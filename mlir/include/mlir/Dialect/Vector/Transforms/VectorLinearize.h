@@ -17,7 +17,7 @@ namespace mlir {
 namespace vector {
 
 /// Initialize `typeConverter` with source and target materializations that
-/// use shape_casts to/from 1D vectors.
+/// use shape_cast for converting to and from 1D (linearized) vectors.
 void initializeForVectorLinearize(TypeConverter &typeConverter);
 
 /// Initialize `conversionTarget` and `patterns` for linearization. Here
@@ -27,15 +27,14 @@ void initializeForVectorLinearize(TypeConverter &typeConverter);
 ///
 /// This function initializes `conversionTarget` with a definition of which
 /// operations are illegal and consequently must be converted to a linearized
-/// (legal) form. It also populates `patterns` with the patterns that will be
-/// run to convert illegal operations, and what sets what priority/benefit they
-/// have.
+/// (legal) form. It also populates `patterns` with patterns that will be run to
+/// convert illegal operations, and sets the priority/benefit patterns have.
 ///
 /// Note: the set of legal operations can be extended by a user by adding
 /// additional legality rules to `conversionTarget`.
 ///
 /// Further note: the choice to use a dialect conversion design for
-/// linearization is to enable reuse of generic structural type conversions for
+/// linearization is to enable reusing generic structural type conversions for
 /// linearizing scf/cf/func operations.
 void populateForFullVectorLinearize(const TypeConverter &,
                                     ConversionTarget &conversionTarget,
@@ -45,7 +44,7 @@ void populateForFullVectorLinearize(const TypeConverter &,
 enum class LinearizePattern {
 
   /// This pattern converts a constant (or poison) vector of rank>1 into a
-  /// 1D vector followed by a shape_cast.
+  /// 1D vector, followed by a shape_cast.
   ///
   /// BEFORE
   /// %1 = arith.constant dense<[[1.0, 2.0], [3.0, 4.0]]> : vector<2x2xf32>
@@ -73,9 +72,6 @@ enum class LinearizePattern {
   /// %2 = vector.shape_cast %1 : vector<32xf16> to vector<4x8xf16>
   LinearizeVectorBitCast,
 
-  /// This pattern currently only supports 2D masks with a unit outer
-  /// dimension.
-  ///
   /// BEFORE
   /// %mask_2d = vector.create_mask %arg0, %arg1 : vector<1x4xi1>
   ///
@@ -85,10 +81,13 @@ enum class LinearizePattern {
   /// %mask_2d = vector.shape_cast %mask : vector<4xi1> to vector<1x4xi1>
   ///
   /// where `%mul` is a function of `%arg0` and `%arg1`.
+  ///
+  /// This pattern currently only supports 2D masks with a unit outer
+  /// dimension.
   LinearizeVectorCreateMask,
 
-  /// This pattern converts the ShuffleOp that works on nD (n > 1)
-  /// vectors to a ShuffleOp that works on linearized vectors.
+  /// This pattern converts a vector.shuffle that works on nD (n > 1) vectors to
+  /// a one that works on linearized vectors.
   ///
   /// BEFORE
   /// %shuffle_3d = vector.shuffle %v1_3d, %v2_3d [ shuffle_indices ]
@@ -110,19 +109,8 @@ enum class LinearizePattern {
   /// %1 = vector.shape_cast %0 : vector<16xf32> to vector<4x4xf32>
   LinearizeVectorSplat,
 
-  /// BEFORE
-  /// %extract = vector.extract %src [ position ]
-  ///
-  /// AFTER
-  /// %src_1d = vector.shape_cast %src : [...]
-  /// %out_1d = vector.shuffle %source_1d, %source_1d [ shuffle_indices ]
-  /// %out_nd = vector.shape_cast %out_1d : [...]
-  ///
-  /// `shuffle_indices` is computed from `position` of original extract.
-  VectorExtractToRankOneShuffle,
-
   /// This pattern converts a vector.extract_strided_slice operation into a
-  /// vector.shuffle operation that has a rank-1 (linearized) operand and
+  /// vector.shuffle operation that has rank-1 (linearized) operand and
   /// result.
   ///
   /// BEFORE
@@ -139,16 +127,15 @@ enum class LinearizePattern {
   VectorExtractStridedSliceToRankOneShuffle,
 
   /// BEFORE
-  /// %insert = vector.insert %src %dst [ position ]
+  /// %extract = vector.extract %src [ position ]
   ///
   /// AFTER
   /// %src_1d = vector.shape_cast %src : [...]
-  /// %dst_1d = vector.shape_cast %dst : [...]
-  /// %out_1d = vector.shuffle %dst_1d, %src_1d [ shuffle_indices ]
+  /// %out_1d = vector.shuffle %source_1d, %source_1d [ shuffle_indices ]
   /// %out_nd = vector.shape_cast %out_1d : [...]
   ///
-  /// `shuffle_indices` is computed from `position`.
-  VectorInsertToRankOneShuffle,
+  /// `shuffle_indices` is computed from `position` of original extract.
+  VectorExtractToRankOneShuffle,
 
   /// This pattern converts a vector.insert_strided_slice operation into a
   /// vector.shuffle operation that has rank-1 (linearized) operands and result.
@@ -169,6 +156,18 @@ enum class LinearizePattern {
   ///                        ^^^^^^^^^^^^^^
   ///                          to_store_1d
   VectorInsertStridedSliceToRankOneShuffle,
+
+  /// BEFORE
+  /// %insert = vector.insert %src %dst [ position ]
+  ///
+  /// AFTER
+  /// %src_1d = vector.shape_cast %src : [...]
+  /// %dst_1d = vector.shape_cast %dst : [...]
+  /// %out_1d = vector.shuffle %dst_1d, %src_1d [ shuffle_indices ]
+  /// %out_nd = vector.shape_cast %out_1d : [...]
+  ///
+  /// `shuffle_indices` is computed from `position`.
+  VectorInsertToRankOneShuffle,
 
   /// The number of patterns in this enum.
   N

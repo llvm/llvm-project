@@ -48,6 +48,15 @@ linearizeConstAttr(Location loc, ConversionPatternRewriter &rewriter,
 
 namespace {
 
+/// This pattern converts a constant (or poison) vector of rank>1 into a
+/// 1D vector, followed by a shape_cast.
+///
+/// BEFORE
+/// %1 = arith.constant dense<[[1.0, 2.0], [3.0, 4.0]]> : vector<2x2xf32>
+///
+/// AFTER
+/// %0 = arith.constant dense<[1.0, 2.0, 3.0, 4.0]> : vector<4xf32>
+/// %1 = vector.shape_cast %0 : vector<4xf32> to vector<2x2xf32>
 struct LinearizeConstantLike final
     : OpTraitConversionPattern<OpTrait::ConstantLike> {
   using OpTraitConversionPattern::OpTraitConversionPattern;
@@ -89,6 +98,13 @@ struct LinearizeConstantLike final
   }
 };
 
+/// BEFORE
+/// %2 = math.sin %arg0 : vector<2x2xf32>
+///
+/// AFTER
+/// %0 = vector.shape_cast %arg0 : vector<2x2xf32> to vector<4xf32>
+/// %1 = math.sin %0 : vector<4xf32>
+/// %2 = vector.shape_cast %1 : vector<4xf32> to vector<2x2xf32>
 struct LinearizeVectorizable final
     : OpTraitConversionPattern<OpTrait::Vectorizable> {
   using OpTraitConversionPattern::OpTraitConversionPattern;
@@ -110,284 +126,13 @@ public:
   }
 };
 
-/// Convert an array of attributes into a vector of integers.
-static FailureOr<SmallVector<int64_t>> intsFromArrayAttr(ArrayAttr attrs) {
-  if (!attrs)
-    return failure();
-  SmallVector<int64_t> ints;
-  ints.reserve(attrs.size());
-  for (auto attr : attrs) {
-    if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
-      ints.push_back(intAttr.getInt());
-    } else {
-      return failure();
-    }
-  }
-  return ints;
-}
-
-struct VectorExtractStridedSliceToRankOneShuffle final
-    : public OpConversionPattern<vector::ExtractStridedSliceOp> {
-  using OpConversionPattern::OpConversionPattern;
-  VectorExtractStridedSliceToRankOneShuffle(const TypeConverter &typeConverter,
-                                            MLIRContext *context,
-                                            PatternBenefit benefit)
-      : OpConversionPattern(typeConverter, context, benefit) {}
-
-  LogicalResult
-  matchAndRewrite(vector::ExtractStridedSliceOp extractStridedSliceOp,
-                  OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-
-    VectorType flatOutputType = getTypeConverter()->convertType<VectorType>(
-        extractStridedSliceOp.getType());
-    assert(flatOutputType && "vector type expected");
-
-    // Expect a legalization failure if the strides are not all 1 (if ever the
-    // verifier for extract_strided_slice allows non-1 strides).
-    if (extractStridedSliceOp.hasNonUnitStrides()) {
-      return rewriter.notifyMatchFailure(
-          extractStridedSliceOp,
-          "extract_strided_slice with strides != 1 not supported");
-    }
-
-    FailureOr<SmallVector<int64_t>> offsets =
-        intsFromArrayAttr(extractStridedSliceOp.getOffsets());
-    if (failed(offsets)) {
-      return rewriter.notifyMatchFailure(extractStridedSliceOp,
-                                         "failed to get integer offsets");
-    }
-
-    ArrayRef<int64_t> inputShape =
-        extractStridedSliceOp.getSourceVectorType().getShape();
-
-    ArrayRef<int64_t> outputShape = extractStridedSliceOp.getType().getShape();
-
-    SmallVector<int64_t> indices = vector::getStridedSliceInsertionIndices(
-        outputShape, inputShape, offsets.value());
-
-    Value srcVector = adaptor.getVector();
-    rewriter.replaceOpWithNewOp<vector::ShuffleOp>(
-        extractStridedSliceOp, flatOutputType, srcVector, srcVector, indices);
-    return success();
-  }
-};
-
-static Value asRankOne(ConversionPatternRewriter &rewriter, Value v) {
-  auto vType = dyn_cast<VectorType>(v.getType());
-  assert(vType && "expected vector type");
-  assert(vType.getRank() <= 1 && "expected rank-0 or rank-1 type");
-  if (vType.getRank() == 1)
-    return v;
-  // Convert rank-0 vector to rank-1 vector.
-  v = rewriter.create<vector::ShapeCastOp>(
-      v.getLoc(), VectorType::get({1}, vType.getElementType()), v);
-  return v;
-}
-
-struct VectorInsertStridedSliceToRankOneShuffle final
-    : public OpConversionPattern<vector::InsertStridedSliceOp> {
-  using OpConversionPattern::OpConversionPattern;
-  VectorInsertStridedSliceToRankOneShuffle(const TypeConverter &typeConverter,
-                                           MLIRContext *context,
-                                           PatternBenefit benefit)
-      : OpConversionPattern(typeConverter, context, benefit) {}
-
-  LogicalResult
-  matchAndRewrite(vector::InsertStridedSliceOp insertStridedSliceOp,
-                  OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-
-    // Expect a legalization failure if the strides are not all 1 (if ever the
-    // verifier for insert_strided_slice allows non-1 strides).
-    if (insertStridedSliceOp.hasNonUnitStrides()) {
-      return rewriter.notifyMatchFailure(
-          insertStridedSliceOp,
-          "insert_strided_slice with strides != 1 not supported");
-    }
-
-    VectorType inputType = insertStridedSliceOp.getValueToStore().getType();
-    ArrayRef<int64_t> inputShape = inputType.getShape();
-
-    VectorType outputType = insertStridedSliceOp.getType();
-    ArrayRef<int64_t> outputShape = outputType.getShape();
-    int64_t nOutputElements = outputType.getNumElements();
-
-    FailureOr<SmallVector<int64_t>> offsets =
-        intsFromArrayAttr(insertStridedSliceOp.getOffsets());
-    if (failed(offsets)) {
-      return rewriter.notifyMatchFailure(insertStridedSliceOp,
-                                         "failed to get integer offsets");
-    }
-    SmallVector<int64_t> sliceIndices = vector::getStridedSliceInsertionIndices(
-        inputShape, outputShape, offsets.value());
-
-    SmallVector<int64_t> indices(nOutputElements);
-    std::iota(indices.begin(), indices.end(), 0);
-    for (auto [index, sliceIndex] : llvm::enumerate(sliceIndices)) {
-      indices[sliceIndex] = index + nOutputElements;
-    }
-
-    Value flatToStore = asRankOne(rewriter, adaptor.getValueToStore());
-    Value flatDest = adaptor.getDest();
-    rewriter.replaceOpWithNewOp<vector::ShuffleOp>(insertStridedSliceOp,
-                                                   flatDest.getType(), flatDest,
-                                                   flatToStore, indices);
-    return success();
-  }
-};
-
-struct LinearizeVectorShuffle final
-    : public OpConversionPattern<vector::ShuffleOp> {
-  using OpConversionPattern::OpConversionPattern;
-  LinearizeVectorShuffle(const TypeConverter &typeConverter,
-                         MLIRContext *context, PatternBenefit benefit)
-      : OpConversionPattern(typeConverter, context, benefit) {}
-
-  LogicalResult
-  matchAndRewrite(vector::ShuffleOp shuffleOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    VectorType dstType =
-        getTypeConverter()->convertType<VectorType>(shuffleOp.getType());
-    assert(dstType && "vector type destination expected.");
-
-    Value vec1 = asRankOne(rewriter, adaptor.getV1());
-    Value vec2 = asRankOne(rewriter, adaptor.getV2());
-    int shuffleSliceLen = 1;
-    int rank = shuffleOp.getV1().getType().getRank();
-
-    // If rank > 1, we need to do the shuffle in the granularity of slices
-    // instead of scalars. Size of the slice is equal to the rank-1 innermost
-    // dims. Mask of the shuffle op specifies which slice to take from the
-    // outermost dim.
-    if (rank > 1) {
-      llvm::ArrayRef<int64_t> shape = shuffleOp.getV1().getType().getShape();
-      for (unsigned i = 1; i < shape.size(); ++i) {
-        shuffleSliceLen *= shape[i];
-      }
-    }
-
-    // For each value in the mask, we generate the indices of the source vectors
-    // that need to be shuffled to the destination vector. If shuffleSliceLen >
-    // 1 we need to shuffle the slices (consecutive shuffleSliceLen number of
-    // elements) instead of scalars.
-    ArrayRef<int64_t> mask = shuffleOp.getMask();
-    int64_t totalSizeOfShuffledElmnts = mask.size() * shuffleSliceLen;
-    llvm::SmallVector<int64_t, 2> indices(totalSizeOfShuffledElmnts);
-    for (auto [i, value] : llvm::enumerate(mask)) {
-      std::iota(indices.begin() + shuffleSliceLen * i,
-                indices.begin() + shuffleSliceLen * (i + 1),
-                shuffleSliceLen * value);
-    }
-
-    rewriter.replaceOpWithNewOp<vector::ShuffleOp>(shuffleOp, dstType, vec1,
-                                                   vec2, indices);
-    return success();
-  }
-};
-
-struct VectorExtractToRankOneShuffle final
-    : public OpConversionPattern<vector::ExtractOp> {
-  using OpConversionPattern::OpConversionPattern;
-  VectorExtractToRankOneShuffle(const TypeConverter &typeConverter,
-                                MLIRContext *context, PatternBenefit benefit)
-      : OpConversionPattern(typeConverter, context, benefit) {}
-  LogicalResult
-  matchAndRewrite(vector::ExtractOp extractOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    // Skip if result is not a vector type
-    if (!isa<VectorType>(extractOp.getType()))
-      return rewriter.notifyMatchFailure(extractOp,
-                                         "scalar extract not supported");
-    Type dstTy = getTypeConverter()->convertType(extractOp.getType());
-    assert(dstTy && "expected 1-D vector type");
-
-    // Dynamic position is not supported.
-    if (extractOp.hasDynamicPosition())
-      return rewriter.notifyMatchFailure(extractOp,
-                                         "dynamic position is not supported.");
-
-    llvm::ArrayRef<int64_t> shape = extractOp.getVector().getType().getShape();
-    int64_t size = extractOp.getVector().getType().getNumElements();
-
-    // Compute linearized offset.
-    int64_t linearizedOffset = 0;
-    llvm::ArrayRef<int64_t> offsets = extractOp.getStaticPosition();
-    for (auto [i, off] : llvm::enumerate(offsets)) {
-      size /= shape[i];
-      linearizedOffset += offsets[i] * size;
-    }
-
-    Value v0 = asRankOne(rewriter, adaptor.getVector());
-    llvm::SmallVector<int64_t, 2> indices(size);
-    std::iota(indices.begin(), indices.end(), linearizedOffset);
-    rewriter.replaceOpWithNewOp<vector::ShuffleOp>(extractOp, dstTy, v0, v0,
-                                                   indices);
-
-    return success();
-  }
-};
-
-struct VectorInsertToRankOneShuffle final
-    : public OpConversionPattern<vector::InsertOp> {
-  using OpConversionPattern::OpConversionPattern;
-  VectorInsertToRankOneShuffle(const TypeConverter &typeConverter,
-                               MLIRContext *context, PatternBenefit benefit = 1)
-      : OpConversionPattern(typeConverter, context, benefit) {}
-  LogicalResult
-  matchAndRewrite(vector::InsertOp insertOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    VectorType dstTy = getTypeConverter()->convertType<VectorType>(
-        insertOp.getDestVectorType());
-    assert(dstTy && "vector type destination expected.");
-
-    // dynamic position is not supported
-    if (insertOp.hasDynamicPosition())
-      return rewriter.notifyMatchFailure(insertOp,
-                                         "dynamic position is not supported.");
-    auto srcTy = insertOp.getValueToStoreType();
-    auto srcAsVec = dyn_cast<VectorType>(srcTy);
-    uint64_t srcSize = 0;
-    if (srcAsVec) {
-      srcSize = srcAsVec.getNumElements();
-    } else {
-      return rewriter.notifyMatchFailure(insertOp,
-                                         "scalars are not supported.");
-    }
-
-    auto dstShape = insertOp.getDestVectorType().getShape();
-    const auto dstSize = insertOp.getDestVectorType().getNumElements();
-    auto dstSizeForOffsets = dstSize;
-
-    // compute linearized offset
-    int64_t linearizedOffset = 0;
-    auto offsetsNd = insertOp.getStaticPosition();
-    for (auto [dim, offset] : llvm::enumerate(offsetsNd)) {
-      dstSizeForOffsets /= dstShape[dim];
-      linearizedOffset += offset * dstSizeForOffsets;
-    }
-
-    llvm::SmallVector<int64_t, 2> indices(dstSize);
-    auto *origValsUntil = indices.begin();
-    std::advance(origValsUntil, linearizedOffset);
-    std::iota(indices.begin(), origValsUntil,
-              0); // original values that remain [0, offset)
-    auto *newValsUntil = origValsUntil;
-    std::advance(newValsUntil, srcSize);
-    std::iota(origValsUntil, newValsUntil,
-              dstSize); // new values [offset, offset+srcNumElements)
-    std::iota(newValsUntil, indices.end(),
-              linearizedOffset + srcSize); // the rest of original values
-                                           // [offset+srcNumElements, end)
-
-    rewriter.replaceOpWithNewOp<vector::ShuffleOp>(
-        insertOp, dstTy, adaptor.getDest(),
-        asRankOne(rewriter, adaptor.getValueToStore()), indices);
-
-    return success();
-  }
-};
-
+/// BEFORE
+/// %2 = vector.bitcast %arg0 : vector<4x4xf32> to vector<4x8xf16>
+///
+/// AFTER
+/// %0 = vector.shape_cast %arg0 : vector<4x4xf32> to vector<16xf32>
+/// %1 = vector.bitcast %0 : vector<16xf32> to vector<32xf16>
+/// %2 = vector.shape_cast %1 : vector<32xf16> to vector<4x8xf16>
 struct LinearizeVectorBitCast final
     : public OpConversionPattern<vector::BitCastOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -401,26 +146,6 @@ struct LinearizeVectorBitCast final
     assert(resType && "expected 1-D vector type");
     rewriter.replaceOpWithNewOp<vector::BitCastOp>(castOp, resType,
                                                    adaptor.getSource());
-    return success();
-  }
-};
-
-struct LinearizeVectorSplat final
-    : public OpConversionPattern<vector::SplatOp> {
-  using OpConversionPattern::OpConversionPattern;
-
-  LinearizeVectorSplat(const TypeConverter &typeConverter, MLIRContext *context,
-                       PatternBenefit benefit)
-      : OpConversionPattern(typeConverter, context, benefit) {}
-
-  LogicalResult
-  matchAndRewrite(vector::SplatOp splatOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto dstTy = getTypeConverter()->convertType(splatOp.getType());
-    if (!dstTy)
-      return rewriter.notifyMatchFailure(splatOp, "cannot convert type.");
-    rewriter.replaceOpWithNewOp<vector::SplatOp>(splatOp, adaptor.getInput(),
-                                                 dstTy);
     return success();
   }
 };
@@ -478,6 +203,363 @@ struct LinearizeVectorCreateMask final
 
     auto newMask = rewriter.create<vector::CreateMaskOp>(loc, dstTy, maskSize);
     rewriter.replaceOp(createMaskOp, newMask);
+    return success();
+  }
+};
+
+/// This pattern converts a vector.shuffle that works on nD (n > 1) vectors to
+/// a one that works on linearized vectors.
+///
+/// BEFORE
+/// %shuffle_3d = vector.shuffle %v1_3d, %v2_3d [ shuffle_indices ]
+///
+/// AFTER
+/// %v1_1d = vector.shape_cast %v1_3d : [...]
+/// %v2_1d = vector.shape_cast %v2_3d : [...]
+/// %shuffle_1d = vector.shuffle %v1_1d, %v2_1d [ shuffle_indices_1d ]
+/// %shuffle_3d = vector.shape_cast %shuffle_1d :  [...]
+///
+/// Where `shuffle_indices_1d` is computed by expanding `shuffle_indices`.
+struct LinearizeVectorShuffle final
+    : public OpConversionPattern<vector::ShuffleOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LinearizeVectorShuffle(const TypeConverter &typeConverter,
+                         MLIRContext *context, PatternBenefit benefit)
+      : OpConversionPattern(typeConverter, context, benefit) {}
+
+  LogicalResult
+  matchAndRewrite(vector::ShuffleOp shuffleOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    VectorType dstType =
+        getTypeConverter()->convertType<VectorType>(shuffleOp.getType());
+    assert(dstType && "vector type destination expected.");
+
+    Value vec1 = adaptor.getV1();
+    Value vec2 = adaptor.getV2();
+    int shuffleSliceLen = 1;
+    int rank = shuffleOp.getV1().getType().getRank();
+
+    // If rank > 1, we need to do the shuffle in the granularity of slices
+    // instead of scalars. Size of the slice is equal to the rank-1 innermost
+    // dims. Mask of the shuffle op specifies which slice to take from the
+    // outermost dim.
+    if (rank > 1) {
+      llvm::ArrayRef<int64_t> shape = shuffleOp.getV1().getType().getShape();
+      for (unsigned i = 1; i < shape.size(); ++i) {
+        shuffleSliceLen *= shape[i];
+      }
+    }
+
+    // For each value in the mask, we generate the indices of the source vectors
+    // that need to be shuffled to the destination vector. If shuffleSliceLen >
+    // 1 we need to shuffle the slices (consecutive shuffleSliceLen number of
+    // elements) instead of scalars.
+    ArrayRef<int64_t> mask = shuffleOp.getMask();
+    int64_t totalSizeOfShuffledElmnts = mask.size() * shuffleSliceLen;
+    llvm::SmallVector<int64_t, 2> indices(totalSizeOfShuffledElmnts);
+    for (auto [i, value] : llvm::enumerate(mask)) {
+      std::iota(indices.begin() + shuffleSliceLen * i,
+                indices.begin() + shuffleSliceLen * (i + 1),
+                shuffleSliceLen * value);
+    }
+
+    rewriter.replaceOpWithNewOp<vector::ShuffleOp>(shuffleOp, dstType, vec1,
+                                                   vec2, indices);
+    return success();
+  }
+};
+
+/// BEFORE
+/// %1 = vector.splat %value : vector<4x4xf32>
+///
+/// AFTER
+/// %0 = vector.splat %value : vector<16xf32>
+/// %1 = vector.shape_cast %0 : vector<16xf32> to vector<4x4xf32>
+struct LinearizeVectorSplat final
+    : public OpConversionPattern<vector::SplatOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LinearizeVectorSplat(const TypeConverter &typeConverter, MLIRContext *context,
+                       PatternBenefit benefit)
+      : OpConversionPattern(typeConverter, context, benefit) {}
+
+  LogicalResult
+  matchAndRewrite(vector::SplatOp splatOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto dstTy = getTypeConverter()->convertType(splatOp.getType());
+    if (!dstTy)
+      return rewriter.notifyMatchFailure(splatOp, "cannot convert type.");
+    rewriter.replaceOpWithNewOp<vector::SplatOp>(splatOp, adaptor.getInput(),
+                                                 dstTy);
+    return success();
+  }
+};
+
+/// Convert an array of attributes into a vector of integers.
+static FailureOr<SmallVector<int64_t>> intsFromArrayAttr(ArrayAttr attrs) {
+  if (!attrs)
+    return failure();
+  SmallVector<int64_t> ints;
+  ints.reserve(attrs.size());
+  for (auto attr : attrs) {
+    if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
+      ints.push_back(intAttr.getInt());
+    } else {
+      return failure();
+    }
+  }
+  return ints;
+}
+
+/// This pattern converts a vector.extract_strided_slice operation into a
+/// vector.shuffle operation that has rank-1 (linearized) operand and
+/// result.
+///
+/// BEFORE
+/// %out_nd = vector.extract_strided_slice %source_nd
+///         { offsets = [..], strides = [..], sizes = [..] }
+///
+/// AFTER
+/// %source_1d = vector.shape_cast %source_nd [...]
+/// %out_1d    = vector.shuffle %source_1d, %source_1d [ shuffle_indices_1d ]
+/// %out_nd    = vector.shape_cast %out_1d [...]
+///
+/// `shuffle_indices_1d` is computed using the offsets and sizes of the
+/// original vector.extract_strided_slice operation.
+struct VectorExtractStridedSliceToRankOneShuffle final
+    : public OpConversionPattern<vector::ExtractStridedSliceOp> {
+  using OpConversionPattern::OpConversionPattern;
+  VectorExtractStridedSliceToRankOneShuffle(const TypeConverter &typeConverter,
+                                            MLIRContext *context,
+                                            PatternBenefit benefit)
+      : OpConversionPattern(typeConverter, context, benefit) {}
+
+  LogicalResult
+  matchAndRewrite(vector::ExtractStridedSliceOp extractStridedSliceOp,
+                  OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    VectorType flatOutputType = getTypeConverter()->convertType<VectorType>(
+        extractStridedSliceOp.getType());
+    assert(flatOutputType && "vector type expected");
+
+    // Expect a legalization failure if the strides are not all 1 (if ever the
+    // verifier for extract_strided_slice allows non-1 strides).
+    if (extractStridedSliceOp.hasNonUnitStrides()) {
+      return rewriter.notifyMatchFailure(
+          extractStridedSliceOp,
+          "extract_strided_slice with strides != 1 not supported");
+    }
+
+    FailureOr<SmallVector<int64_t>> offsets =
+        intsFromArrayAttr(extractStridedSliceOp.getOffsets());
+    if (failed(offsets)) {
+      return rewriter.notifyMatchFailure(extractStridedSliceOp,
+                                         "failed to get integer offsets");
+    }
+
+    ArrayRef<int64_t> inputShape =
+        extractStridedSliceOp.getSourceVectorType().getShape();
+
+    ArrayRef<int64_t> outputShape = extractStridedSliceOp.getType().getShape();
+
+    SmallVector<int64_t> indices = vector::getStridedSliceInsertionIndices(
+        outputShape, inputShape, offsets.value());
+
+    Value srcVector = adaptor.getVector();
+    rewriter.replaceOpWithNewOp<vector::ShuffleOp>(
+        extractStridedSliceOp, flatOutputType, srcVector, srcVector, indices);
+    return success();
+  }
+};
+
+/// BEFORE
+/// %extract = vector.extract %src [ position ]
+///
+/// AFTER
+/// %src_1d = vector.shape_cast %src : [...]
+/// %out_1d = vector.shuffle %source_1d, %source_1d [ shuffle_indices ]
+/// %out_nd = vector.shape_cast %out_1d : [...]
+///
+/// `shuffle_indices` is computed from `position` of original extract.
+struct VectorExtractToRankOneShuffle final
+    : public OpConversionPattern<vector::ExtractOp> {
+  using OpConversionPattern::OpConversionPattern;
+  VectorExtractToRankOneShuffle(const TypeConverter &typeConverter,
+                                MLIRContext *context, PatternBenefit benefit)
+      : OpConversionPattern(typeConverter, context, benefit) {}
+  LogicalResult
+  matchAndRewrite(vector::ExtractOp extractOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Skip if result is not a vector type
+    if (!isa<VectorType>(extractOp.getType()))
+      return rewriter.notifyMatchFailure(extractOp,
+                                         "scalar extract not supported");
+    Type dstTy = getTypeConverter()->convertType(extractOp.getType());
+    assert(dstTy && "expected 1-D vector type");
+
+    // Dynamic position is not supported.
+    if (extractOp.hasDynamicPosition())
+      return rewriter.notifyMatchFailure(extractOp,
+                                         "dynamic position is not supported.");
+
+    llvm::ArrayRef<int64_t> shape = extractOp.getVector().getType().getShape();
+    int64_t size = extractOp.getVector().getType().getNumElements();
+
+    // Compute linearized offset.
+    int64_t linearizedOffset = 0;
+    llvm::ArrayRef<int64_t> offsets = extractOp.getStaticPosition();
+    for (auto [i, off] : llvm::enumerate(offsets)) {
+      size /= shape[i];
+      linearizedOffset += offsets[i] * size;
+    }
+
+    Value v0 = adaptor.getVector();
+    llvm::SmallVector<int64_t, 2> indices(size);
+    std::iota(indices.begin(), indices.end(), linearizedOffset);
+    rewriter.replaceOpWithNewOp<vector::ShuffleOp>(extractOp, dstTy, v0, v0,
+                                                   indices);
+
+    return success();
+  }
+};
+
+/// This pattern converts a vector.insert_strided_slice operation into a
+/// vector.shuffle operation that has rank-1 (linearized) operands and result.
+///
+/// BEFORE
+/// %0 = vector.insert_strided_slice %to_store, %into
+///             {offsets = [1, 0, 0, 0], strides = [1, 1]}
+///                  : vector<2x2xi8> into vector<2x1x3x2xi8>
+/// AFTER
+/// %to_store_1d
+///          = vector.shape_cast %to_store : vector<2x2xi8> to vector<4xi8>
+/// %into_1d = vector.shape_cast %into : vector<2x1x3x2xi8> to vector<12xi8>
+/// %out_1d  = vector.shuffle %into_1d, %to_store_1d [ shuffle_indices_1d ]
+/// %out_nd  = vector.shape_cast %out_1d : vector<12xi8> to vector<2x1x3x2xi8>
+///
+/// where shuffle_indices_1d in this case is
+///     [0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 10, 11].
+///                        ^^^^^^^^^^^^^^
+///                          to_store_1d
+struct VectorInsertStridedSliceToRankOneShuffle final
+    : public OpConversionPattern<vector::InsertStridedSliceOp> {
+  using OpConversionPattern::OpConversionPattern;
+  VectorInsertStridedSliceToRankOneShuffle(const TypeConverter &typeConverter,
+                                           MLIRContext *context,
+                                           PatternBenefit benefit)
+      : OpConversionPattern(typeConverter, context, benefit) {}
+
+  LogicalResult
+  matchAndRewrite(vector::InsertStridedSliceOp insertStridedSliceOp,
+                  OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    // Expect a legalization failure if the strides are not all 1 (if ever the
+    // verifier for insert_strided_slice allows non-1 strides).
+    if (insertStridedSliceOp.hasNonUnitStrides()) {
+      return rewriter.notifyMatchFailure(
+          insertStridedSliceOp,
+          "insert_strided_slice with strides != 1 not supported");
+    }
+
+    VectorType inputType = insertStridedSliceOp.getValueToStore().getType();
+    ArrayRef<int64_t> inputShape = inputType.getShape();
+
+    VectorType outputType = insertStridedSliceOp.getType();
+    ArrayRef<int64_t> outputShape = outputType.getShape();
+    int64_t nOutputElements = outputType.getNumElements();
+
+    FailureOr<SmallVector<int64_t>> offsets =
+        intsFromArrayAttr(insertStridedSliceOp.getOffsets());
+    if (failed(offsets)) {
+      return rewriter.notifyMatchFailure(insertStridedSliceOp,
+                                         "failed to get integer offsets");
+    }
+    SmallVector<int64_t> sliceIndices = vector::getStridedSliceInsertionIndices(
+        inputShape, outputShape, offsets.value());
+
+    SmallVector<int64_t> indices(nOutputElements);
+    std::iota(indices.begin(), indices.end(), 0);
+    for (auto [index, sliceIndex] : llvm::enumerate(sliceIndices)) {
+      indices[sliceIndex] = index + nOutputElements;
+    }
+
+    Value flatToStore = adaptor.getValueToStore();
+    Value flatDest = adaptor.getDest();
+    rewriter.replaceOpWithNewOp<vector::ShuffleOp>(insertStridedSliceOp,
+                                                   flatDest.getType(), flatDest,
+                                                   flatToStore, indices);
+    return success();
+  }
+};
+
+/// BEFORE
+/// %insert = vector.insert %src %dst [ position ]
+///
+/// AFTER
+/// %src_1d = vector.shape_cast %src : [...]
+/// %dst_1d = vector.shape_cast %dst : [...]
+/// %out_1d = vector.shuffle %dst_1d, %src_1d [ shuffle_indices ]
+/// %out_nd = vector.shape_cast %out_1d : [...]
+///
+/// `shuffle_indices` is computed from `position`.
+
+struct VectorInsertToRankOneShuffle final
+    : public OpConversionPattern<vector::InsertOp> {
+  using OpConversionPattern::OpConversionPattern;
+  VectorInsertToRankOneShuffle(const TypeConverter &typeConverter,
+                               MLIRContext *context, PatternBenefit benefit = 1)
+      : OpConversionPattern(typeConverter, context, benefit) {}
+  LogicalResult
+  matchAndRewrite(vector::InsertOp insertOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    VectorType dstTy = getTypeConverter()->convertType<VectorType>(
+        insertOp.getDestVectorType());
+    assert(dstTy && "vector type destination expected.");
+
+    // dynamic position is not supported
+    if (insertOp.hasDynamicPosition())
+      return rewriter.notifyMatchFailure(insertOp,
+                                         "dynamic position is not supported.");
+    auto srcTy = insertOp.getValueToStoreType();
+    auto srcAsVec = dyn_cast<VectorType>(srcTy);
+    uint64_t srcSize = 0;
+    if (srcAsVec) {
+      srcSize = srcAsVec.getNumElements();
+    } else {
+      return rewriter.notifyMatchFailure(insertOp,
+                                         "scalars are not supported.");
+    }
+
+    auto dstShape = insertOp.getDestVectorType().getShape();
+    const auto dstSize = insertOp.getDestVectorType().getNumElements();
+    auto dstSizeForOffsets = dstSize;
+
+    // compute linearized offset
+    int64_t linearizedOffset = 0;
+    auto offsetsNd = insertOp.getStaticPosition();
+    for (auto [dim, offset] : llvm::enumerate(offsetsNd)) {
+      dstSizeForOffsets /= dstShape[dim];
+      linearizedOffset += offset * dstSizeForOffsets;
+    }
+
+    llvm::SmallVector<int64_t, 2> indices(dstSize);
+    auto *origValsUntil = indices.begin();
+    std::advance(origValsUntil, linearizedOffset);
+    std::iota(indices.begin(), origValsUntil,
+              0); // original values that remain [0, offset)
+    auto *newValsUntil = origValsUntil;
+    std::advance(newValsUntil, srcSize);
+    std::iota(origValsUntil, newValsUntil,
+              dstSize); // new values [offset, offset+srcNumElements)
+    std::iota(newValsUntil, indices.end(),
+              linearizedOffset + srcSize); // the rest of original values
+                                           // [offset+srcNumElements, end)
+
+    rewriter.replaceOpWithNewOp<vector::ShuffleOp>(
+        insertOp, dstTy, adaptor.getDest(), adaptor.getValueToStore(), indices);
+
     return success();
   }
 };
@@ -706,27 +788,27 @@ void vector::VectorLinearizePatterns::addToPatternSet(
   // ------------------------ //
   // Extract related patterns //
   // ------------------------ //
-  if (isEnabled(LinearizePattern::VectorExtractToRankOneShuffle))
-    patterns.add<VectorExtractToRankOneShuffle>(
-        typeConverter, context,
-        getBenefit(LinearizePattern::VectorExtractToRankOneShuffle));
-
   if (isEnabled(LinearizePattern::VectorExtractStridedSliceToRankOneShuffle))
     patterns.add<VectorExtractStridedSliceToRankOneShuffle>(
         typeConverter, context,
         getBenefit(
             LinearizePattern::VectorExtractStridedSliceToRankOneShuffle));
 
+  if (isEnabled(LinearizePattern::VectorExtractToRankOneShuffle))
+    patterns.add<VectorExtractToRankOneShuffle>(
+        typeConverter, context,
+        getBenefit(LinearizePattern::VectorExtractToRankOneShuffle));
+
   // ------------------------ //
   // Insert related patterns  //
   // ------------------------ //
-  if (isEnabled(LinearizePattern::VectorInsertToRankOneShuffle))
-    patterns.add<VectorInsertToRankOneShuffle>(
-        typeConverter, context,
-        getBenefit(LinearizePattern::VectorInsertToRankOneShuffle));
-
   if (isEnabled(LinearizePattern::VectorInsertStridedSliceToRankOneShuffle))
     patterns.add<VectorInsertStridedSliceToRankOneShuffle>(
         typeConverter, context,
         getBenefit(LinearizePattern::VectorInsertStridedSliceToRankOneShuffle));
+
+  if (isEnabled(LinearizePattern::VectorInsertToRankOneShuffle))
+    patterns.add<VectorInsertToRankOneShuffle>(
+        typeConverter, context,
+        getBenefit(LinearizePattern::VectorInsertToRankOneShuffle));
 }
