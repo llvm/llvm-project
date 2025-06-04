@@ -1579,9 +1579,8 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
     // original warpOp.
     for (OpResult forResult : forOp.getResults()) {
       // Check if this forResult is already yielded by the yield op.
-      if (llvm::is_contained(yield->getOperands(), forResult)) {
+      if (llvm::is_contained(yield->getOperands(), forResult))
         continue;
-      }
       collectEscapingValues(forResult);
     }
 
