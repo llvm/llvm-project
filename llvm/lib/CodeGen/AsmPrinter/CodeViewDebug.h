@@ -98,6 +98,9 @@ private:
   /// The codeview CPU type used by the translation unit.
   codeview::CPUType TheCPU;
 
+  /// Whether to emit compiler information only.
+  bool NoDebug = false;
+
   static LocalVarDef createDefRangeMem(uint16_t CVRegister, int Offset);
 
   /// Similar to DbgVariable in DwarfDebug, but not dwarf-specific.

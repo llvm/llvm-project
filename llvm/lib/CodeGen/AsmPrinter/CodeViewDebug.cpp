@@ -613,8 +613,7 @@ static SourceLanguage MapDWLangToCVLang(unsigned DWLang) {
 void CodeViewDebug::beginModule(Module *M) {
   // If module doesn't have named metadata anchors or COFF debug section
   // is not available, skip any debug info related stuff.
-  if (!Asm->hasDebugInfo() ||
-      !Asm->getObjFileLowering().getCOFFDebugSymbolsSection()) {
+  if (!Asm->getObjFileLowering().getCOFFDebugSymbolsSection()) {
     Asm = nullptr;
     return;
   }
@@ -622,10 +621,22 @@ void CodeViewDebug::beginModule(Module *M) {
   TheCPU = mapArchToCVCPUType(M->getTargetTriple().getArch());
 
   // Get the current source language.
-  const MDNode *Node = *M->debug_compile_units_begin();
+  const MDNode *Node;
+  if (Asm->hasDebugInfo()) {
+    Node = *M->debug_compile_units_begin();
+  } else {
+    // When emitting only compiler information, we may have only NoDebug CUs,
+    // which would be skipped by debug_compile_units_begin.
+    NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
+    Node = *CUs->operands().begin();
+  }
   const auto *CU = cast<DICompileUnit>(Node);
 
   CurrentSourceLanguage = MapDWLangToCVLang(CU->getSourceLanguage());
+  NoDebug =
+      !M->getCodeViewFlag() || CU->getEmissionKind() == DICompileUnit::NoDebug;
+  if (NoDebug)
+    return;
 
   collectGlobalVariableInfo();
 
@@ -636,7 +647,7 @@ void CodeViewDebug::beginModule(Module *M) {
 }
 
 void CodeViewDebug::endModule() {
-  if (!Asm || !Asm->hasDebugInfo())
+  if (!Asm)
     return;
 
   // The COFF .debug$S section consists of several subsections, each starting
@@ -652,6 +663,8 @@ void CodeViewDebug::endModule() {
   emitObjName();
   emitCompilerInformation();
   endCVSubsection(CompilerInfo);
+  if (NoDebug)
+    return;
 
   emitInlineeLinesSubsection();
 
@@ -1440,6 +1453,9 @@ void CodeViewDebug::collectVariableInfo(const DISubprogram *SP) {
 }
 
 void CodeViewDebug::beginFunctionImpl(const MachineFunction *MF) {
+  if (NoDebug)
+    return;
+
   const TargetSubtargetInfo &TSI = MF->getSubtarget();
   const TargetRegisterInfo *TRI = TSI.getRegisterInfo();
   const MachineFrameInfo &MFI = MF->getFrameInfo();
@@ -3031,6 +3047,9 @@ void CodeViewDebug::collectLexicalBlockInfo(
 }
 
 void CodeViewDebug::endFunctionImpl(const MachineFunction *MF) {
+  if (NoDebug)
+    return;
+
   const Function &GV = MF->getFunction();
   assert(FnDebugInfo.count(&GV));
   assert(CurFn == FnDebugInfo[&GV].get());
@@ -3089,6 +3108,8 @@ static bool isUsableDebugLoc(DebugLoc DL) {
 
 void CodeViewDebug::beginInstruction(const MachineInstr *MI) {
   DebugHandlerBase::beginInstruction(MI);
+  if (NoDebug)
+    return;
 
   // Ignore DBG_VALUE and DBG_LABEL locations and function prologue.
   if (!Asm || !CurFn || MI->isDebugInstr() ||
