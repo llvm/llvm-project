@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "OffloadAPI.h"
-#include "OffloadError.h"
+#include "Shared/OffloadError.h"
 #include "llvm/Support/Error.h"
 
 #include <cstring>

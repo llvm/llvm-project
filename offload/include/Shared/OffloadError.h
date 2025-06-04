@@ -18,7 +18,7 @@ namespace error {
 
 enum class ErrorCode {
 #define OFFLOAD_ERRC(Name, _, Value) Name = Value,
-#include "OffloadErrcodes.inc"
+#include "Shared/OffloadErrcodes.inc"
 #undef OFFLOAD_ERRC
 };
 
