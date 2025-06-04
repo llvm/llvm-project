@@ -274,7 +274,7 @@ struct RecurrenceInfo {
   RecurrenceInfo(const Loop &L) : L(L) {}
   operator bool() const { return BO; }
 
-  LLVM_DUMP_METHOD void print(raw_ostream &OS, unsigned Indent = 0) const {
+  void print(raw_ostream &OS, unsigned Indent = 0) const {
     OS.indent(Indent) << "Phi: ";
     Phi->print(OS);
     OS << "\n";

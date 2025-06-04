@@ -34,7 +34,7 @@ using ErrBits = std::tuple<KnownBits, unsigned, bool>;
 
 /// A custom std::array with 256 entries, that also has a print function.
 struct CRCTable : public std::array<APInt, 256> {
-  LLVM_DUMP_METHOD void print(raw_ostream &OS) const;
+  void print(raw_ostream &OS) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
@@ -91,7 +91,7 @@ public:
   // and return a 256-entry CRC table.
   CRCTable genSarwateTable(const APInt &GenPoly, bool ByteOrderSwapped) const;
 
-  LLVM_DUMP_METHOD void print(raw_ostream &OS) const;
+  void print(raw_ostream &OS) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
