@@ -406,8 +406,9 @@ define <3 x ptr> @shufflevector_v3p0(<3 x ptr> %a, <3 x ptr> %b) {
 ; CHECK-GI-NEXT:    fmov x8, d5
 ; CHECK-GI-NEXT:    mov v1.d[0], x8
 ; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v2.16b, #8
-; CHECK-GI-NEXT:    fmov x10, d1
+; CHECK-GI-NEXT:    dup v1.2d, v1.d[0]
 ; CHECK-GI-NEXT:    mov d2, v0.d[1]
+; CHECK-GI-NEXT:    fmov x10, d1
 ; CHECK-GI-NEXT:    fmov d1, d2
 ; CHECK-GI-NEXT:    fmov d2, x10
 ; CHECK-GI-NEXT:    ret
