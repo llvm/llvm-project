@@ -92,4 +92,4 @@ TEST(LlvmLibcStrSpnTest, CrashOnNullPtr) {
                WITH_SIGNAL(-1));
 }
 
-#endif // defined(LIBC_TARGET_OS_IS_LINUX)
+#endif // defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
