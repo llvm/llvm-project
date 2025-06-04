@@ -41,6 +41,7 @@ private:
   const llvm::abi::Type *convertVectorType(const clang::VectorType *VT);
   const llvm::abi::Type *convertRecordType(const clang::RecordType *RT);
   const llvm::abi::Type *convertEnumType(const clang::EnumType *ET);
+  const llvm::abi::Type *convertReferenceType(const ReferenceType *RT);
 
   const llvm::abi::StructType *convertStructType(const clang::RecordDecl *RD);
   const llvm::abi::UnionType *convertUnionType(const clang::RecordDecl *RD);
