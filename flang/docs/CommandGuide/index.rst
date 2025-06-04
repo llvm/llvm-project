@@ -19,4 +19,4 @@ Flang Command Line Reference
 .. toctree::
    :maxdepth: 1
 
-   ../FlangCommandLineReference
+   FlangCommandLineReference
