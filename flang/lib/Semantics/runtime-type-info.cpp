@@ -1018,9 +1018,11 @@ SymbolVector CollectBindings(const Scope &dtScope) {
       if (overriderIter != localBindings.end()) {
         Symbol &overrider{*overriderIter->second};
         if (symbol.attrs().test(Attr::PRIVATE) &&
+            !symbol.attrs().test(Attr::DEFERRED) &&
             FindModuleContaining(symbol.owner()) !=
                 FindModuleContaining(dtScope)) {
-          // Don't override inaccessible PRIVATE bindings
+          // Don't override inaccessible PRIVATE bindings, unless
+          // they are deferred
           auto &binding{overrider.get<ProcBindingDetails>()};
           binding.set_numPrivatesNotOverridden(
               binding.numPrivatesNotOverridden() + 1);
