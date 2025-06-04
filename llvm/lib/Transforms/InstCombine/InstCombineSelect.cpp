@@ -1312,7 +1312,11 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
 
       // If NewOp is a constant and OldOp is not replace iff NewOp doesn't
       // contain and undef elements.
-      if (match(NewOp, m_ImmConstant()) || NewOp == V) {
+      // Make sure that V is always simpler than TrueVal, otherwise we might
+      // end up in an infinite loop.
+      if (match(NewOp, m_ImmConstant()) ||
+          (isa<Instruction>(TrueVal) &&
+           is_contained(cast<Instruction>(TrueVal)->operands(), V))) {
         if (isGuaranteedNotToBeUndef(NewOp, SQ.AC, &Sel, &DT))
           return replaceOperand(Sel, Swapped ? 2 : 1, V);
         return nullptr;
