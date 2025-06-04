@@ -46,8 +46,9 @@ else()
       "Path where built libsycl libraries should be installed.")
 endif()
 
-set(LIBSYCL_INCLUDE_DIR ${LIBSYCL_SOURCE_DIR}/include)
-set(LIBSYCL_BUILD_INCLUDE_DIR ${LLVM_BINARY_DIR}/include)
+set(LIBSYCL_INCLUDE_DIR include)
+set(LIBSYCL_BUILD_INCLUDE_DIR ${LLVM_BINARY_DIR}/${LIBSYCL_INCLUDE_DIR})
+set(LIBSYCL_SOURCE_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBSYCL_LIBRARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBSYCL_LIBRARY_DIR})
@@ -61,6 +62,15 @@ set(LIBSYCL_PATCH_VERSION 0)
 set(LIBSYCL_VERSION_STRING "${LIBSYCL_MAJOR_VERSION}.${LIBSYCL_MINOR_VERSION}.${LIBSYCL_PATCH_VERSION}")
 set(LIBSYCL_ABI_NAMESPACE "V${LIBSYCL_MAJOR_VERSION}" CACHE STRING
     "The inline ABI namespace used by libsycl. It defaults to Vn where `n` is the current ABI version.")
+
+# Generate headers
+configure_file("${LIBSYCL_SOURCE_DIR}/src/version.hpp.in" "${LIBSYCL_BUILD_INCLUDE_DIR}/sycl/version.hpp")
+
+# Install generated headers.
+install(FILES
+  "${LIBSYCL_BUILD_INCLUDE_DIR}/sycl/version.hpp"
+  DESTINATION "${LIBSYCL_INCLUDE_DIR}/sycl"
+  COMPONENT sycl-headers)
 
 #===============================================================================
 # Setup Compiler Flags
@@ -88,24 +98,22 @@ endif()
 
 # This is a workaround to detect changes (add or modify) in subtree which
 # are not detected by copy_directory command.
-file(GLOB_RECURSE HEADERS_IN_SYCL_DIR CONFIGURE_DEPENDS "${LIBSYCL_INCLUDE_DIR}/sycl/*")
+file(GLOB_RECURSE HEADERS_IN_SYCL_DIR CONFIGURE_DEPENDS "${LIBSYCL_SOURCE_INCLUDE_DIR}/sycl/*")
 
-string(REPLACE "${LIBSYCL_INCLUDE_DIR}" "${LIBSYCL_BUILD_INCLUDE_DIR}"
+string(REPLACE "${LIBSYCL_SOURCE_INCLUDE_DIR}" "${LIBSYCL_BUILD_INCLUDE_DIR}"
   OUT_HEADERS_IN_SYCL_DIR "${HEADERS_IN_SYCL_DIR}")
 
 # Copy SYCL headers from sources to build directory
 add_custom_target(sycl-headers
   DEPENDS ${OUT_HEADERS_IN_SYCL_DIR})
 
-configure_file("${LIBSYCL_SOURCE_DIR}/src/version.hpp.in" "${LIBSYCL_INCLUDE_DIR}/sycl/version.hpp")
-
 add_custom_command(
   OUTPUT  ${OUT_HEADERS_IN_SYCL_DIR}
   DEPENDS ${HEADERS_IN_SYCL_DIR}
-  COMMAND ${CMAKE_COMMAND} -E copy_directory ${LIBSYCL_INCLUDE_DIR}/sycl ${LIBSYCL_BUILD_INCLUDE_DIR}/sycl
+  COMMAND ${CMAKE_COMMAND} -E copy_directory ${LIBSYCL_SOURCE_INCLUDE_DIR}/sycl ${LIBSYCL_BUILD_INCLUDE_DIR}/sycl
   COMMENT "Copying SYCL headers...")
 
-install(DIRECTORY "${LIBSYCL_INCLUDE_DIR}/sycl" DESTINATION ${LIBSYCL_INSTALL_INCLUDE_DIR} COMPONENT sycl-headers)
+install(DIRECTORY "${LIBSYCL_SOURCE_INCLUDE_DIR}/sycl" DESTINATION ${LIBSYCL_INCLUDE_DIR}/sycl COMPONENT sycl-headers)
 
 if (WIN32)
   set(LIBSYCL_RT_LIBS ${LIBSYCL_SHARED_OUTPUT_NAME}${LIBSYCL_MAJOR_VERSION})
