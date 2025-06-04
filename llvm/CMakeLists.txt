@@ -289,7 +289,9 @@ if(LLVM_CCACHE_BUILD)
     set(LLVM_CCACHE_PARAMS "CCACHE_CPP2=yes CCACHE_HASHDIR=yes CCACHE_SLOPPINESS=pch_defines,time_macros"
         CACHE STRING "Parameters to pass through to ccache")
 
-    # Using precompiled headers with ccache builds can result in intermittent CI failures
+    # FIXME: This is a workaround for an unknown underlying issue where the header file
+    # changes but then the pch does not get rebuilt before its dependencies.
+    # See: https://github.com/llvm/llvm-project/issues/142449
     set(LLVM_CCACHE_PCH OFF CACHE BOOL "Use precompiled headers in ccache builds")
     if (NOT LLVM_CCACHE_PCH)
       set(CMAKE_DISABLE_PRECOMPILE_HEADERS "ON")

@@ -412,7 +412,9 @@ enabled sub-projects. Nearly all of these variable names begin with
   Defaults to OFF.  The size and location of the cache maintained
   by ``ccache`` can be adjusted via the LLVM_CCACHE_MAXSIZE and LLVM_CCACHE_DIR
   options, which are passed to the CCACHE_MAXSIZE and CCACHE_DIR environment
-  variables, respectively.
+  variables, respectively. By default, enabling the ccache build will disable
+  using precompiled headers as they have been known to cause intermittent CI
+  failures. This can be adjusted via the LLVM_CCACHE_PCH option.
 
 **LLVM_CODE_COVERAGE_TARGETS**:STRING
   If set to a semicolon separated list of targets, those targets will be used
