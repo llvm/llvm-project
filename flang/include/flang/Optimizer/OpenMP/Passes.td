@@ -21,6 +21,12 @@ def MapInfoFinalizationPass
     explicit individual mapping by the OpenMP runtime.
   }];
   let dependentDialects = ["mlir::omp::OpenMPDialect"];
+
+  let options = [Option<"deferDescMapping", "opt-defer-desc-mapping",
+                      "bool", /*default=*/"true",
+                      "Activates or deactivates deferred descriptor mapping, "
+                      "which delays mapping of top-level descriptors to target "
+                      "regions and target data regions">];
 }
 
 def MapsForPrivatizedSymbolsPass

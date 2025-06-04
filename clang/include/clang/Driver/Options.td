@@ -7305,6 +7305,15 @@ def fhermetic_module_files : Flag<["-"], "fhermetic-module-files">, Group<f_Grou
 def fdo_concurrent_to_openmp_EQ : Joined<["-"], "fdo-concurrent-to-openmp=">,
   HelpText<"Try to map `do concurrent` loops to OpenMP [none|host|device]">,
       Values<"none, host, device">;
+
+def fdefer_desc_map : Flag<["-"], "fdefer-desc-map">, Group<f_Group>,
+  HelpText<"Enable deferred descriptor mapping, which puts off top-level descriptor "
+    "mapping until target regions, this is the default behaviour">;
+
+def fno_defer_desc_map : Flag<["-"], "fno-defer-desc-map">, Group<f_Group>,
+  HelpText<"Disable deferred deferred descriptor mapping, which puts off top-level "
+          " descriptor mapping till target regions">;
+
 } // let Visibility = [FC1Option, FlangOption]
 
 def J : JoinedOrSeparate<["-"], "J">,

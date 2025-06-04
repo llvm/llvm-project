@@ -58,6 +58,13 @@ namespace {
 class MapInfoFinalizationPass
     : public flangomp::impl::MapInfoFinalizationPassBase<
           MapInfoFinalizationPass> {
+public:
+  MapInfoFinalizationPass() = default;
+
+  MapInfoFinalizationPass(
+      const flangomp::MapInfoFinalizationPassOptions &options)
+      : MapInfoFinalizationPassBase(options) {}
+
   /// Helper class tracking a members parent and its
   /// placement in the parents member list
   struct ParentAndPlacement {
@@ -954,17 +961,20 @@ class MapInfoFinalizationPass
       // within a target region. At which point we map the relevant descriptor
       // data and the runtime should correctly associate the data with the
       // descriptor and bind together and allow clean mapping and execution.
-      func->walk([&](mlir::omp::MapInfoOp op) {
-        if (fir::isTypeWithDescriptor(op.getVarType()) ||
-            mlir::isa_and_present<fir::BoxAddrOp>(
-                op.getVarPtr().getDefiningOp())) {
-          mlir::Operation *targetUser = getFirstTargetUser(op);
-          assert(targetUser && "expected user of map operation was not found");
-          builder.setInsertionPoint(op);
-          removeTopLevelDescriptor(op, builder, targetUser);
-          addImplictDescriptorMapToTargetDataOp(op, builder, targetUser);
-        }
-      });
+      if (deferDescMapping) {
+        func->walk([&](mlir::omp::MapInfoOp op) {
+          if (fir::isTypeWithDescriptor(op.getVarType()) ||
+              mlir::isa_and_present<fir::BoxAddrOp>(
+                  op.getVarPtr().getDefiningOp())) {
+            mlir::Operation *targetUser = getFirstTargetUser(op);
+            assert(targetUser &&
+                   "expected user of map operation was not found");
+            builder.setInsertionPoint(op);
+            removeTopLevelDescriptor(op, builder, targetUser);
+            addImplictDescriptorMapToTargetDataOp(op, builder, targetUser);
+          }
+        });
+      }
 
       // Wait until after we have generated all of our maps to add them onto
       // the target's block arguments, simplifying the process as there would be
@@ -977,5 +987,11 @@ class MapInfoFinalizationPass
     });
   }
 };
-
 } // namespace
+
+std::unique_ptr<mlir::Pass>
+flangomp::createMapInfoFinalizationPass(bool deferDescMap) {
+  MapInfoFinalizationPassOptions options;
+  options.deferDescMapping = deferDescMap;
+  return std::make_unique<MapInfoFinalizationPass>(options);
+}
