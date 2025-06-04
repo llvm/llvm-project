@@ -256,7 +256,12 @@ public:
 struct GenericKernelTy {
   /// Construct a kernel with a name and a execution mode.
   GenericKernelTy(const char *Name)
-      : Name(Name), PreferredNumThreads(0), MaxNumThreads(0) {}
+      : Name(Name), PreferredNumThreads(0), MaxNumThreads(0) {
+    // Ensure that the name is null terminated so getName() can just return the
+    // pointer
+    this->Name.push_back('\0');
+    this->Name.pop_back();
+  }
 
   virtual ~GenericKernelTy() {}
 
@@ -277,7 +282,7 @@ struct GenericKernelTy {
                            AsyncInfoWrapperTy &AsyncInfoWrapper) const = 0;
 
   /// Get the kernel name.
-  const char *getName() const { return Name; }
+  const char *getName() const { return Name.data(); }
 
   /// Get the kernel image.
   DeviceImageTy &getImage() const {
@@ -373,7 +378,7 @@ private:
   }
 
   /// The kernel name.
-  const char *Name;
+  SmallString<32> Name;
 
   /// The image that contains this kernel.
   DeviceImageTy *ImagePtr = nullptr;
