@@ -1,6 +1,6 @@
 REQUIRES: zlib
-RUN: llvm-profdata show -sample %S/Inputs/unknown.section.extbin.profdata | FileCheck %s
-RUN: llvm-profdata show -sample %S/Inputs/unknown.section.compressed.extbin.profdata | FileCheck %s
+RUN: llvm-profdata show -sample -all-functions %S/Inputs/unknown.section.extbin.profdata | FileCheck %s
+RUN: llvm-profdata show -sample -all-functions %S/Inputs/unknown.section.compressed.extbin.profdata | FileCheck %s
 RUN: llvm-profdata show -sample -show-sec-info-only %S/Inputs/unknown.section.extbin.profdata | FileCheck %s -check-prefix=HDR
 RUN: llvm-profdata show -sample -show-sec-info-only %S/Inputs/unknown.section.compressed.extbin.profdata | FileCheck %s -check-prefix=HDR-COMPRESS
 
