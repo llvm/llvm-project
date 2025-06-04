@@ -16,4 +16,3 @@ add_mlir_dialect_library(MLIRArmSVEVectorTransformOps
   MLIRArmSVEDialect
   MLIRArmSVETransforms
   )
-  
