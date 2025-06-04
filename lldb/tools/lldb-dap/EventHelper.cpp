@@ -46,7 +46,9 @@ void SendTargetBasedCapabilities(DAP &dap) {
 
   protocol::Event event;
   event.event = "capabilities";
-  event.body = llvm::json::Object{{"supportsStepInTargetsRequest", false}};
+  event.body = llvm::json::Object{
+      {"capabilities",
+       llvm::json::Object{{"supportsStepInTargetsRequest", false}}}};
   dap.Send(event);
 }
 // "ProcessEvent": {
