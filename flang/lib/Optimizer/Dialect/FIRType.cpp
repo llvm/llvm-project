@@ -1499,9 +1499,7 @@ bool fir::BaseBoxType::isPointer() const {
   return llvm::isa<fir::PointerType>(getEleTy());
 }
 
-bool BaseBoxType::isVolatile() const {
-  return fir::isa_volatile_type(*this);
-}
+bool BaseBoxType::isVolatile() const { return fir::isa_volatile_type(*this); }
 //===----------------------------------------------------------------------===//
 // FIROpsDialect
 //===----------------------------------------------------------------------===//
