@@ -875,7 +875,12 @@ void OperationName::UnregisteredOpModel::setInherentAttr(Operation *op,
       attrs.getDictionary(op->getContext());
 }
 void OperationName::UnregisteredOpModel::populateInherentAttrs(
-    Operation *op, NamedAttrList &attrs) {}
+    Operation *op, NamedAttrList &attrs) {
+  auto dict = dyn_cast_or_null<DictionaryAttr>(getPropertiesAsAttr(op));
+  if (dict) {
+    attrs.append(dict.begin(), dict.end());
+  }
+}
 LogicalResult OperationName::UnregisteredOpModel::verifyInherentAttrs(
     OperationName opName, NamedAttrList &attributes,
     function_ref<InFlightDiagnostic()> emitError) {
