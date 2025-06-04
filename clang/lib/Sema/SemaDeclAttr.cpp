@@ -872,6 +872,21 @@ static void handleDiagnoseIfAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       cast<NamedDecl>(D)));
 }
 
+static void handleCFIUncheckedCalleeAttr(Sema &S, Decl *D,
+                                         const ParsedAttr &Attrs) {
+  if (hasDeclarator(D))
+    return;
+
+  if (!isa<ObjCMethodDecl>(D)) {
+    S.Diag(Attrs.getLoc(), diag::warn_attribute_wrong_decl_type)
+        << Attrs << Attrs.isRegularKeywordAttribute()
+        << ExpectedFunctionOrMethod;
+    return;
+  }
+
+  D->addAttr(::new (S.Context) CFIUncheckedCalleeAttr(S.Context, Attrs));
+}
+
 static void handleNoBuiltinAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   static constexpr const StringRef kWildcard = "*";
 
@@ -3192,6 +3207,17 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
       if (!CurFeature.starts_with('+') && !CurFeature.starts_with('-'))
         return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
                << Unsupported << None << AttrStr << Target;
+    }
+  }
+
+  if (Context.getTargetInfo().getTriple().isLoongArch()) {
+    for (const auto &Feature : ParsedAttrs.Features) {
+      StringRef CurFeature = Feature;
+      if (CurFeature.starts_with("!arch=")) {
+        StringRef ArchValue = CurFeature.split("=").second.trim();
+        return Diag(LiteralLoc, diag::err_attribute_unsupported)
+               << "target(arch=..)" << ArchValue;
+      }
     }
   }
 
@@ -7104,6 +7130,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_NoBuiltin:
     handleNoBuiltinAttr(S, D, AL);
     break;
+  case ParsedAttr::AT_CFIUncheckedCallee:
+    handleCFIUncheckedCalleeAttr(S, D, AL);
+    break;
   case ParsedAttr::AT_ExtVectorType:
     handleExtVectorTypeAttr(S, D, AL);
     break;
@@ -7498,6 +7527,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_HLSLWaveSize:
     S.HLSL().handleWaveSizeAttr(D, AL);
+    break;
+  case ParsedAttr::AT_HLSLVkExtBuiltinInput:
+    S.HLSL().handleVkExtBuiltinInputAttr(D, AL);
     break;
   case ParsedAttr::AT_HLSLSV_GroupThreadID:
     S.HLSL().handleSV_GroupThreadIDAttr(D, AL);
