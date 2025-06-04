@@ -3685,7 +3685,8 @@ static bool IsReductionAllowedForType(
       return CheckSymbolSupportsType(
           scope, MangleDefinedOperator(definedOp->v.symbol->name()), type);
     }
-    DIE("Intrinsic Operator not found - parsing gone wrong?");
+    llvm_unreachable(
+        "A DefinedOperator is either a DefinedOpName or an IntrinsicOperator");
   }};
 
   auto checkDesignator{[&](const parser::ProcedureDesignator &procD) {
