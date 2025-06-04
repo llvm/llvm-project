@@ -317,7 +317,7 @@ Non-comprehensive list of changes in this release
   ``sizeof`` or ``typeof`` expression. (#GH138444)
 - Deprecation warning is emitted for the deprecated ``__reference_binds_to_temporary`` intrinsic.
   ``__reference_constructs_from_temporary`` should be used instead. (#GH44056)
-- Support authenticated ``type_info`` vtable pointers in Objective-C++
+- Support pointer authentication for Objective-C exception `type_info` objects
 
 New Compiler Flags
 ------------------
