@@ -150,11 +150,13 @@ struct LinearizeVectorBitCast final
   }
 };
 
-/// This pattern converts the CreateMaskOp to work on a linearized vector.
+/// This pattern converts the vector.create_mask to work on a linearized vector.
 /// It currently supports only 2D masks with a unit outer dimension.
-/// Following,
+///
+/// BEFORE
 ///   vector.create_mask %arg0, %arg1 : vector<1x4xi1>
-/// is converted to:
+///
+/// AFTER
 ///   %zero = arith.constant 0 : index
 ///   %cmpi = arith.cmpi sgt, %arg0, %zero : index
 ///   %index = arith.index_cast %cmpi : i1 to index
