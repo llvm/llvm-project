@@ -1,4 +1,3 @@
-; REQUIRES: x86_64-linux
 
 ; Make sure that we can undrift the MemProf profile and annotate the IR
 ; accordingly.
