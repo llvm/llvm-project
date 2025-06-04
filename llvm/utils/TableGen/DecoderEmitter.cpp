@@ -83,6 +83,13 @@ static cl::opt<bool> LargeTable(
              "in the table instead of the default 16 bits."),
     cl::init(false), cl::cat(DisassemblerEmitterCat));
 
+static cl::opt<bool> UseLambdaInDecodetoMCInst(
+    "use-lambda-in-decode-to-mcinst",
+    cl::desc("Use a table of lambdas instead of a switch case in the\n"
+             "generated `decodeToMCInst` function. Helps improve compile time\n"
+             "of the generated code."),
+    cl::init(false), cl::cat(DisassemblerEmitterCat));
+
 STATISTIC(NumEncodings, "Number of encodings considered");
 STATISTIC(NumEncodingsLackingDisasm,
           "Number of encodings without disassembler info");
@@ -1082,15 +1089,47 @@ void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
      << "using TmpType = "
         "std::conditional_t<std::is_integral<InsnType>::"
         "value, InsnType, uint64_t>;\n";
-  OS << Indent << "TmpType tmp;\n";
-  OS << Indent << "switch (Idx) {\n";
-  OS << Indent << "default: llvm_unreachable(\"Invalid index!\");\n";
-  for (const auto &[Index, Decoder] : enumerate(Decoders)) {
-    OS << Indent << "case " << Index << ":\n";
-    OS << Decoder;
-    OS << Indent + 2 << "return S;\n";
+
+  if (UseLambdaInDecodetoMCInst) {
+    // Emit one lambda for each case first.
+    for (const auto &[Index, Decoder] : enumerate(Decoders)) {
+      OS << Indent << "auto decodeLambda" << Index << " = [](DecodeStatus S,\n"
+         << Indent << "                   InsnType insn, MCInst &MI,\n"
+         << Indent << "                   uint64_t Address, \n"
+         << Indent << "                   const MCDisassembler *Decoder,\n"
+         << Indent << "                   bool &DecodeComplete) {\n";
+      OS << Indent + 2 << "[[maybe_unused]] TmpType tmp;\n";
+      OS << Decoder;
+      OS << Indent + 2 << "return S;\n";
+      OS << Indent << "};\n";
+    }
+    // Build a table of lambdas.
+
+    OS << R"(
+  using LambdaTy =
+      function_ref<DecodeStatus(DecodeStatus, InsnType, MCInst &, uint64_t,
+                                const MCDisassembler *, bool &)>;
+    )";
+    OS << Indent << "const static LambdaTy decodeLambdaTable[] = {\n";
+    for (size_t Index : llvm::seq(Decoders.size()))
+      OS << Indent + 2 << "decodeLambda" << Index << ",\n";
+    OS << Indent << "};\n";
+    OS << Indent << "if (Idx >= " << Decoders.size() << ")\n";
+    OS << Indent + 2 << "llvm_unreachable(\"Invalid index!\");\n";
+    OS << Indent
+       << "return decodeLambdaTable[Idx](S, insn, MI, Address, Decoder, "
+          "DecodeComplete);\n";
+  } else {
+    OS << Indent << "TmpType tmp;\n";
+    OS << Indent << "switch (Idx) {\n";
+    OS << Indent << "default: llvm_unreachable(\"Invalid index!\");\n";
+    for (const auto &[Index, Decoder] : enumerate(Decoders)) {
+      OS << Indent << "case " << Index << ":\n";
+      OS << Decoder;
+      OS << Indent + 2 << "return S;\n";
+    }
+    OS << Indent << "}\n";
   }
-  OS << Indent << "}\n";
   Indent -= 2;
   OS << Indent << "}\n";
 }
