@@ -1857,26 +1857,29 @@ void OmpVisitor::ProcessReductionSpecifier(
     const std::optional<parser::OmpClauseList> &clauses,
     const T &wholeOmpConstruct) {
   const parser::Name *name{nullptr};
-  parser::Name mangledName;
+  parser::CharBlock mangledName;
   UserReductionDetails reductionDetailsTemp;
   const auto &id{std::get<parser::OmpReductionIdentifier>(spec.t)};
-  if (auto procDes{std::get_if<parser::ProcedureDesignator>(&id.u)}) {
+  if (auto *procDes{std::get_if<parser::ProcedureDesignator>(&id.u)}) {
     name = std::get_if<parser::Name>(&procDes->u);
-    if (name) {
-      mangledName.source = MangleSpecialFunctions(name->source);
-    }
-
+    // This shouldn't be a procedure component: this is the name of the
+    // reduction being declared.
+    assert(name && "ProcedureDesignator contained ProcComponentRef");
+    // Prevent the symbol from conflicting with the builtin function name
+    mangledName = MangleSpecialFunctions(name->source);
+    // Note: the Name inside the parse tree is not updated because it is const.
+    // All lookups must use MangleSpecialFunctions.
   } else {
     const auto &defOp{std::get<parser::DefinedOperator>(id.u)};
-    if (const auto definedOp{std::get_if<parser::DefinedOpName>(&defOp.u)}) {
+    if (const auto *definedOp{std::get_if<parser::DefinedOpName>(&defOp.u)}) {
       name = &definedOp->v;
-      mangledName.source = parser::CharBlock{context().StoreUserReductionName(
-          MangleDefinedOperator(definedOp->v.source))};
+      // TODO: StoreReductionName
+      mangledName = parser::CharBlock{context().StoreUserReductionName(
+          MangleDefinedOperator(name->source))};
     } else {
-      mangledName.source = MakeNameFromOperator(
+      mangledName = MakeNameFromOperator(
           std::get<parser::DefinedOperator::IntrinsicOperator>(defOp.u),
           context());
-      name = &mangledName;
     }
   }
 
@@ -1884,7 +1887,7 @@ void OmpVisitor::ProcessReductionSpecifier(
   // the first, or only, instance with this name). The details then
   // gets stored in the symbol when it's created.
   UserReductionDetails *reductionDetails{&reductionDetailsTemp};
-  Symbol *symbol{FindSymbol(mangledName)};
+  Symbol *symbol{currScope().FindSymbol(mangledName)};
   if (symbol) {
     // If we found a symbol, we append the type info to the
     // existing reductionDetails.
@@ -1893,7 +1896,7 @@ void OmpVisitor::ProcessReductionSpecifier(
     if (!reductionDetails) {
       context().Say(
           "Duplicate definition of '%s' in DECLARE REDUCTION"_err_en_US,
-          name->source);
+          mangledName);
       return;
     }
   }
@@ -1943,10 +1946,10 @@ void OmpVisitor::ProcessReductionSpecifier(
 
   reductionDetails->AddDecl(&wholeOmpConstruct);
 
+  if (!symbol) {
+    symbol = &MakeSymbol(mangledName, Attrs{}, std::move(*reductionDetails));
+  }
   if (name) {
-    if (!symbol) {
-      symbol = &MakeSymbol(mangledName, Attrs{}, std::move(*reductionDetails));
-    }
     name->symbol = symbol;
   }
 }
