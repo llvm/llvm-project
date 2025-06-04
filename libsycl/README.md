@@ -7,11 +7,11 @@ Subproject documentation is available at: [SYCL RT documentation](./docs).
 
 libsycl runtime library and headers require C++17 support or higher.
 
-### How to use DPC++
+### How to use libsycl with Clang
 
 TBD
 
-#### Build from sources
+#### How to build
 
 TBD
 
