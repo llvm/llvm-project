@@ -685,6 +685,11 @@ llvm::Constant *CodeGenModule::getMemberFunctionPointer(llvm::Constant *Pointer,
       *Entry = Pointer;
   }
 
+  if (const auto *MFT = dyn_cast<MemberPointerType>(FT.getTypePtr())) {
+    if (MFT->hasPointeeToToCFIUncheckedCalleeFunctionType())
+      Pointer = llvm::NoCFIValue::get(cast<llvm::GlobalValue>(Pointer));
+  }
+
   return Pointer;
 }
 
