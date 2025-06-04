@@ -140,10 +140,11 @@ def SharedVar : SubsetSubject<Var,
                               [{S->hasGlobalStorage() && !S->getTLSKind()}],
                               "global variables">;
 
-def HLSLInputBuiltin : SubsetSubject<Var, [{S->hasGlobalStorage() &&
-                    S->getStorageClass()==StorageClass::SC_Static &&
-                    S->getType().isConstQualified()}],
-                                     "static const globals">;
+def HLSLInputBuiltin
+    : SubsetSubject<Var, [{S->hasGlobalStorage() &&
+                           S->getStorageClass() == StorageClass::SC_Static &&
+                           S->getType().isConstQualified()}],
+                    "static const globals">;
 
 def GlobalVar : SubsetSubject<Var,
                              [{S->hasGlobalStorage()}], "global variables">;
