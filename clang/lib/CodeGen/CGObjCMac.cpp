@@ -7684,15 +7684,9 @@ CGObjCNonFragileABIMac::GetInterfaceEHType(const ObjCInterfaceDecl *ID,
 
   if (auto &Schema =
           CGM.getCodeGenOpts().PointerAuth.CXXTypeInfoVTablePointer) {
-    uint32_t discrimination = 0;
-    if (Schema.hasOtherDiscrimination()) {
-      assert(Schema.getOtherDiscrimination() ==
-             PointerAuthSchema::Discrimination::Constant);
-      discrimination = Schema.getConstantDiscrimination();
-    }
-    values.addSignedPointer(
-        VTablePtr, Schema.getKey(), Schema.isAddressDiscriminated(),
-        llvm::ConstantInt::get(CGM.IntPtrTy, discrimination));
+      assert(!Schema.hasOtherDiscrimination() ||
+             Schema.getOtherDiscrimination() == PointerAuthSchema::Discrimination::Constant);
+    values.addSignedPointer(VTablePtr, Schema, GlobalDecl(), QualType());
   } else {
     values.add(VTablePtr);
   }

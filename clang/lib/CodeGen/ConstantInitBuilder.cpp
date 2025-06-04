@@ -314,15 +314,3 @@ void ConstantAggregateBuilderBase::addSignedPointer(
       Pointer, Schema, StorageAddress, CalleeDecl, CalleeType);
   add(SignedPointer);
 }
-
-void ConstantAggregateBuilderBase::addSignedPointer(
-    llvm::Constant *Pointer, unsigned Key, bool UseAddressDiscrimination,
-    llvm::ConstantInt *OtherDiscriminator) {
-  llvm::Constant *StorageAddress = nullptr;
-  if (UseAddressDiscrimination)
-    StorageAddress = getAddrOfCurrentPosition(Pointer->getType());
-
-  llvm::Constant *SignedPointer = Builder.CGM.getConstantSignedPointer(
-      Pointer, Key, StorageAddress, OtherDiscriminator);
-  add(SignedPointer);
-}
