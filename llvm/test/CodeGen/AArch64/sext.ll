@@ -1245,12 +1245,10 @@ entry:
 define <2 x i128> @sext_v2i64_v2i128(<2 x i64> %a) {
 ; CHECK-SD-LABEL: sext_v2i64_v2i128:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov x8, v0.d[1]
-; CHECK-SD-NEXT:    dup v1.2d, v0.d[1]
+; CHECK-SD-NEXT:    mov x2, v0.d[1]
 ; CHECK-SD-NEXT:    fmov x0, d0
-; CHECK-SD-NEXT:    fmov x2, d1
 ; CHECK-SD-NEXT:    asr x1, x0, #63
-; CHECK-SD-NEXT:    asr x3, x8, #63
+; CHECK-SD-NEXT:    asr x3, x2, #63
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sext_v2i64_v2i128:

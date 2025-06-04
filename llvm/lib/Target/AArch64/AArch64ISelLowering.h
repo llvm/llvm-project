@@ -449,6 +449,10 @@ public:
   /// Enable aggressive FMA fusion on targets that want it.
   bool enableAggressiveFMAFusion(EVT VT) const override;
 
+  bool aggressivelyPreferBuildVectorSources(EVT VecVT) const override {
+    return true;
+  }
+
   /// Returns the size of the platform's va_list object.
   unsigned getVaListSizeInBits(const DataLayout &DL) const override;
 
