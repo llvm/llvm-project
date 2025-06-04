@@ -10,6 +10,10 @@
 
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 
+#include "llvm/Support/MSVCErrorWorkarounds.h"
+
+#include <future>
+
 #define DEBUG_TYPE "orc"
 
 namespace llvm {
@@ -35,8 +39,9 @@ SimpleExecutorDylibManager::open(const std::string &Path, uint64_t Mode) {
 
   std::lock_guard<std::mutex> Lock(M);
   auto H = ExecutorAddr::fromPtr(DL.getOSSpecificHandle());
+  Resolvers.push_back(std::make_unique<DylibSymbolResolver>(H));
   Dylibs.insert(DL.getOSSpecificHandle());
-  return H;
+  return ExecutorAddr::fromPtr(Resolvers.back().get());
 }
 
 Expected<std::vector<ExecutorSymbolDef>>
@@ -96,6 +101,8 @@ void SimpleExecutorDylibManager::addBootstrapSymbols(
       ExecutorAddr::fromPtr(&openWrapper);
   M[rt::SimpleExecutorDylibManagerLookupWrapperName] =
       ExecutorAddr::fromPtr(&lookupWrapper);
+  M[rt::SimpleExecutorDylibManagerResolveWrapperName] =
+      ExecutorAddr::fromPtr(&resolveWrapper);
 }
 
 llvm::orc::shared::CWrapperFunctionResult
@@ -115,6 +122,25 @@ SimpleExecutorDylibManager::lookupWrapper(const char *ArgData, size_t ArgSize) {
              ArgData, ArgSize,
              shared::makeMethodWrapperHandler(
                  &SimpleExecutorDylibManager::lookup))
+          .release();
+}
+
+llvm::orc::shared::CWrapperFunctionResult
+SimpleExecutorDylibManager::resolveWrapper(const char *ArgData,
+                                           size_t ArgSize) {
+  using ResolveResult = ExecutorResolver::ResolveResult;
+  return shared::WrapperFunction<
+             rt::SPSSimpleExecutorDylibManagerResolveSignature>::
+      handle(ArgData, ArgSize,
+             [](ExecutorAddr Obj, RemoteSymbolLookupSet L) -> ResolveResult {
+               using TmpResult = MSVCPExpected<std::vector<ExecutorSymbolDef>>;
+               std::promise<TmpResult> P;
+               auto F = P.get_future();
+               Obj.toPtr<ExecutorResolver *>()->resolveAsync(
+                   std::move(L),
+                   [&](TmpResult R) { P.set_value(std::move(R)); });
+               return F.get();
+             })
           .release();
 }
 

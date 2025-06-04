@@ -35,6 +35,7 @@ public:
     ExecutorAddr Instance;
     ExecutorAddr Open;
     ExecutorAddr Lookup;
+    ExecutorAddr Resolve;
   };
 
   /// Create an EPCGenericMemoryAccess instance from a given set of
@@ -68,8 +69,8 @@ public:
     return RF.get();
   }
 
-  using SymbolLookupCompleteFn =
-      unique_function<void(Expected<std::vector<ExecutorSymbolDef>>)>;
+  using SymbolLookupCompleteFn = unique_function<void(
+      Expected<std::vector<ExecutorSymbolDef>>)>;
 
   /// Looks up symbols within the given dylib.
   LLVM_ABI void lookupAsync(tpctypes::DylibHandle H,

@@ -114,6 +114,10 @@ struct PointerWrite {
 /// A handle used to represent a loaded dylib in the target process.
 using DylibHandle = ExecutorAddr;
 
+/// A handle used to reference the resolver associated with a loaded
+///  dylib in the target process.
+using ResolverHandle = ExecutorAddr;
+
 using LookupResult = std::vector<ExecutorSymbolDef>;
 
 } // end namespace tpctypes
