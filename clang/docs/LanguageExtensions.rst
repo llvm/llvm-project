@@ -2043,6 +2043,17 @@ references can be used instead of numeric references.
       return -1;
   }
 
+ASM Goto versus Branch Target Enforcement
+=========================================
+
+Some target architectures implement branch target enforcement, by requiring
+indirect (register-controlled) branch instructions to jump only to locations
+marked by a special instruction (such as AArch64 ``bti``).
+
+The assembler code inside an ``asm goto`` statement is expected not to use a
+branch instruction of that kind to transfer control to any of its destination
+labels. Therefore, using a label in an ``asm goto`` statement does not cause
+clang to put a ``bti`` or equivalent instruction at the label.
 
 Constexpr strings in GNU ASM statements
 =======================================
