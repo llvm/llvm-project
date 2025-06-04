@@ -100,7 +100,7 @@ static Instruction *foldSelectBinOpIdentity(SelectInst &Sel,
   // transform. Bail out if we can not exclude that possibility.
   if (isa<FPMathOperator>(BO))
     if (!BO->hasNoSignedZeros() &&
-        !cannotBeNegativeZero(Y, 0,
+        !cannotBeNegativeZero(Y,
                               IC.getSimplifyQuery().getWithInstruction(&Sel)))
       return nullptr;
 
@@ -2800,9 +2800,8 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
     if (match(TrueVal, m_FSub(m_PosZeroFP(), m_Specific(X))) &&
         (cast<FPMathOperator>(CondVal)->hasNoNaNs() || SI.hasNoNaNs() ||
          (SI.hasOneUse() && canIgnoreSignBitOfNaN(*SI.use_begin())) ||
-         isKnownNeverNaN(X, /*Depth=*/0,
-                         IC.getSimplifyQuery().getWithInstruction(
-                             cast<Instruction>(CondVal))))) {
+         isKnownNeverNaN(X, IC.getSimplifyQuery().getWithInstruction(
+                                cast<Instruction>(CondVal))))) {
       if (!Swap && (Pred == FCmpInst::FCMP_OLE || Pred == FCmpInst::FCMP_ULE)) {
         Value *Fabs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, &SI);
         return IC.replaceInstUsesWith(SI, Fabs);
@@ -3757,8 +3756,7 @@ static Value *foldSelectBitTest(SelectInst &Sel, Value *CondVal, Value *TrueVal,
       assert(ICmpInst::isEquality(Res->Pred) && "Not equality test?");
       AndMask = Res->Mask;
       V = Res->X;
-      KnownBits Known =
-          computeKnownBits(V, /*Depth=*/0, SQ.getWithInstruction(&Sel));
+      KnownBits Known = computeKnownBits(V, SQ.getWithInstruction(&Sel));
       AndMask &= Known.getMaxValue();
       if (!AndMask.isPowerOf2())
         return nullptr;
@@ -4185,7 +4183,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   // the assumption cache, so make sure that is populated.
   if (!CondVal->getType()->isVectorTy() && !AC.assumptions().empty()) {
     KnownBits Known(1);
-    computeKnownBits(CondVal, Known, 0, &SI);
+    computeKnownBits(CondVal, Known, &SI);
     if (Known.One.isOne())
       return replaceInstUsesWith(SI, TrueVal);
     if (Known.Zero.isOne())
@@ -4340,7 +4338,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     if (!CC.AffectedValues.empty()) {
       if (!isa<Constant>(TrueVal) &&
           hasAffectedValue(TrueVal, CC.AffectedValues, /*Depth=*/0)) {
-        KnownBits Known = llvm::computeKnownBits(TrueVal, /*Depth=*/0, Q);
+        KnownBits Known = llvm::computeKnownBits(TrueVal, Q);
         if (Known.isConstant())
           return replaceOperand(SI, 1,
                                 ConstantInt::get(SelType, Known.getConstant()));
@@ -4349,7 +4347,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       CC.Invert = true;
       if (!isa<Constant>(FalseVal) &&
           hasAffectedValue(FalseVal, CC.AffectedValues, /*Depth=*/0)) {
-        KnownBits Known = llvm::computeKnownBits(FalseVal, /*Depth=*/0, Q);
+        KnownBits Known = llvm::computeKnownBits(FalseVal, Q);
         if (Known.isConstant())
           return replaceOperand(SI, 2,
                                 ConstantInt::get(SelType, Known.getConstant()));

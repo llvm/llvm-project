@@ -628,6 +628,8 @@ Improvements to Clang's diagnostics
   diagnostic group ``-Wimplicit-int-comparison-on-negation``, grouped under
   ``-Wimplicit-int-conversion``, so user can turn it off independently.
 
+- Improved the FixIts for unused lambda captures.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -1065,7 +1067,9 @@ Sanitizers
 ----------
 
 - ``-fsanitize=vptr`` is no longer a part of ``-fsanitize=undefined``.
-- Sanitizer ignorelists now support the syntax ``src:*=sanitize``.
+- Sanitizer ignorelists now support the syntax ``src:*=sanitize``, 
+  ``type:*=sanitize``, ``fun:*=sanitize``, ``global:*=sanitize``,
+  and ``mainfile:*=sanitize``.
 
 Python Binding Changes
 ----------------------
