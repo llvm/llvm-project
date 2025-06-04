@@ -119,6 +119,10 @@ public:
     return N;
   }
 
+  // Take a string Name with sub-words separated with characters from Sep,
+  // and return a string with each of the sub-words capitalized, and the
+  // separators removed, e.g.
+  //   Name = "some_directive^name", Sep = "_^"  ->  "SomeDirectiveName".
   static std::string getUpperCamelName(StringRef Name, StringRef Sep) {
     std::string Camel = Name.str();
     // Convert to uppercase
