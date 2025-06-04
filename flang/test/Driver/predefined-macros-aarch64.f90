@@ -1,4 +1,4 @@
-! Test predefined macro for 64 bit X86 architecture
+! Test predefined macro for AArch64
 
 ! REQUIRES: aarch64-registered-target
 
