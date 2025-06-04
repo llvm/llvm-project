@@ -160,6 +160,16 @@ void xegpu::setLayoutAttr(const T &operandOrResult, const LayoutAttr layout) {
     owner->setAttr(name, layout);
 }
 
+// Explicit instantiation for OpResult
+template void
+xegpu::setLayoutAttr<mlir::OpResult>(const mlir::OpResult &result,
+                                     const mlir::xegpu::LayoutAttr layout);
+
+// Explicit instantiation for OpOperand
+template void
+xegpu::setLayoutAttr<mlir::OpOperand>(const mlir::OpOperand &operand,
+                                      const mlir::xegpu::LayoutAttr layout);
+
 void xegpu::setLayoutAttrs(Operation *op,
                            function_ref<LayoutAttr(Value)> getLayoutImpl) {
   op->walk([&](Operation *nestOp) {

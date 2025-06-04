@@ -14419,6 +14419,12 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     if (getLangOpts().HLSL && HLSL().ActOnUninitializedVarDecl(Var))
       return;
 
+    // HLSL input variables are expected to be externally initialized, even
+    // when marked `static`.
+    if (getLangOpts().HLSL &&
+        Var->getType().getAddressSpace() == LangAS::hlsl_input)
+      return;
+
     // C++03 [dcl.init]p9:
     //   If no initializer is specified for an object, and the
     //   object is of (possibly cv-qualified) non-POD class type (or

@@ -97,7 +97,7 @@ define i32 @addorlow16(i32 %x) {
 ; RV64-LABEL: addorlow16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lui a1, 16
-; RV64-NEXT:    addiw a1, a1, -1
+; RV64-NEXT:    addi a1, a1, -1
 ; RV64-NEXT:    addw a0, a0, a1
 ; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    ret
@@ -107,19 +107,12 @@ define i32 @addorlow16(i32 %x) {
 }
 
 define i32 @andxorlow16(i32 %x) {
-; RV32-LABEL: andxorlow16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    lui a1, 16
-; RV32-NEXT:    addi a1, a1, -1
-; RV32-NEXT:    andn a0, a1, a0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: andxorlow16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    lui a1, 16
-; RV64-NEXT:    addiw a1, a1, -1
-; RV64-NEXT:    andn a0, a1, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: andxorlow16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, 16
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    andn a0, a1, a0
+; CHECK-NEXT:    ret
   %and = and i32 %x, 65535
   %xor = xor i32 %and, 65535
   ret i32 %xor
