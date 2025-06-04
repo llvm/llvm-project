@@ -86,20 +86,22 @@ detail::verifyBranchSuccessorOperands(Operation *op, unsigned succNo,
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verifyWeights(Operation *op, DenseI32ArrayAttr weights,
-                                   int64_t weightsNum,
+                                   int64_t expectedWeightsNum,
                                    llvm::StringRef weightAnchorName,
                                    llvm::StringRef weightRefName) {
-  if (weights) {
-    if (weights.size() != weightsNum)
-      return op->emitError() << "expects number of " << weightAnchorName
-                             << " weights to match number of " << weightRefName
-                             << ": " << weights.size() << " vs " << weightsNum;
+  if (!weights)
+    return success();
 
-    for (auto weight : llvm::enumerate(weights.asArrayRef()))
-      if (weight.value() < 0)
-        return op->emitError()
-               << "weight #" << weight.index() << " must be non-negative";
-  }
+  if (weights.size() != expectedWeightsNum)
+    return op->emitError() << "expects number of " << weightAnchorName
+                           << " weights to match number of " << weightRefName
+                           << ": " << weights.size() << " vs "
+                           << expectedWeightsNum;
+
+  for (auto [index, weight] : llvm::enumerate(weights.asArrayRef()))
+    if (weight < 0)
+      return op->emitError() << "weight #" << index << " must be non-negative";
+
   return success();
 }
 
@@ -109,6 +111,8 @@ LogicalResult detail::verifyBranchWeights(Operation *op) {
   // CallOpInterface operations without successors may only have
   // one weight, though it seems to be redundant and indicate
   // 100% probability of calling the callee(s).
+  // TODO: maybe we should remove this interface for calls without
+  // successors.
   int64_t weightsNum =
       (successorsNum == 0 && isa<CallOpInterface>(op)) ? 1 : successorsNum;
   return verifyWeights(op, weights, weightsNum, "branch", "successors");
