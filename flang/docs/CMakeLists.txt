@@ -119,7 +119,7 @@ if (LLVM_ENABLE_SPHINX)
               "${CMAKE_CURRENT_SOURCE_DIR}"
               "${CMAKE_CURRENT_BINARY_DIR}/Source"
         COMMAND "${CMAKE_COMMAND}" -E remove
-          "${CMAKE_CURRENT_BINARY_DIR}/Source/index.rst"
+          "${CMAKE_CURRENT_BINARY_DIR}/Source/CommandGuide/index.rst"
         DEPENDS flang-doc gen-FlangCommandLineReference.rst)
 
       # Run Python preprocessing ONLY for HTML build
