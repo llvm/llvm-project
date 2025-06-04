@@ -582,6 +582,28 @@ llvm::json::Value toJSON(const SteppingGranularity &SG) {
   llvm_unreachable("unhandled stepping granularity.");
 }
 
+bool fromJSON(const json::Value &Params, StepInTarget &SIT, json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("id", SIT.id) && O.map("label", SIT.label) &&
+         O.map("line", SIT.line) && O.map("column", SIT.column) &&
+         O.map("endLine", SIT.endLine) && O.map("endColumn", SIT.endColumn);
+}
+
+llvm::json::Value toJSON(const StepInTarget &SIT) {
+  json::Object target{{"id", SIT.id}, {"label", SIT.label}};
+
+  if (SIT.line != LLDB_INVALID_LINE_NUMBER)
+    target.insert({"line", SIT.line});
+  if (SIT.column != LLDB_INVALID_COLUMN_NUMBER)
+    target.insert({"column", SIT.column});
+  if (SIT.endLine != LLDB_INVALID_LINE_NUMBER)
+    target.insert({"endLine", SIT.endLine});
+  if (SIT.endLine != LLDB_INVALID_COLUMN_NUMBER)
+    target.insert({"endColumn", SIT.endColumn});
+
+  return target;
+}
+
 bool fromJSON(const llvm::json::Value &Params, ValueFormat &VF,
               llvm::json::Path P) {
   json::ObjectMapper O(Params, P);
@@ -847,8 +869,15 @@ bool fromJSON(const llvm::json::Value &Params, DisassembledInstruction &DI,
 }
 
 llvm::json::Value toJSON(const DisassembledInstruction &DI) {
-  llvm::json::Object result{{"address", "0x" + llvm::utohexstr(DI.address)},
-                            {"instruction", DI.instruction}};
+  llvm::json::Object result{{"instruction", DI.instruction}};
+  if (DI.address == LLDB_INVALID_ADDRESS) {
+    // VS Code has explicit comparisons to the string "-1" in order to check for
+    // invalid instructions. See
+    // https://github.com/microsoft/vscode/blob/main/src/vs/workbench/contrib/debug/browser/disassemblyView.ts
+    result.insert({"address", "-1"});
+  } else {
+    result.insert({"address", "0x" + llvm::utohexstr(DI.address)});
+  }
 
   if (DI.instructionBytes)
     result.insert({"instructionBytes", *DI.instructionBytes});

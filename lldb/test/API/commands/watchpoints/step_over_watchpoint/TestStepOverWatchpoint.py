@@ -19,11 +19,8 @@ class TestStepOverWatchpoint(TestBase):
         return (target, process, thread, frame, read_watchpoint)
 
     @add_test_categories(["basic_process"])
-    @expectedFailureAll(
-        macos_version=["<", "14.4"],
-        archs=["aarch64", "arm"],
-        bugnumber="<rdar://problem/106868647>",
-    )
+    # kernel disables wp's over instruction step, fixed in macOS 14.4.
+    @skipIf(macos_version=["<", "14.4"])
     def test_step_over_read_watchpoint(self):
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
@@ -62,11 +59,8 @@ class TestStepOverWatchpoint(TestBase):
         self.step_inst_for_watchpoint(1)
 
     @add_test_categories(["basic_process"])
-    @expectedFailureAll(
-        macos_version=["<", "14.4"],
-        archs=["aarch64", "arm"],
-        bugnumber="<rdar://problem/106868647>",
-    )
+    # kernel disables wp's over instruction step, fixed in macOS 14.4.
+    @skipIf(macos_version=["<", "14.4"])
     def test_step_over_write_watchpoint(self):
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(

@@ -15,6 +15,7 @@
 #define LLVM_CODEGEN_MACROFUSION_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 namespace llvm {
@@ -36,15 +37,15 @@ using MacroFusionPredTy = bool (*)(const TargetInstrInfo &TII,
 
 /// Checks if the number of cluster edges between SU and its predecessors is
 /// less than FuseLimit
-bool hasLessThanNumFused(const SUnit &SU, unsigned FuseLimit);
+LLVM_ABI bool hasLessThanNumFused(const SUnit &SU, unsigned FuseLimit);
 
 /// Create an artificial edge between FirstSU and SecondSU.
 /// Make data dependencies from the FirstSU also dependent on the SecondSU to
 /// prevent them from being scheduled between the FirstSU and the SecondSU
 /// and vice-versa.
 /// Fusing more than 2 instructions is not currently supported.
-bool fuseInstructionPair(ScheduleDAGInstrs &DAG, SUnit &FirstSU,
-                         SUnit &SecondSU);
+LLVM_ABI bool fuseInstructionPair(ScheduleDAGInstrs &DAG, SUnit &FirstSU,
+                                  SUnit &SecondSU);
 
 /// Create a DAG scheduling mutation to pair instructions back to back
 /// for instructions that benefit according to the target-specific
@@ -52,7 +53,7 @@ bool fuseInstructionPair(ScheduleDAGInstrs &DAG, SUnit &FirstSU,
 /// provided predicates are true.
 /// If BranchOnly is true, only branch instructions with one of their
 /// predecessors will be fused.
-std::unique_ptr<ScheduleDAGMutation>
+LLVM_ABI std::unique_ptr<ScheduleDAGMutation>
 createMacroFusionDAGMutation(ArrayRef<MacroFusionPredTy> Predicates,
                              bool BranchOnly = false);
 

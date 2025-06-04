@@ -8,6 +8,7 @@
 
 #include "llvm/ExecutionEngine/Orc/COFFVCRuntimeSupport.h"
 
+#include "llvm/ExecutionEngine/Orc/COFF.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -81,12 +82,14 @@ Error COFFVCRuntimeBootstrapper::loadVCRuntime(
   auto LoadLibrary = [&](SmallString<256> LibPath, StringRef LibName) -> Error {
     sys::path::append(LibPath, LibName);
 
-    auto G = StaticLibraryDefinitionGenerator::Load(ObjLinkingLayer,
-                                                    LibPath.c_str());
+    std::set<std::string> NewImportedLibraries;
+    auto G = StaticLibraryDefinitionGenerator::Load(
+        ObjLinkingLayer, LibPath.c_str(),
+        COFFImportFileScanner(NewImportedLibraries));
     if (!G)
       return G.takeError();
 
-    llvm::append_range(ImportedLibraries, (*G)->getImportedDynamicLibraries());
+    llvm::append_range(ImportedLibraries, NewImportedLibraries);
 
     JD.addGenerator(std::move(*G));
 
