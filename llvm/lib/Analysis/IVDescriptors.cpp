@@ -760,43 +760,80 @@ RecurrenceDescriptor::isMinMaxPattern(Instruction *I, const InstDesc &Prev,
       !match(I, m_Select(m_OneUse(m_Cmp()), m_Value(), m_Value())))
     return InstDesc(false, I);
 
-  // Look for a min/max pattern.
-  if (match(I, m_UMin(m_Value(), m_Value())))
-    return InstDesc(I, RecurKind::UMin);
-  if (match(I, m_UMax(m_Value(), m_Value())))
-    return InstDesc(I, RecurKind::UMax);
-  if (match(I, m_SMax(m_Value(), m_Value())))
-    return InstDesc(I, RecurKind::SMax);
-  if (match(I, m_SMin(m_Value(), m_Value())))
-    return InstDesc(I, RecurKind::SMin);
-
-  // minimum/minnum and maximum/maxnum intrinsics do not require nsz and nnan
-  // flags since NaN and signed zeroes are propagated in the intrinsic
-  // implementation.
-  if (match(I, m_FMinimumNum(m_Value(), m_Value())))
-    return InstDesc(I, RecurKind::FMinimumNum);
-  if (match(I, m_FMaximumNum(m_Value(), m_Value())))
-    return InstDesc(I, RecurKind::FMaximumNum);
-  if (match(I, m_FMinimum(m_Value(), m_Value())))
-    return InstDesc(I, RecurKind::FMinimum);
-  if (match(I, m_FMaximum(m_Value(), m_Value())))
-    return InstDesc(I, RecurKind::FMaximum);
-
   bool HasRequiredFMF =
       (FuncFMF.noNaNs() && FuncFMF.noSignedZeros()) ||
       (isa<FPMathOperator>(I) && I->hasNoNaNs() && I->hasNoSignedZeros());
-  if (!HasRequiredFMF)
+
+  // Look for a min/max pattern.
+  auto CheckKind = [I, HasRequiredFMF](RecurKind Kind) {
+    switch (Kind) {
+    case RecurKind::UMin:
+      if (match(I, m_UMin(m_Value(), m_Value())))
+        return InstDesc(I, RecurKind::UMin);
+      break;
+    case RecurKind::UMax:
+      if (match(I, m_UMax(m_Value(), m_Value())))
+        return InstDesc(I, RecurKind::UMax);
+      break;
+    case RecurKind::SMax:
+      if (match(I, m_SMax(m_Value(), m_Value())))
+        return InstDesc(I, RecurKind::SMax);
+      break;
+    case RecurKind::SMin:
+      if (match(I, m_SMin(m_Value(), m_Value())))
+        return InstDesc(I, RecurKind::SMin);
+      break;
+
+    // minimum/minnum and maximum/maxnum intrinsics do not require nsz and nnan
+    // flags since NaN and signed zeroes are propagated in the intrinsic
+    // implementation.
+    case RecurKind::FMinimumNum:
+      if (match(I, m_FMinimumNum(m_Value(), m_Value())))
+        return InstDesc(I, RecurKind::FMinimumNum);
+      break;
+    case RecurKind::FMaximumNum:
+      if (match(I, m_FMaximumNum(m_Value(), m_Value())))
+        return InstDesc(I, RecurKind::FMaximumNum);
+      break;
+    case RecurKind::FMinimum:
+      if (match(I, m_FMinimum(m_Value(), m_Value())))
+        return InstDesc(I, RecurKind::FMinimum);
+      break;
+    case RecurKind::FMaximum:
+      if (match(I, m_FMaximum(m_Value(), m_Value())))
+        return InstDesc(I, RecurKind::FMaximum);
+      break;
+
+    case RecurKind::FMin:
+      if (HasRequiredFMF && match(I, m_OrdOrUnordFMin(m_Value(), m_Value())))
+        return InstDesc(I, RecurKind::FMin);
+      if (HasRequiredFMF && match(I, m_FMinNum(m_Value(), m_Value())))
+        return InstDesc(I, RecurKind::FMin);
+      break;
+    case RecurKind::FMax:
+      if (HasRequiredFMF && match(I, m_OrdOrUnordFMax(m_Value(), m_Value())))
+        return InstDesc(I, RecurKind::FMax);
+      if (HasRequiredFMF && match(I, m_FMaxNum(m_Value(), m_Value())))
+        return InstDesc(I, RecurKind::FMax);
+      break;
+    default:
+      break;
+    }
     return InstDesc(false, I);
+  };
 
-  if (match(I, m_OrdOrUnordFMin(m_Value(), m_Value())))
-    return InstDesc(I, RecurKind::FMin);
-  if (match(I, m_OrdOrUnordFMax(m_Value(), m_Value())))
-    return InstDesc(I, RecurKind::FMax);
-  if (match(I, m_FMinNum(m_Value(), m_Value())))
-    return InstDesc(I, RecurKind::FMin);
-  if (match(I, m_FMaxNum(m_Value(), m_Value())))
-    return InstDesc(I, RecurKind::FMax);
-
+  // The previous recurrence, if there is one, must match the current
+  // recurrence.
+  if (Prev.getRecKind() != RecurKind::None)
+    return CheckKind(Prev.getRecKind());
+  for (RecurKind K :
+       {RecurKind::SMin, RecurKind::SMax, RecurKind::UMin, RecurKind::UMax,
+        RecurKind::FMin, RecurKind::FMax, RecurKind::FMinimum,
+        RecurKind::FMaximum, RecurKind::FMinimumNum, RecurKind::FMaximumNum}) {
+    InstDesc D = CheckKind(K);
+    if (D.getRecKind() != RecurKind::None)
+      return D;
+  }
   return InstDesc(false, I);
 }
 

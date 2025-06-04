@@ -1042,12 +1042,8 @@ for.body:                                         ; preds = %entry, %for.body
 }
 
 ; CHECK-LABEL: @sminmax(
-; CHECK: <2 x i32> @llvm.smin.v2i32
-; CHECK: <2 x i32> @llvm.smin.v2i32
-; CHECK: <2 x i32> @llvm.smax.v2i32
-; CHECK: <2 x i32> @llvm.smax.v2i32
-; CHECK: middle.block
-; CHECK: i32 @llvm.vector.reduce.smax.v2i32
+; Min and max intrinsics - don't vectorize
+; CHECK-NOT: <2 x i32>
 define i32 @sminmax(ptr nocapture readonly %x, ptr nocapture readonly %y) {
 entry:
   br label %for.body
