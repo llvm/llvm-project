@@ -56,7 +56,7 @@ public:
 
 /// The logical reader owns of all the logical elements created during
 /// the debug information parsing. For its creation it uses a specific
-///  bump allocator for each type of logical element.
+/// bump allocator for each type of logical element.
 class LVReader {
   LVBinaryType BinaryType;
 
@@ -122,7 +122,24 @@ class LVReader {
 
 #undef LV_OBJECT_ALLOCATOR
 
+  // Scopes with ranges for current compile unit. It is used to find a line
+  // giving its exact or closest address. To support comdat functions, all
+  // addresses for the same section are recorded in the same map.
+  using LVSectionRanges = std::map<LVSectionIndex, std::unique_ptr<LVRange>>;
+  LVSectionRanges SectionRanges;
+
 protected:
+  // Current elements during the processing of a DIE/MDNode.
+  LVElement *CurrentElement = nullptr;
+  LVScope *CurrentScope = nullptr;
+  LVSymbol *CurrentSymbol = nullptr;
+  LVType *CurrentType = nullptr;
+  LVLine *CurrentLine = nullptr;
+  LVOffset CurrentOffset = 0;
+
+  // Address ranges collected for current DIE/MDNode/AST Node.
+  std::vector<LVAddressRange> CurrentRanges;
+
   LVScopeRoot *Root = nullptr;
   std::string InputFilename;
   std::string FileFormatName;
@@ -133,10 +150,17 @@ protected:
   // Only for ELF format. The CodeView is handled in a different way.
   LVSectionIndex DotTextSectionIndex = UndefinedSectionIndex;
 
+  void addSectionRange(LVSectionIndex SectionIndex, LVScope *Scope);
+  void addSectionRange(LVSectionIndex SectionIndex, LVScope *Scope,
+                       LVAddress LowerAddress, LVAddress UpperAddress);
+  LVRange *getSectionRanges(LVSectionIndex SectionIndex);
+
   // Record Compilation Unit entry.
   void addCompileUnitOffset(LVOffset Offset, LVScopeCompileUnit *CompileUnit) {
     CompileUnits.emplace(Offset, CompileUnit);
   }
+
+  LVElement *createElement(dwarf::Tag Tag);
 
   // Create the Scope Root.
   virtual Error createScopes() {
