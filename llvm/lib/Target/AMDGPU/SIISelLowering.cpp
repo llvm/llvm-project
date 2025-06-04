@@ -751,7 +751,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BUILD_VECTOR, {MVT::v2i16, MVT::v2f16, MVT::v2bf16},
                        Subtarget->hasVOP3PInsts() ? Legal : Custom);
 
-    setOperationAction(ISD::FNEG, MVT::v2f16, Legal);
+    setOperationAction(ISD::FNEG, {MVT::v2f16, MVT::v2bf16}, Legal);
     // This isn't really legal, but this avoids the legalizer unrolling it (and
     // allows matching fneg (fabs x) patterns)
     setOperationAction(ISD::FABS, MVT::v2f16, Legal);
