@@ -31,7 +31,7 @@ end subroutine local_assoc
 ! CHECK: %[[ASSOC_DECL:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "{{.*}}local_assocEa"}
 ! CHECK: %[[ASSOC_BOX:.*]] = fir.embox %[[ASSOC_DECL]]#0(%{{.*}})
 ! CHECK: fir.store %[[ASSOC_BOX]] to %[[BOX_REF]]
-! CHECK: fir.do_concurrent.loop {{.*}} local(@[[LOCALIZER]] %[[BOX_REF]] -> %[[LOCAL_ARG:.*]] : {{.*}}) {
+! CHECK: fir.do_concurrent.loop {{.*}} local(@[[LOCALIZER]] %[[BOX_REF]] -> %[[LOCAL_ARG:.*]] : !fir.ref<!fir.box<!fir.array<8xf32>>>) {
 ! CHECK:   %[[LOCAL_DECL:.*]]:2 = hlfir.declare %[[LOCAL_ARG]]
 ! CHECK:   %[[LOCAL_LD:.*]] = fir.load %[[LOCAL_DECL]]#0 : !fir.ref<!fir.box<!fir.array<8xf32>>>
 ! CHECK:   hlfir.designate %[[LOCAL_LD]] (%{{.*}})
