@@ -40,7 +40,6 @@
 ; CHECK-DAG: %[[#]] = OpFunctionParameter %[[#IMG1D_WR]]
 ; CHECK-DAG: %[[#]] = OpFunctionParameter %[[#IMG2D_RW]]
 
-; Function Attrs: nounwind readnone
 define spir_kernel void @foo(
   target("spirv.Pipe", 0) %a,
   target("spirv.Pipe", 1) %b,
