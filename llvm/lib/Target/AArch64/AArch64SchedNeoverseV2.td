@@ -14,7 +14,9 @@
 //===----------------------------------------------------------------------===//
 
 def NeoverseV2Model : SchedMachineModel {
-  let IssueWidth            =  16; // Micro-ops dispatched at a time.
+  let IssueWidth            =   6; // Value based on a combination of dispatch
+                                   // constraints discussed in the SWOG, i.e. up
+                                   // to 8 MOps per cycle, and benchmark tuning.
   let MicroOpBufferSize     = 320; // Entries in micro-op re-order buffer.
   let LoadLatency           =   4; // Optimistic load latency.
   let MispredictPenalty     =  10; // Extra cycles for mispredicted branch.  NOTE: Copied from N2.
