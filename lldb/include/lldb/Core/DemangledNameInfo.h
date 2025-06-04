@@ -13,6 +13,7 @@
 #include "llvm/Demangle/Utility.h"
 
 #include <cstddef>
+#include <cstdlib>
 #include <utility>
 
 namespace lldb_private {
@@ -158,5 +159,14 @@ private:
   unsigned FunctionPrintingDepth = 0;
 };
 } // namespace lldb_private
+
+struct TrackingOutputBufferDeleter {
+  void operator()(TrackingOutputBuffer *TOB) {
+    if (!TOB)
+      return;
+    std::free(TOB->getBuffer());
+    delete TOB;
+  }
+};
 
 #endif // LLDB_CORE_DEMANGLEDNAMEINFO_H
