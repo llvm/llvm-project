@@ -119,23 +119,14 @@ class Display(object):
         test_name = test.getFullName()
 
         extra_info = ""
-        extra_attrs = []
-
-        if self.opts.showAttemptsCount:
-            if (
-                test.result.max_allowed_attempts is not None
-                and test.result.max_allowed_attempts > 1
-            ):
-                extra_attrs.append(f"attempts={test.result.attempts}")
-                extra_attrs.append(
-                    f"max_allowed_attempts={test.result.max_allowed_attempts}"
-                )
-
-        if len(extra_attrs) > 0:
-            extra_info = " [" + ",".join(extra_attrs) + "]"
+        if (
+            test.result.max_allowed_attempts is not None
+            and test.result.max_allowed_attempts > 1
+        ) and test.result.attempts > 0:
+            extra_info = f", {test.result.attempts} of {test.result.max_allowed_attempts} attempts"
 
         print(
-            "%s: %s (%d of %d)%s"
+            "%s: %s (%d of %d%s)"
             % (
                 test.result.code.name,
                 test_name,

@@ -104,13 +104,6 @@ def parse_args():
         help="Do not use curses based progress bar",
         action="store_false",
     )
-    format_group.add_argument(
-        "--show-attempts-count",
-        dest="showAttemptsCount",
-        help="Show number of attempts and maximum attempts for tests"
-        " which are allowed to run more than once.",
-        action="store_true",
-    )
 
     # Note: this does not generate flags for user-defined result codes.
     success_codes = [c for c in lit.Test.ResultCode.all_codes() if not c.isFailure]

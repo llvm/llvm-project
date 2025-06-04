@@ -144,34 +144,6 @@ OUTPUT OPTIONS
 
  Show expectedly failed tests.
 
-.. option:: --show-attempts-count
-
- Show the number of attempts needed for a test to pass. It also shows the
- maximum number of attempts that were allowed for this test. This option is
- useful when you want to understand how many attempts took for a flaky test
- (``FLAKYPASS``) to pass.
-
- This is how the test output looks like *without* :option:`--show-attempts-count`
-
- .. code-block:: none
-
-  PASS: your-test-suite :: your-first-test.py (1 of 3)
-  FLAKYPASS: your-test-suite :: your-second-test.py (2 of 2)
-
- This is the output *with* :option:`--show-attempts-count`
-
- .. code-block:: none
-
-  PASS: your-test-suite :: your-first-test.py (1 of 2)
-  FLAKYPASS: your-test-suite :: your-second-test.py (2 of 2) [attempts=3,max_allowed_attempts=4]
-
- In this case ``your-second-test.py`` was executed three times and it succeeded
- after the third time (``attempts=3``). Technically another run would have been
- possible (``max_allowed_attempts=4``).
-
- We will only append the extra information when a test was allowed more than one
- attempt to succeed (i.e. see :option:`--max-retries-per-test`).
-
 .. _execution-options:
 
 EXECUTION OPTIONS
@@ -715,6 +687,14 @@ newline.
 
 The ``<progress info>`` field can be used to report progress information such
 as (1/300) or can be empty, but even when empty the parentheses are required.
+
+Should a test be allowed retries (see ``ALLOW_RETRIES:`` annotation) and it
+needed more than one attempt to succeed, then ``<progess info>`` is extended
+by this information:
+
+.. code-block:: none
+
+  , <num_attempts_made> of <max_allowed_attempts> attempts
 
 Each test result may include additional (multiline) log information in the
 following format:
