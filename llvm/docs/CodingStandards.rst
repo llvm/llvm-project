@@ -587,10 +587,7 @@ Prefer C++-style casts
 ^^^^^^^^^^^^^^^^^^^^^^
 
 When casting, use ``static_cast``, ``reinterpret_cast``, and ``const_cast``,
-rather than C-style casts. There are two exceptions to this:
-
-* When casting to ``void`` to suppress warnings about unused variables (as an
-  alternative to ``[[maybe_unused]]``). Prefer C-style casts in this instance.
+rather than C-style casts. There is one exception to this:
 
 * When casting between integral types (including enums that are not strongly-
   typed), functional-style casts are permitted as an alternative to
@@ -1288,15 +1285,15 @@ These are two interesting different cases. In the first case, the call to
 ``V.size()`` is only useful for the assert, and we don't want it executed when
 assertions are disabled.  Code like this should move the call into the assert
 itself.  In the second case, the side effects of the call must happen whether
-the assert is enabled or not.  In this case, the value should be cast to void to
-disable the warning.  To be specific, it is preferred to write the code like
-this:
+the assert is enabled or not. In this case, the value should be defined using
+the ``[[maybe_unused]]`` attribute to disable the warning. To be specific, it is
+preferred to write the code like this:
 
 .. code-block:: c++
 
   assert(V.size() > 42 && "Vector smaller than it should be");
 
-  bool NewToSet = Myset.insert(Value); (void)NewToSet;
+  [[maybe_unused]] bool NewToSet = Myset.insert(Value);
   assert(NewToSet && "The value shouldn't be in the set yet");
 
 Do Not Use ``using namespace std``
