@@ -3074,6 +3074,41 @@ following way:
 
 Query for this feature with ``__has_builtin(__builtin_offsetof)``.
 
+``__builtin_get_vtable_pointer``
+--------------------------------
+
+``__builtin_get_vtable_pointer`` loads and authenticates the primary vtable
+pointer from an instance of a polymorphic C++ class. This builtin is needed
+for directly loading the vtable pointer when on platforms using
+:doc:`PointerAuthentication`.
+
+**Syntax**:
+
+.. code-block:: c++
+
+  __builtin_get_vtable_pointer(PolymorphicClass*)
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  struct PolymorphicClass {
+    virtual ~PolymorphicClass();
+  };
+
+  PolymorphicClass anInstance;
+  const void* vtablePointer = __builtin_get_vtable_pointer(&anInstance);
+
+**Description**:
+
+The ``__builtin_get_vtable_pointer`` builtin loads the primary vtable
+pointer from a polymorphic C++ type. If the target platform authenticates
+vtable pointers, this builtin will perform the authentication and produce
+the underlying raw pointer. The object being queried must be polymorphic,
+and so must also be a complete type.
+
+Query for this feature with ``__has_builtin(__builtin_get_vtable_pointer)``.
+
 ``__builtin_call_with_static_chain``
 ------------------------------------
 
