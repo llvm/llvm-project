@@ -655,7 +655,7 @@ private:
 /// For memory dependences that cannot be determined at compile time, it
 /// generates run-time checks to prove independence.  This is done by
 /// AccessAnalysis::canCheckPtrAtRT and the checks are maintained by the
-/// RuntimePointerCheck class. AllowPartial determines whether partial checks
+/// RuntimePointerCheck class. \p AllowPartial determines whether partial checks
 /// are generated when not all pointers could be analyzed.
 ///
 /// If pointers can wrap or can't be expressed as affine AddRec expressions by

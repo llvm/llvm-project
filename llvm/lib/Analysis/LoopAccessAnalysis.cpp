@@ -697,7 +697,8 @@ public:
   /// Returns true if we need no check or if we do and we can generate them
   /// (i.e. the pointers have computable bounds). A return value of false means
   /// we couldn't analyze and generate runtime checks for all pointers in the
-  /// loop, but we will have checks for those pointers we could analyze.
+  /// loop, but if \p AllowPartial is set then we will have checks for those
+  /// pointers we could analyze.
   bool canCheckPtrAtRT(RuntimePointerChecking &RtCheck, Loop *TheLoop,
                        const DenseMap<Value *, const SCEV *> &Strides,
                        Value *&UncomputablePtr, bool AllowPartial);
@@ -1330,6 +1331,7 @@ bool AccessAnalysis::canCheckPtrAtRT(
   // are needed. This can happen when all pointers point to the same underlying
   // object for example.
   RtCheck.Need = CanDoRT ? RtCheck.getNumberOfChecks() != 0 : MayNeedRTCheck;
+
   bool CanDoRTIfNeeded = !RtCheck.Need || CanDoRT;
   assert(CanDoRTIfNeeded == (CanDoRT || !MayNeedRTCheck) &&
          "CanDoRTIfNeeded depends on RtCheck.Need");
