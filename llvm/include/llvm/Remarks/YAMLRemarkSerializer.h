@@ -13,8 +13,8 @@
 #ifndef LLVM_REMARKS_YAMLREMARKSERIALIZER_H
 #define LLVM_REMARKS_YAMLREMARKSERIALIZER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/Remarks/RemarkSerializer.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <optional>
 

@@ -13,11 +13,11 @@
 #ifndef LLVM_REMARKS_REMARK_H
 #define LLVM_REMARKS_REMARK_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm-c/Remarks.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CBindingWrapping.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 #include <string>

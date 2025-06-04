@@ -9,17 +9,17 @@
 #ifndef LLVM_OPTION_ARGLIST_H
 #define LLVM_OPTION_ARGLIST_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/OptSpecifier.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cstddef>
 #include <initializer_list>
@@ -285,7 +285,8 @@ public:
   /// @{
 
   /// getLastArgValue - Return the value of the last argument, or a default.
-  LLVM_ABI StringRef getLastArgValue(OptSpecifier Id, StringRef Default = "") const;
+  LLVM_ABI StringRef getLastArgValue(OptSpecifier Id,
+                                     StringRef Default = "") const;
 
   /// getAllArgValues - Get the values of all instances of the given argument
   /// as strings.
@@ -300,19 +301,20 @@ public:
   /// \p Default if neither option is given. If both the option and its
   /// negation are present, the last one wins.
   LLVM_ABI bool hasFlag(OptSpecifier Pos, OptSpecifier Neg, bool Default) const;
-  LLVM_ABI bool hasFlagNoClaim(OptSpecifier Pos, OptSpecifier Neg, bool Default) const;
+  LLVM_ABI bool hasFlagNoClaim(OptSpecifier Pos, OptSpecifier Neg,
+                               bool Default) const;
 
   /// hasFlag - Given an option \p Pos, an alias \p PosAlias and its negative
   /// form \p Neg, return true if the option or its alias is present, false if
   /// the negation is present, and \p Default if none of the options are
   /// given. If multiple options are present, the last one wins.
-  LLVM_ABI bool hasFlag(OptSpecifier Pos, OptSpecifier PosAlias, OptSpecifier Neg,
-               bool Default) const;
+  LLVM_ABI bool hasFlag(OptSpecifier Pos, OptSpecifier PosAlias,
+                        OptSpecifier Neg, bool Default) const;
 
   /// Given an option Pos and its negative form Neg, render the option if Pos is
   /// present.
   LLVM_ABI void addOptInFlag(ArgStringList &Output, OptSpecifier Pos,
-                    OptSpecifier Neg) const;
+                             OptSpecifier Neg) const;
   /// Render the option if Neg is present.
   void addOptOutFlag(ArgStringList &Output, OptSpecifier Pos,
                      OptSpecifier Neg) const {
@@ -332,10 +334,12 @@ public:
 
   /// AddAllArgsExcept - Render all arguments matching any of the given ids
   /// and not matching any of the excluded ids.
-  LLVM_ABI void AddAllArgsExcept(ArgStringList &Output, ArrayRef<OptSpecifier> Ids,
-                        ArrayRef<OptSpecifier> ExcludeIds) const;
+  LLVM_ABI void AddAllArgsExcept(ArgStringList &Output,
+                                 ArrayRef<OptSpecifier> Ids,
+                                 ArrayRef<OptSpecifier> ExcludeIds) const;
   /// Render all arguments matching any of the given ids.
-  LLVM_ABI void addAllArgs(ArgStringList &Output, ArrayRef<OptSpecifier> Ids) const;
+  LLVM_ABI void addAllArgs(ArgStringList &Output,
+                           ArrayRef<OptSpecifier> Ids) const;
 
   /// AddAllArgs - Render all arguments matching the given ids.
   LLVM_ABI void AddAllArgs(ArgStringList &Output, OptSpecifier Id0) const;
@@ -343,7 +347,8 @@ public:
   /// AddAllArgValues - Render the argument values of all arguments
   /// matching the given ids.
   LLVM_ABI void AddAllArgValues(ArgStringList &Output, OptSpecifier Id0,
-                       OptSpecifier Id1 = 0U, OptSpecifier Id2 = 0U) const;
+                                OptSpecifier Id1 = 0U,
+                                OptSpecifier Id2 = 0U) const;
 
   /// AddAllArgsTranslated - Render all the arguments matching the
   /// given ids, but forced to separate args and using the provided
@@ -352,8 +357,8 @@ public:
   /// \param Joined - If true, render the argument as joined with
   /// the option specifier.
   LLVM_ABI void AddAllArgsTranslated(ArgStringList &Output, OptSpecifier Id0,
-                            const char *Translation,
-                            bool Joined = false) const;
+                                     const char *Translation,
+                                     bool Joined = false) const;
 
   /// ClaimAllArgs - Claim all arguments which match the given
   /// option id.
@@ -383,7 +388,7 @@ public:
   /// Create an arg string for (\p LHS + \p RHS), reusing the
   /// string at \p Index if possible.
   LLVM_ABI const char *GetOrMakeJoinedArgString(unsigned Index, StringRef LHS,
-                                        StringRef RHS) const;
+                                                StringRef RHS) const;
 
   LLVM_ABI void print(raw_ostream &O) const;
   LLVM_ABI void dump() const;

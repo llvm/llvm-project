@@ -13,9 +13,9 @@
 #ifndef LLVM_REMARKS_REMARKSERIALIZER_H
 #define LLVM_REMARKS_REMARKSERIALIZER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Remarks/RemarkStringTable.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 namespace llvm {

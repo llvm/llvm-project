@@ -9,11 +9,11 @@
 #ifndef LLVM_OPTION_OPTION_H
 #define LLVM_OPTION_OPTION_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/OptSpecifier.h"
 #include "llvm/Option/OptTable.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 
@@ -229,7 +229,8 @@ public:
   /// \p GroupedShortOption If true, we are handling the fallback case of
   /// parsing a prefix of the current argument as a short option.
   LLVM_ABI std::unique_ptr<Arg> accept(const ArgList &Args, StringRef CurArg,
-                              bool GroupedShortOption, unsigned &Index) const;
+                                       bool GroupedShortOption,
+                                       unsigned &Index) const;
 
 private:
   std::unique_ptr<Arg> acceptInternal(const ArgList &Args, StringRef CurArg,
