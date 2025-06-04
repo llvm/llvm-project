@@ -10,7 +10,7 @@
 // DEFINE: %{run} = %mcr_aarch64_cmd %t -e %{entry_point} -entry-point-result=void  --march=aarch64 --mattr="+sve,+i8mm" \
 // DEFINE:    -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils,%native_mlir_arm_runner_utils
 
-// RUN: rm -f %t && %{compile} && %{run} | FileCheck %s
+// RUN: rm -f %t && %{compile} && FileCheck %s --input-file=%t -check-prefix CHECK-IR && %{run} | FileCheck %s
 
 #packed_maps = [
   affine_map<(d0, d1, d2) -> (d0, d2)>,
@@ -27,7 +27,6 @@ func.func @main() {
   %c0 = arith.constant 0 : index
   %c0_i32 = arith.constant 0 : i32
   %c0_i8 = arith.constant 0 : i8
-
 
   // Accumulator test data
   %acc_cst = arith.constant dense<[[-44,  20,  44, -46,  -8,  25, -34,  26],
@@ -119,6 +118,8 @@ func.func @main() {
 
   %rhs = vector.shape_cast %rhs_flat : vector<[32]xi8> to vector<[4]x8xi8>
 
+// CHECK-IR-COUNT-8: arm_sve.intr.smmla
+
   // Matrix multiplication
   %0 = arith.extsi %lhs : vector<8x8xi8> to vector<8x8xi32>
   %1 = arith.extsi %rhs : vector<[4]x8xi8> to vector<[4]x8xi32>
@@ -145,7 +146,6 @@ func.func @main() {
   vector.print %u5 : vector<[4]xi32>
   vector.print %u6 : vector<[4]xi32>
   vector.print %u7 : vector<[4]xi32>
-
 
 // CHECK: ( -2294, -1282,  2728,  -410, -1328,   882, -5498,   732 )
 // CHECK: (  1012, -4237,  4154,  2624,  5225, -2338,  2011,  1374 )

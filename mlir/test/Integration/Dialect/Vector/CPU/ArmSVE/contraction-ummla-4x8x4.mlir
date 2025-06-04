@@ -10,7 +10,7 @@
 // DEFINE: %{run} = %mcr_aarch64_cmd %t -e %{entry_point} -entry-point-result=void  --march=aarch64 --mattr="+sve,+i8mm" \
 // DEFINE:    -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils,%native_mlir_arm_runner_utils
 
-// RUN: rm -f %t && %{compile} && %{run} | FileCheck %s
+// RUN: rm -f %t && %{compile} && FileCheck %s --input-file=%t -check-prefix CHECK-IR && %{run} | FileCheck %s
 
 #packed_maps = [
   affine_map<(d0, d1, d2) -> (d0, d2)>,
@@ -29,8 +29,7 @@ func.func @main() {
   %c0_i32 = arith.constant 0 : i32
   %c0_i8 = arith.constant 0 : i8
 
-
-// Accumulator test data
+  // Accumulator test data
   %acc_cst = arith.constant dense<[[16, 16, 48, 40],
                                    [40, 24, 35, 12],
                                    [33, 24, 29, 19],
@@ -91,6 +90,8 @@ func.func @main() {
   vector.print %rhs1 : vector<[16]xi8>
 
   %rhs = vector.shape_cast %rhs_flat : vector<[32]xi8> to vector<[4]x8xi8>
+
+// CHECK-IR-COUNT-4: arm_sve.intr.ummla
 
   // Matrix multiplication
   %0 = arith.extui %lhs : vector<4x8xi8> to vector<4x8xi32>
