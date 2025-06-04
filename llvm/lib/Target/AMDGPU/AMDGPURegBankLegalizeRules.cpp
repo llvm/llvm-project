@@ -718,7 +718,21 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivP1}, {{VgprP1}, {VgprP1, Vgpr64}}})
       .Any({{DivP0}, {{VgprP0}, {VgprP0, Vgpr64}}});
 
-  addRulesForGOpcs({G_INTTOPTR}).Any({{UniP4}, {{SgprP4}, {Sgpr64}}});
+  addRulesForGOpcs({G_INTTOPTR})
+      .Any({{UniPtr32}, {{SgprPtr32}, {Sgpr32}}})
+      .Any({{DivPtr32}, {{VgprPtr32}, {Vgpr32}}})
+      .Any({{UniPtr64}, {{SgprPtr64}, {Sgpr64}}})
+      .Any({{DivPtr64}, {{VgprPtr64}, {Vgpr64}}})
+      .Any({{UniPtr128}, {{SgprPtr128}, {Sgpr128}}})
+      .Any({{DivPtr128}, {{VgprPtr128}, {Vgpr128}}});
+
+  addRulesForGOpcs({G_PTRTOINT})
+      .Any({{UniS32}, {{Sgpr32}, {SgprPtr32}}})
+      .Any({{DivS32}, {{Vgpr32}, {VgprPtr32}}})
+      .Any({{UniS64}, {{Sgpr64}, {SgprPtr64}}})
+      .Any({{DivS64}, {{Vgpr64}, {VgprPtr64}}})
+      .Any({{UniS128}, {{Sgpr128}, {SgprPtr128}}})
+      .Any({{DivS128}, {{Vgpr128}, {VgprPtr128}}});
 
   addRulesForGOpcs({G_ABS}, Standard).Uni(S16, {{Sgpr32Trunc}, {Sgpr32SExt}});
 
