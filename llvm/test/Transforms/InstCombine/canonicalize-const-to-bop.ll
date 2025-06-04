@@ -403,9 +403,7 @@ define i8 @sub_const_on_lhs_negative(i8 %x) {
 define i8 @smin_ugt(i8 %x) {
 ; CHECK-LABEL: define i8 @smin_ugt(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[SMIN:%.*]] = call i8 @llvm.smin.i8(i8 [[X]], i8 50)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X]], 100
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 50, i8 [[SMIN]]
+; CHECK-NEXT:    [[S:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 50)
 ; CHECK-NEXT:    ret i8 [[S]]
 ;
   %smin = call i8 @llvm.smin.i8(i8 %x, i8 50)
@@ -417,9 +415,8 @@ define i8 @smin_ugt(i8 %x) {
 define i8 @smax_ugt(i8 %x) {
 ; CHECK-LABEL: define i8 @smax_ugt(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[SMAX:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 50)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X]], 100
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 100, i8 [[SMAX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 100)
+; CHECK-NEXT:    [[S:%.*]] = call i8 @llvm.smax.i8(i8 [[TMP1]], i8 50)
 ; CHECK-NEXT:    ret i8 [[S]]
 ;
   %smax = call i8 @llvm.smax.i8(i8 %x, i8 50)
@@ -431,9 +428,8 @@ define i8 @smax_ugt(i8 %x) {
 define i8 @umin_slt(i8 %x) {
 ; CHECK-LABEL: define i8 @umin_slt(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X]], 0
-; CHECK-NEXT:    [[UMIN:%.*]] = tail call i8 @llvm.umin.i8(i8 [[X]], i8 100)
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 0, i8 [[UMIN]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 0)
+; CHECK-NEXT:    [[S:%.*]] = call i8 @llvm.umin.i8(i8 [[TMP1]], i8 100)
 ; CHECK-NEXT:    ret i8 [[S]]
 ;
   %cmp = icmp slt i8 %x, 0
@@ -445,9 +441,8 @@ define i8 @umin_slt(i8 %x) {
 define i8 @umax_sgt(i8 %x) {
 ; CHECK-LABEL: define i8 @umax_sgt(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X]], 100
-; CHECK-NEXT:    [[UMAX:%.*]] = tail call i8 @llvm.umax.i8(i8 [[X]], i8 50)
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 100, i8 [[UMAX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[X]], i8 100)
+; CHECK-NEXT:    [[S:%.*]] = call i8 @llvm.umax.i8(i8 [[TMP1]], i8 50)
 ; CHECK-NEXT:    ret i8 [[S]]
 ;
   %cmp = icmp sgt i8 %x, 100
