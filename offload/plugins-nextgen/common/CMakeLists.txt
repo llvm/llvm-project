@@ -1,11 +1,9 @@
-
-if(OFFLOAD_ENABLE_EMISSARY_APIS)
-  set(emissary_sources
-    src/Emissary.cpp
-    src/EmissaryFortrt.cpp
-    src/EmissaryPrint.cpp
-  )
-endif()
+# The error codes in this header are shared with liboffload, so need to be
+# generated from the same source.
+include(TableGen)
+set(LLVM_TARGET_DEFINITIONS ${CMAKE_CURRENT_SOURCE_DIR}/../../liboffload/API/OffloadAPI.td)
+tablegen(OFFLOAD include/OffloadErrcodes.inc -gen-errcodes -I ${CMAKE_CURRENT_SOURCE_DIR}/../../liboffload/API)
+add_public_tablegen_target(PluginErrcodes)
 
 # NOTE: Don't try to build `PluginInterface` using `add_llvm_library` because we
 # don't want to export `PluginInterface` while `add_llvm_library` requires that.
@@ -18,7 +16,7 @@ add_library(PluginCommon OBJECT
   src/Utils/ELF.cpp
   ${emissary_sources}
 )
-add_dependencies(PluginCommon intrinsics_gen)
+add_dependencies(PluginCommon intrinsics_gen PluginErrcodes)
 
 # Only enable JIT for those targets that LLVM can support.
 set(supported_jit_targets AMDGPU NVPTX)
@@ -60,6 +58,7 @@ endif()
 
 target_include_directories(PluginCommon PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include
+  ${CMAKE_CURRENT_BINARY_DIR}/include
   ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
   ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
   ${LIBOMPTARGET_INCLUDE_DIR}

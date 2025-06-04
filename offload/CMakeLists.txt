@@ -427,23 +427,7 @@ set(LIBOMPTARGET_LLVM_LIBRARY_DIR "${LLVM_LIBRARY_DIR}" CACHE STRING
 set(LIBOMPTARGET_LLVM_LIBRARY_INTDIR "${LIBOMPTARGET_INTDIR}" CACHE STRING
   "Path to folder where intermediate libraries will be output")
 
-if(SANITIZER_AMDGPU)
-  add_definitions(-DSANITIZER_AMDGPU=1)
-  # Check for COMGr package , ASan requires COMGr with minimum version 2.4
-  find_package(amd_comgr QUIET 2.4.0 HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
-endif()
-
-# An Emissary API is a subset of Host APIs that are executed from Offload devices
-# using the offload RPC mechanism such as FORTRAN IO runtime and MPI.
-option(OFFLOAD_ENABLE_EMISSARY_APIS "Enable build of GPU Emissary APIs" ON)
-if(OFFLOAD_ENABLE_EMISSARY_APIS)
-  # Header install location
-  add_definitions(-DOFFLOAD_ENABLE_EMISSARY_APIS)
-  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/DeviceRTL/include/EmissaryIds.h
-    DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH})
-  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/DeviceRTL/include/EmissaryMPI.h
-    DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH})
-endif()
+add_subdirectory(tools/offload-tblgen)
 
 # Build offloading plugins and device RTLs if they are available.
 add_subdirectory(plugins-nextgen)
@@ -454,9 +438,7 @@ add_subdirectory(DeviceRTL)
 # Build target agnostic offloading library.
 add_subdirectory(libomptarget)
 
-# FIXME: Re-enable once OMPT design allows
-# add_subdirectory(tools/offload-tblgen)
-# add_subdirectory(liboffload)
+add_subdirectory(liboffload)
 
 # Add tests.
 add_subdirectory(test)
