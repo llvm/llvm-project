@@ -9254,7 +9254,9 @@ class sve2_crypto_des_bin_op<bits<2> opc, string asm, ZPRRegOp zprty>
 }
 
 multiclass sve2_crypto_des_bin_op<bits<2> opc, string asm, ZPRRegOp zprty,
-                                  SDPatternOperator op, ValueType vt> {
+                                  SDPatternOperator op, ValueType vt,
+                                  bit commutable = 0> {
+  let isCommutable = commutable in
   def NAME : sve2_crypto_des_bin_op<opc, asm, zprty>;
   def : SVE_2_Op_Pat<vt, op, vt, vt, !cast<Instruction>(NAME)>;
 }
