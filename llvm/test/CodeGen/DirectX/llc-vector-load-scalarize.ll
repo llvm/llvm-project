@@ -60,19 +60,15 @@ define <4 x i32> @load_array_vec_test() #0 {
 define <4 x i32> @load_vec_test() #0 {
 ; CHECK-LABEL: define <4 x i32> @load_vec_test(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast ptr addrspace(3) @vecData.scalarized to ptr addrspace(3)
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(3) [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast ptr addrspace(3) getelementptr (i32, ptr addrspace(3) @vecData.scalarized, i32 1) to ptr addrspace(3)
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(3) [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast ptr addrspace(3) getelementptr (i32, ptr addrspace(3) @vecData.scalarized, i32 2) to ptr addrspace(3)
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr addrspace(3) [[TMP5]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast ptr addrspace(3) getelementptr (i32, ptr addrspace(3) @vecData.scalarized, i32 3) to ptr addrspace(3)
-; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr addrspace(3) [[TMP7]], align 4
-; CHECK-NEXT:    [[DOTUPTO0:%.*]] = insertelement <4 x i32> poison, i32 [[TMP2]], i32 0
-; CHECK-NEXT:    [[DOTUPTO1:%.*]] = insertelement <4 x i32> [[DOTUPTO0]], i32 [[TMP4]], i32 1
-; CHECK-NEXT:    [[DOTUPTO2:%.*]] = insertelement <4 x i32> [[DOTUPTO1]], i32 [[TMP6]], i32 2
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i32> [[DOTUPTO2]], i32 [[TMP8]], i32 3
-; CHECK-NEXT:    ret <4 x i32> [[TMP9]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(3) @vecData.scalarized, align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(3) getelementptr (i32, ptr addrspace(3) @vecData.scalarized, i32 1), align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) getelementptr (i32, ptr addrspace(3) @vecData.scalarized, i32 2), align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(3) getelementptr (i32, ptr addrspace(3) @vecData.scalarized, i32 3), align 4
+; CHECK-NEXT:    [[DOTUPTO0:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1]], i32 0
+; CHECK-NEXT:    [[DOTUPTO1:%.*]] = insertelement <4 x i32> [[DOTUPTO0]], i32 [[TMP2]], i32 1
+; CHECK-NEXT:    [[DOTUPTO2:%.*]] = insertelement <4 x i32> [[DOTUPTO1]], i32 [[TMP3]], i32 2
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[DOTUPTO2]], i32 [[TMP4]], i32 3
+; CHECK-NEXT:    ret <4 x i32> [[TMP5]]
 ;
   %1 = load <4 x i32>, <4 x i32> addrspace(3)* @"vecData", align 4
   ret <4 x i32> %1
@@ -107,31 +103,23 @@ define <4 x i32> @load_static_array_of_vec_test(i32 %index) #0 {
 define <4 x i32> @multid_load_test() #0 {
 ; CHECK-LABEL: define <4 x i32> @multid_load_test(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim to ptr addrspace(3)
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(3) [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast ptr addrspace(3) getelementptr (i32, ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 1) to ptr addrspace(3)
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(3) [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast ptr addrspace(3) getelementptr (i32, ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 2) to ptr addrspace(3)
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr addrspace(3) [[TMP5]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast ptr addrspace(3) getelementptr (i32, ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 3) to ptr addrspace(3)
-; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr addrspace(3) [[TMP7]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast ptr addrspace(3) getelementptr inbounds ([36 x i32], ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 1) to ptr addrspace(3)
-; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr addrspace(3) [[TMP11]], align 4
-; CHECK-NEXT:    [[DOTI12:%.*]] = bitcast ptr addrspace(3) getelementptr (i32, ptr addrspace(3) getelementptr inbounds ([36 x i32], ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 1), i32 1) to ptr addrspace(3)
-; CHECK-NEXT:    [[DOTI13:%.*]] = load i32, ptr addrspace(3) [[DOTI12]], align 4
-; CHECK-NEXT:    [[DOTI24:%.*]] = bitcast ptr addrspace(3) getelementptr (i32, ptr addrspace(3) getelementptr inbounds ([36 x i32], ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 1), i32 2) to ptr addrspace(3)
-; CHECK-NEXT:    [[DOTI25:%.*]] = load i32, ptr addrspace(3) [[DOTI24]], align 4
-; CHECK-NEXT:    [[DOTI36:%.*]] = bitcast ptr addrspace(3) getelementptr (i32, ptr addrspace(3) getelementptr inbounds ([36 x i32], ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 1), i32 3) to ptr addrspace(3)
-; CHECK-NEXT:    [[DOTI37:%.*]] = load i32, ptr addrspace(3) [[DOTI36]], align 4
-; CHECK-NEXT:    [[DOTI08:%.*]] = add i32 [[TMP2]], [[TMP12]]
-; CHECK-NEXT:    [[DOTI19:%.*]] = add i32 [[TMP4]], [[DOTI13]]
-; CHECK-NEXT:    [[DOTI210:%.*]] = add i32 [[TMP6]], [[DOTI25]]
-; CHECK-NEXT:    [[DOTI311:%.*]] = add i32 [[TMP8]], [[DOTI37]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(3) getelementptr (i32, ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 1), align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) getelementptr (i32, ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 2), align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(3) getelementptr (i32, ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 3), align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr addrspace(3) getelementptr inbounds ([36 x i32], ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 1), align 4
+; CHECK-NEXT:    [[DOTI13:%.*]] = load i32, ptr addrspace(3) getelementptr (i32, ptr addrspace(3) getelementptr inbounds ([36 x i32], ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 1), i32 1), align 4
+; CHECK-NEXT:    [[DOTI25:%.*]] = load i32, ptr addrspace(3) getelementptr (i32, ptr addrspace(3) getelementptr inbounds ([36 x i32], ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 1), i32 2), align 4
+; CHECK-NEXT:    [[DOTI37:%.*]] = load i32, ptr addrspace(3) getelementptr (i32, ptr addrspace(3) getelementptr inbounds ([36 x i32], ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 1), i32 3), align 4
+; CHECK-NEXT:    [[DOTI08:%.*]] = add i32 [[TMP1]], [[TMP5]]
+; CHECK-NEXT:    [[DOTI19:%.*]] = add i32 [[TMP2]], [[DOTI13]]
+; CHECK-NEXT:    [[DOTI210:%.*]] = add i32 [[TMP3]], [[DOTI25]]
+; CHECK-NEXT:    [[DOTI311:%.*]] = add i32 [[TMP4]], [[DOTI37]]
 ; CHECK-NEXT:    [[DOTUPTO015:%.*]] = insertelement <4 x i32> poison, i32 [[DOTI08]], i32 0
 ; CHECK-NEXT:    [[DOTUPTO116:%.*]] = insertelement <4 x i32> [[DOTUPTO015]], i32 [[DOTI19]], i32 1
 ; CHECK-NEXT:    [[DOTUPTO217:%.*]] = insertelement <4 x i32> [[DOTUPTO116]], i32 [[DOTI210]], i32 2
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i32> [[DOTUPTO217]], i32 [[DOTI311]], i32 3
-; CHECK-NEXT:    ret <4 x i32> [[TMP16]]
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[DOTUPTO217]], i32 [[DOTI311]], i32 3
+; CHECK-NEXT:    ret <4 x i32> [[TMP6]]
 ;
   %1 = load <4 x i32>, <4 x i32> addrspace(3)* getelementptr inbounds ([3 x [3 x <4 x i32>]], [3 x [3 x <4 x i32>]] addrspace(3)* @"groushared2dArrayofVectors", i32 0, i32 0, i32 0), align 4
   %2 = load <4 x i32>, <4 x i32> addrspace(3)* getelementptr inbounds ([3 x [3 x <4 x i32>]], [3 x [3 x <4 x i32>]] addrspace(3)* @"groushared2dArrayofVectors", i32 0, i32 1, i32 1), align 4
