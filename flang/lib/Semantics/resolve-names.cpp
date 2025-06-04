@@ -1927,7 +1927,7 @@ void OmpVisitor::ProcessReductionSpecifier(
 
     // Only process types we can find. There will be an error later on when
     // a type isn't found.
-    if (const DeclTypeSpec * typeSpec{GetDeclTypeSpec()}) {
+    if (const DeclTypeSpec *typeSpec{GetDeclTypeSpec()}) {
       reductionDetails->AddType(*typeSpec);
 
       for (auto &nm : ompVarNames) {

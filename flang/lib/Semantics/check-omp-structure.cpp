@@ -3526,7 +3526,7 @@ bool OmpStructureChecker::CheckReductionOperator(
     if (const auto *definedOp{std::get_if<parser::DefinedOpName>(&dOpr.u)}) {
       std::string mangled{MangleDefinedOperator(definedOp->v.symbol->name())};
       const Scope &scope{definedOp->v.symbol->owner()};
-      if (const Symbol * symbol{scope.FindSymbol(mangled)}) {
+      if (const Symbol *symbol{scope.FindSymbol(mangled)}) {
         if (symbol->detailsIf<UserReductionDetails>()) {
           return true;
         }
