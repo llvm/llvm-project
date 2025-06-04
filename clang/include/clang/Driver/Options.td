@@ -2996,14 +2996,18 @@ defm fine_grained_bitfield_accesses : BoolOption<"f", "fine-grained-bitfield-acc
   BothFlags<[], [ClangOption, CC1Option]>>,
   Group<f_clang_Group>;
 
-def fexperimental_relative_cxx_abi_vtables :
-  Flag<["-"], "fexperimental-relative-c++-abi-vtables">,
-  Group<f_clang_Group>, Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Use the experimental C++ class ABI for classes with virtual tables">;
-def fno_experimental_relative_cxx_abi_vtables :
-  Flag<["-"], "fno-experimental-relative-c++-abi-vtables">,
-  Group<f_clang_Group>, Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Do not use the experimental C++ class ABI for classes with virtual tables">;
+defm experimental_relative_cxx_abi_vtables
+    : BoolFOption<
+          "experimental-relative-c++-abi-vtables",
+          LangOpts<"RelativeCXXABIVTables">, DefaultFalse,
+          PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use ">,
+          NegFlag<SetFalse, [], [ClangOption, CC1Option], "Do not use ">,
+          BothFlags<[], [ClangOption, CC1Option],
+                    " the C++ class ABI for classes with virtual tables">>;
+def : Flag<["-"], "frelative-c++-abi-vtables">,
+      Alias<fexperimental_relative_cxx_abi_vtables>;
+def : Flag<["-"], "fno-relative-c++-abi-vtables">,
+      Alias<fno_experimental_relative_cxx_abi_vtables>;
 
 defm experimental_omit_vtable_rtti : BoolFOption<"experimental-omit-vtable-rtti",
   LangOpts<"OmitVTableRTTI">, DefaultFalse,
