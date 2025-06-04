@@ -12,7 +12,7 @@
 #include <string.h>
 #include <unistd.h>
 
-constexpr auto kKeys = 100;
+constexpr auto kKeys = 500;
 
 int main(int argc, char **argv) {
   __hwasan_enable_allocator_tagging();
