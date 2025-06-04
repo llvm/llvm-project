@@ -458,7 +458,8 @@ add_subdirectory(DeviceRTL)
 # Build target agnostic offloading library.
 add_subdirectory(libomptarget)
 
-add_subdirectory(liboffload)
+# FIXME: Re-enable once OMPT design allows
+# add_subdirectory(liboffload)
 
 # Add tests.
 if(OFFLOAD_INCLUDE_TESTS)
