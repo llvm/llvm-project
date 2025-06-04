@@ -33,9 +33,9 @@ ThreadsRequestHandler::Run(const ThreadsArguments &) const {
   // If no thread has reported to the client, it prevents something
   // like the pause request from working in the running state.
   // Return the cache of initial threads as the process might have resumed
-  if (dap.initial_thread_list) {
-    threads = *dap.initial_thread_list;
-    dap.initial_thread_list.reset();
+  if (!dap.initial_thread_list.empty()) {
+    threads = dap.initial_thread_list;
+    dap.initial_thread_list.clear();
   } else {
     if (!lldb::SBDebugger::StateIsStoppedState(process.GetState()))
       return make_error<NotStoppedError>();

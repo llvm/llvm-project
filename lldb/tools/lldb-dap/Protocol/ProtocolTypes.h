@@ -446,7 +446,7 @@ llvm::json::Value toJSON(const StepInTarget &);
 /// A Thread.
 struct Thread {
   /// Unique identifier for the thread.
-  lldb::tid_t id;
+  lldb::tid_t id = LLDB_INVALID_THREAD_ID;
   /// The name of the thread.
   std::string name;
 };
