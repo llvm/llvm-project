@@ -9830,6 +9830,17 @@ static bool IsElementEquivalent(int MaskSize, SDValue Op, SDValue ExpectedOp,
       return (Idx % NumMemElts) == (ExpectedIdx % NumMemElts);
     }
     break;
+  case X86ISD::VPERMI: {
+    if (Op == ExpectedOp && (int)VT.getVectorNumElements() == MaskSize) {
+      SmallVector<int, 8> Mask;
+      DecodeVPERMMask(MaskSize, Op.getConstantOperandVal(1), Mask);
+      SDValue Src = Op.getOperand(0);
+      return (Mask[Idx] == Mask[ExpectedIdx]) ||
+             IsElementEquivalent(MaskSize, Src, Src, Mask[Idx],
+                                 Mask[ExpectedIdx]);
+    }
+    break;
+  }
   case X86ISD::HADD:
   case X86ISD::HSUB:
   case X86ISD::FHADD:
