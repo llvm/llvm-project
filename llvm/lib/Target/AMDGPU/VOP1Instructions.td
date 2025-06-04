@@ -290,9 +290,11 @@ foreach vt = Reg32Types.types in {
 }
 
 #ifdef LLPC_BUILD_NPI
-let HasOpSel = 1, EmitDstSel = 0, HasOMod = 0, HasClamp = 0 in {
-def VOP_F32_BF16_OP_SEL : VOPProfile <[f32, bf16, untyped, untyped]>;
-}
+let HasOMod = 0, HasClamp = 0 in {
+  def VOPProfile_CVT_F32_BF16_gfx1250_t16 : VOPProfile_True16 <VOP_F32_BF16>;
+  let HasOpSel = 1, EmitDstSel = 0 in
+  def VOPProfile_CVT_F32_BF16_gfx1250_fake16 : VOPProfile_Fake16 <VOP_F32_BF16>;
+} // End HasOMod = 0, HasClamp = 0
 
 #endif /* LLPC_BUILD_NPI */
 let isReMaterializable = 1 in {
@@ -353,7 +355,9 @@ let SubtargetPredicate = HasGFX950Insts, OtherPredicates = [HasBF16ConversionIns
   defm V_CVT_F32_BF16 : VOP1Inst_t16 <"v_cvt_f32_bf16", VOP_F32_BF16>;
 }
 let SubtargetPredicate = isGFX1250Plus, OtherPredicates = [HasBF16ConversionInsts] in {
-  defm V_CVT_F32_BF16_OP_SEL : VOP1Inst_t16 <"v_cvt_f32_bf16_op_sel", VOP_F32_BF16_OP_SEL>;
+  defm V_CVT_F32_BF16_gfx1250 : VOP1Inst_t16_with_profiles <"v_cvt_f32_bf16_gfx1250", VOP_F32_BF16,
+                                                            VOPProfile_CVT_F32_BF16_gfx1250_t16,
+                                                            VOPProfile_CVT_F32_BF16_gfx1250_fake16>;
 }
 #else /* LLPC_BUILD_NPI */
 let SubtargetPredicate = HasBF16ConversionInsts in
@@ -1416,9 +1420,9 @@ defm V_TANH_F16              : VOP1_Real_FULL_t16_and_fake16_gfx1250_gfx13<0x01f
 defm V_PERMLANE16_SWAP_B32   : VOP1_Real_OpSelIsDPP_gfx1250_gfx13<0x049>;
 defm V_TANH_BF16             : VOP1_Real_FULL_t16_and_fake16_gfx1250_gfx13<0x04a>;
 defm V_PRNG_B32              : VOP1_Real_FULL_gfx1250_gfx13<0x04b>;
-defm V_CVT_F32_BF16_fake16   : VOP1_Real_FULL_with_name_gfx1250_gfx13<0x072, "V_CVT_F32_BF16_OP_SEL", "v_cvt_f32_bf16">;
-defm V_SAT_PK4_I4_I8_fake16  : VOP1_Real_FULL_t16_gfx1250_gfx13<0x073>;
-defm V_SAT_PK4_U4_U8_fake16  : VOP1_Real_FULL_t16_gfx1250_gfx13<0x074>;
+defm V_CVT_F32_BF16          : VOP1_Real_FULL_t16_and_fake16_gfx1250_gfx13<0x072, "v_cvt_f32_bf16", "V_CVT_F32_BF16_gfx1250">;
+defm V_SAT_PK4_I4_I8         : VOP1_Real_FULL_t16_and_fake16_gfx1250_gfx13<0x073>;
+defm V_SAT_PK4_U4_U8         : VOP1_Real_FULL_t16_and_fake16_gfx1250_gfx13<0x074>;
 defm V_CVT_PK_F16_FP8        : VOP1_Real_FULL_t16_and_fake16_gfx1250_gfx13<0x075>;
 defm V_CVT_PK_F16_BF8        : VOP1_Real_FULL_t16_and_fake16_gfx1250_gfx13<0x076>;
 defm V_CVT_F16_FP8           : VOP1_Real_FULL_t16_and_fake16_gfx1250_gfx13<0x077>;

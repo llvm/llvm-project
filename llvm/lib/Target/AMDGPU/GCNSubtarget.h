@@ -323,6 +323,7 @@ protected:
   bool HasPointSampleAccel = false;
 #if LLPC_BUILD_NPI
   bool HasLdsBarrierArriveAtomic = false;
+  bool HasSetPrioIncWgInst = false;
 #endif /* LLPC_BUILD_NPI */
 
   bool RequiresCOV6 = false;
@@ -1730,6 +1731,9 @@ public:
 
   // \returns ture if target has S_GET_SHADER_CYCLES_U64 instruction.
   bool hasSGetShaderCyclesInst() const { return GFX1250Insts; }
+
+  // \returns true if target has S_SETPRIO_INC_WG instruction.
+  bool hasSetPrioIncWgInst() const { return HasSetPrioIncWgInst; }
 
 #endif /* LLPC_BUILD_NPI */
   // \returns true if S_GETPC_B64 zero-extends the result from 48 bits instead

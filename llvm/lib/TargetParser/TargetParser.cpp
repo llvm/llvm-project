@@ -466,6 +466,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["atomic-flat-pk-add-16-insts"] = true;
       Features["atomic-global-pk-add-bf16-inst"] = true;
       Features["atomic-ds-pk-add-16-insts"] = true;
+      Features["setprio-inc-wg-inst"] = true;
       break;
 #endif /* LLPC_BUILD_NPI */
     case GK_GFX120F:
