@@ -263,7 +263,7 @@ static void ReExecIfNeeded(bool ignore_heap) {
     if (personality(old_personality | ADDR_NO_RANDOMIZE) == -1) {
       Printf("FATAL: ThreadSanitizer: unable to disable ASLR (perhaps "
              "sandboxing is enabled?).\n");
-      Printf("FATAL: Please rerun without sandboxing or ASLR.\n");
+      Printf("FATAL: Please rerun without sandboxing and/or ASLR.\n");
       Die();
     }
 
