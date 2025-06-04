@@ -161,6 +161,40 @@ uint64_t mlirIntegerAttrGetValueUInt(MlirAttribute attr) {
   return llvm::cast<IntegerAttr>(unwrap(attr)).getUInt();
 }
 
+int mlirIntegerAttrGetValueInterop(MlirAttribute attr,
+                                   apint_interop_t *interop) {
+  size_t needed_bit_width =
+      llvm::cast<IntegerAttr>(unwrap(attr)).getValue().getBitWidth();
+  if (interop->numbits < needed_bit_width) {
+    interop->numbits = needed_bit_width;
+    return 1;
+  }
+  if (interop->numbits <= 64) {
+    interop->data.VAL =
+        llvm::cast<IntegerAttr>(unwrap(attr)).getValue().getRawData()[0];
+    return 0;
+  }
+  int memcpy_bytes = (interop->numbits + 7) / 8;
+  memcpy((void *)interop->data.pVAL,
+         (const void *)llvm::cast<IntegerAttr>(unwrap(attr))
+             .getValue()
+             .getRawData(),
+         memcpy_bytes);
+  return 0;
+}
+
+MlirAttribute mlirIntegerAttrFromInterop(MlirType type,
+                                         apint_interop_t *interop) {
+  if (interop->numbits <= 64) {
+    return wrap(IntegerAttr::get(unwrap(type), interop->data.VAL));
+  }
+  APInt apInt(interop->numbits,
+              llvm::ArrayRef<uint64_t>(interop->data.pVAL,
+                                       (interop->numbits + 63) / 64));
+  IntegerAttr value = IntegerAttr::get(unwrap(type), apInt);
+  return wrap(value);
+}
+
 MlirTypeID mlirIntegerAttrGetTypeID(void) {
   return wrap(IntegerAttr::getTypeID());
 }
