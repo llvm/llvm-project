@@ -3060,6 +3060,39 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
   if (TLI.useStackGuardXorFP())
     GuardVal = TLI.emitStackGuardXorFP(DAG, GuardVal, dl);
 
+  // If we're using function-based instrumentation, call the guard check
+  // function
+  if (SPD.shouldEmitFunctionBasedCheckStackProtector()) {
+    // Get the guard check function from the target and verify it exists since
+    // we're using function-based instrumentation
+    const Function *GuardCheckFn = TLI.getSSPStackGuardCheck(M);
+    assert(GuardCheckFn && "Guard check function is null");
+
+    // The target provides a guard check function to validate the guard value.
+    // Generate a call to that function with the content of the guard slot as
+    // argument.
+    FunctionType *FnTy = GuardCheckFn->getFunctionType();
+    assert(FnTy->getNumParams() == 1 && "Invalid function signature");
+
+    TargetLowering::ArgListTy Args;
+    TargetLowering::ArgListEntry Entry;
+    Entry.Node = GuardVal;
+    Entry.Ty = FnTy->getParamType(0);
+    if (GuardCheckFn->hasParamAttribute(0, Attribute::AttrKind::InReg))
+      Entry.IsInReg = true;
+    Args.push_back(Entry);
+
+    TargetLowering::CallLoweringInfo CLI(DAG);
+    CLI.setDebugLoc(getCurSDLoc())
+        .setChain(DAG.getEntryNode())
+        .setCallee(GuardCheckFn->getCallingConv(), FnTy->getReturnType(),
+                   getValue(GuardCheckFn), std::move(Args));
+
+    std::pair<SDValue, SDValue> Result = TLI.LowerCallTo(CLI);
+    DAG.setRoot(Result.second);
+    return;
+  }
+
   // If useLoadStackGuardNode returns true, generate LOAD_STACK_GUARD.
   // Otherwise, emit a volatile load to retrieve the stack guard value.
   SDValue Chain = DAG.getEntryNode();
@@ -3107,9 +3140,11 @@ void SelectionDAGBuilder::visitSPDescriptorFailure(
   const Module &M = *ParentBB->getParent()->getFunction().getParent();
   SDValue Chain;
 
-  // Retrieve guard check function, nullptr if instrumentation is inlined.
-  if (const Function *GuardCheckFn = TLI.getSSPStackGuardCheck(M)) {
-
+  // For -Oz builds with a guard check function, we use function-based
+  // instrumentation. Otherwise, if we have a guard check function, we call it
+  // in the failure block.
+  auto *GuardCheckFn = TLI.getSSPStackGuardCheck(M);
+  if (GuardCheckFn && !SPD.shouldEmitFunctionBasedCheckStackProtector()) {
     // First create the loads to the guard/stack slot for the comparison.
     auto &DL = DAG.getDataLayout();
     EVT PtrTy = TLI.getFrameIndexTy(DL);
