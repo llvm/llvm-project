@@ -8,6 +8,7 @@ class TestSwiftVariadicGenerics(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     @skipUnlessDarwin
     @swiftTest
+    @skipIfAsan # rdar://152465885 Address Sanitizer assert doing `expr --bind-generic-types=false -- 0`
     def test(self):
         self.build()
 
