@@ -1,4 +1,4 @@
-//==---- QualtypeMapper.cpp - Maps Clang Qualtype to LLVMABI Types ---------==//
+//==---- QualTypeMapper.cpp - Maps Clang QualType to LLVMABI Types ---------==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,8 +14,9 @@
 /// interoperability.
 ///
 //===----------------------------------------------------------------------===//
-#include "clang/CodeGen/QualtypeMapper.h"
+#include "clang/CodeGen/QualTypeMapper.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
@@ -48,7 +49,7 @@ const llvm::abi::Type *QualTypeMapper::convertType(QualType QT) {
   } else if (const auto *ET = dyn_cast<EnumType>(QT.getTypePtr())) {
     Result = convertEnumType(ET);
   } else {
-    // TODO: Write Fallback logic for unsupported types.
+    llvm_unreachable("Unsupported type for ABI lowering");
   }
   TypeCache[QT] = Result;
   return Result;
@@ -113,7 +114,6 @@ QualTypeMapper::convertArrayType(const clang::ArrayType *AT) {
     return Builder.getArrayType(ElementType, 0);
   if (const auto *VAT = dyn_cast<VariableArrayType>(AT))
     return createPointerTypeForPointee(VAT->getPointeeType());
-  // TODO: This of a better fallback.
   return Builder.getArrayType(ElementType, 1);
 }
 
@@ -136,7 +136,67 @@ const llvm::abi::Type *QualTypeMapper::convertRecordType(const RecordType *RT) {
 
   if (RD->isUnion())
     return convertUnionType(RD);
+
+  // Handle C++ classes with base classes
+  auto *const CXXRd = dyn_cast<CXXRecordDecl>(RD);
+  if (CXXRd && (CXXRd->getNumBases() > 0 || CXXRd->getNumVBases() > 0)) {
+    return convertCXXRecordType(CXXRd);
+  }
   return convertStructType(RD);
+}
+
+const llvm::abi::StructType *
+QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
+  const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(RD);
+  SmallVector<llvm::abi::FieldInfo, 16> Fields;
+
+  if (RD->isPolymorphic()) {
+    const llvm::abi::Type *VtablePointer =
+        createPointerTypeForPointee(ASTCtx.VoidPtrTy);
+    Fields.emplace_back(VtablePointer, 0);
+  }
+
+  for (const auto &Base : RD->bases()) {
+    if (Base.isVirtual())
+      continue;
+
+    const RecordType *BaseRT = Base.getType()->getAs<RecordType>();
+    if (!BaseRT)
+      continue;
+
+    const llvm::abi::Type *BaseType = convertType(Base.getType());
+    uint64_t BaseOffset =
+        Layout.getBaseClassOffset(BaseRT->getAsCXXRecordDecl()).getQuantity() *
+        8;
+
+    Fields.emplace_back(BaseType, BaseOffset);
+  }
+
+  for (const auto &VBase : RD->vbases()) {
+    const RecordType *VBaseRT = VBase.getType()->getAs<RecordType>();
+    if (!VBaseRT)
+      continue;
+
+    const llvm::abi::Type *VBaseType = convertType(VBase.getType());
+    uint64_t VBaseOffset =
+        Layout.getVBaseClassOffset(VBaseRT->getAsCXXRecordDecl())
+            .getQuantity() *
+        8;
+
+    Fields.emplace_back(VBaseType, VBaseOffset);
+  }
+  computeFieldInfo(RD, Fields, Layout);
+
+  llvm::sort(Fields,
+             [](const llvm::abi::FieldInfo &A, const llvm::abi::FieldInfo &B) {
+               return A.OffsetInBits < B.OffsetInBits;
+             });
+
+  llvm::TypeSize Size =
+      llvm::TypeSize::getFixed(Layout.getSize().getQuantity() * 8);
+  llvm::Align Alignment = llvm::Align(Layout.getAlignment().getQuantity());
+
+  return Builder.getStructType(Fields, Size, Alignment);
 }
 
 const llvm::abi::Type *
