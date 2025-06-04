@@ -33,7 +33,7 @@ class TestDAP_threads(lldbdap_testcase.DAPTestCaseBase):
         self.dap_server.request_continue()
         stopped_event = self.dap_server.wait_for_stopped()
         # Verify that the description is the relevant breakpoint,
-        # preserveFocusHint is False.
+        # preserveFocusHint is False and threadCausedFocus is True
         self.assertTrue(
             stopped_event[0]["body"]["description"].startswith(
                 "breakpoint %s." % breakpoint_ids[0]

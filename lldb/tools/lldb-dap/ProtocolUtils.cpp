@@ -152,7 +152,9 @@ std::vector<protocol::Thread> GetThreads(lldb::SBProcess process,
   std::lock_guard<lldb::SBMutex> guard(lock);
 
   std::vector<protocol::Thread> threads;
+
   const uint32_t num_threads = process.GetNumThreads();
+  threads.reserve(num_threads);
   for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
     lldb::SBThread thread = process.GetThreadAtIndex(thread_idx);
     threads.emplace_back(CreateThread(thread, format));

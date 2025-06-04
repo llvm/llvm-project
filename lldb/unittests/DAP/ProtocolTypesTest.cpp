@@ -618,8 +618,16 @@ TEST(ProtocolTypesTest, DisassembledInstruction) {
   EXPECT_THAT_EXPECTED(
       parse<DisassembledInstruction>(R"({"address":1})",
                                      "disassemblyInstruction"),
-      FailedWithMessage(
-          "missing 'address' field when parsing disassemblyInstruction"));
+      FailedWithMessage("expected string at disassemblyInstruction.address"));
+  EXPECT_THAT_EXPECTED(parse<DisassembledInstruction>(R"({"address":"-1"})",
+                                                      "disassemblyInstruction"),
+                       FailedWithMessage("expected string encoded uint64_t at "
+                                         "disassemblyInstruction.address"));
+  EXPECT_THAT_EXPECTED(parse<DisassembledInstruction>(
+                           R"({"address":"0xfffffffffffffffffffffffffff"})",
+                           "disassemblyInstruction"),
+                       FailedWithMessage("expected string encoded uint64_t at "
+                                         "disassemblyInstruction.address"));
 }
 
 TEST(ProtocolTypesTest, Thread) {
@@ -643,8 +651,7 @@ TEST(ProtocolTypesTest, Thread) {
 
 TEST(ProtocolTypesTest, ThreadResponseBody) {
   const ThreadsResponseBody body{{{1, "thr1"}, {2, "thr2"}}};
-  const StringRef json =
-      R"({
+  const StringRef json = R"({
   "threads": [
     {
       "id": 1,
