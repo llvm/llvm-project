@@ -612,3 +612,66 @@ TEST_P(DemanglingPartsTestFixture, DemanglingParts) {
 
 INSTANTIATE_TEST_SUITE_P(DemanglingPartsTests, DemanglingPartsTestFixture,
                          ::testing::ValuesIn(g_demangling_parts_test_cases));
+
+struct DemanglingInfoCorrectnessTestCase {
+  const char *mangled;
+  const char *demangled;
+};
+
+DemanglingInfoCorrectnessTestCase g_demangling_correctness_test_cases[] = {
+#include "llvm/Testing/Demangle/DemangleTestCases.inc"
+};
+
+struct DemanglingInfoCorrectnessTestFixutre
+    : public ::testing::TestWithParam<DemanglingInfoCorrectnessTestCase> {};
+
+TEST_P(DemanglingInfoCorrectnessTestFixutre, Correctness) {
+  auto [mangled, demangled] = GetParam();
+
+  llvm::itanium_demangle::ManglingParser<TestAllocator> Parser(
+      mangled, mangled + ::strlen(mangled));
+
+  const auto *Root = Parser.parse();
+
+  ASSERT_NE(nullptr, Root);
+
+  TrackingOutputBuffer OB;
+  Root->print(OB);
+
+  // Filter out cases which would never show up in frames. We only care about
+  // function names.
+  if (Root->getKind() !=
+          llvm::itanium_demangle::Node::Kind::KFunctionEncoding &&
+      Root->getKind() != llvm::itanium_demangle::Node::Kind::KDotSuffix)
+    return;
+
+  ASSERT_TRUE(OB.NameInfo.hasBasename());
+
+  auto tracked_name = llvm::StringRef(OB);
+
+  auto return_left = tracked_name.slice(0, OB.NameInfo.ScopeRange.first);
+  auto scope = tracked_name.slice(OB.NameInfo.ScopeRange.first,
+                                  OB.NameInfo.ScopeRange.second);
+  auto basename = tracked_name.slice(OB.NameInfo.BasenameRange.first,
+                                     OB.NameInfo.BasenameRange.second);
+  auto template_args = tracked_name.slice(OB.NameInfo.BasenameRange.second,
+                                          OB.NameInfo.ArgumentsRange.first);
+  auto args = tracked_name.slice(OB.NameInfo.ArgumentsRange.first,
+                                 OB.NameInfo.ArgumentsRange.second);
+  auto return_right = tracked_name.slice(OB.NameInfo.ArgumentsRange.second,
+                                         OB.NameInfo.QualifiersRange.first);
+  auto qualifiers = tracked_name.slice(OB.NameInfo.QualifiersRange.first,
+                                       OB.NameInfo.QualifiersRange.second);
+  auto suffix = tracked_name.slice(OB.NameInfo.QualifiersRange.second,
+                                   llvm::StringRef::npos);
+
+  auto reconstructed_name =
+      llvm::join_items("", return_left, scope, basename, template_args, args,
+                       return_right, qualifiers, suffix);
+
+  EXPECT_EQ(reconstructed_name, demangled);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    DemanglingInfoCorrectnessTests, DemanglingInfoCorrectnessTestFixutre,
+    ::testing::ValuesIn(g_demangling_correctness_test_cases));

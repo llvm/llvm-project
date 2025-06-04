@@ -1090,6 +1090,7 @@ R"(All available -march extensions for RISC-V
     sha                  1.0
     shcounterenw         1.0
     shgatpa              1.0
+    shlcofideleg         1.0
     shtvala              1.0
     shvsatpa             1.0
     shvstvala            1.0
