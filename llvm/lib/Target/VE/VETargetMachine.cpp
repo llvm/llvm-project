@@ -30,6 +30,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVETarget() {
   RegisterTargetMachine<VETargetMachine> X(getTheVETarget());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeVEAsmPrinterPass(PR);
   initializeVEDAGToDAGISelLegacyPass(PR);
 }
 

@@ -164,3 +164,57 @@ void test4(int n) {
   int y = _Countof(int[n++][7]);
 }
 
+// CHECK-64-LABEL: define dso_local void @test5(
+// CHECK-64-SAME: ) #[[ATTR0]] {
+// CHECK-64-NEXT:  [[ENTRY:.*:]]
+// CHECK-64-NEXT:    [[J:%.*]] = alloca i32, align
+// CHECK-64-NEXT:    [[SAVED_STACK:%.*]] = alloca ptr, align
+// CHECK-64-NEXT:    [[A:%.*]] = alloca i32, align
+// CHECK-64-NEXT:    [[B:%.*]] = alloca i32, align
+// CHECK-64-NEXT:    [[C:%.*]] = alloca i32, align
+// CHECK-64-NEXT:    [[D:%.*]] = alloca i32, align
+// CHECK-64-NEXT:    store i32 2, ptr [[J]], align
+// CHECK-64-NEXT:    [[TMP0:%.*]] = call ptr @llvm.stacksave.p0()
+// CHECK-64-NEXT:    store ptr [[TMP0]], ptr [[SAVED_STACK]], align
+// CHECK-64-NEXT:    [[VLA:%.*]] = alloca i32, i64 120, align
+// CHECK-64-NEXT:    store i32 1, ptr [[A]], align
+// CHECK-64-NEXT:    store i32 4, ptr [[B]], align
+// CHECK-64-NEXT:    store i32 5, ptr [[C]], align
+// CHECK-64-NEXT:    store i32 6, ptr [[D]], align
+// CHECK-64-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[SAVED_STACK]], align
+// CHECK-64-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP1]])
+// CHECK-64-NEXT:    ret void
+//
+// CHECK-32-LABEL: define dso_local void @test5(
+// CHECK-32-SAME: ) #[[ATTR0]] {
+// CHECK-32-NEXT:  [[ENTRY:.*:]]
+// CHECK-32-NEXT:    [[J:%.*]] = alloca i32, align
+// CHECK-32-NEXT:    [[SAVED_STACK:%.*]] = alloca ptr, align
+// CHECK-32-NEXT:    [[A:%.*]] = alloca i32, align
+// CHECK-32-NEXT:    [[B:%.*]] = alloca i32, align
+// CHECK-32-NEXT:    [[C:%.*]] = alloca i32, align
+// CHECK-32-NEXT:    [[D:%.*]] = alloca i32, align
+// CHECK-32-NEXT:    store i32 2, ptr [[J]], align
+// CHECK-32-NEXT:    [[TMP0:%.*]] = call ptr @llvm.stacksave.p0()
+// CHECK-32-NEXT:    store ptr [[TMP0]], ptr [[SAVED_STACK]], align
+// CHECK-32-NEXT:    [[VLA:%.*]] = alloca i32, i32 120, align
+// CHECK-32-NEXT:    store i32 1, ptr [[A]], align
+// CHECK-32-NEXT:    store i32 4, ptr [[B]], align
+// CHECK-32-NEXT:    store i32 5, ptr [[C]], align
+// CHECK-32-NEXT:    store i32 6, ptr [[D]], align
+// CHECK-32-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[SAVED_STACK]], align
+// CHECK-32-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP1]])
+// CHECK-32-NEXT:    ret void
+//
+void test5() {
+  // Ensure we're getting the variable-length dimensions correctly. We were
+  // previously returning the size of all VLA dimensions multiplied together
+  // to get the total element count rather than the element count for a single
+  // array rank. See GH141409
+  const int j = 2;
+  int arr[1][j + 2][j + 3][j + 4];
+  int a = _Countof arr;
+  int b = _Countof *arr;
+  int c = _Countof **arr;
+  int d = _Countof ***arr;
+}

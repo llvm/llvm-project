@@ -2215,18 +2215,23 @@ void GlobalOp::build(OpBuilder &builder, OperationState &result, Type type,
   result.addRegion();
 }
 
-void GlobalOp::print(OpAsmPrinter &p) {
-  p << ' ' << stringifyLinkage(getLinkage()) << ' ';
-  StringRef visibility = stringifyVisibility(getVisibility_());
+template <typename OpType>
+static void printCommonGlobalAndAlias(OpAsmPrinter &p, OpType op) {
+  p << ' ' << stringifyLinkage(op.getLinkage()) << ' ';
+  StringRef visibility = stringifyVisibility(op.getVisibility_());
   if (!visibility.empty())
     p << visibility << ' ';
-  if (getThreadLocal_())
+  if (op.getThreadLocal_())
     p << "thread_local ";
-  if (auto unnamedAddr = getUnnamedAddr()) {
+  if (auto unnamedAddr = op.getUnnamedAddr()) {
     StringRef str = stringifyUnnamedAddr(*unnamedAddr);
     if (!str.empty())
       p << str << ' ';
   }
+}
+
+void GlobalOp::print(OpAsmPrinter &p) {
+  printCommonGlobalAndAlias<GlobalOp>(p, *this);
   if (getConstant())
     p << "constant ";
   p.printSymbolName(getSymName());
@@ -2309,15 +2314,15 @@ static ParseResult parseCommonGlobalAndAlias(OpAsmParser &parser,
                           parseOptionalLLVMKeyword<LLVM::Visibility, int64_t>(
                               parser, result, LLVM::Visibility::Default)));
 
+  if (succeeded(parser.parseOptionalKeyword("thread_local")))
+    result.addAttribute(OpType::getThreadLocal_AttrName(result.name),
+                        parser.getBuilder().getUnitAttr());
+
   // Parse optional UnnamedAddr, default to None.
   result.addAttribute(OpType::getUnnamedAddrAttrName(result.name),
                       parser.getBuilder().getI64IntegerAttr(
                           parseOptionalLLVMKeyword<UnnamedAddr, int64_t>(
                               parser, result, LLVM::UnnamedAddr::None)));
-
-  if (succeeded(parser.parseOptionalKeyword("thread_local")))
-    result.addAttribute(OpType::getThreadLocal_AttrName(result.name),
-                        parser.getBuilder().getUnitAttr());
 
   return success();
 }
@@ -2581,19 +2586,7 @@ void AliasOp::build(OpBuilder &builder, OperationState &result, Type type,
 }
 
 void AliasOp::print(OpAsmPrinter &p) {
-  p << ' ' << stringifyLinkage(getLinkage()) << ' ';
-  StringRef visibility = stringifyVisibility(getVisibility_());
-  if (!visibility.empty())
-    p << visibility << ' ';
-
-  if (std::optional<mlir::LLVM::UnnamedAddr> unnamedAddr = getUnnamedAddr()) {
-    StringRef str = stringifyUnnamedAddr(*unnamedAddr);
-    if (!str.empty())
-      p << str << ' ';
-  }
-
-  if (getThreadLocal_())
-    p << "thread_local ";
+  printCommonGlobalAndAlias<AliasOp>(p, *this);
 
   p.printSymbolName(getSymName());
   p.printOptionalAttrDict((*this)->getAttrs(),
@@ -3149,6 +3142,74 @@ static bool hasScalableVectorType(Type t) {
   return false;
 }
 
+/// Verifies the constant array represented by `arrayAttr` matches the provided
+/// `arrayType`.
+static LogicalResult verifyStructArrayConstant(LLVM::ConstantOp op,
+                                               LLVM::LLVMArrayType arrayType,
+                                               ArrayAttr arrayAttr, int dim) {
+  if (arrayType.getNumElements() != arrayAttr.size())
+    return op.emitOpError()
+           << "array attribute size does not match array type size in "
+              "dimension "
+           << dim << ": " << arrayAttr.size() << " vs. "
+           << arrayType.getNumElements();
+
+  llvm::DenseSet<Attribute> elementsVerified;
+
+  // Recursively verify sub-dimensions for multidimensional arrays.
+  if (auto subArrayType =
+          dyn_cast<LLVM::LLVMArrayType>(arrayType.getElementType())) {
+    for (auto [idx, elementAttr] : llvm::enumerate(arrayAttr))
+      if (elementsVerified.insert(elementAttr).second) {
+        if (isa<LLVM::ZeroAttr, LLVM::UndefAttr>(elementAttr))
+          continue;
+        auto subArrayAttr = dyn_cast<ArrayAttr>(elementAttr);
+        if (!subArrayAttr)
+          return op.emitOpError()
+                 << "nested attribute for sub-array in dimension " << dim
+                 << " at index " << idx
+                 << " must be a zero, or undef, or array attribute";
+        if (failed(verifyStructArrayConstant(op, subArrayType, subArrayAttr,
+                                             dim + 1)))
+          return failure();
+      }
+    return success();
+  }
+
+  // Forbid usages of ArrayAttr for simple array types that should use
+  // DenseElementsAttr instead. Note that there would be a use case for such
+  // array types when one element value is obtained via a ptr-to-int conversion
+  // from a symbol and cannot be represented in a DenseElementsAttr, but no MLIR
+  // user needs this so far, and it seems better to avoid people misusing the
+  // ArrayAttr for simple types.
+  auto structType = dyn_cast<LLVM::LLVMStructType>(arrayType.getElementType());
+  if (!structType)
+    return op.emitOpError() << "for array with an array attribute must have a "
+                               "struct element type";
+
+  // Shallow verification that leaf attributes are appropriate as struct initial
+  // value.
+  size_t numStructElements = structType.getBody().size();
+  for (auto [idx, elementAttr] : llvm::enumerate(arrayAttr)) {
+    if (elementsVerified.insert(elementAttr).second) {
+      if (isa<LLVM::ZeroAttr, LLVM::UndefAttr>(elementAttr))
+        continue;
+      auto subArrayAttr = dyn_cast<ArrayAttr>(elementAttr);
+      if (!subArrayAttr)
+        return op.emitOpError()
+               << "nested attribute for struct element at index " << idx
+               << " must be a zero, or undef, or array attribute";
+      if (subArrayAttr.size() != numStructElements)
+        return op.emitOpError()
+               << "nested array attribute size for struct element at index "
+               << idx << " must match struct size: " << subArrayAttr.size()
+               << " vs. " << numStructElements;
+    }
+  }
+
+  return success();
+}
+
 LogicalResult LLVM::ConstantOp::verify() {
   if (StringAttr sAttr = llvm::dyn_cast<StringAttr>(getValue())) {
     auto arrayType = llvm::dyn_cast<LLVMArrayType>(getType());
@@ -3215,7 +3276,7 @@ LogicalResult LLVM::ConstantOp::verify() {
     if (isa<IntegerType>(getType()) && !getType().isInteger(floatWidth)) {
       return emitOpError() << "expected integer type of width " << floatWidth;
     }
-  } else if (isa<ElementsAttr, ArrayAttr>(getValue())) {
+  } else if (isa<ElementsAttr>(getValue())) {
     if (hasScalableVectorType(getType())) {
       // The exact number of elements of a scalable vector is unknown, so we
       // allow only splat attributes.
@@ -3228,15 +3289,20 @@ LogicalResult LLVM::ConstantOp::verify() {
     if (!isa<VectorType, LLVM::LLVMArrayType>(getType()))
       return emitOpError() << "expected vector or array type";
     // The number of elements of the attribute and the type must match.
-    int64_t attrNumElements;
-    if (auto elementsAttr = dyn_cast<ElementsAttr>(getValue()))
-      attrNumElements = elementsAttr.getNumElements();
-    else
-      attrNumElements = cast<ArrayAttr>(getValue()).size();
-    if (getNumElements(getType()) != attrNumElements)
-      return emitOpError()
-             << "type and attribute have a different number of elements: "
-             << getNumElements(getType()) << " vs. " << attrNumElements;
+    if (auto elementsAttr = dyn_cast<ElementsAttr>(getValue())) {
+      int64_t attrNumElements = elementsAttr.getNumElements();
+      if (getNumElements(getType()) != attrNumElements)
+        return emitOpError()
+               << "type and attribute have a different number of elements: "
+               << getNumElements(getType()) << " vs. " << attrNumElements;
+    }
+  } else if (auto arrayAttr = dyn_cast<ArrayAttr>(getValue())) {
+    auto arrayType = dyn_cast<LLVM::LLVMArrayType>(getType());
+    if (!arrayType)
+      return emitOpError() << "expected array type";
+    // When the attribute is an ArrayAttr, check that its nesting matches the
+    // corresponding ArrayType or VectorType nesting.
+    return verifyStructArrayConstant(*this, arrayType, arrayAttr, /*dim=*/0);
   } else {
     return emitOpError()
            << "only supports integer, float, string or elements attributes";
@@ -3734,36 +3800,6 @@ void CallIntrinsicOp::print(OpAsmPrinter &p) {
 }
 
 //===----------------------------------------------------------------------===//
-// OpAsmDialectInterface
-//===----------------------------------------------------------------------===//
-
-namespace {
-struct LLVMOpAsmDialectInterface : public OpAsmDialectInterface {
-  using OpAsmDialectInterface::OpAsmDialectInterface;
-
-  AliasResult getAlias(Attribute attr, raw_ostream &os) const override {
-    return TypeSwitch<Attribute, AliasResult>(attr)
-        .Case<AccessGroupAttr, AliasScopeAttr, AliasScopeDomainAttr,
-              DIBasicTypeAttr, DICommonBlockAttr, DICompileUnitAttr,
-              DICompositeTypeAttr, DIDerivedTypeAttr, DIFileAttr,
-              DIGlobalVariableAttr, DIGlobalVariableExpressionAttr,
-              DIImportedEntityAttr, DILabelAttr, DILexicalBlockAttr,
-              DILexicalBlockFileAttr, DILocalVariableAttr, DIModuleAttr,
-              DINamespaceAttr, DINullTypeAttr, DIStringTypeAttr,
-              DISubprogramAttr, DISubroutineTypeAttr, LoopAnnotationAttr,
-              LoopVectorizeAttr, LoopInterleaveAttr, LoopUnrollAttr,
-              LoopUnrollAndJamAttr, LoopLICMAttr, LoopDistributeAttr,
-              LoopPipelineAttr, LoopPeeledAttr, LoopUnswitchAttr, TBAARootAttr,
-              TBAATagAttr, TBAATypeDescriptorAttr>([&](auto attr) {
-          os << decltype(attr)::getMnemonic();
-          return AliasResult::OverridableAlias;
-        })
-        .Default([](Attribute) { return AliasResult::NoAlias; });
-  }
-};
-} // namespace
-
-//===----------------------------------------------------------------------===//
 // LinkerOptionsOp
 //===----------------------------------------------------------------------===//
 
@@ -4007,6 +4043,21 @@ LogicalResult LLVM::masked_scatter::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// InlineAsmOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult InlineAsmOp::verify() {
+  if (!getTailCallKindAttr())
+    return success();
+
+  if (getTailCallKindAttr().getTailCallKind() == TailCallKind::MustTail)
+    return emitOpError(
+        "tail call kind 'musttail' is not supported by this operation");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // LLVMDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
 
@@ -4031,9 +4082,6 @@ void LLVMDialect::initialize() {
 
   // Support unknown operations because not all LLVM operations are registered.
   allowUnknownOperations();
-  // clang-format off
-  addInterfaces<LLVMOpAsmDialectInterface>();
-  // clang-format on
   declarePromisedInterface<DialectInlinerInterface, LLVMDialect>();
 }
 

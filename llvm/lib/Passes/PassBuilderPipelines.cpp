@@ -24,7 +24,6 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
-#include "llvm/CodeGen/GlobalMergeFunctions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Passes/OptimizationLevel.h"
@@ -2319,6 +2318,10 @@ AAManager PassBuilder::buildDefaultAAPipeline() {
 
   // The order in which these are registered determines their priority when
   // being queried.
+
+  // Add any target-specific alias analyses that should be run early.
+  if (TM)
+    TM->registerEarlyDefaultAliasAnalyses(AA);
 
   // First we register the basic alias analysis that provides the majority of
   // per-function local AA logic. This is a stateless, on-demand local set of

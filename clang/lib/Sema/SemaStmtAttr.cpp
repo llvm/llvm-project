@@ -395,7 +395,7 @@ static Attr *handleCodeAlignAttr(Sema &S, Stmt *St, const ParsedAttr &A) {
 template <typename LoopAttrT>
 static void CheckForDuplicateLoopAttrs(Sema &S, ArrayRef<const Attr *> Attrs) {
   auto FindFunc = [](const Attr *A) { return isa<const LoopAttrT>(A); };
-  const auto *FirstItr = std::find_if(Attrs.begin(), Attrs.end(), FindFunc);
+  const auto *FirstItr = llvm::find_if(Attrs, FindFunc);
 
   if (FirstItr == Attrs.end()) // no attributes found
     return;
@@ -428,7 +428,6 @@ static void CheckForDuplicateLoopAttrs(Sema &S, ArrayRef<const Attr *> Attrs) {
       S.Diag((*FirstItr)->getLocation(), diag::note_previous_attribute);
     }
   }
-  return;
 }
 
 static Attr *handleMSConstexprAttr(Sema &S, Stmt *St, const ParsedAttr &A,

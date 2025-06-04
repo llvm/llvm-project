@@ -21,8 +21,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Sema/HeuristicResolver.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 
 namespace clang::tidy::bugprone {

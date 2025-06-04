@@ -37,6 +37,7 @@
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Vectorize/EVLIndVarSimplify.h"
 #include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
 #include <optional>
 using namespace llvm;
@@ -146,9 +147,11 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVDAGToDAGISelLegacyPass(*PR);
   initializeRISCVMoveMergePass(*PR);
   initializeRISCVPushPopOptPass(*PR);
+  initializeRISCVIndirectBranchTrackingPass(*PR);
   initializeRISCVLoadStoreOptPass(*PR);
   initializeRISCVExpandAtomicPseudoPass(*PR);
   initializeRISCVRedundantCopyEliminationPass(*PR);
+  initializeRISCVAsmPrinterPass(*PR);
 }
 
 static StringRef computeDataLayout(const Triple &TT,
@@ -295,9 +298,8 @@ bool RISCVTargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
 
 ScheduleDAGInstrs *
 RISCVTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
-  ScheduleDAGMILive *DAG = nullptr;
+  ScheduleDAGMILive *DAG = createSchedLive(C);
   if (EnableMISchedLoadStoreClustering) {
-    DAG = createGenericSchedLive(C);
     DAG->addMutation(createLoadClusterDAGMutation(
         DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
     DAG->addMutation(createStoreClusterDAGMutation(
@@ -305,18 +307,16 @@ RISCVTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
   }
 
   const RISCVSubtarget &ST = C->MF->getSubtarget<RISCVSubtarget>();
-  if (!DisableVectorMaskMutation && ST.hasVInstructions()) {
-    DAG = DAG ? DAG : createGenericSchedLive(C);
+  if (!DisableVectorMaskMutation && ST.hasVInstructions())
     DAG->addMutation(createRISCVVectorMaskDAGMutation(DAG->TRI));
-  }
+
   return DAG;
 }
 
 ScheduleDAGInstrs *
 RISCVTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
-  ScheduleDAGMI *DAG = nullptr;
+  ScheduleDAGMI *DAG = createSchedPostRA(C);
   if (EnablePostMISchedLoadStoreClustering) {
-    DAG = createGenericSchedPostRA(C);
     DAG->addMutation(createLoadClusterDAGMutation(
         DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
     DAG->addMutation(createStoreClusterDAGMutation(
@@ -644,6 +644,12 @@ void RISCVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
                                                  OptimizationLevel Level) {
     LPM.addPass(LoopIdiomVectorizePass(LoopIdiomVectorizeStyle::Predicated));
   });
+
+  PB.registerVectorizerEndEPCallback(
+      [](FunctionPassManager &FPM, OptimizationLevel Level) {
+        if (Level.isOptimizingForSpeed())
+          FPM.addPass(createFunctionToLoopPassAdaptor(EVLIndVarSimplifyPass()));
+      });
 }
 
 yaml::MachineFunctionInfo *

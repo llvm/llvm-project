@@ -96,56 +96,49 @@ __nat __invoke(_Args&&... __args);
 
 // clang-format off
 template <class _Fp, class _A0, class... _Args, class = __enable_if_bullet1<_Fp, _A0> >
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
+inline _LIBCPP_HIDE_FROM_ABI
 decltype((std::declval<_A0>().*std::declval<_Fp>())(std::declval<_Args>()...))
 __invoke(_Fp&& __f, _A0&& __a0, _Args&&... __args)
-    _NOEXCEPT_(noexcept((static_cast<_A0&&>(__a0).*__f)(static_cast<_Args&&>(__args)...)))
                { return (static_cast<_A0&&>(__a0).*__f)(static_cast<_Args&&>(__args)...); }
 
 template <class _Fp, class _A0, class... _Args, class = __enable_if_bullet2<_Fp, _A0> >
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
+inline _LIBCPP_HIDE_FROM_ABI
 decltype((std::declval<_A0>().get().*std::declval<_Fp>())(std::declval<_Args>()...))
 __invoke(_Fp&& __f, _A0&& __a0, _Args&&... __args)
-    _NOEXCEPT_(noexcept((__a0.get().*__f)(static_cast<_Args&&>(__args)...)))
                { return (__a0.get().*__f)(static_cast<_Args&&>(__args)...); }
 
 template <class _Fp, class _A0, class... _Args, class = __enable_if_bullet3<_Fp, _A0> >
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
+inline _LIBCPP_HIDE_FROM_ABI
 decltype(((*std::declval<_A0>()).*std::declval<_Fp>())(std::declval<_Args>()...))
 __invoke(_Fp&& __f, _A0&& __a0, _Args&&... __args)
-    _NOEXCEPT_(noexcept(((*static_cast<_A0&&>(__a0)).*__f)(static_cast<_Args&&>(__args)...)))
                { return ((*static_cast<_A0&&>(__a0)).*__f)(static_cast<_Args&&>(__args)...); }
 
 // bullets 4, 5 and 6
 
 template <class _Fp, class _A0, class = __enable_if_bullet4<_Fp, _A0> >
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
+inline _LIBCPP_HIDE_FROM_ABI
 decltype(std::declval<_A0>().*std::declval<_Fp>())
 __invoke(_Fp&& __f, _A0&& __a0)
-    _NOEXCEPT_(noexcept(static_cast<_A0&&>(__a0).*__f))
                { return static_cast<_A0&&>(__a0).*__f; }
 
 template <class _Fp, class _A0, class = __enable_if_bullet5<_Fp, _A0> >
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
+inline _LIBCPP_HIDE_FROM_ABI
 decltype(std::declval<_A0>().get().*std::declval<_Fp>())
 __invoke(_Fp&& __f, _A0&& __a0)
-    _NOEXCEPT_(noexcept(__a0.get().*__f))
                { return __a0.get().*__f; }
 
 template <class _Fp, class _A0, class = __enable_if_bullet6<_Fp, _A0> >
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
+inline _LIBCPP_HIDE_FROM_ABI
 decltype((*std::declval<_A0>()).*std::declval<_Fp>())
 __invoke(_Fp&& __f, _A0&& __a0)
-    _NOEXCEPT_(noexcept((*static_cast<_A0&&>(__a0)).*__f))
                { return (*static_cast<_A0&&>(__a0)).*__f; }
 
 // bullet 7
 
 template <class _Fp, class... _Args>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
+inline _LIBCPP_HIDE_FROM_ABI
 decltype(std::declval<_Fp>()(std::declval<_Args>()...))
 __invoke(_Fp&& __f, _Args&&... __args)
-    _NOEXCEPT_(noexcept(static_cast<_Fp&&>(__f)(static_cast<_Args&&>(__args)...)))
                { return static_cast<_Fp&&>(__f)(static_cast<_Args&&>(__args)...); }
 // clang-format on
 
@@ -203,7 +196,7 @@ struct __invoke_of
 template <class _Ret, bool = is_void<_Ret>::value>
 struct __invoke_void_return_wrapper {
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static _Ret __call(_Args&&... __args) {
+  _LIBCPP_HIDE_FROM_ABI static _Ret __call(_Args&&... __args) {
     return std::__invoke(std::forward<_Args>(__args)...);
   }
 };
@@ -211,7 +204,7 @@ struct __invoke_void_return_wrapper {
 template <class _Ret>
 struct __invoke_void_return_wrapper<_Ret, true> {
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static void __call(_Args&&... __args) {
+  _LIBCPP_HIDE_FROM_ABI static void __call(_Args&&... __args) {
     std::__invoke(std::forward<_Args>(__args)...);
   }
 };

@@ -23,11 +23,7 @@ class StringRef;
 class LoongArchMCExpr : public MCTargetExpr {
 public:
   using Specifier = uint16_t;
-  enum {
-    VK_None,
-    VK_CALL = 1000, // larger than relocation types
-    VK_CALL_PLT,
-  };
+  enum { VK_None };
 
 private:
   const MCExpr *Expr;

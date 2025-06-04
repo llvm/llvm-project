@@ -1096,6 +1096,57 @@ OpenMPIRBuilder::createCancel(const LocationDescription &Loc,
   return Builder.saveIP();
 }
 
+OpenMPIRBuilder::InsertPointOrErrorTy
+OpenMPIRBuilder::createCancellationPoint(const LocationDescription &Loc,
+                                         omp::Directive CanceledDirective) {
+  if (!updateToLocation(Loc))
+    return Loc.IP;
+
+  // LLVM utilities like blocks with terminators.
+  auto *UI = Builder.CreateUnreachable();
+  Builder.SetInsertPoint(UI);
+
+  Value *CancelKind = nullptr;
+  switch (CanceledDirective) {
+#define OMP_CANCEL_KIND(Enum, Str, DirectiveEnum, Value)                       \
+  case DirectiveEnum:                                                          \
+    CancelKind = Builder.getInt32(Value);                                      \
+    break;
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+  default:
+    llvm_unreachable("Unknown cancel kind!");
+  }
+
+  uint32_t SrcLocStrSize;
+  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
+  Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
+  Value *Args[] = {Ident, getOrCreateThreadID(Ident), CancelKind};
+  Value *Result = Builder.CreateCall(
+      getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_cancellationpoint), Args);
+  auto ExitCB = [this, CanceledDirective, Loc](InsertPointTy IP) -> Error {
+    if (CanceledDirective == OMPD_parallel) {
+      IRBuilder<>::InsertPointGuard IPG(Builder);
+      Builder.restoreIP(IP);
+      return createBarrier(LocationDescription(Builder.saveIP(), Loc.DL),
+                           omp::Directive::OMPD_unknown,
+                           /* ForceSimpleCall */ false,
+                           /* CheckCancelFlag */ false)
+          .takeError();
+    }
+    return Error::success();
+  };
+
+  // The actual cancel logic is shared with others, e.g., cancel_barriers.
+  if (Error Err = emitCancelationCheckImpl(Result, CanceledDirective, ExitCB))
+    return Err;
+
+  // Update the insertion point and remove the terminator we introduced.
+  Builder.SetInsertPoint(UI->getParent());
+  UI->eraseFromParent();
+
+  return Builder.saveIP();
+}
+
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetKernel(
     const LocationDescription &Loc, InsertPointTy AllocaIP, Value *&Return,
     Value *Ident, Value *DeviceID, Value *NumTeams, Value *NumThreads,
@@ -4203,6 +4254,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyStaticWorkshareLoop(
   Value *PLowerBound = Builder.CreateAlloca(IVTy, nullptr, "p.lowerbound");
   Value *PUpperBound = Builder.CreateAlloca(IVTy, nullptr, "p.upperbound");
   Value *PStride = Builder.CreateAlloca(IVTy, nullptr, "p.stride");
+  CLI->setLastIter(PLastIter);
 
   // At the end of the preheader, prepare for calling the "init" function by
   // storing the current loop bounds into the allocated space. A canonical loop
@@ -4310,6 +4362,7 @@ OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(DebugLoc DL,
   Value *PUpperBound =
       Builder.CreateAlloca(InternalIVTy, nullptr, "p.upperbound");
   Value *PStride = Builder.CreateAlloca(InternalIVTy, nullptr, "p.stride");
+  CLI->setLastIter(PLastIter);
 
   // Set up the source location value for the OpenMP runtime.
   Builder.restoreIP(CLI->getPreheaderIP());
@@ -4793,6 +4846,7 @@ OpenMPIRBuilder::applyDynamicWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
   Value *PLowerBound = Builder.CreateAlloca(IVTy, nullptr, "p.lowerbound");
   Value *PUpperBound = Builder.CreateAlloca(IVTy, nullptr, "p.upperbound");
   Value *PStride = Builder.CreateAlloca(IVTy, nullptr, "p.stride");
+  CLI->setLastIter(PLastIter);
 
   // At the end of the preheader, prepare for calling the "init" function by
   // storing the current loop bounds into the allocated space. A canonical loop
@@ -7035,8 +7089,12 @@ static Expected<Function *> createOutlinedFunction(
     if (auto *Const = dyn_cast<Constant>(Input))
       convertUsersOfConstantsToInstructions(Const, Func, false);
 
+    // Collect users before iterating over them to avoid invalidating the
+    // iteration in case a user uses Input more than once (e.g. a call
+    // instruction).
+    SetVector<User *> Users(Input->users().begin(), Input->users().end());
     // Collect all the instructions
-    for (User *User : make_early_inc_range(Input->users()))
+    for (User *User : make_early_inc_range(Users))
       if (auto *Instr = dyn_cast<Instruction>(User))
         if (Instr->getFunction() == Func)
           Instr->replaceUsesOfWith(Input, InputCopy);
@@ -7509,18 +7567,18 @@ Error OpenMPIRBuilder::emitOffloadingArraysAndArgs(
   return Error::success();
 }
 
-static void
-emitTargetCall(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
-               OpenMPIRBuilder::InsertPointTy AllocaIP,
-               OpenMPIRBuilder::TargetDataInfo &Info,
-               const OpenMPIRBuilder::TargetKernelDefaultAttrs &DefaultAttrs,
-               const OpenMPIRBuilder::TargetKernelRuntimeAttrs &RuntimeAttrs,
-               Value *IfCond, Function *OutlinedFn, Constant *OutlinedFnID,
-               SmallVectorImpl<Value *> &Args,
-               OpenMPIRBuilder::GenMapInfoCallbackTy GenMapInfoCB,
-               OpenMPIRBuilder::CustomMapperCallbackTy CustomMapperCB,
-               SmallVector<llvm::OpenMPIRBuilder::DependData> Dependencies,
-               bool HasNoWait) {
+static void emitTargetCall(
+    OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
+    OpenMPIRBuilder::InsertPointTy AllocaIP,
+    OpenMPIRBuilder::TargetDataInfo &Info,
+    const OpenMPIRBuilder::TargetKernelDefaultAttrs &DefaultAttrs,
+    const OpenMPIRBuilder::TargetKernelRuntimeAttrs &RuntimeAttrs,
+    Value *IfCond, Function *OutlinedFn, Constant *OutlinedFnID,
+    SmallVectorImpl<Value *> &Args,
+    OpenMPIRBuilder::GenMapInfoCallbackTy GenMapInfoCB,
+    OpenMPIRBuilder::CustomMapperCallbackTy CustomMapperCB,
+    const SmallVector<llvm::OpenMPIRBuilder::DependData> &Dependencies,
+    bool HasNoWait) {
   // Generate a function call to the host fallback implementation of the target
   // region. This is called by the host when no offload entry was generated for
   // the target region and when the offloading call fails at runtime.
@@ -7706,8 +7764,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTarget(
     SmallVectorImpl<Value *> &Inputs, GenMapInfoCallbackTy GenMapInfoCB,
     OpenMPIRBuilder::TargetBodyGenCallbackTy CBFunc,
     OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
-    CustomMapperCallbackTy CustomMapperCB, SmallVector<DependData> Dependencies,
-    bool HasNowait) {
+    CustomMapperCallbackTy CustomMapperCB,
+    const SmallVector<DependData> &Dependencies, bool HasNowait) {
 
   if (!updateToLocation(Loc))
     return InsertPointTy();

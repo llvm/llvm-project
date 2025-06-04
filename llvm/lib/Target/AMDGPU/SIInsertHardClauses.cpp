@@ -42,6 +42,12 @@ using namespace llvm;
 
 #define DEBUG_TYPE "si-insert-hard-clauses"
 
+static cl::opt<unsigned>
+    HardClauseLengthLimit("amdgpu-hard-clause-length-limit",
+                          cl::desc("Maximum number of memory instructions to "
+                                   "place in the same hard clause"),
+                          cl::Hidden);
+
 namespace {
 
 enum HardClauseType {
@@ -97,7 +103,8 @@ public:
   HardClauseType getHardClauseType(const MachineInstr &MI) {
     if (MI.mayLoad() || (MI.mayStore() && ST->shouldClusterStores())) {
       if (ST->getGeneration() == AMDGPUSubtarget::GFX10) {
-        if (SIInstrInfo::isVMEM(MI) || SIInstrInfo::isSegmentSpecificFLAT(MI)) {
+        if ((SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isFLAT(MI)) ||
+            SIInstrInfo::isSegmentSpecificFLAT(MI)) {
           if (ST->hasNSAClauseBug()) {
             const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
             if (Info && Info->MIMGEncoding == AMDGPU::MIMGEncGfx10NSA)
@@ -115,13 +122,14 @@ public:
               AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
           if (BaseInfo->BVH)
             return HARDCLAUSE_BVH;
-          if (BaseInfo->Sampler)
+          if (BaseInfo->Sampler || BaseInfo->MSAA)
             return HARDCLAUSE_MIMG_SAMPLE;
           return MI.mayLoad() ? MI.mayStore() ? HARDCLAUSE_MIMG_ATOMIC
                                               : HARDCLAUSE_MIMG_LOAD
                               : HARDCLAUSE_MIMG_STORE;
         }
-        if (SIInstrInfo::isVMEM(MI) || SIInstrInfo::isSegmentSpecificFLAT(MI)) {
+        if ((SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isFLAT(MI)) ||
+            SIInstrInfo::isSegmentSpecificFLAT(MI)) {
           return MI.mayLoad() ? MI.mayStore() ? HARDCLAUSE_VMEM_ATOMIC
                                               : HARDCLAUSE_VMEM_LOAD
                               : HARDCLAUSE_VMEM_STORE;
@@ -183,9 +191,16 @@ public:
   }
 
   bool run(MachineFunction &MF) {
-
     ST = &MF.getSubtarget<GCNSubtarget>();
     if (!ST->hasHardClauses())
+      return false;
+
+    unsigned MaxClauseLength = MF.getFunction().getFnAttributeAsParsedInteger(
+        "amdgpu-hard-clause-length-limit", 255);
+    if (HardClauseLengthLimit.getNumOccurrences())
+      MaxClauseLength = HardClauseLengthLimit;
+    MaxClauseLength = std::min(MaxClauseLength, ST->maxHardClauseLength());
+    if (MaxClauseLength <= 1)
       return false;
 
     const SIInstrInfo *SII = ST->getInstrInfo();
@@ -210,7 +225,7 @@ public:
           }
         }
 
-        if (CI.Length == ST->maxHardClauseLength() ||
+        if (CI.Length == MaxClauseLength ||
             (CI.Length && Type != HARDCLAUSE_INTERNAL &&
              Type != HARDCLAUSE_IGNORE &&
              (Type != CI.Type ||

@@ -354,7 +354,7 @@ define void @test_widen_if_then_else(ptr noalias %a, ptr readnone %b) #4 {
 ; TFCOMMON-NEXT:    [[TMP9:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> [[TMP8]])
 ; TFCOMMON-NEXT:    [[TMP10:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i1> zeroinitializer
 ; TFCOMMON-NEXT:    [[TMP11:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[TMP10]])
-; TFCOMMON-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP8]], <vscale x 2 x i64> [[TMP9]], <vscale x 2 x i64> [[TMP11]]
+; TFCOMMON-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP10]], <vscale x 2 x i64> [[TMP11]], <vscale x 2 x i64> [[TMP9]]
 ; TFCOMMON-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[INDEX]]
 ; TFCOMMON-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[PREDPHI]], ptr [[TMP12]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; TFCOMMON-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP4]]
@@ -397,8 +397,8 @@ define void @test_widen_if_then_else(ptr noalias %a, ptr readnone %b) #4 {
 ; TFA_INTERLEAVE-NEXT:    [[TMP20:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]], <vscale x 2 x i1> [[TMP12]], <vscale x 2 x i1> zeroinitializer
 ; TFA_INTERLEAVE-NEXT:    [[TMP21:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[TMP19]])
 ; TFA_INTERLEAVE-NEXT:    [[TMP22:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[WIDE_MASKED_LOAD3]], <vscale x 2 x i1> [[TMP20]])
-; TFA_INTERLEAVE-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP15]], <vscale x 2 x i64> [[TMP17]], <vscale x 2 x i64> [[TMP21]]
-; TFA_INTERLEAVE-NEXT:    [[PREDPHI4:%.*]] = select <vscale x 2 x i1> [[TMP16]], <vscale x 2 x i64> [[TMP18]], <vscale x 2 x i64> [[TMP22]]
+; TFA_INTERLEAVE-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP19]], <vscale x 2 x i64> [[TMP21]], <vscale x 2 x i64> [[TMP17]]
+; TFA_INTERLEAVE-NEXT:    [[PREDPHI4:%.*]] = select <vscale x 2 x i1> [[TMP20]], <vscale x 2 x i64> [[TMP22]], <vscale x 2 x i64> [[TMP18]]
 ; TFA_INTERLEAVE-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[INDEX]]
 ; TFA_INTERLEAVE-NEXT:    [[TMP24:%.*]] = call i64 @llvm.vscale.i64()
 ; TFA_INTERLEAVE-NEXT:    [[TMP25:%.*]] = mul i64 [[TMP24]], 2

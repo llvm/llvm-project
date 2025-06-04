@@ -30,9 +30,9 @@ int main() {
 
 // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_masked_begin:
 // CHECK-SAME: parallel_id=[[PARALLEL_ID:[0-9]+]], task_id=[[TASK_ID:[0-9]+]],
-// CHECK-SAME: codeptr_ra=[[RETURN_ADDRESS:0x[0-f]+]]{{[0-f][0-f]}}
+// CHECK-SAME: codeptr_ra=[[RETURN_ADDRESS:(0x)?[0-f]+]]{{[0-f][0-f]}}
 // CHECK: {{^}}[[MASTER_ID]]: fuzzy_address={{.*}}[[RETURN_ADDRESS]]
 // CHECK: {{^}}[[MASTER_ID]]: ompt_event_masked_end:
 // CHECK-SAME: parallel_id=[[PARALLEL_ID]], task_id=[[TASK_ID]],
-// CHECK-SAME: codeptr_ra=[[RETURN_ADDRESS_END:0x[0-f]+]]
+// CHECK-SAME: codeptr_ra=[[RETURN_ADDRESS_END:(0x)?[0-f]+]]
 // CHECK: {{^}}[[MASTER_ID]]: current_address={{.*}}[[RETURN_ADDRESS_END]]

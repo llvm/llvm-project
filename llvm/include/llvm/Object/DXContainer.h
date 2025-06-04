@@ -17,13 +17,17 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/TargetParser/Triple.h"
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <variant>
 
 namespace llvm {
@@ -119,9 +123,10 @@ template <typename T> struct ViewArray {
 
 namespace DirectX {
 struct RootParameterView {
-  const dxbc::RootParameterHeader &Header;
+  const dxbc::RTS0::v1::RootParameterHeader &Header;
   StringRef ParamData;
-  RootParameterView(const dxbc::RootParameterHeader &H, StringRef P)
+
+  RootParameterView(const dxbc::RTS0::v1::RootParameterHeader &H, StringRef P)
       : Header(H), ParamData(P) {}
 
   template <typename T> Expected<T> readParameter() {
@@ -144,8 +149,77 @@ struct RootConstantView : RootParameterView {
            (uint32_t)dxbc::RootParameterType::Constants32Bit;
   }
 
-  llvm::Expected<dxbc::RootConstants> read() {
-    return readParameter<dxbc::RootConstants>();
+  llvm::Expected<dxbc::RTS0::v1::RootConstants> read() {
+    return readParameter<dxbc::RTS0::v1::RootConstants>();
+  }
+};
+
+struct RootDescriptorView : RootParameterView {
+  static bool classof(const RootParameterView *V) {
+    return (V->Header.ParameterType ==
+                llvm::to_underlying(dxbc::RootParameterType::CBV) ||
+            V->Header.ParameterType ==
+                llvm::to_underlying(dxbc::RootParameterType::SRV) ||
+            V->Header.ParameterType ==
+                llvm::to_underlying(dxbc::RootParameterType::UAV));
+  }
+
+  llvm::Expected<dxbc::RTS0::v2::RootDescriptor> read(uint32_t Version) {
+    if (Version == 1) {
+      auto Descriptor = readParameter<dxbc::RTS0::v1::RootDescriptor>();
+      if (Error E = Descriptor.takeError())
+        return E;
+      return dxbc::RTS0::v2::RootDescriptor(*Descriptor);
+    }
+    if (Version != 2)
+      return make_error<GenericBinaryError>("Invalid Root Signature version: " +
+                                                Twine(Version),
+                                            object_error::parse_failed);
+    return readParameter<dxbc::RTS0::v2::RootDescriptor>();
+  }
+};
+
+struct DescriptorTable {
+  uint32_t NumRanges;
+  uint32_t RangesOffset;
+  ViewArray<dxbc::RTS0::v2::DescriptorRange> Ranges;
+
+  typename ViewArray<dxbc::RTS0::v2::DescriptorRange>::iterator begin() const {
+    return Ranges.begin();
+  }
+
+  typename ViewArray<dxbc::RTS0::v2::DescriptorRange>::iterator end() const {
+    return Ranges.end();
+  }
+};
+
+struct DescriptorTableView : RootParameterView {
+  static bool classof(const RootParameterView *V) {
+    return (V->Header.ParameterType ==
+            llvm::to_underlying(dxbc::RootParameterType::DescriptorTable));
+  }
+
+  // Define a type alias to access the template parameter from inside classof
+  llvm::Expected<DescriptorTable> read(uint32_t Version) {
+    const char *Current = ParamData.begin();
+    DescriptorTable Table;
+
+    Table.NumRanges =
+        support::endian::read<uint32_t, llvm::endianness::little>(Current);
+    Current += sizeof(uint32_t);
+
+    Table.RangesOffset =
+        support::endian::read<uint32_t, llvm::endianness::little>(Current);
+    Current += sizeof(uint32_t);
+
+    size_t RangeSize = sizeof(dxbc::RTS0::v1::DescriptorRange);
+    if (Version > 1)
+      RangeSize = sizeof(dxbc::RTS0::v2::DescriptorRange);
+
+    Table.Ranges.Stride = RangeSize;
+    Table.Ranges.Data =
+        ParamData.substr(2 * sizeof(uint32_t), Table.NumRanges * RangeSize);
+    return Table;
   }
 };
 
@@ -161,15 +235,18 @@ private:
   uint32_t NumStaticSamplers;
   uint32_t StaticSamplersOffset;
   uint32_t Flags;
-  ViewArray<dxbc::RootParameterHeader> ParametersHeaders;
+  ViewArray<dxbc::RTS0::v1::RootParameterHeader> ParametersHeaders;
   StringRef PartData;
+  ViewArray<dxbc::RTS0::v1::StaticSampler> StaticSamplers;
 
-  using param_header_iterator = ViewArray<dxbc::RootParameterHeader>::iterator;
+  using param_header_iterator =
+      ViewArray<dxbc::RTS0::v1::RootParameterHeader>::iterator;
+  using samplers_iterator = ViewArray<dxbc::RTS0::v1::StaticSampler>::iterator;
 
 public:
   RootSignature(StringRef PD) : PartData(PD) {}
 
-  Error parse();
+  LLVM_ABI Error parse();
   uint32_t getVersion() const { return Version; }
   uint32_t getNumParameters() const { return NumParameters; }
   uint32_t getRootParametersOffset() const { return RootParametersOffset; }
@@ -179,24 +256,50 @@ public:
   llvm::iterator_range<param_header_iterator> param_headers() const {
     return llvm::make_range(ParametersHeaders.begin(), ParametersHeaders.end());
   }
+  llvm::iterator_range<samplers_iterator> samplers() const {
+    return llvm::make_range(StaticSamplers.begin(), StaticSamplers.end());
+  }
   uint32_t getFlags() const { return Flags; }
 
   llvm::Expected<RootParameterView>
-  getParameter(const dxbc::RootParameterHeader &Header) const {
+  getParameter(const dxbc::RTS0::v1::RootParameterHeader &Header) const {
     size_t DataSize;
+    size_t EndOfSectionByte = getNumStaticSamplers() == 0
+                                  ? PartData.size()
+                                  : getStaticSamplersOffset();
 
     if (!dxbc::isValidParameterType(Header.ParameterType))
       return parseFailed("invalid parameter type");
 
     switch (static_cast<dxbc::RootParameterType>(Header.ParameterType)) {
     case dxbc::RootParameterType::Constants32Bit:
-      DataSize = sizeof(dxbc::RootConstants);
+      DataSize = sizeof(dxbc::RTS0::v1::RootConstants);
+      break;
+    case dxbc::RootParameterType::CBV:
+    case dxbc::RootParameterType::SRV:
+    case dxbc::RootParameterType::UAV:
+      if (Version == 1)
+        DataSize = sizeof(dxbc::RTS0::v1::RootDescriptor);
+      else
+        DataSize = sizeof(dxbc::RTS0::v2::RootDescriptor);
+      break;
+    case dxbc::RootParameterType::DescriptorTable:
+      if (Header.ParameterOffset + sizeof(uint32_t) > EndOfSectionByte)
+        return parseFailed("Reading structure out of file bounds");
+
+      uint32_t NumRanges =
+          support::endian::read<uint32_t, llvm::endianness::little>(
+              PartData.begin() + Header.ParameterOffset);
+      if (Version == 1)
+        DataSize = sizeof(dxbc::RTS0::v1::DescriptorRange) * NumRanges;
+      else
+        DataSize = sizeof(dxbc::RTS0::v2::DescriptorRange) * NumRanges;
+
+      // 4 bytes for the number of ranges in table and
+      // 4 bytes for the ranges offset
+      DataSize += 2 * sizeof(uint32_t);
       break;
     }
-    size_t EndOfSectionByte = getNumStaticSamplers() == 0
-                                  ? PartData.size()
-                                  : getStaticSamplersOffset();
-
     if (Header.ParameterOffset + DataSize > EndOfSectionByte)
       return parseFailed("Reading structure out of file bounds");
 
@@ -235,7 +338,7 @@ public:
   PSVRuntimeInfo(StringRef D) : Data(D), Size(0) {}
 
   // Parsing depends on the shader kind
-  Error parse(uint16_t ShaderKind);
+  LLVM_ABI Error parse(uint16_t ShaderKind);
 
   uint32_t getSize() const { return Size; }
   uint32_t getResourceCount() const { return Resources.size(); }
@@ -279,9 +382,9 @@ public:
     return SemanticIndexTable;
   }
 
-  uint8_t getSigInputCount() const;
-  uint8_t getSigOutputCount() const;
-  uint8_t getSigPatchOrPrimCount() const;
+  LLVM_ABI uint8_t getSigInputCount() const;
+  LLVM_ABI uint8_t getSigOutputCount() const;
+  LLVM_ABI uint8_t getSigPatchOrPrimCount() const;
 
   SigElementArray getSigInputElements() const { return SigInputElements; }
   SigElementArray getSigOutputElements() const { return SigOutputElements; }
@@ -358,7 +461,7 @@ public:
 
   bool isEmpty() const { return Parameters.isEmpty(); }
 
-  Error initialize(StringRef Part);
+  LLVM_ABI Error initialize(StringRef Part);
 };
 
 } // namespace DirectX
@@ -426,7 +529,7 @@ public:
 
     // Implementation for updating the iterator state based on a specified
     // offest.
-    void updateIteratorImpl(const uint32_t Offset);
+    LLVM_ABI void updateIteratorImpl(const uint32_t Offset);
 
   public:
     PartIterator &operator++() {
@@ -462,7 +565,7 @@ public:
   PartIterator end() const { return PartIterator(*this, PartOffsets.end()); }
 
   StringRef getData() const { return Data.getBuffer(); }
-  static Expected<DXContainer> create(MemoryBufferRef Object);
+  LLVM_ABI static Expected<DXContainer> create(MemoryBufferRef Object);
 
   const dxbc::Header &getHeader() const { return Header; }
 

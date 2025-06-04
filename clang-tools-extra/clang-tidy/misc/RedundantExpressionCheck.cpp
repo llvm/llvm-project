@@ -8,9 +8,7 @@
 
 #include "RedundantExpressionCheck.h"
 #include "../utils/Matchers.h"
-#include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/ExprConcepts.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
@@ -20,14 +18,12 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/SmallBitVector.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <optional>
 #include <string>
-#include <vector>
 
 using namespace clang::ast_matchers;
 using namespace clang::tidy::matchers;

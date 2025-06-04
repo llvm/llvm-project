@@ -17,6 +17,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
@@ -518,17 +519,15 @@ struct TestVectorScanLowering
 static Value allocateGlobalSharedMemory(Location loc, OpBuilder &builder,
                                         gpu::WarpExecuteOnLane0Op warpOp,
                                         Type type) {
-  Attribute sharedMemorySpaceAttr =
-      builder.getAttr<gpu::AddressSpaceAttr>(gpu::AddressSpace::Workgroup);
+  static constexpr int64_t kSharedMemorySpace = 3;
   // Compute type of shared memory buffer.
   MemRefType memrefType;
   if (auto vectorType = dyn_cast<VectorType>(type)) {
     memrefType =
-        MemRefType::get(vectorType.getShape(), vectorType.getElementType(),
-                        MemRefLayoutAttrInterface{}, sharedMemorySpaceAttr);
+        MemRefType::get(vectorType.getShape(), vectorType.getElementType(), {},
+                        kSharedMemorySpace);
   } else {
-    memrefType = MemRefType::get({1}, type, MemRefLayoutAttrInterface{},
-                                 sharedMemorySpaceAttr);
+    memrefType = MemRefType::get({1}, type, {}, kSharedMemorySpace);
   }
 
   // Get symbol table holding all shared memory globals.
@@ -838,9 +837,6 @@ struct TestVectorEmulateMaskedLoadStore final
   }
 };
 
-// TODO: move this code into the user project.
-namespace vendor {
-
 /// Get the set of operand/result types to check for sufficiently
 /// small inner-most dimension size.
 static SmallVector<std::pair<Type, unsigned>>
@@ -891,11 +887,10 @@ isNotLinearizableBecauseLargeInnerDimension(Operation *op,
   // Check on bitwidths.
   SmallVector<std::pair<Type, unsigned>> toCheck =
       getTypeBitWidthBoundPairs(op, targetBitWidth);
-  return std::any_of(toCheck.begin(), toCheck.end(),
-                     [&](std::pair<Type, unsigned> typeWidth) {
-                       return isNotLinearizableBecauseLargeInnerDimension(
-                           typeWidth.first, typeWidth.second);
-                     });
+  return llvm::any_of(toCheck, [&](std::pair<Type, unsigned> typeWidth) {
+    return isNotLinearizableBecauseLargeInnerDimension(typeWidth.first,
+                                                       typeWidth.second);
+  });
 }
 
 void populateWithBitWidthConstraints(TypeConverter &typeConverter,
@@ -962,8 +957,6 @@ struct TestVectorBitWidthLinearize final
   }
 };
 
-} // namespace vendor
-
 struct TestVectorLinearize final
     : public PassWrapper<TestVectorLinearize, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorLinearize)
@@ -975,7 +968,7 @@ struct TestVectorLinearize final
     return "Linearizes ND vectors for N >= 2 into 1D vectors";
   }
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<vector::VectorDialect>();
+    registry.insert<vector::VectorDialect, arith::ArithDialect>();
   }
 
   void runOnOperation() override {
@@ -989,6 +982,8 @@ struct TestVectorLinearize final
     vector::populateVectorLinearizeBasePatterns(converter, target, patterns);
     vector::populateVectorLinearizeShuffleLikeOpsPatterns(converter, target,
                                                           patterns);
+    mlir::scf::populateSCFStructuralTypeConversionsAndLegality(
+        converter, patterns, target);
 
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
@@ -1069,7 +1064,7 @@ void registerTestVectorLowerings() {
 
   PassRegistration<TestVectorLinearize>();
 
-  PassRegistration<vendor::TestVectorBitWidthLinearize>();
+  PassRegistration<TestVectorBitWidthLinearize>();
 
   PassRegistration<TestEliminateVectorMasks>();
 }

@@ -22,25 +22,25 @@ int compound_assign(int b) {
 
 // CIR: cir.func @_Z15compound_assigni
 // CIR:   %[[MUL:.*]] = cir.binop(mul, %{{.*}}, %{{.*}}) nsw : !s32i
-// CIR:   cir.store %[[MUL]], %{{.*}} : !s32i, !cir.ptr<!s32i>
+// CIR:   cir.store{{.*}} %[[MUL]], %{{.*}} : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[DIV:.*]] = cir.binop(div, %{{.*}}, %{{.*}}) : !s32i
-// CIR:   cir.store %[[DIV]], %{{.*}} : !s32i, !cir.ptr<!s32i>
+// CIR:   cir.store{{.*}} %[[DIV]], %{{.*}} : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[REM:.*]] = cir.binop(rem, %{{.*}}, %{{.*}}) : !s32i
-// CIR:   cir.store %[[REM]], %{{.*}} : !s32i, !cir.ptr<!s32i>
+// CIR:   cir.store{{.*}} %[[REM]], %{{.*}} : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[ADD:.*]] = cir.binop(add, %{{.*}}, %{{.*}}) nsw : !s32i
-// CIR:   cir.store %[[ADD]], %{{.*}} : !s32i, !cir.ptr<!s32i>
+// CIR:   cir.store{{.*}} %[[ADD]], %{{.*}} : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[SUB:.*]] = cir.binop(sub, %{{.*}}, %{{.*}}) nsw : !s32i
-// CIR:   cir.store %[[SUB]], %{{.*}} : !s32i, !cir.ptr<!s32i>
+// CIR:   cir.store{{.*}} %[[SUB]], %{{.*}} : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[SHR:.*]] = cir.shift(right, %{{.*}} : !s32i, %{{.*}} : !s32i) -> !s32i
-// CIR:   cir.store %[[SHR]], %{{.*}} : !s32i, !cir.ptr<!s32i>
+// CIR:   cir.store{{.*}} %[[SHR]], %{{.*}} : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[SHL:.*]] = cir.shift(left, %{{.*}} : !s32i, %{{.*}} : !s32i) -> !s32i
-// CIR:   cir.store %[[SHL]], %{{.*}} : !s32i, !cir.ptr<!s32i>
+// CIR:   cir.store{{.*}} %[[SHL]], %{{.*}} : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[AND:.*]] = cir.binop(and, %{{.*}}, %{{.*}}) : !s32i
-// CIR:   cir.store %[[AND]], %{{.*}} : !s32i, !cir.ptr<!s32i>
+// CIR:   cir.store{{.*}} %[[AND]], %{{.*}} : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[XOR:.*]] = cir.binop(xor, %{{.*}}, %{{.*}}) : !s32i
-// CIR:   cir.store %[[XOR]], %{{.*}} : !s32i, !cir.ptr<!s32i>
+// CIR:   cir.store{{.*}} %[[XOR]], %{{.*}} : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[OR:.*]] = cir.binop(or, %{{.*}}, %{{.*}}) : !s32i
-// CIR:   cir.store %[[OR]], %{{.*}} : !s32i, !cir.ptr<!s32i>
+// CIR:   cir.store{{.*}} %[[OR]], %{{.*}} : !s32i, !cir.ptr<!s32i>
 
 // LLVM: define {{.*}}i32 @_Z15compound_assigni
 // LLVM:   %[[MUL:.*]] = mul nsw i32 %{{.*}}, %{{.*}}

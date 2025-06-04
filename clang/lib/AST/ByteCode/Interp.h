@@ -114,9 +114,6 @@ bool CheckCallDepth(InterpState &S, CodePtr OpPC);
 /// Checks the 'this' pointer.
 bool CheckThis(InterpState &S, CodePtr OpPC, const Pointer &This);
 
-/// Checks if a method is pure virtual.
-bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD);
-
 /// Checks if all the arguments annotated as 'nonnull' are in fact not null.
 bool CheckNonNullArgs(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *CE, unsigned ArgSize);
@@ -203,15 +200,16 @@ bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
 
   if constexpr (Dir == ShiftDir::Left) {
     if (LHS.isSigned() && !S.getLangOpts().CPlusPlus20) {
-      const Expr *E = S.Current->getExpr(OpPC);
       // C++11 [expr.shift]p2: A signed left shift must have a non-negative
       // operand, and must not overflow the corresponding unsigned type.
       if (LHS.isNegative()) {
+        const Expr *E = S.Current->getExpr(OpPC);
         S.CCEDiag(E, diag::note_constexpr_lshift_of_negative) << LHS.toAPSInt();
         if (!S.noteUndefinedBehavior())
           return false;
       } else if (LHS.toUnsigned().countLeadingZeros() <
                  static_cast<unsigned>(RHS)) {
+        const Expr *E = S.Current->getExpr(OpPC);
         S.CCEDiag(E, diag::note_constexpr_lshift_discards);
         if (!S.noteUndefinedBehavior())
           return false;
@@ -1037,6 +1035,9 @@ static inline bool IsOpaqueConstantCall(const CallExpr *E) {
           Builtin == Builtin::BI__builtin_function_start);
 }
 
+bool arePotentiallyOverlappingStringLiterals(const Pointer &LHS,
+                                             const Pointer &RHS);
+
 template <>
 inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   using BoolT = PrimConv<PT_Bool>::T;
@@ -1069,6 +1070,18 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     S.Stk.push<BoolT>(BoolT::from(Fn(Compare(LHS.getIntegerRepresentation(),
                                              RHS.getIntegerRepresentation()))));
     return true;
+  }
+
+  // FIXME: The source check here isn't entirely correct.
+  if (LHS.pointsToStringLiteral() && RHS.pointsToStringLiteral() &&
+      LHS.getFieldDesc()->asExpr() != RHS.getFieldDesc()->asExpr()) {
+    if (arePotentiallyOverlappingStringLiterals(LHS, RHS)) {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_literal_comparison)
+          << LHS.toDiagnosticString(S.getASTContext())
+          << RHS.toDiagnosticString(S.getASTContext());
+      return false;
+    }
   }
 
   if (Pointer::hasSameBase(LHS, RHS)) {
@@ -1136,6 +1149,14 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
           << RHS.toDiagnosticString(S.getASTContext());
       return false;
     }
+  }
+
+  if (LHS.isUnknownSizeArray() && RHS.isUnknownSizeArray()) {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_zero_sized)
+        << LHS.toDiagnosticString(S.getASTContext())
+        << RHS.toDiagnosticString(S.getASTContext());
+    return false;
   }
 
   S.Stk.push<BoolT>(BoolT::from(Fn(ComparisonCategoryResult::Unordered)));
@@ -1321,13 +1342,9 @@ bool GetLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
   return true;
 }
 
-static inline bool Kill(InterpState &S, CodePtr OpPC) {
-  const auto &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckDummy(S, OpPC, Ptr, AK_Destroy))
-    return false;
-  Ptr.endLifetime();
-  return true;
-}
+bool EndLifetime(InterpState &S, CodePtr OpPC);
+bool EndLifetimePop(InterpState &S, CodePtr OpPC);
+bool StartLifetime(InterpState &S, CodePtr OpPC);
 
 /// 1) Pops the value from the stack.
 /// 2) Writes the value to the local variable with the
@@ -1638,7 +1655,7 @@ inline bool GetPtrActiveThisField(InterpState &S, CodePtr OpPC, uint32_t Off) {
 }
 
 inline bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off,
-                             bool NullOK) {
+                             bool NullOK, const Type *TargetType) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!NullOK && !CheckNull(S, OpPC, Ptr, CSK_Derived))
     return false;
@@ -1655,6 +1672,20 @@ inline bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off,
     return false;
   if (!CheckDowncast(S, OpPC, Ptr, Off))
     return false;
+
+  const Record *TargetRecord = Ptr.atFieldSub(Off).getRecord();
+  assert(TargetRecord);
+
+  if (TargetRecord->getDecl()
+          ->getTypeForDecl()
+          ->getAsCXXRecordDecl()
+          ->getCanonicalDecl() !=
+      TargetType->getAsCXXRecordDecl()->getCanonicalDecl()) {
+    QualType MostDerivedType = Ptr.getDeclDesc()->getType();
+    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_downcast)
+        << MostDerivedType << QualType(TargetType, 0);
+    return false;
+  }
 
   S.Stk.push<Pointer>(Ptr.atFieldSub(Off));
   return true;
@@ -1858,10 +1889,8 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Init(InterpState &S, CodePtr OpPC) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
-  if (!CheckInit(S, OpPC, Ptr)) {
-    assert(false);
+  if (!CheckInit(S, OpPC, Ptr))
     return false;
-  }
   Ptr.activate();
   Ptr.initialize();
   new (&Ptr.deref<T>()) T(Value);
@@ -2933,13 +2962,14 @@ inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind,
         << static_cast<unsigned>(Kind) << S.Current->getRange(OpPC);
     return !Fatal;
   } else if (Kind == CastKind::Volatile) {
-    // FIXME: Technically not a cast.
-    const auto *E = cast<CastExpr>(S.Current->getExpr(OpPC));
-    if (S.getLangOpts().CPlusPlus)
-      S.FFDiag(E, diag::note_constexpr_access_volatile_type)
-          << AK_Read << E->getSubExpr()->getType();
-    else
-      S.FFDiag(E);
+    if (!S.checkingPotentialConstantExpression()) {
+      const auto *E = cast<CastExpr>(S.Current->getExpr(OpPC));
+      if (S.getLangOpts().CPlusPlus)
+        S.FFDiag(E, diag::note_constexpr_access_volatile_type)
+            << AK_Read << E->getSubExpr()->getType();
+      else
+        S.FFDiag(E);
+    }
 
     return false;
   } else if (Kind == CastKind::Dynamic) {
@@ -3029,10 +3059,11 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool CheckEnumValue(InterpState &S, CodePtr OpPC, const EnumDecl *ED) {
   assert(ED);
   assert(!ED->isFixed());
-  const APSInt Val = S.Stk.peek<T>().toAPSInt();
 
-  if (S.inConstantContext())
+  if (S.inConstantContext()) {
+    const APSInt Val = S.Stk.peek<T>().toAPSInt();
     diagnoseEnumValue(S, OpPC, ED, Val);
+  }
   return true;
 }
 

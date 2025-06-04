@@ -128,14 +128,33 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexAllTokensTest) {
 
     RootSignature
 
-    DescriptorTable
+    RootFlags DescriptorTable RootConstants StaticSampler
+
+    num32BitConstants
 
     CBV SRV UAV Sampler
     space visibility flags
     numDescriptors offset
 
+    filter mipLODBias addressU addressV addressW
+    maxAnisotropy comparisonFunc borderColor
+    minLOD maxLOD
+
     unbounded
     DESCRIPTOR_RANGE_OFFSET_APPEND
+
+    allow_input_assembler_input_layout
+    deny_vertex_shader_root_access
+    deny_hull_shader_root_access
+    deny_domain_shader_root_access
+    deny_geometry_shader_root_access
+    deny_pixel_shader_root_access
+    deny_amplification_shader_root_access
+    deny_mesh_shader_root_access
+    allow_stream_output
+    local_root_signature
+    cbv_srv_uav_heap_directly_indexed
+    sampler_heap_directly_indexed
 
     DATA_VOLATILE
     DATA_STATIC_WHILE_SET_AT_EXECUTE
@@ -151,6 +170,64 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexAllTokensTest) {
     shader_visibility_pixel
     shader_visibility_amplification
     shader_visibility_mesh
+
+    FILTER_MIN_MAG_MIP_POINT
+    FILTER_MIN_MAG_POINT_MIP_LINEAR
+    FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT
+    FILTER_MIN_POINT_MAG_MIP_LINEAR
+    FILTER_MIN_LINEAR_MAG_MIP_POINT
+    FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR
+    FILTER_MIN_MAG_LINEAR_MIP_POINT
+    FILTER_MIN_MAG_MIP_LINEAR
+    FILTER_ANISOTROPIC
+    FILTER_COMPARISON_MIN_MAG_MIP_POINT
+    FILTER_COMPARISON_MIN_MAG_POINT_MIP_LINEAR
+    FILTER_COMPARISON_MIN_POINT_MAG_LINEAR_MIP_POINT
+    FILTER_COMPARISON_MIN_POINT_MAG_MIP_LINEAR
+    FILTER_COMPARISON_MIN_LINEAR_MAG_MIP_POINT
+    FILTER_COMPARISON_MIN_LINEAR_MAG_POINT_MIP_LINEAR
+    FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT
+    FILTER_COMPARISON_MIN_MAG_MIP_LINEAR
+    FILTER_COMPARISON_ANISOTROPIC
+    FILTER_MINIMUM_MIN_MAG_MIP_POINT
+    FILTER_MINIMUM_MIN_MAG_POINT_MIP_LINEAR
+    FILTER_MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT
+    FILTER_MINIMUM_MIN_POINT_MAG_MIP_LINEAR
+    FILTER_MINIMUM_MIN_LINEAR_MAG_MIP_POINT
+    FILTER_MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR
+    FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT
+    FILTER_MINIMUM_MIN_MAG_MIP_LINEAR
+    FILTER_MINIMUM_ANISOTROPIC
+    FILTER_MAXIMUM_MIN_MAG_MIP_POINT
+    FILTER_MAXIMUM_MIN_MAG_POINT_MIP_LINEAR
+    FILTER_MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT
+    FILTER_MAXIMUM_MIN_POINT_MAG_MIP_LINEAR
+    FILTER_MAXIMUM_MIN_LINEAR_MAG_MIP_POINT
+    FILTER_MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR
+    FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT
+    FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR
+    FILTER_MAXIMUM_ANISOTROPIC
+
+    TEXTURE_ADDRESS_WRAP
+    TEXTURE_ADDRESS_MIRROR
+    TEXTURE_ADDRESS_CLAMP
+    TEXTURE_ADDRESS_BORDER
+    TEXTURE_ADDRESS_MIRRORONCE
+
+    comparison_never
+    comparison_less
+    comparison_equal
+    comparison_less_equal
+    comparison_greater
+    comparison_not_equal
+    comparison_greater_equal
+    comparison_always
+
+    STATIC_BORDER_COLOR_TRANSPARENT_BLACK
+    STATIC_BORDER_COLOR_OPAQUE_BLACK
+    STATIC_BORDER_COLOR_OPAQUE_WHITE
+    STATIC_BORDER_COLOR_OPAQUE_BLACK_UINT
+    STATIC_BORDER_COLOR_OPAQUE_WHITE_UINT
   )cc";
   auto TokLoc = SourceLocation();
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);

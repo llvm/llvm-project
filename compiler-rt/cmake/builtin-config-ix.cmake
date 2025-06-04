@@ -50,6 +50,24 @@ void foo(void)  __arm_streaming_compatible {
 }
 ")
 
+builtin_check_c_compiler_source(COMPILER_RT_HAS_ARM_UNALIGNED
+"
+void foo() {
+#ifndef __ARM_FEATURE_UNALIGNED
+#error \"Unaligned accesses unsupported\"
+#endif
+}
+")
+
+builtin_check_c_compiler_source(COMPILER_RT_HAS_ARM_FP
+"
+void foo() {
+#ifndef __ARM_FP
+#error \"No floating-point support\"
+#endif
+}
+")
+
 check_include_files("sys/auxv.h"    COMPILER_RT_HAS_AUXV)
 
 if(ANDROID)
@@ -59,7 +77,7 @@ else()
 endif()
 
 set(AMDGPU amdgcn)
-set(ARM64 aarch64)
+set(ARM64 aarch64 arm64ec)
 set(ARM32 arm armhf armv4t armv5te armv6 armv6m armv7m armv7em armv7 armv7s armv7k armv8m.base armv8m.main armv8.1m.main)
 set(AVR avr)
 set(HEXAGON hexagon)
