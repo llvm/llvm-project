@@ -483,7 +483,7 @@ bool RecurrenceDescriptor::AddReductionVar(
       } else if (!isa<PHINode>(UI) &&
                  ((!isa<FCmpInst>(UI) && !isa<ICmpInst>(UI) &&
                    !isa<SelectInst>(UI)) ||
-                  (!isConditionalRdxPattern(Kind, UI).isRecurrence() &&
+                  (!isConditionalRdxPattern(UI).isRecurrence() &&
                    !isAnyOfPattern(TheLoop, Phi, UI, IgnoredVal)
                         .isRecurrence() &&
                    !isMinMaxPattern(UI, Kind, IgnoredVal).isRecurrence())))
@@ -802,7 +802,7 @@ RecurrenceDescriptor::isMinMaxPattern(Instruction *I, RecurKind Kind,
 /// %add = fadd %0, %sum.1
 /// %sum.2 = select %cmp, %add, %sum.1
 RecurrenceDescriptor::InstDesc
-RecurrenceDescriptor::isConditionalRdxPattern(RecurKind Kind, Instruction *I) {
+RecurrenceDescriptor::isConditionalRdxPattern(Instruction *I) {
   SelectInst *SI = dyn_cast<SelectInst>(I);
   if (!SI)
     return InstDesc(false, I);
@@ -874,7 +874,7 @@ RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(
   case Instruction::Select:
     if (Kind == RecurKind::FAdd || Kind == RecurKind::FMul ||
         Kind == RecurKind::Add || Kind == RecurKind::Mul)
-      return isConditionalRdxPattern(Kind, I);
+      return isConditionalRdxPattern(I);
     if (isFindLastIVRecurrenceKind(Kind) && SE)
       return isFindLastIVPattern(L, OrigPhi, I, *SE);
     [[fallthrough]];
