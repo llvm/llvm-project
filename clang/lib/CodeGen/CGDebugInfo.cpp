@@ -6421,9 +6421,7 @@ CodeGenFunction::LexicalScope::~LexicalScope() {
   }
 }
 
-llvm::DILocation *CodeGenFunction::SanitizerAnnotateDebugInfo(
-    ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
-    SanitizerHandler Handler) {
+static std::string SanitizerHandlerToCheckLabel(SanitizerHandler Handler) {
   std::string Label;
   switch (Handler) {
 #define SANITIZER_CHECK(Enum, Name, Version)                                   \
@@ -6435,10 +6433,44 @@ llvm::DILocation *CodeGenFunction::SanitizerAnnotateDebugInfo(
 #undef SANITIZER_CHECK
   };
 
+  // Label doesn't require sanitization
+
+  return Label;
+}
+
+static std::string
+SanitizerOrdinalToCheckLabel(SanitizerKind::SanitizerOrdinal Ordinal) {
+  std::string Label;
+  switch (Ordinal) {
+#define SANITIZER(NAME, ID)                                                    \
+  case SanitizerKind::SO_##ID:                                                 \
+    Label = "__ubsan_check_" NAME;                                             \
+    break;
+#include "clang/Basic/Sanitizers.def"
+  default:
+    llvm_unreachable("unexpected sanitizer kind");
+  }
+
+  // Sanitize label (convert hyphens to underscores; also futureproof against
+  // non-alpha)
+  for (unsigned int i = 0; i < Label.length(); i++)
+    if (!std::isalpha(Label[i]))
+      Label[i] = '_';
+
+  return Label;
+}
+
+llvm::DILocation *CodeGenFunction::SanitizerAnnotateDebugInfo(
+    ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
+    SanitizerHandler Handler) {
+  std::string Label;
+  if (Ordinals.size() == 1)
+    Label = SanitizerOrdinalToCheckLabel(Ordinals[0]);
+  else
+    Label = SanitizerHandlerToCheckLabel(Handler);
+
   llvm::DILocation *CheckDI = Builder.getCurrentDebugLocation();
 
-  // TODO: the annotation could be more precise e.g.,
-  //       use the ordinal name if there is only one ordinal
   for (auto Ord : Ordinals) {
     // TODO: deprecate ClArrayBoundsPseudoFn
     if (((ClArrayBoundsPseudoFn && Ord == SanitizerKind::SO_ArrayBounds) ||

@@ -24,7 +24,7 @@ void caller(void (*f)(void)) {
 }
 //.
 // CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-// CHECK: [[META1]] = !DIFile(filename: "<stdin>", directory: {{.*}})
+// CHECK: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
 // CHECK: [[DBG7]] = distinct !DISubprogram(name: "caller", scope: [[META8:![0-9]+]], file: [[META8]], line: 22, type: [[META9:![0-9]+]], scopeLine: 22, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META14:![0-9]+]])
 // CHECK: [[META8]] = !DIFile(filename: "{{.*}}cfi-check-fail-debuginfo.c", directory: {{.*}})
 // CHECK: [[META9]] = !DISubroutineType(types: [[META10:![0-9]+]])
@@ -39,7 +39,7 @@ void caller(void (*f)(void)) {
 // CHECK: [[META18]] = !{i64 0, i64 2451761621477796417}
 // CHECK: [[META19]] = !DILocation(line: 0, scope: [[DBG7]])
 // CHECK: [[DBG20]] = !DILocation(line: 0, scope: [[META21:![0-9]+]], inlinedAt: [[DBG23]])
-// CHECK: [[META21]] = distinct !DISubprogram(name: "__ubsan_check_cfi_check_fail", scope: [[META8]], file: [[META8]], type: [[META22:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
+// CHECK: [[META21]] = distinct !DISubprogram(name: "__ubsan_check_cfi_icall", scope: [[META8]], file: [[META8]], type: [[META22:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
 // CHECK: [[META22]] = !DISubroutineType(types: null)
 // CHECK: [[DBG23]] = !DILocation(line: 23, column: 3, scope: [[DBG7]])
 // CHECK: [[META24]] = !{}

@@ -55,7 +55,7 @@ void g(int** (*fp)(const char *, const char **)) {
 
 //.
 // UNGENERALIZED: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, retainedTypes: [[META2:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
-// UNGENERALIZED: [[META1]] = !DIFile(filename: "<stdin>", directory: {{.*}})
+// UNGENERALIZED: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
 // UNGENERALIZED: [[META2]] = !{[[META3:![0-9]+]]}
 // UNGENERALIZED: [[META3]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META4:![0-9]+]], size: 64)
 // UNGENERALIZED: [[META4]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META5:![0-9]+]], size: 64)
@@ -85,7 +85,7 @@ void g(int** (*fp)(const char *, const char **)) {
 // UNGENERALIZED: [[META32]] = !{i64 0, !"_ZTSFvPvE.generalized"}
 // UNGENERALIZED: [[META33]] = !DILocation(line: 0, scope: [[DBG25]])
 // UNGENERALIZED: [[DBG34]] = !DILocation(line: 0, scope: [[META35:![0-9]+]], inlinedAt: [[DBG37]])
-// UNGENERALIZED: [[META35]] = distinct !DISubprogram(name: "__ubsan_check_cfi_check_fail", scope: [[META11]], file: [[META11]], type: [[META36:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
+// UNGENERALIZED: [[META35]] = distinct !DISubprogram(name: "__ubsan_check_cfi_icall", scope: [[META11]], file: [[META11]], type: [[META36:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
 // UNGENERALIZED: [[META36]] = !DISubroutineType(types: null)
 // UNGENERALIZED: [[DBG37]] = !DILocation(line: 53, column: 3, scope: [[DBG25]])
 // UNGENERALIZED: [[META38]] = !{}
@@ -93,7 +93,7 @@ void g(int** (*fp)(const char *, const char **)) {
 // UNGENERALIZED: [[DBG40]] = !DILocation(line: 54, column: 1, scope: [[DBG25]])
 //.
 // GENERALIZED: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, retainedTypes: [[META2:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
-// GENERALIZED: [[META1]] = !DIFile(filename: "<stdin>", directory: {{.*}})
+// GENERALIZED: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
 // GENERALIZED: [[META2]] = !{[[META3:![0-9]+]]}
 // GENERALIZED: [[META3]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META4:![0-9]+]], size: 64)
 // GENERALIZED: [[META4]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META5:![0-9]+]], size: 64)
@@ -123,7 +123,7 @@ void g(int** (*fp)(const char *, const char **)) {
 // GENERALIZED: [[META32]] = !{i64 0, !"_ZTSFvPvE.generalized"}
 // GENERALIZED: [[META33]] = !DILocation(line: 0, scope: [[DBG25]])
 // GENERALIZED: [[DBG34]] = !DILocation(line: 0, scope: [[META35:![0-9]+]], inlinedAt: [[DBG37]])
-// GENERALIZED: [[META35]] = distinct !DISubprogram(name: "__ubsan_check_cfi_check_fail", scope: [[META11]], file: [[META11]], type: [[META36:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
+// GENERALIZED: [[META35]] = distinct !DISubprogram(name: "__ubsan_check_cfi_icall", scope: [[META11]], file: [[META11]], type: [[META36:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
 // GENERALIZED: [[META36]] = !DISubroutineType(types: null)
 // GENERALIZED: [[DBG37]] = !DILocation(line: 53, column: 3, scope: [[DBG25]])
 // GENERALIZED: [[META38]] = !{}

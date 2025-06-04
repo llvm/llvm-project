@@ -37,7 +37,7 @@ void call_no_prototype(void (*f)()) { f(); }
 void call_prototype(void (*f)(void)) { f(); }
 //.
 // CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-// CHECK: [[META1]] = !DIFile(filename: "<stdin>", directory: {{.*}})
+// CHECK: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
 // CHECK: [[DBG5]] = distinct !DISubprogram(name: "call_no_prototype", scope: [[META6:![0-9]+]], file: [[META6]], line: 14, type: [[META7:![0-9]+]], scopeLine: 14, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META12:![0-9]+]])
 // CHECK: [[META6]] = !DIFile(filename: "{{.*}}ubsan-function-debuginfo.c", directory: {{.*}})
 // CHECK: [[META7]] = !DISubroutineType(types: [[META8:![0-9]+]])
@@ -62,7 +62,7 @@ void call_prototype(void (*f)(void)) { f(); }
 // CHECK: [[META26]] = !{i32 -1056584962, i32 -747727454}
 // CHECK: [[META27]] = !DILocation(line: 0, scope: [[DBG18]])
 // CHECK: [[DBG28]] = !DILocation(line: 0, scope: [[META29:![0-9]+]], inlinedAt: [[DBG31]])
-// CHECK: [[META29]] = distinct !DISubprogram(name: "__ubsan_check_function_type_mismatch", scope: [[META6]], file: [[META6]], type: [[META30:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
+// CHECK: [[META29]] = distinct !DISubprogram(name: "__ubsan_check_function", scope: [[META6]], file: [[META6]], type: [[META30:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
 // CHECK: [[META30]] = !DISubroutineType(types: null)
 // CHECK: [[DBG31]] = !DILocation(line: 37, column: 40, scope: [[DBG18]])
 // CHECK: [[META32]] = !{}
