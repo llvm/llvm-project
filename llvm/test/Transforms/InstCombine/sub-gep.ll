@@ -760,6 +760,38 @@ entry:
   ret i64 %ret
 }
 
+declare void @use(ptr)
+
+define i64 @sub_multi_use(ptr %base, i64 %idx) {
+; CHECK-LABEL: @sub_multi_use(
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds [0 x i32], ptr [[BASE:%.*]], i64 0, i64 [[IDX:%.*]]
+; CHECK-NEXT:    call void @use(ptr [[P2]])
+; CHECK-NEXT:    [[P2_IDX:%.*]] = shl nsw i64 [[IDX]], 2
+; CHECK-NEXT:    ret i64 [[P2_IDX]]
+;
+  %p2 = getelementptr inbounds [0 x i32], ptr %base, i64 0, i64 %idx
+  call void @use(ptr %p2)
+  %i1 = ptrtoint ptr %base to i64
+  %i2 = ptrtoint ptr %p2 to i64
+  %d = sub i64 %i2, %i1
+  ret i64 %d
+}
+
+define i64 @sub_multi_use_nuw(ptr %base, i64 %idx) {
+; CHECK-LABEL: @sub_multi_use_nuw(
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds [0 x i32], ptr [[BASE:%.*]], i64 0, i64 [[IDX:%.*]]
+; CHECK-NEXT:    call void @use(ptr [[P2]])
+; CHECK-NEXT:    [[P2_IDX:%.*]] = shl nuw nsw i64 [[IDX]], 2
+; CHECK-NEXT:    ret i64 [[P2_IDX]]
+;
+  %p2 = getelementptr inbounds [0 x i32], ptr %base, i64 0, i64 %idx
+  call void @use(ptr %p2)
+  %i1 = ptrtoint ptr %base to i64
+  %i2 = ptrtoint ptr %p2 to i64
+  %d = sub nuw i64 %i2, %i1
+  ret i64 %d
+}
+
 define i1 @_gep_phi1(ptr %str1) {
 ; CHECK-LABEL: @_gep_phi1(
 ; CHECK-NEXT:  entry:
