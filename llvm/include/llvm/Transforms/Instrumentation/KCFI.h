@@ -14,13 +14,14 @@
 #ifndef LLVM_TRANSFORMS_INSTRUMENTATION_KCFI_H
 #define LLVM_TRANSFORMS_INSTRUMENTATION_KCFI_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
 class KCFIPass : public PassInfoMixin<KCFIPass> {
 public:
   static bool isRequired() { return true; }
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 } // namespace llvm
 #endif // LLVM_TRANSFORMS_INSTRUMENTATION_KCFI_H

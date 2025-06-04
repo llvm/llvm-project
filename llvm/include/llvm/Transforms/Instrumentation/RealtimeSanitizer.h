@@ -19,13 +19,14 @@
 #ifndef LLVM_TRANSFORMS_INSTRUMENTATION_REALTIMESANITIZER_H
 #define LLVM_TRANSFORMS_INSTRUMENTATION_REALTIMESANITIZER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
 
 /// Create ctor and init functions.
 struct RealtimeSanitizerPass : public PassInfoMixin<RealtimeSanitizerPass> {
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
   static bool isRequired() { return true; }
 };
 

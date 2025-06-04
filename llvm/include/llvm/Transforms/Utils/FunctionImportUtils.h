@@ -14,6 +14,7 @@
 #ifndef LLVM_TRANSFORMS_UTILS_FUNCTIONIMPORTUTILS_H
 #define LLVM_TRANSFORMS_UTILS_FUNCTIONIMPORTUTILS_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 
@@ -102,15 +103,15 @@ class FunctionImportGlobalProcessing {
   DenseSet<GlobalValue::GUID> SymbolsToMove;
 
 public:
-  FunctionImportGlobalProcessing(Module &M, const ModuleSummaryIndex &Index,
+  LLVM_ABI FunctionImportGlobalProcessing(Module &M, const ModuleSummaryIndex &Index,
                                  SetVector<GlobalValue *> *GlobalsToImport,
                                  bool ClearDSOLocalOnDeclarations);
-  void run();
+  LLVM_ABI void run();
 };
 
 /// Perform in-place global value handling on the given Module for
 /// exported local functions renamed and promoted for ThinLTO.
-void renameModuleForThinLTO(
+LLVM_ABI void renameModuleForThinLTO(
     Module &M, const ModuleSummaryIndex &Index,
     bool ClearDSOLocalOnDeclarations,
     SetVector<GlobalValue *> *GlobalsToImport = nullptr);

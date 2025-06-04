@@ -14,6 +14,7 @@
 #ifndef LLVM_TRANSFORMS_UTILS_CODEEXTRACTOR_H
 #define LLVM_TRANSFORMS_UTILS_CODEEXTRACTOR_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
@@ -57,7 +58,7 @@ class CodeExtractorAnalysisCache {
   void findSideEffectInfoForBlock(BasicBlock &BB);
 
 public:
-  CodeExtractorAnalysisCache(Function &F);
+  LLVM_ABI CodeExtractorAnalysisCache(Function &F);
 
   /// Get the allocas in the function at the time the analysis was created.
   /// Note that some of these allocas may no longer be present in the function,
@@ -66,7 +67,7 @@ public:
 
   /// Check whether \p BB contains an instruction thought to load from, store
   /// to, or otherwise clobber the alloca \p Addr.
-  bool doesBlockContainClobberOfAddr(BasicBlock &BB, AllocaInst *Addr) const;
+  LLVM_ABI bool doesBlockContainClobberOfAddr(BasicBlock &BB, AllocaInst *Addr) const;
 };
 
   /// Utility class for extracting code into a new function.
@@ -148,7 +149,7 @@ public:
     /// If ArgsInZeroAddressSpace param is set to true, then the aggregate
     /// param pointer of the outlined function is declared in zero address
     /// space.
-    CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT = nullptr,
+    LLVM_ABI CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT = nullptr,
                   bool AggregateArgs = false, BlockFrequencyInfo *BFI = nullptr,
                   BranchProbabilityInfo *BPI = nullptr,
                   AssumptionCache *AC = nullptr, bool AllowVarArgs = false,
@@ -160,7 +161,7 @@ public:
     ///
     /// Returns zero when called on a CodeExtractor instance where isEligible
     /// returns false.
-    Function *extractCodeRegion(const CodeExtractorAnalysisCache &CEAC);
+    LLVM_ABI Function *extractCodeRegion(const CodeExtractorAnalysisCache &CEAC);
 
     /// Perform the extraction, returning the new function and providing an
     /// interface to see what was categorized as inputs and outputs.
@@ -173,13 +174,13 @@ public:
     /// newly outlined function.
     /// \returns zero when called on a CodeExtractor instance where isEligible
     /// returns false.
-    Function *extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
+    LLVM_ABI Function *extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                                 ValueSet &Inputs, ValueSet &Outputs);
 
     /// Verify that assumption cache isn't stale after a region is extracted.
     /// Returns true when verifier finds errors. AssumptionCache is passed as
     /// parameter to make this function stateless.
-    static bool verifyAssumptionCache(const Function &OldFunc,
+    LLVM_ABI static bool verifyAssumptionCache(const Function &OldFunc,
                                       const Function &NewFunc,
                                       AssumptionCache *AC);
 
@@ -190,7 +191,7 @@ public:
     ///
     /// Checks that varargs handling (with vastart and vaend) is only done in
     /// the outlined blocks.
-    bool isEligible() const;
+    LLVM_ABI bool isEligible() const;
 
     /// Compute the set of input values and output values for the code.
     ///
@@ -200,7 +201,7 @@ public:
     /// a code sequence, that sequence is modified, including changing these
     /// sets, before extraction occurs. These modifications won't have any
     /// significant impact on the cost however.
-    void findInputsOutputs(ValueSet &Inputs, ValueSet &Outputs,
+    LLVM_ABI void findInputsOutputs(ValueSet &Inputs, ValueSet &Outputs,
                            const ValueSet &Allocas,
                            bool CollectGlobalInputs = false) const;
 
@@ -208,7 +209,7 @@ public:
     /// region.
     ///
     /// Returns true if it is safe to do the code motion.
-    bool
+    LLVM_ABI bool
     isLegalToShrinkwrapLifetimeMarkers(const CodeExtractorAnalysisCache &CEAC,
                                        Instruction *AllocaAddr) const;
 
@@ -220,7 +221,7 @@ public:
     /// are used by the lifetime markers are also candidates for shrink-
     /// wrapping. The instructions that need to be sunk are collected in
     /// 'Allocas'.
-    void findAllocas(const CodeExtractorAnalysisCache &CEAC,
+    LLVM_ABI void findAllocas(const CodeExtractorAnalysisCache &CEAC,
                      ValueSet &SinkCands, ValueSet &HoistCands,
                      BasicBlock *&ExitBlock) const;
 
@@ -232,11 +233,11 @@ public:
     /// inside the region that is the predecessor of CommonExitBlock, that block
     /// will be returned. Otherwise CommonExitBlock will be split and the
     /// original block will be added to the outline region.
-    BasicBlock *findOrCreateBlockForHoisting(BasicBlock *CommonExitBlock);
+    LLVM_ABI BasicBlock *findOrCreateBlockForHoisting(BasicBlock *CommonExitBlock);
 
     /// Exclude a value from aggregate argument passing when extracting a code
     /// region, passing it instead as a scalar.
-    void excludeArgFromAggregate(Value *Arg);
+    LLVM_ABI void excludeArgFromAggregate(Value *Arg);
 
   private:
     struct LifetimeMarkerInfo {

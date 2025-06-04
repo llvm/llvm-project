@@ -13,6 +13,7 @@
 #ifndef LLVM_TRANSFORMS_UTILS_MODULEUTILS_H
 #define LLVM_TRANSFORMS_UTILS_MODULEUTILS_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/GlobalIFunc.h"
@@ -38,11 +39,11 @@ class Type;
 /// This wraps the function in the appropriate structure and stores it along
 /// side other global constructors. For details see
 /// https://llvm.org/docs/LangRef.html#the-llvm-global-ctors-global-variable
-void appendToGlobalCtors(Module &M, Function *F, int Priority,
+LLVM_ABI void appendToGlobalCtors(Module &M, Function *F, int Priority,
                          Constant *Data = nullptr);
 
 /// Same as appendToGlobalCtors(), but for global dtors.
-void appendToGlobalDtors(Module &M, Function *F, int Priority,
+LLVM_ABI void appendToGlobalDtors(Module &M, Function *F, int Priority,
                          Constant *Data = nullptr);
 
 /// Apply 'Fn' to the list of global ctors of module M and replace contructor
@@ -50,26 +51,26 @@ void appendToGlobalDtors(Module &M, Function *F, int Priority,
 /// corresponding constructor will be removed from the array. For details see
 /// https://llvm.org/docs/LangRef.html#the-llvm-global-ctors-global-variable
 using GlobalCtorTransformFn = llvm::function_ref<Constant *(Constant *)>;
-void transformGlobalCtors(Module &M, const GlobalCtorTransformFn &Fn);
-void transformGlobalDtors(Module &M, const GlobalCtorTransformFn &Fn);
+LLVM_ABI void transformGlobalCtors(Module &M, const GlobalCtorTransformFn &Fn);
+LLVM_ABI void transformGlobalDtors(Module &M, const GlobalCtorTransformFn &Fn);
 
 /// Sets the KCFI type for the function. Used for compiler-generated functions
 /// that are indirectly called in instrumented code.
-void setKCFIType(Module &M, Function &F, StringRef MangledType);
+LLVM_ABI void setKCFIType(Module &M, Function &F, StringRef MangledType);
 
-FunctionCallee declareSanitizerInitFunction(Module &M, StringRef InitName,
+LLVM_ABI FunctionCallee declareSanitizerInitFunction(Module &M, StringRef InitName,
                                             ArrayRef<Type *> InitArgTypes,
                                             bool Weak = false);
 
 /// Creates sanitizer constructor function.
 /// \return Returns pointer to constructor.
-Function *createSanitizerCtor(Module &M, StringRef CtorName);
+LLVM_ABI Function *createSanitizerCtor(Module &M, StringRef CtorName);
 
 /// Creates sanitizer constructor function, and calls sanitizer's init
 /// function from it.
 /// \return Returns pair of pointers to constructor, and init functions
 /// respectively.
-std::pair<Function *, FunctionCallee> createSanitizerCtorAndInitFunctions(
+LLVM_ABI std::pair<Function *, FunctionCallee> createSanitizerCtorAndInitFunctions(
     Module &M, StringRef CtorName, StringRef InitName,
     ArrayRef<Type *> InitArgTypes, ArrayRef<Value *> InitArgs,
     StringRef VersionCheckName = StringRef(), bool Weak = false);
@@ -81,7 +82,7 @@ std::pair<Function *, FunctionCallee> createSanitizerCtorAndInitFunctions(
 ///
 /// \return Returns pair of pointers to constructor, and init functions
 /// respectively.
-std::pair<Function *, FunctionCallee> getOrCreateSanitizerCtorAndInitFunctions(
+LLVM_ABI std::pair<Function *, FunctionCallee> getOrCreateSanitizerCtorAndInitFunctions(
     Module &M, StringRef CtorName, StringRef InitName,
     ArrayRef<Type *> InitArgTypes, ArrayRef<Value *> InitArgs,
     function_ref<void(Function *, FunctionCallee)> FunctionsCreatedCallback,
@@ -89,18 +90,18 @@ std::pair<Function *, FunctionCallee> getOrCreateSanitizerCtorAndInitFunctions(
 
 /// Rename all the anon globals in the module using a hash computed from
 /// the list of public globals in the module.
-bool nameUnamedGlobals(Module &M);
+LLVM_ABI bool nameUnamedGlobals(Module &M);
 
 /// Adds global values to the llvm.used list.
-void appendToUsed(Module &M, ArrayRef<GlobalValue *> Values);
+LLVM_ABI void appendToUsed(Module &M, ArrayRef<GlobalValue *> Values);
 
 /// Adds global values to the llvm.compiler.used list.
-void appendToCompilerUsed(Module &M, ArrayRef<GlobalValue *> Values);
+LLVM_ABI void appendToCompilerUsed(Module &M, ArrayRef<GlobalValue *> Values);
 
 /// Removes global values from the llvm.used and llvm.compiler.used arrays. \p
 /// ShouldRemove should return true for any initializer field that should not be
 /// included in the replacement global.
-void removeFromUsedLists(Module &M,
+LLVM_ABI void removeFromUsedLists(Module &M,
                          function_ref<bool(Constant *)> ShouldRemove);
 
 /// Filter out potentially dead comdat functions where other entries keep the
@@ -116,7 +117,7 @@ void removeFromUsedLists(Module &M,
 /// After this routine finishes, the only remaining `Function`s in \p
 /// DeadComdatFunctions are those where every member of the comdat is listed
 /// and thus removing them is safe (provided *all* are removed).
-void filterDeadComdatFunctions(
+LLVM_ABI void filterDeadComdatFunctions(
     SmallVectorImpl<Function *> &DeadComdatFunctions);
 
 /// Produce a unique identifier for this module by taking the MD5 sum of
@@ -129,12 +130,12 @@ void filterDeadComdatFunctions(
 /// If the module has no strong external symbols (such a module may still have a
 /// semantic effect if it performs global initialization), we cannot produce a
 /// unique identifier for this module, so we return the empty string.
-std::string getUniqueModuleId(Module *M);
+LLVM_ABI std::string getUniqueModuleId(Module *M);
 
 /// Embed the memory buffer \p Buf into the module \p M as a global using the
 /// specified section name. Also provide a metadata entry to identify it in the
 /// module using the same section name.
-void embedBufferInModule(Module &M, MemoryBufferRef Buf, StringRef SectionName,
+LLVM_ABI void embedBufferInModule(Module &M, MemoryBufferRef Buf, StringRef SectionName,
                          Align Alignment = Align(1));
 
 /// Lower all calls to ifuncs by replacing uses with indirect calls loaded out
@@ -149,7 +150,7 @@ void embedBufferInModule(Module &M, MemoryBufferRef Buf, StringRef SectionName,
 ///
 /// The processed ifuncs without remaining users will be removed from the
 /// module.
-bool lowerGlobalIFuncUsersAsGlobalCtor(
+LLVM_ABI bool lowerGlobalIFuncUsersAsGlobalCtor(
     Module &M, ArrayRef<GlobalIFunc *> IFuncsToLower = {});
 
 } // End llvm namespace

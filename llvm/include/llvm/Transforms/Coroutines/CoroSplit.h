@@ -15,6 +15,7 @@
 #ifndef LLVM_TRANSFORMS_COROUTINES_COROSPLIT_H
 #define LLVM_TRANSFORMS_COROUTINES_COROSPLIT_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/IR/PassManager.h"
@@ -31,19 +32,19 @@ struct CoroSplitPass : PassInfoMixin<CoroSplitPass> {
   using BaseABITy =
       std::function<std::unique_ptr<coro::BaseABI>(Function &, coro::Shape &)>;
 
-  CoroSplitPass(bool OptimizeFrame = false);
+  LLVM_ABI CoroSplitPass(bool OptimizeFrame = false);
 
-  CoroSplitPass(SmallVector<BaseABITy> GenCustomABIs,
+  LLVM_ABI CoroSplitPass(SmallVector<BaseABITy> GenCustomABIs,
                 bool OptimizeFrame = false);
 
-  CoroSplitPass(std::function<bool(Instruction &)> MaterializableCallback,
+  LLVM_ABI CoroSplitPass(std::function<bool(Instruction &)> MaterializableCallback,
                 bool OptimizeFrame = false);
 
-  CoroSplitPass(std::function<bool(Instruction &)> MaterializableCallback,
+  LLVM_ABI CoroSplitPass(std::function<bool(Instruction &)> MaterializableCallback,
                 SmallVector<BaseABITy> GenCustomABIs,
                 bool OptimizeFrame = false);
 
-  PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
+  LLVM_ABI PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
                         LazyCallGraph &CG, CGSCCUpdateResult &UR);
 
   static bool isRequired() { return true; }

@@ -15,6 +15,7 @@
 #ifndef LLVM_TRANSFORMS_IPO_FUNCTIONATTRS_H
 #define LLVM_TRANSFORMS_IPO_FUNCTIONATTRS_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/LazyCallGraph.h"
@@ -28,11 +29,11 @@ class Function;
 class Module;
 
 /// Returns the memory access properties of this copy of the function.
-MemoryEffects computeFunctionBodyMemoryAccess(Function &F, AAResults &AAR);
+LLVM_ABI MemoryEffects computeFunctionBodyMemoryAccess(Function &F, AAResults &AAR);
 
 /// Propagate function attributes for function summaries along the index's
 /// callgraph during thinlink
-bool thinLTOPropagateFunctionAttrs(
+LLVM_ABI bool thinLTOPropagateFunctionAttrs(
     ModuleSummaryIndex &Index,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing);
@@ -49,10 +50,10 @@ bool thinLTOPropagateFunctionAttrs(
 struct PostOrderFunctionAttrsPass : PassInfoMixin<PostOrderFunctionAttrsPass> {
   PostOrderFunctionAttrsPass(bool SkipNonRecursive = false)
       : SkipNonRecursive(SkipNonRecursive) {}
-  PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
+  LLVM_ABI PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
                         LazyCallGraph &CG, CGSCCUpdateResult &UR);
 
-  void printPipeline(raw_ostream &OS,
+  LLVM_ABI void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
 
 private:
@@ -72,7 +73,7 @@ private:
 class ReversePostOrderFunctionAttrsPass
     : public PassInfoMixin<ReversePostOrderFunctionAttrsPass> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 } // end namespace llvm

@@ -9,6 +9,7 @@
 #ifndef LLVM_TRANSFORMS_IPO_EXTRACTGV_H
 #define LLVM_TRANSFORMS_IPO_EXTRACTGV_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/PassManager.h"
 
@@ -22,9 +23,9 @@ private:
   bool keepConstInit;
 
 public:
-  ExtractGVPass(std::vector<GlobalValue *> &GVs, bool deleteS = true,
+  LLVM_ABI ExtractGVPass(std::vector<GlobalValue *> &GVs, bool deleteS = true,
                 bool keepConstInit = false);
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };
 } // namespace llvm
 

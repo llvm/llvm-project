@@ -29,6 +29,7 @@
 #ifndef LLVM_TRANSFORMS_UTILS_LCSSA_H
 #define LLVM_TRANSFORMS_UTILS_LCSSA_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
@@ -36,7 +37,7 @@ namespace llvm {
 /// Converts loops into loop-closed SSA form.
 class LCSSAPass : public PassInfoMixin<LCSSAPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 } // end namespace llvm
 

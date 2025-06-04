@@ -9,6 +9,7 @@
 #ifndef LLVM_TRANSFORMS_IPO_INLINER_H
 #define LLVM_TRANSFORMS_IPO_INLINER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/InlineAdvisor.h"
 #include "llvm/Analysis/InlineCost.h"
@@ -39,10 +40,10 @@ public:
       : OnlyMandatory(OnlyMandatory), LTOPhase(LTOPhase) {}
   InlinerPass(InlinerPass &&Arg) = default;
 
-  PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
+  LLVM_ABI PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
                         LazyCallGraph &CG, CGSCCUpdateResult &UR);
 
-  void printPipeline(raw_ostream &OS,
+  LLVM_ABI void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
 
 private:
@@ -61,14 +62,14 @@ private:
 class ModuleInlinerWrapperPass
     : public PassInfoMixin<ModuleInlinerWrapperPass> {
 public:
-  ModuleInlinerWrapperPass(
+  LLVM_ABI ModuleInlinerWrapperPass(
       InlineParams Params = getInlineParams(), bool MandatoryFirst = true,
       InlineContext IC = {},
       InliningAdvisorMode Mode = InliningAdvisorMode::Default,
       unsigned MaxDevirtIterations = 0);
   ModuleInlinerWrapperPass(ModuleInlinerWrapperPass &&Arg) = default;
 
-  PreservedAnalyses run(Module &, ModuleAnalysisManager &);
+  LLVM_ABI PreservedAnalyses run(Module &, ModuleAnalysisManager &);
 
   /// Allow adding more CGSCC passes, besides inlining. This should be called
   /// before run is called, as part of pass pipeline building.
@@ -84,7 +85,7 @@ public:
     AfterCGMPM.addPass(std::move(Pass));
   }
 
-  void printPipeline(raw_ostream &OS,
+  LLVM_ABI void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
 
 private:

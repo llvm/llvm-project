@@ -36,6 +36,7 @@
 #ifndef LLVM_TRANSFORMS_SCALAR_LOOPPASSMANAGER_H
 #define LLVM_TRANSFORMS_SCALAR_LOOPPASSMANAGER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -91,10 +92,10 @@ public:
     return *this;
   }
 
-  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
+  LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                         LoopStandardAnalysisResults &AR, LPMUpdater &U);
 
-  void printPipeline(raw_ostream &OS,
+  LLVM_ABI void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
   /// Add either a loop pass or a loop-nest pass to the pass manager. Append \p
   /// Pass to the list of loop passes if it has a dedicated \fn run() method for
@@ -154,10 +155,10 @@ protected:
                 LoopStandardAnalysisResults &AR, LPMUpdater &U,
                 PassInstrumentation &PI);
 
-  PreservedAnalyses runWithLoopNestPasses(Loop &L, LoopAnalysisManager &AM,
+  LLVM_ABI PreservedAnalyses runWithLoopNestPasses(Loop &L, LoopAnalysisManager &AM,
                                           LoopStandardAnalysisResults &AR,
                                           LPMUpdater &U);
-  PreservedAnalyses runWithoutLoopNestPasses(Loop &L, LoopAnalysisManager &AM,
+  LLVM_ABI PreservedAnalyses runWithoutLoopNestPasses(Loop &L, LoopAnalysisManager &AM,
                                              LoopStandardAnalysisResults &AR,
                                              LPMUpdater &U);
 
@@ -413,8 +414,8 @@ public:
   }
 
   /// Runs the loop passes across every loop in the function.
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  void printPipeline(raw_ostream &OS,
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
 
   static bool isRequired() { return true; }
@@ -497,10 +498,10 @@ class PrintLoopPass : public PassInfoMixin<PrintLoopPass> {
   std::string Banner;
 
 public:
-  PrintLoopPass();
-  PrintLoopPass(raw_ostream &OS, const std::string &Banner = "");
+  LLVM_ABI PrintLoopPass();
+  LLVM_ABI PrintLoopPass(raw_ostream &OS, const std::string &Banner = "");
 
-  PreservedAnalyses run(Loop &L, LoopAnalysisManager &,
+  LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &,
                         LoopStandardAnalysisResults &, LPMUpdater &);
 };
 }

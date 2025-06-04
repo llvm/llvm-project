@@ -81,6 +81,7 @@
 #ifndef LLVM_TRANSFORMS_IPO_FUNCTIONSPECIALIZATION_H
 #define LLVM_TRANSFORMS_IPO_FUNCTIONSPECIALIZATION_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/InlineCost.h"
@@ -179,11 +180,11 @@ public:
     return Solver.isBlockExecutable(BB) && !DeadBlocks.contains(BB);
   }
 
-  Cost getCodeSizeSavingsForArg(Argument *A, Constant *C);
+  LLVM_ABI Cost getCodeSizeSavingsForArg(Argument *A, Constant *C);
 
-  Cost getCodeSizeSavingsFromPendingPHIs();
+  LLVM_ABI Cost getCodeSizeSavingsFromPendingPHIs();
 
-  Cost getLatencySavingsForKnownConstants();
+  LLVM_ABI Cost getLatencySavingsForKnownConstants();
 
 private:
   friend class InstVisitor<InstCostVisitor, Constant *>;
@@ -260,9 +261,9 @@ public:
       : Solver(Solver), M(M), FAM(FAM), GetBFI(GetBFI), GetTLI(GetTLI),
         GetTTI(GetTTI), GetAC(GetAC) {}
 
-  ~FunctionSpecializer();
+  LLVM_ABI ~FunctionSpecializer();
 
-  bool run();
+  LLVM_ABI bool run();
 
   InstCostVisitor getInstCostVisitorFor(Function *F) {
     auto &TTI = GetTTI(*F);

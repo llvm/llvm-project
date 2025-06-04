@@ -12,6 +12,7 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_SEEDCOLLECTOR_H
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_SEEDCOLLECTOR_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -95,7 +96,7 @@ public:
   /// with a total size <= \p MaxVecRegBits, or an empty slice if the
   /// requirements cannot be met . If \p ForcePowOf2 is true, then the returned
   /// slice will have a total number of bits that is a power of 2.
-  ArrayRef<Instruction *> getSlice(unsigned StartIdx, unsigned MaxVecRegBits,
+  LLVM_ABI ArrayRef<Instruction *> getSlice(unsigned StartIdx, unsigned MaxVecRegBits,
                                    bool ForcePowOf2);
 
   /// \Returns the number of seed elements in the bundle.
@@ -269,7 +270,7 @@ public:
   template <typename LoadOrStoreT> void insert(LoadOrStoreT *LSI);
   // To support constant-time erase, these just mark the element used, rather
   // than actually removing them from the bundle.
-  bool erase(Instruction *I);
+  LLVM_ABI bool erase(Instruction *I);
   bool erase(const KeyT &Key) { return Bundles.erase(Key); }
   iterator begin() {
     if (Bundles.empty())
@@ -300,8 +301,8 @@ class SeedCollector {
   }
 
 public:
-  SeedCollector(BasicBlock *BB, ScalarEvolution &SE);
-  ~SeedCollector();
+  LLVM_ABI SeedCollector(BasicBlock *BB, ScalarEvolution &SE);
+  LLVM_ABI ~SeedCollector();
 
   iterator_range<SeedContainer::iterator> getStoreSeeds() {
     return {StoreSeeds.begin(), StoreSeeds.end()};

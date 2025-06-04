@@ -14,6 +14,7 @@
 #ifndef LLVM_TRANSFORMS_SCALAR_SIMPLIFYCFG_H
 #define LLVM_TRANSFORMS_SCALAR_SIMPLIFYCFG_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Transforms/Utils/SimplifyCFGOptions.h"
@@ -34,15 +35,15 @@ public:
   /// rather than optimal IR. That is, by default we bypass transformations that
   /// are likely to improve performance but make analysis for other passes more
   /// difficult.
-  SimplifyCFGPass();
+  LLVM_ABI SimplifyCFGPass();
 
   /// Construct a pass with optional optimizations.
-  SimplifyCFGPass(const SimplifyCFGOptions &PassOptions);
+  LLVM_ABI SimplifyCFGPass(const SimplifyCFGOptions &PassOptions);
 
   /// Run the pass over the function.
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
-  void printPipeline(raw_ostream &OS,
+  LLVM_ABI void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 

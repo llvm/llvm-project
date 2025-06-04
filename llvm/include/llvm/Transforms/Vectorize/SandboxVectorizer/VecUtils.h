@@ -12,6 +12,7 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_VECUTILS_H
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_VECUTILS_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/SandboxIR/Type.h"
@@ -195,7 +196,7 @@ public:
     return ScalarTy;
   }
   /// \Returns the first integer power of 2 that is <= Num.
-  static unsigned getFloorPowerOf2(unsigned Num);
+  LLVM_ABI static unsigned getFloorPowerOf2(unsigned Num);
 
   /// Helper struct for `matchPack()`. Describes the instructions and operands
   /// of a pack pattern.

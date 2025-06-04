@@ -13,6 +13,7 @@
 #ifndef LLVM_TRANSFORMS_INSTRUMENTATION_HWADDRESSSANITIZER_H
 #define LLVM_TRANSFORMS_INSTRUMENTATION_HWADDRESSSANITIZER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/IR/PassManager.h"
 
@@ -40,9 +41,9 @@ class HWAddressSanitizerPass : public PassInfoMixin<HWAddressSanitizerPass> {
 public:
   explicit HWAddressSanitizerPass(HWAddressSanitizerOptions Options)
       : Options(Options){};
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
   static bool isRequired() { return true; }
-  void printPipeline(raw_ostream &OS,
+  LLVM_ABI void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
 
 private:

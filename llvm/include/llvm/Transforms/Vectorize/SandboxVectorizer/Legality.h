@@ -12,6 +12,7 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_LEGALITY_H
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_LEGALITY_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/DataLayout.h"
@@ -347,13 +348,13 @@ public:
   /// \Returns a LegalityResult object owned by LegalityAnalysis.
   /// \p SkipScheduling skips the scheduler check and is only meant for testing.
   // TODO: Try to remove the SkipScheduling argument by refactoring the tests.
-  const LegalityResult &canVectorize(ArrayRef<Value *> Bndl,
+  LLVM_ABI const LegalityResult &canVectorize(ArrayRef<Value *> Bndl,
                                      bool SkipScheduling = false);
   /// \Returns a Pack with reason 'ForcePackForDebugging'.
   const LegalityResult &getForcedPackForDebugging() {
     return createLegalityResult<Pack>(ResultReason::ForcePackForDebugging);
   }
-  void clear();
+  LLVM_ABI void clear();
 };
 
 } // namespace llvm::sandboxir

@@ -12,6 +12,7 @@
 #ifndef LLVM_TRANSFORMS_INSTRUMENTATION_SANITIZERBINARYMETADATA_H
 #define LLVM_TRANSFORMS_INSTRUMENTATION_SANITIZERBINARYMETADATA_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
@@ -50,10 +51,10 @@ inline constexpr char kSanitizerBinaryMetadataAtomicsSection[] =
 class SanitizerBinaryMetadataPass
     : public PassInfoMixin<SanitizerBinaryMetadataPass> {
 public:
-  explicit SanitizerBinaryMetadataPass(
+  LLVM_ABI explicit SanitizerBinaryMetadataPass(
       SanitizerBinaryMetadataOptions Opts = {},
       ArrayRef<std::string> IgnorelistFiles = {});
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
   static bool isRequired() { return true; }
 
 private:

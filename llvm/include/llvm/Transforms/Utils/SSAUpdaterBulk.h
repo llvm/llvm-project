@@ -13,6 +13,7 @@
 #ifndef LLVM_TRANSFORMS_UTILS_SSAUPDATERBULK_H
 #define LLVM_TRANSFORMS_UTILS_SSAUPDATERBULK_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/PredIteratorCache.h"
@@ -58,15 +59,15 @@ public:
   /// Add a new variable to the SSA rewriter. This needs to be called before
   /// AddAvailableValue or AddUse calls. The return value is the variable ID,
   /// which needs to be passed to AddAvailableValue and AddUse.
-  unsigned AddVariable(StringRef Name, Type *Ty);
+  LLVM_ABI unsigned AddVariable(StringRef Name, Type *Ty);
 
   /// Indicate that a rewritten value is available in the specified block with
   /// the specified value.
-  void AddAvailableValue(unsigned Var, BasicBlock *BB, Value *V);
+  LLVM_ABI void AddAvailableValue(unsigned Var, BasicBlock *BB, Value *V);
 
   /// Record a use of the symbolic value. This use will be updated with a
   /// rewritten value when RewriteAllUses is called.
-  void AddUse(unsigned Var, Use *U);
+  LLVM_ABI void AddUse(unsigned Var, Use *U);
 
   /// Perform all the necessary updates, including new PHI-nodes insertion and
   /// the requested uses update.
@@ -75,7 +76,7 @@ public:
   /// locations for new phi-nodes insertions. If a nonnull pointer to a vector
   /// InsertedPHIs is passed, all the new phi-nodes will be added to this
   /// vector.
-  void RewriteAllUses(DominatorTree *DT,
+  LLVM_ABI void RewriteAllUses(DominatorTree *DT,
                       SmallVectorImpl<PHINode *> *InsertedPHIs = nullptr);
 };
 

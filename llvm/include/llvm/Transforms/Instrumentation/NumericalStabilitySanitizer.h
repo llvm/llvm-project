@@ -14,6 +14,7 @@
 #ifndef LLVM_TRANSFORMS_INSTRUMENTATION_NUMERICALSTABIITYSANITIZER_H
 #define LLVM_TRANSFORMS_INSTRUMENTATION_NUMERICALSTABIITYSANITIZER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
@@ -27,7 +28,7 @@ namespace llvm {
 /// functions aren't declared yet, the pass inserts the declarations.
 struct NumericalStabilitySanitizerPass
     : public PassInfoMixin<NumericalStabilitySanitizerPass> {
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
   static bool isRequired() { return true; }
 };
 

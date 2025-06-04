@@ -14,6 +14,7 @@
 #ifndef LLVM_TRANSFORMS_INSTRUMENTATION_LOWERALLOWCHECKPASS_H
 #define LLVM_TRANSFORMS_INSTRUMENTATION_LOWERALLOWCHECKPASS_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
@@ -30,10 +31,10 @@ public:
 
   explicit LowerAllowCheckPass(LowerAllowCheckPass::Options Opts)
       : Opts(std::move(Opts)) {};
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
-  static bool IsRequested();
-  void printPipeline(raw_ostream &OS,
+  LLVM_ABI static bool IsRequested();
+  LLVM_ABI void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
 
 private:

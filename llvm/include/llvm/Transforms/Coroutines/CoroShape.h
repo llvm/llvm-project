@@ -12,6 +12,7 @@
 #ifndef LLVM_TRANSFORMS_COROUTINES_COROSHAPE_H
 #define LLVM_TRANSFORMS_COROUTINES_COROSHAPE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Transforms/Coroutines/CoroInstr.h"
@@ -78,16 +79,16 @@ struct Shape {
   }
 
   // Scan the function and collect the above intrinsics for later processing
-  void analyze(Function &F, SmallVectorImpl<CoroFrameInst *> &CoroFrames,
+  LLVM_ABI void analyze(Function &F, SmallVectorImpl<CoroFrameInst *> &CoroFrames,
                SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves,
                CoroPromiseInst *&CoroPromise);
   // If for some reason, we were not able to find coro.begin, bailout.
-  void invalidateCoroutine(Function &F,
+  LLVM_ABI void invalidateCoroutine(Function &F,
                            SmallVectorImpl<CoroFrameInst *> &CoroFrames);
   // Perform ABI related initial transformation
-  void initABI();
+  LLVM_ABI void initABI();
   // Remove orphaned and unnecessary intrinsics
-  void cleanCoroutine(SmallVectorImpl<CoroFrameInst *> &CoroFrames,
+  LLVM_ABI void cleanCoroutine(SmallVectorImpl<CoroFrameInst *> &CoroFrames,
                       SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves,
                       CoroPromiseInst *CoroPromise);
 
@@ -256,12 +257,12 @@ struct Shape {
   /// Allocate memory according to the rules of the active lowering.
   ///
   /// \param CG - if non-null, will be updated for the new call
-  Value *emitAlloc(IRBuilder<> &Builder, Value *Size, CallGraph *CG) const;
+  LLVM_ABI Value *emitAlloc(IRBuilder<> &Builder, Value *Size, CallGraph *CG) const;
 
   /// Deallocate memory according to the rules of the active lowering.
   ///
   /// \param CG - if non-null, will be updated for the new call
-  void emitDealloc(IRBuilder<> &Builder, Value *Ptr, CallGraph *CG) const;
+  LLVM_ABI void emitDealloc(IRBuilder<> &Builder, Value *Ptr, CallGraph *CG) const;
 
   Shape() = default;
   explicit Shape(Function &F) {

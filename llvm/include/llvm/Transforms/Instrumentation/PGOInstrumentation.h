@@ -15,6 +15,7 @@
 #ifndef LLVM_TRANSFORMS_INSTRUMENTATION_PGOINSTRUMENTATION_H
 #define LLVM_TRANSFORMS_INSTRUMENTATION_PGOINSTRUMENTATION_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/IR/PassManager.h"
@@ -24,7 +25,7 @@
 
 namespace llvm {
 
-extern cl::opt<bool> DebugInfoCorrelate;
+LLVM_ABI extern cl::opt<bool> DebugInfoCorrelate;
 
 class Function;
 class Instruction;
@@ -46,7 +47,7 @@ public:
   PGOInstrumentationGenCreateVar(std::string CSInstrName = "",
                                  bool Sampling = false)
       : CSInstrName(CSInstrName), ProfileSampling(Sampling) {}
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 
 private:
   std::string CSInstrName;
@@ -60,7 +61,7 @@ public:
   PGOInstrumentationGen(
       PGOInstrumentationType InstrumentationType = PGOInstrumentationType ::FDO)
       : InstrumentationType(InstrumentationType) {}
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 
 private:
   // If this is a context sensitive instrumentation.
@@ -70,11 +71,11 @@ private:
 /// The profile annotation (profile-instr-use) pass for IR based PGO.
 class PGOInstrumentationUse : public PassInfoMixin<PGOInstrumentationUse> {
 public:
-  PGOInstrumentationUse(std::string Filename = "",
+  LLVM_ABI PGOInstrumentationUse(std::string Filename = "",
                         std::string RemappingFilename = "", bool IsCS = false,
                         IntrusiveRefCntPtr<vfs::FileSystem> FS = nullptr);
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 
 private:
   std::string ProfileFileName;
@@ -90,7 +91,7 @@ public:
   PGOIndirectCallPromotion(bool IsInLTO = false, bool SamplePGO = false)
       : InLTO(IsInLTO), SamplePGO(SamplePGO) {}
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 
 private:
   bool InLTO;
@@ -102,13 +103,13 @@ class PGOMemOPSizeOpt : public PassInfoMixin<PGOMemOPSizeOpt> {
 public:
   PGOMemOPSizeOpt() = default;
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &MAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &MAM);
 };
 
-void setProfMetadata(Module *M, Instruction *TI, ArrayRef<uint64_t> EdgeCounts,
+LLVM_ABI void setProfMetadata(Module *M, Instruction *TI, ArrayRef<uint64_t> EdgeCounts,
                      uint64_t MaxCount);
 
-void setIrrLoopHeaderMetadata(Module *M, Instruction *TI, uint64_t Count);
+LLVM_ABI void setIrrLoopHeaderMetadata(Module *M, Instruction *TI, uint64_t Count);
 
 } // end namespace llvm
 

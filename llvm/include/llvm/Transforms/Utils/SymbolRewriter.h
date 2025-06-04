@@ -32,6 +32,7 @@
 #ifndef LLVM_TRANSFORMS_UTILS_SYMBOLREWRITER_H
 #define LLVM_TRANSFORMS_UTILS_SYMBOLREWRITER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/IR/PassManager.h"
 #include <list>
 #include <memory>
@@ -92,7 +93,7 @@ using RewriteDescriptorList = std::list<std::unique_ptr<RewriteDescriptor>>;
 
 class RewriteMapParser {
 public:
-  bool parse(const std::string &MapFile, RewriteDescriptorList *Descriptors);
+  LLVM_ABI bool parse(const std::string &MapFile, RewriteDescriptorList *Descriptors);
 
 private:
   bool parse(std::unique_ptr<MemoryBuffer> &MapFile, RewriteDescriptorList *DL);
@@ -121,13 +122,13 @@ public:
     Descriptors.splice(Descriptors.begin(), DL);
   }
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
   // Glue for old PM
-  bool runImpl(Module &M);
+  LLVM_ABI bool runImpl(Module &M);
 
 private:
-  void loadAndParseMapFiles();
+  LLVM_ABI void loadAndParseMapFiles();
 
   SymbolRewriter::RewriteDescriptorList Descriptors;
 };

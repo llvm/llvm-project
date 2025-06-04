@@ -28,19 +28,19 @@ class PostDominatorTree;
 /// Return true if \p I0 and \p I1 are control flow equivalent.
 /// Two instructions are control flow equivalent if their basic blocks are
 /// control flow equivalent.
-bool isControlFlowEquivalent(const Instruction &I0, const Instruction &I1,
+LLVM_ABI bool isControlFlowEquivalent(const Instruction &I0, const Instruction &I1,
                              const DominatorTree &DT,
                              const PostDominatorTree &PDT);
 
 /// Return true if \p BB0 and \p BB1 are control flow equivalent.
 /// Two basic blocks are control flow equivalent if when one executes, the other
 /// is guaranteed to execute.
-bool isControlFlowEquivalent(const BasicBlock &BB0, const BasicBlock &BB1,
+LLVM_ABI bool isControlFlowEquivalent(const BasicBlock &BB0, const BasicBlock &BB1,
                              const DominatorTree &DT,
                              const PostDominatorTree &PDT);
 
 /// Return true if \p I can be safely moved before \p InsertPoint.
-bool isSafeToMoveBefore(Instruction &I, Instruction &InsertPoint,
+LLVM_ABI bool isSafeToMoveBefore(Instruction &I, Instruction &InsertPoint,
                         DominatorTree &DT,
                         const PostDominatorTree *PDT = nullptr,
                         DependenceInfo *DI = nullptr,
@@ -48,21 +48,21 @@ bool isSafeToMoveBefore(Instruction &I, Instruction &InsertPoint,
 
 /// Return true if all instructions (except the terminator) in \p BB can be
 /// safely moved before \p InsertPoint.
-bool isSafeToMoveBefore(BasicBlock &BB, Instruction &InsertPoint,
+LLVM_ABI bool isSafeToMoveBefore(BasicBlock &BB, Instruction &InsertPoint,
                         DominatorTree &DT,
                         const PostDominatorTree *PDT = nullptr,
                         DependenceInfo *DI = nullptr);
 
 /// Move instructions, in an order-preserving manner, from \p FromBB to the
 /// beginning of \p ToBB when proven safe.
-void moveInstructionsToTheBeginning(BasicBlock &FromBB, BasicBlock &ToBB,
+LLVM_ABI void moveInstructionsToTheBeginning(BasicBlock &FromBB, BasicBlock &ToBB,
                                     DominatorTree &DT,
                                     const PostDominatorTree &PDT,
                                     DependenceInfo &DI);
 
 /// Move instructions, in an order-preserving manner, from \p FromBB to the end
 /// of \p ToBB when proven safe.
-void moveInstructionsToTheEnd(BasicBlock &FromBB, BasicBlock &ToBB,
+LLVM_ABI void moveInstructionsToTheEnd(BasicBlock &FromBB, BasicBlock &ToBB,
                               DominatorTree &DT, const PostDominatorTree &PDT,
                               DependenceInfo &DI);
 
@@ -70,13 +70,13 @@ void moveInstructionsToTheEnd(BasicBlock &FromBB, BasicBlock &ToBB,
 /// equivalent but they do not strictly dominate and post-dominate each
 /// other, we determine if \p ThisBlock is reached after \p OtherBlock
 /// in the control flow.
-bool nonStrictlyPostDominate(const BasicBlock *ThisBlock,
+LLVM_ABI bool nonStrictlyPostDominate(const BasicBlock *ThisBlock,
                              const BasicBlock *OtherBlock,
                              const DominatorTree *DT,
                              const PostDominatorTree *PDT);
 
 // Check if I0 is reached before I1 in the control flow.
-bool isReachedBefore(const Instruction *I0, const Instruction *I1,
+LLVM_ABI bool isReachedBefore(const Instruction *I0, const Instruction *I1,
                      const DominatorTree *DT, const PostDominatorTree *PDT);
 
 } // end namespace llvm

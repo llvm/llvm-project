@@ -12,6 +12,7 @@
 #ifndef LLVM_TRANSFORMS_INSTRUMENTATION_GCOVPROFILER_H
 #define LLVM_TRANSFORMS_INSTRUMENTATION_GCOVPROFILER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Transforms/Utils/Instrumentation.h"
 
@@ -20,7 +21,7 @@ namespace llvm {
 class GCOVProfilerPass : public PassInfoMixin<GCOVProfilerPass> {
 public:
   GCOVProfilerPass(const GCOVOptions &Options = GCOVOptions::getDefault()) : GCOVOpts(Options) { }
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
 private:
   GCOVOptions GCOVOpts;

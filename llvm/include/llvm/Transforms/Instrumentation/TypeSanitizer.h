@@ -13,6 +13,7 @@
 #ifndef LLVM_TRANSFORMS_INSTRUMENTATION_TYPESANITIZER_H
 #define LLVM_TRANSFORMS_INSTRUMENTATION_TYPESANITIZER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
@@ -21,7 +22,7 @@ class FunctionPass;
 class Module;
 
 struct TypeSanitizerPass : public PassInfoMixin<TypeSanitizerPass> {
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
   static bool isRequired() { return true; }
 };
 

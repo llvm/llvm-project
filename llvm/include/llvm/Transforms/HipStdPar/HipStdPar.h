@@ -18,6 +18,7 @@
 #ifndef LLVM_TRANSFORMS_HIPSTDPAR_HIPSTDPAR_H
 #define LLVM_TRANSFORMS_HIPSTDPAR_HIPSTDPAR_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
@@ -27,7 +28,7 @@ class Module;
 class HipStdParAcceleratorCodeSelectionPass
   : public PassInfoMixin<HipStdParAcceleratorCodeSelectionPass> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 
   static bool isRequired() { return true; }
 };
@@ -35,7 +36,7 @@ public:
 class HipStdParAllocationInterpositionPass
   : public PassInfoMixin<HipStdParAllocationInterpositionPass> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 
   static bool isRequired() { return true; }
 };

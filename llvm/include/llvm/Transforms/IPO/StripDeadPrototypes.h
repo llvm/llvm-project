@@ -16,6 +16,7 @@
 #ifndef LLVM_TRANSFORMS_IPO_STRIPDEADPROTOTYPES_H
 #define LLVM_TRANSFORMS_IPO_STRIPDEADPROTOTYPES_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
@@ -24,7 +25,7 @@ class Module;
 
 /// Pass to remove unused function declarations.
 struct StripDeadPrototypesPass : PassInfoMixin<StripDeadPrototypesPass> {
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };
 
 }
