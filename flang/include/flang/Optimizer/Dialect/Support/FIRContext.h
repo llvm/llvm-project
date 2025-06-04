@@ -58,9 +58,23 @@ void setTargetCPU(mlir::ModuleOp mod, llvm::StringRef cpu);
 /// Get the target CPU string from the Module or return a null reference.
 llvm::StringRef getTargetCPU(mlir::ModuleOp mod);
 
+// Setters and Getters for atomic control options
+void setAmdgpuIgnoreDenormalMode(mlir::ModuleOp mod);
+bool getAmdgpuIgnoreDenormalMode(mlir::ModuleOp mod);
+void setAmdgpuFineGrainedMemory(mlir::ModuleOp mod);
+bool getAmdgpuFineGrainedMemory(mlir::ModuleOp mod);
+void setAmdgpuRemoteMemory(mlir::ModuleOp mod);
+bool getAmdgpuRemoteMemory(mlir::ModuleOp mod);
+
 /// Set the tune CPU for the module. `cpu` must not be deallocated while
 /// module `mod` is still live.
 void setTuneCPU(mlir::ModuleOp mod, llvm::StringRef cpu);
+
+// set Atomic control options for amd gpu.
+void setAmdgpuAtomicControlOptions(mlir::ModuleOp mod,
+                                   bool amdgpuIgnoreDenormalMode,
+                                   bool amdgpuNoFineGrainedMemory,
+                                   bool amdgpuNoRemoteMemory);
 
 /// Get the tune CPU string from the Module or return a null reference.
 llvm::StringRef getTuneCPU(mlir::ModuleOp mod);
