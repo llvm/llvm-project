@@ -77,11 +77,6 @@ LanguageFeatureControl::LanguageFeatureControl() {
         std::string_view{cliOption};
   });
 
-  replaceCliCanonicalSpelling(UsageWarning::F202XAllocatableBreakingChange,
-      "f202x-allocatable-breaking-change");
-
-  // If we need to
-
   // These features must be explicitly enabled by command line options.
   disable_.set(LanguageFeature::OldDebugLines);
   disable_.set(LanguageFeature::OpenACC);
