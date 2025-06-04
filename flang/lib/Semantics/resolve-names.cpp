@@ -1511,6 +1511,11 @@ public:
     return false;
   }
 
+  bool Pre(const parser::OpenMPDeclareSimdConstruct &x) {
+    AddOmpSourceRange(x.source);
+    return true;
+  }
+
   bool Pre(const parser::OmpInitializerProc &x) {
     auto &procDes = std::get<parser::ProcedureDesignator>(x.t);
     auto &name = std::get<parser::Name>(procDes.u);
@@ -1656,9 +1661,14 @@ public:
   }
   bool Pre(const parser::OpenMPDeclarativeConstruct &x) {
     AddOmpSourceRange(x.source);
+    // Without skipping implicit typing, declarative constructs
+    // can implicitly declare variables instead of only using the
+    // ones already declared in the Fortran sources.
+    SkipImplicitTyping(true);
     return true;
   }
   void Post(const parser::OpenMPDeclarativeConstruct &) {
+    SkipImplicitTyping(false);
     messageHandler().set_currStmtSource(std::nullopt);
   }
   bool Pre(const parser::OpenMPDepobjConstruct &x) {
