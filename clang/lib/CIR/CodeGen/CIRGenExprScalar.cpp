@@ -569,6 +569,8 @@ public:
 
   mlir::Value VisitUnaryLNot(const UnaryOperator *e);
 
+  mlir::Value VisitCXXThisExpr(CXXThisExpr *te) { return cgf.loadCXXThis(); }
+
   /// Emit a conversion from the specified type to the specified destination
   /// type, both of which are CIR scalar types.
   /// TODO: do we need ScalarConversionOpts here? Should be done in another
@@ -1311,7 +1313,7 @@ mlir::Value ScalarExprEmitter::emitMul(const BinOpInfo &ops) {
       !canElideOverflowCheck(cgf.getContext(), ops))
     cgf.cgm.errorNYI("unsigned int overflow sanitizer");
 
-  if (cir::isFPOrFPVectorTy(ops.lhs.getType())) {
+  if (cir::isFPOrVectorOfFPType(ops.lhs.getType())) {
     assert(!cir::MissingFeatures::cgFPOptionsRAII());
     return builder.createFMul(loc, ops.lhs, ops.rhs);
   }
@@ -1370,7 +1372,7 @@ mlir::Value ScalarExprEmitter::emitAdd(const BinOpInfo &ops) {
       !canElideOverflowCheck(cgf.getContext(), ops))
     cgf.cgm.errorNYI("unsigned int overflow sanitizer");
 
-  if (cir::isFPOrFPVectorTy(ops.lhs.getType())) {
+  if (cir::isFPOrVectorOfFPType(ops.lhs.getType())) {
     assert(!cir::MissingFeatures::cgFPOptionsRAII());
     return builder.createFAdd(loc, ops.lhs, ops.rhs);
   }
@@ -1418,7 +1420,7 @@ mlir::Value ScalarExprEmitter::emitSub(const BinOpInfo &ops) {
         !canElideOverflowCheck(cgf.getContext(), ops))
       cgf.cgm.errorNYI("unsigned int overflow sanitizer");
 
-    if (cir::isFPOrFPVectorTy(ops.lhs.getType())) {
+    if (cir::isFPOrVectorOfFPType(ops.lhs.getType())) {
       assert(!cir::MissingFeatures::cgFPOptionsRAII());
       return builder.createFSub(loc, ops.lhs, ops.rhs);
     }

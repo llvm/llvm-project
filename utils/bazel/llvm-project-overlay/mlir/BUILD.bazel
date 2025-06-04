@@ -3437,6 +3437,7 @@ cc_library(
         ":IR",
         ":IndexDialect",
         ":InliningUtils",
+        ":LoopLikeInterface",
         ":MemRefDialect",
         ":Pass",
         ":TransformUtils",
@@ -3455,8 +3456,13 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/XeGPU/Utils/*.h"]),
     includes = ["include"],
     deps = [
+        ":DialectUtils",
         ":IR",
+        ":LoopLikeInterface",
+        ":SCFTransforms",
+        ":TransformUtils",
         ":XeGPUDialect",
+        "//llvm:Support",
     ],
 )
 
