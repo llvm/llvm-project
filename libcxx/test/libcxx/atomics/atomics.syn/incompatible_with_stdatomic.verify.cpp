@@ -9,6 +9,9 @@
 // UNSUPPORTED: no-threads
 // REQUIRES: c++03 || c++11 || c++14 || c++17 || c++20
 
+// On Android, libc++'s <stdatomic.h> header always redirects to <atomic>, even before C++23.
+// XFAIL: android
+
 // No diagnostic gets emitted when we build with modules.
 // XFAIL: clang-modules-build
 
