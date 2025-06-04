@@ -107,19 +107,19 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
     if (NativeProcessLinux::PtraceWrapper(PTRACE_GETREGSET,
                                           native_thread.GetID(), &regset,
                                           &ioVec, sizeof(sve_header))
-            .Success()) {
+            .Success())
       opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskSVE);
 
-      // We may also have the Scalable Matrix Extension (SME) which adds a
-      // streaming SVE mode.
-      ioVec.iov_len = sizeof(sve_header);
-      regset = NT_ARM_SSVE;
-      if (NativeProcessLinux::PtraceWrapper(PTRACE_GETREGSET,
-                                            native_thread.GetID(), &regset,
-                                            &ioVec, sizeof(sve_header))
-              .Success())
-        opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskSSVE);
-    }
+    // We may also have the Scalable Matrix Extension (SME) which adds
+    // a streaming SVE mode. Note that SVE and SSVE may implemented
+    // independently, which is true on Apple's M4 architecture.
+    ioVec.iov_len = sizeof(sve_header);
+    regset = NT_ARM_SSVE;
+    if (NativeProcessLinux::PtraceWrapper(PTRACE_GETREGSET,
+                                          native_thread.GetID(), &regset,
+                                          &ioVec, sizeof(sve_header))
+            .Success())
+      opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskSSVE);
 
     sve::user_za_header za_header;
     ioVec.iov_base = &za_header;
