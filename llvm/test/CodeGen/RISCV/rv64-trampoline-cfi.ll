@@ -26,16 +26,16 @@ define i64 @test0(i64 %n, ptr %p) nounwind {
 ; RV64-NEXT:    li a0, 23
 ; RV64-NEXT:    sw a0, 16(sp)
 ; RV64-NEXT:    lui a0, 56
-; RV64-NEXT:    addiw a0, a0, 103
+; RV64-NEXT:    addi a0, a0, 103
 ; RV64-NEXT:    sw a0, 32(sp)
 ; RV64-NEXT:    lui a0, 4324
-; RV64-NEXT:    addiw a0, a0, -509
+; RV64-NEXT:    addi a0, a0, -509
 ; RV64-NEXT:    sw a0, 28(sp)
 ; RV64-NEXT:    lui a0, 6371
-; RV64-NEXT:    addiw a0, a0, 899
+; RV64-NEXT:    addi a0, a0, 899
 ; RV64-NEXT:    sw a0, 24(sp)
 ; RV64-NEXT:    lui a0, 1
-; RV64-NEXT:    addiw a0, a0, -489
+; RV64-NEXT:    addi a0, a0, -489
 ; RV64-NEXT:    sw a0, 20(sp)
 ; RV64-NEXT:    addi a1, sp, 36
 ; RV64-NEXT:    addi a0, sp, 16
@@ -65,16 +65,16 @@ define i64 @test0(i64 %n, ptr %p) nounwind {
 ; RV64-LINUX-NEXT:    li a0, 23
 ; RV64-LINUX-NEXT:    sw a0, 16(sp)
 ; RV64-LINUX-NEXT:    lui a0, 56
-; RV64-LINUX-NEXT:    addiw a0, a0, 103
+; RV64-LINUX-NEXT:    addi a0, a0, 103
 ; RV64-LINUX-NEXT:    sw a0, 32(sp)
 ; RV64-LINUX-NEXT:    lui a0, 4324
-; RV64-LINUX-NEXT:    addiw a0, a0, -509
+; RV64-LINUX-NEXT:    addi a0, a0, -509
 ; RV64-LINUX-NEXT:    sw a0, 28(sp)
 ; RV64-LINUX-NEXT:    lui a0, 6371
-; RV64-LINUX-NEXT:    addiw a0, a0, 899
+; RV64-LINUX-NEXT:    addi a0, a0, 899
 ; RV64-LINUX-NEXT:    sw a0, 24(sp)
 ; RV64-LINUX-NEXT:    lui a0, 1
-; RV64-LINUX-NEXT:    addiw a0, a0, -489
+; RV64-LINUX-NEXT:    addi a0, a0, -489
 ; RV64-LINUX-NEXT:    sw a0, 20(sp)
 ; RV64-LINUX-NEXT:    addi a1, sp, 36
 ; RV64-LINUX-NEXT:    addi a0, sp, 16
