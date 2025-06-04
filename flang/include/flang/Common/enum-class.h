@@ -17,7 +17,6 @@
 #ifndef FORTRAN_COMMON_ENUM_CLASS_H_
 #define FORTRAN_COMMON_ENUM_CLASS_H_
 
-#include "optional.h"
 #include <array>
 #include <functional>
 #include <string_view>

@@ -27,9 +27,7 @@
 #define FORTRAN_COMMON_OPTIONAL_H
 
 #include "api-attrs.h"
-#include <functional>
 #include <optional>
-#include <type_traits>
 
 #if !defined(STD_OPTIONAL_UNSUPPORTED) && \
     (defined(__CUDACC__) || defined(__CUDA__)) && defined(__CUDA_ARCH__)
