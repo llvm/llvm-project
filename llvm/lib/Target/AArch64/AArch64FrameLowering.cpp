@@ -713,7 +713,8 @@ static void emitCalleeSavedRestores(MachineBasicBlock &MBB,
 
   // If pac-ret+leaf is in effect, ".cfi_restore w30" is emitted near
   // PAUTH_EPILOGUE pseudo instruction by emitPacRetPlusLeafHardening().
-  bool ShouldSkipLR = MF.getInfo<AArch64FunctionInfo>()->shouldSignReturnAddressEverywhere();
+  bool ShouldSkipLR =
+      MF.getInfo<AArch64FunctionInfo>()->shouldSignReturnAddressEverywhere();
 
   for (const auto &Info : CSI) {
     if (ShouldSkipLR && Info.getReg() == AArch64::LR)
