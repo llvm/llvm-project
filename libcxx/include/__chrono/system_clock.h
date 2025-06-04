@@ -20,7 +20,6 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 namespace chrono {
 
@@ -48,7 +47,6 @@ using sys_days    = sys_time<days>;
 
 } // namespace chrono
 
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___CHRONO_SYSTEM_CLOCK_H

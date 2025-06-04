@@ -16,7 +16,11 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
         program = self.getBuildArtifact(program_basename)
         self.build_and_launch(program)
         functions = ["foo"]
-        breakpoint_ids = self.set_function_breakpoints(functions)
+
+        # This breakpoint will be resolved only when the libfoo module is loaded
+        breakpoint_ids = self.set_function_breakpoints(
+            functions, wait_for_resolve=False
+        )
         self.assertEqual(len(breakpoint_ids), len(functions), "expect one breakpoint")
         self.continue_to_breakpoints(breakpoint_ids)
         active_modules = self.dap_server.get_modules()

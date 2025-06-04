@@ -25,6 +25,8 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -780,15 +782,9 @@ Value *LowerTypeTestsModule::lowerTypeTestCall(Metadata *TypeId, CallInst *CI,
   // result, causing the comparison to fail if they are nonzero. The rotate
   // also conveniently gives us a bit offset to use during the load from
   // the bitset.
-  Value *OffsetSHR =
-      B.CreateLShr(PtrOffset, B.CreateZExt(TIL.AlignLog2, IntPtrTy));
-  Value *OffsetSHL = B.CreateShl(
-      PtrOffset, B.CreateZExt(
-                     ConstantExpr::getSub(
-                         ConstantInt::get(Int8Ty, DL.getPointerSizeInBits(0)),
-                         TIL.AlignLog2),
-                     IntPtrTy));
-  Value *BitOffset = B.CreateOr(OffsetSHR, OffsetSHL);
+  Value *BitOffset = B.CreateIntrinsic(
+      IntPtrTy, Intrinsic::fshr,
+      {PtrOffset, PtrOffset, B.CreateZExt(TIL.AlignLog2, IntPtrTy)});
 
   Value *OffsetInRange = B.CreateICmpULE(BitOffset, TIL.SizeM1);
 
@@ -2488,10 +2484,23 @@ PreservedAnalyses SimplifyTypeTestsPass::run(Module &M,
   // test. Unfortunately this pass ends up needing to reverse engineer what
   // LowerTypeTests did; this is currently inherent to the design of ThinLTO
   // importing where LowerTypeTests needs to run at the start.
+  //
+  // We look for things like:
+  //
+  // sub (i64 ptrtoint (ptr @_Z2fpv to i64), i64 ptrtoint (ptr @__typeid__ZTSFvvE_global_addr to i64))
+  //
+  // which gets replaced with 0 if _Z2fpv (more specifically _Z2fpv.cfi, the
+  // function referred to by the jump table) is a member of the type _ZTSFvv, as
+  // well as things like
+  //
+  // icmp eq ptr @_Z2fpv, @__typeid__ZTSFvvE_global_addr
+  //
+  // which gets replaced with true if _Z2fpv is a member.
   for (auto &GV : M.globals()) {
     if (!GV.getName().starts_with("__typeid_") ||
         !GV.getName().ends_with("_global_addr"))
       continue;
+    // __typeid_foo_global_addr -> foo
     auto *MD = MDString::get(M.getContext(),
                              GV.getName().substr(9, GV.getName().size() - 21));
     auto MaySimplifyPtr = [&](Value *Ptr) {
@@ -2550,5 +2559,9 @@ PreservedAnalyses SimplifyTypeTestsPass::run(Module &M,
 
   if (!Changed)
     return PreservedAnalyses::all();
-  return PreservedAnalyses::none();
+  PreservedAnalyses PA = PreservedAnalyses::none();
+  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<PostDominatorTreeAnalysis>();
+  PA.preserve<LoopAnalysis>();
+  return PA;
 }

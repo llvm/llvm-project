@@ -121,8 +121,8 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-NEXT: No successors
 ; DBG-EMPTY:
 ; DBG-NEXT: scalar.ph:
-; DBG-NEXT:  EMIT vp<[[RESUME1:%.+]]> = resume-phi vp<[[VEC_TC]]>, ir<0>
-; DBG-NEXT:  EMIT vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END]]>, ir<false>
+; DBG-NEXT:  EMIT-SCALAR vp<[[RESUME1:%.+]]> = resume-phi vp<[[VEC_TC]]>, ir<0>
+; DBG-NEXT:  EMIT-SCALAR vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END]]>, ir<false>
 ; DBG-NEXT: Successor(s): ir-bb<loop.header>
 ; DBG-EMPTY:
 ; DBG-NEXT: ir-bb<loop.header>:
@@ -228,8 +228,8 @@ exit:
 ; DBG-NEXT: No successors
 ; DBG-EMPTY:
 ; DBG-NEXT: scalar.ph:
-; DBG-NEXT:  EMIT vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
-; DBG-NEXT:  EMIT vp<[[RESUME_P:%.*]]> = resume-phi vp<[[RESUME_1]]>, ir<0>
+; DBG-NEXT:  EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; DBG-NEXT:  EMIT-SCALAR vp<[[RESUME_P:%.*]]> = resume-phi vp<[[RESUME_1]]>, ir<0>
 ; DBG-NEXT: Successor(s): ir-bb<loop>
 ; DBG-EMPTY:
 ; DBG-NEXT: ir-bb<loop>:

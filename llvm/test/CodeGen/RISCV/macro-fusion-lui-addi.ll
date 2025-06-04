@@ -77,19 +77,19 @@ define i32 @test_matint() {
 ; FUSION-LABEL: test_matint:
 ; FUSION:       # %bb.0:
 ; FUSION-NEXT:    lui a0, 1
-; FUSION-NEXT:    addiw a0, a0, -2048
+; FUSION-NEXT:    addi a0, a0, -2048
 ; FUSION-NEXT:    ret
 ;
 ; FUSION-POSTRA-LABEL: test_matint:
 ; FUSION-POSTRA:       # %bb.0:
 ; FUSION-POSTRA-NEXT:    lui a0, 1
-; FUSION-POSTRA-NEXT:    addiw a0, a0, -2048
+; FUSION-POSTRA-NEXT:    addi a0, a0, -2048
 ; FUSION-POSTRA-NEXT:    ret
 ;
 ; FUSION-GENERIC-LABEL: test_matint:
 ; FUSION-GENERIC:       # %bb.0:
 ; FUSION-GENERIC-NEXT:    lui a0, 1
-; FUSION-GENERIC-NEXT:    addiw a0, a0, -2048
+; FUSION-GENERIC-NEXT:    addi a0, a0, -2048
 ; FUSION-GENERIC-NEXT:    ret
   ret i32 2048
 }
@@ -99,27 +99,27 @@ define void @test_regalloc_hint(i32 noundef signext %0, i32 noundef signext %1) 
 ; NOFUSION:       # %bb.0:
 ; NOFUSION-NEXT:    mv a0, a1
 ; NOFUSION-NEXT:    lui a1, 3014
-; NOFUSION-NEXT:    addiw a1, a1, 334
+; NOFUSION-NEXT:    addi a1, a1, 334
 ; NOFUSION-NEXT:    tail bar
 ;
 ; FUSION-LABEL: test_regalloc_hint:
 ; FUSION:       # %bb.0:
 ; FUSION-NEXT:    mv a0, a1
 ; FUSION-NEXT:    lui a1, 3014
-; FUSION-NEXT:    addiw a1, a1, 334
+; FUSION-NEXT:    addi a1, a1, 334
 ; FUSION-NEXT:    tail bar
 ;
 ; FUSION-POSTRA-LABEL: test_regalloc_hint:
 ; FUSION-POSTRA:       # %bb.0:
 ; FUSION-POSTRA-NEXT:    mv a0, a1
 ; FUSION-POSTRA-NEXT:    lui a1, 3014
-; FUSION-POSTRA-NEXT:    addiw a1, a1, 334
+; FUSION-POSTRA-NEXT:    addi a1, a1, 334
 ; FUSION-POSTRA-NEXT:    tail bar
 ;
 ; FUSION-GENERIC-LABEL: test_regalloc_hint:
 ; FUSION-GENERIC:       # %bb.0:
 ; FUSION-GENERIC-NEXT:    lui a2, 3014
-; FUSION-GENERIC-NEXT:    addiw a2, a2, 334
+; FUSION-GENERIC-NEXT:    addi a2, a2, 334
 ; FUSION-GENERIC-NEXT:    mv a0, a1
 ; FUSION-GENERIC-NEXT:    mv a1, a2
 ; FUSION-GENERIC-NEXT:    tail bar

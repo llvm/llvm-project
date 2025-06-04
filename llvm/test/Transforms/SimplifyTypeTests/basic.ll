@@ -1,4 +1,10 @@
+; Test that a lowered type test for a type is simplified to true
+; if the target is a constant member of that type.
+
 ; RUN: opt -S %s -passes=simplify-type-tests | FileCheck %s
+
+; Test that the simplification does not occur if the type is wrong.
+ 
 ; RUN: sed -e 's/"_ZTSFvvE"/"wrongtype"/g' %s | opt -S -passes=simplify-type-tests | FileCheck --check-prefix=WRONGTYPE %s
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
