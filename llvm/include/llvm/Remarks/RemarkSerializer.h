@@ -13,6 +13,7 @@
 #ifndef LLVM_REMARKS_REMARKSERIALIZER_H
 #define LLVM_REMARKS_REMARKSERIALIZER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Remarks/RemarkStringTable.h"
 #include <optional>
@@ -77,12 +78,12 @@ struct MetaSerializer {
 };
 
 /// Create a remark serializer.
-Expected<std::unique_ptr<RemarkSerializer>>
+LLVM_ABI Expected<std::unique_ptr<RemarkSerializer>>
 createRemarkSerializer(Format RemarksFormat, SerializerMode Mode,
                        raw_ostream &OS);
 
 /// Create a remark serializer that uses a pre-filled string table.
-Expected<std::unique_ptr<RemarkSerializer>>
+LLVM_ABI Expected<std::unique_ptr<RemarkSerializer>>
 createRemarkSerializer(Format RemarksFormat, SerializerMode Mode,
                        raw_ostream &OS, remarks::StringTable StrTab);
 

@@ -9,6 +9,7 @@
 #ifndef LLVM_OPTION_OPTION_H
 #define LLVM_OPTION_OPTION_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/OptSpecifier.h"
@@ -81,7 +82,7 @@ protected:
   const OptTable *Owner;
 
 public:
-  Option(const OptTable::Info *Info, const OptTable *Owner);
+  LLVM_ABI Option(const OptTable::Info *Info, const OptTable *Owner);
 
   bool isValid() const {
     return Info != nullptr;
@@ -213,7 +214,7 @@ public:
   /// Note that matches against options which are an alias should never be
   /// done -- aliases do not participate in matching and so such a query will
   /// always be false.
-  bool matches(OptSpecifier ID) const;
+  LLVM_ABI bool matches(OptSpecifier ID) const;
 
   /// Potentially accept the current argument, returning a new Arg instance,
   /// or 0 if the option does not accept this argument (or the argument is
@@ -227,7 +228,7 @@ public:
   /// underlying storage to represent a Joined argument.
   /// \p GroupedShortOption If true, we are handling the fallback case of
   /// parsing a prefix of the current argument as a short option.
-  std::unique_ptr<Arg> accept(const ArgList &Args, StringRef CurArg,
+  LLVM_ABI std::unique_ptr<Arg> accept(const ArgList &Args, StringRef CurArg,
                               bool GroupedShortOption, unsigned &Index) const;
 
 private:
@@ -235,8 +236,8 @@ private:
                                       unsigned &Index) const;
 
 public:
-  void print(raw_ostream &O, bool AddNewLine = true) const;
-  void dump() const;
+  LLVM_ABI void print(raw_ostream &O, bool AddNewLine = true) const;
+  LLVM_ABI void dump() const;
 };
 
 } // end namespace opt
