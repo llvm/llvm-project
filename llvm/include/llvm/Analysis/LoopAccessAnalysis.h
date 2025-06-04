@@ -805,6 +805,8 @@ private:
 
   Loop *TheLoop;
 
+  /// Determines whether we should generate partial runtime checks when not all
+  /// memory accesses could be analyzed.
   bool AllowPartial;
 
   unsigned NumLoads = 0;
