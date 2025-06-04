@@ -972,6 +972,13 @@ public:
   /// Calls \c Lexer::getLocForEndOfToken()
   SourceLocation getLocForEndOfToken(SourceLocation Loc, unsigned Offset = 0);
 
+  /// Calls \c Lexer::findNextToken() to find the next token, and if the
+  /// locations of both ends of the token can be resolved it return that
+  /// range; Otherwise it returns an invalid SourceRange.
+  SourceRange getRangeForNextToken(
+      SourceLocation Loc, bool IncludeMacros, bool IncludeComments,
+      std::optional<tok::TokenKind> ExpectedToken = std::nullopt);
+
   /// Retrieve the module loader associated with the preprocessor.
   ModuleLoader &getModuleLoader() const;
 
@@ -9134,6 +9141,7 @@ public:
   /// Diagnose if an explicit lambda capture is unused. Returns true if a
   /// diagnostic is emitted.
   bool DiagnoseUnusedLambdaCapture(SourceRange CaptureRange,
+                                   SourceRange FixItRange,
                                    const sema::Capture &From);
 
   /// Build a FieldDecl suitable to hold the given capture.

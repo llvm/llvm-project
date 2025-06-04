@@ -4393,7 +4393,8 @@ ShuffleVectorExpr::ShuffleVectorExpr(const ASTContext &C, ArrayRef<Expr *> args,
                                      QualType Type, SourceLocation BLoc,
                                      SourceLocation RP)
     : Expr(ShuffleVectorExprClass, Type, VK_PRValue, OK_Ordinary),
-      BuiltinLoc(BLoc), RParenLoc(RP), NumExprs(args.size()) {
+      BuiltinLoc(BLoc), RParenLoc(RP) {
+  ShuffleVectorExprBits.NumExprs = args.size();
   SubExprs = new (C) Stmt*[args.size()];
   for (unsigned i = 0; i != args.size(); i++)
     SubExprs[i] = args[i];
@@ -4404,8 +4405,8 @@ ShuffleVectorExpr::ShuffleVectorExpr(const ASTContext &C, ArrayRef<Expr *> args,
 void ShuffleVectorExpr::setExprs(const ASTContext &C, ArrayRef<Expr *> Exprs) {
   if (SubExprs) C.Deallocate(SubExprs);
 
-  this->NumExprs = Exprs.size();
-  SubExprs = new (C) Stmt*[NumExprs];
+  this->ShuffleVectorExprBits.NumExprs = Exprs.size();
+  SubExprs = new (C) Stmt *[ShuffleVectorExprBits.NumExprs];
   memcpy(SubExprs, Exprs.data(), sizeof(Expr *) * Exprs.size());
 }
 
