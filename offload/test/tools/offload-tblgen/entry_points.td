@@ -28,7 +28,7 @@ def : Function {
 // CHECK: if (offloadConfig().TracingEnabled) {
 // CHECK-NEXT: "---> FunctionA";
 
-// CHECK: Result = FunctionA_val(ParamA, ParamB);
+// CHECK: Result = llvmErrorToOffloadError(FunctionA_val(ParamA, ParamB));
 
 // Tracing should construct a param struct for printing
 // CHECK: if (offloadConfig().TracingEnabled) {

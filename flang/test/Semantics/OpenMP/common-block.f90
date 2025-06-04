@@ -10,9 +10,9 @@ program main
   common /blk/ a, b, c
   !$omp parallel private(/blk/)
     !CHECK: OtherConstruct scope: size=0 alignment=1
-    !CHECK:   a (OmpPrivate): HostAssoc
-    !CHECK:   b (OmpPrivate): HostAssoc
-    !CHECK:   c (OmpPrivate): HostAssoc
+    !CHECK:   a (OmpPrivate, OmpExplicit): HostAssoc
+    !CHECK:   b (OmpPrivate, OmpExplicit): HostAssoc
+    !CHECK:   c (OmpPrivate, OmpExplicit): HostAssoc
     call sub(a, b, c)
   !$omp end parallel
 end program

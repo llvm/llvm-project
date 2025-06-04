@@ -47,7 +47,6 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -291,10 +290,16 @@ bool RuntimePointerChecking::tryToCreateDiffCheck(
   if (AccSink[0] < AccSrc[0])
     std::swap(Src, Sink);
 
-  auto *SrcAR = dyn_cast<SCEVAddRecExpr>(Src->Expr);
-  auto *SinkAR = dyn_cast<SCEVAddRecExpr>(Sink->Expr);
-  if (!SrcAR || !SinkAR || SrcAR->getLoop() != DC.getInnermostLoop() ||
-      SinkAR->getLoop() != DC.getInnermostLoop())
+  const SCEVConstant *Step;
+  const SCEV *SrcStart;
+  const SCEV *SinkStart;
+  const Loop *InnerLoop = DC.getInnermostLoop();
+  if (!match(Src->Expr,
+             m_scev_AffineAddRec(m_SCEV(SrcStart), m_SCEVConstant(Step),
+                                 m_SpecificLoop(InnerLoop))) ||
+      !match(Sink->Expr,
+             m_scev_AffineAddRec(m_SCEV(SinkStart), m_scev_Specific(Step),
+                                 m_SpecificLoop(InnerLoop))))
     return false;
 
   SmallVector<Instruction *, 4> SrcInsts =
@@ -306,17 +311,14 @@ bool RuntimePointerChecking::tryToCreateDiffCheck(
   if (isa<ScalableVectorType>(SrcTy) || isa<ScalableVectorType>(DstTy))
     return false;
 
-  const DataLayout &DL =
-      SinkAR->getLoop()->getHeader()->getDataLayout();
+  const DataLayout &DL = InnerLoop->getHeader()->getDataLayout();
   unsigned AllocSize =
       std::max(DL.getTypeAllocSize(SrcTy), DL.getTypeAllocSize(DstTy));
 
   // Only matching constant steps matching the AllocSize are supported at the
   // moment. This simplifies the difference computation. Can be extended in the
   // future.
-  auto *Step = dyn_cast<SCEVConstant>(SinkAR->getStepRecurrence(*SE));
-  if (!Step || Step != SrcAR->getStepRecurrence(*SE) ||
-      Step->getAPInt().abs() != AllocSize)
+  if (Step->getAPInt().abs() != AllocSize)
     return false;
 
   IntegerType *IntTy =
@@ -325,15 +327,14 @@ bool RuntimePointerChecking::tryToCreateDiffCheck(
 
   // When counting down, the dependence distance needs to be swapped.
   if (Step->getValue()->isNegative())
-    std::swap(SinkAR, SrcAR);
+    std::swap(SinkStart, SrcStart);
 
-  const SCEV *SinkStartInt = SE->getPtrToIntExpr(SinkAR->getStart(), IntTy);
-  const SCEV *SrcStartInt = SE->getPtrToIntExpr(SrcAR->getStart(), IntTy);
+  const SCEV *SinkStartInt = SE->getPtrToIntExpr(SinkStart, IntTy);
+  const SCEV *SrcStartInt = SE->getPtrToIntExpr(SrcStart, IntTy);
   if (isa<SCEVCouldNotCompute>(SinkStartInt) ||
       isa<SCEVCouldNotCompute>(SrcStartInt))
     return false;
 
-  const Loop *InnerLoop = SrcAR->getLoop();
   // If the start values for both Src and Sink also vary according to an outer
   // loop, then it's probably better to avoid creating diff checks because
   // they may not be hoisted. We should instead let llvm::addRuntimeChecks
@@ -591,20 +592,29 @@ bool RuntimePointerChecking::needsChecking(unsigned I, unsigned J) const {
   return PointerI.AliasSetId == PointerJ.AliasSetId;
 }
 
+/// Assign each RuntimeCheckingPtrGroup pointer an index for stable UTC output.
+static DenseMap<const RuntimeCheckingPtrGroup *, unsigned>
+getPtrToIdxMap(ArrayRef<RuntimeCheckingPtrGroup> CheckingGroups) {
+  DenseMap<const RuntimeCheckingPtrGroup *, unsigned> PtrIndices;
+  for (const auto &[Idx, CG] : enumerate(CheckingGroups))
+    PtrIndices[&CG] = Idx;
+  return PtrIndices;
+}
+
 void RuntimePointerChecking::printChecks(
     raw_ostream &OS, const SmallVectorImpl<RuntimePointerCheck> &Checks,
     unsigned Depth) const {
   unsigned N = 0;
+  auto PtrIndices = getPtrToIdxMap(CheckingGroups);
   for (const auto &[Check1, Check2] : Checks) {
     const auto &First = Check1->Members, &Second = Check2->Members;
-
     OS.indent(Depth) << "Check " << N++ << ":\n";
-
-    OS.indent(Depth + 2) << "Comparing group (" << Check1 << "):\n";
+    OS.indent(Depth + 2) << "Comparing group GRP" << PtrIndices.at(Check1)
+                         << ":\n";
     for (unsigned K : First)
       OS.indent(Depth + 2) << *Pointers[K].PointerValue << "\n";
-
-    OS.indent(Depth + 2) << "Against group (" << Check2 << "):\n";
+    OS.indent(Depth + 2) << "Against group GRP" << PtrIndices.at(Check2)
+                         << ":\n";
     for (unsigned K : Second)
       OS.indent(Depth + 2) << *Pointers[K].PointerValue << "\n";
   }
@@ -616,8 +626,9 @@ void RuntimePointerChecking::print(raw_ostream &OS, unsigned Depth) const {
   printChecks(OS, Checks, Depth);
 
   OS.indent(Depth) << "Grouped accesses:\n";
+  auto PtrIndices = getPtrToIdxMap(CheckingGroups);
   for (const auto &CG : CheckingGroups) {
-    OS.indent(Depth + 2) << "Group " << &CG << ":\n";
+    OS.indent(Depth + 2) << "Group GRP" << PtrIndices.at(&CG) << ":\n";
     OS.indent(Depth + 4) << "(Low: " << *CG.Low << " High: " << *CG.High
                          << ")\n";
     for (unsigned Member : CG.Members) {
@@ -683,8 +694,7 @@ public:
   ///
   /// Returns true if we need no check or if we do and we can generate them
   /// (i.e. the pointers have computable bounds).
-  bool canCheckPtrAtRT(RuntimePointerChecking &RtCheck, ScalarEvolution *SE,
-                       Loop *TheLoop,
+  bool canCheckPtrAtRT(RuntimePointerChecking &RtCheck, Loop *TheLoop,
                        const DenseMap<Value *, const SCEV *> &Strides,
                        Value *&UncomputablePtr);
 
@@ -842,9 +852,6 @@ getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
   return Stride;
 }
 
-static bool isNoWrapGEP(Value *Ptr, PredicatedScalarEvolution &PSE,
-                        const Loop *L);
-
 /// Check whether \p AR is a non-wrapping AddRec. If \p Ptr is not nullptr, use
 /// informating from the IR pointer value to determine no-wrap.
 static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
@@ -855,11 +862,6 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
     return true;
 
   if (Ptr && PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW))
-    return true;
-
-  // The address calculation must not wrap. Otherwise, a dependence could be
-  // inverted.
-  if (Ptr && isNoWrapGEP(Ptr, PSE, L))
     return true;
 
   // An nusw getelementptr that is an AddRec cannot wrap. If it would wrap,
@@ -999,24 +1001,22 @@ static void findForkedSCEVs(
       break;
     }
 
-    // Find the pointer type we need to extend to.
-    Type *IntPtrTy = SE->getEffectiveSCEVType(
-        SE->getSCEV(GEP->getPointerOperand())->getType());
+    Type *IntPtrTy = SE->getEffectiveSCEVType(GEP->getPointerOperandType());
 
     // Find the size of the type being pointed to. We only have a single
     // index term (guarded above) so we don't need to index into arrays or
     // structures, just get the size of the scalar value.
     const SCEV *Size = SE->getSizeOfExpr(IntPtrTy, SourceTy);
 
-    // Scale up the offsets by the size of the type, then add to the bases.
-    const SCEV *Scaled1 = SE->getMulExpr(
-        Size, SE->getTruncateOrSignExtend(get<0>(OffsetScevs[0]), IntPtrTy));
-    const SCEV *Scaled2 = SE->getMulExpr(
-        Size, SE->getTruncateOrSignExtend(get<0>(OffsetScevs[1]), IntPtrTy));
-    ScevList.emplace_back(SE->getAddExpr(get<0>(BaseScevs[0]), Scaled1),
-                          NeedsFreeze);
-    ScevList.emplace_back(SE->getAddExpr(get<0>(BaseScevs[1]), Scaled2),
-                          NeedsFreeze);
+    for (auto [B, O] : zip(BaseScevs, OffsetScevs)) {
+      const SCEV *Base = get<0>(B);
+      const SCEV *Offset = get<0>(O);
+
+      // Scale up the offsets by the size of the type, then add to the bases.
+      const SCEV *Scaled =
+          SE->getMulExpr(Size, SE->getTruncateOrSignExtend(Offset, IntPtrTy));
+      ScevList.emplace_back(SE->getAddExpr(Base, Scaled), NeedsFreeze);
+    }
     break;
   }
   case Instruction::Select: {
@@ -1026,10 +1026,9 @@ static void findForkedSCEVs(
     // then we just bail out and return the generic SCEV.
     findForkedSCEVs(SE, L, I->getOperand(1), ChildScevs, Depth);
     findForkedSCEVs(SE, L, I->getOperand(2), ChildScevs, Depth);
-    if (ChildScevs.size() == 2) {
-      ScevList.push_back(ChildScevs[0]);
-      ScevList.push_back(ChildScevs[1]);
-    } else
+    if (ChildScevs.size() == 2)
+      append_range(ScevList, ChildScevs);
+    else
       ScevList.emplace_back(Scev, !isGuaranteedNotToBeUndefOrPoison(Ptr));
     break;
   }
@@ -1042,10 +1041,9 @@ static void findForkedSCEVs(
       findForkedSCEVs(SE, L, I->getOperand(0), ChildScevs, Depth);
       findForkedSCEVs(SE, L, I->getOperand(1), ChildScevs, Depth);
     }
-    if (ChildScevs.size() == 2) {
-      ScevList.push_back(ChildScevs[0]);
-      ScevList.push_back(ChildScevs[1]);
-    } else
+    if (ChildScevs.size() == 2)
+      append_range(ScevList, ChildScevs);
+    else
       ScevList.emplace_back(Scev, !isGuaranteedNotToBeUndefOrPoison(Ptr));
     break;
   }
@@ -1072,12 +1070,9 @@ static void findForkedSCEVs(
       break;
     }
 
-    ScevList.emplace_back(
-        GetBinOpExpr(Opcode, get<0>(LScevs[0]), get<0>(RScevs[0])),
-        NeedsFreeze);
-    ScevList.emplace_back(
-        GetBinOpExpr(Opcode, get<0>(LScevs[1]), get<0>(RScevs[1])),
-        NeedsFreeze);
+    for (auto [L, R] : zip(LScevs, RScevs))
+      ScevList.emplace_back(GetBinOpExpr(Opcode, get<0>(L), get<0>(R)),
+                            NeedsFreeze);
     break;
   }
   default:
@@ -1178,7 +1173,7 @@ bool AccessAnalysis::createCheckForAccess(
 }
 
 bool AccessAnalysis::canCheckPtrAtRT(
-    RuntimePointerChecking &RtCheck, ScalarEvolution *SE, Loop *TheLoop,
+    RuntimePointerChecking &RtCheck, Loop *TheLoop,
     const DenseMap<Value *, const SCEV *> &StridesMap,
     Value *&UncomputablePtr) {
   // Find pointers with computable bounds. We are going to use this information
@@ -1457,49 +1452,6 @@ void AccessAnalysis::processMemAccesses() {
       }
     }
   }
-}
-
-/// Check whether \p Ptr is non-wrapping GEP.
-static bool isNoWrapGEP(Value *Ptr, PredicatedScalarEvolution &PSE,
-                        const Loop *L) {
-  // Scalar evolution does not propagate the non-wrapping flags to values that
-  // are derived from a non-wrapping induction variable because non-wrapping
-  // could be flow-sensitive.
-  //
-  // Look through the potentially overflowing instruction to try to prove
-  // non-wrapping for the *specific* value of Ptr.
-
-  // The arithmetic implied by an nusw GEP can't overflow.
-  const auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
-  if (!GEP || !GEP->hasNoUnsignedSignedWrap())
-    return false;
-
-  // Make sure there is only one non-const index and analyze that.
-  Value *NonConstIndex = nullptr;
-  for (Value *Index : GEP->indices())
-    if (!isa<ConstantInt>(Index)) {
-      if (NonConstIndex)
-        return false;
-      NonConstIndex = Index;
-    }
-  if (!NonConstIndex)
-    // The recurrence is on the pointer, ignore for now.
-    return false;
-
-  // The index in GEP is signed.  It is non-wrapping if it's derived from a NSW
-  // AddRec using a NSW operation.
-  if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(NonConstIndex))
-    if (OBO->hasNoSignedWrap() &&
-        // Assume constant for other the operand so that the AddRec can be
-        // easily found.
-        isa<ConstantInt>(OBO->getOperand(1))) {
-      const SCEV *OpScev = PSE.getSCEV(OBO->getOperand(0));
-
-      if (auto *OpAR = dyn_cast<SCEVAddRecExpr>(OpScev))
-        return OpAR->getLoop() == L && OpAR->getNoWrapFlags(SCEV::FlagNSW);
-    }
-
-  return false;
 }
 
 /// Check whether the access through \p Ptr has a constant stride.
@@ -2641,7 +2593,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
   // to place a runtime bound check.
   Value *UncomputablePtr = nullptr;
   bool CanDoRTIfNeeded = Accesses.canCheckPtrAtRT(
-      *PtrRtChecking, PSE->getSE(), TheLoop, SymbolicStrides, UncomputablePtr);
+      *PtrRtChecking, TheLoop, SymbolicStrides, UncomputablePtr);
   if (!CanDoRTIfNeeded) {
     const auto *I = dyn_cast_or_null<Instruction>(UncomputablePtr);
     recordAnalysis("CantIdentifyArrayBounds", I)
@@ -2669,10 +2621,9 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
       PtrRtChecking->reset();
       PtrRtChecking->Need = true;
 
-      auto *SE = PSE->getSE();
       UncomputablePtr = nullptr;
       CanDoRTIfNeeded = Accesses.canCheckPtrAtRT(
-          *PtrRtChecking, SE, TheLoop, SymbolicStrides, UncomputablePtr);
+          *PtrRtChecking, TheLoop, SymbolicStrides, UncomputablePtr);
 
       // Check that we found the bounds for the pointer.
       if (!CanDoRTIfNeeded) {
@@ -2788,7 +2739,7 @@ OptimizationRemarkAnalysis &
 LoopAccessInfo::recordAnalysis(StringRef RemarkName, const Instruction *I) {
   assert(!Report && "Multiple reports generated");
 
-  const Value *CodeRegion = TheLoop->getHeader();
+  const BasicBlock *CodeRegion = TheLoop->getHeader();
   DebugLoc DL = TheLoop->getStartLoc();
 
   if (I) {
@@ -2799,8 +2750,8 @@ LoopAccessInfo::recordAnalysis(StringRef RemarkName, const Instruction *I) {
       DL = I->getDebugLoc();
   }
 
-  Report = std::make_unique<OptimizationRemarkAnalysis>(DEBUG_TYPE, RemarkName, DL,
-                                                   CodeRegion);
+  Report = std::make_unique<OptimizationRemarkAnalysis>(DEBUG_TYPE, RemarkName,
+                                                        DL, CodeRegion);
   return *Report;
 }
 
@@ -2855,16 +2806,8 @@ static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *L
     while (auto *C = dyn_cast<SCEVIntegralCastExpr>(V))
       V = C->getOperand();
 
-  auto *S = dyn_cast<SCEVAddRecExpr>(V);
-  if (!S)
+  if (!match(V, m_scev_AffineAddRec(m_SCEV(), m_SCEV(V), m_SpecificLoop(Lp))))
     return nullptr;
-
-  // If the pointer is invariant then there is no stride and it makes no
-  // sense to add it here.
-  if (Lp != S->getLoop())
-    return nullptr;
-
-  V = S->getStepRecurrence(*SE);
 
   // Note that the restriction after this loop invariant check are only
   // profitability restrictions.
@@ -3029,7 +2972,7 @@ void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
 }
 
 const LoopAccessInfo &LoopAccessInfoManager::getInfo(Loop &L) {
-  const auto &[It, Inserted] = LoopAccessInfoMap.insert({&L, nullptr});
+  const auto &[It, Inserted] = LoopAccessInfoMap.try_emplace(&L);
 
   if (Inserted)
     It->second =

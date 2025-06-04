@@ -985,6 +985,51 @@ inst_pacnbibsppc:
         ret
         .size inst_pacnbibsppc, .-inst_pacnbibsppc
 
+// Test that write-back forms of LDRA(A|B) instructions are handled properly.
+
+        .globl  inst_ldraa_wb
+        .type   inst_ldraa_wb,@function
+inst_ldraa_wb:
+// CHECK-NOT: inst_ldraa_wb
+        ldraa   x2, [x0]!
+        pacda   x0, x1
+        ret
+        .size inst_ldraa_wb, .-inst_ldraa_wb
+
+        .globl  inst_ldrab_wb
+        .type   inst_ldrab_wb,@function
+inst_ldrab_wb:
+// CHECK-NOT: inst_ldrab_wb
+        ldrab   x2, [x0]!
+        pacda   x0, x1
+        ret
+        .size inst_ldrab_wb, .-inst_ldrab_wb
+
+// Non write-back forms of LDRA(A|B) instructions do not modify the address
+// register, and thus do not make it safe.
+
+        .globl  inst_ldraa_non_wb
+        .type   inst_ldraa_non_wb,@function
+inst_ldraa_non_wb:
+// CHECK-LABEL: GS-PAUTH: signing oracle found in function inst_ldraa_non_wb, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      pacdb   x0, x1
+// CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
+        ldraa   x2, [x0]
+        pacdb   x0, x1
+        ret
+        .size inst_ldraa_non_wb, .-inst_ldraa_non_wb
+
+        .globl  inst_ldrab_non_wb
+        .type   inst_ldrab_non_wb,@function
+inst_ldrab_non_wb:
+// CHECK-LABEL: GS-PAUTH: signing oracle found in function inst_ldrab_non_wb, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      pacda   x0, x1
+// CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
+        ldrab   x2, [x0]
+        pacda   x0, x1
+        ret
+        .size inst_ldrab_non_wb, .-inst_ldrab_non_wb
+
         .globl  main
         .type   main,@function
 main:

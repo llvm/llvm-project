@@ -201,7 +201,7 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
 
   std::string Error;
   const Target *TheTarget =
-      TargetRegistry::lookupTarget(std::string(ArchName), TheTriple, Error);
+      TargetRegistry::lookupTarget(ArchName, TheTriple, Error);
   if (!TheTarget)
     return createStringError(make_error_code(std::errc::not_supported),
                              Twine("BOLT-ERROR: ", Error));
@@ -1032,10 +1032,8 @@ void BinaryContext::adjustCodePadding() {
 
     if (!hasValidCodePadding(BF)) {
       if (HasRelocations) {
-        if (opts::Verbosity >= 1) {
-          this->outs() << "BOLT-INFO: function " << BF
-                       << " has invalid padding. Ignoring the function.\n";
-        }
+        this->errs() << "BOLT-WARNING: function " << BF
+                     << " has invalid padding. Ignoring the function\n";
         BF.setIgnored();
       } else {
         BF.setMaxSize(BF.getSize());
@@ -1600,21 +1598,7 @@ std::vector<BinaryFunction *> BinaryContext::getSortedFunctions() {
                   SortedFunctions.begin(),
                   [](BinaryFunction &BF) { return &BF; });
 
-  llvm::stable_sort(SortedFunctions,
-                    [](const BinaryFunction *A, const BinaryFunction *B) {
-                      // Place hot text movers at the start.
-                      if (A->isHotTextMover() && !B->isHotTextMover())
-                        return true;
-                      if (!A->isHotTextMover() && B->isHotTextMover())
-                        return false;
-                      if (A->hasValidIndex() && B->hasValidIndex()) {
-                        return A->getIndex() < B->getIndex();
-                      }
-                      if (opts::HotFunctionsAtEnd)
-                        return B->hasValidIndex();
-                      else
-                        return A->hasValidIndex();
-                    });
+  llvm::stable_sort(SortedFunctions, compareBinaryFunctionByIndex);
   return SortedFunctions;
 }
 
@@ -2435,15 +2419,6 @@ BinaryContext::createInstructionPatch(uint64_t Address,
     PBF->setAnonymous(true);
 
   return PBF;
-}
-
-BinaryFunction *
-BinaryContext::createThunkBinaryFunction(const std::string &Name) {
-  ThunkBinaryFunctions.push_back(new BinaryFunction(Name, *this, true));
-  BinaryFunction *BF = ThunkBinaryFunctions.back();
-  setSymbolToFunctionMap(BF->getSymbol(), BF);
-  BF->CurrentState = BinaryFunction::State::CFG;
-  return BF;
 }
 
 std::pair<size_t, size_t>

@@ -2041,6 +2041,7 @@ private:
   // as they are created in `createSourceManagerForFile` so that they can be
   // deleted in the reverse order as they are created.
   std::unique_ptr<FileManager> FileMgr;
+  std::unique_ptr<DiagnosticOptions> DiagOpts;
   std::unique_ptr<DiagnosticsEngine> Diagnostics;
   std::unique_ptr<SourceManager> SourceMgr;
 };

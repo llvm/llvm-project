@@ -226,12 +226,11 @@ bool CompilerInstance::executeAction(FrontendAction &act) {
 
 void CompilerInstance::createDiagnostics(clang::DiagnosticConsumer *client,
                                          bool shouldOwnClient) {
-  diagnostics =
-      createDiagnostics(&getDiagnosticOpts(), client, shouldOwnClient);
+  diagnostics = createDiagnostics(getDiagnosticOpts(), client, shouldOwnClient);
 }
 
 clang::IntrusiveRefCntPtr<clang::DiagnosticsEngine>
-CompilerInstance::createDiagnostics(clang::DiagnosticOptions *opts,
+CompilerInstance::createDiagnostics(clang::DiagnosticOptions &opts,
                                     clang::DiagnosticConsumer *client,
                                     bool shouldOwnClient) {
   clang::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagID(

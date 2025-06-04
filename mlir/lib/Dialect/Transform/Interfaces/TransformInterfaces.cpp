@@ -807,8 +807,7 @@ void transform::TransformState::compactOpHandles() {
   for (Value handle : opHandlesToCompact) {
     Mappings &mappings = getMapping(handle, /*allowOutOfScope=*/true);
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-    if (llvm::find(mappings.direct[handle], nullptr) !=
-        mappings.direct[handle].end())
+    if (llvm::is_contained(mappings.direct[handle], nullptr))
       // Payload IR is removed from the mapping. This invalidates the respective
       // iterators.
       mappings.incrementTimestamp(handle);

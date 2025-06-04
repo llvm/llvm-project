@@ -13,6 +13,7 @@
 #define CLANG_CIR_LOWERTOLLVM_H
 
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
@@ -149,6 +150,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMSwitchFlatOpLowering
+    : public mlir::OpConversionPattern<cir::SwitchFlatOp> {
+public:
+  using mlir::OpConversionPattern<cir::SwitchFlatOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::SwitchFlatOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMGetGlobalOpLowering
     : public mlir::OpConversionPattern<cir::GetGlobalOp> {
 public:
@@ -182,6 +193,10 @@ private:
 
   void setupRegionInitializedLLVMGlobalOp(
       cir::GlobalOp op, mlir::ConversionPatternRewriter &rewriter) const;
+
+  mutable mlir::LLVM::ComdatOp comdatOp = nullptr;
+  mlir::SymbolRefAttr getComdatAttr(cir::GlobalOp &op,
+                                    mlir::OpBuilder &builder) const;
 };
 
 class CIRToLLVMUnaryOpLowering
@@ -329,6 +344,27 @@ public:
 
   mlir::LogicalResult
   matchAndRewrite(cir::VecInsertOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMVecCmpOpLowering
+    : public mlir::OpConversionPattern<cir::VecCmpOp> {
+public:
+  using mlir::OpConversionPattern<cir::VecCmpOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::VecCmpOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMVecShuffleDynamicOpLowering
+    : public mlir::OpConversionPattern<cir::VecShuffleDynamicOp> {
+public:
+  using mlir::OpConversionPattern<
+      cir::VecShuffleDynamicOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::VecShuffleDynamicOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 

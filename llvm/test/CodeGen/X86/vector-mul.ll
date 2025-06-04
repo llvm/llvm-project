@@ -1569,24 +1569,18 @@ define <2 x i64> @mul_v2i64_neg_17_65(<2 x i64> %a0) nounwind {
 }
 
 define <2 x i64> @mul_v2i64_0_1(<2 x i64> %a0) nounwind {
-; X86-SSE2-LABEL: mul_v2i64_0_1:
-; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    xorpd %xmm1, %xmm1
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; X86-SSE2-NEXT:    retl
+; SSE2-LABEL: mul_v2i64_0_1:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    xorps %xmm1, %xmm1
+; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
+; SSE2-NEXT:    movaps %xmm1, %xmm0
+; SSE2-NEXT:    ret{{[l|q]}}
 ;
 ; SSE4-LABEL: mul_v2i64_0_1:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    xorps %xmm1, %xmm1
 ; SSE4-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
 ; SSE4-NEXT:    ret{{[l|q]}}
-;
-; X64-SSE2-LABEL: mul_v2i64_0_1:
-; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    xorps %xmm1, %xmm1
-; X64-SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
-; X64-SSE2-NEXT:    movaps %xmm1, %xmm0
-; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: mul_v2i64_0_1:
 ; X64-AVX:       # %bb.0:

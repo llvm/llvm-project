@@ -3037,11 +3037,11 @@ private:
 
   /// Parse the argument to C++23's [[assume()]] attribute. Returns true on
   /// error.
-  bool ParseCXXAssumeAttributeArg(ParsedAttributes &Attrs,
-                                  IdentifierInfo *AttrName,
-                                  SourceLocation AttrNameLoc,
-                                  SourceLocation *EndLoc,
-                                  ParsedAttr::Form Form);
+  bool
+  ParseCXXAssumeAttributeArg(ParsedAttributes &Attrs, IdentifierInfo *AttrName,
+                             SourceLocation AttrNameLoc,
+                             IdentifierInfo *ScopeName, SourceLocation ScopeLoc,
+                             SourceLocation *EndLoc, ParsedAttr::Form Form);
 
   /// Try to parse an 'identifier' which appears within an attribute-token.
   ///
@@ -7073,6 +7073,10 @@ private:
   // #pragma optimize("gsty", on|off)
   bool HandlePragmaMSOptimize(StringRef PragmaName,
                               SourceLocation PragmaLocation);
+
+  // #pragma intrinsic("foo")
+  bool HandlePragmaMSIntrinsic(StringRef PragmaName,
+                               SourceLocation PragmaLocation);
 
   /// Handle the annotation token produced for
   /// #pragma align...

@@ -1514,6 +1514,7 @@ void ByteCodeExecutor::processNativeFunResults(
   // Store the results in the bytecode memory
   for (unsigned resultIdx = 0; resultIdx < numResults; resultIdx++) {
     PDLValue::Kind resultKind = read<PDLValue::Kind>();
+    (void)resultKind;
     PDLValue result = results.getResults()[resultIdx];
     LLVM_DEBUG(llvm::dbgs() << "  * Result: " << result << "\n");
     assert(result.getKind() == resultKind &&
@@ -2345,10 +2346,10 @@ void PDLByteCode::match(Operation *op, PatternRewriter &rewriter,
   assert(succeeded(executeResult) && "unexpected matcher execution failure");
 
   // Order the found matches by benefit.
-  std::stable_sort(matches.begin(), matches.end(),
-                   [](const MatchResult &lhs, const MatchResult &rhs) {
-                     return lhs.benefit > rhs.benefit;
-                   });
+  llvm::stable_sort(matches,
+                    [](const MatchResult &lhs, const MatchResult &rhs) {
+                      return lhs.benefit > rhs.benefit;
+                    });
 }
 
 LogicalResult PDLByteCode::rewrite(PatternRewriter &rewriter,

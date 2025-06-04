@@ -16,11 +16,9 @@
 #include "Arch/Sparc.h"
 #include "Arch/SystemZ.h"
 #include "CommonArgs.h"
-#include "Linux.h"
 #include "clang/Config/config.h" // for GCC_INSTALL_PREFIX
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/MultilibBuilder.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/Tool.h"
@@ -521,19 +519,9 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
-  if (D.isUsingLTO()) {
-    assert(!Inputs.empty() && "Must have at least one input.");
-    // Find the first filename InputInfo object.
-    auto Input = llvm::find_if(
-        Inputs, [](const InputInfo &II) -> bool { return II.isFilename(); });
-    if (Input == Inputs.end())
-      // For a very rare case, all of the inputs to the linker are
-      // InputArg. If that happens, just use the first InputInfo.
-      Input = Inputs.begin();
-
-    addLTOOptions(ToolChain, Args, CmdArgs, Output, *Input,
+  if (D.isUsingLTO())
+    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs,
                   D.getLTOMode() == LTOK_Thin);
-  }
 
   if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
     CmdArgs.push_back("--no-demangle");
@@ -671,41 +659,12 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  // Facebook T92898286
-  if (Args.hasArg(options::OPT_post_link_optimize))
-    CmdArgs.push_back("-q");
-  // End Facebook T92898286
-
   Args.addAllArgs(CmdArgs, {options::OPT_T, options::OPT_t});
 
   const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
   C.addCommand(std::make_unique<Command>(JA, *this,
                                          ResponseFileSupport::AtFileCurCP(),
                                          Exec, CmdArgs, Inputs, Output));
-  // Facebook T92898286
-  if (!Args.hasArg(options::OPT_post_link_optimize) || !Output.isFilename())
-    return;
-
-  const char *MvExec = Args.MakeArgString(ToolChain.GetProgramPath("mv"));
-  ArgStringList MoveCmdArgs;
-  MoveCmdArgs.push_back(Output.getFilename());
-  const char *PreBoltBin =
-      Args.MakeArgString(Twine(Output.getFilename()) + ".pre-bolt");
-  MoveCmdArgs.push_back(PreBoltBin);
-  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
-                                         MvExec, MoveCmdArgs, std::nullopt));
-
-  ArgStringList BoltCmdArgs;
-  const char *BoltExec =
-      Args.MakeArgString(ToolChain.GetProgramPath("llvm-bolt"));
-  BoltCmdArgs.push_back(PreBoltBin);
-  BoltCmdArgs.push_back("-reorder-blocks=reverse");
-  BoltCmdArgs.push_back("-update-debug-sections");
-  BoltCmdArgs.push_back("-o");
-  BoltCmdArgs.push_back(Output.getFilename());
-  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
-                                         BoltExec, BoltCmdArgs, std::nullopt));
-  // End Facebook T92898286
 }
 
 void tools::gnutools::Assembler::ConstructJob(Compilation &C,

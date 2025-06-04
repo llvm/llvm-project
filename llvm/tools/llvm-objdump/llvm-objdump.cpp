@@ -65,8 +65,6 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
@@ -702,14 +700,18 @@ class HexagonPrettyPrinter : public PrettyPrinter {
 public:
   void printLead(ArrayRef<uint8_t> Bytes, uint64_t Address,
                  formatted_raw_ostream &OS) {
-    uint32_t opcode =
-      (Bytes[3] << 24) | (Bytes[2] << 16) | (Bytes[1] << 8) | Bytes[0];
     if (LeadingAddr)
       OS << format("%8" PRIx64 ":", Address);
     if (ShowRawInsn) {
       OS << "\t";
-      dumpBytes(Bytes.slice(0, 4), OS);
-      OS << format("\t%08" PRIx32, opcode);
+      if (Bytes.size() >= 4) {
+        dumpBytes(Bytes.slice(0, 4), OS);
+        uint32_t opcode =
+            (Bytes[3] << 24) | (Bytes[2] << 16) | (Bytes[1] << 8) | Bytes[0];
+        OS << format("\t%08" PRIx32, opcode);
+      } else {
+        dumpBytes(Bytes, OS);
+      }
     }
   }
   void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
@@ -3361,7 +3363,7 @@ static void dumpObject(ObjectFile *O, const Archive *A = nullptr,
   if (FaultMapSection)
     printFaultMaps(O);
   if (Offloading)
-    dumpOffloadBinary(*O);
+    dumpOffloadBinary(*O, StringRef(ArchName));
 }
 
 static void dumpObject(const COFFImportFile *I, const Archive *A,

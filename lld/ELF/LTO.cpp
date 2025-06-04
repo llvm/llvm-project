@@ -11,13 +11,10 @@
 #include "InputFiles.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
-#include "lld/Common/Args.h"
-#include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Filesystem.h"
 #include "lld/Common/Strings.h"
 #include "lld/Common/TargetOptionsCommandFlags.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -26,11 +23,8 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include <algorithm>
 #include <cstddef>
 #include <memory>
 #include <string>

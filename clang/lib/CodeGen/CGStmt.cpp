@@ -14,6 +14,7 @@
 #include "CGOpenMPRuntime.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "CodeGenPGO.h"
 #include "TargetInfo.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Expr.h"
@@ -59,7 +60,7 @@ void CodeGenFunction::EmitStopPoint(const Stmt *S) {
 
 void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   assert(S && "Null statement?");
-  PGO.setCurrentStmt(S);
+  PGO->setCurrentStmt(S);
 
   // These statements have their own debug info handling.
   if (EmitSimpleStmt(S, Attrs))
@@ -76,7 +77,7 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
       // Verify that any decl statements were handled as simple, they may be in
       // scope of subsequent reachable statements.
       assert(!isa<DeclStmt>(*S) && "Unexpected DeclStmt!");
-      PGO.markStmtMaybeUsed(S);
+      PGO->markStmtMaybeUsed(S);
       return;
     }
 
@@ -917,7 +918,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
         RunCleanupsScope ExecutedScope(*this);
         EmitStmt(Executed);
       }
-      PGO.markStmtMaybeUsed(Skipped);
+      PGO->markStmtMaybeUsed(Skipped);
       return;
     }
   }
@@ -1130,7 +1131,15 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
     if (!Weights && CGM.getCodeGenOpts().OptimizationLevel)
       BoolCondVal = emitCondLikelihoodViaExpectIntrinsic(
           BoolCondVal, Stmt::getLikelihood(S.getBody()));
-    Builder.CreateCondBr(BoolCondVal, LoopBody, ExitBlock, Weights);
+    auto *I = Builder.CreateCondBr(BoolCondVal, LoopBody, ExitBlock, Weights);
+    // Key Instructions: Emit the condition and branch as separate source
+    // location atoms otherwise we may omit a step onto the loop condition in
+    // favour of the `while` keyword.
+    // FIXME: We could have the branch as the backup location for the condition,
+    // which would probably be a better experience. Explore this later.
+    if (auto *CondI = dyn_cast<llvm::Instruction>(BoolCondVal))
+      addInstToNewSourceAtom(CondI, nullptr);
+    addInstToNewSourceAtom(I, nullptr);
 
     if (ExitBlock != LoopExit.getBlock()) {
       EmitBlock(ExitBlock);
@@ -1242,9 +1251,18 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
   // As long as the condition is true, iterate the loop.
   if (EmitBoolCondBranch) {
     uint64_t BackedgeCount = getProfileCount(S.getBody()) - ParentCount;
-    Builder.CreateCondBr(
+    auto *I = Builder.CreateCondBr(
         BoolCondVal, LoopBody, LoopExit.getBlock(),
         createProfileWeightsForLoop(S.getCond(), BackedgeCount));
+
+    // Key Instructions: Emit the condition and branch as separate source
+    // location atoms otherwise we may omit a step onto the loop condition in
+    // favour of the closing brace.
+    // FIXME: We could have the branch as the backup location for the condition,
+    // which would probably be a better experience (no jumping to the brace).
+    if (auto *CondI = dyn_cast<llvm::Instruction>(BoolCondVal))
+      addInstToNewSourceAtom(CondI, nullptr);
+    addInstToNewSourceAtom(I, nullptr);
   }
 
   LoopStack.pop();
@@ -1347,7 +1365,14 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
       BoolCondVal = emitCondLikelihoodViaExpectIntrinsic(
           BoolCondVal, Stmt::getLikelihood(S.getBody()));
 
-    Builder.CreateCondBr(BoolCondVal, ForBody, ExitBlock, Weights);
+    auto *I = Builder.CreateCondBr(BoolCondVal, ForBody, ExitBlock, Weights);
+    // Key Instructions: Emit the condition and branch as separate atoms to
+    // match existing loop stepping behaviour. FIXME: We could have the branch
+    // as the backup location for the condition, which would probably be a
+    // better experience (no jumping to the brace).
+    if (auto *CondI = dyn_cast<llvm::Instruction>(BoolCondVal))
+      addInstToNewSourceAtom(CondI, nullptr);
+    addInstToNewSourceAtom(I, nullptr);
 
     if (ExitBlock != LoopExit.getBlock()) {
       EmitBlock(ExitBlock);
@@ -1371,6 +1396,10 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     RunCleanupsScope BodyScope(*this);
     EmitStmt(S.getBody());
   }
+
+  // The last block in the loop's body (which unconditionally branches to the
+  // `inc` block if there is one).
+  auto *FinalBodyBB = Builder.GetInsertBlock();
 
   // If there is an increment, emit it next.
   if (S.getInc()) {
@@ -1401,6 +1430,12 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
 
   if (CGM.shouldEmitConvergenceTokens())
     ConvergenceTokenStack.pop_back();
+
+  if (FinalBodyBB) {
+    // Key Instructions: We want the for closing brace to be step-able on to
+    // match existing behaviour.
+    addInstToNewSourceAtom(FinalBodyBB->getTerminator(), nullptr);
+  }
 }
 
 void
@@ -1683,6 +1718,7 @@ void CodeGenFunction::EmitBreakStmt(const BreakStmt &S) {
   if (HaveInsertPoint())
     EmitStopPoint(&S);
 
+  ApplyAtomGroup Grp(getDebugInfo());
   EmitBranchThroughCleanup(BreakContinueStack.back().BreakBlock);
 }
 
@@ -1695,6 +1731,7 @@ void CodeGenFunction::EmitContinueStmt(const ContinueStmt &S) {
   if (HaveInsertPoint())
     EmitStopPoint(&S);
 
+  ApplyAtomGroup Grp(getDebugInfo());
   EmitBranchThroughCleanup(BreakContinueStack.back().ContinueBlock);
 }
 
@@ -2248,7 +2285,7 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
       for (unsigned i = 0, e = CaseStmts.size(); i != e; ++i)
         EmitStmt(CaseStmts[i]);
       incrementProfileCounter(&S);
-      PGO.markStmtMaybeUsed(S.getBody());
+      PGO->markStmtMaybeUsed(S.getBody());
 
       // Now we want to restore the saved switch instance so that nested
       // switches continue to function properly
@@ -2276,6 +2313,8 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   // failure.
   llvm::BasicBlock *DefaultBlock = createBasicBlock("sw.default");
   SwitchInsn = Builder.CreateSwitch(CondV, DefaultBlock);
+  addInstToNewSourceAtom(SwitchInsn, CondV);
+
   if (HLSLControlFlowAttr != HLSLControlFlowHintAttr::SpellingNotCalculated) {
     llvm::MDBuilder MDHelper(CGM.getLLVMContext());
     llvm::ConstantInt *BranchHintConstant =
@@ -2289,7 +2328,7 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
                             llvm::MDNode::get(CGM.getLLVMContext(), Vals));
   }
 
-  if (PGO.haveRegionCounts()) {
+  if (PGO->haveRegionCounts()) {
     // Walk the SwitchCase list to find how many there are.
     uint64_t DefaultCount = 0;
     unsigned NumCases = 0;
@@ -3310,7 +3349,7 @@ CodeGenFunction::GenerateCapturedStmtFunction(const CapturedStmt &S) {
     CXXThisValue = EmitLoadOfLValue(ThisLValue, Loc).getScalarVal();
   }
 
-  PGO.assignRegionCounters(GlobalDecl(CD), F);
+  PGO->assignRegionCounters(GlobalDecl(CD), F);
   CapturedStmtInfo->EmitBody(*this, CD->getBody());
   FinishFunction(CD->getBodyRBrace());
 
