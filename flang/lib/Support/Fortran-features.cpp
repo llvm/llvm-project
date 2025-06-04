@@ -254,13 +254,6 @@ std::vector<const char *> LanguageFeatureControl::GetNames(
   }
 }
 
-template <typename ENUM, std::size_t N>
-void ForEachEnum(std::function<void(ENUM)> f) {
-  for (size_t j{0}; j < N; ++j) {
-    f(static_cast<ENUM>(j));
-  }
-}
-
 void LanguageFeatureControl::WarnOnAllNonstandard(bool yes) {
   warnAllLanguage_ = yes;
   warnLanguage_.reset();

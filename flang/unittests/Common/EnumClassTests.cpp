@@ -8,10 +8,8 @@
 
 #include "gtest/gtest.h"
 #include "flang/Common/enum-class.h"
-#include "flang/Common/template.h"
 
-using namespace Fortran::common;
-using namespace std;
+namespace Fortran::common {
 
 ENUM_CLASS(TestEnum, One, Two, Three)
 
@@ -33,3 +31,4 @@ TEST(EnumClassTest, EnumClassForEach) {
   });
   ASSERT_EQ(result, "One, Two, Three");
 }
+} // namespace Fortran::common
