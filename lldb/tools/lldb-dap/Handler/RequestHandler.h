@@ -334,9 +334,6 @@ class RestartRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "restart"; }
-  FeatureSet GetSupportedFeatures() const override {
-    return {protocol::eAdapterFeatureRestartRequest};
-  }
   void operator()(const llvm::json::Object &request) const override;
 };
 
