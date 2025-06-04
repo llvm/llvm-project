@@ -1524,44 +1524,50 @@ cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
       invalidLoc ? theModule->getLoc() : getLoc(funcDecl->getSourceRange()),
       mangledName, mlir::cast<cir::FuncType>(funcType), funcDecl);
 
-  if (!dontDefer) {
-    // All MSVC dtors other than the base dtor are linkonce_odr and delegate to
-    // each other bottoming out wiht the base dtor. Therefore we emit non-base
-    // dtors on usage, even if there is no dtor definition in the TU.
-    if (isa_and_nonnull<CXXDestructorDecl>(d))
-      errorNYI(d->getSourceRange(), "getOrCreateCIRFunction: dtor");
+  // 'dontDefer' actually means don't move this to the deferredDeclsToEmit list.
+  if (dontDefer) {
+    // TODO(cir): This assertion will need an additional condition when we
+    // support incomplete functions.
+    assert(funcOp.getFunctionType() == funcType);
+    return funcOp;
+  }
 
-    // This is the first use or definition of a mangled name. If there is a
-    // deferred decl with this name, remember that we need to emit it at the end
-    // of the file.
-    auto ddi = deferredDecls.find(mangledName);
-    if (ddi != deferredDecls.end()) {
-      // Move the potentially referenced deferred decl to the
-      // DeferredDeclsToEmit list, and remove it from DeferredDecls (since we
-      // don't need it anymore).
-      addDeferredDeclToEmit(ddi->second);
-      deferredDecls.erase(ddi);
+  // All MSVC dtors other than the base dtor are linkonce_odr and delegate to
+  // each other bottoming out wiht the base dtor. Therefore we emit non-base
+  // dtors on usage, even if there is no dtor definition in the TU.
+  if (isa_and_nonnull<CXXDestructorDecl>(d))
+    errorNYI(d->getSourceRange(), "getOrCreateCIRFunction: dtor");
 
-      // Otherwise, there are cases we have to worry about where we're using a
-      // declaration for which we must emit a definition but where we might not
-      // find a top-level definition.
-      //   - member functions defined inline in their classes
-      //   - friend functions defined inline in some class
-      //   - special member functions with implicit definitions
-      // If we ever change our AST traversal to walk into class methods, this
-      // will be unnecessary.
-      //
-      // We also don't emit a definition for a function if it's going to be an
-      // entry in a vtable, unless it's already marked as used.
-    } else if (getLangOpts().CPlusPlus && d) {
-      // Look for a declaration that's lexically in a record.
-      for (const auto *fd = cast<FunctionDecl>(d)->getMostRecentDecl(); fd;
-           fd = fd->getPreviousDecl()) {
-        if (isa<CXXRecordDecl>(fd->getLexicalDeclContext())) {
-          if (fd->doesThisDeclarationHaveABody()) {
-            addDeferredDeclToEmit(gd.getWithDecl(fd));
-            break;
-          }
+  // This is the first use or definition of a mangled name. If there is a
+  // deferred decl with this name, remember that we need to emit it at the end
+  // of the file.
+  auto ddi = deferredDecls.find(mangledName);
+  if (ddi != deferredDecls.end()) {
+    // Move the potentially referenced deferred decl to the
+    // DeferredDeclsToEmit list, and remove it from DeferredDecls (since we
+    // don't need it anymore).
+    addDeferredDeclToEmit(ddi->second);
+    deferredDecls.erase(ddi);
+
+    // Otherwise, there are cases we have to worry about where we're using a
+    // declaration for which we must emit a definition but where we might not
+    // find a top-level definition.
+    //   - member functions defined inline in their classes
+    //   - friend functions defined inline in some class
+    //   - special member functions with implicit definitions
+    // If we ever change our AST traversal to walk into class methods, this
+    // will be unnecessary.
+    //
+    // We also don't emit a definition for a function if it's going to be an
+    // entry in a vtable, unless it's already marked as used.
+  } else if (getLangOpts().CPlusPlus && d) {
+    // Look for a declaration that's lexically in a record.
+    for (const auto *fd = cast<FunctionDecl>(d)->getMostRecentDecl(); fd;
+          fd = fd->getPreviousDecl()) {
+      if (isa<CXXRecordDecl>(fd->getLexicalDeclContext())) {
+        if (fd->doesThisDeclarationHaveABody()) {
+          addDeferredDeclToEmit(gd.getWithDecl(fd));
+          break;
         }
       }
     }
