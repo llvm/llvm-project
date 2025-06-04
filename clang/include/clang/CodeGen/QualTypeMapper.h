@@ -1,4 +1,4 @@
-//==---- QualtypeMapper.h - Maps Clang Qualtype to LLVMABI Types -----------==//
+//==---- QualTypeMapper.h - Maps Clang QualType to LLVMABI Types -----------==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -45,6 +45,7 @@ private:
   const llvm::abi::StructType *convertStructType(const clang::RecordDecl *RD);
   const llvm::abi::UnionType *convertUnionType(const clang::RecordDecl *RD);
   const llvm::abi::Type *createPointerTypeForPointee(QualType PointeeType);
+  const llvm::abi::StructType *convertCXXRecordType(const CXXRecordDecl *RD);
 
   void computeFieldInfo(const clang::RecordDecl *RD,
                         SmallVectorImpl<llvm::abi::FieldInfo> &Fields,
