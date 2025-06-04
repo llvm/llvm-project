@@ -95,25 +95,13 @@ set(sources
 
 add_llvm_target(X86CodeGen ${sources}
   LINK_COMPONENTS
-  Analysis
-  AsmPrinter
-  CFGuard
-  CodeGen
-  CodeGenTypes
-  Core
-  GlobalISel
-  IRPrinter
-  Instrumentation
-  MC
-  ProfileData
-  Scalar
-  SelectionDAG
-  Support
-  Target
-  TargetParser
-  TransformUtils
   X86Desc
   X86Info
+  ${TARGET_LIBRARIES}
+  CFGuard
+  GlobalISel
+  IRPrinter
+  ProfileData
 
   ADD_TO_COMPONENT
   X86
