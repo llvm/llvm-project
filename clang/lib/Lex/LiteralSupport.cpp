@@ -1438,8 +1438,10 @@ void NumericLiteralParser::ParseNumberStartingWithZero(SourceLocation TokLoc) {
       // Done
     } else if ((isHexDigit(*s) && *s != 'e' && *s != 'E' && *s != '.') &&
                !isValidUDSuffix(LangOpts, StringRef(s, ThisTokEnd - s))) {
-      auto InvalidDigitLoc = Lexer::AdvanceToTokenCharacter(TokLoc, s - ThisTokBegin, SM, LangOpts);
-      Diags.Report(InvalidDigitLoc, diag::err_invalid_digit) << StringRef(s, 1) << 1;
+      auto InvalidDigitLoc = Lexer::AdvanceToTokenCharacter(
+          TokLoc, s - ThisTokBegin, SM, LangOpts);
+      Diags.Report(InvalidDigitLoc, diag::err_invalid_digit)
+          << StringRef(s, 1) << 1;
       hadError = true;
     }
     // Other suffixes will be diagnosed by the caller.
