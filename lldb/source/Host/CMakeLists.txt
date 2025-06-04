@@ -160,6 +160,7 @@ else()
     add_host_subdirectory(aix
       aix/Host.cpp
       aix/HostInfoAIX.cpp
+      aix/Support.cpp
       )
   endif()
 endif()
