@@ -29,31 +29,6 @@ namespace xegpu {
 using namespace mlir;
 
 namespace {
-
-static std::pair<SmallVector<int64_t>, int>
-computeTileShapeAndCount(ArrayRef<int64_t> shape, xegpu::LayoutAttr layout) {
-  // init count and subShape to the default value. If the LayoutAttr
-  // is not present, it will return a VectorType with original shape.
-  int count = 1;
-  SmallVector<int64_t> tileShape(shape);
-
-  if (layout) {
-    if (DenseI32ArrayAttr sgLayoutAttr = layout.getSgLayout()) {
-      auto sgLayout = llvm::to_vector_of<int64_t>(sgLayoutAttr.asArrayRef());
-      if (DenseI32ArrayAttr sgDataAttr = layout.getSgData())
-        tileShape = llvm::to_vector_of<int64_t>(sgDataAttr.asArrayRef());
-      else
-        tileShape = computeShapeRatio(shape, sgLayout).value_or(tileShape);
-      SmallVector<int64_t> distUnit =
-          computeElementwiseMul(sgLayout, tileShape);
-      for (size_t i = 0; i < distUnit.size(); ++i)
-        distUnit[i] = std::min(shape[i], distUnit[i]);
-      count = computeProduct(shape) / computeProduct(distUnit);
-    }
-  }
-  return std::make_pair(tileShape, count);
-}
-
 /// This pattern transforms the CreateNdDescOp to create a subgroup descriptor
 /// from a workgroup descriptor. It replaces the offsets and sizes with
 /// appropriate values for the subgroup.
@@ -339,6 +314,15 @@ struct WgToSgPrefetchNdOp : public OpConversionPattern<xegpu::PrefetchNdOp> {
   }
 };
 
+// Handles UnrealizedConversionCastOp generated during
+// SCFStructuralTypeConversions (step 1). This op may appear as either a
+// target or source materialization for Vector or TensorDesc, e.g.:
+// 1. unrealized_conversion_cast %1 : tensor_desc<16xf16> to
+// tensor_desc<128xf16, ...>
+// 2. unrealized_conversion_cast %1 : vector<256xf32> to vector<16xf32>, ...
+// 3. unrealized_conversion_cast %1 : vector<16xf32>, ... to vector<256xf32>
+// In all cases, the pattern simply forwards the inputs to the outputs with
+// one-to-one or one-to-n patterns.
 struct UnrealizedConversionCastOpPattern
     : public OpConversionPattern<mlir::UnrealizedConversionCastOp> {
   using OpConversionPattern<
@@ -347,11 +331,40 @@ struct UnrealizedConversionCastOpPattern
   mlir::LogicalResult
   matchAndRewrite(mlir::UnrealizedConversionCastOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (op.getNumOperands() == 1 && op.getNumResults() == 1) {
-      rewriter.replaceOpWithMultiple(op,
-                                     xegpu::flattenValues(adaptor.getInputs()));
-      return mlir::success();
+    SmallVector<Value> inputs = xegpu::flattenValues(adaptor.getInputs());
+
+    // Handles the case where cast %1 : tensor_desc<16xf16> to
+    // tensor_desc<128xf16, ...> The input values provided by the adaptor should
+    // already be distributed.
+    if (op.getNumOperands() == 1 && op.getNumResults() == 1 &&
+        isa<xegpu::TensorDescType>(op->getOperand(0).getType()) &&
+        isa<xegpu::TensorDescType>(op->getResult(0).getType())) {
+      rewriter.replaceOp(op, inputs);
+      return success();
     }
+
+    // Handles the case where cast %1 : vector<256xf32> to vector<16xf32>, ...
+    // the input values provided by the adaptor should already be distributed,
+    // and their types should correspond exactly to the result types of the
+    // operation.
+    if (op.getNumOperands() == 1 &&
+        llvm::equal(ValueRange(inputs).getTypes(), op->getResultTypes())) {
+      rewriter.replaceOp(op, inputs);
+      return success();
+    }
+
+    // Handles the case where cast %1 : vector<16xf32>, ... to vector<256xf32>.
+    // All input values must have the same vector type, and their shape must be
+    // evenly divisible by the output vector's shape.
+    auto inputTy = dyn_cast<VectorType>(inputs[0].getType());
+    auto outputTy = dyn_cast<VectorType>(op->getOpResult(0).getType());
+    if (op.getNumResults() == 1 && inputTy && outputTy &&
+        llvm::all_equal(ValueRange(inputs).getTypes()) &&
+        computeShapeRatio(outputTy.getShape(), inputTy.getShape())) {
+      rewriter.replaceOpWithMultiple(op, {inputs});
+      return success();
+    }
+
     return mlir::failure();
   }
 };
@@ -376,6 +389,70 @@ struct XeGPUWgToSgDistributePass
 } // namespace
 
 void XeGPUWgToSgDistributePass::runOnOperation() {
+  auto getSgShapeAndCount = [](ArrayRef<int64_t> shape,
+                               xegpu::LayoutAttr layout) {
+    int count = 1;
+    SmallVector<int64_t> sgShape(shape);
+
+    if (layout && layout.isWgLayout()) {
+      DenseI32ArrayAttr sgLayoutAttr = layout.getSgLayout();
+      auto sgLayout = llvm::to_vector_of<int64_t>(sgLayoutAttr.asArrayRef());
+      if (DenseI32ArrayAttr sgDataAttr = layout.getSgData())
+        sgShape = llvm::to_vector_of<int64_t>(sgDataAttr.asArrayRef());
+      else
+        sgShape = computeShapeRatio(shape, sgLayout).value_or(sgShape);
+      SmallVector<int64_t> distUnit = computeElementwiseMul(sgLayout, sgShape);
+      // Clamp distUnit to the original shape to handle cases where data is
+      // shared among subgroups, which may cause distUnit to exceed the original
+      // shape.
+      for (size_t i = 0; i < distUnit.size(); ++i)
+        distUnit[i] = std::min(shape[i], distUnit[i]);
+      count = computeProduct(shape) / computeProduct(distUnit);
+    }
+    return std::make_pair(sgShape, count);
+  };
+
+  TypeConverter converter;
+  converter.addConversion([&](Type type) -> Type { return type; });
+  converter.addConversion(
+      [&](RankedTensorType type,
+          SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
+        Type elemTy = type.getElementType();
+        ArrayRef<int64_t> shape = type.getShape();
+
+        int count;
+        SmallVector<int64_t> subShape;
+        std::tie(subShape, count) = getSgShapeAndCount(
+            shape, dyn_cast<xegpu::LayoutAttr>(type.getEncoding()));
+
+        auto newTy = VectorType::get(subShape, elemTy);
+        result.append(count, newTy);
+        return success();
+      });
+
+  converter.addConversion(
+      [&](xegpu::TensorDescType type,
+          SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
+        Type elemTy = type.getElementType();
+        ArrayRef<int64_t> shape = type.getShape();
+
+        int count;
+        SmallVector<int64_t> subShape;
+        xegpu::LayoutAttr layout = type.getLayoutAttr();
+        std::tie(subShape, count) = getSgShapeAndCount(shape, layout);
+
+        if (layout)
+          layout = layout.dropSgLayoutAndData();
+
+        auto newTy = xegpu::TensorDescType::get(
+            type.getContext(), subShape, elemTy, type.getEncoding(), layout);
+        result.append(count, newTy);
+        return success();
+      });
+
+  // step1: perform SCFStructuralTypeConversions on SCF ops
+  xegpu::doSCFStructuralTypeConversionWithTensorType(getOperation(), converter);
+
   MLIRContext *ctx = &getContext();
   RewritePatternSet patterns(ctx);
   ConversionTarget target(*ctx);
@@ -402,7 +479,7 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
                                xegpu::StoreNdOp, xegpu::UpdateNdOffsetOp,
                                xegpu::PrefetchNdOp>([=](Operation *op) -> bool {
     auto tdescTy = getTensorDescType(op);
-    auto layout = dyn_cast_or_null<xegpu::LayoutAttr>(tdescTy.getLayout());
+    auto layout = dyn_cast_if_present<xegpu::LayoutAttr>(tdescTy.getLayout());
     return isLegal(layout);
   });
 
@@ -415,48 +492,7 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
 
   target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
 
-  TypeConverter converter;
-  converter.addConversion([&](Type type) -> Type { return type; });
-  converter.addConversion(
-      [&](RankedTensorType type,
-          SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
-        Type elemTy = type.getElementType();
-        ArrayRef<int64_t> shape = type.getShape();
-
-        int count;
-        SmallVector<int64_t> subShape;
-        std::tie(subShape, count) = computeTileShapeAndCount(
-            shape, dyn_cast<xegpu::LayoutAttr>(type.getEncoding()));
-
-        auto newTy = VectorType::get(subShape, elemTy);
-        result.append(count, newTy);
-        return success();
-      });
-
-  converter.addConversion(
-      [&](xegpu::TensorDescType type,
-          SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
-        Type elemTy = type.getElementType();
-        ArrayRef<int64_t> shape = type.getShape();
-
-        // init count and newTy to the default value. If the layout
-        // attribute is not present, it will return the original type.
-        int count;
-        SmallVector<int64_t> subShape;
-        xegpu::LayoutAttr layout = type.getLayoutAttr();
-        std::tie(subShape, count) = computeTileShapeAndCount(shape, layout);
-
-        if (layout)
-          layout = layout.dropSgLayoutAndData();
-
-        auto newTy = xegpu::TensorDescType::get(
-            type.getContext(), subShape, elemTy, type.getEncoding(), layout);
-        result.append(count, newTy);
-        return success();
-      });
-
-  xegpu::doSCFStructuralTypeConversionWithTensorType(getOperation(), converter);
-
+  // step2: Perform for workgroup to subgroup distribution for rest ops
   xegpu::populateXeGPUWgToSgDistributePatterns(patterns);
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))

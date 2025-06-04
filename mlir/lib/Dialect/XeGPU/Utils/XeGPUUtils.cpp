@@ -271,7 +271,7 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
       auto resultTy = dyn_cast<RankedTensorType>(result.getType());
 
       // Only look at ops casting from VectorType to RankedTensorType
-      if (!isa<VectorType>(inputTy) || !isa<RankedTensorType>(resultTy))
+      if (!inputTy || !resultTy)
         return WalkResult::skip();
 
       xegpu::LayoutAttr layout = xegpu::getLayoutAttr(input);
