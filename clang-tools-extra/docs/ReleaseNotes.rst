@@ -136,6 +136,12 @@ New checks
   Finds unintended character output from ``unsigned char`` and ``signed char``
   to an ``ostream``.
 
+- New :doc:`llvm-prefer-static-over-anonymous-namespace
+  <clang-tidy/checks/llvm/prefer-static-over-anonymous-namespace>` check.
+
+  Finds function and variable declarations inside anonymous namespace and
+  suggests replacing them with ``static`` declarations.
+
 - New :doc:`portability-avoid-pragma-once
   <clang-tidy/checks/portability/avoid-pragma-once>` check.
 
