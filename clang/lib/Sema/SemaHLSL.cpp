@@ -2171,8 +2171,9 @@ static void SetElementTypeAsReturnType(Sema *S, CallExpr *TheCall,
                                        QualType ReturnType) {
   auto *VecTyA = TheCall->getArg(0)->getType()->getAs<VectorType>();
   if (VecTyA)
-    ReturnType = S->Context.getVectorType(ReturnType, VecTyA->getNumElements(),
-                                          VectorKind::Generic);
+    ReturnType =
+        S->Context.getExtVectorType(ReturnType, VecTyA->getNumElements());
+
   TheCall->setType(ReturnType);
 }
 
