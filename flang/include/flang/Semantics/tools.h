@@ -922,7 +922,7 @@ bool IsSameOrConvertOf(const SomeExpr &expr, const SomeExpr &x);
 /// the input value. A ComplexConstructor(x, 0) is also considered as a
 /// convert operation.
 /// If the input is not Operation, Designator, FunctionRef or Constant,
-/// is returns std::nullopt.
+/// it returns std::nullopt.
 MaybeExpr GetConvertInput(const SomeExpr &x);
 
 } // namespace Fortran::semantics

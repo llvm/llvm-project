@@ -3367,7 +3367,7 @@ void OmpStructureChecker::CheckAtomicCaptureAssignment(
     CheckAtomicVariable(atom, rsrc);
     // This part should have been checked prior to calling this function.
     assert(*GetConvertInput(capture.rhs) == atom &&
-        "This canont be a capture assignment");
+        "This cannot be a capture assignment");
     CheckStorageOverlap(atom, {cap}, source);
   }
 }
@@ -3757,7 +3757,7 @@ void OmpStructureChecker::CheckAtomicConditionalUpdateCapture(
   // There are two different variants of this:
   // (1) conditional-update and capture separately:
   //     This form only allows single-statement updates, i.e. the update
-  //     form "r = cond; if (r) ...)" is not allowed.
+  //     form "r = cond; if (r) ..." is not allowed.
   // (2) conditional-update combined with capture in a single statement:
   //     This form does allow the condition to be calculated separately,
   //     i.e. "r = cond; if (r) ...".
