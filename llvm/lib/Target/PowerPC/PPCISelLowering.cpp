@@ -1475,7 +1475,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setMinimumJumpTableEntries(PPCMinimumJumpTableEntries);
 
   setMinFunctionAlignment(Align(4));
-  if(Subtarget.hasPartwordAtomics())
+  if (Subtarget.hasPartwordAtomics())
     setMinCmpXchgSizeInBits(8);
   else
     setMinCmpXchgSizeInBits(32);
@@ -12738,7 +12738,7 @@ Value *PPCTargetLowering::emitStoreConditional(IRBuilderBase &Builder,
     break;
   }
 
-  if(SZ ==8 || SZ==16)
+  if (SZ == 8 || SZ == 16)
     Val = Builder.CreateZExt(Val, Builder.getIntNTy(32));;
 
   Value *Call = Builder.CreateIntrinsic(IntID, {Addr, Val},
