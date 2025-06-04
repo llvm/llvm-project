@@ -19,11 +19,13 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ABI/Types.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/TypeSize.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace clang {
 namespace mapper {
@@ -40,6 +42,8 @@ const llvm::abi::Type *QualTypeMapper::convertType(QualType QT) {
     Result = convertBuiltinType(BT);
   } else if (const auto *PT = dyn_cast<PointerType>(QT.getTypePtr())) {
     Result = convertPointerType(PT);
+  } else if (const auto *RT = dyn_cast<ReferenceType>(QT.getTypePtr())) {
+    Result = convertReferenceType(RT);
   } else if (const auto *AT = dyn_cast<ArrayType>(QT.getTypePtr())) {
     Result = convertArrayType(AT);
   } else if (const auto *VT = dyn_cast<VectorType>(QT.getTypePtr())) {
@@ -48,6 +52,18 @@ const llvm::abi::Type *QualTypeMapper::convertType(QualType QT) {
     Result = convertRecordType(RT);
   } else if (const auto *ET = dyn_cast<EnumType>(QT.getTypePtr())) {
     Result = convertEnumType(ET);
+  } else if (const auto *BIT = dyn_cast<BitIntType>(QT.getTypePtr())) {
+    QualType QT(BIT, 0);
+    uint64_t NumBits = BIT->getNumBits();
+    bool IsSigned = BIT->isSigned();
+    llvm::Align TypeAlign = getTypeAlign(QT);
+    return Builder.getIntegerType(NumBits, TypeAlign, IsSigned);
+  } else if (isa<ObjCObjectType>(QT.getTypePtr()) ||
+             isa<ObjCObjectPointerType>(QT.getTypePtr())) {
+    auto PointerSize = ASTCtx.getTargetInfo().getPointerWidth(LangAS::Default);
+    llvm::Align PointerAlign =
+        llvm::Align(ASTCtx.getTargetInfo().getPointerAlign(LangAS::Default));
+    return Builder.getPointerType(PointerSize, PointerAlign);
   } else {
     llvm_unreachable("Unsupported type for ABI lowering");
   }
@@ -200,19 +216,54 @@ QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
 }
 
 const llvm::abi::Type *
+QualTypeMapper::convertReferenceType(const ReferenceType *RT) {
+  return createPointerTypeForPointee(RT->getPointeeType());
+}
+
+const llvm::abi::Type *
 QualTypeMapper::convertPointerType(const clang::PointerType *PT) {
   return createPointerTypeForPointee(PT->getPointeeType());
 }
 
 const llvm::abi::Type *
 QualTypeMapper::convertEnumType(const clang::EnumType *ET) {
+  if (!ET)
+    return Builder.getIntegerType(32, llvm::Align(4), true);
   const EnumDecl *ED = ET->getDecl();
+  if (!ED)
+    return Builder.getIntegerType(32, llvm::Align(4), true);
+  if (ED->isInvalidDecl())
+    return Builder.getIntegerType(32, llvm::Align(4), true);
+
+  if (!ED->isComplete()) {
+    if (ED->isFixed()) {
+      QualType UnderlyingType = ED->getIntegerType();
+      if (!UnderlyingType.isNull()) {
+        return convertType(UnderlyingType);
+      }
+    }
+    return Builder.getIntegerType(32, llvm::Align(4), true);
+  }
   QualType UnderlyingType = ED->getIntegerType();
 
-  if (UnderlyingType.isNull())
-    UnderlyingType = ASTCtx.IntTy;
+  if (UnderlyingType.isNull()) {
+    UnderlyingType = ED->getPromotionType();
+  }
 
-  return convertType(UnderlyingType);
+  if (UnderlyingType.isNull()) {
+    UnderlyingType = ASTCtx.IntTy;
+  }
+
+  if (const auto *BT = dyn_cast<BuiltinType>(UnderlyingType.getTypePtr())) {
+    return convertBuiltinType(BT);
+  }
+
+  // For non-builtin underlying types, extract type information safely
+  uint64_t TypeSize = ASTCtx.getTypeSize(UnderlyingType);
+  llvm::Align TypeAlign = getTypeAlign(UnderlyingType);
+  bool IsSigned = UnderlyingType->isSignedIntegerType();
+
+  return Builder.getIntegerType(TypeSize, TypeAlign, IsSigned);
 }
 
 const llvm::abi::StructType *
