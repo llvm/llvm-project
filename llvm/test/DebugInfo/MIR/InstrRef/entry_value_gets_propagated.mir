@@ -1,5 +1,9 @@
-# RUN: llc --run-pass=livedebugvalues -o - %s | FileCheck %s
+# RUN: llc --run-pass=livedebugvalues -o - %s | FileCheck %s --implicit-check-not=DBG_VALUE 
 # REQUIRES: x86-registered-target
+
+# This test covers the scenario where a DBG_VALUE created prior to LiveDebugValues has an entry-value expression.
+# It ensures that a clobbered stack copy doesn't crash if used as an entry-value because entry-values can't be clobbered.
+
 --- |
   target triple = "x86_64-"
 
@@ -64,13 +68,13 @@ body:             |
     successors: %bb.2(0x40000000), %bb.1(0x40000000)
     liveins: $r14, $edi, $edx, $esi
     DBG_VALUE $r14, $noreg, !14, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !19
-    $r14 = MOV64ri 0, debug-location !20
     CMP32ri killed renamable $edx, 0, implicit-def $eflags, debug-location !20
     JCC_1 %bb.2, 4, implicit killed $eflags, debug-location !22
   bb.1.if.then:
     successors: %bb.3(0x80000000)
     liveins: $edi, $r13
     CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit-def $eax, debug-location !23
+    $r14 = MOV64ri 0, debug-location !20
     JMP_1 %bb.3, debug-location !25
   bb.2.if.else:
     successors: %bb.3(0x80000000)
@@ -85,6 +89,9 @@ body:             |
 # CHECK: DBG_VALUE $r14, {{.*}}, !DIExpression(DW_OP_LLVM_entry_value, 1)
 # CHECK-LABEL: bb.1.if.then:
 # CHECK: DBG_VALUE $r14, {{.*}}, !DIExpression(DW_OP_LLVM_entry_value, 1)
+# CHECK-NEXT: CALL64pcrel32 @foo
+# CHECK-NEXT: $r14 = MOV64ri 0
+# CHECK-NOT: DBG_VALUE $r14, {{.*}}, !DIExpression(DW_OP_LLVM_entry_value, 1)
 # CHECK-LABEL: bb.2.if.else:
 # CHECK: DBG_VALUE $r14, {{.*}}, !DIExpression(DW_OP_LLVM_entry_value, 1)
 # CHECK-LABEL: bb.3.if.end:

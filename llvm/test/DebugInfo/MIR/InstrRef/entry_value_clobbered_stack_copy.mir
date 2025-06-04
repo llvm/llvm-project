@@ -1,6 +1,9 @@
 # RUN: llc --run-pass=livedebugvalues -o - %s | FileCheck %s
 # REQUIRES: x86-registered-target
 
+# This test covers the scenario where a DBG_VALUE created prior to LiveDebugValues has an entry-value expression. 
+# It tests that an EntryValue DBG_VALUE is propagated in a diamond-shaped CFG.
+
 --- |
   target triple = "x86_64-"
   define void @foo(ptr swiftasync %0) !dbg !4 {
