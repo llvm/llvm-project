@@ -111,6 +111,12 @@ public:
     auto type =
         getType<cir::RecordType>(members, nameAttr, packed, padded, kind);
 
+    // If we found an existing type, verify that either it is incomplete or
+    // it matches the requested attributes.
+    assert(!type.isIncomplete() ||
+           (type.getMembers() == members && type.getPacked() == packed &&
+            type.getPadded() == padded));
+
     // Complete an incomplete record or ensure the existing complete record
     // matches the requested attributes.
     type.complete(members, packed, padded);
