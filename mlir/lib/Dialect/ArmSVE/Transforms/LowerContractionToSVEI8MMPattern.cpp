@@ -27,7 +27,6 @@
 #define DEBUG_TYPE "lower-contract-to-arm-sve-i8mm"
 
 using namespace mlir;
-using namespace mlir::arm_sve;
 
 namespace {
 // Get the operand of a `vector.contract`. This function is intended to abstract
@@ -35,7 +34,7 @@ namespace {
 // `vector.contract` - via zero-extend or an explicit or implicit sign-extend
 // (for implicit sign-extension see `vector.contract` documentation).
 //
-// The template parameter `Op` indicates the extension operation (explicir or
+// The template parameter `Op` indicates the extension operation (explicit or
 // implicit) for which we are checking.
 //
 // Return success only for extensions from `i8` to `i32`.
@@ -59,7 +58,7 @@ std::optional<Value> getExtOperand(Value v, Type i8Ty, Type i32Ty) {
   }
 
   // If the operand is defined by an explicit extend operation of the accepted
-  // operation type, check it's extented from `i8` to `i32`.
+  // operation type, check it's extended from `i8` to `i32`.
   auto inOp = extOp.getIn();
   auto inTy = dyn_cast<VectorType>(inOp.getType());
   if (!inTy || inTy.getElementType() != i8Ty)
@@ -81,7 +80,7 @@ enum class MMLA {
   MixedSwapped // usmmla with LHS and RHS swapped
 };
 
-// Create the matrix multply and accumulate operation according to `op`.
+// Create the matrix mulitply and accumulate operation according to `op`.
 Value createMMLA(PatternRewriter &rewriter, MMLA op, Location loc,
                  mlir::VectorType accType, Value acc, Value lhs, Value rhs) {
   switch (op) {
@@ -128,7 +127,7 @@ Value createMMLA(PatternRewriter &rewriter, MMLA op, Location loc,
 /// The LHS operand is initially unpacked into M/2 values, each representing a
 /// sub-tile with dimensions <2x8>, and then each such sub-tile is replicated
 /// VSCALE times.
-/// Multiplying thus replicated LHS sub-tile by the corresposponing RHS sub-tile
+/// Multiplying thus replicated LHS sub-tile by the corresponding RHS sub-tile
 /// correctly computes an entire result sub-tile.
 class LowerContractionToSVEI8MMPattern
     : public OpRewritePattern<vector::ContractionOp> {
@@ -235,7 +234,7 @@ public:
     // Extract LHS sub-tiles with logicall shape <2x8>.
     SmallVector<Value> lhsTile;
     for (int64_t i = 0; i < M; i += 2) {
-      // Exract two consective rows of the LHS tile.
+      // Extract two consecutive rows of the LHS tile.
       auto r0 = rewriter.create<vector::ExtractOp>(loc, *maybeLhs,
                                                    ArrayRef<int64_t>{i});
       auto r1 = rewriter.create<vector::ExtractOp>(loc, *maybeLhs,
@@ -293,17 +292,16 @@ public:
       } else {
         // Bitcast them to 64-bit elements, so subsequent
         // interleave/deinterleave work on pairs of 32-bit numbers.
-        auto r0_i64 = rewriter.create<vector::BitCastOp>(loc, accRow64Ty, r0);
-        auto r1_i64 = rewriter.create<vector::BitCastOp>(loc, accRow64Ty, r1);
+        auto r0I64 = rewriter.create<vector::BitCastOp>(loc, accRow64Ty, r0);
+        auto r1I64 = rewriter.create<vector::BitCastOp>(loc, accRow64Ty, r1);
 
         // Interleave the rows, effectively flattening each 2x2 tile into 4
         // consecutive elements.
-        auto intr_i64 =
-            rewriter.create<vector::InterleaveOp>(loc, r0_i64, r1_i64);
+        auto intrI64 = rewriter.create<vector::InterleaveOp>(loc, r0I64, r1I64);
 
         // Bitcast back to 32-bit elements.
         accTileVec =
-            rewriter.create<vector::BitCastOp>(loc, accRowX2Ty, intr_i64);
+            rewriter.create<vector::BitCastOp>(loc, accRowX2Ty, intrI64);
       }
       // Extract ACC sub-tiles.
       for (int64_t j = 0; j < N; j += 2)

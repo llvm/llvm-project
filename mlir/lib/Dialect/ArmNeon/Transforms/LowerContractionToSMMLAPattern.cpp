@@ -57,7 +57,7 @@ public:
     if (!lhsType.hasRank() || !rhsType.hasRank() || rhsType.getRank() < 2)
       return failure();
     // This codegen does not work for scalable vectors. Return failure so this
-    // pattern not accidentally chosen over patterns that lower to ArmSVE.
+    // pattern is not accidentally chosen over patterns that lower to ArmSVE.
     if (lhsType.isScalable() || rhsType.isScalable())
       return failure();
     auto dimM = lhsType.getRank() == 1 ? 1 : lhsType.getDimSize(0);
