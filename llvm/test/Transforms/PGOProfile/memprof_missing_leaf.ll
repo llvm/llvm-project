@@ -3,8 +3,6 @@
 ;; matching and we are able to match the next call frame up the inlined
 ;; context.
 
-;; Avoid failures on big-endian systems that can't read the profile properly
-; REQUIRES: x86_64-linux
 
 ;; # To generate below LLVM IR for use in matching.
 ;; $ clang++ -gmlt -fdebug-info-for-profiling -S memprof_missing_leaf.cc \
