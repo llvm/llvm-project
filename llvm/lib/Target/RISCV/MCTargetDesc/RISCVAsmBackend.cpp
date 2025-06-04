@@ -27,8 +27,6 @@
 
 using namespace llvm;
 
-static cl::opt<bool> RelaxBranches("riscv-asm-relax-branches", cl::init(true),
-                                   cl::Hidden);
 // Temporary workaround for old linkers that do not support ULEB128 relocations,
 // which are abused by DWARF v5 DW_LLE_offset_pair/DW_RLE_offset_pair
 // implemented in Clang/LLVM.
@@ -110,9 +108,6 @@ bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
                                                    const MCValue &,
                                                    uint64_t Value,
                                                    bool Resolved) const {
-  if (!RelaxBranches)
-    return false;
-
   int64_t Offset = int64_t(Value);
   unsigned Kind = Fixup.getTargetKind();
 
