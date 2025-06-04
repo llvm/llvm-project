@@ -50,6 +50,8 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::scalar(32);
   case S64:
     return MRI.getType(Reg) == LLT::scalar(64);
+  case S128:
+    return MRI.getType(Reg) == LLT::scalar(128);
   case P0:
     return MRI.getType(Reg) == LLT::pointer(0, 64);
   case P1:
@@ -84,6 +86,8 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::scalar(32) && MUI.isUniform(Reg);
   case UniS64:
     return MRI.getType(Reg) == LLT::scalar(64) && MUI.isUniform(Reg);
+  case UniS128:
+    return MRI.getType(Reg) == LLT::scalar(128) && MUI.isUniform(Reg);
   case UniP0:
     return MRI.getType(Reg) == LLT::pointer(0, 64) && MUI.isUniform(Reg);
   case UniP1:
@@ -116,6 +120,8 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::scalar(32) && MUI.isDivergent(Reg);
   case DivS64:
     return MRI.getType(Reg) == LLT::scalar(64) && MUI.isDivergent(Reg);
+  case DivS128:
+    return MRI.getType(Reg) == LLT::scalar(128) && MUI.isDivergent(Reg);
   case DivP0:
     return MRI.getType(Reg) == LLT::pointer(0, 64) && MUI.isDivergent(Reg);
   case DivP1:
