@@ -6666,6 +6666,12 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   fir::setKindMapping(*module, kindMap);
   fir::setTargetCPU(*module, targetMachine.getTargetCPU());
   fir::setTuneCPU(*module, targetOpts.cpuToTuneFor);
+  if (targetOpts.amdgpuIgnoreDenormalMode)
+    fir::setAmdgpuIgnoreDenormalMode(*module);
+  if (targetOpts.amdgpuFineGrainedMemory)
+    fir::setAmdgpuFineGrainedMemory(*module);
+  if (targetOpts.amdgpuRemoteMemory)
+    fir::setAmdgpuRemoteMemory(*module);
   fir::setTargetFeatures(*module, targetMachine.getTargetFeatureString());
   fir::support::setMLIRDataLayout(*module, targetMachine.createDataLayout());
   fir::setIdent(*module, Fortran::common::getFlangFullVersion());

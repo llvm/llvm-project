@@ -496,6 +496,18 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
           args.getLastArg(clang::driver::options::OPT_triple))
     opts.triple = a->getValue();
 
+  if (llvm::Triple(opts.triple).isAMDGPU()) {
+    opts.amdgpuIgnoreDenormalMode = args.hasFlag(
+        clang::driver::options::OPT_fatomic_ignore_denormal_mode,
+        clang::driver::options::OPT_fno_atomic_ignore_denormal_mode, false);
+    opts.amdgpuFineGrainedMemory = args.hasFlag(
+        clang::driver::options::OPT_fatomic_fine_grained_memory,
+        clang::driver::options::OPT_fno_atomic_fine_grained_memory, false);
+    opts.amdgpuRemoteMemory = args.hasFlag(
+        clang::driver::options::OPT_fatomic_remote_memory,
+        clang::driver::options::OPT_fno_atomic_remote_memory, false);
+  }
+
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_target_cpu))
     opts.cpu = a->getValue();
