@@ -87,3 +87,32 @@ subroutine f07
   v = x
 end
 
+subroutine f08
+  type :: struct
+    integer :: m
+  end type
+  type(struct) :: x, v
+
+  !$omp atomic read
+  !ERROR: Atomic variable x should have an intrinsic type
+  v = x
+end
+
+subroutine f09(x, v)
+  class(*), pointer :: x, v
+
+  !$omp atomic read
+  !ERROR: Atomic variable x cannot be a pointer to a polymorphic type
+  v => x
+end
+
+subroutine f10(x, v)
+  type struct(length)
+    integer, len :: length
+  end type
+  type(struct(*)), pointer :: x, v
+
+  !$omp atomic read
+  !ERROR: Atomic variable x is a pointer to a type with non-constant length parameter
+  v => x
+end

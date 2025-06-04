@@ -2955,13 +2955,6 @@ private:
 };
 } // namespace atomic
 
-static bool IsAllocatable(const SomeExpr &expr) {
-  std::vector<SomeExpr> dsgs{atomic::DesignatorCollector{}(expr)};
-  assert(dsgs.size() == 1 && "Should have a single top-level designator");
-  evaluate::SymbolVector syms{evaluate::GetSymbolVector(dsgs.front())};
-  return !syms.empty() && IsAllocatable(syms.back()) && !IsArrayElement(expr);
-}
-
 static bool IsPointerAssignment(const evaluate::Assignment &x) {
   return std::holds_alternative<evaluate::Assignment::BoundsSpec>(x.u) ||
       std::holds_alternative<evaluate::Assignment::BoundsRemapping>(x.u);
@@ -3149,30 +3142,69 @@ void OmpStructureChecker::ErrorShouldBeVariable(
 ///   function references with scalar data pointer result of non-character
 ///   intrinsic type or variables that are non-polymorphic scalar pointers
 ///   and any length type parameter must be constant.
-void OmpStructureChecker::CheckAtomicVariable(
-    const SomeExpr &atom, parser::CharBlock source) {
+void OmpStructureChecker::CheckAtomicType(SymbolRef sym,
+                                          parser::CharBlock source,
+                                          std::string_view name) {
+  const DeclTypeSpec *typeSpec{sym->GetType()};
+  if (!typeSpec) {
+    return;
+  }
+
+  if (!IsPointer(sym)) {
+    using Category = DeclTypeSpec::Category;
+    Category cat{typeSpec->category()};
+    if (cat == Category::Character) {
+      context_.Say(source,
+                   "Atomic variable %s cannot have CHARACTER type"_err_en_US,
+                   name);
+    } else if (cat != Category::Numeric && cat != Category::Logical) {
+      context_.Say(source,
+                   "Atomic variable %s should have an intrinsic type"_err_en_US,
+                   name);
+    }
+    return;
+  }
+
+  // Variable is a pointer.
+  if (typeSpec->IsPolymorphic()) {
+    context_.Say(
+        source,
+        "Atomic variable %s cannot be a pointer to a polymorphic type"_err_en_US,
+        name);
+    return;
+  }
+
+  // Go over all length parameters, if any, and check if they are
+  // explicit.
+  if (const DerivedTypeSpec *derived{typeSpec->AsDerived()}) {
+    if (llvm::any_of(derived->parameters(), [](auto &&entry) {
+          // "entry" is a map entry
+          return entry.second.isLen() && !entry.second.isExplicit();
+        })) {
+      context_.Say(
+          source,
+          "Atomic variable %s is a pointer to a type with non-constant length parameter"_err_en_US,
+          name);
+    }
+  }
+}
+
+void OmpStructureChecker::CheckAtomicVariable(const SomeExpr &atom,
+                                              parser::CharBlock source) {
   if (atom.Rank() != 0) {
     context_.Say(source, "Atomic variable %s should be a scalar"_err_en_US,
-        atom.AsFortran());
+                 atom.AsFortran());
   }
 
-  if (std::optional<evaluate::DynamicType> dtype{atom.GetType()}) {
-    if (dtype->category() == TypeCategory::Character) {
-      context_.Say(source,
-          "Atomic variable %s cannot have CHARACTER type"_err_en_US,
-          atom.AsFortran());
-    } else if (dtype->IsPolymorphic()) {
-      context_.Say(source,
-          "Atomic variable %s cannot have a polymorphic type"_err_en_US,
-          atom.AsFortran());
-    }
-    // TODO: Check non-constant type parameters for non-character types.
-    // At the moment there don't seem to be any.
-  }
+  std::vector<SomeExpr> dsgs{atomic::DesignatorCollector{}(atom)};
+  assert(dsgs.size() == 1 && "Should have a single top-level designator");
+  evaluate::SymbolVector syms{evaluate::GetSymbolVector(dsgs.front())};
 
-  if (IsAllocatable(atom)) {
+  CheckAtomicType(syms.back(), source, atom.AsFortran());
+
+  if (IsAllocatable(syms.back()) && !IsArrayElement(atom)) {
     context_.Say(source, "Atomic variable %s cannot be ALLOCATABLE"_err_en_US,
-        atom.AsFortran());
+                 atom.AsFortran());
   }
 }
 
