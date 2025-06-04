@@ -95,7 +95,7 @@ TEST_F(ObjectFileMachOTest, IndirectSymbolsInTheSharedCache) {
     OF->ParseSymtab(symtab);
 }
 
-TEST_F(ObjectFileMachOTest, ObjectFileFormatWithoutLoadCommand) {
+TEST_F(ObjectFileMachOTest, ObjectFormatWithoutVersionLoadCommand) {
   // A Mach-O file without the load command LC_BUILD_VERSION.
   const char *yamldata = R"(
 --- !mach-o
