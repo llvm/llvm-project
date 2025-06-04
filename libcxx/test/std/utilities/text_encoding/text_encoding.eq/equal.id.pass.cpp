@@ -10,8 +10,6 @@
 
 // REQUIRES: std-at-least-c++26
 
-// UNSUPPORTED: no-localization
-
 // class text_encoding
 
 // text_encoding operator==(const text_encoding&, id) _NOEXCEPT
@@ -21,13 +19,20 @@
 // 2. operator==(const text_encoding&, id) returns true if mib() is equal to the id
 // 3. operator==(const text_encoding&, id) returns false if mib() is not equal to the id
 
-#include <cassert>
-#include <text_encoding>
-
-#include "test_macros.h"
 #include "test_text_encoding.h"
 
 using id = std::text_encoding::id;
+
+constexpr bool test_primary_encodings() {
+  for (auto& data : unique_encoding_data) {
+    auto te = std::text_encoding(id(data.mib));
+    if (te != id(data.mib)) {
+      return false;
+    }
+  }
+
+  return true;
+}
 
 int main() {
   { // 1
@@ -63,5 +68,10 @@ int main() {
   { // 3
     constexpr auto te = std::text_encoding(id::UTF8);
     static_assert(!(te == id::UTF16));
+  }
+
+  {
+    static_assert(test_primary_encodings());
+    assert(test_primary_encodings());
   }
 }

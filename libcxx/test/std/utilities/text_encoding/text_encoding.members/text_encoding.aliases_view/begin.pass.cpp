@@ -17,13 +17,6 @@
 // 2. begin() of aliases_views of two text_encoding objects that represent the same ID but hold different names are the same.
 // 3. begin() of aliases_views of two text_encoding objects that represent different IDs are different.
 
-#include <cassert>
-#include <cstdlib>
-#include <text_encoding>
-#include <ranges>
-
-#include "platform_support.h"
-#include "test_macros.h"
 #include "test_text_encoding.h"
 
 using id = std::text_encoding::id;
@@ -35,6 +28,7 @@ int main() {
     auto view2 = te.aliases();
 
     assert(std::ranges::begin(view1) == std::ranges::begin(view2));
+    assert(view1.begin() == view2.begin());
   }
 
   {
@@ -44,6 +38,7 @@ int main() {
     auto view1 = te1.aliases();
     auto view2 = te2.aliases();
 
+    assert(view1.begin() == view2.begin());
     assert(std::ranges::begin(view1) == std::ranges::begin(view2));
   }
 
@@ -54,6 +49,7 @@ int main() {
     auto view1 = te1.aliases();
     auto view2 = te2.aliases();
 
+    assert(!(view1.begin() == view2.begin()));
     assert(!(std::ranges::begin(view1) == std::ranges::begin(view2)));
   }
 }

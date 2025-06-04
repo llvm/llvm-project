@@ -57,14 +57,23 @@ struct text_encoding
 
 */
 
-#include <__config>
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/__config>
+#else
+#  include <__config>
 
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#  pragma GCC system_header
-#endif
+#  if _LIBCPP_STD_VER >= 23
+#    include <__text_encoding/text_encoding_rep.h>
+#    if _LIBCPP_STD_VER >= 26
+#      include <__text_encoding/text_encoding.h>
+#    endif // _LIBCPP_STD_VER >= 26
+#  endif
 
-#if _LIBCPP_STD_VER >= 26
-#  include <__text_encoding/text_encoding.h>
-#endif // _LIBCPP_STD_VER >= 26
+#  include <version>
+
+#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#    pragma GCC system_header
+#  endif
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_TEXT_ENCODING

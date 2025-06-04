@@ -17,12 +17,6 @@
 // 2. An aliases_views of two text_encoding objects that represent the same ID but hold different names return the same front()
 // 3. An aliases_views of two text_encoding objects that represent different IDs return different front()
 
-#include <cassert>
-#include <cstdlib>
-#include <text_encoding>
-
-#include "platform_support.h"
-#include "test_macros.h"
 #include "test_text_encoding.h"
 
 using id = std::text_encoding::id;
@@ -38,7 +32,7 @@ int main() {
   }
 
   {
-    auto te1 = std::text_encoding("ANSI_X3.4-1968");
+    auto te1 = std::text_encoding("US-ASCII");
     auto te2 = std::text_encoding("ANSI_X3.4-1986");
 
     auto view1 = te1.aliases();

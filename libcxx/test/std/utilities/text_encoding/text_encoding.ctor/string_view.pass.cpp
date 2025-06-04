@@ -9,30 +9,36 @@
 // <text_encoding>
 
 // REQUIRES: std-at-least-c++26
-
-// UNSUPPORTED: no-localization
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=9000000
 
 // class text_encoding
 
 // text_encoding::text_encoding(string_view) noexcept
 
-#include <cassert>
-#include <cstring>
-#include <string_view>
-#include <text_encoding>
-#include <type_traits>
-
-#include "test_macros.h"
 #include "test_text_encoding.h"
 
 constexpr bool test_ctor(std::string_view str, std::string_view expect, std::text_encoding::id expect_id) {
-  auto te = std::text_encoding(str);
-  return te.mib() == expect_id && expect.compare(te.name()) == 0;
+  auto te      = std::text_encoding(str);
+  bool success = true;
+
+  assert(te.mib() == expect_id);
+  assert(expect.compare(te.name()) == 0);
+
+  return success;
 }
 
-constexpr bool test_correct_encoding_spellings() {
-  for (auto pair : unique_encoding_data) {
+constexpr bool test_primary_encoding_spellings() {
+  for (auto& pair : unique_encoding_data) {
     if (!test_ctor(pair.name, pair.name, std::text_encoding::id{pair.mib})) {
+      return false;
+    }
+  }
+  return true;
+}
+
+constexpr bool test_others() {
+  for (auto& pair : other_names) {
+    if (!test_ctor(pair, pair, std::text_encoding::other)) {
       return false;
     }
   }
@@ -47,7 +53,7 @@ int main() {
 
   // happy paths
   {
-    assert(test_correct_encoding_spellings());
+    assert(test_primary_encoding_spellings());
   }
 
   {
@@ -79,4 +85,11 @@ int main() {
     static_assert(test_ctor("iso00885931988", "iso00885931988", std::text_encoding::ISOLatin3));
     assert(test_ctor("iso00885931988", "iso00885931988", std::text_encoding::ISOLatin3));
   }
+
+  {
+    static_assert(test_others());
+    assert(test_others());
+  }
+
+  return 0;
 }

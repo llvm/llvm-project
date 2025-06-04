@@ -543,7 +543,8 @@ int main(int, char**)
           std::noshowbase(ios);
         }
         {   // negative, showbase
-          std::wstring v = convert_thousands_sep(L"-1" THOUSANDS_SEP_ "234" THOUSANDS_SEP_ "567,89 \u20ac"); // EURO SIGN
+          std::wstring v =
+              convert_thousands_sep(L"-1" THOUSANDS_SEP_ "234" THOUSANDS_SEP_ "567,89 \u20ac"); // EURO SIGN
           std::showbase(ios);
           typedef cpp17_input_iterator<const wchar_t*> I;
           long double ex;

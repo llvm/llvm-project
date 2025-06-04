@@ -18,12 +18,6 @@
 // 1. Verify that text_encoding::aliases_view satisfies ranges::forward_range, copyable, view,
 //    ranges::random_access_range and ranges::borrowed_range
 
-#include <concepts>
-#include <ranges>
-#include <text_encoding>
-
-#include "platform_support.h"
-#include "test_macros.h"
 #include "test_text_encoding.h"
 
 int main() {
@@ -32,4 +26,6 @@ int main() {
   static_assert(std::ranges::view<std::text_encoding::aliases_view>);
   static_assert(std::ranges::random_access_range<std::text_encoding::aliases_view>);
   static_assert(std::ranges::borrowed_range<std::text_encoding::aliases_view>);
+  static_assert(std::same_as<std::ranges::range_value_t<std::text_encoding::aliases_view>, const char*>);
+  static_assert(std::same_as<std::ranges::range_reference_t<std::text_encoding::aliases_view>, const char*>);
 }

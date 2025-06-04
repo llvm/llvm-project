@@ -2081,7 +2081,7 @@ module std [system] {
   }
 
   module text_encoding {
-    module get_locale_encoding { header "__text_encoding/get_locale_encoding.h" }
+    module text_encoding_rep { header "__text_encoding/text_encoding_rep.h" }
     module text_encoding { header "__text_encoding/text_encoding.h" }
 
     header "text_encoding"
