@@ -676,7 +676,7 @@ struct DisassembledInstruction {
 
   /// The address of the instruction. Treated as a hex value if prefixed with
   /// `0x`, or as a decimal value otherwise.
-  lldb::addr_t address;
+  lldb::addr_t address = LLDB_INVALID_ADDRESS;
 
   /// Raw bytes representing the instruction and its operands, in an
   /// implementation-defined format.
@@ -716,8 +716,6 @@ struct DisassembledInstruction {
   /// addresses may be presented is 'invalid.'
   /// Values: 'normal', 'invalid'
   std::optional<PresentationHint> presentationHint;
-
-  DisassembledInstruction() : address(0) {}
 };
 bool fromJSON(const llvm::json::Value &,
               DisassembledInstruction::PresentationHint &, llvm::json::Path);

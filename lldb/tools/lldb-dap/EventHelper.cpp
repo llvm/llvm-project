@@ -8,10 +8,11 @@
 
 #include "EventHelper.h"
 #include "DAP.h"
-#include "DAPLog.h"
+#include "DAPERror.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
 #include "lldb/API/SBFileSpec.h"
+#include "llvm/Support/Error.h"
 
 #if defined(_WIN32)
 #define NOMINMAX
@@ -21,6 +22,8 @@
 #define PATH_MAX MAX_PATH
 #endif
 #endif
+
+using namespace llvm;
 
 namespace lldb_dap {
 
@@ -134,20 +137,17 @@ void SendProcessEvent(DAP &dap, LaunchMethod launch_method) {
 
 // Send a thread stopped event for all threads as long as the process
 // is stopped.
-void SendThreadStoppedEvent(DAP &dap, bool on_entry) {
+llvm::Error SendThreadStoppedEvent(DAP &dap, bool on_entry) {
+  lldb::SBMutex lock = dap.GetAPIMutex();
+  std::lock_guard<lldb::SBMutex> guard(lock);
+
   lldb::SBProcess process = dap.target.GetProcess();
-  if (!process.IsValid()) {
-    DAP_LOG(dap.log, "error: SendThreadStoppedEvent() invalid process");
-    return;
-  }
+  if (!process.IsValid())
+    return make_error<DAPError>("invalid process");
 
   lldb::StateType state = process.GetState();
-  if (!lldb::SBDebugger::StateIsStoppedState(state)) {
-    DAP_LOG(dap.log,
-            "error: SendThreadStoppedEvent() when process isn't stopped ({0})",
-            lldb::SBDebugger::StateAsCString(state));
-    return;
-  }
+  if (!lldb::SBDebugger::StateIsStoppedState(state))
+    return make_error<NotStoppedError>();
 
   llvm::DenseSet<lldb::tid_t> old_thread_ids;
   old_thread_ids.swap(dap.thread_ids);
@@ -200,7 +200,7 @@ void SendThreadStoppedEvent(DAP &dap, bool on_entry) {
     }
   }
 
-  for (auto tid : old_thread_ids) {
+  for (const auto &tid : old_thread_ids) {
     auto end = dap.thread_ids.end();
     auto pos = dap.thread_ids.find(tid);
     if (pos == end)
@@ -208,6 +208,7 @@ void SendThreadStoppedEvent(DAP &dap, bool on_entry) {
   }
 
   dap.RunStopCommands();
+  return Error::success();
 }
 
 // Send a "terminated" event to indicate the process is done being

@@ -36,10 +36,12 @@ ThreadsRequestHandler::Run(const ThreadsArguments &) const {
   if (dap.initial_thread_list) {
     threads = *dap.initial_thread_list;
     dap.initial_thread_list.reset();
-  } else if (!lldb::SBDebugger::StateIsStoppedState(process.GetState()))
-    return make_error<NotStoppedError>();
-  else
+  } else {
+    if (!lldb::SBDebugger::StateIsStoppedState(process.GetState()))
+      return make_error<NotStoppedError>();
+
     threads = GetThreads(process, dap.thread_format);
+  }
 
   if (threads.size() == 0)
     return make_error<DAPError>("failed to retrieve threads from process");
