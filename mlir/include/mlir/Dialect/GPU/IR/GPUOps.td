@@ -1333,8 +1333,7 @@ def GPU_ShuffleOp : GPU_Op<
     ```
 
     For lane `k`, returns the value from lane `(k + cst1)`. If `(k + cst1)` is
-    bigger than or equal to `width`, the value is unspecified and `valid` is
-    `false`.
+    bigger than or equal to `width`, the value is poison and `valid` is `false`.
 
     `up` example:
 
@@ -1344,7 +1343,7 @@ def GPU_ShuffleOp : GPU_Op<
     ```
 
     For lane `k`, returns the value from lane `(k - cst1)`. If `(k - cst1)` is
-    smaller than `0`, the value is unspecified and `valid` is `false`.
+    smaller than `0`, the value is poison and `valid` is `false`.
 
     `idx` example:
 

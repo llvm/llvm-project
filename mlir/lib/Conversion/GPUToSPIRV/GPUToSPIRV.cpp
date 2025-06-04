@@ -425,6 +425,21 @@ Value getDimOp(OpBuilder &builder, MLIRContext *ctx, Location loc,
   return builder.create<arith::IndexCastOp>(loc, i32Type, dim);
 }
 
+Value getLaneId(OpBuilder &rewriter, MLIRContext *ctx, Location loc) {
+  Value dimX = getDimOp<gpu::BlockDimOp>(rewriter, ctx, loc, gpu::Dimension::x);
+  Value dimY = getDimOp<gpu::BlockDimOp>(rewriter, ctx, loc, gpu::Dimension::y);
+  Value tidX = getDimOp<gpu::ThreadIdOp>(rewriter, ctx, loc, gpu::Dimension::x);
+  Value tidY = getDimOp<gpu::ThreadIdOp>(rewriter, ctx, loc, gpu::Dimension::y);
+  Value tidZ = getDimOp<gpu::ThreadIdOp>(rewriter, ctx, loc, gpu::Dimension::z);
+  auto i32Type = rewriter.getIntegerType(32);
+  Value tmp1 = rewriter.create<arith::MulIOp>(loc, i32Type, tidZ, dimY);
+  Value tmp2 = rewriter.create<arith::AddIOp>(loc, i32Type, tmp1, tidY);
+  Value tmp3 = rewriter.create<arith::MulIOp>(loc, i32Type, tmp2, dimX);
+  Value laneId = rewriter.create<arith::AddIOp>(loc, i32Type, tmp3, tidX);
+
+  return laneId;
+}
+
 //===----------------------------------------------------------------------===//
 // Shuffle
 //===----------------------------------------------------------------------===//
@@ -464,24 +479,9 @@ LogicalResult GPUShuffleConversion::matchAndRewrite(
         loc, scope, adaptor.getValue(), adaptor.getOffset());
 
     MLIRContext *ctx = shuffleOp.getContext();
-    Value dimX =
-        getDimOp<gpu::BlockDimOp>(rewriter, ctx, loc, gpu::Dimension::x);
-    Value dimY =
-        getDimOp<gpu::BlockDimOp>(rewriter, ctx, loc, gpu::Dimension::y);
-    Value tidX =
-        getDimOp<gpu::ThreadIdOp>(rewriter, ctx, loc, gpu::Dimension::x);
-    Value tidY =
-        getDimOp<gpu::ThreadIdOp>(rewriter, ctx, loc, gpu::Dimension::y);
-    Value tidZ =
-        getDimOp<gpu::ThreadIdOp>(rewriter, ctx, loc, gpu::Dimension::z);
-    auto i32Type = rewriter.getIntegerType(32);
-    Value tmp1 = rewriter.create<arith::MulIOp>(loc, i32Type, tidZ, dimY);
-    Value tmp2 = rewriter.create<arith::AddIOp>(loc, i32Type, tmp1, tidY);
-    Value tmp3 = rewriter.create<arith::MulIOp>(loc, i32Type, tmp2, dimX);
-    Value landId = rewriter.create<arith::AddIOp>(loc, i32Type, tmp3, tidX);
-
+    Value laneId = getLaneId(rewriter, ctx, loc);
     Value resultLandId =
-        rewriter.create<arith::AddIOp>(loc, landId, adaptor.getOffset());
+        rewriter.create<arith::AddIOp>(loc, laneId, adaptor.getOffset());
     validVal = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult,
                                               resultLandId, adaptor.getWidth());
     break;
@@ -491,24 +491,10 @@ LogicalResult GPUShuffleConversion::matchAndRewrite(
         loc, scope, adaptor.getValue(), adaptor.getOffset());
 
     MLIRContext *ctx = shuffleOp.getContext();
-    Value dimX =
-        getDimOp<gpu::BlockDimOp>(rewriter, ctx, loc, gpu::Dimension::x);
-    Value dimY =
-        getDimOp<gpu::BlockDimOp>(rewriter, ctx, loc, gpu::Dimension::y);
-    Value tidX =
-        getDimOp<gpu::ThreadIdOp>(rewriter, ctx, loc, gpu::Dimension::x);
-    Value tidY =
-        getDimOp<gpu::ThreadIdOp>(rewriter, ctx, loc, gpu::Dimension::y);
-    Value tidZ =
-        getDimOp<gpu::ThreadIdOp>(rewriter, ctx, loc, gpu::Dimension::z);
-    auto i32Type = rewriter.getIntegerType(32);
-    Value tmp1 = rewriter.create<arith::MulIOp>(loc, i32Type, tidZ, dimY);
-    Value tmp2 = rewriter.create<arith::AddIOp>(loc, i32Type, tmp1, tidY);
-    Value tmp3 = rewriter.create<arith::MulIOp>(loc, i32Type, tmp2, dimX);
-    Value landId = rewriter.create<arith::AddIOp>(loc, i32Type, tmp3, tidX);
-
+    Value laneId = getLaneId(rewriter, ctx, loc);
     Value resultLandId =
-        rewriter.create<arith::SubIOp>(loc, landId, adaptor.getOffset());
+        rewriter.create<arith::SubIOp>(loc, laneId, adaptor.getOffset());
+    auto i32Type = rewriter.getIntegerType(32);
     validVal = rewriter.create<arith::CmpIOp>(
         loc, arith::CmpIPredicate::sge, resultLandId,
         rewriter.create<arith::ConstantOp>(
