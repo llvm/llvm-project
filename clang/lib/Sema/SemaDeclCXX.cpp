@@ -13717,15 +13717,8 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S, AccessSpecifier AS,
                                   const ParsedAttributesView &AttrList,
                                   TypeResult Type, Decl *DeclFromDeclSpec) {
 
-  if (Type.isInvalid()) {
-    for (TemplateParameterList *TPL : TemplateParamLists) {
-      for (NamedDecl *D : *TPL) {
-        D->setInvalidDecl(true);
-      }
-    }
+  if (Type.isInvalid())
     return nullptr;
-  }
-    
 
   bool Invalid = false;
   DeclarationNameInfo NameInfo = GetNameFromUnqualifiedId(Name);

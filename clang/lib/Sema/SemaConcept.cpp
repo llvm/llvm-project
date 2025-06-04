@@ -220,14 +220,6 @@ static ExprResult EvaluateAtomicConstraint(
     if (Inst.isInvalid())
       return ExprError();
 
-    if (const TemplateTypeParmType *TTPT =
-        dyn_cast<TemplateTypeParmType>(AtomicExpr->getType().getDesugaredType(S.Context))) {
-      TemplateTypeParmDecl *TTPD = TTPT->getDecl();
-      if (TTPD->isInvalidDecl()) {
-        return ExprError();
-      }
-    }
-
     llvm::FoldingSetNodeID ID;
     if (Template &&
         DiagRecursiveConstraintEval(S, ID, Template, AtomicExpr, MLTAL)) {
