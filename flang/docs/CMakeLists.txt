@@ -136,7 +136,7 @@ if (LLVM_ENABLE_SPHINX)
     # MAN BUILD SETUP
     # ----------------------------
     if (${SPHINX_OUTPUT_MAN})
-      message(STATUS "NOTE: The Flang man page is currently a placeholder with a TODO. See docs/index.rst for details")
+      message(STATUS "NOTE: The Flang man page is currently a placeholder with a TODO. See docs/CommandGuide/index.rst for details")
 
       # Create minimal Source dir with ONLY the files needed for man build:
       # - conf.py (Sphinx config)
@@ -149,7 +149,7 @@ if (LLVM_ENABLE_SPHINX)
           "${CMAKE_CURRENT_SOURCE_DIR}/conf.py"
           "${CMAKE_CURRENT_BINARY_DIR}/Source/conf.py"
         COMMAND "${CMAKE_COMMAND}" -E copy
-                "${CMAKE_CURRENT_SOURCE_DIR}/index.rst"
+                "${CMAKE_CURRENT_SOURCE_DIR}/CommandGuide/index.rst"
                 "${CMAKE_CURRENT_BINARY_DIR}/Source/index.rst"
         DEPENDS flang-doc gen-FlangCommandLineReference.rst)
         
