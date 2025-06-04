@@ -703,7 +703,7 @@ define i64 @sub_scalable(ptr noundef %val1) {
 ; CHECK-LABEL: @sub_scalable(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
 entry:
@@ -718,7 +718,7 @@ define i64 @sub_scalable2(ptr noundef %val1) {
 ; CHECK-LABEL: @sub_scalable2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[GEP2_IDX:%.*]] = shl i64 [[TMP2]], 5
 ; CHECK-NEXT:    [[GEPDIFF:%.*]] = sub i64 [[TMP1]], [[GEP2_IDX]]
@@ -750,7 +750,7 @@ define i64 @nullptrtoint_scalable_x(i64 %x) {
 ; CHECK-LABEL: @nullptrtoint_scalable_x(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[PTR_IDX:%.*]] = mul nsw i64 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i64 [[PTR_IDX]]
 ;
