@@ -71,7 +71,7 @@ def : Function {
 
 def : Function {
   let name = "olGetKernelInfo";
-  let desc = "Queries the given property of the device.";
+  let desc = "Queries the given property of the kernel.";
   let details = [];
   let params = [
     Param<"ol_kernel_handle_t", "Kernel", "handle of the kernel instance", PARAM_IN>,
@@ -89,13 +89,13 @@ def : Function {
       "`PropSize == 0`",
       "If `PropSize` is less than the real number of bytes needed to return the info."
     ]>,
-    Return<"OL_ERRC_INVALID_DEVICE">
+    Return<"OL_ERRC_INVALID_KERNEL">
   ];
 }
 
 def : Function {
   let name = "olGetKernelInfoSize";
-  let desc = "Returns the storage size of the given device query.";
+  let desc = "Returns the storage size of the given kernel query.";
   let details = [];
   let params = [
     Param<"ol_kernel_handle_t", "Kernel", "handle of the kernel instance", PARAM_IN>,
@@ -106,6 +106,6 @@ def : Function {
     Return<"OL_ERRC_UNSUPPORTED_ENUMERATION", [
       "If `PropName` is not supported by the kernel."
     ]>,
-    Return<"OL_ERRC_INVALID_DEVICE">
+    Return<"OL_ERRC_INVALID_KERNEL">
   ];
 }
