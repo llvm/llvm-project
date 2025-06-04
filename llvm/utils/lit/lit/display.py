@@ -122,7 +122,7 @@ class Display(object):
         if (
             test.result.max_allowed_attempts is not None
             and test.result.max_allowed_attempts > 1
-        ) and test.result.attempts > 0:
+        ) and test.result.attempts > 1:
             extra_info = f", {test.result.attempts} of {test.result.max_allowed_attempts} attempts"
 
         print(
