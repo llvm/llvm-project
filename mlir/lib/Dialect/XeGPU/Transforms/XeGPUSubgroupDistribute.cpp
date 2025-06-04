@@ -938,18 +938,18 @@ static void updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
     }
     // If the result is a vector type, add a temporary layout attribute to the
     // op.
-    std::string resultLayoutName =
-        resultLayoutNamePrefix + std::to_string(result.getResultNumber());
-    op->setAttr(resultLayoutName, layout);
-    // Update all users of the result with the layout.
-    for (OpOperand &user : result.getUses()) {
-      Operation *owner = user.getOwner();
-      unsigned operandNumber = user.getOperandNumber();
-      // Add temorary layout attribute at the user op.
-      std::string attrName =
-          operandLayoutNamePrefix + std::to_string(operandNumber);
-      owner->setAttr(attrName, layout);
-    }
+    // std::string resultLayoutName =
+    //     resultLayoutNamePrefix + std::to_string(result.getResultNumber());
+    // op->setAttr(resultLayoutName, layout);
+    // // Update all users of the result with the layout.
+    // for (OpOperand &user : result.getUses()) {
+    //   Operation *owner = user.getOwner();
+    //   unsigned operandNumber = user.getOperandNumber();
+    //   // Add temorary layout attribute at the user op.
+    //   std::string attrName =
+    //       operandLayoutNamePrefix + std::to_string(operandNumber);
+    //   owner->setAttr(attrName, layout);
+    // }
   }
 }
 static void updateBranchTerminatorOpInterface(
