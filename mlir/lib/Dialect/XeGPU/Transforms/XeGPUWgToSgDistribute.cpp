@@ -329,13 +329,13 @@ struct WgToSgPrefetchNdOp : public OpConversionPattern<xegpu::PrefetchNdOp> {
 
 // Handles UnrealizedConversionCastOp generated during
 // SCFStructuralTypeConversions (step 1). This op may appear as either a
-// target or source materialization for Vector or TensorDesc, e.g.:
-// 1. unrealized_conversion_cast %1 : tensor_desc<16xf16> to
-// tensor_desc<128xf16, ...>
-// 2. unrealized_conversion_cast %1 : vector<256xf32> to vector<16xf32>, ...
-// 3. unrealized_conversion_cast %1 : vector<16xf32>, ... to vector<256xf32>
-// In all cases, the pattern simply forwards the inputs to the outputs with
-// one-to-one or one-to-n patterns.
+// target or source materialization for Vector or TensorDesc values, e.g.:
+// 1. unrealized_cast %1 : vector<256xf32> to vector<16xf32>, ...
+// 2. unrealized_cast %1 : vector<16xf32>, ... to vector<256xf32>
+// it could be either 1:1, 1:N or N:1 cast. In all cases, the pattern
+// simply forwards the inputs to the outputs using 1:1 or 1:N interface.
+// TODO: remove it when context-aware type converter is ready.
+// It is safe only when input codes don't contain UnrealizedConversionCastOp.
 struct UnrealizedConversionCastOpPattern
     : public OpConversionPattern<mlir::UnrealizedConversionCastOp> {
   using OpConversionPattern<
@@ -346,22 +346,20 @@ struct UnrealizedConversionCastOpPattern
                   ConversionPatternRewriter &rewriter) const override {
     SmallVector<Value> inputs = xegpu::flattenValues(adaptor.getInputs());
 
-    // Handles the case where cast %1 : tensor_desc<16xf16> to
-    // tensor_desc<128xf16, ...> The input values provided by the adaptor should
-    // already be distributed.
-    if (op.getNumOperands() == 1 && op.getNumResults() == 1 &&
-        isa<xegpu::TensorDescType>(op->getOperand(0).getType()) &&
-        isa<xegpu::TensorDescType>(op->getResult(0).getType())) {
-      rewriter.replaceOp(op, inputs);
-      return success();
-    }
+    auto inputTy = inputs[0].getType();
+    auto outputTy = op->getOpResult(0).getType();
+
+    if (!llvm::all_equal(op->getResultTypes()) ||
+        !llvm::all_equal(ValueRange(inputs).getTypes()) ||
+        !isa<VectorType, xegpu::TensorDescType>(inputTy) ||
+        !isa<VectorType, xegpu::TensorDescType>(outputTy))
+      return failure();
 
     // Handles the case where cast %1 : vector<256xf32> to vector<16xf32>, ...
     // the input values provided by the adaptor should already be distributed,
     // and their types should correspond exactly to the result types of the
     // operation.
-    if (op.getNumOperands() == 1 &&
-        llvm::equal(ValueRange(inputs).getTypes(), op->getResultTypes())) {
+    if (op.getNumOperands() == 1) {
       rewriter.replaceOp(op, inputs);
       return success();
     }
@@ -369,11 +367,7 @@ struct UnrealizedConversionCastOpPattern
     // Handles the case where cast %1 : vector<16xf32>, ... to vector<256xf32>.
     // All input values must have the same vector type, and their shape must be
     // evenly divisible by the output vector's shape.
-    auto inputTy = dyn_cast<VectorType>(inputs[0].getType());
-    auto outputTy = dyn_cast<VectorType>(op->getOpResult(0).getType());
-    if (op.getNumResults() == 1 && inputTy && outputTy &&
-        llvm::all_equal(ValueRange(inputs).getTypes()) &&
-        computeShapeRatio(outputTy.getShape(), inputTy.getShape())) {
+    if (op.getNumResults() == 1) {
       rewriter.replaceOpWithMultiple(op, {inputs});
       return success();
     }
