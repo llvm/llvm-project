@@ -16,8 +16,7 @@ define <16 x i8> @combineXorAeseZeroARM64(<16 x i8> %data, <16 x i8> %key) {
 define <16 x i8> @combineXorAeseZeroLhsARM64(<16 x i8> %data, <16 x i8> %key) {
 ; CHECK-LABEL: define <16 x i8> @combineXorAeseZeroLhsARM64(
 ; CHECK-SAME: <16 x i8> [[DATA:%.*]], <16 x i8> [[KEY:%.*]]) {
-; CHECK-NEXT:    [[DATA_XOR:%.*]] = xor <16 x i8> [[DATA]], [[KEY]]
-; CHECK-NEXT:    [[DATA_AES:%.*]] = tail call <16 x i8> @llvm.aarch64.crypto.aese(<16 x i8> zeroinitializer, <16 x i8> [[DATA_XOR]])
+; CHECK-NEXT:    [[DATA_AES:%.*]] = tail call <16 x i8> @llvm.aarch64.crypto.aese(<16 x i8> [[DATA]], <16 x i8> [[KEY]])
 ; CHECK-NEXT:    ret <16 x i8> [[DATA_AES]]
 ;
   %data.xor = xor <16 x i8> %data, %key
@@ -51,8 +50,7 @@ define <16 x i8> @combineXorAesdZeroARM64(<16 x i8> %data, <16 x i8> %key) {
 define <16 x i8> @combineXorAesdZeroLhsARM64(<16 x i8> %data, <16 x i8> %key) {
 ; CHECK-LABEL: define <16 x i8> @combineXorAesdZeroLhsARM64(
 ; CHECK-SAME: <16 x i8> [[DATA:%.*]], <16 x i8> [[KEY:%.*]]) {
-; CHECK-NEXT:    [[DATA_XOR:%.*]] = xor <16 x i8> [[DATA]], [[KEY]]
-; CHECK-NEXT:    [[DATA_AES:%.*]] = tail call <16 x i8> @llvm.aarch64.crypto.aesd(<16 x i8> zeroinitializer, <16 x i8> [[DATA_XOR]])
+; CHECK-NEXT:    [[DATA_AES:%.*]] = tail call <16 x i8> @llvm.aarch64.crypto.aesd(<16 x i8> [[DATA]], <16 x i8> [[KEY]])
 ; CHECK-NEXT:    ret <16 x i8> [[DATA_AES]]
 ;
   %data.xor = xor <16 x i8> %data, %key
@@ -80,8 +78,7 @@ declare <16 x i8> @llvm.aarch64.crypto.aesd(<16 x i8>, <16 x i8>) #0
 define <vscale x 16 x i8> @combineXorAeseZeroSVE(<vscale x 16 x i8> %data, <vscale x 16 x i8> %key) {
 ; CHECK-LABEL: define <vscale x 16 x i8> @combineXorAeseZeroSVE(
 ; CHECK-SAME: <vscale x 16 x i8> [[DATA:%.*]], <vscale x 16 x i8> [[KEY:%.*]]) {
-; CHECK-NEXT:    [[DATA_XOR:%.*]] = xor <vscale x 16 x i8> [[DATA]], [[KEY]]
-; CHECK-NEXT:    [[DATA_AES:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.aese(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i8> [[DATA_XOR]])
+; CHECK-NEXT:    [[DATA_AES:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.aese(<vscale x 16 x i8> [[DATA]], <vscale x 16 x i8> [[KEY]])
 ; CHECK-NEXT:    ret <vscale x 16 x i8> [[DATA_AES]]
 ;
   %data.xor = xor <vscale x 16 x i8> %data, %key
@@ -92,8 +89,7 @@ define <vscale x 16 x i8> @combineXorAeseZeroSVE(<vscale x 16 x i8> %data, <vsca
 define <vscale x 16 x i8> @combineXorAesdZeroSVE(<vscale x 16 x i8> %data, <vscale x 16 x i8> %key) {
 ; CHECK-LABEL: define <vscale x 16 x i8> @combineXorAesdZeroSVE(
 ; CHECK-SAME: <vscale x 16 x i8> [[DATA:%.*]], <vscale x 16 x i8> [[KEY:%.*]]) {
-; CHECK-NEXT:    [[DATA_XOR:%.*]] = xor <vscale x 16 x i8> [[DATA]], [[KEY]]
-; CHECK-NEXT:    [[DATA_AES:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.aesd(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i8> [[DATA_XOR]])
+; CHECK-NEXT:    [[DATA_AES:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.aesd(<vscale x 16 x i8> [[DATA]], <vscale x 16 x i8> [[KEY]])
 ; CHECK-NEXT:    ret <vscale x 16 x i8> [[DATA_AES]]
 ;
   %data.xor = xor <vscale x 16 x i8> %data, %key
