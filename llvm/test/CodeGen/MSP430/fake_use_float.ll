@@ -1,30 +1,31 @@
 ; RUN: llc < %s | FileCheck %s
 target triple = "msp430"
 
-; CHECK:       bb.0.entry:
-; CHECK:       %0:gr16 = MOV16ri
-; CHECK-DAG:   FAKE_USE killed %0
-; CHECK:       %1:gr16 = MOV16ri
-; CHECK-DAG:   FAKE_USE killed %1
-; CHECK:       %2:gr16 = MOV16ri
-; CHECK-DAG:   FAKE_USE killed %2
-; CHECK:       %3:gr16 = MOV16ri
-; CHECK-DAG:   FAKE_USE killed %3
-; CHECK:       RET
+; CHECK:       mov	#19923, r12
+; CHECK:       mov	#4194, r12
+; CHECK:       mov	#25688, r12
+; CHECK:       mov	#-16245, r12
+; CHECK:       ret
 define void @test-double() {
 entry:
   call void (...) @llvm.fake.use(double -8.765430e+02)
   ret void
 }
 
-; CHECK:       bb.0.entry:
-; CHECK:       %0:gr16 = MOV16ri
-; CHECK-DAG:   FAKE_USE killed %0
-; CHECK:       %1:gr16 = MOV16ri
-; CHECK-DAG:   FAKE_USE killed %1
-; CHECK:       RET
-define void @test-float() {
+; CHECK:       call	#__mspabi_addd
+; CHECK:       ret
+define void @test-double2(double %0) {
 entry:
-  call void (...) @llvm.fake.use(float -8.76e+02)
+  %1 = fadd double %0, %0
+  call void (...) @llvm.fake.use(double %1)
+  ret void
+}
+
+; CHECK:       call	#__mspabi_addf
+; CHECK:       ret
+define void @test-float(float %0) {
+entry:
+  %1 = fadd float %0, %0
+  call void (...) @llvm.fake.use(float %1)
   ret void
 }
