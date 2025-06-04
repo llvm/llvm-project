@@ -130,11 +130,10 @@ protocol::Thread CreateThread(lldb::SBThread &thread, lldb::SBFormat &format) {
     } else if (!queue_name.empty()) {
       auto kind = thread.GetQueue().GetKind();
       std::string queue_kind_label = "";
-      if (kind == lldb::eQueueKindSerial) {
+      if (kind == lldb::eQueueKindSerial)
         queue_kind_label = " (serial)";
-      } else if (kind == lldb::eQueueKindConcurrent) {
+      else if (kind == lldb::eQueueKindConcurrent)
         queue_kind_label = " (concurrent)";
-      }
 
       name = llvm::formatv("Thread {0} Queue: {1}{2}", thread.GetIndexID(),
                            queue_name, queue_kind_label)
