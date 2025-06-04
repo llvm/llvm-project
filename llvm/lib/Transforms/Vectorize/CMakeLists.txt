@@ -2,6 +2,7 @@ add_llvm_component_library(LLVMVectorize
   EVLIndVarSimplify.cpp
   LoadStoreVectorizer.cpp
   LoopIdiomVectorize.cpp
+  StridedLoopUnroll.cpp
   LoopVectorizationLegality.cpp
   LoopVectorize.cpp
   SandboxVectorizer/DependencyGraph.cpp
