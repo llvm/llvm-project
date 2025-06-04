@@ -3254,48 +3254,6 @@ static Value *createBitOrPointerCast(IRBuilderBase &Builder, Value *V,
   return Builder.CreateBitOrPointerCast(CastVal, DstVTy);
 }
 
-static Intrinsic::ID getInterleaveIntrinsicID(unsigned Factor) {
-  switch (Factor) {
-  case 2:
-    return Intrinsic::vector_interleave2;
-  case 3:
-    return Intrinsic::vector_interleave3;
-  case 4:
-    return Intrinsic::vector_interleave4;
-  case 5:
-    return Intrinsic::vector_interleave5;
-  case 6:
-    return Intrinsic::vector_interleave6;
-  case 7:
-    return Intrinsic::vector_interleave7;
-  case 8:
-    return Intrinsic::vector_interleave8;
-  default:
-    llvm_unreachable("Unexpected factor");
-  }
-}
-
-static Intrinsic::ID getDeinterleaveIntrinsicID(unsigned Factor) {
-  switch (Factor) {
-  case 2:
-    return Intrinsic::vector_deinterleave2;
-  case 3:
-    return Intrinsic::vector_deinterleave3;
-  case 4:
-    return Intrinsic::vector_deinterleave4;
-  case 5:
-    return Intrinsic::vector_deinterleave5;
-  case 6:
-    return Intrinsic::vector_deinterleave6;
-  case 7:
-    return Intrinsic::vector_deinterleave7;
-  case 8:
-    return Intrinsic::vector_deinterleave8;
-  default:
-    llvm_unreachable("Unexpected factor");
-  }
-}
-
 /// Return a vector containing interleaved elements from multiple
 /// smaller input vectors.
 static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,

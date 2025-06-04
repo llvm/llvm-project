@@ -240,6 +240,48 @@ Intrinsic::ID llvm::getVectorIntrinsicIDForCall(const CallInst *CI,
   return Intrinsic::not_intrinsic;
 }
 
+Intrinsic::ID llvm::getInterleaveIntrinsicID(unsigned Factor) {
+  switch (Factor) {
+  case 2:
+    return Intrinsic::vector_interleave2;
+  case 3:
+    return Intrinsic::vector_interleave3;
+  case 4:
+    return Intrinsic::vector_interleave4;
+  case 5:
+    return Intrinsic::vector_interleave5;
+  case 6:
+    return Intrinsic::vector_interleave6;
+  case 7:
+    return Intrinsic::vector_interleave7;
+  case 8:
+    return Intrinsic::vector_interleave8;
+  default:
+    llvm_unreachable("Unexpected factor");
+  }
+}
+
+Intrinsic::ID llvm::getDeinterleaveIntrinsicID(unsigned Factor) {
+  switch (Factor) {
+  case 2:
+    return Intrinsic::vector_deinterleave2;
+  case 3:
+    return Intrinsic::vector_deinterleave3;
+  case 4:
+    return Intrinsic::vector_deinterleave4;
+  case 5:
+    return Intrinsic::vector_deinterleave5;
+  case 6:
+    return Intrinsic::vector_deinterleave6;
+  case 7:
+    return Intrinsic::vector_deinterleave7;
+  case 8:
+    return Intrinsic::vector_deinterleave8;
+  default:
+    llvm_unreachable("Unexpected factor");
+  }
+}
+
 /// Given a vector and an element number, see if the scalar value is
 /// already around as a register, for example if it were inserted then extracted
 /// from the vector.
