@@ -11,6 +11,7 @@
 #include "TestTypes.h"
 #include "mlir/Bytecode/BytecodeImplementation.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizationConversionInterface.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/AsmState.h"
@@ -284,6 +285,53 @@ getDynamicCustomParserPrinterOp(TestDialect *dialect) {
                                   verifier, regionVerifier, parser, printer);
 }
 
+namespace {
+
+struct TestConverter : bufferization::ConversionDialectInterface {
+  TestConverter(Dialect *dialect)
+      : bufferization::ConversionDialectInterface(dialect) {}
+
+  FailureOr<bufferization::BufferLikeType>
+  getBufferType(Value value, const bufferization::BufferizationOptions &options,
+                const bufferization::BufferizationState &state,
+                function_ref<InFlightDiagnostic(const Twine &)> emitError)
+      const override {
+    auto testTensor = dyn_cast<TestTensorType>(value.getType());
+    if (!testTensor)
+      return emitError("expected TestTensorType");
+
+    return cast<bufferization::BufferLikeType>(
+        TestMemrefType::get(value.getContext(), testTensor.getShape(),
+                            testTensor.getElementType(), nullptr));
+  }
+
+  LogicalResult typesMatch(bufferization::TensorLikeType tensor,
+                           bufferization::BufferLikeType buffer,
+                           function_ref<InFlightDiagnostic(const Twine &)>
+                               emitError) const override {
+    auto testTensor = dyn_cast<TestTensorType>(tensor);
+    auto testMemref = dyn_cast<TestMemrefType>(buffer);
+    if (!testTensor || !testMemref)
+      return emitError("expected TestTensorType and TestMemrefType");
+
+    const bool valid =
+        testTensor.getShape() == testMemref.getShape() &&
+        testTensor.getElementType() == testMemref.getElementType();
+    return success(valid);
+  }
+
+  bufferization::TensorLikeType
+  getTensorFromBuffer(bufferization::BufferLikeType buffer) const override {
+    auto testMemref = dyn_cast<TestMemrefType>(buffer);
+    assert(testMemref && "expected TestMemrefType");
+    return cast<bufferization::TensorLikeType>(
+        TestTensorType::get(testMemref.getContext(), testMemref.getShape(),
+                            testMemref.getElementType()));
+  }
+};
+
+} // namespace
+
 //===----------------------------------------------------------------------===//
 // TestDialect
 //===----------------------------------------------------------------------===//
@@ -333,6 +381,7 @@ void TestDialect::initialize() {
   registerDynamicOp(getDynamicCustomParserPrinterOp(this));
   registerInterfaces();
   allowUnknownOperations();
+  addInterface<TestConverter>();
 
   // Instantiate our fallback op interface that we'll use on specific
   // unregistered op.

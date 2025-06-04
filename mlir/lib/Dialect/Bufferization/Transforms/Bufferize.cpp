@@ -412,11 +412,11 @@ bufferization::bufferizeBlockSignature(Block *block, RewriterBase &rewriter,
       continue;
     }
 
-    FailureOr<BaseMemRefType> memrefType =
+    FailureOr<BufferLikeType> bufferType =
         bufferization::getBufferType(bbArg, options, state);
-    if (failed(memrefType))
+    if (failed(bufferType))
       return failure();
-    newTypes.push_back(*memrefType);
+    newTypes.push_back(*bufferType);
   }
 
   // Change the type of all block arguments.
@@ -463,7 +463,7 @@ bufferization::bufferizeBlockSignature(Block *block, RewriterBase &rewriter,
         newOperands.push_back(operand);
         continue;
       }
-      FailureOr<BaseMemRefType> operandBufferType =
+      FailureOr<BufferLikeType> operandBufferType =
           bufferization::getBufferType(operand, options, state);
       if (failed(operandBufferType))
         return failure();
