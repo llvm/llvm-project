@@ -6739,6 +6739,9 @@ private:
                                                 OpenMPClauseKind Kind,
                                                 bool ParseOnly);
 
+  /// Parses the 'looprange' clause of a '#pragma omp fuse' directive.
+  OMPClause *ParseOpenMPLoopRangeClause();
+  
   /// Parses the 'sizes' clause of a '#pragma omp tile' directive.
   OMPClause *ParseOpenMPSizesClause();
 

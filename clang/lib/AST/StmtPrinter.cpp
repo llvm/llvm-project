@@ -790,6 +790,11 @@ void StmtPrinter::VisitOMPInterchangeDirective(OMPInterchangeDirective *Node) {
   PrintOMPExecutableDirective(Node);
 }
 
+void StmtPrinter::VisitOMPFuseDirective(OMPFuseDirective *Node) {
+  Indent() << "#pragma omp fuse";
+  PrintOMPExecutableDirective(Node);
+}
+
 void StmtPrinter::VisitOMPForDirective(OMPForDirective *Node) {
   Indent() << "#pragma omp for";
   PrintOMPExecutableDirective(Node);
