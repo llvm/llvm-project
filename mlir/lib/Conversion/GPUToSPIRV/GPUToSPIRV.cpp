@@ -416,6 +416,15 @@ LogicalResult GPUBarrierConversion::matchAndRewrite(
   return success();
 }
 
+template <typename T>
+Value getDimOp(OpBuilder &builder, MLIRContext *ctx, Location loc,
+               gpu::Dimension dimension) {
+  Type indexType = IndexType::get(ctx);
+  IntegerType i32Type = IntegerType::get(ctx, 32);
+  Value dim = builder.create<T>(loc, indexType, dimension);
+  return builder.create<arith::IndexCastOp>(loc, i32Type, dim);
+}
+
 //===----------------------------------------------------------------------===//
 // Shuffle
 //===----------------------------------------------------------------------===//
@@ -436,8 +445,8 @@ LogicalResult GPUShuffleConversion::matchAndRewrite(
         shuffleOp, "shuffle width and target subgroup size mismatch");
 
   Location loc = shuffleOp.getLoc();
-  Value trueVal = spirv::ConstantOp::getOne(rewriter.getI1Type(),
-                                            shuffleOp.getLoc(), rewriter);
+  Value validVal = spirv::ConstantOp::getOne(rewriter.getI1Type(),
+                                             shuffleOp.getLoc(), rewriter);
   auto scope = rewriter.getAttr<spirv::ScopeAttr>(spirv::Scope::Subgroup);
   Value result;
 
@@ -450,17 +459,65 @@ LogicalResult GPUShuffleConversion::matchAndRewrite(
     result = rewriter.create<spirv::GroupNonUniformShuffleOp>(
         loc, scope, adaptor.getValue(), adaptor.getOffset());
     break;
-  case gpu::ShuffleMode::DOWN:
+  case gpu::ShuffleMode::DOWN: {
     result = rewriter.create<spirv::GroupNonUniformShuffleDownOp>(
         loc, scope, adaptor.getValue(), adaptor.getOffset());
-    break;
-  case gpu::ShuffleMode::UP:
-    result = rewriter.create<spirv::GroupNonUniformShuffleUpOp>(
-        loc, scope, adaptor.getValue(), adaptor.getOffset());
+
+    MLIRContext *ctx = shuffleOp.getContext();
+    Value dimX =
+        getDimOp<gpu::BlockDimOp>(rewriter, ctx, loc, gpu::Dimension::x);
+    Value dimY =
+        getDimOp<gpu::BlockDimOp>(rewriter, ctx, loc, gpu::Dimension::y);
+    Value tidX =
+        getDimOp<gpu::ThreadIdOp>(rewriter, ctx, loc, gpu::Dimension::x);
+    Value tidY =
+        getDimOp<gpu::ThreadIdOp>(rewriter, ctx, loc, gpu::Dimension::y);
+    Value tidZ =
+        getDimOp<gpu::ThreadIdOp>(rewriter, ctx, loc, gpu::Dimension::z);
+    auto i32Type = rewriter.getIntegerType(32);
+    Value tmp1 = rewriter.create<arith::MulIOp>(loc, i32Type, tidZ, dimY);
+    Value tmp2 = rewriter.create<arith::AddIOp>(loc, i32Type, tmp1, tidY);
+    Value tmp3 = rewriter.create<arith::MulIOp>(loc, i32Type, tmp2, dimX);
+    Value landId = rewriter.create<arith::AddIOp>(loc, i32Type, tmp3, tidX);
+
+    Value resultLandId =
+        rewriter.create<arith::AddIOp>(loc, landId, adaptor.getOffset());
+    validVal = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult,
+                                              resultLandId, adaptor.getWidth());
     break;
   }
+  case gpu::ShuffleMode::UP: {
+    result = rewriter.create<spirv::GroupNonUniformShuffleUpOp>(
+        loc, scope, adaptor.getValue(), adaptor.getOffset());
 
-  rewriter.replaceOp(shuffleOp, {result, trueVal});
+    MLIRContext *ctx = shuffleOp.getContext();
+    Value dimX =
+        getDimOp<gpu::BlockDimOp>(rewriter, ctx, loc, gpu::Dimension::x);
+    Value dimY =
+        getDimOp<gpu::BlockDimOp>(rewriter, ctx, loc, gpu::Dimension::y);
+    Value tidX =
+        getDimOp<gpu::ThreadIdOp>(rewriter, ctx, loc, gpu::Dimension::x);
+    Value tidY =
+        getDimOp<gpu::ThreadIdOp>(rewriter, ctx, loc, gpu::Dimension::y);
+    Value tidZ =
+        getDimOp<gpu::ThreadIdOp>(rewriter, ctx, loc, gpu::Dimension::z);
+    auto i32Type = rewriter.getIntegerType(32);
+    Value tmp1 = rewriter.create<arith::MulIOp>(loc, i32Type, tidZ, dimY);
+    Value tmp2 = rewriter.create<arith::AddIOp>(loc, i32Type, tmp1, tidY);
+    Value tmp3 = rewriter.create<arith::MulIOp>(loc, i32Type, tmp2, dimX);
+    Value landId = rewriter.create<arith::AddIOp>(loc, i32Type, tmp3, tidX);
+
+    Value resultLandId =
+        rewriter.create<arith::SubIOp>(loc, landId, adaptor.getOffset());
+    validVal = rewriter.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::sge, resultLandId,
+        rewriter.create<arith::ConstantOp>(
+            loc, i32Type, rewriter.getIntegerAttr(i32Type, 0)));
+    break;
+  }
+  }
+
+  rewriter.replaceOp(shuffleOp, {result, validVal});
   return success();
 }
 
