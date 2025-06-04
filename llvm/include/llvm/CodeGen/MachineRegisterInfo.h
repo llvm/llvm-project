@@ -729,8 +729,9 @@ public:
   bool constrainRegAttrs(Register Reg, Register ConstrainingReg,
                          unsigned MinNumRegs = 0);
 
-  /// recomputeRegClass - Try to find a legal super-class of Reg's register
-  /// class that still satisfies the constraints from the instructions using
+  /// getLargestConstrainedSuperClass - Try to find a legal super-class of Reg's
+  /// register class that still satisfies the constraints from the instructions
+  /// using
   /// \p Reg. \p return the super-class TargetRegisterClass if one was found,
   /// otherwise \p return the original TargetRegisterClass.
   const TargetRegisterClass *
