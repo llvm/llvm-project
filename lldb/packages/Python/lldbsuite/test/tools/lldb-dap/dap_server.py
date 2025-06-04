@@ -1073,16 +1073,33 @@ class DebugCommunication(object):
         return response
 
     def request_dataBreakpointInfo(
-        self, variablesReference, name, frameIndex=0, threadId=None
+        self,
+        name: str,
+        variablesReference: Optional[int] = None,
+        frameIndex: Optional[int] = 0,
+        bytes_: Optional[int] = None,
+        asAddress: Optional[bool] = None,
     ):
-        stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
-        if stackFrame is None:
-            return []
-        args_dict = {
-            "variablesReference": variablesReference,
-            "name": name,
-            "frameId": stackFrame["id"],
-        }
+        args_dict = {}
+        if asAddress is not None:
+            args_dict = {
+                "name": name,
+                "asAddress": asAddress,
+                "bytes": bytes_,
+            }
+        else:
+            thread_id = self.get_thread_id()
+            stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=thread_id)
+            if stackFrame is None:
+                raise ValueError(
+                    f"could not get stackframe for frameIndex: {frameIndex} and threadId: {thread_id}"
+                )
+            args_dict = {
+                "variablesReference": variablesReference,
+                "name": name,
+                "frameId": stackFrame["id"],
+            }
+
         command_dict = {
             "command": "dataBreakpointInfo",
             "type": "request",

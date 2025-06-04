@@ -128,7 +128,9 @@ class DAPTestCaseBase(TestBase):
             time.sleep(0.5)
         return False
 
-    def verify_breakpoint_hit(self, breakpoint_ids, timeout=DEFAULT_TIMEOUT):
+    def verify_breakpoint_hit(
+        self, breakpoint_ids, timeout=DEFAULT_TIMEOUT, reason: Optional[str] = None
+    ):
         """Wait for the process we are debugging to stop, and verify we hit
         any breakpoint location in the "breakpoint_ids" array.
         "breakpoint_ids" should be a list of breakpoint ID strings
@@ -140,9 +142,10 @@ class DAPTestCaseBase(TestBase):
                 body = stopped_event["body"]
                 if "reason" not in body:
                     continue
-                if (
-                    body["reason"] != "breakpoint"
-                    and body["reason"] != "instruction breakpoint"
+                if body["reason"] not in (
+                    "breakpoint",
+                    "instruction breakpoint",
+                    "data breakpoint",
                 ):
                     continue
                 if "description" not in body:
@@ -155,9 +158,10 @@ class DAPTestCaseBase(TestBase):
                 # So when looking at the description we just want to make sure
                 # the right breakpoint matches and not worry about the actual
                 # location.
+                type_name = reason or "breakpoint"
                 description = body["description"]
                 for breakpoint_id in breakpoint_ids:
-                    match_desc = f"breakpoint {breakpoint_id}."
+                    match_desc = f"{type_name} {breakpoint_id}"
                     if match_desc in description:
                         return
         self.assertTrue(False, f"breakpoint not hit, stopped_events={stopped_events}")
@@ -353,12 +357,16 @@ class DAPTestCaseBase(TestBase):
         self.do_continue()
         return self.dap_server.wait_for_stopped(timeout)
 
-    def continue_to_breakpoint(self, breakpoint_id: str, timeout=DEFAULT_TIMEOUT):
-        self.continue_to_breakpoints((breakpoint_id), timeout)
+    def continue_to_breakpoint(
+        self, breakpoint_id: str, timeout=DEFAULT_TIMEOUT, reason: Optional[str] = None
+    ):
+        self.continue_to_breakpoints([breakpoint_id], timeout, reason)
 
-    def continue_to_breakpoints(self, breakpoint_ids, timeout=DEFAULT_TIMEOUT):
+    def continue_to_breakpoints(
+        self, breakpoint_ids, timeout=DEFAULT_TIMEOUT, reason: Optional[str] = None
+    ):
         self.do_continue()
-        self.verify_breakpoint_hit(breakpoint_ids, timeout)
+        self.verify_breakpoint_hit(breakpoint_ids, timeout, reason)
 
     def continue_to_exception_breakpoint(self, filter_label, timeout=DEFAULT_TIMEOUT):
         self.do_continue()

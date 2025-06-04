@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
-#include "EventHelper.h"
 #include "Protocol/ProtocolTypes.h"
 #include "RequestHandler.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
@@ -16,12 +15,80 @@
 
 namespace lldb_dap {
 
+namespace {
+std::vector<protocol::DataBreakpointAccessType>
+GetBreakpointAccessTypes(lldb::SBMemoryRegionInfo region) {
+  std::vector<protocol::DataBreakpointAccessType> types;
+  if (region.IsReadable())
+    types.emplace_back(protocol::eDataBreakpointAccessTypeRead);
+  if (region.IsWritable())
+    types.emplace_back(protocol::eDataBreakpointAccessTypeWrite);
+  if (region.IsReadable() && region.IsWritable())
+    types.emplace_back(protocol::eDataBreakpointAccessTypeReadWrite);
+
+  return types;
+}
+
+llvm::Expected<protocol::DataBreakpointInfoResponseBody>
+HandleDataBreakpointBytes(DAP &dap,
+                          const protocol::DataBreakpointInfoArguments &args) {
+  const llvm::StringRef raw_address = args.name;
+
+  lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
+  if (raw_address.getAsInteger<lldb::addr_t>(0, load_addr)) {
+    return llvm::make_error<DAPError>(llvm::formatv("invalid address"),
+                                      llvm::inconvertibleErrorCode(), false);
+  }
+
+  if (lldb::SBAddress address(load_addr, dap.target); !address.IsValid()) {
+    return llvm::make_error<DAPError>(
+        llvm::formatv("address {:x} does not exist in the debuggee", load_addr),
+        llvm::inconvertibleErrorCode(), false);
+  }
+
+  const uint32_t byte_size =
+      args.bytes.value_or(dap.target.GetAddressByteSize());
+
+  lldb::SBMemoryRegionInfo region;
+  lldb::SBError err =
+      dap.target.GetProcess().GetMemoryRegionInfo(load_addr, region);
+  std::vector<protocol::DataBreakpointAccessType> access_types =
+      GetBreakpointAccessTypes(region);
+
+  protocol::DataBreakpointInfoResponseBody response;
+  if (err.Fail()) {
+    response.dataId = std::nullopt;
+    response.description = err.GetCString();
+    return response;
+  }
+
+  if (access_types.empty()) {
+    response.dataId = std::nullopt;
+    response.description = llvm::formatv(
+        "memory region for address {} has no read or write permissions",
+        load_addr);
+    return response;
+  }
+
+  response.dataId = llvm::formatv("{:x-}/{}", load_addr, byte_size);
+  response.description =
+      llvm::formatv("{} bytes at {:x}", byte_size, load_addr);
+  response.accessTypes = std::move(access_types);
+
+  return response;
+}
+} // namespace
+
 /// Obtains information on a possible data breakpoint that could be set on an
 /// expression or variable. Clients should only call this request if the
 /// corresponding capability supportsDataBreakpoints is true.
 llvm::Expected<protocol::DataBreakpointInfoResponseBody>
 DataBreakpointInfoRequestHandler::Run(
     const protocol::DataBreakpointInfoArguments &args) const {
+
+  if (args.asAddress.value_or(false))
+    return HandleDataBreakpointBytes(dap, args);
+
   protocol::DataBreakpointInfoResponseBody response;
   lldb::SBFrame frame = dap.GetLLDBFrame(args.frameId.value_or(UINT64_MAX));
   lldb::SBValue variable = dap.variables.FindVariable(
@@ -40,7 +107,7 @@ DataBreakpointInfoRequestHandler::Run(
       is_data_ok = false;
       response.description = "variable size is 0";
     } else {
-      addr = llvm::utohexstr(load_addr);
+      addr = llvm::utohexstr(load_addr, /*lowerCase=*/true);
       size = llvm::utostr(byte_size);
     }
   } else if (args.variablesReference.value_or(0) == 0 && frame.IsValid()) {
@@ -57,7 +124,7 @@ DataBreakpointInfoRequestHandler::Run(
       lldb::SBData data = value.GetPointeeData();
       if (data.IsValid()) {
         size = llvm::utostr(data.GetByteSize());
-        addr = llvm::utohexstr(load_addr);
+        addr = llvm::utohexstr(load_addr, /*lowerCase=*/true);
         lldb::SBMemoryRegionInfo region;
         lldb::SBError err =
             dap.target.GetProcess().GetMemoryRegionInfo(load_addr, region);
@@ -86,7 +153,7 @@ DataBreakpointInfoRequestHandler::Run(
     response.accessTypes = {protocol::eDataBreakpointAccessTypeRead,
                             protocol::eDataBreakpointAccessTypeWrite,
                             protocol::eDataBreakpointAccessTypeReadWrite};
-    response.description = size + " bytes at " + addr + " " + args.name;
+    response.description = size + " bytes at 0x" + addr + " " + args.name;
   }
 
   return response;
