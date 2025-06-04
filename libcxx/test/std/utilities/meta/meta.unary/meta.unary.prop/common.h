@@ -85,6 +85,14 @@ public:
   explicit operator int&();
 };
 
+struct NonMovable {
+  NonMovable(NonMovable&&) = delete;
+};
+
+struct ConvertsFromNonMovable {
+  ConvertsFromNonMovable(NonMovable);
+};
+
 #endif
 
 #endif // TEST_META_UNARY_COMP_COMMON_H
