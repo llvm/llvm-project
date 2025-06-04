@@ -1351,30 +1351,28 @@ define bfloat @test_roundeven(bfloat %a) {
 define bfloat @test_maximum(bfloat %a, bfloat %b) {
 ; SM70-LABEL: test_maximum(
 ; SM70:       {
-; SM70-NEXT:    .reg .pred %p<6>;
-; SM70-NEXT:    .reg .b16 %rs<8>;
+; SM70-NEXT:    .reg .pred %p<5>;
+; SM70-NEXT:    .reg .b16 %rs<7>;
 ; SM70-NEXT:    .reg .b32 %r<7>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    ld.param.b16 %rs1, [test_maximum_param_0];
+; SM70-NEXT:    setp.eq.s16 %p1, %rs1, 0;
 ; SM70-NEXT:    ld.param.b16 %rs2, [test_maximum_param_1];
+; SM70-NEXT:    selp.b16 %rs3, %rs1, %rs2, %p1;
 ; SM70-NEXT:    cvt.u32.u16 %r1, %rs2;
 ; SM70-NEXT:    shl.b32 %r2, %r1, 16;
 ; SM70-NEXT:    cvt.u32.u16 %r3, %rs1;
 ; SM70-NEXT:    shl.b32 %r4, %r3, 16;
-; SM70-NEXT:    setp.gt.f32 %p1, %r4, %r2;
-; SM70-NEXT:    selp.b16 %rs3, %rs1, %rs2, %p1;
-; SM70-NEXT:    setp.nan.f32 %p2, %r4, %r2;
-; SM70-NEXT:    selp.b16 %rs4, 0x7FC0, %rs3, %p2;
-; SM70-NEXT:    setp.eq.s16 %p3, %rs1, 0;
-; SM70-NEXT:    selp.b16 %rs5, %rs1, %rs4, %p3;
-; SM70-NEXT:    setp.eq.s16 %p4, %rs2, 0;
-; SM70-NEXT:    selp.b16 %rs6, %rs2, %rs5, %p4;
-; SM70-NEXT:    cvt.u32.u16 %r5, %rs4;
+; SM70-NEXT:    setp.gt.f32 %p2, %r4, %r2;
+; SM70-NEXT:    selp.b16 %rs4, %rs1, %rs2, %p2;
+; SM70-NEXT:    setp.nan.f32 %p3, %r4, %r2;
+; SM70-NEXT:    selp.b16 %rs5, 0x7FC0, %rs4, %p3;
+; SM70-NEXT:    cvt.u32.u16 %r5, %rs5;
 ; SM70-NEXT:    shl.b32 %r6, %r5, 16;
-; SM70-NEXT:    setp.eq.f32 %p5, %r6, 0f00000000;
-; SM70-NEXT:    selp.b16 %rs7, %rs6, %rs4, %p5;
-; SM70-NEXT:    st.param.b16 [func_retval0], %rs7;
+; SM70-NEXT:    setp.eq.f32 %p4, %r6, 0f00000000;
+; SM70-NEXT:    selp.b16 %rs6, %rs3, %rs5, %p4;
+; SM70-NEXT:    st.param.b16 [func_retval0], %rs6;
 ; SM70-NEXT:    ret;
 ;
 ; SM80-LABEL: test_maximum(
@@ -1475,48 +1473,44 @@ define bfloat @test_maxnum(bfloat %a, bfloat %b) {
 define <2 x bfloat> @test_maximum_v2(<2 x bfloat> %a, <2 x bfloat> %b) {
 ; SM70-LABEL: test_maximum_v2(
 ; SM70:       {
-; SM70-NEXT:    .reg .pred %p<11>;
-; SM70-NEXT:    .reg .b16 %rs<19>;
+; SM70-NEXT:    .reg .pred %p<9>;
+; SM70-NEXT:    .reg .b16 %rs<15>;
 ; SM70-NEXT:    .reg .b32 %r<16>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    ld.param.b32 %r1, [test_maximum_v2_param_0];
 ; SM70-NEXT:    ld.param.b32 %r2, [test_maximum_v2_param_1];
 ; SM70-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
+; SM70-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
+; SM70-NEXT:    setp.eq.s16 %p1, %rs4, 0;
+; SM70-NEXT:    selp.b16 %rs7, %rs4, %rs2, %p1;
 ; SM70-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM70-NEXT:    shl.b32 %r4, %r3, 16;
-; SM70-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
 ; SM70-NEXT:    cvt.u32.u16 %r5, %rs4;
 ; SM70-NEXT:    shl.b32 %r6, %r5, 16;
-; SM70-NEXT:    setp.gt.f32 %p1, %r6, %r4;
-; SM70-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
-; SM70-NEXT:    setp.nan.f32 %p2, %r6, %r4;
-; SM70-NEXT:    selp.b16 %rs6, 0x7FC0, %rs5, %p2;
-; SM70-NEXT:    setp.eq.s16 %p3, %rs4, 0;
-; SM70-NEXT:    selp.b16 %rs9, %rs4, %rs6, %p3;
-; SM70-NEXT:    setp.eq.s16 %p4, %rs2, 0;
-; SM70-NEXT:    selp.b16 %rs12, %rs2, %rs9, %p4;
-; SM70-NEXT:    cvt.u32.u16 %r7, %rs6;
+; SM70-NEXT:    setp.gt.f32 %p2, %r6, %r4;
+; SM70-NEXT:    selp.b16 %rs8, %rs4, %rs2, %p2;
+; SM70-NEXT:    setp.nan.f32 %p3, %r6, %r4;
+; SM70-NEXT:    selp.b16 %rs9, 0x7FC0, %rs8, %p3;
+; SM70-NEXT:    cvt.u32.u16 %r7, %rs9;
 ; SM70-NEXT:    shl.b32 %r8, %r7, 16;
-; SM70-NEXT:    setp.eq.f32 %p5, %r8, 0f00000000;
-; SM70-NEXT:    selp.b16 %rs13, %rs12, %rs6, %p5;
+; SM70-NEXT:    setp.eq.f32 %p4, %r8, 0f00000000;
+; SM70-NEXT:    selp.b16 %rs10, %rs7, %rs9, %p4;
+; SM70-NEXT:    setp.eq.s16 %p5, %rs3, 0;
+; SM70-NEXT:    selp.b16 %rs11, %rs3, %rs1, %p5;
 ; SM70-NEXT:    cvt.u32.u16 %r9, %rs1;
 ; SM70-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM70-NEXT:    cvt.u32.u16 %r11, %rs3;
 ; SM70-NEXT:    shl.b32 %r12, %r11, 16;
 ; SM70-NEXT:    setp.gt.f32 %p6, %r12, %r10;
-; SM70-NEXT:    selp.b16 %rs14, %rs3, %rs1, %p6;
+; SM70-NEXT:    selp.b16 %rs12, %rs3, %rs1, %p6;
 ; SM70-NEXT:    setp.nan.f32 %p7, %r12, %r10;
-; SM70-NEXT:    selp.b16 %rs15, 0x7FC0, %rs14, %p7;
-; SM70-NEXT:    setp.eq.s16 %p8, %rs3, 0;
-; SM70-NEXT:    selp.b16 %rs16, %rs3, %rs15, %p8;
-; SM70-NEXT:    setp.eq.s16 %p9, %rs1, 0;
-; SM70-NEXT:    selp.b16 %rs17, %rs1, %rs16, %p9;
-; SM70-NEXT:    cvt.u32.u16 %r13, %rs15;
+; SM70-NEXT:    selp.b16 %rs13, 0x7FC0, %rs12, %p7;
+; SM70-NEXT:    cvt.u32.u16 %r13, %rs13;
 ; SM70-NEXT:    shl.b32 %r14, %r13, 16;
-; SM70-NEXT:    setp.eq.f32 %p10, %r14, 0f00000000;
-; SM70-NEXT:    selp.b16 %rs18, %rs17, %rs15, %p10;
-; SM70-NEXT:    mov.b32 %r15, {%rs18, %rs13};
+; SM70-NEXT:    setp.eq.f32 %p8, %r14, 0f00000000;
+; SM70-NEXT:    selp.b16 %rs14, %rs11, %rs13, %p8;
+; SM70-NEXT:    mov.b32 %r15, {%rs14, %rs10};
 ; SM70-NEXT:    st.param.b32 [func_retval0], %r15;
 ; SM70-NEXT:    ret;
 ;

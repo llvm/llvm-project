@@ -317,6 +317,8 @@ Non-comprehensive list of changes in this release
   ``sizeof`` or ``typeof`` expression. (#GH138444)
 - Deprecation warning is emitted for the deprecated ``__reference_binds_to_temporary`` intrinsic.
   ``__reference_constructs_from_temporary`` should be used instead. (#GH44056)
+- Added `__builtin_get_vtable_pointer` to directly load the primary vtable pointer from a
+  polymorphic object.
 
 New Compiler Flags
 ------------------
@@ -611,6 +613,8 @@ Improvements to Clang's diagnostics
 - Split diagnosis of implicit integer comparison on negation to a new
   diagnostic group ``-Wimplicit-int-comparison-on-negation``, grouped under
   ``-Wimplicit-int-conversion``, so user can turn it off independently.
+
+- Improved the FixIts for unused lambda captures.
 
 Improvements to Clang's time-trace
 ----------------------------------

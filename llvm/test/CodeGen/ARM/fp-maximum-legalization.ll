@@ -4,7 +4,7 @@
 define double @maximum_double(double %x, double %y) nounwind {
 ; CHECK-LABEL: maximum_double:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    sub sp, sp, #8
 ; CHECK-NEXT:    vmov d17, r2, r3
 ; CHECK-NEXT:    mov r2, #0
 ; CHECK-NEXT:    vmov d16, r0, r1
@@ -12,32 +12,26 @@ define double @maximum_double(double %x, double %y) nounwind {
 ; CHECK-NEXT:    vcmp.f64 d16, d17
 ; CHECK-NEXT:    mov r0, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vstr d16, [sp, #8]
-; CHECK-NEXT:    vstr d17, [sp]
-; CHECK-NEXT:    ldrb r1, [sp, #15]
-; CHECK-NEXT:    vmov.f64 d19, d17
-; CHECK-NEXT:    clz r1, r1
 ; CHECK-NEXT:    vldr d18, .LCPI0_0
+; CHECK-NEXT:    vmov.f64 d19, d17
+; CHECK-NEXT:    vstr d16, [sp]
+; CHECK-NEXT:    ldrb r1, [sp, #7]
+; CHECK-NEXT:    clz r1, r1
 ; CHECK-NEXT:    movwvs r2, #1
 ; CHECK-NEXT:    movwgt r3, #1
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    vmovne.f64 d19, d16
 ; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    ldrb r2, [sp, #7]
 ; CHECK-NEXT:    vmovne.f64 d19, d18
 ; CHECK-NEXT:    lsrs r1, r1, #5
-; CHECK-NEXT:    clz r1, r2
 ; CHECK-NEXT:    vcmp.f64 d19, #0
-; CHECK-NEXT:    vmov.f64 d18, d19
-; CHECK-NEXT:    vmovne.f64 d18, d16
-; CHECK-NEXT:    lsrs r1, r1, #5
-; CHECK-NEXT:    vmovne.f64 d18, d17
+; CHECK-NEXT:    vmovne.f64 d17, d16
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    movweq r0, #1
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    vmovne.f64 d19, d18
+; CHECK-NEXT:    vmovne.f64 d19, d17
 ; CHECK-NEXT:    vmov r0, r1, d19
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    add sp, sp, #8
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 3
 ; CHECK-NEXT:  @ %bb.1:

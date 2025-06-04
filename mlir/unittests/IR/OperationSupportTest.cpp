@@ -315,6 +315,7 @@ TEST(OperandStorageTest, PopulateDefaultAttrs) {
 TEST(OperationEquivalenceTest, HashWorksWithFlags) {
   MLIRContext context;
   context.getOrLoadDialect<test::TestDialect>();
+  OpBuilder b(&context);
 
   auto *op1 = createOp(&context);
   // `op1` has an unknown loc.
@@ -325,12 +326,36 @@ TEST(OperationEquivalenceTest, HashWorksWithFlags) {
         op, OperationEquivalence::ignoreHashValue,
         OperationEquivalence::ignoreHashValue, flags);
   };
+  // Check ignore location.
   EXPECT_EQ(getHash(op1, OperationEquivalence::IgnoreLocations),
             getHash(op2, OperationEquivalence::IgnoreLocations));
   EXPECT_NE(getHash(op1, OperationEquivalence::None),
             getHash(op2, OperationEquivalence::None));
+  op1->setLoc(NameLoc::get(StringAttr::get(&context, "foo")));
+  // Check ignore discardable dictionary attributes.
+  SmallVector<NamedAttribute> newAttrs = {
+      b.getNamedAttr("foo", b.getStringAttr("f"))};
+  op1->setAttrs(newAttrs);
+  EXPECT_EQ(getHash(op1, OperationEquivalence::IgnoreDiscardableAttrs),
+            getHash(op2, OperationEquivalence::IgnoreDiscardableAttrs));
+  EXPECT_NE(getHash(op1, OperationEquivalence::None),
+            getHash(op2, OperationEquivalence::None));
   op1->destroy();
   op2->destroy();
+
+  // Check ignore properties.
+  auto req1 = b.getI32IntegerAttr(10);
+  Operation *opWithProperty1 = b.create<test::OpAttrMatch1>(
+      b.getUnknownLoc(), req1, nullptr, nullptr, req1);
+  auto req2 = b.getI32IntegerAttr(60);
+  Operation *opWithProperty2 = b.create<test::OpAttrMatch1>(
+      b.getUnknownLoc(), req2, nullptr, nullptr, req2);
+  EXPECT_EQ(getHash(opWithProperty1, OperationEquivalence::IgnoreProperties),
+            getHash(opWithProperty2, OperationEquivalence::IgnoreProperties));
+  EXPECT_NE(getHash(opWithProperty1, OperationEquivalence::None),
+            getHash(opWithProperty2, OperationEquivalence::None));
+  opWithProperty1->destroy();
+  opWithProperty2->destroy();
 }
 
 } // namespace

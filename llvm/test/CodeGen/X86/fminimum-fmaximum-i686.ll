@@ -15,63 +15,52 @@ define half @maximum_half(half %x, half %y) nounwind {
 ; CHECK-NEXT:    fstps {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    calll __extendhfsf2
 ; CHECK-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
-; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:    fsts {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:    fucom %st(1)
-; CHECK-NEXT:    fnstsw %ax
-; CHECK-NEXT:    # kill: def $ah killed $ah killed $ax
-; CHECK-NEXT:    sahf
+; CHECK-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fld %st(0)
-; CHECK-NEXT:    ja .LBB0_2
+; CHECK-NEXT:    je .LBB0_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    fstp %st(0)
 ; CHECK-NEXT:    fld %st(1)
 ; CHECK-NEXT:  .LBB0_2:
-; CHECK-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; CHECK-NEXT:    jp .LBB0_4
-; CHECK-NEXT:  # %bb.3:
-; CHECK-NEXT:    fstp %st(0)
-; CHECK-NEXT:    fldz
 ; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:  .LBB0_4:
-; CHECK-NEXT:    fstp %st(1)
-; CHECK-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    je .LBB0_6
-; CHECK-NEXT:  # %bb.5:
-; CHECK-NEXT:    fstp %st(1)
-; CHECK-NEXT:    fld %st(0)
-; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:  .LBB0_6:
-; CHECK-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    je .LBB0_8
-; CHECK-NEXT:  # %bb.7:
-; CHECK-NEXT:    fstp %st(2)
-; CHECK-NEXT:    fldz
-; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:    fxch %st(2)
-; CHECK-NEXT:  .LBB0_8:
-; CHECK-NEXT:    fstp %st(1)
-; CHECK-NEXT:    fldz
-; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:    fucom %st(1)
-; CHECK-NEXT:    fstp %st(1)
+; CHECK-NEXT:    fucom %st(2)
 ; CHECK-NEXT:    fnstsw %ax
 ; CHECK-NEXT:    # kill: def $ah killed $ah killed $ax
 ; CHECK-NEXT:    sahf
-; CHECK-NEXT:    jne .LBB0_9
-; CHECK-NEXT:  # %bb.10:
-; CHECK-NEXT:    jp .LBB0_13
-; CHECK-NEXT:  # %bb.11:
+; CHECK-NEXT:    ja .LBB0_4
+; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    fstp %st(0)
-; CHECK-NEXT:    jmp .LBB0_12
-; CHECK-NEXT:  .LBB0_9:
-; CHECK-NEXT:    fstp %st(1)
-; CHECK-NEXT:  .LBB0_12:
 ; CHECK-NEXT:    fldz
-; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:  .LBB0_13:
+; CHECK-NEXT:    fxch %st(2)
+; CHECK-NEXT:  .LBB0_4:
+; CHECK-NEXT:    fstp %st(2)
+; CHECK-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; CHECK-NEXT:    jp .LBB0_6
+; CHECK-NEXT:  # %bb.5:
+; CHECK-NEXT:    fstp %st(0)
+; CHECK-NEXT:    fldz
+; CHECK-NEXT:    fxch %st(2)
+; CHECK-NEXT:  .LBB0_6:
+; CHECK-NEXT:    fstp %st(2)
+; CHECK-NEXT:    fldz
+; CHECK-NEXT:    fxch %st(2)
+; CHECK-NEXT:    fucom %st(2)
+; CHECK-NEXT:    fstp %st(2)
+; CHECK-NEXT:    fnstsw %ax
+; CHECK-NEXT:    # kill: def $ah killed $ah killed $ax
+; CHECK-NEXT:    sahf
+; CHECK-NEXT:    jne .LBB0_7
+; CHECK-NEXT:  # %bb.8:
+; CHECK-NEXT:    jp .LBB0_11
+; CHECK-NEXT:  # %bb.9:
 ; CHECK-NEXT:    fstp %st(1)
+; CHECK-NEXT:    jmp .LBB0_10
+; CHECK-NEXT:  .LBB0_7:
+; CHECK-NEXT:    fstp %st(0)
+; CHECK-NEXT:  .LBB0_10:
+; CHECK-NEXT:    fldz
+; CHECK-NEXT:  .LBB0_11:
+; CHECK-NEXT:    fstp %st(0)
 ; CHECK-NEXT:    fstps (%esp)
 ; CHECK-NEXT:    calll __truncsfhf2
 ; CHECK-NEXT:    addl $24, %esp
@@ -84,68 +73,57 @@ define half @maximum_half(half %x, half %y) nounwind {
 define float @maximum_float(float %x, float %y) nounwind {
 ; CHECK-LABEL: maximum_float:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subl $8, %esp
+; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fsts (%esp)
-; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:    fsts {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:    fucom %st(1)
-; CHECK-NEXT:    fnstsw %ax
-; CHECK-NEXT:    # kill: def $ah killed $ah killed $ax
-; CHECK-NEXT:    sahf
+; CHECK-NEXT:    cmpl $0, (%esp)
 ; CHECK-NEXT:    fld %st(0)
-; CHECK-NEXT:    ja .LBB1_2
+; CHECK-NEXT:    je .LBB1_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    fstp %st(0)
 ; CHECK-NEXT:    fld %st(1)
 ; CHECK-NEXT:  .LBB1_2:
-; CHECK-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; CHECK-NEXT:    jp .LBB1_4
-; CHECK-NEXT:  # %bb.3:
-; CHECK-NEXT:    fstp %st(0)
-; CHECK-NEXT:    fldz
 ; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:  .LBB1_4:
-; CHECK-NEXT:    fstp %st(1)
-; CHECK-NEXT:    cmpl $0, (%esp)
-; CHECK-NEXT:    je .LBB1_6
-; CHECK-NEXT:  # %bb.5:
-; CHECK-NEXT:    fstp %st(1)
-; CHECK-NEXT:    fld %st(0)
-; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:  .LBB1_6:
-; CHECK-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    je .LBB1_8
-; CHECK-NEXT:  # %bb.7:
-; CHECK-NEXT:    fstp %st(2)
-; CHECK-NEXT:    fldz
-; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:    fxch %st(2)
-; CHECK-NEXT:  .LBB1_8:
-; CHECK-NEXT:    fstp %st(1)
-; CHECK-NEXT:    fldz
-; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:    fucom %st(1)
-; CHECK-NEXT:    fstp %st(1)
+; CHECK-NEXT:    fucom %st(2)
 ; CHECK-NEXT:    fnstsw %ax
 ; CHECK-NEXT:    # kill: def $ah killed $ah killed $ax
 ; CHECK-NEXT:    sahf
-; CHECK-NEXT:    jne .LBB1_9
-; CHECK-NEXT:  # %bb.10:
-; CHECK-NEXT:    jp .LBB1_13
-; CHECK-NEXT:  # %bb.11:
+; CHECK-NEXT:    ja .LBB1_4
+; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    fstp %st(0)
-; CHECK-NEXT:    jmp .LBB1_12
-; CHECK-NEXT:  .LBB1_9:
-; CHECK-NEXT:    fstp %st(1)
-; CHECK-NEXT:  .LBB1_12:
 ; CHECK-NEXT:    fldz
-; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:  .LBB1_13:
+; CHECK-NEXT:    fxch %st(2)
+; CHECK-NEXT:  .LBB1_4:
+; CHECK-NEXT:    fstp %st(2)
+; CHECK-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; CHECK-NEXT:    jp .LBB1_6
+; CHECK-NEXT:  # %bb.5:
+; CHECK-NEXT:    fstp %st(0)
+; CHECK-NEXT:    fldz
+; CHECK-NEXT:    fxch %st(2)
+; CHECK-NEXT:  .LBB1_6:
+; CHECK-NEXT:    fstp %st(2)
+; CHECK-NEXT:    fldz
+; CHECK-NEXT:    fxch %st(2)
+; CHECK-NEXT:    fucom %st(2)
+; CHECK-NEXT:    fstp %st(2)
+; CHECK-NEXT:    fnstsw %ax
+; CHECK-NEXT:    # kill: def $ah killed $ah killed $ax
+; CHECK-NEXT:    sahf
+; CHECK-NEXT:    jne .LBB1_7
+; CHECK-NEXT:  # %bb.8:
+; CHECK-NEXT:    jp .LBB1_11
+; CHECK-NEXT:  # %bb.9:
 ; CHECK-NEXT:    fstp %st(1)
-; CHECK-NEXT:    addl $8, %esp
+; CHECK-NEXT:    jmp .LBB1_10
+; CHECK-NEXT:  .LBB1_7:
+; CHECK-NEXT:    fstp %st(0)
+; CHECK-NEXT:  .LBB1_10:
+; CHECK-NEXT:    fldz
+; CHECK-NEXT:  .LBB1_11:
+; CHECK-NEXT:    fstp %st(0)
+; CHECK-NEXT:    popl %eax
 ; CHECK-NEXT:    retl
   %res = call float @llvm.maximum.f32(float %x, float %y)
   ret float %res
@@ -154,68 +132,57 @@ define float @maximum_float(float %x, float %y) nounwind {
 define double @maximum_double(double %x, double %y) nounwind {
 ; CHECK-LABEL: maximum_double:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subl $20, %esp
+; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fstl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fxch %st(1)
 ; CHECK-NEXT:    fstl (%esp)
-; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:    fucom %st(1)
-; CHECK-NEXT:    fnstsw %ax
-; CHECK-NEXT:    # kill: def $ah killed $ah killed $ax
-; CHECK-NEXT:    sahf
+; CHECK-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fld %st(0)
-; CHECK-NEXT:    ja .LBB2_2
+; CHECK-NEXT:    je .LBB2_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    fstp %st(0)
 ; CHECK-NEXT:    fld %st(1)
 ; CHECK-NEXT:  .LBB2_2:
-; CHECK-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; CHECK-NEXT:    jp .LBB2_4
-; CHECK-NEXT:  # %bb.3:
-; CHECK-NEXT:    fstp %st(0)
-; CHECK-NEXT:    fldz
 ; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:  .LBB2_4:
-; CHECK-NEXT:    fstp %st(1)
-; CHECK-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    je .LBB2_6
-; CHECK-NEXT:  # %bb.5:
-; CHECK-NEXT:    fstp %st(1)
-; CHECK-NEXT:    fld %st(0)
-; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:  .LBB2_6:
-; CHECK-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    je .LBB2_8
-; CHECK-NEXT:  # %bb.7:
-; CHECK-NEXT:    fstp %st(2)
-; CHECK-NEXT:    fldz
-; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:    fxch %st(2)
-; CHECK-NEXT:  .LBB2_8:
-; CHECK-NEXT:    fstp %st(1)
-; CHECK-NEXT:    fldz
-; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:    fucom %st(1)
-; CHECK-NEXT:    fstp %st(1)
+; CHECK-NEXT:    fucom %st(2)
 ; CHECK-NEXT:    fnstsw %ax
 ; CHECK-NEXT:    # kill: def $ah killed $ah killed $ax
 ; CHECK-NEXT:    sahf
-; CHECK-NEXT:    jne .LBB2_9
-; CHECK-NEXT:  # %bb.10:
-; CHECK-NEXT:    jp .LBB2_13
-; CHECK-NEXT:  # %bb.11:
+; CHECK-NEXT:    ja .LBB2_4
+; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    fstp %st(0)
-; CHECK-NEXT:    jmp .LBB2_12
-; CHECK-NEXT:  .LBB2_9:
-; CHECK-NEXT:    fstp %st(1)
-; CHECK-NEXT:  .LBB2_12:
 ; CHECK-NEXT:    fldz
-; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:  .LBB2_13:
+; CHECK-NEXT:    fxch %st(2)
+; CHECK-NEXT:  .LBB2_4:
+; CHECK-NEXT:    fstp %st(2)
+; CHECK-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; CHECK-NEXT:    jp .LBB2_6
+; CHECK-NEXT:  # %bb.5:
+; CHECK-NEXT:    fstp %st(0)
+; CHECK-NEXT:    fldz
+; CHECK-NEXT:    fxch %st(2)
+; CHECK-NEXT:  .LBB2_6:
+; CHECK-NEXT:    fstp %st(2)
+; CHECK-NEXT:    fldz
+; CHECK-NEXT:    fxch %st(2)
+; CHECK-NEXT:    fucom %st(2)
+; CHECK-NEXT:    fstp %st(2)
+; CHECK-NEXT:    fnstsw %ax
+; CHECK-NEXT:    # kill: def $ah killed $ah killed $ax
+; CHECK-NEXT:    sahf
+; CHECK-NEXT:    jne .LBB2_7
+; CHECK-NEXT:  # %bb.8:
+; CHECK-NEXT:    jp .LBB2_11
+; CHECK-NEXT:  # %bb.9:
 ; CHECK-NEXT:    fstp %st(1)
-; CHECK-NEXT:    addl $20, %esp
+; CHECK-NEXT:    jmp .LBB2_10
+; CHECK-NEXT:  .LBB2_7:
+; CHECK-NEXT:    fstp %st(0)
+; CHECK-NEXT:  .LBB2_10:
+; CHECK-NEXT:    fldz
+; CHECK-NEXT:  .LBB2_11:
+; CHECK-NEXT:    fstp %st(0)
+; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
   %res = call double @llvm.maximum.f64(double %x, double %y)
   ret double %res
@@ -272,63 +239,57 @@ define half @minimum_half(half %x, half %y) nounwind {
 ; CHECK-NEXT:    fstps {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    calll __extendhfsf2
 ; CHECK-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
-; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:    fsts {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fucom %st(1)
-; CHECK-NEXT:    fnstsw %ax
-; CHECK-NEXT:    # kill: def $ah killed $ah killed $ax
-; CHECK-NEXT:    sahf
-; CHECK-NEXT:    fld %st(1)
-; CHECK-NEXT:    ja .LBB4_2
+; CHECK-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fld %st(0)
+; CHECK-NEXT:    jne .LBB4_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    fstp %st(0)
-; CHECK-NEXT:    fld %st(0)
+; CHECK-NEXT:    fld %st(1)
 ; CHECK-NEXT:  .LBB4_2:
 ; CHECK-NEXT:    fxch %st(2)
 ; CHECK-NEXT:    fucom %st(1)
 ; CHECK-NEXT:    fnstsw %ax
 ; CHECK-NEXT:    # kill: def $ah killed $ah killed $ax
 ; CHECK-NEXT:    sahf
-; CHECK-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; CHECK-NEXT:    jp .LBB4_4
+; CHECK-NEXT:    fld %st(1)
+; CHECK-NEXT:    ja .LBB4_4
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    fstp %st(0)
-; CHECK-NEXT:    fldz
-; CHECK-NEXT:    fxch %st(3)
+; CHECK-NEXT:    fld %st(0)
 ; CHECK-NEXT:  .LBB4_4:
-; CHECK-NEXT:    fstp %st(3)
-; CHECK-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    jne .LBB4_6
-; CHECK-NEXT:  # %bb.5:
-; CHECK-NEXT:    fstp %st(0)
-; CHECK-NEXT:    fld %st(1)
-; CHECK-NEXT:  .LBB4_6:
-; CHECK-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    jne .LBB4_8
-; CHECK-NEXT:  # %bb.7:
-; CHECK-NEXT:    fstp %st(1)
-; CHECK-NEXT:    fldz
-; CHECK-NEXT:  .LBB4_8:
-; CHECK-NEXT:    fstp %st(0)
-; CHECK-NEXT:    fldz
 ; CHECK-NEXT:    fxch %st(2)
-; CHECK-NEXT:    fucom %st(2)
-; CHECK-NEXT:    fstp %st(2)
+; CHECK-NEXT:    fucompp
 ; CHECK-NEXT:    fnstsw %ax
 ; CHECK-NEXT:    # kill: def $ah killed $ah killed $ax
 ; CHECK-NEXT:    sahf
-; CHECK-NEXT:    jne .LBB4_9
-; CHECK-NEXT:  # %bb.10:
-; CHECK-NEXT:    jp .LBB4_13
-; CHECK-NEXT:  # %bb.11:
-; CHECK-NEXT:    fstp %st(1)
-; CHECK-NEXT:    jmp .LBB4_12
-; CHECK-NEXT:  .LBB4_9:
+; CHECK-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; CHECK-NEXT:    jp .LBB4_6
+; CHECK-NEXT:  # %bb.5:
 ; CHECK-NEXT:    fstp %st(0)
-; CHECK-NEXT:  .LBB4_12:
 ; CHECK-NEXT:    fldz
-; CHECK-NEXT:  .LBB4_13:
+; CHECK-NEXT:    fxch %st(1)
+; CHECK-NEXT:  .LBB4_6:
+; CHECK-NEXT:    fstp %st(1)
+; CHECK-NEXT:    fldz
+; CHECK-NEXT:    fxch %st(1)
+; CHECK-NEXT:    fucom %st(1)
+; CHECK-NEXT:    fstp %st(1)
+; CHECK-NEXT:    fnstsw %ax
+; CHECK-NEXT:    # kill: def $ah killed $ah killed $ax
+; CHECK-NEXT:    sahf
+; CHECK-NEXT:    jne .LBB4_7
+; CHECK-NEXT:  # %bb.8:
+; CHECK-NEXT:    jp .LBB4_11
+; CHECK-NEXT:  # %bb.9:
 ; CHECK-NEXT:    fstp %st(0)
+; CHECK-NEXT:    jmp .LBB4_10
+; CHECK-NEXT:  .LBB4_7:
+; CHECK-NEXT:    fstp %st(1)
+; CHECK-NEXT:  .LBB4_10:
+; CHECK-NEXT:    fldz
+; CHECK-NEXT:    fxch %st(1)
+; CHECK-NEXT:  .LBB4_11:
+; CHECK-NEXT:    fstp %st(1)
 ; CHECK-NEXT:    fstps (%esp)
 ; CHECK-NEXT:    calll __truncsfhf2
 ; CHECK-NEXT:    addl $24, %esp
@@ -341,68 +302,62 @@ define half @minimum_half(half %x, half %y) nounwind {
 define float @minimum_float(float %x, float %y) nounwind {
 ; CHECK-LABEL: minimum_float:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subl $8, %esp
+; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fsts (%esp)
-; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:    fsts {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fucom %st(1)
-; CHECK-NEXT:    fnstsw %ax
-; CHECK-NEXT:    # kill: def $ah killed $ah killed $ax
-; CHECK-NEXT:    sahf
-; CHECK-NEXT:    fld %st(1)
-; CHECK-NEXT:    ja .LBB5_2
+; CHECK-NEXT:    cmpl $0, (%esp)
+; CHECK-NEXT:    fld %st(0)
+; CHECK-NEXT:    jne .LBB5_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    fstp %st(0)
-; CHECK-NEXT:    fld %st(0)
+; CHECK-NEXT:    fld %st(1)
 ; CHECK-NEXT:  .LBB5_2:
 ; CHECK-NEXT:    fxch %st(2)
 ; CHECK-NEXT:    fucom %st(1)
 ; CHECK-NEXT:    fnstsw %ax
 ; CHECK-NEXT:    # kill: def $ah killed $ah killed $ax
 ; CHECK-NEXT:    sahf
-; CHECK-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; CHECK-NEXT:    jp .LBB5_4
+; CHECK-NEXT:    fld %st(1)
+; CHECK-NEXT:    ja .LBB5_4
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    fstp %st(0)
-; CHECK-NEXT:    fldz
-; CHECK-NEXT:    fxch %st(3)
+; CHECK-NEXT:    fld %st(0)
 ; CHECK-NEXT:  .LBB5_4:
-; CHECK-NEXT:    fstp %st(3)
-; CHECK-NEXT:    cmpl $0, (%esp)
-; CHECK-NEXT:    jne .LBB5_6
-; CHECK-NEXT:  # %bb.5:
-; CHECK-NEXT:    fstp %st(0)
-; CHECK-NEXT:    fld %st(1)
-; CHECK-NEXT:  .LBB5_6:
-; CHECK-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    jne .LBB5_8
-; CHECK-NEXT:  # %bb.7:
-; CHECK-NEXT:    fstp %st(1)
-; CHECK-NEXT:    fldz
-; CHECK-NEXT:  .LBB5_8:
-; CHECK-NEXT:    fstp %st(0)
-; CHECK-NEXT:    fldz
 ; CHECK-NEXT:    fxch %st(2)
-; CHECK-NEXT:    fucom %st(2)
-; CHECK-NEXT:    fstp %st(2)
+; CHECK-NEXT:    fucompp
 ; CHECK-NEXT:    fnstsw %ax
 ; CHECK-NEXT:    # kill: def $ah killed $ah killed $ax
 ; CHECK-NEXT:    sahf
-; CHECK-NEXT:    jne .LBB5_9
-; CHECK-NEXT:  # %bb.10:
-; CHECK-NEXT:    jp .LBB5_13
-; CHECK-NEXT:  # %bb.11:
-; CHECK-NEXT:    fstp %st(1)
-; CHECK-NEXT:    jmp .LBB5_12
-; CHECK-NEXT:  .LBB5_9:
+; CHECK-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; CHECK-NEXT:    jp .LBB5_6
+; CHECK-NEXT:  # %bb.5:
 ; CHECK-NEXT:    fstp %st(0)
-; CHECK-NEXT:  .LBB5_12:
 ; CHECK-NEXT:    fldz
-; CHECK-NEXT:  .LBB5_13:
+; CHECK-NEXT:    fxch %st(1)
+; CHECK-NEXT:  .LBB5_6:
+; CHECK-NEXT:    fstp %st(1)
+; CHECK-NEXT:    fldz
+; CHECK-NEXT:    fxch %st(1)
+; CHECK-NEXT:    fucom %st(1)
+; CHECK-NEXT:    fstp %st(1)
+; CHECK-NEXT:    fnstsw %ax
+; CHECK-NEXT:    # kill: def $ah killed $ah killed $ax
+; CHECK-NEXT:    sahf
+; CHECK-NEXT:    jne .LBB5_7
+; CHECK-NEXT:  # %bb.8:
+; CHECK-NEXT:    jp .LBB5_11
+; CHECK-NEXT:  # %bb.9:
 ; CHECK-NEXT:    fstp %st(0)
-; CHECK-NEXT:    addl $8, %esp
+; CHECK-NEXT:    jmp .LBB5_10
+; CHECK-NEXT:  .LBB5_7:
+; CHECK-NEXT:    fstp %st(1)
+; CHECK-NEXT:  .LBB5_10:
+; CHECK-NEXT:    fldz
+; CHECK-NEXT:    fxch %st(1)
+; CHECK-NEXT:  .LBB5_11:
+; CHECK-NEXT:    fstp %st(1)
+; CHECK-NEXT:    popl %eax
 ; CHECK-NEXT:    retl
   %res = call float @llvm.minimum.f32(float %x, float %y)
   ret float %res
@@ -411,68 +366,62 @@ define float @minimum_float(float %x, float %y) nounwind {
 define double @minimum_double(double %x, double %y) nounwind {
 ; CHECK-LABEL: minimum_double:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subl $20, %esp
+; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fstl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fxch %st(1)
 ; CHECK-NEXT:    fstl (%esp)
-; CHECK-NEXT:    fucom %st(1)
-; CHECK-NEXT:    fnstsw %ax
-; CHECK-NEXT:    # kill: def $ah killed $ah killed $ax
-; CHECK-NEXT:    sahf
-; CHECK-NEXT:    fld %st(1)
-; CHECK-NEXT:    ja .LBB6_2
+; CHECK-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fld %st(0)
+; CHECK-NEXT:    jne .LBB6_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    fstp %st(0)
-; CHECK-NEXT:    fld %st(0)
+; CHECK-NEXT:    fld %st(1)
 ; CHECK-NEXT:  .LBB6_2:
 ; CHECK-NEXT:    fxch %st(2)
 ; CHECK-NEXT:    fucom %st(1)
 ; CHECK-NEXT:    fnstsw %ax
 ; CHECK-NEXT:    # kill: def $ah killed $ah killed $ax
 ; CHECK-NEXT:    sahf
-; CHECK-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; CHECK-NEXT:    jp .LBB6_4
+; CHECK-NEXT:    fld %st(1)
+; CHECK-NEXT:    ja .LBB6_4
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    fstp %st(0)
-; CHECK-NEXT:    fldz
-; CHECK-NEXT:    fxch %st(3)
+; CHECK-NEXT:    fld %st(0)
 ; CHECK-NEXT:  .LBB6_4:
-; CHECK-NEXT:    fstp %st(3)
-; CHECK-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    jne .LBB6_6
-; CHECK-NEXT:  # %bb.5:
-; CHECK-NEXT:    fstp %st(0)
-; CHECK-NEXT:    fld %st(1)
-; CHECK-NEXT:  .LBB6_6:
-; CHECK-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    jne .LBB6_8
-; CHECK-NEXT:  # %bb.7:
-; CHECK-NEXT:    fstp %st(1)
-; CHECK-NEXT:    fldz
-; CHECK-NEXT:  .LBB6_8:
-; CHECK-NEXT:    fstp %st(0)
-; CHECK-NEXT:    fldz
 ; CHECK-NEXT:    fxch %st(2)
-; CHECK-NEXT:    fucom %st(2)
-; CHECK-NEXT:    fstp %st(2)
+; CHECK-NEXT:    fucompp
 ; CHECK-NEXT:    fnstsw %ax
 ; CHECK-NEXT:    # kill: def $ah killed $ah killed $ax
 ; CHECK-NEXT:    sahf
-; CHECK-NEXT:    jne .LBB6_9
-; CHECK-NEXT:  # %bb.10:
-; CHECK-NEXT:    jp .LBB6_13
-; CHECK-NEXT:  # %bb.11:
-; CHECK-NEXT:    fstp %st(1)
-; CHECK-NEXT:    jmp .LBB6_12
-; CHECK-NEXT:  .LBB6_9:
+; CHECK-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; CHECK-NEXT:    jp .LBB6_6
+; CHECK-NEXT:  # %bb.5:
 ; CHECK-NEXT:    fstp %st(0)
-; CHECK-NEXT:  .LBB6_12:
 ; CHECK-NEXT:    fldz
-; CHECK-NEXT:  .LBB6_13:
+; CHECK-NEXT:    fxch %st(1)
+; CHECK-NEXT:  .LBB6_6:
+; CHECK-NEXT:    fstp %st(1)
+; CHECK-NEXT:    fldz
+; CHECK-NEXT:    fxch %st(1)
+; CHECK-NEXT:    fucom %st(1)
+; CHECK-NEXT:    fstp %st(1)
+; CHECK-NEXT:    fnstsw %ax
+; CHECK-NEXT:    # kill: def $ah killed $ah killed $ax
+; CHECK-NEXT:    sahf
+; CHECK-NEXT:    jne .LBB6_7
+; CHECK-NEXT:  # %bb.8:
+; CHECK-NEXT:    jp .LBB6_11
+; CHECK-NEXT:  # %bb.9:
 ; CHECK-NEXT:    fstp %st(0)
-; CHECK-NEXT:    addl $20, %esp
+; CHECK-NEXT:    jmp .LBB6_10
+; CHECK-NEXT:  .LBB6_7:
+; CHECK-NEXT:    fstp %st(1)
+; CHECK-NEXT:  .LBB6_10:
+; CHECK-NEXT:    fldz
+; CHECK-NEXT:    fxch %st(1)
+; CHECK-NEXT:  .LBB6_11:
+; CHECK-NEXT:    fstp %st(1)
+; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
   %res = call double @llvm.minimum.f64(double %x, double %y)
   ret double %res
