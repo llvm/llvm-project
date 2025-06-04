@@ -270,7 +270,7 @@ define <16 x i8> @vsel_i8(<16 x i8> %v1, <16 x i8> %v2) {
 ;
 ; AVX2-LABEL: vsel_i8:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [0,255,255,255,0,255,255,255,0,255,255,255,0,255,255,255]
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,255,255,255,0,255,255,255,0,255,255,255,0,255,255,255]
 ; AVX2-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 entry:

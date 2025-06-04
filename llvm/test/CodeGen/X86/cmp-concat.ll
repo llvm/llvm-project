@@ -93,20 +93,20 @@ define <16 x i8> @cmp_allbits_concat_v16i8(<16 x i8> %x, <16 x i8> %y) {
 define <2 x i64> @cmp_nobits_concat_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: cmp_nobits_concat_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %xmm0, %rax
-; CHECK-NEXT:    pextrq $1, %xmm0, %rcx
+; CHECK-NEXT:    pextrq $1, %xmm0, %rax
+; CHECK-NEXT:    movq %xmm0, %rcx
 ; CHECK-NEXT:    movq %xmm1, %rdx
 ; CHECK-NEXT:    pextrq $1, %xmm1, %rsi
 ; CHECK-NEXT:    xorl %edi, %edi
-; CHECK-NEXT:    orq %rcx, %rsi
+; CHECK-NEXT:    orq %rax, %rsi
 ; CHECK-NEXT:    sete %dil
 ; CHECK-NEXT:    negq %rdi
 ; CHECK-NEXT:    movq %rdi, %xmm1
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    orq %rax, %rdx
-; CHECK-NEXT:    sete %cl
-; CHECK-NEXT:    negq %rcx
-; CHECK-NEXT:    movq %rcx, %xmm0
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    orq %rcx, %rdx
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    negq %rax
+; CHECK-NEXT:    movq %rax, %xmm0
 ; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    retq
   %zx = zext <2 x i64> %x to <2 x i128>

@@ -13,8 +13,9 @@ define void @test1(i64 %x) nounwind {
 ; ENABLED:       # %bb.0: # %entry
 ; ENABLED-NEXT:    shlq $2, %rdi
 ; ENABLED-NEXT:    movl arr1(%rdi,%rdi,2), %ecx
-; ENABLED-NEXT:    leaq arr1+4(%rdi,%rdi,2), %rax
 ; ENABLED-NEXT:    subl arr1+4(%rdi,%rdi,2), %ecx
+; ENABLED-NEXT:    leaq (%rdi,%rdi,2), %rax
+; ENABLED-NEXT:    addq $arr1+4, %rax
 ; ENABLED-NEXT:    addl arr1+8(%rdi,%rdi,2), %ecx
 ; ENABLED-NEXT:    cmpl $2, %ecx
 ; ENABLED-NEXT:    je .LBB0_3
@@ -35,9 +36,11 @@ define void @test1(i64 %x) nounwind {
 ; DISABLED:       # %bb.0: # %entry
 ; DISABLED-NEXT:    shlq $2, %rdi
 ; DISABLED-NEXT:    movl arr1(%rdi,%rdi,2), %edx
-; DISABLED-NEXT:    leaq arr1+4(%rdi,%rdi,2), %rax
+; DISABLED-NEXT:    leaq (%rdi,%rdi,2), %rax
+; DISABLED-NEXT:    addq $arr1+4, %rax
 ; DISABLED-NEXT:    subl arr1+4(%rdi,%rdi,2), %edx
-; DISABLED-NEXT:    leaq arr1+8(%rdi,%rdi,2), %rcx
+; DISABLED-NEXT:    leaq (%rdi,%rdi,2), %rcx
+; DISABLED-NEXT:    addq $arr1+8, %rcx
 ; DISABLED-NEXT:    addl arr1+8(%rdi,%rdi,2), %edx
 ; DISABLED-NEXT:    cmpl $2, %edx
 ; DISABLED-NEXT:    je .LBB0_3
@@ -85,7 +88,8 @@ define void @test2(i64 %x) nounwind optsize {
 ; ENABLED-LABEL: test2:
 ; ENABLED:       # %bb.0: # %entry
 ; ENABLED-NEXT:    shlq $2, %rdi
-; ENABLED-NEXT:    leaq arr1+4(%rdi,%rdi,2), %rax
+; ENABLED-NEXT:    leaq (%rdi,%rdi,2), %rax
+; ENABLED-NEXT:    addq $arr1+4, %rax
 ; ENABLED-NEXT:    movl -4(%rax), %ecx
 ; ENABLED-NEXT:    subl (%rax), %ecx
 ; ENABLED-NEXT:    addl 4(%rax), %ecx
@@ -108,9 +112,11 @@ define void @test2(i64 %x) nounwind optsize {
 ; DISABLED:       # %bb.0: # %entry
 ; DISABLED-NEXT:    shlq $2, %rdi
 ; DISABLED-NEXT:    movl arr1(%rdi,%rdi,2), %edx
-; DISABLED-NEXT:    leaq arr1+4(%rdi,%rdi,2), %rax
+; DISABLED-NEXT:    leaq (%rdi,%rdi,2), %rax
+; DISABLED-NEXT:    addq $arr1+4, %rax
 ; DISABLED-NEXT:    subl arr1+4(%rdi,%rdi,2), %edx
-; DISABLED-NEXT:    leaq arr1+8(%rdi,%rdi,2), %rcx
+; DISABLED-NEXT:    leaq (%rdi,%rdi,2), %rcx
+; DISABLED-NEXT:    addq $arr1+8, %rcx
 ; DISABLED-NEXT:    addl arr1+8(%rdi,%rdi,2), %edx
 ; DISABLED-NEXT:    cmpl $2, %edx
 ; DISABLED-NEXT:    je .LBB1_3
@@ -163,8 +169,10 @@ define void @test3(i64 %x) nounwind optsize {
 ; ENABLED:       # %bb.0: # %entry
 ; ENABLED-NEXT:    movq %rdi, %rax
 ; ENABLED-NEXT:    shlq $7, %rax
-; ENABLED-NEXT:    leaq arr2+132(%rax,%rdi,8), %rcx
-; ENABLED-NEXT:    leaq arr2(%rax,%rdi,8), %rax
+; ENABLED-NEXT:    leaq (%rax,%rdi,8), %rcx
+; ENABLED-NEXT:    addq $arr2+132, %rcx
+; ENABLED-NEXT:    leaq (%rax,%rdi,8), %rax
+; ENABLED-NEXT:    addq $arr2, %rax
 ; ENABLED-NEXT:    movl (%rcx), %edx
 ; ENABLED-NEXT:    addl (%rax), %edx
 ; ENABLED-NEXT:    cmpl $2, %edx
@@ -186,8 +194,10 @@ define void @test3(i64 %x) nounwind optsize {
 ; DISABLED:       # %bb.0: # %entry
 ; DISABLED-NEXT:    movq %rdi, %rsi
 ; DISABLED-NEXT:    shlq $7, %rsi
-; DISABLED-NEXT:    leaq arr2+132(%rsi,%rdi,8), %rcx
-; DISABLED-NEXT:    leaq arr2(%rsi,%rdi,8), %rax
+; DISABLED-NEXT:    leaq (%rsi,%rdi,8), %rcx
+; DISABLED-NEXT:    addq $arr2+132, %rcx
+; DISABLED-NEXT:    leaq (%rsi,%rdi,8), %rax
+; DISABLED-NEXT:    addq $arr2, %rax
 ; DISABLED-NEXT:    movl arr2+132(%rsi,%rdi,8), %edx
 ; DISABLED-NEXT:    addl arr2(%rsi,%rdi,8), %edx
 ; DISABLED-NEXT:    cmpl $2, %edx

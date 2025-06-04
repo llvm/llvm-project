@@ -866,9 +866,9 @@ define <8 x double> @test37_commute(<8 x double> %x, <8 x double> %x1, ptr %ptr)
 define <4 x double> @test38(<4 x double> %x, <4 x double> %x1, ptr %ptr) nounwind {
 ; AVX512-LABEL: test38:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    ## kill: def $ymm1 killed $ymm1 def $zmm1
 ; AVX512-NEXT:    ## kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512-NEXT:    vcmpltpd (%rdi){1to8}, %zmm0, %k1 ## encoding: [0x62,0xf1,0xfd,0x58,0xc2,0x0f,0x01]
+; AVX512-NEXT:    ## kill: def $ymm1 killed $ymm1 def $zmm1
 ; AVX512-NEXT:    vblendmpd %zmm0, %zmm1, %zmm0 {%k1} ## encoding: [0x62,0xf2,0xf5,0x49,0x65,0xc0]
 ; AVX512-NEXT:    ## kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512-NEXT:    retq ## encoding: [0xc3]
@@ -891,9 +891,9 @@ define <4 x double> @test38(<4 x double> %x, <4 x double> %x1, ptr %ptr) nounwin
 define <4 x double> @test38_commute(<4 x double> %x, <4 x double> %x1, ptr %ptr) nounwind {
 ; AVX512-LABEL: test38_commute:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    ## kill: def $ymm1 killed $ymm1 def $zmm1
 ; AVX512-NEXT:    ## kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512-NEXT:    vcmpgtpd (%rdi){1to8}, %zmm0, %k1 ## encoding: [0x62,0xf1,0xfd,0x58,0xc2,0x0f,0x0e]
+; AVX512-NEXT:    ## kill: def $ymm1 killed $ymm1 def $zmm1
 ; AVX512-NEXT:    vblendmpd %zmm0, %zmm1, %zmm0 {%k1} ## encoding: [0x62,0xf2,0xf5,0x49,0x65,0xc0]
 ; AVX512-NEXT:    ## kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512-NEXT:    retq ## encoding: [0xc3]
@@ -916,9 +916,9 @@ define <4 x double> @test38_commute(<4 x double> %x, <4 x double> %x1, ptr %ptr)
 define <2 x double> @test39(<2 x double> %x, <2 x double> %x1, ptr %ptr) nounwind {
 ; AVX512-LABEL: test39:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512-NEXT:    vcmpltpd (%rdi){1to8}, %zmm0, %k1 ## encoding: [0x62,0xf1,0xfd,0x58,0xc2,0x0f,0x01]
+; AVX512-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512-NEXT:    vblendmpd %zmm0, %zmm1, %zmm0 {%k1} ## encoding: [0x62,0xf2,0xf5,0x49,0x65,0xc0]
 ; AVX512-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
@@ -942,9 +942,9 @@ define <2 x double> @test39(<2 x double> %x, <2 x double> %x1, ptr %ptr) nounwin
 define <2 x double> @test39_commute(<2 x double> %x, <2 x double> %x1, ptr %ptr) nounwind {
 ; AVX512-LABEL: test39_commute:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512-NEXT:    vcmpgtpd (%rdi){1to8}, %zmm0, %k1 ## encoding: [0x62,0xf1,0xfd,0x58,0xc2,0x0f,0x0e]
+; AVX512-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512-NEXT:    vblendmpd %zmm0, %zmm1, %zmm0 {%k1} ## encoding: [0x62,0xf2,0xf5,0x49,0x65,0xc0]
 ; AVX512-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
@@ -1001,9 +1001,9 @@ define <16  x float> @test40_commute(<16  x float> %x, <16  x float> %x1, ptr %p
 define <8  x float> @test41(<8  x float> %x, <8  x float> %x1, ptr %ptr) nounwind {
 ; AVX512-LABEL: test41:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    ## kill: def $ymm1 killed $ymm1 def $zmm1
 ; AVX512-NEXT:    ## kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512-NEXT:    vcmpltps (%rdi){1to16}, %zmm0, %k1 ## encoding: [0x62,0xf1,0x7c,0x58,0xc2,0x0f,0x01]
+; AVX512-NEXT:    ## kill: def $ymm1 killed $ymm1 def $zmm1
 ; AVX512-NEXT:    vblendmps %zmm0, %zmm1, %zmm0 {%k1} ## encoding: [0x62,0xf2,0x75,0x49,0x65,0xc0]
 ; AVX512-NEXT:    ## kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512-NEXT:    retq ## encoding: [0xc3]
@@ -1026,9 +1026,9 @@ define <8  x float> @test41(<8  x float> %x, <8  x float> %x1, ptr %ptr) nounwin
 define <8  x float> @test41_commute(<8  x float> %x, <8  x float> %x1, ptr %ptr) nounwind {
 ; AVX512-LABEL: test41_commute:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    ## kill: def $ymm1 killed $ymm1 def $zmm1
 ; AVX512-NEXT:    ## kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512-NEXT:    vcmpgtps (%rdi){1to16}, %zmm0, %k1 ## encoding: [0x62,0xf1,0x7c,0x58,0xc2,0x0f,0x0e]
+; AVX512-NEXT:    ## kill: def $ymm1 killed $ymm1 def $zmm1
 ; AVX512-NEXT:    vblendmps %zmm0, %zmm1, %zmm0 {%k1} ## encoding: [0x62,0xf2,0x75,0x49,0x65,0xc0]
 ; AVX512-NEXT:    ## kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512-NEXT:    retq ## encoding: [0xc3]
@@ -1051,9 +1051,9 @@ define <8  x float> @test41_commute(<8  x float> %x, <8  x float> %x1, ptr %ptr)
 define <4  x float> @test42(<4  x float> %x, <4  x float> %x1, ptr %ptr) nounwind {
 ; AVX512-LABEL: test42:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512-NEXT:    vcmpltps (%rdi){1to16}, %zmm0, %k1 ## encoding: [0x62,0xf1,0x7c,0x58,0xc2,0x0f,0x01]
+; AVX512-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512-NEXT:    vblendmps %zmm0, %zmm1, %zmm0 {%k1} ## encoding: [0x62,0xf2,0x75,0x49,0x65,0xc0]
 ; AVX512-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
@@ -1077,9 +1077,9 @@ define <4  x float> @test42(<4  x float> %x, <4  x float> %x1, ptr %ptr) nounwin
 define <4  x float> @test42_commute(<4  x float> %x, <4  x float> %x1, ptr %ptr) nounwind {
 ; AVX512-LABEL: test42_commute:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512-NEXT:    vcmpgtps (%rdi){1to16}, %zmm0, %k1 ## encoding: [0x62,0xf1,0x7c,0x58,0xc2,0x0f,0x0e]
+; AVX512-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512-NEXT:    vblendmps %zmm0, %zmm1, %zmm0 {%k1} ## encoding: [0x62,0xf2,0x75,0x49,0x65,0xc0]
 ; AVX512-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]

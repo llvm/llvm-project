@@ -197,9 +197,9 @@ define <4 x i1> @neither_pow2_non_zero_4xv64_x_maybe_z(<4 x i64> %x) {
 ; CHECK-AVX2-LABEL: neither_pow2_non_zero_4xv64_x_maybe_z:
 ; CHECK-AVX2:       # %bb.0:
 ; CHECK-AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; CHECK-AVX2-NEXT:    vpaddq %ymm1, %ymm0, %ymm2
-; CHECK-AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm3 = [9223372036854775808,9223372036854775808,9223372036854775808,9223372036854775808]
-; CHECK-AVX2-NEXT:    vpxor %ymm3, %ymm2, %ymm2
+; CHECK-AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [9223372036854775808,9223372036854775808,9223372036854775808,9223372036854775808]
+; CHECK-AVX2-NEXT:    vpaddq %ymm1, %ymm0, %ymm3
+; CHECK-AVX2-NEXT:    vpxor %ymm2, %ymm3, %ymm2
 ; CHECK-AVX2-NEXT:    vpxor %ymm0, %ymm2, %ymm0
 ; CHECK-AVX2-NEXT:    vpcmpgtq %ymm2, %ymm0, %ymm0
 ; CHECK-AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm0

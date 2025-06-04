@@ -24,10 +24,10 @@ define i32 @f(<16 x float> %A, <16 x float> %AA, ptr %B, <8 x double> %C, <8 x d
 ; CHECK-NEXT:    vmovntpd %zmm0, (%rdi)
 ; CHECK-NEXT:    vpaddd %zmm7, %zmm6, %zmm0
 ; CHECK-NEXT:    addl (%rsi), %eax
+; CHECK-NEXT:    vpaddw 80(%rbp), %zmm9, %zmm1
 ; CHECK-NEXT:    vmovntdq %zmm0, (%rdi)
-; CHECK-NEXT:    vpaddw 80(%rbp), %zmm9, %zmm0
 ; CHECK-NEXT:    addl (%rsi), %eax
-; CHECK-NEXT:    vmovntdq %zmm0, (%rdi)
+; CHECK-NEXT:    vmovntdq %zmm1, (%rdi)
 ; CHECK-NEXT:    vpaddb 208(%rbp), %zmm8, %zmm0
 ; CHECK-NEXT:    addl (%rsi), %eax
 ; CHECK-NEXT:    vmovntdq %zmm0, (%rdi)

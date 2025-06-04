@@ -169,10 +169,10 @@ define i64 @t6(i64 %key, ptr nocapture %val) nounwind {
 ; X86-LABEL: t6:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    shrdl $3, %esi, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    shrl $3, %esi
 ; X86-NEXT:    movl (%edx), %eax
 ; X86-NEXT:    movl 4(%edx), %edx

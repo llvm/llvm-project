@@ -12,8 +12,8 @@ define x86_thiscallcc void @stackRealignment(ptr %this) {
 ; SHRINK-WRAP-LABEL: stackRealignment:
 ; SHRINK-WRAP:       # %bb.0: # %entry
 ; SHRINK-WRAP-NEXT:    movl (%ecx), %eax
-; SHRINK-WRAP-NEXT:    cmpl $33, %eax
 ; SHRINK-WRAP-NEXT:    movl $42, %edx
+; SHRINK-WRAP-NEXT:    cmpl $33, %eax
 ; SHRINK-WRAP-NEXT:    jge LBB0_2
 ; SHRINK-WRAP-NEXT:  # %bb.1: # %entry
 ; SHRINK-WRAP-NEXT:    movl $128, %edx
@@ -43,8 +43,8 @@ define x86_thiscallcc void @stackRealignment(ptr %this) {
 ; NO-SHRINK-WRAP-NEXT:    andl $-8, %esp
 ; NO-SHRINK-WRAP-NEXT:    subl $16, %esp
 ; NO-SHRINK-WRAP-NEXT:    movl (%ecx), %eax
-; NO-SHRINK-WRAP-NEXT:    cmpl $33, %eax
 ; NO-SHRINK-WRAP-NEXT:    movl $42, %edx
+; NO-SHRINK-WRAP-NEXT:    cmpl $33, %eax
 ; NO-SHRINK-WRAP-NEXT:    jge LBB0_2
 ; NO-SHRINK-WRAP-NEXT:  # %bb.1: # %entry
 ; NO-SHRINK-WRAP-NEXT:    movl $128, %edx

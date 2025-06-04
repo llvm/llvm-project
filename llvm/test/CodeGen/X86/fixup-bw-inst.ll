@@ -14,35 +14,41 @@ define void @foo1(i32 %count, ptr noalias nocapture %q, ptr noalias nocapture %p
 ; BWON-LABEL: foo1:
 ; BWON:       ## %bb.0:
 ; BWON-NEXT:    testl %edi, %edi
-; BWON-NEXT:    jle LBB0_2
+; BWON-NEXT:    jle LBB0_3
+; BWON-NEXT:  ## %bb.1: ## %.lr.ph
+; BWON-NEXT:    movl %edi, %eax
+; BWON-NEXT:    xorl %ecx, %ecx
 ; BWON-NEXT:    .p2align 4
-; BWON-NEXT:  LBB0_1: ## %a4
+; BWON-NEXT:  LBB0_2: ## %a4
 ; BWON-NEXT:    ## =>This Inner Loop Header: Depth=1
-; BWON-NEXT:    movzbl (%rsi), %eax
-; BWON-NEXT:    movb %al, (%rdx)
-; BWON-NEXT:    movzbl 1(%rsi), %eax
-; BWON-NEXT:    movb %al, 1(%rdx)
-; BWON-NEXT:    addq $8, %rdx
-; BWON-NEXT:    decl %edi
-; BWON-NEXT:    jne LBB0_1
-; BWON-NEXT:  LBB0_2: ## %._crit_edge
+; BWON-NEXT:    movzbl (%rsi), %edi
+; BWON-NEXT:    movb %dil, (%rdx,%rcx,8)
+; BWON-NEXT:    movzbl 1(%rsi), %edi
+; BWON-NEXT:    movb %dil, 1(%rdx,%rcx,8)
+; BWON-NEXT:    incq %rcx
+; BWON-NEXT:    cmpl %ecx, %eax
+; BWON-NEXT:    jne LBB0_2
+; BWON-NEXT:  LBB0_3: ## %._crit_edge
 ; BWON-NEXT:    retq
 ;
 ; BWOFF-LABEL: foo1:
 ; BWOFF:       ## %bb.0:
 ; BWOFF-NEXT:    testl %edi, %edi
-; BWOFF-NEXT:    jle LBB0_2
+; BWOFF-NEXT:    jle LBB0_3
+; BWOFF-NEXT:  ## %bb.1: ## %.lr.ph
+; BWOFF-NEXT:    movl %edi, %eax
+; BWOFF-NEXT:    xorl %ecx, %ecx
 ; BWOFF-NEXT:    .p2align 4
-; BWOFF-NEXT:  LBB0_1: ## %a4
+; BWOFF-NEXT:  LBB0_2: ## %a4
 ; BWOFF-NEXT:    ## =>This Inner Loop Header: Depth=1
-; BWOFF-NEXT:    movb (%rsi), %al
-; BWOFF-NEXT:    movb %al, (%rdx)
-; BWOFF-NEXT:    movb 1(%rsi), %al
-; BWOFF-NEXT:    movb %al, 1(%rdx)
-; BWOFF-NEXT:    addq $8, %rdx
-; BWOFF-NEXT:    decl %edi
-; BWOFF-NEXT:    jne LBB0_1
-; BWOFF-NEXT:  LBB0_2: ## %._crit_edge
+; BWOFF-NEXT:    movb (%rsi), %dil
+; BWOFF-NEXT:    movb %dil, (%rdx,%rcx,8)
+; BWOFF-NEXT:    movb 1(%rsi), %dil
+; BWOFF-NEXT:    movb %dil, 1(%rdx,%rcx,8)
+; BWOFF-NEXT:    incq %rcx
+; BWOFF-NEXT:    cmpl %ecx, %eax
+; BWOFF-NEXT:    jne LBB0_2
+; BWOFF-NEXT:  LBB0_3: ## %._crit_edge
 ; BWOFF-NEXT:    retq
   %1 = icmp sgt i32 %count, 0
   br i1 %1, label %.lr.ph, label %._crit_edge

@@ -15,13 +15,13 @@ define i64 @test_mm512_kunpackd(<8 x i64> %__A, <8 x i64> %__B, <8 x i64> %__C, 
 ; X86-NEXT:    andl $-64, %esp
 ; X86-NEXT:    subl $64, %esp
 ; X86-NEXT:    vmovdqa64 136(%ebp), %zmm3
-; X86-NEXT:    vpcmpneqb %zmm0, %zmm1, %k0
-; X86-NEXT:    vpcmpneqb 8(%ebp), %zmm2, %k1
-; X86-NEXT:    vpcmpneqb 72(%ebp), %zmm3, %k2
-; X86-NEXT:    kandd %k0, %k2, %k0
-; X86-NEXT:    kmovd %k0, %eax
-; X86-NEXT:    kshiftrq $32, %k2, %k0
-; X86-NEXT:    kandd %k1, %k0, %k0
+; X86-NEXT:    vpcmpneqb 8(%ebp), %zmm2, %k0
+; X86-NEXT:    vpcmpneqb 72(%ebp), %zmm3, %k1
+; X86-NEXT:    vpcmpneqb %zmm0, %zmm1, %k2
+; X86-NEXT:    kandd %k2, %k1, %k2
+; X86-NEXT:    kmovd %k2, %eax
+; X86-NEXT:    kshiftrq $32, %k1, %k1
+; X86-NEXT:    kandd %k0, %k1, %k0
 ; X86-NEXT:    kmovd %k0, %edx
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp

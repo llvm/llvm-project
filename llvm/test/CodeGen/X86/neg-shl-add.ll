@@ -7,9 +7,9 @@ define i64 @foo(i64 %x, i64 %y, i64 %n) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdx, %rcx
-; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; CHECK-NEXT:    shlq %cl, %rsi
+; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    subq %rsi, %rax
 ; CHECK-NEXT:    retq
   %a = sub i64 0, %y
@@ -21,9 +21,9 @@ define i64 @boo(i64 %x, i64 %y, i64 %n) nounwind {
 ; CHECK-LABEL: boo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdx, %rcx
-; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; CHECK-NEXT:    shlq %cl, %rsi
+; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    subq %rsi, %rax
 ; CHECK-NEXT:    retq
   %a = sub i64 0, %y

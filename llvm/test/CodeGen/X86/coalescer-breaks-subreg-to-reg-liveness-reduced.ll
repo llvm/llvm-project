@@ -56,8 +56,8 @@ define void @foo(ptr %arg3, i1 %icmp16) #0 {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    callq *%rax
 ; CHECK-NEXT:    movl %r13d, %r13d
-; CHECK-NEXT:    testb $1, %bl
 ; CHECK-NEXT:    movl $0, %r14d
+; CHECK-NEXT:    testb $1, %bl
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  # %bb.3: # %bb17
 ; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1

@@ -73,8 +73,8 @@ define <4 x float> @gather_v4f32_ptr_v4i32(<4 x ptr> %ptr, <4 x i32> %trigger, <
 ; AVX1-NEXT:    vpextrq $1, %xmm0, %rcx
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],mem[0],xmm2[2,3]
 ; AVX1-NEXT:  .LBB0_4: # %else2
-; AVX1-NEXT:    testb $4, %al
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    testb $4, %al
 ; AVX1-NEXT:    jne .LBB0_5
 ; AVX1-NEXT:  # %bb.6: # %else5
 ; AVX1-NEXT:    testb $8, %al
@@ -113,8 +113,8 @@ define <4 x float> @gather_v4f32_ptr_v4i32(<4 x ptr> %ptr, <4 x i32> %trigger, <
 ; AVX2-NEXT:    vpextrq $1, %xmm0, %rcx
 ; AVX2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],mem[0],xmm2[2,3]
 ; AVX2-NEXT:  .LBB0_4: # %else2
-; AVX2-NEXT:    testb $4, %al
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX2-NEXT:    testb $4, %al
 ; AVX2-NEXT:    jne .LBB0_5
 ; AVX2-NEXT:  # %bb.6: # %else5
 ; AVX2-NEXT:    testb $8, %al
@@ -153,8 +153,8 @@ define <4 x float> @gather_v4f32_ptr_v4i32(<4 x ptr> %ptr, <4 x i32> %trigger, <
 ; AVX512F-NEXT:    vpextrq $1, %xmm0, %rcx
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],mem[0],xmm2[2,3]
 ; AVX512F-NEXT:  .LBB0_4: # %else2
-; AVX512F-NEXT:    testb $4, %al
 ; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX512F-NEXT:    testb $4, %al
 ; AVX512F-NEXT:    jne .LBB0_5
 ; AVX512F-NEXT:  # %bb.6: # %else5
 ; AVX512F-NEXT:    testb $8, %al
@@ -262,8 +262,8 @@ define <4 x float> @gather_v4f32_v4i32_v4i32(ptr %base, <4 x i32> %idx, <4 x i32
 ; AVX1-NEXT:    vpextrq $1, %xmm0, %rcx
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],mem[0],xmm2[2,3]
 ; AVX1-NEXT:  .LBB1_4: # %else2
-; AVX1-NEXT:    testb $4, %al
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    testb $4, %al
 ; AVX1-NEXT:    jne .LBB1_5
 ; AVX1-NEXT:  # %bb.6: # %else5
 ; AVX1-NEXT:    testb $8, %al
@@ -307,8 +307,8 @@ define <4 x float> @gather_v4f32_v4i32_v4i32(ptr %base, <4 x i32> %idx, <4 x i32
 ; AVX2-NEXT:    vpextrq $1, %xmm0, %rcx
 ; AVX2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],mem[0],xmm2[2,3]
 ; AVX2-NEXT:  .LBB1_4: # %else2
-; AVX2-NEXT:    testb $4, %al
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX2-NEXT:    testb $4, %al
 ; AVX2-NEXT:    jne .LBB1_5
 ; AVX2-NEXT:  # %bb.6: # %else5
 ; AVX2-NEXT:    testb $8, %al
@@ -352,8 +352,8 @@ define <4 x float> @gather_v4f32_v4i32_v4i32(ptr %base, <4 x i32> %idx, <4 x i32
 ; AVX512F-NEXT:    vpextrq $1, %xmm0, %rcx
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],mem[0],xmm2[2,3]
 ; AVX512F-NEXT:  .LBB1_4: # %else2
-; AVX512F-NEXT:    testb $4, %al
 ; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX512F-NEXT:    testb $4, %al
 ; AVX512F-NEXT:    jne .LBB1_5
 ; AVX512F-NEXT:  # %bb.6: # %else5
 ; AVX512F-NEXT:    testb $8, %al
@@ -459,8 +459,8 @@ define <4 x float> @gather_v4f32_v4i64_v4i32(ptr %base, <4 x i64> %idx, <4 x i32
 ; AVX1-NEXT:    vpextrq $1, %xmm0, %rcx
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],mem[0],xmm2[2,3]
 ; AVX1-NEXT:  .LBB2_4: # %else2
-; AVX1-NEXT:    testb $4, %al
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    testb $4, %al
 ; AVX1-NEXT:    jne .LBB2_5
 ; AVX1-NEXT:  # %bb.6: # %else5
 ; AVX1-NEXT:    testb $8, %al
@@ -503,8 +503,8 @@ define <4 x float> @gather_v4f32_v4i64_v4i32(ptr %base, <4 x i64> %idx, <4 x i32
 ; AVX2-NEXT:    vpextrq $1, %xmm0, %rcx
 ; AVX2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],mem[0],xmm2[2,3]
 ; AVX2-NEXT:  .LBB2_4: # %else2
-; AVX2-NEXT:    testb $4, %al
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX2-NEXT:    testb $4, %al
 ; AVX2-NEXT:    jne .LBB2_5
 ; AVX2-NEXT:  # %bb.6: # %else5
 ; AVX2-NEXT:    testb $8, %al
@@ -547,8 +547,8 @@ define <4 x float> @gather_v4f32_v4i64_v4i32(ptr %base, <4 x i64> %idx, <4 x i32
 ; AVX512F-NEXT:    vpextrq $1, %xmm0, %rcx
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],mem[0],xmm2[2,3]
 ; AVX512F-NEXT:  .LBB2_4: # %else2
-; AVX512F-NEXT:    testb $4, %al
 ; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX512F-NEXT:    testb $4, %al
 ; AVX512F-NEXT:    jne .LBB2_5
 ; AVX512F-NEXT:  # %bb.6: # %else5
 ; AVX512F-NEXT:    testb $8, %al
@@ -750,8 +750,8 @@ define <16 x i8> @gather_v16i8_v16i32_v16i8(ptr %base, <16 x i32> %idx, <16 x i8
 ; AVX1-NEXT:  .LBB3_4: # %else2
 ; AVX1-NEXT:    vpmovsxdq %xmm2, %xmm5
 ; AVX1-NEXT:    vpaddq %xmm6, %xmm4, %xmm2
-; AVX1-NEXT:    testb $4, %al
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    testb $4, %al
 ; AVX1-NEXT:    je .LBB3_6
 ; AVX1-NEXT:  # %bb.5: # %cond.load4
 ; AVX1-NEXT:    vmovq %xmm0, %rcx
@@ -781,8 +781,8 @@ define <16 x i8> @gather_v16i8_v16i32_v16i8(ptr %base, <16 x i32> %idx, <16 x i8
 ; AVX1-NEXT:  .LBB3_12: # %else14
 ; AVX1-NEXT:    vpmovsxdq %xmm2, %xmm5
 ; AVX1-NEXT:    vpaddq %xmm6, %xmm4, %xmm2
-; AVX1-NEXT:    testb $64, %al
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    testb $64, %al
 ; AVX1-NEXT:    je .LBB3_14
 ; AVX1-NEXT:  # %bb.13: # %cond.load16
 ; AVX1-NEXT:    vmovq %xmm0, %rcx
@@ -813,8 +813,8 @@ define <16 x i8> @gather_v16i8_v16i32_v16i8(ptr %base, <16 x i32> %idx, <16 x i8
 ; AVX1-NEXT:  .LBB3_20: # %else26
 ; AVX1-NEXT:    vpmovsxdq %xmm2, %xmm2
 ; AVX1-NEXT:    vpaddq %xmm1, %xmm4, %xmm1
-; AVX1-NEXT:    testl $1024, %eax # imm = 0x400
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    testl $1024, %eax # imm = 0x400
 ; AVX1-NEXT:    je .LBB3_22
 ; AVX1-NEXT:  # %bb.21: # %cond.load28
 ; AVX1-NEXT:    vmovq %xmm0, %rcx
@@ -840,8 +840,8 @@ define <16 x i8> @gather_v16i8_v16i32_v16i8(ptr %base, <16 x i32> %idx, <16 x i8
 ; AVX1-NEXT:    vpextrq $1, %xmm0, %rcx
 ; AVX1-NEXT:    vpinsrb $13, (%rcx), %xmm3, %xmm3
 ; AVX1-NEXT:  .LBB3_28: # %else38
-; AVX1-NEXT:    testl $16384, %eax # imm = 0x4000
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    testl $16384, %eax # imm = 0x4000
 ; AVX1-NEXT:    jne .LBB3_29
 ; AVX1-NEXT:  # %bb.30: # %else41
 ; AVX1-NEXT:    testl $32768, %eax # imm = 0x8000
@@ -884,8 +884,8 @@ define <16 x i8> @gather_v16i8_v16i32_v16i8(ptr %base, <16 x i32> %idx, <16 x i8
 ; AVX2-NEXT:    vpinsrb $1, (%rcx), %xmm3, %xmm3
 ; AVX2-NEXT:  .LBB3_4: # %else2
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX2-NEXT:    testb $4, %al
 ; AVX2-NEXT:    vextracti128 $1, %ymm5, %xmm0
+; AVX2-NEXT:    testb $4, %al
 ; AVX2-NEXT:    je .LBB3_6
 ; AVX2-NEXT:  # %bb.5: # %cond.load4
 ; AVX2-NEXT:    vmovq %xmm0, %rcx
@@ -911,8 +911,8 @@ define <16 x i8> @gather_v16i8_v16i32_v16i8(ptr %base, <16 x i32> %idx, <16 x i8
 ; AVX2-NEXT:    vpextrq $1, %xmm0, %rcx
 ; AVX2-NEXT:    vpinsrb $5, (%rcx), %xmm3, %xmm3
 ; AVX2-NEXT:  .LBB3_12: # %else14
-; AVX2-NEXT:    testb $64, %al
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX2-NEXT:    testb $64, %al
 ; AVX2-NEXT:    je .LBB3_14
 ; AVX2-NEXT:  # %bb.13: # %cond.load16
 ; AVX2-NEXT:    vmovq %xmm0, %rcx
@@ -939,8 +939,8 @@ define <16 x i8> @gather_v16i8_v16i32_v16i8(ptr %base, <16 x i32> %idx, <16 x i8
 ; AVX2-NEXT:    vpinsrb $9, (%rcx), %xmm3, %xmm3
 ; AVX2-NEXT:  .LBB3_20: # %else26
 ; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm1
-; AVX2-NEXT:    testl $1024, %eax # imm = 0x400
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX2-NEXT:    testl $1024, %eax # imm = 0x400
 ; AVX2-NEXT:    je .LBB3_22
 ; AVX2-NEXT:  # %bb.21: # %cond.load28
 ; AVX2-NEXT:    vmovq %xmm0, %rcx
@@ -966,8 +966,8 @@ define <16 x i8> @gather_v16i8_v16i32_v16i8(ptr %base, <16 x i32> %idx, <16 x i8
 ; AVX2-NEXT:    vpextrq $1, %xmm0, %rcx
 ; AVX2-NEXT:    vpinsrb $13, (%rcx), %xmm3, %xmm3
 ; AVX2-NEXT:  .LBB3_28: # %else38
-; AVX2-NEXT:    testl $16384, %eax # imm = 0x4000
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX2-NEXT:    testl $16384, %eax # imm = 0x4000
 ; AVX2-NEXT:    jne .LBB3_29
 ; AVX2-NEXT:  # %bb.30: # %else41
 ; AVX2-NEXT:    testl $32768, %eax # imm = 0x8000
@@ -1012,8 +1012,8 @@ define <16 x i8> @gather_v16i8_v16i32_v16i8(ptr %base, <16 x i32> %idx, <16 x i8
 ; AVX512-NEXT:    vpextrq $1, %xmm1, %rcx
 ; AVX512-NEXT:    vpinsrb $3, (%rcx), %xmm2, %xmm2
 ; AVX512-NEXT:  .LBB3_8: # %else8
-; AVX512-NEXT:    testb $16, %al
 ; AVX512-NEXT:    vextracti32x4 $2, %zmm4, %xmm1
+; AVX512-NEXT:    testb $16, %al
 ; AVX512-NEXT:    je .LBB3_10
 ; AVX512-NEXT:  # %bb.9: # %cond.load10
 ; AVX512-NEXT:    vmovq %xmm1, %rcx
@@ -1026,8 +1026,8 @@ define <16 x i8> @gather_v16i8_v16i32_v16i8(ptr %base, <16 x i32> %idx, <16 x i8
 ; AVX512-NEXT:    vpinsrb $5, (%rcx), %xmm2, %xmm2
 ; AVX512-NEXT:  .LBB3_12: # %else14
 ; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512-NEXT:    testb $64, %al
 ; AVX512-NEXT:    vextracti32x4 $3, %zmm4, %xmm0
+; AVX512-NEXT:    testb $64, %al
 ; AVX512-NEXT:    je .LBB3_14
 ; AVX512-NEXT:  # %bb.13: # %cond.load16
 ; AVX512-NEXT:    vmovq %xmm0, %rcx
@@ -1057,8 +1057,8 @@ define <16 x i8> @gather_v16i8_v16i32_v16i8(ptr %base, <16 x i32> %idx, <16 x i8
 ; AVX512-NEXT:    vpextrq $1, %xmm1, %rcx
 ; AVX512-NEXT:    vpinsrb $11, (%rcx), %xmm2, %xmm2
 ; AVX512-NEXT:  .LBB3_24: # %else32
-; AVX512-NEXT:    testl $4096, %eax # imm = 0x1000
 ; AVX512-NEXT:    vextracti32x4 $2, %zmm0, %xmm1
+; AVX512-NEXT:    testl $4096, %eax # imm = 0x1000
 ; AVX512-NEXT:    je .LBB3_26
 ; AVX512-NEXT:  # %bb.25: # %cond.load34
 ; AVX512-NEXT:    vmovq %xmm1, %rcx
@@ -1070,8 +1070,8 @@ define <16 x i8> @gather_v16i8_v16i32_v16i8(ptr %base, <16 x i32> %idx, <16 x i8
 ; AVX512-NEXT:    vpextrq $1, %xmm1, %rcx
 ; AVX512-NEXT:    vpinsrb $13, (%rcx), %xmm2, %xmm2
 ; AVX512-NEXT:  .LBB3_28: # %else38
-; AVX512-NEXT:    testl $16384, %eax # imm = 0x4000
 ; AVX512-NEXT:    vextracti32x4 $3, %zmm0, %xmm0
+; AVX512-NEXT:    testl $16384, %eax # imm = 0x4000
 ; AVX512-NEXT:    jne .LBB3_29
 ; AVX512-NEXT:  # %bb.30: # %else41
 ; AVX512-NEXT:    testl $32768, %eax # imm = 0x8000
@@ -1334,8 +1334,8 @@ define <8 x i32> @gather_v8i32_v8i32(<8 x i32> %trigger) {
 ; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
 ; AVX1-NEXT:    vmovmskps %ymm1, %eax
-; AVX1-NEXT:    testb $1, %al
 ; AVX1-NEXT:    # implicit-def: $ymm1
+; AVX1-NEXT:    testb $1, %al
 ; AVX1-NEXT:    jne .LBB4_1
 ; AVX1-NEXT:  # %bb.2: # %else
 ; AVX1-NEXT:    testb $2, %al
@@ -1367,8 +1367,8 @@ define <8 x i32> @gather_v8i32_v8i32(<8 x i32> %trigger) {
 ; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm0, %xmm3
 ; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm3, %ymm3
 ; AVX1-NEXT:    vmovmskps %ymm3, %eax
-; AVX1-NEXT:    testb $1, %al
 ; AVX1-NEXT:    # implicit-def: $ymm3
+; AVX1-NEXT:    testb $1, %al
 ; AVX1-NEXT:    jne .LBB4_17
 ; AVX1-NEXT:  # %bb.18: # %else26
 ; AVX1-NEXT:    testb $2, %al
@@ -1400,8 +1400,8 @@ define <8 x i32> @gather_v8i32_v8i32(<8 x i32> %trigger) {
 ; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vmovmskps %ymm0, %eax
-; AVX1-NEXT:    testb $1, %al
 ; AVX1-NEXT:    # implicit-def: $ymm0
+; AVX1-NEXT:    testb $1, %al
 ; AVX1-NEXT:    jne .LBB4_33
 ; AVX1-NEXT:  # %bb.34: # %else67
 ; AVX1-NEXT:    testb $2, %al
@@ -1544,8 +1544,8 @@ define <8 x i32> @gather_v8i32_v8i32(<8 x i32> %trigger) {
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm1
 ; AVX2-NEXT:    vmovmskps %ymm1, %eax
-; AVX2-NEXT:    testb $1, %al
 ; AVX2-NEXT:    # implicit-def: $ymm1
+; AVX2-NEXT:    testb $1, %al
 ; AVX2-NEXT:    jne .LBB4_1
 ; AVX2-NEXT:  # %bb.2: # %else
 ; AVX2-NEXT:    testb $2, %al
@@ -1575,8 +1575,8 @@ define <8 x i32> @gather_v8i32_v8i32(<8 x i32> %trigger) {
 ; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm0, %ymm2
 ; AVX2-NEXT:    vmovmskps %ymm2, %eax
-; AVX2-NEXT:    testb $1, %al
 ; AVX2-NEXT:    # implicit-def: $ymm2
+; AVX2-NEXT:    testb $1, %al
 ; AVX2-NEXT:    jne .LBB4_17
 ; AVX2-NEXT:  # %bb.18: # %else26
 ; AVX2-NEXT:    testb $2, %al
@@ -1606,8 +1606,8 @@ define <8 x i32> @gather_v8i32_v8i32(<8 x i32> %trigger) {
 ; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm0, %ymm0
 ; AVX2-NEXT:    vmovmskps %ymm0, %eax
-; AVX2-NEXT:    testb $1, %al
 ; AVX2-NEXT:    # implicit-def: $ymm0
+; AVX2-NEXT:    testb $1, %al
 ; AVX2-NEXT:    jne .LBB4_33
 ; AVX2-NEXT:  # %bb.34: # %else67
 ; AVX2-NEXT:    testb $2, %al

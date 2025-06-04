@@ -36,9 +36,9 @@ define void @h(float %i) {
 ; CHECK-NEXT:    fsts _d
 ; CHECK-NEXT:    fld1
 ; CHECK-NEXT:    fldz
-; CHECK-NEXT:    testl %ecx, %ecx
 ; CHECK-NEXT:    fld %st(0)
 ; CHECK-NEXT:    fld %st(2)
+; CHECK-NEXT:    testl %ecx, %ecx
 ; CHECK-NEXT:    je LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    fstp %st(1)

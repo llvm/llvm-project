@@ -9,10 +9,10 @@
 ;
 ; CHECK: SU(8):   CMP8rr %4:gr8, %3:gr8, implicit-def $eflags
 ; CHECK:   Predecessors:
-; CHECK-NEXT:    SU(6): Data Latency=0 Reg=%4
+; CHECK-NEXT:    SU(6): Data Latency=1 Reg=%4
 ; CHECK-NEXT:    SU(7): Out  Latency=0
 ; CHECK-NEXT:    SU(5): Out  Latency=0
-; CHECK-NEXT:    SU(3): Data Latency=4 Reg=%3
+; CHECK-NEXT:    SU(3): Data Latency=5 Reg=%3
 define void @misched_bug() nounwind {
 entry:
   %v0 = load i8, ptr @sc, align 1

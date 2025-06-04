@@ -7,8 +7,8 @@
 define <8 x i32> @foo(<8 x i64> %x, <4 x i64> %y) {
 ; X86-LABEL: foo:
 ; X86:       # %bb.0:
-; X86-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; X86-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm1, %ymm1
+; X86-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; X86-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2],ymm1[0,2],ymm0[4,6],ymm1[4,6]
 ; X86-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; X86-NEXT:    retl

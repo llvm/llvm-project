@@ -34,19 +34,25 @@ entry:
 define i32 @test1(ptr nocapture readonly %ptr) nounwind {
 ; X86-LABEL: test1:
 ; X86:       # %bb.0: # %entry
+; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movd (%eax), %mm0
-; X86-NEXT:    pshufw $232, %mm0, %mm0 # mm0 = mm0[0,2,2,3]
-; X86-NEXT:    movd %mm0, %eax
+; X86-NEXT:    movq %mm0, (%esp) # 8-byte Spill
 ; X86-NEXT:    emms
+; X86-NEXT:    pshufw $232, (%esp), %mm0 # 8-byte Folded Reload
+; X86-NEXT:    # mm0 = mem[0,2,2,3]
+; X86-NEXT:    movd %mm0, %eax
+; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test1:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movd (%rdi), %mm0
-; X64-NEXT:    pshufw $232, %mm0, %mm0 # mm0 = mm0[0,2,2,3]
-; X64-NEXT:    movd %mm0, %eax
+; X64-NEXT:    movq %mm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    emms
+; X64-NEXT:    pshufw $232, {{[-0-9]+}}(%r{{[sb]}}p), %mm0 # 8-byte Folded Reload
+; X64-NEXT:    # mm0 = mem[0,2,2,3]
+; X64-NEXT:    movd %mm0, %eax
 ; X64-NEXT:    retq
 entry:
   %0 = load i32, ptr %ptr, align 4
@@ -69,17 +75,23 @@ entry:
 define i32 @test2(ptr nocapture readonly %ptr) nounwind {
 ; X86-LABEL: test2:
 ; X86:       # %bb.0: # %entry
+; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pshufw $232, (%eax), %mm0 # mm0 = mem[0,2,2,3]
-; X86-NEXT:    movd %mm0, %eax
+; X86-NEXT:    movq %mm0, (%esp) # 8-byte Spill
 ; X86-NEXT:    emms
+; X86-NEXT:    movq (%esp), %mm0 # 8-byte Reload
+; X86-NEXT:    movd %mm0, %eax
+; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test2:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pshufw $232, (%rdi), %mm0 # mm0 = mem[0,2,2,3]
-; X64-NEXT:    movd %mm0, %eax
+; X64-NEXT:    movq %mm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    emms
+; X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %mm0 # 8-byte Reload
+; X64-NEXT:    movd %mm0, %eax
 ; X64-NEXT:    retq
 entry:
   %0 = load <1 x i64>, ptr %ptr, align 8

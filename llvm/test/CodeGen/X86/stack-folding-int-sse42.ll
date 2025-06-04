@@ -979,12 +979,11 @@ define <8 x i16> @stack_fold_pcmpgtw(<8 x i16> %a0, <8 x i16> %a1) {
 define i32 @stack_fold_pcmpistri(<16 x i8> %a0, <16 x i8> %a1) {
 ; CHECK-LABEL: stack_fold_pcmpistri:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    pcmpistri $7, %xmm1, %xmm0
+; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    pcmpistri $7, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = call i32 @llvm.x86.sse42.pcmpistri128(<16 x i8> %a0, <16 x i8> %a1, i8 7)
@@ -995,11 +994,10 @@ declare i32 @llvm.x86.sse42.pcmpistri128(<16 x i8>, <16 x i8>, i8) nounwind read
 define <16 x i8> @stack_fold_pcmpistrm(<16 x i8> %a0, <16 x i8> %a1) {
 ; CHECK-LABEL: stack_fold_pcmpistrm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    pcmpistrm $7, %xmm1, %xmm0
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    pcmpistrm $7, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = call <16 x i8> @llvm.x86.sse42.pcmpistrm128(<16 x i8> %a0, <16 x i8> %a1, i8 7)

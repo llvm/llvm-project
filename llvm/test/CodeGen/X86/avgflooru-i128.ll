@@ -118,23 +118,23 @@ start:
 define <2 x i128> @avgflooru_i128_vec(<2 x i128> %x, <2 x i128> %y) {
 ; CHECK-LABEL: avgflooru_i128_vec:
 ; CHECK:       # %bb.0: # %start
-; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    addq %r9, %rsi
 ; CHECK-NEXT:    adcq {{[0-9]+}}(%rsp), %rdx
-; CHECK-NEXT:    setb %dil
-; CHECK-NEXT:    movzbl %dil, %edi
-; CHECK-NEXT:    shldq $63, %rdx, %rdi
+; CHECK-NEXT:    setb %al
+; CHECK-NEXT:    movzbl %al, %r9d
+; CHECK-NEXT:    shldq $63, %rdx, %r9
 ; CHECK-NEXT:    addq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    adcq {{[0-9]+}}(%rsp), %r8
-; CHECK-NEXT:    setb %r9b
-; CHECK-NEXT:    movzbl %r9b, %r9d
-; CHECK-NEXT:    shldq $63, %r8, %r9
+; CHECK-NEXT:    setb %al
+; CHECK-NEXT:    movzbl %al, %r10d
+; CHECK-NEXT:    shldq $63, %r8, %r10
 ; CHECK-NEXT:    shldq $63, %rsi, %rdx
+; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    shldq $63, %rcx, %r8
-; CHECK-NEXT:    movq %r8, 16(%rax)
-; CHECK-NEXT:    movq %rdx, (%rax)
-; CHECK-NEXT:    movq %r9, 24(%rax)
-; CHECK-NEXT:    movq %rdi, 8(%rax)
+; CHECK-NEXT:    movq %r8, 16(%rdi)
+; CHECK-NEXT:    movq %rdx, (%rdi)
+; CHECK-NEXT:    movq %r10, 24(%rdi)
+; CHECK-NEXT:    movq %r9, 8(%rdi)
 ; CHECK-NEXT:    retq
 start:
   %xor = xor <2 x i128> %y, %x

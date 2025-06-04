@@ -52,7 +52,8 @@ define dso_local i64 @one() #0 {
 ; MPIC:       # %bb.0: # %entry
 ; MPIC-NEXT:    leaq _GLOBAL_OFFSET_TABLE_(%rip), %rax
 ; MPIC-NEXT:    movabsq $foo@GOTOFF, %rcx
-; MPIC-NEXT:    leaq 1(%rax,%rcx), %rax
+; MPIC-NEXT:    addq %rcx, %rax
+; MPIC-NEXT:    incq %rax
 ; MPIC-NEXT:    retq
 entry:
   ret i64 add (i64 ptrtoint (ptr @foo to i64), i64 1)
@@ -83,7 +84,8 @@ define dso_local i64 @large() #0 {
 ; MPIC:       # %bb.0: # %entry
 ; MPIC-NEXT:    leaq _GLOBAL_OFFSET_TABLE_(%rip), %rax
 ; MPIC-NEXT:    movabsq $foo@GOTOFF, %rcx
-; MPIC-NEXT:    leaq 1701208431(%rax,%rcx), %rax
+; MPIC-NEXT:    addq %rcx, %rax
+; MPIC-NEXT:    addq $1701208431, %rax # imm = 0x6566616F
 ; MPIC-NEXT:    retq
 entry:
   ret i64 add (i64 ptrtoint (ptr @foo to i64), i64 1701208431)
@@ -112,7 +114,8 @@ define dso_local i64 @neg_1() #0 {
 ; MPIC:       # %bb.0: # %entry
 ; MPIC-NEXT:    leaq _GLOBAL_OFFSET_TABLE_(%rip), %rax
 ; MPIC-NEXT:    movabsq $foo@GOTOFF, %rcx
-; MPIC-NEXT:    leaq -1(%rax,%rcx), %rax
+; MPIC-NEXT:    addq %rcx, %rax
+; MPIC-NEXT:    decq %rax
 ; MPIC-NEXT:    retq
 entry:
   ret i64 add (i64 ptrtoint (ptr @foo to i64), i64 -1)
@@ -141,7 +144,8 @@ define dso_local i64 @neg_0x80000000() #0 {
 ; MPIC:       # %bb.0: # %entry
 ; MPIC-NEXT:    leaq _GLOBAL_OFFSET_TABLE_(%rip), %rax
 ; MPIC-NEXT:    movabsq $foo@GOTOFF, %rcx
-; MPIC-NEXT:    leaq -2147483648(%rax,%rcx), %rax
+; MPIC-NEXT:    addq %rcx, %rax
+; MPIC-NEXT:    addq $-2147483648, %rax # imm = 0x80000000
 ; MPIC-NEXT:    retq
 entry:
   ret i64 add (i64 ptrtoint (ptr @foo to i64), i64 -2147483648)

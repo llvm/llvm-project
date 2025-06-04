@@ -8,7 +8,8 @@ define i32 @select_unsigned_lt_10_8_13(i32 %0) {
 ; BASE-NEXT:    xorl %eax, %eax
 ; BASE-NEXT:    cmpl $10, %edi
 ; BASE-NEXT:    setae %al
-; BASE-NEXT:    leal 8(%rax,%rax,4), %eax
+; BASE-NEXT:    leal (%rax,%rax,4), %eax
+; BASE-NEXT:    addl $8, %eax
 ; BASE-NEXT:    retq
 ;
 ; SLOWLEA3-LABEL: select_unsigned_lt_10_8_13:

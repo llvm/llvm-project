@@ -629,8 +629,8 @@ define <4 x float> @knownbits_lshr_and_select_shuffle_uitofp(<4 x i32> %a0, <4 x
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    vmovaps 8(%ebp), %xmm3
-; X86-NEXT:    vpsrld $5, %xmm2, %xmm2
 ; X86-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm3, %xmm3
+; X86-NEXT:    vpsrld $5, %xmm2, %xmm2
 ; X86-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vblendvps %xmm0, %xmm2, %xmm3, %xmm0
 ; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,0,2,2]
@@ -641,8 +641,8 @@ define <4 x float> @knownbits_lshr_and_select_shuffle_uitofp(<4 x i32> %a0, <4 x
 ;
 ; X64-LABEL: knownbits_lshr_and_select_shuffle_uitofp:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpsrld $5, %xmm2, %xmm2
 ; X64-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm3
+; X64-NEXT:    vpsrld $5, %xmm2, %xmm2
 ; X64-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vblendvps %xmm0, %xmm2, %xmm3, %xmm0
 ; X64-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,0,2,2]

@@ -276,8 +276,8 @@ define {i64, i1} @test8(i64 %left, i64 %right) nounwind {
 ; X86-LABEL: test8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    setb %cl
 ; X86-NEXT:    retl
@@ -310,9 +310,9 @@ entry:
 define i32 @test9(i32 %x, i32 %y) nounwind readnone {
 ; X86-LABEL: test9:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    cmpl $10, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    sete %cl
 ; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    retl
@@ -462,19 +462,19 @@ define <4 x i32> @inc_not_vec(<4 x i32> %a) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    subl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    subl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    xorl %esi, %esi
 ; X86-NEXT:    subl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    xorl %edi, %edi
 ; X86-NEXT:    subl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    subl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, 12(%eax)
-; X86-NEXT:    movl %edi, 8(%eax)
-; X86-NEXT:    movl %esi, 4(%eax)
-; X86-NEXT:    movl %edx, (%eax)
+; X86-NEXT:    movl %edi, 12(%eax)
+; X86-NEXT:    movl %esi, 8(%eax)
+; X86-NEXT:    movl %edx, 4(%eax)
+; X86-NEXT:    movl %ecx, (%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl $4

@@ -1206,8 +1206,8 @@ define fp128 @TestPair128(i64 %a, i64 %b) nounwind {
 ; X64-SSE-LABEL: TestPair128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    addq $3, %rsi
-; X64-SSE-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
 ; X64-SSE-NEXT:    adcq $0, %rdi
+; X64-SSE-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
 ; X64-SSE-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; X64-SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
 ; X64-SSE-NEXT:    retq
@@ -1220,10 +1220,10 @@ define fp128 @TestPair128(i64 %a, i64 %b) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    addl $3, %ecx
 ; X86-NEXT:    adcl $0, %edx
 ; X86-NEXT:    adcl $0, %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    adcl $0, %edi
 ; X86-NEXT:    movl %esi, 8(%eax)
 ; X86-NEXT:    movl %edx, 4(%eax)
@@ -1236,8 +1236,8 @@ define fp128 @TestPair128(i64 %a, i64 %b) nounwind {
 ; X64-AVX-LABEL: TestPair128:
 ; X64-AVX:       # %bb.0: # %entry
 ; X64-AVX-NEXT:    addq $3, %rsi
-; X64-AVX-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
 ; X64-AVX-NEXT:    adcq $0, %rdi
+; X64-AVX-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
 ; X64-AVX-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; X64-AVX-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
 ; X64-AVX-NEXT:    retq

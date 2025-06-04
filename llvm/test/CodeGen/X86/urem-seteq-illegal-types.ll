@@ -169,7 +169,7 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ; SSE41-NEXT:    pinsrd $2, %edx, %xmm0
 ; SSE41-NEXT:    psubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE41-NEXT:    pmovsxwd {{.*#+}} xmm1 = [2047,2047,2047,2047]
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [2047,2047,2047,2047]
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
 ; SSE41-NEXT:    pand %xmm1, %xmm2
 ; SSE41-NEXT:    psrld $1, %xmm2
@@ -180,9 +180,9 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ; SSE41-NEXT:    por %xmm2, %xmm3
 ; SSE41-NEXT:    pand %xmm1, %xmm3
 ; SSE41-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
-; SSE41-NEXT:    movd %xmm3, %eax
 ; SSE41-NEXT:    pextrb $4, %xmm3, %edx
 ; SSE41-NEXT:    pextrb $8, %xmm3, %ecx
+; SSE41-NEXT:    movd %xmm3, %eax
 ; SSE41-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE41-NEXT:    # kill: def $dl killed $dl killed $edx
 ; SSE41-NEXT:    # kill: def $cl killed $cl killed $ecx
@@ -205,9 +205,9 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ; AVX1-NEXT:    vpor %xmm0, %xmm2, %xmm0
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vmovd %xmm0, %eax
 ; AVX1-NEXT:    vpextrb $4, %xmm0, %edx
 ; AVX1-NEXT:    vpextrb $8, %xmm0, %ecx
+; AVX1-NEXT:    vmovd %xmm0, %eax
 ; AVX1-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX1-NEXT:    # kill: def $dl killed $dl killed $edx
 ; AVX1-NEXT:    # kill: def $cl killed $cl killed $ecx
@@ -227,9 +227,9 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ; AVX2-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vpcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX2-NEXT:    vmovd %xmm0, %eax
 ; AVX2-NEXT:    vpextrb $4, %xmm0, %edx
 ; AVX2-NEXT:    vpextrb $8, %xmm0, %ecx
+; AVX2-NEXT:    vmovd %xmm0, %eax
 ; AVX2-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX2-NEXT:    # kill: def $dl killed $dl killed $edx
 ; AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx

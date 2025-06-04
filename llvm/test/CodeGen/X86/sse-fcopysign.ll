@@ -153,9 +153,9 @@ define x86_fp80 @int3(x86_fp80 %a, x86_fp80 %b) nounwind {
 ; X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-NEXT:    fstpt (%esp)
 ; X86-NEXT:    fabs
+; X86-NEXT:    testb $-128, {{[0-9]+}}(%esp)
 ; X86-NEXT:    fld %st(0)
 ; X86-NEXT:    fchs
-; X86-NEXT:    testb $-128, {{[0-9]+}}(%esp)
 ; X86-NEXT:    fxch %st(1)
 ; X86-NEXT:    fcmovne %st(1), %st
 ; X86-NEXT:    fstp %st(1)
@@ -168,9 +168,9 @@ define x86_fp80 @int3(x86_fp80 %a, x86_fp80 %b) nounwind {
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    fabs
+; X64-NEXT:    testb $-128, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    fld %st(0)
 ; X64-NEXT:    fchs
-; X64-NEXT:    testb $-128, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    fxch %st(1)
 ; X64-NEXT:    fcmovne %st(1), %st
 ; X64-NEXT:    fstp %st(1)

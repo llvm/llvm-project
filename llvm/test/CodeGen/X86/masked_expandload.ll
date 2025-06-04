@@ -1003,17 +1003,17 @@ define <16 x double> @expandload_v16f64_v16i32(ptr %base, <16 x double> %src0, <
 ; AVX512F-LABEL: expandload_v16f64_v16i32:
 ; AVX512F:       ## %bb.0:
 ; AVX512F-NEXT:    vextracti64x4 $1, %zmm2, %ymm3
-; AVX512F-NEXT:    vptestnmd %zmm3, %zmm3, %k1
-; AVX512F-NEXT:    vptestnmd %zmm2, %zmm2, %k2
-; AVX512F-NEXT:    vexpandpd (%rdi), %zmm0 {%k2}
-; AVX512F-NEXT:    kmovw %k2, %eax
+; AVX512F-NEXT:    vptestnmd %zmm2, %zmm2, %k1
+; AVX512F-NEXT:    vexpandpd (%rdi), %zmm0 {%k1}
+; AVX512F-NEXT:    vptestnmd %zmm3, %zmm3, %k2
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movzbl %al, %eax
 ; AVX512F-NEXT:    imull $134480385, %eax, %eax ## imm = 0x8040201
 ; AVX512F-NEXT:    shrl $3, %eax
 ; AVX512F-NEXT:    andl $286331153, %eax ## imm = 0x11111111
 ; AVX512F-NEXT:    imull $286331153, %eax, %eax ## imm = 0x11111111
 ; AVX512F-NEXT:    shrl $28, %eax
-; AVX512F-NEXT:    vexpandpd (%rdi,%rax,8), %zmm1 {%k1}
+; AVX512F-NEXT:    vexpandpd (%rdi,%rax,8), %zmm1 {%k2}
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VLDQ-LABEL: expandload_v16f64_v16i32:
@@ -1034,17 +1034,17 @@ define <16 x double> @expandload_v16f64_v16i32(ptr %base, <16 x double> %src0, <
 ; AVX512VLBW-LABEL: expandload_v16f64_v16i32:
 ; AVX512VLBW:       ## %bb.0:
 ; AVX512VLBW-NEXT:    vextracti64x4 $1, %zmm2, %ymm3
-; AVX512VLBW-NEXT:    vptestnmd %ymm3, %ymm3, %k1
-; AVX512VLBW-NEXT:    vptestnmd %ymm2, %ymm2, %k2
-; AVX512VLBW-NEXT:    vexpandpd (%rdi), %zmm0 {%k2}
-; AVX512VLBW-NEXT:    kmovd %k2, %eax
+; AVX512VLBW-NEXT:    vptestnmd %ymm2, %ymm2, %k1
+; AVX512VLBW-NEXT:    vexpandpd (%rdi), %zmm0 {%k1}
+; AVX512VLBW-NEXT:    vptestnmd %ymm3, %ymm3, %k2
+; AVX512VLBW-NEXT:    kmovd %k1, %eax
 ; AVX512VLBW-NEXT:    movzbl %al, %eax
 ; AVX512VLBW-NEXT:    imull $134480385, %eax, %eax ## imm = 0x8040201
 ; AVX512VLBW-NEXT:    shrl $3, %eax
 ; AVX512VLBW-NEXT:    andl $286331153, %eax ## imm = 0x11111111
 ; AVX512VLBW-NEXT:    imull $286331153, %eax, %eax ## imm = 0x11111111
 ; AVX512VLBW-NEXT:    shrl $28, %eax
-; AVX512VLBW-NEXT:    vexpandpd (%rdi,%rax,8), %zmm1 {%k1}
+; AVX512VLBW-NEXT:    vexpandpd (%rdi,%rax,8), %zmm1 {%k2}
 ; AVX512VLBW-NEXT:    retq
   %mask = icmp eq <16 x i32> %trigger, zeroinitializer
   %res = call <16 x double> @llvm.masked.expandload.v16f64(ptr %base, <16 x i1> %mask, <16 x double> %src0)

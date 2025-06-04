@@ -83,8 +83,8 @@ define <4 x float> @vselect(ptr%p, <4 x i32> %q) {
 ;
 ; X64-LABEL: vselect:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    testl %edx, %edx
 ; X64-NEXT:    xorps %xmm0, %xmm0
+; X64-NEXT:    testl %edx, %edx
 ; X64-NEXT:    je .LBB1_1
 ; X64-NEXT:  # %bb.2: # %entry
 ; X64-NEXT:    xorps %xmm1, %xmm1
@@ -190,19 +190,19 @@ define <4 x i32> @PR30512(<4 x i32> %x, <4 x i32> %y) nounwind {
 ;
 ; X64-LABEL: PR30512:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    xorl %edi, %edi
+; X64-NEXT:    xorl %r10d, %r10d
 ; X64-NEXT:    cmpl {{[0-9]+}}(%rsp), %r8d
-; X64-NEXT:    sete %dil
-; X64-NEXT:    negl %edi
-; X64-NEXT:    movl %edi, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    sete %r10b
+; X64-NEXT:    negl %r10d
+; X64-NEXT:    movl %r10d, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    xorl %edi, %edi
 ; X64-NEXT:    cmpl {{[0-9]+}}(%rsp), %ecx
 ; X64-NEXT:    sete %dil
 ; X64-NEXT:    negl %edi
-; X64-NEXT:    movl %edi, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    cmpl {{[0-9]+}}(%rsp), %edx
+; X64-NEXT:    movl %edi, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    sete %cl
 ; X64-NEXT:    negl %ecx
 ; X64-NEXT:    movl %ecx, -{{[0-9]+}}(%rsp)

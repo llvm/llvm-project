@@ -41,7 +41,7 @@ define <16 x i8> @test_fixed_v16i8(<16 x i8> %a0, <16 x i8> %a1) nounwind {
 ; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsrlw $1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastb {{.*#+}} xmm1 = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64]
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64]
 ; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
@@ -96,7 +96,7 @@ define <16 x i8> @test_ext_v16i8(<16 x i8> %a0, <16 x i8> %a1) nounwind {
 ; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsrlw $1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastb {{.*#+}} xmm1 = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64]
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64]
 ; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsubb %xmm1, %xmm0, %xmm0

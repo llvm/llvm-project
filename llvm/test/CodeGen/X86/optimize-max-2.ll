@@ -14,14 +14,15 @@ define void @foo(ptr nocapture %p, i64 %x, i64 %y) nounwind {
 ; CHECK-NEXT:    cmovneq %rdx, %rax
 ; CHECK-NEXT:    cmpq %rsi, %rax
 ; CHECK-NEXT:    cmovbeq %rsi, %rax
+; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %bb4
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    addsd %xmm0, %xmm0
-; CHECK-NEXT:    movsd %xmm0, (%rdi)
-; CHECK-NEXT:    addq $8, %rdi
-; CHECK-NEXT:    decq %rax
+; CHECK-NEXT:    movsd %xmm0, (%rdi,%rcx,8)
+; CHECK-NEXT:    incq %rcx
+; CHECK-NEXT:    cmpq %rcx, %rax
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %return
 ; CHECK-NEXT:    retq

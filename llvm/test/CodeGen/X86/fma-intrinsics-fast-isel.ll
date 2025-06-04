@@ -343,7 +343,7 @@ entry:
 define <8 x float> @test_mm256_fnmsub_ps(<8 x float> %a, <8 x float> %b, <8 x float> %c) {
 ; CHECK-LABEL: test_mm256_fnmsub_ps:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vbroadcastss {{.*#+}} ymm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    vmovaps {{.*#+}} ymm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; CHECK-NEXT:    vxorps %ymm3, %ymm0, %ymm4
 ; CHECK-NEXT:    vxorps %ymm3, %ymm2, %ymm0
 ; CHECK-NEXT:    vfmadd231ps {{.*#+}} ymm0 = (ymm1 * ymm4) + ymm0
@@ -358,7 +358,7 @@ entry:
 define <4 x double> @test_mm256_fnmsub_pd(<4 x double> %a, <4 x double> %b, <4 x double> %c) {
 ; CHECK-LABEL: test_mm256_fnmsub_pd:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vbroadcastsd {{.*#+}} ymm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    vmovapd {{.*#+}} ymm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; CHECK-NEXT:    vxorpd %ymm3, %ymm0, %ymm4
 ; CHECK-NEXT:    vxorpd %ymm3, %ymm2, %ymm0
 ; CHECK-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm1 * ymm4) + ymm0

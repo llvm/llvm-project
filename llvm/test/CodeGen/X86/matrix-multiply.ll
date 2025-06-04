@@ -406,7 +406,7 @@ define <9 x float> @test_mul3x3_f32(<9 x float> %a0, <9 x float> %a1) nounwind {
 ; AVX512F-NEXT:    vaddss %xmm1, %xmm2, %xmm1
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm1 = xmm0[0,1],xmm1[0],xmm0[3]
 ; AVX512F-NEXT:    vinsertf32x4 $1, %xmm7, %zmm6, %zmm2
-; AVX512F-NEXT:    vpmovsxbd {{.*#+}} zmm0 = [0,1,2,4,5,6,16,17,18,0,0,0,0,0,0,0]
+; AVX512F-NEXT:    vmovaps {{.*#+}} zmm0 = [0,1,2,4,5,6,16,17,18,u,u,u,u,u,u,u]
 ; AVX512F-NEXT:    vpermi2ps %zmm1, %zmm2, %zmm0
 ; AVX512F-NEXT:    retq
 ;
@@ -465,7 +465,7 @@ define <9 x float> @test_mul3x3_f32(<9 x float> %a0, <9 x float> %a1) nounwind {
 ; AVX512VL-NEXT:    vaddss %xmm1, %xmm2, %xmm1
 ; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm0[0,1],xmm1[0],xmm0[3]
 ; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm5, %zmm3, %zmm2
-; AVX512VL-NEXT:    vpmovsxbd {{.*#+}} zmm0 = [0,1,2,4,5,6,16,17,18,0,0,0,0,0,0,0]
+; AVX512VL-NEXT:    vmovaps {{.*#+}} zmm0 = [0,1,2,4,5,6,16,17,18,u,u,u,u,u,u,u]
 ; AVX512VL-NEXT:    vpermi2ps %zmm1, %zmm2, %zmm0
 ; AVX512VL-NEXT:    retq
 entry:
@@ -774,7 +774,7 @@ define <9 x double> @test_mul3x3_f64(<9 x double> %a0, <9 x double> %a1) nounwin
 ; AVX512F-NEXT:    vmulsd %xmm1, %xmm8, %xmm1
 ; AVX512F-NEXT:    vaddsd %xmm1, %xmm2, %xmm1
 ; AVX512F-NEXT:    vinsertf64x4 $1, %ymm4, %zmm3, %zmm2
-; AVX512F-NEXT:    vpmovsxbq {{.*#+}} zmm3 = [0,1,2,4,5,6,8,9]
+; AVX512F-NEXT:    vmovapd {{.*#+}} zmm3 = [0,1,2,4,5,6,8,9]
 ; AVX512F-NEXT:    vpermi2pd %zmm0, %zmm2, %zmm3
 ; AVX512F-NEXT:    vmovsd %xmm1, 64(%rdi)
 ; AVX512F-NEXT:    vmovapd %zmm3, (%rdi)
@@ -792,16 +792,16 @@ define <9 x double> @test_mul3x3_f64(<9 x double> %a0, <9 x double> %a1) nounwin
 ; AVX512VL-NEXT:    vmovddup {{.*#+}} xmm4 = mem[0,0]
 ; AVX512VL-NEXT:    vmulpd %xmm4, %xmm3, %xmm10
 ; AVX512VL-NEXT:    vaddpd %xmm10, %xmm9, %xmm9
+; AVX512VL-NEXT:    vmovddup {{.*#+}} xmm10 = mem[0,0]
 ; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm6 = xmm6[0],xmm7[0]
-; AVX512VL-NEXT:    vmovddup {{.*#+}} xmm7 = mem[0,0]
-; AVX512VL-NEXT:    vmulpd %xmm7, %xmm6, %xmm10
-; AVX512VL-NEXT:    vaddpd %xmm10, %xmm9, %xmm9
+; AVX512VL-NEXT:    vmulpd %xmm6, %xmm10, %xmm7
+; AVX512VL-NEXT:    vaddpd %xmm7, %xmm9, %xmm7
 ; AVX512VL-NEXT:    vmulsd %xmm1, %xmm2, %xmm1
 ; AVX512VL-NEXT:    vmulsd %xmm4, %xmm5, %xmm4
 ; AVX512VL-NEXT:    vaddsd %xmm4, %xmm1, %xmm1
-; AVX512VL-NEXT:    vmulsd %xmm7, %xmm8, %xmm4
+; AVX512VL-NEXT:    vmulsd %xmm10, %xmm8, %xmm4
 ; AVX512VL-NEXT:    vaddsd %xmm4, %xmm1, %xmm1
-; AVX512VL-NEXT:    vinsertf128 $1, %xmm1, %ymm9, %ymm1
+; AVX512VL-NEXT:    vinsertf128 $1, %xmm1, %ymm7, %ymm1
 ; AVX512VL-NEXT:    vmovddup {{.*#+}} xmm4 = mem[0,0]
 ; AVX512VL-NEXT:    vmulpd %xmm4, %xmm0, %xmm7
 ; AVX512VL-NEXT:    vmovddup {{.*#+}} xmm9 = mem[0,0]
@@ -830,7 +830,7 @@ define <9 x double> @test_mul3x3_f64(<9 x double> %a0, <9 x double> %a1) nounwin
 ; AVX512VL-NEXT:    vmulsd %xmm3, %xmm8, %xmm3
 ; AVX512VL-NEXT:    vaddsd %xmm3, %xmm2, %xmm2
 ; AVX512VL-NEXT:    vinsertf64x4 $1, %ymm4, %zmm1, %zmm1
-; AVX512VL-NEXT:    vpmovsxbq {{.*#+}} zmm3 = [0,1,2,4,5,6,8,9]
+; AVX512VL-NEXT:    vmovapd {{.*#+}} zmm3 = [0,1,2,4,5,6,8,9]
 ; AVX512VL-NEXT:    vpermi2pd %zmm0, %zmm1, %zmm3
 ; AVX512VL-NEXT:    vmovsd %xmm2, 64(%rdi)
 ; AVX512VL-NEXT:    vmovapd %zmm3, (%rdi)
@@ -1942,9 +1942,9 @@ define <64 x float> @test_mul8x8_f32(<64 x float> %a0, <64 x float> %a1) nounwin
 ; AVX1OR2-NEXT:    pushq %rbp
 ; AVX1OR2-NEXT:    movq %rsp, %rbp
 ; AVX1OR2-NEXT:    andq $-32, %rsp
-; AVX1OR2-NEXT:    subq $32, %rsp
-; AVX1OR2-NEXT:    movq %rdi, %rax
+; AVX1OR2-NEXT:    subq $64, %rsp
 ; AVX1OR2-NEXT:    vbroadcastss 16(%rbp), %ymm8
+; AVX1OR2-NEXT:    movq %rdi, %rax
 ; AVX1OR2-NEXT:    vmulps %ymm0, %ymm8, %ymm8
 ; AVX1OR2-NEXT:    vbroadcastss 20(%rbp), %ymm9
 ; AVX1OR2-NEXT:    vmulps %ymm1, %ymm9, %ymm9
@@ -1967,6 +1967,7 @@ define <64 x float> @test_mul8x8_f32(<64 x float> %a0, <64 x float> %a1) nounwin
 ; AVX1OR2-NEXT:    vbroadcastss 44(%rbp), %ymm9
 ; AVX1OR2-NEXT:    vmulps %ymm7, %ymm9, %ymm9
 ; AVX1OR2-NEXT:    vaddps %ymm9, %ymm8, %ymm8
+; AVX1OR2-NEXT:    vmovaps %ymm8, (%rsp) # 32-byte Spill
 ; AVX1OR2-NEXT:    vbroadcastss 48(%rbp), %ymm9
 ; AVX1OR2-NEXT:    vmulps %ymm0, %ymm9, %ymm9
 ; AVX1OR2-NEXT:    vbroadcastss 52(%rbp), %ymm10
@@ -2014,30 +2015,30 @@ define <64 x float> @test_mul8x8_f32(<64 x float> %a0, <64 x float> %a1) nounwin
 ; AVX1OR2-NEXT:    vmulps %ymm7, %ymm11, %ymm11
 ; AVX1OR2-NEXT:    vaddps %ymm11, %ymm10, %ymm10
 ; AVX1OR2-NEXT:    vbroadcastss 112(%rbp), %ymm11
-; AVX1OR2-NEXT:    vmulps %ymm0, %ymm11, %ymm11
 ; AVX1OR2-NEXT:    vbroadcastss 116(%rbp), %ymm12
+; AVX1OR2-NEXT:    vmulps %ymm0, %ymm11, %ymm11
 ; AVX1OR2-NEXT:    vmulps %ymm1, %ymm12, %ymm12
+; AVX1OR2-NEXT:    vbroadcastss 120(%rbp), %ymm13
 ; AVX1OR2-NEXT:    vaddps %ymm12, %ymm11, %ymm11
-; AVX1OR2-NEXT:    vbroadcastss 120(%rbp), %ymm12
-; AVX1OR2-NEXT:    vmulps %ymm2, %ymm12, %ymm12
+; AVX1OR2-NEXT:    vmulps %ymm2, %ymm13, %ymm12
+; AVX1OR2-NEXT:    vbroadcastss 124(%rbp), %ymm13
 ; AVX1OR2-NEXT:    vaddps %ymm12, %ymm11, %ymm11
-; AVX1OR2-NEXT:    vbroadcastss 124(%rbp), %ymm12
-; AVX1OR2-NEXT:    vmulps %ymm3, %ymm12, %ymm12
+; AVX1OR2-NEXT:    vmulps %ymm3, %ymm13, %ymm12
+; AVX1OR2-NEXT:    vbroadcastss 128(%rbp), %ymm13
 ; AVX1OR2-NEXT:    vaddps %ymm12, %ymm11, %ymm11
-; AVX1OR2-NEXT:    vbroadcastss 128(%rbp), %ymm12
-; AVX1OR2-NEXT:    vmulps %ymm4, %ymm12, %ymm12
+; AVX1OR2-NEXT:    vmulps %ymm4, %ymm13, %ymm12
+; AVX1OR2-NEXT:    vbroadcastss 132(%rbp), %ymm13
 ; AVX1OR2-NEXT:    vaddps %ymm12, %ymm11, %ymm11
-; AVX1OR2-NEXT:    vbroadcastss 132(%rbp), %ymm12
-; AVX1OR2-NEXT:    vmulps %ymm5, %ymm12, %ymm12
+; AVX1OR2-NEXT:    vmulps %ymm5, %ymm13, %ymm12
+; AVX1OR2-NEXT:    vbroadcastss 136(%rbp), %ymm13
 ; AVX1OR2-NEXT:    vaddps %ymm12, %ymm11, %ymm11
-; AVX1OR2-NEXT:    vbroadcastss 136(%rbp), %ymm12
-; AVX1OR2-NEXT:    vmulps %ymm6, %ymm12, %ymm12
+; AVX1OR2-NEXT:    vmulps %ymm6, %ymm13, %ymm12
+; AVX1OR2-NEXT:    vbroadcastss 140(%rbp), %ymm13
 ; AVX1OR2-NEXT:    vaddps %ymm12, %ymm11, %ymm11
-; AVX1OR2-NEXT:    vbroadcastss 140(%rbp), %ymm12
-; AVX1OR2-NEXT:    vmulps %ymm7, %ymm12, %ymm12
+; AVX1OR2-NEXT:    vmulps %ymm7, %ymm13, %ymm12
+; AVX1OR2-NEXT:    vbroadcastss 144(%rbp), %ymm13
 ; AVX1OR2-NEXT:    vaddps %ymm12, %ymm11, %ymm11
-; AVX1OR2-NEXT:    vbroadcastss 144(%rbp), %ymm12
-; AVX1OR2-NEXT:    vmulps %ymm0, %ymm12, %ymm12
+; AVX1OR2-NEXT:    vmulps %ymm0, %ymm13, %ymm12
 ; AVX1OR2-NEXT:    vbroadcastss 148(%rbp), %ymm13
 ; AVX1OR2-NEXT:    vmulps %ymm1, %ymm13, %ymm13
 ; AVX1OR2-NEXT:    vaddps %ymm13, %ymm12, %ymm12
@@ -2106,27 +2107,27 @@ define <64 x float> @test_mul8x8_f32(<64 x float> %a0, <64 x float> %a1) nounwin
 ; AVX1OR2-NEXT:    vmulps %ymm7, %ymm15, %ymm15
 ; AVX1OR2-NEXT:    vaddps %ymm15, %ymm14, %ymm14
 ; AVX1OR2-NEXT:    vbroadcastss 240(%rbp), %ymm15
+; AVX1OR2-NEXT:    vbroadcastss 244(%rbp), %ymm8
 ; AVX1OR2-NEXT:    vmulps %ymm0, %ymm15, %ymm0
-; AVX1OR2-NEXT:    vbroadcastss 244(%rbp), %ymm15
-; AVX1OR2-NEXT:    vmulps %ymm1, %ymm15, %ymm1
+; AVX1OR2-NEXT:    vmulps %ymm1, %ymm8, %ymm1
+; AVX1OR2-NEXT:    vbroadcastss 248(%rbp), %ymm8
 ; AVX1OR2-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; AVX1OR2-NEXT:    vbroadcastss 248(%rbp), %ymm1
-; AVX1OR2-NEXT:    vmulps %ymm1, %ymm2, %ymm1
+; AVX1OR2-NEXT:    vmulps %ymm2, %ymm8, %ymm1
+; AVX1OR2-NEXT:    vbroadcastss 252(%rbp), %ymm2
 ; AVX1OR2-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; AVX1OR2-NEXT:    vbroadcastss 252(%rbp), %ymm1
-; AVX1OR2-NEXT:    vmulps %ymm1, %ymm3, %ymm1
+; AVX1OR2-NEXT:    vmulps %ymm2, %ymm3, %ymm1
+; AVX1OR2-NEXT:    vbroadcastss 256(%rbp), %ymm2
 ; AVX1OR2-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; AVX1OR2-NEXT:    vbroadcastss 256(%rbp), %ymm1
-; AVX1OR2-NEXT:    vmulps %ymm1, %ymm4, %ymm1
+; AVX1OR2-NEXT:    vmulps %ymm2, %ymm4, %ymm1
+; AVX1OR2-NEXT:    vbroadcastss 260(%rbp), %ymm2
 ; AVX1OR2-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; AVX1OR2-NEXT:    vbroadcastss 260(%rbp), %ymm1
-; AVX1OR2-NEXT:    vmulps %ymm1, %ymm5, %ymm1
+; AVX1OR2-NEXT:    vmulps %ymm2, %ymm5, %ymm1
+; AVX1OR2-NEXT:    vbroadcastss 264(%rbp), %ymm2
 ; AVX1OR2-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; AVX1OR2-NEXT:    vbroadcastss 264(%rbp), %ymm1
-; AVX1OR2-NEXT:    vmulps %ymm1, %ymm6, %ymm1
+; AVX1OR2-NEXT:    vmulps %ymm2, %ymm6, %ymm1
+; AVX1OR2-NEXT:    vbroadcastss 268(%rbp), %ymm2
 ; AVX1OR2-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; AVX1OR2-NEXT:    vbroadcastss 268(%rbp), %ymm1
-; AVX1OR2-NEXT:    vmulps %ymm1, %ymm7, %ymm1
+; AVX1OR2-NEXT:    vmulps %ymm2, %ymm7, %ymm1
 ; AVX1OR2-NEXT:    vaddps %ymm1, %ymm0, %ymm0
 ; AVX1OR2-NEXT:    vmovaps %ymm0, 224(%rdi)
 ; AVX1OR2-NEXT:    vmovaps %ymm14, 192(%rdi)
@@ -2135,7 +2136,8 @@ define <64 x float> @test_mul8x8_f32(<64 x float> %a0, <64 x float> %a1) nounwin
 ; AVX1OR2-NEXT:    vmovaps %ymm11, 96(%rdi)
 ; AVX1OR2-NEXT:    vmovaps %ymm10, 64(%rdi)
 ; AVX1OR2-NEXT:    vmovaps %ymm9, 32(%rdi)
-; AVX1OR2-NEXT:    vmovaps %ymm8, (%rdi)
+; AVX1OR2-NEXT:    vmovaps (%rsp), %ymm0 # 32-byte Reload
+; AVX1OR2-NEXT:    vmovaps %ymm0, (%rdi)
 ; AVX1OR2-NEXT:    movq %rbp, %rsp
 ; AVX1OR2-NEXT:    popq %rbp
 ; AVX1OR2-NEXT:    vzeroupper
@@ -3413,43 +3415,43 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; AVX1OR2-NEXT:    pushq %rbp
 ; AVX1OR2-NEXT:    movq %rsp, %rbp
 ; AVX1OR2-NEXT:    andq $-32, %rsp
-; AVX1OR2-NEXT:    subq $448, %rsp # imm = 0x1C0
-; AVX1OR2-NEXT:    vmovapd %ymm2, %ymm12
-; AVX1OR2-NEXT:    vmovapd %ymm0, (%rsp) # 32-byte Spill
+; AVX1OR2-NEXT:    subq $416, %rsp # imm = 0x1A0
+; AVX1OR2-NEXT:    vmovapd %ymm1, %ymm13
+; AVX1OR2-NEXT:    vmovapd %ymm0, %ymm9
 ; AVX1OR2-NEXT:    movq %rdi, %rax
-; AVX1OR2-NEXT:    vmovapd 144(%rbp), %ymm13
-; AVX1OR2-NEXT:    vmovapd 112(%rbp), %ymm14
-; AVX1OR2-NEXT:    vbroadcastsd 272(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmulpd %ymm1, %ymm10, %ymm8
-; AVX1OR2-NEXT:    vmovapd %ymm1, %ymm9
-; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm10, %ymm0
+; AVX1OR2-NEXT:    vmovapd 48(%rbp), %ymm14
+; AVX1OR2-NEXT:    vbroadcastsd 272(%rbp), %ymm8
+; AVX1OR2-NEXT:    vmovapd 16(%rbp), %ymm15
+; AVX1OR2-NEXT:    vmulpd %ymm1, %ymm8, %ymm12
 ; AVX1OR2-NEXT:    vbroadcastsd 280(%rbp), %ymm10
+; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm8, %ymm8
 ; AVX1OR2-NEXT:    vmulpd %ymm3, %ymm10, %ymm11
-; AVX1OR2-NEXT:    vaddpd %ymm11, %ymm8, %ymm1
+; AVX1OR2-NEXT:    vaddpd %ymm11, %ymm12, %ymm1
 ; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm10, %ymm10
-; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
+; AVX1OR2-NEXT:    vaddpd %ymm10, %ymm8, %ymm0
 ; AVX1OR2-NEXT:    vbroadcastsd 288(%rbp), %ymm10
+; AVX1OR2-NEXT:    vmovapd %ymm4, %ymm8
 ; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm10, %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm11, %ymm0
 ; AVX1OR2-NEXT:    vmulpd %ymm5, %ymm10, %ymm10
+; AVX1OR2-NEXT:    vbroadcastsd 296(%rbp), %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
-; AVX1OR2-NEXT:    vbroadcastsd 296(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmulpd %ymm7, %ymm10, %ymm11
-; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
-; AVX1OR2-NEXT:    vmulpd %ymm6, %ymm10, %ymm10
+; AVX1OR2-NEXT:    vmulpd %ymm7, %ymm11, %ymm10
+; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
+; AVX1OR2-NEXT:    vmulpd %ymm6, %ymm11, %ymm10
 ; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
 ; AVX1OR2-NEXT:    vbroadcastsd 304(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmulpd 16(%rbp), %ymm10, %ymm11
+; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm15, %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm11, %ymm0
-; AVX1OR2-NEXT:    vmulpd 48(%rbp), %ymm10, %ymm10
+; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm14, %ymm10
+; AVX1OR2-NEXT:    vbroadcastsd 312(%rbp), %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
-; AVX1OR2-NEXT:    vbroadcastsd 312(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm14, %ymm11
-; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
-; AVX1OR2-NEXT:    vmulpd 80(%rbp), %ymm10, %ymm10
+; AVX1OR2-NEXT:    vmulpd 112(%rbp), %ymm11, %ymm10
+; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
+; AVX1OR2-NEXT:    vmulpd 80(%rbp), %ymm11, %ymm10
 ; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
 ; AVX1OR2-NEXT:    vbroadcastsd 320(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm13, %ymm11
+; AVX1OR2-NEXT:    vmulpd 144(%rbp), %ymm10, %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm11, %ymm0
 ; AVX1OR2-NEXT:    vmulpd 176(%rbp), %ymm10, %ymm10
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
@@ -3461,318 +3463,313 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; AVX1OR2-NEXT:    vmovapd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX1OR2-NEXT:    vbroadcastsd 336(%rbp), %ymm0
-; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm9, %ymm1
+; AVX1OR2-NEXT:    vmovapd %ymm13, %ymm4
+; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm13, %ymm1
 ; AVX1OR2-NEXT:    vbroadcastsd 344(%rbp), %ymm10
 ; AVX1OR2-NEXT:    vmulpd %ymm3, %ymm10, %ymm11
-; AVX1OR2-NEXT:    vmovapd %ymm3, %ymm8
+; AVX1OR2-NEXT:    vmovapd %ymm3, %ymm13
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
-; AVX1OR2-NEXT:    vmovapd (%rsp), %ymm15 # 32-byte Reload
-; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm15, %ymm0
+; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm9, %ymm0
 ; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm10, %ymm10
+; AVX1OR2-NEXT:    vmovapd %ymm2, %ymm3
+; AVX1OR2-NEXT:    vbroadcastsd 352(%rbp), %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
-; AVX1OR2-NEXT:    vbroadcastsd 352(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm10, %ymm11
-; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm11, %ymm0
-; AVX1OR2-NEXT:    vmulpd %ymm5, %ymm10, %ymm10
-; AVX1OR2-NEXT:    vmovapd %ymm5, %ymm3
+; AVX1OR2-NEXT:    vmulpd %ymm11, %ymm8, %ymm10
+; AVX1OR2-NEXT:    vmovapd %ymm8, %ymm12
+; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
+; AVX1OR2-NEXT:    vmulpd %ymm5, %ymm11, %ymm10
+; AVX1OR2-NEXT:    vmovapd %ymm5, %ymm8
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
 ; AVX1OR2-NEXT:    vbroadcastsd 360(%rbp), %ymm10
 ; AVX1OR2-NEXT:    vmulpd %ymm7, %ymm10, %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
 ; AVX1OR2-NEXT:    vmulpd %ymm6, %ymm10, %ymm10
+; AVX1OR2-NEXT:    vbroadcastsd 368(%rbp), %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
-; AVX1OR2-NEXT:    vbroadcastsd 368(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmovapd 16(%rbp), %ymm2
-; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm10, %ymm11
-; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm11, %ymm0
-; AVX1OR2-NEXT:    vmulpd 48(%rbp), %ymm10, %ymm10
+; AVX1OR2-NEXT:    vmulpd %ymm11, %ymm15, %ymm10
+; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
+; AVX1OR2-NEXT:    vmulpd %ymm11, %ymm14, %ymm10
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
 ; AVX1OR2-NEXT:    vbroadcastsd 376(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm14, %ymm11
-; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
-; AVX1OR2-NEXT:    vmovapd 80(%rbp), %ymm2
-; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm10, %ymm10
-; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
-; AVX1OR2-NEXT:    vbroadcastsd 384(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm13, %ymm11
-; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm11, %ymm0
-; AVX1OR2-NEXT:    vmovapd 176(%rbp), %ymm14
-; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm14, %ymm10
-; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
-; AVX1OR2-NEXT:    vbroadcastsd 392(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmovapd 240(%rbp), %ymm2
+; AVX1OR2-NEXT:    vmovapd 112(%rbp), %ymm2
 ; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm10, %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
-; AVX1OR2-NEXT:    vmovapd %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1OR2-NEXT:    vmulpd 208(%rbp), %ymm10, %ymm1
-; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
-; AVX1OR2-NEXT:    vmovapd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1OR2-NEXT:    vbroadcastsd 400(%rbp), %ymm0
-; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm9, %ymm1
-; AVX1OR2-NEXT:    vbroadcastsd 408(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmovapd %ymm8, %ymm5
-; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm8, %ymm11
-; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
-; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm15, %ymm0
-; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm12, %ymm10
-; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
-; AVX1OR2-NEXT:    vbroadcastsd 416(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm10, %ymm11
-; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm11, %ymm0
-; AVX1OR2-NEXT:    vmulpd %ymm3, %ymm10, %ymm10
-; AVX1OR2-NEXT:    vmovapd %ymm3, %ymm2
-; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
-; AVX1OR2-NEXT:    vbroadcastsd 424(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmulpd %ymm7, %ymm10, %ymm11
-; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
-; AVX1OR2-NEXT:    vmulpd %ymm6, %ymm10, %ymm10
-; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
-; AVX1OR2-NEXT:    vbroadcastsd 432(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmulpd 16(%rbp), %ymm10, %ymm11
-; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm11, %ymm0
-; AVX1OR2-NEXT:    vmulpd 48(%rbp), %ymm10, %ymm10
-; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
-; AVX1OR2-NEXT:    vbroadcastsd 440(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmulpd 112(%rbp), %ymm10, %ymm11
-; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
 ; AVX1OR2-NEXT:    vmulpd 80(%rbp), %ymm10, %ymm10
+; AVX1OR2-NEXT:    vbroadcastsd 384(%rbp), %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
-; AVX1OR2-NEXT:    vbroadcastsd 448(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm13, %ymm11
-; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm11, %ymm0
-; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm14, %ymm10
+; AVX1OR2-NEXT:    vmovapd 144(%rbp), %ymm14
+; AVX1OR2-NEXT:    vmulpd %ymm11, %ymm14, %ymm10
+; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
+; AVX1OR2-NEXT:    vmovapd 176(%rbp), %ymm15
+; AVX1OR2-NEXT:    vmulpd %ymm11, %ymm15, %ymm10
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
-; AVX1OR2-NEXT:    vbroadcastsd 456(%rbp), %ymm10
+; AVX1OR2-NEXT:    vbroadcastsd 392(%rbp), %ymm10
 ; AVX1OR2-NEXT:    vmulpd 240(%rbp), %ymm10, %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
 ; AVX1OR2-NEXT:    vmovapd %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX1OR2-NEXT:    vmulpd 208(%rbp), %ymm10, %ymm1
+; AVX1OR2-NEXT:    vbroadcastsd 400(%rbp), %ymm10
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; AVX1OR2-NEXT:    vmovapd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1OR2-NEXT:    vbroadcastsd 464(%rbp), %ymm0
-; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm9, %ymm1
-; AVX1OR2-NEXT:    vmovapd %ymm9, %ymm13
-; AVX1OR2-NEXT:    vbroadcastsd 472(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm8, %ymm11
-; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
-; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm15, %ymm0
-; AVX1OR2-NEXT:    vmovapd %ymm15, %ymm9
-; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm12, %ymm10
-; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
-; AVX1OR2-NEXT:    vbroadcastsd 480(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm10, %ymm11
-; AVX1OR2-NEXT:    vmovapd %ymm4, %ymm3
+; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm10, %ymm0
+; AVX1OR2-NEXT:    vmovapd %ymm4, %ymm2
+; AVX1OR2-NEXT:    vbroadcastsd 408(%rbp), %ymm1
+; AVX1OR2-NEXT:    vmovapd %ymm13, %ymm5
+; AVX1OR2-NEXT:    vmulpd %ymm1, %ymm13, %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm11, %ymm0
-; AVX1OR2-NEXT:    vmovapd %ymm2, %ymm15
-; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm10, %ymm10
+; AVX1OR2-NEXT:    vmovapd %ymm9, %ymm13
+; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm9, %ymm10
+; AVX1OR2-NEXT:    vmulpd %ymm1, %ymm3, %ymm1
+; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
+; AVX1OR2-NEXT:    vbroadcastsd 416(%rbp), %ymm10
+; AVX1OR2-NEXT:    vmovapd %ymm12, %ymm4
+; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm12, %ymm11
+; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
+; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm8, %ymm10
+; AVX1OR2-NEXT:    vbroadcastsd 424(%rbp), %ymm11
+; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
+; AVX1OR2-NEXT:    vmulpd %ymm7, %ymm11, %ymm10
+; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
+; AVX1OR2-NEXT:    vmulpd %ymm6, %ymm11, %ymm10
+; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
+; AVX1OR2-NEXT:    vbroadcastsd 432(%rbp), %ymm10
+; AVX1OR2-NEXT:    vmulpd 16(%rbp), %ymm10, %ymm11
+; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
+; AVX1OR2-NEXT:    vmulpd 48(%rbp), %ymm10, %ymm10
+; AVX1OR2-NEXT:    vbroadcastsd 440(%rbp), %ymm11
+; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
+; AVX1OR2-NEXT:    vmulpd 112(%rbp), %ymm11, %ymm10
+; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
+; AVX1OR2-NEXT:    vmulpd 80(%rbp), %ymm11, %ymm10
+; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
+; AVX1OR2-NEXT:    vbroadcastsd 448(%rbp), %ymm10
+; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm14, %ymm11
+; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
+; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm15, %ymm10
+; AVX1OR2-NEXT:    vbroadcastsd 456(%rbp), %ymm11
+; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
+; AVX1OR2-NEXT:    vmulpd 240(%rbp), %ymm11, %ymm10
+; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
+; AVX1OR2-NEXT:    vmovapd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX1OR2-NEXT:    vmovapd 208(%rbp), %ymm0
+; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm11, %ymm0
+; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm1, %ymm0
+; AVX1OR2-NEXT:    vmovapd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX1OR2-NEXT:    vbroadcastsd 464(%rbp), %ymm0
+; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm2, %ymm1
+; AVX1OR2-NEXT:    vmovapd %ymm2, %ymm12
+; AVX1OR2-NEXT:    vbroadcastsd 472(%rbp), %ymm10
+; AVX1OR2-NEXT:    vmulpd %ymm5, %ymm10, %ymm11
+; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
+; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm9, %ymm0
+; AVX1OR2-NEXT:    vmulpd %ymm3, %ymm10, %ymm10
+; AVX1OR2-NEXT:    vmovapd %ymm3, %ymm9
+; AVX1OR2-NEXT:    vbroadcastsd 480(%rbp), %ymm11
+; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
+; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm11, %ymm10
+; AVX1OR2-NEXT:    vmovapd %ymm4, %ymm15
+; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
+; AVX1OR2-NEXT:    vmulpd %ymm11, %ymm8, %ymm10
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
 ; AVX1OR2-NEXT:    vbroadcastsd 488(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmovapd %ymm7, %ymm8
 ; AVX1OR2-NEXT:    vmulpd %ymm7, %ymm10, %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
-; AVX1OR2-NEXT:    vmovapd %ymm6, %ymm7
 ; AVX1OR2-NEXT:    vmulpd %ymm6, %ymm10, %ymm10
+; AVX1OR2-NEXT:    vbroadcastsd 496(%rbp), %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
-; AVX1OR2-NEXT:    vbroadcastsd 496(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmulpd 16(%rbp), %ymm10, %ymm11
-; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm11, %ymm0
-; AVX1OR2-NEXT:    vmovapd 48(%rbp), %ymm4
-; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm10, %ymm10
+; AVX1OR2-NEXT:    vmovapd 16(%rbp), %ymm2
+; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm11, %ymm10
+; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
+; AVX1OR2-NEXT:    vmovapd 48(%rbp), %ymm14
+; AVX1OR2-NEXT:    vmulpd %ymm11, %ymm14, %ymm10
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
 ; AVX1OR2-NEXT:    vbroadcastsd 504(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmovapd 112(%rbp), %ymm2
-; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm10, %ymm11
+; AVX1OR2-NEXT:    vmulpd 112(%rbp), %ymm10, %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
-; AVX1OR2-NEXT:    vmovapd 80(%rbp), %ymm14
-; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm14, %ymm10
+; AVX1OR2-NEXT:    vmovapd 80(%rbp), %ymm3
+; AVX1OR2-NEXT:    vmulpd %ymm3, %ymm10, %ymm10
+; AVX1OR2-NEXT:    vbroadcastsd 512(%rbp), %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
-; AVX1OR2-NEXT:    vbroadcastsd 512(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmulpd 144(%rbp), %ymm10, %ymm11
-; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm11, %ymm0
-; AVX1OR2-NEXT:    vmovapd 176(%rbp), %ymm2
-; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm10, %ymm10
+; AVX1OR2-NEXT:    vmovapd 144(%rbp), %ymm3
+; AVX1OR2-NEXT:    vmulpd %ymm3, %ymm11, %ymm10
+; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
+; AVX1OR2-NEXT:    vmulpd 176(%rbp), %ymm11, %ymm10
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
 ; AVX1OR2-NEXT:    vbroadcastsd 520(%rbp), %ymm10
 ; AVX1OR2-NEXT:    vmulpd 240(%rbp), %ymm10, %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
 ; AVX1OR2-NEXT:    vmovapd %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX1OR2-NEXT:    vmulpd 208(%rbp), %ymm10, %ymm1
+; AVX1OR2-NEXT:    vbroadcastsd 528(%rbp), %ymm10
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; AVX1OR2-NEXT:    vmovapd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1OR2-NEXT:    vbroadcastsd 528(%rbp), %ymm0
-; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm13, %ymm1
-; AVX1OR2-NEXT:    vbroadcastsd 536(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmulpd %ymm5, %ymm10, %ymm11
-; AVX1OR2-NEXT:    vmovapd %ymm5, %ymm6
-; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
-; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm9, %ymm0
-; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm12, %ymm10
-; AVX1OR2-NEXT:    vmovapd %ymm12, %ymm5
-; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
+; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm12, %ymm0
+; AVX1OR2-NEXT:    vbroadcastsd 536(%rbp), %ymm1
+; AVX1OR2-NEXT:    vmulpd %ymm1, %ymm5, %ymm11
+; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm11, %ymm0
+; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm13, %ymm10
+; AVX1OR2-NEXT:    vmovapd %ymm13, %ymm4
+; AVX1OR2-NEXT:    vmulpd %ymm1, %ymm9, %ymm1
+; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
 ; AVX1OR2-NEXT:    vbroadcastsd 544(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmulpd %ymm3, %ymm10, %ymm11
-; AVX1OR2-NEXT:    vmovapd %ymm3, %ymm12
-; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm11, %ymm0
-; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm15, %ymm10
-; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
-; AVX1OR2-NEXT:    vbroadcastsd 552(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm8, %ymm11
+; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm15, %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
-; AVX1OR2-NEXT:    vmulpd %ymm7, %ymm10, %ymm10
+; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm8, %ymm10
+; AVX1OR2-NEXT:    vbroadcastsd 552(%rbp), %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
-; AVX1OR2-NEXT:    vbroadcastsd 560(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmulpd 16(%rbp), %ymm10, %ymm11
-; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm11, %ymm0
-; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm10, %ymm10
-; AVX1OR2-NEXT:    vmovapd %ymm4, %ymm3
+; AVX1OR2-NEXT:    vmulpd %ymm7, %ymm11, %ymm10
+; AVX1OR2-NEXT:    vmovapd %ymm7, %ymm13
+; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
+; AVX1OR2-NEXT:    vmulpd %ymm6, %ymm11, %ymm10
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
-; AVX1OR2-NEXT:    vbroadcastsd 568(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmulpd 112(%rbp), %ymm10, %ymm11
+; AVX1OR2-NEXT:    vbroadcastsd 560(%rbp), %ymm10
+; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm10, %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
 ; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm14, %ymm10
+; AVX1OR2-NEXT:    vbroadcastsd 568(%rbp), %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
+; AVX1OR2-NEXT:    vmovapd 112(%rbp), %ymm2
+; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm11, %ymm10
+; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
+; AVX1OR2-NEXT:    vmulpd 80(%rbp), %ymm11, %ymm10
+; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
 ; AVX1OR2-NEXT:    vbroadcastsd 576(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmovapd 144(%rbp), %ymm4
-; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm10, %ymm11
-; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm11, %ymm0
-; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm10, %ymm10
-; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
-; AVX1OR2-NEXT:    vbroadcastsd 584(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmovapd 240(%rbp), %ymm14
-; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm14, %ymm11
-; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
-; AVX1OR2-NEXT:    vmovapd %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1OR2-NEXT:    vmovapd 208(%rbp), %ymm2
-; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm10, %ymm1
-; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
-; AVX1OR2-NEXT:    vmovapd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1OR2-NEXT:    vbroadcastsd 592(%rbp), %ymm0
-; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm13, %ymm1
-; AVX1OR2-NEXT:    vbroadcastsd 600(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmulpd %ymm6, %ymm10, %ymm11
-; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
-; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm9, %ymm0
-; AVX1OR2-NEXT:    vmulpd %ymm5, %ymm10, %ymm10
-; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
-; AVX1OR2-NEXT:    vbroadcastsd 608(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm12, %ymm11
-; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm11, %ymm0
-; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm15, %ymm10
-; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
-; AVX1OR2-NEXT:    vbroadcastsd 616(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm8, %ymm11
-; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
-; AVX1OR2-NEXT:    vmulpd %ymm7, %ymm10, %ymm10
-; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
-; AVX1OR2-NEXT:    vbroadcastsd 624(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmulpd 16(%rbp), %ymm10, %ymm11
-; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm11, %ymm0
-; AVX1OR2-NEXT:    vmulpd %ymm3, %ymm10, %ymm10
-; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
-; AVX1OR2-NEXT:    vbroadcastsd 632(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmovapd 112(%rbp), %ymm3
 ; AVX1OR2-NEXT:    vmulpd %ymm3, %ymm10, %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
-; AVX1OR2-NEXT:    vmovapd 80(%rbp), %ymm3
-; AVX1OR2-NEXT:    vmulpd %ymm3, %ymm10, %ymm10
+; AVX1OR2-NEXT:    vmovapd 176(%rbp), %ymm7
+; AVX1OR2-NEXT:    vmulpd %ymm7, %ymm10, %ymm10
+; AVX1OR2-NEXT:    vbroadcastsd 584(%rbp), %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
-; AVX1OR2-NEXT:    vbroadcastsd 640(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm10, %ymm11
-; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm11, %ymm0
-; AVX1OR2-NEXT:    vmovapd 176(%rbp), %ymm3
-; AVX1OR2-NEXT:    vmulpd %ymm3, %ymm10, %ymm10
+; AVX1OR2-NEXT:    vmovapd 240(%rbp), %ymm14
+; AVX1OR2-NEXT:    vmulpd %ymm11, %ymm14, %ymm10
+; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
+; AVX1OR2-NEXT:    vmovapd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX1OR2-NEXT:    vmovapd 208(%rbp), %ymm0
+; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm11, %ymm0
+; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm1, %ymm0
+; AVX1OR2-NEXT:    vmovapd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX1OR2-NEXT:    vbroadcastsd 592(%rbp), %ymm0
+; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm12, %ymm1
+; AVX1OR2-NEXT:    vbroadcastsd 600(%rbp), %ymm10
+; AVX1OR2-NEXT:    vmulpd %ymm5, %ymm10, %ymm11
+; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
+; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm4, %ymm0
+; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm9, %ymm10
+; AVX1OR2-NEXT:    vbroadcastsd 608(%rbp), %ymm11
+; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
+; AVX1OR2-NEXT:    vmulpd %ymm11, %ymm15, %ymm10
+; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
+; AVX1OR2-NEXT:    vmulpd %ymm11, %ymm8, %ymm10
+; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
+; AVX1OR2-NEXT:    vbroadcastsd 616(%rbp), %ymm10
+; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm13, %ymm11
+; AVX1OR2-NEXT:    vmovapd %ymm13, %ymm3
+; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
+; AVX1OR2-NEXT:    vmulpd %ymm6, %ymm10, %ymm10
+; AVX1OR2-NEXT:    vmovapd %ymm6, %ymm7
+; AVX1OR2-NEXT:    vbroadcastsd 624(%rbp), %ymm11
+; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
+; AVX1OR2-NEXT:    vmovapd 16(%rbp), %ymm13
+; AVX1OR2-NEXT:    vmulpd %ymm11, %ymm13, %ymm10
+; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
+; AVX1OR2-NEXT:    vmulpd 48(%rbp), %ymm11, %ymm10
+; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
+; AVX1OR2-NEXT:    vbroadcastsd 632(%rbp), %ymm10
+; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm10, %ymm11
+; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
+; AVX1OR2-NEXT:    vmulpd 80(%rbp), %ymm10, %ymm10
+; AVX1OR2-NEXT:    vbroadcastsd 640(%rbp), %ymm11
+; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
+; AVX1OR2-NEXT:    vmovapd 144(%rbp), %ymm6
+; AVX1OR2-NEXT:    vmulpd %ymm6, %ymm11, %ymm10
+; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
+; AVX1OR2-NEXT:    vmulpd 176(%rbp), %ymm11, %ymm10
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
 ; AVX1OR2-NEXT:    vbroadcastsd 648(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmovapd %ymm14, %ymm4
 ; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm14, %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
 ; AVX1OR2-NEXT:    vmovapd %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm10, %ymm1
-; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
-; AVX1OR2-NEXT:    vmovapd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX1OR2-NEXT:    vmovapd 208(%rbp), %ymm11
+; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm11, %ymm1
 ; AVX1OR2-NEXT:    vbroadcastsd 656(%rbp), %ymm2
-; AVX1OR2-NEXT:    vmovapd %ymm13, %ymm3
-; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm13, %ymm1
-; AVX1OR2-NEXT:    vbroadcastsd 664(%rbp), %ymm0
-; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm6, %ymm14
-; AVX1OR2-NEXT:    vmovapd %ymm6, %ymm10
-; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm14, %ymm1
-; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm9, %ymm2
-; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm5, %ymm0
-; AVX1OR2-NEXT:    vmovapd %ymm5, %ymm6
-; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm2, %ymm0
+; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
+; AVX1OR2-NEXT:    vmovapd %ymm0, (%rsp) # 32-byte Spill
+; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm12, %ymm0
+; AVX1OR2-NEXT:    vbroadcastsd 664(%rbp), %ymm1
+; AVX1OR2-NEXT:    vmulpd %ymm1, %ymm5, %ymm14
+; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm14, %ymm0
+; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm4, %ymm2
+; AVX1OR2-NEXT:    vmulpd %ymm1, %ymm9, %ymm1
+; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm2, %ymm1
 ; AVX1OR2-NEXT:    vbroadcastsd 672(%rbp), %ymm2
-; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm12, %ymm14
-; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm14, %ymm0
-; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm15, %ymm2
-; AVX1OR2-NEXT:    vaddpd %ymm2, %ymm1, %ymm1
-; AVX1OR2-NEXT:    vbroadcastsd 680(%rbp), %ymm2
-; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm8, %ymm14
+; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm15, %ymm14
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm14, %ymm1
-; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm7, %ymm2
+; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm8, %ymm2
+; AVX1OR2-NEXT:    vbroadcastsd 680(%rbp), %ymm14
 ; AVX1OR2-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
+; AVX1OR2-NEXT:    vmovapd %ymm3, %ymm10
+; AVX1OR2-NEXT:    vmulpd %ymm3, %ymm14, %ymm2
+; AVX1OR2-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
+; AVX1OR2-NEXT:    vmulpd %ymm7, %ymm14, %ymm2
+; AVX1OR2-NEXT:    vaddpd %ymm2, %ymm1, %ymm1
 ; AVX1OR2-NEXT:    vbroadcastsd 688(%rbp), %ymm2
-; AVX1OR2-NEXT:    vmovapd 16(%rbp), %ymm11
-; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm11, %ymm14
-; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm14, %ymm0
+; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm13, %ymm14
+; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm14, %ymm1
 ; AVX1OR2-NEXT:    vmulpd 48(%rbp), %ymm2, %ymm2
-; AVX1OR2-NEXT:    vaddpd %ymm2, %ymm1, %ymm1
-; AVX1OR2-NEXT:    vbroadcastsd 696(%rbp), %ymm2
-; AVX1OR2-NEXT:    vmovapd 112(%rbp), %ymm5
-; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm5, %ymm14
-; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm14, %ymm1
-; AVX1OR2-NEXT:    vmovapd 80(%rbp), %ymm5
-; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm5, %ymm2
+; AVX1OR2-NEXT:    vbroadcastsd 696(%rbp), %ymm14
 ; AVX1OR2-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
+; AVX1OR2-NEXT:    vmulpd 112(%rbp), %ymm14, %ymm2
+; AVX1OR2-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
+; AVX1OR2-NEXT:    vmulpd 80(%rbp), %ymm14, %ymm2
+; AVX1OR2-NEXT:    vaddpd %ymm2, %ymm1, %ymm1
 ; AVX1OR2-NEXT:    vbroadcastsd 704(%rbp), %ymm2
-; AVX1OR2-NEXT:    vmulpd 144(%rbp), %ymm2, %ymm14
-; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm14, %ymm0
-; AVX1OR2-NEXT:    vmovapd 176(%rbp), %ymm13
-; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm13, %ymm2
-; AVX1OR2-NEXT:    vaddpd %ymm2, %ymm1, %ymm1
+; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm6, %ymm14
+; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm14, %ymm14
+; AVX1OR2-NEXT:    vmulpd 176(%rbp), %ymm2, %ymm1
 ; AVX1OR2-NEXT:    vbroadcastsd 712(%rbp), %ymm2
-; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm4, %ymm14
-; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm14, %ymm1
-; AVX1OR2-NEXT:    vmovapd 208(%rbp), %ymm14
-; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm14, %ymm2
-; AVX1OR2-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
+; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
+; AVX1OR2-NEXT:    vmovapd 240(%rbp), %ymm13
+; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm13, %ymm1
+; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm0, %ymm1
+; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm11, %ymm0
+; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm14, %ymm0
 ; AVX1OR2-NEXT:    vbroadcastsd 720(%rbp), %ymm2
-; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm3, %ymm3
-; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm9, %ymm2
+; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm12, %ymm3
+; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm4, %ymm2
 ; AVX1OR2-NEXT:    vbroadcastsd 728(%rbp), %ymm4
-; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm10, %ymm5
+; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm5, %ymm5
 ; AVX1OR2-NEXT:    vaddpd %ymm5, %ymm3, %ymm3
-; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm6, %ymm4
+; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm9, %ymm4
+; AVX1OR2-NEXT:    vbroadcastsd 736(%rbp), %ymm5
 ; AVX1OR2-NEXT:    vaddpd %ymm4, %ymm2, %ymm2
-; AVX1OR2-NEXT:    vbroadcastsd 736(%rbp), %ymm4
-; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm12, %ymm5
-; AVX1OR2-NEXT:    vaddpd %ymm5, %ymm2, %ymm2
-; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm15, %ymm4
+; AVX1OR2-NEXT:    vmulpd %ymm5, %ymm15, %ymm4
+; AVX1OR2-NEXT:    vaddpd %ymm4, %ymm2, %ymm2
+; AVX1OR2-NEXT:    vmulpd %ymm5, %ymm8, %ymm4
 ; AVX1OR2-NEXT:    vaddpd %ymm4, %ymm3, %ymm3
 ; AVX1OR2-NEXT:    vbroadcastsd 744(%rbp), %ymm4
-; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm8, %ymm5
+; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm10, %ymm5
 ; AVX1OR2-NEXT:    vaddpd %ymm5, %ymm3, %ymm3
 ; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm7, %ymm4
+; AVX1OR2-NEXT:    vbroadcastsd 752(%rbp), %ymm5
 ; AVX1OR2-NEXT:    vaddpd %ymm4, %ymm2, %ymm2
-; AVX1OR2-NEXT:    vbroadcastsd 752(%rbp), %ymm4
-; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm11, %ymm5
-; AVX1OR2-NEXT:    vaddpd %ymm5, %ymm2, %ymm2
-; AVX1OR2-NEXT:    vmulpd 48(%rbp), %ymm4, %ymm4
+; AVX1OR2-NEXT:    vmulpd 16(%rbp), %ymm5, %ymm4
+; AVX1OR2-NEXT:    vaddpd %ymm4, %ymm2, %ymm2
+; AVX1OR2-NEXT:    vmulpd 48(%rbp), %ymm5, %ymm4
 ; AVX1OR2-NEXT:    vaddpd %ymm4, %ymm3, %ymm3
 ; AVX1OR2-NEXT:    vbroadcastsd 760(%rbp), %ymm4
 ; AVX1OR2-NEXT:    vmulpd 112(%rbp), %ymm4, %ymm5
 ; AVX1OR2-NEXT:    vaddpd %ymm5, %ymm3, %ymm3
 ; AVX1OR2-NEXT:    vmulpd 80(%rbp), %ymm4, %ymm4
+; AVX1OR2-NEXT:    vbroadcastsd 768(%rbp), %ymm5
 ; AVX1OR2-NEXT:    vaddpd %ymm4, %ymm2, %ymm2
-; AVX1OR2-NEXT:    vbroadcastsd 768(%rbp), %ymm4
-; AVX1OR2-NEXT:    vmulpd 144(%rbp), %ymm4, %ymm5
-; AVX1OR2-NEXT:    vaddpd %ymm5, %ymm2, %ymm2
-; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm13, %ymm4
+; AVX1OR2-NEXT:    vmulpd %ymm5, %ymm6, %ymm4
+; AVX1OR2-NEXT:    vaddpd %ymm4, %ymm2, %ymm2
+; AVX1OR2-NEXT:    vmulpd 176(%rbp), %ymm5, %ymm4
 ; AVX1OR2-NEXT:    vaddpd %ymm4, %ymm3, %ymm3
 ; AVX1OR2-NEXT:    vbroadcastsd 776(%rbp), %ymm4
-; AVX1OR2-NEXT:    vmulpd 240(%rbp), %ymm4, %ymm5
+; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm13, %ymm5
 ; AVX1OR2-NEXT:    vaddpd %ymm5, %ymm3, %ymm3
-; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm14, %ymm4
+; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm11, %ymm4
 ; AVX1OR2-NEXT:    vaddpd %ymm4, %ymm2, %ymm2
 ; AVX1OR2-NEXT:    vmovapd %ymm3, 480(%rdi)
 ; AVX1OR2-NEXT:    vmovapd %ymm2, 448(%rdi)
@@ -3780,7 +3777,7 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; AVX1OR2-NEXT:    vmovapd %ymm0, 384(%rdi)
 ; AVX1OR2-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; AVX1OR2-NEXT:    vmovaps %ymm0, 352(%rdi)
-; AVX1OR2-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
+; AVX1OR2-NEXT:    vmovaps (%rsp), %ymm0 # 32-byte Reload
 ; AVX1OR2-NEXT:    vmovaps %ymm0, 320(%rdi)
 ; AVX1OR2-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; AVX1OR2-NEXT:    vmovaps %ymm0, 288(%rdi)
@@ -3813,48 +3810,48 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; AVX512-NEXT:    movq %rsp, %rbp
 ; AVX512-NEXT:    andq $-64, %rsp
 ; AVX512-NEXT:    subq $64, %rsp
-; AVX512-NEXT:    movq %rdi, %rax
 ; AVX512-NEXT:    vmulpd 16(%rbp){1to8}, %zmm0, %zmm8
+; AVX512-NEXT:    movq %rdi, %rax
 ; AVX512-NEXT:    vmulpd 24(%rbp){1to8}, %zmm1, %zmm9
 ; AVX512-NEXT:    vaddpd %zmm9, %zmm8, %zmm8
 ; AVX512-NEXT:    vmulpd 32(%rbp){1to8}, %zmm2, %zmm9
+; AVX512-NEXT:    vmulpd 40(%rbp){1to8}, %zmm3, %zmm10
 ; AVX512-NEXT:    vaddpd %zmm9, %zmm8, %zmm8
-; AVX512-NEXT:    vmulpd 40(%rbp){1to8}, %zmm3, %zmm9
-; AVX512-NEXT:    vaddpd %zmm9, %zmm8, %zmm8
+; AVX512-NEXT:    vaddpd %zmm10, %zmm8, %zmm8
 ; AVX512-NEXT:    vmulpd 48(%rbp){1to8}, %zmm4, %zmm9
 ; AVX512-NEXT:    vaddpd %zmm9, %zmm8, %zmm8
 ; AVX512-NEXT:    vmulpd 56(%rbp){1to8}, %zmm5, %zmm9
 ; AVX512-NEXT:    vaddpd %zmm9, %zmm8, %zmm8
 ; AVX512-NEXT:    vmulpd 64(%rbp){1to8}, %zmm6, %zmm9
+; AVX512-NEXT:    vmulpd 72(%rbp){1to8}, %zmm7, %zmm10
 ; AVX512-NEXT:    vaddpd %zmm9, %zmm8, %zmm8
-; AVX512-NEXT:    vmulpd 72(%rbp){1to8}, %zmm7, %zmm9
-; AVX512-NEXT:    vaddpd %zmm9, %zmm8, %zmm8
+; AVX512-NEXT:    vaddpd %zmm10, %zmm8, %zmm8
 ; AVX512-NEXT:    vmulpd 80(%rbp){1to8}, %zmm0, %zmm9
 ; AVX512-NEXT:    vmulpd 88(%rbp){1to8}, %zmm1, %zmm10
+; AVX512-NEXT:    vmulpd 96(%rbp){1to8}, %zmm2, %zmm11
 ; AVX512-NEXT:    vaddpd %zmm10, %zmm9, %zmm9
-; AVX512-NEXT:    vmulpd 96(%rbp){1to8}, %zmm2, %zmm10
-; AVX512-NEXT:    vaddpd %zmm10, %zmm9, %zmm9
+; AVX512-NEXT:    vaddpd %zmm11, %zmm9, %zmm9
 ; AVX512-NEXT:    vmulpd 104(%rbp){1to8}, %zmm3, %zmm10
 ; AVX512-NEXT:    vaddpd %zmm10, %zmm9, %zmm9
 ; AVX512-NEXT:    vmulpd 112(%rbp){1to8}, %zmm4, %zmm10
 ; AVX512-NEXT:    vaddpd %zmm10, %zmm9, %zmm9
 ; AVX512-NEXT:    vmulpd 120(%rbp){1to8}, %zmm5, %zmm10
+; AVX512-NEXT:    vmulpd 128(%rbp){1to8}, %zmm6, %zmm11
 ; AVX512-NEXT:    vaddpd %zmm10, %zmm9, %zmm9
-; AVX512-NEXT:    vmulpd 128(%rbp){1to8}, %zmm6, %zmm10
-; AVX512-NEXT:    vaddpd %zmm10, %zmm9, %zmm9
+; AVX512-NEXT:    vaddpd %zmm11, %zmm9, %zmm9
 ; AVX512-NEXT:    vmulpd 136(%rbp){1to8}, %zmm7, %zmm10
+; AVX512-NEXT:    vmulpd 144(%rbp){1to8}, %zmm0, %zmm11
+; AVX512-NEXT:    vmulpd 152(%rbp){1to8}, %zmm1, %zmm12
 ; AVX512-NEXT:    vaddpd %zmm10, %zmm9, %zmm9
-; AVX512-NEXT:    vmulpd 144(%rbp){1to8}, %zmm0, %zmm10
-; AVX512-NEXT:    vmulpd 152(%rbp){1to8}, %zmm1, %zmm11
-; AVX512-NEXT:    vaddpd %zmm11, %zmm10, %zmm10
+; AVX512-NEXT:    vaddpd %zmm12, %zmm11, %zmm10
 ; AVX512-NEXT:    vmulpd 160(%rbp){1to8}, %zmm2, %zmm11
 ; AVX512-NEXT:    vaddpd %zmm11, %zmm10, %zmm10
 ; AVX512-NEXT:    vmulpd 168(%rbp){1to8}, %zmm3, %zmm11
 ; AVX512-NEXT:    vaddpd %zmm11, %zmm10, %zmm10
 ; AVX512-NEXT:    vmulpd 176(%rbp){1to8}, %zmm4, %zmm11
+; AVX512-NEXT:    vmulpd 184(%rbp){1to8}, %zmm5, %zmm12
 ; AVX512-NEXT:    vaddpd %zmm11, %zmm10, %zmm10
-; AVX512-NEXT:    vmulpd 184(%rbp){1to8}, %zmm5, %zmm11
-; AVX512-NEXT:    vaddpd %zmm11, %zmm10, %zmm10
+; AVX512-NEXT:    vaddpd %zmm12, %zmm10, %zmm10
 ; AVX512-NEXT:    vmulpd 192(%rbp){1to8}, %zmm6, %zmm11
 ; AVX512-NEXT:    vaddpd %zmm11, %zmm10, %zmm10
 ; AVX512-NEXT:    vmulpd 200(%rbp){1to8}, %zmm7, %zmm11
@@ -3865,56 +3862,56 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; AVX512-NEXT:    vmulpd 224(%rbp){1to8}, %zmm2, %zmm12
 ; AVX512-NEXT:    vaddpd %zmm12, %zmm11, %zmm11
 ; AVX512-NEXT:    vmulpd 232(%rbp){1to8}, %zmm3, %zmm12
+; AVX512-NEXT:    vmulpd 240(%rbp){1to8}, %zmm4, %zmm13
 ; AVX512-NEXT:    vaddpd %zmm12, %zmm11, %zmm11
-; AVX512-NEXT:    vmulpd 240(%rbp){1to8}, %zmm4, %zmm12
-; AVX512-NEXT:    vaddpd %zmm12, %zmm11, %zmm11
+; AVX512-NEXT:    vaddpd %zmm13, %zmm11, %zmm11
 ; AVX512-NEXT:    vmulpd 248(%rbp){1to8}, %zmm5, %zmm12
 ; AVX512-NEXT:    vaddpd %zmm12, %zmm11, %zmm11
 ; AVX512-NEXT:    vmulpd 256(%rbp){1to8}, %zmm6, %zmm12
 ; AVX512-NEXT:    vaddpd %zmm12, %zmm11, %zmm11
 ; AVX512-NEXT:    vmulpd 264(%rbp){1to8}, %zmm7, %zmm12
+; AVX512-NEXT:    vmulpd 272(%rbp){1to8}, %zmm0, %zmm13
 ; AVX512-NEXT:    vaddpd %zmm12, %zmm11, %zmm11
-; AVX512-NEXT:    vmulpd 272(%rbp){1to8}, %zmm0, %zmm12
-; AVX512-NEXT:    vmulpd 280(%rbp){1to8}, %zmm1, %zmm13
-; AVX512-NEXT:    vaddpd %zmm13, %zmm12, %zmm12
+; AVX512-NEXT:    vmulpd 280(%rbp){1to8}, %zmm1, %zmm12
+; AVX512-NEXT:    vaddpd %zmm12, %zmm13, %zmm12
 ; AVX512-NEXT:    vmulpd 288(%rbp){1to8}, %zmm2, %zmm13
+; AVX512-NEXT:    vmulpd 296(%rbp){1to8}, %zmm3, %zmm14
 ; AVX512-NEXT:    vaddpd %zmm13, %zmm12, %zmm12
-; AVX512-NEXT:    vmulpd 296(%rbp){1to8}, %zmm3, %zmm13
-; AVX512-NEXT:    vaddpd %zmm13, %zmm12, %zmm12
+; AVX512-NEXT:    vaddpd %zmm14, %zmm12, %zmm12
 ; AVX512-NEXT:    vmulpd 304(%rbp){1to8}, %zmm4, %zmm13
 ; AVX512-NEXT:    vaddpd %zmm13, %zmm12, %zmm12
 ; AVX512-NEXT:    vmulpd 312(%rbp){1to8}, %zmm5, %zmm13
 ; AVX512-NEXT:    vaddpd %zmm13, %zmm12, %zmm12
 ; AVX512-NEXT:    vmulpd 320(%rbp){1to8}, %zmm6, %zmm13
+; AVX512-NEXT:    vmulpd 328(%rbp){1to8}, %zmm7, %zmm14
 ; AVX512-NEXT:    vaddpd %zmm13, %zmm12, %zmm12
-; AVX512-NEXT:    vmulpd 328(%rbp){1to8}, %zmm7, %zmm13
-; AVX512-NEXT:    vaddpd %zmm13, %zmm12, %zmm12
+; AVX512-NEXT:    vaddpd %zmm14, %zmm12, %zmm12
 ; AVX512-NEXT:    vmulpd 336(%rbp){1to8}, %zmm0, %zmm13
 ; AVX512-NEXT:    vmulpd 344(%rbp){1to8}, %zmm1, %zmm14
+; AVX512-NEXT:    vmulpd 352(%rbp){1to8}, %zmm2, %zmm15
 ; AVX512-NEXT:    vaddpd %zmm14, %zmm13, %zmm13
-; AVX512-NEXT:    vmulpd 352(%rbp){1to8}, %zmm2, %zmm14
-; AVX512-NEXT:    vaddpd %zmm14, %zmm13, %zmm13
+; AVX512-NEXT:    vaddpd %zmm15, %zmm13, %zmm13
 ; AVX512-NEXT:    vmulpd 360(%rbp){1to8}, %zmm3, %zmm14
 ; AVX512-NEXT:    vaddpd %zmm14, %zmm13, %zmm13
 ; AVX512-NEXT:    vmulpd 368(%rbp){1to8}, %zmm4, %zmm14
 ; AVX512-NEXT:    vaddpd %zmm14, %zmm13, %zmm13
 ; AVX512-NEXT:    vmulpd 376(%rbp){1to8}, %zmm5, %zmm14
+; AVX512-NEXT:    vmulpd 384(%rbp){1to8}, %zmm6, %zmm15
 ; AVX512-NEXT:    vaddpd %zmm14, %zmm13, %zmm13
-; AVX512-NEXT:    vmulpd 384(%rbp){1to8}, %zmm6, %zmm14
-; AVX512-NEXT:    vaddpd %zmm14, %zmm13, %zmm13
+; AVX512-NEXT:    vaddpd %zmm15, %zmm13, %zmm13
 ; AVX512-NEXT:    vmulpd 392(%rbp){1to8}, %zmm7, %zmm14
+; AVX512-NEXT:    vmulpd 400(%rbp){1to8}, %zmm0, %zmm15
+; AVX512-NEXT:    vmulpd 408(%rbp){1to8}, %zmm1, %zmm16
 ; AVX512-NEXT:    vaddpd %zmm14, %zmm13, %zmm13
-; AVX512-NEXT:    vmulpd 400(%rbp){1to8}, %zmm0, %zmm14
-; AVX512-NEXT:    vmulpd 408(%rbp){1to8}, %zmm1, %zmm15
-; AVX512-NEXT:    vaddpd %zmm15, %zmm14, %zmm14
+; AVX512-NEXT:    vaddpd %zmm16, %zmm15, %zmm14
 ; AVX512-NEXT:    vmulpd 416(%rbp){1to8}, %zmm2, %zmm15
 ; AVX512-NEXT:    vaddpd %zmm15, %zmm14, %zmm14
 ; AVX512-NEXT:    vmulpd 424(%rbp){1to8}, %zmm3, %zmm15
 ; AVX512-NEXT:    vaddpd %zmm15, %zmm14, %zmm14
 ; AVX512-NEXT:    vmulpd 432(%rbp){1to8}, %zmm4, %zmm15
+; AVX512-NEXT:    vmulpd 440(%rbp){1to8}, %zmm5, %zmm16
 ; AVX512-NEXT:    vaddpd %zmm15, %zmm14, %zmm14
-; AVX512-NEXT:    vmulpd 440(%rbp){1to8}, %zmm5, %zmm15
-; AVX512-NEXT:    vaddpd %zmm15, %zmm14, %zmm14
+; AVX512-NEXT:    vaddpd %zmm16, %zmm14, %zmm14
 ; AVX512-NEXT:    vmulpd 448(%rbp){1to8}, %zmm6, %zmm15
 ; AVX512-NEXT:    vaddpd %zmm15, %zmm14, %zmm14
 ; AVX512-NEXT:    vmulpd 456(%rbp){1to8}, %zmm7, %zmm15
@@ -3925,9 +3922,9 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; AVX512-NEXT:    vmulpd 480(%rbp){1to8}, %zmm2, %zmm1
 ; AVX512-NEXT:    vaddpd %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vmulpd 488(%rbp){1to8}, %zmm3, %zmm1
+; AVX512-NEXT:    vmulpd 496(%rbp){1to8}, %zmm4, %zmm2
 ; AVX512-NEXT:    vaddpd %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vmulpd 496(%rbp){1to8}, %zmm4, %zmm1
-; AVX512-NEXT:    vaddpd %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vaddpd %zmm2, %zmm0, %zmm0
 ; AVX512-NEXT:    vmulpd 504(%rbp){1to8}, %zmm5, %zmm1
 ; AVX512-NEXT:    vaddpd %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vmulpd 512(%rbp){1to8}, %zmm6, %zmm1

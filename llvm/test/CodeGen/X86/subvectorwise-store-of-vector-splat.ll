@@ -3333,9 +3333,9 @@ define void @vec384_v3i64(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ;
 ; SSE2-LABEL: vec384_v3i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq 16(%rdi), %rax
 ; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE2-NEXT:    pxor (%rdi), %xmm0
+; SSE2-NEXT:    movq 16(%rdi), %rax
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
 ; SSE2-NEXT:    notq %rax
 ; SSE2-NEXT:    movq %rax, 16(%rsi)
@@ -3405,9 +3405,9 @@ define void @vec384_v3f64(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ;
 ; SSE2-LABEL: vec384_v3f64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq 16(%rdi), %rax
 ; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE2-NEXT:    pxor (%rdi), %xmm0
+; SSE2-NEXT:    movq 16(%rdi), %rax
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
 ; SSE2-NEXT:    notq %rax
 ; SSE2-NEXT:    movq %rax, 16(%rsi)

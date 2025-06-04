@@ -44,17 +44,24 @@ declare i32 @llvm.x86.sse.comieq.ss(<4 x float>, <4 x float>) nounwind readnone
 define i32 @test_x86_sse_comige_ss(<4 x float> %a0, <4 x float> %a1, i32 %a2, i32 %a3) {
 ; SSE-LABEL: test_x86_sse_comige_ss:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    comiss %xmm1, %xmm0
+; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    cmovbl %esi, %eax
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test_x86_sse_comige_ss:
-; AVX:       # %bb.0:
-; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vcomiss %xmm1, %xmm0
-; AVX-NEXT:    cmovbl %esi, %eax
-; AVX-NEXT:    retq
+; NO-AVX10_2-LABEL: test_x86_sse_comige_ss:
+; NO-AVX10_2:       # %bb.0:
+; NO-AVX10_2-NEXT:    vcomiss %xmm1, %xmm0
+; NO-AVX10_2-NEXT:    movl %edi, %eax
+; NO-AVX10_2-NEXT:    cmovbl %esi, %eax
+; NO-AVX10_2-NEXT:    retq
+;
+; AVX10_2-LABEL: test_x86_sse_comige_ss:
+; AVX10_2:       # %bb.0:
+; AVX10_2-NEXT:    movl %edi, %eax
+; AVX10_2-NEXT:    vcomiss %xmm1, %xmm0
+; AVX10_2-NEXT:    cmovbl %esi, %eax
+; AVX10_2-NEXT:    retq
   %call = call i32 @llvm.x86.sse.comige.ss(<4 x float> %a0, <4 x float> %a1)
   %cmp = icmp ne i32 %call, 0
   %res = select i1 %cmp, i32 %a2, i32 %a3
@@ -86,17 +93,24 @@ declare i32 @llvm.x86.sse.comigt.ss(<4 x float>, <4 x float>) nounwind readnone
 define i32 @test_x86_sse_comile_ss(<4 x float> %a0, <4 x float> %a1, i32 %a2, i32 %a3) {
 ; SSE-LABEL: test_x86_sse_comile_ss:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    comiss %xmm0, %xmm1
+; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    cmovbl %esi, %eax
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test_x86_sse_comile_ss:
-; AVX:       # %bb.0:
-; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vcomiss %xmm0, %xmm1
-; AVX-NEXT:    cmovbl %esi, %eax
-; AVX-NEXT:    retq
+; NO-AVX10_2-LABEL: test_x86_sse_comile_ss:
+; NO-AVX10_2:       # %bb.0:
+; NO-AVX10_2-NEXT:    vcomiss %xmm0, %xmm1
+; NO-AVX10_2-NEXT:    movl %edi, %eax
+; NO-AVX10_2-NEXT:    cmovbl %esi, %eax
+; NO-AVX10_2-NEXT:    retq
+;
+; AVX10_2-LABEL: test_x86_sse_comile_ss:
+; AVX10_2:       # %bb.0:
+; AVX10_2-NEXT:    movl %edi, %eax
+; AVX10_2-NEXT:    vcomiss %xmm0, %xmm1
+; AVX10_2-NEXT:    cmovbl %esi, %eax
+; AVX10_2-NEXT:    retq
   %call = call i32 @llvm.x86.sse.comile.ss(<4 x float> %a0, <4 x float> %a1)
   %cmp = icmp ne i32 %call, 0
   %res = select i1 %cmp, i32 %a2, i32 %a3
@@ -192,17 +206,24 @@ declare i32 @llvm.x86.sse.ucomieq.ss(<4 x float>, <4 x float>) nounwind readnone
 define i32 @test_x86_sse_ucomige_ss(<4 x float> %a0, <4 x float> %a1, i32 %a2, i32 %a3) {
 ; SSE-LABEL: test_x86_sse_ucomige_ss:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    ucomiss %xmm1, %xmm0
+; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    cmovbl %esi, %eax
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test_x86_sse_ucomige_ss:
-; AVX:       # %bb.0:
-; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vucomiss %xmm1, %xmm0
-; AVX-NEXT:    cmovbl %esi, %eax
-; AVX-NEXT:    retq
+; NO-AVX10_2-LABEL: test_x86_sse_ucomige_ss:
+; NO-AVX10_2:       # %bb.0:
+; NO-AVX10_2-NEXT:    vucomiss %xmm1, %xmm0
+; NO-AVX10_2-NEXT:    movl %edi, %eax
+; NO-AVX10_2-NEXT:    cmovbl %esi, %eax
+; NO-AVX10_2-NEXT:    retq
+;
+; AVX10_2-LABEL: test_x86_sse_ucomige_ss:
+; AVX10_2:       # %bb.0:
+; AVX10_2-NEXT:    movl %edi, %eax
+; AVX10_2-NEXT:    vucomiss %xmm1, %xmm0
+; AVX10_2-NEXT:    cmovbl %esi, %eax
+; AVX10_2-NEXT:    retq
   %call = call i32 @llvm.x86.sse.ucomige.ss(<4 x float> %a0, <4 x float> %a1)
   %cmp = icmp ne i32 %call, 0
   %res = select i1 %cmp, i32 %a2, i32 %a3
@@ -234,17 +255,24 @@ declare i32 @llvm.x86.sse.ucomigt.ss(<4 x float>, <4 x float>) nounwind readnone
 define i32 @test_x86_sse_ucomile_ss(<4 x float> %a0, <4 x float> %a1, i32 %a2, i32 %a3) {
 ; SSE-LABEL: test_x86_sse_ucomile_ss:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    ucomiss %xmm0, %xmm1
+; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    cmovbl %esi, %eax
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test_x86_sse_ucomile_ss:
-; AVX:       # %bb.0:
-; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vucomiss %xmm0, %xmm1
-; AVX-NEXT:    cmovbl %esi, %eax
-; AVX-NEXT:    retq
+; NO-AVX10_2-LABEL: test_x86_sse_ucomile_ss:
+; NO-AVX10_2:       # %bb.0:
+; NO-AVX10_2-NEXT:    vucomiss %xmm0, %xmm1
+; NO-AVX10_2-NEXT:    movl %edi, %eax
+; NO-AVX10_2-NEXT:    cmovbl %esi, %eax
+; NO-AVX10_2-NEXT:    retq
+;
+; AVX10_2-LABEL: test_x86_sse_ucomile_ss:
+; AVX10_2:       # %bb.0:
+; AVX10_2-NEXT:    movl %edi, %eax
+; AVX10_2-NEXT:    vucomiss %xmm0, %xmm1
+; AVX10_2-NEXT:    cmovbl %esi, %eax
+; AVX10_2-NEXT:    retq
   %call = call i32 @llvm.x86.sse.ucomile.ss(<4 x float> %a0, <4 x float> %a1)
   %cmp = icmp ne i32 %call, 0
   %res = select i1 %cmp, i32 %a2, i32 %a3
@@ -344,17 +372,24 @@ declare i32 @llvm.x86.sse2.comieq.sd(<2 x double>, <2 x double>) nounwind readno
 define i32 @test_x86_sse2_comige_sd(<2 x double> %a0, <2 x double> %a1, i32 %a2, i32 %a3) {
 ; SSE-LABEL: test_x86_sse2_comige_sd:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    comisd %xmm1, %xmm0
+; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    cmovbl %esi, %eax
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test_x86_sse2_comige_sd:
-; AVX:       # %bb.0:
-; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vcomisd %xmm1, %xmm0
-; AVX-NEXT:    cmovbl %esi, %eax
-; AVX-NEXT:    retq
+; NO-AVX10_2-LABEL: test_x86_sse2_comige_sd:
+; NO-AVX10_2:       # %bb.0:
+; NO-AVX10_2-NEXT:    vcomisd %xmm1, %xmm0
+; NO-AVX10_2-NEXT:    movl %edi, %eax
+; NO-AVX10_2-NEXT:    cmovbl %esi, %eax
+; NO-AVX10_2-NEXT:    retq
+;
+; AVX10_2-LABEL: test_x86_sse2_comige_sd:
+; AVX10_2:       # %bb.0:
+; AVX10_2-NEXT:    movl %edi, %eax
+; AVX10_2-NEXT:    vcomisd %xmm1, %xmm0
+; AVX10_2-NEXT:    cmovbl %esi, %eax
+; AVX10_2-NEXT:    retq
   %call = call i32 @llvm.x86.sse2.comige.sd(<2 x double> %a0, <2 x double> %a1) ; <i32> [#uses=1]
   %cmp = icmp ne i32 %call, 0
   %res = select i1 %cmp, i32 %a2, i32 %a3
@@ -386,17 +421,24 @@ declare i32 @llvm.x86.sse2.comigt.sd(<2 x double>, <2 x double>) nounwind readno
 define i32 @test_x86_sse2_comile_sd(<2 x double> %a0, <2 x double> %a1, i32 %a2, i32 %a3) {
 ; SSE-LABEL: test_x86_sse2_comile_sd:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    comisd %xmm0, %xmm1
+; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    cmovbl %esi, %eax
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test_x86_sse2_comile_sd:
-; AVX:       # %bb.0:
-; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vcomisd %xmm0, %xmm1
-; AVX-NEXT:    cmovbl %esi, %eax
-; AVX-NEXT:    retq
+; NO-AVX10_2-LABEL: test_x86_sse2_comile_sd:
+; NO-AVX10_2:       # %bb.0:
+; NO-AVX10_2-NEXT:    vcomisd %xmm0, %xmm1
+; NO-AVX10_2-NEXT:    movl %edi, %eax
+; NO-AVX10_2-NEXT:    cmovbl %esi, %eax
+; NO-AVX10_2-NEXT:    retq
+;
+; AVX10_2-LABEL: test_x86_sse2_comile_sd:
+; AVX10_2:       # %bb.0:
+; AVX10_2-NEXT:    movl %edi, %eax
+; AVX10_2-NEXT:    vcomisd %xmm0, %xmm1
+; AVX10_2-NEXT:    cmovbl %esi, %eax
+; AVX10_2-NEXT:    retq
   %call = call i32 @llvm.x86.sse2.comile.sd(<2 x double> %a0, <2 x double> %a1) ; <i32> [#uses=1]
   %cmp = icmp ne i32 %call, 0
   %res = select i1 %cmp, i32 %a2, i32 %a3
@@ -492,17 +534,24 @@ declare i32 @llvm.x86.sse2.ucomieq.sd(<2 x double>, <2 x double>) nounwind readn
 define i32 @test_x86_sse2_ucomige_sd(<2 x double> %a0, <2 x double> %a1, i32 %a2, i32 %a3) {
 ; SSE-LABEL: test_x86_sse2_ucomige_sd:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    ucomisd %xmm1, %xmm0
+; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    cmovbl %esi, %eax
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test_x86_sse2_ucomige_sd:
-; AVX:       # %bb.0:
-; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vucomisd %xmm1, %xmm0
-; AVX-NEXT:    cmovbl %esi, %eax
-; AVX-NEXT:    retq
+; NO-AVX10_2-LABEL: test_x86_sse2_ucomige_sd:
+; NO-AVX10_2:       # %bb.0:
+; NO-AVX10_2-NEXT:    vucomisd %xmm1, %xmm0
+; NO-AVX10_2-NEXT:    movl %edi, %eax
+; NO-AVX10_2-NEXT:    cmovbl %esi, %eax
+; NO-AVX10_2-NEXT:    retq
+;
+; AVX10_2-LABEL: test_x86_sse2_ucomige_sd:
+; AVX10_2:       # %bb.0:
+; AVX10_2-NEXT:    movl %edi, %eax
+; AVX10_2-NEXT:    vucomisd %xmm1, %xmm0
+; AVX10_2-NEXT:    cmovbl %esi, %eax
+; AVX10_2-NEXT:    retq
   %call = call i32 @llvm.x86.sse2.ucomige.sd(<2 x double> %a0, <2 x double> %a1) ; <i32> [#uses=1]
   %cmp = icmp ne i32 %call, 0
   %res = select i1 %cmp, i32 %a2, i32 %a3
@@ -534,17 +583,24 @@ declare i32 @llvm.x86.sse2.ucomigt.sd(<2 x double>, <2 x double>) nounwind readn
 define i32 @test_x86_sse2_ucomile_sd(<2 x double> %a0, <2 x double> %a1, i32 %a2, i32 %a3) {
 ; SSE-LABEL: test_x86_sse2_ucomile_sd:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    ucomisd %xmm0, %xmm1
+; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    cmovbl %esi, %eax
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test_x86_sse2_ucomile_sd:
-; AVX:       # %bb.0:
-; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vucomisd %xmm0, %xmm1
-; AVX-NEXT:    cmovbl %esi, %eax
-; AVX-NEXT:    retq
+; NO-AVX10_2-LABEL: test_x86_sse2_ucomile_sd:
+; NO-AVX10_2:       # %bb.0:
+; NO-AVX10_2-NEXT:    vucomisd %xmm0, %xmm1
+; NO-AVX10_2-NEXT:    movl %edi, %eax
+; NO-AVX10_2-NEXT:    cmovbl %esi, %eax
+; NO-AVX10_2-NEXT:    retq
+;
+; AVX10_2-LABEL: test_x86_sse2_ucomile_sd:
+; AVX10_2:       # %bb.0:
+; AVX10_2-NEXT:    movl %edi, %eax
+; AVX10_2-NEXT:    vucomisd %xmm0, %xmm1
+; AVX10_2-NEXT:    cmovbl %esi, %eax
+; AVX10_2-NEXT:    retq
   %call = call i32 @llvm.x86.sse2.ucomile.sd(<2 x double> %a0, <2 x double> %a1) ; <i32> [#uses=1]
   %cmp = icmp ne i32 %call, 0
   %res = select i1 %cmp, i32 %a2, i32 %a3

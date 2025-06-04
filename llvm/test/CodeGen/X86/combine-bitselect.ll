@@ -34,7 +34,7 @@ define <2 x i64> @bitselect_v2i64_rr(<2 x i64>, <2 x i64>) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vpmovsxbd {{.*#+}} xmm2 = [4294967295,4294967294,4294967293,4294967292]
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm2 = [18446744069414584319,18446744060824649725]
 ; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 ^ (zmm2 & (zmm0 ^ zmm1))
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512F-NEXT:    vzeroupper
@@ -77,7 +77,7 @@ define <2 x i64> @bitselect_v2i64_rm(<2 x i64>, ptr nocapture readonly) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512F-NEXT:    vmovdqa (%rdi), %xmm1
-; AVX512F-NEXT:    vpmovsxbd {{.*#+}} xmm2 = [4294967294,4294967293,4294967292,4294967295]
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm2 = [18446744065119617022,18446744073709551612]
 ; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 ^ (zmm2 & (zmm0 ^ zmm1))
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512F-NEXT:    vzeroupper
@@ -122,7 +122,7 @@ define <2 x i64> @bitselect_v2i64_mr(ptr nocapture readonly, <2 x i64>) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512F-NEXT:    vmovdqa (%rdi), %xmm1
-; AVX512F-NEXT:    vpmovsxbd {{.*#+}} xmm2 = [2,3,0,1]
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm2 = [12884901890,4294967296]
 ; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 ^ (zmm2 & (zmm0 ^ zmm1))
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512F-NEXT:    vzeroupper
@@ -153,7 +153,7 @@ define <2 x i64> @bitselect_v2i64_mm(ptr nocapture readonly, ptr nocapture reado
 ; XOP-LABEL: bitselect_v2i64_mm:
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vmovdqa (%rsi), %xmm0
-; XOP-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [4294967292,4294967295,4294967294,4294967293]
+; XOP-NEXT:    vmovdqa {{.*#+}} xmm1 = [18446744073709551612,18446744065119617022]
 ; XOP-NEXT:    vpcmov %xmm1, (%rdi), %xmm0, %xmm0
 ; XOP-NEXT:    retq
 ;
@@ -170,7 +170,7 @@ define <2 x i64> @bitselect_v2i64_mm(ptr nocapture readonly, ptr nocapture reado
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX512F-NEXT:    vmovdqa (%rsi), %xmm0
-; AVX512F-NEXT:    vpmovsxbd {{.*#+}} xmm2 = [4294967292,4294967295,4294967294,4294967293]
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm2 = [18446744073709551612,18446744065119617022]
 ; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm1 ^ (zmm2 & (zmm0 ^ zmm1))
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512F-NEXT:    vzeroupper
@@ -179,7 +179,7 @@ define <2 x i64> @bitselect_v2i64_mm(ptr nocapture readonly, ptr nocapture reado
 ; AVX512VL-LABEL: bitselect_v2i64_mm:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vmovdqa (%rsi), %xmm1
-; AVX512VL-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [4294967292,4294967295,4294967294,4294967293]
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm0 = [18446744073709551612,18446744065119617022]
 ; AVX512VL-NEXT:    vpternlogq {{.*#+}} xmm0 = mem ^ (xmm0 & (xmm1 ^ mem))
 ; AVX512VL-NEXT:    retq
   %3 = load <2 x i64>, ptr %0
@@ -306,8 +306,8 @@ define <4 x i64> @bitselect_v4i64_rr(<4 x i64>, <4 x i64>) {
 ; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
-; SSE-NEXT:    orps %xmm3, %xmm1
 ; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE-NEXT:    orps %xmm3, %xmm1
 ; SSE-NEXT:    orps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
@@ -327,7 +327,7 @@ define <4 x i64> @bitselect_v4i64_rr(<4 x i64>, <4 x i64>) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512F-NEXT:    vpmovsxbd {{.*#+}} ymm2 = [4294967295,4294967294,4294967293,4294967292,4294967293,4294967292,4294967293,4294967292]
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm2 = [18446744069414584319,18446744060824649725,18446744060824649725,18446744060824649725]
 ; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 ^ (zmm2 & (zmm0 ^ zmm1))
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    retq
@@ -377,7 +377,7 @@ define <4 x i64> @bitselect_v4i64_rm(<4 x i64>, ptr nocapture readonly) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512F-NEXT:    vmovdqa (%rdi), %ymm1
-; AVX512F-NEXT:    vpmovsxbd {{.*#+}} ymm2 = [4294967294,4294967293,4294967292,4294967295,4294967294,4294967293,4294967292,4294967295]
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm2 = [18446744065119617022,18446744073709551612,18446744065119617022,18446744073709551612]
 ; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 ^ (zmm2 & (zmm0 ^ zmm1))
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    retq
@@ -429,7 +429,7 @@ define <4 x i64> @bitselect_v4i64_mr(ptr nocapture readonly, <4 x i64>) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512F-NEXT:    vmovdqa (%rdi), %ymm1
-; AVX512F-NEXT:    vpmovsxbd {{.*#+}} ymm2 = [2,3,0,1,2,3,0,1]
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm2 = [12884901890,4294967296,12884901890,4294967296]
 ; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 ^ (zmm2 & (zmm0 ^ zmm1))
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    retq
@@ -456,16 +456,15 @@ define <4 x i64> @bitselect_v4i64_mm(ptr nocapture readonly, ptr nocapture reado
 ; SSE-NEXT:    andps %xmm1, %xmm3
 ; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    andnps (%rdi), %xmm0
-; SSE-NEXT:    orps %xmm3, %xmm0
 ; SSE-NEXT:    andnps 16(%rdi), %xmm1
+; SSE-NEXT:    orps %xmm3, %xmm0
 ; SSE-NEXT:    orps %xmm2, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; XOP-LABEL: bitselect_v4i64_mm:
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vmovdqa (%rsi), %ymm0
-; XOP-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = [18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022]
-; XOP-NEXT:    # ymm1 = mem[0,1,0,1]
+; XOP-NEXT:    vmovdqa {{.*#+}} ymm1 = [18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022]
 ; XOP-NEXT:    vpcmov %ymm1, (%rdi), %ymm0, %ymm0
 ; XOP-NEXT:    retq
 ;
@@ -482,7 +481,7 @@ define <4 x i64> @bitselect_v4i64_mm(ptr nocapture readonly, ptr nocapture reado
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqa (%rdi), %ymm1
 ; AVX512F-NEXT:    vmovdqa (%rsi), %ymm0
-; AVX512F-NEXT:    vpmovsxbd {{.*#+}} ymm2 = [4294967292,4294967295,4294967294,4294967293,4294967292,4294967295,4294967294,4294967293]
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm2 = [18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022]
 ; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm1 ^ (zmm2 & (zmm0 ^ zmm1))
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    retq
@@ -490,7 +489,7 @@ define <4 x i64> @bitselect_v4i64_mm(ptr nocapture readonly, ptr nocapture reado
 ; AVX512VL-LABEL: bitselect_v4i64_mm:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vmovdqa (%rsi), %ymm1
-; AVX512VL-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [4294967292,4294967295,4294967294,4294967293,4294967292,4294967295,4294967294,4294967293]
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm0 = [18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022]
 ; AVX512VL-NEXT:    vpternlogq {{.*#+}} ymm0 = mem ^ (ymm0 & (ymm1 ^ mem))
 ; AVX512VL-NEXT:    retq
   %3 = load <4 x i64>, ptr %0
@@ -837,21 +836,20 @@ define <8 x i64> @bitselect_v8i64_mm(ptr nocapture readonly, ptr nocapture reado
 ;
 ; AVX-LABEL: bitselect_v8i64_mm:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = [18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022]
-; AVX-NEXT:    # ymm1 = mem[0,1,0,1]
-; AVX-NEXT:    vandps 32(%rsi), %ymm1, %ymm2
-; AVX-NEXT:    vandps (%rsi), %ymm1, %ymm0
-; AVX-NEXT:    vandnps (%rdi), %ymm1, %ymm3
-; AVX-NEXT:    vorps %ymm3, %ymm0, %ymm0
-; AVX-NEXT:    vandnps 32(%rdi), %ymm1, %ymm1
-; AVX-NEXT:    vorps %ymm1, %ymm2, %ymm1
+; AVX-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = [18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022]
+; AVX-NEXT:    # ymm0 = mem[0,1,0,1]
+; AVX-NEXT:    vandps 32(%rsi), %ymm0, %ymm1
+; AVX-NEXT:    vandps (%rsi), %ymm0, %ymm2
+; AVX-NEXT:    vandnps (%rdi), %ymm0, %ymm3
+; AVX-NEXT:    vandnps 32(%rdi), %ymm0, %ymm4
+; AVX-NEXT:    vorps %ymm3, %ymm2, %ymm0
+; AVX-NEXT:    vorps %ymm4, %ymm1, %ymm1
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: bitselect_v8i64_mm:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovdqa64 (%rsi), %zmm1
-; AVX512-NEXT:    vbroadcasti32x4 {{.*#+}} zmm0 = [18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022]
-; AVX512-NEXT:    # zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022]
 ; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = mem ^ (zmm0 & (zmm1 ^ mem))
 ; AVX512-NEXT:    retq
   %3 = load <8 x i64>, ptr %0
@@ -1005,27 +1003,27 @@ define <4 x i1> @bitselect_v4i1_loop(<4 x i32> %a0, <4 x i32> %a1) {
 ; XOP-LABEL: bitselect_v4i1_loop:
 ; XOP:       # %bb.0: # %bb
 ; XOP-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; XOP-NEXT:    vpcomneqd %xmm2, %xmm0, %xmm0
-; XOP-NEXT:    vpcomeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm2
+; XOP-NEXT:    vpcomeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm3
 ; XOP-NEXT:    vpcomeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; XOP-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
+; XOP-NEXT:    vpcomneqd %xmm2, %xmm0, %xmm0
+; XOP-NEXT:    vblendvps %xmm0, %xmm3, %xmm1, %xmm0
 ; XOP-NEXT:    retq
 ;
 ; AVX1-LABEL: bitselect_v4i1_loop:
 ; AVX1:       # %bb.0: # %bb
 ; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm2
+; AVX1-NEXT:    vpcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm3
 ; AVX1-NEXT:    vpcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vblendvps %xmm0, %xmm1, %xmm3, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: bitselect_v4i1_loop:
 ; AVX2:       # %bb.0: # %bb
 ; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [12,12,12,12]
 ; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [12,12,12,12]
-; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm1, %xmm2
+; AVX2-NEXT:    vpcmpeqd %xmm3, %xmm1, %xmm2
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [15,15,15,15]
 ; AVX2-NEXT:    vpcmpeqd %xmm3, %xmm1, %xmm1
 ; AVX2-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
@@ -1034,8 +1032,8 @@ define <4 x i1> @bitselect_v4i1_loop(<4 x i32> %a0, <4 x i32> %a1) {
 ; AVX512F-LABEL: bitselect_v4i1_loop:
 ; AVX512F:       # %bb.0: # %bb
 ; AVX512F-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
-; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512F-NEXT:    vpcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %k1
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512F-NEXT:    vpcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %k2
 ; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k0 {%k2}
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k1 {%k1}

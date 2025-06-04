@@ -56,11 +56,11 @@ define void @memset_8(ptr %a, i8 %value) nounwind {
 define void @memset_16(ptr %a, i8 %value) nounwind {
 ; SSE2-LABEL: memset_16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movzbl %sil, %eax
-; SSE2-NEXT:    movabsq $72340172838076673, %rcx # imm = 0x101010101010101
-; SSE2-NEXT:    imulq %rax, %rcx
-; SSE2-NEXT:    movq %rcx, 8(%rdi)
-; SSE2-NEXT:    movq %rcx, (%rdi)
+; SSE2-NEXT:    movd %esi, %xmm0
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; SSE2-NEXT:    movdqu %xmm0, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: memset_16:
@@ -92,13 +92,12 @@ define void @memset_16(ptr %a, i8 %value) nounwind {
 define void @memset_32(ptr %a, i8 %value) nounwind {
 ; SSE2-LABEL: memset_32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movzbl %sil, %eax
-; SSE2-NEXT:    movabsq $72340172838076673, %rcx # imm = 0x101010101010101
-; SSE2-NEXT:    imulq %rax, %rcx
-; SSE2-NEXT:    movq %rcx, 24(%rdi)
-; SSE2-NEXT:    movq %rcx, 16(%rdi)
-; SSE2-NEXT:    movq %rcx, 8(%rdi)
-; SSE2-NEXT:    movq %rcx, (%rdi)
+; SSE2-NEXT:    movd %esi, %xmm0
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; SSE2-NEXT:    movdqu %xmm0, 16(%rdi)
+; SSE2-NEXT:    movdqu %xmm0, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: memset_32:
@@ -133,17 +132,14 @@ define void @memset_32(ptr %a, i8 %value) nounwind {
 define void @memset_64(ptr %a, i8 %value) nounwind {
 ; SSE2-LABEL: memset_64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movzbl %sil, %eax
-; SSE2-NEXT:    movabsq $72340172838076673, %rcx # imm = 0x101010101010101
-; SSE2-NEXT:    imulq %rax, %rcx
-; SSE2-NEXT:    movq %rcx, 56(%rdi)
-; SSE2-NEXT:    movq %rcx, 48(%rdi)
-; SSE2-NEXT:    movq %rcx, 40(%rdi)
-; SSE2-NEXT:    movq %rcx, 32(%rdi)
-; SSE2-NEXT:    movq %rcx, 24(%rdi)
-; SSE2-NEXT:    movq %rcx, 16(%rdi)
-; SSE2-NEXT:    movq %rcx, 8(%rdi)
-; SSE2-NEXT:    movq %rcx, (%rdi)
+; SSE2-NEXT:    movd %esi, %xmm0
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; SSE2-NEXT:    movdqu %xmm0, 48(%rdi)
+; SSE2-NEXT:    movdqu %xmm0, 32(%rdi)
+; SSE2-NEXT:    movdqu %xmm0, 16(%rdi)
+; SSE2-NEXT:    movdqu %xmm0, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: memset_64:
@@ -346,8 +342,8 @@ define void @bzero_8(ptr %a) nounwind {
 define void @bzero_16(ptr %a) nounwind {
 ; SSE2-LABEL: bzero_16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq $0, 8(%rdi)
-; SSE2-NEXT:    movq $0, (%rdi)
+; SSE2-NEXT:    xorps %xmm0, %xmm0
+; SSE2-NEXT:    movups %xmm0, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: bzero_16:
@@ -374,10 +370,9 @@ define void @bzero_16(ptr %a) nounwind {
 define void @bzero_32(ptr %a) nounwind {
 ; SSE2-LABEL: bzero_32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq $0, 24(%rdi)
-; SSE2-NEXT:    movq $0, 16(%rdi)
-; SSE2-NEXT:    movq $0, 8(%rdi)
-; SSE2-NEXT:    movq $0, (%rdi)
+; SSE2-NEXT:    xorps %xmm0, %xmm0
+; SSE2-NEXT:    movups %xmm0, 16(%rdi)
+; SSE2-NEXT:    movups %xmm0, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: bzero_32:
@@ -407,14 +402,11 @@ define void @bzero_32(ptr %a) nounwind {
 define void @bzero_64(ptr %a) nounwind {
 ; SSE2-LABEL: bzero_64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq $0, 56(%rdi)
-; SSE2-NEXT:    movq $0, 48(%rdi)
-; SSE2-NEXT:    movq $0, 40(%rdi)
-; SSE2-NEXT:    movq $0, 32(%rdi)
-; SSE2-NEXT:    movq $0, 24(%rdi)
-; SSE2-NEXT:    movq $0, 16(%rdi)
-; SSE2-NEXT:    movq $0, 8(%rdi)
-; SSE2-NEXT:    movq $0, (%rdi)
+; SSE2-NEXT:    xorps %xmm0, %xmm0
+; SSE2-NEXT:    movups %xmm0, 48(%rdi)
+; SSE2-NEXT:    movups %xmm0, 32(%rdi)
+; SSE2-NEXT:    movups %xmm0, 16(%rdi)
+; SSE2-NEXT:    movups %xmm0, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: bzero_64:

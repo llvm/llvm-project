@@ -284,12 +284,12 @@ define i64 @test_two_live_flags(ptr %foo0, i64 %bar0, i64 %baz0, ptr %foo1, i64 
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK32-NEXT:    lock cmpxchg8b (%esi)
+; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK32-NEXT:    sete {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK32-NEXT:    movl %ebp, %edx
 ; CHECK32-NEXT:    movl %edi, %ecx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK32-NEXT:    lock cmpxchg8b (%esi)
 ; CHECK32-NEXT:    sete %al
 ; CHECK32-NEXT:    andb {{[-0-9]+}}(%e{{[sb]}}p), %al # 1-byte Folded Reload

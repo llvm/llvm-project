@@ -36,16 +36,16 @@ define i32 @t(i32 %a, i32 %b) nounwind {
 ; CHECK-NEXT:    jle .LBB0_5
 ; CHECK-NEXT:  # %bb.4: # %cond_true
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=2
-; CHECK-NEXT:    cmpl %eax, %ecx
 ; CHECK-NEXT:    movl %eax, %edx
+; CHECK-NEXT:    cmpl %eax, %ecx
 ; CHECK-NEXT:    jne .LBB0_3
 ; CHECK-NEXT:    jmp .LBB0_6
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_5: # %cond_false
 ; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    subl %edx, %ecx
-; CHECK-NEXT:    cmpl %edx, %ecx
 ; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    cmpl %edx, %ecx
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  .LBB0_6: # %bb17
 ; CHECK-NEXT:    retl

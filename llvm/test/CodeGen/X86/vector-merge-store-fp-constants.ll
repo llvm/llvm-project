@@ -5,10 +5,9 @@
 define void @merge_8_float_zero_stores(ptr %ptr) {
 ; DEFAULTCPU-LABEL: merge_8_float_zero_stores:
 ; DEFAULTCPU:       # %bb.0:
-; DEFAULTCPU-NEXT:    movq $0, (%rdi)
-; DEFAULTCPU-NEXT:    movq $0, 8(%rdi)
-; DEFAULTCPU-NEXT:    movq $0, 16(%rdi)
-; DEFAULTCPU-NEXT:    movq $0, 24(%rdi)
+; DEFAULTCPU-NEXT:    xorps %xmm0, %xmm0
+; DEFAULTCPU-NEXT:    movups %xmm0, (%rdi)
+; DEFAULTCPU-NEXT:    movups %xmm0, 16(%rdi)
 ; DEFAULTCPU-NEXT:    retq
 ;
 ; X64CPU-LABEL: merge_8_float_zero_stores:

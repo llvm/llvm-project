@@ -10,12 +10,12 @@ define void @main(<24 x ptr> %x)
 ; CHECK-NEXT:    vmovq %rsi, %xmm1
 ; CHECK-NEXT:    vmovq %rdi, %xmm2
 ; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; CHECK-NEXT:    vmovq %r9, %xmm2
+; CHECK-NEXT:    vmovq %r8, %xmm3
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
+; CHECK-NEXT:    vinserti128 $1, {{[0-9]+}}(%rsp), %ymm2, %ymm2
 ; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
-; CHECK-NEXT:    vmovq %r9, %xmm1
-; CHECK-NEXT:    vmovq %r8, %xmm2
-; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; CHECK-NEXT:    vinserti128 $1, {{[0-9]+}}(%rsp), %ymm1, %ymm1
-; CHECK-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
 ; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %zmm1
 ; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %zmm2
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k1

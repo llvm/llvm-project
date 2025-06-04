@@ -4,47 +4,50 @@
 define void @foo(ptr %buf, i32 %size, i32 %col, ptr %p) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    pushl %ebp
 ; CHECK-NEXT:    pushl %ebx
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; CHECK-NEXT:    testl %ebp, %ebp
 ; CHECK-NEXT:    jle LBB0_3
 ; CHECK-NEXT:  ## %bb.1: ## %bb.preheader
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK-NEXT:    addl $8, %ecx
+; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_2: ## %bb
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movl (%esi), %edi
-; CHECK-NEXT:    movzbl -8(%ecx), %ebx
-; CHECK-NEXT:    movb %bl, (%edi,%edx)
-; CHECK-NEXT:    movzbl -7(%ecx), %ebx
-; CHECK-NEXT:    movb %bl, 7(%edi,%edx)
-; CHECK-NEXT:    movzbl -6(%ecx), %ebx
-; CHECK-NEXT:    movb %bl, 5(%edi,%edx)
-; CHECK-NEXT:    movzbl -5(%ecx), %ebx
-; CHECK-NEXT:    movb %bl, 3(%edi,%edx)
-; CHECK-NEXT:    movzbl -4(%ecx), %ebx
-; CHECK-NEXT:    movb %bl, 2(%edi,%edx)
-; CHECK-NEXT:    movzbl -3(%ecx), %ebx
-; CHECK-NEXT:    movb %bl, 1(%edi,%edx)
-; CHECK-NEXT:    movzbl -2(%ecx), %ebx
-; CHECK-NEXT:    movb %bl, 2(%edi,%edx)
-; CHECK-NEXT:    movzbl -1(%ecx), %ebx
-; CHECK-NEXT:    movb %bl, 4(%edi,%edx)
-; CHECK-NEXT:    movzbl (%ecx), %ebx
-; CHECK-NEXT:    movb %bl, 6(%edi,%edx)
-; CHECK-NEXT:    addl $4, %esi
+; CHECK-NEXT:    movl (%esi,%edi,4), %ebx
+; CHECK-NEXT:    movzbl -8(%ecx), %eax
+; CHECK-NEXT:    movb %al, (%ebx,%edx)
+; CHECK-NEXT:    movzbl -7(%ecx), %eax
+; CHECK-NEXT:    movb %al, 7(%ebx,%edx)
+; CHECK-NEXT:    movzbl -6(%ecx), %eax
+; CHECK-NEXT:    movb %al, 5(%ebx,%edx)
+; CHECK-NEXT:    movzbl -5(%ecx), %eax
+; CHECK-NEXT:    movb %al, 3(%ebx,%edx)
+; CHECK-NEXT:    movzbl -4(%ecx), %eax
+; CHECK-NEXT:    movb %al, 2(%ebx,%edx)
+; CHECK-NEXT:    movzbl -3(%ecx), %eax
+; CHECK-NEXT:    movb %al, 1(%ebx,%edx)
+; CHECK-NEXT:    movzbl -2(%ecx), %eax
+; CHECK-NEXT:    movb %al, 2(%ebx,%edx)
+; CHECK-NEXT:    movzbl -1(%ecx), %eax
+; CHECK-NEXT:    movb %al, 4(%ebx,%edx)
+; CHECK-NEXT:    movzbl (%ecx), %eax
+; CHECK-NEXT:    movb %al, 6(%ebx,%edx)
+; CHECK-NEXT:    incl %edi
 ; CHECK-NEXT:    addl $9, %ecx
-; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    cmpl %edi, %ebp
 ; CHECK-NEXT:    jne LBB0_2
 ; CHECK-NEXT:  LBB0_3: ## %return
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    popl %ebx
+; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl
 entry:
 	icmp sgt i32 %size, 0		; <i1>:0 [#uses=1]

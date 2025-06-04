@@ -4,9 +4,9 @@
 define void @pr34605(ptr nocapture %s, i32 %p) {
 ; CHECK-LABEL: pr34605:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    vpbroadcastd {{[0-9]+}}(%esp), %zmm0
 ; CHECK-NEXT:    vpcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}, %zmm0, %k0
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    vpcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}, %zmm0, %k1
 ; CHECK-NEXT:    kunpckwd %k0, %k1, %k0
 ; CHECK-NEXT:    vpcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}, %zmm0, %k1

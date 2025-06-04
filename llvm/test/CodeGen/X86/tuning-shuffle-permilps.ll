@@ -69,7 +69,7 @@ define <8 x float> @transform_VPERMILPSYrm(ptr %ap) nounwind {
 define <4 x float> @transform_VPERMILPSrm(ptr %ap) nounwind {
 ; CHECK-AVX1-LABEL: transform_VPERMILPSrm:
 ; CHECK-AVX1:       # %bb.0:
-; CHECK-AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = mem[3,2,1,0]
+; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = mem[3,2,1,0]
 ; CHECK-AVX1-NEXT:    retq
 ;
 ; CHECK-AVX1-DELAY-LABEL: transform_VPERMILPSrm:
@@ -79,7 +79,7 @@ define <4 x float> @transform_VPERMILPSrm(ptr %ap) nounwind {
 ;
 ; CHECK-AVX2-LABEL: transform_VPERMILPSrm:
 ; CHECK-AVX2:       # %bb.0:
-; CHECK-AVX2-NEXT:    vpermilps {{.*#+}} xmm0 = mem[3,2,1,0]
+; CHECK-AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = mem[3,2,1,0]
 ; CHECK-AVX2-NEXT:    retq
 ;
 ; CHECK-AVX2-DELAY-LABEL: transform_VPERMILPSrm:

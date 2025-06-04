@@ -10,11 +10,11 @@
 define <4 x i32> @out_constant_varx_mone(ptr%px, ptr%py, ptr%pmask) {
 ; CHECK-SSE1-LABEL: out_constant_varx_mone:
 ; CHECK-SSE1:       # %bb.0:
-; CHECK-SSE1-NEXT:    movq %rdi, %rax
 ; CHECK-SSE1-NEXT:    movaps (%rcx), %xmm0
 ; CHECK-SSE1-NEXT:    movaps {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
 ; CHECK-SSE1-NEXT:    xorps %xmm0, %xmm1
 ; CHECK-SSE1-NEXT:    andps (%rsi), %xmm0
+; CHECK-SSE1-NEXT:    movq %rdi, %rax
 ; CHECK-SSE1-NEXT:    orps %xmm1, %xmm0
 ; CHECK-SSE1-NEXT:    movaps %xmm0, (%rdi)
 ; CHECK-SSE1-NEXT:    retq
@@ -149,11 +149,11 @@ define <4 x i32> @in_constant_varx_mone_invmask(ptr%px, ptr%py, ptr%pmask) {
 define <4 x i32> @out_constant_varx_42(ptr%px, ptr%py, ptr%pmask) {
 ; CHECK-SSE1-LABEL: out_constant_varx_42:
 ; CHECK-SSE1:       # %bb.0:
-; CHECK-SSE1-NEXT:    movq %rdi, %rax
 ; CHECK-SSE1-NEXT:    movaps (%rcx), %xmm0
 ; CHECK-SSE1-NEXT:    movaps (%rsi), %xmm1
 ; CHECK-SSE1-NEXT:    andps %xmm0, %xmm1
 ; CHECK-SSE1-NEXT:    andnps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE1-NEXT:    movq %rdi, %rax
 ; CHECK-SSE1-NEXT:    orps %xmm1, %xmm0
 ; CHECK-SSE1-NEXT:    movaps %xmm0, (%rdi)
 ; CHECK-SSE1-NEXT:    retq
@@ -186,11 +186,11 @@ define <4 x i32> @out_constant_varx_42(ptr%px, ptr%py, ptr%pmask) {
 define <4 x i32> @in_constant_varx_42(ptr%px, ptr%py, ptr%pmask) {
 ; CHECK-SSE1-LABEL: in_constant_varx_42:
 ; CHECK-SSE1:       # %bb.0:
-; CHECK-SSE1-NEXT:    movq %rdi, %rax
 ; CHECK-SSE1-NEXT:    movaps (%rcx), %xmm0
 ; CHECK-SSE1-NEXT:    movaps (%rsi), %xmm1
 ; CHECK-SSE1-NEXT:    andps %xmm0, %xmm1
 ; CHECK-SSE1-NEXT:    andnps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE1-NEXT:    movq %rdi, %rax
 ; CHECK-SSE1-NEXT:    orps %xmm1, %xmm0
 ; CHECK-SSE1-NEXT:    movaps %xmm0, (%rdi)
 ; CHECK-SSE1-NEXT:    retq
@@ -223,11 +223,11 @@ define <4 x i32> @in_constant_varx_42(ptr%px, ptr%py, ptr%pmask) {
 define <4 x i32> @out_constant_varx_42_invmask(ptr%px, ptr%py, ptr%pmask) {
 ; CHECK-SSE1-LABEL: out_constant_varx_42_invmask:
 ; CHECK-SSE1:       # %bb.0:
-; CHECK-SSE1-NEXT:    movq %rdi, %rax
 ; CHECK-SSE1-NEXT:    movaps (%rcx), %xmm0
 ; CHECK-SSE1-NEXT:    movaps %xmm0, %xmm1
 ; CHECK-SSE1-NEXT:    andnps (%rsi), %xmm1
 ; CHECK-SSE1-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE1-NEXT:    movq %rdi, %rax
 ; CHECK-SSE1-NEXT:    orps %xmm1, %xmm0
 ; CHECK-SSE1-NEXT:    movaps %xmm0, (%rdi)
 ; CHECK-SSE1-NEXT:    retq
@@ -261,11 +261,11 @@ define <4 x i32> @out_constant_varx_42_invmask(ptr%px, ptr%py, ptr%pmask) {
 define <4 x i32> @in_constant_varx_42_invmask(ptr%px, ptr%py, ptr%pmask) {
 ; CHECK-SSE1-LABEL: in_constant_varx_42_invmask:
 ; CHECK-SSE1:       # %bb.0:
-; CHECK-SSE1-NEXT:    movq %rdi, %rax
 ; CHECK-SSE1-NEXT:    movaps (%rcx), %xmm0
 ; CHECK-SSE1-NEXT:    movaps %xmm0, %xmm1
 ; CHECK-SSE1-NEXT:    andnps (%rsi), %xmm1
 ; CHECK-SSE1-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE1-NEXT:    movq %rdi, %rax
 ; CHECK-SSE1-NEXT:    orps %xmm1, %xmm0
 ; CHECK-SSE1-NEXT:    movaps %xmm0, (%rdi)
 ; CHECK-SSE1-NEXT:    retq
@@ -358,11 +358,11 @@ define <4 x i32> @in_constant_mone_vary(ptr%px, ptr%py, ptr%pmask) {
 define <4 x i32> @out_constant_mone_vary_invmask(ptr%px, ptr%py, ptr%pmask) {
 ; CHECK-SSE1-LABEL: out_constant_mone_vary_invmask:
 ; CHECK-SSE1:       # %bb.0:
-; CHECK-SSE1-NEXT:    movq %rdi, %rax
 ; CHECK-SSE1-NEXT:    movaps (%rcx), %xmm0
 ; CHECK-SSE1-NEXT:    movaps {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
 ; CHECK-SSE1-NEXT:    xorps %xmm0, %xmm1
 ; CHECK-SSE1-NEXT:    andps (%rdx), %xmm0
+; CHECK-SSE1-NEXT:    movq %rdi, %rax
 ; CHECK-SSE1-NEXT:    orps %xmm1, %xmm0
 ; CHECK-SSE1-NEXT:    movaps %xmm0, (%rdi)
 ; CHECK-SSE1-NEXT:    retq
@@ -431,11 +431,11 @@ define <4 x i32> @in_constant_mone_vary_invmask(ptr%px, ptr%py, ptr%pmask) {
 define <4 x i32> @out_constant_42_vary(ptr%px, ptr%py, ptr%pmask) {
 ; CHECK-SSE1-LABEL: out_constant_42_vary:
 ; CHECK-SSE1:       # %bb.0:
-; CHECK-SSE1-NEXT:    movq %rdi, %rax
 ; CHECK-SSE1-NEXT:    movaps (%rcx), %xmm0
 ; CHECK-SSE1-NEXT:    movaps {{.*#+}} xmm1 = [5.88545355E-44,5.88545355E-44,5.88545355E-44,5.88545355E-44]
 ; CHECK-SSE1-NEXT:    andps %xmm0, %xmm1
 ; CHECK-SSE1-NEXT:    andnps (%rdx), %xmm0
+; CHECK-SSE1-NEXT:    movq %rdi, %rax
 ; CHECK-SSE1-NEXT:    orps %xmm1, %xmm0
 ; CHECK-SSE1-NEXT:    movaps %xmm0, (%rdi)
 ; CHECK-SSE1-NEXT:    retq
@@ -468,11 +468,11 @@ define <4 x i32> @out_constant_42_vary(ptr%px, ptr%py, ptr%pmask) {
 define <4 x i32> @in_constant_42_vary(ptr%px, ptr%py, ptr%pmask) {
 ; CHECK-SSE1-LABEL: in_constant_42_vary:
 ; CHECK-SSE1:       # %bb.0:
-; CHECK-SSE1-NEXT:    movq %rdi, %rax
 ; CHECK-SSE1-NEXT:    movaps (%rcx), %xmm0
 ; CHECK-SSE1-NEXT:    movaps %xmm0, %xmm1
 ; CHECK-SSE1-NEXT:    andnps (%rdx), %xmm1
 ; CHECK-SSE1-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE1-NEXT:    movq %rdi, %rax
 ; CHECK-SSE1-NEXT:    orps %xmm1, %xmm0
 ; CHECK-SSE1-NEXT:    movaps %xmm0, (%rdi)
 ; CHECK-SSE1-NEXT:    retq
@@ -505,11 +505,11 @@ define <4 x i32> @in_constant_42_vary(ptr%px, ptr%py, ptr%pmask) {
 define <4 x i32> @out_constant_42_vary_invmask(ptr%px, ptr%py, ptr%pmask) {
 ; CHECK-SSE1-LABEL: out_constant_42_vary_invmask:
 ; CHECK-SSE1:       # %bb.0:
-; CHECK-SSE1-NEXT:    movq %rdi, %rax
 ; CHECK-SSE1-NEXT:    movaps (%rcx), %xmm0
 ; CHECK-SSE1-NEXT:    movaps %xmm0, %xmm1
 ; CHECK-SSE1-NEXT:    andnps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; CHECK-SSE1-NEXT:    andps (%rdx), %xmm0
+; CHECK-SSE1-NEXT:    movq %rdi, %rax
 ; CHECK-SSE1-NEXT:    orps %xmm1, %xmm0
 ; CHECK-SSE1-NEXT:    movaps %xmm0, (%rdi)
 ; CHECK-SSE1-NEXT:    retq
@@ -543,11 +543,11 @@ define <4 x i32> @out_constant_42_vary_invmask(ptr%px, ptr%py, ptr%pmask) {
 define <4 x i32> @in_constant_42_vary_invmask(ptr%px, ptr%py, ptr%pmask) {
 ; CHECK-SSE1-LABEL: in_constant_42_vary_invmask:
 ; CHECK-SSE1:       # %bb.0:
-; CHECK-SSE1-NEXT:    movq %rdi, %rax
 ; CHECK-SSE1-NEXT:    movaps (%rcx), %xmm0
 ; CHECK-SSE1-NEXT:    movaps (%rdx), %xmm1
 ; CHECK-SSE1-NEXT:    andps %xmm0, %xmm1
 ; CHECK-SSE1-NEXT:    andnps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE1-NEXT:    movq %rdi, %rax
 ; CHECK-SSE1-NEXT:    orps %xmm1, %xmm0
 ; CHECK-SSE1-NEXT:    movaps %xmm0, (%rdi)
 ; CHECK-SSE1-NEXT:    retq

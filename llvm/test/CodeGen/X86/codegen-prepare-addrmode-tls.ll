@@ -17,8 +17,8 @@ define i32 @func_local_tls(i32 %arg0, i64 %arg1) nounwind {
 ; NOPIC-NEXT:    pushq %rbx
 ; NOPIC-NEXT:    pushq %rax
 ; NOPIC-NEXT:    movl %fs:foo_local@TPOFF, %ebp
-; NOPIC-NEXT:    testl %edi, %edi
 ; NOPIC-NEXT:    movl %ebp, %eax
+; NOPIC-NEXT:    testl %edi, %edi
 ; NOPIC-NEXT:    jne .LBB0_2
 ; NOPIC-NEXT:  # %bb.1: # %if.then
 ; NOPIC-NEXT:    movq %rsi, %rbx
@@ -37,8 +37,8 @@ define i32 @func_local_tls(i32 %arg0, i64 %arg1) nounwind {
 ; PIC-NEXT:    pushq %r14
 ; PIC-NEXT:    pushq %rbx
 ; PIC-NEXT:    movl %fs:.Lfoo_local$local@TPOFF, %ebp
-; PIC-NEXT:    testl %edi, %edi
 ; PIC-NEXT:    movl %ebp, %eax
+; PIC-NEXT:    testl %edi, %edi
 ; PIC-NEXT:    jne .LBB0_2
 ; PIC-NEXT:  # %bb.1: # %if.then
 ; PIC-NEXT:    movq %rsi, %rbx
@@ -59,8 +59,8 @@ define i32 @func_local_tls(i32 %arg0, i64 %arg1) nounwind {
 ; TLSDESC-NEXT:    pushq %r14
 ; TLSDESC-NEXT:    pushq %rbx
 ; TLSDESC-NEXT:    movl %fs:.Lfoo_local$local@TPOFF, %ebp
-; TLSDESC-NEXT:    testl %edi, %edi
 ; TLSDESC-NEXT:    movl %ebp, %eax
+; TLSDESC-NEXT:    testl %edi, %edi
 ; TLSDESC-NEXT:    jne .LBB0_2
 ; TLSDESC-NEXT:  # %bb.1: # %if.then
 ; TLSDESC-NEXT:    movq %rsi, %rbx
@@ -103,8 +103,8 @@ define i32 @func_nonlocal_tls(i32 %arg0, i64 %arg1) nounwind {
 ; NOPIC-NEXT:    pushq %rbx
 ; NOPIC-NEXT:    movq foo_nonlocal@GOTTPOFF(%rip), %r14
 ; NOPIC-NEXT:    movl %fs:(%r14), %ebp
-; NOPIC-NEXT:    testl %edi, %edi
 ; NOPIC-NEXT:    movl %ebp, %eax
+; NOPIC-NEXT:    testl %edi, %edi
 ; NOPIC-NEXT:    jne .LBB1_2
 ; NOPIC-NEXT:  # %bb.1: # %if.then
 ; NOPIC-NEXT:    movq %rsi, %rbx
@@ -134,8 +134,8 @@ define i32 @func_nonlocal_tls(i32 %arg0, i64 %arg1) nounwind {
 ; PIC-NEXT:    callq __tls_get_addr@PLT
 ; PIC-NEXT:    movq %rax, %r14
 ; PIC-NEXT:    movl (%rax), %r15d
-; PIC-NEXT:    testl %ebp, %ebp
 ; PIC-NEXT:    movl %r15d, %eax
+; PIC-NEXT:    testl %ebp, %ebp
 ; PIC-NEXT:    jne .LBB1_2
 ; PIC-NEXT:  # %bb.1: # %if.then
 ; PIC-NEXT:    callq effect@PLT
@@ -157,8 +157,8 @@ define i32 @func_nonlocal_tls(i32 %arg0, i64 %arg1) nounwind {
 ; TLSDESC-NEXT:    leaq foo_nonlocal@tlsdesc(%rip), %rax
 ; TLSDESC-NEXT:    callq *foo_nonlocal@tlscall(%rax)
 ; TLSDESC-NEXT:    movl %fs:(%rax), %ebp
-; TLSDESC-NEXT:    testl %edi, %edi
 ; TLSDESC-NEXT:    movl %ebp, %ecx
+; TLSDESC-NEXT:    testl %edi, %edi
 ; TLSDESC-NEXT:    jne .LBB1_2
 ; TLSDESC-NEXT:  # %bb.1: # %if.then
 ; TLSDESC-NEXT:    movq %rsi, %rbx

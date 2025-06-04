@@ -49,10 +49,10 @@ define dso_local i32 @test1() nounwind {
 ; X64-NEXT:    incl c(%rip)
 ; X64-NEXT:    sete %dl
 ; X64-NEXT:    movzbl a(%rip), %esi
-; X64-NEXT:    leal 1(%rsi), %edi
 ; X64-NEXT:    cmpb %cl, %sil
 ; X64-NEXT:    sete d(%rip)
-; X64-NEXT:    movb %dil, a(%rip)
+; X64-NEXT:    leal 1(%rsi), %ecx
+; X64-NEXT:    movb %cl, a(%rip)
 ; X64-NEXT:    testb %dl, %dl
 ; X64-NEXT:    jne .LBB0_2
 ; X64-NEXT:  # %bb.1: # %if.then

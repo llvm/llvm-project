@@ -166,8 +166,8 @@ define i64 @test_v16i64(<16 x i64> %a0) nounwind {
 ; X86-SSE-NEXT:    movdqa 8(%ebp), %xmm3
 ; X86-SSE-NEXT:    pxor 56(%ebp), %xmm2
 ; X86-SSE-NEXT:    pxor 24(%ebp), %xmm0
-; X86-SSE-NEXT:    pxor %xmm2, %xmm0
 ; X86-SSE-NEXT:    pxor 72(%ebp), %xmm3
+; X86-SSE-NEXT:    pxor %xmm2, %xmm0
 ; X86-SSE-NEXT:    pxor 40(%ebp), %xmm1
 ; X86-SSE-NEXT:    pxor %xmm3, %xmm1
 ; X86-SSE-NEXT:    pxor %xmm0, %xmm1
@@ -337,8 +337,8 @@ define i32 @test_v16i32(<16 x i32> %a0) nounwind {
 ; X86-SSE-NEXT:    movl %esp, %ebp
 ; X86-SSE-NEXT:    andl $-16, %esp
 ; X86-SSE-NEXT:    subl $16, %esp
-; X86-SSE-NEXT:    pxor %xmm2, %xmm0
 ; X86-SSE-NEXT:    pxor 8(%ebp), %xmm1
+; X86-SSE-NEXT:    pxor %xmm2, %xmm0
 ; X86-SSE-NEXT:    pxor %xmm0, %xmm1
 ; X86-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; X86-SSE-NEXT:    pxor %xmm1, %xmm0
@@ -411,8 +411,8 @@ define i32 @test_v32i32(<32 x i32> %a0) nounwind {
 ; X86-SSE-NEXT:    movl %esp, %ebp
 ; X86-SSE-NEXT:    andl $-16, %esp
 ; X86-SSE-NEXT:    subl $16, %esp
-; X86-SSE-NEXT:    movdqa 8(%ebp), %xmm3
 ; X86-SSE-NEXT:    pxor 56(%ebp), %xmm2
+; X86-SSE-NEXT:    movdqa 8(%ebp), %xmm3
 ; X86-SSE-NEXT:    pxor 24(%ebp), %xmm0
 ; X86-SSE-NEXT:    pxor %xmm2, %xmm0
 ; X86-SSE-NEXT:    pxor 72(%ebp), %xmm3
@@ -735,9 +735,9 @@ define i16 @test_v64i16(<64 x i16> %a0) nounwind {
 ; X86-SSE-NEXT:    movdqa 8(%ebp), %xmm3
 ; X86-SSE-NEXT:    pxor 56(%ebp), %xmm2
 ; X86-SSE-NEXT:    pxor 24(%ebp), %xmm0
-; X86-SSE-NEXT:    pxor %xmm2, %xmm0
 ; X86-SSE-NEXT:    pxor 72(%ebp), %xmm3
 ; X86-SSE-NEXT:    pxor 40(%ebp), %xmm1
+; X86-SSE-NEXT:    pxor %xmm2, %xmm0
 ; X86-SSE-NEXT:    pxor %xmm3, %xmm1
 ; X86-SSE-NEXT:    pxor %xmm0, %xmm1
 ; X86-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
@@ -1127,9 +1127,9 @@ define i8 @test_v128i8(<128 x i8> %a0) nounwind {
 ; X86-SSE-NEXT:    movl %esp, %ebp
 ; X86-SSE-NEXT:    andl $-16, %esp
 ; X86-SSE-NEXT:    subl $16, %esp
-; X86-SSE-NEXT:    movdqa 8(%ebp), %xmm3
 ; X86-SSE-NEXT:    pxor 56(%ebp), %xmm2
 ; X86-SSE-NEXT:    pxor 24(%ebp), %xmm0
+; X86-SSE-NEXT:    movdqa 8(%ebp), %xmm3
 ; X86-SSE-NEXT:    pxor %xmm2, %xmm0
 ; X86-SSE-NEXT:    pxor 72(%ebp), %xmm3
 ; X86-SSE-NEXT:    pxor 40(%ebp), %xmm1

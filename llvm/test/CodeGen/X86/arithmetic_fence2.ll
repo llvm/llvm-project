@@ -222,9 +222,9 @@ define <3 x bfloat> @f10(<3 x bfloat> %a) nounwind {
 ; X86-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; X86-NEXT:    pextrw $0, %xmm0, %edx
 ; X86-NEXT:    #ARITH_FENCE
-; X86-NEXT:    #ARITH_FENCE
-; X86-NEXT:    #ARITH_FENCE
 ; X86-NEXT:    pinsrw $0, %eax, %xmm0
+; X86-NEXT:    #ARITH_FENCE
+; X86-NEXT:    #ARITH_FENCE
 ; X86-NEXT:    pinsrw $0, %ecx, %xmm1
 ; X86-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; X86-NEXT:    pinsrw $0, %edx, %xmm1
@@ -240,9 +240,9 @@ define <3 x bfloat> @f10(<3 x bfloat> %a) nounwind {
 ; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; X64-NEXT:    pextrw $0, %xmm0, %edx
 ; X64-NEXT:    #ARITH_FENCE
-; X64-NEXT:    #ARITH_FENCE
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    pinsrw $0, %eax, %xmm0
+; X64-NEXT:    #ARITH_FENCE
+; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    pinsrw $0, %ecx, %xmm1
 ; X64-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; X64-NEXT:    pinsrw $0, %edx, %xmm1
@@ -269,13 +269,13 @@ define <4 x bfloat> @f11(<4 x bfloat> %a) nounwind {
 ; X86-NEXT:    #ARITH_FENCE
 ; X86-NEXT:    #ARITH_FENCE
 ; X86-NEXT:    #ARITH_FENCE
-; X86-NEXT:    pinsrw $0, %eax, %xmm0
-; X86-NEXT:    pinsrw $0, %edx, %xmm1
-; X86-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; X86-NEXT:    pinsrw $0, %eax, %xmm1
+; X86-NEXT:    pinsrw $0, %edx, %xmm2
 ; X86-NEXT:    pinsrw $0, %ecx, %xmm0
-; X86-NEXT:    pinsrw $0, %esi, %xmm2
-; X86-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
-; X86-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X86-NEXT:    pinsrw $0, %esi, %xmm3
+; X86-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
+; X86-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1],xmm0[2],xmm3[2],xmm0[3],xmm3[3]
+; X86-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
@@ -294,13 +294,13 @@ define <4 x bfloat> @f11(<4 x bfloat> %a) nounwind {
 ; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    #ARITH_FENCE
-; X64-NEXT:    pinsrw $0, %eax, %xmm0
-; X64-NEXT:    pinsrw $0, %ecx, %xmm1
-; X64-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; X64-NEXT:    pinsrw $0, %eax, %xmm1
+; X64-NEXT:    pinsrw $0, %ecx, %xmm2
 ; X64-NEXT:    pinsrw $0, %edx, %xmm0
-; X64-NEXT:    pinsrw $0, %esi, %xmm2
-; X64-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
-; X64-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X64-NEXT:    pinsrw $0, %esi, %xmm3
+; X64-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
+; X64-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1],xmm0[2],xmm3[2],xmm0[3],xmm3[3]
+; X64-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
 ; X64-NEXT:    retq
   %b = call <4 x bfloat> @llvm.arithmetic.fence.v4bf16(<4 x bfloat> %a)
   ret <4 x bfloat> %b

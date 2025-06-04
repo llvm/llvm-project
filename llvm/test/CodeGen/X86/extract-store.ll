@@ -463,19 +463,9 @@ define void @extract_f64_1(ptr nocapture %dst, <2 x double> %foo) nounwind {
 define void @extract_f128_0(ptr nocapture %dst, <2 x fp128> %foo) nounwind {
 ; SSE-X86-LABEL: extract_f128_0:
 ; SSE-X86:       # %bb.0:
-; SSE-X86-NEXT:    pushl %edi
-; SSE-X86-NEXT:    pushl %esi
+; SSE-X86-NEXT:    movups {{[0-9]+}}(%esp), %xmm0
 ; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; SSE-X86-NEXT:    movl %esi, 12(%edi)
-; SSE-X86-NEXT:    movl %edx, 8(%edi)
-; SSE-X86-NEXT:    movl %ecx, 4(%edi)
-; SSE-X86-NEXT:    movl %eax, (%edi)
-; SSE-X86-NEXT:    popl %esi
-; SSE-X86-NEXT:    popl %edi
+; SSE-X86-NEXT:    movups %xmm0, (%eax)
 ; SSE-X86-NEXT:    retl
 ;
 ; SSE-X64-LABEL: extract_f128_0:
@@ -502,19 +492,9 @@ define void @extract_f128_0(ptr nocapture %dst, <2 x fp128> %foo) nounwind {
 define void @extract_f128_1(ptr nocapture %dst, <2 x fp128> %foo) nounwind {
 ; SSE-X86-LABEL: extract_f128_1:
 ; SSE-X86:       # %bb.0:
-; SSE-X86-NEXT:    pushl %edi
-; SSE-X86-NEXT:    pushl %esi
+; SSE-X86-NEXT:    movups {{[0-9]+}}(%esp), %xmm0
 ; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; SSE-X86-NEXT:    movl %esi, 12(%edi)
-; SSE-X86-NEXT:    movl %edx, 8(%edi)
-; SSE-X86-NEXT:    movl %ecx, 4(%edi)
-; SSE-X86-NEXT:    movl %eax, (%edi)
-; SSE-X86-NEXT:    popl %esi
-; SSE-X86-NEXT:    popl %edi
+; SSE-X86-NEXT:    movups %xmm0, (%eax)
 ; SSE-X86-NEXT:    retl
 ;
 ; SSE-X64-LABEL: extract_f128_1:

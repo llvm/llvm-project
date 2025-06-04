@@ -13,9 +13,9 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    cmpl $2, %edx
 ; X86-NEXT:    movl $1, %eax
 ; X86-NEXT:    movl $1, %esi
+; X86-NEXT:    cmpl $2, %edx
 ; X86-NEXT:    jge .LBB0_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl %edx, %esi

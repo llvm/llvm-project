@@ -5,19 +5,23 @@
 define <4 x double> @test_x86_avx_vzeroall(<4 x double> %a, <4 x double> %b) {
 ; AVX-LABEL: test_x86_avx_vzeroall:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # encoding: [0xc5,0xfd,0x58,0xc1]
-; AVX-NEXT:    vmovupd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX-NEXT:    # encoding: [0xc5,0xfd,0x11,0x44,0x24,0xd8]
+; AVX-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX-NEXT:    # encoding: [0xc5,0xfc,0x11,0x4c,0x24,0xd8]
+; AVX-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX-NEXT:    # encoding: [0xc5,0xfc,0x11,0x44,0x24,0xb8]
 ; AVX-NEXT:    vzeroall # encoding: [0xc5,0xfc,0x77]
-; AVX-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; AVX-NEXT:    # encoding: [0xc5,0xfc,0x10,0x44,0x24,0xd8]
+; AVX-NEXT:    vmovupd {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
+; AVX-NEXT:    # encoding: [0xc5,0xfd,0x10,0x44,0x24,0xb8]
+; AVX-NEXT:    vaddpd {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 32-byte Folded Reload
+; AVX-NEXT:    # encoding: [0xc5,0xfd,0x58,0x44,0x24,0xd8]
 ; AVX-NEXT:    retq # encoding: [0xc3]
 ;
 ; AVX512VL-LABEL: test_x86_avx_vzeroall:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vaddpd %ymm1, %ymm0, %ymm16 # encoding: [0x62,0xe1,0xfd,0x28,0x58,0xc1]
+; AVX512VL-NEXT:    vmovapd %ymm1, %ymm16 # encoding: [0x62,0xe1,0xfd,0x28,0x28,0xc1]
+; AVX512VL-NEXT:    vmovapd %ymm0, %ymm17 # encoding: [0x62,0xe1,0xfd,0x28,0x28,0xc8]
 ; AVX512VL-NEXT:    vzeroall # encoding: [0xc5,0xfc,0x77]
-; AVX512VL-NEXT:    vmovapd %ymm16, %ymm0 # encoding: [0x62,0xb1,0xfd,0x28,0x28,0xc0]
+; AVX512VL-NEXT:    vaddpd %ymm16, %ymm17, %ymm0 # encoding: [0x62,0xb1,0xf5,0x20,0x58,0xc0]
 ; AVX512VL-NEXT:    retq # encoding: [0xc3]
   %c = fadd <4 x double> %a, %b
   call void @llvm.x86.avx.vzeroall()
@@ -28,19 +32,23 @@ declare void @llvm.x86.avx.vzeroall() nounwind
 define <4 x double> @test_x86_avx_vzeroupper(<4 x double> %a, <4 x double> %b) {
 ; AVX-LABEL: test_x86_avx_vzeroupper:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # encoding: [0xc5,0xfd,0x58,0xc1]
-; AVX-NEXT:    vmovupd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX-NEXT:    # encoding: [0xc5,0xfd,0x11,0x44,0x24,0xd8]
+; AVX-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX-NEXT:    # encoding: [0xc5,0xfc,0x11,0x4c,0x24,0xd8]
+; AVX-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX-NEXT:    # encoding: [0xc5,0xfc,0x11,0x44,0x24,0xb8]
 ; AVX-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
-; AVX-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; AVX-NEXT:    # encoding: [0xc5,0xfc,0x10,0x44,0x24,0xd8]
+; AVX-NEXT:    vmovupd {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
+; AVX-NEXT:    # encoding: [0xc5,0xfd,0x10,0x44,0x24,0xb8]
+; AVX-NEXT:    vaddpd {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 32-byte Folded Reload
+; AVX-NEXT:    # encoding: [0xc5,0xfd,0x58,0x44,0x24,0xd8]
 ; AVX-NEXT:    retq # encoding: [0xc3]
 ;
 ; AVX512VL-LABEL: test_x86_avx_vzeroupper:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vaddpd %ymm1, %ymm0, %ymm16 # encoding: [0x62,0xe1,0xfd,0x28,0x58,0xc1]
+; AVX512VL-NEXT:    vmovapd %ymm1, %ymm16 # encoding: [0x62,0xe1,0xfd,0x28,0x28,0xc1]
+; AVX512VL-NEXT:    vmovapd %ymm0, %ymm17 # encoding: [0x62,0xe1,0xfd,0x28,0x28,0xc8]
 ; AVX512VL-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
-; AVX512VL-NEXT:    vmovapd %ymm16, %ymm0 # encoding: [0x62,0xb1,0xfd,0x28,0x28,0xc0]
+; AVX512VL-NEXT:    vaddpd %ymm16, %ymm17, %ymm0 # encoding: [0x62,0xb1,0xf5,0x20,0x58,0xc0]
 ; AVX512VL-NEXT:    retq # encoding: [0xc3]
   %c = fadd <4 x double> %a, %b
   call void @llvm.x86.avx.vzeroupper()

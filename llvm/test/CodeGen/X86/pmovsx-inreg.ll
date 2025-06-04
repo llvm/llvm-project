@@ -27,8 +27,8 @@ define void @test1(ptr %in, ptr %out) nounwind {
 ; X86-AVX2-LABEL: test1:
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX2-NEXT:    vpmovsxbq (%ecx), %xmm0
+; X86-AVX2-NEXT:    vpmovsxbq (%eax), %xmm0
+; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86-AVX2-NEXT:    vmovups %xmm1, (%eax)
 ; X86-AVX2-NEXT:    vmovdqu %xmm0, (%eax)
@@ -74,8 +74,8 @@ define void @test2(ptr %in, ptr %out) nounwind {
 ; X86-AVX2-LABEL: test2:
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX2-NEXT:    vpmovsxbq (%ecx), %ymm0
+; X86-AVX2-NEXT:    vpmovsxbq (%eax), %ymm0
+; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86-AVX2-NEXT:    vmovups %ymm1, (%eax)
 ; X86-AVX2-NEXT:    vmovdqu %ymm0, (%eax)
@@ -108,8 +108,8 @@ define void @test3(ptr %in, ptr %out) nounwind {
 ; X86-AVX2-LABEL: test3:
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX2-NEXT:    vpmovsxbd (%ecx), %xmm0
+; X86-AVX2-NEXT:    vpmovsxbd (%eax), %xmm0
+; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86-AVX2-NEXT:    vmovups %xmm1, (%eax)
 ; X86-AVX2-NEXT:    vmovdqu %xmm0, (%eax)
@@ -155,8 +155,8 @@ define void @test4(ptr %in, ptr %out) nounwind {
 ; X86-AVX2-LABEL: test4:
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX2-NEXT:    vpmovsxbd (%ecx), %ymm0
+; X86-AVX2-NEXT:    vpmovsxbd (%eax), %ymm0
+; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86-AVX2-NEXT:    vmovups %ymm1, (%eax)
 ; X86-AVX2-NEXT:    vmovdqu %ymm0, (%eax)
@@ -189,8 +189,8 @@ define void @test5(ptr %in, ptr %out) nounwind {
 ; X86-AVX2-LABEL: test5:
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX2-NEXT:    vpmovsxbw (%ecx), %xmm0
+; X86-AVX2-NEXT:    vpmovsxbw (%eax), %xmm0
+; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86-AVX2-NEXT:    vmovups %xmm1, (%eax)
 ; X86-AVX2-NEXT:    vmovdqu %xmm0, (%eax)
@@ -236,8 +236,8 @@ define void @test6(ptr %in, ptr %out) nounwind {
 ; X86-AVX2-LABEL: test6:
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX2-NEXT:    vpmovsxbw (%ecx), %ymm0
+; X86-AVX2-NEXT:    vpmovsxbw (%eax), %ymm0
+; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86-AVX2-NEXT:    vmovups %ymm1, (%eax)
 ; X86-AVX2-NEXT:    vmovdqu %ymm0, (%eax)
@@ -270,8 +270,8 @@ define void @test7(ptr %in, ptr %out) nounwind {
 ; X86-AVX2-LABEL: test7:
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX2-NEXT:    vpmovsxwq (%ecx), %xmm0
+; X86-AVX2-NEXT:    vpmovsxwq (%eax), %xmm0
+; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86-AVX2-NEXT:    vmovups %xmm1, (%eax)
 ; X86-AVX2-NEXT:    vmovdqu %xmm0, (%eax)
@@ -317,8 +317,8 @@ define void @test8(ptr %in, ptr %out) nounwind {
 ; X86-AVX2-LABEL: test8:
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX2-NEXT:    vpmovsxwq (%ecx), %ymm0
+; X86-AVX2-NEXT:    vpmovsxwq (%eax), %ymm0
+; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86-AVX2-NEXT:    vmovups %ymm1, (%eax)
 ; X86-AVX2-NEXT:    vmovdqu %ymm0, (%eax)
@@ -351,8 +351,8 @@ define void @test9(ptr %in, ptr %out) nounwind {
 ; X86-AVX2-LABEL: test9:
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX2-NEXT:    vpmovsxwd (%ecx), %xmm0
+; X86-AVX2-NEXT:    vpmovsxwd (%eax), %xmm0
+; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86-AVX2-NEXT:    vmovups %xmm1, (%eax)
 ; X86-AVX2-NEXT:    vmovdqu %xmm0, (%eax)
@@ -398,8 +398,8 @@ define void @test10(ptr %in, ptr %out) nounwind {
 ; X86-AVX2-LABEL: test10:
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX2-NEXT:    vpmovsxwd (%ecx), %ymm0
+; X86-AVX2-NEXT:    vpmovsxwd (%eax), %ymm0
+; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86-AVX2-NEXT:    vmovups %ymm1, (%eax)
 ; X86-AVX2-NEXT:    vmovdqu %ymm0, (%eax)
@@ -432,8 +432,8 @@ define void @test11(ptr %in, ptr %out) nounwind {
 ; X86-AVX2-LABEL: test11:
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX2-NEXT:    vpmovsxdq (%ecx), %xmm0
+; X86-AVX2-NEXT:    vpmovsxdq (%eax), %xmm0
+; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86-AVX2-NEXT:    vmovups %xmm1, (%eax)
 ; X86-AVX2-NEXT:    vmovdqu %xmm0, (%eax)
@@ -479,8 +479,8 @@ define void @test12(ptr %in, ptr %out) nounwind {
 ; X86-AVX2-LABEL: test12:
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX2-NEXT:    vpmovsxdq (%ecx), %ymm0
+; X86-AVX2-NEXT:    vpmovsxdq (%eax), %ymm0
+; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86-AVX2-NEXT:    vmovups %ymm1, (%eax)
 ; X86-AVX2-NEXT:    vmovdqu %ymm0, (%eax)

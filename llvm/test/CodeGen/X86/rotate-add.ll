@@ -273,10 +273,10 @@ define i32 @test_rotl_mul_special_case(i32 %i) {
 define i64 @test_rotl_mul_with_mask_special_case(i64 %i) {
 ; X86-LABEL: test_rotl_mul_with_mask_special_case:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    leal (%eax,%eax,8), %ecx
 ; X86-NEXT:    movl $9, %eax
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    leal (%ecx,%ecx,8), %ecx
 ; X86-NEXT:    addl %ecx, %edx
 ; X86-NEXT:    shrdl $25, %eax, %edx
 ; X86-NEXT:    movzbl %dl, %eax

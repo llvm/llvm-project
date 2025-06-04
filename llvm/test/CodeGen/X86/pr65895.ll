@@ -24,7 +24,8 @@ define i32 @PR65895() {
 ; CHECK-NEXT:    addb $-3, %al
 ; CHECK-NEXT:    movsbl %al, %eax
 ; CHECK-NEXT:    movl %eax, d(%rip)
-; CHECK-NEXT:    leal 247(%rax,%rax,2), %eax
+; CHECK-NEXT:    leal (%rax,%rax,2), %eax
+; CHECK-NEXT:    addl $247, %eax
 ; CHECK-NEXT:    movb $1, c(%rip)
 ; CHECK-NEXT:    movsbq %al, %rax
 ; CHECK-NEXT:    movq %rax, e(%rip)
@@ -66,7 +67,8 @@ define void @foo(i8 %arg) nounwind {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    addb $-109, %dil
 ; CHECK-NEXT:    movsbl %dil, %eax
-; CHECK-NEXT:    leal 1(%rax,%rax,2), %edi
+; CHECK-NEXT:    leal (%rax,%rax,2), %edi
+; CHECK-NEXT:    incl %edi
 ; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq

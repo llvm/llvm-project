@@ -204,27 +204,18 @@ declare void @consume_attributes(i32, ptr nest, i32, ptr byval(%struct2))
 define void @test_attributes(ptr byval(%struct2) %s) gc "statepoint-example" {
 ; CHECK-LABEL: test_attributes:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    subq $8, %rsp
-; CHECK-NEXT:    .cfi_adjust_cfa_offset 8
+; CHECK-NEXT:    subq $24, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
+; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; CHECK-NEXT:    movups %xmm0, (%rsp)
 ; CHECK-NEXT:    movl $42, %edi
 ; CHECK-NEXT:    xorl %r10d, %r10d
 ; CHECK-NEXT:    movl $17, %esi
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    .cfi_adjust_cfa_offset 8
-; CHECK-NEXT:    pushq %rdx
-; CHECK-NEXT:    .cfi_adjust_cfa_offset 8
-; CHECK-NEXT:    pushq %rcx
-; CHECK-NEXT:    .cfi_adjust_cfa_offset 8
 ; CHECK-NEXT:    callq consume_attributes@PLT
 ; CHECK-NEXT:  .Ltmp9:
-; CHECK-NEXT:    addq $32, %rsp
-; CHECK-NEXT:    .cfi_adjust_cfa_offset -32
-; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:

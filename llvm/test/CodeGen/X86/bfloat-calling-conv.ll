@@ -155,18 +155,18 @@ define <3 x bfloat> @return_arg_v3bf16(<3 x bfloat> %x) #0 {
 ; FAST_ISEL_AVXNECONVERT:       # %bb.0:
 ; FAST_ISEL_AVXNECONVERT-NEXT:    vpextrw $2, %xmm0, %eax
 ; FAST_ISEL_AVXNECONVERT-NEXT:    shll $16, %eax
+; FAST_ISEL_AVXNECONVERT-NEXT:    vpextrw $1, %xmm0, %ecx
 ; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %eax, %xmm1
-; FAST_ISEL_AVXNECONVERT-NEXT:    vpextrw $1, %xmm0, %eax
-; FAST_ISEL_AVXNECONVERT-NEXT:    shll $16, %eax
-; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %eax, %xmm2
+; FAST_ISEL_AVXNECONVERT-NEXT:    shll $16, %ecx
+; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %ecx, %xmm2
 ; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %xmm0, %eax
 ; FAST_ISEL_AVXNECONVERT-NEXT:    shll $16, %eax
 ; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %eax, %xmm0
 ; FAST_ISEL_AVXNECONVERT-NEXT:    {vex} vcvtneps2bf16 %xmm1, %xmm1
-; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %xmm1, %eax
 ; FAST_ISEL_AVXNECONVERT-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
-; FAST_ISEL_AVXNECONVERT-NEXT:    {vex} vcvtneps2bf16 %xmm2, %xmm1
-; FAST_ISEL_AVXNECONVERT-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; FAST_ISEL_AVXNECONVERT-NEXT:    {vex} vcvtneps2bf16 %xmm2, %xmm2
+; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %xmm1, %eax
+; FAST_ISEL_AVXNECONVERT-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
 ; FAST_ISEL_AVXNECONVERT-NEXT:    vpinsrw $2, %eax, %xmm1, %xmm1
 ; FAST_ISEL_AVXNECONVERT-NEXT:    vmovq %xmm1, %rax
 ; FAST_ISEL_AVXNECONVERT-NEXT:    movl %eax, %ecx
@@ -745,8 +745,8 @@ define <3 x bfloat> @call_ret_v3bf16(ptr %ptr) #0 {
 ; FAST_ISEL_AVXNECONVERT-NEXT:    shll $16, %eax
 ; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %eax, %xmm2
 ; FAST_ISEL_AVXNECONVERT-NEXT:    {vex} vcvtneps2bf16 %xmm2, %xmm2
-; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %xmm2, %eax
 ; FAST_ISEL_AVXNECONVERT-NEXT:    {vex} vcvtneps2bf16 %xmm1, %xmm1
+; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %xmm2, %eax
 ; FAST_ISEL_AVXNECONVERT-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
 ; FAST_ISEL_AVXNECONVERT-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; FAST_ISEL_AVXNECONVERT-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0

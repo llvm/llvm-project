@@ -1256,9 +1256,9 @@ define void @load_v32i1_broadcast_31_v8i1_store(ptr %a0,ptr %a1) {
 ; AVX512-FAST-LABEL: load_v32i1_broadcast_31_v8i1_store:
 ; AVX512-FAST:       # %bb.0:
 ; AVX512-FAST-NEXT:    kmovb 3(%rdi), %k0
-; AVX512-FAST-NEXT:    vpmovm2d %k0, %ymm0
-; AVX512-FAST-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [7,7,7,7,7,7,7,7]
-; AVX512-FAST-NEXT:    vpermd %ymm0, %ymm1, %ymm0
+; AVX512-FAST-NEXT:    vpbroadcastd {{.*#+}} ymm0 = [7,7,7,7,7,7,7,7]
+; AVX512-FAST-NEXT:    vpmovm2d %k0, %ymm1
+; AVX512-FAST-NEXT:    vpermd %ymm1, %ymm0, %ymm0
 ; AVX512-FAST-NEXT:    vpmovd2m %ymm0, %k0
 ; AVX512-FAST-NEXT:    kmovb %k0, (%rsi)
 ; AVX512-FAST-NEXT:    vzeroupper
@@ -1519,9 +1519,9 @@ define void @load_v64i1_broadcast_63_v8i1_store(ptr %a0,ptr %a1) {
 ; AVX512-FAST-LABEL: load_v64i1_broadcast_63_v8i1_store:
 ; AVX512-FAST:       # %bb.0:
 ; AVX512-FAST-NEXT:    kmovb 7(%rdi), %k0
-; AVX512-FAST-NEXT:    vpmovm2d %k0, %ymm0
-; AVX512-FAST-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [7,7,7,7,7,7,7,7]
-; AVX512-FAST-NEXT:    vpermd %ymm0, %ymm1, %ymm0
+; AVX512-FAST-NEXT:    vpbroadcastd {{.*#+}} ymm0 = [7,7,7,7,7,7,7,7]
+; AVX512-FAST-NEXT:    vpmovm2d %k0, %ymm1
+; AVX512-FAST-NEXT:    vpermd %ymm1, %ymm0, %ymm0
 ; AVX512-FAST-NEXT:    vpmovd2m %ymm0, %k0
 ; AVX512-FAST-NEXT:    kmovb %k0, (%rsi)
 ; AVX512-FAST-NEXT:    vzeroupper
@@ -1574,9 +1574,9 @@ define void @load_v64i1_broadcast_63_v16i1_store(ptr %a0,ptr %a1) {
 ; AVX512-FAST-LABEL: load_v64i1_broadcast_63_v16i1_store:
 ; AVX512-FAST:       # %bb.0:
 ; AVX512-FAST-NEXT:    kmovw 6(%rdi), %k0
-; AVX512-FAST-NEXT:    vpmovm2d %k0, %zmm0
-; AVX512-FAST-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; AVX512-FAST-NEXT:    vpermd %zmm0, %zmm1, %zmm0
+; AVX512-FAST-NEXT:    vpbroadcastd {{.*#+}} zmm0 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX512-FAST-NEXT:    vpmovm2d %k0, %zmm1
+; AVX512-FAST-NEXT:    vpermd %zmm1, %zmm0, %zmm0
 ; AVX512-FAST-NEXT:    vpmovd2m %zmm0, %k0
 ; AVX512-FAST-NEXT:    kmovw %k0, (%rsi)
 ; AVX512-FAST-NEXT:    vzeroupper
@@ -1596,9 +1596,9 @@ define void @load_v64i1_broadcast_63_v16i1_store(ptr %a0,ptr %a1) {
 ; AVX512NOTDQ-FAST-LABEL: load_v64i1_broadcast_63_v16i1_store:
 ; AVX512NOTDQ-FAST:       # %bb.0:
 ; AVX512NOTDQ-FAST-NEXT:    kmovw 6(%rdi), %k1
-; AVX512NOTDQ-FAST-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
-; AVX512NOTDQ-FAST-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; AVX512NOTDQ-FAST-NEXT:    vpermd %zmm0, %zmm1, %zmm0
+; AVX512NOTDQ-FAST-NEXT:    vpbroadcastd {{.*#+}} zmm0 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX512NOTDQ-FAST-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} {z} = -1
+; AVX512NOTDQ-FAST-NEXT:    vpermd %zmm1, %zmm0, %zmm0
 ; AVX512NOTDQ-FAST-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; AVX512NOTDQ-FAST-NEXT:    kmovw %k0, (%rsi)
 ; AVX512NOTDQ-FAST-NEXT:    vzeroupper

@@ -58,8 +58,8 @@ define <16 x i16> @trunc_concat_packusdw_256(<8 x i32> %a0, <8 x i32> %a1) nounw
 ;
 ; AVX2-LABEL: trunc_concat_packusdw_256:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsrld $17, %ymm0, %ymm0
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [15,15,15,15,15,15,15,15]
+; AVX2-NEXT:    vpsrld $17, %ymm0, %ymm0
 ; AVX2-NEXT:    vpand %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    vpackusdw %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
@@ -228,8 +228,8 @@ define <16 x i16> @concat_trunc_packusdw_256(<8 x i32> %a0, <8 x i32> %a1) nounw
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsrld $17, %ymm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX2-NEXT:    vpackusdw %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
+; AVX2-NEXT:    vpackusdw %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,2,3]
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX2-NEXT:    vpunpckhqdq {{.*#+}} xmm2 = xmm0[1],xmm1[1]

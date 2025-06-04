@@ -1027,21 +1027,21 @@ define zeroext i1 @PR44781(ptr %0) {
 ;
 ; AVX2-LABEL: PR44781:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm0 = [15,15,15,15]
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm0 = [64424509455,64424509455]
 ; AVX2-NEXT:    vptest (%rdi), %xmm0
 ; AVX2-NEXT:    sete %al
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: PR44781:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpbroadcastd {{.*#+}} xmm0 = [15,15,15,15]
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm0 = [64424509455,64424509455]
 ; AVX512F-NEXT:    vptest (%rdi), %xmm0
 ; AVX512F-NEXT:    sete %al
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: PR44781:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpbroadcastd {{.*#+}} xmm0 = [15,15,15,15]
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm0 = [64424509455,64424509455]
 ; AVX512BW-NEXT:    vptest (%rdi), %xmm0
 ; AVX512BW-NEXT:    sete %al
 ; AVX512BW-NEXT:    retq

@@ -25,17 +25,13 @@ entry:
 define <4 x i64> @A2(ptr %ptr, ptr %ptr2) nounwind uwtable readnone ssp {
 ; X86-LABEL: A2:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl (%ecx), %edx
-; X86-NEXT:    movl 4(%ecx), %esi
 ; X86-NEXT:    vbroadcastsd (%ecx), %ymm0
+; X86-NEXT:    movl 4(%ecx), %ecx
 ; X86-NEXT:    movl %edx, (%eax)
-; X86-NEXT:    movl %esi, 4(%eax)
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl %ecx, 4(%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: A2:

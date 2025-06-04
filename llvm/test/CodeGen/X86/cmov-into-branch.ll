@@ -48,8 +48,8 @@ define i32 @test4(i32 %a, ptr nocapture %b, i32 %x, i32 %y)  {
 define i32 @test5(i32 %a, ptr nocapture %b, i32 %x, i32 %y) {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    cmpl %edi, (%rsi)
+; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    cmoval %edi, %eax
 ; CHECK-NEXT:    cmovael %edx, %eax
 ; CHECK-NEXT:    retq
@@ -170,8 +170,8 @@ define i32 @weighted_selects(i32 %a, i32 %b) !prof !19 {
 ; CHECK-LABEL: weighted_selects:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    jne .LBB11_2
 ; CHECK-NEXT:  # %bb.1: # %select.false
 ; CHECK-NEXT:    movl %eax, %ecx

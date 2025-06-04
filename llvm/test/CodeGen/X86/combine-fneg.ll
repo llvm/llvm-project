@@ -125,8 +125,8 @@ define <2 x float> @fneg_bitcast(i64 %i) nounwind {
 ; X86-SSE1-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
 ; X86-SSE1-NEXT:    movl 12(%ebp), %ecx
 ; X86-SSE1-NEXT:    xorl %eax, %ecx
-; X86-SSE1-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    xorl 8(%ebp), %eax
+; X86-SSE1-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    movl %eax, (%esp)
 ; X86-SSE1-NEXT:    movaps (%esp), %xmm0
 ; X86-SSE1-NEXT:    movl %ebp, %esp
@@ -138,8 +138,8 @@ define <2 x float> @fneg_bitcast(i64 %i) nounwind {
 ; X86-SSE2-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE2-NEXT:    xorl %eax, %ecx
-; X86-SSE2-NEXT:    movd %ecx, %xmm1
 ; X86-SSE2-NEXT:    xorl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movd %ecx, %xmm1
 ; X86-SSE2-NEXT:    movd %eax, %xmm0
 ; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X86-SSE2-NEXT:    retl

@@ -390,13 +390,13 @@ declare i32 @llvm.x86.bmi.pext.32(i32, i32)
 define i32 @mulx32(i32 %x, i32 %y, ptr %p)   {
 ; X86-LABEL: mulx32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    addl %edx, %edx
 ; X86-NEXT:    addl %eax, %eax
-; X86-NEXT:    mulxl %eax, %eax, %edx
-; X86-NEXT:    movl %edx, (%ecx)
+; X86-NEXT:    mulxl %eax, %eax, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl %ecx, (%edx)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mulx32:
@@ -439,12 +439,12 @@ define i32 @mulx32(i32 %x, i32 %y, ptr %p)   {
 define i32 @mulx32_load(i32 %x, ptr %y, ptr %p)   {
 ; X86-LABEL: mulx32_load:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    addl %edx, %edx
-; X86-NEXT:    mulxl (%eax), %eax, %edx
-; X86-NEXT:    movl %edx, (%ecx)
+; X86-NEXT:    mulxl (%eax), %eax, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl %ecx, (%edx)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mulx32_load:

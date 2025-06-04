@@ -399,7 +399,8 @@ define <4 x i64> @vec256_i64_signed_reg_reg(<4 x i64> %a1, <4 x i64> %a2) nounwi
 ; AVX1-NEXT:    vpsrlq $1, %xmm2, %xmm6
 ; AVX1-NEXT:    vpsrlq $1, %xmm1, %xmm7
 ; AVX1-NEXT:    vpsrlq $33, %xmm1, %xmm1
-; AVX1-NEXT:    vpmovsxbq {{.*#+}} xmm8 = [1,1]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm8 = [1,1]
+; AVX1-NEXT:    # xmm8 = mem[0,0]
 ; AVX1-NEXT:    vpor %xmm5, %xmm8, %xmm9
 ; AVX1-NEXT:    vpmuludq %xmm1, %xmm9, %xmm1
 ; AVX1-NEXT:    vpsrlq $32, %xmm5, %xmm5
@@ -424,20 +425,20 @@ define <4 x i64> @vec256_i64_signed_reg_reg(<4 x i64> %a1, <4 x i64> %a2) nounwi
 ;
 ; AVX2-LABEL: vec256_i64_signed_reg_reg:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm2
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm3 = [1,1,1,1]
-; AVX2-NEXT:    vpor %ymm3, %ymm2, %ymm3
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [1,1,1,1]
+; AVX2-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm3
+; AVX2-NEXT:    vpor %ymm2, %ymm3, %ymm2
 ; AVX2-NEXT:    vpsubq %ymm1, %ymm0, %ymm1
-; AVX2-NEXT:    vpxor %ymm2, %ymm1, %ymm1
-; AVX2-NEXT:    vpsubq %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    vpxor %ymm3, %ymm1, %ymm1
+; AVX2-NEXT:    vpsubq %ymm1, %ymm3, %ymm1
 ; AVX2-NEXT:    vpsrlq $1, %ymm1, %ymm4
 ; AVX2-NEXT:    vpsrlq $33, %ymm1, %ymm1
-; AVX2-NEXT:    vpmuludq %ymm3, %ymm1, %ymm1
-; AVX2-NEXT:    vpsrlq $32, %ymm2, %ymm2
-; AVX2-NEXT:    vpmuludq %ymm2, %ymm4, %ymm2
-; AVX2-NEXT:    vpaddq %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    vpmuludq %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    vpsrlq $32, %ymm3, %ymm3
+; AVX2-NEXT:    vpmuludq %ymm3, %ymm4, %ymm3
+; AVX2-NEXT:    vpaddq %ymm1, %ymm3, %ymm1
 ; AVX2-NEXT:    vpsllq $32, %ymm1, %ymm1
-; AVX2-NEXT:    vpmuludq %ymm3, %ymm4, %ymm2
+; AVX2-NEXT:    vpmuludq %ymm2, %ymm4, %ymm2
 ; AVX2-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
@@ -457,7 +458,8 @@ define <4 x i64> @vec256_i64_signed_reg_reg(<4 x i64> %a1, <4 x i64> %a2) nounwi
 ; XOP-NEXT:    vpsrlq $1, %xmm2, %xmm6
 ; XOP-NEXT:    vpsrlq $1, %xmm1, %xmm7
 ; XOP-NEXT:    vpsrlq $33, %xmm1, %xmm1
-; XOP-NEXT:    vpmovsxbq {{.*#+}} xmm8 = [1,1]
+; XOP-NEXT:    vmovddup {{.*#+}} xmm8 = [1,1]
+; XOP-NEXT:    # xmm8 = mem[0,0]
 ; XOP-NEXT:    vpor %xmm5, %xmm8, %xmm9
 ; XOP-NEXT:    vpmuludq %xmm1, %xmm9, %xmm1
 ; XOP-NEXT:    vpsrlq $32, %xmm5, %xmm5
@@ -485,20 +487,20 @@ define <4 x i64> @vec256_i64_signed_reg_reg(<4 x i64> %a1, <4 x i64> %a2) nounwi
 ; AVX512F-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512F-NEXT:    vpcmpgtq %zmm1, %zmm0, %k1
-; AVX512F-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; AVX512F-NEXT:    vpbroadcastq {{.*#+}} ymm3 = [1,1,1,1]
-; AVX512F-NEXT:    vmovdqa64 %zmm2, %zmm3 {%k1}
-; AVX512F-NEXT:    vpminsq %zmm1, %zmm0, %zmm2
+; AVX512F-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [1,1,1,1]
+; AVX512F-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; AVX512F-NEXT:    vmovdqa64 %zmm3, %zmm2 {%k1}
+; AVX512F-NEXT:    vpminsq %zmm1, %zmm0, %zmm3
 ; AVX512F-NEXT:    vpmaxsq %zmm1, %zmm0, %zmm1
-; AVX512F-NEXT:    vpsubq %ymm2, %ymm1, %ymm1
-; AVX512F-NEXT:    vpsrlq $1, %ymm1, %ymm2
+; AVX512F-NEXT:    vpsubq %ymm3, %ymm1, %ymm1
+; AVX512F-NEXT:    vpsrlq $1, %ymm1, %ymm3
 ; AVX512F-NEXT:    vpsrlq $33, %ymm1, %ymm1
-; AVX512F-NEXT:    vpmuludq %ymm3, %ymm1, %ymm1
-; AVX512F-NEXT:    vpsrlq $32, %ymm3, %ymm4
-; AVX512F-NEXT:    vpmuludq %ymm4, %ymm2, %ymm4
+; AVX512F-NEXT:    vpmuludq %ymm2, %ymm1, %ymm1
+; AVX512F-NEXT:    vpsrlq $32, %ymm2, %ymm4
+; AVX512F-NEXT:    vpmuludq %ymm4, %ymm3, %ymm4
 ; AVX512F-NEXT:    vpaddq %ymm1, %ymm4, %ymm1
 ; AVX512F-NEXT:    vpsllq $32, %ymm1, %ymm1
-; AVX512F-NEXT:    vpmuludq %ymm3, %ymm2, %ymm2
+; AVX512F-NEXT:    vpmuludq %ymm2, %ymm3, %ymm2
 ; AVX512F-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
 ; AVX512F-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    retq
@@ -520,20 +522,20 @@ define <4 x i64> @vec256_i64_signed_reg_reg(<4 x i64> %a1, <4 x i64> %a2) nounwi
 ; AVX512BW-FALLBACK-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; AVX512BW-FALLBACK-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512BW-FALLBACK-NEXT:    vpcmpgtq %zmm1, %zmm0, %k1
-; AVX512BW-FALLBACK-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; AVX512BW-FALLBACK-NEXT:    vpbroadcastq {{.*#+}} ymm3 = [1,1,1,1]
-; AVX512BW-FALLBACK-NEXT:    vmovdqa64 %zmm2, %zmm3 {%k1}
-; AVX512BW-FALLBACK-NEXT:    vpminsq %zmm1, %zmm0, %zmm2
+; AVX512BW-FALLBACK-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [1,1,1,1]
+; AVX512BW-FALLBACK-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; AVX512BW-FALLBACK-NEXT:    vmovdqa64 %zmm3, %zmm2 {%k1}
+; AVX512BW-FALLBACK-NEXT:    vpminsq %zmm1, %zmm0, %zmm3
 ; AVX512BW-FALLBACK-NEXT:    vpmaxsq %zmm1, %zmm0, %zmm1
-; AVX512BW-FALLBACK-NEXT:    vpsubq %ymm2, %ymm1, %ymm1
-; AVX512BW-FALLBACK-NEXT:    vpsrlq $1, %ymm1, %ymm2
+; AVX512BW-FALLBACK-NEXT:    vpsubq %ymm3, %ymm1, %ymm1
+; AVX512BW-FALLBACK-NEXT:    vpsrlq $1, %ymm1, %ymm3
 ; AVX512BW-FALLBACK-NEXT:    vpsrlq $33, %ymm1, %ymm1
-; AVX512BW-FALLBACK-NEXT:    vpmuludq %ymm3, %ymm1, %ymm1
-; AVX512BW-FALLBACK-NEXT:    vpsrlq $32, %ymm3, %ymm4
-; AVX512BW-FALLBACK-NEXT:    vpmuludq %ymm4, %ymm2, %ymm4
+; AVX512BW-FALLBACK-NEXT:    vpmuludq %ymm2, %ymm1, %ymm1
+; AVX512BW-FALLBACK-NEXT:    vpsrlq $32, %ymm2, %ymm4
+; AVX512BW-FALLBACK-NEXT:    vpmuludq %ymm4, %ymm3, %ymm4
 ; AVX512BW-FALLBACK-NEXT:    vpaddq %ymm1, %ymm4, %ymm1
 ; AVX512BW-FALLBACK-NEXT:    vpsllq $32, %ymm1, %ymm1
-; AVX512BW-FALLBACK-NEXT:    vpmuludq %ymm3, %ymm2, %ymm2
+; AVX512BW-FALLBACK-NEXT:    vpmuludq %ymm2, %ymm3, %ymm2
 ; AVX512BW-FALLBACK-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
 ; AVX512BW-FALLBACK-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; AVX512BW-FALLBACK-NEXT:    retq
@@ -570,7 +572,8 @@ define <4 x i64> @vec256_i64_unsigned_reg_reg(<4 x i64> %a1, <4 x i64> %a2) noun
 ; AVX1-NEXT:    vpsrlq $1, %xmm3, %xmm6
 ; AVX1-NEXT:    vpsrlq $1, %xmm1, %xmm7
 ; AVX1-NEXT:    vpsrlq $33, %xmm1, %xmm1
-; AVX1-NEXT:    vpmovsxbq {{.*#+}} xmm8 = [1,1]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm8 = [1,1]
+; AVX1-NEXT:    # xmm8 = mem[0,0]
 ; AVX1-NEXT:    vpor %xmm4, %xmm8, %xmm9
 ; AVX1-NEXT:    vpmuludq %xmm1, %xmm9, %xmm1
 ; AVX1-NEXT:    vpsrlq $32, %xmm4, %xmm4
@@ -598,9 +601,9 @@ define <4 x i64> @vec256_i64_unsigned_reg_reg(<4 x i64> %a1, <4 x i64> %a2) noun
 ; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [9223372036854775808,9223372036854775808,9223372036854775808,9223372036854775808]
 ; AVX2-NEXT:    vpxor %ymm2, %ymm1, %ymm3
 ; AVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm2
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm4 = [1,1,1,1]
 ; AVX2-NEXT:    vpcmpgtq %ymm3, %ymm2, %ymm2
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm3 = [1,1,1,1]
-; AVX2-NEXT:    vpor %ymm3, %ymm2, %ymm3
+; AVX2-NEXT:    vpor %ymm4, %ymm2, %ymm3
 ; AVX2-NEXT:    vpsubq %ymm1, %ymm0, %ymm1
 ; AVX2-NEXT:    vpxor %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    vpsubq %ymm1, %ymm2, %ymm1
@@ -631,7 +634,8 @@ define <4 x i64> @vec256_i64_unsigned_reg_reg(<4 x i64> %a1, <4 x i64> %a2) noun
 ; XOP-NEXT:    vpsrlq $1, %xmm2, %xmm6
 ; XOP-NEXT:    vpsrlq $1, %xmm1, %xmm7
 ; XOP-NEXT:    vpsrlq $33, %xmm1, %xmm1
-; XOP-NEXT:    vpmovsxbq {{.*#+}} xmm8 = [1,1]
+; XOP-NEXT:    vmovddup {{.*#+}} xmm8 = [1,1]
+; XOP-NEXT:    # xmm8 = mem[0,0]
 ; XOP-NEXT:    vpor %xmm5, %xmm8, %xmm9
 ; XOP-NEXT:    vpmuludq %xmm1, %xmm9, %xmm1
 ; XOP-NEXT:    vpsrlq $32, %xmm5, %xmm5
@@ -659,20 +663,20 @@ define <4 x i64> @vec256_i64_unsigned_reg_reg(<4 x i64> %a1, <4 x i64> %a2) noun
 ; AVX512F-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512F-NEXT:    vpcmpnleuq %zmm1, %zmm0, %k1
-; AVX512F-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; AVX512F-NEXT:    vpbroadcastq {{.*#+}} ymm3 = [1,1,1,1]
-; AVX512F-NEXT:    vmovdqa64 %zmm2, %zmm3 {%k1}
-; AVX512F-NEXT:    vpminuq %zmm1, %zmm0, %zmm2
+; AVX512F-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [1,1,1,1]
+; AVX512F-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; AVX512F-NEXT:    vmovdqa64 %zmm3, %zmm2 {%k1}
+; AVX512F-NEXT:    vpminuq %zmm1, %zmm0, %zmm3
 ; AVX512F-NEXT:    vpmaxuq %zmm1, %zmm0, %zmm1
-; AVX512F-NEXT:    vpsubq %ymm2, %ymm1, %ymm1
-; AVX512F-NEXT:    vpsrlq $1, %ymm1, %ymm2
+; AVX512F-NEXT:    vpsubq %ymm3, %ymm1, %ymm1
+; AVX512F-NEXT:    vpsrlq $1, %ymm1, %ymm3
 ; AVX512F-NEXT:    vpsrlq $33, %ymm1, %ymm1
-; AVX512F-NEXT:    vpmuludq %ymm3, %ymm1, %ymm1
-; AVX512F-NEXT:    vpsrlq $32, %ymm3, %ymm4
-; AVX512F-NEXT:    vpmuludq %ymm4, %ymm2, %ymm4
+; AVX512F-NEXT:    vpmuludq %ymm2, %ymm1, %ymm1
+; AVX512F-NEXT:    vpsrlq $32, %ymm2, %ymm4
+; AVX512F-NEXT:    vpmuludq %ymm4, %ymm3, %ymm4
 ; AVX512F-NEXT:    vpaddq %ymm1, %ymm4, %ymm1
 ; AVX512F-NEXT:    vpsllq $32, %ymm1, %ymm1
-; AVX512F-NEXT:    vpmuludq %ymm3, %ymm2, %ymm2
+; AVX512F-NEXT:    vpmuludq %ymm2, %ymm3, %ymm2
 ; AVX512F-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
 ; AVX512F-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    retq
@@ -694,20 +698,20 @@ define <4 x i64> @vec256_i64_unsigned_reg_reg(<4 x i64> %a1, <4 x i64> %a2) noun
 ; AVX512BW-FALLBACK-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; AVX512BW-FALLBACK-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512BW-FALLBACK-NEXT:    vpcmpnleuq %zmm1, %zmm0, %k1
-; AVX512BW-FALLBACK-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; AVX512BW-FALLBACK-NEXT:    vpbroadcastq {{.*#+}} ymm3 = [1,1,1,1]
-; AVX512BW-FALLBACK-NEXT:    vmovdqa64 %zmm2, %zmm3 {%k1}
-; AVX512BW-FALLBACK-NEXT:    vpminuq %zmm1, %zmm0, %zmm2
+; AVX512BW-FALLBACK-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [1,1,1,1]
+; AVX512BW-FALLBACK-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; AVX512BW-FALLBACK-NEXT:    vmovdqa64 %zmm3, %zmm2 {%k1}
+; AVX512BW-FALLBACK-NEXT:    vpminuq %zmm1, %zmm0, %zmm3
 ; AVX512BW-FALLBACK-NEXT:    vpmaxuq %zmm1, %zmm0, %zmm1
-; AVX512BW-FALLBACK-NEXT:    vpsubq %ymm2, %ymm1, %ymm1
-; AVX512BW-FALLBACK-NEXT:    vpsrlq $1, %ymm1, %ymm2
+; AVX512BW-FALLBACK-NEXT:    vpsubq %ymm3, %ymm1, %ymm1
+; AVX512BW-FALLBACK-NEXT:    vpsrlq $1, %ymm1, %ymm3
 ; AVX512BW-FALLBACK-NEXT:    vpsrlq $33, %ymm1, %ymm1
-; AVX512BW-FALLBACK-NEXT:    vpmuludq %ymm3, %ymm1, %ymm1
-; AVX512BW-FALLBACK-NEXT:    vpsrlq $32, %ymm3, %ymm4
-; AVX512BW-FALLBACK-NEXT:    vpmuludq %ymm4, %ymm2, %ymm4
+; AVX512BW-FALLBACK-NEXT:    vpmuludq %ymm2, %ymm1, %ymm1
+; AVX512BW-FALLBACK-NEXT:    vpsrlq $32, %ymm2, %ymm4
+; AVX512BW-FALLBACK-NEXT:    vpmuludq %ymm4, %ymm3, %ymm4
 ; AVX512BW-FALLBACK-NEXT:    vpaddq %ymm1, %ymm4, %ymm1
 ; AVX512BW-FALLBACK-NEXT:    vpsllq $32, %ymm1, %ymm1
-; AVX512BW-FALLBACK-NEXT:    vpmuludq %ymm3, %ymm2, %ymm2
+; AVX512BW-FALLBACK-NEXT:    vpmuludq %ymm2, %ymm3, %ymm2
 ; AVX512BW-FALLBACK-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
 ; AVX512BW-FALLBACK-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; AVX512BW-FALLBACK-NEXT:    retq
@@ -741,7 +745,8 @@ define <4 x i64> @vec256_i64_signed_mem_reg(ptr %a1_addr, <4 x i64> %a2) nounwin
 ; AVX1-NEXT:    vpsrlq $1, %xmm1, %xmm6
 ; AVX1-NEXT:    vpsrlq $1, %xmm0, %xmm7
 ; AVX1-NEXT:    vpsrlq $33, %xmm0, %xmm0
-; AVX1-NEXT:    vpmovsxbq {{.*#+}} xmm8 = [1,1]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm8 = [1,1]
+; AVX1-NEXT:    # xmm8 = mem[0,0]
 ; AVX1-NEXT:    vpor %xmm5, %xmm8, %xmm9
 ; AVX1-NEXT:    vpmuludq %xmm0, %xmm9, %xmm0
 ; AVX1-NEXT:    vpsrlq $32, %xmm5, %xmm5
@@ -767,20 +772,20 @@ define <4 x i64> @vec256_i64_signed_mem_reg(ptr %a1_addr, <4 x i64> %a2) nounwin
 ; AVX2-LABEL: vec256_i64_signed_mem_reg:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovdqa (%rdi), %ymm1
-; AVX2-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm2
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm3 = [1,1,1,1]
-; AVX2-NEXT:    vpor %ymm3, %ymm2, %ymm3
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [1,1,1,1]
+; AVX2-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm3
+; AVX2-NEXT:    vpor %ymm2, %ymm3, %ymm2
 ; AVX2-NEXT:    vpsubq %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpsubq %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    vpxor %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vpsubq %ymm0, %ymm3, %ymm0
 ; AVX2-NEXT:    vpsrlq $1, %ymm0, %ymm4
 ; AVX2-NEXT:    vpsrlq $33, %ymm0, %ymm0
-; AVX2-NEXT:    vpmuludq %ymm3, %ymm0, %ymm0
-; AVX2-NEXT:    vpsrlq $32, %ymm2, %ymm2
-; AVX2-NEXT:    vpmuludq %ymm2, %ymm4, %ymm2
-; AVX2-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    vpmuludq %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpsrlq $32, %ymm3, %ymm3
+; AVX2-NEXT:    vpmuludq %ymm3, %ymm4, %ymm3
+; AVX2-NEXT:    vpaddq %ymm0, %ymm3, %ymm0
 ; AVX2-NEXT:    vpsllq $32, %ymm0, %ymm0
-; AVX2-NEXT:    vpmuludq %ymm3, %ymm4, %ymm2
+; AVX2-NEXT:    vpmuludq %ymm2, %ymm4, %ymm2
 ; AVX2-NEXT:    vpaddq %ymm1, %ymm2, %ymm1
 ; AVX2-NEXT:    vpaddq %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
@@ -801,7 +806,8 @@ define <4 x i64> @vec256_i64_signed_mem_reg(ptr %a1_addr, <4 x i64> %a2) nounwin
 ; XOP-NEXT:    vpsrlq $1, %xmm1, %xmm6
 ; XOP-NEXT:    vpsrlq $1, %xmm0, %xmm7
 ; XOP-NEXT:    vpsrlq $33, %xmm0, %xmm0
-; XOP-NEXT:    vpmovsxbq {{.*#+}} xmm8 = [1,1]
+; XOP-NEXT:    vmovddup {{.*#+}} xmm8 = [1,1]
+; XOP-NEXT:    # xmm8 = mem[0,0]
 ; XOP-NEXT:    vpor %xmm5, %xmm8, %xmm9
 ; XOP-NEXT:    vpmuludq %xmm0, %xmm9, %xmm0
 ; XOP-NEXT:    vpsrlq $32, %xmm5, %xmm5
@@ -829,20 +835,20 @@ define <4 x i64> @vec256_i64_signed_mem_reg(ptr %a1_addr, <4 x i64> %a2) nounwin
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512F-NEXT:    vmovdqa (%rdi), %ymm1
 ; AVX512F-NEXT:    vpcmpgtq %zmm0, %zmm1, %k1
-; AVX512F-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; AVX512F-NEXT:    vpbroadcastq {{.*#+}} ymm3 = [1,1,1,1]
-; AVX512F-NEXT:    vmovdqa64 %zmm2, %zmm3 {%k1}
-; AVX512F-NEXT:    vpminsq %zmm0, %zmm1, %zmm2
+; AVX512F-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [1,1,1,1]
+; AVX512F-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; AVX512F-NEXT:    vmovdqa64 %zmm3, %zmm2 {%k1}
+; AVX512F-NEXT:    vpminsq %zmm0, %zmm1, %zmm3
 ; AVX512F-NEXT:    vpmaxsq %zmm0, %zmm1, %zmm0
-; AVX512F-NEXT:    vpsubq %ymm2, %ymm0, %ymm0
-; AVX512F-NEXT:    vpsrlq $1, %ymm0, %ymm2
+; AVX512F-NEXT:    vpsubq %ymm3, %ymm0, %ymm0
+; AVX512F-NEXT:    vpsrlq $1, %ymm0, %ymm3
 ; AVX512F-NEXT:    vpsrlq $33, %ymm0, %ymm0
-; AVX512F-NEXT:    vpmuludq %ymm3, %ymm0, %ymm0
-; AVX512F-NEXT:    vpsrlq $32, %ymm3, %ymm4
-; AVX512F-NEXT:    vpmuludq %ymm4, %ymm2, %ymm4
+; AVX512F-NEXT:    vpmuludq %ymm2, %ymm0, %ymm0
+; AVX512F-NEXT:    vpsrlq $32, %ymm2, %ymm4
+; AVX512F-NEXT:    vpmuludq %ymm4, %ymm3, %ymm4
 ; AVX512F-NEXT:    vpaddq %ymm0, %ymm4, %ymm0
 ; AVX512F-NEXT:    vpsllq $32, %ymm0, %ymm0
-; AVX512F-NEXT:    vpmuludq %ymm3, %ymm2, %ymm2
+; AVX512F-NEXT:    vpmuludq %ymm2, %ymm3, %ymm2
 ; AVX512F-NEXT:    vpaddq %ymm1, %ymm2, %ymm1
 ; AVX512F-NEXT:    vpaddq %ymm0, %ymm1, %ymm0
 ; AVX512F-NEXT:    retq
@@ -865,20 +871,20 @@ define <4 x i64> @vec256_i64_signed_mem_reg(ptr %a1_addr, <4 x i64> %a2) nounwin
 ; AVX512BW-FALLBACK-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512BW-FALLBACK-NEXT:    vmovdqa (%rdi), %ymm1
 ; AVX512BW-FALLBACK-NEXT:    vpcmpgtq %zmm0, %zmm1, %k1
-; AVX512BW-FALLBACK-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; AVX512BW-FALLBACK-NEXT:    vpbroadcastq {{.*#+}} ymm3 = [1,1,1,1]
-; AVX512BW-FALLBACK-NEXT:    vmovdqa64 %zmm2, %zmm3 {%k1}
-; AVX512BW-FALLBACK-NEXT:    vpminsq %zmm0, %zmm1, %zmm2
+; AVX512BW-FALLBACK-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [1,1,1,1]
+; AVX512BW-FALLBACK-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; AVX512BW-FALLBACK-NEXT:    vmovdqa64 %zmm3, %zmm2 {%k1}
+; AVX512BW-FALLBACK-NEXT:    vpminsq %zmm0, %zmm1, %zmm3
 ; AVX512BW-FALLBACK-NEXT:    vpmaxsq %zmm0, %zmm1, %zmm0
-; AVX512BW-FALLBACK-NEXT:    vpsubq %ymm2, %ymm0, %ymm0
-; AVX512BW-FALLBACK-NEXT:    vpsrlq $1, %ymm0, %ymm2
+; AVX512BW-FALLBACK-NEXT:    vpsubq %ymm3, %ymm0, %ymm0
+; AVX512BW-FALLBACK-NEXT:    vpsrlq $1, %ymm0, %ymm3
 ; AVX512BW-FALLBACK-NEXT:    vpsrlq $33, %ymm0, %ymm0
-; AVX512BW-FALLBACK-NEXT:    vpmuludq %ymm3, %ymm0, %ymm0
-; AVX512BW-FALLBACK-NEXT:    vpsrlq $32, %ymm3, %ymm4
-; AVX512BW-FALLBACK-NEXT:    vpmuludq %ymm4, %ymm2, %ymm4
+; AVX512BW-FALLBACK-NEXT:    vpmuludq %ymm2, %ymm0, %ymm0
+; AVX512BW-FALLBACK-NEXT:    vpsrlq $32, %ymm2, %ymm4
+; AVX512BW-FALLBACK-NEXT:    vpmuludq %ymm4, %ymm3, %ymm4
 ; AVX512BW-FALLBACK-NEXT:    vpaddq %ymm0, %ymm4, %ymm0
 ; AVX512BW-FALLBACK-NEXT:    vpsllq $32, %ymm0, %ymm0
-; AVX512BW-FALLBACK-NEXT:    vpmuludq %ymm3, %ymm2, %ymm2
+; AVX512BW-FALLBACK-NEXT:    vpmuludq %ymm2, %ymm3, %ymm2
 ; AVX512BW-FALLBACK-NEXT:    vpaddq %ymm1, %ymm2, %ymm1
 ; AVX512BW-FALLBACK-NEXT:    vpaddq %ymm0, %ymm1, %ymm0
 ; AVX512BW-FALLBACK-NEXT:    retq
@@ -911,7 +917,8 @@ define <4 x i64> @vec256_i64_signed_reg_mem(<4 x i64> %a1, ptr %a2_addr) nounwin
 ; AVX1-NEXT:    vpsrlq $1, %xmm2, %xmm6
 ; AVX1-NEXT:    vpsrlq $1, %xmm1, %xmm7
 ; AVX1-NEXT:    vpsrlq $33, %xmm1, %xmm1
-; AVX1-NEXT:    vpmovsxbq {{.*#+}} xmm8 = [1,1]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm8 = [1,1]
+; AVX1-NEXT:    # xmm8 = mem[0,0]
 ; AVX1-NEXT:    vpor %xmm5, %xmm8, %xmm9
 ; AVX1-NEXT:    vpmuludq %xmm1, %xmm9, %xmm1
 ; AVX1-NEXT:    vpsrlq $32, %xmm5, %xmm5
@@ -937,20 +944,20 @@ define <4 x i64> @vec256_i64_signed_reg_mem(<4 x i64> %a1, ptr %a2_addr) nounwin
 ; AVX2-LABEL: vec256_i64_signed_reg_mem:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovdqa (%rdi), %ymm1
-; AVX2-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm2
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm3 = [1,1,1,1]
-; AVX2-NEXT:    vpor %ymm3, %ymm2, %ymm3
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [1,1,1,1]
+; AVX2-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm3
+; AVX2-NEXT:    vpor %ymm2, %ymm3, %ymm2
 ; AVX2-NEXT:    vpsubq %ymm1, %ymm0, %ymm1
-; AVX2-NEXT:    vpxor %ymm2, %ymm1, %ymm1
-; AVX2-NEXT:    vpsubq %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    vpxor %ymm3, %ymm1, %ymm1
+; AVX2-NEXT:    vpsubq %ymm1, %ymm3, %ymm1
 ; AVX2-NEXT:    vpsrlq $1, %ymm1, %ymm4
 ; AVX2-NEXT:    vpsrlq $33, %ymm1, %ymm1
-; AVX2-NEXT:    vpmuludq %ymm3, %ymm1, %ymm1
-; AVX2-NEXT:    vpsrlq $32, %ymm2, %ymm2
-; AVX2-NEXT:    vpmuludq %ymm2, %ymm4, %ymm2
-; AVX2-NEXT:    vpaddq %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    vpmuludq %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    vpsrlq $32, %ymm3, %ymm3
+; AVX2-NEXT:    vpmuludq %ymm3, %ymm4, %ymm3
+; AVX2-NEXT:    vpaddq %ymm1, %ymm3, %ymm1
 ; AVX2-NEXT:    vpsllq $32, %ymm1, %ymm1
-; AVX2-NEXT:    vpmuludq %ymm3, %ymm4, %ymm2
+; AVX2-NEXT:    vpmuludq %ymm2, %ymm4, %ymm2
 ; AVX2-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
@@ -971,7 +978,8 @@ define <4 x i64> @vec256_i64_signed_reg_mem(<4 x i64> %a1, ptr %a2_addr) nounwin
 ; XOP-NEXT:    vpsrlq $1, %xmm2, %xmm6
 ; XOP-NEXT:    vpsrlq $1, %xmm1, %xmm7
 ; XOP-NEXT:    vpsrlq $33, %xmm1, %xmm1
-; XOP-NEXT:    vpmovsxbq {{.*#+}} xmm8 = [1,1]
+; XOP-NEXT:    vmovddup {{.*#+}} xmm8 = [1,1]
+; XOP-NEXT:    # xmm8 = mem[0,0]
 ; XOP-NEXT:    vpor %xmm5, %xmm8, %xmm9
 ; XOP-NEXT:    vpmuludq %xmm1, %xmm9, %xmm1
 ; XOP-NEXT:    vpsrlq $32, %xmm5, %xmm5
@@ -999,20 +1007,20 @@ define <4 x i64> @vec256_i64_signed_reg_mem(<4 x i64> %a1, ptr %a2_addr) nounwin
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512F-NEXT:    vmovdqa (%rdi), %ymm1
 ; AVX512F-NEXT:    vpcmpgtq %zmm1, %zmm0, %k1
-; AVX512F-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; AVX512F-NEXT:    vpbroadcastq {{.*#+}} ymm3 = [1,1,1,1]
-; AVX512F-NEXT:    vmovdqa64 %zmm2, %zmm3 {%k1}
-; AVX512F-NEXT:    vpminsq %zmm1, %zmm0, %zmm2
+; AVX512F-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [1,1,1,1]
+; AVX512F-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; AVX512F-NEXT:    vmovdqa64 %zmm3, %zmm2 {%k1}
+; AVX512F-NEXT:    vpminsq %zmm1, %zmm0, %zmm3
 ; AVX512F-NEXT:    vpmaxsq %zmm1, %zmm0, %zmm1
-; AVX512F-NEXT:    vpsubq %ymm2, %ymm1, %ymm1
-; AVX512F-NEXT:    vpsrlq $1, %ymm1, %ymm2
+; AVX512F-NEXT:    vpsubq %ymm3, %ymm1, %ymm1
+; AVX512F-NEXT:    vpsrlq $1, %ymm1, %ymm3
 ; AVX512F-NEXT:    vpsrlq $33, %ymm1, %ymm1
-; AVX512F-NEXT:    vpmuludq %ymm3, %ymm1, %ymm1
-; AVX512F-NEXT:    vpsrlq $32, %ymm3, %ymm4
-; AVX512F-NEXT:    vpmuludq %ymm4, %ymm2, %ymm4
+; AVX512F-NEXT:    vpmuludq %ymm2, %ymm1, %ymm1
+; AVX512F-NEXT:    vpsrlq $32, %ymm2, %ymm4
+; AVX512F-NEXT:    vpmuludq %ymm4, %ymm3, %ymm4
 ; AVX512F-NEXT:    vpaddq %ymm1, %ymm4, %ymm1
 ; AVX512F-NEXT:    vpsllq $32, %ymm1, %ymm1
-; AVX512F-NEXT:    vpmuludq %ymm3, %ymm2, %ymm2
+; AVX512F-NEXT:    vpmuludq %ymm2, %ymm3, %ymm2
 ; AVX512F-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
 ; AVX512F-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    retq
@@ -1035,20 +1043,20 @@ define <4 x i64> @vec256_i64_signed_reg_mem(<4 x i64> %a1, ptr %a2_addr) nounwin
 ; AVX512BW-FALLBACK-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512BW-FALLBACK-NEXT:    vmovdqa (%rdi), %ymm1
 ; AVX512BW-FALLBACK-NEXT:    vpcmpgtq %zmm1, %zmm0, %k1
-; AVX512BW-FALLBACK-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; AVX512BW-FALLBACK-NEXT:    vpbroadcastq {{.*#+}} ymm3 = [1,1,1,1]
-; AVX512BW-FALLBACK-NEXT:    vmovdqa64 %zmm2, %zmm3 {%k1}
-; AVX512BW-FALLBACK-NEXT:    vpminsq %zmm1, %zmm0, %zmm2
+; AVX512BW-FALLBACK-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [1,1,1,1]
+; AVX512BW-FALLBACK-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; AVX512BW-FALLBACK-NEXT:    vmovdqa64 %zmm3, %zmm2 {%k1}
+; AVX512BW-FALLBACK-NEXT:    vpminsq %zmm1, %zmm0, %zmm3
 ; AVX512BW-FALLBACK-NEXT:    vpmaxsq %zmm1, %zmm0, %zmm1
-; AVX512BW-FALLBACK-NEXT:    vpsubq %ymm2, %ymm1, %ymm1
-; AVX512BW-FALLBACK-NEXT:    vpsrlq $1, %ymm1, %ymm2
+; AVX512BW-FALLBACK-NEXT:    vpsubq %ymm3, %ymm1, %ymm1
+; AVX512BW-FALLBACK-NEXT:    vpsrlq $1, %ymm1, %ymm3
 ; AVX512BW-FALLBACK-NEXT:    vpsrlq $33, %ymm1, %ymm1
-; AVX512BW-FALLBACK-NEXT:    vpmuludq %ymm3, %ymm1, %ymm1
-; AVX512BW-FALLBACK-NEXT:    vpsrlq $32, %ymm3, %ymm4
-; AVX512BW-FALLBACK-NEXT:    vpmuludq %ymm4, %ymm2, %ymm4
+; AVX512BW-FALLBACK-NEXT:    vpmuludq %ymm2, %ymm1, %ymm1
+; AVX512BW-FALLBACK-NEXT:    vpsrlq $32, %ymm2, %ymm4
+; AVX512BW-FALLBACK-NEXT:    vpmuludq %ymm4, %ymm3, %ymm4
 ; AVX512BW-FALLBACK-NEXT:    vpaddq %ymm1, %ymm4, %ymm1
 ; AVX512BW-FALLBACK-NEXT:    vpsllq $32, %ymm1, %ymm1
-; AVX512BW-FALLBACK-NEXT:    vpmuludq %ymm3, %ymm2, %ymm2
+; AVX512BW-FALLBACK-NEXT:    vpmuludq %ymm2, %ymm3, %ymm2
 ; AVX512BW-FALLBACK-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
 ; AVX512BW-FALLBACK-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; AVX512BW-FALLBACK-NEXT:    retq
@@ -1082,7 +1090,8 @@ define <4 x i64> @vec256_i64_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind
 ; AVX1-NEXT:    vpsrlq $1, %xmm1, %xmm6
 ; AVX1-NEXT:    vpsrlq $1, %xmm0, %xmm7
 ; AVX1-NEXT:    vpsrlq $33, %xmm0, %xmm0
-; AVX1-NEXT:    vpmovsxbq {{.*#+}} xmm8 = [1,1]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm8 = [1,1]
+; AVX1-NEXT:    # xmm8 = mem[0,0]
 ; AVX1-NEXT:    vpor %xmm5, %xmm8, %xmm9
 ; AVX1-NEXT:    vpmuludq %xmm0, %xmm9, %xmm0
 ; AVX1-NEXT:    vpsrlq $32, %xmm5, %xmm5
@@ -1109,20 +1118,20 @@ define <4 x i64> @vec256_i64_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX2-NEXT:    vmovdqa (%rsi), %ymm1
-; AVX2-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm2
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm3 = [1,1,1,1]
-; AVX2-NEXT:    vpor %ymm3, %ymm2, %ymm3
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [1,1,1,1]
+; AVX2-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm3
+; AVX2-NEXT:    vpor %ymm2, %ymm3, %ymm2
 ; AVX2-NEXT:    vpsubq %ymm1, %ymm0, %ymm1
-; AVX2-NEXT:    vpxor %ymm2, %ymm1, %ymm1
-; AVX2-NEXT:    vpsubq %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    vpxor %ymm3, %ymm1, %ymm1
+; AVX2-NEXT:    vpsubq %ymm1, %ymm3, %ymm1
 ; AVX2-NEXT:    vpsrlq $1, %ymm1, %ymm4
 ; AVX2-NEXT:    vpsrlq $33, %ymm1, %ymm1
-; AVX2-NEXT:    vpmuludq %ymm3, %ymm1, %ymm1
-; AVX2-NEXT:    vpsrlq $32, %ymm2, %ymm2
-; AVX2-NEXT:    vpmuludq %ymm2, %ymm4, %ymm2
-; AVX2-NEXT:    vpaddq %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    vpmuludq %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    vpsrlq $32, %ymm3, %ymm3
+; AVX2-NEXT:    vpmuludq %ymm3, %ymm4, %ymm3
+; AVX2-NEXT:    vpaddq %ymm1, %ymm3, %ymm1
 ; AVX2-NEXT:    vpsllq $32, %ymm1, %ymm1
-; AVX2-NEXT:    vpmuludq %ymm3, %ymm4, %ymm2
+; AVX2-NEXT:    vpmuludq %ymm2, %ymm4, %ymm2
 ; AVX2-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
@@ -1144,7 +1153,8 @@ define <4 x i64> @vec256_i64_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind
 ; XOP-NEXT:    vpsrlq $1, %xmm1, %xmm6
 ; XOP-NEXT:    vpsrlq $1, %xmm0, %xmm7
 ; XOP-NEXT:    vpsrlq $33, %xmm0, %xmm0
-; XOP-NEXT:    vpmovsxbq {{.*#+}} xmm8 = [1,1]
+; XOP-NEXT:    vmovddup {{.*#+}} xmm8 = [1,1]
+; XOP-NEXT:    # xmm8 = mem[0,0]
 ; XOP-NEXT:    vpor %xmm5, %xmm8, %xmm9
 ; XOP-NEXT:    vpmuludq %xmm0, %xmm9, %xmm0
 ; XOP-NEXT:    vpsrlq $32, %xmm5, %xmm5
@@ -1172,20 +1182,20 @@ define <4 x i64> @vec256_i64_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind
 ; AVX512F-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512F-NEXT:    vmovdqa (%rsi), %ymm1
 ; AVX512F-NEXT:    vpcmpgtq %zmm1, %zmm0, %k1
-; AVX512F-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; AVX512F-NEXT:    vpbroadcastq {{.*#+}} ymm3 = [1,1,1,1]
-; AVX512F-NEXT:    vmovdqa64 %zmm2, %zmm3 {%k1}
-; AVX512F-NEXT:    vpminsq %zmm1, %zmm0, %zmm2
+; AVX512F-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [1,1,1,1]
+; AVX512F-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; AVX512F-NEXT:    vmovdqa64 %zmm3, %zmm2 {%k1}
+; AVX512F-NEXT:    vpminsq %zmm1, %zmm0, %zmm3
 ; AVX512F-NEXT:    vpmaxsq %zmm1, %zmm0, %zmm1
-; AVX512F-NEXT:    vpsubq %ymm2, %ymm1, %ymm1
-; AVX512F-NEXT:    vpsrlq $1, %ymm1, %ymm2
+; AVX512F-NEXT:    vpsubq %ymm3, %ymm1, %ymm1
+; AVX512F-NEXT:    vpsrlq $1, %ymm1, %ymm3
 ; AVX512F-NEXT:    vpsrlq $33, %ymm1, %ymm1
-; AVX512F-NEXT:    vpmuludq %ymm3, %ymm1, %ymm1
-; AVX512F-NEXT:    vpsrlq $32, %ymm3, %ymm4
-; AVX512F-NEXT:    vpmuludq %ymm4, %ymm2, %ymm4
+; AVX512F-NEXT:    vpmuludq %ymm2, %ymm1, %ymm1
+; AVX512F-NEXT:    vpsrlq $32, %ymm2, %ymm4
+; AVX512F-NEXT:    vpmuludq %ymm4, %ymm3, %ymm4
 ; AVX512F-NEXT:    vpaddq %ymm1, %ymm4, %ymm1
 ; AVX512F-NEXT:    vpsllq $32, %ymm1, %ymm1
-; AVX512F-NEXT:    vpmuludq %ymm3, %ymm2, %ymm2
+; AVX512F-NEXT:    vpmuludq %ymm2, %ymm3, %ymm2
 ; AVX512F-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
 ; AVX512F-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    retq
@@ -1209,20 +1219,20 @@ define <4 x i64> @vec256_i64_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind
 ; AVX512BW-FALLBACK-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512BW-FALLBACK-NEXT:    vmovdqa (%rsi), %ymm1
 ; AVX512BW-FALLBACK-NEXT:    vpcmpgtq %zmm1, %zmm0, %k1
-; AVX512BW-FALLBACK-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; AVX512BW-FALLBACK-NEXT:    vpbroadcastq {{.*#+}} ymm3 = [1,1,1,1]
-; AVX512BW-FALLBACK-NEXT:    vmovdqa64 %zmm2, %zmm3 {%k1}
-; AVX512BW-FALLBACK-NEXT:    vpminsq %zmm1, %zmm0, %zmm2
+; AVX512BW-FALLBACK-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [1,1,1,1]
+; AVX512BW-FALLBACK-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; AVX512BW-FALLBACK-NEXT:    vmovdqa64 %zmm3, %zmm2 {%k1}
+; AVX512BW-FALLBACK-NEXT:    vpminsq %zmm1, %zmm0, %zmm3
 ; AVX512BW-FALLBACK-NEXT:    vpmaxsq %zmm1, %zmm0, %zmm1
-; AVX512BW-FALLBACK-NEXT:    vpsubq %ymm2, %ymm1, %ymm1
-; AVX512BW-FALLBACK-NEXT:    vpsrlq $1, %ymm1, %ymm2
+; AVX512BW-FALLBACK-NEXT:    vpsubq %ymm3, %ymm1, %ymm1
+; AVX512BW-FALLBACK-NEXT:    vpsrlq $1, %ymm1, %ymm3
 ; AVX512BW-FALLBACK-NEXT:    vpsrlq $33, %ymm1, %ymm1
-; AVX512BW-FALLBACK-NEXT:    vpmuludq %ymm3, %ymm1, %ymm1
-; AVX512BW-FALLBACK-NEXT:    vpsrlq $32, %ymm3, %ymm4
-; AVX512BW-FALLBACK-NEXT:    vpmuludq %ymm4, %ymm2, %ymm4
+; AVX512BW-FALLBACK-NEXT:    vpmuludq %ymm2, %ymm1, %ymm1
+; AVX512BW-FALLBACK-NEXT:    vpsrlq $32, %ymm2, %ymm4
+; AVX512BW-FALLBACK-NEXT:    vpmuludq %ymm4, %ymm3, %ymm4
 ; AVX512BW-FALLBACK-NEXT:    vpaddq %ymm1, %ymm4, %ymm1
 ; AVX512BW-FALLBACK-NEXT:    vpsllq $32, %ymm1, %ymm1
-; AVX512BW-FALLBACK-NEXT:    vpmuludq %ymm3, %ymm2, %ymm2
+; AVX512BW-FALLBACK-NEXT:    vpmuludq %ymm2, %ymm3, %ymm2
 ; AVX512BW-FALLBACK-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
 ; AVX512BW-FALLBACK-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; AVX512BW-FALLBACK-NEXT:    retq

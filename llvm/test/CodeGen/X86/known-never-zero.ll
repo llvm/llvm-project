@@ -309,14 +309,14 @@ define i32 @umax_maybe_zero(i32 %x, i32 %y) {
 define i32 @umin_known_nonzero(i32 %xx, i32 %yy) {
 ; X86-LABEL: umin_known_nonzero:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl $4, %edx
-; X86-NEXT:    shll %cl, %edx
-; X86-NEXT:    addl $4, %eax
-; X86-NEXT:    cmpl %eax, %edx
-; X86-NEXT:    cmovbl %edx, %eax
-; X86-NEXT:    rep bsfl %eax, %eax
+; X86-NEXT:    movl $4, %eax
+; X86-NEXT:    shll %cl, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    addl $4, %ecx
+; X86-NEXT:    cmpl %ecx, %eax
+; X86-NEXT:    cmovbl %eax, %ecx
+; X86-NEXT:    rep bsfl %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: umin_known_nonzero:
@@ -365,14 +365,14 @@ define i32 @umin_maybe_zero(i32 %x, i32 %y) {
 define i32 @smin_known_nonzero(i32 %xx, i32 %yy) {
 ; X86-LABEL: smin_known_nonzero:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl $4, %edx
-; X86-NEXT:    shll %cl, %edx
-; X86-NEXT:    addl $4, %eax
-; X86-NEXT:    cmpl %eax, %edx
-; X86-NEXT:    cmovll %edx, %eax
-; X86-NEXT:    rep bsfl %eax, %eax
+; X86-NEXT:    movl $4, %eax
+; X86-NEXT:    shll %cl, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    addl $4, %ecx
+; X86-NEXT:    cmpl %ecx, %eax
+; X86-NEXT:    cmovll %eax, %ecx
+; X86-NEXT:    rep bsfl %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: smin_known_nonzero:
@@ -477,14 +477,14 @@ define i32 @smin_maybe_zero(i32 %x, i32 %y) {
 define i32 @smax_known_nonzero(i32 %xx, i32 %yy) {
 ; X86-LABEL: smax_known_nonzero:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl $4, %edx
-; X86-NEXT:    shll %cl, %edx
-; X86-NEXT:    addl $4, %eax
-; X86-NEXT:    cmpl %eax, %edx
-; X86-NEXT:    cmovgl %edx, %eax
-; X86-NEXT:    rep bsfl %eax, %eax
+; X86-NEXT:    movl $4, %eax
+; X86-NEXT:    shll %cl, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    addl $4, %ecx
+; X86-NEXT:    cmpl %ecx, %eax
+; X86-NEXT:    cmovgl %eax, %ecx
+; X86-NEXT:    rep bsfl %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: smax_known_nonzero:

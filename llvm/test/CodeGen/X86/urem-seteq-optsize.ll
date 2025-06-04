@@ -47,9 +47,9 @@ define i32 @test_minsize(i32 %X) optsize minsize nounwind readnone {
 define i32 @test_optsize(i32 %X) optsize nounwind readnone {
 ; X86-LABEL: test_optsize:
 ; X86:       # %bb.0:
-; X86-NEXT:    imull $-858993459, {{[0-9]+}}(%esp), %eax # imm = 0xCCCCCCCD
-; X86-NEXT:    cmpl $858993460, %eax # imm = 0x33333334
+; X86-NEXT:    imull $-858993459, {{[0-9]+}}(%esp), %ecx # imm = 0xCCCCCCCD
 ; X86-NEXT:    movl $42, %eax
+; X86-NEXT:    cmpl $858993460, %ecx # imm = 0x33333334
 ; X86-NEXT:    jb .LBB1_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl $-10, %eax

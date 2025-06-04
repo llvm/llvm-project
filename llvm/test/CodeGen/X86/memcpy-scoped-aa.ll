@@ -18,10 +18,8 @@ define i32 @test_memcpy(ptr nocapture %p, ptr nocapture readonly %q) {
   ; MIR-NEXT: {{  $}}
   ; MIR-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rsi
   ; MIR-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
-  ; MIR-NEXT:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 16, $noreg :: (load (s64) from %ir.p1, align 4, !alias.scope !0, !noalias !3)
-  ; MIR-NEXT:   [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 24, $noreg :: (load (s64) from %ir.p1 + 8, align 4, !alias.scope !0, !noalias !3)
-  ; MIR-NEXT:   MOV64mr [[COPY1]], 1, $noreg, 8, $noreg, killed [[MOV64rm1]] :: (store (s64) into %ir.p0 + 8, align 4, !alias.scope !0, !noalias !3)
-  ; MIR-NEXT:   MOV64mr [[COPY1]], 1, $noreg, 0, $noreg, killed [[MOV64rm]] :: (store (s64) into %ir.p0, align 4, !alias.scope !0, !noalias !3)
+  ; MIR-NEXT:   [[MOVUPSrm:%[0-9]+]]:vr128 = MOVUPSrm [[COPY1]], 1, $noreg, 16, $noreg :: (load (s128) from %ir.p1, align 4, !alias.scope !0, !noalias !3)
+  ; MIR-NEXT:   MOVUPSmr [[COPY1]], 1, $noreg, 0, $noreg, killed [[MOVUPSrm]] :: (store (s128) into %ir.p0, align 4, !alias.scope !0, !noalias !3)
   ; MIR-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 0, $noreg :: (load (s32) from %ir.q, !alias.scope !3, !noalias !0)
   ; MIR-NEXT:   [[ADD32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[COPY]], 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.q1, !alias.scope !3, !noalias !0)
   ; MIR-NEXT:   $eax = COPY [[ADD32rm]]
@@ -44,10 +42,8 @@ define i32 @test_memcpy_inline(ptr nocapture %p, ptr nocapture readonly %q) {
   ; MIR-NEXT: {{  $}}
   ; MIR-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rsi
   ; MIR-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
-  ; MIR-NEXT:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 16, $noreg :: (load (s64) from %ir.p1, align 4, !alias.scope !0, !noalias !3)
-  ; MIR-NEXT:   [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 24, $noreg :: (load (s64) from %ir.p1 + 8, align 4, !alias.scope !0, !noalias !3)
-  ; MIR-NEXT:   MOV64mr [[COPY1]], 1, $noreg, 8, $noreg, killed [[MOV64rm1]] :: (store (s64) into %ir.p0 + 8, align 4, !alias.scope !0, !noalias !3)
-  ; MIR-NEXT:   MOV64mr [[COPY1]], 1, $noreg, 0, $noreg, killed [[MOV64rm]] :: (store (s64) into %ir.p0, align 4, !alias.scope !0, !noalias !3)
+  ; MIR-NEXT:   [[MOVUPSrm:%[0-9]+]]:vr128 = MOVUPSrm [[COPY1]], 1, $noreg, 16, $noreg :: (load (s128) from %ir.p1, align 4, !alias.scope !0, !noalias !3)
+  ; MIR-NEXT:   MOVUPSmr [[COPY1]], 1, $noreg, 0, $noreg, killed [[MOVUPSrm]] :: (store (s128) into %ir.p0, align 4, !alias.scope !0, !noalias !3)
   ; MIR-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 0, $noreg :: (load (s32) from %ir.q, !alias.scope !3, !noalias !0)
   ; MIR-NEXT:   [[ADD32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[COPY]], 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.q1, !alias.scope !3, !noalias !0)
   ; MIR-NEXT:   $eax = COPY [[ADD32rm]]
@@ -70,10 +66,8 @@ define i32 @test_memmove(ptr nocapture %p, ptr nocapture readonly %q) {
   ; MIR-NEXT: {{  $}}
   ; MIR-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rsi
   ; MIR-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
-  ; MIR-NEXT:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 16, $noreg :: (load (s64) from %ir.p1, align 4, !alias.scope !0, !noalias !3)
-  ; MIR-NEXT:   [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 24, $noreg :: (load (s64) from %ir.p1 + 8, align 4, !alias.scope !0, !noalias !3)
-  ; MIR-NEXT:   MOV64mr [[COPY1]], 1, $noreg, 0, $noreg, killed [[MOV64rm]] :: (store (s64) into %ir.p0, align 4, !alias.scope !0, !noalias !3)
-  ; MIR-NEXT:   MOV64mr [[COPY1]], 1, $noreg, 8, $noreg, killed [[MOV64rm1]] :: (store (s64) into %ir.p0 + 8, align 4, !alias.scope !0, !noalias !3)
+  ; MIR-NEXT:   [[MOVUPSrm:%[0-9]+]]:vr128 = MOVUPSrm [[COPY1]], 1, $noreg, 16, $noreg :: (load (s128) from %ir.p1, align 4, !alias.scope !0, !noalias !3)
+  ; MIR-NEXT:   MOVUPSmr [[COPY1]], 1, $noreg, 0, $noreg, killed [[MOVUPSrm]] :: (store (s128) into %ir.p0, align 4, !alias.scope !0, !noalias !3)
   ; MIR-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 0, $noreg :: (load (s32) from %ir.q, !alias.scope !3, !noalias !0)
   ; MIR-NEXT:   [[ADD32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[COPY]], 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.q1, !alias.scope !3, !noalias !0)
   ; MIR-NEXT:   $eax = COPY [[ADD32rm]]
@@ -96,9 +90,8 @@ define i32 @test_memset(ptr nocapture %p, ptr nocapture readonly %q) {
   ; MIR-NEXT: {{  $}}
   ; MIR-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rsi
   ; MIR-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
-  ; MIR-NEXT:   [[MOV64ri:%[0-9]+]]:gr64 = MOV64ri -6148914691236517206
-  ; MIR-NEXT:   MOV64mr [[COPY1]], 1, $noreg, 8, $noreg, [[MOV64ri]] :: (store (s64) into %ir.p0 + 8, align 4, !alias.scope !0, !noalias !3)
-  ; MIR-NEXT:   MOV64mr [[COPY1]], 1, $noreg, 0, $noreg, [[MOV64ri]] :: (store (s64) into %ir.p0, align 4, !alias.scope !0, !noalias !3)
+  ; MIR-NEXT:   [[MOVAPSrm:%[0-9]+]]:vr128 = MOVAPSrm $rip, 1, $noreg, %const.0, $noreg :: (load (s128) from constant-pool)
+  ; MIR-NEXT:   MOVUPSmr [[COPY1]], 1, $noreg, 0, $noreg, killed [[MOVAPSrm]] :: (store (s128) into %ir.p0, align 4, !alias.scope !0, !noalias !3)
   ; MIR-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 0, $noreg :: (load (s32) from %ir.q, !alias.scope !3, !noalias !0)
   ; MIR-NEXT:   [[ADD32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[COPY]], 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.q1, !alias.scope !3, !noalias !0)
   ; MIR-NEXT:   $eax = COPY [[ADD32rm]]
@@ -119,10 +112,8 @@ define i32 @test_mempcpy(ptr nocapture %p, ptr nocapture readonly %q) {
   ; MIR-NEXT: {{  $}}
   ; MIR-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rsi
   ; MIR-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
-  ; MIR-NEXT:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 16, $noreg :: (load (s64) from %ir.p1, align 1, !alias.scope !0, !noalias !3)
-  ; MIR-NEXT:   [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 24, $noreg :: (load (s64) from %ir.p1 + 8, align 1, !alias.scope !0, !noalias !3)
-  ; MIR-NEXT:   MOV64mr [[COPY1]], 1, $noreg, 8, $noreg, killed [[MOV64rm1]] :: (store (s64) into %ir.p0 + 8, align 1, !alias.scope !0, !noalias !3)
-  ; MIR-NEXT:   MOV64mr [[COPY1]], 1, $noreg, 0, $noreg, killed [[MOV64rm]] :: (store (s64) into %ir.p0, align 1, !alias.scope !0, !noalias !3)
+  ; MIR-NEXT:   [[MOVUPSrm:%[0-9]+]]:vr128 = MOVUPSrm [[COPY1]], 1, $noreg, 16, $noreg :: (load (s128) from %ir.p1, align 1, !alias.scope !0, !noalias !3)
+  ; MIR-NEXT:   MOVUPSmr [[COPY1]], 1, $noreg, 0, $noreg, killed [[MOVUPSrm]] :: (store (s128) into %ir.p0, align 1, !alias.scope !0, !noalias !3)
   ; MIR-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 0, $noreg :: (load (s32) from %ir.q, !alias.scope !3, !noalias !0)
   ; MIR-NEXT:   [[ADD32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[COPY]], 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.q1, !alias.scope !3, !noalias !0)
   ; MIR-NEXT:   $eax = COPY [[ADD32rm]]
