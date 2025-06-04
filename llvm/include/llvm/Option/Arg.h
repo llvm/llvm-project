@@ -14,10 +14,10 @@
 #ifndef LLVM_OPTION_ARG_H
 #define LLVM_OPTION_ARG_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Support/Compiler.h"
 #include <string>
 
 namespace llvm {
@@ -72,11 +72,12 @@ private:
 
 public:
   LLVM_ABI Arg(const Option Opt, StringRef Spelling, unsigned Index,
-      const Arg *BaseArg = nullptr);
+               const Arg *BaseArg = nullptr);
   LLVM_ABI Arg(const Option Opt, StringRef Spelling, unsigned Index,
-      const char *Value0, const Arg *BaseArg = nullptr);
+               const char *Value0, const Arg *BaseArg = nullptr);
   LLVM_ABI Arg(const Option Opt, StringRef Spelling, unsigned Index,
-      const char *Value0, const char *Value1, const Arg *BaseArg = nullptr);
+               const char *Value0, const char *Value1,
+               const Arg *BaseArg = nullptr);
   Arg(const Arg &) = delete;
   Arg &operator=(const Arg &) = delete;
   LLVM_ABI ~Arg();

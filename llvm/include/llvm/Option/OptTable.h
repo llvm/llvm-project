@@ -9,12 +9,12 @@
 #ifndef LLVM_OPTION_OPTTABLE_H
 #define LLVM_OPTION_OPTTABLE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/Option/OptSpecifier.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/StringSaver.h"
 #include <cassert>
 #include <string>
@@ -427,8 +427,8 @@ private:
 class GenericOptTable : public OptTable {
 protected:
   LLVM_ABI GenericOptTable(const StringTable &StrTable,
-                  ArrayRef<StringTable::Offset> PrefixesTable,
-                  ArrayRef<Info> OptionInfos, bool IgnoreCase = false);
+                           ArrayRef<StringTable::Offset> PrefixesTable,
+                           ArrayRef<Info> OptionInfos, bool IgnoreCase = false);
 };
 
 class PrecomputedOptTable : public OptTable {

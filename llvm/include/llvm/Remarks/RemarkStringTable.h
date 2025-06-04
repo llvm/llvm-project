@@ -16,9 +16,9 @@
 #ifndef LLVM_REMARKS_REMARKSTRINGTABLE_H
 #define LLVM_REMARKS_REMARKSTRINGTABLE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include <vector>
 
 namespace llvm {
