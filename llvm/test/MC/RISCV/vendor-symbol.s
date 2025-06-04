@@ -8,7 +8,7 @@
 ## relocations do not interfere with symbols with identical names that
 ## are written in assembly.
 
-.option exact
+  .option exact
 
   qc.e.bgeui s0, 20, QUALCOMM
 
@@ -28,5 +28,8 @@ QUALCOMM:
 
 
 # CHECK-LABEL: Symbol table '.symtab'
+# CHECK-NOT: QUALCOMM
 # CHECK: 00000000 0 NOTYPE  LOCAL  DEFAULT ABS QUALCOMM
+# CHECK-NOT: QUALCOMM
 # CHECK: 00000006 0 NOTYPE  GLOBAL DEFAULT   2 QUALCOMM
+# CHECK-NOT: QUALCOMM
