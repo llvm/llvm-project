@@ -80,7 +80,7 @@ define i32 @test_inbounds_nuw_trunc(ptr %base, i64 %idx) {
 
 define i64 @test_inbounds_nuw_swapped(ptr %base, i64 %idx) {
 ; CHECK-LABEL: @test_inbounds_nuw_swapped(
-; CHECK-NEXT:    [[P2_IDX_NEG:%.*]] = mul i64 [[IDX:%.*]], -4
+; CHECK-NEXT:    [[P2_IDX_NEG:%.*]] = mul nsw i64 [[IDX:%.*]], -4
 ; CHECK-NEXT:    ret i64 [[P2_IDX_NEG]]
 ;
   %p2 = getelementptr inbounds [0 x i32], ptr %base, i64 0, i64 %idx
@@ -104,7 +104,7 @@ define i64 @test_inbounds1_nuw_swapped(ptr %base, i64 %idx) {
 
 define i64 @test_inbounds2_nuw_swapped(ptr %base, i64 %idx) {
 ; CHECK-LABEL: @test_inbounds2_nuw_swapped(
-; CHECK-NEXT:    [[P2_IDX_NEG:%.*]] = mul i64 [[IDX:%.*]], -4
+; CHECK-NEXT:    [[P2_IDX_NEG:%.*]] = mul nsw i64 [[IDX:%.*]], -4
 ; CHECK-NEXT:    ret i64 [[P2_IDX_NEG]]
 ;
   %p2 = getelementptr inbounds [0 x i32], ptr %base, i64 0, i64 %idx
@@ -279,8 +279,8 @@ define i16 @test24_as1(ptr addrspace(1) %P, i16 %A) {
 
 define i64 @test24a(ptr %P, i64 %A){
 ; CHECK-LABEL: @test24a(
-; CHECK-NEXT:    [[DIFF_NEG:%.*]] = sub i64 0, [[A:%.*]]
-; CHECK-NEXT:    ret i64 [[DIFF_NEG]]
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = sub nsw i64 0, [[A:%.*]]
+; CHECK-NEXT:    ret i64 [[GEPDIFF]]
 ;
   %B = getelementptr inbounds i8, ptr %P, i64 %A
   %C = ptrtoint ptr %B to i64
@@ -291,8 +291,8 @@ define i64 @test24a(ptr %P, i64 %A){
 
 define i16 @test24a_as1(ptr addrspace(1) %P, i16 %A) {
 ; CHECK-LABEL: @test24a_as1(
-; CHECK-NEXT:    [[DIFF_NEG:%.*]] = sub i16 0, [[A:%.*]]
-; CHECK-NEXT:    ret i16 [[DIFF_NEG]]
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = sub nsw i16 0, [[A:%.*]]
+; CHECK-NEXT:    ret i16 [[GEPDIFF]]
 ;
   %B = getelementptr inbounds i8, ptr addrspace(1) %P, i16 %A
   %C = ptrtoint ptr addrspace(1) %B to i16
@@ -863,11 +863,8 @@ _Z3fooPKc.exit:
 
 define i64 @multiple_geps_one_chain(ptr %base, i64 %idx, i64 %idx2) {
 ; CHECK-LABEL: @multiple_geps_one_chain(
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i32, ptr [[BASE:%.*]], i64 [[IDX:%.*]]
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i32, ptr [[P2]], i64 [[IDX2:%.*]]
-; CHECK-NEXT:    [[I1:%.*]] = ptrtoint ptr [[BASE]] to i64
-; CHECK-NEXT:    [[I2:%.*]] = ptrtoint ptr [[P3]] to i64
-; CHECK-NEXT:    [[D:%.*]] = sub i64 [[I2]], [[I1]]
+; CHECK-NEXT:    [[P2_IDX1:%.*]] = add i64 [[IDX:%.*]], [[IDX2:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = shl i64 [[P2_IDX1]], 2
 ; CHECK-NEXT:    ret i64 [[D]]
 ;
   %p2 = getelementptr inbounds i32, ptr %base, i64 %idx
@@ -880,12 +877,9 @@ define i64 @multiple_geps_one_chain(ptr %base, i64 %idx, i64 %idx2) {
 
 define i64 @multiple_geps_one_chain_commuted(ptr %base, i64 %idx, i64 %idx2) {
 ; CHECK-LABEL: @multiple_geps_one_chain_commuted(
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i32, ptr [[BASE:%.*]], i64 [[IDX:%.*]]
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i32, ptr [[P2]], i64 [[IDX2:%.*]]
-; CHECK-NEXT:    [[I1:%.*]] = ptrtoint ptr [[BASE]] to i64
-; CHECK-NEXT:    [[I2:%.*]] = ptrtoint ptr [[P3]] to i64
-; CHECK-NEXT:    [[D:%.*]] = sub i64 [[I1]], [[I2]]
-; CHECK-NEXT:    ret i64 [[D]]
+; CHECK-NEXT:    [[P2_IDX1:%.*]] = add i64 [[IDX:%.*]], [[IDX2:%.*]]
+; CHECK-NEXT:    [[DOTNEG:%.*]] = mul i64 [[P2_IDX1]], -4
+; CHECK-NEXT:    ret i64 [[DOTNEG]]
 ;
   %p2 = getelementptr inbounds i32, ptr %base, i64 %idx
   %p3 = getelementptr inbounds i32, ptr %p2, i64 %idx2
@@ -897,13 +891,10 @@ define i64 @multiple_geps_one_chain_commuted(ptr %base, i64 %idx, i64 %idx2) {
 
 define i64 @multiple_geps_two_chains(ptr %base, i64 %idx, i64 %idx2, i64 %idx3) {
 ; CHECK-LABEL: @multiple_geps_two_chains(
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i32, ptr [[BASE:%.*]], i64 [[IDX:%.*]]
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i32, ptr [[P2]], i64 [[IDX2:%.*]]
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i32, ptr [[BASE]], i64 [[IDX3:%.*]]
-; CHECK-NEXT:    [[I1:%.*]] = ptrtoint ptr [[P4]] to i64
-; CHECK-NEXT:    [[I2:%.*]] = ptrtoint ptr [[P3]] to i64
-; CHECK-NEXT:    [[D:%.*]] = sub i64 [[I2]], [[I1]]
-; CHECK-NEXT:    ret i64 [[D]]
+; CHECK-NEXT:    [[P2_IDX1:%.*]] = add i64 [[IDX:%.*]], [[IDX2:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[P2_IDX1]], [[IDX3:%.*]]
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = shl i64 [[TMP1]], 2
+; CHECK-NEXT:    ret i64 [[GEPDIFF]]
 ;
   %p2 = getelementptr inbounds i32, ptr %base, i64 %idx
   %p3 = getelementptr inbounds i32, ptr %p2, i64 %idx2
@@ -916,13 +907,10 @@ define i64 @multiple_geps_two_chains(ptr %base, i64 %idx, i64 %idx2, i64 %idx3) 
 
 define i64 @multiple_geps_two_chains_commuted(ptr %base, i64 %idx, i64 %idx2, i64 %idx3) {
 ; CHECK-LABEL: @multiple_geps_two_chains_commuted(
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i32, ptr [[BASE:%.*]], i64 [[IDX:%.*]]
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i32, ptr [[P2]], i64 [[IDX2:%.*]]
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i32, ptr [[BASE]], i64 [[IDX3:%.*]]
-; CHECK-NEXT:    [[I1:%.*]] = ptrtoint ptr [[P4]] to i64
-; CHECK-NEXT:    [[I2:%.*]] = ptrtoint ptr [[P3]] to i64
-; CHECK-NEXT:    [[D:%.*]] = sub i64 [[I1]], [[I2]]
-; CHECK-NEXT:    ret i64 [[D]]
+; CHECK-NEXT:    [[P2_IDX1:%.*]] = add i64 [[IDX:%.*]], [[IDX2:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[IDX3:%.*]], [[P2_IDX1]]
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = shl i64 [[TMP1]], 2
+; CHECK-NEXT:    ret i64 [[GEPDIFF]]
 ;
   %p2 = getelementptr inbounds i32, ptr %base, i64 %idx
   %p3 = getelementptr inbounds i32, ptr %p2, i64 %idx2
@@ -933,18 +921,19 @@ define i64 @multiple_geps_two_chains_commuted(ptr %base, i64 %idx, i64 %idx2, i6
   ret i64 %d
 }
 
+declare void @use(ptr)
+
 define i64 @multiple_geps_two_chains_gep_base(ptr %base, i64 %base.idx, i64 %idx, i64 %idx2, i64 %idx3) {
 ; CHECK-LABEL: @multiple_geps_two_chains_gep_base(
 ; CHECK-NEXT:    [[GEP_BASE:%.*]] = getelementptr inbounds i32, ptr [[BASE:%.*]], i64 [[BASE_IDX:%.*]]
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i32, ptr [[GEP_BASE]], i64 [[IDX:%.*]]
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i32, ptr [[P2]], i64 [[IDX2:%.*]]
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i32, ptr [[GEP_BASE]], i64 [[IDX3:%.*]]
-; CHECK-NEXT:    [[I1:%.*]] = ptrtoint ptr [[P4]] to i64
-; CHECK-NEXT:    [[I2:%.*]] = ptrtoint ptr [[P3]] to i64
-; CHECK-NEXT:    [[D:%.*]] = sub i64 [[I2]], [[I1]]
-; CHECK-NEXT:    ret i64 [[D]]
+; CHECK-NEXT:    call void @use(ptr [[GEP_BASE]])
+; CHECK-NEXT:    [[P2_IDX1:%.*]] = add i64 [[IDX:%.*]], [[IDX2:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[P2_IDX1]], [[IDX3:%.*]]
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = shl i64 [[TMP1]], 2
+; CHECK-NEXT:    ret i64 [[GEPDIFF]]
 ;
   %gep.base = getelementptr inbounds i32, ptr %base, i64 %base.idx
+  call void @use(ptr %gep.base)
   %p2 = getelementptr inbounds i32, ptr %gep.base, i64 %idx
   %p3 = getelementptr inbounds i32, ptr %p2, i64 %idx2
   %p4 = getelementptr inbounds i32, ptr %gep.base, i64 %idx3
