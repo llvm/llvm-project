@@ -3078,7 +3078,9 @@ Query for this feature with ``__has_builtin(__builtin_offsetof)``.
 --------------------------------
 
 ``__builtin_get_vtable_pointer`` loads and authenticates the primary vtable
-pointer from an instance of a polymorphic C++ class.
+pointer from an instance of a polymorphic C++ class. This builtin is needed
+for directly loading the vtable pointer when on platforms using
+:doc:`PointerAuthentication`.
 
 **Syntax**:
 
