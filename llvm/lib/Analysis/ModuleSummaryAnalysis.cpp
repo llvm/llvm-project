@@ -525,7 +525,6 @@ static void computeFunctionSummary(
       if (MemProfMD) {
         std::vector<MIBInfo> MIBs;
         std::vector<std::vector<ContextTotalSize>> ContextSizeInfos;
-        bool HasNonZeroContextSizeInfos = false;
         for (auto &MDOp : MemProfMD->operands()) {
           auto *MIBMD = cast<const MDNode>(MDOp);
           MDNode *StackNode = getMIBStackNode(MIBMD);
@@ -545,8 +544,7 @@ static void computeFunctionSummary(
           }
           // If we have context size information, collect it for inclusion in
           // the summary.
-          assert(MIBMD->getNumOperands() > 2 ||
-                 !metadataIncludesAllContextSizeInfo());
+          assert(MIBMD->getNumOperands() > 2 || !MemProfReportHintedSizes);
           if (MIBMD->getNumOperands() > 2) {
             std::vector<ContextTotalSize> ContextSizes;
             for (unsigned I = 2; I < MIBMD->getNumOperands(); I++) {
@@ -560,31 +558,14 @@ static void computeFunctionSummary(
                                 ->getZExtValue();
               ContextSizes.push_back({FullStackId, TS});
             }
-            // Flag that we need to keep the ContextSizeInfos array for this
-            // alloc as it now contains non-zero context info sizes.
-            HasNonZeroContextSizeInfos = true;
             ContextSizeInfos.push_back(std::move(ContextSizes));
-          } else {
-            // The ContextSizeInfos must be in the same relative position as the
-            // associated MIB. In some cases we only include a ContextSizeInfo
-            // for a subset of MIBs in an allocation. To handle that, eagerly
-            // fill any MIB entries that don't have context size info metadata
-            // with a pair of 0s. Later on we will only use this array if it
-            // ends up containing any non-zero entries (see where we set
-            // HasNonZeroContextSizeInfos above).
-            ContextSizeInfos.push_back({{0, 0}});
           }
           MIBs.push_back(
               MIBInfo(getMIBAllocType(MIBMD), std::move(StackIdIndices)));
         }
         Allocs.push_back(AllocInfo(std::move(MIBs)));
-        assert(HasNonZeroContextSizeInfos ||
-               !metadataIncludesAllContextSizeInfo());
-        // We eagerly build the ContextSizeInfos array, but it will be filled
-        // with sub arrays of pairs of 0s if no MIBs on this alloc actually
-        // contained context size info metadata. Only save it if any MIBs had
-        // any such metadata.
-        if (HasNonZeroContextSizeInfos) {
+        assert(!ContextSizeInfos.empty() || !MemProfReportHintedSizes);
+        if (!ContextSizeInfos.empty()) {
           assert(Allocs.back().MIBs.size() == ContextSizeInfos.size());
           Allocs.back().ContextSizeInfos = std::move(ContextSizeInfos);
         }
