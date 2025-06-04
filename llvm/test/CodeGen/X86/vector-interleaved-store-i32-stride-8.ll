@@ -460,12 +460,12 @@ define void @store_i32_stride8_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX-NEXT:    vblendps {{.*#+}} xmm11 = xmm11[0,1],xmm12[2,3]
 ; AVX-NEXT:    vblendps {{.*#+}} ymm10 = ymm11[0,1,2,3],ymm10[4,5,6,7]
 ; AVX-NEXT:    vunpckhps {{.*#+}} xmm6 = xmm6[2],xmm7[2],xmm6[3],xmm7[3]
-; AVX-NEXT:    vshufps {{.*#+}} xmm4 = xmm4[3,0],xmm5[3,0]
-; AVX-NEXT:    vshufps {{.*#+}} xmm4 = xmm4[0,2],xmm6[2,3]
+; AVX-NEXT:    vshufps {{.*#+}} xmm4 = xmm5[3,0],xmm4[3,0]
+; AVX-NEXT:    vshufps {{.*#+}} xmm4 = xmm4[2,0],xmm6[2,3]
 ; AVX-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm4
 ; AVX-NEXT:    vunpckhps {{.*#+}} xmm2 = xmm2[2],xmm3[2],xmm2[3],xmm3[3]
-; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,0],xmm1[3,0]
-; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm2[2,3]
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[3,0],xmm0[3,0]
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,0],xmm2[2,3]
 ; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm4[4,5,6,7]
 ; AVX-NEXT:    vmovaps %ymm0, 96(%rax)
 ; AVX-NEXT:    vmovaps %ymm10, 64(%rax)
