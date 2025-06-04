@@ -29,6 +29,30 @@ namespace xegpu {
 using namespace mlir;
 
 namespace {
+
+static std::pair<SmallVector<int64_t>, int>
+getSgShapeAndCount(ArrayRef<int64_t> shape, xegpu::LayoutAttr layout) {
+  int count = 1;
+  SmallVector<int64_t> sgShape(shape);
+
+  if (layout && layout.isWgLayout()) {
+    DenseI32ArrayAttr sgLayoutAttr = layout.getSgLayout();
+    auto sgLayout = llvm::to_vector_of<int64_t>(sgLayoutAttr.asArrayRef());
+    if (DenseI32ArrayAttr sgDataAttr = layout.getSgData())
+      sgShape = llvm::to_vector_of<int64_t>(sgDataAttr.asArrayRef());
+    else
+      sgShape = computeShapeRatio(shape, sgLayout).value_or(sgShape);
+    SmallVector<int64_t> distUnit = computeElementwiseMul(sgLayout, sgShape);
+    // Clamp distUnit to the original shape to handle cases where data is
+    // shared among subgroups, which may cause distUnit to exceed the original
+    // shape.
+    for (size_t i = 0; i < distUnit.size(); ++i)
+      distUnit[i] = std::min(shape[i], distUnit[i]);
+    count = computeProduct(shape) / computeProduct(distUnit);
+  }
+  return std::make_pair(sgShape, count);
+};
+
 /// This pattern transforms the CreateNdDescOp to create a subgroup descriptor
 /// from a workgroup descriptor. It replaces the offsets and sizes with
 /// appropriate values for the subgroup.
@@ -129,18 +153,7 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
       return rewriter.notifyMatchFailure(
           op, "sgLayout attribute is required in layout");
 
-    SmallVector<int64_t> sgShape;
-    if (auto sgDataAttr = layout.getSgData()) {
-      sgShape = llvm::to_vector_of<int64_t>(sgDataAttr.asArrayRef());
-    } else {
-      assert(wgShape.size() == sgLayout.size() &&
-             "sgLayout and wgShape must have the same rank");
-      sgShape.reserve(wgShape.size());
-      for (size_t i = 0; i < wgShape.size(); ++i) {
-        assert(sgLayout[i] != 0 && "sgLayout elements must be non-zero");
-        sgShape.push_back(wgShape[i] / sgLayout[i]);
-      }
-    }
+    SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
 
     // TODO : Handle order attribute
     // Get the subgroup ID
@@ -389,29 +402,6 @@ struct XeGPUWgToSgDistributePass
 } // namespace
 
 void XeGPUWgToSgDistributePass::runOnOperation() {
-  auto getSgShapeAndCount = [](ArrayRef<int64_t> shape,
-                               xegpu::LayoutAttr layout) {
-    int count = 1;
-    SmallVector<int64_t> sgShape(shape);
-
-    if (layout && layout.isWgLayout()) {
-      DenseI32ArrayAttr sgLayoutAttr = layout.getSgLayout();
-      auto sgLayout = llvm::to_vector_of<int64_t>(sgLayoutAttr.asArrayRef());
-      if (DenseI32ArrayAttr sgDataAttr = layout.getSgData())
-        sgShape = llvm::to_vector_of<int64_t>(sgDataAttr.asArrayRef());
-      else
-        sgShape = computeShapeRatio(shape, sgLayout).value_or(sgShape);
-      SmallVector<int64_t> distUnit = computeElementwiseMul(sgLayout, sgShape);
-      // Clamp distUnit to the original shape to handle cases where data is
-      // shared among subgroups, which may cause distUnit to exceed the original
-      // shape.
-      for (size_t i = 0; i < distUnit.size(); ++i)
-        distUnit[i] = std::min(shape[i], distUnit[i]);
-      count = computeProduct(shape) / computeProduct(distUnit);
-    }
-    return std::make_pair(sgShape, count);
-  };
-
   TypeConverter converter;
   converter.addConversion([&](Type type) -> Type { return type; });
   converter.addConversion(
