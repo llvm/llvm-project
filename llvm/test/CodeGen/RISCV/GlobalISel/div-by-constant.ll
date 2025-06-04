@@ -25,7 +25,7 @@ define i32 @udiv_constant_no_add(i32 %a) nounwind {
 ; RV64IM-NEXT:    slli a0, a0, 32
 ; RV64IM-NEXT:    lui a1, 205
 ; RV64IM-NEXT:    srli a0, a0, 32
-; RV64IM-NEXT:    addiw a1, a1, -819
+; RV64IM-NEXT:    addi a1, a1, -819
 ; RV64IM-NEXT:    slli a1, a1, 12
 ; RV64IM-NEXT:    addi a1, a1, -819
 ; RV64IM-NEXT:    mul a0, a0, a1
@@ -62,7 +62,7 @@ define i32 @udiv_constant_add(i32 %a) nounwind {
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    lui a1, 149797
 ; RV64IM-NEXT:    slli a2, a0, 32
-; RV64IM-NEXT:    addiw a1, a1, -1755
+; RV64IM-NEXT:    addi a1, a1, -1755
 ; RV64IM-NEXT:    srli a2, a2, 32
 ; RV64IM-NEXT:    mul a1, a2, a1
 ; RV64IM-NEXT:    srli a1, a1, 32
@@ -75,7 +75,7 @@ define i32 @udiv_constant_add(i32 %a) nounwind {
 ; RV64IMZB-LABEL: udiv_constant_add:
 ; RV64IMZB:       # %bb.0:
 ; RV64IMZB-NEXT:    lui a1, 149797
-; RV64IMZB-NEXT:    addiw a1, a1, -1755
+; RV64IMZB-NEXT:    addi a1, a1, -1755
 ; RV64IMZB-NEXT:    zext.w a2, a0
 ; RV64IMZB-NEXT:    mul a1, a2, a1
 ; RV64IMZB-NEXT:    srli a1, a1, 32
@@ -286,7 +286,7 @@ define i16 @udiv16_constant_no_add(i16 %a) nounwind {
 ; RV64IM-NEXT:    slli a0, a0, 48
 ; RV64IM-NEXT:    lui a1, 13
 ; RV64IM-NEXT:    srli a0, a0, 48
-; RV64IM-NEXT:    addiw a1, a1, -819
+; RV64IM-NEXT:    addi a1, a1, -819
 ; RV64IM-NEXT:    mul a0, a0, a1
 ; RV64IM-NEXT:    srli a0, a0, 18
 ; RV64IM-NEXT:    ret
@@ -295,7 +295,7 @@ define i16 @udiv16_constant_no_add(i16 %a) nounwind {
 ; RV64IMZB:       # %bb.0:
 ; RV64IMZB-NEXT:    zext.h a0, a0
 ; RV64IMZB-NEXT:    lui a1, 13
-; RV64IMZB-NEXT:    addiw a1, a1, -819
+; RV64IMZB-NEXT:    addi a1, a1, -819
 ; RV64IMZB-NEXT:    mul a0, a0, a1
 ; RV64IMZB-NEXT:    srli a0, a0, 18
 ; RV64IMZB-NEXT:    ret
@@ -340,8 +340,8 @@ define i16 @udiv16_constant_add(i16 %a) nounwind {
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    lui a1, 2
 ; RV64IM-NEXT:    lui a2, 16
-; RV64IM-NEXT:    addiw a1, a1, 1171
-; RV64IM-NEXT:    addiw a2, a2, -1
+; RV64IM-NEXT:    addi a1, a1, 1171
+; RV64IM-NEXT:    addi a2, a2, -1
 ; RV64IM-NEXT:    and a3, a0, a2
 ; RV64IM-NEXT:    mul a1, a3, a1
 ; RV64IM-NEXT:    srli a1, a1, 16

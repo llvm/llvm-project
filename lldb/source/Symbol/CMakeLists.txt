@@ -33,6 +33,8 @@ add_lldb_library(lldbSymbol NO_PLUGIN_DEPENDENCIES
   Variable.cpp
   VariableList.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbCore
     lldbExpression
@@ -40,7 +42,4 @@ add_lldb_library(lldbSymbol NO_PLUGIN_DEPENDENCIES
     lldbTarget
     lldbUtility
     lldbValueObject
-
-  LINK_COMPONENTS
-    Support
   )
