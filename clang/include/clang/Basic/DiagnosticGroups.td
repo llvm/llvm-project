@@ -813,19 +813,19 @@ changes to one object won't affect the others, the object's initializer will run
 once per copy, etc.
 
 Specifically, this warning fires when it detects an object which:
-  1. Is defined as ``inline`` in a header file (so it might get compiled into multiple libaries), and
-  2. Has external linkage (otherwise it's supposed to be duplicated), and
-  3. Has hidden visibility.
+1. Is defined as ``inline`` in a header file (so it might get compiled into multiple libaries), and
+2. Has external linkage (otherwise it's supposed to be duplicated), and
+3. Has hidden visibility.
 
 As well as one of the following:
-  1. The object is mutable, or
-  2. The object's initializer definitely has side effects.
+1. The object is mutable, or
+2. The object's initializer definitely has side effects.
 
 The warning can be resolved by removing one of the conditions above. In rough
 order of preference, this may be done by:
-  1. Marking the object ``const`` (if possible)
-  2. Moving the object's definition to a source file
-  3. Giving the object non-hidden visibility, e.g. using ``__attribute((visibility("default")))``.
+1. Marking the object ``const`` (if possible)
+2. Moving the object's definition to a source file
+3. Giving the object non-hidden visibility, e.g. using ``__attribute((visibility("default")))``.
 
 Note that for (2), all levels of a pointer variable must be constant;
 ``const int*`` will trigger the warning because the pointer itself is mutable.
