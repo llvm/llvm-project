@@ -70,7 +70,7 @@ void DWARFExpressionCompactPrinterTest::TestExprPrinter(
     return {};
   };
 
-  Expr.printCompact(OS, GetRegName);
+  DWARFExpressionPrinter::printCompact(&Expr, OS, GetRegName);
   EXPECT_EQ(OS.str(), Expected);
 }
 
