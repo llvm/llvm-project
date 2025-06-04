@@ -2310,6 +2310,8 @@ void OmpAttributeVisitor::CreateImplicitSymbols(const Symbol *symbol) {
     bool targetDir = llvm::omp::allTargetSet.test(dirContext.directive);
     bool parallelDir = llvm::omp::allParallelSet.test(dirContext.directive);
     bool teamsDir = llvm::omp::allTeamsSet.test(dirContext.directive);
+    bool isStaticStorageDuration =
+        symbol->flags().test(Symbol::Flag::InDataStmt);
 
     if (dsa.any()) {
       if (parallelDir || taskGenDir || teamsDir) {
@@ -2367,7 +2369,8 @@ void OmpAttributeVisitor::CreateImplicitSymbols(const Symbol *symbol) {
       dsa = prevDSA;
     } else if (taskGenDir) {
       // TODO 5) dummy arg in orphaned taskgen construct -> firstprivate
-      if (prevDSA.test(Symbol::Flag::OmpShared)) {
+      // variables with static storage duration are predetermined as shared
+      if (prevDSA.test(Symbol::Flag::OmpShared) || isStaticStorageDuration) {
         // 6) shared in enclosing context -> shared
         dsa = {Symbol::Flag::OmpShared};
         makeSymbol(dsa);
