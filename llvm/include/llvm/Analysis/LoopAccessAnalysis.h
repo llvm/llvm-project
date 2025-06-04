@@ -194,7 +194,8 @@ public:
   /// of a write access.
   LLVM_ABI void addAccess(LoadInst *LI);
 
-  /// Check whether the dependencies between the accesses are safe.
+  /// Check whether the dependencies between the accesses are safe, and records
+  /// the dependence information in Dependences if so.
   ///
   /// Only checks sets with elements in \p CheckDeps.
   LLVM_ABI bool areDepsSafe(const DepCandidates &AccessSets,
@@ -654,7 +655,8 @@ private:
 /// For memory dependences that cannot be determined at compile time, it
 /// generates run-time checks to prove independence.  This is done by
 /// AccessAnalysis::canCheckPtrAtRT and the checks are maintained by the
-/// RuntimePointerCheck class.
+/// RuntimePointerCheck class. \p AllowPartial determines whether partial checks
+/// are generated when not all pointers could be analyzed.
 ///
 /// If pointers can wrap or can't be expressed as affine AddRec expressions by
 /// ScalarEvolution, we will generate run-time checks by emitting a
@@ -667,7 +669,8 @@ public:
   LLVM_ABI LoopAccessInfo(Loop *L, ScalarEvolution *SE,
                           const TargetTransformInfo *TTI,
                           const TargetLibraryInfo *TLI, AAResults *AA,
-                          DominatorTree *DT, LoopInfo *LI);
+                          DominatorTree *DT, LoopInfo *LI,
+                          bool AllowPartial = false);
 
   /// Return true we can analyze the memory accesses in the loop and there are
   /// no memory dependence cycles. Note that for dependences between loads &
@@ -681,6 +684,11 @@ public:
   /// still be reported runtime pointer checks that would be required, but it is
   /// not legal to insert them.
   bool hasConvergentOp() const { return HasConvergentOp; }
+
+  /// Return true if, when runtime pointer checking does not have complete
+  /// results, it instead has partial results for those memory accesses that
+  /// could be analyzed.
+  bool hasAllowPartial() const { return AllowPartial; }
 
   const RuntimePointerChecking *getRuntimePointerChecking() const {
     return PtrRtChecking.get();
@@ -784,13 +792,22 @@ private:
 
   /// We need to check that all of the pointers in this list are disjoint
   /// at runtime. Using std::unique_ptr to make using move ctor simpler.
+  /// If AllowPartial is true then this list may contain only partial
+  /// information when we've failed to analyze all the memory accesses in the
+  /// loop, in which case HasCompletePtrRtChecking will be false.
   std::unique_ptr<RuntimePointerChecking> PtrRtChecking;
 
-  /// the Memory Dependence Checker which can determine the
+  /// The Memory Dependence Checker which can determine the
   /// loop-independent and loop-carried dependences between memory accesses.
+  /// This will be empty if we've failed to analyze all the memory access in the
+  /// loop (i.e. CanVecMem is false).
   std::unique_ptr<MemoryDepChecker> DepChecker;
 
   Loop *TheLoop;
+
+  /// Determines whether we should generate partial runtime checks when not all
+  /// memory accesses could be analyzed.
+  bool AllowPartial;
 
   unsigned NumLoads = 0;
   unsigned NumStores = 0;
@@ -798,6 +815,7 @@ private:
   /// Cache the result of analyzeLoop.
   bool CanVecMem = false;
   bool HasConvergentOp = false;
+  bool HasCompletePtrRtChecking = false;
 
   /// Indicator that there are two non vectorizable stores to the same uniform
   /// address.
@@ -920,7 +938,7 @@ public:
                         const TargetLibraryInfo *TLI)
       : SE(SE), AA(AA), DT(DT), LI(LI), TTI(TTI), TLI(TLI) {}
 
-  LLVM_ABI const LoopAccessInfo &getInfo(Loop &L);
+  LLVM_ABI const LoopAccessInfo &getInfo(Loop &L, bool AllowPartial = false);
 
   LLVM_ABI void clear();
 

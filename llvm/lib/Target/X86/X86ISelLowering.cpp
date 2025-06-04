@@ -9830,6 +9830,17 @@ static bool IsElementEquivalent(int MaskSize, SDValue Op, SDValue ExpectedOp,
       return (Idx % NumMemElts) == (ExpectedIdx % NumMemElts);
     }
     break;
+  case X86ISD::VPERMI: {
+    if (Op == ExpectedOp && (int)VT.getVectorNumElements() == MaskSize) {
+      SmallVector<int, 8> Mask;
+      DecodeVPERMMask(MaskSize, Op.getConstantOperandVal(1), Mask);
+      SDValue Src = Op.getOperand(0);
+      return (Mask[Idx] == Mask[ExpectedIdx]) ||
+             IsElementEquivalent(MaskSize, Src, Src, Mask[Idx],
+                                 Mask[ExpectedIdx]);
+    }
+    break;
+  }
   case X86ISD::HADD:
   case X86ISD::HSUB:
   case X86ISD::FHADD:
@@ -28977,6 +28988,30 @@ static SDValue LowerVectorCTLZ(SDValue Op, const SDLoc &DL,
   return LowerVectorCTLZInRegLUT(Op, DL, Subtarget, DAG);
 }
 
+static SDValue LowerVectorCTLZ_GFNI(SDValue Op, const SDLoc &DL,
+                                    SelectionDAG &DAG,
+                                    const X86Subtarget &Subtarget) {
+  MVT VT = Op.getSimpleValueType();
+  SDValue Input = Op.getOperand(0);
+
+  assert(VT.isVector() && VT.getVectorElementType() == MVT::i8 &&
+         "Expected vXi8 input for GFNI-based CTLZ lowering");
+
+  SDValue Reversed = DAG.getNode(ISD::BITREVERSE, DL, VT, Input);
+
+  SDValue Neg = DAG.getNegative(Reversed, DL, VT);
+  SDValue Filtered = DAG.getNode(ISD::AND, DL, VT, Reversed, Neg);
+
+  MVT VT64 = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
+  SDValue CTTZConst = DAG.getConstant(0xAACCF0FF00000000ULL, DL, VT64);
+  SDValue CTTZMatrix = DAG.getBitcast(VT, CTTZConst);
+
+  SDValue LZCNT =
+      DAG.getNode(X86ISD::GF2P8AFFINEQB, DL, VT, Filtered, CTTZMatrix,
+                  DAG.getTargetConstant(8, DL, MVT::i8));
+  return LZCNT;
+}
+
 static SDValue LowerCTLZ(SDValue Op, const X86Subtarget &Subtarget,
                          SelectionDAG &DAG) {
   MVT VT = Op.getSimpleValueType();
@@ -28984,6 +29019,9 @@ static SDValue LowerCTLZ(SDValue Op, const X86Subtarget &Subtarget,
   unsigned NumBits = VT.getSizeInBits();
   SDLoc dl(Op);
   unsigned Opc = Op.getOpcode();
+
+  if (VT.isVector() && VT.getScalarType() == MVT::i8 && Subtarget.hasGFNI())
+    return LowerVectorCTLZ_GFNI(Op, dl, DAG, Subtarget);
 
   if (VT.isVector())
     return LowerVectorCTLZ(Op, dl, Subtarget, DAG);

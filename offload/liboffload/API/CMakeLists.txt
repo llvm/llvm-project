@@ -23,7 +23,14 @@ if (CLANG_FORMAT)
     add_custom_command(TARGET OffloadGenerate POST_BUILD COMMAND ${CMAKE_COMMAND}
         -E copy_if_different OffloadErrcodes.inc "${LIBOMPTARGET_INCLUDE_DIR}/Shared/OffloadErrcodes.inc")
 else()
-    message(WARNING "clang-format was not found, so the OffloadGenerate target\
-        will not be available. Offload will still build, but you will not be\
-        able to make changes to the API.")
+    message(WARNING "clang-format not found, the generated Offload API headers will not be formatted")
+    foreach(file IN LISTS files_to_copy)
+        add_custom_command(
+            OUTPUT ${file}
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different generated/${file}.gen ${CMAKE_CURRENT_BINARY_DIR}/${file}
+            DEPENDS generated/${file}.gen
+        )
+        add_custom_target(OffloadAPI.${file} DEPENDS ${file})
+        add_dependencies(OffloadAPI OffloadAPI.${file})
+    endforeach()
 endif()
