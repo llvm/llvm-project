@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 #include "DXILRootSignature.h"
 #include "DirectX.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
@@ -52,6 +53,13 @@ static std::optional<uint32_t> extractMdIntValue(MDNode *Node,
   if (auto *CI =
           mdconst::dyn_extract<ConstantInt>(Node->getOperand(OpId).get()))
     return CI->getZExtValue();
+  return std::nullopt;
+}
+
+static std::optional<APFloat> extractMdFloatValue(MDNode *Node,
+                                                  unsigned int OpId) {
+  if (auto *CI = mdconst::dyn_extract<ConstantFP>(Node->getOperand(OpId).get()))
+    return CI->getValue();
   return std::nullopt;
 }
 
@@ -262,6 +270,81 @@ static bool parseDescriptorTable(LLVMContext *Ctx,
   return false;
 }
 
+static bool parseStaticSampler(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
+                               MDNode *StaticSamplerNode) {
+  if (StaticSamplerNode->getNumOperands() != 14)
+    return reportError(Ctx, "Invalid format for Static Sampler");
+
+  dxbc::RTS0::v1::StaticSampler Sampler;
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 1))
+    Sampler.Filter = *Val;
+  else
+    return reportError(Ctx, "Invalid value for Filter");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 2))
+    Sampler.AddressU = *Val;
+  else
+    return reportError(Ctx, "Invalid value for AddressU");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 3))
+    Sampler.AddressV = *Val;
+  else
+    return reportError(Ctx, "Invalid value for AddressV");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 4))
+    Sampler.AddressW = *Val;
+  else
+    return reportError(Ctx, "Invalid value for AddressW");
+
+  if (std::optional<APFloat> Val = extractMdFloatValue(StaticSamplerNode, 5))
+    Sampler.MipLODBias = Val->convertToFloat();
+  else
+    return reportError(Ctx, "Invalid value for MipLODBias");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 6))
+    Sampler.MaxAnisotropy = *Val;
+  else
+    return reportError(Ctx, "Invalid value for MaxAnisotropy");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 7))
+    Sampler.ComparisonFunc = *Val;
+  else
+    return reportError(Ctx, "Invalid value for ComparisonFunc ");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 8))
+    Sampler.BorderColor = *Val;
+  else
+    return reportError(Ctx, "Invalid value for ComparisonFunc ");
+
+  if (std::optional<APFloat> Val = extractMdFloatValue(StaticSamplerNode, 9))
+    Sampler.MinLOD = Val->convertToFloat();
+  else
+    return reportError(Ctx, "Invalid value for MinLOD");
+
+  if (std::optional<APFloat> Val = extractMdFloatValue(StaticSamplerNode, 10))
+    Sampler.MaxLOD = Val->convertToFloat();
+  else
+    return reportError(Ctx, "Invalid value for MaxLOD");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 11))
+    Sampler.ShaderRegister = *Val;
+  else
+    return reportError(Ctx, "Invalid value for ShaderRegister");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 12))
+    Sampler.RegisterSpace = *Val;
+  else
+    return reportError(Ctx, "Invalid value for RegisterSpace");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 13))
+    Sampler.ShaderVisibility = *Val;
+  else
+    return reportError(Ctx, "Invalid value for ShaderVisibility");
+
+  RSD.StaticSamplers.push_back(Sampler);
+  return false;
+}
+
 static bool parseRootSignatureElement(LLVMContext *Ctx,
                                       mcdxbc::RootSignatureDesc &RSD,
                                       MDNode *Element) {
@@ -277,6 +360,7 @@ static bool parseRootSignatureElement(LLVMContext *Ctx,
           .Case("RootSRV", RootSignatureElementKind::SRV)
           .Case("RootUAV", RootSignatureElementKind::UAV)
           .Case("DescriptorTable", RootSignatureElementKind::DescriptorTable)
+          .Case("StaticSampler", RootSignatureElementKind::StaticSamplers)
           .Default(RootSignatureElementKind::Error);
 
   switch (ElementKind) {
@@ -291,6 +375,8 @@ static bool parseRootSignatureElement(LLVMContext *Ctx,
     return parseRootDescriptors(Ctx, RSD, Element, ElementKind);
   case RootSignatureElementKind::DescriptorTable:
     return parseDescriptorTable(Ctx, RSD, Element);
+  case RootSignatureElementKind::StaticSamplers:
+    return parseStaticSampler(Ctx, RSD, Element);
   case RootSignatureElementKind::Error:
     return reportError(Ctx, "Invalid Root Signature Element: " + *ElementText);
   }
@@ -521,6 +607,9 @@ analyzeModule(Module &M) {
     // sequence. First the header, then the root parameters. So the header
     // offset will always equal to the header size.
     RSD.RootParameterOffset = sizeof(dxbc::RTS0::v1::RootSignatureHeader);
+
+    // static sampler offset is calculated when writting dxcontainer.
+    RSD.StaticSamplersOffset = 0u;
 
     if (parse(Ctx, RSD, RootElementListNode) || validate(Ctx, RSD)) {
       return RSDMap;
