@@ -1630,6 +1630,12 @@ bool WidenIV::widenLoopCompare(WidenIV::NarrowIVDefUse DU) {
 
   // Widen the other operand of the compare, if necessary.
   if (CastWidth < IVWidth) {
+    // If the narrow IV is always postive and the other operand is sext, widen
+    // using sext so we can combine them. This works for all comparison
+    // predicates.
+    if (DU.NeverNegative && isa<SExtInst>(Op))
+      CmpPreferredSign = true;
+
     Value *ExtOp = createExtendInst(Op, WideType, CmpPreferredSign, Cmp);
     DU.NarrowUse->replaceUsesOfWith(Op, ExtOp);
   }

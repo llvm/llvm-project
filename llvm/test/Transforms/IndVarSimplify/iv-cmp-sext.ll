@@ -22,7 +22,7 @@ define void @foo(ptr %x, i32 %n) {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i16, ptr [[X]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[ARRAYIDX]], align 2
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[TMP0]] to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[CONV]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[CONV]] to i64
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i64 [[INDVARS_IV]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label %[[IF_THEN:.*]], label %[[FOR_INC]]
 ; CHECK:       [[IF_THEN]]:
