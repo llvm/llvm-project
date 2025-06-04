@@ -486,7 +486,7 @@ bool RecurrenceDescriptor::AddReductionVar(
                   (!isConditionalRdxPattern(Kind, UI).isRecurrence() &&
                    !isAnyOfPattern(TheLoop, Phi, UI, IgnoredVal)
                         .isRecurrence() &&
-                   !isMinMaxPattern(UI, Kind, IgnoredVal).isRecurrence())))
+                   !isMinMaxPattern(UI, IgnoredVal, FuncFMF).isRecurrence())))
         return false;
 
       // Remember that we completed the cycle.
@@ -744,13 +744,10 @@ RecurrenceDescriptor::isFindLastIVPattern(Loop *TheLoop, PHINode *OrigPhi,
 }
 
 RecurrenceDescriptor::InstDesc
-RecurrenceDescriptor::isMinMaxPattern(Instruction *I, RecurKind Kind,
-                                      const InstDesc &Prev) {
+RecurrenceDescriptor::isMinMaxPattern(Instruction *I, const InstDesc &Prev,
+                                      FastMathFlags FuncFMF) {
   assert((isa<CmpInst>(I) || isa<SelectInst>(I) || isa<CallInst>(I)) &&
          "Expected a cmp or select or call instruction");
-  if (!isMinMaxRecurrenceKind(Kind))
-    return InstDesc(false, I);
-
   // We must handle the select(cmp()) as a single instruction. Advance to the
   // select.
   if (match(I, m_OneUse(m_Cmp()))) {
@@ -765,29 +762,40 @@ RecurrenceDescriptor::isMinMaxPattern(Instruction *I, RecurKind Kind,
 
   // Look for a min/max pattern.
   if (match(I, m_UMin(m_Value(), m_Value())))
-    return InstDesc(Kind == RecurKind::UMin, I);
+    return InstDesc(I, RecurKind::UMin);
   if (match(I, m_UMax(m_Value(), m_Value())))
-    return InstDesc(Kind == RecurKind::UMax, I);
+    return InstDesc(I, RecurKind::UMax);
   if (match(I, m_SMax(m_Value(), m_Value())))
-    return InstDesc(Kind == RecurKind::SMax, I);
+    return InstDesc(I, RecurKind::SMax);
   if (match(I, m_SMin(m_Value(), m_Value())))
-    return InstDesc(Kind == RecurKind::SMin, I);
-  if (match(I, m_OrdOrUnordFMin(m_Value(), m_Value())))
-    return InstDesc(Kind == RecurKind::FMin, I);
-  if (match(I, m_OrdOrUnordFMax(m_Value(), m_Value())))
-    return InstDesc(Kind == RecurKind::FMax, I);
-  if (match(I, m_FMinNum(m_Value(), m_Value())))
-    return InstDesc(Kind == RecurKind::FMin, I);
-  if (match(I, m_FMaxNum(m_Value(), m_Value())))
-    return InstDesc(Kind == RecurKind::FMax, I);
+    return InstDesc(I, RecurKind::SMin);
+
+  // minimum/minnum and maximum/maxnum intrinsics do not require nsz and nnan
+  // flags since NaN and signed zeroes are propagated in the intrinsic
+  // implementation.
   if (match(I, m_FMinimumNum(m_Value(), m_Value())))
-    return InstDesc(Kind == RecurKind::FMinimumNum, I);
+    return InstDesc(I, RecurKind::FMinimumNum);
   if (match(I, m_FMaximumNum(m_Value(), m_Value())))
-    return InstDesc(Kind == RecurKind::FMaximumNum, I);
+    return InstDesc(I, RecurKind::FMaximumNum);
   if (match(I, m_FMinimum(m_Value(), m_Value())))
-    return InstDesc(Kind == RecurKind::FMinimum, I);
+    return InstDesc(I, RecurKind::FMinimum);
   if (match(I, m_FMaximum(m_Value(), m_Value())))
-    return InstDesc(Kind == RecurKind::FMaximum, I);
+    return InstDesc(I, RecurKind::FMaximum);
+
+  bool HasRequiredFMF =
+      (FuncFMF.noNaNs() && FuncFMF.noSignedZeros()) ||
+      (isa<FPMathOperator>(I) && I->hasNoNaNs() && I->hasNoSignedZeros());
+  if (!HasRequiredFMF)
+    return InstDesc(false, I);
+
+  if (match(I, m_OrdOrUnordFMin(m_Value(), m_Value())))
+    return InstDesc(I, RecurKind::FMin);
+  if (match(I, m_OrdOrUnordFMax(m_Value(), m_Value())))
+    return InstDesc(I, RecurKind::FMax);
+  if (match(I, m_FMinNum(m_Value(), m_Value())))
+    return InstDesc(I, RecurKind::FMin);
+  if (match(I, m_FMaxNum(m_Value(), m_Value())))
+    return InstDesc(I, RecurKind::FMax);
 
   return InstDesc(false, I);
 }
@@ -883,24 +891,9 @@ RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(
   case Instruction::Call:
     if (isAnyOfRecurrenceKind(Kind))
       return isAnyOfPattern(L, OrigPhi, I, Prev);
-    auto HasRequiredFMF = [&]() {
-     if (FuncFMF.noNaNs() && FuncFMF.noSignedZeros())
-       return true;
-     if (isa<FPMathOperator>(I) && I->hasNoNaNs() && I->hasNoSignedZeros())
-       return true;
-     // minimum/minnum and maximum/maxnum intrinsics do not require nsz and nnan
-     // flags since NaN and signed zeroes are propagated in the intrinsic
-     // implementation.
-     return match(I, m_Intrinsic<Intrinsic::minimum>(m_Value(), m_Value())) ||
-            match(I, m_Intrinsic<Intrinsic::maximum>(m_Value(), m_Value())) ||
-            match(I,
-                  m_Intrinsic<Intrinsic::minimumnum>(m_Value(), m_Value())) ||
-            match(I, m_Intrinsic<Intrinsic::maximumnum>(m_Value(), m_Value()));
-    };
-    if (isIntMinMaxRecurrenceKind(Kind) ||
-        (HasRequiredFMF() && isFPMinMaxRecurrenceKind(Kind)))
-      return isMinMaxPattern(I, Kind, Prev);
-    else if (isFMulAddIntrinsic(I))
+    if (isMinMaxRecurrenceKind(Kind))
+      return isMinMaxPattern(I, Prev, FuncFMF);
+    if (isFMulAddIntrinsic(I))
       return InstDesc(Kind == RecurKind::FMulAdd, I,
                       I->hasAllowReassoc() ? nullptr : I);
     return InstDesc(false, I);
@@ -961,22 +954,14 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
   }
   if (AddReductionVar(Phi, RecurKind::SMax, TheLoop, FMF, RedDes, DB, AC, DT,
                       SE)) {
-    LLVM_DEBUG(dbgs() << "Found a SMAX reduction PHI." << *Phi << "\n");
+    LLVM_DEBUG(dbgs() << "Found an integral MinMax reduction PHI." << *Phi
+                      << "\n");
     return true;
   }
-  if (AddReductionVar(Phi, RecurKind::SMin, TheLoop, FMF, RedDes, DB, AC, DT,
+  if (AddReductionVar(Phi, RecurKind::FMax, TheLoop, FMF, RedDes, DB, AC, DT,
                       SE)) {
-    LLVM_DEBUG(dbgs() << "Found a SMIN reduction PHI." << *Phi << "\n");
-    return true;
-  }
-  if (AddReductionVar(Phi, RecurKind::UMax, TheLoop, FMF, RedDes, DB, AC, DT,
-                      SE)) {
-    LLVM_DEBUG(dbgs() << "Found a UMAX reduction PHI." << *Phi << "\n");
-    return true;
-  }
-  if (AddReductionVar(Phi, RecurKind::UMin, TheLoop, FMF, RedDes, DB, AC, DT,
-                      SE)) {
-    LLVM_DEBUG(dbgs() << "Found a UMIN reduction PHI." << *Phi << "\n");
+    LLVM_DEBUG(dbgs() << "Found a floating-point MinMax reduction PHI." << *Phi
+                      << "\n");
     return true;
   }
   if (AddReductionVar(Phi, RecurKind::AnyOf, TheLoop, FMF, RedDes, DB, AC, DT,
@@ -1000,41 +985,9 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
     LLVM_DEBUG(dbgs() << "Found an FAdd reduction PHI." << *Phi << "\n");
     return true;
   }
-  if (AddReductionVar(Phi, RecurKind::FMax, TheLoop, FMF, RedDes, DB, AC, DT,
-                      SE)) {
-    LLVM_DEBUG(dbgs() << "Found a float MAX reduction PHI." << *Phi << "\n");
-    return true;
-  }
-  if (AddReductionVar(Phi, RecurKind::FMin, TheLoop, FMF, RedDes, DB, AC, DT,
-                      SE)) {
-    LLVM_DEBUG(dbgs() << "Found a float MIN reduction PHI." << *Phi << "\n");
-    return true;
-  }
   if (AddReductionVar(Phi, RecurKind::FMulAdd, TheLoop, FMF, RedDes, DB, AC, DT,
                       SE)) {
     LLVM_DEBUG(dbgs() << "Found an FMulAdd reduction PHI." << *Phi << "\n");
-    return true;
-  }
-  if (AddReductionVar(Phi, RecurKind::FMaximum, TheLoop, FMF, RedDes, DB, AC, DT,
-                      SE)) {
-    LLVM_DEBUG(dbgs() << "Found a float MAXIMUM reduction PHI." << *Phi << "\n");
-    return true;
-  }
-  if (AddReductionVar(Phi, RecurKind::FMinimum, TheLoop, FMF, RedDes, DB, AC, DT,
-                      SE)) {
-    LLVM_DEBUG(dbgs() << "Found a float MINIMUM reduction PHI." << *Phi << "\n");
-    return true;
-  }
-  if (AddReductionVar(Phi, RecurKind::FMaximumNum, TheLoop, FMF, RedDes, DB, AC,
-                      DT, SE)) {
-    LLVM_DEBUG(dbgs() << "Found a float MAXIMUMNUM reduction PHI." << *Phi
-                      << "\n");
-    return true;
-  }
-  if (AddReductionVar(Phi, RecurKind::FMinimumNum, TheLoop, FMF, RedDes, DB, AC,
-                      DT, SE)) {
-    LLVM_DEBUG(dbgs() << "Found a float MINIMUMNUM reduction PHI." << *Phi
-                      << "\n");
     return true;
   }
 

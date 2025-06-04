@@ -147,8 +147,8 @@ public:
   /// corresponding to a min(X, Y) or max(X, Y), matching the recurrence kind \p
   /// Kind. \p Prev specifies the description of an already processed select
   /// instruction, so its corresponding cmp can be matched to it.
-  LLVM_ABI static InstDesc isMinMaxPattern(Instruction *I, RecurKind Kind,
-                                           const InstDesc &Prev);
+  LLVM_ABI static InstDesc isMinMaxPattern(Instruction *I, const InstDesc &Prev,
+                                           FastMathFlags FuncFMF);
 
   /// Returns a struct describing whether the instruction is either a
   ///   Select(ICmp(A, B), X, Y), or
