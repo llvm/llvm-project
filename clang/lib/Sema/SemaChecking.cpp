@@ -1832,30 +1832,30 @@ static ExprResult PointerAuthStringDiscriminator(Sema &S, CallExpr *Call) {
 static ExprResult GetVTablePointer(Sema &S, CallExpr *Call) {
   if (S.checkArgCount(Call, 1))
     return ExprError();
-  Expr *ThisArg = Call->getArg(0);
-  ExprResult ThisValue = S.DefaultFunctionArrayLvalueConversion(ThisArg);
-  if (ThisValue.isInvalid())
+  Expr *FirstArg = Call->getArg(0);
+  ExprResult FirstValue = S.DefaultFunctionArrayLvalueConversion(FirstArg);
+  if (FirstValue.isInvalid())
     return ExprError();
-  Call->setArg(0, ThisValue.get());
-  QualType ThisType = ThisArg->getType();
-  if (ThisType->canDecayToPointerType() && ThisType->isArrayType())
-    ThisType = S.Context.getDecayedType(ThisType);
+  Call->setArg(0, FirstValue.get());
+  QualType FirstArgType = FirstArg->getType();
+  if (FirstArgType->canDecayToPointerType() && FirstArgType->isArrayType())
+    FirstArgType = S.Context.getDecayedType(FirstArgType);
 
-  const CXXRecordDecl *SubjectRecord = ThisType->getPointeeCXXRecordDecl();
-  if (!SubjectRecord) {
-    S.Diag(ThisArg->getBeginLoc(), diag::err_get_vtable_pointer_incorrect_type)
-        << /*isPolymorphic=*/0 << ThisType;
+  const CXXRecordDecl *FirstArgRecord = FirstArgType->getPointeeCXXRecordDecl();
+  if (!FirstArgRecord) {
+    S.Diag(FirstArg->getBeginLoc(), diag::err_get_vtable_pointer_incorrect_type)
+        << /*isPolymorphic=*/0 << FirstArgType;
     return ExprError();
   }
   if (S.RequireCompleteType(
-          ThisArg->getBeginLoc(), ThisType->getPointeeType(),
+          FirstArg->getBeginLoc(), FirstArgType->getPointeeType(),
           diag::err_get_vtable_pointer_requires_complete_type)) {
     return ExprError();
   }
 
-  if (!SubjectRecord->isPolymorphic()) {
-    S.Diag(ThisArg->getBeginLoc(), diag::err_get_vtable_pointer_incorrect_type)
-        << /*isPolymorphic=*/1 << SubjectRecord;
+  if (!FirstArgRecord->isPolymorphic()) {
+    S.Diag(FirstArg->getBeginLoc(), diag::err_get_vtable_pointer_incorrect_type)
+        << /*isPolymorphic=*/1 << FirstArgRecord;
     return ExprError();
   }
   QualType ReturnType = S.Context.getPointerType(S.Context.VoidTy.withConst());
