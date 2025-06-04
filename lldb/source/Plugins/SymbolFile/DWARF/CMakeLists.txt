@@ -44,6 +44,9 @@ add_lldb_library(lldbPluginSymbolFileDWARF PLUGIN
   UniqueDWARFASTType.cpp
   ${SWIFT_SOURCES}
 
+  LINK_COMPONENTS
+    DebugInfoDWARF
+    Support
   LINK_LIBS
     lldbCore
     lldbExpression
@@ -60,9 +63,6 @@ add_lldb_library(lldbPluginSymbolFileDWARF PLUGIN
   CLANG_LIBS
     clangAST
     clangBasic
-  LINK_COMPONENTS
-    DebugInfoDWARF
-    Support
   )
 
 add_dependencies(lldbPluginSymbolFileDWARF

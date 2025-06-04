@@ -18,16 +18,17 @@ add_lldb_library(lldbHostMacOSXObjCXX ${PLUGIN_DEPENDENCY_ARG}
   HostThreadMacOSX.mm
   MemoryMonitorMacOSX.mm
 
+  ## BEGIN SWIFT
   ${SWIFT_SOURCES}
-
-  LINK_LIBS
-    lldbUtility
-    ${LLDB_PLUGIN_DEPENDENCIES}
-    ${EXTRA_LIBS}
+  ## END SWIFT
 
   LINK_COMPONENTS
     Support
     TargetParser
+  LINK_LIBS
+    lldbUtility
+    ${LLDB_PLUGIN_DEPENDENCIES}
+    ${EXTRA_LIBS}
   )
 
 target_compile_options(lldbHostMacOSXObjCXX PRIVATE

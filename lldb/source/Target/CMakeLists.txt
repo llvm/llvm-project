@@ -83,6 +83,9 @@ add_lldb_library(lldbTarget
   UnwindLLDB.cpp
   VerboseTrapFrameRecognizer.cpp
 
+  LINK_COMPONENTS
+    Support
+    MC
   LINK_LIBS
     lldbBreakpoint
     lldbCore
@@ -93,10 +96,6 @@ add_lldb_library(lldbTarget
     lldbUtility
     lldbValueObject
     lldbPluginProcessUtility
-
-  LINK_COMPONENTS
-    Support
-    MC
   )
 if(CMAKE_CXX_COMPILER_ID STREQUAL Clang)
   target_compile_options(lldbTarget PRIVATE -Wno-dollar-in-identifier-extension)

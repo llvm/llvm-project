@@ -61,6 +61,12 @@ add_lldb_library(lldbCore NO_PLUGIN_DEPENDENCIES
   DEPENDS
     clang-tablegen-targets
 
+
+  LINK_COMPONENTS
+    Support
+    Demangle
+    TargetParser
+    Telemetry
   LINK_LIBS
     lldbBreakpoint
     lldbDataFormatters
@@ -76,12 +82,6 @@ add_lldb_library(lldbCore NO_PLUGIN_DEPENDENCIES
 
   CLANG_LIBS
     clangDriver
-
-  LINK_COMPONENTS
-    Support
-    Demangle
-    TargetParser
-    Telemetry
   )
 
 add_dependencies(lldbCore

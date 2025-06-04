@@ -47,9 +47,12 @@ add_lldb_library(lldbCommands NO_PLUGIN_DEPENDENCIES
   CommandOptionArgumentTable.cpp
   CommandOptionsProcessAttach.cpp
   CommandOptionsProcessLaunch.cpp
-
+## BEGIN SWIFT
   ${Healtcheck_SOURCES}
+  ## END SWIFT
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbBreakpoint
     lldbCore
@@ -62,9 +65,6 @@ add_lldb_library(lldbCommands NO_PLUGIN_DEPENDENCIES
     lldbUtility
     lldbValueObject
     lldbVersion
-
-  LINK_COMPONENTS
-    Support
   )
 
 add_dependencies(lldbCommands LLDBOptionsGen)

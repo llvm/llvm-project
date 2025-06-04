@@ -27,6 +27,10 @@ add_lldb_library(lldbExpression ${PLUGIN_DEPENDENCY_ARG}
   DEPENDS
   intrinsics_gen
 
+  LINK_COMPONENTS
+    Core
+    ExecutionEngine
+    Support
   LINK_LIBS
     lldbCore
     lldbHost
@@ -36,9 +40,9 @@ add_lldb_library(lldbExpression ${PLUGIN_DEPENDENCY_ARG}
     lldbUtility
     lldbValueObject
 
-    # Begin Swift Mods
+    ## BEGIN SWIFT
     ${SWIFT_LIBS}
-    # End Swift Mods
+    ## END SWIFT
 
   LINK_COMPONENTS
     Core
