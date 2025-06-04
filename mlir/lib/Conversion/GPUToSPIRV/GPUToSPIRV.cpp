@@ -479,7 +479,7 @@ static Value createGroupReduceOpImpl(OpBuilder &builder, Location loc,
         .getResult();
   }
 
-  Value clusterSizeValue = {};
+  Value clusterSizeValue;
   if (clusterSize.has_value())
     clusterSizeValue = builder.create<spirv::ConstantOp>(
         loc, builder.getI32Type(),
