@@ -299,7 +299,7 @@ static void ReExecIfNeeded(bool ignore_heap) {
       if (personality(old_personality | ADDR_NO_RANDOMIZE) == -1) {
         Printf(
             "FATAL: ThreadSanitizer: encountered an incompatible memory "
-            "but was unable to disable ASLR (perhaps sandboxing is "
+            "layout but was unable to disable ASLR (perhaps sandboxing is "
             "enabled?).\n");
         Printf(
             "FATAL: Please rerun with lower ASLR entropy, ASLR disabled, "
