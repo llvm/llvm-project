@@ -15,6 +15,7 @@
 #ifndef LLVM_PROFILEDATA_CTXINSTRPROFILEREADER_H
 #define LLVM_PROFILEDATA_CTXINSTRPROFILEREADER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/ProfileData/PGOCtxProfWriter.h"
@@ -219,9 +220,9 @@ public:
       : Magic(Buffer.substr(0, PGOCtxProfileWriter::ContainerMagic.size())),
         Cursor(Buffer.substr(PGOCtxProfileWriter::ContainerMagic.size())) {}
 
-  Expected<PGOCtxProfile> loadProfiles();
+  LLVM_ABI Expected<PGOCtxProfile> loadProfiles();
 };
 
-void convertCtxProfToYaml(raw_ostream &OS, const PGOCtxProfile &Profile);
+LLVM_ABI void convertCtxProfToYaml(raw_ostream &OS, const PGOCtxProfile &Profile);
 } // namespace llvm
 #endif

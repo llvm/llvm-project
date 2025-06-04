@@ -13,6 +13,7 @@
 #ifndef LLVM_PROFILEDATA_PGOCTXPROFWRITER_H_
 #define LLVM_PROFILEDATA_PGOCTXPROFWRITER_H_
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitstream/BitCodeEnums.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
@@ -74,7 +75,7 @@ enum PGOCtxProfileBlockIDs {
 /// like value profiling - which would appear as additional records. For
 /// example, value profiling would produce a new record with a new record ID,
 /// containing the profiled values (much like the counters)
-class PGOCtxProfileWriter final : public ctx_profile::ProfileWriter {
+class LLVM_ABI PGOCtxProfileWriter final : public ctx_profile::ProfileWriter {
   enum class EmptyContextCriteria { None, EntryIsZero, AllAreZero };
 
   BitstreamWriter Writer;
@@ -111,6 +112,6 @@ public:
   static constexpr StringRef ContainerMagic = "CTXP";
 };
 
-Error createCtxProfFromYAML(StringRef Profile, raw_ostream &Out);
+LLVM_ABI Error createCtxProfFromYAML(StringRef Profile, raw_ostream &Out);
 } // namespace llvm
 #endif

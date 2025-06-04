@@ -13,6 +13,7 @@
 #ifndef LLVM_PROFILEDATA_MEMPROFSUMMARYBUILDER_H
 #define LLVM_PROFILEDATA_MEMPROFSUMMARYBUILDER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/MemProfSummary.h"
 
@@ -40,9 +41,9 @@ public:
   MemProfSummaryBuilder() = default;
   ~MemProfSummaryBuilder() = default;
 
-  void addRecord(const IndexedMemProfRecord &);
-  void addRecord(const MemProfRecord &);
-  std::unique_ptr<MemProfSummary> getSummary();
+  LLVM_ABI void addRecord(const IndexedMemProfRecord &);
+  LLVM_ABI void addRecord(const MemProfRecord &);
+  LLVM_ABI std::unique_ptr<MemProfSummary> getSummary();
 };
 
 } // namespace memprof
