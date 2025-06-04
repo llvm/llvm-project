@@ -113,14 +113,14 @@ func.func @transfer_read_dims_mismatch_non_zero_indices(
 // CHECK: #[[$ATTR_0:.+]] = affine_map<()[s0, s1] -> (s0 * 24 + s1 * 6)>
 
 // CHECK-LABEL:   func.func @transfer_read_dims_mismatch_non_zero_indices(
-// CHECK-SAME:      %[[IDX_1:.*]]: index, %[[IDX_2:.*]]: index,
-// CHECK-SAME:      %[[MEM:.*]]: memref<1x43x4x6xi32>
-// CHECK:           %[[C_0:.*]] = arith.constant 0 : i32
-// CHECK:           %[[COLLAPSED_IN:.*]] = memref.collapse_shape %[[MEM]]
+// CHECK-SAME:      %[[IDX_1:.+]]: index, %[[IDX_2:.+]]: index,
+// CHECK-SAME:      %[[MEM:.+]]: memref<1x43x4x6xi32>
+// CHECK:           %[[C_0:.+]] = arith.constant 0 : i32
+// CHECK:           %[[COLLAPSED_IN:.+]] = memref.collapse_shape %[[MEM]]
 // CHECK-SAME{LITERAL}: [[0, 1, 2, 3]]
 // CHECK-SAME:         : memref<1x43x4x6xi32> into memref<1032xi32>
-// CHECK:           %[[COLLAPSED_IDX:.*]] = affine.apply #[[$ATTR_0]]()[%[[IDX_1]], %[[IDX_2]]]
-// CHECK:           %[[READ:.*]] = vector.transfer_read %[[COLLAPSED_IN]][%[[COLLAPSED_IDX]]], %[[C_0]] {in_bounds = [true]} : memref<1032xi32>, vector<12xi32>
+// CHECK:           %[[COLLAPSED_IDX:.+]] = affine.apply #[[$ATTR_0]]()[%[[IDX_1]], %[[IDX_2]]]
+// CHECK:           %[[READ:.+]] = vector.transfer_read %[[COLLAPSED_IN]][%[[COLLAPSED_IDX]]], %[[C_0]] {in_bounds = [true]} : memref<1032xi32>, vector<12xi32>
 
 // CHECK-128B-LABEL: func @transfer_read_dims_mismatch_non_zero_indices(
 //   CHECK-128B-NOT:   memref.collapse_shape
@@ -232,20 +232,21 @@ func.func @transfer_read_dynamic_dim_to_flatten(
   return %res : vector<1x2x6xi32>
 }
 
-// CHECK: #[[$MAP:.*]] = affine_map<()[s0, s1] -> (s0 * 24 + s1 * 6)>
+// CHECK: #[[$MAP:.+]] = affine_map<()[s0, s1] -> (s0 * 24 + s1 * 6)>
 
 // CHECK-LABEL: func.func @transfer_read_dynamic_dim_to_flatten
 // CHECK-SAME:    %[[IDX_1:arg0]]
 // CHECK-SAME:    %[[IDX_2:arg1]]
 // CHECK-SAME:    %[[MEM:arg2]]
-// CHECK:              %[[C0_I32:.*]] = arith.constant 0 : i32
-// CHECK:              %[[COLLAPSED:.*]] = memref.collapse_shape %[[MEM]]
-// CHECK-SAME{LITERAL}:  [[0, 1, 2, 3]]
-// CHECK-SAME:           memref<1x?x4x6xi32> into memref<?xi32>
-// CHECK:              %[[COLLAPSED_IDX:.*]] = affine.apply #[[$MAP]]()[%[[IDX_1]], %[[IDX_2]]]
-// CHECK:              %[[VEC_1D:.*]] = vector.transfer_read %[[COLLAPSED]][%[[COLLAPSED_IDX]]],
-// CHECK-SAME:           %[[C0_I32]] {in_bounds = [true]} : memref<?xi32>, vector<12xi32>
-// CHECK:              %[[RESULT:.*]] = vector.shape_cast %[[VEC_1D]] : vector<12xi32> to vector<1x2x6xi32>
+// CHECK:              %[[C0_I32:.+]] = arith.constant 0 : i32
+// CHECK:              %[[C0:.+]] = arith.constant 0 : index
+// CHECK:              %[[COLLAPSED:.+]] = memref.collapse_shape %[[MEM]]
+// CHECK-SAME{LITERAL}:  [[0], [1, 2, 3]]
+// CHECK-SAME:           memref<1x?x4x6xi32> into memref<1x?xi32>
+// CHECK:              %[[COLLAPSED_IDX:.+]] = affine.apply #[[$MAP]]()[%[[IDX_1]], %[[IDX_2]]]
+// CHECK:              %[[VEC_1D:.+]] = vector.transfer_read %[[COLLAPSED]][%[[C0]], %[[COLLAPSED_IDX]]],
+// CHECK-SAME:           %[[C0_I32]] {in_bounds = [true]} : memref<1x?xi32>, vector<12xi32>
+// CHECK:              %[[RESULT:.+]] = vector.shape_cast %[[VEC_1D]] : vector<12xi32> to vector<1x2x6xi32>
 // CHECK:              return %[[RESULT]] : vector<1x2x6xi32>
 
 
@@ -531,21 +532,21 @@ func.func @transfer_write_dynamic_dim_to_flatten(
   return
 }
 
-// CHECK: #[[$MAP:.*]] = affine_map<()[s0, s1] -> (s0 * 24 + s1 * 6)>
+// CHECK: #[[$MAP:.+]] = affine_map<()[s0, s1] -> (s0 * 24 + s1 * 6)>
 
 // CHECK-LABEL: func.func @transfer_write_dynamic_dim_to_flatten
 // CHECK-SAME:    %[[IDX_1:arg0]]: index
 // CHECK-SAME:    %[[IDX_2:arg1]]: index
 // CHECK-SAME:    %[[VEC:arg2]]: vector<1x2x6xi32>
 // CHECK-SAME:    %[[MEM:arg3]]: memref<1x?x4x6xi32>
-
-// CHECK:              %[[COLLAPSED_MEM:.*]] = memref.collapse_shape %[[MEM]]
-// CHECK-SAME{LITERAL}:  [[0, 1, 2, 3]]
-// CHECK-SAME:           : memref<1x?x4x6xi32> into memref<?xi32>
-// CHECK:              %[[COLLAPSED_IDX:.*]] = affine.apply #[[$MAP]]()[%[[IDX_1]], %[[IDX_2]]]
-// CHECK:              %[[VEC_1D:.*]] = vector.shape_cast %[[VEC]] : vector<1x2x6xi32> to vector<12xi32>
-// CHECK:              vector.transfer_write %[[VEC_1D]], %[[COLLAPSED_MEM]][%[[COLLAPSED_IDX]]]
-// CHECK-SAME:           {in_bounds = [true]} : vector<12xi32>, memref<?xi32>
+// CHECK:              %[[C0:.+]] = arith.constant 0 : index
+// CHECK:              %[[COLLAPSED_MEM:.+]] = memref.collapse_shape %[[MEM]]
+// CHECK-SAME{LITERAL}:  [[0], [1, 2, 3]]
+// CHECK-SAME:           : memref<1x?x4x6xi32> into memref<1x?xi32>
+// CHECK:              %[[COLLAPSED_IDX:.+]] = affine.apply #[[$MAP]]()[%[[IDX_1]], %[[IDX_2]]]
+// CHECK:              %[[VEC_1D:.+]] = vector.shape_cast %[[VEC]] : vector<1x2x6xi32> to vector<12xi32>
+// CHECK:              vector.transfer_write %[[VEC_1D]], %[[COLLAPSED_MEM]][%[[C0]], %[[COLLAPSED_IDX]]]
+// CHECK-SAME:           {in_bounds = [true]} : vector<12xi32>, memref<1x?xi32>
 
 // CHECK-128B-LABEL: func @transfer_write_dynamic_dim_to_flatten
 //   CHECK-128B-NOT:   memref.collapse_shape

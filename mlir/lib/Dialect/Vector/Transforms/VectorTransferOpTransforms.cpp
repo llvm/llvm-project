@@ -642,7 +642,7 @@ public:
     // Determinine the first memref dimension to collapse
     int64_t firstDimToCollapse = std::max(
         lastDynIndex(sourceType.getShape()),
-        sourceType.getRank() - sourceType.getMaxCollapsableTrailingDims());
+        sourceType.getRank() - sourceType.getMaxContiguousTrailingDims());
 
     // 1. Collapse the source memref
     Value collapsedSource =
@@ -737,7 +737,7 @@ public:
     // Determinine the first memref dimension to collapse
     int64_t firstDimToCollapse = std::max(
         lastDynIndex(sourceType.getShape()),
-        sourceType.getRank() - sourceType.getMaxCollapsableTrailingDims());
+        sourceType.getRank() - sourceType.getMaxContiguousTrailingDims());
 
     // 1. Collapse the source memref
     Value collapsedSource =
