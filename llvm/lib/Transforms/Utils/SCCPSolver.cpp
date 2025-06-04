@@ -88,7 +88,7 @@ bool SCCPSolver::tryToReplaceWithConstant(Value *V) {
 /// Try to use \p Inst's value range from \p Solver to infer the NUW flag.
 static bool refineInstruction(SCCPSolver &Solver,
                               const SmallPtrSetImpl<Value *> &InsertedValues,
-                              Instruction &Inst, Statistic &InstRemovedStat) {
+                              Instruction &Inst) {
   bool Changed = false;
   auto GetRange = [&Solver, &InsertedValues](Value *Op) {
     if (auto *Const = dyn_cast<Constant>(Op))
@@ -100,9 +100,6 @@ static bool refineInstruction(SCCPSolver &Solver,
     return Solver.getLatticeValueFor(Op).asConstantRange(
         Op->getType(), /*UndefAllowed=*/false);
   };
-
-  Value *X;
-  const APInt *RHSC;
 
   if (isa<OverflowingBinaryOperator>(Inst)) {
     if (Inst.hasNoSignedWrap() && Inst.hasNoUnsignedWrap())
@@ -162,15 +159,6 @@ static bool refineInstruction(SCCPSolver &Solver,
                           GEPNoWrapFlags::noUnsignedWrap());
       Changed = true;
     }
-  } else if (match(&Inst, m_And(m_Value(X), m_LowBitMask(RHSC)))) {
-    ConstantRange LRange = GetRange(Inst.getOperand(0));
-    if (!LRange.getUnsignedMax().ule(*RHSC))
-      return false;
-
-    Inst.replaceAllUsesWith(X);
-    Inst.eraseFromParent();
-    ++InstRemovedStat;
-    Changed = true;
   }
 
   return Changed;
@@ -246,6 +234,33 @@ static bool replaceSignedInst(SCCPSolver &Solver,
   return true;
 }
 
+/// Try to use \p Inst's value range from \p Solver to simplify it.
+static Value *simplifyInstruction(SCCPSolver &Solver,
+                                  SmallPtrSetImpl<Value *> &InsertedValues,
+                                  Instruction &Inst) {
+  auto GetRange = [&Solver, &InsertedValues](Value *Op) {
+    if (auto *Const = dyn_cast<Constant>(Op))
+      return Const->toConstantRange();
+    if (InsertedValues.contains(Op)) {
+      unsigned Bitwidth = Op->getType()->getScalarSizeInBits();
+      return ConstantRange::getFull(Bitwidth);
+    }
+    return Solver.getLatticeValueFor(Op).asConstantRange(
+        Op->getType(), /*UndefAllowed=*/false);
+  };
+
+  Value *X;
+  const APInt *RHSC;
+  // Remove masking operations.
+  if (match(&Inst, m_And(m_Value(X), m_LowBitMask(RHSC)))) {
+    ConstantRange LRange = GetRange(Inst.getOperand(0));
+    if (LRange.getUnsignedMax().ule(*RHSC))
+      return X;
+  }
+
+  return nullptr;
+}
+
 bool SCCPSolver::simplifyInstsInBlock(BasicBlock &BB,
                                       SmallPtrSetImpl<Value *> &InsertedValues,
                                       Statistic &InstRemovedStat,
@@ -263,8 +278,12 @@ bool SCCPSolver::simplifyInstsInBlock(BasicBlock &BB,
     } else if (replaceSignedInst(*this, InsertedValues, Inst)) {
       MadeChanges = true;
       ++InstReplacedStat;
-    } else if (refineInstruction(*this, InsertedValues, Inst,
-                                 InstRemovedStat)) {
+    } else if (refineInstruction(*this, InsertedValues, Inst)) {
+      MadeChanges = true;
+    } else if (auto *V = simplifyInstruction(*this, InsertedValues, Inst)) {
+      Inst.replaceAllUsesWith(V);
+      Inst.eraseFromParent();
+      ++InstRemovedStat;
       MadeChanges = true;
     }
   }
