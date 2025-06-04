@@ -120,23 +120,30 @@ IRBuilderBase::createCallHelper(Function *Callee, ArrayRef<Value *> Ops,
   return CI;
 }
 
-Value *IRBuilderBase::CreateVScale(Constant *Scaling, const Twine &Name) {
-  assert(isa<ConstantInt>(Scaling) && "Expected constant integer");
-  if (cast<ConstantInt>(Scaling)->isZero())
-    return Scaling;
-  CallInst *CI =
-      CreateIntrinsic(Intrinsic::vscale, {Scaling->getType()}, {}, {}, Name);
-  return cast<ConstantInt>(Scaling)->isOne() ? CI : CreateMul(CI, Scaling);
+Value *IRBuilderBase::CreateVScale(Type *Ty, const Twine &Name) {
+  return CreateIntrinsic(Intrinsic::vscale, {Ty}, {}, {}, Name);
 }
 
-Value *IRBuilderBase::CreateElementCount(Type *DstType, ElementCount EC) {
-  Constant *MinEC = ConstantInt::get(DstType, EC.getKnownMinValue());
-  return EC.isScalable() ? CreateVScale(MinEC) : MinEC;
+Value *IRBuilderBase::CreateElementCount(Type *Ty, ElementCount EC) {
+  if (EC.isFixed() || EC.isZero())
+    return ConstantInt::get(Ty, EC.getKnownMinValue());
+
+  Value *VScale = CreateVScale(Ty);
+  if (EC.getKnownMinValue() == 1)
+    return VScale;
+
+  return CreateMul(VScale, ConstantInt::get(Ty, EC.getKnownMinValue()));
 }
 
-Value *IRBuilderBase::CreateTypeSize(Type *DstType, TypeSize Size) {
-  Constant *MinSize = ConstantInt::get(DstType, Size.getKnownMinValue());
-  return Size.isScalable() ? CreateVScale(MinSize) : MinSize;
+Value *IRBuilderBase::CreateTypeSize(Type *Ty, TypeSize Size) {
+  if (Size.isFixed() || Size.isZero())
+    return ConstantInt::get(Ty, Size.getKnownMinValue());
+
+  Value *VScale = CreateVScale(Ty);
+  if (Size.getKnownMinValue() == 1)
+    return VScale;
+
+  return CreateMul(VScale, ConstantInt::get(Ty, Size.getKnownMinValue()));
 }
 
 Value *IRBuilderBase::CreateStepVector(Type *DstType, const Twine &Name) {

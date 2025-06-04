@@ -4793,11 +4793,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   case SVE::BI__builtin_sve_svlen_u64: {
     SVETypeFlags TF(Builtin->TypeModifier);
     auto VTy = cast<llvm::VectorType>(getSVEType(TF));
-    auto *NumEls =
-        llvm::ConstantInt::get(Ty, VTy->getElementCount().getKnownMinValue());
-
-    Function *F = CGM.getIntrinsic(Intrinsic::vscale, Ty);
-    return Builder.CreateMul(NumEls, Builder.CreateCall(F));
+    return Builder.CreateElementCount(Ty, VTy->getElementCount());
   }
 
   case SVE::BI__builtin_sve_svtbl2_u8:
