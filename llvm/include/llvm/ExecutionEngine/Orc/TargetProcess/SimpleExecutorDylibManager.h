@@ -23,6 +23,7 @@
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/ExecutorBootstrapService.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/ExecutorResolver.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Error.h"
@@ -54,8 +55,12 @@ private:
   static llvm::orc::shared::CWrapperFunctionResult
   lookupWrapper(const char *ArgData, size_t ArgSize);
 
+  static llvm::orc::shared::CWrapperFunctionResult
+  resolveWrapper(const char *ArgData, size_t ArgSize);
+
   std::mutex M;
   DylibSet Dylibs;
+  std::vector<std::unique_ptr<ExecutorResolver>> Resolvers;
 };
 
 } // end namespace rt_bootstrap
