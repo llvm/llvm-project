@@ -13,12 +13,14 @@
 define amdgpu_kernel void @system_one_as_acquire() #0 {
   ; GFX6-LABEL: name: system_one_as_acquire
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_WAITCNT_soft 3952
   ; GFX6-NEXT:   BUFFER_WBINVL1 implicit $exec
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: system_one_as_acquire
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_WAITCNT_soft 3952
   ; GFX8-NEXT:   BUFFER_WBINVL1_VOL implicit $exec
   ; GFX8-NEXT:   S_ENDPGM 0
@@ -62,11 +64,13 @@ entry:
 define amdgpu_kernel void @system_one_as_release() #0 {
   ; GFX6-LABEL: name: system_one_as_release
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_WAITCNT_soft 3952
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: system_one_as_release
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_WAITCNT_soft 3952
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
@@ -101,12 +105,14 @@ entry:
 define amdgpu_kernel void @system_one_as_acq_rel() #0 {
   ; GFX6-LABEL: name: system_one_as_acq_rel
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_WAITCNT_soft 3952
   ; GFX6-NEXT:   BUFFER_WBINVL1 implicit $exec
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: system_one_as_acq_rel
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_WAITCNT_soft 3952
   ; GFX8-NEXT:   BUFFER_WBINVL1_VOL implicit $exec
   ; GFX8-NEXT:   S_ENDPGM 0
@@ -150,12 +156,14 @@ entry:
 define amdgpu_kernel void @system_one_as_seq_cst() #0 {
   ; GFX6-LABEL: name: system_one_as_seq_cst
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_WAITCNT_soft 3952
   ; GFX6-NEXT:   BUFFER_WBINVL1 implicit $exec
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: system_one_as_seq_cst
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_WAITCNT_soft 3952
   ; GFX8-NEXT:   BUFFER_WBINVL1_VOL implicit $exec
   ; GFX8-NEXT:   S_ENDPGM 0
@@ -199,10 +207,12 @@ entry:
 define amdgpu_kernel void @singlethread_one_as_acquire() #0 {
   ; GFX6-LABEL: name: singlethread_one_as_acquire
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: singlethread_one_as_acquire
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
   ; GFX10WGP-LABEL: name: singlethread_one_as_acquire
@@ -228,10 +238,12 @@ entry:
 define amdgpu_kernel void @singlethread_one_as_release() #0 {
   ; GFX6-LABEL: name: singlethread_one_as_release
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: singlethread_one_as_release
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
   ; GFX10WGP-LABEL: name: singlethread_one_as_release
@@ -257,10 +269,12 @@ entry:
 define amdgpu_kernel void @singlethread_one_as_acq_rel() #0 {
   ; GFX6-LABEL: name: singlethread_one_as_acq_rel
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: singlethread_one_as_acq_rel
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
   ; GFX10WGP-LABEL: name: singlethread_one_as_acq_rel
@@ -286,10 +300,12 @@ entry:
 define amdgpu_kernel void @singlethread_one_as_seq_cst() #0 {
   ; GFX6-LABEL: name: singlethread_one_as_seq_cst
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: singlethread_one_as_seq_cst
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
   ; GFX10WGP-LABEL: name: singlethread_one_as_seq_cst
@@ -315,12 +331,14 @@ entry:
 define amdgpu_kernel void @agent_one_as_acquire() #0 {
   ; GFX6-LABEL: name: agent_one_as_acquire
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_WAITCNT_soft 3952
   ; GFX6-NEXT:   BUFFER_WBINVL1 implicit $exec
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: agent_one_as_acquire
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_WAITCNT_soft 3952
   ; GFX8-NEXT:   BUFFER_WBINVL1_VOL implicit $exec
   ; GFX8-NEXT:   S_ENDPGM 0
@@ -364,11 +382,13 @@ entry:
 define amdgpu_kernel void @agent_one_as_release() #0 {
   ; GFX6-LABEL: name: agent_one_as_release
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_WAITCNT_soft 3952
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: agent_one_as_release
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_WAITCNT_soft 3952
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
@@ -403,12 +423,14 @@ entry:
 define amdgpu_kernel void @agent_one_as_acq_rel() #0 {
   ; GFX6-LABEL: name: agent_one_as_acq_rel
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_WAITCNT_soft 3952
   ; GFX6-NEXT:   BUFFER_WBINVL1 implicit $exec
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: agent_one_as_acq_rel
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_WAITCNT_soft 3952
   ; GFX8-NEXT:   BUFFER_WBINVL1_VOL implicit $exec
   ; GFX8-NEXT:   S_ENDPGM 0
@@ -452,12 +474,14 @@ entry:
 define amdgpu_kernel void @agent_one_as_seq_cst() #0 {
   ; GFX6-LABEL: name: agent_one_as_seq_cst
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_WAITCNT_soft 3952
   ; GFX6-NEXT:   BUFFER_WBINVL1 implicit $exec
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: agent_one_as_seq_cst
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_WAITCNT_soft 3952
   ; GFX8-NEXT:   BUFFER_WBINVL1_VOL implicit $exec
   ; GFX8-NEXT:   S_ENDPGM 0
@@ -501,10 +525,12 @@ entry:
 define amdgpu_kernel void @workgroup_one_as_acquire() #0 {
   ; GFX6-LABEL: name: workgroup_one_as_acquire
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: workgroup_one_as_acquire
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
   ; GFX10WGP-LABEL: name: workgroup_one_as_acquire
@@ -536,10 +562,12 @@ entry:
 define amdgpu_kernel void @workgroup_one_as_release() #0 {
   ; GFX6-LABEL: name: workgroup_one_as_release
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: workgroup_one_as_release
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
   ; GFX10WGP-LABEL: name: workgroup_one_as_release
@@ -569,10 +597,12 @@ entry:
 define amdgpu_kernel void @workgroup_one_as_acq_rel() #0 {
   ; GFX6-LABEL: name: workgroup_one_as_acq_rel
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: workgroup_one_as_acq_rel
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
   ; GFX10WGP-LABEL: name: workgroup_one_as_acq_rel
@@ -604,10 +634,12 @@ entry:
 define amdgpu_kernel void @workgroup_one_as_seq_cst() #0 {
   ; GFX6-LABEL: name: workgroup_one_as_seq_cst
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: workgroup_one_as_seq_cst
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
   ; GFX10WGP-LABEL: name: workgroup_one_as_seq_cst
@@ -639,10 +671,12 @@ entry:
 define amdgpu_kernel void @wavefront_one_as_acquire() #0 {
   ; GFX6-LABEL: name: wavefront_one_as_acquire
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: wavefront_one_as_acquire
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
   ; GFX10WGP-LABEL: name: wavefront_one_as_acquire
@@ -668,10 +702,12 @@ entry:
 define amdgpu_kernel void @wavefront_one_as_release() #0 {
   ; GFX6-LABEL: name: wavefront_one_as_release
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: wavefront_one_as_release
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
   ; GFX10WGP-LABEL: name: wavefront_one_as_release
@@ -697,10 +733,12 @@ entry:
 define amdgpu_kernel void @wavefront_one_as_acq_rel() #0 {
   ; GFX6-LABEL: name: wavefront_one_as_acq_rel
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: wavefront_one_as_acq_rel
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
   ; GFX10WGP-LABEL: name: wavefront_one_as_acq_rel
@@ -726,10 +764,12 @@ entry:
 define amdgpu_kernel void @wavefront_one_as_seq_cst() #0 {
   ; GFX6-LABEL: name: wavefront_one_as_seq_cst
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: wavefront_one_as_seq_cst
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
   ; GFX10WGP-LABEL: name: wavefront_one_as_seq_cst
@@ -755,12 +795,14 @@ entry:
 define amdgpu_kernel void @system_acquire() #0 {
   ; GFX6-LABEL: name: system_acquire
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_WAITCNT_soft 112
   ; GFX6-NEXT:   BUFFER_WBINVL1 implicit $exec
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: system_acquire
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_WAITCNT_soft 112
   ; GFX8-NEXT:   BUFFER_WBINVL1_VOL implicit $exec
   ; GFX8-NEXT:   S_ENDPGM 0
@@ -804,11 +846,13 @@ entry:
 define amdgpu_kernel void @system_release() #0 {
   ; GFX6-LABEL: name: system_release
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_WAITCNT_soft 112
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: system_release
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_WAITCNT_soft 112
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
@@ -843,12 +887,14 @@ entry:
 define amdgpu_kernel void @system_acq_rel() #0 {
   ; GFX6-LABEL: name: system_acq_rel
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_WAITCNT_soft 112
   ; GFX6-NEXT:   BUFFER_WBINVL1 implicit $exec
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: system_acq_rel
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_WAITCNT_soft 112
   ; GFX8-NEXT:   BUFFER_WBINVL1_VOL implicit $exec
   ; GFX8-NEXT:   S_ENDPGM 0
@@ -892,12 +938,14 @@ entry:
 define amdgpu_kernel void @system_seq_cst() #0 {
   ; GFX6-LABEL: name: system_seq_cst
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_WAITCNT_soft 112
   ; GFX6-NEXT:   BUFFER_WBINVL1 implicit $exec
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: system_seq_cst
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_WAITCNT_soft 112
   ; GFX8-NEXT:   BUFFER_WBINVL1_VOL implicit $exec
   ; GFX8-NEXT:   S_ENDPGM 0
@@ -941,10 +989,12 @@ entry:
 define amdgpu_kernel void @singlethread_acquire() #0 {
   ; GFX6-LABEL: name: singlethread_acquire
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: singlethread_acquire
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
   ; GFX10WGP-LABEL: name: singlethread_acquire
@@ -970,10 +1020,12 @@ entry:
 define amdgpu_kernel void @singlethread_release() #0 {
   ; GFX6-LABEL: name: singlethread_release
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: singlethread_release
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
   ; GFX10WGP-LABEL: name: singlethread_release
@@ -999,10 +1051,12 @@ entry:
 define amdgpu_kernel void @singlethread_acq_rel() #0 {
   ; GFX6-LABEL: name: singlethread_acq_rel
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: singlethread_acq_rel
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
   ; GFX10WGP-LABEL: name: singlethread_acq_rel
@@ -1028,10 +1082,12 @@ entry:
 define amdgpu_kernel void @singlethread_seq_cst() #0 {
   ; GFX6-LABEL: name: singlethread_seq_cst
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: singlethread_seq_cst
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
   ; GFX10WGP-LABEL: name: singlethread_seq_cst
@@ -1057,12 +1113,14 @@ entry:
 define amdgpu_kernel void @agent_acquire() #0 {
   ; GFX6-LABEL: name: agent_acquire
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_WAITCNT_soft 112
   ; GFX6-NEXT:   BUFFER_WBINVL1 implicit $exec
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: agent_acquire
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_WAITCNT_soft 112
   ; GFX8-NEXT:   BUFFER_WBINVL1_VOL implicit $exec
   ; GFX8-NEXT:   S_ENDPGM 0
@@ -1106,11 +1164,13 @@ entry:
 define amdgpu_kernel void @agent_release() #0 {
   ; GFX6-LABEL: name: agent_release
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_WAITCNT_soft 112
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: agent_release
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_WAITCNT_soft 112
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
@@ -1145,12 +1205,14 @@ entry:
 define amdgpu_kernel void @agent_acq_rel() #0 {
   ; GFX6-LABEL: name: agent_acq_rel
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_WAITCNT_soft 112
   ; GFX6-NEXT:   BUFFER_WBINVL1 implicit $exec
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: agent_acq_rel
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_WAITCNT_soft 112
   ; GFX8-NEXT:   BUFFER_WBINVL1_VOL implicit $exec
   ; GFX8-NEXT:   S_ENDPGM 0
@@ -1194,12 +1256,14 @@ entry:
 define amdgpu_kernel void @agent_seq_cst() #0 {
   ; GFX6-LABEL: name: agent_seq_cst
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_WAITCNT_soft 112
   ; GFX6-NEXT:   BUFFER_WBINVL1 implicit $exec
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: agent_seq_cst
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_WAITCNT_soft 112
   ; GFX8-NEXT:   BUFFER_WBINVL1_VOL implicit $exec
   ; GFX8-NEXT:   S_ENDPGM 0
@@ -1243,11 +1307,13 @@ entry:
 define amdgpu_kernel void @workgroup_acquire() #0 {
   ; GFX6-LABEL: name: workgroup_acquire
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_WAITCNT_soft 127
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: workgroup_acquire
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_WAITCNT_soft 127
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
@@ -1282,11 +1348,13 @@ entry:
 define amdgpu_kernel void @workgroup_release() #0 {
   ; GFX6-LABEL: name: workgroup_release
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_WAITCNT_soft 127
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: workgroup_release
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_WAITCNT_soft 127
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
@@ -1319,11 +1387,13 @@ entry:
 define amdgpu_kernel void @workgroup_acq_rel() #0 {
   ; GFX6-LABEL: name: workgroup_acq_rel
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_WAITCNT_soft 127
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: workgroup_acq_rel
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_WAITCNT_soft 127
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
@@ -1358,11 +1428,13 @@ entry:
 define amdgpu_kernel void @workgroup_seq_cst() #0 {
   ; GFX6-LABEL: name: workgroup_seq_cst
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_WAITCNT_soft 127
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: workgroup_seq_cst
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_WAITCNT_soft 127
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
@@ -1397,10 +1469,12 @@ entry:
 define amdgpu_kernel void @wavefront_acquire() #0 {
   ; GFX6-LABEL: name: wavefront_acquire
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: wavefront_acquire
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
   ; GFX10WGP-LABEL: name: wavefront_acquire
@@ -1426,10 +1500,12 @@ entry:
 define amdgpu_kernel void @wavefront_release() #0 {
   ; GFX6-LABEL: name: wavefront_release
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: wavefront_release
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
   ; GFX10WGP-LABEL: name: wavefront_release
@@ -1455,10 +1531,12 @@ entry:
 define amdgpu_kernel void @wavefront_acq_rel() #0 {
   ; GFX6-LABEL: name: wavefront_acq_rel
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: wavefront_acq_rel
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
   ; GFX10WGP-LABEL: name: wavefront_acq_rel
@@ -1484,10 +1562,12 @@ entry:
 define amdgpu_kernel void @wavefront_seq_cst() #0 {
   ; GFX6-LABEL: name: wavefront_seq_cst
   ; GFX6: bb.0.entry:
+  ; GFX6-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX6-NEXT:   S_ENDPGM 0
   ;
   ; GFX8-LABEL: name: wavefront_seq_cst
   ; GFX8: bb.0.entry:
+  ; GFX8-NEXT:   S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
   ; GFX10WGP-LABEL: name: wavefront_seq_cst

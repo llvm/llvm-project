@@ -71,6 +71,7 @@ define amdgpu_kernel void @test_kernel(i32 %val) #0 {
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ds_write_b32 v0, v1
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_endpgm
 ; CHECK-NEXT:  .LBB0_2: ; %end
 ; CHECK-NEXT:    s_endpgm
