@@ -114,6 +114,15 @@ auto f4 = 0o0E1; /* expected-error {{invalid suffix 'E1' on integer constant}}
                     cpp-warning {{octal integer literals are a Clang extension}}
                  */
 
+// Show that valid floating-point literals with a leading 0 do not produce octal-related warnings.
+auto f5 = 0.;
+auto f7 = 00.;
+auto f8 = 01.;
+auto f9 = 0e1;
+auto f10 = 0E1;
+auto f11 = 00e1;
+auto f12 = 00E1;
+
 // Ensure digit separators work as expected.
 constexpr int p = 0o0'1'2'3'4'5'6'7; /* compat-warning {{octal integer literals are incompatible with standards before C2y}}
                                         ext-warning {{octal integer literals are a C2y extension}}
