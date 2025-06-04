@@ -1332,6 +1332,51 @@ void ShuffleOp::build(OpBuilder &builder, OperationState &result, Value value,
 }
 
 //===----------------------------------------------------------------------===//
+// RotateOp
+//===----------------------------------------------------------------------===//
+
+void RotateOp::build(OpBuilder &builder, OperationState &result, Value value,
+                     int32_t offset, int32_t width) {
+  build(builder, result, value,
+        builder.create<arith::ConstantOp>(result.location,
+                                          builder.getI32IntegerAttr(offset)),
+        builder.create<arith::ConstantOp>(result.location,
+                                          builder.getI32IntegerAttr(width)));
+}
+
+LogicalResult RotateOp::verify() {
+  llvm::APInt offsetValue;
+  if (auto constOp = getOffset().getDefiningOp<arith::ConstantOp>()) {
+    if (auto intAttr = llvm::dyn_cast<mlir::IntegerAttr>(constOp.getValue())) {
+      offsetValue = intAttr.getValue();
+    } else {
+      return emitOpError() << "offset is not an integer value";
+    }
+  } else {
+    return emitOpError() << "offset is not a constant value";
+  }
+
+  llvm::APInt widthValue;
+  if (auto constOp = getWidth().getDefiningOp<arith::ConstantOp>()) {
+    if (auto intAttr = llvm::dyn_cast<mlir::IntegerAttr>(constOp.getValue())) {
+      widthValue = intAttr.getValue();
+    } else {
+      return emitOpError() << "width is not an integer value";
+    }
+  } else {
+    return emitOpError() << "width is not a constant value";
+  }
+
+  if (!widthValue.isPowerOf2())
+    return emitOpError() << "width must be a power of two";
+
+  if (offsetValue.sge(widthValue) || offsetValue.slt(0))
+    return emitOpError() << "offset must be in the range [0, width)";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // BarrierOp
 //===----------------------------------------------------------------------===//
 
