@@ -14713,7 +14713,7 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
           SourceLocation Loc;
           if (!Init->isIntegerConstantExpr(Context, &Loc)) {
             Diag(Loc, diag::ext_in_class_initializer_non_constant)
-              << Init->getSourceRange();
+                << Init->getSourceRange();
           }
         }
         (void)var->checkForConstantInitialization(Notes);
@@ -14754,7 +14754,7 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
     } else if (var->isStaticDataMember() && !var->isInline() &&
                var->getLexicalDeclContext()->isRecord()) {
       Diag(var->getLocation(), diag::err_in_class_initializer_non_constant)
-        << Init->getSourceRange();
+          << Init->getSourceRange();
       for (auto &it : Notes)
         Diag(it.first, it.second);
       var->setInvalidDecl();
