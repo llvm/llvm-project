@@ -136,7 +136,7 @@ LoadCommands:
         reserved3:       0x00000000
 ...
 )";
-  
+
   // Perform setup.
   llvm::Expected<TestFile> file = TestFile::fromYaml(yamldata);
   EXPECT_THAT_EXPECTED(file, llvm::Succeeded());
@@ -146,6 +146,7 @@ LoadCommands:
   ASSERT_NE(object_file, nullptr);
 
   // Verify that the object file is recognized as Mach-O.
-  ASSERT_EQ(object_file->GetArchitecture().GetTriple().getObjectFormat(), llvm::Triple::MachO);
+  ASSERT_EQ(object_file->GetArchitecture().GetTriple().getObjectFormat(),
+            llvm::Triple::MachO);
 }
 #endif
