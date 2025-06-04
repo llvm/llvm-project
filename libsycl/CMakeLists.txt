@@ -22,8 +22,7 @@ option(LIBSYCL_ENABLE_WERROR "Treat all warnings as errors in the libsycl projec
 # Configure System
 #===============================================================================
 
-set(LIBSYCL_INSTALL_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}" CACHE STRING
-    "Path where libsycl headers should be installed.")
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 set(LIBSYCL_SHARED_OUTPUT_NAME "sycl" CACHE STRING "Output name for the shared libsycl runtime library.")
 
@@ -32,6 +31,7 @@ if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   if(LIBSYCL_LIBDIR_SUBDIR)
     string(APPEND LIBSYCL_TARGET_SUBDIR /${LIBSYCL_LIBDIR_SUBDIR})
   endif()
+  cmake_path(NORMAL_PATH LIBSYCL_TARGET_SUBDIR)
   set(LIBSYCL_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LIBSYCL_TARGET_SUBDIR})
   set(LIBSYCL_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LIBSYCL_TARGET_SUBDIR} CACHE STRING
       "Path where built libsycl libraries should be installed.")
@@ -76,15 +76,10 @@ install(FILES
 # Setup Compiler Flags
 #===============================================================================
 
-# Starting CMake 3.26 this property as ON by default. With 3.20+ we still need to set it.
-if(MSVC)
-  set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-endif()
-
 # Enable all warnings by default
-if (MSVC)
+if(MSVC)
   append("/W4" CMAKE_CXX_FLAGS)
-else ()
+else()
   append("-Wall -Wextra" CMAKE_CXX_FLAGS)
 endif()
 
