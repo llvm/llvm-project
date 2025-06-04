@@ -32,4 +32,6 @@ add_offload_unittest("program"
 add_offload_unittest("queue"
     queue/olCreateQueue.cpp
     queue/olWaitQueue.cpp
-    queue/olDestroyQueue.cpp)
+    queue/olDestroyQueue.cpp
+    queue/olGetQueueInfo.cpp
+    queue/olGetQueueInfoSize.cpp)
