@@ -384,8 +384,10 @@ LVRange *LVBinaryReader::getSectionRanges(LVSectionIndex SectionIndex) {
   // Check if we already have a mapping for this section index.
   LVSectionRanges::iterator IterSection = SectionRanges.find(SectionIndex);
   if (IterSection == SectionRanges.end())
-    IterSection =
-        SectionRanges.emplace(SectionIndex, std::make_unique<LVRange>()).first;
+    IterSection = SectionRanges
+                      .emplace(SectionIndex,
+                               std::make_unique<LVRange>(getTombstoneAddress()))
+                      .first;
   LVRange *Range = IterSection->second.get();
   assert(Range && "Range is null.");
   return Range;
