@@ -1648,12 +1648,13 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
   // If we are compiling as iOS / simulator, don't attempt to link libgcc_s.1,
   // it never went into the SDK.
   // Linking against libgcc_s.1 isn't needed for iOS 5.0+ or macOS 10.6+
-  if (isTargetIOSBased() && isIPhoneOSVersionLT(5, 0) &&
-      !isTargetIOSSimulator() && getTriple().getArch() != llvm::Triple::aarch64)
-    CmdArgs.push_back("-lgcc_s.1");
-  else if (isTargetMacOSBased() && isMacosxVersionLT(10, 6) &&
-           getTriple().getArch() != llvm::Triple::aarch64)
-    CmdArgs.push_back("-lgcc_s.1");
+  if (getTriple().getArch() != llvm::Triple::aarch64) {
+    if (isTargetIOSBased() && isIPhoneOSVersionLT(5, 0) &&
+        !isTargetIOSSimulator())
+      CmdArgs.push_back("-lgcc_s.1");
+    else if (isTargetMacOSBased() && isMacosxVersionLT(10, 6))
+      CmdArgs.push_back("-lgcc_s.1");
+  }
   AddLinkRuntimeLib(Args, CmdArgs, "builtins");
 }
 
