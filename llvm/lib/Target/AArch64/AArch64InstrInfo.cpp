@@ -1281,8 +1281,9 @@ bool AArch64InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
                                       int64_t &CmpValue) const {
   // The first operand can be a frame index where we'd normally expect a
   // register.
+  // FIXME: Pass subregisters out of analyzeCompare
   assert(MI.getNumOperands() >= 2 && "All AArch64 cmps should have 2 operands");
-  if (!MI.getOperand(1).isReg())
+  if (!MI.getOperand(1).isReg() || MI.getOperand(1).getSubReg())
     return false;
 
   switch (MI.getOpcode()) {
@@ -1292,6 +1293,9 @@ bool AArch64InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
   case AArch64::PTEST_PP_ANY:
     SrcReg = MI.getOperand(0).getReg();
     SrcReg2 = MI.getOperand(1).getReg();
+    if (MI.getOperand(2).getSubReg())
+      return false;
+
     // Not sure about the mask and value for now...
     CmpMask = ~0;
     CmpValue = 0;
@@ -1311,6 +1315,11 @@ bool AArch64InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
     // Replace SUBSWrr with SUBWrr if NZCV is not used.
     SrcReg = MI.getOperand(1).getReg();
     SrcReg2 = MI.getOperand(2).getReg();
+
+    // FIXME: Pass subregisters out of analyzeCompare
+    if (MI.getOperand(2).getSubReg())
+      return false;
+
     CmpMask = ~0;
     CmpValue = 0;
     return true;
@@ -3231,6 +3240,8 @@ bool AArch64InstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI,
       [&](int64_t Scale,
           ExtAddrMode::Formula Form = ExtAddrMode::Formula::Basic) -> bool {
     if (MemI.getOperand(2).getImm() != 0)
+      return false;
+    if ((unsigned)Scale != Scale)
       return false;
     if (!isLegalAddressingMode(NumBytes, /* Offset */ 0, Scale))
       return false;
