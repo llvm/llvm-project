@@ -13,7 +13,6 @@
 #ifndef LLVM_PROFILEDATA_MEMPROFREADER_H_
 #define LLVM_PROFILEDATA_MEMPROFREADER_H_
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -26,6 +25,7 @@
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/MemProfData.inc"
 #include "llvm/ProfileData/MemProfRadixTree.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -225,7 +225,8 @@ public:
 
   // Create a YAMLMemProfReader after sanity checking the contents of the file
   // at \p Path or the \p Buffer.
-  LLVM_ABI static Expected<std::unique_ptr<YAMLMemProfReader>> create(const Twine &Path);
+  LLVM_ABI static Expected<std::unique_ptr<YAMLMemProfReader>>
+  create(const Twine &Path);
   LLVM_ABI static Expected<std::unique_ptr<YAMLMemProfReader>>
   create(std::unique_ptr<MemoryBuffer> Buffer);
 

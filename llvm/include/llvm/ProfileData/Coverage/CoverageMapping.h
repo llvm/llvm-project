@@ -665,7 +665,8 @@ public:
   /// \param NextIDs The list of {FalseID, TrueID} indexed by ID
   ///        The first element [0] should be the root node.
   /// \param Offset Offset of index to final decisions.
-  LLVM_ABI TVIdxBuilder(const SmallVectorImpl<ConditionIDs> &NextIDs, int Offset = 0);
+  LLVM_ABI TVIdxBuilder(const SmallVectorImpl<ConditionIDs> &NextIDs,
+                        int Offset = 0);
 };
 } // namespace mcdc
 
@@ -1055,10 +1056,12 @@ public:
   LLVM_ABI CoverageData getCoverageForFile(StringRef Filename) const;
 
   /// Get the coverage for a particular function.
-  LLVM_ABI CoverageData getCoverageForFunction(const FunctionRecord &Function) const;
+  LLVM_ABI CoverageData
+  getCoverageForFunction(const FunctionRecord &Function) const;
 
   /// Get the coverage for an expansion within a coverage set.
-  LLVM_ABI CoverageData getCoverageForExpansion(const ExpansionRecord &Expansion) const;
+  LLVM_ABI CoverageData
+  getCoverageForExpansion(const ExpansionRecord &Expansion) const;
 
   /// Gets all of the functions covered by this profile.
   iterator_range<FunctionRecordIterator> getCoveredFunctions() const {
@@ -1097,7 +1100,8 @@ class LineCoverageStats {
 
 public:
   LLVM_ABI LineCoverageStats(ArrayRef<const CoverageSegment *> LineSegments,
-                    const CoverageSegment *WrappedSegment, unsigned Line);
+                             const CoverageSegment *WrappedSegment,
+                             unsigned Line);
 
   uint64_t getExecutionCount() const { return ExecutionCount; }
 

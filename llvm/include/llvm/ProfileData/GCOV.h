@@ -14,7 +14,6 @@
 #ifndef LLVM_PROFILEDATA_GCOV_H
 #define LLVM_PROFILEDATA_GCOV_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -22,6 +21,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
@@ -317,7 +317,7 @@ public:
 };
 
 LLVM_ABI void gcovOneInput(const GCOV::Options &options, StringRef filename,
-                  StringRef gcno, StringRef gcda, GCOVFile &file);
+                           StringRef gcno, StringRef gcda, GCOVFile &file);
 
 } // end namespace llvm
 

@@ -67,7 +67,7 @@ public:
   /// Add an equivalence between \p First and \p Second. Both manglings must
   /// live at least as long as the canonicalizer.
   LLVM_ABI EquivalenceError addEquivalence(FragmentKind Kind, StringRef First,
-                                  StringRef Second);
+                                           StringRef Second);
 
   using Key = uintptr_t;
 

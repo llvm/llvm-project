@@ -14,11 +14,11 @@
 #ifndef LLVM_PROFILEDATA_PROFILECOMMON_H
 #define LLVM_PROFILEDATA_PROFILECOMMON_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/SampleProf.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <algorithm>
 #include <cstdint>
@@ -97,7 +97,7 @@ public:
       : ProfileSummaryBuilder(std::move(Cutoffs)) {}
 
   LLVM_ABI void addRecord(const sampleprof::FunctionSamples &FS,
-                 bool isCallsiteSample = false);
+                          bool isCallsiteSample = false);
   LLVM_ABI std::unique_ptr<ProfileSummary>
   computeSummaryForProfiles(const sampleprof::SampleProfileMap &Profiles);
   LLVM_ABI std::unique_ptr<ProfileSummary> getSummary();

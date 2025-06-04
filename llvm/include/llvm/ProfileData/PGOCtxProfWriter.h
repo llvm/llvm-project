@@ -13,11 +13,11 @@
 #ifndef LLVM_PROFILEDATA_PGOCTXPROFWRITER_H_
 #define LLVM_PROFILEDATA_PGOCTXPROFWRITER_H_
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitstream/BitCodeEnums.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 #include "llvm/ProfileData/CtxInstrContextNode.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 enum PGOCtxProfileRecords {

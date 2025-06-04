@@ -15,10 +15,10 @@
 #ifndef LLVM_PROFILEDATA_INDEXEDMEMPROFDATA_H
 #define LLVM_PROFILEDATA_INDEXEDMEMPROFDATA_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProf.h"
+#include "llvm/Support/Compiler.h"
 
 #include <functional>
 #include <optional>

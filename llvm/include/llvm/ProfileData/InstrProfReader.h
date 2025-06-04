@@ -14,7 +14,6 @@
 #ifndef LLVM_PROFILEDATA_INSTRPROFREADER_H
 #define LLVM_PROFILEDATA_INSTRPROFREADER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ProfileSummary.h"
@@ -25,6 +24,7 @@
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/MemProfSummary.h"
 #include "llvm/ProfileData/MemProfYAML.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/LineIterator.h"
@@ -554,8 +554,9 @@ public:
   }
 
   LLVM_ABI bool readValueProfilingData(const unsigned char *&D,
-                              const unsigned char *const End);
-  LLVM_ABI data_type ReadData(StringRef K, const unsigned char *D, offset_type N);
+                                       const unsigned char *const End);
+  LLVM_ABI data_type ReadData(StringRef K, const unsigned char *D,
+                              offset_type N);
 
   // Used for testing purpose only.
   void setValueProfDataEndianness(llvm::endianness Endianness) {
@@ -719,7 +720,8 @@ private:
 public:
   IndexedMemProfReader() = default;
 
-  LLVM_ABI Error deserialize(const unsigned char *Start, uint64_t MemProfOffset);
+  LLVM_ABI Error deserialize(const unsigned char *Start,
+                             uint64_t MemProfOffset);
 
   LLVM_ABI Expected<memprof::MemProfRecord>
   getMemProfRecord(const uint64_t FuncNameHash) const;

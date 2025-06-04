@@ -241,12 +241,13 @@ computeFrameHistogram(llvm::MapVector<CallStackId, llvm::SmallVector<FrameIdTy>>
 }
 
 // Explicitly instantiate function with the utilized FrameIdTy.
-template llvm::DenseMap<FrameId, FrameStat> LLVM_ABI computeFrameHistogram<FrameId>(
-    llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
-        &MemProfCallStackData);
+template llvm::DenseMap<FrameId, FrameStat>
+    LLVM_ABI computeFrameHistogram<FrameId>(
+        llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
+            &MemProfCallStackData);
 template llvm::DenseMap<LinearFrameId, FrameStat>
-LLVM_ABI computeFrameHistogram<LinearFrameId>(
-    llvm::MapVector<CallStackId, llvm::SmallVector<LinearFrameId>>
-        &MemProfCallStackData);
+    LLVM_ABI computeFrameHistogram<LinearFrameId>(
+        llvm::MapVector<CallStackId, llvm::SmallVector<LinearFrameId>>
+            &MemProfCallStackData);
 } // namespace memprof
 } // namespace llvm

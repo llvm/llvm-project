@@ -12,11 +12,11 @@
 #ifndef LLVM_PROFILEDATA_SAMPLEPROFWRITER_H
 #define LLVM_PROFILEDATA_SAMPLEPROFWRITER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/SampleProf.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
@@ -265,7 +265,8 @@ const std::array<SmallVector<SecHdrTableEntry, 8>, NumOfLayout>
                                           {SecFuncMetadata, 0, 0, 0, 0}}),
 };
 
-class LLVM_ABI SampleProfileWriterExtBinaryBase : public SampleProfileWriterBinary {
+class LLVM_ABI SampleProfileWriterExtBinaryBase
+    : public SampleProfileWriterBinary {
   using SampleProfileWriterBinary::SampleProfileWriterBinary;
 public:
   std::error_code write(const SampleProfileMap &ProfileMap) override;
@@ -408,7 +409,8 @@ private:
   ProfileSymbolList *ProfSymList = nullptr;
 };
 
-class LLVM_ABI SampleProfileWriterExtBinary : public SampleProfileWriterExtBinaryBase {
+class LLVM_ABI SampleProfileWriterExtBinary
+    : public SampleProfileWriterExtBinaryBase {
 public:
   SampleProfileWriterExtBinary(std::unique_ptr<raw_ostream> &OS)
       : SampleProfileWriterExtBinaryBase(OS) {}

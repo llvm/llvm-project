@@ -17,7 +17,6 @@
 #ifndef LLVM_PROFILEDATA_DATAACCESSPROF_H_
 #define LLVM_PROFILEDATA_DATAACCESSPROF_H_
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMapInfoVariant.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
@@ -25,6 +24,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/StringSaver.h"
 
@@ -157,13 +157,15 @@ public:
   /// duplicated symbol names or content hashes are seen. The user of this
   /// class should aggregate counters that correspond to the same symbol name
   /// or with the same string literal hash before calling 'set*' methods.
-  LLVM_ABI Error setDataAccessProfile(SymbolHandleRef SymbolID, uint64_t AccessCount);
+  LLVM_ABI Error setDataAccessProfile(SymbolHandleRef SymbolID,
+                                      uint64_t AccessCount);
   /// Similar to the method above, for records with \p Locations representing
   /// the `filename:line` where this symbol shows up. Note because of linker's
   /// merge of identical symbols (e.g., unnamed_addr string literals), one
   /// symbol is likely to have multiple locations.
-  LLVM_ABI Error setDataAccessProfile(SymbolHandleRef SymbolID, uint64_t AccessCount,
-                             ArrayRef<SourceLocation> Locations);
+  LLVM_ABI Error setDataAccessProfile(SymbolHandleRef SymbolID,
+                                      uint64_t AccessCount,
+                                      ArrayRef<SourceLocation> Locations);
   /// Add a symbol that's seen in the profiled binary without samples.
   LLVM_ABI Error addKnownSymbolWithoutSamples(SymbolHandleRef SymbolID);
 
