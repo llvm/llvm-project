@@ -612,6 +612,8 @@ Improvements to Clang's diagnostics
   diagnostic group ``-Wimplicit-int-comparison-on-negation``, grouped under
   ``-Wimplicit-int-conversion``, so user can turn it off independently.
 
+- Improved the FixIts for unused lambda captures.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
