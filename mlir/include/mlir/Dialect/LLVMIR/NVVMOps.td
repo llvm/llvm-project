@@ -2354,7 +2354,7 @@ def NVVM_CpAsyncBulkTensorSharedCTAToGlobalOp :
 }
 
 //===----------------------------------------------------------------------===//
-// NVVM Prefetch Ops
+// NVVM Prefetch Op
 //===----------------------------------------------------------------------===//
 
 def PrefetchCacheLevelL1 : I32EnumCase<"L1", 0, "L1">;
@@ -2399,10 +2399,10 @@ def NVVM_PrefetchOp : NVVM_Op<"prefetch"> {
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID getIntrinsicID(Operation &op);
+    static llvm::Intrinsic::ID getIntrinsicID(NVVM::PrefetchOp &op);
   }];
   let llvmBuilder = [{
-    auto intId = NVVM::PrefetchOp::getIntrinsicID(*op);
+    auto intId = NVVM::PrefetchOp::getIntrinsicID(op);
     createIntrinsicCall(builder, intId, $addr);
   }];
 }
