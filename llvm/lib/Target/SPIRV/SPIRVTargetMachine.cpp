@@ -12,7 +12,6 @@
 
 #include "SPIRVTargetMachine.h"
 #include "SPIRV.h"
-#include "SPIRVCallLowering.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVLegalizerInfo.h"
 #include "SPIRVStructurizerWrapper.h"
@@ -24,7 +23,6 @@
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -32,7 +30,6 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Scalar/Reg2Mem.h"
 #include "llvm/Transforms/Utils.h"
 #include <optional>
 
@@ -191,7 +188,7 @@ TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
 void SPIRVPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
 
-  if (TM.getSubtargetImpl()->isVulkanEnv()) {
+  if (TM.getSubtargetImpl()->isShader()) {
     // Vulkan does not allow address space casts. This pass is run to remove
     // address space casts that can be removed.
     // If an address space cast is not removed while targeting Vulkan, lowering
@@ -229,7 +226,7 @@ void SPIRVPassConfig::addIRPasses() {
 
 void SPIRVPassConfig::addISelPrepare() {
   addPass(createSPIRVEmitIntrinsicsPass(&getTM<SPIRVTargetMachine>()));
-  if (TM.getSubtargetImpl()->isVulkanEnv())
+  if (TM.getSubtargetImpl()->isLogicalSPIRV())
     addPass(createSPIRVLegalizePointerCastPass(&getTM<SPIRVTargetMachine>()));
   TargetPassConfig::addISelPrepare();
 }
@@ -274,8 +271,7 @@ namespace {
 class SPIRVInstructionSelect : public InstructionSelect {
   // We don't use register banks, so unset the requirement for them
   MachineFunctionProperties getRequiredProperties() const override {
-    return InstructionSelect::getRequiredProperties().reset(
-        MachineFunctionProperties::Property::RegBankSelected);
+    return InstructionSelect::getRequiredProperties().resetRegBankSelected();
   }
 };
 } // namespace

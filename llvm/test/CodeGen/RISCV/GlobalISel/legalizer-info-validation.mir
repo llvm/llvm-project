@@ -4,9 +4,9 @@
 # RUN: llc -mtriple=riscv64-- -run-pass=legalizer %s \
 # RUN:     -mattr=+m,+zbb,+zfh,+v -o - 2>&1 | FileCheck %s --check-prefixes=CHECK
 
-# RUN: llc -mtriple=riscv32-- -run-pass=legalizer %s -debug-only=legalizer-info \
+# RUN: llc -mtriple=riscv32-- -run-pass=legalizer %s -debug-only=legalizer-info -verbose-gisel-verify-legalizer-info \
 # RUN:     -mattr=+m,+zbb,+zfh,+v -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,DEBUG,DEBUG-RV32
-# RUN: llc -mtriple=riscv64-- -run-pass=legalizer %s -debug-only=legalizer-info \
+# RUN: llc -mtriple=riscv64-- -run-pass=legalizer %s -debug-only=legalizer-info -verbose-gisel-verify-legalizer-info \
 # RUN:     -mattr=+m,+zbb,+zfh,+v -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,DEBUG,DEBUG-RV64
 
 # REQUIRES: asserts

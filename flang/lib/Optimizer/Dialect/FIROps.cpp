@@ -1536,20 +1536,50 @@ bool fir::ConvertOp::canBeConverted(mlir::Type inType, mlir::Type outType) {
          areRecordsCompatible(inType, outType);
 }
 
+// In general, ptrtoint-like conversions are allowed to lose volatility
+// information because they are either:
+//
+// 1. passing an entity to an external function and there's nothing we can do
+//    about volatility after that happens, or
+// 2. for code generation, at which point we represent volatility with
+//    attributes on the LLVM instructions and intrinsics.
+//
+// For all other cases, volatility ought to match exactly.
+static mlir::LogicalResult verifyVolatility(mlir::Type inType,
+                                            mlir::Type outType) {
+  const bool toLLVMPointer = mlir::isa<mlir::LLVM::LLVMPointerType>(outType);
+  const bool toInteger = fir::isa_integer(outType);
+
+  // When converting references to classes or allocatables into boxes for
+  // runtime arguments, we cast away all the volatility information and pass a
+  // box<none>. This is allowed.
+  const bool isBoxNoneLike = [&]() {
+    if (fir::isBoxNone(outType))
+      return true;
+    if (auto referenceType = mlir::dyn_cast<fir::ReferenceType>(outType)) {
+      if (fir::isBoxNone(referenceType.getElementType())) {
+        return true;
+      }
+    }
+    return false;
+  }();
+
+  const bool isPtrToIntLike = toLLVMPointer || toInteger || isBoxNoneLike;
+  if (isPtrToIntLike) {
+    return mlir::success();
+  }
+
+  // In all other cases, we need to check for an exact volatility match.
+  return mlir::success(fir::isa_volatile_type(inType) ==
+                       fir::isa_volatile_type(outType));
+}
+
 llvm::LogicalResult fir::ConvertOp::verify() {
   mlir::Type inType = getValue().getType();
   mlir::Type outType = getType();
-  // If we're converting to an LLVM pointer type or an integer, we don't
-  // need to check for volatility mismatch - volatility will be handled by the
-  // memory operations themselves in llvm code generation and ptr-to-int can't
-  // represent volatility.
-  const bool toLLVMPointer = mlir::isa<mlir::LLVM::LLVMPointerType>(outType);
-  const bool toInteger = fir::isa_integer(outType);
   if (fir::useStrictVolatileVerification()) {
-    if (fir::isa_volatile_type(inType) != fir::isa_volatile_type(outType) &&
-        !toLLVMPointer && !toInteger) {
-      return emitOpError("cannot convert between volatile and non-volatile "
-                         "types, use fir.volatile_cast instead ")
+    if (failed(verifyVolatility(inType, outType))) {
+      return emitOpError("this conversion does not preserve volatility: ")
              << inType << " / " << outType;
     }
   }
@@ -2333,6 +2363,21 @@ llvm::LogicalResult fir::InsertOnRangeOp::verify() {
     rangeIsKnownToBeNonempty = lb < ub;
   }
   return mlir::success();
+}
+
+bool fir::InsertOnRangeOp::isFullRange() {
+  auto extents = getType().getShape();
+  mlir::DenseIntElementsAttr indexes = getCoor();
+  if (indexes.size() / 2 != static_cast<int64_t>(extents.size()))
+    return false;
+  auto cur_index = indexes.value_begin<int64_t>();
+  for (unsigned i = 0; i < indexes.size(); i += 2) {
+    if (*(cur_index++) != 0)
+      return false;
+    if (*(cur_index++) != extents[i / 2] - 1)
+      return false;
+  }
+  return true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -4720,6 +4765,61 @@ mlir::Type fir::applyPathToType(mlir::Type eleTy, mlir::ValueRange path) {
   }
   return eleTy;
 }
+
+bool fir::reboxPreservesContinuity(fir::ReboxOp rebox, bool checkWhole) {
+  // If slicing is not involved, then the rebox does not affect
+  // the continuity of the array.
+  auto sliceArg = rebox.getSlice();
+  if (!sliceArg)
+    return true;
+
+  if (auto sliceOp =
+          mlir::dyn_cast_or_null<fir::SliceOp>(sliceArg.getDefiningOp())) {
+    if (sliceOp.getFields().empty() && sliceOp.getSubstr().empty()) {
+      // TODO: generalize code for the triples analysis with
+      // hlfir::designatePreservesContinuity, especially when
+      // recognition of the whole dimension slices is added.
+      auto triples = sliceOp.getTriples();
+      assert((triples.size() % 3) == 0 && "invalid triples size");
+
+      // A slice with step=1 in the innermost dimension preserves
+      // the continuity of the array in the innermost dimension.
+      // If checkWhole is false, then check only the innermost slice triples.
+      std::size_t checkUpTo = checkWhole ? triples.size() : 3;
+      checkUpTo = std::min(checkUpTo, triples.size());
+      for (std::size_t i = 0; i < checkUpTo; i += 3) {
+        if (triples[i] != triples[i + 1]) {
+          // This is a section of the dimension. Only allow it
+          // to be the first triple.
+          if (i != 0)
+            return false;
+          auto constantStep = fir::getIntIfConstant(triples[i + 2]);
+          if (!constantStep || *constantStep != 1)
+            return false;
+        }
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
+std::optional<int64_t> fir::getAllocaByteSize(fir::AllocaOp alloca,
+                                              const mlir::DataLayout &dl,
+                                              const fir::KindMapping &kindMap) {
+  mlir::Type type = alloca.getInType();
+  // TODO: should use the constant operands when all info is not available in
+  // the type.
+  if (!alloca.isDynamic())
+    if (auto sizeAndAlignment =
+            getTypeSizeAndAlignment(alloca.getLoc(), type, dl, kindMap))
+      return sizeAndAlignment->first;
+  return std::nullopt;
+}
+
+//===----------------------------------------------------------------------===//
+// DeclareOp
+//===----------------------------------------------------------------------===//
 
 llvm::LogicalResult fir::DeclareOp::verify() {
   auto fortranVar =

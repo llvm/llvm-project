@@ -560,7 +560,8 @@ public:
     memcpy(buf, tailMergeARM64, sizeof(tailMergeARM64));
     applyArm64Addr(buf + 44, desc->getRVA(), rva + 44, 12);
     applyArm64Imm(buf + 48, desc->getRVA() & 0xfff, 0);
-    applyArm64Branch26(buf + 52, helper->getRVA() - rva - 52);
+    if (helper)
+      applyArm64Branch26(buf + 52, helper->getRVA() - rva - 52);
   }
 
   Chunk *desc = nullptr;
@@ -781,6 +782,7 @@ void IdataContents::create(COFFLinkerContext &ctx) {
     // ordinal values to the table.
     size_t base = lookups.size();
     Chunk *lookupsTerminator = nullptr, *addressesTerminator = nullptr;
+    uint32_t nativeOnly = 0;
     for (DefinedImportData *s : syms) {
       uint16_t ord = s->getOrdinal();
       HintNameChunk *hintChunk = nullptr;
@@ -806,8 +808,8 @@ void IdataContents::create(COFFLinkerContext &ctx) {
       // the native terminator, they will be ignored in the native view.
       // In the EC view, they should act as terminators, so emit ZEROFILL
       // relocations overriding them.
-      if (ctx.hybridSymtab && !lookupsTerminator && s->file->isEC() &&
-          !s->file->hybridFile) {
+      if (ctx.config.machine == ARM64X && !lookupsTerminator &&
+          s->file->isEC() && !s->file->hybridFile) {
         lookupsTerminator = lookupsChunk;
         addressesTerminator = addressesChunk;
         lookupsChunk = make<NullChunk>(ctx);
@@ -841,6 +843,7 @@ void IdataContents::create(COFFLinkerContext &ctx) {
         // Fill the auxiliary IAT with null chunks for native-only imports.
         auxIat.push_back(make<NullChunk>(ctx));
         auxIatCopy.push_back(make<NullChunk>(ctx));
+        ++nativeOnly;
       }
     }
     // Terminate with null values.
@@ -862,18 +865,15 @@ void IdataContents::create(COFFLinkerContext &ctx) {
     // Create the import table header.
     dllNames.push_back(make<StringChunk>(syms[0]->getDLLName()));
     auto *dir = make<ImportDirectoryChunk>(dllNames.back());
-    dir->lookupTab = lookups[base];
-    dir->addressTab = addresses[base];
-    dirs.push_back(dir);
 
-    if (ctx.hybridSymtab) {
-      // If native-only imports exist, they will appear as a prefix to all
-      // imports. Emit ARM64X relocations to skip them in the EC view.
-      uint32_t nativeOnly =
-          llvm::find_if(syms,
-                        [](DefinedImportData *s) { return s->file->isEC(); }) -
-          syms.begin();
-      if (nativeOnly) {
+    if (ctx.hybridSymtab && nativeOnly) {
+      if (ctx.config.machine != ARM64X)
+        // On pure ARM64EC targets, skip native-only imports in the import
+        // directory.
+        base += nativeOnly;
+      else if (nativeOnly) {
+        // If native-only imports exist, they will appear as a prefix to all
+        // imports. Emit ARM64X relocations to skip them in the EC view.
         ctx.dynamicRelocs->add(
             IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA, 0,
             Arm64XRelocVal(
@@ -886,6 +886,10 @@ void IdataContents::create(COFFLinkerContext &ctx) {
             nativeOnly * sizeof(uint64_t));
       }
     }
+
+    dir->lookupTab = lookups[base];
+    dir->addressTab = addresses[base];
+    dirs.push_back(dir);
   }
   // Add null terminator.
   dirs.push_back(make<NullChunk>(sizeof(ImportDirectoryTableEntry), 4));
@@ -922,21 +926,25 @@ void DelayLoadContents::create() {
 
     size_t base = addresses.size();
     ctx.forEachSymtab([&](SymbolTable &symtab) {
-      if (ctx.hybridSymtab && symtab.isEC()) {
-        // For hybrid images, emit null-terminated native import entries
-        // followed by null-terminated EC entries. If a view is missing imports
-        // for a given module, only terminators are emitted. Emit ARM64X
-        // relocations to skip native entries in the EC view.
-        ctx.dynamicRelocs->add(
-            IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA, 0,
-            Arm64XRelocVal(dir, offsetof(delay_import_directory_table_entry,
-                                         DelayImportAddressTable)),
-            (addresses.size() - base) * sizeof(uint64_t));
-        ctx.dynamicRelocs->add(
-            IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA, 0,
-            Arm64XRelocVal(dir, offsetof(delay_import_directory_table_entry,
-                                         DelayImportNameTable)),
-            (addresses.size() - base) * sizeof(uint64_t));
+      if (symtab.isEC()) {
+        if (ctx.config.machine == ARM64X) {
+          // For hybrid images, emit null-terminated native import entries
+          // followed by null-terminated EC entries. If a view is missing
+          // imports for a given module, only terminators are emitted. Emit
+          // ARM64X relocations to skip native entries in the EC view.
+          ctx.dynamicRelocs->add(
+              IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA, 0,
+              Arm64XRelocVal(dir, offsetof(delay_import_directory_table_entry,
+                                           DelayImportAddressTable)),
+              (addresses.size() - base) * sizeof(uint64_t));
+          ctx.dynamicRelocs->add(
+              IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA, 0,
+              Arm64XRelocVal(dir, offsetof(delay_import_directory_table_entry,
+                                           DelayImportNameTable)),
+              (addresses.size() - base) * sizeof(uint64_t));
+        } else {
+          base = addresses.size();
+        }
       }
 
       Chunk *tm = nullptr;
@@ -981,7 +989,7 @@ void DelayLoadContents::create() {
           chunk = make<AuxImportChunk>(s->file);
           auxIatCopy.push_back(chunk);
           s->file->auxImpCopySym->setLocation(chunk);
-        } else if (ctx.hybridSymtab) {
+        } else if (ctx.config.machine == ARM64X) {
           // Fill the auxiliary IAT with null chunks for native imports.
           auxIat.push_back(make<NullChunk>(ctx));
           auxIatCopy.push_back(make<NullChunk>(ctx));
@@ -994,6 +1002,10 @@ void DelayLoadContents::create() {
             saver().save("__tailMerge_" + syms[0]->getDLLName().lower());
         symtab.addSynthetic(tmName, tm);
       }
+
+      // Skip terminators on pure ARM64EC target if there are no native imports.
+      if (!tm && !symtab.isEC() && ctx.config.machine != ARM64X)
+        return;
 
       // Terminate with null values.
       addresses.push_back(make<NullChunk>(ctx, 8));
@@ -1024,7 +1036,7 @@ void DelayLoadContents::create() {
 }
 
 Chunk *DelayLoadContents::newTailMergeChunk(SymbolTable &symtab, Chunk *dir) {
-  auto helper = cast<Defined>(symtab.delayLoadHelper);
+  auto helper = cast_or_null<Defined>(symtab.delayLoadHelper);
   switch (symtab.machine) {
   case AMD64:
   case ARM64EC:

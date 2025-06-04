@@ -20,9 +20,11 @@
 // CHECK-NOT: __riscv_m {{.*$}}
 // CHECK-NOT: __riscv_mul {{.*$}}
 // CHECK-NOT: __riscv_muldiv {{.*$}}
+// CHECK-NOT: __riscv_q {{.*$}}
 // CHECK-NOT: __riscv_sha {{.*$}}
 // CHECK-NOT: __riscv_shcounterenw {{.*$}}
 // CHECK-NOT: __riscv_shgatpa {{.*$}}
+// CHECK-NOT: __riscv_shlcofideleg {{.*$}}
 // CHECK-NOT: __riscv_shtvala {{.*$}}
 // CHECK-NOT: __riscv_shvsatpa {{.*$}}
 // CHECK-NOT: __riscv_shvstvala {{.*$}}
@@ -335,6 +337,17 @@
 // CHECK-M-EXT: __riscv_muldiv 1
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN:   -march=rv32ifdq -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-Q-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN:   -march=rv64ifdq -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-Q-EXT %s
+// CHECK-Q-EXT: __riscv_fdiv 1
+// CHECK-Q-EXT: __riscv_flen 128
+// CHECK-Q-EXT: __riscv_fsqrt 1
+// CHECK-Q-EXT: __riscv_q 2002000{{$}}
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32isha -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SHCOUNTERENW-EXT %s
 // RUN: %clang --target=riscv64-unknown-linux-gnu \
@@ -357,6 +370,14 @@
 // RUN:   -march=rv64ishgatpa -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SHGATPA-EXT %s
 // CHECK-SHGATPA-EXT: __riscv_shgatpa 1000000{{$}}
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN:   -march=rv32ishlcofideleg -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SHLCOFIDELEG-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN:   -march=rv64ishlcofideleg -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SHLCOFIDELEG-EXT %s
+// CHECK-SHLCOFIDELEG-EXT: __riscv_shlcofideleg 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32ishtvala -E -dM %s \

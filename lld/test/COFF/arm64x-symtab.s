@@ -18,6 +18,8 @@
 
 // RUN: not lld-link -machine:arm64x -dll -noentry -out:err1.dll symref-aarch64.obj sym-arm64ec.obj \
 // RUN:              2>&1 | FileCheck --check-prefix=UNDEF %s
+// RUN: not lld-link -machine:arm64ec -dll -noentry -out:err1.dll symref-aarch64.obj sym-arm64ec.obj \
+// RUN:              2>&1 | FileCheck --check-prefix=UNDEF %s
 // UNDEF:      lld-link: error: undefined symbol: sym (native symbol)
 // UNDEF-NEXT: >>> referenced by symref-aarch64.obj:(.data)
 
@@ -25,25 +27,34 @@
 
 // RUN: not lld-link -machine:arm64x -dll -noentry -out:out.dll symref-arm64ec.obj sym-aarch64.obj \
 // RUN:              2>&1 | FileCheck --check-prefix=UNDEFEC %s
+// RUN: not lld-link -machine:arm64ec -dll -noentry -out:out.dll symref-arm64ec.obj sym-aarch64.obj \
+// RUN:              2>&1 | FileCheck --check-prefix=UNDEFEC %s
 // UNDEFEC:      lld-link: error: undefined symbol: sym (EC symbol)
 // UNDEFEC-NEXT: >>> referenced by symref-arm64ec.obj:(.data)
 
 // RUN: not lld-link -machine:arm64x -dll -noentry -out:out.dll symref-x86_64.obj sym-aarch64.obj \
+// RUN:              2>&1 | FileCheck --check-prefix=UNDEFX86 %s
+// RUN: not lld-link -machine:arm64ec -dll -noentry -out:out.dll symref-x86_64.obj sym-aarch64.obj \
 // RUN:              2>&1 | FileCheck --check-prefix=UNDEFX86 %s
 // UNDEFX86:      lld-link: error: undefined symbol: sym (EC symbol)
 // UNDEFX86-NEXT: >>> referenced by symref-x86_64.obj:(.data)
 
 // RUN: not lld-link -machine:arm64x -dll -noentry -out:err2.dll symref-aarch64.obj sym-x86_64.obj \
 // RUN:              2>&1 | FileCheck --check-prefix=UNDEF %s
+// RUN: not lld-link -machine:arm64ec -dll -noentry -out:err2.dll symref-aarch64.obj sym-x86_64.obj \
+// RUN:              2>&1 | FileCheck --check-prefix=UNDEF %s
 
 // Check that ARM64X target can have the same symbol names in both native and EC namespaces.
 
 // RUN: lld-link -machine:arm64x -dll -noentry -out:out.dll symref-aarch64.obj sym-aarch64.obj \
 // RUN:           symref-arm64ec.obj sym-x86_64.obj
+// RUN: lld-link -machine:arm64ec -dll -noentry -out:out.dll symref-aarch64.obj sym-aarch64.obj \
+// RUN:           symref-arm64ec.obj sym-x86_64.obj
 
 // Check that ARM64X target can reference both native and EC symbols from an archive.
 
 // RUN: lld-link -machine:arm64x -dll -noentry -out:out2.dll symref-aarch64.obj symref-arm64ec.obj sym.lib
+// RUN: lld-link -machine:arm64ec -dll -noentry -out:out2.dll symref-aarch64.obj symref-arm64ec.obj sym.lib
 
 // Check that EC object files can reference x86_64 library symbols.
 
@@ -55,14 +66,19 @@
 
 // RUN: not lld-link -machine:arm64x -dll -noentry -out:err3.dll symref-aarch64.obj sym-x86_64.lib \
 // RUN:              2>&1 | FileCheck --check-prefix=UNDEF %s
+// RUN: not lld-link -machine:arm64ec -dll -noentry -out:err3.dll symref-aarch64.obj sym-x86_64.lib \
+// RUN:              2>&1 | FileCheck --check-prefix=UNDEF %s
 
 // Check that native object files can reference native library symbols.
 
 // RUN: lld-link -machine:arm64x -dll -noentry -out:out6.dll symref-aarch64.obj sym-aarch64.lib
+// RUN: lld-link -machine:arm64ec -dll -noentry -out:out6.dll symref-aarch64.obj sym-aarch64.lib
 
 // Check that EC object files can't reference native ARM64 library symbols.
 
 // RUN: not lld-link -machine:arm64x -dll -noentry -out:err4.dll symref-arm64ec.obj sym-aarch64.lib \
+// RUN:              2>&1 | FileCheck --check-prefix=UNDEFEC %s
+// RUN: not lld-link -machine:arm64ec -dll -noentry -out:err4.dll symref-arm64ec.obj sym-aarch64.lib \
 // RUN:              2>&1 | FileCheck --check-prefix=UNDEFEC %s
 
 #--- symref.s

@@ -29,8 +29,8 @@ GITHUB_WORKFLOW_TO_TRACK = {"CI Checks": "github_llvm_premerge_checks"}
 # name.
 GITHUB_JOB_TO_TRACK = {
     "github_llvm_premerge_checks": {
-        "Build and Test Linux (Test Only - Please Ignore Results)": "premerge_linux",
-        "Build and Test Windows (Test Only - Please Ignore Results)": "premerge_windows",
+        "Build and Test Linux": "premerge_linux",
+        "Build and Test Windows": "premerge_windows",
     }
 }
 
@@ -67,6 +67,7 @@ BUILDKITE_WORKFLOW_TO_TRACK = {
 # remain small.
 BUILDKITE_GRAPHQL_BUILDS_PER_PAGE = 50
 
+
 @dataclass
 class JobMetrics:
     job_name: str
@@ -76,6 +77,7 @@ class JobMetrics:
     completed_at_ns: int
     workflow_id: int
     workflow_name: str
+
 
 @dataclass
 class GaugeMetric:
@@ -258,6 +260,7 @@ def buildkite_get_metrics(
 
     return output, incomplete_now
 
+
 def github_get_metrics(
     github_repo: github.Repository, last_workflows_seen_as_completed: set[int]
 ) -> tuple[list[JobMetrics], int]:
@@ -346,19 +349,7 @@ def github_get_metrics(
                     running_count[metric_name] += 1
                 continue
 
-            job_result = int(job.conclusion == "success")
-            if job_result:
-                # We still might want to mark the job as a failure if one of the steps
-                # failed. This is required due to use setting continue-on-error in
-                # the premerge pipeline to prevent sending emails while we are
-                # testing the infrastructure.
-                # TODO(boomanaiden154): Remove this once the premerge pipeline is no
-                # longer in a testing state and we can directly assert the workflow
-                # result.
-                for step in job.steps:
-                    if step.conclusion != "success" and step.conclusion != "skipped":
-                        job_result = 0
-                        break
+            job_result = int(job.conclusion == "success" or job.conclusion == "skipped")
 
             created_at = job.created_at
             started_at = job.started_at

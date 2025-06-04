@@ -216,6 +216,10 @@ public:
   /// Returns the def's extra class definition code.
   std::optional<StringRef> getExtraDefs() const;
 
+  /// Returns true if we need to generate a default 'getAlias' implementation
+  /// using the mnemonic.
+  bool genMnemonicAlias() const;
+
   /// Get the code location (for error printing).
   ArrayRef<SMLoc> getLoc() const;
 

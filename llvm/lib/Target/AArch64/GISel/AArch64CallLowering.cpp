@@ -539,7 +539,7 @@ bool AArch64CallLowering::fallBackToDAGISel(const MachineFunction &MF) const {
     return true;
   }
 
-  SMEAttrs Attrs(F);
+  SMEAttrs Attrs = MF.getInfo<AArch64FunctionInfo>()->getSMEFnAttrs();
   if (Attrs.hasZAState() || Attrs.hasZT0State() ||
       Attrs.hasStreamingInterfaceOrBody() ||
       Attrs.hasStreamingCompatibleInterface())
@@ -1366,10 +1366,8 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     ++CalleeOpNo;
 
     // We may or may not need to emit both the marker and the retain/claim call.
-    // Do what the frontend tells us: if the rvmarker module flag is present,
-    // emit the marker.  Always emit the call regardless.
     // Tell the pseudo expansion using an additional boolean op.
-    MIB.addImm(true);
+    MIB.addImm(objcarc::attachedCallOpBundleNeedsMarker(Info.CB));
     ++CalleeOpNo;
   } else if (Info.CFIType) {
     MIB->setCFIType(MF, Info.CFIType->getZExtValue());

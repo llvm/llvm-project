@@ -41,7 +41,6 @@ class LibcxxStringDataFormatterTestCase(TestBase):
             self.runCmd("type summary clear", check=False)
             self.runCmd("type filter clear", check=False)
             self.runCmd("type synth clear", check=False)
-            self.runCmd("settings set target.max-children-count 256", check=False)
 
         is_64_bit = self.process().GetAddressByteSize() == 8
 

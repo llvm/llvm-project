@@ -2,13 +2,12 @@
 
 func.func @_QPsub1() {
   %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", uniq_name = "_QFsub1Ea"}
-  %1 = fir.alloca i32
+  %s = fir.alloca i64
   %pinned = fir.alloca i1
   %4:2 = hlfir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub1Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
   %11 = fir.convert %4#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
-  %s = fir.load %1 : !fir.ref<i32>
   // expected-error@+1{{'cuf.allocate' op pinned and stream cannot appears at the same time}}
-  %13 = cuf.allocate %11 : !fir.ref<!fir.box<none>> stream(%s : i32) pinned(%pinned : !fir.ref<i1>) {data_attr = #cuf.cuda<device>} -> i32
+  %13 = cuf.allocate %11 : !fir.ref<!fir.box<none>> stream(%s : !fir.ref<i64>) pinned(%pinned : !fir.ref<i1>) {data_attr = #cuf.cuda<device>} -> i32
   return
 }
 

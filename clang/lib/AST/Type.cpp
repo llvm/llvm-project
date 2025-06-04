@@ -2108,8 +2108,7 @@ bool Type::hasIntegerRepresentation() const {
 /// \returns true if the type is considered an integral type, false otherwise.
 bool Type::isIntegralType(const ASTContext &Ctx) const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
-    return BT->getKind() >= BuiltinType::Bool &&
-           BT->getKind() <= BuiltinType::Int128;
+    return BT->isInteger();
 
   // Complete enum types are integral in C.
   if (!Ctx.getLangOpts().CPlusPlus)
@@ -2121,8 +2120,7 @@ bool Type::isIntegralType(const ASTContext &Ctx) const {
 
 bool Type::isIntegralOrUnscopedEnumerationType() const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
-    return BT->getKind() >= BuiltinType::Bool &&
-           BT->getKind() <= BuiltinType::Int128;
+    return BT->isInteger();
 
   if (isBitIntType())
     return true;
@@ -2193,14 +2191,26 @@ bool Type::isAnyCharacterType() const {
   }
 }
 
+bool Type::isUnicodeCharacterType() const {
+  const auto *BT = dyn_cast<BuiltinType>(CanonicalType);
+  if (!BT)
+    return false;
+  switch (BT->getKind()) {
+  default:
+    return false;
+  case BuiltinType::Char8:
+  case BuiltinType::Char16:
+  case BuiltinType::Char32:
+    return true;
+  }
+}
+
 /// isSignedIntegerType - Return true if this is an integer type that is
 /// signed, according to C99 6.2.5p4 [char, signed char, short, int, long..],
 /// an enum decl which has a signed representation
 bool Type::isSignedIntegerType() const {
-  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType)) {
-    return BT->getKind() >= BuiltinType::Char_S &&
-           BT->getKind() <= BuiltinType::Int128;
-  }
+  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
+    return BT->isSignedInteger();
 
   if (const EnumType *ET = dyn_cast<EnumType>(CanonicalType)) {
     // Incomplete enum types are not treated as integer types.
@@ -2218,15 +2228,12 @@ bool Type::isSignedIntegerType() const {
 }
 
 bool Type::isSignedIntegerOrEnumerationType() const {
-  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType)) {
-    return BT->getKind() >= BuiltinType::Char_S &&
-           BT->getKind() <= BuiltinType::Int128;
-  }
+  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
+    return BT->isSignedInteger();
 
-  if (const auto *ET = dyn_cast<EnumType>(CanonicalType)) {
-    if (ET->getDecl()->isComplete())
-      return ET->getDecl()->getIntegerType()->isSignedIntegerType();
-  }
+  if (const auto *ET = dyn_cast<EnumType>(CanonicalType);
+      ET && ET->getDecl()->isComplete())
+    return ET->getDecl()->getIntegerType()->isSignedIntegerType();
 
   if (const auto *IT = dyn_cast<BitIntType>(CanonicalType))
     return IT->isSigned();
@@ -2247,10 +2254,8 @@ bool Type::hasSignedIntegerRepresentation() const {
 /// unsigned, according to C99 6.2.5p6 [which returns true for _Bool], an enum
 /// decl which has an unsigned representation
 bool Type::isUnsignedIntegerType() const {
-  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType)) {
-    return BT->getKind() >= BuiltinType::Bool &&
-           BT->getKind() <= BuiltinType::UInt128;
-  }
+  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
+    return BT->isUnsignedInteger();
 
   if (const auto *ET = dyn_cast<EnumType>(CanonicalType)) {
     // Incomplete enum types are not treated as integer types.
@@ -2268,15 +2273,12 @@ bool Type::isUnsignedIntegerType() const {
 }
 
 bool Type::isUnsignedIntegerOrEnumerationType() const {
-  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType)) {
-    return BT->getKind() >= BuiltinType::Bool &&
-           BT->getKind() <= BuiltinType::UInt128;
-  }
+  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
+    return BT->isUnsignedInteger();
 
-  if (const auto *ET = dyn_cast<EnumType>(CanonicalType)) {
-    if (ET->getDecl()->isComplete())
-      return ET->getDecl()->getIntegerType()->isUnsignedIntegerType();
-  }
+  if (const auto *ET = dyn_cast<EnumType>(CanonicalType);
+      ET && ET->getDecl()->isComplete())
+    return ET->getDecl()->getIntegerType()->isUnsignedIntegerType();
 
   if (const auto *IT = dyn_cast<BitIntType>(CanonicalType))
     return IT->isUnsigned();
@@ -2579,8 +2581,7 @@ bool Type::isSVESizelessBuiltinType() const {
 #define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId)                 \
   case BuiltinType::Id:                                                        \
     return true;
-#define SVE_TYPE(Name, Id, SingletonId)
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
     default:
       return false;
     }
@@ -2831,6 +2832,11 @@ static bool isTriviallyCopyableTypeImpl(const QualType &type,
 
   // As an extension, Clang treats vector types as Scalar types.
   if (CanonicalType->isScalarType() || CanonicalType->isVectorType())
+    return true;
+
+  // Mfloat8 type is a special case as it not scalar, but is still trivially
+  // copyable.
+  if (CanonicalType->isMFloat8Type())
     return true;
 
   if (const auto *RT = CanonicalType->getAs<RecordType>()) {
@@ -3516,7 +3522,7 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
 #define SVE_TYPE(Name, Id, SingletonId)                                        \
   case Id:                                                                     \
     return #Name;
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size)                                        \
   case Id:                                                                     \
     return #Name;
@@ -3790,13 +3796,13 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
       ExtraBits.EffectsHaveConditions = true;
       auto *DestConds = getTrailingObjects<EffectConditionExpr>();
       llvm::uninitialized_copy(SrcConds, DestConds);
-      assert(std::any_of(SrcConds.begin(), SrcConds.end(),
-                         [](const EffectConditionExpr &EC) {
-                           if (const Expr *E = EC.getCondition())
-                             return E->isTypeDependent() ||
-                                    E->isValueDependent();
-                           return false;
-                         }) &&
+      assert(llvm::any_of(SrcConds,
+                          [](const EffectConditionExpr &EC) {
+                            if (const Expr *E = EC.getCondition())
+                              return E->isTypeDependent() ||
+                                     E->isValueDependent();
+                            return false;
+                          }) &&
              "expected a dependent expression among the conditions");
       addDependence(TypeDependence::DependentInstantiation);
     }
@@ -4757,6 +4763,8 @@ static CachedProperties computeCachedProperties(const Type *T) {
     return Cache::get(cast<PipeType>(T)->getElementType());
   case Type::HLSLAttributedResource:
     return Cache::get(cast<HLSLAttributedResourceType>(T)->getWrappedType());
+  case Type::HLSLInlineSpirv:
+    return CachedProperties(Linkage::External, false);
   }
 
   llvm_unreachable("unhandled type class");
@@ -4855,6 +4863,17 @@ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
     return computeTypeLinkageInfo(cast<HLSLAttributedResourceType>(T)
                                       ->getContainedType()
                                       ->getCanonicalTypeInternal());
+  case Type::HLSLInlineSpirv:
+    return LinkageInfo::external();
+    {
+      const auto *ST = cast<HLSLInlineSpirvType>(T);
+      LinkageInfo LV = LinkageInfo::external();
+      for (auto &Operand : ST->getOperands()) {
+        if (Operand.isConstant() || Operand.isType())
+          LV.merge(computeTypeLinkageInfo(Operand.getResultType()));
+      }
+      return LV;
+    }
   }
 
   llvm_unreachable("unhandled type class");
@@ -4977,7 +4996,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
     case BuiltinType::OCLQueue:
     case BuiltinType::OCLReserveID:
 #define SVE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size) case BuiltinType::Id:
 #include "clang/Basic/PPCTypes.def"
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
@@ -5042,6 +5061,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   case Type::DependentBitInt:
   case Type::ArrayParameter:
   case Type::HLSLAttributedResource:
+  case Type::HLSLInlineSpirv:
     return false;
   }
   llvm_unreachable("bad type kind!");
@@ -5570,7 +5590,7 @@ LLVM_DUMP_METHOD void FunctionEffectKindSet::dump(llvm::raw_ostream &OS) const {
 FunctionEffectsRef
 FunctionEffectsRef::create(ArrayRef<FunctionEffect> FX,
                            ArrayRef<EffectConditionExpr> Conds) {
-  assert(std::is_sorted(FX.begin(), FX.end()) && "effects should be sorted");
+  assert(llvm::is_sorted(FX) && "effects should be sorted");
   assert((Conds.empty() || Conds.size() == FX.size()) &&
          "effects size should match conditions size");
   return FunctionEffectsRef(FX, Conds);

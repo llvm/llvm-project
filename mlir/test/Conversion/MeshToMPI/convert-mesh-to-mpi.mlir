@@ -193,7 +193,7 @@ module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 24> } {
     // CHECK-NEXT: [[vc44_i32:%.*]] = arith.constant 44 : i32
     // CHECK-NEXT: [[vc4_i32:%.*]] = arith.constant 4 : i32
     // CHECK-NEXT: [[vc91_i32:%.*]] = arith.constant 91 : i32
-    // CHECK-NEXT: [[v0:%.*]] = bufferization.to_memref [[varg0]] : tensor<120x120x120xi8> to memref<120x120x120xi8>
+    // CHECK-NEXT: [[v0:%.*]] = bufferization.to_buffer [[varg0]] : tensor<120x120x120xi8> to memref<120x120x120xi8>
     // CHECK-NEXT: [[v1:%.*]] = mpi.comm_world : !mpi.comm
     // CHECK-NEXT: [[valloc:%.*]] = memref.alloc() : memref<117x113x5xi8>
     // CHECK-NEXT: [[vsubview:%.*]] = memref.subview [[v0]][1, 3, 109] [117, 113, 5] [1, 1, 1] : memref<120x120x120xi8> to memref<117x113x5xi8, strided<[14400, 120, 1], offset: 14869>>
