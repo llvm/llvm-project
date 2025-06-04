@@ -181,7 +181,7 @@ public:
         if (MergedRanges.back().second < It->second)
           MergedRanges.back().second = It->second;
       }
-      Result.push_back({Data.Ref->getName(), MergedRanges});
+      Result.push_back({Data.Ref->getName(), std::move(MergedRanges)});
     }
     printJson(Result);
   }
