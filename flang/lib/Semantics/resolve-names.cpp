@@ -1661,6 +1661,9 @@ public:
   }
   bool Pre(const parser::OpenMPDeclarativeConstruct &x) {
     AddOmpSourceRange(x.source);
+    // Without skipping implicit typing, declarative constructs
+    // can implicitly declare variables instead of only using the
+    // ones already declared in the Fortran sources.
     SkipImplicitTyping(true);
     return true;
   }

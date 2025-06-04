@@ -1,5 +1,5 @@
 ! RUN: %python %S/../test_errors.py %s %flang -fopenmp
-! Test declare simd with linear clause
+! Test declare simd with linear clause does not cause an implicit declaration of i
 
 module mod
 contains
