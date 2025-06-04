@@ -9,6 +9,7 @@
 #ifndef LLVM_SANDBOXIR_MODULE_H
 #define LLVM_SANDBOXIR_MODULE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Module.h"
 #include <string>
@@ -38,7 +39,7 @@ class Module {
 public:
   Context &getContext() const { return Ctx; }
 
-  Function *getFunction(StringRef Name) const;
+  LLVM_ABI Function *getFunction(StringRef Name) const;
 
   const DataLayout &getDataLayout() const { return LLVMM.getDataLayout(); }
 
@@ -50,7 +51,7 @@ public:
   /// does not exist, return null. If AllowInternal is set to true, this
   /// function will return types that have InternalLinkage. By default, these
   /// types are not returned.
-  GlobalVariable *getGlobalVariable(StringRef Name, bool AllowInternal) const;
+  LLVM_ABI GlobalVariable *getGlobalVariable(StringRef Name, bool AllowInternal) const;
   GlobalVariable *getGlobalVariable(StringRef Name) const {
     return getGlobalVariable(Name, /*AllowInternal=*/false);
   }
@@ -66,12 +67,12 @@ public:
   /// Return the global alias in the module with the specified name, of
   /// arbitrary type. This method returns null if a global with the specified
   /// name is not found.
-  GlobalAlias *getNamedAlias(StringRef Name) const;
+  LLVM_ABI GlobalAlias *getNamedAlias(StringRef Name) const;
 
   /// Return the global ifunc in the module with the specified name, of
   /// arbitrary type. This method returns null if a global with the specified
   /// name is not found.
-  GlobalIFunc *getNamedIFunc(StringRef Name) const;
+  LLVM_ABI GlobalIFunc *getNamedIFunc(StringRef Name) const;
 
   // TODO: Missing removeGlobalVariable() eraseGlobalVariable(),
   // insertGlobalVariable()
