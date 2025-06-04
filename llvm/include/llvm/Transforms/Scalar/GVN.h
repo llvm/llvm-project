@@ -132,8 +132,9 @@ public:
   /// Run the pass over the function.
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
-  LLVM_ABI void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 
   /// This removes the specified instruction from
   /// our various maps and marks it for deletion.
@@ -203,10 +204,12 @@ public:
     LLVM_ABI uint32_t lookupOrAdd(Value *V);
     LLVM_ABI uint32_t lookup(Value *V, bool Verify = true) const;
     LLVM_ABI uint32_t lookupOrAddCmp(unsigned Opcode, CmpInst::Predicate Pred,
-                            Value *LHS, Value *RHS);
-    LLVM_ABI uint32_t phiTranslate(const BasicBlock *BB, const BasicBlock *PhiBlock,
-                          uint32_t Num, GVNPass &GVN);
-    LLVM_ABI void eraseTranslateCacheEntry(uint32_t Num, const BasicBlock &CurrBlock);
+                                     Value *LHS, Value *RHS);
+    LLVM_ABI uint32_t phiTranslate(const BasicBlock *BB,
+                                   const BasicBlock *PhiBlock, uint32_t Num,
+                                   GVNPass &GVN);
+    LLVM_ABI void eraseTranslateCacheEntry(uint32_t Num,
+                                           const BasicBlock &CurrBlock);
     LLVM_ABI bool exists(Value *V) const;
     LLVM_ABI void add(Value *V, uint32_t Num);
     LLVM_ABI void clear();

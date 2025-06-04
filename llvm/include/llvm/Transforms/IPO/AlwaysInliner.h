@@ -14,8 +14,8 @@
 #ifndef LLVM_TRANSFORMS_IPO_ALWAYSINLINER_H
 #define LLVM_TRANSFORMS_IPO_ALWAYSINLINER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -44,7 +44,6 @@ public:
 /// Create a legacy pass manager instance of a pass to inline and remove
 /// functions marked as "always_inline".
 LLVM_ABI Pass *createAlwaysInlinerLegacyPass(bool InsertLifetime = true);
-
 }
 
 #endif // LLVM_TRANSFORMS_IPO_ALWAYSINLINER_H

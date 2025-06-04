@@ -12,8 +12,8 @@
 #ifndef LLVM_TRANSFORMS_INSTRUMENTATION_GCOVPROFILER_H
 #define LLVM_TRANSFORMS_INSTRUMENTATION_GCOVPROFILER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/Instrumentation.h"
 
 namespace llvm {

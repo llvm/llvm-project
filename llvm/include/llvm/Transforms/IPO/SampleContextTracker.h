@@ -15,10 +15,10 @@
 #ifndef LLVM_TRANSFORMS_IPO_SAMPLECONTEXTTRACKER_H
 #define LLVM_TRANSFORMS_IPO_SAMPLECONTEXTTRACKER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ProfileData/SampleProf.h"
+#include "llvm/Support/Compiler.h"
 #include <map>
 #include <queue>
 #include <vector>
@@ -41,12 +41,14 @@ public:
       : ParentContext(Parent), FuncName(FName), FuncSamples(FSamples),
         CallSiteLoc(CallLoc){};
   LLVM_ABI ContextTrieNode *getChildContext(const LineLocation &CallSite,
+                                            FunctionId ChildName);
+  LLVM_ABI ContextTrieNode *
+  getHottestChildContext(const LineLocation &CallSite);
+  LLVM_ABI ContextTrieNode *
+  getOrCreateChildContext(const LineLocation &CallSite, FunctionId ChildName,
+                          bool AllowCreate = true);
+  LLVM_ABI void removeChildContext(const LineLocation &CallSite,
                                    FunctionId ChildName);
-  LLVM_ABI ContextTrieNode *getHottestChildContext(const LineLocation &CallSite);
-  LLVM_ABI ContextTrieNode *getOrCreateChildContext(const LineLocation &CallSite,
-                                           FunctionId ChildName,
-                                           bool AllowCreate = true);
-  LLVM_ABI void removeChildContext(const LineLocation &CallSite, FunctionId ChildName);
   LLVM_ABI std::map<uint64_t, ContextTrieNode> &getAllChildContext();
   LLVM_ABI FunctionId getFuncName() const;
   LLVM_ABI FunctionSamples *getFunctionSamples() const;
@@ -92,14 +94,15 @@ public:
   using ContextSamplesTy = std::vector<FunctionSamples *>;
 
   SampleContextTracker() = default;
-  LLVM_ABI SampleContextTracker(SampleProfileMap &Profiles,
+  LLVM_ABI
+  SampleContextTracker(SampleProfileMap &Profiles,
                        const DenseMap<uint64_t, StringRef> *GUIDToFuncNameMap);
   // Populate the FuncToCtxtProfiles map after the trie is built.
   LLVM_ABI void populateFuncToCtxtMap();
   // Query context profile for a specific callee with given name at a given
   // call-site. The full context is identified by location of call instruction.
   LLVM_ABI FunctionSamples *getCalleeContextSamplesFor(const CallBase &Inst,
-                                              StringRef CalleeName);
+                                                       StringRef CalleeName);
   // Get samples for indirect call targets for call site at given location.
   LLVM_ABI std::vector<const FunctionSamples *>
   getIndirectCalleeContextSamplesFor(const DILocation *DIL);
@@ -112,14 +115,14 @@ public:
   LLVM_ABI ContextSamplesTy &getAllContextSamplesFor(const Function &Func);
   LLVM_ABI ContextSamplesTy &getAllContextSamplesFor(StringRef Name);
   LLVM_ABI ContextTrieNode *getOrCreateContextPath(const SampleContext &Context,
-                                          bool AllowCreate);
+                                                   bool AllowCreate);
   // Query base profile for a given function. A base profile is a merged view
   // of all context profiles for contexts that are not inlined.
   LLVM_ABI FunctionSamples *getBaseSamplesFor(const Function &Func,
-                                     bool MergeContext = true);
+                                              bool MergeContext = true);
   // Query base profile for a given function by name.
   LLVM_ABI FunctionSamples *getBaseSamplesFor(FunctionId Name,
-                                     bool MergeContext = true);
+                                              bool MergeContext = true);
   // Retrieve the context trie node for given profile context
   LLVM_ABI ContextTrieNode *getContextFor(const SampleContext &Context);
   // Get real function name for a given trie node.
@@ -127,13 +130,15 @@ public:
   // Mark a context profile as inlined when function is inlined.
   // This makes sure that inlined context profile will be excluded in
   // function's base profile.
-  LLVM_ABI void markContextSamplesInlined(const FunctionSamples *InlinedSamples);
+  LLVM_ABI void
+  markContextSamplesInlined(const FunctionSamples *InlinedSamples);
   LLVM_ABI ContextTrieNode &getRootContext();
   LLVM_ABI void promoteMergeContextSamplesTree(const Instruction &Inst,
-                                      FunctionId CalleeName);
+                                               FunctionId CalleeName);
 
   // Create a merged conext-less profile map.
-  LLVM_ABI void createContextLessProfileMap(SampleProfileMap &ContextLessProfiles);
+  LLVM_ABI void
+  createContextLessProfileMap(SampleProfileMap &ContextLessProfiles);
   ContextTrieNode *
   getContextNodeForProfile(const FunctionSamples *FSamples) const {
     auto I = ProfileToNodeMap.find(FSamples);

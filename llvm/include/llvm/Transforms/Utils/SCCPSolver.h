@@ -14,11 +14,11 @@
 #ifndef LLVM_TRANSFORMS_UTILS_SCCPSOLVER_H
 #define LLVM_TRANSFORMS_UTILS_SCCPSOLVER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/PredicateInfo.h"
 #include <vector>
 
@@ -67,13 +67,15 @@ class SCCPSolver {
   std::unique_ptr<SCCPInstVisitor> Visitor;
 
 public:
-  LLVM_ABI SCCPSolver(const DataLayout &DL,
+  LLVM_ABI
+  SCCPSolver(const DataLayout &DL,
              std::function<const TargetLibraryInfo &(Function &)> GetTLI,
              LLVMContext &Ctx);
 
   LLVM_ABI ~SCCPSolver();
 
-  LLVM_ABI void addPredicateInfo(Function &F, DominatorTree &DT, AssumptionCache &AC);
+  LLVM_ABI void addPredicateInfo(Function &F, DominatorTree &DT,
+                                 AssumptionCache &AC);
 
   /// markBlockExecutable - This method can be used by clients to mark all of
   /// the blocks that are known to be intrinsically live in the processed unit.
@@ -105,7 +107,8 @@ public:
   /// argument-tracked functions.
   LLVM_ABI bool isArgumentTrackedFunction(Function *F);
 
-  LLVM_ABI const SmallPtrSetImpl<Function *> &getArgumentTrackedFunctions() const;
+  LLVM_ABI const SmallPtrSetImpl<Function *> &
+  getArgumentTrackedFunctions() const;
 
   /// Solve - Solve for constants and executable blocks.
   LLVM_ABI void solve();
@@ -119,7 +122,8 @@ public:
 
   LLVM_ABI void solveWhileResolvedUndefsIn(Module &M);
 
-  LLVM_ABI void solveWhileResolvedUndefsIn(SmallVectorImpl<Function *> &WorkList);
+  LLVM_ABI void
+  solveWhileResolvedUndefsIn(SmallVectorImpl<Function *> &WorkList);
 
   LLVM_ABI void solveWhileResolvedUndefs();
 
@@ -129,7 +133,8 @@ public:
   // block to the 'To' basic block is currently feasible.
   LLVM_ABI bool isEdgeFeasible(BasicBlock *From, BasicBlock *To) const;
 
-  LLVM_ABI std::vector<ValueLatticeElement> getStructLatticeValueFor(Value *V) const;
+  LLVM_ABI std::vector<ValueLatticeElement>
+  getStructLatticeValueFor(Value *V) const;
 
   LLVM_ABI void removeLatticeValueFor(Value *V);
 
@@ -140,7 +145,8 @@ public:
   LLVM_ABI const ValueLatticeElement &getLatticeValueFor(Value *V) const;
 
   /// getTrackedRetVals - Get the inferred return value map.
-  LLVM_ABI const MapVector<Function *, ValueLatticeElement> &getTrackedRetVals() const;
+  LLVM_ABI const MapVector<Function *, ValueLatticeElement> &
+  getTrackedRetVals() const;
 
   /// getTrackedGlobals - Get and return the set of inferred initializers for
   /// global variables.
@@ -175,8 +181,8 @@ public:
   /// If an argument is Constant then its lattice value is marked with the
   /// corresponding actual argument in \p Args. Otherwise, its lattice value
   /// is inherited (copied) from the corresponding formal argument in \p Args.
-  LLVM_ABI void setLatticeValueForSpecializationArguments(Function *F,
-                                       const SmallVectorImpl<ArgInfo> &Args);
+  LLVM_ABI void setLatticeValueForSpecializationArguments(
+      Function *F, const SmallVectorImpl<ArgInfo> &Args);
 
   /// Mark all of the blocks in function \p F non-executable. Clients can used
   /// this method to erase a function from the module (e.g., if it has been
@@ -187,12 +193,12 @@ public:
   LLVM_ABI void visitCall(CallInst &I);
 
   LLVM_ABI bool simplifyInstsInBlock(BasicBlock &BB,
-                            SmallPtrSetImpl<Value *> &InsertedValues,
-                            Statistic &InstRemovedStat,
-                            Statistic &InstReplacedStat);
+                                     SmallPtrSetImpl<Value *> &InsertedValues,
+                                     Statistic &InstRemovedStat,
+                                     Statistic &InstReplacedStat);
 
   LLVM_ABI bool removeNonFeasibleEdges(BasicBlock *BB, DomTreeUpdater &DTU,
-                              BasicBlock *&NewUnreachableBB) const;
+                                       BasicBlock *&NewUnreachableBB) const;
 
   LLVM_ABI void inferReturnAttributes() const;
   LLVM_ABI void inferArgAttributes() const;

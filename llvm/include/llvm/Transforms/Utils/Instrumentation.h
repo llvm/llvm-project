@@ -13,13 +13,13 @@
 #ifndef LLVM_TRANSFORMS_INSTRUMENTATION_H
 #define LLVM_TRANSFORMS_INSTRUMENTATION_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <limits>
@@ -42,12 +42,12 @@ LLVM_ABI bool checkIfAlreadyInstrumented(Module &M, StringRef Flag);
 /// allocas and llvm.localescape calls, for example, must remain in the entry
 /// block.
 LLVM_ABI BasicBlock::iterator PrepareToSplitEntryBlock(BasicBlock &BB,
-                                              BasicBlock::iterator IP);
+                                                       BasicBlock::iterator IP);
 
 // Create a constant for Str so that we can pass it to the run-time lib.
 LLVM_ABI GlobalVariable *createPrivateGlobalForString(Module &M, StringRef Str,
-                                             bool AllowMerging,
-                                             Twine NamePrefix = "");
+                                                      bool AllowMerging,
+                                                      Twine NamePrefix = "");
 
 // Returns F.getComdat() if it exists.
 // Otherwise creates a new comdat, sets F's comdat, and returns it.
@@ -58,7 +58,7 @@ LLVM_ABI Comdat *getOrCreateFunctionComdat(Function &F, Triple &T);
 // relocation overflow pressure. This can be be used for metadata globals that
 // aren't directly accessed by code, which has no performance impact.
 LLVM_ABI void setGlobalVariableLargeSection(const Triple &TargetTriple,
-                                   GlobalVariable &GV);
+                                            GlobalVariable &GV);
 
 // Insert GCOV profiling instrumentation
 struct GCOVOptions {
@@ -107,9 +107,10 @@ namespace pgo {
 // If \p AttachProfToDirectCall is true, a prof metadata is attached to the
 // new direct call to contain \p Count.
 // Returns the promoted direct call instruction.
-LLVM_ABI CallBase &promoteIndirectCall(CallBase &CB, Function *F, uint64_t Count,
-                              uint64_t TotalCount, bool AttachProfToDirectCall,
-                              OptimizationRemarkEmitter *ORE);
+LLVM_ABI CallBase &promoteIndirectCall(CallBase &CB, Function *F,
+                                       uint64_t Count, uint64_t TotalCount,
+                                       bool AttachProfToDirectCall,
+                                       OptimizationRemarkEmitter *ORE);
 } // namespace pgo
 
 /// Options for the frontend instrumentation based profiling pass.

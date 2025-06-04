@@ -14,10 +14,10 @@
 #ifndef LLVM_TRANSFORMS_UTILS_CODEEXTRACTOR_H
 #define LLVM_TRANSFORMS_UTILS_CODEEXTRACTOR_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Support/Compiler.h"
 #include <limits>
 
 namespace llvm {
@@ -67,7 +67,8 @@ public:
 
   /// Check whether \p BB contains an instruction thought to load from, store
   /// to, or otherwise clobber the alloca \p Addr.
-  LLVM_ABI bool doesBlockContainClobberOfAddr(BasicBlock &BB, AllocaInst *Addr) const;
+  LLVM_ABI bool doesBlockContainClobberOfAddr(BasicBlock &BB,
+                                              AllocaInst *Addr) const;
 };
 
   /// Utility class for extracting code into a new function.
@@ -149,7 +150,8 @@ public:
     /// If ArgsInZeroAddressSpace param is set to true, then the aggregate
     /// param pointer of the outlined function is declared in zero address
     /// space.
-    LLVM_ABI CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT = nullptr,
+    LLVM_ABI
+    CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT = nullptr,
                   bool AggregateArgs = false, BlockFrequencyInfo *BFI = nullptr,
                   BranchProbabilityInfo *BPI = nullptr,
                   AssumptionCache *AC = nullptr, bool AllowVarArgs = false,
@@ -161,7 +163,8 @@ public:
     ///
     /// Returns zero when called on a CodeExtractor instance where isEligible
     /// returns false.
-    LLVM_ABI Function *extractCodeRegion(const CodeExtractorAnalysisCache &CEAC);
+    LLVM_ABI Function *
+    extractCodeRegion(const CodeExtractorAnalysisCache &CEAC);
 
     /// Perform the extraction, returning the new function and providing an
     /// interface to see what was categorized as inputs and outputs.
@@ -175,14 +178,14 @@ public:
     /// \returns zero when called on a CodeExtractor instance where isEligible
     /// returns false.
     LLVM_ABI Function *extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
-                                ValueSet &Inputs, ValueSet &Outputs);
+                                         ValueSet &Inputs, ValueSet &Outputs);
 
     /// Verify that assumption cache isn't stale after a region is extracted.
     /// Returns true when verifier finds errors. AssumptionCache is passed as
     /// parameter to make this function stateless.
     LLVM_ABI static bool verifyAssumptionCache(const Function &OldFunc,
-                                      const Function &NewFunc,
-                                      AssumptionCache *AC);
+                                               const Function &NewFunc,
+                                               AssumptionCache *AC);
 
     /// Test whether this code extractor is eligible.
     ///
@@ -202,8 +205,8 @@ public:
     /// sets, before extraction occurs. These modifications won't have any
     /// significant impact on the cost however.
     LLVM_ABI void findInputsOutputs(ValueSet &Inputs, ValueSet &Outputs,
-                           const ValueSet &Allocas,
-                           bool CollectGlobalInputs = false) const;
+                                    const ValueSet &Allocas,
+                                    bool CollectGlobalInputs = false) const;
 
     /// Check if life time marker nodes can be hoisted/sunk into the outline
     /// region.
@@ -222,8 +225,8 @@ public:
     /// wrapping. The instructions that need to be sunk are collected in
     /// 'Allocas'.
     LLVM_ABI void findAllocas(const CodeExtractorAnalysisCache &CEAC,
-                     ValueSet &SinkCands, ValueSet &HoistCands,
-                     BasicBlock *&ExitBlock) const;
+                              ValueSet &SinkCands, ValueSet &HoistCands,
+                              BasicBlock *&ExitBlock) const;
 
     /// Find or create a block within the outline region for placing hoisted
     /// code.
@@ -233,7 +236,8 @@ public:
     /// inside the region that is the predecessor of CommonExitBlock, that block
     /// will be returned. Otherwise CommonExitBlock will be split and the
     /// original block will be added to the outline region.
-    LLVM_ABI BasicBlock *findOrCreateBlockForHoisting(BasicBlock *CommonExitBlock);
+    LLVM_ABI BasicBlock *
+    findOrCreateBlockForHoisting(BasicBlock *CommonExitBlock);
 
     /// Exclude a value from aggregate argument passing when extracting a code
     /// region, passing it instead as a scalar.

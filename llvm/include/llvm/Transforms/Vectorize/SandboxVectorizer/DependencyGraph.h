@@ -22,12 +22,12 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_DEPENDENCYGRAPH_H
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_DEPENDENCYGRAPH_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/IntrinsicInst.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Interval.h"
 
 namespace llvm::sandboxir {
@@ -70,8 +70,8 @@ class PredIterator {
   /// Skip iterators that don't point instructions or are outside \p DAG,
   /// starting from \p OpIt and ending before \p OpItE.n
   LLVM_ABI static User::op_iterator skipBadIt(User::op_iterator OpIt,
-                                     User::op_iterator OpItE,
-                                     const DependencyGraph &DAG);
+                                              User::op_iterator OpItE,
+                                              const DependencyGraph &DAG);
 
 public:
   using difference_type = std::ptrdiff_t;
@@ -315,16 +315,16 @@ public:
   /// Scans the instruction chain in \p Intvl top-down, returning the top-most
   /// MemDGNode, or nullptr.
   LLVM_ABI static MemDGNode *getTopMemDGNode(const Interval<Instruction> &Intvl,
-                                    const DependencyGraph &DAG);
+                                             const DependencyGraph &DAG);
   /// Scans the instruction chain in \p Intvl bottom-up, returning the
   /// bottom-most MemDGNode, or nullptr.
   LLVM_ABI static MemDGNode *getBotMemDGNode(const Interval<Instruction> &Intvl,
-                                    const DependencyGraph &DAG);
+                                             const DependencyGraph &DAG);
   /// Given \p Instrs it finds their closest mem nodes in the interval and
   /// returns the corresponding mem range. Note: BotN (or its neighboring mem
   /// node) is included in the range.
   LLVM_ABI static Interval<MemDGNode> make(const Interval<Instruction> &Instrs,
-                                  DependencyGraph &DAG);
+                                           DependencyGraph &DAG);
   static Interval<MemDGNode> makeEmpty() { return {}; }
 };
 

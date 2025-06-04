@@ -13,8 +13,8 @@
 #ifndef LLVM_TRANSFORMS_UTILS_SANITIZERSTATS_H
 #define LLVM_TRANSFORMS_UTILS_SANITIZERSTATS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

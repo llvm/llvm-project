@@ -15,13 +15,13 @@
 #ifndef LLVM_TRANSFORMS_COROUTINES_SUSPENDCROSSINGINFO_H
 #define LLVM_TRANSFORMS_COROUTINES_SUSPENDCROSSINGINFO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Coroutines/CoroInstr.h"
 
 namespace llvm {
@@ -103,19 +103,21 @@ public:
             ModuleSlotTracker &MST) const;
 #endif
 
-  LLVM_ABI SuspendCrossingInfo(Function &F,
+  LLVM_ABI
+  SuspendCrossingInfo(Function &F,
                       const SmallVectorImpl<AnyCoroSuspendInst *> &CoroSuspends,
                       const SmallVectorImpl<AnyCoroEndInst *> &CoroEnds);
 
   /// Returns true if there is a path from \p From to \p To crossing a suspend
   /// point without crossing \p From a 2nd time.
-  LLVM_ABI bool hasPathCrossingSuspendPoint(BasicBlock *From, BasicBlock *To) const;
+  LLVM_ABI bool hasPathCrossingSuspendPoint(BasicBlock *From,
+                                            BasicBlock *To) const;
 
   /// Returns true if there is a path from \p From to \p To crossing a suspend
   /// point without crossing \p From a 2nd time. If \p From is the same as \p To
   /// this will also check if there is a looping path crossing a suspend point.
   LLVM_ABI bool hasPathOrLoopCrossingSuspendPoint(BasicBlock *From,
-                                         BasicBlock *To) const;
+                                                  BasicBlock *To) const;
 
   bool isDefinitionAcrossSuspend(BasicBlock *DefBB, User *U) const {
     auto *I = cast<Instruction>(U);

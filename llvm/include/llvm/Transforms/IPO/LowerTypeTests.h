@@ -14,9 +14,9 @@
 #ifndef LLVM_TRANSFORMS_IPO_LOWERTYPETESTS_H
 #define LLVM_TRANSFORMS_IPO_LOWERTYPETESTS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <cstring>
 #include <limits>
@@ -191,7 +191,7 @@ struct ByteArrayBuilder {
   /// Processing Time) multiprocessor scheduling algorithm to lay out the bits
   /// efficiently; the pass allocates bit sets in decreasing size order.
   LLVM_ABI void allocate(const std::set<uint64_t> &Bits, uint64_t BitSize,
-                uint64_t &AllocByteOffset, uint8_t &AllocMask);
+                         uint64_t &AllocByteOffset, uint8_t &AllocMask);
 };
 
 LLVM_ABI bool isJumpTableCanonical(Function *F);

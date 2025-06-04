@@ -13,7 +13,6 @@
 #ifndef LLVM_TRANSFORMS_UTILS_SCALAREVOLUTIONEXPANDER_H
 #define LLVM_TRANSFORMS_UTILS_SCALAREVOLUTIONEXPANDER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -24,6 +23,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/InstructionCost.h"
 
 namespace llvm {
@@ -272,8 +272,8 @@ public:
   }
 
   /// Return the induction variable increment's IV operand.
-  LLVM_ABI Instruction *getIVIncOperand(Instruction *IncV, Instruction *InsertPos,
-                               bool allowScale);
+  LLVM_ABI Instruction *
+  getIVIncOperand(Instruction *IncV, Instruction *InsertPos, bool allowScale);
 
   /// Utility for hoisting \p IncV (with all subexpressions requried for its
   /// computation) before \p InsertPos. If \p RecomputePoisonFlags is set, drops
@@ -282,21 +282,23 @@ public:
   /// introduce a new use in the new position that didn't exist before, and may
   /// trigger new UB in case of poison.
   LLVM_ABI bool hoistIVInc(Instruction *IncV, Instruction *InsertPos,
-                  bool RecomputePoisonFlags = false);
+                           bool RecomputePoisonFlags = false);
 
   /// Return true if both increments directly increment the corresponding IV PHI
   /// nodes and have the same opcode. It is not safe to re-use the flags from
   /// the original increment, if it is more complex and SCEV expansion may have
   /// yielded a more simplified wider increment.
-  LLVM_ABI static bool canReuseFlagsFromOriginalIVInc(PHINode *OrigPhi, PHINode *WidePhi,
-                                             Instruction *OrigInc,
-                                             Instruction *WideInc);
+  LLVM_ABI static bool canReuseFlagsFromOriginalIVInc(PHINode *OrigPhi,
+                                                      PHINode *WidePhi,
+                                                      Instruction *OrigInc,
+                                                      Instruction *WideInc);
 
   /// replace congruent phis with their most canonical representative. Return
   /// the number of phis eliminated.
-  LLVM_ABI unsigned replaceCongruentIVs(Loop *L, const DominatorTree *DT,
-                               SmallVectorImpl<WeakTrackingVH> &DeadInsts,
-                               const TargetTransformInfo *TTI = nullptr);
+  LLVM_ABI unsigned
+  replaceCongruentIVs(Loop *L, const DominatorTree *DT,
+                      SmallVectorImpl<WeakTrackingVH> &DeadInsts,
+                      const TargetTransformInfo *TTI = nullptr);
 
   /// Return true if the given expression is safe to expand in the sense that
   /// all materialized values are safe to speculate anywhere their operands are
@@ -306,11 +308,13 @@ public:
   /// Return true if the given expression is safe to expand in the sense that
   /// all materialized values are defined and safe to speculate at the specified
   /// location and their operands are defined at this location.
-  LLVM_ABI bool isSafeToExpandAt(const SCEV *S, const Instruction *InsertionPoint) const;
+  LLVM_ABI bool isSafeToExpandAt(const SCEV *S,
+                                 const Instruction *InsertionPoint) const;
 
   /// Insert code to directly compute the specified SCEV expression into the
   /// program.  The code is inserted into the specified block.
-  LLVM_ABI Value *expandCodeFor(const SCEV *SH, Type *Ty, BasicBlock::iterator I);
+  LLVM_ABI Value *expandCodeFor(const SCEV *SH, Type *Ty,
+                                BasicBlock::iterator I);
   Value *expandCodeFor(const SCEV *SH, Type *Ty, Instruction *I) {
     return expandCodeFor(SH, Ty, I->getIterator());
   }
@@ -324,24 +328,27 @@ public:
   /// Generates a code sequence that evaluates this predicate.  The inserted
   /// instructions will be at position \p Loc.  The result will be of type i1
   /// and will have a value of 0 when the predicate is false and 1 otherwise.
-  LLVM_ABI Value *expandCodeForPredicate(const SCEVPredicate *Pred, Instruction *Loc);
+  LLVM_ABI Value *expandCodeForPredicate(const SCEVPredicate *Pred,
+                                         Instruction *Loc);
 
   /// A specialized variant of expandCodeForPredicate, handling the case when
   /// we are expanding code for a SCEVComparePredicate.
   LLVM_ABI Value *expandComparePredicate(const SCEVComparePredicate *Pred,
-                                Instruction *Loc);
+                                         Instruction *Loc);
 
   /// Generates code that evaluates if the \p AR expression will overflow.
-  LLVM_ABI Value *generateOverflowCheck(const SCEVAddRecExpr *AR, Instruction *Loc,
-                               bool Signed);
+  LLVM_ABI Value *generateOverflowCheck(const SCEVAddRecExpr *AR,
+                                        Instruction *Loc, bool Signed);
 
   /// A specialized variant of expandCodeForPredicate, handling the case when
   /// we are expanding code for a SCEVWrapPredicate.
-  LLVM_ABI Value *expandWrapPredicate(const SCEVWrapPredicate *P, Instruction *Loc);
+  LLVM_ABI Value *expandWrapPredicate(const SCEVWrapPredicate *P,
+                                      Instruction *Loc);
 
   /// A specialized variant of expandCodeForPredicate, handling the case when
   /// we are expanding code for a SCEVUnionPredicate.
-  LLVM_ABI Value *expandUnionPredicate(const SCEVUnionPredicate *Pred, Instruction *Loc);
+  LLVM_ABI Value *expandUnionPredicate(const SCEVUnionPredicate *Pred,
+                                       Instruction *Loc);
 
   /// Set the current IV increment loop and position.
   void setIVIncInsertPos(const Loop *L, Instruction *Pos) {
@@ -418,24 +425,24 @@ public:
   ///
   /// Note that this function does not perform an exhaustive search. I.e if it
   /// didn't find any value it does not mean that there is no such value.
-  LLVM_ABI bool hasRelatedExistingExpansion(const SCEV *S, const Instruction *At,
-                                   Loop *L);
+  LLVM_ABI bool hasRelatedExistingExpansion(const SCEV *S,
+                                            const Instruction *At, Loop *L);
 
   /// Returns a suitable insert point after \p I, that dominates \p
   /// MustDominate. Skips instructions inserted by the expander.
-  LLVM_ABI BasicBlock::iterator findInsertPointAfter(Instruction *I,
-                                            Instruction *MustDominate) const;
+  LLVM_ABI BasicBlock::iterator
+  findInsertPointAfter(Instruction *I, Instruction *MustDominate) const;
 
 private:
   LLVMContext &getContext() const { return SE.getContext(); }
 
   /// Recursive helper function for isHighCostExpansion.
-  LLVM_ABI bool isHighCostExpansionHelper(const SCEVOperand &WorkItem, Loop *L,
-                                 const Instruction &At, InstructionCost &Cost,
-                                 unsigned Budget,
-                                 const TargetTransformInfo &TTI,
-                                 SmallPtrSetImpl<const SCEV *> &Processed,
-                                 SmallVectorImpl<SCEVOperand> &Worklist);
+  LLVM_ABI bool
+  isHighCostExpansionHelper(const SCEVOperand &WorkItem, Loop *L,
+                            const Instruction &At, InstructionCost &Cost,
+                            unsigned Budget, const TargetTransformInfo &TTI,
+                            SmallPtrSetImpl<const SCEV *> &Processed,
+                            SmallVectorImpl<SCEVOperand> &Worklist);
 
   /// Insert the specified binary operator, doing a small amount of work to
   /// avoid inserting an obviously redundant operation, and hoisting to an

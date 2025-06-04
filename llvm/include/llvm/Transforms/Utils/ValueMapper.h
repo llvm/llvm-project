@@ -14,12 +14,12 @@
 #ifndef LLVM_TRANSFORMS_UTILS_VALUEMAPPER_H
 #define LLVM_TRANSFORMS_UTILS_VALUEMAPPER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/simple_ilist.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/IR/ValueMap.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -165,9 +165,9 @@ class ValueMapper {
 
 public:
   LLVM_ABI ValueMapper(ValueToValueMapTy &VM, RemapFlags Flags = RF_None,
-              ValueMapTypeRemapper *TypeMapper = nullptr,
-              ValueMaterializer *Materializer = nullptr,
-              const MetadataPredicate *IdentityMD = nullptr);
+                       ValueMapTypeRemapper *TypeMapper = nullptr,
+                       ValueMaterializer *Materializer = nullptr,
+                       const MetadataPredicate *IdentityMD = nullptr);
   ValueMapper(ValueMapper &&) = delete;
   ValueMapper(const ValueMapper &) = delete;
   ValueMapper &operator=(ValueMapper &&) = delete;
@@ -196,21 +196,24 @@ public:
 
   LLVM_ABI void remapInstruction(Instruction &I);
   LLVM_ABI void remapDbgRecord(Module *M, DbgRecord &V);
-  LLVM_ABI void remapDbgRecordRange(Module *M, iterator_range<DbgRecordIterator> Range);
+  LLVM_ABI void remapDbgRecordRange(Module *M,
+                                    iterator_range<DbgRecordIterator> Range);
   LLVM_ABI void remapFunction(Function &F);
   LLVM_ABI void remapGlobalObjectMetadata(GlobalObject &GO);
 
   LLVM_ABI void scheduleMapGlobalInitializer(GlobalVariable &GV, Constant &Init,
-                                    unsigned MappingContextID = 0);
-  LLVM_ABI void scheduleMapAppendingVariable(GlobalVariable &GV, Constant *InitPrefix,
-                                    bool IsOldCtorDtor,
-                                    ArrayRef<Constant *> NewMembers,
-                                    unsigned MappingContextID = 0);
+                                             unsigned MappingContextID = 0);
+  LLVM_ABI void scheduleMapAppendingVariable(GlobalVariable &GV,
+                                             Constant *InitPrefix,
+                                             bool IsOldCtorDtor,
+                                             ArrayRef<Constant *> NewMembers,
+                                             unsigned MappingContextID = 0);
   LLVM_ABI void scheduleMapGlobalAlias(GlobalAlias &GA, Constant &Aliasee,
-                              unsigned MappingContextID = 0);
+                                       unsigned MappingContextID = 0);
   LLVM_ABI void scheduleMapGlobalIFunc(GlobalIFunc &GI, Constant &Resolver,
-                              unsigned MappingContextID = 0);
-  LLVM_ABI void scheduleRemapFunction(Function &F, unsigned MappingContextID = 0);
+                                       unsigned MappingContextID = 0);
+  LLVM_ABI void scheduleRemapFunction(Function &F,
+                                      unsigned MappingContextID = 0);
 };
 
 /// Look up or compute a value in the value map.

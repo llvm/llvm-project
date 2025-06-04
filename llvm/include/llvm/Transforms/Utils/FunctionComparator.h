@@ -14,7 +14,6 @@
 #ifndef LLVM_TRANSFORMS_UTILS_FUNCTIONCOMPARATOR_H
 #define LLVM_TRANSFORMS_UTILS_FUNCTIONCOMPARATOR_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Instructions.h"
@@ -22,6 +21,7 @@
 #include "llvm/IR/ValueMap.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <tuple>
 
@@ -111,7 +111,8 @@ protected:
   LLVM_ABI int compareSignature() const;
 
   /// Test whether two basic blocks have equivalent behaviour.
-  LLVM_ABI int cmpBasicBlocks(const BasicBlock *BBL, const BasicBlock *BBR) const;
+  LLVM_ABI int cmpBasicBlocks(const BasicBlock *BBL,
+                              const BasicBlock *BBR) const;
 
   /// Constants comparison.
   /// Its analog to lexicographical comparison between hypothetical numbers
@@ -271,7 +272,7 @@ protected:
   /// still must be compared afterwards. In this case it's already guaranteed
   /// that both instructions have the same number of operands.
   LLVM_ABI int cmpOperations(const Instruction *L, const Instruction *R,
-                    bool &needToCmpOperands) const;
+                             bool &needToCmpOperands) const;
 
   /// cmpType - compares two types,
   /// defines total ordering among the types set.
@@ -318,7 +319,8 @@ protected:
   LLVM_ABI int cmpNumbers(uint64_t L, uint64_t R) const;
   LLVM_ABI int cmpAligns(Align L, Align R) const;
   LLVM_ABI int cmpAPInts(const APInt &L, const APInt &R) const;
-  LLVM_ABI int cmpConstantRanges(const ConstantRange &L, const ConstantRange &R) const;
+  LLVM_ABI int cmpConstantRanges(const ConstantRange &L,
+                                 const ConstantRange &R) const;
   LLVM_ABI int cmpAPFloats(const APFloat &L, const APFloat &R) const;
   LLVM_ABI int cmpMem(StringRef L, StringRef R) const;
 

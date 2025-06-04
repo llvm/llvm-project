@@ -13,9 +13,9 @@
 #ifndef LLVM_TRANSFORMS_UTILS_SIZEOPTS_H
 #define LLVM_TRANSFORMS_UTILS_SIZEOPTS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 LLVM_ABI extern cl::opt<bool> EnablePGSO;
@@ -91,15 +91,17 @@ bool shouldOptimizeForSizeImpl(BlockTOrBlockFreq BBOrBlockFreq,
 
 /// Returns true if function \p F is suggested to be size-optimized based on the
 /// profile.
-LLVM_ABI bool shouldOptimizeForSize(const Function *F, ProfileSummaryInfo *PSI,
-                           BlockFrequencyInfo *BFI,
-                           PGSOQueryType QueryType = PGSOQueryType::Other);
+LLVM_ABI bool
+shouldOptimizeForSize(const Function *F, ProfileSummaryInfo *PSI,
+                      BlockFrequencyInfo *BFI,
+                      PGSOQueryType QueryType = PGSOQueryType::Other);
 
 /// Returns true if basic block \p BB is suggested to be size-optimized based on
 /// the profile.
-LLVM_ABI bool shouldOptimizeForSize(const BasicBlock *BB, ProfileSummaryInfo *PSI,
-                           BlockFrequencyInfo *BFI,
-                           PGSOQueryType QueryType = PGSOQueryType::Other);
+LLVM_ABI bool
+shouldOptimizeForSize(const BasicBlock *BB, ProfileSummaryInfo *PSI,
+                      BlockFrequencyInfo *BFI,
+                      PGSOQueryType QueryType = PGSOQueryType::Other);
 
 } // end namespace llvm
 

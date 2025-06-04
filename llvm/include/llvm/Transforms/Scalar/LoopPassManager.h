@@ -36,13 +36,13 @@
 #ifndef LLVM_TRANSFORMS_SCALAR_LOOPPASSMANAGER_H
 #define LLVM_TRANSFORMS_SCALAR_LOOPPASSMANAGER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopNestAnalysis.h"
-#include "llvm/IR/PassManager.h"
 #include "llvm/IR/PassInstrumentation.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/LCSSA.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -93,10 +93,12 @@ public:
   }
 
   LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
-                        LoopStandardAnalysisResults &AR, LPMUpdater &U);
+                                 LoopStandardAnalysisResults &AR,
+                                 LPMUpdater &U);
 
-  LLVM_ABI void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
   /// Add either a loop pass or a loop-nest pass to the pass manager. Append \p
   /// Pass to the list of loop passes if it has a dedicated \fn run() method for
   /// loops and to the list of loop-nest passes if the \fn run() method is for
@@ -155,12 +157,12 @@ protected:
                 LoopStandardAnalysisResults &AR, LPMUpdater &U,
                 PassInstrumentation &PI);
 
-  LLVM_ABI PreservedAnalyses runWithLoopNestPasses(Loop &L, LoopAnalysisManager &AM,
-                                          LoopStandardAnalysisResults &AR,
-                                          LPMUpdater &U);
-  LLVM_ABI PreservedAnalyses runWithoutLoopNestPasses(Loop &L, LoopAnalysisManager &AM,
-                                             LoopStandardAnalysisResults &AR,
-                                             LPMUpdater &U);
+  LLVM_ABI PreservedAnalyses
+  runWithLoopNestPasses(Loop &L, LoopAnalysisManager &AM,
+                        LoopStandardAnalysisResults &AR, LPMUpdater &U);
+  LLVM_ABI PreservedAnalyses
+  runWithoutLoopNestPasses(Loop &L, LoopAnalysisManager &AM,
+                           LoopStandardAnalysisResults &AR, LPMUpdater &U);
 
 private:
   static const Loop &getLoopFromIR(Loop &L) { return L; }
@@ -415,8 +417,9 @@ public:
 
   /// Runs the loop passes across every loop in the function.
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  LLVM_ABI void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 
   static bool isRequired() { return true; }
 
@@ -502,7 +505,7 @@ public:
   LLVM_ABI PrintLoopPass(raw_ostream &OS, const std::string &Banner = "");
 
   LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &,
-                        LoopStandardAnalysisResults &, LPMUpdater &);
+                                 LoopStandardAnalysisResults &, LPMUpdater &);
 };
 }
 

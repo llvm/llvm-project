@@ -16,10 +16,10 @@
 #ifndef LLVM_TRANSFORMS_UTILS_ASSUMEBUNDLEBUILDER_H
 #define LLVM_TRANSFORMS_UTILS_ASSUMEBUNDLEBUILDER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class AssumeInst;
@@ -45,14 +45,14 @@ LLVM_ABI AssumeInst *buildAssumeFromInst(Instruction *I);
 /// reasoning.
 /// This returns if a change was made.
 LLVM_ABI bool salvageKnowledge(Instruction *I, AssumptionCache *AC = nullptr,
-                      DominatorTree *DT = nullptr);
+                               DominatorTree *DT = nullptr);
 
 /// Build and return a new assume created from the provided knowledge
 /// if the knowledge in the assume is fully redundant this will return nullptr
-LLVM_ABI AssumeInst *buildAssumeFromKnowledge(ArrayRef<RetainedKnowledge> Knowledge,
-                                     Instruction *CtxI,
-                                     AssumptionCache *AC = nullptr,
-                                     DominatorTree *DT = nullptr);
+LLVM_ABI AssumeInst *
+buildAssumeFromKnowledge(ArrayRef<RetainedKnowledge> Knowledge,
+                         Instruction *CtxI, AssumptionCache *AC = nullptr,
+                         DominatorTree *DT = nullptr);
 
 /// This pass attempts to minimize the number of assume without loosing any
 /// information.
@@ -70,9 +70,9 @@ struct AssumeBuilderPass : public PassInfoMixin<AssumeBuilderPass> {
 /// Assume. This will return an empty RetainedKnowledge if the knowledge is
 /// useless.
 LLVM_ABI RetainedKnowledge simplifyRetainedKnowledge(AssumeInst *Assume,
-                                            RetainedKnowledge RK,
-                                            AssumptionCache *AC,
-                                            DominatorTree *DT);
+                                                     RetainedKnowledge RK,
+                                                     AssumptionCache *AC,
+                                                     DominatorTree *DT);
 
 } // namespace llvm
 

@@ -1821,7 +1821,8 @@ void llvm::appendLoopsToWorklist(RangeT &&Loops,
   appendReversedLoopsToWorklist(reverse(Loops), Worklist);
 }
 
-template LLVM_EXPORT_TEMPLATE void llvm::appendLoopsToWorklist<ArrayRef<Loop *> &>(
+template LLVM_EXPORT_TEMPLATE void
+llvm::appendLoopsToWorklist<ArrayRef<Loop *> &>(
     ArrayRef<Loop *> &Loops, SmallPriorityWorklist<Loop *, 4> &Worklist);
 
 template LLVM_EXPORT_TEMPLATE void

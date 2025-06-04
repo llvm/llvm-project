@@ -9,9 +9,9 @@
 #ifndef LLVM_TRANSFORMS_IPO_EXTRACTGV_H
 #define LLVM_TRANSFORMS_IPO_EXTRACTGV_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class GlobalValue;
@@ -24,7 +24,7 @@ private:
 
 public:
   LLVM_ABI ExtractGVPass(std::vector<GlobalValue *> &GVs, bool deleteS = true,
-                bool keepConstInit = false);
+                         bool keepConstInit = false);
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };
 } // namespace llvm

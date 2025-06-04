@@ -9,13 +9,13 @@
 #ifndef LLVM_TRANSFORMS_IPO_FUNCTIONIMPORT_H
 #define LLVM_TRANSFORMS_IPO_FUNCTIONIMPORT_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <functional>
 #include <memory>
@@ -201,12 +201,13 @@ public:
     // Add the given GUID to ImportList as a definition.  If the same GUID has
     // been added as a declaration previously, that entry is overridden.
     LLVM_ABI AddDefinitionStatus addDefinition(StringRef FromModule,
-                                      GlobalValue::GUID GUID);
+                                               GlobalValue::GUID GUID);
 
     // Add the given GUID to ImportList as a declaration.  If the same GUID has
     // been added as a definition previously, that entry takes precedence, and
     // no change is made.
-    LLVM_ABI void maybeAddDeclaration(StringRef FromModule, GlobalValue::GUID GUID);
+    LLVM_ABI void maybeAddDeclaration(StringRef FromModule,
+                                      GlobalValue::GUID GUID);
 
     void addGUID(StringRef FromModule, GlobalValue::GUID GUID,
                  GlobalValueSummary::ImportKind ImportKind) {
@@ -313,7 +314,8 @@ public:
         ClearDSOLocalOnDeclarations(ClearDSOLocalOnDeclarations) {}
 
   /// Import functions in Module \p M based on the supplied import list.
-  LLVM_ABI Expected<bool> importFunctions(Module &M, const ImportMapTy &ImportList);
+  LLVM_ABI Expected<bool> importFunctions(Module &M,
+                                          const ImportMapTy &ImportList);
 
 private:
   /// The summaries index used to trigger importing.
@@ -418,9 +420,9 @@ LLVM_ABI void gatherImportedSummariesForModule(
     GVSummaryPtrSet &DecSummaries);
 
 /// Emit into \p OutputFilename the files module \p ModulePath will import from.
-LLVM_ABI Error EmitImportsFiles(
-    StringRef ModulePath, StringRef OutputFilename,
-    const ModuleToSummariesForIndexTy &ModuleToSummariesForIndex);
+LLVM_ABI Error
+EmitImportsFiles(StringRef ModulePath, StringRef OutputFilename,
+                 const ModuleToSummariesForIndexTy &ModuleToSummariesForIndex);
 
 /// Call \p F passing each of the files module \p ModulePath will import from.
 LLVM_ABI void processImportsFiles(
@@ -435,13 +437,13 @@ LLVM_ABI void processImportsFiles(
 /// 2. (optional) Apply propagated function attributes to \p TheModule if
 ///    PropagateAttrs is true
 LLVM_ABI void thinLTOFinalizeInModule(Module &TheModule,
-                             const GVSummaryMapTy &DefinedGlobals,
-                             bool PropagateAttrs);
+                                      const GVSummaryMapTy &DefinedGlobals,
+                                      bool PropagateAttrs);
 
 /// Internalize \p TheModule based on the information recorded in the summaries
 /// during global summary-based analysis.
 LLVM_ABI void thinLTOInternalizeModule(Module &TheModule,
-                              const GVSummaryMapTy &DefinedGlobals);
+                                       const GVSummaryMapTy &DefinedGlobals);
 
 } // end namespace llvm
 

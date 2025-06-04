@@ -13,10 +13,10 @@
 #ifndef LLVM_TRANSFORMS_UTILS_SSAUPDATERBULK_H
 #define LLVM_TRANSFORMS_UTILS_SSAUPDATERBULK_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/PredIteratorCache.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -76,8 +76,9 @@ public:
   /// locations for new phi-nodes insertions. If a nonnull pointer to a vector
   /// InsertedPHIs is passed, all the new phi-nodes will be added to this
   /// vector.
-  LLVM_ABI void RewriteAllUses(DominatorTree *DT,
-                      SmallVectorImpl<PHINode *> *InsertedPHIs = nullptr);
+  LLVM_ABI void
+  RewriteAllUses(DominatorTree *DT,
+                 SmallVectorImpl<PHINode *> *InsertedPHIs = nullptr);
 };
 
 } // end namespace llvm

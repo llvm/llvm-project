@@ -14,8 +14,8 @@
 #ifndef LLVM_TRANSFORMS_UTILS_CALLPROMOTIONUTILS_H
 #define LLVM_TRANSFORMS_UTILS_CALLPROMOTIONUTILS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/Analysis/CtxProfAnalysis.h"
+#include "llvm/Support/Compiler.h"
 namespace llvm {
 template <typename T> class ArrayRef;
 class Constant;
@@ -34,7 +34,7 @@ class Value;
 /// is non-null and the indirect call cannot be promoted, the failure reason
 /// will be stored in it.
 LLVM_ABI bool isLegalToPromote(const CallBase &CB, Function *Callee,
-                      const char **FailureReason = nullptr);
+                               const char **FailureReason = nullptr);
 
 /// Promote the given indirect call site to unconditionally call \p Callee.
 ///
@@ -44,7 +44,7 @@ LLVM_ABI bool isLegalToPromote(const CallBase &CB, Function *Callee,
 /// RetBitCast is non-null, it will be used to store the return value bitcast,
 /// if created.
 LLVM_ABI CallBase &promoteCall(CallBase &CB, Function *Callee,
-                      CastInst **RetBitCast = nullptr);
+                               CastInst **RetBitCast = nullptr);
 
 /// Promote the given indirect call site to conditionally call \p Callee. The
 /// promoted direct call instruction is predicated on `CB.getCalledOperand() ==
@@ -56,10 +56,10 @@ LLVM_ABI CallBase &promoteCall(CallBase &CB, Function *Callee,
 /// \p BranchWeights is non-null, it will be used to set !prof metadata on the
 /// new conditional branch.
 LLVM_ABI CallBase &promoteCallWithIfThenElse(CallBase &CB, Function *Callee,
-                                    MDNode *BranchWeights = nullptr);
+                                             MDNode *BranchWeights = nullptr);
 
 LLVM_ABI CallBase *promoteCallWithIfThenElse(CallBase &CB, Function &Callee,
-                                    PGOContextualProfile &CtxProf);
+                                             PGOContextualProfile &CtxProf);
 
 /// This is similar to `promoteCallWithIfThenElse` except that the condition to
 /// promote a virtual call is that \p VPtr is the same as any of \p
@@ -73,9 +73,9 @@ LLVM_ABI CallBase *promoteCallWithIfThenElse(CallBase &CB, Function &Callee,
 /// TODO: sink the address-calculation instructions of indirect callee to the
 /// indirect call fallback after transformation.
 LLVM_ABI CallBase &promoteCallWithVTableCmp(CallBase &CB, Instruction *VPtr,
-                                   Function *Callee,
-                                   ArrayRef<Constant *> AddressPoints,
-                                   MDNode *BranchWeights);
+                                            Function *Callee,
+                                            ArrayRef<Constant *> AddressPoints,
+                                            MDNode *BranchWeights);
 
 /// Try to promote (devirtualize) a virtual call on an Alloca. Return true on
 /// success.
@@ -107,7 +107,8 @@ LLVM_ABI bool tryPromoteCall(CallBase &CB);
 /// the given callee. The original call site is moved into the "else" block,
 /// and a clone of the call site is placed in the "then" block. The cloned
 /// instruction is returned.
-LLVM_ABI CallBase &versionCallSite(CallBase &CB, Value *Callee, MDNode *BranchWeights);
+LLVM_ABI CallBase &versionCallSite(CallBase &CB, Value *Callee,
+                                   MDNode *BranchWeights);
 
 } // end namespace llvm
 

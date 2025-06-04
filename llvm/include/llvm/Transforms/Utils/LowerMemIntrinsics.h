@@ -49,12 +49,14 @@ LLVM_ABI void createMemCpyLoopKnownSize(
     std::optional<uint32_t> AtomicCpySize = std::nullopt);
 
 /// Expand \p MemCpy as a loop. \p MemCpy is not deleted.
-LLVM_ABI void expandMemCpyAsLoop(MemCpyInst *MemCpy, const TargetTransformInfo &TTI,
-                        ScalarEvolution *SE = nullptr);
+LLVM_ABI void expandMemCpyAsLoop(MemCpyInst *MemCpy,
+                                 const TargetTransformInfo &TTI,
+                                 ScalarEvolution *SE = nullptr);
 
 /// Expand \p MemMove as a loop. \p MemMove is not deleted. Returns true if the
 /// memmove was lowered.
-LLVM_ABI bool expandMemMoveAsLoop(MemMoveInst *MemMove, const TargetTransformInfo &TTI);
+LLVM_ABI bool expandMemMoveAsLoop(MemMoveInst *MemMove,
+                                  const TargetTransformInfo &TTI);
 
 /// Expand \p MemSet as a loop. \p MemSet is not deleted.
 LLVM_ABI void expandMemSetAsLoop(MemSetInst *MemSet);
@@ -64,8 +66,8 @@ LLVM_ABI void expandMemSetPatternAsLoop(MemSetPatternInst *MemSet);
 
 /// Expand \p AtomicMemCpy as a loop. \p AtomicMemCpy is not deleted.
 LLVM_ABI void expandAtomicMemCpyAsLoop(AnyMemCpyInst *AtomicMemCpy,
-                              const TargetTransformInfo &TTI,
-                              ScalarEvolution *SE);
+                                       const TargetTransformInfo &TTI,
+                                       ScalarEvolution *SE);
 
 } // namespace llvm
 

@@ -97,7 +97,6 @@
 #ifndef LLVM_TRANSFORMS_IPO_ATTRIBUTOR_H
 #define LLVM_TRANSFORMS_IPO_ATTRIBUTOR_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/MapVector.h"
@@ -130,6 +129,7 @@
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -197,15 +197,16 @@ struct ValueAndContext : public std::pair<Value *, const Instruction *> {
 /// Return true if \p I is a `nosync` instruction. Use generic reasoning and
 /// potentially the corresponding AANoSync.
 LLVM_ABI bool isNoSyncInst(Attributor &A, const Instruction &I,
-                  const AbstractAttribute &QueryingAA);
+                           const AbstractAttribute &QueryingAA);
 
 /// Return true if \p V is dynamically unique, that is, there are no two
 /// "instances" of \p V at runtime with different values.
 /// Note: If \p ForAnalysisOnly is set we only check that the Attributor will
 /// never use \p V to represent two "instances" not that \p V could not
 /// technically represent them.
-LLVM_ABI bool isDynamicallyUnique(Attributor &A, const AbstractAttribute &QueryingAA,
-                         const Value &V, bool ForAnalysisOnly = true);
+LLVM_ABI bool isDynamicallyUnique(Attributor &A,
+                                  const AbstractAttribute &QueryingAA,
+                                  const Value &V, bool ForAnalysisOnly = true);
 
 /// Return true if \p V is a valid value in \p Scope, that is a constant or an
 /// instruction/argument of \p Scope.
@@ -214,7 +215,8 @@ LLVM_ABI bool isValidInScope(const Value &V, const Function *Scope);
 /// Return true if the value of \p VAC is a valid at the position of \p VAC,
 /// that is a constant, an argument of the same function, or an instruction in
 /// that function that dominates the position.
-LLVM_ABI bool isValidAtPosition(const ValueAndContext &VAC, InformationCache &InfoCache);
+LLVM_ABI bool isValidAtPosition(const ValueAndContext &VAC,
+                                InformationCache &InfoCache);
 
 /// Try to convert \p V to type \p Ty without introducing new instructions. If
 /// this is not possible return `nullptr`. Note: this function basically knows
@@ -329,11 +331,10 @@ inline bool operator==(const RangeTy &A, const RangeTy &B) {
 inline bool operator!=(const RangeTy &A, const RangeTy &B) { return !(A == B); }
 
 /// Return the initial value of \p Obj with type \p Ty if that is a constant.
-LLVM_ABI Constant *getInitialValueForObj(Attributor &A,
-                                const AbstractAttribute &QueryingAA, Value &Obj,
-                                Type &Ty, const TargetLibraryInfo *TLI,
-                                const DataLayout &DL,
-                                RangeTy *RangePtr = nullptr);
+LLVM_ABI Constant *
+getInitialValueForObj(Attributor &A, const AbstractAttribute &QueryingAA,
+                      Value &Obj, Type &Ty, const TargetLibraryInfo *TLI,
+                      const DataLayout &DL, RangeTy *RangePtr = nullptr);
 
 /// Collect all potential values \p LI could read into \p PotentialValues. That
 /// is, the only values read by \p LI are assumed to be known and all are in
@@ -369,12 +370,14 @@ LLVM_ABI bool getPotentialCopiesOfStoredValue(
 /// Return true if \p IRP is readonly. This will query respective AAs that
 /// deduce the information and introduce dependences for \p QueryingAA.
 LLVM_ABI bool isAssumedReadOnly(Attributor &A, const IRPosition &IRP,
-                       const AbstractAttribute &QueryingAA, bool &IsKnown);
+                                const AbstractAttribute &QueryingAA,
+                                bool &IsKnown);
 
 /// Return true if \p IRP is readnone. This will query respective AAs that
 /// deduce the information and introduce dependences for \p QueryingAA.
 LLVM_ABI bool isAssumedReadNone(Attributor &A, const IRPosition &IRP,
-                       const AbstractAttribute &QueryingAA, bool &IsKnown);
+                                const AbstractAttribute &QueryingAA,
+                                bool &IsKnown);
 
 /// Return true if \p ToI is potentially reachable from \p FromI without running
 /// into any instruction in \p ExclusionSet The two instructions do not need to
@@ -399,14 +402,16 @@ LLVM_ABI bool isPotentiallyReachable(
 
 /// Return true if \p Obj is assumed to be a thread local object.
 LLVM_ABI bool isAssumedThreadLocalObject(Attributor &A, Value &Obj,
-                                const AbstractAttribute &QueryingAA);
+                                         const AbstractAttribute &QueryingAA);
 
 /// Return true if \p I is potentially affected by a barrier.
-LLVM_ABI bool isPotentiallyAffectedByBarrier(Attributor &A, const Instruction &I,
-                                    const AbstractAttribute &QueryingAA);
-LLVM_ABI bool isPotentiallyAffectedByBarrier(Attributor &A, ArrayRef<const Value *> Ptrs,
-                                    const AbstractAttribute &QueryingAA,
-                                    const Instruction *CtxI);
+LLVM_ABI bool
+isPotentiallyAffectedByBarrier(Attributor &A, const Instruction &I,
+                               const AbstractAttribute &QueryingAA);
+LLVM_ABI bool
+isPotentiallyAffectedByBarrier(Attributor &A, ArrayRef<const Value *> Ptrs,
+                               const AbstractAttribute &QueryingAA,
+                               const Instruction *CtxI);
 } // namespace AA
 
 template <>
@@ -1344,7 +1349,8 @@ struct InformationCache {
 
   /// Return all functions that might be called indirectly, only valid for
   /// closed world modules (see isClosedWorldModule).
-  LLVM_ABI ArrayRef<Function *> getIndirectlyCallableFunctions(Attributor &A) const;
+  LLVM_ABI ArrayRef<Function *>
+  getIndirectlyCallableFunctions(Attributor &A) const;
 
   /// Return the flat address space if the associated target has.
   LLVM_ABI std::optional<unsigned> getFlatAddressSpace() const;
@@ -1530,8 +1536,9 @@ struct Attributor {
   ///                  the abstract attributes.
   /// \param Configuration The Attributor configuration which determines what
   ///                      generic features to use.
-  LLVM_ABI Attributor(SetVector<Function *> &Functions, InformationCache &InfoCache,
-             AttributorConfig Configuration);
+  LLVM_ABI Attributor(SetVector<Function *> &Functions,
+                      InformationCache &InfoCache,
+                      AttributorConfig Configuration);
 
   LLVM_ABI ~Attributor();
 
@@ -1696,7 +1703,8 @@ struct Attributor {
   /// state, \p ToAA can be moved to a pessimistic fixpoint because it required
   /// information from \p FromAA but none are available anymore.
   LLVM_ABI void recordDependence(const AbstractAttribute &FromAA,
-                        const AbstractAttribute &ToAA, DepClassTy DepClass);
+                                 const AbstractAttribute &ToAA,
+                                 DepClassTy DepClass);
 
   /// Introduce a new abstract attribute into the fixpoint analysis.
   ///
@@ -1915,17 +1923,19 @@ struct Attributor {
 
   /// Return the attributes of kind \p AK existing in the IR as operand bundles
   /// of an llvm.assume.
-  LLVM_ABI bool getAttrsFromAssumes(const IRPosition &IRP, Attribute::AttrKind AK,
-                           SmallVectorImpl<Attribute> &Attrs);
+  LLVM_ABI bool getAttrsFromAssumes(const IRPosition &IRP,
+                                    Attribute::AttrKind AK,
+                                    SmallVectorImpl<Attribute> &Attrs);
 
   /// Return true if any kind in \p AKs existing in the IR at a position that
   /// will affect this one. See also getAttrs(...).
   /// \param IgnoreSubsumingPositions Flag to determine if subsuming positions,
   ///                                 e.g., the function position if this is an
   ///                                 argument position, should be ignored.
-  LLVM_ABI bool hasAttr(const IRPosition &IRP, ArrayRef<Attribute::AttrKind> AKs,
-               bool IgnoreSubsumingPositions = false,
-               Attribute::AttrKind ImpliedAttributeKind = Attribute::None);
+  LLVM_ABI bool
+  hasAttr(const IRPosition &IRP, ArrayRef<Attribute::AttrKind> AKs,
+          bool IgnoreSubsumingPositions = false,
+          Attribute::AttrKind ImpliedAttributeKind = Attribute::None);
 
   /// Return the attributes of any kind in \p AKs existing in the IR at a
   /// position that will affect this one. While each position can only have a
@@ -1935,20 +1945,22 @@ struct Attributor {
   /// \param IgnoreSubsumingPositions Flag to determine if subsuming positions,
   ///                                 e.g., the function position if this is an
   ///                                 argument position, should be ignored.
-  LLVM_ABI void getAttrs(const IRPosition &IRP, ArrayRef<Attribute::AttrKind> AKs,
-                SmallVectorImpl<Attribute> &Attrs,
-                bool IgnoreSubsumingPositions = false);
+  LLVM_ABI void getAttrs(const IRPosition &IRP,
+                         ArrayRef<Attribute::AttrKind> AKs,
+                         SmallVectorImpl<Attribute> &Attrs,
+                         bool IgnoreSubsumingPositions = false);
 
   /// Remove all \p AttrKinds attached to \p IRP.
   LLVM_ABI ChangeStatus removeAttrs(const IRPosition &IRP,
-                           ArrayRef<Attribute::AttrKind> AttrKinds);
-  LLVM_ABI ChangeStatus removeAttrs(const IRPosition &IRP, ArrayRef<StringRef> Attrs);
+                                    ArrayRef<Attribute::AttrKind> AttrKinds);
+  LLVM_ABI ChangeStatus removeAttrs(const IRPosition &IRP,
+                                    ArrayRef<StringRef> Attrs);
 
   /// Attach \p DeducedAttrs to \p IRP, if \p ForceReplace is set we do this
   /// even if the same attribute kind was already present.
   LLVM_ABI ChangeStatus manifestAttrs(const IRPosition &IRP,
-                             ArrayRef<Attribute> DeducedAttrs,
-                             bool ForceReplace = false);
+                                      ArrayRef<Attribute> DeducedAttrs,
+                                      bool ForceReplace = false);
 
 private:
   /// Helper to check \p Attrs for \p AK, if not found, check if \p
@@ -1973,9 +1985,9 @@ private:
 public:
   /// If \p IRP is assumed to be a constant, return it, if it is unclear yet,
   /// return std::nullopt, otherwise return `nullptr`.
-  LLVM_ABI std::optional<Constant *> getAssumedConstant(const IRPosition &IRP,
-                                               const AbstractAttribute &AA,
-                                               bool &UsedAssumedInformation);
+  LLVM_ABI std::optional<Constant *>
+  getAssumedConstant(const IRPosition &IRP, const AbstractAttribute &AA,
+                     bool &UsedAssumedInformation);
   std::optional<Constant *> getAssumedConstant(const Value &V,
                                                const AbstractAttribute &AA,
                                                bool &UsedAssumedInformation) {
@@ -2002,10 +2014,9 @@ public:
   /// return std::nullopt, otherwise return `nullptr`. Same as the public
   /// version except that it can be used without recording dependences on any \p
   /// AA.
-  LLVM_ABI std::optional<Value *> getAssumedSimplified(const IRPosition &V,
-                                              const AbstractAttribute *AA,
-                                              bool &UsedAssumedInformation,
-                                              AA::ValueScope S);
+  LLVM_ABI std::optional<Value *>
+  getAssumedSimplified(const IRPosition &V, const AbstractAttribute *AA,
+                       bool &UsedAssumedInformation, AA::ValueScope S);
 
   /// Try to simplify \p IRP and in the scope \p S. If successful, true is
   /// returned and all potential values \p IRP can take are put into \p Values.
@@ -2013,12 +2024,11 @@ public:
   /// those could not be simplified to a single value. Recursive calls with
   /// these instructions will yield their respective potential values. If false
   /// is returned no other information is valid.
-  LLVM_ABI bool getAssumedSimplifiedValues(const IRPosition &IRP,
-                                  const AbstractAttribute *AA,
-                                  SmallVectorImpl<AA::ValueAndContext> &Values,
-                                  AA::ValueScope S,
-                                  bool &UsedAssumedInformation,
-                                  bool RecurseForSelectAndPHI = true);
+  LLVM_ABI bool
+  getAssumedSimplifiedValues(const IRPosition &IRP, const AbstractAttribute *AA,
+                             SmallVectorImpl<AA::ValueAndContext> &Values,
+                             AA::ValueScope S, bool &UsedAssumedInformation,
+                             bool RecurseForSelectAndPHI = true);
 
   /// Register \p CB as a simplification callback.
   /// `Attributor::getAssumedSimplified` will use these callbacks before
@@ -2102,42 +2112,49 @@ public:
   /// Return true if \p AA (or its context instruction) is assumed dead.
   ///
   /// If \p LivenessAA is not provided it is queried.
-  LLVM_ABI bool isAssumedDead(const AbstractAttribute &AA, const AAIsDead *LivenessAA,
-                     bool &UsedAssumedInformation,
-                     bool CheckBBLivenessOnly = false,
-                     DepClassTy DepClass = DepClassTy::OPTIONAL);
+  LLVM_ABI bool isAssumedDead(const AbstractAttribute &AA,
+                              const AAIsDead *LivenessAA,
+                              bool &UsedAssumedInformation,
+                              bool CheckBBLivenessOnly = false,
+                              DepClassTy DepClass = DepClassTy::OPTIONAL);
 
   /// Return true if \p I is assumed dead.
   ///
   /// If \p LivenessAA is not provided it is queried.
-  LLVM_ABI bool isAssumedDead(const Instruction &I, const AbstractAttribute *QueryingAA,
-                     const AAIsDead *LivenessAA, bool &UsedAssumedInformation,
-                     bool CheckBBLivenessOnly = false,
-                     DepClassTy DepClass = DepClassTy::OPTIONAL,
-                     bool CheckForDeadStore = false);
+  LLVM_ABI bool isAssumedDead(const Instruction &I,
+                              const AbstractAttribute *QueryingAA,
+                              const AAIsDead *LivenessAA,
+                              bool &UsedAssumedInformation,
+                              bool CheckBBLivenessOnly = false,
+                              DepClassTy DepClass = DepClassTy::OPTIONAL,
+                              bool CheckForDeadStore = false);
 
   /// Return true if \p U is assumed dead.
   ///
   /// If \p FnLivenessAA is not provided it is queried.
   LLVM_ABI bool isAssumedDead(const Use &U, const AbstractAttribute *QueryingAA,
-                     const AAIsDead *FnLivenessAA, bool &UsedAssumedInformation,
-                     bool CheckBBLivenessOnly = false,
-                     DepClassTy DepClass = DepClassTy::OPTIONAL);
+                              const AAIsDead *FnLivenessAA,
+                              bool &UsedAssumedInformation,
+                              bool CheckBBLivenessOnly = false,
+                              DepClassTy DepClass = DepClassTy::OPTIONAL);
 
   /// Return true if \p IRP is assumed dead.
   ///
   /// If \p FnLivenessAA is not provided it is queried.
-  LLVM_ABI bool isAssumedDead(const IRPosition &IRP, const AbstractAttribute *QueryingAA,
-                     const AAIsDead *FnLivenessAA, bool &UsedAssumedInformation,
-                     bool CheckBBLivenessOnly = false,
-                     DepClassTy DepClass = DepClassTy::OPTIONAL);
+  LLVM_ABI bool isAssumedDead(const IRPosition &IRP,
+                              const AbstractAttribute *QueryingAA,
+                              const AAIsDead *FnLivenessAA,
+                              bool &UsedAssumedInformation,
+                              bool CheckBBLivenessOnly = false,
+                              DepClassTy DepClass = DepClassTy::OPTIONAL);
 
   /// Return true if \p BB is assumed dead.
   ///
   /// If \p LivenessAA is not provided it is queried.
-  LLVM_ABI bool isAssumedDead(const BasicBlock &BB, const AbstractAttribute *QueryingAA,
-                     const AAIsDead *FnLivenessAA,
-                     DepClassTy DepClass = DepClassTy::OPTIONAL);
+  LLVM_ABI bool isAssumedDead(const BasicBlock &BB,
+                              const AbstractAttribute *QueryingAA,
+                              const AAIsDead *FnLivenessAA,
+                              DepClassTy DepClass = DepClassTy::OPTIONAL);
 
   /// Check \p Pred on all potential Callees of \p CB.
   ///
@@ -2157,13 +2174,14 @@ public:
   /// what original used was replaced by a new one (or new ones). The visit is
   /// cut short if \p EquivalentUseCB returns false and the function will return
   /// false as well.
-  LLVM_ABI bool checkForAllUses(function_ref<bool(const Use &, bool &)> Pred,
-                       const AbstractAttribute &QueryingAA, const Value &V,
-                       bool CheckBBLivenessOnly = false,
-                       DepClassTy LivenessDepClass = DepClassTy::OPTIONAL,
-                       bool IgnoreDroppableUses = true,
-                       function_ref<bool(const Use &OldU, const Use &NewU)>
-                           EquivalentUseCB = nullptr);
+  LLVM_ABI bool checkForAllUses(
+      function_ref<bool(const Use &, bool &)> Pred,
+      const AbstractAttribute &QueryingAA, const Value &V,
+      bool CheckBBLivenessOnly = false,
+      DepClassTy LivenessDepClass = DepClassTy::OPTIONAL,
+      bool IgnoreDroppableUses = true,
+      function_ref<bool(const Use &OldU, const Use &NewU)> EquivalentUseCB =
+          nullptr);
 
   /// Emit a remark generically.
   ///
@@ -2301,8 +2319,9 @@ public:
   ///
   /// \returns True, if the replacement can be registered, via
   /// registerFunctionSignatureRewrite, false otherwise.
-  LLVM_ABI bool isValidFunctionSignatureRewrite(Argument &Arg,
-                                       ArrayRef<Type *> ReplacementTypes);
+  LLVM_ABI bool
+  isValidFunctionSignatureRewrite(Argument &Arg,
+                                  ArrayRef<Type *> ReplacementTypes);
 
   /// Register a rewrite for a function signature.
   ///
@@ -2325,9 +2344,9 @@ public:
   /// If true is returned, \p UsedAssumedInformation is set if assumed
   /// information was used to skip or simplify potential call sites.
   LLVM_ABI bool checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
-                            const AbstractAttribute &QueryingAA,
-                            bool RequireAllCallSites,
-                            bool &UsedAssumedInformation);
+                                     const AbstractAttribute &QueryingAA,
+                                     bool RequireAllCallSites,
+                                     bool &UsedAssumedInformation);
 
   /// Check \p Pred on all call sites of \p Fn.
   ///
@@ -2337,10 +2356,11 @@ public:
   /// If true is returned, \p UsedAssumedInformation is set if assumed
   /// information was used to skip or simplify potential call sites.
   LLVM_ABI bool checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
-                            const Function &Fn, bool RequireAllCallSites,
-                            const AbstractAttribute *QueryingAA,
-                            bool &UsedAssumedInformation,
-                            bool CheckPotentiallyDead = false);
+                                     const Function &Fn,
+                                     bool RequireAllCallSites,
+                                     const AbstractAttribute *QueryingAA,
+                                     bool &UsedAssumedInformation,
+                                     bool CheckPotentiallyDead = false);
 
   /// Check \p Pred on all values potentially returned by the function
   /// associated with \p QueryingAA.
@@ -2358,23 +2378,23 @@ public:
   /// This method will evaluate \p Pred on all instructions with an opcode
   /// present in \p Opcode and return true if \p Pred holds on all of them.
   LLVM_ABI bool checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
-                               const Function *Fn,
-                               const AbstractAttribute *QueryingAA,
-                               ArrayRef<unsigned> Opcodes,
-                               bool &UsedAssumedInformation,
-                               bool CheckBBLivenessOnly = false,
-                               bool CheckPotentiallyDead = false);
+                                        const Function *Fn,
+                                        const AbstractAttribute *QueryingAA,
+                                        ArrayRef<unsigned> Opcodes,
+                                        bool &UsedAssumedInformation,
+                                        bool CheckBBLivenessOnly = false,
+                                        bool CheckPotentiallyDead = false);
 
   /// Check \p Pred on all instructions with an opcode present in \p Opcodes.
   ///
   /// This method will evaluate \p Pred on all instructions with an opcode
   /// present in \p Opcode and return true if \p Pred holds on all of them.
   LLVM_ABI bool checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
-                               const AbstractAttribute &QueryingAA,
-                               ArrayRef<unsigned> Opcodes,
-                               bool &UsedAssumedInformation,
-                               bool CheckBBLivenessOnly = false,
-                               bool CheckPotentiallyDead = false);
+                                        const AbstractAttribute &QueryingAA,
+                                        ArrayRef<unsigned> Opcodes,
+                                        bool &UsedAssumedInformation,
+                                        bool CheckBBLivenessOnly = false,
+                                        bool CheckPotentiallyDead = false);
 
   /// Check \p Pred on all call-like instructions (=CallBased derived).
   ///
@@ -2396,9 +2416,10 @@ public:
   /// This method will evaluate \p Pred on all instructions that read or write
   /// to memory present in the information cache and return true if \p Pred
   /// holds on all of them.
-  LLVM_ABI bool checkForAllReadWriteInstructions(function_ref<bool(Instruction &)> Pred,
-                                        AbstractAttribute &QueryingAA,
-                                        bool &UsedAssumedInformation);
+  LLVM_ABI bool
+  checkForAllReadWriteInstructions(function_ref<bool(Instruction &)> Pred,
+                                   AbstractAttribute &QueryingAA,
+                                   bool &UsedAssumedInformation);
 
   /// Create a shallow wrapper for \p F such that \p F has internal linkage
   /// afterwards. It also sets the original \p F 's name to anonymous
@@ -2433,7 +2454,8 @@ public:
   ///
   /// If the function \p F failed to be internalized the return value will be a
   /// null pointer.
-  LLVM_ABI static Function *internalizeFunction(Function &F, bool Force = false);
+  LLVM_ABI static Function *internalizeFunction(Function &F,
+                                                bool Force = false);
 
   /// Make copies of each function in the set \p FnSet such that the copied
   /// version has internal linkage afterwards and can be analysed. Then we
@@ -2448,8 +2470,9 @@ public:
   /// once and then replace the uses. This prevents internalized functions being
   /// called by external functions when there is an internalized version in the
   /// module.
-  LLVM_ABI static bool internalizeFunctions(SmallPtrSetImpl<Function *> &FnSet,
-                                   DenseMap<Function *, Function *> &FnMap);
+  LLVM_ABI static bool
+  internalizeFunctions(SmallPtrSetImpl<Function *> &FnSet,
+                       DenseMap<Function *, Function *> &FnMap);
 
   /// Return the data layout associated with the anchor scope.
   const DataLayout &getDataLayout() const { return InfoCache.DL; }
@@ -3444,15 +3467,17 @@ operator<<(raw_ostream &OS,
   return OS << "(" << S.getKnown() << "-" << S.getAssumed() << ")"
             << static_cast<const AbstractState &>(S);
 }
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const IntegerRangeState &State);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const IntegerRangeState &State);
 ///}
 
 struct AttributorPass : public PassInfoMixin<AttributorPass> {
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 struct AttributorCGSCCPass : public PassInfoMixin<AttributorCGSCCPass> {
-  LLVM_ABI PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
-                        LazyCallGraph &CG, CGSCCUpdateResult &UR);
+  LLVM_ABI PreservedAnalyses run(LazyCallGraph::SCC &C,
+                                 CGSCCAnalysisManager &AM, LazyCallGraph &CG,
+                                 CGSCCUpdateResult &UR);
 };
 
 /// A more lightweight version of the Attributor which only runs attribute
@@ -3465,8 +3490,9 @@ struct AttributorLightPass : public PassInfoMixin<AttributorLightPass> {
 /// inference but no simplifications.
 struct AttributorLightCGSCCPass
     : public PassInfoMixin<AttributorLightCGSCCPass> {
-  LLVM_ABI PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
-                        LazyCallGraph &CG, CGSCCUpdateResult &UR);
+  LLVM_ABI PreservedAnalyses run(LazyCallGraph::SCC &C,
+                                 CGSCCAnalysisManager &AM, LazyCallGraph &CG,
+                                 CGSCCUpdateResult &UR);
 };
 
 /// Helper function to clamp a state \p S of type \p StateType with the
@@ -3497,7 +3523,8 @@ struct AANoUnwind
   bool isKnownNoUnwind() const { return getKnown(); }
 
   /// Create an abstract attribute view for the position \p IRP.
-  LLVM_ABI static AANoUnwind &createForPosition(const IRPosition &IRP, Attributor &A);
+  LLVM_ABI static AANoUnwind &createForPosition(const IRPosition &IRP,
+                                                Attributor &A);
 
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AANoUnwind"; }
@@ -3577,10 +3604,12 @@ struct AANoSync
   /// indicates if the call is executed by all threads in a (thread) block in an
   /// aligned way. If that is the case, non-aligned barriers are effectively
   /// aligned barriers.
-  LLVM_ABI static bool isAlignedBarrier(const CallBase &CB, bool ExecutedAligned);
+  LLVM_ABI static bool isAlignedBarrier(const CallBase &CB,
+                                        bool ExecutedAligned);
 
   /// Create an abstract attribute view for the position \p IRP.
-  LLVM_ABI static AANoSync &createForPosition(const IRPosition &IRP, Attributor &A);
+  LLVM_ABI static AANoSync &createForPosition(const IRPosition &IRP,
+                                              Attributor &A);
 
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AANoSync"; }
@@ -3621,7 +3650,7 @@ struct AAMustProgress
 
   /// Create an abstract attribute view for the position \p IRP.
   LLVM_ABI static AAMustProgress &createForPosition(const IRPosition &IRP,
-                                           Attributor &A);
+                                                    Attributor &A);
 
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAMustProgress"; }
@@ -3663,8 +3692,8 @@ struct AANonNull
 
   /// See AbstractAttribute::isImpliedByIR(...).
   LLVM_ABI static bool isImpliedByIR(Attributor &A, const IRPosition &IRP,
-                            Attribute::AttrKind ImpliedAttributeKind,
-                            bool IgnoreSubsumingPositions = false);
+                                     Attribute::AttrKind ImpliedAttributeKind,
+                                     bool IgnoreSubsumingPositions = false);
 
   /// Return true if we assume that the underlying value is nonnull.
   bool isAssumedNonNull() const { return getAssumed(); }
@@ -3673,7 +3702,8 @@ struct AANonNull
   bool isKnownNonNull() const { return getKnown(); }
 
   /// Create an abstract attribute view for the position \p IRP.
-  LLVM_ABI static AANonNull &createForPosition(const IRPosition &IRP, Attributor &A);
+  LLVM_ABI static AANonNull &createForPosition(const IRPosition &IRP,
+                                               Attributor &A);
 
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AANonNull"; }
@@ -3704,7 +3734,8 @@ struct AANoRecurse
   bool isKnownNoRecurse() const { return getKnown(); }
 
   /// Create an abstract attribute view for the position \p IRP.
-  LLVM_ABI static AANoRecurse &createForPosition(const IRPosition &IRP, Attributor &A);
+  LLVM_ABI static AANoRecurse &createForPosition(const IRPosition &IRP,
+                                                 Attributor &A);
 
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AANoRecurse"; }
@@ -3768,7 +3799,8 @@ struct AAWillReturn
   bool isKnownWillReturn() const { return getKnown(); }
 
   /// Create an abstract attribute view for the position \p IRP.
-  LLVM_ABI static AAWillReturn &createForPosition(const IRPosition &IRP, Attributor &A);
+  LLVM_ABI static AAWillReturn &createForPosition(const IRPosition &IRP,
+                                                  Attributor &A);
 
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAWillReturn"; }
@@ -3805,7 +3837,7 @@ struct AAUndefinedBehavior
 
   /// Create an abstract attribute view for the position \p IRP.
   LLVM_ABI static AAUndefinedBehavior &createForPosition(const IRPosition &IRP,
-                                                Attributor &A);
+                                                         Attributor &A);
 
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAUndefinedBehavior"; }
@@ -3837,8 +3869,8 @@ struct AAIntraFnReachability
       const AA::InstExclusionSetTy *ExclusionSet = nullptr) const = 0;
 
   /// Create an abstract attribute view for the position \p IRP.
-  LLVM_ABI static AAIntraFnReachability &createForPosition(const IRPosition &IRP,
-                                                  Attributor &A);
+  LLVM_ABI static AAIntraFnReachability &
+  createForPosition(const IRPosition &IRP, Attributor &A);
 
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAIntraFnReachability"; }
@@ -3872,8 +3904,8 @@ struct AANoAlias
 
   /// See IRAttribute::isImpliedByIR
   LLVM_ABI static bool isImpliedByIR(Attributor &A, const IRPosition &IRP,
-                            Attribute::AttrKind ImpliedAttributeKind,
-                            bool IgnoreSubsumingPositions = false);
+                                     Attribute::AttrKind ImpliedAttributeKind,
+                                     bool IgnoreSubsumingPositions = false);
 
   /// See AbstractAttribute::requiresCallersForArgOrFunction
   static bool requiresCallersForArgOrFunction() { return true; }
@@ -3885,7 +3917,8 @@ struct AANoAlias
   bool isKnownNoAlias() const { return getKnown(); }
 
   /// Create an abstract attribute view for the position \p IRP.
-  LLVM_ABI static AANoAlias &createForPosition(const IRPosition &IRP, Attributor &A);
+  LLVM_ABI static AANoAlias &createForPosition(const IRPosition &IRP,
+                                               Attributor &A);
 
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AANoAlias"; }
@@ -3935,7 +3968,8 @@ struct AANoFree
   bool isKnownNoFree() const { return getKnown(); }
 
   /// Create an abstract attribute view for the position \p IRP.
-  LLVM_ABI static AANoFree &createForPosition(const IRPosition &IRP, Attributor &A);
+  LLVM_ABI static AANoFree &createForPosition(const IRPosition &IRP,
+                                              Attributor &A);
 
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AANoFree"; }
@@ -3966,7 +4000,8 @@ struct AANoReturn
   bool isKnownNoReturn() const { return getKnown(); }
 
   /// Create an abstract attribute view for the position \p IRP.
-  LLVM_ABI static AANoReturn &createForPosition(const IRPosition &IRP, Attributor &A);
+  LLVM_ABI static AANoReturn &createForPosition(const IRPosition &IRP,
+                                                Attributor &A);
 
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AANoReturn"; }
@@ -4047,7 +4082,8 @@ protected:
 
 public:
   /// Create an abstract attribute view for the position \p IRP.
-  LLVM_ABI static AAIsDead &createForPosition(const IRPosition &IRP, Attributor &A);
+  LLVM_ABI static AAIsDead &createForPosition(const IRPosition &IRP,
+                                              Attributor &A);
 
   /// Determine if \p F might catch asynchronous exceptions.
   static bool mayCatchAsynchronousExceptions(const Function &F) {
@@ -4257,7 +4293,7 @@ struct AADereferenceable
 
   /// Create an abstract attribute view for the position \p IRP.
   LLVM_ABI static AADereferenceable &createForPosition(const IRPosition &IRP,
-                                              Attributor &A);
+                                                       Attributor &A);
 
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AADereferenceable"; }
@@ -4309,7 +4345,8 @@ struct AAAlign
   }
 
   /// Create an abstract attribute view for the position \p IRP.
-  LLVM_ABI static AAAlign &createForPosition(const IRPosition &IRP, Attributor &A);
+  LLVM_ABI static AAAlign &createForPosition(const IRPosition &IRP,
+                                             Attributor &A);
 
   /// Unique ID (due to the unique address)
   LLVM_ABI static const char ID;
@@ -4337,7 +4374,7 @@ struct AAInstanceInfo : public StateWrapper<BooleanState, AbstractAttribute> {
 
   /// Create an abstract attribute view for the position \p IRP.
   LLVM_ABI static AAInstanceInfo &createForPosition(const IRPosition &IRP,
-                                           Attributor &A);
+                                                    Attributor &A);
 
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAInstanceInfo"; }
@@ -4365,14 +4402,14 @@ struct AANoCapture
 
   /// See IRAttribute::isImpliedByIR
   LLVM_ABI static bool isImpliedByIR(Attributor &A, const IRPosition &IRP,
-                            Attribute::AttrKind ImpliedAttributeKind,
-                            bool IgnoreSubsumingPositions = false);
+                                     Attribute::AttrKind ImpliedAttributeKind,
+                                     bool IgnoreSubsumingPositions = false);
 
   /// Update \p State according to the capture capabilities of \p F for position
   /// \p IRP.
-  LLVM_ABI static void determineFunctionCaptureCapabilities(const IRPosition &IRP,
-                                                   const Function &F,
-                                                   BitIntegerState &State);
+  LLVM_ABI static void
+  determineFunctionCaptureCapabilities(const IRPosition &IRP, const Function &F,
+                                       BitIntegerState &State);
 
   /// See AbstractAttribute::isValidIRPositionForInit
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
@@ -4419,7 +4456,8 @@ struct AANoCapture
   }
 
   /// Create an abstract attribute view for the position \p IRP.
-  LLVM_ABI static AANoCapture &createForPosition(const IRPosition &IRP, Attributor &A);
+  LLVM_ABI static AANoCapture &createForPosition(const IRPosition &IRP,
+                                                 Attributor &A);
 
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AANoCapture"; }
@@ -4519,7 +4557,7 @@ struct AAValueSimplify
 
   /// Create an abstract attribute view for the position \p IRP.
   LLVM_ABI static AAValueSimplify &createForPosition(const IRPosition &IRP,
-                                            Attributor &A);
+                                                     Attributor &A);
 
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAValueSimplify"; }
@@ -4560,7 +4598,8 @@ struct AAHeapToStack : public StateWrapper<BooleanState, AbstractAttribute> {
   virtual bool isAssumedHeapToStackRemovedFree(CallBase &CB) const = 0;
 
   /// Create an abstract attribute view for the position \p IRP.
-  LLVM_ABI static AAHeapToStack &createForPosition(const IRPosition &IRP, Attributor &A);
+  LLVM_ABI static AAHeapToStack &createForPosition(const IRPosition &IRP,
+                                                   Attributor &A);
 
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAHeapToStack"; }
@@ -4615,7 +4654,7 @@ struct AAPrivatizablePtr
 
   /// Create an abstract attribute view for the position \p IRP.
   LLVM_ABI static AAPrivatizablePtr &createForPosition(const IRPosition &IRP,
-                                              Attributor &A);
+                                                       Attributor &A);
 
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAPrivatizablePtr"; }
@@ -4689,7 +4728,7 @@ struct AAMemoryBehavior
 
   /// Create an abstract attribute view for the position \p IRP.
   LLVM_ABI static AAMemoryBehavior &createForPosition(const IRPosition &IRP,
-                                             Attributor &A);
+                                                      Attributor &A);
 
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAMemoryBehavior"; }
@@ -4869,7 +4908,7 @@ struct AAMemoryLocation
 
   /// Create an abstract attribute view for the position \p IRP.
   LLVM_ABI static AAMemoryLocation &createForPosition(const IRPosition &IRP,
-                                             Attributor &A);
+                                                      Attributor &A);
 
   /// See AbstractState::getAsStr(Attributor).
   const std::string getAsStr(Attributor *A) const override {
@@ -4915,7 +4954,7 @@ struct AAValueConstantRange
 
   /// Create an abstract attribute view for the position \p IRP.
   LLVM_ABI static AAValueConstantRange &createForPosition(const IRPosition &IRP,
-                                                 Attributor &A);
+                                                          Attributor &A);
 
   /// Return an assumed range for the associated value a program point \p CtxI.
   /// If \p I is nullptr, simply return an assumed range.
@@ -5233,8 +5272,9 @@ using PotentialLLVMValuesState =
     PotentialValuesState<std::pair<AA::ValueAndContext, AA::ValueScope>>;
 
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
-                        const PotentialConstantIntValuesState &R);
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const PotentialLLVMValuesState &R);
+                                 const PotentialConstantIntValuesState &R);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const PotentialLLVMValuesState &R);
 
 /// An abstract interface for potential values analysis.
 ///
@@ -5273,8 +5313,8 @@ struct AAPotentialConstantValues
   }
 
   /// Create an abstract attribute view for the position \p IRP.
-  LLVM_ABI static AAPotentialConstantValues &createForPosition(const IRPosition &IRP,
-                                                      Attributor &A);
+  LLVM_ABI static AAPotentialConstantValues &
+  createForPosition(const IRPosition &IRP, Attributor &A);
 
   /// Return assumed constant for the associated value
   std::optional<Constant *>
@@ -5326,12 +5366,13 @@ struct AAPotentialValues
 
   /// Create an abstract attribute view for the position \p IRP.
   LLVM_ABI static AAPotentialValues &createForPosition(const IRPosition &IRP,
-                                              Attributor &A);
+                                                       Attributor &A);
 
   /// Extract the single value in \p Values if any.
-  LLVM_ABI static Value *getSingleValue(Attributor &A, const AbstractAttribute &AA,
-                               const IRPosition &IRP,
-                               SmallVectorImpl<AA::ValueAndContext> &Values);
+  LLVM_ABI static Value *
+  getSingleValue(Attributor &A, const AbstractAttribute &AA,
+                 const IRPosition &IRP,
+                 SmallVectorImpl<AA::ValueAndContext> &Values);
 
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAPotentialValues"; }
@@ -5371,8 +5412,8 @@ struct AANoUndef
 
   /// See IRAttribute::isImpliedByIR
   LLVM_ABI static bool isImpliedByIR(Attributor &A, const IRPosition &IRP,
-                            Attribute::AttrKind ImpliedAttributeKind,
-                            bool IgnoreSubsumingPositions = false);
+                                     Attribute::AttrKind ImpliedAttributeKind,
+                                     bool IgnoreSubsumingPositions = false);
 
   /// Return true if we assume that the underlying value is noundef.
   bool isAssumedNoUndef() const { return getAssumed(); }
@@ -5381,7 +5422,8 @@ struct AANoUndef
   bool isKnownNoUndef() const { return getKnown(); }
 
   /// Create an abstract attribute view for the position \p IRP.
-  LLVM_ABI static AANoUndef &createForPosition(const IRPosition &IRP, Attributor &A);
+  LLVM_ABI static AANoUndef &createForPosition(const IRPosition &IRP,
+                                               Attributor &A);
 
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AANoUndef"; }
@@ -5432,7 +5474,8 @@ struct AANoFPClass
   }
 
   /// Create an abstract attribute view for the position \p IRP.
-  LLVM_ABI static AANoFPClass &createForPosition(const IRPosition &IRP, Attributor &A);
+  LLVM_ABI static AANoFPClass &createForPosition(const IRPosition &IRP,
+                                                 Attributor &A);
 
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AANoFPClass"; }
@@ -5521,7 +5564,8 @@ struct AACallEdges : public StateWrapper<BooleanState, AbstractAttribute>,
   }
 
   /// Create an abstract attribute view for the position \p IRP.
-  LLVM_ABI static AACallEdges &createForPosition(const IRPosition &IRP, Attributor &A);
+  LLVM_ABI static AACallEdges &createForPosition(const IRPosition &IRP,
+                                                 Attributor &A);
 
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AACallEdges"; }
@@ -5643,7 +5687,7 @@ struct AAExecutionDomain
 
   /// Create an abstract attribute view for the position \p IRP.
   LLVM_ABI static AAExecutionDomain &createForPosition(const IRPosition &IRP,
-                                              Attributor &A);
+                                                       Attributor &A);
 
   /// See AbstractAttribute::getName().
   StringRef getName() const override { return "AAExecutionDomain"; }
@@ -5708,8 +5752,8 @@ struct AAInterFnReachability
       const AA::InstExclusionSetTy *ExclusionSet = nullptr) const = 0;
 
   /// Create an abstract attribute view for the position \p IRP.
-  LLVM_ABI static AAInterFnReachability &createForPosition(const IRPosition &IRP,
-                                                  Attributor &A);
+  LLVM_ABI static AAInterFnReachability &
+  createForPosition(const IRPosition &IRP, Attributor &A);
 
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAInterFnReachability"; }
@@ -5735,7 +5779,7 @@ struct AANonConvergent : public StateWrapper<BooleanState, AbstractAttribute> {
 
   /// Create an abstract attribute view for the position \p IRP.
   LLVM_ABI static AANonConvergent &createForPosition(const IRPosition &IRP,
-                                            Attributor &A);
+                                                     Attributor &A);
 
   /// Return true if "non-convergent" is assumed.
   bool isAssumedNotConvergent() const { return getAssumed(); }
@@ -6164,7 +6208,8 @@ struct AAPointerInfo : public AbstractAttribute {
   };
 
   /// Create an abstract attribute view for the position \p IRP.
-  LLVM_ABI static AAPointerInfo &createForPosition(const IRPosition &IRP, Attributor &A);
+  LLVM_ABI static AAPointerInfo &createForPosition(const IRPosition &IRP,
+                                                   Attributor &A);
 
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAPointerInfo"; }
@@ -6230,7 +6275,7 @@ struct AAAssumptionInfo
 
   /// Create an abstract attribute view for the position \p IRP.
   LLVM_ABI static AAAssumptionInfo &createForPosition(const IRPosition &IRP,
-                                             Attributor &A);
+                                                      Attributor &A);
 
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAAssumptionInfo"; }
@@ -6264,7 +6309,7 @@ struct AAUnderlyingObjects : AbstractAttribute {
 
   /// Create an abstract attribute biew for the position \p IRP.
   LLVM_ABI static AAUnderlyingObjects &createForPosition(const IRPosition &IRP,
-                                                Attributor &A);
+                                                         Attributor &A);
 
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAUnderlyingObjects"; }
@@ -6312,7 +6357,7 @@ struct AAAddressSpace : public StateWrapper<BooleanState, AbstractAttribute> {
 
   /// Create an abstract attribute view for the position \p IRP.
   LLVM_ABI static AAAddressSpace &createForPosition(const IRPosition &IRP,
-                                           Attributor &A);
+                                                    Attributor &A);
 
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAAddressSpace"; }
@@ -6347,7 +6392,7 @@ struct AAAllocationInfo : public StateWrapper<BooleanState, AbstractAttribute> {
 
   /// Create an abstract attribute view for the position \p IRP.
   LLVM_ABI static AAAllocationInfo &createForPosition(const IRPosition &IRP,
-                                             Attributor &A);
+                                                      Attributor &A);
 
   virtual std::optional<TypeSize> getAllocatedSize() const = 0;
 
@@ -6387,7 +6432,7 @@ struct AAGlobalValueInfo
 
   /// Create an abstract attribute view for the position \p IRP.
   LLVM_ABI static AAGlobalValueInfo &createForPosition(const IRPosition &IRP,
-                                              Attributor &A);
+                                                       Attributor &A);
 
   /// Return true iff \p U is a potential use of the associated global value.
   virtual bool isPotentialUse(const Use &U) const = 0;
@@ -6425,7 +6470,7 @@ struct AAIndirectCallInfo
 
   /// Create an abstract attribute view for the position \p IRP.
   LLVM_ABI static AAIndirectCallInfo &createForPosition(const IRPosition &IRP,
-                                               Attributor &A);
+                                                        Attributor &A);
 
   /// Call \CB on each potential callee value and return true if all were known
   /// and \p CB returned true on all of them. Otherwise, return false.
@@ -6459,7 +6504,7 @@ struct AADenormalFPMath
 
   /// Create an abstract attribute view for the position \p IRP.
   LLVM_ABI static AADenormalFPMath &createForPosition(const IRPosition &IRP,
-                                             Attributor &A);
+                                                      Attributor &A);
 
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AADenormalFPMath"; }

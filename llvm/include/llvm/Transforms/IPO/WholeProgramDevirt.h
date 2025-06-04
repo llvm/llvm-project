@@ -14,10 +14,10 @@
 #ifndef LLVM_TRANSFORMS_IPO_WHOLEPROGRAMDEVIRT_H
 #define LLVM_TRANSFORMS_IPO_WHOLEPROGRAMDEVIRT_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <map>
@@ -203,22 +203,22 @@ struct VirtualCallTarget {
 // Find the minimum offset that we may store a value of size Size bits at. If
 // IsAfter is set, look for an offset before the object, otherwise look for an
 // offset after the object.
-LLVM_ABI uint64_t findLowestOffset(ArrayRef<VirtualCallTarget> Targets, bool IsAfter,
-                          uint64_t Size);
+LLVM_ABI uint64_t findLowestOffset(ArrayRef<VirtualCallTarget> Targets,
+                                   bool IsAfter, uint64_t Size);
 
 // Set the stored value in each of Targets to VirtualCallTarget::RetVal at the
 // given allocation offset before the vtable address. Stores the computed
 // byte/bit offset to OffsetByte/OffsetBit.
 LLVM_ABI void setBeforeReturnValues(MutableArrayRef<VirtualCallTarget> Targets,
-                           uint64_t AllocBefore, unsigned BitWidth,
-                           int64_t &OffsetByte, uint64_t &OffsetBit);
+                                    uint64_t AllocBefore, unsigned BitWidth,
+                                    int64_t &OffsetByte, uint64_t &OffsetBit);
 
 // Set the stored value in each of Targets to VirtualCallTarget::RetVal at the
 // given allocation offset after the vtable address. Stores the computed
 // byte/bit offset to OffsetByte/OffsetBit.
 LLVM_ABI void setAfterReturnValues(MutableArrayRef<VirtualCallTarget> Targets,
-                          uint64_t AllocAfter, unsigned BitWidth,
-                          int64_t &OffsetByte, uint64_t &OffsetBit);
+                                   uint64_t AllocAfter, unsigned BitWidth,
+                                   int64_t &OffsetByte, uint64_t &OffsetBit);
 
 } // end namespace wholeprogramdevirt
 
@@ -240,9 +240,10 @@ struct VTableSlotSummary {
   StringRef TypeID;
   uint64_t ByteOffset;
 };
-LLVM_ABI bool hasWholeProgramVisibility(bool WholeProgramVisibilityEnabledInLTO);
-LLVM_ABI void updatePublicTypeTestCalls(Module &M,
-                               bool WholeProgramVisibilityEnabledInLTO);
+LLVM_ABI bool
+hasWholeProgramVisibility(bool WholeProgramVisibilityEnabledInLTO);
+LLVM_ABI void
+updatePublicTypeTestCalls(Module &M, bool WholeProgramVisibilityEnabledInLTO);
 LLVM_ABI void updateVCallVisibilityInModule(
     Module &M, bool WholeProgramVisibilityEnabledInLTO,
     const DenseSet<GlobalValue::GUID> &DynamicExportSymbols,

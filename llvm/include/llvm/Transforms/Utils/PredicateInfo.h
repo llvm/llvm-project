@@ -50,7 +50,6 @@
 #ifndef LLVM_TRANSFORMS_UTILS_PREDICATEINFO_H
 #define LLVM_TRANSFORMS_UTILS_PREDICATEINFO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/ilist.h"
@@ -58,6 +57,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

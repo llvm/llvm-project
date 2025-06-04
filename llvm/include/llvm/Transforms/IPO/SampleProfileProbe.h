@@ -15,11 +15,11 @@
 #ifndef LLVM_TRANSFORMS_IPO_SAMPLEPROFILEPROBE_H
 #define LLVM_TRANSFORMS_IPO_SAMPLEPROFILEPROBE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/Analysis/LazyCallGraph.h"
-#include "llvm/IR/PassManager.h"
 #include "llvm/IR/PassInstrumentation.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/ProfileData/SampleProf.h"
+#include "llvm/Support/Compiler.h"
 #include <unordered_map>
 
 namespace llvm {

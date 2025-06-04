@@ -9,8 +9,8 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_LOADSTOREVECTORIZER_H
 #define LLVM_TRANSFORMS_VECTORIZE_LOADSTOREVECTORIZER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class Pass;
@@ -23,7 +23,6 @@ public:
 
 /// Create a legacy pass manager instance of the LoadStoreVectorizer pass
 LLVM_ABI Pass *createLoadStoreVectorizerPass();
-
 }
 
 #endif /* LLVM_TRANSFORMS_VECTORIZE_LOADSTOREVECTORIZER_H */

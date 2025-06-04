@@ -20,8 +20,9 @@ namespace coro {
 LLVM_ABI bool isTriviallyMaterializable(Instruction &I);
 
 // Performs rematerialization, invoked from buildCoroutineFrame.
-LLVM_ABI void doRematerializations(Function &F, SuspendCrossingInfo &Checker,
-                          std::function<bool(Instruction &)> IsMaterializable);
+LLVM_ABI void
+doRematerializations(Function &F, SuspendCrossingInfo &Checker,
+                     std::function<bool(Instruction &)> IsMaterializable);
 
 } // namespace coro
 

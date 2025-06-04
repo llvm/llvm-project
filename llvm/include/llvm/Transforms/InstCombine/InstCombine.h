@@ -16,10 +16,10 @@
 #ifndef LLVM_TRANSFORMS_INSTCOMBINE_INSTCOMBINE_H
 #define LLVM_TRANSFORMS_INSTCOMBINE_INSTCOMBINE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 
 #define DEBUG_TYPE "instcombine"
 #include "llvm/Transforms/Utils/InstructionWorklist.h"
@@ -54,8 +54,9 @@ private:
 
 public:
   LLVM_ABI explicit InstCombinePass(InstCombineOptions Opts = {});
-  LLVM_ABI void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

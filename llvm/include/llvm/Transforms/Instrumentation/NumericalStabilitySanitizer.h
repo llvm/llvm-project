@@ -14,9 +14,9 @@
 #ifndef LLVM_TRANSFORMS_INSTRUMENTATION_NUMERICALSTABIITYSANITIZER_H
 #define LLVM_TRANSFORMS_INSTRUMENTATION_NUMERICALSTABIITYSANITIZER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

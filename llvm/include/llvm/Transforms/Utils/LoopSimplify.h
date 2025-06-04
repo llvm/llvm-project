@@ -38,8 +38,8 @@
 #ifndef LLVM_TRANSFORMS_UTILS_LOOPSIMPLIFY_H
 #define LLVM_TRANSFORMS_UTILS_LOOPSIMPLIFY_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -62,9 +62,9 @@ public:
 /// it into a simplified loop nest with preheaders and single backedges. It will
 /// update \c DominatorTree, \c LoopInfo, \c ScalarEvolution and \c MemorySSA
 /// analyses if they're non-null, and LCSSA if \c PreserveLCSSA is true.
-LLVM_ABI bool simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI, ScalarEvolution *SE,
-                  AssumptionCache *AC, MemorySSAUpdater *MSSAU,
-                  bool PreserveLCSSA);
+LLVM_ABI bool simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
+                           ScalarEvolution *SE, AssumptionCache *AC,
+                           MemorySSAUpdater *MSSAU, bool PreserveLCSSA);
 
 } // end namespace llvm
 

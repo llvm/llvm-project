@@ -21,8 +21,8 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_SCHEDULER_H
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_SCHEDULER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/SandboxIR/Instruction.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/DependencyGraph.h"
 #include <queue>
 
@@ -207,7 +207,8 @@ class Scheduler {
                     /// were in the same SchedBundle.
   };
   /// \Returns whether none/some/all of \p Instrs have been scheduled.
-  LLVM_ABI BndlSchedState getBndlSchedState(ArrayRef<Instruction *> Instrs) const;
+  LLVM_ABI BndlSchedState
+  getBndlSchedState(ArrayRef<Instruction *> Instrs) const;
   /// Destroy the top-most part of the schedule that includes \p Instrs.
   void trimSchedule(ArrayRef<Instruction *> Instrs);
   /// Disable copies.

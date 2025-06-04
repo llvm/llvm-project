@@ -15,9 +15,9 @@
 #ifndef LLVM_TRANSFORMS_UTILS_CALLGRAPHUPDATER_H
 #define LLVM_TRANSFORMS_UTILS_CALLGRAPHUPDATER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/LazyCallGraph.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

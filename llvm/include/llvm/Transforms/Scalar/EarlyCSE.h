@@ -14,8 +14,8 @@
 #ifndef LLVM_TRANSFORMS_SCALAR_EARLYCSE_H
 #define LLVM_TRANSFORMS_SCALAR_EARLYCSE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -33,8 +33,9 @@ struct EarlyCSEPass : PassInfoMixin<EarlyCSEPass> {
 
   /// Run the pass over the function.
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  LLVM_ABI void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 
   bool UseMemorySSA;
 };

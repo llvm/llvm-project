@@ -12,13 +12,13 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_SEEDCOLLECTOR_H
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_SEEDCOLLECTOR_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Utils.h"
 #include "llvm/SandboxIR/Value.h"
+#include "llvm/Support/Compiler.h"
 #include <iterator>
 #include <memory>
 
@@ -96,8 +96,8 @@ public:
   /// with a total size <= \p MaxVecRegBits, or an empty slice if the
   /// requirements cannot be met . If \p ForcePowOf2 is true, then the returned
   /// slice will have a total number of bits that is a power of 2.
-  LLVM_ABI ArrayRef<Instruction *> getSlice(unsigned StartIdx, unsigned MaxVecRegBits,
-                                   bool ForcePowOf2);
+  LLVM_ABI ArrayRef<Instruction *>
+  getSlice(unsigned StartIdx, unsigned MaxVecRegBits, bool ForcePowOf2);
 
   /// \Returns the number of seed elements in the bundle.
   std::size_t size() const { return Seeds.size(); }
@@ -290,8 +290,10 @@ public:
 };
 
 // Explicit instantiations
-extern template LLVM_TEMPLATE_ABI void SeedContainer::insert<LoadInst>(LoadInst *);
-extern template LLVM_TEMPLATE_ABI void SeedContainer::insert<StoreInst>(StoreInst *);
+extern template LLVM_TEMPLATE_ABI void
+SeedContainer::insert<LoadInst>(LoadInst *);
+extern template LLVM_TEMPLATE_ABI void
+SeedContainer::insert<StoreInst>(StoreInst *);
 
 class SeedCollector {
   SeedContainer StoreSeeds;

@@ -22,8 +22,8 @@
 #ifndef LLVM_TRANSFORMS_IPO_STRIPSYMBOLS_H
 #define LLVM_TRANSFORMS_IPO_STRIPSYMBOLS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

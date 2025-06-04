@@ -25,9 +25,9 @@
 #ifndef LLVM_TRANSFORMS_COROUTINES_COROINSTR_H
 #define LLVM_TRANSFORMS_COROUTINES_COROINSTR_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {

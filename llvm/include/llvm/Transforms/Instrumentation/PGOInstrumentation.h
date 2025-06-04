@@ -15,11 +15,11 @@
 #ifndef LLVM_TRANSFORMS_INSTRUMENTATION_PGOINSTRUMENTATION_H
 #define LLVM_TRANSFORMS_INSTRUMENTATION_PGOINSTRUMENTATION_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <cstdint>
 #include <string>
@@ -68,7 +68,8 @@ private:
 /// The profile annotation (profile-instr-use) pass for IR based PGO.
 class PGOInstrumentationUse : public PassInfoMixin<PGOInstrumentationUse> {
 public:
-  LLVM_ABI PGOInstrumentationUse(std::string Filename = "",
+  LLVM_ABI
+  PGOInstrumentationUse(std::string Filename = "",
                         std::string RemappingFilename = "", bool IsCS = false,
                         IntrusiveRefCntPtr<vfs::FileSystem> FS = nullptr);
 
@@ -103,10 +104,11 @@ public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &MAM);
 };
 
-LLVM_ABI void setProfMetadata(Module *M, Instruction *TI, ArrayRef<uint64_t> EdgeCounts,
-                     uint64_t MaxCount);
+LLVM_ABI void setProfMetadata(Module *M, Instruction *TI,
+                              ArrayRef<uint64_t> EdgeCounts, uint64_t MaxCount);
 
-LLVM_ABI void setIrrLoopHeaderMetadata(Module *M, Instruction *TI, uint64_t Count);
+LLVM_ABI void setIrrLoopHeaderMetadata(Module *M, Instruction *TI,
+                                       uint64_t Count);
 
 } // end namespace llvm
 

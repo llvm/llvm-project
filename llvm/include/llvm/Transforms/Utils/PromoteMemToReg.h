@@ -37,7 +37,7 @@ LLVM_ABI bool isAllocaPromotable(const AllocaInst *AI);
 /// the same function.
 ///
 LLVM_ABI void PromoteMemToReg(ArrayRef<AllocaInst *> Allocas, DominatorTree &DT,
-                     AssumptionCache *AC = nullptr);
+                              AssumptionCache *AC = nullptr);
 
 } // End llvm namespace
 

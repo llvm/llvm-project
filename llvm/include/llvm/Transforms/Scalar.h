@@ -64,11 +64,12 @@ LLVM_ABI Pass *createLoopTermFoldPass();
 //
 // LoopUnroll - This pass is a simple loop unrolling pass.
 //
-LLVM_ABI Pass *createLoopUnrollPass(int OptLevel = 2, bool OnlyWhenForced = false,
-                           bool ForgetAllSCEV = false, int Threshold = -1,
-                           int Count = -1, int AllowPartial = -1,
-                           int Runtime = -1, int UpperBound = -1,
-                           int AllowPeeling = -1);
+LLVM_ABI Pass *createLoopUnrollPass(int OptLevel = 2,
+                                    bool OnlyWhenForced = false,
+                                    bool ForgetAllSCEV = false,
+                                    int Threshold = -1, int Count = -1,
+                                    int AllowPartial = -1, int Runtime = -1,
+                                    int UpperBound = -1, int AllowPeeling = -1);
 
 //===----------------------------------------------------------------------===//
 //
@@ -149,7 +150,8 @@ LLVM_ABI Pass *createMergeICmpsLegacyPass();
 // on the target. If AddressSpace is left to its default value, it will be
 // obtained from the TargetTransformInfo.
 //
-LLVM_ABI FunctionPass *createInferAddressSpacesPass(unsigned AddressSpace = ~0u);
+LLVM_ABI FunctionPass *
+createInferAddressSpacesPass(unsigned AddressSpace = ~0u);
 LLVM_ABI extern char &InferAddressSpacesID;
 
 //===----------------------------------------------------------------------===//
@@ -163,7 +165,8 @@ LLVM_ABI FunctionPass *createPartiallyInlineLibCallsPass();
 //
 // SeparateConstOffsetFromGEP - Split GEPs for better CSE
 //
-LLVM_ABI FunctionPass *createSeparateConstOffsetFromGEPPass(bool LowerGEP = false);
+LLVM_ABI FunctionPass *
+createSeparateConstOffsetFromGEPPass(bool LowerGEP = false);
 
 //===----------------------------------------------------------------------===//
 //
@@ -201,7 +204,6 @@ LLVM_ABI FunctionPass *createLoopDataPrefetchPass();
 // instruction in a function.
 //
 LLVM_ABI FunctionPass *createInstSimplifyLegacyPass();
-
 
 //===----------------------------------------------------------------------===//
 //

@@ -14,11 +14,11 @@
 #ifndef LLVM_TRANSFORMS_IPO_SAMPLEPROFILE_H
 #define LLVM_TRANSFORMS_IPO_SAMPLEPROFILE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include <string>
 
 namespace llvm {

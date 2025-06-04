@@ -9,10 +9,10 @@
 #ifndef LLVM_TRANSFORMS_IPO_MODULEINLINER_H
 #define LLVM_TRANSFORMS_IPO_MODULEINLINER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/Analysis/InlineAdvisor.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

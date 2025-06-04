@@ -13,11 +13,11 @@
 #ifndef LLVM_TRANSFORMS_UTILS_MODULEUTILS_H
 #define LLVM_TRANSFORMS_UTILS_MODULEUTILS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/GlobalIFunc.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include <utility> // for std::pair
 
@@ -40,11 +40,11 @@ class Type;
 /// side other global constructors. For details see
 /// https://llvm.org/docs/LangRef.html#the-llvm-global-ctors-global-variable
 LLVM_ABI void appendToGlobalCtors(Module &M, Function *F, int Priority,
-                         Constant *Data = nullptr);
+                                  Constant *Data = nullptr);
 
 /// Same as appendToGlobalCtors(), but for global dtors.
 LLVM_ABI void appendToGlobalDtors(Module &M, Function *F, int Priority,
-                         Constant *Data = nullptr);
+                                  Constant *Data = nullptr);
 
 /// Apply 'Fn' to the list of global ctors of module M and replace contructor
 /// record with the one returned by `Fn`. If `nullptr` was returned, the
@@ -58,9 +58,9 @@ LLVM_ABI void transformGlobalDtors(Module &M, const GlobalCtorTransformFn &Fn);
 /// that are indirectly called in instrumented code.
 LLVM_ABI void setKCFIType(Module &M, Function &F, StringRef MangledType);
 
-LLVM_ABI FunctionCallee declareSanitizerInitFunction(Module &M, StringRef InitName,
-                                            ArrayRef<Type *> InitArgTypes,
-                                            bool Weak = false);
+LLVM_ABI FunctionCallee
+declareSanitizerInitFunction(Module &M, StringRef InitName,
+                             ArrayRef<Type *> InitArgTypes, bool Weak = false);
 
 /// Creates sanitizer constructor function.
 /// \return Returns pointer to constructor.
@@ -70,10 +70,13 @@ LLVM_ABI Function *createSanitizerCtor(Module &M, StringRef CtorName);
 /// function from it.
 /// \return Returns pair of pointers to constructor, and init functions
 /// respectively.
-LLVM_ABI std::pair<Function *, FunctionCallee> createSanitizerCtorAndInitFunctions(
-    Module &M, StringRef CtorName, StringRef InitName,
-    ArrayRef<Type *> InitArgTypes, ArrayRef<Value *> InitArgs,
-    StringRef VersionCheckName = StringRef(), bool Weak = false);
+LLVM_ABI std::pair<Function *, FunctionCallee>
+createSanitizerCtorAndInitFunctions(Module &M, StringRef CtorName,
+                                    StringRef InitName,
+                                    ArrayRef<Type *> InitArgTypes,
+                                    ArrayRef<Value *> InitArgs,
+                                    StringRef VersionCheckName = StringRef(),
+                                    bool Weak = false);
 
 /// Creates sanitizer constructor function lazily. If a constructor and init
 /// function already exist, this function returns it. Otherwise it calls \c
@@ -82,7 +85,8 @@ LLVM_ABI std::pair<Function *, FunctionCallee> createSanitizerCtorAndInitFunctio
 ///
 /// \return Returns pair of pointers to constructor, and init functions
 /// respectively.
-LLVM_ABI std::pair<Function *, FunctionCallee> getOrCreateSanitizerCtorAndInitFunctions(
+LLVM_ABI std::pair<Function *, FunctionCallee>
+getOrCreateSanitizerCtorAndInitFunctions(
     Module &M, StringRef CtorName, StringRef InitName,
     ArrayRef<Type *> InitArgTypes, ArrayRef<Value *> InitArgs,
     function_ref<void(Function *, FunctionCallee)> FunctionsCreatedCallback,
@@ -102,7 +106,7 @@ LLVM_ABI void appendToCompilerUsed(Module &M, ArrayRef<GlobalValue *> Values);
 /// ShouldRemove should return true for any initializer field that should not be
 /// included in the replacement global.
 LLVM_ABI void removeFromUsedLists(Module &M,
-                         function_ref<bool(Constant *)> ShouldRemove);
+                                  function_ref<bool(Constant *)> ShouldRemove);
 
 /// Filter out potentially dead comdat functions where other entries keep the
 /// entire comdat group alive.
@@ -117,8 +121,8 @@ LLVM_ABI void removeFromUsedLists(Module &M,
 /// After this routine finishes, the only remaining `Function`s in \p
 /// DeadComdatFunctions are those where every member of the comdat is listed
 /// and thus removing them is safe (provided *all* are removed).
-LLVM_ABI void filterDeadComdatFunctions(
-    SmallVectorImpl<Function *> &DeadComdatFunctions);
+LLVM_ABI void
+filterDeadComdatFunctions(SmallVectorImpl<Function *> &DeadComdatFunctions);
 
 /// Produce a unique identifier for this module by taking the MD5 sum of
 /// the names of the module's strong external symbols that are not comdat
@@ -135,8 +139,9 @@ LLVM_ABI std::string getUniqueModuleId(Module *M);
 /// Embed the memory buffer \p Buf into the module \p M as a global using the
 /// specified section name. Also provide a metadata entry to identify it in the
 /// module using the same section name.
-LLVM_ABI void embedBufferInModule(Module &M, MemoryBufferRef Buf, StringRef SectionName,
-                         Align Alignment = Align(1));
+LLVM_ABI void embedBufferInModule(Module &M, MemoryBufferRef Buf,
+                                  StringRef SectionName,
+                                  Align Alignment = Align(1));
 
 /// Lower all calls to ifuncs by replacing uses with indirect calls loaded out
 /// of a global table initialized in a global constructor. This will introduce
@@ -150,8 +155,9 @@ LLVM_ABI void embedBufferInModule(Module &M, MemoryBufferRef Buf, StringRef Sect
 ///
 /// The processed ifuncs without remaining users will be removed from the
 /// module.
-LLVM_ABI bool lowerGlobalIFuncUsersAsGlobalCtor(
-    Module &M, ArrayRef<GlobalIFunc *> IFuncsToLower = {});
+LLVM_ABI bool
+lowerGlobalIFuncUsersAsGlobalCtor(Module &M,
+                                  ArrayRef<GlobalIFunc *> IFuncsToLower = {});
 
 } // End llvm namespace
 

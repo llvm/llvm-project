@@ -12,10 +12,10 @@
 #ifndef LLVM_TRANSFORMS_INSTRUMENTATION_MEMPROFUSE_H
 #define LLVM_TRANSFORMS_INSTRUMENTATION_MEMPROFUSE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/ProfileData/MemProf.h"
+#include "llvm/Support/Compiler.h"
 
 #include <unordered_map>
 
@@ -30,8 +30,9 @@ class FileSystem;
 
 class MemProfUsePass : public PassInfoMixin<MemProfUsePass> {
 public:
-  LLVM_ABI explicit MemProfUsePass(std::string MemoryProfileFile,
-                          IntrusiveRefCntPtr<vfs::FileSystem> FS = nullptr);
+  LLVM_ABI explicit MemProfUsePass(
+      std::string MemoryProfileFile,
+      IntrusiveRefCntPtr<vfs::FileSystem> FS = nullptr);
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
 private:
