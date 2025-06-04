@@ -1500,11 +1500,8 @@ bool fir::BaseBoxType::isPointer() const {
 }
 
 bool BaseBoxType::isVolatile() const {
-  return llvm::TypeSwitch<fir::BaseBoxType, bool>(*this)
-      .Case<fir::BoxType, fir::ClassType>(
-          [](auto type) { return type.isVolatile(); });
+  return fir::isa_volatile_type(*this);
 }
-
 //===----------------------------------------------------------------------===//
 // FIROpsDialect
 //===----------------------------------------------------------------------===//
