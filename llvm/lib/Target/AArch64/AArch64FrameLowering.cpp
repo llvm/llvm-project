@@ -711,7 +711,14 @@ static void emitCalleeSavedRestores(MachineBasicBlock &MBB,
   const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
   CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameDestroy);
 
+  // If pac-ret+leaf is in effect, ".cfi_restore w30" is emitted near
+  // PAUTH_EPILOGUE pseudo instruction by emitPacRetPlusLeafHardening().
+  bool ShouldSkipLR = MF.getInfo<AArch64FunctionInfo>()->shouldSignReturnAddressEverywhere();
+
   for (const auto &Info : CSI) {
+    if (ShouldSkipLR && Info.getReg() == AArch64::LR)
+      continue;
+
     if (SVE !=
         (MFI.getStackID(Info.getFrameIdx()) == TargetStackID::ScalableVector))
       continue;
@@ -1721,6 +1728,12 @@ void AArch64FrameLowering::emitPacRetPlusLeafHardening(
     MachineFunction &MF) const {
   const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+
+  bool SpillsLR = llvm::any_of(
+      MF.getFrameInfo().getCalleeSavedInfo(),
+      [](const auto &Info) { return Info.getReg() == AArch64::LR; });
+  bool EmitCFI = AFI->needsAsyncDwarfUnwindInfo(MF);
 
   auto EmitSignRA = [&](MachineBasicBlock &MBB) {
     DebugLoc DL; // Set debug location to unknown.
@@ -1738,6 +1751,11 @@ void AArch64FrameLowering::emitPacRetPlusLeafHardening(
 
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::PAUTH_EPILOGUE))
         .setMIFlag(MachineInstr::FrameDestroy);
+
+    if (EmitCFI && SpillsLR) {
+      CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameDestroy);
+      CFIBuilder.buildRestore(AArch64::LR);
+    }
   };
 
   // This should be in sync with PEIImpl::calculateSaveRestoreBlocks.
