@@ -1912,8 +1912,9 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
     } else if (FD && FD->hasAttr<CUDAGlobalAttr>() &&
                GD.getKernelReferenceKind() == KernelReferenceKind::Stub) {
       Out << "__device_stub__" << II->getName();
-    } else if (FD && FD->hasAttr<DeviceKernelAttr>() &&
-               CGM.getLangOpts().OpenCL &&
+    } else if (FD &&
+               DeviceKernelAttr::isOpenCLSpelling(
+                   FD->getAttr<DeviceKernelAttr>()) &&
                GD.getKernelReferenceKind() == KernelReferenceKind::Stub) {
       Out << "__clang_ocl_kern_imp_" << II->getName();
     } else {
@@ -6178,7 +6179,7 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
                           (CodeGenOpts.OptimizationLevel == 0) &&
                           !D->hasAttr<MinSizeAttr>();
 
-  if (getLangOpts().OpenCL && D->hasAttr<DeviceKernelAttr>()) {
+  if (DeviceKernelAttr::isOpenCLSpelling(D->getAttr<DeviceKernelAttr>())) {
     if (GD.getKernelReferenceKind() == KernelReferenceKind::Stub &&
         !D->hasAttr<NoInlineAttr>() &&
         !Fn->hasFnAttribute(llvm::Attribute::NoInline) &&

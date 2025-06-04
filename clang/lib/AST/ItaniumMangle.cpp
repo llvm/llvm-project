@@ -1556,8 +1556,8 @@ void CXXNameMangler::mangleUnqualifiedName(
           FD && FD->hasAttr<CUDAGlobalAttr>() &&
           GD.getKernelReferenceKind() == KernelReferenceKind::Stub;
       bool IsOCLDeviceStub =
-          getASTContext().getLangOpts().OpenCL && FD &&
-          FD->hasAttr<DeviceKernelAttr>() &&
+          FD &&
+          DeviceKernelAttr::isOpenCLSpelling(FD->getAttr<DeviceKernelAttr>()) &&
           GD.getKernelReferenceKind() == KernelReferenceKind::Stub;
       if (IsDeviceStub)
         mangleDeviceStubName(II);

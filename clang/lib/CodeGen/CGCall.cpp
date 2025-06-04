@@ -539,7 +539,7 @@ CodeGenTypes::arrangeFunctionDeclaration(const GlobalDecl GD) {
   assert(isa<FunctionType>(FTy));
   setCUDAKernelCallingConvention(FTy, CGM, FD);
 
-  if (getContext().getLangOpts().OpenCL && FD->hasAttr<DeviceKernelAttr>() &&
+  if (DeviceKernelAttr::isOpenCLSpelling(FD->getAttr<DeviceKernelAttr>()) &&
       GD.getKernelReferenceKind() == KernelReferenceKind::Stub) {
     const FunctionType *FT = FTy->getAs<FunctionType>();
     CGM.getTargetCodeGenInfo().setOCLKernelStubCallingConvention(FT);
@@ -2535,7 +2535,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
                                  NumElemsParam);
     }
 
-    if (getLangOpts().OpenCL && TargetDecl->hasAttr<DeviceKernelAttr>() &&
+    if (DeviceKernelAttr::isOpenCLSpelling(
+            TargetDecl->getAttr<DeviceKernelAttr>()) &&
         CallingConv != CallingConv::CC_C &&
         CallingConv != CallingConv::CC_SpirFunction) {
       // Check CallingConv to avoid adding uniform-work-group-size attribute to
@@ -2918,8 +2919,10 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     // > For arguments to a __kernel function declared to be a pointer to a
     // > data type, the OpenCL compiler can assume that the pointee is always
     // > appropriately aligned as required by the data type.
-    if (getLangOpts().OpenCL && TargetDecl &&
-        TargetDecl->hasAttr<DeviceKernelAttr>() && ParamType->isPointerType()) {
+    if (TargetDecl &&
+        DeviceKernelAttr::isOpenCLSpelling(
+            TargetDecl->getAttr<DeviceKernelAttr>()) &&
+        ParamType->isPointerType()) {
       QualType PTy = ParamType->getPointeeType();
       if (!PTy->isIncompleteType() && PTy->isConstantSizeType()) {
         llvm::Align Alignment =

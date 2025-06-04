@@ -191,7 +191,8 @@ def FunctionPointer : SubsetSubject<DeclBase,
 
 def OpenCLKernelFunction
     : SubsetSubject<Function, [{S->getASTContext().getLangOpts().OpenCL &&
-                               S->hasAttr<DeviceKernelAttr>()}],
+                               DeviceKernelAttr::isOpenCLSpelling(
+			                 S->getAttr<DeviceKernelAttr>()}],
                                "kernel functions">;
 
 // HasFunctionProto is a more strict version of FunctionLike, so it should
@@ -1556,18 +1557,38 @@ def DeviceKernel : DeclOrTypeAttr {
              A.getAttributeSpellingListIndex() == CXX11_clang_amdgpu_kernel ||
              A.getAttributeSpellingListIndex() == C23_clang_amdgpu_kernel;
     }
+    static inline bool isAMDGPUSpelling(const AttributeCommonInfo* A) {
+      if(!A) return false;
+      return isAMDGPUSpelling(*A);
+    }
     static inline bool isNVPTXSpelling(const AttributeCommonInfo& A) {
       return A.getAttributeSpellingListIndex() == GNU_nvptx_kernel ||
              A.getAttributeSpellingListIndex() == CXX11_clang_nvptx_kernel ||
              A.getAttributeSpellingListIndex() == C23_clang_nvptx_kernel;
+    }
+    static inline bool isNVPTXSpelling(const AttributeCommonInfo* A) {
+      if(!A) return false;
+      return isNVPTXSpelling(*A);
     }
     static inline bool isSYCLSpelling(const AttributeCommonInfo& A) {
       return A.getAttributeSpellingListIndex() == GNU_sycl_kernel ||
              A.getAttributeSpellingListIndex() == CXX11_clang_sycl_kernel ||
              A.getAttributeSpellingListIndex() == C23_clang_sycl_kernel;
     }
+    static inline bool isSYCLSpelling(const AttributeCommonInfo* A) {
+      if(!A) return false;
+      return isSYCLSpelling(*A);
+    }
     static inline bool isOpenCLSpelling(const AttributeCommonInfo& A) {
-      return A.getAttributeSpellingListIndex() == Keyword_kernel;
+    // Tablegen trips underscores from spellings to build the spelling
+    // list, but here we have the same spelling with unscores and without,
+    // so handle that case manually.
+      return A.getAttributeSpellingListIndex() == Keyword_kernel ||
+      A.getAttrName()->getName() == "kernel";
+    }
+    static inline bool isOpenCLSpelling(const AttributeCommonInfo* A) {
+    if (!A) return false;
+    return isOpenCLSpelling(*A);
     }
 }];
 }
