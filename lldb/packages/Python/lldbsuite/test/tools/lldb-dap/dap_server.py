@@ -135,7 +135,7 @@ class Source(object):
         return source_dict
 
 
-class NotSupportedError(Exception):
+class NotSupportedError(KeyError):
     """Raised if a feature is not supported due to its capabilities."""
 
 
@@ -495,11 +495,13 @@ class DebugCommunication(object):
             raise ValueError("didn't get terminated event")
         return event_dict
 
-    def get_capability(self, key, default=None):
+    def get_capability(self, key):
         """Get a value for the given key if it there is a key/value pair in
         the capabilities reported by the adapter.
         """
-        return self.capabilities.get(key, default)
+        if key in self.capabilities:
+            return self.capabilities[key]
+        raise NotSupportedError(key)
 
     def get_threads(self):
         if self.threads is None:
@@ -767,8 +769,7 @@ class DebugCommunication(object):
     def request_restart(self, restartArguments=None):
         if self.exit_status is not None:
             raise ValueError("request_restart called after process exited")
-        if not self.get_capability("supportsRestartRequest", False):
-            raise NotSupportedError("supportsRestartRequest is not set")
+        self.get_capability("supportsRestartRequest")
         command_dict = {
             "command": "restart",
             "type": "request",
@@ -981,8 +982,7 @@ class DebugCommunication(object):
     def request_stepInTargets(self, frameId):
         if self.exit_status is not None:
             raise ValueError("request_stepInTargets called after process exited")
-        if not self.get_capability("supportsStepInTargetsRequest", False):
-            raise NotSupportedError("supportsStepInTargetsRequest is not set")
+        self.get_capability("supportsStepInTargetsRequest")
         args_dict = {"frameId": frameId}
         command_dict = {
             "command": "stepInTargets",
