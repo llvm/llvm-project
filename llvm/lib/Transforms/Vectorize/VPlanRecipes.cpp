@@ -3850,9 +3850,6 @@ VPFirstOrderRecurrencePHIRecipe::computeCost(ElementCount VF,
   if (VF.isScalar())
     return Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
 
-  if (VF.isScalable() && VF.getKnownMinValue() == 1)
-    return InstructionCost::getInvalid();
-
   return 0;
 }
 
