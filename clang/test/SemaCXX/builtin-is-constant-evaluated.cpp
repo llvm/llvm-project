@@ -143,3 +143,8 @@ namespace fold_initializer {
   const float A::f = __builtin_is_constant_evaluated();
   static_assert(fold(A::f == 1.0f));
 }
+
+struct GH99680 {
+  static const int x = 1/(1-__builtin_is_constant_evaluated()); // expected-error {{in-class initializer for static data member is not a constant expression}} \
+    // expected-note {{division by zero}}
+};
