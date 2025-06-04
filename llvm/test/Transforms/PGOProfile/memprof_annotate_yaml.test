@@ -1,4 +1,3 @@
-; REQUIRES: x86_64-linux
 
 ; Make sure that we can ingest the MemProf profile in YAML and
 ; annotate a call to new as cold.
