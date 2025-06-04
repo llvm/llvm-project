@@ -1206,35 +1206,37 @@ LogicalResult NVVM::VoteSyncOp::verify() {
 }
 
 LogicalResult NVVM::PrefetchOp::verify() {
-  unsigned addressSpace =
+  using MemSpace = NVVM::NVVMMemorySpace;
+  using CacheLevel = NVVM::PrefetchCacheLevel;
+
+  unsigned as =
       llvm::cast<LLVM::LLVMPointerType>(getAddr().getType()).getAddressSpace();
-  auto evictPriority = getEvictPriority();
+  std::optional<NVVM::CacheEvictionPriority> evictPriority = getEvictPriority();
 
   if (getUniform()) {
-    if (!(getCacheLevel() == NVVM::PrefetchCacheLevel::L1)) {
+    if (getCacheLevel() != CacheLevel::L1)
       return emitOpError("unsupported cache level, the only supported uniform "
                          "cache level is L1");
-    }
-    if (addressSpace != NVVM::NVVMMemorySpace::kGenericMemorySpace) {
+
+    if (as != MemSpace::kGenericMemorySpace)
       return emitOpError(
           "prefetch to uniform cache requires a generic pointer");
-    }
   }
 
-  if (evictPriority && getCacheLevel() != NVVM::PrefetchCacheLevel::L2)
-    return emitOpError(
-        "cache eviction priority supported only for cache level L2");
+  if (evictPriority) {
+    if (getCacheLevel() != CacheLevel::L2)
+      return emitOpError(
+          "cache eviction priority supported only for cache level L2");
 
-  if (evictPriority &&
-      (addressSpace != NVVM::NVVMMemorySpace::kGlobalMemorySpace))
-    return emitOpError("cache eviction priority requires a global pointer");
+    if (as != MemSpace::kGlobalMemorySpace)
+      return emitOpError("cache eviction priority requires a global pointer");
 
-  if (evictPriority &&
-      *evictPriority != NVVM::CacheEvictionPriority::EvictNormal &&
-      *evictPriority != NVVM::CacheEvictionPriority::EvictLast)
-    return emitOpError(
-        "unsupported cache eviction priority, only evict_last and "
-        "evict_normal are supported");
+    if (*evictPriority != NVVM::CacheEvictionPriority::EvictNormal &&
+        *evictPriority != NVVM::CacheEvictionPriority::EvictLast)
+      return emitOpError(
+          "unsupported cache eviction priority, only evict_last and "
+          "evict_normal are supported");
+  }
 
   return success();
 }
@@ -1769,52 +1771,45 @@ NVVM::IDArgPair DotAccumulate2WayOp::getIntrinsicIDAndArgs(
 }
 
 llvm::Intrinsic::ID PrefetchOp::getIntrinsicID(Operation &op) {
+  using MemSpace = NVVM::NVVMMemorySpace;
+  using CacheLevel = NVVM::PrefetchCacheLevel;
+
   auto curOp = llvm::cast<NVVM::PrefetchOp>(op);
-  NVVM::PrefetchCacheLevel cacheLevel = curOp.getCacheLevel();
+  NVVM::PrefetchCacheLevel cl = curOp.getCacheLevel();
   std::optional<NVVM::CacheEvictionPriority> evictPriority =
       curOp.getEvictPriority();
   unsigned as = llvm::cast<LLVM::LLVMPointerType>(curOp.getAddr().getType())
                     .getAddressSpace();
 
-  if (curOp.getUniform()) {
-    if (cacheLevel == NVVM::PrefetchCacheLevel::L1)
-      return llvm::Intrinsic::nvvm_prefetchu_L1;
-    else
-      llvm_unreachable("Invalid uniform cache level");
+  if (curOp.getUniform() && cl == CacheLevel::L1)
+    return llvm::Intrinsic::nvvm_prefetchu_L1;
+
+  if (evictPriority && cl == CacheLevel::L2) {
+    switch (*evictPriority) {
+    case NVVM::CacheEvictionPriority::EvictLast:
+      return llvm::Intrinsic::nvvm_prefetch_global_L2_evict_last;
+    case NVVM::CacheEvictionPriority::EvictNormal:
+      return llvm::Intrinsic::nvvm_prefetch_global_L2_evict_normal;
+    default:
+      llvm_unreachable("Invalid cache eviction priority");
+    }
   }
 
-  if (cacheLevel == NVVM::PrefetchCacheLevel::L1) {
-    switch (as) {
-    case NVVM::NVVMMemorySpace::kGenericMemorySpace:
-      return llvm::Intrinsic::nvvm_prefetch_L1;
-    case NVVM::NVVMMemorySpace::kGlobalMemorySpace:
-      return llvm::Intrinsic::nvvm_prefetch_global_L1;
-    case NVVM::NVVMMemorySpace::kLocalMemorySpace:
-      return llvm::Intrinsic::nvvm_prefetch_local_L1;
-    default:
-      llvm_unreachable("Invalid pointer address space");
-    }
-  } else if (cacheLevel == NVVM::PrefetchCacheLevel::L2) {
-    switch (as) {
-    case NVVM::NVVMMemorySpace::kGenericMemorySpace:
-      return llvm::Intrinsic::nvvm_prefetch_L2;
-    case NVVM::NVVMMemorySpace::kGlobalMemorySpace:
-      if (evictPriority) {
-        if (*evictPriority == NVVM::CacheEvictionPriority::EvictLast)
-          return llvm::Intrinsic::nvvm_prefetch_global_L2_evict_last;
-        else if (*evictPriority == NVVM::CacheEvictionPriority::EvictNormal)
-          return llvm::Intrinsic::nvvm_prefetch_global_L2_evict_normal;
-        else
-          llvm_unreachable("Invalid cache eviction priority");
-      }
-      return llvm::Intrinsic::nvvm_prefetch_global_L2;
-    case NVVM::NVVMMemorySpace::kLocalMemorySpace:
-      return llvm::Intrinsic::nvvm_prefetch_local_L2;
-    default:
-      llvm_unreachable("Invalid pointer address space");
-    }
+  switch (as) {
+  case MemSpace::kGenericMemorySpace:
+    return cl == CacheLevel::L1 ? llvm::Intrinsic::nvvm_prefetch_L1
+                                : llvm::Intrinsic::nvvm_prefetch_L2;
+  case MemSpace::kGlobalMemorySpace:
+    return cl == CacheLevel::L1 ? llvm::Intrinsic::nvvm_prefetch_global_L1
+                                : llvm::Intrinsic::nvvm_prefetch_global_L2;
+  case MemSpace::kLocalMemorySpace:
+    return cl == CacheLevel::L1 ? llvm::Intrinsic::nvvm_prefetch_local_L1
+                                : llvm::Intrinsic::nvvm_prefetch_local_L2;
+  default:
+    llvm_unreachable("Invalid pointer address space");
   }
-  llvm_unreachable("Invalid cache level");
+
+  llvm_unreachable("Invalid parameters for prefetch");
 }
 
 //===----------------------------------------------------------------------===//

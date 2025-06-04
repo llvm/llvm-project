@@ -2380,7 +2380,9 @@ def NVVM_PrefetchOp : NVVM_Op<"prefetch"> {
     containing the specified address is brought.
     
     `uniform` can be specified after the `cacheLevel` to indicate that the 
-    prefetch is performed to the specified uniform cache level. If `uniform` is specified, `addr` must be a generic address pointer and no operation is performed if `addr` maps to a `const`, `local`, or `shared` memory location.
+    prefetch is performed to the specified uniform cache level. If `uniform` is 
+    specified, `addr` must be a generic address pointer and no operation is 
+    performed if `addr` maps to a `const`, `local`, or `shared` memory location.
 
     The `evictPriority` attribute is optional and specifies the cache eviction
     priority when `cacheLevel` is L2.
