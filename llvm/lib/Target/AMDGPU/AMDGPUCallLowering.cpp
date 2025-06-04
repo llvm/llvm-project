@@ -1128,9 +1128,10 @@ bool AMDGPUCallLowering::isEligibleForTailCallOptimization(
   }
 
   // If we have -tailcallopt, then we're done.
-  if (MF.getTarget().Options.GuaranteedTailCallOpt)
+  if (MF.getTarget().Options.GuaranteedTailCallOpt) {
     return AMDGPU::canGuaranteeTCO(CalleeCC) &&
            CalleeCC == CallerF.getCallingConv();
+  }
 
   // Verify that the incoming and outgoing arguments from the callee are
   // safe to tail call.
