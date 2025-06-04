@@ -19,6 +19,7 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/ValueObject/ValueObject.h"
+#include "lldb/Symbol/Variable.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
@@ -174,7 +175,13 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
         if (auto persisted_valobj = valobj_sp->Persist())
           valobj_sp = persisted_valobj;
       }
-
+      // FIXME: LLDB haven't implemented "optimization out" output.
+      if (valobj_sp->GetVariable()->IsImplicitPointer()) {
+        result.AppendMessageWithFormatv("expression `{0}` is an implicit "
+                                        "pointer, value has been optimized out",
+                                        expr);
+        return;
+      }
       if (verbosity == eDWIMPrintVerbosityFull) {
         StringRef flags;
         if (args.HasArgs())

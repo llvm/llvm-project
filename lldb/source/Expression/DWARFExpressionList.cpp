@@ -9,13 +9,16 @@
 #include "lldb/Expression/DWARFExpressionList.h"
 #include "Plugins/SymbolFile/DWARF/DWARFUnit.h"
 #include "lldb/Symbol/Function.h"
+#include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace lldb_private::plugin::dwarf;
 
 bool DWARFExpressionList::IsAlwaysValidSingleExpr() const {
   return GetAlwaysValidExpr() != nullptr;
@@ -197,6 +200,58 @@ void DWARFExpressionList::GetDescription(Stream *s,
   }
 }
 
+//===----------------------------------------------------------------------===//
+// ResolveImplicitPointerValue resolves an implicit pointer value from a DIE
+// offset and an offset within that DIE. It retrieves the variable name from
+// the DIE, finds the corresponding variable in the current frame's variable
+// list, and constructs a Value object representing the implicit pointer.
+static llvm::Expected<Value> ResolveImplicitPointerValue(ExecutionContext *exe_ctx,
+                                                  const DWARFUnit *dwarf_cu,
+                                                  uint64_t die_offset,
+                                                  uint64_t offset) {
+  if (!exe_ctx || !dwarf_cu)
+    return llvm::createStringError("invalid execution context or DWARF CU");
+
+  DWARFDIE die = const_cast<DWARFUnit *>(dwarf_cu)->GetDIE(die_offset);
+  if (!die) {
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Could not locate DIE at offset 0x%" PRIx64
+                                   " for implicit pointer.",
+                                   die_offset);
+  }
+
+  DWARFAttributes attrs = die.GetAttributes();
+  const char *name = die.GetAttributeValueAsString(dwarf::DW_AT_name, nullptr);
+  StackFrame *frame = exe_ctx->GetFramePtr();
+  if (!frame)
+    return llvm::createStringError("no frame for implicit pointer");
+
+  const bool get_file_globals = true;
+  VariableListSP var_list_sp(frame->GetInScopeVariableList(get_file_globals));
+  VariableList *variable_list = var_list_sp.get();
+  if (!variable_list)
+    return llvm::createStringError("no variable list for implicit pointer");
+
+  VariableSP var_sp = variable_list->FindVariable(ConstString(name), false);
+  ValueObjectSP valobj_sp;
+  if (var_sp && !valobj_sp) {
+    valobj_sp =
+        frame->GetValueObjectForFrameVariable(var_sp, lldb::eNoDynamicValues);
+  }
+  if (!valobj_sp) {
+    return llvm::createStringError("invalid variable path '{0}'", name);
+  }
+  valobj_sp->UpdateValueIfNeeded(false);
+  lldb::addr_t base_addr = valobj_sp->GetValue().GetScalar().ULongLong(0);
+  if (base_addr == LLDB_INVALID_ADDRESS) {
+    return llvm::createStringError("invalid base address");
+  }
+
+  valobj_sp->GetValue().setImplictPointerDIEoffset(die_offset);
+  valobj_sp->GetValue().setImplictPointerOffset(offset);
+  return valobj_sp->GetValue();
+}
+
 llvm::Expected<Value> DWARFExpressionList::Evaluate(
     ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
     lldb::addr_t func_load_addr, const Value *initial_value_ptr,
@@ -233,7 +288,19 @@ llvm::Expected<Value> DWARFExpressionList::Evaluate(
   }
   expr.GetExpressionData(data);
   reg_kind = expr.GetRegisterKind();
-  return DWARFExpression::Evaluate(exe_ctx, reg_ctx, module_sp, data,
-                                   m_dwarf_cu, reg_kind, initial_value_ptr,
-                                   object_address_ptr);
+  llvm::Expected<Value> maybe_value = DWARFExpression::Evaluate(
+      exe_ctx, reg_ctx, module_sp, data, m_dwarf_cu, reg_kind,
+      initial_value_ptr, object_address_ptr);
+  if (maybe_value) {
+    Value &value = *maybe_value;
+    if (value.getImplictPointerDIEoffset() != 0) {
+      auto resolved = ResolveImplicitPointerValue(
+          exe_ctx, m_dwarf_cu, value.getImplictPointerDIEoffset(),
+          value.getImplictPointerOffset());
+      if (!resolved)
+        return resolved.takeError();
+      maybe_value = *resolved;
+    }
+  }
+  return maybe_value;
 }

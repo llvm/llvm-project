@@ -55,7 +55,8 @@ Value::Value(const void *bytes, int len)
 Value::Value(const Value &v)
     : m_value(v.m_value), m_compiler_type(v.m_compiler_type),
       m_context(v.m_context), m_value_type(v.m_value_type),
-      m_context_type(v.m_context_type), m_data_buffer() {
+      m_context_type(v.m_context_type), m_data_buffer(),
+      implicit_pointer(v.implicit_pointer) {
   const uintptr_t rhs_value =
       (uintptr_t)v.m_value.ULongLong(LLDB_INVALID_ADDRESS);
   if ((rhs_value != 0) &&
@@ -65,6 +66,8 @@ Value::Value(const Value &v)
 
     m_value = (uintptr_t)m_data_buffer.GetBytes();
   }
+  implicit_pointer.result_offset = v.implicit_pointer.result_offset;
+  implicit_pointer.die_offset = v.implicit_pointer.die_offset;
 }
 
 Value &Value::operator=(const Value &rhs) {
@@ -74,6 +77,7 @@ Value &Value::operator=(const Value &rhs) {
     m_context = rhs.m_context;
     m_value_type = rhs.m_value_type;
     m_context_type = rhs.m_context_type;
+    implicit_pointer = rhs.implicit_pointer;
     const uintptr_t rhs_value =
         (uintptr_t)rhs.m_value.ULongLong(LLDB_INVALID_ADDRESS);
     if ((rhs_value != 0) &&
@@ -641,6 +645,8 @@ void Value::Clear() {
   m_context = nullptr;
   m_context_type = ContextType::Invalid;
   m_data_buffer.Clear();
+  implicit_pointer.result_offset = 0;
+  implicit_pointer.die_offset = 0;
 }
 
 const char *Value::GetValueTypeAsCString(ValueType value_type) {
@@ -657,6 +663,19 @@ const char *Value::GetValueTypeAsCString(ValueType value_type) {
     return "host address";
   };
   llvm_unreachable("enum cases exhausted.");
+}
+
+void Value::setImplictPointerDIEoffset(uint64_t offset) {
+  implicit_pointer.die_offset = offset;
+}
+void Value::setImplictPointerOffset(int64_t offset) {
+  implicit_pointer.result_offset = offset;
+}
+uint64_t Value::getImplictPointerDIEoffset() const {
+  return implicit_pointer.die_offset;
+}
+int64_t Value::getImplictPointerOffset() const {
+  return implicit_pointer.result_offset;
 }
 
 const char *Value::GetContextTypeAsCString(ContextType context_type) {

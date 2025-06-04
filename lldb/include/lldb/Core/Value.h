@@ -82,6 +82,10 @@ public:
 
   ValueType GetValueType() const;
 
+  void setImplictPointerDIEoffset(uint64_t offset);
+  void setImplictPointerOffset(int64_t offset);
+  uint64_t getImplictPointerDIEoffset() const;
+  int64_t getImplictPointerOffset() const;
   AddressType GetValueAddressType() const;
 
   ContextType GetContextType() const { return m_context_type; }
@@ -182,6 +186,12 @@ protected:
   ValueType m_value_type = ValueType::Scalar;
   ContextType m_context_type = ContextType::Invalid;
   DataBufferHeap m_data_buffer;
+  struct {
+    /* 4- or 8-byte offset of DIE  */
+    uint64_t die_offset = 0;
+    /* The byte offset into the resulting data.  */
+    int64_t result_offset;
+  } implicit_pointer;
 };
 
 class ValueList {

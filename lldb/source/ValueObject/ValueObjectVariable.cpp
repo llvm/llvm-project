@@ -165,12 +165,17 @@ bool ValueObjectVariable::UpdateValue() {
     if (maybe_value) {
       m_value = *maybe_value;
       m_resolved_value = m_value;
-      m_value.SetContext(Value::ContextType::Variable, variable);
-
-      CompilerType compiler_type = GetCompilerType();
-      if (compiler_type.IsValid())
-        m_value.SetCompilerType(compiler_type);
-
+      CompilerType compiler_type;
+      if (m_value.getImplictPointerDIEoffset() != 0) {
+        compiler_type = m_value.GetCompilerType();
+        variable->SetIsImplicitPointer(true);
+        m_override_type = compiler_type;
+      } else {
+        m_value.SetContext(Value::ContextType::Variable, variable);
+        compiler_type = GetCompilerType();
+        if (compiler_type.IsValid())
+          m_value.SetCompilerType(compiler_type);
+      }
       Value::ValueType value_type = m_value.GetValueType();
 
       // The size of the buffer within m_value can be less than the size

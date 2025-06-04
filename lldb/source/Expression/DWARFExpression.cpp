@@ -357,7 +357,7 @@ static lldb::offset_t GetOpcodeDataSize(const DataExtractor &data,
     offset += block_len;
     return offset - data_offset;
   }
-
+  case DW_OP_GNU_implicit_pointer: 
   case DW_OP_implicit_pointer: // 0xa0 4-byte (or 8-byte for DWARF 64) constant
                                // + LEB128
   {
@@ -2066,11 +2066,23 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       stack.push_back(result);
       break;
     }
-
+    // OPCODE: DW_OP_implicit_pointer 
+    // OPERANDS: 
+    // (1) 2 4- or 8-byte offset of DIE
+    // (2) SLEB128 constant offset
+    // DESCRIPTION: First offset is a reference to a debugging information entry that describes the dereferenced object’s value
+    // and a signed number that is treated as a byte offset from the start of that value
+    case DW_OP_GNU_implicit_pointer:
     case DW_OP_implicit_pointer: {
       dwarf4_location_description_kind = Implicit;
-      return llvm::createStringError("Could not evaluate %s.",
-                                     DW_OP_value_to_name(op));
+      uint64_t die_offset = opcodes.GetU32(&offset);
+      int64_t result_offset = opcodes.GetSLEB128(&offset);
+      
+      Value implicit_ptr_value;
+      implicit_ptr_value.setImplictPointerDIEoffset(die_offset);
+      implicit_ptr_value.setImplictPointerOffset(result_offset);
+      stack.push_back(implicit_ptr_value);
+      break;
     }
 
     // OPCODE: DW_OP_push_object_address

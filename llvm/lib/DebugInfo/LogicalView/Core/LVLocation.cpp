@@ -284,6 +284,7 @@ std::string LVOperation::getOperandsDWARFInfo() {
   case dwarf::DW_OP_implicit_value:
     Stream << "TODO: DW_OP_implicit_value";
     break;
+  case dwarf::DW_OP_GNU_implicit_pointer:
   case dwarf::DW_OP_implicit_pointer:
     Stream << "implicit_pointer DIE offset " << hexString(Operands[0]) << " "
            << int(Operands[1]);

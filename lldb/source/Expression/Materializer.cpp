@@ -540,8 +540,9 @@ public:
           return;
         }
 
-        if (data.GetByteSize() <
-            llvm::expectedToOptional(GetByteSize(scope)).value_or(0)) {
+        if ((data.GetByteSize() <
+             llvm::expectedToOptional(GetByteSize(scope)).value_or(0)) &&
+            !valobj_sp->GetVariable()->IsImplicitPointer()) {
           if (data.GetByteSize() == 0 && !LocationExpressionIsValid()) {
             err = Status::FromErrorStringWithFormat(
                 "the variable '%s' has no location, "
@@ -599,10 +600,17 @@ public:
           return;
         }
 
+        lldb::addr_t tmp_allocation = m_temporary_allocation;
+        if (valobj_sp->GetVariable()->IsImplicitPointer()) {
+          // If the variable is an implicit pointer, we need to write the
+          // address of the temporary region into the memory location
+          // that the implicit pointer points to.
+          uint64_t ptr_offset = valobj_sp->GetValue().getImplictPointerOffset();
+          MallocTmp(map, tmp_allocation, byte_align, ptr_offset, err);
+        }
         Status pointer_write_error;
 
-        map.WritePointerToMemory(load_addr, m_temporary_allocation,
-                                 pointer_write_error);
+        map.WritePointerToMemory(load_addr, tmp_allocation, pointer_write_error);
 
         if (!pointer_write_error.Success()) {
           err = Status::FromErrorStringWithFormat(
@@ -613,6 +621,24 @@ public:
     }
   }
 
+void MallocTmp(IRMemoryMap &map, lldb::addr_t &allocation,
+               size_t byte_align, uint64_t offset, Status &err) {
+  Status alloc_error;
+  const bool zero_memory = false;
+  allocation = map.Malloc(sizeof(lldb::addr_t), byte_align,
+                              lldb::ePermissionsReadable | lldb::ePermissionsWritable,
+                              IRMemoryMap::eAllocationPolicyMirror,
+                              zero_memory, alloc_error);
+  if (!alloc_error.Success()) {
+    err = Status::FromErrorStringWithFormat(
+        "Couldn't allocate a temporary region for %s: %s",
+        GetName().AsCString(), alloc_error.AsCString());
+    return;
+  }
+  Status pointer_write_error;
+  map.WritePointerToMemory(allocation, m_temporary_allocation + offset,
+                           pointer_write_error);
+}
   void Dematerialize(lldb::StackFrameSP &frame_sp, IRMemoryMap &map,
                      lldb::addr_t process_address, lldb::addr_t frame_top,
                      lldb::addr_t frame_bottom, Status &err) override {
@@ -659,15 +685,15 @@ public:
       bool actually_write = true;
 
       if (m_original_data) {
-        if ((data.GetByteSize() == m_original_data->GetByteSize()) &&
+        if (((data.GetByteSize() == m_original_data->GetByteSize()) &&
             !memcmp(m_original_data->GetBytes(), data.GetDataStart(),
-                    data.GetByteSize())) {
+                    data.GetByteSize())) || 
+                    valobj_sp->GetVariable()->IsImplicitPointer()) {
           actually_write = false;
         }
       }
 
       Status set_error;
-
       if (actually_write) {
         valobj_sp->SetData(data, set_error);
 

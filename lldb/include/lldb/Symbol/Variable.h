@@ -34,7 +34,7 @@ public:
            SymbolContextScope *owner_scope, const RangeList &scope_range,
            Declaration *decl, const DWARFExpressionList &location,
            bool external, bool artificial, bool location_is_constant_data,
-           bool static_member = false);
+           bool static_member = false, bool is_implicit_pointer = false);
 
   virtual ~Variable();
 
@@ -97,6 +97,9 @@ public:
 
   void SetLocationIsConstantValueData(bool b) { m_loc_is_const_data = b; }
 
+  bool IsImplicitPointer() const { return m_is_implicit_pointer; }
+
+  void SetIsImplicitPointer(bool b) { m_is_implicit_pointer = b; }
   typedef size_t (*GetVariableCallback)(void *baton, const char *name,
                                         VariableList &var_list);
 
@@ -140,7 +143,8 @@ protected:
   unsigned m_loc_is_const_data : 1;
   /// Non-zero if variable is static member of a class or struct.
   unsigned m_static_member : 1;
-
+  /// Non-zero if the variable is a implicit pointer type.
+  unsigned m_is_implicit_pointer : 1;
 private:
   Variable(const Variable &rhs) = delete;
   Variable &operator=(const Variable &rhs) = delete;
