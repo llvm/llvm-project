@@ -42,5 +42,7 @@ else()
             COMMAND ${CMAKE_COMMAND} -E copy_if_different generated/${file}.gen ${CMAKE_CURRENT_BINARY_DIR}/${file}
             DEPENDS generated/${file}.gen
         )
+        add_custom_target(OffloadAPI.${file} DEPENDS ${file})
+        add_dependencies(OffloadAPI OffloadAPI.${file})
     endforeach()
 endif()

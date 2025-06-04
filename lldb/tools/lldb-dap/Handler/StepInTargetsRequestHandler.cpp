@@ -86,6 +86,6 @@ StepInTargetsRequestHandler::Run(const StepInTargetsArguments &args) const {
     }
   }
   return body;
-};
+}
 
 } // namespace lldb_dap

@@ -308,9 +308,9 @@ private:
   const Record *Def;
 };
 
-class ClauseVal : public BaseRecord {
+class EnumVal : public BaseRecord {
 public:
-  ClauseVal(const Record *Def) : BaseRecord(Def) {}
+  EnumVal(const Record *Def) : BaseRecord(Def) {}
 
   int getValue() const { return Def->getValueAsInt("value"); }
 

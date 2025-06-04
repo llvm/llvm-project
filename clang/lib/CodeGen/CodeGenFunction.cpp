@@ -444,8 +444,10 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
 
   // Reset the debug location to that of the simple 'return' expression, if any
   // rather than that of the end of the function's scope '}'.
+  uint64_t RetKeyInstructionsAtomGroup = Loc ? Loc->getAtomGroup() : 0;
   ApplyDebugLocation AL(*this, Loc);
-  EmitFunctionEpilog(*CurFnInfo, EmitRetDbgLoc, EndLoc);
+  EmitFunctionEpilog(*CurFnInfo, EmitRetDbgLoc, EndLoc,
+                     RetKeyInstructionsAtomGroup);
   EmitEndEHSpec(CurCodeDecl);
 
   assert(EHStack.empty() &&
