@@ -1681,7 +1681,8 @@ static std::string getSystemOrSDKMacOSVersion(StringRef MacOSSDKVersion) {
 
 namespace {
 
-/// The Darwin OS that was selected or inferred from arguments / environment.
+/// The Darwin OS and version that was selected or inferred from arguments or
+/// environment.
 struct DarwinPlatform {
   enum SourceKind {
     /// The OS was specified using the -target argument.
@@ -1709,16 +1710,29 @@ struct DarwinPlatform {
     Environment = Kind;
     InferSimulatorFromArch = false;
   }
-  const VersionTuple &getOSVersion() const { return ResolvedOSVersion; }
+
+  const VersionTuple getOSVersion() const {
+    return UnderlyingOSVersion.value_or(VersionTuple());
+  }
+
+  VersionTuple takeOSVersion() {
+    assert(UnderlyingOSVersion.has_value() &&
+           "attempting to get an unset OS version");
+    VersionTuple Result = *UnderlyingOSVersion;
+    UnderlyingOSVersion.reset();
+    return Result;
+  }
 
   VersionTuple getCanonicalOSVersion() const {
     return llvm::Triple::getCanonicalVersionForOS(getOSFromPlatform(Platform),
-                                                  ResolvedOSVersion);
+                                                  getOSVersion());
   }
 
-  void setOSVersion(VersionTuple Version) { ResolvedOSVersion = Version; }
+  void setOSVersion(const VersionTuple &Version) {
+    UnderlyingOSVersion = Version;
+  }
 
-  bool providedOSVersion() const { return ProvidedOSVersion; }
+  bool hasOSVersion() const { return UnderlyingOSVersion.has_value(); }
 
   VersionTuple getZipperedOSVersion() const {
     assert(Environment == DarwinEnvironmentKind::MacCatalyst &&
@@ -1738,7 +1752,8 @@ struct DarwinPlatform {
 
   /// Adds the -m<os>-version-min argument to the compiler invocation.
   void addOSVersionMinArgument(DerivedArgList &Args, const OptTable &Opts) {
-    if (Argument)
+    auto &[Arg, OSVersionStr] = Arguments;
+    if (Arg)
       return;
     assert(Kind != TargetArg && Kind != MTargetOSArg && Kind != OSVersionArg &&
            "Invalid kind");
@@ -1763,25 +1778,24 @@ struct DarwinPlatform {
       // DriverKit always explicitly provides a version in the triple.
       return;
     }
-    Argument = Args.MakeJoinedArg(nullptr, Opts.getOption(Opt),
-                                  ResolvedOSVersion.getAsString());
-    Args.append(Argument);
+    Arg = Args.MakeJoinedArg(nullptr, Opts.getOption(Opt), OSVersionStr);
+    Args.append(Arg);
   }
 
   /// Returns the OS version with the argument / environment variable that
   /// specified it.
   std::string getAsString(DerivedArgList &Args, const OptTable &Opts) {
+    auto &[Arg, OSVersionStr] = Arguments;
     switch (Kind) {
     case TargetArg:
     case MTargetOSArg:
     case OSVersionArg:
     case InferredFromSDK:
     case InferredFromArch:
-      assert(Argument && "OS version argument not yet inferred");
-      return Argument->getAsString(Args);
+      assert(Arg && "OS version argument not yet inferred");
+      return Arg->getAsString(Args);
     case DeploymentTargetEnv:
-      return (llvm::Twine(EnvVarName) + "=" + ResolvedOSVersion.getAsString())
-          .str();
+      return (llvm::Twine(EnvVarName) + "=" + OSVersionStr).str();
     }
     llvm_unreachable("Unsupported Darwin Source Kind");
   }
@@ -1797,7 +1811,7 @@ struct DarwinPlatform {
       Environment = DarwinEnvironmentKind::MacCatalyst;
       // The minimum native macOS target for MacCatalyst is macOS 10.15.
       ZipperedOSVersion = VersionTuple(10, 15);
-      if (providedOSVersion() && SDKInfo) {
+      if (hasOSVersion() && SDKInfo) {
         if (const auto *MacCatalystToMacOSMapping = SDKInfo->getVersionMapping(
                 DarwinSDKInfo::OSEnvPair::macCatalystToMacOSPair())) {
           if (auto MacOSVersion = MacCatalystToMacOSMapping->map(
@@ -1879,19 +1893,23 @@ struct DarwinPlatform {
   /// the platform from the SDKPath.
   DarwinSDKInfo inferSDKInfo() {
     assert(Kind == InferredFromSDK && "can infer SDK info only");
-    return DarwinSDKInfo(ResolvedOSVersion,
+    return DarwinSDKInfo(getOSVersion(),
                          /*MaximumDeploymentTarget=*/
-                         VersionTuple(ResolvedOSVersion.getMajor(), 0, 99),
+                         VersionTuple(getOSVersion().getMajor(), 0, 99),
                          getOSFromPlatform(Platform));
   }
 
 private:
   DarwinPlatform(SourceKind Kind, DarwinPlatformKind Platform, Arg *Argument)
-      : Kind(Kind), Platform(Platform), Argument(Argument) {}
+      : Kind(Kind), Platform(Platform),
+        Arguments({Argument, VersionTuple().getAsString()}) {}
   DarwinPlatform(SourceKind Kind, DarwinPlatformKind Platform,
                  VersionTuple Value, Arg *Argument = nullptr)
-      : Kind(Kind), Platform(Platform), ResolvedOSVersion(Value),
-        ProvidedOSVersion(!Value.empty()), Argument(Argument) {}
+      : Kind(Kind), Platform(Platform),
+        Arguments({Argument, Value.getAsString()}) {
+    if (!Value.empty())
+      UnderlyingOSVersion = Value;
+  }
 
   static VersionTuple getVersionFromString(const StringRef Input) {
     llvm::VersionTuple Version;
@@ -1947,14 +1965,12 @@ private:
   // OSVersion tied to the main target value.
   VersionTuple ZipperedOSVersion;
   // We allow multiple ways to set or default the OS
-  // version used for compilation. The ResolvedOSVersion always represents what
-  // will be used.
-  VersionTuple ResolvedOSVersion;
-  // Track whether the OS deployment version was explicitly set on creation.
-  // This can be used for overidding the resolved version or error reporting.
-  bool ProvidedOSVersion = false;
+  // version used for compilation. When set, UnderlyingOSVersion represents
+  // the intended version to match the platform information computed from
+  // arguments.
+  std::optional<VersionTuple> UnderlyingOSVersion;
   bool InferSimulatorFromArch = true;
-  Arg *Argument;
+  std::pair<Arg *, std::string> Arguments;
   StringRef EnvVarName;
   // When compiling for a zippered target, this value represents the target
   // triple encoded in the target variant.
@@ -2151,9 +2167,10 @@ inferDeploymentTargetFromSDK(DerivedArgList &Args,
   // The SDK can be an SDK variant with a name like `<prefix>.<platform>`.
   return CreatePlatformFromSDKName(dropSDKNamePrefix(SDK));
 }
-
-VersionTuple getOSVersion(llvm::Triple::OSType OS, const llvm::Triple &Triple,
-                          const Driver &TheDriver) {
+// Compute & get the OS Version when the target triple omitted one.
+VersionTuple getInferredOSVersion(llvm::Triple::OSType OS,
+                                  const llvm::Triple &Triple,
+                                  const Driver &TheDriver) {
   VersionTuple OsVersion;
   llvm::Triple SystemTriple(llvm::sys::getProcessTriple());
   switch (OS) {
@@ -2215,8 +2232,8 @@ inferDeploymentTargetFromArch(DerivedArgList &Args, const Darwin &Toolchain,
     OSTy = llvm::Triple::MacOSX;
   if (OSTy == llvm::Triple::UnknownOS)
     return std::nullopt;
-  return DarwinPlatform::createFromArch(OSTy,
-                                        getOSVersion(OSTy, Triple, TheDriver));
+  return DarwinPlatform::createFromArch(
+      OSTy, getInferredOSVersion(OSTy, Triple, TheDriver));
 }
 
 /// Returns the deployment target that's specified using the -target option.
@@ -2228,7 +2245,6 @@ std::optional<DarwinPlatform> getDeploymentTargetFromTargetArg(
   if (Triple.getOS() == llvm::Triple::Darwin ||
       Triple.getOS() == llvm::Triple::UnknownOS)
     return std::nullopt;
-  VersionTuple OSVersion = getOSVersion(Triple.getOS(), Triple, TheDriver);
   std::optional<llvm::Triple> TargetVariantTriple;
   for (const Arg *A : Args.filtered(options::OPT_darwin_target_variant)) {
     llvm::Triple TVT(A->getValue());
@@ -2258,9 +2274,6 @@ std::optional<DarwinPlatform> getDeploymentTargetFromTargetArg(
       Triple, Args.getLastArg(options::OPT_target), TargetVariantTriple,
       SDKInfo);
 
-  // Override the OSVersion if it doesn't match the one from the triple.
-  if (Triple.getOSVersion() != OSVersion)
-    PlatformAndVersion.setOSVersion(OSVersion);
   return PlatformAndVersion;
 }
 
@@ -2350,6 +2363,12 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
       getDriver().Diag(diag::err_drv_cannot_mix_options)
           << TargetArgStr << MTargetOSArgStr;
     }
+    // Implicitly allow resolving the OS version when it wasn't explicitly set.
+    bool TripleProvidedOSVersion = PlatformAndVersion->hasOSVersion();
+    if (!TripleProvidedOSVersion)
+      PlatformAndVersion->setOSVersion(
+          getInferredOSVersion(getTriple().getOS(), getTriple(), getDriver()));
+
     std::optional<DarwinPlatform> PlatformAndVersionFromOSVersionArg =
         getDeploymentTargetFromOSVersionArg(Args, getDriver());
     if (PlatformAndVersionFromOSVersionArg) {
@@ -2372,7 +2391,7 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
         // the -target does not include an OS version.
         if (PlatformAndVersion->getPlatform() ==
                 PlatformAndVersionFromOSVersionArg->getPlatform() &&
-            !PlatformAndVersion->providedOSVersion()) {
+            !TripleProvidedOSVersion) {
           PlatformAndVersion->setOSVersion(
               PlatformAndVersionFromOSVersionArg->getOSVersion());
         } else {
@@ -2451,8 +2470,8 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   bool HadExtra;
   // The major version should not be over this number.
   const unsigned MajorVersionLimit = 1000;
-  const std::string OSVersionStr =
-      PlatformAndVersion->getOSVersion().getAsString();
+  const VersionTuple OSVersion = PlatformAndVersion->takeOSVersion();
+  const std::string OSVersionStr = OSVersion.getAsString();
   // Set the tool chain target information.
   if (Platform == MacOS) {
     if (!Driver::GetReleaseVersion(OSVersionStr, Major, Minor, Micro,
