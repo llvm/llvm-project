@@ -4378,7 +4378,7 @@ define <3 x float> @stofp_v3i64_v3f32(<3 x i64> %a) {
 ; CHECK-GI-NEXT:    scvtf v0.2d, v0.2d
 ; CHECK-GI-NEXT:    fcvtn v2.2s, v2.2d
 ; CHECK-GI-NEXT:    fcvtn v1.2s, v0.2d
-; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov s0, v1.s[0]
 ; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
 ; CHECK-GI-NEXT:    mov v0.s[2], v2.s[0]
 ; CHECK-GI-NEXT:    ret
@@ -4415,7 +4415,7 @@ define <3 x float> @utofp_v3i64_v3f32(<3 x i64> %a) {
 ; CHECK-GI-NEXT:    ucvtf v0.2d, v0.2d
 ; CHECK-GI-NEXT:    fcvtn v2.2s, v2.2d
 ; CHECK-GI-NEXT:    fcvtn v1.2s, v0.2d
-; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov s0, v1.s[0]
 ; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
 ; CHECK-GI-NEXT:    mov v0.s[2], v2.s[0]
 ; CHECK-GI-NEXT:    ret
@@ -6389,7 +6389,7 @@ define <2 x half> @stofp_v2i64_v2f16(<2 x i64> %a) {
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
 ; CHECK-GI-NOFP16-NEXT:    scvtf v0.2d, v0.2d
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-GI-NOFP16-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NOFP16-NEXT:    mov s1, v0.s[0]
 ; CHECK-GI-NOFP16-NEXT:    mov v1.s[1], v0.s[1]
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v1.4s
 ; CHECK-GI-NOFP16-NEXT:    ret
@@ -6435,7 +6435,7 @@ define <2 x half> @utofp_v2i64_v2f16(<2 x i64> %a) {
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
 ; CHECK-GI-NOFP16-NEXT:    ucvtf v0.2d, v0.2d
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-GI-NOFP16-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NOFP16-NEXT:    mov s1, v0.s[0]
 ; CHECK-GI-NOFP16-NEXT:    mov v1.s[1], v0.s[1]
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v1.4s
 ; CHECK-GI-NOFP16-NEXT:    ret
@@ -7371,7 +7371,7 @@ define <2 x half> @stofp_v2i32_v2f16(<2 x i32> %a) {
 ; CHECK-GI-LABEL: stofp_v2i32_v2f16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    scvtf v0.2s, v0.2s
-; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov s1, v0.s[0]
 ; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
 ; CHECK-GI-NEXT:    fcvtn v0.4h, v1.4s
 ; CHECK-GI-NEXT:    ret
@@ -7391,7 +7391,7 @@ define <2 x half> @utofp_v2i32_v2f16(<2 x i32> %a) {
 ; CHECK-GI-LABEL: utofp_v2i32_v2f16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ucvtf v0.2s, v0.2s
-; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov s1, v0.s[0]
 ; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
 ; CHECK-GI-NEXT:    fcvtn v0.4h, v1.4s
 ; CHECK-GI-NEXT:    ret
@@ -7598,7 +7598,7 @@ define <2 x half> @stofp_v2i16_v2f16(<2 x i16> %a) {
 ; CHECK-GI-NOFP16-NEXT:    shl v0.2s, v0.2s, #16
 ; CHECK-GI-NOFP16-NEXT:    sshr v0.2s, v0.2s, #16
 ; CHECK-GI-NOFP16-NEXT:    scvtf v0.2s, v0.2s
-; CHECK-GI-NOFP16-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NOFP16-NEXT:    mov s1, v0.s[0]
 ; CHECK-GI-NOFP16-NEXT:    mov v1.s[1], v0.s[1]
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v1.4s
 ; CHECK-GI-NOFP16-NEXT:    ret
@@ -7633,7 +7633,7 @@ define <2 x half> @utofp_v2i16_v2f16(<2 x i16> %a) {
 ; CHECK-GI-NOFP16-NEXT:    movi d1, #0x00ffff0000ffff
 ; CHECK-GI-NOFP16-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NOFP16-NEXT:    ucvtf v0.2s, v0.2s
-; CHECK-GI-NOFP16-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NOFP16-NEXT:    mov s1, v0.s[0]
 ; CHECK-GI-NOFP16-NEXT:    mov v1.s[1], v0.s[1]
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v1.4s
 ; CHECK-GI-NOFP16-NEXT:    ret
@@ -8120,7 +8120,7 @@ define <2 x half> @stofp_v2i8_v2f16(<2 x i8> %a) {
 ; CHECK-GI-NOFP16-NEXT:    shl v0.2s, v0.2s, #24
 ; CHECK-GI-NOFP16-NEXT:    sshr v0.2s, v0.2s, #24
 ; CHECK-GI-NOFP16-NEXT:    scvtf v0.2s, v0.2s
-; CHECK-GI-NOFP16-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NOFP16-NEXT:    mov s1, v0.s[0]
 ; CHECK-GI-NOFP16-NEXT:    mov v1.s[1], v0.s[1]
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v1.4s
 ; CHECK-GI-NOFP16-NEXT:    ret
@@ -8171,7 +8171,7 @@ define <2 x half> @utofp_v2i8_v2f16(<2 x i8> %a) {
 ; CHECK-GI-NOFP16-NEXT:    movi d1, #0x0000ff000000ff
 ; CHECK-GI-NOFP16-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NOFP16-NEXT:    ucvtf v0.2s, v0.2s
-; CHECK-GI-NOFP16-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NOFP16-NEXT:    mov s1, v0.s[0]
 ; CHECK-GI-NOFP16-NEXT:    mov v1.s[1], v0.s[1]
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v1.4s
 ; CHECK-GI-NOFP16-NEXT:    ret
