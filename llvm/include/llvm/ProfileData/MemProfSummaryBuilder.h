@@ -13,9 +13,9 @@
 #ifndef LLVM_PROFILEDATA_MEMPROFSUMMARYBUILDER_H
 #define LLVM_PROFILEDATA_MEMPROFSUMMARYBUILDER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/MemProfSummary.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace memprof {

@@ -14,7 +14,6 @@
 #ifndef LLVM_PROFILEDATA_SAMPLEPROF_H
 #define LLVM_PROFILEDATA_SAMPLEPROF_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -25,6 +24,7 @@
 #include "llvm/ProfileData/FunctionId.h"
 #include "llvm/ProfileData/HashKeyMap.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MathExtras.h"
@@ -429,7 +429,8 @@ public:
 
   /// Merge the samples in \p Other into this record.
   /// Optionally scale sample counts by \p Weight.
-  LLVM_ABI sampleprof_error merge(const SampleRecord &Other, uint64_t Weight = 1);
+  LLVM_ABI sampleprof_error merge(const SampleRecord &Other,
+                                  uint64_t Weight = 1);
   LLVM_ABI void print(raw_ostream &OS, unsigned Indent) const;
   LLVM_ABI void dump() const;
   /// Serialize the sample record to the output stream using ULEB128 encoding.
@@ -1164,7 +1165,7 @@ public:
   /// regular profile, to hide implementation details from the sample loader and
   /// the context tracker.
   LLVM_ABI static LineLocation getCallSiteIdentifier(const DILocation *DIL,
-                                            bool ProfileIsFS = false);
+                                                     bool ProfileIsFS = false);
 
   /// Returns a unique hash code for a combination of a callsite location and
   /// the callee function name.
@@ -1353,8 +1354,9 @@ public:
 
 using NameFunctionSamples = std::pair<hash_code, const FunctionSamples *>;
 
-LLVM_ABI void sortFuncProfiles(const SampleProfileMap &ProfileMap,
-                      std::vector<NameFunctionSamples> &SortedProfiles);
+LLVM_ABI void
+sortFuncProfiles(const SampleProfileMap &ProfileMap,
+                 std::vector<NameFunctionSamples> &SortedProfiles);
 
 /// Sort a LocationT->SampleT map by LocationT.
 ///
@@ -1393,10 +1395,10 @@ public:
   // true, preinliner decsion is not honored anyway so TrimBaseProfileOnly will
   // be ignored.
   LLVM_ABI void trimAndMergeColdContextProfiles(uint64_t ColdCountThreshold,
-                                       bool TrimColdContext,
-                                       bool MergeColdContext,
-                                       uint32_t ColdContextFrameLength,
-                                       bool TrimBaseProfileOnly);
+                                                bool TrimColdContext,
+                                                bool MergeColdContext,
+                                                uint32_t ColdContextFrameLength,
+                                                bool TrimBaseProfileOnly);
 
 private:
   SampleProfileMap &ProfileMap;
@@ -1428,7 +1430,7 @@ public:
     LineLocation CallSiteLoc;
 
     LLVM_ABI FrameNode *getOrCreateChildFrame(const LineLocation &CallSite,
-                                     FunctionId CalleeName);
+                                              FunctionId CalleeName);
   };
 
   static void flattenProfile(SampleProfileMap &ProfileMap,

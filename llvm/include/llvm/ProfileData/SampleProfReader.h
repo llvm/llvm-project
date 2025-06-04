@@ -225,7 +225,6 @@
 #ifndef LLVM_PROFILEDATA_SAMPLEPROFREADER_H
 #define LLVM_PROFILEDATA_SAMPLEPROFREADER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -234,6 +233,7 @@
 #include "llvm/ProfileData/GCOV.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/ProfileData/SymbolRemappingReader.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Discriminator.h"
 #include "llvm/Support/ErrorOr.h"
@@ -396,7 +396,8 @@ public:
   virtual std::error_code readImpl() = 0;
 
   /// Print the profile for \p FunctionSamples on stream \p OS.
-  LLVM_ABI void dumpFunctionProfile(const FunctionSamples &FS, raw_ostream &OS = dbgs());
+  LLVM_ABI void dumpFunctionProfile(const FunctionSamples &FS,
+                                    raw_ostream &OS = dbgs());
 
   /// Collect functions with definitions in Module M. For reader which
   /// support loading function profiles on demand, return true when the
@@ -763,7 +764,8 @@ public:
 /// commonly used sections of a profile in extensible binary format. It is
 /// possible to define other types of profile inherited from
 /// SampleProfileReaderExtBinaryBase/SampleProfileWriterExtBinaryBase.
-class LLVM_ABI SampleProfileReaderExtBinaryBase : public SampleProfileReaderBinary {
+class LLVM_ABI SampleProfileReaderExtBinaryBase
+    : public SampleProfileReaderBinary {
 private:
   std::error_code decompressSection(const uint8_t *SecStart,
                                     const uint64_t SecSize,
@@ -846,7 +848,8 @@ private:
                        SampleProfileMap &Profiles) override;
 };
 
-class LLVM_ABI SampleProfileReaderExtBinary : public SampleProfileReaderExtBinaryBase {
+class LLVM_ABI SampleProfileReaderExtBinary
+    : public SampleProfileReaderExtBinaryBase {
 private:
   std::error_code verifySPMagic(uint64_t Magic) override;
   std::error_code readCustomSection(const SecHdrTableEntry &Entry) override {

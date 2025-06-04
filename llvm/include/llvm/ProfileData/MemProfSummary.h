@@ -13,8 +13,8 @@
 #ifndef LLVM_PROFILEDATA_MEMPROFSUMMARY_H
 #define LLVM_PROFILEDATA_MEMPROFSUMMARY_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace memprof {
@@ -51,7 +51,8 @@ public:
   /// Write to indexed MemProf profile.
   LLVM_ABI void write(ProfOStream &OS) const;
   /// Read from indexed MemProf profile.
-  LLVM_ABI static std::unique_ptr<MemProfSummary> deserialize(const unsigned char *&);
+  LLVM_ABI static std::unique_ptr<MemProfSummary>
+  deserialize(const unsigned char *&);
 };
 
 } // namespace memprof

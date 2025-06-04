@@ -14,7 +14,6 @@
 #ifndef LLVM_PROFILEDATA_INSTRPROFWRITER_H
 #define LLVM_PROFILEDATA_INSTRPROFWRITER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -24,6 +23,7 @@
 #include "llvm/ProfileData/IndexedMemProfData.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProfSummaryBuilder.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <memory>
@@ -96,15 +96,15 @@ public:
   // provided by MemprofGenerateRandomHotnessSeed, or if that is 0, one will be
   // generated in the writer using the current time.
   LLVM_ABI InstrProfWriter(bool Sparse = false,
-                  uint64_t TemporalProfTraceReservoirSize = 0,
-                  uint64_t MaxTemporalProfTraceLength = 0,
-                  bool WritePrevVersion = false,
-                  memprof::IndexedVersion MemProfVersionRequested =
-                      static_cast<memprof::IndexedVersion>(
-                          memprof::MinimumSupportedVersion),
-                  bool MemProfFullSchema = false,
-                  bool MemprofGenerateRandomHotness = false,
-                  unsigned MemprofGenerateRandomHotnessSeed = 0);
+                           uint64_t TemporalProfTraceReservoirSize = 0,
+                           uint64_t MaxTemporalProfTraceLength = 0,
+                           bool WritePrevVersion = false,
+                           memprof::IndexedVersion MemProfVersionRequested =
+                               static_cast<memprof::IndexedVersion>(
+                                   memprof::MinimumSupportedVersion),
+                           bool MemProfFullSchema = false,
+                           bool MemprofGenerateRandomHotness = false,
+                           unsigned MemprofGenerateRandomHotnessSeed = 0);
   LLVM_ABI ~InstrProfWriter();
 
   StringMap<ProfilingData> &getProfileData() { return FunctionData; }
@@ -113,7 +113,7 @@ public:
   /// for this function and the hash and number of counts match, each counter is
   /// summed. Optionally scale counts by \p Weight.
   LLVM_ABI void addRecord(NamedInstrProfRecord &&I, uint64_t Weight,
-                 function_ref<void(Error)> Warn);
+                          function_ref<void(Error)> Warn);
   void addRecord(NamedInstrProfRecord &&I, function_ref<void(Error)> Warn) {
     addRecord(std::move(I), 1, Warn);
   }
@@ -121,12 +121,13 @@ public:
 
   /// Add \p SrcTraces using reservoir sampling where \p SrcStreamSize is the
   /// total number of temporal profiling traces the source has seen.
-  LLVM_ABI void addTemporalProfileTraces(SmallVectorImpl<TemporalProfTraceTy> &SrcTraces,
-                                uint64_t SrcStreamSize);
+  LLVM_ABI void
+  addTemporalProfileTraces(SmallVectorImpl<TemporalProfTraceTy> &SrcTraces,
+                           uint64_t SrcStreamSize);
 
   /// Add the entire MemProfData \p Incoming to the writer context.
   LLVM_ABI bool addMemProfData(memprof::IndexedMemProfData Incoming,
-                      function_ref<void(Error)> Warn);
+                               function_ref<void(Error)> Warn);
 
   // Add a binary id to the binary ids list.
   LLVM_ABI void addBinaryIds(ArrayRef<llvm::object::BuildID> BIs);
@@ -136,7 +137,7 @@ public:
 
   /// Merge existing function counts from the given writer.
   LLVM_ABI void mergeRecordsFromWriter(InstrProfWriter &&IPW,
-                              function_ref<void(Error)> Warn);
+                                       function_ref<void(Error)> Warn);
 
   /// Write the profile to \c OS
   LLVM_ABI Error write(raw_fd_ostream &OS);
@@ -149,14 +150,15 @@ public:
 
   /// Write temporal profile trace data to the header in text format to \c OS
   LLVM_ABI void writeTextTemporalProfTraceData(raw_fd_ostream &OS,
-                                      InstrProfSymtab &Symtab);
+                                               InstrProfSymtab &Symtab);
 
   LLVM_ABI Error validateRecord(const InstrProfRecord &Func);
 
   /// Write \c Record in text format to \c OS
   LLVM_ABI static void writeRecordInText(StringRef Name, uint64_t Hash,
-                                const InstrProfRecord &Counters,
-                                InstrProfSymtab &Symtab, raw_fd_ostream &OS);
+                                         const InstrProfRecord &Counters,
+                                         InstrProfSymtab &Symtab,
+                                         raw_fd_ostream &OS);
 
   /// Write the profile, returning the raw data. For testing.
   LLVM_ABI std::unique_ptr<MemoryBuffer> writeBuffer();
@@ -215,9 +217,10 @@ public:
   void setMemProfFullSchema(bool Full) { MemProfFullSchema = Full; }
   // Compute the overlap b/w this object and Other. Program level result is
   // stored in Overlap and function level result is stored in FuncLevelOverlap.
-  LLVM_ABI void overlapRecord(NamedInstrProfRecord &&Other, OverlapStats &Overlap,
-                     OverlapStats &FuncLevelOverlap,
-                     const OverlapFuncFilters &FuncFilter);
+  LLVM_ABI void overlapRecord(NamedInstrProfRecord &&Other,
+                              OverlapStats &Overlap,
+                              OverlapStats &FuncLevelOverlap,
+                              const OverlapFuncFilters &FuncFilter);
 
 private:
   void addRecord(StringRef Name, uint64_t Hash, InstrProfRecord &&I,

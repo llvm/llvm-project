@@ -14,10 +14,10 @@
 #ifndef LLVM_PROFILEDATA_COVERAGE_COVERAGEMAPPINGWRITER_H
 #define LLVM_PROFILEDATA_COVERAGE_COVERAGEMAPPINGWRITER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

@@ -14,7 +14,6 @@
 #ifndef LLVM_PROFILEDATA_MEMPROF_H
 #define LLVM_PROFILEDATA_MEMPROF_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLForwardCompat.h"
@@ -24,6 +23,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/ProfileData/MemProfData.inc"
 #include "llvm/Support/BLAKE3.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/HashBuilder.h"
@@ -398,7 +398,7 @@ struct IndexedAllocationInfo {
 
   // Returns the size in bytes when this allocation info struct is serialized.
   LLVM_ABI size_t serializedSize(const MemProfSchema &Schema,
-                        IndexedVersion Version) const;
+                                 IndexedVersion Version) const;
 
   bool operator==(const IndexedAllocationInfo &Other) const {
     if (Other.Info != Info)
@@ -459,7 +459,7 @@ struct IndexedMemProfRecord {
   }
 
   LLVM_ABI size_t serializedSize(const MemProfSchema &Schema,
-                        IndexedVersion Version) const;
+                                 IndexedVersion Version) const;
 
   bool operator==(const IndexedMemProfRecord &Other) const {
     if (Other.AllocSites != AllocSites)
@@ -473,14 +473,14 @@ struct IndexedMemProfRecord {
   // Serializes the memprof records in \p Records to the ostream \p OS based
   // on the schema provided in \p Schema.
   LLVM_ABI void serialize(const MemProfSchema &Schema, raw_ostream &OS,
-                 IndexedVersion Version,
-                 llvm::DenseMap<CallStackId, LinearCallStackId>
-                     *MemProfCallStackIndexes = nullptr) const;
+                          IndexedVersion Version,
+                          llvm::DenseMap<CallStackId, LinearCallStackId>
+                              *MemProfCallStackIndexes = nullptr) const;
 
   // Deserializes memprof records from the Buffer.
   LLVM_ABI static IndexedMemProfRecord deserialize(const MemProfSchema &Schema,
-                                          const unsigned char *Buffer,
-                                          IndexedVersion Version);
+                                                   const unsigned char *Buffer,
+                                                   IndexedVersion Version);
 
   // Convert IndexedMemProfRecord to MemProfRecord.  Callback is used to
   // translate CallStackId to call stacks with frames inline.
@@ -552,7 +552,8 @@ struct MemProfRecord {
 // ids in the schema. Subsequent entries are integers which map to memprof::Meta
 // enum class entries. After successfully reading the schema, the pointer is one
 // byte past the schema contents.
-LLVM_ABI Expected<MemProfSchema> readMemProfSchema(const unsigned char *&Buffer);
+LLVM_ABI Expected<MemProfSchema>
+readMemProfSchema(const unsigned char *&Buffer);
 
 // Trait for reading IndexedMemProfRecord data from the on-disk hash table.
 class RecordLookupTrait {

@@ -357,7 +357,8 @@ public:
 
 // Defined in MemProfRadixTree.cpp
 extern template class LLVM_TEMPLATE_ABI CallStackRadixTreeBuilder<FrameId>;
-extern template class LLVM_TEMPLATE_ABI CallStackRadixTreeBuilder<LinearFrameId>;
+extern template class LLVM_TEMPLATE_ABI
+    CallStackRadixTreeBuilder<LinearFrameId>;
 
 } // namespace memprof
 } // namespace llvm
