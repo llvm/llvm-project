@@ -185,9 +185,21 @@ public:
                                     global.getSymName());
   }
 
+  mlir::Value createGetGlobal(cir::GlobalOp global) {
+    return createGetGlobal(global.getLoc(), global);
+  }
+
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, mlir::Value dst,
                            mlir::IntegerAttr align = {}) {
     return create<cir::StoreOp>(loc, val, dst, align);
+  }
+
+  [[nodiscard]] cir::GlobalOp
+  createGlobal(mlir::ModuleOp module, mlir::Location loc, mlir::StringRef name,
+               mlir::Type type, cir::GlobalLinkageKind linkage) {
+    mlir::OpBuilder::InsertionGuard guard(*this);
+    setInsertionPointToStart(module.getBody());
+    return create<cir::GlobalOp>(loc, name, type, linkage);
   }
 
   cir::GetMemberOp createGetMember(mlir::Location loc, mlir::Type resultTy,
