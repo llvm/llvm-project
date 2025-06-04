@@ -13,7 +13,6 @@
 #include "llvm/Demangle/Utility.h"
 
 #include <cstddef>
-#include <cstdlib>
 #include <utility>
 
 namespace lldb_private {

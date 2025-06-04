@@ -26,6 +26,7 @@
 
 #include "gtest/gtest.h"
 
+#include <cstdlib>
 #include <memory>
 
 using namespace lldb;
