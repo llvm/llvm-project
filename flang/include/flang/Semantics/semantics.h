@@ -290,10 +290,6 @@ public:
   // Top-level ProgramTrees are owned by the SemanticsContext for persistence.
   ProgramTree &SaveProgramTree(ProgramTree &&);
 
-  // Store (and get a reference to the stored string) for mangled names
-  // used for OpenMP DECLARE REDUCTION.
-  std::string &StoreUserReductionName(const std::string &name);
-
 private:
   struct ScopeIndexComparator {
     bool operator()(parser::CharBlock, parser::CharBlock) const;
@@ -347,11 +343,6 @@ private:
   std::map<const Symbol *, SourceName> moduleFileOutputRenamings_;
   UnorderedSymbolSet isDefined_;
   std::list<ProgramTree> programTrees_;
-
-  // Storage for mangled names used in OMP DECLARE REDUCTION.
-  // use std::list to avoid re-allocating the string when adding
-  // more content to the container.
-  std::list<std::string> userReductionNames_;
 };
 
 class Semantics {

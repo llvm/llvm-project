@@ -1873,9 +1873,7 @@ void OmpVisitor::ProcessReductionSpecifier(
     const auto &defOp{std::get<parser::DefinedOperator>(id.u)};
     if (const auto *definedOp{std::get_if<parser::DefinedOpName>(&defOp.u)}) {
       name = &definedOp->v;
-      // TODO: StoreReductionName
-      mangledName = parser::CharBlock{context().StoreUserReductionName(
-          MangleDefinedOperator(name->source))};
+      mangledName = context().SaveTempName(MangleDefinedOperator(name->source));
     } else {
       mangledName = MakeNameFromOperator(
           std::get<parser::DefinedOperator::IntrinsicOperator>(defOp.u),
