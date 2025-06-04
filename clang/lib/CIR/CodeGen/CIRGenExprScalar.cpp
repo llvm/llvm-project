@@ -1858,9 +1858,6 @@ mlir::Value ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *e) {
 
   // ZExt result to the expr type.
   return maybePromoteBoolResult(boolVal, cgf.convertType(e->getType()));
-
-  cgf.cgm.errorNYI("destination type for logical-not unary operator is NYI");
-  return {};
 }
 
 /// Return the size or alignment of the type of argument of the sizeof

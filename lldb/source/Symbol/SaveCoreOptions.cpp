@@ -24,7 +24,6 @@ Status SaveCoreOptions::SetPluginName(const char *name) {
   if (!PluginManager::IsRegisteredObjectFilePluginName(name)) {
     return Status::FromErrorStringWithFormat(
         "plugin name '%s' is not a valid ObjectFile plugin name", name);
-    return error;
   }
 
   m_plugin_name = name;
