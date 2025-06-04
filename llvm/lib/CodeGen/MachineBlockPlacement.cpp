@@ -1483,6 +1483,11 @@ bool MachineBlockPlacement::hasBetterLayoutPredecessor(
   if (SuccChain.UnscheduledPredecessors == 0)
     return false;
 
+  // Compile-time optimization: runtime is quadratic in the number of
+  // predecessors. For such uncommon cases, exit early.
+  if (Succ->pred_size() > PredecessorLimit)
+    return false;
+
   // There are two basic scenarios here:
   // -------------------------------------
   // Case 1: triangular shape CFG (if-then):
@@ -1602,11 +1607,6 @@ bool MachineBlockPlacement::hasBetterLayoutPredecessor(
   // important predecessor.
   BlockFrequency CandidateEdgeFreq = MBFI->getBlockFreq(BB) * RealSuccProb;
   bool BadCFGConflict = false;
-
-  // Compile-time optimization: runtime is quadratic in the number of
-  // predecessors. For such uncommon cases, exit early.
-  if (Succ->pred_size() > PredecessorLimit)
-    return false;
 
   for (MachineBasicBlock *Pred : Succ->predecessors()) {
     BlockChain *PredChain = BlockToChain[Pred];
