@@ -3037,8 +3037,9 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
 
   // First create the loads to the guard/stack slot for the comparison.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  EVT PtrTy = TLI.getPointerTy(DAG.getDataLayout());
-  EVT PtrMemTy = TLI.getPointerMemTy(DAG.getDataLayout());
+  auto &DL = DAG.getDataLayout();
+  EVT PtrTy = TLI.getPointerTy(DL);
+  EVT PtrMemTy = TLI.getPointerMemTy(DL);
 
   MachineFrameInfo &MFI = ParentBB->getParent()->getFrameInfo();
   int FI = MFI.getStackProtectorIndex();
@@ -3047,8 +3048,8 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
   SDLoc dl = getCurSDLoc();
   SDValue StackSlotPtr = DAG.getFrameIndex(FI, PtrTy);
   const Module &M = *ParentBB->getParent()->getFunction().getParent();
-  Align Align =
-      DAG.getDataLayout().getPrefTypeAlign(PointerType::get(M.getContext(), 0));
+  Align Align = DL.getPrefTypeAlign(
+      PointerType::get(M.getContext(), DL.getAllocaAddrSpace()));
 
   // Generate code to load the content of the guard slot.
   SDValue GuardVal = DAG.getLoad(
@@ -3074,10 +3075,9 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
   }
 
   // Perform the comparison via a getsetcc.
-  SDValue Cmp = DAG.getSetCC(dl, TLI.getSetCCResultType(DAG.getDataLayout(),
-                                                        *DAG.getContext(),
-                                                        Guard.getValueType()),
-                             Guard, GuardVal, ISD::SETNE);
+  SDValue Cmp = DAG.getSetCC(
+      dl, TLI.getSetCCResultType(DL, *DAG.getContext(), Guard.getValueType()),
+      Guard, GuardVal, ISD::SETNE);
 
   // If the guard/stackslot do not equal, branch to failure MBB.
   SDValue BrCond = DAG.getNode(ISD::BRCOND, dl,
@@ -3111,16 +3111,17 @@ void SelectionDAGBuilder::visitSPDescriptorFailure(
   if (const Function *GuardCheckFn = TLI.getSSPStackGuardCheck(M)) {
 
     // First create the loads to the guard/stack slot for the comparison.
-    EVT PtrTy = TLI.getPointerTy(DAG.getDataLayout());
-    EVT PtrMemTy = TLI.getPointerMemTy(DAG.getDataLayout());
+    auto &DL = DAG.getDataLayout();
+    EVT PtrTy = TLI.getFrameIndexTy(DL);
+    EVT PtrMemTy = TLI.getPointerMemTy(DL);
 
     MachineFrameInfo &MFI = ParentBB->getParent()->getFrameInfo();
     int FI = MFI.getStackProtectorIndex();
 
     SDLoc dl = getCurSDLoc();
     SDValue StackSlotPtr = DAG.getFrameIndex(FI, PtrTy);
-    Align Align = DAG.getDataLayout().getPrefTypeAlign(
-        PointerType::get(M.getContext(), 0));
+    Align Align = DL.getPrefTypeAlign(
+        PointerType::get(M.getContext(), DL.getAllocaAddrSpace()));
 
     // Generate code to load the content of the guard slot.
     SDValue GuardVal = DAG.getLoad(
