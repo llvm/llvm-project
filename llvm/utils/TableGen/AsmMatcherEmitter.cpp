@@ -1712,11 +1712,11 @@ void AsmMatcherInfo::buildInstructionOperandReference(MatchableInfo *II,
   MatchableInfo::AsmOperand *Op = &II->AsmOperands[AsmOpIdx];
 
   // Map this token to an operand.
-  unsigned Idx;
-  if (!Operands.hasOperandNamed(OperandName, Idx))
+  std::optional<unsigned> MayBeIdx = Operands.findOperandNamed(OperandName);
+  if (!MayBeIdx)
     PrintFatalError(II->TheDef->getLoc(),
                     "error: unable to find operand: '" + OperandName + "'");
-
+  unsigned Idx = *MayBeIdx;
   // If the instruction operand has multiple suboperands, but the parser
   // match class for the asm operand is still the default "ImmAsmOperand",
   // then handle each suboperand separately.
