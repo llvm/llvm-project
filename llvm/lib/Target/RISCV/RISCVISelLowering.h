@@ -95,8 +95,9 @@ public:
                                                 unsigned &NumIntermediates,
                                                 MVT &RegisterVT) const override;
 
-  bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
-                                            EVT VT) const override;
+  bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode, EVT VT,
+                                            unsigned SelectOpcode, SDValue X,
+                                            SDValue Y) const override;
 
   /// Return true if the given shuffle mask can be codegen'd directly, or if it
   /// should be stack expanded.
@@ -152,6 +153,12 @@ public:
                                            const APInt &DemandedElts,
                                            const SelectionDAG &DAG,
                                            unsigned Depth) const override;
+
+  bool SimplifyDemandedBitsForTargetNode(SDValue Op, const APInt &DemandedBits,
+                                         const APInt &DemandedElts,
+                                         KnownBits &Known,
+                                         TargetLoweringOpt &TLO,
+                                         unsigned Depth) const override;
 
   bool canCreateUndefOrPoisonForTargetNode(SDValue Op,
                                            const APInt &DemandedElts,

@@ -564,6 +564,23 @@ func.func @test_avg_pool2d_zero_dim_input(%arg0: tensor<1x0x?x9xf32>, %arg1: ten
 
 // -----
 
+func.func @test_variable_unranked(%arg0: tensor<2x4x8xi8>) -> () {
+  tosa.variable @stored_var : tensor<*xi8>
+  // expected-error@+1 {{custom op 'tosa.variable' expected ranked type}}
+  return
+}
+
+// -----
+
+func.func @test_variable_unranked_initial_value(%arg0: tensor<2x4x8xi8>) -> () {
+  // expected-error@+1 {{elements literal type must have static shape}}
+  tosa.variable @stored_var = dense<0> : tensor<*xi8>
+  // expected-error@+1 {{custom op 'tosa.variable' expected attribute}}
+  return
+}
+
+// -----
+
 func.func @test_variable_duplicates(%arg0: tensor<2x4x8xi8>) -> () {
   tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
   // expected-error@+1 {{'tosa.variable' op illegal to have multiple declaration of 'stored_var'}}
@@ -673,6 +690,16 @@ func.func @test_mul_type_mismatch(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x1
   // expected-error@+1 {{'tosa.mul' op requires the same element type for all operands}}
   %0 = tosa.mul %arg0, %arg1, %shift : (tensor<13x21x3xf32>, tensor<13x1x3xf16>, tensor<1xi8>) -> tensor<13x21x3xf32>
   return %0 : tensor<13x21x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_mul_int_type_mismatch
+func.func @test_mul_int_type_mismatch(%arg0: tensor<1xf32>, %arg1: tensor<1xf32>) -> tensor<1xi32> {
+  %shift = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  // expected-error@+1 {{'tosa.mul' op requires the same element type for all operands}}
+  %3 = tosa.mul %arg0, %arg1, %shift : (tensor<1xf32>, tensor<1xf32>, tensor<1xi8>) -> tensor<1xi32>
+  return %3 : tensor<1xi32>
 }
 
 // -----

@@ -167,7 +167,6 @@ TEST_F(ResourceBindingAnalysisTest, TestUnboundedAndOverlap) {
   // StructuredBuffer<float> C[]  : register(t0, space2);
   // StructuredBuffer<float> D    : register(t4, space2); /* overlapping */
   StringRef Assembly = R"(
-%__cblayout_CB = type <{ i32 }>
 define void @main() {
 entry:
   %handleA = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 -1, i32 10, i1 false, ptr null)
@@ -198,11 +197,12 @@ TEST_F(ResourceBindingAnalysisTest, TestExactOverlap) {
   // StructuredBuffer<float> A  : register(t5);
   // StructuredBuffer<float> B  : register(t5);
   StringRef Assembly = R"(
-%__cblayout_CB = type <{ i32 }>
+@A.str = private unnamed_addr constant [2 x i8] c"A\00", align 1
+@B.str = private unnamed_addr constant [2 x i8] c"B\00", align 1
 define void @main() {
 entry:
-  %handleA = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, i1 false, ptr null)
-  %handleB = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, i1 false, ptr null)
+  %handleA = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, i1 false, ptr @A.str)
+  %handleB = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, i1 false, ptr @B.str)
   ret void
 }
   )";
@@ -213,9 +213,7 @@ entry:
       MAM->getResult<DXILResourceBindingAnalysis>(*M);
 
   EXPECT_EQ(false, DRBI.hasImplicitBinding());
-  // FIXME (XFAIL): detecting overlap of two resource with identical binding
-  // is not yet supported (llvm/llvm-project#110723).
-  EXPECT_EQ(false, DRBI.hasOverlappingBinding());
+  EXPECT_EQ(true, DRBI.hasOverlappingBinding());
 
   DXILResourceBindingInfo::BindingSpaces &SRVSpaces =
       DRBI.getBindingSpaces(ResourceClass::SRV);

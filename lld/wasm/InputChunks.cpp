@@ -174,9 +174,9 @@ static bool relocIsLive(const WasmRelocation &rel, ObjFile *file) {
 }
 
 size_t InputChunk::getNumLiveRelocations() const {
-  return std::count_if(
-      relocations.begin(), relocations.end(),
-      [this](const WasmRelocation &rel) { return relocIsLive(rel, file); });
+  return llvm::count_if(relocations, [this](const WasmRelocation &rel) {
+    return relocIsLive(rel, file);
+  });
 }
 
 // Copy relocation entries to a given output stream.

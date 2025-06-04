@@ -19,8 +19,6 @@ class TestFrameVarDILArraySubscript(TestBase):
             self.runCmd("settings set target.experimental.use-DIL true")
             self.assertEqual(value_dil.GetValue(), value_frv.GetValue())
 
-    # int_arr[100] sometimes points to above the stack region, fix coming soon.
-    @skipIfWindows
     def test_subscript(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -53,9 +51,10 @@ class TestFrameVarDILArraySubscript(TestBase):
         # Both typedefs and refs
         self.expect("frame var 'td_int_arr_ref[td_int_idx_1_ref]'", error=True)
 
-        # Test for index out of bounds.
-        self.expect_var_path("int_arr[42]", True, type="int")
-        self.expect_var_path("int_arr[100]", True, type="int")
+        # Test for index out of bounds. 1 beyond the end.
+        self.expect_var_path("int_arr[3]", True, type="int")
+        # Far beyond the end (but not far enough to be off the top of the stack).
+        self.expect_var_path("int_arr[10]", True, type="int")
 
         # Test address-of of the subscripted value.
         self.expect_var_path("*(&int_arr[1])", value="2")
