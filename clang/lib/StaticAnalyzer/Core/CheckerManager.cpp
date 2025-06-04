@@ -585,8 +585,8 @@ namespace {
                     NodeBuilder &Bldr, ExplodedNode *Pred) {
       llvm::TimeTraceScope TimeScope(
           checkerScopeName("Allocator", checkFn.Checker));
-      ProgramPoint L =
-          PostAllocatorCall(Call.getOriginExpr(), Pred->getLocationContext());
+      ProgramPoint L = PostAllocatorCall(
+          Call.getOriginExpr(), Pred->getLocationContext(), checkFn.Checker);
       CheckerContext C(Bldr, Eng, Pred, L, WasInlined);
       checkFn(cast<CXXAllocatorCall>(*Call.cloneWithState(Pred->getState())),
               C);

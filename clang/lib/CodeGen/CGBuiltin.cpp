@@ -17,6 +17,7 @@
 #include "CGDebugInfo.h"
 #include "CGObjCRuntime.h"
 #include "CGOpenCLRuntime.h"
+#include "CGPointerAuthInfo.h"
 #include "CGRecordLayout.h"
 #include "CGValue.h"
 #include "CodeGenFunction.h"
@@ -5619,6 +5620,18 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       Result = Builder.CreateIntToPtr(Result, OrigValueType);
     }
     return RValue::get(Result);
+  }
+
+  case Builtin::BI__builtin_get_vtable_pointer: {
+    const Expr *Target = E->getArg(0);
+    QualType TargetType = Target->getType();
+    const CXXRecordDecl *Decl = TargetType->getPointeeCXXRecordDecl();
+    assert(Decl);
+    auto ThisAddress = EmitPointerWithAlignment(Target);
+    assert(ThisAddress.isValid());
+    llvm::Value *VTablePointer =
+        GetVTablePtr(ThisAddress, Int8PtrTy, Decl, VTableAuthMode::MustTrap);
+    return RValue::get(VTablePointer);
   }
 
   case Builtin::BI__exception_code:

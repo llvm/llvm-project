@@ -918,7 +918,7 @@ static bool canReplaceGEPIdxWithZero(InstCombinerImpl &IC,
   // first non-zero index.
   auto IsAllNonNegative = [&]() {
     for (unsigned i = Idx+1, e = GEPI->getNumOperands(); i != e; ++i) {
-      KnownBits Known = IC.computeKnownBits(GEPI->getOperand(i), 0, MemI);
+      KnownBits Known = IC.computeKnownBits(GEPI->getOperand(i), MemI);
       if (Known.isNonNegative())
         continue;
       return false;

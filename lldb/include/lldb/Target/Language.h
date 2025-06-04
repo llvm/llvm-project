@@ -495,9 +495,7 @@ public:
   /// Python uses \b except. Defaults to \b catch.
   virtual llvm::StringRef GetCatchKeyword() const { return "catch"; }
 
-  virtual const FormatEntity::Entry *GetFunctionNameFormat() const {
-    return nullptr;
-  }
+  virtual FormatEntity::Entry GetFunctionNameFormat() const { return {}; }
 
 protected:
   // Classes that inherit from Language can see and modify these

@@ -964,22 +964,6 @@ cc_library(
 )
 
 cc_library(
-    name = "TestArmNeon",
-    srcs = glob(["lib/Dialect/ArmNeon/*.cpp"]),
-    includes = ["lib/Dialect/Test"],
-    deps = [
-        "//mlir:ArmNeonDialect",
-        "//mlir:ArmNeonTransforms",
-        "//mlir:FuncDialect",
-        "//mlir:IR",
-        "//mlir:Pass",
-        "//mlir:Support",
-        "//mlir:TransformUtils",
-        "//mlir:Transforms",
-    ],
-)
-
-cc_library(
     name = "TestArmSME",
     srcs = glob(["lib/Dialect/ArmSME/*.cpp"]),
     includes = ["lib/Dialect/Test"],

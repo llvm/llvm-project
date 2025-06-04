@@ -1532,7 +1532,7 @@ bool ASTReader::ReadSpecializations(ModuleFile &M, BitstreamCursor &Cursor,
 }
 
 void ASTReader::Error(StringRef Msg) const {
-  Error(diag::err_fe_pch_malformed, Msg);
+  Error(diag::err_fe_ast_file_malformed, Msg);
   if (PP.getLangOpts().Modules &&
       !PP.getHeaderSearchInfo().getModuleCachePath().empty()) {
     Diag(diag::note_module_cache_path)
@@ -4953,20 +4953,21 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName, ModuleKind Type,
 
 static ASTFileSignature readASTFileSignature(StringRef PCH);
 
-/// Whether \p Stream doesn't start with the AST/PCH file magic number 'CPCH'.
+/// Whether \p Stream doesn't start with the AST file magic number 'CPCH'.
 static llvm::Error doesntStartWithASTFileMagic(BitstreamCursor &Stream) {
   // FIXME checking magic headers is done in other places such as
   // SerializedDiagnosticReader and GlobalModuleIndex, but error handling isn't
   // always done the same. Unify it all with a helper.
   if (!Stream.canSkipToPos(4))
-    return llvm::createStringError(std::errc::illegal_byte_sequence,
-                                   "file too small to contain AST file magic");
+    return llvm::createStringError(
+        std::errc::illegal_byte_sequence,
+        "file too small to contain precompiled file magic");
   for (unsigned C : {'C', 'P', 'C', 'H'})
     if (Expected<llvm::SimpleBitstreamCursor::word_t> Res = Stream.Read(8)) {
       if (Res.get() != C)
         return llvm::createStringError(
             std::errc::illegal_byte_sequence,
-            "file doesn't start with AST file magic");
+            "file doesn't start with precompiled file magic");
     } else
       return Res.takeError();
   return llvm::Error::success();

@@ -30,6 +30,7 @@ llvm::Error
 ConfigurationDoneRequestHandler::Run(const ConfigurationDoneArguments &) const {
   dap.configuration_done = true;
 
+  SendTargetBasedCapabilities(dap);
   // Ensure any command scripts did not leave us in an unexpected state.
   lldb::SBProcess process = dap.target.GetProcess();
   if (!process.IsValid() ||

@@ -378,14 +378,14 @@ void X86TargetMachine::reset() { SubtargetMap.clear(); }
 
 ScheduleDAGInstrs *
 X86TargetMachine::createMachineScheduler(MachineSchedContext *C) const {
-  ScheduleDAGMILive *DAG = createGenericSchedLive(C);
+  ScheduleDAGMILive *DAG = createSchedLive(C);
   DAG->addMutation(createX86MacroFusionDAGMutation());
   return DAG;
 }
 
 ScheduleDAGInstrs *
 X86TargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
-  ScheduleDAGMI *DAG = createGenericSchedPostRA(C);
+  ScheduleDAGMI *DAG = createSchedPostRA(C);
   DAG->addMutation(createX86MacroFusionDAGMutation());
   return DAG;
 }

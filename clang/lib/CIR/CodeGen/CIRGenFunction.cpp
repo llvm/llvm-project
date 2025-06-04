@@ -343,7 +343,9 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
 
   curFn = fn;
 
-  const auto *fd = dyn_cast_or_null<FunctionDecl>(gd.getDecl());
+  const Decl *d = gd.getDecl();
+  const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
+  curFuncDecl = d->getNonClosureContext();
 
   mlir::Block *entryBB = &fn.getBlocks().front();
   builder.setInsertionPointToStart(entryBB);
@@ -385,6 +387,24 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   if (!returnType->isVoidType())
     emitAndUpdateRetAlloca(returnType, getLoc(fd->getBody()->getEndLoc()),
                            getContext().getTypeAlignInChars(returnType));
+
+  if (isa_and_nonnull<CXXMethodDecl>(d) &&
+      cast<CXXMethodDecl>(d)->isInstance()) {
+    cgm.getCXXABI().emitInstanceFunctionProlog(loc, *this);
+
+    const auto *md = cast<CXXMethodDecl>(d);
+    if (md->getParent()->isLambda() && md->getOverloadedOperator() == OO_Call) {
+      cgm.errorNYI(loc, "lambda call operator");
+    } else {
+      // Not in a lambda; just use 'this' from the method.
+      // FIXME: Should we generate a new load for each use of 'this'? The fast
+      // register allocator would be happier...
+      cxxThisValue = cxxabiThisValue;
+    }
+
+    assert(!cir::MissingFeatures::sanitizers());
+    assert(!cir::MissingFeatures::emitTypeCheck());
+  }
 }
 
 void CIRGenFunction::finishFunction(SourceLocation endLoc) {}

@@ -19,6 +19,7 @@ add_clang_library(clangCIR
   CIRGenExprConstant.cpp
   CIRGenExprScalar.cpp
   CIRGenFunction.cpp
+  CIRGenItaniumCXXABI.cpp
   CIRGenModule.cpp
   CIRGenOpenACCClause.cpp
   CIRGenRecordLayoutBuilder.cpp

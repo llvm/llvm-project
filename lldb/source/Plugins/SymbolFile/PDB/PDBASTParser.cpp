@@ -653,9 +653,8 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     if (func_sig->isVolatileType())
       type_quals |= clang::Qualifiers::Volatile;
     auto cc = TranslateCallingConvention(func_sig->getCallingConvention());
-    CompilerType func_sig_ast_type =
-        m_ast.CreateFunctionType(return_ast_type, arg_list.data(),
-                                 arg_list.size(), is_variadic, type_quals, cc);
+    CompilerType func_sig_ast_type = m_ast.CreateFunctionType(
+        return_ast_type, arg_list, is_variadic, type_quals, cc);
 
     AddSourceInfoToDecl(type, decl);
     return m_ast.GetSymbolFile()->MakeType(

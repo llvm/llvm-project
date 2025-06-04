@@ -70,13 +70,12 @@ add_lldb_library(lldbDAP
   Protocol/ProtocolTypes.cpp
   Protocol/ProtocolRequests.cpp
 
-  LINK_LIBS
-    liblldb
-    lldbHost
-
   LINK_COMPONENTS
     Option
     Support
+  LINK_LIBS
+    liblldb
+    lldbHost
   )
 
 target_include_directories(lldbDAP

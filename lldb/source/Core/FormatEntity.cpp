@@ -1279,13 +1279,13 @@ static bool FormatFunctionNameForLanguage(Stream &s,
   if (!language_plugin)
     return false;
 
-  const auto *format = language_plugin->GetFunctionNameFormat();
+  FormatEntity::Entry format = language_plugin->GetFunctionNameFormat();
   if (!format)
     return false;
 
   StreamString name_stream;
   const bool success =
-      FormatEntity::Format(*format, name_stream, sc, exe_ctx, /*addr=*/nullptr,
+      FormatEntity::Format(format, name_stream, sc, exe_ctx, /*addr=*/nullptr,
                            /*valobj=*/nullptr, /*function_changed=*/false,
                            /*initial_function=*/false);
   if (success)

@@ -278,7 +278,7 @@ Error LVBinaryReader::loadGenericTargetInfo(StringRef TheTriple,
                                             StringRef TheFeatures) {
   std::string TargetLookupError;
   const Target *TheTarget =
-      TargetRegistry::lookupTarget(std::string(TheTriple), TargetLookupError);
+      TargetRegistry::lookupTarget(TheTriple, TargetLookupError);
   if (!TheTarget)
     return createStringError(errc::invalid_argument, TargetLookupError.c_str());
 

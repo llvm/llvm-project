@@ -6367,7 +6367,7 @@ APInt ScalarEvolution::getConstantMultipleImpl(const SCEV *S) {
     // ask ValueTracking for known bits
     const SCEVUnknown *U = cast<SCEVUnknown>(S);
     unsigned Known =
-        computeKnownBits(U->getValue(), getDataLayout(), 0, &AC, nullptr, &DT)
+        computeKnownBits(U->getValue(), getDataLayout(), &AC, nullptr, &DT)
             .countMinTrailingZeros();
     return GetShiftedByZeros(Known);
   }
@@ -6485,8 +6485,8 @@ getRangeForUnknownRecurrence(const SCEVUnknown *U) {
   if (!TC || TC >= BitWidth)
     return FullSet;
 
-  auto KnownStart = computeKnownBits(Start, DL, 0, &AC, nullptr, &DT);
-  auto KnownStep = computeKnownBits(Step, DL, 0, &AC, nullptr, &DT);
+  auto KnownStart = computeKnownBits(Start, DL, &AC, nullptr, &DT);
+  auto KnownStep = computeKnownBits(Step, DL, &AC, nullptr, &DT);
   assert(KnownStart.getBitWidth() == BitWidth &&
          KnownStep.getBitWidth() == BitWidth);
 
@@ -6863,13 +6863,13 @@ const ConstantRange &ScalarEvolution::getRangeRef(
 
     // See if ValueTracking can give us a useful range.
     const DataLayout &DL = getDataLayout();
-    KnownBits Known = computeKnownBits(V, DL, 0, &AC, nullptr, &DT);
+    KnownBits Known = computeKnownBits(V, DL, &AC, nullptr, &DT);
     if (Known.getBitWidth() != BitWidth)
       Known = Known.zextOrTrunc(BitWidth);
 
     // ValueTracking may be able to compute a tighter result for the number of
     // sign bits than for the value of those sign bits.
-    unsigned NS = ComputeNumSignBits(V, DL, 0, &AC, nullptr, &DT);
+    unsigned NS = ComputeNumSignBits(V, DL, &AC, nullptr, &DT);
     if (U->getType()->isPointerTy()) {
       // If the pointer size is larger than the index size type, this can cause
       // NS to be larger than BitWidth. So compensate for this.
@@ -7818,8 +7818,7 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
         unsigned TZ = A.countr_zero();
         unsigned BitWidth = A.getBitWidth();
         KnownBits Known(BitWidth);
-        computeKnownBits(BO->LHS, Known, getDataLayout(),
-                         0, &AC, nullptr, &DT);
+        computeKnownBits(BO->LHS, Known, getDataLayout(), &AC, nullptr, &DT);
 
         APInt EffectiveMask =
             APInt::getLowBitsSet(BitWidth, BitWidth - LZ - TZ).shl(TZ);
@@ -9485,7 +9484,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeShiftCompareExitLimit(
     // {K,ashr,<positive-constant>} stabilizes to signum(K) in at most
     // bitwidth(K) iterations.
     Value *FirstValue = PN->getIncomingValueForBlock(Predecessor);
-    KnownBits Known = computeKnownBits(FirstValue, DL, 0, &AC,
+    KnownBits Known = computeKnownBits(FirstValue, DL, &AC,
                                        Predecessor->getTerminator(), &DT);
     auto *Ty = cast<IntegerType>(RHS->getType());
     if (Known.isNonNegative())

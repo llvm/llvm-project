@@ -6,25 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// \file This file contains helper objects for working with HLSL Root
-/// Signatures.
+/// \file This file contains structure definitions of HLSL Root Signature
+/// objects.
 ///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_FRONTEND_HLSL_HLSLROOTSIGNATURE_H
 #define LLVM_FRONTEND_HLSL_HLSLROOTSIGNATURE_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DXILABI.h"
-#include "llvm/Support/raw_ostream.h"
 #include <variant>
 
 namespace llvm {
-class LLVMContext;
-class MDNode;
-class Metadata;
-
 namespace hlsl {
 namespace rootsig {
 
@@ -195,8 +189,6 @@ struct DescriptorTable {
   uint32_t NumClauses = 0;
 };
 
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const DescriptorTable &Table);
-
 static const uint32_t NumDescriptorsUnbounded = 0xffffffff;
 static const uint32_t DescriptorTableOffsetAppend = 0xffffffff;
 // Models DTClause : CBV | SRV | UAV | Sampler, by collecting like parameters
@@ -224,9 +216,6 @@ struct DescriptorTableClause {
     }
   }
 };
-
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
-                                 const DescriptorTableClause &Clause);
 
 struct StaticSampler {
   Register Reg;
@@ -263,32 +252,6 @@ struct StaticSampler {
 using RootElement =
     std::variant<RootFlags, RootConstants, RootDescriptor, DescriptorTable,
                  DescriptorTableClause, StaticSampler>;
-
-LLVM_ABI void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements);
-
-class MetadataBuilder {
-public:
-  MetadataBuilder(llvm::LLVMContext &Ctx, ArrayRef<RootElement> Elements)
-      : Ctx(Ctx), Elements(Elements) {}
-
-  /// Iterates through the elements and dispatches onto the correct Build method
-  ///
-  /// Accumulates the root signature and returns the Metadata node that is just
-  /// a list of all the elements
-  LLVM_ABI MDNode *BuildRootSignature();
-
-private:
-  /// Define the various builders for the different metadata types
-  MDNode *BuildRootFlags(const RootFlags &Flags);
-  MDNode *BuildRootConstants(const RootConstants &Constants);
-  MDNode *BuildRootDescriptor(const RootDescriptor &Descriptor);
-  MDNode *BuildDescriptorTable(const DescriptorTable &Table);
-  MDNode *BuildDescriptorTableClause(const DescriptorTableClause &Clause);
-
-  llvm::LLVMContext &Ctx;
-  ArrayRef<RootElement> Elements;
-  SmallVector<Metadata *> GeneratedMetadata;
-};
 
 } // namespace rootsig
 } // namespace hlsl

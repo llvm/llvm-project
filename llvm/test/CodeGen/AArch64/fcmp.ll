@@ -969,8 +969,6 @@ define <4 x i32> @v4f64_i32(<4 x double> %a, <4 x double> %b, <4 x i32> %d, <4 x
 ; CHECK-GI-NEXT:    fcmgt v0.2d, v2.2d, v0.2d
 ; CHECK-GI-NEXT:    fcmgt v1.2d, v3.2d, v1.2d
 ; CHECK-GI-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #31
-; CHECK-GI-NEXT:    sshr v0.4s, v0.4s, #31
 ; CHECK-GI-NEXT:    bsl v0.16b, v4.16b, v5.16b
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1291,8 +1289,6 @@ define <8 x half> @v8f16_half(<8 x half> %a, <8 x half> %b, <8 x half> %d, <8 x 
 ; CHECK-GI-NOFP16-NEXT:    fcmgt v4.4s, v5.4s, v4.4s
 ; CHECK-GI-NOFP16-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
 ; CHECK-GI-NOFP16-NEXT:    uzp1 v0.8h, v4.8h, v0.8h
-; CHECK-GI-NOFP16-NEXT:    shl v0.8h, v0.8h, #15
-; CHECK-GI-NOFP16-NEXT:    sshr v0.8h, v0.8h, #15
 ; CHECK-GI-NOFP16-NEXT:    bsl v0.16b, v2.16b, v3.16b
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
@@ -1341,9 +1337,9 @@ define <16 x half> @v16f16_half(<16 x half> %a, <16 x half> %b, <16 x half> %d, 
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v16.4s, v0.4h
 ; CHECK-GI-NOFP16-NEXT:    fcvtl2 v0.4s, v0.8h
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v17.4s, v1.4h
-; CHECK-GI-NOFP16-NEXT:    fcvtl2 v1.4s, v1.8h
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v18.4s, v2.4h
 ; CHECK-GI-NOFP16-NEXT:    fcvtl2 v2.4s, v2.8h
+; CHECK-GI-NOFP16-NEXT:    fcvtl2 v1.4s, v1.8h
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v19.4s, v3.4h
 ; CHECK-GI-NOFP16-NEXT:    fcvtl2 v3.4s, v3.8h
 ; CHECK-GI-NOFP16-NEXT:    fcmgt v16.4s, v18.4s, v16.4s
@@ -1352,12 +1348,12 @@ define <16 x half> @v16f16_half(<16 x half> %a, <16 x half> %b, <16 x half> %d, 
 ; CHECK-GI-NOFP16-NEXT:    fcmgt v1.4s, v3.4s, v1.4s
 ; CHECK-GI-NOFP16-NEXT:    uzp1 v0.8h, v16.8h, v0.8h
 ; CHECK-GI-NOFP16-NEXT:    uzp1 v1.8h, v2.8h, v1.8h
-; CHECK-GI-NOFP16-NEXT:    shl v0.8h, v0.8h, #15
-; CHECK-GI-NOFP16-NEXT:    shl v1.8h, v1.8h, #15
-; CHECK-GI-NOFP16-NEXT:    sshr v0.8h, v0.8h, #15
-; CHECK-GI-NOFP16-NEXT:    sshr v1.8h, v1.8h, #15
-; CHECK-GI-NOFP16-NEXT:    bsl v0.16b, v4.16b, v6.16b
-; CHECK-GI-NOFP16-NEXT:    bsl v1.16b, v5.16b, v7.16b
+; CHECK-GI-NOFP16-NEXT:    and v2.16b, v4.16b, v0.16b
+; CHECK-GI-NOFP16-NEXT:    bic v0.16b, v6.16b, v0.16b
+; CHECK-GI-NOFP16-NEXT:    and v3.16b, v5.16b, v1.16b
+; CHECK-GI-NOFP16-NEXT:    bic v1.16b, v7.16b, v1.16b
+; CHECK-GI-NOFP16-NEXT:    orr v0.16b, v2.16b, v0.16b
+; CHECK-GI-NOFP16-NEXT:    orr v1.16b, v3.16b, v1.16b
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: v16f16_half:

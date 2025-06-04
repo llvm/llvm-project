@@ -3195,6 +3195,17 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
     }
   }
 
+  if (Context.getTargetInfo().getTriple().isLoongArch()) {
+    for (const auto &Feature : ParsedAttrs.Features) {
+      StringRef CurFeature = Feature;
+      if (CurFeature.starts_with("!arch=")) {
+        StringRef ArchValue = CurFeature.split("=").second.trim();
+        return Diag(LiteralLoc, diag::err_attribute_unsupported)
+               << "target(arch=..)" << ArchValue;
+      }
+    }
+  }
+
   if (ParsedAttrs.Duplicate != "")
     return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
            << Duplicate << None << ParsedAttrs.Duplicate << Target;
@@ -7498,6 +7509,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_HLSLWaveSize:
     S.HLSL().handleWaveSizeAttr(D, AL);
+    break;
+  case ParsedAttr::AT_HLSLVkExtBuiltinInput:
+    S.HLSL().handleVkExtBuiltinInputAttr(D, AL);
     break;
   case ParsedAttr::AT_HLSLSV_GroupThreadID:
     S.HLSL().handleSV_GroupThreadIDAttr(D, AL);

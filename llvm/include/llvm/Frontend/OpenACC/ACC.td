@@ -86,8 +86,8 @@ def ACCC_Create : Clause<"create"> {
 }
 
 // 2.5.16
-def ACC_Default_none : ClauseVal<"none", 1, 1> { let isDefault = 1; }
-def ACC_Default_present : ClauseVal<"present", 0, 1> {}
+def ACC_Default_none : EnumVal<"none", 1, 1> { let isDefault = 1; }
+def ACC_Default_present : EnumVal<"present", 0, 1> {}
 
 def ACCC_Default : Clause<"default"> {
   let flangClass = "AccDefaultClause";

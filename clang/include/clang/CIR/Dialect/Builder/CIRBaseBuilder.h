@@ -300,6 +300,24 @@ public:
     return createBinop(loc, lhs, cir::BinOpKind::Or, rhs);
   }
 
+  mlir::Value createSelect(mlir::Location loc, mlir::Value condition,
+                           mlir::Value trueValue, mlir::Value falseValue) {
+    assert(trueValue.getType() == falseValue.getType() &&
+           "trueValue and falseValue should have the same type");
+    return create<cir::SelectOp>(loc, trueValue.getType(), condition, trueValue,
+                                 falseValue);
+  }
+
+  mlir::Value createLogicalAnd(mlir::Location loc, mlir::Value lhs,
+                               mlir::Value rhs) {
+    return createSelect(loc, lhs, rhs, getBool(false, loc));
+  }
+
+  mlir::Value createLogicalOr(mlir::Location loc, mlir::Value lhs,
+                              mlir::Value rhs) {
+    return createSelect(loc, lhs, getBool(true, loc), rhs);
+  }
+
   mlir::Value createMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
                         OverflowBehavior ob = OverflowBehavior::None) {
     auto op =

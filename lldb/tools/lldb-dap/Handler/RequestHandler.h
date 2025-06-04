@@ -356,7 +356,21 @@ public:
   llvm::Error Run(const protocol::StepInArguments &args) const override;
 };
 
-class StepInTargetsRequestHandler : public LegacyRequestHandler {
+class StepInTargetsRequestHandler
+    : public RequestHandler<
+          protocol::StepInTargetsArguments,
+          llvm::Expected<protocol::StepInTargetsResponseBody>> {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral GetCommand() { return "stepInTargets"; }
+  FeatureSet GetSupportedFeatures() const override {
+    return {protocol::eAdapterFeatureStepInTargetsRequest};
+  }
+  llvm::Expected<protocol::StepInTargetsResponseBody>
+  Run(const protocol::StepInTargetsArguments &args) const override;
+};
+
+class StepInTargetsRequestHandler2 : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "stepInTargets"; }

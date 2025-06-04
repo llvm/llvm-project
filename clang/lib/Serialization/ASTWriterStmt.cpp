@@ -2212,8 +2212,8 @@ void ASTStmtWriter::VisitSizeOfPackExpr(SizeOfPackExpr *E) {
 
 void ASTStmtWriter::VisitPackIndexingExpr(PackIndexingExpr *E) {
   VisitExpr(E);
-  Record.push_back(E->TransformedExpressions);
-  Record.push_back(E->FullySubstituted);
+  Record.push_back(E->PackIndexingExprBits.TransformedExpressions);
+  Record.push_back(E->PackIndexingExprBits.FullySubstituted);
   Record.AddSourceLocation(E->getEllipsisLoc());
   Record.AddSourceLocation(E->getRSquareLoc());
   Record.AddStmt(E->getPackIdExpression());
@@ -2278,7 +2278,7 @@ void ASTStmtWriter::VisitCXXFoldExpr(CXXFoldExpr *E) {
   Record.AddStmt(E->SubExprs[0]);
   Record.AddStmt(E->SubExprs[1]);
   Record.AddStmt(E->SubExprs[2]);
-  Record.push_back(E->Opcode);
+  Record.push_back(E->CXXFoldExprBits.Opcode);
   Code = serialization::EXPR_CXX_FOLD;
 }
 

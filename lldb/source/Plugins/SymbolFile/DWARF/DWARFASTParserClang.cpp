@@ -1309,11 +1309,10 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
 
   // clang_type will get the function prototype clang type after this
   // call
-  CompilerType clang_type =
-      m_ast.CreateFunctionType(return_clang_type, function_param_types.data(),
-                               function_param_types.size(), is_variadic,
-                               GetCXXMethodCVQuals(die, object_parameter),
-                               calling_convention, attrs.ref_qual);
+  CompilerType clang_type = m_ast.CreateFunctionType(
+      return_clang_type, function_param_types, is_variadic,
+      GetCXXMethodCVQuals(die, object_parameter), calling_convention,
+      attrs.ref_qual);
 
   if (attrs.name) {
     bool type_handled = false;

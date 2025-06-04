@@ -756,6 +756,7 @@ public:
   /// Whether this points to a block that's been created for a "literal lvalue",
   /// i.e. a non-MaterializeTemporaryExpr Expr.
   bool pointsToLiteral() const;
+  bool pointsToStringLiteral() const;
 
   /// Prints the pointer.
   void print(llvm::raw_ostream &OS) const;

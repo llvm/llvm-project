@@ -28,8 +28,12 @@ void CIRGenerator::anchor() {}
 CIRGenerator::CIRGenerator(clang::DiagnosticsEngine &diags,
                            llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> vfs,
                            const CodeGenOptions &cgo)
-    : diags(diags), fs(std::move(vfs)), codeGenOpts{cgo} {}
-CIRGenerator::~CIRGenerator() = default;
+    : diags(diags), fs(std::move(vfs)), codeGenOpts{cgo},
+      handlingTopLevelDecls{0} {}
+CIRGenerator::~CIRGenerator() {
+  // There should normally not be any leftover inline method definitions.
+  assert(deferredInlineMemberFuncDefs.empty() || diags.hasErrorOccurred());
+}
 
 void CIRGenerator::Initialize(ASTContext &astContext) {
   using namespace llvm;
@@ -57,10 +61,48 @@ bool CIRGenerator::HandleTopLevelDecl(DeclGroupRef group) {
   if (diags.hasUnrecoverableErrorOccurred())
     return true;
 
+  HandlingTopLevelDeclRAII handlingDecl(*this);
+
   for (Decl *decl : group)
     cgm->emitTopLevelDecl(decl);
 
   return true;
+}
+
+void CIRGenerator::HandleInlineFunctionDefinition(FunctionDecl *d) {
+  if (diags.hasErrorOccurred())
+    return;
+
+  assert(d->doesThisDeclarationHaveABody());
+
+  // We may want to emit this definition. However, that decision might be
+  // based on computing the linkage, and we have to defer that in case we are
+  // inside of something that will chagne the method's final linkage, e.g.
+  //   typedef struct {
+  //     void bar();
+  //     void foo() { bar(); }
+  //   } A;
+  deferredInlineMemberFuncDefs.push_back(d);
+
+  // Provide some coverage mapping even for methods that aren't emitted.
+  // Don't do this for templated classes though, as they may not be
+  // instantiable.
+  assert(!cir::MissingFeatures::coverageMapping());
+}
+
+void CIRGenerator::emitDeferredDecls() {
+  if (deferredInlineMemberFuncDefs.empty())
+    return;
+
+  // Emit any deferred inline method definitions. Note that more deferred
+  // methods may be added during this loop, since ASTConsumer callbacks can be
+  // invoked if AST inspection results in declarations being added. Therefore,
+  // we use an index to loop over the deferredInlineMemberFuncDefs rather than
+  // a range.
+  HandlingTopLevelDeclRAII handlingDecls(*this);
+  for (unsigned i = 0; i != deferredInlineMemberFuncDefs.size(); ++i)
+    cgm->emitTopLevelDecl(deferredInlineMemberFuncDefs[i]);
+  deferredInlineMemberFuncDefs.clear();
 }
 
 void CIRGenerator::CompleteTentativeDefinition(VarDecl *d) {

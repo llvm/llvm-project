@@ -50,7 +50,7 @@ public:
   }
 
   unsigned getFlatAddressSpace() const override {
-    if (ST->isVulkanEnv())
+    if (ST->isShader())
       return 0;
     // FIXME: Clang has 2 distinct address space maps. One where
     // default=4=Generic, and one with default=0=Function. This depends on the

@@ -77,9 +77,9 @@ def OMPC_AtomicDefaultMemOrder : Clause<"atomic_default_mem_order"> {
   let flangClass = "OmpAtomicDefaultMemOrderClause";
 }
 
-def OMP_BIND_parallel : ClauseVal<"parallel",1,1> {}
-def OMP_BIND_teams : ClauseVal<"teams",2,1> {}
-def OMP_BIND_thread : ClauseVal<"thread",3,1> { let isDefault = true; }
+def OMP_BIND_parallel : EnumVal<"parallel",1,1> {}
+def OMP_BIND_teams : EnumVal<"teams",2,1> {}
+def OMP_BIND_thread : EnumVal<"thread",3,1> { let isDefault = true; }
 def OMPC_Bind : Clause<"bind"> {
   let clangClass = "OMPBindClause";
   let flangClass = "OmpBindClause";
@@ -91,11 +91,11 @@ def OMPC_Bind : Clause<"bind"> {
   ];
 }
 
-def OMP_CANCELLATION_CONSTRUCT_Parallel : ClauseVal<"parallel", 1, 1> {}
-def OMP_CANCELLATION_CONSTRUCT_Loop : ClauseVal<"loop", 2, 1> {}
-def OMP_CANCELLATION_CONSTRUCT_Sections : ClauseVal<"sections", 3, 1> {}
-def OMP_CANCELLATION_CONSTRUCT_Taskgroup : ClauseVal<"taskgroup", 4, 1> {}
-def OMP_CANCELLATION_CONSTRUCT_None : ClauseVal<"none", 5, 0> {
+def OMP_CANCELLATION_CONSTRUCT_Parallel : EnumVal<"parallel", 1, 1> {}
+def OMP_CANCELLATION_CONSTRUCT_Loop : EnumVal<"loop", 2, 1> {}
+def OMP_CANCELLATION_CONSTRUCT_Sections : EnumVal<"sections", 3, 1> {}
+def OMP_CANCELLATION_CONSTRUCT_Taskgroup : EnumVal<"taskgroup", 4, 1> {}
+def OMP_CANCELLATION_CONSTRUCT_None : EnumVal<"none", 5, 0> {
   let isDefault = 1;
 }
 def OMPC_CancellationConstructType : Clause<"cancellation_construct_type"> {
@@ -210,8 +210,8 @@ def OMPC_From : Clause<"from"> {
 def OMPC_Full: Clause<"full"> {
   let clangClass = "OMPFullClause";
 }
-def OMP_GRAINSIZE_Strict : ClauseVal<"strict", 1, 1> {}
-def OMP_GRAINSIZE_Unknown : ClauseVal<"unknown", 2, 0> { let isDefault = 1; }
+def OMP_GRAINSIZE_Strict : EnumVal<"strict", 1, 1> {}
+def OMP_GRAINSIZE_Unknown : EnumVal<"unknown", 2, 0> { let isDefault = 1; }
 def OMPC_GrainSize : Clause<"grainsize"> {
   let clangClass = "OMPGrainsizeClause";
   let flangClass = "OmpGrainsizeClause";
@@ -278,12 +278,12 @@ def OMPC_Map : Clause<"map"> {
 def OMPC_Match : Clause<"match"> {
   let flangClass = "OmpMatchClause";
 }
-def OMP_MEMORY_ORDER_SeqCst : ClauseVal<"seq_cst", 1, 1> {}
-def OMP_MEMORY_ORDER_AcqRel : ClauseVal<"acq_rel", 2, 1> {}
-def OMP_MEMORY_ORDER_Acquire : ClauseVal<"acquire", 3, 1> {}
-def OMP_MEMORY_ORDER_Release : ClauseVal<"release", 4, 1> {}
-def OMP_MEMORY_ORDER_Relaxed : ClauseVal<"relaxed", 5, 1> {}
-def OMP_MEMORY_ORDER_Default : ClauseVal<"default", 6, 0> {
+def OMP_MEMORY_ORDER_SeqCst : EnumVal<"seq_cst", 1, 1> {}
+def OMP_MEMORY_ORDER_AcqRel : EnumVal<"acq_rel", 2, 1> {}
+def OMP_MEMORY_ORDER_Acquire : EnumVal<"acquire", 3, 1> {}
+def OMP_MEMORY_ORDER_Release : EnumVal<"release", 4, 1> {}
+def OMP_MEMORY_ORDER_Relaxed : EnumVal<"relaxed", 5, 1> {}
+def OMP_MEMORY_ORDER_Default : EnumVal<"default", 6, 0> {
   let isDefault = 1;
 }
 def OMPC_MemoryOrder : Clause<"memory_order"> {
@@ -337,8 +337,8 @@ def OMPC_Novariants : Clause<"novariants"> {
 def OMPC_NoWait : Clause<"nowait"> {
   let clangClass = "OMPNowaitClause";
 }
-def OMP_NUMTASKS_Strict : ClauseVal<"strict", 1, 1> {}
-def OMP_NUMTASKS_Unknown : ClauseVal<"unknown", 2, 0> { let isDefault = 1; }
+def OMP_NUMTASKS_Strict : EnumVal<"strict", 1, 1> {}
+def OMP_NUMTASKS_Unknown : EnumVal<"unknown", 2, 0> { let isDefault = 1; }
 def OMPC_NumTasks : Clause<"num_tasks"> {
   let clangClass = "OMPNumTasksClause";
   let flangClass = "OmpNumTasksClause";
@@ -366,8 +366,8 @@ def OMPC_OMPX_DynCGroupMem : Clause<"ompx_dyn_cgroup_mem"> {
   let clangClass = "OMPXDynCGroupMemClause";
   let flangClass = "ScalarIntExpr";
 }
-def OMP_ORDER_concurrent : ClauseVal<"concurrent",1,1> {}
-def OMP_ORDER_unknown : ClauseVal<"unknown",2,0> { let isDefault = 1; }
+def OMP_ORDER_concurrent : EnumVal<"concurrent",1,1> {}
+def OMP_ORDER_unknown : EnumVal<"unknown",2,0> { let isDefault = 1; }
 def OMPC_Order : Clause<"order"> {
   let clangClass = "OMPOrderClause";
   let flangClass = "OmpOrderClause";
@@ -404,12 +404,12 @@ def OMPC_Private : Clause<"private"> {
   let clangClass = "OMPPrivateClause";
   let flangClass = "OmpObjectList";
 }
-def OMP_PROC_BIND_master : ClauseVal<"master",2,1> {}
-def OMP_PROC_BIND_close : ClauseVal<"close",3,1> {}
-def OMP_PROC_BIND_spread : ClauseVal<"spread",4,1> {}
-def OMP_PROC_BIND_primary : ClauseVal<"primary",5,1> {}
-def OMP_PROC_BIND_default : ClauseVal<"default",6,0> {}
-def OMP_PROC_BIND_unknown : ClauseVal<"unknown",7,0> { let isDefault = true; }
+def OMP_PROC_BIND_master : EnumVal<"master",2,1> {}
+def OMP_PROC_BIND_close : EnumVal<"close",3,1> {}
+def OMP_PROC_BIND_spread : EnumVal<"spread",4,1> {}
+def OMP_PROC_BIND_primary : EnumVal<"primary",5,1> {}
+def OMP_PROC_BIND_default : EnumVal<"default",6,0> {}
+def OMP_PROC_BIND_unknown : EnumVal<"unknown",7,0> { let isDefault = true; }
 def OMPC_ProcBind : Clause<"proc_bind"> {
   let clangClass = "OMPProcBindClause";
   let flangClass = "OmpProcBindClause";
@@ -443,12 +443,12 @@ def OMPC_SafeLen : Clause<"safelen"> {
   let clangClass = "OMPSafelenClause";
   let flangClass = "ScalarIntConstantExpr";
 }
-def OMP_SCHEDULE_Static : ClauseVal<"static", 2, 1> {}
-def OMP_SCHEDULE_Dynamic : ClauseVal<"dynamic", 3, 1> {}
-def OMP_SCHEDULE_Guided : ClauseVal<"guided", 4, 1> {}
-def OMP_SCHEDULE_Auto : ClauseVal<"auto", 5, 1> {}
-def OMP_SCHEDULE_Runtime : ClauseVal<"runtime", 6, 1> {}
-def OMP_SCHEDULE_Default : ClauseVal<"default", 7, 0> { let isDefault = 1; }
+def OMP_SCHEDULE_Static : EnumVal<"static", 2, 1> {}
+def OMP_SCHEDULE_Dynamic : EnumVal<"dynamic", 3, 1> {}
+def OMP_SCHEDULE_Guided : EnumVal<"guided", 4, 1> {}
+def OMP_SCHEDULE_Auto : EnumVal<"auto", 5, 1> {}
+def OMP_SCHEDULE_Runtime : EnumVal<"runtime", 6, 1> {}
+def OMP_SCHEDULE_Default : EnumVal<"default", 7, 0> { let isDefault = 1; }
 def OMPC_Schedule : Clause<"schedule"> {
   let clangClass = "OMPScheduleClause";
   let flangClass = "OmpScheduleClause";

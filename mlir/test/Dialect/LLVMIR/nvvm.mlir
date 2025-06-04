@@ -587,6 +587,15 @@ func.func @dot_accumulate_4way(%a_vec: vector<4xi8>, %b_vec: vector<4xi8>, %c: i
   return
 }
 
+// CHECK-LABEL: @dot_accumulate_2way
+func.func @dot_accumulate_2way(%a_vec: vector<2xi16>, %b_vec: vector<4xi8>, %c: i32) {
+  // CHECK:   nvvm.dot.accumulate.2way %{{.*}}, %{{.*}}, %{{.*}} {b_hi = false} : vector<2xi16>, vector<4xi8>
+  %1 = nvvm.dot.accumulate.2way %a_vec <unsigned>, %b_vec <unsigned>, %c {b_hi = false}: vector<2xi16>, vector<4xi8>
+  // CHECK:   nvvm.dot.accumulate.2way %{{.*}}, %{{.*}}, %{{.*}} {b_hi = true} : vector<2xi16>, vector<4xi8>
+  %3 = nvvm.dot.accumulate.2way %a_vec <signed>, %b_vec <signed>, %c {b_hi = true}: vector<2xi16>, vector<4xi8>
+  return
+}
+
 // -----
 
 // Just check these don't emit errors.

@@ -153,7 +153,7 @@ class DebugCommunication(object):
         self.recv_thread = threading.Thread(target=self._read_packet_thread)
         self.process_event_body = None
         self.exit_status: Optional[int] = None
-        self.initialize_body = None
+        self.initialize_body: dict[str, Any] = {}
         self.progress_events: list[Event] = []
         self.reverse_requests = []
         self.sequence = 1
@@ -300,6 +300,9 @@ class DebugCommunication(object):
             elif event == "breakpoint":
                 # Breakpoint events are sent when a breakpoint is resolved
                 self._update_verified_breakpoints([body["breakpoint"]])
+            elif event == "capabilities":
+                # update the capabilities with new ones from the event.
+                self.initialize_body.update(body["capabilities"])
 
         elif packet_type == "response":
             if packet["command"] == "disconnect":
@@ -494,7 +497,7 @@ class DebugCommunication(object):
         """
         if self.initialize_body and key in self.initialize_body:
             return self.initialize_body[key]
-        return None
+        raise ValueError(f"no value for key: {key} in {self.initialize_body}")
 
     def get_threads(self):
         if self.threads is None:

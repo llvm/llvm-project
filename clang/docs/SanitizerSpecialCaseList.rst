@@ -79,7 +79,8 @@ instrumentation for arithmetic operations containing values of type ``int``.
 
 The ``=sanitize`` category is also supported. Any ``=sanitize`` category
 entries enable sanitizer instrumentation, even if it was ignored by entries
-before.
+before. Entries can be ``src``, ``type``, ``global``, ``fun``, and
+``mainfile``.
 
 With this, one may disable instrumentation for some or all types and
 specifically allow instrumentation for one or many types -- including types
@@ -102,8 +103,8 @@ supported sanitizers.
     char c = toobig; // also not instrumented
   }
 
-If multiple entries match the source, than the latest entry takes the
-precedence.
+If multiple entries match the source, then the latest entry takes the
+precedence. Here are a few examples.
 
 .. code-block:: bash
 
@@ -118,6 +119,19 @@ precedence.
   src:*
   src:*/mylib/test.cc
   src:*/mylib/*=sanitize
+
+  $ cat ignorelist3.txt
+  # Type T will not be instrumented.
+  type:*
+  type:T=sanitize
+  type:T
+
+  $ cat ignorelist4.txt
+  # Function `bad_bar`` will be instrumented.
+  # Function `good_bar` will not be instrumented.
+  fun:*
+  fun:*bar
+  fun:bad_bar=sanitize
 
 Format
 ======

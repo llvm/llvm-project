@@ -49,9 +49,10 @@ static inline bool isFnEntryBlock(Block *block) {
 //===----------------------------------------------------------------------===//
 
 spirv::Deserializer::Deserializer(ArrayRef<uint32_t> binary,
-                                  MLIRContext *context)
+                                  MLIRContext *context,
+                                  const spirv::DeserializationOptions &options)
     : binary(binary), context(context), unknownLoc(UnknownLoc::get(context)),
-      module(createModuleOp()), opBuilder(module->getRegion())
+      module(createModuleOp()), opBuilder(module->getRegion()), options(options)
 #ifndef NDEBUG
       ,
       logger(llvm::dbgs())
@@ -1061,12 +1062,30 @@ LogicalResult spirv::Deserializer::processCooperativeMatrixTypeKHR(
            << operands[2];
   }
 
-  unsigned rows = getConstantInt(operands[3]).getInt();
-  unsigned columns = getConstantInt(operands[4]).getInt();
+  IntegerAttr rowsAttr = getConstantInt(operands[3]);
+  IntegerAttr columnsAttr = getConstantInt(operands[4]);
+  IntegerAttr useAttr = getConstantInt(operands[5]);
+
+  if (!rowsAttr)
+    return emitError(unknownLoc, "OpTypeCooperativeMatrixKHR `Rows` references "
+                                 "undefined constant <id> ")
+           << operands[3];
+
+  if (!columnsAttr)
+    return emitError(unknownLoc, "OpTypeCooperativeMatrixKHR `Columns` "
+                                 "references undefined constant <id> ")
+           << operands[4];
+
+  if (!useAttr)
+    return emitError(unknownLoc, "OpTypeCooperativeMatrixKHR `Use` references "
+                                 "undefined constant <id> ")
+           << operands[5];
+
+  unsigned rows = rowsAttr.getInt();
+  unsigned columns = columnsAttr.getInt();
 
   std::optional<spirv::CooperativeMatrixUseKHR> use =
-      spirv::symbolizeCooperativeMatrixUseKHR(
-          getConstantInt(operands[5]).getInt());
+      spirv::symbolizeCooperativeMatrixUseKHR(useAttr.getInt());
   if (!use) {
     return emitError(
                unknownLoc,
@@ -2361,6 +2380,16 @@ LogicalResult spirv::Deserializer::splitConditionalBlocks() {
 }
 
 LogicalResult spirv::Deserializer::structurizeControlFlow() {
+  if (!options.enableControlFlowStructurization) {
+    LLVM_DEBUG(
+        {
+          logger.startLine()
+              << "//----- [cf] skip structurizing control flow -----//\n";
+          logger.indent();
+        });
+    return success();
+  }
+
   LLVM_DEBUG({
     logger.startLine()
         << "//----- [cf] start structurizing control flow -----//\n";

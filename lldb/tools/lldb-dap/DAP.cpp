@@ -820,7 +820,7 @@ void DAP::SendTerminatedEvent() {
   });
 }
 
-llvm::Error DAP::Disconnect() { return Disconnect(is_attach); }
+llvm::Error DAP::Disconnect() { return Disconnect(!is_attach); }
 
 llvm::Error DAP::Disconnect(bool terminateDebuggee) {
   lldb::SBError error;

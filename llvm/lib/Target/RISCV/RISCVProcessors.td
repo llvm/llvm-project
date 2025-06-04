@@ -679,7 +679,7 @@ def ANDES_AX25 : RISCVProcessorModel<"andes-ax25",
                                       FeatureVendorXAndesPerf]>;
 
 def ANDES_N45 : RISCVProcessorModel<"andes-n45",
-                                    NoSchedModel,
+                                    Andes45Model,
                                     [Feature32Bit,
                                      FeatureStdExtI,
                                      FeatureStdExtZicsr,
@@ -693,7 +693,7 @@ def ANDES_N45 : RISCVProcessorModel<"andes-n45",
                                      FeatureVendorXAndesPerf]>;
 
 def ANDES_NX45 : RISCVProcessorModel<"andes-nx45",
-                                     NoSchedModel,
+                                     Andes45Model,
                                      [Feature64Bit,
                                       FeatureStdExtI,
                                       FeatureStdExtZicsr,
@@ -707,7 +707,7 @@ def ANDES_NX45 : RISCVProcessorModel<"andes-nx45",
                                       FeatureVendorXAndesPerf]>;
 
 def ANDES_A45 : RISCVProcessorModel<"andes-a45",
-                                    NoSchedModel,
+                                    Andes45Model,
                                     [Feature32Bit,
                                      FeatureStdExtI,
                                      FeatureStdExtZicsr,
@@ -721,7 +721,7 @@ def ANDES_A45 : RISCVProcessorModel<"andes-a45",
                                      FeatureVendorXAndesPerf]>;
 
 def ANDES_AX45 : RISCVProcessorModel<"andes-ax45",
-                                     NoSchedModel,
+                                     Andes45Model,
                                      [Feature64Bit,
                                       FeatureStdExtI,
                                       FeatureStdExtZicsr,

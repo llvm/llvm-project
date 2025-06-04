@@ -144,36 +144,8 @@ enum class CPUType : uint16_t {
 /// Debug Interface Access SDK, and are documented here:
 /// https://learn.microsoft.com/en-us/visualstudio/debugger/debug-interface-access/cv-cfl-lang
 enum SourceLanguage : uint8_t {
-  C = 0x00,
-  Cpp = 0x01,
-  Fortran = 0x02,
-  Masm = 0x03,
-  Pascal = 0x04,
-  Basic = 0x05,
-  Cobol = 0x06,
-  Link = 0x07,
-  Cvtres = 0x08,
-  Cvtpgd = 0x09,
-  CSharp = 0x0a,
-  VB = 0x0b,
-  ILAsm = 0x0c,
-  Java = 0x0d,
-  JScript = 0x0e,
-  MSIL = 0x0f,
-  HLSL = 0x10,
-  ObjC = 0x11,
-  ObjCpp = 0x12,
-  Swift = 0x13,
-  AliasObj = 0x14,
-  Rust = 0x15,
-  Go = 0x16,
-
-  /// The DMD compiler emits 'D' for the CV source language. Microsoft does not
-  /// have an enumerator for it yet.
-  D = 'D',
-  /// The Swift compiler used to emit 'S' for the CV source language, but
-  /// current versions emit the enumerator defined above.
-  OldSwift = 'S',
+#define CV_LANGUAGE(NAME, ID) NAME = ID,
+#include "CodeViewLanguages.def"
 };
 
 /// These values correspond to the CV_call_e enumeration, and are documented

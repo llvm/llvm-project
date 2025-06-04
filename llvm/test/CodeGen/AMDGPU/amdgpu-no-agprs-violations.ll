@@ -13,8 +13,9 @@
 ; CHECK: {{^}}kernel_illegal_agpr_use_asm:
 ; CHECK: ; use a0
 
-; CHECK: NumVgprs: 0
-; CHECK: NumAgprs: 1
+; GFX908: NumVgprs: 3
+; GFX90A: NumVgprs: 1
+; CHECK: NumAgprs: 0
 define amdgpu_kernel void @kernel_illegal_agpr_use_asm() #0 {
   call void asm sideeffect "; use $0", "a"(i32 poison)
   ret void
@@ -24,7 +25,7 @@ define amdgpu_kernel void @kernel_illegal_agpr_use_asm() #0 {
 ; CHECK: ; use a0
 
 ; CHECK: NumVgprs: 0
-; CHECK: NumAgprs: 1
+; CHECK: NumAgprs: 0
 define void @func_illegal_agpr_use_asm() #0 {
   call void asm sideeffect "; use $0", "a"(i32 poison)
   ret void

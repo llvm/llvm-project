@@ -12803,6 +12803,14 @@ def err_bit_cast_non_trivially_copyable : Error<
 def err_bit_cast_type_size_mismatch : Error<
   "size of '__builtin_bit_cast' source type %0 does not match destination type %1 (%2 vs %3 bytes)">;
 
+def err_get_vtable_pointer_incorrect_type
+    : Error<"__builtin_get_vtable_pointer requires an argument of%select{| "
+            "polymorphic}0 class pointer type"
+            ", but %1 %select{was provided|has no virtual methods}0">;
+def err_get_vtable_pointer_requires_complete_type
+    : Error<"__builtin_get_vtable_pointer requires an argument with a complete "
+            "type, but %0 is incomplete">;
+
 // SYCL-specific diagnostics
 def warn_sycl_kernel_num_of_template_params : Warning<
   "'sycl_kernel' attribute only applies to a function template with at least"

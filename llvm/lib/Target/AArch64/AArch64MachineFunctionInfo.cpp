@@ -100,6 +100,9 @@ AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
   BranchTargetEnforcement = F.hasFnAttribute("branch-target-enforcement");
   BranchProtectionPAuthLR = F.hasFnAttribute("branch-protection-pauth-lr");
 
+  // Parse the SME function attributes.
+  SMEFnAttrs = SMEAttrs(F);
+
   // The default stack probe size is 4096 if the function has no
   // stack-probe-size attribute. This is a safe default because it is the
   // smallest possible guard page size.

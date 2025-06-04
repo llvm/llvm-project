@@ -1978,10 +1978,10 @@ void ClangExpressionDeclMap::AddContextClassType(NameSearchContext &context,
       copied_clang_type.GetCompleteType()) {
     CompilerType void_clang_type =
         m_clang_ast_context->GetBasicType(eBasicTypeVoid);
-    CompilerType void_ptr_clang_type = void_clang_type.GetPointerType();
+    std::array<CompilerType, 1> args{void_clang_type.GetPointerType()};
 
     CompilerType method_type = m_clang_ast_context->CreateFunctionType(
-        void_clang_type, &void_ptr_clang_type, 1, false, 0);
+        void_clang_type, args, false, 0);
 
     const bool is_virtual = false;
     const bool is_static = false;
