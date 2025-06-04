@@ -6434,7 +6434,6 @@ static std::string SanitizerHandlerToCheckLabel(SanitizerHandler Handler) {
   };
 
   // Label doesn't require sanitization
-
   return Label;
 }
 
