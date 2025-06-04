@@ -646,11 +646,10 @@ LogicalResult MemRefType::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 bool MemRefType::areTrailingDimsContiguous(int64_t n) {
-  return getLayout().isIdentity() ||
-         getMaxCollapsableTrailingDims() >= std::min(n, getRank());
+  return getMaxContiguousTrailingDims() >= std::min(n, getRank());
 }
 
-int64_t MemRefType::getMaxCollapsableTrailingDims() {
+int64_t MemRefType::getMaxContiguousTrailingDims() {
   const int64_t n = getRank();
 
   // memrefs with identity layout are entirely contiguous.
@@ -664,7 +663,7 @@ int64_t MemRefType::getMaxCollapsableTrailingDims() {
   if (!succeeded(getStridesAndOffset(strides, offset)))
     return 0;
 
-  auto shape = getShape();
+  ArrayRef<int64_t> shape = getShape();
 
   // A memref with dimensions `d0, d1, ..., dn-1` and strides
   // `s0, s1, ..., sn-1` is contiguous up to dimension `k`
@@ -674,6 +673,8 @@ int64_t MemRefType::getMaxCollapsableTrailingDims() {
   for (int64_t i = n - 1; i >= 0; --i) {
     if (strides[i] != dimProduct)
       return n - i - 1;
+    if (shape[i] == 1)
+      continue;
     if (shape[i] == ShapedType::kDynamic)
       return n - i;
     dimProduct *= shape[i];
