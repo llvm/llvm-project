@@ -3195,6 +3195,17 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
     }
   }
 
+  if (Context.getTargetInfo().getTriple().isLoongArch()) {
+    for (const auto &Feature : ParsedAttrs.Features) {
+      StringRef CurFeature = Feature;
+      if (CurFeature.starts_with("!arch=")) {
+        StringRef ArchValue = CurFeature.split("=").second.trim();
+        return Diag(LiteralLoc, diag::err_attribute_unsupported)
+               << "target(arch=..)" << ArchValue;
+      }
+    }
+  }
+
   if (ParsedAttrs.Duplicate != "")
     return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
            << Duplicate << None << ParsedAttrs.Duplicate << Target;
@@ -3495,13 +3506,7 @@ static void handleTargetClonesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (HasCommas && AL.getNumArgs() > 1)
     S.Diag(AL.getLoc(), diag::warn_target_clone_mixed_values);
 
-  if (S.Context.getTargetInfo().getTriple().isAArch64() && !HasDefault) {
-    // Add default attribute if there is no one
-    HasDefault = true;
-    Strings.push_back("default");
-  }
-
-  if (!HasDefault) {
+  if (!HasDefault && !S.Context.getTargetInfo().getTriple().isAArch64()) {
     S.Diag(AL.getLoc(), diag::err_target_clone_must_have_default);
     return;
   }

@@ -361,7 +361,7 @@ define i32 @caller_half_on_stack() nounwind {
 ; RV64I-NEXT:    li a4, 5
 ; RV64I-NEXT:    li a5, 6
 ; RV64I-NEXT:    li a6, 7
-; RV64I-NEXT:    addiw t0, a7, -1792
+; RV64I-NEXT:    addi t0, a7, -1792
 ; RV64I-NEXT:    li a7, 8
 ; RV64I-NEXT:    sd t0, 0(sp)
 ; RV64I-NEXT:    call callee_half_on_stack
@@ -510,7 +510,7 @@ define half @callee_half_ret() nounwind {
 ; RV64IF-LABEL: callee_half_ret:
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    lui a0, 1048564
-; RV64IF-NEXT:    addiw a0, a0, -1024
+; RV64IF-NEXT:    addi a0, a0, -1024
 ; RV64IF-NEXT:    ret
 ;
 ; RV32-ILP32F-LABEL: callee_half_ret:

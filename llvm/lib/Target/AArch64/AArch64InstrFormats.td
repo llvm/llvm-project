@@ -1817,7 +1817,6 @@ class APASI : SimpleSystemI<0, (ins GPR64:$Xt), "apas", "\t$Xt">, Sched<[]> {
   bits<5> Xt;
   let Inst{20-5} = 0b0111001110000000;
   let Inst{4-0} = Xt;
-  let DecoderNamespace = "APAS";
 }
 
 // Hint instructions that take both a CRm and a 3-bit immediate.
@@ -7764,9 +7763,9 @@ multiclass SIMDThreeScalarD<bit U, bits<5> opc, string asm,
 }
 
 multiclass SIMDThreeScalarBHSD<bit U, bits<5> opc, string asm,
-                               SDPatternOperator OpNode> {
+                               SDPatternOperator OpNode, SDPatternOperator SatOp> {
   def v1i64  : BaseSIMDThreeScalar<U, 0b111, opc, FPR64, asm,
-    [(set (v1i64 FPR64:$Rd), (OpNode (v1i64 FPR64:$Rn), (v1i64 FPR64:$Rm)))]>;
+    [(set (v1i64 FPR64:$Rd), (SatOp (v1i64 FPR64:$Rn), (v1i64 FPR64:$Rm)))]>;
   def v1i32  : BaseSIMDThreeScalar<U, 0b101, opc, FPR32, asm, []>;
   def v1i16  : BaseSIMDThreeScalar<U, 0b011, opc, FPR16, asm, []>;
   def v1i8   : BaseSIMDThreeScalar<U, 0b001, opc, FPR8 , asm, []>;
