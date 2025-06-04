@@ -239,12 +239,6 @@ using std::nullopt_t;
 using std::optional;
 #endif // !STD_OPTIONAL_UNSUPPORTED
 
-template <typename T, typename U>
-std::optional<U> inline MapOption(
-    std::optional<T> x, std::function<U(const T)> f) {
-  return x ? std::optional<U>{f(*x)} : std::nullopt;
-}
-
 } // namespace Fortran::common
 
 #endif // FORTRAN_COMMON_OPTIONAL_H

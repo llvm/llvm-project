@@ -11,6 +11,8 @@
 
 #include "Fortran.h"
 #include "flang/Common/enum-set.h"
+#include <llvm/Support/raw_ostream.h>
+#include <string_view>
 #include <vector>
 
 namespace Fortran::common {
@@ -60,7 +62,7 @@ ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     NonTargetPassedToTarget, PointerToPossibleNoncontiguous,
     ShortCharacterActual, ShortArrayActual, ImplicitInterfaceActual,
     PolymorphicTransferArg, PointerComponentTransferArg, TransferSizePresence,
-    F202xAllocatableBreakingChange, OptionalMustBePresent, CommonBlockPadding,
+    F202XAllocatableBreakingChange, OptionalMustBePresent, CommonBlockPadding,
     LogicalVsCBool, BindCCharLength, ProcDummyArgShapes, ExternalNameConflict,
     FoldingException, FoldingAvoidsRuntimeCrash, FoldingValueChecks,
     FoldingFailure, FoldingLimit, Interoperability, CharacterInteroperability,
@@ -76,10 +78,6 @@ ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     CompatibleDeclarationsFromDistinctModules,
     NullActualForDefaultIntentAllocatable, UseAssociationIntoSameNameSubprogram,
     HostAssociatedIntentOutInSpecExpr, NonVolatilePointerToVolatile)
-
-// Generate default String -> Enum mapping.
-ENUM_CLASS_EXTRA(LanguageFeature)
-ENUM_CLASS_EXTRA(UsageWarning)
 
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 using UsageWarnings = EnumSet<UsageWarning, UsageWarning_enumSize>;
@@ -113,16 +111,40 @@ public:
     DisableAllNonstandardWarnings();
     DisableAllUsageWarnings();
   }
-  bool applyCLIOption(std::string_view input, bool insensitive = false);
   bool AreWarningsDisabled() const { return disableAllWarnings_; }
   bool IsEnabled(LanguageFeature f) const { return !disable_.test(f); }
   bool ShouldWarn(LanguageFeature f) const { return warnLanguage_.test(f); }
   bool ShouldWarn(UsageWarning w) const { return warnUsage_.test(w); }
+  // CLI options
+  bool applyCLIOption(std::string input);
+  void addAlternativeCliSpelling(LanguageFeature f, std::string input) {
+    cliOptions_.insert({input, {f}});
+  }
+  void addAlternativeCliSpelling(UsageWarning w, std::string input) {
+    cliOptions_.insert({input, {w}});
+  }
+  void replaceCliCanonicalSpelling(LanguageFeature f, std::string input);
+  void replaceCliCanonicalSpelling(UsageWarning w, std::string input);
+  std::string_view getDefaultCliSpelling(LanguageFeature f) const {
+    return languageFeatureCliCanonicalSpelling_[EnumToInt(f)];
+  };
+  std::string_view getDefaultCliSpelling(UsageWarning w) const {
+    return usageWarningCliCanonicalSpelling_[EnumToInt(w)];
+  };
   // Return all spellings of operators names, depending on features enabled
   std::vector<const char *> GetNames(LogicalOperator) const;
   std::vector<const char *> GetNames(RelationalOperator) const;
 
 private:
+  // Map from CLI syntax of language features and usage warnings to their enum
+  // values.
+  std::unordered_map<std::string, std::variant<LanguageFeature, UsageWarning>>
+      cliOptions_;
+  // These two arrays map the enum values to their cannonical CLI spellings.
+  std::array<std::string_view, LanguageFeature_enumSize>
+      languageFeatureCliCanonicalSpelling_;
+  std::array<std::string_view, UsageWarning_enumSize>
+      usageWarningCliCanonicalSpelling_;
   LanguageFeatures disable_;
   LanguageFeatures warnLanguage_;
   bool warnAllLanguage_{false};

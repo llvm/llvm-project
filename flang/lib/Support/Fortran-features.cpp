@@ -8,13 +8,80 @@
 
 #include "flang/Support/Fortran-features.h"
 #include "flang/Common/idioms.h"
-#include "flang/Common/optional.h"
+#include "flang/Parser/characters.h"
 #include "flang/Support/Fortran.h"
-#include "llvm/ADT/StringExtras.h"
+#include <string>
+#include <string_view>
 
 namespace Fortran::common {
 
+// Namespace for helper functions for parsing CLI options
+// used instead of static so that there can be unit tests for these
+// functions.
+namespace featuresHelpers {
+
+static std::vector<std::string_view> SplitCamelCase(std::string_view x) {
+  std::vector<std::string_view> result;
+  // NB, we start at 1 because the first character is never a word boundary.
+  size_t xSize{x.size()}, wordStart{0}, wordEnd{1};
+  for (; wordEnd < xSize; ++wordEnd) {
+    // Identify when wordEnd is at the start of a new word.
+    if ((!parser::IsUpperCaseLetter(x[wordEnd - 1]) &&
+            parser::IsUpperCaseLetter(x[wordEnd])) ||
+        // ACCUsage => ACC-Usage, CComment => C-Comment, etc.
+        (parser::IsUpperCaseLetter(x[wordEnd]) && wordEnd + 1 < xSize &&
+            parser::IsLowerCaseLetter(x[wordEnd + 1]))) {
+      result.push_back(
+          std::string_view(x.begin() + wordStart, wordEnd - wordStart));
+      wordStart = wordEnd;
+    }
+  }
+  // We went one past the end of the last word.
+  result.push_back(
+      std::string_view(x.begin() + wordStart, wordEnd - wordStart));
+  return result;
+}
+
+std::string CamelCaseToLowerCaseHyphenated(std::string_view x) {
+  std::vector<std::string_view> words{SplitCamelCase(x)};
+  std::string result{};
+  result.reserve(x.size() + words.size() + 1);
+  for (size_t i{0}; i < words.size(); ++i) {
+    std::string word{parser::ToLowerCaseLetters(words[i])};
+    result += i == 0 ? "" : "-";
+    result += word;
+  }
+  return result;
+}
+} // namespace featuresHelpers
+
 LanguageFeatureControl::LanguageFeatureControl() {
+
+  // Initialize the bidirectional maps with the default spellings.
+  cliOptions_.reserve(LanguageFeature_enumSize + UsageWarning_enumSize);
+  ForEachLanguageFeature([&](auto feature) {
+    std::string_view name{Fortran::common::EnumToString(feature)};
+    std::string cliOption{
+        featuresHelpers::CamelCaseToLowerCaseHyphenated(name)};
+    cliOptions_.insert({cliOption, {feature}});
+    languageFeatureCliCanonicalSpelling_[EnumToInt(feature)] =
+        std::string_view{cliOption};
+  });
+
+  ForEachUsageWarning([&](auto warning) {
+    std::string_view name{Fortran::common::EnumToString(warning)};
+    std::string cliOption{
+        featuresHelpers::CamelCaseToLowerCaseHyphenated(name)};
+    cliOptions_.insert({cliOption, {warning}});
+    usageWarningCliCanonicalSpelling_[EnumToInt(warning)] =
+        std::string_view{cliOption};
+  });
+
+  replaceCliCanonicalSpelling(UsageWarning::F202XAllocatableBreakingChange,
+      "f202x-allocatable-breaking-change");
+
+  // If we need to
+
   // These features must be explicitly enabled by command line options.
   disable_.set(LanguageFeature::OldDebugLines);
   disable_.set(LanguageFeature::OpenACC);
@@ -96,156 +163,41 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnLanguage_.set(LanguageFeature::NullActualForAllocatable);
 }
 
-// Namespace for helper functions for parsing CLI options
-// used instead of static so that there can be unit tests for these
-// functions.
-namespace FortranFeaturesHelpers {
-
-// Ignore case and any inserted punctuation (like '-'/'_')
-static std::optional<char> GetWarningChar(char ch) {
-  if (ch >= 'a' && ch <= 'z') {
-    return ch;
-  } else if (ch >= 'A' && ch <= 'Z') {
-    return ch - 'A' + 'a';
-  } else if (ch >= '0' && ch <= '9') {
-    return ch;
-  } else {
-    return std::nullopt;
-  }
-}
-
-// Check for case and punctuation insensitive string equality.
-// NB, b is probably not null terminated, so don't treat is like a C string.
-static bool InsensitiveWarningNameMatch(
-    std::string_view a, std::string_view b) {
-  size_t j{0}, aSize{a.size()}, k{0}, bSize{b.size()};
-  while (true) {
-    optional<char> ach{nullopt};
-    while (!ach && j < aSize) {
-      ach = GetWarningChar(a[j++]);
-    }
-    optional<char> bch{};
-    while (!bch && k < bSize) {
-      bch = GetWarningChar(b[k++]);
-    }
-    if (!ach && !bch) {
-      return true;
-    } else if (!ach || !bch || *ach != *bch) {
-      return false;
-    }
-    ach = bch = nullopt;
-  }
-}
-
-// Check if lower case hyphenated words are equal to camel case words.
-// Because of out use case we know that 'r' the camel case string is
-// well formed in the sense that it is a sequence [a-zA-Z]+[a-zA-Z0-9]*.
-// This is checked in the enum-class.h file.
-static bool SensitiveWarningNameMatch(llvm::StringRef l, llvm::StringRef r) {
-  size_t ls{l.size()}, rs{r.size()};
-  if (ls < rs) {
-    return false;
-  }
-  bool atStartOfWord{true};
-  size_t wordCount{0}, j{0}; // j is the number of word characters checked in r.
-  for (; j < rs; j++) {
-    if (wordCount + j >= ls) {
-      // `l` was shorter once the hiphens were removed.
-      // If r is null terminated, then we are good.
-      return r[j] == '\0';
-    }
-    if (atStartOfWord) {
-      if (llvm::isUpper(r[j])) {
-        // Upper Case Run
-        if (l[wordCount + j] != llvm::toLower(r[j])) {
-          return false;
-        }
-      } else {
-        atStartOfWord = false;
-        if (l[wordCount + j] != r[j]) {
-          return false;
-        }
-      }
-    } else {
-      if (llvm::isUpper(r[j])) {
-        atStartOfWord = true;
-        if (l[wordCount + j] != '-') {
-          return false;
-        }
-        ++wordCount;
-        if (l[wordCount + j] != llvm::toLower(r[j])) {
-          return false;
-        }
-      } else if (l[wordCount + j] != r[j]) {
-        return false;
-      }
-    }
-  }
-  // If there are more characters in l after processing all the characters in r.
-  // then fail unless the string is null terminated.
-  if (ls > wordCount + j) {
-    return l[wordCount + j] == '\0';
-  }
-  return true;
-}
-
-// Parse a CLI enum option return the enum index and whether it should be
-// enabled (true) or disabled (false).
-template <typename T>
-optional<std::pair<bool, T>> ParseCLIEnum(llvm::StringRef input,
-    EnumClass::FindIndexType findIndex, bool insensitive) {
-  bool negated{false};
-  EnumClass::Predicate predicate;
-  if (insensitive) {
-    if (input.starts_with_insensitive("no")) {
-      negated = true;
-      input = input.drop_front(2);
-    }
-    predicate = [input](std::string_view r) {
-      return InsensitiveWarningNameMatch(input, r);
-    };
-  } else {
-    if (input.starts_with("no-")) {
-      negated = true;
-      input = input.drop_front(3);
-    }
-    predicate = [input](std::string_view r) {
-      return SensitiveWarningNameMatch(input, r);
-    };
-  }
-  optional<T> x = EnumClass::Find<T>(predicate, findIndex);
-  return MapOption<T, std::pair<bool, T>>(
-      x, [negated](T x) { return std::pair{!negated, x}; });
-}
-
-optional<std::pair<bool, UsageWarning>> parseCLIUsageWarning(
-    llvm::StringRef input, bool insensitive) {
-  return ParseCLIEnum<UsageWarning>(input, FindUsageWarningIndex, insensitive);
-}
-
-optional<std::pair<bool, LanguageFeature>> parseCLILanguageFeature(
-    llvm::StringRef input, bool insensitive) {
-  return ParseCLIEnum<LanguageFeature>(
-      input, FindLanguageFeatureIndex, insensitive);
-}
-
-} // namespace FortranFeaturesHelpers
-
 // Take a string from the CLI and apply it to the LanguageFeatureControl.
 // Return true if the option was applied recognized.
-bool LanguageFeatureControl::applyCLIOption(
-    std::string_view input, bool insensitive) {
-  llvm::StringRef inputRef{input};
-  if (auto result = FortranFeaturesHelpers::parseCLILanguageFeature(
-          inputRef, insensitive)) {
-    EnableWarning(result->second, result->first);
-    return true;
-  } else if (auto result = FortranFeaturesHelpers::parseCLIUsageWarning(
-                 inputRef, insensitive)) {
-    EnableWarning(result->second, result->first);
-    return true;
+bool LanguageFeatureControl::applyCLIOption(std::string input) {
+  bool negated{false};
+  if (input.size() > 3 && input.substr(0, 3) == "no-") {
+    negated = true;
+    input = input.substr(3);
+  }
+  if (auto it = cliOptions_.find(input); it != cliOptions_.end()) {
+    if (std::holds_alternative<LanguageFeature>(it->second)) {
+      EnableWarning(std::get<LanguageFeature>(it->second), !negated);
+      return true;
+    }
+    if (std::holds_alternative<UsageWarning>(it->second)) {
+      EnableWarning(std::get<UsageWarning>(it->second), !negated);
+      return true;
+    }
   }
   return false;
+}
+
+void LanguageFeatureControl::replaceCliCanonicalSpelling(
+    LanguageFeature f, std::string input) {
+  std::string_view old{languageFeatureCliCanonicalSpelling_[EnumToInt(f)]};
+  cliOptions_.erase(std::string{old});
+  languageFeatureCliCanonicalSpelling_[EnumToInt(f)] = input;
+  cliOptions_.insert({input, {f}});
+}
+
+void LanguageFeatureControl::replaceCliCanonicalSpelling(
+    UsageWarning w, std::string input) {
+  std::string_view old{usageWarningCliCanonicalSpelling_[EnumToInt(w)]};
+  cliOptions_.erase(std::string{old});
+  usageWarningCliCanonicalSpelling_[EnumToInt(w)] = input;
+  cliOptions_.insert({input, {w}});
 }
 
 std::vector<const char *> LanguageFeatureControl::GetNames(

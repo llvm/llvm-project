@@ -995,7 +995,7 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
       if (wArg == "error") {
         res.setWarnAsErr(true);
         // -W(no-)<feature>
-      } else if (!features.applyCLIOption(wArg)) {
+      } else if (!res.getFrontendOpts().features.applyCLIOption(wArg)) {
         const unsigned diagID = diags.getCustomDiagID(
             clang::DiagnosticsEngine::Error, "Unknown diagnostic option: -W%0");
         diags.Report(diagID) << wArg;
@@ -1011,11 +1011,9 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 
   // Default to off for `flang -fc1`.
   bool showColors = parseShowColorsArgs(args, false);
-
   diags.getDiagnosticOptions().ShowColors = showColors;
   res.getDiagnosticOpts().ShowColors = showColors;
   res.getFrontendOpts().showColors = showColors;
-
   return diags.getNumErrors() == numErrorsBefore;
 }
 
