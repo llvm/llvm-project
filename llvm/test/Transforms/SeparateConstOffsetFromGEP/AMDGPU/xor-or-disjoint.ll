@@ -4,6 +4,40 @@
 @global_smem = external addrspace(3) global [0 x i8], align 16
 
 define amdgpu_kernel void @matmul_kernel(ptr addrspace(1) %inptr, <4 x i32> %data0, <4 x i32> %data1, i1 %cond) {
+; CHECK-LABEL: define amdgpu_kernel void @matmul_kernel(
+; CHECK-SAME: ptr addrspace(1) [[INPTR:%.*]], <4 x i32> [[DATA0:%.*]], <4 x i32> [[DATA1:%.*]], i1 [[COND:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], 8
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP0]], 16
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP0]], 32
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP4]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP0]], 256
+; CHECK-NEXT:    [[TMP7:%.*]] = shl i32 [[TMP0]], 3
+; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], 56
+; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[DOTNOT]], i32 0, i32 72
+; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP3]], i32 0, i32 144
+; CHECK-NEXT:    [[TMP11:%.*]] = or disjoint i32 [[TMP9]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = select i1 [[TMP5]], i32 0, i32 288
+; CHECK-NEXT:    [[TMP13:%.*]] = or disjoint i32 [[TMP11]], [[TMP12]]
+; CHECK-NEXT:    [[TMP14:%.*]] = xor i32 [[TMP13]], [[TMP8]]
+; CHECK-NEXT:    [[TMP15:%.*]] = and i32 [[TMP7]], 1536
+; CHECK-NEXT:    [[TMP16:%.*]] = or disjoint i32 [[TMP15]], [[TMP14]]
+; CHECK-NEXT:    [[TMP17:%.*]] = shl nuw nsw i32 [[TMP6]], 3
+; CHECK-NEXT:    [[TMP18:%.*]] = or disjoint i32 [[TMP16]], [[TMP17]]
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw half, ptr addrspace(3) @global_smem, i32 [[TMP18]]
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(3) [[TMP19]], i32 8192
+; CHECK-NEXT:    br i1 [[COND]], label [[S1:%.*]], label [[S2:%.*]]
+; CHECK:       s1:
+; CHECK-NEXT:    store <4 x i32> [[DATA0]], ptr addrspace(3) [[TMP20]], align 16
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       s2:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
 entry:
   %28 = tail call i32 @llvm.amdgcn.workitem.id.x()
   %29 = and i32 %28, 8
