@@ -1045,7 +1045,9 @@ Sanitizers
 ----------
 
 - ``-fsanitize=vptr`` is no longer a part of ``-fsanitize=undefined``.
-- Sanitizer ignorelists now support the syntax ``src:*=sanitize``.
+- Sanitizer ignorelists now support the syntax ``src:*=sanitize``, 
+  ``type:*=sanitize``, ``fun:*=sanitize``, ``global:*=sanitize``,
+  and ``mainfile:*=sanitize``.
 
 Python Binding Changes
 ----------------------
