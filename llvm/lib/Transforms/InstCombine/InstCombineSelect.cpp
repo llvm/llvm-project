@@ -585,21 +585,23 @@ static Value *foldSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
     Pred = CmpInst::getSwappedPredicate(Pred);
   }
 
-  if (CmpLHS == TVal) {
+  // TODO: consider handeling 'or disjoint' as well, though these would need to
+  // be converted to 'add' instructions.
+  if (CmpLHS == TVal && isa<Instruction>(FVal)) {
     if (Pred == CmpInst::ICMP_SGT &&
-        match(FVal, m_NSWAddLike(m_Specific(CmpRHS), m_One()))) {
+        match(FVal, m_NSWAdd(m_Specific(CmpRHS), m_One()))) {
       cast<Instruction>(FVal)->setHasNoUnsignedWrap(false);
       return Builder.CreateBinaryIntrinsic(Intrinsic::smax, TVal, FVal);
     }
 
     if (Pred == CmpInst::ICMP_SLT &&
-        match(FVal, m_NSWAddLike(m_Specific(CmpRHS), m_AllOnes()))) {
+        match(FVal, m_NSWAdd(m_Specific(CmpRHS), m_AllOnes()))) {
       cast<Instruction>(FVal)->setHasNoUnsignedWrap(false);
       return Builder.CreateBinaryIntrinsic(Intrinsic::smin, TVal, FVal);
     }
 
     if (Pred == CmpInst::ICMP_UGT &&
-        match(FVal, m_NUWAddLike(m_Specific(CmpRHS), m_One()))) {
+        match(FVal, m_NUWAdd(m_Specific(CmpRHS), m_One()))) {
       cast<Instruction>(FVal)->setHasNoSignedWrap(false);
       return Builder.CreateBinaryIntrinsic(Intrinsic::umax, TVal, FVal);
     }
@@ -607,7 +609,7 @@ static Value *foldSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
     // Note: We must use isKnownNonZero here because "sub nuw %x, 1" will be
     // canonicalize to "add %x, -1" discarding the nuw flag.
     if (Pred == CmpInst::ICMP_ULT &&
-        match(FVal, m_AddLike(m_Specific(CmpRHS), m_AllOnes())) &&
+        match(FVal, m_Add(m_Specific(CmpRHS), m_AllOnes())) &&
         isKnownNonZero(CmpRHS, SQ)) {
       cast<Instruction>(FVal)->setHasNoSignedWrap(false);
       return Builder.CreateBinaryIntrinsic(Intrinsic::umin, TVal, FVal);

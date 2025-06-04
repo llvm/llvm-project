@@ -1791,3 +1791,54 @@ define i32 @test_umin_sub1_nuw_drop_flags(i32 %x, i32 range(i32 1, 0) %w) {
   %r = select i1 %cmp, i32 %x, i32 %sub
   ret i32 %r
 }
+
+;; Confirm we don't crash on these cases.
+define i32 @test_smin_or_neg1_nsw(i32 %x, i32 %w) {
+; CHECK-LABEL: @test_smin_or_neg1_nsw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i32 [[X]], i32 -1
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %cmp = icmp slt i32 %x, %w
+  %sub = or disjoint i32 %w, -1
+  %r = select i1 %cmp, i32 %x, i32 %sub
+  ret i32 %r
+}
+
+define i32 @test_smax_or_1_nsw(i32 %x, i32 %w) {
+; CHECK-LABEL: @test_smax_or_1_nsw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = or disjoint i32 [[W]], 1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[ADD]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %cmp = icmp sgt i32 %x, %w
+  %add = or disjoint i32 %w, 1
+  %r = select i1 %cmp, i32 %x, i32 %add
+  ret i32 %r
+}
+
+define i32 @test_umax_or_1_nuw(i32 %x, i32 %w) {
+; CHECK-LABEL: @test_umax_or_1_nuw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = or disjoint i32 [[W]], 1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[ADD]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %cmp = icmp ugt i32 %x, %w
+  %add = or disjoint i32 %w, 1
+  %r = select i1 %cmp, i32 %x, i32 %add
+  ret i32 %r
+}
+
+define i32 @test_umin_or_neg1_nuw(i32 %x, i32 range(i32 1, 0) %w) {
+; CHECK-LABEL: @test_umin_or_neg1_nuw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i32 [[X]], i32 -1
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %cmp = icmp ult i32 %x, %w
+  %sub = or disjoint i32 %w, -1
+  %r = select i1 %cmp, i32 %x, i32 %sub
+  ret i32 %r
+}
