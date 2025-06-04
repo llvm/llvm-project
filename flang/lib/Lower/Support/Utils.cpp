@@ -652,6 +652,13 @@ void privatizeSymbol(
     const semantics::Symbol *symToPrivatize, OperandsStructType *clauseOps) {
   constexpr bool isDoConcurrent =
       std::is_same_v<OpType, fir::LocalitySpecifierOp>;
+  mlir::OpBuilder::InsertPoint dcIP;
+
+  if (isDoConcurrent) {
+    dcIP = firOpBuilder.saveInsertionPoint();
+    firOpBuilder.setInsertionPoint(
+        firOpBuilder.getRegion().getParentOfType<fir::DoConcurrentOp>());
+  }
 
   const semantics::Symbol *sym =
       isDoConcurrent ? &symToPrivatize->GetUltimate() : symToPrivatize;
@@ -824,6 +831,9 @@ void privatizeSymbol(
 
   if (isDoConcurrent)
     allPrivatizedSymbols.insert(symToPrivatize);
+
+  if (isDoConcurrent)
+    firOpBuilder.restoreInsertionPoint(dcIP);
 }
 
 template void

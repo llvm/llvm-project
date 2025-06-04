@@ -26,7 +26,12 @@ end subroutine local_assoc
 ! CHECK-NEXT:   fir.yield(%[[LOCAL_ARG]] : !fir.ref<!fir.box<!fir.array<8xf32>>>)
 ! CHECK-NEXT: }
 
-! CHECK: fir.do_concurrent.loop {{.*}} local(@[[LOCALIZER]] %{{.*}} -> %[[LOCAL_ARG:.*]] : {{.*}}) {
+! CHECK: func.func @_QPlocal_assoc()
+! CHECK: %[[BOX_REF:.*]] = fir.alloca !fir.box<!fir.array<8xf32>>
+! CHECK: %[[ASSOC_DECL:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "{{.*}}local_assocEa"}
+! CHECK: %[[ASSOC_BOX:.*]] = fir.embox %[[ASSOC_DECL]]#0(%{{.*}})
+! CHECK: fir.store %[[ASSOC_BOX]] to %[[BOX_REF]]
+! CHECK: fir.do_concurrent.loop {{.*}} local(@[[LOCALIZER]] %[[BOX_REF]] -> %[[LOCAL_ARG:.*]] : {{.*}}) {
 ! CHECK:   %[[LOCAL_DECL:.*]]:2 = hlfir.declare %[[LOCAL_ARG]]
 ! CHECK:   %[[LOCAL_LD:.*]] = fir.load %[[LOCAL_DECL]]#0 : !fir.ref<!fir.box<!fir.array<8xf32>>>
 ! CHECK:   hlfir.designate %[[LOCAL_LD]] (%{{.*}})
