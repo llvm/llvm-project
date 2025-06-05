@@ -144,6 +144,17 @@ namespace fold_initializer {
   static_assert(fold(A::f == 1.0f));
 }
 
+namespace narrowing {
+  struct X { unsigned u; };
+  constexpr int f(X x) {return x.u;}
+  void g() {
+    static_assert(f({0xFFFFFFFFLL + __builtin_is_constant_evaluated()}) == 0);
+    f({0x100000000LL - __builtin_is_constant_evaluated()}); // expected-error {{constant expression evaluates to 4294967296}} \
+    // expected-warning {{implicit conversion}} \
+    // expected-note {{insert an explicit cast to silence this issue}}
+  }
+}
+
 struct GH99680 {
   static const int x = 1/(1-__builtin_is_constant_evaluated()); // expected-error {{in-class initializer for static data member is not a constant expression}} \
     // expected-note {{division by zero}}
