@@ -63,7 +63,7 @@ enum class SIAtomicScope {
   SINGLETHREAD,
   WAVEFRONT,
   WORKGROUP,
-  CLUSTER,
+  CLUSTER, // Promoted to AGENT on targets without workgroup clusters.
   AGENT,
   SYSTEM
 };
@@ -108,6 +108,7 @@ private:
 
   // TODO: Should we assume Cooperative=true if no MMO is present?
   SIMemOpInfo(
+      const GCNSubtarget &ST,
       AtomicOrdering Ordering = AtomicOrdering::SequentiallyConsistent,
       SIAtomicScope Scope = SIAtomicScope::SYSTEM,
       SIAtomicAddrSpace OrderingAddrSpace = SIAtomicAddrSpace::ATOMIC,
@@ -158,6 +159,11 @@ private:
                   SIAtomicAddrSpace::GDS)) == SIAtomicAddrSpace::NONE) {
       this->Scope = std::min(Scope, SIAtomicScope::AGENT);
     }
+
+    // On targets that have no concept of a workgroup cluster, use
+    // AGENT scope as a conservatively correct alternative.
+    if (this->Scope == SIAtomicScope::CLUSTER && !ST.hasClusters())
+      this->Scope = SIAtomicScope::AGENT;
   }
 
 public:
@@ -227,6 +233,7 @@ public:
 class SIMemOpAccess final {
 private:
   const AMDGPUMachineModuleInfo *MMI = nullptr;
+  const GCNSubtarget &ST;
 
   /// Reports unsupported message \p Msg for \p MI to LLVM context.
   void reportUnsupported(const MachineBasicBlock::iterator &MI,
@@ -250,7 +257,7 @@ private:
 public:
   /// Construct class to support accessing the machine memory operands
   /// of instructions in the machine function \p MF.
-  SIMemOpAccess(const AMDGPUMachineModuleInfo &MMI);
+  SIMemOpAccess(const AMDGPUMachineModuleInfo &MMI, const GCNSubtarget &ST);
 
   /// \returns Load info if \p MI is a load operation, "std::nullopt" otherwise.
   std::optional<SIMemOpInfo>
@@ -813,8 +820,9 @@ SIAtomicAddrSpace SIMemOpAccess::toSIAtomicAddrSpace(unsigned AS) const {
   return SIAtomicAddrSpace::OTHER;
 }
 
-SIMemOpAccess::SIMemOpAccess(const AMDGPUMachineModuleInfo &MMI_)
-    : MMI(&MMI_) {}
+SIMemOpAccess::SIMemOpAccess(const AMDGPUMachineModuleInfo &MMI_,
+                             const GCNSubtarget &ST)
+    : MMI(&MMI_), ST(ST) {}
 
 std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
     const MachineBasicBlock::iterator &MI) const {
@@ -875,7 +883,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
       return std::nullopt;
     }
   }
-  return SIMemOpInfo(Ordering, Scope, OrderingAddrSpace, InstrAddrSpace,
+  return SIMemOpInfo(ST, Ordering, Scope, OrderingAddrSpace, InstrAddrSpace,
                      IsCrossAddressSpaceOrdering, FailureOrdering, IsVolatile,
                      IsNonTemporal, IsLastUse, IsCooperative);
 }
@@ -889,7 +897,7 @@ SIMemOpAccess::getLoadInfo(const MachineBasicBlock::iterator &MI) const {
 
   // Be conservative if there are no memory operands.
   if (MI->getNumMemOperands() == 0)
-    return SIMemOpInfo();
+    return SIMemOpInfo(ST);
 
   return constructFromMIWithMMO(MI);
 }
@@ -903,7 +911,7 @@ SIMemOpAccess::getStoreInfo(const MachineBasicBlock::iterator &MI) const {
 
   // Be conservative if there are no memory operands.
   if (MI->getNumMemOperands() == 0)
-    return SIMemOpInfo();
+    return SIMemOpInfo(ST);
 
   return constructFromMIWithMMO(MI);
 }
@@ -937,8 +945,9 @@ SIMemOpAccess::getAtomicFenceInfo(const MachineBasicBlock::iterator &MI) const {
     return std::nullopt;
   }
 
-  return SIMemOpInfo(Ordering, Scope, OrderingAddrSpace, SIAtomicAddrSpace::ATOMIC,
-                     IsCrossAddressSpaceOrdering, AtomicOrdering::NotAtomic);
+  return SIMemOpInfo(ST, Ordering, Scope, OrderingAddrSpace,
+                     SIAtomicAddrSpace::ATOMIC, IsCrossAddressSpaceOrdering,
+                     AtomicOrdering::NotAtomic);
 }
 
 std::optional<SIMemOpInfo> SIMemOpAccess::getAtomicCmpxchgOrRmwInfo(
@@ -950,7 +959,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::getAtomicCmpxchgOrRmwInfo(
 
   // Be conservative if there are no memory operands.
   if (MI->getNumMemOperands() == 0)
-    return SIMemOpInfo();
+    return SIMemOpInfo(ST);
 
   return constructFromMIWithMMO(MI);
 }
@@ -1000,7 +1009,6 @@ bool SIGfx6CacheControl::enableLoadCacheBypass(
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-    case SIAtomicScope::CLUSTER:
       // Set L1 cache policy to MISS_EVICT.
       // Note: there is no L2 cache bypass policy at the ISA level.
       Changed |= enableGLCBit(MI);
@@ -1119,7 +1127,6 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-    case SIAtomicScope::CLUSTER:
       VMCnt |= true;
       break;
     case SIAtomicScope::WORKGROUP:
@@ -1137,7 +1144,6 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-    case SIAtomicScope::CLUSTER:
     case SIAtomicScope::WORKGROUP:
       // If no cross address space ordering then an "S_WAITCNT lgkmcnt(0)" is
       // not needed as LDS operations for all waves are executed in a total
@@ -1161,7 +1167,6 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-    case SIAtomicScope::CLUSTER:
       // If no cross address space ordering then an GDS "S_WAITCNT lgkmcnt(0)"
       // is not needed as GDS operations for all waves are executed in a total
       // global ordering as observed by all waves. Required if also
@@ -1217,7 +1222,6 @@ bool SIGfx6CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-    case SIAtomicScope::CLUSTER:
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_WBINVL1));
       Changed = true;
       break;
@@ -1278,7 +1282,6 @@ bool SIGfx7CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-    case SIAtomicScope::CLUSTER:
       BuildMI(MBB, MI, DL, TII->get(InvalidateL1));
       Changed = true;
       break;
@@ -1316,7 +1319,6 @@ bool SIGfx90ACacheControl::enableLoadCacheBypass(
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-    case SIAtomicScope::CLUSTER:
       // Set the L1 cache policy to MISS_LRU.
       // Note: there is no L2 cache bypass policy at the ISA level.
       Changed |= enableGLCBit(MI);
@@ -1359,7 +1361,6 @@ bool SIGfx90ACacheControl::enableStoreCacheBypass(
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-    case SIAtomicScope::CLUSTER:
       /// Do not set glc for store atomic operations as they implicitly write
       /// through the L1 cache.
       break;
@@ -1395,7 +1396,6 @@ bool SIGfx90ACacheControl::enableRMWCacheBypass(
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-    case SIAtomicScope::CLUSTER:
       /// Do not set glc for RMW atomic operations as they implicitly bypass
       /// the L1 cache, and the glc bit is instead used to indicate if they are
       /// return or no-return.
@@ -1516,7 +1516,6 @@ bool SIGfx90ACacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
       Changed = true;
       break;
     case SIAtomicScope::AGENT:
-    case SIAtomicScope::CLUSTER:
       // Same as GFX7.
       break;
     case SIAtomicScope::WORKGROUP:
@@ -1583,7 +1582,6 @@ bool SIGfx90ACacheControl::insertRelease(MachineBasicBlock::iterator &MI,
       Changed = true;
       break;
     case SIAtomicScope::AGENT:
-    case SIAtomicScope::CLUSTER:
     case SIAtomicScope::WORKGROUP:
     case SIAtomicScope::WAVEFRONT:
     case SIAtomicScope::SINGLETHREAD:
@@ -1618,7 +1616,6 @@ bool SIGfx940CacheControl::enableLoadCacheBypass(
       Changed |= enableSC1Bit(MI);
       break;
     case SIAtomicScope::AGENT:
-    case SIAtomicScope::CLUSTER:
       // Set SC bits to indicate agent scope.
       Changed |= enableSC1Bit(MI);
       break;
@@ -1663,7 +1660,6 @@ bool SIGfx940CacheControl::enableStoreCacheBypass(
       Changed |= enableSC1Bit(MI);
       break;
     case SIAtomicScope::AGENT:
-    case SIAtomicScope::CLUSTER:
       // Set SC bits to indicate agent scope.
       Changed |= enableSC1Bit(MI);
       break;
@@ -1703,7 +1699,6 @@ bool SIGfx940CacheControl::enableRMWCacheBypass(
       Changed |= enableSC1Bit(MI);
       break;
     case SIAtomicScope::AGENT:
-    case SIAtomicScope::CLUSTER:
     case SIAtomicScope::WORKGROUP:
     case SIAtomicScope::WAVEFRONT:
     case SIAtomicScope::SINGLETHREAD:
@@ -1792,7 +1787,6 @@ bool SIGfx940CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
       Changed = true;
       break;
     case SIAtomicScope::AGENT:
-    case SIAtomicScope::CLUSTER:
       // Ensures that following loads will not see stale remote date or local
       // MTYPE NC global data. Local MTYPE RW and CC memory will never be stale
       // due to the memory probes.
@@ -1878,7 +1872,6 @@ bool SIGfx940CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
       Changed = true;
       break;
     case SIAtomicScope::AGENT:
-    case SIAtomicScope::CLUSTER:
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_WBL2))
           // Set SC bits to indicate agent scope.
           .addImm(AMDGPU::CPol::SC1);
@@ -1922,7 +1915,6 @@ bool SIGfx10CacheControl::enableLoadCacheBypass(
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-    case SIAtomicScope::CLUSTER:
       // Set the L0 and L1 cache policies to MISS_EVICT.
       // Note: there is no L2 cache coherent bypass control at the ISA level.
       Changed |= enableGLCBit(MI);
@@ -2028,7 +2020,6 @@ bool SIGfx10CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-    case SIAtomicScope::CLUSTER:
       if ((Op & SIMemOp::LOAD) != SIMemOp::NONE)
         VMCnt |= true;
       if ((Op & SIMemOp::STORE) != SIMemOp::NONE)
@@ -2061,7 +2052,6 @@ bool SIGfx10CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-    case SIAtomicScope::CLUSTER:
     case SIAtomicScope::WORKGROUP:
       // If no cross address space ordering then an "S_WAITCNT lgkmcnt(0)" is
       // not needed as LDS operations for all waves are executed in a total
@@ -2085,7 +2075,6 @@ bool SIGfx10CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-    case SIAtomicScope::CLUSTER:
       // If no cross address space ordering then an GDS "S_WAITCNT lgkmcnt(0)"
       // is not needed as GDS operations for all waves are executed in a total
       // global ordering as observed by all waves. Required if also
@@ -2148,7 +2137,6 @@ bool SIGfx10CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-    case SIAtomicScope::CLUSTER:
       // The order of invalidates matter here. We must invalidate "outer in"
       // so L1 -> L0 to avoid L0 pulling in stale data from L1 when it is
       // invalidated.
@@ -2198,7 +2186,6 @@ bool SIGfx11CacheControl::enableLoadCacheBypass(
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-    case SIAtomicScope::CLUSTER:
       // Set the L0 and L1 cache policies to MISS_EVICT.
       // Note: there is no L2 cache coherent bypass control at the ISA level.
       Changed |= enableGLCBit(MI);
@@ -2916,8 +2903,9 @@ SIMemoryLegalizerPass::run(MachineFunction &MF,
 bool SIMemoryLegalizer::run(MachineFunction &MF) {
   bool Changed = false;
 
-  SIMemOpAccess MOA(MMI.getObjFileInfo<AMDGPUMachineModuleInfo>());
-  CC = SICacheControl::create(MF.getSubtarget<GCNSubtarget>());
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  SIMemOpAccess MOA(MMI.getObjFileInfo<AMDGPUMachineModuleInfo>(), ST);
+  CC = SICacheControl::create(ST);
 
   for (auto &MBB : MF) {
     for (auto MI = MBB.begin(); MI != MBB.end(); ++MI) {
