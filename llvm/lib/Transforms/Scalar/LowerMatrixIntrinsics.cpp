@@ -489,7 +489,7 @@ class LowerMatrixIntrinsics {
   DenseMap<Value *, ShapeInfo> ShapeMap;
 
   /// List of instructions to remove. While lowering, we are not replacing all
-  /// users of a lowered instruction, if shape information is available and
+  /// users of a lowered instruction.and
   /// those need to be removed after we finished lowering.
   SmallVector<Instruction *, 16> ToRemove;
 
@@ -1063,14 +1063,14 @@ public:
 
       Value *Op1;
       Value *Op2;
-      if (match(Inst, m_Load(m_Value(Op1))))
-        VisitLoad(cast<LoadInst>(Inst), SI, Op1, Builder);
-      else if (match(Inst, m_Store(m_Value(Op1), m_Value(Op2))))
-        VisitStore(cast<StoreInst>(Inst), SI, Op1, Op2, Builder);
-      else if (auto *BinOp = dyn_cast<BinaryOperator>(Inst))
+      if (auto *BinOp = dyn_cast<BinaryOperator>(Inst))
         VisitBinaryOperator(BinOp, SI);
       else if (auto *UnOp = dyn_cast<UnaryOperator>(Inst))
         VisitUnaryOperator(UnOp, SI);
+      else if (match(Inst, m_Load(m_Value(Op1))))
+        VisitLoad(cast<LoadInst>(Inst), SI, Op1, Builder);
+      else if (match(Inst, m_Store(m_Value(Op1), m_Value(Op2))))
+        VisitStore(cast<StoreInst>(Inst), SI, Op1, Op2, Builder);
       else
         continue;
       Changed = true;
@@ -2109,7 +2109,7 @@ public:
         Builder);
   }
 
-  /// Lower load instructions, if shape information is available.
+  /// Lower load instructions.
   void VisitLoad(LoadInst *Inst, const ShapeInfo &SI, Value *Ptr,
                  IRBuilder<> &Builder) {
     LowerLoad(Inst, Ptr, Inst->getAlign(), Builder.getInt64(SI.getStride()),
@@ -2122,7 +2122,7 @@ public:
                Builder.getInt64(SI.getStride()), Inst->isVolatile(), SI);
   }
 
-  /// Lower binary operators, if shape information is available.
+  /// Lower binary operators.
   void VisitBinaryOperator(BinaryOperator *Inst, const ShapeInfo &SI) {
     Value *Lhs = Inst->getOperand(0);
     Value *Rhs = Inst->getOperand(1);
@@ -2148,7 +2148,7 @@ public:
                      Builder);
   }
 
-  /// Lower unary operators, if shape information is available.
+  /// Lower unary operators.
   void VisitUnaryOperator(UnaryOperator *Inst, const ShapeInfo &SI) {
     Value *Op = Inst->getOperand(0);
 
