@@ -295,8 +295,8 @@ static bool canEvaluateTruncated(Value *V, Type *Ty, InstCombinerImpl &IC,
     APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, BitWidth);
     // Do not preserve the original context instruction. Simplifying div/rem
     // based on later context may introduce a trap.
-    if (IC.MaskedValueIsZero(I->getOperand(0), Mask, 0, I) &&
-        IC.MaskedValueIsZero(I->getOperand(1), Mask, 0, I)) {
+    if (IC.MaskedValueIsZero(I->getOperand(0), Mask, I) &&
+        IC.MaskedValueIsZero(I->getOperand(1), Mask, I)) {
       return canEvaluateTruncated(I->getOperand(0), Ty, IC, I) &&
              canEvaluateTruncated(I->getOperand(1), Ty, IC, I);
     }
@@ -321,7 +321,7 @@ static bool canEvaluateTruncated(Value *V, Type *Ty, InstCombinerImpl &IC,
     //       zero - use AmtKnownBits.getMaxValue().
     uint32_t OrigBitWidth = OrigTy->getScalarSizeInBits();
     uint32_t BitWidth = Ty->getScalarSizeInBits();
-    KnownBits AmtKnownBits = IC.computeKnownBits(I->getOperand(1), 0, CxtI);
+    KnownBits AmtKnownBits = IC.computeKnownBits(I->getOperand(1), CxtI);
     APInt MaxShiftAmt = AmtKnownBits.getMaxValue();
     APInt ShiftedBits = APInt::getBitsSetFrom(OrigBitWidth, BitWidth);
     if (MaxShiftAmt.ult(BitWidth)) {
@@ -333,7 +333,7 @@ static bool canEvaluateTruncated(Value *V, Type *Ty, InstCombinerImpl &IC,
           return canEvaluateTruncated(I->getOperand(0), Ty, IC, CxtI) &&
                  canEvaluateTruncated(I->getOperand(1), Ty, IC, CxtI);
       }
-      if (IC.MaskedValueIsZero(I->getOperand(0), ShiftedBits, 0, CxtI))
+      if (IC.MaskedValueIsZero(I->getOperand(0), ShiftedBits, CxtI))
         return canEvaluateTruncated(I->getOperand(0), Ty, IC, CxtI) &&
                canEvaluateTruncated(I->getOperand(1), Ty, IC, CxtI);
     }
@@ -351,7 +351,7 @@ static bool canEvaluateTruncated(Value *V, Type *Ty, InstCombinerImpl &IC,
         llvm::computeKnownBits(I->getOperand(1), IC.getDataLayout());
     unsigned ShiftedBits = OrigBitWidth - BitWidth;
     if (AmtKnownBits.getMaxValue().ult(BitWidth) &&
-        ShiftedBits < IC.ComputeNumSignBits(I->getOperand(0), 0, CxtI))
+        ShiftedBits < IC.ComputeNumSignBits(I->getOperand(0), CxtI))
       return canEvaluateTruncated(I->getOperand(0), Ty, IC, CxtI) &&
              canEvaluateTruncated(I->getOperand(1), Ty, IC, CxtI);
     break;
@@ -595,7 +595,7 @@ Instruction *InstCombinerImpl::narrowFunnelShift(TruncInst &Trunc) {
   // from 'zext', 'and' or 'shift'). High bits of the left-shifted value are
   // truncated, so those do not matter.
   APInt HiBitMask = APInt::getHighBitsSet(WideWidth, WideWidth - NarrowWidth);
-  if (!MaskedValueIsZero(ShVal1, HiBitMask, 0, &Trunc))
+  if (!MaskedValueIsZero(ShVal1, HiBitMask, &Trunc))
     return nullptr;
 
   // Adjust the width of ShAmt for narrowed funnel shift operation:
@@ -951,13 +951,13 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
 
   bool Changed = false;
   if (!Trunc.hasNoSignedWrap() &&
-      ComputeMaxSignificantBits(Src, /*Depth=*/0, &Trunc) <= DestWidth) {
+      ComputeMaxSignificantBits(Src, &Trunc) <= DestWidth) {
     Trunc.setHasNoSignedWrap(true);
     Changed = true;
   }
   if (!Trunc.hasNoUnsignedWrap() &&
       MaskedValueIsZero(Src, APInt::getBitsSetFrom(SrcWidth, DestWidth),
-                        /*Depth=*/0, &Trunc)) {
+                        &Trunc)) {
     Trunc.setHasNoUnsignedWrap(true);
     Changed = true;
   }
@@ -1000,7 +1000,7 @@ Instruction *InstCombinerImpl::transformZExtICmp(ICmpInst *Cmp,
     if (Op1CV->isZero() && Cmp->isEquality()) {
       // Exactly 1 possible 1? But not the high-bit because that is
       // canonicalized to this form.
-      KnownBits Known = computeKnownBits(Cmp->getOperand(0), 0, &Zext);
+      KnownBits Known = computeKnownBits(Cmp->getOperand(0), &Zext);
       APInt KnownZeroMask(~Known.Zero);
       uint32_t ShAmt = KnownZeroMask.logBase2();
       bool IsExpectShAmt = KnownZeroMask.isPowerOf2() &&
@@ -1109,7 +1109,7 @@ static bool canEvaluateZExtd(Value *V, Type *Ty, unsigned &BitsToClear,
       unsigned VSize = V->getType()->getScalarSizeInBits();
       if (IC.MaskedValueIsZero(I->getOperand(1),
                                APInt::getHighBitsSet(VSize, BitsToClear),
-                               0, CxtI)) {
+                               CxtI)) {
         // If this is an And instruction and all of the BitsToClear are
         // known to be zero we can reset BitsToClear.
         if (I->getOpcode() == Instruction::And)
@@ -1229,10 +1229,9 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
 
     // If the high bits are already filled with zeros, just replace this
     // cast with the result.
-    if (MaskedValueIsZero(Res,
-                          APInt::getHighBitsSet(DestBitSize,
-                                                DestBitSize - SrcBitsKept),
-                             0, &Zext))
+    if (MaskedValueIsZero(
+            Res, APInt::getHighBitsSet(DestBitSize, DestBitSize - SrcBitsKept),
+            &Zext))
       return replaceInstUsesWith(Zext, Res);
 
     // We need to emit an AND to clear the high bits.
@@ -1369,7 +1368,7 @@ Instruction *InstCombinerImpl::transformSExtICmp(ICmpInst *Cmp,
     // the icmp and sext into bitwise/integer operations.
     if (Cmp->hasOneUse() &&
         Cmp->isEquality() && (Op1C->isZero() || Op1C->getValue().isPowerOf2())){
-      KnownBits Known = computeKnownBits(Op0, 0, &Sext);
+      KnownBits Known = computeKnownBits(Op0, &Sext);
 
       APInt KnownZeroMask(~Known.Zero);
       if (KnownZeroMask.isPowerOf2()) {
@@ -1509,7 +1508,7 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
 
     // If the high bits are already filled with sign bit, just replace this
     // cast with the result.
-    if (ComputeNumSignBits(Res, 0, &Sext) > DestBitSize - SrcBitSize)
+    if (ComputeNumSignBits(Res, &Sext) > DestBitSize - SrcBitSize)
       return replaceInstUsesWith(Sext, Res);
 
     // We need to emit a shl + ashr to do the sign extend.
@@ -1523,7 +1522,7 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
     // If the input has more sign bits than bits truncated, then convert
     // directly to final type.
     unsigned XBitSize = X->getType()->getScalarSizeInBits();
-    if (ComputeNumSignBits(X, 0, &Sext) > XBitSize - SrcBitSize)
+    if (ComputeNumSignBits(X, &Sext) > XBitSize - SrcBitSize)
       return CastInst::CreateIntegerCast(X, DestTy, /* isSigned */ true);
 
     // If input is a trunc from the destination type, then convert into shifts.
@@ -1748,7 +1747,7 @@ static bool isKnownExactCastIntToFP(CastInst &I, InstCombinerImpl &IC) {
   // TODO:
   // Try harder to find if the source integer type has less significant bits.
   // For example, compute number of sign bits.
-  KnownBits SrcKnown = IC.computeKnownBits(Src, 0, &I);
+  KnownBits SrcKnown = IC.computeKnownBits(Src, &I);
   int SigBits = (int)SrcTy->getScalarSizeInBits() -
                 SrcKnown.countMinLeadingZeros() -
                 SrcKnown.countMinTrailingZeros();
@@ -2007,9 +2006,8 @@ static Instruction *foldFPtoI(Instruction &FI, InstCombiner &IC) {
   // fpto{u/s}i non-norm --> 0
   FPClassTest Mask =
       FI.getOpcode() == Instruction::FPToUI ? fcPosNormal : fcNormal;
-  KnownFPClass FPClass =
-      computeKnownFPClass(FI.getOperand(0), Mask, /*Depth=*/0,
-                          IC.getSimplifyQuery().getWithInstruction(&FI));
+  KnownFPClass FPClass = computeKnownFPClass(
+      FI.getOperand(0), Mask, IC.getSimplifyQuery().getWithInstruction(&FI));
   if (FPClass.isKnownNever(Mask))
     return IC.replaceInstUsesWith(FI, ConstantInt::getNullValue(FI.getType()));
 

@@ -2117,7 +2117,7 @@ public:
 
   bool VisitStore(StoreInst *Inst, Value *StoredVal, Value *Ptr,
                   IRBuilder<> &Builder) {
-    auto I = ShapeMap.find(StoredVal);
+    auto I = ShapeMap.find(Inst);
     assert(I != ShapeMap.end() &&
            "must only visit instructions with shape info");
     LowerStore(Inst, StoredVal, Ptr, Inst->getAlign(),

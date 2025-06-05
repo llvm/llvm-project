@@ -14,9 +14,9 @@ def TestDirectiveLanguage : DirectiveLanguage {
   let flangClauseBaseClass = "TdlClause";
 }
 
-def TDLCV_vala : ClauseVal<"vala",1,1> {}
-def TDLCV_valb : ClauseVal<"valb",2,1> {}
-def TDLCV_valc : ClauseVal<"valc",3,0> { let isDefault = 1; }
+def TDLCV_vala : EnumVal<"vala",1,1> {}
+def TDLCV_valb : EnumVal<"valb",2,1> {}
+def TDLCV_valc : EnumVal<"valc",3,0> { let isDefault = 1; }
 
 def TDLC_ClauseA : Clause<"clausea"> {
   let enumClauseValue = "AKind";
@@ -34,6 +34,7 @@ def TDLC_ClauseB : Clause<"clauseb"> {
 }
 
 def TDLC_ClauseC : Clause<"clausec"> {
+  let aliases = ["ccccccc"];
   let flangClass = "IntExpr";
   let isValueList = 1;
 }
@@ -260,7 +261,8 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-NEXT:  TYPE_PARSER(
 // IMPL-NEXT:    "clausec" >> construct<TdlClause>(construct<TdlClause::Clausec>(parenthesized(nonemptyList(Parser<IntExpr>{})))) || 
 // IMPL-NEXT:    "clauseb" >> construct<TdlClause>(construct<TdlClause::Clauseb>(maybe(parenthesized(Parser<IntExpr>{})))) ||
-// IMPL-NEXT:    "clausea" >> construct<TdlClause>(construct<TdlClause::Clausea>())
+// IMPL-NEXT:    "clausea" >> construct<TdlClause>(construct<TdlClause::Clausea>()) ||
+// IMPL-NEXT:    "ccccccc" >> construct<TdlClause>(construct<TdlClause::Clausec>(parenthesized(nonemptyList(Parser<IntExpr>{}))))
 // IMPL-NEXT:  )
 // IMPL-EMPTY:
 // IMPL-NEXT:  #endif // GEN_FLANG_CLAUSES_PARSER

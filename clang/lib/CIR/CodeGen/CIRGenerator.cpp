@@ -14,11 +14,13 @@
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/Target/LLVMIR/Import.h"
 
 #include "clang/AST/DeclGroup.h"
 #include "clang/CIR/CIRGenerator.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/OpenACC/RegisterOpenACCExtensions.h"
+#include "llvm/IR/DataLayout.h"
 
 using namespace cir;
 using namespace clang;
@@ -35,12 +37,20 @@ CIRGenerator::~CIRGenerator() {
   assert(deferredInlineMemberFuncDefs.empty() || diags.hasErrorOccurred());
 }
 
+static void setMLIRDataLayout(mlir::ModuleOp &mod, const llvm::DataLayout &dl) {
+  mlir::MLIRContext *mlirContext = mod.getContext();
+  mlir::DataLayoutSpecInterface dlSpec =
+      mlir::translateDataLayout(dl, mlirContext);
+  mod->setAttr(mlir::DLTIDialect::kDataLayoutAttrName, dlSpec);
+}
+
 void CIRGenerator::Initialize(ASTContext &astContext) {
   using namespace llvm;
 
   this->astContext = &astContext;
 
   mlirContext = std::make_unique<mlir::MLIRContext>();
+  mlirContext->loadDialect<mlir::DLTIDialect>();
   mlirContext->loadDialect<cir::CIRDialect>();
   mlirContext->getOrLoadDialect<mlir::acc::OpenACCDialect>();
 
@@ -51,6 +61,10 @@ void CIRGenerator::Initialize(ASTContext &astContext) {
 
   cgm = std::make_unique<clang::CIRGen::CIRGenModule>(
       *mlirContext.get(), astContext, codeGenOpts, diags);
+  mlir::ModuleOp mod = cgm->getModule();
+  llvm::DataLayout layout =
+      llvm::DataLayout(astContext.getTargetInfo().getDataLayoutString());
+  setMLIRDataLayout(mod, layout);
 }
 
 bool CIRGenerator::verifyModule() const { return cgm->verifyModule(); }
@@ -67,6 +81,16 @@ bool CIRGenerator::HandleTopLevelDecl(DeclGroupRef group) {
     cgm->emitTopLevelDecl(decl);
 
   return true;
+}
+
+void CIRGenerator::HandleTranslationUnit(ASTContext &astContext) {
+  // Release the Builder when there is no error.
+  if (!diags.hasErrorOccurred() && cgm)
+    cgm->release();
+
+  // If there are errors before or when releasing the cgm, reset the module to
+  // stop here before invoking the backend.
+  assert(!cir::MissingFeatures::cleanupAfterErrorDiags());
 }
 
 void CIRGenerator::HandleInlineFunctionDefinition(FunctionDecl *d) {
