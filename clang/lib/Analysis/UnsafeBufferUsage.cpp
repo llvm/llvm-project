@@ -247,11 +247,11 @@ private:
 
 // Because we're dealing with raw pointers, let's define what we mean by that.
 static bool hasPointerType(const Expr &E) {
-  return isa<PointerType>(E.getType().getCanonicalType());
+  return isa<clang::PointerType>(E.getType().getCanonicalType());
 }
 
 static bool hasArrayType(const Expr &E) {
-  return isa<ArrayType>(E.getType().getCanonicalType());
+  return isa<clang::ArrayType>(E.getType().getCanonicalType());
 }
 
 static void
@@ -968,7 +968,8 @@ static bool hasUnsafePrintfStringArg(const CallExpr &Node, ASTContext &Ctx,
   if (!FirstParmTy->isPointerType())
     return false; // possibly some user-defined printf function
 
-  QualType FirstPteTy = FirstParmTy->castAs<PointerType>()->getPointeeType();
+  QualType FirstPteTy =
+      FirstParmTy->castAs<clang::PointerType>()->getPointeeType();
 
   if (!Ctx.getFILEType()
            .isNull() && //`FILE *` must be in the context if it is fprintf
@@ -1052,7 +1053,8 @@ static bool hasUnsafeSnprintfBuffer(const CallExpr &Node,
   if (!FirstParmTy->isPointerType())
     return false; // Not an snprint
 
-  QualType FirstPteTy = FirstParmTy->castAs<PointerType>()->getPointeeType();
+  QualType FirstPteTy =
+      FirstParmTy->castAs<clang::PointerType>()->getPointeeType();
   const Expr *Buf = Node.getArg(0), *Size = Node.getArg(1);
 
   if (FirstPteTy.isConstQualified() || !Buf->getType()->isPointerType() ||
