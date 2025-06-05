@@ -6,11 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <clc/clc_convert.h>
+#include <clc/common/clc_sign.h>
+#include <clc/float/definitions.h>
+#include <clc/geometric/clc_dot.h>
 #include <clc/geometric/clc_normalize.h>
-#include <clc/opencl/clc.h>
+#include <clc/internal/clc.h>
+#include <clc/math/clc_copysign.h>
+#include <clc/math/clc_rsqrt.h>
+#include <clc/relational/clc_all.h>
+#include <clc/relational/clc_isinf.h>
+#include <clc/relational/clc_select.h>
 
-#define FUNCTION normalize
-#define __CLC_GEOMETRIC_RET_GENTYPE
-#define __CLC_BODY <clc/geometric/unary_def.inc>
-
+#define __CLC_BODY <clc_normalize.inc>
 #include <clc/math/gentype.inc>
