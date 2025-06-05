@@ -206,7 +206,6 @@ gpu.func @test_dpas_no_sg_data(%a: memref<24x32xf32>, %b: memref<32x24xf32>) {
     gpu.return
   }
 
-
   gpu.func @test_scf_while_and_condition(%arg0: memref<1024xf32>, %arg1: memref<1024xf32>) {
     %c1_i32 = arith.constant 1 : i32
     %c10_i32 = arith.constant 10 : i32
@@ -229,6 +228,64 @@ gpu.func @test_dpas_no_sg_data(%a: memref<24x32xf32>, %b: memref<32x24xf32>) {
       %6 = xegpu.load_nd %5  : !xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [16], sg_data = [16]>> -> vector<256xf32>
       scf.yield %6, %4 : vector<256xf32>, i32
     }
+    gpu.return
+  }
+
+  gpu.func @test_scf_if(%arg0: memref<1024xf32>, %arg1: memref<1024xf32>) {
+    %c10 = arith.constant 10 : index
+    %id = gpu.subgroup_id : index
+
+    %0 = xegpu.create_nd_tdesc %arg0[0] : memref<1024xf32> -> !xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [16], sg_data = [16]>>
+    %1 = xegpu.create_nd_tdesc %arg1[0] : memref<1024xf32> -> !xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [16], sg_data = [16]>>
+
+    %4 = arith.cmpi eq, %id, %c10 : index
+    // CHECK-LABEL: scf.if
+    //  CHECK-SAME: (vector<16xf32>)
+    %5 = scf.if %4 -> (vector<256xf32>) {
+      // CHECK-LABEL: xegpu.load_nd
+      //  CHECK-SAME: !xegpu.tensor_desc<16xf32> -> vector<16xf32>
+      %2 = xegpu.load_nd %0 : !xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [16], sg_data = [16]>> -> vector<256xf32>
+      // CHECK-LABEL: scf.yield
+      //  CHECK-SAME: vector<16xf32>
+      scf.yield %2 : vector<256xf32>
+    } else {
+      // CHECK-LABEL: xegpu.load_nd
+      //  CHECK-SAME: !xegpu.tensor_desc<16xf32> -> vector<16xf32>
+      %3 = xegpu.load_nd %1 : !xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [16], sg_data = [16]>> -> vector<256xf32>
+      // CHECK-LABEL: scf.yield
+      //  CHECK-SAME: vector<16xf32>
+      scf.yield %3 : vector<256xf32>
+    } {layout_result_0 = #xegpu.layout<sg_layout = [16], sg_data = [16]>}
+    xegpu.store_nd %5, %0 : vector<256xf32>, !xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [16], sg_data = [16]>>
+    gpu.return
+  }
+
+  gpu.func @test_scf_if_tensor_desc(%arg0: memref<1024xf32>, %arg1: memref<1024xf32>) {
+    %c10 = arith.constant 10 : index
+    %id = gpu.subgroup_id : index
+
+    %t = xegpu.create_nd_tdesc %arg0[0] : memref<1024xf32> -> !xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [16], sg_data = [16]>>
+    %d = xegpu.load_nd %t : !xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [16], sg_data = [16]>> -> vector<256xf32>
+
+    %0 = arith.cmpi eq, %id, %c10 : index
+    // CHECK-LABEL: scf.if
+    //  CHECK-SAME: !xegpu.tensor_desc<16xf32>
+    %1 = scf.if %0 -> (!xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [16], sg_data = [16]>>) {
+      // CHECK-LABEL: xegpu.create_nd_tdesc
+      //  CHECK-SAME: memref<1024xf32> -> !xegpu.tensor_desc<16xf32>
+      %2 = xegpu.create_nd_tdesc %arg0[0] : memref<1024xf32> -> !xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [16], sg_data = [16]>>
+      // CHECK-LABEL: scf.yield
+      //  CHECK-SAME: !xegpu.tensor_desc<16xf32>
+      scf.yield %2 : !xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [16], sg_data = [16]>>
+    } else {
+      // CHECK-LABEL: xegpu.create_nd_tdesc
+      //  CHECK-SAME: memref<1024xf32> -> !xegpu.tensor_desc<16xf32>
+      %3 = xegpu.create_nd_tdesc %arg1[0] : memref<1024xf32> -> !xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [16], sg_data = [16]>>
+      // CHECK-LABEL: scf.yield
+      //  CHECK-SAME: !xegpu.tensor_desc<16xf32>
+      scf.yield %3 : !xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [16], sg_data = [16]>>
+    }
+    xegpu.store_nd %d, %1 : vector<256xf32>, !xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [16], sg_data = [16]>>
     gpu.return
   }
 
