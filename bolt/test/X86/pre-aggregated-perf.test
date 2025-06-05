@@ -57,6 +57,16 @@ RUN: llvm-bolt %t.exe -o %t.bolt.yaml --pa -p %p/Inputs/pre-aggregated.txt \
 RUN:   --aggregate-only --profile-format=yaml --profile-use-dfs
 RUN: cat %t.bolt.yaml | FileCheck %s -check-prefix=NEWFORMAT
 
+## Test pre-aggregated basic profile
+RUN: perf2bolt %t.exe -o %t --pa -p %p/Inputs/pre-aggregated-basic.txt -o %t.ba \
+RUN:   2>&1 | FileCheck %s --check-prefix=BASIC-ERROR
+RUN: perf2bolt %t.exe -o %t --pa -p %p/Inputs/pre-aggregated-basic.txt -o %t.ba.nl \
+RUN:   -nl 2>&1 | FileCheck %s --check-prefix=BASIC-SUCCESS
+RUN: FileCheck %s --input-file %t.ba.nl --check-prefix CHECK-BASIC-NL
+BASIC-ERROR: BOLT-INFO: 0 out of 7 functions in the binary (0.0%) have non-empty execution profile
+BASIC-SUCCESS: BOLT-INFO: 4 out of 7 functions in the binary (57.1%) have non-empty execution profile
+CHECK-BASIC-NL: no_lbr cycles
+
 PERF2BOLT: 0 [unknown] 7f36d18d60c0 1 main 53c 0 2
 PERF2BOLT: 1 main 451 1 SolveCubic 0 0 2
 PERF2BOLT: 1 main 490 0 [unknown] 4005f0 0 1

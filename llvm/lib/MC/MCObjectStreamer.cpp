@@ -586,7 +586,14 @@ void MCObjectStreamer::emitCodeAlignment(Align Alignment,
                                          const MCSubtargetInfo *STI,
                                          unsigned MaxBytesToEmit) {
   emitValueToAlignment(Alignment, 0, 1, MaxBytesToEmit);
-  cast<MCAlignFragment>(getCurrentFragment())->setEmitNops(true, STI);
+  auto *F = cast<MCAlignFragment>(getCurrentFragment());
+  F->setEmitNops(true, STI);
+  // With RISC-V style linker relaxation, mark the section as linker-relaxable
+  // if the alignment is larger than the minimum NOP size.
+  unsigned Size;
+  if (getAssembler().getBackend().shouldInsertExtraNopBytesForCodeAlign(*F,
+                                                                        Size))
+    getCurrentSectionOnly()->setLinkerRelaxable();
 }
 
 void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,

@@ -42,10 +42,6 @@ cir::TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
 #include "clang/AST/TypeNodes.inc"
       llvm_unreachable("non-canonical or dependent type in IR-generation");
 
-    case Type::ArrayParameter:
-    case Type::HLSLAttributedResource:
-      llvm_unreachable("NYI");
-
     case Type::Auto:
     case Type::DeducedTemplateSpecialization:
       llvm_unreachable("undeduced type in IR-generation");
@@ -66,6 +62,8 @@ cir::TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
     case Type::ObjCObjectPointer:
     case Type::Pipe:
     case Type::BitInt:
+    case Type::HLSLAttributedResource:
+    case Type::HLSLInlineSpirv:
       return cir::TEK_Scalar;
 
     // Complexes.
@@ -79,6 +77,7 @@ cir::TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
     case Type::Record:
     case Type::ObjCObject:
     case Type::ObjCInterface:
+    case Type::ArrayParameter:
       return cir::TEK_Aggregate;
 
     // We operate on atomic values according to their underlying type.
@@ -344,7 +343,9 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
 
   curFn = fn;
 
-  const auto *fd = dyn_cast_or_null<FunctionDecl>(gd.getDecl());
+  const Decl *d = gd.getDecl();
+  const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
+  curFuncDecl = d->getNonClosureContext();
 
   mlir::Block *entryBB = &fn.getBlocks().front();
   builder.setInsertionPointToStart(entryBB);
@@ -386,6 +387,24 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   if (!returnType->isVoidType())
     emitAndUpdateRetAlloca(returnType, getLoc(fd->getBody()->getEndLoc()),
                            getContext().getTypeAlignInChars(returnType));
+
+  if (isa_and_nonnull<CXXMethodDecl>(d) &&
+      cast<CXXMethodDecl>(d)->isInstance()) {
+    cgm.getCXXABI().emitInstanceFunctionProlog(loc, *this);
+
+    const auto *md = cast<CXXMethodDecl>(d);
+    if (md->getParent()->isLambda() && md->getOverloadedOperator() == OO_Call) {
+      cgm.errorNYI(loc, "lambda call operator");
+    } else {
+      // Not in a lambda; just use 'this' from the method.
+      // FIXME: Should we generate a new load for each use of 'this'? The fast
+      // register allocator would be happier...
+      cxxThisValue = cxxabiThisValue;
+    }
+
+    assert(!cir::MissingFeatures::sanitizers());
+    assert(!cir::MissingFeatures::emitTypeCheck());
+  }
 }
 
 void CIRGenFunction::finishFunction(SourceLocation endLoc) {}
