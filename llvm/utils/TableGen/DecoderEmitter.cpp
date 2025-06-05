@@ -222,8 +222,9 @@ public:
   DecoderEmitter(const RecordKeeper &R, StringRef PredicateNamespace)
       : RK(R), Target(R), PredicateNamespace(PredicateNamespace) {}
 
-  // Emit the decoder state machine table.
-  void emitTable(formatted_raw_ostream &OS, DecoderTable &Table, indent Indent,
+  // Emit the decoder state machine table. Return true if any `TryDecode` ops
+  // were generated.
+  bool emitTable(formatted_raw_ostream &OS, DecoderTable &Table, indent Indent,
                  unsigned BitWidth, StringRef Namespace,
                  const EncodingIDsVec &EncodingIDs) const;
   void emitInstrLenTable(formatted_raw_ostream &OS,
@@ -827,7 +828,7 @@ unsigned Filter::usefulness() const {
 //////////////////////////////////
 
 // Emit the decoder state machine table.
-void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
+bool DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
                                indent Indent, unsigned BitWidth,
                                StringRef Namespace,
                                const EncodingIDsVec &EncodingIDs) const {
@@ -883,6 +884,8 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
     if (*(I + NumToSkip) == MCD::OPC_Fail)
       OS << " (Fail)";
   };
+
+  bool HasTryDecode = false;
 
   while (I != E) {
     assert(I < E && "incomplete decode table entry!");
@@ -964,6 +967,7 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
     case MCD::OPC_TryDecodeOrFail: {
       bool IsFail = DecoderOp == MCD::OPC_TryDecodeOrFail;
       bool IsTry = DecoderOp == MCD::OPC_TryDecode || IsFail;
+      HasTryDecode |= IsTry;
       // Decode the Opcode value.
       const char *ErrMsg = nullptr;
       unsigned Opc = decodeULEB128(&*I, nullptr, EndPtr, &ErrMsg);
@@ -1027,6 +1031,8 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
   Indent -= 2;
 
   OS << Indent << "};\n\n";
+
+  return HasTryDecode;
 }
 
 void DecoderEmitter::emitInstrLenTable(formatted_raw_ostream &OS,
@@ -2217,8 +2223,8 @@ static void insertBits(InsnType &field, InsnType bits, unsigned startBit,
 
 // emitDecodeInstruction - Emit the templated helper function
 // decodeInstruction().
-static void emitDecodeInstruction(formatted_raw_ostream &OS,
-                                  bool IsVarLenInst) {
+static void emitDecodeInstruction(formatted_raw_ostream &OS, bool IsVarLenInst,
+                                  bool HasTryDecode) {
   OS << R"(
 static unsigned decodeNumToSkip(const uint8_t *&Ptr) {
   unsigned NumToSkip = *Ptr++;
@@ -2364,7 +2370,9 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
                    << ", using decoder " << DecodeIdx << ": "
                    << (S != MCDisassembler::Fail ? "PASS\n" : "FAIL\n"));
       return S;
-    }
+    })";
+  if (HasTryDecode) {
+    OS << R"(
     case MCD::OPC_TryDecode:
     case MCD::OPC_TryDecodeOrFail: {
       bool IsFail = DecoderOp == MCD::OPC_TryDecodeOrFail;
@@ -2399,7 +2407,9 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       // set before the decode attempt.
       S = MCDisassembler::Success;
       break;
-    }
+    })";
+  }
+  OS << R"(
     case MCD::OPC_SoftFail: {
       // Decode the mask values.
       uint64_t PositiveMask = decodeULEB128AndIncUnsafe(Ptr);
@@ -2609,6 +2619,7 @@ namespace {
   }
 
   DecoderTableInfo TableInfo;
+  bool HasTryDecode = false;
   for (const auto &Opc : OpcMap) {
     // Emit the decoder for this namespace+width combination.
     ArrayRef<EncodingAndInst> NumberedEncodingsRef(NumberedEncodings.data(),
@@ -2634,8 +2645,8 @@ namespace {
     TableInfo.Table.push_back(MCD::OPC_Fail);
 
     // Print the table to the output stream.
-    emitTable(OS, TableInfo.Table, indent(0), FC.getBitWidth(), Opc.first.first,
-              Opc.second);
+    HasTryDecode |= emitTable(OS, TableInfo.Table, indent(0), FC.getBitWidth(),
+                              Opc.first.first, Opc.second);
   }
 
   // For variable instruction, we emit a instruction length table
@@ -2650,7 +2661,7 @@ namespace {
   emitDecoderFunction(OS, TableInfo.Decoders, indent(0));
 
   // Emit the main entry point for the decoder, decodeInstruction().
-  emitDecodeInstruction(OS, IsVarLenInst);
+  emitDecodeInstruction(OS, IsVarLenInst, HasTryDecode);
 
   OS << "\n} // namespace\n";
 }
