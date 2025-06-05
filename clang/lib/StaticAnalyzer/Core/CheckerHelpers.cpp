@@ -134,14 +134,14 @@ std::optional<int> tryExpandAsInteger(StringRef Macro, const Preprocessor &PP) {
     return std::nullopt;
 
   bool InvalidSpelling = false;
+  SmallVector<char> Buffer(T.getLength());
   // `Preprocessor::getSpelling` can get the spelling of the token regardless of
   // whether the macro is defined in a PCH or not:
-  std::string Spelling = PP.getSpelling(T, &InvalidSpelling);
+  StringRef ValueStr = PP.getSpelling(T, Buffer, &InvalidSpelling);
 
   if (InvalidSpelling)
     return std::nullopt;
 
-  StringRef ValueStr(Spelling);
   llvm::APInt IntValue;
   constexpr unsigned AutoSenseRadix = 0;
   if (ValueStr.getAsInteger(AutoSenseRadix, IntValue))
