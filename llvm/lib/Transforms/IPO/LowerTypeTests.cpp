@@ -782,9 +782,8 @@ Value *LowerTypeTestsModule::lowerTypeTestCall(Metadata *TypeId, CallInst *CI,
   // result, causing the comparison to fail if they are nonzero. The rotate
   // also conveniently gives us a bit offset to use during the load from
   // the bitset.
-  Value *BitOffset = B.CreateIntrinsic(
-      IntPtrTy, Intrinsic::fshr,
-      {PtrOffset, PtrOffset, B.CreateZExt(TIL.AlignLog2, IntPtrTy)});
+  Value *BitOffset = B.CreateIntrinsic(IntPtrTy, Intrinsic::fshr,
+                                       {PtrOffset, PtrOffset, TIL.AlignLog2});
 
   Value *OffsetInRange = B.CreateICmpULE(BitOffset, TIL.SizeM1);
 
@@ -1036,7 +1035,7 @@ LowerTypeTestsModule::importTypeId(StringRef TypeId) {
   if (TIL.TheKind == TypeTestResolution::ByteArray ||
       TIL.TheKind == TypeTestResolution::Inline ||
       TIL.TheKind == TypeTestResolution::AllOnes) {
-    TIL.AlignLog2 = ImportConstant("align", TTRes.AlignLog2, 8, Int8Ty);
+    TIL.AlignLog2 = ImportConstant("align", TTRes.AlignLog2, 8, IntPtrTy);
     TIL.SizeM1 =
         ImportConstant("size_m1", TTRes.SizeM1, TTRes.SizeM1BitWidth, IntPtrTy);
   }
@@ -1157,7 +1156,7 @@ void LowerTypeTestsModule::lowerTypeTestCalls(
     TypeIdLowering TIL;
     TIL.OffsetedGlobal = ConstantExpr::getGetElementPtr(
         Int8Ty, CombinedGlobalAddr, ConstantInt::get(IntPtrTy, BSI.ByteOffset)),
-    TIL.AlignLog2 = ConstantInt::get(Int8Ty, BSI.AlignLog2);
+    TIL.AlignLog2 = ConstantInt::get(IntPtrTy, BSI.AlignLog2);
     TIL.SizeM1 = ConstantInt::get(IntPtrTy, BSI.BitSize - 1);
     if (BSI.isAllOnes()) {
       TIL.TheKind = (BSI.BitSize == 1) ? TypeTestResolution::Single
