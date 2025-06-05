@@ -102,7 +102,7 @@ CFIAnalysis::CFIAnalysis(MCContext &Context, MCInstrInfo const &MCII,
   }
 }
 
-void CFIAnalysis::update(MCInst &Inst,
+void CFIAnalysis::update(const MCInst &Inst,
                          ArrayRef<MCCFIInstruction> CFIDirectives) {
   const MCInstrDesc &MCInstInfo = MCII.get(Inst.getOpcode());
   CFIState AfterState(State);

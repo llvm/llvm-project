@@ -46,7 +46,7 @@ public:
               MCInstrAnalysis *MCIA,
               ArrayRef<MCCFIInstruction> PrologueCFIDirectives);
 
-  void update(MCInst &Inst, ArrayRef<MCCFIInstruction> CFIDirectives);
+  void update(const MCInst &Inst, ArrayRef<MCCFIInstruction> CFIDirectives);
 
 private:
   void checkRegDiff(const MCInst &Inst, DWARFRegType Reg,
