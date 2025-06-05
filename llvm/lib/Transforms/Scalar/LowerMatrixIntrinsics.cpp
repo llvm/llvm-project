@@ -2211,18 +2211,19 @@ public:
     MatrixTy A = getMatrix(OpA, Shape, Builder);
     MatrixTy B = getMatrix(OpB, Shape, Builder);
 
+    Value *CondV[2];
     if (isa<FixedVectorType>(Cond->getType())) {
       MatrixTy C = getMatrix(Cond, Shape, Builder);
-      for (unsigned I = 0; I < Shape.getNumVectors(); ++I) {
-        auto *Sel = Builder.CreateSelect(C.getVector(I), A.getVector(I), B.getVector(I));
-        Result.addVector(Sel);
-      }
+      CondV[0] = C.getVector(0);
+      CondV[1] = C.getVector(1);
     } else {
-      for (unsigned I = 0; I < Shape.getNumVectors(); ++I) {
-        auto *Sel = Builder.CreateSelect(Cond, A.getVector(I), B.getVector(I));
-        Result.addVector(Sel);
-      }
+      CondV[0] = Cond;
+      CondV[1] = Cond;
     }
+
+    for (unsigned I = 0, E = Shape.getNumVectors(); I != E; ++I)
+      Result.addVector(
+          Builder.CreateSelect(CondV[I], A.getVector(I), B.getVector(I)));
 
     finalizeLowering(Inst,
                      Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
