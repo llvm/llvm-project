@@ -229,8 +229,8 @@ class OpenACCClauseCIREmitter final
     llvm::SmallVector<mlir::Value> bounds;
 
     std::string exprString;
-    llvm::raw_string_ostream OS(exprString);
-    e->printPretty(OS, nullptr, cgf.getContext().getPrintingPolicy());
+    llvm::raw_string_ostream os(exprString);
+    e->printPretty(os, nullptr, cgf.getContext().getPrintingPolicy());
 
     // Assemble the list of bounds.
     while (isa<ArraySectionExpr, ArraySubscriptExpr>(curVarExpr)) {
