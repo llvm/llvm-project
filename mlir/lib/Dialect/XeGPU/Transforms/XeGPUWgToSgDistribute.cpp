@@ -398,6 +398,11 @@ struct XeGPUWgToSgDistributePass
 } // namespace
 
 void XeGPUWgToSgDistributePass::runOnOperation() {
+  // Track existing UnrealizedConversionCastOps
+  SmallVector<Operation *> existingCastOps;
+  getOperation()->walk([&](UnrealizedConversionCastOp castOp) {
+    existingCastOps.push_back(castOp.getOperation());
+  });
 
   TypeConverter converter;
   converter.addConversion([&](Type type) -> Type { return type; });
@@ -478,7 +483,10 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
     return isLegal(layout);
   });
 
-  target.addIllegalOp<UnrealizedConversionCastOp>();
+  target.addDynamicallyLegalOp<UnrealizedConversionCastOp>(
+      [=](UnrealizedConversionCastOp op) {
+        return llvm::is_contained(existingCastOps, op.getOperation());
+      });
 
   target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
 
