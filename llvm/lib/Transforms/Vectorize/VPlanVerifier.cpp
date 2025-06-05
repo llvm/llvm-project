@@ -458,12 +458,6 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
     return false;
   }
 
-  if (!isa<VPCanonicalIVPHIRecipe>(&*Entry->begin())) {
-    errs() << "VPlan vector loop header does not start with a "
-              "VPCanonicalIVPHIRecipe\n";
-    return false;
-  }
-
   const VPBasicBlock *Exiting = dyn_cast<VPBasicBlock>(TopRegion->getExiting());
   if (!Exiting) {
     errs() << "VPlan exiting block is not a VPBasicBlock\n";
