@@ -228,13 +228,15 @@ void VPPredicator::createSwitchEdgeMasks(VPInstruction *SI) {
 }
 
 void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
-  for (VPRecipeBase &R : make_early_inc_range(VPBB->phis())) {
+  SmallVector<VPWidenPHIRecipe *> Phis;
+  for (VPRecipeBase &R : VPBB->phis())
+    Phis.push_back(cast<VPWidenPHIRecipe>(&R));
+  for (VPWidenPHIRecipe *PhiR : Phis) {
     // The non-header Phi is converted into a Blend recipe below,
     // so we don't have to worry about the insertion order and we can just use
     // the builder. At this point we generate the predication tree. There may
     // be duplications since this is a simple recursive scan, but future
     // optimizations will clean it up.
-    auto *PhiR = cast<VPWidenPHIRecipe>(&R);
 
     SmallVector<VPValue *, 2> OperandsWithMask;
     unsigned NumIncoming = PhiR->getNumIncoming();

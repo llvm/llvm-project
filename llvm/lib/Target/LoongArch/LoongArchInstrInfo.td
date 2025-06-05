@@ -524,22 +524,22 @@ def ImmSubFrom32 : SDNodeXForm<imm, [{
 
 // Return the lowest 12 bits of the signed immediate.
 def LO12: SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(SignExtend64<12>(N->getSExtValue()),
-                                   SDLoc(N), N->getValueType(0));
+  return CurDAG->getSignedTargetConstant(SignExtend64<12>(N->getSExtValue()),
+                                         SDLoc(N), N->getValueType(0));
 }]>;
 
 // Return the higher 16 bits of the signed immediate.
 def HI16 : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue() >> 16, SDLoc(N),
-                                   N->getValueType(0));
+  return CurDAG->getSignedTargetConstant(N->getSExtValue() >> 16, SDLoc(N),
+                                         N->getValueType(0));
 }]>;
 
 // Return the higher 16 bits of the signed immediate, adjusted for use within an
 // `addu16i.d + addi` pair.
 def HI16ForAddu16idAddiPair: SDNodeXForm<imm, [{
   auto Imm = N->getSExtValue();
-  return CurDAG->getTargetConstant((Imm - SignExtend64<12>(Imm)) >> 16,
-                                   SDLoc(N), N->getValueType(0));
+  return CurDAG->getSignedTargetConstant((Imm - SignExtend64<12>(Imm)) >> 16,
+                                          SDLoc(N), N->getValueType(0));
 }]>;
 
 def BaseAddr : ComplexPattern<iPTR, 1, "SelectBaseAddr">;
@@ -2445,7 +2445,7 @@ let hasSideEffects = 1, Constraints = "$rd = $dst" in {
 def CSRWR : FmtCSR<0x04000020, (outs GPR:$dst),
                    (ins GPR:$rd, uimm14:$csr_num), "$rd, $csr_num">;
 def CSRXCHG : FmtCSRXCHG<0x04000000, (outs GPR:$dst),
-                         (ins GPR:$rd, GPR:$rj, uimm14:$csr_num),
+                         (ins GPR:$rd, GPRNoR0R1:$rj, uimm14:$csr_num),
                          "$rd, $rj, $csr_num">;
 } // hasSideEffects = 1, Constraints = "$rd = $dst"
 
@@ -2492,8 +2492,8 @@ def IDLE : MISC_I15<0x06488000>;
 def : Pat<(loongarch_csrrd uimm14:$imm14), (CSRRD uimm14:$imm14)>;
 def : Pat<(loongarch_csrwr GPR:$rd, uimm14:$imm14),
           (CSRWR GPR:$rd, uimm14:$imm14)>;
-def : Pat<(loongarch_csrxchg GPR:$rd, GPR:$rj, uimm14:$imm14),
-          (CSRXCHG GPR:$rd, GPR:$rj, uimm14:$imm14)>;
+def : Pat<(loongarch_csrxchg GPR:$rd, GPRNoR0R1:$rj, uimm14:$imm14),
+          (CSRXCHG GPR:$rd, GPRNoR0R1:$rj, uimm14:$imm14)>;
 
 def : Pat<(loongarch_iocsrrd_b GPR:$rj), (IOCSRRD_B GPR:$rj)>;
 def : Pat<(loongarch_iocsrrd_h GPR:$rj), (IOCSRRD_H GPR:$rj)>;

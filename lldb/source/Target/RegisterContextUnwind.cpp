@@ -880,10 +880,9 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
     CallFrameInfo *object_file_unwind =
         pc_module_sp->GetUnwindTable().GetObjectFileUnwindInfo();
     if (object_file_unwind) {
-      auto unwind_plan_sp =
-          std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
-      if (object_file_unwind->GetUnwindPlan(m_current_pc, *unwind_plan_sp))
-        return unwind_plan_sp;
+      if (std::unique_ptr<UnwindPlan> plan_up =
+              object_file_unwind->GetUnwindPlan(m_current_pc))
+        return plan_up;
     }
 
     return arch_default_unwind_plan_sp;

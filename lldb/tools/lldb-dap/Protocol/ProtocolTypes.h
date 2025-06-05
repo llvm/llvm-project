@@ -677,6 +677,8 @@ struct DisassembledInstruction {
   /// addresses may be presented is 'invalid.'
   /// Values: 'normal', 'invalid'
   std::optional<PresentationHint> presentationHint;
+
+  DisassembledInstruction() : address(0) {}
 };
 bool fromJSON(const llvm::json::Value &,
               DisassembledInstruction::PresentationHint &, llvm::json::Path);

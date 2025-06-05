@@ -114,6 +114,7 @@ cl::list<LVAttributeKind> cmdline::AttributeOptions(
                       "Element declaration and definition references."),
            clEnumValN(LVAttributeKind::Register, "register",
                       "Processor register names."),
+           clEnumValN(LVAttributeKind::Size, "size", "Type sizes."),
            clEnumValN(LVAttributeKind::Standard, "standard",
                       "Basic attributes alias."),
            clEnumValN(LVAttributeKind::Subrange, "subrange",
