@@ -162,7 +162,7 @@ bool LanguageFeatureControl::ApplyCliOption(std::string input) {
     negated = true;
     input = input.substr(3);
   }
-  if (auto it {cliOptions_.find(input)}; it != cliOptions_.end()) {
+  if (auto it{cliOptions_.find(input)}; it != cliOptions_.end()) {
     if (std::holds_alternative<LanguageFeature>(it->second)) {
       EnableWarning(std::get<LanguageFeature>(it->second), !negated);
       return true;
