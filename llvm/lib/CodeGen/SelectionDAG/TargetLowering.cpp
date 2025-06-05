@@ -429,8 +429,20 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
     // Update Chain.
     Chain = Call.second;
   } else {
+    assert(CCCode == (ShouldInvertCC ? ISD::SETEQ : ISD::SETNE) &&
+           "unordered call should be simple boolean");
+
     EVT SetCCVT =
         getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), RetVT);
+    if (RetVT == SetCCVT &&
+        getBooleanContents(RetVT) == ZeroOrOneBooleanContent) {
+      // FIXME: Checking the type matches is a hack in case the calling
+      // convention lowering inserted some instructions after the
+      // CopyFromReg. Combines fail to look through the AssertZext.
+      NewLHS = DAG.getNode(ISD::AssertZext, dl, RetVT, Call.first,
+                           DAG.getValueType(MVT::i1));
+    }
+
     SDValue Tmp = DAG.getSetCC(dl, SetCCVT, NewLHS, NewRHS, CCCode);
     auto Call2 = makeLibCall(DAG, LC2, RetVT, Ops, CallOptions, dl, Chain);
     CCCode = getCmpLibcallCC(LC2);
