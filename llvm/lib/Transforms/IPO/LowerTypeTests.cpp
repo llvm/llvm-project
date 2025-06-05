@@ -2525,6 +2525,7 @@ PreservedAnalyses SimplifyTypeTestsPass::run(Module &M,
           CI->replaceAllUsesWith(ConstantInt::getTrue(M.getContext()));
           CI->eraseFromParent();
           Changed = true;
+          continue;
         }
       }
       auto *CE = dyn_cast<ConstantExpr>(U);
