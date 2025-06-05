@@ -3173,7 +3173,7 @@ std::optional<StringRef> tools::ParseMPreferVectorWidthOption(
     ArgStringList &CmdArgs, bool isCompilerDriver) {
   // If this was invoked by the Compiler Driver, we pass through the option
   // as-is. Otherwise, if this is the Frontend Driver, we want just the value.
-  StringRef Out = (isCompilerDriver) ? "-mprefer-vector-width=" : "";
+  StringRef Out = isCompilerDriver ? "-mprefer-vector-width=" : "";
 
   Arg *A = Args.getLastArg(clang::driver::options::OPT_mprefer_vector_width_EQ);
   if (!A)
