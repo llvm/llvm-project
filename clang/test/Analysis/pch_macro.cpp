@@ -2,13 +2,18 @@
 // RUN: mkdir -p %t
 // RUN: split-file %s %t
 
-// RUN: %clang_cc1 -x c++ -triple x86_64-apple-macosx10.15.0 -emit-pch -o %t/header.pch %t/header.h
-// RUN: %clang_analyze_cc1 -triple x86_64-apple-macosx10.15.0 -include-pch %t/header.pch \
-// RUN:   -analyzer-checker=core,apiModeling,unix.StdCLibraryFunctions -verify %t/main.cpp
-//
-// RUN: %clang_cc1 -x c++ -emit-pch -o %t/header.pch %t/header.h
-// RUN: %clang_analyze_cc1 -include-pch %t/header.pch \
-// RUN:   -analyzer-checker=core,apiModeling,unix.StdCLibraryFunctions -verify %t/main.cpp
+// DEFINE: %{emit-pch-action} = \
+// DEFINE:   %clang_cc1 -x c++ -emit-pch -o %t/header.pch %t/header.h
+
+// DEFINE: %{analyze-action} = \
+// DEFINE:   %clang_analyze_cc1 -include-pch %t/header.pch \
+// DEFINE:   -analyzer-checker=core,apiModeling,unix.StdCLibraryFunctions \
+// DEFINE:   -verify %t/main.cpp
+
+// RUN: %{emit-pch-action} -triple x86_64-apple-macosx10.15.0
+// RUN: %{analyze-action}  -triple x86_64-apple-macosx10.15.0
+// RUN: %{emit-pch-action}
+// RUN: %{analyze-action}
 
 
 //--- header.h
