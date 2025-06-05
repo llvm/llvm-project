@@ -2706,6 +2706,14 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
            "Expected small code model");
     auto Op1 = BaseMI->getOperand(1);
     auto Op2 = I.getOperand(2);
+    if (Subtarget->genLongCalls() && Op1.isSymbol()) {
+      auto MovAddr =
+          MIB.buildInstr(AArch64::MOVaddr, {I.getOperand(0)}, {})
+              .addExternalSymbol(Op1.getSymbolName(), Op1.getTargetFlags())
+              .addExternalSymbol(Op2.getSymbolName(), Op2.getTargetFlags());
+      I.eraseFromParent();
+      return constrainSelectedInstRegOperands(*MovAddr, TII, TRI, RBI);
+    }
     auto MovAddr = MIB.buildInstr(AArch64::MOVaddr, {I.getOperand(0)}, {})
                        .addGlobalAddress(Op1.getGlobal(), Op1.getOffset(),
                                          Op1.getTargetFlags())

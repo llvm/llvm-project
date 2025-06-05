@@ -1351,6 +1351,17 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       DstOp(getLLTForType(*F.getType(), DL)).addDefToMIB(MRI, MIB);
       MIB.addExternalSymbol(Info.Callee.getSymbolName(), AArch64II::MO_GOT);
       Info.Callee = MachineOperand::CreateReg(MIB.getReg(0), false);
+    } else if (Subtarget.genLongCalls()) {
+      // If -mlong-calls are enabled, materialize the symbol/global with MO_PAGE
+      // to allow ADRP+LDR relocation sequence for calls beyond 128MB range.
+      auto MIB = MIRBuilder.buildInstr(TargetOpcode::G_GLOBAL_VALUE);
+      DstOp(getLLTForType(*F.getType(), DL)).addDefToMIB(MRI, MIB);
+      if (Info.Callee.isGlobal()) {
+        const GlobalValue *GV = Info.Callee.getGlobal();
+        MIB.addGlobalAddress(GV, 0, AArch64II::MO_PAGE);
+      } else if (Info.Callee.isSymbol())
+        MIB.addExternalSymbol(Info.Callee.getSymbolName(), AArch64II::MO_PAGE);
+      Info.Callee = MachineOperand::CreateReg(MIB.getReg(0), false);
     }
     Opc = getCallOpcode(MF, Info.Callee.isReg(), false, Info.PAI, MRI);
   }

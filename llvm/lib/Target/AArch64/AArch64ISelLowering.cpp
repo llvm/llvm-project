@@ -9286,8 +9286,12 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       Callee = DAG.getTargetGlobalAddress(CalledGlobal, DL, PtrVT, 0, OpFlags);
       Callee = DAG.getNode(AArch64ISD::LOADgot, DL, PtrVT, Callee);
     } else {
-      const GlobalValue *GV = G->getGlobal();
-      Callee = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, OpFlags);
+      if (Subtarget->genLongCalls())
+        Callee = getAddr(G, DAG, OpFlags);
+      else {
+        const GlobalValue *GV = G->getGlobal();
+        Callee = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, OpFlags);
+      }
     }
   } else if (auto *S = dyn_cast<ExternalSymbolSDNode>(Callee)) {
     bool UseGot = (getTargetMachine().getCodeModel() == CodeModel::Large &&
@@ -9298,7 +9302,10 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       Callee = DAG.getTargetExternalSymbol(Sym, PtrVT, AArch64II::MO_GOT);
       Callee = DAG.getNode(AArch64ISD::LOADgot, DL, PtrVT, Callee);
     } else {
-      Callee = DAG.getTargetExternalSymbol(Sym, PtrVT, 0);
+      if (Subtarget->genLongCalls())
+        Callee = getAddr(S, DAG, 0);
+      else
+        Callee = DAG.getTargetExternalSymbol(Sym, PtrVT, 0);
     }
   }
 

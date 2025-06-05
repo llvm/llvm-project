@@ -42,7 +42,9 @@ private:
   bool legalizeShlAshrLshr(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &MIRBuilder,
                            GISelChangeObserver &Observer) const;
-
+  bool legalizeSmallCMSymbol(MachineInstr &MI, MachineRegisterInfo &MRI,
+                             MachineIRBuilder &MIRBuilder,
+                             GISelChangeObserver &Observer) const;
   bool legalizeSmallCMGlobalValue(MachineInstr &MI, MachineRegisterInfo &MRI,
                                   MachineIRBuilder &MIRBuilder,
                                   GISelChangeObserver &Observer) const;
