@@ -31,16 +31,6 @@ option:
 
   $ clang -cc1 -include-pch test.h.pch test.c -o test.s
 
-To ignore PCH options, use the option `-ignore-pch`:
-
-.. code-block:: bash
-
-  $ clang -cc1 test.h -emit-pch -ignore-pch -o test.h.pch
-  $ clang -cc1 -include-pch test.h.pch -ignore-pch test.c -o test.s
-
-This option disables precompiled headers, overrides -emit-pch and -include-pch.
-test.h.pch is not generated and not used as a prefix header.
-
 Design Philosophy
 -----------------
 

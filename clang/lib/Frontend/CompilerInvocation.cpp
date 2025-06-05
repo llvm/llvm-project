@@ -2982,7 +2982,6 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
 #undef FRONTEND_OPTION_WITH_MARSHALLING
 
   Opts.ProgramAction = frontend::ParseSyntaxOnly;
-
   if (const Arg *A = Args.getLastArg(OPT_Action_Group)) {
     OptSpecifier Opt = OptSpecifier(A->getOption().getID());
     std::optional<frontend::ActionKind> ProgramAction = getFrontendAction(Opt);

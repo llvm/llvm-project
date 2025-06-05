@@ -4286,14 +4286,13 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
     YcArg = YuArg = nullptr;
   }
 
-  Arg *IncludePCHArg = Args.getLastArg(options::OPT_include_pch);
-  if (IncludePCHArg && (FinalPhase == phases::Preprocess ||
-                        Args.hasArg(options::OPT_ignore_pch))) {
+  if (Args.hasArg(options::OPT_include_pch) &&
+      (FinalPhase == phases::Preprocess ||
+       Args.hasArg(options::OPT_ignore_pch))) {
     // If only preprocessing or -ignore-pch is used, -include-pch is disabled.
     // Since -emit-pch is CC1option, it will not be added to command argments if
     // -ignore-pch is used.
     Args.eraseArg(options::OPT_include_pch);
-    IncludePCHArg = nullptr;
   }
 
   bool LinkOnly = phases::Link == FinalPhase && Inputs.size() > 0;
