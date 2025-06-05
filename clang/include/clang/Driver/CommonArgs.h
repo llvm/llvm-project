@@ -271,10 +271,9 @@ void handleVectorizeLoopsArgs(const llvm::opt::ArgList &Args,
 void handleVectorizeSLPArgs(const llvm::opt::ArgList &Args,
                             llvm::opt::ArgStringList &CmdArgs);
 
-void ParseMPreferVectorWidthOption(clang::DiagnosticsEngine &Diags,
-                                   const llvm::opt::ArgList &Args,
-                                   llvm::opt::ArgStringList &CmdArgs,
-                                   bool isCompilerDriver);
+std::optional<StringRef> ParseMPreferVectorWidthOption(
+    clang::DiagnosticsEngine &Diags, const llvm::opt::ArgList &Args,
+    llvm::opt::ArgStringList &CmdArgs, bool isCompilerDriver);
 
 } // end namespace tools
 } // end namespace driver
