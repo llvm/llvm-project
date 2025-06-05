@@ -59,7 +59,7 @@ public:
   struct Chunk {
     int64_t Begin;
     int64_t End;
-    LLVM_ABI void print(llvm::raw_ostream &OS) const;
+    LLVM_ABI void print(llvm::raw_ostream &OS);
     bool contains(int64_t Idx) const { return Idx >= Begin && Idx <= End; }
   };
 
