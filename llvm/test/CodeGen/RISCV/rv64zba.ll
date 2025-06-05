@@ -1049,7 +1049,7 @@ define i64 @addmul4230(i64 %a, i64 %b) {
 ; CHECK-LABEL: addmul4230:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a2, 1
-; CHECK-NEXT:    addiw a2, a2, 134
+; CHECK-NEXT:    addi a2, a2, 134
 ; CHECK-NEXT:    mul a0, a0, a2
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    ret
@@ -2061,7 +2061,7 @@ define i64 @add4104(i64 %a) {
 ; RV64I-LABEL: add4104:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a1, 1
-; RV64I-NEXT:    addiw a1, a1, 8
+; RV64I-NEXT:    addi a1, a1, 8
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -2084,7 +2084,7 @@ define i64 @add4104_2(i64 %a) {
 ; RV64I-LABEL: add4104_2:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a1, 1
-; RV64I-NEXT:    addiw a1, a1, 8
+; RV64I-NEXT:    addi a1, a1, 8
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -2107,7 +2107,7 @@ define i64 @add8208(i64 %a) {
 ; RV64I-LABEL: add8208:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a1, 2
-; RV64I-NEXT:    addiw a1, a1, 16
+; RV64I-NEXT:    addi a1, a1, 16
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -3688,15 +3688,14 @@ define ptr @test_gep_gep_dont_crash(ptr %p, i64 %a1, i64 %a2) {
 ; RV64ZBA-LABEL: test_gep_gep_dont_crash:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    srliw a2, a2, 6
-; RV64ZBA-NEXT:    add a1, a2, a1
+; RV64ZBA-NEXT:    sh3add a0, a2, a0
 ; RV64ZBA-NEXT:    sh3add a0, a1, a0
 ; RV64ZBA-NEXT:    ret
 ;
 ; RV64XANDESPERF-LABEL: test_gep_gep_dont_crash:
 ; RV64XANDESPERF:       # %bb.0:
 ; RV64XANDESPERF-NEXT:    srliw a2, a2, 6
-; RV64XANDESPERF-NEXT:    slli a2, a2, 3
-; RV64XANDESPERF-NEXT:    add a0, a0, a2
+; RV64XANDESPERF-NEXT:    nds.lea.d a0, a0, a2
 ; RV64XANDESPERF-NEXT:    nds.lea.d a0, a0, a1
 ; RV64XANDESPERF-NEXT:    ret
   %lshr = lshr i64 %a2, 6
@@ -4099,7 +4098,7 @@ define i64 @srli_slli_i16(i64 %1) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    lui a1, 256
-; CHECK-NEXT:    addiw a1, a1, -16
+; CHECK-NEXT:    addi a1, a1, -16
 ; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    ret
 entry:
@@ -4273,4 +4272,143 @@ entry:
   %add = add i64 %x, 4294967294
   %and = and i64 %add, 4294967295
   ret i64 %and
+}
+
+define ptr @shl_and_gep(ptr %p, i64 %i) {
+; RV64I-LABEL: shl_and_gep:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srliw a1, a1, 2
+; RV64I-NEXT:    slli a1, a1, 3
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: shl_and_gep:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    srliw a1, a1, 2
+; RV64ZBA-NEXT:    sh3add a0, a1, a0
+; RV64ZBA-NEXT:    ret
+;
+; RV64XANDESPERF-LABEL: shl_and_gep:
+; RV64XANDESPERF:       # %bb.0:
+; RV64XANDESPERF-NEXT:    srliw a1, a1, 2
+; RV64XANDESPERF-NEXT:    nds.lea.d a0, a0, a1
+; RV64XANDESPERF-NEXT:    ret
+  %shl = shl i64 %i, 1
+  %and = and i64 %shl, 8589934584
+  %gep = getelementptr i8, ptr %p, i64 %and
+  ret ptr %gep
+}
+
+define ptr @shr_and_gep(ptr %p, i64 %i) {
+; RV64I-LABEL: shr_and_gep:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srliw a1, a1, 6
+; RV64I-NEXT:    slli a1, a1, 1
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: shr_and_gep:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    srliw a1, a1, 6
+; RV64ZBA-NEXT:    sh1add a0, a1, a0
+; RV64ZBA-NEXT:    ret
+;
+; RV64XANDESPERF-LABEL: shr_and_gep:
+; RV64XANDESPERF:       # %bb.0:
+; RV64XANDESPERF-NEXT:    srliw a1, a1, 6
+; RV64XANDESPERF-NEXT:    nds.lea.h a0, a0, a1
+; RV64XANDESPERF-NEXT:    ret
+  %lshr = lshr i64 %i, 6
+  %and = and i64 %lshr, 67108863
+  %gep = getelementptr i16, ptr %p, i64 %and
+  ret ptr %gep
+}
+
+define ptr @slt_select_gep(ptr %p, i32 %y) {
+; RV64I-LABEL: slt_select_gep:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srli a1, a1, 28
+; RV64I-NEXT:    andi a1, a1, 8
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    addi a0, a0, 16
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: slt_select_gep:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    srliw a1, a1, 31
+; RV64ZBA-NEXT:    sh3add a0, a1, a0
+; RV64ZBA-NEXT:    addi a0, a0, 16
+; RV64ZBA-NEXT:    ret
+;
+; RV64XANDESPERF-LABEL: slt_select_gep:
+; RV64XANDESPERF:       # %bb.0:
+; RV64XANDESPERF-NEXT:    srliw a1, a1, 31
+; RV64XANDESPERF-NEXT:    nds.lea.d a0, a0, a1
+; RV64XANDESPERF-NEXT:    addi a0, a0, 16
+; RV64XANDESPERF-NEXT:    ret
+  %cmp = icmp slt i32 %y, 0
+  %select = select i1 %cmp, i64 24, i64 16
+  %gep = getelementptr i8, ptr %p, i64 %select
+  ret ptr %gep
+}
+
+define i32 @shr_and_add(i32 %x, i32 %y) {
+; RV64I-LABEL: shr_and_add:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srliw a1, a1, 9
+; RV64I-NEXT:    slli a1, a1, 2
+; RV64I-NEXT:    addw a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: shr_and_add:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    srliw a1, a1, 9
+; RV64ZBA-NEXT:    sh2add a0, a1, a0
+; RV64ZBA-NEXT:    sext.w a0, a0
+; RV64ZBA-NEXT:    ret
+;
+; RV64XANDESPERF-LABEL: shr_and_add:
+; RV64XANDESPERF:       # %bb.0:
+; RV64XANDESPERF-NEXT:    srliw a1, a1, 9
+; RV64XANDESPERF-NEXT:    nds.lea.w a0, a0, a1
+; RV64XANDESPERF-NEXT:    sext.w a0, a0
+; RV64XANDESPERF-NEXT:    ret
+  %lshr = lshr i32 %y, 7
+  %and = and i32 %lshr, 33554428
+  %add = add i32 %x, %and
+  ret i32 %add
+}
+
+define ptr @udiv1280_gep(ptr %p, i16 zeroext %i) {
+; RV64I-LABEL: udiv1280_gep:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a2, 13
+; RV64I-NEXT:    addi a2, a2, -819
+; RV64I-NEXT:    mul a1, a1, a2
+; RV64I-NEXT:    srliw a1, a1, 26
+; RV64I-NEXT:    slli a1, a1, 3
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: udiv1280_gep:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    lui a2, 13
+; RV64ZBA-NEXT:    addi a2, a2, -819
+; RV64ZBA-NEXT:    mul a1, a1, a2
+; RV64ZBA-NEXT:    srliw a1, a1, 26
+; RV64ZBA-NEXT:    sh3add a0, a1, a0
+; RV64ZBA-NEXT:    ret
+;
+; RV64XANDESPERF-LABEL: udiv1280_gep:
+; RV64XANDESPERF:       # %bb.0:
+; RV64XANDESPERF-NEXT:    lui a2, 13
+; RV64XANDESPERF-NEXT:    addi a2, a2, -819
+; RV64XANDESPERF-NEXT:    mul a1, a1, a2
+; RV64XANDESPERF-NEXT:    srliw a1, a1, 26
+; RV64XANDESPERF-NEXT:    nds.lea.d a0, a0, a1
+; RV64XANDESPERF-NEXT:    ret
+  %udiv = udiv i16 %i, 1280
+  %idx.ext = zext nneg i16 %udiv to i64
+  %add.ptr = getelementptr i64, ptr %p, i64 %idx.ext
+  ret ptr %add.ptr
 }

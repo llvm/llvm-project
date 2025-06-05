@@ -897,12 +897,13 @@ bool ClangUserExpression::AddArguments(ExecutionContext &exe_ctx,
     Status object_ptr_error;
 
     if (m_ctx_obj) {
-      AddressType address_type;
-      object_ptr = m_ctx_obj->GetAddressOf(false, &address_type);
-      if (object_ptr == LLDB_INVALID_ADDRESS ||
-          address_type != eAddressTypeLoad)
+      ValueObject::AddrAndType address = m_ctx_obj->GetAddressOf(false);
+      if (address.address == LLDB_INVALID_ADDRESS ||
+          address.type != eAddressTypeLoad)
         object_ptr_error = Status::FromErrorString("Can't get context object's "
                                                    "debuggee address");
+      else
+        object_ptr = address.address;
     } else {
       if (m_in_cplusplus_method) {
         object_ptr =
