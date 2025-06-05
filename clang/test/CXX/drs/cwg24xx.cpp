@@ -223,7 +223,9 @@ struct S {
     virtual void f(); // #cwg2496-f
     virtual void g() &; // #cwg2496-g
     virtual void h(); // #cwg2496-h
-    virtual void i(); // #cwg2496-i
+    virtual void i();
+    virtual void j() &;
+    virtual void k() &&;
 };
 
 struct T : S {
@@ -237,6 +239,8 @@ struct T : S {
     // expected-error@-1 {{cannot overload a member function with ref-qualifier '&&' with a member function without a ref-qualifier}}
     // expected-note@#cwg2496-h {{previous declaration is here}}
     virtual void i();
+    virtual void j() &;
+    virtual void k() &;
 };
 #endif
 }
