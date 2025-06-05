@@ -54,7 +54,6 @@ void CFIAnalysisMCStreamer::feedCFIA() {
     return;
   }
 
-  // TODO get this from emit yourself, instead of getting it in this way
   const auto *LastDwarfFrameInfo = &getDwarfFrameInfos()[FrameIndex];
 
   auto CFIDirectivesRange = getCFIDirectivesRange();
