@@ -104,6 +104,7 @@ public:
       return builder.createBoolToInt(value, dstTy);
     if (mlir::isa<cir::BoolType>(dstTy))
       return value;
+    llvm_unreachable("Can only promote integer or boolean types");
   }
 
   //===--------------------------------------------------------------------===//
@@ -1857,9 +1858,6 @@ mlir::Value ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *e) {
 
   // ZExt result to the expr type.
   return maybePromoteBoolResult(boolVal, cgf.convertType(e->getType()));
-
-  cgf.cgm.errorNYI("destination type for logical-not unary operator is NYI");
-  return {};
 }
 
 /// Return the size or alignment of the type of argument of the sizeof
@@ -1956,19 +1954,28 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
     }
   }
 
+  QualType condType = condExpr->getType();
+
   // OpenCL: If the condition is a vector, we can treat this condition like
   // the select function.
-  if ((cgf.getLangOpts().OpenCL && condExpr->getType()->isVectorType()) ||
-      condExpr->getType()->isExtVectorType()) {
+  if ((cgf.getLangOpts().OpenCL && condType->isVectorType()) ||
+      condType->isExtVectorType()) {
     assert(!cir::MissingFeatures::vectorType());
     cgf.cgm.errorNYI(e->getSourceRange(), "vector ternary op");
   }
 
-  if (condExpr->getType()->isVectorType() ||
-      condExpr->getType()->isSveVLSBuiltinType()) {
-    assert(!cir::MissingFeatures::vecTernaryOp());
-    cgf.cgm.errorNYI(e->getSourceRange(), "vector ternary op");
-    return {};
+  if (condType->isVectorType() || condType->isSveVLSBuiltinType()) {
+    if (!condType->isVectorType()) {
+      assert(!cir::MissingFeatures::vecTernaryOp());
+      cgf.cgm.errorNYI(loc, "TernaryOp for SVE vector");
+      return {};
+    }
+
+    mlir::Value condValue = Visit(condExpr);
+    mlir::Value lhsValue = Visit(lhsExpr);
+    mlir::Value rhsValue = Visit(rhsExpr);
+    return builder.create<cir::VecTernaryOp>(loc, condValue, lhsValue,
+                                             rhsValue);
   }
 
   // If this is a really simple expression (like x ? 4 : 5), emit this as a
