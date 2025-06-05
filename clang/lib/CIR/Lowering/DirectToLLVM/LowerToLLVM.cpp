@@ -1965,7 +1965,7 @@ mlir::LogicalResult CIRToLLVMVecSplatOpLowering::matchAndRewrite(
   // element in the vector. Start with an undef vector. Insert the value into
   // the first element. Then use a `shufflevector` with a mask of all 0 to
   // fill out the entire vector with that value.
-  const auto vecTy = mlir::cast<cir::VectorType>(op.getType());
+  const cir::VectorType vecTy = op.getType();
   const mlir::Type llvmTy = typeConverter->convertType(vecTy);
   const mlir::Location loc = op.getLoc();
   const mlir::Value poison = rewriter.create<mlir::LLVM::PoisonOp>(loc, llvmTy);
@@ -1983,20 +1983,16 @@ mlir::LogicalResult CIRToLLVMVecSplatOpLowering::matchAndRewrite(
     if (auto intAttr = dyn_cast<mlir::IntegerAttr>(constValue.getValue())) {
       mlir::DenseIntElementsAttr denseVec = mlir::DenseIntElementsAttr::get(
           mlir::cast<mlir::ShapedType>(llvmTy), intAttr.getValue());
-
-      const mlir::Value indexValue = rewriter.create<mlir::LLVM::ConstantOp>(
-          loc, denseVec.getType(), denseVec);
-      rewriter.replaceOp(op, indexValue);
+      rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(
+          op, denseVec.getType(), denseVec);
       return mlir::success();
     }
 
     if (auto fpAttr = dyn_cast<mlir::FloatAttr>(constValue.getValue())) {
       mlir::DenseFPElementsAttr denseVec = mlir::DenseFPElementsAttr::get(
           mlir::cast<mlir::ShapedType>(llvmTy), fpAttr.getValue());
-
-      const mlir::Value indexValue = rewriter.create<mlir::LLVM::ConstantOp>(
-          loc, denseVec.getType(), denseVec);
-      rewriter.replaceOp(op, indexValue);
+      rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(
+          op, denseVec.getType(), denseVec);
       return mlir::success();
     }
   }
