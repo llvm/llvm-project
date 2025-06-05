@@ -5034,7 +5034,7 @@ void TransferWriteOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
   if (llvm::isa<MemRefType>(getShapedType()))
-    effects.emplace_back(MemoryEffects::Write::get(), &getValueToStoreMutable(),
+    effects.emplace_back(MemoryEffects::Write::get(), &getBaseMutable(),
                          SideEffects::DefaultResource::get());
 }
 
