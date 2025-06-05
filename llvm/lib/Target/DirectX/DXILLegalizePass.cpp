@@ -569,9 +569,11 @@ public:
 
   bool runLegalizationPipeline(Function &F) {
     bool MadeChange = false;
+    SmallVector<Instruction *> ToRemove;
+    DenseMap<Value *, Value *> ReplacedValues;
     for (int Stage = 0; Stage < NumStages; ++Stage) {
-      SmallVector<Instruction *> ToRemove;
-      DenseMap<Value *, Value *> ReplacedValues;
+      ToRemove.clear();
+      ReplacedValues.clear();
       for (auto &I : instructions(F)) {
         for (auto &LegalizationFn : LegalizationPipeline[Stage])
           LegalizationFn(I, ToRemove, ReplacedValues);
