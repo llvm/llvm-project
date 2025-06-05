@@ -105,6 +105,36 @@ def dump_dap_log(log_file):
     print("========= END =========", file=sys.stderr)
 
 
+class Source(object):
+    def __init__(
+        self, path: Optional[str] = None, source_reference: Optional[int] = None
+    ):
+        self._name = None
+        self._path = None
+        self._source_reference = None
+
+        if path is not None:
+            self._name = os.path.basename(path)
+            self._path = path
+        elif source_reference is not None:
+            self._source_reference = source_reference
+        else:
+            raise ValueError("Either path or source_reference must be provided")
+
+    def __str__(self):
+        return f"Source(name={self.name}, path={self.path}), source_reference={self.source_reference})"
+
+    def as_dict(self):
+        source_dict = {}
+        if self._name is not None:
+            source_dict["name"] = self._name
+        if self._path is not None:
+            source_dict["path"] = self._path
+        if self._source_reference is not None:
+            source_dict["sourceReference"] = self._source_reference
+        return source_dict
+
+
 class DebugCommunication(object):
     def __init__(
         self,
@@ -136,7 +166,7 @@ class DebugCommunication(object):
         self.initialized = False
         self.frame_scopes = {}
         self.init_commands = init_commands
-        self.disassembled_instructions = {}
+        self.resolved_breakpoints = {}
 
     @classmethod
     def encode_content(cls, s: str) -> bytes:
@@ -267,6 +297,9 @@ class DebugCommunication(object):
                 # and 'progressEnd' events. Keep these around in case test
                 # cases want to verify them.
                 self.progress_events.append(packet)
+            elif event == "breakpoint":
+                # Breakpoint events are sent when a breakpoint is resolved
+                self._update_verified_breakpoints([body["breakpoint"]])
 
         elif packet_type == "response":
             if packet["command"] == "disconnect":
@@ -279,6 +312,13 @@ class DebugCommunication(object):
         self.frame_scopes = {}
         if all_threads_continued:
             self.thread_stop_reasons = {}
+
+    def _update_verified_breakpoints(self, breakpoints: list[Event]):
+        for breakpoint in breakpoints:
+            if "id" in breakpoint:
+                self.resolved_breakpoints[str(breakpoint["id"])] = breakpoint.get(
+                    "verified", False
+                )
 
     def send_packet(self, command_dict: Request, set_sequence=True):
         """Take the "command_dict" python dictionary and encode it as a JSON
@@ -424,6 +464,17 @@ class DebugCommunication(object):
                 break
             breakpoint_events.append(event)
         return breakpoint_events
+
+    def wait_for_breakpoints_to_be_verified(
+        self, breakpoint_ids: list[str], timeout: Optional[float] = None
+    ):
+        """Wait for all breakpoints to be verified. Return all unverified breakpoints."""
+        while any(id not in self.resolved_breakpoints for id in breakpoint_ids):
+            breakpoint_event = self.wait_for_event("breakpoint", timeout=timeout)
+            if breakpoint_event is None:
+                break
+
+        return [id for id in breakpoint_ids if id not in self.resolved_breakpoints]
 
     def wait_for_exited(self, timeout: Optional[float] = None):
         event_dict = self.wait_for_event("exited", timeout=timeout)
@@ -735,11 +786,15 @@ class DebugCommunication(object):
         return self.send_recv(command_dict)
 
     def request_disassemble(
-        self, memoryReference, offset=-50, instructionCount=200, resolveSymbols=True
+        self,
+        memoryReference,
+        instructionOffset=-50,
+        instructionCount=200,
+        resolveSymbols=True,
     ):
         args_dict = {
             "memoryReference": memoryReference,
-            "offset": offset,
+            "instructionOffset": instructionOffset,
             "instructionCount": instructionCount,
             "resolveSymbols": resolveSymbols,
         }
@@ -748,9 +803,7 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        instructions = self.send_recv(command_dict)["body"]["instructions"]
-        for inst in instructions:
-            self.disassembled_instructions[inst["address"]] = inst
+        return self.send_recv(command_dict)["body"]["instructions"]
 
     def request_readMemory(self, memoryReference, offset, count):
         args_dict = {
@@ -825,7 +878,7 @@ class DebugCommunication(object):
         cwd: Optional[str] = None,
         env: Optional[dict[str, str]] = None,
         stopOnEntry=False,
-        disableASLR=True,
+        disableASLR=False,
         disableSTDIO=False,
         shellExpandArguments=False,
         runInTerminal=False,
@@ -948,15 +1001,13 @@ class DebugCommunication(object):
         command_dict = {"command": "scopes", "type": "request", "arguments": args_dict}
         return self.send_recv(command_dict)
 
-    def request_setBreakpoints(self, file_path, line_array, data=None):
+    def request_setBreakpoints(self, source: Source, line_array, data=None):
         """data is array of parameters for breakpoints in line_array.
         Each parameter object is 1:1 mapping with entries in line_entry.
         It contains optional location/hitCondition/logMessage parameters.
         """
-        (dir, base) = os.path.split(file_path)
-        source_dict = {"name": base, "path": file_path}
         args_dict = {
-            "source": source_dict,
+            "source": source.as_dict(),
             "sourceModified": False,
         }
         if line_array is not None:
@@ -984,7 +1035,10 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        return self.send_recv(command_dict)
+        response = self.send_recv(command_dict)
+        if response["success"]:
+            self._update_verified_breakpoints(response["body"]["breakpoints"])
+        return response
 
     def request_setExceptionBreakpoints(self, filters):
         args_dict = {"filters": filters}
@@ -1010,7 +1064,10 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        return self.send_recv(command_dict)
+        response = self.send_recv(command_dict)
+        if response["success"]:
+            self._update_verified_breakpoints(response["body"]["breakpoints"])
+        return response
 
     def request_dataBreakpointInfo(
         self, variablesReference, name, frameIndex=0, threadId=None
@@ -1381,7 +1438,7 @@ def run_vscode(dbg, args, options):
                 else:
                     source_to_lines[path] = [int(line)]
         for source in source_to_lines:
-            dbg.request_setBreakpoints(source, source_to_lines[source])
+            dbg.request_setBreakpoints(Source(source), source_to_lines[source])
     if options.funcBreakpoints:
         dbg.request_setFunctionBreakpoints(options.funcBreakpoints)
 

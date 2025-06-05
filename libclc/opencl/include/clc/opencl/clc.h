@@ -211,9 +211,10 @@
 #include <clc/opencl/relational/select.h>
 #include <clc/opencl/relational/signbit.h>
 
+#include <clc/opencl/synchronization/cl_mem_fence_flags.h>
+
 /* 6.11.8 Synchronization Functions */
 #include <clc/opencl/synchronization/barrier.h>
-#include <clc/opencl/synchronization/cl_mem_fence_flags.h>
 
 /* 6.11.9 Explicit Memory Fence Functions */
 #include <clc/opencl/explicit_fence/explicit_memory_fence.h>

@@ -847,8 +847,15 @@ bool fromJSON(const llvm::json::Value &Params, DisassembledInstruction &DI,
 }
 
 llvm::json::Value toJSON(const DisassembledInstruction &DI) {
-  llvm::json::Object result{{"address", "0x" + llvm::utohexstr(DI.address)},
-                            {"instruction", DI.instruction}};
+  llvm::json::Object result{{"instruction", DI.instruction}};
+  if (DI.address == LLDB_INVALID_ADDRESS) {
+    // VS Code has explicit comparisons to the string "-1" in order to check for
+    // invalid instructions. See
+    // https://github.com/microsoft/vscode/blob/main/src/vs/workbench/contrib/debug/browser/disassemblyView.ts
+    result.insert({"address", "-1"});
+  } else {
+    result.insert({"address", "0x" + llvm::utohexstr(DI.address)});
+  }
 
   if (DI.instructionBytes)
     result.insert({"instructionBytes", *DI.instructionBytes});

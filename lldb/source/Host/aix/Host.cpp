@@ -32,8 +32,8 @@
 #include "lldb/Host/posix/Support.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "llvm/BinaryFormat/XCOFF.h"
-
-#include <sstream>
+#include <dirent.h>
+#include <sys/proc.h>
 #include <sys/procfs.h>
 
 using namespace llvm;
@@ -239,29 +239,21 @@ uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
     bool all_users = match_info.GetMatchAllUsers();
 
     while ((direntry = readdir(dirproc)) != nullptr) {
-      /*
-      if (direntry->d_type != DT_DIR || !IsDirNumeric(direntry->d_name))
+      lldb::pid_t pid;
+      // Skip non-numeric name directories
+      if (!llvm::to_integer(direntry->d_name, pid))
         continue;
-      */
-
-      lldb::pid_t pid = atoi(direntry->d_name);
-
       // Skip this process.
       if (pid == our_pid)
         continue;
 
-      ::pid_t tracerpid;
       ProcessState State;
       ProcessInstanceInfo process_info;
-
-      if (!GetProcessAndStatInfo(pid, process_info, State, tracerpid))
+      if (!GetProcessAndStatInfo(pid, process_info, State))
         continue;
 
-      // Skip if process is being debugged.
-      if (tracerpid != 0)
-        continue;
-
-      if (State == ProcessState::Zombie)
+      if (State == ProcessState::Zombie ||
+          State == ProcessState::TracedOrStopped)
         continue;
 
       // Check for user match if we're not matching all users and not running
@@ -269,14 +261,11 @@ uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
       if (!all_users && (our_uid != 0) && (process_info.GetUserID() != our_uid))
         continue;
 
-      if (match_info.Matches(process_info)) {
+      if (match_info.Matches(process_info))
         process_infos.push_back(process_info);
-      }
     }
-
     closedir(dirproc);
   }
-
   return process_infos.size();
 }
 

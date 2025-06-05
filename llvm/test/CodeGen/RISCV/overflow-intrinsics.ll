@@ -1330,7 +1330,7 @@ define i16 @overflow_not_used(i16 %a, i16 %b, ptr %res) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lui a3, 16
 ; RV64-NEXT:    add a0, a1, a0
-; RV64-NEXT:    addiw a3, a3, -1
+; RV64-NEXT:    addi a3, a3, -1
 ; RV64-NEXT:    and a4, a1, a3
 ; RV64-NEXT:    and a3, a0, a3
 ; RV64-NEXT:    bltu a3, a4, .LBB38_2

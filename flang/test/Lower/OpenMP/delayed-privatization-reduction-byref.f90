@@ -3,7 +3,7 @@
 ! that the block arguments are added in the proper order (reductions first and
 ! then delayed privatization.
 
-! RUN: bbc -emit-hlfir -fopenmp --force-byref-reduction --openmp-enable-delayed-privatization -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -fopenmp --force-byref-reduction --enable-delayed-privatization -o - %s 2>&1 | FileCheck %s
 
 subroutine red_and_delayed_private
     integer :: red

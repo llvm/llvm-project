@@ -155,6 +155,7 @@ public:
       }
     }
     setBranchProtectionFnAttributes(BPI, *Fn);
+    setPointerAuthFnAttributes(CGM.getCodeGenOpts().PointerAuth, *Fn);
   }
 
   bool isScalarizableAsmOperand(CodeGen::CodeGenFunction &CGF,
@@ -773,8 +774,7 @@ bool AArch64ABIInfo::passAsPureScalableType(
   case BuiltinType::Id:                                                        \
     isPredicate = true;                                                        \
     break;
-#define SVE_TYPE(Name, Id, SingletonId)
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
   default:
     return false;
   }

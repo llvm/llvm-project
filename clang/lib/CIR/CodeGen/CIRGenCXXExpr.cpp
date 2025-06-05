@@ -98,9 +98,11 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
   CallArgList rtlArgStorage;
   CallArgList *rtlArgs = nullptr;
   if (auto *oce = dyn_cast<CXXOperatorCallExpr>(ce)) {
-    cgm.errorNYI(oce->getSourceRange(),
-                 "emitCXXMemberOrOperatorMemberCallExpr: operator call");
-    return RValue::get(nullptr);
+    if (oce->isAssignmentOp()) {
+      cgm.errorNYI(
+          oce->getSourceRange(),
+          "emitCXXMemberOrOperatorMemberCallExpr: assignment operator");
+    }
   }
 
   LValue thisPtr;
@@ -113,7 +115,7 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
     thisPtr = emitLValue(base);
   }
 
-  if (const CXXConstructorDecl *ctor = dyn_cast<CXXConstructorDecl>(md)) {
+  if (isa<CXXConstructorDecl>(md)) {
     cgm.errorNYI(ce->getSourceRange(),
                  "emitCXXMemberOrOperatorMemberCallExpr: constructor call");
     return RValue::get(nullptr);
@@ -127,29 +129,29 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
       cgm.errorNYI(ce->getSourceRange(),
                    "emitCXXMemberOrOperatorMemberCallExpr: trivial assignment");
       return RValue::get(nullptr);
-    } else {
-      assert(md->getParent()->mayInsertExtraPadding() &&
-             "unknown trivial member function");
     }
+
+    assert(md->getParent()->mayInsertExtraPadding() &&
+           "unknown trivial member function");
   }
 
   // Compute the function type we're calling
   const CXXMethodDecl *calleeDecl = md;
   const CIRGenFunctionInfo *fInfo = nullptr;
-  if (const auto *dtor = dyn_cast<CXXDestructorDecl>(calleeDecl)) {
+  if (isa<CXXDestructorDecl>(calleeDecl)) {
     cgm.errorNYI(ce->getSourceRange(),
                  "emitCXXMemberOrOperatorMemberCallExpr: destructor call");
     return RValue::get(nullptr);
-  } else {
-    fInfo = &cgm.getTypes().arrangeCXXMethodDeclaration(calleeDecl);
   }
+
+  fInfo = &cgm.getTypes().arrangeCXXMethodDeclaration(calleeDecl);
 
   mlir::Type ty = cgm.getTypes().getFunctionType(*fInfo);
 
   assert(!cir::MissingFeatures::sanitizers());
   assert(!cir::MissingFeatures::emitTypeCheck());
 
-  if (const auto *dtor = dyn_cast<CXXDestructorDecl>(calleeDecl)) {
+  if (isa<CXXDestructorDecl>(calleeDecl)) {
     cgm.errorNYI(ce->getSourceRange(),
                  "emitCXXMemberOrOperatorMemberCallExpr: destructor call");
     return RValue::get(nullptr);
@@ -167,6 +169,17 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
   return emitCXXMemberOrOperatorCall(
       calleeDecl, callee, returnValue, thisPtr.getPointer(),
       /*ImplicitParam=*/nullptr, QualType(), ce, rtlArgs);
+}
+
+RValue
+CIRGenFunction::emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
+                                              const CXXMethodDecl *md,
+                                              ReturnValueSlot returnValue) {
+  assert(md->isInstance() &&
+         "Trying to emit a member call expr on a static method!");
+  return emitCXXMemberOrOperatorMemberCallExpr(
+      e, md, returnValue, /*HasQualifier=*/false, /*Qualifier=*/nullptr,
+      /*IsArrow=*/false, e->getArg(0));
 }
 
 RValue CIRGenFunction::emitCXXMemberOrOperatorCall(

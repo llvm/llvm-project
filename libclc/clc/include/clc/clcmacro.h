@@ -73,39 +73,6 @@
         FUNCTION(x.sf, y.sf));                                                 \
   }
 
-#define _CLC_V_S_V_VECTORIZE(DECLSPEC, RET_TYPE, FUNCTION, ARG1_TYPE,          \
-                             ARG2_TYPE)                                        \
-  DECLSPEC RET_TYPE##2 FUNCTION(ARG1_TYPE x, ARG2_TYPE##2 y) {                 \
-    return (RET_TYPE##2)(FUNCTION(x, y.s0), FUNCTION(x, y.s1));                \
-  }                                                                            \
-                                                                               \
-  DECLSPEC RET_TYPE##3 FUNCTION(ARG1_TYPE x, ARG2_TYPE##3 y) {                 \
-    return (RET_TYPE##3)(FUNCTION(x, y.s0), FUNCTION(x, y.s1),                 \
-                         FUNCTION(x, y.s2));                                   \
-  }                                                                            \
-                                                                               \
-  DECLSPEC RET_TYPE##4 FUNCTION(ARG1_TYPE x, ARG2_TYPE##4 y) {                 \
-    return (RET_TYPE##4)(FUNCTION(x, y.s0), FUNCTION(x, y.s1),                 \
-                         FUNCTION(x, y.s2), FUNCTION(x, y.s3));                \
-  }                                                                            \
-                                                                               \
-  DECLSPEC RET_TYPE##8 FUNCTION(ARG1_TYPE x, ARG2_TYPE##8 y) {                 \
-    return (RET_TYPE##8)(FUNCTION(x, y.s0), FUNCTION(x, y.s1),                 \
-                         FUNCTION(x, y.s2), FUNCTION(x, y.s3),                 \
-                         FUNCTION(x, y.s4), FUNCTION(x, y.s5),                 \
-                         FUNCTION(x, y.s6), FUNCTION(x, y.s7));                \
-  }                                                                            \
-                                                                               \
-  DECLSPEC RET_TYPE##16 FUNCTION(ARG1_TYPE x, ARG2_TYPE##16 y) {               \
-    return (RET_TYPE##16)(                                                     \
-        FUNCTION(x, y.s0), FUNCTION(x, y.s1), FUNCTION(x, y.s2),               \
-        FUNCTION(x, y.s3), FUNCTION(x, y.s4), FUNCTION(x, y.s5),               \
-        FUNCTION(x, y.s6), FUNCTION(x, y.s7), FUNCTION(x, y.s8),               \
-        FUNCTION(x, y.s9), FUNCTION(x, y.sa), FUNCTION(x, y.sb),               \
-        FUNCTION(x, y.sc), FUNCTION(x, y.sd), FUNCTION(x, y.se),               \
-        FUNCTION(x, y.sf));                                                    \
-  }
-
 #define _CLC_TERNARY_VECTORIZE(DECLSPEC, RET_TYPE, FUNCTION, ARG1_TYPE,        \
                                ARG2_TYPE, ARG3_TYPE)                           \
   DECLSPEC RET_TYPE##2 FUNCTION(ARG1_TYPE##2 x, ARG2_TYPE##2 y,                \

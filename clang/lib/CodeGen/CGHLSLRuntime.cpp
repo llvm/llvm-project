@@ -23,6 +23,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Frontend/HLSL/HLSLRootSignatureUtils.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -34,6 +35,7 @@
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <utility>
 
 using namespace clang;
 using namespace CodeGen;
@@ -41,10 +43,6 @@ using namespace clang::hlsl;
 using namespace llvm;
 
 using llvm::hlsl::CBufferRowSizeInBytes;
-
-static void initializeBufferFromBinding(CodeGenModule &CGM,
-                                        llvm::GlobalVariable *GV,
-                                        HLSLResourceBindingAttr *RBA);
 
 namespace {
 
@@ -239,6 +237,35 @@ static void fillPackoffsetLayout(const HLSLBufferDecl *BufDecl,
   }
 }
 
+std::pair<llvm::Intrinsic::ID, bool>
+CGHLSLRuntime::getCreateHandleFromBindingIntrinsic() {
+  switch (getArch()) {
+  case llvm::Triple::dxil:
+    return std::pair(llvm::Intrinsic::dx_resource_handlefrombinding, true);
+  case llvm::Triple::spirv:
+    return std::pair(llvm::Intrinsic::spv_resource_handlefrombinding, false);
+  default:
+    llvm_unreachable("Intrinsic resource_handlefrombinding not supported by "
+                     "target architecture");
+  }
+}
+
+std::pair<llvm::Intrinsic::ID, bool>
+CGHLSLRuntime::getCreateHandleFromImplicitBindingIntrinsic() {
+  switch (getArch()) {
+  case llvm::Triple::dxil:
+    return std::pair(llvm::Intrinsic::dx_resource_handlefromimplicitbinding,
+                     true);
+  case llvm::Triple::spirv:
+    return std::pair(llvm::Intrinsic::spv_resource_handlefromimplicitbinding,
+                     false);
+  default:
+    llvm_unreachable(
+        "Intrinsic resource_handlefromimplicitbinding not supported by "
+        "target architecture");
+  }
+}
+
 // Codegen for HLSLBufferDecl
 void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *BufDecl) {
 
@@ -275,7 +302,7 @@ void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *BufDecl) {
   HLSLResourceBindingAttr *RBA = BufDecl->getAttr<HLSLResourceBindingAttr>();
   assert(RBA &&
          "cbuffer/tbuffer should always have resource binding attribute");
-  initializeBufferFromBinding(CGM, BufGV, RBA);
+  initializeBufferFromBinding(BufDecl, BufGV, RBA);
 }
 
 llvm::TargetExtType *
@@ -557,29 +584,57 @@ static void initializeBuffer(CodeGenModule &CGM, llvm::GlobalVariable *GV,
   CGM.AddCXXGlobalInit(InitResFunc);
 }
 
-static void initializeBufferFromBinding(CodeGenModule &CGM,
-                                        llvm::GlobalVariable *GV,
-                                        HLSLResourceBindingAttr *RBA) {
+void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
+                                                llvm::GlobalVariable *GV,
+                                                HLSLResourceBindingAttr *RBA) {
   llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGM.getLLVMContext());
   auto *NonUniform = llvm::ConstantInt::get(Int1Ty, false);
   auto *Index = llvm::ConstantInt::get(CGM.IntTy, 0);
   auto *RangeSize = llvm::ConstantInt::get(CGM.IntTy, 1);
   auto *Space =
       llvm::ConstantInt::get(CGM.IntTy, RBA ? RBA->getSpaceNumber() : 0);
+  Value *Name = nullptr;
 
+  auto [IntrinsicID, HasNameArg] =
+      RBA->hasRegisterSlot()
+          ? CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic()
+          : CGM.getHLSLRuntime().getCreateHandleFromImplicitBindingIntrinsic();
+
+  if (HasNameArg) {
+    std::string Str(BufDecl->getName());
+    std::string GlobalName(Str + ".str");
+    Name = CGM.GetAddrOfConstantCString(Str, GlobalName.c_str()).getPointer();
+  }
+
+  // buffer with explicit binding
   if (RBA->hasRegisterSlot()) {
     auto *RegSlot = llvm::ConstantInt::get(CGM.IntTy, RBA->getSlotNumber());
-    Intrinsic::ID Intr =
-        CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic();
-    initializeBuffer(CGM, GV, Intr,
-                     {Space, RegSlot, RangeSize, Index, NonUniform});
+    SmallVector<Value *> Args{Space, RegSlot, RangeSize, Index, NonUniform};
+    if (Name)
+      Args.push_back(Name);
+    initializeBuffer(CGM, GV, IntrinsicID, Args);
   } else {
+    // buffer with implicit binding
     auto *OrderID =
         llvm::ConstantInt::get(CGM.IntTy, RBA->getImplicitBindingOrderID());
-    Intrinsic::ID Intr =
-        CGM.getHLSLRuntime().getCreateHandleFromImplicitBindingIntrinsic();
-    initializeBuffer(CGM, GV, Intr,
-                     {OrderID, Space, RangeSize, Index, NonUniform});
+    SmallVector<Value *> Args{OrderID, Space, RangeSize, Index, NonUniform};
+    if (Name)
+      Args.push_back(Name);
+    initializeBuffer(CGM, GV, IntrinsicID, Args);
+  }
+}
+
+void CGHLSLRuntime::handleGlobalVarDefinition(const VarDecl *VD,
+                                              llvm::GlobalVariable *GV) {
+  if (auto Attr = VD->getAttr<HLSLVkExtBuiltinInputAttr>()) {
+    LLVMContext &Ctx = GV->getContext();
+    IRBuilder<> B(GV->getContext());
+    MDNode *Operands = MDNode::get(
+        Ctx, {ConstantAsMetadata::get(
+                  B.getInt32(/* Spirv::Decoration::BuiltIn */ 11)),
+              ConstantAsMetadata::get(B.getInt32(Attr->getBuiltIn()))});
+    MDNode *Decoration = MDNode::get(Ctx, {Operands});
+    GV->addMetadata("spirv.Decorations", *Decoration);
   }
 }
 

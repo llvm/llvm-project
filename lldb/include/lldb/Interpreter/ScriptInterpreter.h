@@ -500,10 +500,8 @@ public:
     return false;
   }
 
-  virtual void OptionParsingStartedForCommandObject(
-      StructuredData::GenericSP cmd_obj_sp) {
-    return;
-  }
+  virtual void
+  OptionParsingStartedForCommandObject(StructuredData::GenericSP cmd_obj_sp) {}
 
   virtual uint32_t
   GetFlagsForCommandObject(StructuredData::GenericSP cmd_obj_sp) {

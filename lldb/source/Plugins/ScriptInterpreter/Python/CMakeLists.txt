@@ -31,6 +31,8 @@ add_lldb_library(lldbPluginScriptInterpreterPython PLUGIN
   PythonReadline.cpp
   ScriptInterpreterPython.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbBreakpoint
     lldbCore
@@ -42,7 +44,4 @@ add_lldb_library(lldbPluginScriptInterpreterPython PLUGIN
     lldbPluginScriptInterpreterPythonInterfaces
     ${Python3_LIBRARIES}
     ${LLDB_LIBEDIT_LIBS}
-
-  LINK_COMPONENTS
-    Support
   )

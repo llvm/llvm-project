@@ -117,7 +117,7 @@ define i32 @PR63108() {
 ; AVX512-NEXT:    testb %al, %al
 ; AVX512-NEXT:    je .LBB0_2
 ; AVX512-NEXT:  # %bb.1:
-; AVX512-NEXT:    vpbroadcastw {{.*#+}} xmm0 = [251,223,251,223,251,223,251,223,251,223,251,223,251,223,251,223]
+; AVX512-NEXT:    vmovd {{.*#+}} xmm0 = [57339,0,0,0]
 ; AVX512-NEXT:    jmp .LBB0_5
 ; AVX512-NEXT:  .LBB0_2: # %vector.body.preheader
 ; AVX512-NEXT:    vmovd {{.*#+}} xmm0 = [57339,0,0,0]

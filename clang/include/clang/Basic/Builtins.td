@@ -970,6 +970,12 @@ def IsWithinLifetime : LangBuiltin<"CXX_LANG"> {
   let Prototype = "bool(void*)";
 }
 
+def GetVtablePointer : LangBuiltin<"CXX_LANG"> {
+  let Spellings = ["__builtin_get_vtable_pointer"];
+  let Attributes = [CustomTypeChecking, NoThrow, Const];
+  let Prototype = "void*(void*)";
+}
+
 // GCC exception builtins
 def EHReturn : Builtin {
   let Spellings = ["__builtin_eh_return"];
@@ -4909,10 +4915,16 @@ def HLSLClamp : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
-def HLSLCross: LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_cross"];
+def HLSLCrossFloat: LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_crossf32"];
   let Attributes = [NoThrow, Const];
-  let Prototype = "void(...)";
+  let Prototype = "_ExtVector<3, float>(_ExtVector<3, float>, _ExtVector<3, float>)";
+}
+
+def HLSLCrossHalf: LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_crossf16"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "_ExtVector<3, __fp16>(_ExtVector<3, __fp16>, _ExtVector<3, __fp16>)";
 }
 
 def HLSLDegrees : LangBuiltin<"HLSL_LANG"> {
@@ -4971,7 +4983,7 @@ def HLSLLerp : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLMad : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_mad"];
-  let Attributes = [NoThrow, Const];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
 

@@ -701,13 +701,13 @@ define <5 x i32> @test_v5i32(<5 x i32> %a) {
 ; CHECK: .func  (.param .b32 func_retval0)
 ; CHECK-LABEL: test_f32(
 ; CHECK-NEXT: .param .b32 test_f32_param_0
-; CHECK:      ld.param.b32    [[E:%f[0-9]+]], [test_f32_param_0];
+; CHECK:      ld.param.b32    [[E:%r[0-9]+]], [test_f32_param_0];
 ; CHECK:      .param .b32 param0;
 ; CHECK:      st.param.b32    [param0], [[E]];
 ; CHECK:      .param .b32 retval0;
 ; CHECK:      call.uni (retval0),
 ; CHECK-NEXT: test_f32,
-; CHECK:      ld.param.b32    [[R:%f[0-9]+]], [retval0];
+; CHECK:      ld.param.b32    [[R:%r[0-9]+]], [retval0];
 ; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define float @test_f32(float %a) {
@@ -976,13 +976,13 @@ define %s_i32 @test_s_i32(%s_i32 %a) {
 ; CHECK: .func  (.param .align 4 .b8 func_retval0[4])
 ; CHECK-LABEL: test_s_f32(
 ; CHECK-NEXT: .param .align 4 .b8 test_s_f32_param_0[4]
-; CHECK:      ld.param.b32    [[E:%f[0-9]+]], [test_s_f32_param_0];
+; CHECK:      ld.param.b32    [[E:%r[0-9]+]], [test_s_f32_param_0];
 ; CHECK:      .param .align 4 .b8 param0[4]
 ; CHECK:      st.param.b32    [param0], [[E]];
 ; CHECK:      .param .align 4 .b8 retval0[4];
 ; CHECK:      call.uni (retval0),
 ; CHECK-NEXT: test_s_f32,
-; CHECK:      ld.param.b32    [[R:%f[0-9]+]], [retval0];
+; CHECK:      ld.param.b32    [[R:%r[0-9]+]], [retval0];
 ; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define %s_f32 @test_s_f32(%s_f32 %a) {
@@ -1012,9 +1012,9 @@ define %s_i64 @test_s_i64(%s_i64 %a) {
 ; CHECK-LABEL: test_s_i32f32(
 ; CHECK:        .param .align 8 .b8 test_s_i32f32_param_0[24]
 ; CHECK-DAG:    ld.param.b64    [[E4:%rd[0-9]+]], [test_s_i32f32_param_0+16];
-; CHECK-DAG:    ld.param.b32    [[E3:%f[0-9]+]], [test_s_i32f32_param_0+12];
+; CHECK-DAG:    ld.param.b32    [[E3:%r[0-9]+]], [test_s_i32f32_param_0+12];
 ; CHECK-DAG:    ld.param.b32    [[E2:%r[0-9]+]], [test_s_i32f32_param_0+8];
-; CHECK-DAG:    ld.param.b32    [[E1:%f[0-9]+]], [test_s_i32f32_param_0+4];
+; CHECK-DAG:    ld.param.b32    [[E1:%r[0-9]+]], [test_s_i32f32_param_0+4];
 ; CHECK-DAG:    ld.param.b32    [[E0:%r[0-9]+]], [test_s_i32f32_param_0];
 ; CHECK:        .param .align 8 .b8 param0[24];
 ; CHECK-DAG:    st.param.b32    [param0], [[E0]];
@@ -1026,9 +1026,9 @@ define %s_i64 @test_s_i64(%s_i64 %a) {
 ; CHECK:        call.uni (retval0),
 ; CHECK-NEXT:   test_s_i32f32,
 ; CHECK-DAG:    ld.param.b32    [[RE0:%r[0-9]+]], [retval0];
-; CHECK-DAG:    ld.param.b32    [[RE1:%f[0-9]+]], [retval0+4];
+; CHECK-DAG:    ld.param.b32    [[RE1:%r[0-9]+]], [retval0+4];
 ; CHECK-DAG:    ld.param.b32    [[RE2:%r[0-9]+]], [retval0+8];
-; CHECK-DAG:    ld.param.b32    [[RE3:%f[0-9]+]], [retval0+12];
+; CHECK-DAG:    ld.param.b32    [[RE3:%r[0-9]+]], [retval0+12];
 ; CHECK-DAG:    ld.param.b64    [[RE4:%rd[0-9]+]], [retval0+16];
 ; CHECK-DAG:    st.param.b32    [func_retval0], [[RE0]];
 ; CHECK-DAG:    st.param.b32    [func_retval0+4], [[RE1]];

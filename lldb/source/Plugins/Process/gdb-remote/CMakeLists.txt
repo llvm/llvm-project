@@ -38,6 +38,9 @@ add_lldb_library(lldbPluginProcessGDBRemote PLUGIN
   ProcessGDBRemoteLog.cpp
   ThreadGDBRemote.cpp
 
+  LINK_COMPONENTS
+    Support
+    TargetParser
   LINK_LIBS
     lldbBreakpoint
     lldbCore
@@ -50,9 +53,6 @@ add_lldb_library(lldbPluginProcessGDBRemote PLUGIN
     ${LLDB_SYSTEM_LIBS}
     ${LLDB_PLUGINS}
     ${LIBCOMPRESSION}
-  LINK_COMPONENTS
-    Support
-    TargetParser
   )
 
 add_dependencies(lldbPluginProcessGDBRemote

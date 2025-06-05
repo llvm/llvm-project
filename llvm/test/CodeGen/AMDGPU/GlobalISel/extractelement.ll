@@ -347,30 +347,30 @@ define i64 @dyn_extract_v8i64_const_s_v(i32 %sel) {
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX10-NEXT:    v_mov_b32_e32 v2, s5
 ; GFX10-NEXT:    s_mov_b64 s[6:7], 1
-; GFX10-NEXT:    s_mov_b64 s[4:5], 3
+; GFX10-NEXT:    v_cmp_eq_u32_e64 s4, 2, v0
+; GFX10-NEXT:    s_mov_b64 s[8:9], 3
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, s6, v1, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e32 v2, s7, v2, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v0
-; GFX10-NEXT:    s_mov_b64 s[6:7], 4
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s4, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s5, vcc_lo
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 3, v0
-; GFX10-NEXT:    s_mov_b64 s[4:5], 5
+; GFX10-NEXT:    s_mov_b64 s[6:7], 4
+; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s8, s4
+; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s9, s4
+; GFX10-NEXT:    v_cmp_eq_u32_e64 s4, 4, v0
+; GFX10-NEXT:    s_mov_b64 s[8:9], 5
 ; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s6, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s7, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 4, v0
-; GFX10-NEXT:    s_mov_b64 s[6:7], 6
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s4, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s5, vcc_lo
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 5, v0
-; GFX10-NEXT:    s_mov_b64 s[4:5], 7
+; GFX10-NEXT:    s_mov_b64 s[6:7], 6
+; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s8, s4
+; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s9, s4
+; GFX10-NEXT:    v_cmp_eq_u32_e64 s4, 6, v0
+; GFX10-NEXT:    s_mov_b64 s[8:9], 7
 ; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s6, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s7, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 6, v0
-; GFX10-NEXT:    s_mov_b64 s[6:7], 8
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s4, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s5, vcc_lo
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 7, v0
+; GFX10-NEXT:    s_mov_b64 s[6:7], 8
+; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s8, s4
+; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s9, s4
 ; GFX10-NEXT:    v_cndmask_b32_e64 v0, v1, s6, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e64 v1, v2, s7, vcc_lo
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -382,30 +382,30 @@ define i64 @dyn_extract_v8i64_const_s_v(i32 %sel) {
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
 ; GFX11-NEXT:    v_dual_mov_b32 v1, s0 :: v_dual_mov_b32 v2, s1
 ; GFX11-NEXT:    s_mov_b64 s[2:3], 1
-; GFX11-NEXT:    s_mov_b64 s[0:1], 3
+; GFX11-NEXT:    v_cmp_eq_u32_e64 s0, 2, v0
+; GFX11-NEXT:    s_mov_b64 s[4:5], 3
 ; GFX11-NEXT:    v_cndmask_b32_e32 v1, s2, v1, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e32 v2, s3, v2, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v0
-; GFX11-NEXT:    s_mov_b64 s[2:3], 4
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s0, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s1, vcc_lo
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 3, v0
-; GFX11-NEXT:    s_mov_b64 s[0:1], 5
+; GFX11-NEXT:    s_mov_b64 s[2:3], 4
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s4, s0
+; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s5, s0
+; GFX11-NEXT:    v_cmp_eq_u32_e64 s0, 4, v0
+; GFX11-NEXT:    s_mov_b64 s[4:5], 5
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s2, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s3, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 4, v0
-; GFX11-NEXT:    s_mov_b64 s[2:3], 6
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s0, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s1, vcc_lo
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 5, v0
-; GFX11-NEXT:    s_mov_b64 s[0:1], 7
+; GFX11-NEXT:    s_mov_b64 s[2:3], 6
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s4, s0
+; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s5, s0
+; GFX11-NEXT:    v_cmp_eq_u32_e64 s0, 6, v0
+; GFX11-NEXT:    s_mov_b64 s[4:5], 7
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s2, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s3, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 6, v0
-; GFX11-NEXT:    s_mov_b64 s[2:3], 8
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s0, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s1, vcc_lo
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 7, v0
+; GFX11-NEXT:    s_mov_b64 s[2:3], 8
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s4, s0
+; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s5, s0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, v1, s2, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, v2, s3, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -3059,7 +3059,7 @@ define amdgpu_kernel void @dyn_extract_v5f64_s_s(ptr addrspace(1) %out, i32 %sel
 ; GPRIDX-NEXT:     gds_segment_byte_size = 0
 ; GPRIDX-NEXT:     kernarg_segment_byte_size = 28
 ; GPRIDX-NEXT:     workgroup_fbarrier_count = 0
-; GPRIDX-NEXT:     wavefront_sgpr_count = 17
+; GPRIDX-NEXT:     wavefront_sgpr_count = 24
 ; GPRIDX-NEXT:     workitem_vgpr_count = 3
 ; GPRIDX-NEXT:     reserved_vgpr_first = 0
 ; GPRIDX-NEXT:     reserved_vgpr_count = 0
@@ -3202,7 +3202,7 @@ define amdgpu_kernel void @dyn_extract_v5f64_s_s(ptr addrspace(1) %out, i32 %sel
 ; GFX10-NEXT:     kernel_code_entry_byte_offset = 256
 ; GFX10-NEXT:     kernel_code_prefetch_byte_size = 0
 ; GFX10-NEXT:     granulated_workitem_vgpr_count = 0
-; GFX10-NEXT:     granulated_wavefront_sgpr_count = 1
+; GFX10-NEXT:     granulated_wavefront_sgpr_count = 2
 ; GFX10-NEXT:     priority = 0
 ; GFX10-NEXT:     float_mode = 240
 ; GFX10-NEXT:     priv = 0
@@ -3245,7 +3245,7 @@ define amdgpu_kernel void @dyn_extract_v5f64_s_s(ptr addrspace(1) %out, i32 %sel
 ; GFX10-NEXT:     gds_segment_byte_size = 0
 ; GFX10-NEXT:     kernarg_segment_byte_size = 28
 ; GFX10-NEXT:     workgroup_fbarrier_count = 0
-; GFX10-NEXT:     wavefront_sgpr_count = 10
+; GFX10-NEXT:     wavefront_sgpr_count = 18
 ; GFX10-NEXT:     workitem_vgpr_count = 3
 ; GFX10-NEXT:     reserved_vgpr_first = 0
 ; GFX10-NEXT:     reserved_vgpr_count = 0
@@ -3294,7 +3294,7 @@ define amdgpu_kernel void @dyn_extract_v5f64_s_s(ptr addrspace(1) %out, i32 %sel
 ; GFX11-NEXT:     kernel_code_entry_byte_offset = 256
 ; GFX11-NEXT:     kernel_code_prefetch_byte_size = 0
 ; GFX11-NEXT:     granulated_workitem_vgpr_count = 0
-; GFX11-NEXT:     granulated_wavefront_sgpr_count = 0
+; GFX11-NEXT:     granulated_wavefront_sgpr_count = 1
 ; GFX11-NEXT:     priority = 0
 ; GFX11-NEXT:     float_mode = 240
 ; GFX11-NEXT:     priv = 0
@@ -3337,7 +3337,7 @@ define amdgpu_kernel void @dyn_extract_v5f64_s_s(ptr addrspace(1) %out, i32 %sel
 ; GFX11-NEXT:     gds_segment_byte_size = 0
 ; GFX11-NEXT:     kernarg_segment_byte_size = 28
 ; GFX11-NEXT:     workgroup_fbarrier_count = 0
-; GFX11-NEXT:     wavefront_sgpr_count = 7
+; GFX11-NEXT:     wavefront_sgpr_count = 16
 ; GFX11-NEXT:     workitem_vgpr_count = 3
 ; GFX11-NEXT:     reserved_vgpr_first = 0
 ; GFX11-NEXT:     reserved_vgpr_count = 0
@@ -4034,7 +4034,7 @@ define amdgpu_kernel void @dyn_extract_v4f32_s_s_s(ptr addrspace(1) %out, i32 %s
 ; GPRIDX-NEXT:     kernel_code_entry_byte_offset = 256
 ; GPRIDX-NEXT:     kernel_code_prefetch_byte_size = 0
 ; GPRIDX-NEXT:     granulated_workitem_vgpr_count = 0
-; GPRIDX-NEXT:     granulated_wavefront_sgpr_count = 1
+; GPRIDX-NEXT:     granulated_wavefront_sgpr_count = 2
 ; GPRIDX-NEXT:     priority = 0
 ; GPRIDX-NEXT:     float_mode = 240
 ; GPRIDX-NEXT:     priv = 0
@@ -4077,8 +4077,8 @@ define amdgpu_kernel void @dyn_extract_v4f32_s_s_s(ptr addrspace(1) %out, i32 %s
 ; GPRIDX-NEXT:     gds_segment_byte_size = 0
 ; GPRIDX-NEXT:     kernarg_segment_byte_size = 28
 ; GPRIDX-NEXT:     workgroup_fbarrier_count = 0
-; GPRIDX-NEXT:     wavefront_sgpr_count = 16
-; GPRIDX-NEXT:     workitem_vgpr_count = 2
+; GPRIDX-NEXT:     wavefront_sgpr_count = 24
+; GPRIDX-NEXT:     workitem_vgpr_count = 3
 ; GPRIDX-NEXT:     reserved_vgpr_first = 0
 ; GPRIDX-NEXT:     reserved_vgpr_count = 0
 ; GPRIDX-NEXT:     reserved_sgpr_first = 0
@@ -4206,7 +4206,7 @@ define amdgpu_kernel void @dyn_extract_v4f32_s_s_s(ptr addrspace(1) %out, i32 %s
 ; GFX10-NEXT:     kernel_code_entry_byte_offset = 256
 ; GFX10-NEXT:     kernel_code_prefetch_byte_size = 0
 ; GFX10-NEXT:     granulated_workitem_vgpr_count = 0
-; GFX10-NEXT:     granulated_wavefront_sgpr_count = 1
+; GFX10-NEXT:     granulated_wavefront_sgpr_count = 2
 ; GFX10-NEXT:     priority = 0
 ; GFX10-NEXT:     float_mode = 240
 ; GFX10-NEXT:     priv = 0
@@ -4249,8 +4249,8 @@ define amdgpu_kernel void @dyn_extract_v4f32_s_s_s(ptr addrspace(1) %out, i32 %s
 ; GFX10-NEXT:     gds_segment_byte_size = 0
 ; GFX10-NEXT:     kernarg_segment_byte_size = 28
 ; GFX10-NEXT:     workgroup_fbarrier_count = 0
-; GFX10-NEXT:     wavefront_sgpr_count = 10
-; GFX10-NEXT:     workitem_vgpr_count = 2
+; GFX10-NEXT:     wavefront_sgpr_count = 18
+; GFX10-NEXT:     workitem_vgpr_count = 3
 ; GFX10-NEXT:     reserved_vgpr_first = 0
 ; GFX10-NEXT:     reserved_vgpr_count = 0
 ; GFX10-NEXT:     reserved_sgpr_first = 0
@@ -4291,7 +4291,7 @@ define amdgpu_kernel void @dyn_extract_v4f32_s_s_s(ptr addrspace(1) %out, i32 %s
 ; GFX11-NEXT:     kernel_code_entry_byte_offset = 256
 ; GFX11-NEXT:     kernel_code_prefetch_byte_size = 0
 ; GFX11-NEXT:     granulated_workitem_vgpr_count = 0
-; GFX11-NEXT:     granulated_wavefront_sgpr_count = 0
+; GFX11-NEXT:     granulated_wavefront_sgpr_count = 1
 ; GFX11-NEXT:     priority = 0
 ; GFX11-NEXT:     float_mode = 240
 ; GFX11-NEXT:     priv = 0
@@ -4334,7 +4334,7 @@ define amdgpu_kernel void @dyn_extract_v4f32_s_s_s(ptr addrspace(1) %out, i32 %s
 ; GFX11-NEXT:     gds_segment_byte_size = 0
 ; GFX11-NEXT:     kernarg_segment_byte_size = 28
 ; GFX11-NEXT:     workgroup_fbarrier_count = 0
-; GFX11-NEXT:     wavefront_sgpr_count = 6
+; GFX11-NEXT:     wavefront_sgpr_count = 16
 ; GFX11-NEXT:     workitem_vgpr_count = 2
 ; GFX11-NEXT:     reserved_vgpr_first = 0
 ; GFX11-NEXT:     reserved_vgpr_count = 0
@@ -4382,7 +4382,7 @@ define amdgpu_kernel void @dyn_extract_v4f64_s_s_s(ptr addrspace(1) %out, i32 %s
 ; GPRIDX-NEXT:     kernel_code_entry_byte_offset = 256
 ; GPRIDX-NEXT:     kernel_code_prefetch_byte_size = 0
 ; GPRIDX-NEXT:     granulated_workitem_vgpr_count = 0
-; GPRIDX-NEXT:     granulated_wavefront_sgpr_count = 1
+; GPRIDX-NEXT:     granulated_wavefront_sgpr_count = 2
 ; GPRIDX-NEXT:     priority = 0
 ; GPRIDX-NEXT:     float_mode = 240
 ; GPRIDX-NEXT:     priv = 0
@@ -4425,7 +4425,7 @@ define amdgpu_kernel void @dyn_extract_v4f64_s_s_s(ptr addrspace(1) %out, i32 %s
 ; GPRIDX-NEXT:     gds_segment_byte_size = 0
 ; GPRIDX-NEXT:     kernarg_segment_byte_size = 28
 ; GPRIDX-NEXT:     workgroup_fbarrier_count = 0
-; GPRIDX-NEXT:     wavefront_sgpr_count = 16
+; GPRIDX-NEXT:     wavefront_sgpr_count = 24
 ; GPRIDX-NEXT:     workitem_vgpr_count = 3
 ; GPRIDX-NEXT:     reserved_vgpr_first = 0
 ; GPRIDX-NEXT:     reserved_vgpr_count = 0
@@ -4560,7 +4560,7 @@ define amdgpu_kernel void @dyn_extract_v4f64_s_s_s(ptr addrspace(1) %out, i32 %s
 ; GFX10-NEXT:     kernel_code_entry_byte_offset = 256
 ; GFX10-NEXT:     kernel_code_prefetch_byte_size = 0
 ; GFX10-NEXT:     granulated_workitem_vgpr_count = 0
-; GFX10-NEXT:     granulated_wavefront_sgpr_count = 1
+; GFX10-NEXT:     granulated_wavefront_sgpr_count = 2
 ; GFX10-NEXT:     priority = 0
 ; GFX10-NEXT:     float_mode = 240
 ; GFX10-NEXT:     priv = 0
@@ -4603,7 +4603,7 @@ define amdgpu_kernel void @dyn_extract_v4f64_s_s_s(ptr addrspace(1) %out, i32 %s
 ; GFX10-NEXT:     gds_segment_byte_size = 0
 ; GFX10-NEXT:     kernarg_segment_byte_size = 28
 ; GFX10-NEXT:     workgroup_fbarrier_count = 0
-; GFX10-NEXT:     wavefront_sgpr_count = 10
+; GFX10-NEXT:     wavefront_sgpr_count = 18
 ; GFX10-NEXT:     workitem_vgpr_count = 3
 ; GFX10-NEXT:     reserved_vgpr_first = 0
 ; GFX10-NEXT:     reserved_vgpr_count = 0
@@ -4648,7 +4648,7 @@ define amdgpu_kernel void @dyn_extract_v4f64_s_s_s(ptr addrspace(1) %out, i32 %s
 ; GFX11-NEXT:     kernel_code_entry_byte_offset = 256
 ; GFX11-NEXT:     kernel_code_prefetch_byte_size = 0
 ; GFX11-NEXT:     granulated_workitem_vgpr_count = 0
-; GFX11-NEXT:     granulated_wavefront_sgpr_count = 0
+; GFX11-NEXT:     granulated_wavefront_sgpr_count = 1
 ; GFX11-NEXT:     priority = 0
 ; GFX11-NEXT:     float_mode = 240
 ; GFX11-NEXT:     priv = 0
@@ -4691,7 +4691,7 @@ define amdgpu_kernel void @dyn_extract_v4f64_s_s_s(ptr addrspace(1) %out, i32 %s
 ; GFX11-NEXT:     gds_segment_byte_size = 0
 ; GFX11-NEXT:     kernarg_segment_byte_size = 28
 ; GFX11-NEXT:     workgroup_fbarrier_count = 0
-; GFX11-NEXT:     wavefront_sgpr_count = 7
+; GFX11-NEXT:     wavefront_sgpr_count = 16
 ; GFX11-NEXT:     workitem_vgpr_count = 3
 ; GFX11-NEXT:     reserved_vgpr_first = 0
 ; GFX11-NEXT:     reserved_vgpr_count = 0
