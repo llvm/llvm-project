@@ -336,11 +336,244 @@ LogicalResult IndexSwitchOpLowering::matchAndRewrite(
   return success();
 }
 
+// Lower scf::while to either emitc::while or emitc::do based on argument usage
+// patterns. Uses mutable variables to maintain loop state across iterations.
+struct WhileLowering : public OpConversionPattern<WhileOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(WhileOp whileOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = whileOp.getLoc();
+    MLIRContext *context = loc.getContext();
+
+    // Create variable storage for loop-carried values to enable imperative
+    // updates while maintaining SSA semantics at conversion boundaries.
+    SmallVector<Value> variables;
+    if (failed(
+            createInitVariables(whileOp, rewriter, variables, loc, context))) {
+      return failure();
+    }
+
+    // Select lowering strategy based on condition argument usage:
+    // - emitc.while when condition args match region inputs (direct mapping);
+    // - emitc.do when condition args differ (requires state synchronization).
+    Region &beforeRegion = adaptor.getBefore();
+    Block &beforeBlock = beforeRegion.front();
+    auto condOp = cast<scf::ConditionOp>(beforeRegion.back().getTerminator());
+
+    bool isDoOp = !llvm::equal(beforeBlock.getArguments(), condOp.getArgs());
+
+    LogicalResult result =
+        isDoOp ? lowerDoWhile(whileOp, variables, context, rewriter, loc)
+               : lowerWhile(whileOp, variables, context, rewriter, loc);
+
+    if (failed(result))
+      return failure();
+
+    // Create an emitc::variable op for each result. These variables will be
+    // assigned to by emitc::assign ops within the loop body.
+    SmallVector<Value> resultVariables;
+    if (failed(createVariablesForResults(whileOp, getTypeConverter(), rewriter,
+                                         resultVariables))) {
+      return rewriter.notifyMatchFailure(whileOp,
+                                         "Failed to create result variables");
+    }
+
+    rewriter.setInsertionPointAfter(whileOp);
+
+    // Transfer final loop state to result variables and get final SSA results.
+    SmallVector<Value> finalResults =
+        finalizeLoopResults(resultVariables, variables, rewriter, loc);
+
+    rewriter.replaceOp(whileOp, finalResults);
+    return success();
+  }
+
+private:
+  // Initialize variables for loop-carried values to enable state updates
+  // across iterations without SSA argument passing.
+  static LogicalResult createInitVariables(WhileOp whileOp,
+                                           ConversionPatternRewriter &rewriter,
+                                           SmallVectorImpl<Value> &outVars,
+                                           Location loc, MLIRContext *context) {
+    emitc::OpaqueAttr noInit = emitc::OpaqueAttr::get(context, "");
+
+    for (Value init : whileOp.getInits()) {
+      emitc::VariableOp var = rewriter.create<emitc::VariableOp>(
+          loc, emitc::LValueType::get(init.getType()), noInit);
+      rewriter.create<emitc::AssignOp>(loc, var.getResult(), init);
+      outVars.push_back(var.getResult());
+    }
+
+    return success();
+  }
+
+  // Transition from SSA block arguments to variable-based state management by
+  // replacing argument uses with variable loads and cleaning up block
+  // interface.
+  void replaceBlockArgsWithVarLoads(Block *block, ArrayRef<Value> vars,
+                                    ConversionPatternRewriter &rewriter,
+                                    Location loc) const {
+    rewriter.setInsertionPointToStart(block);
+
+    for (auto [arg, var] : llvm::zip(block->getArguments(), vars)) {
+      Type loadedType = cast<emitc::LValueType>(var.getType()).getValueType();
+      Value load = rewriter.create<emitc::LoadOp>(loc, loadedType, var);
+      arg.replaceAllUsesWith(load);
+    }
+
+    // Remove arguments after replacement to simplify block structure.
+    block->eraseArguments(0, block->getNumArguments());
+  }
+
+  // Convert SCF yield terminators to imperative assignments to update loop
+  // variables, maintaining loop semantics while transitioning to emitc model.
+  void processYieldTerminator(Operation *terminator, ArrayRef<Value> vars,
+                              ConversionPatternRewriter &rewriter,
+                              Location loc) const {
+    auto yieldOp = cast<scf::YieldOp>(terminator);
+    SmallVector<Value> yields(yieldOp.getOperands());
+    rewriter.eraseOp(yieldOp);
+
+    rewriter.setInsertionPointToEnd(yieldOp->getBlock());
+    for (auto [var, val] : llvm::zip(vars, yields))
+      rewriter.create<emitc::AssignOp>(loc, var, val);
+  }
+
+  // Transfers final loop state from mutable variables to result variables,
+  // then returns the final SSA values to replace the original scf::while
+  // results.
+  static SmallVector<Value>
+  finalizeLoopResults(ArrayRef<Value> resultVariables,
+                      ArrayRef<Value> loopVariables,
+                      ConversionPatternRewriter &rewriter, Location loc) {
+    // Transfer final loop state to result variables to bridge imperative loop
+    // variables with SSA result expectations of the original op.
+    for (auto [resultVar, var] : llvm::zip(resultVariables, loopVariables)) {
+      Type loadedType = cast<emitc::LValueType>(var.getType()).getValueType();
+      Value load = rewriter.create<emitc::LoadOp>(loc, loadedType, var);
+      rewriter.create<emitc::AssignOp>(loc, resultVar, load);
+    }
+
+    // Replace op with loaded values to integrate with converted SSA graph.
+    SmallVector<Value> finalResults;
+    for (Value resultVar : resultVariables) {
+      Type loadedType =
+          cast<emitc::LValueType>(resultVar.getType()).getValueType();
+      finalResults.push_back(
+          rewriter.create<emitc::LoadOp>(loc, loadedType, resultVar));
+    }
+
+    return finalResults;
+  }
+
+  // Direct lowering to emitc.while when condition arguments match region
+  // inputs.
+  LogicalResult lowerWhile(WhileOp whileOp, ArrayRef<Value> vars,
+                           MLIRContext *context,
+                           ConversionPatternRewriter &rewriter,
+                           Location loc) const {
+    auto loweredWhile = rewriter.create<emitc::WhileOp>(loc);
+
+    // Lower before region to condition region.
+    rewriter.inlineRegionBefore(whileOp.getBefore(),
+                                loweredWhile.getConditionRegion(),
+                                loweredWhile.getConditionRegion().end());
+
+    Block *condBlock = &loweredWhile.getConditionRegion().front();
+    replaceBlockArgsWithVarLoads(condBlock, vars, rewriter, loc);
+
+    Operation *condTerminator =
+        loweredWhile.getConditionRegion().back().getTerminator();
+    auto condOp = cast<scf::ConditionOp>(condTerminator);
+    rewriter.setInsertionPoint(condOp);
+    Value condition = rewriter.getRemappedValue(condOp.getCondition());
+    rewriter.create<emitc::YieldOp>(condOp.getLoc(), condition);
+    rewriter.eraseOp(condOp);
+
+    // Lower after region to body region.
+    rewriter.inlineRegionBefore(whileOp.getAfter(),
+                                loweredWhile.getBodyRegion(),
+                                loweredWhile.getBodyRegion().end());
+
+    Block *bodyBlock = &loweredWhile.getBodyRegion().front();
+    replaceBlockArgsWithVarLoads(bodyBlock, vars, rewriter, loc);
+
+    // Convert scf.yield to variable assignments for state updates.
+    processYieldTerminator(bodyBlock->getTerminator(), vars, rewriter, loc);
+
+    return success();
+  }
+
+  // Lower to emitc.do when condition arguments differ from region inputs.
+  LogicalResult lowerDoWhile(WhileOp whileOp, ArrayRef<Value> vars,
+                             MLIRContext *context,
+                             ConversionPatternRewriter &rewriter,
+                             Location loc) const {
+    Type i1Type = IntegerType::get(context, 1);
+    auto globalCondition =
+        rewriter.create<emitc::VariableOp>(loc, emitc::LValueType::get(i1Type),
+                                           emitc::OpaqueAttr::get(context, ""));
+    Value conditionVal = globalCondition.getResult();
+
+    auto loweredDo = rewriter.create<emitc::DoOp>(loc);
+
+    // Lower before region as body.
+    rewriter.inlineRegionBefore(whileOp.getBefore(), loweredDo.getBodyRegion(),
+                                loweredDo.getBodyRegion().end());
+
+    Block *bodyBlock = &loweredDo.getBodyRegion().front();
+    replaceBlockArgsWithVarLoads(bodyBlock, vars, rewriter, loc);
+
+    // Convert scf.condition to condition variable assignment.
+    Operation *condTerminator =
+        loweredDo.getBodyRegion().back().getTerminator();
+    scf::ConditionOp condOp = cast<scf::ConditionOp>(condTerminator);
+    rewriter.setInsertionPoint(condOp);
+    Value condition = rewriter.getRemappedValue(condOp.getCondition());
+    rewriter.create<emitc::AssignOp>(loc, conditionVal, condition);
+
+    // Wrap body region in conditional to preserve scf semantics.
+    auto ifOp = rewriter.create<emitc::IfOp>(loc, condition, false, false);
+
+    // Lower after region as then-block of conditional.
+    rewriter.inlineRegionBefore(whileOp.getAfter(), ifOp.getBodyRegion(),
+                                ifOp.getBodyRegion().begin());
+
+    if (!ifOp.getBodyRegion().empty()) {
+      Block *ifBlock = &ifOp.getBodyRegion().front();
+
+      // Handle argument mapping from condition op to body region.
+      auto args = condOp.getArgs();
+      for (auto [arg, val] : llvm::zip(ifBlock->getArguments(), args))
+        arg.replaceAllUsesWith(rewriter.getRemappedValue(val));
+
+      ifBlock->eraseArguments(0, ifBlock->getNumArguments());
+
+      // Convert scf.yield to variable assignments for state updates.
+      processYieldTerminator(ifBlock->getTerminator(), vars, rewriter, loc);
+      rewriter.create<emitc::YieldOp>(loc);
+    }
+
+    rewriter.eraseOp(condOp);
+
+    // Create condition region that loads from the flag variable.
+    Block *condBlock = rewriter.createBlock(&loweredDo.getConditionRegion());
+    rewriter.setInsertionPointToStart(condBlock);
+    Value cond = rewriter.create<emitc::LoadOp>(loc, i1Type, conditionVal);
+    rewriter.create<emitc::YieldOp>(loc, cond);
+
+    return success();
+  }
+};
+
 void mlir::populateSCFToEmitCConversionPatterns(RewritePatternSet &patterns,
                                                 TypeConverter &typeConverter) {
   patterns.add<ForLowering>(typeConverter, patterns.getContext());
   patterns.add<IfLowering>(typeConverter, patterns.getContext());
   patterns.add<IndexSwitchOpLowering>(typeConverter, patterns.getContext());
+  patterns.add<WhileLowering>(typeConverter, patterns.getContext());
 }
 
 void SCFToEmitCPass::runOnOperation() {
@@ -357,7 +590,8 @@ void SCFToEmitCPass::runOnOperation() {
 
   // Configure conversion to lower out SCF operations.
   ConversionTarget target(getContext());
-  target.addIllegalOp<scf::ForOp, scf::IfOp, scf::IndexSwitchOp>();
+  target
+      .addIllegalOp<scf::ForOp, scf::IfOp, scf::IndexSwitchOp, scf::WhileOp>();
   target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
