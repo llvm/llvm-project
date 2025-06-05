@@ -1954,19 +1954,28 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
     }
   }
 
+  QualType condType = condExpr->getType();
+
   // OpenCL: If the condition is a vector, we can treat this condition like
   // the select function.
-  if ((cgf.getLangOpts().OpenCL && condExpr->getType()->isVectorType()) ||
-      condExpr->getType()->isExtVectorType()) {
+  if ((cgf.getLangOpts().OpenCL && condType->isVectorType()) ||
+      condType->isExtVectorType()) {
     assert(!cir::MissingFeatures::vectorType());
     cgf.cgm.errorNYI(e->getSourceRange(), "vector ternary op");
   }
 
-  if (condExpr->getType()->isVectorType() ||
-      condExpr->getType()->isSveVLSBuiltinType()) {
-    assert(!cir::MissingFeatures::vecTernaryOp());
-    cgf.cgm.errorNYI(e->getSourceRange(), "vector ternary op");
-    return {};
+  if (condType->isVectorType() || condType->isSveVLSBuiltinType()) {
+    if (!condType->isVectorType()) {
+      assert(!cir::MissingFeatures::vecTernaryOp());
+      cgf.cgm.errorNYI(loc, "TernaryOp for SVE vector");
+      return {};
+    }
+
+    mlir::Value condValue = Visit(condExpr);
+    mlir::Value lhsValue = Visit(lhsExpr);
+    mlir::Value rhsValue = Visit(rhsExpr);
+    return builder.create<cir::VecTernaryOp>(loc, condValue, lhsValue,
+                                             rhsValue);
   }
 
   // If this is a really simple expression (like x ? 4 : 5), emit this as a
