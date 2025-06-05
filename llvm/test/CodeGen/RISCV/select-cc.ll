@@ -358,7 +358,7 @@ define i32 @select_sge_int16min(i32 signext %x, i32 signext %y, i32 signext %z) 
 ; RV64I-LABEL: select_sge_int16min:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a3, 1048560
-; RV64I-NEXT:    addiw a3, a3, -1
+; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    blt a3, a0, .LBB2_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    mv a1, a2
@@ -369,7 +369,7 @@ define i32 @select_sge_int16min(i32 signext %x, i32 signext %y, i32 signext %z) 
 ; RV64I-CCMOV-LABEL: select_sge_int16min:
 ; RV64I-CCMOV:       # %bb.0:
 ; RV64I-CCMOV-NEXT:    lui a3, 1048560
-; RV64I-CCMOV-NEXT:    addiw a3, a3, -1
+; RV64I-CCMOV-NEXT:    addi a3, a3, -1
 ; RV64I-CCMOV-NEXT:    slt a0, a3, a0
 ; RV64I-CCMOV-NEXT:    mips.ccmov a0, a0, a1, a2
 ; RV64I-CCMOV-NEXT:    ret

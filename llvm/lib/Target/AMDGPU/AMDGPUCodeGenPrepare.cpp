@@ -180,7 +180,7 @@ public:
   /// Wrapper to pass all the arguments to computeKnownFPClass
   KnownFPClass computeKnownFPClass(const Value *V, FPClassTest Interested,
                                    const Instruction *CtxI) const {
-    return llvm::computeKnownFPClass(V, DL, Interested, 0, TLI, AC, CtxI, DT);
+    return llvm::computeKnownFPClass(V, DL, Interested, TLI, AC, CtxI, DT);
   }
 
   bool canIgnoreDenormalInput(const Value *V, const Instruction *CtxI) const {
@@ -596,11 +596,11 @@ bool AMDGPUCodeGenPrepareImpl::promoteUniformBitreverseToI32(
 }
 
 unsigned AMDGPUCodeGenPrepareImpl::numBitsUnsigned(Value *Op) const {
-  return computeKnownBits(Op, DL, 0, AC).countMaxActiveBits();
+  return computeKnownBits(Op, DL, AC).countMaxActiveBits();
 }
 
 unsigned AMDGPUCodeGenPrepareImpl::numBitsSigned(Value *Op) const {
-  return ComputeMaxSignificantBits(Op, DL, 0, AC);
+  return ComputeMaxSignificantBits(Op, DL, AC);
 }
 
 static void extractValues(IRBuilder<> &Builder,
@@ -1198,13 +1198,13 @@ unsigned AMDGPUCodeGenPrepareImpl::getDivNumBits(BinaryOperator &I, Value *Num,
          Den->getType()->getScalarSizeInBits());
   unsigned SSBits = Num->getType()->getScalarSizeInBits();
   if (IsSigned) {
-    unsigned RHSSignBits = ComputeNumSignBits(Den, DL, 0, AC, &I);
+    unsigned RHSSignBits = ComputeNumSignBits(Den, DL, AC, &I);
     // A sign bit needs to be reserved for shrinking.
     unsigned DivBits = SSBits - RHSSignBits + 1;
     if (DivBits > MaxDivBits)
       return SSBits;
 
-    unsigned LHSSignBits = ComputeNumSignBits(Num, DL, 0, AC, &I);
+    unsigned LHSSignBits = ComputeNumSignBits(Num, DL, AC, &I);
 
     unsigned SignBits = std::min(LHSSignBits, RHSSignBits);
     DivBits = SSBits - SignBits + 1;
@@ -1213,7 +1213,7 @@ unsigned AMDGPUCodeGenPrepareImpl::getDivNumBits(BinaryOperator &I, Value *Num,
 
   // All bits are used for unsigned division for Num or Den in range
   // (SignedMax, UnsignedMax].
-  KnownBits Known = computeKnownBits(Den, DL, 0, AC, &I);
+  KnownBits Known = computeKnownBits(Den, DL, AC, &I);
   if (Known.isNegative() || !Known.isNonNegative())
     return SSBits;
   unsigned RHSSignBits = Known.countMinLeadingZeros();
@@ -1221,7 +1221,7 @@ unsigned AMDGPUCodeGenPrepareImpl::getDivNumBits(BinaryOperator &I, Value *Num,
   if (DivBits > MaxDivBits)
     return SSBits;
 
-  Known = computeKnownBits(Num, DL, 0, AC, &I);
+  Known = computeKnownBits(Num, DL, AC, &I);
   if (Known.isNegative() || !Known.isNonNegative())
     return SSBits;
   unsigned LHSSignBits = Known.countMinLeadingZeros();
@@ -1358,7 +1358,7 @@ bool AMDGPUCodeGenPrepareImpl::divHasSpecialOptimization(BinaryOperator &I,
     // If there's no wider mulhi, there's only a better expansion for powers of
     // two.
     // TODO: Should really know for each vector element.
-    if (isKnownToBeAPowerOfTwo(C, DL, true, 0, AC, &I, DT))
+    if (isKnownToBeAPowerOfTwo(C, DL, true, AC, &I, DT))
       return true;
 
     return false;
@@ -1368,8 +1368,7 @@ bool AMDGPUCodeGenPrepareImpl::divHasSpecialOptimization(BinaryOperator &I,
     // fold (udiv x, (shl c, y)) -> x >>u (log2(c)+y) iff c is power of 2
     if (BinOpDen->getOpcode() == Instruction::Shl &&
         isa<Constant>(BinOpDen->getOperand(0)) &&
-        isKnownToBeAPowerOfTwo(BinOpDen->getOperand(0), DL, true, 0, AC, &I,
-                               DT)) {
+        isKnownToBeAPowerOfTwo(BinOpDen->getOperand(0), DL, true, AC, &I, DT)) {
       return true;
     }
   }
@@ -2289,8 +2288,7 @@ bool AMDGPUCodeGenPrepareImpl::visitFMinLike(IntrinsicInst &I) {
 
   // Match pattern for fract intrinsic in contexts where the nan check has been
   // optimized out (and hope the knowledge the source can't be nan wasn't lost).
-  if (!I.hasNoNaNs() &&
-      !isKnownNeverNaN(FractArg, /*Depth=*/0, SimplifyQuery(DL, TLI)))
+  if (!I.hasNoNaNs() && !isKnownNeverNaN(FractArg, SimplifyQuery(DL, TLI)))
     return false;
 
   IRBuilder<> Builder(&I);
