@@ -873,6 +873,46 @@ static void updateBranchOpInterface(mlir::OpBuilder &builder,
   }
 }
 
+static void updateFunctionOpInterface(mlir::OpBuilder &builder,
+                                      mlir::FunctionOpInterface funcOp,
+                                      GetLayoutCallbackFnTy getLayoutOfValue) {
+  SmallVector<Type> newArgTypes;
+  // Update the function arguments.
+  for (BlockArgument arg : funcOp.getArguments()) {
+    Type argType = arg.getType();
+    newArgTypes.push_back(argType);
+    if (!isa<VectorType, xegpu::TensorDescType>(argType))
+      continue;
+    xegpu::LayoutAttr layout = getLayoutOfValue(arg);
+    if (!layout) {
+      LLVM_DEBUG(DBGS() << "Expecting layout for function argument: " << arg
+                        << " but got none.\n");
+      continue;
+    }
+    if (auto tensorDescTy = dyn_cast<xegpu::TensorDescType>(argType)) {
+      auto newTdescTy = xegpu::TensorDescType::get(
+          tensorDescTy.getContext(), tensorDescTy.getShape(),
+          tensorDescTy.getElementType(), tensorDescTy.getEncoding(), layout);
+      arg.setType(newTdescTy);
+      newArgTypes.back() = newTdescTy;
+      continue;
+    }
+    // If the argument is a vector type, update all the users of the argument
+    // with the layout.
+    for (OpOperand &user : arg.getUses()) {
+      Operation *owner = user.getOwner();
+      unsigned operandNumber = user.getOperandNumber();
+      std::string attrName =
+          operandLayoutNamePrefix + std::to_string(operandNumber);
+      owner->setAttr(attrName, layout);
+    }
+  }
+  // Update the function type with the new argument types.
+  // NOTE: We assume that function results are not expected to have layouts.
+  funcOp.setType(FunctionType::get(funcOp.getContext(), newArgTypes,
+                                   funcOp.getResultTypes()));
+}
+
 namespace {
 
 struct XeGPULayoutPropagatePass final
@@ -903,15 +943,20 @@ void XeGPULayoutPropagatePass::runOnOperation() {
   Operation *op = getOperation();
   op->walk([&](mlir::Block *block) {
     for (mlir::Operation &op : llvm::reverse(block->getOperations())) {
-      if (auto terminator =
+      if (auto branchTermOp =
               mlir::dyn_cast<mlir::RegionBranchTerminatorOpInterface>(op)) {
-        updateBranchTerminatorOpInterface(builder, terminator,
+        updateBranchTerminatorOpInterface(builder, branchTermOp,
                                           getXeGPULayoutForValue);
         continue;
       }
 
-      if (auto iface = mlir::dyn_cast<mlir::RegionBranchOpInterface>(op)) {
-        updateBranchOpInterface(builder, iface, getXeGPULayoutForValue);
+      if (auto regionBrOp = mlir::dyn_cast<mlir::RegionBranchOpInterface>(op)) {
+        updateBranchOpInterface(builder, regionBrOp, getXeGPULayoutForValue);
+        continue;
+      }
+
+      if (auto funcOp = mlir::dyn_cast<mlir::FunctionOpInterface>(op)) {
+        updateFunctionOpInterface(builder, funcOp, getXeGPULayoutForValue);
         continue;
       }
       updateOp(builder, &op, getXeGPULayoutForValue);
