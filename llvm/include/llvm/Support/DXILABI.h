@@ -99,11 +99,12 @@ enum class SamplerFeedbackType : uint32_t {
 const unsigned MinWaveSize = 4;
 const unsigned MaxWaveSize = 128;
 
-// Definition of the various enumerations and flags. The definitions of all
-// values here correspond to their description in the d3d12.h header and are
-// carried over from their values in DXC. For reference:
+// Definition of the various d3d12.h enumerations and flags. The definitions of
+// all values here correspond to their description in the d3d12.h header and
+// are carried over from their values in DXC. For reference:
 // https://learn.microsoft.com/en-us/windows/win32/api/d3d12/
 
+// D3D12_ROOT_SIGNATURE_FLAGS
 enum class RootFlags : uint32_t {
   None = 0,
   AllowInputAssemblerInputLayout = 0x1,
@@ -121,6 +122,7 @@ enum class RootFlags : uint32_t {
   ValidFlags = 0x00000fff
 };
 
+// D3D12_ROOT_DESCRIPTOR_FLAGS
 enum class RootDescriptorFlags : unsigned {
   None = 0,
   DataVolatile = 0x2,
@@ -129,6 +131,7 @@ enum class RootDescriptorFlags : unsigned {
   ValidFlags = 0xe,
 };
 
+// D3D12_DESCRIPTOR_RANGE_FLAGS
 enum class DescriptorRangeFlags : unsigned {
   None = 0,
   DescriptorsVolatile = 0x1,
@@ -140,6 +143,7 @@ enum class DescriptorRangeFlags : unsigned {
   ValidSamplerFlags = DescriptorsVolatile,
 };
 
+// D3D12_SHADER_VISIBILITY
 enum class ShaderVisibility {
   All = 0,
   Vertex = 1,
@@ -151,8 +155,7 @@ enum class ShaderVisibility {
   Mesh = 7,
 };
 
-// D3D12_FILTER enumeration:
-// https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_filter
+// D3D12_FILTER
 enum class SamplerFilter {
   MinMagMipPoint = 0,
   MinMagPointMipLinear = 0x1,
@@ -192,6 +195,7 @@ enum class SamplerFilter {
   MaximumAnisotropic = 0x1d5
 };
 
+// D3D12_TEXTURE_ADDRESS_MODE
 enum class TextureAddressMode {
   Wrap = 1,
   Mirror = 2,
@@ -200,6 +204,7 @@ enum class TextureAddressMode {
   MirrorOnce = 5
 };
 
+// D3D12_COMPARISON_FUNC
 enum class ComparisonFunc : unsigned {
   Never = 1,
   Less = 2,
@@ -211,6 +216,7 @@ enum class ComparisonFunc : unsigned {
   Always = 8
 };
 
+// D3D12_STATIC_BORDER_COLOR
 enum class StaticBorderColor {
   TransparentBlack = 0,
   OpaqueBlack = 1,
