@@ -26,14 +26,12 @@ static std::vector<std::string_view> SplitCamelCase(std::string_view x) {
         // ACCUsage => ACC-Usage, CComment => C-Comment, etc.
         (parser::IsUpperCaseLetter(x[wordEnd]) && wordEnd + 1 < xSize &&
             parser::IsLowerCaseLetter(x[wordEnd + 1]))) {
-      result.push_back(
-          std::string_view(x.begin() + wordStart, wordEnd - wordStart));
+      result.push_back(x.substr(wordStart, wordEnd - wordStart));
       wordStart = wordEnd;
     }
   }
   // We went one past the end of the last word.
-  result.push_back(
-      std::string_view(x.begin() + wordStart, wordEnd - wordStart));
+  result.push_back(x.substr(wordStart, wordEnd - wordStart));
   return result;
 }
 
