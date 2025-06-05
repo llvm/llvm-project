@@ -35,12 +35,14 @@ namespace Fortran {
 namespace lower {
 class AbstractConverter;
 
-namespace omp {
-
-enum class DeclOperationKind { Private, FirstPrivate, Reduction };
+enum class DeclOperationKind {
+  PrivateOrLocal,
+  FirstPrivateOrLocalInit,
+  Reduction
+};
 inline bool isPrivatization(DeclOperationKind kind) {
-  return (kind == DeclOperationKind::FirstPrivate) ||
-         (kind == DeclOperationKind::Private);
+  return (kind == DeclOperationKind::FirstPrivateOrLocalInit) ||
+         (kind == DeclOperationKind::PrivateOrLocal);
 }
 inline bool isReduction(DeclOperationKind kind) {
   return kind == DeclOperationKind::Reduction;
@@ -56,7 +58,7 @@ void populateByRefInitAndCleanupRegions(
     mlir::Value allocatedPrivVarArg, mlir::Value moldArg,
     mlir::Region &cleanupRegion, DeclOperationKind kind,
     const Fortran::semantics::Symbol *sym = nullptr,
-    bool cannotHaveNonDefaultLowerBounds = false);
+    bool cannotHaveNonDefaultLowerBounds = false, bool isDoConcurrent = false);
 
 /// Generate a fir::ShapeShift op describing the provided boxed array.
 /// `cannotHaveNonDefaultLowerBounds` should be set if `box` is known to have
@@ -69,7 +71,6 @@ fir::ShapeShiftOp getShapeShift(fir::FirOpBuilder &builder, mlir::Location loc,
                                 bool cannotHaveNonDefaultLowerBounds = false,
                                 bool useDefaultLowerBounds = false);
 
-} // namespace omp
 } // namespace lower
 } // namespace Fortran
 
