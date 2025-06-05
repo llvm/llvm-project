@@ -1698,7 +1698,7 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
           MI.getOperand(0).setReg(DefReg);
           MI.getOperand(0).setIsDead(false);
 
-          // Move the AVL from MI to NextMI
+          // Move the AVL from NextMI to MI
           dropAVLUse(MI.getOperand(1));
           if (NextMI->getOperand(1).isImm())
             MI.getOperand(1).ChangeToImmediate(NextMI->getOperand(1).getImm());
