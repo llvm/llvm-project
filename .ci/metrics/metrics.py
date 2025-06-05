@@ -349,19 +349,7 @@ def github_get_metrics(
                     running_count[metric_name] += 1
                 continue
 
-            job_result = int(job.conclusion == "success")
-            if job_result:
-                # We still might want to mark the job as a failure if one of the steps
-                # failed. This is required due to use setting continue-on-error in
-                # the premerge pipeline to prevent sending emails while we are
-                # testing the infrastructure.
-                # TODO(boomanaiden154): Remove this once the premerge pipeline is no
-                # longer in a testing state and we can directly assert the workflow
-                # result.
-                for step in job.steps:
-                    if step.conclusion != "success" and step.conclusion != "skipped":
-                        job_result = 0
-                        break
+            job_result = int(job.conclusion == "success" or job.conclusion == "skipped")
 
             created_at = job.created_at
             started_at = job.started_at

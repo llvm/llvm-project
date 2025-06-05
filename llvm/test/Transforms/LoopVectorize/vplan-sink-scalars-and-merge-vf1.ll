@@ -58,8 +58,8 @@ define void @sink_with_sideeffects(i1 %c, ptr %ptr) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT vp<[[RESUME1:%.+]]> = resume-phi vp<[[VEC_TC]]>, ir<0>
-; CHECK-NEXT:    EMIT vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END]]>, ir<1024>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME1:%.+]]> = resume-phi vp<[[VEC_TC]]>, ir<0>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END]]>, ir<1024>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:

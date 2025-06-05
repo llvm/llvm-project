@@ -100,6 +100,7 @@ bool Qualifiers::isTargetAddressSpaceSupersetOf(LangAS A, LangAS B,
          // address spaces to default to work around this problem.
          (A == LangAS::Default && B == LangAS::hlsl_private) ||
          (A == LangAS::Default && B == LangAS::hlsl_device) ||
+         (A == LangAS::Default && B == LangAS::hlsl_input) ||
          // Conversions from target specific address spaces may be legal
          // depending on the target information.
          Ctx.getTargetInfo().isAddressSpaceSupersetOf(A, B);
@@ -3571,6 +3572,12 @@ QualType QualType::getNonLValueExprType(const ASTContext &Context) const {
   return *this;
 }
 
+bool FunctionType::getCFIUncheckedCalleeAttr() const {
+  if (const auto *FPT = getAs<FunctionProtoType>())
+    return FPT->hasCFIUncheckedCallee();
+  return false;
+}
+
 StringRef FunctionType::getNameForCallConv(CallingConv CC) {
   switch (CC) {
   case CC_C:
@@ -3662,6 +3669,7 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
   FunctionTypeBits.HasExtParameterInfos = !!epi.ExtParameterInfos;
   FunctionTypeBits.Variadic = epi.Variadic;
   FunctionTypeBits.HasTrailingReturn = epi.HasTrailingReturn;
+  FunctionTypeBits.CFIUncheckedCallee = epi.CFIUncheckedCallee;
 
   if (epi.requiresFunctionProtoTypeExtraBitfields()) {
     FunctionTypeBits.HasExtraBitfields = true;
@@ -3929,6 +3937,7 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
 
   ID.AddInteger((EffectCount << 3) | (HasConds << 2) |
                 (epi.AArch64SMEAttributes << 1) | epi.HasTrailingReturn);
+  ID.AddInteger(epi.CFIUncheckedCallee);
 
   for (unsigned Idx = 0; Idx != EffectCount; ++Idx) {
     ID.AddInteger(epi.FunctionEffects.Effects[Idx].toOpaqueInt32());

@@ -693,6 +693,17 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
   llvm::Constant *CheckTypeDesc;
   bool ShouldEmitCFICheck = CGF.SanOpts.has(SanitizerKind::CFIMFCall) &&
                             CGM.HasHiddenLTOVisibility(RD);
+
+  if (ShouldEmitCFICheck) {
+    if (const auto *BinOp = dyn_cast<BinaryOperator>(E)) {
+      if (BinOp->isPtrMemOp() &&
+          BinOp->getRHS()
+              ->getType()
+              ->hasPointeeToToCFIUncheckedCalleeFunctionType())
+        ShouldEmitCFICheck = false;
+    }
+  }
+
   bool ShouldEmitVFEInfo = CGM.getCodeGenOpts().VirtualFunctionElimination &&
                            CGM.HasHiddenLTOVisibility(RD);
   bool ShouldEmitWPDInfo =
