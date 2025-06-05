@@ -872,6 +872,21 @@ static void handleDiagnoseIfAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       cast<NamedDecl>(D)));
 }
 
+static void handleCFIUncheckedCalleeAttr(Sema &S, Decl *D,
+                                         const ParsedAttr &Attrs) {
+  if (hasDeclarator(D))
+    return;
+
+  if (!isa<ObjCMethodDecl>(D)) {
+    S.Diag(Attrs.getLoc(), diag::warn_attribute_wrong_decl_type)
+        << Attrs << Attrs.isRegularKeywordAttribute()
+        << ExpectedFunctionOrMethod;
+    return;
+  }
+
+  D->addAttr(::new (S.Context) CFIUncheckedCalleeAttr(S.Context, Attrs));
+}
+
 static void handleNoBuiltinAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   static constexpr const StringRef kWildcard = "*";
 
@@ -3506,13 +3521,7 @@ static void handleTargetClonesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (HasCommas && AL.getNumArgs() > 1)
     S.Diag(AL.getLoc(), diag::warn_target_clone_mixed_values);
 
-  if (S.Context.getTargetInfo().getTriple().isAArch64() && !HasDefault) {
-    // Add default attribute if there is no one
-    HasDefault = true;
-    Strings.push_back("default");
-  }
-
-  if (!HasDefault) {
+  if (!HasDefault && !S.Context.getTargetInfo().getTriple().isAArch64()) {
     S.Diag(AL.getLoc(), diag::err_target_clone_must_have_default);
     return;
   }
@@ -4166,7 +4175,7 @@ LifetimeCaptureByAttr *Sema::ParseLifetimeCaptureByAttr(const ParsedAttr &AL,
   }
   if (!IsValid)
     return nullptr;
-  SmallVector<int> FakeParamIndices(N, LifetimeCaptureByAttr::INVALID);
+  SmallVector<int> FakeParamIndices(N, LifetimeCaptureByAttr::Invalid);
   auto *CapturedBy =
       LifetimeCaptureByAttr::Create(Context, FakeParamIndices.data(), N, AL);
   CapturedBy->setArgs(ParamIdents, ParamLocs);
@@ -4209,8 +4218,8 @@ void Sema::LazyProcessLifetimeCaptureByParams(FunctionDecl *FD) {
   if (Attrs.empty())
     return;
   llvm::StringMap<int> NameIdxMapping = {
-      {"global", LifetimeCaptureByAttr::GLOBAL},
-      {"unknown", LifetimeCaptureByAttr::UNKNOWN}};
+      {"global", LifetimeCaptureByAttr::Global},
+      {"unknown", LifetimeCaptureByAttr::Unknown}};
   int Idx = 0;
   if (HasImplicitThisParam) {
     NameIdxMapping["this"] = 0;
@@ -7121,6 +7130,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_NoBuiltin:
     handleNoBuiltinAttr(S, D, AL);
     break;
+  case ParsedAttr::AT_CFIUncheckedCallee:
+    handleCFIUncheckedCalleeAttr(S, D, AL);
+    break;
   case ParsedAttr::AT_ExtVectorType:
     handleExtVectorTypeAttr(S, D, AL);
     break;
@@ -7515,6 +7527,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_HLSLWaveSize:
     S.HLSL().handleWaveSizeAttr(D, AL);
+    break;
+  case ParsedAttr::AT_HLSLVkExtBuiltinInput:
+    S.HLSL().handleVkExtBuiltinInputAttr(D, AL);
     break;
   case ParsedAttr::AT_HLSLSV_GroupThreadID:
     S.HLSL().handleSV_GroupThreadIDAttr(D, AL);

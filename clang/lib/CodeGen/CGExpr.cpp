@@ -21,6 +21,7 @@
 #include "CGRecordLayout.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "CodeGenPGO.h"
 #include "ConstantEmitter.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
@@ -56,14 +57,16 @@ using namespace clang;
 using namespace CodeGen;
 
 namespace clang {
-// TODO: Introduce frontend options to enabled per sanitizers, similar to
-// `fsanitize-trap`.
+// TODO: consider deprecating ClSanitizeGuardChecks; functionality is subsumed
+//       by -fsanitize-skip-hot-cutoff
 llvm::cl::opt<bool> ClSanitizeGuardChecks(
     "ubsan-guard-checks", llvm::cl::Optional,
     llvm::cl::desc("Guard UBSAN checks with `llvm.allow.ubsan.check()`."));
 
 } // namespace clang
 
+// TODO: consider deprecating ClArrayBoundsPseudoFn; functionality is subsumed
+//       by -fsanitize-annotate-debug-info
 static llvm::cl::opt<bool> ClArrayBoundsPseudoFn(
     "array-bounds-pseudofn", llvm::cl::Hidden, llvm::cl::Optional,
     llvm::cl::desc("Emit debug info that places array-bounds instrumentation "
@@ -205,7 +208,7 @@ RawAddress CodeGenFunction::CreateMemTempWithoutCast(QualType Ty,
 /// EvaluateExprAsBool - Perform the usual unary conversions on the specified
 /// expression and compare the result against zero, returning an Int1Ty value.
 llvm::Value *CodeGenFunction::EvaluateExprAsBool(const Expr *E) {
-  PGO.setCurrentStmt(E);
+  PGO->setCurrentStmt(E);
   if (const MemberPointerType *MPT = E->getType()->getAs<MemberPointerType>()) {
     llvm::Value *MemPtr = EmitScalarExpr(E);
     return CGM.getCXXABI().EmitMemberPointerIsNotNull(*this, MemPtr, MPT);
@@ -3050,9 +3053,13 @@ static LValue EmitFunctionDeclLValue(CodeGenFunction &CGF, const Expr *E,
                                      GlobalDecl GD) {
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
   llvm::Constant *V = CGF.CGM.getFunctionPointer(GD);
+  QualType ETy = E->getType();
+  if (ETy->isCFIUncheckedCalleeFunctionType()) {
+    if (auto *GV = dyn_cast<llvm::GlobalValue>(V))
+      V = llvm::NoCFIValue::get(GV);
+  }
   CharUnits Alignment = CGF.getContext().getDeclAlign(FD);
-  return CGF.MakeAddrLValue(V, E->getType(), Alignment,
-                            AlignmentSource::Decl);
+  return CGF.MakeAddrLValue(V, ETy, Alignment, AlignmentSource::Decl);
 }
 
 static LValue EmitCapturedFieldLValue(CodeGenFunction &CGF, const FieldDecl *FD,
@@ -6346,10 +6353,13 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
       FD && FD->hasAttr<OpenCLKernelAttr>())
     CGM.getTargetCodeGenInfo().setOCLKernelStubCallingConvention(FnType);
 
+  bool CFIUnchecked =
+      CalleeType->hasPointeeToToCFIUncheckedCalleeFunctionType();
+
   // If we are checking indirect calls and this call is indirect, check that the
   // function pointer is a member of the bit set for the function type.
   if (SanOpts.has(SanitizerKind::CFIICall) &&
-      (!TargetDecl || !isa<FunctionDecl>(TargetDecl))) {
+      (!TargetDecl || !isa<FunctionDecl>(TargetDecl)) && !CFIUnchecked) {
     SanitizerScope SanScope(this);
     EmitSanitizerStatReport(llvm::SanStat_CFI_ICall);
     ApplyDebugLocation ApplyTrapDI(

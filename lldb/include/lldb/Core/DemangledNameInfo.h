@@ -71,8 +71,7 @@ struct DemangledNameInfo {
 
   /// Returns \c true if this object holds a valid basename range.
   bool hasBasename() const {
-    return BasenameRange.second > BasenameRange.first &&
-           BasenameRange.second > 0;
+    return BasenameRange.second > BasenameRange.first;
   }
 };
 

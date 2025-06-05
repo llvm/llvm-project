@@ -2215,15 +2215,15 @@ namespace {
     // Return when there is nothing to check.
     if (!Body || !Third) return;
 
-    if (S.Diags.isIgnored(diag::warn_redundant_loop_iteration,
-                          Third->getBeginLoc()))
-      return;
-
     // Get the last statement from the loop body.
     CompoundStmt *CS = dyn_cast<CompoundStmt>(Body);
     if (!CS || CS->body_empty()) return;
     Stmt *LastStmt = CS->body_back();
     if (!LastStmt) return;
+
+    if (S.Diags.isIgnored(diag::warn_redundant_loop_iteration,
+                          Third->getBeginLoc()))
+      return;
 
     bool LoopIncrement, LastIncrement;
     DeclRefExpr *LoopDRE, *LastDRE;

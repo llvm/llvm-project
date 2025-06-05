@@ -300,7 +300,7 @@ public:
       : ResourceTypeInfo(HandleTy, {}, dxil::ResourceKind::Invalid) {}
 
   TargetExtType *getHandleTy() const { return HandleTy; }
-  LLVM_ABI StructType *createElementStruct();
+  LLVM_ABI StructType *createElementStruct(StringRef CBufferName = "");
 
   // Conditions to check before accessing specific views.
   LLVM_ABI bool isUAV() const;
@@ -358,6 +358,9 @@ public:
       return std::tie(RecordID, Space, LowerBound, Size) <
              std::tie(RHS.RecordID, RHS.Space, RHS.LowerBound, RHS.Size);
     }
+    bool overlapsWith(const ResourceBinding &RHS) const {
+      return Space == RHS.Space && LowerBound + Size - 1 >= RHS.LowerBound;
+    }
   };
 
 private:
@@ -394,8 +397,8 @@ public:
   getAnnotateProps(Module &M, dxil::ResourceTypeInfo &RTI) const;
 
   bool operator==(const ResourceInfo &RHS) const {
-    return std::tie(Binding, HandleTy, Symbol) ==
-           std::tie(RHS.Binding, RHS.HandleTy, RHS.Symbol);
+    return std::tie(Binding, HandleTy, Symbol, Name) ==
+           std::tie(RHS.Binding, RHS.HandleTy, RHS.Symbol, RHS.Name);
   }
   bool operator!=(const ResourceInfo &RHS) const { return !(*this == RHS); }
   bool operator<(const ResourceInfo &RHS) const {
