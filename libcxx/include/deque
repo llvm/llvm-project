@@ -277,9 +277,9 @@ struct __deque_block_size {
 // We need to transform the type to something like FancyPtr<const FancyPtr<_ValueType>>.
 template <class _ValueType, class _MapPointer>
 using __get_deque_map_iterator _LIBCPP_NODEBUG =
-    conditional_t<is_const<__libcpp_remove_reference_t<decltype(**_MapPointer())> >::value,
-                  __rebind_pointer_t<_MapPointer, const __rebind_pointer_t<_MapPointer, _ValueType> >,
-                  _MapPointer>;
+    __conditional_t<is_const<__libcpp_remove_reference_t<decltype(**_MapPointer())> >::value,
+                    __rebind_pointer_t<_MapPointer, const __rebind_pointer_t<_MapPointer, _ValueType> >,
+                    _MapPointer>;
 
 template <class _ValueType,
           class _Pointer,
