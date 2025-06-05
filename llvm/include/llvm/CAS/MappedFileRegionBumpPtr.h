@@ -78,7 +78,7 @@ public:
   Expected<int64_t> allocateOffset(uint64_t AllocSize);
 
   char *data() const { return Region.data(); }
-  uint64_t size() const { return *BumpPtr; }
+  uint64_t size() const { return H->BumpPtr; }
   uint64_t capacity() const { return Region.size(); }
 
   RegionT &getRegion() { return Region; }
@@ -100,7 +100,7 @@ private:
   void destroyImpl();
   void moveImpl(MappedFileRegionBumpPtr &RHS) {
     std::swap(Region, RHS.Region);
-    std::swap(BumpPtr, RHS.BumpPtr);
+    std::swap(H, RHS.H);
     std::swap(Path, RHS.Path);
     std::swap(FD, RHS.FD);
     std::swap(SharedLockFD, RHS.SharedLockFD);
@@ -108,8 +108,12 @@ private:
   }
 
 private:
+  struct Header {
+    std::atomic<int64_t> BumpPtr;
+    std::atomic<int64_t> AllocatedSize;
+  };
   RegionT Region;
-  std::atomic<int64_t> *BumpPtr = nullptr;
+  Header *H = nullptr;
   std::string Path;
   std::optional<int> FD;
   std::optional<int> SharedLockFD;

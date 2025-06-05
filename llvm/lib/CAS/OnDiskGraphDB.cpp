@@ -81,7 +81,7 @@ static constexpr StringLiteral DataPoolTableName = "llvm.cas.data";
 static constexpr StringLiteral IndexFile = "index";
 static constexpr StringLiteral DataPoolFile = "data";
 
-static constexpr StringLiteral FilePrefix = "v8.";
+static constexpr StringLiteral FilePrefix = "v9.";
 static constexpr StringLiteral FileSuffixData = ".data";
 static constexpr StringLiteral FileSuffixLeaf = ".leaf";
 static constexpr StringLiteral FileSuffixLeaf0 = ".leaf+0";
@@ -1310,6 +1310,9 @@ OnDiskGraphDB::createTempFile(StringRef FinalPath, uint64_t Size) {
       TempFile::create(FinalPath + ".%%%%%%", Logger.get());
   if (!File)
     return File.takeError();
+
+  if (Error E = preallocateFileTail(File->FD, 0, Size).takeError())
+    return createFileError(File->TmpName, std::move(E));
 
   if (auto EC = sys::fs::resize_file_before_mapping_readwrite(File->FD, Size))
     return createFileError(File->TmpName, EC);

@@ -12,7 +12,7 @@ RUN: llvm-cas --cas %t/cas --ingest %S/Inputs > %t/cas.id
 RUN: llvm-cas --cas %t/cas --validate
 RUN: llvm-cas --cas %t/cas --validate --check-hash
 
-RUN: rm %t/cas/v1.1/v8.data
+RUN: rm %t/cas/v1.1/v9.data
 RUN: not llvm-cas --cas %t/cas --validate
 RUN: not llvm-cas --cas %t/cas --validate --check-hash
 
@@ -28,5 +28,5 @@ RUN: llvm-cas --cas %t/ac --put-cache-key @%t/abc.casid @%t/empty.casid
 RUN: llvm-cas --cas %t/ac --validate
 # Note: records are 40 bytes (32 hash bytes + 8 byte value), so trim the last
 # allocated record, leaving it invalid.
-RUN: truncate -s -40 %t/ac/v1.1/v3.actions 
+RUN: truncate -s -40 %t/ac/v1.1/v4.actions
 RUN: not llvm-cas --cas %t/ac --validate

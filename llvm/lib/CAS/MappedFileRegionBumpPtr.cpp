@@ -54,6 +54,19 @@
 #include "llvm/CAS/MappedFileRegionBumpPtr.h"
 #include "OnDiskCommon.h"
 #include "llvm/CAS/OnDiskCASLogger.h"
+#include "llvm/Support/Compiler.h"
+
+#if LLVM_ON_UNIX
+#include <sys/stat.h>
+#if __has_include(<sys/param.h>)
+#include <sys/param.h>
+#endif
+#ifdef DEV_BSIZE
+#define MAPPED_FILE_BSIZE DEV_BSIZE
+#elif __linux__
+#define MAPPED_FILE_BSIZE 512
+#endif
+#endif
 
 using namespace llvm;
 using namespace llvm::cas;
@@ -84,6 +97,13 @@ struct FileLockRAII {
     }
     return Error::success();
   }
+};
+
+struct FileSizeInfo {
+  uint64_t Size;
+  uint64_t AllocatedSize;
+
+  static ErrorOr<FileSizeInfo> get(sys::fs::file_t File);
 };
 } // end anonymous namespace
 
@@ -123,39 +143,41 @@ Expected<MappedFileRegionBumpPtr> MappedFileRegionBumpPtr::create(
     return std::move(E);
 
   sys::fs::file_t File = sys::fs::convertFDToNativeFile(FD);
-  sys::fs::file_status Status;
-  if (std::error_code EC = sys::fs::status(File, Status))
-    return createFileError(Result.Path, EC);
+  auto FileSize = FileSizeInfo::get(File);
+  if (!FileSize)
+    return createFileError(Result.Path, FileSize.getError());
 
-  if (Status.getSize() < Capacity) {
+  if (FileSize->Size < Capacity) {
     // Lock the file exclusively so only one process will do the initialization.
     if (Error E = InitLock.unlock())
       return std::move(E);
     if (Error E = InitLock.lock(FileLockRAII::Exclusive))
       return std::move(E);
     // Retrieve the current size now that we have exclusive access.
-    if (std::error_code EC = sys::fs::status(File, Status))
-      return createFileError(Result.Path, EC);
+    FileSize = FileSizeInfo::get(File);
+    if (!FileSize)
+        return createFileError(Result.Path, FileSize.getError());
   }
 
   // At this point either the file is still under-sized, or we have the size for
   // the completely initialized file.
 
-  if (Status.getSize() < Capacity) {
+  if (FileSize->Size < Capacity) {
     // We are initializing the file; it may be empty, or may have been shrunk
     // during a previous close.
     // FIXME: Detect a case where someone opened it with a smaller capacity.
     // FIXME: On Windows we should use FSCTL_SET_SPARSE and FSCTL_SET_ZERO_DATA
     // to make this a sparse region, if supported.
+    assert(InitLock.Locked == FileLockRAII::Exclusive);
     if (std::error_code EC = sys::fs::resize_file(FD, Capacity))
       return createFileError(Result.Path, EC);
 
     if (Result.Logger)
       Result.Logger->log_MappedFileRegionBumpPtr_resizeFile(
-          Result.Path, Status.getSize(), Capacity);
+          Result.Path, FileSize->Size, Capacity);
   } else {
     // Someone else initialized it.
-    Capacity = Status.getSize();
+    Capacity = FileSize->Size;
   }
 
   // Create the mapped region.
@@ -168,12 +190,23 @@ Expected<MappedFileRegionBumpPtr> MappedFileRegionBumpPtr::create(
     Result.Region = std::move(Map);
   }
 
-  if (Status.getSize() == 0) {
+  if (FileSize->Size == 0) {
+    assert(InitLock.Locked == FileLockRAII::Exclusive);
     // We are creating a new file; run the constructor.
     if (Error E = NewFileConstructor(Result))
       return std::move(E);
   } else {
     Result.initializeBumpPtr(BumpPtrOffset);
+  }
+
+  if (FileSize->Size < Capacity && FileSize->AllocatedSize < Capacity) {
+    // We are initializing the file; sync the allocated size in case it
+    // changed when truncating or during construction.
+    FileSize = FileSizeInfo::get(File);
+    if (!FileSize)
+      return createFileError(Result.Path, FileSize.getError());
+    assert(InitLock.Locked == FileLockRAII::Exclusive);
+    Result.H->AllocatedSize.exchange(FileSize->AllocatedSize);
   }
 
   return Result;
@@ -189,7 +222,7 @@ void MappedFileRegionBumpPtr::destroyImpl() {
 
   // Attempt to truncate the file if we can get exclusive access. Ignore any
   // errors.
-  if (BumpPtr) {
+  if (H) {
     assert(SharedLockFD && "Must have shared lock file open");
     if (tryLockFileThreadSafe(*SharedLockFD) == std::error_code()) {
       size_t Size = size();
@@ -223,15 +256,15 @@ void MappedFileRegionBumpPtr::destroyImpl() {
 
 void MappedFileRegionBumpPtr::initializeBumpPtr(int64_t BumpPtrOffset) {
   assert(capacity() < (uint64_t)INT64_MAX && "capacity must fit in int64_t");
-  int64_t BumpPtrEndOffset = BumpPtrOffset + sizeof(decltype(*BumpPtr));
+  int64_t BumpPtrEndOffset = BumpPtrOffset + sizeof(decltype(*H));
   assert(BumpPtrEndOffset <= (int64_t)capacity() &&
          "Expected end offset to be pre-allocated");
-  assert(isAligned(Align::Of<decltype(*BumpPtr)>(), BumpPtrOffset) &&
+  assert(isAligned(Align::Of<decltype(*H)>(), BumpPtrOffset) &&
          "Expected end offset to be aligned");
-  BumpPtr = reinterpret_cast<decltype(BumpPtr)>(data() + BumpPtrOffset);
+  H = reinterpret_cast<decltype(H)>(data() + BumpPtrOffset);
 
   int64_t ExistingValue = 0;
-  if (!BumpPtr->compare_exchange_strong(ExistingValue, BumpPtrEndOffset))
+  if (!H->BumpPtr.compare_exchange_strong(ExistingValue, BumpPtrEndOffset))
     assert(ExistingValue >= BumpPtrEndOffset &&
            "Expected 0, or past the end of the BumpPtr itself");
 
@@ -247,7 +280,7 @@ static Error createAllocatorOutOfSpaceError() {
 
 Expected<int64_t> MappedFileRegionBumpPtr::allocateOffset(uint64_t AllocSize) {
   AllocSize = alignTo(AllocSize, getAlign());
-  int64_t OldEnd = BumpPtr->fetch_add(AllocSize);
+  int64_t OldEnd = H->BumpPtr.fetch_add(AllocSize);
   int64_t NewEnd = OldEnd + AllocSize;
   if (LLVM_UNLIKELY(NewEnd > (int64_t)capacity())) {
     // Return the allocation. If the start already passed the end, that means
@@ -257,7 +290,7 @@ Expected<int64_t> MappedFileRegionBumpPtr::allocateOffset(uint64_t AllocSize) {
     // All other allocation afterwards must have failed and current allocation
     // is in charge of return the allocation back to a valid value.
     if (OldEnd <= (int64_t)capacity())
-      (void)BumpPtr->exchange(OldEnd);
+      (void)H->BumpPtr.exchange(OldEnd);
 
     if (Logger)
       Logger->log_MappedFileRegionBumpPtr_oom(Path, capacity(), OldEnd,
@@ -266,8 +299,43 @@ Expected<int64_t> MappedFileRegionBumpPtr::allocateOffset(uint64_t AllocSize) {
     return createAllocatorOutOfSpaceError();
   }
 
+  int64_t DiskSize = H->AllocatedSize;
+  if (LLVM_UNLIKELY(NewEnd > DiskSize)) {
+    int64_t NewSize;
+    // The minimum increment is a page, but allocate more to amortize the cost.
+    constexpr int64_t Increment = 1 * 1024 * 1024; // 1 MB
+    if (Error E = preallocateFileTail(*FD, DiskSize, DiskSize + Increment).moveInto(NewSize))
+      return std::move(E);
+    assert(NewSize >= DiskSize + Increment);
+    // FIXME: on Darwin this can under-count the size if there is a race to
+    // preallocate disk, because the semantics of F_PREALLOCATE are to add bytes
+    // to the end of the file, not to allocate up to a fixed size.
+    // Any discrepancy will be resolved the next time the file is truncated and
+    // then reopend.
+    while (DiskSize < NewSize)
+      H->AllocatedSize.compare_exchange_strong(DiskSize, NewSize);
+  }
+
   if (Logger)
     Logger->log_MappedFileRegionBumpPtr_allocate(data(), OldEnd, AllocSize);
 
   return OldEnd;
+}
+
+ErrorOr<FileSizeInfo> FileSizeInfo::get(sys::fs::file_t File) {
+#if LLVM_ON_UNIX && defined(MAPPED_FILE_BSIZE)
+  struct stat Status;
+  int StatRet = ::fstat(File, &Status);
+  if (StatRet)
+    return errnoAsErrorCode();
+  uint64_t AllocatedSize = uint64_t(Status.st_blksize) * MAPPED_FILE_BSIZE;
+  return FileSizeInfo{uint64_t(Status.st_size), AllocatedSize};
+#else
+  // Fallback: assume the file is fully allocated. Note: this may result in
+  // data loss on out-of-space.
+  sys::fs::file_status Status;
+  if (std::error_code EC = sys::fs::status(File, Status))
+    return EC;
+  return FileSizeInfo{Status.getSize(), Status.getSize()};
+#endif
 }

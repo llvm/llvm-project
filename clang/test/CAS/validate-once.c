@@ -1,7 +1,7 @@
 // RUN: rm -rf %t
 
 // RUN: llvm-cas --cas %t/cas --ingest %s
-// RUN: mv %t/cas/v1.1/v8.data %t/cas/v1.1/v8.data.bak
+// RUN: mv %t/cas/v1.1/v9.data %t/cas/v1.1/v9.data.bak
 
 // RUN: %clang -cc1depscand -execute %{clang-daemon-dir}/%basename_t -cas-args -fcas-path %t/cas -- \
 // RUN:   %clang -target x86_64-apple-macos11 -I %S/Inputs \

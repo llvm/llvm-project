@@ -1,6 +1,6 @@
 RUN: rm -rf %t && mkdir %t
 RUN: llvm-cas --cas %t/cas --ingest %S/Inputs > %t/cas.id
-RUN: mv %t/cas/v1.1/v8.data %t/cas/v1.1/v8.data.bak 
+RUN: mv %t/cas/v1.1/v9.data %t/cas/v1.1/v9.data.bak
 
 # INVALID: bad record
 # VALID: validated successfully
@@ -12,7 +12,7 @@ RUN: not llvm-cas --cas %t/cas --validate-if-needed 2>&1 | FileCheck %s -check-p
 RUN: not llvm-cas --cas %t/cas --validate-if-needed 2>&1 | FileCheck %s -check-prefix=INVALID
 
 # Validation happens once per boot.
-RUN: mv %t/cas/v1.1/v8.data.bak %t/cas/v1.1/v8.data
+RUN: mv %t/cas/v1.1/v9.data.bak %t/cas/v1.1/v9.data
 RUN: llvm-cas --cas %t/cas --validate-if-needed | FileCheck %s -check-prefix=VALID
 RUN: llvm-cas --cas %t/cas --validate-if-needed | FileCheck %s -check-prefix=SKIPPED
 # Wrong timestamp triggers re-validation.
@@ -20,7 +20,7 @@ RUN: echo '123' > %t/cas/v1.validation
 RUN: llvm-cas --cas %t/cas --validate-if-needed | FileCheck %s -check-prefix=VALID
 RUN: llvm-cas --cas %t/cas --validate-if-needed | FileCheck %s -check-prefix=SKIPPED
 # Skipped validation does not catch errors.
-RUN: mv %t/cas/v1.1/v8.data %t/cas/v1.1/v8.data.bak
+RUN: mv %t/cas/v1.1/v9.data %t/cas/v1.1/v9.data.bak
 RUN: llvm-cas --cas %t/cas --validate-if-needed | FileCheck %s -check-prefix=SKIPPED
 
 # Unless forced.
@@ -33,7 +33,7 @@ RUN: llvm-cas --cas %t/cas --validate-if-needed --allow-recovery | FileCheck %s 
 RUN: llvm-cas --cas %t/cas --validate-if-needed --force | FileCheck %s -check-prefix=VALID
 RUN: rm -rf %t/cas/v1.1
 RUN: cp -r %t/cas/corrupt.0.v1.1 %t/cas/v1.1
-RUN: mv %t/cas/v1.1/v8.data %t/cas/v1.1/v8.data.bak
+RUN: mv %t/cas/v1.1/v9.data %t/cas/v1.1/v9.data.bak
 RUN: llvm-cas --cas %t/cas --validate-if-needed --allow-recovery --force | FileCheck %s -check-prefix=RECOVERED
 RUN: ls %t/cas/corrupt.1.v1.1
 
