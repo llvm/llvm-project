@@ -1336,10 +1336,8 @@ lldb::SBAddress SBValue::GetAddress() {
   if (value_sp) {
     TargetSP target_sp(value_sp->GetTargetSP());
     if (target_sp) {
-      lldb::addr_t value = LLDB_INVALID_ADDRESS;
-      const bool scalar_is_load_address = true;
-      AddressType addr_type;
-      value = value_sp->GetAddressOf(scalar_is_load_address, &addr_type);
+      auto [value, addr_type] =
+          value_sp->GetAddressOf(/*scalar_is_load_address=*/true);
       if (addr_type == eAddressTypeFile) {
         ModuleSP module_sp(value_sp->GetModule());
         if (module_sp)

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2a -verify -ast-dump -ast-dump-decl-types -ast-dump-filter "deduction guide" %s | FileCheck %s --strict-whitespace -dump-input=always
+// RUN: %clang_cc1 -std=c++2a -verify -ast-dump -ast-dump-decl-types -ast-dump-filter "deduction guide" %s | FileCheck %s --strict-whitespace
 
 template<auto ...> struct X {};
 template<template<typename X, X> typename> struct Y {};
@@ -234,7 +234,7 @@ F s(0);
 // CHECK: | `-CXXBoolLiteralExpr {{.*}} 'bool' false
 // CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for F> 'auto (U) -> F<value-parameter-0-0>'
 // CHECK: | `-ParmVarDecl {{.*}} 'U'
-// CHECK: `-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for F> 'auto (int) -> F<>'
+// CHECK: `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for F> 'auto (int) -> F<>'
 // CHECK:   |-TemplateArgument integral ''x''
 // CHECK:   |-TemplateArgument type 'int'
 // CHECK:   | `-BuiltinType {{.*}} 'int'
@@ -911,5 +911,58 @@ void f() {
 // CHECK-NEXT:   | `-BuiltinType {{.+}} 'int'
 // CHECK-NEXT:   |-ParmVarDecl {{.+}} 'int'
 // CHECK-NEXT:   `-ParmVarDecl {{.+}} 'int'
+
+}
+
+namespace GH141425 {
+
+template<class... Lambda>
+struct Container
+{
+    Container(Lambda...) {}
+};
+
+template<class... T>
+using Alias = Container<T...>;
+
+template<class = void>
+struct Invocable {
+    using T = decltype([]() {
+        (void)Alias([]() -> void {});
+    }());
+};
+
+struct Type {
+    using T = bool;
+};
+
+template<class...>
+struct ExpandType {
+    using T = bool;
+};
+
+template<class... X>
+using Expand = ExpandType<typename X::T...>;
+
+Expand<Type, Invocable<>> _{};
+
+// CHECK-LABEL: Dumping GH141425::<deduction guide for Alias>:
+// CHECK-NEXT:  FunctionTemplateDecl {{.+}} implicit <deduction guide for Alias>
+// CHECK-NEXT:   |-TemplateTypeParmDecl {{.+}} class depth 0 index 0 ... T
+// CHECK-NEXT:   |-TypeTraitExpr {{.+}} 'bool' __is_deducible
+// CHECK-NEXT:   | |-DeducedTemplateSpecializationType {{.+}} 'GH141425::Alias' dependent
+// CHECK-NEXT:   | | `-name: 'GH141425::Alias'
+// CHECK-NEXT:   | |   `-TypeAliasTemplateDecl {{.+}} Alias
+// CHECK-NEXT:   | `-TemplateSpecializationType {{.+}} 'Container<T...>' dependent
+// CHECK-NEXT:   |   |-name: 'Container':'GH141425::Container' qualified
+// CHECK-NEXT:   |   | `-ClassTemplateDecl {{.+}} Container
+// CHECK-NEXT:   |   `-TemplateArgument type 'T...':'type-parameter-0-0...'
+// CHECK-NEXT:   |     `-PackExpansionType {{.+}} 'T...' dependent
+// CHECK-NEXT:   |       `-SubstTemplateTypeParmType {{.+}} 'T' sugar dependent contains_unexpanded_pack class depth 0 index 0 ... Lambda pack_index 0
+// CHECK-NEXT:   |         |-FunctionTemplate {{.+}} '<deduction guide for Container>'
+// CHECK-NEXT:   |         `-TemplateTypeParmType {{.+}} 'T' dependent contains_unexpanded_pack depth 0 index 0 pack
+// CHECK-NEXT:   |           `-TemplateTypeParm {{.+}} 'T'
+// CHECK-NEXT:   |-CXXDeductionGuideDecl {{.+}} implicit <deduction guide for Alias> 'auto (T...) -> Container<T...>'
+// CHECK-NEXT:   | `-ParmVarDecl {{.+}} 'T...' pack
 
 }

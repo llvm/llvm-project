@@ -69,8 +69,6 @@ std::string llvm::getQualifiedName(const Record *R) {
   return Namespace + "::" + R->getName().str();
 }
 
-/// getTarget - Return the current instance of the Target class.
-///
 CodeGenTarget::CodeGenTarget(const RecordKeeper &records)
     : Records(records), CGH(records), Intrinsics(records) {
   ArrayRef<const Record *> Targets = Records.getAllDerivedDefinitions("Target");

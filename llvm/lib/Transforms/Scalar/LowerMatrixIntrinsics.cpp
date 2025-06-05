@@ -229,14 +229,11 @@ static bool isUniformShape(Value *V) {
   if (!I)
     return true;
 
+  if (I->isBinaryOp())
+    return true;
+
   switch (I->getOpcode()) {
-  case Instruction::FAdd:
-  case Instruction::FSub:
-  case Instruction::FMul: // Scalar multiply.
   case Instruction::FNeg:
-  case Instruction::Add:
-  case Instruction::Mul:
-  case Instruction::Sub:
     return true;
   default:
     return false;
@@ -386,25 +383,25 @@ class LowerMatrixIntrinsics {
         return Vectors.size();
       else {
         assert(Vectors.size() > 0 && "Cannot call getNumRows without columns");
-        return cast<FixedVectorType>(Vectors[0]->getType())->getNumElements();
+        return getVectorTy()->getNumElements();
       }
     }
     unsigned getNumRows() const {
       if (isColumnMajor()) {
         assert(Vectors.size() > 0 && "Cannot call getNumRows without columns");
-        return cast<FixedVectorType>(Vectors[0]->getType())->getNumElements();
+        return getVectorTy()->getNumElements();
       } else
         return Vectors.size();
     }
 
     void addVector(Value *V) { Vectors.push_back(V); }
-    VectorType *getColumnTy() {
+    FixedVectorType *getColumnTy() {
       assert(isColumnMajor() && "only supported for column-major matrixes");
       return getVectorTy();
     }
 
-    VectorType *getVectorTy() const {
-      return cast<VectorType>(Vectors[0]->getType());
+    FixedVectorType *getVectorTy() const {
+      return cast<FixedVectorType>(Vectors[0]->getType());
     }
 
     iterator_range<SmallVector<Value *, 8>::iterator> columns() {
@@ -517,7 +514,7 @@ public:
       : Func(F), DL(F.getDataLayout()), TTI(TTI), AM(AM) {}
 
   unsigned getNumOps(Type *VT) {
-    assert(isa<VectorType>(VT) && "Expected vector type");
+    assert(isa<FixedVectorType>(VT) && "Expected vector type");
     return getNumOps(VT->getScalarType(),
                      cast<FixedVectorType>(VT)->getNumElements());
   }
@@ -543,10 +540,8 @@ public:
   /// into vectors.
   MatrixTy getMatrix(Value *MatrixVal, const ShapeInfo &SI,
                      IRBuilder<> &Builder) {
-    VectorType *VType = dyn_cast<VectorType>(MatrixVal->getType());
-    assert(VType && "MatrixVal must be a vector type");
-    assert(cast<FixedVectorType>(VType)->getNumElements() ==
-               SI.NumRows * SI.NumColumns &&
+    FixedVectorType *VType = cast<FixedVectorType>(MatrixVal->getType());
+    assert(VType->getNumElements() == SI.NumRows * SI.NumColumns &&
            "The vector size must match the number of matrix elements");
 
     // Check if we lowered MatrixVal using shape information. In that case,
@@ -566,8 +561,7 @@ public:
 
     // Otherwise split MatrixVal.
     SmallVector<Value *, 16> SplitVecs;
-    for (unsigned MaskStart = 0;
-         MaskStart < cast<FixedVectorType>(VType)->getNumElements();
+    for (unsigned MaskStart = 0; MaskStart < VType->getNumElements();
          MaskStart += SI.getStride()) {
       Value *V = Builder.CreateShuffleVector(
           MatrixVal, createSequentialMask(MaskStart, SI.getStride(), 0),
@@ -1068,13 +1062,16 @@ public:
       Value *Op1;
       Value *Op2;
       if (auto *BinOp = dyn_cast<BinaryOperator>(Inst))
-        Changed |= VisitBinaryOperator(BinOp);
-      if (auto *UnOp = dyn_cast<UnaryOperator>(Inst))
-        Changed |= VisitUnaryOperator(UnOp);
-      if (match(Inst, m_Load(m_Value(Op1))))
-        Changed |= VisitLoad(cast<LoadInst>(Inst), Op1, Builder);
+        VisitBinaryOperator(BinOp);
+      else if (auto *UnOp = dyn_cast<UnaryOperator>(Inst))
+        VisitUnaryOperator(UnOp);
+      else if (match(Inst, m_Load(m_Value(Op1))))
+        VisitLoad(cast<LoadInst>(Inst), Op1, Builder);
       else if (match(Inst, m_Store(m_Value(Op1), m_Value(Op2))))
-        Changed |= VisitStore(cast<StoreInst>(Inst), Op1, Op2, Builder);
+        VisitStore(cast<StoreInst>(Inst), Op1, Op2, Builder);
+      else
+        continue;
+      Changed = true;
     }
 
     if (ORE) {
@@ -1160,7 +1157,7 @@ public:
   /// vectors.
   MatrixTy loadMatrix(Type *Ty, Value *Ptr, MaybeAlign MAlign, Value *Stride,
                       bool IsVolatile, ShapeInfo Shape, IRBuilder<> &Builder) {
-    auto *VType = cast<VectorType>(Ty);
+    auto *VType = cast<FixedVectorType>(Ty);
     Type *EltTy = VType->getElementType();
     Type *VecTy = FixedVectorType::get(EltTy, Shape.getStride());
     Value *EltPtr = Ptr;
@@ -1242,7 +1239,7 @@ public:
   MatrixTy storeMatrix(Type *Ty, MatrixTy StoreVal, Value *Ptr,
                        MaybeAlign MAlign, Value *Stride, bool IsVolatile,
                        IRBuilder<> &Builder) {
-    auto VType = cast<VectorType>(Ty);
+    auto *VType = cast<FixedVectorType>(Ty);
     Value *EltPtr = Ptr;
     for (auto Vec : enumerate(StoreVal.vectors())) {
       Value *GEP = computeVectorAddr(
@@ -1380,7 +1377,7 @@ public:
     Value *LHS = MatMul->getArgOperand(0);
     Value *RHS = MatMul->getArgOperand(1);
 
-    Type *ElementType = cast<VectorType>(LHS->getType())->getElementType();
+    Type *ElementType = cast<FixedVectorType>(LHS->getType())->getElementType();
     bool IsIntVec = ElementType->isIntegerTy();
 
     // Floating point reductions require reassocation.
@@ -1478,7 +1475,7 @@ public:
     int MulOpCode = IsIntVec ? Instruction::Mul : Instruction::FMul;
     InstructionCost ReductionCost =
         TTI.getArithmeticReductionCost(
-            AddOpCode, cast<VectorType>(LHS->getType()),
+            AddOpCode, cast<FixedVectorType>(LHS->getType()),
             IsIntVec ? std::nullopt : std::optional(FMF)) +
         TTI.getArithmeticInstrCost(MulOpCode, LHS->getType());
     InstructionCost SequentialAddCost =
@@ -1538,8 +1535,8 @@ public:
       Result = Builder.CreateAddReduce(Mul);
     else {
       Result = Builder.CreateFAddReduce(
-          ConstantFP::get(cast<VectorType>(LHS->getType())->getElementType(),
-                          0.0),
+          ConstantFP::get(
+              cast<FixedVectorType>(LHS->getType())->getElementType(), 0.0),
           Mul);
       cast<Instruction>(Result)->setFastMathFlags(FMF);
     }
@@ -1738,7 +1735,7 @@ public:
     const unsigned R = LShape.NumRows;
     const unsigned C = RShape.NumColumns;
     const unsigned M = LShape.NumColumns;
-    auto *EltType = cast<VectorType>(MatMul->getType())->getElementType();
+    auto *EltType = cast<FixedVectorType>(MatMul->getType())->getElementType();
 
     const unsigned VF = std::max<unsigned>(
         TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
@@ -1774,7 +1771,7 @@ public:
 
   void createTiledLoops(CallInst *MatMul, Value *LPtr, ShapeInfo LShape,
                         Value *RPtr, ShapeInfo RShape, StoreInst *Store) {
-    auto *EltType = cast<VectorType>(MatMul->getType())->getElementType();
+    auto *EltType = cast<FixedVectorType>(MatMul->getType())->getElementType();
 
     // Create the main tiling loop nest.
     TileInfo TI(LShape.NumRows, RShape.NumColumns, LShape.NumColumns, TileSize);
@@ -1845,7 +1842,7 @@ public:
     const unsigned R = LShape.NumRows;
     const unsigned C = RShape.NumColumns;
     const unsigned M = LShape.NumColumns;
-    auto *EltType = cast<VectorType>(MatMul->getType())->getElementType();
+    auto *EltType = cast<FixedVectorType>(MatMul->getType())->getElementType();
 
     Value *APtr = getNonAliasingPointer(LoadOp0, Store, MatMul);
     Value *BPtr = getNonAliasingPointer(LoadOp1, Store, MatMul);
@@ -1917,7 +1914,8 @@ public:
             ? match(B, m_Intrinsic<Intrinsic::matrix_transpose>(m_Value(T)))
             : match(A, m_Intrinsic<Intrinsic::matrix_transpose>(m_Value(T)))) {
       IRBuilder<> Builder(MatMul);
-      auto *EltType = cast<VectorType>(MatMul->getType())->getElementType();
+      auto *EltType =
+          cast<FixedVectorType>(MatMul->getType())->getElementType();
       ShapeInfo LShape(MatMul->getArgOperand(2), MatMul->getArgOperand(3));
       ShapeInfo RShape(MatMul->getArgOperand(3), MatMul->getArgOperand(4));
       const unsigned R = LShape.NumRows;
@@ -2048,7 +2046,7 @@ public:
   /// Lowers llvm.matrix.multiply.
   void LowerMultiply(CallInst *MatMul) {
     IRBuilder<> Builder(MatMul);
-    auto *EltType = cast<VectorType>(MatMul->getType())->getElementType();
+    auto *EltType = cast<FixedVectorType>(MatMul->getType())->getElementType();
     ShapeInfo LShape(MatMul->getArgOperand(2), MatMul->getArgOperand(3));
     ShapeInfo RShape(MatMul->getArgOperand(3), MatMul->getArgOperand(4));
 
@@ -2076,7 +2074,7 @@ public:
     MatrixTy Result;
     IRBuilder<> Builder(Inst);
     Value *InputVal = Inst->getArgOperand(0);
-    VectorType *VectorTy = cast<VectorType>(InputVal->getType());
+    FixedVectorType *VectorTy = cast<FixedVectorType>(InputVal->getType());
     ShapeInfo ArgShape(Inst->getArgOperand(1), Inst->getArgOperand(2));
     MatrixTy InputMatrix = getMatrix(InputVal, ArgShape, Builder);
 
@@ -2110,34 +2108,30 @@ public:
   }
 
   /// Lower load instructions, if shape information is available.
-  bool VisitLoad(LoadInst *Inst, Value *Ptr, IRBuilder<> &Builder) {
+  void VisitLoad(LoadInst *Inst, Value *Ptr, IRBuilder<> &Builder) {
     auto I = ShapeMap.find(Inst);
-    if (I == ShapeMap.end())
-      return false;
-
+    assert(I != ShapeMap.end() &&
+           "must only visit instructions with shape info");
     LowerLoad(Inst, Ptr, Inst->getAlign(),
               Builder.getInt64(I->second.getStride()), Inst->isVolatile(),
               I->second);
-    return true;
   }
 
-  bool VisitStore(StoreInst *Inst, Value *StoredVal, Value *Ptr,
+  void VisitStore(StoreInst *Inst, Value *StoredVal, Value *Ptr,
                   IRBuilder<> &Builder) {
-    auto I = ShapeMap.find(StoredVal);
-    if (I == ShapeMap.end())
-      return false;
-
+    auto I = ShapeMap.find(Inst);
+    assert(I != ShapeMap.end() &&
+           "must only visit instructions with shape info");
     LowerStore(Inst, StoredVal, Ptr, Inst->getAlign(),
                Builder.getInt64(I->second.getStride()), Inst->isVolatile(),
                I->second);
-    return true;
   }
 
   /// Lower binary operators, if shape information is available.
-  bool VisitBinaryOperator(BinaryOperator *Inst) {
+  void VisitBinaryOperator(BinaryOperator *Inst) {
     auto I = ShapeMap.find(Inst);
-    if (I == ShapeMap.end())
-      return false;
+    assert(I != ShapeMap.end() &&
+           "must only visit instructions with shape info");
 
     Value *Lhs = Inst->getOperand(0);
     Value *Rhs = Inst->getOperand(1);
@@ -2154,41 +2148,21 @@ public:
 
     Builder.setFastMathFlags(getFastMathFlags(Inst));
 
-    // Helper to perform binary op on vectors.
-    auto BuildVectorOp = [&Builder, Inst](Value *LHS, Value *RHS) {
-      switch (Inst->getOpcode()) {
-      case Instruction::Add:
-        return Builder.CreateAdd(LHS, RHS);
-      case Instruction::Mul:
-        return Builder.CreateMul(LHS, RHS);
-      case Instruction::Sub:
-        return Builder.CreateSub(LHS, RHS);
-      case Instruction::FAdd:
-        return Builder.CreateFAdd(LHS, RHS);
-      case Instruction::FMul:
-        return Builder.CreateFMul(LHS, RHS);
-      case Instruction::FSub:
-        return Builder.CreateFSub(LHS, RHS);
-      default:
-        llvm_unreachable("Unsupported binary operator for matrix");
-      }
-    };
-
     for (unsigned I = 0; I < Shape.getNumVectors(); ++I)
-      Result.addVector(BuildVectorOp(A.getVector(I), B.getVector(I)));
+      Result.addVector(Builder.CreateBinOp(Inst->getOpcode(), A.getVector(I),
+                                           B.getVector(I)));
 
     finalizeLowering(Inst,
                      Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
                                              Result.getNumVectors()),
                      Builder);
-    return true;
   }
 
   /// Lower unary operators, if shape information is available.
-  bool VisitUnaryOperator(UnaryOperator *Inst) {
+  void VisitUnaryOperator(UnaryOperator *Inst) {
     auto I = ShapeMap.find(Inst);
-    if (I == ShapeMap.end())
-      return false;
+    assert(I != ShapeMap.end() &&
+           "must only visit instructions with shape info");
 
     Value *Op = Inst->getOperand(0);
 
@@ -2217,7 +2191,6 @@ public:
                      Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
                                              Result.getNumVectors()),
                      Builder);
-    return true;
   }
 
   /// Helper to linearize a matrix expression tree into a string. Currently

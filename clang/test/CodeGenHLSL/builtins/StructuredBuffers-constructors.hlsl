@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.3-library -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-DXIL
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-DXIL
 // FIXME: SPIR-V codegen of llvm.spv.resource.handlefrombinding and resource types is not yet implemented
 // RUN-DISABLED: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-SPIRV
 
@@ -71,7 +71,7 @@ export void foo() {
 // CHECK: define linkonce_odr void @_ZN4hlsl16StructuredBufferIfEC2EjjijPKc(ptr noundef nonnull align 4 dereferenceable(4) %this,
 // CHECK-SAME: i32 noundef %registerNo, i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, ptr noundef %name)
 // CHECK-DXIL: %[[HANDLE:.*]] = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_0_0t(
-// CHECK-SAME: i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i1 false)
+// CHECK-SAME: i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i1 false, ptr %{{.*}})
 // CHECK-NEXT: %__handle = getelementptr inbounds nuw %"class.hlsl::StructuredBuffer", ptr %{{.*}}, i32 0, i32 0
 // CHECK-DXIL-NEXT: store target("dx.RawBuffer", float, 0, 0) %[[HANDLE]], ptr %__handle, align 4
 
@@ -80,7 +80,7 @@ export void foo() {
 // CHECK: define linkonce_odr void @_ZN4hlsl18RWStructuredBufferIfEC2EjijjPKc(ptr noundef nonnull align 4 dereferenceable(4) %this,
 // CHECK-SAME: i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, i32 noundef %orderId, ptr noundef %name)
 // CHECK: %[[HANDLE:.*]] = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f32_1_0t
-// CHECK-SAME: (i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i1 false)
+// CHECK-SAME: (i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i1 false, ptr %{{.*}})
 // CHECK-NEXT: %__handle = getelementptr inbounds nuw %"class.hlsl::RWStructuredBuffer", ptr %{{.*}}, i32 0, i32 0
 // CHECK-NEXT: store target("dx.RawBuffer", float, 1, 0) %[[HANDLE]], ptr %__handle, align 4
 
