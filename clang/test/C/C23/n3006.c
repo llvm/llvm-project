@@ -83,7 +83,7 @@ void constexpr_complience_test(void) {
 void builtin_functions_test(void) {
   constexpr typeof(struct s *) x = 0;
   auto so = sizeof(struct S {});
-  auto to = typeof(struct S {});        // expected-error {{expected expression}}
+  auto to = (typeof(struct S {})){};
 }
 
 void misc_test(void) {
