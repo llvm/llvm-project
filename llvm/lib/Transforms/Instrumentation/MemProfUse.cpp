@@ -43,6 +43,9 @@ namespace llvm {
 extern cl::opt<bool> PGOWarnMissing;
 extern cl::opt<bool> NoPGOWarnMismatch;
 extern cl::opt<bool> NoPGOWarnMismatchComdatWeak;
+extern cl::opt<bool> MemProfReportHintedSizes;
+extern cl::opt<unsigned> MinClonedColdBytePercent;
+extern cl::opt<unsigned> MinCallsiteColdBytePercent;
 } // namespace llvm
 
 // By default disable matching of allocation profiles onto operator new that
@@ -90,14 +93,6 @@ STATISTIC(NumOfMemProfMatchedAllocs,
           "Number of matched memory profile allocs.");
 STATISTIC(NumOfMemProfMatchedCallSites,
           "Number of matched memory profile callsites.");
-
-// Options under which we need to record the context size info in the alloc trie
-// used to build metadata.
-bool recordContextSizeInfo() {
-  return MemProfReportHintedSizes || MinClonedColdBytePercent < 100 ||
-         MinCallsiteColdBytePercent < 100;
-
-}
 
 static void addCallsiteMetadata(Instruction &I,
                                 ArrayRef<uint64_t> InlinedCallStack,
