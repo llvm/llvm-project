@@ -1063,9 +1063,9 @@ public:
       Value *Op2;
       if (auto *BinOp = dyn_cast<BinaryOperator>(Inst))
         VisitBinaryOperator(BinOp);
-      if (auto *UnOp = dyn_cast<UnaryOperator>(Inst))
+      else if (auto *UnOp = dyn_cast<UnaryOperator>(Inst))
         VisitUnaryOperator(UnOp);
-      if (match(Inst, m_Load(m_Value(Op1))))
+      else if (match(Inst, m_Load(m_Value(Op1))))
         VisitLoad(cast<LoadInst>(Inst), Op1, Builder);
       else if (match(Inst, m_Store(m_Value(Op1), m_Value(Op2))))
         VisitStore(cast<StoreInst>(Inst), Op1, Op2, Builder);
