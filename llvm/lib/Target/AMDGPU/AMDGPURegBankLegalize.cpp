@@ -213,6 +213,13 @@ public:
       return;
     }
 
+    if (DstTy == S64 && TruncSrcTy == S32) {
+      B.buildMergeLikeInstr(MI.getOperand(0).getReg(),
+                            {TruncSrc, B.buildUndef({SgprRB, S32})});
+      cleanUpAfterCombine(MI, Trunc);
+      return;
+    }
+
     if (DstTy == S32 && TruncSrcTy == S16) {
       B.buildAnyExt(Dst, TruncSrc);
       cleanUpAfterCombine(MI, Trunc);
@@ -301,7 +308,7 @@ bool AMDGPURegBankLegalize::runOnMachineFunction(MachineFunction &MF) {
     // Opcodes that support pretty much all combinations of reg banks and LLTs
     // (except S1). There is no point in writing rules for them.
     if (Opc == AMDGPU::G_BUILD_VECTOR || Opc == AMDGPU::G_UNMERGE_VALUES ||
-        Opc == AMDGPU::G_MERGE_VALUES) {
+        Opc == AMDGPU::G_MERGE_VALUES || Opc == AMDGPU::G_BITCAST) {
       RBLHelper.applyMappingTrivial(*MI);
       continue;
     }

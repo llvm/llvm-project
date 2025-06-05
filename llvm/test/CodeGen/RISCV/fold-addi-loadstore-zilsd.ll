@@ -21,8 +21,7 @@ define void @store_g_0() nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:  .Lpcrel_hi1:
 ; CHECK-NEXT:    auipc a0, %pcrel_hi(g_0)
-; CHECK-NEXT:    fcvt.d.w a2, zero
-; CHECK-NEXT:    sd a2, %pcrel_lo(.Lpcrel_hi1)(a0)
+; CHECK-NEXT:    sd zero, %pcrel_lo(.Lpcrel_hi1)(a0)
 ; CHECK-NEXT:    ret
 entry:
   store double 0.0, ptr @g_0
@@ -43,25 +42,27 @@ define double @fold_addi_from_different_bb(i32 %k, i32 %n, ptr %a) nounwind {
 ; CHECK-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    blez a1, .LBB2_3
 ; CHECK-NEXT:  # %bb.1: # %for.body.lr.ph
-; CHECK-NEXT:    mv s0, a2
-; CHECK-NEXT:    mv s1, a1
+; CHECK-NEXT:    mv s2, a2
+; CHECK-NEXT:    mv s3, a1
+; CHECK-NEXT:    li s0, 0
+; CHECK-NEXT:    li s1, 0
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add s4, a2, a0
-; CHECK-NEXT:    fcvt.d.w s2, zero
 ; CHECK-NEXT:  .LBB2_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mv a0, s0
+; CHECK-NEXT:    mv a0, s2
 ; CHECK-NEXT:    call f
 ; CHECK-NEXT:    ld a0, 8(s4)
-; CHECK-NEXT:    addi s1, s1, -1
-; CHECK-NEXT:    fadd.d s2, a0, s2
-; CHECK-NEXT:    bnez s1, .LBB2_2
+; CHECK-NEXT:    addi s3, s3, -1
+; CHECK-NEXT:    fadd.d s0, a0, s0
+; CHECK-NEXT:    bnez s3, .LBB2_2
 ; CHECK-NEXT:    j .LBB2_4
 ; CHECK-NEXT:  .LBB2_3:
-; CHECK-NEXT:    fcvt.d.w s2, zero
+; CHECK-NEXT:    li s0, 0
+; CHECK-NEXT:    li s1, 0
 ; CHECK-NEXT:  .LBB2_4: # %for.cond.cleanup
-; CHECK-NEXT:    mv a0, s2
-; CHECK-NEXT:    mv a1, s3
+; CHECK-NEXT:    mv a0, s0
+; CHECK-NEXT:    mv a1, s1
 ; CHECK-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload

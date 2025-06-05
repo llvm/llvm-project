@@ -87,13 +87,15 @@ static cl::opt<unsigned> FMAContractLevelOpt(
 
 static cl::opt<NVPTX::DivPrecisionLevel> UsePrecDivF32(
     "nvptx-prec-divf32", cl::Hidden,
-    cl::desc("NVPTX Specifies: 0 use div.approx, 1 use div.full, 2 use"
-             " IEEE Compliant F32 div.rnd if available."),
-    cl::values(clEnumValN(NVPTX::DivPrecisionLevel::Approx, "0",
-                          "Use div.approx"),
-               clEnumValN(NVPTX::DivPrecisionLevel::Full, "1", "Use div.full"),
-               clEnumValN(NVPTX::DivPrecisionLevel::IEEE754, "2",
-                          "Use IEEE Compliant F32 div.rnd if available")),
+    cl::desc(
+        "NVPTX Specific: Override the precision of the lowering for f32 fdiv"),
+    cl::values(
+        clEnumValN(NVPTX::DivPrecisionLevel::Approx, "0", "Use div.approx"),
+        clEnumValN(NVPTX::DivPrecisionLevel::Full, "1", "Use div.full"),
+        clEnumValN(NVPTX::DivPrecisionLevel::IEEE754, "2",
+                   "Use IEEE Compliant F32 div.rnd if available (default)"),
+        clEnumValN(NVPTX::DivPrecisionLevel::IEEE754_NoFTZ, "3",
+                   "Use IEEE Compliant F32 div.rnd if available, no FTZ")),
     cl::init(NVPTX::DivPrecisionLevel::IEEE754));
 
 static cl::opt<bool> UsePrecSqrtF32(
@@ -1994,12 +1996,11 @@ SDValue NVPTXTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   if (STI.getPTXVersion() < 73 || STI.getSmVersion() < 52) {
     const Function &Fn = DAG.getMachineFunction().getFunction();
 
-    DiagnosticInfoUnsupported NoDynamicAlloca(
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
         Fn,
         "Support for dynamic alloca introduced in PTX ISA version 7.3 and "
         "requires target sm_52.",
-        SDLoc(Op).getDebugLoc());
-    DAG.getContext()->diagnose(NoDynamicAlloca);
+        SDLoc(Op).getDebugLoc()));
     auto Ops = {DAG.getConstant(0, SDLoc(), Op.getValueType()),
                 Op.getOperand(0)};
     return DAG.getMergeValues(Ops, SDLoc());
@@ -2035,12 +2036,11 @@ SDValue NVPTXTargetLowering::LowerSTACKRESTORE(SDValue Op,
   if (STI.getPTXVersion() < 73 || STI.getSmVersion() < 52) {
     const Function &Fn = DAG.getMachineFunction().getFunction();
 
-    DiagnosticInfoUnsupported NoStackRestore(
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
         Fn,
         "Support for stackrestore requires PTX ISA version >= 7.3 and target "
         ">= sm_52.",
-        DL.getDebugLoc());
-    DAG.getContext()->diagnose(NoStackRestore);
+        DL.getDebugLoc()));
     return Op.getOperand(0);
   }
 
@@ -2058,12 +2058,11 @@ SDValue NVPTXTargetLowering::LowerSTACKSAVE(SDValue Op,
   if (STI.getPTXVersion() < 73 || STI.getSmVersion() < 52) {
     const Function &Fn = DAG.getMachineFunction().getFunction();
 
-    DiagnosticInfoUnsupported NoStackSave(
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
         Fn,
         "Support for stacksave requires PTX ISA version >= 7.3 and target >= "
         "sm_52.",
-        DL.getDebugLoc());
-    DAG.getContext()->diagnose(NoStackSave);
+        DL.getDebugLoc()));
     auto Ops = {DAG.getConstant(0, DL, Op.getValueType()), Op.getOperand(0)};
     return DAG.getMergeValues(Ops, DL);
   }

@@ -87,16 +87,59 @@ static void fixI8UseChain(Instruction &I,
     return;
   }
 
-  if (auto *Load = dyn_cast<LoadInst>(&I)) {
-    if (!I.getType()->isIntegerTy(8))
-      return;
+  if (auto *Load = dyn_cast<LoadInst>(&I);
+      Load && I.getType()->isIntegerTy(8)) {
     SmallVector<Value *> NewOperands;
     ProcessOperands(NewOperands);
     Type *ElementType = NewOperands[0]->getType();
     if (auto *AI = dyn_cast<AllocaInst>(NewOperands[0]))
       ElementType = AI->getAllocatedType();
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(NewOperands[0])) {
+      ElementType = GEP->getSourceElementType();
+      if (ElementType->isArrayTy())
+        ElementType = ElementType->getArrayElementType();
+    }
     LoadInst *NewLoad = Builder.CreateLoad(ElementType, NewOperands[0]);
     ReplacedValues[Load] = NewLoad;
+    ToRemove.push_back(Load);
+    return;
+  }
+
+  if (auto *Load = dyn_cast<LoadInst>(&I);
+      Load && isa<ConstantExpr>(Load->getPointerOperand())) {
+    auto *CE = dyn_cast<ConstantExpr>(Load->getPointerOperand());
+    if (!(CE->getOpcode() == Instruction::GetElementPtr))
+      return;
+    auto *GEP = dyn_cast<GEPOperator>(CE);
+    if (!GEP->getSourceElementType()->isIntegerTy(8))
+      return;
+
+    Type *ElementType = Load->getType();
+    ConstantInt *Offset = dyn_cast<ConstantInt>(GEP->getOperand(1));
+    uint32_t ByteOffset = Offset->getZExtValue();
+    uint32_t ElemSize = Load->getDataLayout().getTypeAllocSize(ElementType);
+    uint32_t Index = ByteOffset / ElemSize;
+
+    Value *PtrOperand = GEP->getPointerOperand();
+    Type *GEPType = GEP->getPointerOperandType();
+
+    if (auto *GV = dyn_cast<GlobalVariable>(PtrOperand))
+      GEPType = GV->getValueType();
+    if (auto *AI = dyn_cast<AllocaInst>(PtrOperand))
+      GEPType = AI->getAllocatedType();
+
+    if (auto *ArrTy = dyn_cast<ArrayType>(GEPType))
+      GEPType = ArrTy;
+    else
+      GEPType = ArrayType::get(ElementType, 1); // its a scalar
+
+    Value *NewGEP = Builder.CreateGEP(
+        GEPType, PtrOperand, {Builder.getInt32(0), Builder.getInt32(Index)},
+        GEP->getName(), GEP->getNoWrapFlags());
+
+    LoadInst *NewLoad = Builder.CreateLoad(ElementType, NewGEP);
+    ReplacedValues[Load] = NewLoad;
+    Load->replaceAllUsesWith(NewLoad);
     ToRemove.push_back(Load);
     return;
   }
@@ -155,6 +198,7 @@ static void fixI8UseChain(Instruction &I,
       Cast->replaceAllUsesWith(Replacement);
       return;
     }
+
     Value *AdjustedCast = nullptr;
     if (Cast->getOpcode() == Instruction::ZExt)
       AdjustedCast = Builder.CreateZExtOrTrunc(Replacement, Cast->getType());
@@ -163,6 +207,45 @@ static void fixI8UseChain(Instruction &I,
 
     if (AdjustedCast)
       Cast->replaceAllUsesWith(AdjustedCast);
+  }
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
+    if (!GEP->getType()->isPointerTy() ||
+        !GEP->getSourceElementType()->isIntegerTy(8))
+      return;
+
+    Value *BasePtr = GEP->getPointerOperand();
+    if (ReplacedValues.count(BasePtr))
+      BasePtr = ReplacedValues[BasePtr];
+
+    Type *ElementType = BasePtr->getType();
+
+    if (auto *AI = dyn_cast<AllocaInst>(BasePtr))
+      ElementType = AI->getAllocatedType();
+    if (auto *GV = dyn_cast<GlobalVariable>(BasePtr))
+      ElementType = GV->getValueType();
+
+    Type *GEPType = ElementType;
+    if (auto *ArrTy = dyn_cast<ArrayType>(ElementType))
+      ElementType = ArrTy->getArrayElementType();
+    else
+      GEPType = ArrayType::get(ElementType, 1); // its a scalar
+
+    ConstantInt *Offset = dyn_cast<ConstantInt>(GEP->getOperand(1));
+    // Note: i8 to i32 offset conversion without emitting IR requires constant
+    // ints. Since offset conversion is common, we can safely assume Offset is
+    // always a ConstantInt, so no need to have a conditional bail out on
+    // nullptr, instead assert this is the case.
+    assert(Offset && "Offset is expected to be a ConstantInt");
+    uint32_t ByteOffset = Offset->getZExtValue();
+    uint32_t ElemSize = GEP->getDataLayout().getTypeAllocSize(ElementType);
+    assert(ElemSize > 0 && "ElementSize must be set");
+    uint32_t Index = ByteOffset / ElemSize;
+    Value *NewGEP = Builder.CreateGEP(
+        GEPType, BasePtr, {Builder.getInt32(0), Builder.getInt32(Index)},
+        GEP->getName(), GEP->getNoWrapFlags());
+    ReplacedValues[GEP] = NewGEP;
+    GEP->replaceAllUsesWith(NewGEP);
+    ToRemove.push_back(GEP);
   }
 }
 
@@ -175,15 +258,12 @@ static void upcastI8AllocasAndUses(Instruction &I,
 
   Type *SmallestType = nullptr;
 
-  for (User *U : AI->users()) {
-    auto *Load = dyn_cast<LoadInst>(U);
-    if (!Load)
-      continue;
+  auto ProcessLoad = [&](LoadInst *Load) {
     for (User *LU : Load->users()) {
       Type *Ty = nullptr;
-      if (auto *Cast = dyn_cast<CastInst>(LU))
+      if (CastInst *Cast = dyn_cast<CastInst>(LU))
         Ty = Cast->getType();
-      if (CallInst *CI = dyn_cast<CallInst>(LU)) {
+      else if (CallInst *CI = dyn_cast<CallInst>(LU)) {
         if (CI->getIntrinsicID() == Intrinsic::memset)
           Ty = Type::getInt32Ty(CI->getContext());
       }
@@ -194,6 +274,17 @@ static void upcastI8AllocasAndUses(Instruction &I,
       if (!SmallestType ||
           Ty->getPrimitiveSizeInBits() < SmallestType->getPrimitiveSizeInBits())
         SmallestType = Ty;
+    }
+  };
+
+  for (User *U : AI->users()) {
+    if (auto *Load = dyn_cast<LoadInst>(U))
+      ProcessLoad(Load);
+    else if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
+      for (User *GU : GEP->users()) {
+        if (auto *Load = dyn_cast<LoadInst>(GU))
+          ProcessLoad(Load);
+      }
     }
   }
 

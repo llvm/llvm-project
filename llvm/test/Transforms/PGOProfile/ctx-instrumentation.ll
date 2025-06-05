@@ -9,6 +9,8 @@
 declare void @bar()
 
 ;.
+; INSTRUMENT: @foo_alias = weak_odr unnamed_addr alias void (i32, ptr), ptr @foo
+;.
 ; LOWERING: @__llvm_ctx_profile_callsite = external hidden thread_local global ptr
 ; LOWERING: @__llvm_ctx_profile_expected_callee = external hidden thread_local global ptr
 ; LOWERING: @[[GLOB0:[0-9]+]] = internal global { ptr, ptr, ptr, ptr, i8 } zeroinitializer
@@ -19,6 +21,8 @@ declare void @bar()
 ; LOWERING: @[[GLOB5:[0-9]+]] = internal global { ptr, ptr, ptr, ptr, i8 } zeroinitializer
 ; LOWERING: @[[GLOB6:[0-9]+]] = internal global { ptr, ptr, ptr, ptr, i8 } zeroinitializer
 ; LOWERING: @[[GLOB7:[0-9]+]] = internal global { ptr, ptr, ptr, ptr, i8 } { ptr null, ptr null, ptr inttoptr (i64 1 to ptr), ptr null, i8 0 }
+; LOWERING: @[[GLOB8:[0-9]+]] = internal global { ptr, ptr, ptr, ptr, i8 } zeroinitializer
+; LOWERING: @foo_alias = weak_odr unnamed_addr alias void (i32, ptr), ptr @foo
 ;.
 define void @foo(i32 %a, ptr %fct) {
 ; INSTRUMENT-LABEL: define void @foo(
@@ -335,6 +339,41 @@ define void @unreachable() {
 ;
   unreachable
 }
+
+@foo_alias = weak_odr unnamed_addr alias void (i32, ptr), ptr @foo
+
+define void @call_alias(ptr %a) {
+; INSTRUMENT-LABEL: define void @call_alias(
+; INSTRUMENT-SAME: ptr [[A:%.*]]) {
+; INSTRUMENT-NEXT:  entry:
+; INSTRUMENT-NEXT:    call void @llvm.instrprof.increment(ptr @call_alias, i64 742261418966908927, i32 1, i32 0)
+; INSTRUMENT-NEXT:    call void @llvm.instrprof.callsite(ptr @call_alias, i64 742261418966908927, i32 1, i32 0, ptr @foo_alias)
+; INSTRUMENT-NEXT:    call void @foo_alias(i32 0, ptr [[A]])
+; INSTRUMENT-NEXT:    ret void
+;
+; LOWERING-LABEL: define void @call_alias(
+; LOWERING-SAME: ptr [[A:%.*]]) !guid [[META10:![0-9]+]] {
+; LOWERING-NEXT:  entry:
+; LOWERING-NEXT:    [[TMP0:%.*]] = call ptr @__llvm_ctx_profile_get_context(ptr @[[GLOB8]], ptr @call_alias, i64 2172368043968427688, i32 1, i32 1)
+; LOWERING-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[TMP0]] to i64
+; LOWERING-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], 1
+; LOWERING-NEXT:    [[TMP3:%.*]] = call ptr @llvm.threadlocal.address.p0(ptr @__llvm_ctx_profile_expected_callee)
+; LOWERING-NEXT:    [[TMP4:%.*]] = getelementptr ptr, ptr [[TMP3]], i64 [[TMP2]]
+; LOWERING-NEXT:    [[TMP5:%.*]] = call ptr @llvm.threadlocal.address.p0(ptr @__llvm_ctx_profile_callsite)
+; LOWERING-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[TMP5]], i64 [[TMP2]]
+; LOWERING-NEXT:    [[TMP7:%.*]] = and i64 [[TMP1]], -2
+; LOWERING-NEXT:    [[TMP8:%.*]] = inttoptr i64 [[TMP7]] to ptr
+; LOWERING-NEXT:    store volatile ptr @foo_alias, ptr [[TMP4]], align 8
+; LOWERING-NEXT:    [[TMP9:%.*]] = getelementptr { { i64, ptr, i32, i32 }, [1 x i64], [1 x ptr] }, ptr [[TMP0]], i32 0, i32 2, i32 0
+; LOWERING-NEXT:    store volatile ptr [[TMP9]], ptr [[TMP6]], align 8
+; LOWERING-NEXT:    call void @foo_alias(i32 0, ptr [[A]])
+; LOWERING-NEXT:    call void @__llvm_ctx_profile_release_context(ptr @[[GLOB8]])
+; LOWERING-NEXT:    ret void
+;
+entry:
+  call void @foo_alias(i32 0, ptr %a)
+  ret void
+}
 ;.
 ; LOWERING: attributes #[[ATTR0]] = { noreturn }
 ; LOWERING: attributes #[[ATTR1:[0-9]+]] = { nounwind }
@@ -353,4 +392,5 @@ define void @unreachable() {
 ; LOWERING: [[META7]] = !{i64 -4680624981836544329}
 ; LOWERING: [[META8]] = !{i64 5519225910966780583}
 ; LOWERING: [[META9]] = !{i64 -565652589829076809}
+; LOWERING: [[META10]] = !{i64 2172368043968427688}
 ;.

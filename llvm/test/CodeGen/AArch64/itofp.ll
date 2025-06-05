@@ -2243,46 +2243,46 @@ entry:
 define <32 x double> @stofp_v32i32_v32f64(<32 x i32> %a) {
 ; CHECK-SD-LABEL: stofp_v32i32_v32f64:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    sshll2 v16.2d, v7.4s, #0
-; CHECK-SD-NEXT:    sshll v7.2d, v7.2s, #0
 ; CHECK-SD-NEXT:    sshll2 v17.2d, v6.4s, #0
 ; CHECK-SD-NEXT:    sshll v6.2d, v6.2s, #0
-; CHECK-SD-NEXT:    sshll2 v19.2d, v4.4s, #0
+; CHECK-SD-NEXT:    sshll2 v16.2d, v7.4s, #0
+; CHECK-SD-NEXT:    sshll v19.2d, v3.2s, #0
+; CHECK-SD-NEXT:    sshll v7.2d, v7.2s, #0
+; CHECK-SD-NEXT:    sshll2 v3.2d, v3.4s, #0
+; CHECK-SD-NEXT:    sshll2 v20.2d, v4.4s, #0
 ; CHECK-SD-NEXT:    sshll v4.2d, v4.2s, #0
 ; CHECK-SD-NEXT:    sshll2 v18.2d, v5.4s, #0
-; CHECK-SD-NEXT:    sshll v5.2d, v5.2s, #0
-; CHECK-SD-NEXT:    scvtf v16.2d, v16.2d
-; CHECK-SD-NEXT:    scvtf v7.2d, v7.2d
 ; CHECK-SD-NEXT:    scvtf v17.2d, v17.2d
 ; CHECK-SD-NEXT:    scvtf v6.2d, v6.2d
-; CHECK-SD-NEXT:    scvtf v4.2d, v4.2d
-; CHECK-SD-NEXT:    scvtf v18.2d, v18.2d
-; CHECK-SD-NEXT:    scvtf v5.2d, v5.2d
-; CHECK-SD-NEXT:    stp q7, q16, [x8, #224]
-; CHECK-SD-NEXT:    sshll2 v16.2d, v3.4s, #0
-; CHECK-SD-NEXT:    sshll v3.2d, v3.2s, #0
-; CHECK-SD-NEXT:    scvtf v7.2d, v19.2d
-; CHECK-SD-NEXT:    stp q6, q17, [x8, #192]
-; CHECK-SD-NEXT:    sshll2 v17.2d, v2.4s, #0
-; CHECK-SD-NEXT:    sshll v2.2d, v2.2s, #0
-; CHECK-SD-NEXT:    stp q5, q18, [x8, #160]
-; CHECK-SD-NEXT:    scvtf v6.2d, v16.2d
+; CHECK-SD-NEXT:    scvtf v16.2d, v16.2d
+; CHECK-SD-NEXT:    scvtf v7.2d, v7.2d
 ; CHECK-SD-NEXT:    scvtf v3.2d, v3.2d
-; CHECK-SD-NEXT:    sshll2 v16.2d, v1.4s, #0
-; CHECK-SD-NEXT:    sshll v1.2d, v1.2s, #0
-; CHECK-SD-NEXT:    scvtf v5.2d, v17.2d
-; CHECK-SD-NEXT:    stp q4, q7, [x8, #128]
+; CHECK-SD-NEXT:    sshll2 v21.2d, v2.4s, #0
+; CHECK-SD-NEXT:    scvtf v20.2d, v20.2d
+; CHECK-SD-NEXT:    scvtf v4.2d, v4.2d
+; CHECK-SD-NEXT:    sshll v5.2d, v5.2s, #0
+; CHECK-SD-NEXT:    sshll v2.2d, v2.2s, #0
+; CHECK-SD-NEXT:    scvtf v18.2d, v18.2d
+; CHECK-SD-NEXT:    stp q6, q17, [x8, #192]
+; CHECK-SD-NEXT:    scvtf v17.2d, v19.2d
+; CHECK-SD-NEXT:    stp q7, q16, [x8, #224]
 ; CHECK-SD-NEXT:    sshll2 v7.2d, v0.4s, #0
 ; CHECK-SD-NEXT:    sshll v0.2d, v0.2s, #0
+; CHECK-SD-NEXT:    stp q4, q20, [x8, #128]
+; CHECK-SD-NEXT:    scvtf v16.2d, v21.2d
+; CHECK-SD-NEXT:    scvtf v5.2d, v5.2d
 ; CHECK-SD-NEXT:    scvtf v2.2d, v2.2d
-; CHECK-SD-NEXT:    scvtf v4.2d, v16.2d
-; CHECK-SD-NEXT:    stp q3, q6, [x8, #96]
-; CHECK-SD-NEXT:    scvtf v1.2d, v1.2d
-; CHECK-SD-NEXT:    scvtf v3.2d, v7.2d
+; CHECK-SD-NEXT:    stp q17, q3, [x8, #96]
+; CHECK-SD-NEXT:    sshll2 v3.2d, v1.4s, #0
+; CHECK-SD-NEXT:    sshll v1.2d, v1.2s, #0
+; CHECK-SD-NEXT:    scvtf v4.2d, v7.2d
 ; CHECK-SD-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-SD-NEXT:    stp q2, q5, [x8, #64]
-; CHECK-SD-NEXT:    stp q1, q4, [x8, #32]
-; CHECK-SD-NEXT:    stp q0, q3, [x8]
+; CHECK-SD-NEXT:    stp q5, q18, [x8, #160]
+; CHECK-SD-NEXT:    stp q2, q16, [x8, #64]
+; CHECK-SD-NEXT:    scvtf v3.2d, v3.2d
+; CHECK-SD-NEXT:    scvtf v1.2d, v1.2d
+; CHECK-SD-NEXT:    stp q0, q4, [x8]
+; CHECK-SD-NEXT:    stp q1, q3, [x8, #32]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: stofp_v32i32_v32f64:
@@ -2336,46 +2336,46 @@ entry:
 define <32 x double> @utofp_v32i32_v32f64(<32 x i32> %a) {
 ; CHECK-SD-LABEL: utofp_v32i32_v32f64:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ushll2 v16.2d, v7.4s, #0
-; CHECK-SD-NEXT:    ushll v7.2d, v7.2s, #0
 ; CHECK-SD-NEXT:    ushll2 v17.2d, v6.4s, #0
 ; CHECK-SD-NEXT:    ushll v6.2d, v6.2s, #0
-; CHECK-SD-NEXT:    ushll2 v19.2d, v4.4s, #0
+; CHECK-SD-NEXT:    ushll2 v16.2d, v7.4s, #0
+; CHECK-SD-NEXT:    ushll v19.2d, v3.2s, #0
+; CHECK-SD-NEXT:    ushll v7.2d, v7.2s, #0
+; CHECK-SD-NEXT:    ushll2 v3.2d, v3.4s, #0
+; CHECK-SD-NEXT:    ushll2 v20.2d, v4.4s, #0
 ; CHECK-SD-NEXT:    ushll v4.2d, v4.2s, #0
 ; CHECK-SD-NEXT:    ushll2 v18.2d, v5.4s, #0
-; CHECK-SD-NEXT:    ushll v5.2d, v5.2s, #0
-; CHECK-SD-NEXT:    ucvtf v16.2d, v16.2d
-; CHECK-SD-NEXT:    ucvtf v7.2d, v7.2d
 ; CHECK-SD-NEXT:    ucvtf v17.2d, v17.2d
 ; CHECK-SD-NEXT:    ucvtf v6.2d, v6.2d
-; CHECK-SD-NEXT:    ucvtf v4.2d, v4.2d
-; CHECK-SD-NEXT:    ucvtf v18.2d, v18.2d
-; CHECK-SD-NEXT:    ucvtf v5.2d, v5.2d
-; CHECK-SD-NEXT:    stp q7, q16, [x8, #224]
-; CHECK-SD-NEXT:    ushll2 v16.2d, v3.4s, #0
-; CHECK-SD-NEXT:    ushll v3.2d, v3.2s, #0
-; CHECK-SD-NEXT:    ucvtf v7.2d, v19.2d
-; CHECK-SD-NEXT:    stp q6, q17, [x8, #192]
-; CHECK-SD-NEXT:    ushll2 v17.2d, v2.4s, #0
-; CHECK-SD-NEXT:    ushll v2.2d, v2.2s, #0
-; CHECK-SD-NEXT:    stp q5, q18, [x8, #160]
-; CHECK-SD-NEXT:    ucvtf v6.2d, v16.2d
+; CHECK-SD-NEXT:    ucvtf v16.2d, v16.2d
+; CHECK-SD-NEXT:    ucvtf v7.2d, v7.2d
 ; CHECK-SD-NEXT:    ucvtf v3.2d, v3.2d
-; CHECK-SD-NEXT:    ushll2 v16.2d, v1.4s, #0
-; CHECK-SD-NEXT:    ushll v1.2d, v1.2s, #0
-; CHECK-SD-NEXT:    ucvtf v5.2d, v17.2d
-; CHECK-SD-NEXT:    stp q4, q7, [x8, #128]
+; CHECK-SD-NEXT:    ushll2 v21.2d, v2.4s, #0
+; CHECK-SD-NEXT:    ucvtf v20.2d, v20.2d
+; CHECK-SD-NEXT:    ucvtf v4.2d, v4.2d
+; CHECK-SD-NEXT:    ushll v5.2d, v5.2s, #0
+; CHECK-SD-NEXT:    ushll v2.2d, v2.2s, #0
+; CHECK-SD-NEXT:    ucvtf v18.2d, v18.2d
+; CHECK-SD-NEXT:    stp q6, q17, [x8, #192]
+; CHECK-SD-NEXT:    ucvtf v17.2d, v19.2d
+; CHECK-SD-NEXT:    stp q7, q16, [x8, #224]
 ; CHECK-SD-NEXT:    ushll2 v7.2d, v0.4s, #0
 ; CHECK-SD-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-SD-NEXT:    stp q4, q20, [x8, #128]
+; CHECK-SD-NEXT:    ucvtf v16.2d, v21.2d
+; CHECK-SD-NEXT:    ucvtf v5.2d, v5.2d
 ; CHECK-SD-NEXT:    ucvtf v2.2d, v2.2d
-; CHECK-SD-NEXT:    ucvtf v4.2d, v16.2d
-; CHECK-SD-NEXT:    stp q3, q6, [x8, #96]
-; CHECK-SD-NEXT:    ucvtf v1.2d, v1.2d
-; CHECK-SD-NEXT:    ucvtf v3.2d, v7.2d
+; CHECK-SD-NEXT:    stp q17, q3, [x8, #96]
+; CHECK-SD-NEXT:    ushll2 v3.2d, v1.4s, #0
+; CHECK-SD-NEXT:    ushll v1.2d, v1.2s, #0
+; CHECK-SD-NEXT:    ucvtf v4.2d, v7.2d
 ; CHECK-SD-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-SD-NEXT:    stp q2, q5, [x8, #64]
-; CHECK-SD-NEXT:    stp q1, q4, [x8, #32]
-; CHECK-SD-NEXT:    stp q0, q3, [x8]
+; CHECK-SD-NEXT:    stp q5, q18, [x8, #160]
+; CHECK-SD-NEXT:    stp q2, q16, [x8, #64]
+; CHECK-SD-NEXT:    ucvtf v3.2d, v3.2d
+; CHECK-SD-NEXT:    ucvtf v1.2d, v1.2d
+; CHECK-SD-NEXT:    stp q0, q4, [x8]
+; CHECK-SD-NEXT:    stp q1, q3, [x8, #32]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: utofp_v32i32_v32f64:
@@ -2863,7 +2863,7 @@ define <32 x double> @stofp_v32i16_v32f64(<32 x i16> %a) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sshll2 v4.4s, v3.8h, #0
 ; CHECK-SD-NEXT:    sshll2 v5.4s, v2.8h, #0
-; CHECK-SD-NEXT:    sshll2 v7.4s, v1.8h, #0
+; CHECK-SD-NEXT:    sshll2 v16.4s, v1.8h, #0
 ; CHECK-SD-NEXT:    sshll2 v17.4s, v0.8h, #0
 ; CHECK-SD-NEXT:    sshll v3.4s, v3.4h, #0
 ; CHECK-SD-NEXT:    sshll v1.4s, v1.4h, #0
@@ -2871,43 +2871,43 @@ define <32 x double> @stofp_v32i16_v32f64(<32 x i16> %a) {
 ; CHECK-SD-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-SD-NEXT:    sshll2 v6.2d, v4.4s, #0
 ; CHECK-SD-NEXT:    sshll v4.2d, v4.2s, #0
-; CHECK-SD-NEXT:    sshll2 v16.2d, v5.4s, #0
+; CHECK-SD-NEXT:    sshll2 v7.2d, v5.4s, #0
 ; CHECK-SD-NEXT:    sshll v5.2d, v5.2s, #0
-; CHECK-SD-NEXT:    sshll2 v18.2d, v7.4s, #0
-; CHECK-SD-NEXT:    sshll v7.2d, v7.2s, #0
+; CHECK-SD-NEXT:    sshll2 v18.2d, v16.4s, #0
+; CHECK-SD-NEXT:    sshll v16.2d, v16.2s, #0
 ; CHECK-SD-NEXT:    sshll2 v19.2d, v17.4s, #0
 ; CHECK-SD-NEXT:    scvtf v6.2d, v6.2d
 ; CHECK-SD-NEXT:    scvtf v4.2d, v4.2d
-; CHECK-SD-NEXT:    scvtf v16.2d, v16.2d
-; CHECK-SD-NEXT:    scvtf v5.2d, v5.2d
 ; CHECK-SD-NEXT:    scvtf v7.2d, v7.2d
+; CHECK-SD-NEXT:    scvtf v5.2d, v5.2d
+; CHECK-SD-NEXT:    scvtf v16.2d, v16.2d
 ; CHECK-SD-NEXT:    stp q4, q6, [x8, #224]
 ; CHECK-SD-NEXT:    sshll v6.2d, v17.2s, #0
 ; CHECK-SD-NEXT:    scvtf v17.2d, v18.2d
-; CHECK-SD-NEXT:    sshll2 v4.2d, v3.4s, #0
-; CHECK-SD-NEXT:    stp q5, q16, [x8, #160]
+; CHECK-SD-NEXT:    stp q5, q7, [x8, #160]
+; CHECK-SD-NEXT:    sshll2 v7.2d, v3.4s, #0
 ; CHECK-SD-NEXT:    sshll v3.2d, v3.2s, #0
-; CHECK-SD-NEXT:    scvtf v16.2d, v19.2d
+; CHECK-SD-NEXT:    scvtf v4.2d, v19.2d
 ; CHECK-SD-NEXT:    scvtf v5.2d, v6.2d
 ; CHECK-SD-NEXT:    sshll2 v6.2d, v2.4s, #0
 ; CHECK-SD-NEXT:    sshll v2.2d, v2.2s, #0
-; CHECK-SD-NEXT:    scvtf v4.2d, v4.2d
+; CHECK-SD-NEXT:    scvtf v7.2d, v7.2d
 ; CHECK-SD-NEXT:    scvtf v3.2d, v3.2d
-; CHECK-SD-NEXT:    stp q7, q17, [x8, #96]
-; CHECK-SD-NEXT:    sshll2 v7.2d, v1.4s, #0
+; CHECK-SD-NEXT:    stp q16, q17, [x8, #96]
+; CHECK-SD-NEXT:    sshll2 v16.2d, v1.4s, #0
 ; CHECK-SD-NEXT:    sshll v1.2d, v1.2s, #0
 ; CHECK-SD-NEXT:    scvtf v6.2d, v6.2d
 ; CHECK-SD-NEXT:    scvtf v2.2d, v2.2d
-; CHECK-SD-NEXT:    stp q5, q16, [x8, #32]
-; CHECK-SD-NEXT:    sshll2 v5.2d, v0.4s, #0
+; CHECK-SD-NEXT:    stp q5, q4, [x8, #32]
+; CHECK-SD-NEXT:    sshll2 v4.2d, v0.4s, #0
 ; CHECK-SD-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-SD-NEXT:    scvtf v7.2d, v7.2d
-; CHECK-SD-NEXT:    stp q3, q4, [x8, #192]
+; CHECK-SD-NEXT:    scvtf v5.2d, v16.2d
+; CHECK-SD-NEXT:    stp q3, q7, [x8, #192]
 ; CHECK-SD-NEXT:    scvtf v1.2d, v1.2d
-; CHECK-SD-NEXT:    scvtf v3.2d, v5.2d
+; CHECK-SD-NEXT:    scvtf v3.2d, v4.2d
 ; CHECK-SD-NEXT:    scvtf v0.2d, v0.2d
 ; CHECK-SD-NEXT:    stp q2, q6, [x8, #128]
-; CHECK-SD-NEXT:    stp q1, q7, [x8, #64]
+; CHECK-SD-NEXT:    stp q1, q5, [x8, #64]
 ; CHECK-SD-NEXT:    stp q0, q3, [x8]
 ; CHECK-SD-NEXT:    ret
 ;
@@ -2972,7 +2972,7 @@ define <32 x double> @utofp_v32i16_v32f64(<32 x i16> %a) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ushll2 v4.4s, v3.8h, #0
 ; CHECK-SD-NEXT:    ushll2 v5.4s, v2.8h, #0
-; CHECK-SD-NEXT:    ushll2 v7.4s, v1.8h, #0
+; CHECK-SD-NEXT:    ushll2 v16.4s, v1.8h, #0
 ; CHECK-SD-NEXT:    ushll2 v17.4s, v0.8h, #0
 ; CHECK-SD-NEXT:    ushll v3.4s, v3.4h, #0
 ; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
@@ -2980,43 +2980,43 @@ define <32 x double> @utofp_v32i16_v32f64(<32 x i16> %a) {
 ; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-SD-NEXT:    ushll2 v6.2d, v4.4s, #0
 ; CHECK-SD-NEXT:    ushll v4.2d, v4.2s, #0
-; CHECK-SD-NEXT:    ushll2 v16.2d, v5.4s, #0
+; CHECK-SD-NEXT:    ushll2 v7.2d, v5.4s, #0
 ; CHECK-SD-NEXT:    ushll v5.2d, v5.2s, #0
-; CHECK-SD-NEXT:    ushll2 v18.2d, v7.4s, #0
-; CHECK-SD-NEXT:    ushll v7.2d, v7.2s, #0
+; CHECK-SD-NEXT:    ushll2 v18.2d, v16.4s, #0
+; CHECK-SD-NEXT:    ushll v16.2d, v16.2s, #0
 ; CHECK-SD-NEXT:    ushll2 v19.2d, v17.4s, #0
 ; CHECK-SD-NEXT:    ucvtf v6.2d, v6.2d
 ; CHECK-SD-NEXT:    ucvtf v4.2d, v4.2d
-; CHECK-SD-NEXT:    ucvtf v16.2d, v16.2d
-; CHECK-SD-NEXT:    ucvtf v5.2d, v5.2d
 ; CHECK-SD-NEXT:    ucvtf v7.2d, v7.2d
+; CHECK-SD-NEXT:    ucvtf v5.2d, v5.2d
+; CHECK-SD-NEXT:    ucvtf v16.2d, v16.2d
 ; CHECK-SD-NEXT:    stp q4, q6, [x8, #224]
 ; CHECK-SD-NEXT:    ushll v6.2d, v17.2s, #0
 ; CHECK-SD-NEXT:    ucvtf v17.2d, v18.2d
-; CHECK-SD-NEXT:    ushll2 v4.2d, v3.4s, #0
-; CHECK-SD-NEXT:    stp q5, q16, [x8, #160]
+; CHECK-SD-NEXT:    stp q5, q7, [x8, #160]
+; CHECK-SD-NEXT:    ushll2 v7.2d, v3.4s, #0
 ; CHECK-SD-NEXT:    ushll v3.2d, v3.2s, #0
-; CHECK-SD-NEXT:    ucvtf v16.2d, v19.2d
+; CHECK-SD-NEXT:    ucvtf v4.2d, v19.2d
 ; CHECK-SD-NEXT:    ucvtf v5.2d, v6.2d
 ; CHECK-SD-NEXT:    ushll2 v6.2d, v2.4s, #0
 ; CHECK-SD-NEXT:    ushll v2.2d, v2.2s, #0
-; CHECK-SD-NEXT:    ucvtf v4.2d, v4.2d
+; CHECK-SD-NEXT:    ucvtf v7.2d, v7.2d
 ; CHECK-SD-NEXT:    ucvtf v3.2d, v3.2d
-; CHECK-SD-NEXT:    stp q7, q17, [x8, #96]
-; CHECK-SD-NEXT:    ushll2 v7.2d, v1.4s, #0
+; CHECK-SD-NEXT:    stp q16, q17, [x8, #96]
+; CHECK-SD-NEXT:    ushll2 v16.2d, v1.4s, #0
 ; CHECK-SD-NEXT:    ushll v1.2d, v1.2s, #0
 ; CHECK-SD-NEXT:    ucvtf v6.2d, v6.2d
 ; CHECK-SD-NEXT:    ucvtf v2.2d, v2.2d
-; CHECK-SD-NEXT:    stp q5, q16, [x8, #32]
-; CHECK-SD-NEXT:    ushll2 v5.2d, v0.4s, #0
+; CHECK-SD-NEXT:    stp q5, q4, [x8, #32]
+; CHECK-SD-NEXT:    ushll2 v4.2d, v0.4s, #0
 ; CHECK-SD-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-SD-NEXT:    ucvtf v7.2d, v7.2d
-; CHECK-SD-NEXT:    stp q3, q4, [x8, #192]
+; CHECK-SD-NEXT:    ucvtf v5.2d, v16.2d
+; CHECK-SD-NEXT:    stp q3, q7, [x8, #192]
 ; CHECK-SD-NEXT:    ucvtf v1.2d, v1.2d
-; CHECK-SD-NEXT:    ucvtf v3.2d, v5.2d
+; CHECK-SD-NEXT:    ucvtf v3.2d, v4.2d
 ; CHECK-SD-NEXT:    ucvtf v0.2d, v0.2d
 ; CHECK-SD-NEXT:    stp q2, q6, [x8, #128]
-; CHECK-SD-NEXT:    stp q1, q7, [x8, #64]
+; CHECK-SD-NEXT:    stp q1, q5, [x8, #64]
 ; CHECK-SD-NEXT:    stp q0, q3, [x8]
 ; CHECK-SD-NEXT:    ret
 ;

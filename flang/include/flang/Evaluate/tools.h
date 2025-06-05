@@ -414,6 +414,16 @@ const Symbol *IsArrayElement(const Expr<T> &expr, bool intoSubstring = true,
   return nullptr;
 }
 
+template <typename T>
+bool isStructureComponent(const Fortran::evaluate::Expr<T> &expr) {
+  if (auto dataRef{ExtractDataRef(expr, /*intoSubstring=*/false)}) {
+    const Fortran::evaluate::DataRef *ref{&*dataRef};
+    return std::holds_alternative<Fortran::evaluate::Component>(ref->u);
+  }
+
+  return false;
+}
+
 template <typename A>
 std::optional<NamedEntity> ExtractNamedEntity(const A &x) {
   if (auto dataRef{ExtractDataRef(x)}) {

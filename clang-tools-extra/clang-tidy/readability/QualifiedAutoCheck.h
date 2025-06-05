@@ -21,9 +21,7 @@ namespace clang::tidy::readability {
 /// http://clang.llvm.org/extra/clang-tidy/checks/readability/qualified-auto.html
 class QualifiedAutoCheck : public ClangTidyCheck {
 public:
-  QualifiedAutoCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context),
-        AddConstToQualified(Options.get("AddConstToQualified", true)) {}
+  QualifiedAutoCheck(StringRef Name, ClangTidyContext *Context);
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus11;
   }
@@ -33,6 +31,7 @@ public:
 
 private:
   const bool AddConstToQualified;
+  const std::vector<StringRef> AllowedTypes;
 };
 
 } // namespace clang::tidy::readability

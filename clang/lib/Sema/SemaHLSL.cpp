@@ -1117,6 +1117,14 @@ void SemaHLSL::handleWaveSizeAttr(Decl *D, const ParsedAttr &AL) {
     D->addAttr(NewAttr);
 }
 
+void SemaHLSL::handleVkExtBuiltinInputAttr(Decl *D, const ParsedAttr &AL) {
+  uint32_t ID;
+  if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), ID))
+    return;
+  D->addAttr(::new (getASTContext())
+                 HLSLVkExtBuiltinInputAttr(getASTContext(), AL, ID));
+}
+
 bool SemaHLSL::diagnoseInputIDType(QualType T, const ParsedAttr &AL) {
   const auto *VT = T->getAs<VectorType>();
 
@@ -2385,12 +2393,14 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   }
   case Builtin::BI__builtin_hlsl_resource_handlefrombinding: {
     ASTContext &AST = SemaRef.getASTContext();
-    if (SemaRef.checkArgCount(TheCall, 5) ||
+    if (SemaRef.checkArgCount(TheCall, 6) ||
         CheckResourceHandle(&SemaRef, TheCall, 0) ||
         CheckArgTypeMatches(&SemaRef, TheCall->getArg(1), AST.UnsignedIntTy) ||
         CheckArgTypeMatches(&SemaRef, TheCall->getArg(2), AST.UnsignedIntTy) ||
         CheckArgTypeMatches(&SemaRef, TheCall->getArg(3), AST.IntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(4), AST.UnsignedIntTy))
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(4), AST.UnsignedIntTy) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(5),
+                            AST.getPointerType(AST.CharTy.withConst())))
       return true;
     // use the type of the handle (arg0) as a return type
     QualType ResourceTy = TheCall->getArg(0)->getType();
@@ -2399,12 +2409,14 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   }
   case Builtin::BI__builtin_hlsl_resource_handlefromimplicitbinding: {
     ASTContext &AST = SemaRef.getASTContext();
-    if (SemaRef.checkArgCount(TheCall, 5) ||
+    if (SemaRef.checkArgCount(TheCall, 6) ||
         CheckResourceHandle(&SemaRef, TheCall, 0) ||
         CheckArgTypeMatches(&SemaRef, TheCall->getArg(1), AST.UnsignedIntTy) ||
         CheckArgTypeMatches(&SemaRef, TheCall->getArg(2), AST.IntTy) ||
         CheckArgTypeMatches(&SemaRef, TheCall->getArg(3), AST.UnsignedIntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(4), AST.UnsignedIntTy))
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(4), AST.UnsignedIntTy) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(5),
+                            AST.getPointerType(AST.CharTy.withConst())))
       return true;
     // use the type of the handle (arg0) as a return type
     QualType ResourceTy = TheCall->getArg(0)->getType();
@@ -3154,6 +3166,14 @@ void SemaHLSL::deduceAddressSpace(VarDecl *Decl) {
     return;
 
   QualType Type = Decl->getType();
+
+  if (Decl->hasAttr<HLSLVkExtBuiltinInputAttr>()) {
+    LangAS ImplAS = LangAS::hlsl_input;
+    Type = SemaRef.getASTContext().getAddrSpaceQualType(Type, ImplAS);
+    Decl->setType(Type);
+    return;
+  }
+
   if (Type->isSamplerT() || Type->isVoidType())
     return;
 
@@ -3255,13 +3275,18 @@ bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
   IntegerLiteral *Space =
       IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, SpaceNo),
                              AST.UnsignedIntTy, SourceLocation());
+  StringRef VarName = VD->getName();
+  StringLiteral *Name = StringLiteral::Create(
+      AST, VarName, StringLiteralKind::Ordinary, false,
+      AST.getStringLiteralArrayType(AST.CharTy.withConst(), VarName.size()),
+      SourceLocation());
 
   // resource with explicit binding
   if (RegisterSlot.has_value()) {
     IntegerLiteral *RegSlot = IntegerLiteral::Create(
         AST, llvm::APInt(UIntTySize, RegisterSlot.value()), AST.UnsignedIntTy,
         SourceLocation());
-    Expr *Args[] = {RegSlot, Space, RangeSize, Index};
+    Expr *Args[] = {RegSlot, Space, RangeSize, Index, Name};
     return initVarDeclWithCtor(SemaRef, VD, Args);
   }
 
@@ -3269,7 +3294,7 @@ bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
   IntegerLiteral *OrderId = IntegerLiteral::Create(
       AST, llvm::APInt(UIntTySize, getNextImplicitBindingOrderID()),
       AST.UnsignedIntTy, SourceLocation());
-  Expr *Args[] = {Space, RangeSize, Index, OrderId};
+  Expr *Args[] = {Space, RangeSize, Index, OrderId, Name};
   return initVarDeclWithCtor(SemaRef, VD, Args);
 }
 
