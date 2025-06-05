@@ -868,8 +868,9 @@ LogicalResult spirv::Deserializer::processType(spirv::Opcode opcode,
   } break;
   case spirv::Opcode::OpTypeFloat: {
     if (operands.size() != 2 && operands.size() != 3)
-      return emitError(unknownLoc, "OpTypeFloat must have bitwidth parameter "
-                                   "and optional floating point encoding");
+      return emitError(unknownLoc,
+                       "OpTypeFloat expects either 2 operands (type, bitwidth) "
+                       "or 3 operands (type, bitwidth, encoding)");
     uint32_t bitWidth = operands[1];
 
     Type floatTy;
