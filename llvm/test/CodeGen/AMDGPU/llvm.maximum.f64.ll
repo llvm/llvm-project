@@ -2551,18 +2551,18 @@ define <16 x double> @v_maximum_v16f64(<16 x double> %src0, <16 x double> %src1)
 ; GFX10-NEXT:    s_waitcnt vmcnt(23)
 ; GFX10-NEXT:    v_max_f64 v[82:83], v[0:1], v[31:32]
 ; GFX10-NEXT:    v_cmp_o_f64_e32 vcc_lo, v[0:1], v[31:32]
-; GFX10-NEXT:    s_waitcnt vmcnt(22)
+; GFX10-NEXT:    s_waitcnt vmcnt(21)
 ; GFX10-NEXT:    v_max_f64 v[84:85], v[2:3], v[33:34]
 ; GFX10-NEXT:    v_cmp_o_f64_e64 s4, v[2:3], v[33:34]
-; GFX10-NEXT:    s_clause 0x3
-; GFX10-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:120
-; GFX10-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:116
-; GFX10-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:112
-; GFX10-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:108
-; GFX10-NEXT:    s_waitcnt vmcnt(24)
+; GFX10-NEXT:    s_waitcnt vmcnt(19)
 ; GFX10-NEXT:    v_max_f64 v[32:33], v[4:5], v[35:36]
 ; GFX10-NEXT:    v_cmp_o_f64_e64 s5, v[4:5], v[35:36]
-; GFX10-NEXT:    s_clause 0x2
+; GFX10-NEXT:    s_clause 0x7
+; GFX10-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:112
+; GFX10-NEXT:    buffer_load_dword v67, off, s[0:3], s32 offset:104
+; GFX10-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:108
+; GFX10-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:120
+; GFX10-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:116
 ; GFX10-NEXT:    buffer_load_dword v31, off, s[0:3], s32
 ; GFX10-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:128
 ; GFX10-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:124
@@ -2592,9 +2592,6 @@ define <16 x double> @v_maximum_v16f64(<16 x double> %src0, <16 x double> %src1)
 ; GFX10-NEXT:    v_max_f64 v[50:51], v[18:19], v[80:81]
 ; GFX10-NEXT:    v_max_f64 v[70:71], v[22:23], v[68:69]
 ; GFX10-NEXT:    v_cmp_o_f64_e64 s14, v[22:23], v[68:69]
-; GFX10-NEXT:    s_waitcnt vmcnt(7)
-; GFX10-NEXT:    v_max_f64 v[68:69], v[24:25], v[66:67]
-; GFX10-NEXT:    v_cmp_o_f64_e64 s15, v[24:25], v[66:67]
 ; GFX10-NEXT:    v_cndmask_b32_e64 v6, 0, v34, s6
 ; GFX10-NEXT:    v_cndmask_b32_e64 v7, 0x7ff80000, v35, s6
 ; GFX10-NEXT:    v_cndmask_b32_e64 v8, 0, v48, s7
@@ -2613,27 +2610,30 @@ define <16 x double> @v_maximum_v16f64(<16 x double> %src0, <16 x double> %src1)
 ; GFX10-NEXT:    v_cndmask_b32_e64 v21, 0x7ff80000, v65, s13
 ; GFX10-NEXT:    v_cndmask_b32_e64 v22, 0, v70, s14
 ; GFX10-NEXT:    v_cndmask_b32_e64 v23, 0x7ff80000, v71, s14
-; GFX10-NEXT:    v_cndmask_b32_e64 v24, 0, v68, s15
-; GFX10-NEXT:    v_cndmask_b32_e64 v25, 0x7ff80000, v69, s15
+; GFX10-NEXT:    s_waitcnt vmcnt(6)
+; GFX10-NEXT:    v_max_f64 v[68:69], v[24:25], v[66:67]
+; GFX10-NEXT:    v_cmp_o_f64_e64 s15, v[24:25], v[66:67]
 ; GFX10-NEXT:    s_waitcnt vmcnt(5)
-; GFX10-NEXT:    v_max_f64 v[80:81], v[28:29], v[0:1]
-; GFX10-NEXT:    v_cmp_o_f64_e64 s17, v[28:29], v[0:1]
+; GFX10-NEXT:    v_max_f64 v[66:67], v[26:27], v[0:1]
+; GFX10-NEXT:    v_cmp_o_f64_e64 s16, v[26:27], v[0:1]
 ; GFX10-NEXT:    s_waitcnt vmcnt(3)
-; GFX10-NEXT:    v_max_f64 v[66:67], v[26:27], v[2:3]
-; GFX10-NEXT:    v_cmp_o_f64_e64 s16, v[26:27], v[2:3]
-; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0, v82, vcc_lo
+; GFX10-NEXT:    v_max_f64 v[80:81], v[28:29], v[2:3]
+; GFX10-NEXT:    v_cmp_o_f64_e64 s17, v[28:29], v[2:3]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_max_f64 v[86:87], v[30:31], v[4:5]
 ; GFX10-NEXT:    v_cmp_o_f64_e64 s18, v[30:31], v[4:5]
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0, v82, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, 0x7ff80000, v83, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e64 v2, 0, v84, s4
 ; GFX10-NEXT:    v_cndmask_b32_e64 v3, 0x7ff80000, v85, s4
 ; GFX10-NEXT:    v_cndmask_b32_e64 v4, 0, v32, s5
 ; GFX10-NEXT:    v_cndmask_b32_e64 v5, 0x7ff80000, v33, s5
-; GFX10-NEXT:    v_cndmask_b32_e64 v28, 0, v80, s17
-; GFX10-NEXT:    v_cndmask_b32_e64 v29, 0x7ff80000, v81, s17
+; GFX10-NEXT:    v_cndmask_b32_e64 v24, 0, v68, s15
+; GFX10-NEXT:    v_cndmask_b32_e64 v25, 0x7ff80000, v69, s15
 ; GFX10-NEXT:    v_cndmask_b32_e64 v26, 0, v66, s16
 ; GFX10-NEXT:    v_cndmask_b32_e64 v27, 0x7ff80000, v67, s16
+; GFX10-NEXT:    v_cndmask_b32_e64 v28, 0, v80, s17
+; GFX10-NEXT:    v_cndmask_b32_e64 v29, 0x7ff80000, v81, s17
 ; GFX10-NEXT:    v_cndmask_b32_e64 v30, 0, v86, s18
 ; GFX10-NEXT:    v_cndmask_b32_e64 v31, 0x7ff80000, v87, s18
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
