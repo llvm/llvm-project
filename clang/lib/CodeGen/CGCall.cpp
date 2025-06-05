@@ -81,12 +81,19 @@ unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
     return llvm::CallingConv::AArch64_VectorCall;
   case CC_AArch64SVEPCS:
     return llvm::CallingConv::AArch64_SVE_VectorCall;
-  case CC_AMDGPUKernelCall:
-    return llvm::CallingConv::AMDGPU_KERNEL;
   case CC_SpirFunction:
     return llvm::CallingConv::SPIR_FUNC;
-  case CC_OpenCLKernel:
-    return CGM.getTargetCodeGenInfo().getOpenCLKernelCallingConv();
+  case CC_DeviceKernel: {
+    if (CGM.getLangOpts().OpenCL)
+      return CGM.getTargetCodeGenInfo().getOpenCLKernelCallingConv();
+    if (CGM.getTriple().isSPIROrSPIRV())
+      return llvm::CallingConv::SPIR_KERNEL;
+    if (CGM.getTriple().isAMDGPU())
+      return llvm::CallingConv::AMDGPU_KERNEL;
+    if (CGM.getTriple().isNVPTX())
+      return llvm::CallingConv::PTX_Kernel;
+    llvm_unreachable("Unknown kernel calling convention");
+  }
   case CC_PreserveMost:
     return llvm::CallingConv::PreserveMost;
   case CC_PreserveAll:
@@ -284,8 +291,8 @@ static CallingConv getCallingConventionForDecl(const ObjCMethodDecl *D,
   if (D->hasAttr<AArch64SVEPcsAttr>())
     return CC_AArch64SVEPCS;
 
-  if (D->hasAttr<AMDGPUKernelCallAttr>())
-    return CC_AMDGPUKernelCall;
+  if (D->hasAttr<DeviceKernelAttr>())
+    return CC_DeviceKernel;
 
   if (D->hasAttr<IntelOclBiccAttr>())
     return CC_IntelOclBicc;
@@ -533,7 +540,7 @@ CodeGenTypes::arrangeFunctionDeclaration(const GlobalDecl GD) {
   assert(isa<FunctionType>(FTy));
   setCUDAKernelCallingConvention(FTy, CGM, FD);
 
-  if (FD->hasAttr<OpenCLKernelAttr>() &&
+  if (DeviceKernelAttr::isOpenCLSpelling(FD->getAttr<DeviceKernelAttr>()) &&
       GD.getKernelReferenceKind() == KernelReferenceKind::Stub) {
     const FunctionType *FT = FTy->getAs<FunctionType>();
     CGM.getTargetCodeGenInfo().setOCLKernelStubCallingConvention(FT);
@@ -761,7 +768,7 @@ CodeGenTypes::arrangeSYCLKernelCallerDeclaration(QualType resultType,
 
   return arrangeLLVMFunctionInfo(GetReturnType(resultType), FnInfoOpts::None,
                                  argTypes,
-                                 FunctionType::ExtInfo(CC_OpenCLKernel),
+                                 FunctionType::ExtInfo(CC_DeviceKernel),
                                  /*paramInfos=*/{}, RequiredArgs::All);
 }
 
@@ -2536,7 +2543,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
                                  NumElemsParam);
     }
 
-    if (TargetDecl->hasAttr<OpenCLKernelAttr>() &&
+    if (DeviceKernelAttr::isOpenCLSpelling(
+            TargetDecl->getAttr<DeviceKernelAttr>()) &&
         CallingConv != CallingConv::CC_C &&
         CallingConv != CallingConv::CC_SpirFunction) {
       // Check CallingConv to avoid adding uniform-work-group-size attribute to
@@ -2919,7 +2927,9 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     // > For arguments to a __kernel function declared to be a pointer to a
     // > data type, the OpenCL compiler can assume that the pointee is always
     // > appropriately aligned as required by the data type.
-    if (TargetDecl && TargetDecl->hasAttr<OpenCLKernelAttr>() &&
+    if (TargetDecl &&
+        DeviceKernelAttr::isOpenCLSpelling(
+            TargetDecl->getAttr<DeviceKernelAttr>()) &&
         ParamType->isPointerType()) {
       QualType PTy = ParamType->getPointeeType();
       if (!PTy->isIncompleteType() && PTy->isConstantSizeType()) {

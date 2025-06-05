@@ -1100,8 +1100,8 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
     case CC_AArch64SVEPCS:
       OS << "__attribute__((aarch64_sve_pcs))";
       break;
-    case CC_AMDGPUKernelCall:
-      OS << "__attribute__((amdgpu_kernel))";
+    case CC_DeviceKernel:
+      OS << "__attribute__((device_kernel))";
       break;
     case CC_IntelOclBicc:
       OS << " __attribute__((intel_ocl_bicc))";
@@ -1116,7 +1116,6 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
       OS << " __attribute__((regcall))";
       break;
     case CC_SpirFunction:
-    case CC_OpenCLKernel:
       // Do nothing. These CCs are not available as attributes.
       break;
     case CC_Swift:
@@ -2069,7 +2068,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   }
   case attr::AArch64VectorPcs: OS << "aarch64_vector_pcs"; break;
   case attr::AArch64SVEPcs: OS << "aarch64_sve_pcs"; break;
-  case attr::AMDGPUKernelCall: OS << "amdgpu_kernel"; break;
+  case attr::DeviceKernel:
+    OS << T->getAttr()->getSpelling();
+    break;
   case attr::IntelOclBicc: OS << "inteloclbicc"; break;
   case attr::PreserveMost:
     OS << "preserve_most";
