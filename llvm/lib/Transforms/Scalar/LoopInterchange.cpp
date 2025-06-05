@@ -214,7 +214,7 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
         // dependency vector with '*'.
         if (D->isConfused()) {
           assert(Dep.empty() && "Expected empty dependency vector");
-          Dep.assign(Levels, '*');
+          Dep.assign(Level, '*');
         }
 
         while (Dep.size() != Level) {
