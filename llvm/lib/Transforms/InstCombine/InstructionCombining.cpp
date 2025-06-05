@@ -1719,6 +1719,25 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
   if (SI->getType()->isIntOrIntVectorTy(1))
     return nullptr;
 
+  if (auto *II = dyn_cast<IntrinsicInst>(&Op)) {
+    switch (II->getIntrinsicID()) {
+      case Intrinsic::umin:
+      case Intrinsic::smin:
+        if (ConstantInt *C = dyn_cast<ConstantInt>(FV))
+          if (C->isAllOnesValue())
+            return nullptr;
+        break;
+      case Intrinsic::umax:
+      case Intrinsic::smax:
+        if (ConstantInt *C = dyn_cast<ConstantInt>(FV))
+          if (C->isZero())
+            return nullptr;
+        break;
+      default:
+        break;
+    }
+  }
+
   // Test if a FCmpInst instruction is used exclusively by a select as
   // part of a minimum or maximum operation. If so, refrain from doing
   // any other folding. This helps out other analyses which understand
