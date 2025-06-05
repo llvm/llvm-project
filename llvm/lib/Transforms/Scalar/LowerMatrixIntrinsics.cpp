@@ -1087,7 +1087,7 @@ public:
       else if (CallInst *CInst = dyn_cast<CallInst>(Inst))
         VisitCallInst(CInst);
       else if (auto *Select = dyn_cast<SelectInst>(Inst))
-        Changed |= VisitSelectInst(Select, SI);
+        VisitSelectInst(Select, SI);
       else if (match(Inst, m_Load(m_Value(Op1))))
         VisitLoad(cast<LoadInst>(Inst), SI, Op1, Builder);
       else if (match(Inst, m_Store(m_Value(Op1), m_Value(Op2))))
@@ -2200,7 +2200,7 @@ public:
   }
 
   /// Lower selects.
-  bool VisitSelectInst(SelectInst *Inst, const ShapeInfo &Shape) {
+  void VisitSelectInst(SelectInst *Inst, const ShapeInfo &Shape) {
     Value *Cond = Inst->getOperand(0);
     Value *OpA = Inst->getOperand(1);
     Value *OpB = Inst->getOperand(2);
@@ -2228,7 +2228,6 @@ public:
                      Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
                                              Result.getNumVectors()),
                      Builder);
-    return true;
   }
 
   /// Helper to linearize a matrix expression tree into a string. Currently
