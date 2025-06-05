@@ -544,6 +544,12 @@ public:
   static InstrumentationRuntimeCreateInstance
   GetInstrumentationRuntimeCreateCallbackAtIndex(uint32_t idx);
 
+  static std::vector<RegisteredPluginInfo>
+  GetInstrumentationRuntimePluginInfo();
+
+  static bool SetInstrumentationRuntimePluginEnabled(llvm::StringRef name,
+                                                     bool enabled);
+
   // TypeSystem
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                              TypeSystemCreateInstance create_callback,

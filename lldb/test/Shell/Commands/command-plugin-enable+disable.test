@@ -47,6 +47,16 @@ plugin enable system-runtime
 # CHECK: system-runtime
 # CHECK:  [+] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
 
+# Test plugin enable/disable for instrumentation plugin works.
+plugin enable instrumentation-runtime
+# CHECK-LABEL: plugin enable instrumentation-runtime
+# CHECK: instrumentation-runtime
+# CHECK:  [+] AddressSanitizer
+plugin disable instrumentation-runtime
+# CHECK-LABEL: plugin disable instrumentation-runtime
+# CHECK: instrumentation-runtime
+# CHECK:  [-] AddressSanitizer
+
 # Test plugin enable/disable for unknown plugin returns an error.
 # RUN: %lldb -o "plugin enable some-plugin-that-does-not-exist" 2>&1 | FileCheck %s --check-prefix=ERROR_PLUGIN_NOT_FOUND
 # RUN: %lldb -o "plugin disable some-plugin-that-does-not-exist" 2>&1 | FileCheck %s --check-prefix=ERROR_PLUGIN_NOT_FOUND

@@ -186,7 +186,10 @@ llvm::ArrayRef<PluginNamespace> PluginManager::GetPluginNamespaces() {
   // over time.
   static PluginNamespace PluginNamespaces[] = {
       {"system-runtime", PluginManager::GetSystemRuntimePluginInfo,
-       PluginManager::SetSystemRuntimePluginEnabled}};
+       PluginManager::SetSystemRuntimePluginEnabled},
+      {"instrumentation-runtime",
+       PluginManager::GetInstrumentationRuntimePluginInfo,
+       PluginManager::SetInstrumentationRuntimePluginEnabled}};
 
   return PluginNamespaces;
 }
@@ -1544,6 +1547,16 @@ PluginManager::GetInstrumentationRuntimeGetTypeCallbackAtIndex(uint32_t idx) {
 InstrumentationRuntimeCreateInstance
 PluginManager::GetInstrumentationRuntimeCreateCallbackAtIndex(uint32_t idx) {
   return GetInstrumentationRuntimeInstances().GetCallbackAtIndex(idx);
+}
+
+std::vector<RegisteredPluginInfo>
+PluginManager::GetInstrumentationRuntimePluginInfo() {
+  return GetInstrumentationRuntimeInstances().GetPluginInfoForAllInstances();
+}
+
+bool PluginManager::SetInstrumentationRuntimePluginEnabled(llvm::StringRef name,
+                                                           bool enable) {
+  return GetInstrumentationRuntimeInstances().SetInstanceEnabled(name, enable);
 }
 
 #pragma mark TypeSystem
