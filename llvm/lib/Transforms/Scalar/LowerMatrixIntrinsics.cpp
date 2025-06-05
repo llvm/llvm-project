@@ -1058,15 +1058,14 @@ public:
 
       const ShapeInfo &SI = ShapeMap.at(Inst);
 
-      if (CallInst *CInst = dyn_cast<CallInst>(Inst))
-        Changed |= tryVisitCallInst(CInst);
-
       Value *Op1;
       Value *Op2;
       if (auto *BinOp = dyn_cast<BinaryOperator>(Inst))
         VisitBinaryOperator(BinOp, SI);
       else if (auto *UnOp = dyn_cast<UnaryOperator>(Inst))
         VisitUnaryOperator(UnOp, SI);
+      else if (CallInst *CInst = dyn_cast<CallInst>(Inst))
+        VisitCallInst(CInst);
       else if (match(Inst, m_Load(m_Value(Op1))))
         VisitLoad(cast<LoadInst>(Inst), SI, Op1, Builder);
       else if (match(Inst, m_Store(m_Value(Op1), m_Value(Op2))))
@@ -1111,10 +1110,9 @@ public:
     return Changed;
   }
 
-  /// Replace intrinsic calls
-  bool tryVisitCallInst(CallInst *Inst) {
-    if (!Inst->getCalledFunction() || !Inst->getCalledFunction()->isIntrinsic())
-      return false;
+  /// Replace intrinsic calls.
+  void VisitCallInst(CallInst *Inst) {
+    assert(Inst->getCalledFunction() && Inst->getCalledFunction()->isIntrinsic());
 
     switch (Inst->getCalledFunction()->getIntrinsicID()) {
     case Intrinsic::matrix_multiply:
@@ -1130,9 +1128,8 @@ public:
       LowerColumnMajorStore(Inst);
       break;
     default:
-      return false;
+      llvm_unreachable("only intrinsics supporting shape info should be seen here");
     }
-    return true;
   }
 
   /// Compute the alignment for a column/row \p Idx with \p Stride between them.
