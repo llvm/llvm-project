@@ -269,7 +269,7 @@ gpu.func @test_dpas_no_sg_data(%a: memref<24x32xf32>, %b: memref<32x24xf32>) {
 
     %0 = arith.cmpi eq, %id, %c10 : index
     // CHECK-LABEL: scf.if
-    //  CHECK-SAME: !xegpu.tensor_desc<16xf32>
+    //  CHECK-SAME: (!xegpu.tensor_desc<16xf32>)
     %1 = scf.if %0 -> (!xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [16], sg_data = [16]>>) {
       // CHECK-LABEL: xegpu.create_nd_tdesc
       //  CHECK-SAME: memref<1024xf32> -> !xegpu.tensor_desc<16xf32>

@@ -147,4 +147,53 @@ gpu.module @test_round_robin_assignment {
     }
     gpu.return
   }
+
+  gpu.func @test_scf_if(%arg0: memref<1024xf32>, %arg1: memref<1024xf32>) {
+    %c10 = arith.constant 10 : index
+    %0 = gpu.subgroup_id : index
+    %1 = xegpu.create_nd_tdesc %arg0[0] : memref<1024xf32> -> !xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [8], sg_data = [16]>>
+    %2 = xegpu.create_nd_tdesc %arg1[0] : memref<1024xf32> -> !xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [8], sg_data = [16]>>
+    %3 = arith.cmpi eq, %0, %c10 : index
+    // CHECK-LABEL: scf.if
+    //  CHECK-SAME: (vector<16xf32>, vector<16xf32>)
+    %4 = scf.if %3 -> (vector<256xf32>) {
+      %5 = xegpu.load_nd %1  : !xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [8], sg_data = [16]>> -> vector<256xf32>
+      // CHECK-LABEL: scf.yield
+      //  CHECK-SAME: vector<16xf32>, vector<16xf32>
+      scf.yield %5 : vector<256xf32>
+    } else {
+      %5 = xegpu.load_nd %2  : !xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [8], sg_data = [16]>> -> vector<256xf32>
+      // CHECK-LABEL: scf.yield
+      //  CHECK-SAME: vector<16xf32>, vector<16xf32>
+      scf.yield %5 : vector<256xf32>
+    } {layout_result_0 = #xegpu.layout<sg_layout = [8], sg_data = [16]>}
+    xegpu.store_nd %4, %1  : vector<256xf32>, !xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [8], sg_data = [16]>>
+    gpu.return
+  }
+
+  gpu.func @test_scf_if_tensor_desc(%arg0: memref<1024xf32>, %arg1: memref<1024xf32>) {
+    %c10 = arith.constant 10 : index
+    %id = gpu.subgroup_id : index
+
+    %t = xegpu.create_nd_tdesc %arg0[0] : memref<1024xf32> -> !xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [8], sg_data = [16]>>
+    %d = xegpu.load_nd %t : !xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [8], sg_data = [16]>> -> vector<256xf32>
+
+    %0 = arith.cmpi eq, %id, %c10 : index
+    // CHECK-LABEL: scf.if
+    //  CHECK-SAME: (!xegpu.tensor_desc<16xf32>, !xegpu.tensor_desc<16xf32>)
+    %1 = scf.if %0 -> (!xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [8], sg_data = [16]>>) {
+      %2 = xegpu.create_nd_tdesc %arg0[0] : memref<1024xf32> -> !xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [8], sg_data = [16]>>
+      // CHECK-LABEL: scf.yield
+      //  CHECK-SAME: !xegpu.tensor_desc<16xf32>, !xegpu.tensor_desc<16xf32>
+      scf.yield %2 : !xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [8], sg_data = [16]>>
+    } else {
+      %3 = xegpu.create_nd_tdesc %arg1[0] : memref<1024xf32> -> !xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [8], sg_data = [16]>>
+      // CHECK-LABEL: scf.yield
+      //  CHECK-SAME: !xegpu.tensor_desc<16xf32>, !xegpu.tensor_desc<16xf32>
+      scf.yield %3 : !xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [8], sg_data = [16]>>
+    }
+    xegpu.store_nd %d, %1 : vector<256xf32>, !xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [8], sg_data = [16]>>
+    gpu.return
+  }
+
 }
