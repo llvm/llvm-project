@@ -265,6 +265,24 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::UREM_I8, nullptr);
     setLibcallName(RTLIB::UREM_I16, nullptr);
     setLibcallName(RTLIB::UREM_I32, nullptr);
+
+    // Division and modulus rtlib functions
+    setLibcallName(RTLIB::SDIVREM_I8, "__divmodqi4");
+    setLibcallName(RTLIB::SDIVREM_I16, "__divmodhi4");
+    setLibcallName(RTLIB::SDIVREM_I32, "__divmodsi4");
+    setLibcallName(RTLIB::UDIVREM_I8, "__udivmodqi4");
+    setLibcallName(RTLIB::UDIVREM_I16, "__udivmodhi4");
+    setLibcallName(RTLIB::UDIVREM_I32, "__udivmodsi4");
+
+    // Several of the runtime library functions use a special calling conv
+    setLibcallCallingConv(RTLIB::SDIVREM_I8, CallingConv::AVR_BUILTIN);
+    setLibcallCallingConv(RTLIB::SDIVREM_I16, CallingConv::AVR_BUILTIN);
+    setLibcallCallingConv(RTLIB::UDIVREM_I8, CallingConv::AVR_BUILTIN);
+    setLibcallCallingConv(RTLIB::UDIVREM_I16, CallingConv::AVR_BUILTIN);
+
+    // Trigonometric rtlib functions
+    setLibcallName(RTLIB::SIN_F32, "sin");
+    setLibcallName(RTLIB::COS_F32, "cos");
   }
 
   if (!TT.isWasm()) {
@@ -277,5 +295,18 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
       setLibcallName(RTLIB::MULO_I64, nullptr);
     }
     setLibcallName(RTLIB::MULO_I128, nullptr);
+  }
+
+  if (TT.isSystemZ() && TT.isOSzOS()) {
+    struct RTLibCallMapping {
+      RTLIB::Libcall Code;
+      const char *Name;
+    };
+    static RTLibCallMapping RTLibCallCommon[] = {
+#define HANDLE_LIBCALL(code, name) {RTLIB::code, name},
+#include "ZOSLibcallNames.def"
+    };
+    for (auto &E : RTLibCallCommon)
+      setLibcallName(E.Code, E.Name);
   }
 }

@@ -7074,6 +7074,10 @@ private:
   bool HandlePragmaMSOptimize(StringRef PragmaName,
                               SourceLocation PragmaLocation);
 
+  // #pragma intrinsic("foo")
+  bool HandlePragmaMSIntrinsic(StringRef PragmaName,
+                               SourceLocation PragmaLocation);
+
   /// Handle the annotation token produced for
   /// #pragma align...
   void HandlePragmaAlign();
