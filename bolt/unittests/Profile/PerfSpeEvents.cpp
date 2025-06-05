@@ -73,13 +73,13 @@ protected:
   std::unique_ptr<ObjectFile> ObjFile;
   std::unique_ptr<BinaryContext> BC;
 
-  /// Compare LBREntries
+  // @return true if LBREntries are equal.
   bool checkLBREntry(const LBREntry &Lhs, const LBREntry &Rhs) {
     return Lhs.From == Rhs.From && Lhs.To == Rhs.To &&
            Lhs.Mispred == Rhs.Mispred;
   }
 
-  /// Parse and check SPE brstack as LBR
+  // Parse and check SPE brstack as LBR.
   void parseAndCheckBrstackEvents(
       uint64_t PID,
       const std::vector<SmallVector<LBREntry, 2>> &ExpectedSamples) {
@@ -102,12 +102,9 @@ protected:
       EXPECT_EQ(Sample.LBR.size(), ExpectedSamples[NumSamples].size());
 
       // Check the parsed LBREntries.
-      const auto *ActualIter = Sample.LBR.begin();
-      const auto *ExpectIter = ExpectedSamples[NumSamples].begin();
-      while (ActualIter != Sample.LBR.end() &&
-             ExpectIter != ExpectedSamples[NumSamples].end())
-        EXPECT_TRUE(checkLBREntry(*ActualIter++, *ExpectIter++));
-
+      for (auto [Actual, Expected] :
+           zip_equal(Sample.LBR, ExpectedSamples[NumSamples]))
+        EXPECT_TRUE(checkLBREntry(Actual, Expected));
       ++NumSamples;
     }
   }
@@ -135,7 +132,7 @@ TEST_F(PerfSpeEventsTestHelper, SpeBranchesWithBrstack) {
                          "  1234  0xe001/0xe002/P/-/-/14/RET/-\n"
                          "  1234  0xf001/0xf002/MN/-/-/8/COND/-\n";
 
-  std::vector<SmallVector<LBREntry, 2>> ExpectedSamples = {
+  std::vector<SmallVector<LBREntry>> ExpectedSamples = {
       {{{0xa001, 0xa002, false}}}, {{{0xb001, 0xb002, false}}},
       {{{0xc001, 0xc002, false}}}, {{{0xd001, 0xd002, true}}},
       {{{0xe001, 0xe002, false}}}, {{{0xf001, 0xf002, true}}},
