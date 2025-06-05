@@ -92,8 +92,8 @@ Error EPCDynamicLibrarySearchGenerator::tryToGenerate(
     }
 
     LLVM_DEBUG({
-      dbgs() << "EPCDynamicLibrarySearchGenerator lookup returned "
-             << NewSyms << "\n";
+      dbgs() << "EPCDynamicLibrarySearchGenerator lookup returned " << NewSyms
+             << "\n";
     });
 
     if (NewSyms.empty())
