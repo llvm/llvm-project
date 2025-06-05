@@ -987,7 +987,7 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
                           clang::DiagnosticsEngine &diags) {
   unsigned numErrorsBefore = diags.getNumErrors();
 
-  auto &features = res.getFrontendOpts().features;
+  auto &features{res.getFrontendOpts().features};
   // The order of these flags (-pedantic -W<feature> -w) is important and is
   // chosen to match clang's behavior.
 
@@ -1009,7 +1009,7 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
       if (wArg == "error") {
         res.setWarnAsErr(true);
         // -W(no-)<feature>
-      } else if (!res.getFrontendOpts().features.ApplyCLIOption(wArg)) {
+      } else if (!features.ApplyCLIOption(wArg)) {
         const unsigned diagID = diags.getCustomDiagID(
             clang::DiagnosticsEngine::Error, "Unknown diagnostic option: -W%0");
         diags.Report(diagID) << wArg;
@@ -1024,7 +1024,7 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   }
 
   // Default to off for `flang -fc1`.
-  bool showColors = parseShowColorsArgs(args, false);
+  bool showColors{parseShowColorsArgs(args, false)};
   diags.getDiagnosticOptions().ShowColors = showColors;
   res.getDiagnosticOpts().ShowColors = showColors;
   res.getFrontendOpts().showColors = showColors;
