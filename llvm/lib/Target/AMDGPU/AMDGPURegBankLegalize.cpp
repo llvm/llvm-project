@@ -184,9 +184,11 @@ public:
     if (UnMerge) {
       int Idx = UnMerge->findRegisterDefOperandIdx(Src, nullptr);
       auto *Merge = getOpcodeDef<GMergeLikeInstr>(UnMerge->getSourceReg(), MRI);
-      if (Merge) {
-        auto [RAL, RALSrc] =
-            tryMatch(Merge->getSourceReg(Idx), AMDGPU::G_AMDGPU_READANYLANE);
+      if (Merge && UnMerge->getNumDefs() == Merge->getNumSources()) {
+        Register SrcRegIdx = Merge->getSourceReg(Idx);
+        if (MRI.getType(Src) != MRI.getType(SrcRegIdx))
+          return {};
+        auto [RAL, RALSrc] = tryMatch(SrcRegIdx, AMDGPU::G_AMDGPU_READANYLANE);
         if (RAL)
           return RALSrc;
       }
@@ -205,7 +207,14 @@ public:
   bool tryEliminateReadAnyLane(MachineInstr &Copy) {
     Register Dst = Copy.getOperand(0).getReg();
     Register Src = Copy.getOperand(1).getReg();
-    if (!Src.isVirtual())
+
+    // Skip non-vgpr Dst
+    if (Dst.isVirtual() ? (MRI.getRegBankOrNull(Dst) != VgprRB)
+                        : !TRI.isVGPR(MRI, Dst))
+      return false;
+
+    // Skip physical source registers and source registers with register class
+    if (!Src.isVirtual() || MRI.getRegClassOrNull(Src))
       return false;
 
     Register RALDst = Src;
