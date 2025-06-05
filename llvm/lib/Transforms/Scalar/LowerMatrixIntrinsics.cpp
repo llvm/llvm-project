@@ -271,7 +271,9 @@ computeShapeInfoForInst(Instruction *I,
   }
 
   if (auto *Select = dyn_cast<SelectInst>(I)) {
-    for (Use &Op : Select->getCondition()->getType()->isVectorTy() ? I->operands() : drop_begin(I->operands())) {
+    Type *CondTy = Select->getCondition()->getType();
+    for (Use &Op : CondTy->isVectorTy() ? Select->operands()
+                                        : drop_begin(Select->operands())) {
       auto OpShape = ShapeMap.find(Op);
       if (OpShape != ShapeMap.end())
         return OpShape->second;
@@ -719,10 +721,12 @@ public:
         // backward propagate to an instruction with an already known shape.
       } else if (auto *Select = dyn_cast<SelectInst>(V)) {
         ShapeInfo Shape = ShapeMap[V];
-        if (setShapeInfo(Select->getOperand(1), Shape))
-          pushInstruction(Select, WorkList);
-        if (setShapeInfo(Select->getOperand(2), Shape))
-          pushInstruction(Select, WorkList);
+        Type *CondTy = Select->getCondition()->getType();
+        for (Use &Op : CondTy->isVectorTy() ? Select->operands()
+                                            : drop_begin(Select->operands())) {
+          if (setShapeInfo(Op, Shape))
+            pushInstruction(Select, WorkList);
+        }
       } else if (isUniformShape(V)) {
         // Propagate to all operands.
         ShapeInfo Shape = ShapeMap[V];
