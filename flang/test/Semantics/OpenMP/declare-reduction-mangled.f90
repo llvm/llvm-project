@@ -34,7 +34,7 @@ program omp_examples
 
   big%r = 0
   !$omp parallel do reduction(max:big)
-!CHECK: big (OmpReduction): HostAssoc
+!CHECK: big (OmpReduction, OmpExplicit): HostAssoc
 !CHECK: max, INTRINSIC: ProcEntity  
   do i = 1, n
      big = mymax(values(i), big)
@@ -42,7 +42,7 @@ program omp_examples
 
   small%r = 1
   !$omp parallel do reduction(min:small)
-!CHECK: small (OmpReduction): HostAssoc
+!CHECK: small (OmpReduction, OmpExplicit): HostAssoc
   do i = 1, n
      small%r = min(values(i)%r, small%r)
   end do

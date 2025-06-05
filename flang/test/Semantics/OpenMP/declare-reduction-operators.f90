@@ -73,8 +73,8 @@ program test_vector
   !$OMP parallel do reduction(+:v2)
 !CHECK: OtherConstruct scope
 !CHECK: i (OmpPrivate, OmpPreDetermined): HostAssoc
-!CHECK: v1: HostAssoc
-!CHECK: v2 (OmpReduction): HostAssoc
+!CHECK: v1 (OmpShared): HostAssoc
+!CHECK: v2 (OmpReduction, OmpExplicit): HostAssoc
 
   do i = 1, 100
      v2(i) = v2(i) + v1(i)  ! Invokes add_vectors
