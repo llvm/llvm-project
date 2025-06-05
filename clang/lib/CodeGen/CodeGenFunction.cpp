@@ -626,7 +626,7 @@ CodeGenFunction::getUBSanFunctionTypeHash(QualType Ty) const {
 
 void CodeGenFunction::EmitKernelMetadata(const FunctionDecl *FD,
                                          llvm::Function *Fn) {
-  if (!FD->hasAttr<OpenCLKernelAttr>() && !FD->hasAttr<CUDAGlobalAttr>())
+  if (!FD->hasAttr<DeviceKernelAttr>() && !FD->hasAttr<CUDAGlobalAttr>())
     return;
 
   llvm::LLVMContext &Context = getLLVMContext();
@@ -1598,7 +1598,8 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     // Implicit copy-assignment gets the same special treatment as implicit
     // copy-constructors.
     emitImplicitAssignmentOperatorBody(Args);
-  } else if (FD->hasAttr<OpenCLKernelAttr>() &&
+  } else if (DeviceKernelAttr::isOpenCLSpelling(
+                 FD->getAttr<DeviceKernelAttr>()) &&
              GD.getKernelReferenceKind() == KernelReferenceKind::Kernel) {
     CallArgList CallArgs;
     for (unsigned i = 0; i < Args.size(); ++i) {

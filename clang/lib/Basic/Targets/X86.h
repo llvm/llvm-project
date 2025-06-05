@@ -409,10 +409,11 @@ public:
     case CC_Swift:
     case CC_X86Pascal:
     case CC_IntelOclBicc:
-    case CC_OpenCLKernel:
       return CCCR_OK;
     case CC_SwiftAsync:
       return CCCR_Error;
+    case CC_DeviceKernel:
+      return IsOpenCL ? CCCR_OK : CCCR_Warning;
     default:
       return CCCR_Warning;
     }
@@ -440,7 +441,13 @@ public:
   uint64_t getPointerAlignV(LangAS AddrSpace) const override {
     return getPointerWidthV(AddrSpace);
   }
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override {
+    TargetInfo::adjust(Diags, Opts);
+    IsOpenCL = Opts.OpenCL;
+  }
 
+private:
+  bool IsOpenCL = false;
 };
 
 // X86-32 generic target
@@ -786,8 +793,9 @@ public:
     case CC_PreserveAll:
     case CC_PreserveNone:
     case CC_X86RegCall:
-    case CC_OpenCLKernel:
       return CCCR_OK;
+    case CC_DeviceKernel:
+      return IsOpenCL ? CCCR_OK : CCCR_Warning;
     default:
       return CCCR_Warning;
     }
@@ -818,7 +826,6 @@ public:
     return X86TargetInfo::validateGlobalRegisterVariable(RegName, RegSize,
                                                          HasSizeMismatch);
   }
-
   void setMaxAtomicWidth() override {
     if (hasFeature("cx16"))
       MaxAtomicInlineWidth = 128;
@@ -830,6 +837,14 @@ public:
   size_t getMaxBitIntWidth() const override {
     return llvm::IntegerType::MAX_INT_BITS;
   }
+
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override {
+    TargetInfo::adjust(Diags, Opts);
+    IsOpenCL = Opts.OpenCL;
+  }
+
+private:
+  bool IsOpenCL = false;
 };
 
 // x86-64 UEFI target
@@ -915,7 +930,7 @@ public:
     case CC_Swift:
     case CC_SwiftAsync:
     case CC_X86RegCall:
-    case CC_OpenCLKernel:
+    case CC_DeviceKernel:
       return CCCR_OK;
     default:
       return CCCR_Warning;
