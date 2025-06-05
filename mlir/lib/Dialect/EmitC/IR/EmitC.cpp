@@ -974,10 +974,12 @@ LogicalResult emitc::YieldOp::verify() {
   Value result = getResult();
   Operation *containingOp = getOperation()->getParentOp();
 
-  if (result && containingOp->getNumResults() != 1)
+  if (result && containingOp->getNumResults() != 1 &&
+      !isa<WhileOp, DoOp>(containingOp))
     return emitOpError() << "yields a value not returned by parent";
 
-  if (!result && containingOp->getNumResults() != 0)
+  if (!result && containingOp->getNumResults() != 0 &&
+      !isa<WhileOp, DoOp>(containingOp))
     return emitOpError() << "does not yield a value to be returned by parent";
 
   return success();
@@ -1559,6 +1561,116 @@ LogicalResult GetFieldOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
            << "' type " << fieldType;
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Common functions for WhileOp and DoOp
+//===----------------------------------------------------------------------===//
+
+static Operation *getRootOpFromLoopCondition(Region &condRegion) {
+  auto yieldOp = cast<emitc::YieldOp>(condRegion.front().getTerminator());
+  return yieldOp.getResult().getDefiningOp();
+}
+
+static LogicalResult verifyLoopRegions(Operation &op, Region &condition,
+                                       Region &body) {
+  if (condition.empty())
+    return op.emitOpError("condition region cannot be empty");
+
+  Block &condBlock = condition.front();
+  for (Operation &inner : condBlock.without_terminator()) {
+    if (!inner.hasTrait<OpTrait::emitc::CExpression>())
+      return op.emitOpError(
+                 "expected all operations in condition region must implement "
+                 "CExpression trait, but ")
+             << inner.getName() << " does not";
+  }
+
+  auto condYield = dyn_cast<emitc::YieldOp>(condBlock.back());
+  if (!condYield)
+    return op.emitOpError(
+               "expected condition region to end with emitc.yield, but got ")
+           << condBlock.back().getName();
+
+  if (condYield.getNumOperands() != 1 ||
+      !condYield.getOperand(0).getType().isInteger(1))
+    return op.emitOpError("condition region must yield a single i1 value");
+
+  if (body.empty())
+    return op.emitOpError("body region cannot be empty");
+
+  Block &bodyBlock = body.front();
+  if (auto bodyYield = dyn_cast<emitc::YieldOp>(bodyBlock.back()))
+    if (bodyYield.getNumOperands() != 0)
+      return op.emitOpError(
+                 "expected body region to return 0 values, but body returns ")
+             << bodyYield.getNumOperands();
+
+  return success();
+}
+
+static void printLoop(OpAsmPrinter &p, Operation *self, Region &first,
+                      StringRef midKeyword, Region &second) {
+  p << ' ';
+  p.printRegion(first, /*printEntryBlockArgs=*/false);
+  p << ' ' << midKeyword << ' ';
+  p.printRegion(second);
+  p.printOptionalAttrDictWithKeyword(self->getAttrs());
+}
+
+static ParseResult parseLoop(OpAsmParser &parser, OperationState &res,
+                             StringRef midKeyword) {
+  Region *firstRegion = res.addRegion();
+  Region *secondRegion = res.addRegion();
+
+  if (parser.parseRegion(*firstRegion))
+    return failure();
+  if (parser.parseKeyword(midKeyword) || parser.parseRegion(*secondRegion))
+    return failure();
+
+  return parser.parseOptionalAttrDictWithKeyword(res.attributes);
+}
+
+//===----------------------------------------------------------------------===//
+// WhileOp
+//===----------------------------------------------------------------------===//
+
+Operation *WhileOp::getRootOp() {
+  return getRootOpFromLoopCondition(getConditionRegion());
+}
+
+void WhileOp::print(OpAsmPrinter &p) {
+  printLoop(p, getOperation(), getConditionRegion(), "do", getBodyRegion());
+}
+
+LogicalResult emitc::WhileOp::verify() {
+  return verifyLoopRegions(*getOperation(), getConditionRegion(),
+                           getBodyRegion());
+}
+
+ParseResult WhileOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseLoop(parser, result, "do");
+}
+
+//===----------------------------------------------------------------------===//
+// DoOp
+//===----------------------------------------------------------------------===//
+
+Operation *DoOp::getRootOp() {
+  return getRootOpFromLoopCondition(getConditionRegion());
+}
+
+void DoOp::print(OpAsmPrinter &p) {
+  printLoop(p, getOperation(), getBodyRegion(), "while", getConditionRegion());
+}
+
+LogicalResult emitc::DoOp::verify() {
+  return verifyLoopRegions(*getOperation(), getConditionRegion(),
+                           getBodyRegion());
+}
+
+ParseResult DoOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseLoop(parser, result, "while");
 }
 
 //===----------------------------------------------------------------------===//

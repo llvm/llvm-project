@@ -1393,7 +1393,7 @@ def EmitC_AssignOp : EmitC_Op<"assign", []> {
 }
 
 def EmitC_YieldOp : EmitC_Op<"yield",
-      [Pure, Terminator, ParentOneOf<["ExpressionOp", "IfOp", "ForOp", "SwitchOp"]>]> {
+      [Pure, Terminator, ParentOneOf<["DoOp", "ExpressionOp", "ForOp", "IfOp", "SwitchOp", "WhileOp"]>]> {
   let summary = "Block termination operation";
   let description = [{
     The `emitc.yield` terminates its parent EmitC op's region, optionally yielding
@@ -1725,6 +1725,158 @@ def EmitC_GetFieldOp
   let results = (outs EmitCType:$result);
   let assemblyFormat = "$field_name `:` type($result) attr-dict";
   let hasVerifier = 1;
+}
+
+def EmitC_WhileOp : EmitC_Op<"while",
+      [HasOnlyGraphRegion, RecursiveMemoryEffects, NoRegionArguments, OpAsmOpInterface, NoTerminator]> {
+  let summary = "While operation";
+ let description = [{
+    The `emitc.while` operation represents a C/C++ while loop construct that
+    repeatedly executes a body region as long as a condition region evaluates to
+    true. The operation has two regions:
+    
+    1. A condition region that must yield a boolean value (i1) 
+    2. A body region that contains the loop body
+
+    The condition region is evaluated before each iteration. If it yields true,
+    the body region is executed. The loop terminates when the condition yields
+    false. The condition region must contain exactly one block that terminates
+    with an `emitc.yield` operation producing an i1 value.
+
+    Example:
+
+    ```mlir
+    emitc.func @foo(%arg0 : !emitc.ptr<i32>) {
+      %var = "emitc.variable"() <{value = 0 : i32}> : () -> !emitc.lvalue<i32>
+      %0 = emitc.literal "10" : i32
+      %1 = emitc.literal "1" : i32
+
+      emitc.while {
+        %var_load = load %var : <i32>
+        %res = emitc.cmp le, %var_load, %0 : (i32, i32) -> i1
+        emitc.yield %res : i1
+      } do {
+        emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
+        %var_load = load %var : <i32>
+        %tmp_add = add %var_load, %1 : (i32, i32) -> i32
+        "emitc.assign"(%var, %tmp_add) : (!emitc.lvalue<i32>, i32) -> ()
+      }
+
+      return
+    }
+    ```
+
+    ```c++
+    // Code emitted for the operation above.
+    void foo(int32_t* v1) {
+      int32_t v2 = 0;
+      while (v2 <= 10) {
+        printf("%d", *v1);
+        int32_t v3 = v2;
+        int32_t v4 = v3 + 1;
+        v2 = v4;
+      }
+      return;
+    }
+    ```
+  }];
+
+  let arguments = (ins);
+  let results = (outs); 
+  let regions = (region MaxSizedRegion<1>:$conditionRegion,
+                        MaxSizedRegion<1>:$bodyRegion);
+
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    Operation *getRootOp();
+
+    //===------------------------------------------------------------------===//
+    // OpAsmOpInterface Methods
+    //===------------------------------------------------------------------===//
+
+    /// EmitC ops in the body can omit their 'emitc.' prefix in the assembly.
+    static ::llvm::StringRef getDefaultDialect() {
+      return "emitc";
+    }
+  }];
+}
+
+def EmitC_DoOp : EmitC_Op<"do",
+      [RecursiveMemoryEffects, NoRegionArguments, OpAsmOpInterface, NoTerminator]> {
+  let summary = "Do-while operation";
+ let description = [{
+    The `emitc.do` operation represents a C/C++ do-while loop construct that
+    executes a body region first and then repeatedly executes it as long as a
+    condition region evaluates to true. The operation has two regions:
+
+    1. A body region that contains the loop body
+    2. A condition region that must yield a boolean value (i1)
+
+    Unlike a while loop, the body region is executed before the first evaluation
+    of the condition. The loop terminates when the condition yields false. The
+    condition region must contain exactly one block that terminates with an
+    `emitc.yield` operation producing an i1 value.
+
+    Example:
+
+    ```mlir
+    emitc.func @foo(%arg0 : !emitc.ptr<i32>) {
+      %var = "emitc.variable"() <{value = 0 : i32}> : () -> !emitc.lvalue<i32>
+      %0 = emitc.literal "10" : i32
+      %1 = emitc.literal "1" : i32
+
+      emitc.do {
+        emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
+        %var_load = load %var : <i32>
+        %tmp_add = add %var_load, %1 : (i32, i32) -> i32
+        "emitc.assign"(%var, %tmp_add) : (!emitc.lvalue<i32>, i32) -> ()
+      } while {
+        %var_load = load %var : <i32>
+        %res = emitc.cmp le, %var_load, %0 : (i32, i32) -> i1
+        emitc.yield %res : i1
+      }
+
+      return
+    }
+    ```
+
+    ```c++
+    // Code emitted for the operation above.
+    void foo(int32_t* v1) {
+      int32_t v2 = 0;
+      do {
+        printf("%d", *v1);
+        int32_t v3 = v2;
+        int32_t v4 = v3 + 1;
+        v2 = v4;
+      } while (v2 <= 10);
+      return;
+    }
+    ```
+  }];
+
+  let arguments = (ins);
+  let results = (outs); 
+  let regions = (region MaxSizedRegion<1>:$bodyRegion,
+                        MaxSizedRegion<1>:$conditionRegion);
+
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    Operation *getRootOp();
+
+    //===------------------------------------------------------------------===//
+    // OpAsmOpInterface Methods
+    //===------------------------------------------------------------------===//
+
+    /// EmitC ops in the body can omit their 'emitc.' prefix in the assembly.
+    static ::llvm::StringRef getDefaultDialect() {
+      return "emitc";
+    }
+  }];
 }
 
 #endif // MLIR_DIALECT_EMITC_IR_EMITC
