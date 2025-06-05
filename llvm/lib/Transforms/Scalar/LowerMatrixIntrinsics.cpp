@@ -1062,13 +1062,16 @@ public:
       Value *Op1;
       Value *Op2;
       if (auto *BinOp = dyn_cast<BinaryOperator>(Inst))
-        Changed |= VisitBinaryOperator(BinOp);
-      if (auto *UnOp = dyn_cast<UnaryOperator>(Inst))
-        Changed |= VisitUnaryOperator(UnOp);
-      if (match(Inst, m_Load(m_Value(Op1))))
-        Changed |= VisitLoad(cast<LoadInst>(Inst), Op1, Builder);
+        VisitBinaryOperator(BinOp);
+      else if (auto *UnOp = dyn_cast<UnaryOperator>(Inst))
+        VisitUnaryOperator(UnOp);
+      else if (match(Inst, m_Load(m_Value(Op1))))
+        VisitLoad(cast<LoadInst>(Inst), Op1, Builder);
       else if (match(Inst, m_Store(m_Value(Op1), m_Value(Op2))))
-        Changed |= VisitStore(cast<StoreInst>(Inst), Op1, Op2, Builder);
+        VisitStore(cast<StoreInst>(Inst), Op1, Op2, Builder);
+      else
+        continue;
+      Changed = true;
     }
 
     if (ORE) {
@@ -2105,17 +2108,16 @@ public:
   }
 
   /// Lower load instructions, if shape information is available.
-  bool VisitLoad(LoadInst *Inst, Value *Ptr, IRBuilder<> &Builder) {
+  void VisitLoad(LoadInst *Inst, Value *Ptr, IRBuilder<> &Builder) {
     auto I = ShapeMap.find(Inst);
     assert(I != ShapeMap.end() &&
            "must only visit instructions with shape info");
     LowerLoad(Inst, Ptr, Inst->getAlign(),
               Builder.getInt64(I->second.getStride()), Inst->isVolatile(),
               I->second);
-    return true;
   }
 
-  bool VisitStore(StoreInst *Inst, Value *StoredVal, Value *Ptr,
+  void VisitStore(StoreInst *Inst, Value *StoredVal, Value *Ptr,
                   IRBuilder<> &Builder) {
     auto I = ShapeMap.find(Inst);
     assert(I != ShapeMap.end() &&
@@ -2123,11 +2125,10 @@ public:
     LowerStore(Inst, StoredVal, Ptr, Inst->getAlign(),
                Builder.getInt64(I->second.getStride()), Inst->isVolatile(),
                I->second);
-    return true;
   }
 
   /// Lower binary operators, if shape information is available.
-  bool VisitBinaryOperator(BinaryOperator *Inst) {
+  void VisitBinaryOperator(BinaryOperator *Inst) {
     auto I = ShapeMap.find(Inst);
     assert(I != ShapeMap.end() &&
            "must only visit instructions with shape info");
@@ -2155,11 +2156,10 @@ public:
                      Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
                                              Result.getNumVectors()),
                      Builder);
-    return true;
   }
 
   /// Lower unary operators, if shape information is available.
-  bool VisitUnaryOperator(UnaryOperator *Inst) {
+  void VisitUnaryOperator(UnaryOperator *Inst) {
     auto I = ShapeMap.find(Inst);
     assert(I != ShapeMap.end() &&
            "must only visit instructions with shape info");
@@ -2191,7 +2191,6 @@ public:
                      Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
                                              Result.getNumVectors()),
                      Builder);
-    return true;
   }
 
   /// Helper to linearize a matrix expression tree into a string. Currently
