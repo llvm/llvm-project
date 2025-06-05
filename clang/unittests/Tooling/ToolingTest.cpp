@@ -294,8 +294,8 @@ TEST(ToolInvocation, CustomDiagnosticOptionsOverwriteParsedOnes) {
   Invocation.setDiagnosticConsumer(&Consumer);
 
   // Inject custom `DiagnosticOptions` for command-line parsing.
-  auto DiagOpts = llvm::makeIntrusiveRefCnt<DiagnosticOptions>();
-  Invocation.setDiagnosticOptions(&*DiagOpts);
+  DiagnosticOptions DiagOpts;
+  Invocation.setDiagnosticOptions(&DiagOpts);
 
   EXPECT_TRUE(Invocation.run());
   // Check that the warning was issued during command-line parsing due to the
@@ -392,14 +392,14 @@ overlayRealFS(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
 
 struct CommandLineExtractorTest : public ::testing::Test {
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFS;
+  DiagnosticOptions DiagOpts;
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diags;
   driver::Driver Driver;
 
 public:
   CommandLineExtractorTest()
       : InMemoryFS(new llvm::vfs::InMemoryFileSystem),
-        Diags(CompilerInstance::createDiagnostics(*InMemoryFS,
-                                                  new DiagnosticOptions)),
+        Diags(CompilerInstance::createDiagnostics(*InMemoryFS, DiagOpts)),
         Driver("clang", llvm::sys::getDefaultTargetTriple(), *Diags,
                "clang LLVM compiler", overlayRealFS(InMemoryFS)) {}
 
@@ -755,6 +755,25 @@ TEST(ClangToolTest, NoOutputCommands) {
 
 TEST(ClangToolTest, BaseVirtualFileSystemUsage) {
   FixedCompilationDatabase Compilations("/", std::vector<std::string>());
+  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
+      new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
+  OverlayFileSystem->pushOverlay(InMemoryFileSystem);
+
+  InMemoryFileSystem->addFile(
+      "a.cpp", 0, llvm::MemoryBuffer::getMemBuffer("int main() {}"));
+
+  ClangTool Tool(Compilations, std::vector<std::string>(1, "a.cpp"),
+                 std::make_shared<PCHContainerOperations>(), OverlayFileSystem);
+  std::unique_ptr<FrontendActionFactory> Action(
+      newFrontendActionFactory<SyntaxOnlyAction>());
+  EXPECT_EQ(0, Tool.run(Action.get()));
+}
+
+// Check -cc1 command doesn't fail.
+TEST(ClangToolTest, CC1Arg) {
+  FixedCompilationDatabase Compilations("/", {"-cc1"});
   llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
       new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(

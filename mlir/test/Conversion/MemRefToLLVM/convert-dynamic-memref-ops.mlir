@@ -175,8 +175,8 @@ func.func @mixed_load(%mixed : memref<42x?xf32>, %i : index, %j : index) {
 //   CHECK-DAG:  %[[J:.*]] = builtin.unrealized_conversion_cast %[[Jarg]]
 //       CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  %[[st0:.*]] = llvm.extractvalue %[[ld]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
-//  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] : i64
-//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] : i64
+//  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] overflow<nsw, nuw> : i64
+//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] overflow<nsw, nuw> : i64
 //  CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr inbounds|nuw %[[ptr]][%[[off1]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 //  CHECK-NEXT:  llvm.load %[[addr]] : !llvm.ptr -> f32
   %0 = memref.load %mixed[%i, %j] : memref<42x?xf32>
@@ -192,8 +192,8 @@ func.func @dynamic_load(%dynamic : memref<?x?xf32>, %i : index, %j : index) {
 //   CHECK-DAG:  %[[J:.*]] = builtin.unrealized_conversion_cast %[[Jarg]]
 //       CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  %[[st0:.*]] = llvm.extractvalue %[[ld]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
-//  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] : i64
-//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] : i64
+//  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] overflow<nsw, nuw> : i64
+//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] overflow<nsw, nuw> : i64
 //  CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr inbounds|nuw %[[ptr]][%[[off1]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 //  CHECK-NEXT:  llvm.load %[[addr]] : !llvm.ptr -> f32
   %0 = memref.load %dynamic[%i, %j] : memref<?x?xf32>
@@ -230,8 +230,8 @@ func.func @dynamic_store(%dynamic : memref<?x?xf32>, %i : index, %j : index, %va
 //   CHECK-DAG:  %[[J:.*]] = builtin.unrealized_conversion_cast %[[Jarg]]
 //       CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  %[[st0:.*]] = llvm.extractvalue %[[ld]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
-//  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] : i64
-//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] : i64
+//  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] overflow<nsw, nuw> : i64
+//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] overflow<nsw, nuw> : i64
 //  CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr inbounds|nuw %[[ptr]][%[[off1]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 //  CHECK-NEXT:  llvm.store %{{.*}}, %[[addr]] : f32, !llvm.ptr
   memref.store %val, %dynamic[%i, %j] : memref<?x?xf32>
@@ -247,8 +247,8 @@ func.func @mixed_store(%mixed : memref<42x?xf32>, %i : index, %j : index, %val :
 //   CHECK-DAG:  %[[J:.*]] = builtin.unrealized_conversion_cast %[[Jarg]]
 //       CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  %[[st0:.*]] = llvm.extractvalue %[[ld]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
-//  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] : i64
-//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] : i64
+//  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] overflow<nsw, nuw> : i64
+//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] overflow<nsw, nuw> : i64
 //  CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr inbounds|nuw %[[ptr]][%[[off1]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 //  CHECK-NEXT:  llvm.store %{{.*}}, %[[addr]] : f32, !llvm.ptr
   memref.store %val, %mixed[%i, %j] : memref<42x?xf32>

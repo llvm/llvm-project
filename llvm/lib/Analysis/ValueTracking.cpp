@@ -4594,6 +4594,10 @@ static KnownFPClass computeKnownFPClassFromContext(const Value *V,
                                                    const SimplifyQuery &Q) {
   KnownFPClass KnownFromContext;
 
+  if (Q.CC && Q.CC->AffectedValues.contains(V))
+    computeKnownFPClassFromCond(V, Q.CC->Cond, 0, !Q.CC->Invert, Q.CxtI,
+                                KnownFromContext);
+
   if (!Q.CxtI)
     return KnownFromContext;
 
@@ -5935,6 +5939,114 @@ std::optional<bool> llvm::computeKnownFPSignBit(const Value *V, unsigned Depth,
                                                 const SimplifyQuery &SQ) {
   KnownFPClass Known = computeKnownFPClass(V, fcAllFlags, Depth, SQ);
   return Known.SignBit;
+}
+
+bool llvm::canIgnoreSignBitOfZero(const Use &U) {
+  auto *User = cast<Instruction>(U.getUser());
+  if (auto *FPOp = dyn_cast<FPMathOperator>(User)) {
+    if (FPOp->hasNoSignedZeros())
+      return true;
+  }
+
+  switch (User->getOpcode()) {
+  case Instruction::FPToSI:
+  case Instruction::FPToUI:
+    return true;
+  case Instruction::FCmp:
+    // fcmp treats both positive and negative zero as equal.
+    return true;
+  case Instruction::Call:
+    if (auto *II = dyn_cast<IntrinsicInst>(User)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::fabs:
+        return true;
+      case Intrinsic::copysign:
+        return U.getOperandNo() == 0;
+      case Intrinsic::is_fpclass:
+      case Intrinsic::vp_is_fpclass: {
+        auto Test =
+            static_cast<FPClassTest>(
+                cast<ConstantInt>(II->getArgOperand(1))->getZExtValue()) &
+            FPClassTest::fcZero;
+        return Test == FPClassTest::fcZero || Test == FPClassTest::fcNone;
+      }
+      default:
+        return false;
+      }
+    }
+    return false;
+  default:
+    return false;
+  }
+}
+
+bool llvm::canIgnoreSignBitOfNaN(const Use &U) {
+  auto *User = cast<Instruction>(U.getUser());
+  if (auto *FPOp = dyn_cast<FPMathOperator>(User)) {
+    if (FPOp->hasNoNaNs())
+      return true;
+  }
+
+  switch (User->getOpcode()) {
+  case Instruction::FPToSI:
+  case Instruction::FPToUI:
+    return true;
+  // Proper FP math operations ignore the sign bit of NaN.
+  case Instruction::FAdd:
+  case Instruction::FSub:
+  case Instruction::FMul:
+  case Instruction::FDiv:
+  case Instruction::FRem:
+  case Instruction::FPTrunc:
+  case Instruction::FPExt:
+  case Instruction::FCmp:
+    return true;
+  // Bitwise FP operations should preserve the sign bit of NaN.
+  case Instruction::FNeg:
+  case Instruction::Select:
+  case Instruction::PHI:
+    return false;
+  case Instruction::Ret:
+    return User->getFunction()->getAttributes().getRetNoFPClass() &
+           FPClassTest::fcNan;
+  case Instruction::Call:
+  case Instruction::Invoke: {
+    if (auto *II = dyn_cast<IntrinsicInst>(User)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::fabs:
+        return true;
+      case Intrinsic::copysign:
+        return U.getOperandNo() == 0;
+      // Other proper FP math intrinsics ignore the sign bit of NaN.
+      case Intrinsic::maxnum:
+      case Intrinsic::minnum:
+      case Intrinsic::maximum:
+      case Intrinsic::minimum:
+      case Intrinsic::maximumnum:
+      case Intrinsic::minimumnum:
+      case Intrinsic::canonicalize:
+      case Intrinsic::fma:
+      case Intrinsic::fmuladd:
+      case Intrinsic::sqrt:
+      case Intrinsic::pow:
+      case Intrinsic::powi:
+      case Intrinsic::fptoui_sat:
+      case Intrinsic::fptosi_sat:
+      case Intrinsic::is_fpclass:
+      case Intrinsic::vp_is_fpclass:
+        return true;
+      default:
+        return false;
+      }
+    }
+
+    FPClassTest NoFPClass =
+        cast<CallBase>(User)->getParamNoFPClass(U.getOperandNo());
+    return NoFPClass & FPClassTest::fcNan;
+  }
+  default:
+    return false;
+  }
 }
 
 Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {
@@ -7354,18 +7466,11 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
   case Instruction::FNeg:
   case Instruction::PHI:
   case Instruction::Select:
-  case Instruction::URem:
-  case Instruction::SRem:
   case Instruction::ExtractValue:
   case Instruction::InsertValue:
   case Instruction::Freeze:
   case Instruction::ICmp:
   case Instruction::FCmp:
-  case Instruction::FAdd:
-  case Instruction::FSub:
-  case Instruction::FMul:
-  case Instruction::FDiv:
-  case Instruction::FRem:
   case Instruction::GetElementPtr:
     return false;
   default: {
@@ -8797,19 +8902,20 @@ SelectPatternResult llvm::matchSelectPattern(Value *V, Value *&LHS, Value *&RHS,
   Value *TrueVal = SI->getTrueValue();
   Value *FalseVal = SI->getFalseValue();
 
-  return llvm::matchDecomposedSelectPattern(CmpI, TrueVal, FalseVal, LHS, RHS,
-                                            CastOp, Depth);
+  return llvm::matchDecomposedSelectPattern(
+      CmpI, TrueVal, FalseVal, LHS, RHS,
+      isa<FPMathOperator>(SI) ? SI->getFastMathFlags() : FastMathFlags(),
+      CastOp, Depth);
 }
 
 SelectPatternResult llvm::matchDecomposedSelectPattern(
     CmpInst *CmpI, Value *TrueVal, Value *FalseVal, Value *&LHS, Value *&RHS,
-    Instruction::CastOps *CastOp, unsigned Depth) {
+    FastMathFlags FMF, Instruction::CastOps *CastOp, unsigned Depth) {
   CmpInst::Predicate Pred = CmpI->getPredicate();
   Value *CmpLHS = CmpI->getOperand(0);
   Value *CmpRHS = CmpI->getOperand(1);
-  FastMathFlags FMF;
-  if (isa<FPMathOperator>(CmpI))
-    FMF = CmpI->getFastMathFlags();
+  if (isa<FPMathOperator>(CmpI) && CmpI->hasNoNaNs())
+    FMF.setNoNaNs();
 
   // Bail out early.
   if (CmpI->isEquality())
@@ -9165,15 +9271,13 @@ isImpliedCondCommonOperandWithCR(CmpPredicate LPred, const ConstantRange &LCR,
 /// is true.  Return false if LHS implies RHS is false. Otherwise, return
 /// std::nullopt if we can't infer anything.
 static std::optional<bool>
-isImpliedCondICmps(const ICmpInst *LHS, CmpPredicate RPred, const Value *R0,
-                   const Value *R1, const DataLayout &DL, bool LHSIsTrue) {
-  Value *L0 = LHS->getOperand(0);
-  Value *L1 = LHS->getOperand(1);
-
+isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
+                   CmpPredicate RPred, const Value *R0, const Value *R1,
+                   const DataLayout &DL, bool LHSIsTrue) {
   // The rest of the logic assumes the LHS condition is true.  If that's not the
   // case, invert the predicate to make it so.
-  CmpPredicate LPred =
-      LHSIsTrue ? LHS->getCmpPredicate() : LHS->getInverseCmpPredicate();
+  if (!LHSIsTrue)
+    LPred = ICmpInst::getInverseCmpPredicate(LPred);
 
   // We can have non-canonical operands, so try to normalize any common operand
   // to L0/R0.
@@ -9314,9 +9418,15 @@ llvm::isImpliedCondition(const Value *LHS, CmpPredicate RHSPred,
     LHSIsTrue = !LHSIsTrue;
 
   // Both LHS and RHS are icmps.
-  const ICmpInst *LHSCmp = dyn_cast<ICmpInst>(LHS);
-  if (LHSCmp)
-    return isImpliedCondICmps(LHSCmp, RHSPred, RHSOp0, RHSOp1, DL, LHSIsTrue);
+  if (const auto *LHSCmp = dyn_cast<ICmpInst>(LHS))
+    return isImpliedCondICmps(LHSCmp->getCmpPredicate(), LHSCmp->getOperand(0),
+                              LHSCmp->getOperand(1), RHSPred, RHSOp0, RHSOp1,
+                              DL, LHSIsTrue);
+  const Value *V;
+  if (match(LHS, m_NUWTrunc(m_Value(V))))
+    return isImpliedCondICmps(CmpInst::ICMP_NE, V,
+                              ConstantInt::get(V->getType(), 0), RHSPred,
+                              RHSOp0, RHSOp1, DL, LHSIsTrue);
 
   /// The LHS should be an 'or', 'and', or a 'select' instruction.  We expect
   /// the RHS to be an icmp.
@@ -9350,6 +9460,15 @@ std::optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
     if (auto Implied = isImpliedCondition(
             LHS, RHSCmp->getCmpPredicate(), RHSCmp->getOperand(0),
             RHSCmp->getOperand(1), DL, LHSIsTrue, Depth))
+      return InvertRHS ? !*Implied : *Implied;
+    return std::nullopt;
+  }
+
+  const Value *V;
+  if (match(RHS, m_NUWTrunc(m_Value(V)))) {
+    if (auto Implied = isImpliedCondition(LHS, CmpInst::ICMP_NE, V,
+                                          ConstantInt::get(V->getType(), 0), DL,
+                                          LHSIsTrue, Depth))
       return InvertRHS ? !*Implied : *Implied;
     return std::nullopt;
   }

@@ -64,11 +64,14 @@ private:
   std::unique_ptr<MCObjectWriter> Writer;
 
   bool HasLayout = false;
+  bool HasFinalLayout = false;
   bool RelaxAll = false;
 
   SectionListType Sections;
 
   SmallVector<const MCSymbol *, 0> Symbols;
+
+  mutable SmallVector<std::pair<SMLoc, std::string>, 0> PendingErrors;
 
   MCDwarfLineTableParams LTParams;
 
@@ -89,16 +92,15 @@ private:
   /// Evaluate a fixup to a relocatable expression and the value which should be
   /// placed into the fixup.
   ///
+  /// \param F The fragment the fixup is inside.
   /// \param Fixup The fixup to evaluate.
-  /// \param DF The fragment the fixup is inside.
   /// \param Target [out] On return, the relocatable expression the fixup
   /// evaluates to.
   /// \param Value [out] On return, the value of the fixup as currently laid
   /// out.
   /// \param RecordReloc Record relocation if needed.
   /// relocation.
-  bool evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
-                     MCValue &Target, const MCSubtargetInfo *STI,
+  bool evaluateFixup(const MCFragment *F, const MCFixup &Fixup, MCValue &Target,
                      uint64_t &Value, bool RecordReloc,
                      MutableArrayRef<char> Contents) const;
 
@@ -109,12 +111,12 @@ private:
   /// Check whether the given fragment needs relaxation.
   bool fragmentNeedsRelaxation(const MCRelaxableFragment *IF) const;
 
+  void layoutSection(MCSection &Sec);
   /// Perform one layout iteration and return true if any offsets
   /// were adjusted.
-  bool layoutOnce();
+  bool relaxOnce();
 
-  /// Perform relaxation on a single fragment - returns true if the fragment
-  /// changes as a result of relaxation.
+  /// Perform relaxation on a single fragment.
   bool relaxFragment(MCFragment &F);
   bool relaxInstruction(MCRelaxableFragment &IF);
   bool relaxLEB(MCLEBFragment &IF);
@@ -123,6 +125,7 @@ private:
   bool relaxDwarfCallFrameFragment(MCDwarfCallFrameFragment &DF);
   bool relaxCVInlineLineTable(MCCVInlineLineTableFragment &DF);
   bool relaxCVDefRange(MCCVDefRangeFragment &DF);
+  bool relaxFill(MCFillFragment &F);
   bool relaxPseudoProbeAddr(MCPseudoProbeAddrFragment &DF);
 
 public:
@@ -142,10 +145,9 @@ public:
   uint64_t computeFragmentSize(const MCFragment &F) const;
 
   void layoutBundle(MCFragment *Prev, MCFragment *F) const;
-  void ensureValid(MCSection &Sec) const;
 
   // Get the offset of the given fragment inside its containing section.
-  uint64_t getFragmentOffset(const MCFragment &F) const;
+  uint64_t getFragmentOffset(const MCFragment &F) const { return F.Offset; }
 
   uint64_t getSectionAddressSize(const MCSection &Sec) const;
   uint64_t getSectionFileSize(const MCSection &Sec) const;
@@ -197,6 +199,7 @@ public:
   void layout();
 
   bool hasLayout() const { return HasLayout; }
+  bool hasFinalLayout() const { return HasFinalLayout; }
   bool getRelaxAll() const { return RelaxAll; }
   void setRelaxAll(bool Value) { RelaxAll = Value; }
 
@@ -227,6 +230,12 @@ public:
   /// Expects a fragment \p F containing instructions and its size \p FSize.
   void writeFragmentPadding(raw_ostream &OS, const MCEncodedFragment &F,
                             uint64_t FSize) const;
+
+  void reportError(SMLoc L, const Twine &Msg) const;
+  // Record pending errors during layout iteration, as they may go away once the
+  // layout is finalized.
+  void recordError(SMLoc L, const Twine &Msg) const;
+  void flushPendingErrors() const;
 
   void dump() const;
 };

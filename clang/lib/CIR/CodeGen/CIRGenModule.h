@@ -111,6 +111,8 @@ public:
   /// Handling globals
   /// -------
 
+  mlir::Operation *lastGlobalOp = nullptr;
+
   mlir::Operation *getGlobalValue(llvm::StringRef ref);
 
   /// If the specified mangled name is not in the module, create and return an
@@ -147,6 +149,12 @@ public:
   cir::GlobalOp getGlobalForStringLiteral(const StringLiteral *s,
                                           llvm::StringRef name = ".str");
 
+  /// Set attributes which are common to any form of a global definition (alias,
+  /// Objective-C method, function, global variable).
+  ///
+  /// NOTE: This should only be called for definitions.
+  void setCommonAttributes(GlobalDecl gd, mlir::Operation *op);
+
   const TargetCIRGenInfo &getTargetCIRGenInfo();
 
   /// Helpers to convert the presumed location of Clang's SourceLocation to an
@@ -177,6 +185,16 @@ public:
 
   mlir::Type convertType(clang::QualType type);
 
+  /// Set the visibility for the given global.
+  void setGlobalVisibility(mlir::Operation *op, const NamedDecl *d) const;
+  void setDSOLocal(mlir::Operation *op) const;
+  void setDSOLocal(cir::CIRGlobalValueInterface gv) const;
+
+  /// Set visibility, dllimport/dllexport and dso_local.
+  /// This must be called after dllimport/dllexport is set.
+  void setGVProperties(mlir::Operation *op, const NamedDecl *d) const;
+  void setGVPropertiesAux(mlir::Operation *op, const NamedDecl *d) const;
+
   void emitGlobalDefinition(clang::GlobalDecl gd,
                             mlir::Operation *op = nullptr);
   void emitGlobalFunctionDefinition(clang::GlobalDecl gd, mlir::Operation *op);
@@ -194,6 +212,11 @@ public:
 
   llvm::StringRef getMangledName(clang::GlobalDecl gd);
 
+  void emitTentativeDefinition(const VarDecl *d);
+
+  bool supportsCOMDAT() const;
+  void maybeSetTrivialComdat(const clang::Decl &d, mlir::Operation *op);
+
   static void setInitializer(cir::GlobalOp &op, mlir::Attribute value);
 
   cir::FuncOp
@@ -208,10 +231,21 @@ public:
                                 const clang::FunctionDecl *funcDecl);
 
   mlir::IntegerAttr getSize(CharUnits size) {
-    return builder.getSizeFromCharUnits(&getMLIRContext(), size);
+    return builder.getSizeFromCharUnits(size);
   }
 
   const llvm::Triple &getTriple() const { return target.getTriple(); }
+
+  /// -------
+  /// Visibility and Linkage
+  /// -------
+
+  static mlir::SymbolTable::Visibility
+  getMLIRVisibilityFromCIRLinkage(cir::GlobalLinkageKind GLK);
+  static cir::VisibilityKind getGlobalVisibilityKindFromClangVisibility(
+      clang::VisibilityAttr::VisibilityType visibility);
+  cir::VisibilityAttr getGlobalVisibilityAttrFromDecl(const Decl *decl);
+  static mlir::SymbolTable::Visibility getMLIRVisibility(cir::GlobalOp op);
 
   cir::GlobalLinkageKind getCIRLinkageForDeclarator(const DeclaratorDecl *dd,
                                                     GVALinkage linkage,
@@ -239,7 +273,7 @@ public:
     return diags.Report(diagID) << feature;
   }
 
-  DiagnosticBuilder errorNYI(llvm::StringRef feature) {
+  DiagnosticBuilder errorNYI(llvm::StringRef feature) const {
     // TODO: Make a default location? currSrcLoc?
     unsigned diagID = diags.getCustomDiagID(
         DiagnosticsEngine::Error, "ClangIR code gen Not Yet Implemented: %0");
@@ -258,6 +292,8 @@ private:
   // An ordered map of canonical GlobalDecls to their mangled names.
   llvm::MapVector<clang::GlobalDecl, llvm::StringRef> mangledDeclNames;
   llvm::StringMap<clang::GlobalDecl, llvm::BumpPtrAllocator> manglings;
+
+  void setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op);
 };
 } // namespace CIRGen
 

@@ -1928,8 +1928,9 @@ bool isNotCapturedBeforeOrInLoop(const Value *V, const Loop *L,
   // loop header, as the loop header is reachable from any instruction inside
   // the loop.
   // TODO: ReturnCaptures=true shouldn't be necessary here.
-  return !PointerMayBeCapturedBefore(V, /* ReturnCaptures */ true,
-                                     L->getHeader()->getTerminator(), DT);
+  return capturesNothing(PointerMayBeCapturedBefore(
+      V, /*ReturnCaptures=*/true, L->getHeader()->getTerminator(), DT,
+      /*IncludeI=*/false, CaptureComponents::Provenance));
 }
 
 /// Return true if we can prove that a caller cannot inspect the object if an
@@ -2870,13 +2871,6 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
     if (auto *I = dyn_cast<Instruction>(Inv))
       I->setFastMathFlags(Intersect);
     NewBO->setFastMathFlags(Intersect);
-  } else if (Opcode == Instruction::Or) {
-    bool Disjoint = cast<PossiblyDisjointInst>(BO)->isDisjoint() &&
-                    cast<PossiblyDisjointInst>(BO0)->isDisjoint();
-    // If `Inv` was not constant-folded, a new Instruction has been created.
-    if (auto *I = dyn_cast<PossiblyDisjointInst>(Inv))
-      I->setIsDisjoint(Disjoint);
-    cast<PossiblyDisjointInst>(NewBO)->setIsDisjoint(Disjoint);
   } else {
     OverflowTracking Flags;
     Flags.AllKnownNonNegative = false;

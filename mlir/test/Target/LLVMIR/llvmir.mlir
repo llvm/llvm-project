@@ -2081,8 +2081,14 @@ llvm.func @useInlineAsm(%arg0: i32, %arg1 : !llvm.ptr) {
   // CHECK-NEXT:  call { i8, i8 } asm "foo", "=r,=r,r"(i32 {{.*}})
   %5 = llvm.inline_asm "foo", "=r,=r,r" %arg0 : (i32) -> !llvm.struct<(i8, i8)>
 
-  // CHECK-NEXT:  call void asm sideeffect "", "*m,~{memory}"(ptr elementtype(ptr) %1)
-  %6 = llvm.inline_asm has_side_effects operand_attrs = [{elementtype = !llvm.ptr}] "", "*m,~{memory}" %arg1 : (!llvm.ptr) -> !llvm.void
+  // CHECK-NEXT:  tail call void asm sideeffect "", "*m,~{memory}"(ptr elementtype(ptr) %1)
+  %6 = llvm.inline_asm has_side_effects tail_call_kind = <tail> operand_attrs = [{elementtype = !llvm.ptr}] "", "*m,~{memory}" %arg1 : (!llvm.ptr) -> !llvm.void
+
+  // CHECK-NEXT:  = call { i8, i8 } asm "foo", "=r,=r,r"(i32 {{.*}})
+  %7 = llvm.inline_asm tail_call_kind = <none> "foo", "=r,=r,r" %arg0 : (i32) -> !llvm.struct<(i8, i8)>
+
+  // CHECK-NEXT:  notail call { i8, i8 } asm "foo", "=r,=r,r"(i32 {{.*}})
+  %8 = llvm.inline_asm tail_call_kind = <notail> "foo", "=r,=r,r" %arg0 : (i32) -> !llvm.struct<(i8, i8)>
 
   llvm.return
 }

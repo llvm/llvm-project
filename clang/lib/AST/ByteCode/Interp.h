@@ -200,15 +200,16 @@ bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
 
   if constexpr (Dir == ShiftDir::Left) {
     if (LHS.isSigned() && !S.getLangOpts().CPlusPlus20) {
-      const Expr *E = S.Current->getExpr(OpPC);
       // C++11 [expr.shift]p2: A signed left shift must have a non-negative
       // operand, and must not overflow the corresponding unsigned type.
       if (LHS.isNegative()) {
+        const Expr *E = S.Current->getExpr(OpPC);
         S.CCEDiag(E, diag::note_constexpr_lshift_of_negative) << LHS.toAPSInt();
         if (!S.noteUndefinedBehavior())
           return false;
       } else if (LHS.toUnsigned().countLeadingZeros() <
                  static_cast<unsigned>(RHS)) {
+        const Expr *E = S.Current->getExpr(OpPC);
         S.CCEDiag(E, diag::note_constexpr_lshift_discards);
         if (!S.noteUndefinedBehavior())
           return false;
@@ -1326,21 +1327,9 @@ bool GetLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
   return true;
 }
 
-static inline bool Kill(InterpState &S, CodePtr OpPC) {
-  const auto &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckDummy(S, OpPC, Ptr, AK_Destroy))
-    return false;
-  Ptr.endLifetime();
-  return true;
-}
-
-static inline bool StartLifetime(InterpState &S, CodePtr OpPC) {
-  const auto &Ptr = S.Stk.peek<Pointer>();
-  if (!CheckDummy(S, OpPC, Ptr, AK_Destroy))
-    return false;
-  Ptr.startLifetime();
-  return true;
-}
+bool EndLifetime(InterpState &S, CodePtr OpPC);
+bool EndLifetimePop(InterpState &S, CodePtr OpPC);
+bool StartLifetime(InterpState &S, CodePtr OpPC);
 
 /// 1) Pops the value from the stack.
 /// 2) Writes the value to the local variable with the

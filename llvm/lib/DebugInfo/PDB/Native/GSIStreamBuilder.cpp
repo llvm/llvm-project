@@ -323,8 +323,8 @@ Error GSIStreamBuilder::finalizeMsfLayout() {
   uint64_t RecordBytes = PSH->RecordByteSize + GSH->RecordByteSize;
   if (RecordBytes > UINT32_MAX)
     return make_error<StringError>(
-        formatv("the public ({0} bytes) and global ({1} bytes) "
-                "symbols are too large to fit in a PDB file; "
+        formatv("the public symbols ({0} bytes) and global symbols ({1} bytes) "
+                "are too large to fit in a PDB file; "
                 "the maximum total is {2} bytes.",
                 PSH->RecordByteSize, GSH->RecordByteSize, UINT32_MAX),
         inconvertibleErrorCode());

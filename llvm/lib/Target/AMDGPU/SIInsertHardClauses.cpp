@@ -116,7 +116,7 @@ public:
               AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
           if (BaseInfo->BVH)
             return HARDCLAUSE_BVH;
-          if (BaseInfo->Sampler)
+          if (BaseInfo->Sampler || BaseInfo->MSAA)
             return HARDCLAUSE_MIMG_SAMPLE;
           return MI.mayLoad() ? MI.mayStore() ? HARDCLAUSE_MIMG_ATOMIC
                                               : HARDCLAUSE_MIMG_LOAD

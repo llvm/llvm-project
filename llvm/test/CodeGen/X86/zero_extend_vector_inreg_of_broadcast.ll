@@ -7065,17 +7065,29 @@ define void @vec512_i64_widen_to_i256_factor4_broadcast_to_v2i256_factor2(ptr %i
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
-; AVX512BW-LABEL: vec512_i64_widen_to_i256_factor4_broadcast_to_v2i256_factor2:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX512BW-NEXT:    vpaddb (%rsi), %xmm0, %xmm0
-; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512BW-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [0,9,2,11,0,13,2,15]
-; AVX512BW-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
-; AVX512BW-NEXT:    vpaddb (%rdx), %zmm2, %zmm0
-; AVX512BW-NEXT:    vmovdqa64 %zmm0, (%rcx)
-; AVX512BW-NEXT:    vzeroupper
-; AVX512BW-NEXT:    retq
+; AVX512BW-SLOW-LABEL: vec512_i64_widen_to_i256_factor4_broadcast_to_v2i256_factor2:
+; AVX512BW-SLOW:       # %bb.0:
+; AVX512BW-SLOW-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX512BW-SLOW-NEXT:    vpaddb (%rsi), %xmm0, %xmm0
+; AVX512BW-SLOW-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0
+; AVX512BW-SLOW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512BW-SLOW-NEXT:    vpunpcklqdq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[2],zmm1[2],zmm0[4],zmm1[4],zmm0[6],zmm1[6]
+; AVX512BW-SLOW-NEXT:    vpaddb (%rdx), %zmm0, %zmm0
+; AVX512BW-SLOW-NEXT:    vmovdqa64 %zmm0, (%rcx)
+; AVX512BW-SLOW-NEXT:    vzeroupper
+; AVX512BW-SLOW-NEXT:    retq
+;
+; AVX512BW-FAST-LABEL: vec512_i64_widen_to_i256_factor4_broadcast_to_v2i256_factor2:
+; AVX512BW-FAST:       # %bb.0:
+; AVX512BW-FAST-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX512BW-FAST-NEXT:    vpaddb (%rsi), %xmm0, %xmm0
+; AVX512BW-FAST-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512BW-FAST-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [0,9,2,11,0,13,2,15]
+; AVX512BW-FAST-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
+; AVX512BW-FAST-NEXT:    vpaddb (%rdx), %zmm2, %zmm0
+; AVX512BW-FAST-NEXT:    vmovdqa64 %zmm0, (%rcx)
+; AVX512BW-FAST-NEXT:    vzeroupper
+; AVX512BW-FAST-NEXT:    retq
   %in.vec.base = load <64 x i8>, ptr %in.vec.base.ptr, align 64
   %in.vec.bias = load <64 x i8>, ptr %in.vec.bias.ptr, align 64
   %in.vec = add <64 x i8> %in.vec.base, %in.vec.bias

@@ -18,7 +18,6 @@
 #include "clang/Basic/SimpleTypoCorrection.h"
 #include "clang/Basic/TargetInfo.h"
 
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
 
 using namespace clang;

@@ -65,7 +65,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/Mutex.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -75,7 +74,6 @@
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>
-#include <deque>
 #include <limits>
 #include <optional>
 #include <set>
@@ -2760,6 +2758,66 @@ SDValue SelectionDAG::CreateStackTemporary(EVT VT1, EVT VT2) {
   const DataLayout &DL = getDataLayout();
   Align Align = std::max(DL.getPrefTypeAlign(Ty1), DL.getPrefTypeAlign(Ty2));
   return CreateStackTemporary(Bytes, Align);
+}
+
+void SelectionDAG::getSignAsIntValue(FloatSignAsInt &State, const SDLoc &DL,
+                                     SDValue Value) {
+  EVT FloatVT = Value.getValueType();
+  unsigned NumBits = FloatVT.getScalarSizeInBits();
+  State.FloatVT = FloatVT;
+  EVT IVT = FloatVT.changeTypeToInteger();
+  // Convert to an integer of the same size.
+  if (TLI->isTypeLegal(IVT)) {
+    State.IntValue = getNode(ISD::BITCAST, DL, IVT, Value);
+    State.SignMask = APInt::getSignMask(NumBits);
+    State.SignBit = NumBits - 1;
+    return;
+  }
+
+  auto &DataLayout = getDataLayout();
+  // Store the float to memory, then load the sign part out as an integer.
+  MVT LoadTy = TLI->getRegisterType(MVT::i8);
+  // First create a temporary that is aligned for both the load and store.
+  SDValue StackPtr = CreateStackTemporary(FloatVT, LoadTy);
+  int FI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+  // Then store the float to it.
+  State.FloatPtr = StackPtr;
+  MachineFunction &MF = getMachineFunction();
+  State.FloatPointerInfo = MachinePointerInfo::getFixedStack(MF, FI);
+  State.Chain = getStore(getEntryNode(), DL, Value, State.FloatPtr,
+                         State.FloatPointerInfo);
+
+  SDValue IntPtr;
+  if (DataLayout.isBigEndian()) {
+    assert(FloatVT.isByteSized() && "Unsupported floating point type!");
+    // Load out a legal integer with the same sign bit as the float.
+    IntPtr = StackPtr;
+    State.IntPointerInfo = State.FloatPointerInfo;
+  } else {
+    // Advance the pointer so that the loaded byte will contain the sign bit.
+    unsigned ByteOffset = (NumBits / 8) - 1;
+    IntPtr = getMemBasePlusOffset(StackPtr, TypeSize::getFixed(ByteOffset), DL);
+    State.IntPointerInfo =
+        MachinePointerInfo::getFixedStack(MF, FI, ByteOffset);
+  }
+
+  State.IntPtr = IntPtr;
+  State.IntValue = getExtLoad(ISD::EXTLOAD, DL, LoadTy, State.Chain, IntPtr,
+                              State.IntPointerInfo, MVT::i8);
+  State.SignMask = APInt::getOneBitSet(LoadTy.getScalarSizeInBits(), 7);
+  State.SignBit = 7;
+}
+
+SDValue SelectionDAG::modifySignAsInt(const FloatSignAsInt &State,
+                                      const SDLoc &DL, SDValue NewIntValue) {
+  if (!State.Chain)
+    return getNode(ISD::BITCAST, DL, State.FloatVT, NewIntValue);
+
+  // Override the part containing the sign bit in the value stored on the stack.
+  SDValue Chain = getTruncStore(State.Chain, DL, NewIntValue, State.IntPtr,
+                                State.IntPointerInfo, MVT::i8);
+  return getLoad(State.FloatVT, DL, Chain, State.FloatPtr,
+                 State.FloatPointerInfo);
 }
 
 SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
@@ -5581,6 +5639,12 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::ADD:
   case ISD::SUB:
   case ISD::MUL:
+  case ISD::FNEG:
+  case ISD::FADD:
+  case ISD::FSUB:
+  case ISD::FMUL:
+  case ISD::FDIV:
+  case ISD::FREM:
     // No poison except from flags (which is handled above)
     return false;
 
@@ -5644,7 +5708,7 @@ bool SelectionDAG::isADDLike(SDValue Op, bool NoWrap) const {
 
 bool SelectionDAG::isBaseWithConstantOffset(SDValue Op) const {
   return Op.getNumOperands() == 2 && isa<ConstantSDNode>(Op.getOperand(1)) &&
-         (Op.getOpcode() == ISD::ADD || isADDLike(Op));
+         (Op.isAnyAdd() || isADDLike(Op));
 }
 
 bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN,
@@ -7353,10 +7417,18 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::OR:
   case ISD::XOR:
   case ISD::ADD:
+  case ISD::PTRADD:
   case ISD::SUB:
     assert(VT.isInteger() && "This operator does not apply to FP types!");
     assert(N1.getValueType() == N2.getValueType() &&
            N1.getValueType() == VT && "Binary operator types must match!");
+    // The equal operand types requirement is unnecessarily strong for PTRADD.
+    // However, the SelectionDAGBuilder does not generate PTRADDs with different
+    // operand types, and we'd need to re-implement GEP's non-standard wrapping
+    // logic everywhere where PTRADDs may be folded or combined to properly
+    // support them. If/when we introduce pointer types to the SDAG, we will
+    // need to relax this constraint.
+
     // (X ^|+- 0) -> X.  This commonly occurs when legalizing i64 values, so
     // it's worth handling here.
     if (N2CV && N2CV->isZero())
@@ -7719,6 +7791,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       std::swap(N1, N2);
     } else {
       switch (Opcode) {
+      case ISD::PTRADD:
       case ISD::SUB:
         // fold op(undef, arg2) -> undef, fold op(poison, arg2) ->poison.
         return N1.getOpcode() == ISD::POISON ? getPOISON(VT) : getUNDEF(VT);
@@ -7746,6 +7819,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
         return getConstant(0, DL, VT);
       [[fallthrough]];
     case ISD::ADD:
+    case ISD::PTRADD:
     case ISD::SUB:
     case ISD::UDIV:
     case ISD::SDIV:
@@ -8167,6 +8241,9 @@ SDValue SelectionDAG::getMemBasePlusOffset(SDValue Ptr, SDValue Offset,
                                            const SDNodeFlags Flags) {
   assert(Offset.getValueType().isInteger());
   EVT BasePtrVT = Ptr.getValueType();
+  if (TLI->shouldPreservePtrArith(this->getMachineFunction().getFunction(),
+                                  BasePtrVT))
+    return getNode(ISD::PTRADD, DL, BasePtrVT, Ptr, Offset, Flags);
   return getNode(ISD::ADD, DL, BasePtrVT, Ptr, Offset, Flags);
 }
 

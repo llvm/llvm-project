@@ -41,6 +41,11 @@ Potentially Breaking Changes
 - For ARM targets when compiling assembly files, the features included in the selected CPU
   or Architecture's FPU are included. If you wish not to use a specific feature,
   the relevant ``+no`` option will need to be amended to the command line option.
+- When compiling with branch target enforcement, ``asm goto``
+  statements will no longer guarantee to place a ``bti`` or
+  ``endbr64`` instruction at the labels named as possible branch
+  destinations, so it is not safe to use a register-controlled branch
+  instruction to branch to one. (In line with gcc.)
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -60,6 +65,8 @@ C++ Specific Potentially Breaking Changes
   standard library already have their own bespoke builtins.
 - A workaround for libstdc++4.7 has been removed. Note that 4.8.3 remains the oldest
   supported libstdc++ version.
+
+- Added ``!nonnull/!align`` metadata to load of references for better codegen.
 
 ABI Changes in This Version
 ---------------------------
@@ -224,6 +231,9 @@ C Language Changes
 - Added the existing ``-Wduplicate-decl-specifier`` diagnostic, which is on by
   default, to ``-Wc++-compat`` because duplicated declaration specifiers are
   not valid in C++.
+- The ``[[clang::assume()]]`` attribute is now correctly recognized in C. The
+  ``__attribute__((assume()))`` form has always been supported, so the fix is
+  specific to the attribute syntax used.
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -249,7 +259,9 @@ C2y Feature Support
   a conforming extension in earlier C language modes, but not in C++ language
   modes (``std::extent`` and ``std::size`` already provide the same
   functionality but with more granularity). The feature can be tested via
-  ``__has_feature(c_countof)`` or ``__has_extension(c_countof)``.
+  ``__has_feature(c_countof)`` or ``__has_extension(c_countof)``. This also
+  adds the ``<stdcountof.h>`` header file which exposes the ``countof`` macro
+  which expands to ``_Countof``.
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -303,6 +315,8 @@ Non-comprehensive list of changes in this release
   different than before.
 - Fixed a crash when a VLA with an invalid size expression was used within a
   ``sizeof`` or ``typeof`` expression. (#GH138444)
+- Deprecation warning is emitted for the deprecated ``__reference_binds_to_temporary`` intrinsic.
+  ``__reference_constructs_from_temporary`` should be used instead. (#GH44056)
 
 New Compiler Flags
 ------------------
@@ -315,7 +329,7 @@ New Compiler Flags
 
 - New option ``-ftime-report-json`` added which outputs the same timing data as ``-ftime-report`` but formatted as JSON.
 
-- New option ``-Wnrvo`` added and disabled by default to warn about missed NRVO opportunites.
+- New option ``-Wnrvo`` added and disabled by default to warn about missed NRVO opportunities.
 
 Deprecated Compiler Flags
 -------------------------
@@ -445,6 +459,7 @@ Improvements to Clang's diagnostics
   as function arguments or return value respectively. Note that
   :doc:`ThreadSafetyAnalysis` still does not perform alias analysis. The
   feature will be default-enabled with ``-Wthread-safety`` in a future release.
+- The :doc:`ThreadSafetyAnalysis` now supports reentrant capabilities.
 - Clang will now do a better job producing common nested names, when producing
   common types for ternary operator, template argument deduction and multiple return auto deduction.
 - The ``-Wsign-compare`` warning now treats expressions with bitwise not(~) and minus(-) as signed integers
@@ -565,6 +580,38 @@ Improvements to Clang's diagnostics
 
 - Clang now suggests corrections for unknown attribute names.
 
+- ``-Wswitch`` will now diagnose unhandled enumerators in switches also when
+  the enumerator is deprecated. Warnings about using deprecated enumerators in
+  switch cases have moved behind a new ``-Wdeprecated-declarations-switch-case``
+  flag.
+
+  For example:
+
+  .. code-block:: c
+
+    enum E {
+      Red,
+      Green,
+      Blue [[deprecated]]
+    };
+    void example(enum E e) {
+      switch (e) {
+      case Red:   // stuff...
+      case Green: // stuff...
+      }
+    }
+
+  will result in a warning about ``Blue`` not being handled in the switch.
+
+  The warning can be fixed either by adding a ``default:``, or by adding
+  ``case Blue:``. Since the enumerator is deprecated, the latter approach will
+  trigger a ``'Blue' is deprecated`` warning, which can be turned off with
+  ``-Wno-deprecated-declarations-switch-case``.
+
+- Split diagnosis of implicit integer comparison on negation to a new
+  diagnostic group ``-Wimplicit-int-comparison-on-negation``, grouped under
+  ``-Wimplicit-int-conversion``, so user can turn it off independently.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -633,6 +680,7 @@ Bug Fixes in This Version
   base classes. (GH139452)
 - Fixed an assertion failure in serialization of constexpr structs containing unions. (#GH140130)
 - Fixed duplicate entries in TableGen that caused the wrong attribute to be selected. (GH#140701)
+- Fixed type mismatch error when 'builtin-elementwise-math' arguments have different qualifiers, this should be well-formed. (#GH141397)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -767,6 +815,8 @@ Bug Fixes to C++ Support
 - Clang could incorrectly instantiate functions in discarded contexts (#GH140449)
 - Fix instantiation of default-initialized variable template specialization. (#GH140632) (#GH140622)
 - Clang modules now allow a module and its user to differ on TrivialAutoVarInit*
+- Fixed an access checking bug when initializing non-aggregates in default arguments (#GH62444), (#GH83608)
+- Fixed a pack substitution bug in deducing class template partial specializations. (#GH53609)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -783,6 +833,7 @@ Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Fixed crash when ``-print-stats`` is enabled in compiling IR files. (#GH131608)
+- Fix code completion crash involving PCH serialzied templates. (#GH139019)
 
 OpenACC Specific Changes
 ------------------------
@@ -817,6 +868,10 @@ X86 Support
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 
+- Implementation of modal 8-bit floating point intrinsics in accordance with
+  the Arm C Language Extensions (ACLE)
+  `as specified here <https://github.com/ARM-software/acle/blob/main/main/acle.md#modal-8-bit-floating-point-extensions>`_
+  is now available.
 - Support has been added for the following processors (command-line identifiers in parentheses):
   - Arm Cortex-A320 (``cortex-a320``)
 - For ARM targets, cc1as now considers the FPU's features for the selected CPU or Architecture.
@@ -981,6 +1036,7 @@ Sanitizers
 ----------
 
 - ``-fsanitize=vptr`` is no longer a part of ``-fsanitize=undefined``.
+- Sanitizer ignorelists now support the syntax ``src:*=sanitize``.
 
 Python Binding Changes
 ----------------------

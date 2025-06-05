@@ -49,10 +49,8 @@ bool RecurrenceDescriptor::isIntegerRecurrenceKind(RecurKind Kind) {
   case RecurKind::SMin:
   case RecurKind::UMax:
   case RecurKind::UMin:
-  case RecurKind::IAnyOf:
-  case RecurKind::FAnyOf:
-  case RecurKind::IFindLastIV:
-  case RecurKind::FFindLastIV:
+  case RecurKind::AnyOf:
+  case RecurKind::FindLastIV:
     return true;
   }
   return false;
@@ -417,11 +415,11 @@ bool RecurrenceDescriptor::AddReductionVar(
     if (IsAPhi && Cur != Phi && !areAllUsesIn(Cur, VisitedInsts))
       return false;
 
-    if ((isIntMinMaxRecurrenceKind(Kind) || Kind == RecurKind::IAnyOf) &&
-        (isa<ICmpInst>(Cur) || isa<SelectInst>(Cur)))
+    if (isIntMinMaxRecurrenceKind(Kind) && (isa<ICmpInst>(Cur) || IsASelect))
       ++NumCmpSelectPatternInst;
-    if ((isFPMinMaxRecurrenceKind(Kind) || Kind == RecurKind::FAnyOf) &&
-        (isa<FCmpInst>(Cur) || isa<SelectInst>(Cur)))
+    if (isFPMinMaxRecurrenceKind(Kind) && (isa<FCmpInst>(Cur) || IsASelect))
+      ++NumCmpSelectPatternInst;
+    if (isAnyOfRecurrenceKind(Kind) && IsASelect)
       ++NumCmpSelectPatternInst;
 
     // Check  whether we found a reduction operator.
@@ -654,8 +652,7 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
   if (!Loop->isLoopInvariant(NonPhi))
     return InstDesc(false, I);
 
-  return InstDesc(I, isa<ICmpInst>(I->getOperand(0)) ? RecurKind::IAnyOf
-                                                     : RecurKind::FAnyOf);
+  return InstDesc(I, RecurKind::AnyOf);
 }
 
 // We are looking for loops that do something like this:
@@ -743,8 +740,7 @@ RecurrenceDescriptor::isFindLastIVPattern(Loop *TheLoop, PHINode *OrigPhi,
   if (!IsIncreasingLoopInduction(NonRdxPhi))
     return InstDesc(false, I);
 
-  return InstDesc(I, isa<ICmpInst>(I->getOperand(0)) ? RecurKind::IFindLastIV
-                                                     : RecurKind::FFindLastIV);
+  return InstDesc(I, RecurKind::FindLastIV);
 }
 
 RecurrenceDescriptor::InstDesc
@@ -983,19 +979,15 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
     LLVM_DEBUG(dbgs() << "Found a UMIN reduction PHI." << *Phi << "\n");
     return true;
   }
-  if (AddReductionVar(Phi, RecurKind::IAnyOf, TheLoop, FMF, RedDes, DB, AC, DT,
+  if (AddReductionVar(Phi, RecurKind::AnyOf, TheLoop, FMF, RedDes, DB, AC, DT,
                       SE)) {
-    LLVM_DEBUG(dbgs() << "Found an integer conditional select reduction PHI."
-                      << *Phi << "\n");
+    LLVM_DEBUG(dbgs() << "Found a conditional select reduction PHI." << *Phi
+                      << "\n");
     return true;
   }
-  if (AddReductionVar(Phi, RecurKind::IFindLastIV, TheLoop, FMF, RedDes, DB, AC,
+  if (AddReductionVar(Phi, RecurKind::FindLastIV, TheLoop, FMF, RedDes, DB, AC,
                       DT, SE)) {
-    LLVM_DEBUG(dbgs() << "Found a "
-                      << (RedDes.getRecurrenceKind() == RecurKind::FFindLastIV
-                              ? "F"
-                              : "I")
-                      << "FindLastIV reduction PHI." << *Phi << "\n");
+    LLVM_DEBUG(dbgs() << "Found a FindLastIV reduction PHI." << *Phi << "\n");
     return true;
   }
   if (AddReductionVar(Phi, RecurKind::FMul, TheLoop, FMF, RedDes, DB, AC, DT,
@@ -1016,12 +1008,6 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
   if (AddReductionVar(Phi, RecurKind::FMin, TheLoop, FMF, RedDes, DB, AC, DT,
                       SE)) {
     LLVM_DEBUG(dbgs() << "Found a float MIN reduction PHI." << *Phi << "\n");
-    return true;
-  }
-  if (AddReductionVar(Phi, RecurKind::FAnyOf, TheLoop, FMF, RedDes, DB, AC, DT,
-                      SE)) {
-    LLVM_DEBUG(dbgs() << "Found a float conditional select reduction PHI."
-                      << " PHI." << *Phi << "\n");
     return true;
   }
   if (AddReductionVar(Phi, RecurKind::FMulAdd, TheLoop, FMF, RedDes, DB, AC, DT,
@@ -1150,8 +1136,8 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
     return Instruction::Add;
   case RecurKind::Mul:
     return Instruction::Mul;
-  case RecurKind::IAnyOf:
-  case RecurKind::FAnyOf:
+  case RecurKind::AnyOf:
+  case RecurKind::FindLastIV:
   case RecurKind::Or:
     return Instruction::Or;
   case RecurKind::And:
@@ -1167,7 +1153,6 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
   case RecurKind::SMin:
   case RecurKind::UMax:
   case RecurKind::UMin:
-  case RecurKind::IFindLastIV:
     return Instruction::ICmp;
   case RecurKind::FMax:
   case RecurKind::FMin:
@@ -1175,7 +1160,6 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
   case RecurKind::FMinimum:
   case RecurKind::FMaximumNum:
   case RecurKind::FMinimumNum:
-  case RecurKind::FFindLastIV:
     return Instruction::FCmp;
   default:
     llvm_unreachable("Unknown recurrence operation");

@@ -3801,6 +3801,13 @@ void TargetLowering::computeKnownBitsForTargetInstr(
   Known.resetAll();
 }
 
+void TargetLowering::computeKnownFPClassForTargetInstr(
+    GISelValueTracking &Analysis, Register R, KnownFPClass &Known,
+    const APInt &DemandedElts, const MachineRegisterInfo &MRI,
+    unsigned Depth) const {
+  Known.resetAll();
+}
+
 void TargetLowering::computeKnownBitsForFrameIndex(
   const int FrameIdx, KnownBits &Known, const MachineFunction &MF) const {
   // The low bits are known zero if the pointer is aligned.
@@ -8603,16 +8610,18 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
   // fminimum/fmaximum requires -0.0 less than +0.0
   if (!MinMaxMustRespectOrderedZero && !N->getFlags().hasNoSignedZeros() &&
       !DAG.isKnownNeverZeroFloat(RHS) && !DAG.isKnownNeverZeroFloat(LHS)) {
+    auto IsSpecificZero = [&](SDValue F) {
+      FloatSignAsInt State;
+      DAG.getSignAsIntValue(State, DL, F);
+      return DAG.getSetCC(DL, CCVT, State.IntValue,
+                          DAG.getConstant(0, DL, State.IntValue.getValueType()),
+                          IsMax ? ISD::SETEQ : ISD::SETNE);
+    };
     SDValue IsZero = DAG.getSetCC(DL, CCVT, MinMax,
                                   DAG.getConstantFP(0.0, DL, VT), ISD::SETOEQ);
-    SDValue TestZero =
-        DAG.getTargetConstant(IsMax ? fcPosZero : fcNegZero, DL, MVT::i32);
-    SDValue LCmp = DAG.getSelect(
-        DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, CCVT, LHS, TestZero), LHS,
-        MinMax, Flags);
-    SDValue RCmp = DAG.getSelect(
-        DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, CCVT, RHS, TestZero), RHS,
-        LCmp, Flags);
+    SDValue LCmp =
+        DAG.getSelect(DL, VT, IsSpecificZero(LHS), LHS, MinMax, Flags);
+    SDValue RCmp = DAG.getSelect(DL, VT, IsSpecificZero(RHS), RHS, LCmp, Flags);
     MinMax = DAG.getSelect(DL, VT, IsZero, RCmp, MinMax, Flags);
   }
 

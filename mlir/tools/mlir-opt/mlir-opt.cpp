@@ -120,7 +120,6 @@ void registerTestLLVMLegalizePatternsPass();
 void registerTestLoopFusion();
 void registerTestLoopMappingPass();
 void registerTestLoopUnrollingPass();
-void registerTestLowerToArmNeon();
 void registerTestLowerToArmSME();
 void registerTestLowerToLLVM();
 void registerTestMakeIsolatedFromAbovePass();
@@ -128,6 +127,7 @@ void registerTestMatchReductionPass();
 void registerTestMathAlgebraicSimplificationPass();
 void registerTestMathPolynomialApproximationPass();
 void registerTestMathToVCIXPass();
+void registerTestIrdlTestDialectConversionPass();
 void registerTestMemRefDependenceCheck();
 void registerTestMemRefStrideCalculation();
 void registerTestMeshReshardingSpmdizationPass();
@@ -172,6 +172,7 @@ void registerTestDialect(DialectRegistry &);
 void registerTestDynDialect(DialectRegistry &);
 void registerTestTilingInterfaceTransformDialectExtension(DialectRegistry &);
 void registerTestTransformDialectExtension(DialectRegistry &);
+void registerIrdlTestDialect(DialectRegistry &);
 void registerTestTransformsTransformDialectExtension(DialectRegistry &);
 } // namespace test
 
@@ -250,6 +251,7 @@ void registerTestPasses() {
   mlir::test::registerTestIRVisitorsPass();
   mlir::test::registerTestGenericIRVisitorsPass();
   mlir::test::registerTestInterfaces();
+  mlir::test::registerTestIrdlTestDialectConversionPass();
   mlir::test::registerTestIRVisitorsPass();
   mlir::test::registerTestLastModifiedPass();
   mlir::test::registerTestLinalgDecomposeOps();
@@ -264,7 +266,6 @@ void registerTestPasses() {
   mlir::test::registerTestLoopFusion();
   mlir::test::registerTestLoopMappingPass();
   mlir::test::registerTestLoopUnrollingPass();
-  mlir::test::registerTestLowerToArmNeon();
   mlir::test::registerTestLowerToArmSME();
   mlir::test::registerTestLowerToLLVM();
   mlir::test::registerTestMakeIsolatedFromAbovePass();
@@ -326,11 +327,12 @@ int main(int argc, char **argv) {
   registerAllGPUToLLVMIRTranslations(registry);
 
 #ifdef MLIR_INCLUDE_TESTS
+  ::test::registerIrdlTestDialect(registry);
   ::test::registerTestDialect(registry);
+  ::test::registerTestDynDialect(registry);
+  ::test::registerTestTilingInterfaceTransformDialectExtension(registry);
   ::test::registerTestTransformDialectExtension(registry);
   ::test::registerTestTransformsTransformDialectExtension(registry);
-  ::test::registerTestTilingInterfaceTransformDialectExtension(registry);
-  ::test::registerTestDynDialect(registry);
 #endif
   return mlir::asMainReturnCode(mlir::MlirOptMain(
       argc, argv, "MLIR modular optimizer driver\n", registry));
