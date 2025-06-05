@@ -32,9 +32,7 @@ define double @fmul_strict_tan_strict_cos_contract(double %a) {
 define double @fmul_contract_tan_strict_cos_strict(double %a) {
 ; CHECK-LABEL: define double @fmul_contract_tan_strict_cos_strict(
 ; CHECK-SAME: double [[A:%.*]]) {
-; CHECK-NEXT:    [[TAN:%.*]] = call double @llvm.tan.f64(double [[A]])
-; CHECK-NEXT:    [[COS:%.*]] = call double @llvm.cos.f64(double [[A]])
-; CHECK-NEXT:    [[RES:%.*]] = fmul contract double [[TAN]], [[COS]]
+; CHECK-NEXT:    [[RES:%.*]] = call contract double @llvm.sin.f64(double [[A]])
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %tan = call double @llvm.tan.f64(double %a)
@@ -46,9 +44,7 @@ define double @fmul_contract_tan_strict_cos_strict(double %a) {
 define double @fmul_contract_tan_contract_cos_strict(double %a) {
 ; CHECK-LABEL: define double @fmul_contract_tan_contract_cos_strict(
 ; CHECK-SAME: double [[A:%.*]]) {
-; CHECK-NEXT:    [[TAN:%.*]] = call contract double @llvm.tan.f64(double [[A]])
-; CHECK-NEXT:    [[COS:%.*]] = call double @llvm.cos.f64(double [[A]])
-; CHECK-NEXT:    [[RES:%.*]] = fmul contract double [[TAN]], [[COS]]
+; CHECK-NEXT:    [[RES:%.*]] = call contract double @llvm.sin.f64(double [[A]])
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %tan = call contract double @llvm.tan.f64(double %a)
@@ -76,9 +72,7 @@ define double @fmul_tan_cos_contract_multiple_uses(double %a) {
 define double @fmul_tan_cos_contract(double %a) {
 ; CHECK-LABEL: define double @fmul_tan_cos_contract(
 ; CHECK-SAME: double [[A:%.*]]) {
-; CHECK-NEXT:    [[TAN:%.*]] = call contract double @llvm.tan.f64(double [[A]])
-; CHECK-NEXT:    [[COS:%.*]] = call contract double @llvm.cos.f64(double [[A]])
-; CHECK-NEXT:    [[RES:%.*]] = fmul contract double [[TAN]], [[COS]]
+; CHECK-NEXT:    [[RES:%.*]] = call contract double @llvm.sin.f64(double [[A]])
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %tan = call contract double @llvm.tan.f64(double %a)
@@ -90,9 +84,7 @@ define double @fmul_tan_cos_contract(double %a) {
 define float @fmul_tanf_cosf_contract(float %a) {
 ; CHECK-LABEL: define float @fmul_tanf_cosf_contract(
 ; CHECK-SAME: float [[A:%.*]]) {
-; CHECK-NEXT:    [[TAN:%.*]] = call contract float @llvm.tan.f32(float [[A]])
-; CHECK-NEXT:    [[COS:%.*]] = call contract float @llvm.cos.f32(float [[A]])
-; CHECK-NEXT:    [[RES:%.*]] = fmul contract float [[TAN]], [[COS]]
+; CHECK-NEXT:    [[RES:%.*]] = call contract float @llvm.sin.f32(float [[A]])
 ; CHECK-NEXT:    ret float [[RES]]
 ;
   %tan = call contract float @llvm.tan.f32(float %a)
@@ -104,9 +96,7 @@ define float @fmul_tanf_cosf_contract(float %a) {
 define fp128 @fmul_tanfp128_cosfp128_contract(fp128 %a) {
 ; CHECK-LABEL: define fp128 @fmul_tanfp128_cosfp128_contract(
 ; CHECK-SAME: fp128 [[A:%.*]]) {
-; CHECK-NEXT:    [[TAN:%.*]] = call contract fp128 @llvm.tan.f128(fp128 [[A]])
-; CHECK-NEXT:    [[COS:%.*]] = call contract fp128 @llvm.cos.f128(fp128 [[A]])
-; CHECK-NEXT:    [[RES:%.*]] = fmul contract fp128 [[TAN]], [[COS]]
+; CHECK-NEXT:    [[RES:%.*]] = call contract fp128 @llvm.sin.f128(fp128 [[A]])
 ; CHECK-NEXT:    ret fp128 [[RES]]
 ;
   %tan = call contract fp128 @llvm.tan.fp128(fp128 %a)
@@ -119,9 +109,7 @@ define fp128 @fmul_tanfp128_cosfp128_contract(fp128 %a) {
 define double @commutativity_cos_tan(double %a) {
 ; CHECK-LABEL: define double @commutativity_cos_tan(
 ; CHECK-SAME: double [[A:%.*]]) {
-; CHECK-NEXT:    [[COS:%.*]] = call contract double @llvm.cos.f64(double [[A]])
-; CHECK-NEXT:    [[TAN:%.*]] = call contract double @llvm.tan.f64(double [[A]])
-; CHECK-NEXT:    [[RES:%.*]] = fmul contract double [[COS]], [[TAN]]
+; CHECK-NEXT:    [[RES:%.*]] = call contract double @llvm.sin.f64(double [[A]])
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %cos = call contract double @llvm.cos.f64(double %a)
@@ -149,9 +137,7 @@ define double @tan_cos_value_mismatch(double %a, double %b) {
 define <2 x double> @fmul_tan_cos_vector(<2 x double> %a) {
 ; CHECK-LABEL: define <2 x double> @fmul_tan_cos_vector(
 ; CHECK-SAME: <2 x double> [[A:%.*]]) {
-; CHECK-NEXT:    [[TAN:%.*]] = call contract <2 x double> @llvm.tan.v2f64(<2 x double> [[A]])
-; CHECK-NEXT:    [[COS:%.*]] = call contract <2 x double> @llvm.cos.v2f64(<2 x double> [[A]])
-; CHECK-NEXT:    [[RES:%.*]] = fmul contract <2 x double> [[TAN]], [[COS]]
+; CHECK-NEXT:    [[RES:%.*]] = call contract <2 x double> @llvm.sin.v2f64(<2 x double> [[A]])
 ; CHECK-NEXT:    ret <2 x double> [[RES]]
 ;
   %tan = call contract <2 x double> @llvm.tan.v2f64(<2 x double> %a)
@@ -164,9 +150,7 @@ define <2 x double> @fmul_tan_cos_vector(<2 x double> %a) {
 define double @fmul_tan_cos_nnan_preservation(double %a) {
 ; CHECK-LABEL: define double @fmul_tan_cos_nnan_preservation(
 ; CHECK-SAME: double [[A:%.*]]) {
-; CHECK-NEXT:    [[TAN:%.*]] = call contract double @llvm.tan.f64(double [[A]])
-; CHECK-NEXT:    [[COS:%.*]] = call contract double @llvm.cos.f64(double [[A]])
-; CHECK-NEXT:    [[RES:%.*]] = fmul nnan contract double [[TAN]], [[COS]]
+; CHECK-NEXT:    [[RES:%.*]] = call nnan contract double @llvm.sin.f64(double [[A]])
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %tan = call contract double @llvm.tan.f64(double %a)
@@ -179,9 +163,7 @@ define double @fmul_tan_cos_nnan_preservation(double %a) {
 define double @fmul_tan_cos_fpmath_metadata_preservation(double %a) {
 ; CHECK-LABEL: define double @fmul_tan_cos_fpmath_metadata_preservation(
 ; CHECK-SAME: double [[A:%.*]]) {
-; CHECK-NEXT:    [[TAN:%.*]] = call contract double @llvm.tan.f64(double [[A]])
-; CHECK-NEXT:    [[COS:%.*]] = call contract double @llvm.cos.f64(double [[A]])
-; CHECK-NEXT:    [[RES:%.*]] = fmul contract double [[TAN]], [[COS]], !fpmath [[META0:![0-9]+]]
+; CHECK-NEXT:    [[RES:%.*]] = call contract double @llvm.sin.f64(double [[A]]), !fpmath [[META0:![0-9]+]]
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %tan = call contract double @llvm.tan.f64(double %a)
