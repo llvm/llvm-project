@@ -19,11 +19,14 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -779,9 +782,8 @@ Value *LowerTypeTestsModule::lowerTypeTestCall(Metadata *TypeId, CallInst *CI,
   // result, causing the comparison to fail if they are nonzero. The rotate
   // also conveniently gives us a bit offset to use during the load from
   // the bitset.
-  Value *BitOffset = B.CreateIntrinsic(
-      IntPtrTy, Intrinsic::fshr,
-      {PtrOffset, PtrOffset, B.CreateZExt(TIL.AlignLog2, IntPtrTy)});
+  Value *BitOffset = B.CreateIntrinsic(IntPtrTy, Intrinsic::fshr,
+                                       {PtrOffset, PtrOffset, TIL.AlignLog2});
 
   Value *OffsetInRange = B.CreateICmpULE(BitOffset, TIL.SizeM1);
 
@@ -1033,7 +1035,7 @@ LowerTypeTestsModule::importTypeId(StringRef TypeId) {
   if (TIL.TheKind == TypeTestResolution::ByteArray ||
       TIL.TheKind == TypeTestResolution::Inline ||
       TIL.TheKind == TypeTestResolution::AllOnes) {
-    TIL.AlignLog2 = ImportConstant("align", TTRes.AlignLog2, 8, Int8Ty);
+    TIL.AlignLog2 = ImportConstant("align", TTRes.AlignLog2, 8, IntPtrTy);
     TIL.SizeM1 =
         ImportConstant("size_m1", TTRes.SizeM1, TTRes.SizeM1BitWidth, IntPtrTy);
   }
@@ -1154,7 +1156,7 @@ void LowerTypeTestsModule::lowerTypeTestCalls(
     TypeIdLowering TIL;
     TIL.OffsetedGlobal = ConstantExpr::getGetElementPtr(
         Int8Ty, CombinedGlobalAddr, ConstantInt::get(IntPtrTy, BSI.ByteOffset)),
-    TIL.AlignLog2 = ConstantInt::get(Int8Ty, BSI.AlignLog2);
+    TIL.AlignLog2 = ConstantInt::get(IntPtrTy, BSI.AlignLog2);
     TIL.SizeM1 = ConstantInt::get(IntPtrTy, BSI.BitSize - 1);
     if (BSI.isAllOnes()) {
       TIL.TheKind = (BSI.BitSize == 1) ? TypeTestResolution::Single
@@ -2471,4 +2473,96 @@ PreservedAnalyses LowerTypeTestsPass::run(Module &M,
   if (!Changed)
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
+}
+
+PreservedAnalyses SimplifyTypeTestsPass::run(Module &M,
+                                             ModuleAnalysisManager &AM) {
+  bool Changed = false;
+  // Figure out whether inlining has exposed a constant address to a lowered
+  // type test, and remove the test if so and the address is known to pass the
+  // test. Unfortunately this pass ends up needing to reverse engineer what
+  // LowerTypeTests did; this is currently inherent to the design of ThinLTO
+  // importing where LowerTypeTests needs to run at the start.
+  //
+  // We look for things like:
+  //
+  // sub (i64 ptrtoint (ptr @_Z2fpv to i64), i64 ptrtoint (ptr
+  // @__typeid__ZTSFvvE_global_addr to i64))
+  //
+  // which gets replaced with 0 if _Z2fpv (more specifically _Z2fpv.cfi, the
+  // function referred to by the jump table) is a member of the type _ZTSFvv, as
+  // well as things like
+  //
+  // icmp eq ptr @_Z2fpv, @__typeid__ZTSFvvE_global_addr
+  //
+  // which gets replaced with true if _Z2fpv is a member.
+  for (auto &GV : M.globals()) {
+    if (!GV.getName().starts_with("__typeid_") ||
+        !GV.getName().ends_with("_global_addr"))
+      continue;
+    // __typeid_foo_global_addr -> foo
+    auto *MD = MDString::get(M.getContext(),
+                             GV.getName().substr(9, GV.getName().size() - 21));
+    auto MaySimplifyPtr = [&](Value *Ptr) {
+      if (auto *GV = dyn_cast<GlobalValue>(Ptr))
+        if (auto *CFIGV = M.getNamedValue((GV->getName() + ".cfi").str()))
+          Ptr = CFIGV;
+      return isKnownTypeIdMember(MD, M.getDataLayout(), Ptr, 0);
+    };
+    auto MaySimplifyInt = [&](Value *Op) {
+      auto *PtrAsInt = dyn_cast<ConstantExpr>(Op);
+      if (!PtrAsInt || PtrAsInt->getOpcode() != Instruction::PtrToInt)
+        return false;
+      return MaySimplifyPtr(PtrAsInt->getOperand(0));
+    };
+    for (User *U : make_early_inc_range(GV.users())) {
+      if (auto *CI = dyn_cast<ICmpInst>(U)) {
+        if (CI->getPredicate() == CmpInst::ICMP_EQ &&
+            MaySimplifyPtr(CI->getOperand(0))) {
+          // This is an equality comparison (TypeTestResolution::Single case in
+          // lowerTypeTestCall). In this case we just replace the comparison
+          // with true.
+          CI->replaceAllUsesWith(ConstantInt::getTrue(M.getContext()));
+          CI->eraseFromParent();
+          Changed = true;
+          continue;
+        }
+      }
+      auto *CE = dyn_cast<ConstantExpr>(U);
+      if (!CE || CE->getOpcode() != Instruction::PtrToInt)
+        continue;
+      for (Use &U : make_early_inc_range(CE->uses())) {
+        auto *CE = dyn_cast<ConstantExpr>(U.getUser());
+        if (U.getOperandNo() == 1 && CE &&
+            CE->getOpcode() == Instruction::Sub &&
+            MaySimplifyInt(CE->getOperand(0))) {
+          // This is a computation of PtrOffset as generated by
+          // LowerTypeTestsModule::lowerTypeTestCall above. If
+          // isKnownTypeIdMember passes we just pretend it evaluated to 0. This
+          // should cause later passes to remove the range and alignment checks.
+          // The bitset checks won't be removed but those are uncommon.
+          CE->replaceAllUsesWith(ConstantInt::get(CE->getType(), 0));
+          Changed = true;
+        }
+        auto *CI = dyn_cast<ICmpInst>(U.getUser());
+        if (U.getOperandNo() == 1 && CI &&
+            CI->getPredicate() == CmpInst::ICMP_EQ &&
+            MaySimplifyInt(CI->getOperand(0))) {
+          // This is an equality comparison. Unlike in the case above it
+          // remained as an integer compare.
+          CI->replaceAllUsesWith(ConstantInt::getTrue(M.getContext()));
+          CI->eraseFromParent();
+          Changed = true;
+        }
+      }
+    }
+  }
+
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = PreservedAnalyses::none();
+  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<PostDominatorTreeAnalysis>();
+  PA.preserve<LoopAnalysis>();
+  return PA;
 }

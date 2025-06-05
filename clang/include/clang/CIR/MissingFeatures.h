@@ -136,6 +136,7 @@ struct MissingFeatures {
   static bool cxxSupport() { return false; }
   static bool recordZeroInit() { return false; }
   static bool zeroSizeRecordMembers() { return false; }
+  static bool recordLayoutVirtualBases() { return false; }
 
   // Various handling of deferred processing in CIRGenModule.
   static bool cgmRelease() { return false; }
