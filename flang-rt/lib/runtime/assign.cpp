@@ -102,7 +102,7 @@ static RT_API_ATTRS int AllocateAssignmentLHS(
     toDim.SetByteStride(stride);
     stride *= toDim.Extent();
   }
-  int result{ReturnError(terminator, to.Allocate(kNoAsyncId))};
+  int result{ReturnError(terminator, to.Allocate(kNoAsyncObject))};
   if (result == StatOk && derived && !derived->noInitializationNeeded()) {
     result = ReturnError(terminator, Initialize(to, *derived, terminator));
   }
@@ -280,7 +280,7 @@ RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
       // entity, otherwise, the Deallocate() below will not
       // free the descriptor memory.
       newFrom.raw().attribute = CFI_attribute_allocatable;
-      auto stat{ReturnError(terminator, newFrom.Allocate(kNoAsyncId))};
+      auto stat{ReturnError(terminator, newFrom.Allocate(kNoAsyncObject))};
       if (stat == StatOk) {
         if (HasDynamicComponent(from)) {
           // If 'from' has allocatable/automatic component, we cannot
@@ -497,7 +497,7 @@ RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
       }
     } else { // elemental copies, possibly with character truncation
       for (std::size_t n{toElements}; n-- > 0;
-           to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
+          to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
         memmoveFct(to.Element<char>(toAt), from.Element<const char>(fromAt),
             toElementBytes);
       }
@@ -591,7 +591,8 @@ void RTDEF(CopyInAssign)(Descriptor &temp, const Descriptor &var,
   temp = var;
   temp.set_base_addr(nullptr);
   temp.raw().attribute = CFI_attribute_allocatable;
-  RTNAME(AssignTemporary)(temp, var, sourceFile, sourceLine);
+  temp.Allocate(kNoAsyncObject);
+  ShallowCopy(temp, var);
 }
 
 void RTDEF(CopyOutAssign)(
@@ -600,9 +601,10 @@ void RTDEF(CopyOutAssign)(
 
   // Copyout from the temporary must not cause any finalizations
   // for LHS. The variable must be properly initialized already.
-  if (var)
-    Assign(*var, temp, terminator, NoAssignFlags);
-  temp.Destroy(/*finalize=*/false, /*destroyPointers=*/false, &terminator);
+  if (var) {
+    ShallowCopy(*var, temp);
+  }
+  temp.Deallocate();
 }
 
 void RTDEF(AssignExplicitLengthCharacter)(Descriptor &to,

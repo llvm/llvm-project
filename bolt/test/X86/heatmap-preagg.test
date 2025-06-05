@@ -4,7 +4,7 @@ RUN: yaml2obj %p/Inputs/blarge_new.yaml &> %t.exe
 ## Non-BOLTed input binary
 RUN: llvm-bolt-heatmap %t.exe -o %t --pa -p %p/Inputs/blarge_new.preagg.txt \
 # Heatmaps for 64B, 128B, 1K buckets
-RUN:   --block-size=64:1,3 --line-size 64 \
+RUN:   --block-size=64,128,1K --line-size 64 \
 RUN:   2>&1 | FileCheck --check-prefix CHECK-HEATMAP %s
 RUN: FileCheck %s --check-prefix CHECK-SEC-HOT --input-file %t-section-hotness.csv
 RUN: FileCheck %s --check-prefix CHECK-HM-64 --input-file %t
@@ -17,7 +17,7 @@ RUN:   --reorder-blocks=ext-tsp --split-functions --split-strategy=cdsplit \
 RUN:   --reorder-functions=cdsort --enable-bat --dyno-stats --skip-funcs=main
 # Heatmaps for 64B, 4K, 16K, 1M buckets
 RUN: llvm-bolt-heatmap %t.out -o %t2 --pa -p %p/Inputs/blarge_new_bat.preagg.txt \
-RUN:   2>&1 | FileCheck --check-prefix CHECK-HEATMAP-BAT %s
+RUN:   --block-size=64,4KB,16kb,1MiB 2>&1 | FileCheck --check-prefix CHECK-HEATMAP-BAT %s
 RUN: FileCheck %s --check-prefix CHECK-SEC-HOT-BAT --input-file %t2-section-hotness.csv
 RUN: llvm-nm -n %t.out | FileCheck %s --check-prefix=CHECK-HOT-SYMS
 RUN: FileCheck %s --check-prefix CHECK-BAT-HM-64 --input-file %t2

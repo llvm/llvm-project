@@ -842,6 +842,9 @@ std::string Symbol::OmpFlagToClauseName(Symbol::Flag ompFlag) {
   case Symbol::Flag::OmpLinear:
     clauseName = "LINEAR";
     break;
+  case Symbol::Flag::OmpUniform:
+    clauseName = "UNIFORM";
+    break;
   case Symbol::Flag::OmpFirstPrivate:
     clauseName = "FIRSTPRIVATE";
     break;

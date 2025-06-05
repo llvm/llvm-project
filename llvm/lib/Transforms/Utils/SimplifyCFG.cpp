@@ -3067,7 +3067,9 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
         Value *Obj = getUnderlyingObject(StorePtr);
         bool ExplicitlyDereferenceableOnly;
         if (isWritableObject(Obj, ExplicitlyDereferenceableOnly) &&
-            !PointerMayBeCaptured(Obj, /*ReturnCaptures=*/false) &&
+            capturesNothing(
+                PointerMayBeCaptured(Obj, /*ReturnCaptures=*/false,
+                                     CaptureComponents::Provenance)) &&
             (!ExplicitlyDereferenceableOnly ||
              isDereferenceablePointer(StorePtr, StoreTy,
                                       LI->getDataLayout()))) {
@@ -5852,13 +5854,13 @@ static bool eliminateDeadSwitchCases(SwitchInst *SI, DomTreeUpdater *DTU,
                                      AssumptionCache *AC,
                                      const DataLayout &DL) {
   Value *Cond = SI->getCondition();
-  KnownBits Known = computeKnownBits(Cond, DL, 0, AC, SI);
+  KnownBits Known = computeKnownBits(Cond, DL, AC, SI);
 
   // We can also eliminate cases by determining that their values are outside of
   // the limited range of the condition based on how many significant (non-sign)
   // bits are in the condition value.
   unsigned MaxSignificantBitsInCond =
-      ComputeMaxSignificantBits(Cond, DL, 0, AC, SI);
+      ComputeMaxSignificantBits(Cond, DL, AC, SI);
 
   // Gather dead cases.
   SmallVector<ConstantInt *, 8> DeadCases;
@@ -7555,8 +7557,7 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
     if (Seen.insert(BB).second) {
       // Keep track of which PHIs we need as keys in PhiPredIVs below.
       for (BasicBlock *Succ : BI->successors())
-        for (PHINode &Phi : Succ->phis())
-          Phis.insert(&Phi);
+        Phis.insert_range(llvm::make_pointer_range(Succ->phis()));
       // Add the successor only if not previously visited.
       Cases.emplace_back(SwitchSuccWrapper{BB, &PhiPredIVs});
     }
@@ -8222,8 +8223,8 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
       if (CB->isArgOperand(&Use)) {
         unsigned ArgIdx = CB->getArgOperandNo(&Use);
         // Passing null to a nonnnull+noundef argument is undefined.
-        if (C->isNullValue() && CB->isPassingUndefUB(ArgIdx) &&
-            CB->paramHasAttr(ArgIdx, Attribute::NonNull))
+        if (isa<ConstantPointerNull>(C) &&
+            CB->paramHasNonNullAttr(ArgIdx, /*AllowUndefOrPoison=*/false))
           return !PtrValueMayBeModified;
         // Passing undef to a noundef argument is undefined.
         if (isa<UndefValue>(C) && CB->isPassingUndefUB(ArgIdx))

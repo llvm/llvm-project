@@ -24,6 +24,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/Analysis/FloatingPointPredicateUtils.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -5446,11 +5447,17 @@ bool AddressingModeMatcher::matchAddr(Value *Addr, unsigned Depth) {
       TPT.getRestorationPoint();
   if (ConstantInt *CI = dyn_cast<ConstantInt>(Addr)) {
     if (CI->getValue().isSignedIntN(64)) {
-      // Fold in immediates if legal for the target.
-      AddrMode.BaseOffs += CI->getSExtValue();
-      if (TLI.isLegalAddressingMode(DL, AddrMode, AccessTy, AddrSpace))
-        return true;
-      AddrMode.BaseOffs -= CI->getSExtValue();
+      // Check if the addition would result in a signed overflow.
+      int64_t Result;
+      bool Overflow =
+          AddOverflow(AddrMode.BaseOffs, CI->getSExtValue(), Result);
+      if (!Overflow) {
+        // Fold in immediates if legal for the target.
+        AddrMode.BaseOffs = Result;
+        if (TLI.isLegalAddressingMode(DL, AddrMode, AccessTy, AddrSpace))
+          return true;
+        AddrMode.BaseOffs -= CI->getSExtValue();
+      }
     }
   } else if (GlobalValue *GV = dyn_cast<GlobalValue>(Addr)) {
     // If this is a global variable, try to fold it into the addressing mode.

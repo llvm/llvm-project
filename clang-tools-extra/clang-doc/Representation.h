@@ -164,6 +164,9 @@ struct TypeInfo {
   bool operator==(const TypeInfo &Other) const { return Type == Other.Type; }
 
   Reference Type; // Referenced type in this info.
+
+  bool IsTemplate = false;
+  bool IsBuiltIn = false;
 };
 
 // Represents one template parameter.
@@ -363,6 +366,9 @@ struct FunctionInfo : public SymbolInfo {
   // specializations.
   SmallString<16> FullName;
 
+  // Function Prototype
+  SmallString<256> Prototype;
+
   // When present, this function is a template or specialization.
   std::optional<TemplateInfo> Template;
 };
@@ -518,10 +524,13 @@ struct ClangDocContext {
   ClangDocContext(tooling::ExecutionContext *ECtx, StringRef ProjectName,
                   bool PublicOnly, StringRef OutDirectory, StringRef SourceRoot,
                   StringRef RepositoryUrl, StringRef RepositoryCodeLinePrefix,
-                  StringRef Base, std::vector<std::string> UserStylesheets);
+                  StringRef Base, std::vector<std::string> UserStylesheets,
+                  bool FTimeTrace = false);
   tooling::ExecutionContext *ECtx;
   std::string ProjectName; // Name of project clang-doc is documenting.
   bool PublicOnly; // Indicates if only public declarations are documented.
+  bool FTimeTrace; // Indicates if ftime trace is turned on
+  int Granularity; // Granularity of ftime trace
   std::string OutDirectory; // Directory for outputting generated files.
   std::string SourceRoot;   // Directory where processed files are stored. Links
                             // to definition locations will only be generated if

@@ -16,9 +16,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <string>

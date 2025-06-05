@@ -1762,6 +1762,29 @@ def err_user_defined_msg_constexpr : Error<
   "%sub{subst_user_defined_msg}0 must be produced by a "
   "constant expression">;
 
+// Type traits explanations
+def note_unsatisfied_trait : Note<"%0 is not %enum_select<TraitName>{"
+                                  "%TriviallyRelocatable{trivially relocatable}"
+                                  "}1">;
+
+def note_unsatisfied_trait_reason
+    : Note<"because it "
+           "%enum_select<TraitNotSatisfiedReason>{"
+           "%Ref{is a reference type}|"
+           "%HasArcLifetime{has an ARC lifetime qualifier}|"
+           "%VLA{is a variably-modified type}|"
+           "%VBase{has a virtual base %1}|"
+           "%NRBase{has a non-trivially-relocatable base %1}|"
+           "%NRField{has a non-trivially-relocatable member %1 of type %2}|"
+           "%DeletedDtr{has a %select{deleted|user-provided}1 destructor}|"
+           "%UserProvidedCtr{has a user provided %select{copy|move}1 "
+           "constructor}|"
+           "%UserProvidedAssign{has a user provided %select{copy|move}1 "
+           "assignment operator}|"
+           "%UnionWithUserDeclaredSMF{is a union with a user-declared "
+           "%sub{select_special_member_kind}1}"
+           "}0">;
+
 def warn_consteval_if_always_true : Warning<
   "consteval if is always true in an %select{unevaluated|immediate}0 context">,
   InGroup<DiagGroup<"redundant-consteval-if">>;
@@ -3257,8 +3280,7 @@ def err_attribute_too_few_arguments : Error<
   "%0 attribute takes at least %1 argument%s1">;
 def err_attribute_invalid_vector_type : Error<"invalid vector element type %0">;
 def err_attribute_invalid_bitint_vector_type : Error<
-  "'_BitInt' %select{vector|matrix}0 element width must be %select{a power of 2|"
-  "at least as wide as 'CHAR_BIT'}1">;
+  "'_BitInt' %select{vector|matrix}0 element width must be a power of 2">;
 def err_attribute_invalid_matrix_type : Error<"invalid matrix element type %0">;
 def err_attribute_bad_neon_vector_size : Error<
   "Neon vector size must be 64 or 128 bits">;
@@ -4060,6 +4082,9 @@ def warn_thread_attribute_not_on_scoped_lockable_param : Warning<
   "%0 attribute applies to function parameters only if their type is a "
   "reference to a 'scoped_lockable'-annotated type">,
   InGroup<ThreadSafetyAttributes>, DefaultIgnore;
+def warn_thread_attribute_requires_preceded : Warning<
+  "%0 attribute on %1 must be preceded by %2 attribute">,
+  InGroup<ThreadSafetyAttributes>, DefaultIgnore;
 def err_attribute_argument_out_of_bounds_extra_info : Error<
   "%0 attribute parameter %1 is out of bounds: "
   "%plural{0:no parameters to index into|"
@@ -4083,10 +4108,10 @@ def warn_expecting_locked : Warning<
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 // FIXME: improve the error message about locks not in scope
 def warn_lock_some_predecessors : Warning<
-  "%0 '%1' is not held on every path through here">,
+  "%0 '%1' is not held on every path through here%select{| with equal reentrancy depth}2">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 def warn_expecting_lock_held_on_loop : Warning<
-  "expecting %0 '%1' to be held at start of each loop">,
+  "expecting %0 '%1' to be held at start of each loop%select{| with equal reentrancy depth}2">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 def note_locked_here : Note<"%0 acquired here">;
 def note_unlocked_here : Note<"%0 released here">;
@@ -4263,6 +4288,9 @@ def warn_impcast_integer_sign_conditional : Warning<
 def warn_impcast_integer_precision : Warning<
   "implicit conversion loses integer precision: %0 to %1">,
   InGroup<ImplicitIntConversion>, DefaultIgnore;
+def warn_impcast_integer_precision_on_negation : Warning<
+  "implicit conversion loses integer precision: %0 to %1 on negation">,
+  InGroup<ImplicitIntConversionOnNegation>, DefaultIgnore;
 def warn_impcast_high_order_zero_bits : Warning<
   "higher order bits are zeroes after implicit conversion">,
   InGroup<ImplicitIntConversion>, DefaultIgnore;
@@ -4654,7 +4682,7 @@ def err_attribute_preferred_name_arg_invalid : Error<
   "argument %0 to 'preferred_name' attribute is not a typedef for "
   "a specialization of %1">;
 def err_attribute_builtin_alias : Error<
-  "%0 attribute can only be applied to a ARM, HLSL or RISC-V builtin">;
+  "%0 attribute can only be applied to a ARM, HLSL, SPIR-V or RISC-V builtin">;
 
 // called-once attribute diagnostics.
 def err_called_once_attribute_wrong_type : Error<
@@ -6039,6 +6067,8 @@ def note_not_found_by_two_phase_lookup : Note<"%0 should be declared prior to th
 def err_undeclared_use : Error<"use of undeclared %0">;
 def warn_deprecated : Warning<"%0 is deprecated">,
     InGroup<DeprecatedDeclarations>;
+def warn_deprecated_switch_case : Warning<warn_deprecated.Summary>,
+    InGroup<DeprecatedDeclarationsSwitchCase>;
 def note_from_diagnose_if : Note<"from 'diagnose_if' attribute on %0:">;
 def warn_property_method_deprecated :
     Warning<"property access is using %0 method which is deprecated">,
@@ -12445,6 +12475,10 @@ def warn_zero_as_null_pointer_constant : Warning<
   "zero as null pointer constant">,
   InGroup<DiagGroup<"zero-as-null-pointer-constant">>, DefaultIgnore;
 
+def warn_not_eliding_copy_on_return : Warning<
+  "not eliding copy on return">, 
+  InGroup<DiagGroup<"nrvo">>, DefaultIgnore;
+
 def err_nullability_cs_multilevel : Error<
   "nullability keyword %0 cannot be applied to multi-level pointer type %1">;
 def note_nullability_type_specifier : Note<
@@ -12708,7 +12742,7 @@ def err_builtin_invalid_arg_type: Error<
   // An 'or' if non-empty second and third components are combined
   "%plural{0:|:%plural{0:|:or }2}3"
   // Third component: floating-point types
-  "%select{|floating-point}3"
+  "%select{|floating-point|16 or 32 bit floating-point}3"
   // A space after a non-empty third component
   "%plural{0:|: }3"
   "%plural{[0,3]:type|:types}1 (was %4)">;
@@ -12847,6 +12881,16 @@ def err_bit_int_bad_size : Error<"%select{signed|unsigned}0 _BitInt must "
 def err_bit_int_max_size : Error<"%select{signed|unsigned}0 _BitInt of bit "
                                  "sizes greater than %1 not supported">;
 
+// SPIR-V builtins diagnostics
+def err_spirv_invalid_target : Error<
+   "builtin requires %select{spirv|spirv32 or spirv64}0 target">;
+def err_spirv_builtin_generic_cast_invalid_arg : Error<
+  "expecting a pointer argument to the generic address space">;
+def err_spirv_enum_not_int : Error<
+   "%0{storage class} argument for SPIR-V builtin is not a 32-bits integer">;
+def err_spirv_enum_not_valid : Error<
+   "invalid value for %select{storage class}0 argument">;
+
 // errors of expect.with.probability
 def err_probability_not_constant_float : Error<
    "probability argument to __builtin_expect_with_probability must be constant "
@@ -12911,7 +12955,7 @@ def warn_hlsl_deprecated_register_type_i: Warning<"binding type 'i' ignored. The
 def err_hlsl_unsupported_register_number : Error<"register number should be an integer">;
 def err_hlsl_expected_space : Error<"invalid space specifier '%0' used; expected 'space' followed by an integer, like space1">;
 def err_hlsl_space_on_global_constant : Error<"register space cannot be specified on global constants">;
-def warn_hlsl_implicit_binding : Warning<"resource has implicit register binding">, InGroup<HLSLImplicitBinding>, DefaultError;
+def warn_hlsl_implicit_binding : Warning<"resource has implicit register binding">, InGroup<HLSLImplicitBinding>, DefaultIgnore;
 def warn_hlsl_packoffset_mix : Warning<"cannot mix packoffset elements with nonpackoffset elements in a cbuffer">,
     InGroup<HLSLMixPackOffset>;
 def err_hlsl_packoffset_overlap : Error<"packoffset overlap between %0, %1">;
@@ -12966,6 +13010,9 @@ def err_hlsl_expect_arg_const_int_one_or_neg_one: Error<
   "argument %0 must be constant integer 1 or -1">;
 def err_invalid_hlsl_resource_type: Error<
   "invalid __hlsl_resource_t type attributes">;
+
+def err_hlsl_spirv_only: Error<"%0 is only available for the SPIR-V target">;
+def err_hlsl_vk_literal_must_contain_constant: Error<"the argument to vk::Literal must be a vk::integral_constant">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<

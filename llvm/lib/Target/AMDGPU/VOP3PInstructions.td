@@ -829,12 +829,12 @@ class MFMA_F8F6F4_WithSizeTable_Helper<VOP3_Pseudo  ps, string F8F8Op> :
 // Currently assumes scaled instructions never have abid
 class MAIFrag<SDPatternOperator Op, code pred, bit HasAbid = true, bit Scaled = false> : PatFrag <
   !if(Scaled, (ops node:$src0, node:$src1, node:$src2, node:$cbsz, node:$blgp,
-                   node:$scale_src0_opsel, node:$scale_src0,
-                   node:$scale_src1_opsel, node:$scale_src1),
+                   node:$src0_modifiers, node:$scale_src0,
+                   node:$src1_modifiers, node:$scale_src1),
               !con((ops node:$src0, node:$src1, node:$src2, node:$cbsz),
                    !if(HasAbid, (ops node:$abid), (ops)),
                     (ops node:$blgp))),
-  !if(Scaled, (Op $src0, $src1, $src2, $cbsz, $blgp, $scale_src0_opsel, $scale_src0, $scale_src1_opsel, $scale_src1),
+  !if(Scaled, (Op $src0, $src1, $src2, $cbsz, $blgp, $src0_modifiers, $scale_src0, $src1_modifiers, $scale_src1),
               !if(HasAbid, (Op $src0, $src1, $src2, $cbsz, $abid, $blgp),
                            (Op $src0, $src1, $src2, $cbsz, $blgp))),
   pred
@@ -895,12 +895,12 @@ class ScaledMAIInst<string OpName, MAIInst BaseInst, SDPatternOperator node> :
   let InOperandList = !con(BaseInst.InOperandList,
     (ins VSrc_b32:$scale_src0,
          VSrc_b32:$scale_src1,
-         op_sel0:$scale_src0_opsel,
-         op_sel_hi0:$scale_src1_opsel));
+         op_sel0:$src0_modifiers,
+         op_sel_hi0:$src1_modifiers));
   let AsmOperands =
     "$vdst, $src0, $src1, $src2, $scale_src0, $scale_src1"
-    "$scale_src0_opsel$scale_src1_opsel$cbsz$blgp";
-
+    "$src0_modifiers$src1_modifiers$cbsz$blgp";
+  let AsmMatchConverter = "cvtScaledMFMA";
   let FixedSize = 1;
   let Size = 16;
 }
@@ -2041,7 +2041,6 @@ multiclass VOP3PX_Real_ScaledMFMA<bits<7> op> {
   defvar PS_VCD = !cast<VOP3_Pseudo>(NAME # "_vgprcd" # "_e64");
   defvar Name = PS_ACD.Mnemonic;
   defvar F8F8Name = !substr(NAME, 0, !sub(!size(NAME), !size("_fN_fM")))#"_f8_f8";
-
   let SubtargetPredicate = HasGFX950Insts,
       DecoderNamespace = "GFX940",
       AsmString = Name # PS_ACD.AsmOperands, Constraints = "" in {

@@ -21,7 +21,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/Support/Debug.h"
