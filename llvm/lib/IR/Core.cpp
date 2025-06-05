@@ -432,11 +432,13 @@ void LLVMAddModuleFlag(LLVMModuleRef M, LLVMModuleFlagBehavior Behavior,
 }
 
 LLVMBool LLVMIsNewDbgInfoFormat(LLVMModuleRef M) {
-  return unwrap(M)->IsNewDbgInfoFormat;
+  return true;
 }
 
 void LLVMSetIsNewDbgInfoFormat(LLVMModuleRef M, LLVMBool UseNewFormat) {
-  unwrap(M)->setIsNewDbgInfoFormat(UseNewFormat);
+  if (!UseNewFormat)
+    llvm_unreachable("LLVM no longer supports intrinsic based debug-info");
+  (void)M;
 }
 
 /*--.. Printing modules ....................................................--*/
