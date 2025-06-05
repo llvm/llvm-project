@@ -19,8 +19,6 @@
 #include "src/__support/CPP/type_traits.h" // cpp::is_same_v
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
-#include "src/string/memory_utils/inline_bzero.h"
-#include "src/string/memory_utils/inline_memcpy.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
@@ -220,7 +218,7 @@ LIBC_INLINE size_t strlcpy(char *__restrict dst, const char *__restrict src,
   if (!size)
     return len;
   size_t n = len < size - 1 ? len : size - 1;
-  inline_memcpy(dst, src, n);
+  __builtin_memcpy(dst, src, n);
   dst[n] = '\0';
   return len;
 }
