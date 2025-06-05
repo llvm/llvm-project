@@ -1513,6 +1513,7 @@ constexpr bool mayTailCallThisCC(CallingConv::ID CC) {
   switch (CC) {
   case CallingConv::C:
   case CallingConv::AMDGPU_Gfx:
+  case CallingConv::AMDGPU_Gfx_WholeWave:
     return true;
   default:
     return canGuaranteeTCO(CC);

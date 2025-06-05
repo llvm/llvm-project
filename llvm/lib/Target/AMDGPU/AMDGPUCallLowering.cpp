@@ -1004,8 +1004,14 @@ static unsigned getCallOpcode(const MachineFunction &CallerF, bool IsIndirect,
     return IsWave32 ? AMDGPU::SI_CS_CHAIN_TC_W32 : AMDGPU::SI_CS_CHAIN_TC_W64;
   }
 
-  return CC == CallingConv::AMDGPU_Gfx ? AMDGPU::SI_TCRETURN_GFX :
-                                         AMDGPU::SI_TCRETURN;
+  if (CallerF.getFunction().getCallingConv() ==
+      CallingConv::AMDGPU_Gfx_WholeWave)
+    return AMDGPU::SI_TCRETURN_GFX_WholeWave;
+
+  if (CC == CallingConv::AMDGPU_Gfx || CC == CallingConv::AMDGPU_Gfx_WholeWave)
+    return AMDGPU::SI_TCRETURN_GFX;
+
+  return AMDGPU::SI_TCRETURN;
 }
 
 // Add operands to call instruction to track the callee.
@@ -1284,6 +1290,13 @@ bool AMDGPUCallLowering::lowerTailCall(
   unsigned Opc = getCallOpcode(MF, Info.Callee.isReg(), /*IsTailCall*/ true,
                                ST.isWave32(), CalleeCC, IsDynamicVGPRChainCall);
   auto MIB = MIRBuilder.buildInstrNoInsert(Opc);
+
+  if (FuncInfo->isWholeWaveFunction())
+    addOriginalExecToReturn(MF, MIB);
+
+  // Keep track of the index of the next operand to be added to the call
+  unsigned CalleeIdx = MIB->getNumOperands();
+
   if (!addCallTargetOperands(MIB, MIRBuilder, Info, IsDynamicVGPRChainCall))
     return false;
 
@@ -1401,7 +1414,7 @@ bool AMDGPUCallLowering::lowerTailCall(
   // If we have -tailcallopt, we need to adjust the stack. We'll do the call
   // sequence start and end here.
   if (!IsSibCall) {
-    MIB->getOperand(1).setImm(FPDiff);
+    MIB->getOperand(CalleeIdx + 1).setImm(FPDiff);
     CallSeqStart.addImm(NumBytes).addImm(0);
     // End the call sequence *before* emitting the call. Normally, we would
     // tidy the frame up after the call. However, here, we've laid out the
@@ -1413,16 +1426,24 @@ bool AMDGPUCallLowering::lowerTailCall(
   // Now we can add the actual call instruction to the correct basic block.
   MIRBuilder.insertInstr(MIB);
 
+  // If this is a whole wave tail call, we need to constrain the register for
+  // the original EXEC.
+  if (MIB->getOpcode() == AMDGPU::SI_TCRETURN_GFX_WholeWave) {
+    MIB->getOperand(0).setReg(
+        constrainOperandRegClass(MF, *TRI, MRI, *TII, *ST.getRegBankInfo(),
+                                 *MIB, MIB->getDesc(), MIB->getOperand(0), 0));
+  }
+
   // If Callee is a reg, since it is used by a target specific
   // instruction, it must have a register class matching the
   // constraint of that instruction.
 
   // FIXME: We should define regbankselectable call instructions to handle
   // divergent call targets.
-  if (MIB->getOperand(0).isReg()) {
-    MIB->getOperand(0).setReg(
-        constrainOperandRegClass(MF, *TRI, MRI, *TII, *ST.getRegBankInfo(),
-                                 *MIB, MIB->getDesc(), MIB->getOperand(0), 0));
+  if (MIB->getOperand(CalleeIdx).isReg()) {
+    MIB->getOperand(CalleeIdx).setReg(constrainOperandRegClass(
+        MF, *TRI, MRI, *TII, *ST.getRegBankInfo(), *MIB, MIB->getDesc(),
+        MIB->getOperand(CalleeIdx), CalleeIdx));
   }
 
   MF.getFrameInfo().setHasTailCall();

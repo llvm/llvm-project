@@ -4260,6 +4260,11 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
       break;
     }
 
+    // If the caller is a whole wave function, we need to use a special opcode
+    // so we can patch up EXEC.
+    if (Info->isWholeWaveFunction())
+      OPC = AMDGPUISD::TC_RETURN_GFX_WholeWave;
+
     return DAG.getNode(OPC, DL, MVT::Other, Ops);
   }
 
@@ -6023,6 +6028,7 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.eraseFromParent();
     return SplitBB;
   }
+  case AMDGPU::SI_TCRETURN_GFX_WholeWave:
   case AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN: {
     assert(MFI->isWholeWaveFunction());
 
