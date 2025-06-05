@@ -13,6 +13,7 @@
 # CUSTOM-NEXT:   Class:           ELFCLASS64
 # CUSTOM-NEXT:   Data:            ELFDATA2LSB
 # CUSTOM-NEXT:   Type:            ET_EXEC
+# CUSTOM-NEXT:   Flags:           [ ]
 # CUSTOM-NEXT:   SectionHeaderStringTable: .foo
 # CUSTOM-NEXT: ...
 
@@ -45,6 +46,7 @@ Sections:
 # XINDEX-NEXT:   Class:           ELFCLASS64
 # XINDEX-NEXT:   Data:            ELFDATA2LSB
 # XINDEX-NEXT:   Type:            ET_EXEC
+# XINDEX-NEXT:   Flags:           [ ]
 # XINDEX-NEXT:   SectionHeaderStringTable: .foo
 # XINDEX-NEXT: Sections:
 # XINDEX-NEXT:   - Type:            SHT_NULL
@@ -63,6 +65,7 @@ Sections:
 # STRTAB-NEXT:   Class:           ELFCLASS64
 # STRTAB-NEXT:   Data:            ELFDATA2LSB
 # STRTAB-NEXT:   Type:            ET_EXEC
+# STRTAB-NEXT:   Flags:           [ ]
 # STRTAB-NEXT:   SectionHeaderStringTable: .strtab
 # STRTAB-NEXT: Symbols:
 # STRTAB-NEXT:   - Name:            boz
@@ -91,6 +94,7 @@ Symbols:
 # DYNSTR-NEXT:   Class:           ELFCLASS64
 # DYNSTR-NEXT:   Data:            ELFDATA2LSB
 # DYNSTR-NEXT:   Type:            ET_EXEC
+# DYNSTR-NEXT:   Flags:           [ ]
 # DYNSTR-NEXT:   SectionHeaderStringTable: .dynstr
 # DYNSTR-NEXT: Sections:
 # DYNSTR-NEXT:   - Name:            .dynsym
@@ -127,6 +131,7 @@ DynamicSymbols:
 # DEFAULT-NEXT:   Class:           ELFCLASS64
 # DEFAULT-NEXT:   Data:            ELFDATA2LSB
 # DEFAULT-NEXT:   Type:            ET_EXEC
+# DEFAULT-NEXT:   Flags:           [ ]
 # DEFAULT-NEXT: ...
 
 --- !ELF
@@ -156,6 +161,7 @@ Sections:
 # DEFXINDEX-NEXT:   Class:           ELFCLASS64
 # DEFXINDEX-NEXT:   Data:            ELFDATA2LSB
 # DEFXINDEX-NEXT:   Type:            ET_EXEC
+# DEFXINDEX-NEXT:   Flags:           [ ]
 # DEFXINDEX-NEXT: Sections:
 # DEFXINDEX-NEXT:   - Type:            SHT_NULL
 # DEFXINDEX-NEXT:     Link:            .shstrtab
@@ -181,6 +187,7 @@ Sections:
 # NOHDRS-NEXT:   Class:  ELFCLASS64
 # NOHDRS-NEXT:   Data:   ELFDATA2LSB
 # NOHDRS-NEXT:   Type:   ET_EXEC
+# NOHDRS-NEXT:   Flags:  [ ]
 ## FIXME: There should be a SectionHeaderTable key as per the input.
 # NOHDRS-NEXT: ...
 
@@ -195,6 +202,7 @@ Sections:
 # REORDER-NEXT:   Class:           ELFCLASS64
 # REORDER-NEXT:   Data:            ELFDATA2LSB
 # REORDER-NEXT:   Type:            ET_EXEC
+# REORDER-NEXT:   Flags:           [ ]
 # REORDER-NEXT:   SectionHeaderStringTable: .foo
 # REORDER-NEXT: Sections:
 # REORDER-NEXT:   - Name:            .baz
@@ -243,6 +251,7 @@ Sections:
 # PLACED-NEXT:   Class:           ELFCLASS64
 # PLACED-NEXT:   Data:            ELFDATA2LSB
 # PLACED-NEXT:   Type:            ET_EXEC
+# PLACED-NEXT:   Flags:           [ ]
 # PLACED-NEXT:   SectionHeaderStringTable: .foo
 # PLACED-NEXT: Sections:
 # PLACED-NEXT:   - Name:            .baz
@@ -275,6 +284,7 @@ Sections:
 # PROPS-NEXT:   Class: ELFCLASS64
 # PROPS-NEXT:   Data:  ELFDATA2LSB
 # PROPS-NEXT:   Type:  ET_EXEC
+# PROPS-NEXT:   Flags: [ ]
 # PROPS-NEXT:   SectionHeaderStringTable: .foo
 # PROPS-NEXT: Sections:
 # PROPS-NEXT:   - Name:  .foo
@@ -322,6 +332,7 @@ Sections:
 # UNIQUIFY1-NEXT:   Class: ELFCLASS64
 # UNIQUIFY1-NEXT:   Data:  ELFDATA2LSB
 # UNIQUIFY1-NEXT:   Type:  ET_EXEC
+# UNIQUIFY1-NEXT:   Flags: [ ]
 # UNIQUIFY1-NEXT:   SectionHeaderStringTable: '.strings (1)'
 # UNIQUIFY1-NEXT: Sections:
 # UNIQUIFY1-NEXT:   - Name:  .strings
@@ -349,6 +360,7 @@ Sections:
 # UNIQUIFY2-NEXT:   Class: ELFCLASS64
 # UNIQUIFY2-NEXT:   Data:  ELFDATA2LSB
 # UNIQUIFY2-NEXT:   Type:  ET_EXEC
+# UNIQUIFY2-NEXT:   Flags: [ ]
 # UNIQUIFY2-NEXT:   SectionHeaderStringTable: '[[NAME]] (1)'
 # UNIQUIFY2-NEXT: Symbols:
 # UNIQUIFY2-NEXT:   - Name:  foo
@@ -380,6 +392,7 @@ Symbols:
 # UNIQUIFY3-NEXT:   Class: ELFCLASS64
 # UNIQUIFY3-NEXT:   Data:  ELFDATA2LSB
 # UNIQUIFY3-NEXT:   Type:  ET_EXEC
+# UNIQUIFY3-NEXT:   Flags: [ ]
 # UNIQUIFY3-NEXT:   SectionHeaderStringTable: '[[NAME]] (1)'
 ## FIXME: The .dynsym and .dynstr sections shouldn't need to be emitted, since
 ##        their values are the default produced by yaml2obj.
@@ -428,6 +441,7 @@ DynamicSymbols:
 # UNIQUIFY6-NEXT:   Class:           ELFCLASS64
 # UNIQUIFY6-NEXT:   Data:            ELFDATA2LSB
 # UNIQUIFY6-NEXT:   Type:            ET_EXEC
+# UNIQUIFY6-NEXT:   Flags: [ ]
 # UNIQUIFY6-NEXT:   SectionHeaderStringTable: '.debug_str (1)'
 # UNIQUIFY6-NEXT: DWARF:
 # UNIQUIFY6-NEXT:   debug_str:

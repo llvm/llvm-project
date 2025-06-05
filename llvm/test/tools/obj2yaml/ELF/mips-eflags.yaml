@@ -258,7 +258,7 @@ FileHeader:
 # RUN: yaml2obj --docnum=25 %s -o %t-arch-1b
 # RUN: obj2yaml %t-arch-1b | FileCheck %s --check-prefix=ARCH-1
 
-# ARCH-1-NOT: Flags:
+# ARCH-1-NOT: Flags: [ ]
 
 --- !ELF
 FileHeader:
