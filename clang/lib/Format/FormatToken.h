@@ -114,6 +114,7 @@ namespace format {
   TYPE(LineComment)                                                            \
   TYPE(MacroBlockBegin)                                                        \
   TYPE(MacroBlockEnd)                                                          \
+  TYPE(MicrosoftCallingConvention)                                             \
   TYPE(ModulePartitionColon)                                                   \
   TYPE(NamespaceLBrace)                                                        \
   TYPE(NamespaceMacro)                                                         \

@@ -17504,6 +17504,12 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   verifyFormat("A::A() : a(1) {}", SpaceFuncDecl);
   verifyFormat("void f () __attribute__((asdf));", SpaceFuncDecl);
   verifyFormat("void __attribute__((asdf)) f ();", SpaceFuncDecl);
+  verifyFormat("void __stdcall f ();", SpaceFuncDecl);
+  verifyFormat("void __cdecl f ();", SpaceFuncDecl);
+  verifyFormat("void __fastcall f ();", SpaceFuncDecl);
+  verifyFormat("void __stdcall f() {}", SpaceFuncDecl);
+  verifyFormat("void __cdecl f() {}", SpaceFuncDecl);
+  verifyFormat("void __fastcall f() {}", SpaceFuncDecl);
   verifyFormat("#define A(x) x", SpaceFuncDecl);
   verifyFormat("#define A (x) x", SpaceFuncDecl);
   verifyFormat("#if defined(x)\n"
@@ -17540,6 +17546,12 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   verifyFormat("A::A () : a(1) {}", SpaceFuncDef);
   verifyFormat("void f() __attribute__((asdf));", SpaceFuncDef);
   verifyFormat("void __attribute__((asdf)) f();", SpaceFuncDef);
+  verifyFormat("void __stdcall f();", SpaceFuncDef);
+  verifyFormat("void __cdecl f();", SpaceFuncDef);
+  verifyFormat("void __fastcall f();", SpaceFuncDef);
+  verifyFormat("void __stdcall f () {}", SpaceFuncDef);
+  verifyFormat("void __cdecl f () {}", SpaceFuncDef);
+  verifyFormat("void __fastcall f () {}", SpaceFuncDef);
   verifyFormat("#define A(x) x", SpaceFuncDef);
   verifyFormat("#define A (x) x", SpaceFuncDef);
   verifyFormat("#if defined(x)\n"

@@ -1802,6 +1802,14 @@ private:
       if (Style.isTableGen() && !parseTableGenValue())
         return false;
       break;
+    case tok::kw___cdecl:
+    case tok::kw___stdcall:
+    case tok::kw___fastcall:
+    case tok::kw___thiscall:
+    case tok::kw___regcall:
+    case tok::kw___vectorcall:
+      Tok->setType(TT_MicrosoftCallingConvention);
+      break;
     default:
       break;
     }
@@ -2610,6 +2618,13 @@ private:
 
     // Skip "const" as it does not have an influence on whether this is a name.
     FormatToken *PreviousNotConst = Tok.getPreviousNonComment();
+
+    // Skip Microsoft calling conventions, as they come before the function
+    // name, but after the return type
+    while (PreviousNotConst &&
+           PreviousNotConst->is(TT_MicrosoftCallingConvention)) {
+      PreviousNotConst = PreviousNotConst->getPreviousNonComment();
+    }
 
     // For javascript const can be like "let" or "var"
     if (!Style.isJavaScript())
