@@ -230,6 +230,22 @@ const char *SBTypeSummary::GetData() {
   return nullptr;
 }
 
+uint32_t SBTypeSummary::GetPtrMatchDepth() {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (!IsValid())
+    return 0;
+  return m_opaque_sp->GetPtrMatchDepth();
+}
+
+void SBTypeSummary::SetPtrMatchDepth(uint32_t ptr_match_depth) {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (!IsValid())
+    return;
+  return m_opaque_sp->SetPtrMatchDepth(ptr_match_depth);
+}
+
 uint32_t SBTypeSummary::GetOptions() {
   LLDB_INSTRUMENT_VA(this);
 

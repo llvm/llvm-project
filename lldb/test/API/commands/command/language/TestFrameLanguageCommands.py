@@ -5,6 +5,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class TestCase(TestBase):
+    @skipUnlessDarwin
     def test(self):
         self.build()
         _, _, thread, _ = lldbutil.run_to_source_breakpoint(

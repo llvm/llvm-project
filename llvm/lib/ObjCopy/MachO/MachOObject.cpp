@@ -8,7 +8,6 @@
 
 #include "MachOObject.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/Support/SystemZ/zOSSupport.h"
 #include <unordered_set>
 
 using namespace llvm;

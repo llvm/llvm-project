@@ -281,8 +281,9 @@ public:
   bool shouldFoldConstantShiftPairToMask(const SDNode *N,
                                          CombineLevel Level) const override;
 
-  bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
-                                            EVT VT) const override;
+  bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode, EVT VT,
+                                            unsigned SelectOpcode, SDValue X,
+                                            SDValue Y) const override;
 
   /// Returns true if it is beneficial to convert a load of a constant
   /// to just the constant itself.
@@ -538,9 +539,6 @@ private:
   /// Keep a pointer to the AArch64Subtarget around so that we can
   /// make the right decision when generating code for different targets.
   const AArch64Subtarget *Subtarget;
-
-  llvm::BumpPtrAllocator BumpAlloc;
-  llvm::StringSaver Saver{BumpAlloc};
 
   bool isExtFreeImpl(const Instruction *Ext) const override;
 

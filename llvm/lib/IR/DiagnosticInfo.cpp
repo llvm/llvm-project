@@ -296,10 +296,10 @@ void DiagnosticInfoOptimizationBase::print(DiagnosticPrinter &DP) const {
 OptimizationRemark::OptimizationRemark(const char *PassName,
                                        StringRef RemarkName,
                                        const DiagnosticLocation &Loc,
-                                       const Value *CodeRegion)
-    : DiagnosticInfoIROptimization(
-          DK_OptimizationRemark, DS_Remark, PassName, RemarkName,
-          *cast<BasicBlock>(CodeRegion)->getParent(), Loc, CodeRegion) {}
+                                       const BasicBlock *CodeRegion)
+    : DiagnosticInfoIROptimization(DK_OptimizationRemark, DS_Remark, PassName,
+                                   RemarkName, *CodeRegion->getParent(), Loc,
+                                   CodeRegion) {}
 
 OptimizationRemark::OptimizationRemark(const char *PassName,
                                        StringRef RemarkName,
@@ -327,10 +327,10 @@ bool OptimizationRemark::isEnabled() const {
 
 OptimizationRemarkMissed::OptimizationRemarkMissed(
     const char *PassName, StringRef RemarkName, const DiagnosticLocation &Loc,
-    const Value *CodeRegion)
-    : DiagnosticInfoIROptimization(
-          DK_OptimizationRemarkMissed, DS_Remark, PassName, RemarkName,
-          *cast<BasicBlock>(CodeRegion)->getParent(), Loc, CodeRegion) {}
+    const BasicBlock *CodeRegion)
+    : DiagnosticInfoIROptimization(DK_OptimizationRemarkMissed, DS_Remark,
+                                   PassName, RemarkName,
+                                   *CodeRegion->getParent(), Loc, CodeRegion) {}
 
 OptimizationRemarkMissed::OptimizationRemarkMissed(const char *PassName,
                                                    StringRef RemarkName,
@@ -355,10 +355,10 @@ bool OptimizationRemarkMissed::isEnabled() const {
 
 OptimizationRemarkAnalysis::OptimizationRemarkAnalysis(
     const char *PassName, StringRef RemarkName, const DiagnosticLocation &Loc,
-    const Value *CodeRegion)
-    : DiagnosticInfoIROptimization(
-          DK_OptimizationRemarkAnalysis, DS_Remark, PassName, RemarkName,
-          *cast<BasicBlock>(CodeRegion)->getParent(), Loc, CodeRegion) {}
+    const BasicBlock *CodeRegion)
+    : DiagnosticInfoIROptimization(DK_OptimizationRemarkAnalysis, DS_Remark,
+                                   PassName, RemarkName,
+                                   *CodeRegion->getParent(), Loc, CodeRegion) {}
 
 OptimizationRemarkAnalysis::OptimizationRemarkAnalysis(const char *PassName,
                                                        StringRef RemarkName,
@@ -370,10 +370,9 @@ OptimizationRemarkAnalysis::OptimizationRemarkAnalysis(const char *PassName,
 
 OptimizationRemarkAnalysis::OptimizationRemarkAnalysis(
     enum DiagnosticKind Kind, const char *PassName, StringRef RemarkName,
-    const DiagnosticLocation &Loc, const Value *CodeRegion)
+    const DiagnosticLocation &Loc, const BasicBlock *CodeRegion)
     : DiagnosticInfoIROptimization(Kind, DS_Remark, PassName, RemarkName,
-                                   *cast<BasicBlock>(CodeRegion)->getParent(),
-                                   Loc, CodeRegion) {}
+                                   *CodeRegion->getParent(), Loc, CodeRegion) {}
 
 OptimizationRemarkAnalysis::OptimizationRemarkAnalysis(const char *PassName,
                                                        StringRef RemarkName,
@@ -399,10 +398,10 @@ void DiagnosticInfoSrcMgr::print(DiagnosticPrinter &DP) const {
 
 DiagnosticInfoOptimizationFailure::DiagnosticInfoOptimizationFailure(
     const char *PassName, StringRef RemarkName, const DiagnosticLocation &Loc,
-    const Value *CodeRegion)
-    : DiagnosticInfoIROptimization(
-          DK_OptimizationFailure, DS_Warning, PassName, RemarkName,
-          *cast<BasicBlock>(CodeRegion)->getParent(), Loc, CodeRegion) {}
+    const BasicBlock *CodeRegion)
+    : DiagnosticInfoIROptimization(DK_OptimizationFailure, DS_Warning, PassName,
+                                   RemarkName, *CodeRegion->getParent(), Loc,
+                                   CodeRegion) {}
 
 bool DiagnosticInfoOptimizationFailure::isEnabled() const {
   // Only print warnings.

@@ -245,6 +245,11 @@ Changes in existing checks
   tolerating fix-it breaking compilation when functions is used as pointers
   to avoid matching usage of functions within the current compilation unit.
 
+- Improved :doc:`readability-math-missing-parentheses
+  <clang-tidy/checks/readability/math-missing-parentheses>` check by fixing
+  false negatives where math expressions are the operand of assignment operators
+  or comparison operators.
+
 - Improved :doc:`readability-qualified-auto
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option
   `AllowedTypes`, that excludes specified types from adding qualifiers.

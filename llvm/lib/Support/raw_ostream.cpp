@@ -13,7 +13,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/config.h"
-#include "llvm/Support/AutoConvert.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Duration.h"
 #include "llvm/Support/ErrorHandling.h"

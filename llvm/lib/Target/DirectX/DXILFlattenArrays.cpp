@@ -272,8 +272,9 @@ bool DXILFlattenArraysVisitor::visitGetElementPtrInstInGEPChainBase(
 
   ArrayType *FlattenedArrayType = GEPInfo.ParentArrayType;
   Value *FlatGEP =
-      Builder.CreateGEP(FlattenedArrayType, GEPInfo.ParendOperand, FlatIndex,
-                        GEP.getName() + ".flat", GEP.isInBounds());
+      Builder.CreateGEP(FlattenedArrayType, GEPInfo.ParendOperand,
+                        {Builder.getInt32(0), FlatIndex},
+                        GEP.getName() + ".flat", GEP.getNoWrapFlags());
 
   GEP.replaceAllUsesWith(FlatGEP);
   GEP.eraseFromParent();

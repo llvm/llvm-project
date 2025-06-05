@@ -576,17 +576,17 @@ define <3 x i128> @v3i128(<3 x i128> %d, <3 x i128> %e) {
 ; CHECK-GI-NEXT:    mul x9, x2, x10
 ; CHECK-GI-NEXT:    umulh x14, x2, x10
 ; CHECK-GI-NEXT:    madd x10, x3, x10, x13
-; CHECK-GI-NEXT:    ldp x13, x15, [sp, #16]
+; CHECK-GI-NEXT:    ldp x15, x13, [sp, #16]
 ; CHECK-GI-NEXT:    mov x2, x9
 ; CHECK-GI-NEXT:    umulh x11, x0, x6
 ; CHECK-GI-NEXT:    mov x0, x8
-; CHECK-GI-NEXT:    mul x15, x4, x15
+; CHECK-GI-NEXT:    mul x13, x4, x13
 ; CHECK-GI-NEXT:    add x3, x10, x14
-; CHECK-GI-NEXT:    umulh x16, x4, x13
+; CHECK-GI-NEXT:    umulh x16, x4, x15
 ; CHECK-GI-NEXT:    add x1, x12, x11
-; CHECK-GI-NEXT:    madd x15, x5, x13, x15
-; CHECK-GI-NEXT:    mul x4, x4, x13
-; CHECK-GI-NEXT:    add x5, x15, x16
+; CHECK-GI-NEXT:    madd x13, x5, x15, x13
+; CHECK-GI-NEXT:    mul x4, x4, x15
+; CHECK-GI-NEXT:    add x5, x13, x16
 ; CHECK-GI-NEXT:    ret
 entry:
   %s = mul <3 x i128> %d, %e
@@ -638,14 +638,14 @@ define <4 x i128> @v4i128(<4 x i128> %d, <4 x i128> %e) {
 ; CHECK-GI-NEXT:    umulh x17, x4, x15
 ; CHECK-GI-NEXT:    add x3, x13, x14
 ; CHECK-GI-NEXT:    madd x15, x5, x15, x16
-; CHECK-GI-NEXT:    ldp x16, x18, [sp, #48]
+; CHECK-GI-NEXT:    ldp x18, x16, [sp, #48]
 ; CHECK-GI-NEXT:    mov x4, x10
-; CHECK-GI-NEXT:    mul x18, x6, x18
-; CHECK-GI-NEXT:    umulh x0, x6, x16
+; CHECK-GI-NEXT:    mul x16, x6, x16
+; CHECK-GI-NEXT:    umulh x0, x6, x18
 ; CHECK-GI-NEXT:    add x5, x15, x17
-; CHECK-GI-NEXT:    madd x18, x7, x16, x18
-; CHECK-GI-NEXT:    mul x6, x6, x16
-; CHECK-GI-NEXT:    add x7, x18, x0
+; CHECK-GI-NEXT:    madd x16, x7, x18, x16
+; CHECK-GI-NEXT:    mul x6, x6, x18
+; CHECK-GI-NEXT:    add x7, x16, x0
 ; CHECK-GI-NEXT:    mov x0, x8
 ; CHECK-GI-NEXT:    ret
 entry:

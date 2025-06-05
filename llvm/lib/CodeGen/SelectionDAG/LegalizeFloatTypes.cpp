@@ -1143,6 +1143,9 @@ bool DAGTypeLegalizer::SoftenFloatOperand(SDNode *N, unsigned OpNo) {
     Res = SoftenFloatOp_ATOMIC_STORE(N, OpNo);
     break;
   case ISD::FCOPYSIGN:   Res = SoftenFloatOp_FCOPYSIGN(N); break;
+  case ISD::FAKE_USE:
+    Res = SoftenFloatOp_FAKE_USE(N);
+    break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
@@ -1475,6 +1478,12 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_LLRINT(SDNode *N) {
                                              RTLIB::LLRINT_F80,
                                              RTLIB::LLRINT_F128,
                                              RTLIB::LLRINT_PPCF128));
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatOp_FAKE_USE(SDNode *N) {
+  SDValue Op1 = BitConvertToInteger(N->getOperand(1));
+  return DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0),
+                     N->getOperand(0), Op1);
 }
 
 //===----------------------------------------------------------------------===//

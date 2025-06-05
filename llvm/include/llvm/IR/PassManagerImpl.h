@@ -19,9 +19,10 @@
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/PrettyStackTrace.h"
 
-extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
+LLVM_ABI extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
 
 namespace llvm {
 

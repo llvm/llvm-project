@@ -90,6 +90,25 @@ struct RootDescriptorYaml {
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 };
 
+struct DescriptorRangeYaml {
+  uint32_t RangeType;
+  uint32_t NumDescriptors;
+  uint32_t BaseShaderRegister;
+  uint32_t RegisterSpace;
+  uint32_t OffsetInDescriptorsFromTableStart;
+
+  uint32_t getEncodedFlags() const;
+
+#define DESCRIPTOR_RANGE_FLAG(Num, Val) bool Val = false;
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+struct DescriptorTableYaml {
+  uint32_t NumRanges;
+  uint32_t RangesOffset;
+  SmallVector<DescriptorRangeYaml> Ranges;
+};
+
 struct RootParameterHeaderYaml {
   uint32_t Type;
   uint32_t Visibility;
@@ -113,6 +132,7 @@ struct RootParameterYamlDesc {
 
   SmallVector<RootConstantsYaml> Constants;
   SmallVector<RootDescriptorYaml> Descriptors;
+  SmallVector<DescriptorTableYaml> Tables;
 
   template <typename T>
   T &getOrInsertImpl(RootParameterLocationYaml &ParamDesc,
@@ -134,9 +154,31 @@ struct RootParameterYamlDesc {
     return getOrInsertImpl(ParamDesc, Descriptors);
   }
 
+  DescriptorTableYaml &getOrInsertTable(RootParameterLocationYaml &ParamDesc) {
+    return getOrInsertImpl(ParamDesc, Tables);
+  }
+
   void insertLocation(RootParameterLocationYaml &Location) {
     Locations.push_back(Location);
   }
+};
+
+struct StaticSamplerYamlDesc {
+  uint32_t Filter = llvm::to_underlying(dxbc::StaticSamplerFilter::ANISOTROPIC);
+  uint32_t AddressU = llvm::to_underlying(dxbc::TextureAddressMode::Wrap);
+  uint32_t AddressV = llvm::to_underlying(dxbc::TextureAddressMode::Wrap);
+  uint32_t AddressW = llvm::to_underlying(dxbc::TextureAddressMode::Wrap);
+  float MipLODBias = 0.f;
+  uint32_t MaxAnisotropy = 16u;
+  uint32_t ComparisonFunc =
+      llvm::to_underlying(dxbc::SamplersComparisonFunction::LessEqual);
+  uint32_t BorderColor =
+      llvm::to_underlying(dxbc::SamplersBorderColor::OpaqueWhite);
+  float MinLOD = 0.f;
+  float MaxLOD = std::numeric_limits<float>::max();
+  uint32_t ShaderRegister;
+  uint32_t RegisterSpace;
+  uint32_t ShaderVisibility;
 };
 
 struct RootSignatureYamlDesc {
@@ -149,8 +191,13 @@ struct RootSignatureYamlDesc {
   uint32_t StaticSamplersOffset;
 
   RootParameterYamlDesc Parameters;
+  SmallVector<StaticSamplerYamlDesc> StaticSamplers;
 
   uint32_t getEncodedFlags();
+
+  iterator_range<StaticSamplerYamlDesc *> samplers() {
+    return make_range(StaticSamplers.begin(), StaticSamplers.end());
+  }
 
   static llvm::Expected<DXContainerYAML::RootSignatureYamlDesc>
   create(const object::DirectX::RootSignature &Data);
@@ -263,6 +310,8 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::SignatureElement)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::PSVInfo::MaskVector)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::SignatureParameter)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::RootParameterLocationYaml)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::DescriptorRangeYaml)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::StaticSamplerYamlDesc)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::SemanticKind)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::ComponentType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::InterpolationMode)
@@ -349,6 +398,18 @@ template <> struct MappingTraits<llvm::DXContainerYAML::RootConstantsYaml> {
 
 template <> struct MappingTraits<llvm::DXContainerYAML::RootDescriptorYaml> {
   static void mapping(IO &IO, llvm::DXContainerYAML::RootDescriptorYaml &D);
+};
+
+template <> struct MappingTraits<llvm::DXContainerYAML::DescriptorTableYaml> {
+  static void mapping(IO &IO, llvm::DXContainerYAML::DescriptorTableYaml &D);
+};
+
+template <> struct MappingTraits<llvm::DXContainerYAML::DescriptorRangeYaml> {
+  static void mapping(IO &IO, llvm::DXContainerYAML::DescriptorRangeYaml &D);
+};
+
+template <> struct MappingTraits<llvm::DXContainerYAML::StaticSamplerYamlDesc> {
+  static void mapping(IO &IO, llvm::DXContainerYAML::StaticSamplerYamlDesc &S);
 };
 
 } // namespace yaml

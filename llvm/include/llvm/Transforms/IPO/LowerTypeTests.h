@@ -223,6 +223,11 @@ public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
+class SimplifyTypeTestsPass : public PassInfoMixin<SimplifyTypeTestsPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_IPO_LOWERTYPETESTS_H

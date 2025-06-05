@@ -25,5 +25,5 @@
 // RUN: FileCheck %s < %t/stderr
 //
 // CHECK: file '[[M_H:.*[/\\]m\.h]]' has been modified since the precompiled header '[[A_PCH:.*/a\.pch]]' was built: content changed
-// CHECK: please rebuild precompiled header '[[A_PCH]]'
+// CHECK: please rebuild precompiled file '[[A_PCH]]'
 // expected-no-diagnostics

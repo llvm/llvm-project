@@ -2667,7 +2667,7 @@ AffineParallelOp mlir::affine::getAffineParallelInductionVarOwner(Value val) {
   if (!ivArg || !ivArg.getOwner())
     return nullptr;
   Operation *containingOp = ivArg.getOwner()->getParentOp();
-  auto parallelOp = dyn_cast<AffineParallelOp>(containingOp);
+  auto parallelOp = dyn_cast_if_present<AffineParallelOp>(containingOp);
   if (parallelOp && llvm::is_contained(parallelOp.getIVs(), val))
     return parallelOp;
   return nullptr;

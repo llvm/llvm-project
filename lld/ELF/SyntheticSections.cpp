@@ -668,7 +668,8 @@ void GotSection::addEntry(const Symbol &sym) {
 }
 
 void GotSection::addAuthEntry(const Symbol &sym) {
-  authEntries.push_back({(numEntries - 1) * ctx.arg.wordsize, sym.isFunc()});
+  authEntries.push_back(
+      {(numEntries - 1) * ctx.target->gotEntrySize, sym.isFunc()});
 }
 
 bool GotSection::addTlsDescEntry(const Symbol &sym) {
@@ -679,8 +680,8 @@ bool GotSection::addTlsDescEntry(const Symbol &sym) {
 }
 
 void GotSection::addTlsDescAuthEntry() {
-  authEntries.push_back({(numEntries - 2) * ctx.arg.wordsize, true});
-  authEntries.push_back({(numEntries - 1) * ctx.arg.wordsize, false});
+  authEntries.push_back({(numEntries - 2) * ctx.target->gotEntrySize, true});
+  authEntries.push_back({(numEntries - 1) * ctx.target->gotEntrySize, false});
 }
 
 bool GotSection::addDynTlsEntry(const Symbol &sym) {
@@ -696,13 +697,13 @@ bool GotSection::addDynTlsEntry(const Symbol &sym) {
 bool GotSection::addTlsIndex() {
   if (tlsIndexOff != uint32_t(-1))
     return false;
-  tlsIndexOff = numEntries * ctx.arg.wordsize;
+  tlsIndexOff = numEntries * ctx.target->gotEntrySize;
   numEntries += 2;
   return true;
 }
 
 uint32_t GotSection::getTlsDescOffset(const Symbol &sym) const {
-  return sym.getTlsDescIdx(ctx) * ctx.arg.wordsize;
+  return sym.getTlsDescIdx(ctx) * ctx.target->gotEntrySize;
 }
 
 uint64_t GotSection::getTlsDescAddr(const Symbol &sym) const {
@@ -710,11 +711,11 @@ uint64_t GotSection::getTlsDescAddr(const Symbol &sym) const {
 }
 
 uint64_t GotSection::getGlobalDynAddr(const Symbol &b) const {
-  return this->getVA() + b.getTlsGdIdx(ctx) * ctx.arg.wordsize;
+  return this->getVA() + b.getTlsGdIdx(ctx) * ctx.target->gotEntrySize;
 }
 
 uint64_t GotSection::getGlobalDynOffset(const Symbol &b) const {
-  return b.getTlsGdIdx(ctx) * ctx.arg.wordsize;
+  return b.getTlsGdIdx(ctx) * ctx.target->gotEntrySize;
 }
 
 void GotSection::finalizeContents() {
@@ -723,7 +724,7 @@ void GotSection::finalizeContents() {
       !ctx.sym.globalOffsetTable)
     size = 0;
   else
-    size = numEntries * ctx.arg.wordsize;
+    size = numEntries * ctx.target->gotEntrySize;
 }
 
 bool GotSection::isNeeded() const {
@@ -1199,7 +1200,7 @@ void MipsGotSection::writeTo(uint8_t *buf) {
 // consistent across both 64-bit PowerPC ABIs as well as the 32-bit PowerPC ABI.
 GotPltSection::GotPltSection(Ctx &ctx)
     : SyntheticSection(ctx, ".got.plt", SHT_PROGBITS, SHF_ALLOC | SHF_WRITE,
-                       ctx.arg.wordsize) {
+                       ctx.target->gotEntrySize) {
   if (ctx.arg.emachine == EM_PPC) {
     name = ".plt";
   } else if (ctx.arg.emachine == EM_PPC64) {

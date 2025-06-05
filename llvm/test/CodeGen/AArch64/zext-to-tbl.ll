@@ -2913,28 +2913,28 @@ define i32 @test_widening_instr_mull_64(ptr %p1, ptr %p2, i32 %h) {
 ; CHECK-NEXT:  LBB25_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr q4, [x0]
-; CHECK-NEXT:    ldp q17, q7, [x1, #32]
+; CHECK-NEXT:    ldp q17, q16, [x1, #32]
 ; CHECK-NEXT:    ldr q18, [x1]
 ; CHECK-NEXT:    subs w2, w2, #1
 ; CHECK-NEXT:    tbl.16b v5, { v4 }, v3
 ; CHECK-NEXT:    tbl.16b v6, { v4 }, v0
-; CHECK-NEXT:    tbl.16b v16, { v4 }, v1
+; CHECK-NEXT:    tbl.16b v7, { v4 }, v1
 ; CHECK-NEXT:    tbl.16b v4, { v4 }, v2
 ; CHECK-NEXT:    ldr q21, [x8, #16]!
 ; CHECK-NEXT:    mov x1, x8
-; CHECK-NEXT:    umull2.2d v19, v5, v7
+; CHECK-NEXT:    umull2.2d v19, v5, v16
 ; CHECK-NEXT:    umull2.2d v20, v6, v17
-; CHECK-NEXT:    umull2.2d v22, v16, v18
-; CHECK-NEXT:    umull.2d v5, v5, v7
-; CHECK-NEXT:    umull2.2d v7, v4, v21
+; CHECK-NEXT:    umull2.2d v22, v7, v18
+; CHECK-NEXT:    umull.2d v5, v5, v16
+; CHECK-NEXT:    umull2.2d v16, v4, v21
 ; CHECK-NEXT:    umull.2d v4, v4, v21
-; CHECK-NEXT:    umull.2d v16, v16, v18
+; CHECK-NEXT:    umull.2d v7, v7, v18
 ; CHECK-NEXT:    umull.2d v6, v6, v17
 ; CHECK-NEXT:    str q20, [x0, #80]
 ; CHECK-NEXT:    stp q22, q4, [x0, #16]
 ; CHECK-NEXT:    stp q5, q19, [x0, #96]
-; CHECK-NEXT:    str q7, [x0, #48]
-; CHECK-NEXT:    str q16, [x0]
+; CHECK-NEXT:    str q16, [x0, #48]
+; CHECK-NEXT:    str q7, [x0]
 ; CHECK-NEXT:    str q6, [x0, #64]!
 ; CHECK-NEXT:    b.ne LBB25_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit

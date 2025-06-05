@@ -240,16 +240,10 @@ VectorIteratorSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
 bool lldb_private::formatters::LibStdcppStringSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   const bool scalar_is_load_addr = true;
-  AddressType addr_type;
-  lldb::addr_t addr_of_string = LLDB_INVALID_ADDRESS;
-  if (valobj.IsPointerOrReferenceType()) {
-    Status error;
-    ValueObjectSP pointee_sp = valobj.Dereference(error);
-    if (pointee_sp && error.Success())
-      addr_of_string = pointee_sp->GetAddressOf(scalar_is_load_addr, &addr_type);
-  } else
-    addr_of_string =
-        valobj.GetAddressOf(scalar_is_load_addr, &addr_type);
+  auto [addr_of_string, addr_type] =
+      valobj.IsPointerOrReferenceType()
+          ? valobj.GetPointerValue()
+          : valobj.GetAddressOf(scalar_is_load_addr);
   if (addr_of_string != LLDB_INVALID_ADDRESS) {
     switch (addr_type) {
     case eAddressTypeLoad: {
@@ -296,9 +290,7 @@ bool lldb_private::formatters::LibStdcppStringSummaryProvider(
 bool lldb_private::formatters::LibStdcppWStringSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   const bool scalar_is_load_addr = true;
-  AddressType addr_type;
-  lldb::addr_t addr_of_string =
-      valobj.GetAddressOf(scalar_is_load_addr, &addr_type);
+  auto [addr_of_string, addr_type] = valobj.GetAddressOf(scalar_is_load_addr);
   if (addr_of_string != LLDB_INVALID_ADDRESS) {
     switch (addr_type) {
     case eAddressTypeLoad: {
@@ -379,6 +371,9 @@ LibStdcppSharedPtrSyntheticFrontEnd::CalculateNumChildren() {
 
 lldb::ValueObjectSP
 LibStdcppSharedPtrSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
+  if (!m_ptr_obj)
+    return nullptr;
+
   if (idx == 0)
     return m_ptr_obj->GetSP();
   if (idx == 1) {

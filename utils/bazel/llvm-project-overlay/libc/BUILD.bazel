@@ -4201,6 +4201,7 @@ libc_function(
     hdrs = ["src/string/memchr.h"],
     deps = [
         ":__support_common",
+        ":__support_macros_null_check",
         ":string_utils",
     ],
 )
@@ -4211,6 +4212,7 @@ libc_function(
     hdrs = ["src/string/memcpy.h"],
     deps = [
         ":__support_common",
+        ":__support_macros_null_check",
         ":string_memory_utils",
     ],
 )
@@ -4221,6 +4223,7 @@ libc_function(
     hdrs = ["src/string/memset.h"],
     deps = [
         ":__support_common",
+        ":__support_macros_null_check",
         ":string_memory_utils",
     ],
 )
@@ -4231,6 +4234,7 @@ libc_function(
     hdrs = ["src/string/memmove.h"],
     deps = [
         ":__support_common",
+        ":__support_macros_null_check",
         ":string_memory_utils",
     ],
 )
@@ -4241,6 +4245,7 @@ libc_function(
     hdrs = ["src/string/mempcpy.h"],
     deps = [
         ":__support_common",
+        ":__support_macros_null_check",
         ":string_memory_utils",
     ],
 )
@@ -4262,6 +4267,7 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_integer_operations",
+        ":__support_macros_null_check",
         ":string_memory_utils",
     ],
 )
@@ -4292,6 +4298,7 @@ libc_function(
     hdrs = ["src/string/memrchr.h"],
     deps = [
         ":__support_common",
+        ":__support_macros_null_check",
         ":string_utils",
     ],
 )
@@ -4302,6 +4309,7 @@ libc_function(
     hdrs = ["src/string/strlen.h"],
     deps = [
         ":__support_common",
+        ":__support_macros_null_check",
         ":string_utils",
     ],
 )
@@ -4312,6 +4320,7 @@ libc_function(
     hdrs = ["src/string/strcpy.h"],
     deps = [
         ":__support_common",
+        ":__support_macros_null_check",
         ":string_memory_utils",
         ":string_utils",
     ],
@@ -4323,6 +4332,7 @@ libc_function(
     hdrs = ["src/string/strncpy.h"],
     deps = [
         ":__support_common",
+        ":__support_macros_null_check",
     ],
 )
 
@@ -4363,6 +4373,7 @@ libc_function(
     hdrs = ["src/string/strstr.h"],
     deps = [
         ":__support_common",
+        ":__support_macros_null_check",
         ":string_memory_utils",
         ":string_utils",
     ],
@@ -4395,6 +4406,7 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_cpp_bitset",
+        ":__support_macros_null_check",
         ":string_utils",
     ],
 )

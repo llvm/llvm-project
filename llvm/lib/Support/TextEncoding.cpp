@@ -17,9 +17,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ConvertEBCDIC.h"
-#include "llvm/Support/raw_ostream.h"
-#include <algorithm>
-#include <limits>
 #include <system_error>
 
 #if HAVE_ICU

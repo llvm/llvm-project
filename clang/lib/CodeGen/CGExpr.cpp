@@ -21,6 +21,7 @@
 #include "CGRecordLayout.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "CodeGenPGO.h"
 #include "ConstantEmitter.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
@@ -56,14 +57,16 @@ using namespace clang;
 using namespace CodeGen;
 
 namespace clang {
-// TODO: Introduce frontend options to enabled per sanitizers, similar to
-// `fsanitize-trap`.
+// TODO: consider deprecating ClSanitizeGuardChecks; functionality is subsumed
+//       by -fsanitize-skip-hot-cutoff
 llvm::cl::opt<bool> ClSanitizeGuardChecks(
     "ubsan-guard-checks", llvm::cl::Optional,
     llvm::cl::desc("Guard UBSAN checks with `llvm.allow.ubsan.check()`."));
 
 } // namespace clang
 
+// TODO: consider deprecating ClArrayBoundsPseudoFn; functionality is subsumed
+//       by -fsanitize-annotate-debug-info
 static llvm::cl::opt<bool> ClArrayBoundsPseudoFn(
     "array-bounds-pseudofn", llvm::cl::Hidden, llvm::cl::Optional,
     llvm::cl::desc("Emit debug info that places array-bounds instrumentation "
@@ -205,7 +208,7 @@ RawAddress CodeGenFunction::CreateMemTempWithoutCast(QualType Ty,
 /// EvaluateExprAsBool - Perform the usual unary conversions on the specified
 /// expression and compare the result against zero, returning an Int1Ty value.
 llvm::Value *CodeGenFunction::EvaluateExprAsBool(const Expr *E) {
-  PGO.setCurrentStmt(E);
+  PGO->setCurrentStmt(E);
   if (const MemberPointerType *MPT = E->getType()->getAs<MemberPointerType>()) {
     llvm::Value *MemPtr = EmitScalarExpr(E);
     return CGM.getCXXABI().EmitMemberPointerIsNotNull(*this, MemPtr, MPT);
@@ -3050,9 +3053,13 @@ static LValue EmitFunctionDeclLValue(CodeGenFunction &CGF, const Expr *E,
                                      GlobalDecl GD) {
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
   llvm::Constant *V = CGF.CGM.getFunctionPointer(GD);
+  QualType ETy = E->getType();
+  if (ETy->isCFIUncheckedCalleeFunctionType()) {
+    if (auto *GV = dyn_cast<llvm::GlobalValue>(V))
+      V = llvm::NoCFIValue::get(GV);
+  }
   CharUnits Alignment = CGF.getContext().getDeclAlign(FD);
-  return CGF.MakeAddrLValue(V, E->getType(), Alignment,
-                            AlignmentSource::Decl);
+  return CGF.MakeAddrLValue(V, ETy, Alignment, AlignmentSource::Decl);
 }
 
 static LValue EmitCapturedFieldLValue(CodeGenFunction &CGF, const FieldDecl *FD,
@@ -4588,7 +4595,32 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
         E->getType(), !getLangOpts().PointerOverflowDefined, SignedIndices,
         E->getExprLoc(), &arrayType, E->getBase());
     EltBaseInfo = ArrayLV.getBaseInfo();
-    EltTBAAInfo = CGM.getTBAAInfoForSubobject(ArrayLV, E->getType());
+    if (!CGM.getCodeGenOpts().NewStructPathTBAA) {
+      // Since CodeGenTBAA::getTypeInfoHelper only handles array types for
+      // new struct path TBAA, we must a use a plain access.
+      EltTBAAInfo = CGM.getTBAAInfoForSubobject(ArrayLV, E->getType());
+    } else if (ArrayLV.getTBAAInfo().isMayAlias()) {
+      EltTBAAInfo = TBAAAccessInfo::getMayAliasInfo();
+    } else if (ArrayLV.getTBAAInfo().isIncomplete()) {
+      // The array element is complete, even if the array is not.
+      EltTBAAInfo = CGM.getTBAAAccessInfo(E->getType());
+    } else {
+      // The TBAA access info from the array (base) lvalue is ordinary. We will
+      // adapt it to create access info for the element.
+      EltTBAAInfo = ArrayLV.getTBAAInfo();
+
+      // We retain the TBAA struct path (BaseType and Offset members) from the
+      // array. In the TBAA representation, we map any array access to the
+      // element at index 0, as the index is generally a runtime value. This
+      // element has the same offset in the base type as the array itself.
+      // If the array lvalue had no base type, there is no point trying to
+      // generate one, since an array itself is not a valid base type.
+
+      // We also retain the access type from the base lvalue, but the access
+      // size must be updated to the size of an individual element.
+      EltTBAAInfo.Size =
+          getContext().getTypeSizeInChars(E->getType()).getQuantity();
+    }
   } else {
     // The base must be a pointer; emit it with an estimate of its alignment.
     Address BaseAddr =
@@ -5912,7 +5944,7 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
 }
 
 static GlobalDecl getGlobalDeclForDirectCall(const FunctionDecl *FD) {
-  if (FD->hasAttr<OpenCLKernelAttr>())
+  if (DeviceKernelAttr::isOpenCLSpelling(FD->getAttr<DeviceKernelAttr>()))
     return GlobalDecl(FD, KernelReferenceKind::Stub);
   return GlobalDecl(FD);
 }
@@ -6343,13 +6375,16 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
   const auto *FnType = cast<FunctionType>(PointeeType);
 
   if (const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl);
-      FD && FD->hasAttr<OpenCLKernelAttr>())
+      FD && DeviceKernelAttr::isOpenCLSpelling(FD->getAttr<DeviceKernelAttr>()))
     CGM.getTargetCodeGenInfo().setOCLKernelStubCallingConvention(FnType);
+
+  bool CFIUnchecked =
+      CalleeType->hasPointeeToToCFIUncheckedCalleeFunctionType();
 
   // If we are checking indirect calls and this call is indirect, check that the
   // function pointer is a member of the bit set for the function type.
   if (SanOpts.has(SanitizerKind::CFIICall) &&
-      (!TargetDecl || !isa<FunctionDecl>(TargetDecl))) {
+      (!TargetDecl || !isa<FunctionDecl>(TargetDecl)) && !CFIUnchecked) {
     SanitizerScope SanScope(this);
     EmitSanitizerStatReport(llvm::SanStat_CFI_ICall);
     ApplyDebugLocation ApplyTrapDI(

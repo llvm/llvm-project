@@ -151,6 +151,11 @@ public:
   void lowerQuadwordRestore(MachineBasicBlock::iterator II,
                             unsigned FrameIndex) const;
 
+  void lowerDMRSpilling(MachineBasicBlock::iterator II,
+                        unsigned FrameIndex) const;
+  void lowerDMRRestore(MachineBasicBlock::iterator II,
+                       unsigned FrameIndex) const;
+
   static void emitAccCopyInfo(MachineBasicBlock &MBB, MCRegister DestReg,
                               MCRegister SrcReg);
 

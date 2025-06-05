@@ -105,8 +105,60 @@ DXContainerYAML::RootSignatureYamlDesc::create(
        llvm::to_underlying(dxbc::RootDescriptorFlag::Val)) > 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
       }
+    } else if (auto *DTV =
+                   dyn_cast<object::DirectX::DescriptorTableView>(&ParamView)) {
+      llvm::Expected<object::DirectX::DescriptorTable> TableOrErr =
+          DTV->read(Version);
+      if (Error E = TableOrErr.takeError())
+        return std::move(E);
+      auto Table = *TableOrErr;
+      RootParameterLocationYaml Location(Header);
+      DescriptorTableYaml &TableYaml =
+          RootSigDesc.Parameters.getOrInsertTable(Location);
+      RootSigDesc.Parameters.insertLocation(Location);
+
+      TableYaml.NumRanges = Table.NumRanges;
+      TableYaml.RangesOffset = Table.RangesOffset;
+
+      for (const auto &R : Table) {
+        DescriptorRangeYaml NewR;
+
+        NewR.OffsetInDescriptorsFromTableStart =
+            R.OffsetInDescriptorsFromTableStart;
+        NewR.NumDescriptors = R.NumDescriptors;
+        NewR.BaseShaderRegister = R.BaseShaderRegister;
+        NewR.RegisterSpace = R.RegisterSpace;
+        NewR.RangeType = R.RangeType;
+        if (Version > 1) {
+#define DESCRIPTOR_RANGE_FLAG(Num, Val)                                        \
+  NewR.Val =                                                                   \
+      (R.Flags & llvm::to_underlying(dxbc::DescriptorRangeFlag::Val)) > 0;
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+        }
+        TableYaml.Ranges.push_back(NewR);
+      }
     }
   }
+
+  for (const auto &S : Data.samplers()) {
+    StaticSamplerYamlDesc NewS;
+    NewS.Filter = S.Filter;
+    NewS.AddressU = S.AddressU;
+    NewS.AddressV = S.AddressV;
+    NewS.AddressW = S.AddressW;
+    NewS.MipLODBias = S.MipLODBias;
+    NewS.MaxAnisotropy = S.MaxAnisotropy;
+    NewS.ComparisonFunc = S.ComparisonFunc;
+    NewS.BorderColor = S.BorderColor;
+    NewS.MinLOD = S.MinLOD;
+    NewS.MaxLOD = S.MaxLOD;
+    NewS.ShaderRegister = S.ShaderRegister;
+    NewS.RegisterSpace = S.RegisterSpace;
+    NewS.ShaderVisibility = S.ShaderVisibility;
+
+    RootSigDesc.StaticSamplers.push_back(NewS);
+  }
+
 #define ROOT_ELEMENT_FLAG(Num, Val)                                            \
   RootSigDesc.Val =                                                            \
       (Flags & llvm::to_underlying(dxbc::RootElementFlag::Val)) > 0;
@@ -128,6 +180,15 @@ uint32_t DXContainerYAML::RootSignatureYamlDesc::getEncodedFlags() {
 #define ROOT_ELEMENT_FLAG(Num, Val)                                            \
   if (Val)                                                                     \
     Flag |= (uint32_t)dxbc::RootElementFlag::Val;
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  return Flag;
+}
+
+uint32_t DXContainerYAML::DescriptorRangeYaml::getEncodedFlags() const {
+  uint64_t Flag = 0;
+#define DESCRIPTOR_RANGE_FLAG(Num, Val)                                        \
+  if (Val)                                                                     \
+    Flag |= (uint32_t)dxbc::DescriptorRangeFlag::Val;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
   return Flag;
 }
@@ -299,8 +360,40 @@ void MappingTraits<DXContainerYAML::RootSignatureYamlDesc>::mapping(
   IO.mapRequired("NumStaticSamplers", S.NumStaticSamplers);
   IO.mapRequired("StaticSamplersOffset", S.StaticSamplersOffset);
   IO.mapRequired("Parameters", S.Parameters.Locations, S);
+  IO.mapOptional("Samplers", S.StaticSamplers);
 #define ROOT_ELEMENT_FLAG(Num, Val) IO.mapOptional(#Val, S.Val, false);
 #include "llvm/BinaryFormat/DXContainerConstants.def"
+}
+
+void MappingTraits<llvm::DXContainerYAML::DescriptorRangeYaml>::mapping(
+    IO &IO, llvm::DXContainerYAML::DescriptorRangeYaml &R) {
+  IO.mapRequired("RangeType", R.RangeType);
+  // handling the edge case where NumDescriptors might be -1
+  if (IO.outputting()) {
+    if (R.NumDescriptors == UINT_MAX) {
+      int32_t NegOne = -1;
+      IO.mapRequired("NumDescriptors", NegOne);
+    } else
+      IO.mapRequired("NumDescriptors", R.NumDescriptors);
+  } else {
+    int32_t TmpNumDesc = 0;
+    IO.mapRequired("NumDescriptors", TmpNumDesc);
+    R.NumDescriptors = static_cast<uint32_t>(TmpNumDesc);
+  }
+
+  IO.mapRequired("BaseShaderRegister", R.BaseShaderRegister);
+  IO.mapRequired("RegisterSpace", R.RegisterSpace);
+  IO.mapRequired("OffsetInDescriptorsFromTableStart",
+                 R.OffsetInDescriptorsFromTableStart);
+#define DESCRIPTOR_RANGE_FLAG(Num, Val) IO.mapOptional(#Val, R.Val, false);
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+}
+
+void MappingTraits<llvm::DXContainerYAML::DescriptorTableYaml>::mapping(
+    IO &IO, llvm::DXContainerYAML::DescriptorTableYaml &T) {
+  IO.mapRequired("NumRanges", T.NumRanges);
+  IO.mapOptional("RangesOffset", T.RangesOffset);
+  IO.mapRequired("Ranges", T.Ranges);
 }
 
 void MappingContextTraits<DXContainerYAML::RootParameterLocationYaml,
@@ -325,6 +418,12 @@ void MappingContextTraits<DXContainerYAML::RootParameterLocationYaml,
     IO.mapRequired("Descriptor", Descriptor);
     break;
   }
+  case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
+    DXContainerYAML::DescriptorTableYaml &Table =
+        S.Parameters.getOrInsertTable(L);
+    IO.mapRequired("Table", Table);
+    break;
+  }
   }
 }
 
@@ -341,6 +440,24 @@ void MappingTraits<llvm::DXContainerYAML::RootDescriptorYaml>::mapping(
   IO.mapRequired("ShaderRegister", D.ShaderRegister);
 #define ROOT_DESCRIPTOR_FLAG(Num, Val) IO.mapOptional(#Val, D.Val, false);
 #include "llvm/BinaryFormat/DXContainerConstants.def"
+}
+
+void MappingTraits<llvm::DXContainerYAML::StaticSamplerYamlDesc>::mapping(
+    IO &IO, llvm::DXContainerYAML::StaticSamplerYamlDesc &S) {
+
+  IO.mapOptional("Filter", S.Filter);
+  IO.mapOptional("AddressU", S.AddressU);
+  IO.mapOptional("AddressV", S.AddressV);
+  IO.mapOptional("AddressW", S.AddressW);
+  IO.mapOptional("MipLODBias", S.MipLODBias);
+  IO.mapOptional("MaxAnisotropy", S.MaxAnisotropy);
+  IO.mapOptional("ComparisonFunc", S.ComparisonFunc);
+  IO.mapOptional("BorderColor", S.BorderColor);
+  IO.mapOptional("MinLOD", S.MinLOD);
+  IO.mapOptional("MaxLOD", S.MaxLOD);
+  IO.mapRequired("ShaderRegister", S.ShaderRegister);
+  IO.mapRequired("RegisterSpace", S.RegisterSpace);
+  IO.mapRequired("ShaderVisibility", S.ShaderVisibility);
 }
 
 void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,

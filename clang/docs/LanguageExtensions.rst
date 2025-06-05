@@ -1001,6 +1001,7 @@ to ``float``; see below for more information on this emulation.
   * X86 (if SSE2 is available; natively if AVX512-FP16 is also available)
   * RISC-V (natively if Zfh or Zhinx is available)
   * SystemZ (emulated)
+  * LoongArch (emulated)
 
 * ``__bf16`` is supported on the following targets (currently never natively):
 
@@ -2042,6 +2043,17 @@ references can be used instead of numeric references.
       return -1;
   }
 
+ASM Goto versus Branch Target Enforcement
+=========================================
+
+Some target architectures implement branch target enforcement, by requiring
+indirect (register-controlled) branch instructions to jump only to locations
+marked by a special instruction (such as AArch64 ``bti``).
+
+The assembler code inside an ``asm goto`` statement is expected not to use a
+branch instruction of that kind to transfer control to any of its destination
+labels. Therefore, using a label in an ``asm goto`` statement does not cause
+clang to put a ``bti`` or equivalent instruction at the label.
 
 Constexpr strings in GNU ASM statements
 =======================================
@@ -3061,6 +3073,41 @@ following way:
   to the builtin.
 
 Query for this feature with ``__has_builtin(__builtin_offsetof)``.
+
+``__builtin_get_vtable_pointer``
+--------------------------------
+
+``__builtin_get_vtable_pointer`` loads and authenticates the primary vtable
+pointer from an instance of a polymorphic C++ class. This builtin is needed
+for directly loading the vtable pointer when on platforms using
+:doc:`PointerAuthentication`.
+
+**Syntax**:
+
+.. code-block:: c++
+
+  __builtin_get_vtable_pointer(PolymorphicClass*)
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  struct PolymorphicClass {
+    virtual ~PolymorphicClass();
+  };
+
+  PolymorphicClass anInstance;
+  const void* vtablePointer = __builtin_get_vtable_pointer(&anInstance);
+
+**Description**:
+
+The ``__builtin_get_vtable_pointer`` builtin loads the primary vtable
+pointer from a polymorphic C++ type. If the target platform authenticates
+vtable pointers, this builtin will perform the authentication and produce
+the underlying raw pointer. The object being queried must be polymorphic,
+and so must also be a complete type.
+
+Query for this feature with ``__has_builtin(__builtin_get_vtable_pointer)``.
 
 ``__builtin_call_with_static_chain``
 ------------------------------------

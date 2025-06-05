@@ -539,7 +539,7 @@ bool AArch64CallLowering::fallBackToDAGISel(const MachineFunction &MF) const {
     return true;
   }
 
-  SMEAttrs Attrs(F);
+  SMEAttrs Attrs = MF.getInfo<AArch64FunctionInfo>()->getSMEFnAttrs();
   if (Attrs.hasZAState() || Attrs.hasZT0State() ||
       Attrs.hasStreamingInterfaceOrBody() ||
       Attrs.hasStreamingCompatibleInterface())

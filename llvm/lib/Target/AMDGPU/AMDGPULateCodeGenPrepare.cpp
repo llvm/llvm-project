@@ -61,7 +61,7 @@ public:
 
   // Check if the specified value is at least DWORD aligned.
   bool isDWORDAligned(const Value *V) const {
-    KnownBits Known = computeKnownBits(V, DL, 0, AC);
+    KnownBits Known = computeKnownBits(V, DL, AC);
     return Known.countMinTrailingZeros() >= 2;
   }
 

@@ -917,20 +917,11 @@ define <4 x i64> @udot_no_bin_op_8to64(<4 x i64> %acc, <16 x i8> %a){
 ;
 ; CHECK-NEWLOWERING-I8MM-LABEL: udot_no_bin_op_8to64:
 ; CHECK-NEWLOWERING-I8MM:       // %bb.0:
-; CHECK-NEWLOWERING-I8MM-NEXT:    ushll v3.8h, v2.8b, #0
-; CHECK-NEWLOWERING-I8MM-NEXT:    ushll2 v2.8h, v2.16b, #0
-; CHECK-NEWLOWERING-I8MM-NEXT:    ushll v4.4s, v3.4h, #0
-; CHECK-NEWLOWERING-I8MM-NEXT:    ushll v5.4s, v2.4h, #0
-; CHECK-NEWLOWERING-I8MM-NEXT:    ushll2 v3.4s, v3.8h, #0
-; CHECK-NEWLOWERING-I8MM-NEXT:    ushll2 v2.4s, v2.8h, #0
-; CHECK-NEWLOWERING-I8MM-NEXT:    uaddw v1.2d, v1.2d, v5.2s
+; CHECK-NEWLOWERING-I8MM-NEXT:    movi v3.16b, #1
+; CHECK-NEWLOWERING-I8MM-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-NEWLOWERING-I8MM-NEXT:    udot v4.4s, v2.16b, v3.16b
 ; CHECK-NEWLOWERING-I8MM-NEXT:    uaddw v0.2d, v0.2d, v4.2s
-; CHECK-NEWLOWERING-I8MM-NEXT:    uaddw2 v1.2d, v1.2d, v5.4s
 ; CHECK-NEWLOWERING-I8MM-NEXT:    uaddw2 v0.2d, v0.2d, v4.4s
-; CHECK-NEWLOWERING-I8MM-NEXT:    uaddw v1.2d, v1.2d, v2.2s
-; CHECK-NEWLOWERING-I8MM-NEXT:    uaddw v0.2d, v0.2d, v3.2s
-; CHECK-NEWLOWERING-I8MM-NEXT:    uaddw2 v1.2d, v1.2d, v2.4s
-; CHECK-NEWLOWERING-I8MM-NEXT:    uaddw2 v0.2d, v0.2d, v3.4s
 ; CHECK-NEWLOWERING-I8MM-NEXT:    ret
   %a.wide = zext <16 x i8> %a to <16 x i64>
   %partial.reduce = tail call <4 x i64> @llvm.experimental.vector.partial.reduce.add.v4i64.v16i64(<4 x i64> %acc, <16 x i64> %a.wide)
@@ -967,20 +958,11 @@ define <4 x i64> @sdot_no_bin_op_8to64(<4 x i64> %acc, <16 x i8> %a){
 ;
 ; CHECK-NEWLOWERING-I8MM-LABEL: sdot_no_bin_op_8to64:
 ; CHECK-NEWLOWERING-I8MM:       // %bb.0:
-; CHECK-NEWLOWERING-I8MM-NEXT:    sshll v3.8h, v2.8b, #0
-; CHECK-NEWLOWERING-I8MM-NEXT:    sshll2 v2.8h, v2.16b, #0
-; CHECK-NEWLOWERING-I8MM-NEXT:    sshll v4.4s, v3.4h, #0
-; CHECK-NEWLOWERING-I8MM-NEXT:    sshll v5.4s, v2.4h, #0
-; CHECK-NEWLOWERING-I8MM-NEXT:    sshll2 v3.4s, v3.8h, #0
-; CHECK-NEWLOWERING-I8MM-NEXT:    sshll2 v2.4s, v2.8h, #0
-; CHECK-NEWLOWERING-I8MM-NEXT:    saddw v1.2d, v1.2d, v5.2s
+; CHECK-NEWLOWERING-I8MM-NEXT:    movi v3.16b, #1
+; CHECK-NEWLOWERING-I8MM-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-NEWLOWERING-I8MM-NEXT:    sdot v4.4s, v2.16b, v3.16b
 ; CHECK-NEWLOWERING-I8MM-NEXT:    saddw v0.2d, v0.2d, v4.2s
-; CHECK-NEWLOWERING-I8MM-NEXT:    saddw2 v1.2d, v1.2d, v5.4s
 ; CHECK-NEWLOWERING-I8MM-NEXT:    saddw2 v0.2d, v0.2d, v4.4s
-; CHECK-NEWLOWERING-I8MM-NEXT:    saddw v1.2d, v1.2d, v2.2s
-; CHECK-NEWLOWERING-I8MM-NEXT:    saddw v0.2d, v0.2d, v3.2s
-; CHECK-NEWLOWERING-I8MM-NEXT:    saddw2 v1.2d, v1.2d, v2.4s
-; CHECK-NEWLOWERING-I8MM-NEXT:    saddw2 v0.2d, v0.2d, v3.4s
 ; CHECK-NEWLOWERING-I8MM-NEXT:    ret
   %a.wide = sext <16 x i8> %a to <16 x i64>
   %partial.reduce = tail call <4 x i64> @llvm.experimental.vector.partial.reduce.add.v4i64.v16i64(<4 x i64> %acc, <16 x i64> %a.wide)

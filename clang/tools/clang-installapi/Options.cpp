@@ -763,7 +763,6 @@ getInterfaceFile(const StringRef Filename) {
     return errorCodeToError(std::move(Err));
 
   auto Buffer = std::move(*BufferOrErr);
-  std::unique_ptr<InterfaceFile> IF;
   switch (identify_magic(Buffer->getBuffer())) {
   case file_magic::macho_dynamically_linked_shared_lib:
   case file_magic::macho_dynamically_linked_shared_lib_stub:

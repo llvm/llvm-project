@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVAsmBackend.h"
+#include "RISCVFixupKinds.h"
 #include "RISCVMCExpr.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -133,8 +134,8 @@ bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
   case RISCV::fixup_riscv_branch:
   case RISCV::fixup_riscv_qc_e_branch:
     // For conditional branch instructions the immediate must be
-    // in the range [-4096, 4095].
-    return !isInt<13>(Offset);
+    // in the range [-4096, 4094].
+    return Offset > 4094 || Offset < -4096;
   }
 }
 
@@ -327,14 +328,8 @@ bool RISCVAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
   auto AddFixups = [&Fixups, &AddrDelta](unsigned Offset,
                                          std::pair<unsigned, unsigned> Fixup) {
     const MCBinaryExpr &MBE = cast<MCBinaryExpr>(AddrDelta);
-    Fixups.push_back(
-        MCFixup::create(Offset, MBE.getLHS(),
-                        static_cast<MCFixupKind>(FirstLiteralRelocationKind +
-                                                 std::get<0>(Fixup))));
-    Fixups.push_back(
-        MCFixup::create(Offset, MBE.getRHS(),
-                        static_cast<MCFixupKind>(FirstLiteralRelocationKind +
-                                                 std::get<1>(Fixup))));
+    Fixups.push_back(MCFixup::create(Offset, MBE.getLHS(), std::get<0>(Fixup)));
+    Fixups.push_back(MCFixup::create(Offset, MBE.getRHS(), std::get<1>(Fixup)));
   };
 
   if (isUIntN(6, Value)) {
@@ -546,7 +541,7 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
 
 bool RISCVAsmBackend::isPCRelFixupResolved(const MCSymbol *SymA,
                                            const MCFragment &F) {
-  // If the section does not contain linker-relaxable instructions, PC-relative
+  // If the section does not contain linker-relaxable fragments, PC-relative
   // fixups can be resolved.
   if (!F.getParent()->isLinkerRelaxable())
     return true;
@@ -611,6 +606,46 @@ bool RISCVAsmBackend::evaluateTargetFixup(const MCFixup &Fixup,
          isPCRelFixupResolved(AUIPCTarget.getAddSym(), *AUIPCDF);
 }
 
+void RISCVAsmBackend::maybeAddVendorReloc(const MCFragment &F,
+                                          const MCFixup &Fixup) {
+  StringRef VendorIdentifier;
+  switch (Fixup.getTargetKind()) {
+  default:
+    // No Vendor Relocation Required.
+    return;
+  case RISCV::fixup_riscv_qc_e_branch:
+  case RISCV::fixup_riscv_qc_abs20_u:
+  case RISCV::fixup_riscv_qc_e_32:
+  case RISCV::fixup_riscv_qc_e_jump_plt:
+    VendorIdentifier = "QUALCOMM";
+    break;
+  }
+
+  // Create a local symbol for the vendor relocation to reference. It's fine if
+  // the symbol has the same name as an existing symbol.
+  MCContext &Ctx = Asm->getContext();
+  MCSymbol *VendorSymbol = Ctx.createLocalSymbol(VendorIdentifier);
+  auto [It, Inserted] =
+      VendorSymbols.try_emplace(VendorIdentifier, VendorSymbol);
+
+  if (Inserted) {
+    // Setup the just-created symbol
+    VendorSymbol->setVariableValue(MCConstantExpr::create(0, Ctx));
+    Asm->registerSymbol(*VendorSymbol);
+  } else {
+    // Fetch the existing symbol
+    VendorSymbol = It->getValue();
+  }
+
+  MCFixup VendorFixup =
+      MCFixup::create(Fixup.getOffset(), nullptr, ELF::R_RISCV_VENDOR);
+  // Explicitly create MCValue rather than using an MCExpr and evaluating it so
+  // that the absolute vendor symbol is not evaluated to constant 0.
+  MCValue VendorTarget = MCValue::get(VendorSymbol);
+  uint64_t VendorValue;
+  Asm->getWriter().recordRelocation(F, VendorFixup, VendorTarget, VendorValue);
+}
+
 bool RISCVAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
                                const MCValue &Target, uint64_t &FixedValue,
                                bool IsResolved) {
@@ -660,7 +695,14 @@ bool RISCVAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
   if (IsResolved &&
       (getFixupKindInfo(Fixup.getKind()).Flags & MCFixupKindInfo::FKF_IsPCRel))
     IsResolved = isPCRelFixupResolved(Target.getAddSym(), F);
-  IsResolved = MCAsmBackend::addReloc(F, Fixup, Target, FixedValue, IsResolved);
+
+  if (!IsResolved) {
+    // Some Fixups require a vendor relocation, record it (directly) before we
+    // add the relocation.
+    maybeAddVendorReloc(F, Fixup);
+
+    Asm->getWriter().recordRelocation(F, Fixup, Target, FixedValue);
+  }
 
   if (Fixup.isLinkerRelaxable()) {
     auto FA = MCFixup::create(Fixup.getOffset(), nullptr, ELF::R_RISCV_RELAX);

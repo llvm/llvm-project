@@ -692,20 +692,17 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
         const RTLIB::Libcall Op;
         const char *const Name;
         const CallingConv::ID CC;
-        const ISD::CondCode Cond;
       } MemOpsLibraryCalls[] = {
-        // Memory operations
-        // RTABI chapter 4.3.4
-        { RTLIB::MEMCPY,  "__aeabi_memcpy",  CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-        { RTLIB::MEMMOVE, "__aeabi_memmove", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-        { RTLIB::MEMSET,  "__aeabi_memset",  CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
+          // Memory operations
+          // RTABI chapter 4.3.4
+          {RTLIB::MEMCPY, "__aeabi_memcpy", CallingConv::ARM_AAPCS},
+          {RTLIB::MEMMOVE, "__aeabi_memmove", CallingConv::ARM_AAPCS},
+          {RTLIB::MEMSET, "__aeabi_memset", CallingConv::ARM_AAPCS},
       };
 
       for (const auto &LC : MemOpsLibraryCalls) {
         setLibcallName(LC.Op, LC.Name);
         setLibcallCallingConv(LC.Op, LC.CC);
-        if (LC.Cond != ISD::SETCC_INVALID)
-          setCmpLibcallCC(LC.Op, LC.Cond);
       }
     }
   }
@@ -901,10 +898,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FEXP, MVT::v2f64, Expand);
     setOperationAction(ISD::FEXP2, MVT::v2f64, Expand);
     setOperationAction(ISD::FEXP10, MVT::v2f64, Expand);
-    // FIXME: Create unittest for FCEIL, FTRUNC, FRINT, FNEARBYINT, FFLOOR.
     setOperationAction(ISD::FCEIL, MVT::v2f64, Expand);
     setOperationAction(ISD::FTRUNC, MVT::v2f64, Expand);
     setOperationAction(ISD::FRINT, MVT::v2f64, Expand);
+    setOperationAction(ISD::FROUNDEVEN, MVT::v2f64, Expand);
     setOperationAction(ISD::FNEARBYINT, MVT::v2f64, Expand);
     setOperationAction(ISD::FFLOOR, MVT::v2f64, Expand);
     setOperationAction(ISD::FMA, MVT::v2f64, Expand);
@@ -927,6 +924,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FCEIL, MVT::v4f32, Expand);
     setOperationAction(ISD::FTRUNC, MVT::v4f32, Expand);
     setOperationAction(ISD::FRINT, MVT::v4f32, Expand);
+    setOperationAction(ISD::FROUNDEVEN, MVT::v4f32, Expand);
     setOperationAction(ISD::FNEARBYINT, MVT::v4f32, Expand);
     setOperationAction(ISD::FFLOOR, MVT::v4f32, Expand);
 
@@ -945,8 +943,15 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FCEIL, MVT::v2f32, Expand);
     setOperationAction(ISD::FTRUNC, MVT::v2f32, Expand);
     setOperationAction(ISD::FRINT, MVT::v2f32, Expand);
+    setOperationAction(ISD::FROUNDEVEN, MVT::v2f32, Expand);
     setOperationAction(ISD::FNEARBYINT, MVT::v2f32, Expand);
     setOperationAction(ISD::FFLOOR, MVT::v2f32, Expand);
+
+    for (ISD::NodeType Op : {ISD::FFLOOR, ISD::FNEARBYINT, ISD::FCEIL,
+                              ISD::FRINT, ISD::FTRUNC, ISD::FROUNDEVEN}) {
+      setOperationAction(Op, MVT::v4f16, Expand);
+      setOperationAction(Op, MVT::v8f16, Expand);
+    }
 
     // Neon does not support some operations on v1i64 and v2i64 types.
     setOperationAction(ISD::MUL, MVT::v1i64, Expand);
@@ -1087,6 +1092,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FCEIL,      MVT::f64, Expand);
     setOperationAction(ISD::FTRUNC,     MVT::f64, Expand);
     setOperationAction(ISD::FRINT,      MVT::f64, Expand);
+    setOperationAction(ISD::FROUNDEVEN, MVT::f64, Expand);
     setOperationAction(ISD::FNEARBYINT, MVT::f64, Expand);
     setOperationAction(ISD::FFLOOR,     MVT::f64, Expand);
     setOperationAction(ISD::SINT_TO_FP, MVT::i32, Custom);
@@ -1534,6 +1540,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FTRUNC, MVT::f32, Legal);
     setOperationAction(ISD::FNEARBYINT, MVT::f32, Legal);
     setOperationAction(ISD::FRINT, MVT::f32, Legal);
+    setOperationAction(ISD::FROUNDEVEN, MVT::f32, Legal);
     setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
     setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
     if (Subtarget->hasNEON()) {
@@ -1550,6 +1557,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FTRUNC, MVT::f64, Legal);
       setOperationAction(ISD::FNEARBYINT, MVT::f64, Legal);
       setOperationAction(ISD::FRINT, MVT::f64, Legal);
+      setOperationAction(ISD::FROUNDEVEN, MVT::f64, Legal);
       setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
       setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
     }
@@ -2941,18 +2949,17 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     assert(!isARMFunc && !isDirect &&
            "Cannot handle call to ARM function or direct call");
     if (NumBytes > 0) {
-      DiagnosticInfoUnsupported Diag(DAG.getMachineFunction().getFunction(),
-                                     "call to non-secure function would "
-                                     "require passing arguments on stack",
-                                     dl.getDebugLoc());
-      DAG.getContext()->diagnose(Diag);
+      DAG.getContext()->diagnose(
+          DiagnosticInfoUnsupported(DAG.getMachineFunction().getFunction(),
+                                    "call to non-secure function would require "
+                                    "passing arguments on stack",
+                                    dl.getDebugLoc()));
     }
     if (isStructRet) {
-      DiagnosticInfoUnsupported Diag(
+      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
           DAG.getMachineFunction().getFunction(),
           "call to non-secure function would return value through pointer",
-          dl.getDebugLoc());
-      DAG.getContext()->diagnose(Diag);
+          dl.getDebugLoc()));
     }
   }
 
@@ -3320,11 +3327,10 @@ ARMTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   if (AFI->isCmseNSEntryFunction() && MF.getFunction().hasStructRetAttr()) {
     // Note: using an empty SDLoc(), as the first line of the function is a
     // better place to report than the last line.
-    DiagnosticInfoUnsupported Diag(
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
         DAG.getMachineFunction().getFunction(),
         "secure entry function would return value through pointer",
-        SDLoc().getDebugLoc());
-    DAG.getContext()->diagnose(Diag);
+        SDLoc().getDebugLoc()));
   }
 
   // Copy the result values into the output registers.
@@ -4810,10 +4816,9 @@ SDValue ARMTargetLowering::LowerFormalArguments(
     VarArgStyleRegisters(CCInfo, DAG, dl, Chain, CCInfo.getStackSize(),
                          TotalArgRegsSaveSize);
     if (AFI->isCmseNSEntryFunction()) {
-      DiagnosticInfoUnsupported Diag(
+      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
           DAG.getMachineFunction().getFunction(),
-          "secure entry function must not be variadic", dl.getDebugLoc());
-      DAG.getContext()->diagnose(Diag);
+          "secure entry function must not be variadic", dl.getDebugLoc()));
     }
   }
 
@@ -4831,10 +4836,9 @@ SDValue ARMTargetLowering::LowerFormalArguments(
   AFI->setArgumentStackSize(StackArgSize);
 
   if (CCInfo.getStackSize() > 0 && AFI->isCmseNSEntryFunction()) {
-    DiagnosticInfoUnsupported Diag(
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
         DAG.getMachineFunction().getFunction(),
-        "secure entry function requires arguments on stack", dl.getDebugLoc());
-    DAG.getContext()->diagnose(Diag);
+        "secure entry function requires arguments on stack", dl.getDebugLoc()));
   }
 
   return Chain;
@@ -13961,9 +13965,11 @@ bool ARMTargetLowering::shouldFoldConstantShiftPairToMask(
   return false;
 }
 
-bool ARMTargetLowering::shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
-                                                             EVT VT) const {
-  return Subtarget->hasMVEIntegerOps() && isTypeLegal(VT);
+bool ARMTargetLowering::shouldFoldSelectWithIdentityConstant(
+    unsigned BinOpcode, EVT VT, unsigned SelectOpcode, SDValue X,
+    SDValue Y) const {
+  return Subtarget->hasMVEIntegerOps() && isTypeLegal(VT) &&
+         SelectOpcode == ISD::VSELECT;
 }
 
 bool ARMTargetLowering::preferIncOfAddToSubOfNot(EVT VT) const {

@@ -7740,8 +7740,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addOptInFlag(CmdArgs, options::OPT_fexperimental_late_parse_attributes,
                     options::OPT_fno_experimental_late_parse_attributes);
 
-  Args.addOptInFlag(CmdArgs, options::OPT_funique_source_file_names,
-                    options::OPT_fno_unique_source_file_names);
+  if (Args.hasFlag(options::OPT_funique_source_file_names,
+                   options::OPT_fno_unique_source_file_names, false)) {
+    if (Arg *A = Args.getLastArg(options::OPT_unique_source_file_identifier_EQ))
+      A->render(Args, CmdArgs);
+    else
+      CmdArgs.push_back(Args.MakeArgString(
+          Twine("-funique-source-file-identifier=") + Input.getBaseInput()));
+  }
 
   // Setup statistics file output.
   SmallString<128> StatsFile = getStatsFileName(Args, Output, Input, D);

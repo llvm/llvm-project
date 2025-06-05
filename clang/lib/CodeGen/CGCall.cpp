@@ -21,6 +21,7 @@
 #include "CGRecordLayout.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "CodeGenPGO.h"
 #include "TargetInfo.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
@@ -80,12 +81,19 @@ unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
     return llvm::CallingConv::AArch64_VectorCall;
   case CC_AArch64SVEPCS:
     return llvm::CallingConv::AArch64_SVE_VectorCall;
-  case CC_AMDGPUKernelCall:
-    return llvm::CallingConv::AMDGPU_KERNEL;
   case CC_SpirFunction:
     return llvm::CallingConv::SPIR_FUNC;
-  case CC_OpenCLKernel:
-    return CGM.getTargetCodeGenInfo().getOpenCLKernelCallingConv();
+  case CC_DeviceKernel: {
+    if (CGM.getLangOpts().OpenCL)
+      return CGM.getTargetCodeGenInfo().getOpenCLKernelCallingConv();
+    if (CGM.getTriple().isSPIROrSPIRV())
+      return llvm::CallingConv::SPIR_KERNEL;
+    if (CGM.getTriple().isAMDGPU())
+      return llvm::CallingConv::AMDGPU_KERNEL;
+    if (CGM.getTriple().isNVPTX())
+      return llvm::CallingConv::PTX_Kernel;
+    llvm_unreachable("Unknown kernel calling convention");
+  }
   case CC_PreserveMost:
     return llvm::CallingConv::PreserveMost;
   case CC_PreserveAll:
@@ -283,8 +291,8 @@ static CallingConv getCallingConventionForDecl(const ObjCMethodDecl *D,
   if (D->hasAttr<AArch64SVEPcsAttr>())
     return CC_AArch64SVEPCS;
 
-  if (D->hasAttr<AMDGPUKernelCallAttr>())
-    return CC_AMDGPUKernelCall;
+  if (D->hasAttr<DeviceKernelAttr>())
+    return CC_DeviceKernel;
 
   if (D->hasAttr<IntelOclBiccAttr>())
     return CC_IntelOclBicc;
@@ -532,7 +540,7 @@ CodeGenTypes::arrangeFunctionDeclaration(const GlobalDecl GD) {
   assert(isa<FunctionType>(FTy));
   setCUDAKernelCallingConvention(FTy, CGM, FD);
 
-  if (FD->hasAttr<OpenCLKernelAttr>() &&
+  if (DeviceKernelAttr::isOpenCLSpelling(FD->getAttr<DeviceKernelAttr>()) &&
       GD.getKernelReferenceKind() == KernelReferenceKind::Stub) {
     const FunctionType *FT = FTy->getAs<FunctionType>();
     CGM.getTargetCodeGenInfo().setOCLKernelStubCallingConvention(FT);
@@ -760,7 +768,7 @@ CodeGenTypes::arrangeSYCLKernelCallerDeclaration(QualType resultType,
 
   return arrangeLLVMFunctionInfo(GetReturnType(resultType), FnInfoOpts::None,
                                  argTypes,
-                                 FunctionType::ExtInfo(CC_OpenCLKernel),
+                                 FunctionType::ExtInfo(CC_DeviceKernel),
                                  /*paramInfos=*/{}, RequiredArgs::All);
 }
 
@@ -1424,7 +1432,8 @@ void CodeGenFunction::CreateCoercedStore(llvm::Value *Src, Address Dst,
         SrcSize == CGM.getDataLayout().getTypeAllocSize(Dst.getElementType())) {
       // If the value is supposed to be a pointer, convert it before storing it.
       Src = CoerceIntOrPtrToIntOrPtr(Src, Dst.getElementType(), *this);
-      Builder.CreateStore(Src, Dst, DstIsVolatile);
+      auto *I = Builder.CreateStore(Src, Dst, DstIsVolatile);
+      addInstToCurrentSourceAtom(I, Src);
     } else if (llvm::StructType *STy =
                    dyn_cast<llvm::StructType>(Src->getType())) {
       // Prefer scalar stores to first-class aggregate stores.
@@ -1432,16 +1441,21 @@ void CodeGenFunction::CreateCoercedStore(llvm::Value *Src, Address Dst,
       for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
         Address EltPtr = Builder.CreateStructGEP(Dst, i);
         llvm::Value *Elt = Builder.CreateExtractValue(Src, i);
-        Builder.CreateStore(Elt, EltPtr, DstIsVolatile);
+        auto *I = Builder.CreateStore(Elt, EltPtr, DstIsVolatile);
+        addInstToCurrentSourceAtom(I, Elt);
       }
     } else {
-      Builder.CreateStore(Src, Dst.withElementType(SrcTy), DstIsVolatile);
+      auto *I =
+          Builder.CreateStore(Src, Dst.withElementType(SrcTy), DstIsVolatile);
+      addInstToCurrentSourceAtom(I, Src);
     }
   } else if (SrcTy->isIntegerTy()) {
     // If the source is a simple integer, coerce it directly.
     llvm::Type *DstIntTy = Builder.getIntNTy(DstSize.getFixedValue() * 8);
     Src = CoerceIntOrPtrToIntOrPtr(Src, DstIntTy, *this);
-    Builder.CreateStore(Src, Dst.withElementType(DstIntTy), DstIsVolatile);
+    auto *I =
+        Builder.CreateStore(Src, Dst.withElementType(DstIntTy), DstIsVolatile);
+    addInstToCurrentSourceAtom(I, Src);
   } else {
     // Otherwise do coercion through memory. This is stupid, but
     // simple.
@@ -1455,10 +1469,11 @@ void CodeGenFunction::CreateCoercedStore(llvm::Value *Src, Address Dst,
     RawAddress Tmp =
         CreateTempAllocaForCoercion(*this, SrcTy, Dst.getAlignment());
     Builder.CreateStore(Src, Tmp);
-    Builder.CreateMemCpy(Dst.emitRawPointer(*this),
-                         Dst.getAlignment().getAsAlign(), Tmp.getPointer(),
-                         Tmp.getAlignment().getAsAlign(),
-                         Builder.CreateTypeSize(IntPtrTy, DstSize));
+    auto *I = Builder.CreateMemCpy(
+        Dst.emitRawPointer(*this), Dst.getAlignment().getAsAlign(),
+        Tmp.getPointer(), Tmp.getAlignment().getAsAlign(),
+        Builder.CreateTypeSize(IntPtrTy, DstSize));
+    addInstToCurrentSourceAtom(I, Src);
   }
 }
 
@@ -2528,7 +2543,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
                                  NumElemsParam);
     }
 
-    if (TargetDecl->hasAttr<OpenCLKernelAttr>() &&
+    if (DeviceKernelAttr::isOpenCLSpelling(
+            TargetDecl->getAttr<DeviceKernelAttr>()) &&
         CallingConv != CallingConv::CC_C &&
         CallingConv != CallingConv::CC_SpirFunction) {
       // Check CallingConv to avoid adding uniform-work-group-size attribute to
@@ -2911,7 +2927,9 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     // > For arguments to a __kernel function declared to be a pointer to a
     // > data type, the OpenCL compiler can assume that the pointee is always
     // > appropriately aligned as required by the data type.
-    if (TargetDecl && TargetDecl->hasAttr<OpenCLKernelAttr>() &&
+    if (TargetDecl &&
+        DeviceKernelAttr::isOpenCLSpelling(
+            TargetDecl->getAttr<DeviceKernelAttr>()) &&
         ParamType->isPointerType()) {
       QualType PTy = ParamType->getPointeeType();
       if (!PTy->isIncompleteType() && PTy->isConstantSizeType()) {
@@ -3921,9 +3939,9 @@ llvm::Value *CodeGenFunction::EmitCMSEClearRecord(llvm::Value *Src,
   return R;
 }
 
-void CodeGenFunction::EmitFunctionEpilog(const CGFunctionInfo &FI,
-                                         bool EmitRetDbgLoc,
-                                         SourceLocation EndLoc) {
+void CodeGenFunction::EmitFunctionEpilog(
+    const CGFunctionInfo &FI, bool EmitRetDbgLoc, SourceLocation EndLoc,
+    uint64_t RetKeyInstructionsSourceAtom) {
   if (FI.isNoReturn()) {
     // Noreturn functions don't return.
     EmitUnreachable(EndLoc);
@@ -3938,7 +3956,11 @@ void CodeGenFunction::EmitFunctionEpilog(const CGFunctionInfo &FI,
 
   // Functions with no result always return void.
   if (!ReturnValue.isValid()) {
-    Builder.CreateRetVoid();
+    auto *I = Builder.CreateRetVoid();
+    if (RetKeyInstructionsSourceAtom)
+      addInstToSpecificSourceAtom(I, nullptr, RetKeyInstructionsSourceAtom);
+    else
+      addInstToNewSourceAtom(I, nullptr);
     return;
   }
 
@@ -4118,6 +4140,12 @@ void CodeGenFunction::EmitFunctionEpilog(const CGFunctionInfo &FI,
 
   if (RetDbgLoc)
     Ret->setDebugLoc(std::move(RetDbgLoc));
+
+  llvm::Value *Backup = RV ? Ret->getOperand(0) : nullptr;
+  if (RetKeyInstructionsSourceAtom)
+    addInstToSpecificSourceAtom(Ret, Backup, RetKeyInstructionsSourceAtom);
+  else
+    addInstToNewSourceAtom(Ret, Backup);
 }
 
 void CodeGenFunction::EmitReturnValueCheck(llvm::Value *RV) {
@@ -5900,7 +5928,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // For more details, see the comment before the definition of
   // IPVK_IndirectCallTarget in InstrProfData.inc.
   if (!CI->getCalledFunction())
-    PGO.valueProfile(Builder, llvm::IPVK_IndirectCallTarget, CI, CalleePtr);
+    PGO->valueProfile(Builder, llvm::IPVK_IndirectCallTarget, CI, CalleePtr);
 
   // In ObjC ARC mode with no ObjC ARC exception safety, tell the ARC
   // optimizer it can aggressively ignore unwind edges.

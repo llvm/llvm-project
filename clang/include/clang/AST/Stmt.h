@@ -19,6 +19,7 @@
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/StmtIterator.h"
 #include "clang/Basic/CapturedStmt.h"
+#include "clang/Basic/ExpressionTraits.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Lambda.h"
@@ -563,17 +564,21 @@ protected:
     unsigned HasFPFeatures : 1;
 
     /// True if the call expression is a must-elide call to a coroutine.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsCoroElideSafe : 1;
 
-    /// Padding used to align OffsetToTrailingObjects to a byte multiple.
-    unsigned : 24 - 4 - NumExprBits;
+    /// Tracks when CallExpr is used to represent an explicit object
+    /// member function, in order to adjust the begin location.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned ExplicitObjectMemFunUsingMemberSyntax : 1;
 
-    /// The offset in bytes from the this pointer to the start of the
-    /// trailing objects belonging to CallExpr. Intentionally byte sized
-    /// for faster access.
-    unsigned OffsetToTrailingObjects : 8;
+    /// Indicates that SourceLocations are cached as
+    /// Trailing objects. See the definition of CallExpr.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasTrailingSourceLoc : 1;
   };
-  enum { NumCallExprBits = 32 };
+
+  enum { NumCallExprBits = 25 };
 
   class MemberExprBitfields {
     friend class ASTStmtReader;
@@ -732,6 +737,15 @@ protected:
     unsigned ProducedByFoldExpansion : 1;
   };
 
+  class ShuffleVectorExprBitfields {
+    friend class ShuffleVectorExpr;
+
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    unsigned NumExprs;
+  };
+
   class StmtExprBitfields {
     friend class ASTStmtReader;
     friend class StmtExpr;
@@ -743,6 +757,17 @@ protected:
     /// expression. Used to determine if a statement expression remains
     /// dependent after instantiation.
     unsigned TemplateDepth;
+  };
+
+  class ChooseExprBitfields {
+    friend class ASTStmtReader;
+    friend class ChooseExpr;
+
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    LLVM_PREFERRED_TYPE(bool)
+    bool CondIsTrue : 1;
   };
 
   //===--- C++ Expression bitfields classes ---===//
@@ -1180,6 +1205,57 @@ protected:
     SourceLocation RequiresKWLoc;
   };
 
+  class ArrayTypeTraitExprBitfields {
+    friend class ArrayTypeTraitExpr;
+    friend class ASTStmtReader;
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    /// The trait. An ArrayTypeTrait enum in MSVC compat unsigned.
+    LLVM_PREFERRED_TYPE(ArrayTypeTrait)
+    unsigned ATT : 2;
+  };
+
+  class ExpressionTraitExprBitfields {
+    friend class ExpressionTraitExpr;
+    friend class ASTStmtReader;
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    /// The trait. A ExpressionTrait enum in MSVC compatible unsigned.
+    LLVM_PREFERRED_TYPE(ExpressionTrait)
+    unsigned ET : 31;
+
+    /// The value of the type trait. Unspecified if dependent.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned Value : 1;
+  };
+
+  class CXXFoldExprBitfields {
+    friend class CXXFoldExpr;
+    friend class ASTStmtReader;
+    friend class ASTStmtWriter;
+
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    BinaryOperatorKind Opcode;
+  };
+
+  class PackIndexingExprBitfields {
+    friend class PackIndexingExpr;
+    friend class ASTStmtWriter;
+    friend class ASTStmtReader;
+
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+    // The size of the trailing expressions.
+    unsigned TransformedExpressions : 31;
+
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned FullySubstituted : 1;
+  };
+
   //===--- C++ Coroutines bitfields classes ---===//
 
   class CoawaitExprBitfields {
@@ -1275,9 +1351,11 @@ protected:
     PseudoObjectExprBitfields PseudoObjectExprBits;
     SourceLocExprBitfields SourceLocExprBits;
     ParenExprBitfields ParenExprBits;
+    ShuffleVectorExprBitfields ShuffleVectorExprBits;
 
     // GNU Extensions.
     StmtExprBitfields StmtExprBits;
+    ChooseExprBitfields ChooseExprBits;
 
     // C++ Expressions
     CXXOperatorCallExprBitfields CXXOperatorCallExprBits;
@@ -1304,6 +1382,10 @@ protected:
     SubstNonTypeTemplateParmExprBitfields SubstNonTypeTemplateParmExprBits;
     LambdaExprBitfields LambdaExprBits;
     RequiresExprBitfields RequiresExprBits;
+    ArrayTypeTraitExprBitfields ArrayTypeTraitExprBits;
+    ExpressionTraitExprBitfields ExpressionTraitExprBits;
+    CXXFoldExprBitfields CXXFoldExprBits;
+    PackIndexingExprBitfields PackIndexingExprBits;
 
     // C++ Coroutines expressions
     CoawaitExprBitfields CoawaitBits;

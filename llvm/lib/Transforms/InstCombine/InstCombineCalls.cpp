@@ -601,7 +601,7 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
     return BO;
   }
 
-  KnownBits Known = IC.computeKnownBits(Op0, 0, &II);
+  KnownBits Known = IC.computeKnownBits(Op0, &II);
 
   // Create a mask for bits above (ctlz) or below (cttz) the first known one.
   unsigned PossibleZeros = IsTZ ? Known.countMaxTrailingZeros()
@@ -684,7 +684,7 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombinerImpl &IC) {
   }
 
   KnownBits Known(BitWidth);
-  IC.computeKnownBits(Op0, Known, 0, &II);
+  IC.computeKnownBits(Op0, Known, &II);
 
   // If all bits are zero except for exactly one fixed bit, then the result
   // must be 0 or 1, and we can get that answer by shifting to LSB:
@@ -1099,7 +1099,7 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
 }
 
 static std::optional<bool> getKnownSign(Value *Op, const SimplifyQuery &SQ) {
-  KnownBits Known = computeKnownBits(Op, /*Depth=*/0, SQ);
+  KnownBits Known = computeKnownBits(Op, SQ);
   if (Known.isNonNegative())
     return false;
   if (Known.isNegative())
@@ -1222,9 +1222,8 @@ Instruction *InstCombinerImpl::matchSAddSubSat(IntrinsicInst &MinMax1) {
 
   // The two operands of the add/sub must be nsw-truncatable to the NewTy. This
   // is usually achieved via a sext from a smaller type.
-  if (ComputeMaxSignificantBits(AddSub->getOperand(0), 0, AddSub) >
-          NewBitWidth ||
-      ComputeMaxSignificantBits(AddSub->getOperand(1), 0, AddSub) > NewBitWidth)
+  if (ComputeMaxSignificantBits(AddSub->getOperand(0), AddSub) > NewBitWidth ||
+      ComputeMaxSignificantBits(AddSub->getOperand(1), AddSub) > NewBitWidth)
     return nullptr;
 
   // Finally create and return the sat intrinsic, truncated to the new type
@@ -2160,7 +2159,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
-    KnownBits Known = computeKnownBits(IIOperand, 0, II);
+    KnownBits Known = computeKnownBits(IIOperand, II);
     uint64_t LZ = alignDown(Known.countMinLeadingZeros(), 8);
     uint64_t TZ = alignDown(Known.countMinTrailingZeros(), 8);
     unsigned BW = Known.getBitWidth();
@@ -2752,7 +2751,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::copysign: {
     Value *Mag = II->getArgOperand(0), *Sign = II->getArgOperand(1);
     if (std::optional<bool> KnownSignBit = computeKnownFPSignBit(
-            Sign, /*Depth=*/0, getSimplifyQuery().getWithInstruction(II))) {
+            Sign, getSimplifyQuery().getWithInstruction(II))) {
       if (*KnownSignBit) {
         // If we know that the sign argument is negative, reduce to FNABS:
         // copysign Mag, -Sign --> fneg (fabs Mag)
@@ -3100,8 +3099,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           ID0 != Intrinsic::hexagon_V6_vandqrt_128B)
         break;
       Value *Bytes = Op0->getArgOperand(1), *Mask = II->getArgOperand(1);
-      uint64_t Bytes1 = computeKnownBits(Bytes, 0, Op0).One.getZExtValue();
-      uint64_t Mask1 = computeKnownBits(Mask, 0, II).One.getZExtValue();
+      uint64_t Bytes1 = computeKnownBits(Bytes, Op0).One.getZExtValue();
+      uint64_t Mask1 = computeKnownBits(Mask, II).One.getZExtValue();
       // Check if every byte has common bits in Bytes and Mask.
       uint64_t C = Bytes1 & Mask1;
       if ((C & 0xFF) && (C & 0xFF00) && (C & 0xFF0000) && (C & 0xFF000000))
@@ -3392,7 +3391,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // If there is a dominating assume with the same condition as this one,
     // then this one is redundant, and should be removed.
     KnownBits Known(1);
-    computeKnownBits(IIOperand, Known, 0, II);
+    computeKnownBits(IIOperand, Known, II);
     if (Known.isAllOnes() && isAssumeWithEmptyBundle(cast<AssumeInst>(*II)))
       return eraseInstFromFunction(*II);
 
