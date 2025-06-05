@@ -4513,6 +4513,12 @@ bool InstCombinerImpl::sinkNotIntoLogicalOp(Instruction &I) {
   if (Op0 == Op1)
     return false;
 
+  // If one of the operands is a user of the other,
+  // freelyInvert->freelyInvertAllUsersOf will change the operands of I, which
+  // may cause miscompilation.
+  if (match(Op0, m_Not(m_Specific(Op1))) || match(Op1, m_Not(m_Specific(Op0))))
+    return false;
+
   Instruction::BinaryOps NewOpc =
       match(&I, m_LogicalAnd()) ? Instruction::Or : Instruction::And;
   bool IsBinaryOp = isa<BinaryOperator>(I);
