@@ -296,7 +296,6 @@ private:
     auto *DefR = dyn_cast<RecipeTy>(R);
     // Check for recipes that do not have opcodes.
     if constexpr (std::is_same_v<RecipeTy, VPScalarIVStepsRecipe> ||
-                  std::is_same_v<RecipeTy, VPCanonicalIVPHIRecipe> ||
                   std::is_same_v<RecipeTy, VPDerivedIVRecipe>)
       return DefR;
     else
@@ -441,6 +440,12 @@ template <typename Op0_t, typename Op1_t>
 inline AllRecipe_commutative_match<Instruction::Add, Op0_t, Op1_t>
 m_c_Add(const Op0_t &Op0, const Op1_t &Op1) {
   return m_c_Binary<Instruction::Add, Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline AllRecipe_match<Instruction::Or, Op0_t, Op1_t> m_Or(const Op0_t &Op0,
+                                                           const Op1_t &Op1) {
+  return m_Binary<Instruction::Or, Op0_t, Op1_t>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>

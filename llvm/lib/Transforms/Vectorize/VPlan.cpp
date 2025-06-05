@@ -768,10 +768,17 @@ static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry) {
 
 VPRegionBlock *VPRegionBlock::clone() {
   const auto &[NewEntry, NewExiting] = cloneFrom(getEntry());
-  auto *NewRegion = getPlan()->createVPRegionBlock(NewEntry, NewExiting,
-                                                   getName(), isReplicator());
+  auto *NewRegion =
+      getPlan()->createVPRegionBlock(NewEntry, NewExiting, getName());
   for (VPBlockBase *Block : vp_depth_first_shallow(NewEntry))
     Block->setParent(NewRegion);
+
+  if (CanIVInfo.CanIV) {
+    NewRegion->CanIVInfo.CanIV = new VPRegionValue();
+    NewRegion->CanIVInfo.HasNUW = CanIVInfo.HasNUW;
+    NewRegion->CanIVInfo.DL = CanIVInfo.DL;
+  }
+
   return NewRegion;
 }
 
@@ -856,6 +863,11 @@ void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
   O << Indent << (isReplicator() ? "<xVFxUF> " : "<x1> ") << getName() << ": {";
   auto NewIndent = Indent + "  ";
+  if (auto *CanIV = getCanonicalIV()) {
+    O << '\n';
+    CanIV->print(O, SlotTracker);
+    O << '\n';
+  }
   for (auto *BlockBase : vp_depth_first_shallow(Entry)) {
     O << '\n';
     BlockBase->print(O, NewIndent, SlotTracker);
@@ -868,18 +880,37 @@ void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
 
 void VPRegionBlock::dissolveToCFGLoop() {
   auto *Header = cast<VPBasicBlock>(getEntry());
-  if (auto *CanIV = dyn_cast<VPCanonicalIVPHIRecipe>(&Header->front())) {
-    assert(this == getPlan()->getVectorLoopRegion() &&
-           "Canonical IV must be in the entry of the top-level loop region");
-    auto *ScalarR = VPBuilder(CanIV).createScalarPhi(
-        {CanIV->getStartValue(), CanIV->getBackedgeValue()},
-        CanIV->getDebugLoc(), "index");
+  auto *ExitingLatch = cast<VPBasicBlock>(getExiting());
+  VPValue *CanIV = getCanonicalIV();
+  if (CanIV && CanIV->getNumUsers() > 0) {
+    auto *ExitingTerm = ExitingLatch->getTerminator();
+    VPInstruction *CanIVInc = nullptr;
+    // Check if there's a canonical IV increment via an existing terminator.
+    if (match(ExitingTerm,
+              m_BranchOnCount(m_VPInstruction(CanIVInc), m_VPValue()))) {
+      assert(match(CanIVInc,
+                   m_Add(m_CombineOr(m_Specific(CanIV),
+                                     m_Add(m_Specific(CanIV), m_LiveIn())),
+                         m_VPValue())) &&
+             "invalid existing IV increment");
+    }
+    VPlan &Plan = *getPlan();
+    if (!CanIVInc) {
+      CanIVInc = VPBuilder(ExitingTerm)
+                     .createOverflowingOp(
+                         Instruction::Add, {CanIV, &Plan.getVFxUF()},
+                         {CanIVInfo.HasNUW, false}, CanIVInfo.DL, "index.next");
+    }
+    Type *CanIVTy = VPTypeAnalysis(Plan).inferScalarType(CanIV);
+    auto *ScalarR =
+        VPBuilder(Header, Header->begin())
+            .createScalarPhi(
+                {Plan.getOrAddLiveIn(ConstantInt::get(CanIVTy, 0)), CanIVInc},
+                CanIVInfo.DL, "index");
     CanIV->replaceAllUsesWith(ScalarR);
-    CanIV->eraseFromParent();
   }
 
   VPBlockBase *Preheader = getSinglePredecessor();
-  auto *ExitingLatch = cast<VPBasicBlock>(getExiting());
   VPBlockBase *Middle = getSingleSuccessor();
   VPBlockUtils::disconnectBlocks(Preheader, this);
   VPBlockUtils::disconnectBlocks(this, Middle);
@@ -916,7 +947,10 @@ VPlan::~VPlan() {
         for (unsigned I = 0, E = R.getNumOperands(); I != E; I++)
           R.setOperand(I, &DummyValue);
       }
+    } else if (auto *CanIV = cast<VPRegionBlock>(VPB)->getCanonicalIV()) {
+      CanIV->replaceAllUsesWith(&DummyValue);
     }
+
     delete VPB;
   }
   for (VPValue *VPV : getLiveIns())
@@ -1224,6 +1258,11 @@ VPlan *VPlan::duplicate() {
   // else NewTripCount will be created and inserted into Old2NewVPValues when
   // TripCount is cloned. In any case NewPlan->TripCount is updated below.
 
+  if (auto *LoopRegion = getVectorLoopRegion()) {
+    Old2NewVPValues[LoopRegion->getCanonicalIV()] =
+        NewPlan->getVectorLoopRegion()->getCanonicalIV();
+  }
+
   remapOperands(Entry, NewEntry, Old2NewVPValues);
 
   // Initialize remaining fields of cloned VPlan.
@@ -1404,6 +1443,8 @@ void VPlanPrinter::dumpRegion(const VPRegionBlock *Region) {
 /// Returns true if there is a vector loop region and \p VPV is defined in a
 /// loop region.
 static bool isDefinedInsideLoopRegions(const VPValue *VPV) {
+  if (isa<VPRegionValue>(VPV))
+    return true;
   const VPRecipeBase *DefR = VPV->getDefiningRecipe();
   return DefR && (!DefR->getParent()->getPlan()->getVectorLoopRegion() ||
                   DefR->getParent()->getEnclosingLoopRegion());
@@ -1513,9 +1554,12 @@ void VPSlotTracker::assignNames(const VPlan &Plan) {
 
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<const VPBlockBase *>>
       RPOT(VPBlockDeepTraversalWrapper<const VPBlockBase *>(Plan.getEntry()));
-  for (const VPBasicBlock *VPBB :
-       VPBlockUtils::blocksOnly<const VPBasicBlock>(RPOT))
-    assignNames(VPBB);
+  for (const VPBlockBase *VPB : RPOT) {
+    if (auto *VPBB = dyn_cast<VPBasicBlock>(VPB)) {
+      assignNames(VPBB);
+    } else if (auto *CanIV = cast<VPRegionBlock>(VPB)->getCanonicalIV())
+      assignName(CanIV);
+  }
 }
 
 void VPSlotTracker::assignNames(const VPBasicBlock *VPBB) {

@@ -57,9 +57,7 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
   EXPECT_EQ(&*Plan, VecBB->getPlan());
 
   auto Iter = VecBB->begin();
-  auto *CanIV = dyn_cast<VPCanonicalIVPHIRecipe>(&*Iter++);
-  EXPECT_NE(nullptr, CanIV);
-  auto *Phi = dyn_cast<VPPhi>(&*Iter++);
+  VPWidenPHIRecipe *Phi = dyn_cast<VPWidenPHIRecipe>(&*Iter++);
   EXPECT_NE(nullptr, Phi);
 
   VPInstruction *Idx = dyn_cast<VPInstruction>(&*Iter++);
@@ -218,7 +216,6 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
   EXPECT_EQ(VecBB->getParent()->getEntryBasicBlock(), VecBB);
 
   auto Iter = VecBB->begin();
-  EXPECT_NE(nullptr, dyn_cast<VPCanonicalIVPHIRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenPHIRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenGEPRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenMemoryRecipe>(&*Iter++));

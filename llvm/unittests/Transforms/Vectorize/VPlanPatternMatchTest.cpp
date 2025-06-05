@@ -23,32 +23,31 @@ using VPPatternMatchTest = VPlanTestBase;
 
 TEST_F(VPPatternMatchTest, ScalarIVSteps) {
   VPlan &Plan = getPlan();
+  IntegerType *I64Ty = IntegerType::get(C, 64);
+  VPRegionBlock *VPR =
+      Plan.createVPRegionBlock(DebugLoc::getCompilerGenerated(), "");
+  VPValue *CanIV = VPR->getCanonicalIV();
   VPBasicBlock *VPBB = Plan.createVPBasicBlock("");
   VPBuilder Builder(VPBB);
 
-  IntegerType *I64Ty = IntegerType::get(C, 64);
-  VPValue *StartV = Plan.getOrAddLiveIn(ConstantInt::get(I64Ty, 0));
-  auto *CanonicalIVPHI = new VPCanonicalIVPHIRecipe(StartV, DebugLoc());
-  Builder.insert(CanonicalIVPHI);
-
   VPValue *Inc = Plan.getOrAddLiveIn(ConstantInt::get(I64Ty, 1));
   VPValue *VF = &Plan.getVF();
-  VPValue *Steps = Builder.createScalarIVSteps(
-      Instruction::Add, nullptr, CanonicalIVPHI, Inc, VF, DebugLoc());
+  VPValue *Steps = Builder.createScalarIVSteps(Instruction::Add, nullptr, CanIV,
+                                               Inc, VF, DebugLoc());
 
   VPValue *Inc2 = Plan.getOrAddLiveIn(ConstantInt::get(I64Ty, 2));
-  VPValue *Steps2 = Builder.createScalarIVSteps(
-      Instruction::Add, nullptr, CanonicalIVPHI, Inc2, VF, DebugLoc());
+  VPValue *Steps2 = Builder.createScalarIVSteps(Instruction::Add, nullptr,
+                                                CanIV, Inc2, VF, DebugLoc());
 
   using namespace VPlanPatternMatch;
 
-  ASSERT_TRUE(match(Steps, m_ScalarIVSteps(m_Specific(CanonicalIVPHI),
-                                           m_SpecificInt(1), m_Specific(VF))));
+  ASSERT_TRUE(match(Steps, m_ScalarIVSteps(m_Specific(CanIV), m_SpecificInt(1),
+                                           m_Specific(VF))));
   ASSERT_FALSE(
-      match(Steps2, m_ScalarIVSteps(m_Specific(CanonicalIVPHI),
-                                    m_SpecificInt(1), m_Specific(VF))));
-  ASSERT_TRUE(match(Steps2, m_ScalarIVSteps(m_Specific(CanonicalIVPHI),
-                                            m_SpecificInt(2), m_Specific(VF))));
+      match(Steps2, m_ScalarIVSteps(m_Specific(CanIV), m_SpecificInt(1),
+                                    m_Specific(VF))));
+  ASSERT_TRUE(match(Steps2, m_ScalarIVSteps(m_Specific(CanIV), m_SpecificInt(2),
+                                            m_Specific(VF))));
 }
 
 TEST_F(VPPatternMatchTest, GetElementPtr) {
