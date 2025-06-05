@@ -1,4 +1,5 @@
-//===--- FunctionVisibilityChangeCheck.cpp - clang-tidy -------------------===//
+//===--- VisibilityChangeToVirtualFunctionCheck.cpp - clang-tidy
+//-------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FunctionVisibilityChangeCheck.h"
+#include "VisibilityChangeToVirtualFunctionCheck.h"
 #include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -16,26 +17,29 @@ using namespace clang::ast_matchers;
 namespace clang::tidy {
 
 template <>
-struct OptionEnumMapping<bugprone::FunctionVisibilityChangeCheck::ChangeKind> {
-  static llvm::ArrayRef<
-      std::pair<bugprone::FunctionVisibilityChangeCheck::ChangeKind, StringRef>>
+struct OptionEnumMapping<
+    misc::VisibilityChangeToVirtualFunctionCheck::ChangeKind> {
+  static llvm::ArrayRef<std::pair<
+      misc::VisibilityChangeToVirtualFunctionCheck::ChangeKind, StringRef>>
   getEnumMapping() {
     static constexpr std::pair<
-        bugprone::FunctionVisibilityChangeCheck::ChangeKind, StringRef>
+        misc::VisibilityChangeToVirtualFunctionCheck::ChangeKind, StringRef>
         Mapping[] = {
-            {bugprone::FunctionVisibilityChangeCheck::ChangeKind::Any, "any"},
-            {bugprone::FunctionVisibilityChangeCheck::ChangeKind::Widening,
+            {misc::VisibilityChangeToVirtualFunctionCheck::ChangeKind::Any,
+             "any"},
+            {misc::VisibilityChangeToVirtualFunctionCheck::ChangeKind::Widening,
              "widening"},
-            {bugprone::FunctionVisibilityChangeCheck::ChangeKind::Narrowing,
+            {misc::VisibilityChangeToVirtualFunctionCheck::ChangeKind::
+                 Narrowing,
              "narrowing"},
         };
     return {Mapping};
   }
 };
 
-namespace bugprone {
+namespace misc {
 
-FunctionVisibilityChangeCheck::FunctionVisibilityChangeCheck(
+VisibilityChangeToVirtualFunctionCheck::VisibilityChangeToVirtualFunctionCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       DetectVisibilityChange(
@@ -45,7 +49,7 @@ FunctionVisibilityChangeCheck::FunctionVisibilityChangeCheck(
       IgnoredFunctions(utils::options::parseStringList(
           Options.get("IgnoredFunctions", ""))) {}
 
-void FunctionVisibilityChangeCheck::storeOptions(
+void VisibilityChangeToVirtualFunctionCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "DisallowedVisibilityChange", DetectVisibilityChange);
   Options.store(Opts, "CheckDestructors", CheckDestructors);
@@ -54,7 +58,8 @@ void FunctionVisibilityChangeCheck::storeOptions(
                 utils::options::serializeStringList(IgnoredFunctions));
 }
 
-void FunctionVisibilityChangeCheck::registerMatchers(MatchFinder *Finder) {
+void VisibilityChangeToVirtualFunctionCheck::registerMatchers(
+    MatchFinder *Finder) {
   auto IgnoredDecl =
       namedDecl(matchers::matchesAnyListedName(IgnoredFunctions));
   Finder->addMatcher(
@@ -69,7 +74,7 @@ void FunctionVisibilityChangeCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-void FunctionVisibilityChangeCheck::check(
+void VisibilityChangeToVirtualFunctionCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *MatchedFunction = Result.Nodes.getNodeAs<FunctionDecl>("func");
   if (!MatchedFunction->isCanonicalDecl())
@@ -131,6 +136,6 @@ void FunctionVisibilityChangeCheck::check(
   }
 }
 
-} // namespace bugprone
+} // namespace misc
 
 } // namespace clang::tidy

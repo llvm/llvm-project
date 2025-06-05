@@ -136,8 +136,8 @@ New checks
   Finds unintended character output from ``unsigned char`` and ``signed char``
   to an ``ostream``.
 
-- New :doc:`bugprone-visibility-change-to-virtual-functions
-  <clang-tidy/checks/bugprone/visibility-change-to-virtual-functions>` check.
+- New :doc:`misc-visibility-change-to-virtual-function
+  <clang-tidy/checks/misc/visibility-change-to-virtual-function>` check.
 
   Finds virtual function overrides with different visibility than the function
   in the base class.

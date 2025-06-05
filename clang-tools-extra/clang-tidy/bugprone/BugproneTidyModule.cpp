@@ -30,7 +30,6 @@
 #include "FoldInitTypeCheck.h"
 #include "ForwardDeclarationNamespaceCheck.h"
 #include "ForwardingReferenceOverloadCheck.h"
-#include "FunctionVisibilityChangeCheck.h"
 #include "ImplicitWideningOfMultiplicationResultCheck.h"
 #include "InaccurateEraseCheck.h"
 #include "IncDecInConditionsCheck.h"
@@ -281,8 +280,6 @@ public:
     CheckFactories.registerCheck<UseAfterMoveCheck>("bugprone-use-after-move");
     CheckFactories.registerCheck<VirtualNearMissCheck>(
         "bugprone-virtual-near-miss");
-    CheckFactories.registerCheck<FunctionVisibilityChangeCheck>(
-        "bugprone-visibility-change-to-virtual-function");
   }
 };
 

@@ -1,14 +1,14 @@
-// RUN: %check_clang_tidy -check-suffixes=DTORS,WIDENING,NARROWING %s bugprone-visibility-change-to-virtual-function %t -- \
-// RUN:   -config="{CheckOptions: {bugprone-visibility-change-to-virtual-function.CheckDestructors: true}}"
+// RUN: %check_clang_tidy -check-suffixes=DTORS,WIDENING,NARROWING %s misc-visibility-change-to-virtual-function %t -- \
+// RUN:   -config="{CheckOptions: {misc-visibility-change-to-virtual-function.CheckDestructors: true}}"
 
-// RUN: %check_clang_tidy -check-suffixes=OPS,WIDENING,NARROWING %s bugprone-visibility-change-to-virtual-function %t -- \
-// RUN:   -config="{CheckOptions: {bugprone-visibility-change-to-virtual-function.CheckOperators: true}}"
+// RUN: %check_clang_tidy -check-suffixes=OPS,WIDENING,NARROWING %s misc-visibility-change-to-virtual-function %t -- \
+// RUN:   -config="{CheckOptions: {misc-visibility-change-to-virtual-function.CheckOperators: true}}"
 
-// RUN: %check_clang_tidy -check-suffixes=WIDENING %s bugprone-visibility-change-to-virtual-function %t -- \
-// RUN:   -config="{CheckOptions: {bugprone-visibility-change-to-virtual-function.DisallowedVisibilityChange: 'widening'}}"
+// RUN: %check_clang_tidy -check-suffixes=WIDENING %s misc-visibility-change-to-virtual-function %t -- \
+// RUN:   -config="{CheckOptions: {misc-visibility-change-to-virtual-function.DisallowedVisibilityChange: 'widening'}}"
 
-// RUN: %check_clang_tidy -check-suffixes=NARROWING %s bugprone-visibility-change-to-virtual-function %t -- \
-// RUN:   -config="{CheckOptions: {bugprone-visibility-change-to-virtual-function.DisallowedVisibilityChange: 'narrowing'}}"
+// RUN: %check_clang_tidy -check-suffixes=NARROWING %s misc-visibility-change-to-virtual-function %t -- \
+// RUN:   -config="{CheckOptions: {misc-visibility-change-to-virtual-function.DisallowedVisibilityChange: 'narrowing'}}"
 
 namespace test_change {
 
