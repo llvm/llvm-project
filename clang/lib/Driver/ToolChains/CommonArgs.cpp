@@ -3180,7 +3180,7 @@ std::optional<StringRef> tools::ParseMPreferVectorWidthOption(
     return std::nullopt;
 
   StringRef Value = A->getValue();
-  unsigned Width;
+  unsigned Width __attribute((uninitialized));
 
   // Only "none" and Integer values are accepted by
   // -mprefer-vector-width=<value>.
