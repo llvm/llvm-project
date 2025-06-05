@@ -450,8 +450,8 @@ namespace std {
 #  include <__config>
 
 #  if _LIBCPP_STD_VER >= 23
-#    include <__fwd/span.h>
 #    include <__fwd/mdspan.h>
+#    include <__fwd/span.h>
 #    include <__mdspan/default_accessor.h>
 #    include <__mdspan/extents.h>
 #    include <__mdspan/layout_left.h>
