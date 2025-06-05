@@ -1333,7 +1333,7 @@ CodeGenSubRegIndex *CodeGenRegBank::getSubRegIdx(const Record *Def) {
 
 const CodeGenSubRegIndex *
 CodeGenRegBank::findSubRegIdx(const Record *Def) const {
-  return Def2SubRegIdx.lookup(Def);
+  return Def2SubRegIdx.at(Def);
 }
 
 CodeGenRegister *CodeGenRegBank::getReg(const Record *Def) {
