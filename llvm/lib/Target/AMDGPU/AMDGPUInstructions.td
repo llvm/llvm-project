@@ -20,6 +20,7 @@ def AddrSpaces {
   int Private = 5;
   int Constant32Bit = 6;
   int LaneShared = 10;
+  int Distributed = 11;
 }
 
 
@@ -470,7 +471,9 @@ def StoreAddress_region : AddressSpaceList<[ AddrSpaces.Region ]>;
 def LoadAddress_laneshared : AddressSpaceList<[ AddrSpaces.LaneShared ]>;
 def StoreAddress_laneshared : AddressSpaceList<[ AddrSpaces.LaneShared ]>;
 
-foreach as = [ "global", "flat", "constant", "local", "private", "region", "laneshared" ] in {
+def LoadAddress_distributed : AddressSpaceList<[ AddrSpaces.Distributed ]>;
+
+foreach as = [ "global", "flat", "constant", "local", "private", "region", "laneshared", "distributed" ] in {
 let AddressSpaces = !cast<AddressSpaceList>("LoadAddress_"#as).AddrSpaces in {
 
 def load_#as : PatFrag<(ops node:$ptr), (unindexedload node:$ptr)> {

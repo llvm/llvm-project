@@ -4834,6 +4834,24 @@ def int_amdgcn_global_store_async_from_lds_b32  : AMDGPUAsyncGlobalStoreFromLDS;
 def int_amdgcn_global_store_async_from_lds_b64  : AMDGPUAsyncGlobalStoreFromLDS;
 def int_amdgcn_global_store_async_from_lds_b128 : AMDGPUAsyncGlobalStoreFromLDS;
 
+// Async instructions increment ASYNCcnt which is modeled as InaccessibleMem.
+class AMDGPUAsyncDDSLoadLDS : Intrinsic <
+  [],
+  [dds_ptr_ty,             // Base dds pointer to load from
+   local_ptr_ty,           // LDS base pointer to store to
+   llvm_i32_ty,            // offset
+   llvm_i32_ty],            // gfx12+ cachepolicy:
+                           //   bits [0-2] = th
+                           //   bits [3-4] = scope
+  [IntrInaccessibleMemOrArgMemOnly, ReadOnly<ArgIndex<0>>, WriteOnly<ArgIndex<1>>, NoCapture<ArgIndex<0>>,
+   NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, IntrWillReturn, IntrNoCallback, IntrNoFree],
+  "", [SDNPMemOperand]
+>;
+
+def int_amdgcn_dds_load_async_to_lds_b32     : AMDGPUAsyncDDSLoadLDS;
+def int_amdgcn_dds_load_async_to_lds_b64     : AMDGPUAsyncDDSLoadLDS;
+def int_amdgcn_dds_load_async_to_lds_b128    : AMDGPUAsyncDDSLoadLDS;
+
 // WMMA intrinsics.
 class AMDGPUWmmaIntrinsicModsAB<LLVMType AB, LLVMType CD> :
   Intrinsic<
