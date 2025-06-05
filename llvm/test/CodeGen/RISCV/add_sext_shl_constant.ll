@@ -356,10 +356,8 @@ define i64 @add_shl_moreOneUse_sh1add(i64 %x) {
 ;
 ; XANDESPERF-LABEL: add_shl_moreOneUse_sh1add:
 ; XANDESPERF:       # %bb.0:
-; XANDESPERF-NEXT:    ori a1, a0, 1
-; XANDESPERF-NEXT:    slli a0, a0, 1
-; XANDESPERF-NEXT:    ori a0, a0, 2
-; XANDESPERF-NEXT:    add a0, a0, a1
+; XANDESPERF-NEXT:    ori a0, a0, 1
+; XANDESPERF-NEXT:    nds.lea.h a0, a0, a0
 ; XANDESPERF-NEXT:    ret
   %or = or i64 %x, 1
   %mul = shl i64 %or, 1
@@ -384,10 +382,8 @@ define i64 @add_shl_moreOneUse_sh2add(i64 %x) {
 ;
 ; XANDESPERF-LABEL: add_shl_moreOneUse_sh2add:
 ; XANDESPERF:       # %bb.0:
-; XANDESPERF-NEXT:    ori a1, a0, 1
-; XANDESPERF-NEXT:    slli a0, a0, 2
-; XANDESPERF-NEXT:    ori a0, a0, 4
-; XANDESPERF-NEXT:    add a0, a0, a1
+; XANDESPERF-NEXT:    ori a0, a0, 1
+; XANDESPERF-NEXT:    nds.lea.w a0, a0, a0
 ; XANDESPERF-NEXT:    ret
   %or = or i64 %x, 1
   %mul = shl i64 %or, 2
@@ -412,10 +408,8 @@ define i64 @add_shl_moreOneUse_sh3add(i64 %x) {
 ;
 ; XANDESPERF-LABEL: add_shl_moreOneUse_sh3add:
 ; XANDESPERF:       # %bb.0:
-; XANDESPERF-NEXT:    ori a1, a0, 1
-; XANDESPERF-NEXT:    slli a0, a0, 3
-; XANDESPERF-NEXT:    ori a0, a0, 8
-; XANDESPERF-NEXT:    add a0, a0, a1
+; XANDESPERF-NEXT:    ori a0, a0, 1
+; XANDESPERF-NEXT:    nds.lea.d a0, a0, a0
 ; XANDESPERF-NEXT:    ret
   %or = or i64 %x, 1
   %mul = shl i64 %or, 3

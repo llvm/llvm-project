@@ -19,8 +19,8 @@ define i32 @add_shl_oneUse(i32 %x, i32 %y) nounwind {
 ;
 ; XANDESPERF-LABEL: add_shl_oneUse:
 ; XANDESPERF:       # %bb.0:
+; XANDESPERF-NEXT:    addi a0, a0, 123
 ; XANDESPERF-NEXT:    nds.lea.d a0, a1, a0
-; XANDESPERF-NEXT:    addi a0, a0, 984
 ; XANDESPERF-NEXT:    ret
   %add.0 = add i32 %x, 123
   %shl = shl i32 %add.0, 3
@@ -257,10 +257,8 @@ define i32 @add_shl_moreOneUse_sh1add(i32 %x) {
 ;
 ; XANDESPERF-LABEL: add_shl_moreOneUse_sh1add:
 ; XANDESPERF:       # %bb.0:
-; XANDESPERF-NEXT:    ori a1, a0, 1
-; XANDESPERF-NEXT:    slli a0, a0, 1
-; XANDESPERF-NEXT:    ori a0, a0, 2
-; XANDESPERF-NEXT:    add a0, a0, a1
+; XANDESPERF-NEXT:    ori a0, a0, 1
+; XANDESPERF-NEXT:    nds.lea.h a0, a0, a0
 ; XANDESPERF-NEXT:    ret
   %or = or i32 %x, 1
   %mul = shl i32 %or, 1
@@ -285,10 +283,8 @@ define i32 @add_shl_moreOneUse_sh2add(i32 %x) {
 ;
 ; XANDESPERF-LABEL: add_shl_moreOneUse_sh2add:
 ; XANDESPERF:       # %bb.0:
-; XANDESPERF-NEXT:    ori a1, a0, 1
-; XANDESPERF-NEXT:    slli a0, a0, 2
-; XANDESPERF-NEXT:    ori a0, a0, 4
-; XANDESPERF-NEXT:    add a0, a0, a1
+; XANDESPERF-NEXT:    ori a0, a0, 1
+; XANDESPERF-NEXT:    nds.lea.w a0, a0, a0
 ; XANDESPERF-NEXT:    ret
   %or = or i32 %x, 1
   %mul = shl i32 %or, 2
@@ -313,10 +309,8 @@ define i32 @add_shl_moreOneUse_sh3add(i32 %x) {
 ;
 ; XANDESPERF-LABEL: add_shl_moreOneUse_sh3add:
 ; XANDESPERF:       # %bb.0:
-; XANDESPERF-NEXT:    ori a1, a0, 1
-; XANDESPERF-NEXT:    slli a0, a0, 3
-; XANDESPERF-NEXT:    ori a0, a0, 8
-; XANDESPERF-NEXT:    add a0, a0, a1
+; XANDESPERF-NEXT:    ori a0, a0, 1
+; XANDESPERF-NEXT:    nds.lea.d a0, a0, a0
 ; XANDESPERF-NEXT:    ret
   %or = or i32 %x, 1
   %mul = shl i32 %or, 3
