@@ -33,9 +33,6 @@ set(UR_EXTERNAL_DEPENDENCIES "sycl-headers" CACHE STRING
 if("level_zero" IN_LIST LIBSYCL_ENABLE_BACKENDS)
   set(UR_BUILD_ADAPTER_L0 ON)
 endif()
-if("level_zero_v2" IN_LIST LIBSYCL_ENABLE_BACKENDS)
-  set(UR_BUILD_ADAPTER_L0_V2 ON)
-endif()
 if("cuda" IN_LIST LIBSYCL_ENABLE_BACKENDS)
   set(UR_BUILD_ADAPTER_CUDA ON)
 endif()
@@ -44,11 +41,6 @@ if("hip" IN_LIST LIBSYCL_ENABLE_BACKENDS)
 endif()
 if("opencl" IN_LIST LIBSYCL_ENABLE_BACKENDS)
   set(UR_BUILD_ADAPTER_OPENCL ON)
-  set(UR_OPENCL_ICD_LOADER_LIBRARY OpenCL-ICD CACHE FILEPATH
-    "Path of the OpenCL ICD Loader library" FORCE)
-endif()
-if("native_cpu" IN_LIST LIBSYCL_ENABLE_BACKENDS)
-  set(UR_BUILD_ADAPTER_NATIVE_CPU ON)
 endif()
 
 # Disable errors from warnings while building the UR.
@@ -138,11 +130,6 @@ if(LIBSYCL_UR_USE_FETCH_CONTENT)
   )
 
   fetch_adapter_source(hip
-    ${UNIFIED_RUNTIME_REPO}
-    ${UNIFIED_RUNTIME_TAG}
-  )
-
-  fetch_adapter_source(native_cpu
     ${UNIFIED_RUNTIME_REPO}
     ${UNIFIED_RUNTIME_TAG}
   )
@@ -243,10 +230,6 @@ if("level_zero" IN_LIST LIBSYCL_ENABLE_BACKENDS)
   add_sycl_ur_adapter(level_zero)
 endif()
 
-if("level_zero_v2" IN_LIST LIBSYCL_ENABLE_BACKENDS)
-  add_sycl_ur_adapter(level_zero_v2)
-endif()
-
 if("cuda" IN_LIST LIBSYCL_ENABLE_BACKENDS)
   add_sycl_ur_adapter(cuda)
 endif()
@@ -257,21 +240,6 @@ endif()
 
 if("opencl" IN_LIST LIBSYCL_ENABLE_BACKENDS)
   add_sycl_ur_adapter(opencl)
-endif()
-
-if("native_cpu" IN_LIST LIBSYCL_ENABLE_BACKENDS)
-  add_sycl_ur_adapter(native_cpu)
-
-  # Deal with OCK option
-  option(NATIVECPU_USE_OCK "Use the oneAPI Construction Kit for Native CPU" ON)
-
-  if(NATIVECPU_USE_OCK)
-    message(STATUS "Compiling Native CPU adapter with OCK support.")
-    target_compile_definitions(ur_adapter_native_cpu PRIVATE NATIVECPU_USE_OCK)
-  else()
-    message(WARNING "Compiling Native CPU adapter without OCK support.
-    Some valid SYCL programs may not build or may have low performance.")
-  endif()
 endif()
 
 install(TARGETS umf

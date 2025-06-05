@@ -14,6 +14,13 @@ function(add_sycl_rt_library LIB_NAME LIB_OBJ_NAME)
       ${LIBSYCL_BUILD_INCLUDE_DIR}
   )
 
+  # Object libraries are not linked, so these "libraries" are in fact include
+  # directories
+  target_link_libraries(${LIB_OBJ_NAME}
+    PRIVATE
+      UnifiedRuntime-Headers
+  )
+
   add_library(${LIB_NAME} SHARED
               $<TARGET_OBJECTS:${LIB_OBJ_NAME}>)
 
@@ -72,6 +79,7 @@ function(add_sycl_rt_library LIB_NAME LIB_OBJ_NAME)
     PRIVATE
       ${CMAKE_DL_LIBS}
       ${CMAKE_THREAD_LIBS_INIT}
+      UnifiedRuntimeLoader
   )
 
   set_target_properties(${LIB_NAME} PROPERTIES
