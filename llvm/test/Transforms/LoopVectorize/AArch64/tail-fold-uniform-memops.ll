@@ -24,9 +24,9 @@ define void @uniform_load(ptr noalias %dst, ptr noalias readonly %src, i64 %n) #
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr %dst, i64 [[IDX]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i32 0
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP5]], ptr [[TMP7]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-NEXT:    [[IDX_NEXT]] = add i64 [[IDX]], 4
 ; CHECK-NEXT:    [[NEXT_ACTIVE_LANE_MASK]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[IDX]], i64 [[N2]])
 ; CHECK-NEXT:    [[NOT_ACTIVE_LANE_MASK:%.*]] = xor <4 x i1> [[NEXT_ACTIVE_LANE_MASK]], splat (i1 true)
+; CHECK-NEXT:    [[IDX_NEXT]] = add i64 [[IDX]], 4
 ; CHECK-NEXT:    [[FIRST_LANE_SET:%.*]] = extractelement <4 x i1> [[NOT_ACTIVE_LANE_MASK]], i32 0
 ; CHECK-NEXT:    br i1 [[FIRST_LANE_SET]], label %middle.block, label %vector.body
 

@@ -3247,7 +3247,6 @@ public:
 
   VPCanonicalIVPHIRecipe *clone() override {
     auto *R = new VPCanonicalIVPHIRecipe(getOperand(0), getDebugLoc());
-    R->addOperand(getBackedgeValue());
     return R;
   }
 
@@ -3783,6 +3782,8 @@ class VPRegionBlock : public VPBlockBase {
   /// instances of output IR corresponding to its VPBlockBases.
   bool IsReplicator;
 
+  VPCanonicalIVPHIRecipe *CanIV = nullptr;
+
   /// Use VPlan::createVPRegionBlock to create VPRegionBlocks.
   VPRegionBlock(VPBlockBase *Entry, VPBlockBase *Exiting,
                 const std::string &Name = "", bool IsReplicator = false)
@@ -3793,12 +3794,26 @@ class VPRegionBlock : public VPBlockBase {
     Entry->setParent(this);
     Exiting->setParent(this);
   }
+  VPRegionBlock(VPBlockBase *Entry, VPBlockBase *Exiting, VPValue *StartV,
+                const std::string &Name = "")
+      : VPBlockBase(VPRegionBlockSC, Name), Entry(Entry), Exiting(Exiting),
+        IsReplicator(false),
+        CanIV(new VPCanonicalIVPHIRecipe(StartV, DebugLoc())) {
+    assert(Entry->getPredecessors().empty() && "Entry block has predecessors.");
+    assert(Exiting->getSuccessors().empty() && "Exit block has successors.");
+    Entry->setParent(this);
+    Exiting->setParent(this);
+  }
+
   VPRegionBlock(const std::string &Name = "", bool IsReplicator = false)
       : VPBlockBase(VPRegionBlockSC, Name), Entry(nullptr), Exiting(nullptr),
         IsReplicator(IsReplicator) {}
 
 public:
-  ~VPRegionBlock() override {}
+  ~VPRegionBlock() override {
+    if (CanIV)
+      delete CanIV;
+  }
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPBlockBase *V) {
@@ -3815,6 +3830,11 @@ public:
            "Entry block cannot have predecessors.");
     Entry = EntryBlock;
     EntryBlock->setParent(this);
+    if (!cast<VPBasicBlock>(Entry)->empty() &&
+        isa<VPCanonicalIVPHIRecipe>(cast<VPBasicBlock>(Entry)->front())) {
+      CanIV = &cast<VPCanonicalIVPHIRecipe>(cast<VPBasicBlock>(Entry)->front());
+      CanIV->removeFromParent();
+    }
   }
 
   const VPBlockBase *getExiting() const { return Exiting; }
@@ -3865,6 +3885,9 @@ public:
   /// Remove the current region from its VPlan, connecting its predecessor to
   /// its entry, and its exiting block to its successor.
   void dissolveToCFGLoop();
+
+  VPCanonicalIVPHIRecipe *getCanonicalIV() { return CanIV; }
+  const VPCanonicalIVPHIRecipe *getCanonicalIV() const { return CanIV; }
 };
 
 /// VPlan models a candidate for vectorization, encoding various decisions take
@@ -4166,12 +4189,7 @@ public:
 
   /// Returns the canonical induction recipe of the vector loop.
   VPCanonicalIVPHIRecipe *getCanonicalIV() {
-    VPBasicBlock *EntryVPBB = getVectorLoopRegion()->getEntryBasicBlock();
-    if (EntryVPBB->empty()) {
-      // VPlan native path.
-      EntryVPBB = cast<VPBasicBlock>(EntryVPBB->getSingleSuccessor());
-    }
-    return cast<VPCanonicalIVPHIRecipe>(&*EntryVPBB->begin());
+    return getVectorLoopRegion()->getCanonicalIV();
   }
 
   VPValue *getSCEVExpansion(const SCEV *S) const {
@@ -4212,9 +4230,8 @@ public:
   /// to nullptr. If \p IsReplicator is true, the region is a replicate region.
   /// The returned block is owned by the VPlan and deleted once the VPlan is
   /// destroyed.
-  VPRegionBlock *createVPRegionBlock(const std::string &Name = "",
-                                     bool IsReplicator = false) {
-    auto *VPB = new VPRegionBlock(Name, IsReplicator);
+  VPRegionBlock *createVPRegionBlock(const std::string &Name = "") {
+    auto *VPB = new VPRegionBlock(Name, false);
     CreatedBlocks.push_back(VPB);
     return VPB;
   }

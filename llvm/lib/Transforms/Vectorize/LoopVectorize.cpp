@@ -7347,10 +7347,38 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // removes unneeded loop regions first.
   VPlanTransforms::dissolveLoopRegions(BestVPlan);
   VPlanTransforms::removeDeadRecipes(BestVPlan);
+
+  // Don't use getDecisionAndClampRange here, because we don't know the UF
+  // so this function is better to be conservative, rather than to split
+  // it up into different VPlans.
+  // TODO: Consider using getDecisionAndClampRange here to split up VPlans.
+  bool IVUpdateMayOverflow = false;
+  IVUpdateMayOverflow |= !isIndvarOverflowCheckKnownFalse(&CM, BestVF);
+
+  TailFoldingStyle Style = CM.getTailFoldingStyle(IVUpdateMayOverflow);
+  // Use NUW for the induction increment if we proved that it won't overflow in
+  // the vector loop or when not folding the tail. In the later case, we know
+  // that the canonical induction increment will not overflow as the vector trip
+  // count is >= increment and a multiple of the increment.
+
   // Perform the actual loop transformation.
   VPTransformState State(&TTI, BestVF, LI, DT, ILV.AC, ILV.Builder, &BestVPlan,
                          OrigLoop->getParentLoop(),
                          Legal->getWidestInductionType());
+
+  bool HasNUW = !IVUpdateMayOverflow || Style == TailFoldingStyle::None;
+  if (!HasNUW) {
+    using namespace llvm::VPlanPatternMatch;
+    VPBasicBlock *HeaderVPBB =
+        vputils::getFirstLoopHeader(BestVPlan, State.VPDT);
+    auto *CanIV = cast<VPPhi>(&HeaderVPBB->front());
+    for (auto &P : HeaderVPBB->phis()) {
+      auto *IVInc = P.getOperand(1);
+      if (match(IVInc, m_VPInstruction<Instruction::Add>(m_Specific(CanIV),
+                                                         m_VPValue())))
+        cast<VPRecipeWithIRFlags>(IVInc)->dropPoisonGeneratingFlags();
+    }
+  }
 
 #ifdef EXPENSIVE_CHECKS
   assert(DT->verify(DominatorTree::VerificationLevel::Fast));
@@ -9760,48 +9788,54 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
   Header->setName("vec.epilog.vector.body");
 
   DenseMap<Value *, Value *> ToFrozen;
+
+  auto *IV = Plan.getCanonicalIV();
+  // When vectorizing the epilogue loop, the canonical induction start
+  // value needs to be changed from zero to the value after the main
+  // vector loop. Find the resume value created during execution of the main
+  // VPlan.
+  // FIXME: Improve modeling for canonical IV start values in the epilogue
+  // loop.
+  BasicBlock *MainMiddle = find_singleton<BasicBlock>(
+      predecessors(L->getLoopPreheader()),
+      [&EPI](BasicBlock *BB, bool) -> BasicBlock * {
+        if (BB != EPI.MainLoopIterationCountCheck &&
+            BB != EPI.EpilogueIterationCountCheck &&
+            BB != EPI.SCEVSafetyCheck && BB != EPI.MemSafetyCheck)
+          return BB;
+        return nullptr;
+      });
+  using namespace llvm::PatternMatch;
+  Type *IdxTy = IV->getScalarType();
+  PHINode *EPResumeVal = find_singleton<PHINode>(
+      L->getLoopPreheader()->phis(),
+      [&EPI, IdxTy, MainMiddle](PHINode &P, bool) -> PHINode * {
+        if (P.getType() == IdxTy &&
+            P.getIncomingValueForBlock(MainMiddle) == EPI.VectorTripCount &&
+            match(P.getIncomingValueForBlock(EPI.MainLoopIterationCountCheck),
+                  m_SpecificInt(0)))
+          return &P;
+        return nullptr;
+      });
+  assert(EPResumeVal && "must have a resume value for the canonical IV");
+  VPValue *VPV = Plan.getOrAddLiveIn(EPResumeVal);
+  assert(all_of(IV->users(),
+                [](const VPUser *U) {
+                  return isa<VPScalarIVStepsRecipe>(U) ||
+                         isa<VPDerivedIVRecipe>(U) ||
+                         cast<VPRecipeBase>(U)->isScalarCast() ||
+                         cast<VPInstruction>(U)->getOpcode() ==
+                             Instruction::Add ||
+                         cast<VPInstruction>(U)->getOpcode() ==
+                             VPInstruction::BranchOnCount;
+                }) &&
+         "the canonical IV should only be used by its increment or "
+         "ScalarIVSteps when resetting the start value");
+  IV->setOperand(0, VPV);
+
   // Ensure that the start values for all header phi recipes are updated before
   // vectorizing the epilogue loop.
   for (VPRecipeBase &R : Header->phis()) {
-    if (auto *IV = dyn_cast<VPCanonicalIVPHIRecipe>(&R)) {
-      // When vectorizing the epilogue loop, the canonical induction start
-      // value needs to be changed from zero to the value after the main
-      // vector loop. Find the resume value created during execution of the main
-      // VPlan.
-      // FIXME: Improve modeling for canonical IV start values in the epilogue
-      // loop.
-      using namespace llvm::PatternMatch;
-      Type *IdxTy = IV->getScalarType();
-      PHINode *EPResumeVal = find_singleton<PHINode>(
-          L->getLoopPreheader()->phis(),
-          [&EPI, IdxTy](PHINode &P, bool) -> PHINode * {
-            if (P.getType() == IdxTy &&
-                match(
-                    P.getIncomingValueForBlock(EPI.MainLoopIterationCountCheck),
-                    m_SpecificInt(0)) &&
-                all_of(P.incoming_values(), [&EPI](Value *Inc) {
-                  return Inc == EPI.VectorTripCount ||
-                         match(Inc, m_SpecificInt(0));
-                }))
-              return &P;
-            return nullptr;
-          });
-      assert(EPResumeVal && "must have a resume value for the canonical IV");
-      VPValue *VPV = Plan.getOrAddLiveIn(EPResumeVal);
-      assert(all_of(IV->users(),
-                    [](const VPUser *U) {
-                      return isa<VPScalarIVStepsRecipe>(U) ||
-                             isa<VPDerivedIVRecipe>(U) ||
-                             cast<VPRecipeBase>(U)->isScalarCast() ||
-                             cast<VPInstruction>(U)->getOpcode() ==
-                                 Instruction::Add;
-                    }) &&
-             "the canonical IV should only be used by its increment or "
-             "ScalarIVSteps when resetting the start value");
-      IV->setOperand(0, VPV);
-      continue;
-    }
-
     Value *ResumeV = nullptr;
     // TODO: Move setting of resume values to prepareToExecute.
     if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {

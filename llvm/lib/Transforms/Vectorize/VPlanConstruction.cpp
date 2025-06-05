@@ -409,7 +409,7 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   // LatchExitVPB, taking care to preserve the original predecessor & successor
   // order of blocks. Set region entry and exiting after both HeaderVPB and
   // LatchVPBB have been disconnected from their predecessors/successors.
-  auto *R = Plan.createVPRegionBlock("", false /*isReplicator*/);
+  auto *R = Plan.createVPRegionBlock("");
   VPBlockUtils::insertOnEdge(LatchVPBB, LatchExitVPB, R);
   VPBlockUtils::disconnectBlocks(LatchVPBB, R);
   VPBlockUtils::connectBlocks(PreheaderVPBB, R);
@@ -426,29 +426,23 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
 static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
                                   VPBasicBlock *LatchVPBB, Type *IdxTy,
                                   DebugLoc DL) {
-  using namespace VPlanPatternMatch;
+  using namespace llvm::VPlanPatternMatch;
   Value *StartIdx = ConstantInt::get(IdxTy, 0);
   auto *StartV = Plan.getOrAddLiveIn(StartIdx);
 
-  // Add a VPCanonicalIVPHIRecipe starting at 0 to the header.
   auto *CanonicalIVPHI = new VPCanonicalIVPHIRecipe(StartV, DL);
   HeaderVPBB->insert(CanonicalIVPHI, HeaderVPBB->begin());
 
-  // We are about to replace the branch to exit the region. Remove the original
-  // BranchOnCond, if there is any.
+  // We are about to replace the branch to exit the region. Remove the
+  // original BranchOnCond, if there is any.
   if (!LatchVPBB->empty() &&
       match(&LatchVPBB->back(), m_BranchOnCond(m_VPValue())))
     LatchVPBB->getTerminator()->eraseFromParent();
 
   VPBuilder Builder(LatchVPBB);
-  // Add a VPInstruction to increment the scalar canonical IV by VF * UF.
-  // Initially the induction increment is guaranteed to not wrap, but that may
-  // change later, e.g. when tail-folding, when the flags need to be dropped.
-  auto *CanonicalIVIncrement = Builder.createOverflowingOp(
+  auto CanonicalIVIncrement = Builder.createOverflowingOp(
       Instruction::Add, {CanonicalIVPHI, &Plan.getVFxUF()}, {true, false}, DL,
       "index.next");
-  CanonicalIVPHI->addOperand(CanonicalIVIncrement);
-
   // Add the BranchOnCount VPInstruction to the latch.
   Builder.createNaryOp(VPInstruction::BranchOnCount,
                        {CanonicalIVIncrement, &Plan.getVectorTripCount()}, DL);
