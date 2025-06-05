@@ -246,8 +246,8 @@ define void @store_i32_stride3_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX-NEXT:    vunpckhpd {{.*#+}} xmm3 = xmm0[1],xmm1[1]
 ; AVX-NEXT:    vshufps {{.*#+}} xmm3 = xmm1[1,1],xmm3[0,2]
 ; AVX-NEXT:    vblendps {{.*#+}} xmm3 = xmm3[0],xmm2[1],xmm3[2,3]
-; AVX-NEXT:    vmovlhps {{.*#+}} xmm4 = xmm0[0],xmm1[0]
-; AVX-NEXT:    vshufps {{.*#+}} xmm4 = xmm4[0,2],xmm0[2,1]
+; AVX-NEXT:    vmovlhps {{.*#+}} xmm4 = xmm1[0],xmm0[0]
+; AVX-NEXT:    vshufps {{.*#+}} xmm4 = xmm4[2,0],xmm0[2,1]
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1],xmm2[0],xmm4[3]
 ; AVX-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3
 ; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3],xmm1[3,3]

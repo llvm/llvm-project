@@ -317,6 +317,8 @@ Non-comprehensive list of changes in this release
   ``sizeof`` or ``typeof`` expression. (#GH138444)
 - Deprecation warning is emitted for the deprecated ``__reference_binds_to_temporary`` intrinsic.
   ``__reference_constructs_from_temporary`` should be used instead. (#GH44056)
+- Added `__builtin_get_vtable_pointer` to directly load the primary vtable pointer from a
+  polymorphic object.
 
 New Compiler Flags
 ------------------
@@ -612,6 +614,8 @@ Improvements to Clang's diagnostics
   diagnostic group ``-Wimplicit-int-comparison-on-negation``, grouped under
   ``-Wimplicit-int-conversion``, so user can turn it off independently.
 
+- Improved the FixIts for unused lambda captures.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -826,6 +830,7 @@ Bug Fixes to C++ Support
 - Clang modules now allow a module and its user to differ on TrivialAutoVarInit*
 - Fixed an access checking bug when initializing non-aggregates in default arguments (#GH62444), (#GH83608)
 - Fixed a pack substitution bug in deducing class template partial specializations. (#GH53609)
+- Fixed a crash when constant evaluating some explicit object member assignment operators. (#GH142835)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1045,7 +1050,7 @@ Sanitizers
 ----------
 
 - ``-fsanitize=vptr`` is no longer a part of ``-fsanitize=undefined``.
-- Sanitizer ignorelists now support the syntax ``src:*=sanitize``, 
+- Sanitizer ignorelists now support the syntax ``src:*=sanitize``,
   ``type:*=sanitize``, ``fun:*=sanitize``, ``global:*=sanitize``,
   and ``mainfile:*=sanitize``.
 
