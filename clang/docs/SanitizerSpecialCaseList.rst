@@ -102,7 +102,7 @@ supported sanitizers.
     char c = toobig; // also not instrumented
   }
 
-If multiple entries match the source, than the latest entry takes the
+If multiple entries match the source, then the latest entry takes the
 precedence.
 
 .. code-block:: bash

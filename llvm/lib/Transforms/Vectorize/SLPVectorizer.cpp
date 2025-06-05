@@ -10488,7 +10488,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
       } else if (ShuffleOrOp == Instruction::SIToFP ||
                  ShuffleOrOp == Instruction::UIToFP) {
         unsigned NumSignBits =
-            ComputeNumSignBits(VL0->getOperand(0), *DL, 0, AC, nullptr, DT);
+            ComputeNumSignBits(VL0->getOperand(0), *DL, AC, nullptr, DT);
         if (auto *OpI = dyn_cast<Instruction>(VL0->getOperand(0))) {
           APInt Mask = DB->getDemandedBits(OpI);
           NumSignBits = std::max(NumSignBits, Mask.countl_zero());
@@ -10532,12 +10532,12 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
       buildTreeRec(Operands.back(), Depth + 1, {TE, 1});
       if (ShuffleOrOp == Instruction::ICmp) {
         unsigned NumSignBits0 =
-            ComputeNumSignBits(VL0->getOperand(0), *DL, 0, AC, nullptr, DT);
+            ComputeNumSignBits(VL0->getOperand(0), *DL, AC, nullptr, DT);
         if (NumSignBits0 * 2 >=
             DL->getTypeSizeInBits(VL0->getOperand(0)->getType()))
           ExtraBitWidthNodes.insert(getOperandEntry(TE, 0)->Idx);
         unsigned NumSignBits1 =
-            ComputeNumSignBits(VL0->getOperand(1), *DL, 0, AC, nullptr, DT);
+            ComputeNumSignBits(VL0->getOperand(1), *DL, AC, nullptr, DT);
         if (NumSignBits1 * 2 >=
             DL->getTypeSizeInBits(VL0->getOperand(1)->getType()))
           ExtraBitWidthNodes.insert(getOperandEntry(TE, 1)->Idx);
@@ -20024,7 +20024,7 @@ bool BoUpSLP::collectValuesToDemote(
       if (MaskedValueIsZero(V, Mask, SimplifyQuery(*DL)))
         return true;
     }
-    unsigned NumSignBits = ComputeNumSignBits(V, *DL, 0, AC, nullptr, DT);
+    unsigned NumSignBits = ComputeNumSignBits(V, *DL, AC, nullptr, DT);
     unsigned BitWidth1 = OrigBitWidth - NumSignBits;
     if (IsSignedNode)
       ++BitWidth1;
@@ -20260,8 +20260,8 @@ bool BoUpSLP::collectValuesToDemote(
         KnownBits AmtKnownBits = computeKnownBits(I->getOperand(1), *DL);
         unsigned ShiftedBits = OrigBitWidth - BitWidth;
         return AmtKnownBits.getMaxValue().ult(BitWidth) &&
-               ShiftedBits < ComputeNumSignBits(I->getOperand(0), *DL, 0, AC,
-                                                nullptr, DT);
+               ShiftedBits <
+                   ComputeNumSignBits(I->getOperand(0), *DL, AC, nullptr, DT);
       });
     };
     return TryProcessInstruction(
@@ -20324,10 +20324,10 @@ bool BoUpSLP::collectValuesToDemote(
                "Expected min/max intrinsics only.");
         unsigned SignBits = OrigBitWidth - BitWidth;
         APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, BitWidth - 1);
-        unsigned Op0SignBits = ComputeNumSignBits(I->getOperand(0), *DL, 0, AC,
-                                              nullptr, DT);
-        unsigned Op1SignBits = ComputeNumSignBits(I->getOperand(1), *DL, 0, AC,
-                                              nullptr, DT);
+        unsigned Op0SignBits =
+            ComputeNumSignBits(I->getOperand(0), *DL, AC, nullptr, DT);
+        unsigned Op1SignBits =
+            ComputeNumSignBits(I->getOperand(1), *DL, AC, nullptr, DT);
         return SignBits <= Op0SignBits &&
                ((SignBits != Op0SignBits &&
                  !isKnownNonNegative(I->getOperand(0), SimplifyQuery(*DL))) ||
@@ -20346,7 +20346,7 @@ bool BoUpSLP::collectValuesToDemote(
         unsigned SignBits = OrigBitWidth - BitWidth;
         APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, BitWidth - 1);
         unsigned Op0SignBits =
-            ComputeNumSignBits(I->getOperand(0), *DL, 0, AC, nullptr, DT);
+            ComputeNumSignBits(I->getOperand(0), *DL, AC, nullptr, DT);
         return SignBits <= Op0SignBits &&
                ((SignBits != Op0SignBits &&
                  !isKnownNonNegative(I->getOperand(0), SimplifyQuery(*DL))) ||
@@ -20532,7 +20532,7 @@ void BoUpSLP::computeMinimumValueSizes() {
     for (Value *Root : E.Scalars) {
       if (isa<PoisonValue>(Root))
         continue;
-      unsigned NumSignBits = ComputeNumSignBits(Root, *DL, 0, AC, nullptr, DT);
+      unsigned NumSignBits = ComputeNumSignBits(Root, *DL, AC, nullptr, DT);
       TypeSize NumTypeBits =
           DL->getTypeSizeInBits(Root->getType()->getScalarType());
       unsigned BitWidth1 = NumTypeBits - NumSignBits;
@@ -20623,7 +20623,7 @@ void BoUpSLP::computeMinimumValueSizes() {
       for (Value *V : *UserIgnoreList) {
         if (isa<PoisonValue>(V))
           continue;
-        unsigned NumSignBits = ComputeNumSignBits(V, *DL, 0, AC, nullptr, DT);
+        unsigned NumSignBits = ComputeNumSignBits(V, *DL, AC, nullptr, DT);
         TypeSize NumTypeBits = DL->getTypeSizeInBits(V->getType());
         unsigned BitWidth1 = NumTypeBits - NumSignBits;
         if (!isKnownNonNegative(V, SimplifyQuery(*DL)))

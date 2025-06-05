@@ -278,4 +278,17 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     }
     setLibcallName(RTLIB::MULO_I128, nullptr);
   }
+
+  if (TT.isSystemZ() && TT.isOSzOS()) {
+    struct RTLibCallMapping {
+      RTLIB::Libcall Code;
+      const char *Name;
+    };
+    static RTLibCallMapping RTLibCallCommon[] = {
+#define HANDLE_LIBCALL(code, name) {RTLIB::code, name},
+#include "ZOSLibcallNames.def"
+    };
+    for (auto &E : RTLibCallCommon)
+      setLibcallName(E.Code, E.Name);
+  }
 }
