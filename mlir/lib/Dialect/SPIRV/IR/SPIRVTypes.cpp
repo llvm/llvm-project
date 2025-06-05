@@ -537,7 +537,7 @@ void ScalarType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
     [[fallthrough]];
   case StorageClass::Input:
   case StorageClass::Output:
-    if (getIntOrFloatBitWidth() == 16 && !isa<BFloat16Type>(*this)) {
+    if (getIntOrFloatBitWidth() == 16) {
       static const Extension exts[] = {Extension::SPV_KHR_16bit_storage};
       ArrayRef<Extension> ref(exts, std::size(exts));
       extensions.push_back(ref);
