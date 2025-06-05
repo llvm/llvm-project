@@ -353,7 +353,7 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
               TII->get(IsX64 ? X86::TAILJMPr64_REX : X86::TAILJMPr64))
           .add(JumpTarget);
     } else {
-      assert(!IsWin64 && "Win64 requires REX for indirect jumps.");
+      assert(!IsX64 && "Win64 and UEFI64 require REX for indirect jumps.");
       JumpTarget.setIsKill();
       BuildMI(MBB, MBBI, DL, TII->get(X86::TAILJMPr))
           .add(JumpTarget);
