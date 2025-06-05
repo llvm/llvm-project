@@ -514,6 +514,12 @@ bool ScalarType::isValid(IntegerType type) {
 
 void ScalarType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
                                std::optional<StorageClass> storage) {
+  if (llvm::isa<BFloat16Type>(*this)) {
+    static const Extension exts[] = {Extension::SPV_KHR_bfloat16};
+    ArrayRef<Extension> ref(exts, std::size(exts));
+    extensions.push_back(ref);
+  }
+
   // 8- or 16-bit integer/floating-point numbers will require extra extensions
   // to appear in interface storage classes. See SPV_KHR_16bit_storage and
   // SPV_KHR_8bit_storage for more details.
@@ -532,7 +538,7 @@ void ScalarType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
     [[fallthrough]];
   case StorageClass::Input:
   case StorageClass::Output:
-    if (getIntOrFloatBitWidth() == 16) {
+    if (getIntOrFloatBitWidth() == 16 && !llvm::isa<BFloat16Type>(*this)) {
       static const Extension exts[] = {Extension::SPV_KHR_16bit_storage};
       ArrayRef<Extension> ref(exts, std::size(exts));
       extensions.push_back(ref);
@@ -619,7 +625,19 @@ void ScalarType::getCapabilities(
   } else {
     assert(llvm::isa<FloatType>(*this));
     switch (bitwidth) {
-      WIDTH_CASE(Float, 16);
+    case 16: {
+      if (llvm::isa<BFloat16Type>(*this)) {
+        static const Capability caps[] = {Capability::BFloat16TypeKHR};
+        ArrayRef<Capability> ref(caps, std::size(caps));
+        capabilities.push_back(ref);
+
+      } else {
+        static const Capability caps[] = {Capability::Float16};
+        ArrayRef<Capability> ref(caps, std::size(caps));
+        capabilities.push_back(ref);
+      }
+      break;
+    }
       WIDTH_CASE(Float, 64);
     case 32:
       break;
