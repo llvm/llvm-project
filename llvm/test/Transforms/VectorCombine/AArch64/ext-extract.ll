@@ -329,3 +329,32 @@ entry:
   call void @use.i64(i64 %ext.1)
   ret void
 }
+
+define void @zext_nv4i8_all_lanes_used(<vscale x 4 x i8> %src) {
+; CHECK-LABEL: define void @zext_nv4i8_all_lanes_used(
+; CHECK-SAME: <vscale x 4 x i8> [[SRC:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[EXT9:%.*]] = zext nneg <vscale x 4 x i8> [[SRC]] to <vscale x 4 x i32>
+; CHECK-NEXT:    [[EXT_0:%.*]] = extractelement <vscale x 4 x i32> [[EXT9]], i64 0
+; CHECK-NEXT:    [[EXT_1:%.*]] = extractelement <vscale x 4 x i32> [[EXT9]], i64 1
+; CHECK-NEXT:    [[EXT_2:%.*]] = extractelement <vscale x 4 x i32> [[EXT9]], i64 2
+; CHECK-NEXT:    [[EXT_3:%.*]] = extractelement <vscale x 4 x i32> [[EXT9]], i64 3
+; CHECK-NEXT:    call void @use.i32(i32 [[EXT_0]])
+; CHECK-NEXT:    call void @use.i32(i32 [[EXT_1]])
+; CHECK-NEXT:    call void @use.i32(i32 [[EXT_2]])
+; CHECK-NEXT:    call void @use.i32(i32 [[EXT_3]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %ext9 = zext nneg <vscale x 4 x i8> %src to <vscale x 4 x i32>
+  %ext.0 = extractelement <vscale x 4 x i32> %ext9, i64 0
+  %ext.1 = extractelement <vscale x 4 x i32> %ext9, i64 1
+  %ext.2 = extractelement <vscale x 4 x i32> %ext9, i64 2
+  %ext.3 = extractelement <vscale x 4 x i32> %ext9, i64 3
+
+  call void @use.i32(i32 %ext.0)
+  call void @use.i32(i32 %ext.1)
+  call void @use.i32(i32 %ext.2)
+  call void @use.i32(i32 %ext.3)
+  ret void
+}
