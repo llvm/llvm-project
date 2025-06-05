@@ -12,6 +12,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCDisassembler/MCSymbolizer.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <memory>
@@ -23,7 +24,7 @@ struct XCOFFSymbolInfoTy {
   std::optional<XCOFF::StorageMappingClass> StorageMappingClass;
   std::optional<uint32_t> Index;
   bool IsLabel = false;
-  bool operator<(const XCOFFSymbolInfoTy &SymInfo) const;
+  LLVM_ABI bool operator<(const XCOFFSymbolInfoTy &SymInfo) const;
 };
 
 struct SymbolInfoTy {
@@ -81,7 +82,7 @@ class raw_ostream;
 
 /// Superclass for all disassemblers. Consumes a memory region and provides an
 /// array of assembly instructions.
-class MCDisassembler {
+class LLVM_ABI MCDisassembler {
 public:
   /// Ternary decode status. Most backends will just use Fail and
   /// Success, however some have a concept of an instruction with
