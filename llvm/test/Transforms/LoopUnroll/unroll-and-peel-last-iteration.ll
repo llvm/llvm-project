@@ -71,6 +71,47 @@ exit:
   ret i32 %1
 }
 
+; Test case for https://github.com/llvm/llvm-project/issues/142895.
+
+define i32 @pr142895_exit_value_is_arg(i32 %arg) {
+entry:
+  br label %for.cond.preheader
+
+for.cond.preheader:
+  %indvar = phi i32 [ 0, %entry ], [ %inc, %for.cond.preheader ]
+  %cmp1 = icmp eq i32 %indvar, 32
+  %sel = select i1 %cmp1, i32 0, i32 0
+  %sub = sub i32 0, 0
+  %xor = xor i32 0, 0
+  %inc = add i32 %indvar, 1
+  %exitcond = icmp ne i32 %inc, 33
+  br i1 %exitcond, label %for.cond.preheader, label %for.cond.cleanup
+
+for.cond.cleanup:
+  %exit.lcssa = phi i32 [ %arg, %for.cond.preheader ]
+  ret i32 %exit.lcssa
+}
+
+define i32 @pr142895_exit_value_is_inst(i32 %arg) {
+entry:
+  %mul = mul i32 %arg, 7
+  br label %for.cond.preheader
+
+for.cond.preheader:
+  %indvar = phi i32 [ 0, %entry ], [ %inc, %for.cond.preheader ]
+  %cmp1 = icmp eq i32 %indvar, 32
+  %sel = select i1 %cmp1, i32 0, i32 0
+  %sub = sub i32 0, 0
+  %xor = xor i32 0, 0
+  %inc = add i32 %indvar, 1
+  %exitcond = icmp ne i32 %inc, 33
+  br i1 %exitcond, label %for.cond.preheader, label %for.cond.cleanup
+
+for.cond.cleanup:
+  %exit.lcssa = phi i32 [ %mul, %for.cond.preheader ]
+  ret i32 %exit.lcssa
+}
+
 declare void @foo(i32)
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
