@@ -62,9 +62,8 @@ bool llvm::fuseInstructionPair(ScheduleDAGInstrs &DAG, SUnit &FirstSU,
     if (SI.isCluster())
       return false;
 
-  unsigned FirstCluster = FirstSU.ParentClusterIdx;
-  unsigned SecondCluster = SecondSU.ParentClusterIdx;
-  assert(FirstCluster == InvalidClusterId && SecondCluster == InvalidClusterId);
+  assert(FirstSU.ParentClusterIdx == InvalidClusterId &&
+         SecondSU.ParentClusterIdx == InvalidClusterId);
 
   // Though the reachability checks above could be made more generic,
   // perhaps as part of ScheduleDAGInstrs::addEdge(), since such edges are valid,
