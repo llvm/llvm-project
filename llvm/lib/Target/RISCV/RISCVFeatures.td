@@ -787,7 +787,7 @@ def HasStdExtZvknha : Predicate<"Subtarget->hasStdExtZvknha()">,
 
 def FeatureStdExtZvknhb
     : RISCVExtension<1, 0, "Vector SHA-2 (SHA-256 and SHA-512)",
-                     [FeatureStdExtZve64x]>,
+                     [FeatureStdExtZve64x, FeatureStdExtZvknha]>,
       RISCVExtensionBitmask<0, 56>;
 def HasStdExtZvknhb : Predicate<"Subtarget->hasStdExtZvknhb()">,
                       AssemblerPredicate<(all_of FeatureStdExtZvknhb),

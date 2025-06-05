@@ -2848,9 +2848,9 @@ let UnMaskedPolicyScheme = HasPolicyOperand, HasMasked = false in {
 
   // zvknhb
   let RequiredFeatures = ["Zvknhb"] in {
-    defm vsha2ch : RVVOutOp2BuiltinSetVVZvk<"il">;
-    defm vsha2cl : RVVOutOp2BuiltinSetVVZvk<"il">;
-    defm vsha2ms : RVVOutOp2BuiltinSetVVZvk<"il">;
+    defm vsha2ch : RVVOutOp2BuiltinSetVVZvk<"l">;
+    defm vsha2cl : RVVOutOp2BuiltinSetVVZvk<"l">;
+    defm vsha2ms : RVVOutOp2BuiltinSetVVZvk<"l">;
   }
 
   // zvksed
