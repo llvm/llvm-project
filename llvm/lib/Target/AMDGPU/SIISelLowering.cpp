@@ -6914,8 +6914,8 @@ SDValue SITargetLowering::splitFP_ROUNDVectorOp(SDValue Op,
   SDLoc DL(Op);
   unsigned Opc = Op.getOpcode();
   SDValue Flags = Op.getOperand(1);
-  EVT HalfDstVT
-      = EVT::getVectorVT(*DAG.getContext(), DstVT.getScalarType(), NumElts / 2);
+  EVT HalfDstVT =
+      EVT::getVectorVT(*DAG.getContext(), DstVT.getScalarType(), NumElts / 2);
   SDValue OpLo = DAG.getNode(Opc, DL, HalfDstVT, Lo, Flags);
   SDValue OpHi = DAG.getNode(Opc, DL, HalfDstVT, Hi, Flags);
 
