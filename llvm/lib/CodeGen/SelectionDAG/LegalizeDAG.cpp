@@ -3358,7 +3358,9 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   }
   case ISD::FCANONICALIZE: {
     // This implements llvm.canonicalize.f* by multiplication with 1.0,
-    // as suggested in https://llvm.org/docs/LangRef.html#id2335.
+    // as suggested in https://llvm.org/docs/LangRef.html#id2335. It uses
+    // strict_fp operations even outside a strict_fp context in order to
+    // guarantee that the canonicalization is not optimized away by later passes.
     // Get operand x.
     SDValue Operand = Node->getOperand(0);
     // Get fp value type used.
