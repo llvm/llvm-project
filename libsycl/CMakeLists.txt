@@ -21,7 +21,7 @@ option(LIBSYCL_ENABLE_WERROR "Treat all warnings as errors in the libsycl projec
 # If LIBSYCL_ENABLE_BACKENDS is undefined, we default to enabling OpenCL and Level
 # Zero backends.
 if (NOT DEFINED LIBSYCL_ENABLE_BACKENDS)
-  set(LIBSYCL_ENABLE_BACKENDS "opencl;level_zero;level_zero_v2" CACHE STRING "Backends enabled for SYCL")
+  set(LIBSYCL_ENABLE_BACKENDS "opencl;level_zero" CACHE STRING "Backends enabled for SYCL")
 endif()
 
 #===============================================================================

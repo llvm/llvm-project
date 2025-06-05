@@ -47,14 +47,14 @@ endif()
 # And remember origin flags before doing that.
 set(CMAKE_CXX_FLAGS_BAK "${CMAKE_CXX_FLAGS}")
 if(WIN32)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /WX-")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /WX-")
-  # FIXME: Unified runtime build fails with /DUNICODE
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /UUNICODE")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /UUNICODE")
+  append("/WX-" CMAKE_CXX_FLAGS)
+  append("/WX-" CMAKE_C_FLAGS)
+  # Unified runtime build fails with /DUNICODE
+  append("/UUNICODE" CMAKE_CXX_FLAGS)
+  append("/UUNICODE" CMAKE_C_FLAGS)
 else()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-error")
+  append("-Wno-error" CMAKE_CXX_FLAGS)
+  append("-Wno-error" CMAKE_C_FLAGS)
 endif()
 
 if(LIBSYCL_UR_USE_FETCH_CONTENT)
@@ -104,7 +104,7 @@ if(LIBSYCL_UR_USE_FETCH_CONTENT)
   endfunction()
 
   set(UNIFIED_RUNTIME_REPO "https://github.com/oneapi-src/unified-runtime.git")
-  set(UNIFIED_RUNTIME_TAG d03f19a88e42cb98be9604ff24b61190d1e48727)
+  set(UNIFIED_RUNTIME_TAG 851ee6a2bb5f5c34c6e48a00e0b06255044e0f03)
 
   set(UMF_BUILD_EXAMPLES OFF CACHE INTERNAL "EXAMPLES")
   # Due to the use of dependentloadflag and no installer for UMF and hwloc we need
