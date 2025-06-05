@@ -1,4 +1,4 @@
-//===--------- Definition of the MemProfiler class --------------*- C++ -*-===//
+//===--------- MemProfUse.h - Memory profiler use pass ----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares the MemProfiler class.
+// This file declares the MemProfUsePass class and related utilities.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_TRANSFORMS_INSTRUMENTATION_MEMPROFILER_H
-#define LLVM_TRANSFORMS_INSTRUMENTATION_MEMPROFILER_H
+#ifndef LLVM_TRANSFORMS_INSTRUMENTATION_MEMPROFUSE_H
+#define LLVM_TRANSFORMS_INSTRUMENTATION_MEMPROFUSE_H
 
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/IR/PassManager.h"
@@ -19,7 +19,6 @@
 #include <unordered_map>
 
 namespace llvm {
-class Function;
 class IndexedInstrProfReader;
 class Module;
 class TargetLibraryInfo;
@@ -27,29 +26,6 @@ class TargetLibraryInfo;
 namespace vfs {
 class FileSystem;
 } // namespace vfs
-
-/// Public interface to the memory profiler pass for instrumenting code to
-/// profile memory accesses.
-///
-/// The profiler itself is a function pass that works by inserting various
-/// calls to the MemProfiler runtime library functions. The runtime library
-/// essentially replaces malloc() and free() with custom implementations that
-/// record data about the allocations.
-class MemProfilerPass : public PassInfoMixin<MemProfilerPass> {
-public:
-  explicit MemProfilerPass();
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
-};
-
-/// Public interface to the memory profiler module pass for instrumenting code
-/// to profile memory allocations and accesses.
-class ModuleMemProfilerPass : public PassInfoMixin<ModuleMemProfilerPass> {
-public:
-  explicit ModuleMemProfilerPass();
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
-};
 
 class MemProfUsePass : public PassInfoMixin<MemProfUsePass> {
 public:
