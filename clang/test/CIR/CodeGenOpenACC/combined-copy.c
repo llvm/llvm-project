@@ -1071,3 +1071,34 @@ void acc_compute_members() {
   // CHECK-NEXT:  } loc
   // CHECK-NEXT:  acc.copyout accPtr(%[[COPYIN1]] : !cir.ptr<!cir.ptr<!cir.ptr<!cir.double>>>) bounds(%[[BOUNDS1]], %[[BOUNDS2]]) to varPtr(%[[GETPTRPTRMEMBER]] : !cir.ptr<!cir.ptr<!cir.ptr<!cir.double>>>) {dataClause = #acc<data_clause acc_copy>, name = "localStruct.ptrPtrMember[1:3][1:1]"}
 }
+
+typedef struct InnerTy {
+  int a;
+  int b;
+} Inner;
+
+typedef struct OuterTy {
+  Inner inner[4];
+} Outer;
+
+void copy_member_of_array_element_member() {
+  // CHECK: cir.func @copy_member_of_array_element_member() {
+  Outer outer;
+  // CHECK-NEXT: %[[OUTER:.*]] = cir.alloca !rec_OuterTy, !cir.ptr<!rec_OuterTy>, ["outer"]
+
+  #pragma acc parallel loop copy(outer.inner[2].b)
+  for(int i = 0; i < 5; ++i);
+  // CHECK-NEXT: %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
+  // CHECK-NEXT: %[[GETINNER:.*]] = cir.get_member %[[OUTER]][0] {name = "inner"} : !cir.ptr<!rec_OuterTy> -> !cir.ptr<!cir.array<!rec_InnerTy x 4>>
+  // CHECK-NEXT: %[[INNERDECAY:.*]] = cir.cast(array_to_ptrdecay, %[[GETINNER]] : !cir.ptr<!cir.array<!rec_InnerTy x 4>>), !cir.ptr<!rec_InnerTy>
+  // CHECK-NEXT: %[[STRIDE:.*]] = cir.ptr_stride(%[[INNERDECAY]] : !cir.ptr<!rec_InnerTy>, %[[TWO]] : !s32i), !cir.ptr<!rec_InnerTy>
+  // CHECK-NEXT: %[[GETB:.*]] = cir.get_member %[[STRIDE]][1] {name = "b"} : !cir.ptr<!rec_InnerTy> -> !cir.ptr<!s32i>
+  // CHECK-NEXT:  %[[COPYIN1:.*]] = acc.copyin varPtr(%[[GETB]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {dataClause = #acc<data_clause acc_copy>, name = "outer.inner[2].b"}
+  // CHECK-NEXT:  acc.parallel combined(loop) dataOperands(%[[COPYIN1]] : !cir.ptr<!s32i>) {
+  // CHECK-NEXT: acc.loop combined(parallel) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: }
+  // CHECK-NEXT:  acc.yield
+  // CHECK-NEXT:  } loc
+  // CHECK-NEXT:  acc.copyout accPtr(%[[COPYIN1]] : !cir.ptr<!s32i>) to varPtr(%[[GETB]] : !cir.ptr<!s32i>) {dataClause = #acc<data_clause acc_copy>, name = "outer.inner[2].b"}
+}
