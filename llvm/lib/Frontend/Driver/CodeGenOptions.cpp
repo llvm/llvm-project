@@ -8,7 +8,14 @@
 
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/TargetParser/Triple.h"
+
+namespace llvm {
+extern llvm::cl::opt<bool> DebugInfoCorrelate;
+extern llvm::cl::opt<llvm::InstrProfCorrelator::ProfCorrelatorKind>
+    ProfileCorrelate;
+} // namespace llvm
 
 namespace llvm::driver {
 
@@ -56,4 +63,10 @@ TargetLibraryInfoImpl *createTLII(const llvm::Triple &TargetTriple,
   return TLII;
 }
 
+std::string getDefaultProfileGenName() {
+  return llvm::DebugInfoCorrelate ||
+                 llvm::ProfileCorrelate != InstrProfCorrelator::NONE
+             ? "default_%m.proflite"
+             : "default_%m.profraw";
+}
 } // namespace llvm::driver
