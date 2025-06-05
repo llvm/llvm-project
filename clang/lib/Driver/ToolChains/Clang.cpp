@@ -7741,7 +7741,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_experimental_late_parse_attributes);
 
   if (Args.hasFlag(options::OPT_funique_source_file_names,
-                    options::OPT_fno_unique_source_file_names, false)) {
+                   options::OPT_fno_unique_source_file_names, false)) {
     if (Arg *A = Args.getLastArg(options::OPT_unique_source_file_identifier_EQ))
       A->render(Args, CmdArgs);
     else

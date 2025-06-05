@@ -341,7 +341,7 @@ public:
   /// If non-empty, allow the compiler to assume that the given source file
   /// identifier is unique at link time.
   std::string UniqueSourceFileIdentifier;
-  
+
   enum RemarkKind {
     RK_Missing,            // Remark argument not present on the command line.
     RK_Enabled,            // Remark enabled via '-Rgroup'.
