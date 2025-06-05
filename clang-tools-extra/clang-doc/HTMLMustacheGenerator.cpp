@@ -209,14 +209,13 @@ static json::Value extractValue(const TypedefInfo &I) {
 
 static json::Value extractValue(const CommentInfo &I) {
   Object Obj = Object();
-  json::Value Child = Object();
+  Object Child;
 
   json::Value ChildArr = Array();
   auto &CARef = *ChildArr.getAsArray();
   CARef.reserve(I.Children.size());
-  for (const auto &C : I.Children) {
+  for (const auto &C : I.Children)
     CARef.emplace_back(extractValue(*C));
-  }
 
   switch (I.Kind) {
   case CommentKind::CK_TextComment: {
@@ -225,9 +224,9 @@ static json::Value extractValue(const CommentInfo &I) {
   }
 
   case CommentKind::CK_BlockCommandComment: {
-    Child.getAsObject()->insert({"Command", I.Name});
-    Child.getAsObject()->insert({"Children", ChildArr});
-    Obj.insert({commentKindToString(I.Kind), Child});
+    Child.insert({"Command", I.Name});
+    Child.insert({"Children", ChildArr});
+    Obj.insert({commentKindToString(I.Kind), json::Value(std::move(Child))});
     return Obj;
   }
 
@@ -236,37 +235,37 @@ static json::Value extractValue(const CommentInfo &I) {
     for (const auto &Arg : I.Args) {
       ArgsArr.getAsArray()->emplace_back(Arg);
     }
-    Child.getAsObject()->insert({"Command", I.Name});
-    Child.getAsObject()->insert({"Args", ArgsArr});
-    Child.getAsObject()->insert({"Children", ChildArr});
-    Obj.insert({commentKindToString(I.Kind), Child});
+    Child.insert({"Command", I.Name});
+    Child.insert({"Args", ArgsArr});
+    Child.insert({"Children", ChildArr});
+    Obj.insert({commentKindToString(I.Kind), json::Value(std::move(Child))});
     return Obj;
   }
 
   case CommentKind::CK_ParamCommandComment:
   case CommentKind::CK_TParamCommandComment: {
-    Child.getAsObject()->insert({"ParamName", I.ParamName});
-    Child.getAsObject()->insert({"Direction", I.Direction});
-    Child.getAsObject()->insert({"Explicit", I.Explicit});
-    Child.getAsObject()->insert({"Children", ChildArr});
-    Obj.insert({commentKindToString(I.Kind), Child});
+    Child.insert({"ParamName", I.ParamName});
+    Child.insert({"Direction", I.Direction});
+    Child.insert({"Explicit", I.Explicit});
+    Child.insert({"Children", ChildArr});
+    Obj.insert({commentKindToString(I.Kind), json::Value(std::move(Child))});
     return Obj;
   }
 
   case CommentKind::CK_VerbatimBlockComment: {
-    Child.getAsObject()->insert({"Text", I.Text});
-    Child.getAsObject()->insert({"Children", ChildArr});
+    Child.insert({"Text", I.Text});
+    Child.insert({"Children", ChildArr});
     if (!I.CloseName.empty())
-      Child.getAsObject()->insert({"CloseName", I.CloseName});
-    Obj.insert({commentKindToString(I.Kind), Child});
+      Child.insert({"CloseName", I.CloseName});
+    Obj.insert({commentKindToString(I.Kind), json::Value(std::move(Child))});
     return Obj;
   }
 
   case CommentKind::CK_VerbatimBlockLineComment:
   case CommentKind::CK_VerbatimLineComment: {
-    Child.getAsObject()->insert({"Text", I.Text});
-    Child.getAsObject()->insert({"Children", ChildArr});
-    Obj.insert({commentKindToString(I.Kind), Child});
+    Child.insert({"Text", I.Text});
+    Child.insert({"Children", ChildArr});
+    Obj.insert({commentKindToString(I.Kind), json::Value(std::move(Child))});
     return Obj;
   }
 
@@ -279,26 +278,26 @@ static json::Value extractValue(const CommentInfo &I) {
     for (const auto &Val : I.AttrValues)
       AttrValuesArray.getAsArray()->emplace_back(Val);
 
-    Child.getAsObject()->insert({"Name", I.Name});
-    Child.getAsObject()->insert({"SelfClosing", I.SelfClosing});
-    Child.getAsObject()->insert({"AttrKeys", AttrKeysArray});
-    Child.getAsObject()->insert({"AttrValues", AttrValuesArray});
-    Child.getAsObject()->insert({"Children", ChildArr});
-    Obj.insert({commentKindToString(I.Kind), Child});
+    Child.insert({"Name", I.Name});
+    Child.insert({"SelfClosing", I.SelfClosing});
+    Child.insert({"AttrKeys", AttrKeysArray});
+    Child.insert({"AttrValues", AttrValuesArray});
+    Child.insert({"Children", ChildArr});
+    Obj.insert({commentKindToString(I.Kind), json::Value(std::move(Child))});
     return Obj;
   }
 
   case CommentKind::CK_HTMLEndTagComment: {
-    Child.getAsObject()->insert({"Name", I.Name});
-    Child.getAsObject()->insert({"Children", ChildArr});
-    Obj.insert({commentKindToString(I.Kind), Child});
+    Child.insert({"Name", I.Name});
+    Child.insert({"Children", ChildArr});
+    Obj.insert({commentKindToString(I.Kind), json::Value(std::move(Child))});
     return Obj;
   }
 
   case CommentKind::CK_FullComment:
   case CommentKind::CK_ParagraphComment: {
-    Child.getAsObject()->insert({"Children", ChildArr});
-    Obj.insert({commentKindToString(I.Kind), Child});
+    Child.insert({"Children", ChildArr});
+    Obj.insert({commentKindToString(I.Kind), json::Value(std::move(Child))});
     return Obj;
   }
 
@@ -306,9 +305,8 @@ static json::Value extractValue(const CommentInfo &I) {
     Obj.insert({commentKindToString(I.Kind), I.Text});
     return Obj;
   }
-
-    llvm_unreachable("Unknown comment kind encountered.");
   }
+  llvm_unreachable("Unknown comment kind encountered.");
 }
 
 static void maybeInsertLocation(std::optional<Location> Loc,
