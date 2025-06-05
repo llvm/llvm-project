@@ -812,7 +812,6 @@ void xegpu::populateXeGPUSubgroupDistributePatterns(
 }
 
 void XeGPUSubgroupDistributePass::runOnOperation() {
-
   // Move all operations of a GPU function inside gpu.warp_execute_on_lane_0
   // operation.
   {

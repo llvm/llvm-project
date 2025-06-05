@@ -23,6 +23,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/Visitors.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -683,6 +684,22 @@ RunLayoutInfoPropagation::printAnalysisResult(llvm::raw_ostream &os) {
 }
 
 using GetLayoutCallbackFnTy = function_ref<xegpu::LayoutAttr(Value)>;
+/// Helper to update the users of a value with a given layout.
+static void updateUsers(Value v, xegpu::LayoutAttr layout) {
+  // Update all users of the value with the layout.
+  for (OpOperand &user : v.getUses()) {
+    Operation *owner = user.getOwner();
+    // Add temporary layout attribute at the user op.
+    std::string attrName = xegpu::getLayoutName(user);
+    owner->setAttr(attrName, layout);
+  }
+}
+
+/// Update an operation with the layout of its results. If the result type is a
+/// vector type, a temporary layout attribute is added to the operation. If the
+/// result type is a tensor descriptor type, the type is updated with the layout
+/// attribute. The users of the result are also updated with the layout
+/// attribute.
 static void updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
                      GetLayoutCallbackFnTy getLayoutOfValue) {
 
@@ -712,14 +729,12 @@ static void updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
     std::string resultLayoutName = xegpu::getLayoutName(result);
     op->setAttr(resultLayoutName, layout);
     // Update all users of the result with the layout.
-    for (OpOperand &user : result.getUses()) {
-      Operation *owner = user.getOwner();
-      // Add temorary layout attribute at the user op.
-      std::string attrName = xegpu::getLayoutName(user);
-      owner->setAttr(attrName, layout);
-    }
+    updateUsers(result, layout);
   }
 }
+
+/// Update the types of successor regions of a branch terminator op (scf.yield)
+/// with assigned layouts.
 static void updateBranchTerminatorOpInterface(
     mlir::OpBuilder &builder,
     mlir::RegionBranchTerminatorOpInterface terminator,
@@ -769,6 +784,10 @@ static void updateBranchTerminatorOpInterface(
     }
   }
 }
+
+/// Some operations contain multiple regions (like scf.for) each of which have
+/// block arguments. This function updates the block arguments types of such
+/// regions with the assigned layouts.
 static void updateBranchOpInterface(mlir::OpBuilder &builder,
                                     mlir::RegionBranchOpInterface branch,
                                     GetLayoutCallbackFnTy getLayoutOfValue) {
@@ -790,33 +809,32 @@ static void updateBranchOpInterface(mlir::OpBuilder &builder,
       Type inputType = input.getType();
       if (!isa<xegpu::TensorDescType>(inputType))
         continue;
-      xegpu::LayoutAttr blockArgLayout = getLayoutOfValue(input);
-      xegpu::LayoutAttr initArgLayout = getLayoutOfValue(operand);
+      xegpu::LayoutAttr inputLayout = getLayoutOfValue(input);
+      xegpu::LayoutAttr operandLayout = getLayoutOfValue(operand);
 
-      if (!blockArgLayout || !initArgLayout) {
+      if (!inputLayout || !operandLayout) {
         LLVM_DEBUG(DBGS() << "No layout assigned for block arg: " << input
                           << " or init arg: " << operand << "\n");
         continue;
       }
 
-      // TOOD: We expect these two to match. Data flow analysis will ensure
-      // this.
-      assert(blockArgLayout == initArgLayout &&
+      // TODO: We expect these two to match.
+      assert(inputLayout == operandLayout &&
              "Expexing block arg and init arg to have the same layout.");
       // Get tensor descriptor type with the layout.
       auto tdescTy = dyn_cast<xegpu::TensorDescType>(inputType);
       auto newTdescTy = xegpu::TensorDescType::get(
           tdescTy.getContext(), tdescTy.getShape(), tdescTy.getElementType(),
-          tdescTy.getEncoding(), blockArgLayout);
+          tdescTy.getEncoding(), inputLayout);
       input.setType(newTdescTy);
       // Store the layout for the result.
       if (resultToLayouts.count(result) != 0 &&
-          resultToLayouts[result] != blockArgLayout) {
+          resultToLayouts[result] != inputLayout) {
         LLVM_DEBUG(DBGS() << "Conflicting layouts for result: " << result
                           << " - " << resultToLayouts[result] << " vs "
-                          << blockArgLayout << "\n");
+                          << inputLayout << "\n");
       } else {
-        resultToLayouts[result] = blockArgLayout;
+        resultToLayouts[result] = inputLayout;
       }
     }
   }
@@ -844,15 +862,11 @@ static void updateBranchOpInterface(mlir::OpBuilder &builder,
     std::string resultLayoutName = xegpu::getLayoutName(r);
     op->setAttr(resultLayoutName, layout);
     // Update all users of the result with the layout.
-    for (OpOperand &user : r.getUses()) {
-      Operation *owner = user.getOwner();
-      // Add temporary layout attribute at the user op.
-      std::string attrName = xegpu::getLayoutName(user);
-      owner->setAttr(attrName, layout);
-    }
+    updateUsers(r, layout);
   }
 }
 
+/// Update the function arguments and results with the layouts.
 static void updateFunctionOpInterface(mlir::OpBuilder &builder,
                                       mlir::FunctionOpInterface funcOp,
                                       GetLayoutCallbackFnTy getLayoutOfValue) {
@@ -879,11 +893,7 @@ static void updateFunctionOpInterface(mlir::OpBuilder &builder,
     }
     // If the argument is a vector type, update all the users of the argument
     // with the layout.
-    for (OpOperand &user : arg.getUses()) {
-      Operation *owner = user.getOwner();
-      std::string attrName = xegpu::getLayoutName(user);
-      owner->setAttr(attrName, layout);
-    }
+    updateUsers(arg, layout);
   }
   // Update the function type with the new argument types.
   // NOTE: We assume that function results are not expected to have layouts.
@@ -902,7 +912,7 @@ struct XeGPULayoutPropagatePass final
 
 void XeGPULayoutPropagatePass::runOnOperation() {
   auto &analyis = getAnalysis<RunLayoutInfoPropagation>();
-
+  // Helper to convert LayoutInfo to xegpu::LayoutAttr.
   auto getXeGPULayoutForValue = [&](Value val) -> xegpu::LayoutAttr {
     LayoutInfo layout = analyis.getLayoutInfo(val);
     if (!layout.isAssigned()) {
@@ -921,23 +931,25 @@ void XeGPULayoutPropagatePass::runOnOperation() {
   Operation *op = getOperation();
   op->walk([&](mlir::Block *block) {
     for (mlir::Operation &op : llvm::reverse(block->getOperations())) {
-      if (auto branchTermOp =
-              mlir::dyn_cast<mlir::RegionBranchTerminatorOpInterface>(op)) {
-        updateBranchTerminatorOpInterface(builder, branchTermOp,
+      TypeSwitch<Operation *>(&op)
+          .Case<mlir::RegionBranchTerminatorOpInterface>(
+              [&](mlir::RegionBranchTerminatorOpInterface branchTermOp) {
+                updateBranchTerminatorOpInterface(builder, branchTermOp,
+                                                  getXeGPULayoutForValue);
+              })
+          .Case<mlir::RegionBranchOpInterface>(
+              [&](mlir::RegionBranchOpInterface regionBrOp) {
+                updateBranchOpInterface(builder, regionBrOp,
+                                        getXeGPULayoutForValue);
+              })
+          .Case<mlir::FunctionOpInterface>(
+              [&](mlir::FunctionOpInterface funcOp) {
+                updateFunctionOpInterface(builder, funcOp,
                                           getXeGPULayoutForValue);
-        continue;
-      }
-
-      if (auto regionBrOp = mlir::dyn_cast<mlir::RegionBranchOpInterface>(op)) {
-        updateBranchOpInterface(builder, regionBrOp, getXeGPULayoutForValue);
-        continue;
-      }
-
-      if (auto funcOp = mlir::dyn_cast<mlir::FunctionOpInterface>(op)) {
-        updateFunctionOpInterface(builder, funcOp, getXeGPULayoutForValue);
-        continue;
-      }
-      updateOp(builder, &op, getXeGPULayoutForValue);
+              })
+          .Default([&](Operation *op) {
+            updateOp(builder, op, getXeGPULayoutForValue);
+          });
     }
   });
 }
