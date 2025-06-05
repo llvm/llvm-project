@@ -393,17 +393,27 @@ llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
     return B.CreateCall(FunctionCallee(GroupIndex));
   }
   if (D.hasAttr<HLSLSV_DispatchThreadIDAttr>()) {
+    llvm::Intrinsic::ID IntrinID = getThreadIdIntrinsic();
     llvm::Function *ThreadIDIntrinsic =
-        CGM.getIntrinsic(getThreadIdIntrinsic());
+        llvm::Intrinsic::isOverloaded(IntrinID)
+            ? CGM.getIntrinsic(IntrinID, {CGM.Int32Ty})
+            : CGM.getIntrinsic(IntrinID);
     return buildVectorInput(B, ThreadIDIntrinsic, Ty);
   }
   if (D.hasAttr<HLSLSV_GroupThreadIDAttr>()) {
+    llvm::Intrinsic::ID IntrinID = getGroupThreadIdIntrinsic();
     llvm::Function *GroupThreadIDIntrinsic =
-        CGM.getIntrinsic(getGroupThreadIdIntrinsic());
+        llvm::Intrinsic::isOverloaded(IntrinID)
+            ? CGM.getIntrinsic(IntrinID, {CGM.Int32Ty})
+            : CGM.getIntrinsic(IntrinID);
     return buildVectorInput(B, GroupThreadIDIntrinsic, Ty);
   }
   if (D.hasAttr<HLSLSV_GroupIDAttr>()) {
-    llvm::Function *GroupIDIntrinsic = CGM.getIntrinsic(getGroupIdIntrinsic());
+    llvm::Intrinsic::ID IntrinID = getGroupIdIntrinsic();
+    llvm::Function *GroupIDIntrinsic =
+        llvm::Intrinsic::isOverloaded(IntrinID)
+            ? CGM.getIntrinsic(IntrinID, {CGM.Int32Ty})
+            : CGM.getIntrinsic(IntrinID);
     return buildVectorInput(B, GroupIDIntrinsic, Ty);
   }
   if (D.hasAttr<HLSLSV_PositionAttr>()) {
