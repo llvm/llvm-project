@@ -2,7 +2,7 @@
 ;RUN: llc < %s -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK
 
 ; ;CHECK-LABEL: {{^}}_amdgpu_ps_1_arg:
-; ;CHECK: NumVgprs: 2
+; ;CHECK: NumVgprs: 4
 define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_1_arg(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18) local_unnamed_addr #0 {
 .entry:
   %i1 = extractelement <2 x float> %arg3, i32 1
@@ -193,7 +193,7 @@ define dllexport amdgpu_ps { <4 x float>, <4 x float>, <4 x float>, <4 x float> 
 
 ; Check that when no input args are used we get the minimum allocation - note that we always enable the first input
 ; CHECK-LABEL: {{^}}_amdgpu_ps_all_unused:
-; CHECK: NumVgprs: 2
+; CHECK: NumVgprs: 4
 define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_all_unused(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18) local_unnamed_addr #0 {
 .entry:
   ret { <4 x float> } undef
@@ -202,7 +202,7 @@ define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_all_unused(i32 inreg %arg
 ; Check that when no input args are used we get the minimum allocation - note that we always enable the first input
 ; Additionally set the PSInputAddr to 0 via the metadata
 ; CHECK-LABEL: {{^}}_amdgpu_ps_all_unused_ia0:
-; CHECK: NumVgprs: 2
+; CHECK: NumVgprs: 4
 define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_all_unused_ia0(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x float> %arg3, <2 x float> %arg4, <2 x float> %arg5, <3 x float> %arg6, <2 x float> %arg7, <2 x float> %arg8, <2 x float> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, i32 %arg15, i32 %arg16, i32 %arg17, i32 %arg18) local_unnamed_addr #3 {
 .entry:
   ret { <4 x float> } undef

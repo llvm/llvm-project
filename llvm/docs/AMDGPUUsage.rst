@@ -4450,9 +4450,10 @@ same *vendor-name*.
                                                                   wavefront for
                                                                   GFX6-GFX9. A register
                                                                   is required if it is
-                                                                  written to, or
+                                                                  used explicitly, or
                                                                   if a higher numbered
-                                                                  register is written to. This
+                                                                  register is used
+                                                                  explicitly. This
                                                                   includes the special
                                                                   SGPRs for VCC, Flat
                                                                   Scratch (GFX7-GFX9)
@@ -4470,10 +4471,10 @@ same *vendor-name*.
                                                                   each work-item for
                                                                   GFX6-GFX9. A register
                                                                   is required if it is
-                                                                  written to, or
+                                                                  used explicitly, or
                                                                   if a higher numbered
-                                                                  register is
-                                                                  written to.
+                                                                  register is used
+                                                                  explicitly.
      ".agpr_count"                       integer        Required  Number of accumulator
                                                                   registers required by
                                                                   each work-item for

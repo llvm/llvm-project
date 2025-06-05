@@ -141,7 +141,8 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
   if (MFI->isStackRealigned())
     Info.PrivateSegmentSize += FrameInfo.getMaxAlign().value();
 
-  Info.UsesVCC = MRI.isPhysRegUsed(AMDGPU::VCC);
+  Info.UsesVCC =
+      MRI.isPhysRegUsed(AMDGPU::VCC_LO) || MRI.isPhysRegUsed(AMDGPU::VCC_HI);
 
   // If there are no calls and no laneshared, MachineRegisterInfo can tell us
   // the used register count easily.
@@ -158,9 +159,9 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
     return Info;
   }
 
-  if (!FrameInfo.hasCalls() && !FrameInfo.hasTailCall())
-    return Info;
-
+  int32_t MaxVGPR = -1;
+  int32_t MaxAGPR = -1;
+  int32_t MaxSGPR = -1;
   Info.CalleeSegmentSize = 0;
 
   for (const MachineBasicBlock &MBB : MF) {
@@ -512,6 +513,10 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
       }
     }
   }
+
+  Info.NumExplicitSGPR = MaxSGPR + 1;
+  Info.NumVGPR = MaxVGPR + 1;
+  Info.NumAGPR = MaxAGPR + 1;
 
   return Info;
 }
