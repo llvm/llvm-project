@@ -5388,6 +5388,13 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
     CheckDoacross(*doaDep);
     CheckDependenceType(doaDep->GetDepType());
   } else {
+    using Modifier = parser::OmpDependClause::TaskDep::Modifier;
+    auto &modifiers{std::get<std::optional<std::list<Modifier>>>(taskDep->t)};
+    if (!modifiers) {
+      context_.Say(GetContext().clauseSource,
+          "A DEPEND clause on a TASK construct must have a valid task dependence type"_err_en_US);
+      return;
+    }
     CheckTaskDependenceType(taskDep->GetTaskDepType());
   }
 
