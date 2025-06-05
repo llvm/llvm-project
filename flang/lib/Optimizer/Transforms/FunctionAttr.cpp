@@ -107,6 +107,10 @@ void FunctionAttrPass::runOnOperation() {
     func->setAttr(
         mlir::LLVM::LLVMFuncOp::getUnsafeFpMathAttrName(llvmFuncOpName),
         mlir::BoolAttr::get(context, true));
+  if (!preferVectorWidth.empty())
+    func->setAttr(
+        mlir::LLVM::LLVMFuncOp::getPreferVectorWidthAttrName(llvmFuncOpName),
+        mlir::StringAttr::get(context, preferVectorWidth));
 
   LLVM_DEBUG(llvm::dbgs() << "=== End " DEBUG_TYPE " ===\n");
 }

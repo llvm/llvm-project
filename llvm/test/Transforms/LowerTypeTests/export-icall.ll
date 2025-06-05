@@ -37,7 +37,7 @@ define void @f3(i32 %x) !type !8 {
 
 
 ; CHECK-DAG: @__typeid_typeid1_global_addr = hidden alias i8, ptr [[JT1:.*]]
-; CHECK-DAG: @__typeid_typeid1_align = hidden alias i8, inttoptr (i8 3 to ptr)
+; CHECK-DAG: @__typeid_typeid1_align = hidden alias i8, inttoptr (i64 3 to ptr)
 ; CHECK-DAG: @__typeid_typeid1_size_m1 = hidden alias i8, inttoptr (i64 4 to ptr)
 
 ; CHECK-DAG: @h                    = alias void (i8), ptr [[JT1]]

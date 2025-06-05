@@ -243,9 +243,7 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
           continue;
         }
         // TODO: Also verify VPPredInstPHIRecipe.
-        if (isa<VPPredInstPHIRecipe>(UI) ||
-            (isa<VPInstruction>(UI) && (cast<VPInstruction>(UI)->getOpcode() ==
-                                        VPInstruction::ResumePhi)))
+        if (isa<VPPredInstPHIRecipe>(UI))
           continue;
 
         // If the user is in the same block, check it comes after R in the

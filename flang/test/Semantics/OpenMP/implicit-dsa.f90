@@ -14,15 +14,15 @@ subroutine implicit_dsa_test1
 
   !$omp task private(y) shared(z)
     !DEF: /implicit_dsa_test1/OtherConstruct1/x (OmpFirstPrivate, OmpImplicit) HostAssoc INTEGER(4)
-    !DEF: /implicit_dsa_test1/OtherConstruct1/y (OmpPrivate) HostAssoc INTEGER(4)
-    !DEF: /implicit_dsa_test1/OtherConstruct1/z (OmpShared) HostAssoc INTEGER(4)
+    !DEF: /implicit_dsa_test1/OtherConstruct1/y (OmpPrivate, OmpExplicit) HostAssoc INTEGER(4)
+    !DEF: /implicit_dsa_test1/OtherConstruct1/z (OmpShared, OmpExplicit) HostAssoc INTEGER(4)
     x = y + z
   !$omp end task
 
   !$omp task default(shared)
-    !DEF: /implicit_dsa_test1/OtherConstruct2/x HostAssoc INTEGER(4)
-    !DEF: /implicit_dsa_test1/OtherConstruct2/y HostAssoc INTEGER(4)
-    !DEF: /implicit_dsa_test1/OtherConstruct2/z HostAssoc INTEGER(4)
+    !DEF: /implicit_dsa_test1/OtherConstruct2/x (OmpShared) HostAssoc INTEGER(4)
+    !DEF: /implicit_dsa_test1/OtherConstruct2/y (OmpShared) HostAssoc INTEGER(4)
+    !DEF: /implicit_dsa_test1/OtherConstruct2/z (OmpShared) HostAssoc INTEGER(4)
     x = y + z
   !$omp end task
 
@@ -61,16 +61,16 @@ subroutine implicit_dsa_test3
 
   !$omp parallel
     !$omp task
-      !DEF: /implicit_dsa_test3/OtherConstruct1/OtherConstruct1/x HostAssoc INTEGER(4)
+      !DEF: /implicit_dsa_test3/OtherConstruct1/OtherConstruct1/x (OmpShared) HostAssoc INTEGER(4)
       x = 1
-      !DEF: /implicit_dsa_test3/OtherConstruct1/OtherConstruct1/y HostAssoc INTEGER(4)
+      !DEF: /implicit_dsa_test3/OtherConstruct1/OtherConstruct1/y (OmpShared) HostAssoc INTEGER(4)
       y = 1
     !$omp end task
 
     !$omp task firstprivate(x)
-      !DEF: /implicit_dsa_test3/OtherConstruct1/OtherConstruct2/x (OmpFirstPrivate) HostAssoc INTEGER(4)
+      !DEF: /implicit_dsa_test3/OtherConstruct1/OtherConstruct2/x (OmpFirstPrivate, OmpExplicit) HostAssoc INTEGER(4)
       x = 1
-      !DEF: /implicit_dsa_test3/OtherConstruct1/OtherConstruct2/z HostAssoc INTEGER(4)
+      !DEF: /implicit_dsa_test3/OtherConstruct1/OtherConstruct2/z (OmpShared) HostAssoc INTEGER(4)
       z = 1
     !$omp end task
   !$omp end parallel
@@ -110,7 +110,7 @@ subroutine implicit_dsa_test5
   !$omp parallel default(private)
     !$omp task
       !$omp parallel
-        !DEF: /implicit_dsa_test5/OtherConstruct1/OtherConstruct1/OtherConstruct1/x HostAssoc INTEGER(4)
+        !DEF: /implicit_dsa_test5/OtherConstruct1/OtherConstruct1/OtherConstruct1/x (OmpShared) HostAssoc INTEGER(4)
         x = 1
       !$omp end parallel
     !$omp end task
@@ -133,7 +133,7 @@ subroutine implicit_dsa_test6
     !$omp end parallel
 
     !$omp parallel default(firstprivate) shared(y)
-      !DEF: /implicit_dsa_test6/OtherConstruct1/OtherConstruct2/y (OmpShared) HostAssoc INTEGER(4)
+      !DEF: /implicit_dsa_test6/OtherConstruct1/OtherConstruct2/y (OmpShared, OmpExplicit) HostAssoc INTEGER(4)
       !DEF: /implicit_dsa_test6/OtherConstruct1/OtherConstruct2/x (OmpFirstPrivate) HostAssocINTEGER(4)
       !DEF: /implicit_dsa_test6/OtherConstruct1/OtherConstruct2/z (OmpFirstPrivate) HostAssocINTEGER(4)
       y = x + z
@@ -154,5 +154,18 @@ subroutine implicit_dsa_test7
       !DEF: /implicit_dsa_test7/OtherConstruct1/y (OmpFirstPrivate, OmpImplicit) HostAssoc INTEGER(4)
       x = y
     !$omp end taskgroup
+  !$omp end task
+end subroutine
+
+! Predetermined loop iteration variable.
+!DEF: /implicit_dsa_test8 (Subroutine) Subprogram
+subroutine implicit_dsa_test8
+  !DEF: /implicit_dsa_test8/i ObjectEntity INTEGER(4)
+  integer i
+
+  !$omp task
+    !DEF: /implicit_dsa_test8/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+    do i = 1, 10
+    end do
   !$omp end task
 end subroutine
