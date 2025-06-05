@@ -40,5 +40,5 @@ void DebugLocStream::finalizeEntry() {
 DebugLocStream::ListBuilder::~ListBuilder() {
   if (!Locs.finalizeList(Asm))
     return;
-  V.emplace<Loc::Multi>(ListIndex, TagOffset);
+  V.emplace<Loc::Multi>(ListIndex, TagOffset, CommonAddrSpace);
 }

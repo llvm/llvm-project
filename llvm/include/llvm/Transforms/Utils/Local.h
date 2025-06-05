@@ -366,7 +366,7 @@ Value *salvageDebugInfoImpl(Instruction &I, uint64_t CurrentLocOps,
 /// introducing a use-before-def, it is either salvaged (\ref salvageDebugInfo)
 /// or deleted. Returns true if any debug users were updated.
 bool replaceAllDbgUsesWith(Instruction &From, Value &To, Instruction &DomPoint,
-                           DominatorTree &DT);
+                           const DominatorTree &DT);
 
 /// If a terminator in an unreachable basic block has an operand of type
 /// Instruction, transform it into poison. Return true if any operands
