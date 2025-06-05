@@ -627,7 +627,8 @@ static void followUsesInContext(AAType &AA, Attributor &A,
     if (const Instruction *UserI = dyn_cast<Instruction>(U->getUser())) {
       bool Found = Explorer.findInContextOf(UserI, EIt, EEnd);
       if (Found && AA.followUseInMBEC(A, U, UserI, State))
-        Uses.insert_range(llvm::make_pointer_range(UserI->uses()));
+        for (const Use &Us : UserI->uses())
+          Uses.insert(&Us);
     }
   }
 }
@@ -12781,13 +12782,13 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
 
     resetASRanges(A);
 
-    auto FlatAS = A.getInfoCache().getFlatAddressSpace();
+    std::optional<unsigned> FlatAS = A.getInfoCache().getFlatAddressSpace();
     if (!FlatAS.has_value()) {
       indicatePessimisticFixpoint();
       return;
     }
 
-    removeAS(FlatAS.value());
+    removeAS(*FlatAS);
 
     unsigned AS = getAssociatedType()->getPointerAddressSpace();
     if (AS != FlatAS.value()) {
@@ -12798,7 +12799,7 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
 
   ChangeStatus updateImpl(Attributor &A) override {
     unsigned FlatAS = A.getInfoCache().getFlatAddressSpace().value();
-    uint32_t OrigAssumed = getAssumed();
+    uint32_t OldAssumed = getAssumed();
 
     auto CheckAddressSpace = [&](Value &Obj) {
       if (isa<PoisonValue>(&Obj))
@@ -12812,19 +12813,18 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
       return true;
     };
 
-    auto *AUO = A.getOrCreateAAFor<AAUnderlyingObjects>(getIRPosition(), this,
-                                                        DepClassTy::REQUIRED);
-    if (!AUO->forallUnderlyingObjects(CheckAddressSpace)) {
+    const AAUnderlyingObjects *AUO = A.getOrCreateAAFor<AAUnderlyingObjects>(
+        getIRPosition(), this, DepClassTy::REQUIRED);
+    if (!AUO->forallUnderlyingObjects(CheckAddressSpace))
       return indicatePessimisticFixpoint();
-    }
 
-    return OrigAssumed == getAssumed() ? ChangeStatus::UNCHANGED
-                                       : ChangeStatus::CHANGED;
+    return OldAssumed == getAssumed() ? ChangeStatus::UNCHANGED
+                                      : ChangeStatus::CHANGED;
   }
 
   /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
-    auto FlatAS = A.getInfoCache().getFlatAddressSpace();
+    std::optional<unsigned> FlatAS = A.getInfoCache().getFlatAddressSpace();
     if (!FlatAS.has_value())
       llvm_unreachable("Must have flat address space!");
 
@@ -12836,11 +12836,11 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
     MDNode *NoAliasASNode = nullptr;
     MDBuilder MDB(Ctx);
     for (RangeMap::const_iterator I = Map.begin(); I != Map.end(); I++) {
-      if (I.value() != true)
+      if (!I.value())
         continue;
       unsigned Upper = I.stop();
       unsigned Lower = I.start();
-      if (NoAliasASNode == nullptr) {
+      if (!NoAliasASNode) {
         NoAliasASNode = MDB.createRange(APInt(32, Lower), APInt(32, Upper + 1));
         continue;
       }
@@ -12854,8 +12854,8 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
     auto AddNoAliasAttr = [&](const Use &U, bool &) {
       if (U.get() != AssociatedValue)
         return true;
-      auto *Inst = dyn_cast<Instruction>(U.getUser());
-      if (!Inst)
+      Instruction *Inst = dyn_cast<Instruction>(U.getUser());
+      if (!Inst || Inst->hasMetadata(LLVMContext::MD_noalias_addrspace))
         return true;
       if (!isa<LoadInst>(Inst) && !isa<StoreInst>(Inst) &&
           !isa<AtomicCmpXchgInst>(Inst) && !isa<AtomicRMWInst>(Inst))
@@ -12866,7 +12866,7 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
       Changed = true;
       return true;
     };
-    (void)A.checkForAllUses(AddNoAliasAttr, *this, getAssociatedValue(),
+    (void)A.checkForAllUses(AddNoAliasAttr, *this, *AssociatedValue,
                             /*CheckBBLivenessOnly=*/true);
     return Changed ? ChangeStatus::CHANGED : ChangeStatus::UNCHANGED;
   }
@@ -12874,10 +12874,10 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
   /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
     if (!isValidState())
-      return "noaliasaddrspace(<invalid>)";
+      return "<invalid>";
     std::string Str;
     raw_string_ostream OS(Str);
-    OS << "noaliasaddrspace(";
+    OS << "CanNotBeAddrSpace(";
     for (RangeMap::const_iterator I = Map.begin(); I != Map.end(); I++) {
       unsigned Upper = I.stop();
       unsigned Lower = I.start();
@@ -12898,7 +12898,7 @@ private:
       if (Upper == Lower)
         return;
       if (AS != ~((unsigned)0) && AS + 1 <= Upper)
-        Map.insert(AS + 1, Upper, true);
+        Map.insert(AS + 1, Upper, /*what ever this variable name is=*/true);
       if (AS != 0 && Lower <= AS - 1)
         Map.insert(Lower, AS - 1, true);
     }

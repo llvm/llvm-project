@@ -591,7 +591,49 @@ define amdgpu_kernel void @kernal_call_func(i1 %cond1, i1 %cond2, i32 %val) #0 {
   ret void
 }
 
+define amdgpu_kernel void @no_alias_addr_space_unhandled(ptr addrspace(3) %sptr, i1 %cond1, i1 %cond2, i32 %val, i32 %offset) #0 {
+; CHECK-LABEL: define amdgpu_kernel void @no_alias_addr_space_unhandled(
+; CHECK-SAME: ptr addrspace(3) [[SPTR:%.*]], i1 [[COND1:%.*]], i1 [[COND2:%.*]], i32 [[VAL:%.*]], i32 [[OFFSET:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[LPTR:%.*]] = alloca i32, align 4, addrspace(5)
+; CHECK-NEXT:    store i32 [[VAL]], ptr addrspace(3) [[SPTR]], align 4
+; CHECK-NEXT:    store i32 [[VAL]], ptr addrspace(5) [[LPTR]], align 4
+; CHECK-NEXT:    store i32 [[VAL]], ptr addrspace(1) @gptr, align 4
+; CHECK-NEXT:    ret void
+;
+  %lptr = alloca i32, align 4, addrspace(5)
+  store i32 %val, ptr addrspace(3) %sptr
+  store i32 %val, ptr addrspace(5) %lptr
+  store i32 %val, ptr addrspace(1) @gptr
+  ret void
+}
+
+define amdgpu_kernel void @no_alias_addr_space_has_meta(ptr addrspace(3) %sptr, i1 %cond1, i1 %cond2, i32 %val, i32 %offset) #0 {
+; CHECK-LABEL: define amdgpu_kernel void @no_alias_addr_space_has_meta(
+; CHECK-SAME: ptr addrspace(3) [[SPTR:%.*]], i1 [[COND1:%.*]], i1 [[COND2:%.*]], i32 [[VAL:%.*]], i32 [[OFFSET:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[LPTR:%.*]] = alloca i32, align 4, addrspace(5)
+; CHECK-NEXT:    [[B:%.*]] = addrspacecast ptr addrspace(5) [[LPTR]] to ptr
+; CHECK-NEXT:    [[C:%.*]] = addrspacecast ptr addrspace(3) [[SPTR]] to ptr
+; CHECK-NEXT:    [[ADD_A:%.*]] = getelementptr inbounds i8, ptr addrspacecast (ptr addrspace(1) @gptr to ptr), i32 [[OFFSET]]
+; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[COND1]], ptr [[ADD_A]], ptr [[B]]
+; CHECK-NEXT:    [[PTR2:%.*]] = select i1 [[COND2]], ptr [[PTR]], ptr [[C]]
+; CHECK-NEXT:    store i32 [[VAL]], ptr [[PTR2]], align 4, !noalias.addrspace [[META2:![0-9]+]]
+; CHECK-NEXT:    ret void
+;
+  %lptr = alloca i32, align 4, addrspace(5)
+  %a = addrspacecast ptr addrspace(1) @gptr to ptr
+  %b = addrspacecast ptr addrspace(5) %lptr to ptr
+  %c = addrspacecast ptr addrspace(3) %sptr to ptr
+  %add_a = getelementptr inbounds i8, ptr %a, i32 %offset
+  %ptr = select i1 %cond1, ptr %add_a, ptr %b
+  %ptr2 = select i1 %cond2, ptr %ptr, ptr %c
+  store i32 %val, ptr %ptr2, !noalias.addrspace !0
+  ret void
+}
+
+!0 = !{i32 2, i32 3, i32 4, i32 10}
+
 ;.
 ; CHECK: [[META0]] = !{i32 2, i32 3, i32 4, i32 5, i32 6, i32 10}
 ; CHECK: [[META1]] = !{i32 2, i32 3, i32 5, i32 10}
+; CHECK: [[META2]] = !{i32 2, i32 3, i32 4, i32 10}
 ;.
