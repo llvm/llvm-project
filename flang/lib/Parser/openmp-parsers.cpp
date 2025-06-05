@@ -1239,7 +1239,7 @@ struct OmpEndDirectiveParser {
   constexpr OmpEndDirectiveParser(llvm::omp::Directive dir) : dir_(dir) {}
 
   std::optional<resultType> Parse(ParseState &state) const {
-    if ((startOmpLine >> "END"_id).Parse(state)) {
+    if ((startOmpLine >> "END"_sptok).Parse(state)) {
       auto &&dirSpec{Parser<OmpDirectiveSpecification>{}.Parse(state)};
       if (dirSpec && dirSpec->DirId() == dir_) {
         return std::move(dirSpec);
