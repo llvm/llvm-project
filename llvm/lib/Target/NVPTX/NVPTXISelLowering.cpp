@@ -5693,8 +5693,14 @@ static SDValue combineMINMAX(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
 
   const unsigned BitWidth = VT.getSizeInBits();
   SDLoc DL(N);
-  auto MatchTuncSat = [&](MVT DestVT) {
+  const auto TryToLowerAsSaturatedConversion = [&](MVT DestVT) {
     const unsigned DestBitWidth = DestVT.getSizeInBits();
+
+    // If the destination is greater than or equal to the source, the min/max
+    // comparisons are meaningless/impossible.
+    if (DestBitWidth >= BitWidth)
+      return SDValue();
+
     bool IsSigned;
     if (Ceil == APInt::getSignedMaxValue(DestBitWidth).sext(BitWidth) &&
         Floor == APInt::getSignedMinValue(DestBitWidth).sext(BitWidth))
@@ -5710,12 +5716,9 @@ static SDValue combineMINMAX(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     return DCI.DAG.getExtOrTrunc(IsSigned, Trunc, DL, VT);
   };
 
-  if (VT != MVT::i16)
-    if (auto Res = MatchTuncSat(MVT::i16))
+  for (const auto DestVT : {MVT::i16, MVT::i8})
+    if (auto Res = TryToLowerAsSaturatedConversion(DestVT))
       return Res;
-
-  if (auto Res = MatchTuncSat(MVT::i8))
-    return Res;
 
   return SDValue();
 }
