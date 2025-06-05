@@ -409,6 +409,34 @@ Error olDestroyEvent_impl(ol_event_handle_t Event) {
   return olDestroy(Event);
 }
 
+Error olGetEventInfoImplDetail(ol_event_handle_t Event,
+                               ol_event_info_t PropName, size_t PropSize,
+                               void *PropValue, size_t *PropSizeRet) {
+  ReturnHelper ReturnValue(PropSize, PropValue, PropSizeRet);
+
+  switch (PropName) {
+  case OL_EVENT_INFO_QUEUE:
+    return ReturnValue(Event->Queue);
+  default:
+    return createOffloadError(ErrorCode::INVALID_ENUMERATION,
+                              "olGetEventInfo enum '%i' is invalid", PropName);
+  }
+
+  return Error::success();
+}
+
+Error olGetEventInfo_impl(ol_event_handle_t Event, ol_event_info_t PropName,
+                          size_t PropSize, void *PropValue) {
+
+  return olGetEventInfoImplDetail(Event, PropName, PropSize, PropValue,
+                                  nullptr);
+}
+
+Error olGetEventInfoSize_impl(ol_event_handle_t Event, ol_event_info_t PropName,
+                              size_t *PropSizeRet) {
+  return olGetEventInfoImplDetail(Event, PropName, 0, nullptr, PropSizeRet);
+}
+
 ol_event_handle_t makeEvent(ol_queue_handle_t Queue) {
   auto EventImpl = std::make_unique<ol_event_impl_t>(nullptr, Queue);
   if (auto Res = Queue->Device->Device->createEvent(&EventImpl->EventInfo)) {

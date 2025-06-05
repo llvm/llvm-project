@@ -10,7 +10,9 @@ add_offload_unittest("device"
 
 add_offload_unittest("event"
     event/olDestroyEvent.cpp
-    event/olWaitEvent.cpp)
+    event/olWaitEvent.cpp
+    event/olGetEventInfo.cpp
+    event/olGetEventInfoSize.cpp)
 
 add_offload_unittest("kernel"
     kernel/olGetKernel.cpp
