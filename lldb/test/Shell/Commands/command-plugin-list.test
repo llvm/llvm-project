@@ -31,8 +31,8 @@ plugin list --json
 # CHECK: {
 # CHECK:  "system-runtime": [
 # CHECK:    {
-# CHECK:      "enabled": true,
-# CHECK:      "name": "systemruntime-macosx"
+# CHECK-DAG:  "enabled": true,
+# CHECK-DAG:  "name": "systemruntime-macosx"
 # CHECK:    }
 # CHECK:  ]
 # CHECK: }
