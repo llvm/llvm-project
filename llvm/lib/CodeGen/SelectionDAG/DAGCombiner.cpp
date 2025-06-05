@@ -2681,14 +2681,6 @@ SDValue DAGCombiner::visitPTRADD(SDNode *N) {
   assert(PtrVT == IntVT &&
          "PTRADD with different operand types is not supported");
 
-  // fold (ptradd undef, y) -> undef
-  if (N0.isUndef())
-    return N0;
-
-  // fold (ptradd x, undef) -> undef
-  if (N1.isUndef())
-    return DAG.getUNDEF(PtrVT);
-
   // fold (ptradd x, 0) -> x
   if (isNullConstant(N1))
     return N0;
