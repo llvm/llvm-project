@@ -1,10 +1,9 @@
 #include "Generators.h"
+#include "clang/Basic/Specifiers.h"
 #include "llvm/Support/JSON.h"
 
 using namespace llvm;
 using namespace llvm::json;
-
-static llvm::ExitOnError ExitOnErr;
 
 namespace clang {
 namespace doc {
@@ -117,6 +116,18 @@ static void serializeReference(const Reference &Ref, Object &ReferenceObj,
   ReferenceObj["Name"] = Ref.Name;
   ReferenceObj["QualName"] = Ref.QualName;
   ReferenceObj["ID"] = toHex(toStringRef(Ref.USR));
+}
+
+static void serializeReference(Object &Obj, SmallVector<Reference, 4> References, std::string Key) {
+  json::Value ReferencesArray = Array();
+  json::Array &ReferencesArrayRef = *ReferencesArray.getAsArray();
+  for (const auto& Reference : References) {
+    Object ReferenceObject = Object();
+    auto BasePath = Reference.getRelativeFilePath("");
+    serializeReference(Reference, ReferenceObject, BasePath);
+    ReferencesArrayRef.push_back(std::move(ReferenceObject));
+  } 
+  Obj[Key] = std::move(ReferencesArray);
 }
 
 // Although namespaces and records both have ScopeChildren, they serialize them
@@ -280,6 +291,26 @@ static void serializeInfo(const RecordInfo &I, json::Object &Obj,
       Obj["ProtectedMembers"] = std::move(ProtectedMembers);
   }
 
+  if (!I.Bases.empty()) {
+    json::Value BasesArray = Array();
+    json::Array &BasesArrayRef = *BasesArray.getAsArray();
+    for (const auto &BaseInfo : I.Bases) {
+      Object BaseInfoObj = Object();
+      serializeInfo(BaseInfo, BaseInfoObj, RepositoryUrl);
+      BaseInfoObj["IsVirtual"] = BaseInfo.IsVirtual;
+      BaseInfoObj["Access"] = getAccessSpelling(BaseInfo.Access);
+      BaseInfoObj["IsParent"] = BaseInfo.IsParent;
+      BasesArrayRef.push_back(std::move(BaseInfoObj));
+    }
+    Obj["Bases"] = std::move(BasesArray);
+  }
+
+  if (!I.Parents.empty())
+    serializeReference(Obj, I.Parents, "Parents");
+
+  if (!I.VirtualParents.empty())
+    serializeReference(Obj, I.VirtualParents, "VirtualParents");
+
   serializeCommonChildren(I.Children, Obj, RepositoryUrl);
 }
 
@@ -297,7 +328,7 @@ Error JSONGenerator::generateDocs(
     if (!CreatedDirs.contains(Path)) {
       if (std::error_code Err = sys::fs::create_directories(Path);
           Err != std::error_code())
-        ExitOnErr(createFileError(Twine(Path), Err));
+        return createFileError(Twine(Path), Err);
       CreatedDirs.insert(Path);
     }
 
@@ -309,7 +340,7 @@ Error JSONGenerator::generateDocs(
     std::error_code FileErr;
     raw_fd_ostream InfoOS(Group.getKey(), FileErr, sys::fs::OF_Text);
     if (FileErr)
-      ExitOnErr(createFileError("cannot open file " + Group.getKey(), FileErr));
+      return createFileError("cannot open file " + Group.getKey(), FileErr);
 
     for (const auto &Info : Group.getValue())
       if (Error Err = generateDocForInfo(Info, InfoOS, CDCtx))
@@ -334,8 +365,7 @@ Error JSONGenerator::generateDocForInfo(Info *I, raw_ostream &OS,
   case InfoType::IT_typedef:
     break;
   case InfoType::IT_default:
-    ExitOnErr(
-        createStringError(inconvertibleErrorCode(), "unexpected info type"));
+    return createStringError(inconvertibleErrorCode(), "unexpected info type");
   }
   OS << llvm::formatv("{0:2}", llvm::json::Value(std::move(Obj)));
   return Error::success();
