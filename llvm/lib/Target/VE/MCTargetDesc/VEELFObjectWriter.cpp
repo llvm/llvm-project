@@ -32,8 +32,7 @@ protected:
   unsigned getRelocType(const MCFixup &, const MCValue &,
                         bool IsPCRel) const override;
 
-  bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
-                               unsigned Type) const override;
+  bool needsRelocateWithSymbol(const MCValue &, unsigned Type) const override;
 };
 } // namespace
 
@@ -145,7 +144,6 @@ unsigned VEELFObjectWriter::getRelocType(const MCFixup &Fixup,
 }
 
 bool VEELFObjectWriter::needsRelocateWithSymbol(const MCValue &,
-                                                const MCSymbol &,
                                                 unsigned Type) const {
   switch (Type) {
   default:

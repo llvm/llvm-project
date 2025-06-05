@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/LoongArchFixupKinds.h"
-#include "MCTargetDesc/LoongArchMCExpr.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
@@ -26,8 +25,7 @@ public:
 
   ~LoongArchELFObjectWriter() override;
 
-  bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
-                               unsigned Type) const override {
+  bool needsRelocateWithSymbol(const MCValue &, unsigned Type) const override {
     return EnableRelax;
   }
 

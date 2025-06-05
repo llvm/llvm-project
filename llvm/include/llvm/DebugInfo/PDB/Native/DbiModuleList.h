@@ -15,6 +15,7 @@
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptor.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cstddef>
@@ -34,22 +35,23 @@ class DbiModuleSourceFilesIterator
   using BaseType = typename DbiModuleSourceFilesIterator::iterator_facade_base;
 
 public:
-  DbiModuleSourceFilesIterator(const DbiModuleList &Modules, uint32_t Modi,
-                               uint16_t Filei);
+  LLVM_ABI DbiModuleSourceFilesIterator(const DbiModuleList &Modules,
+                                        uint32_t Modi, uint16_t Filei);
   DbiModuleSourceFilesIterator() = default;
   DbiModuleSourceFilesIterator(const DbiModuleSourceFilesIterator &R) = default;
   DbiModuleSourceFilesIterator &
   operator=(const DbiModuleSourceFilesIterator &R) = default;
 
-  bool operator==(const DbiModuleSourceFilesIterator &R) const;
+  LLVM_ABI bool operator==(const DbiModuleSourceFilesIterator &R) const;
 
   const StringRef &operator*() const { return ThisValue; }
   StringRef &operator*() { return ThisValue; }
 
-  bool operator<(const DbiModuleSourceFilesIterator &RHS) const;
-  std::ptrdiff_t operator-(const DbiModuleSourceFilesIterator &R) const;
-  DbiModuleSourceFilesIterator &operator+=(std::ptrdiff_t N);
-  DbiModuleSourceFilesIterator &operator-=(std::ptrdiff_t N);
+  LLVM_ABI bool operator<(const DbiModuleSourceFilesIterator &RHS) const;
+  LLVM_ABI std::ptrdiff_t
+  operator-(const DbiModuleSourceFilesIterator &R) const;
+  LLVM_ABI DbiModuleSourceFilesIterator &operator+=(std::ptrdiff_t N);
+  LLVM_ABI DbiModuleSourceFilesIterator &operator-=(std::ptrdiff_t N);
 
 private:
   void setValue();
@@ -68,17 +70,17 @@ class DbiModuleList {
   friend DbiModuleSourceFilesIterator;
 
 public:
-  Error initialize(BinaryStreamRef ModInfo, BinaryStreamRef FileInfo);
+  LLVM_ABI Error initialize(BinaryStreamRef ModInfo, BinaryStreamRef FileInfo);
 
-  Expected<StringRef> getFileName(uint32_t Index) const;
-  uint32_t getModuleCount() const;
-  uint32_t getSourceFileCount() const;
-  uint16_t getSourceFileCount(uint32_t Modi) const;
+  LLVM_ABI Expected<StringRef> getFileName(uint32_t Index) const;
+  LLVM_ABI uint32_t getModuleCount() const;
+  LLVM_ABI uint32_t getSourceFileCount() const;
+  LLVM_ABI uint16_t getSourceFileCount(uint32_t Modi) const;
 
-  iterator_range<DbiModuleSourceFilesIterator>
+  LLVM_ABI iterator_range<DbiModuleSourceFilesIterator>
   source_files(uint32_t Modi) const;
 
-  DbiModuleDescriptor getModuleDescriptor(uint32_t Modi) const;
+  LLVM_ABI DbiModuleDescriptor getModuleDescriptor(uint32_t Modi) const;
 
 private:
   Error initializeModInfo(BinaryStreamRef ModInfo);

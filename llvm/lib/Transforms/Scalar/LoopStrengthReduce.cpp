@@ -556,13 +556,14 @@ static void DoInitialMatch(const SCEV *S, Loop *L,
 
   // Look at addrec operands.
   const SCEV *Start, *Step;
-  if (match(S, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step))) &&
+  const Loop *ARLoop;
+  if (match(S,
+            m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step), m_Loop(ARLoop))) &&
       !Start->isZero()) {
     DoInitialMatch(Start, L, Good, Bad, SE);
     DoInitialMatch(SE.getAddRecExpr(SE.getConstant(S->getType(), 0), Step,
                                     // FIXME: AR->getNoWrapFlags()
-                                    cast<SCEVAddRecExpr>(S)->getLoop(),
-                                    SCEV::FlagAnyWrap),
+                                    ARLoop, SCEV::FlagAnyWrap),
                    L, Good, Bad, SE);
     return;
   }
@@ -5879,7 +5880,7 @@ void LSRInstance::RewriteForPHI(PHINode *PN, const LSRUse &LU,
       }
 
       std::pair<DenseMap<BasicBlock *, Value *>::iterator, bool> Pair =
-        Inserted.insert(std::make_pair(BB, static_cast<Value *>(nullptr)));
+          Inserted.try_emplace(BB);
       if (!Pair.second)
         PN->setIncomingValue(i, Pair.first->second);
       else {

@@ -306,10 +306,10 @@ InstructionCost RISCVTTIImpl::getPartialReductionCost(
       Opcode != Instruction::Add || !BinOp || *BinOp != Instruction::Mul ||
       InputTypeA != InputTypeB || !InputTypeA->isIntegerTy(8) ||
       OpAExtend != OpBExtend || !AccumType->isIntegerTy(32) ||
-      !VF.isKnownMultipleOf(4) || !VF.isScalable())
+      !VF.isKnownMultipleOf(4))
     return InstructionCost::getInvalid();
 
-  Type *Tp = VectorType::get(AccumType, VF);
+  Type *Tp = VectorType::get(AccumType, VF.divideCoefficientBy(4));
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
   // Note: Asuming all vqdot* variants are equal cost
   // TODO: Thread CostKind through this API
@@ -2297,9 +2297,12 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
       Index = Index % M1Max;
     }
 
-    // We could extract/insert the first element without vslidedown/vslideup.
     if (Index == 0)
+      // We can extract/insert the first element without vslidedown/vslideup.
       SlideCost = 0;
+    else if (ST->hasVendorXRivosVisni() && isUInt<5>(Index) &&
+             Val->getScalarType()->isIntegerTy())
+      SlideCost = 0; // With ri.vinsert/ri.vextract there is no slide needed
     else if (Opcode == Instruction::InsertElement)
       SlideCost = 1; // With a constant index, we do not need to use addi.
   }

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCExpr.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -474,21 +475,6 @@ bool MCExpr::evaluateAsRelocatable(MCValue &Res, const MCAssembler *Asm) const {
 bool MCExpr::evaluateAsValue(MCValue &Res, const MCAssembler &Asm) const {
   return evaluateAsRelocatableImpl(Res, &Asm, true);
 }
-static bool canExpand(const MCSymbol &Sym, bool InSet) {
-  if (Sym.isWeakExternal())
-    return false;
-
-  const MCExpr *Expr = Sym.getVariableValue();
-  const auto *Inner = dyn_cast<MCSymbolRefExpr>(Expr);
-  if (Inner) {
-    if (Inner->getKind() == MCSymbolRefExpr::VK_WEAKREF)
-      return false;
-  }
-
-  if (InSet)
-    return true;
-  return !Sym.isInSection();
-}
 
 bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
                                        bool InSet) const {
@@ -502,17 +488,38 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
 
   case SymbolRef: {
     const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(this);
-    const MCSymbol &Sym = SRE->getSymbol();
+    MCSymbol &Sym = const_cast<MCSymbol &>(SRE->getSymbol());
     const auto Kind = SRE->getKind();
     bool Layout = Asm && Asm->hasLayout();
 
-    // Evaluate recursively if this is a variable.
+    // If the symbol is equated, resolve the inner expression.
+    // However, when two IMAGE_WEAK_EXTERN_ANTI_DEPENDENCY symbols reference
+    // each other, we retain the equated symbol to avoid a cyclic definition
+    // error.
+    if (Sym.isResolving()) {
+      if (Asm && Asm->hasFinalLayout()) {
+        Asm->getContext().reportError(
+            Sym.getVariableValue()->getLoc(),
+            "cyclic dependency detected for symbol '" + Sym.getName() + "'");
+        Sym.setVariableValue(MCConstantExpr::create(0, Asm->getContext()));
+      }
+      return false;
+    }
     if (Sym.isVariable() && (Kind == MCSymbolRefExpr::VK_None || Layout) &&
-        canExpand(Sym, InSet)) {
+        !Sym.isWeakExternal()) {
+      Sym.setIsResolving(true);
+      auto _ = make_scope_exit([&] { Sym.setIsResolving(false); });
       bool IsMachO =
           Asm && Asm->getContext().getAsmInfo()->hasSubsectionsViaSymbols();
-      if (Sym.getVariableValue()->evaluateAsRelocatableImpl(Res, Asm,
-                                                            InSet || IsMachO)) {
+      if (!Sym.getVariableValue()->evaluateAsRelocatableImpl(Res, Asm,
+                                                             InSet || IsMachO))
+        return false;
+      // When generating relocations, if Sym resolves to a symbol relative to a
+      // section, relocations are generated against Sym. Treat label differences
+      // as constants.
+      auto *A = Res.getAddSym();
+      auto *B = Res.getSubSym();
+      if (InSet || !(A && !B && A->isInSection())) {
         if (Kind != MCSymbolRefExpr::VK_None) {
           if (Res.isAbsolute()) {
             Res = MCValue::get(&Sym, nullptr, 0, Kind);
@@ -529,8 +536,6 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
         if (!IsMachO)
           return true;
 
-        auto *A = Res.getAddSym();
-        auto *B = Res.getSubSym();
         // FIXME: This is small hack. Given
         // a = b + 4
         // .long a
@@ -712,9 +717,16 @@ MCFragment *MCExpr::findAssociatedFragment() const {
     return MCSymbol::AbsolutePseudoFragment;
 
   case SymbolRef: {
-    const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(this);
-    const MCSymbol &Sym = SRE->getSymbol();
-    return Sym.getFragment();
+    auto &Sym =
+        const_cast<MCSymbol &>(cast<MCSymbolRefExpr>(this)->getSymbol());
+    if (Sym.Fragment)
+      return Sym.Fragment;
+    if (Sym.isResolving())
+      return MCSymbol::AbsolutePseudoFragment;
+    Sym.setIsResolving(true);
+    auto *F = Sym.getFragment();
+    Sym.setIsResolving(false);
+    return F;
   }
 
   case Unary:

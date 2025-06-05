@@ -82,3 +82,17 @@ Otherwise it will be transformed into:
    const auto &Foo3 = cast<const int &>(Bar3);
 
 Note in the LLVM alias, the default value is `false`.
+
+.. option:: AllowedTypes
+
+  A semicolon-separated list of names of types to ignore when ``auto`` is
+  deduced to that type or a pointer to that type. Note that this distinguishes
+  type aliases from the original type, so specifying e.g. ``my_int`` will not
+  suppress reports about ``int`` even if it is defined as a ``typedef`` alias
+  for ``int``. Regular expressions are accepted, e.g. ``[Rr]ef(erence)?$``
+  matches every type with suffix ``Ref``, ``ref``, ``Reference`` and
+  ``reference``. If a name in the list contains the sequence `::` it is matched
+  against the qualified type name (i.e. ``namespace::Type``), otherwise it is
+  matched against only the type name (i.e. ``Type``). E.g. to suppress reports
+  for ``std::array`` iterators use `std::array<.*>::(const_)?iterator` string.
+  The default is an empty string.

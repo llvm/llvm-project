@@ -216,7 +216,7 @@ bool EarliestEscapeAnalysis::isNotCapturedBefore(const Value *Object,
   if (!isIdentifiedFunctionLocal(Object))
     return false;
 
-  auto Iter = EarliestEscapes.insert({Object, nullptr});
+  auto Iter = EarliestEscapes.try_emplace(Object);
   if (Iter.second) {
     Instruction *EarliestCapture = FindEarliestCapture(
         Object, *const_cast<Function *>(DT.getRoot()->getParent()),
@@ -1261,8 +1261,7 @@ AliasResult BasicAAResult::aliasGEP(
 
     ConstantRange CR = computeConstantRange(Index.Val.V, /* ForSigned */ false,
                                             true, &AC, Index.CxtI);
-    KnownBits Known =
-        computeKnownBits(Index.Val.V, DL, 0, &AC, Index.CxtI, DT);
+    KnownBits Known = computeKnownBits(Index.Val.V, DL, &AC, Index.CxtI, DT);
     CR = CR.intersectWith(
         ConstantRange::fromKnownBits(Known, /* Signed */ true),
         ConstantRange::Signed);

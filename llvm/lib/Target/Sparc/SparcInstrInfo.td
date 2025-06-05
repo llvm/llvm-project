@@ -55,6 +55,10 @@ def HasUA2005 : Predicate<"Subtarget->isUA2005()">,
 def HasUA2007 : Predicate<"Subtarget->isUA2007()">,
                 AssemblerPredicate<(all_of FeatureUA2007)>;
 
+// HasOSA2011 - This is true when the target processor has OSA 2011 extensions.
+def HasOSA2011 : Predicate<"Subtarget->isOSA2011()">,
+                AssemblerPredicate<(all_of FeatureOSA2011)>;
+
 // HasHardQuad - This is true when the target processor supports quad floating
 // point instructions.
 def HasHardQuad : Predicate<"Subtarget->hasHardQuad()">;
@@ -92,6 +96,8 @@ def UseDeprecatedInsts : Predicate<"Subtarget->useV8DeprecatedInsts()">;
 
 // FIXME these should have AsmOperandClass.
 def uimm3 : PatLeaf<(imm), [{ return isUInt<3>(N->getZExtValue()); }]>;
+
+def simm5  : PatLeaf<(imm), [{ return isInt<5>(N->getSExtValue()); }]>;
 
 def simm10  : PatLeaf<(imm), [{ return isInt<10>(N->getSExtValue()); }]>;
 
@@ -151,6 +157,12 @@ def SparcMEMrrAsmOperand : AsmOperandClass {
 def SparcMEMriAsmOperand : AsmOperandClass {
   let Name = "MEMri";
   let ParserMethod = "parseMEMOperand";
+}
+
+def simm5Op : Operand<iPTR> {
+  let OperandType = "OPERAND_IMMEDIATE";
+  let DecoderMethod = "DecodeSIMM5";
+  let EncoderMethod = "getSImm5OpValue";
 }
 
 def simm13Op : Operand<iPTR> {
@@ -242,6 +254,13 @@ def bprtarget : Operand<OtherVT> {
 def bprtarget16 : Operand<OtherVT> {
   let EncoderMethod = "getBranchOnRegTargetOpValue";
   let DecoderMethod = "DecodeDisp<16>";
+  let PrintMethod = "printCTILabel";
+  let OperandType = "OPERAND_PCREL";
+}
+
+def cbtarget : Operand<OtherVT> {
+  let EncoderMethod = "getCompareAndBranchTargetOpValue";
+  let DecoderMethod = "DecodeDisp<10>";
   let PrintMethod = "printCTILabel";
   let OperandType = "OPERAND_PCREL";
 }

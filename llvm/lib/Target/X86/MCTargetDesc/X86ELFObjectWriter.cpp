@@ -35,8 +35,7 @@ public:
 protected:
   unsigned getRelocType(const MCFixup &, const MCValue &,
                         bool IsPCRel) const override;
-  bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
-                               unsigned Type) const override;
+  bool needsRelocateWithSymbol(const MCValue &, unsigned Type) const override;
 
   void checkIs32(SMLoc Loc, X86_64RelType Type) const;
   void checkIs64(SMLoc Loc, X86_64RelType Type) const;
@@ -392,7 +391,6 @@ unsigned X86ELFObjectWriter::getRelocType(const MCFixup &Fixup,
 }
 
 bool X86ELFObjectWriter::needsRelocateWithSymbol(const MCValue &V,
-                                                 const MCSymbol &Sym,
                                                  unsigned Type) const {
   switch (V.getSpecifier()) {
   case X86MCExpr::VK_GOT:

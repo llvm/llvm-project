@@ -1954,6 +1954,10 @@ For example:
     The first three options are mutually exclusive, and the remaining options
     describe more details of how the function behaves. The remaining options
     are invalid for "free"-type functions.
+``"alloc-variant-zeroed"="FUNCTION"``
+    This attribute indicates that another function is equivalent to an allocator function,
+    but returns zeroed memory. The function must have "zeroed" allocation behavior,
+    the same ``alloc-family``, and take exactly the same arguments.
 ``allocsize(<EltSizeParam>[, <NumEltsParam>])``
     This attribute indicates that the annotated function will always return at
     least a given number of bytes (or null). Its arguments are zero-indexed
@@ -5614,6 +5618,8 @@ LoongArch:
 - ``m``: A memory operand whose address is formed by a base register and
   offset that is suitable for use in instructions with the same addressing
   mode as st.w and ld.w.
+- ``q``: A general-purpose register except for $r0 and $r1 (for the csrxchg
+  instruction).
 - ``I``: A signed 12-bit constant (for arithmetic instructions).
 - ``J``: An immediate integer zero.
 - ``K``: An unsigned 12-bit constant (for logic instructions).
@@ -9593,6 +9599,14 @@ the ``indirect labels``. Therefore, the address of a label as seen by another
 may not be equal to the address provided for the same block to this
 instruction's ``indirect labels`` operand. The assembly code may only transfer
 control to addresses provided via this instruction's ``indirect labels``.
+
+On target architectures that implement branch target enforcement by requiring
+indirect (register-controlled) branch instructions to jump only to locations
+marked by a special instruction (such as AArch64 ``bti``), the called code is
+expected not to use such an indirect branch to transfer control to the
+locations in ``indirect labels``. Therefore, including a label in the
+``indirect labels`` of a ``callbr`` does not require the compiler to put a
+``bti`` or equivalent instruction at the label.
 
 Arguments:
 """"""""""
@@ -20207,7 +20221,7 @@ Arguments:
 
 The argument to this intrinsic must be a vector.
 
-'``llvm.vector.deinterleave2/3/5/7``' Intrinsic
+'``llvm.vector.deinterleave2/3/4/5/6/7/8``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -20225,8 +20239,8 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-The '``llvm.vector.deinterleave2/3/5/7``' intrinsics deinterleave adjacent lanes
-into 2, 3, 5, and 7 separate vectors, respectively, and return them as the
+The '``llvm.vector.deinterleave2/3/4/5/6/7/8``' intrinsics deinterleave adjacent lanes
+into 2 through to 8 separate vectors, respectively, and return them as the
 result.
 
 This intrinsic works for both fixed and scalable vectors. While this intrinsic
@@ -20248,7 +20262,7 @@ Arguments:
 The argument is a vector whose type corresponds to the logical concatenation of
 the aggregated result types.
 
-'``llvm.vector.interleave2/3/5/7``' Intrinsic
+'``llvm.vector.interleave2/3/4/5/6/7/8``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -20266,7 +20280,7 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-The '``llvm.vector.interleave2/3/5/7``' intrinsic constructs a vector
+The '``llvm.vector.interleave2/3/4/5/6/7/8``' intrinsic constructs a vector
 by interleaving all the input vectors.
 
 This intrinsic works for both fixed and scalable vectors. While this intrinsic
