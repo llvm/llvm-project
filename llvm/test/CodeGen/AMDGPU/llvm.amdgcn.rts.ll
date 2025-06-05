@@ -174,3 +174,12 @@ define amdgpu_cs <3 x float>  @rts_read_prim_info(ptr addrspace(1) %gaddr, i32 %
   %ret = call <3 x float> @llvm.amdgcn.rts.read.prim.info(ptr addrspace(1) %gaddr, i32 %addr2)
   ret <3 x float> %ret
 }
+
+define amdgpu_cs void @test_rts_invalidate_bvh(){
+; GFX13-LABEL: test_rts_invalidate_bvh:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    global_inv scope:SCOPE_SE
+; GFX13-NEXT:    s_endpgm
+  call void @llvm.amdgcn.rts.invalidate.bvh()
+  ret void
+}

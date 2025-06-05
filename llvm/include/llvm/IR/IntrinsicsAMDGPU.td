@@ -4060,6 +4060,11 @@ def int_amdgcn_rts_read_prim_info: Intrinsic<[llvm_v3f32_ty],
     [global_ptr_ty, llvm_i32_ty],
     [IntrReadMem, IntrNoCallback, IntrWillReturn, IntrNoFree], "", [SDNPMemOperand]>;
 
+// llvm.amdgcn.rts.invalidate.bvh
+def int_amdgcn_rts_invalidate_bvh: Intrinsic<[],
+    [],
+    [IntrNoMem, IntrHasSideEffects, IntrWillReturn, IntrNoFree, IntrNoCallback], "", [SDNPMemOperand]>;
+
 def int_amdgcn_swc_reorder: Intrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrHasSideEffects, IntrNoCallback, IntrWillReturn, IntrNoFree], "", [SDNPMemOperand]>;
 def int_amdgcn_swc_flush: Intrinsic<[], [], [IntrHasSideEffects, IntrNoCallback, IntrWillReturn, IntrNoFree], "", [SDNPMemOperand]>;
 def int_amdgcn_swc_reorder_swap: Intrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrHasSideEffects, IntrNoCallback, IntrWillReturn, IntrNoFree], "", [SDNPMemOperand]>;

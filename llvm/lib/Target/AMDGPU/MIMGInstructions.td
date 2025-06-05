@@ -2078,6 +2078,12 @@ def : GCNPat<
   (RTS_READ_PRIM_INFO_gfx13 (i32 (EXTRACT_SUBREG VReg_64:$vaddr, sub0)),
                             (i32 (EXTRACT_SUBREG VReg_64:$vaddr, sub1)), $vaddr2, (i1 1))
 >;
+
+def : GCNPat<
+  (int_amdgcn_rts_invalidate_bvh),
+  //SCOPE_SE is 8
+  (GLOBAL_INV (i32 8))
+>;
 /********** ========================================= **********/
 /********** Table of dimension-aware image intrinsics **********/
 /********** ========================================= **********/
