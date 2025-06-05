@@ -172,8 +172,8 @@ def form_duplane : GICombineRule <
   (apply [{ applyDupLane(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
-def shuffle_vector_lowering : GICombineGroup<[dup, rev, ext, zip, uzp, trn, fullrev,
-                                              form_duplane, shuf_to_ins]>;
+def shuffle_vector_lowering : GICombineGroup<[dup, form_duplane, rev, ext, zip,
+                                              uzp, trn, fullrev, shuf_to_ins]>;
 
 // Turn G_UNMERGE_VALUES -> G_EXTRACT_VECTOR_ELT's
 def vector_unmerge_lowering : GICombineRule <
