@@ -257,6 +257,25 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   // Indicates the EEW of a vector instruction's destination operand.
   EEW DestEEW = EEWSEWx1;
   let TSFlags{25-24} = DestEEW.Value;
+
+  // 0 -> Don't care about altfmt bit in VTYPE.
+  // 1 -> Is not altfmt.
+  // 2 -> Is altfmt(BF16).
+  bits<2> AltFmtType = 0;
+  let TSFlags{27-26} = AltFmtType;
+
+  bit IsWiden = 0;
+  let TSFlags{28} = IsWiden;
+
+  // XSfmmbase
+  bit HasTWidenOp = 0;
+  let TSFlags{29} = HasTWidenOp;
+
+  bit HasTmOp = 0;
+  let TSFlags{30} = HasTmOp;
+
+  bit HasTkOp = 0;
+  let TSFlags{31} = HasTkOp;
 }
 
 class RVInst<dag outs, dag ins, string opcodestr, string argstr,
