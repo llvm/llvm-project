@@ -24,15 +24,12 @@ define float @maximumnum_float(float %x, float %y) {
 ; MIPS64R2-NEXT:    c.ule.s $f12, $f13
 ; MIPS64R2-NEXT:    mov.s $f0, $f13
 ; MIPS64R2-NEXT:    movf.s $f0, $f12, $fcc0
-; MIPS64R2-NEXT:    add.s $f1, $f0, $f0
-; MIPS64R2-NEXT:    c.un.s $f0, $f0
-; MIPS64R2-NEXT:    movt.s $f0, $f1, $fcc0
 ; MIPS64R2-NEXT:    mfc1 $1, $f12
 ; MIPS64R2-NEXT:    mov.s $f1, $f0
 ; MIPS64R2-NEXT:    movz.s $f1, $f12, $1
 ; MIPS64R2-NEXT:    mfc1 $1, $f13
-; MIPS64R2-NEXT:    mtc1 $zero, $f2
 ; MIPS64R2-NEXT:    movz.s $f1, $f13, $1
+; MIPS64R2-NEXT:    mtc1 $zero, $f2
 ; MIPS64R2-NEXT:    c.eq.s $f0, $f2
 ; MIPS64R2-NEXT:    jr $ra
 ; MIPS64R2-NEXT:    movt.s $f0, $f1, $fcc0
@@ -56,11 +53,8 @@ define float @maximumnum_float_nsz(float %x, float %y) {
 ; MIPS64R2-NEXT:    c.un.s $f13, $f13
 ; MIPS64R2-NEXT:    movt.s $f0, $f12, $fcc0
 ; MIPS64R2-NEXT:    c.ule.s $f12, $f0
-; MIPS64R2-NEXT:    movf.s $f0, $f12, $fcc0
-; MIPS64R2-NEXT:    add.s $f1, $f0, $f0
-; MIPS64R2-NEXT:    c.un.s $f0, $f0
 ; MIPS64R2-NEXT:    jr $ra
-; MIPS64R2-NEXT:    movt.s $f0, $f1, $fcc0
+; MIPS64R2-NEXT:    movf.s $f0, $f12, $fcc0
   %z = call nsz float @llvm.maximumnum.f32(float %x, float %y)
   ret float %z
 }
@@ -107,9 +101,6 @@ define double @maximumnum_double(double %x, double %y) {
 ; MIPS64R2-NEXT:    c.ule.d $f12, $f13
 ; MIPS64R2-NEXT:    mov.d $f0, $f13
 ; MIPS64R2-NEXT:    movf.d $f0, $f12, $fcc0
-; MIPS64R2-NEXT:    add.d $f1, $f0, $f0
-; MIPS64R2-NEXT:    c.un.d $f0, $f0
-; MIPS64R2-NEXT:    movt.d $f0, $f1, $fcc0
 ; MIPS64R2-NEXT:    dmfc1 $1, $f12
 ; MIPS64R2-NEXT:    mov.d $f1, $f0
 ; MIPS64R2-NEXT:    movz.d $f1, $f12, $1
@@ -139,11 +130,8 @@ define double @maximumnum_double_nsz(double %x, double %y) {
 ; MIPS64R2-NEXT:    c.un.d $f13, $f13
 ; MIPS64R2-NEXT:    movt.d $f0, $f12, $fcc0
 ; MIPS64R2-NEXT:    c.ule.d $f12, $f0
-; MIPS64R2-NEXT:    movf.d $f0, $f12, $fcc0
-; MIPS64R2-NEXT:    add.d $f1, $f0, $f0
-; MIPS64R2-NEXT:    c.un.d $f0, $f0
 ; MIPS64R2-NEXT:    jr $ra
-; MIPS64R2-NEXT:    movt.d $f0, $f1, $fcc0
+; MIPS64R2-NEXT:    movf.d $f0, $f12, $fcc0
   %z = call nsz double @llvm.maximumnum.f64(double %x, double %y)
   ret double %z
 }
@@ -189,9 +177,6 @@ define float @minimumnum_float(float %x, float %y) {
 ; MIPS64R2-NEXT:    c.olt.s $f12, $f13
 ; MIPS64R2-NEXT:    mov.s $f0, $f13
 ; MIPS64R2-NEXT:    movt.s $f0, $f12, $fcc0
-; MIPS64R2-NEXT:    add.s $f1, $f0, $f0
-; MIPS64R2-NEXT:    c.un.s $f0, $f0
-; MIPS64R2-NEXT:    movt.s $f0, $f1, $fcc0
 ; MIPS64R2-NEXT:    mfc1 $1, $f12
 ; MIPS64R2-NEXT:    lui $2, 32768
 ; MIPS64R2-NEXT:    xor $1, $1, $2
@@ -199,8 +184,8 @@ define float @minimumnum_float(float %x, float %y) {
 ; MIPS64R2-NEXT:    movz.s $f1, $f12, $1
 ; MIPS64R2-NEXT:    mfc1 $1, $f13
 ; MIPS64R2-NEXT:    xor $1, $1, $2
-; MIPS64R2-NEXT:    mtc1 $zero, $f2
 ; MIPS64R2-NEXT:    movz.s $f1, $f13, $1
+; MIPS64R2-NEXT:    mtc1 $zero, $f2
 ; MIPS64R2-NEXT:    c.eq.s $f0, $f2
 ; MIPS64R2-NEXT:    jr $ra
 ; MIPS64R2-NEXT:    movt.s $f0, $f1, $fcc0
@@ -224,11 +209,8 @@ define float @minimumnum_float_nsz(float %x, float %y) {
 ; MIPS64R2-NEXT:    c.un.s $f13, $f13
 ; MIPS64R2-NEXT:    movt.s $f0, $f12, $fcc0
 ; MIPS64R2-NEXT:    c.olt.s $f12, $f0
-; MIPS64R2-NEXT:    movt.s $f0, $f12, $fcc0
-; MIPS64R2-NEXT:    add.s $f1, $f0, $f0
-; MIPS64R2-NEXT:    c.un.s $f0, $f0
 ; MIPS64R2-NEXT:    jr $ra
-; MIPS64R2-NEXT:    movt.s $f0, $f1, $fcc0
+; MIPS64R2-NEXT:    movt.s $f0, $f12, $fcc0
   %z = call nsz float @llvm.minimumnum.f32(float %x, float %y)
   ret float %z
 }
@@ -277,9 +259,6 @@ define double @minimumnum_double(double %x, double %y) {
 ; MIPS64R2-NEXT:    c.olt.d $f12, $f13
 ; MIPS64R2-NEXT:    mov.d $f0, $f13
 ; MIPS64R2-NEXT:    movt.d $f0, $f12, $fcc0
-; MIPS64R2-NEXT:    add.d $f1, $f0, $f0
-; MIPS64R2-NEXT:    c.un.d $f0, $f0
-; MIPS64R2-NEXT:    movt.d $f0, $f1, $fcc0
 ; MIPS64R2-NEXT:    dmfc1 $1, $f12
 ; MIPS64R2-NEXT:    daddiu $2, $zero, 1
 ; MIPS64R2-NEXT:    dsll $2, $2, 63
@@ -313,11 +292,8 @@ define double @minimumnum_double_nsz(double %x, double %y) {
 ; MIPS64R2-NEXT:    c.un.d $f13, $f13
 ; MIPS64R2-NEXT:    movt.d $f0, $f12, $fcc0
 ; MIPS64R2-NEXT:    c.olt.d $f12, $f0
-; MIPS64R2-NEXT:    movt.d $f0, $f12, $fcc0
-; MIPS64R2-NEXT:    add.d $f1, $f0, $f0
-; MIPS64R2-NEXT:    c.un.d $f0, $f0
 ; MIPS64R2-NEXT:    jr $ra
-; MIPS64R2-NEXT:    movt.d $f0, $f1, $fcc0
+; MIPS64R2-NEXT:    movt.d $f0, $f12, $fcc0
   %z = call nsz double @llvm.minimumnum.f64(double %x, double %y)
   ret double %z
 }

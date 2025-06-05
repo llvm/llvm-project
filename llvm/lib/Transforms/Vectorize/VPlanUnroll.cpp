@@ -327,7 +327,9 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
     // Add all VPValues for all parts to ComputeReductionResult which combines
     // the parts to compute the final reduction value.
     VPValue *Op1;
-    if (match(&R, m_VPInstruction<VPInstruction::ComputeReductionResult>(
+    if (match(&R, m_VPInstruction<VPInstruction::ComputeAnyOfResult>(
+                      m_VPValue(), m_VPValue(), m_VPValue(Op1))) ||
+        match(&R, m_VPInstruction<VPInstruction::ComputeReductionResult>(
                       m_VPValue(), m_VPValue(Op1))) ||
         match(&R, m_VPInstruction<VPInstruction::ComputeFindLastIVResult>(
                       m_VPValue(), m_VPValue(), m_VPValue(Op1)))) {

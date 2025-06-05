@@ -235,6 +235,30 @@ protected:
   /// Join the lattice element and propagate and update if it changed.
   void join(AbstractSparseLattice *lhs, const AbstractSparseLattice &rhs);
 
+  /// Visits a call operation. Given the operand lattices, sets the result
+  /// lattices. Performs interprocedural data flow as follows: if the call
+  /// operation targets an external function, or if the solver is not
+  /// interprocedural, attempts to infer the results from the call arguments
+  /// using the user-provided `visitExternalCallImpl`. Otherwise, computes the
+  /// result lattices from the return sites if all return sites are known;
+  /// otherwise, conservatively marks the result lattices as having reached
+  /// their pessimistic fixpoints.
+  /// This method can be overridden to, for example, be less conservative and
+  /// propagate the information even if some return sites are unknown.
+  virtual LogicalResult
+  visitCallOperation(CallOpInterface call,
+                     ArrayRef<const AbstractSparseLattice *> operandLattices,
+                     ArrayRef<AbstractSparseLattice *> resultLattices);
+
+  /// Visits a callable operation. Computes the argument lattices from call
+  /// sites if all call sites are known; otherwise, conservatively marks them
+  /// as having reached their pessimistic fixpoints.
+  /// This method can be overridden to, for example, be less conservative and
+  /// propagate the information even if some call sites are unknown.
+  virtual void
+  visitCallableOperation(CallableOpInterface callable,
+                         ArrayRef<AbstractSparseLattice *> argLattices);
+
 private:
   /// Recursively initialize the analysis on nested operations and blocks.
   LogicalResult initializeRecursively(Operation *op);
@@ -429,6 +453,16 @@ protected:
 
   /// Join the lattice element and propagate and update if it changed.
   void meet(AbstractSparseLattice *lhs, const AbstractSparseLattice &rhs);
+
+  /// Visits a callable operation. If all the call sites are known computes the
+  /// operand lattices of `op` from the result lattices of all the call sites;
+  /// otherwise, conservatively marks them as having reached their pessimistic
+  /// fixpoints.
+  /// This method can be overridden to, for example, be less conservative and
+  /// propagate the information even if some call sites are unknown.
+  virtual LogicalResult
+  visitCallableOperation(Operation *op, CallableOpInterface callable,
+                         ArrayRef<AbstractSparseLattice *> operandLattices);
 
 private:
   /// Recursively initialize the analysis on nested operations and blocks.

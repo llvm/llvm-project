@@ -26,9 +26,9 @@ private:
   // instances of the same allocations.
   DenseSet<uint64_t> Contexts;
 
+  // Helper called by the public raw and indexed profile addRecord interfaces.
   void addRecord(uint64_t, const PortableMemInfoBlock &);
 
-protected:
   uint64_t MaxColdTotalSize = 0;
   uint64_t MaxWarmTotalSize = 0;
   uint64_t MaxHotTotalSize = 0;

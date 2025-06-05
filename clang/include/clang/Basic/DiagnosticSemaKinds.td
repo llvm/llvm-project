@@ -4288,6 +4288,9 @@ def warn_impcast_integer_sign_conditional : Warning<
 def warn_impcast_integer_precision : Warning<
   "implicit conversion loses integer precision: %0 to %1">,
   InGroup<ImplicitIntConversion>, DefaultIgnore;
+def warn_impcast_integer_precision_on_negation : Warning<
+  "implicit conversion loses integer precision: %0 to %1 on negation">,
+  InGroup<ImplicitIntConversionOnNegation>, DefaultIgnore;
 def warn_impcast_high_order_zero_bits : Warning<
   "higher order bits are zeroes after implicit conversion">,
   InGroup<ImplicitIntConversion>, DefaultIgnore;
@@ -12708,6 +12711,11 @@ def warn_noderef_on_non_pointer_or_array : Warning<
 def warn_noderef_to_dereferenceable_pointer : Warning<
   "casting to dereferenceable pointer removes 'noderef' attribute">, InGroup<NoDeref>;
 
+def warn_cast_discards_cfi_unchecked_callee
+    : Warning<"implicit conversion from %0 to %1 discards "
+              "'cfi_unchecked_callee' attribute">,
+      InGroup<DiagGroup<"cfi-unchecked-callee">>;
+
 def err_builtin_launder_invalid_arg : Error<
   "%select{non-pointer|function pointer|void pointer}0 argument to "
   "'__builtin_launder' is not allowed">;
@@ -12799,6 +12807,14 @@ def err_bit_cast_non_trivially_copyable : Error<
   "'__builtin_bit_cast' %select{source|destination}0 type must be trivially copyable">;
 def err_bit_cast_type_size_mismatch : Error<
   "size of '__builtin_bit_cast' source type %0 does not match destination type %1 (%2 vs %3 bytes)">;
+
+def err_get_vtable_pointer_incorrect_type
+    : Error<"__builtin_get_vtable_pointer requires an argument of%select{| "
+            "polymorphic}0 class pointer type"
+            ", but %1 %select{was provided|has no virtual methods}0">;
+def err_get_vtable_pointer_requires_complete_type
+    : Error<"__builtin_get_vtable_pointer requires an argument with a complete "
+            "type, but %0 is incomplete">;
 
 // SYCL-specific diagnostics
 def warn_sycl_kernel_num_of_template_params : Warning<
@@ -12952,7 +12968,7 @@ def warn_hlsl_deprecated_register_type_i: Warning<"binding type 'i' ignored. The
 def err_hlsl_unsupported_register_number : Error<"register number should be an integer">;
 def err_hlsl_expected_space : Error<"invalid space specifier '%0' used; expected 'space' followed by an integer, like space1">;
 def err_hlsl_space_on_global_constant : Error<"register space cannot be specified on global constants">;
-def warn_hlsl_implicit_binding : Warning<"resource has implicit register binding">, InGroup<HLSLImplicitBinding>, DefaultError;
+def warn_hlsl_implicit_binding : Warning<"resource has implicit register binding">, InGroup<HLSLImplicitBinding>, DefaultIgnore;
 def warn_hlsl_packoffset_mix : Warning<"cannot mix packoffset elements with nonpackoffset elements in a cbuffer">,
     InGroup<HLSLMixPackOffset>;
 def err_hlsl_packoffset_overlap : Error<"packoffset overlap between %0, %1">;

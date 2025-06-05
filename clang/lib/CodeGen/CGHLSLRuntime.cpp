@@ -23,6 +23,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Frontend/HLSL/HLSLRootSignatureUtils.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -620,6 +621,20 @@ void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
     if (Name)
       Args.push_back(Name);
     initializeBuffer(CGM, GV, IntrinsicID, Args);
+  }
+}
+
+void CGHLSLRuntime::handleGlobalVarDefinition(const VarDecl *VD,
+                                              llvm::GlobalVariable *GV) {
+  if (auto Attr = VD->getAttr<HLSLVkExtBuiltinInputAttr>()) {
+    LLVMContext &Ctx = GV->getContext();
+    IRBuilder<> B(GV->getContext());
+    MDNode *Operands = MDNode::get(
+        Ctx, {ConstantAsMetadata::get(
+                  B.getInt32(/* Spirv::Decoration::BuiltIn */ 11)),
+              ConstantAsMetadata::get(B.getInt32(Attr->getBuiltIn()))});
+    MDNode *Decoration = MDNode::get(Ctx, {Operands});
+    GV->addMetadata("spirv.Decorations", *Decoration);
   }
 }
 
