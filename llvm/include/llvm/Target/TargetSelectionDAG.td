@@ -1062,7 +1062,7 @@ class OutPatFrag<dag ops, dag frag>
 // to define immediates and other common things concisely.
 class PatLeaf<dag frag, code pred = [{}], SDNodeXForm xform = NOOP_SDNodeXForm>
  : PatFrag<(ops), frag, pred, xform> {
-  code GISelLeafPredicateCode = [{}];
+  code GISelLeafPredicateCode = ?;
 }
 
 
