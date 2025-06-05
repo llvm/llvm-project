@@ -3719,10 +3719,13 @@ GDBRemoteCommunicationServerLLGS::Handle_jGPUPluginBreakpointHit(
 
   for (auto &plugin_up: m_plugins) {
     if (plugin_up->GetPluginName() == args->plugin_name) {
-      GPUPluginBreakpointHitResponse bp_response = 
+      Expected<GPUPluginBreakpointHitResponse> bp_response = 
           plugin_up->BreakpointWasHit(*args);
+      if (!bp_response)
+        return SendErrorResponse(bp_response.takeError());
+        
       StreamGDBRemote response;
-      response.PutAsJSON(bp_response, /*hex_ascii=*/false);
+      response.PutAsJSON(*bp_response, /*hex_ascii=*/false);
       return SendPacketNoLock(response.GetString());
     }
   }

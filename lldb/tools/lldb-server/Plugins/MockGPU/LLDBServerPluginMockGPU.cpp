@@ -181,7 +181,7 @@ std::optional<GPUActions> LLDBServerPluginMockGPU::NativeProcessIsStopping() {
   return std::nullopt;
 }
 
-GPUPluginBreakpointHitResponse 
+llvm::Expected<GPUPluginBreakpointHitResponse>
 LLDBServerPluginMockGPU::BreakpointWasHit(GPUPluginBreakpointHitArgs &args) {
   Log *log = GetLog(GDBRLog::Plugin);
   std::string json_string;
