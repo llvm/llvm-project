@@ -5047,3 +5047,18 @@ define <2 x ptr> @select_freeze_constant_expression_vector_gep(i1 %cond, <2 x pt
   %sel = select i1 %cond, <2 x ptr> %y, <2 x ptr> %freeze
   ret <2 x ptr> %sel
 }
+
+declare i8 @llvm.umin.i8(i8, i8)
+
+define i8 @no_fold_masked_min(i8 %acc, i8 %val, i8 %mask) {
+; CHECK-LABEL: @no_fold_masked_min(
+; CHECK-NEXT:  [[COND:%.*]] = icmp eq i8 [[MASK:%.*]], 0
+; CHECK-NEXT:  [[MASKED_VAL:%.*]] = select i1 [[COND:%.*]], i8 [[VAL:%.*]], i8 -1
+; CHECK-NEXT:  [[RES:%.*]] = call i8 @llvm.umin.i8(i8 [[ACC:%.*]], i8 [[MASKED_VAL:%.*]])
+; CHECK-NEXT:  ret i8 [[RES]]
+;
+  %cond = icmp eq i8 %mask, 0
+  %masked_val = select i1 %cond, i8 %val, i8 -1
+  %res = call i8 @llvm.umin.i8(i8 %acc, i8 %masked_val)
+  ret i8 %res
+}

@@ -1654,6 +1654,25 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   if (Value *FreedOp = getFreedOperand(&CI, &TLI))
     return visitFree(CI, FreedOp);
 
+  if (Function *F = CI.getCalledFunction()) {
+    if (F->getIntrinsicID() == Intrinsic::umin || F->getIntrinsicID() == Intrinsic::umax) {
+      for (Value *Arg : CI.args()) {
+        auto *SI = dyn_cast<SelectInst>(Arg);
+        if (!SI)
+          continue;
+
+        auto *TrueC = dyn_cast<Constant>(SI->getTrueValue());
+        auto *FalseC = dyn_cast<Constant>(SI->getFalseValue());
+
+        // Block only if the select is masking, e.g. select(cond, val, -1)
+        if ((TrueC && TrueC->isAllOnesValue()) || (FalseC && FalseC->isAllOnesValue())) {
+          LLVM_DEBUG(dbgs() << "InstCombine: skipping umin/umax folding for masked select\n");
+          return nullptr;
+        }
+      }
+    }
+  }
+
   // If the caller function (i.e. us, the function that contains this CallInst)
   // is nounwind, mark the call as nounwind, even if the callee isn't.
   if (CI.getFunction()->doesNotThrow() && !CI.doesNotThrow()) {
