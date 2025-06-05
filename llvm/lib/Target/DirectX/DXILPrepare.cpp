@@ -148,9 +148,49 @@ class DXILPrepareModule : public ModulePass {
                                      Type *Ty) {
     // Omit bitcasts if the incoming value matches the instruction type.
     auto It = PointerTypes.find(Operand);
-    if (It != PointerTypes.end())
-      if (cast<TypedPointerType>(It->second)->getElementType() == Ty)
+    if (It != PointerTypes.end()) {
+      auto *OpTy = cast<TypedPointerType>(It->second)->getElementType();
+      if (OpTy == Ty)
         return nullptr;
+    }
+
+    Type *ValTy = Operand->getType();
+    // Also omit the bitcast for matching global array types
+    if (auto *GlobalVar = dyn_cast<GlobalVariable>(Operand))
+      ValTy = GlobalVar->getValueType();
+
+    if (auto *AI = dyn_cast<AllocaInst>(Operand))
+      ValTy = AI->getAllocatedType();
+
+    if (auto *ArrTy = dyn_cast<ArrayType>(ValTy)) {
+      Type *ElTy = ArrTy->getElementType();
+      if (ElTy == Ty)
+        return nullptr;
+    }
+
+    // finally, drill down GEP instructions until we get the array
+    // that is being accessed, and compare element types
+    if (ConstantExpr *GEPInstr = dyn_cast<ConstantExpr>(Operand)) {
+      while (GEPInstr->getOpcode() == Instruction::GetElementPtr) {
+        Value *OpArg = GEPInstr->getOperand(0);
+        if (ConstantExpr *NewGEPInstr = dyn_cast<ConstantExpr>(OpArg)) {
+          GEPInstr = NewGEPInstr;
+          continue;
+        }
+
+        if (auto *GlobalVar = dyn_cast<GlobalVariable>(OpArg))
+          ValTy = GlobalVar->getValueType();
+        if (auto *AI = dyn_cast<AllocaInst>(Operand))
+          ValTy = AI->getAllocatedType();
+        if (auto *ArrTy = dyn_cast<ArrayType>(ValTy)) {
+          Type *ElTy = ArrTy->getElementType();
+          if (ElTy == Ty)
+            return nullptr;
+        }
+        break;
+      }
+    }
+
     // Insert bitcasts where we are removing the instruction.
     Builder.SetInsertPoint(&Inst);
     // This code only gets hit in opaque-pointer mode, so the type of the
