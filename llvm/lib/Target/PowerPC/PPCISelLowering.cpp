@@ -9667,18 +9667,17 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   bool IsSplat64 = false;
   uint64_t SplatBits = 0;
   int32_t SextVal = 0;
-  if (BVNIsConstantSplat) {
+  if (BVNIsConstantSplat && SplatBitSize <= 64) {
+    SplatBits = APSplatBits.getZExtValue();
     if (SplatBitSize <= 32) {
-      SplatBits = APSplatBits.getZExtValue();
       SextVal = SignExtend32(SplatBits, SplatBitSize);
     } else if (SplatBitSize == 64 && Subtarget.hasP8Altivec()) {
-      int64_t Splat64Val = APSplatBits.getSExtValue();
-      SplatBits = (uint64_t)Splat64Val;
-      SextVal = (int32_t)SplatBits;
+      int64_t Splat64Val = static_cast<int64_t>(SplatBits);
       bool P9Vector = Subtarget.hasP9Vector();
       int32_t Hi = P9Vector ? 127 : 15;
       int32_t Lo = P9Vector ? -128 : -16;
       IsSplat64 = Splat64Val >= Lo && Splat64Val <= Hi;
+      SextVal = static_cast<int32_t>(SplatBits);
     }
   }
 
@@ -9818,15 +9817,19 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     SDValue C = DAG.getConstant((unsigned char)SextVal, dl, MVT::i32);
     SmallVector<SDValue, 16> Ops(16, C);
     SDValue BV = DAG.getBuildVector(MVT::v16i8, dl, Ops);
-    assert((SplatSize == 2 || SplatSize == 4 || SplatSize == 8) &&
-           "Unexpected type for vector constant.");
     unsigned IID;
-    if (SplatSize == 2) {
+    switch (SplatSize) {
+    default:
+      llvm_unreachable("Unexpected type for vector constant.");
+    case 2:
       IID = Intrinsic::ppc_altivec_vupklsb;
-    } else if (SplatSize == 4) {
+      break;
+    case 4:
       IID = Intrinsic::ppc_altivec_vextsb2w;
-    } else { // SplatSize == 8
+      break;
+    case 8:
       IID = Intrinsic::ppc_altivec_vextsb2d;
+      break;
     }
     SDValue Extend = BuildIntrinsicOp(IID, BV, DAG, dl);
     return DAG.getBitcast(Op->getValueType(0), Extend);
