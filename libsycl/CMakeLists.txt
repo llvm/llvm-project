@@ -60,16 +60,12 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBSYCL_LIBRARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBSYCL_LIBRARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LIBSYCL_LIBRARY_DIR})
 
-<<<<<<< HEAD
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
 # Download & build dependency for kernel offloading
 include(FetchUnifiedRuntime)
 
-# The change in LIBSYCL_MAJOR_VERSION must be accompanied with the same update in
-# clang/lib/Driver/CMakeLists.txt.
-=======
->>>>>>> addlibsycl
+
 set(LIBSYCL_MAJOR_VERSION 0)
 set(LIBSYCL_MINOR_VERSION 1)
 set(LIBSYCL_PATCH_VERSION 0)
