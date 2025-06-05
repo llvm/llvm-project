@@ -489,7 +489,7 @@ class LowerMatrixIntrinsics {
   DenseMap<Value *, ShapeInfo> ShapeMap;
 
   /// List of instructions to remove. While lowering, we are not replacing all
-  /// users of a lowered instruction.and
+  /// users of a lowered instruction, if shape information is available and
   /// those need to be removed after we finished lowering.
   SmallVector<Instruction *, 16> ToRemove;
 
