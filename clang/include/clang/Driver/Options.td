@@ -4206,7 +4206,7 @@ def fno_trigraphs : Flag<["-"], "fno-trigraphs">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>;
 def funique_source_file_names: Flag<["-"], "funique-source-file-names">, Group<f_Group>,
   HelpText<"Allow the compiler to assume that each translation unit has a unique "                       
-           "source file identifier (see funique-source-file-identifier) at link time">;
+           "source file identifier (see -funique-source-file-identifier) at link time">;
 def fno_unique_source_file_names: Flag<["-"], "fno-unique-source-file-names">;
 def unique_source_file_identifier_EQ: Joined<["-"], "funique-source-file-identifier=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
