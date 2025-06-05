@@ -57,7 +57,8 @@ public:
   StackOffset resolveFrameOffsetReference(const MachineFunction &MF,
                                           int64_t ObjectOffset, bool isFixed,
                                           bool isSVE, Register &FrameReg,
-                                          bool PreferFP, bool ForSimm) const;
+                                          bool PreferFP, bool ForSimm,
+                                          int64_t FI) const;
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI,
                                  ArrayRef<CalleeSavedInfo> CSI,
