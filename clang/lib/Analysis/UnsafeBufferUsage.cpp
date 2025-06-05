@@ -40,7 +40,6 @@
 #include <set>
 #include <sstream>
 
-using namespace llvm;
 using namespace clang;
 
 #ifndef NDEBUG
@@ -543,11 +542,11 @@ struct CompatibleCountExprVisitor
       Expr::EvalResult ER;
 
       if (Self->EvaluateAsConstantExpr(ER, Ctx)) {
-        APInt SelfVal = ER.Val.getInt();
+        llvm::APInt SelfVal = ER.Val.getInt();
 
         if (Other->getType()->isIntegerType())
           if (Other->EvaluateAsConstantExpr(ER, Ctx))
-            return APInt::isSameValue(SelfVal, ER.Val.getInt());
+            return llvm::APInt::isSameValue(SelfVal, ER.Val.getInt());
       }
     }
     return false;
@@ -842,9 +841,9 @@ static bool hasIntegeralConstant(const Expr *E, uint64_t Val, ASTContext &Ctx) {
   Expr::EvalResult ER;
 
   if (E->EvaluateAsInt(ER, Ctx)) {
-    APInt Eval = ER.Val.getInt();
+    llvm::APInt Eval = ER.Val.getInt();
 
-    return APInt::isSameValue(Eval, APInt(Eval.getBitWidth(), Val));
+    return llvm::APInt::isSameValue(Eval, llvm::APInt(Eval.getBitWidth(), Val));
   }
   return false;
 }
@@ -1003,11 +1002,11 @@ static bool isCountAttributedPointerArgumentSafeImpl(
         // char:
         ArrArg = CE->getSubExpr()->IgnoreParenImpCasts();
     if (const auto *ATy = Context.getAsConstantArrayType(ArrArg->getType())) {
-      APInt TySize = ATy->getSize();
+      llvm::APInt TySize = ATy->getSize();
 
       if (isSizedBy)
         if (auto TySizeInChar = Context.getTypeSizeInCharsIfKnown(ATy))
-          TySize = APInt(TySize.getBitWidth(), TySizeInChar->getQuantity());
+          TySize = llvm::APInt(TySize.getBitWidth(), TySizeInChar->getQuantity());
       ActualCount = IntegerLiteral::Create(
           Context, TySize, Context.getSizeType(), SourceLocation());
     }
@@ -1188,7 +1187,7 @@ static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
   auto HaveEqualConstantValues = [&Ctx](const Expr *E0, const Expr *E1) {
     if (auto E0CV = E0->getIntegerConstantExpr(Ctx))
       if (auto E1CV = E1->getIntegerConstantExpr(Ctx)) {
-        return APSInt::compareValues(*E0CV, *E1CV) == 0;
+        return llvm::APSInt::compareValues(*E0CV, *E1CV) == 0;
       }
     return false;
   };
@@ -1199,7 +1198,7 @@ static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
       }
     return false;
   };
-  std::optional<APSInt> Arg1CV = Arg1->getIntegerConstantExpr(Ctx);
+  std::optional<llvm::APSInt> Arg1CV = Arg1->getIntegerConstantExpr(Ctx);
 
   if (Arg1CV && Arg1CV->isZero())
     // Check form 5:
@@ -1242,10 +1241,10 @@ static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
   QualType Arg0Ty = Arg0->getType();
 
   if (auto *ConstArrTy = Ctx.getAsConstantArrayType(Arg0Ty)) {
-    const APSInt ConstArrSize = APSInt(ConstArrTy->getSize());
+    const llvm::APSInt ConstArrSize = llvm::APSInt(ConstArrTy->getSize());
 
     // Check form 4:
-    return Arg1CV && APSInt::compareValues(ConstArrSize, *Arg1CV) == 0;
+    return Arg1CV && llvm::APSInt::compareValues(ConstArrSize, *Arg1CV) == 0;
   }
 
   // Check form 6:
@@ -2966,8 +2965,8 @@ namespace {
 // declarations to its uses and make sure we've covered all uses with our
 // analysis before we try to fix the declaration.
 class DeclUseTracker {
-  using UseSetTy = SmallSet<const DeclRefExpr *, 16>;
-  using DefMapTy = DenseMap<const VarDecl *, const DeclStmt *>;
+  using UseSetTy = llvm::SmallSet<const DeclRefExpr *, 16>;
+  using DefMapTy = llvm::DenseMap<const VarDecl *, const DeclStmt *>;
 
   // Allocate on the heap for easier move.
   std::unique_ptr<UseSetTy> Uses{std::make_unique<UseSetTy>()};
@@ -4576,7 +4575,7 @@ static FixItList fixVarDeclWithArray(const VarDecl *D, const ASTContext &Ctx,
     }
 
     SmallString<32> Replacement;
-    raw_svector_ostream OS(Replacement);
+    llvm::raw_svector_ostream OS(Replacement);
     OS << "std::array<" << ElemTypeTxt << ", " << ArraySizeTxt << "> "
        << IdentText->str();
 
@@ -5000,7 +4999,8 @@ static void applyGadgets(const Decl *D, FixableGadgetList FixableGadgets,
 #endif
 
   // Fixpoint iteration for pointer assignments
-  using DepMapTy = DenseMap<const VarDecl *, llvm::SetVector<const VarDecl *>>;
+  using DepMapTy =
+      llvm::DenseMap<const VarDecl *, llvm::SetVector<const VarDecl *>>;
   DepMapTy DependenciesMap{};
   DepMapTy PtrAssignmentGraph{};
 
