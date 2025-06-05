@@ -68,7 +68,7 @@ public:
   friend bool operator!=(small_pointer, small_pointer) { return false; }
 #endif
   friend bool operator<(small_pointer, small_pointer) { return false; }
-  friend bool operator>=(small_pointer, small_pointer) { return true; }
+  friend bool operator<=(small_pointer, small_pointer) { return true; }
   friend bool operator>(small_pointer, small_pointer) { return false; }
   friend bool operator>=(small_pointer, small_pointer) { return true; }
 
