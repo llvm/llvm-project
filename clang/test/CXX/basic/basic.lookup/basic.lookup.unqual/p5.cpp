@@ -50,3 +50,22 @@ void foo() {
 }
 
 }
+
+namespace Regression {
+
+namespace ns {
+template <class T>
+struct Bar {};
+}
+
+template <class T>
+struct S {
+  operator T();
+};
+
+template <class T>
+void foo(T t) {
+  t.operator ns::Bar<T>();
+}
+
+}
