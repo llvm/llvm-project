@@ -136,10 +136,17 @@ PreservedAnalyses DXILResourceImplicitBinding::run(Module &M,
 
   DXILResourceBindingInfo &DRBI = AM.getResult<DXILResourceBindingAnalysis>(M);
   DXILResourceTypeMap &DRTM = AM.getResult<DXILResourceTypeAnalysis>(M);
-  if (DRBI.hasImplicitBinding())
-    if (assignBindings(M, DRBI, DRTM))
-      return PreservedAnalyses::none();
-  return PreservedAnalyses::all();
+
+  if (!DRBI.hasImplicitBinding())
+    return PreservedAnalyses::all();
+
+  if (!assignBindings(M, DRBI, DRTM))
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserve<DXILResourceBindingAnalysis>();
+  PA.preserve<DXILResourceTypeAnalysis>();
+  return PA;
 }
 
 namespace {
@@ -163,6 +170,8 @@ public:
   void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
     AU.addRequired<DXILResourceTypeWrapperPass>();
     AU.addRequired<DXILResourceBindingWrapperPass>();
+    AU.addPreserved<DXILResourceTypeWrapperPass>();
+    AU.addPreserved<DXILResourceBindingWrapperPass>();
   }
 };
 

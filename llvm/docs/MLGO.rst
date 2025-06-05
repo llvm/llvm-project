@@ -469,7 +469,6 @@ embeddings can be computed and accessed via an ``ir2vec::Embedder`` instance.
         return;
       }
       const ir2vec::Vocab &Vocabulary = VocabRes.getVocabulary();
-      unsigned Dimension = VocabRes.getDimension();
 
    Note that ``IR2VecVocabAnalysis`` pass is immutable.
 
@@ -481,7 +480,7 @@ embeddings can be computed and accessed via an ``ir2vec::Embedder`` instance.
       // Assuming F is an llvm::Function&
       // For example, using IR2VecKind::Symbolic:
       Expected<std::unique_ptr<ir2vec::Embedder>> EmbOrErr =
-          ir2vec::Embedder::create(IR2VecKind::Symbolic, F, Vocabulary, Dimension);
+          ir2vec::Embedder::create(IR2VecKind::Symbolic, F, Vocabulary);
 
       if (auto Err = EmbOrErr.takeError()) {
         // Handle error in embedder creation
@@ -492,15 +491,15 @@ embeddings can be computed and accessed via an ``ir2vec::Embedder`` instance.
 3. **Compute and Access Embeddings**:
    Call ``getFunctionVector()`` to get the embedding for the function. 
 
-  .. code-block:: c++
+   .. code-block:: c++
 
-      const ir2vec::Embedding &FuncVector = Emb->getFunctionVector();
+    const ir2vec::Embedding &FuncVector = Emb->getFunctionVector();
 
    Currently, ``Embedder`` can generate embeddings at three levels: Instructions,
    Basic Blocks, and Functions. Appropriate getters are provided to access the
    embeddings at these levels.
 
-  .. note::
+   .. note::
 
     The validity of ``Embedder`` instance (and the embeddings it generates) is
     tied to the function it is associated with remains unchanged. If the function
