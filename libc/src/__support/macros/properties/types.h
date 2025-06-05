@@ -61,7 +61,9 @@ using float16 = _Float16;
 
 // -- bfloat16 support ---------------------------------------------------------
 #ifdef LIBC_TYPES_HAS_BFLOAT16
-using bfloat16 = __bf16; // TODO: verify this
+
+using bfloat16 = BFloat16;
+
 #endif // LIBC_TYPES_HAS_BFLOAT16
 
 
