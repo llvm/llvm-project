@@ -2,6 +2,8 @@
 
 REQUIRES: system-linux,perf,target=aarch64{{.*}}
 
+RUN: %clang %cflags %p/../../Inputs/asm_foo.s %p/../../Inputs/asm_main.c -o %t.exe
+
 RUN: perf record -e cycles -q -o %t.perf.data -- %t.exe 2> /dev/null
 
 RUN: (perf2bolt -p %t.perf.data -o %t.perf.boltdata --spe %t.exe 2> /dev/null; exit 0) | FileCheck %s --check-prefix=CHECK-SPE-LBR

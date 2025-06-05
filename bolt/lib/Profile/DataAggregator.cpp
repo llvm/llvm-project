@@ -49,9 +49,7 @@ static cl::opt<bool>
                      cl::desc("aggregate basic samples (without LBR info)"),
                      cl::cat(AggregatorCategory));
 
-cl::opt<bool> ArmSPE("spe",
-                     cl::desc("Enable Arm SPE mode. Can combine with `--nl` "
-                              "to use in no-lbr mode"),
+cl::opt<bool> ArmSPE("spe", cl::desc("Enable Arm SPE mode."),
                      cl::cat(AggregatorCategory));
 
 static cl::opt<std::string>
@@ -187,7 +185,10 @@ void DataAggregator::start() {
   findPerfExecutable();
 
   if (opts::ArmSPE) {
-    // pid    from_ip      to_ip        predicted/missed not-taken?
+    // pid    from_ip      to_ip        flags
+    // where flags could be:
+    // P/M: whether branch was Predicted or Mispredicted.
+    // N: optionally appears when the branch was Not-Taken (ie fall-through)
     // 12345  0x123/0x456/PN/-/-/8/RET/-
     launchPerfProcess("SPE brstack events", MainEventsPPI,
                       "script -F pid,brstack --itrace=bl",
@@ -1004,7 +1005,8 @@ ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
   if (std::error_code EC = MispredStrRes.getError())
     return EC;
   StringRef MispredStr = MispredStrRes.get();
-  // SPE brstack mispredicted flags might be two characters long: 'PN' or 'MN'.
+  // SPE brstack mispredicted flags might be up to two characters long:
+  // 'PN' or 'MN'. Where 'N' optionally appears.
   bool ValidStrSize = opts::ArmSPE
                           ? MispredStr.size() >= 1 && MispredStr.size() <= 2
                           : MispredStr.size() == 1;
@@ -1521,7 +1523,7 @@ void DataAggregator::printBranchStacksDiagnostics(
 std::error_code DataAggregator::parseBranchEvents() {
   std::string BranchEventTypeStr =
       !opts::ArmSPE ? "branch events" : "SPE branch events in LBR-format";
-  outs() << "PERF2BOLT: " << BranchEventTypeStr << "...\n";
+  outs() << "PERF2BOLT: parse " << BranchEventTypeStr << "...\n";
   NamedRegionTimer T("parseBranch", "Parsing " + BranchEventTypeStr,
                      TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
 
@@ -1582,8 +1584,11 @@ std::error_code DataAggregator::parseBranchEvents() {
       else
         errs()
             << "PERF2BOLT-WARNING: all recorded samples for this binary lack "
-               "SPE brstack entries. Record profile with:"
-               "perf record arm_spe_0/branch_filter=1/";
+               "SPE brstack entries. The minimum required version of "
+               "Linux-perf is v6.14 or higher for brstack support. "
+               "With an older Linux-perf you may get zero samples. "
+               "Plese also make sure about you recorded profile with: "
+               "perf record -e 'arm_spe_0/branch_filter=1/'.";
     } else {
       printBranchStacksDiagnostics(NumTotalSamples - NumSamples);
     }
