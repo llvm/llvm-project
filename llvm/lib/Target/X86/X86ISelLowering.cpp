@@ -21638,15 +21638,9 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
         // Widen to 512-bits.
         unsigned IntSize = EleVT.getSizeInBits();
         unsigned Num = IntSize > 16 ? 512 / IntSize : 32;
-        MVT TmpVT = MVT::getVectorVT(MVT::f16, Num);
         ResVT = MVT::getVectorVT(EleVT, Num);
-        // Need to concat with zero vector for strict fp to avoid spurious
-        // exceptions.
-        // TODO: Should we just do this for non-strict as well?
-        SDValue Tmp =
-            IsStrict ? DAG.getConstantFP(0.0, dl, TmpVT) : DAG.getUNDEF(TmpVT);
-        Src = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, TmpVT, Tmp, Src,
-                          DAG.getVectorIdxConstant(0, dl));
+        Src = widenSubVector(MVT::getVectorVT(MVT::f16, Num), Src, IsStrict,
+                             Subtarget, DAG, dl);
       }
 
       if (IsStrict) {
