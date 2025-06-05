@@ -98,6 +98,8 @@ Type RecordType::parse(mlir::AsmParser &parser) {
     kind = RecordKind::Struct;
   else if (parser.parseOptionalKeyword("union").succeeded())
     kind = RecordKind::Union;
+  else if (parser.parseOptionalKeyword("class").succeeded())
+    kind = RecordKind::Class;
   else {
     parser.emitError(loc, "unknown record type");
     return {};
@@ -167,6 +169,9 @@ void RecordType::print(mlir::AsmPrinter &printer) const {
     break;
   case RecordKind::Union:
     printer << "union ";
+    break;
+  case RecordKind::Class:
+    printer << "class ";
     break;
   }
 
