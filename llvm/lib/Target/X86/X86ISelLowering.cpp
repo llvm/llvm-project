@@ -20361,10 +20361,16 @@ static SDValue lowerUINT_TO_FP_vXi32(SDValue Op, const SDLoc &DL,
     if (VT == MVT::v8f64)
       return Op;
 
-    assert((VT == MVT::v4f32 || VT == MVT::v8f32 || VT == MVT::v4f64) &&
+    assert((VT == MVT::v4f32 || VT == MVT::v8f32 || VT == MVT::v4f64 ||
+            VT == MVT::v8f16) &&
            "Unexpected VT!");
-    MVT WideVT = VT == MVT::v4f64 ? MVT::v8f64 : MVT::v16f32;
-    MVT WideIntVT = VT == MVT::v4f64 ? MVT::v8i32 : MVT::v16i32;
+    MVT WideVT = VT == MVT::v8f16 ? MVT::v16f16 : MVT::v16f32;
+    MVT WideIntVT = MVT::v16i32;
+    if (VT == MVT::v4f64) {
+      WideVT = MVT::v8f64;
+      WideIntVT = MVT::v8i32;
+    }
+
     // Need to concat with zero vector for strict fp to avoid spurious
     // exceptions.
     SDValue Tmp =
@@ -42649,7 +42655,15 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
   case X86ISD::VPERM2X128: {
     SDValue LHS = N->getOperand(0);
     SDValue RHS = N->getOperand(1);
-    unsigned Imm = N.getConstantOperandVal(2);
+    unsigned Imm = N.getConstantOperandVal(2) & 255;
+
+    // Canonicalize unary/repeated operands to LHS.
+    if (LHS.isUndef() && !RHS.isUndef())
+      return DAG.getNode(X86ISD::VPERM2X128, DL, VT, RHS, LHS,
+                         DAG.getTargetConstant(Imm ^ 0x22, DL, MVT::i8));
+    if (LHS == RHS)
+      return DAG.getNode(X86ISD::VPERM2X128, DL, VT, LHS, DAG.getUNDEF(VT),
+                         DAG.getTargetConstant(Imm & ~0x22, DL, MVT::i8));
 
     // Fold vperm2x128(bitcast(x),bitcast(y),c) -> bitcast(vperm2x128(x,y,c)).
     if (LHS.getOpcode() == ISD::BITCAST &&
@@ -58475,12 +58489,13 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       EVT SrcVT1 = Src1.getOperand(0).getValueType();
       unsigned NumSrcElts0 = SrcVT0.getVectorNumElements();
       unsigned NumSrcElts1 = SrcVT1.getVectorNumElements();
+      const APInt &SrcIdx0 = Src0.getConstantOperandAPInt(1);
+      const APInt &SrcIdx1 = Src1.getConstantOperandAPInt(1);
       // concat(extract_subvector(v0), extract_subvector(v1)) -> vperm2x128.
       // Only concat of subvector high halves which vperm2x128 is best at.
       if (VT.is256BitVector() && SrcVT0.is256BitVector() &&
-          SrcVT1.is256BitVector() &&
-          Src0.getConstantOperandAPInt(1) == (NumSrcElts0 / 2) &&
-          Src1.getConstantOperandAPInt(1) == (NumSrcElts1 / 2)) {
+          SrcVT1.is256BitVector() && SrcIdx0 == (NumSrcElts0 / 2) &&
+          SrcIdx1 == (NumSrcElts1 / 2)) {
         return DAG.getNode(X86ISD::VPERM2X128, DL, VT,
                            DAG.getBitcast(VT, Src0.getOperand(0)),
                            DAG.getBitcast(VT, Src1.getOperand(0)),
@@ -58491,10 +58506,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       // --> extract_subvector(x,lo)
       unsigned NumSubElts0 = Src0.getValueType().getVectorNumElements();
       if (Src0.getOperand(0) == Src1.getOperand(0) &&
-          (Src0.getConstantOperandAPInt(1) == 0 ||
-           Src0.getConstantOperandAPInt(1) == (NumSrcElts0 / 2)) &&
-          Src1.getConstantOperandAPInt(1) ==
-              (Src0.getConstantOperandAPInt(1) + NumSubElts0)) {
+          (SrcIdx0 == 0 || SrcIdx0 == (NumSrcElts0 / 2)) &&
+          SrcIdx1 == (SrcIdx0 + NumSubElts0)) {
         return DAG.getBitcast(VT,
                               extractSubVector(Src0.getOperand(0),
                                                Src0.getConstantOperandVal(1),

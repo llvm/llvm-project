@@ -113,14 +113,43 @@ public:
 
   // Returns the name of the directive formatted for output. Whitespace are
   // replaced with underscores.
-  static std::string formatName(StringRef Name) {
+  static std::string getSnakeName(StringRef Name) {
     std::string N = Name.str();
     llvm::replace(N, ' ', '_');
     return N;
   }
 
+  // Take a string Name with sub-words separated with characters from Sep,
+  // and return a string with each of the sub-words capitalized, and the
+  // separators removed, e.g.
+  //   Name = "some_directive^name", Sep = "_^"  ->  "SomeDirectiveName".
+  static std::string getUpperCamelName(StringRef Name, StringRef Sep) {
+    std::string Camel = Name.str();
+    // Convert to uppercase
+    bool Cap = true;
+    llvm::transform(Camel, Camel.begin(), [&](unsigned char C) {
+      if (Sep.contains(C)) {
+        assert(!Cap && "No initial or repeated separators");
+        Cap = true;
+      } else if (Cap) {
+        C = llvm::toUpper(C);
+        Cap = false;
+      }
+      return C;
+    });
+    size_t Out = 0;
+    // Remove separators
+    for (size_t In = 0, End = Camel.size(); In != End; ++In) {
+      unsigned char C = Camel[In];
+      if (!Sep.contains(C))
+        Camel[Out++] = C;
+    }
+    Camel.resize(Out);
+    return Camel;
+  }
+
   std::string getFormattedName() const {
-    return formatName(Def->getValueAsString("name"));
+    return getSnakeName(Def->getValueAsString("name"));
   }
 
   bool isDefault() const { return Def->getValueAsBit("isDefault"); }
@@ -172,26 +201,13 @@ public:
 
   // Clang uses a different format for names of its directives enum.
   std::string getClangAccSpelling() const {
-    std::string Name = Def->getValueAsString("name").str();
+    StringRef Name = Def->getValueAsString("name");
 
     // Clang calls the 'unknown' value 'invalid'.
     if (Name == "unknown")
       return "Invalid";
 
-    // Clang entries all start with a capital letter, so apply that.
-    Name[0] = std::toupper(Name[0]);
-    // Additionally, spaces/underscores are handled by capitalizing the next
-    // letter of the name and removing the space/underscore.
-    for (unsigned I = 0; I < Name.size(); ++I) {
-      if (Name[I] == ' ' || Name[I] == '_') {
-        Name.erase(I, 1);
-        assert(Name[I] != ' ' && Name[I] != '_' &&
-               "No double spaces/underscores");
-        Name[I] = std::toupper(Name[I]);
-      }
-    }
-
-    return Name;
+    return BaseRecord::getUpperCamelName(Name, " _");
   }
 };
 
@@ -218,19 +234,7 @@ public:
   //     num_threads -> NumThreads
   std::string getFormattedParserClassName() const {
     StringRef Name = Def->getValueAsString("name");
-    std::string N = Name.str();
-    bool Cap = true;
-    llvm::transform(N, N.begin(), [&Cap](unsigned char C) {
-      if (Cap == true) {
-        C = toUpper(C);
-        Cap = false;
-      } else if (C == '_') {
-        Cap = true;
-      }
-      return C;
-    });
-    erase(N, '_');
-    return N;
+    return BaseRecord::getUpperCamelName(Name, "_");
   }
 
   // Clang uses a different format for names of its clause enum, which can be
@@ -241,20 +245,8 @@ public:
         !ClangSpelling.empty())
       return ClangSpelling.str();
 
-    std::string Name = Def->getValueAsString("name").str();
-    // Clang entries all start with a capital letter, so apply that.
-    Name[0] = std::toupper(Name[0]);
-    // Additionally, underscores are handled by capitalizing the next letter of
-    // the name and removing the underscore.
-    for (unsigned I = 0; I < Name.size(); ++I) {
-      if (Name[I] == '_') {
-        Name.erase(I, 1);
-        assert(Name[I] != '_' && "No double underscores");
-        Name[I] = std::toupper(Name[I]);
-      }
-    }
-
-    return Name;
+    StringRef Name = Def->getValueAsString("name");
+    return BaseRecord::getUpperCamelName(Name, "_");
   }
 
   // Optional field.
