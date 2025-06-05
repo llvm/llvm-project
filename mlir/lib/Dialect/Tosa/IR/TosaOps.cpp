@@ -2673,6 +2673,73 @@ LogicalResult tosa::ScatterOp::verify() {
           .failed()) {
     return failure();
   }
+
+  const ShapeAdaptor valuesInShape(getValuesIn().getType());
+  const ShapeAdaptor indicesShape(getIndices().getType());
+  const ShapeAdaptor inputShape(getInput().getType());
+  const ShapeAdaptor outputShape(getValuesOut().getType());
+
+  int64_t N = ShapedType::kDynamic;
+  int64_t K = ShapedType::kDynamic;
+  int64_t W = ShapedType::kDynamic;
+  int64_t C = ShapedType::kDynamic;
+  if (valuesInShape.hasRank()) {
+    N = valuesInShape.getDimSize(0);
+    K = valuesInShape.getDimSize(1);
+    C = valuesInShape.getDimSize(2);
+  }
+  if (indicesShape.hasRank()) {
+    const int64_t indicesN = indicesShape.getDimSize(0);
+    W = indicesShape.getDimSize(1);
+    if (N == ShapedType::kDynamic)
+      N = indicesN;
+    else if (indicesN != ShapedType::kDynamic && N != indicesN)
+      return emitOpError() << "requires indices dimension 0 to have size " << N
+                           << ", got " << indicesN;
+  }
+  if (inputShape.hasRank()) {
+    const int64_t inputN = inputShape.getDimSize(0);
+    const int64_t inputW = inputShape.getDimSize(1);
+    const int64_t inputC = inputShape.getDimSize(2);
+    if (N == ShapedType::kDynamic)
+      N = inputN;
+    else if (inputN != ShapedType::kDynamic && N != inputN)
+      return emitOpError() << "requires input dimension 0 to have size " << N
+                           << ", got " << inputN;
+    if (W == ShapedType::kDynamic)
+      W = inputW;
+    else if (inputW != ShapedType::kDynamic && W != inputW)
+      return emitOpError() << "requires input dimension 1 to have size " << W
+                           << ", got " << inputW;
+
+    if (C == ShapedType::kDynamic)
+      C = inputC;
+    else if (inputC != ShapedType::kDynamic && C != inputC)
+      return emitOpError() << "requires input dimension 2 to have size " << C
+                           << ", got " << inputC;
+  }
+  if (outputShape.hasRank()) {
+    const int64_t outputN = outputShape.getDimSize(0);
+    const int64_t outputK = outputShape.getDimSize(1);
+    const int64_t outputC = outputShape.getDimSize(2);
+    if (N != ShapedType::kDynamic && outputN != ShapedType::kDynamic &&
+        N != outputN)
+      return emitOpError() << "requires values_out dimension 0 to have size "
+                           << N << ", got " << outputN;
+    if (K == ShapedType::kDynamic)
+      K = outputK;
+    else if (outputK != ShapedType::kDynamic && K != outputK)
+      return emitOpError() << "requires values_out dimension 1 to have size "
+                           << K << ", got " << outputK;
+    if (C != ShapedType::kDynamic && outputC != ShapedType::kDynamic &&
+        C != outputC)
+      return emitOpError() << "requires values_out dimension 2 to have size "
+                           << C << ", got " << outputC;
+  }
+  if (K != ShapedType::kDynamic && W != ShapedType::kDynamic && !(K >= W))
+    return emitOpError() << "requires dimensions K >= W, got K=" << K
+                         << " and W=" << W;
+
   return success();
 }
 
