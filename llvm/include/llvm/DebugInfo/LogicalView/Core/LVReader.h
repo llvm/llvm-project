@@ -16,6 +16,7 @@
 
 #include "llvm/DebugInfo/LogicalView/Core/LVOptions.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVRange.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -40,9 +41,9 @@ public:
   LVSplitContext &operator=(const LVSplitContext &) = delete;
   ~LVSplitContext() = default;
 
-  Error createSplitFolder(StringRef Where);
-  std::error_code open(std::string Name, std::string Extension,
-                       raw_ostream &OS);
+  LLVM_ABI Error createSplitFolder(StringRef Where);
+  LLVM_ABI std::error_code open(std::string Name, std::string Extension,
+                                raw_ostream &OS);
   void close() {
     if (OutputFile) {
       OutputFile->os().close();
@@ -57,7 +58,7 @@ public:
 /// The logical reader owns of all the logical elements created during
 /// the debug information parsing. For its creation it uses a specific
 /// bump allocator for each type of logical element.
-class LVReader {
+class LLVM_ABI LVReader {
   LVBinaryType BinaryType;
 
   // Context used by '--output=split' command line option.
