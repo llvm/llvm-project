@@ -119,10 +119,7 @@ class Display(object):
         test_name = test.getFullName()
 
         extra_info = ""
-        if (
-            test.result.max_allowed_attempts is not None
-            and test.result.max_allowed_attempts > 1
-        ) and test.result.attempts > 1:
+        if test.result.attempts > 1:
             extra_info = f", {test.result.attempts} of {test.result.max_allowed_attempts} attempts"
 
         print(
