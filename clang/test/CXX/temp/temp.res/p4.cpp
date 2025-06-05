@@ -158,7 +158,7 @@ template int Test<X>;
 template<typename T> struct A {
   enum E : T::type {}; // expected-error{{missing 'typename'}}
   operator T::type() {} // expected-error{{missing 'typename'}}
-  void f() { this->operator T::type(); } // expected-error{{missing 'typename'}}
+  void f() { this->operator T::type(); }
 };
 
 template<typename T>

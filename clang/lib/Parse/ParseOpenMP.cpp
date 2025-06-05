@@ -2997,7 +2997,7 @@ bool Parser::ParseOpenMPSimpleVarList(
                 StopBeforeMatch);
     } else if (ParseUnqualifiedId(SS, /*ObjectType=*/nullptr,
                                   /*ObjectHadErrors=*/false, false, false,
-                                  false, false, nullptr, Name)) {
+                                  false, false, false, nullptr, Name)) {
       IsCorrect = false;
       SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
                 StopBeforeMatch);
@@ -4052,12 +4052,14 @@ static bool ParseReductionId(Parser &P, CXXScopeSpec &ReductionIdScopeSpec,
       return false;
     }
   }
-  return P.ParseUnqualifiedId(
-      ReductionIdScopeSpec, /*ObjectType=*/nullptr,
-      /*ObjectHadErrors=*/false, /*EnteringContext*/ false,
-      /*AllowDestructorName*/ false,
-      /*AllowConstructorName*/ false,
-      /*AllowDeductionGuide*/ false, nullptr, ReductionId);
+  return P.ParseUnqualifiedId(ReductionIdScopeSpec, /*ObjectType=*/nullptr,
+                              /*ObjectHadErrors=*/false,
+                              /*EnteringContext*/ false,
+                              /*AllowDestructorName*/ false,
+                              /*AllowConstructorName*/ false,
+                              /*AllowDeductionGuide*/ false,
+                              /*ForPostfixExpression=*/false, nullptr,
+                              ReductionId);
 }
 
 /// Checks if the token is a valid map-type-modifier.

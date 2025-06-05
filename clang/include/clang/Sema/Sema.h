@@ -3568,6 +3568,7 @@ public:
                          bool isClassName = false, bool HasTrailingDot = false,
                          ParsedType ObjectType = nullptr,
                          bool IsCtorOrDtorName = false,
+                         bool IsOperatorName = false,
                          bool WantNontrivialTypeSourceInfo = false,
                          bool IsClassTemplateDeductionContext = true,
                          ImplicitTypenameContext AllowImplicitTypename =

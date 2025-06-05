@@ -1871,14 +1871,15 @@ enum class DeclaratorContext {
   LambdaExpr,          // Lambda-expression declarator.
   LambdaExprParameter, // Lambda-expression parameter declarator.
   ConversionId,        // C++ conversion-type-id.
-  TrailingReturn,      // C++11 trailing-type-specifier.
-  TrailingReturnVar,   // C++11 trailing-type-specifier for variable.
-  TemplateArg,         // Any template argument (in template argument list).
-  TemplateTypeArg,     // Template type argument (in default argument).
-  AliasDecl,           // C++11 alias-declaration.
-  AliasTemplate,       // C++11 alias-declaration template.
-  RequiresExpr,        // C++2a requires-expression.
-  Association          // C11 _Generic selection expression association.
+  ConversionIdInPostfixExpr, // C++ conversion-type-id.
+  TrailingReturn,            // C++11 trailing-type-specifier.
+  TrailingReturnVar,         // C++11 trailing-type-specifier for variable.
+  TemplateArg,     // Any template argument (in template argument list).
+  TemplateTypeArg, // Template type argument (in default argument).
+  AliasDecl,       // C++11 alias-declaration.
+  AliasTemplate,   // C++11 alias-declaration template.
+  RequiresExpr,    // C++2a requires-expression.
+  Association,     // C11 _Generic selection expression association.
 };
 
 // Describes whether the current context is a context where an implicit
@@ -2159,6 +2160,7 @@ public:
     case DeclaratorContext::BlockLiteral:
     case DeclaratorContext::LambdaExpr:
     case DeclaratorContext::ConversionId:
+    case DeclaratorContext::ConversionIdInPostfixExpr:
     case DeclaratorContext::TemplateArg:
     case DeclaratorContext::TemplateTypeArg:
     case DeclaratorContext::TrailingReturn:
@@ -2200,6 +2202,7 @@ public:
     case DeclaratorContext::BlockLiteral:
     case DeclaratorContext::LambdaExpr:
     case DeclaratorContext::ConversionId:
+    case DeclaratorContext::ConversionIdInPostfixExpr:
     case DeclaratorContext::TemplateArg:
     case DeclaratorContext::TemplateTypeArg:
     case DeclaratorContext::TrailingReturn:
@@ -2244,6 +2247,7 @@ public:
     case DeclaratorContext::BlockLiteral:
     case DeclaratorContext::LambdaExpr:
     case DeclaratorContext::ConversionId:
+    case DeclaratorContext::ConversionIdInPostfixExpr:
     case DeclaratorContext::TemplateArg:
     case DeclaratorContext::TemplateTypeArg:
     case DeclaratorContext::TrailingReturn:
@@ -2301,6 +2305,7 @@ public:
     case DeclaratorContext::BlockLiteral:
     case DeclaratorContext::LambdaExpr:
     case DeclaratorContext::ConversionId:
+    case DeclaratorContext::ConversionIdInPostfixExpr:
     case DeclaratorContext::TemplateArg:
     case DeclaratorContext::TemplateTypeArg:
     case DeclaratorContext::TrailingReturn:
@@ -2539,6 +2544,7 @@ public:
     case DeclaratorContext::BlockLiteral:
     case DeclaratorContext::LambdaExpr:
     case DeclaratorContext::ConversionId:
+    case DeclaratorContext::ConversionIdInPostfixExpr:
     case DeclaratorContext::TemplateArg:
     case DeclaratorContext::TemplateTypeArg:
     case DeclaratorContext::TrailingReturn:
@@ -2587,6 +2593,7 @@ public:
     case DeclaratorContext::SelectionInit:
     case DeclaratorContext::Condition:
     case DeclaratorContext::TemplateArg:
+    case DeclaratorContext::ConversionIdInPostfixExpr:
       return true;
     }
 

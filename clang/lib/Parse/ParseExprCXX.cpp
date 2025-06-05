@@ -283,8 +283,9 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
         // because a simple-template-id cannot start with 'operator', but
         // go ahead and parse it anyway for consistency with the case where
         // we already annotated the template-id.
-        if (ParseUnqualifiedIdOperator(SS, EnteringContext, ObjectType,
-                                       TemplateName)) {
+        if (ParseUnqualifiedIdOperator(SS, EnteringContext,
+                                       /*ForPostfixExpression=*/false,
+                                       ObjectType, TemplateName)) {
           TPA.Commit();
           break;
         }
@@ -608,7 +609,8 @@ ExprResult Parser::tryParseCXXIdExpression(CXXScopeSpec &SS,
                            /*EnteringContext=*/false,
                            /*AllowDestructorName=*/false,
                            /*AllowConstructorName=*/false,
-                           /*AllowDeductionGuide=*/false, &TemplateKWLoc, Name))
+                           /*AllowDeductionGuide=*/false,
+                           /*ForPostfixExpression=*/true, &TemplateKWLoc, Name))
       return ExprError();
 
     // This is only the direct operand of an & operator if it is not
@@ -2212,9 +2214,11 @@ void Parser::ParseCXXSimpleTypeSpecifier(DeclSpec &DS) {
   DS.Finish(Actions, Policy);
 }
 
-bool Parser::ParseCXXTypeSpecifierSeq(DeclSpec &DS, DeclaratorContext Context) {
+bool Parser::ParseCXXTypeSpecifierSeq(DeclSpec &DS, DeclaratorContext Context,
+                                      ParsedType ObjectType) {
   ParseSpecifierQualifierList(DS, AS_none,
-                              getDeclSpecContextFromDeclaratorContext(Context));
+                              getDeclSpecContextFromDeclaratorContext(Context),
+                              ObjectType);
   DS.Finish(Actions, Actions.getASTContext().getPrintingPolicy());
   return false;
 }
@@ -2375,6 +2379,7 @@ bool Parser::ParseUnqualifiedIdTemplateId(
 }
 
 bool Parser::ParseUnqualifiedIdOperator(CXXScopeSpec &SS, bool EnteringContext,
+                                        bool ForPostfixExpression,
                                         ParsedType ObjectType,
                                         UnqualifiedId &Result) {
   assert(Tok.is(tok::kw_operator) && "Expected 'operator' keyword");
@@ -2555,8 +2560,18 @@ bool Parser::ParseUnqualifiedIdOperator(CXXScopeSpec &SS, bool EnteringContext,
 
   // Parse the type-specifier-seq.
   DeclSpec DS(AttrFactory);
+  if (ForPostfixExpression && !SS.isEmpty() && Tok.is(tok::identifier)) {
+    if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
+                                       /*ObjectHasErrors=*/false,
+                                       EnteringContext))
+      return true;
+    AnnotateScopeToken(SS, /*IsNewAnnotation=*/true);
+  }
   if (ParseCXXTypeSpecifierSeq(
-          DS, DeclaratorContext::ConversionId)) // FIXME: ObjectType?
+          DS,
+          ForPostfixExpression ? DeclaratorContext::ConversionIdInPostfixExpr
+                               : DeclaratorContext::ConversionId,
+          ObjectType))
     return true;
 
   // Parse the conversion-declarator, which is merely a sequence of
@@ -2576,13 +2591,11 @@ bool Parser::ParseUnqualifiedIdOperator(CXXScopeSpec &SS, bool EnteringContext,
   return false;
 }
 
-bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
-                                bool ObjectHadErrors, bool EnteringContext,
-                                bool AllowDestructorName,
-                                bool AllowConstructorName,
-                                bool AllowDeductionGuide,
-                                SourceLocation *TemplateKWLoc,
-                                UnqualifiedId &Result) {
+bool Parser::ParseUnqualifiedId(
+    CXXScopeSpec &SS, ParsedType ObjectType, bool ObjectHadErrors,
+    bool EnteringContext, bool AllowDestructorName, bool AllowConstructorName,
+    bool AllowDeductionGuide, bool ForPostfixExpression,
+    SourceLocation *TemplateKWLoc, UnqualifiedId &Result) {
   if (TemplateKWLoc)
     *TemplateKWLoc = SourceLocation();
 
@@ -2723,7 +2736,8 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
   //   operator-function-id
   //   conversion-function-id
   if (Tok.is(tok::kw_operator)) {
-    if (ParseUnqualifiedIdOperator(SS, EnteringContext, ObjectType, Result))
+    if (ParseUnqualifiedIdOperator(SS, EnteringContext, ForPostfixExpression,
+                                   ObjectType, Result))
       return true;
 
     // If we have an operator-function-id or a literal-operator-id and the next

@@ -3310,6 +3310,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
       IsDeducedReturnType = true;
       break;
     case DeclaratorContext::ConversionId:
+    case DeclaratorContext::ConversionIdInPostfixExpr:
       if (!SemaRef.getLangOpts().CPlusPlus14 || !IsCXXAutoType)
         Error = 14; // conversion-type-id
       IsDeducedReturnType = true;
@@ -3432,6 +3433,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
     case DeclaratorContext::TypeName:
     case DeclaratorContext::FunctionalCast:
     case DeclaratorContext::ConversionId:
+    case DeclaratorContext::ConversionIdInPostfixExpr:
     case DeclaratorContext::TemplateParam:
     case DeclaratorContext::CXXNew:
     case DeclaratorContext::CXXCatch:
@@ -4488,6 +4490,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     }
 
     case DeclaratorContext::ConversionId:
+    case DeclaratorContext::ConversionIdInPostfixExpr:
       complainAboutMissingNullability = CAMN_Yes;
       break;
 
@@ -5663,6 +5666,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     case DeclaratorContext::BlockLiteral:
     case DeclaratorContext::LambdaExpr:
     case DeclaratorContext::ConversionId:
+    case DeclaratorContext::ConversionIdInPostfixExpr:
     case DeclaratorContext::TrailingReturn:
     case DeclaratorContext::TrailingReturnVar:
     case DeclaratorContext::TemplateArg:

@@ -80,9 +80,7 @@ struct B : A {
   operator T();
 } b;
 void foo() {
-  b.A::operator T(); // FIXME: qualified lookup should find T in A.
-  // expected-error@-1 {{unknown type name 'T'}}
-  //   expected-note@#cwg1111-A-T {{'A::T' declared here}}
+  b.A::operator T();
 }
 } // namespace example4
 

@@ -2728,13 +2728,13 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
 
 void Parser::ParseSpecifierQualifierList(
     DeclSpec &DS, ImplicitTypenameContext AllowImplicitTypename,
-    AccessSpecifier AS, DeclSpecContext DSC) {
+    AccessSpecifier AS, DeclSpecContext DSC, ParsedType ObjectType) {
   ParsedTemplateInfo TemplateInfo;
   /// specifier-qualifier-list is a subset of declaration-specifiers.  Just
   /// parse declaration-specifiers and complain about extra stuff.
   /// TODO: diagnose attribute-specifiers and alignment-specifiers.
   ParseDeclarationSpecifiers(DS, TemplateInfo, AS, DSC, nullptr,
-                             AllowImplicitTypename);
+                             AllowImplicitTypename, ObjectType);
 
   // Validate declspec for type-name.
   unsigned Specs = DS.getParsedSpecifiers();
@@ -3055,6 +3055,8 @@ Parser::getDeclSpecContextFromDeclaratorContext(DeclaratorContext Context) {
     return DeclSpecContext::DSC_condition;
   case DeclaratorContext::ConversionId:
     return DeclSpecContext::DSC_conv_operator;
+  case DeclaratorContext::ConversionIdInPostfixExpr:
+    return DeclSpecContext::DSC_conv_operator_in_postfix_expr;
   case DeclaratorContext::CXXNew:
     return DeclSpecContext::DSC_new;
   case DeclaratorContext::Prototype:
@@ -3360,7 +3362,7 @@ Parser::DiagnoseMissingSemiAfterTagDefinition(DeclSpec &DS, AccessSpecifier AS,
 void Parser::ParseDeclarationSpecifiers(
     DeclSpec &DS, ParsedTemplateInfo &TemplateInfo, AccessSpecifier AS,
     DeclSpecContext DSContext, LateParsedAttrList *LateAttrs,
-    ImplicitTypenameContext AllowImplicitTypename) {
+    ImplicitTypenameContext AllowImplicitTypename, ParsedType ObjectType) {
   if (DS.getSourceRange().isInvalid()) {
     // Start the range at the current token but make the end of the range
     // invalid.  This will make the entire range invalid unless we successfully
@@ -3369,7 +3371,7 @@ void Parser::ParseDeclarationSpecifiers(
     DS.SetRangeEnd(SourceLocation());
   }
 
-  // If we are in a operator context, convert it back into a type specifier
+  // If we are in an operator context, convert it back into a type specifier
   // context for better error handling later on.
   if (DSContext == DeclSpecContext::DSC_conv_operator) {
     // No implicit typename here.
@@ -3610,7 +3612,10 @@ void Parser::ParseDeclarationSpecifiers(
         ConsumeAnnotationToken(); // The C++ scope.
         assert(Tok.is(tok::annot_template_id) &&
                "ParseOptionalCXXScopeSpecifier not working");
-        AnnotateTemplateIdTokenAsType(SS, AllowImplicitTypename);
+        AnnotateTemplateIdTokenAsType(
+            SS, AllowImplicitTypename,
+            /*IsClassName=*/DSContext ==
+                DeclSpecContext::DSC_conv_operator_in_postfix_expr);
         continue;
       }
 
@@ -3673,6 +3678,8 @@ void Parser::ParseDeclarationSpecifiers(
           *Next.getIdentifierInfo(), Next.getLocation(), getCurScope(), &SS,
           false, false, nullptr,
           /*IsCtorOrDtorName=*/false,
+          /*IsOperatorName=*/DSContext ==
+              DeclSpecContext::DSC_conv_operator_in_postfix_expr,
           /*WantNontrivialTypeSourceInfo=*/true,
           isClassTemplateDeductionContext(DSContext), AllowImplicitTypename);
 
@@ -3796,12 +3803,13 @@ void Parser::ParseDeclarationSpecifiers(
         // - `return type`.
         SuppressAccessChecks SAC(*this, IsTemplateSpecOrInst);
 
-        const bool Success = TryAnnotateCXXScopeToken(EnteringContext);
+        const bool Failed =
+            TryAnnotateCXXScopeToken(EnteringContext, ObjectType);
 
         if (IsTemplateSpecOrInst)
           SAC.done();
 
-        if (Success) {
+        if (Failed) {
           if (IsTemplateSpecOrInst)
             SAC.redelay();
           DS.SetTypeSpecError();
@@ -3846,7 +3854,9 @@ void Parser::ParseDeclarationSpecifiers(
 
       ParsedType TypeRep = Actions.getTypeName(
           *Tok.getIdentifierInfo(), Tok.getLocation(), getCurScope(), nullptr,
-          false, false, nullptr, false, false,
+          false, false, ObjectType, false,
+          /*IsOperatorName=*/DSContext ==
+              DeclSpecContext::DSC_conv_operator_in_postfix_expr,
           isClassTemplateDeductionContext(DSContext));
 
       // If this is not a typedef name, don't parse it as part of the declspec,
@@ -6648,7 +6658,8 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
                              /*ObjectHadErrors=*/false,
                              /*EnteringContext=*/true,
                              /*AllowDestructorName=*/true, AllowConstructorName,
-                             AllowDeductionGuide, &TemplateKWLoc,
+                             AllowDeductionGuide,
+                             /*ForPostfixExpression=*/false, &TemplateKWLoc,
                              D.getName()) ||
           // Once we're past the identifier, if the scope was bad, mark the
           // whole declarator bad.
@@ -7509,7 +7520,8 @@ void Parser::ParseParameterDeclarationClause(
     ParsedTemplateInfo TemplateInfo;
     ParseDeclarationSpecifiers(DS, TemplateInfo, AS_none,
                                DeclSpecContext::DSC_normal,
-                               /*LateAttrs=*/nullptr, AllowImplicitTypename);
+                               /*LateAttrs=*/nullptr, AllowImplicitTypename,
+                               /*ObjectType=*/nullptr);
 
     DS.takeAttributesFrom(ArgDeclSpecAttrs);
 

@@ -311,12 +311,13 @@ static ParsedType buildNamedType(Sema &S, const CXXScopeSpec *SS, QualType T,
 ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
                              Scope *S, CXXScopeSpec *SS, bool isClassName,
                              bool HasTrailingDot, ParsedType ObjectTypePtr,
-                             bool IsCtorOrDtorName,
+                             bool IsCtorOrDtorName, bool IsOperatorName,
                              bool WantNontrivialTypeSourceInfo,
                              bool IsClassTemplateDeductionContext,
                              ImplicitTypenameContext AllowImplicitTypename,
                              IdentifierInfo **CorrectedII) {
-  bool IsImplicitTypename = !isClassName && !IsCtorOrDtorName;
+  bool IsImplicitTypename =
+      !isClassName && !IsCtorOrDtorName && !IsOperatorName;
   // FIXME: Consider allowing this outside C++1z mode as an extension.
   bool AllowDeducedTemplate = IsClassTemplateDeductionContext &&
                               getLangOpts().CPlusPlus17 && IsImplicitTypename &&
@@ -368,6 +369,9 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
                                : ElaboratedTypeKeyword::None,
             SourceLocation(), QualifierLoc, II, NameLoc);
         return ParsedType::make(T);
+        // return CreateParsedType(
+        //     T, Context.getTrivialTypeSourceInfo(T,
+        //     QualifierLoc.getBeginLoc()));
       }
 
       return nullptr;
@@ -393,7 +397,7 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
     // nested-name-specifier.
     LookupQualifiedName(Result, LookupCtx);
 
-    if (ObjectTypePtr && Result.empty()) {
+    if ((ObjectTypePtr || IsOperatorName) && Result.empty()) {
       // C++ [basic.lookup.classref]p3:
       //   If the unqualified-id is ~type-name, the type-name is looked up
       //   in the context of the entire postfix-expression. If the type T of
@@ -443,11 +447,10 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
           !(getLangOpts().CPlusPlus && NewSSPtr &&
             isTemplateName(S, *NewSSPtr, false, TemplateName, nullptr, false,
                            Template, MemberOfUnknownSpecialization))) {
-        ParsedType Ty = getTypeName(*NewII, NameLoc, S, NewSSPtr,
-                                    isClassName, HasTrailingDot, ObjectTypePtr,
-                                    IsCtorOrDtorName,
-                                    WantNontrivialTypeSourceInfo,
-                                    IsClassTemplateDeductionContext);
+        ParsedType Ty = getTypeName(
+            *NewII, NameLoc, S, NewSSPtr, isClassName, HasTrailingDot,
+            ObjectTypePtr, IsCtorOrDtorName, IsOperatorName,
+            WantNontrivialTypeSourceInfo, IsClassTemplateDeductionContext);
         if (Ty) {
           diagnoseTypo(Correction,
                        PDiag(diag::err_unknown_type_or_class_name_suggest)
@@ -755,6 +758,7 @@ void Sema::DiagnoseUnknownTypeName(IdentifierInfo *&II,
           getTypeName(*Corrected.getCorrectionAsIdentifierInfo(), IILoc, S,
                       tmpSS.isSet() ? &tmpSS : SS, false, false, nullptr,
                       /*IsCtorOrDtorName=*/false,
+                      /*IsOperatorName=*/false,
                       /*WantNontrivialTypeSourceInfo=*/true);
     }
     return;

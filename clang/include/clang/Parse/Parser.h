@@ -359,7 +359,8 @@ public:
   /// Note that this routine emits an error if you call it with ::new or
   /// ::delete as the current tokens, so only call it in contexts where these
   /// are invalid.
-  bool TryAnnotateCXXScopeToken(bool EnteringContext = false);
+  bool TryAnnotateCXXScopeToken(bool EnteringContext = false,
+                                ParsedType ObjectType = nullptr);
 
   bool MightBeCXXScopeToken() {
     return getLangOpts().CPlusPlus &&
@@ -1525,8 +1526,10 @@ private:
     DSC_class,          // class context, enables 'friend'
     DSC_type_specifier, // C++ type-specifier-seq or C specifier-qualifier-list
     DSC_trailing, // C++11 trailing-type-specifier in a trailing return type
-    DSC_alias_declaration,  // C++11 type-specifier-seq in an alias-declaration
-    DSC_conv_operator,      // C++ type-specifier-seq in an conversion operator
+    DSC_alias_declaration, // C++11 type-specifier-seq in an alias-declaration
+    DSC_conv_operator,     // C++ type-specifier-seq in an conversion operator
+    DSC_conv_operator_in_postfix_expr, // C++ type-specifier-seq which is
+                                       // referenced in a postfix expression
     DSC_top_level,          // top-level/namespace declaration context
     DSC_template_param,     // template parameter context
     DSC_template_arg,       // template argument context
@@ -1554,6 +1557,7 @@ private:
     case DeclSpecContext::DSC_template_type_arg:
     case DeclSpecContext::DSC_type_specifier:
     case DeclSpecContext::DSC_conv_operator:
+    case DeclSpecContext::DSC_conv_operator_in_postfix_expr:
     case DeclSpecContext::DSC_trailing:
     case DeclSpecContext::DSC_alias_declaration:
     case DeclSpecContext::DSC_association:
@@ -1605,6 +1609,7 @@ private:
 
     case DeclSpecContext::DSC_trailing:
     case DeclSpecContext::DSC_conv_operator:
+    case DeclSpecContext::DSC_conv_operator_in_postfix_expr:
     case DeclSpecContext::DSC_template_arg:
     case DeclSpecContext::DSC_new:
       return AllowDefiningTypeSpec::No;
@@ -1629,6 +1634,7 @@ private:
     case DeclSpecContext::DSC_trailing:
     case DeclSpecContext::DSC_association:
     case DeclSpecContext::DSC_conv_operator:
+    case DeclSpecContext::DSC_conv_operator_in_postfix_expr:
     case DeclSpecContext::DSC_template_arg:
     case DeclSpecContext::DSC_new:
 
@@ -1650,6 +1656,7 @@ private:
     case DeclSpecContext::DSC_type_specifier:
     case DeclSpecContext::DSC_association:
     case DeclSpecContext::DSC_conv_operator:
+    case DeclSpecContext::DSC_conv_operator_in_postfix_expr:
     case DeclSpecContext::DSC_new:
       return true;
 
@@ -1673,6 +1680,7 @@ private:
     case DeclSpecContext::DSC_trailing:
     case DeclSpecContext::DSC_alias_declaration:
     case DeclSpecContext::DSC_template_param:
+    case DeclSpecContext::DSC_conv_operator_in_postfix_expr:
     case DeclSpecContext::DSC_new:
       return ImplicitTypenameContext::Yes;
 
@@ -1826,9 +1834,11 @@ private:
   ParseDeclarationSpecifiers(DeclSpec &DS, ParsedTemplateInfo &TemplateInfo,
                              AccessSpecifier AS = AS_none,
                              DeclSpecContext DSC = DeclSpecContext::DSC_normal,
-                             LateParsedAttrList *LateAttrs = nullptr) {
+                             LateParsedAttrList *LateAttrs = nullptr,
+                             ParsedType ObjectType = nullptr) {
     return ParseDeclarationSpecifiers(DS, TemplateInfo, AS, DSC, LateAttrs,
-                                      getImplicitTypenameContext(DSC));
+                                      getImplicitTypenameContext(DSC),
+                                      ObjectType);
   }
 
   /// ParseDeclarationSpecifiers
@@ -1860,11 +1870,12 @@ private:
   ///       'friend': [C++ dcl.friend]
   ///       'constexpr': [C++0x dcl.constexpr]
   /// \endverbatim
-  void
-  ParseDeclarationSpecifiers(DeclSpec &DS, ParsedTemplateInfo &TemplateInfo,
-                             AccessSpecifier AS, DeclSpecContext DSC,
-                             LateParsedAttrList *LateAttrs,
-                             ImplicitTypenameContext AllowImplicitTypename);
+  void ParseDeclarationSpecifiers(DeclSpec &DS,
+                                  ParsedTemplateInfo &TemplateInfo,
+                                  AccessSpecifier AS, DeclSpecContext DSC,
+                                  LateParsedAttrList *LateAttrs,
+                                  ImplicitTypenameContext AllowImplicitTypename,
+                                  ParsedType ObjectType);
 
   /// Determine whether we're looking at something that might be a declarator
   /// in a simple-declaration. If it can't possibly be a declarator, maybe
@@ -1877,10 +1888,12 @@ private:
       DeclSpec &DS, AccessSpecifier AS, DeclSpecContext DSContext,
       LateParsedAttrList *LateAttrs = nullptr);
 
-  void ParseSpecifierQualifierList(
-      DeclSpec &DS, AccessSpecifier AS = AS_none,
-      DeclSpecContext DSC = DeclSpecContext::DSC_normal) {
-    ParseSpecifierQualifierList(DS, getImplicitTypenameContext(DSC), AS, DSC);
+  void
+  ParseSpecifierQualifierList(DeclSpec &DS, AccessSpecifier AS = AS_none,
+                              DeclSpecContext DSC = DeclSpecContext::DSC_normal,
+                              ParsedType ObjectType = nullptr) {
+    ParseSpecifierQualifierList(DS, getImplicitTypenameContext(DSC), AS, DSC,
+                                ObjectType);
   }
 
   /// ParseSpecifierQualifierList
@@ -1891,10 +1904,12 @@ private:
   /// [GNU]    attributes     specifier-qualifier-list[opt]
   /// \endverbatim
   ///
-  void ParseSpecifierQualifierList(
-      DeclSpec &DS, ImplicitTypenameContext AllowImplicitTypename,
-      AccessSpecifier AS = AS_none,
-      DeclSpecContext DSC = DeclSpecContext::DSC_normal);
+  void
+  ParseSpecifierQualifierList(DeclSpec &DS,
+                              ImplicitTypenameContext AllowImplicitTypename,
+                              AccessSpecifier AS = AS_none,
+                              DeclSpecContext DSC = DeclSpecContext::DSC_normal,
+                              ParsedType ObjectType = nullptr);
 
   /// ParseEnumSpecifier
   /// \verbatim
@@ -4413,7 +4428,7 @@ public:
   bool ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
                           bool ObjectHadErrors, bool EnteringContext,
                           bool AllowDestructorName, bool AllowConstructorName,
-                          bool AllowDeductionGuide,
+                          bool AllowDeductionGuide, bool ForPostfixExpression,
                           SourceLocation *TemplateKWLoc, UnqualifiedId &Result);
 
 private:
@@ -4826,7 +4841,8 @@ private:
   /// \endverbatim
   ///
   bool ParseCXXTypeSpecifierSeq(
-      DeclSpec &DS, DeclaratorContext Context = DeclaratorContext::TypeName);
+      DeclSpec &DS, DeclaratorContext Context = DeclaratorContext::TypeName,
+      ParsedType ObjectType = nullptr);
 
   //===--------------------------------------------------------------------===//
   // C++ 5.3.4 and 5.3.5: C++ new and delete
@@ -5091,6 +5107,7 @@ private:
   ///
   /// \returns true if parsing fails, false otherwise.
   bool ParseUnqualifiedIdOperator(CXXScopeSpec &SS, bool EnteringContext,
+                                  bool ForPostfixExpression,
                                   ParsedType ObjectType, UnqualifiedId &Result);
 
   //===--------------------------------------------------------------------===//

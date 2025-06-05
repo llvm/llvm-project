@@ -2019,6 +2019,7 @@ bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(
             *Tok.getIdentifierInfo(), Tok.getLocation(), getCurScope(), &SS,
             false, NextToken().is(tok::period), nullptr,
             /*IsCtorOrDtorName=*/false,
+            /*IsOperatorName=*/false,
             /*NonTrivialTypeSourceInfo=*/true,
             /*IsClassTemplateDeductionContext=*/true, AllowImplicitTypename)) {
       SourceLocation BeginLoc = Tok.getLocation();
@@ -2126,13 +2127,14 @@ bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(
   return false;
 }
 
-bool Parser::TryAnnotateCXXScopeToken(bool EnteringContext) {
+bool Parser::TryAnnotateCXXScopeToken(bool EnteringContext,
+                                      ParsedType ObjectType) {
   assert(getLangOpts().CPlusPlus &&
          "Call sites of this function should be guarded by checking for C++");
   assert(MightBeCXXScopeToken() && "Cannot be a type or scope token!");
 
   CXXScopeSpec SS;
-  if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
+  if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/ObjectType,
                                      /*ObjectHasErrors=*/false,
                                      EnteringContext))
     return true;
@@ -2262,7 +2264,8 @@ bool Parser::ParseMicrosoftIfExistsCondition(IfExistsCondition& Result) {
                          /*ObjectHadErrors=*/false, /*EnteringContext*/ false,
                          /*AllowDestructorName*/ true,
                          /*AllowConstructorName*/ true,
-                         /*AllowDeductionGuide*/ false, &TemplateKWLoc,
+                         /*AllowDeductionGuide*/ false,
+                         /*ForPostfixExpression=*/false, &TemplateKWLoc,
                          Result.Name)) {
     T.skipToEnd();
     return true;
