@@ -1651,67 +1651,67 @@ define <16 x i64> @unzip2a_dual_v16i64_exact(<16 x i64> %a, <16 x i64> %b) vscal
 ;
 ; ZVE32F-LABEL: unzip2a_dual_v16i64_exact:
 ; ZVE32F:       # %bb.0: # %entry
-; ZVE32F-NEXT:    ld a6, 64(a1)
-; ZVE32F-NEXT:    ld a4, 80(a1)
-; ZVE32F-NEXT:    ld a7, 96(a1)
-; ZVE32F-NEXT:    ld t0, 0(a2)
-; ZVE32F-NEXT:    ld a3, 16(a2)
-; ZVE32F-NEXT:    ld t1, 32(a2)
-; ZVE32F-NEXT:    ld a5, 112(a1)
-; ZVE32F-NEXT:    srli t2, a7, 32
-; ZVE32F-NEXT:    vsetivli zero, 8, e32, m1, ta, mu
-; ZVE32F-NEXT:    vmv.v.x v8, a6
-; ZVE32F-NEXT:    srli a6, a6, 32
-; ZVE32F-NEXT:    vmv.v.x v9, a7
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a6
-; ZVE32F-NEXT:    vslide1down.vx v9, v9, t2
 ; ZVE32F-NEXT:    ld a6, 0(a1)
-; ZVE32F-NEXT:    ld a7, 16(a1)
-; ZVE32F-NEXT:    ld t2, 32(a1)
-; ZVE32F-NEXT:    ld a1, 48(a1)
+; ZVE32F-NEXT:    ld a4, 16(a1)
+; ZVE32F-NEXT:    ld a7, 32(a1)
+; ZVE32F-NEXT:    ld a3, 48(a1)
+; ZVE32F-NEXT:    ld a5, 80(a1)
+; ZVE32F-NEXT:    ld t0, 96(a1)
+; ZVE32F-NEXT:    ld t1, 64(a1)
+; ZVE32F-NEXT:    ld a1, 112(a1)
+; ZVE32F-NEXT:    srli t2, a6, 32
+; ZVE32F-NEXT:    vsetivli zero, 8, e32, m1, ta, mu
+; ZVE32F-NEXT:    vmv.v.x v8, t0
+; ZVE32F-NEXT:    srli t0, t0, 32
+; ZVE32F-NEXT:    vmv.v.x v9, t1
+; ZVE32F-NEXT:    srli t1, t1, 32
 ; ZVE32F-NEXT:    vmv.v.x v10, a6
-; ZVE32F-NEXT:    srli a6, a6, 32
-; ZVE32F-NEXT:    vslide1down.vx v10, v10, a6
+; ZVE32F-NEXT:    vslide1down.vx v9, v9, t1
+; ZVE32F-NEXT:    vslide1down.vx v8, v8, t0
+; ZVE32F-NEXT:    vslide1down.vx v10, v10, t2
+; ZVE32F-NEXT:    ld t1, 32(a2)
+; ZVE32F-NEXT:    ld t0, 16(a2)
+; ZVE32F-NEXT:    ld t2, 0(a2)
 ; ZVE32F-NEXT:    ld a6, 48(a2)
 ; ZVE32F-NEXT:    vmv.v.x v11, t1
 ; ZVE32F-NEXT:    srli t1, t1, 32
-; ZVE32F-NEXT:    vmv.v.x v12, t0
-; ZVE32F-NEXT:    srli t0, t0, 32
-; ZVE32F-NEXT:    vmv.v.x v13, t2
+; ZVE32F-NEXT:    vmv.v.x v12, t2
 ; ZVE32F-NEXT:    srli t2, t2, 32
-; ZVE32F-NEXT:    vslide1down.vx v13, v13, t2
-; ZVE32F-NEXT:    vslide1down.vx v12, v12, t0
+; ZVE32F-NEXT:    vmv.v.x v13, a7
+; ZVE32F-NEXT:    srli a7, a7, 32
+; ZVE32F-NEXT:    vslide1down.vx v13, v13, a7
+; ZVE32F-NEXT:    vslide1down.vx v12, v12, t2
 ; ZVE32F-NEXT:    vslide1down.vx v11, v11, t1
-; ZVE32F-NEXT:    ld t0, 64(a2)
+; ZVE32F-NEXT:    ld a7, 64(a2)
 ; ZVE32F-NEXT:    ld t1, 80(a2)
 ; ZVE32F-NEXT:    ld t2, 96(a2)
 ; ZVE32F-NEXT:    ld a2, 112(a2)
-; ZVE32F-NEXT:    vmv.v.x v14, t0
-; ZVE32F-NEXT:    srli t0, t0, 32
-; ZVE32F-NEXT:    vslide1down.vx v14, v14, t0
+; ZVE32F-NEXT:    vmv.v.x v14, a7
+; ZVE32F-NEXT:    srli a7, a7, 32
+; ZVE32F-NEXT:    vslide1down.vx v14, v14, a7
 ; ZVE32F-NEXT:    vmv.v.x v15, t2
-; ZVE32F-NEXT:    srli t0, t2, 32
-; ZVE32F-NEXT:    vslide1down.vx v15, v15, t0
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a4
-; ZVE32F-NEXT:    srli a4, a4, 32
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a4
+; ZVE32F-NEXT:    srli a7, t2, 32
+; ZVE32F-NEXT:    vslide1down.vx v15, v15, a7
 ; ZVE32F-NEXT:    vslide1down.vx v9, v9, a5
 ; ZVE32F-NEXT:    srli a5, a5, 32
-; ZVE32F-NEXT:    vslide1down.vx v9, v9, a5
-; ZVE32F-NEXT:    vslide1down.vx v10, v10, a7
-; ZVE32F-NEXT:    srli a4, a7, 32
-; ZVE32F-NEXT:    vslide1down.vx v10, v10, a4
-; ZVE32F-NEXT:    vslide1down.vx v12, v12, a3
-; ZVE32F-NEXT:    srli a3, a3, 32
-; ZVE32F-NEXT:    vslide1down.vx v12, v12, a3
-; ZVE32F-NEXT:    vmv.v.i v0, 15
-; ZVE32F-NEXT:    vslide1down.vx v14, v14, t1
-; ZVE32F-NEXT:    srli a3, t1, 32
-; ZVE32F-NEXT:    vslide1down.vx v14, v14, a3
-; ZVE32F-NEXT:    vslidedown.vi v9, v8, 4, v0.t
-; ZVE32F-NEXT:    vslide1down.vx v8, v13, a1
-; ZVE32F-NEXT:    srli a1, a1, 32
+; ZVE32F-NEXT:    vslide1down.vx v16, v9, a5
 ; ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
+; ZVE32F-NEXT:    srli a1, a1, 32
+; ZVE32F-NEXT:    vslide1down.vx v9, v8, a1
+; ZVE32F-NEXT:    vslide1down.vx v8, v10, a4
+; ZVE32F-NEXT:    srli a4, a4, 32
+; ZVE32F-NEXT:    vslide1down.vx v10, v8, a4
+; ZVE32F-NEXT:    vslide1down.vx v8, v12, t0
+; ZVE32F-NEXT:    srli a1, t0, 32
+; ZVE32F-NEXT:    vslide1down.vx v12, v8, a1
+; ZVE32F-NEXT:    vmv.v.i v0, 15
+; ZVE32F-NEXT:    vslide1down.vx v8, v14, t1
+; ZVE32F-NEXT:    srli a1, t1, 32
+; ZVE32F-NEXT:    vslide1down.vx v14, v8, a1
+; ZVE32F-NEXT:    vslidedown.vi v9, v16, 4, v0.t
+; ZVE32F-NEXT:    vslide1down.vx v8, v13, a3
+; ZVE32F-NEXT:    srli a3, a3, 32
+; ZVE32F-NEXT:    vslide1down.vx v8, v8, a3
 ; ZVE32F-NEXT:    vslidedown.vi v8, v10, 4, v0.t
 ; ZVE32F-NEXT:    vslide1down.vx v10, v11, a6
 ; ZVE32F-NEXT:    srli a1, a6, 32
