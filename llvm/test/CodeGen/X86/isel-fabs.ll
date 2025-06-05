@@ -12,11 +12,6 @@ define float @test_float_abs(float %arg) {
 ; SDAG-X64-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SDAG-X64-NEXT:    retq
 ;
-; X86-LABEL: test_float_abs:
-; X86:       # %bb.0:
-; X86-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
-; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    retl
 ; X64-LABEL: test_float_abs:
 ; X64:       # %bb.0:
 ; X64-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -56,12 +51,6 @@ define double @test_double_abs(double %arg) {
 ; SDAG-X64-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SDAG-X64-NEXT:    retq
 ;
-; X86-LABEL: test_double_abs:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl $2147483647, %edx # imm = 0x7FFFFFFF
-; X86-NEXT:    andl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    retl
 ; X64-LABEL: test_double_abs:
 ; X64:       # %bb.0:
 ; X64-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
