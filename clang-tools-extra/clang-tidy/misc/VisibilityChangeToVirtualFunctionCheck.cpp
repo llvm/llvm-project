@@ -13,6 +13,16 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
+using namespace clang;
+
+namespace {
+AST_MATCHER(NamedDecl, isOperatorDecl) {
+  DeclarationName::NameKind NK = Node.getDeclName().getNameKind();
+  return NK != DeclarationName::Identifier &&
+         NK != DeclarationName::CXXConstructorName &&
+         NK != DeclarationName::CXXDestructorName;
+}
+} // namespace
 
 namespace clang::tidy {
 
@@ -62,9 +72,13 @@ void VisibilityChangeToVirtualFunctionCheck::registerMatchers(
     MatchFinder *Finder) {
   auto IgnoredDecl =
       namedDecl(matchers::matchesAnyListedName(IgnoredFunctions));
+  auto FilterDestructors =
+      CheckDestructors ? decl() : decl(unless(cxxDestructorDecl()));
+  auto FilterOperators =
+      CheckOperators ? namedDecl() : namedDecl(unless(isOperatorDecl()));
   Finder->addMatcher(
       cxxMethodDecl(
-          isVirtual(),
+          isVirtual(), FilterDestructors, FilterOperators,
           ofClass(
               cxxRecordDecl(unless(isExpansionInSystemHeader())).bind("class")),
           forEachOverridden(cxxMethodDecl(ofClass(cxxRecordDecl().bind("base")),
@@ -78,13 +92,6 @@ void VisibilityChangeToVirtualFunctionCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *MatchedFunction = Result.Nodes.getNodeAs<FunctionDecl>("func");
   if (!MatchedFunction->isCanonicalDecl())
-    return;
-  DeclarationName::NameKind NK = MatchedFunction->getDeclName().getNameKind();
-  if (!CheckDestructors && NK == DeclarationName::CXXDestructorName)
-    return;
-  if (!CheckOperators && NK != DeclarationName::Identifier &&
-      NK != DeclarationName::CXXConstructorName &&
-      NK != DeclarationName::CXXDestructorName)
     return;
 
   const auto *ParentClass = Result.Nodes.getNodeAs<CXXRecordDecl>("class");
