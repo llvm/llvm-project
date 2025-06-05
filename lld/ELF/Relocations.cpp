@@ -805,9 +805,9 @@ static bool maybeReportUndefined(Ctx &ctx, Undefined &sym,
     return false;
 
   // Skip undefined symbols from list
-  for (const auto& ignoredUndef : ctx.arg.unresolvedSymbolsList) {
+  for (const auto &ignoredUndef : ctx.arg.unresolvedSymbolsList) {
     if (ignoredUndef == sym.getName()) {
-        return false;
+      return false;
     }
   }
 
