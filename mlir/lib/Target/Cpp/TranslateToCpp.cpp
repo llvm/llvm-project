@@ -180,6 +180,12 @@ struct CppEmitter {
   /// Emit an expression as a C expression.
   LogicalResult emitExpression(ExpressionOp expressionOp);
 
+  /// Emit while as a C while.
+  LogicalResult emitWhile(WhileOp expressionOp);
+
+  /// Emit do-while as a C do-while.
+  LogicalResult emitDo(DoOp expressionOp);
+
   /// Insert the expression representing the operation into the value cache.
   void cacheDeferredOpResult(Value value, StringRef str);
 
@@ -201,6 +207,8 @@ struct CppEmitter {
 
   /// Return the existing or a new label of a Block.
   StringRef getOrCreateName(Block &block);
+
+  LogicalResult emitInlinedExpression(Value value);
 
   /// Whether to map an mlir integer to a unsigned integer in C++.
   bool shouldMapToUnsigned(IntegerType::SignednessSemantics val);
@@ -259,7 +267,7 @@ struct CppEmitter {
   }
 
   /// Get expression currently being emitted.
-  ExpressionOp getEmittedExpression() { return emittedExpression; }
+  Operation *getEmittedExpression() { return emittedExpression; }
 
   /// Determine whether given value is part of the expression potentially being
   /// emitted.
@@ -269,7 +277,8 @@ struct CppEmitter {
     Operation *def = value.getDefiningOp();
     if (!def)
       return false;
-    auto operandExpression = dyn_cast<ExpressionOp>(def->getParentOp());
+
+    Operation *operandExpression = def->getParentOp();
     return operandExpression == emittedExpression;
   };
 
@@ -317,7 +326,7 @@ private:
   unsigned int valueCount{0};
 
   /// State of the current expression being emitted.
-  ExpressionOp emittedExpression;
+  Operation *emittedExpression = nullptr;
   SmallVector<int> emittedExpressionPrecedence;
 
   void pushExpressionPrecedence(int precedence) {
@@ -545,6 +554,16 @@ static LogicalResult printOperation(CppEmitter &emitter,
 
   os.unindent() << "}\n}";
   return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::WhileOp whileOp) {
+  return emitter.emitWhile(whileOp);
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::DoOp doWhileOp) {
+  return emitter.emitDo(doWhileOp);
 }
 
 static LogicalResult printOperation(CppEmitter &emitter, emitc::CmpOp cmpOp) {
@@ -1519,6 +1538,84 @@ LogicalResult CppEmitter::emitExpression(ExpressionOp expressionOp) {
   return success();
 }
 
+LogicalResult CppEmitter::emitWhile(WhileOp whileOp) {
+  assert(emittedExpressionPrecedence.empty() &&
+         "Expected precedence stack to be empty");
+  Operation *rootOp = whileOp.getRootOp();
+
+  emittedExpression = whileOp;
+  FailureOr<int> precedence = getOperatorPrecedence(rootOp);
+  if (failed(precedence))
+    return failure();
+  pushExpressionPrecedence(precedence.value());
+
+  os << "while (";
+  if (failed(emitOperation(*rootOp, /*trailingSemicolon=*/false)))
+    return failure();
+  os << ") {\n";
+
+  popExpressionPrecedence();
+  assert(emittedExpressionPrecedence.empty() &&
+         "Expected precedence stack to be empty");
+  emittedExpression = nullptr;
+
+  os.indent();
+
+  Region &bodyRegion = whileOp.getBodyRegion();
+  auto regionOps = bodyRegion.getOps();
+
+  for (Operation &op : regionOps) {
+    if (isa<emitc::YieldOp>(op))
+      continue;
+
+    if (failed(emitOperation(op, /*trailingSemicolon=*/true)))
+      return failure();
+  }
+
+  os.unindent() << "}";
+
+  return success();
+}
+
+LogicalResult CppEmitter::emitDo(DoOp doWhileOp) {
+  os << "do {\n";
+  os.indent();
+
+  Region &bodyRegion = doWhileOp.getBodyRegion();
+  auto regionOps = bodyRegion.getOps();
+
+  for (Operation &op : regionOps) {
+    if (isa<emitc::YieldOp>(op))
+      continue;
+
+    if (failed(emitOperation(op, /*trailingSemicolon=*/true)))
+      return failure();
+  }
+
+  os.unindent() << "} while (";
+
+  assert(emittedExpressionPrecedence.empty() &&
+         "Expected precedence stack to be empty");
+  Operation *rootOp = doWhileOp.getRootOp();
+
+  emittedExpression = doWhileOp;
+  FailureOr<int> precedence = getOperatorPrecedence(rootOp);
+  if (failed(precedence))
+    return failure();
+  pushExpressionPrecedence(precedence.value());
+
+  if (failed(emitOperation(*rootOp, /*trailingSemicolon=*/false)))
+    return failure();
+  os << ");";
+
+  popExpressionPrecedence();
+  assert(emittedExpressionPrecedence.empty() &&
+         "Expected precedence stack to be empty");
+  emittedExpression = nullptr;
+
+  return success();
+}
+
 LogicalResult CppEmitter::emitOperand(Value value) {
   if (isPartOfCurrentExpression(value)) {
     Operation *def = value.getDefiningOp();
@@ -1702,14 +1799,14 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
                 emitc::BitwiseRightShiftOp, emitc::BitwiseXorOp, emitc::CallOp,
                 emitc::CallOpaqueOp, emitc::CastOp, emitc::ClassOp,
                 emitc::CmpOp, emitc::ConditionalOp, emitc::ConstantOp,
-                emitc::DeclareFuncOp, emitc::DivOp, emitc::ExpressionOp,
+                emitc::DeclareFuncOp, emitc::DivOp, emitc::DoOp, emitc::ExpressionOp,
                 emitc::FieldOp, emitc::FileOp, emitc::ForOp, emitc::FuncOp,
                 emitc::GetFieldOp, emitc::GlobalOp, emitc::IfOp,
                 emitc::IncludeOp, emitc::LoadOp, emitc::LogicalAndOp,
                 emitc::LogicalNotOp, emitc::LogicalOrOp, emitc::MulOp,
                 emitc::RemOp, emitc::ReturnOp, emitc::SubOp, emitc::SwitchOp,
                 emitc::UnaryMinusOp, emitc::UnaryPlusOp, emitc::VariableOp,
-                emitc::VerbatimOp>(
+                emitc::VerbatimOp, emitc::WhileOp>(
 
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.
@@ -1753,9 +1850,9 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
   // Never emit a semicolon for some operations, especially if endening with
   // `}`.
   trailingSemicolon &=
-      !isa<cf::CondBranchOp, emitc::DeclareFuncOp, emitc::FileOp, emitc::ForOp,
-           emitc::IfOp, emitc::IncludeOp, emitc::SwitchOp, emitc::VerbatimOp>(
-          op);
+      !isa<cf::CondBranchOp, emitc::DeclareFuncOp, emitc::DoOp, emitc::FileOp,
+           emitc::ForOp, emitc::IfOp, emitc::IncludeOp, emitc::SwitchOp,
+           emitc::VerbatimOp, emitc::WhileOp>(op);
 
   os << (trailingSemicolon ? ";\n" : "\n");
 
