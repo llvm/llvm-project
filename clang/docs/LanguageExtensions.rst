@@ -6503,49 +6503,57 @@ of explicit constraints against atomically qualified (arrays and) function
 types.
 
 
-Underspecified object declarations in C
+Underspecified Object Declarations in C
 =======================================
 
-In C23 (N3006), when an object is declared inside of another object and that
-only exists in the scope of the declaration of the outer object. Clang allows
-underspecified object declarations for structs, unions and enums when valid.
+C23 introduced the notion of `underspecified object declarations <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3006.htm>`_
+(note, the final standards text is different from WG14 N3006 due to changes
+during national body comment review). When an object is declared with the
+``constexpr`` storage class specifier or has a deduced type (with the ``auto``
+specifier), it is said to be "underspecified". Underspecified declarations have
+different requirements than non-underspecified declarations. In particular, the
+identifier being declared cannot be used in its initialization. e.g.,
 
 .. code-block:: c
 
-  auto s1 = (struct S1 { int x, y; }){ 1, 2 };
-  auto u1 = (union U1 { int a; double b; }){ .a = 34 };
-  auto e1 = (enum E1 { FOO, BAR }){ BAR };
+  auto x = x; // Invalid
+  constexpr int y = y; // Invalid
 
-Note, The ``constexpr`` keyword and getting a struct member that is
-underspecified is also allowed.
+The standard leaves it implementation-defined whether an underspecified
+declaration may introduce additional identifiers as part of the declaration.
 
-.. code-block:: c
+Clang allows additional identifiers to be declared in the following cases:
 
-  constexpr auto cs1 = (struct S1 { int x, y; }){ 1, 2 };
-  constexpr auto cu1 = (union U1 { int a; double b; }){ .a = 34 };
-  constexpr auto ce1 = (enum E1 { FOO, BAR }){ BAR };
-  int i1 = (struct T { int a, b; }){0, 1}.a;
-  constexpr int ci2 = (struct T2 { int a, b; }){0, 1}.a;
+* A compound literal may introduce a new type. e.g.,
 
-Moreover, some unusual cases are also allowed as described bellow.
+  .. code-block:: c
 
-.. code-block:: c
+    auto x = (struct S { int x, y; }){ 1, 2 };      // Accepted by Clang
+    constexpr int i = (struct T { int x; }){ 1 }.x; // Accepted by Clang
 
-  constexpr struct S { int a, b; } y = { 0 };
-  constexpr typeof(struct s *) x = 0;
-  auto so = sizeof(struct S {});
-  auto s = ({struct T { int x; } s = {}; s.x; });
-  constexpr int (*fp)(struct X { int x; } val) = 0;
-  auto v = (void (*)(int y))0;
+* The type specifier for a ``constexpr`` declaration may define a new type.
+  e.g.,
 
-  constexpr struct {
-      int a;
-  } si = {};
+  .. code-block:: c
 
-  auto z = ({
-      int a = 12;
-      struct {} s;
-      a;
-  });
+    constexpr struct S { int x; } s = { 1 }; // Accepted by Clang
 
-All other cases are prohibited by Clang.
+* A function declarator may be declared with parameters, including parameters
+  which introduce a new type. e.g.,
+
+  .. code-block:: c
+
+    constexpr int (*fp)(int x) = nullptr;              // Accepted by Clang
+    auto f = (void (*)(struct S { int x; } s))nullptr; // Accepted by Clang
+
+* The initializer may contain a GNU statement expression which defines new
+  types or objects. e.g.,
+
+  .. code-block:: c
+
+    constexpr int i = ({                              // Accepted by Clang
+      constexpr int x = 12;
+      constexpr struct S { int x; } s = { x };
+      s.x;
+    });
+    auto x = ({ struct S { int x; } s = { 0 }; s; }); // Accepted by Clang
