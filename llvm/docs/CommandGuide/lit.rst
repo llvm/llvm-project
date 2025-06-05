@@ -689,7 +689,7 @@ The ``<progress info>`` field can be used to report progress information such
 as (1/300) or can be empty, but even when empty the parentheses are required.
 
 Should a test be allowed retries (see ``ALLOW_RETRIES:`` annotation) and it
-needed more than one attempt to succeed, then ``<progess info>`` is extended
+needed more than one attempt to succeed, then ``<progress info>`` is extended
 by this information:
 
 .. code-block:: none
