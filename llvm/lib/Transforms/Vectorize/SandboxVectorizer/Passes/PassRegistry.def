@@ -18,7 +18,6 @@
 #endif
 
 REGION_PASS("null", ::llvm::sandboxir::NullPass)
-REGION_PASS("pack-reuse", ::llvm::sandboxir::PackReuse)
 REGION_PASS("print-instruction-count", ::llvm::sandboxir::PrintInstructionCount)
 REGION_PASS("print-region", ::llvm::sandboxir::PrintRegion)
 REGION_PASS("tr-save", ::llvm::sandboxir::TransactionSave)
