@@ -121,7 +121,7 @@ void COFFWriter::layoutSections() {
 Expected<size_t> COFFWriter::finalizeStringTable() {
   for (const auto &S : Obj.getSections())
     if (S.Name.size() > COFF::NameSize)
-      StrTabBuilder.add(S.Name);
+      StrTabBuilder.add(S.Name, /*Priority=*/UINT8_MAX);
 
   for (const auto &S : Obj.getSymbols())
     if (S.Name.size() > COFF::NameSize)
