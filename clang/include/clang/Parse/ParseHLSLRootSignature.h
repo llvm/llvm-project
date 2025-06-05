@@ -71,7 +71,7 @@ private:
   // expected, or, there is a lexing error
 
   /// Root Element parse methods:
-  std::optional<llvm::hlsl::rootsig::RootFlags> parseRootFlags();
+  std::optional<llvm::dxil::RootFlags> parseRootFlags();
   std::optional<llvm::hlsl::rootsig::RootConstants> parseRootConstants();
   std::optional<llvm::hlsl::rootsig::RootDescriptor> parseRootDescriptor();
   std::optional<llvm::hlsl::rootsig::DescriptorTable> parseDescriptorTable();
@@ -86,15 +86,15 @@ private:
     std::optional<llvm::hlsl::rootsig::Register> Reg;
     std::optional<uint32_t> Num32BitConstants;
     std::optional<uint32_t> Space;
-    std::optional<llvm::hlsl::rootsig::ShaderVisibility> Visibility;
+    std::optional<llvm::dxil::ShaderVisibility> Visibility;
   };
   std::optional<ParsedConstantParams> parseRootConstantParams();
 
   struct ParsedRootDescriptorParams {
     std::optional<llvm::hlsl::rootsig::Register> Reg;
     std::optional<uint32_t> Space;
-    std::optional<llvm::hlsl::rootsig::ShaderVisibility> Visibility;
-    std::optional<llvm::hlsl::rootsig::RootDescriptorFlags> Flags;
+    std::optional<llvm::dxil::ShaderVisibility> Visibility;
+    std::optional<llvm::dxil::RootDescriptorFlags> Flags;
   };
   std::optional<ParsedRootDescriptorParams>
   parseRootDescriptorParams(RootSignatureToken::Kind RegType);
@@ -104,25 +104,25 @@ private:
     std::optional<uint32_t> NumDescriptors;
     std::optional<uint32_t> Space;
     std::optional<uint32_t> Offset;
-    std::optional<llvm::hlsl::rootsig::DescriptorRangeFlags> Flags;
+    std::optional<llvm::dxil::DescriptorRangeFlags> Flags;
   };
   std::optional<ParsedClauseParams>
   parseDescriptorTableClauseParams(RootSignatureToken::Kind RegType);
 
   struct ParsedStaticSamplerParams {
     std::optional<llvm::hlsl::rootsig::Register> Reg;
-    std::optional<llvm::hlsl::rootsig::SamplerFilter> Filter;
-    std::optional<llvm::hlsl::rootsig::TextureAddressMode> AddressU;
-    std::optional<llvm::hlsl::rootsig::TextureAddressMode> AddressV;
-    std::optional<llvm::hlsl::rootsig::TextureAddressMode> AddressW;
+    std::optional<llvm::dxil::SamplerFilter> Filter;
+    std::optional<llvm::dxil::TextureAddressMode> AddressU;
+    std::optional<llvm::dxil::TextureAddressMode> AddressV;
+    std::optional<llvm::dxil::TextureAddressMode> AddressW;
     std::optional<float> MipLODBias;
     std::optional<uint32_t> MaxAnisotropy;
-    std::optional<llvm::hlsl::rootsig::ComparisonFunc> CompFunc;
-    std::optional<llvm::hlsl::rootsig::StaticBorderColor> BorderColor;
+    std::optional<llvm::dxil::ComparisonFunc> CompFunc;
+    std::optional<llvm::dxil::StaticBorderColor> BorderColor;
     std::optional<float> MinLOD;
     std::optional<float> MaxLOD;
     std::optional<uint32_t> Space;
-    std::optional<llvm::hlsl::rootsig::ShaderVisibility> Visibility;
+    std::optional<llvm::dxil::ShaderVisibility> Visibility;
   };
   std::optional<ParsedStaticSamplerParams> parseStaticSamplerParams();
 
@@ -132,16 +132,16 @@ private:
   std::optional<float> parseFloatParam();
 
   /// Parsing methods of various enums
-  std::optional<llvm::hlsl::rootsig::ShaderVisibility> parseShaderVisibility();
-  std::optional<llvm::hlsl::rootsig::SamplerFilter> parseSamplerFilter();
-  std::optional<llvm::hlsl::rootsig::TextureAddressMode>
+  std::optional<llvm::dxil::ShaderVisibility> parseShaderVisibility();
+  std::optional<llvm::dxil::SamplerFilter> parseSamplerFilter();
+  std::optional<llvm::dxil::TextureAddressMode>
   parseTextureAddressMode();
-  std::optional<llvm::hlsl::rootsig::ComparisonFunc> parseComparisonFunc();
-  std::optional<llvm::hlsl::rootsig::StaticBorderColor>
+  std::optional<llvm::dxil::ComparisonFunc> parseComparisonFunc();
+  std::optional<llvm::dxil::StaticBorderColor>
   parseStaticBorderColor();
-  std::optional<llvm::hlsl::rootsig::RootDescriptorFlags>
+  std::optional<llvm::dxil::RootDescriptorFlags>
   parseRootDescriptorFlags();
-  std::optional<llvm::hlsl::rootsig::DescriptorRangeFlags>
+  std::optional<llvm::dxil::DescriptorRangeFlags>
   parseDescriptorRangeFlags();
 
   /// Use NumericLiteralParser to convert CurToken.NumSpelling into a unsigned

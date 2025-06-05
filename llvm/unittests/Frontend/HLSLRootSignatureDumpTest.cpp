@@ -9,6 +9,7 @@
 #include "llvm/Frontend/HLSL/HLSLRootSignatureUtils.h"
 #include "gtest/gtest.h"
 
+using namespace llvm::dxil;
 using namespace llvm::hlsl::rootsig;
 
 namespace {

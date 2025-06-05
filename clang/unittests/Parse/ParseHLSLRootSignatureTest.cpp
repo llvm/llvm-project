@@ -25,6 +25,7 @@
 #include "gtest/gtest.h"
 
 using namespace clang;
+using namespace llvm::dxil;
 using namespace llvm::hlsl::rootsig;
 
 namespace {

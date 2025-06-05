@@ -36,7 +36,7 @@ struct RootConstants {
   uint32_t Num32BitConstants;
   Register Reg;
   uint32_t Space = 0;
-  ShaderVisibility Visibility = ShaderVisibility::All;
+  dxil::ShaderVisibility Visibility = dxil::ShaderVisibility::All;
 };
 
 enum class DescriptorType : uint8_t { SRV = 0, UAV, CBuffer };
@@ -45,17 +45,17 @@ struct RootDescriptor {
   DescriptorType Type;
   Register Reg;
   uint32_t Space = 0;
-  ShaderVisibility Visibility = ShaderVisibility::All;
-  RootDescriptorFlags Flags;
+  dxil::ShaderVisibility Visibility = dxil::ShaderVisibility::All;
+  dxil::RootDescriptorFlags Flags;
 
   void setDefaultFlags() {
     switch (Type) {
     case DescriptorType::CBuffer:
     case DescriptorType::SRV:
-      Flags = RootDescriptorFlags::DataStaticWhileSetAtExecute;
+      Flags = dxil::RootDescriptorFlags::DataStaticWhileSetAtExecute;
       break;
     case DescriptorType::UAV:
-      Flags = RootDescriptorFlags::DataVolatile;
+      Flags = dxil::RootDescriptorFlags::DataVolatile;
       break;
     }
   }
@@ -63,7 +63,7 @@ struct RootDescriptor {
 
 // Models the end of a descriptor table and stores its visibility
 struct DescriptorTable {
-  ShaderVisibility Visibility = ShaderVisibility::All;
+  dxil::ShaderVisibility Visibility = dxil::ShaderVisibility::All;
   // Denotes that the previous NumClauses in the RootElement array
   // are the clauses in the table.
   uint32_t NumClauses = 0;
@@ -79,19 +79,19 @@ struct DescriptorTableClause {
   uint32_t NumDescriptors = 1;
   uint32_t Space = 0;
   uint32_t Offset = DescriptorTableOffsetAppend;
-  DescriptorRangeFlags Flags;
+  dxil::DescriptorRangeFlags Flags;
 
   void setDefaultFlags() {
     switch (Type) {
     case ClauseType::CBuffer:
     case ClauseType::SRV:
-      Flags = DescriptorRangeFlags::DataStaticWhileSetAtExecute;
+      Flags = dxil::DescriptorRangeFlags::DataStaticWhileSetAtExecute;
       break;
     case ClauseType::UAV:
-      Flags = DescriptorRangeFlags::DataVolatile;
+      Flags = dxil::DescriptorRangeFlags::DataVolatile;
       break;
     case ClauseType::Sampler:
-      Flags = DescriptorRangeFlags::None;
+      Flags = dxil::DescriptorRangeFlags::None;
       break;
     }
   }
@@ -99,18 +99,18 @@ struct DescriptorTableClause {
 
 struct StaticSampler {
   Register Reg;
-  SamplerFilter Filter = SamplerFilter::Anisotropic;
-  TextureAddressMode AddressU = TextureAddressMode::Wrap;
-  TextureAddressMode AddressV = TextureAddressMode::Wrap;
-  TextureAddressMode AddressW = TextureAddressMode::Wrap;
+  dxil::SamplerFilter Filter = dxil::SamplerFilter::Anisotropic;
+  dxil::TextureAddressMode AddressU = dxil::TextureAddressMode::Wrap;
+  dxil::TextureAddressMode AddressV = dxil::TextureAddressMode::Wrap;
+  dxil::TextureAddressMode AddressW = dxil::TextureAddressMode::Wrap;
   float MipLODBias = 0.f;
   uint32_t MaxAnisotropy = 16;
-  ComparisonFunc CompFunc = ComparisonFunc::LessEqual;
-  StaticBorderColor BorderColor = StaticBorderColor::OpaqueWhite;
+  dxil::ComparisonFunc CompFunc = dxil::ComparisonFunc::LessEqual;
+  dxil::StaticBorderColor BorderColor = dxil::StaticBorderColor::OpaqueWhite;
   float MinLOD = 0.f;
   float MaxLOD = std::numeric_limits<float>::max();
   uint32_t Space = 0;
-  ShaderVisibility Visibility = ShaderVisibility::All;
+  dxil::ShaderVisibility Visibility = dxil::ShaderVisibility::All;
 };
 
 /// Models RootElement : RootFlags | RootConstants | RootParam
@@ -130,7 +130,7 @@ struct StaticSampler {
 /// RootElements in the array, and it holds a data member for the Visibility
 /// parameter.
 using RootElement =
-    std::variant<RootFlags, RootConstants, RootDescriptor, DescriptorTable,
+    std::variant<dxil::RootFlags, RootConstants, RootDescriptor, DescriptorTable,
                  DescriptorTableClause, StaticSampler>;
 
 } // namespace rootsig

@@ -40,30 +40,30 @@ static raw_ostream &operator<<(raw_ostream &OS, const Register &Reg) {
 }
 
 static raw_ostream &operator<<(raw_ostream &OS,
-                               const ShaderVisibility &Visibility) {
+                               const dxil::ShaderVisibility &Visibility) {
   switch (Visibility) {
-  case ShaderVisibility::All:
+  case dxil::ShaderVisibility::All:
     OS << "All";
     break;
-  case ShaderVisibility::Vertex:
+  case dxil::ShaderVisibility::Vertex:
     OS << "Vertex";
     break;
-  case ShaderVisibility::Hull:
+  case dxil::ShaderVisibility::Hull:
     OS << "Hull";
     break;
-  case ShaderVisibility::Domain:
+  case dxil::ShaderVisibility::Domain:
     OS << "Domain";
     break;
-  case ShaderVisibility::Geometry:
+  case dxil::ShaderVisibility::Geometry:
     OS << "Geometry";
     break;
-  case ShaderVisibility::Pixel:
+  case dxil::ShaderVisibility::Pixel:
     OS << "Pixel";
     break;
-  case ShaderVisibility::Amplification:
+  case dxil::ShaderVisibility::Amplification:
     OS << "Amplification";
     break;
-  case ShaderVisibility::Mesh:
+  case dxil::ShaderVisibility::Mesh:
     OS << "Mesh";
     break;
   }
@@ -91,7 +91,7 @@ static raw_ostream &operator<<(raw_ostream &OS, const ClauseType &Type) {
 }
 
 static raw_ostream &operator<<(raw_ostream &OS,
-                               const DescriptorRangeFlags &Flags) {
+                               const dxil::DescriptorRangeFlags &Flags) {
   bool FlagSet = false;
   unsigned Remaining = llvm::to_underlying(Flags);
   while (Remaining) {
@@ -100,20 +100,20 @@ static raw_ostream &operator<<(raw_ostream &OS,
       if (FlagSet)
         OS << " | ";
 
-      switch (static_cast<DescriptorRangeFlags>(Bit)) {
-      case DescriptorRangeFlags::DescriptorsVolatile:
+      switch (static_cast<dxil::DescriptorRangeFlags>(Bit)) {
+      case dxil::DescriptorRangeFlags::DescriptorsVolatile:
         OS << "DescriptorsVolatile";
         break;
-      case DescriptorRangeFlags::DataVolatile:
+      case dxil::DescriptorRangeFlags::DataVolatile:
         OS << "DataVolatile";
         break;
-      case DescriptorRangeFlags::DataStaticWhileSetAtExecute:
+      case dxil::DescriptorRangeFlags::DataStaticWhileSetAtExecute:
         OS << "DataStaticWhileSetAtExecute";
         break;
-      case DescriptorRangeFlags::DataStatic:
+      case dxil::DescriptorRangeFlags::DataStatic:
         OS << "DataStatic";
         break;
-      case DescriptorRangeFlags::DescriptorsStaticKeepingBufferBoundsChecks:
+      case dxil::DescriptorRangeFlags::DescriptorsStaticKeepingBufferBoundsChecks:
         OS << "DescriptorsStaticKeepingBufferBoundsChecks";
         break;
       default:
@@ -182,7 +182,7 @@ template <class... Ts> OverloadedBuild(Ts...) -> OverloadedBuild<Ts...>;
 
 MDNode *MetadataBuilder::BuildRootSignature() {
   const auto Visitor = OverloadedBuild{
-      [this](const RootFlags &Flags) -> MDNode * {
+      [this](const dxil::RootFlags &Flags) -> MDNode * {
         return BuildRootFlags(Flags);
       },
       [this](const RootConstants &Constants) -> MDNode * {
@@ -212,7 +212,7 @@ MDNode *MetadataBuilder::BuildRootSignature() {
   return MDNode::get(Ctx, GeneratedMetadata);
 }
 
-MDNode *MetadataBuilder::BuildRootFlags(const RootFlags &Flags) {
+MDNode *MetadataBuilder::BuildRootFlags(const dxil::RootFlags &Flags) {
   IRBuilder<> Builder(Ctx);
   Metadata *Operands[] = {
       MDString::get(Ctx, "RootFlags"),
