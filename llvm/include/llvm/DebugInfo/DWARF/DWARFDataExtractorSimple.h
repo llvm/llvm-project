@@ -23,7 +23,8 @@ namespace llvm {
 /// A DataExtractor suitable use for parsing dwarf from memory.  Clients use
 /// Relocator::getRelocatedValueImpl to relocate values as appropriate.
 
-template <class Relocator> class DWARFDataExtractorBase : public DataExtractor {
+template <typename Relocator>
+class DWARFDataExtractorBase : public DataExtractor {
 
 public:
   DWARFDataExtractorBase(StringRef Data, bool IsLittleEndian,
@@ -40,8 +41,6 @@ public:
       : DataExtractor(Other.getData().substr(0, Length), Other.isLittleEndian(),
                       Other.getAddressSize()) {}
 
-  ~DWARFDataExtractorBase() {}
-
   /// Extracts a value and returns it as adjusted by the Relocator
   LLVM_ABI uint64_t getRelocatedValue(uint32_t Size, uint64_t *Off,
                                       uint64_t *SectionIndex = nullptr,
@@ -49,6 +48,7 @@ public:
     return static_cast<const Relocator *>(this)->getRelocatedValueImpl(
         Size, Off, SectionIndex, Err);
   }
+
   LLVM_ABI uint64_t getRelocatedValue(Cursor &C, uint32_t Size,
                                       uint64_t *SectionIndex = nullptr) const {
     return getRelocatedValue(Size, &getOffset(C), SectionIndex, &getError(C));
@@ -59,6 +59,7 @@ public:
                                         uint64_t *SecIx = nullptr) const {
     return getRelocatedValue(getAddressSize(), Off, SecIx);
   }
+
   LLVM_ABI uint64_t getRelocatedAddress(Cursor &C,
                                         uint64_t *SecIx = nullptr) const {
     return getRelocatedValue(getAddressSize(), &getOffset(C), SecIx,
