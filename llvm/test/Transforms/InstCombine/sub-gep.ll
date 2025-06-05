@@ -860,3 +860,96 @@ _Z3fooPKc.exit:
   %tobool = icmp eq i64 %2, 0
   ret i1 %tobool
 }
+
+define i64 @multiple_geps_one_chain(ptr %base, i64 %idx, i64 %idx2) {
+; CHECK-LABEL: @multiple_geps_one_chain(
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i32, ptr [[BASE:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i32, ptr [[P2]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    [[I1:%.*]] = ptrtoint ptr [[BASE]] to i64
+; CHECK-NEXT:    [[I2:%.*]] = ptrtoint ptr [[P3]] to i64
+; CHECK-NEXT:    [[D:%.*]] = sub i64 [[I2]], [[I1]]
+; CHECK-NEXT:    ret i64 [[D]]
+;
+  %p2 = getelementptr inbounds i32, ptr %base, i64 %idx
+  %p3 = getelementptr inbounds i32, ptr %p2, i64 %idx2
+  %i1 = ptrtoint ptr %base to i64
+  %i2 = ptrtoint ptr %p3 to i64
+  %d = sub i64 %i2, %i1
+  ret i64 %d
+}
+
+define i64 @multiple_geps_one_chain_commuted(ptr %base, i64 %idx, i64 %idx2) {
+; CHECK-LABEL: @multiple_geps_one_chain_commuted(
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i32, ptr [[BASE:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i32, ptr [[P2]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    [[I1:%.*]] = ptrtoint ptr [[BASE]] to i64
+; CHECK-NEXT:    [[I2:%.*]] = ptrtoint ptr [[P3]] to i64
+; CHECK-NEXT:    [[D:%.*]] = sub i64 [[I1]], [[I2]]
+; CHECK-NEXT:    ret i64 [[D]]
+;
+  %p2 = getelementptr inbounds i32, ptr %base, i64 %idx
+  %p3 = getelementptr inbounds i32, ptr %p2, i64 %idx2
+  %i1 = ptrtoint ptr %base to i64
+  %i2 = ptrtoint ptr %p3 to i64
+  %d = sub i64 %i1, %i2
+  ret i64 %d
+}
+
+define i64 @multiple_geps_two_chains(ptr %base, i64 %idx, i64 %idx2, i64 %idx3) {
+; CHECK-LABEL: @multiple_geps_two_chains(
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i32, ptr [[BASE:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i32, ptr [[P2]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i32, ptr [[BASE]], i64 [[IDX3:%.*]]
+; CHECK-NEXT:    [[I1:%.*]] = ptrtoint ptr [[P4]] to i64
+; CHECK-NEXT:    [[I2:%.*]] = ptrtoint ptr [[P3]] to i64
+; CHECK-NEXT:    [[D:%.*]] = sub i64 [[I2]], [[I1]]
+; CHECK-NEXT:    ret i64 [[D]]
+;
+  %p2 = getelementptr inbounds i32, ptr %base, i64 %idx
+  %p3 = getelementptr inbounds i32, ptr %p2, i64 %idx2
+  %p4 = getelementptr inbounds i32, ptr %base, i64 %idx3
+  %i1 = ptrtoint ptr %p4 to i64
+  %i2 = ptrtoint ptr %p3 to i64
+  %d = sub i64 %i2, %i1
+  ret i64 %d
+}
+
+define i64 @multiple_geps_two_chains_commuted(ptr %base, i64 %idx, i64 %idx2, i64 %idx3) {
+; CHECK-LABEL: @multiple_geps_two_chains_commuted(
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i32, ptr [[BASE:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i32, ptr [[P2]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i32, ptr [[BASE]], i64 [[IDX3:%.*]]
+; CHECK-NEXT:    [[I1:%.*]] = ptrtoint ptr [[P4]] to i64
+; CHECK-NEXT:    [[I2:%.*]] = ptrtoint ptr [[P3]] to i64
+; CHECK-NEXT:    [[D:%.*]] = sub i64 [[I1]], [[I2]]
+; CHECK-NEXT:    ret i64 [[D]]
+;
+  %p2 = getelementptr inbounds i32, ptr %base, i64 %idx
+  %p3 = getelementptr inbounds i32, ptr %p2, i64 %idx2
+  %p4 = getelementptr inbounds i32, ptr %base, i64 %idx3
+  %i1 = ptrtoint ptr %p4 to i64
+  %i2 = ptrtoint ptr %p3 to i64
+  %d = sub i64 %i1, %i2
+  ret i64 %d
+}
+
+define i64 @multiple_geps_two_chains_gep_base(ptr %base, i64 %base.idx, i64 %idx, i64 %idx2, i64 %idx3) {
+; CHECK-LABEL: @multiple_geps_two_chains_gep_base(
+; CHECK-NEXT:    [[GEP_BASE:%.*]] = getelementptr inbounds i32, ptr [[BASE:%.*]], i64 [[BASE_IDX:%.*]]
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i32, ptr [[GEP_BASE]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i32, ptr [[P2]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i32, ptr [[GEP_BASE]], i64 [[IDX3:%.*]]
+; CHECK-NEXT:    [[I1:%.*]] = ptrtoint ptr [[P4]] to i64
+; CHECK-NEXT:    [[I2:%.*]] = ptrtoint ptr [[P3]] to i64
+; CHECK-NEXT:    [[D:%.*]] = sub i64 [[I2]], [[I1]]
+; CHECK-NEXT:    ret i64 [[D]]
+;
+  %gep.base = getelementptr inbounds i32, ptr %base, i64 %base.idx
+  %p2 = getelementptr inbounds i32, ptr %gep.base, i64 %idx
+  %p3 = getelementptr inbounds i32, ptr %p2, i64 %idx2
+  %p4 = getelementptr inbounds i32, ptr %gep.base, i64 %idx3
+  %i1 = ptrtoint ptr %p4 to i64
+  %i2 = ptrtoint ptr %p3 to i64
+  %d = sub i64 %i2, %i1
+  ret i64 %d
+}
