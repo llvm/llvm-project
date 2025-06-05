@@ -1655,7 +1655,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     return visitFree(CI, FreedOp);
 
   if (Function *F = CI.getCalledFunction()) {
-    if (F->getIntrinsicID() == Intrinsic::umin || F->getIntrinsicID() == Intrinsic::umax) {
+    if (F->getIntrinsicID() == Intrinsic::umin ||
+        F->getIntrinsicID() == Intrinsic::umax) {
       for (Value *Arg : CI.args()) {
         auto *SI = dyn_cast<SelectInst>(Arg);
         if (!SI)
@@ -1665,8 +1666,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         auto *FalseC = dyn_cast<Constant>(SI->getFalseValue());
 
         // Block only if the select is masking, e.g. select(cond, val, -1)
-        if ((TrueC && TrueC->isAllOnesValue()) || (FalseC && FalseC->isAllOnesValue())) {
-          LLVM_DEBUG(dbgs() << "InstCombine: skipping umin/umax folding for masked select\n");
+        if ((TrueC && TrueC->isAllOnesValue()) ||
+            (FalseC && FalseC->isAllOnesValue())) {
+          LLVM_DEBUG(
+              dbgs()
+              << "InstCombine: skipping umin/umax folding for masked select\n");
           return nullptr;
         }
       }
