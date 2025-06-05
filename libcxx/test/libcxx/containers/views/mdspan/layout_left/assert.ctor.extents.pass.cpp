@@ -19,7 +19,6 @@
 //
 // Effects: Direct-non-list-initializes extents_ with e.
 
-#include <span> // dynamic_extent
 #include <mdspan>
 #include <cassert>
 
