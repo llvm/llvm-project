@@ -43,6 +43,7 @@ properties(propsList)
 
 String linuxBasePath = '/usr/sbin:/usr/bin:/bin'
 String gitHubAppCredsId = 'Jenkins-AOCC'
+Boolean hasSourceChanges = true
 
 Integer fullTimeoutH = 15
 
@@ -104,7 +105,7 @@ try {
                 }
                 dir ('llvm-project') {
                     String theUrl = 'https://er.github.amd.com/AOCC/llvm-project'
-                    checkout(
+                    def gitVars = checkout( // groovylint-disable-line NoDef,VariableTypeRequired
                         changelog: true,
                         scm: scmGit(
                             gitTool: gitTool,
@@ -130,8 +131,30 @@ try {
                             ]
                         )
                     )
+                    assert gitVars.GIT_COMMIT
+                    String dummyFile = env.BUILD_TAG + '_dummy.txt'
+                    Integer activeStat = sh(
+                        label: 'has-active-files',
+                        script: (
+                            'set +x; echo "# Dummy" > ' + dummyFile + ' && ' +
+                                'bash ../aocc-essentials/build_essentials/has_active_files.sh' + space +
+                                gitVars.GIT_COMMIT + space + dummyFile + ' && rm -f ' + dummyFile
+                        ),
+                        returnStatus: true
+                    )
+                    if (activeStat == 1) {
+                        echo('Skipping build.')
+                        hasSourceChanges = false
+                        return // From stage
+                    }
                 }
-                // ToDo could now call build_essentials/has_active_files.sh
+            }
+            if (!hasSourceChanges) {
+                cleanWs(
+                    deleteDirs: true,
+                    patterns: cleanExcludes
+                )
+                return this
             }
             stage ('run') {
                 // ToDo this jobName string is 'presub' specific:
