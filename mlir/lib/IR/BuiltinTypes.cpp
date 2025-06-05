@@ -669,12 +669,14 @@ int64_t MemRefType::getMaxContiguousTrailingDims() {
   // `s0, s1, ..., sn-1` is contiguous up to dimension `k`
   // if each stride `si` is the product of the dimensions `di+1, ..., dn-1`,
   // for `i` in `[k, n-1]`.
+  // Ignore stride elements if the corresponding dimension is 1, as they are
+  // of no consequence.
   int64_t dimProduct = 1;
   for (int64_t i = n - 1; i >= 0; --i) {
-    if (strides[i] != dimProduct)
-      return n - i - 1;
     if (shape[i] == 1)
       continue;
+    if (strides[i] != dimProduct)
+      return n - i - 1;
     if (shape[i] == ShapedType::kDynamic)
       return n - i;
     dimProduct *= shape[i];

@@ -15,7 +15,7 @@
 using namespace mlir;
 using namespace mlir::memref;
 
-TEST(MemRefLayout, maxCollapseDim) {
+TEST(MemRefLayout, maxContigDim) {
   MLIRContext ctx;
   OpBuilder b(&ctx);
 
@@ -76,6 +76,26 @@ TEST(MemRefLayout, maxCollapseDim) {
   // memref<?x2x2xf32, strided<[8,4,2]>
   auto m13 = MemRefType::get({_, 2, 2}, f32, strided({8, 4, 2}));
   EXPECT_EQ(m13.getMaxContiguousTrailingDims(), 0);
+
+  // memref<2x2x1xf32, strided<[2,1,2]>
+  auto m14 = MemRefType::get({2, 2, 1}, f32, strided({2, 1, 2}));
+  EXPECT_EQ(m14.getMaxContiguousTrailingDims(), 3);
+
+  // memref<2x2x1xf32, strided<[2,1,?]>
+  auto m15 = MemRefType::get({2, 2, 1}, f32, strided({2, 1, _}));
+  EXPECT_EQ(m15.getMaxContiguousTrailingDims(), 3);
+
+  // memref<2x2x1xf32, strided<[4,2,2]>
+  auto m16 = MemRefType::get({2, 2, 1}, f32, strided({4, 2, 2}));
+  EXPECT_EQ(m16.getMaxContiguousTrailingDims(), 1);
+
+  // memref<2x1x2xf32, strided<[2,4,1]>
+  auto m17 = MemRefType::get({2, 1, 2}, f32, strided({2, 4, 1}));
+  EXPECT_EQ(m17.getMaxContiguousTrailingDims(), 3);
+
+  // memref<2x1x2xf32, strided<[2,?,1]>
+  auto m18 = MemRefType::get({2, 1, 2}, f32, strided({2, _, 1}));
+  EXPECT_EQ(m18.getMaxContiguousTrailingDims(), 3);
 }
 
 TEST(MemRefLayout, contigTrailingDim) {
