@@ -175,9 +175,9 @@ bool Vreg1WideningHelper::widenVreg1s() {
                   .addImm(-1)
                   .addReg(SrcReg);
           DeadCopies.push_back(&MI);
-        } else
-          // It is possible to have vreg1-to-vreg1 copy?
-          assert(isVreg1(SrcReg));
+        } else {
+          assert(isVreg1(SrcReg) || Vreg32Set.count(SrcReg));
+        }
 
         MRI->replaceRegWith(DstReg, DefReg32b);
       }
