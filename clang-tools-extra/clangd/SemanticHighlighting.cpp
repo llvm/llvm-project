@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SemanticHighlighting.h"
+#include "AST.h"
 #include "Config.h"
 #include "FindTarget.h"
 #include "ParsedAST.h"
@@ -75,23 +76,6 @@ bool canHighlightName(DeclarationName Name) {
     return false;
   }
   llvm_unreachable("invalid name kind");
-}
-
-bool isUniqueDefinition(const NamedDecl *Decl) {
-  if (auto *Func = dyn_cast<FunctionDecl>(Decl))
-    return Func->isThisDeclarationADefinition();
-  if (auto *Klass = dyn_cast<CXXRecordDecl>(Decl))
-    return Klass->isThisDeclarationADefinition();
-  if (auto *Iface = dyn_cast<ObjCInterfaceDecl>(Decl))
-    return Iface->isThisDeclarationADefinition();
-  if (auto *Proto = dyn_cast<ObjCProtocolDecl>(Decl))
-    return Proto->isThisDeclarationADefinition();
-  if (auto *Var = dyn_cast<VarDecl>(Decl))
-    return Var->isThisDeclarationADefinition();
-  return isa<TemplateTypeParmDecl>(Decl) ||
-         isa<NonTypeTemplateParmDecl>(Decl) ||
-         isa<TemplateTemplateParmDecl>(Decl) || isa<ObjCCategoryDecl>(Decl) ||
-         isa<ObjCImplDecl>(Decl);
 }
 
 std::optional<HighlightingKind> kindForType(const Type *TP,
@@ -190,91 +174,6 @@ std::optional<HighlightingKind> kindForType(const Type *TP,
   if (auto *TD = TP->getAsTagDecl())
     return kindForDecl(TD, Resolver);
   return std::nullopt;
-}
-
-// Whether T is const in a loose sense - is a variable with this type readonly?
-bool isConst(QualType T) {
-  if (T.isNull())
-    return false;
-  T = T.getNonReferenceType();
-  if (T.isConstQualified())
-    return true;
-  if (const auto *AT = T->getAsArrayTypeUnsafe())
-    return isConst(AT->getElementType());
-  if (isConst(T->getPointeeType()))
-    return true;
-  return false;
-}
-
-// Whether D is const in a loose sense (should it be highlighted as such?)
-// FIXME: This is separate from whether *a particular usage* can mutate D.
-//        We may want V in V.size() to be readonly even if V is mutable.
-bool isConst(const Decl *D) {
-  if (llvm::isa<EnumConstantDecl>(D) || llvm::isa<NonTypeTemplateParmDecl>(D))
-    return true;
-  if (llvm::isa<FieldDecl>(D) || llvm::isa<VarDecl>(D) ||
-      llvm::isa<MSPropertyDecl>(D) || llvm::isa<BindingDecl>(D)) {
-    if (isConst(llvm::cast<ValueDecl>(D)->getType()))
-      return true;
-  }
-  if (const auto *OCPD = llvm::dyn_cast<ObjCPropertyDecl>(D)) {
-    if (OCPD->isReadOnly())
-      return true;
-  }
-  if (const auto *MPD = llvm::dyn_cast<MSPropertyDecl>(D)) {
-    if (!MPD->hasSetter())
-      return true;
-  }
-  if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(D)) {
-    if (CMD->isConst())
-      return true;
-  }
-  return false;
-}
-
-// "Static" means many things in C++, only some get the "static" modifier.
-//
-// Meanings that do:
-// - Members associated with the class rather than the instance.
-//   This is what 'static' most often means across languages.
-// - static local variables
-//   These are similarly "detached from their context" by the static keyword.
-//   In practice, these are rarely used inside classes, reducing confusion.
-//
-// Meanings that don't:
-// - Namespace-scoped variables, which have static storage class.
-//   This is implicit, so the keyword "static" isn't so strongly associated.
-//   If we want a modifier for these, "global scope" is probably the concept.
-// - Namespace-scoped variables/functions explicitly marked "static".
-//   There the keyword changes *linkage* , which is a totally different concept.
-//   If we want to model this, "file scope" would be a nice modifier.
-//
-// This is confusing, and maybe we should use another name, but because "static"
-// is a standard LSP modifier, having one with that name has advantages.
-bool isStatic(const Decl *D) {
-  if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(D))
-    return CMD->isStatic();
-  if (const VarDecl *VD = llvm::dyn_cast<VarDecl>(D))
-    return VD->isStaticDataMember() || VD->isStaticLocal();
-  if (const auto *OPD = llvm::dyn_cast<ObjCPropertyDecl>(D))
-    return OPD->isClassProperty();
-  if (const auto *OMD = llvm::dyn_cast<ObjCMethodDecl>(D))
-    return OMD->isClassMethod();
-  return false;
-}
-
-bool isAbstract(const Decl *D) {
-  if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(D))
-    return CMD->isPureVirtual();
-  if (const auto *CRD = llvm::dyn_cast<CXXRecordDecl>(D))
-    return CRD->hasDefinition() && CRD->isAbstract();
-  return false;
-}
-
-bool isVirtual(const Decl *D) {
-  if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(D))
-    return CMD->isVirtual();
-  return false;
 }
 
 bool isDependent(const Decl *D) {
