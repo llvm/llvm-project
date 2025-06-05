@@ -1276,8 +1276,8 @@ void PPCRegisterInfo::lowerOctWordSpilling(MachineBasicBlock::iterator II,
   const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
   Register SrcReg = MI.getOperand(0).getReg();
-  bool IsKilled = MI.getOperand(0).isKill();
   bool IsLittleEndian = Subtarget.isLittleEndian();
+  bool IsKilled = MI.getOperand(0).isKill();
 
   spillRegPair(MBB, II, DL, TII, FrameIndex, IsLittleEndian, IsKilled, SrcReg,
                IsLittleEndian ? 16 : 0);
