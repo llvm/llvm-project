@@ -197,20 +197,49 @@ List only the plugin 'foo' matching a fully qualified name exactly
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     size_t argc = command.GetArgumentCount();
-    if (argc > 1) {
-      result.AppendError("'plugin list' requires zero or one arguments");
-      return;
-    }
-    llvm::StringRef pattern = argc ? command[0].ref() : "";
     result.SetStatus(eReturnStatusSuccessFinishResult);
 
-    bool found_matching = false;
-    if (m_options.m_json_format) {
-      llvm::json::Object obj = PluginManager::GetJSON(pattern);
-      found_matching = obj.size() > 0;
-      if (found_matching)
-        result.AppendMessage(ConvertJSONToPrettyString(std::move(obj)));
-    } else {
+    // Create a temporary vector to hold the patterns to simplify the logic
+    // for the case when the user passes no patterns
+    std::vector<llvm::StringRef> patterns;
+    patterns.reserve(argc == 0 ? 1 : argc);
+    if (argc == 0)
+      patterns.push_back("");
+    else
+      for (size_t i = 0; i < argc; ++i)
+        patterns.push_back(command[i].ref());
+
+    if (m_options.m_json_format)
+      OutputJsonFormat(patterns, result);
+    else
+      OutputTextFormat(patterns, result);
+  }
+
+private:
+  void OutputJsonFormat(const std::vector<llvm::StringRef> &patterns,
+                        CommandReturnObject &result) {
+    llvm::json::Object obj;
+    bool found_empty = false;
+    for (const llvm::StringRef pattern : patterns) {
+      llvm::json::Object pat_obj = PluginManager::GetJSON(pattern);
+      if (pat_obj.empty()) {
+        found_empty = true;
+        result.AppendErrorWithFormat(
+            "Found no matching plugins for pattern '%s'", pattern.data());
+        break;
+      }
+      for (auto &entry : pat_obj) {
+        obj[entry.first] = std::move(entry.second);
+      }
+    }
+    if (!found_empty) {
+      result.AppendMessage(ConvertJSONToPrettyString(std::move(obj)));
+    }
+  }
+
+  void OutputTextFormat(const std::vector<llvm::StringRef> &patterns,
+                        CommandReturnObject &result) {
+    for (const llvm::StringRef pattern : patterns) {
       int num_matching = ActOnMatchingPlugins(
           pattern, [&](const PluginNamespace &plugin_namespace,
                        const std::vector<RegisteredPluginInfo> &plugins) {
@@ -221,11 +250,12 @@ protected:
                   plugin.name.data(), plugin.description.data());
             }
           });
-      found_matching = num_matching > 0;
+      if (num_matching == 0) {
+        result.AppendErrorWithFormat(
+            "Found no matching plugins for pattern '%s'", pattern.data());
+        break;
+      }
     }
-
-    if (!found_matching)
-      result.AppendErrorWithFormat("Found no matching plugins");
   }
 
   PluginListCommandOptions m_options;

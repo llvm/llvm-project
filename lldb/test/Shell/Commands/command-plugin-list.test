@@ -27,12 +27,20 @@ plugin list system-runtime
 # CHECK: system-runtime
 # CHECK:  [+] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
 
+# Test plugin list on multiple args works.
+plugin list system-runtime instrumentation-runtime.AddressSanitizer
+# CHECK-LABEL: plugin list system-runtime instrumentation-runtime.AddressSanitizer
+# CHECK: system-runtime
+# CHECK:  [+] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
+# CHECK: instrumentation-runtime
+# CHECK:  [+] AddressSanitizer               AddressSanitizer instrumentation runtime plugin.
+
 # Test json output for plugin list.
 plugin list --json
 # CHECK-LABEL plugin list --json
 # CHECK: {
-# CHECK-DAG:  "system-runtime":
 # CHECK-DAG:  "instrumentation-runtime":
+# CHECK-DAG:  "system-runtime":
 # CHECK: }
 
 # Test json output for plugin list with a namespace
@@ -47,6 +55,15 @@ plugin list system-runtime --json
 # CHECK:  ]
 # CHECK: }
 
+# Test json output for listing multiple plugins
+plugin list --json system-runtime instrumentation-runtime.AddressSanitizer
+# CHECK-LABEL plugin list --json system-runtime instrumentation-runtime.AddressSanitizer
+# CHECK: {
+# CHECK-DAG:  "instrumentation-runtime":
+# CHECK-DAG:    "name": "AddressSanitizer"
+# CHECK-DAG:  "system-runtime":
+# CHECK: }
+
 
 # Test plugin list does not match a plugin name by substring.
 # RUN: %lldb -o "plugin list macosx" 2>&1 | FileCheck %s --check-prefix=ERROR_PLUGIN_NOT_FOUND
@@ -54,10 +71,12 @@ plugin list system-runtime --json
 # Test plugin list does not match a plugin namespace by substring.
 # RUN: %lldb -o "plugin list system-runtime." 2>&1 | FileCheck %s --check-prefix=ERROR_PLUGIN_NOT_FOUND
 
+# Test plugin list returns an error for unknown second argument
+# RUN: %lldb -o "plugin list system-runtime foo" 2>&1 | FileCheck %s --check-prefix=ERROR_PLUGIN_NOT_FOUND
+
+# Test plugin list returns an error for unknown second argument
+# RUN: %lldb -o "plugin list --json system-runtime foo" 2>&1 | FileCheck %s --check-prefix=ERROR_PLUGIN_NOT_FOUND
+
 # Test plugin list for unknown plugin returns an error.
 # RUN: %lldb -o "plugin list some-plugin-that-does-not-exist" 2>&1 | FileCheck %s --check-prefix=ERROR_PLUGIN_NOT_FOUND
 # ERROR_PLUGIN_NOT_FOUND: error: Found no matching plugins
-
-# Test plugin list fails on multiple arguments.
-# RUN: %lldb -o "plugin list a b c" 2>&1 | FileCheck %s --check-prefix=ERROR_ARGUMENTS
-# ERROR_ARGUMENTS: error: 'plugin list' requires zero or one arguments
