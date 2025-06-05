@@ -623,10 +623,6 @@ define void @or8_nouse_seq_cst(ptr %p) #0 {
 }
 
 define void @atomic_umin_uint_max(ptr %addr) #0 {
-; CHECK-LABEL: @atomic_umin_uint_max(
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i32 0 monotonic, align 4
-; CHECK-NEXT:    ret i32 [[RES]]
-;
 ; X64-LABEL: atomic_umin_uint_max:
 ; X64:       # %bb.0:
 ; X64-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
@@ -660,10 +656,6 @@ define void @atomic_umin_uint_max(ptr %addr) #0 {
 }
 
 define void @atomic_umax_zero(ptr %addr) #0 {
-; CHECK-LABEL: @atomic_umax_zero(
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i32 0 monotonic, align 4
-; CHECK-NEXT:    ret i32 [[RES]]
-;
 ; X64-LABEL: atomic_umax_zero:
 ; X64:       # %bb.0:
 ; X64-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
@@ -697,10 +689,6 @@ define void @atomic_umax_zero(ptr %addr) #0 {
 }
 
 define void @atomic_min_smax_char(ptr %addr) #0 {
-; CHECK-LABEL: @atomic_min_smax_char(
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i8 0 monotonic, align 1
-; CHECK-NEXT:    ret i8 [[RES]]
-;
 ; X64-LABEL: atomic_min_smax_char:
 ; X64:       # %bb.0:
 ; X64-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
@@ -734,10 +722,6 @@ define void @atomic_min_smax_char(ptr %addr) #0 {
 }
 
 define void @atomic_max_smin_char(ptr %addr) #0 {
-; CHECK-LABEL: @atomic_max_smin_char(
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i8 0 monotonic, align 1
-; CHECK-NEXT:    ret i8 [[RES]]
-;
 ; X64-LABEL: atomic_max_smin_char:
 ; X64:       # %bb.0:
 ; X64-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
@@ -771,10 +755,6 @@ define void @atomic_max_smin_char(ptr %addr) #0 {
 }
 
 define void @atomic_min_umax_char(ptr %addr) #0 {
-; CHECK-LABEL: @atomic_min_umax_char(
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i8 0 monotonic, align 1
-; CHECK-NEXT:    ret i8 [[RES]]
-;
 ; X64-LABEL: atomic_min_umax_char:
 ; X64:       # %bb.0:
 ; X64-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
@@ -808,10 +788,6 @@ define void @atomic_min_umax_char(ptr %addr) #0 {
 }
 
 define void @atomic_max_umin_char(ptr %addr) #0 {
-; CHECK-LABEL: @atomic_max_umin_char(
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i8 0 monotonic, align 1
-; CHECK-NEXT:    ret i8 [[RES]]
-;
 ; X64-LABEL: atomic_max_umin_char:
 ; X64:       # %bb.0:
 ; X64-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
@@ -846,10 +822,6 @@ define void @atomic_max_umin_char(ptr %addr) #0 {
 
 ; TODO: Add floating point support.
 define void @atomic_fadd_zero(ptr %addr) #0 {
-; CHECK-LABEL: @atomic_fadd_zero(
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[ADDR:%.*]], float -0.000000e+00 monotonic, align 4
-; CHECK-NEXT:    ret float [[RES]]
-;
 ; X64-LABEL: atomic_fadd_zero:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl (%rdi), %eax
@@ -915,10 +887,6 @@ define void @atomic_fadd_zero(ptr %addr) #0 {
 }
 
 define void @atomic_fsub_zero(ptr %addr) #0 {
-; CHECK-LABEL: @atomic_fsub_canon(
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[ADDR:%.*]], float -0.000000e+00 release, align 4
-; CHECK-NEXT:    ret float [[RES]]
-;
 ; X64-LABEL: atomic_fsub_zero:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl (%rdi), %eax
