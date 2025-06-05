@@ -89,7 +89,7 @@ public:
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
   void emitEHSymAttributes(const MCSymbol *Symbol, MCSymbol *EHSymbol) override;
-  void emitAssemblerFlag(MCAssemblerFlag Flag) override;
+  void emitSubsectionsViaSymbols() override;
   void emitLinkerOptions(ArrayRef<std::string> Options) override;
   void emitDataRegion(MCDataRegionType Kind) override;
   void emitVersionMin(MCVersionMinType Kind, unsigned Major, unsigned Minor,
@@ -209,19 +209,8 @@ void MCMachOStreamer::emitDataRegionEnd() {
   emitLabel(Data.End);
 }
 
-void MCMachOStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
-  // Let the target do whatever target specific stuff it needs to do.
-  getAssembler().getBackend().handleAssemblerFlag(Flag);
-  // Do any generic stuff we need to do.
-  switch (Flag) {
-  case MCAF_SyntaxUnified: return; // no-op here.
-  case MCAF_Code16: return; // Change parsing mode; no-op here.
-  case MCAF_Code32: return; // Change parsing mode; no-op here.
-  case MCAF_Code64: return; // Change parsing mode; no-op here.
-  case MCAF_SubsectionsViaSymbols:
-    getWriter().setSubsectionsViaSymbols(true);
-    return;
-  }
+void MCMachOStreamer::emitSubsectionsViaSymbols() {
+  getWriter().setSubsectionsViaSymbols(true);
 }
 
 void MCMachOStreamer::emitLinkerOptions(ArrayRef<std::string> Options) {

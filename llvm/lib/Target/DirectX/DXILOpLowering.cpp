@@ -57,9 +57,9 @@ public:
 
       if (Error E = ReplaceCall(CI)) {
         std::string Message(toString(std::move(E)));
-        DiagnosticInfoUnsupported Diag(*CI->getFunction(), Message,
-                                       CI->getDebugLoc());
-        M.getContext().diagnose(Diag);
+        M.getContext().diagnose(DiagnosticInfoUnsupported(
+            *CI->getFunction(), Message, CI->getDebugLoc()));
+
         return true;
       }
     }
@@ -211,6 +211,21 @@ public:
     }
   }
 
+  void replaceHandleFromBindingCall(CallInst *CI, Value *Replacement) {
+    assert(CI->getCalledFunction()->getIntrinsicID() ==
+           Intrinsic::dx_resource_handlefrombinding);
+
+    removeResourceGlobals(CI);
+
+    auto *NameGlobal = dyn_cast<llvm::GlobalVariable>(CI->getArgOperand(5));
+
+    CI->replaceAllUsesWith(Replacement);
+    CI->eraseFromParent();
+
+    if (NameGlobal && NameGlobal->use_empty())
+      NameGlobal->removeFromParent();
+  }
+
   [[nodiscard]] bool lowerToCreateHandle(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
@@ -241,11 +256,7 @@ public:
         return E;
 
       Value *Cast = createTmpHandleCast(*OpCall, CI->getType());
-
-      removeResourceGlobals(CI);
-
-      CI->replaceAllUsesWith(Cast);
-      CI->eraseFromParent();
+      replaceHandleFromBindingCall(CI, Cast);
       return Error::success();
     });
   }
@@ -296,12 +307,7 @@ public:
         return E;
 
       Value *Cast = createTmpHandleCast(*OpAnnotate, CI->getType());
-
-      removeResourceGlobals(CI);
-
-      CI->replaceAllUsesWith(Cast);
-      CI->eraseFromParent();
-
+      replaceHandleFromBindingCall(CI, Cast);
       return Error::success();
     });
   }
@@ -739,6 +745,50 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerIsFPClass(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *RetTy = IRB.getInt1Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+      SmallVector<Value *> Args;
+      Value *Fl = CI->getArgOperand(0);
+      Args.push_back(Fl);
+
+      dxil::OpCode OpCode;
+      Value *T = CI->getArgOperand(1);
+      auto *TCI = dyn_cast<ConstantInt>(T);
+      switch (TCI->getZExtValue()) {
+      case FPClassTest::fcInf:
+        OpCode = dxil::OpCode::IsInf;
+        break;
+      case FPClassTest::fcNan:
+        OpCode = dxil::OpCode::IsNaN;
+        break;
+      case FPClassTest::fcNormal:
+        OpCode = dxil::OpCode::IsNormal;
+        break;
+      case FPClassTest::fcFinite:
+        OpCode = dxil::OpCode::IsFinite;
+        break;
+      default:
+        SmallString<128> Msg =
+            formatv("Unsupported FPClassTest {0} for DXIL Op Lowering",
+                    TCI->getZExtValue());
+        return make_error<StringError>(Msg, inconvertibleErrorCode());
+      }
+
+      Expected<CallInst *> OpCall =
+          OpBuilder.tryCreateOp(OpCode, Args, CI->getName(), RetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+
+      CI->replaceAllUsesWith(*OpCall);
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
   bool lowerIntrinsics() {
     bool Updated = false;
     bool HasErrors = false;
@@ -804,6 +854,9 @@ public:
         break;
       case Intrinsic::ctpop:
         HasErrors |= lowerCtpopToCountBits(F);
+        break;
+      case Intrinsic::is_fpclass:
+        HasErrors |= lowerIsFPClass(F);
         break;
       }
       Updated = true;

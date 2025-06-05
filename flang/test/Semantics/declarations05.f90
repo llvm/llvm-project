@@ -22,7 +22,7 @@ module m
   end
   pure subroutine test
     !ERROR: 'x0' may not be a local variable in a pure subprogram
-    !BECAUSE: 'x0' is polymorphic in a pure subprogram
+    !BECAUSE: 'x0' is a whole polymorphic object in a pure subprogram
     class(t0), allocatable :: x0
     !ERROR: 'x1' may not be a local variable in a pure subprogram
     !BECAUSE: 'x1' has an impure FINAL procedure 'final'

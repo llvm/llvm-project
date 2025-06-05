@@ -872,7 +872,7 @@ let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
       let FixedSize = 1 in
       def S_FMAAK_F32 : SOP2_Pseudo<
         "s_fmaak_f32", (outs SReg_32:$sdst),
-        (ins SSrc_f32_Deferred:$src0, SSrc_f32_Deferred:$src1, KImmFP32:$imm),
+        (ins SSrc_f32:$src0, SSrc_f32:$src1, KImmFP32:$imm),
         "$sdst, $src0, $src1, $imm"
       >;
 
@@ -895,7 +895,7 @@ let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
     let FixedSize = 1 in
     def S_FMAMK_F32 : SOP2_Pseudo<
       "s_fmamk_f32", (outs SReg_32:$sdst),
-      (ins SSrc_f32_Deferred:$src0, KImmFP32:$imm, SSrc_f32_Deferred:$src1),
+      (ins SSrc_f32:$src0, KImmFP32:$imm, SSrc_f32:$src1),
       "$sdst, $src0, $imm, $src1"
     >;
   } // End isReMaterializable = 1
@@ -922,11 +922,11 @@ let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
 
 // On GFX12 MIN/MAX instructions do not read MODE register.
 let SubtargetPredicate = isGFX12Plus, mayRaiseFPException = 1, isCommutable = 1,
-    isReMaterializable = 1, SchedRW = [WriteSFPU], AddedComplexity = 17 in {
-  def S_MINIMUM_F32 : SOP2_F32_Inst<"s_minimum_f32", fminimum>;
-  def S_MAXIMUM_F32 : SOP2_F32_Inst<"s_maximum_f32", fmaximum>;
-  def S_MINIMUM_F16 : SOP2_F16_Inst<"s_minimum_f16", fminimum>;
-  def S_MAXIMUM_F16 : SOP2_F16_Inst<"s_maximum_f16", fmaximum>;
+    isReMaterializable = 1, SchedRW = [WriteSFPU], AddedComplexity = 25 in {
+  def S_MINIMUM_F32 : SOP2_F32_Inst<"s_minimum_f32", UniformBinFrag<fminimum>>;
+  def S_MAXIMUM_F32 : SOP2_F32_Inst<"s_maximum_f32", UniformBinFrag<fmaximum>>;
+  def S_MINIMUM_F16 : SOP2_F16_Inst<"s_minimum_f16", UniformBinFrag<fminimum>>;
+  def S_MAXIMUM_F16 : SOP2_F16_Inst<"s_maximum_f16", UniformBinFrag<fmaximum>>;
 }
 
 //===----------------------------------------------------------------------===//

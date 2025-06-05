@@ -2469,6 +2469,7 @@ void JumpThreadingPass::threadEdge(BasicBlock *BB,
                                {DominatorTree::Insert, PredBB, NewBB},
                                {DominatorTree::Delete, PredBB, BB}});
 
+  remapSourceAtoms(ValueMapping, NewBB->begin(), NewBB->end());
   updateSSA(BB, NewBB, ValueMapping);
 
   // At this point, the IR is fully up to date and consistent.  Do a quick scan

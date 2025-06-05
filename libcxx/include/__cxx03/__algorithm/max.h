@@ -24,13 +24,13 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Compare>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const _Tp&
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI const _Tp&
 max(_LIBCPP_LIFETIMEBOUND const _Tp& __a, _LIBCPP_LIFETIMEBOUND const _Tp& __b, _Compare __comp) {
   return __comp(__a, __b) ? __b : __a;
 }
 
 template <class _Tp>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const _Tp&
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI const _Tp&
 max(_LIBCPP_LIFETIMEBOUND const _Tp& __a, _LIBCPP_LIFETIMEBOUND const _Tp& __b) {
   return std::max(__a, __b, __less<>());
 }

@@ -88,8 +88,9 @@ Status PipeWindows::CreateNew(llvm::StringRef name,
   std::string pipe_path = g_pipe_name_prefix.str();
   pipe_path.append(name.str());
 
-  SECURITY_ATTRIBUTES sa{sizeof(SECURITY_ATTRIBUTES), 0,
-                         child_process_inherit ? TRUE : FALSE};
+  // We always create inheritable handles, but we won't pass them to a child
+  // process unless explicitly requested (cf. ProcessLauncherWindows.cpp).
+  SECURITY_ATTRIBUTES sa{sizeof(SECURITY_ATTRIBUTES), 0, TRUE};
 
   // Always open for overlapped i/o.  We implement blocking manually in Read
   // and Write.
@@ -165,8 +166,9 @@ Status PipeWindows::OpenNamedPipe(llvm::StringRef name,
 
   assert(is_read ? !CanRead() : !CanWrite());
 
-  SECURITY_ATTRIBUTES attributes{sizeof(SECURITY_ATTRIBUTES), 0,
-                                 child_process_inherit ? TRUE : FALSE};
+  // We always create inheritable handles, but we won't pass them to a child
+  // process unless explicitly requested (cf. ProcessLauncherWindows.cpp).
+  SECURITY_ATTRIBUTES attributes{sizeof(SECURITY_ATTRIBUTES), 0, TRUE};
 
   std::string pipe_path = g_pipe_name_prefix.str();
   pipe_path.append(name.str());

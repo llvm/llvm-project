@@ -1,4 +1,4 @@
-import dap_server
+from dap_server import Source
 import shutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -33,7 +33,9 @@ class TestDAP_InstructionBreakpointTestCase(lldbdap_testcase.DAPTestCaseBase):
         self.build_and_launch(program)
 
         # Set source breakpoint 1
-        response = self.dap_server.request_setBreakpoints(self.main_path, [main_line])
+        response = self.dap_server.request_setBreakpoints(
+            Source(self.main_path), [main_line]
+        )
         breakpoints = response["body"]["breakpoints"]
         self.assertEqual(len(breakpoints), 1)
         breakpoint = breakpoints[0]
@@ -66,7 +68,7 @@ class TestDAP_InstructionBreakpointTestCase(lldbdap_testcase.DAPTestCaseBase):
         )
 
         # Check disassembly view
-        instruction = self.disassemble(frameIndex=0)
+        disassembled_instructions, instruction = self.disassemble(frameIndex=0)
         self.assertEqual(
             instruction["address"],
             intstructionPointerReference[0],
@@ -74,8 +76,7 @@ class TestDAP_InstructionBreakpointTestCase(lldbdap_testcase.DAPTestCaseBase):
         )
 
         # Get next instruction address to set instruction breakpoint
-        disassembled_instruction_list = self.dap_server.disassembled_instructions
-        instruction_addr_list = list(disassembled_instruction_list.keys())
+        instruction_addr_list = list(disassembled_instructions.keys())
         index = instruction_addr_list.index(intstructionPointerReference[0])
         if len(instruction_addr_list) >= (index + 1):
             next_inst_addr = instruction_addr_list[index + 1]

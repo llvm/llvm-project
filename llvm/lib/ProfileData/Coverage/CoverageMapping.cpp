@@ -260,8 +260,8 @@ void MCDCRecord::findIndependencePairs() {
   // Will be replaced to shorter expr.
   unsigned TVTrueIdx = std::distance(
       TV.begin(),
-      std::find_if(TV.begin(), TV.end(),
-                   [&](auto I) { return (I.second == MCDCRecord::MCDC_True); })
+      llvm::find_if(TV,
+                    [&](auto I) { return (I.second == MCDCRecord::MCDC_True); })
 
   );
   for (unsigned I = TVTrueIdx; I < NumTVs; ++I) {

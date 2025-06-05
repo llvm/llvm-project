@@ -78,15 +78,15 @@
 # VMA:            3:	r1 = 0x1
 # VMA-NEXT:		0000000000000018:  CO-RE <type_exists> [3] struct foo
 # VMA-NEXT:       4:	call -0x1
-# VMA-NEXT:		0000000000000010:  R_BPF_64_32	consume
+# VMA-NEXT:		0000000000000020:  R_BPF_64_32	consume
 # VMA-NEXT:       5:	r1 = 0x0
 # VMA-NEXT:		0000000000000028:  CO-RE <byte_off> [3] struct foo::a (0:0)
 # VMA-NEXT:       6:	call -0x1
-# VMA-NEXT:		0000000000000020:  R_BPF_64_32	consume
+# VMA-NEXT:		0000000000000030:  R_BPF_64_32	consume
 # VMA-NEXT:       7:	r1 = 0x1 ll
 # VMA-NEXT:		0000000000000038:  CO-RE <enumval_exists> [8] enum bar::U = 0
 # VMA-NEXT:       9:	call -0x1
-# VMA-NEXT:		0000000000000038:  R_BPF_64_32	consume
+# VMA-NEXT:		0000000000000048:  R_BPF_64_32	consume
 # VMA-NEXT:      10:	exit
 
 	.text

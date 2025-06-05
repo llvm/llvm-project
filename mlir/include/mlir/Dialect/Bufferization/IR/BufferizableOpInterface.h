@@ -302,7 +302,7 @@ struct BufferizationOptions {
                              Value to) const;
 
   /// Specifies whether not bufferizable ops are allowed in the input. If so,
-  /// bufferization.to_memref and bufferization.to_tensor ops are inserted at
+  /// bufferization.to_buffer and bufferization.to_tensor ops are inserted at
   /// the boundaries.
   bool allowUnknownOps = false;
 
@@ -578,19 +578,34 @@ private:
       insideMutuallyExclusiveRegionsCache;
 };
 
+/// BufferizationState provides information about the state of the IR during the
+/// bufferization process.
+class BufferizationState {
+public:
+  /// Get a reference to the collection of cached symbol tables.
+  SymbolTableCollection &getSymbolTables();
+
+private:
+  /// The cached symbol tables.
+  /// The user is expected to update / invalidate the cached symbol tables if
+  /// the bufferized operation has the Symbol or SymbolTable traits.
+  SymbolTableCollection symbolTables;
+};
+
 /// Create an AllocTensorOp for the given shaped value (memref or tensor).
 /// If `copy` is set, the shaped value is copied. Otherwise, a tensor with
 /// undefined contents is allocated.
 FailureOr<Value>
 allocateTensorForShapedValue(OpBuilder &b, Location loc, Value shapedValue,
                              const BufferizationOptions &options,
-                             bool copy = true);
+                             const BufferizationState &state, bool copy = true);
 
 /// Lookup the buffer for the given value. If the value was not bufferized
-/// yet, wrap it in a ToMemrefOp. Otherwise, it is the result of a ToTensorOp,
+/// yet, wrap it in a ToBufferOp. Otherwise, it is the result of a ToTensorOp,
 /// from which the memref operand is returned.
 FailureOr<Value> getBuffer(RewriterBase &rewriter, Value value,
-                           const BufferizationOptions &options);
+                           const BufferizationOptions &options,
+                           const BufferizationState &state);
 
 /// Return the buffer type for a given Value (tensor) after bufferization
 /// without bufferizing any IR.
@@ -601,7 +616,8 @@ FailureOr<Value> getBuffer(RewriterBase &rewriter, Value value,
 ///
 /// This function is a wrapper around BufferizableOpInterface::getBufferType.
 FailureOr<BaseMemRefType> getBufferType(Value value,
-                                        const BufferizationOptions &options);
+                                        const BufferizationOptions &options,
+                                        const BufferizationState &state);
 
 /// Return the buffer type for a given Value (tensor) after bufferization
 /// without bufferizing any IR. This function (and not the other overload
@@ -615,6 +631,7 @@ FailureOr<BaseMemRefType> getBufferType(Value value,
 /// This function is a wrapper around `BufferizableOpInterface::getBufferType`.
 FailureOr<BaseMemRefType> getBufferType(Value value,
                                         const BufferizationOptions &options,
+                                        const BufferizationState &state,
                                         SmallVector<Value> &invocationStack);
 
 /// Return "true" if the given op has tensor semantics and should be bufferized.
@@ -695,6 +712,7 @@ AliasingOpOperandList defaultGetAliasingOpOperands(Value value,
 /// places.
 FailureOr<BaseMemRefType>
 defaultGetBufferType(Value value, const BufferizationOptions &options,
+                     const BufferizationState &state,
                      SmallVector<Value> &invocationStack);
 
 /// This is the default implementation of

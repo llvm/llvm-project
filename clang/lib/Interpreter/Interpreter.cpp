@@ -95,9 +95,9 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
 
   // Buffer diagnostics from argument parsing so that we can output them using
   // a well formed diagnostic object.
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+  DiagnosticOptions DiagOpts;
   TextDiagnosticBuffer *DiagsBuffer = new TextDiagnosticBuffer;
-  DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagsBuffer);
+  DiagnosticsEngine Diags(DiagID, DiagOpts, DiagsBuffer);
   bool Success = CompilerInvocation::CreateFromArgs(
       Clang->getInvocation(), llvm::ArrayRef(Argv.begin(), Argv.size()), Diags);
 
@@ -173,10 +173,10 @@ IncrementalCompilerBuilder::create(std::string TT,
   // Buffer diagnostics from argument parsing so that we can output them using a
   // well formed diagnostic object.
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts =
+  std::unique_ptr<DiagnosticOptions> DiagOpts =
       CreateAndPopulateDiagOpts(ClangArgv);
   TextDiagnosticBuffer *DiagsBuffer = new TextDiagnosticBuffer;
-  DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagsBuffer);
+  DiagnosticsEngine Diags(DiagID, *DiagOpts, DiagsBuffer);
 
   driver::Driver Driver(/*MainBinaryName=*/ClangArgv[0], TT, Diags);
   Driver.setCheckInputsExist(false); // the input comes from mem buffers
@@ -654,14 +654,13 @@ void Interpreter::ResetExecutor() { IncrExecutor.reset(); }
 
 llvm::Error Interpreter::Execute(PartialTranslationUnit &T) {
   assert(T.TheModule);
-  LLVM_DEBUG(llvm::dbgs()
-             << "execute-ptu "
-             << ((std::find(PTUs.begin(), PTUs.end(), T) != PTUs.end())
-                     ? std::distance(PTUs.begin(),
-                                     std::find(PTUs.begin(), PTUs.end(), T))
-                     : -1)
-             << ": [TU=" << T.TUPart << ", M=" << T.TheModule.get() << " ("
-             << T.TheModule->getName() << ")]\n");
+  LLVM_DEBUG(
+      llvm::dbgs() << "execute-ptu "
+                   << (llvm::is_contained(PTUs, T)
+                           ? std::distance(PTUs.begin(), llvm::find(PTUs, T))
+                           : -1)
+                   << ": [TU=" << T.TUPart << ", M=" << T.TheModule.get()
+                   << " (" << T.TheModule->getName() << ")]\n");
   if (!IncrExecutor) {
     auto Err = CreateExecutor();
     if (Err)

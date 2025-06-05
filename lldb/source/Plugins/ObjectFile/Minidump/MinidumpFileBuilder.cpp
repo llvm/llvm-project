@@ -718,7 +718,7 @@ Status MinidumpFileBuilder::AddExceptions() {
     // We have 120 bytes to work with and it's unlikely description will
     // overflow, but we gotta check.
     memcpy(&exp_record.ExceptionInformation, description.c_str(),
-           std::max(description.size(), Exception::MaxParameterBytes));
+           std::min(description.size(), Exception::MaxParameterBytes));
     exp_record.UnusedAlignment = static_cast<llvm::support::ulittle32_t>(0);
     ExceptionStream exp_stream;
     exp_stream.ThreadId =
@@ -1170,7 +1170,6 @@ MinidumpFileBuilder::AddMemoryList_64(std::vector<CoreFileMemoryRange> &ranges,
               "(%" PRIx64 "bytes) "
               "[%" PRIx64 ", %" PRIx64 ")",
               region_index, ranges.size(), size, addr, addr + size);
-    ++region_index;
 
     progress.Increment(1, "Adding Memory Range " + core_range.Dump());
     uint64_t bytes_read = 0;
@@ -1186,6 +1185,8 @@ MinidumpFileBuilder::AddMemoryList_64(std::vector<CoreFileMemoryRange> &ranges,
       cleanup_required = true;
       descriptors[region_index].DataSize = bytes_read;
     }
+
+    ++region_index;
   }
 
   // Early return if there is no cleanup needed.

@@ -193,7 +193,7 @@ define i32 @vqmovnd_u(<2 x i64> %b) nounwind readnone {
 define i32 @uqxtn_ext(<4 x i32> noundef %a, <4 x i32> noundef %b, i32 %c, float %d, <2 x i64> %e) {
 ; CHECK-LABEL: uqxtn_ext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov v0.d[0], v3.d[1]
+; CHECK-NEXT:    mov d0, v3.d[1]
 ; CHECK-NEXT:    uqxtn s0, d0
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -219,7 +219,7 @@ entry:
 define <4 x i32> @sqxtun_insext(<4 x i32> noundef %a, <2 x i64> %e) {
 ; CHECK-LABEL: sqxtun_insext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov v1.d[0], v1.d[1]
+; CHECK-NEXT:    mov d1, v1.d[1]
 ; CHECK-NEXT:    sqxtun s1, d1
 ; CHECK-NEXT:    mov v0.s[3], v1.s[0]
 ; CHECK-NEXT:    ret

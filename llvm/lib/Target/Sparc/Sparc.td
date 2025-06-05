@@ -49,6 +49,15 @@ def FeatureVIS2
 def FeatureVIS3
   : SubtargetFeature<"vis3", "IsVIS3", "true",
                      "Enable Visual Instruction Set extensions III">;
+def FeatureUA2005
+  : SubtargetFeature<"ua2005", "IsUA2005", "true",
+                     "Enable UltraSPARC Architecture 2005 extensions">;
+def FeatureUA2007
+  : SubtargetFeature<"ua2007", "IsUA2007", "true",
+                     "Enable UltraSPARC Architecture 2007 extensions">;
+def FeatureOSA2011
+  : SubtargetFeature<"osa2011", "IsOSA2011", "true",
+                     "Enable Oracle SPARC Architecture 2011 extensions">;
 def FeatureLeon
   : SubtargetFeature<"leon", "IsLeon", "true",
                      "Enable LEON extensions">;
@@ -152,13 +161,15 @@ def : Proc<"ultrasparc3",     [FeatureV9, FeatureV8Deprecated, FeatureVIS,
                                FeatureVIS2],
                               [TuneSlowRDPC]>;
 def : Proc<"niagara",         [FeatureV9, FeatureV8Deprecated, FeatureVIS,
-                               FeatureVIS2]>;
+                               FeatureVIS2, FeatureUA2005]>;
 def : Proc<"niagara2",        [FeatureV9, FeatureV8Deprecated, UsePopc,
-                               FeatureVIS, FeatureVIS2]>;
+                               FeatureVIS, FeatureVIS2, FeatureUA2005]>;
 def : Proc<"niagara3",        [FeatureV9, FeatureV8Deprecated, UsePopc,
-                               FeatureVIS, FeatureVIS2, FeatureVIS3]>;
+                               FeatureVIS, FeatureVIS2, FeatureVIS3,
+                               FeatureUA2005, FeatureUA2007]>;
 def : Proc<"niagara4",        [FeatureV9, FeatureV8Deprecated, UsePopc,
-                               FeatureVIS, FeatureVIS2, FeatureVIS3]>;
+                               FeatureVIS, FeatureVIS2, FeatureVIS3,
+                               FeatureUA2005, FeatureUA2007, FeatureOSA2011]>;
 
 // LEON 2 FT generic
 def : Processor<"leon2", LEON2Itineraries,

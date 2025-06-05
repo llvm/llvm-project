@@ -24,10 +24,12 @@ body:             |
     liveins: $w0, $w1
 
     ; CHECK-LABEL: name: sdiv_s32_gpr
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: [[SDIVWr:%[0-9]+]]:gpr32 = SDIVWr [[COPY]], [[COPY1]]
-    ; CHECK: $w0 = COPY [[SDIVWr]]
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
+    ; CHECK-NEXT: [[SDIVWr:%[0-9]+]]:gpr32 = SDIVWr [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $w0 = COPY [[SDIVWr]]
     %0(s32) = COPY $w0
     %1(s32) = COPY $w1
     %2(s32) = G_INTRINSIC intrinsic(@llvm.aarch64.sdiv.i32), %0, %1

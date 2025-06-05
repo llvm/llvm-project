@@ -3,7 +3,7 @@ from lldbsuite.test import decorators
 
 decor = [
     decorators.skipUnlessHasCallSiteInfo,
-    decorators.skipIf(archs=["arm"], oslist=["linux"]),
+    decorators.skipIf(archs=["arm$"], oslist=["linux"]),
     decorators.skipIf(dwarf_version=["<", "4"]),
     decorators.skipIf(compiler="clang", compiler_version=["<", "11.0"]),
 ]

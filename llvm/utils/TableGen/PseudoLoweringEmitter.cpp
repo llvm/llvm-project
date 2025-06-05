@@ -126,8 +126,9 @@ void PseudoLoweringEmitter::addOperandMapping(
     auto &Entry = OperandMap[MIOpNo];
     Entry.Kind = OpData::Imm;
     Entry.Data.Imm = *BI->convertInitializerToInt();
-  } else
+  } else {
     llvm_unreachable("Unhandled pseudo-expansion argument type!");
+  }
 }
 
 void PseudoLoweringEmitter::evaluateExpansion(const Record *Rec) {
@@ -281,8 +282,9 @@ void PseudoLoweringEmitter::emitLoweringEmitter(raw_ostream &o) {
         << "  }\n";
     }
     o << "  }\n  return true;";
-  } else
+  } else {
     o << "  return false;";
+  }
 
   o << "\n}\n\n";
 }

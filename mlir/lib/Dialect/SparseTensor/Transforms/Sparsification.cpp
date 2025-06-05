@@ -1128,7 +1128,7 @@ static bool startLoopSeq(CodegenEnv &env, OpBuilder &builder, ExprId exp,
     // TODO: remove this! The same tensor level might be added for multiple
     // times due to the special handling for all-dense "sparse" output tensor
     // (see L1038).
-    if (llvm::find(tidLvls, tl) != tidLvls.end())
+    if (llvm::is_contained(tidLvls, tl))
       return;
     tidLvls.emplace_back(tl);
   });

@@ -1090,7 +1090,7 @@ auto GetSymbolVectorHelper::operator()(const ArrayRef &x) const -> Result {
   return GetSymbolVector(x.base());
 }
 auto GetSymbolVectorHelper::operator()(const CoarrayRef &x) const -> Result {
-  return x.base();
+  return GetSymbolVector(x.base());
 }
 
 const Symbol *GetLastTarget(const SymbolVector &symbols) {
@@ -1196,16 +1196,6 @@ parser::Message *AttachDeclaration(
       const auto *assoc{unhosted->detailsIf<semantics::HostAssocDetails>()}) {
     unhosted = &assoc->symbol();
   }
-  if (const auto *binding{
-          unhosted->detailsIf<semantics::ProcBindingDetails>()}) {
-    if (binding->symbol().name() != symbol.name()) {
-      message.Attach(binding->symbol().name(),
-          "Procedure '%s' of type '%s' is bound to '%s'"_en_US, symbol.name(),
-          symbol.owner().GetName().value(), binding->symbol().name());
-      return &message;
-    }
-    unhosted = &binding->symbol();
-  }
   if (const auto *use{symbol.detailsIf<semantics::UseDetails>()}) {
     message.Attach(use->location(),
         "'%s' is USE-associated with '%s' in module '%s'"_en_US, symbol.name(),
@@ -1213,6 +1203,15 @@ parser::Message *AttachDeclaration(
   } else {
     message.Attach(
         unhosted->name(), "Declaration of '%s'"_en_US, unhosted->name());
+  }
+  if (const auto *binding{
+          unhosted->detailsIf<semantics::ProcBindingDetails>()}) {
+    if (!symbol.attrs().test(semantics::Attr::DEFERRED) &&
+        binding->symbol().name() != symbol.name()) {
+      message.Attach(binding->symbol().name(),
+          "Procedure '%s' of type '%s' is bound to '%s'"_en_US, symbol.name(),
+          symbol.owner().GetName().value(), binding->symbol().name());
+    }
   }
   return &message;
 }
@@ -1318,6 +1317,41 @@ std::optional<parser::MessageFixedText> CheckProcCompatibility(bool isCall,
           " designator '%s': %s"_err_en_US;
   }
   return msg;
+}
+
+const Symbol *UnwrapWholeSymbolDataRef(const DataRef &dataRef) {
+  const SymbolRef *p{std::get_if<SymbolRef>(&dataRef.u)};
+  return p ? &p->get() : nullptr;
+}
+
+const Symbol *UnwrapWholeSymbolDataRef(const std::optional<DataRef> &dataRef) {
+  return dataRef ? UnwrapWholeSymbolDataRef(*dataRef) : nullptr;
+}
+
+const Symbol *UnwrapWholeSymbolOrComponentDataRef(const DataRef &dataRef) {
+  if (const Component * c{std::get_if<Component>(&dataRef.u)}) {
+    return c->base().Rank() == 0 ? &c->GetLastSymbol() : nullptr;
+  } else {
+    return UnwrapWholeSymbolDataRef(dataRef);
+  }
+}
+
+const Symbol *UnwrapWholeSymbolOrComponentDataRef(
+    const std::optional<DataRef> &dataRef) {
+  return dataRef ? UnwrapWholeSymbolOrComponentDataRef(*dataRef) : nullptr;
+}
+
+const Symbol *UnwrapWholeSymbolOrComponentOrCoarrayRef(const DataRef &dataRef) {
+  if (const CoarrayRef * c{std::get_if<CoarrayRef>(&dataRef.u)}) {
+    return UnwrapWholeSymbolOrComponentOrCoarrayRef(c->base());
+  } else {
+    return UnwrapWholeSymbolOrComponentDataRef(dataRef);
+  }
+}
+
+const Symbol *UnwrapWholeSymbolOrComponentOrCoarrayRef(
+    const std::optional<DataRef> &dataRef) {
+  return dataRef ? UnwrapWholeSymbolOrComponentOrCoarrayRef(*dataRef) : nullptr;
 }
 
 // GetLastPointerSymbol()

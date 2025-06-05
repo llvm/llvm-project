@@ -2257,6 +2257,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsFunctionDeclarationNames) {
   EXPECT_TOKEN(Tokens[1], tok::identifier, TT_FunctionDeclarationName);
   EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_FunctionDeclarationLParen);
 
+  Tokens = annotate("#define FUNC(foo, bar, baz) \\\n"
+                    "  auto foo##bar##baz() -> Type {}");
+  ASSERT_EQ(Tokens.size(), 23u) << Tokens;
+  EXPECT_TOKEN(Tokens[11], tok::identifier, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[16], tok::l_paren, TT_FunctionDeclarationLParen);
+  EXPECT_TOKEN(Tokens[18], tok::arrow, TT_TrailingReturnArrow);
+
   Tokens = annotate("int iso_time(time_t);");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::identifier, TT_FunctionDeclarationName);
@@ -3792,6 +3799,17 @@ TEST_F(TokenAnnotatorTest, SwitchExpression) {
   EXPECT_TOKEN(Tokens[20], tok::arrow, TT_CaseLabelArrow);
 }
 
+TEST_F(TokenAnnotatorTest, JavaRecord) {
+  auto Tokens = annotate("public record MyRecord() {}",
+                         getLLVMStyle(FormatStyle::LK_Java));
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::identifier, TT_ClassHeadName);
+  // Not TT_FunctionDeclarationLParen.
+  EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[5], tok::l_brace, TT_RecordLBrace);
+  EXPECT_TOKEN(Tokens[6], tok::r_brace, TT_RecordRBrace);
+}
+
 TEST_F(TokenAnnotatorTest, CppAltOperatorKeywords) {
   auto Tokens = annotate("a = b and c;");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
@@ -4063,6 +4081,14 @@ TEST_F(TokenAnnotatorTest, EnumColonInTypedef) {
   auto Tokens = annotate("typedef enum : int {} foo;");
   ASSERT_EQ(Tokens.size(), 9u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::colon, TT_Unknown); // Not TT_InheritanceColon.
+}
+
+TEST_F(TokenAnnotatorTest, BitFieldColon) {
+  auto Tokens = annotate("class C {\n"
+                         "  int f : SIZE;\n"
+                         "};");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::colon, TT_BitFieldColon);
 }
 
 } // namespace

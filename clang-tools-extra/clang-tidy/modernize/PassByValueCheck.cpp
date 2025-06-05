@@ -166,9 +166,8 @@ static bool hasRValueOverload(const CXXConstructorDecl *Ctor,
   };
 
   for (const auto *Candidate : Record->ctors()) {
-    if (IsRValueOverload(Candidate)) {
+    if (IsRValueOverload(Candidate))
       return true;
-    }
   }
   return false;
 }

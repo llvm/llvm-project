@@ -2129,6 +2129,11 @@ def fir_InsertOnRangeOp : fir_OneResultOp<"insert_on_range", [NoMemoryEffect]> {
     $seq `,` $val custom<CustomRangeSubscript>($coor) attr-dict `:` functional-type(operands, results)
   }];
 
+  let extraClassDeclaration = [{
+    /// Is this insert_on_range inserting on all the values of the result type?
+    bool isFullRange();
+  }];
+
   let hasVerifier = 1;
 }
 
@@ -3600,6 +3605,21 @@ def fir_LocalitySpecifierOp : fir_Op<"local", [IsolatedFromAbove]> {
   ];
 
   let extraClassDeclaration = [{
+    mlir::BlockArgument getInitMoldArg() {
+      auto &region = getInitRegion();
+      return region.empty() ? nullptr : region.getArgument(0);
+    }
+    mlir::BlockArgument getInitPrivateArg() {
+      auto &region = getInitRegion();
+      return region.empty() ? nullptr : region.getArgument(1);
+    }
+
+    /// Returns true if the init region might read from the mold argument
+    bool initReadsFromMold() {
+      mlir::BlockArgument moldArg = getInitMoldArg();
+      return moldArg && !moldArg.use_empty();
+    }
+
     /// Get the type for arguments to nested regions. This should
     /// generally be either the same as getType() or some pointer
     /// type (pointing to the type allocated by this op).
@@ -3645,6 +3665,13 @@ def fir_DoConcurrentOp : fir_Op<"do_concurrent",
 
   let assemblyFormat = "$region attr-dict";
   let hasVerifier = 1;
+}
+
+def fir_LocalSpecifier {
+  dag arguments = (ins
+    Variadic<AnyType>:$local_vars,
+    OptionalAttr<SymbolRefArrayAttr>:$local_syms
+  );
 }
 
 def fir_DoConcurrentLoopOp : fir_Op<"do_concurrent.loop",
@@ -3700,7 +3727,7 @@ def fir_DoConcurrentLoopOp : fir_Op<"do_concurrent.loop",
       LLVM.
   }];
 
-  let arguments = (ins
+  defvar opArgs = (ins
     Variadic<Index>:$lowerBound,
     Variadic<Index>:$upperBound,
     Variadic<Index>:$step,
@@ -3709,15 +3736,39 @@ def fir_DoConcurrentLoopOp : fir_Op<"do_concurrent.loop",
     OptionalAttr<LoopAnnotationAttr>:$loopAnnotation
   );
 
+  let arguments = !con(opArgs, fir_LocalSpecifier.arguments);
+
   let regions = (region SizedRegion<1>:$region);
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
+    unsigned getNumInductionVars() { return getLowerBound().size(); }
+
+    unsigned getNumLocalOperands() { return getLocalVars().size(); }
+
+    mlir::Block::BlockArgListType getInductionVars() {
+      return getBody()->getArguments().slice(0, getNumInductionVars());
+    }
+
+    mlir::Block::BlockArgListType getRegionLocalArgs() {
+      return getBody()->getArguments().slice(getNumInductionVars(),
+                                             getNumLocalOperands());
+    }
+
+    /// Number of operands controlling the loop
+    unsigned getNumControlOperands() { return getLowerBound().size() * 3; }
+
     // Get Number of reduction operands
     unsigned getNumReduceOperands() {
       return getReduceOperands().size();
+    }
+
+    mlir::Operation::operand_range getLocalOperands() {
+      return getOperands()
+          .slice(getNumControlOperands() + getNumReduceOperands(),
+                 getNumLocalOperands());
     }
   }];
 }

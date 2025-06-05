@@ -801,7 +801,7 @@ bool AppleObjCRuntimeV2::GetDynamicTypeAndAddress(
     // be the ISA pointer.
     ClassDescriptorSP objc_class_sp(GetNonKVOClassDescriptor(in_value));
     if (objc_class_sp) {
-      const addr_t object_ptr = in_value.GetPointerValue();
+      const addr_t object_ptr = in_value.GetPointerValue().address;
       address.SetRawAddress(object_ptr);
 
       ConstString class_name(objc_class_sp->GetClassName());
@@ -1521,7 +1521,7 @@ AppleObjCRuntimeV2::GetClassDescriptor(ValueObject &valobj) {
   // ObjC object)
   if (!valobj.GetCompilerType().IsValid())
     return objc_class_sp;
-  addr_t isa_pointer = valobj.GetPointerValue();
+  addr_t isa_pointer = valobj.GetPointerValue().address;
 
   // tagged pointer
   if (IsTaggedPointer(isa_pointer))

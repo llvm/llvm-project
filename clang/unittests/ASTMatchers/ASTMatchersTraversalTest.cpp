@@ -2025,14 +2025,24 @@ void plusIntOperator()
                          hasOperatorName("+"), hasUnaryOperand(expr())))));
 
   Code = R"cpp(
-struct HasOpArrow
+struct S {
+  void foo(int);
+};
+struct HasOpStar
 {
     int& operator*();
 };
-void foo()
+struct HasOpArrow
 {
-    HasOpArrow s1;
-    *s1;
+    S* operator->();
+};
+void hasOpStarMem(HasOpStar s)
+{
+    *s;
+}
+void hasOpArrowMem(HasOpArrow a)
+{
+    a->foo(42);
 }
 )cpp";
 
@@ -2040,6 +2050,11 @@ void foo()
       matches(Code, traverse(TK_IgnoreUnlessSpelledInSource,
                              cxxOperatorCallExpr(hasOperatorName("*"),
                                                  hasUnaryOperand(expr())))));
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     cxxOperatorCallExpr(hasOperatorName("->"),
+                                         hasUnaryOperand(declRefExpr(
+                                             to(varDecl(hasName("a")))))))));
 }
 
 TEST(Matcher, UnaryOperatorTypes) {

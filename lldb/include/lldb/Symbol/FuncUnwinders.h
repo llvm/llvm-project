@@ -51,8 +51,6 @@ public:
   std::shared_ptr<const UnwindPlan>
   GetUnwindPlanArchitectureDefaultAtFunctionEntry(lldb_private::Thread &thread);
 
-  Address &GetFirstNonPrologueInsn(Target &target);
-
   const Address &GetFunctionStartAddress() const;
 
   bool ContainsAddress(const Address &addr) const {
@@ -113,10 +111,6 @@ private:
 
   /// The address ranges of the function.
   AddressRanges m_ranges;
-
-  /// The smallest address range covering the entire function.
-  /// DEPRECATED: Use m_ranges instead.
-  AddressRange m_range;
 
   std::recursive_mutex m_mutex;
 

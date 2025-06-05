@@ -2,19 +2,19 @@
 
 ! RUN: split-file %s %t
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --openmp-enable-delayed-privatization \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization \
 ! RUN:   -o - %t/one_dim_array.f90 2>&1 | FileCheck %s --check-prefix=ONE_DIM
-! RUN: bbc -emit-hlfir -fopenmp --openmp-enable-delayed-privatization -o - \
+! RUN: bbc -emit-hlfir -fopenmp --enable-delayed-privatization -o - \
 ! RUN:   %t/one_dim_array.f90 2>&1 | FileCheck %s --check-prefix=ONE_DIM
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --openmp-enable-delayed-privatization \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization \
 ! RUN:   -o - %t/two_dim_array.f90 2>&1 | FileCheck %s --check-prefix=TWO_DIM
-! RUN: bbc -emit-hlfir -fopenmp --openmp-enable-delayed-privatization -o - \
+! RUN: bbc -emit-hlfir -fopenmp --enable-delayed-privatization -o - \
 ! RUN:   %t/two_dim_array.f90 2>&1 | FileCheck %s --check-prefix=TWO_DIM
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --openmp-enable-delayed-privatization \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization \
 ! RUN:   -o - %t/one_dim_array_default_lb.f90 2>&1 | FileCheck %s --check-prefix=ONE_DIM_DEFAULT_LB
-! RUN: bbc -emit-hlfir -fopenmp --openmp-enable-delayed-privatization -o - \
+! RUN: bbc -emit-hlfir -fopenmp --enable-delayed-privatization -o - \
 ! RUN:   %t/one_dim_array_default_lb.f90 2>&1 | FileCheck %s --check-prefix=ONE_DIM_DEFAULT_LB
 
 !--- one_dim_array.f90

@@ -15,9 +15,8 @@ define i32 @foo(double %x, ptr %y, i64 %0, i64 %1, i1 %cmp6.not, ptr %arrayidx13
 ; CHECK-NEXT:  .LBB0_2: # %if.then7
 ; CHECK-NEXT:    lw a0, 0(sp)
 ; CHECK-NEXT:  .LBB0_3: # %common.ret
-; CHECK-NEXT:    fcvt.d.w a2, zero
-; CHECK-NEXT:    sw a2, 0(a0)
-; CHECK-NEXT:    sw a3, 4(a0)
+; CHECK-NEXT:    sw zero, 0(a0)
+; CHECK-NEXT:    sw zero, 4(a0)
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ret
 entry:
