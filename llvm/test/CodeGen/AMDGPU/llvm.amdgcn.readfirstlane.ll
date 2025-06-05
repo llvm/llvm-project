@@ -1033,9 +1033,9 @@ define void @test_readfirstlane_v32f32(ptr addrspace(1) %out, <32 x float> %src)
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s41, v7
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s40, v6
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s66, v0
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s67, v0
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s67, v1
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s66, v1
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s65, v27
 ; CHECK-SDAG-NEXT:    ;;#ASMSTART
@@ -1478,9 +1478,9 @@ define void @test_readfirstlane_v32i32(ptr addrspace(1) %out, <32 x i32> %src) {
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s41, v7
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s40, v6
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s66, v0
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s67, v0
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s67, v1
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s66, v1
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s65, v27
 ; CHECK-SDAG-NEXT:    ;;#ASMSTART
