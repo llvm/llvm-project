@@ -153,11 +153,10 @@ define i32 @select_icmp_var_start_iv_trunc(i32 %N, i32 %start) #0 {
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add <4 x i32> [[STEP_ADD]], splat (i32 4)
 ; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add <4 x i32> [[STEP_ADD_2]], splat (i32 4)
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP3]] = select i1 [[TMP2]], <4 x i32> [[VEC_IND]], <4 x i32> [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP4]] = select i1 [[TMP2]], <4 x i32> [[STEP_ADD]], <4 x i32> [[VEC_PHI2]]
-; CHECK-NEXT:    [[TMP5]] = select i1 [[TMP2]], <4 x i32> [[STEP_ADD_2]], <4 x i32> [[VEC_PHI3]]
-; CHECK-NEXT:    [[TMP6]] = select i1 [[TMP2]], <4 x i32> [[STEP_ADD_3]], <4 x i32> [[VEC_PHI4]]
+; CHECK-NEXT:    [[TMP3]] = select <4 x i1> [[TMP1]], <4 x i32> [[VEC_IND]], <4 x i32> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP1]], <4 x i32> [[STEP_ADD]], <4 x i32> [[VEC_PHI2]]
+; CHECK-NEXT:    [[TMP5]] = select <4 x i1> [[TMP1]], <4 x i32> [[STEP_ADD_2]], <4 x i32> [[VEC_PHI3]]
+; CHECK-NEXT:    [[TMP6]] = select <4 x i1> [[TMP1]], <4 x i32> [[STEP_ADD_3]], <4 x i32> [[VEC_PHI4]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[STEP_ADD_3]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -196,8 +195,7 @@ define i32 @select_icmp_var_start_iv_trunc(i32 %N, i32 %start) #0 {
 ; CHECK-NEXT:    [[INDEX11:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT17:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI12:%.*]] = phi <4 x i32> [ [[DOTSPLAT]], %[[VEC_EPILOG_PH]] ], [ [[TMP14:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND15:%.*]] = phi <4 x i32> [ [[INDUCTION]], %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT16:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i1> [[TMP11]], i32 0
-; CHECK-NEXT:    [[TMP14]] = select i1 [[TMP13]], <4 x i32> [[VEC_IND15]], <4 x i32> [[VEC_PHI12]]
+; CHECK-NEXT:    [[TMP14]] = select <4 x i1> [[TMP11]], <4 x i32> [[VEC_IND15]], <4 x i32> [[VEC_PHI12]]
 ; CHECK-NEXT:    [[INDEX_NEXT17]] = add nuw i64 [[INDEX11]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT16]] = add <4 x i32> [[VEC_IND15]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT17]], [[N_VEC8]]

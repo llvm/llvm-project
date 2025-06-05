@@ -13,6 +13,7 @@
 #define LLVM_DEBUGINFO_DWARF_DWARFDATAEXTRACTORSIMPLE_H
 
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/MathExtras.h"
@@ -42,22 +43,24 @@ public:
   ~DWARFDataExtractorBase() {}
 
   /// Extracts a value and returns it as adjusted by the Relocator
-  uint64_t getRelocatedValue(uint32_t Size, uint64_t *Off,
-                             uint64_t *SectionIndex = nullptr,
-                             Error *Err = nullptr) const {
+  LLVM_ABI uint64_t getRelocatedValue(uint32_t Size, uint64_t *Off,
+                                      uint64_t *SectionIndex = nullptr,
+                                      Error *Err = nullptr) const {
     return static_cast<const Relocator *>(this)->getRelocatedValueImpl(
         Size, Off, SectionIndex, Err);
   }
-  uint64_t getRelocatedValue(Cursor &C, uint32_t Size,
-                             uint64_t *SectionIndex = nullptr) const {
+  LLVM_ABI uint64_t getRelocatedValue(Cursor &C, uint32_t Size,
+                                      uint64_t *SectionIndex = nullptr) const {
     return getRelocatedValue(Size, &getOffset(C), SectionIndex, &getError(C));
   }
 
   /// Extracts an address-sized value.
-  uint64_t getRelocatedAddress(uint64_t *Off, uint64_t *SecIx = nullptr) const {
+  LLVM_ABI uint64_t getRelocatedAddress(uint64_t *Off,
+                                        uint64_t *SecIx = nullptr) const {
     return getRelocatedValue(getAddressSize(), Off, SecIx);
   }
-  uint64_t getRelocatedAddress(Cursor &C, uint64_t *SecIx = nullptr) const {
+  LLVM_ABI uint64_t getRelocatedAddress(Cursor &C,
+                                        uint64_t *SecIx = nullptr) const {
     return getRelocatedValue(getAddressSize(), &getOffset(C), SecIx,
                              &getError(C));
   }
@@ -67,7 +70,7 @@ public:
   /// 64-bit length. Returns the actual length, and the DWARF format which is
   /// encoded in the field. In case of errors, it returns {0, DWARF32} and
   /// leaves the offset unchanged.
-  std::pair<uint64_t, dwarf::DwarfFormat>
+  LLVM_ABI std::pair<uint64_t, dwarf::DwarfFormat>
   getInitialLength(uint64_t *Off, Error *Err = nullptr) const {
     ErrorAsOutParameter ErrAsOut(Err);
     if (Err && *Err)
@@ -99,7 +102,8 @@ public:
     return {0, dwarf::DWARF32};
   }
 
-  std::pair<uint64_t, dwarf::DwarfFormat> getInitialLength(Cursor &C) const {
+  LLVM_ABI std::pair<uint64_t, dwarf::DwarfFormat>
+  getInitialLength(Cursor &C) const {
     return getInitialLength(&getOffset(C), &getError(C));
   }
 
@@ -107,8 +111,9 @@ public:
   /// There is a DWARF encoding that uses a PC-relative adjustment.
   /// For these values, \p AbsPosOffset is used to fix them, which should
   /// reflect the absolute address of this pointer.
-  std::optional<uint64_t> getEncodedPointer(uint64_t *Offset, uint8_t Encoding,
-                                            uint64_t PCRelOffset) const {
+  LLVM_ABI std::optional<uint64_t>
+  getEncodedPointer(uint64_t *Offset, uint8_t Encoding,
+                    uint64_t PCRelOffset) const {
     if (Encoding == dwarf::DW_EH_PE_omit)
       return std::nullopt;
 
@@ -179,9 +184,9 @@ class DWARFDataExtractorSimple
     : public DWARFDataExtractorBase<DWARFDataExtractorSimple> {
   using DWARFDataExtractorBase::DWARFDataExtractorBase;
 
-  uint64_t getRelocatedValueImpl(uint32_t Size, uint64_t *Off,
-                                 uint64_t *SectionIndex = nullptr,
-                                 Error *Err = nullptr) const {
+  LLVM_ABI uint64_t getRelocatedValueImpl(uint32_t Size, uint64_t *Off,
+                                          uint64_t *SectionIndex = nullptr,
+                                          Error *Err = nullptr) const {
     assert(SectionIndex == nullptr &&
            "DWARFDATAExtractorSimple cannot take section indices.");
     return getUnsigned(Off, Size, Err);

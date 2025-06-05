@@ -183,8 +183,8 @@ entry:
 define amdgpu_cs void @sgpr_inverse_ballot(i64 inreg %input, ptr addrspace(1) %out) {
 ; GISEL_W64-LABEL: sgpr_inverse_ballot:
 ; GISEL_W64:       ; %bb.0: ; %entry
-; GISEL_W64-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[0:1]
 ; GISEL_W64-NEXT:    v_mov_b32_e32 v3, 0
+; GISEL_W64-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[0:1]
 ; GISEL_W64-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GISEL_W64-NEXT:    s_endpgm
 ;
@@ -199,8 +199,8 @@ define amdgpu_cs void @sgpr_inverse_ballot(i64 inreg %input, ptr addrspace(1) %o
 ;
 ; GISEL_W32-LABEL: sgpr_inverse_ballot:
 ; GISEL_W32:       ; %bb.0: ; %entry
-; GISEL_W32-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
 ; GISEL_W32-NEXT:    v_mov_b32_e32 v3, 0
+; GISEL_W32-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
 ; GISEL_W32-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GISEL_W32-NEXT:    s_endpgm
 ;

@@ -174,8 +174,8 @@ define i24 @bitreverse_i24(i24 %x) {
 ; RV64-NEXT:    slli a1, a0, 16
 ; RV64-NEXT:    lui a2, 4096
 ; RV64-NEXT:    lui a3, 1048335
-; RV64-NEXT:    addiw a2, a2, -1
-; RV64-NEXT:    addiw a3, a3, 240
+; RV64-NEXT:    addi a2, a2, -1
+; RV64-NEXT:    addi a3, a3, 240
 ; RV64-NEXT:    and a0, a0, a2
 ; RV64-NEXT:    srli a0, a0, 16
 ; RV64-NEXT:    or a0, a0, a1
@@ -184,7 +184,7 @@ define i24 @bitreverse_i24(i24 %x) {
 ; RV64-NEXT:    slli a0, a0, 4
 ; RV64-NEXT:    and a0, a0, a3
 ; RV64-NEXT:    lui a3, 1047757
-; RV64-NEXT:    addiw a3, a3, -820
+; RV64-NEXT:    addi a3, a3, -820
 ; RV64-NEXT:    srli a1, a1, 4
 ; RV64-NEXT:    or a0, a1, a0
 ; RV64-NEXT:    and a1, a3, a2
@@ -192,7 +192,7 @@ define i24 @bitreverse_i24(i24 %x) {
 ; RV64-NEXT:    slli a0, a0, 2
 ; RV64-NEXT:    and a0, a0, a3
 ; RV64-NEXT:    lui a3, 1047211
-; RV64-NEXT:    addiw a3, a3, -1366
+; RV64-NEXT:    addi a3, a3, -1366
 ; RV64-NEXT:    and a2, a3, a2
 ; RV64-NEXT:    srli a1, a1, 2
 ; RV64-NEXT:    or a0, a1, a0

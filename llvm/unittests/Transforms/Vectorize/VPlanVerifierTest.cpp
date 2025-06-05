@@ -143,6 +143,46 @@ TEST_F(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
   delete Phi;
 }
 
+TEST_F(VPVerifierTest, VPPhiIncomingValueDoesntDominateIncomingBlock) {
+  VPlan &Plan = getPlan();
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 0));
+
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB4 = Plan.createVPBasicBlock("");
+
+  VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero});
+  VPPhi *Phi = new VPPhi({DefI}, {});
+  VPBB2->appendRecipe(Phi);
+  VPBB2->appendRecipe(DefI);
+  auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
+  VPBB3->appendRecipe(CanIV);
+
+  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB3, VPBB3, "R1");
+  VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+  VPBlockUtils::connectBlocks(VPBB2, R1);
+  VPBlockUtils::connectBlocks(VPBB4, Plan.getScalarHeader());
+#if GTEST_HAS_STREAM_REDIRECTION
+  ::testing::internal::CaptureStderr();
+#endif
+  EXPECT_FALSE(verifyVPlanIsValid(Plan));
+#if GTEST_HAS_STREAM_REDIRECTION
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  EXPECT_STREQ("Incoming def at index 0 does not dominate incoming block!\n"
+               "  EMIT vp<%2> = add ir<0>\n"
+               "  does not dominate preheader for\n"
+               "  EMIT-SCALAR vp<%1> = phi [ vp<%2>, preheader ]",
+               ::testing::internal::GetCapturedStderr().c_str());
+#else
+  EXPECT_STREQ("Incoming def at index 0 does not dominate incoming block!\n", ::
+                   testing::internal::GetCapturedStderr()
+                       .c_str());
+#endif
+#endif
+}
+
 TEST_F(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
   VPlan &Plan = getPlan();
   VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(C), 0));

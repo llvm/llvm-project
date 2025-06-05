@@ -12,6 +12,7 @@
 
 #include "CoverageMappingGen.h"
 #include "CodeGenFunction.h"
+#include "CodeGenPGO.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Lex/Lexer.h"
@@ -1703,14 +1704,13 @@ struct CounterCoverageMappingBuilder
     if (!IsCounterEqual(OutCount, ParentCount)) {
       pushRegion(OutCount);
       GapRegionCounter = OutCount;
+      if (BodyHasTerminateStmt)
+        HasTerminateStmt = true;
     }
 
     // Create Branch Region around condition.
     if (!llvm::EnableSingleByteCoverage)
       createBranchRegion(S->getCond(), BodyCount, BranchCount.Skipped);
-
-    if (BodyHasTerminateStmt)
-      HasTerminateStmt = true;
   }
 
   void VisitForStmt(const ForStmt *S) {

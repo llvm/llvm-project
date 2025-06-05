@@ -187,9 +187,9 @@ bool IsModuleFileUpToDate(PathRef ModuleFilePath,
   HSOpts.ValidateASTInputFilesContent = true;
 
   clang::clangd::IgnoreDiagnostics IgnoreDiags;
+  DiagnosticOptions DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(*VFS, new DiagnosticOptions,
-                                          &IgnoreDiags,
+      CompilerInstance::createDiagnostics(*VFS, DiagOpts, &IgnoreDiags,
                                           /*ShouldOwnClient=*/false);
 
   LangOptions LangOpts;
@@ -207,8 +207,7 @@ bool IsModuleFileUpToDate(PathRef ModuleFilePath,
   Preprocessor PP(PPOpts, *Diags, LangOpts, SourceMgr, HeaderInfo,
                   ModuleLoader);
 
-  IntrusiveRefCntPtr<ModuleCache> ModCache =
-      createCrossProcessModuleCache(HSOpts.BuildSessionTimestamp);
+  IntrusiveRefCntPtr<ModuleCache> ModCache = createCrossProcessModuleCache();
   PCHContainerOperations PCHOperations;
   ASTReader Reader(PP, *ModCache, /*ASTContext=*/nullptr,
                    PCHOperations.getRawReader(), {});
