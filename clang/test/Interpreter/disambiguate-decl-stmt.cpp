@@ -1,3 +1,4 @@
+// UNSUPPORTED: target=ppc64le{{.*}}, target=aix{{.*}}
 // RUN: %clang_cc1 -fsyntax-only -verify -fincremental-extensions -std=c++20 %s
 // RUN: %clang_cc1 -fsyntax-only -DMS -fms-extensions -verify -fincremental-extensions -std=c++20 %s
 
