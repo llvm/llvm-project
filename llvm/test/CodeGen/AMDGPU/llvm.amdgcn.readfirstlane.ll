@@ -1000,9 +1000,9 @@ define void @test_readfirstlane_v32f32(ptr addrspace(1) %out, <32 x float> %src)
 ; CHECK-SDAG-NEXT:    v_writelane_b32 v31, s65, 13
 ; CHECK-SDAG-NEXT:    v_writelane_b32 v31, s66, 14
 ; CHECK-SDAG-NEXT:    v_writelane_b32 v31, s67, 15
-; CHECK-SDAG-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:4
-; CHECK-SDAG-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:8
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s61, v27
+; CHECK-SDAG-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:8
+; CHECK-SDAG-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4
 ; CHECK-SDAG-NEXT:    buffer_load_dword v27, off, s[0:3], s32
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s64, v30
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s55, v21
@@ -1445,9 +1445,9 @@ define void @test_readfirstlane_v32i32(ptr addrspace(1) %out, <32 x i32> %src) {
 ; CHECK-SDAG-NEXT:    v_writelane_b32 v31, s65, 13
 ; CHECK-SDAG-NEXT:    v_writelane_b32 v31, s66, 14
 ; CHECK-SDAG-NEXT:    v_writelane_b32 v31, s67, 15
-; CHECK-SDAG-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:4
-; CHECK-SDAG-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:8
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s61, v27
+; CHECK-SDAG-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:8
+; CHECK-SDAG-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4
 ; CHECK-SDAG-NEXT:    buffer_load_dword v27, off, s[0:3], s32
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s64, v30
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s55, v21
