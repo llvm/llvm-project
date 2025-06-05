@@ -62,5 +62,6 @@ LANGOPT(OpenMPNoNestedParallelism, 1, 0)
 LANGOPT(VScaleMin, 32, 0)  ///< Minimum vscale range value
 LANGOPT(VScaleMax, 32, 0)  ///< Maximum vscale range value
 
+LANGOPT(SanitizeAddressFieldPadding, 2, 0)
 #undef LANGOPT
 #undef ENUM_LANGOPT
