@@ -53,7 +53,6 @@ define void @simple_memset(i32 %val, ptr %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP54]], i32 4, <vscale x 4 x i1> [[ACTIVE_LANE_MASK7]])
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP57]], i32 4, <vscale x 4 x i1> [[ACTIVE_LANE_MASK8]])
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP60]], i32 4, <vscale x 4 x i1> [[ACTIVE_LANE_MASK9]])
-; CHECK-NEXT:    [[INDEX_NEXT10]] = add i64 [[INDEX6]], [[TMP62]]
 ; CHECK-NEXT:    [[TMP63:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP64:%.*]] = shl nuw i64 [[TMP63]], 2
 ; CHECK-NEXT:    [[TMP65:%.*]] = add i64 [[INDEX6]], [[TMP64]]
@@ -69,6 +68,7 @@ define void @simple_memset(i32 %val, ptr %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT13]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[TMP71]], i64 [[TMP9]])
 ; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; CHECK-NEXT:    [[TMP36:%.*]] = xor i1 [[TMP35]], true
+; CHECK-NEXT:    [[INDEX_NEXT10]] = add i64 [[INDEX6]], [[TMP62]]
 ; CHECK-NEXT:    br i1 [[TMP36]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[WHILE_END_LOOPEXIT:%.*]]
@@ -160,7 +160,6 @@ define void @cond_memset(i32 %val, ptr noalias readonly %cond_ptr, ptr noalias %
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP76]], i32 4, <vscale x 4 x i1> [[TMP70]])
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP79]], i32 4, <vscale x 4 x i1> [[TMP71]])
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP82]], i32 4, <vscale x 4 x i1> [[TMP72]])
-; CHECK-NEXT:    [[INDEX_NEXT13]] = add i64 [[INDEX6]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP85:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP86:%.*]] = shl nuw i64 [[TMP85]], 2
 ; CHECK-NEXT:    [[TMP87:%.*]] = add i64 [[INDEX6]], [[TMP86]]
@@ -176,6 +175,7 @@ define void @cond_memset(i32 %val, ptr noalias readonly %cond_ptr, ptr noalias %
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT16]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[TMP93]], i64 [[TMP9]])
 ; CHECK-NEXT:    [[TMP66:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; CHECK-NEXT:    [[TMP67:%.*]] = xor i1 [[TMP66]], true
+; CHECK-NEXT:    [[INDEX_NEXT13]] = add i64 [[INDEX6]], [[TMP6]]
 ; CHECK-NEXT:    br i1 [[TMP67]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[WHILE_END_LOOPEXIT:%.*]]
