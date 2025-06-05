@@ -9,6 +9,7 @@
 #include "llvm/Object/ELF.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/Object/Decompressor.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 
@@ -782,6 +783,27 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
   if (!ContentsOrErr)
     return ContentsOrErr.takeError();
   ArrayRef<uint8_t> Content = *ContentsOrErr;
+
+  // Decompress the section if needed.
+  std::unique_ptr<uint8_t[]> DecompressedContent;
+  if (Sec.sh_flags & llvm::ELF::SHF_COMPRESSED) {
+    Expected<StringRef> SectionNameOrErr = EF.getSectionName(Sec);
+    if (!SectionNameOrErr)
+      return SectionNameOrErr.takeError();
+    auto DecompressorOrErr =
+        Decompressor::create(*SectionNameOrErr, toStringRef(*ContentsOrErr),
+                             EF.isLE(), ELFT::Is64Bits);
+    if (!DecompressorOrErr)
+      return DecompressorOrErr.takeError();
+    size_t DecompressedSize = DecompressorOrErr->getDecompressedSize();
+    DecompressedContent = std::make_unique<uint8_t[]>(DecompressedSize);
+    MutableArrayRef<uint8_t> DecompressedContentRef(DecompressedContent.get(),
+                                                    DecompressedSize);
+    if (Error Err = DecompressorOrErr->decompress(DecompressedContentRef))
+      return std::move(Err);
+    Content = DecompressedContentRef;
+  }
+
   DataExtractor Data(Content, EF.isLE(), ELFT::Is64Bits ? 8 : 4);
   std::vector<BBAddrMap> FunctionEntries;
 
@@ -965,8 +987,7 @@ ELFFile<ELFT>::getSectionAndRelocations(
       continue;
     }
     if (*DoesSectionMatch) {
-      if (SecToRelocMap.insert(std::make_pair(&Sec, (const Elf_Shdr *)nullptr))
-              .second)
+      if (SecToRelocMap.try_emplace(&Sec).second)
         continue;
     }
 

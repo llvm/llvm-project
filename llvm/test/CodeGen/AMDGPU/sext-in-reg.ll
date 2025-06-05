@@ -521,13 +521,10 @@ define amdgpu_kernel void @v_sext_in_reg_i32_to_i64_move_use(ptr addrspace(1) %o
 ; FUNC-LABEL: {{^}}s_sext_in_reg_i1_i16:
 ; GCN: s_load_dword [[VAL:s[0-9]+]]
 
-; SI: s_bfe_i32 [[BFE:s[0-9]+]], [[VAL]], 0x10000
-; SI: v_mov_b32_e32 [[VBFE:v[0-9]+]], [[BFE]]
-; SI: buffer_store_short [[VBFE]]
+; GCN: s_bfe_i32 [[BFE:s[0-9]+]], [[VAL]], 0x10000
+; GCN: v_mov_b32_e32 [[VBFE:v[0-9]+]], [[BFE]]
+; GCN: buffer_store_short [[VBFE]]
 
-; GFX89: s_lshl_b32 s{{[0-9]+}}, s{{[0-9]+}}, 15
-; GFX89: s_sext_i32_i16 s{{[0-9]+}}, s{{[0-9]+}}
-; GFX89: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 15
 define amdgpu_kernel void @s_sext_in_reg_i1_i16(ptr addrspace(1) %out, ptr addrspace(4) %ptr) #0 {
   %ld = load i32, ptr addrspace(4) %ptr
   %in = trunc i32 %ld to i16
@@ -622,9 +619,7 @@ define amdgpu_kernel void @s_sext_in_reg_i2_i16_arg(ptr addrspace(1) %out, i16 %
 ; SI: v_mov_b32_e32 [[VSEXT:v[0-9]+]], [[SSEXT]]
 ; SI: buffer_store_short [[VSEXT]]
 
-; GFX89: s_lshl_b32 s{{[0-9]+}}, s{{[0-9]+}}, 8{{$}}
-; GFX89: s_sext_i32_i16 s{{[0-9]+}}, s{{[0-9]+}}
-; GFX89: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 8{{$}}
+; GFX89: s_bfe_i32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80000
 define amdgpu_kernel void @s_sext_in_reg_i8_i16_arg(ptr addrspace(1) %out, i16 %in) #0 {
   %shl = shl i16 %in, 8
   %sext = ashr i16 %shl, 8

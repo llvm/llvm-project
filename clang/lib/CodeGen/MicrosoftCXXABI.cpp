@@ -1818,9 +1818,7 @@ llvm::GlobalVariable *MicrosoftCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
   // VFTablesMap, thus a simple zero check is not sufficient.
 
   VFTableIdTy ID(RD, VPtrOffset);
-  VTablesMapTy::iterator I;
-  bool Inserted;
-  std::tie(I, Inserted) = VTablesMap.insert(std::make_pair(ID, nullptr));
+  auto [I, Inserted] = VTablesMap.try_emplace(ID);
   if (!Inserted)
     return I->second;
 
@@ -2036,10 +2034,7 @@ const VBTableGlobals &
 MicrosoftCXXABI::enumerateVBTables(const CXXRecordDecl *RD) {
   // At this layer, we can key the cache off of a single class, which is much
   // easier than caching each vbtable individually.
-  llvm::DenseMap<const CXXRecordDecl*, VBTableGlobals>::iterator Entry;
-  bool Added;
-  std::tie(Entry, Added) =
-      VBTablesMap.insert(std::make_pair(RD, VBTableGlobals()));
+  auto [Entry, Added] = VBTablesMap.try_emplace(RD);
   VBTableGlobals &VBGlobals = Entry->second;
   if (!Added)
     return VBGlobals;

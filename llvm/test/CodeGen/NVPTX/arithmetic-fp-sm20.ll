@@ -11,28 +11,28 @@
 ;;; f64
 
 define double @fadd_f64(double %a, double %b) {
-; CHECK: add.f64 %fd{{[0-9]+}}, %fd{{[0-9]+}}, %fd{{[0-9]+}}
+; CHECK: add.f64 %rd{{[0-9]+}}, %rd{{[0-9]+}}, %rd{{[0-9]+}}
 ; CHECK: ret
   %ret = fadd double %a, %b
   ret double %ret
 }
 
 define double @fsub_f64(double %a, double %b) {
-; CHECK: sub.f64 %fd{{[0-9]+}}, %fd{{[0-9]+}}, %fd{{[0-9]+}}
+; CHECK: sub.f64 %rd{{[0-9]+}}, %rd{{[0-9]+}}, %rd{{[0-9]+}}
 ; CHECK: ret
   %ret = fsub double %a, %b
   ret double %ret
 }
 
 define double @fmul_f64(double %a, double %b) {
-; CHECK: mul.f64 %fd{{[0-9]+}}, %fd{{[0-9]+}}, %fd{{[0-9]+}}
+; CHECK: mul.f64 %rd{{[0-9]+}}, %rd{{[0-9]+}}, %rd{{[0-9]+}}
 ; CHECK: ret
   %ret = fmul double %a, %b
   ret double %ret
 }
 
 define double @fdiv_f64(double %a, double %b) {
-; CHECK: div.rn.f64 %fd{{[0-9]+}}, %fd{{[0-9]+}}, %fd{{[0-9]+}}
+; CHECK: div.rn.f64 %rd{{[0-9]+}}, %rd{{[0-9]+}}, %rd{{[0-9]+}}
 ; CHECK: ret
   %ret = fdiv double %a, %b
   ret double %ret
@@ -44,28 +44,28 @@ define double @fdiv_f64(double %a, double %b) {
 ;;; f32
 
 define float @fadd_f32(float %a, float %b) {
-; CHECK: add.f32 %f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}
+; CHECK: add.f32 %r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}
 ; CHECK: ret
   %ret = fadd float %a, %b
   ret float %ret
 }
 
 define float @fsub_f32(float %a, float %b) {
-; CHECK: sub.f32 %f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}
+; CHECK: sub.f32 %r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}
 ; CHECK: ret
   %ret = fsub float %a, %b
   ret float %ret
 }
 
 define float @fmul_f32(float %a, float %b) {
-; CHECK: mul.f32 %f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}
+; CHECK: mul.f32 %r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}
 ; CHECK: ret
   %ret = fmul float %a, %b
   ret float %ret
 }
 
 define float @fdiv_f32(float %a, float %b) {
-; CHECK: div.rn.f32 %f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}
+; CHECK: div.rn.f32 %r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}
 ; CHECK: ret
   %ret = fdiv float %a, %b
   ret float %ret

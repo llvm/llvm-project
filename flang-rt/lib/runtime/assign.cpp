@@ -79,15 +79,18 @@ static RT_API_ATTRS int AllocateAssignmentLHS(
     to.raw().elem_len = from.ElementBytes();
   }
   const typeInfo::DerivedType *derived{nullptr};
+  DescriptorAddendum *toAddendum{to.Addendum()};
   if (const DescriptorAddendum * fromAddendum{from.Addendum()}) {
     derived = fromAddendum->derivedType();
-    if (DescriptorAddendum * toAddendum{to.Addendum()}) {
+    if (toAddendum) {
       toAddendum->set_derivedType(derived);
       std::size_t lenParms{derived ? derived->LenParameters() : 0};
       for (std::size_t j{0}; j < lenParms; ++j) {
         toAddendum->SetLenParameterValue(j, fromAddendum->LenParameterValue(j));
       }
     }
+  } else if (toAddendum) {
+    toAddendum->set_derivedType(nullptr);
   }
   // subtle: leave bounds in place when "from" is scalar (10.2.1.3(3))
   int rank{from.rank()};
@@ -99,7 +102,7 @@ static RT_API_ATTRS int AllocateAssignmentLHS(
     toDim.SetByteStride(stride);
     stride *= toDim.Extent();
   }
-  int result{ReturnError(terminator, to.Allocate(kNoAsyncId))};
+  int result{ReturnError(terminator, to.Allocate(kNoAsyncObject))};
   if (result == StatOk && derived && !derived->noInitializationNeeded()) {
     result = ReturnError(terminator, Initialize(to, *derived, terminator));
   }
@@ -277,7 +280,7 @@ RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
       // entity, otherwise, the Deallocate() below will not
       // free the descriptor memory.
       newFrom.raw().attribute = CFI_attribute_allocatable;
-      auto stat{ReturnError(terminator, newFrom.Allocate(kNoAsyncId))};
+      auto stat{ReturnError(terminator, newFrom.Allocate(kNoAsyncObject))};
       if (stat == StatOk) {
         if (HasDynamicComponent(from)) {
           // If 'from' has allocatable/automatic component, we cannot
@@ -327,6 +330,7 @@ RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
       }
       flags &= ~NeedFinalization;
       toElementBytes = to.ElementBytes(); // may have changed
+      toDerived = toAddendum ? toAddendum->derivedType() : nullptr;
     }
   }
   if (toDerived && (flags & CanBeDefinedAssignment)) {
@@ -494,7 +498,7 @@ RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
       }
     } else { // elemental copies, possibly with character truncation
       for (std::size_t n{toElements}; n-- > 0;
-           to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
+          to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
         memmoveFct(to.Element<char>(toAt), from.Element<const char>(fromAt),
             toElementBytes);
       }
@@ -588,7 +592,8 @@ void RTDEF(CopyInAssign)(Descriptor &temp, const Descriptor &var,
   temp = var;
   temp.set_base_addr(nullptr);
   temp.raw().attribute = CFI_attribute_allocatable;
-  RTNAME(AssignTemporary)(temp, var, sourceFile, sourceLine);
+  temp.Allocate(kNoAsyncObject);
+  ShallowCopy(temp, var);
 }
 
 void RTDEF(CopyOutAssign)(
@@ -597,9 +602,10 @@ void RTDEF(CopyOutAssign)(
 
   // Copyout from the temporary must not cause any finalizations
   // for LHS. The variable must be properly initialized already.
-  if (var)
-    Assign(*var, temp, terminator, NoAssignFlags);
-  temp.Destroy(/*finalize=*/false, /*destroyPointers=*/false, &terminator);
+  if (var) {
+    ShallowCopy(*var, temp);
+  }
+  temp.Deallocate();
 }
 
 void RTDEF(AssignExplicitLengthCharacter)(Descriptor &to,

@@ -155,6 +155,7 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_Blocking:                                                \
   case ParsedAttr::AT_Allocating:                                              \
   case ParsedAttr::AT_Regparm:                                                 \
+  case ParsedAttr::AT_CFIUncheckedCallee:                                      \
   case ParsedAttr::AT_CmseNSCall:                                              \
   case ParsedAttr::AT_ArmStreaming:                                            \
   case ParsedAttr::AT_ArmStreamingCompatible:                                  \
@@ -324,8 +325,8 @@ namespace {
 
       // FIXME: This is quadratic if we have lots of reuses of the same
       // attributed type.
-      for (auto It = std::partition_point(
-               AttrsForTypes.begin(), AttrsForTypes.end(),
+      for (auto It = llvm::partition_point(
+               AttrsForTypes,
                [=](const TypeAttrPair &A) { return A.first < AT; });
            It != AttrsForTypes.end() && It->first == AT; ++It) {
         if (It->second) {
@@ -2321,9 +2322,9 @@ static bool CheckBitIntElementType(Sema &S, SourceLocation AttrLoc,
                                    bool ForMatrixType = false) {
   // Only support _BitInt elements with byte-sized power of 2 NumBits.
   unsigned NumBits = BIT->getNumBits();
-  if (!llvm::isPowerOf2_32(NumBits) || NumBits < 8)
+  if (!llvm::isPowerOf2_32(NumBits))
     return S.Diag(AttrLoc, diag::err_attribute_invalid_bitint_vector_type)
-           << ForMatrixType << (NumBits < 8);
+           << ForMatrixType;
   return false;
 }
 
@@ -5056,12 +5057,12 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
           S.Diag(DeclType.Loc, diag::err_func_returning_qualified_void) << T;
         } else
           diagnoseRedundantReturnTypeQualifiers(S, T, D, chunkIndex);
-
-        // C++2a [dcl.fct]p12:
-        //   A volatile-qualified return type is deprecated
-        if (T.isVolatileQualified() && S.getLangOpts().CPlusPlus20)
-          S.Diag(DeclType.Loc, diag::warn_deprecated_volatile_return) << T;
       }
+
+      // C++2a [dcl.fct]p12:
+      //   A volatile-qualified return type is deprecated
+      if (T.isVolatileQualified() && S.getLangOpts().CPlusPlus20)
+        S.Diag(DeclType.Loc, diag::warn_deprecated_volatile_return) << T;
 
       // Objective-C ARC ownership qualifiers are ignored on the function
       // return type (by type canonicalization). Complain if this attribute
@@ -5888,6 +5889,7 @@ namespace {
       Visit(TL.getWrappedLoc());
       fillHLSLAttributedResourceTypeLoc(TL, State);
     }
+    void VisitHLSLInlineSpirvTypeLoc(HLSLInlineSpirvTypeLoc TL) {}
     void VisitMacroQualifiedTypeLoc(MacroQualifiedTypeLoc TL) {
       Visit(TL.getInnerLoc());
       TL.setExpansionLoc(
@@ -7689,8 +7691,8 @@ static bool checkMutualExclusion(TypeProcessingState &state,
                                  const FunctionProtoType::ExtProtoInfo &EPI,
                                  ParsedAttr &Attr,
                                  AttributeCommonInfo::Kind OtherKind) {
-  auto OtherAttr = std::find_if(
-      state.getCurrentAttributes().begin(), state.getCurrentAttributes().end(),
+  auto OtherAttr = llvm::find_if(
+      state.getCurrentAttributes(),
       [OtherKind](const ParsedAttr &A) { return A.getKind() == OtherKind; });
   if (OtherAttr == state.getCurrentAttributes().end() || OtherAttr->isInvalid())
     return false;
@@ -7810,6 +7812,27 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
     // Otherwise we can process right away.
     FunctionType::ExtInfo EI = unwrapped.get()->getExtInfo().withNoReturn(true);
     type = unwrapped.wrap(S, S.Context.adjustFunctionType(unwrapped.get(), EI));
+    return true;
+  }
+
+  if (attr.getKind() == ParsedAttr::AT_CFIUncheckedCallee) {
+    // Delay if this is not a prototyped function type.
+    if (!unwrapped.isFunctionType())
+      return false;
+
+    if (!unwrapped.get()->isFunctionProtoType()) {
+      S.Diag(attr.getLoc(), diag::warn_attribute_wrong_decl_type)
+          << attr << attr.isRegularKeywordAttribute()
+          << ExpectedFunctionWithProtoType;
+      attr.setInvalid();
+      return true;
+    }
+
+    const auto *FPT = unwrapped.get()->getAs<FunctionProtoType>();
+    type = S.Context.getFunctionType(
+        FPT->getReturnType(), FPT->getParamTypes(),
+        FPT->getExtProtoInfo().withCFIUncheckedCallee(true));
+    type = unwrapped.wrap(S, cast<FunctionType>(type.getTypePtr()));
     return true;
   }
 
@@ -8379,15 +8402,14 @@ static void HandlePtrAuthQualifier(ASTContext &Ctx, QualType &T,
     return;
   }
 
-  if (!T->isSignableType() && !T->isDependentType()) {
-    S.Diag(Attr.getLoc(), diag::err_ptrauth_qualifier_nonpointer) << T;
+  if (!T->isSignableType(Ctx) && !T->isDependentType()) {
+    S.Diag(Attr.getLoc(), diag::err_ptrauth_qualifier_invalid_target) << T;
     Attr.setInvalid();
     return;
   }
 
   if (T.getPointerAuth()) {
-    S.Diag(Attr.getLoc(), diag::err_ptrauth_qualifier_redundant)
-        << T << Attr.getAttrName()->getName();
+    S.Diag(Attr.getLoc(), diag::err_ptrauth_qualifier_redundant) << T;
     Attr.setInvalid();
     return;
   }
@@ -8402,7 +8424,8 @@ static void HandlePtrAuthQualifier(ASTContext &Ctx, QualType &T,
          "address discriminator arg should be either 0 or 1");
   PointerAuthQualifier Qual = PointerAuthQualifier::Create(
       Key, IsAddressDiscriminated, ExtraDiscriminator,
-      PointerAuthenticationMode::SignAndAuth, false, false);
+      PointerAuthenticationMode::SignAndAuth, /*IsIsaPointer=*/false,
+      /*AuthenticatesNullValues=*/false);
   T = S.Context.getPointerAuthType(T, Qual);
 }
 
@@ -8788,9 +8811,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
 
     case ParsedAttr::UnknownAttribute:
       if (attr.isStandardAttributeSyntax()) {
-        state.getSema().Diag(attr.getLoc(),
-                             diag::warn_unknown_attribute_ignored)
-            << attr << attr.getRange();
+        state.getSema().DiagnoseUnknownAttribute(attr);
         // Mark the attribute as invalid so we don't emit the same diagnostic
         // multiple times.
         attr.setInvalid();

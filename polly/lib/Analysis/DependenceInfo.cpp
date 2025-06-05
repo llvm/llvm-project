@@ -992,7 +992,7 @@ DependenceInfoWrapperPass::getDependences(Scop *S,
   if (It != ScopToDepsMap.end())
     if (It->second) {
       if (It->second->getDependenceLevel() == Level)
-        return *It->second.get();
+        return *It->second;
     }
   return recomputeDependences(S, Level);
 }
