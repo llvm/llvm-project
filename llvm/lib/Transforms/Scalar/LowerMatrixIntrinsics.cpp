@@ -1112,7 +1112,8 @@ public:
 
   /// Replace intrinsic calls.
   void VisitCallInst(CallInst *Inst) {
-    assert(Inst->getCalledFunction() && Inst->getCalledFunction()->isIntrinsic());
+    assert(Inst->getCalledFunction() &&
+           Inst->getCalledFunction()->isIntrinsic());
 
     switch (Inst->getCalledFunction()->getIntrinsicID()) {
     case Intrinsic::matrix_multiply:
@@ -1128,7 +1129,8 @@ public:
       LowerColumnMajorStore(Inst);
       break;
     default:
-      llvm_unreachable("only intrinsics supporting shape info should be seen here");
+      llvm_unreachable(
+          "only intrinsics supporting shape info should be seen here");
     }
   }
 
