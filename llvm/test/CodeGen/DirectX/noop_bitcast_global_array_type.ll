@@ -41,3 +41,13 @@ define float @testGEPNonConst(i32 %i) local_unnamed_addr {
   
   ret float %v
 }
+
+; CHECK-LABEL: testAlloca
+define float @testAlloca(i32 %i) local_unnamed_addr {  
+  ; CHECK-NEXT: alloca [3 x float], align 4
+  %arr = alloca [3 x float], align 4
+  ; CHECK-NEXT: getelementptr [3 x float], ptr %arr, i32 1
+  %gep = getelementptr [3 x float], ptr %arr, i32 1
+  %v = load float, ptr %gep
+  ret float %v
+}
