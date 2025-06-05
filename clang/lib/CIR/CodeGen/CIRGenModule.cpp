@@ -202,6 +202,99 @@ mlir::Location CIRGenModule::getLoc(SourceRange cRange) {
   return mlir::FusedLoc::get({begin, end}, metadata, builder.getContext());
 }
 
+mlir::Operation *
+CIRGenModule::getAddrOfGlobal(GlobalDecl gd, ForDefinition_t isForDefinition) {
+  const Decl *d = gd.getDecl();
+
+  if (isa<CXXConstructorDecl>(d) || isa<CXXDestructorDecl>(d)) {
+    errorNYI(d->getSourceRange(),
+             "getAddrOfGlobal: C++ constructor/destructor");
+    return nullptr;
+  }
+
+  if (isa<CXXMethodDecl>(d)) {
+    errorNYI(d->getSourceRange(), "getAddrOfGlobal: C++ method decl");
+    return nullptr;
+  }
+
+  if (isa<FunctionDecl>(d)) {
+    errorNYI(d->getSourceRange(), "getAddrOfGlobal: function decl");
+    return nullptr;
+  }
+
+  return getAddrOfGlobalVar(cast<VarDecl>(d), /*ty=*/nullptr, isForDefinition)
+      .getDefiningOp();
+}
+
+void CIRGenModule::emitGlobalDecl(const clang::GlobalDecl &d) {
+  // We call getAddrOfGlobal with isForDefinition set to ForDefinition in
+  // order to get a Value with exactly the type we need, not something that
+  // might have been created for another decl with the same mangled name but
+  // different type.
+  mlir::Operation *op = getAddrOfGlobal(d, ForDefinition);
+
+  // In case of different address spaces, we may still get a cast, even with
+  // IsForDefinition equal to ForDefinition. Query mangled names table to get
+  // GlobalValue.
+  if (!op)
+    op = getGlobalValue(getMangledName(d));
+
+  assert(op && "expected a valid global op");
+
+  // Check to see if we've already emitted this. This is necessary for a
+  // couple of reasons: first, decls can end up in deferred-decls queue
+  // multiple times, and second, decls can end up with definitions in unusual
+  // ways (e.g. by an extern inline function acquiring a strong function
+  // redefinition). Just ignore those cases.
+  // TODO: Not sure what to map this to for MLIR
+  mlir::Operation *globalValueOp = op;
+  if (auto gv = dyn_cast<cir::GetGlobalOp>(op))
+    globalValueOp =
+        mlir::SymbolTable::lookupSymbolIn(getModule(), gv.getNameAttr());
+
+  if (auto cirGlobalValue =
+          dyn_cast<cir::CIRGlobalValueInterface>(globalValueOp))
+    if (!cirGlobalValue.isDeclaration())
+      return;
+
+  // If this is OpenMP, check if it is legal to emit this global normally.
+  assert(!cir::MissingFeatures::openMP());
+
+  // Otherwise, emit the definition and move on to the next one.
+  emitGlobalDefinition(d, op);
+}
+
+void CIRGenModule::emitDeferred() {
+  // Emit code for any potentially referenced deferred decls. Since a previously
+  // unused static decl may become used during the generation of code for a
+  // static function, iterate until no changes are made.
+
+  assert(!cir::MissingFeatures::openMP());
+  assert(!cir::MissingFeatures::deferredVtables());
+  assert(!cir::MissingFeatures::cudaSupport());
+
+  // Stop if we're out of both deferred vtables and deferred declarations.
+  if (deferredDeclsToEmit.empty())
+    return;
+
+  // Grab the list of decls to emit. If emitGlobalDefinition schedules more
+  // work, it will not interfere with this.
+  std::vector<GlobalDecl> curDeclsToEmit;
+  curDeclsToEmit.swap(deferredDeclsToEmit);
+
+  for (const GlobalDecl &d : curDeclsToEmit) {
+    emitGlobalDecl(d);
+
+    // If we found out that we need to emit more decls, do that recursively.
+    // This has the advantage that the decls are emitted in a DFS and related
+    // ones are close together, which is convenient for testing.
+    if (!deferredDeclsToEmit.empty()) {
+      emitDeferred();
+      assert(deferredDeclsToEmit.empty());
+    }
+  }
+}
+
 void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
   if (const auto *cd = dyn_cast<clang::OpenACCConstructDecl>(gd.getDecl())) {
     emitGlobalOpenACCDecl(cd);
@@ -240,8 +333,33 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
     }
   }
 
-  // TODO(CIR): Defer emitting some global definitions until later
-  emitGlobalDefinition(gd);
+  // Defer code generation to first use when possible, e.g. if this is an inline
+  // function. If the global must always be emitted, do it eagerly if possible
+  // to benefit from cache locality. Deferring code generation is necessary to
+  // avoid adding initializers to external declarations.
+  if (mustBeEmitted(global) && mayBeEmittedEagerly(global)) {
+    // Emit the definition if it can't be deferred.
+    emitGlobalDefinition(gd);
+    return;
+  }
+
+  // If we're deferring emission of a C++ variable with an initializer, remember
+  // the order in which it appeared on the file.
+  assert(!cir::MissingFeatures::deferredCXXGlobalInit());
+
+  llvm::StringRef mangledName = getMangledName(gd);
+  if (getGlobalValue(mangledName) != nullptr) {
+    // The value has already been used and should therefore be emitted.
+    addDeferredDeclToEmit(gd);
+  } else if (mustBeEmitted(global)) {
+    // The value must be emitted, but cannot be emitted eagerly.
+    assert(!mayBeEmittedEagerly(global));
+    addDeferredDeclToEmit(gd);
+  } else {
+    // Otherwise, remember that we saw a deferred decl with this name. The first
+    // use of the mangled name will cause it to move into deferredDeclsToEmit.
+    deferredDecls[mangledName] = gd;
+  }
 }
 
 void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
@@ -401,6 +519,17 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
   cir::GlobalOp gv =
       CIRGenModule::createGlobalOp(*this, loc, mangledName, ty,
                                    /*insertPoint=*/entry.getOperation());
+
+  // This is the first use or definition of a mangled name.  If there is a
+  // deferred decl with this name, remember that we need to emit it at the end
+  // of the file.
+  auto ddi = deferredDecls.find(mangledName);
+  if (ddi != deferredDecls.end()) {
+    // Move the potentially referenced deferred decl to the DeferredDeclsToEmit
+    // list, and remove it from DeferredDecls (since we don't need it anymore).
+    addDeferredDeclToEmit(ddi->second);
+    deferredDecls.erase(ddi);
+  }
 
   // Handle things which are present even on external declarations.
   if (d) {
@@ -1121,10 +1250,86 @@ void CIRGenModule::emitTentativeDefinition(const VarDecl *d) {
   if (gv && !mlir::cast<cir::GlobalOp>(gv).isDeclaration())
     return;
 
-  assert(!cir::MissingFeatures::deferredDecls());
+  // If we have not seen a reference to this variable yet, place it into the
+  // deferred declarations table to be emitted if needed later.
+  if (!mustBeEmitted(d) && !gv) {
+    deferredDecls[mangledName] = d;
+    return;
+  }
 
   // The tentative definition is the only definition.
   emitGlobalVarDefinition(d);
+}
+
+bool CIRGenModule::mustBeEmitted(const ValueDecl *global) {
+  // Never defer when EmitAllDecls is specified.
+  if (langOpts.EmitAllDecls)
+    return true;
+
+  const auto *vd = dyn_cast<VarDecl>(global);
+  if (vd &&
+      ((codeGenOpts.KeepPersistentStorageVariables &&
+        (vd->getStorageDuration() == SD_Static ||
+         vd->getStorageDuration() == SD_Thread)) ||
+       (codeGenOpts.KeepStaticConsts && vd->getStorageDuration() == SD_Static &&
+        vd->getType().isConstQualified())))
+    return true;
+
+  // TODO(cir): We do want to defer function decls, but it's not implemented.
+  assert(!cir::MissingFeatures::deferredFuncDecls());
+  if (isa<FunctionDecl>(global))
+    return true;
+
+  return getASTContext().DeclMustBeEmitted(global);
+}
+
+bool CIRGenModule::mayBeEmittedEagerly(const ValueDecl *global) {
+  // In OpenMP 5.0 variables and function may be marked as
+  // device_type(host/nohost) and we should not emit them eagerly unless we sure
+  // that they must be emitted on the host/device. To be sure we need to have
+  // seen a declare target with an explicit mentioning of the function, we know
+  // we have if the level of the declare target attribute is -1. Note that we
+  // check somewhere else if we should emit this at all.
+  if (langOpts.OpenMP >= 50 && !langOpts.OpenMPSimd) {
+    std::optional<OMPDeclareTargetDeclAttr *> activeAttr =
+        OMPDeclareTargetDeclAttr::getActiveAttr(global);
+    if (!activeAttr || (*activeAttr)->getLevel() != (unsigned)-1)
+      return false;
+  }
+
+  const auto *fd = dyn_cast<FunctionDecl>(global);
+  if (fd) {
+    // Implicit template instantiations may change linkage if they are later
+    // explicitly instantiated, so they should not be emitted eagerly.
+    if (fd->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
+      return false;
+    // Defer until all versions have been semantically checked.
+    if (fd->hasAttr<TargetVersionAttr>() && !fd->isMultiVersion())
+      return false;
+    if (langOpts.SYCLIsDevice) {
+      errorNYI(fd->getSourceRange(), "mayBeEmittedEagerly: SYCL");
+      return false;
+    }
+  }
+  const auto *vd = dyn_cast<VarDecl>(global);
+  if (vd)
+    if (astContext.getInlineVariableDefinitionKind(vd) ==
+        ASTContext::InlineVariableDefinitionKind::WeakUnknown)
+      // A definition of an inline constexpr static data member may change
+      // linkage later if it's redeclared outside the class.
+      return false;
+
+  // If OpenMP is enabled and threadprivates must be generated like TLS, delay
+  // codegen for global variables, because they may be marked as threadprivate.
+  if (langOpts.OpenMP && langOpts.OpenMPUseTLS &&
+      astContext.getTargetInfo().isTLSSupported() && isa<VarDecl>(global) &&
+      !global->getType().isConstantStorage(astContext, false, false) &&
+      !OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(global))
+    return false;
+
+  assert((fd || vd) &&
+         "Only FunctionDecl and VarDecl should hit this path so far.");
+  return true;
 }
 
 static bool shouldAssumeDSOLocal(const CIRGenModule &cgm,
@@ -1392,6 +1597,13 @@ CIRGenModule::getGlobalVisibilityAttrFromDecl(const Decl *decl) {
         getGlobalVisibilityKindFromClangVisibility(va->getVisibility()));
   }
   return cirVisibility;
+}
+
+void CIRGenModule::release() {
+  emitDeferred();
+
+  // There's a lot of code that is not implemented yet.
+  assert(!cir::MissingFeatures::cgmRelease());
 }
 
 mlir::Type CIRGenModule::convertType(QualType type) {

@@ -534,36 +534,61 @@ define double @flat_system_atomic_fadd_f64(ptr %ptr, double %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_xor_b32_e32 v4, src_flat_scratch_base_hi, v1
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_cmp_lt_u32_e32 vcc_lo, 0x3ffffff, v4
-; GFX1250-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GFX1250-NEXT:    s_and_saveexec_b32 s0, vcc_lo
-; GFX1250-NEXT:    s_xor_b32 s0, exec_lo, s0
-; GFX1250-NEXT:    s_cbranch_execz .LBB34_2
-; GFX1250-NEXT:  ; %bb.1: ; %atomicrmw.global
-; GFX1250-NEXT:    flat_atomic_add_f64 v[4:5], v[0:1], v[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
+; GFX1250-NEXT:    v_dual_mov_b32 v5, v1 :: v_dual_mov_b32 v4, v0
+; GFX1250-NEXT:    s_mov_b64 s[0:1], src_shared_base
+; GFX1250-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX1250-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX1250-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX1250-NEXT:  .LBB34_2: ; %Flow
-; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    s_and_not1_saveexec_b32 s0, s0
-; GFX1250-NEXT:    s_cbranch_execz .LBB34_4
-; GFX1250-NEXT:  ; %bb.3: ; %atomicrmw.private
-; GFX1250-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[0:1]
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    v_subrev_nc_u32_e32 v4, src_flat_scratch_base_lo, v0
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_cndmask_b32_e32 v6, -1, v4, vcc_lo
-; GFX1250-NEXT:    scratch_load_b64 v[4:5], v6, off
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_add_f64_e32 v[0:1], v[4:5], v[2:3]
-; GFX1250-NEXT:    scratch_store_b64 v6, v[0:1], off scope:SCOPE_SE
-; GFX1250-NEXT:  .LBB34_4: ; %atomicrmw.phi
-; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    v_cmpx_ne_u32_e64 s1, v5
+; GFX1250-NEXT:    s_xor_b32 s0, exec_lo, s0
+; GFX1250-NEXT:    s_cbranch_execnz .LBB34_3
+; GFX1250-NEXT:  ; %bb.1: ; %Flow2
+; GFX1250-NEXT:    s_and_not1_saveexec_b32 s0, s0
+; GFX1250-NEXT:    s_cbranch_execnz .LBB34_8
+; GFX1250-NEXT:  .LBB34_2: ; %atomicrmw.phi
 ; GFX1250-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v5
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-NEXT:  .LBB34_3: ; %atomicrmw.check.private
+; GFX1250-NEXT:    v_xor_b32_e32 v0, src_flat_scratch_base_hi, v5
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX1250-NEXT:    v_cmp_lt_u32_e32 vcc_lo, 0x3ffffff, v0
+; GFX1250-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX1250-NEXT:    s_and_saveexec_b32 s1, vcc_lo
+; GFX1250-NEXT:    s_xor_b32 s1, exec_lo, s1
+; GFX1250-NEXT:    s_cbranch_execz .LBB34_5
+; GFX1250-NEXT:  ; %bb.4: ; %atomicrmw.global
+; GFX1250-NEXT:    global_atomic_add_f64 v[0:1], v[4:5], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
+; GFX1250-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; GFX1250-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX1250-NEXT:  .LBB34_5: ; %Flow
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_and_not1_saveexec_b32 s1, s1
+; GFX1250-NEXT:    s_cbranch_execz .LBB34_7
+; GFX1250-NEXT:  ; %bb.6: ; %atomicrmw.private
+; GFX1250-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[4:5]
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    v_subrev_nc_u32_e32 v0, src_flat_scratch_base_lo, v4
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_cndmask_b32_e32 v4, -1, v0, vcc_lo
+; GFX1250-NEXT:    scratch_load_b64 v[0:1], v4, off
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    v_add_f64_e32 v[2:3], v[0:1], v[2:3]
+; GFX1250-NEXT:    scratch_store_b64 v4, v[2:3], off scope:SCOPE_SE
+; GFX1250-NEXT:  .LBB34_7: ; %Flow1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_or_b32 exec_lo, exec_lo, s1
+; GFX1250-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; GFX1250-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX1250-NEXT:    s_and_not1_saveexec_b32 s0, s0
+; GFX1250-NEXT:    s_cbranch_execz .LBB34_2
+; GFX1250-NEXT:  .LBB34_8: ; %atomicrmw.shared
+; GFX1250-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[4:5]
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    v_cndmask_b32_e32 v0, -1, v4, vcc_lo
+; GFX1250-NEXT:    ds_add_rtn_f64 v[0:1], v0, v[2:3]
+; GFX1250-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %result = atomicrmw fadd ptr %ptr, double %val monotonic
   ret double %result
@@ -574,36 +599,61 @@ define double @flat_one_as_atomic_fadd_f64(ptr %ptr, double %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_xor_b32_e32 v4, src_flat_scratch_base_hi, v1
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_cmp_lt_u32_e32 vcc_lo, 0x3ffffff, v4
-; GFX1250-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GFX1250-NEXT:    s_and_saveexec_b32 s0, vcc_lo
-; GFX1250-NEXT:    s_xor_b32 s0, exec_lo, s0
-; GFX1250-NEXT:    s_cbranch_execz .LBB35_2
-; GFX1250-NEXT:  ; %bb.1: ; %atomicrmw.global
-; GFX1250-NEXT:    flat_atomic_add_f64 v[4:5], v[0:1], v[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
+; GFX1250-NEXT:    v_dual_mov_b32 v5, v1 :: v_dual_mov_b32 v4, v0
+; GFX1250-NEXT:    s_mov_b64 s[0:1], src_shared_base
+; GFX1250-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX1250-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX1250-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX1250-NEXT:  .LBB35_2: ; %Flow
-; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    s_and_not1_saveexec_b32 s0, s0
-; GFX1250-NEXT:    s_cbranch_execz .LBB35_4
-; GFX1250-NEXT:  ; %bb.3: ; %atomicrmw.private
-; GFX1250-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[0:1]
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    v_subrev_nc_u32_e32 v4, src_flat_scratch_base_lo, v0
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_cndmask_b32_e32 v6, -1, v4, vcc_lo
-; GFX1250-NEXT:    scratch_load_b64 v[4:5], v6, off
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_add_f64_e32 v[0:1], v[4:5], v[2:3]
-; GFX1250-NEXT:    scratch_store_b64 v6, v[0:1], off scope:SCOPE_SE
-; GFX1250-NEXT:  .LBB35_4: ; %atomicrmw.phi
-; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    v_cmpx_ne_u32_e64 s1, v5
+; GFX1250-NEXT:    s_xor_b32 s0, exec_lo, s0
+; GFX1250-NEXT:    s_cbranch_execnz .LBB35_3
+; GFX1250-NEXT:  ; %bb.1: ; %Flow2
+; GFX1250-NEXT:    s_and_not1_saveexec_b32 s0, s0
+; GFX1250-NEXT:    s_cbranch_execnz .LBB35_8
+; GFX1250-NEXT:  .LBB35_2: ; %atomicrmw.phi
 ; GFX1250-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v5
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-NEXT:  .LBB35_3: ; %atomicrmw.check.private
+; GFX1250-NEXT:    v_xor_b32_e32 v0, src_flat_scratch_base_hi, v5
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX1250-NEXT:    v_cmp_lt_u32_e32 vcc_lo, 0x3ffffff, v0
+; GFX1250-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX1250-NEXT:    s_and_saveexec_b32 s1, vcc_lo
+; GFX1250-NEXT:    s_xor_b32 s1, exec_lo, s1
+; GFX1250-NEXT:    s_cbranch_execz .LBB35_5
+; GFX1250-NEXT:  ; %bb.4: ; %atomicrmw.global
+; GFX1250-NEXT:    global_atomic_add_f64 v[0:1], v[4:5], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
+; GFX1250-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; GFX1250-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX1250-NEXT:  .LBB35_5: ; %Flow
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_and_not1_saveexec_b32 s1, s1
+; GFX1250-NEXT:    s_cbranch_execz .LBB35_7
+; GFX1250-NEXT:  ; %bb.6: ; %atomicrmw.private
+; GFX1250-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[4:5]
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    v_subrev_nc_u32_e32 v0, src_flat_scratch_base_lo, v4
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_cndmask_b32_e32 v4, -1, v0, vcc_lo
+; GFX1250-NEXT:    scratch_load_b64 v[0:1], v4, off
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    v_add_f64_e32 v[2:3], v[0:1], v[2:3]
+; GFX1250-NEXT:    scratch_store_b64 v4, v[2:3], off scope:SCOPE_SE
+; GFX1250-NEXT:  .LBB35_7: ; %Flow1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_or_b32 exec_lo, exec_lo, s1
+; GFX1250-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; GFX1250-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX1250-NEXT:    s_and_not1_saveexec_b32 s0, s0
+; GFX1250-NEXT:    s_cbranch_execz .LBB35_2
+; GFX1250-NEXT:  .LBB35_8: ; %atomicrmw.shared
+; GFX1250-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[4:5]
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    v_cndmask_b32_e32 v0, -1, v4, vcc_lo
+; GFX1250-NEXT:    ds_add_rtn_f64 v[0:1], v0, v[2:3]
+; GFX1250-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %result = atomicrmw fadd ptr %ptr, double %val syncscope("one-as") monotonic
   ret double %result

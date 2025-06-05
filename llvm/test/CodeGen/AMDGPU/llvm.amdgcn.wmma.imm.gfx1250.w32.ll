@@ -1514,10 +1514,10 @@ define amdgpu_ps void @test_wmma_scale_f32_16x16x128_f8f6f4_non_inlineable(<16 x
 ; GFX1250-NEXT:    v_mov_b32_e32 v34, 0x40400000
 ; GFX1250-NEXT:    v_mov_b32_e32 v43, 0x64
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_dual_mov_b32 v42, 0x65 :: v_dual_mov_b32 v35, v34
-; GFX1250-NEXT:    v_dual_mov_b32 v36, v34 :: v_dual_mov_b32 v37, v34
-; GFX1250-NEXT:    v_dual_mov_b32 v38, v34 :: v_dual_mov_b32 v39, v34
-; GFX1250-NEXT:    v_dual_mov_b32 v40, v34 :: v_dual_mov_b32 v41, v34
+; GFX1250-NEXT:    v_dual_mov_b32 v42, 0x65 :: v_dual_mov_b32 v41, v34
+; GFX1250-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v36, v34
+; GFX1250-NEXT:    v_dual_mov_b32 v37, v34 :: v_dual_mov_b32 v38, v34
+; GFX1250-NEXT:    v_dual_mov_b32 v39, v34 :: v_dual_mov_b32 v40, v34
 ; GFX1250-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[34:41], v[0:15], v[16:31], v[34:41], v43, v42 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_scale:MATRIX_SCALE_ROW1 matrix_a_reuse
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v[32:33], v[38:41], off offset:16
@@ -2622,14 +2622,14 @@ define amdgpu_ps void @test_wmma_scale_f32_32x16x128_f4_non_inlineable(<16 x i32
 ; GFX1250-NEXT:    v_mov_b32_e32 v26, 0x40400000
 ; GFX1250-NEXT:    v_mov_b32_e32 v43, 0x64
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1250-NEXT:    v_dual_mov_b32 v42, 0x65 :: v_dual_mov_b32 v27, v26
-; GFX1250-NEXT:    v_dual_mov_b32 v28, v26 :: v_dual_mov_b32 v29, v26
-; GFX1250-NEXT:    v_dual_mov_b32 v30, v26 :: v_dual_mov_b32 v31, v26
-; GFX1250-NEXT:    v_dual_mov_b32 v32, v26 :: v_dual_mov_b32 v33, v26
-; GFX1250-NEXT:    v_dual_mov_b32 v34, v26 :: v_dual_mov_b32 v35, v26
-; GFX1250-NEXT:    v_dual_mov_b32 v36, v26 :: v_dual_mov_b32 v37, v26
-; GFX1250-NEXT:    v_dual_mov_b32 v38, v26 :: v_dual_mov_b32 v39, v26
-; GFX1250-NEXT:    v_dual_mov_b32 v40, v26 :: v_dual_mov_b32 v41, v26
+; GFX1250-NEXT:    v_dual_mov_b32 v42, 0x65 :: v_dual_mov_b32 v41, v26
+; GFX1250-NEXT:    v_dual_mov_b32 v27, v26 :: v_dual_mov_b32 v28, v26
+; GFX1250-NEXT:    v_dual_mov_b32 v29, v26 :: v_dual_mov_b32 v30, v26
+; GFX1250-NEXT:    v_dual_mov_b32 v31, v26 :: v_dual_mov_b32 v32, v26
+; GFX1250-NEXT:    v_dual_mov_b32 v33, v26 :: v_dual_mov_b32 v34, v26
+; GFX1250-NEXT:    v_dual_mov_b32 v35, v26 :: v_dual_mov_b32 v36, v26
+; GFX1250-NEXT:    v_dual_mov_b32 v37, v26 :: v_dual_mov_b32 v38, v26
+; GFX1250-NEXT:    v_dual_mov_b32 v39, v26 :: v_dual_mov_b32 v40, v26
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_wmma_scale_f32_32x16x128_f4 v[26:41], v[0:15], v[16:23], v[26:41], v43, v42 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_scale:MATRIX_SCALE_ROW1 matrix_a_reuse
 ; GFX1250-NEXT:    s_clause 0x3
