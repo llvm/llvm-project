@@ -24,14 +24,12 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefSameBB) {
   VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(C), 0));
   VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero});
   VPInstruction *UseI = new VPInstruction(Instruction::Sub, {DefI});
-  auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
   VPBB1->appendRecipe(UseI);
   VPBB1->appendRecipe(DefI);
 
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
-  VPBB2->appendRecipe(CanIV);
   VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB2, "R1");
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
@@ -59,15 +57,13 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
   VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(C), 0));
   VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero});
   VPInstruction *UseI = new VPInstruction(Instruction::Sub, {DefI});
-  auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   VPInstruction *BranchOnCond =
-      new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
+      new VPInstruction(VPInstruction::BranchOnCond, {UseI});
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
 
   VPBB1->appendRecipe(UseI);
-  VPBB2->appendRecipe(CanIV);
   VPBB2->appendRecipe(DefI);
   VPBB2->appendRecipe(BranchOnCond);
 
@@ -100,9 +96,8 @@ TEST_F(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
   VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 0));
 
   VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero});
-  auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   VPInstruction *BranchOnCond =
-      new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
+      new VPInstruction(VPInstruction::BranchOnCond, {DefI});
   auto *Blend = new VPBlendRecipe(Phi, {DefI});
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
@@ -110,7 +105,6 @@ TEST_F(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
   VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
   VPBasicBlock *VPBB4 = Plan.createVPBasicBlock("");
 
-  VPBB2->appendRecipe(CanIV);
   VPBB3->appendRecipe(Blend);
   VPBB4->appendRecipe(DefI);
   VPBB4->appendRecipe(BranchOnCond);
@@ -157,8 +151,6 @@ TEST_F(VPVerifierTest, VPPhiIncomingValueDoesntDominateIncomingBlock) {
   VPPhi *Phi = new VPPhi({DefI}, {});
   VPBB2->appendRecipe(Phi);
   VPBB2->appendRecipe(DefI);
-  auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
-  VPBB3->appendRecipe(CanIV);
 
   VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB3, VPBB3, "R1");
   VPBlockUtils::connectBlocks(VPBB1, VPBB2);
@@ -187,9 +179,8 @@ TEST_F(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
   VPlan &Plan = getPlan();
   VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(C), 0));
   VPInstruction *I1 = new VPInstruction(Instruction::Add, {Zero});
-  auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   VPInstruction *BranchOnCond =
-      new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
+      new VPInstruction(VPInstruction::BranchOnCond, {I1});
   VPInstruction *BranchOnCond2 =
       new VPInstruction(VPInstruction::BranchOnCond, {I1});
 
@@ -198,7 +189,6 @@ TEST_F(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
 
   VPBB1->appendRecipe(I1);
   VPBB1->appendRecipe(BranchOnCond2);
-  VPBB2->appendRecipe(CanIV);
   VPBB2->appendRecipe(BranchOnCond);
 
   VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB2, "R1");
@@ -221,9 +211,8 @@ TEST_F(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
   VPlan &Plan = getPlan();
   VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(C), 0));
   VPInstruction *I1 = new VPInstruction(Instruction::Add, {Zero});
-  auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   VPInstruction *BranchOnCond =
-      new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
+      new VPInstruction(VPInstruction::BranchOnCond, {I1});
   VPInstruction *BranchOnCond2 =
       new VPInstruction(VPInstruction::BranchOnCond, {I1});
 
@@ -232,7 +221,6 @@ TEST_F(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
   VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
 
   VPBB1->appendRecipe(I1);
-  VPBB2->appendRecipe(CanIV);
   VPBB2->appendRecipe(BranchOnCond2);
   VPBB3->appendRecipe(BranchOnCond);
 
@@ -261,8 +249,6 @@ TEST_F(VPVerifierTest, BlockOutsideRegionWithParent) {
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
 
   VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(C), 0));
-  auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
-  VPBB2->appendRecipe(CanIV);
 
   VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero});
   VPInstruction *BranchOnCond =
