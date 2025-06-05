@@ -36,8 +36,8 @@ void DylibSymbolResolver::resolveAsync(
         Result.emplace_back();
       else
         // FIXME: determine accurate JITSymbolFlags.
-        Result.emplace_back(ExecutorSymbolDef{ExecutorAddr::fromPtr(Addr),
-                                              JITSymbolFlags::Exported});
+        Result.push_back(
+            {ExecutorAddr::fromPtr(Addr), JITSymbolFlags::Exported});
     }
   }
 
