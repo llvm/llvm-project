@@ -1009,7 +1009,7 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
       if (wArg == "error") {
         res.setWarnAsErr(true);
         // -W(no-)<feature>
-      } else if (!features.ApplyCLIOption(wArg)) {
+      } else if (!features.ApplyCliOption(wArg)) {
         const unsigned diagID = diags.getCustomDiagID(
             clang::DiagnosticsEngine::Error, "Unknown diagnostic option: -W%0");
         diags.Report(diagID) << wArg;

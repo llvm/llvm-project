@@ -35,7 +35,7 @@ static std::vector<std::string_view> SplitCamelCase(std::string_view x) {
   return result;
 }
 
-// Namespace for helper functions for parsing CLI options used instead of static
+// Namespace for helper functions for parsing Cli options used instead of static
 // so that there can be unit tests for this function.
 namespace featuresHelpers {
 std::string CamelCaseToLowerCaseHyphenated(std::string_view x) {
@@ -154,15 +154,15 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnLanguage_.set(LanguageFeature::NullActualForAllocatable);
 }
 
-// Take a string from the CLI and apply it to the LanguageFeatureControl.
+// Take a string from the Cli and apply it to the LanguageFeatureControl.
 // Return true if the option was applied recognized.
-bool LanguageFeatureControl::ApplyCLIOption(std::string input) {
+bool LanguageFeatureControl::ApplyCliOption(std::string input) {
   bool negated{false};
   if (input.size() > 3 && input.substr(0, 3) == "no-") {
     negated = true;
     input = input.substr(3);
   }
-  if (auto it{cliOptions_.find(input)}; it != cliOptions_.end()) {
+  if (auto it {cliOptions_.find(input)}; it != cliOptions_.end()) {
     if (std::holds_alternative<LanguageFeature>(it->second)) {
       EnableWarning(std::get<LanguageFeature>(it->second), !negated);
       return true;
@@ -175,7 +175,7 @@ bool LanguageFeatureControl::ApplyCLIOption(std::string input) {
   return false;
 }
 
-void LanguageFeatureControl::ReplaceCLICanonicalSpelling(
+void LanguageFeatureControl::ReplaceCliCanonicalSpelling(
     LanguageFeature f, std::string input) {
   std::string_view old{languageFeatureCliCanonicalSpelling_[EnumToInt(f)]};
   cliOptions_.erase(std::string{old});
@@ -183,7 +183,7 @@ void LanguageFeatureControl::ReplaceCLICanonicalSpelling(
   cliOptions_.insert({input, {f}});
 }
 
-void LanguageFeatureControl::ReplaceCLICanonicalSpelling(
+void LanguageFeatureControl::ReplaceCliCanonicalSpelling(
     UsageWarning w, std::string input) {
   std::string_view old{usageWarningCliCanonicalSpelling_[EnumToInt(w)]};
   cliOptions_.erase(std::string{old});

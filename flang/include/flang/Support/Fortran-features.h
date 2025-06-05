@@ -115,36 +115,36 @@ public:
   bool IsEnabled(LanguageFeature f) const { return !disable_.test(f); }
   bool ShouldWarn(LanguageFeature f) const { return warnLanguage_.test(f); }
   bool ShouldWarn(UsageWarning w) const { return warnUsage_.test(w); }
-  // CLI options
-  bool ApplyCLIOption(std::string input);
-  void AddAlternativeCLISpelling(LanguageFeature f, std::string input) {
+  // Cli options
+  bool ApplyCliOption(std::string input);
+  void AddAlternativeCliSpelling(LanguageFeature f, std::string input) {
     cliOptions_.insert({input, {f}});
   }
-  void AddAlternativeCLISpelling(UsageWarning w, std::string input) {
+  void AddAlternativeCliSpelling(UsageWarning w, std::string input) {
     cliOptions_.insert({input, {w}});
   }
-  void ReplaceCLICanonicalSpelling(LanguageFeature f, std::string input);
-  void ReplaceCLICanonicalSpelling(UsageWarning w, std::string input);
-  std::string_view getDefaultCLISpelling(LanguageFeature f) const {
-    return languageFeatureCLICanonicalSpelling_[EnumToInt(f)];
+  void ReplaceCliCanonicalSpelling(LanguageFeature f, std::string input);
+  void ReplaceCliCanonicalSpelling(UsageWarning w, std::string input);
+  std::string_view getDefaultCliSpelling(LanguageFeature f) const {
+    return languageFeatureCliCanonicalSpelling_[EnumToInt(f)];
   };
-  std::string_view getDefaultCLISpelling(UsageWarning w) const {
-    return usageWarningCLICanonicalSpelling_[EnumToInt(w)];
+  std::string_view getDefaultCliSpelling(UsageWarning w) const {
+    return usageWarningCliCanonicalSpelling_[EnumToInt(w)];
   };
   // Return all spellings of operators names, depending on features enabled
   std::vector<const char *> GetNames(LogicalOperator) const;
   std::vector<const char *> GetNames(RelationalOperator) const;
 
 private:
-  // Map from CLI syntax of language features and usage warnings to their enum
+  // Map from Cli syntax of language features and usage warnings to their enum
   // values.
   std::unordered_map<std::string, std::variant<LanguageFeature, UsageWarning>>
       cliOptions_;
-  // These two arrays map the enum values to their cannonical CLI spellings.
+  // These two arrays map the enum values to their cannonical Cli spellings.
   std::array<std::string_view, LanguageFeature_enumSize>
-      languageFeatureCLICanonicalSpelling_;
+      languageFeatureCliCanonicalSpelling_;
   std::array<std::string_view, UsageWarning_enumSize>
-      usageWarningCLICanonicalSpelling_;
+      usageWarningCliCanonicalSpelling_;
   LanguageFeatures disable_;
   LanguageFeatures warnLanguage_;
   bool warnAllLanguage_{false};
