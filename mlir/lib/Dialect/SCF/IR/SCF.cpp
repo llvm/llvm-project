@@ -1787,7 +1787,7 @@ struct ForallOpReplaceConstantInductionVar : public OpRewritePattern<ForallOp> {
     for (auto [lb, ub, step, iv] :
          llvm::zip(op.getMixedLowerBound(), op.getMixedUpperBound(),
                    op.getMixedStep(), op.getInductionVars())) {
-      if (iv.getUses().begin() == iv.getUses().end())
+      if (iv.hasNUses(0))
         continue;
       auto numIterations = constantTripCount(lb, ub, step);
       if (!numIterations.has_value() || numIterations.value() != 1) {

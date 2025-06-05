@@ -15,6 +15,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <utility>
 
@@ -29,7 +30,7 @@ class ScopedPrinter;
 /// DWARF 5 accelerator tables.
 /// TODO: Generalize the rest of the AppleAcceleratorTable interface and move it
 /// to this class.
-class DWARFAcceleratorTable {
+class LLVM_ABI DWARFAcceleratorTable {
 protected:
   DWARFDataExtractor AccelSection;
   DataExtractor StringSection;
@@ -97,7 +98,7 @@ public:
 
 /// This implements the Apple accelerator table format, a precursor of the
 /// DWARF 5 accelerator table format.
-class AppleAcceleratorTable : public DWARFAcceleratorTable {
+class LLVM_ABI AppleAcceleratorTable : public DWARFAcceleratorTable {
   struct Header {
     uint32_t Magic;
     uint16_t Version;
@@ -106,7 +107,7 @@ class AppleAcceleratorTable : public DWARFAcceleratorTable {
     uint32_t HashCount;
     uint32_t HeaderDataLength;
 
-    void dump(ScopedPrinter &W) const;
+    LLVM_ABI void dump(ScopedPrinter &W) const;
   };
 
   struct HeaderData {
@@ -116,7 +117,7 @@ class AppleAcceleratorTable : public DWARFAcceleratorTable {
     uint64_t DIEOffsetBase;
     SmallVector<std::pair<AtomType, Form>, 3> Atoms;
 
-    std::optional<uint64_t>
+    LLVM_ABI std::optional<uint64_t>
     extractOffset(std::optional<DWARFFormValue> Value) const;
   };
 
@@ -210,7 +211,7 @@ class AppleAcceleratorTable : public DWARFAcceleratorTable {
 
 public:
   /// Apple-specific implementation of an Accelerator Entry.
-  class Entry final : public DWARFAcceleratorTable::Entry {
+  class LLVM_ABI Entry final : public DWARFAcceleratorTable::Entry {
     const AppleAcceleratorTable &Table;
 
     Entry(const AppleAcceleratorTable &Table);
@@ -244,8 +245,8 @@ public:
 
   public:
     /// Construct a new iterator for the entries at \p DataOffset.
-    SameNameIterator(const AppleAcceleratorTable &AccelTable,
-                     uint64_t DataOffset);
+    LLVM_ABI SameNameIterator(const AppleAcceleratorTable &AccelTable,
+                              uint64_t DataOffset);
 
     const Entry &operator*() {
       uint64_t OffsetCopy = Offset;
@@ -292,7 +293,7 @@ public:
 
     /// Reads the next Entry in the table, populating `Current`.
     /// If not possible (e.g. end of the section), becomes the end iterator.
-    void prepareNextEntryOrEnd();
+    LLVM_ABI void prepareNextEntryOrEnd();
 
     /// Reads the next string pointer and the entry count for that string,
     /// populating `NumEntriesToCome`.
@@ -301,7 +302,7 @@ public:
     void prepareNextStringOrEnd();
 
   public:
-    Iterator(const AppleAcceleratorTable &Table, bool SetEnd = false);
+    LLVM_ABI Iterator(const AppleAcceleratorTable &Table, bool SetEnd = false);
 
     Iterator &operator++() {
       prepareNextEntryOrEnd();
@@ -380,7 +381,7 @@ public:
 /// The last segment consists of a list of entries, which is a 0-terminated list
 /// referenced by the name table and interpreted with the help of the
 /// abbreviation table.
-class DWARFDebugNames : public DWARFAcceleratorTable {
+class LLVM_ABI DWARFDebugNames : public DWARFAcceleratorTable {
 public:
   class NameIndex;
   class NameIterator;
@@ -400,8 +401,8 @@ public:
     uint32_t AugmentationStringSize;
     SmallString<8> AugmentationString;
 
-    Error extract(const DWARFDataExtractor &AS, uint64_t *Offset);
-    void dump(ScopedPrinter &W) const;
+    LLVM_ABI Error extract(const DWARFDataExtractor &AS, uint64_t *Offset);
+    LLVM_ABI void dump(ScopedPrinter &W) const;
   };
 
   /// Index attribute and its encoding.
@@ -430,11 +431,11 @@ public:
         : AbbrevOffset(AbbrevOffset), Code(Code), Tag(Tag),
           Attributes(std::move(Attributes)) {}
 
-    void dump(ScopedPrinter &W) const;
+    LLVM_ABI void dump(ScopedPrinter &W) const;
   };
 
   /// DWARF v5-specific implementation of an Accelerator Entry.
-  class Entry final : public DWARFAcceleratorTable::Entry {
+  class LLVM_ABI Entry final : public DWARFAcceleratorTable::Entry {
     const NameIndex *NameIdx;
     const Abbrev *Abbr;
 
@@ -510,7 +511,7 @@ public:
 
   /// Error returned by NameIndex::getEntry to report it has reached the end of
   /// the entry list.
-  class SentinelError : public ErrorInfo<SentinelError> {
+  class LLVM_ABI SentinelError : public ErrorInfo<SentinelError> {
   public:
     static char ID;
 
@@ -521,8 +522,8 @@ public:
 private:
   /// DenseMapInfo for struct Abbrev.
   struct AbbrevMapInfo {
-    static Abbrev getEmptyKey();
-    static Abbrev getTombstoneKey();
+    LLVM_ABI static Abbrev getEmptyKey();
+    LLVM_ABI static Abbrev getTombstoneKey();
     static unsigned getHashValue(uint32_t Code) {
       return DenseMapInfo<uint32_t>::getHashValue(Code);
     }
@@ -633,32 +634,32 @@ public:
     DWARFDebugNamesOffsets getOffsets() const { return Offsets; }
 
     /// Reads offset of compilation unit CU. CU is 0-based.
-    uint64_t getCUOffset(uint32_t CU) const;
+    LLVM_ABI uint64_t getCUOffset(uint32_t CU) const;
     uint32_t getCUCount() const { return Hdr.CompUnitCount; }
 
     /// Reads offset of local type unit TU, TU is 0-based.
-    uint64_t getLocalTUOffset(uint32_t TU) const;
+    LLVM_ABI uint64_t getLocalTUOffset(uint32_t TU) const;
     uint32_t getLocalTUCount() const { return Hdr.LocalTypeUnitCount; }
 
     /// Reads signature of foreign type unit TU. TU is 0-based.
-    uint64_t getForeignTUSignature(uint32_t TU) const;
+    LLVM_ABI uint64_t getForeignTUSignature(uint32_t TU) const;
     uint32_t getForeignTUCount() const { return Hdr.ForeignTypeUnitCount; }
 
     /// Reads an entry in the Bucket Array for the given Bucket. The returned
     /// value is a (1-based) index into the Names, StringOffsets and
     /// EntryOffsets arrays. The input Bucket index is 0-based.
-    uint32_t getBucketArrayEntry(uint32_t Bucket) const;
+    LLVM_ABI uint32_t getBucketArrayEntry(uint32_t Bucket) const;
     uint32_t getBucketCount() const { return Hdr.BucketCount; }
 
     /// Reads an entry in the Hash Array for the given Index. The input Index
     /// is 1-based.
-    uint32_t getHashArrayEntry(uint32_t Index) const;
+    LLVM_ABI uint32_t getHashArrayEntry(uint32_t Index) const;
 
     /// Reads an entry in the Name Table for the given Index. The Name Table
     /// consists of two arrays -- String Offsets and Entry Offsets. The returned
     /// offsets are relative to the starts of respective sections. Input Index
     /// is 1-based.
-    NameTableEntry getNameTableEntry(uint32_t Index) const;
+    LLVM_ABI NameTableEntry getNameTableEntry(uint32_t Index) const;
 
     uint32_t getNameCount() const { return Hdr.NameCount; }
 
@@ -666,7 +667,7 @@ public:
       return Abbrevs;
     }
 
-    Expected<Entry> getEntry(uint64_t *Offset) const;
+    LLVM_ABI Expected<Entry> getEntry(uint64_t *Offset) const;
 
     /// Returns the Entry at the relative `Offset` from the start of the Entry
     /// pool.
@@ -676,18 +677,18 @@ public:
     }
 
     /// Look up all entries in this Name Index matching \c Key.
-    iterator_range<ValueIterator> equal_range(StringRef Key) const;
+    LLVM_ABI iterator_range<ValueIterator> equal_range(StringRef Key) const;
 
     NameIterator begin() const { return NameIterator(this, 1); }
     NameIterator end() const { return NameIterator(this, getNameCount() + 1); }
 
-    Error extract();
+    LLVM_ABI Error extract();
     uint64_t getUnitOffset() const { return Base; }
     uint64_t getNextUnitOffset() const {
       return Base + dwarf::getUnitLengthFieldByteSize(Hdr.Format) +
              Hdr.UnitLength;
     }
-    void dump(ScopedPrinter &W) const;
+    LLVM_ABI void dump(ScopedPrinter &W) const;
 
     friend class DWARFDebugNames;
   };
@@ -719,7 +720,7 @@ public:
     std::optional<uint64_t> findEntryOffsetInCurrentIndex();
     bool findInCurrentIndex();
     void searchFromStartOfCurrentIndex();
-    void next();
+    LLVM_ABI void next();
 
     /// Set the iterator to the "end" state.
     void setEnd() { *this = ValueIterator(); }
@@ -728,11 +729,11 @@ public:
     /// Create a "begin" iterator for looping over all entries in the
     /// accelerator table matching Key. The iterator will run through all Name
     /// Indexes in the section in sequence.
-    ValueIterator(const DWARFDebugNames &AccelTable, StringRef Key);
+    LLVM_ABI ValueIterator(const DWARFDebugNames &AccelTable, StringRef Key);
 
     /// Create a "begin" iterator for looping over all entries in a specific
     /// Name Index. Other indices in the section will not be visited.
-    ValueIterator(const NameIndex &NI, StringRef Key);
+    LLVM_ABI ValueIterator(const NameIndex &NI, StringRef Key);
 
     /// End marker.
     ValueIterator() = default;
@@ -840,7 +841,7 @@ public:
 /// Calculates the starting offsets for various sections within the
 /// .debug_names section.
 namespace dwarf {
-DWARFDebugNames::DWARFDebugNamesOffsets
+LLVM_ABI DWARFDebugNames::DWARFDebugNamesOffsets
 findDebugNamesOffsets(uint64_t EndOfHeaderOffset,
                       const DWARFDebugNames::Header &Hdr);
 }
@@ -849,7 +850,7 @@ findDebugNamesOffsets(uint64_t EndOfHeaderOffset,
 /// parameters, returns a substring of `Name` containing no template
 /// parameters.
 /// E.g.: StripTemplateParameters("foo<int>") = "foo".
-std::optional<StringRef> StripTemplateParameters(StringRef Name);
+LLVM_ABI std::optional<StringRef> StripTemplateParameters(StringRef Name);
 
 struct ObjCSelectorNames {
   /// For "-[A(Category) method:]", this would be "method:"
@@ -865,7 +866,8 @@ struct ObjCSelectorNames {
 /// If `Name` is the AT_name of a DIE which refers to an Objective-C selector,
 /// returns an instance of ObjCSelectorNames. The Selector and ClassName fields
 /// are guaranteed to be non-empty in the result.
-std::optional<ObjCSelectorNames> getObjCNamesIfSelector(StringRef Name);
+LLVM_ABI std::optional<ObjCSelectorNames>
+getObjCNamesIfSelector(StringRef Name);
 
 } // end namespace llvm
 

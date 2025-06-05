@@ -17,7 +17,6 @@
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
@@ -240,15 +239,15 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   // Make __builtin_ms_va_list available.
   HasBuiltinMSVaList = true;
 
-  // Make the SVE types available.  Note that this deliberately doesn't
-  // depend on SveMode, since in principle it should be possible to turn
+  // Make the Neon ACLE and SVE types available.  Note that this deliberately
+  // doesn't depend on SveMode, since in principle it should be possible to turn
   // SVE on and off within a translation unit.  It should also be possible
   // to compile the global declaration:
   //
   // __SVInt8_t *ptr;
   //
   // even without SVE.
-  HasAArch64SVETypes = true;
+  HasAArch64ACLETypes = true;
 
   // {} in inline assembly are neon specifiers, not assembly variant
   // specifiers.
@@ -1401,7 +1400,7 @@ AArch64TargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_PreserveMost:
   case CC_PreserveAll:
   case CC_PreserveNone:
-  case CC_OpenCLKernel:
+  case CC_DeviceKernel:
   case CC_AArch64VectorCall:
   case CC_AArch64SVEPCS:
   case CC_Win64:
@@ -1759,7 +1758,7 @@ WindowsARM64TargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_X86FastCall:
     return CCCR_Ignore;
   case CC_C:
-  case CC_OpenCLKernel:
+  case CC_DeviceKernel:
   case CC_PreserveMost:
   case CC_PreserveAll:
   case CC_PreserveNone:
