@@ -63,5 +63,11 @@
 # RUN:   FileCheck -check-prefix=ERRUND %s
 # RUN: not ld.lld %t2.o -o /dev/null 2>&1 | FileCheck -check-prefix=ERRUND %s
 
+## Ignoring undefines in objects should not produce error for symbol from object.
+# RUN: not ld.lld %t2.o -o /dev/null --unresolved-symbols=@%p/Inputs/unresolved.ignore 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=IGNLST
+
+# IGNLST: error: undefined symbol: undef2
+
 .globl _start
 _start:

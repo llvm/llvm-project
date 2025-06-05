@@ -714,6 +714,14 @@ static void setUnresolvedSymbolPolicy(Ctx &ctx, opt::InputArgList &args) {
       } else if (s == "report-all") {
         diagRegular = true;
         diagShlib = true;
+      } else if (s.starts_with("@")) {
+        // Read file with set of unresolved symbols
+        StringRef filename(s.substr(1ULL));
+        std::optional<MemoryBufferRef> buffer = readFile(ctx, filename);
+        if (!buffer)
+          continue;
+        for (auto [_, line] : llvm::enumerate(args::getLines(*buffer)))
+          ctx.arg.unresolvedSymbolsList.emplace_back(line);
       } else {
         ErrAlways(ctx) << "unknown --unresolved-symbols value: " << s;
       }

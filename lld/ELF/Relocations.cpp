@@ -804,6 +804,13 @@ static bool maybeReportUndefined(Ctx &ctx, Undefined &sym,
   if (ctx.arg.unresolvedSymbols == UnresolvedPolicy::Ignore && canBeExternal)
     return false;
 
+  // Skip undefined symbols from list
+  for (const auto& ignoredUndef : ctx.arg.unresolvedSymbolsList) {
+    if (ignoredUndef == sym.getName()) {
+        return false;
+    }
+  }
+
   // clang (as of 2019-06-12) / gcc (as of 8.2.1) PPC64 may emit a .rela.toc
   // which references a switch table in a discarded .rodata/.text section. The
   // .toc and the .rela.toc are incorrectly not placed in the comdat. The ELF
