@@ -1105,7 +1105,7 @@ define internal void @optnone(ptr dereferenceable(4) %a) optnone noinline {
 }
 define void @make_live(ptr nonnull dereferenceable(8) %a) {
 ; FNATTRS-LABEL: define void @make_live(
-; FNATTRS-SAME: ptr nonnull dereferenceable(8) [[A:%.*]]) {
+; FNATTRS-SAME: ptr nonnull dereferenceable(8) [[A:%.*]]) #[[ATTR13:[0-9]+]] {
 ; FNATTRS-NEXT:    call void @naked(ptr nonnull align 16 dereferenceable(8) [[A]])
 ; FNATTRS-NEXT:    call void @control(ptr nonnull align 16 dereferenceable(8) [[A]])
 ; FNATTRS-NEXT:    call void @optnone(ptr nonnull align 16 dereferenceable(8) [[A]])

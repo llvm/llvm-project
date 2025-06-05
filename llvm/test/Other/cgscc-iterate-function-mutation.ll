@@ -9,7 +9,7 @@ declare void @reference_function_pointer(ptr) nofree nosync readnone
 ; and the RefSCCs that those functions are in, we re-run the CGSCC passes to
 ; observe the refined call graph structure.
 
-; CHECK: define void @test1_a() {
+; CHECK: define void @test1_a() #1 {
 define void @test1_a() {
   call void @test1_b1()
   call void @test1_b2()
@@ -128,7 +128,7 @@ exit:
 ; multiple layers that have to be traversed in the correct order instead of
 ; a single node.
 
-; CHECK: define void @test3_a() {
+; CHECK: define void @test3_a() #1 {
 define void @test3_a() {
   call void @test3_b11()
   call void @test3_b21()
@@ -137,13 +137,13 @@ define void @test3_a() {
   ret void
 }
 
-; CHECK: define void @test3_b11() #0 {
+; CHECK: define void @test3_b11() #2 {
 define void @test3_b11() {
   call void @test3_b12()
   ret void
 }
 
-; CHECK: define void @test3_b12() #0 {
+; CHECK: define void @test3_b12() #2 {
 define void @test3_b12() {
   call void @test3_b13()
   ret void
@@ -155,13 +155,13 @@ define void @test3_b13() {
   ret void
 }
 
-; CHECK: define void @test3_b21() #0 {
+; CHECK: define void @test3_b21() #2 {
 define void @test3_b21() {
   call void @test3_b22()
   ret void
 }
 
-; CHECK: define void @test3_b22() #0 {
+; CHECK: define void @test3_b22() #2 {
 define void @test3_b22() {
   call void @test3_b23()
   ret void
@@ -180,13 +180,13 @@ exit:
   ret void
 }
 
-; CHECK: define void @test3_b31() {
+; CHECK: define void @test3_b31() #1 {
 define void @test3_b31() {
   call void @test3_b32()
   ret void
 }
 
-; CHECK: define void @test3_b32() {
+; CHECK: define void @test3_b32() #1 {
 define void @test3_b32() {
   call void @test3_b33()
   ret void
@@ -205,13 +205,13 @@ exit:
   ret void
 }
 
-; CHECK: define void @test3_b41() #0 {
+; CHECK: define void @test3_b41() #2 {
 define void @test3_b41() {
   call void @test3_b42()
   ret void
 }
 
-; CHECK: define void @test3_b42() #0 {
+; CHECK: define void @test3_b42() #2 {
 define void @test3_b42() {
   call void @test3_b43()
   ret void
@@ -244,13 +244,13 @@ define void @test4_a() {
   ret void
 }
 
-; CHECK: define void @test4_b11() #0 {
+; CHECK: define void @test4_b11() #2 {
 define void @test4_b11() {
   call void @test4_b12()
   ret void
 }
 
-; CHECK: define void @test4_b12() #0 {
+; CHECK: define void @test4_b12() #2 {
 define void @test4_b12() {
   call void @test4_b13()
   ret void
@@ -262,20 +262,20 @@ define void @test4_b13() {
   ret void
 }
 
-; CHECK: define void @test4_b21() #0 {
+; CHECK: define void @test4_b21() #2 {
 define void @test4_b21() {
   call void @test4_b22()
   ret void
 }
 
-; CHECK: define void @test4_b22() #0 {
+; CHECK: define void @test4_b22() #2 {
 define void @test4_b22() {
   call void @test4_b23()
   ret void
 }
 
 ; CHECK: define void @test4_b23() #0 {
-define void @test4_b23() {
+define void @test4_b23() #0 {
   call void @reference_function_pointer(ptr @test4_a)
   br i1 false, label %dead, label %exit
 
@@ -287,13 +287,13 @@ exit:
   ret void
 }
 
-; CHECK: define void @test4_b31() {
+; CHECK: define void @test4_b31() #1 {
 define void @test4_b31() {
   call void @test4_b32()
   ret void
 }
 
-; CHECK: define void @test4_b32() {
+; CHECK: define void @test4_b32() #1 {
 define void @test4_b32() {
   call void @test4_b33()
   ret void
@@ -313,13 +313,13 @@ exit:
   ret void
 }
 
-; CHECK: define void @test4_b41() #0 {
+; CHECK: define void @test4_b41() #2 {
 define void @test4_b41() {
   call void @test4_b42()
   ret void
 }
 
-; CHECK: define void @test4_b42() #0 {
+; CHECK: define void @test4_b42() #2 {
 define void @test4_b42() {
   call void @test4_b43()
   ret void
@@ -339,3 +339,5 @@ exit:
 }
 
 ; CHECK: attributes #0 = { nofree nosync memory(none) }
+; CHECK: attributes #1 = { norecurse }
+; CHECK: attributes #2 = { nofree norecurse nosync memory(none) }

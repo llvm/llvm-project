@@ -157,7 +157,9 @@ define i32 @catch_thing() personality ptr @__gxx_personality_v0 {
 }
 
 define i32 @catch_thing_user() {
-; FNATTRS-LABEL: define {{[^@]+}}@catch_thing_user() {
+; FNATTRS: Function Attrs: norecurse
+; FNATTRS-LABEL: define {{[^@]+}}@catch_thing_user
+; FNATTRS-SAME: () #[[ATTR2:[0-9]+]] {
 ; FNATTRS-NEXT:    [[CATCH_THING_CALL:%.*]] = call i32 @catch_thing()
 ; FNATTRS-NEXT:    ret i32 [[CATCH_THING_CALL]]
 ;
@@ -174,18 +176,31 @@ declare void @abort() nounwind
 @catch_ty = external global ptr
 
 define void @catch_specific_landingpad() personality ptr @__gxx_personality_v0 {
-; COMMON: Function Attrs: noreturn
-; COMMON-LABEL: define {{[^@]+}}@catch_specific_landingpad
-; COMMON-SAME: () #[[ATTR3:[0-9]+]] personality ptr @__gxx_personality_v0 {
-; COMMON-NEXT:    invoke void @do_throw()
-; COMMON-NEXT:            to label [[UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
-; COMMON:       lpad:
-; COMMON-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
-; COMMON-NEXT:            catch ptr @catch_ty
-; COMMON-NEXT:    call void @abort()
-; COMMON-NEXT:    unreachable
-; COMMON:       unreachable:
-; COMMON-NEXT:    unreachable
+; FNATTRS: Function Attrs: noreturn
+; FNATTRS-LABEL: define {{[^@]+}}@catch_specific_landingpad
+; FNATTRS-SAME: () #[[ATTR4:[0-9]+]] personality ptr @__gxx_personality_v0 {
+; FNATTRS-NEXT:    invoke void @do_throw()
+; FNATTRS-NEXT:            to label [[UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
+; FNATTRS:       lpad:
+; FNATTRS-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
+; FNATTRS-NEXT:            catch ptr @catch_ty
+; FNATTRS-NEXT:    call void @abort()
+; FNATTRS-NEXT:    unreachable
+; FNATTRS:       unreachable:
+; FNATTRS-NEXT:    unreachable
+;
+; ATTRIBUTOR: Function Attrs: noreturn
+; ATTRIBUTOR-LABEL: define {{[^@]+}}@catch_specific_landingpad
+; ATTRIBUTOR-SAME: () #[[ATTR3:[0-9]+]] personality ptr @__gxx_personality_v0 {
+; ATTRIBUTOR-NEXT:    invoke void @do_throw()
+; ATTRIBUTOR-NEXT:            to label [[UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
+; ATTRIBUTOR:       lpad:
+; ATTRIBUTOR-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
+; ATTRIBUTOR-NEXT:            catch ptr @catch_ty
+; ATTRIBUTOR-NEXT:    call void @abort()
+; ATTRIBUTOR-NEXT:    unreachable
+; ATTRIBUTOR:       unreachable:
+; ATTRIBUTOR-NEXT:    unreachable
 ;
   invoke void @do_throw()
   to label %unreachable unwind label %lpad
@@ -201,18 +216,31 @@ unreachable:
 }
 
 define void @catch_all_landingpad() personality ptr @__gxx_personality_v0 {
-; COMMON: Function Attrs: noreturn nounwind
-; COMMON-LABEL: define {{[^@]+}}@catch_all_landingpad
-; COMMON-SAME: () #[[ATTR4:[0-9]+]] personality ptr @__gxx_personality_v0 {
-; COMMON-NEXT:    invoke void @do_throw()
-; COMMON-NEXT:            to label [[UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
-; COMMON:       lpad:
-; COMMON-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
-; COMMON-NEXT:            catch ptr null
-; COMMON-NEXT:    call void @abort()
-; COMMON-NEXT:    unreachable
-; COMMON:       unreachable:
-; COMMON-NEXT:    unreachable
+; FNATTRS: Function Attrs: noreturn nounwind
+; FNATTRS-LABEL: define {{[^@]+}}@catch_all_landingpad
+; FNATTRS-SAME: () #[[ATTR5:[0-9]+]] personality ptr @__gxx_personality_v0 {
+; FNATTRS-NEXT:    invoke void @do_throw()
+; FNATTRS-NEXT:            to label [[UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
+; FNATTRS:       lpad:
+; FNATTRS-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
+; FNATTRS-NEXT:            catch ptr null
+; FNATTRS-NEXT:    call void @abort()
+; FNATTRS-NEXT:    unreachable
+; FNATTRS:       unreachable:
+; FNATTRS-NEXT:    unreachable
+;
+; ATTRIBUTOR: Function Attrs: noreturn nounwind
+; ATTRIBUTOR-LABEL: define {{[^@]+}}@catch_all_landingpad
+; ATTRIBUTOR-SAME: () #[[ATTR4:[0-9]+]] personality ptr @__gxx_personality_v0 {
+; ATTRIBUTOR-NEXT:    invoke void @do_throw()
+; ATTRIBUTOR-NEXT:            to label [[UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
+; ATTRIBUTOR:       lpad:
+; ATTRIBUTOR-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
+; ATTRIBUTOR-NEXT:            catch ptr null
+; ATTRIBUTOR-NEXT:    call void @abort()
+; ATTRIBUTOR-NEXT:    unreachable
+; ATTRIBUTOR:       unreachable:
+; ATTRIBUTOR-NEXT:    unreachable
 ;
   invoke void @do_throw()
   to label %unreachable unwind label %lpad
@@ -228,18 +256,31 @@ unreachable:
 }
 
 define void @filter_specific_landingpad() personality ptr @__gxx_personality_v0 {
-; COMMON: Function Attrs: noreturn
-; COMMON-LABEL: define {{[^@]+}}@filter_specific_landingpad
-; COMMON-SAME: () #[[ATTR3]] personality ptr @__gxx_personality_v0 {
-; COMMON-NEXT:    invoke void @do_throw()
-; COMMON-NEXT:            to label [[UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
-; COMMON:       lpad:
-; COMMON-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
-; COMMON-NEXT:            filter [1 x ptr] [ptr @catch_ty]
-; COMMON-NEXT:    call void @abort()
-; COMMON-NEXT:    unreachable
-; COMMON:       unreachable:
-; COMMON-NEXT:    unreachable
+; FNATTRS: Function Attrs: noreturn
+; FNATTRS-LABEL: define {{[^@]+}}@filter_specific_landingpad
+; FNATTRS-SAME: () #[[ATTR4]] personality ptr @__gxx_personality_v0 {
+; FNATTRS-NEXT:    invoke void @do_throw()
+; FNATTRS-NEXT:            to label [[UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
+; FNATTRS:       lpad:
+; FNATTRS-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
+; FNATTRS-NEXT:            filter [1 x ptr] [ptr @catch_ty]
+; FNATTRS-NEXT:    call void @abort()
+; FNATTRS-NEXT:    unreachable
+; FNATTRS:       unreachable:
+; FNATTRS-NEXT:    unreachable
+;
+; ATTRIBUTOR: Function Attrs: noreturn
+; ATTRIBUTOR-LABEL: define {{[^@]+}}@filter_specific_landingpad
+; ATTRIBUTOR-SAME: () #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+; ATTRIBUTOR-NEXT:    invoke void @do_throw()
+; ATTRIBUTOR-NEXT:            to label [[UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
+; ATTRIBUTOR:       lpad:
+; ATTRIBUTOR-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
+; ATTRIBUTOR-NEXT:            filter [1 x ptr] [ptr @catch_ty]
+; ATTRIBUTOR-NEXT:    call void @abort()
+; ATTRIBUTOR-NEXT:    unreachable
+; ATTRIBUTOR:       unreachable:
+; ATTRIBUTOR-NEXT:    unreachable
 ;
   invoke void @do_throw()
   to label %unreachable unwind label %lpad
@@ -255,18 +296,31 @@ unreachable:
 }
 
 define void @filter_none_landingpad() personality ptr @__gxx_personality_v0 {
-; COMMON: Function Attrs: noreturn nounwind
-; COMMON-LABEL: define {{[^@]+}}@filter_none_landingpad
-; COMMON-SAME: () #[[ATTR4]] personality ptr @__gxx_personality_v0 {
-; COMMON-NEXT:    invoke void @do_throw()
-; COMMON-NEXT:            to label [[UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
-; COMMON:       lpad:
-; COMMON-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
-; COMMON-NEXT:            filter [0 x ptr] zeroinitializer
-; COMMON-NEXT:    call void @abort()
-; COMMON-NEXT:    unreachable
-; COMMON:       unreachable:
-; COMMON-NEXT:    unreachable
+; FNATTRS: Function Attrs: noreturn nounwind
+; FNATTRS-LABEL: define {{[^@]+}}@filter_none_landingpad
+; FNATTRS-SAME: () #[[ATTR5]] personality ptr @__gxx_personality_v0 {
+; FNATTRS-NEXT:    invoke void @do_throw()
+; FNATTRS-NEXT:            to label [[UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
+; FNATTRS:       lpad:
+; FNATTRS-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
+; FNATTRS-NEXT:            filter [0 x ptr] zeroinitializer
+; FNATTRS-NEXT:    call void @abort()
+; FNATTRS-NEXT:    unreachable
+; FNATTRS:       unreachable:
+; FNATTRS-NEXT:    unreachable
+;
+; ATTRIBUTOR: Function Attrs: noreturn nounwind
+; ATTRIBUTOR-LABEL: define {{[^@]+}}@filter_none_landingpad
+; ATTRIBUTOR-SAME: () #[[ATTR4]] personality ptr @__gxx_personality_v0 {
+; ATTRIBUTOR-NEXT:    invoke void @do_throw()
+; ATTRIBUTOR-NEXT:            to label [[UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
+; ATTRIBUTOR:       lpad:
+; ATTRIBUTOR-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
+; ATTRIBUTOR-NEXT:            filter [0 x ptr] zeroinitializer
+; ATTRIBUTOR-NEXT:    call void @abort()
+; ATTRIBUTOR-NEXT:    unreachable
+; ATTRIBUTOR:       unreachable:
+; ATTRIBUTOR-NEXT:    unreachable
 ;
   invoke void @do_throw()
   to label %unreachable unwind label %lpad
@@ -282,18 +336,31 @@ unreachable:
 }
 
 define void @cleanup_landingpad() personality ptr @__gxx_personality_v0 {
-; COMMON: Function Attrs: noreturn
-; COMMON-LABEL: define {{[^@]+}}@cleanup_landingpad
-; COMMON-SAME: () #[[ATTR3]] personality ptr @__gxx_personality_v0 {
-; COMMON-NEXT:    invoke void @do_throw()
-; COMMON-NEXT:            to label [[UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
-; COMMON:       lpad:
-; COMMON-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
-; COMMON-NEXT:            cleanup
-; COMMON-NEXT:    call void @abort()
-; COMMON-NEXT:    unreachable
-; COMMON:       unreachable:
-; COMMON-NEXT:    unreachable
+; FNATTRS: Function Attrs: noreturn
+; FNATTRS-LABEL: define {{[^@]+}}@cleanup_landingpad
+; FNATTRS-SAME: () #[[ATTR4]] personality ptr @__gxx_personality_v0 {
+; FNATTRS-NEXT:    invoke void @do_throw()
+; FNATTRS-NEXT:            to label [[UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
+; FNATTRS:       lpad:
+; FNATTRS-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
+; FNATTRS-NEXT:            cleanup
+; FNATTRS-NEXT:    call void @abort()
+; FNATTRS-NEXT:    unreachable
+; FNATTRS:       unreachable:
+; FNATTRS-NEXT:    unreachable
+;
+; ATTRIBUTOR: Function Attrs: noreturn
+; ATTRIBUTOR-LABEL: define {{[^@]+}}@cleanup_landingpad
+; ATTRIBUTOR-SAME: () #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+; ATTRIBUTOR-NEXT:    invoke void @do_throw()
+; ATTRIBUTOR-NEXT:            to label [[UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
+; ATTRIBUTOR:       lpad:
+; ATTRIBUTOR-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
+; ATTRIBUTOR-NEXT:            cleanup
+; ATTRIBUTOR-NEXT:    call void @abort()
+; ATTRIBUTOR-NEXT:    unreachable
+; ATTRIBUTOR:       unreachable:
+; ATTRIBUTOR-NEXT:    unreachable
 ;
   invoke void @do_throw()
   to label %unreachable unwind label %lpad
@@ -311,7 +378,7 @@ unreachable:
 define void @cleanuppad() personality ptr @__gxx_personality_v0 {
 ; FNATTRS: Function Attrs: noreturn
 ; FNATTRS-LABEL: define {{[^@]+}}@cleanuppad
-; FNATTRS-SAME: () #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+; FNATTRS-SAME: () #[[ATTR4]] personality ptr @__gxx_personality_v0 {
 ; FNATTRS-NEXT:    invoke void @do_throw()
 ; FNATTRS-NEXT:            to label [[UNREACHABLE:%.*]] unwind label [[CPAD:%.*]]
 ; FNATTRS:       cpad:
@@ -348,7 +415,7 @@ unreachable:
 define void @catchswitch_cleanuppad() personality ptr @__gxx_personality_v0 {
 ; FNATTRS: Function Attrs: noreturn
 ; FNATTRS-LABEL: define {{[^@]+}}@catchswitch_cleanuppad
-; FNATTRS-SAME: () #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+; FNATTRS-SAME: () #[[ATTR4]] personality ptr @__gxx_personality_v0 {
 ; FNATTRS-NEXT:    invoke void @do_throw()
 ; FNATTRS-NEXT:            to label [[UNREACHABLE:%.*]] unwind label [[CS:%.*]]
 ; FNATTRS:       cs:

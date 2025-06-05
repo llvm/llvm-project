@@ -250,9 +250,9 @@ define void @f1() #0 {
 }
 
 define void @f2() #0 {
-; FNATTR: Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
+; FNATTR: Function Attrs: nofree noinline norecurse nosync nounwind memory(none) uwtable
 ; FNATTR-LABEL: define {{[^@]+}}@f2
-; FNATTR-SAME: () #[[ATTR4]] {
+; FNATTR-SAME: () #[[ATTR7:[0-9]+]] {
 ; FNATTR-NEXT:    tail call void @f1()
 ; FNATTR-NEXT:    ret void
 ;
