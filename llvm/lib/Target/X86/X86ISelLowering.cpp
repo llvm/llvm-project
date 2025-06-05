@@ -40663,7 +40663,8 @@ static SDValue combineX86ShuffleChainWithExtract(
         continue;
       }
       if (Input.getOpcode() == ISD::INSERT_SUBVECTOR &&
-          Input.getOperand(0).isUndef()) {
+          Input.getOperand(0).isUndef() &&
+          isNullConstant(Input.getOperand(2))) {
         Input = peekThroughBitcasts(Input.getOperand(1));
         continue;
       }
