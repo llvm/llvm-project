@@ -9,7 +9,7 @@ using namespace llvm;
 
 namespace llvm {
 
-void DebugCounter::Chunk::print(llvm::raw_ostream &OS) {
+void DebugCounter::Chunk::print(llvm::raw_ostream &OS) const {
   if (Begin == End)
     OS << Begin;
   else
