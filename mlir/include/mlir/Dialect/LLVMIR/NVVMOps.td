@@ -25,6 +25,7 @@ include "mlir/Dialect/LLVMIR/LLVMTypes.td"
 def LLVM_PointerGeneric : LLVM_PointerInAddressSpace<0>;
 def LLVM_PointerGlobal : LLVM_PointerInAddressSpace<1>;
 def LLVM_PointerShared : LLVM_PointerInAddressSpace<3>;
+def LLVM_PointerLocal : LLVM_PointerInAddressSpace<5>;
 def LLVM_PointerTensor : LLVM_PointerInAddressSpace<6>;
 def LLVM_PointerSharedCluster : LLVM_PointerInAddressSpace<7>;
 
@@ -116,6 +117,25 @@ class NVVM_PTXBuilder_Op<string mnemonic,
 class NVVM_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
     : AttrDef<NVVM_Dialect, attrName, traits> {
   let mnemonic = attrMnemonic;
+}
+
+// Cache Eviction Priority enum definitions
+def EvictNormal : I32EnumCase<"EvictNormal", 0, "evict_normal">;
+def EvictFirst : I32EnumCase<"EvictFirst", 1, "evict_first">;
+def EvictLast : I32EnumCase<"EvictLast", 2, "evict_last">;
+def EvictUnchanged : I32EnumCase<"EvictUnchanged", 3, "evict_unchanged">;
+def NoAllocate : I32EnumCase<"NoAllocate", 4, "no_allocate">;
+
+def CacheEvictionPriority : I32Enum<"CacheEvictionPriority",
+                                    "NVVM Cache Eviction Priority",
+                                    [EvictNormal, EvictFirst, EvictLast,   
+                                     EvictUnchanged, NoAllocate]> {
+  let cppNamespace = "::mlir::NVVM";
+}
+
+def CacheEvictionPriorityAttr : EnumAttr<NVVM_Dialect, CacheEvictionPriority, 
+                                         "cache_eviction_priority"> {
+  let assemblyFormat = "$value";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2331,6 +2351,60 @@ def NVVM_CpAsyncBulkTensorSharedCTAToGlobalOp :
     }
   }];
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM Prefetch Op
+//===----------------------------------------------------------------------===//
+
+def PrefetchCacheLevelL1 : I32EnumCase<"L1", 0, "L1">;
+def PrefetchCacheLevelL2 : I32EnumCase<"L2", 1, "L2">;
+
+def PrefetchCacheLevel : I32Enum<"PrefetchCacheLevel",
+                                 "NVVM Prefetch Cache Level",
+                                 [PrefetchCacheLevelL1, PrefetchCacheLevelL2]> {
+  let cppNamespace = "::mlir::NVVM";
+}
+
+def PrefetchCacheLevelAttr : EnumAttr<NVVM_Dialect, PrefetchCacheLevel, "prefetch_cache_level"> {
+  let assemblyFormat = "$value";
+}
+
+def NVVM_PrefetchOp : NVVM_Op<"prefetch"> {
+  let summary = "Brings the cache line containing an address into the specified cache level";
+  let description = [{
+    Operand `addr` can be a global, local or generic address pointer. No 
+    operation is performed if `addr` maps to a `shared` memory location.
+
+    The `cacheLevel` attribute specifies the cache level to which the cache line
+    containing the specified address is brought.
+    
+    `uniform` can be specified after the `cacheLevel` to indicate that the 
+    prefetch is performed to the specified uniform cache level. If `uniform` is 
+    specified, `addr` must be a generic address pointer and no operation is 
+    performed if `addr` maps to a `const`, `local`, or `shared` memory location.
+
+    The `evictPriority` attribute is optional and specifies the cache eviction
+    priority when `cacheLevel` is L2.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-prefetch-prefetchu)
+  }];
+  let arguments = (ins PrefetchCacheLevelAttr:$cacheLevel,
+                       UnitAttr:$uniform,
+                       AnyTypeOf<[LLVM_PointerGlobal,
+                                  LLVM_PointerLocal,
+                                  LLVM_PointerGeneric]>:$addr,
+                       OptionalAttr<CacheEvictionPriorityAttr>:$evictPriority);
+  let assemblyFormat = "`level` `=` $cacheLevel (`uniform` $uniform^)? `,` $addr (`,` `evict_priority` `=` $evictPriority^)? attr-dict `:` type($addr)";
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    static llvm::Intrinsic::ID getIntrinsicID(NVVM::PrefetchOp &op);
+  }];
+  let llvmBuilder = [{
+    auto intId = NVVM::PrefetchOp::getIntrinsicID(op);
+    createIntrinsicCall(builder, intId, $addr);
+  }];
 }
 
 def NVVM_PrefetchTensorMapOp : NVVM_Op<"prefetch.tensormap",

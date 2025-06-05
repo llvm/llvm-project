@@ -104,6 +104,7 @@ struct Entry {
     FunctionInitial,
     FunctionChanged,
     FunctionIsOptimized,
+    FunctionIsInlined,
     LineEntryFile,
     LineEntryLineNumber,
     LineEntryColumn,
