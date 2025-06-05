@@ -1299,6 +1299,30 @@ static const VecDesc VecFuncs_LIBMVEC_X86[] = {
 #undef TLI_DEFINE_LIBMVEC_X86_VECFUNCS
 };
 
+static const VecDesc VecFuncs_LIBMVEC_AARCH64_VF2[] = {
+#define TLI_DEFINE_LIBMVEC_AARCH64_VF2_VECFUNCS
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VABI_PREFIX)                             \
+  {SCAL, VEC, /* VF = */ FIXED(2), /* MASK = */ false, VABI_PREFIX,            \
+    /* CC = */ CallingConv::AArch64_VectorCall},
+#include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_LIBMVEC_AARCH64_VF2_VECFUNCS
+};
+static const VecDesc VecFuncs_LIBMVEC_AARCH64_VF4[] = {
+#define TLI_DEFINE_LIBMVEC_AARCH64_VF4_VECFUNCS
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VABI_PREFIX)                             \
+  {SCAL, VEC, /* VF = */ FIXED(4), /* MASK = */ false, VABI_PREFIX,            \
+    /* CC = */ CallingConv::AArch64_VectorCall},
+#include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_LIBMVEC_AARCH64_VF4_VECFUNCS
+};
+static const VecDesc VecFuncs_LIBMVEC_AARCH64_VFScalable[] = {
+#define TLI_DEFINE_LIBMVEC_AARCH64_SCALABLE_VECFUNCS
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
+  {SCAL, VEC, VF, MASK, VABI_PREFIX, /* CC = */ std::nullopt},
+#include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_LIBMVEC_AARCH64_SCALABLE_VECFUNCS
+};
+
 static const VecDesc VecFuncs_MASSV[] = {
 #define TLI_DEFINE_MASSV_VECFUNCS
 #include "llvm/Analysis/VecFuncs.def"
@@ -1375,6 +1399,12 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
       addVectorizableFunctions(VecFuncs_LIBMVEC_X86);
+      break;
+    case llvm::Triple::aarch64:
+    case llvm::Triple::aarch64_be:
+      addVectorizableFunctions(VecFuncs_LIBMVEC_AARCH64_VF2);
+      addVectorizableFunctions(VecFuncs_LIBMVEC_AARCH64_VF4);
+      addVectorizableFunctions(VecFuncs_LIBMVEC_AARCH64_VFScalable);
       break;
     }
     break;
