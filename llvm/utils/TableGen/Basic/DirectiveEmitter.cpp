@@ -269,8 +269,8 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
   if (DirLang.hasEnableBitmaskEnumInNamespace())
     OS << "#include \"llvm/ADT/BitmaskEnum.h\"\n";
 
-  OS << R"s(#include "llvm/ADT/StringRef.h")s" "\n";
-  OS << R"s(#include "llvm/Support/Compiler.h")s" "\n";
+  OS << "#include \"llvm/ADT/StringRef.h\"\n";
+  OS << "#include \"llvm/Support/Compiler.h\"\n";
   OS << "#include <cstddef>\n"; // for size_t
   OS << "#include <utility>\n"; // for std::pair
   OS << "\n";
