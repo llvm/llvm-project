@@ -5938,10 +5938,10 @@ SDValue SITargetLowering::splitUnaryVectorOp(SDValue Op,
 }
 
 // Enable lowering of ROTR for vxi32 types. This is a workaround for a
-// regression caused by legalising v2i32 or.
+// regression in rotr.ll, whereby extra unnecessary instructions were added to
+// the final codegen caused by legalising v2i32 or.
 SDValue SITargetLowering::lowerROTR(SDValue Op, SelectionDAG &DAG) const {
-  unsigned Opc = Op.getOpcode();
-  EVT VT = Op.getValueType();
+  [[maybe_unused]] EVT VT = Op.getValueType();
 
   assert((VT == MVT::v2i32 || VT == MVT::v4i32 || VT == MVT::v8i32 ||
           VT == MVT::v16i32) &&
@@ -12998,7 +12998,7 @@ SDValue SITargetLowering::performXorCombine(SDNode *N,
     SDValue LHS_0 = LHS.getOperand(0);
     SDValue LHS_1 = LHS.getOperand(1);
 
-    if (LHS.getOpcode() == ISD::VSELECT && VT == MVT::v2i32) {
+    if (LHS.getOpcode() == ISD::VSELECT) {
       if (CRHS_0 && CRHS_0->getAPIntValue().isSignMask() &&
           shouldFoldFNegIntoSrc(N, LHS_0))
         if (CRHS_1 && CRHS_1->getAPIntValue().isSignMask() &&
@@ -13015,11 +13015,7 @@ SDValue SITargetLowering::performXorCombine(SDNode *N,
           return DAG.getNode(ISD::BITCAST, DL, VT, NewSelect);
         }
     }
-    // Possibly split vector here if one side does have a constant RHS.
   }
-
-  // Add test for when only one of the RHS vector elements is a const. Might be
-  // possible to optimise this case.
 
   const ConstantSDNode *CRHS = dyn_cast<ConstantSDNode>(RHS);
 
