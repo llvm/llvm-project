@@ -27,10 +27,6 @@ def XeGPUSubgroupDistribute : Pass<"xegpu-subgroup-distribute"> {
   }];
   let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect",
                            "vector::VectorDialect"];
-  let options = [Option<
-      "printOnly", "print-analysis-only", "bool",
-      /*default=*/"false",
-      "Print the result of the subgroup map propagation analysis and exit.">];
 }
 
 def XeGPULayoutPropagate : Pass<"xegpu-layout-propagate"> {
