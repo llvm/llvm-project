@@ -312,8 +312,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
 
   llvm::opt::ArgStringList result;
   opts.PreferVectorWidth = clang::driver::tools::ParseMPreferVectorWidthOption(
-      diags, args, result,
-      /*isCompilerDriver=*/false).value_or("");
+                               diags, args, result,
+                               /*isCompilerDriver=*/false)
+                               .value_or("");
 
   // -fembed-offload-object option
   for (auto *a :
