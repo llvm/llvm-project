@@ -16,6 +16,7 @@ class TestDAP_exception(lldbdap_testcase.DAPTestCaseBase):
         """
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)
+        self.do_continue()
 
         self.assertTrue(self.verify_stop_exception_info("signal SIGABRT"))
         exceptionInfo = self.get_exceptionInfo()

@@ -50,7 +50,7 @@ TEST(ProtocolTypesTest, Source) {
   source.name = "testName";
   source.path = "/path/to/source";
   source.sourceReference = 12345;
-  source.presentationHint = ePresentationHintEmphasize;
+  source.presentationHint = Source::eSourcePresentationHintEmphasize;
 
   llvm::Expected<Source> deserialized_source = roundtrip(source);
   ASSERT_THAT_EXPECTED(deserialized_source, llvm::Succeeded());
@@ -101,8 +101,8 @@ TEST(ProtocolTypesTest, Breakpoint) {
   breakpoint.id = 42;
   breakpoint.verified = true;
   breakpoint.message = "Breakpoint set successfully";
-  breakpoint.source =
-      Source{"test.cpp", "/path/to/test.cpp", 123, ePresentationHintNormal};
+  breakpoint.source = Source{"test.cpp", "/path/to/test.cpp", 123,
+                             Source::eSourcePresentationHintNormal};
   breakpoint.line = 10;
   breakpoint.column = 5;
   breakpoint.endLine = 15;
@@ -292,12 +292,53 @@ TEST(ProtocolTypesTest, Capabilities) {
             deserialized_capabilities->lldbExtVersion);
 }
 
+TEST(ProtocolTypesTest, Scope) {
+  Scope scope;
+  scope.name = "Locals";
+  scope.presentationHint = Scope::eScopePresentationHintLocals;
+  scope.variablesReference = 1;
+  scope.namedVariables = 2;
+  scope.indexedVariables = std::nullopt;
+  scope.expensive = false;
+  scope.line = 2;
+  scope.column = 3;
+  scope.endLine = 10;
+  scope.endColumn = 20;
+
+  Source source;
+  source.name = "testName";
+  source.path = "/path/to/source";
+  source.sourceReference = 12345;
+  source.presentationHint = Source::eSourcePresentationHintNormal;
+  scope.source = source;
+
+  llvm::Expected<Scope> deserialized_scope = roundtrip(scope);
+  ASSERT_THAT_EXPECTED(deserialized_scope, llvm::Succeeded());
+  EXPECT_EQ(scope.name, deserialized_scope->name);
+  EXPECT_EQ(scope.presentationHint, deserialized_scope->presentationHint);
+  EXPECT_EQ(scope.variablesReference, deserialized_scope->variablesReference);
+  EXPECT_EQ(scope.namedVariables, deserialized_scope->namedVariables);
+  EXPECT_EQ(scope.indexedVariables, deserialized_scope->indexedVariables);
+  EXPECT_EQ(scope.expensive, deserialized_scope->expensive);
+  EXPECT_EQ(scope.line, deserialized_scope->line);
+  EXPECT_EQ(scope.column, deserialized_scope->column);
+  EXPECT_EQ(scope.endLine, deserialized_scope->endLine);
+  EXPECT_EQ(scope.endColumn, deserialized_scope->endColumn);
+
+  EXPECT_THAT(deserialized_scope->source.has_value(), true);
+  const Source &deserialized_source = deserialized_scope->source.value();
+
+  EXPECT_EQ(source.path, deserialized_source.path);
+  EXPECT_EQ(source.sourceReference, deserialized_source.sourceReference);
+  EXPECT_EQ(source.presentationHint, deserialized_source.presentationHint);
+}
+
 TEST(ProtocolTypesTest, PresentationHint) {
   // Test all PresentationHint values.
-  std::vector<std::pair<PresentationHint, llvm::StringRef>> test_cases = {
-      {ePresentationHintNormal, "normal"},
-      {ePresentationHintEmphasize, "emphasize"},
-      {ePresentationHintDeemphasize, "deemphasize"}};
+  std::vector<std::pair<Source::PresentationHint, llvm::StringRef>> test_cases =
+      {{Source::eSourcePresentationHintNormal, "normal"},
+       {Source::eSourcePresentationHintEmphasize, "emphasize"},
+       {Source::eSourcePresentationHintDeemphasize, "deemphasize"}};
 
   for (const auto &test_case : test_cases) {
     // Serialize the PresentationHint to JSON.
@@ -306,7 +347,7 @@ TEST(ProtocolTypesTest, PresentationHint) {
     EXPECT_EQ(serialized.getAsString(), test_case.second);
 
     // Deserialize the JSON back to PresentationHint.
-    PresentationHint deserialized;
+    Source::PresentationHint deserialized;
     llvm::json::Path::Root root;
     ASSERT_TRUE(fromJSON(serialized, deserialized, root))
         << llvm::toString(root.getError());
@@ -315,7 +356,7 @@ TEST(ProtocolTypesTest, PresentationHint) {
 
   // Test invalid value.
   llvm::json::Value invalid_value = "invalid_hint";
-  PresentationHint deserialized_invalid;
+  Source::PresentationHint deserialized_invalid;
   llvm::json::Path::Root root;
   EXPECT_FALSE(fromJSON(invalid_value, deserialized_invalid, root));
 }
@@ -488,4 +529,76 @@ TEST(ProtocolTypesTest, ChecksumAlgorithm) {
   ChecksumAlgorithm deserialized_invalid;
   llvm::json::Path::Root root;
   EXPECT_FALSE(fromJSON(invalid_value, deserialized_invalid, root));
+}
+
+TEST(ProtocolTypesTest, DisassembledInstructionPresentationHint) {
+  // Test all PresentationHint values.
+  std::vector<
+      std::pair<DisassembledInstruction::PresentationHint, llvm::StringRef>>
+      test_cases = {{DisassembledInstruction::
+                         eDisassembledInstructionPresentationHintNormal,
+                     "normal"},
+                    {DisassembledInstruction::
+                         eDisassembledInstructionPresentationHintInvalid,
+                     "invalid"}};
+
+  for (const auto &test_case : test_cases) {
+    // Serialize the PresentationHint to JSON.
+    llvm::json::Value serialized = toJSON(test_case.first);
+    ASSERT_EQ(serialized.kind(), llvm::json::Value::Kind::String);
+    EXPECT_EQ(serialized.getAsString(), test_case.second);
+
+    // Deserialize the JSON back to PresentationHint.
+    DisassembledInstruction::PresentationHint deserialized;
+    llvm::json::Path::Root root;
+    ASSERT_TRUE(fromJSON(serialized, deserialized, root))
+        << llvm::toString(root.getError());
+    EXPECT_EQ(deserialized, test_case.first);
+  }
+
+  // Test invalid value.
+  llvm::json::Value invalid_value = "invalid_hint";
+  DisassembledInstruction::PresentationHint deserialized_invalid;
+  llvm::json::Path::Root root;
+  EXPECT_FALSE(fromJSON(invalid_value, deserialized_invalid, root));
+}
+
+TEST(ProtocolTypesTest, DisassembledInstruction) {
+  DisassembledInstruction instruction;
+  instruction.address = 0x12345678;
+  instruction.instructionBytes = "0F 1F 00";
+  instruction.instruction = "mov eax, ebx";
+  instruction.symbol = "main";
+  instruction.location = Source{"test.cpp", "/path/to/test.cpp", 123,
+                                Source::eSourcePresentationHintNormal};
+  instruction.line = 10;
+  instruction.column = 5;
+  instruction.endLine = 15;
+  instruction.endColumn = 10;
+  instruction.presentationHint =
+      DisassembledInstruction::eDisassembledInstructionPresentationHintNormal;
+
+  llvm::Expected<DisassembledInstruction> deserialized_instruction =
+      roundtrip(instruction);
+  ASSERT_THAT_EXPECTED(deserialized_instruction, llvm::Succeeded());
+
+  EXPECT_EQ(instruction.address, deserialized_instruction->address);
+  EXPECT_EQ(instruction.instructionBytes,
+            deserialized_instruction->instructionBytes);
+  EXPECT_EQ(instruction.instruction, deserialized_instruction->instruction);
+  EXPECT_EQ(instruction.symbol, deserialized_instruction->symbol);
+  EXPECT_EQ(instruction.location->name,
+            deserialized_instruction->location->name);
+  EXPECT_EQ(instruction.location->path,
+            deserialized_instruction->location->path);
+  EXPECT_EQ(instruction.location->sourceReference,
+            deserialized_instruction->location->sourceReference);
+  EXPECT_EQ(instruction.location->presentationHint,
+            deserialized_instruction->location->presentationHint);
+  EXPECT_EQ(instruction.line, deserialized_instruction->line);
+  EXPECT_EQ(instruction.column, deserialized_instruction->column);
+  EXPECT_EQ(instruction.endLine, deserialized_instruction->endLine);
+  EXPECT_EQ(instruction.endColumn, deserialized_instruction->endColumn);
+  EXPECT_EQ(instruction.presentationHint,
+            deserialized_instruction->presentationHint);
 }

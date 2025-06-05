@@ -109,7 +109,9 @@ class TestReports(unittest.TestCase):
 
               All tests passed but another part of the build **failed**.
 
-              [Download](https://buildkite.com/organizations/organization_slug/pipelines/pipeline_slug/builds/build_number/jobs/job_id/download.txt) the build's log file to see the details."""
+              [Download](https://buildkite.com/organizations/organization_slug/pipelines/pipeline_slug/builds/build_number/jobs/job_id/download.txt) the build's log file to see the details.
+              
+              If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
                 ),
                 "error",
             ),
@@ -169,7 +171,9 @@ class TestReports(unittest.TestCase):
           ```
           Other output goes here
           ```
-          </details>"""
+          </details>
+          
+          If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
                 ),
                 "error",
             ),
@@ -203,7 +207,9 @@ class TestReports(unittest.TestCase):
         ```
         DEF/test_2 output goes here
         ```
-        </details>"""
+        </details>
+        
+        If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
         ),
         "error",
     )
@@ -311,7 +317,9 @@ class TestReports(unittest.TestCase):
 
           * 1 test failed
 
-          Failed tests and their output was too large to report. Download the build's log file to see the details."""
+          Failed tests and their output was too large to report. Download the build's log file to see the details.
+          
+          If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
                 ),
                 "error",
             ),
@@ -352,13 +360,16 @@ class TestReports(unittest.TestCase):
 
           * 1 test failed
 
-          Failed tests and their output was too large to report. [Download](https://buildkite.com/organizations/organization_slug/pipelines/pipeline_slug/builds/build_number/jobs/job_id/download.txt) the build's log file to see the details."""
+          Failed tests and their output was too large to report. [Download](https://buildkite.com/organizations/organization_slug/pipelines/pipeline_slug/builds/build_number/jobs/job_id/download.txt) the build's log file to see the details.
+          
+          If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
                 ),
                 "error",
             ),
         )
 
     def test_report_size_limit(self):
+        test_output = "f" * 1000
         self.assertEqual(
             generate_test_report_lib.generate_report(
                 "Foo",
@@ -371,14 +382,16 @@ class TestReports(unittest.TestCase):
           <testsuites time="0.02">
           <testsuite name="Bar" tests="1" failures="1" skipped="0" time="0.02">
           <testcase classname="Bar/test_1" name="test_1" time="0.02">
-            <failure><![CDATA[Some long output goes here...]]></failure>
+            <failure><![CDATA[{output}]]></failure>
           </testcase>
           </testsuite>
-          </testsuites>"""
+          </testsuites>""".format(
+                                output=test_output
+                            )
                         )
                     )
                 ],
-                size_limit=128,
+                size_limit=512,
             ),
             (
                 dedent(
@@ -387,7 +400,9 @@ class TestReports(unittest.TestCase):
 
           * 1 test failed
 
-          Failed tests and their output was too large to report. Download the build's log file to see the details."""
+          Failed tests and their output was too large to report. Download the build's log file to see the details.
+          
+          If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
                 ),
                 "error",
             ),

@@ -19,6 +19,7 @@
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/Support/BinaryStreamArray.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include <cstdint>
 #include <vector>
@@ -1023,8 +1024,8 @@ public:
   uint32_t RecordOffset = 0;
 };
 
-Expected<CVSymbol> readSymbolFromStream(BinaryStreamRef Stream,
-                                        uint32_t Offset);
+LLVM_ABI Expected<CVSymbol> readSymbolFromStream(BinaryStreamRef Stream,
+                                                 uint32_t Offset);
 
 } // end namespace codeview
 } // end namespace llvm

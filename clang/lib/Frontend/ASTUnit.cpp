@@ -57,10 +57,8 @@
 #include "clang/Sema/CodeCompleteOptions.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaCodeCompletion.h"
-#include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ASTWriter.h"
-#include "clang/Serialization/ContinuousRangeMap.h"
 #include "clang/Serialization/ModuleCache.h"
 #include "clang/Serialization/ModuleFile.h"
 #include "clang/Serialization/PCHContainerOperations.h"
@@ -77,12 +75,10 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/DJB.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Timer.h"
@@ -803,7 +799,8 @@ void ASTUnit::ConfigureDiags(IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
 
 std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
     StringRef Filename, const PCHContainerReader &PCHContainerRdr,
-    WhatToLoad ToLoad, IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
+    WhatToLoad ToLoad, std::shared_ptr<DiagnosticOptions> DiagOpts,
+    IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
     const FileSystemOptions &FileSystemOpts, const HeaderSearchOptions &HSOpts,
     const LangOptions *LangOpts, bool OnlyLocalDecls,
     CaptureDiagsKind CaptureDiagnostics, bool AllowASTWithCompilerErrors,
@@ -823,16 +820,16 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
                            : std::make_unique<LangOptions>();
   AST->OnlyLocalDecls = OnlyLocalDecls;
   AST->CaptureDiagnostics = CaptureDiagnostics;
+  AST->DiagOpts = DiagOpts;
   AST->Diagnostics = Diags;
   AST->FileMgr = new FileManager(FileSystemOpts, VFS);
   AST->UserFilesAreVolatile = UserFilesAreVolatile;
   AST->SourceMgr = new SourceManager(AST->getDiagnostics(),
                                      AST->getFileManager(),
                                      UserFilesAreVolatile);
+  AST->ModCache = createCrossProcessModuleCache();
   AST->HSOpts = std::make_unique<HeaderSearchOptions>(HSOpts);
   AST->HSOpts->ModuleFormat = std::string(PCHContainerRdr.getFormats().front());
-  AST->ModCache =
-      createCrossProcessModuleCache(AST->HSOpts->BuildSessionTimestamp);
   AST->HeaderInfo.reset(new HeaderSearch(AST->getHeaderSearchOpts(),
                                          AST->getSourceManager(),
                                          AST->getDiagnostics(),
@@ -1535,6 +1532,7 @@ StringRef ASTUnit::getASTFileName() const {
 
 std::unique_ptr<ASTUnit>
 ASTUnit::create(std::shared_ptr<CompilerInvocation> CI,
+                std::shared_ptr<DiagnosticOptions> DiagOpts,
                 IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
                 CaptureDiagsKind CaptureDiagnostics,
                 bool UserFilesAreVolatile) {
@@ -1542,6 +1540,7 @@ ASTUnit::create(std::shared_ptr<CompilerInvocation> CI,
   ConfigureDiags(Diags, *AST, CaptureDiagnostics);
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
       createVFSFromCompilerInvocation(*CI, *Diags);
+  AST->DiagOpts = DiagOpts;
   AST->Diagnostics = Diags;
   AST->FileSystemOpts = CI->getFileSystemOpts();
   AST->Invocation = std::move(CI);
@@ -1549,8 +1548,7 @@ ASTUnit::create(std::shared_ptr<CompilerInvocation> CI,
   AST->UserFilesAreVolatile = UserFilesAreVolatile;
   AST->SourceMgr = new SourceManager(AST->getDiagnostics(), *AST->FileMgr,
                                      UserFilesAreVolatile);
-  AST->ModCache = createCrossProcessModuleCache(
-      AST->Invocation->getHeaderSearchOpts().BuildSessionTimestamp);
+  AST->ModCache = createCrossProcessModuleCache();
 
   return AST;
 }
@@ -1558,6 +1556,7 @@ ASTUnit::create(std::shared_ptr<CompilerInvocation> CI,
 ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
     std::shared_ptr<CompilerInvocation> CI,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
+    std::shared_ptr<DiagnosticOptions> DiagOpts,
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags, FrontendAction *Action,
     ASTUnit *Unit, bool Persistent, StringRef ResourceFilesPath,
     bool OnlyLocalDecls, CaptureDiagsKind CaptureDiagnostics,
@@ -1569,7 +1568,8 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
   ASTUnit *AST = Unit;
   if (!AST) {
     // Create the AST unit.
-    OwnAST = create(CI, Diags, CaptureDiagnostics, UserFilesAreVolatile);
+    OwnAST =
+        create(CI, DiagOpts, Diags, CaptureDiagnostics, UserFilesAreVolatile);
     AST = OwnAST.get();
     if (!AST)
       return nullptr;
@@ -1731,6 +1731,7 @@ bool ASTUnit::LoadFromCompilerInvocation(
 std::unique_ptr<ASTUnit> ASTUnit::LoadFromCompilerInvocation(
     std::shared_ptr<CompilerInvocation> CI,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
+    std::shared_ptr<DiagnosticOptions> DiagOpts,
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags, FileManager *FileMgr,
     bool OnlyLocalDecls, CaptureDiagsKind CaptureDiagnostics,
     unsigned PrecompilePreambleAfterNParses, TranslationUnitKind TUKind,
@@ -1739,6 +1740,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromCompilerInvocation(
   // Create the AST unit.
   std::unique_ptr<ASTUnit> AST(new ASTUnit(false));
   ConfigureDiags(Diags, *AST, CaptureDiagnostics);
+  AST->DiagOpts = DiagOpts;
   AST->Diagnostics = Diags;
   AST->OnlyLocalDecls = OnlyLocalDecls;
   AST->CaptureDiagnostics = CaptureDiagnostics;
@@ -1768,6 +1770,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromCompilerInvocation(
 std::unique_ptr<ASTUnit> ASTUnit::LoadFromCommandLine(
     const char **ArgBegin, const char **ArgEnd,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
+    std::shared_ptr<DiagnosticOptions> DiagOpts,
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags, StringRef ResourceFilesPath,
     bool StorePreamblesInMemory, StringRef PreambleStoragePath,
     bool OnlyLocalDecls, CaptureDiagsKind CaptureDiagnostics,
@@ -1830,12 +1833,14 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromCommandLine(
   AST->NumStoredDiagnosticsFromDriver = StoredDiagnostics.size();
   AST->StoredDiagnostics.swap(StoredDiagnostics);
   ConfigureDiags(Diags, *AST, CaptureDiagnostics);
+  AST->DiagOpts = DiagOpts;
   AST->Diagnostics = Diags;
   AST->FileSystemOpts = CI->getFileSystemOpts();
   VFS = createVFSFromCompilerInvocation(*CI, *Diags, VFS);
   AST->FileMgr = new FileManager(AST->FileSystemOpts, VFS);
   AST->StorePreamblesInMemory = StorePreamblesInMemory;
   AST->PreambleStoragePath = PreambleStoragePath;
+  AST->ModCache = createCrossProcessModuleCache();
   AST->OnlyLocalDecls = OnlyLocalDecls;
   AST->CaptureDiagnostics = CaptureDiagnostics;
   AST->TUKind = TUKind;
@@ -1844,8 +1849,6 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromCommandLine(
     = IncludeBriefCommentsInCodeCompletion;
   AST->UserFilesAreVolatile = UserFilesAreVolatile;
   AST->Invocation = CI;
-  AST->ModCache = createCrossProcessModuleCache(
-      AST->Invocation->getHeaderSearchOpts().BuildSessionTimestamp);
   AST->SkipFunctionBodies = SkipFunctionBodies;
   if (ForSerialization)
     AST->WriterData.reset(new ASTWriterData(*AST->ModCache));
@@ -2381,6 +2384,7 @@ bool ASTUnit::serialize(raw_ostream &OS) {
 
   SmallString<128> Buffer;
   llvm::BitstreamWriter Stream(Buffer);
+  IntrusiveRefCntPtr<ModuleCache> ModCache = createCrossProcessModuleCache();
   ASTWriter Writer(Stream, Buffer, *ModCache, {});
   return serializeUnit(Writer, Buffer, getSema(), OS);
 }

@@ -8,10 +8,10 @@
 
 #include "Transport.h"
 #include "Protocol/ProtocolBase.h"
+#include "TestBase.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/Pipe.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <chrono>
@@ -21,20 +21,18 @@
 using namespace llvm;
 using namespace lldb;
 using namespace lldb_dap;
+using namespace lldb_dap_tests;
 using namespace lldb_dap::protocol;
 using lldb_private::File;
 using lldb_private::NativeFile;
 using lldb_private::Pipe;
 
-class TransportTest : public testing::Test {
+class TransportTest : public PipeBase {
 protected:
-  Pipe input;
-  Pipe output;
   std::unique_ptr<Transport> transport;
 
   void SetUp() override {
-    ASSERT_THAT_ERROR(input.CreateNew(false).ToError(), Succeeded());
-    ASSERT_THAT_ERROR(output.CreateNew(false).ToError(), Succeeded());
+    PipeBase::SetUp();
     transport = std::make_unique<Transport>(
         "stdio", nullptr,
         std::make_shared<NativeFile>(input.GetReadFileDescriptor(),
@@ -43,13 +41,6 @@ protected:
         std::make_shared<NativeFile>(output.GetWriteFileDescriptor(),
                                      File::eOpenOptionWriteOnly,
                                      NativeFile::Unowned));
-  }
-
-  void Write(StringRef json) {
-    std::string message =
-        formatv("Content-Length: {0}\r\n\r\n{1}", json.size(), json).str();
-    ASSERT_THAT_EXPECTED(input.Write(message.data(), message.size()),
-                         Succeeded());
   }
 };
 
@@ -65,7 +56,12 @@ TEST_F(TransportTest, MalformedRequests) {
 }
 
 TEST_F(TransportTest, Read) {
-  Write(R"json({"seq": 1, "type": "request", "command": "abc"})json");
+  std::string json =
+      R"json({"seq": 1, "type": "request", "command": "abc"})json";
+  std::string message =
+      formatv("Content-Length: {0}\r\n\r\n{1}", json.size(), json).str();
+  ASSERT_THAT_EXPECTED(input.Write(message.data(), message.size()),
+                       Succeeded());
   ASSERT_THAT_EXPECTED(
       transport->Read(std::chrono::milliseconds(1)),
       HasValue(testing::VariantWith<Request>(testing::FieldsAre(
