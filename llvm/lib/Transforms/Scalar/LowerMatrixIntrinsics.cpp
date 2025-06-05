@@ -1124,16 +1124,16 @@ public:
     switch (Inst->getIntrinsicID()) {
     case Intrinsic::matrix_multiply:
       LowerMultiply(Inst);
-      break;
+      return;
     case Intrinsic::matrix_transpose:
       LowerTranspose(Inst);
-      break;
+      return;
     case Intrinsic::matrix_column_major_load:
       LowerColumnMajorLoad(Inst);
-      break;
+      return;
     case Intrinsic::matrix_column_major_store:
       LowerColumnMajorStore(Inst);
-      break;
+      return;
     case Intrinsic::abs:
     case Intrinsic::fabs: {
       IRBuilder<> Builder(Inst);
