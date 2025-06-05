@@ -141,8 +141,6 @@ func.func @negative_broadcast_transpose_021(%arg0 : vector<3x1x3xi8>) -> vector<
   return %1 : vector<3x3x3xi8>
 }
 
-// -----
-
 /// +--------------------------------------------------------------------------
 ///  Tests of ShapeCastOp::fold:  shape_cast(transpose) -> shape_cast
 /// +--------------------------------------------------------------------------
