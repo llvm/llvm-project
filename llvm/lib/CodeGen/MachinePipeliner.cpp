@@ -334,7 +334,7 @@ public:
 
 private:
   /// Tags to \p SU if the instruction may affect the order-dependencies.
-  std::optional<TaggedSUnit> checkInstrType(SUnit *SU) const;
+  std::optional<InstrTag> getInstrTag(SUnit *SU) const;
 
   void addLoopCarriedDepenenciesForChunks(const LoadStoreChunk &From,
                                           const LoadStoreChunk &To);
@@ -1030,34 +1030,29 @@ LoopCarriedOrderDepsTracker::LoopCarriedOrderDepsTracker(
 void LoopCarriedOrderDepsTracker::computeDependencies() {
   // Traverse all instructions and extract only what we are targetting.
   for (auto &SU : SUnits) {
-    auto Tagged = checkInstrType(&SU);
+    auto Tagged = getInstrTag(&SU);
 
     // This instruction has no loop-carried order-dependencies.
     if (!Tagged)
       continue;
-    TaggedSUnits.push_back(*Tagged);
+    TaggedSUnits.emplace_back(&SU, *Tagged);
   }
 
   computeDependenciesAux();
-
-  LLVM_DEBUG({
-    for (unsigned I = 0; I != N; I++)
-      assert(!LoopCarried[I].test(I) && "Unexpected self-loop");
-  });
 }
 
-std::optional<LoopCarriedOrderDepsTracker::TaggedSUnit>
-LoopCarriedOrderDepsTracker::checkInstrType(SUnit *SU) const {
+std::optional<LoopCarriedOrderDepsTracker::InstrTag>
+LoopCarriedOrderDepsTracker::getInstrTag(SUnit *SU) const {
   MachineInstr *MI = SU->getInstr();
   if (TII->isGlobalMemoryObject(MI))
-    return TaggedSUnit(SU, InstrTag::Barrier);
+    return InstrTag::Barrier;
 
   if (MI->mayStore() ||
       (MI->mayLoad() && !MI->isDereferenceableInvariantLoad()))
-    return TaggedSUnit(SU, InstrTag::LoadOrStore);
+    return InstrTag::LoadOrStore;
 
   if (MI->mayRaiseFPException())
-    return TaggedSUnit(SU, InstrTag::FPExceptions);
+    return InstrTag::FPExceptions;
 
   return std::nullopt;
 }
