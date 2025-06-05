@@ -7384,6 +7384,22 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, getValue(I.getOperand(0)));
     return;
 
+  case Intrinsic::type_test:
+  case Intrinsic::public_type_test: {
+    bool AllUsersAreAssume = llvm::all_of(I.users(), [](const User *U) {
+      if (const auto *call = dyn_cast<CallInst>(U)) {
+        return call->getIntrinsicID() == Intrinsic::assume;
+      }
+      return false;
+    });
+
+    if (AllUsersAreAssume)
+      setValue(&I, DAG.getUNDEF(MVT::i1));
+    else
+      setValue(&I, DAG.getConstant(1, sdl, MVT::i1));
+    return;
+  }
+
   case Intrinsic::assume:
   case Intrinsic::experimental_noalias_scope_decl:
   case Intrinsic::var_annotation:
