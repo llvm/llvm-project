@@ -154,20 +154,18 @@ class DXILPrepareModule : public ModulePass {
         return nullptr;
     }
 
+    Type *ValTy = Operand->getType();
     // Also omit the bitcast for matching global array types
-    if (auto *GlobalVar = dyn_cast<GlobalVariable>(Operand)) {
-      Type *ValTy = GlobalVar->getValueType();
+    if (auto *GlobalVar = dyn_cast<GlobalVariable>(Operand))
+      ValTy = GlobalVar->getValueType();
 
-      if (auto *ArrTy = dyn_cast<ArrayType>(ValTy)) {
-        Type *ElTy = ArrTy->getElementType();
-        if (ElTy == Ty)
-          return nullptr;
-      }
-    }
+    if (auto *AI = dyn_cast<AllocaInst>(Operand))
+      ValTy = AI->getAllocatedType();
 
-    // Also omit the bitcast for alloca instructions
-    if (auto *AI = dyn_cast<AllocaInst>(Operand)) {
-      return nullptr;
+    if (auto *ArrTy = dyn_cast<ArrayType>(ValTy)) {
+      Type *ElTy = ArrTy->getElementType();
+      if (ElTy == Ty)
+        return nullptr;
     }
 
     // finally, drill down GEP instructions until we get the array
@@ -180,13 +178,14 @@ class DXILPrepareModule : public ModulePass {
           continue;
         }
 
-        if (auto *GlobalVar = dyn_cast<GlobalVariable>(OpArg)) {
-          Type *ValTy = GlobalVar->getValueType();
-          if (auto *ArrTy = dyn_cast<ArrayType>(ValTy)) {
-            Type *ElTy = ArrTy->getElementType();
-            if (ElTy == Ty)
-              return nullptr;
-          }
+        if (auto *GlobalVar = dyn_cast<GlobalVariable>(OpArg))
+          ValTy = GlobalVar->getValueType();
+        if (auto *AI = dyn_cast<AllocaInst>(Operand))
+          ValTy = AI->getAllocatedType();
+        if (auto *ArrTy = dyn_cast<ArrayType>(ValTy)) {
+          Type *ElTy = ArrTy->getElementType();
+          if (ElTy == Ty)
+            return nullptr;
         }
         break;
       }
