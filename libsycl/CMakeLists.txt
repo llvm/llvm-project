@@ -60,6 +60,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBSYCL_LIBRARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBSYCL_LIBRARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LIBSYCL_LIBRARY_DIR})
 
+<<<<<<< HEAD
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
 # Download & build dependency for kernel offloading
@@ -67,21 +68,14 @@ include(FetchUnifiedRuntime)
 
 # The change in LIBSYCL_MAJOR_VERSION must be accompanied with the same update in
 # clang/lib/Driver/CMakeLists.txt.
+=======
+>>>>>>> addlibsycl
 set(LIBSYCL_MAJOR_VERSION 0)
 set(LIBSYCL_MINOR_VERSION 1)
 set(LIBSYCL_PATCH_VERSION 0)
 set(LIBSYCL_VERSION_STRING "${LIBSYCL_MAJOR_VERSION}.${LIBSYCL_MINOR_VERSION}.${LIBSYCL_PATCH_VERSION}")
 set(LIBSYCL_ABI_NAMESPACE "V${LIBSYCL_MAJOR_VERSION}" CACHE STRING
     "The inline ABI namespace used by libsycl. It defaults to Vn where `n` is the current ABI version.")
-
-# Generate headers
-configure_file("${LIBSYCL_SOURCE_DIR}/src/version.hpp.in" "${LIBSYCL_BUILD_INCLUDE_DIR}/sycl/version.hpp")
-
-# Install generated headers.
-install(FILES
-  "${LIBSYCL_BUILD_INCLUDE_DIR}/sycl/version.hpp"
-  DESTINATION "${LIBSYCL_INCLUDE_DIR}/sycl"
-  COMPONENT sycl-headers)
 
 #===============================================================================
 # Setup Compiler Flags
@@ -101,6 +95,19 @@ if(LIBSYCL_ENABLE_WERROR)
     append("-Werror" CMAKE_CXX_FLAGS)
   endif()
 endif()
+
+#===============================================================================
+# Setup build & install rules
+#===============================================================================
+
+# Generate headers
+configure_file("${LIBSYCL_SOURCE_DIR}/src/version.hpp.in" "${LIBSYCL_BUILD_INCLUDE_DIR}/sycl/version.hpp")
+
+# Install generated headers.
+install(FILES
+  "${LIBSYCL_BUILD_INCLUDE_DIR}/sycl/version.hpp"
+  DESTINATION "${LIBSYCL_INCLUDE_DIR}/sycl"
+  COMPONENT sycl-headers)
 
 # This is a workaround to detect changes (add or modify) in subtree which
 # are not detected by copy_directory command.
@@ -131,7 +138,7 @@ add_custom_command(
   COMMAND ${CMAKE_COMMAND} -E copy ${UR_HEADERS_TO_COPY} ${LIBSYCL_BUILD_INCLUDE_DIR}
   COMMENT "Copying SYCL headers...")
 
-install(DIRECTORY "${LIBSYCL_SOURCE_INCLUDE_DIR}/sycl" DESTINATION ${LIBSYCL_INCLUDE_DIR}/sycl COMPONENT sycl-headers)
+install(DIRECTORY "${LIBSYCL_SOURCE_INCLUDE_DIR}/sycl" DESTINATION ${LIBSYCL_INCLUDE_DIR} COMPONENT sycl-headers)
 install(FILES "${UNIFIED_RUNTIME_INCLUDE_DIR}/ur_api.h" DESTINATION ${LIBSYCL_INCLUDE_DIR}
   COMPONENT sycl-headers)
 install(FILES "${UNIFIED_RUNTIME_INCLUDE_DIR}/ur_api_funcs.def" DESTINATION ${LIBSYCL_INCLUDE_DIR}
