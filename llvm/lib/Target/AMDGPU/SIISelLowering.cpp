@@ -5942,7 +5942,6 @@ SDValue SITargetLowering::splitUnaryVectorOp(SDValue Op,
 SDValue SITargetLowering::lowerROTR(SDValue Op, SelectionDAG &DAG) const {
   unsigned Opc = Op.getOpcode();
   EVT VT = Op.getValueType();
-  assert(Opc == ISD::ROTR && "Expected ROTR Opcode for lowerROTR.");
 
   assert((VT == MVT::v2i32 || VT == MVT::v4i32 || VT == MVT::v8i32 ||
           VT == MVT::v16i32) &&
