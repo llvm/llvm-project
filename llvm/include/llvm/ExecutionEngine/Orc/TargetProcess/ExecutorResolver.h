@@ -34,11 +34,11 @@ public:
 
 class DylibSymbolResolver : public ExecutorResolver {
 public:
-  DylibSymbolResolver(tpctypes::DylibHandle H)
-  : Handle(H) {}
+  DylibSymbolResolver(tpctypes::DylibHandle H) : Handle(H) {}
 
-  void resolveAsync(const RemoteSymbolLookupSet &L,
-                    ExecutorResolver::YieldResolveResultFn &&OnResolve) override;
+  void
+  resolveAsync(const RemoteSymbolLookupSet &L,
+               ExecutorResolver::YieldResolveResultFn &&OnResolve) override;
 
 private:
   tpctypes::DylibHandle Handle;
