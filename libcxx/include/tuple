@@ -213,6 +213,7 @@ template <class... Types>
 #if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 #  include <__cxx03/__config>
 #else
+#  include <__concepts/boolean_testable.h>
 #  include <__compare/common_comparison_category.h>
 #  include <__compare/ordering.h>
 #  include <__compare/synth_three_way.h>
