@@ -733,12 +733,7 @@ struct NVGPUAsyncCreateGroupLowering
   LogicalResult
   matchAndRewrite(nvgpu::DeviceAsyncCreateGroupOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    rewriter.create<NVVM::CpAsyncCommitGroupOp>(op.getLoc());
-    // Drop the result token.
-    Value zero = rewriter.create<LLVM::ConstantOp>(
-        op->getLoc(), IntegerType::get(op.getContext(), 32),
-        rewriter.getI32IntegerAttr(0));
-    rewriter.replaceOp(op, zero);
+    rewriter.replaceOpWithNewOp<NVVM::CpAsyncCommitGroupOp>(op);
     return success();
   }
 };
