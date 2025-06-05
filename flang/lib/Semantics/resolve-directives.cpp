@@ -2369,17 +2369,21 @@ void OmpAttributeVisitor::CreateImplicitSymbols(const Symbol *symbol) {
       dsa = prevDSA;
     } else if (taskGenDir) {
       // TODO 5) dummy arg in orphaned taskgen construct -> firstprivate
-      // variables with static storage duration are predetermined as shared
-      if (prevDSA.test(Symbol::Flag::OmpShared) || isStaticStorageDuration) {
+      if (prevDSA.test(Symbol::Flag::OmpShared)) {
         // 6) shared in enclosing context -> shared
         dsa = {Symbol::Flag::OmpShared};
         makeSymbol(dsa);
         PRINT_IMPLICIT_RULE("6) taskgen: shared");
+      } else if (isStaticStorageDuration) {
+        // 7) variables with static storage duration are predetermined as shared
+        dsa = {Symbol::Flag::OmpShared};
+        makeSymbol(dsa);
+        PRINT_IMPLICIT_RULE("7) taskgen: shared (static storage duration)");
       } else {
-        // 7) firstprivate
+        // 8) firstprivate
         dsa = {Symbol::Flag::OmpFirstPrivate};
         makeSymbol(dsa)->set(Symbol::Flag::OmpImplicit);
-        PRINT_IMPLICIT_RULE("7) taskgen: firstprivate");
+        PRINT_IMPLICIT_RULE("8) taskgen: firstprivate");
       }
     }
     prevDSA = dsa;

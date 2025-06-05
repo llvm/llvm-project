@@ -170,7 +170,7 @@ subroutine implicit_dsa_test8
   !$omp end task
 end subroutine
 
-! Test static storage duration variables default to shared DSA
+! Test variables defined in modules default to shared DSA
 !DEF: /implicit_dsa_test9_mod Module
 module implicit_dsa_test9_mod
  !DEF: /implicit_dsa_test9_mod/tm3a PUBLIC (InDataStmt) ObjectEntity COMPLEX(4)
@@ -189,3 +189,19 @@ contains
   print *,tm3a
   end subroutine
 end module
+
+! Test variables in data statement default to shared DSA
+!DEF: /implicit_dsa_test10 (Subroutine) Subprogram
+subroutine implicit_dsa_test10
+ !DEF: /implicit_dsa_test10/tm3a (Implicit, InDataStmt) ObjectEntity REAL(4)
+data tm3a /(0, 2)/
+!$omp task
+  !$omp task
+ !DEF: /implicit_dsa_test10/OtherConstruct1/OtherConstruct1/tm3a (OmpShared) HostAssoc REAL(4)
+    tm3a = (1, 2)
+  !$omp end task
+!$omp end task
+!$omp taskwait
+ !REF: /implicit_dsa_test10/tm3a
+print *,tm3a
+end subroutine
