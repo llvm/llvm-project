@@ -23,7 +23,6 @@
 #include "llvm-c/Target.h"
 #include "llvm-c/TargetMachine.h"
 #include "llvm-c/Types.h"
-#include "llvm/Support/Compiler.h"
 
 LLVM_C_EXTERN_C_BEGIN
 
@@ -36,14 +35,14 @@ LLVM_C_EXTERN_C_BEGIN
 
 /**
  * Empty function used to force the linker to link MCJIT.
- * Hidden because it does not apply to the dylib interface.
+ * Has no effect when called on a pre-built library (dylib interface).
  */
-LLVM_ATTRIBUTE_VISIBILITY_HIDDEN void LLVMLinkInMCJIT(void);
+void LLVMLinkInMCJIT(void);
 /**
  * Empty function used to force the linker to link the LLVM interpreter.
- * Hidden because it does not apply to the dylib interface.
+ * Has no effect when called on a pre-built library (dylib interface).
  */
-LLVM_ATTRIBUTE_VISIBILITY_HIDDEN void LLVMLinkInInterpreter(void);
+void LLVMLinkInInterpreter(void);
 
 typedef struct LLVMOpaqueGenericValue *LLVMGenericValueRef;
 typedef struct LLVMOpaqueExecutionEngine *LLVMExecutionEngineRef;
