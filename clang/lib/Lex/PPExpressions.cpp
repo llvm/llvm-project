@@ -984,13 +984,8 @@ static std::optional<CXXStandardLibraryVersionInfo>
 getCXXStandardLibraryVersion(Preprocessor &PP, StringRef MacroName,
                              CXXStandardLibraryVersionInfo::Library Lib) {
   MacroInfo *Macro = PP.getMacroInfo(PP.getIdentifierInfo(MacroName));
-  if (!Macro)
+  if (!Macro || Macro->getNumTokens() != 1 || !Macro->isObjectLike())
     return std::nullopt;
-
-  if (Macro->getNumTokens() != 1 || !Macro->isObjectLike()) {
-    Macro->dump();
-    return std::nullopt;
-  }
 
   const Token &RevisionDateTok = Macro->getReplacementToken(0);
 
@@ -999,19 +994,16 @@ getCXXStandardLibraryVersion(Preprocessor &PP, StringRef MacroName,
   llvm::StringRef RevisionDate =
       PP.getSpelling(RevisionDateTok, Buffer, &Invalid);
   if (!Invalid) {
-    llvm::errs() << RevisionDate << "\n";
-    unsigned Value;
+    std::uint64_t Value;
     // We don't use NumericParser to avoid diagnostics
-    if (!RevisionDate.consumeInteger(10, Value)) {
-      llvm::errs() << "Value:" << Value << "\n";
+    if (!RevisionDate.consumeInteger(10, Value))
       return CXXStandardLibraryVersionInfo{Lib, Value};
-    }
   }
   return CXXStandardLibraryVersionInfo{CXXStandardLibraryVersionInfo::Unknown,
                                        0};
 }
 
-std::optional<unsigned> Preprocessor::getStdLibCxxVersion() {
+std::optional<uint64_t> Preprocessor::getStdLibCxxVersion() {
   if (!CXXStandardLibraryVersion)
     CXXStandardLibraryVersion = getCXXStandardLibraryVersion(
         *this, "__GLIBCXX__", CXXStandardLibraryVersionInfo::LibStdCXX);
@@ -1024,10 +1016,10 @@ std::optional<unsigned> Preprocessor::getStdLibCxxVersion() {
   return std::nullopt;
 }
 
-bool Preprocessor::NeedsStdLibCxxWorkaroundBefore(unsigned FixedVersion) {
+bool Preprocessor::NeedsStdLibCxxWorkaroundBefore(uint64_t FixedVersion) {
   assert(FixedVersion >= 2000'00'00 && FixedVersion <= 2100'00'00 &&
          "invalid value for __GLIBCXX__");
-  std::optional<unsigned> Ver = getStdLibCxxVersion();
+  std::optional<std::uint64_t> Ver = getStdLibCxxVersion();
   if (!Ver)
     return false;
   return *Ver < FixedVersion;
