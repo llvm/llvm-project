@@ -208,6 +208,7 @@ Changes to the RISC-V Backend
   Extensions.
 * `-mcpu=andes-a25` and `-mcpu=andes-ax25` were added.
 * The `Shlcofideleg` extension was added.
+* `-mcpu=sifive-x390` was added.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -220,6 +221,8 @@ Changes to the Windows Target
 
 Changes to the X86 Backend
 --------------------------
+
+* `fp128` will now use `*f128` libcalls on 32-bit GNU targets as well.
 
 Changes to the OCaml bindings
 -----------------------------
