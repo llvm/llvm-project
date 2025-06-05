@@ -387,7 +387,8 @@ private:
       auto resultSubShape =
           resultShape.slice(resultIndices.front(), resultIndices.size());
 
-      if (llvm::count_if(srcSubShape, ShapedType::isDynamic) >= 2)
+      if (llvm::count_if(srcSubShape, ShapedType::isDynamic) >= 2 &&
+          llvm::count_if(resultSubShape, ShapedType::isDynamic) >= 2)
         return std::nullopt;
 
       if (srcSubShape.size() == resultSubShape.size()) {
