@@ -6526,34 +6526,52 @@ Clang allows additional identifiers to be declared in the following cases:
 
 * A compound literal may introduce a new type. e.g.,
 
-  .. code-block:: c
+.. code-block:: c
 
-    auto x = (struct S { int x, y; }){ 1, 2 };      // Accepted by Clang
-    constexpr int i = (struct T { int x; }){ 1 }.x; // Accepted by Clang
+  auto x = (struct S { int x, y; }){ 1, 2 };      // Accepted by Clang
+  constexpr int i = (struct T { int x; }){ 1 }.x; // Accepted by Clang
 
 * The type specifier for a ``constexpr`` declaration may define a new type.
   e.g.,
 
-  .. code-block:: c
+.. code-block:: c
 
-    constexpr struct S { int x; } s = { 1 }; // Accepted by Clang
+  constexpr struct S { int x; } s = { 1 }; // Accepted by Clang
 
 * A function declarator may be declared with parameters, including parameters
   which introduce a new type. e.g.,
 
-  .. code-block:: c
+.. code-block:: c
 
-    constexpr int (*fp)(int x) = nullptr;              // Accepted by Clang
-    auto f = (void (*)(struct S { int x; } s))nullptr; // Accepted by Clang
+  constexpr int (*fp)(int x) = nullptr;              // Accepted by Clang
+  auto f = (void (*)(struct S { int x; } s))nullptr; // Accepted by Clang
 
 * The initializer may contain a GNU statement expression which defines new
   types or objects. e.g.,
 
-  .. code-block:: c
+.. code-block:: c
 
-    constexpr int i = ({                              // Accepted by Clang
-      constexpr int x = 12;
-      constexpr struct S { int x; } s = { x };
-      s.x;
-    });
-    auto x = ({ struct S { int x; } s = { 0 }; s; }); // Accepted by Clang
+  constexpr int i = ({                              // Accepted by Clang
+    constexpr int x = 12;
+    constexpr struct S { int x; } s = { x };
+    s.x;
+  });
+  auto x = ({ struct S { int x; } s = { 0 }; s; }); // Accepted by Clang
+
+Clang intentionally does not implement the changed scoping rules from C23
+for underspecified declarations. Doing so would significantly complicate the
+implementation in order to get reasonable diagnostic behavior and also means
+Clang fails to reject some code that should be rejected. e.g.,
+
+.. code-block:: c
+
+  // This should be rejected because 'x' is not in scope within the initializer
+  // of an underspecified declaration. Clang accepts because it treats the scope
+  // of the identifier as beginning immediately after the declarator, same as with
+  // a non-underspecified declaration.
+  constexpr int x = sizeof(x);
+
+  // Clang rejects this code with a diagnostic about using the variable within its
+  // own initializer rather than rejecting the code with an undeclared identifier
+  // diagnostic.
+  auto x = x;
