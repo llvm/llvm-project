@@ -58048,6 +58048,23 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = combineToHorizontalAddSub(N, DAG, Subtarget))
     return V;
 
+  // Canonicalize hidden LEA pattern:
+  // Fold (add (sub (shl x, c), y), z) -> (sub (add (shl x, c), z), y)
+  // iff c < 4
+  if (VT == MVT::i32 || VT == MVT::i64) {
+    SDValue Y, Z, Shift;
+    APInt Amt;
+    if (sd_match(
+            N, m_Add(m_OneUse(m_Sub(m_AllOf(m_Value(Shift),
+                                            m_Shl(m_Value(), m_ConstInt(Amt))),
+                                    m_Value(Y))),
+                     m_Value(Z))) &&
+        Amt.ult(4) && !isa<ConstantSDNode>(Z)) {
+      return DAG.getNode(ISD::SUB, DL, VT,
+                         DAG.getNode(ISD::ADD, DL, VT, Shift, Z), Y);
+    }
+  }
+
   // add(psadbw(X,0),psadbw(Y,0)) -> psadbw(add(X,Y),0)
   // iff X and Y won't overflow.
   if (Op0.getOpcode() == X86ISD::PSADBW && Op1.getOpcode() == X86ISD::PSADBW &&
