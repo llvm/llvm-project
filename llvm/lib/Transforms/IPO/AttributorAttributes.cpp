@@ -12648,9 +12648,12 @@ private:
   bool requiresNoAlias() const {
     switch (getPositionKind()) {
     default:
-      return false;
-    case IRP_CALL_SITE_RETURNED:
+      // Conservatively default to require noalias.
       return true;
+    case IRP_FLOAT:
+    case IRP_RETURNED:
+    case IRP_CALL_SITE:
+      return false;
     case IRP_ARGUMENT: {
       const Function *F = getAssociatedFunction();
       assert(F && "no associated function for argument");
