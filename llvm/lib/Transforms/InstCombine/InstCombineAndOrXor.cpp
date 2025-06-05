@@ -3593,10 +3593,9 @@ static Value *foldOrOfInversions(BinaryOperator &I,
   return nullptr;
 }
 
-// A decomposition of ((A & N) ? 0 : N * C) . Where X = A, Factor = C, Mask = N.
-// The NUW / NSW bools
-// Note that we can decompose equivalent forms of this expression (e.g. ((A & N)
-// * C))
+// A decomposition of ((X & Mask) ? 0 : Mask * Factor) . The NUW / NSW bools
+// track these properities for preservation. Note that we can decompose
+// equivalent forms of this expression (e.g. ((X & Mask) * Factor))
 struct DecomposedBitMaskMul {
   Value *X;
   APInt Factor;
@@ -3610,25 +3609,20 @@ static std::optional<DecomposedBitMaskMul> matchBitmaskMul(Value *V) {
   if (!Op)
     return std::nullopt;
 
-  Value *MulOp = nullptr;
   const APInt *MulConst = nullptr;
 
   // Decompose (A & N) * C) into BitMaskMul
-  if (match(Op, m_Mul(m_Value(MulOp), m_APInt(MulConst)))) {
-    Value *Original = nullptr;
-    const APInt *Mask = nullptr;
-    if (MulConst->isZero())
+  Value *Original = nullptr;
+  const APInt *Mask = nullptr;
+  if (match(Op, m_Mul(m_And(m_Value(Original), m_APInt(Mask)),
+                      m_APInt(MulConst)))) {
+    if (MulConst->isZero() || Mask->isZero())
       return std::nullopt;
 
-    if (match(MulOp, m_And(m_Value(Original), m_APInt(Mask)))) {
-      if (Mask->isZero())
-        return std::nullopt;
-      return std::optional<DecomposedBitMaskMul>(
-          {Original, *MulConst, *Mask,
-           cast<BinaryOperator>(Op)->hasNoUnsignedWrap(),
-           cast<BinaryOperator>(Op)->hasNoSignedWrap()});
-    }
-    return std::nullopt;
+    return std::optional<DecomposedBitMaskMul>(
+        {Original, *MulConst, *Mask,
+         cast<BinaryOperator>(Op)->hasNoUnsignedWrap(),
+         cast<BinaryOperator>(Op)->hasNoSignedWrap()});
   }
 
   Value *Cond = nullptr;
@@ -3642,15 +3636,16 @@ static std::optional<DecomposedBitMaskMul> matchBitmaskMul(Value *V) {
     if (!ICmpDecompose.has_value())
       return std::nullopt;
 
+    assert(ICmpInst::isEquality(ICmpDecompose->Pred) &&
+           ICmpDecompose->C.isZero());
+
     if (ICmpDecompose->Pred == ICmpInst::ICMP_NE)
       std::swap(EqZero, NeZero);
 
     if (!EqZero->isZero() || NeZero->isZero())
       return std::nullopt;
 
-    if (!ICmpInst::isEquality(ICmpDecompose->Pred) ||
-        !ICmpDecompose->C.isZero() || !ICmpDecompose->Mask.isPowerOf2() ||
-        ICmpDecompose->Mask.isZero() ||
+    if (!ICmpDecompose->Mask.isPowerOf2() || ICmpDecompose->Mask.isZero() ||
         NeZero->getBitWidth() != ICmpDecompose->Mask.getBitWidth())
       return std::nullopt;
 
