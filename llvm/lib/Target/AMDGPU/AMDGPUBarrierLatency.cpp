@@ -8,7 +8,7 @@
 //
 /// \file This file contains a DAG scheduling mutation to add data dependency
 ///       edges between ATOMIC_FENCE instructions and preceeding memory
-///       accesses they might be effected by the fence.
+///       accesses that might be affected by the fence.
 ///       This is beneficial when a fence would cause wait count insertion,
 ///       as more instructions will be scheduled before the fence hiding
 ///       memory latency.
