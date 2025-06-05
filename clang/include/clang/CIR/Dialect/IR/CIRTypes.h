@@ -26,8 +26,6 @@ struct RecordTypeStorage;
 
 bool isValidFundamentalIntWidth(unsigned width);
 
-bool isFPOrFPVectorTy(mlir::Type);
-
 } // namespace cir
 
 //===----------------------------------------------------------------------===//

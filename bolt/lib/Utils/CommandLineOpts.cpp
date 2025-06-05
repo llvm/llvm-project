@@ -12,6 +12,7 @@
 
 #include "bolt/Utils/CommandLineOpts.h"
 #include "VCSVersion.inc"
+#include "llvm/Support/Regex.h"
 
 using namespace llvm;
 
@@ -104,35 +105,54 @@ ExecutionCountThreshold("execution-count-threshold",
   cl::cat(BoltOptCategory));
 
 bool HeatmapBlockSpecParser::parse(cl::Option &O, StringRef ArgName,
-                                   StringRef Arg, HeatmapBlockSpec &Val) {
-  auto [InitialPart, ScalesPart] = Arg.split(':');
-  if (InitialPart.getAsInteger(10, Val.Initial)) {
-    O.error("'" + Arg + "' value invalid for block-size initial_size argument");
-    return true;
-  }
-  // Scales part is optional.
-  if (ScalesPart.empty())
-    return false;
-  SmallVector<StringRef> Scales;
-  ScalesPart.split(Scales, ',');
-  for (StringRef Scale : Scales) {
-    unsigned &ScaleVal = Val.Scales.emplace_back(0);
-    if (Scale.getAsInteger(10, ScaleVal)) {
-      O.error("'" + Scale + "' value invalid for block-size scale argument");
+                                   StringRef Arg, HeatmapBlockSizes &Val) {
+  // Parses a human-readable suffix into a shift amount or nullopt on error.
+  auto parseSuffix = [](StringRef Suffix) -> std::optional<unsigned> {
+    if (Suffix.empty())
+      return 0;
+    if (!Regex{"^[kKmMgG]i?[bB]?$"}.match(Suffix))
+      return std::nullopt;
+    // clang-format off
+    switch (Suffix.front()) {
+      case 'k': case 'K': return 10;
+      case 'm': case 'M': return 20;
+      case 'g': case 'G': return 30;
+    }
+    // clang-format on
+    llvm_unreachable("Unexpected suffix");
+  };
+
+  SmallVector<StringRef> Sizes;
+  Arg.split(Sizes, ',');
+  unsigned PreviousSize = 0;
+  for (StringRef Size : Sizes) {
+    StringRef OrigSize = Size;
+    unsigned &SizeVal = Val.emplace_back(0);
+    if (Size.consumeInteger(10, SizeVal)) {
+      O.error("'" + OrigSize + "' value can't be parsed as an integer");
       return true;
     }
+    if (std::optional<unsigned> ShiftAmt = parseSuffix(Size)) {
+      SizeVal <<= *ShiftAmt;
+    } else {
+      O.error("'" + Size + "' value can't be parsed as a suffix");
+      return true;
+    }
+    if (SizeVal <= PreviousSize || (PreviousSize && SizeVal % PreviousSize)) {
+      O.error("'" + OrigSize + "' must be a multiple of previous value");
+      return true;
+    }
+    PreviousSize = SizeVal;
   }
   return false;
 }
 
-cl::opt<opts::HeatmapBlockSpec, false, opts::HeatmapBlockSpecParser>
+cl::opt<opts::HeatmapBlockSizes, false, opts::HeatmapBlockSpecParser>
     HeatmapBlock(
-        "block-size", cl::value_desc("initial_size{:pow2_scale1,...}"),
-        cl::desc("size of a heat map block in bytes (default 64), optionally "
-                 "followed by a comma-separated list of cumulative scales "
-                 "represented as powers of 2 to produce zoomed-out heatmaps "
-                 "(default 6, 2, 6 = 4k, 16k, 1M block sizes)."),
-        cl::init(HeatmapBlockSpec{/*Initial*/ 64, /*Scales*/ {6, 2, 6}}),
+        "block-size", cl::value_desc("initial_size{,zoom-out_size,...}"),
+        cl::desc("heatmap bucket size, optionally followed by zoom-out sizes "
+                 "for coarse-grained heatmaps (default 64B, 4K, 256K)."),
+        cl::init(HeatmapBlockSizes{/*Initial*/ 64, /*Zoom-out*/ 4096, 262144}),
         cl::cat(HeatmapCategory));
 
 cl::opt<unsigned long long> HeatmapMaxAddress(

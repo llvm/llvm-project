@@ -201,6 +201,7 @@ static bool parseVectorLibArg(Fortran::frontend::CodeGenOptions &opts,
           .Case("SLEEF", VectorLibrary::SLEEF)
           .Case("Darwin_libsystem_m", VectorLibrary::Darwin_libsystem_m)
           .Case("ArmPL", VectorLibrary::ArmPL)
+          .Case("AMDLIBM", VectorLibrary::AMDLIBM)
           .Case("NoLibrary", VectorLibrary::NoLibrary)
           .Default(std::nullopt);
   if (!val.has_value()) {
@@ -269,6 +270,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::driver::options::OPT_fno_stack_arrays, false))
     opts.StackArrays = 1;
 
+  if (args.getLastArg(clang::driver::options::OPT_floop_interchange))
+    opts.InterchangeLoops = 1;
+
   if (args.getLastArg(clang::driver::options::OPT_vectorize_loops))
     opts.VectorizeLoop = 1;
 
@@ -304,6 +308,20 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
 
   for (auto *a : args.filtered(clang::driver::options::OPT_fpass_plugin_EQ))
     opts.LLVMPassPlugins.push_back(a->getValue());
+
+  // -mprefer_vector_width option
+  if (const llvm::opt::Arg *a = args.getLastArg(
+          clang::driver::options::OPT_mprefer_vector_width_EQ)) {
+    llvm::StringRef s = a->getValue();
+    unsigned width;
+    if (s == "none")
+      opts.PreferVectorWidth = "none";
+    else if (s.getAsInteger(10, width))
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << a->getAsString(args) << a->getValue();
+    else
+      opts.PreferVectorWidth = s.str();
+  }
 
   // -fembed-offload-object option
   for (auto *a :

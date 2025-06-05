@@ -961,7 +961,7 @@ void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
     // implementation of multiple entry points).  If this doesn't occur, the
     // linker can safely perform dead code stripping.  Since LLVM never
     // generates code that does this, it is always safe to set.
-    OutStreamer->emitAssemblerFlag(MCAF_SubsectionsViaSymbols);
+    OutStreamer->emitSubsectionsViaSymbols();
   }
 
   if (TT.isOSBinFormatELF()) {
@@ -3271,6 +3271,32 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
            "SaveAnyRegQPX SEH opcode offset must fit into 6 bits");
     TS->emitARM64WinCFISaveAnyRegQPX(MI->getOperand(0).getImm(),
                                      -MI->getOperand(2).getImm());
+    return;
+
+  case AArch64::SEH_AllocZ:
+    assert(MI->getOperand(0).getImm() >= 0 &&
+           "AllocZ SEH opcode offset must be non-negative");
+    assert(MI->getOperand(0).getImm() <= 255 &&
+           "AllocZ SEH opcode offset must fit into 8 bits");
+    TS->emitARM64WinCFIAllocZ(MI->getOperand(0).getImm());
+    return;
+
+  case AArch64::SEH_SaveZReg:
+    assert(MI->getOperand(1).getImm() >= 0 &&
+           "SaveZReg SEH opcode offset must be non-negative");
+    assert(MI->getOperand(1).getImm() <= 255 &&
+           "SaveZReg SEH opcode offset must fit into 8 bits");
+    TS->emitARM64WinCFISaveZReg(MI->getOperand(0).getImm(),
+                                MI->getOperand(1).getImm());
+    return;
+
+  case AArch64::SEH_SavePReg:
+    assert(MI->getOperand(1).getImm() >= 0 &&
+           "SavePReg SEH opcode offset must be non-negative");
+    assert(MI->getOperand(1).getImm() <= 255 &&
+           "SavePReg SEH opcode offset must fit into 8 bits");
+    TS->emitARM64WinCFISavePReg(MI->getOperand(0).getImm(),
+                                MI->getOperand(1).getImm());
     return;
 
   case AArch64::BLR:

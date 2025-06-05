@@ -55,7 +55,6 @@ public:
   uint64_t HotStart{0};
   uint64_t HotEnd{0};
 
-  static constexpr uint64_t KernelBaseAddr = 0xffff800000000000;
   inline bool ignoreAddress(uint64_t Address) const {
     return (Address > MaxAddress) || (Address < MinAddress);
   }
@@ -87,9 +86,8 @@ public:
 
   size_t size() const { return Map.size(); }
 
-  /// Increase bucket size by 2^\p Scale, recomputing the heatmap.
-  /// Returns new bucket size.
-  uint64_t resizeBucket(uint64_t Pow2Scale);
+  /// Increase bucket size to \p NewSize, recomputing the heatmap.
+  void resizeBucket(uint64_t NewSize);
 };
 
 } // namespace bolt

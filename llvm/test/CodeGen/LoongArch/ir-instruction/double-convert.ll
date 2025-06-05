@@ -119,17 +119,18 @@ define i32 @convert_double_to_u32(double %a) nounwind {
 ; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI7_0)
 ; LA32-NEXT:    fld.d $fa1, $a0, %pc_lo12(.LCPI7_0)
 ; LA32-NEXT:    fcmp.clt.d $fcc0, $fa0, $fa1
-; LA32-NEXT:    fsub.d $fa1, $fa0, $fa1
-; LA32-NEXT:    ftintrz.w.d $fa1, $fa1
-; LA32-NEXT:    movfr2gr.s $a0, $fa1
+; LA32-NEXT:    movcf2gr $a0, $fcc0
+; LA32-NEXT:    bne $a0, $zero, .LBB7_2
+; LA32-NEXT:  # %bb.1:
+; LA32-NEXT:    fsub.d $fa0, $fa0, $fa1
+; LA32-NEXT:    ftintrz.w.d $fa0, $fa0
+; LA32-NEXT:    movfr2gr.s $a0, $fa0
 ; LA32-NEXT:    lu12i.w $a1, -524288
 ; LA32-NEXT:    xor $a0, $a0, $a1
-; LA32-NEXT:    movcf2gr $a1, $fcc0
-; LA32-NEXT:    masknez $a0, $a0, $a1
+; LA32-NEXT:    ret
+; LA32-NEXT:  .LBB7_2:
 ; LA32-NEXT:    ftintrz.w.d $fa0, $fa0
-; LA32-NEXT:    movfr2gr.s $a2, $fa0
-; LA32-NEXT:    maskeqz $a1, $a2, $a1
-; LA32-NEXT:    or $a0, $a1, $a0
+; LA32-NEXT:    movfr2gr.s $a0, $fa0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: convert_double_to_u32:

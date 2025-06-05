@@ -508,7 +508,7 @@ void MatcherGen::EmitMatchCode(const TreePatternNode &N,
   // we already saw this in the pattern, emit code to verify dagness.
   SmallVector<std::string, 4> Names;
   if (!N.getName().empty())
-    Names.push_back(N.getName());
+    Names.push_back(N.getName().str());
 
   for (const ScopedName &Name : N.getNamesAsPredicateArg()) {
     Names.push_back(

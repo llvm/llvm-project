@@ -87,7 +87,8 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         """
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, stopOnEntry=True)
-
+        self.dap_server.request_configurationDone()
+        self.dap_server.wait_for_stopped()
         self.assertTrue(
             len(self.dap_server.thread_stop_reasons) > 0,
             "expected stopped event during launch",
@@ -329,7 +330,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
             )
 
     @skipIf(
-        archs=["arm", "aarch64"]
+        archs=["arm$", "aarch64"]
     )  # failed run https://lab.llvm.org/buildbot/#/builders/96/builds/6933
     def test_commands(self):
         """
@@ -357,7 +358,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         terminateCommands = ["expr 4+2"]
         self.build_and_launch(
             program,
-            stopOnEntry=True,
             initCommands=initCommands,
             preRunCommands=preRunCommands,
             postRunCommands=postRunCommands,
@@ -519,7 +519,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.assertRegex(output, re.escape(bad_path) + r".*does not exist")
 
     @skipIfNetBSD  # Hangs on NetBSD as well
-    @skipIf(archs=["arm", "aarch64"], oslist=["linux"])
+    @skipIf(archs=["arm$", "aarch64"], oslist=["linux"])
     def test_terminate_commands(self):
         """
         Tests that the "terminateCommands", that can be passed during
