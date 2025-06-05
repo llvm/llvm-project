@@ -1718,15 +1718,18 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
   // Try to convert a vector zext feeding only extracts to a set of scalar (Src
   // << ExtIdx *Size) & (Size -1), if profitable.
   auto *Ext = cast<ZExtInst>(&I);
-  auto *SrcTy = cast<FixedVectorType>(Ext->getOperand(0)->getType());
+  auto *SrcTy = dyn_cast<FixedVectorType>(Ext->getOperand(0)->getType());
+  if (!SrcTy)
+    return false;
   auto *DstTy = cast<FixedVectorType>(Ext->getType());
 
-  if (DL->getTypeSizeInBits(SrcTy) !=
-      DL->getTypeSizeInBits(DstTy->getElementType()))
+  Type *ScalarDstTy = DstTy->getElementType();
+  if (DL->getTypeSizeInBits(SrcTy) != DL->getTypeSizeInBits(ScalarDstTy))
     return false;
 
-  InstructionCost VectorCost = TTI.getCastInstrCost(
-      Instruction::ZExt, DstTy, SrcTy, TTI::CastContextHint::None, CostKind);
+  InstructionCost VectorCost =
+      TTI.getCastInstrCost(Instruction::ZExt, DstTy, SrcTy,
+                           TTI::CastContextHint::None, CostKind, Ext);
   unsigned ExtCnt = 0;
   bool ExtLane0 = false;
   for (User *U : Ext->users()) {
@@ -1741,7 +1744,6 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
                                          CostKind, Idx->getZExtValue(), U);
   }
 
-  Type *ScalarDstTy = DstTy->getElementType();
   InstructionCost ScalarCost =
       ExtCnt * TTI.getArithmeticInstrCost(
                    Instruction::And, ScalarDstTy, CostKind,
@@ -1749,7 +1751,6 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
                    {TTI::OK_NonUniformConstantValue, TTI::OP_None}) +
       (ExtCnt - ExtLane0) *
           TTI.getArithmeticInstrCost(
-
               Instruction::LShr, ScalarDstTy, CostKind,
               {TTI::OK_AnyValue, TTI::OP_None},
               {TTI::OK_NonUniformConstantValue, TTI::OP_None});
