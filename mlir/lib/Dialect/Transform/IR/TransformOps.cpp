@@ -54,12 +54,11 @@
 using namespace mlir;
 
 static ParseResult parseApplyRegisteredPassOptions(
-    OpAsmParser &parser,
-    std::optional<OpAsmParser::UnresolvedOperand> &dynamicOptions,
-    StringAttr &staticOptions);
+    OpAsmParser &parser, ArrayAttr &options,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &dynamicOptions);
 static void printApplyRegisteredPassOptions(OpAsmPrinter &printer,
-                                            Operation *op, Value dynamicOptions,
-                                            StringAttr staticOptions);
+                                            Operation *op, ArrayAttr options,
+                                            ValueRange dynamicOptions);
 static ParseResult parseSequenceOpOperands(
     OpAsmParser &parser, std::optional<OpAsmParser::UnresolvedOperand> &root,
     Type &rootType,
@@ -785,25 +784,40 @@ DiagnosedSilenceableFailure
 transform::ApplyRegisteredPassOp::apply(transform::TransformRewriter &rewriter,
                                         transform::TransformResults &results,
                                         transform::TransformState &state) {
-  // Check whether pass options are specified, either as a dynamic param or
-  // a static attribute. In either case, options are passed as a single string.
-  StringRef options;
-  if (auto dynamicOptions = getDynamicOptions()) {
-    ArrayRef<Attribute> dynamicOptionsParam = state.getParams(dynamicOptions);
-    if (dynamicOptionsParam.size() != 1) {
-      return emitSilenceableError()
-             << "options passed as a param must be a single value, got "
-             << dynamicOptionsParam.size();
-    }
-    if (auto optionsStrAttr = dyn_cast<StringAttr>(dynamicOptionsParam[0])) {
-      options = optionsStrAttr.getValue();
+  // Obtain a single options-string from options passed statically as
+  // string attributes as well as "dynamically" through params.
+  std::string options;
+  OperandRange dynamicOptions = getDynamicOptions();
+  size_t dynamicOptionsIdx = 0;
+  for (auto [idx, optionAttr] : llvm::enumerate(getOptions())) {
+    if (idx > 0)
+      options += " "; // Interleave options seperator.
+
+    if (auto strAttr = dyn_cast<StringAttr>(optionAttr)) {
+      options += strAttr.getValue();
+    } else if (isa<UnitAttr>(optionAttr)) {
+      assert(dynamicOptionsIdx < dynamicOptions.size() &&
+             "number of dynamic option markers (UnitAttr) in options ArrayAttr "
+             "should be the same as the number of options passed as params");
+      ArrayRef<Attribute> dynamicOption =
+          state.getParams(dynamicOptions[dynamicOptionsIdx++]);
+      if (dynamicOption.size() != 1)
+        return emitSilenceableError() << "options passed as a param must have "
+                                         "a single value associated, param "
+                                      << dynamicOptionsIdx - 1 << " associates "
+                                      << dynamicOption.size();
+
+      if (auto dynamicOptionStr = dyn_cast<StringAttr>(dynamicOption[0])) {
+        options += dynamicOptionStr.getValue();
+      } else {
+        return emitSilenceableError()
+               << "options passed as a param must be a string, got "
+               << dynamicOption[0];
+      }
     } else {
-      return emitSilenceableError()
-             << "options passed as a param must be a string, got "
-             << dynamicOptionsParam[0];
+      assert(false &&
+             "expected options element to be either StringAttr or UnitAttr");
     }
-  } else {
-    options = getStaticOptions();
   }
 
   // Get pass or pass pipeline from registry.
@@ -850,41 +864,86 @@ transform::ApplyRegisteredPassOp::apply(transform::TransformRewriter &rewriter,
 }
 
 static ParseResult parseApplyRegisteredPassOptions(
-    OpAsmParser &parser,
-    std::optional<OpAsmParser::UnresolvedOperand> &dynamicOptions,
-    StringAttr &staticOptions) {
-  dynamicOptions = std::nullopt;
-  OpAsmParser::UnresolvedOperand dynamicOptionsOperand;
-  OptionalParseResult hasDynamicOptions =
-      parser.parseOptionalOperand(dynamicOptionsOperand);
+    OpAsmParser &parser, ArrayAttr &options,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &dynamicOptions) {
+  auto dynamicOptionMarker = UnitAttr::get(parser.getContext());
+  SmallVector<Attribute> optionsArray;
 
-  if (hasDynamicOptions.has_value()) {
-    if (failed(hasDynamicOptions.value()))
+  auto parseOperandOrString = [&]() -> OptionalParseResult {
+    OpAsmParser::UnresolvedOperand operand;
+    OptionalParseResult parsedOperand = parser.parseOptionalOperand(operand);
+    if (parsedOperand.has_value()) {
+      if (failed(parsedOperand.value()))
+        return failure();
+
+      dynamicOptions.push_back(operand);
+      optionsArray.push_back(
+          dynamicOptionMarker); // Placeholder for knowing where to
+                                // inject the dynamic option-as-param.
+      return success();
+    }
+
+    StringAttr stringAttr;
+    OptionalParseResult parsedStringAttr =
+        parser.parseOptionalAttribute(stringAttr);
+    if (parsedStringAttr.has_value()) {
+      if (failed(parsedStringAttr.value()))
+        return failure();
+      optionsArray.push_back(stringAttr);
+      return success();
+    }
+
+    return std::nullopt;
+  };
+
+  OptionalParseResult parsedOptionsElement = parseOperandOrString();
+  while (parsedOptionsElement.has_value()) {
+    if (failed(parsedOptionsElement.value()))
       return failure();
-
-    dynamicOptions = dynamicOptionsOperand;
-    return success();
+    parsedOptionsElement = parseOperandOrString();
   }
 
-  OptionalParseResult hasStaticOptions =
-      parser.parseOptionalAttribute(staticOptions);
-  if (hasStaticOptions.has_value()) {
-    if (failed(hasStaticOptions.value()))
-      return failure();
-    return success();
+  if (optionsArray.empty()) {
+    return parser.emitError(parser.getCurrentLocation())
+           << "expected at least one option (either a string or a param)";
   }
-
+  options = parser.getBuilder().getArrayAttr(optionsArray);
   return success();
 }
 
 static void printApplyRegisteredPassOptions(OpAsmPrinter &printer,
-                                            Operation *op, Value dynamicOptions,
-                                            StringAttr staticOptions) {
-  if (dynamicOptions) {
-    printer.printOperand(dynamicOptions);
-  } else if (!staticOptions.getValue().empty()) {
-    printer.printAttribute(staticOptions);
+                                            Operation *op, ArrayAttr options,
+                                            ValueRange dynamicOptions) {
+  size_t currentDynamicOptionIdx = 0;
+  for (Attribute optionAttr : options) {
+    if (currentDynamicOptionIdx > 0)
+      printer << " "; // Interleave options separator.
+
+    if (isa<UnitAttr>(optionAttr))
+      printer.printOperand(dynamicOptions[currentDynamicOptionIdx++]);
+    else if (auto strAttr = dyn_cast<StringAttr>(optionAttr))
+      printer.printAttribute(strAttr);
+    else
+      assert(false && "each option should be either a StringAttr or UnitAttr");
   }
+}
+
+LogicalResult transform::ApplyRegisteredPassOp::verify() {
+  size_t numUnitsInOptions = 0;
+  for (Attribute optionsElement : getOptions()) {
+    if (isa<UnitAttr>(optionsElement))
+      numUnitsInOptions++;
+    else if (!isa<StringAttr>(optionsElement))
+      return emitOpError() << "expected each option to be either a StringAttr "
+                           << "or a UnitAttr, got " << optionsElement;
+  }
+
+  if (getDynamicOptions().size() != numUnitsInOptions)
+    return emitOpError()
+           << "expected the same number of options passed as params as "
+           << "UnitAttr elements in options ArrayAttr";
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
