@@ -2112,7 +2112,7 @@ Value *InstCombinerImpl::OptimizePointerDifference(Value *LHS, Value *RHS,
   // then the final multiplication is also nuw.
   if (auto *I = dyn_cast<Instruction>(Result))
     if (IsNUW && !GEP2 && !Swapped && GEP1NW.isInBounds() &&
-        I->getOpcode() == Instruction::Mul) {
+        I->getOpcode() == Instruction::Mul && !I->hasNoUnsignedWrap()) {
       if (!I->use_empty()) {
         // If the offset calculation is reused by the GEP, add the nuw flag to
         // a separate clone. This may improve folds and will get CSEd if not
