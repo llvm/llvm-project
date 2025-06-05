@@ -20,6 +20,7 @@
 #include "CastingThroughVoidCheck.h"
 #include "ChainedComparisonCheck.h"
 #include "ComparePointerToMemberVirtualFunctionCheck.h"
+#include "ConflictingGlobalAccessesCheck.h"
 #include "CopyConstructorInitCheck.h"
 #include "CrtpConstructorAccessibilityCheck.h"
 #include "DanglingHandleCheck.h"
@@ -128,6 +129,8 @@ public:
         "bugprone-chained-comparison");
     CheckFactories.registerCheck<ComparePointerToMemberVirtualFunctionCheck>(
         "bugprone-compare-pointer-to-member-virtual-function");
+    CheckFactories.registerCheck<ConflictingGlobalAccessesCheck>(
+        "bugprone-conflicting-global-accesses");
     CheckFactories.registerCheck<CopyConstructorInitCheck>(
         "bugprone-copy-constructor-init");
     CheckFactories.registerCheck<DanglingHandleCheck>(

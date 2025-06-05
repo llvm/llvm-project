@@ -10,6 +10,7 @@
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
 #include "../bugprone/BadSignalToKillThreadCheck.h"
+#include "../bugprone/ConflictingGlobalAccessesCheck.h"
 #include "../bugprone/PointerArithmeticOnPolymorphicObjectCheck.h"
 #include "../bugprone/ReservedIdentifierCheck.h"
 #include "../bugprone/SignalHandlerCheck.h"
@@ -262,6 +263,9 @@ public:
     CheckFactories.registerCheck<ThrownExceptionTypeCheck>("cert-err60-cpp");
     CheckFactories.registerCheck<misc::ThrowByValueCatchByReferenceCheck>(
         "cert-err61-cpp");
+    // EXP
+    CheckFactories.registerCheck<bugprone::ConflictingGlobalAccessesCheck>(
+        "cert-exp50-cpp");
     // MEM
     CheckFactories.registerCheck<DefaultOperatorNewAlignmentCheck>(
         "cert-mem57-cpp");
@@ -301,6 +305,8 @@ public:
         "cert-err33-c");
     CheckFactories.registerCheck<StrToNumCheck>("cert-err34-c");
     // EXP
+    CheckFactories.registerCheck<bugprone::ConflictingGlobalAccessesCheck>(
+        "cert-exp30-c");
     CheckFactories.registerCheck<bugprone::SuspiciousMemoryComparisonCheck>(
         "cert-exp42-c");
     // FLP
