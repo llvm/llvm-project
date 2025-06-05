@@ -57,7 +57,7 @@ projects="${1}"
 targets="${2}"
 runtimes="${3}"
 runtime_targets="${4}"
-runtime_targets_multiconfig="${5}"
+runtime_targets_needs_reconfig="${5}"
 
 lit_args="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests"
 
@@ -102,7 +102,7 @@ fi
 
 # Compiling runtimes with just-built Clang and running their tests
 # as an additional testing for Clang.
-if [[ "${runtime_targets_multiconfig}" != "" ]]; then
+if [[ "${runtime_targets_needs_reconfig}" != "" ]]; then
   echo "--- cmake runtimes C++26"
 
   cmake \
@@ -112,7 +112,7 @@ if [[ "${runtime_targets_multiconfig}" != "" ]]; then
 
   echo "--- ninja runtimes C++26"
 
-  ninja -C "${BUILD_DIR}" ${runtime_targets_multiconfig}
+  ninja -C "${BUILD_DIR}" ${runtime_targets_needs_reconfig}
 
   echo "--- cmake runtimes clang modules"
 
@@ -123,5 +123,5 @@ if [[ "${runtime_targets_multiconfig}" != "" ]]; then
 
   echo "--- ninja runtimes clang modules"
 
-  ninja -C "${BUILD_DIR}" ${runtime_targets_multiconfig}
+  ninja -C "${BUILD_DIR}" ${runtime_targets_needs_reconfig}
 fi

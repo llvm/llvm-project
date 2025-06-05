@@ -66,7 +66,7 @@ DEPENDENT_RUNTIMES_TO_BUILD = {"lldb": {"libcxx", "libcxxabi", "libunwind"}}
 DEPENDENT_RUNTIMES_TO_TEST = {
     "clang": {"compiler-rt"},
 }
-DEPENDENT_RUNTIMES_TO_TEST_MULTICONFIG = {
+DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG = {
     "llvm": {"libcxx", "libcxxabi", "libunwind"},
     "clang": {"libcxx", "libcxxabi", "libunwind"},
     ".ci": {"libcxx", "libcxxabi", "libunwind"},
@@ -201,15 +201,15 @@ def _compute_runtimes_to_test(modified_projects: Set[str], platform: str) -> Set
     return _exclude_projects(runtimes_to_test, platform)
 
 
-def _compute_runtimes_to_test_multiconfig(
+def _compute_runtimes_to_test_needs_reconfig(
     modified_projects: Set[str], platform: str
 ) -> Set[str]:
     runtimes_to_test = set()
     for modified_project in modified_projects:
-        if modified_project not in DEPENDENT_RUNTIMES_TO_TEST_MULTICONFIG:
+        if modified_project not in DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG:
             continue
         runtimes_to_test.update(
-            DEPENDENT_RUNTIMES_TO_TEST_MULTICONFIG[modified_project]
+            DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG[modified_project]
         )
     return _exclude_projects(runtimes_to_test, platform)
 
@@ -246,17 +246,17 @@ def get_env_variables(modified_files: list[str], platform: str) -> Set[str]:
     modified_projects = _get_modified_projects(modified_files)
     projects_to_test = _compute_projects_to_test(modified_projects, platform)
     runtimes_to_test = _compute_runtimes_to_test(modified_projects, platform)
-    runtimes_to_test_multiconfig = _compute_runtimes_to_test_multiconfig(
+    runtimes_to_test_needs_reconfig = _compute_runtimes_to_test_needs_reconfig(
         modified_projects, platform
     )
     runtimes_to_build = _compute_runtimes_to_build(
-        runtimes_to_test | runtimes_to_test_multiconfig, modified_projects, platform
+        runtimes_to_test | runtimes_to_test_needs_reconfig, modified_projects, platform
     )
     projects_to_build = _compute_projects_to_build(projects_to_test, runtimes_to_build)
     projects_check_targets = _compute_project_check_targets(projects_to_test)
     runtimes_check_targets = _compute_project_check_targets(runtimes_to_test)
-    runtimes_check_targets_multiconfig = _compute_project_check_targets(
-        runtimes_to_test_multiconfig
+    runtimes_check_targets_needs_reconfig = _compute_project_check_targets(
+        runtimes_to_test_needs_reconfig
     )
     # We use a semicolon to separate the projects/runtimes as they get passed
     # to the CMake invocation and thus we need to use the CMake list separator
@@ -267,8 +267,8 @@ def get_env_variables(modified_files: list[str], platform: str) -> Set[str]:
         "project_check_targets": " ".join(sorted(projects_check_targets)),
         "runtimes_to_build": ";".join(sorted(runtimes_to_build)),
         "runtimes_check_targets": " ".join(sorted(runtimes_check_targets)),
-        "runtimes_check_targets_multiconfig": " ".join(
-            sorted(runtimes_check_targets_multiconfig)
+        "runtimes_check_targets_needs_reconfig": " ".join(
+            sorted(runtimes_check_targets_needs_reconfig)
         ),
     }
 
