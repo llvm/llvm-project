@@ -43,9 +43,6 @@ namespace llvm {
 extern cl::opt<bool> PGOWarnMissing;
 extern cl::opt<bool> NoPGOWarnMismatch;
 extern cl::opt<bool> NoPGOWarnMismatchComdatWeak;
-extern cl::opt<bool> MemProfReportHintedSizes;
-extern cl::opt<unsigned> MinClonedColdBytePercent;
-extern cl::opt<unsigned> MinCallsiteColdBytePercent;
 } // namespace llvm
 
 // By default disable matching of allocation profiles onto operator new that

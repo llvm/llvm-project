@@ -1,5 +1,4 @@
-//===- MemProfInstrumentation.cpp - memory allocation and access profiler
-// instrumentation ------------===//
+//===- MemProfInstrumentation.cpp - memory alloc and access instrumentation ==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -35,7 +34,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProf.h"
-#include "llvm/ProfileData/MemProfCommon.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/TargetParser/Triple.h"
