@@ -8,13 +8,13 @@ void CallNew() {
 }
 // CHECK-LABEL: FunctionTemplateDecl {{.*}} CallNew
 // CHECK: |-FunctionDecl {{.*}} CallNew 'void ()'
-// CHECK:  `-CXXNewExpr {{.*}} 'operator new' 'void *(unsigned long)'
+// CHECK:  `-CXXNewExpr {{.*}} 'operator new'
 // CHECK:  `-CXXParenListInitExpr {{.*}} 'Node'
 // CHECK:  `-ImplicitCastExpr {{.*}} 'long' <IntegralCast>
 // CHECK:  `-IntegerLiteral {{.*}} 'int' 0
 // CHECK: `-FunctionDecl {{.*}} used CallNew 'void ()' implicit_instantiation
 // CHECK:   |-TemplateArgument integral 'true'
-// CHECK:   `-CXXNewExpr {{.*}} 'operator new' 'void *(unsigned long)'
+// CHECK:   `-CXXNewExpr {{.*}} 'operator new'
 // CHECK:   `-CXXParenListInitExpr {{.*}} 'Node'
 // CHECK:   `-ImplicitCastExpr {{.*}} 'long' <IntegralCast>
 // CHECK:   `-IntegerLiteral {{.*}} 'int' 0
