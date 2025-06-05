@@ -18,6 +18,17 @@ module m
     !WARNING: I/O statement might not be supported on device
     write(12,'(10F4.1)'), x
   end
+  attributes(global) subroutine devsub3(n)
+    implicit none
+    integer :: n
+    integer :: i, ig, iGrid
+    iGrid = gridDim%x*blockDim%x
+    ig = (blockIdx%x-1)*blockDim%x + threadIdx%x
+ 
+    !dir$ nounroll
+    do i = ig, n, iGrid
+    end do
+  end subroutine
   attributes(global) subroutine hostglobal(a)
     integer :: a(*)
     i = threadIdx%x

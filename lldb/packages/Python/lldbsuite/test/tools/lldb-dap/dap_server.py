@@ -153,7 +153,7 @@ class DebugCommunication(object):
         self.recv_thread = threading.Thread(target=self._read_packet_thread)
         self.process_event_body = None
         self.exit_status: Optional[int] = None
-        self.initialize_body = None
+        self.initialize_body: dict[str, Any] = {}
         self.progress_events: list[Event] = []
         self.reverse_requests = []
         self.sequence = 1
@@ -166,6 +166,7 @@ class DebugCommunication(object):
         self.initialized = False
         self.frame_scopes = {}
         self.init_commands = init_commands
+        self.resolved_breakpoints = {}
 
     @classmethod
     def encode_content(cls, s: str) -> bytes:
@@ -296,6 +297,12 @@ class DebugCommunication(object):
                 # and 'progressEnd' events. Keep these around in case test
                 # cases want to verify them.
                 self.progress_events.append(packet)
+            elif event == "breakpoint":
+                # Breakpoint events are sent when a breakpoint is resolved
+                self._update_verified_breakpoints([body["breakpoint"]])
+            elif event == "capabilities":
+                # update the capabilities with new ones from the event.
+                self.initialize_body.update(body["capabilities"])
 
         elif packet_type == "response":
             if packet["command"] == "disconnect":
@@ -308,6 +315,13 @@ class DebugCommunication(object):
         self.frame_scopes = {}
         if all_threads_continued:
             self.thread_stop_reasons = {}
+
+    def _update_verified_breakpoints(self, breakpoints: list[Event]):
+        for breakpoint in breakpoints:
+            if "id" in breakpoint:
+                self.resolved_breakpoints[str(breakpoint["id"])] = breakpoint.get(
+                    "verified", False
+                )
 
     def send_packet(self, command_dict: Request, set_sequence=True):
         """Take the "command_dict" python dictionary and encode it as a JSON
@@ -454,6 +468,17 @@ class DebugCommunication(object):
             breakpoint_events.append(event)
         return breakpoint_events
 
+    def wait_for_breakpoints_to_be_verified(
+        self, breakpoint_ids: list[str], timeout: Optional[float] = None
+    ):
+        """Wait for all breakpoints to be verified. Return all unverified breakpoints."""
+        while any(id not in self.resolved_breakpoints for id in breakpoint_ids):
+            breakpoint_event = self.wait_for_event("breakpoint", timeout=timeout)
+            if breakpoint_event is None:
+                break
+
+        return [id for id in breakpoint_ids if id not in self.resolved_breakpoints]
+
     def wait_for_exited(self, timeout: Optional[float] = None):
         event_dict = self.wait_for_event("exited", timeout=timeout)
         if event_dict is None:
@@ -472,7 +497,7 @@ class DebugCommunication(object):
         """
         if self.initialize_body and key in self.initialize_body:
             return self.initialize_body[key]
-        return None
+        raise ValueError(f"no value for key: {key} in {self.initialize_body}")
 
     def get_threads(self):
         if self.threads is None:
@@ -856,7 +881,7 @@ class DebugCommunication(object):
         cwd: Optional[str] = None,
         env: Optional[dict[str, str]] = None,
         stopOnEntry=False,
-        disableASLR=True,
+        disableASLR=False,
         disableSTDIO=False,
         shellExpandArguments=False,
         runInTerminal=False,
@@ -1013,7 +1038,10 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        return self.send_recv(command_dict)
+        response = self.send_recv(command_dict)
+        if response["success"]:
+            self._update_verified_breakpoints(response["body"]["breakpoints"])
+        return response
 
     def request_setExceptionBreakpoints(self, filters):
         args_dict = {"filters": filters}
@@ -1039,7 +1067,10 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        return self.send_recv(command_dict)
+        response = self.send_recv(command_dict)
+        if response["success"]:
+            self._update_verified_breakpoints(response["body"]["breakpoints"])
+        return response
 
     def request_dataBreakpointInfo(
         self, variablesReference, name, frameIndex=0, threadId=None

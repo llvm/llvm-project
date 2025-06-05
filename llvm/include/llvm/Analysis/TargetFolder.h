@@ -40,7 +40,7 @@ class LLVM_ABI TargetFolder final : public IRBuilderFolder {
     return ConstantFoldConstant(C, DL);
   }
 
-  virtual void anchor();
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
 public:
   explicit TargetFolder(const DataLayout &DL) : DL(DL) {}
