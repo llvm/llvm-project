@@ -248,7 +248,7 @@ protected:
       result.AppendError("'plugin enable' requires one argument");
       return;
     }
-    llvm::StringRef pattern = argc ? command[0].ref() : "";
+    llvm::StringRef pattern = command[0].ref();
     result.SetStatus(eReturnStatusSuccessFinishResult);
 
     int num_matching = SetEnableOnMatchingPlugins(pattern, result, true);
@@ -275,7 +275,7 @@ protected:
       result.AppendError("'plugin disable' requires one argument");
       return;
     }
-    llvm::StringRef pattern = argc ? command[0].ref() : "";
+    llvm::StringRef pattern = command[0].ref();
     result.SetStatus(eReturnStatusSuccessFinishResult);
 
     int num_matching = SetEnableOnMatchingPlugins(pattern, result, false);
