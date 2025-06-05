@@ -28,6 +28,7 @@
 //       for every rank index r.
 //
 
+#include <span>
 #include <mdspan>
 #include <cassert>
 
