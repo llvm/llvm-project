@@ -44,6 +44,6 @@ func.func @boxchar_addr(%boxchar : !fir.ref<!fir.boxchar<1>>) -> !fir.llvm_ptr<!
 }
 
 // CHECK-LABEL: define ptr @boxchar_addr(
-// CHECK-SAME: ptr {{.*}} %[[BOXCHAR:.*]]){{.*}} {
+// CHECK-SAME: ptr {{.*}}%[[BOXCHAR:.*]]){{.*}} {
 // CHECK: %[[VAL_0:.*]] = getelementptr { ptr, i64 }, ptr %[[BOXCHAR]], i32 0, i32 0
 // CHECK: ret ptr %[[VAL_0]]
