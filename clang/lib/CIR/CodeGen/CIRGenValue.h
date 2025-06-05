@@ -113,21 +113,6 @@ public:
     er.isVolatile = isVolatile;
     return er;
   }
-
-  // FIXME: Aggregate rvalues need to retain information about whether they are
-  // volatile or not.  Remove default to find all places that probably get this
-  // wrong.
-
-  /// Convert an Address to an RValue. If the Address is not
-  /// signed, create an RValue using the unsigned address. Otherwise, resign the
-  /// address using the provided type.
-  static RValue getAggregate(Address addr, bool isVolatile = false) {
-    RValue ER;
-    ER.aggregateAddr = addr;
-    ER.flavor = Aggregate;
-    ER.isVolatile = isVolatile;
-    return ER;
-  }
 };
 
 /// The source of the alignment of an l-value; an expression of
