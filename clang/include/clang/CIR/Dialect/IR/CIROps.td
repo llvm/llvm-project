@@ -2255,7 +2255,7 @@ def VecSplatOp : CIR_Op<"vec.splat", [Pure,
     ```
   }];
 
-  let arguments = (ins CIR_AnyType:$value);
+  let arguments = (ins CIR_VectorElementType:$value);
   let results = (outs CIR_VectorType:$result);
 
   let assemblyFormat = [{
