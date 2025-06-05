@@ -89,8 +89,7 @@ define i64 @and_0xfff_shl_33(i64 %x) {
 ; RV64I-LABEL: and_0xfff_shl_33:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 52
-; RV64I-NEXT:    srli a0, a0, 52
-; RV64I-NEXT:    slli a0, a0, 33
+; RV64I-NEXT:    srli a0, a0, 19
 ; RV64I-NEXT:    ret
   %a = and i64 %x, 4095
   %s = shl i64 %a, 33
