@@ -105,11 +105,10 @@ namespace llvm {
   // cycle.
   //
   // Only consider components that are part of \p Mask.
-  LLVM_ABI Instruction *FindEarliestCapture(const Value *V, Function &F,
-                                            bool ReturnCaptures,
-                                            const DominatorTree &DT,
-                                            CaptureComponents Mask,
-                                            unsigned MaxUsesToExplore = 0);
+  LLVM_ABI std::pair<Instruction *, CaptureComponents>
+  FindEarliestCapture(const Value *V, Function &F, bool ReturnCaptures,
+                      const DominatorTree &DT, CaptureComponents Mask,
+                      unsigned MaxUsesToExplore = 0);
 
   /// Capture information for a specific Use.
   struct UseCaptureInfo {
