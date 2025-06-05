@@ -554,7 +554,7 @@ define void @multiply_nt_t(ptr %A, ptr %B, ptr %C) {
 ; REMARK-NEXT:   - String:          x
 ; REMARK-NEXT:   - Cols:            '3'
 ; REMARK-NEXT:   - String:          ' matrix '
-; REMARK-NEXT:   - Source:          '  %{{.*}} = load <12 x double>, ptr %B, align 16'
+; REMARK-NEXT:   - Source:          '  %{{.*}} = load <12 x double>, ptr %{{.*}}, align 16'
 ; REMARK-NEXT:   - String:          ' because we do not have a shape-aware lowering for its user:'
 ; REMARK-NEXT:   - Instr:           '  %{{.*}} = shufflevector <12 x double> %{{.*}}, <12 x double> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>'
 ; REMARK-NEXT:   - Opcode:          shufflevector
@@ -731,7 +731,7 @@ define void @multiply_ntt_t(ptr %A, ptr %B, ptr %C, ptr %R) {
 ; REMARK-NEXT:   - String:          x
 ; REMARK-NEXT:   - Cols:            '3'
 ; REMARK-NEXT:   - String:          ' matrix '
-; REMARK-NEXT:   - Source:          '  %{{.*}} = load <9 x double>, ptr %A, align 16'
+; REMARK-NEXT:   - Source:          '  %{{.*}} = load <9 x double>, ptr %{{.*}}, align 16'
 ; REMARK-NEXT:   - String:          ' because we do not have a shape-aware lowering for its user:'
 ; REMARK-NEXT:   - Instr:           '  %{{.*}} = shufflevector <9 x double> %{{.*}}, <9 x double> poison, <3 x i32> <i32 6, i32 7, i32 8>'
 ; REMARK-NEXT:   - Opcode:          shufflevector
