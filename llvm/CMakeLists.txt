@@ -876,7 +876,7 @@ option(LLVM_VERSION_PRINTER_SHOW_BUILD_CONFIG
 
 set(LLVM_CRASH_DIAGNOSTICS "" CACHE STRING "Control when to generate reproducer. Can be OFF, COMPILER, ALL")
 set(LLVM_CRASH_DIAGNOSTICS_DIR "" CACHE STRING "Path to use for crash reproducers")
-set(LLVM_ERROR_REPRODUCERS OFF CACHE BOOL "Generate a reproducer in the case of an error")
+set(LLVM_GEN_REPRODUCER OFF CACHE BOOL "Generate a reproducer. Can be OFF, CRASH, ERROR, ALWAYS")
 
 # You can configure which libraries from LLVM you want to include in the
 # shared library by setting LLVM_DYLIB_COMPONENTS to a semi-colon delimited
