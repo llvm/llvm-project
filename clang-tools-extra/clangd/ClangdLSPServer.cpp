@@ -686,6 +686,9 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   ServerCaps["executeCommandProvider"] =
       llvm::json::Object{{"commands", Commands}};
 
+  if (Opts.Encoding)
+    ServerCaps["positionEncoding"] = *Opts.Encoding;
+
   llvm::json::Object Result{
       {{"serverInfo",
         llvm::json::Object{
