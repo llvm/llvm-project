@@ -12,6 +12,12 @@
 using namespace llvm;
 using namespace RTLIB;
 
+#define GET_INIT_RUNTIME_LIBCALL_UTILS
+#define GET_INIT_RUNTIME_LIBCALL_NAMES
+#include "llvm/IR/RuntimeLibcalls.inc"
+#undef GET_INIT_RUNTIME_LIBCALL_UTILS
+#undef GET_INIT_RUNTIME_LIBCALL_NAMES
+
 static cl::opt<bool>
     HexagonEnableFastMathRuntimeCalls("hexagon-fast-math", cl::Hidden,
                                       cl::desc("Enable Fast Math processing"));
@@ -30,34 +36,21 @@ static void setAArch64LibcallNames(RuntimeLibcallsInfo &Info,
   LCALLNAMES(A, B, 1)                                                          \
   LCALLNAMES(A, B, 2)                                                          \
   LCALLNAMES(A, B, 4) LCALLNAMES(A, B, 8) LCALLNAMES(A, B, 16)
-  LCALLNAME5(RTLIB::OUTLINE_ATOMIC_CAS, __aarch64_cas)
-  LCALLNAME4(RTLIB::OUTLINE_ATOMIC_SWP, __aarch64_swp)
-  LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDADD, __aarch64_ldadd)
-  LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDSET, __aarch64_ldset)
-  LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDCLR, __aarch64_ldclr)
-  LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDEOR, __aarch64_ldeor)
 
   if (TT.isWindowsArm64EC()) {
-    // FIXME: are there calls we need to exclude from this?
-#define HANDLE_LIBCALL(code, name)                                             \
-  if (sizeof(name) != 1) {                                                     \
-    const char *libcallName = Info.getLibcallName(RTLIB::code);                \
-    if (libcallName && libcallName[0] != '#') {                                \
-      assert(strcmp(libcallName, name) == 0 && "Unexpected name");             \
-      Info.setLibcallName(RTLIB::code, "#" name);                              \
-    }                                                                          \
-  }
-#define LIBCALL_NO_NAME ""
-#include "llvm/IR/RuntimeLibcalls.def"
-#undef HANDLE_LIBCALL
-#undef LIBCALL_NO_NAME
-
     LCALLNAME5(RTLIB::OUTLINE_ATOMIC_CAS, #__aarch64_cas)
     LCALLNAME4(RTLIB::OUTLINE_ATOMIC_SWP, #__aarch64_swp)
     LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDADD, #__aarch64_ldadd)
     LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDSET, #__aarch64_ldset)
     LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDCLR, #__aarch64_ldclr)
     LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDEOR, #__aarch64_ldeor)
+  } else {
+    LCALLNAME5(RTLIB::OUTLINE_ATOMIC_CAS, __aarch64_cas)
+    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_SWP, __aarch64_swp)
+    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDADD, __aarch64_ldadd)
+    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDSET, __aarch64_ldset)
+    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDCLR, __aarch64_ldclr)
+    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDEOR, __aarch64_ldeor)
   }
 
 #undef LCALLNAMES
@@ -354,22 +347,20 @@ static void setLongDoubleIsF128Libm(RuntimeLibcallsInfo &Info,
   }
 }
 
+void RuntimeLibcallsInfo::initDefaultLibCallNames() {
+  std::memcpy(LibcallRoutineNames, DefaultLibcallRoutineNames,
+              sizeof(LibcallRoutineNames));
+  static_assert(sizeof(LibcallRoutineNames) ==
+                    sizeof(DefaultLibcallRoutineNames),
+                "libcall array size should match");
+}
+
 /// Set default libcall names. If a target wants to opt-out of a libcall it
 /// should be placed here.
 void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
                                        ExceptionHandling ExceptionModel,
                                        FloatABI::ABIType FloatABI,
                                        EABI EABIVersion, StringRef ABIName) {
-  initSoftFloatCmpLibcallPredicates();
-
-  initSoftFloatCmpLibcallPredicates();
-
-#define HANDLE_LIBCALL(code, name) setLibcallName(RTLIB::code, name);
-#define LIBCALL_NO_NAME nullptr
-#include "llvm/IR/RuntimeLibcalls.def"
-#undef HANDLE_LIBCALL
-#undef LIBCALL_NO_NAME
-
   // Use the f128 variants of math functions on x86
   if (TT.isX86() && TT.isGNUEnvironment())
     setLongDoubleIsF128Libm(*this, /*FiniteOnlyFuncs=*/true);
@@ -379,37 +370,8 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
       setLibcallName(RTLIB::UNWIND_RESUME, "_Unwind_SjLj_Resume");
   }
 
-  // For IEEE quad-precision libcall names, PPC uses "kf" instead of "tf".
   if (TT.isPPC()) {
-    setLibcallName(RTLIB::ADD_F128, "__addkf3");
-    setLibcallName(RTLIB::SUB_F128, "__subkf3");
-    setLibcallName(RTLIB::MUL_F128, "__mulkf3");
-    setLibcallName(RTLIB::DIV_F128, "__divkf3");
-    setLibcallName(RTLIB::POWI_F128, "__powikf2");
-    setLibcallName(RTLIB::FPEXT_F32_F128, "__extendsfkf2");
-    setLibcallName(RTLIB::FPEXT_F64_F128, "__extenddfkf2");
-    setLibcallName(RTLIB::FPROUND_F128_F16, "__trunckfhf2");
-    setLibcallName(RTLIB::FPROUND_F128_F32, "__trunckfsf2");
-    setLibcallName(RTLIB::FPROUND_F128_F64, "__trunckfdf2");
-    setLibcallName(RTLIB::FPTOSINT_F128_I32, "__fixkfsi");
-    setLibcallName(RTLIB::FPTOSINT_F128_I64, "__fixkfdi");
-    setLibcallName(RTLIB::FPTOSINT_F128_I128, "__fixkfti");
-    setLibcallName(RTLIB::FPTOUINT_F128_I32, "__fixunskfsi");
-    setLibcallName(RTLIB::FPTOUINT_F128_I64, "__fixunskfdi");
-    setLibcallName(RTLIB::FPTOUINT_F128_I128, "__fixunskfti");
-    setLibcallName(RTLIB::SINTTOFP_I32_F128, "__floatsikf");
-    setLibcallName(RTLIB::SINTTOFP_I64_F128, "__floatdikf");
-    setLibcallName(RTLIB::SINTTOFP_I128_F128, "__floattikf");
-    setLibcallName(RTLIB::UINTTOFP_I32_F128, "__floatunsikf");
-    setLibcallName(RTLIB::UINTTOFP_I64_F128, "__floatundikf");
-    setLibcallName(RTLIB::UINTTOFP_I128_F128, "__floatuntikf");
-    setLibcallName(RTLIB::OEQ_F128, "__eqkf2");
-    setLibcallName(RTLIB::UNE_F128, "__nekf2");
-    setLibcallName(RTLIB::OGE_F128, "__gekf2");
-    setLibcallName(RTLIB::OLT_F128, "__ltkf2");
-    setLibcallName(RTLIB::OLE_F128, "__lekf2");
-    setLibcallName(RTLIB::OGT_F128, "__gtkf2");
-    setLibcallName(RTLIB::UO_F128, "__unordkf2");
+    setPPCLibCallNameOverrides();
 
     // TODO: Do the finite only functions exist?
     setLongDoubleIsF128Libm(*this, /*FiniteOnlyFuncs=*/false);
@@ -490,7 +452,7 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
   // Disable most libcalls on AMDGPU and NVPTX.
   if (TT.isAMDGPU() || TT.isNVPTX()) {
     for (RTLIB::Libcall LC : RTLIB::libcalls()) {
-      if (LC < RTLIB::ATOMIC_LOAD || LC > RTLIB::ATOMIC_FETCH_NAND_16)
+      if (!isAtomicLibCall(LC))
         setLibcallName(LC, nullptr);
     }
   }
@@ -522,11 +484,13 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
     }
   }
 
-  if (TT.isAArch64())
+  if (TT.isAArch64()) {
+    if (TT.isWindowsArm64EC())
+      setWindowsArm64LibCallNameOverrides();
     setAArch64LibcallNames(*this, TT);
-  else if (TT.isARM() || TT.isThumb())
+  } else if (TT.isARM() || TT.isThumb()) {
     setARMLibcallNames(*this, TT, FloatABI, EABIVersion);
-  else if (TT.getArch() == Triple::ArchType::avr) {
+  } else if (TT.getArch() == Triple::ArchType::avr) {
     // Division rtlib functions (not supported), use divmod functions instead
     setLibcallName(RTLIB::SDIV_I8, nullptr);
     setLibcallName(RTLIB::SDIV_I16, nullptr);
@@ -579,19 +543,6 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
     setLibcallName(RTLIB::RETURN_ADDRESS, "emscripten_return_address");
   }
 
-  if (TT.isSystemZ() && TT.isOSzOS()) {
-    struct RTLibCallMapping {
-      RTLIB::Libcall Code;
-      const char *Name;
-    };
-    static RTLibCallMapping RTLibCallCommon[] = {
-#define HANDLE_LIBCALL(code, name) {RTLIB::code, name},
-#include "ZOSLibcallNames.def"
-    };
-    for (auto &E : RTLibCallCommon)
-      setLibcallName(E.Code, E.Name);
-  }
-
   if (TT.getArch() == Triple::ArchType::hexagon) {
     setLibcallName(RTLIB::SDIV_I32, "__hexagon_divsi3");
     setLibcallName(RTLIB::SDIV_I64, "__hexagon_divdi3");
@@ -632,6 +583,9 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
 
   if (TT.getArch() == Triple::ArchType::msp430)
     setMSP430Libcalls(*this, TT);
+
+  if (TT.isSystemZ() && TT.isOSzOS())
+    setZOSLibCallNameOverrides();
 }
 
 bool RuntimeLibcallsInfo::darwinHasExp10(const Triple &TT) {
