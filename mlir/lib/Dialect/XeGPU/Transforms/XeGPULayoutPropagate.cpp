@@ -46,16 +46,6 @@ namespace xegpu {
 using namespace mlir;
 using namespace mlir::dataflow;
 
-/// HW dependent constants.
-/// TODO: These constants should be queried from the target information.
-constexpr unsigned subgroupSize = 16; // How many lanes in a subgroup.
-/// If DPAS A or B operands have low precision element types they must be packed
-/// according to the following sizes.
-constexpr unsigned packedSizeInBitsForDefault =
-    16; // Minimum packing size per register for DPAS A.
-constexpr unsigned packedSizeInBitsForDpasB =
-    32; // Minimum packing size per register for DPAS B.
-
 namespace {
 
 //===----------------------------------------------------------------------===//
@@ -198,8 +188,10 @@ struct LayoutInfoLattice : public Lattice<LayoutInfo> {
 static LayoutInfo getDefaultLayoutInfo(unsigned rank) {
   assert((rank == 1 || rank == 2) && "Expected 1D or 2D vector.");
   if (rank == 1)
-    return LayoutInfo(LaneLayout({subgroupSize}), LaneData({1}));
-  return LayoutInfo(LaneLayout({1, subgroupSize}), LaneData({1, 1}));
+    return LayoutInfo(LaneLayout({xegpu::targetinfo::subgroupSize}),
+                      LaneData({1}));
+  return LayoutInfo(LaneLayout({1, xegpu::targetinfo::subgroupSize}),
+                    LaneData({1, 1}));
 }
 
 /// Helper to get the default layout for a vector type.
@@ -216,9 +208,9 @@ static LayoutInfo getDefaultLayoutInfo(VectorType vectorTy) {
   // Packing factor is determined by the element type bitwidth.
   int packingFactor = 1;
   unsigned bitwidth = vectorTy.getElementType().getIntOrFloatBitWidth();
-  if (bitwidth < packedSizeInBitsForDefault)
-    packingFactor = packedSizeInBitsForDefault / bitwidth;
-  return LayoutInfo(LaneLayout({1, subgroupSize}),
+  if (bitwidth < xegpu::targetinfo::packedSizeInBitsForDefault)
+    packingFactor = xegpu::targetinfo::packedSizeInBitsForDefault / bitwidth;
+  return LayoutInfo(LaneLayout({1, xegpu::targetinfo::subgroupSize}),
                     LaneData({1, packingFactor}));
 }
 
@@ -233,13 +225,14 @@ static LayoutInfo getLayoutInfoForDPASOperand(VectorType vectorTy,
   Type elementTy = vectorTy.getElementType();
   assert(elementTy.isIntOrFloat() &&
          "Expected int or float type in DPAS operands");
-  LaneLayout layout({1, subgroupSize});
+  LaneLayout layout({1, xegpu::targetinfo::subgroupSize});
   // For B operand, data must be packed in minimum `packedDpasBSizeInBits` and
   // must have the VNNI format.
-  if (operandNum == 1 &&
-      elementTy.getIntOrFloatBitWidth() < packedSizeInBitsForDpasB) {
-    LaneData data(
-        {packedSizeInBitsForDpasB / elementTy.getIntOrFloatBitWidth(), 1});
+  if (operandNum == 1 && elementTy.getIntOrFloatBitWidth() <
+                             xegpu::targetinfo::packedSizeInBitsForDpasB) {
+    LaneData data({xegpu::targetinfo::packedSizeInBitsForDpasB /
+                       elementTy.getIntOrFloatBitWidth(),
+                   1});
     return LayoutInfo(layout, data);
   }
   // Otherwise, return the default layout for the vector type.
@@ -577,7 +570,7 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   ArrayRef<int64_t> tdescShape = storeScatter.getTensorDescType().getShape();
   if (tdescShape.size() > 1)
     assert(
-        tdescShape[0] == subgroupSize &&
+        tdescShape[0] == xegpu::targetinfo::subgroupSize &&
         "Expected the first dimension of 2D tensor descriptor to be equal to "
         "subgroup size.");
 

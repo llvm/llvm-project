@@ -58,15 +58,6 @@ namespace xegpu {
 
 using namespace mlir;
 
-/// HW dependent constants.
-/// TODO: These constants should be queried from the target information.
-constexpr unsigned subgroupSize = 16; // How many lanes in a subgroup.
-/// If DPAS A or B operands have low precision element types they must be packed
-/// according to the following sizes.
-constexpr unsigned packedSizeInBitsForDefault =
-    16; // Minimum packing size per register for DPAS A.
-constexpr unsigned packedSizeInBitsForDpasB =
-    32; // Minimum packing size per register for DPAS B.
 static const char *const resolveSIMTTypeMismatch =
     "resolve_simt_type_mismatch"; // Attribute name for identifying
                                   // UnrelizedConversionCastOp added to resolve
@@ -228,8 +219,9 @@ struct MoveFuncBodyToWarpExecuteOnLane0
         /** upperBound = **/ mlir::IntegerAttr());
     ArrayRef<Type> gpuFuncResultType = gpuFuncOp.getFunctionType().getResults();
     auto warpOp = rewriter.create<gpu::WarpExecuteOnLane0Op>(
-        laneId.getLoc(), gpuFuncResultType, laneId, subgroupSize,
-        newGpuFunc.getArguments(), newGpuFunc.getArgumentTypes());
+        laneId.getLoc(), gpuFuncResultType, laneId,
+        xegpu::targetinfo::subgroupSize, newGpuFunc.getArguments(),
+        newGpuFunc.getArgumentTypes());
     Block &warpBodyBlock = warpOp.getBodyRegion().front();
     // Replace the ReturnOp of the original gpu function with a YieldOp.
     auto origRetunOp =
