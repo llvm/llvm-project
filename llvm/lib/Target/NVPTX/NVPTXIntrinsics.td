@@ -1768,93 +1768,74 @@ def : Pat<(int_nvvm_ff_to_e5m2x2_rn f32:$a, f32:$b),
 def : Pat<(int_nvvm_ff_to_e5m2x2_rn_relu f32:$a, f32:$b),
           (CVT_e5m2x2_f32 $a, $b, CvtRN_RELU)>;
 
-def : Pat<(int_nvvm_f16x2_to_e4m3x2_rn Int32Regs:$a),
+def : Pat<(int_nvvm_f16x2_to_e4m3x2_rn v2f16:$a),
           (CVT_e4m3x2_f16x2 $a, CvtRN)>;
-def : Pat<(int_nvvm_f16x2_to_e4m3x2_rn_relu Int32Regs:$a),
+def : Pat<(int_nvvm_f16x2_to_e4m3x2_rn_relu v2f16:$a),
           (CVT_e4m3x2_f16x2 $a, CvtRN_RELU)>;
-def : Pat<(int_nvvm_f16x2_to_e5m2x2_rn Int32Regs:$a),
+def : Pat<(int_nvvm_f16x2_to_e5m2x2_rn v2f16:$a),
           (CVT_e5m2x2_f16x2 $a, CvtRN)>;
-def : Pat<(int_nvvm_f16x2_to_e5m2x2_rn_relu Int32Regs:$a),
+def : Pat<(int_nvvm_f16x2_to_e5m2x2_rn_relu v2f16:$a),
           (CVT_e5m2x2_f16x2 $a, CvtRN_RELU)>;
 
-def : Pat<(int_nvvm_e4m3x2_to_f16x2_rn Int16Regs:$a),
+def : Pat<(int_nvvm_e4m3x2_to_f16x2_rn i16:$a),
           (CVT_f16x2_e4m3x2 $a, CvtRN)>;
-def : Pat<(int_nvvm_e4m3x2_to_f16x2_rn_relu Int16Regs:$a),
+def : Pat<(int_nvvm_e4m3x2_to_f16x2_rn_relu i16:$a),
           (CVT_f16x2_e4m3x2 $a, CvtRN_RELU)>;
-def : Pat<(int_nvvm_e5m2x2_to_f16x2_rn Int16Regs:$a),
+def : Pat<(int_nvvm_e5m2x2_to_f16x2_rn i16:$a),
           (CVT_f16x2_e5m2x2 $a, CvtRN)>;
-def : Pat<(int_nvvm_e5m2x2_to_f16x2_rn_relu Int16Regs:$a),
+def : Pat<(int_nvvm_e5m2x2_to_f16x2_rn_relu i16:$a),
           (CVT_f16x2_e5m2x2 $a, CvtRN_RELU)>;
 
-def : Pat<(int_nvvm_ff_to_e2m3x2_rn_satfinite f32:$a, f32:$b),
-          (CVT_e2m3x2_f32_sf $a, $b, CvtRN)>,
-      Requires<[hasPTX<86>, hasSM<100>, hasArchAccelFeatures]>;
-def : Pat<(int_nvvm_ff_to_e2m3x2_rn_relu_satfinite f32:$a, f32:$b),
-          (CVT_e2m3x2_f32_sf $a, $b, CvtRN_RELU)>,
-      Requires<[hasPTX<86>, hasSM<100>, hasArchAccelFeatures]>;
-def : Pat<(int_nvvm_ff_to_e3m2x2_rn_satfinite f32:$a, f32:$b),
-          (CVT_e3m2x2_f32_sf $a, $b, CvtRN)>,
-      Requires<[hasPTX<86>, hasSM<100>, hasArchAccelFeatures]>;
-def : Pat<(int_nvvm_ff_to_e3m2x2_rn_relu_satfinite f32:$a, f32:$b),
-          (CVT_e3m2x2_f32_sf $a, $b, CvtRN_RELU)>,
-      Requires<[hasPTX<86>, hasSM<100>, hasArchAccelFeatures]>;
+let Predicates = [hasPTX<86>, hasSM<100>, hasArchAccelFeatures] in {
+  def : Pat<(int_nvvm_ff_to_e2m3x2_rn_satfinite f32:$a, f32:$b),
+            (CVT_e2m3x2_f32_sf $a, $b, CvtRN)>;
+  def : Pat<(int_nvvm_ff_to_e2m3x2_rn_relu_satfinite f32:$a, f32:$b),
+            (CVT_e2m3x2_f32_sf $a, $b, CvtRN_RELU)>;
+  def : Pat<(int_nvvm_ff_to_e3m2x2_rn_satfinite f32:$a, f32:$b),
+            (CVT_e3m2x2_f32_sf $a, $b, CvtRN)>;
+  def : Pat<(int_nvvm_ff_to_e3m2x2_rn_relu_satfinite f32:$a, f32:$b),
+            (CVT_e3m2x2_f32_sf $a, $b, CvtRN_RELU)>;
 
-def : Pat<(int_nvvm_e2m3x2_to_f16x2_rn i16:$a),
-          (CVT_f16x2_e2m3x2 $a, CvtRN)>,
-      Requires<[hasPTX<86>, hasSM<100>, hasArchAccelFeatures]>;
-def : Pat<(int_nvvm_e2m3x2_to_f16x2_rn_relu i16:$a),
-          (CVT_f16x2_e2m3x2 $a, CvtRN_RELU)>,
-      Requires<[hasPTX<86>, hasSM<100>, hasArchAccelFeatures]>;
-def : Pat<(int_nvvm_e3m2x2_to_f16x2_rn i16:$a),
-          (CVT_f16x2_e3m2x2 $a, CvtRN)>,
-      Requires<[hasPTX<86>, hasSM<100>, hasArchAccelFeatures]>;
-def : Pat<(int_nvvm_e3m2x2_to_f16x2_rn_relu i16:$a),
-          (CVT_f16x2_e3m2x2 $a, CvtRN_RELU)>,
-      Requires<[hasPTX<86>, hasSM<100>, hasArchAccelFeatures]>;
-      
-def : Pat<(int_nvvm_ff_to_e2m1x2_rn_satfinite f32:$a, f32:$b),
-          (CVT_e2m1x2_f32_sf $a, $b, CvtRN)>,
-      Requires<[hasPTX<86>, hasSM<100>, hasArchAccelFeatures]>;
-def : Pat<(int_nvvm_ff_to_e2m1x2_rn_relu_satfinite f32:$a, f32:$b),
-          (CVT_e2m1x2_f32_sf $a, $b, CvtRN_RELU)>,
-      Requires<[hasPTX<86>, hasSM<100>, hasArchAccelFeatures]>;
-      
-def : Pat<(int_nvvm_e2m1x2_to_f16x2_rn Int16Regs:$a),
-          (CVT_f16x2_e2m1x2 $a, CvtRN)>,
-      Requires<[hasPTX<86>, hasSM<100>, hasArchAccelFeatures]>;
-def : Pat<(int_nvvm_e2m1x2_to_f16x2_rn_relu Int16Regs:$a),
-          (CVT_f16x2_e2m1x2 $a, CvtRN_RELU)>,
-      Requires<[hasPTX<86>, hasSM<100>, hasArchAccelFeatures]>;
+  def : Pat<(int_nvvm_e2m3x2_to_f16x2_rn i16:$a),
+            (CVT_f16x2_e2m3x2 $a, CvtRN)>;
+  def : Pat<(int_nvvm_e2m3x2_to_f16x2_rn_relu i16:$a),
+            (CVT_f16x2_e2m3x2 $a, CvtRN_RELU)>;
+  def : Pat<(int_nvvm_e3m2x2_to_f16x2_rn i16:$a),
+            (CVT_f16x2_e3m2x2 $a, CvtRN)>;
+  def : Pat<(int_nvvm_e3m2x2_to_f16x2_rn_relu i16:$a),
+            (CVT_f16x2_e3m2x2 $a, CvtRN_RELU)>;
 
-def : Pat<(int_nvvm_ff_to_ue8m0x2_rz f32:$a, f32:$b),
-          (CVT_ue8m0x2_f32 $a, $b, CvtRZ)>,
-      Requires<[hasPTX<86>, hasSM<100>, hasArchAccelFeatures]>;
-def : Pat<(int_nvvm_ff_to_ue8m0x2_rz_satfinite f32:$a, f32:$b),
-          (CVT_ue8m0x2_f32_sf $a, $b, CvtRZ)>,
-      Requires<[hasPTX<86>, hasSM<100>, hasArchAccelFeatures]>;
-def : Pat<(int_nvvm_ff_to_ue8m0x2_rp f32:$a, f32:$b),
-          (CVT_ue8m0x2_f32 $a, $b, CvtRP)>,
-      Requires<[hasPTX<86>, hasSM<100>, hasArchAccelFeatures]>;
-def : Pat<(int_nvvm_ff_to_ue8m0x2_rp_satfinite f32:$a, f32:$b),
-          (CVT_ue8m0x2_f32_sf $a, $b, CvtRP)>,
-      Requires<[hasPTX<86>, hasSM<100>, hasArchAccelFeatures]>;
-          
-def : Pat<(int_nvvm_bf16x2_to_ue8m0x2_rz Int32Regs:$a),
-          (CVT_ue8m0x2_bf16x2 $a, CvtRZ)>,
-      Requires<[hasPTX<86>, hasSM<100>, hasArchAccelFeatures]>;
-def : Pat<(int_nvvm_bf16x2_to_ue8m0x2_rz_satfinite Int32Regs:$a),
-          (CVT_ue8m0x2_bf16x2_sf $a, CvtRZ)>,
-      Requires<[hasPTX<86>, hasSM<100>, hasArchAccelFeatures]>;
-def : Pat<(int_nvvm_bf16x2_to_ue8m0x2_rp Int32Regs:$a),
-          (CVT_ue8m0x2_bf16x2 $a, CvtRP)>,
-      Requires<[hasPTX<86>, hasSM<100>, hasArchAccelFeatures]>;
-def : Pat<(int_nvvm_bf16x2_to_ue8m0x2_rp_satfinite Int32Regs:$a),
-          (CVT_ue8m0x2_bf16x2_sf $a, CvtRP)>,
-      Requires<[hasPTX<86>, hasSM<100>, hasArchAccelFeatures]>;
-          
-def : Pat<(int_nvvm_ue8m0x2_to_bf16x2 i16:$a),
-          (CVT_bf16x2_ue8m0x2 $a)>,
-      Requires<[hasPTX<86>, hasSM<100>, hasArchAccelFeatures]>;
+  def : Pat<(int_nvvm_ff_to_e2m1x2_rn_satfinite f32:$a, f32:$b),
+            (CVT_e2m1x2_f32_sf $a, $b, CvtRN)>;
+  def : Pat<(int_nvvm_ff_to_e2m1x2_rn_relu_satfinite f32:$a, f32:$b),
+            (CVT_e2m1x2_f32_sf $a, $b, CvtRN_RELU)>;
+
+  def : Pat<(int_nvvm_e2m1x2_to_f16x2_rn i16:$a),
+            (CVT_f16x2_e2m1x2 $a, CvtRN)>;
+  def : Pat<(int_nvvm_e2m1x2_to_f16x2_rn_relu i16:$a),
+            (CVT_f16x2_e2m1x2 $a, CvtRN_RELU)>;
+
+  def : Pat<(int_nvvm_ff_to_ue8m0x2_rz f32:$a, f32:$b),
+            (CVT_ue8m0x2_f32 $a, $b, CvtRZ)>;
+  def : Pat<(int_nvvm_ff_to_ue8m0x2_rz_satfinite f32:$a, f32:$b),
+            (CVT_ue8m0x2_f32_sf $a, $b, CvtRZ)>;
+  def : Pat<(int_nvvm_ff_to_ue8m0x2_rp f32:$a, f32:$b),
+            (CVT_ue8m0x2_f32 $a, $b, CvtRP)>;
+  def : Pat<(int_nvvm_ff_to_ue8m0x2_rp_satfinite f32:$a, f32:$b),
+            (CVT_ue8m0x2_f32_sf $a, $b, CvtRP)>;
+
+  def : Pat<(int_nvvm_bf16x2_to_ue8m0x2_rz v2bf16:$a),
+            (CVT_ue8m0x2_bf16x2 $a, CvtRZ)>;
+  def : Pat<(int_nvvm_bf16x2_to_ue8m0x2_rz_satfinite v2bf16:$a),
+            (CVT_ue8m0x2_bf16x2_sf $a, CvtRZ)>;
+  def : Pat<(int_nvvm_bf16x2_to_ue8m0x2_rp v2bf16:$a),
+            (CVT_ue8m0x2_bf16x2 $a, CvtRP)>;
+  def : Pat<(int_nvvm_bf16x2_to_ue8m0x2_rp_satfinite v2bf16:$a),
+            (CVT_ue8m0x2_bf16x2_sf $a, CvtRP)>;
+
+  def : Pat<(int_nvvm_ue8m0x2_to_bf16x2 i16:$a),
+            (CVT_bf16x2_ue8m0x2 $a)>;
+}
 
 //
 // FNS
@@ -4482,1783 +4463,566 @@ def ISTYPEP_TEXTURE
 
 let IsSust = true in {
 
-class SUST_1D_base<string inst, NVPTXRegClass intype, dag surf>
+class SUST_1D_base<string inst, NVPTXRegClass intype, dag surf, list<dag> pat>
     : NVPTXInst<(outs),
                 !con(surf, (ins Int32Regs:$x, intype:$r)),
-                inst # " \t[$s, \\{$x\\}], \\{$r\\};",
-                []>;
+                inst # " \t[$s, \\{$x\\}], \\{$r\\};", pat>;
 multiclass SUST_1D<string inst, NVPTXRegClass intype> {
-  def _R : SUST_1D_base<inst, intype, (ins Int64Regs:$s)>;
-  def _I : SUST_1D_base<inst, intype, (ins i64imm:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+
+  def _R : SUST_1D_base<inst, intype, (ins Int64Regs:$s),
+              [(intr Int64Regs:$s, Int32Regs:$x, intype:$r)]>;
+  def _I : SUST_1D_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_1D_B8_CLAMP : SUST_1D<"sust.b.1d.b8.clamp", Int16Regs>;
-defm SUST_B_1D_B16_CLAMP : SUST_1D<"sust.b.1d.b16.clamp", Int16Regs>;
-defm SUST_B_1D_B32_CLAMP : SUST_1D<"sust.b.1d.b32.clamp", Int32Regs>;
-defm SUST_B_1D_B64_CLAMP : SUST_1D<"sust.b.1d.b64.clamp", Int64Regs>;
+defm SUST_B_1D_I8_CLAMP : SUST_1D<"sust.b.1d.b8.clamp", Int16Regs>;
+defm SUST_B_1D_I16_CLAMP : SUST_1D<"sust.b.1d.b16.clamp", Int16Regs>;
+defm SUST_B_1D_I32_CLAMP : SUST_1D<"sust.b.1d.b32.clamp", Int32Regs>;
+defm SUST_B_1D_I64_CLAMP : SUST_1D<"sust.b.1d.b64.clamp", Int64Regs>;
 
-defm SUST_B_1D_B8_TRAP : SUST_1D<"sust.b.1d.b8.trap", Int16Regs>;
-defm SUST_B_1D_B16_TRAP : SUST_1D<"sust.b.1d.b16.trap", Int16Regs>;
-defm SUST_B_1D_B32_TRAP : SUST_1D<"sust.b.1d.b32.trap", Int32Regs>;
-defm SUST_B_1D_B64_TRAP : SUST_1D<"sust.b.1d.b64.trap", Int64Regs>;
+defm SUST_B_1D_I8_TRAP : SUST_1D<"sust.b.1d.b8.trap", Int16Regs>;
+defm SUST_B_1D_I16_TRAP : SUST_1D<"sust.b.1d.b16.trap", Int16Regs>;
+defm SUST_B_1D_I32_TRAP : SUST_1D<"sust.b.1d.b32.trap", Int32Regs>;
+defm SUST_B_1D_I64_TRAP : SUST_1D<"sust.b.1d.b64.trap", Int64Regs>;
 
-defm SUST_B_1D_B8_ZERO : SUST_1D<"sust.b.1d.b8.zero", Int16Regs>;
-defm SUST_B_1D_B16_ZERO : SUST_1D<"sust.b.1d.b16.zero", Int16Regs>;
-defm SUST_B_1D_B32_ZERO : SUST_1D<"sust.b.1d.b32.zero", Int32Regs>;
-defm SUST_B_1D_B64_ZERO : SUST_1D<"sust.b.1d.b64.zero", Int64Regs>;
+defm SUST_B_1D_I8_ZERO : SUST_1D<"sust.b.1d.b8.zero", Int16Regs>;
+defm SUST_B_1D_I16_ZERO : SUST_1D<"sust.b.1d.b16.zero", Int16Regs>;
+defm SUST_B_1D_I32_ZERO : SUST_1D<"sust.b.1d.b32.zero", Int32Regs>;
+defm SUST_B_1D_I64_ZERO : SUST_1D<"sust.b.1d.b64.zero", Int64Regs>;
 
-defm SUST_P_1D_B8_TRAP : SUST_1D<"sust.p.1d.b8.trap", Int16Regs>;
-defm SUST_P_1D_B16_TRAP : SUST_1D<"sust.p.1d.b16.trap", Int16Regs>;
-defm SUST_P_1D_B32_TRAP : SUST_1D<"sust.p.1d.b32.trap", Int32Regs>;
+defm SUST_P_1D_I8_TRAP : SUST_1D<"sust.p.1d.b8.trap", Int16Regs>;
+defm SUST_P_1D_I16_TRAP : SUST_1D<"sust.p.1d.b16.trap", Int16Regs>;
+defm SUST_P_1D_I32_TRAP : SUST_1D<"sust.p.1d.b32.trap", Int32Regs>;
 
-class SUST_1D_V2_base<string inst, NVPTXRegClass intype, dag surf>
+class SUST_1D_V2_base<string inst, NVPTXRegClass intype, dag surf, list<dag> pat>
     : NVPTXInst<(outs),
                 !con(surf, (ins Int32Regs:$x, intype:$r, intype:$g)),
                 inst # " \t[$s, \\{$x\\}], \\{$r, $g\\};",
-                []>;
+                pat>;
 multiclass SUST_1D_V2<string inst, NVPTXRegClass intype> {
-  def _R : SUST_1D_V2_base<inst, intype, (ins Int64Regs:$s)>;
-  def _I : SUST_1D_V2_base<inst, intype, (ins i64imm:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+  def _R : SUST_1D_V2_base<inst, intype, (ins Int64Regs:$s),
+              [(intr Int64Regs:$s, Int32Regs:$x, intype:$r, intype:$g)]>;
+  def _I : SUST_1D_V2_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_1D_V2B8_CLAMP : SUST_1D_V2<"sust.b.1d.v2.b8.clamp", Int16Regs>;
-defm SUST_B_1D_V2B16_CLAMP : SUST_1D_V2<"sust.b.1d.v2.b16.clamp", Int16Regs>;
-defm SUST_B_1D_V2B32_CLAMP : SUST_1D_V2<"sust.b.1d.v2.b32.clamp", Int32Regs>;
-defm SUST_B_1D_V2B64_CLAMP : SUST_1D_V2<"sust.b.1d.v2.b64.clamp", Int64Regs>;
+// int_nvvm_sust_b_1d_v2i8_clamp
 
-defm SUST_B_1D_V2B8_TRAP : SUST_1D_V2<"sust.b.1d.v2.b8.trap", Int16Regs>;
-defm SUST_B_1D_V2B16_TRAP : SUST_1D_V2<"sust.b.1d.v2.b16.trap", Int16Regs>;
-defm SUST_B_1D_V2B32_TRAP : SUST_1D_V2<"sust.b.1d.v2.b32.trap", Int32Regs>;
-defm SUST_B_1D_V2B64_TRAP : SUST_1D_V2<"sust.b.1d.v2.b64.trap", Int64Regs>;
+defm SUST_B_1D_V2I8_CLAMP : SUST_1D_V2<"sust.b.1d.v2.b8.clamp", Int16Regs>;
+defm SUST_B_1D_V2I16_CLAMP : SUST_1D_V2<"sust.b.1d.v2.b16.clamp", Int16Regs>;
+defm SUST_B_1D_V2I32_CLAMP : SUST_1D_V2<"sust.b.1d.v2.b32.clamp", Int32Regs>;
+defm SUST_B_1D_V2I64_CLAMP : SUST_1D_V2<"sust.b.1d.v2.b64.clamp", Int64Regs>;
 
-defm SUST_B_1D_V2B8_ZERO : SUST_1D_V2<"sust.b.1d.v2.b8.zero", Int16Regs>;
-defm SUST_B_1D_V2B16_ZERO : SUST_1D_V2<"sust.b.1d.v2.b16.zero", Int16Regs>;
-defm SUST_B_1D_V2B32_ZERO : SUST_1D_V2<"sust.b.1d.v2.b32.zero", Int32Regs>;
-defm SUST_B_1D_V2B64_ZERO : SUST_1D_V2<"sust.b.1d.v2.b64.zero", Int64Regs>;
+defm SUST_B_1D_V2I8_TRAP : SUST_1D_V2<"sust.b.1d.v2.b8.trap", Int16Regs>;
+defm SUST_B_1D_V2I16_TRAP : SUST_1D_V2<"sust.b.1d.v2.b16.trap", Int16Regs>;
+defm SUST_B_1D_V2I32_TRAP : SUST_1D_V2<"sust.b.1d.v2.b32.trap", Int32Regs>;
+defm SUST_B_1D_V2I64_TRAP : SUST_1D_V2<"sust.b.1d.v2.b64.trap", Int64Regs>;
 
-defm SUST_P_1D_V2B8_TRAP : SUST_1D_V2<"sust.p.1d.v2.b8.trap", Int16Regs>;
-defm SUST_P_1D_V2B16_TRAP : SUST_1D_V2<"sust.p.1d.v2.b16.trap", Int16Regs>;
-defm SUST_P_1D_V2B32_TRAP : SUST_1D_V2<"sust.p.1d.v2.b32.trap", Int32Regs>;
+defm SUST_B_1D_V2I8_ZERO : SUST_1D_V2<"sust.b.1d.v2.b8.zero", Int16Regs>;
+defm SUST_B_1D_V2I16_ZERO : SUST_1D_V2<"sust.b.1d.v2.b16.zero", Int16Regs>;
+defm SUST_B_1D_V2I32_ZERO : SUST_1D_V2<"sust.b.1d.v2.b32.zero", Int32Regs>;
+defm SUST_B_1D_V2I64_ZERO : SUST_1D_V2<"sust.b.1d.v2.b64.zero", Int64Regs>;
 
-class SUST_1D_V4_base<string inst, NVPTXRegClass intype, dag surf>
+defm SUST_P_1D_V2I8_TRAP : SUST_1D_V2<"sust.p.1d.v2.b8.trap", Int16Regs>;
+defm SUST_P_1D_V2I16_TRAP : SUST_1D_V2<"sust.p.1d.v2.b16.trap", Int16Regs>;
+defm SUST_P_1D_V2I32_TRAP : SUST_1D_V2<"sust.p.1d.v2.b32.trap", Int32Regs>;
+
+class SUST_1D_V4_base<string inst, NVPTXRegClass intype, dag surf, list<dag> pat>
     : NVPTXInst<(outs),
                 !con(surf, (ins Int32Regs:$x, intype:$r, intype:$g,
                                 intype:$b, intype:$a)),
                 inst # " \t[$s, \\{$x\\}], \\{$r, $g, $b, $a\\};",
-                []>;
+                pat>;
 multiclass SUST_1D_V4<string inst, NVPTXRegClass intype> {
-  def _R : SUST_1D_V4_base<inst, intype, (ins Int64Regs:$s)>;
-  def _I : SUST_1D_V4_base<inst, intype, (ins i64imm:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+  def _R : SUST_1D_V4_base<inst, intype, (ins Int64Regs:$s),
+              [(intr Int64Regs:$s, Int32Regs:$x, intype:$r, intype:$g,
+                intype:$b, intype:$a)]>;
+  def _I : SUST_1D_V4_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_1D_V4B8_CLAMP : SUST_1D_V4<"sust.b.1d.v4.b8.clamp", Int16Regs>;
-defm SUST_B_1D_V4B16_CLAMP : SUST_1D_V4<"sust.b.1d.v4.b16.clamp", Int16Regs>;
-defm SUST_B_1D_V4B32_CLAMP : SUST_1D_V4<"sust.b.1d.v4.b32.clamp", Int32Regs>;
+defm SUST_B_1D_V4I8_CLAMP : SUST_1D_V4<"sust.b.1d.v4.b8.clamp", Int16Regs>;
+defm SUST_B_1D_V4I16_CLAMP : SUST_1D_V4<"sust.b.1d.v4.b16.clamp", Int16Regs>;
+defm SUST_B_1D_V4I32_CLAMP : SUST_1D_V4<"sust.b.1d.v4.b32.clamp", Int32Regs>;
 
-defm SUST_B_1D_V4B8_TRAP : SUST_1D_V4<"sust.b.1d.v4.b8.trap", Int16Regs>;
-defm SUST_B_1D_V4B16_TRAP : SUST_1D_V4<"sust.b.1d.v4.b16.trap", Int16Regs>;
-defm SUST_B_1D_V4B32_TRAP : SUST_1D_V4<"sust.b.1d.v4.b32.trap", Int32Regs>;
+defm SUST_B_1D_V4I8_TRAP : SUST_1D_V4<"sust.b.1d.v4.b8.trap", Int16Regs>;
+defm SUST_B_1D_V4I16_TRAP : SUST_1D_V4<"sust.b.1d.v4.b16.trap", Int16Regs>;
+defm SUST_B_1D_V4I32_TRAP : SUST_1D_V4<"sust.b.1d.v4.b32.trap", Int32Regs>;
 
-defm SUST_B_1D_V4B8_ZERO : SUST_1D_V4<"sust.b.1d.v4.b8.zero", Int16Regs>;
-defm SUST_B_1D_V4B16_ZERO : SUST_1D_V4<"sust.b.1d.v4.b16.zero", Int16Regs>;
-defm SUST_B_1D_V4B32_ZERO : SUST_1D_V4<"sust.b.1d.v4.b32.zero", Int32Regs>;
+defm SUST_B_1D_V4I8_ZERO : SUST_1D_V4<"sust.b.1d.v4.b8.zero", Int16Regs>;
+defm SUST_B_1D_V4I16_ZERO : SUST_1D_V4<"sust.b.1d.v4.b16.zero", Int16Regs>;
+defm SUST_B_1D_V4I32_ZERO : SUST_1D_V4<"sust.b.1d.v4.b32.zero", Int32Regs>;
 
-defm SUST_P_1D_V4B8_TRAP : SUST_1D_V4<"sust.p.1d.v4.b8.trap", Int16Regs>;
-defm SUST_P_1D_V4B16_TRAP : SUST_1D_V4<"sust.p.1d.v4.b16.trap", Int16Regs>;
-defm SUST_P_1D_V4B32_TRAP : SUST_1D_V4<"sust.p.1d.v4.b32.trap", Int32Regs>;
+defm SUST_P_1D_V4I8_TRAP : SUST_1D_V4<"sust.p.1d.v4.b8.trap", Int16Regs>;
+defm SUST_P_1D_V4I16_TRAP : SUST_1D_V4<"sust.p.1d.v4.b16.trap", Int16Regs>;
+defm SUST_P_1D_V4I32_TRAP : SUST_1D_V4<"sust.p.1d.v4.b32.trap", Int32Regs>;
 
-class SUST_1D_ARRAY_base<string inst, NVPTXRegClass intype, dag surf>
+class SUST_1D_ARRAY_base<string inst, NVPTXRegClass intype, dag surf, list<dag> pat>
     : NVPTXInst<(outs),
                 !con(surf, (ins Int32Regs:$idx, Int32Regs:$x, intype:$r)),
                 inst # " \t[$s, \\{$idx, $x\\}], \\{$r\\};",
-                []>;
+                pat>;
 multiclass SUST_1D_ARRAY<string inst, NVPTXRegClass intype> {
-  def _R : SUST_1D_ARRAY_base<inst, intype, (ins Int64Regs:$s)>;
-  def _I : SUST_1D_ARRAY_base<inst, intype, (ins i64imm:$s)>;
+    defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+  def _R : SUST_1D_ARRAY_base<inst, intype, (ins Int64Regs:$s),
+              [(intr Int64Regs:$s, Int32Regs:$idx, Int32Regs:$x, intype:$r)]>;
+  def _I : SUST_1D_ARRAY_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_1D_ARRAY_B8_CLAMP
+defm SUST_B_1D_ARRAY_I8_CLAMP
   : SUST_1D_ARRAY<"sust.b.a1d.b8.clamp", Int16Regs>;
-defm SUST_B_1D_ARRAY_B16_CLAMP
+defm SUST_B_1D_ARRAY_I16_CLAMP
   : SUST_1D_ARRAY<"sust.b.a1d.b16.clamp", Int16Regs>;
-defm SUST_B_1D_ARRAY_B32_CLAMP
+defm SUST_B_1D_ARRAY_I32_CLAMP
   : SUST_1D_ARRAY<"sust.b.a1d.b32.clamp", Int32Regs>;
-defm SUST_B_1D_ARRAY_B64_CLAMP
+defm SUST_B_1D_ARRAY_I64_CLAMP
   : SUST_1D_ARRAY<"sust.b.a1d.b64.clamp", Int64Regs>;
 
-defm SUST_B_1D_ARRAY_B8_TRAP
+defm SUST_B_1D_ARRAY_I8_TRAP
   : SUST_1D_ARRAY<"sust.b.a1d.b8.trap", Int16Regs>;
-defm SUST_B_1D_ARRAY_B16_TRAP
+defm SUST_B_1D_ARRAY_I16_TRAP
   : SUST_1D_ARRAY<"sust.b.a1d.b16.trap", Int16Regs>;
-defm SUST_B_1D_ARRAY_B32_TRAP
+defm SUST_B_1D_ARRAY_I32_TRAP
   : SUST_1D_ARRAY<"sust.b.a1d.b32.trap", Int32Regs>;
-defm SUST_B_1D_ARRAY_B64_TRAP
+defm SUST_B_1D_ARRAY_I64_TRAP
   : SUST_1D_ARRAY<"sust.b.a1d.b64.trap", Int64Regs>;
 
-defm SUST_B_1D_ARRAY_B8_ZERO
+defm SUST_B_1D_ARRAY_I8_ZERO
   : SUST_1D_ARRAY<"sust.b.a1d.b8.zero", Int16Regs>;
-defm SUST_B_1D_ARRAY_B16_ZERO
+defm SUST_B_1D_ARRAY_I16_ZERO
   : SUST_1D_ARRAY<"sust.b.a1d.b16.zero", Int16Regs>;
-defm SUST_B_1D_ARRAY_B32_ZERO
+defm SUST_B_1D_ARRAY_I32_ZERO
   : SUST_1D_ARRAY<"sust.b.a1d.b32.zero", Int32Regs>;
-defm SUST_B_1D_ARRAY_B64_ZERO
+defm SUST_B_1D_ARRAY_I64_ZERO
   : SUST_1D_ARRAY<"sust.b.a1d.b64.zero", Int64Regs>;
 
-defm SUST_P_1D_ARRAY_B8_TRAP
+defm SUST_P_1D_ARRAY_I8_TRAP
   : SUST_1D_ARRAY<"sust.p.a1d.b8.trap", Int16Regs>;
-defm SUST_P_1D_ARRAY_B16_TRAP
+defm SUST_P_1D_ARRAY_I16_TRAP
   : SUST_1D_ARRAY<"sust.p.a1d.b16.trap", Int16Regs>;
-defm SUST_P_1D_ARRAY_B32_TRAP
+defm SUST_P_1D_ARRAY_I32_TRAP
   : SUST_1D_ARRAY<"sust.p.a1d.b32.trap", Int32Regs>;
 
-class SUST_1D_ARRAY_V2_base<string inst, NVPTXRegClass intype, dag surf>
+class SUST_1D_ARRAY_V2_base<string inst, NVPTXRegClass intype, dag surf, list<dag> pat>
     : NVPTXInst<(outs),
                 !con(surf, (ins Int32Regs:$idx, Int32Regs:$x,
                                 intype:$r, intype:$g)),
                 inst # " \t[$s, \\{$idx, $x\\}], \\{$r, $g\\};",
-                []>;
+                pat>;
 multiclass SUST_1D_ARRAY_V2<string inst, NVPTXRegClass intype> {
-  def _R : SUST_1D_ARRAY_V2_base<inst, intype, (ins Int64Regs:$s)>;
-  def _I : SUST_1D_ARRAY_V2_base<inst, intype, (ins i64imm:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+  def _R : SUST_1D_ARRAY_V2_base<inst, intype, (ins Int64Regs:$s),
+              [(intr Int64Regs:$s, Int32Regs:$idx, Int32Regs:$x,
+                intype:$r, intype:$g)]>;
+  def _I : SUST_1D_ARRAY_V2_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_1D_ARRAY_V2B8_CLAMP
+defm SUST_B_1D_ARRAY_V2I8_CLAMP
   : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b8.clamp", Int16Regs>;
-defm SUST_B_1D_ARRAY_V2B16_CLAMP
+defm SUST_B_1D_ARRAY_V2I16_CLAMP
   : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b16.clamp", Int16Regs>;
-defm SUST_B_1D_ARRAY_V2B32_CLAMP
+defm SUST_B_1D_ARRAY_V2I32_CLAMP
   : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b32.clamp", Int32Regs>;
-defm SUST_B_1D_ARRAY_V2B64_CLAMP
+defm SUST_B_1D_ARRAY_V2I64_CLAMP
   : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b64.clamp", Int64Regs>;
 
-defm SUST_B_1D_ARRAY_V2B8_TRAP
+defm SUST_B_1D_ARRAY_V2I8_TRAP
   : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b8.trap", Int16Regs>;
-defm SUST_B_1D_ARRAY_V2B16_TRAP
+defm SUST_B_1D_ARRAY_V2I16_TRAP
   : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b16.trap", Int16Regs>;
-defm SUST_B_1D_ARRAY_V2B32_TRAP
+defm SUST_B_1D_ARRAY_V2I32_TRAP
   : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b32.trap", Int32Regs>;
-defm SUST_B_1D_ARRAY_V2B64_TRAP
+defm SUST_B_1D_ARRAY_V2I64_TRAP
   : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b64.trap", Int64Regs>;
 
-defm SUST_B_1D_ARRAY_V2B8_ZERO
+defm SUST_B_1D_ARRAY_V2I8_ZERO
   : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b8.zero", Int16Regs>;
-defm SUST_B_1D_ARRAY_V2B16_ZERO
+defm SUST_B_1D_ARRAY_V2I16_ZERO
   : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b16.zero", Int16Regs>;
-defm SUST_B_1D_ARRAY_V2B32_ZERO
+defm SUST_B_1D_ARRAY_V2I32_ZERO
   : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b32.zero", Int32Regs>;
-defm SUST_B_1D_ARRAY_V2B64_ZERO
+defm SUST_B_1D_ARRAY_V2I64_ZERO
   : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b64.zero", Int64Regs>;
 
-defm SUST_P_1D_ARRAY_V2B8_TRAP
+defm SUST_P_1D_ARRAY_V2I8_TRAP
   : SUST_1D_ARRAY_V2<"sust.p.a1d.v2.b8.trap", Int16Regs>;
-defm SUST_P_1D_ARRAY_V2B16_TRAP
+defm SUST_P_1D_ARRAY_V2I16_TRAP
   : SUST_1D_ARRAY_V2<"sust.p.a1d.v2.b16.trap", Int16Regs>;
-defm SUST_P_1D_ARRAY_V2B32_TRAP
+defm SUST_P_1D_ARRAY_V2I32_TRAP
   : SUST_1D_ARRAY_V2<"sust.p.a1d.v2.b32.trap", Int32Regs>;
 
-class SUST_1D_ARRAY_V4_base<string inst, NVPTXRegClass intype, dag surf>
+class SUST_1D_ARRAY_V4_base<string inst, NVPTXRegClass intype, dag surf, list<dag> pat>
     : NVPTXInst<(outs),
                 !con(surf, (ins Int32Regs:$idx, Int32Regs:$x,
                                 intype:$r, intype:$g, intype:$b, intype:$a)),
                 inst # " \t[$s, \\{$idx, $x\\}], \\{$r, $g, $b, $a\\};",
-                []>;
+                pat>;
 multiclass SUST_1D_ARRAY_V4<string inst, NVPTXRegClass intype> {
-  def _R : SUST_1D_ARRAY_V4_base<inst, intype, (ins Int64Regs:$s)>;
-  def _I : SUST_1D_ARRAY_V4_base<inst, intype, (ins i64imm:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+  def _R : SUST_1D_ARRAY_V4_base<inst, intype, (ins Int64Regs:$s),
+              [(intr Int64Regs:$s, Int32Regs:$idx, Int32Regs:$x,
+                intype:$r, intype:$g, intype:$b, intype:$a)]>;
+  def _I : SUST_1D_ARRAY_V4_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_1D_ARRAY_V4B8_CLAMP
+defm SUST_B_1D_ARRAY_V4I8_CLAMP
   : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b8.clamp", Int16Regs>;
-defm SUST_B_1D_ARRAY_V4B16_CLAMP
+defm SUST_B_1D_ARRAY_V4I16_CLAMP
   : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b16.clamp", Int16Regs>;
-defm SUST_B_1D_ARRAY_V4B32_CLAMP
+defm SUST_B_1D_ARRAY_V4I32_CLAMP
   : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b32.clamp", Int32Regs>;
 
-defm SUST_B_1D_ARRAY_V4B8_TRAP
+defm SUST_B_1D_ARRAY_V4I8_TRAP
   : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b8.trap", Int16Regs>;
-defm SUST_B_1D_ARRAY_V4B16_TRAP
+defm SUST_B_1D_ARRAY_V4I16_TRAP
   : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b16.trap", Int16Regs>;
-defm SUST_B_1D_ARRAY_V4B32_TRAP
+defm SUST_B_1D_ARRAY_V4I32_TRAP
   : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b32.trap", Int32Regs>;
 
-defm SUST_B_1D_ARRAY_V4B8_ZERO
+defm SUST_B_1D_ARRAY_V4I8_ZERO
   : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b8.zero", Int16Regs>;
-defm SUST_B_1D_ARRAY_V4B16_ZERO
+defm SUST_B_1D_ARRAY_V4I16_ZERO
   : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b16.zero", Int16Regs>;
-defm SUST_B_1D_ARRAY_V4B32_ZERO
+defm SUST_B_1D_ARRAY_V4I32_ZERO
   : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b32.zero", Int32Regs>;
 
-defm SUST_P_1D_ARRAY_V4B8_TRAP
+defm SUST_P_1D_ARRAY_V4I8_TRAP
   : SUST_1D_ARRAY_V4<"sust.p.a1d.v4.b8.trap", Int16Regs>;
-defm SUST_P_1D_ARRAY_V4B16_TRAP
+defm SUST_P_1D_ARRAY_V4I16_TRAP
   : SUST_1D_ARRAY_V4<"sust.p.a1d.v4.b16.trap", Int16Regs>;
-defm SUST_P_1D_ARRAY_V4B32_TRAP
+defm SUST_P_1D_ARRAY_V4I32_TRAP
   : SUST_1D_ARRAY_V4<"sust.p.a1d.v4.b32.trap", Int32Regs>;
 
-class SUST_2D_base<string inst, NVPTXRegClass intype, dag surf>
+class SUST_2D_base<string inst, NVPTXRegClass intype, dag surf, list<dag> pat>
     : NVPTXInst<(outs),
                 !con(surf, (ins Int32Regs:$x, Int32Regs:$y, intype:$r)),
                 inst # " \t[$s, \\{$x, $y\\}], \\{$r\\};",
-                []>;
+                pat>;
 multiclass SUST_2D<string inst, NVPTXRegClass intype> {
-  def _R : SUST_2D_base<inst, intype, (ins Int64Regs:$s)>;
-  def _I : SUST_2D_base<inst, intype, (ins i64imm:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+  def _R : SUST_2D_base<inst, intype, (ins Int64Regs:$s),
+              [(intr Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, intype:$r)]>;
+  def _I : SUST_2D_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_2D_B8_CLAMP : SUST_2D<"sust.b.2d.b8.clamp", Int16Regs>;
-defm SUST_B_2D_B16_CLAMP : SUST_2D<"sust.b.2d.b16.clamp", Int16Regs>;
-defm SUST_B_2D_B32_CLAMP : SUST_2D<"sust.b.2d.b32.clamp", Int32Regs>;
-defm SUST_B_2D_B64_CLAMP : SUST_2D<"sust.b.2d.b64.clamp", Int64Regs>;
+defm SUST_B_2D_I8_CLAMP : SUST_2D<"sust.b.2d.b8.clamp", Int16Regs>;
+defm SUST_B_2D_I16_CLAMP : SUST_2D<"sust.b.2d.b16.clamp", Int16Regs>;
+defm SUST_B_2D_I32_CLAMP : SUST_2D<"sust.b.2d.b32.clamp", Int32Regs>;
+defm SUST_B_2D_I64_CLAMP : SUST_2D<"sust.b.2d.b64.clamp", Int64Regs>;
 
-defm SUST_B_2D_B8_TRAP : SUST_2D<"sust.b.2d.b8.trap", Int16Regs>;
-defm SUST_B_2D_B16_TRAP : SUST_2D<"sust.b.2d.b16.trap", Int16Regs>;
-defm SUST_B_2D_B32_TRAP : SUST_2D<"sust.b.2d.b32.trap", Int32Regs>;
-defm SUST_B_2D_B64_TRAP : SUST_2D<"sust.b.2d.b64.trap", Int64Regs>;
+defm SUST_B_2D_I8_TRAP : SUST_2D<"sust.b.2d.b8.trap", Int16Regs>;
+defm SUST_B_2D_I16_TRAP : SUST_2D<"sust.b.2d.b16.trap", Int16Regs>;
+defm SUST_B_2D_I32_TRAP : SUST_2D<"sust.b.2d.b32.trap", Int32Regs>;
+defm SUST_B_2D_I64_TRAP : SUST_2D<"sust.b.2d.b64.trap", Int64Regs>;
 
-defm SUST_B_2D_B8_ZERO : SUST_2D<"sust.b.2d.b8.zero", Int16Regs>;
-defm SUST_B_2D_B16_ZERO : SUST_2D<"sust.b.2d.b16.zero", Int16Regs>;
-defm SUST_B_2D_B32_ZERO : SUST_2D<"sust.b.2d.b32.zero", Int32Regs>;
-defm SUST_B_2D_B64_ZERO : SUST_2D<"sust.b.2d.b64.zero", Int64Regs>;
+defm SUST_B_2D_I8_ZERO : SUST_2D<"sust.b.2d.b8.zero", Int16Regs>;
+defm SUST_B_2D_I16_ZERO : SUST_2D<"sust.b.2d.b16.zero", Int16Regs>;
+defm SUST_B_2D_I32_ZERO : SUST_2D<"sust.b.2d.b32.zero", Int32Regs>;
+defm SUST_B_2D_I64_ZERO : SUST_2D<"sust.b.2d.b64.zero", Int64Regs>;
 
-defm SUST_P_2D_B8_TRAP : SUST_2D<"sust.p.2d.b8.trap", Int16Regs>;
-defm SUST_P_2D_B16_TRAP : SUST_2D<"sust.p.2d.b16.trap", Int16Regs>;
-defm SUST_P_2D_B32_TRAP : SUST_2D<"sust.p.2d.b32.trap", Int32Regs>;
+defm SUST_P_2D_I8_TRAP : SUST_2D<"sust.p.2d.b8.trap", Int16Regs>;
+defm SUST_P_2D_I16_TRAP : SUST_2D<"sust.p.2d.b16.trap", Int16Regs>;
+defm SUST_P_2D_I32_TRAP : SUST_2D<"sust.p.2d.b32.trap", Int32Regs>;
 
-class SUST_2D_V2_base<string inst, NVPTXRegClass intype, dag surf>
+class SUST_2D_V2_base<string inst, NVPTXRegClass intype, dag surf, list<dag> pat>
     : NVPTXInst<(outs),
                 !con(surf, (ins Int32Regs:$x, Int32Regs:$y,
                                 intype:$r, intype:$g)),
                 inst # " \t[$s, \\{$x, $y\\}], \\{$r, $g\\};",
-                []>;
+                pat>;
 multiclass SUST_2D_V2<string inst, NVPTXRegClass intype> {
-  def _R : SUST_2D_V2_base<inst, intype, (ins Int64Regs:$s)>;
-  def _I : SUST_2D_V2_base<inst, intype, (ins i64imm:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+  def _R : SUST_2D_V2_base<inst, intype, (ins Int64Regs:$s),
+              [(intr Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
+                intype:$r, intype:$g)]>;
+  def _I : SUST_2D_V2_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_2D_V2B8_CLAMP : SUST_2D_V2<"sust.b.2d.v2.b8.clamp", Int16Regs>;
-defm SUST_B_2D_V2B16_CLAMP : SUST_2D_V2<"sust.b.2d.v2.b16.clamp", Int16Regs>;
-defm SUST_B_2D_V2B32_CLAMP : SUST_2D_V2<"sust.b.2d.v2.b32.clamp", Int32Regs>;
-defm SUST_B_2D_V2B64_CLAMP : SUST_2D_V2<"sust.b.2d.v2.b64.clamp", Int64Regs>;
+defm SUST_B_2D_V2I8_CLAMP : SUST_2D_V2<"sust.b.2d.v2.b8.clamp", Int16Regs>;
+defm SUST_B_2D_V2I16_CLAMP : SUST_2D_V2<"sust.b.2d.v2.b16.clamp", Int16Regs>;
+defm SUST_B_2D_V2I32_CLAMP : SUST_2D_V2<"sust.b.2d.v2.b32.clamp", Int32Regs>;
+defm SUST_B_2D_V2I64_CLAMP : SUST_2D_V2<"sust.b.2d.v2.b64.clamp", Int64Regs>;
 
-defm SUST_B_2D_V2B8_TRAP : SUST_2D_V2<"sust.b.2d.v2.b8.trap", Int16Regs>;
-defm SUST_B_2D_V2B16_TRAP : SUST_2D_V2<"sust.b.2d.v2.b16.trap", Int16Regs>;
-defm SUST_B_2D_V2B32_TRAP : SUST_2D_V2<"sust.b.2d.v2.b32.trap", Int32Regs>;
-defm SUST_B_2D_V2B64_TRAP : SUST_2D_V2<"sust.b.2d.v2.b64.trap", Int64Regs>;
+defm SUST_B_2D_V2I8_TRAP : SUST_2D_V2<"sust.b.2d.v2.b8.trap", Int16Regs>;
+defm SUST_B_2D_V2I16_TRAP : SUST_2D_V2<"sust.b.2d.v2.b16.trap", Int16Regs>;
+defm SUST_B_2D_V2I32_TRAP : SUST_2D_V2<"sust.b.2d.v2.b32.trap", Int32Regs>;
+defm SUST_B_2D_V2I64_TRAP : SUST_2D_V2<"sust.b.2d.v2.b64.trap", Int64Regs>;
 
-defm SUST_B_2D_V2B8_ZERO : SUST_2D_V2<"sust.b.2d.v2.b8.zero", Int16Regs>;
-defm SUST_B_2D_V2B16_ZERO : SUST_2D_V2<"sust.b.2d.v2.b16.zero", Int16Regs>;
-defm SUST_B_2D_V2B32_ZERO : SUST_2D_V2<"sust.b.2d.v2.b32.zero", Int32Regs>;
-defm SUST_B_2D_V2B64_ZERO : SUST_2D_V2<"sust.b.2d.v2.b64.zero", Int64Regs>;
+defm SUST_B_2D_V2I8_ZERO : SUST_2D_V2<"sust.b.2d.v2.b8.zero", Int16Regs>;
+defm SUST_B_2D_V2I16_ZERO : SUST_2D_V2<"sust.b.2d.v2.b16.zero", Int16Regs>;
+defm SUST_B_2D_V2I32_ZERO : SUST_2D_V2<"sust.b.2d.v2.b32.zero", Int32Regs>;
+defm SUST_B_2D_V2I64_ZERO : SUST_2D_V2<"sust.b.2d.v2.b64.zero", Int64Regs>;
 
-defm SUST_P_2D_V2B8_TRAP : SUST_2D_V2<"sust.p.2d.v2.b8.trap", Int16Regs>;
-defm SUST_P_2D_V2B16_TRAP : SUST_2D_V2<"sust.p.2d.v2.b16.trap", Int16Regs>;
-defm SUST_P_2D_V2B32_TRAP : SUST_2D_V2<"sust.p.2d.v2.b32.trap", Int32Regs>;
+defm SUST_P_2D_V2I8_TRAP : SUST_2D_V2<"sust.p.2d.v2.b8.trap", Int16Regs>;
+defm SUST_P_2D_V2I16_TRAP : SUST_2D_V2<"sust.p.2d.v2.b16.trap", Int16Regs>;
+defm SUST_P_2D_V2I32_TRAP : SUST_2D_V2<"sust.p.2d.v2.b32.trap", Int32Regs>;
 
-class SUST_2D_V4_base<string inst, NVPTXRegClass intype, dag surf>
+class SUST_2D_V4_base<string inst, NVPTXRegClass intype, dag surf, list<dag> pat>
     : NVPTXInst<(outs),
                 !con(surf, (ins Int32Regs:$x, Int32Regs:$y,
                                 intype:$r, intype:$g, intype:$b, intype:$a)),
                 inst # " \t[$s, \\{$x, $y\\}], \\{$r, $g, $b, $a\\};",
-                []>;
+                pat>;
 multiclass SUST_2D_V4<string inst, NVPTXRegClass intype> {
-  def _R : SUST_2D_V4_base<inst, intype, (ins Int64Regs:$s)>;
-  def _I : SUST_2D_V4_base<inst, intype, (ins i64imm:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+  def _R : SUST_2D_V4_base<inst, intype, (ins Int64Regs:$s),
+              [(intr Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
+                intype:$r, intype:$g, intype:$b, intype:$a)]>;
+  def _I : SUST_2D_V4_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_2D_V4B8_CLAMP : SUST_2D_V4<"sust.b.2d.v4.b8.clamp", Int16Regs>;
-defm SUST_B_2D_V4B16_CLAMP : SUST_2D_V4<"sust.b.2d.v4.b16.clamp", Int16Regs>;
-defm SUST_B_2D_V4B32_CLAMP : SUST_2D_V4<"sust.b.2d.v4.b32.clamp", Int32Regs>;
+defm SUST_B_2D_V4I8_CLAMP : SUST_2D_V4<"sust.b.2d.v4.b8.clamp", Int16Regs>;
+defm SUST_B_2D_V4I16_CLAMP : SUST_2D_V4<"sust.b.2d.v4.b16.clamp", Int16Regs>;
+defm SUST_B_2D_V4I32_CLAMP : SUST_2D_V4<"sust.b.2d.v4.b32.clamp", Int32Regs>;
 
-defm SUST_B_2D_V4B8_TRAP : SUST_2D_V4<"sust.b.2d.v4.b8.trap", Int16Regs>;
-defm SUST_B_2D_V4B16_TRAP : SUST_2D_V4<"sust.b.2d.v4.b16.trap", Int16Regs>;
-defm SUST_B_2D_V4B32_TRAP : SUST_2D_V4<"sust.b.2d.v4.b32.trap", Int32Regs>;
+defm SUST_B_2D_V4I8_TRAP : SUST_2D_V4<"sust.b.2d.v4.b8.trap", Int16Regs>;
+defm SUST_B_2D_V4I16_TRAP : SUST_2D_V4<"sust.b.2d.v4.b16.trap", Int16Regs>;
+defm SUST_B_2D_V4I32_TRAP : SUST_2D_V4<"sust.b.2d.v4.b32.trap", Int32Regs>;
 
-defm SUST_B_2D_V4B8_ZERO : SUST_2D_V4<"sust.b.2d.v4.b8.zero", Int16Regs>;
-defm SUST_B_2D_V4B16_ZERO : SUST_2D_V4<"sust.b.2d.v4.b16.zero", Int16Regs>;
-defm SUST_B_2D_V4B32_ZERO : SUST_2D_V4<"sust.b.2d.v4.b32.zero", Int32Regs>;
+defm SUST_B_2D_V4I8_ZERO : SUST_2D_V4<"sust.b.2d.v4.b8.zero", Int16Regs>;
+defm SUST_B_2D_V4I16_ZERO : SUST_2D_V4<"sust.b.2d.v4.b16.zero", Int16Regs>;
+defm SUST_B_2D_V4I32_ZERO : SUST_2D_V4<"sust.b.2d.v4.b32.zero", Int32Regs>;
 
-defm SUST_P_2D_V4B8_TRAP : SUST_2D_V4<"sust.p.2d.v4.b8.trap", Int16Regs>;
-defm SUST_P_2D_V4B16_TRAP : SUST_2D_V4<"sust.p.2d.v4.b16.trap", Int16Regs>;
-defm SUST_P_2D_V4B32_TRAP : SUST_2D_V4<"sust.p.2d.v4.b32.trap", Int32Regs>;
+defm SUST_P_2D_V4I8_TRAP : SUST_2D_V4<"sust.p.2d.v4.b8.trap", Int16Regs>;
+defm SUST_P_2D_V4I16_TRAP : SUST_2D_V4<"sust.p.2d.v4.b16.trap", Int16Regs>;
+defm SUST_P_2D_V4I32_TRAP : SUST_2D_V4<"sust.p.2d.v4.b32.trap", Int32Regs>;
 
-class SUST_2D_ARRAY_base<string inst, NVPTXRegClass intype, dag surf>
+class SUST_2D_ARRAY_base<string inst, NVPTXRegClass intype, dag surf, list<dag> pat>
     : NVPTXInst<(outs),
                 !con(surf, (ins Int32Regs:$idx, Int32Regs:$x, Int32Regs:$y,
                                 intype:$r)),
                 inst # " \t[$s, \\{$idx, $x, $y, $y\\}], \\{$r\\};",
-                []>;
+                pat>;
 multiclass SUST_2D_ARRAY<string inst, NVPTXRegClass intype> {
-  def _R : SUST_2D_ARRAY_base<inst, intype, (ins Int64Regs:$s)>;
-  def _I : SUST_2D_ARRAY_base<inst, intype, (ins i64imm:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+  def _R : SUST_2D_ARRAY_base<inst, intype, (ins Int64Regs:$s),
+              [(intr Int64Regs:$s, Int32Regs:$idx, Int32Regs:$x, Int32Regs:$y,
+                intype:$r)]>;
+  def _I : SUST_2D_ARRAY_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_2D_ARRAY_B8_CLAMP
+defm SUST_B_2D_ARRAY_I8_CLAMP
   : SUST_2D_ARRAY<"sust.b.a2d.b8.clamp", Int16Regs>;
-defm SUST_B_2D_ARRAY_B16_CLAMP
+defm SUST_B_2D_ARRAY_I16_CLAMP
   : SUST_2D_ARRAY<"sust.b.a2d.b16.clamp", Int16Regs>;
-defm SUST_B_2D_ARRAY_B32_CLAMP
+defm SUST_B_2D_ARRAY_I32_CLAMP
   : SUST_2D_ARRAY<"sust.b.a2d.b32.clamp", Int32Regs>;
-defm SUST_B_2D_ARRAY_B64_CLAMP
+defm SUST_B_2D_ARRAY_I64_CLAMP
   : SUST_2D_ARRAY<"sust.b.a2d.b64.clamp", Int64Regs>;
 
-defm SUST_B_2D_ARRAY_B8_TRAP
+defm SUST_B_2D_ARRAY_I8_TRAP
   : SUST_2D_ARRAY<"sust.b.a2d.b8.trap", Int16Regs>;
-defm SUST_B_2D_ARRAY_B16_TRAP
+defm SUST_B_2D_ARRAY_I16_TRAP
   : SUST_2D_ARRAY<"sust.b.a2d.b16.trap", Int16Regs>;
-defm SUST_B_2D_ARRAY_B32_TRAP
+defm SUST_B_2D_ARRAY_I32_TRAP
   : SUST_2D_ARRAY<"sust.b.a2d.b32.trap", Int32Regs>;
-defm SUST_B_2D_ARRAY_B64_TRAP
+defm SUST_B_2D_ARRAY_I64_TRAP
   : SUST_2D_ARRAY<"sust.b.a2d.b64.trap", Int64Regs>;
 
-defm SUST_B_2D_ARRAY_B8_ZERO
+defm SUST_B_2D_ARRAY_I8_ZERO
   : SUST_2D_ARRAY<"sust.b.a2d.b8.zero", Int16Regs>;
-defm SUST_B_2D_ARRAY_B16_ZERO
+defm SUST_B_2D_ARRAY_I16_ZERO
   : SUST_2D_ARRAY<"sust.b.a2d.b16.zero", Int16Regs>;
-defm SUST_B_2D_ARRAY_B32_ZERO
+defm SUST_B_2D_ARRAY_I32_ZERO
   : SUST_2D_ARRAY<"sust.b.a2d.b32.zero", Int32Regs>;
-defm SUST_B_2D_ARRAY_B64_ZERO
+defm SUST_B_2D_ARRAY_I64_ZERO
   : SUST_2D_ARRAY<"sust.b.a2d.b64.zero", Int64Regs>;
 
-defm SUST_P_2D_ARRAY_B8_TRAP
+defm SUST_P_2D_ARRAY_I8_TRAP
   : SUST_2D_ARRAY<"sust.p.a2d.b8.trap", Int16Regs>;
-defm SUST_P_2D_ARRAY_B16_TRAP
+defm SUST_P_2D_ARRAY_I16_TRAP
   : SUST_2D_ARRAY<"sust.p.a2d.b16.trap", Int16Regs>;
-defm SUST_P_2D_ARRAY_B32_TRAP
+defm SUST_P_2D_ARRAY_I32_TRAP
   : SUST_2D_ARRAY<"sust.p.a2d.b32.trap", Int32Regs>;
 
-class SUST_2D_ARRAY_V2_base<string inst, NVPTXRegClass intype, dag surf>
+class SUST_2D_ARRAY_V2_base<string inst, NVPTXRegClass intype, dag surf, list<dag> pat>
     : NVPTXInst<(outs),
                 !con(surf, (ins Int32Regs:$idx, Int32Regs:$x, Int32Regs:$y,
                                 intype:$r, intype:$g)),
                 inst # " \t[$s, \\{$idx, $x, $y, $y\\}], \\{$r, $g\\};",
-                []>;
+                pat>;
 multiclass SUST_2D_ARRAY_V2<string inst, NVPTXRegClass intype> {
-  def _R : SUST_2D_ARRAY_V2_base<inst, intype, (ins Int64Regs:$s)>;
-  def _I : SUST_2D_ARRAY_V2_base<inst, intype, (ins i64imm:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+  def _R : SUST_2D_ARRAY_V2_base<inst, intype, (ins Int64Regs:$s),
+              [(intr Int64Regs:$s, Int32Regs:$idx, Int32Regs:$x, Int32Regs:$y,
+                intype:$r, intype:$g)]>;
+  def _I : SUST_2D_ARRAY_V2_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_2D_ARRAY_V2B8_CLAMP
+defm SUST_B_2D_ARRAY_V2I8_CLAMP
   : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b8.clamp", Int16Regs>;
-defm SUST_B_2D_ARRAY_V2B16_CLAMP
+defm SUST_B_2D_ARRAY_V2I16_CLAMP
   : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b16.clamp", Int16Regs>;
-defm SUST_B_2D_ARRAY_V2B32_CLAMP
+defm SUST_B_2D_ARRAY_V2I32_CLAMP
   : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b32.clamp", Int32Regs>;
-defm SUST_B_2D_ARRAY_V2B64_CLAMP
+defm SUST_B_2D_ARRAY_V2I64_CLAMP
   : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b64.clamp", Int64Regs>;
 
-defm SUST_B_2D_ARRAY_V2B8_TRAP
+defm SUST_B_2D_ARRAY_V2I8_TRAP
   : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b8.trap", Int16Regs>;
-defm SUST_B_2D_ARRAY_V2B16_TRAP
+defm SUST_B_2D_ARRAY_V2I16_TRAP
   : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b16.trap", Int16Regs>;
-defm SUST_B_2D_ARRAY_V2B32_TRAP
+defm SUST_B_2D_ARRAY_V2I32_TRAP
   : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b32.trap", Int32Regs>;
-defm SUST_B_2D_ARRAY_V2B64_TRAP
+defm SUST_B_2D_ARRAY_V2I64_TRAP
   : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b64.trap", Int64Regs>;
 
-defm SUST_B_2D_ARRAY_V2B8_ZERO
+defm SUST_B_2D_ARRAY_V2I8_ZERO
   : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b8.zero", Int16Regs>;
-defm SUST_B_2D_ARRAY_V2B16_ZERO
+defm SUST_B_2D_ARRAY_V2I16_ZERO
   : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b16.zero", Int16Regs>;
-defm SUST_B_2D_ARRAY_V2B32_ZERO
+defm SUST_B_2D_ARRAY_V2I32_ZERO
   : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b32.zero", Int32Regs>;
-defm SUST_B_2D_ARRAY_V2B64_ZERO
+defm SUST_B_2D_ARRAY_V2I64_ZERO
   : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b64.zero", Int64Regs>;
 
-defm SUST_P_2D_ARRAY_V2B8_TRAP
+defm SUST_P_2D_ARRAY_V2I8_TRAP
   : SUST_2D_ARRAY_V2<"sust.p.a2d.v2.b8.trap", Int16Regs>;
-defm SUST_P_2D_ARRAY_V2B16_TRAP
+defm SUST_P_2D_ARRAY_V2I16_TRAP
   : SUST_2D_ARRAY_V2<"sust.p.a2d.v2.b16.trap", Int16Regs>;
-defm SUST_P_2D_ARRAY_V2B32_TRAP
+defm SUST_P_2D_ARRAY_V2I32_TRAP
   : SUST_2D_ARRAY_V2<"sust.p.a2d.v2.b32.trap", Int32Regs>;
 
-class SUST_2D_ARRAY_V4_base<string inst, NVPTXRegClass intype, dag surf>
+class SUST_2D_ARRAY_V4_base<string inst, NVPTXRegClass intype, dag surf, list<dag> pat>
     : NVPTXInst<(outs),
                 !con(surf, (ins Int32Regs:$idx, Int32Regs:$x, Int32Regs:$y,
                                 intype:$r, intype:$g, intype:$b, intype:$a)),
                 inst # " \t[$s, \\{$idx, $x, $y, $y\\}], \\{$r, $g, $b, $a\\};",
-                []>;
+                pat>;
 multiclass SUST_2D_ARRAY_V4<string inst, NVPTXRegClass intype> {
-  def _R : SUST_2D_ARRAY_V4_base<inst, intype, (ins Int64Regs:$s)>;
-  def _I : SUST_2D_ARRAY_V4_base<inst, intype, (ins i64imm:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+  def _R : SUST_2D_ARRAY_V4_base<inst, intype, (ins Int64Regs:$s),
+              [(intr Int64Regs:$s, Int32Regs:$idx, Int32Regs:$x, Int32Regs:$y,
+                intype:$r, intype:$g, intype:$b, intype:$a)]>;
+  def _I : SUST_2D_ARRAY_V4_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_2D_ARRAY_V4B8_CLAMP
+defm SUST_B_2D_ARRAY_V4I8_CLAMP
   : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b8.clamp", Int16Regs>;
-defm SUST_B_2D_ARRAY_V4B16_CLAMP
+defm SUST_B_2D_ARRAY_V4I16_CLAMP
   : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b16.clamp", Int16Regs>;
-defm SUST_B_2D_ARRAY_V4B32_CLAMP
+defm SUST_B_2D_ARRAY_V4I32_CLAMP
   : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b32.clamp", Int32Regs>;
 
-defm SUST_B_2D_ARRAY_V4B8_TRAP
+defm SUST_B_2D_ARRAY_V4I8_TRAP
   : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b8.trap", Int16Regs>;
-defm SUST_B_2D_ARRAY_V4B16_TRAP
+defm SUST_B_2D_ARRAY_V4I16_TRAP
   : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b16.trap", Int16Regs>;
-defm SUST_B_2D_ARRAY_V4B32_TRAP
+defm SUST_B_2D_ARRAY_V4I32_TRAP
   : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b32.trap", Int32Regs>;
 
-defm SUST_B_2D_ARRAY_V4B8_ZERO
+defm SUST_B_2D_ARRAY_V4I8_ZERO
   : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b8.zero", Int16Regs>;
-defm SUST_B_2D_ARRAY_V4B16_ZERO
+defm SUST_B_2D_ARRAY_V4I16_ZERO
   : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b16.zero", Int16Regs>;
-defm SUST_B_2D_ARRAY_V4B32_ZERO
+defm SUST_B_2D_ARRAY_V4I32_ZERO
   : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b32.zero", Int32Regs>;
 
-defm SUST_P_2D_ARRAY_V4B8_TRAP
+defm SUST_P_2D_ARRAY_V4I8_TRAP
   : SUST_2D_ARRAY_V4<"sust.p.a2d.v4.b8.trap", Int16Regs>;
-defm SUST_P_2D_ARRAY_V4B16_TRAP
+defm SUST_P_2D_ARRAY_V4I16_TRAP
   : SUST_2D_ARRAY_V4<"sust.p.a2d.v4.b16.trap", Int16Regs>;
-defm SUST_P_2D_ARRAY_V4B32_TRAP
+defm SUST_P_2D_ARRAY_V4I32_TRAP
   : SUST_2D_ARRAY_V4<"sust.p.a2d.v4.b32.trap", Int32Regs>;
 
-class SUST_3D_base<string inst, NVPTXRegClass intype, dag surf>
+class SUST_3D_base<string inst, NVPTXRegClass intype, dag surf, list<dag> pat>
     : NVPTXInst<(outs),
                 !con(surf, (ins Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
                                 intype:$r)),
                 inst # " \t[$s, \\{$x, $y, $z, $z\\}], \\{$r\\};",
-                []>;
+                pat>;
 multiclass SUST_3D<string inst, NVPTXRegClass intype> {
-  def _R : SUST_3D_base<inst, intype, (ins Int64Regs:$s)>;
-  def _I : SUST_3D_base<inst, intype, (ins i64imm:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+  def _R : SUST_3D_base<inst, intype, (ins Int64Regs:$s),
+              [(intr Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
+                intype:$r)]>;
+  def _I : SUST_3D_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_3D_B8_CLAMP : SUST_3D<"sust.b.3d.b8.clamp", Int16Regs>;
-defm SUST_B_3D_B16_CLAMP : SUST_3D<"sust.b.3d.b16.clamp", Int16Regs>;
-defm SUST_B_3D_B32_CLAMP : SUST_3D<"sust.b.3d.b32.clamp", Int32Regs>;
-defm SUST_B_3D_B64_CLAMP : SUST_3D<"sust.b.3d.b64.clamp", Int64Regs>;
+defm SUST_B_3D_I8_CLAMP : SUST_3D<"sust.b.3d.b8.clamp", Int16Regs>;
+defm SUST_B_3D_I16_CLAMP : SUST_3D<"sust.b.3d.b16.clamp", Int16Regs>;
+defm SUST_B_3D_I32_CLAMP : SUST_3D<"sust.b.3d.b32.clamp", Int32Regs>;
+defm SUST_B_3D_I64_CLAMP : SUST_3D<"sust.b.3d.b64.clamp", Int64Regs>;
 
-defm SUST_B_3D_B8_TRAP : SUST_3D<"sust.b.3d.b8.trap", Int16Regs>;
-defm SUST_B_3D_B16_TRAP : SUST_3D<"sust.b.3d.b16.trap", Int16Regs>;
-defm SUST_B_3D_B32_TRAP : SUST_3D<"sust.b.3d.b32.trap", Int32Regs>;
-defm SUST_B_3D_B64_TRAP : SUST_3D<"sust.b.3d.b64.trap", Int64Regs>;
+defm SUST_B_3D_I8_TRAP : SUST_3D<"sust.b.3d.b8.trap", Int16Regs>;
+defm SUST_B_3D_I16_TRAP : SUST_3D<"sust.b.3d.b16.trap", Int16Regs>;
+defm SUST_B_3D_I32_TRAP : SUST_3D<"sust.b.3d.b32.trap", Int32Regs>;
+defm SUST_B_3D_I64_TRAP : SUST_3D<"sust.b.3d.b64.trap", Int64Regs>;
 
-defm SUST_B_3D_B8_ZERO : SUST_3D<"sust.b.3d.b8.zero", Int16Regs>;
-defm SUST_B_3D_B16_ZERO : SUST_3D<"sust.b.3d.b16.zero", Int16Regs>;
-defm SUST_B_3D_B32_ZERO : SUST_3D<"sust.b.3d.b32.zero", Int32Regs>;
-defm SUST_B_3D_B64_ZERO : SUST_3D<"sust.b.3d.b64.zero", Int64Regs>;
+defm SUST_B_3D_I8_ZERO : SUST_3D<"sust.b.3d.b8.zero", Int16Regs>;
+defm SUST_B_3D_I16_ZERO : SUST_3D<"sust.b.3d.b16.zero", Int16Regs>;
+defm SUST_B_3D_I32_ZERO : SUST_3D<"sust.b.3d.b32.zero", Int32Regs>;
+defm SUST_B_3D_I64_ZERO : SUST_3D<"sust.b.3d.b64.zero", Int64Regs>;
 
-defm SUST_P_3D_B8_TRAP : SUST_3D<"sust.p.3d.b8.trap", Int16Regs>;
-defm SUST_P_3D_B16_TRAP : SUST_3D<"sust.p.3d.b16.trap", Int16Regs>;
-defm SUST_P_3D_B32_TRAP : SUST_3D<"sust.p.3d.b32.trap", Int32Regs>;
+defm SUST_P_3D_I8_TRAP : SUST_3D<"sust.p.3d.b8.trap", Int16Regs>;
+defm SUST_P_3D_I16_TRAP : SUST_3D<"sust.p.3d.b16.trap", Int16Regs>;
+defm SUST_P_3D_I32_TRAP : SUST_3D<"sust.p.3d.b32.trap", Int32Regs>;
 
-class SUST_3D_V2_base<string inst, NVPTXRegClass intype, dag surf>
+class SUST_3D_V2_base<string inst, NVPTXRegClass intype, dag surf, list<dag> pat>
     : NVPTXInst<(outs),
                 !con(surf, (ins Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
                                 intype:$r, intype:$g)),
                 inst # " \t[$s, \\{$x, $y, $z, $z\\}], \\{$r, $g\\};",
-                []>;
+                pat>;
 multiclass SUST_3D_V2<string inst, NVPTXRegClass intype> {
-  def _R : SUST_3D_V2_base<inst, intype, (ins Int64Regs:$s)>;
-  def _I : SUST_3D_V2_base<inst, intype, (ins i64imm:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+  def _R : SUST_3D_V2_base<inst, intype, (ins Int64Regs:$s),
+              [(intr Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
+                intype:$r, intype:$g)]>;
+  def _I : SUST_3D_V2_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_3D_V2B8_CLAMP : SUST_3D_V2<"sust.b.3d.v2.b8.clamp", Int16Regs>;
-defm SUST_B_3D_V2B16_CLAMP : SUST_3D_V2<"sust.b.3d.v2.b16.clamp", Int16Regs>;
-defm SUST_B_3D_V2B32_CLAMP : SUST_3D_V2<"sust.b.3d.v2.b32.clamp", Int32Regs>;
-defm SUST_B_3D_V2B64_CLAMP : SUST_3D_V2<"sust.b.3d.v2.b64.clamp", Int64Regs>;
+defm SUST_B_3D_V2I8_CLAMP : SUST_3D_V2<"sust.b.3d.v2.b8.clamp", Int16Regs>;
+defm SUST_B_3D_V2I16_CLAMP : SUST_3D_V2<"sust.b.3d.v2.b16.clamp", Int16Regs>;
+defm SUST_B_3D_V2I32_CLAMP : SUST_3D_V2<"sust.b.3d.v2.b32.clamp", Int32Regs>;
+defm SUST_B_3D_V2I64_CLAMP : SUST_3D_V2<"sust.b.3d.v2.b64.clamp", Int64Regs>;
 
-defm SUST_B_3D_V2B8_TRAP : SUST_3D_V2<"sust.b.3d.v2.b8.trap", Int16Regs>;
-defm SUST_B_3D_V2B16_TRAP : SUST_3D_V2<"sust.b.3d.v2.b16.trap", Int16Regs>;
-defm SUST_B_3D_V2B32_TRAP : SUST_3D_V2<"sust.b.3d.v2.b32.trap", Int32Regs>;
-defm SUST_B_3D_V2B64_TRAP : SUST_3D_V2<"sust.b.3d.v2.b64.trap", Int64Regs>;
+defm SUST_B_3D_V2I8_TRAP : SUST_3D_V2<"sust.b.3d.v2.b8.trap", Int16Regs>;
+defm SUST_B_3D_V2I16_TRAP : SUST_3D_V2<"sust.b.3d.v2.b16.trap", Int16Regs>;
+defm SUST_B_3D_V2I32_TRAP : SUST_3D_V2<"sust.b.3d.v2.b32.trap", Int32Regs>;
+defm SUST_B_3D_V2I64_TRAP : SUST_3D_V2<"sust.b.3d.v2.b64.trap", Int64Regs>;
 
-defm SUST_B_3D_V2B8_ZERO : SUST_3D_V2<"sust.b.3d.v2.b8.zero", Int16Regs>;
-defm SUST_B_3D_V2B16_ZERO : SUST_3D_V2<"sust.b.3d.v2.b16.zero", Int16Regs>;
-defm SUST_B_3D_V2B32_ZERO : SUST_3D_V2<"sust.b.3d.v2.b32.zero", Int32Regs>;
-defm SUST_B_3D_V2B64_ZERO : SUST_3D_V2<"sust.b.3d.v2.b64.zero", Int64Regs>;
+defm SUST_B_3D_V2I8_ZERO : SUST_3D_V2<"sust.b.3d.v2.b8.zero", Int16Regs>;
+defm SUST_B_3D_V2I16_ZERO : SUST_3D_V2<"sust.b.3d.v2.b16.zero", Int16Regs>;
+defm SUST_B_3D_V2I32_ZERO : SUST_3D_V2<"sust.b.3d.v2.b32.zero", Int32Regs>;
+defm SUST_B_3D_V2I64_ZERO : SUST_3D_V2<"sust.b.3d.v2.b64.zero", Int64Regs>;
 
-defm SUST_P_3D_V2B8_TRAP : SUST_3D_V2<"sust.p.3d.v2.b8.trap", Int16Regs>;
-defm SUST_P_3D_V2B16_TRAP : SUST_3D_V2<"sust.p.3d.v2.b16.trap", Int16Regs>;
-defm SUST_P_3D_V2B32_TRAP : SUST_3D_V2<"sust.p.3d.v2.b32.trap", Int32Regs>;
+defm SUST_P_3D_V2I8_TRAP : SUST_3D_V2<"sust.p.3d.v2.b8.trap", Int16Regs>;
+defm SUST_P_3D_V2I16_TRAP : SUST_3D_V2<"sust.p.3d.v2.b16.trap", Int16Regs>;
+defm SUST_P_3D_V2I32_TRAP : SUST_3D_V2<"sust.p.3d.v2.b32.trap", Int32Regs>;
 
-class SUST_3D_V4_base<string inst, NVPTXRegClass intype, dag surf>
+class SUST_3D_V4_base<string inst, NVPTXRegClass intype, dag surf, list<dag> pat>
     : NVPTXInst<(outs),
                 !con(surf, (ins Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
                                 intype:$r, intype:$g, intype:$b, intype:$a)),
                 inst # " \t[$s, \\{$x, $y, $z, $z\\}], \\{$r, $g, $b, $a\\};",
-                []>;
+                pat>;
 multiclass SUST_3D_V4<string inst, NVPTXRegClass intype> {
-  def _R : SUST_3D_V4_base<inst, intype, (ins Int64Regs:$s)>;
-  def _I : SUST_3D_V4_base<inst, intype, (ins i64imm:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+  def _R : SUST_3D_V4_base<inst, intype, (ins Int64Regs:$s),
+              [(intr Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
+                intype:$r, intype:$g, intype:$b, intype:$a)]>;
+  def _I : SUST_3D_V4_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_3D_V4B8_CLAMP : SUST_3D_V4<"sust.b.3d.v4.b8.clamp", Int16Regs>;
-defm SUST_B_3D_V4B16_CLAMP : SUST_3D_V4<"sust.b.3d.v4.b16.clamp", Int16Regs>;
-defm SUST_B_3D_V4B32_CLAMP : SUST_3D_V4<"sust.b.3d.v4.b32.clamp", Int32Regs>;
+defm SUST_B_3D_V4I8_CLAMP : SUST_3D_V4<"sust.b.3d.v4.b8.clamp", Int16Regs>;
+defm SUST_B_3D_V4I16_CLAMP : SUST_3D_V4<"sust.b.3d.v4.b16.clamp", Int16Regs>;
+defm SUST_B_3D_V4I32_CLAMP : SUST_3D_V4<"sust.b.3d.v4.b32.clamp", Int32Regs>;
 
-defm SUST_B_3D_V4B8_TRAP : SUST_3D_V4<"sust.b.3d.v4.b8.trap", Int16Regs>;
-defm SUST_B_3D_V4B16_TRAP : SUST_3D_V4<"sust.b.3d.v4.b16.trap", Int16Regs>;
-defm SUST_B_3D_V4B32_TRAP : SUST_3D_V4<"sust.b.3d.v4.b32.trap", Int32Regs>;
+defm SUST_B_3D_V4I8_TRAP : SUST_3D_V4<"sust.b.3d.v4.b8.trap", Int16Regs>;
+defm SUST_B_3D_V4I16_TRAP : SUST_3D_V4<"sust.b.3d.v4.b16.trap", Int16Regs>;
+defm SUST_B_3D_V4I32_TRAP : SUST_3D_V4<"sust.b.3d.v4.b32.trap", Int32Regs>;
 
-defm SUST_B_3D_V4B8_ZERO : SUST_3D_V4<"sust.b.3d.v4.b8.zero", Int16Regs>;
-defm SUST_B_3D_V4B16_ZERO : SUST_3D_V4<"sust.b.3d.v4.b16.zero", Int16Regs>;
-defm SUST_B_3D_V4B32_ZERO : SUST_3D_V4<"sust.b.3d.v4.b32.zero", Int32Regs>;
+defm SUST_B_3D_V4I8_ZERO : SUST_3D_V4<"sust.b.3d.v4.b8.zero", Int16Regs>;
+defm SUST_B_3D_V4I16_ZERO : SUST_3D_V4<"sust.b.3d.v4.b16.zero", Int16Regs>;
+defm SUST_B_3D_V4I32_ZERO : SUST_3D_V4<"sust.b.3d.v4.b32.zero", Int32Regs>;
 
-defm SUST_P_3D_V4B8_TRAP : SUST_3D_V4<"sust.p.3d.v4.b8.trap", Int16Regs>;
-defm SUST_P_3D_V4B16_TRAP : SUST_3D_V4<"sust.p.3d.v4.b16.trap", Int16Regs>;
-defm SUST_P_3D_V4B32_TRAP : SUST_3D_V4<"sust.p.3d.v4.b32.trap", Int32Regs>;
+defm SUST_P_3D_V4I8_TRAP : SUST_3D_V4<"sust.p.3d.v4.b8.trap", Int16Regs>;
+defm SUST_P_3D_V4I16_TRAP : SUST_3D_V4<"sust.p.3d.v4.b16.trap", Int16Regs>;
+defm SUST_P_3D_V4I32_TRAP : SUST_3D_V4<"sust.p.3d.v4.b32.trap", Int32Regs>;
 
 }
 
-// Surface store instruction patterns
-// I'm not sure why we can't just include these in the instruction definitions,
-// but TableGen complains of type errors :(
-
-// .clamp variant
-def : Pat<(int_nvvm_sust_b_1d_i8_clamp
-           Int64Regs:$s, Int32Regs:$x, Int16Regs:$r),
-          (SUST_B_1D_B8_CLAMP_R Int64Regs:$s, Int32Regs:$x, Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_1d_i16_clamp
-           Int64Regs:$s, Int32Regs:$x, Int16Regs:$r),
-          (SUST_B_1D_B16_CLAMP_R Int64Regs:$s, Int32Regs:$x, Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_1d_i32_clamp
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$r),
-          (SUST_B_1D_B32_CLAMP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_1d_i64_clamp
-           Int64Regs:$s, Int32Regs:$x, Int64Regs:$r),
-          (SUST_B_1D_B64_CLAMP_R Int64Regs:$s, Int32Regs:$x, Int64Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_1d_v2i8_clamp
-           Int64Regs:$s, Int32Regs:$x, Int16Regs:$r, Int16Regs:$g),
-          (SUST_B_1D_V2B8_CLAMP_R Int64Regs:$s, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_1d_v2i16_clamp
-           Int64Regs:$s, Int32Regs:$x, Int16Regs:$r, Int16Regs:$g),
-          (SUST_B_1D_V2B16_CLAMP_R Int64Regs:$s, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_1d_v2i32_clamp
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$r, Int32Regs:$g),
-          (SUST_B_1D_V2B32_CLAMP_R Int64Regs:$s, Int32Regs:$x,
-           Int32Regs:$r, Int32Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_1d_v2i64_clamp
-           Int64Regs:$s, Int32Regs:$x, Int64Regs:$r, Int64Regs:$g),
-          (SUST_B_1D_V2B64_CLAMP_R Int64Regs:$s, Int32Regs:$x,
-           Int64Regs:$r, Int64Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_1d_v4i8_clamp
-           Int64Regs:$s, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_B_1D_V4B8_CLAMP_R Int64Regs:$s, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_b_1d_v4i16_clamp
-           Int64Regs:$s, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_B_1D_V4B16_CLAMP_R Int64Regs:$s, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_b_1d_v4i32_clamp
-           Int64Regs:$s, Int32Regs:$x,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a),
-          (SUST_B_1D_V4B32_CLAMP_R Int64Regs:$s, Int32Regs:$x,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a)>;
-
-
-
-def : Pat<(int_nvvm_sust_b_1d_array_i8_clamp
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int16Regs:$r),
-          (SUST_B_1D_ARRAY_B8_CLAMP_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_1d_array_i16_clamp
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int16Regs:$r),
-          (SUST_B_1D_ARRAY_B16_CLAMP_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_1d_array_i32_clamp
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$r),
-          (SUST_B_1D_ARRAY_B32_CLAMP_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int32Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_1d_array_i64_clamp
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int64Regs:$r),
-          (SUST_B_1D_ARRAY_B64_CLAMP_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int64Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_1d_array_v2i8_clamp
-          Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int16Regs:$r, Int16Regs:$g),
-          (SUST_B_1D_ARRAY_V2B8_CLAMP_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_1d_array_v2i16_clamp
-          Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int16Regs:$r, Int16Regs:$g),
-          (SUST_B_1D_ARRAY_V2B16_CLAMP_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_1d_array_v2i32_clamp
-          Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$r, Int32Regs:$g),
-          (SUST_B_1D_ARRAY_V2B32_CLAMP_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int32Regs:$r, Int32Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_1d_array_v2i64_clamp
-          Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int64Regs:$r, Int64Regs:$g),
-          (SUST_B_1D_ARRAY_V2B64_CLAMP_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int64Regs:$r, Int64Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_1d_array_v4i8_clamp
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_B_1D_ARRAY_V4B8_CLAMP_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_b_1d_array_v4i16_clamp
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_B_1D_ARRAY_V4B16_CLAMP_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_b_1d_array_v4i32_clamp
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a),
-          (SUST_B_1D_ARRAY_V4B32_CLAMP_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a)>;
-
-
-
-def : Pat<(int_nvvm_sust_b_2d_i8_clamp
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int16Regs:$r),
-          (SUST_B_2D_B8_CLAMP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_2d_i16_clamp
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int16Regs:$r),
-          (SUST_B_2D_B16_CLAMP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_2d_i32_clamp
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$r),
-          (SUST_B_2D_B32_CLAMP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int32Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_2d_i64_clamp
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int64Regs:$r),
-          (SUST_B_2D_B64_CLAMP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int64Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_2d_v2i8_clamp
-          Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int16Regs:$r, Int16Regs:$g),
-          (SUST_B_2D_V2B8_CLAMP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_2d_v2i16_clamp
-          Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int16Regs:$r, Int16Regs:$g),
-          (SUST_B_2D_V2B16_CLAMP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_2d_v2i32_clamp
-          Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$r, Int32Regs:$g),
-          (SUST_B_2D_V2B32_CLAMP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int32Regs:$r, Int32Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_2d_v2i64_clamp
-          Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int64Regs:$r, Int64Regs:$g),
-          (SUST_B_2D_V2B64_CLAMP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int64Regs:$r, Int64Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_2d_v4i8_clamp
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_B_2D_V4B8_CLAMP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_b_2d_v4i16_clamp
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_B_2D_V4B16_CLAMP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_b_2d_v4i32_clamp
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a),
-          (SUST_B_2D_V4B32_CLAMP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a)>;
-
-
-
-def : Pat<(int_nvvm_sust_b_2d_array_i8_clamp
-          Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y, Int16Regs:$r),
-          (SUST_B_2D_ARRAY_B8_CLAMP_R Int64Regs:$s,
-           Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_2d_array_i16_clamp
-          Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y, Int16Regs:$r),
-          (SUST_B_2D_ARRAY_B16_CLAMP_R Int64Regs:$s,
-           Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_2d_array_i32_clamp
-          Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y, Int32Regs:$r),
-          (SUST_B_2D_ARRAY_B32_CLAMP_R Int64Regs:$s,
-           Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int32Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_2d_array_i64_clamp
-          Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y, Int64Regs:$r),
-          (SUST_B_2D_ARRAY_B64_CLAMP_R Int64Regs:$s,
-           Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int64Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_2d_array_v2i8_clamp
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g),
-          (SUST_B_2D_ARRAY_V2B8_CLAMP_R Int64Regs:$s, Int32Regs:$l,
-           Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_2d_array_v2i16_clamp
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g),
-          (SUST_B_2D_ARRAY_V2B16_CLAMP_R Int64Regs:$s, Int32Regs:$l,
-           Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_2d_array_v2i32_clamp
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y, Int32Regs:$r,
-           Int32Regs:$g),
-          (SUST_B_2D_ARRAY_V2B32_CLAMP_R Int64Regs:$s, Int32Regs:$l,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$r, Int32Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_2d_array_v2i64_clamp
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y, Int64Regs:$r,
-           Int64Regs:$g),
-          (SUST_B_2D_ARRAY_V2B64_CLAMP_R Int64Regs:$s, Int32Regs:$l,
-           Int32Regs:$x, Int32Regs:$y, Int64Regs:$r, Int64Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_2d_array_v4i8_clamp
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_B_2D_ARRAY_V4B8_CLAMP_R Int64Regs:$s,
-           Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_b_2d_array_v4i16_clamp
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_B_2D_ARRAY_V4B16_CLAMP_R Int64Regs:$s,
-           Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_b_2d_array_v4i32_clamp
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a),
-          (SUST_B_2D_ARRAY_V4B32_CLAMP_R Int64Regs:$s, Int32Regs:$l,
-           Int32Regs:$x, Int32Regs:$y,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a)>;
-
-
-
-def : Pat<(int_nvvm_sust_b_3d_i8_clamp
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r),
-          (SUST_B_3D_B8_CLAMP_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_3d_i16_clamp
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r),
-          (SUST_B_3D_B16_CLAMP_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_3d_i32_clamp
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int32Regs:$r),
-          (SUST_B_3D_B32_CLAMP_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int32Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_3d_i64_clamp
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int64Regs:$r),
-          (SUST_B_3D_B64_CLAMP_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int64Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_3d_v2i8_clamp
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g),
-          (SUST_B_3D_V2B8_CLAMP_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_3d_v2i16_clamp
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g),
-          (SUST_B_3D_V2B16_CLAMP_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_3d_v2i32_clamp
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int32Regs:$r, Int32Regs:$g),
-          (SUST_B_3D_V2B32_CLAMP_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int32Regs:$r, Int32Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_3d_v2i64_clamp
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int64Regs:$r, Int64Regs:$g),
-          (SUST_B_3D_V2B64_CLAMP_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int64Regs:$r, Int64Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_3d_v4i8_clamp
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_B_3D_V4B8_CLAMP_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_b_3d_v4i16_clamp
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_B_3D_V4B16_CLAMP_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_b_3d_v4i32_clamp
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a),
-          (SUST_B_3D_V4B32_CLAMP_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a)>;
-
-
-// .trap variant
-def : Pat<(int_nvvm_sust_b_1d_i8_trap
-           Int64Regs:$s, Int32Regs:$x, Int16Regs:$r),
-          (SUST_B_1D_B8_TRAP_R Int64Regs:$s, Int32Regs:$x, Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_1d_i16_trap
-           Int64Regs:$s, Int32Regs:$x, Int16Regs:$r),
-          (SUST_B_1D_B16_TRAP_R Int64Regs:$s, Int32Regs:$x, Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_1d_i32_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$r),
-          (SUST_B_1D_B32_TRAP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_1d_i64_trap
-           Int64Regs:$s, Int32Regs:$x, Int64Regs:$r),
-          (SUST_B_1D_B64_TRAP_R Int64Regs:$s, Int32Regs:$x, Int64Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_1d_v2i8_trap
-           Int64Regs:$s, Int32Regs:$x, Int16Regs:$r, Int16Regs:$g),
-          (SUST_B_1D_V2B8_TRAP_R Int64Regs:$s, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_1d_v2i16_trap
-           Int64Regs:$s, Int32Regs:$x, Int16Regs:$r, Int16Regs:$g),
-          (SUST_B_1D_V2B16_TRAP_R Int64Regs:$s, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_1d_v2i32_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$r, Int32Regs:$g),
-          (SUST_B_1D_V2B32_TRAP_R Int64Regs:$s, Int32Regs:$x,
-           Int32Regs:$r, Int32Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_1d_v2i64_trap
-           Int64Regs:$s, Int32Regs:$x, Int64Regs:$r, Int64Regs:$g),
-          (SUST_B_1D_V2B64_TRAP_R Int64Regs:$s, Int32Regs:$x,
-           Int64Regs:$r, Int64Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_1d_v4i8_trap
-           Int64Regs:$s, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_B_1D_V4B8_TRAP_R Int64Regs:$s, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_b_1d_v4i16_trap
-           Int64Regs:$s, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_B_1D_V4B16_TRAP_R Int64Regs:$s, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_b_1d_v4i32_trap
-           Int64Regs:$s, Int32Regs:$x,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a),
-          (SUST_B_1D_V4B32_TRAP_R Int64Regs:$s, Int32Regs:$x,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a)>;
-
-
-
-def : Pat<(int_nvvm_sust_b_1d_array_i8_trap
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int16Regs:$r),
-          (SUST_B_1D_ARRAY_B8_TRAP_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_1d_array_i16_trap
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int16Regs:$r),
-          (SUST_B_1D_ARRAY_B16_TRAP_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_1d_array_i32_trap
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$r),
-          (SUST_B_1D_ARRAY_B32_TRAP_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int32Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_1d_array_i64_trap
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int64Regs:$r),
-          (SUST_B_1D_ARRAY_B64_TRAP_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int64Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_1d_array_v2i8_trap
-          Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int16Regs:$r, Int16Regs:$g),
-          (SUST_B_1D_ARRAY_V2B8_TRAP_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_1d_array_v2i16_trap
-          Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int16Regs:$r, Int16Regs:$g),
-          (SUST_B_1D_ARRAY_V2B16_TRAP_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_1d_array_v2i32_trap
-          Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$r, Int32Regs:$g),
-          (SUST_B_1D_ARRAY_V2B32_TRAP_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int32Regs:$r, Int32Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_1d_array_v2i64_trap
-          Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int64Regs:$r, Int64Regs:$g),
-          (SUST_B_1D_ARRAY_V2B64_TRAP_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int64Regs:$r, Int64Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_1d_array_v4i8_trap
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_B_1D_ARRAY_V4B8_TRAP_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_b_1d_array_v4i16_trap
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_B_1D_ARRAY_V4B16_TRAP_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_b_1d_array_v4i32_trap
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a),
-          (SUST_B_1D_ARRAY_V4B32_TRAP_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a)>;
-
-
-
-def : Pat<(int_nvvm_sust_b_2d_i8_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int16Regs:$r),
-          (SUST_B_2D_B8_TRAP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_2d_i16_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int16Regs:$r),
-          (SUST_B_2D_B16_TRAP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_2d_i32_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$r),
-          (SUST_B_2D_B32_TRAP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int32Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_2d_i64_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int64Regs:$r),
-          (SUST_B_2D_B64_TRAP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int64Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_2d_v2i8_trap
-          Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int16Regs:$r, Int16Regs:$g),
-          (SUST_B_2D_V2B8_TRAP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_2d_v2i16_trap
-          Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int16Regs:$r, Int16Regs:$g),
-          (SUST_B_2D_V2B16_TRAP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_2d_v2i32_trap
-          Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$r, Int32Regs:$g),
-          (SUST_B_2D_V2B32_TRAP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int32Regs:$r, Int32Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_2d_v2i64_trap
-          Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int64Regs:$r, Int64Regs:$g),
-          (SUST_B_2D_V2B64_TRAP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int64Regs:$r, Int64Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_2d_v4i8_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_B_2D_V4B8_TRAP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_b_2d_v4i16_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_B_2D_V4B16_TRAP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_b_2d_v4i32_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a),
-          (SUST_B_2D_V4B32_TRAP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a)>;
-
-
-
-def : Pat<(int_nvvm_sust_b_2d_array_i8_trap
-          Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y, Int16Regs:$r),
-          (SUST_B_2D_ARRAY_B8_TRAP_R Int64Regs:$s,
-           Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_2d_array_i16_trap
-          Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y, Int16Regs:$r),
-          (SUST_B_2D_ARRAY_B16_TRAP_R Int64Regs:$s,
-           Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_2d_array_i32_trap
-          Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y, Int32Regs:$r),
-          (SUST_B_2D_ARRAY_B32_TRAP_R Int64Regs:$s,
-           Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int32Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_2d_array_i64_trap
-          Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y, Int64Regs:$r),
-          (SUST_B_2D_ARRAY_B64_TRAP_R Int64Regs:$s,
-           Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int64Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_2d_array_v2i8_trap
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g),
-          (SUST_B_2D_ARRAY_V2B8_TRAP_R Int64Regs:$s, Int32Regs:$l,
-           Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_2d_array_v2i16_trap
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g),
-          (SUST_B_2D_ARRAY_V2B16_TRAP_R Int64Regs:$s, Int32Regs:$l,
-           Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_2d_array_v2i32_trap
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y, Int32Regs:$r,
-           Int32Regs:$g),
-          (SUST_B_2D_ARRAY_V2B32_TRAP_R Int64Regs:$s, Int32Regs:$l,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$r, Int32Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_2d_array_v2i64_trap
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y, Int64Regs:$r,
-           Int64Regs:$g),
-          (SUST_B_2D_ARRAY_V2B64_TRAP_R Int64Regs:$s, Int32Regs:$l,
-           Int32Regs:$x, Int32Regs:$y, Int64Regs:$r, Int64Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_2d_array_v4i8_trap
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_B_2D_ARRAY_V4B8_TRAP_R Int64Regs:$s,
-           Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_b_2d_array_v4i16_trap
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_B_2D_ARRAY_V4B16_TRAP_R Int64Regs:$s,
-           Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_b_2d_array_v4i32_trap
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a),
-          (SUST_B_2D_ARRAY_V4B32_TRAP_R Int64Regs:$s, Int32Regs:$l,
-           Int32Regs:$x, Int32Regs:$y,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a)>;
-
-
-
-def : Pat<(int_nvvm_sust_b_3d_i8_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r),
-          (SUST_B_3D_B8_TRAP_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_3d_i16_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r),
-          (SUST_B_3D_B16_TRAP_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_3d_i32_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int32Regs:$r),
-          (SUST_B_3D_B32_TRAP_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int32Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_3d_i64_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int64Regs:$r),
-          (SUST_B_3D_B64_TRAP_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int64Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_3d_v2i8_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g),
-          (SUST_B_3D_V2B8_TRAP_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_3d_v2i16_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g),
-          (SUST_B_3D_V2B16_TRAP_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_3d_v2i32_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int32Regs:$r, Int32Regs:$g),
-          (SUST_B_3D_V2B32_TRAP_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int32Regs:$r, Int32Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_3d_v2i64_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int64Regs:$r, Int64Regs:$g),
-          (SUST_B_3D_V2B64_TRAP_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int64Regs:$r, Int64Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_3d_v4i8_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_B_3D_V4B8_TRAP_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_b_3d_v4i16_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_B_3D_V4B16_TRAP_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_b_3d_v4i32_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a),
-          (SUST_B_3D_V4B32_TRAP_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a)>;
-
-
-// .zero variant
-def : Pat<(int_nvvm_sust_b_1d_i8_zero
-           Int64Regs:$s, Int32Regs:$x, Int16Regs:$r),
-          (SUST_B_1D_B8_ZERO_R Int64Regs:$s, Int32Regs:$x, Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_1d_i16_zero
-           Int64Regs:$s, Int32Regs:$x, Int16Regs:$r),
-          (SUST_B_1D_B16_ZERO_R Int64Regs:$s, Int32Regs:$x, Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_1d_i32_zero
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$r),
-          (SUST_B_1D_B32_ZERO_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_1d_i64_zero
-           Int64Regs:$s, Int32Regs:$x, Int64Regs:$r),
-          (SUST_B_1D_B64_ZERO_R Int64Regs:$s, Int32Regs:$x, Int64Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_1d_v2i8_zero
-           Int64Regs:$s, Int32Regs:$x, Int16Regs:$r, Int16Regs:$g),
-          (SUST_B_1D_V2B8_ZERO_R Int64Regs:$s, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_1d_v2i16_zero
-           Int64Regs:$s, Int32Regs:$x, Int16Regs:$r, Int16Regs:$g),
-          (SUST_B_1D_V2B16_ZERO_R Int64Regs:$s, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_1d_v2i32_zero
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$r, Int32Regs:$g),
-          (SUST_B_1D_V2B32_ZERO_R Int64Regs:$s, Int32Regs:$x,
-           Int32Regs:$r, Int32Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_1d_v2i64_zero
-           Int64Regs:$s, Int32Regs:$x, Int64Regs:$r, Int64Regs:$g),
-          (SUST_B_1D_V2B64_ZERO_R Int64Regs:$s, Int32Regs:$x,
-           Int64Regs:$r, Int64Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_1d_v4i8_zero
-           Int64Regs:$s, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_B_1D_V4B8_ZERO_R Int64Regs:$s, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_b_1d_v4i16_zero
-           Int64Regs:$s, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_B_1D_V4B16_ZERO_R Int64Regs:$s, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_b_1d_v4i32_zero
-           Int64Regs:$s, Int32Regs:$x,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a),
-          (SUST_B_1D_V4B32_ZERO_R Int64Regs:$s, Int32Regs:$x,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a)>;
-
-
-
-def : Pat<(int_nvvm_sust_b_1d_array_i8_zero
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int16Regs:$r),
-          (SUST_B_1D_ARRAY_B8_ZERO_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_1d_array_i16_zero
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int16Regs:$r),
-          (SUST_B_1D_ARRAY_B16_ZERO_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_1d_array_i32_zero
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$r),
-          (SUST_B_1D_ARRAY_B32_ZERO_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int32Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_1d_array_i64_zero
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int64Regs:$r),
-          (SUST_B_1D_ARRAY_B64_ZERO_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int64Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_1d_array_v2i8_zero
-          Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int16Regs:$r, Int16Regs:$g),
-          (SUST_B_1D_ARRAY_V2B8_ZERO_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_1d_array_v2i16_zero
-          Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int16Regs:$r, Int16Regs:$g),
-          (SUST_B_1D_ARRAY_V2B16_ZERO_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_1d_array_v2i32_zero
-          Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$r, Int32Regs:$g),
-          (SUST_B_1D_ARRAY_V2B32_ZERO_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int32Regs:$r, Int32Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_1d_array_v2i64_zero
-          Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int64Regs:$r, Int64Regs:$g),
-          (SUST_B_1D_ARRAY_V2B64_ZERO_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int64Regs:$r, Int64Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_1d_array_v4i8_zero
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_B_1D_ARRAY_V4B8_ZERO_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_b_1d_array_v4i16_zero
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_B_1D_ARRAY_V4B16_ZERO_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_b_1d_array_v4i32_zero
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a),
-          (SUST_B_1D_ARRAY_V4B32_ZERO_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a)>;
-
-
-
-def : Pat<(int_nvvm_sust_b_2d_i8_zero
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int16Regs:$r),
-          (SUST_B_2D_B8_ZERO_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_2d_i16_zero
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int16Regs:$r),
-          (SUST_B_2D_B16_ZERO_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_2d_i32_zero
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$r),
-          (SUST_B_2D_B32_ZERO_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int32Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_2d_i64_zero
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int64Regs:$r),
-          (SUST_B_2D_B64_ZERO_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int64Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_2d_v2i8_zero
-          Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int16Regs:$r, Int16Regs:$g),
-          (SUST_B_2D_V2B8_ZERO_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_2d_v2i16_zero
-          Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int16Regs:$r, Int16Regs:$g),
-          (SUST_B_2D_V2B16_ZERO_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_2d_v2i32_zero
-          Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$r, Int32Regs:$g),
-          (SUST_B_2D_V2B32_ZERO_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int32Regs:$r, Int32Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_2d_v2i64_zero
-          Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int64Regs:$r, Int64Regs:$g),
-          (SUST_B_2D_V2B64_ZERO_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int64Regs:$r, Int64Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_2d_v4i8_zero
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_B_2D_V4B8_ZERO_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_b_2d_v4i16_zero
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_B_2D_V4B16_ZERO_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_b_2d_v4i32_zero
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a),
-          (SUST_B_2D_V4B32_ZERO_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a)>;
-
-
-
-def : Pat<(int_nvvm_sust_b_2d_array_i8_zero
-          Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y, Int16Regs:$r),
-          (SUST_B_2D_ARRAY_B8_ZERO_R Int64Regs:$s,
-           Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_2d_array_i16_zero
-          Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y, Int16Regs:$r),
-          (SUST_B_2D_ARRAY_B16_ZERO_R Int64Regs:$s,
-           Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_2d_array_i32_zero
-          Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y, Int32Regs:$r),
-          (SUST_B_2D_ARRAY_B32_ZERO_R Int64Regs:$s,
-           Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int32Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_2d_array_i64_zero
-          Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y, Int64Regs:$r),
-          (SUST_B_2D_ARRAY_B64_ZERO_R Int64Regs:$s,
-           Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int64Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_2d_array_v2i8_zero
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g),
-          (SUST_B_2D_ARRAY_V2B8_ZERO_R Int64Regs:$s, Int32Regs:$l,
-           Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_2d_array_v2i16_zero
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g),
-          (SUST_B_2D_ARRAY_V2B16_ZERO_R Int64Regs:$s, Int32Regs:$l,
-           Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_2d_array_v2i32_zero
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y, Int32Regs:$r,
-           Int32Regs:$g),
-          (SUST_B_2D_ARRAY_V2B32_ZERO_R Int64Regs:$s, Int32Regs:$l,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$r, Int32Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_2d_array_v2i64_zero
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y, Int64Regs:$r,
-           Int64Regs:$g),
-          (SUST_B_2D_ARRAY_V2B64_ZERO_R Int64Regs:$s, Int32Regs:$l,
-           Int32Regs:$x, Int32Regs:$y, Int64Regs:$r, Int64Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_2d_array_v4i8_zero
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_B_2D_ARRAY_V4B8_ZERO_R Int64Regs:$s,
-           Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_b_2d_array_v4i16_zero
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_B_2D_ARRAY_V4B16_ZERO_R Int64Regs:$s,
-           Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_b_2d_array_v4i32_zero
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a),
-          (SUST_B_2D_ARRAY_V4B32_ZERO_R Int64Regs:$s, Int32Regs:$l,
-           Int32Regs:$x, Int32Regs:$y,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a)>;
-
-
-
-def : Pat<(int_nvvm_sust_b_3d_i8_zero
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r),
-          (SUST_B_3D_B8_ZERO_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_3d_i16_zero
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r),
-          (SUST_B_3D_B16_ZERO_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_3d_i32_zero
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int32Regs:$r),
-          (SUST_B_3D_B32_ZERO_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int32Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_3d_i64_zero
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int64Regs:$r),
-          (SUST_B_3D_B64_ZERO_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int64Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_b_3d_v2i8_zero
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g),
-          (SUST_B_3D_V2B8_ZERO_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_3d_v2i16_zero
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g),
-          (SUST_B_3D_V2B16_ZERO_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_3d_v2i32_zero
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int32Regs:$r, Int32Regs:$g),
-          (SUST_B_3D_V2B32_ZERO_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int32Regs:$r, Int32Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_3d_v2i64_zero
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int64Regs:$r, Int64Regs:$g),
-          (SUST_B_3D_V2B64_ZERO_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int64Regs:$r, Int64Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_b_3d_v4i8_zero
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_B_3D_V4B8_ZERO_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_b_3d_v4i16_zero
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_B_3D_V4B16_ZERO_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_b_3d_v4i32_zero
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a),
-          (SUST_B_3D_V4B32_ZERO_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a)>;
-
-
-
-
-def : Pat<(int_nvvm_sust_p_1d_i8_trap
-           Int64Regs:$s, Int32Regs:$x, Int16Regs:$r),
-          (SUST_P_1D_B8_TRAP_R Int64Regs:$s, Int32Regs:$x, Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_p_1d_i16_trap
-           Int64Regs:$s, Int32Regs:$x, Int16Regs:$r),
-          (SUST_P_1D_B16_TRAP_R Int64Regs:$s, Int32Regs:$x, Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_p_1d_i32_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$r),
-          (SUST_P_1D_B32_TRAP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_p_1d_v2i8_trap
-           Int64Regs:$s, Int32Regs:$x, Int16Regs:$r, Int16Regs:$g),
-          (SUST_P_1D_V2B8_TRAP_R Int64Regs:$s, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_p_1d_v2i16_trap
-           Int64Regs:$s, Int32Regs:$x, Int16Regs:$r, Int16Regs:$g),
-          (SUST_P_1D_V2B16_TRAP_R Int64Regs:$s, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_p_1d_v2i32_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$r, Int32Regs:$g),
-          (SUST_P_1D_V2B32_TRAP_R Int64Regs:$s, Int32Regs:$x,
-           Int32Regs:$r, Int32Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_p_1d_v4i8_trap
-           Int64Regs:$s, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_P_1D_V4B8_TRAP_R Int64Regs:$s, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_p_1d_v4i16_trap
-           Int64Regs:$s, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_P_1D_V4B16_TRAP_R Int64Regs:$s, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_p_1d_v4i32_trap
-           Int64Regs:$s, Int32Regs:$x,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a),
-          (SUST_P_1D_V4B32_TRAP_R Int64Regs:$s, Int32Regs:$x,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a)>;
-
-
-
-def : Pat<(int_nvvm_sust_p_1d_array_i8_trap
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int16Regs:$r),
-          (SUST_P_1D_ARRAY_B8_TRAP_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_p_1d_array_i16_trap
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int16Regs:$r),
-          (SUST_P_1D_ARRAY_B16_TRAP_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_p_1d_array_i32_trap
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$r),
-          (SUST_P_1D_ARRAY_B32_TRAP_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int32Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_p_1d_array_v2i8_trap
-          Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int16Regs:$r, Int16Regs:$g),
-          (SUST_P_1D_ARRAY_V2B8_TRAP_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_p_1d_array_v2i16_trap
-          Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int16Regs:$r, Int16Regs:$g),
-          (SUST_P_1D_ARRAY_V2B16_TRAP_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_p_1d_array_v2i32_trap
-          Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$r, Int32Regs:$g),
-          (SUST_P_1D_ARRAY_V2B32_TRAP_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int32Regs:$r, Int32Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_p_1d_array_v4i8_trap
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_P_1D_ARRAY_V4B8_TRAP_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_p_1d_array_v4i16_trap
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_P_1D_ARRAY_V4B16_TRAP_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_p_1d_array_v4i32_trap
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a),
-          (SUST_P_1D_ARRAY_V4B32_TRAP_R Int64Regs:$s, Int32Regs:$l, Int32Regs:$x,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a)>;
-
-
-
-def : Pat<(int_nvvm_sust_p_2d_i8_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int16Regs:$r),
-          (SUST_P_2D_B8_TRAP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_p_2d_i16_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int16Regs:$r),
-          (SUST_P_2D_B16_TRAP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_p_2d_i32_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$r),
-          (SUST_P_2D_B32_TRAP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int32Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_p_2d_v2i8_trap
-          Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int16Regs:$r, Int16Regs:$g),
-          (SUST_P_2D_V2B8_TRAP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_p_2d_v2i16_trap
-          Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int16Regs:$r, Int16Regs:$g),
-          (SUST_P_2D_V2B16_TRAP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_p_2d_v2i32_trap
-          Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$r, Int32Regs:$g),
-          (SUST_P_2D_V2B32_TRAP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int32Regs:$r, Int32Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_p_2d_v4i8_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_P_2D_V4B8_TRAP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_p_2d_v4i16_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_P_2D_V4B16_TRAP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_p_2d_v4i32_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a),
-          (SUST_P_2D_V4B32_TRAP_R Int64Regs:$s, Int32Regs:$x, Int32Regs:$y,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a)>;
-
-
-
-def : Pat<(int_nvvm_sust_p_2d_array_i8_trap
-          Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y, Int16Regs:$r),
-          (SUST_P_2D_ARRAY_B8_TRAP_R Int64Regs:$s,
-           Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_p_2d_array_i16_trap
-          Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y, Int16Regs:$r),
-          (SUST_P_2D_ARRAY_B16_TRAP_R Int64Regs:$s,
-           Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_p_2d_array_i32_trap
-          Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y, Int32Regs:$r),
-          (SUST_P_2D_ARRAY_B32_TRAP_R Int64Regs:$s,
-           Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int32Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_p_2d_array_v2i8_trap
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g),
-          (SUST_P_2D_ARRAY_V2B8_TRAP_R Int64Regs:$s, Int32Regs:$l,
-           Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_p_2d_array_v2i16_trap
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g),
-          (SUST_P_2D_ARRAY_V2B16_TRAP_R Int64Regs:$s, Int32Regs:$l,
-           Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_p_2d_array_v2i32_trap
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y, Int32Regs:$r,
-           Int32Regs:$g),
-          (SUST_P_2D_ARRAY_V2B32_TRAP_R Int64Regs:$s, Int32Regs:$l,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$r, Int32Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_p_2d_array_v4i8_trap
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_P_2D_ARRAY_V4B8_TRAP_R Int64Regs:$s,
-           Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_p_2d_array_v4i16_trap
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_P_2D_ARRAY_V4B16_TRAP_R Int64Regs:$s,
-           Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_p_2d_array_v4i32_trap
-           Int64Regs:$s, Int32Regs:$l, Int32Regs:$x, Int32Regs:$y,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a),
-          (SUST_P_2D_ARRAY_V4B32_TRAP_R Int64Regs:$s, Int32Regs:$l,
-           Int32Regs:$x, Int32Regs:$y,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a)>;
-
-
-
-def : Pat<(int_nvvm_sust_p_3d_i8_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r),
-          (SUST_P_3D_B8_TRAP_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_p_3d_i16_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r),
-          (SUST_P_3D_B16_TRAP_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_p_3d_i32_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int32Regs:$r),
-          (SUST_P_3D_B32_TRAP_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int32Regs:$r)>;
-
-def : Pat<(int_nvvm_sust_p_3d_v2i8_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g),
-          (SUST_P_3D_V2B8_TRAP_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_p_3d_v2i16_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g),
-          (SUST_P_3D_V2B16_TRAP_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_p_3d_v2i32_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int32Regs:$r, Int32Regs:$g),
-          (SUST_P_3D_V2B32_TRAP_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int32Regs:$r, Int32Regs:$g)>;
-
-def : Pat<(int_nvvm_sust_p_3d_v4i8_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_P_3D_V4B8_TRAP_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_p_3d_v4i16_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a),
-          (SUST_P_3D_V4B16_TRAP_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int16Regs:$r, Int16Regs:$g, Int16Regs:$b, Int16Regs:$a)>;
-
-def : Pat<(int_nvvm_sust_p_3d_v4i32_trap
-           Int64Regs:$s, Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a),
-          (SUST_P_3D_V4B32_TRAP_R Int64Regs:$s,
-           Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
-           Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a)>;
 
 //-----------------------------------
 // Read Special Registers
