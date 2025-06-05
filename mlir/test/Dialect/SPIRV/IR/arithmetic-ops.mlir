@@ -12,6 +12,14 @@ func.func @fadd_scalar(%arg: f32) -> f32 {
 
 // -----
 
+func.func @fadd_bf16_scalar(%arg: bf16) -> bf16 {
+  // expected-error @+1 {{operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values}}
+  %0 = spirv.FAdd %arg, %arg : bf16
+  return %0 : bf16
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.FDiv
 //===----------------------------------------------------------------------===//
@@ -24,6 +32,14 @@ func.func @fdiv_scalar(%arg: f32) -> f32 {
 
 // -----
 
+func.func @fdiv_bf16_scalar(%arg: bf16) -> bf16 {
+  // expected-error @+1 {{operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values}}
+  %0 = spirv.FDiv %arg, %arg : bf16
+  return %0 : bf16
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.FMod
 //===----------------------------------------------------------------------===//
@@ -32,6 +48,14 @@ func.func @fmod_scalar(%arg: f32) -> f32 {
   // CHECK: spirv.FMod
   %0 = spirv.FMod %arg, %arg : f32
   return %0 : f32
+}
+
+// -----
+
+func.func @fmod_bf16_scalar(%arg: bf16) -> bf16 {
+  // expected-error @+1 {{operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values}}
+  %0 = spirv.FMod %arg, %arg : bf16
+  return %0 : bf16
 }
 
 // -----
@@ -70,6 +94,14 @@ func.func @fmul_bf16(%arg: bf16) -> bf16 {
 
 // -----
 
+func.func @fmul_bf16_vector(%arg: vector<4xbf16>) -> vector<4xbf16> {
+  // expected-error @+1 {{operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values}}
+  %0 = spirv.FMul %arg, %arg : vector<4xbf16>
+  return %0 : vector<4xbf16>
+}
+
+// -----
+
 func.func @fmul_tensor(%arg: tensor<4xf32>) -> tensor<4xf32> {
   // expected-error @+1 {{operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values}}
   %0 = spirv.FMul %arg, %arg : tensor<4xf32>
@@ -90,6 +122,14 @@ func.func @fnegate_scalar(%arg: f32) -> f32 {
 
 // -----
 
+func.func @fnegate_bf16_scalar(%arg: bf16) -> bf16 {
+  // expected-error @+1 {{operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values}}
+  %0 = spirv.FNegate %arg : bf16
+  return %0 : bf16
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.FRem
 //===----------------------------------------------------------------------===//
@@ -102,6 +142,14 @@ func.func @frem_scalar(%arg: f32) -> f32 {
 
 // -----
 
+func.func @frem_bf16_scalar(%arg: bf16) -> bf16 {
+  // expected-error @+1 {{operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values}}
+  %0 = spirv.FRem %arg, %arg : bf16
+  return %0 : bf16
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.FSub
 //===----------------------------------------------------------------------===//
@@ -110,6 +158,14 @@ func.func @fsub_scalar(%arg: f32) -> f32 {
   // CHECK: spirv.FSub
   %0 = spirv.FSub %arg, %arg : f32
   return %0 : f32
+}
+
+// -----
+
+func.func @fsub_bf16_scalar(%arg: bf16) -> bf16 {
+  // expected-error @+1 {{operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values}}
+  %0 = spirv.FSub %arg, %arg : bf16
+  return %0 : bf16
 }
 
 // -----
@@ -488,4 +544,12 @@ func.func @vector_times_scalar(%vector: vector<4xf32>, %scalar: f32) -> vector<3
   // expected-error @+1 {{vector operand and result type mismatch}}
   %0 = spirv.VectorTimesScalar %vector, %scalar : (vector<4xf32>, f32) -> vector<3xf32>
   return %0 : vector<3xf32>
+}
+
+// -----
+
+func.func @vector_bf16_times_scalar_bf16(%vector: vector<4xbf16>, %scalar: bf16) -> vector<4xbf16> {
+  // expected-error @+1 {{op operand #0 must be vector of 16/32/64-bit float values of length 2/3/4}}
+  %0 = spirv.VectorTimesScalar %vector, %scalar : (vector<4xbf16>, bf16) -> vector<4xbf16>
+  return %0 : vector<4xbf16>
 }
