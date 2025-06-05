@@ -487,9 +487,37 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
     }
     Size = llvm::alignTo(Size, Alignment);
 
+    // If the Aggregate is made up of pointers, use an array of pointers for the
+    // coerced type. This prevents having to convert ptr2int->int2ptr through
+    // the call, allowing alias analysis to produce better code.
+    auto ContainsOnlyPointers = [&](const auto &Self, QualType Ty) {
+      if (isEmptyRecord(getContext(), Ty, true))
+        return false;
+      const RecordType *RT = Ty->getAs<RecordType>();
+      if (!RT)
+        return false;
+      const RecordDecl *RD = RT->getDecl();
+      if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+        for (const auto &I : CXXRD->bases())
+          if (!Self(Self, I.getType()))
+            return false;
+      }
+      return all_of(RD->fields(), [&](FieldDecl *FD) {
+        QualType FDTy = FD->getType();
+        if (FDTy->isArrayType())
+          FDTy = getContext().getBaseElementType(FDTy);
+        return (FDTy->isPointerOrReferenceType() &&
+                getContext().getTypeSize(FDTy) == 64) ||
+               Self(Self, FDTy);
+      });
+    };
+
     // We use a pair of i64 for 16-byte aggregate with 8-byte alignment.
     // For aggregates with 16-byte alignment, we use i128.
     llvm::Type *BaseTy = llvm::Type::getIntNTy(getVMContext(), Alignment);
+    if ((Size == 64 || Size == 128) && Alignment == 64 &&
+        ContainsOnlyPointers(ContainsOnlyPointers, Ty))
+      BaseTy = llvm::PointerType::getUnqual(getVMContext());
     return ABIArgInfo::getDirect(
         Size == Alignment ? BaseTy
                           : llvm::ArrayType::get(BaseTy, Size / Alignment));
