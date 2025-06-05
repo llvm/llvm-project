@@ -1731,7 +1731,8 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMVecExtractOpLowering,
                CIRToLLVMVecInsertOpLowering,
                CIRToLLVMVecCmpOpLowering,
-               CIRToLLVMVecShuffleDynamicOpLowering
+               CIRToLLVMVecShuffleDynamicOpLowering,
+               CIRToLLVMVecTernaryOpLowering
       // clang-format on
       >(converter, patterns.getContext());
 
@@ -1933,6 +1934,20 @@ mlir::LogicalResult CIRToLLVMVecShuffleDynamicOpLowering::matchAndRewrite(
                                                           valueAtIndex, iValue);
   }
   rewriter.replaceOp(op, result);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMVecTernaryOpLowering::matchAndRewrite(
+    cir::VecTernaryOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  // Convert `cond` into a vector of i1, then use that in a `select` op.
+  mlir::Value bitVec = rewriter.create<mlir::LLVM::ICmpOp>(
+      op.getLoc(), mlir::LLVM::ICmpPredicate::ne, adaptor.getCond(),
+      rewriter.create<mlir::LLVM::ZeroOp>(
+          op.getCond().getLoc(),
+          typeConverter->convertType(op.getCond().getType())));
+  rewriter.replaceOpWithNewOp<mlir::LLVM::SelectOp>(
+      op, bitVec, adaptor.getLhs(), adaptor.getRhs());
   return mlir::success();
 }
 
