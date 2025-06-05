@@ -564,6 +564,11 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
         if (!QueryInst || QueryInst->isVolatile())
           return MemDepResult::getClobber(SI);
 
+      // If we store the pointer of QueryInst, it is danger due to that the address
+      // may be modified with other reference.
+      if (QueryInst && QueryInst->getOperand(0) == SI->getOperand(0))
+        return MemDepResult::getClobber(SI);
+
       // If alias analysis can tell that this store is guaranteed to not modify
       // the query pointer, ignore it.  Use getModRefInfo to handle cases where
       // the query pointer points to constant memory etc.
