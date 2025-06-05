@@ -14447,6 +14447,7 @@ static T *performExtractsShuffleAction(
     [[maybe_unused]] auto *V = ValueSelect::get<T *>(Base);
     assert((!V || GetVF(V) == Mask.size()) &&
            "Expected base vector of VF number of elements.");
+
     Prev = Action(Mask, {nullptr, Res.first});
   } else if (ShuffleMask.size() == 1) {
     // Base is undef and only 1 vector is shuffled - perform the action only for
@@ -14905,7 +14906,39 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
                  << " for final shuffle of insertelement external users.\n";
           TE->dump(); dbgs() << "SLP: Current total cost = " << Cost << "\n");
       Cost += C;
-      return std::make_pair(TE, true);
+
+      bool HasLargeIndex =
+          any_of(Mask, [VF](int Idx) { return Idx >= static_cast<int>(VF); });
+
+      // If the resize source is just an identity vector, then will produce an
+      // insert subvector shufflevector
+      bool NeedsResizeExtract = true;
+      if ((VecVF < VF) && !HasLargeIndex) {
+        NeedsResizeExtract = false;
+        SmallVector<int> ResizeMask(VF, PoisonMaskElem);
+        for (unsigned I = 0; I < VF; ++I) {
+          if (Mask[I] != PoisonMaskElem) {
+            assert((size_t)Mask[I] < ResizeMask.size());
+            ResizeMask[Mask[I]] = Mask[I];
+          }
+        }
+
+        unsigned MinVF = std::min(VF, VecVF);
+        // Check if our mask is a a padded identity mask with non poision
+        // intermediaries. This implies that our resize shuffle is just a
+        // contiguous insertsubvector
+        for (auto [Position, Mask] : enumerate(ResizeMask)) {
+          if (Position >= MinVF)
+            break;
+
+          if ((int)Position != Mask) {
+            NeedsResizeExtract = true;
+            break;
+          }
+        }
+      }
+
+      return std::make_pair(TE, NeedsResizeExtract);
     }
     return std::make_pair(TE, false);
   };
