@@ -45,8 +45,8 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_cdcmpeq)
 #else
 #if defined(__ARM_FEATURE_PAC_DEFAULT)
         pop {r0-r3, r12, lr}
-        beq 2f
         aut r12, lr, sp
+        beq 2f
         b __aeabi_cdcmple
 #else
         pop {r0-r3, lr}
@@ -60,16 +60,12 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_cdcmpeq)
 
 2:
 #if defined(USE_THUMB_2)
-        mov r0, #APSR_C
-        msr APSR_nzcvq, r0
+        mov r12, #APSR_C
+        msr APSR_nzcvq, r12
 #else
         msr APSR_nzcvq, #APSR_C
 #endif
-#if defined(__ARM_FEATURE_PAC_DEFAULT)
-        bxaut r12, lr, sp
-#else
         JMP(lr)
-#endif
 #endif
 END_COMPILERRT_FUNCTION(__aeabi_cdcmpeq)
 
