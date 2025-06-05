@@ -1672,11 +1672,13 @@ StringRef sys::getHostCPUName() {
   return "generic";
 }
 #elif defined(__riscv)
+#if defined(__linux__)
 // struct riscv_hwprobe
 struct RISCVHwProbe {
   int64_t Key;
   uint64_t Value;
 };
+#endif
 
 StringRef sys::getHostCPUName() {
 #if defined(__linux__)
