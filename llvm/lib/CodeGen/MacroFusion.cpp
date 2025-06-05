@@ -81,7 +81,7 @@ bool llvm::fuseInstructionPair(ScheduleDAGInstrs &DAG, SUnit &FirstSU,
   SecondSU.ParentClusterIdx = Clusters.size();
 
   SmallSet<SUnit *, 8> Cluster{{&FirstSU, &SecondSU}};
-  Clusters.emplace_back(Cluster);
+  Clusters.push_back(Cluster);
 
   // TODO - If we want to chain more than two instructions, we need to create
   // artifical edges to make dependencies from the FirstSU also dependent
