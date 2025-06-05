@@ -703,7 +703,7 @@ struct TupleExpander : SetTheory::Expander {
           RV.setValue(BitInit::get(RK, true));
 
         // Copy fields from the RegisterTuples def.
-        if (Field == "SubRegIndices" || Field == "CompositeIndices") {
+        if (Field == "SubRegIndices") {
           NewReg->addValue(*Def->getValue(Field));
           continue;
         }
