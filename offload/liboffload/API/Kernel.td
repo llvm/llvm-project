@@ -24,6 +24,19 @@ def : Function {
     let returns = [];
 }
 
+def : Function {
+    let name = "olKernelMaxGroupSize";
+    let desc = "Get the maximum block size needed to achieve maximum occupancy.";
+    let details = [];
+    let params = [
+        Param<"ol_kernel_handle_t", "Kernel", "handle of the kernel", PARAM_IN>,
+        Param<"ol_device_handle_t", "Device", "device intended to run the kernel", PARAM_IN>,
+        Param<"size_t", "SharedMemory", "dynamic shared memory required", PARAM_IN>,
+        Param<"size_t*", "GroupSize", "maximum block size", PARAM_OUT>
+    ];
+    let returns = [];
+}
+
 def : Struct {
     let name = "ol_kernel_launch_size_args_t";
     let desc = "Size-related arguments for a kernel launch.";

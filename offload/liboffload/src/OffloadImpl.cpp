@@ -468,6 +468,10 @@ Error olDestroyProgram_impl(ol_program_handle_t Program) {
   return olDestroy(Program);
 }
 
+inline GenericKernelTy *getOmpKernel(ol_kernel_handle_t OlKernel) {
+  return reinterpret_cast<GenericKernelTy *>(OlKernel);
+}
+
 Error olGetKernel_impl(ol_program_handle_t Program, const char *KernelName,
                        ol_kernel_handle_t *Kernel) {
 
@@ -480,6 +484,20 @@ Error olGetKernel_impl(ol_program_handle_t Program, const char *KernelName,
     return Err;
 
   *Kernel = &*KernelImpl;
+
+  return Error::success();
+}
+
+Error olKernelMaxGroupSize_impl(ol_kernel_handle_t Kernel,
+                                ol_device_handle_t Device,
+                                size_t DynamicMemSize, size_t *GroupSize) {
+  auto *KernelImpl = getOmpKernel(Kernel);
+
+  auto Res = KernelImpl->maxGroupSize(*Device->Device, DynamicMemSize);
+  if (auto Err = Res.takeError()) {
+    return Err;
+  }
+  *GroupSize = *Res;
 
   return Error::success();
 }
@@ -514,7 +532,7 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   // Don't do anything with pointer indirection; use arg data as-is
   LaunchArgs.Flags.IsCUDA = true;
 
-  auto *KernelImpl = reinterpret_cast<GenericKernelTy *>(Kernel);
+  auto *KernelImpl = getOmpKernel(Kernel);
   auto Err = KernelImpl->launch(*DeviceImpl, LaunchArgs.ArgPtrs, nullptr,
                                 LaunchArgs, AsyncInfoWrapper);
 
