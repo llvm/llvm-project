@@ -7587,7 +7587,7 @@ static bool isGuaranteedNotToBeUndefOrPoison(
       if (isa<ConstantExpr>(C)) {
         // Scalable vectors can use a ConstantExpr to build a splat.
         if (Constant *SplatC = C->getSplatValue())
-          if (isa<ConstantInt>(SplatC))
+          if (isa<ConstantInt>(SplatC) || isa<ConstantFP>(SplatC))
             return true;
       } else {
         if (includesUndef(Kind) && C->containsUndefElement())
