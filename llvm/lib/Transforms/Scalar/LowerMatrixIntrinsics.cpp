@@ -1146,11 +1146,11 @@ public:
         case Intrinsic::abs:
           Result.addVector(Builder.CreateBinaryIntrinsic(Intrinsic::abs, Vector,
                                                          Inst->getOperand(1)));
-          break;
+          continue;
         case Intrinsic::fabs:
           Result.addVector(
               Builder.CreateUnaryIntrinsic(Inst->getIntrinsicID(), Vector));
-          break;
+          continue;
         default:
           llvm_unreachable("unexpected intrinsic");
         }
