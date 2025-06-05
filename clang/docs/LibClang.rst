@@ -380,8 +380,9 @@ changes can happen in the following (non-exhaustive) situations:
   period.
 * Using implementation details, such as names or comments that say something
   is "private", "reserved", "internal", etc.
-* Bug fixes or changes to Clang's internal implementation, or (rarely), bug
-  fixes to libclang itself.
+* Bug fixes and changes to Clang's internal implementation happen routinely and
+  will change the behavior of callers.
+* Rarely, bug fixes to libclang itself.
 
 The library has version macros (``CINDEX_VERSION_MAJOR``,
 ``CINDEX_VERSION_MINOR``, and ``CINDEX_VERSION``) which can be used to test for
