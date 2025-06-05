@@ -14,8 +14,6 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   )
 endif()
 
-message(STATUS "Target arch is ${LIBC_TARGET_ARCHITECTURE}")
-
 add_entrypoint_object(
   setjmp
   ALIAS
