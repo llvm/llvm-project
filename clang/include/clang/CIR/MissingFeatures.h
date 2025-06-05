@@ -136,6 +136,12 @@ struct MissingFeatures {
   static bool cxxSupport() { return false; }
   static bool recordZeroInit() { return false; }
   static bool zeroSizeRecordMembers() { return false; }
+  static bool recordLayoutVirtualBases() { return false; }
+
+  // Various handling of deferred processing in CIRGenModule.
+  static bool cgmRelease() { return false; }
+  static bool deferredVtables() { return false; }
+  static bool deferredFuncDecls() { return false; }
 
   // CXXABI
   static bool cxxABI() { return false; }
@@ -205,9 +211,13 @@ struct MissingFeatures {
   static bool writebacks() { return false; }
   static bool cleanupsToDeactivate() { return false; }
   static bool stackBase() { return false; }
-  static bool deferredDecls() { return false; }
+  static bool deferredCXXGlobalInit() { return false; }
   static bool setTargetAttributes() { return false; }
   static bool coverageMapping() { return false; }
+  static bool peepholeProtection() { return false; }
+  static bool instrumentation() { return false; }
+  static bool cleanupAfterErrorDiags() { return false; }
+  static bool cxxRecordStaticMembers() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
@@ -232,8 +242,9 @@ struct MissingFeatures {
   static bool ptrDiffOp() { return false; }
   static bool ptrStrideOp() { return false; }
   static bool switchOp() { return false; }
-  static bool ternaryOp() { return false; }
+  static bool throwOp() { return false; }
   static bool tryOp() { return false; }
+  static bool vecTernaryOp() { return false; }
   static bool zextOp() { return false; }
 
   // Future CIR attributes

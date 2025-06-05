@@ -857,22 +857,21 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
     return false;
   }
 
-  // Bail out if the function declaration itself is invalid.  We will
-  // have produced a relevant diagnostic while parsing it, so just
-  // note the problematic sub-expression.
-  if (F->getDecl()->isInvalidDecl())
-    return Invalid(S, OpPC);
-
   if (S.checkingPotentialConstantExpression() && S.Current->getDepth() != 0)
     return false;
 
-  if (F->isConstexpr() && F->hasBody() &&
-      (F->getDecl()->isConstexpr() || F->getDecl()->hasAttr<MSConstexprAttr>()))
+  if (F->isValid() && F->hasBody() && F->isConstexpr())
     return true;
 
   // Implicitly constexpr.
   if (F->isLambdaStaticInvoker())
     return true;
+
+  // Bail out if the function declaration itself is invalid.  We will
+  // have produced a relevant diagnostic while parsing it, so just
+  // note the problematic sub-expression.
+  if (F->getDecl()->isInvalidDecl())
+    return Invalid(S, OpPC);
 
   // Diagnose failed assertions specially.
   if (S.Current->getLocation(OpPC).isMacroID() &&
@@ -923,7 +922,8 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
       // for a constant expression. It might be defined at the point we're
       // actually calling it.
       bool IsExtern = DiagDecl->getStorageClass() == SC_Extern;
-      if (!DiagDecl->isDefined() && !IsExtern && DiagDecl->isConstexpr() &&
+      bool IsDefined = F->isDefined();
+      if (!IsDefined && !IsExtern && DiagDecl->isConstexpr() &&
           S.checkingPotentialConstantExpression())
         return false;
 
@@ -2006,6 +2006,51 @@ bool DiagTypeid(InterpState &S, CodePtr OpPC) {
       << E->getExprOperand()->getType()
       << E->getExprOperand()->getSourceRange();
   return false;
+}
+
+bool arePotentiallyOverlappingStringLiterals(const Pointer &LHS,
+                                             const Pointer &RHS) {
+  unsigned LHSOffset = LHS.getIndex();
+  unsigned RHSOffset = RHS.getIndex();
+  unsigned LHSLength = (LHS.getNumElems() - 1) * LHS.elemSize();
+  unsigned RHSLength = (RHS.getNumElems() - 1) * RHS.elemSize();
+
+  StringRef LHSStr((const char *)LHS.atIndex(0).getRawAddress(), LHSLength);
+  StringRef RHSStr((const char *)RHS.atIndex(0).getRawAddress(), RHSLength);
+  int32_t IndexDiff = RHSOffset - LHSOffset;
+  if (IndexDiff < 0) {
+    if (static_cast<int32_t>(LHSLength) < -IndexDiff)
+      return false;
+    LHSStr = LHSStr.drop_front(-IndexDiff);
+  } else {
+    if (static_cast<int32_t>(RHSLength) < IndexDiff)
+      return false;
+    RHSStr = RHSStr.drop_front(IndexDiff);
+  }
+
+  unsigned ShorterCharWidth;
+  StringRef Shorter;
+  StringRef Longer;
+  if (LHSLength < RHSLength) {
+    ShorterCharWidth = LHS.elemSize();
+    Shorter = LHSStr;
+    Longer = RHSStr;
+  } else {
+    ShorterCharWidth = RHS.elemSize();
+    Shorter = RHSStr;
+    Longer = LHSStr;
+  }
+
+  // The null terminator isn't included in the string data, so check for it
+  // manually. If the longer string doesn't have a null terminator where the
+  // shorter string ends, they aren't potentially overlapping.
+  for (unsigned NullByte : llvm::seq(ShorterCharWidth)) {
+    if (Shorter.size() + NullByte >= Longer.size())
+      break;
+    if (Longer[Shorter.size() + NullByte])
+      return false;
+  }
+  return Shorter == Longer.take_front(Shorter.size());
 }
 
 // https://github.com/llvm/llvm-project/issues/102513
