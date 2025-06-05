@@ -422,6 +422,28 @@ static const char *getInitializer(QualType QT, bool UseAssignment) {
   }
 }
 
+static bool isStdArray(QualType QT) {
+  const auto *RT = QT->getAs<RecordType>();
+  if (!RT)
+    return false;
+  const auto *RD = RT->getDecl();
+  if (!RD)
+    return false;
+
+  const IdentifierInfo *II = RD->getIdentifier();
+  if (!II)
+    return false;
+
+  if (II->getName() == "array") {
+    const NamespaceDecl *NS = dyn_cast<NamespaceDecl>(RD->getDeclContext());
+    if (NS && NS->getName() == "std") {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 void ProTypeMemberInitCheck::checkMissingMemberInitializer(
     ASTContext &Context, const CXXRecordDecl &ClassDecl,
     const CXXConstructorDecl *Ctor) {
@@ -435,7 +457,7 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
   bool AnyMemberHasInitPerUnion = false;
   forEachFieldWithFilter(ClassDecl, ClassDecl.fields(),
                          AnyMemberHasInitPerUnion, [&](const FieldDecl *F) {
-    if (IgnoreArrays && F->getType()->isArrayType())
+    if (IgnoreArrays && (F->getType()->isArrayType() || isStdArray(F->getType())))
       return;
     if (F->hasInClassInitializer() && F->getParent()->isUnion()) {
       AnyMemberHasInitPerUnion = true;
