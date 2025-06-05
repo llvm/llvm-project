@@ -7,6 +7,7 @@
 
 set(LLVM_TARGET_DEFINITIONS ${CMAKE_CURRENT_SOURCE_DIR}/OffloadAPI.td)
 set(files_to_copy "")
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/generated)
 
 macro(offload_tablegen file)
     tablegen(OFFLOAD generated/${file}.gen ${ARGN})

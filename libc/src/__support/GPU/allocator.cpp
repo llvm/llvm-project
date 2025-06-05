@@ -229,24 +229,34 @@ struct Slab {
 
     // The uniform mask represents which lanes contain a uniform target pointer.
     // We attempt to place these next to each other.
-    // TODO: We should coalesce these bits and use the result of `fetch_or` to
-    //       search for free bits in parallel.
     void *result = nullptr;
     for (uint64_t mask = lane_mask; mask;
          mask = gpu::ballot(lane_mask, !result)) {
-      uint32_t id = impl::lane_count(uniform & mask);
-      uint32_t index =
-          (gpu::broadcast_value(lane_mask, impl::xorshift32(state)) + id) %
-          usable_bits(chunk_size);
+      if (result)
+        continue;
 
+      uint32_t start = gpu::broadcast_value(lane_mask, impl::xorshift32(state));
+
+      uint32_t id = impl::lane_count(uniform & mask);
+      uint32_t index = (start + id) % usable_bits(chunk_size);
       uint32_t slot = index / BITS_IN_WORD;
       uint32_t bit = index % BITS_IN_WORD;
-      if (!result) {
-        uint32_t before = cpp::AtomicRef(get_bitfield()[slot])
-                              .fetch_or(1u << bit, cpp::MemoryOrder::RELAXED);
-        if (~before & (1 << bit))
-          result = ptr_from_index(index, chunk_size);
-      }
+
+      // Get the mask of bits destined for the same slot and coalesce it.
+      uint64_t match = uniform & gpu::match_any(mask, slot);
+      uint32_t length = cpp::popcount(match);
+      uint32_t bitmask = static_cast<uint32_t>((uint64_t(1) << length) - 1)
+                         << bit;
+
+      uint32_t before = 0;
+      if (gpu::get_lane_id() == static_cast<uint32_t>(cpp::countr_zero(match)))
+        before = cpp::AtomicRef(get_bitfield()[slot])
+                     .fetch_or(bitmask, cpp::MemoryOrder::RELAXED);
+      before = gpu::shuffle(mask, cpp::countr_zero(match), before);
+      if (~before & (1 << bit))
+        result = ptr_from_index(index, chunk_size);
+      else
+        sleep_briefly();
     }
 
     cpp::atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
