@@ -11,7 +11,7 @@ declare void @unknown()
 
 ; Basic correctness check: this should get annotated as memory(none).
 ; CHECK: Function Attrs: nounwind memory(none)
-; CHECK-NEXT: declare void @readnone()
+; CHECK-NEXT: declare void @readnone() #0
 declare void @readnone() readnone nounwind
 
 ; The 'test1_' prefixed functions are designed to trigger forming a new direct
@@ -27,8 +27,8 @@ entry:
 }
 
 ; This function should have had 'memory(none)' deduced for its SCC.
-; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none)
-; CHECK-NEXT: define void @test1_g()
+; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind memory(none)
+; CHECK-NEXT: define void @test1_g() #1
 define void @test1_g() noinline {
 entry:
   call void @test1_f(ptr @test1_h)
@@ -37,7 +37,7 @@ entry:
 
 ; This function should have had 'memory(none)' deduced for its SCC.
 ; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none)
-; CHECK-NEXT: define void @test1_h()
+; CHECK-NEXT: define void @test1_h() #2
 define void @test1_h() noinline {
 entry:
   call void @test1_g()
@@ -60,7 +60,7 @@ entry:
 
 ; This function should have had 'memory(none)' deduced for its SCC.
 ; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none)
-; CHECK-NEXT: define void @test2_g()
+; CHECK-NEXT: define void @test2_g() #2
 define void @test2_g() noinline {
 entry:
   %p = call ptr @test2_f()
@@ -70,7 +70,7 @@ entry:
 
 ; This function should have had 'memory(none)' deduced for its SCC.
 ; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none)
-; CHECK-NEXT: define void @test2_h()
+; CHECK-NEXT: define void @test2_h() #2
 define void @test2_h() noinline {
 entry:
   call void @test2_g()
@@ -129,7 +129,7 @@ exit:
 ; doesn't simplify the caller's trivially dead CFG and so we end with a dead
 ; block calling @unknown.
 ; CHECK-NOT: Function Attrs: readnone
-; CHECK: define void @test3_h()
+; CHECK: define void @test3_h() #3
 define void @test3_h() {
 entry:
   %g = call i1 @test3_g(i1 false)
@@ -153,7 +153,7 @@ exit:
 
 ; This function should have had 'memory(none)' deduced for its SCC.
 ; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none)
-; CHECK-NEXT: define void @test4_f1()
+; CHECK-NEXT: define void @test4_f1() #2
 define void @test4_f1() noinline {
 entry:
   call void @test4_h()
@@ -175,8 +175,8 @@ entry:
 }
 
 ; This function should have had 'memory(none)' deduced for its SCC.
-; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none)
-; CHECK-NEXT: define void @test4_h()
+; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind memory(none)
+; CHECK-NEXT: define void @test4_h() #1
 define void @test4_h() noinline {
 entry:
   call void @test4_g(ptr @test4_f2)
