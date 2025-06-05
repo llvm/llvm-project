@@ -31,7 +31,8 @@ def CIR_AnyIntAttr : CIR_AttrConstraint<"::cir::IntAttr", "integer attribute">;
 // FPAttr constraints
 //===----------------------------------------------------------------------===//
 
-def CIR_AnyFPAttr : CIR_AttrConstraint<"::cir::FPAttr", "floating-point attribute">;
+def CIR_AnyFPAttr : CIR_AttrConstraint<"::cir::FPAttr",
+  "floating-point attribute">;
 
 def CIR_AnyIntOrFloatAttr : AnyAttrOf<[CIR_AnyIntAttr, CIR_AnyFPAttr],
     "integer or floating point type"> {
