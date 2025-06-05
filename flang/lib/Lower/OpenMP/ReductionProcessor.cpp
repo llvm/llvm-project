@@ -12,9 +12,9 @@
 
 #include "ReductionProcessor.h"
 
-#include "PrivateReductionUtils.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/ConvertType.h"
+#include "flang/Lower/Support/PrivateReductionUtils.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
@@ -371,8 +371,10 @@ static void genBoxCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
 
   // Get ShapeShift with default lower bounds. This makes it possible to use
   // unmodified LoopNest's indices with ArrayCoorOp.
-  fir::ShapeShiftOp shapeShift = getShapeShift(builder, loc, lhs,
-                                               /*useDefaultLowerBounds=*/true);
+  fir::ShapeShiftOp shapeShift =
+      getShapeShift(builder, loc, lhs,
+                    /*cannotHaveNonDefaultLowerBounds=*/false,
+                    /*useDefaultLowerBounds=*/true);
 
   // Iterate over array elements, applying the equivalent scalar reduction:
 
