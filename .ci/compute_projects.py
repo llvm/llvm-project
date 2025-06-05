@@ -145,22 +145,15 @@ def _add_dependencies(projects: Set[str], runtimes: Set[str]) -> Set[str]:
 
 
 def _exclude_projects(current_projects: Set[str], platform: str) -> Set[str]:
-    new_project_set = set(current_projects)
     if platform == "Linux":
-        for to_exclude in EXCLUDE_LINUX:
-            if to_exclude in new_project_set:
-                new_project_set.remove(to_exclude)
+        to_exclude = EXCLUDE_LINUX
     elif platform == "Windows":
-        for to_exclude in EXCLUDE_WINDOWS:
-            if to_exclude in new_project_set:
-                new_project_set.remove(to_exclude)
+        to_exclude = EXCLUDE_WINDOWS
     elif platform == "Darwin":
-        for to_exclude in EXCLUDE_MAC:
-            if to_exclude in new_project_set:
-                new_project_set.remove(to_exclude)
+        to_exclude = EXCLUDE_MAC
     else:
-        raise ValueError("Unexpected platform.")
-    return new_project_set
+        raise ValueError(f"Unexpected platform: {platform}")
+    return current_projects.difference(to_exclude)
 
 
 def _compute_projects_to_test(modified_projects: Set[str], platform: str) -> Set[str]:
