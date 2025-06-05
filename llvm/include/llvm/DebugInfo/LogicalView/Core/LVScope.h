@@ -18,6 +18,7 @@
 #include "llvm/DebugInfo/LogicalView/Core/LVLocation.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVSort.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Compiler.h"
 #include <list>
 #include <map>
 #include <set>
@@ -71,7 +72,7 @@ using LVOffsetSymbolMap = std::map<LVOffset, LVSymbol *>;
 using LVTagOffsetsMap = std::map<dwarf::Tag, LVOffsets>;
 
 // Class to represent a DWARF Scope.
-class LVScope : public LVElement {
+class LLVM_ABI LVScope : public LVElement {
   enum class Property {
     HasDiscriminator,
     CanHaveRanges,
@@ -331,7 +332,7 @@ public:
 };
 
 // Class to represent a DWARF Union/Structure/Class.
-class LVScopeAggregate final : public LVScope {
+class LLVM_ABI LVScopeAggregate final : public LVScope {
   LVScope *Reference = nullptr; // DW_AT_specification, DW_AT_abstract_origin.
   size_t EncodedArgsIndex = 0;  // Template encoded arguments.
 
@@ -369,7 +370,7 @@ public:
 };
 
 // Class to represent a DWARF Template alias.
-class LVScopeAlias final : public LVScope {
+class LLVM_ABI LVScopeAlias final : public LVScope {
 public:
   LVScopeAlias() : LVScope() {
     setIsTemplateAlias();
@@ -386,7 +387,7 @@ public:
 };
 
 // Class to represent a DWARF array (DW_TAG_array_type).
-class LVScopeArray final : public LVScope {
+class LLVM_ABI LVScopeArray final : public LVScope {
 public:
   LVScopeArray() : LVScope() { setIsArray(); }
   LVScopeArray(const LVScopeArray &) = delete;
@@ -402,7 +403,7 @@ public:
 };
 
 // Class to represent a DWARF Compilation Unit (CU).
-class LVScopeCompileUnit final : public LVScope {
+class LLVM_ABI LVScopeCompileUnit final : public LVScope {
   // Names (files and directories) used by the Compile Unit.
   std::vector<size_t> Filenames;
 
@@ -622,7 +623,7 @@ public:
 };
 
 // Class to represent a DWARF enumerator (DW_TAG_enumeration_type).
-class LVScopeEnumeration final : public LVScope {
+class LLVM_ABI LVScopeEnumeration final : public LVScope {
 public:
   LVScopeEnumeration() : LVScope() { setIsEnumeration(); }
   LVScopeEnumeration(const LVScopeEnumeration &) = delete;
@@ -637,7 +638,7 @@ public:
 
 // Class to represent a DWARF formal parameter pack
 // (DW_TAG_GNU_formal_parameter_pack).
-class LVScopeFormalPack final : public LVScope {
+class LLVM_ABI LVScopeFormalPack final : public LVScope {
 public:
   LVScopeFormalPack() : LVScope() { setIsTemplatePack(); }
   LVScopeFormalPack(const LVScopeFormalPack &) = delete;
@@ -651,7 +652,7 @@ public:
 };
 
 // Class to represent a DWARF Function.
-class LVScopeFunction : public LVScope {
+class LLVM_ABI LVScopeFunction : public LVScope {
   LVScope *Reference = nullptr; // DW_AT_specification, DW_AT_abstract_origin.
   size_t LinkageNameIndex = 0;  // Function DW_AT_linkage_name attribute.
   size_t EncodedArgsIndex = 0;  // Template encoded arguments.
@@ -703,7 +704,7 @@ public:
 };
 
 // Class to represent a DWARF inlined function.
-class LVScopeFunctionInlined final : public LVScopeFunction {
+class LLVM_ABI LVScopeFunctionInlined final : public LVScopeFunction {
   size_t CallFilenameIndex = 0;
   uint32_t CallLineNumber = 0;
   uint32_t Discriminator = 0;
@@ -746,7 +747,7 @@ public:
 };
 
 // Class to represent a DWARF subroutine type.
-class LVScopeFunctionType final : public LVScopeFunction {
+class LLVM_ABI LVScopeFunctionType final : public LVScopeFunction {
 public:
   LVScopeFunctionType() : LVScopeFunction() { setIsFunctionType(); }
   LVScopeFunctionType(const LVScopeFunctionType &) = delete;
@@ -757,7 +758,7 @@ public:
 };
 
 // Class to represent a DWARF Module.
-class LVScopeModule final : public LVScope {
+class LLVM_ABI LVScopeModule final : public LVScope {
 public:
   LVScopeModule() : LVScope() {
     setIsModule();
@@ -774,7 +775,7 @@ public:
 };
 
 // Class to represent a DWARF Namespace.
-class LVScopeNamespace final : public LVScope {
+class LLVM_ABI LVScopeNamespace final : public LVScope {
   LVScope *Reference = nullptr; // Reference to DW_AT_extension attribute.
 
 public:
@@ -804,7 +805,7 @@ public:
 };
 
 // Class to represent the binary file being analyzed.
-class LVScopeRoot final : public LVScope {
+class LLVM_ABI LVScopeRoot final : public LVScope {
   size_t FileFormatNameIndex = 0;
 
 public:
@@ -838,7 +839,7 @@ public:
 
 // Class to represent a DWARF template parameter pack
 // (DW_TAG_GNU_template_parameter_pack).
-class LVScopeTemplatePack final : public LVScope {
+class LLVM_ABI LVScopeTemplatePack final : public LVScope {
 public:
   LVScopeTemplatePack() : LVScope() { setIsTemplatePack(); }
   LVScopeTemplatePack(const LVScopeTemplatePack &) = delete;
