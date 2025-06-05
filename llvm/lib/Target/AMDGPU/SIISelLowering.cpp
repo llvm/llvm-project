@@ -751,10 +751,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BUILD_VECTOR, {MVT::v2i16, MVT::v2f16, MVT::v2bf16},
                        Subtarget->hasVOP3PInsts() ? Legal : Custom);
 
-    setOperationAction(ISD::FNEG, MVT::v2f16, Legal);
+    setOperationAction(ISD::FNEG, {MVT::v2f16, MVT::v2bf16}, Legal);
     // This isn't really legal, but this avoids the legalizer unrolling it (and
     // allows matching fneg (fabs x) patterns)
-    setOperationAction(ISD::FABS, MVT::v2f16, Legal);
+    setOperationAction(ISD::FABS, {MVT::v2f16, MVT::v2bf16}, Legal);
 
     // Can do this in one BFI plus a constant materialize.
     setOperationAction(ISD::FCOPYSIGN,
@@ -3574,21 +3574,6 @@ void SITargetLowering::passSpecialInputs(
   }
 }
 
-static bool canGuaranteeTCO(CallingConv::ID CC) {
-  return CC == CallingConv::Fast;
-}
-
-/// Return true if we might ever do TCO for calls with this calling convention.
-static bool mayTailCallThisCC(CallingConv::ID CC) {
-  switch (CC) {
-  case CallingConv::C:
-  case CallingConv::AMDGPU_Gfx:
-    return true;
-  default:
-    return canGuaranteeTCO(CC);
-  }
-}
-
 bool SITargetLowering::isEligibleForTailCallOptimization(
     SDValue Callee, CallingConv::ID CalleeCC, bool IsVarArg,
     const SmallVectorImpl<ISD::OutputArg> &Outs,
@@ -3597,7 +3582,7 @@ bool SITargetLowering::isEligibleForTailCallOptimization(
   if (AMDGPU::isChainCC(CalleeCC))
     return true;
 
-  if (!mayTailCallThisCC(CalleeCC))
+  if (!AMDGPU::mayTailCallThisCC(CalleeCC))
     return false;
 
   // For a divergent call target, we need to do a waterfall loop over the
@@ -3619,7 +3604,7 @@ bool SITargetLowering::isEligibleForTailCallOptimization(
   bool CCMatch = CallerCC == CalleeCC;
 
   if (DAG.getTarget().Options.GuaranteedTailCallOpt) {
-    if (canGuaranteeTCO(CalleeCC) && CCMatch)
+    if (AMDGPU::canGuaranteeTCO(CalleeCC) && CCMatch)
       return true;
     return false;
   }
@@ -17541,9 +17526,11 @@ void SITargetLowering::emitExpandAtomicAddrSpacePredicate(
   // where we only insert a check for private and still use the flat instruction
   // for global and shared.
 
-  bool FullFlatEmulation = RMW && RMW->getOperation() == AtomicRMWInst::FAdd &&
-                           Subtarget->hasAtomicFaddInsts() &&
-                           RMW->getType()->isFloatTy();
+  bool FullFlatEmulation =
+      RMW && RMW->getOperation() == AtomicRMWInst::FAdd &&
+      ((Subtarget->hasAtomicFaddInsts() && RMW->getType()->isFloatTy()) ||
+       (Subtarget->hasFlatBufferGlobalAtomicFaddF64Inst() &&
+        RMW->getType()->isDoubleTy()));
 
   // If the return value isn't used, do not introduce a false use in the phi.
   bool ReturnValueIsUsed = !AI->use_empty();

@@ -972,6 +972,13 @@ public:
   /// Calls \c Lexer::getLocForEndOfToken()
   SourceLocation getLocForEndOfToken(SourceLocation Loc, unsigned Offset = 0);
 
+  /// Calls \c Lexer::findNextToken() to find the next token, and if the
+  /// locations of both ends of the token can be resolved it return that
+  /// range; Otherwise it returns an invalid SourceRange.
+  SourceRange getRangeForNextToken(
+      SourceLocation Loc, bool IncludeMacros, bool IncludeComments,
+      std::optional<tok::TokenKind> ExpectedToken = std::nullopt);
+
   /// Retrieve the module loader associated with the preprocessor.
   ModuleLoader &getModuleLoader() const;
 
@@ -2644,6 +2651,16 @@ public:
   /// we do not want to diagnose such misaligned access (e.g. in conversions to
   /// void*).
   void DiscardMisalignedMemberAddress(const Type *T, Expr *E);
+
+  /// Returns true if `From` is a function or pointer to a function with the
+  /// `cfi_unchecked_callee` attribute but `To` is a function or pointer to
+  /// function without this attribute.
+  bool DiscardingCFIUncheckedCallee(QualType From, QualType To) const;
+
+  /// Returns true if `From` is a function or pointer to a function without the
+  /// `cfi_unchecked_callee` attribute but `To` is a function or pointer to
+  /// function with this attribute.
+  bool AddingCFIUncheckedCallee(QualType From, QualType To) const;
 
   /// This function calls Action when it determines that E designates a
   /// misaligned member due to the packed attribute. This is used to emit
@@ -9134,6 +9151,7 @@ public:
   /// Diagnose if an explicit lambda capture is unused. Returns true if a
   /// diagnostic is emitted.
   bool DiagnoseUnusedLambdaCapture(SourceRange CaptureRange,
+                                   SourceRange FixItRange,
                                    const sema::Capture &From);
 
   /// Build a FieldDecl suitable to hold the given capture.
@@ -10254,9 +10272,15 @@ public:
                                  bool CStyle, bool &ObjCLifetimeConversion);
 
   /// Determine whether the conversion from FromType to ToType is a valid
-  /// conversion that strips "noexcept" or "noreturn" off the nested function
-  /// type.
-  bool IsFunctionConversion(QualType FromType, QualType ToType) const;
+  /// conversion that strips "noexcept" or "noreturn" or "cfi_unchecked_callee"
+  /// off the nested function type. This also checks if "cfi_unchecked_callee"
+  /// was added to the function type. If "cfi_unchecked_callee" is added and
+  /// `AddingCFIUncheckedCallee` is provided, it will be set to true. The same
+  /// thing applies for `DiscardingCFIUncheckedCallee` if the attribute is
+  /// discarded.
+  bool IsFunctionConversion(QualType FromType, QualType ToType,
+                            bool *DiscardingCFIUncheckedCallee = nullptr,
+                            bool *AddingCFIUncheckedCallee = nullptr) const;
 
   /// Same as `IsFunctionConversion`, but if this would return true, it sets
   /// `ResultTy` to `ToType`.
@@ -14007,7 +14031,7 @@ public:
                               Decl *D)
         : TmplAttr(A), Scope(S), NewDecl(D) {}
   };
-  typedef SmallVector<LateInstantiatedAttribute, 16> LateInstantiatedAttrVec;
+  typedef SmallVector<LateInstantiatedAttribute, 1> LateInstantiatedAttrVec;
 
   void InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
                         const Decl *Pattern, Decl *Inst,

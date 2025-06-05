@@ -1584,6 +1584,7 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
     // Convert struct members.
     llvm::SmallVector<mlir::Type> llvmMembers;
     switch (type.getKind()) {
+    case cir::RecordType::Class:
     case cir::RecordType::Struct:
       for (mlir::Type ty : type.getMembers())
         llvmMembers.push_back(convertTypeForMemory(converter, dataLayout, ty));
@@ -1730,7 +1731,8 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMVecExtractOpLowering,
                CIRToLLVMVecInsertOpLowering,
                CIRToLLVMVecCmpOpLowering,
-               CIRToLLVMVecShuffleDynamicOpLowering
+               CIRToLLVMVecShuffleDynamicOpLowering,
+               CIRToLLVMVecTernaryOpLowering
       // clang-format on
       >(converter, patterns.getContext());
 
@@ -1767,6 +1769,7 @@ mlir::LogicalResult CIRToLLVMGetMemberOpLowering::matchAndRewrite(
   assert(recordTy && "expected record type");
 
   switch (recordTy.getKind()) {
+  case cir::RecordType::Class:
   case cir::RecordType::Struct: {
     // Since the base address is a pointer to an aggregate, the first offset
     // is always zero. The second offset tell us which member it will access.
@@ -1858,10 +1861,6 @@ mlir::LogicalResult CIRToLLVMVecInsertOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
     cir::VecCmpOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  assert(mlir::isa<cir::VectorType>(op.getType()) &&
-         mlir::isa<cir::VectorType>(op.getLhs().getType()) &&
-         mlir::isa<cir::VectorType>(op.getRhs().getType()) &&
-         "Vector compare with non-vector type");
   mlir::Type elementType = elementTypeIfVector(op.getLhs().getType());
   mlir::Value bitResult;
   if (auto intType = mlir::dyn_cast<cir::IntType>(elementType)) {
@@ -1935,6 +1934,20 @@ mlir::LogicalResult CIRToLLVMVecShuffleDynamicOpLowering::matchAndRewrite(
                                                           valueAtIndex, iValue);
   }
   rewriter.replaceOp(op, result);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMVecTernaryOpLowering::matchAndRewrite(
+    cir::VecTernaryOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  // Convert `cond` into a vector of i1, then use that in a `select` op.
+  mlir::Value bitVec = rewriter.create<mlir::LLVM::ICmpOp>(
+      op.getLoc(), mlir::LLVM::ICmpPredicate::ne, adaptor.getCond(),
+      rewriter.create<mlir::LLVM::ZeroOp>(
+          op.getCond().getLoc(),
+          typeConverter->convertType(op.getCond().getType())));
+  rewriter.replaceOpWithNewOp<mlir::LLVM::SelectOp>(
+      op, bitVec, adaptor.getLhs(), adaptor.getRhs());
   return mlir::success();
 }
 

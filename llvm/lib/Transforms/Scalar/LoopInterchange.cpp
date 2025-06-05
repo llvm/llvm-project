@@ -209,6 +209,14 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
             Direction = '*';
           Dep.push_back(Direction);
         }
+
+        // If the Dependence object doesn't have any information, fill the
+        // dependency vector with '*'.
+        if (D->isConfused()) {
+          assert(Dep.empty() && "Expected empty dependency vector");
+          Dep.assign(Level, '*');
+        }
+
         while (Dep.size() != Level) {
           Dep.push_back('I');
         }

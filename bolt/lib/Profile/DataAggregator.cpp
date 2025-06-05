@@ -1220,7 +1220,7 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   // Storage for parsed fields.
   StringRef EventName;
   std::optional<Location> Addr[3];
-  int64_t Counters[2];
+  int64_t Counters[2] = {0};
 
   while (Type == INVALID || Type == EVENT_NAME) {
     while (checkAndConsumeFS()) {

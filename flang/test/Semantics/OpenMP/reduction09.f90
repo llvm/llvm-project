@@ -16,7 +16,7 @@ program omp_reduction
   !$omp do  reduction(+:k)
   !DEF: /omp_reduction/OtherConstruct1/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do i=1,10
-    !DEF: /omp_reduction/OtherConstruct1/OtherConstruct1/k (OmpReduction) HostAssoc INTEGER(4)
+    !DEF: /omp_reduction/OtherConstruct1/OtherConstruct1/k (OmpReduction, OmpExplicit) HostAssoc INTEGER(4)
     k = k+1
   end do
   !$omp end do
@@ -26,7 +26,7 @@ program omp_reduction
   !$omp parallel do  reduction(+:a(10))
   !DEF: /omp_reduction/OtherConstruct2/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do i=1,10
-    !DEF: /omp_reduction/OtherConstruct2/k HostAssoc INTEGER(4)
+    !DEF: /omp_reduction/OtherConstruct2/k (OmpShared) HostAssoc INTEGER(4)
     k = k+1
   end do
   !$omp end parallel do
@@ -35,7 +35,7 @@ program omp_reduction
   !$omp parallel do  reduction(+:a(1:10:1))
   !DEF: /omp_reduction/OtherConstruct3/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do i=1,10
-    !DEF: /omp_reduction/OtherConstruct3/k HostAssoc INTEGER(4)
+    !DEF: /omp_reduction/OtherConstruct3/k (OmpShared) HostAssoc INTEGER(4)
     k = k+1
   end do
   !$omp end parallel do
@@ -43,7 +43,7 @@ program omp_reduction
   !$omp parallel do  reduction(+:b(1:10:1,1:5,2))
   !DEF: /omp_reduction/OtherConstruct4/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do i=1,10
-    !DEF: /omp_reduction/OtherConstruct4/k HostAssoc INTEGER(4)
+    !DEF: /omp_reduction/OtherConstruct4/k (OmpShared) HostAssoc INTEGER(4)
     k = k+1
   end do
   !$omp end parallel do
@@ -51,7 +51,7 @@ program omp_reduction
   !$omp parallel do  reduction(+:b(1:10:1,1:5,2:5:1))
   !DEF: /omp_reduction/OtherConstruct5/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do i=1,10
-    !DEF: /omp_reduction/OtherConstruct5/k HostAssoc INTEGER(4)
+    !DEF: /omp_reduction/OtherConstruct5/k (OmpShared) HostAssoc INTEGER(4)
     k = k+1
   end do
   !$omp end parallel do
@@ -60,7 +60,7 @@ program omp_reduction
   !$omp do reduction(+:k) reduction(+:j)
   !DEF: /omp_reduction/OtherConstruct6/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do i=1,10
-    !DEF: /omp_reduction/OtherConstruct6/OtherConstruct1/k (OmpReduction) HostAssoc INTEGER(4)
+    !DEF: /omp_reduction/OtherConstruct6/OtherConstruct1/k (OmpReduction, OmpExplicit) HostAssoc INTEGER(4)
     k = k+1
   end do
   !$omp end do
@@ -69,7 +69,7 @@ program omp_reduction
   !$omp do reduction(+:k) reduction(*:j) reduction(+:l)
   !DEF: /omp_reduction/OtherConstruct7/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do i=1,10
-    !DEF: /omp_reduction/OtherConstruct7/k (OmpReduction) HostAssoc INTEGER(4)
+    !DEF: /omp_reduction/OtherConstruct7/k (OmpReduction, OmpExplicit) HostAssoc INTEGER(4)
     k = k+1
   end do
   !$omp end do

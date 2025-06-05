@@ -137,8 +137,20 @@ struct MissingFeatures {
   static bool recordZeroInit() { return false; }
   static bool zeroSizeRecordMembers() { return false; }
 
-  // Misc
+  // Various handling of deferred processing in CIRGenModule.
+  static bool cgmRelease() { return false; }
+  static bool deferredVtables() { return false; }
+  static bool deferredFuncDecls() { return false; }
+
+  // CXXABI
   static bool cxxABI() { return false; }
+  static bool cxxabiThisAlignment() { return false; }
+  static bool cxxabiUseARMMethodPtrABI() { return false; }
+  static bool cxxabiUseARMGuardVarABI() { return false; }
+  static bool cxxabiAppleARM64CXXABI() { return false; }
+  static bool cxxabiStructorImplicitParam() { return false; }
+
+  // Misc
   static bool cirgenABIInfo() { return false; }
   static bool abiArgInfo() { return false; }
   static bool tryEmitAsConstant() { return false; }
@@ -187,7 +199,6 @@ struct MissingFeatures {
   static bool typeChecks() { return false; }
   static bool lambdaFieldToName() { return false; }
   static bool updateCompletedType() { return false; }
-  static bool targetSpecificCXXABI() { return false; }
   static bool moduleNameHash() { return false; }
   static bool constantFoldSwitchStatement() { return false; }
   static bool cudaSupport() { return false; }
@@ -196,13 +207,15 @@ struct MissingFeatures {
   static bool constEmitterVectorILE() { return false; }
   static bool needsGlobalCtorDtor() { return false; }
   static bool emitTypeCheck() { return false; }
-  static bool cxxabiThisDecl() { return false; }
-  static bool cxxabiThisAlignment() { return false; }
   static bool writebacks() { return false; }
   static bool cleanupsToDeactivate() { return false; }
   static bool stackBase() { return false; }
-  static bool deferredDecls() { return false; }
+  static bool deferredCXXGlobalInit() { return false; }
   static bool setTargetAttributes() { return false; }
+  static bool coverageMapping() { return false; }
+  static bool peepholeProtection() { return false; }
+  static bool instrumentation() { return false; }
+  static bool cleanupAfterErrorDiags() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
@@ -227,8 +240,9 @@ struct MissingFeatures {
   static bool ptrDiffOp() { return false; }
   static bool ptrStrideOp() { return false; }
   static bool switchOp() { return false; }
-  static bool ternaryOp() { return false; }
+  static bool throwOp() { return false; }
   static bool tryOp() { return false; }
+  static bool vecTernaryOp() { return false; }
   static bool zextOp() { return false; }
 
   // Future CIR attributes
