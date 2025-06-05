@@ -2320,6 +2320,38 @@ func.func @insert_2d_constant() -> (vector<2x3xi32>, vector<2x3xi32>, vector<2x3
 
 // -----
 
+// CHECK-LABEL: func.func @fully_insert_scalar_constant_to_poison_vector
+//       CHECK: %[[VAL0:.+]] = arith.constant dense<[10, 20]> : vector<2xi64>
+//  CHECK-NEXT: return %[[VAL0]]
+func.func @fully_insert_scalar_constant_to_poison_vector() -> vector<2xi64> {
+  %poison = ub.poison : vector<2xi64>
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %e0 = arith.constant 10 : i64
+  %e1 = arith.constant 20 : i64
+  %v1 = vector.insert %e0, %poison[%c0] : i64 into vector<2xi64>
+  %v2 = vector.insert %e1, %v1[%c1] : i64 into vector<2xi64>
+  return %v2 : vector<2xi64>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @fully_insert_vector_constant_to_poison_vector
+//       CHECK: %[[VAL0:.+]] = arith.constant dense<{{\[\[1, 2, 3\], \[4, 5, 6\]\]}}> : vector<2x3xi64>
+//  CHECK-NEXT: return %[[VAL0]]
+func.func @fully_insert_vector_constant_to_poison_vector() -> vector<2x3xi64> {
+  %poison = ub.poison : vector<2x3xi64>
+  %cv0 = arith.constant dense<[1, 2, 3]> : vector<3xi64>
+  %cv1 = arith.constant dense<[4, 5, 6]> : vector<3xi64>
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %v1 = vector.insert %cv0, %poison[%c0] : vector<3xi64> into vector<2x3xi64>
+  %v2 = vector.insert %cv1, %v1[%c1] : vector<3xi64> into vector<2x3xi64>
+  return %v2 : vector<2x3xi64>
+}
+
+// -----
+
 // CHECK-LABEL: func.func @insert_2d_splat_constant
 //   CHECK-DAG: %[[ACST:.*]] = arith.constant dense<0> : vector<2x3xi32>
 //   CHECK-DAG: %[[BCST:.*]] = arith.constant dense<{{\[\[99, 0, 0\], \[0, 0, 0\]\]}}> : vector<2x3xi32>

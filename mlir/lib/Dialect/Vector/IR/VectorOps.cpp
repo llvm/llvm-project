@@ -3149,6 +3149,42 @@ LogicalResult InsertOp::verify() {
   return success();
 }
 
+// Calculate the linearized position for inserting elements and extract values
+// from the source attribute. Returns the starting position in the destination
+// vector where elements should be inserted.
+static int64_t calculateInsertPositionAndExtractValues(
+    VectorType destTy, const ArrayRef<int64_t> &positions, Attribute srcAttr,
+    SmallVector<Attribute> &valueToInsert) {
+  llvm::SmallVector<int64_t> completePositions(destTy.getRank(), 0);
+  copy(positions, completePositions.begin());
+  int64_t insertBeginPosition =
+      linearize(completePositions, computeStrides(destTy.getShape()));
+
+  Type destEltType = destTy.getElementType();
+
+  /// Converts the expected type to an IntegerAttr if there's
+  /// a mismatch.
+  auto convertIntegerAttr = [](Attribute attr, Type expectedType) -> Attribute {
+    if (auto intAttr = mlir::dyn_cast<IntegerAttr>(attr)) {
+      if (intAttr.getType() != expectedType)
+        return IntegerAttr::get(expectedType, intAttr.getInt());
+    }
+    return attr;
+  };
+
+  // The `convertIntegerAttr` method specifically handles the case
+  // for `llvm.mlir.constant` which can hold an attribute with a
+  // different type than the return type.
+  if (auto denseSource = llvm::dyn_cast<DenseElementsAttr>(srcAttr)) {
+    for (auto value : denseSource.getValues<Attribute>())
+      valueToInsert.push_back(convertIntegerAttr(value, destEltType));
+  } else {
+    valueToInsert.push_back(convertIntegerAttr(srcAttr, destEltType));
+  }
+
+  return insertBeginPosition;
+}
+
 namespace {
 
 // If insertOp is only inserting unit dimensions it can be transformed to a
@@ -3191,6 +3227,109 @@ public:
   }
 };
 
+// Pattern to optimize a chain of constant insertions into a poison vector.
+//
+// This pattern identifies chains of vector.insert operations that:
+// 1. Start from an ub.poison operation.
+// 2. Insert only constant values at static positions.
+// 3. Completely initialize all elements in the resulting vector.
+//
+// When these conditions are met, the entire chain can be replaced with a
+// single arith.constant operation containing a dense elements attribute.
+//
+// Example transformation:
+//   %poison = ub.poison : vector<2xi32>
+//   %0 = vector.insert %c1, %poison[0] : i32 into vector<2xi32>
+//   %1 = vector.insert %c2, %0[1] : i32 into vector<2xi32>
+// ->
+//   %result = arith.constant dense<[1, 2]> : vector<2xi32>
+
+// TODO: Support the case where only some elements of the poison vector are set.
+//       Currently, MLIR doesn't support partial poison vectors.
+
+class InsertConstantToPoison final : public OpRewritePattern<InsertOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(InsertOp op,
+                                PatternRewriter &rewriter) const override {
+
+    VectorType destTy = op.getDestVectorType();
+    if (destTy.isScalable())
+      return failure();
+    // Check if the result is used as the dest operand of another vector.insert
+    // Only care about the last op in a chain of insertions.
+    for (Operation *user : op.getResult().getUsers())
+      if (auto insertOp = dyn_cast<InsertOp>(user))
+        if (insertOp.getDest() == op.getResult())
+          return failure();
+
+    InsertOp firstInsertOp;
+    InsertOp previousInsertOp = op;
+    SmallVector<InsertOp> chainInsertOps;
+    SmallVector<Attribute> srcAttrs;
+    while (previousInsertOp) {
+      // Dynamic position is not supported.
+      if (previousInsertOp.hasDynamicPosition())
+        return failure();
+
+      // The inserted content must be constant.
+      chainInsertOps.push_back(previousInsertOp);
+      srcAttrs.push_back(Attribute());
+      matchPattern(previousInsertOp.getValueToStore(),
+                   m_Constant(&srcAttrs.back()));
+      if (!srcAttrs.back())
+        return failure();
+
+      // An insertion at poison index makes the entire chain poisoned.
+      if (is_contained(previousInsertOp.getStaticPosition(),
+                       InsertOp::kPoisonIndex))
+        return failure();
+
+      firstInsertOp = previousInsertOp;
+      previousInsertOp = previousInsertOp.getDest().getDefiningOp<InsertOp>();
+    }
+
+    if (!firstInsertOp.getDest().getDefiningOp<ub::PoisonOp>())
+      return failure();
+
+    // Need to make sure all elements are initialized.
+    int64_t vectorSize = destTy.getNumElements();
+    int64_t initializedCount = 0;
+    SmallVector<bool> initialized(vectorSize, false);
+    SmallVector<Attribute> initValues(vectorSize);
+
+    for (auto [insertOp, srcAttr] : llvm::zip(chainInsertOps, srcAttrs)) {
+      // Calculate the linearized position for inserting elements, as well as
+      // convert the source attribute to the proper type.
+      SmallVector<Attribute> valueToInsert;
+      int64_t insertBeginPosition = calculateInsertPositionAndExtractValues(
+          destTy, insertOp.getStaticPosition(), srcAttr, valueToInsert);
+      for (auto index :
+           llvm::seq<int64_t>(insertBeginPosition,
+                              insertBeginPosition + valueToInsert.size())) {
+        if (initialized[index])
+          continue;
+
+        initialized[index] = true;
+        ++initializedCount;
+        initValues[index] = valueToInsert[index - insertBeginPosition];
+      }
+      // If all elements in the vector have been initialized, we can stop
+      // processing the remaining insert operations in the chain.
+      if (initializedCount == vectorSize)
+        break;
+    }
+
+    // some positions are not initialized.
+    if (initializedCount != vectorSize)
+      return failure();
+
+    auto newAttr = DenseElementsAttr::get(destTy, initValues);
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, destTy, newAttr);
+    return success();
+  }
+};
+
 } // namespace
 
 static Attribute
@@ -3217,35 +3356,11 @@ foldDenseElementsAttrDestInsertOp(InsertOp insertOp, Attribute srcAttr,
       !insertOp->hasOneUse())
     return {};
 
-  // Calculate the linearized position of the continuous chunk of elements to
-  // insert.
-  llvm::SmallVector<int64_t> completePositions(destTy.getRank(), 0);
-  copy(insertOp.getStaticPosition(), completePositions.begin());
-  int64_t insertBeginPosition =
-      linearize(completePositions, computeStrides(destTy.getShape()));
-
+  // Calculate the linearized position for inserting elements, as well as
+  // convert the source attribute to the proper type.
   SmallVector<Attribute> insertedValues;
-  Type destEltType = destTy.getElementType();
-
-  /// Converts the expected type to an IntegerAttr if there's
-  /// a mismatch.
-  auto convertIntegerAttr = [](Attribute attr, Type expectedType) -> Attribute {
-    if (auto intAttr = mlir::dyn_cast<IntegerAttr>(attr)) {
-      if (intAttr.getType() != expectedType)
-        return IntegerAttr::get(expectedType, intAttr.getInt());
-    }
-    return attr;
-  };
-
-  // The `convertIntegerAttr` method specifically handles the case
-  // for `llvm.mlir.constant` which can hold an attribute with a
-  // different type than the return type.
-  if (auto denseSource = llvm::dyn_cast<DenseElementsAttr>(srcAttr)) {
-    for (auto value : denseSource.getValues<Attribute>())
-      insertedValues.push_back(convertIntegerAttr(value, destEltType));
-  } else {
-    insertedValues.push_back(convertIntegerAttr(srcAttr, destEltType));
-  }
+  int64_t insertBeginPosition = calculateInsertPositionAndExtractValues(
+      destTy, insertOp.getStaticPosition(), srcAttr, insertedValues);
 
   auto allValues = llvm::to_vector(denseDst.getValues<Attribute>());
   copy(insertedValues, allValues.begin() + insertBeginPosition);
@@ -3256,7 +3371,8 @@ foldDenseElementsAttrDestInsertOp(InsertOp insertOp, Attribute srcAttr,
 
 void InsertOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
-  results.add<InsertToBroadcast, BroadcastFolder, InsertSplatToSplat>(context);
+  results.add<InsertToBroadcast, BroadcastFolder, InsertSplatToSplat,
+              InsertConstantToPoison>(context);
 }
 
 OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
