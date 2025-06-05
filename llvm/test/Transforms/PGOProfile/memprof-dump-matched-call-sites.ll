@@ -31,6 +31,7 @@
 ; Note that f3 is considered to be an allocation site, not a call site, because
 ; it directly calls new after inlining.
 
+; REQUIRES: x86_64-linux
 ; RUN: split-file %s %t
 ; RUN: llvm-profdata merge %t/memprof-dump-matched-call-site.yaml -o %t/memprof-dump-matched-call-site.memprofdata
 ; RUN: opt < %t/memprof-dump-matched-call-site.ll -passes='memprof-use<profile-filename=%t/memprof-dump-matched-call-site.memprofdata>' -memprof-print-match-info -S 2>&1 | FileCheck %s

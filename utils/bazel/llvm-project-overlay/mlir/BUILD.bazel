@@ -9030,6 +9030,7 @@ cc_binary(
         "//mlir/test:TestMath",
         "//mlir/test:TestMathToVCIX",
         "//mlir/test:TestMemRef",
+        "//mlir/test:TestMemRefToLLVMWithTransforms",
         "//mlir/test:TestMesh",
         "//mlir/test:TestNVGPU",
         "//mlir/test:TestPDLL",

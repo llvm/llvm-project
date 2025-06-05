@@ -137,6 +137,11 @@ struct MissingFeatures {
   static bool recordZeroInit() { return false; }
   static bool zeroSizeRecordMembers() { return false; }
 
+  // Various handling of deferred processing in CIRGenModule.
+  static bool cgmRelease() { return false; }
+  static bool deferredVtables() { return false; }
+  static bool deferredFuncDecls() { return false; }
+
   // CXXABI
   static bool cxxABI() { return false; }
   static bool cxxabiThisAlignment() { return false; }
@@ -205,11 +210,12 @@ struct MissingFeatures {
   static bool writebacks() { return false; }
   static bool cleanupsToDeactivate() { return false; }
   static bool stackBase() { return false; }
-  static bool deferredDecls() { return false; }
+  static bool deferredCXXGlobalInit() { return false; }
   static bool setTargetAttributes() { return false; }
   static bool coverageMapping() { return false; }
   static bool peepholeProtection() { return false; }
   static bool instrumentation() { return false; }
+  static bool cleanupAfterErrorDiags() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }

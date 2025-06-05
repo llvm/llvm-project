@@ -6869,6 +6869,54 @@ for references or Objective-C object pointers.
 }];
 }
 
+def CFIUncheckedCalleeDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+``cfi_unchecked_callee`` is a function type attribute which prevents the compiler from instrumenting
+`Control Flow Integrity <https://clang.llvm.org/docs/ControlFlowIntegrity.html>`_ checks on indirect
+function calls. Specifically, the attribute has the following semantics:
+
+1. Indirect calls to a function type with this attribute will not be instrumented with CFI. That is,
+   the indirect call will not be checked. Note that this only changes the behavior for indirect calls
+   on pointers to function types having this attribute. It does not prevent all indirect function calls
+   for a given type from being checked.
+2. All direct references to a function whose type has this attribute will always reference the
+   function definition rather than an entry in the CFI jump table.
+3. When a pointer to a function with this attribute is implicitly cast to a pointer to a function
+   without this attribute, the compiler will give a warning saying this attribute is discarded. This
+   warning can be silenced with an explicit cast. Note an explicit cast just disables the warning, so
+   direct references to a function with a ``cfi_unchecked_callee`` attribute will still reference the
+   function definition rather than the CFI jump table.
+
+.. code-block:: c
+
+  #define CFI_UNCHECKED_CALLEE __attribute__((cfi_unchecked_callee))
+
+  void no_cfi() CFI_UNCHECKED_CALLEE {}
+
+  void (*with_cfi)() = no_cfi;  // warning: implicit conversion discards `cfi_unchecked_callee` attribute.
+                                // `with_cfi` also points to the actual definition of `no_cfi` rather than
+                                // its jump table entry.
+
+  void invoke(void (CFI_UNCHECKED_CALLEE *func)()) {
+    func();  // CFI will not instrument this indirect call.
+
+    void (*func2)() = func;  // warning: implicit conversion discards `cfi_unchecked_callee` attribute.
+
+    func2();  // CFI will instrument this indirect call. Users should be careful however because if this
+              // references a function with type `cfi_unchecked_callee`, then the CFI check may incorrectly
+              // fail because the reference will be to the function definition rather than the CFI jump
+              // table entry.
+  }
+
+This attribute can only be applied on functions or member functions. This attribute can be a good
+alternative to ``no_sanitize("cfi")`` if you only want to disable innstrumentation for specific indirect
+calls rather than applying ``no_sanitize("cfi")`` on the whole function containing indirect call. Note
+that ``cfi_unchecked_attribute`` is a type attribute doesn't disable CFI instrumentation on a function
+body.
+}];
+}
+
 def ReinitializesDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
