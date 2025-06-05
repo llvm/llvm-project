@@ -42649,7 +42649,15 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
   case X86ISD::VPERM2X128: {
     SDValue LHS = N->getOperand(0);
     SDValue RHS = N->getOperand(1);
-    unsigned Imm = N.getConstantOperandVal(2);
+    unsigned Imm = N.getConstantOperandVal(2) & 255;
+
+    // Canonicalize unary/repeated operands to LHS.
+    if (LHS.isUndef() && !RHS.isUndef())
+      return DAG.getNode(X86ISD::VPERM2X128, DL, VT, RHS, LHS,
+                         DAG.getTargetConstant(Imm ^ 0x22, DL, MVT::i8));
+    if (LHS == RHS)
+      return DAG.getNode(X86ISD::VPERM2X128, DL, VT, LHS, DAG.getUNDEF(VT),
+                         DAG.getTargetConstant(Imm & ~0x22, DL, MVT::i8));
 
     // Fold vperm2x128(bitcast(x),bitcast(y),c) -> bitcast(vperm2x128(x,y,c)).
     if (LHS.getOpcode() == ISD::BITCAST &&
