@@ -30,3 +30,40 @@ end:
 }
 
 declare i1 @get_b()
+
+define void @func_143(i32 %0, ptr %g_329) {
+; CHECK-LABEL: define void @func_143(
+; CHECK-SAME: i32 [[TMP0:%.*]], ptr [[G_329:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    switch i32 [[TMP0]], label %[[COMMON_RET:.*]] [
+; CHECK-NEXT:      i32 0, label %[[FOR_INC295:.*]]
+; CHECK-NEXT:      i32 1, label %[[FOR_END297:.*]]
+; CHECK-NEXT:      i32 33, label %[[FOR_INC295]]
+; CHECK-NEXT:    ]
+; CHECK:       [[FOR_INC295]]:
+; CHECK-NEXT:    br label %[[FOR_END297]]
+; CHECK:       [[COMMON_RET]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[FOR_END297]]:
+; CHECK-NEXT:    [[STOREMERGE739_LCSSA761:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 1, %[[FOR_INC295]] ]
+; CHECK-NEXT:    store i8 0, ptr [[G_329]], align 1
+; CHECK-NEXT:    br label %[[COMMON_RET]]
+;
+entry:
+  switch i32 %0, label %common.ret [
+  i32 0, label %for.inc295
+  i32 1, label %for.end297
+  i32 33, label %for.inc295
+  ]
+
+for.inc295:                                       ; preds = %entry, %entry
+  br label %for.end297
+
+common.ret:                                       ; preds = %for.end297, %entry
+  ret void
+
+for.end297:                                       ; preds = %for.inc295, %entry
+  %storemerge739.lcssa761 = phi i64 [ 0, %entry ], [ 1, %for.inc295 ]
+  store i8 0, ptr %g_329, align 1
+  br label %common.ret
+}
