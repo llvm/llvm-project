@@ -728,12 +728,15 @@ public:
 
   /// recomputeRegClass - Try to find a legal super-class of Reg's register
   /// class that still satisfies the constraints from the instructions using
-  /// Reg.  Returns true if Reg was upgraded.
+  /// Reg.
+  /// If Reg was upgraded, returns true and a list of debug value instructions
+  /// that became illegal after upgrade.
   ///
   /// This method can be used after constraints have been removed from a
   /// virtual register, for example after removing instructions or splitting
   /// the live range.
-  LLVM_ABI bool recomputeRegClass(Register Reg);
+  LLVM_ABI std::pair<bool, SmallVector<MachineInstr *, 8>>
+  recomputeRegClass(Register Reg);
 
   /// createVirtualRegister - Create and return a new virtual register in the
   /// function with the specified register class.

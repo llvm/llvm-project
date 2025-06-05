@@ -118,28 +118,44 @@ MachineRegisterInfo::constrainRegAttrs(Register Reg,
   return true;
 }
 
-bool
+std::pair<bool, SmallVector<MachineInstr *, 8>>
 MachineRegisterInfo::recomputeRegClass(Register Reg) {
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
   const TargetRegisterClass *OldRC = getRegClass(Reg);
   const TargetRegisterInfo *TRI = getTargetRegisterInfo();
+  // Largest legal super-class for non-debug uses.
   const TargetRegisterClass *NewRC = TRI->getLargestLegalSuperClass(OldRC, *MF);
+  // Largest legal super-class for all uses.
+  const TargetRegisterClass *NewRCWithDebug = NewRC;
+  SmallVector<MachineInstr *, 8> DebugInsns;
 
   // Stop early if there is no room to grow.
   if (NewRC == OldRC)
-    return false;
+    return {false, {}};
 
   // Accumulate constraints from all uses.
-  for (MachineOperand &MO : reg_nodbg_operands(Reg)) {
-    // Apply the effect of the given operand to NewRC.
+  for (MachineOperand &MO : reg_operands(Reg)) {
     MachineInstr *MI = MO.getParent();
     unsigned OpNo = &MO - &MI->getOperand(0);
-    NewRC = MI->getRegClassConstraintEffect(OpNo, NewRC, TII, TRI);
+    if (MO.isDebug()) {
+      DebugInsns.push_back(MI);
+    } else {
+      // Apply the effect of the given operand to NewRC.
+      NewRC = MI->getRegClassConstraintEffect(OpNo, NewRC, TII, TRI);
+    }
+    NewRCWithDebug =
+        MI->getRegClassConstraintEffect(OpNo, NewRCWithDebug, TII, TRI);
     if (!NewRC || NewRC == OldRC)
-      return false;
+      return {false, {}};
   }
   setRegClass(Reg, NewRC);
-  return true;
+
+  // Check if DBG_VALUEs are still legal.
+  if (NewRCWithDebug == NewRC)
+    return {true, {}};
+
+  // DBG_VALUEs can't use the new class and should be changed.
+  return {true, DebugInsns};
 }
 
 Register MachineRegisterInfo::createIncompleteVirtualRegister(StringRef Name) {

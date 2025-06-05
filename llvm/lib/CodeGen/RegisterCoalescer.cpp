@@ -4335,10 +4335,16 @@ bool RegisterCoalescer::run(MachineFunction &fn) {
   for (Register Reg : InflateRegs) {
     if (MRI->reg_nodbg_empty(Reg))
       continue;
-    if (MRI->recomputeRegClass(Reg)) {
+
+    auto [Recomputed, IllegalDbgValues] = MRI->recomputeRegClass(Reg);
+    if (Recomputed) {
       LLVM_DEBUG(dbgs() << printReg(Reg) << " inflated to "
                         << TRI->getRegClassName(MRI->getRegClass(Reg)) << '\n');
       ++NumInflated;
+
+      // Mark undef debug value instructions that became illegal.
+      for (MachineInstr *MI : IllegalDbgValues)
+        MI->setDebugValueUndef();
 
       LiveInterval &LI = LIS->getInterval(Reg);
       if (LI.hasSubRanges()) {
