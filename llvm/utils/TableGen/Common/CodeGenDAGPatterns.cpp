@@ -899,6 +899,9 @@ TreePredicateFn::TreePredicateFn(TreePattern *N) : PatFragRec(N) {
   assert(
       (!hasPredCode() || !hasImmCode()) &&
       ".td file corrupt: can't have a node predicate *and* an imm predicate");
+      
+  if (hasGISelPredicateCode() && hasGISelLeafPredicateCode())
+    PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(), ".td file corrupt: can't have GISelPredicateCode *and* GISelLeafPredicateCode");
 }
 
 bool TreePredicateFn::hasPredCode() const {
