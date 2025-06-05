@@ -963,20 +963,19 @@ void CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
   const bool isConst = false;
   assert(!cir::MissingFeatures::addressSpace());
   const unsigned addrSpace = 0;
-  assert(!cir::MissingFeatures::opGlobalDSOLocal());
-  const bool isDsoLocal = true;
+  const bool isDsoLocal = op.getDsolocal();
   assert(!cir::MissingFeatures::opGlobalThreadLocal());
   const bool isThreadLocal = false;
   const uint64_t alignment = op.getAlignment().value_or(0);
   const mlir::LLVM::Linkage linkage = convertLinkage(op.getLinkage());
   const StringRef symbol = op.getSymName();
+  mlir::SymbolRefAttr comdatAttr = getComdatAttr(op, rewriter);
 
   SmallVector<mlir::NamedAttribute> attributes;
   mlir::LLVM::GlobalOp newGlobalOp =
       rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
           op, llvmType, isConst, linkage, symbol, nullptr, alignment, addrSpace,
-          isDsoLocal, isThreadLocal,
-          /*comdat=*/mlir::SymbolRefAttr(), attributes);
+          isDsoLocal, isThreadLocal, comdatAttr, attributes);
   newGlobalOp.getRegion().emplaceBlock();
   rewriter.setInsertionPointToEnd(newGlobalOp.getInitializerBlock());
 }
@@ -1018,14 +1017,14 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   const bool isConst = false;
   assert(!cir::MissingFeatures::addressSpace());
   const unsigned addrSpace = 0;
-  assert(!cir::MissingFeatures::opGlobalDSOLocal());
-  const bool isDsoLocal = true;
+  const bool isDsoLocal = op.getDsolocal();
   assert(!cir::MissingFeatures::opGlobalThreadLocal());
   const bool isThreadLocal = false;
   const uint64_t alignment = op.getAlignment().value_or(0);
   const mlir::LLVM::Linkage linkage = convertLinkage(op.getLinkage());
   const StringRef symbol = op.getSymName();
   SmallVector<mlir::NamedAttribute> attributes;
+  mlir::SymbolRefAttr comdatAttr = getComdatAttr(op, rewriter);
 
   if (init.has_value()) {
     if (mlir::isa<cir::FPAttr, cir::IntAttr, cir::BoolAttr>(init.value())) {
@@ -1056,10 +1055,31 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   // Rewrite op.
   rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
       op, llvmType, isConst, linkage, symbol, init.value_or(mlir::Attribute()),
-      alignment, addrSpace, isDsoLocal, isThreadLocal,
-      /*comdat=*/mlir::SymbolRefAttr(), attributes);
-
+      alignment, addrSpace, isDsoLocal, isThreadLocal, comdatAttr, attributes);
   return mlir::success();
+}
+
+mlir::SymbolRefAttr
+CIRToLLVMGlobalOpLowering::getComdatAttr(cir::GlobalOp &op,
+                                         mlir::OpBuilder &builder) const {
+  if (!op.getComdat())
+    return mlir::SymbolRefAttr{};
+
+  mlir::ModuleOp module = op->getParentOfType<mlir::ModuleOp>();
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  StringRef comdatName("__llvm_comdat_globals");
+  if (!comdatOp) {
+    builder.setInsertionPointToStart(module.getBody());
+    comdatOp =
+        builder.create<mlir::LLVM::ComdatOp>(module.getLoc(), comdatName);
+  }
+
+  builder.setInsertionPointToStart(&comdatOp.getBody().back());
+  auto selectorOp = builder.create<mlir::LLVM::ComdatSelectorOp>(
+      comdatOp.getLoc(), op.getSymName(), mlir::LLVM::comdat::Comdat::Any);
+  return mlir::SymbolRefAttr::get(
+      builder.getContext(), comdatName,
+      mlir::FlatSymbolRefAttr::get(selectorOp.getSymNameAttr()));
 }
 
 mlir::LogicalResult CIRToLLVMSwitchFlatOpLowering::matchAndRewrite(
@@ -1709,7 +1729,8 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMVecCreateOpLowering,
                CIRToLLVMVecExtractOpLowering,
                CIRToLLVMVecInsertOpLowering,
-               CIRToLLVMVecCmpOpLowering
+               CIRToLLVMVecCmpOpLowering,
+               CIRToLLVMVecShuffleDynamicOpLowering
       // clang-format on
       >(converter, patterns.getContext());
 
@@ -1837,10 +1858,6 @@ mlir::LogicalResult CIRToLLVMVecInsertOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
     cir::VecCmpOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  assert(mlir::isa<cir::VectorType>(op.getType()) &&
-         mlir::isa<cir::VectorType>(op.getLhs().getType()) &&
-         mlir::isa<cir::VectorType>(op.getRhs().getType()) &&
-         "Vector compare with non-vector type");
   mlir::Type elementType = elementTypeIfVector(op.getLhs().getType());
   mlir::Value bitResult;
   if (auto intType = mlir::dyn_cast<cir::IntType>(elementType)) {
@@ -1860,6 +1877,60 @@ mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
   // must be sign-extended to the correct result type.
   rewriter.replaceOpWithNewOp<mlir::LLVM::SExtOp>(
       op, typeConverter->convertType(op.getType()), bitResult);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMVecShuffleDynamicOpLowering::matchAndRewrite(
+    cir::VecShuffleDynamicOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  // LLVM IR does not have an operation that corresponds to this form of
+  // the built-in.
+  //     __builtin_shufflevector(V, I)
+  // is implemented as this pseudocode, where the for loop is unrolled
+  // and N is the number of elements:
+  //
+  // result = undef
+  // maskbits = NextPowerOf2(N - 1)
+  // masked = I & maskbits
+  // for (i in 0 <= i < N)
+  //    result[i] = V[masked[i]]
+  mlir::Location loc = op.getLoc();
+  mlir::Value input = adaptor.getVec();
+  mlir::Type llvmIndexVecType =
+      getTypeConverter()->convertType(op.getIndices().getType());
+  mlir::Type llvmIndexType = getTypeConverter()->convertType(
+      elementTypeIfVector(op.getIndices().getType()));
+  uint64_t numElements =
+      mlir::cast<cir::VectorType>(op.getVec().getType()).getSize();
+
+  uint64_t maskBits = llvm::NextPowerOf2(numElements - 1) - 1;
+  mlir::Value maskValue = rewriter.create<mlir::LLVM::ConstantOp>(
+      loc, llvmIndexType, rewriter.getIntegerAttr(llvmIndexType, maskBits));
+  mlir::Value maskVector =
+      rewriter.create<mlir::LLVM::UndefOp>(loc, llvmIndexVecType);
+
+  for (uint64_t i = 0; i < numElements; ++i) {
+    mlir::Value idxValue =
+        rewriter.create<mlir::LLVM::ConstantOp>(loc, rewriter.getI64Type(), i);
+    maskVector = rewriter.create<mlir::LLVM::InsertElementOp>(
+        loc, maskVector, maskValue, idxValue);
+  }
+
+  mlir::Value maskedIndices = rewriter.create<mlir::LLVM::AndOp>(
+      loc, llvmIndexVecType, adaptor.getIndices(), maskVector);
+  mlir::Value result = rewriter.create<mlir::LLVM::UndefOp>(
+      loc, getTypeConverter()->convertType(op.getVec().getType()));
+  for (uint64_t i = 0; i < numElements; ++i) {
+    mlir::Value iValue =
+        rewriter.create<mlir::LLVM::ConstantOp>(loc, rewriter.getI64Type(), i);
+    mlir::Value indexValue = rewriter.create<mlir::LLVM::ExtractElementOp>(
+        loc, maskedIndices, iValue);
+    mlir::Value valueAtIndex =
+        rewriter.create<mlir::LLVM::ExtractElementOp>(loc, input, indexValue);
+    result = rewriter.create<mlir::LLVM::InsertElementOp>(loc, result,
+                                                          valueAtIndex, iValue);
+  }
+  rewriter.replaceOp(op, result);
   return mlir::success();
 }
 

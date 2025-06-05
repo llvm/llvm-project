@@ -319,6 +319,12 @@ m_VPInstruction(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
 }
 
 template <typename Op0_t>
+inline UnaryVPInstruction_match<Op0_t, Instruction::Freeze>
+m_Freeze(const Op0_t &Op0) {
+  return m_VPInstruction<Instruction::Freeze>(Op0);
+}
+
+template <typename Op0_t>
 inline UnaryVPInstruction_match<Op0_t, VPInstruction::Not>
 m_Not(const Op0_t &Op0) {
   return m_VPInstruction<VPInstruction::Not>(Op0);

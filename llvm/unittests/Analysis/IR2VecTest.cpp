@@ -28,8 +28,7 @@ namespace {
 
 class TestableEmbedder : public Embedder {
 public:
-  TestableEmbedder(const Function &F, const Vocab &V, unsigned Dim)
-      : Embedder(F, V, Dim) {}
+  TestableEmbedder(const Function &F, const Vocab &V) : Embedder(F, V) {}
   void computeEmbeddings() const override {}
   void computeEmbeddings(const BasicBlock &BB) const override {}
   using Embedder::lookupVocab;
@@ -50,7 +49,7 @@ TEST(IR2VecTest, CreateSymbolicEmbedder) {
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(Ctx), false);
   Function *F = Function::Create(FTy, Function::ExternalLinkage, "f", M);
 
-  auto Result = Embedder::create(IR2VecKind::Symbolic, *F, V, 2);
+  auto Result = Embedder::create(IR2VecKind::Symbolic, *F, V);
   EXPECT_TRUE(static_cast<bool>(Result));
 
   auto *Emb = Result->get();
@@ -66,7 +65,7 @@ TEST(IR2VecTest, CreateInvalidMode) {
   Function *F = Function::Create(FTy, Function::ExternalLinkage, "f", M);
 
   // static_cast an invalid int to IR2VecKind
-  auto Result = Embedder::create(static_cast<IR2VecKind>(-1), *F, V, 2);
+  auto Result = Embedder::create(static_cast<IR2VecKind>(-1), *F, V);
   EXPECT_FALSE(static_cast<bool>(Result));
 
   std::string ErrMsg;
@@ -123,7 +122,7 @@ TEST(IR2VecTest, LookupVocab) {
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(Ctx), false);
   Function *F = Function::Create(FTy, Function::ExternalLinkage, "f", M);
 
-  TestableEmbedder E(*F, V, 2);
+  TestableEmbedder E(*F, V);
   auto V_foo = E.lookupVocab("foo");
   EXPECT_EQ(V_foo.size(), 2u);
   EXPECT_THAT(V_foo, ElementsAre(1.0, 2.0));
@@ -190,7 +189,7 @@ struct GetterTestEnv {
     Add = BinaryOperator::CreateAdd(Arg, Const, "add", BB);
     Ret = ReturnInst::Create(Ctx, Add, BB);
 
-    auto Result = Embedder::create(IR2VecKind::Symbolic, *F, V, 2);
+    auto Result = Embedder::create(IR2VecKind::Symbolic, *F, V);
     EXPECT_TRUE(static_cast<bool>(Result));
     Emb = std::move(*Result);
   }

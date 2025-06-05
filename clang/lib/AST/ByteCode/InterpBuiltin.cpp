@@ -763,12 +763,12 @@ static bool interp__builtin_ffs(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_addressof(InterpState &S, CodePtr OpPC,
                                       const InterpFrame *Frame,
                                       const CallExpr *Call) {
+#ifndef NDEBUG
   assert(Call->getArg(0)->isLValue());
-  [[maybe_unused]] PrimType PtrT =
-      S.getContext().classify(Call->getArg(0)).value_or(PT_Ptr);
+  PrimType PtrT = S.getContext().classify(Call->getArg(0)).value_or(PT_Ptr);
   assert(PtrT == PT_Ptr &&
          "Unsupported pointer type passed to __builtin_addressof()");
-  (void)PtrT;
+#endif
   return true;
 }
 
