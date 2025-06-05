@@ -2166,9 +2166,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
 
-  // Create a scalar phi to track the previous EVL if fixed-order recurrence is
-  // contained.
-  VPInstruction *PrevEVL = nullptr;
+  VPValue *PrevEVL = nullptr;
   bool ContainsFORs =
       any_of(Header->phis(), IsaPred<VPFirstOrderRecurrencePHIRecipe>);
   if (ContainsFORs) {
@@ -2183,8 +2181,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
           VFSize > 32 ? Instruction::Trunc : Instruction::ZExt, MaxEVL,
           Type::getInt32Ty(Ctx), DebugLoc());
     }
-    Builder.setInsertPoint(Header, Header->getFirstNonPhi());
-    PrevEVL = Builder.createScalarPhi({MaxEVL, &EVL}, DebugLoc(), "prev.evl");
+    PrevEVL = MaxEVL;
   }
 
   for (VPUser *U : to_vector(Plan.getVF().users())) {
@@ -2273,22 +2270,13 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
   // The transform updates all users of inductions to work based on EVL, instead
   // of the VF directly. At the moment, widened inductions cannot be updated, so
   // bail out if the plan contains any.
-  bool ContainsWidenInductions = any_of(
-      Header->phis(),
-      IsaPred<VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe>);
-  if (ContainsWidenInductions)
-    return false;
 
   auto *CanonicalIVPHI = Plan.getCanonicalIV();
-  VPValue *StartV = CanonicalIVPHI->getStartValue();
 
-  // Create the ExplicitVectorLengthPhi recipe in the main loop.
-  auto *EVLPhi = new VPEVLBasedIVPHIRecipe(StartV, DebugLoc());
-  EVLPhi->insertAfter(CanonicalIVPHI);
   VPBuilder Builder(Header, Header->getFirstNonPhi());
   // Compute original TC - IV as the AVL (application vector length).
   VPValue *AVL = Builder.createNaryOp(
-      Instruction::Sub, {Plan.getTripCount(), EVLPhi}, DebugLoc(), "avl");
+      Instruction::Sub, {Plan.getTripCount(), CanonicalIVPHI}, DebugLoc(), "avl");
   if (MaxSafeElements) {
     // Support for MaxSafeDist for correct loop emission.
     VPValue *AVLSafe = Plan.getOrAddLiveIn(
@@ -2296,32 +2284,20 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
     VPValue *Cmp = Builder.createICmp(ICmpInst::ICMP_ULT, AVL, AVLSafe);
     AVL = Builder.createSelect(Cmp, AVL, AVLSafe, DebugLoc(), "safe_avl");
   }
-  auto *VPEVL = Builder.createNaryOp(VPInstruction::ExplicitVectorLength, AVL,
-                                     DebugLoc());
 
-  auto *CanonicalIVIncrement =
-      cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());
-  Builder.setInsertPoint(CanonicalIVIncrement);
-  VPSingleDefRecipe *OpVPEVL = VPEVL;
-  if (unsigned IVSize = CanonicalIVPHI->getScalarType()->getScalarSizeInBits();
-      IVSize != 32) {
-    OpVPEVL = Builder.createScalarCast(
-        IVSize < 32 ? Instruction::Trunc : Instruction::ZExt, OpVPEVL,
-        CanonicalIVPHI->getScalarType(), CanonicalIVIncrement->getDebugLoc());
-  }
-  auto *NextEVLIV = Builder.createOverflowingOp(
-      Instruction::Add, {OpVPEVL, EVLPhi},
-      {CanonicalIVIncrement->hasNoUnsignedWrap(),
-       CanonicalIVIncrement->hasNoSignedWrap()},
-      CanonicalIVIncrement->getDebugLoc(), "index.evl.next");
-  EVLPhi->addOperand(NextEVLIV);
+  // This is just a umin pattern
+  VPValue &VFxUF = Plan.getVFxUF();
+  VPValue *Cmp = Builder.createICmp(ICmpInst::ICMP_ULT, AVL, &VFxUF);
+  auto *VPEVL = Builder.createSelect(Cmp, AVL, &VFxUF, DebugLoc());
+
+  unsigned BitWidth = CanonicalIVPHI->getScalarType()->getScalarSizeInBits();
+  LLVMContext &Ctx = CanonicalIVPHI->getScalarType()->getContext();
+  VPEVL = Builder.createScalarCast(
+          BitWidth > 32 ? Instruction::Trunc : Instruction::ZExt, VPEVL,
+          Type::getInt32Ty(Ctx), DebugLoc());
 
   transformRecipestoEVLRecipes(Plan, *VPEVL);
 
-  // Replace all uses of VPCanonicalIVPHIRecipe by
-  // VPEVLBasedIVPHIRecipe except for the canonical IV increment.
-  CanonicalIVPHI->replaceAllUsesWith(EVLPhi);
-  CanonicalIVIncrement->setOperand(0, CanonicalIVPHI);
   // TODO: support unroll factor > 1.
   Plan.setUF(1);
   return true;
