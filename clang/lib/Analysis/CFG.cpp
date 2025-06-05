@@ -1261,6 +1261,28 @@ private:
         L2Result.Val.getKind() == APValue::Float) {
       llvm::APFloat L1 = L1Result.Val.getFloat();
       llvm::APFloat L2 = L2Result.Val.getFloat();
+      // Note that L1 and L2 do not necessarily have the same type.  For example
+      // `x != 0 || x != 1.0`, if `x` is a float16, the two literals `0` and
+      // `1.0` are float16 and double respectively.  In this case, we should do
+      // a conversion before comparing L1 and L2.  Their types must be
+      // compatible since they are comparing with the same DRE.
+      int8_t Order = Context->getFloatingTypeOrder(NumExpr1->getType(),
+                                                   NumExpr2->getType());
+      bool convertLoseInfo = false;
+
+      if (Order > 0) {
+        // type rank L1 > L2:
+        if (L2.convert(L1.getSemantics(), llvm::APFloat::rmNearestTiesToEven,
+                       &convertLoseInfo))
+          return {};
+      } else if (Order < 0)
+        // type rank L1 < L2:
+        if (L1.convert(L2.getSemantics(), llvm::APFloat::rmNearestTiesToEven,
+                       &convertLoseInfo))
+          return {};
+      if (convertLoseInfo)
+        return {}; // If the conversion loses info, bail
+
       llvm::APFloat MidValue = L1;
       MidValue.add(L2, llvm::APFloat::rmNearestTiesToEven);
       MidValue.divide(llvm::APFloat(MidValue.getSemantics(), "2.0"),
