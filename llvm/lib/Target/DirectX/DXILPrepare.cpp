@@ -155,32 +155,35 @@ class DXILPrepareModule : public ModulePass {
     }
 
     // Also omit the bitcast for matching global array types
-    if (auto *GlobalVar = llvm::dyn_cast<llvm::GlobalVariable>(Operand)) {
-      llvm::Type *ValTy = GlobalVar->getValueType();
+    if (auto *GlobalVar = dyn_cast<GlobalVariable>(Operand)) {
+      Type *ValTy = GlobalVar->getValueType();
 
-      if (auto *ArrTy = llvm::dyn_cast<llvm::ArrayType>(ValTy)) {
-        llvm::Type *ElTy = ArrTy->getElementType();
+      if (auto *ArrTy = dyn_cast<ArrayType>(ValTy)) {
+        Type *ElTy = ArrTy->getElementType();
         if (ElTy == Ty)
           return nullptr;
       }
     }
 
+    // Also omit the bitcast for alloca instructions
+    if (auto *AI = dyn_cast<AllocaInst>(Operand)) {
+      return nullptr;
+    }
+
     // finally, drill down GEP instructions until we get the array
     // that is being accessed, and compare element types
-    if (llvm::ConstantExpr *GEPInstr =
-            llvm::dyn_cast<llvm::ConstantExpr>(Operand)) {
-      while (GEPInstr->getOpcode() == llvm::Instruction::GetElementPtr) {
-        llvm::Value *OpArg = GEPInstr->getOperand(0);
-        if (llvm::ConstantExpr *NewGEPInstr =
-                llvm::dyn_cast<llvm::ConstantExpr>(OpArg)) {
+    if (ConstantExpr *GEPInstr = dyn_cast<ConstantExpr>(Operand)) {
+      while (GEPInstr->getOpcode() == Instruction::GetElementPtr) {
+        Value *OpArg = GEPInstr->getOperand(0);
+        if (ConstantExpr *NewGEPInstr = dyn_cast<ConstantExpr>(OpArg)) {
           GEPInstr = NewGEPInstr;
           continue;
         }
 
-        if (auto *GlobalVar = llvm::dyn_cast<llvm::GlobalVariable>(OpArg)) {
-          llvm::Type *ValTy = GlobalVar->getValueType();
-          if (auto *ArrTy = llvm::dyn_cast<llvm::ArrayType>(ValTy)) {
-            llvm::Type *ElTy = ArrTy->getElementType();
+        if (auto *GlobalVar = dyn_cast<GlobalVariable>(OpArg)) {
+          Type *ValTy = GlobalVar->getValueType();
+          if (auto *ArrTy = dyn_cast<ArrayType>(ValTy)) {
+            Type *ElTy = ArrTy->getElementType();
             if (ElTy == Ty)
               return nullptr;
           }
