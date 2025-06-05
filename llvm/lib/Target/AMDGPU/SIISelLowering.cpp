@@ -754,7 +754,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FNEG, {MVT::v2f16, MVT::v2bf16}, Legal);
     // This isn't really legal, but this avoids the legalizer unrolling it (and
     // allows matching fneg (fabs x) patterns)
-    setOperationAction(ISD::FABS, MVT::v2f16, Legal);
+    setOperationAction(ISD::FABS, {MVT::v2f16, MVT::v2bf16}, Legal);
 
     // Can do this in one BFI plus a constant materialize.
     setOperationAction(ISD::FCOPYSIGN,
