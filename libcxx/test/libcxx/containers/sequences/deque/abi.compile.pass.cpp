@@ -52,19 +52,19 @@ public:
   small_pointer& operator+=(difference_type);
   small_pointer& operator-=(difference_type);
 
-  friend small_pointer operator+(small_pointer, difference_type);
-  friend small_pointer operator+(difference_type, small_pointer);
-  friend small_pointer operator-(small_pointer, difference_type);
-  friend difference_type operator-(small_pointer, small_pointer);
+  friend small_pointer operator+(small_pointer, difference_type) { return small_pointer{}; }
+  friend small_pointer operator+(difference_type, small_pointer) { return small_pointer{}; }
+  friend small_pointer operator-(small_pointer, difference_type) { return small_pointer{}; }
+  friend difference_type operator-(small_pointer, small_pointer) { return 0; }
 
-  friend bool operator==(small_pointer, small_pointer);
+  friend bool operator==(small_pointer, small_pointer) { return true; }
 #if TEST_STD_VER < 20
-  friend bool operator!=(small_pointer, small_pointer);
+  friend bool operator!=(small_pointer, small_pointer) { return false; }
 #endif
-  friend bool operator<(small_pointer, small_pointer);
-  friend bool operator>=(small_pointer, small_pointer);
-  friend bool operator>(small_pointer, small_pointer);
-  friend bool operator>=(small_pointer, small_pointer);
+  friend bool operator<(small_pointer, small_pointer) { return false; }
+  friend bool operator>=(small_pointer, small_pointer) { return true; }
+  friend bool operator>(small_pointer, small_pointer) { return false; }
+  friend bool operator>=(small_pointer, small_pointer) { return true; }
 
   small_pointer pointer_to(T&);
 };
