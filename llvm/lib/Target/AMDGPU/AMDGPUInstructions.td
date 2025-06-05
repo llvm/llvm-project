@@ -512,6 +512,10 @@ def atomic_load_nonext_64_#as : PatFrag<(ops node:$ptr), (atomic_load_nonext_64 
   let IsAtomic = 1;
 }
 
+def atomic_load_nonext_128_#as : PatFrag<(ops node:$ptr), (atomic_load_nonext_128 node:$ptr)> {
+  let IsAtomic = 1;
+}
+
 def atomic_load_zext_8_#as : PatFrag<(ops node:$ptr), (atomic_load_zext_8 node:$ptr)> {
   let IsAtomic = 1;
 }
@@ -535,7 +539,6 @@ def atomic_load_sext_16_#as : PatFrag<(ops node:$ptr), (atomic_load_sext_16 node
 def atomic_load_aext_16_#as : PatFrag<(ops node:$ptr), (atomic_load_aext_16 node:$ptr)> {
   let IsAtomic = 1;
 }
-
 } // End let AddressSpaces
 } // End foreach as
 
@@ -576,6 +579,8 @@ def atomic_store_32_#as : PatFrag<(ops node:$val, node:$ptr),
                                   (atomic_store_32 node:$val, node:$ptr)>;
 def atomic_store_64_#as : PatFrag<(ops node:$val, node:$ptr),
                                   (atomic_store_64 node:$val, node:$ptr)>;
+def atomic_store_128_#as : PatFrag<(ops node:$val, node:$ptr),
+                                   (atomic_store_128 node:$val, node:$ptr)>;
 } // End let IsAtomic = 1, AddressSpaces = ...
 } // End foreach as
 
