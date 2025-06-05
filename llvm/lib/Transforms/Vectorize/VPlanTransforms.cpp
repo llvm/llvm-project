@@ -1157,9 +1157,9 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   VPValue *StartV;
   if (match(Def, m_VPInstruction<VPInstruction::ReductionStartVector>(
                      m_VPValue(StartV), m_VPValue(), m_VPValue()))) {
-    Def->replaceUsesWithIf(StartV, [Def](const VPUser &U, unsigned Idx) {
+    Def->replaceUsesWithIf(StartV, [](const VPUser &U, unsigned Idx) {
       auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&U);
-      return PhiR && Def == PhiR->getOperand(Idx) && PhiR->isInLoop();
+      return PhiR && PhiR->isInLoop();
     });
     return;
   }
