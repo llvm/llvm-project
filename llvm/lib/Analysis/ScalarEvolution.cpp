@@ -1800,9 +1800,9 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
     // zext (C + A)<nsw> -> (sext(C) + sext(A))<nsw> if zext (C + A)<nsw> >=s 0.
     if (SA->hasNoSignedWrap() && isKnownNonNegative(SA) &&
         match(SA, m_scev_Add(m_SCEVConstant(C), m_SCEV(A)))) {
-      SmallVector<const SCEV *, 4> Ops = {getSignExtendExpr(C, Ty, Depth + 1),
-                                          getSignExtendExpr(A, Ty, Depth + 1)};
-      return getAddExpr(Ops, SCEV::FlagNSW, Depth + 1);
+      return getAddExpr(getSignExtendExpr(C, Ty, Depth + 1),
+                        getSignExtendExpr(A, Ty, Depth + 1), SCEV::FlagNSW,
+                        Depth + 1);
     }
 
     // zext(C + x + y + ...) --> (zext(D) + zext((C - D) + x + y + ...))
