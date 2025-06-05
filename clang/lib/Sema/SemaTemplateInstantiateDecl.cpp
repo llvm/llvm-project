@@ -2394,7 +2394,7 @@ Decl *TemplateDeclInstantiator::VisitVarTemplateDecl(VarTemplateDecl *D) {
     // Queue up any out-of-line partial specializations of this member
     // variable template; the client will force their instantiation once
     // the enclosing class has been instantiated.
-    SmallVector<VarTemplatePartialSpecializationDecl *, 4> PartialSpecs;
+    SmallVector<VarTemplatePartialSpecializationDecl *, 1> PartialSpecs;
     D->getPartialSpecializations(PartialSpecs);
     for (unsigned I = 0, N = PartialSpecs.size(); I != N; ++I)
       if (PartialSpecs[I]->getFirstDecl()->isOutOfLine())
