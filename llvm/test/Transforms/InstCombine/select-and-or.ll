@@ -109,7 +109,7 @@ define <vscale x 2 x i1> @logical_or_implies_scalablevec(<vscale x 2 x i32> %x) 
 ; CHECK-LABEL: @logical_or_implies_scalablevec(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq <vscale x 2 x i32> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    [[C2:%.*]] = icmp eq <vscale x 2 x i32> [[X]], splat (i32 42)
-; CHECK-NEXT:    [[RES:%.*]] = select <vscale x 2 x i1> [[C1]], <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i1> [[C2]]
+; CHECK-NEXT:    [[RES:%.*]] = or <vscale x 2 x i1> [[C1]], [[C2]]
 ; CHECK-NEXT:    ret <vscale x 2 x i1> [[RES]]
 ;
   %c1 = icmp eq <vscale x 2 x i32> %x, zeroinitializer
@@ -148,7 +148,7 @@ define <vscale x 2 x i1> @logical_and_implies_scalablevec(<vscale x 2 x i32> %x)
 ; CHECK-LABEL: @logical_and_implies_scalablevec(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ne <vscale x 2 x i32> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ne <vscale x 2 x i32> [[X]], splat (i32 42)
-; CHECK-NEXT:    [[RES:%.*]] = select <vscale x 2 x i1> [[C1]], <vscale x 2 x i1> [[C2]], <vscale x 2 x i1> zeroinitializer
+; CHECK-NEXT:    [[RES:%.*]] = and <vscale x 2 x i1> [[C1]], [[C2]]
 ; CHECK-NEXT:    ret <vscale x 2 x i1> [[RES]]
 ;
   %c1 = icmp ne <vscale x 2 x i32> %x, zeroinitializer
