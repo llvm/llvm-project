@@ -150,6 +150,8 @@ struct MissingFeatures {
   static bool cxxabiUseARMGuardVarABI() { return false; }
   static bool cxxabiAppleARM64CXXABI() { return false; }
   static bool cxxabiStructorImplicitParam() { return false; }
+  static bool isDiscreteBitFieldABI() { return false; }
+  static bool isBigEndian() { return false; }
 
   // Misc
   static bool cirgenABIInfo() { return false; }
@@ -217,6 +219,7 @@ struct MissingFeatures {
   static bool peepholeProtection() { return false; }
   static bool instrumentation() { return false; }
   static bool cleanupAfterErrorDiags() { return false; }
+  static bool nonFineGrainedBitfields() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
