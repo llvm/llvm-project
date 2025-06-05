@@ -130,8 +130,8 @@ struct StaticSampler {
 /// RootElements in the array, and it holds a data member for the Visibility
 /// parameter.
 using RootElement =
-    std::variant<dxil::RootFlags, RootConstants, RootDescriptor, DescriptorTable,
-                 DescriptorTableClause, StaticSampler>;
+    std::variant<dxil::RootFlags, RootConstants, RootDescriptor,
+                 DescriptorTable, DescriptorTableClause, StaticSampler>;
 
 } // namespace rootsig
 } // namespace hlsl

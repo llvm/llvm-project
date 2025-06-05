@@ -113,7 +113,8 @@ static raw_ostream &operator<<(raw_ostream &OS,
       case dxil::DescriptorRangeFlags::DataStatic:
         OS << "DataStatic";
         break;
-      case dxil::DescriptorRangeFlags::DescriptorsStaticKeepingBufferBoundsChecks:
+      case dxil::DescriptorRangeFlags::
+          DescriptorsStaticKeepingBufferBoundsChecks:
         OS << "DescriptorsStaticKeepingBufferBoundsChecks";
         break;
       default:

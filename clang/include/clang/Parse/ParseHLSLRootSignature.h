@@ -134,15 +134,11 @@ private:
   /// Parsing methods of various enums
   std::optional<llvm::dxil::ShaderVisibility> parseShaderVisibility();
   std::optional<llvm::dxil::SamplerFilter> parseSamplerFilter();
-  std::optional<llvm::dxil::TextureAddressMode>
-  parseTextureAddressMode();
+  std::optional<llvm::dxil::TextureAddressMode> parseTextureAddressMode();
   std::optional<llvm::dxil::ComparisonFunc> parseComparisonFunc();
-  std::optional<llvm::dxil::StaticBorderColor>
-  parseStaticBorderColor();
-  std::optional<llvm::dxil::RootDescriptorFlags>
-  parseRootDescriptorFlags();
-  std::optional<llvm::dxil::DescriptorRangeFlags>
-  parseDescriptorRangeFlags();
+  std::optional<llvm::dxil::StaticBorderColor> parseStaticBorderColor();
+  std::optional<llvm::dxil::RootDescriptorFlags> parseRootDescriptorFlags();
+  std::optional<llvm::dxil::DescriptorRangeFlags> parseDescriptorRangeFlags();
 
   /// Use NumericLiteralParser to convert CurToken.NumSpelling into a unsigned
   /// 32-bit integer

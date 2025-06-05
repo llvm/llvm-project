@@ -984,8 +984,7 @@ std::optional<float> RootSignatureParser::parseFloatParam() {
   return std::nullopt;
 }
 
-std::optional<::ShaderVisibility>
-RootSignatureParser::parseShaderVisibility() {
+std::optional<::ShaderVisibility> RootSignatureParser::parseShaderVisibility() {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
 
@@ -1010,8 +1009,7 @@ RootSignatureParser::parseShaderVisibility() {
   return std::nullopt;
 }
 
-std::optional<::SamplerFilter>
-RootSignatureParser::parseSamplerFilter() {
+std::optional<::SamplerFilter> RootSignatureParser::parseSamplerFilter() {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
 
@@ -1062,8 +1060,7 @@ RootSignatureParser::parseTextureAddressMode() {
   return std::nullopt;
 }
 
-std::optional<::ComparisonFunc>
-RootSignatureParser::parseComparisonFunc() {
+std::optional<::ComparisonFunc> RootSignatureParser::parseComparisonFunc() {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
 
