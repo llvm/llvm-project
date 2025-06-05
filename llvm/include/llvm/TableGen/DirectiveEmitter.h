@@ -177,9 +177,8 @@ public:
     // are added.
     Spelling::Value Oldest{"not found", {/*Min=*/INT_MAX, 0}};
     for (auto V : getSpellings()) {
-      if (V.second.Min < Oldest.second.Min) {
+      if (V.second.Min < Oldest.second.Min)
         Oldest = V;
-      }
     }
     return Oldest.first;
   }
