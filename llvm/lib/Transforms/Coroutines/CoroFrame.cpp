@@ -18,6 +18,7 @@
 #include "CoroInternal.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/StackLifetime.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfo.h"
@@ -1767,6 +1768,18 @@ static void eliminateSwiftError(Function &F, coro::Shape &Shape) {
   }
 }
 
+static bool isLifetimeStart(Instruction *I) {
+  if (auto *II = dyn_cast<IntrinsicInst>(I))
+    return II->getIntrinsicID() == Intrinsic::lifetime_start;
+  return false;
+}
+
+static bool isLifetimeEnd(Instruction *I) {
+  if (auto *II = dyn_cast<IntrinsicInst>(I))
+    return II->getIntrinsicID() == Intrinsic::lifetime_end;
+  return false;
+}
+
 /// For each local variable that all of its user are only used inside one of
 /// suspended region, we sink their lifetime.start markers to the place where
 /// after the suspend block. Doing so minimizes the lifetime of each variable,
@@ -1819,7 +1832,7 @@ static void sinkLifetimeStartMarkers(Function &F, coro::Shape &Shape,
 
       for (User *U : AI->users()) {
         Instruction *UI = cast<Instruction>(U);
-        // For all users except lifetime.start markers, if they are all
+        // For all users except lifetime markers, if they are all
         // dominated by one of the basic blocks and do not cross
         // suspend points as well, then there is no need to spill the
         // instruction.
@@ -1827,7 +1840,7 @@ static void sinkLifetimeStartMarkers(Function &F, coro::Shape &Shape,
             Checker.isDefinitionAcrossSuspend(DomBB, UI)) {
           // Skip lifetime.start, GEP and bitcast used by lifetime.start
           // markers.
-          if (collectLifetimeStart(UI, AI))
+          if (collectLifetimeStart(UI, AI) || isLifetimeEnd(UI))
             continue;
           Valid = false;
           break;
@@ -1846,6 +1859,78 @@ static void sinkLifetimeStartMarkers(Function &F, coro::Shape &Shape,
 
         break;
       }
+    }
+  }
+}
+
+static bool mayEscape(Value *V, User *U) {
+  if (V == U->stripInBoundsOffsets() || isa<PHINode>(U))
+    return true;
+
+  if (auto *SI = dyn_cast<StoreInst>(U))
+    return SI->getValueOperand() == V;
+
+  if (auto *CB = dyn_cast<CallBase>(U)) {
+    unsigned OpCount = CB->arg_size();
+    for (unsigned Op = 0; Op < OpCount; ++Op)
+      if (V == CB->getArgOperand(Op) && !CB->doesNotCapture(Op))
+        return true;
+  }
+  return false;
+}
+
+// Find the suspend point that dominate all uses of alloca,
+// we will rise lifetime.end markers to the end of corresponding save block.
+static void riseLifetimeEndMarkers(Function &F, const coro::Shape &Shape) {
+  const PostDominatorTree PDT(F);
+  for (Instruction &I : instructions(F)) {
+    AllocaInst *AI = dyn_cast<AllocaInst>(&I);
+    if (!AI)
+      continue;
+
+    SmallVector<Instruction *, 2> LifetimeEnds;
+    SmallPtrSet<BasicBlock *, 2> UserBBs{};
+    bool Escape = false;
+    for (User *U : AI->users()) {
+      auto *I = cast<Instruction>(U);
+      // lifetime markers are not actual uses
+      if (isLifetimeStart(I))
+        continue;
+
+      if (isLifetimeEnd(I))
+        LifetimeEnds.push_back(I);
+      else if (mayEscape(AI, U)) {
+        Escape = true;
+        break;
+      }
+      else
+        UserBBs.insert(I->getParent());
+    }
+
+    // Lifetime is unbounded if no lifetime.end
+    if (LifetimeEnds.empty() || Escape)
+      continue;
+
+    BasicBlock *DomBB = nullptr;
+    for (auto *Suspend : Shape.CoroSuspends) {
+      bool DomAll = llvm::all_of(UserBBs, [&](BasicBlock *UserBB) {
+        return PDT.dominates(Suspend->getParent(), UserBB);
+      });
+
+      if (DomAll) {
+        DomBB = Suspend->getParent();
+        break;
+      }
+    }
+
+    if (DomBB != nullptr) {
+      assert(coro::isSuspendBlock(DomBB));
+      auto *SaveBB = DomBB->getSinglePredecessor();
+      auto *NewEnd = LifetimeEnds[0]->clone();
+      NewEnd->insertBefore(SaveBB->getTerminator()->getIterator());
+
+      for (auto *I : LifetimeEnds)
+        I->eraseFromParent();
     }
   }
 }
@@ -2070,9 +2155,10 @@ void coro::BaseABI::buildCoroutineFrame(bool OptimizeFrame) {
   doRematerializations(F, Checker, IsMaterializable);
 
   const DominatorTree DT(F);
-  if (Shape.ABI != coro::ABI::Async && Shape.ABI != coro::ABI::Retcon &&
-      Shape.ABI != coro::ABI::RetconOnce)
+  if (!F.hasOptNone() && Shape.ABI == coro::ABI::Switch) {
     sinkLifetimeStartMarkers(F, Shape, Checker, DT);
+    riseLifetimeEndMarkers(F, Shape);
+  }
 
   // All values (that are not allocas) that needs to be spilled to the frame.
   coro::SpillInfo Spills;

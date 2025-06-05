@@ -51,6 +51,8 @@ suspend:
 ; CHECK-NEXT:    store ptr [[TMP2]], ptr [[TMP0]], align 8
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[TMP1]])
 ; CHECK-NEXT:    store ptr [[TMP0]], ptr [[TMP1]], align 8
+; CHECK-NEXT:    %index.addr1 = getelementptr inbounds nuw %f.Frame, ptr %hdl, i32 0, i32 2 
+; CHECK-NEXT:    store i1 false, ptr %index.addr1, align 1 
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[TMP1]])
 ;
 

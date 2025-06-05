@@ -31,6 +31,8 @@ resume:
   br label %cleanup
 
 cleanup:
+  call void @llvm.lifetime.end.p0(i64 8, ptr %x)
+  call void @llvm.lifetime.end.p0(i64 8, ptr %y)
   %mem = call ptr @llvm.coro.free(token %id, ptr %hdl)
   call void @free(ptr %mem)
   br label %suspend
