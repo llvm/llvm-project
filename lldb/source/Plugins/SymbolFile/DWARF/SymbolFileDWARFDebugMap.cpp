@@ -246,6 +246,10 @@ llvm::StringRef SymbolFileDWARFDebugMap::GetPluginDescriptionStatic() {
 }
 
 SymbolFile *SymbolFileDWARFDebugMap::CreateInstance(ObjectFileSP objfile_sp) {
+  assert(objfile_sp);
+  // Don't create a debug map if the object file isn't a Mach-O.
+  if (!objfile_sp->GetArchitecture().GetTriple().isAppleMachO())
+    return nullptr;
   return new SymbolFileDWARFDebugMap(std::move(objfile_sp));
 }
 
@@ -1267,9 +1271,9 @@ CompilerDeclContext SymbolFileDWARFDebugMap::FindNamespace(
   return matching_namespace;
 }
 
-void SymbolFileDWARFDebugMap::DumpClangAST(Stream &s) {
-  ForEachSymbolFile("Dumping clang AST", [&s](SymbolFileDWARF &oso_dwarf) {
-    oso_dwarf.DumpClangAST(s);
+void SymbolFileDWARFDebugMap::DumpClangAST(Stream &s, llvm::StringRef filter) {
+  ForEachSymbolFile("Dumping clang AST", [&](SymbolFileDWARF &oso_dwarf) {
+    oso_dwarf.DumpClangAST(s, filter);
     // The underlying assumption is that DumpClangAST(...) will obtain the
     // AST from the underlying TypeSystem and therefore we only need to do
     // this once and can stop after the first iteration hence we return true.
