@@ -108,15 +108,20 @@ endif()
 # LLVM_EXTERNAL_${project}_SOURCE_DIR using LLVM_ALL_PROJECTS
 # This allows an easy way of setting up a build directory for llvm and another
 # one for llvm+clang+... using the same sources.
-set(LLVM_ALL_PROJECTS "bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;lld;lldb;mlir;openmp;polly;pstl")
+# These projects will be included when "all" is included in LLVM_ENABLE_PROJECTS.
+set(LLVM_ALL_PROJECTS "bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libclc;lld;lldb;mlir;openmp;polly;pstl")
 if (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
   # Disallow 'openmp' as a LLVM PROJECT on AIX as the supported way is to use
   # LLVM_ENABLE_RUNTIMES.
   list(REMOVE_ITEM LLVM_ALL_PROJECTS openmp)
 endif()
 
-# The flang project is not yet part of "all" projects (see C++ requirements)
-set(LLVM_EXTRA_PROJECTS "flang")
+# The "libc" project, which is not part of "all" projects, could be included in
+# LLVM_ENABLE_PROJECTS.  It is preferred to include "libc" in
+# LLVM_ENABLE_RUNTIMES instead of LLVM_ENABLE_PROJECTS.
+#
+# The flang project is not yet part of "all" projects (see C++ requirements).
+set(LLVM_EXTRA_PROJECTS "flang" "libc")
 # List of all known projects in the mono repo
 set(LLVM_KNOWN_PROJECTS "${LLVM_ALL_PROJECTS};${LLVM_EXTRA_PROJECTS}")
 set(LLVM_ENABLE_PROJECTS "" CACHE STRING
@@ -167,8 +172,7 @@ if ("flang" IN_LIST LLVM_ENABLE_PROJECTS)
 endif()
 
 if ("libc" IN_LIST LLVM_ENABLE_PROJECTS)
-  message(WARNING "Using LLVM_ENABLE_PROJECTS=libc is deprecated now, and will "
-    "become a fatal error in the LLVM 21 release.  Please use "
+  message(WARNING "Using LLVM_ENABLE_PROJECTS=libc is deprecated.  Please use "
     "-DLLVM_ENABLE_RUNTIMES=libc or see the instructions at "
     "https://libc.llvm.org/ for building the runtimes.")
 endif()
