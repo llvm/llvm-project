@@ -8,16 +8,27 @@ import sys
 import textwrap
 
 def get_relevant_bolt_changes(dir: str) -> str:
-    # Return a list of bolt source changes that are relevant to tests.
+    # Return a list of bolt source changes that are relevant to testing.
     all_changes = subprocess.run(
-        shlex.split("git show HEAD --name-only --pretty=''"), cwd=dir,
-        text=True, stdout=subprocess.PIPE)
+        shlex.split("git show HEAD --name-only --pretty=''"),
+        cwd=dir,
+        text=True,
+        stdout=subprocess.PIPE,
+    )
     keep_bolt = subprocess.run(
-        shlex.split("grep '^bolt'"), input=all_changes.stdout,
-        text=True, stdout=subprocess.PIPE)
+        shlex.split("grep '^bolt'"),
+        input=all_changes.stdout,
+        text=True,
+        stdout=subprocess.PIPE,
+    )
     keep_relevant = subprocess.run(
-        shlex.split("grep -v -e '^bolt/docs' -e '^bolt/utils/docker' -e '^bolt/utils/dot2html'"),
-        input=keep_bolt.stdout, text=True, stdout=subprocess.PIPE)
+        shlex.split(
+            "grep -v -e '^bolt/docs' -e '^bolt/utils/docker' -e '^bolt/utils/dot2html'"
+        ),
+        input=keep_bolt.stdout,
+        text=True,
+        stdout=subprocess.PIPE,
+    )
     return keep_relevant.stdout
 
 def get_git_ref_or_rev(dir: str) -> str:
@@ -89,14 +100,14 @@ def main():
     # memorize the old hash for logging
     old_ref = get_git_ref_or_rev(source_dir)
 
-    if args.check_bolt_changes:
+    if args.check_bolt_sources:
         marker = f"{args.build_dir}/.llvm-bolt.changes"
         if os.path.exists(marker):
             os.remove(marker)
         file_changes = get_relevant_bolt_changes(source_dir)
         # Create a marker file if any relevant BOLT source files changed.
         if len(file_changes) > 0:
-            print (f"BOLT source changes were found:\n{file_changes}")
+            print(f"BOLT source changes were found:\n{file_changes}")
             open(marker, "a").close()
 
     # determine whether a stash is needed
