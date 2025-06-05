@@ -171,7 +171,8 @@ class ReturnValueSlot {
 
 public:
   ReturnValueSlot() = default;
-  ReturnValueSlot(Address addr, bool isVolatile) : addr(addr), isVolatileFlag(isVolatile) {}
+  ReturnValueSlot(Address addr, bool isVolatile)
+      : addr(addr), isVolatileFlag(isVolatile) {}
   bool isNull() const { return !addr.isValid(); }
   bool isVolatile() const { return isVolatileFlag; }
   Address getAddress() const { return addr; }
