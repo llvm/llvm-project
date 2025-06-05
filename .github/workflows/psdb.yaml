@@ -1,0 +1,19 @@
+name: LLVM PSDB
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request:
+    types: [opened, synchronize]
+    branches:
+      - 'amd-gfx13'
+
+jobs:
+  llvm-psdb:
+    if: |
+     github.event_name == 'pull_request' || (github.event_name == 'issue_comment' && contains(github.event.comment.body, '!psdb'))
+    uses: AMD-MS-Driver/ci-actions-lib/.github/workflows/dxcp.yaml@main
+    with:
+      job_name: 'llvm-psdb'
+      is_psdb: true
+    secrets: inherit
