@@ -3117,6 +3117,11 @@ def NoDeref : TypeAttr {
   let Documentation = [NoDerefDocs];
 }
 
+def CFIUncheckedCallee : TypeAttr {
+  let Spellings = [Clang<"cfi_unchecked_callee">];
+  let Documentation = [CFIUncheckedCalleeDocs];
+}
+
 def ReqdWorkGroupSize : InheritableAttr {
   // Does not have a [[]] spelling because it is an OpenCL-related attribute.
   let Spellings = [GNU<"reqd_work_group_size">];

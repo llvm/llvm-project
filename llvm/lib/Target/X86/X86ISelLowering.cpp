@@ -4349,13 +4349,13 @@ static std::pair<SDValue, SDValue> splitVector(SDValue Op, SelectionDAG &DAG,
   assert((NumElems % 2) == 0 && (SizeInBits % 2) == 0 &&
          "Can't split odd sized vector");
 
-  if (Op.getOpcode() == ISD::CONCAT_VECTORS) {
-    assert((Op.getNumOperands() % 2) == 0 &&
-           "Can't split odd sized vector concat");
-    unsigned HalfOps = Op.getNumOperands() / 2;
+  SmallVector<SDValue, 4> SubOps;
+  if (collectConcatOps(Op.getNode(), SubOps, DAG)) {
+    assert((SubOps.size() % 2) == 0 && "Can't split odd sized vector concat");
+    unsigned HalfOps = SubOps.size() / 2;
     EVT HalfVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
-    SmallVector<SDValue, 2> LoOps(Op->op_begin(), Op->op_begin() + HalfOps);
-    SmallVector<SDValue, 2> HiOps(Op->op_begin() + HalfOps, Op->op_end());
+    SmallVector<SDValue, 2> LoOps(SubOps.begin(), SubOps.begin() + HalfOps);
+    SmallVector<SDValue, 2> HiOps(SubOps.begin() + HalfOps, SubOps.end());
     SDValue Lo = DAG.getNode(ISD::CONCAT_VECTORS, dl, HalfVT, LoOps);
     SDValue Hi = DAG.getNode(ISD::CONCAT_VECTORS, dl, HalfVT, HiOps);
     return std::make_pair(Lo, Hi);
