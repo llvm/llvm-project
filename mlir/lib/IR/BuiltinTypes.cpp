@@ -646,10 +646,12 @@ LogicalResult MemRefType::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 bool MemRefType::areTrailingDimsContiguous(int64_t n) {
-  return getMaxContiguousTrailingDims() >= std::min(n, getRank());
+  assert(n <= getRank() &&
+         "number of dimensions to check must not exceed rank");
+  return n <= getNumContiguousTrailingDims();
 }
 
-int64_t MemRefType::getMaxContiguousTrailingDims() {
+int64_t MemRefType::getNumContiguousTrailingDims() {
   const int64_t n = getRank();
 
   // memrefs with identity layout are entirely contiguous.

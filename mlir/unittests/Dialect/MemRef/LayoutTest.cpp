@@ -27,75 +27,75 @@ TEST(MemRefLayout, maxContigDim) {
 
   // memref<2x2x2xf32, strided<[4,2,1]>
   auto m1 = MemRefType::get({2, 2, 2}, f32, strided({4, 2, 1}));
-  EXPECT_EQ(m1.getMaxContiguousTrailingDims(), 3);
+  EXPECT_EQ(m1.getNumContiguousTrailingDims(), 3);
 
   // memref<2x2x2xf32, strided<[8,2,1]>
   auto m2 = MemRefType::get({2, 2, 2}, f32, strided({8, 2, 1}));
-  EXPECT_EQ(m2.getMaxContiguousTrailingDims(), 2);
+  EXPECT_EQ(m2.getNumContiguousTrailingDims(), 2);
 
   // memref<2x2x2xf32, strided<[8,4,1]>
   auto m3 = MemRefType::get({2, 2, 2}, f32, strided({8, 4, 1}));
-  EXPECT_EQ(m3.getMaxContiguousTrailingDims(), 1);
+  EXPECT_EQ(m3.getNumContiguousTrailingDims(), 1);
 
   // memref<2x2x2xf32, strided<[8,4,2]>
   auto m4 = MemRefType::get({2, 2, 2}, f32, strided({8, 4, 2}));
-  EXPECT_EQ(m4.getMaxContiguousTrailingDims(), 0);
+  EXPECT_EQ(m4.getNumContiguousTrailingDims(), 0);
 
   // memref<2x2x?xf32, strided<[?,?,1]>
   auto m5 = MemRefType::get({2, 2, _}, f32, strided({_, _, 1}));
-  EXPECT_EQ(m5.getMaxContiguousTrailingDims(), 1);
+  EXPECT_EQ(m5.getNumContiguousTrailingDims(), 1);
 
   // memref<2x2x?xf32, strided<[?,?,2]>
   auto m6 = MemRefType::get({2, 2, _}, f32, strided({_, _, 2}));
-  EXPECT_EQ(m6.getMaxContiguousTrailingDims(), 0);
+  EXPECT_EQ(m6.getNumContiguousTrailingDims(), 0);
 
   // memref<2x?x2xf32, strided<[?,2,1]>
   auto m7 = MemRefType::get({2, _, 2}, f32, strided({_, 2, 1}));
-  EXPECT_EQ(m7.getMaxContiguousTrailingDims(), 2);
+  EXPECT_EQ(m7.getNumContiguousTrailingDims(), 2);
 
   // memref<2x?x2xf32, strided<[?,4,1]>
   auto m8 = MemRefType::get({2, _, 2}, f32, strided({_, 4, 1}));
-  EXPECT_EQ(m8.getMaxContiguousTrailingDims(), 1);
+  EXPECT_EQ(m8.getNumContiguousTrailingDims(), 1);
 
   // memref<2x?x2xf32, strided<[?,4,2]>
   auto m9 = MemRefType::get({2, _, 2}, f32, strided({_, 4, 2}));
-  EXPECT_EQ(m9.getMaxContiguousTrailingDims(), 0);
+  EXPECT_EQ(m9.getNumContiguousTrailingDims(), 0);
 
   // memref<?x2x2xf32, strided<[4,2,1]>
   auto m10 = MemRefType::get({_, 2, 2}, f32, strided({4, 2, 1}));
-  EXPECT_EQ(m10.getMaxContiguousTrailingDims(), 3);
+  EXPECT_EQ(m10.getNumContiguousTrailingDims(), 3);
 
   // memref<?x2x2xf32, strided<[8,2,1]>
   auto m11 = MemRefType::get({_, 2, 2}, f32, strided({8, 2, 1}));
-  EXPECT_EQ(m11.getMaxContiguousTrailingDims(), 2);
+  EXPECT_EQ(m11.getNumContiguousTrailingDims(), 2);
 
   // memref<?x2x2xf32, strided<[8,4,1]>
   auto m12 = MemRefType::get({_, 2, 2}, f32, strided({8, 4, 1}));
-  EXPECT_EQ(m12.getMaxContiguousTrailingDims(), 1);
+  EXPECT_EQ(m12.getNumContiguousTrailingDims(), 1);
 
   // memref<?x2x2xf32, strided<[8,4,2]>
   auto m13 = MemRefType::get({_, 2, 2}, f32, strided({8, 4, 2}));
-  EXPECT_EQ(m13.getMaxContiguousTrailingDims(), 0);
+  EXPECT_EQ(m13.getNumContiguousTrailingDims(), 0);
 
   // memref<2x2x1xf32, strided<[2,1,2]>
   auto m14 = MemRefType::get({2, 2, 1}, f32, strided({2, 1, 2}));
-  EXPECT_EQ(m14.getMaxContiguousTrailingDims(), 3);
+  EXPECT_EQ(m14.getNumContiguousTrailingDims(), 3);
 
   // memref<2x2x1xf32, strided<[2,1,?]>
   auto m15 = MemRefType::get({2, 2, 1}, f32, strided({2, 1, _}));
-  EXPECT_EQ(m15.getMaxContiguousTrailingDims(), 3);
+  EXPECT_EQ(m15.getNumContiguousTrailingDims(), 3);
 
   // memref<2x2x1xf32, strided<[4,2,2]>
   auto m16 = MemRefType::get({2, 2, 1}, f32, strided({4, 2, 2}));
-  EXPECT_EQ(m16.getMaxContiguousTrailingDims(), 1);
+  EXPECT_EQ(m16.getNumContiguousTrailingDims(), 1);
 
   // memref<2x1x2xf32, strided<[2,4,1]>
   auto m17 = MemRefType::get({2, 1, 2}, f32, strided({2, 4, 1}));
-  EXPECT_EQ(m17.getMaxContiguousTrailingDims(), 3);
+  EXPECT_EQ(m17.getNumContiguousTrailingDims(), 3);
 
   // memref<2x1x2xf32, strided<[2,?,1]>
   auto m18 = MemRefType::get({2, 1, 2}, f32, strided({2, _, 1}));
-  EXPECT_EQ(m18.getMaxContiguousTrailingDims(), 3);
+  EXPECT_EQ(m18.getNumContiguousTrailingDims(), 3);
 }
 
 TEST(MemRefLayout, contigTrailingDim) {
@@ -196,14 +196,14 @@ TEST(MemRefLayout, identityMaps) {
 
   // memref<2x2x2xf32>
   auto m1 = MemRefType::get({2, 2, 2}, f32);
-  EXPECT_EQ(m1.getMaxContiguousTrailingDims(), 3);
+  EXPECT_EQ(m1.getNumContiguousTrailingDims(), 3);
   EXPECT_TRUE(m1.areTrailingDimsContiguous(1));
   EXPECT_TRUE(m1.areTrailingDimsContiguous(2));
   EXPECT_TRUE(m1.areTrailingDimsContiguous(3));
 
   // memref<?x?x?xf32>
   auto m2 = MemRefType::get({_, _, _}, f32);
-  EXPECT_EQ(m2.getMaxContiguousTrailingDims(), 3);
+  EXPECT_EQ(m2.getNumContiguousTrailingDims(), 3);
   EXPECT_TRUE(m2.areTrailingDimsContiguous(1));
   EXPECT_TRUE(m2.areTrailingDimsContiguous(2));
   EXPECT_TRUE(m2.areTrailingDimsContiguous(3));
