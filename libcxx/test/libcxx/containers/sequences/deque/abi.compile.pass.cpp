@@ -10,6 +10,8 @@
 
 #include <cstdint>
 #include <deque>
+#include <iterator>
+#include <type_traits>
 
 #include "min_allocator.h"
 #include "test_allocator.h"
@@ -18,6 +20,73 @@
 template <class T>
 class small_pointer {
   std::uint16_t offset;
+
+public:
+  using value_type        = typename std::remove_cv<T>::type;
+  using difference_type   = std::int16_t;
+  using reference         = T&;
+  using pointer           = T*;
+  using iterator_category = std::random_access_iterator_tag;
+
+  template <class CT,
+            typename std::enable_if<std::is_same<const T, CT>::value && !std::is_const<T>::value, int>::type = 0>
+  operator small_pointer<CT>() const;
+  template <
+      class Void,
+      typename std::enable_if<std::is_same<Void, void>::value && std::is_convertible<T*, void*>::value, int>::type = 0>
+  operator small_pointer<Void>() const;
+  template <
+      class CVoid,
+      typename std::enable_if<std::is_same<CVoid, const void>::value && std::is_convertible<T*, const void*>::value,
+                              int>::type = 0>
+  operator small_pointer<CVoid>() const;
+
+  T& operator*() const;
+  T* operator->() const;
+  T& operator[](difference_type) const;
+
+  small_pointer& operator++();
+  small_pointer operator++(int);
+  small_pointer& operator--();
+  small_pointer operator--(int);
+  small_pointer& operator+=(difference_type);
+  small_pointer& operator-=(difference_type);
+
+  friend small_pointer operator+(small_pointer, difference_type);
+  friend small_pointer operator+(difference_type, small_pointer);
+  friend small_pointer operator-(small_pointer, difference_type);
+  friend difference_type operator-(small_pointer, small_pointer);
+
+  friend bool operator==(small_pointer, small_pointer);
+#if TEST_STD_VER < 20
+  friend bool operator!=(small_pointer, small_pointer);
+#endif
+  friend bool operator<(small_pointer, small_pointer);
+  friend bool operator>=(small_pointer, small_pointer);
+  friend bool operator>(small_pointer, small_pointer);
+  friend bool operator>=(small_pointer, small_pointer);
+
+  small_pointer pointer_to(T&);
+};
+
+template <>
+class small_pointer<const void> {
+  std::uint16_t offset;
+
+public:
+  template <class CT, typename std::enable_if<std::is_convertible<CT*, const void*>::value, int>::type = 0>
+  explicit operator small_pointer<CT>() const;
+};
+
+template <>
+class small_pointer<void*> {
+  std::uint16_t offset;
+
+public:
+  operator small_pointer<const void>() const;
+
+  template <class T, typename std::enable_if<std::is_convertible<T*, void*>::value, int>::type = 0>
+  explicit operator small_pointer<T>() const;
 };
 
 template <class T>
@@ -33,8 +102,8 @@ public:
   template <class U>
   small_iter_allocator(small_iter_allocator<U>) TEST_NOEXCEPT {}
 
-  T* allocate(std::size_t n);
-  void deallocate(T* p, std::size_t);
+  pointer allocate(std::size_t n);
+  void deallocate(pointer p, std::size_t);
 
   friend bool operator==(small_iter_allocator, small_iter_allocator) { return true; }
   friend bool operator!=(small_iter_allocator, small_iter_allocator) { return false; }
@@ -53,8 +122,8 @@ public:
   template <class U>
   final_small_iter_allocator(final_small_iter_allocator<U>) TEST_NOEXCEPT {}
 
-  T* allocate(std::size_t n);
-  void deallocate(T* p, std::size_t);
+  pointer allocate(std::size_t n);
+  void deallocate(pointer p, std::size_t);
 
   friend bool operator==(final_small_iter_allocator, final_small_iter_allocator) { return true; }
   friend bool operator!=(final_small_iter_allocator, final_small_iter_allocator) { return false; }
