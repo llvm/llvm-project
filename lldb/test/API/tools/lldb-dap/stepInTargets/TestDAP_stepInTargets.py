@@ -30,8 +30,6 @@ class TestDAP_stepInTargets(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(
             len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
         )
-        # Target based capability 'supportsStepInTargetsRequest' is sent in
-        # 'configurationDone' which is called prior to continue.
         self.continue_to_breakpoints(breakpoint_ids)
 
         threads = self.dap_server.get_threads()
