@@ -134,9 +134,15 @@ try {
                 // ToDo could now call build_essentials/has_active_files.sh
             }
             stage ('run') {
+                // ToDo this jobName string is 'presub' specific:
+                String jobName = 'presub_' + env.CHANGE_TARGET ?: (env.BRANCH_NAME ?: 'NoSuchBranchName')
+                if (env.CHANGE_BRANCH) {
+                    jobName += '_' + env.BRANCH_NAME // Sic, the PR-<n> string.
+                }
                 try {
                     withEnv([
-                        'PATH=' + linuxBasePath
+                        'PATH=' + linuxBasePath,
+                        'JOB_NAME=' + jobName
                     ]) {
                         sh 'llvm-project/.amd-ci/upstream/apptainer_run.sh'
                     }
@@ -149,6 +155,22 @@ try {
                     cleanWs(
                         deleteDirs: true,
                         patterns: cleanExcludes
+                    )
+                    build(
+                        propagate: true,
+                        wait: true,
+                        job: 'AOCC-Workloads/TestSuites/NAGLLVM',
+                        parameters: [
+                            // Use the name of build tar as defined in the run script:
+                            string(
+                                name: 'CUT',
+                                value: (
+                                    env.BUILD_URL + 'artifact/' +
+                                        jobName + '-' + env.BUILD_NUMBER + '.tar.xz'
+                                )
+                            ),
+                            string(name: 'CHANGE_ID', value: env.CHANGE_ID)
+                        ]
                     )
                 }
             }
