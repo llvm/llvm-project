@@ -52,6 +52,124 @@ static Value *getBoolVecFromMask(Value *Mask, const DataLayout &DL) {
   return nullptr;
 }
 
+// Helper function to decompose complex logic on sign-extended i1 vectors
+static Value *tryDecomposeVectorLogicMask(Value *Mask, IRBuilderBase &Builder) {
+  // Look through bitcasts
+  Mask = InstCombiner::peekThroughBitcast(Mask);
+  
+  // Direct sign-extension case (should be caught by the main code path)
+  Value *InnerVal;
+  if (match(Mask, m_SExt(m_Value(InnerVal))) &&
+      InnerVal->getType()->isVectorTy() &&
+      InnerVal->getType()->getScalarType()->isIntegerTy(1))
+    return InnerVal;
+  
+  // Handle AND of sign-extended vectors: (sext A) & (sext B) -> sext(A & B)
+  Value *LHS, *RHS;
+  Value *LHSInner, *RHSInner;
+  if (match(Mask, m_And(m_Value(LHS), m_Value(RHS)))) {
+    LHS = InstCombiner::peekThroughBitcast(LHS);
+    RHS = InstCombiner::peekThroughBitcast(RHS);
+    
+    if (match(LHS, m_SExt(m_Value(LHSInner))) && 
+        LHSInner->getType()->isVectorTy() &&
+        LHSInner->getType()->getScalarType()->isIntegerTy(1) &&
+        match(RHS, m_SExt(m_Value(RHSInner))) &&
+        RHSInner->getType()->isVectorTy() &&
+        RHSInner->getType()->getScalarType()->isIntegerTy(1) &&
+        LHSInner->getType() == RHSInner->getType()) {
+      return Builder.CreateAnd(LHSInner, RHSInner);
+    }
+    
+    // Try recursively on each operand
+    Value *DecomposedLHS = tryDecomposeVectorLogicMask(LHS, Builder);
+    Value *DecomposedRHS = tryDecomposeVectorLogicMask(RHS, Builder);
+    if (DecomposedLHS && DecomposedRHS && 
+        DecomposedLHS->getType() == DecomposedRHS->getType())
+      return Builder.CreateAnd(DecomposedLHS, DecomposedRHS);
+  }
+  
+  // Handle XOR of sign-extended vectors: (sext A) ^ (sext B) -> sext(A ^ B)
+  if (match(Mask, m_Xor(m_Value(LHS), m_Value(RHS)))) {
+    LHS = InstCombiner::peekThroughBitcast(LHS);
+    RHS = InstCombiner::peekThroughBitcast(RHS);
+    
+    if (match(LHS, m_SExt(m_Value(LHSInner))) && 
+        LHSInner->getType()->isVectorTy() &&
+        LHSInner->getType()->getScalarType()->isIntegerTy(1) &&
+        match(RHS, m_SExt(m_Value(RHSInner))) &&
+        RHSInner->getType()->isVectorTy() &&
+        RHSInner->getType()->getScalarType()->isIntegerTy(1) &&
+        LHSInner->getType() == RHSInner->getType()) {
+      return Builder.CreateXor(LHSInner, RHSInner);
+    }
+    
+    // Try recursively on each operand
+    Value *DecomposedLHS = tryDecomposeVectorLogicMask(LHS, Builder);
+    Value *DecomposedRHS = tryDecomposeVectorLogicMask(RHS, Builder);
+    if (DecomposedLHS && DecomposedRHS && 
+        DecomposedLHS->getType() == DecomposedRHS->getType())
+      return Builder.CreateXor(DecomposedLHS, DecomposedRHS);
+  }
+  
+  // Handle OR of sign-extended vectors: (sext A) | (sext B) -> sext(A | B)
+  if (match(Mask, m_Or(m_Value(LHS), m_Value(RHS)))) {
+    LHS = InstCombiner::peekThroughBitcast(LHS);
+    RHS = InstCombiner::peekThroughBitcast(RHS);
+    
+    if (match(LHS, m_SExt(m_Value(LHSInner))) && 
+        LHSInner->getType()->isVectorTy() &&
+        LHSInner->getType()->getScalarType()->isIntegerTy(1) &&
+        match(RHS, m_SExt(m_Value(RHSInner))) &&
+        RHSInner->getType()->isVectorTy() &&
+        RHSInner->getType()->getScalarType()->isIntegerTy(1) &&
+        LHSInner->getType() == RHSInner->getType()) {
+      return Builder.CreateOr(LHSInner, RHSInner);
+    }
+    
+    // Try recursively on each operand
+    Value *DecomposedLHS = tryDecomposeVectorLogicMask(LHS, Builder);
+    Value *DecomposedRHS = tryDecomposeVectorLogicMask(RHS, Builder);
+    if (DecomposedLHS && DecomposedRHS && 
+        DecomposedLHS->getType() == DecomposedRHS->getType())
+      return Builder.CreateOr(DecomposedLHS, DecomposedRHS);
+  }
+  
+  // Handle AndNot: (sext A) & ~(sext B) -> sext(A & ~B)
+  Value *NotOp;
+  if (match(Mask, m_And(m_Value(LHS), 
+                        m_Not(m_Value(NotOp))))) {
+    LHS = InstCombiner::peekThroughBitcast(LHS);
+    NotOp = InstCombiner::peekThroughBitcast(NotOp);
+    
+    if (match(LHS, m_SExt(m_Value(LHSInner))) && 
+        LHSInner->getType()->isVectorTy() &&
+        LHSInner->getType()->getScalarType()->isIntegerTy(1) &&
+        match(NotOp, m_SExt(m_Value(RHSInner))) &&
+        RHSInner->getType()->isVectorTy() &&
+        RHSInner->getType()->getScalarType()->isIntegerTy(1) &&
+        LHSInner->getType() == RHSInner->getType()) {
+      Value *NotRHSInner = Builder.CreateNot(RHSInner);
+      return Builder.CreateAnd(LHSInner, NotRHSInner);
+    }
+    
+    // Try recursively on each operand
+    Value *DecomposedLHS = tryDecomposeVectorLogicMask(LHS, Builder);
+    Value *DecomposedNotOp = tryDecomposeVectorLogicMask(NotOp, Builder);
+    if (DecomposedLHS && DecomposedNotOp && 
+        DecomposedLHS->getType() == DecomposedNotOp->getType()) {
+      Value *NotRHS = Builder.CreateNot(DecomposedNotOp);
+      return Builder.CreateAnd(DecomposedLHS, NotRHS);
+    }
+  }
+  
+  // No matching pattern found
+  return nullptr;
+}
+
+
+
+
 // TODO: If the x86 backend knew how to convert a bool vector mask back to an
 // XMM register mask efficiently, we could transform all x86 masked intrinsics
 // to LLVM masked intrinsics and remove the x86 masked intrinsic defs.
@@ -2150,6 +2268,52 @@ static bool simplifyX86VPERMMask(Instruction *II, bool IsBinary,
   return IC.SimplifyDemandedBits(II, /*OpNo=*/1, DemandedMask, KnownMask);
 }
 
+
+static Instruction *createMaskSelect(InstCombiner &IC, CallInst &II,
+                                    Value *BoolVec, Value *Op0, Value *Op1,
+                                    Value *MaskSrc = nullptr,
+                                    ArrayRef<int> ShuffleMask = std::nullopt) {
+  auto *MaskTy = cast<FixedVectorType>(II.getArgOperand(2)->getType());
+  auto *OpTy = cast<FixedVectorType>(II.getType());
+  unsigned NumMaskElts = MaskTy->getNumElements();
+  unsigned NumOperandElts = OpTy->getNumElements();
+  
+  // If we peeked through a shuffle, reapply the shuffle to the bool vector.
+  if (MaskSrc) {
+    unsigned NumMaskSrcElts =
+        cast<FixedVectorType>(MaskSrc->getType())->getNumElements();
+    NumMaskElts = (ShuffleMask.size() * NumMaskElts) / NumMaskSrcElts;
+    // Multiple mask bits maps to the same operand element - bail out.
+    if (NumMaskElts > NumOperandElts)
+      return nullptr;
+    SmallVector<int> ScaledMask;
+    if (!llvm::scaleShuffleMaskElts(NumMaskElts, ShuffleMask, ScaledMask))
+      return nullptr;
+    BoolVec = IC.Builder.CreateShuffleVector(BoolVec, ScaledMask);
+    MaskTy = FixedVectorType::get(MaskTy->getElementType(), NumMaskElts);
+  }
+  
+  assert(MaskTy->getPrimitiveSizeInBits() ==
+             OpTy->getPrimitiveSizeInBits() &&
+         "Not expecting mask and operands with different sizes");
+  
+  if (NumMaskElts == NumOperandElts) {
+    return SelectInst::Create(BoolVec, Op1, Op0);
+  }
+  
+  // If the mask has less elements than the operands, each mask bit maps to
+  // multiple elements of the operands. Bitcast back and forth.
+  if (NumMaskElts < NumOperandElts) {
+    Value *CastOp0 = IC.Builder.CreateBitCast(Op0, MaskTy);
+    Value *CastOp1 = IC.Builder.CreateBitCast(Op1, MaskTy);
+    Value *Sel = IC.Builder.CreateSelect(BoolVec, CastOp1, CastOp0);
+    return new BitCastInst(Sel, II.getType());
+  }
+  
+  return nullptr;
+}
+
+
 std::optional<Instruction *>
 X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   auto SimplifyDemandedVectorEltsLow = [&IC](Value *Op, unsigned Width,
@@ -2914,42 +3078,16 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (match(Mask, m_SExt(m_Value(BoolVec))) &&
         BoolVec->getType()->isVectorTy() &&
         BoolVec->getType()->getScalarSizeInBits() == 1) {
-      auto *MaskTy = cast<FixedVectorType>(Mask->getType());
-      auto *OpTy = cast<FixedVectorType>(II.getType());
-      unsigned NumMaskElts = MaskTy->getNumElements();
-      unsigned NumOperandElts = OpTy->getNumElements();
-
-      // If we peeked through a shuffle, reapply the shuffle to the bool vector.
-      if (MaskSrc) {
-        unsigned NumMaskSrcElts =
-            cast<FixedVectorType>(MaskSrc->getType())->getNumElements();
-        NumMaskElts = (ShuffleMask.size() * NumMaskElts) / NumMaskSrcElts;
-        // Multiple mask bits maps to the same operand element - bail out.
-        if (NumMaskElts > NumOperandElts)
-          break;
-        SmallVector<int> ScaledMask;
-        if (!llvm::scaleShuffleMaskElts(NumMaskElts, ShuffleMask, ScaledMask))
-          break;
-        BoolVec = IC.Builder.CreateShuffleVector(BoolVec, ScaledMask);
-        MaskTy = FixedVectorType::get(MaskTy->getElementType(), NumMaskElts);
-      }
-      assert(MaskTy->getPrimitiveSizeInBits() ==
-                 OpTy->getPrimitiveSizeInBits() &&
-             "Not expecting mask and operands with different sizes");
-
-      if (NumMaskElts == NumOperandElts) {
-        return SelectInst::Create(BoolVec, Op1, Op0);
-      }
-
-      // If the mask has less elements than the operands, each mask bit maps to
-      // multiple elements of the operands. Bitcast back and forth.
-      if (NumMaskElts < NumOperandElts) {
-        Value *CastOp0 = IC.Builder.CreateBitCast(Op0, MaskTy);
-        Value *CastOp1 = IC.Builder.CreateBitCast(Op1, MaskTy);
-        Value *Sel = IC.Builder.CreateSelect(BoolVec, CastOp1, CastOp0);
-        return new BitCastInst(Sel, II.getType());
-      }
-    }
+		Instruction *Select = createMaskSelect(IC, II, BoolVec, Op0, Op1, MaskSrc, ShuffleMask);
+		if (Select) return Select;
+	} else {
+		BoolVec = tryDecomposeVectorLogicMask(Mask,IC.Builder);
+		if (BoolVec) {
+			Instruction *Select = createMaskSelect(IC, II, BoolVec, Op0, Op1, MaskSrc, ShuffleMask);
+			if (Select)
+				return Select;
+		}
+	}
 
     break;
   }
