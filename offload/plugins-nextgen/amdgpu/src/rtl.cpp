@@ -570,6 +570,14 @@ struct AMDGPUKernelTy : public GenericKernelTy {
                    KernelLaunchParamsTy LaunchParams,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override;
 
+  /// Return maximum block size for maximum occupancy
+  ///
+  /// TODO: This needs to be implemented for amdgpu
+  Expected<size_t> maxGroupSize(GenericDeviceTy &GenericDevice,
+                                size_t DynamicMemSize) const override {
+    return 1;
+  }
+
   /// Print more elaborate kernel launch info for AMDGPU
   Error printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
                                KernelArgsTy &KernelArgs, uint32_t NumThreads[3],
