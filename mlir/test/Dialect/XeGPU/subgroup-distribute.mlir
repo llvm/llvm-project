@@ -166,6 +166,7 @@ gpu.module @test {
 }
 
 // -----
+// TODO: gemm does not use update_nd_offset because of an issue in vector distribution. PR141853 tracks this issue.
 // CHECK-LABEL: gpu.func @gemm_loop
 // CHECK: (%[[ARG0:[0-9a-zA-Z]+]]: memref<1024x1024xbf16>, %[[ARG1:[0-9a-zA-Z]+]]: memref<1024x1024xbf16>, %[[ARG2:[0-9a-zA-Z]+]]: memref<1024x1024xf32>) {
 // CHECK-DAG: %[[BLOCK_ID_X:.*]] = gpu.block_id x
