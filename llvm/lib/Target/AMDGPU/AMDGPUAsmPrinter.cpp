@@ -989,7 +989,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   // dispatch registers are function args.
   unsigned WaveDispatchNumSGPR = 0, WaveDispatchNumVGPR = 0;
 
-  if (isShader(F.getCallingConv()) && isEntryFunctionCC(F.getCallingConv())) {
+  if (isShader(F.getCallingConv())) {
     bool IsPixelShader =
         F.getCallingConv() == CallingConv::AMDGPU_PS && !STM.isAmdHsaOS();
 
@@ -1060,6 +1060,15 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
     ProgInfo.NumVGPR = AMDGPUMCExpr::createTotalNumVGPR(
         ProgInfo.NumAccVGPR, ProgInfo.NumArchVGPR, Ctx);
+  } else if (isKernel(F.getCallingConv()) &&
+             MFI->getNumKernargPreloadedSGPRs()) {
+    // Consider cases where the total number of UserSGPRs with trailing
+    // allocated preload SGPRs, is greater than the number of explicitly
+    // referenced SGPRs.
+    const MCExpr *UserPlusExtraSGPRs = MCBinaryExpr::createAdd(
+        CreateExpr(MFI->getNumUserSGPRs()), ExtraSGPRs, Ctx);
+    ProgInfo.NumSGPR =
+        AMDGPUMCExpr::createMax({ProgInfo.NumSGPR, UserPlusExtraSGPRs}, Ctx);
   }
 
   // Adjust number of registers used to meet default/requested minimum/maximum

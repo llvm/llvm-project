@@ -3,7 +3,7 @@
 ; CHECK-LABEL: __unnamed_1:
 ; CHECK: .set __unnamed_1.num_vgpr, 0
 ; CHECK: .set __unnamed_1.num_agpr, 0
-; CHECK: .set __unnamed_1.numbered_sgpr, 0
+; CHECK: .set __unnamed_1.numbered_sgpr, 32
 ; CHECK: .set __unnamed_1.private_seg_size, 0
 ; CHECK: .set __unnamed_1.uses_vcc, 0
 ; CHECK: .set __unnamed_1.uses_flat_scratch, 0
@@ -16,7 +16,7 @@ entry:
 }
 
 ; CHECK-LABEL: __unnamed_2:
-; CHECK: .set __unnamed_2.num_vgpr, max(1, __unnamed_1.num_vgpr)
+; CHECK: .set __unnamed_2.num_vgpr, max(32, __unnamed_1.num_vgpr)
 ; CHECK: .set __unnamed_2.num_agpr, max(0, __unnamed_1.num_agpr)
 ; CHECK: .set __unnamed_2.numbered_sgpr, max(34, __unnamed_1.numbered_sgpr)
 ; CHECK: .set __unnamed_2.private_seg_size, 16+max(__unnamed_1.private_seg_size)
