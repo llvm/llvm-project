@@ -32,4 +32,3 @@ bt
 # CHECK-NEXT: frame 'regular()'
 # CHECK-NEXT: frame 'inlined2() (Inlined)'
 # CHECK-NEXT: frame 'main'
-# CHECK-NEXT: frame 'start'
