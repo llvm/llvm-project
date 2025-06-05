@@ -198,7 +198,7 @@ def AMDGPU_PackedScaledTruncOp
     `,` $scale
     `:` type($source) `to` type($res) (`into` type($existing)^)?
   }];
-  let hasVerifier = 0;
+  let hasVerifier = 1;
 }
 
 def AMDGPU_PackedStochRoundFp8Op :
