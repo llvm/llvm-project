@@ -18,7 +18,7 @@ target datalayout = "e-p:32:32"
 ; CHECK-NODISCARD: !type
 ; CHECK-NODISCARD: !type
 
-; CHECK: [[BA:@[^ ]*]] = private constant [68 x i8] c"\03\01\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\02\00\01"
+; CHECK: [[BA:@[^ ]*]] = private constant [68 x i8] c"\03\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\02\01\01"
 
 ; Offset 0, 4 byte alignment
 !0 = !{i32 0, !"typeid1"}
@@ -49,7 +49,7 @@ define i1 @foo(ptr %p) {
   ; CHECK-NOT: llvm.type.test
 
   ; CHECK: [[R1:%[^ ]*]] = ptrtoint ptr %p to i32
-  ; CHECK: [[R2:%[^ ]*]] = sub i32 [[R1]], ptrtoint (ptr [[G]] to i32)
+  ; CHECK: [[R2:%[^ ]*]] = sub i32 ptrtoint (ptr getelementptr (i8, ptr [[G]], i32 268) to i32), [[R1]]
   ; CHECK: [[R5:%[^ ]*]] = call i32 @llvm.fshr.i32(i32 [[R2]], i32 [[R2]], i32 2)
   ; CHECK: [[R6:%[^ ]*]] = icmp ule i32 [[R5]], 67
   ; CHECK: br i1 [[R6]]
@@ -72,7 +72,7 @@ define i1 @foo(ptr %p) {
 ; CHECK: @bar(ptr [[B0:%[^ ]*]])
 define i1 @bar(ptr %p) {
   ; CHECK: [[S1:%[^ ]*]] = ptrtoint ptr %p to i32
-  ; CHECK: [[S2:%[^ ]*]] = sub i32 [[S1]], ptrtoint (ptr getelementptr (i8, ptr [[G]], i32 4) to i32)
+  ; CHECK: [[S2:%[^ ]*]] = sub i32 ptrtoint (ptr getelementptr (i8, ptr [[G]], i32 260) to i32), [[S1]]
   ; CHECK: [[S5:%[^ ]*]] = call i32 @llvm.fshr.i32(i32 [[S2]], i32 [[S2]], i32 8)
   ; CHECK: [[S6:%[^ ]*]] = icmp ule i32 [[S5]], 1
   %x = call i1 @llvm.type.test(ptr %p, metadata !"typeid2")
@@ -84,7 +84,7 @@ define i1 @bar(ptr %p) {
 ; CHECK: @baz(ptr [[C0:%[^ ]*]])
 define i1 @baz(ptr %p) {
   ; CHECK: [[T1:%[^ ]*]] = ptrtoint ptr %p to i32
-  ; CHECK: [[T2:%[^ ]*]] = sub i32 [[T1]], ptrtoint (ptr [[G]] to i32)
+  ; CHECK: [[T2:%[^ ]*]] = sub i32 ptrtoint (ptr getelementptr (i8, ptr [[G]], i32 260) to i32), [[T1]]
   ; CHECK: [[T5:%[^ ]*]] = call i32 @llvm.fshr.i32(i32 [[T2]], i32 [[T2]], i32 2)
   ; CHECK: [[T6:%[^ ]*]] = icmp ule i32 [[T5]], 65
   ; CHECK: br i1 [[T6]]
