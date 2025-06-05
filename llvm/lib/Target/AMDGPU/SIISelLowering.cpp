@@ -751,7 +751,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BUILD_VECTOR, {MVT::v2i16, MVT::v2f16, MVT::v2bf16},
                        Subtarget->hasVOP3PInsts() ? Legal : Custom);
 
-    setOperationAction(ISD::FNEG, MVT::v2f16, Legal);
+    setOperationAction(ISD::FNEG, {MVT::v2f16, MVT::v2bf16}, Legal);
     // This isn't really legal, but this avoids the legalizer unrolling it (and
     // allows matching fneg (fabs x) patterns)
     setOperationAction(ISD::FABS, MVT::v2f16, Legal);
@@ -17541,9 +17541,11 @@ void SITargetLowering::emitExpandAtomicAddrSpacePredicate(
   // where we only insert a check for private and still use the flat instruction
   // for global and shared.
 
-  bool FullFlatEmulation = RMW && RMW->getOperation() == AtomicRMWInst::FAdd &&
-                           Subtarget->hasAtomicFaddInsts() &&
-                           RMW->getType()->isFloatTy();
+  bool FullFlatEmulation =
+      RMW && RMW->getOperation() == AtomicRMWInst::FAdd &&
+      ((Subtarget->hasAtomicFaddInsts() && RMW->getType()->isFloatTy()) ||
+       (Subtarget->hasFlatBufferGlobalAtomicFaddF64Inst() &&
+        RMW->getType()->isDoubleTy()));
 
   // If the return value isn't used, do not introduce a false use in the phi.
   bool ReturnValueIsUsed = !AI->use_empty();

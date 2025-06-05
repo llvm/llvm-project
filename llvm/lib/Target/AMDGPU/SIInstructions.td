@@ -1830,10 +1830,12 @@ def : GCNPat <
 >;
 } // End foreach fp16vt = ...
 
+foreach v2fp16vt = [v2f16, v2bf16] in {
 def : GCNPat <
-  (UniformUnaryFrag<fneg> (v2f16 SReg_32:$src)),
+  (UniformUnaryFrag<fneg> (v2fp16vt SReg_32:$src)),
   (S_XOR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x80008000)))
 >;
+}
 
 def : GCNPat <
   (UniformUnaryFrag<fabs> (v2f16 SReg_32:$src)),
@@ -1974,10 +1976,12 @@ def : GCNPat <
 } // End SubtargetPredicate = UseRealTrue16Insts
 } // End foreach fp16vt = ...
 
+foreach v2fp16vt = [v2f16, v2bf16] in {
 def : GCNPat <
-  (fneg (v2f16 VGPR_32:$src)),
+  (fneg (v2fp16vt VGPR_32:$src)),
   (V_XOR_B32_e64 (S_MOV_B32 (i32 0x80008000)), VGPR_32:$src)
 >;
+}
 
 def : GCNPat <
   (fabs (v2f16 VGPR_32:$src)),

@@ -2354,6 +2354,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::LLRINT, MVT::v8f16, Legal);
     }
 
+    setOperationAction(ISD::FP_TO_SINT,         MVT::v8i16, Custom);
+    setOperationAction(ISD::STRICT_FP_TO_SINT,  MVT::v8i16, Custom);
+    setOperationAction(ISD::FP_TO_UINT,         MVT::v8i16, Custom);
+    setOperationAction(ISD::STRICT_FP_TO_UINT,  MVT::v8i16, Custom);
+
     if (Subtarget.hasVLX()) {
       setGroup(MVT::v8f16);
       setGroup(MVT::v16f16);
@@ -2369,10 +2374,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::UINT_TO_FP,         MVT::v8i16,  Legal);
       setOperationAction(ISD::STRICT_UINT_TO_FP,  MVT::v8i16,  Legal);
 
-      setOperationAction(ISD::FP_TO_SINT,         MVT::v8i16, Custom);
-      setOperationAction(ISD::STRICT_FP_TO_SINT,  MVT::v8i16, Custom);
-      setOperationAction(ISD::FP_TO_UINT,         MVT::v8i16, Custom);
-      setOperationAction(ISD::STRICT_FP_TO_UINT,  MVT::v8i16, Custom);
       setOperationAction(ISD::FP_ROUND,           MVT::v8f16, Legal);
       setOperationAction(ISD::STRICT_FP_ROUND,    MVT::v8f16, Legal);
       setOperationAction(ISD::FP_EXTEND,          MVT::v8f32, Custom);
@@ -19999,10 +20000,12 @@ static SDValue promoteXINT_TO_FP(SDValue Op, const SDLoc &dl,
 
 static bool isLegalConversion(MVT VT, MVT FloatVT, bool IsSigned,
                               const X86Subtarget &Subtarget) {
-  if (VT == MVT::v4i32 && Subtarget.hasSSE2() && IsSigned)
-    return true;
-  if (VT == MVT::v8i32 && Subtarget.hasAVX() && IsSigned)
-    return true;
+  if (FloatVT.getScalarType() != MVT::f16 || Subtarget.hasVLX()) {
+    if (VT == MVT::v4i32 && Subtarget.hasSSE2() && IsSigned)
+      return true;
+    if (VT == MVT::v8i32 && Subtarget.hasAVX() && IsSigned)
+      return true;
+  }
   if (Subtarget.hasVLX() && (VT == MVT::v4i32 || VT == MVT::v8i32))
     return true;
   if (Subtarget.useAVX512Regs()) {
@@ -21541,6 +21544,7 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
   bool IsStrict = Op->isStrictFPOpcode();
   bool IsSigned = Op.getOpcode() == ISD::FP_TO_SINT ||
                   Op.getOpcode() == ISD::STRICT_FP_TO_SINT;
+  bool HasVLX = Subtarget.hasVLX();
   MVT VT = Op->getSimpleValueType(0);
   SDValue Src = Op.getOperand(IsStrict ? 1 : 0);
   SDValue Chain = IsStrict ? Op->getOperand(0) : SDValue();
@@ -21571,7 +21575,7 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
       else
         Opc = IsSigned ? X86ISD::CVTTP2SI : X86ISD::CVTTP2UI;
 
-      if (!IsSigned && !Subtarget.hasVLX()) {
+      if (!IsSigned && !HasVLX) {
         assert(Subtarget.useAVX512Regs() && "Unexpected features!");
         // Widen to 512-bits.
         ResVT = MVT::v8i32;
@@ -21601,7 +21605,8 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
     }
 
     if (Subtarget.hasFP16() && SrcVT.getVectorElementType() == MVT::f16) {
-      if (VT == MVT::v8i16 || VT == MVT::v16i16 || VT == MVT::v32i16)
+      if ((HasVLX && (VT == MVT::v8i16 || VT == MVT::v16i16)) ||
+          VT == MVT::v32i16)
         return Op;
 
       MVT ResVT = VT;
@@ -21609,12 +21614,22 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
       if (EleVT != MVT::i64)
         ResVT = EleVT == MVT::i32 ? MVT::v4i32 : MVT::v8i16;
 
-      if (SrcVT != MVT::v8f16) {
+      if (SrcVT == MVT::v2f16 || SrcVT == MVT::v4f16) {
         SDValue Tmp =
             IsStrict ? DAG.getConstantFP(0.0, dl, SrcVT) : DAG.getUNDEF(SrcVT);
         SmallVector<SDValue, 4> Ops(SrcVT == MVT::v2f16 ? 4 : 2, Tmp);
         Ops[0] = Src;
         Src = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v8f16, Ops);
+      }
+
+      if (!HasVLX) {
+        assert(Subtarget.useAVX512Regs() && "Unexpected features!");
+        // Widen to 512-bits.
+        unsigned IntSize = EleVT.getSizeInBits();
+        unsigned Num = IntSize > 16 ? 512 / IntSize : 32;
+        ResVT = MVT::getVectorVT(EleVT, Num);
+        Src = widenSubVector(MVT::getVectorVT(MVT::f16, Num), Src, IsStrict,
+                             Subtarget, DAG, dl);
       }
 
       if (IsStrict) {
@@ -21629,7 +21644,8 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
 
       // TODO: Need to add exception check code for strict FP.
       if (EleVT.getSizeInBits() < 16) {
-        ResVT = MVT::getVectorVT(EleVT, 8);
+        if (HasVLX)
+          ResVT = MVT::getVectorVT(EleVT, 8);
         Res = DAG.getNode(ISD::TRUNCATE, dl, ResVT, Res);
       }
 
@@ -34139,12 +34155,10 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       }
 
       if (IsStrict) {
-        Opc = IsSigned ? X86ISD::STRICT_CVTTP2SI : X86ISD::STRICT_CVTTP2UI;
         Res =
             DAG.getNode(Opc, dl, {ResVT, MVT::Other}, {N->getOperand(0), Src});
         Chain = Res.getValue(1);
       } else {
-        Opc = IsSigned ? X86ISD::CVTTP2SI : X86ISD::CVTTP2UI;
         Res = DAG.getNode(Opc, dl, ResVT, Src);
       }
 
@@ -44161,7 +44175,12 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
       // Conversions.
       // TODO: Add more CVT opcodes when we have test coverage.
     case X86ISD::CVTTP2SI:
-    case X86ISD::CVTTP2UI:
+    case X86ISD::CVTTP2UI: {
+      if (Op.getOperand(0).getValueType().getVectorElementType() == MVT::f16 &&
+          !Subtarget.hasVLX())
+        break;
+      [[fallthrough]];
+    }
     case X86ISD::CVTPH2PS: {
       SDLoc DL(Op);
       unsigned Scale = SizeInBits / ExtSizeInBits;
@@ -58047,6 +58066,23 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
   // Try to synthesize horizontal adds from adds of shuffles.
   if (SDValue V = combineToHorizontalAddSub(N, DAG, Subtarget))
     return V;
+
+  // Canonicalize hidden LEA pattern:
+  // Fold (add (sub (shl x, c), y), z) -> (sub (add (shl x, c), z), y)
+  // iff c < 4
+  if (VT == MVT::i32 || VT == MVT::i64) {
+    SDValue Y, Z, Shift;
+    APInt Amt;
+    if (sd_match(
+            N, m_Add(m_OneUse(m_Sub(m_AllOf(m_Value(Shift),
+                                            m_Shl(m_Value(), m_ConstInt(Amt))),
+                                    m_Value(Y))),
+                     m_Value(Z))) &&
+        Amt.ult(4) && !isa<ConstantSDNode>(Z)) {
+      return DAG.getNode(ISD::SUB, DL, VT,
+                         DAG.getNode(ISD::ADD, DL, VT, Shift, Z), Y);
+    }
+  }
 
   // add(psadbw(X,0),psadbw(Y,0)) -> psadbw(add(X,Y),0)
   // iff X and Y won't overflow.
