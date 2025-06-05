@@ -2112,8 +2112,16 @@ Value *InstCombinerImpl::OptimizePointerDifference(Value *LHS, Value *RHS,
   // then the final multiplication is also nuw.
   if (auto *I = dyn_cast<Instruction>(Result))
     if (IsNUW && !GEP2 && !Swapped && GEP1NW.isInBounds() &&
-        I->getOpcode() == Instruction::Mul && I->use_empty())
+        I->getOpcode() == Instruction::Mul) {
+      if (!I->use_empty()) {
+        // If the offset calculation is reused by the GEP, add the nuw flag to
+        // a separate clone. This may improve folds and will get CSEd if not
+        // useful.
+        Result = I = I->clone();
+        Builder.Insert(I);
+      }
       I->setHasNoUnsignedWrap();
+    }
 
   // If we have a 2nd GEP of the same base pointer, subtract the offsets.
   // If both GEPs are inbounds, then the subtract does not have signed overflow.

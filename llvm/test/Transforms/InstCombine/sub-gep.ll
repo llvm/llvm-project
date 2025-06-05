@@ -782,7 +782,8 @@ define i64 @sub_multi_use_nuw(ptr %base, i64 %idx) {
 ; CHECK-NEXT:    [[P2_IDX:%.*]] = shl nsw i64 [[IDX:%.*]], 2
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[BASE:%.*]], i64 [[P2_IDX]]
 ; CHECK-NEXT:    call void @use(ptr [[P2]])
-; CHECK-NEXT:    ret i64 [[P2_IDX]]
+; CHECK-NEXT:    [[D:%.*]] = shl nuw nsw i64 [[IDX]], 2
+; CHECK-NEXT:    ret i64 [[D]]
 ;
   %p2 = getelementptr inbounds [0 x i32], ptr %base, i64 0, i64 %idx
   call void @use(ptr %p2)
