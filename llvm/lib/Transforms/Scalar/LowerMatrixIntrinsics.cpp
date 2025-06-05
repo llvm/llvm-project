@@ -1137,11 +1137,8 @@ public:
     case Intrinsic::abs:
     case Intrinsic::fabs: {
       IRBuilder<> Builder(Inst);
-
       MatrixTy Result;
-
       MatrixTy M = getMatrix(Inst->getOperand(0), Shape, Builder);
-
       Builder.setFastMathFlags(getFastMathFlags(Inst));
 
       for (auto &Vector : M.vectors()) {
