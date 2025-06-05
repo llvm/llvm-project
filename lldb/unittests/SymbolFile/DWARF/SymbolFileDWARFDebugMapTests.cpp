@@ -73,7 +73,7 @@ LoadCommands:
 ...
 )";
 
-  // Set up
+  // Perform setup.
   llvm::Expected<TestFile> file = TestFile::fromYaml(yamldata);
   EXPECT_THAT_EXPECTED(file, llvm::Succeeded());
   auto module_sp = std::make_shared<Module>(file->moduleSpec());
@@ -139,7 +139,7 @@ DWARF:
           Length:          0
 )";
 
-  // Set up
+  // Perform setup.
   llvm::Expected<TestFile> file = TestFile::fromYaml(yamldata);
   EXPECT_THAT_EXPECTED(file, llvm::Succeeded());
   auto module_sp = std::make_shared<Module>(file->moduleSpec());

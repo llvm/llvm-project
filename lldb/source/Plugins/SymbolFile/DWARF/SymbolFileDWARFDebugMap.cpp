@@ -246,6 +246,7 @@ llvm::StringRef SymbolFileDWARFDebugMap::GetPluginDescriptionStatic() {
 }
 
 SymbolFile *SymbolFileDWARFDebugMap::CreateInstance(ObjectFileSP objfile_sp) {
+  assert(objfile_sp);
   // Don't create a debug map if the object file isn't a Mach-O.
   if (!objfile_sp->GetArchitecture().GetTriple().isAppleMachO())
     return nullptr;
