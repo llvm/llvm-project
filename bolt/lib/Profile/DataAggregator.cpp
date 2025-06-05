@@ -164,6 +164,10 @@ void DataAggregator::findPerfExecutable() {
 void DataAggregator::start() {
   outs() << "PERF2BOLT: Starting data aggregation job for " << Filename << "\n";
 
+  // Turn on heatmap building if requested by --heatmap flag.
+  if (!opts::HeatmapMode && opts::HeatmapOutput.getNumOccurrences())
+    opts::HeatmapMode = opts::HeatmapModeKind::HM_Optional;
+
   // Don't launch perf for pre-aggregated files or when perf input is specified
   // by the user.
   if (opts::ReadPreAggregated || !opts::ReadPerfEvents.empty())
@@ -502,24 +506,25 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
     errs() << "PERF2BOLT: failed to parse samples\n";
 
   // Special handling for memory events
-  if (prepareToParse("mem events", MemEventsPPI, MemEventsErrorCallback))
-    return Error::success();
-
-  if (const std::error_code EC = parseMemEvents())
-    errs() << "PERF2BOLT: failed to parse memory events: " << EC.message()
-           << '\n';
+  if (!prepareToParse("mem events", MemEventsPPI, MemEventsErrorCallback))
+    if (const std::error_code EC = parseMemEvents())
+      errs() << "PERF2BOLT: failed to parse memory events: " << EC.message()
+             << '\n';
 
   deleteTempFiles();
 
 heatmap:
-  if (opts::HeatmapMode) {
-    if (std::error_code EC = printLBRHeatMap()) {
-      errs() << "ERROR: failed to print heat map: " << EC.message() << '\n';
-      exit(1);
-    }
-    exit(0);
-  }
-  return Error::success();
+  if (!opts::HeatmapMode)
+    return Error::success();
+
+  if (std::error_code EC = printLBRHeatMap())
+    return errorCodeToError(EC);
+
+  if (opts::HeatmapMode == opts::HeatmapModeKind::HM_Optional)
+    return Error::success();
+
+  assert(opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive);
+  exit(0);
 }
 
 Error DataAggregator::readProfile(BinaryContext &BC) {
@@ -635,8 +640,6 @@ bool DataAggregator::doBasicSample(BinaryFunction &OrigFunc, uint64_t Address,
 
   BinaryFunction *ParentFunc = getBATParentFunction(OrigFunc);
   BinaryFunction &Func = ParentFunc ? *ParentFunc : OrigFunc;
-  if (ParentFunc || (BAT && !BAT->isBATFunction(Func.getAddress())))
-    NumColdSamples += Count;
   // Attach executed bytes to parent function in case of cold fragment.
   Func.SampleCountInBytes += Count * BlockSize;
 
@@ -740,15 +743,10 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
     if (BAT)
       Addr = BAT->translate(Func->getAddress(), Addr, IsFrom);
 
-    BinaryFunction *ParentFunc = getBATParentFunction(*Func);
-    if (IsFrom &&
-        (ParentFunc || (BAT && !BAT->isBATFunction(Func->getAddress()))))
-      NumColdSamples += Count;
+    if (BinaryFunction *ParentFunc = getBATParentFunction(*Func))
+      Func = ParentFunc;
 
-    if (!ParentFunc)
-      return std::pair{Func, IsRet};
-
-    return std::pair{ParentFunc, IsRet};
+    return std::pair{Func, IsRet};
   };
 
   auto [FromFunc, IsReturn] = handleAddress(From, /*IsFrom*/ true);
@@ -1206,60 +1204,74 @@ ErrorOr<Location> DataAggregator::parseLocationOrOffset() {
 }
 
 std::error_code DataAggregator::parseAggregatedLBREntry() {
-  while (checkAndConsumeFS()) {
-  }
+  enum AggregatedLBREntry : char {
+    INVALID = 0,
+    EVENT_NAME,        // E
+    TRACE,             // T
+    SAMPLE,            // S
+    BRANCH,            // B
+    FT,                // F
+    FT_EXTERNAL_ORIGIN // f
+  } Type = INVALID;
 
-  ErrorOr<StringRef> TypeOrErr = parseString(FieldSeparator);
-  if (std::error_code EC = TypeOrErr.getError())
-    return EC;
-  enum AggregatedLBREntry { TRACE, BRANCH, FT, FT_EXTERNAL_ORIGIN, INVALID };
-  auto Type = StringSwitch<AggregatedLBREntry>(TypeOrErr.get())
-                  .Case("T", TRACE)
-                  .Case("B", BRANCH)
-                  .Case("F", FT)
-                  .Case("f", FT_EXTERNAL_ORIGIN)
-                  .Default(INVALID);
-  if (Type == INVALID) {
-    reportError("expected T, B, F or f");
-    return make_error_code(llvm::errc::io_error);
-  }
+  // The number of fields to parse, set based on Type.
+  int AddrNum = 0;
+  int CounterNum = 0;
+  // Storage for parsed fields.
+  StringRef EventName;
+  std::optional<Location> Addr[3];
+  int64_t Counters[2] = {0};
 
-  while (checkAndConsumeFS()) {
-  }
-  ErrorOr<Location> From = parseLocationOrOffset();
-  if (std::error_code EC = From.getError())
-    return EC;
-
-  while (checkAndConsumeFS()) {
-  }
-  ErrorOr<Location> To = parseLocationOrOffset();
-  if (std::error_code EC = To.getError())
-    return EC;
-
-  ErrorOr<Location> TraceFtEnd = std::error_code();
-  if (Type == AggregatedLBREntry::TRACE) {
+  while (Type == INVALID || Type == EVENT_NAME) {
     while (checkAndConsumeFS()) {
     }
-    TraceFtEnd = parseLocationOrOffset();
-    if (std::error_code EC = TraceFtEnd.getError())
+    ErrorOr<StringRef> StrOrErr =
+        parseString(FieldSeparator, Type == EVENT_NAME);
+    if (std::error_code EC = StrOrErr.getError())
       return EC;
+    StringRef Str = StrOrErr.get();
+
+    if (Type == EVENT_NAME) {
+      EventName = Str;
+      break;
+    }
+
+    Type = StringSwitch<AggregatedLBREntry>(Str)
+               .Case("T", TRACE)
+               .Case("S", SAMPLE)
+               .Case("E", EVENT_NAME)
+               .Case("B", BRANCH)
+               .Case("F", FT)
+               .Case("f", FT_EXTERNAL_ORIGIN)
+               .Default(INVALID);
+
+    if (Type == INVALID) {
+      reportError("expected T, S, E, B, F or f");
+      return make_error_code(llvm::errc::io_error);
+    }
+
+    using SSI = StringSwitch<int>;
+    AddrNum = SSI(Str).Case("T", 3).Case("S", 1).Case("E", 0).Default(2);
+    CounterNum = SSI(Str).Case("B", 2).Case("E", 0).Default(1);
   }
 
-  while (checkAndConsumeFS()) {
-  }
-  ErrorOr<int64_t> Frequency =
-      parseNumberField(FieldSeparator, Type != AggregatedLBREntry::BRANCH);
-  if (std::error_code EC = Frequency.getError())
-    return EC;
-
-  uint64_t Mispreds = 0;
-  if (Type == AggregatedLBREntry::BRANCH) {
+  for (int I = 0; I < AddrNum; ++I) {
     while (checkAndConsumeFS()) {
     }
-    ErrorOr<int64_t> MispredsOrErr = parseNumberField(FieldSeparator, true);
-    if (std::error_code EC = MispredsOrErr.getError())
+    ErrorOr<Location> AddrOrErr = parseLocationOrOffset();
+    if (std::error_code EC = AddrOrErr.getError())
       return EC;
-    Mispreds = static_cast<uint64_t>(MispredsOrErr.get());
+    Addr[I] = AddrOrErr.get();
+  }
+
+  for (int I = 0; I < CounterNum; ++I) {
+    while (checkAndConsumeFS()) {
+    }
+    ErrorOr<int64_t> CountOrErr =
+        parseNumberField(FieldSeparator, I + 1 == CounterNum);
+    if (std::error_code EC = CountOrErr.getError())
+      return EC;
+    Counters[I] = CountOrErr.get();
   }
 
   if (!checkAndConsumeNewLine()) {
@@ -1267,16 +1279,31 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     return make_error_code(llvm::errc::io_error);
   }
 
-  BinaryFunction *FromFunc = getBinaryFunctionContainingAddress(From->Offset);
-  BinaryFunction *ToFunc = getBinaryFunctionContainingAddress(To->Offset);
+  if (Type == EVENT_NAME) {
+    EventNames.insert(EventName);
+    return std::error_code();
+  }
 
-  for (BinaryFunction *BF : {FromFunc, ToFunc})
-    if (BF)
-      BF->setHasProfileAvailable();
+  const uint64_t FromOffset = Addr[0]->Offset;
+  BinaryFunction *FromFunc = getBinaryFunctionContainingAddress(FromOffset);
+  if (FromFunc)
+    FromFunc->setHasProfileAvailable();
 
-  uint64_t Count = static_cast<uint64_t>(Frequency.get());
+  int64_t Count = Counters[0];
+  int64_t Mispreds = Counters[1];
 
-  Trace Trace(From->Offset, To->Offset);
+  if (Type == SAMPLE) {
+    BasicSamples[FromOffset] += Count;
+    NumTotalSamples += Count;
+    return std::error_code();
+  }
+
+  const uint64_t ToOffset = Addr[1]->Offset;
+  BinaryFunction *ToFunc = getBinaryFunctionContainingAddress(ToOffset);
+  if (ToFunc)
+    ToFunc->setHasProfileAvailable();
+
+  Trace Trace(FromOffset, ToOffset);
   // Taken trace
   if (Type == TRACE || Type == BRANCH) {
     TakenBranchInfo &Info = BranchLBRs[Trace];
@@ -1287,8 +1314,9 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   }
   // Construct fallthrough part of the trace
   if (Type == TRACE) {
-    Trace.From = To->Offset;
-    Trace.To = TraceFtEnd->Offset;
+    const uint64_t TraceFtEndOffset = Addr[2]->Offset;
+    Trace.From = ToOffset;
+    Trace.To = TraceFtEndOffset;
     Type = FromFunc == ToFunc ? FT : FT_EXTERNAL_ORIGIN;
   }
   // Add fallthrough trace
@@ -1316,8 +1344,17 @@ std::error_code DataAggregator::printLBRHeatMap() {
     opts::HeatmapMaxAddress = 0xffffffffffffffff;
     opts::HeatmapMinAddress = KernelBaseAddr;
   }
-  Heatmap HM(opts::HeatmapBlock, opts::HeatmapMinAddress,
-             opts::HeatmapMaxAddress, getTextSections(BC));
+  opts::HeatmapBlockSizes &HMBS = opts::HeatmapBlock;
+  Heatmap HM(HMBS[0], opts::HeatmapMinAddress, opts::HeatmapMaxAddress,
+             getTextSections(BC));
+  auto getSymbolValue = [&](const MCSymbol *Symbol) -> uint64_t {
+    if (Symbol)
+      if (ErrorOr<uint64_t> SymValue = BC->getSymbolValue(*Symbol))
+        return SymValue.get();
+    return 0;
+  };
+  HM.HotStart = getSymbolValue(BC->getHotTextStartSymbol());
+  HM.HotEnd = getSymbolValue(BC->getHotTextEndSymbol());
 
   if (!NumTotalSamples) {
     if (opts::BasicAggregation) {
@@ -1351,15 +1388,22 @@ std::error_code DataAggregator::printLBRHeatMap() {
     exit(1);
   }
 
-  HM.print(opts::OutputFilename);
-  if (opts::OutputFilename == "-")
-    HM.printCDF(opts::OutputFilename);
-  else
-    HM.printCDF(opts::OutputFilename + ".csv");
-  if (opts::OutputFilename == "-")
-    HM.printSectionHotness(opts::OutputFilename);
-  else
-    HM.printSectionHotness(opts::OutputFilename + "-section-hotness.csv");
+  HM.print(opts::HeatmapOutput);
+  if (opts::HeatmapOutput == "-") {
+    HM.printCDF(opts::HeatmapOutput);
+    HM.printSectionHotness(opts::HeatmapOutput);
+  } else {
+    HM.printCDF(opts::HeatmapOutput + ".csv");
+    HM.printSectionHotness(opts::HeatmapOutput + "-section-hotness.csv");
+  }
+  // Provide coarse-grained heatmaps if requested via zoom-out scales
+  for (const uint64_t NewBucketSize : ArrayRef(HMBS).drop_front()) {
+    HM.resizeBucket(NewBucketSize);
+    if (opts::HeatmapOutput == "-")
+      HM.print(opts::HeatmapOutput);
+    else
+      HM.print(formatv("{0}-{1}", opts::HeatmapOutput, NewBucketSize).str());
+  }
 
   return std::error_code();
 }
@@ -1386,7 +1430,7 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
       const uint64_t TraceTo = NextLBR->From;
       const BinaryFunction *TraceBF =
           getBinaryFunctionContainingAddress(TraceFrom);
-      if (opts::HeatmapMode) {
+      if (opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive) {
         FTInfo &Info = FallthroughLBRs[Trace(TraceFrom, TraceTo)];
         ++Info.InternCount;
       } else if (TraceBF && TraceBF->containsAddress(TraceTo)) {
@@ -1424,7 +1468,7 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
     NextLBR = &LBR;
 
     // Record branches outside binary functions for heatmap.
-    if (opts::HeatmapMode) {
+    if (opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive) {
       TakenBranchInfo &Info = BranchLBRs[Trace(LBR.From, LBR.To)];
       ++Info.TakenCount;
       continue;
@@ -1439,23 +1483,10 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
   }
   // Record LBR addresses not covered by fallthroughs (bottom-of-stack source
   // and top-of-stack target) as basic samples for heatmap.
-  if (opts::HeatmapMode && !Sample.LBR.empty()) {
+  if (opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive &&
+      !Sample.LBR.empty()) {
     ++BasicSamples[Sample.LBR.front().To];
     ++BasicSamples[Sample.LBR.back().From];
-  }
-}
-
-void DataAggregator::printColdSamplesDiagnostic() const {
-  if (NumColdSamples > 0) {
-    const float ColdSamples = NumColdSamples * 100.0f / NumTotalSamples;
-    outs() << "PERF2BOLT: " << NumColdSamples
-           << format(" (%.1f%%)", ColdSamples)
-           << " samples recorded in cold regions of split functions.\n";
-    if (ColdSamples > 5.0f)
-      outs()
-          << "WARNING: The BOLT-processed binary where samples were collected "
-             "likely used bad data or your service observed a large shift in "
-             "profile. You may want to audit this\n";
   }
 }
 
@@ -1499,7 +1530,6 @@ void DataAggregator::printBranchSamplesDiagnostics() const {
               "collection. The generated data may be ineffective for improving "
               "performance\n\n";
   printLongRangeTracesDiagnostic();
-  printColdSamplesDiagnostic();
 }
 
 void DataAggregator::printBasicSamplesDiagnostics(
@@ -1511,7 +1541,6 @@ void DataAggregator::printBasicSamplesDiagnostics(
               "binary is probably not the same binary used during profiling "
               "collection. The generated data may be ineffective for improving "
               "performance\n\n";
-  printColdSamplesDiagnostic();
 }
 
 void DataAggregator::printBranchStacksDiagnostics(

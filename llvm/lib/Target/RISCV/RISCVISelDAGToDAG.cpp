@@ -601,8 +601,8 @@ bool RISCVDAGToDAGISel::tryShrinkShlLogicImm(SDNode *Node) {
 }
 
 bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
-  // Only supported with XTHeadBb at the moment.
-  if (!Subtarget->hasVendorXTHeadBb())
+  // Only supported with XTHeadBb/XAndesPerf at the moment.
+  if (!Subtarget->hasVendorXTHeadBb() && !Subtarget->hasVendorXAndesPerf())
     return false;
 
   auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
@@ -615,7 +615,9 @@ bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
 
   auto BitfieldExtract = [&](SDValue N0, unsigned Msb, unsigned Lsb, SDLoc DL,
                              MVT VT) {
-    return CurDAG->getMachineNode(RISCV::TH_EXT, DL, VT, N0.getOperand(0),
+    unsigned Opc =
+        Subtarget->hasVendorXTHeadBb() ? RISCV::TH_EXT : RISCV::NDS_BFOS;
+    return CurDAG->getMachineNode(Opc, DL, VT, N0.getOperand(0),
                                   CurDAG->getTargetConstant(Msb, DL, VT),
                                   CurDAG->getTargetConstant(Lsb, DL, VT));
   };
@@ -672,14 +674,17 @@ bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
 bool RISCVDAGToDAGISel::tryUnsignedBitfieldExtract(SDNode *Node, SDLoc DL,
                                                    MVT VT, SDValue X,
                                                    unsigned Msb, unsigned Lsb) {
-  // Only supported with XTHeadBb at the moment.
-  if (!Subtarget->hasVendorXTHeadBb())
+  // Only supported with XTHeadBb/XAndesPerf at the moment.
+  if (!Subtarget->hasVendorXTHeadBb() && !Subtarget->hasVendorXAndesPerf())
     return false;
 
-  SDNode *TH_EXTU = CurDAG->getMachineNode(
-      RISCV::TH_EXTU, DL, VT, X, CurDAG->getTargetConstant(Msb, DL, VT),
-      CurDAG->getTargetConstant(Lsb, DL, VT));
-  ReplaceNode(Node, TH_EXTU);
+  unsigned Opc =
+      Subtarget->hasVendorXTHeadBb() ? RISCV::TH_EXTU : RISCV::NDS_BFOZ;
+
+  SDNode *Ube = CurDAG->getMachineNode(Opc, DL, VT, X,
+                                       CurDAG->getTargetConstant(Msb, DL, VT),
+                                       CurDAG->getTargetConstant(Lsb, DL, VT));
+  ReplaceNode(Node, Ube);
   return true;
 }
 
@@ -902,18 +907,23 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   case ISD::ConstantFP: {
     const APFloat &APF = cast<ConstantFPSDNode>(Node)->getValueAPF();
 
+    bool Is64Bit = Subtarget->is64Bit();
+    bool HasZdinx = Subtarget->hasStdExtZdinx();
+
     bool NegZeroF64 = APF.isNegZero() && VT == MVT::f64;
     SDValue Imm;
     // For +0.0 or f64 -0.0 we need to start from X0. For all others, we will
     // create an integer immediate.
-    if (APF.isPosZero() || NegZeroF64)
-      Imm = CurDAG->getRegister(RISCV::X0, XLenVT);
-    else
+    if (APF.isPosZero() || NegZeroF64) {
+      if (VT == MVT::f64 && HasZdinx && !Is64Bit)
+        Imm = CurDAG->getRegister(RISCV::X0_Pair, MVT::f64);
+      else
+        Imm = CurDAG->getRegister(RISCV::X0, XLenVT);
+    } else {
       Imm = selectImm(CurDAG, DL, XLenVT, APF.bitcastToAPInt().getSExtValue(),
                       *Subtarget);
+    }
 
-    bool HasZdinx = Subtarget->hasStdExtZdinx();
-    bool Is64Bit = Subtarget->is64Bit();
     unsigned Opc;
     switch (VT.SimpleTy) {
     default:
@@ -932,10 +942,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       // For RV32, we can't move from a GPR, we need to convert instead. This
       // should only happen for +0.0 and -0.0.
       assert((Subtarget->is64Bit() || APF.isZero()) && "Unexpected constant");
-      if (Is64Bit)
-        Opc = HasZdinx ? RISCV::COPY : RISCV::FMV_D_X;
+      if (HasZdinx)
+        Opc = RISCV::COPY;
       else
-        Opc = HasZdinx ? RISCV::FCVT_D_W_IN32X : RISCV::FCVT_D_W;
+        Opc = Is64Bit ? RISCV::FMV_D_X : RISCV::FCVT_D_W;
       break;
     }
 
@@ -1625,6 +1635,59 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       return;
     }
     break;
+  }
+  case RISCVISD::LD_RV32: {
+    assert(Subtarget->hasStdExtZilsd() && "LD_RV32 is only used with Zilsd");
+
+    SDValue Base, Offset;
+    SDValue Chain = Node->getOperand(0);
+    SDValue Addr = Node->getOperand(1);
+    SelectAddrRegImm(Addr, Base, Offset);
+
+    SDValue Ops[] = {Base, Offset, Chain};
+    MachineSDNode *New = CurDAG->getMachineNode(
+        RISCV::LD_RV32, DL, {MVT::Untyped, MVT::Other}, Ops);
+    SDValue Lo = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_even, DL,
+                                                MVT::i32, SDValue(New, 0));
+    SDValue Hi = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_odd, DL,
+                                                MVT::i32, SDValue(New, 0));
+    CurDAG->setNodeMemRefs(New, {cast<MemSDNode>(Node)->getMemOperand()});
+    ReplaceUses(SDValue(Node, 0), Lo);
+    ReplaceUses(SDValue(Node, 1), Hi);
+    ReplaceUses(SDValue(Node, 2), SDValue(New, 1));
+    CurDAG->RemoveDeadNode(Node);
+    return;
+  }
+  case RISCVISD::SD_RV32: {
+    SDValue Base, Offset;
+    SDValue Chain = Node->getOperand(0);
+    SDValue Addr = Node->getOperand(3);
+    SelectAddrRegImm(Addr, Base, Offset);
+
+    SDValue Lo = Node->getOperand(1);
+    SDValue Hi = Node->getOperand(2);
+
+    SDValue RegPair;
+    // Peephole to use X0_Pair for storing zero.
+    if (isNullConstant(Lo) && isNullConstant(Hi)) {
+      RegPair = CurDAG->getRegister(RISCV::X0_Pair, MVT::Untyped);
+    } else {
+      SDValue Ops[] = {
+          CurDAG->getTargetConstant(RISCV::GPRPairRegClassID, DL, MVT::i32), Lo,
+          CurDAG->getTargetConstant(RISCV::sub_gpr_even, DL, MVT::i32), Hi,
+          CurDAG->getTargetConstant(RISCV::sub_gpr_odd, DL, MVT::i32)};
+
+      RegPair = SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL,
+                                               MVT::Untyped, Ops),
+                        0);
+    }
+
+    MachineSDNode *New = CurDAG->getMachineNode(RISCV::SD_RV32, DL, MVT::Other,
+                                                {RegPair, Base, Offset, Chain});
+    CurDAG->setNodeMemRefs(New, {cast<MemSDNode>(Node)->getMemOperand()});
+    ReplaceUses(SDValue(Node, 0), SDValue(New, 0));
+    CurDAG->RemoveDeadNode(Node);
+    return;
   }
   case ISD::INTRINSIC_WO_CHAIN: {
     unsigned IntNo = Node->getConstantOperandVal(0);
@@ -2531,8 +2594,7 @@ bool RISCVDAGToDAGISel::SelectAddrFrameIndex(SDValue Addr, SDValue &Base,
 static bool selectConstantAddr(SelectionDAG *CurDAG, const SDLoc &DL,
                                const MVT VT, const RISCVSubtarget *Subtarget,
                                SDValue Addr, SDValue &Base, SDValue &Offset,
-                               bool IsPrefetch = false,
-                               bool IsRV32Zdinx = false) {
+                               bool IsPrefetch = false) {
   if (!isa<ConstantSDNode>(Addr))
     return false;
 
@@ -2546,9 +2608,6 @@ static bool selectConstantAddr(SelectionDAG *CurDAG, const SDLoc &DL,
   if (!Subtarget->is64Bit() || isInt<32>(Hi)) {
     if (IsPrefetch && (Lo12 & 0b11111) != 0)
       return false;
-    if (IsRV32Zdinx && !isInt<12>(Lo12 + 4))
-      return false;
-
     if (Hi) {
       int64_t Hi20 = (Hi >> 12) & 0xfffff;
       Base = SDValue(
@@ -2571,8 +2630,6 @@ static bool selectConstantAddr(SelectionDAG *CurDAG, const SDLoc &DL,
     return false;
   Lo12 = Seq.back().getImm();
   if (IsPrefetch && (Lo12 & 0b11111) != 0)
-    return false;
-  if (IsRV32Zdinx && !isInt<12>(Lo12 + 4))
     return false;
 
   // Drop the last instruction.
@@ -2665,7 +2722,7 @@ bool RISCVDAGToDAGISel::SelectAddrRegRegScale(SDValue Addr,
 }
 
 bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
-                                         SDValue &Offset, bool IsRV32Zdinx) {
+                                         SDValue &Offset) {
   if (SelectAddrFrameIndex(Addr, Base, Offset))
     return true;
 
@@ -2673,39 +2730,14 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
   MVT VT = Addr.getSimpleValueType();
 
   if (Addr.getOpcode() == RISCVISD::ADD_LO) {
-    // If this is non RV32Zdinx we can always fold.
-    if (!IsRV32Zdinx) {
-      Base = Addr.getOperand(0);
-      Offset = Addr.getOperand(1);
-      return true;
-    }
-
-    // For RV32Zdinx we need to have more than 4 byte alignment so we can add 4
-    // to the offset when we expand in RISCVExpandPseudoInsts.
-    if (auto *GA = dyn_cast<GlobalAddressSDNode>(Addr.getOperand(1))) {
-      const DataLayout &DL = CurDAG->getDataLayout();
-      Align Alignment = commonAlignment(
-          GA->getGlobal()->getPointerAlignment(DL), GA->getOffset());
-      if (Alignment > 4) {
-        Base = Addr.getOperand(0);
-        Offset = Addr.getOperand(1);
-        return true;
-      }
-    }
-    if (auto *CP = dyn_cast<ConstantPoolSDNode>(Addr.getOperand(1))) {
-      Align Alignment = commonAlignment(CP->getAlign(), CP->getOffset());
-      if (Alignment > 4) {
-        Base = Addr.getOperand(0);
-        Offset = Addr.getOperand(1);
-        return true;
-      }
-    }
+    Base = Addr.getOperand(0);
+    Offset = Addr.getOperand(1);
+    return true;
   }
 
-  int64_t RV32ZdinxRange = IsRV32Zdinx ? 4 : 0;
   if (CurDAG->isBaseWithConstantOffset(Addr)) {
     int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
-    if (isInt<12>(CVal) && isInt<12>(CVal + RV32ZdinxRange)) {
+    if (isInt<12>(CVal) && isInt<12>(CVal)) {
       Base = Addr.getOperand(0);
       if (Base.getOpcode() == RISCVISD::ADD_LO) {
         SDValue LoOperand = Base.getOperand(1);
@@ -2718,8 +2750,7 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
           const DataLayout &DL = CurDAG->getDataLayout();
           Align Alignment = commonAlignment(
               GA->getGlobal()->getPointerAlignment(DL), GA->getOffset());
-          if ((CVal == 0 || Alignment > CVal) &&
-              (!IsRV32Zdinx || commonAlignment(Alignment, CVal) > 4)) {
+          if ((CVal == 0 || Alignment > CVal)) {
             int64_t CombinedOffset = CVal + GA->getOffset();
             Base = Base.getOperand(0);
             Offset = CurDAG->getTargetGlobalAddress(
@@ -2740,13 +2771,13 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
   // Handle ADD with large immediates.
   if (Addr.getOpcode() == ISD::ADD && isa<ConstantSDNode>(Addr.getOperand(1))) {
     int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
-    assert(!(isInt<12>(CVal) && isInt<12>(CVal + RV32ZdinxRange)) &&
+    assert(!(isInt<12>(CVal) && isInt<12>(CVal)) &&
            "simm12 not already handled?");
 
     // Handle immediates in the range [-4096,-2049] or [2048, 4094]. We can use
     // an ADDI for part of the offset and fold the rest into the load/store.
     // This mirrors the AddiPair PatFrag in RISCVInstrInfo.td.
-    if (CVal >= -4096 && CVal <= (4094 - RV32ZdinxRange)) {
+    if (CVal >= -4096 && CVal <= 4094) {
       int64_t Adj = CVal < 0 ? -2048 : 2047;
       Base = SDValue(
           CurDAG->getMachineNode(RISCV::ADDI, DL, VT, Addr.getOperand(0),
@@ -2764,7 +2795,7 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
     // instructions.
     if (isWorthFoldingAdd(Addr) &&
         selectConstantAddr(CurDAG, DL, VT, Subtarget, Addr.getOperand(1), Base,
-                           Offset, /*IsPrefetch=*/false, RV32ZdinxRange)) {
+                           Offset, /*IsPrefetch=*/false)) {
       // Insert an ADD instruction with the materialized Hi52 bits.
       Base = SDValue(
           CurDAG->getMachineNode(RISCV::ADD, DL, VT, Addr.getOperand(0), Base),
@@ -2774,7 +2805,7 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
   }
 
   if (selectConstantAddr(CurDAG, DL, VT, Subtarget, Addr, Base, Offset,
-                         /*IsPrefetch=*/false, RV32ZdinxRange))
+                         /*IsPrefetch=*/false))
     return true;
 
   Base = Addr;
@@ -3085,34 +3116,44 @@ bool RISCVDAGToDAGISel::selectSHXADDOp(SDValue N, unsigned ShAmt,
       else
         Mask &= maskTrailingOnes<uint64_t>(XLen - C2);
 
-      // Look for (and (shl y, c2), c1) where c1 is a shifted mask with no
-      // leading zeros and c3 trailing zeros. We can use an SRLI by c2+c3
-      // followed by a SHXADD with c3 for the X amount.
       if (isShiftedMask_64(Mask)) {
         unsigned Leading = XLen - llvm::bit_width(Mask);
         unsigned Trailing = llvm::countr_zero(Mask);
-        if (LeftShift && Leading == 0 && C2 < Trailing && Trailing == ShAmt) {
-          SDLoc DL(N);
-          EVT VT = N.getValueType();
-          Val = SDValue(CurDAG->getMachineNode(
-                            RISCV::SRLI, DL, VT, N0.getOperand(0),
-                            CurDAG->getTargetConstant(Trailing - C2, DL, VT)),
-                        0);
-          return true;
-        }
+        if (Trailing != ShAmt)
+          return false;
+
+        unsigned Opcode;
+        // Look for (and (shl y, c2), c1) where c1 is a shifted mask with no
+        // leading zeros and c3 trailing zeros. We can use an SRLI by c3-c2
+        // followed by a SHXADD with c3 for the X amount.
+        if (LeftShift && Leading == 0 && C2 < Trailing)
+          Opcode = RISCV::SRLI;
+        // Look for (and (shl y, c2), c1) where c1 is a shifted mask with 32-c2
+        // leading zeros and c3 trailing zeros. We can use an SRLIW by c3-c2
+        // followed by a SHXADD with c3 for the X amount.
+        else if (LeftShift && Leading == 32 - C2 && C2 < Trailing)
+          Opcode = RISCV::SRLIW;
         // Look for (and (shr y, c2), c1) where c1 is a shifted mask with c2
-        // leading zeros and c3 trailing zeros. We can use an SRLI by C3
+        // leading zeros and c3 trailing zeros. We can use an SRLI by c2+c3
         // followed by a SHXADD using c3 for the X amount.
-        if (!LeftShift && Leading == C2 && Trailing == ShAmt) {
-          SDLoc DL(N);
-          EVT VT = N.getValueType();
-          Val = SDValue(
-              CurDAG->getMachineNode(
-                  RISCV::SRLI, DL, VT, N0.getOperand(0),
-                  CurDAG->getTargetConstant(Leading + Trailing, DL, VT)),
-              0);
-          return true;
-        }
+        else if (!LeftShift && Leading == C2)
+          Opcode = RISCV::SRLI;
+        // Look for (and (shr y, c2), c1) where c1 is a shifted mask with 32+c2
+        // leading zeros and c3 trailing zeros. We can use an SRLIW by c2+c3
+        // followed by a SHXADD using c3 for the X amount.
+        else if (!LeftShift && Leading == 32 + C2)
+          Opcode = RISCV::SRLIW;
+        else
+          return false;
+
+        SDLoc DL(N);
+        EVT VT = N.getValueType();
+        ShAmt = LeftShift ? Trailing - C2 : Trailing + C2;
+        Val = SDValue(
+            CurDAG->getMachineNode(Opcode, DL, VT, N0.getOperand(0),
+                                   CurDAG->getTargetConstant(ShAmt, DL, VT)),
+            0);
+        return true;
       }
     } else if (N0.getOpcode() == ISD::SRA && N0.hasOneUse() &&
                isa<ConstantSDNode>(N0.getOperand(1))) {

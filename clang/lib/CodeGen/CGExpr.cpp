@@ -21,6 +21,7 @@
 #include "CGRecordLayout.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "CodeGenPGO.h"
 #include "ConstantEmitter.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
@@ -56,14 +57,16 @@ using namespace clang;
 using namespace CodeGen;
 
 namespace clang {
-// TODO: Introduce frontend options to enabled per sanitizers, similar to
-// `fsanitize-trap`.
+// TODO: consider deprecating ClSanitizeGuardChecks; functionality is subsumed
+//       by -fsanitize-skip-hot-cutoff
 llvm::cl::opt<bool> ClSanitizeGuardChecks(
     "ubsan-guard-checks", llvm::cl::Optional,
     llvm::cl::desc("Guard UBSAN checks with `llvm.allow.ubsan.check()`."));
 
 } // namespace clang
 
+// TODO: consider deprecating ClArrayBoundsPseudoFn; functionality is subsumed
+//       by -fsanitize-annotate-debug-info
 static llvm::cl::opt<bool> ClArrayBoundsPseudoFn(
     "array-bounds-pseudofn", llvm::cl::Hidden, llvm::cl::Optional,
     llvm::cl::desc("Emit debug info that places array-bounds instrumentation "
@@ -205,7 +208,7 @@ RawAddress CodeGenFunction::CreateMemTempWithoutCast(QualType Ty,
 /// EvaluateExprAsBool - Perform the usual unary conversions on the specified
 /// expression and compare the result against zero, returning an Int1Ty value.
 llvm::Value *CodeGenFunction::EvaluateExprAsBool(const Expr *E) {
-  PGO.setCurrentStmt(E);
+  PGO->setCurrentStmt(E);
   if (const MemberPointerType *MPT = E->getType()->getAs<MemberPointerType>()) {
     llvm::Value *MemPtr = EmitScalarExpr(E);
     return CGM.getCXXABI().EmitMemberPointerIsNotNull(*this, MemPtr, MPT);
@@ -1226,16 +1229,8 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
 
   SanitizerScope SanScope(this);
 
-  llvm::DILocation *CheckDI = Builder.getCurrentDebugLocation();
   auto CheckKind = SanitizerKind::SO_ArrayBounds;
-  // TODO: deprecate ClArrayBoundsPseudoFn
-  if ((ClArrayBoundsPseudoFn ||
-       CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo.has(CheckKind)) &&
-      CheckDI) {
-    CheckDI = getDebugInfo()->CreateSyntheticInlineAt(
-        Builder.getCurrentDebugLocation(), "__ubsan_check_array_bounds");
-  }
-  ApplyDebugLocation ApplyTrapDI(*this, CheckDI);
+  ApplyDebugLocation ApplyTrapDI(*this, SanitizerAnnotateDebugInfo(CheckKind));
 
   bool IndexSigned = IndexType->isSignedIntegerOrEnumerationType();
   llvm::Value *IndexVal = Builder.CreateIntCast(Index, SizeTy, IndexSigned);
@@ -1250,6 +1245,35 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
                                 : Builder.CreateICmpULE(IndexVal, BoundVal);
   EmitCheck(std::make_pair(Check, CheckKind), SanitizerHandler::OutOfBounds,
             StaticData, Index);
+}
+
+llvm::DILocation *CodeGenFunction::SanitizerAnnotateDebugInfo(
+    SanitizerKind::SanitizerOrdinal CheckKindOrdinal) {
+  std::string Label;
+  switch (CheckKindOrdinal) {
+#define SANITIZER(NAME, ID)                                                    \
+  case SanitizerKind::SO_##ID:                                                 \
+    Label = "__ubsan_check_" NAME;                                             \
+    break;
+#include "clang/Basic/Sanitizers.def"
+  default:
+    llvm_unreachable("unexpected sanitizer kind");
+  }
+
+  // Sanitize label
+  for (unsigned int i = 0; i < Label.length(); i++)
+    if (!std::isalpha(Label[i]))
+      Label[i] = '_';
+
+  llvm::DILocation *CheckDI = Builder.getCurrentDebugLocation();
+  // TODO: deprecate ClArrayBoundsPseudoFn
+  if (((ClArrayBoundsPseudoFn &&
+        CheckKindOrdinal == SanitizerKind::SO_ArrayBounds) ||
+       CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo.has(CheckKindOrdinal)) &&
+      CheckDI)
+    CheckDI = getDebugInfo()->CreateSyntheticInlineAt(CheckDI, Label);
+
+  return CheckDI;
 }
 
 CodeGenFunction::ComplexPairTy CodeGenFunction::
@@ -2201,6 +2225,8 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
   }
 
   llvm::StoreInst *Store = Builder.CreateStore(Value, Addr, Volatile);
+  addInstToCurrentSourceAtom(Store, Value);
+
   if (isNontemporal) {
     llvm::MDNode *Node =
         llvm::MDNode::get(Store->getContext(),
@@ -2484,8 +2510,9 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
         Vec = Builder.CreateBitCast(Vec, IRStoreTy);
       }
 
-      Builder.CreateStore(Vec, Dst.getVectorAddress(),
-                          Dst.isVolatileQualified());
+      auto *I = Builder.CreateStore(Vec, Dst.getVectorAddress(),
+                                    Dst.isVolatileQualified());
+      addInstToCurrentSourceAtom(I, Vec);
       return;
     }
 
@@ -2507,8 +2534,9 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
       llvm::Instruction *Load = Builder.CreateLoad(Dst.getMatrixAddress());
       llvm::Value *Vec =
           Builder.CreateInsertElement(Load, Src.getScalarVal(), Idx, "matins");
-      Builder.CreateStore(Vec, Dst.getMatrixAddress(),
-                          Dst.isVolatileQualified());
+      auto *I = Builder.CreateStore(Vec, Dst.getMatrixAddress(),
+                                    Dst.isVolatileQualified());
+      addInstToCurrentSourceAtom(I, Vec);
       return;
     }
 
@@ -2649,7 +2677,8 @@ void CodeGenFunction::EmitStoreThroughBitfieldLValue(RValue Src, LValue Dst,
   }
 
   // Write the new value back out.
-  Builder.CreateStore(SrcVal, Ptr, Dst.isVolatileQualified());
+  auto *I = Builder.CreateStore(SrcVal, Ptr, Dst.isVolatileQualified());
+  addInstToCurrentSourceAtom(I, SrcVal);
 
   // Return the new value of the bit-field, if requested.
   if (Result) {
@@ -2673,14 +2702,20 @@ void CodeGenFunction::EmitStoreThroughBitfieldLValue(RValue Src, LValue Dst,
 
 void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
                                                                LValue Dst) {
+  llvm::Value *SrcVal = Src.getScalarVal();
+  Address DstAddr = Dst.getExtVectorAddress();
+  if (DstAddr.getElementType()->getScalarSizeInBits() >
+      SrcVal->getType()->getScalarSizeInBits())
+    SrcVal = Builder.CreateZExt(
+        SrcVal, convertTypeForLoadStore(Dst.getType(), SrcVal->getType()));
+
   // HLSL allows storing to scalar values through ExtVector component LValues.
   // To support this we need to handle the case where the destination address is
   // a scalar.
-  Address DstAddr = Dst.getExtVectorAddress();
   if (!DstAddr.getElementType()->isVectorTy()) {
     assert(!Dst.getType()->isVectorType() &&
            "this should only occur for non-vector l-values");
-    Builder.CreateStore(Src.getScalarVal(), DstAddr, Dst.isVolatileQualified());
+    Builder.CreateStore(SrcVal, DstAddr, Dst.isVolatileQualified());
     return;
   }
 
@@ -2701,11 +2736,6 @@ void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
       for (unsigned i = 0; i != NumSrcElts; ++i)
         Mask[getAccessedFieldNo(i, Elts)] = i;
 
-      llvm::Value *SrcVal = Src.getScalarVal();
-      if (VecTy->getScalarSizeInBits() >
-          SrcVal->getType()->getScalarSizeInBits())
-        SrcVal = Builder.CreateZExt(SrcVal, VecTy);
-
       Vec = Builder.CreateShuffleVector(SrcVal, Mask);
     } else if (NumDstElts > NumSrcElts) {
       // Extended the source vector to the same length and then shuffle it
@@ -2716,8 +2746,7 @@ void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
       for (unsigned i = 0; i != NumSrcElts; ++i)
         ExtMask.push_back(i);
       ExtMask.resize(NumDstElts, -1);
-      llvm::Value *ExtSrcVal =
-          Builder.CreateShuffleVector(Src.getScalarVal(), ExtMask);
+      llvm::Value *ExtSrcVal = Builder.CreateShuffleVector(SrcVal, ExtMask);
       // build identity
       SmallVector<int, 4> Mask;
       for (unsigned i = 0; i != NumDstElts; ++i)
@@ -2742,10 +2771,6 @@ void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
     // be updating one element.
     unsigned InIdx = getAccessedFieldNo(0, Elts);
     llvm::Value *Elt = llvm::ConstantInt::get(SizeTy, InIdx);
-
-    llvm::Value *SrcVal = Src.getScalarVal();
-    if (VecTy->getScalarSizeInBits() > SrcVal->getType()->getScalarSizeInBits())
-      SrcVal = Builder.CreateZExt(SrcVal, VecTy->getScalarType());
 
     Vec = Builder.CreateInsertElement(Vec, SrcVal, Elt);
   }
@@ -2919,9 +2944,31 @@ CodeGenFunction::EmitLoadOfReference(LValue RefLVal,
   llvm::LoadInst *Load =
       Builder.CreateLoad(RefLVal.getAddress(), RefLVal.isVolatile());
   CGM.DecorateInstructionWithTBAA(Load, RefLVal.getTBAAInfo());
-  return makeNaturalAddressForPointer(Load, RefLVal.getType()->getPointeeType(),
-                                      CharUnits(), /*ForPointeeType=*/true,
-                                      PointeeBaseInfo, PointeeTBAAInfo);
+  QualType PTy = RefLVal.getType()->getPointeeType();
+  CharUnits Align = CGM.getNaturalTypeAlignment(
+      PTy, PointeeBaseInfo, PointeeTBAAInfo, /*ForPointeeType=*/true);
+  if (!PTy->isIncompleteType()) {
+    llvm::LLVMContext &Ctx = getLLVMContext();
+    llvm::MDBuilder MDB(Ctx);
+    // Emit !nonnull metadata
+    if (CGM.getTypes().getTargetAddressSpace(PTy) == 0 &&
+        !CGM.getCodeGenOpts().NullPointerIsValid)
+      Load->setMetadata(llvm::LLVMContext::MD_nonnull,
+                        llvm::MDNode::get(Ctx, {}));
+    // Emit !align metadata
+    if (PTy->isObjectType()) {
+      auto AlignVal = Align.getQuantity();
+      if (AlignVal > 1) {
+        Load->setMetadata(
+            llvm::LLVMContext::MD_align,
+            llvm::MDNode::get(Ctx, MDB.createConstant(llvm::ConstantInt::get(
+                                       Builder.getInt64Ty(), AlignVal))));
+      }
+    }
+  }
+  return makeNaturalAddressForPointer(Load, PTy, Align,
+                                      /*ForPointeeType=*/true, PointeeBaseInfo,
+                                      PointeeTBAAInfo);
 }
 
 LValue CodeGenFunction::EmitLoadOfReferenceLValue(LValue RefLVal) {
@@ -3006,9 +3053,13 @@ static LValue EmitFunctionDeclLValue(CodeGenFunction &CGF, const Expr *E,
                                      GlobalDecl GD) {
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
   llvm::Constant *V = CGF.CGM.getFunctionPointer(GD);
+  QualType ETy = E->getType();
+  if (ETy->isCFIUncheckedCalleeFunctionType()) {
+    if (auto *GV = dyn_cast<llvm::GlobalValue>(V))
+      V = llvm::NoCFIValue::get(GV);
+  }
   CharUnits Alignment = CGF.getContext().getDeclAlign(FD);
-  return CGF.MakeAddrLValue(V, E->getType(), Alignment,
-                            AlignmentSource::Decl);
+  return CGF.MakeAddrLValue(V, ETy, Alignment, AlignmentSource::Decl);
 }
 
 static LValue EmitCapturedFieldLValue(CodeGenFunction &CGF, const FieldDecl *FD,
@@ -3950,6 +4001,8 @@ void CodeGenFunction::EmitCfiCheckFail() {
                          {Addr, AllVtables}),
       IntPtrTy);
 
+  // TODO: the instructions above are not annotated with debug info. It is
+  // inconvenient to do so because we have not determined SanitizerKind yet.
   const std::pair<int, SanitizerKind::SanitizerOrdinal> CheckKinds[] = {
       {CFITCK_VCall, SanitizerKind::SO_CFIVCall},
       {CFITCK_NVCall, SanitizerKind::SO_CFINVCall},
@@ -3960,6 +4013,9 @@ void CodeGenFunction::EmitCfiCheckFail() {
   for (auto CheckKindOrdinalPair : CheckKinds) {
     int Kind = CheckKindOrdinalPair.first;
     SanitizerKind::SanitizerOrdinal Ordinal = CheckKindOrdinalPair.second;
+
+    ApplyDebugLocation ApplyTrapDI(*this, SanitizerAnnotateDebugInfo(Ordinal));
+
     llvm::Value *Cond =
         Builder.CreateICmpNE(CheckKind, llvm::ConstantInt::get(Int8Ty, Kind));
     if (CGM.getLangOpts().Sanitize.has(Ordinal))
@@ -4274,6 +4330,24 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
   return Address(eltPtr, CGF.ConvertTypeForMem(eltType), eltAlign);
 }
 
+namespace {
+
+/// StructFieldAccess is a simple visitor class to grab the first l-value to
+/// r-value cast Expr.
+struct StructFieldAccess
+    : public ConstStmtVisitor<StructFieldAccess, const Expr *> {
+  const Expr *VisitCastExpr(const CastExpr *E) {
+    if (E->getCastKind() == CK_LValueToRValue)
+      return E;
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitParenExpr(const ParenExpr *E) {
+    return Visit(E->getSubExpr());
+  }
+};
+
+} // end anonymous namespace
+
 /// The offset of a field from the beginning of the record.
 static bool getFieldOffsetInBits(CodeGenFunction &CGF, const RecordDecl *RD,
                                  const FieldDecl *Field, int64_t &Offset) {
@@ -4327,6 +4401,60 @@ static std::optional<int64_t> getOffsetDifferenceInBits(CodeGenFunction &CGF,
     return std::optional<int64_t>();
 
   return std::make_optional<int64_t>(FD1Offset - FD2Offset);
+}
+
+/// EmitCountedByBoundsChecking - If the array being accessed has a "counted_by"
+/// attribute, generate bounds checking code. The "count" field is at the top
+/// level of the struct or in an anonymous struct, that's also at the top level.
+/// Future expansions may allow the "count" to reside at any place in the
+/// struct, but the value of "counted_by" will be a "simple" path to the count,
+/// i.e. "a.b.count", so we shouldn't need the full force of EmitLValue or
+/// similar to emit the correct GEP.
+void CodeGenFunction::EmitCountedByBoundsChecking(
+    const Expr *E, llvm::Value *Idx, Address Addr, QualType IdxTy,
+    QualType ArrayTy, bool Accessed, bool FlexibleArray) {
+  const auto *ME = dyn_cast<MemberExpr>(E->IgnoreImpCasts());
+  if (!ME || !ME->getMemberDecl()->getType()->isCountAttributedType())
+    return;
+
+  const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
+      getLangOpts().getStrictFlexArraysLevel();
+  if (FlexibleArray &&
+      !ME->isFlexibleArrayMemberLike(getContext(), StrictFlexArraysLevel))
+    return;
+
+  const FieldDecl *FD = cast<FieldDecl>(ME->getMemberDecl());
+  const FieldDecl *CountFD = FD->findCountedByField();
+  if (!CountFD)
+    return;
+
+  if (std::optional<int64_t> Diff =
+          getOffsetDifferenceInBits(*this, CountFD, FD)) {
+    if (!Addr.isValid()) {
+      // An invalid Address indicates we're checking a pointer array access.
+      // Emit the checked L-Value here.
+      LValue LV = EmitCheckedLValue(E, TCK_MemberAccess);
+      Addr = LV.getAddress();
+    }
+
+    // FIXME: The 'static_cast' is necessary, otherwise the result turns into a
+    // uint64_t, which messes things up if we have a negative offset difference.
+    Diff = *Diff / static_cast<int64_t>(CGM.getContext().getCharWidth());
+
+    // Create a GEP with the byte offset between the counted object and the
+    // count and use that to load the count value.
+    Addr = Builder.CreatePointerBitCastOrAddrSpaceCast(Addr, Int8PtrTy, Int8Ty);
+
+    llvm::Type *CountTy = ConvertType(CountFD->getType());
+    llvm::Value *Res =
+        Builder.CreateInBoundsGEP(Int8Ty, Addr.emitRawPointer(*this),
+                                  Builder.getInt32(*Diff), ".counted_by.gep");
+    Res = Builder.CreateAlignedLoad(CountTy, Res, getIntAlign(),
+                                    ".counted_by.load");
+
+    // Now emit the bounds checking.
+    EmitBoundsCheckImpl(E, Res, Idx, IdxTy, ArrayTy, Accessed);
+  }
 }
 
 LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
@@ -4455,46 +4583,10 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
       ArrayLV = EmitLValue(Array);
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
 
-    if (SanOpts.has(SanitizerKind::ArrayBounds)) {
-      // If the array being accessed has a "counted_by" attribute, generate
-      // bounds checking code. The "count" field is at the top level of the
-      // struct or in an anonymous struct, that's also at the top level. Future
-      // expansions may allow the "count" to reside at any place in the struct,
-      // but the value of "counted_by" will be a "simple" path to the count,
-      // i.e. "a.b.count", so we shouldn't need the full force of EmitLValue or
-      // similar to emit the correct GEP.
-      const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
-          getLangOpts().getStrictFlexArraysLevel();
-
-      if (const auto *ME = dyn_cast<MemberExpr>(Array);
-          ME &&
-          ME->isFlexibleArrayMemberLike(getContext(), StrictFlexArraysLevel) &&
-          ME->getMemberDecl()->getType()->isCountAttributedType()) {
-        const FieldDecl *FAMDecl = cast<FieldDecl>(ME->getMemberDecl());
-        if (const FieldDecl *CountFD = FAMDecl->findCountedByField()) {
-          if (std::optional<int64_t> Diff =
-                  getOffsetDifferenceInBits(*this, CountFD, FAMDecl)) {
-            CharUnits OffsetDiff = CGM.getContext().toCharUnitsFromBits(*Diff);
-
-            // Create a GEP with a byte offset between the FAM and count and
-            // use that to load the count value.
-            Addr = Builder.CreatePointerBitCastOrAddrSpaceCast(
-                ArrayLV.getAddress(), Int8PtrTy, Int8Ty);
-
-            llvm::Type *CountTy = ConvertType(CountFD->getType());
-            llvm::Value *Res = Builder.CreateInBoundsGEP(
-                Int8Ty, Addr.emitRawPointer(*this),
-                Builder.getInt32(OffsetDiff.getQuantity()), ".counted_by.gep");
-            Res = Builder.CreateAlignedLoad(CountTy, Res, getIntAlign(),
-                                            ".counted_by.load");
-
-            // Now emit the bounds checking.
-            EmitBoundsCheckImpl(E, Res, Idx, E->getIdx()->getType(),
-                                Array->getType(), Accessed);
-          }
-        }
-      }
-    }
+    if (SanOpts.has(SanitizerKind::ArrayBounds))
+      EmitCountedByBoundsChecking(Array, Idx, ArrayLV.getAddress(),
+                                  E->getIdx()->getType(), Array->getType(),
+                                  Accessed, /*FlexibleArray=*/true);
 
     // Propagate the alignment from the array itself to the result.
     QualType arrayType = Array->getType();
@@ -4503,15 +4595,53 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
         E->getType(), !getLangOpts().PointerOverflowDefined, SignedIndices,
         E->getExprLoc(), &arrayType, E->getBase());
     EltBaseInfo = ArrayLV.getBaseInfo();
-    EltTBAAInfo = CGM.getTBAAInfoForSubobject(ArrayLV, E->getType());
+    if (!CGM.getCodeGenOpts().NewStructPathTBAA) {
+      // Since CodeGenTBAA::getTypeInfoHelper only handles array types for
+      // new struct path TBAA, we must a use a plain access.
+      EltTBAAInfo = CGM.getTBAAInfoForSubobject(ArrayLV, E->getType());
+    } else if (ArrayLV.getTBAAInfo().isMayAlias()) {
+      EltTBAAInfo = TBAAAccessInfo::getMayAliasInfo();
+    } else if (ArrayLV.getTBAAInfo().isIncomplete()) {
+      // The array element is complete, even if the array is not.
+      EltTBAAInfo = CGM.getTBAAAccessInfo(E->getType());
+    } else {
+      // The TBAA access info from the array (base) lvalue is ordinary. We will
+      // adapt it to create access info for the element.
+      EltTBAAInfo = ArrayLV.getTBAAInfo();
+
+      // We retain the TBAA struct path (BaseType and Offset members) from the
+      // array. In the TBAA representation, we map any array access to the
+      // element at index 0, as the index is generally a runtime value. This
+      // element has the same offset in the base type as the array itself.
+      // If the array lvalue had no base type, there is no point trying to
+      // generate one, since an array itself is not a valid base type.
+
+      // We also retain the access type from the base lvalue, but the access
+      // size must be updated to the size of an individual element.
+      EltTBAAInfo.Size =
+          getContext().getTypeSizeInChars(E->getType()).getQuantity();
+    }
   } else {
     // The base must be a pointer; emit it with an estimate of its alignment.
-    Addr = EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
+    Address BaseAddr =
+        EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
     QualType ptrType = E->getBase()->getType();
-    Addr = emitArraySubscriptGEP(
-        *this, Addr, Idx, E->getType(), !getLangOpts().PointerOverflowDefined,
-        SignedIndices, E->getExprLoc(), &ptrType, E->getBase());
+    Addr = emitArraySubscriptGEP(*this, BaseAddr, Idx, E->getType(),
+                                 !getLangOpts().PointerOverflowDefined,
+                                 SignedIndices, E->getExprLoc(), &ptrType,
+                                 E->getBase());
+
+    if (SanOpts.has(SanitizerKind::ArrayBounds)) {
+      StructFieldAccess Visitor;
+      const Expr *Base = Visitor.Visit(E->getBase());
+
+      if (const auto *CE = dyn_cast_if_present<CastExpr>(Base);
+          CE && CE->getCastKind() == CK_LValueToRValue)
+        EmitCountedByBoundsChecking(CE, Idx, Address::invalid(),
+                                    E->getIdx()->getType(), ptrType, Accessed,
+                                    /*FlexibleArray=*/false);
+    }
   }
 
   LValue LV = MakeAddrLValue(Addr, E->getType(), EltBaseInfo, EltTBAAInfo);
@@ -5814,7 +5944,7 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
 }
 
 static GlobalDecl getGlobalDeclForDirectCall(const FunctionDecl *FD) {
-  if (FD->hasAttr<OpenCLKernelAttr>())
+  if (DeviceKernelAttr::isOpenCLSpelling(FD->getAttr<DeviceKernelAttr>()))
     return GlobalDecl(FD, KernelReferenceKind::Stub);
   return GlobalDecl(FD);
 }
@@ -5907,6 +6037,15 @@ LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E) {
     return EmitPointerToDataMemberBinaryExpr(E);
 
   assert(E->getOpcode() == BO_Assign && "unexpected binary l-value");
+
+  // Create a Key Instructions source location atom group that covers both
+  // LHS and RHS expressions. Nested RHS expressions may get subsequently
+  // separately grouped (1 below):
+  //
+  //   1. `a = b = c`  -> Two atoms.
+  //   2. `x = new(1)` -> One atom (for both addr store and value store).
+  //   3. Complex and agg assignment -> One atom.
+  ApplyAtomGroup Grp(getDebugInfo());
 
   // Note that in all of these cases, __block variables need the RHS
   // evaluated first just in case the variable gets moved by the RHS.
@@ -6236,15 +6375,20 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
   const auto *FnType = cast<FunctionType>(PointeeType);
 
   if (const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl);
-      FD && FD->hasAttr<OpenCLKernelAttr>())
+      FD && DeviceKernelAttr::isOpenCLSpelling(FD->getAttr<DeviceKernelAttr>()))
     CGM.getTargetCodeGenInfo().setOCLKernelStubCallingConvention(FnType);
+
+  bool CFIUnchecked =
+      CalleeType->hasPointeeToToCFIUncheckedCalleeFunctionType();
 
   // If we are checking indirect calls and this call is indirect, check that the
   // function pointer is a member of the bit set for the function type.
   if (SanOpts.has(SanitizerKind::CFIICall) &&
-      (!TargetDecl || !isa<FunctionDecl>(TargetDecl))) {
+      (!TargetDecl || !isa<FunctionDecl>(TargetDecl)) && !CFIUnchecked) {
     SanitizerScope SanScope(this);
     EmitSanitizerStatReport(llvm::SanStat_CFI_ICall);
+    ApplyDebugLocation ApplyTrapDI(
+        *this, SanitizerAnnotateDebugInfo(SanitizerKind::SO_CFIICall));
 
     llvm::Metadata *MD;
     if (CGM.getCodeGenOpts().SanitizeCfiICallGeneralizePointers)

@@ -486,7 +486,7 @@ public:
     return Idx;
   }
 
-  bool hasBody() const { return Body && !Body->getValues().empty(); }
+  bool hasBody() const { return Body && !Body->empty(); }
 
   void setNeededEarly() { NeededEarly = true; }
 
@@ -1436,14 +1436,14 @@ void Intrinsic::emitBodyAsBuiltinCall() {
 void Intrinsic::emitBody(StringRef CallPrefix) {
   std::vector<std::string> Lines;
 
-  if (!Body || Body->getValues().empty()) {
+  if (!Body || Body->empty()) {
     // Nothing specific to output - must output a builtin.
     emitBodyAsBuiltinCall();
     return;
   }
 
   // We have a list of "things to output". The last should be returned.
-  for (auto *I : Body->getValues()) {
+  for (auto *I : Body->getElements()) {
     if (const auto *SI = dyn_cast<StringInit>(I)) {
       Lines.push_back(replaceParamsIn(SI->getAsString()));
     } else if (const auto *DI = dyn_cast<DagInit>(I)) {
@@ -2053,8 +2053,20 @@ void NeonEmitter::createIntrinsic(const Record *R,
   auto &Entry = IntrinsicMap[Name];
 
   for (auto &I : NewTypeSpecs) {
+
+    // MFloat8 type is only available on AArch64. If encountered set ArchGuard
+    // correctly.
+    std::string NewArchGuard = ArchGuard;
+    if (Type(I.first, ".").isMFloat8()) {
+      if (NewArchGuard.empty()) {
+        NewArchGuard = "defined(__aarch64__)";
+      } else if (NewArchGuard.find("defined(__aarch64__)") ==
+                 std::string::npos) {
+        NewArchGuard = "defined(__aarch64__) && (" + NewArchGuard + ")";
+      }
+    }
     Entry.emplace_back(R, Name, Proto, I.first, I.second, CK, Body, *this,
-                       ArchGuard, TargetGuard, IsUnavailable, BigEndianSafe);
+                       NewArchGuard, TargetGuard, IsUnavailable, BigEndianSafe);
     Out.push_back(&Entry.back());
   }
 

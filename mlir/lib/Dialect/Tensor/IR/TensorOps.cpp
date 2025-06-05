@@ -22,6 +22,7 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
@@ -33,9 +34,12 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
 #include <optional>
+#include <vector>
 
 using namespace mlir;
 using namespace mlir::tensor;
@@ -330,8 +334,9 @@ bool mlir::tensor::canFoldIntoConsumerOp(CastOp castOp) {
 
 /// Determines whether the tensor::CastOp casts to a more static version of the
 /// source tensor. This is useful to fold into a producing op and implement
-/// canonicaliation patterns with the `tensor.cast` op as the root, but producer
-/// being from different dialects. Returns true when all conditions are met:
+/// canonicalization patterns with the `tensor.cast` op as the root, but
+/// producer being from different dialects. Returns true when all conditions are
+/// met:
 /// 1. source and result and ranked tensors with same element type and rank.
 /// 2. the result type has more static information than the source.
 ///
@@ -773,11 +778,110 @@ struct SingleInputConcatOp : public OpRewritePattern<ConcatOp> {
     return success();
   }
 };
+
+/// Propagate static shapes into the operands of a `tensor.concat`.
+///
+/// `tensor.concat` requires every operand to match on all dimensions except the
+/// concatenation dimension. If one operand is already static in those
+/// dimensions, the other operands may safely be refined to that same static
+/// shape.
+///
+/// Example:
+///
+/// ```mlir
+///   %2 = tensor.concat dim(0) %0, %1: (tensor<?x12xi32>, tensor<?x?xi32>) ->
+///        tensor<?x12xi32>
+/// ```
+/// ->
+/// ```mlir
+///   %cast = tensor.cast %1 : tensor<?x?xi32> to tensor<?x12xi32>
+///   %2 = tensor.concat dim(0) %0, %cast :
+///        (tensor<?x12xi32>, tensor<?x12xi32>) -> tensor<?x12xi32>
+/// ```
+struct InferConcatOperandTypes : public OpRewritePattern<ConcatOp> {
+  using OpRewritePattern<ConcatOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ConcatOp concatOp,
+                                PatternRewriter &rewriter) const override {
+    int64_t dim = concatOp.getDim();
+    RankedTensorType inferredResultType =
+        ConcatOp::inferResultType(dim, concatOp->getOperandTypes());
+
+    // Find operands for which a more static shape can be inferred.
+    LogicalResult matched = failure();
+    // Inferred operand shapes are identical in every dimension except the
+    // concatenation dimension.
+    SmallVector<int64_t> inferredOperandShape(inferredResultType.getShape());
+    for (auto [operandIdx, operandType] :
+         llvm::enumerate(concatOp->getOperandTypes())) {
+      // Compute inferred type for operand.
+      inferredOperandShape[dim] =
+          cast<RankedTensorType>(operandType).getDimSize(dim);
+      auto inferredOperandType = RankedTensorType::get(
+          inferredOperandShape, inferredResultType.getElementType());
+
+      // Check if inferred type is more static.
+      if (!preservesStaticInformation(inferredOperandType, operandType)) {
+        matched = success();
+
+        // Use refined operand type and create cast from original operand.
+        auto castOp =
+            rewriter.create<CastOp>(concatOp->getLoc(), inferredOperandType,
+                                    concatOp.getOperand(operandIdx));
+        rewriter.modifyOpInPlace(concatOp, [=, operandIdx = operandIdx] {
+          concatOp->setOperand(operandIdx, castOp->getResult(0));
+        });
+      }
+    }
+
+    return matched;
+  }
+};
+
+// Ensure `tensor.concat`'s result type is at least as static as can be inferred
+// from its operand types.
+///
+/// Example:
+/// ```mlir
+///   %2 = tensor.concat dim(0) %0, %1: (tensor<?x12xi32>, tensor<?x12xi32>) ->
+///   tensor<?x?xi32>
+/// ```
+/// ->
+/// ```mlir
+///   %2 = tensor.concat dim(0) %0, %cast : (tensor<?x12xi32>, tensor<?x12xi32>)
+///   -> tensor<?x12xi32> %cast = tensor.cast %2 : tensor<?x12xi32> to
+///   tensor<?x?xi32>
+/// ```
+struct InferConcatResultType : public OpRewritePattern<ConcatOp> {
+  using OpRewritePattern<ConcatOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ConcatOp concatOp,
+                                PatternRewriter &rewriter) const override {
+    int64_t dim = concatOp.getDim();
+    RankedTensorType inferredResultType =
+        ConcatOp::inferResultType(dim, concatOp->getOperandTypes());
+
+    // The result type should be at least as static as inferred result type.
+    if (preservesStaticInformation(inferredResultType,
+                                   concatOp.getResultType())) {
+      return failure();
+    }
+
+    auto newConcatOp = rewriter.create<ConcatOp>(
+        concatOp->getLoc(), inferredResultType, dim, concatOp->getOperands());
+    rewriter.replaceOpWithNewOp<CastOp>(concatOp, concatOp.getResultType(),
+                                        newConcatOp);
+
+    return success();
+  }
+};
 } // namespace
 
 void ConcatOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
-  results.add<SingleInputConcatOp>(context);
+  results
+      .add<SingleInputConcatOp, InferConcatOperandTypes, InferConcatResultType>(
+          context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1187,6 +1291,68 @@ struct ExtractFromTensorCast : public OpRewritePattern<tensor::ExtractOp> {
   }
 };
 
+/// Canonicalizes the pattern of the form
+///
+/// %val = tensor.collapse_shape %src[[0, 1]] : tensor<3x4xf64> into
+/// tensor<12xf64>
+/// %extracted_element = tensor.extract %val[%c10] :
+/// tensor<12xf64>
+///
+/// to
+///
+/// %extracted_element = tensor.extract %src[%c2, %c2] : tensor<3x4xf64>
+struct ExtractFromCollapseShape : public OpRewritePattern<tensor::ExtractOp> {
+  using OpRewritePattern<tensor::ExtractOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::ExtractOp extractOp,
+                                PatternRewriter &rewriter) const final {
+    auto collapseOp =
+        extractOp.getTensor().getDefiningOp<tensor::CollapseShapeOp>();
+    if (!collapseOp)
+      return failure();
+    if (!collapseOp.getSrcType().hasStaticShape())
+      return failure();
+
+    auto sourceSizes = collapseOp.getSrcType().getShape();
+
+    SmallVector<Value> indices(extractOp.getIndices().begin(),
+                               extractOp.getIndices().end());
+    SmallVector<Value> sourceIndices;
+    for (auto [index, group] :
+         llvm::zip(indices, collapseOp.getReassociationIndices())) {
+      assert(!group.empty() && "association indices groups cannot be empty");
+      auto groupSize = group.size();
+
+      if (groupSize == 1) {
+        sourceIndices.push_back(index);
+        continue;
+      }
+
+      SmallVector<int64_t> basis =
+          llvm::map_to_vector(group, [&](int64_t d) { return sourceSizes[d]; });
+      auto delinearize = rewriter.create<affine::AffineDelinearizeIndexOp>(
+          extractOp.getLoc(), index, basis, /*hasOuterBound=*/true);
+      llvm::append_range(sourceIndices, delinearize.getResults());
+    }
+    if (collapseOp.getReassociationIndices().empty()) {
+      auto zeroAffineMap = rewriter.getConstantAffineMap(0);
+      int64_t srcRank =
+          cast<RankedTensorType>(collapseOp.getSrcType()).getRank();
+      OpFoldResult ofr = affine::makeComposedFoldedAffineApply(
+          rewriter, extractOp.getLoc(), zeroAffineMap,
+          ArrayRef<OpFoldResult>{});
+      for (int64_t i = 0; i < srcRank; i++) {
+        sourceIndices.push_back(
+            getValueOrCreateConstantIndexOp(rewriter, extractOp.getLoc(), ofr));
+      }
+    }
+
+    rewriter.replaceOpWithNewOp<tensor::ExtractOp>(
+        extractOp, collapseOp.getSrc(), sourceIndices);
+    return success();
+  }
+};
+
 } // namespace
 
 void ExtractOp::getAsmResultNames(
@@ -1200,6 +1366,23 @@ LogicalResult ExtractOp::verify() {
   if (tensorType.getRank() != static_cast<int64_t>(getIndices().size()))
     return emitOpError("incorrect number of indices for extract_element");
   return success();
+}
+
+/// If we have an ExtractOp consuming an InsertOp with the same
+/// indices, we can return the InsertOp's scalar directly.
+// TODO: This only checks the immediate producer; extend to go up the
+// insert/extract chain if the slices are disjoint.
+static Value foldExtractAfterInsert(ExtractOp extractOp) {
+  auto insertOp = extractOp.getTensor().getDefiningOp<InsertOp>();
+
+  auto isSame = [](Value a, Value b) {
+    return getAsOpFoldResult(a) == getAsOpFoldResult(b);
+  };
+  if (insertOp && insertOp.getScalar().getType() == extractOp.getType() &&
+      llvm::equal(insertOp.getIndices(), extractOp.getIndices(), isSame))
+    return insertOp.getScalar();
+
+  return {};
 }
 
 OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
@@ -1249,12 +1432,20 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
       return elementsAttr.getValues<Attribute>()[indices];
   }
 
+  if (Value result = foldExtractAfterInsert(*this))
+    return result;
+
   return {};
 }
 
 void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
   results.add<ExtractFromTensorCast>(context);
+}
+
+void mlir::tensor::populateFoldCollapseExtractPatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<ExtractFromCollapseShape>(patterns.getContext());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1356,7 +1547,7 @@ RankedTensorType GatherOp::inferResultType(RankedTensorType sourceType,
   SmallVector<int64_t> resultShape(indicesType.getShape().drop_back());
   resultShape.reserve(resultShape.size() + sourceType.getRank());
   for (int64_t idx : llvm::seq<int64_t>(0, sourceType.getRank())) {
-    if (std::binary_search(gatherDims.begin(), gatherDims.end(), idx)) {
+    if (llvm::binary_search(gatherDims, idx)) {
       if (!rankReduced)
         resultShape.push_back(1);
       continue;
@@ -1433,6 +1624,76 @@ OpFoldResult GatherOp::fold(FoldAdaptor adaptor) {
 // InsertOp
 //===----------------------------------------------------------------------===//
 
+namespace {
+
+/// Pattern to fold an insert op of a constant destination and scalar to a new
+/// constant.
+///
+/// Example:
+/// ```
+///   %0 = arith.constant dense<[1.0, 2.0, 3.0, 4.0]> : tensor<4xf32>
+///   %c0 = arith.constant 0 : index
+///   %c4_f32 = arith.constant 4.0 : f32
+///   %1 = tensor.insert %c4_f32 into %0[%c0] : tensor<4xf32>
+/// ```
+/// is rewritten into:
+/// ```
+///   %1 = arith.constant dense<[4.0, 2.0, 3.0, 4.0]> : tensor<4xf32>
+/// ```
+class InsertOpConstantFold final : public OpRewritePattern<InsertOp> {
+public:
+  using OpRewritePattern<InsertOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(InsertOp insertOp,
+                                PatternRewriter &rewriter) const override {
+    // Requires a ranked tensor type.
+    auto destType =
+        llvm::dyn_cast<RankedTensorType>(insertOp.getDest().getType());
+    if (!destType)
+      return failure();
+
+    // Pattern requires constant indices
+    SmallVector<uint64_t, 8> indices;
+    for (OpFoldResult indice : getAsOpFoldResult(insertOp.getIndices())) {
+      auto indiceAttr = dyn_cast<Attribute>(indice);
+      if (!indiceAttr)
+        return failure();
+      indices.push_back(llvm::cast<IntegerAttr>(indiceAttr).getInt());
+    }
+
+    // Requires a constant scalar to insert
+    OpFoldResult scalar = getAsOpFoldResult(insertOp.getScalar());
+    Attribute scalarAttr = dyn_cast<Attribute>(scalar);
+    if (!scalarAttr)
+      return failure();
+
+    if (auto constantOp = dyn_cast_or_null<arith::ConstantOp>(
+            insertOp.getDest().getDefiningOp())) {
+      if (auto sourceAttr =
+              llvm::dyn_cast<ElementsAttr>(constantOp.getValue())) {
+        // Update the attribute at the inserted index.
+        auto sourceValues = sourceAttr.getValues<Attribute>();
+        auto flattenedIndex = sourceAttr.getFlattenedIndex(indices);
+        std::vector<Attribute> updatedValues;
+        updatedValues.reserve(sourceAttr.getNumElements());
+        for (unsigned i = 0; i < sourceAttr.getNumElements(); ++i) {
+          updatedValues.push_back(i == flattenedIndex ? scalarAttr
+                                                      : sourceValues[i]);
+        }
+        rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+            insertOp, sourceAttr.getType(),
+            DenseElementsAttr::get(cast<ShapedType>(sourceAttr.getType()),
+                                   updatedValues));
+        return success();
+      }
+    }
+
+    return failure();
+  }
+};
+
+} // namespace
+
 void InsertOp::getAsmResultNames(
     function_ref<void(Value, StringRef)> setNameFn) {
   setNameFn(getResult(), "inserted");
@@ -1454,6 +1715,11 @@ OpFoldResult InsertOp::fold(FoldAdaptor adaptor) {
       if (scalar == splatDest.getSplatValue<Attribute>())
         return dest;
   return {};
+}
+
+void InsertOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                           MLIRContext *context) {
+  results.add<InsertOpConstantFold>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2738,8 +3004,7 @@ OpFoldResult InsertSliceOp::fold(FoldAdaptor) {
     return getResult();
   if (auto result = foldInsertAfterExtractSlice(*this))
     return result;
-  if (llvm::any_of(getMixedSizes(),
-                   [](OpFoldResult ofr) { return isConstantIntValue(ofr, 0); }))
+  if (llvm::any_of(getMixedSizes(), isZeroInteger))
     return getDest();
   return OpFoldResult();
 }

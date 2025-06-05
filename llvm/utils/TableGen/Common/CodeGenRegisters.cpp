@@ -99,7 +99,7 @@ void CodeGenSubRegIndex::updateComponents(CodeGenRegBank &RegBank) {
   if (!Parts.empty()) {
     if (Parts.size() < 2)
       PrintFatalError(TheDef->getLoc(),
-                      "CoveredBySubRegs must have two or more entries");
+                      "CoveringSubRegIndices must have two or more entries");
     SmallVector<CodeGenSubRegIndex *, 8> IdxParts;
     for (const Record *Part : Parts)
       IdxParts.push_back(RegBank.getSubRegIdx(Part));
@@ -650,8 +650,7 @@ struct TupleExpander : SetTheory::Expander {
 
       // Take the cost list of the first register in the tuple.
       const ListInit *CostList = Proto->getValueAsListInit("CostPerUse");
-      SmallVector<const Init *, 2> CostPerUse;
-      llvm::append_range(CostPerUse, *CostList);
+      SmallVector<const Init *, 2> CostPerUse(CostList->getElements());
 
       const StringInit *AsmName = StringInit::get(RK, "");
       if (!RegNames.empty()) {
@@ -771,7 +770,7 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
 
   // Alternative allocation orders may be subsets.
   SetTheory::RecSet Order;
-  for (auto [Idx, AltOrderElem] : enumerate(AltOrders->getValues())) {
+  for (auto [Idx, AltOrderElem] : enumerate(AltOrders->getElements())) {
     RegBank.getSets().evaluate(AltOrderElem, Order, R->getLoc());
     Orders[1 + Idx].append(Order.begin(), Order.end());
     // Verify that all altorder members are regclass members.
