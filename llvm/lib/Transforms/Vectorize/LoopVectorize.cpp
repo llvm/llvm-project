@@ -4050,7 +4050,6 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPDef::VPScalarIVStepsSC:
       case VPDef::VPReplicateSC:
       case VPDef::VPInstructionSC:
-      case VPDef::VPCanonicalIVPHISC:
       case VPDef::VPVectorPointerSC:
       case VPDef::VPVectorEndPointerSC:
       case VPDef::VPExpandSCEVSC:
@@ -8520,6 +8519,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
                             m_Specific(Plan->getCanonicalIV()), m_VPValue())) &&
            "Did not find the canonical IV increment");
     cast<VPRecipeWithIRFlags>(IVInc)->dropPoisonGeneratingFlags();
+    Plan->getCanonicalIVInfo().HasNUW = false;
   }
 
   // ---------------------------------------------------------------------------
@@ -8583,8 +8583,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
       // latter are added above for masking.
       // FIXME: Migrate code relying on the underlying instruction from VPlan0
       // to construct recipes below to not use the underlying instruction.
-      if (isa<VPCanonicalIVPHIRecipe, VPWidenCanonicalIVRecipe, VPBlendRecipe>(
-              &R) ||
+      if (isa<VPWidenCanonicalIVRecipe, VPBlendRecipe>(&R) ||
           (isa<VPInstruction>(&R) && !UnderlyingValue))
         continue;
 
@@ -8771,8 +8770,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
   VPRecipeBuilder RecipeBuilder(*Plan, OrigLoop, TLI, &TTI, Legal, CM, PSE,
                                 Builder, BlockMaskCache, nullptr /*LVer*/);
   for (auto &R : Plan->getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
-    if (isa<VPCanonicalIVPHIRecipe>(&R))
-      continue;
     auto *HeaderR = cast<VPHeaderPHIRecipe>(&R);
     RecipeBuilder.setRecipe(HeaderR->getUnderlyingInstr(), HeaderR);
   }
@@ -9522,8 +9519,6 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
   SmallPtrSet<PHINode *, 2> EpiWidenedPhis;
   for (VPRecipeBase &R :
        EpiPlan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
-    if (isa<VPCanonicalIVPHIRecipe>(&R))
-      continue;
     EpiWidenedPhis.insert(
         cast<PHINode>(R.getVPSingleValue()->getUnderlyingValue()));
   }
@@ -9584,8 +9579,9 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
   VPPhi *ResumePhi = nullptr;
   if (ResumePhiIter == MainScalarPH->phis().end()) {
     VPBuilder ScalarPHBuilder(MainScalarPH, MainScalarPH->begin());
+    Type *Ty = VPTypeAnalysis(MainPlan).inferScalarType(VectorTC);
     ResumePhi = ScalarPHBuilder.createScalarPhi(
-        {VectorTC, MainPlan.getCanonicalIV()->getStartValue()}, {},
+        {VectorTC, MainPlan.getOrAddLiveIn(Constant::getNullValue(Ty))}, {},
         "vec.epilog.resume.val");
   } else {
     ResumePhi = cast<VPPhi>(&*ResumePhiIter);
@@ -9609,13 +9605,14 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
   VPBasicBlock *Header = VectorLoop->getEntryBasicBlock();
   Header->setName("vec.epilog.vector.body");
 
-  auto *IV = cast<VPCanonicalIVPHIRecipe>(&*Header->begin());
-  // When vectorizing the epilogue loop, the canonical induction start
-  // value needs to be changed from zero to the value after the main
-  // vector loop. Find the resume value created during execution of the main
-  // VPlan. It must be the first phi in the loop preheader.
-  // FIXME: Improve modeling for canonical IV start values in the epilogue
-  // loop.
+  DenseMap<Value *, Value *> ToFrozen;
+  // Ensure that the start values for all header phi recipes are updated before
+  // vectorizing the epilogue loop.
+  auto *IV = Plan.getCanonicalIV();
+  // When vectorizing the epilogue loop, the canonical induction start value
+  // needs to be changed from zero to the value after the main vector loop. Find
+  // the resume value created during execution of the main VPlan.
+  // FIXME: Improve modeling for canonical IV start values in the epilogue loop.
   using namespace llvm::PatternMatch;
   PHINode *EPResumeVal = &*L->getLoopPreheader()->phis().begin();
   for (Value *Inc : EPResumeVal->incoming_values()) {
@@ -9625,100 +9622,97 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
            "Must only have a single non-zero incoming value");
     EPI.VectorTripCount = Inc;
   }
-      // If we didn't find a non-zero vector trip count, all incoming values
-      // must be zero, which also means the vector trip count is zero. Pick the
-      // first zero as vector trip count.
-      // TODO: We should not choose VF * UF so the main vector loop is known to
-      // be dead.
-      if (!EPI.VectorTripCount) {
-        assert(
-            EPResumeVal->getNumIncomingValues() > 0 &&
-            all_of(EPResumeVal->incoming_values(),
-                   [](Value *Inc) { return match(Inc, m_SpecificInt(0)); }) &&
-            "all incoming values must be 0");
-        EPI.VectorTripCount = EPResumeVal->getOperand(0);
-      }
-      VPValue *VPV = Plan.getOrAddLiveIn(EPResumeVal);
-      assert(all_of(IV->users(),
-                    [](const VPUser *U) {
-                      return isa<VPScalarIVStepsRecipe>(U) ||
-                             isa<VPDerivedIVRecipe>(U) ||
-                             cast<VPRecipeBase>(U)->isScalarCast() ||
-                             cast<VPInstruction>(U)->getOpcode() ==
-                                 Instruction::Add;
-                    }) &&
-             "the canonical IV should only be used by its increment or "
-             "ScalarIVSteps when resetting the start value");
-      VPBuilder Builder(Header, Header->getFirstNonPhi());
-      VPInstruction *Add = Builder.createNaryOp(Instruction::Add, {IV, VPV});
-      IV->replaceAllUsesWith(Add);
-      Add->setOperand(0, IV);
+  // If we didn't find a non-zero vector trip count, all incoming values
+  // must be zero, which also means the vector trip count is zero. Pick the
+  // first zero as vector trip count.
+  // TODO: We should not choose VF * UF so the main vector loop is known to
+  // be dead.
+  if (!EPI.VectorTripCount) {
+    assert(EPResumeVal->getNumIncomingValues() > 0 &&
+           all_of(EPResumeVal->incoming_values(),
+                  [](Value *Inc) { return match(Inc, m_SpecificInt(0)); }) &&
+           "all incoming values must be 0");
+    EPI.VectorTripCount = EPResumeVal->getOperand(0);
+  }
+  VPValue *VPV = Plan.getOrAddLiveIn(EPResumeVal);
+  assert(all_of(IV->users(),
+                [](const VPUser *U) {
+                  return isa<VPScalarIVStepsRecipe>(U) ||
+                         isa<VPDerivedIVRecipe>(U) ||
+                         cast<VPRecipeBase>(U)->isScalarCast() ||
+                         cast<VPInstruction>(U)->getOpcode() ==
+                             Instruction::Add;
+                }) &&
+         "the canonical IV should only be used by its increment or "
+         "ScalarIVSteps when resetting the start value");
+  VPBuilder Builder(Header, Header->getFirstNonPhi());
+  VPInstruction *Add = Builder.createNaryOp(Instruction::Add, {IV, VPV});
+  IV->replaceAllUsesWith(Add);
+  Add->setOperand(0, IV);
 
-      DenseMap<Value *, Value *> ToFrozen;
-      // Ensure that the start values for all header phi recipes are updated
-      // before vectorizing the epilogue loop.
-      for (VPRecipeBase &R : drop_begin(Header->phis())) {
-        Value *ResumeV = nullptr;
-        // TODO: Move setting of resume values to prepareToExecute.
-        if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {
-          auto *RdxResult = cast<VPInstruction>(
-              *find_if(ReductionPhi->users(), [](VPUser *U) {
-                auto *VPI = dyn_cast<VPInstruction>(U);
-                return VPI &&
-                       (VPI->getOpcode() == VPInstruction::ComputeAnyOfResult ||
-                        VPI->getOpcode() ==
-                            VPInstruction::ComputeReductionResult ||
-                        VPI->getOpcode() == VPInstruction::ComputeFindIVResult);
-              }));
-          ResumeV = cast<PHINode>(ReductionPhi->getUnderlyingInstr())
-                        ->getIncomingValueForBlock(L->getLoopPreheader());
-          RecurKind RK = ReductionPhi->getRecurrenceKind();
-          if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) {
-            Value *StartV = RdxResult->getOperand(1)->getLiveInIRValue();
-            // VPReductionPHIRecipes for AnyOf reductions expect a boolean as
-            // start value; compare the final value from the main vector loop
-            // to the start value.
-            BasicBlock *PBB = cast<Instruction>(ResumeV)->getParent();
-            IRBuilder<> Builder(PBB, PBB->getFirstNonPHIIt());
-            ResumeV = Builder.CreateICmpNE(ResumeV, StartV);
-          } else if (RecurrenceDescriptor::isFindIVRecurrenceKind(RK)) {
-            Value *StartV = getStartValueFromReductionResult(RdxResult);
-            ToFrozen[StartV] = cast<PHINode>(ResumeV)->getIncomingValueForBlock(
-                EPI.MainLoopIterationCountCheck);
+  // Ensure that the start values for all header phi recipes are updated before
+  // vectorizing the epilogue loop.
+  for (VPRecipeBase &R : Header->phis()) {
+    Value *ResumeV = nullptr;
+    // TODO: Move setting of resume values to prepareToExecute.
+    if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {
+      auto *RdxResult =
+          cast<VPInstruction>(*find_if(ReductionPhi->users(), [](VPUser *U) {
+            auto *VPI = dyn_cast<VPInstruction>(U);
+            return VPI &&
+                   (VPI->getOpcode() == VPInstruction::ComputeAnyOfResult ||
+                    VPI->getOpcode() == VPInstruction::ComputeReductionResult ||
+                    VPI->getOpcode() == VPInstruction::ComputeFindIVResult);
+          }));
+      ResumeV = cast<PHINode>(ReductionPhi->getUnderlyingInstr())
+                    ->getIncomingValueForBlock(L->getLoopPreheader());
+      RecurKind RK = ReductionPhi->getRecurrenceKind();
+      if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) {
+        Value *StartV = RdxResult->getOperand(1)->getLiveInIRValue();
+        // VPReductionPHIRecipes for AnyOf reductions expect a boolean as
+        // start value; compare the final value from the main vector loop
+        // to the start value.
+        BasicBlock *PBB = cast<Instruction>(ResumeV)->getParent();
+        IRBuilder<> Builder(PBB, PBB->getFirstNonPHIIt());
+        ResumeV = Builder.CreateICmpNE(ResumeV, StartV);
+      } else if (RecurrenceDescriptor::isFindIVRecurrenceKind(RK)) {
+        Value *StartV = getStartValueFromReductionResult(RdxResult);
+        ToFrozen[StartV] = cast<PHINode>(ResumeV)->getIncomingValueForBlock(
+            EPI.MainLoopIterationCountCheck);
 
-            // VPReductionPHIRecipe for FindFirstIV/FindLastIV reductions
-            // requires an adjustment to the resume value. The resume value is
-            // adjusted to the sentinel value when the final value from the main
-            // vector loop equals the start value. This ensures correctness when
-            // the start value might not be less than the minimum value of a
-            // monotonically increasing induction variable.
-            BasicBlock *ResumeBB = cast<Instruction>(ResumeV)->getParent();
-            IRBuilder<> Builder(ResumeBB, ResumeBB->getFirstNonPHIIt());
-            Value *Cmp = Builder.CreateICmpEQ(ResumeV, ToFrozen[StartV]);
-            Value *Sentinel = RdxResult->getOperand(2)->getLiveInIRValue();
-            ResumeV = Builder.CreateSelect(Cmp, Sentinel, ResumeV);
-          } else {
-            VPValue *StartVal = Plan.getOrAddLiveIn(ResumeV);
-            auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
-            if (auto *VPI = dyn_cast<VPInstruction>(PhiR->getStartValue())) {
-              assert(VPI->getOpcode() == VPInstruction::ReductionStartVector &&
-                     "unexpected start value");
-              VPI->setOperand(0, StartVal);
-              continue;
-            }
-          }
-        } else {
-          // Retrieve the induction resume values for wide inductions from
-          // their original phi nodes in the scalar loop.
-          PHINode *IndPhi = cast<VPWidenInductionRecipe>(&R)->getPHINode();
-          // Hook up to the PHINode generated by a ResumePhi recipe of main
-          // loop VPlan, which feeds the scalar loop.
-          ResumeV = IndPhi->getIncomingValueForBlock(L->getLoopPreheader());
-        }
-        assert(ResumeV && "Must have a resume value");
+        // VPReductionPHIRecipe for FindFirstIV/FindLastIV reductions
+        // requires an adjustment to the resume value. The resume value is
+        // adjusted to the sentinel value when the final value from the main
+        // vector loop equals the start value. This ensures correctness when
+        // the start value might not be less than the minimum value of a
+        // monotonically increasing induction variable.
+        BasicBlock *ResumeBB = cast<Instruction>(ResumeV)->getParent();
+        IRBuilder<> Builder(ResumeBB, ResumeBB->getFirstNonPHIIt());
+        Value *Cmp = Builder.CreateICmpEQ(ResumeV, ToFrozen[StartV]);
+        Value *Sentinel = RdxResult->getOperand(2)->getLiveInIRValue();
+        ResumeV = Builder.CreateSelect(Cmp, Sentinel, ResumeV);
+      } else {
         VPValue *StartVal = Plan.getOrAddLiveIn(ResumeV);
-        cast<VPHeaderPHIRecipe>(&R)->setStartValue(StartVal);
+        auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
+        if (auto *VPI = dyn_cast<VPInstruction>(PhiR->getStartValue())) {
+          assert(VPI->getOpcode() == VPInstruction::ReductionStartVector &&
+                 "unexpected start value");
+          VPI->setOperand(0, StartVal);
+          continue;
+        }
       }
+    } else {
+      // Retrieve the induction resume values for wide inductions from
+      // their original phi nodes in the scalar loop.
+      PHINode *IndPhi = cast<VPWidenInductionRecipe>(&R)->getPHINode();
+      // Hook up to the PHINode generated by a ResumePhi recipe of main
+      // loop VPlan, which feeds the scalar loop.
+      ResumeV = IndPhi->getIncomingValueForBlock(L->getLoopPreheader());
+    }
+    assert(ResumeV && "Must have a resume value");
+    VPValue *StartVal = Plan.getOrAddLiveIn(ResumeV);
+    cast<VPHeaderPHIRecipe>(&R)->setStartValue(StartVal);
+  }
 
   // For some VPValues in the epilogue plan we must re-use the generated IR
   // values from the main plan. Replace them with live-in VPValues.
