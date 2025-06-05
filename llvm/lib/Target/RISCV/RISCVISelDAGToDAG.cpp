@@ -698,6 +698,9 @@ bool RISCVDAGToDAGISel::tryUnsignedBitfieldInsertInZero(SDNode *Node, SDLoc DL,
 
   unsigned Opc = RISCV::NDS_BFOZ;
 
+  // If the Lsb is equal to the Msb, then the Lsb should be 0.
+  if (Lsb == Msb)
+    Lsb = 0;
   SDNode *Ubi = CurDAG->getMachineNode(Opc, DL, VT, X,
                                        CurDAG->getTargetConstant(Lsb, DL, VT),
                                        CurDAG->getTargetConstant(Msb, DL, VT));
@@ -1350,8 +1353,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
           //     If XLen = 32 and C2 = 12, then
           //     Msb = 32 - 8 - 1 = 23 and Lsb = 12
           const unsigned Msb = XLen - Leading - 1;
-          // If Msb is equal to C2, the Lsb will be 0 instead of C2.
-          unsigned Lsb = Msb == C2 ? 0 : C2;
+          const unsigned Lsb = C2;
           if (tryUnsignedBitfieldInsertInZero(Node, DL, VT, X, Msb, Lsb))
             return;
 
