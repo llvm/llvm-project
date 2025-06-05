@@ -150,8 +150,7 @@ opportunities(Function &F,
       // Regardless whether referenced, add the function arguments as
       // replacement possibility with the goal of reducing the number of (used)
       // function arguments, possibly created by the operands-to-args.
-      for (Argument &Arg : F.args())
-        ReferencedVals.insert(&Arg);
+      ReferencedVals.insert_range(llvm::make_pointer_range(F.args()));
 
       // After all candidates have been added, it doesn't need to be a set
       // anymore.
