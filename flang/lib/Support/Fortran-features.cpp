@@ -162,7 +162,7 @@ bool LanguageFeatureControl::ApplyCLIOption(std::string input) {
     negated = true;
     input = input.substr(3);
   }
-  if (auto it = cliOptions_.find(input); it != cliOptions_.end()) {
+  if (auto it{cliOptions_.find(input)}; it != cliOptions_.end()) {
     if (std::holds_alternative<LanguageFeature>(it->second)) {
       EnableWarning(std::get<LanguageFeature>(it->second), !negated);
       return true;
@@ -175,7 +175,7 @@ bool LanguageFeatureControl::ApplyCLIOption(std::string input) {
   return false;
 }
 
-void LanguageFeatureControl::ReplaceCliCanonicalSpelling(
+void LanguageFeatureControl::ReplaceCLICanonicalSpelling(
     LanguageFeature f, std::string input) {
   std::string_view old{languageFeatureCliCanonicalSpelling_[EnumToInt(f)]};
   cliOptions_.erase(std::string{old});
@@ -183,7 +183,7 @@ void LanguageFeatureControl::ReplaceCliCanonicalSpelling(
   cliOptions_.insert({input, {f}});
 }
 
-void LanguageFeatureControl::ReplaceCliCanonicalSpelling(
+void LanguageFeatureControl::ReplaceCLICanonicalSpelling(
     UsageWarning w, std::string input) {
   std::string_view old{usageWarningCliCanonicalSpelling_[EnumToInt(w)]};
   cliOptions_.erase(std::string{old});

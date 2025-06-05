@@ -72,7 +72,7 @@ constexpr std::array<std::string_view, ITEMS> EnumNames(const char *p) {
     return NAME##_names[static_cast<std::size_t>(e)]; \
   } \
   [[maybe_unused]] inline void ForEach##NAME(std::function<void(NAME)> f) { \
-    for (std::size_t i = 0; i < NAME##_enumSize; ++i) { \
+    for (std::size_t i{0}; i < NAME##_enumSize; ++i) { \
       f(static_cast<NAME>(i)); \
     } \
   }

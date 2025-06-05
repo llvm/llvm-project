@@ -117,19 +117,19 @@ public:
   bool ShouldWarn(UsageWarning w) const { return warnUsage_.test(w); }
   // CLI options
   bool ApplyCLIOption(std::string input);
-  void AddAlternativeCliSpelling(LanguageFeature f, std::string input) {
+  void AddAlternativeCLISpelling(LanguageFeature f, std::string input) {
     cliOptions_.insert({input, {f}});
   }
-  void AddAlternativeCliSpelling(UsageWarning w, std::string input) {
+  void AddAlternativeCLISpelling(UsageWarning w, std::string input) {
     cliOptions_.insert({input, {w}});
   }
-  void ReplaceCliCanonicalSpelling(LanguageFeature f, std::string input);
-  void ReplaceCliCanonicalSpelling(UsageWarning w, std::string input);
-  std::string_view getDefaultCliSpelling(LanguageFeature f) const {
-    return languageFeatureCliCanonicalSpelling_[EnumToInt(f)];
+  void ReplaceCLICanonicalSpelling(LanguageFeature f, std::string input);
+  void ReplaceCLICanonicalSpelling(UsageWarning w, std::string input);
+  std::string_view getDefaultCLISpelling(LanguageFeature f) const {
+    return languageFeatureCLICanonicalSpelling_[EnumToInt(f)];
   };
-  std::string_view getDefaultCliSpelling(UsageWarning w) const {
-    return usageWarningCliCanonicalSpelling_[EnumToInt(w)];
+  std::string_view getDefaultCLISpelling(UsageWarning w) const {
+    return usageWarningCLICanonicalSpelling_[EnumToInt(w)];
   };
   // Return all spellings of operators names, depending on features enabled
   std::vector<const char *> GetNames(LogicalOperator) const;
@@ -142,9 +142,9 @@ private:
       cliOptions_;
   // These two arrays map the enum values to their cannonical CLI spellings.
   std::array<std::string_view, LanguageFeature_enumSize>
-      languageFeatureCliCanonicalSpelling_;
+      languageFeatureCLICanonicalSpelling_;
   std::array<std::string_view, UsageWarning_enumSize>
-      usageWarningCliCanonicalSpelling_;
+      usageWarningCLICanonicalSpelling_;
   LanguageFeatures disable_;
   LanguageFeatures warnLanguage_;
   bool warnAllLanguage_{false};
