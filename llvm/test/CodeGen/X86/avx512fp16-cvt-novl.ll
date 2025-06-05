@@ -8,8 +8,8 @@ define <2 x half> @vector_sint64ToHalf(<2 x i64> %int64) {
 ; CHECK-NEXT:    vcvtqq2ph %zmm0, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-    %fp16 = sitofp <2 x i64> %int64 to <2 x half>
-    ret <2 x half> %fp16
+  %fp16 = sitofp <2 x i64> %int64 to <2 x half>
+  ret <2 x half> %fp16
 }
 
 define <4 x half> @vector_sint32ToHalf(<4 x i32> %int32) {
@@ -27,8 +27,8 @@ define <4 x half> @vector_sint32ToHalf(<4 x i32> %int32) {
 ; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; CHECK-NEXT:    retq
-    %fp16 = sitofp <4 x i32> %int32 to <4 x half>
-    ret <4 x half> %fp16
+  %fp16 = sitofp <4 x i32> %int32 to <4 x half>
+  ret <4 x half> %fp16
 }
 
 define <8 x half> @vector_sint16ToHalf(<8 x i16> %int16) {
@@ -66,8 +66,8 @@ define <8 x half> @vector_sint16ToHalf(<8 x i16> %int16) {
 ; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
 ; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    retq
-    %fp16 = sitofp <8 x i16> %int16 to <8 x half>
-    ret <8 x half> %fp16
+  %fp16 = sitofp <8 x i16> %int16 to <8 x half>
+  ret <8 x half> %fp16
 }
 
 define <2 x half> @vector_uint64ToHalf(<2 x i64> %int64) {
@@ -77,14 +77,21 @@ define <2 x half> @vector_uint64ToHalf(<2 x i64> %int64) {
 ; CHECK-NEXT:    vcvtuqq2ph %zmm0, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-    %fp16 = uitofp <2 x i64> %int64 to <2 x half>
-    ret <2 x half> %fp16
+  %fp16 = uitofp <2 x i64> %int64 to <2 x half>
+  ret <2 x half> %fp16
 }
 
-; define <4 x half> @vector_uint32ToHalf(<4 x i32> %int32) {
-;     %fp16 = uitofp <4 x i32> %int32 to <4 x half>
-;     ret <4 x half> %fp16
-; }
+define <4 x half> @vector_uint32ToHalf(<4 x i32> %int32) {
+; CHECK-LABEL: vector_uint32ToHalf:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; CHECK-NEXT:    vcvtudq2ph %zmm0, %ymm0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %fp16 = uitofp <4 x i32> %int32 to <4 x half>
+  ret <4 x half> %fp16
+}
 
 define <8 x half> @vector_uint16ToHalf(<8 x i16> %int16) {
 ; CHECK-LABEL: vector_uint16ToHalf:
@@ -113,6 +120,6 @@ define <8 x half> @vector_uint16ToHalf(<8 x i16> %int16) {
 ; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
 ; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    retq
-    %fp16 = uitofp <8 x i16> %int16 to <8 x half>
-    ret <8 x half> %fp16
+  %fp16 = uitofp <8 x i16> %int16 to <8 x half>
+  ret <8 x half> %fp16
 }
