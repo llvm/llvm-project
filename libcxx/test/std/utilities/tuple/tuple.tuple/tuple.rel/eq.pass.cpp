@@ -36,8 +36,10 @@ static_assert(!std::equality_comparable<std::tuple<NonComparable, EqualityCompar
 static_assert(!std::equality_comparable_with<std::tuple<EqualityComparable>, std::tuple<NonComparable>>);
 static_assert(!std::equality_comparable_with<std::tuple<NonComparable>, std::tuple<EqualityComparable>>);
 // Size mismatch.
-static_assert(!std::equality_comparable_with<std::tuple<EqualityComparable>, std::tuple<EqualityComparable, EqualityComparable>>);
-static_assert(!std::equality_comparable_with<std::tuple<EqualityComparable, EqualityComparable>, std::tuple<EqualityComparable>>);
+static_assert(
+    !std::equality_comparable_with<std::tuple<EqualityComparable>, std::tuple<EqualityComparable, EqualityComparable>>);
+static_assert(
+    !std::equality_comparable_with<std::tuple<EqualityComparable, EqualityComparable>, std::tuple<EqualityComparable>>);
 
 #endif
 
