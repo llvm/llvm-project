@@ -1682,7 +1682,7 @@ struct RISCVHwProbe {
 
 StringRef sys::getHostCPUName() {
 #if defined(__linux__)
-  // Try hwprobe way first.
+  // Try the hwprobe way first.
   RISCVHwProbe Query[]{{/*RISCV_HWPROBE_KEY_MVENDORID=*/0, 0},
                        {/*RISCV_HWPROBE_KEY_MARCHID=*/1, 0},
                        {/*RISCV_HWPROBE_KEY_MIMPID=*/2, 0}};
