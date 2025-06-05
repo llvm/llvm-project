@@ -647,7 +647,7 @@ struct UnrollBroadcastPattern : public OpRewritePattern<vector::BroadcastOp> {
     Location loc = broadcastOp.getLoc();
     VectorType srcType = dyn_cast<VectorType>(broadcastOp.getSourceType());
     VectorType resType = broadcastOp.getResultVectorType();
-    VectorType newType =
+    VectorType targetType =
         resType.cloneWith(*targetShape, resType.getElementType());
     Value result = rewriter.create<arith::ConstantOp>(
         loc, resType, rewriter.getZeroAttr(resType));
@@ -668,7 +668,7 @@ struct UnrollBroadcastPattern : public OpRewritePattern<vector::BroadcastOp> {
         SmallVector<int64_t> srcShape(targetShape->end() - rank,
                                       targetShape->end());
         SmallVector<int64_t> srcStrides(strides.end() - rank, strides.end());
-        // addjust the offset and shape for src if the corresponding dim is 1.
+        // adjust the offset and shape for src if the corresponding dim is 1.
         for (int64_t i = 0; i < rank; ++i) {
           if (srcType.getDimSize(i) == 1) {
             srcOffsets[i] = 0;
@@ -680,7 +680,7 @@ struct UnrollBroadcastPattern : public OpRewritePattern<vector::BroadcastOp> {
       }
 
       Operation *newOp = cloneOpWithOperandsAndTypes(rewriter, loc, broadcastOp,
-                                                     newSrc, newType);
+                                                     newSrc, targetType);
 
       result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
           loc, newOp->getResult(0), result, offsets, strides);
