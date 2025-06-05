@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
+#include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -54,14 +55,6 @@ constexpr unsigned packedSizeInBitsForDefault =
     16; // Minimum packing size per register for DPAS A.
 constexpr unsigned packedSizeInBitsForDpasB =
     32; // Minimum packing size per register for DPAS B.
-static const char *const operandLayoutNamePrefix =
-    "layout_operand_"; // Attribute name for identifying operand layouts.
-static const char *const resultLayoutNamePrefix =
-    "layout_result_"; // Attribute name for identifying result layouts.
-static const char *const resolveSIMTTypeMismatch =
-    "resolve_simt_type_mismatch"; // Attribute name for identifying
-                                  // UnrelizedConversionCastOp added to resolve
-                                  // SIMT type mismatches.
 
 namespace {
 
@@ -723,16 +716,13 @@ static void updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
     }
     // If the result is a vector type, add a temporary layout attribute to the
     // op.
-    std::string resultLayoutName =
-        resultLayoutNamePrefix + std::to_string(result.getResultNumber());
+    std::string resultLayoutName = xegpu::getLayoutName(result);
     op->setAttr(resultLayoutName, layout);
     // Update all users of the result with the layout.
     for (OpOperand &user : result.getUses()) {
       Operation *owner = user.getOwner();
-      unsigned operandNumber = user.getOperandNumber();
       // Add temorary layout attribute at the user op.
-      std::string attrName =
-          operandLayoutNamePrefix + std::to_string(operandNumber);
+      std::string attrName = xegpu::getLayoutName(user);
       owner->setAttr(attrName, layout);
     }
   }
@@ -858,16 +848,13 @@ static void updateBranchOpInterface(mlir::OpBuilder &builder,
     }
     // If the result is a vector type, add a temporary layout attribute to
     // the op.
-    std::string resultLayoutName =
-        resultLayoutNamePrefix + std::to_string(r.getResultNumber());
+    std::string resultLayoutName = xegpu::getLayoutName(r);
     op->setAttr(resultLayoutName, layout);
     // Update all users of the result with the layout.
     for (OpOperand &user : r.getUses()) {
       Operation *owner = user.getOwner();
-      unsigned operandNumber = user.getOperandNumber();
       // Add temporary layout attribute at the user op.
-      std::string attrName =
-          operandLayoutNamePrefix + std::to_string(operandNumber);
+      std::string attrName = xegpu::getLayoutName(user);
       owner->setAttr(attrName, layout);
     }
   }
@@ -901,9 +888,7 @@ static void updateFunctionOpInterface(mlir::OpBuilder &builder,
     // with the layout.
     for (OpOperand &user : arg.getUses()) {
       Operation *owner = user.getOwner();
-      unsigned operandNumber = user.getOperandNumber();
-      std::string attrName =
-          operandLayoutNamePrefix + std::to_string(operandNumber);
+      std::string attrName = xegpu::getLayoutName(user);
       owner->setAttr(attrName, layout);
     }
   }

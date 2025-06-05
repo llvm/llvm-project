@@ -2974,10 +2974,6 @@ public:
 ///   __array_extent(int[10][20], 1) == 20
 /// \endcode
 class ArrayTypeTraitExpr : public Expr {
-  /// The trait. An ArrayTypeTrait enum in MSVC compat unsigned.
-  LLVM_PREFERRED_TYPE(ArrayTypeTrait)
-  unsigned ATT : 2;
-
   /// The value of the type trait. Unspecified if dependent.
   uint64_t Value = 0;
 
@@ -2999,21 +2995,27 @@ public:
   ArrayTypeTraitExpr(SourceLocation loc, ArrayTypeTrait att,
                      TypeSourceInfo *queried, uint64_t value, Expr *dimension,
                      SourceLocation rparen, QualType ty)
-      : Expr(ArrayTypeTraitExprClass, ty, VK_PRValue, OK_Ordinary), ATT(att),
+      : Expr(ArrayTypeTraitExprClass, ty, VK_PRValue, OK_Ordinary),
         Value(value), Dimension(dimension), Loc(loc), RParen(rparen),
         QueriedType(queried) {
     assert(att <= ATT_Last && "invalid enum value!");
-    assert(static_cast<unsigned>(att) == ATT && "ATT overflow!");
+    ArrayTypeTraitExprBits.ATT = att;
+    assert(static_cast<unsigned>(att) == ArrayTypeTraitExprBits.ATT &&
+           "ATT overflow!");
     setDependence(computeDependence(this));
   }
 
   explicit ArrayTypeTraitExpr(EmptyShell Empty)
-      : Expr(ArrayTypeTraitExprClass, Empty), ATT(0) {}
+      : Expr(ArrayTypeTraitExprClass, Empty) {
+    ArrayTypeTraitExprBits.ATT = 0;
+  }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return Loc; }
   SourceLocation getEndLoc() const LLVM_READONLY { return RParen; }
 
-  ArrayTypeTrait getTrait() const { return static_cast<ArrayTypeTrait>(ATT); }
+  ArrayTypeTrait getTrait() const {
+    return static_cast<ArrayTypeTrait>(ArrayTypeTraitExprBits.ATT);
+  }
 
   QualType getQueriedType() const { return QueriedType->getType(); }
 
@@ -3045,14 +3047,6 @@ public:
 ///   __is_lvalue_expr(1) == false
 /// \endcode
 class ExpressionTraitExpr : public Expr {
-  /// The trait. A ExpressionTrait enum in MSVC compatible unsigned.
-  LLVM_PREFERRED_TYPE(ExpressionTrait)
-  unsigned ET : 31;
-
-  /// The value of the type trait. Unspecified if dependent.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned Value : 1;
-
   /// The location of the type trait keyword.
   SourceLocation Loc;
 
@@ -3068,24 +3062,32 @@ public:
   ExpressionTraitExpr(SourceLocation loc, ExpressionTrait et, Expr *queried,
                       bool value, SourceLocation rparen, QualType resultType)
       : Expr(ExpressionTraitExprClass, resultType, VK_PRValue, OK_Ordinary),
-        ET(et), Value(value), Loc(loc), RParen(rparen),
-        QueriedExpression(queried) {
+        Loc(loc), RParen(rparen), QueriedExpression(queried) {
+    ExpressionTraitExprBits.ET = et;
+    ExpressionTraitExprBits.Value = value;
+
     assert(et <= ET_Last && "invalid enum value!");
-    assert(static_cast<unsigned>(et) == ET && "ET overflow!");
+    assert(static_cast<unsigned>(et) == ExpressionTraitExprBits.ET &&
+           "ET overflow!");
     setDependence(computeDependence(this));
   }
 
   explicit ExpressionTraitExpr(EmptyShell Empty)
-      : Expr(ExpressionTraitExprClass, Empty), ET(0), Value(false) {}
+      : Expr(ExpressionTraitExprClass, Empty) {
+    ExpressionTraitExprBits.ET = 0;
+    ExpressionTraitExprBits.Value = false;
+  }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return Loc; }
   SourceLocation getEndLoc() const LLVM_READONLY { return RParen; }
 
-  ExpressionTrait getTrait() const { return static_cast<ExpressionTrait>(ET); }
+  ExpressionTrait getTrait() const {
+    return static_cast<ExpressionTrait>(ExpressionTraitExprBits.ET);
+  }
 
   Expr *getQueriedExpression() const { return QueriedExpression; }
 
-  bool getValue() const { return Value; }
+  bool getValue() const { return ExpressionTraitExprBits.Value; }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == ExpressionTraitExprClass;
@@ -4506,22 +4508,15 @@ class PackIndexingExpr final
   // The pack being indexed, followed by the index
   Stmt *SubExprs[2];
 
-  // The size of the trailing expressions.
-  unsigned TransformedExpressions : 31;
-
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned FullySubstituted : 1;
-
   PackIndexingExpr(QualType Type, SourceLocation EllipsisLoc,
                    SourceLocation RSquareLoc, Expr *PackIdExpr, Expr *IndexExpr,
                    ArrayRef<Expr *> SubstitutedExprs = {},
                    bool FullySubstituted = false)
       : Expr(PackIndexingExprClass, Type, VK_LValue, OK_Ordinary),
         EllipsisLoc(EllipsisLoc), RSquareLoc(RSquareLoc),
-        SubExprs{PackIdExpr, IndexExpr},
-        TransformedExpressions(SubstitutedExprs.size()),
-        FullySubstituted(FullySubstituted) {
-
+        SubExprs{PackIdExpr, IndexExpr} {
+    PackIndexingExprBits.TransformedExpressions = SubstitutedExprs.size();
+    PackIndexingExprBits.FullySubstituted = FullySubstituted;
     auto *Exprs = getTrailingObjects<Expr *>();
     llvm::uninitialized_copy(SubstitutedExprs, Exprs);
 
@@ -4534,7 +4529,7 @@ class PackIndexingExpr final
   PackIndexingExpr(EmptyShell Empty) : Expr(PackIndexingExprClass, Empty) {}
 
   unsigned numTrailingObjects(OverloadToken<Expr *>) const {
-    return TransformedExpressions;
+    return PackIndexingExprBits.TransformedExpressions;
   }
 
 public:
@@ -4548,11 +4543,14 @@ public:
                                               unsigned NumTransformedExprs);
 
   // The index expression and all elements of the pack have been substituted.
-  bool isFullySubstituted() const { return FullySubstituted; }
+  bool isFullySubstituted() const {
+    return PackIndexingExprBits.FullySubstituted;
+  }
 
   /// Determine if the expression was expanded to empty.
   bool expandsToEmptyPack() const {
-    return isFullySubstituted() && TransformedExpressions == 0;
+    return isFullySubstituted() &&
+           PackIndexingExprBits.TransformedExpressions == 0;
   }
 
   /// Determine the location of the 'sizeof' keyword.
@@ -4590,7 +4588,8 @@ public:
 
   /// Return the trailing expressions, regardless of the expansion.
   ArrayRef<Expr *> getExpressions() const {
-    return {getTrailingObjects<Expr *>(), TransformedExpressions};
+    return {getTrailingObjects<Expr *>(),
+            PackIndexingExprBits.TransformedExpressions};
   }
 
   static bool classof(const Stmt *T) {
@@ -4988,7 +4987,6 @@ class CXXFoldExpr : public Expr {
   // than the number of expansions.
   UnsignedOrNone NumExpansions = std::nullopt;
   Stmt *SubExprs[SubExpr::Count];
-  BinaryOperatorKind Opcode;
 
 public:
   CXXFoldExpr(QualType T, UnresolvedLookupExpr *Callee,
@@ -5021,7 +5019,7 @@ public:
   SourceLocation getLParenLoc() const { return LParenLoc; }
   SourceLocation getRParenLoc() const { return RParenLoc; }
   SourceLocation getEllipsisLoc() const { return EllipsisLoc; }
-  BinaryOperatorKind getOperator() const { return Opcode; }
+  BinaryOperatorKind getOperator() const { return CXXFoldExprBits.Opcode; }
 
   UnsignedOrNone getNumExpansions() const { return NumExpansions; }
 

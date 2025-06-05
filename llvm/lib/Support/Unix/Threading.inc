@@ -142,6 +142,8 @@ uint64_t llvm::get_threadid() {
   return uint64_t(gettid());
 #elif defined(__linux__)
   return uint64_t(syscall(__NR_gettid));
+#elif defined(_AIX)
+  return uint64_t(thread_self());
 #else
   return uint64_t(pthread_self());
 #endif

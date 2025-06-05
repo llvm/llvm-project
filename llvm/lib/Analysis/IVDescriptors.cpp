@@ -111,7 +111,7 @@ static std::pair<Type *, bool> computeRecurrenceType(Instruction *Exit,
     // If demanded bits wasn't able to limit the bit width, we can try to use
     // value tracking instead. This can be the case, for example, if the value
     // may be negative.
-    auto NumSignBits = ComputeNumSignBits(Exit, DL, 0, AC, nullptr, DT);
+    auto NumSignBits = ComputeNumSignBits(Exit, DL, AC, nullptr, DT);
     auto NumTypeBits = DL.getTypeSizeInBits(Exit->getType());
     MaxBitWidth = NumTypeBits - NumSignBits;
     KnownBits Bits = computeKnownBits(Exit, DL);

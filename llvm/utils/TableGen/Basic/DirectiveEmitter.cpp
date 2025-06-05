@@ -24,6 +24,7 @@
 #include "llvm/TableGen/TableGenBackend.h"
 
 #include <numeric>
+#include <string>
 #include <vector>
 
 using namespace llvm;
@@ -147,7 +148,7 @@ static void generateEnumBitmask(ArrayRef<const Record *> Records,
 
 // Generate enums for values that clauses can take.
 // Also generate function declarations for get<Enum>Name(StringRef Str).
-static void generateEnumClauseVal(ArrayRef<const Record *> Records,
+static void generateClauseEnumVal(ArrayRef<const Record *> Records,
                                   raw_ostream &OS,
                                   const DirectiveLanguage &DirLang,
                                   std::string &EnumHelperFuncs) {
@@ -166,8 +167,8 @@ static void generateEnumClauseVal(ArrayRef<const Record *> Records,
 
     OS << "\n";
     OS << "enum class " << Enum << " {\n";
-    for (const ClauseVal CVal : ClauseVals)
-      OS << "  " << CVal.getRecordName() << "=" << CVal.getValue() << ",\n";
+    for (const EnumVal Val : ClauseVals)
+      OS << "  " << Val.getRecordName() << "=" << Val.getValue() << ",\n";
     OS << "};\n";
 
     if (DirLang.hasMakeEnumAvailableInNamespace()) {
@@ -193,10 +194,11 @@ static bool hasDuplicateClauses(ArrayRef<const Record *> Clauses,
                                 StringSet<> &CrtClauses) {
   bool HasError = false;
   for (const VersionedClause VerClause : Clauses) {
-    const auto InsRes = CrtClauses.insert(VerClause.getClause().getName());
+    StringRef Name = VerClause.getClause().getRecordName();
+    const auto InsRes = CrtClauses.insert(Name);
     if (!InsRes.second) {
-      PrintError("Clause " + VerClause.getClause().getRecordName() +
-                 " already defined on directive " + Directive.getRecordName());
+      PrintError("Clause " + Name + " already defined on directive " +
+                 Directive.getRecordName());
       HasError = true;
     }
   }
@@ -267,11 +269,12 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
   if (DirLang.hasEnableBitmaskEnumInNamespace())
     OS << "#include \"llvm/ADT/BitmaskEnum.h\"\n";
 
+  OS << "#include \"llvm/ADT/StringRef.h\"\n";
   OS << "#include \"llvm/Support/Compiler.h\"\n";
   OS << "#include <cstddef>\n"; // for size_t
+  OS << "#include <utility>\n"; // for std::pair
   OS << "\n";
   OS << "namespace llvm {\n";
-  OS << "class StringRef;\n";
 
   // Open namespaces defined in the directive language
   SmallVector<StringRef, 2> Namespaces;
@@ -281,6 +284,13 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
 
   if (DirLang.hasEnableBitmaskEnumInNamespace())
     OS << "\nLLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();\n";
+
+#define AS_STRING_HELPER_TO_GET_THE_ARGUMENT_MACRO_EXPANDED(x) #x
+#define AS_STRING(x) AS_STRING_HELPER_TO_GET_THE_ARGUMENT_MACRO_EXPANDED(x)
+  OS << "\n";
+  OS << AS_STRING(STRUCT_VERSION_RANGE) << ";\n";
+#undef AS_STRING
+#undef AS_STRING_HELPER_TO_GET_THE_ARGUMENT_MACRO_EXPANDED
 
   // Emit Directive associations
   std::vector<const Record *> Associations;
@@ -306,29 +316,39 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
                     DirLang.getClausePrefix(),
                     DirLang.hasMakeEnumAvailableInNamespace());
 
-  // Emit ClauseVal enumeration
+  // Emit ClauseVals enumeration
   std::string EnumHelperFuncs;
-  generateEnumClauseVal(DirLang.getClauses(), OS, DirLang, EnumHelperFuncs);
+  generateClauseEnumVal(DirLang.getClauses(), OS, DirLang, EnumHelperFuncs);
 
   // Generic function signatures
   OS << "\n";
   OS << "// Enumeration helper functions\n";
-  OS << "LLVM_ABI Directive get" << Lang << "DirectiveKind(StringRef Str);\n";
+
+  OS << "LLVM_ABI std::pair<Directive, VersionRange> get" << Lang
+     << "DirectiveKindAndVersions(StringRef Str);\n";
+
+  OS << "inline Directive get" << Lang << "DirectiveKind(StringRef Str) {\n";
+  OS << "  return get" << Lang << "DirectiveKindAndVersions(Str).first;\n";
+  OS << "}\n";
   OS << "\n";
 
-  // For OpenMP the signature is
-  //   getOpenMPDirectiveName(Directive D, unsigned V)
-  OS << "LLVM_ABI StringRef get" << DirLang.getName()
-     << "DirectiveName(Directive D";
-  if (DirLang.getCppNamespace() == "omp")
-    OS << ", unsigned = 0";
-  OS << ");\n";
+  OS << "LLVM_ABI StringRef get" << Lang
+     << "DirectiveName(Directive D, unsigned Ver = 0);\n";
   OS << "\n";
 
-  OS << "LLVM_ABI Clause get" << Lang << "ClauseKind(StringRef Str);\n";
+  OS << "LLVM_ABI std::pair<Clause, VersionRange> get" << Lang
+     << "ClauseKindAndVersions(StringRef Str);\n";
   OS << "\n";
-  OS << "LLVM_ABI StringRef get" << Lang << "ClauseName(Clause C);\n";
+
+  OS << "inline Clause get" << Lang << "ClauseKind(StringRef Str) {\n";
+  OS << "  return get" << Lang << "ClauseKindAndVersions(Str).first;\n";
+  OS << "}\n";
   OS << "\n";
+
+  OS << "LLVM_ABI StringRef get" << Lang
+     << "ClauseName(Clause C, unsigned Ver = 0);\n";
+  OS << "\n";
+
   OS << "/// Return true if \\p C is a valid clause for \\p D in version \\p "
      << "Version.\n";
   OS << "LLVM_ABI bool isAllowedClauseForDirective(Directive D, "
@@ -359,25 +379,23 @@ static void generateGetName(ArrayRef<const Record *> Records, raw_ostream &OS,
                             StringRef Prefix) {
   StringRef Lang = DirLang.getName();
   std::string Qual = getQualifier(DirLang);
-  // For OpenMP the "Directive" signature is
-  //   getOpenMPDirectiveName(Directive D, unsigned V)
   OS << "\n";
   OS << "llvm::StringRef " << Qual << "get" << Lang << Enum << "Name(" << Qual
-     << Enum << " Kind";
-  if (DirLang.getCppNamespace() == "omp" && Enum == "Directive")
-    OS << ", unsigned";
-  OS << ") {\n";
+     << Enum << " Kind, unsigned) {\n";
   OS << "  switch (Kind) {\n";
   for (const Record *R : Records) {
     OS << "    case " << getIdentifierName(R, Prefix) << ":\n";
-    OS << "      return \"" << BaseRecord(R).getName() << "\";\n";
+    // FIXME: This will need to recognize different spellings for different
+    // versions.
+    OS << "      return \"" << BaseRecord(R).getSpellingForIdentifier()
+       << "\";\n";
   }
   OS << "  }\n"; // switch
   OS << "  llvm_unreachable(\"Invalid " << Lang << " " << Enum << " kind\");\n";
   OS << "}\n";
 }
 
-// Generate function implementation for get<Enum>Kind(StringRef Str)
+// Generate function implementation for get<Enum>KindAndVersions(StringRef Str)
 static void generateGetKind(ArrayRef<const Record *> Records, raw_ostream &OS,
                             StringRef Enum, const DirectiveLanguage &DirLang,
                             StringRef Prefix, bool ImplicitAsUnknown) {
@@ -394,27 +412,37 @@ static void generateGetKind(ArrayRef<const Record *> Records, raw_ostream &OS,
   std::string Qual = getQualifier(DirLang);
   std::string DefaultName = getIdentifierName(*DefaultIt, Prefix);
 
+  // std::pair<<Enum>, VersionRange>
+  // get<DirLang><Enum>KindAndVersions(StringRef Str);
   OS << "\n";
-  OS << Qual << Enum << " " << Qual << "get" << DirLang.getName() << Enum
-     << "Kind(llvm::StringRef Str) {\n";
-  OS << "  return StringSwitch<" << Enum << ">(Str)\n";
+  OS << "std::pair<" << Qual << Enum << ", " << Qual << "VersionRange> " << Qual
+     << "get" << DirLang.getName() << Enum
+     << "KindAndVersions(llvm::StringRef Str) {\n";
+  OS << "  VersionRange All{}; // Default-initialized to \"all-versions\"\n";
+  OS << "  return StringSwitch<std::pair<" << Enum << ", "
+     << "VersionRange>>(Str)\n";
 
   for (const Record *R : Records) {
     BaseRecord Rec(R);
+    // FIXME: This will need to recognize different spellings for different
+    // versions.
+    StringRef Name = Rec.getSpellingForIdentifier();
     if (ImplicitAsUnknown && R->getValueAsBit("isImplicit")) {
-      OS << "    .Case(\"" << Rec.getName() << "\"," << DefaultName << ")\n";
+      OS << "    .Case(\"" << Name << "\", {" << DefaultName << ", All})\n";
     } else {
-      OS << "    .Case(\"" << Rec.getName() << "\","
-         << getIdentifierName(R, Prefix) << ")\n";
+      OS << "    .Case(\"" << Name << "\", {" << getIdentifierName(R, Prefix)
+         << ", All})\n";
     }
   }
-  OS << "    .Default(" << DefaultName << ");\n";
+  OS << "    .Default({" << DefaultName << ", All});\n";
   OS << "}\n";
 }
 
-// Generate function implementation for get<ClauseVal>Kind(StringRef Str)
-static void generateGetKindClauseVal(const DirectiveLanguage &DirLang,
-                                     raw_ostream &OS) {
+// Generate function implementations for
+//   <enumClauseValue> get<enumClauseValue>(StringRef Str) and
+//   StringRef get<enumClauseValue>Name(<enumClauseValue>)
+static void generateGetClauseVal(const DirectiveLanguage &DirLang,
+                                 raw_ostream &OS) {
   StringRef Lang = DirLang.getName();
   std::string Qual = getQualifier(DirLang);
 
@@ -428,7 +456,7 @@ static void generateGetKindClauseVal(const DirectiveLanguage &DirLang,
     });
 
     if (DefaultIt == ClauseVals.end()) {
-      PrintError("At least one val in Clause " + C.getFormattedName() +
+      PrintError("At least one val in Clause " + C.getRecordName() +
                  " must be defined as default.");
       return;
     }
@@ -436,8 +464,8 @@ static void generateGetKindClauseVal(const DirectiveLanguage &DirLang,
 
     StringRef Enum = C.getEnumName();
     if (Enum.empty()) {
-      PrintError("enumClauseValue field not set in Clause" +
-                 C.getFormattedName() + ".");
+      PrintError("enumClauseValue field not set in Clause" + C.getRecordName() +
+                 ".");
       return;
     }
 
@@ -445,10 +473,9 @@ static void generateGetKindClauseVal(const DirectiveLanguage &DirLang,
     OS << Qual << Enum << " " << Qual << "get" << Enum
        << "(llvm::StringRef Str) {\n";
     OS << "  return StringSwitch<" << Enum << ">(Str)\n";
-    for (const auto &CV : ClauseVals) {
-      ClauseVal CVal(CV);
-      OS << "    .Case(\"" << CVal.getFormattedName() << "\"," << CV->getName()
-         << ")\n";
+    for (const EnumVal Val : ClauseVals) {
+      OS << "    .Case(\"" << Val.getFormattedName() << "\","
+         << Val.getRecordName() << ")\n";
     }
     OS << "    .Default(" << DefaultName << ");\n";
     OS << "}\n";
@@ -457,10 +484,9 @@ static void generateGetKindClauseVal(const DirectiveLanguage &DirLang,
     OS << "llvm::StringRef " << Qual << "get" << Lang << Enum << "Name(" << Qual
        << Enum << " x) {\n";
     OS << "  switch (x) {\n";
-    for (const auto &CV : ClauseVals) {
-      ClauseVal CVal(CV);
-      OS << "    case " << CV->getName() << ":\n";
-      OS << "      return \"" << CVal.getFormattedName() << "\";\n";
+    for (const EnumVal Val : ClauseVals) {
+      OS << "    case " << Val.getRecordName() << ":\n";
+      OS << "      return \"" << Val.getFormattedName() << "\";\n";
     }
     OS << "  }\n"; // switch
     OS << "  llvm_unreachable(\"Invalid " << Lang << " " << Enum
@@ -599,7 +625,10 @@ static void emitLeafTable(const DirectiveLanguage &DirLang, raw_ostream &OS,
   // (such as "end declare target").
   DenseSet<int> EndDirectives;
   for (auto [Rec, Id] : DirId) {
-    if (Directive(Rec).getName().starts_with_insensitive("end "))
+    // FIXME: This will need to recognize different spellings for different
+    // versions.
+    StringRef Name = Directive(Rec).getSpellingForIdentifier();
+    if (Name.starts_with_insensitive("end "))
       EndDirectives.insert(Id);
   }
 
@@ -608,7 +637,7 @@ static void emitLeafTable(const DirectiveLanguage &DirLang, raw_ostream &OS,
   std::vector<int> Ordering(Directives.size());
   std::iota(Ordering.begin(), Ordering.end(), 0);
 
-  sort(Ordering, [&](int A, int B) {
+  llvm::sort(Ordering, [&](int A, int B) {
     auto &LeavesA = LeafTable[A];
     auto &LeavesB = LeafTable[B];
     int DirA = LeavesA[0], DirB = LeavesB[0];
@@ -710,7 +739,7 @@ static void generateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
   };
 
   auto ErrorPrefixFor = [&](Directive D) -> std::string {
-    return (Twine("Directive '") + D.getName() + "' in namespace '" +
+    return (Twine("Directive '") + D.getRecordName() + "' in namespace '" +
             DirLang.getCppNamespace() + "' ")
         .str();
   };
@@ -752,7 +781,6 @@ static void generateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
     // Compute the association from leaf constructs.
     std::vector<const Record *> Leaves = D.getLeafConstructs();
     if (Leaves.empty()) {
-      errs() << D.getName() << '\n';
       PrintFatalError(ErrorPrefixFor(D) +
                       "requests association to be computed from leaves, "
                       "but it has no leaves");
@@ -839,7 +867,7 @@ static void generateGetDirectiveLanguages(const DirectiveLanguage &DirLang,
         D.getSourceLanguages(), OS,
         [&](const Record *L) {
           StringRef N = L->getValueAsString("name");
-          OS << "SourceLanguage::" << BaseRecord::formatName(N);
+          OS << "SourceLanguage::" << BaseRecord::getSnakeName(N);
         },
         " | ");
     OS << ";\n";
@@ -899,7 +927,7 @@ static void generateDirectiveClauseSets(const DirectiveLanguage &DirLang,
 
   for (const Directive Dir : DirLang.getDirectives()) {
     OS << "\n";
-    OS << "// Sets for " << Dir.getName() << "\n";
+    OS << "// Sets for " << Dir.getSpellingForIdentifier() << "\n";
 
     generateClauseSet(Dir.getAllowedClauses(), OS, "allowedClauses_", Dir,
                       DirLang, FE);
@@ -1034,8 +1062,11 @@ static void generateFlangClauseUnparse(const DirectiveLanguage &DirLang,
   for (const Clause Clause : DirLang.getClauses()) {
     if (Clause.skipFlangUnparser())
       continue;
+    // The unparser doesn't know the effective version, so just pick some
+    // spelling.
+    StringRef SomeSpelling = Clause.getSpellingForIdentifier();
     std::string Parser = Clause.getFormattedParserClassName();
-    std::string Upper = Clause.getName().upper();
+    std::string Upper = SomeSpelling.upper();
 
     if (!Clause.getFlangClass().empty()) {
       if (Clause.isValueOptional() && Clause.getDefaultValue().empty()) {
@@ -1113,59 +1144,63 @@ static void generateFlangClauseParserKindMap(const DirectiveLanguage &DirLang,
      << " Parser clause\");\n";
 }
 
-static bool compareClauseName(const Record *R1, const Record *R2) {
-  Clause C1(R1);
-  Clause C2(R2);
-  return (C1.getName() > C2.getName());
+using RecordWithText = std::pair<const Record *, StringRef>;
+
+static bool compareRecordText(const RecordWithText &A,
+                              const RecordWithText &B) {
+  return A.second > B.second;
+}
+
+static std::vector<RecordWithText>
+getSpellingTexts(ArrayRef<const Record *> Records) {
+  std::vector<RecordWithText> List;
+  for (const Record *R : Records) {
+    Clause C(R);
+    llvm::transform(
+        C.getSpellings(), std::back_inserter(List),
+        [R](Spelling::Value V) { return std::make_pair(R, V.first); });
+  }
+  return List;
 }
 
 // Generate the parser for the clauses.
 static void generateFlangClausesParser(const DirectiveLanguage &DirLang,
                                        raw_ostream &OS) {
   std::vector<const Record *> Clauses = DirLang.getClauses();
-  // Sort clauses in reverse alphabetical order so with clauses with same
-  // beginning, the longer option is tried before.
-  sort(Clauses, compareClauseName);
+  // Sort clauses in the reverse alphabetical order with respect to their
+  // names and aliases, so that longer names are tried before shorter ones.
+  std::vector<std::pair<const Record *, StringRef>> Names =
+      getSpellingTexts(Clauses);
+  llvm::sort(Names, compareRecordText);
   IfDefScope Scope("GEN_FLANG_CLAUSES_PARSER", OS);
   StringRef Base = DirLang.getFlangClauseBaseClass();
 
+  unsigned LastIndex = Names.size() - 1;
   OS << "\n";
-  unsigned Index = 0;
-  unsigned LastClauseIndex = Clauses.size() - 1;
   OS << "TYPE_PARSER(\n";
-  for (const Clause Clause : Clauses) {
-    const std::vector<StringRef> &Aliases = Clause.getAliases();
-    if (Aliases.empty()) {
-      OS << "  \"" << Clause.getName() << "\"";
-    } else {
-      OS << "  ("
-         << "\"" << Clause.getName() << "\"_tok";
-      for (StringRef Alias : Aliases) {
-        OS << " || \"" << Alias << "\"_tok";
-      }
-      OS << ")";
-    }
+  for (auto [Index, RecTxt] : llvm::enumerate(Names)) {
+    auto [R, N] = RecTxt;
+    Clause C(R);
 
-    StringRef FlangClass = Clause.getFlangClass();
-    OS << " >> construct<" << Base << ">(construct<" << Base
-       << "::" << Clause.getFormattedParserClassName() << ">(";
+    StringRef FlangClass = C.getFlangClass();
+    OS << "  \"" << N << "\" >> construct<" << Base << ">(construct<" << Base
+       << "::" << C.getFormattedParserClassName() << ">(";
     if (FlangClass.empty()) {
       OS << "))";
-      if (Index != LastClauseIndex)
+      if (Index != LastIndex)
         OS << " ||";
       OS << "\n";
-      ++Index;
       continue;
     }
 
-    if (Clause.isValueOptional())
+    if (C.isValueOptional())
       OS << "maybe(";
     OS << "parenthesized(";
-    if (Clause.isValueList())
+    if (C.isValueList())
       OS << "nonemptyList(";
 
-    if (!Clause.getPrefix().empty())
-      OS << "\"" << Clause.getPrefix() << ":\" >> ";
+    if (!C.getPrefix().empty())
+      OS << "\"" << C.getPrefix() << ":\" >> ";
 
     // The common Flang parser are used directly. Their name is identical to
     // the Flang class with first letter as lowercase. If the Flang class is
@@ -1181,19 +1216,18 @@ static void generateFlangClausesParser(const DirectiveLanguage &DirLang,
             .Case("ScalarLogicalExpr", "scalarLogicalExpr")
             .Default(("Parser<" + FlangClass + ">{}").toStringRef(Scratch));
     OS << Parser;
-    if (!Clause.getPrefix().empty() && Clause.isPrefixOptional())
+    if (!C.getPrefix().empty() && C.isPrefixOptional())
       OS << " || " << Parser;
-    if (Clause.isValueList()) // close nonemptyList(.
+    if (C.isValueList()) // close nonemptyList(.
       OS << ")";
     OS << ")"; // close parenthesized(.
 
-    if (Clause.isValueOptional()) // close maybe(.
+    if (C.isValueOptional()) // close maybe(.
       OS << ")";
     OS << "))";
-    if (Index != LastClauseIndex)
+    if (Index != LastIndex)
       OS << " ||";
     OS << "\n";
-    ++Index;
   }
   OS << ")\n";
 }
@@ -1302,7 +1336,9 @@ void emitDirectivesBasicImpl(const DirectiveLanguage &DirLang,
   StringRef DPrefix = DirLang.getDirectivePrefix();
   StringRef CPrefix = DirLang.getClausePrefix();
 
-  OS << "\n#include \"llvm/Support/ErrorHandling.h\"\n";
+  OS << "\n";
+  OS << "#include \"llvm/Support/ErrorHandling.h\"\n";
+  OS << "#include <utility>\n";
 
   // getDirectiveKind(StringRef Str)
   generateGetKind(DirLang.getDirectives(), OS, "Directive", DirLang, DPrefix,
@@ -1318,8 +1354,9 @@ void emitDirectivesBasicImpl(const DirectiveLanguage &DirLang,
   // getClauseName(Clause Kind)
   generateGetName(DirLang.getClauses(), OS, "Clause", DirLang, CPrefix);
 
-  // get<ClauseVal>Kind(StringRef Str)
-  generateGetKindClauseVal(DirLang, OS);
+  // <enumClauseValue> get<enumClauseValue>(StringRef Str) ; string -> value
+  // StringRef get<enumClauseValue>Name(<enumClauseValue>) ; value -> string
+  generateGetClauseVal(DirLang, OS);
 
   // isAllowedClauseForDirective(Directive D, Clause C, unsigned Version)
   generateIsAllowedClause(DirLang, OS);

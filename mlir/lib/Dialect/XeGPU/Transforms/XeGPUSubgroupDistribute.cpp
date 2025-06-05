@@ -67,10 +67,6 @@ constexpr unsigned packedSizeInBitsForDefault =
     16; // Minimum packing size per register for DPAS A.
 constexpr unsigned packedSizeInBitsForDpasB =
     32; // Minimum packing size per register for DPAS B.
-static const char *const operandLayoutNamePrefix =
-    "layout_operand_"; // Attribute name for identifying operand layouts.
-static const char *const resultLayoutNamePrefix =
-    "layout_result_"; // Attribute name for identifying result layouts.
 static const char *const resolveSIMTTypeMismatch =
     "resolve_simt_type_mismatch"; // Attribute name for identifying
                                   // UnrelizedConversionCastOp added to resolve
@@ -166,11 +162,8 @@ static SmallVector<NamedAttribute>
 removeTemporaryLayoutAttributes(ArrayRef<NamedAttribute> attrs) {
   SmallVector<NamedAttribute> newAttrs;
   for (NamedAttribute attr : attrs) {
-    if (attr.getName().strref().contains(operandLayoutNamePrefix) ||
-        attr.getName().strref().contains(resultLayoutNamePrefix)) {
-      continue;
-    }
-    newAttrs.push_back(attr);
+    if (!isa<xegpu::LayoutAttr>(attr.getValue()))
+      newAttrs.push_back(attr);
   }
   return newAttrs;
 }
@@ -576,11 +569,10 @@ struct DpasDistribution final : public gpu::WarpDistributionPattern {
 
     auto dpasOp = operand->get().getDefiningOp<xegpu::DpasOp>();
     unsigned operandIdx = operand->getOperandNumber();
-    std::string layoutAName =
-        llvm::formatv("{0}{1}", operandLayoutNamePrefix, 0).str();
-    std::string layoutBName =
-        llvm::formatv("{0}{1}", operandLayoutNamePrefix, 1).str();
-    auto layoutCName = llvm::formatv("{0}{1}", resultLayoutNamePrefix, 0).str();
+    std::string layoutAName = xegpu::getLayoutName(dpasOp->getOpOperand(0));
+    std::string layoutBName = xegpu::getLayoutName(dpasOp->getOpOperand(1));
+    std::string layoutCName = xegpu::getLayoutName(dpasOp->getOpResult(0));
+
     xegpu::LayoutAttr layoutA =
         dpasOp->getAttrOfType<xegpu::LayoutAttr>(layoutAName);
     xegpu::LayoutAttr layoutB =
@@ -854,7 +846,7 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
       }
     });
   }
-  // Finally, do the SIMD to SIMT distribution.
+  // Apply subgroup to workitem distribution patterns.
   RewritePatternSet patterns(&getContext());
   xegpu::populateXeGPUSubgroupDistributePatterns(patterns);
   // TODO: distributionFn and shuffleFn are not used at this point.

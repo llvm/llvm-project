@@ -1889,7 +1889,14 @@ bool Sema::TryFunctionConversion(QualType FromType, QualType ToType,
   return Changed;
 }
 
-bool Sema::IsFunctionConversion(QualType FromType, QualType ToType) const {
+bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
+                                bool *DiscardingCFIUncheckedCallee,
+                                bool *AddingCFIUncheckedCallee) const {
+  if (DiscardingCFIUncheckedCallee)
+    *DiscardingCFIUncheckedCallee = false;
+  if (AddingCFIUncheckedCallee)
+    *AddingCFIUncheckedCallee = false;
+
   if (Context.hasSameUnqualifiedType(FromType, ToType))
     return false;
 
@@ -1944,9 +1951,34 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType) const {
     Changed = true;
   }
 
+  const auto *FromFPT = dyn_cast<FunctionProtoType>(FromFn);
+  const auto *ToFPT = dyn_cast<FunctionProtoType>(ToFn);
+
+  if (FromFPT && ToFPT) {
+    if (FromFPT->hasCFIUncheckedCallee() && !ToFPT->hasCFIUncheckedCallee()) {
+      QualType NewTy = Context.getFunctionType(
+          FromFPT->getReturnType(), FromFPT->getParamTypes(),
+          FromFPT->getExtProtoInfo().withCFIUncheckedCallee(false));
+      FromFPT = cast<FunctionProtoType>(NewTy.getTypePtr());
+      FromFn = FromFPT;
+      Changed = true;
+      if (DiscardingCFIUncheckedCallee)
+        *DiscardingCFIUncheckedCallee = true;
+    } else if (!FromFPT->hasCFIUncheckedCallee() &&
+               ToFPT->hasCFIUncheckedCallee()) {
+      QualType NewTy = Context.getFunctionType(
+          FromFPT->getReturnType(), FromFPT->getParamTypes(),
+          FromFPT->getExtProtoInfo().withCFIUncheckedCallee(true));
+      FromFPT = cast<FunctionProtoType>(NewTy.getTypePtr());
+      FromFn = FromFPT;
+      Changed = true;
+      if (AddingCFIUncheckedCallee)
+        *AddingCFIUncheckedCallee = true;
+    }
+  }
+
   // Drop 'noexcept' if not present in target type.
-  if (const auto *FromFPT = dyn_cast<FunctionProtoType>(FromFn)) {
-    const auto *ToFPT = cast<FunctionProtoType>(ToFn);
+  if (FromFPT) {
     if (FromFPT->isNothrow() && !ToFPT->isNothrow()) {
       FromFn = cast<FunctionType>(
           Context.getFunctionTypeWithExceptionSpec(QualType(FromFPT, 0),
@@ -2510,12 +2542,15 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
 
   SCS.setToType(2, FromType);
 
-  if (CanonFrom == CanonTo)
-    return true;
-
   // If we have not converted the argument type to the parameter type,
   // this is a bad conversion sequence, unless we're resolving an overload in C.
-  if (S.getLangOpts().CPlusPlus || !InOverloadResolution)
+  //
+  // Permit conversions from a function without `cfi_unchecked_callee` to a
+  // function with `cfi_unchecked_callee`.
+  if (CanonFrom == CanonTo || S.AddingCFIUncheckedCallee(CanonFrom, CanonTo))
+    return true;
+
+  if ((S.getLangOpts().CPlusPlus || !InOverloadResolution))
     return false;
 
   ExprResult ER = ExprResult{From};
