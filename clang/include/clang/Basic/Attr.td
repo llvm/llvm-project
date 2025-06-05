@@ -140,6 +140,12 @@ def SharedVar : SubsetSubject<Var,
                               [{S->hasGlobalStorage() && !S->getTLSKind()}],
                               "global variables">;
 
+def HLSLInputBuiltin
+    : SubsetSubject<Var, [{S->hasGlobalStorage() &&
+                           S->getStorageClass() == StorageClass::SC_Static &&
+                           S->getType().isConstQualified()}],
+                    "static const globals">;
+
 def GlobalVar : SubsetSubject<Var,
                              [{S->hasGlobalStorage()}], "global variables">;
 
@@ -1997,10 +2003,12 @@ private:
   ArrayRef<SourceLocation> ArgLocs;
 
 public:
-  static constexpr int THIS = 0;
-  static constexpr int INVALID = -1;
-  static constexpr int UNKNOWN = -2;
-  static constexpr int GLOBAL = -3;
+  enum ArgIndex {
+    This = 0,
+    Invalid = -1,
+    Unknown = -2,
+    Global = -3,
+  };
 
   void setArgs(ArrayRef<IdentifierInfo*> Idents, ArrayRef<SourceLocation> Locs) {
     assert(Idents.size() == params_Size);
@@ -3107,6 +3115,11 @@ def SwiftVersionedRemoval : Attr {
 def NoDeref : TypeAttr {
   let Spellings = [Clang<"noderef">];
   let Documentation = [NoDerefDocs];
+}
+
+def CFIUncheckedCallee : TypeAttr {
+  let Spellings = [Clang<"cfi_unchecked_callee">];
+  let Documentation = [CFIUncheckedCalleeDocs];
 }
 
 def ReqdWorkGroupSize : InheritableAttr {
@@ -4947,6 +4960,14 @@ def HLSLWaveSize: InheritableAttr {
       int getSpelledArgsCount() const { return SpelledArgsCount; }
   }];
   let Documentation = [WaveSizeDocs];
+}
+
+def HLSLVkExtBuiltinInput : InheritableAttr {
+  let Spellings = [CXX11<"vk", "ext_builtin_input">];
+  let Args = [UnsignedArgument<"BuiltIn">];
+  let Subjects = SubjectList<[HLSLInputBuiltin], ErrorDiag>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLVkExtBuiltinInputDocs];
 }
 
 def RandomizeLayout : InheritableAttr {

@@ -48,7 +48,8 @@ define amdgpu_kernel void @memset_global_to_flat_no_md(ptr addrspace(1) %global.
 define amdgpu_kernel void @memcpy_flat_to_flat_replace_src_with_group(ptr %dest, ptr addrspace(3) %src.group.ptr, i64 %size) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @memcpy_flat_to_flat_replace_src_with_group(
 ; CHECK-SAME: ptr [[DEST:%.*]], ptr addrspace(3) [[SRC_GROUP_PTR:%.*]], i64 [[SIZE:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p3.i64(ptr align 4 [[DEST]], ptr addrspace(3) align 4 [[SRC_GROUP_PTR]], i64 [[SIZE]], i1 false), !tbaa [[TBAA0]], !alias.scope [[META3]], !noalias [[META6]]
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[DEST]] to ptr addrspace(1)
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p3.i64(ptr addrspace(1) align 4 [[TMP1]], ptr addrspace(3) align 4 [[SRC_GROUP_PTR]], i64 [[SIZE]], i1 false), !tbaa [[TBAA0]], !alias.scope [[META3]], !noalias [[META6]]
 ; CHECK-NEXT:    ret void
 ;
   %cast.src = addrspacecast ptr addrspace(3) %src.group.ptr to ptr
@@ -59,7 +60,8 @@ define amdgpu_kernel void @memcpy_flat_to_flat_replace_src_with_group(ptr %dest,
 define amdgpu_kernel void @memcpy_inline_flat_to_flat_replace_src_with_group(ptr %dest, ptr addrspace(3) %src.group.ptr) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @memcpy_inline_flat_to_flat_replace_src_with_group(
 ; CHECK-SAME: ptr [[DEST:%.*]], ptr addrspace(3) [[SRC_GROUP_PTR:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    call void @llvm.memcpy.inline.p0.p3.i64(ptr align 4 [[DEST]], ptr addrspace(3) align 4 [[SRC_GROUP_PTR]], i64 42, i1 false), !tbaa [[TBAA0]], !alias.scope [[META3]], !noalias [[META6]]
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[DEST]] to ptr addrspace(1)
+; CHECK-NEXT:    call void @llvm.memcpy.inline.p1.p3.i64(ptr addrspace(1) align 4 [[TMP1]], ptr addrspace(3) align 4 [[SRC_GROUP_PTR]], i64 42, i1 false), !tbaa [[TBAA0]], !alias.scope [[META3]], !noalias [[META6]]
 ; CHECK-NEXT:    ret void
 ;
   %cast.src = addrspacecast ptr addrspace(3) %src.group.ptr to ptr
@@ -70,7 +72,8 @@ define amdgpu_kernel void @memcpy_inline_flat_to_flat_replace_src_with_group(ptr
 define amdgpu_kernel void @memcpy_flat_to_flat_replace_dest_with_group(ptr addrspace(3) %dest.group.ptr, ptr %src.ptr, i64 %size) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @memcpy_flat_to_flat_replace_dest_with_group(
 ; CHECK-SAME: ptr addrspace(3) [[DEST_GROUP_PTR:%.*]], ptr [[SRC_PTR:%.*]], i64 [[SIZE:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    call void @llvm.memcpy.p3.p0.i64(ptr addrspace(3) align 4 [[DEST_GROUP_PTR]], ptr align 4 [[SRC_PTR]], i64 [[SIZE]], i1 false), !tbaa [[TBAA0]], !alias.scope [[META3]], !noalias [[META6]]
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[SRC_PTR]] to ptr addrspace(1)
+; CHECK-NEXT:    call void @llvm.memcpy.p3.p1.i64(ptr addrspace(3) align 4 [[DEST_GROUP_PTR]], ptr addrspace(1) align 4 [[TMP1]], i64 [[SIZE]], i1 false), !tbaa [[TBAA0]], !alias.scope [[META3]], !noalias [[META6]]
 ; CHECK-NEXT:    ret void
 ;
   %cast.dest = addrspacecast ptr addrspace(3) %dest.group.ptr to ptr
@@ -116,7 +119,8 @@ define amdgpu_kernel void @memcpy_group_to_flat_replace_dest_global(ptr addrspac
 define amdgpu_kernel void @memcpy_flat_to_flat_replace_src_with_group_tbaa_struct(ptr %dest, ptr addrspace(3) %src.group.ptr, i64 %size) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @memcpy_flat_to_flat_replace_src_with_group_tbaa_struct(
 ; CHECK-SAME: ptr [[DEST:%.*]], ptr addrspace(3) [[SRC_GROUP_PTR:%.*]], i64 [[SIZE:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p3.i64(ptr align 4 [[DEST]], ptr addrspace(3) align 4 [[SRC_GROUP_PTR]], i64 [[SIZE]], i1 false), !tbaa.struct [[TBAA_STRUCT8:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[DEST]] to ptr addrspace(1)
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p3.i64(ptr addrspace(1) align 4 [[TMP1]], ptr addrspace(3) align 4 [[SRC_GROUP_PTR]], i64 [[SIZE]], i1 false), !tbaa.struct [[TBAA_STRUCT8:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %cast.src = addrspacecast ptr addrspace(3) %src.group.ptr to ptr
@@ -127,7 +131,8 @@ define amdgpu_kernel void @memcpy_flat_to_flat_replace_src_with_group_tbaa_struc
 define amdgpu_kernel void @memcpy_flat_to_flat_replace_src_with_group_no_md(ptr %dest, ptr addrspace(3) %src.group.ptr, i64 %size) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @memcpy_flat_to_flat_replace_src_with_group_no_md(
 ; CHECK-SAME: ptr [[DEST:%.*]], ptr addrspace(3) [[SRC_GROUP_PTR:%.*]], i64 [[SIZE:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p3.i64(ptr align 4 [[DEST]], ptr addrspace(3) align 4 [[SRC_GROUP_PTR]], i64 [[SIZE]], i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[DEST]] to ptr addrspace(1)
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p3.i64(ptr addrspace(1) align 4 [[TMP1]], ptr addrspace(3) align 4 [[SRC_GROUP_PTR]], i64 [[SIZE]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %cast.src = addrspacecast ptr addrspace(3) %src.group.ptr to ptr
@@ -138,8 +143,10 @@ define amdgpu_kernel void @memcpy_flat_to_flat_replace_src_with_group_no_md(ptr 
 define amdgpu_kernel void @multiple_memcpy_flat_to_flat_replace_src_with_group_no_md(ptr %dest0, ptr %dest1, ptr addrspace(3) %src.group.ptr, i64 %size) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @multiple_memcpy_flat_to_flat_replace_src_with_group_no_md(
 ; CHECK-SAME: ptr [[DEST0:%.*]], ptr [[DEST1:%.*]], ptr addrspace(3) [[SRC_GROUP_PTR:%.*]], i64 [[SIZE:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p3.i64(ptr align 4 [[DEST0]], ptr addrspace(3) align 4 [[SRC_GROUP_PTR]], i64 [[SIZE]], i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p3.i64(ptr align 4 [[DEST1]], ptr addrspace(3) align 4 [[SRC_GROUP_PTR]], i64 [[SIZE]], i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[DEST0]] to ptr addrspace(1)
+; CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[DEST1]] to ptr addrspace(1)
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p3.i64(ptr addrspace(1) align 4 [[TMP1]], ptr addrspace(3) align 4 [[SRC_GROUP_PTR]], i64 [[SIZE]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p3.i64(ptr addrspace(1) align 4 [[TMP2]], ptr addrspace(3) align 4 [[SRC_GROUP_PTR]], i64 [[SIZE]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %cast.src = addrspacecast ptr addrspace(3) %src.group.ptr to ptr
@@ -162,7 +169,8 @@ define amdgpu_kernel void @memcpy_group_flat_to_flat_self(ptr addrspace(3) %grou
 define amdgpu_kernel void @memmove_flat_to_flat_replace_src_with_group(ptr %dest, ptr addrspace(3) %src.group.ptr, i64 %size) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @memmove_flat_to_flat_replace_src_with_group(
 ; CHECK-SAME: ptr [[DEST:%.*]], ptr addrspace(3) [[SRC_GROUP_PTR:%.*]], i64 [[SIZE:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    call void @llvm.memmove.p0.p3.i64(ptr align 4 [[DEST]], ptr addrspace(3) align 4 [[SRC_GROUP_PTR]], i64 [[SIZE]], i1 false), !tbaa [[TBAA0]], !alias.scope [[META3]], !noalias [[META6]]
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[DEST]] to ptr addrspace(1)
+; CHECK-NEXT:    call void @llvm.memmove.p1.p3.i64(ptr addrspace(1) align 4 [[TMP1]], ptr addrspace(3) align 4 [[SRC_GROUP_PTR]], i64 [[SIZE]], i1 false), !tbaa [[TBAA0]], !alias.scope [[META3]], !noalias [[META6]]
 ; CHECK-NEXT:    ret void
 ;
   %cast.src = addrspacecast ptr addrspace(3) %src.group.ptr to ptr
