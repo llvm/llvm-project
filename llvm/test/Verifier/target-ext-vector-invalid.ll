@@ -3,6 +3,6 @@
 ; CHECK: invalid vector element type
 
 define void @bad() {
-  %v = alloca <2 x target("spirv.IntegralConstant")>
+  %v = alloca <2 x target("spirv.Image")>
   ret void
 }
