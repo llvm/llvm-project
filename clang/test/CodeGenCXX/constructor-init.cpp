@@ -160,7 +160,7 @@ template<typename T> struct X;
 
 // Make sure that the instantiated constructor initializes start and
 // end properly.
-// CHECK-LABEL: define linkonce_odr void @_ZN1XIiEC2ERKS0_(ptr {{[^,]*}} %this, ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %other) unnamed_addr
+// CHECK-LABEL: define linkonce_odr void @_ZN1XIiEC2ERKS0_(ptr {{[^,]*}} %this, ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0) unnamed_addr
 // CHECK: {{store.*null}}
 // CHECK: {{store.*null}}
 // CHECK: ret

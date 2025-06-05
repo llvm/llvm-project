@@ -283,3 +283,52 @@ static_assert(S<short *>().SizeOfT<char>() == sizeof(short *), "");
 } // namespace GH68490
 
 #endif
+
+namespace PR54279 {
+// Using a different name for the argument when there is a default argument
+// caused a crash.
+template <typename T> void f(const T &a, int c = 0);
+template <> void f(const int &unused, int) {
+  f(42);
+}
+}
+
+namespace PR54279 {
+template <int> struct a {};
+namespace b {
+template <int c>
+void e(a<c> &, const int &center, double, double, unsigned, bool = 0);
+template <int c> void d(a<c> &, double, double, double, unsigned, bool);
+} // namespace b
+struct g {
+  g(int center = 0);
+  int center;
+};
+namespace b {
+template <> void e(a<3> &, const int &f, double, double, unsigned, bool) {
+  a<3> h;
+  e(h, 0, 0, 0, 0);
+}
+template <> void d(a<0> &, double, double, double, unsigned, bool);
+} // namespace b
+}
+
+namespace PR95420 {
+template <typename _Container>
+constexpr auto
+size(const _Container &__cont) noexcept -> decltype(__cont.size0);
+
+struct A {
+  A* data[2];
+};
+
+template <typename T>
+void f1(unsigned long, const A& f, const A& b = {});
+
+template <>
+void f1<A>(unsigned long size, const A& f, const A& b) { // We also need b
+  f1<A>(0, *f.data[0]); // We still need this line
+
+  size; // Changing the name of size prevents crash
+}
+}

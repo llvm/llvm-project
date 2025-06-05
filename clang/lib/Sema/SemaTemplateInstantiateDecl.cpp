@@ -33,6 +33,7 @@
 #include "clang/Sema/SemaSwift.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateInstCallback.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <optional>
 
@@ -5121,6 +5122,10 @@ bool Sema::addInstantiatedParametersToScope(
       // Simple case: not a parameter pack.
       assert(FParamIdx < Function->getNumParams());
       ParmVarDecl *FunctionParam = Function->getParamDecl(FParamIdx);
+      DeclarationName Name = FunctionParam->getDeclName();
+      auto _ = llvm::make_scope_exit([&]() {
+        FunctionParam->setDeclName(Name);
+      });
       FunctionParam->setDeclName(PatternParam->getDeclName());
       // If the parameter's type is not dependent, update it to match the type
       // in the pattern. They can differ in top-level cv-qualifiers, and we want
