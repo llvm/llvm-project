@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENBUILDER_H
 #define LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENBUILDER_H
 
+#include "Address.h"
 #include "CIRGenTypeCache.h"
 #include "clang/CIR/MissingFeatures.h"
 
@@ -82,6 +83,7 @@ public:
   cir::RecordType::RecordKind getRecordKind(const clang::TagTypeKind kind) {
     switch (kind) {
     case clang::TagTypeKind::Class:
+      return cir::RecordType::Class;
     case clang::TagTypeKind::Struct:
       return cir::RecordType::Struct;
     case clang::TagTypeKind::Union:
@@ -277,6 +279,20 @@ public:
     assert(!cir::MissingFeatures::fastMathFlags());
 
     return create<cir::BinOp>(loc, cir::BinOpKind::Div, lhs, rhs);
+  }
+
+  cir::LoadOp createLoad(mlir::Location loc, Address addr,
+                         bool isVolatile = false) {
+    mlir::IntegerAttr align = getAlignmentAttr(addr.getAlignment());
+    return create<cir::LoadOp>(loc, addr.getPointer(), /*isDeref=*/false,
+                               align);
+  }
+
+  cir::StoreOp createStore(mlir::Location loc, mlir::Value val, Address dst,
+                           mlir::IntegerAttr align = {}) {
+    if (!align)
+      align = getAlignmentAttr(dst.getAlignment());
+    return CIRBaseBuilderTy::createStore(loc, val, dst.getPointer(), align);
   }
 
   /// Create a cir.ptr_stride operation to get access to an array element.
