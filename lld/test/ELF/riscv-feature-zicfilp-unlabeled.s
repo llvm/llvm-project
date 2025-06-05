@@ -48,7 +48,6 @@
 # CONFLICT: error: f1-c.o: file has conflicting properties: GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED and GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG
 
 #--- rv32-f1-s.s
-
 .section ".note.gnu.property", "a"
 .balign 4
 .4byte 4
@@ -71,7 +70,6 @@ f1:
   ret
 
 #--- f1-s.s
-
 .section ".note.gnu.property", "a"
 .balign 8
 .4byte 4
@@ -94,7 +92,6 @@ f1:
   ret
 
 #--- f1-c.s
-
 .section ".note.gnu.property", "a"
 .balign 8
 .4byte 4
@@ -117,7 +114,6 @@ f1:
   ret
 
 #--- f2.s
-
 .text
 .globl f2
 .type f2,@function
@@ -128,7 +124,6 @@ f2:
   ret
 
 #--- rv32-f2-s.s
-
 .section ".note.gnu.property", "a"
 .balign 4
 .4byte 4
@@ -153,7 +148,6 @@ f2:
   ret
 
 #--- f2-s.s
-
 .section ".note.gnu.property", "a"
 .balign 8
 .4byte 4
@@ -178,7 +172,6 @@ f2:
   ret
 
 #--- f3.s
-
 .text
 .globl f3
 .type f3,@function
@@ -186,7 +179,6 @@ f3:
   ret
 
 #--- rv32-f3-s.s
-
 .section ".note.gnu.property", "a"
 .balign 4
 .4byte 4
@@ -208,7 +200,6 @@ f3:
   ret
 
 #--- f3-s.s
-
 .section ".note.gnu.property", "a"
 .balign 8
 .4byte 4
