@@ -2700,7 +2700,7 @@ class VPMulAccumulateReductionRecipe : public VPReductionRecipe {
 
   /// The scaling factor, relative to the VF, that this recipe's output is
   /// divided by
-  unsigned VFScaleFactor = 0;
+  unsigned VFScaleFactor = 1;
 
   /// For cloning VPMulAccumulateReductionRecipe.
   VPMulAccumulateReductionRecipe(VPMulAccumulateReductionRecipe *MulAcc)
