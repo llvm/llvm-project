@@ -50,9 +50,9 @@ intCastExpression(bool IsSigned,
                            : implicitCastExpr(hasSourceExpression(IntTypeExpr))
                                  .bind(CastBindName);
 
-  const auto ExplicitCastExpr = anyOf(
-      explicitCastExpr(hasDescendant(ImplicitCastExpr)),
-      ignoringImpCasts(explicitCastExpr(hasDescendant(ImplicitCastExpr))));
+  const auto ExplicitCastExpr =
+      anyOf(explicitCastExpr(has(ImplicitCastExpr)),
+            ignoringImpCasts(explicitCastExpr(has(ImplicitCastExpr))));
 
   // Match function calls or variable references not directly wrapped by an
   // implicit cast

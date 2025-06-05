@@ -190,17 +190,12 @@ namespace PR127471 {
     }
 
     // Template tests (should not warn)
-    template <typename T>
-    void templateFunctionTest(T value) {
-        unsigned int uVar = 42;
-        if (value < uVar)
+    template <typename T1>
+    void templateFunctionTest(T1 value) {
+        if (value() < getUnsignedValue())
             return;
-// CHECK-MESSAGES-NOT: warning:
-    }
 
-    void runTemplateTest() {
-        int sVar = -42;
-        templateFunctionTest(sVar); // This should not trigger warnings
+        if (value() < (getSignedValue() || getUnsignedValue()))
+          return;
     }
-
 } // namespace PR127471
