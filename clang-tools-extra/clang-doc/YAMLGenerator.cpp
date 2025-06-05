@@ -65,8 +65,7 @@ template <> struct ScalarEnumerationTraits<InfoType> {
   }
 };
 
-template <>
-struct ScalarEnumerationTraits<clang::doc::CommentKind> {
+template <> struct ScalarEnumerationTraits<clang::doc::CommentKind> {
   static void enumeration(IO &IO, clang::doc::CommentKind &Value) {
     IO.enumCase(Value, "FullComment", clang::doc::CommentKind::CK_FullComment);
     IO.enumCase(Value, "ParagraphComment",
