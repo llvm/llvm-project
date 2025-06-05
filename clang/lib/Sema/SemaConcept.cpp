@@ -353,8 +353,6 @@ SubstitutionInTemplateArguments(
     const NamedDecl *Template, MultiLevelTemplateArgumentList MLTAL,
     llvm::SmallVector<TemplateArgument> &SubstitutedOuterMost) {
 
-  Sema::SFINAETrap Trap(S);
-
   Sema::InstantiatingTemplate Inst(
       S, Constraint.getBeginLoc(),
       Sema::InstantiatingTemplate::ParameterMappingSubstitution{},
@@ -362,6 +360,8 @@ SubstitutionInTemplateArguments(
       const_cast<NamedDecl *>(Template), Constraint.getSourceRange());
   if (Inst.isInvalid())
     return std::nullopt;
+
+  Sema::SFINAETrap Trap(S);
 
   // TODO substitute at the appropriate depth
   // Template->getTemplateDepth();
@@ -539,7 +539,6 @@ static bool calculateConstraintSatisfaction(
     return true;
   }
 
-  //bool HasAnyFailed = false;
   for (unsigned I = 0; I < *NumExpansions; I++) {
     Sema::ArgPackSubstIndexRAII SubstIndex(S, I);
     Satisfaction.IsSatisfied = false;
@@ -591,18 +590,19 @@ static bool calculateConstraintSatisfaction(
     const ASTTemplateArgumentListInfo *Ori =
         Constraint.getConceptId()->getTemplateArgsAsWritten();
     TemplateArgumentListInfo OutArgs(Ori->LAngleLoc, Ori->RAngleLoc);
-    if (Template && Template->getTemplateDepth() > 0) {
-      TemplateArgumentListInfo TransArgs(Ori->LAngleLoc, Ori->RAngleLoc);
-      AdjustConstraintDepth Adjust(S, Template->getTemplateDepth() - 1);
-      if (Adjust.TransformTemplateArguments(Ori->getTemplateArgs(),
-                                            Ori->NumTemplateArgs, TransArgs))
-        return Ok;
-      if (S.SubstTemplateArguments(TransArgs.arguments(), MLTAL, OutArgs))
-        return Ok;
-    } else {
-      if (S.SubstTemplateArguments(Ori->arguments(), MLTAL, OutArgs))
-        return Ok;
-    }
+
+    TemplateArgumentListInfo TransArgs(Ori->LAngleLoc, Ori->RAngleLoc);
+    unsigned Depth = Template && Template->getTemplateDepth()
+                         ? Template->getTemplateDepth() - 1
+                         : 0;
+    AdjustConstraintDepth Adjust(S, Depth);
+    if (Adjust.TransformTemplateArguments(Ori->getTemplateArgs(),
+                                          Ori->NumTemplateArgs, TransArgs))
+      return Ok;
+
+    if (S.SubstTemplateArguments(TransArgs.arguments(), MLTAL, OutArgs) ||
+        Trap.hasErrorOccurred())
+      return Ok;
 
     CXXScopeSpec SS;
     SS.Adopt(Constraint.getConceptId()->getNestedNameSpecifierLoc());
@@ -1563,22 +1563,14 @@ substituteParameterMappings(Sema &S, NormalizedConstraintWithParamMapping &N,
     }
     TemplateArgumentLoc *TempArgs =
         new (S.Context) TemplateArgumentLoc[OccurringIndices.count()];
-    for (unsigned I = 0, J = 0, C = TemplateParams->size(); I != C; ++I)
+    for (unsigned I = 0, J = 0, C = TemplateParams->size(); I != C; ++I) {
+      SourceLocation Loc = ArgsAsWritten->NumTemplateArgs > I
+                               ? ArgsAsWritten->arguments()[I].getLocation()
+                               : SourceLocation();
       if (OccurringIndices[I])
-        new (&(TempArgs)[J++])
-            TemplateArgumentLoc(S.getIdentityTemplateArgumentLoc(
-                TemplateParams->begin()[I],
-                // Here we assume we do not support things like
-                // template<typename A, typename B>
-                // concept C = ...;
-                //
-                // template<typename... Ts> requires C<Ts...>
-                // struct S { };
-                // The above currently yields a diagnostic.
-                // We still might have default arguments for concept parameters.
-                ArgsAsWritten->NumTemplateArgs > I
-                    ? ArgsAsWritten->arguments()[I].getLocation()
-                    : SourceLocation()));
+        new (&(TempArgs)[J++]) TemplateArgumentLoc(
+            S.getIdentityTemplateArgumentLoc(TemplateParams->begin()[I], Loc));
+    }
     N.updateParameterMapping(OccurringIndices,
                              MutableArrayRef<TemplateArgumentLoc>{
                                  TempArgs, OccurringIndices.count()});
