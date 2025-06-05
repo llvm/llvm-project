@@ -8289,7 +8289,6 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
       // If the PHI is used by a partial reduction, set the scale factor.
       unsigned ScaleFactor =
           getScalingForReduction(RdxDesc.getLoopExitInstr()).value_or(1);
-
       PhiRecipe = new VPReductionPHIRecipe(
           Phi, RdxDesc, *StartV, CM.isInLoopReduction(Phi),
           CM.useOrderedReductions(RdxDesc), ScaleFactor);
@@ -9328,11 +9327,11 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
           RecipeBuilder.getScalingForReduction(RdxDesc.getLoopExitInstr())
               .value_or(1);
       Type *I32Ty = IntegerType::getInt32Ty(PhiTy->getContext());
-      auto *ScalarFactorVPV =
+      auto *ScaleFactorVPV =
           Plan->getOrAddLiveIn(ConstantInt::get(I32Ty, ScaleFactor));
       VPValue *StartV = PHBuilder.createNaryOp(
           VPInstruction::ReductionStartVector,
-          {PhiR->getStartValue(), Iden, ScalarFactorVPV},
+          {PhiR->getStartValue(), Iden, ScaleFactorVPV},
           PhiTy->isFloatingPointTy() ? RdxDesc.getFastMathFlags()
                                      : FastMathFlags());
       PhiR->setOperand(0, StartV);

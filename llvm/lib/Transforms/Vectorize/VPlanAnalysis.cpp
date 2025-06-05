@@ -397,6 +397,10 @@ static unsigned getVFScaleFactor(VPRecipeBase *R) {
     return RR->getVFScaleFactor();
   if (auto *RR = dyn_cast<VPPartialReductionRecipe>(R))
     return RR->getVFScaleFactor();
+  if (auto *VPI = dyn_cast<VPInstruction>(R))
+    assert(
+        VPI->getOpcode() != VPInstruction::ReductionStartVector &&
+        "getting scaling factor of reduction-start-vector not implemented yet");
   return 1;
 }
 
