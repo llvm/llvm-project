@@ -120,30 +120,26 @@ IRBuilderBase::createCallHelper(Function *Callee, ArrayRef<Value *> Ops,
   return CI;
 }
 
-Value *IRBuilderBase::CreateVScale(Type *Ty, const Twine &Name) {
-  return CreateIntrinsic(Intrinsic::vscale, {Ty}, {}, {}, Name);
+static Value *CreateVScaleMultiple(IRBuilderBase &B, Type *Ty, uint64_t Scale) {
+  Value *VScale = B.CreateVScale(Ty);
+  if (Scale == 1)
+    return VScale;
+
+  return B.CreateMul(VScale, ConstantInt::get(Ty, Scale));
 }
 
 Value *IRBuilderBase::CreateElementCount(Type *Ty, ElementCount EC) {
   if (EC.isFixed() || EC.isZero())
     return ConstantInt::get(Ty, EC.getKnownMinValue());
 
-  Value *VScale = CreateVScale(Ty);
-  if (EC.getKnownMinValue() == 1)
-    return VScale;
-
-  return CreateMul(VScale, ConstantInt::get(Ty, EC.getKnownMinValue()));
+  return CreateVScaleMultiple(*this, Ty, EC.getKnownMinValue());
 }
 
 Value *IRBuilderBase::CreateTypeSize(Type *Ty, TypeSize Size) {
   if (Size.isFixed() || Size.isZero())
     return ConstantInt::get(Ty, Size.getKnownMinValue());
 
-  Value *VScale = CreateVScale(Ty);
-  if (Size.getKnownMinValue() == 1)
-    return VScale;
-
-  return CreateMul(VScale, ConstantInt::get(Ty, Size.getKnownMinValue()));
+  return CreateVScaleMultiple(*this, Ty, Size.getKnownMinValue());
 }
 
 Value *IRBuilderBase::CreateStepVector(Type *DstType, const Twine &Name) {

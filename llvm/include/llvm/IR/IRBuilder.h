@@ -946,7 +946,9 @@ public:
                                               const Twine &Name = "");
 
   /// Create a call to llvm.vscale.<Ty>().
-  LLVM_ABI Value *CreateVScale(Type *Ty, const Twine &Name = "");
+  LLVM_ABI Value *CreateVScale(Type *Ty, const Twine &Name = "") {
+    return CreateIntrinsic(Intrinsic::vscale, {Ty}, {}, {}, Name);
+  }
 
   /// Create an expression which evaluates to the number of elements in \p EC
   /// at runtime.
