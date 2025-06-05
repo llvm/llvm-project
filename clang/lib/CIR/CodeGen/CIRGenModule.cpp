@@ -1563,7 +1563,7 @@ cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
   } else if (getLangOpts().CPlusPlus && d) {
     // Look for a declaration that's lexically in a record.
     for (const auto *fd = cast<FunctionDecl>(d)->getMostRecentDecl(); fd;
-          fd = fd->getPreviousDecl()) {
+         fd = fd->getPreviousDecl()) {
       if (isa<CXXRecordDecl>(fd->getLexicalDeclContext())) {
         if (fd->doesThisDeclarationHaveABody()) {
           addDeferredDeclToEmit(gd.getWithDecl(fd));
