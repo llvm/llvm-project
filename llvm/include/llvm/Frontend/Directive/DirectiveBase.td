@@ -51,9 +51,23 @@ class DirectiveLanguage {
   string flangClauseBaseClass = "";
 }
 
-// Information about values accepted by enum-like clauses
-class ClauseVal<string n, int v, bit uv> {
-  // Name of the clause value.
+// Some clauses take an argument from a predefined list of allowed keyword
+// values. For example, assume a clause "someclause" with an argument from
+// the list "foo", "bar", "baz". In the user source code this would look
+// like "someclause(foo)", whereas in the compiler the values would be
+// represented as
+// enum someclause.enumClauseValue {
+//   Xyz_foo = v_foo,
+//   Xyz_bar = v_bar,
+//   Xyz_baz = v_baz,
+// }
+// The "Xyz_..." are the _record_ names of EnumVal's:
+// def Xyz_foo = EnumVal<"foo", v_foo>;
+// def Xyz_bar = EnumVal<"bar", v_bar>;
+// def Xyz_baz = EnumVal<"baz", v_baz>;
+//
+class EnumVal<string n, int v, bit uv> {
+  // Spelling of the value.
   string name = n;
 
   // Integer value of the clause.
@@ -90,7 +104,7 @@ class Clause<string c> {
   string enumClauseValue = "";
 
   // List of allowed clause values
-  list<ClauseVal> allowedClauseValues = [];
+  list<EnumVal> allowedClauseValues = [];
 
   // If set to true, value class is part of a list. Single class by default.
   bit isValueList = false;

@@ -9,10 +9,10 @@
 [0xa3,0x21,0x3e,0xd5]
 [0xa4,0x21,0x1e,0xd5]
 
-# CHECK:      	sys	#6, c7, c0, #0, x0
-# CHECK-NEXT: 	sys	#6, c7, c0, #0, x1
-# CHECK-NEXT: 	sys	#6, c7, c0, #0, x2
-# CHECK-NEXT: 	sys	#6, c7, c0, #0, x17
-# CHECK-NEXT: 	sys	#6, c7, c0, #0, x30
+# CHECK:      	apas x0
+# CHECK-NEXT: 	apas x1
+# CHECK-NEXT: 	apas x2
+# CHECK-NEXT: 	apas x17
+# CHECK-NEXT: 	apas x30
 # CHECK-NEXT: 	mrs	x3, GPCBW_EL3
 # CHECK-NEXT: 	msr	GPCBW_EL3, x4

@@ -99,7 +99,7 @@ void CodeGenSubRegIndex::updateComponents(CodeGenRegBank &RegBank) {
   if (!Parts.empty()) {
     if (Parts.size() < 2)
       PrintFatalError(TheDef->getLoc(),
-                      "CoveredBySubRegs must have two or more entries");
+                      "CoveringSubRegIndices must have two or more entries");
     SmallVector<CodeGenSubRegIndex *, 8> IdxParts;
     for (const Record *Part : Parts)
       IdxParts.push_back(RegBank.getSubRegIdx(Part));

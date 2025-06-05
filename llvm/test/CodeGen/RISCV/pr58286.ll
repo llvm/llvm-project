@@ -7,7 +7,7 @@ define void @func() {
 ; RV64I-LABEL: func:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a0, 1
-; RV64I-NEXT:    addiw a0, a0, 16
+; RV64I-NEXT:    addi a0, a0, 16
 ; RV64I-NEXT:    sub sp, sp, a0
 ; RV64I-NEXT:    .cfi_def_cfa_offset 4112
 ; RV64I-NEXT:    lui a0, %hi(var)
@@ -25,11 +25,11 @@ define void @func() {
 ; RV64I-NEXT:    lw t4, %lo(var)(a0)
 ; RV64I-NEXT:    lw t5, %lo(var)(a0)
 ; RV64I-NEXT:    lw t6, %lo(var)(a0)
-; RV64I-NEXT:    sd s0, 0(sp)
+; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    lui s0, 1
 ; RV64I-NEXT:    add s0, sp, s0
 ; RV64I-NEXT:    sw a1, 12(s0)
-; RV64I-NEXT:    ld s0, 0(sp)
+; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    sw a1, %lo(var)(a0)
 ; RV64I-NEXT:    sw a2, %lo(var)(a0)
 ; RV64I-NEXT:    sw a3, %lo(var)(a0)
@@ -45,7 +45,7 @@ define void @func() {
 ; RV64I-NEXT:    sw t5, %lo(var)(a0)
 ; RV64I-NEXT:    sw t6, %lo(var)(a0)
 ; RV64I-NEXT:    lui a0, 1
-; RV64I-NEXT:    addiw a0, a0, 16
+; RV64I-NEXT:    addi a0, a0, 16
 ; RV64I-NEXT:    add sp, sp, a0
 ; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
@@ -71,11 +71,11 @@ define void @func() {
 ; RV32I-NEXT:    lw t4, %lo(var)(a0)
 ; RV32I-NEXT:    lw t5, %lo(var)(a0)
 ; RV32I-NEXT:    lw t6, %lo(var)(a0)
-; RV32I-NEXT:    sw s0, 0(sp)
+; RV32I-NEXT:    sw s0, 0(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    lui s0, 1
 ; RV32I-NEXT:    add s0, sp, s0
 ; RV32I-NEXT:    sw a1, 12(s0)
-; RV32I-NEXT:    lw s0, 0(sp)
+; RV32I-NEXT:    lw s0, 0(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    sw a1, %lo(var)(a0)
 ; RV32I-NEXT:    sw a2, %lo(var)(a0)
 ; RV32I-NEXT:    sw a3, %lo(var)(a0)
@@ -142,7 +142,7 @@ define void @shrink_wrap(i1 %c) {
 ; RV64I-NEXT:    bnez a0, .LBB1_2
 ; RV64I-NEXT:  # %bb.1: # %bar
 ; RV64I-NEXT:    lui a0, 1
-; RV64I-NEXT:    addiw a0, a0, 16
+; RV64I-NEXT:    addi a0, a0, 16
 ; RV64I-NEXT:    sub sp, sp, a0
 ; RV64I-NEXT:    .cfi_def_cfa_offset 4112
 ; RV64I-NEXT:    lui a0, %hi(var)
@@ -160,11 +160,11 @@ define void @shrink_wrap(i1 %c) {
 ; RV64I-NEXT:    lw t4, %lo(var)(a0)
 ; RV64I-NEXT:    lw t5, %lo(var)(a0)
 ; RV64I-NEXT:    lw t6, %lo(var)(a0)
-; RV64I-NEXT:    sd s0, 0(sp)
+; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    lui s0, 1
 ; RV64I-NEXT:    add s0, sp, s0
 ; RV64I-NEXT:    sw a1, 12(s0)
-; RV64I-NEXT:    ld s0, 0(sp)
+; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    sw a1, %lo(var)(a0)
 ; RV64I-NEXT:    sw a2, %lo(var)(a0)
 ; RV64I-NEXT:    sw a3, %lo(var)(a0)
@@ -180,7 +180,7 @@ define void @shrink_wrap(i1 %c) {
 ; RV64I-NEXT:    sw t5, %lo(var)(a0)
 ; RV64I-NEXT:    sw t6, %lo(var)(a0)
 ; RV64I-NEXT:    lui a0, 1
-; RV64I-NEXT:    addiw a0, a0, 16
+; RV64I-NEXT:    addi a0, a0, 16
 ; RV64I-NEXT:    add sp, sp, a0
 ; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:  .LBB1_2: # %foo
@@ -210,11 +210,11 @@ define void @shrink_wrap(i1 %c) {
 ; RV32I-NEXT:    lw t4, %lo(var)(a0)
 ; RV32I-NEXT:    lw t5, %lo(var)(a0)
 ; RV32I-NEXT:    lw t6, %lo(var)(a0)
-; RV32I-NEXT:    sw s0, 0(sp)
+; RV32I-NEXT:    sw s0, 0(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    lui s0, 1
 ; RV32I-NEXT:    add s0, sp, s0
 ; RV32I-NEXT:    sw a1, 12(s0)
-; RV32I-NEXT:    lw s0, 0(sp)
+; RV32I-NEXT:    lw s0, 0(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    sw a1, %lo(var)(a0)
 ; RV32I-NEXT:    sw a2, %lo(var)(a0)
 ; RV32I-NEXT:    sw a3, %lo(var)(a0)
