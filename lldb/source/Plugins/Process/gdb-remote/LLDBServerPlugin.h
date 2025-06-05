@@ -16,16 +16,16 @@
 #include "llvm/Support/JSON.h"
 
 #include <functional>
+#include <mutex>
 #include <optional>
 #include <stdint.h>
 #include <string>
-#include <mutex>
 
 namespace lldb_private {
 
 namespace process_gdb_remote {
-  class GDBRemoteCommunicationServerLLGS;
-}
+class GDBRemoteCommunicationServerLLGS;
+} // namespace process_gdb_remote
 
 namespace lldb_server {
 
@@ -125,11 +125,11 @@ public:
   /// calling m_process.SetBreakpoint(...) to help implement funcionality,
   /// such as dynamic library loading in GPUs or to synchronize in any other
   /// way with the native process.
-  virtual GPUPluginBreakpointHitResponse
+  virtual llvm::Expected<GPUPluginBreakpointHitResponse>
   BreakpointWasHit(GPUPluginBreakpointHitArgs &args) = 0;
 
-  protected:
-    std::mutex m_connect_mutex;
+protected:
+  std::mutex m_connect_mutex;
 };
 
 } // namespace lldb_server
