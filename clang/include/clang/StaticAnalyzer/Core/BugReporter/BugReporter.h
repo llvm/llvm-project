@@ -294,8 +294,9 @@ public:
 
 protected:
   /// The ExplodedGraph node against which the report was thrown. It corresponds
-  /// to the end of the execution path that demonstrates the bug.
-  const ExplodedNode *ErrorNode = nullptr;
+  /// to the end of the execution path that demonstrates the bug. This is never
+  /// a nullpointer.
+  const ExplodedNode *ErrorNode;
 
   /// The range that corresponds to ErrorNode's program point. It is usually
   /// highlighted in the report.
