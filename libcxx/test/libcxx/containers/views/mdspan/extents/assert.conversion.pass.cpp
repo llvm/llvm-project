@@ -30,7 +30,6 @@
 //          (((Extents != dynamic_extent) && (OtherExtents == dynamic_extent)) || ... ) ||
 //          (numeric_limits<index_type>::max() < numeric_limits<OtherIndexType>::max())
 
-#include <span> // dynamic_extent
 #include <mdspan>
 #include <cassert>
 
