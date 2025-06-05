@@ -1638,6 +1638,41 @@ LogicalResult cir::VecTernaryOp::verify() {
   return success();
 }
 
+OpFoldResult cir::VecTernaryOp::fold(FoldAdaptor adaptor) {
+  mlir::Attribute cond = adaptor.getCond();
+  mlir::Attribute lhs = adaptor.getLhs();
+  mlir::Attribute rhs = adaptor.getRhs();
+
+  if (mlir::isa_and_nonnull<cir::ConstVectorAttr>(cond) &&
+      mlir::isa_and_nonnull<cir::ConstVectorAttr>(lhs) &&
+      mlir::isa_and_nonnull<cir::ConstVectorAttr>(rhs)) {
+    auto condVec = mlir::cast<cir::ConstVectorAttr>(cond);
+    auto lhsVec = mlir::cast<cir::ConstVectorAttr>(lhs);
+    auto rhsVec = mlir::cast<cir::ConstVectorAttr>(rhs);
+
+    mlir::ArrayAttr condElts = condVec.getElts();
+
+    SmallVector<mlir::Attribute, 16> elements;
+    elements.reserve(condElts.size());
+
+    for (const auto &[idx, condAttr] :
+         llvm::enumerate(condElts.getAsRange<cir::IntAttr>())) {
+      if (condAttr.getSInt()) {
+        elements.push_back(lhsVec.getElts()[idx]);
+        continue;
+      }
+
+      elements.push_back(rhsVec.getElts()[idx]);
+    }
+
+    cir::VectorType vecTy = getLhs().getType();
+    return cir::ConstVectorAttr::get(
+        vecTy, mlir::ArrayAttr::get(getContext(), elements));
+  }
+
+  return {};
+}
+
 //===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
