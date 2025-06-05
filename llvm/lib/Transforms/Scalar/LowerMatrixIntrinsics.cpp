@@ -584,7 +584,7 @@ public:
                    << ore::NV("ToCols", SI.NumColumns) << " using at least "
                    << ore::NV("Shuffles", SplitVecs.size()) << " shuffles";
           });
-        } else {
+        } else if (!ShapeMap.contains(MatrixVal)) {
           ORE->emit([&]() {
             return OptimizationRemarkMissed(DEBUG_TYPE,
                                             "unknown-shape-lowering-def", Inst)
@@ -596,6 +596,10 @@ public:
                    << ore::NV("Instr", Inst) << ore::setExtraArgs()
                    << ore::NV("Opcode", Inst->getOpcodeName());
           });
+        } else {
+          // The ShapeMap has it, so it's a case where we're being lowered
+          // before the def, and we expect that InstCombine will clean things up
+          // afterward.
         }
       }
     }

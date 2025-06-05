@@ -50,38 +50,6 @@ entry:
 }
 
 define void @multiply_ntt(ptr %A, ptr %B, ptr %C, ptr %R) {
-; REMARK-LABEL: Name:            unknown-shape-lowering-def
-; REMARK-NEXT: Function:        multiply_ntt
-; REMARK-NEXT: Args:
-; REMARK-NEXT:   - String:          'splitting a '
-; REMARK-NEXT:   - Rows:            '2'
-; REMARK-NEXT:   - String:          x
-; REMARK-NEXT:   - Cols:            '3'
-; REMARK-NEXT:   - String:          ' matrix '
-; REMARK-NEXT:   - String:          ' with '
-; REMARK-NEXT:   - Shuffles:        '3'
-; REMARK-NEXT:   - String:          ' shuffles because we do not have a shape-aware lowering for its def: '
-; REMARK-NEXT:   - Instr:           load
-; REMARK-NEXT:   - Opcode:          load
-; REMARK-NEXT: ...
-; REMARK-NEXT: --- !Missed
-; REMARK-NEXT: Pass:            lower-matrix-intrinsics
-; REMARK-LABEL: Name:            unknown-shape-lowering-def
-; REMARK-NEXT: Function:        multiply_ntt
-; REMARK-NEXT: Args:
-; REMARK-NEXT:   - String:          'splitting a '
-; REMARK-NEXT:   - Rows:            '4'
-; REMARK-NEXT:   - String:          x
-; REMARK-NEXT:   - Cols:            '3'
-; REMARK-NEXT:   - String:          ' matrix '
-; REMARK-NEXT:   - String:          ' with '
-; REMARK-NEXT:   - Shuffles:        '3'
-; REMARK-NEXT:   - String:          ' shuffles because we do not have a shape-aware lowering for its def: '
-; REMARK-NEXT:   - Instr:           'call <12 x double> @llvm.matrix.multiply.v12f64.v8f64.v6f64'
-; REMARK-NEXT:   - Opcode:          call
-; REMARK-NEXT: ...
-; REMARK-NEXT: --- !Missed
-; REMARK-NEXT: Pass:            lower-matrix-intrinsics
 ; REMARK-LABEL: Name:            unknown-shape-lowering-use
 ; REMARK-NEXT: Function:        multiply_ntt
 ; REMARK-NEXT: Args:
@@ -499,38 +467,6 @@ entry:
 }
 
 define void @multiply_nt_t(ptr %A, ptr %B, ptr %C) {
-; REMARK-LABEL: Name:            unknown-shape-lowering-def
-; REMARK-NEXT: Function:        multiply_nt_t
-; REMARK-NEXT: Args:
-; REMARK-NEXT:   - String:          'splitting a '
-; REMARK-NEXT:   - Rows:            '4'
-; REMARK-NEXT:   - String:          x
-; REMARK-NEXT:   - Cols:            '3'
-; REMARK-NEXT:   - String:          ' matrix '
-; REMARK-NEXT:   - String:          ' with '
-; REMARK-NEXT:   - Shuffles:        '3'
-; REMARK-NEXT:   - String:          ' shuffles because we do not have a shape-aware lowering for its def: '
-; REMARK-NEXT:   - Instr:           load
-; REMARK-NEXT:   - Opcode:          load
-; REMARK-NEXT: ...
-; REMARK-NEXT: --- !Missed
-; REMARK-NEXT: Pass:            lower-matrix-intrinsics
-; REMARK-LABEL: Name:            unknown-shape-lowering-def
-; REMARK-NEXT: Function:        multiply_nt_t
-; REMARK-NEXT: Args:
-; REMARK-NEXT:   - String:          'splitting a '
-; REMARK-NEXT:   - Rows:            '2'
-; REMARK-NEXT:   - String:          x
-; REMARK-NEXT:   - Cols:            '3'
-; REMARK-NEXT:   - String:          ' matrix '
-; REMARK-NEXT:   - String:          ' with '
-; REMARK-NEXT:   - Shuffles:        '3'
-; REMARK-NEXT:   - String:          ' shuffles because we do not have a shape-aware lowering for its def: '
-; REMARK-NEXT:   - Instr:           load
-; REMARK-NEXT:   - Opcode:          load
-; REMARK-NEXT: ...
-; REMARK-NEXT: --- !Missed
-; REMARK-NEXT: Pass:            lower-matrix-intrinsics
 ; REMARK-LABEL: Name:            unknown-shape-lowering-use
 ; REMARK-NEXT: Function:        multiply_nt_t
 ; REMARK-NEXT: Args:
@@ -695,34 +631,6 @@ entry:
 }
 
 define void @multiply_ntt_t(ptr %A, ptr %B, ptr %C, ptr %R) {
-; REMARK-LABEL: Name:            unknown-shape-lowering-def
-; REMARK-NEXT: Function:        multiply_ntt_t
-; REMARK-NEXT: Args:
-; REMARK-NEXT:   - String:          'splitting a '
-; REMARK-NEXT:   - Rows:            '3'
-; REMARK-NEXT:   - String:          x
-; REMARK-NEXT:   - Cols:            '3'
-; REMARK-NEXT:   - String:          ' matrix '
-; REMARK-NEXT:   - String:          ' with '
-; REMARK-NEXT:   - Shuffles:        '3'
-; REMARK-NEXT:   - String:          ' shuffles because we do not have a shape-aware lowering for its def: '
-; REMARK-NEXT:   - Instr:           'call <9 x double> @llvm.matrix.multiply.v9f64.v9f64.v9f64'
-; REMARK-NEXT:   - Opcode:          call
-; REMARK-NEXT: ...
-; REMARK-LABEL: Name:            unknown-shape-lowering-def
-; REMARK-NEXT: Function:        multiply_ntt_t
-; REMARK-NEXT: Args:
-; REMARK-NEXT:   - String:          'splitting a '
-; REMARK-NEXT:   - Rows:            '3'
-; REMARK-NEXT:   - String:          x
-; REMARK-NEXT:   - Cols:            '3'
-; REMARK-NEXT:   - String:          ' matrix '
-; REMARK-NEXT:   - String:          ' with '
-; REMARK-NEXT:   - Shuffles:        '3'
-; REMARK-NEXT:   - String:          ' shuffles because we do not have a shape-aware lowering for its def: '
-; REMARK-NEXT:   - Instr:           load
-; REMARK-NEXT:   - Opcode:          load
-; REMARK-NEXT: ...
 ; REMARK-LABEL: Name:            unknown-shape-lowering-use
 ; REMARK-NEXT: Function:        multiply_ntt_t
 ; REMARK-NEXT: Args:
