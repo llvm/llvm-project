@@ -1,10 +1,9 @@
-#include "llvm/MC/MCCFIAnalysis/CFIAnalysis.h"
+#include "llvm/MCCFIAnalysis/CFIAnalysis.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCCFIAnalysis/ExtendedMCInstrAnalysis.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCExpr.h"
@@ -15,6 +14,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/MCCFIAnalysis/ExtendedMCInstrAnalysis.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -93,7 +93,8 @@ CFIAnalysis::CFIAnalysis(MCContext &Context, MCInstrInfo const &MCII,
                                                false)] =
       RegisterCFIState::createOffsetFromCFAVal(0); // sp's old value is CFA
 
-  // State.RegisterCFIStates[MCRI->getDwarfRegNum(EMCIA->getFlagsReg(), false)] =
+  // State.RegisterCFIStates[MCRI->getDwarfRegNum(EMCIA->getFlagsReg(), false)]
+  // =
   //     RegisterCFIState::createUndefined(); // Flags cannot be caller-saved
 
   // Applying the prologue after default assumptions to overwrite them.
