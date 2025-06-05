@@ -610,8 +610,7 @@ define <16 x i8> @shuffled_tbl2_to_tbl4_nonconst_second_mask(<16 x i8> %a, <16 x
 ; CHECK-SD-NEXT:    mov.b v4[6], w0
 ; CHECK-SD-NEXT:    mov.b v4[7], w0
 ; CHECK-SD-NEXT:    tbl.16b v0, { v0, v1 }, v4
-; CHECK-SD-NEXT:    mov.d v2[1], v0[0]
-; CHECK-SD-NEXT:    mov.16b v0, v2
+; CHECK-SD-NEXT:    zip1.2d v0, v2, v0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: shuffled_tbl2_to_tbl4_nonconst_second_mask:

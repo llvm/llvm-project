@@ -16,8 +16,8 @@ define i1 @ptest_v16i1_256bit_min_sve(ptr %a, ptr %b) vscale_range(2, 0) {
 ; CHECK-NEXT:    uzp1 z1.h, z1.h, z1.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
 ; CHECK-NEXT:    uzp1 z1.b, z1.b, z1.b
-; CHECK-NEXT:    mov v1.d[1], v0.d[0]
-; CHECK-NEXT:    umaxv b0, v1.16b
+; CHECK-NEXT:    zip1 v0.2d, v1.2d, v0.2d
+; CHECK-NEXT:    umaxv b0, v0.16b
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret

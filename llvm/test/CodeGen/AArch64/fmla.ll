@@ -71,22 +71,22 @@ entry:
 define <3 x double> @fma_v3f64(<3 x double> %a, <3 x double> %b, <3 x double> %c) {
 ; CHECK-SD-LABEL: fma_v3f64:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    // kill: def $d6 killed $d6 def $q6
 ; CHECK-SD-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    // kill: def $d7 killed $d7 def $q7
+; CHECK-SD-NEXT:    // kill: def $d6 killed $d6 def $q6
 ; CHECK-SD-NEXT:    // kill: def $d4 killed $d4 def $q4
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    // kill: def $d5 killed $d5 def $q5
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-SD-NEXT:    mov v3.d[1], v4.d[0]
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-SD-NEXT:    mov v6.d[1], v7.d[0]
-; CHECK-SD-NEXT:    fmla v6.2d, v3.2d, v0.2d
+; CHECK-SD-NEXT:    zip1 v3.2d, v3.2d, v4.2d
+; CHECK-SD-NEXT:    zip1 v1.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    zip1 v0.2d, v6.2d, v7.2d
+; CHECK-SD-NEXT:    fmla v0.2d, v3.2d, v1.2d
 ; CHECK-SD-NEXT:    ldr d3, [sp]
 ; CHECK-SD-NEXT:    fmla v3.2d, v5.2d, v2.2d
-; CHECK-SD-NEXT:    fmov d0, d6
-; CHECK-SD-NEXT:    ext v1.16b, v6.16b, v6.16b, #8
+; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    fmov d2, d3
 ; CHECK-SD-NEXT:    ret
@@ -722,22 +722,22 @@ entry:
 define <3 x double> @fmuladd_v3f64(<3 x double> %a, <3 x double> %b, <3 x double> %c) {
 ; CHECK-SD-LABEL: fmuladd_v3f64:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    // kill: def $d6 killed $d6 def $q6
 ; CHECK-SD-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    // kill: def $d7 killed $d7 def $q7
+; CHECK-SD-NEXT:    // kill: def $d6 killed $d6 def $q6
 ; CHECK-SD-NEXT:    // kill: def $d4 killed $d4 def $q4
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    // kill: def $d5 killed $d5 def $q5
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-SD-NEXT:    mov v3.d[1], v4.d[0]
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-SD-NEXT:    mov v6.d[1], v7.d[0]
-; CHECK-SD-NEXT:    fmla v6.2d, v3.2d, v0.2d
+; CHECK-SD-NEXT:    zip1 v3.2d, v3.2d, v4.2d
+; CHECK-SD-NEXT:    zip1 v1.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    zip1 v0.2d, v6.2d, v7.2d
+; CHECK-SD-NEXT:    fmla v0.2d, v3.2d, v1.2d
 ; CHECK-SD-NEXT:    ldr d3, [sp]
 ; CHECK-SD-NEXT:    fmla v3.2d, v5.2d, v2.2d
-; CHECK-SD-NEXT:    fmov d0, d6
-; CHECK-SD-NEXT:    ext v1.16b, v6.16b, v6.16b, #8
+; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    fmov d2, d3
 ; CHECK-SD-NEXT:    ret
@@ -1167,22 +1167,22 @@ entry:
 define <3 x double> @fmul_v3f64(<3 x double> %a, <3 x double> %b, <3 x double> %c) {
 ; CHECK-SD-LABEL: fmul_v3f64:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    // kill: def $d6 killed $d6 def $q6
 ; CHECK-SD-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    // kill: def $d7 killed $d7 def $q7
+; CHECK-SD-NEXT:    // kill: def $d6 killed $d6 def $q6
 ; CHECK-SD-NEXT:    // kill: def $d4 killed $d4 def $q4
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    // kill: def $d5 killed $d5 def $q5
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-SD-NEXT:    mov v3.d[1], v4.d[0]
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-SD-NEXT:    mov v6.d[1], v7.d[0]
-; CHECK-SD-NEXT:    fmla v6.2d, v3.2d, v0.2d
+; CHECK-SD-NEXT:    zip1 v3.2d, v3.2d, v4.2d
+; CHECK-SD-NEXT:    zip1 v1.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    zip1 v0.2d, v6.2d, v7.2d
+; CHECK-SD-NEXT:    fmla v0.2d, v3.2d, v1.2d
 ; CHECK-SD-NEXT:    ldr d3, [sp]
 ; CHECK-SD-NEXT:    fmla v3.2d, v5.2d, v2.2d
-; CHECK-SD-NEXT:    fmov d0, d6
-; CHECK-SD-NEXT:    ext v1.16b, v6.16b, v6.16b, #8
+; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    fmov d2, d3
 ; CHECK-SD-NEXT:    ret

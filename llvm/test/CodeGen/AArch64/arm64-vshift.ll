@@ -2348,7 +2348,7 @@ define <4 x i32> @neon_ushl8h_constant_shift_extend_not_2x(ptr %A) nounwind {
 ; CHECK-GI-NEXT:    mov v2.h[1], w11
 ; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-GI-NEXT:    ushll v2.4s, v2.4h, #0
-; CHECK-GI-NEXT:    mov v1.d[1], v2.d[0]
+; CHECK-GI-NEXT:    zip1 v1.2d, v1.2d, v2.2d
 ; CHECK-GI-NEXT:    ushl v0.4s, v1.4s, v0.4s
 ; CHECK-GI-NEXT:    ret
   %tmp1 = load <4 x i8>, ptr %A
@@ -2623,7 +2623,7 @@ define <4 x i32> @neon_sshl4s_wrong_ext_constant_shift(ptr %A) nounwind {
 ; CHECK-GI-NEXT:    mov v2.h[1], w11
 ; CHECK-GI-NEXT:    sshll v1.4s, v1.4h, #0
 ; CHECK-GI-NEXT:    sshll v2.4s, v2.4h, #0
-; CHECK-GI-NEXT:    mov v1.d[1], v2.d[0]
+; CHECK-GI-NEXT:    zip1 v1.2d, v1.2d, v2.2d
 ; CHECK-GI-NEXT:    sshl v0.4s, v1.4s, v0.4s
 ; CHECK-GI-NEXT:    ret
   %tmp1 = load <4 x i8>, ptr %A

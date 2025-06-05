@@ -327,7 +327,7 @@ define <4 x float> @mul_triangle_multiuses(<4 x float> %a, <4 x float> %b, ptr %
 ; CHECK-NEXT:    fneg v3.2s, v3.2s
 ; CHECK-NEXT:    fmla v5.2s, v4.2s, v1.2s
 ; CHECK-NEXT:    fmla v3.2s, v0.2s, v1.2s
-; CHECK-NEXT:    mov v1.d[1], v2.d[0]
+; CHECK-NEXT:    zip1 v1.2d, v1.2d, v2.2d
 ; CHECK-NEXT:    zip1 v0.4s, v3.4s, v5.4s
 ; CHECK-NEXT:    str q1, [x0]
 ; CHECK-NEXT:    ret

@@ -4,9 +4,9 @@
 define <16 x i8> @test1(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b) {
 ; CHECK-LABEL: test1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ld1r { v1.8b }, [x1]
-; CHECK-NEXT:    ld1r { v0.8b }, [x0]
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    ld1r { v0.8b }, [x1]
+; CHECK-NEXT:    ld1r { v1.8b }, [x0]
+; CHECK-NEXT:    zip1 v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i8, ptr %a, align 1
@@ -22,11 +22,11 @@ entry:
 define <16 x i8> @test2(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b) {
 ; CHECK-LABEL: test2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ld1r { v1.8b }, [x1]
+; CHECK-NEXT:    ld1r { v0.8b }, [x1]
 ; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    dup v0.8b, w8
-; CHECK-NEXT:    mov v1.b[7], w8
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    dup v1.8b, w8
+; CHECK-NEXT:    mov v0.b[7], w8
+; CHECK-NEXT:    zip1 v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i8, ptr %a, align 1
@@ -60,9 +60,9 @@ entry:
 define <16 x i8> @test4(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b) {
 ; CHECK-LABEL: test4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ld1r { v1.8b }, [x0]
-; CHECK-NEXT:    ld1r { v0.8b }, [x1]
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    ld1r { v0.8b }, [x0]
+; CHECK-NEXT:    ld1r { v1.8b }, [x1]
+; CHECK-NEXT:    zip1 v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i8, ptr %a, align 1
@@ -136,9 +136,9 @@ entry:
 define <8 x i16> @test8(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b) {
 ; CHECK-LABEL: test8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ld1r { v1.4h }, [x1]
-; CHECK-NEXT:    ld1r { v0.4h }, [x0]
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    ld1r { v0.4h }, [x1]
+; CHECK-NEXT:    ld1r { v1.4h }, [x0]
+; CHECK-NEXT:    zip1 v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i16, ptr %a, align 1
@@ -154,9 +154,9 @@ entry:
 define <4 x i32> @test9(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b) {
 ; CHECK-LABEL: test9:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ld1r { v1.2s }, [x1]
-; CHECK-NEXT:    ld1r { v0.2s }, [x0]
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    ld1r { v0.2s }, [x1]
+; CHECK-NEXT:    ld1r { v1.2s }, [x0]
+; CHECK-NEXT:    zip1 v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i32, ptr %a, align 1
@@ -174,7 +174,7 @@ define <2 x i64> @test10(ptr nocapture noundef readonly %a, ptr nocapture nounde
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i64, ptr %a, align 1
@@ -214,7 +214,7 @@ define <4 x i32> @test12(ptr nocapture noundef readonly %a, ptr nocapture nounde
 ; CHECK-NEXT:    mov v1.16b, v0.16b
 ; CHECK-NEXT:    mov v0.s[1], w8
 ; CHECK-NEXT:    mov v1.s[0], w8
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i32, ptr %a, align 1
@@ -230,9 +230,9 @@ entry:
 define <2 x i64> @test13(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b) {
 ; CHECK-LABEL: test13:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr d1, [x0]
-; CHECK-NEXT:    ldr d0, [x1]
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    zip1 v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i64, ptr %a, align 1

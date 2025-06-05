@@ -714,7 +714,7 @@ define i64 @sminv_v3i64(<3 x i64> %a) {
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    mov x8, #9223372036854775807 // =0x7fffffffffffffff
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    mov v2.d[1], x8
 ; CHECK-SD-NEXT:    cmgt v1.2d, v2.2d, v0.2d
 ; CHECK-SD-NEXT:    bif v0.16b, v2.16b, v1.16b
@@ -1074,7 +1074,7 @@ define i64 @smaxv_v3i64(<3 x i64> %a) {
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    mov v2.d[1], x8
 ; CHECK-SD-NEXT:    cmgt v1.2d, v0.2d, v2.2d
 ; CHECK-SD-NEXT:    bif v0.16b, v2.16b, v1.16b
@@ -1432,7 +1432,7 @@ define i64 @uminv_v3i64(<3 x i64> %a) {
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    mov x8, #-1 // =0xffffffffffffffff
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    mov v2.d[1], x8
 ; CHECK-SD-NEXT:    cmhi v1.2d, v2.2d, v0.2d
 ; CHECK-SD-NEXT:    bif v0.16b, v2.16b, v1.16b
@@ -1788,7 +1788,7 @@ define i64 @umaxv_v3i64(<3 x i64> %a) {
 ; CHECK-SD-NEXT:    mov v3.16b, v2.16b
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    mov v3.d[1], xzr
 ; CHECK-SD-NEXT:    cmhi v3.2d, v0.2d, v3.2d
 ; CHECK-SD-NEXT:    ext v4.16b, v3.16b, v3.16b, #8

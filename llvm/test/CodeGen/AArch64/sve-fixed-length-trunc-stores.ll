@@ -96,8 +96,8 @@ define void @store_trunc_v8i64i16(ptr %ap, ptr %dest) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z1.s, z1.s, z1.s
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; VBITS_GE_256-NEXT:    uzp1 z1.h, z1.h, z1.h
-; VBITS_GE_256-NEXT:    mov v1.d[1], v0.d[0]
-; VBITS_GE_256-NEXT:    str q1, [x1]
+; VBITS_GE_256-NEXT:    zip1 v0.2d, v1.2d, v0.2d
+; VBITS_GE_256-NEXT:    str q0, [x1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: store_trunc_v8i64i16:
@@ -151,8 +151,8 @@ define void @store_trunc_v16i32i8(ptr %ap, ptr %dest) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z1.h, z1.h, z1.h
 ; VBITS_GE_256-NEXT:    uzp1 z0.b, z0.b, z0.b
 ; VBITS_GE_256-NEXT:    uzp1 z1.b, z1.b, z1.b
-; VBITS_GE_256-NEXT:    mov v1.d[1], v0.d[0]
-; VBITS_GE_256-NEXT:    str q1, [x1]
+; VBITS_GE_256-NEXT:    zip1 v0.2d, v1.2d, v0.2d
+; VBITS_GE_256-NEXT:    str q0, [x1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: store_trunc_v16i32i8:

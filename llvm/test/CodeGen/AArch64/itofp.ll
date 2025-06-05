@@ -1214,7 +1214,7 @@ define <2 x double> @stofp_v2i128_v2f64(<2 x i128> %a) {
 ; CHECK-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    add sp, sp, #48
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1272,7 +1272,7 @@ define <2 x double> @utofp_v2i128_v2f64(<2 x i128> %a) {
 ; CHECK-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    add sp, sp, #48
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1486,7 +1486,7 @@ define <3 x double> @stofp_v3i64_v3f64(<3 x i64> %a) {
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    scvtf v2.2d, v2.2d
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    scvtf v0.2d, v0.2d
@@ -1518,7 +1518,7 @@ define <3 x double> @utofp_v3i64_v3f64(<3 x i64> %a) {
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    ucvtf v2.2d, v2.2d
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    ucvtf v0.2d, v0.2d
@@ -5447,7 +5447,7 @@ define <3 x float> @stofp_v3i8_v3f32(<3 x i8> %a) {
 ; CHECK-GI-NEXT:    mov v1.h[1], v0.h[3]
 ; CHECK-GI-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    sshll v1.4s, v1.4h, #0
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-GI-NEXT:    scvtf v0.4s, v0.4s
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -5477,7 +5477,7 @@ define <3 x float> @utofp_v3i8_v3f32(<3 x i8> %a) {
 ; CHECK-GI-NEXT:    mov v1.h[1], v0.h[3]
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-GI-NEXT:    ucvtf v0.4s, v0.4s
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -6460,7 +6460,7 @@ define <3 x half> @stofp_v3i64_v3f16(<3 x i64> %a) {
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    scvtf v1.2d, v2.2d
 ; CHECK-SD-NEXT:    scvtf v0.2d, v0.2d
 ; CHECK-SD-NEXT:    fcvtn v0.2s, v0.2d
@@ -6508,7 +6508,7 @@ define <3 x half> @utofp_v3i64_v3f16(<3 x i64> %a) {
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    ucvtf v1.2d, v2.2d
 ; CHECK-SD-NEXT:    ucvtf v0.2d, v0.2d
 ; CHECK-SD-NEXT:    fcvtn v0.2s, v0.2d
@@ -8222,7 +8222,7 @@ define <3 x half> @stofp_v3i8_v3f16(<3 x i8> %a) {
 ; CHECK-GI-NOFP16-NEXT:    mov v1.h[1], v0.h[3]
 ; CHECK-GI-NOFP16-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-GI-NOFP16-NEXT:    sshll v1.4s, v1.4h, #0
-; CHECK-GI-NOFP16-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NOFP16-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-GI-NOFP16-NEXT:    scvtf v0.4s, v0.4s
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-GI-NOFP16-NEXT:    ret
@@ -8272,7 +8272,7 @@ define <3 x half> @utofp_v3i8_v3f16(<3 x i8> %a) {
 ; CHECK-GI-NOFP16-NEXT:    mov v1.h[1], v0.h[3]
 ; CHECK-GI-NOFP16-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-GI-NOFP16-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-GI-NOFP16-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NOFP16-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-GI-NOFP16-NEXT:    ucvtf v0.4s, v0.4s
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-GI-NOFP16-NEXT:    ret

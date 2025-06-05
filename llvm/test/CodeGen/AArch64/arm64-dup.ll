@@ -602,7 +602,7 @@ define <4 x i32> @dup_const24(<2 x i32> %A, <2 x i32> %B, <4 x i32> %C) nounwind
 ; CHECK-SD-NEXT:    movk w8, #128, lsl #16
 ; CHECK-SD-NEXT:    dup.4s v3, w8
 ; CHECK-SD-NEXT:    add.2s v0, v0, v3
-; CHECK-SD-NEXT:    mov.d v0[1], v1[0]
+; CHECK-SD-NEXT:    zip1.2d v0, v0, v1
 ; CHECK-SD-NEXT:    add.4s v1, v2, v3
 ; CHECK-SD-NEXT:    eor.16b v0, v1, v0
 ; CHECK-SD-NEXT:    ret
@@ -615,7 +615,7 @@ define <4 x i32> @dup_const24(<2 x i32> %A, <2 x i32> %B, <4 x i32> %C) nounwind
 ; CHECK-GI-NEXT:    adrp x8, .LCPI41_0
 ; CHECK-GI-NEXT:    add.2s v0, v0, v3
 ; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI41_0]
-; CHECK-GI-NEXT:    mov.d v0[1], v1[0]
+; CHECK-GI-NEXT:    zip1.2d v0, v0, v1
 ; CHECK-GI-NEXT:    add.4s v1, v2, v3
 ; CHECK-GI-NEXT:    eor.16b v0, v1, v0
 ; CHECK-GI-NEXT:    ret

@@ -7593,13 +7593,13 @@ def : Pat<(vector_extract (v8bf16 V128:$Rn), VectorIndexH:$idx),
           (bf16 (DUPi16 V128:$Rn, VectorIndexH:$idx))>;
 
 // All concat_vectors operations are canonicalised to act on i64 vectors for
-// AArch64. In the general case we need an instruction, which had just as well be
-// INS.
+// AArch64. In the general case we can use ZIP1 to concatenate the low halves of
+// two SIMD registers.
 multiclass ConcatPat<ValueType DstTy, ValueType SrcTy,
                      ComplexPattern ExtractHigh> {
   def : Pat<(DstTy (concat_vectors (SrcTy V64:$Rd), V64:$Rn)),
-            (INSvi64lane (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub), 1,
-                         (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rn, dsub), 0)>;
+            (ZIP1v2i64 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub),
+                       (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rn, dsub))>;
 
   // If the high lanes are zero we can instead emit a d->d register mov, which
   // will implicitly clear the upper bits.
@@ -7610,11 +7610,10 @@ multiclass ConcatPat<ValueType DstTy, ValueType SrcTy,
   def : Pat<(DstTy (concat_vectors (SrcTy V64:$Rn), undef)),
             (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rn, dsub)>;
 
-  // Concatting the high half of two vectors is the insert of the first
-  // into the low half of the second.
+  // Concatting the high half of two vectors is equivalent to ZIP2v2i64.
   def : Pat<(DstTy (concat_vectors (ExtractHigh (DstTy V128:$Rn)),
                                    (ExtractHigh (DstTy V128:$Rm)))),
-            (INSvi64lane V128:$Rm, (i64 0), V128:$Rn, (i64 1))>;
+            (ZIP2v2i64 V128:$Rn, V128:$Rm)>;
 }
 
 defm : ConcatPat<v2i64, v1i64, extract_high_v2i64>;

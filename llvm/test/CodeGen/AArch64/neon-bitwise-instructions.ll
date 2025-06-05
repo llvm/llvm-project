@@ -1241,7 +1241,7 @@ define <8 x i8> @vselect_equivalent_shuffle_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    adrp x8, .LCPI89_0
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    ldr d1, [x8, :lo12:.LCPI89_0]
 ; CHECK-SD-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
 ; CHECK-SD-NEXT:    ret
@@ -1295,7 +1295,7 @@ define <8 x i8> @vselect_equivalent_shuffle_v8i8_zeroswap(<8 x i8> %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    adrp x8, .LCPI91_0
-; CHECK-SD-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v0.2d
 ; CHECK-SD-NEXT:    ldr d1, [x8, :lo12:.LCPI91_0]
 ; CHECK-SD-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
 ; CHECK-SD-NEXT:    ret

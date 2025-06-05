@@ -447,7 +447,7 @@ define i64 @addv_v3i64(<3 x i64> %a) {
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    mov v2.d[1], xzr
 ; CHECK-SD-NEXT:    add v0.2d, v0.2d, v2.2d
 ; CHECK-SD-NEXT:    addp d0, v0.2d
@@ -492,4 +492,3 @@ entry:
   %arg1 = call i128 @llvm.vector.reduce.add.v2i128(<2 x i128> %a)
   ret i128 %arg1
 }
-

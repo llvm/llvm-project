@@ -292,7 +292,7 @@ define <8 x i8> @wrong_shuffle(ptr %p) {
 ; CHECK-NEXT:    ldur d0, [x0, #1]
 ; CHECK-NEXT:    adrp x8, .LCPI19_0
 ; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI19_0]
-; CHECK-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v0.2d
 ; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
 ; CHECK-NEXT:    ld1 { v0.b }[0], [x0]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0

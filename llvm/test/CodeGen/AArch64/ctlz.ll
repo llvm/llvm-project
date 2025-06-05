@@ -312,7 +312,7 @@ define <3 x i64> @v3i64(<3 x i64> %d) {
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    ushr v1.2d, v0.2d, #1
 ; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-SD-NEXT:    ushr v1.2d, v2.2d, #1

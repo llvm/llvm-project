@@ -133,7 +133,7 @@ define <8 x i8> @shuffle_not4(<8 x i8> %v) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    adrp x8, .LCPI11_0
-; CHECK-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v0.2d
 ; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI11_0]
 ; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
 ; CHECK-NEXT:    ret

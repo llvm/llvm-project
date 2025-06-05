@@ -2540,7 +2540,7 @@ define <4 x i32> @fcmal4xfloat(<4 x float> %A, <4 x float> %B) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #1 // =0x1
 ; CHECK-GI-NEXT:    dup v0.2s, w8
-; CHECK-GI-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-GI-NEXT:    zip1 v0.2d, v0.2d, v0.2d
 ; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #31
 ; CHECK-GI-NEXT:    sshr v0.4s, v0.4s, #31
 ; CHECK-GI-NEXT:    ret
@@ -2587,7 +2587,7 @@ define <4 x i32> @fcmnv4xfloat(<4 x float> %A, <4 x float> %B) {
 ; CHECK-GI-NEXT:    mov w8, #0 // =0x0
 ; CHECK-GI-NEXT:    mov v0.s[0], w8
 ; CHECK-GI-NEXT:    mov v0.s[1], w8
-; CHECK-GI-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-GI-NEXT:    zip1 v0.2d, v0.2d, v0.2d
 ; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #31
 ; CHECK-GI-NEXT:    sshr v0.4s, v0.4s, #31
 ; CHECK-GI-NEXT:    ret

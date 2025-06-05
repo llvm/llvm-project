@@ -203,13 +203,13 @@ define void @masked_store_trunc_v8i64i16(ptr %ap, ptr %bp, ptr %dest) #0 {
 ; VBITS_GE_256-NEXT:    mov z3.d, p0/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl4
 ; VBITS_GE_256-NEXT:    uzp1 z2.s, z2.s, z2.s
-; VBITS_GE_256-NEXT:    mov v1.d[1], v0.d[0]
+; VBITS_GE_256-NEXT:    zip1 v0.2d, v1.2d, v0.2d
 ; VBITS_GE_256-NEXT:    uzp1 z3.s, z3.s, z3.s
 ; VBITS_GE_256-NEXT:    splice z3.s, p0, z3.s, z2.s
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl8
 ; VBITS_GE_256-NEXT:    uzp1 z2.h, z3.h, z3.h
 ; VBITS_GE_256-NEXT:    cmpne p0.h, p0/z, z2.h, #0
-; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x2]
+; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x2]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: masked_store_trunc_v8i64i16:
@@ -288,13 +288,13 @@ define void @masked_store_trunc_v16i32i8(ptr %ap, ptr %bp, ptr %dest) #0 {
 ; VBITS_GE_256-NEXT:    mov z3.s, p0/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl16
 ; VBITS_GE_256-NEXT:    uzp1 z2.h, z2.h, z2.h
-; VBITS_GE_256-NEXT:    mov v1.d[1], v0.d[0]
+; VBITS_GE_256-NEXT:    zip1 v0.2d, v1.2d, v0.2d
 ; VBITS_GE_256-NEXT:    uzp1 z3.h, z3.h, z3.h
 ; VBITS_GE_256-NEXT:    uzp1 z2.b, z2.b, z2.b
 ; VBITS_GE_256-NEXT:    uzp1 z3.b, z3.b, z3.b
-; VBITS_GE_256-NEXT:    mov v3.d[1], v2.d[0]
-; VBITS_GE_256-NEXT:    cmpne p0.b, p0/z, z3.b, #0
-; VBITS_GE_256-NEXT:    st1b { z1.b }, p0, [x2]
+; VBITS_GE_256-NEXT:    zip1 v2.2d, v3.2d, v2.2d
+; VBITS_GE_256-NEXT:    cmpne p0.b, p0/z, z2.b, #0
+; VBITS_GE_256-NEXT:    st1b { z0.b }, p0, [x2]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: masked_store_trunc_v16i32i8:
@@ -335,8 +335,8 @@ define void @masked_store_trunc_v16i32i16(ptr %ap, ptr %bp, ptr %dest) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z3.h, z3.h, z3.h
 ; VBITS_GE_256-NEXT:    uzp1 z2.b, z2.b, z2.b
 ; VBITS_GE_256-NEXT:    uzp1 z3.b, z3.b, z3.b
-; VBITS_GE_256-NEXT:    mov v3.d[1], v2.d[0]
-; VBITS_GE_256-NEXT:    sunpklo z2.h, z3.b
+; VBITS_GE_256-NEXT:    zip1 v2.2d, v3.2d, v2.2d
+; VBITS_GE_256-NEXT:    sunpklo z2.h, z2.b
 ; VBITS_GE_256-NEXT:    cmpne p0.h, p0/z, z2.h, #0
 ; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x2]
 ; VBITS_GE_256-NEXT:    ret

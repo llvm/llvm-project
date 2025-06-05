@@ -662,7 +662,7 @@ define <16 x i32> @extrause_load(ptr %p, ptr %q, ptr %r, ptr %s, ptr %z) {
 ; CHECK-NEXT:    zip1 v2.8b, v2.8b, v2.8b
 ; CHECK-NEXT:    mov v0.b[10], w9
 ; CHECK-NEXT:    add x9, x1, #4
-; CHECK-NEXT:    mov v1.d[1], v2.d[0]
+; CHECK-NEXT:    zip1 v1.2d, v1.2d, v2.2d
 ; CHECK-NEXT:    mov v0.b[11], w10
 ; CHECK-NEXT:    add x10, x3, #12
 ; CHECK-NEXT:    bic v1.8h, #255, lsl #8

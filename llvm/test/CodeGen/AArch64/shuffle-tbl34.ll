@@ -102,20 +102,20 @@ define <16 x i8> @shuffle4_v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <8 x i8> 
 ; CHECK-LABEL: shuffle4_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    adrp x8, .LCPI2_0
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-NEXT:    mov v2.d[1], v3.d[0]
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI2_0]
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    zip1 v1.2d, v2.2d, v3.2d
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI2_0]
 ; CHECK-NEXT:    adrp x8, .LCPI2_1
 ; CHECK-NEXT:    ldr d3, [x8, :lo12:.LCPI2_1]
 ; CHECK-NEXT:    adrp x8, .LCPI2_2
-; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
-; CHECK-NEXT:    tbl v1.8b, { v2.16b }, v3.8b
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI2_2]
-; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-NEXT:    tbl v4.8b, { v0.16b }, v2.8b
+; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI2_2]
+; CHECK-NEXT:    tbl v5.8b, { v1.16b }, v3.8b
+; CHECK-NEXT:    tbl v0.16b, { v4.16b, v5.16b }, v0.16b
 ; CHECK-NEXT:    ret
   %x = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 0, i32 3, i32 2, i32 1, i32 12, i32 15, i32 14, i32 12>
   %y = shufflevector <8 x i8> %c, <8 x i8> %d, <8 x i32> <i32 4, i32 7, i32 6, i32 7, i32 8, i32 10, i32 9, i32 11>
@@ -213,15 +213,15 @@ define <16 x i8> @shuffle4_v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <16 x
 define <8 x i16> @shuffle4_v8i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x i16> %d) {
 ; CHECK-LABEL: shuffle4_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d5, d2
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    adrp x8, .LCPI4_0
-; CHECK-NEXT:    fmov d4, d0
-; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI4_0]
-; CHECK-NEXT:    mov v4.d[1], v1.d[0]
-; CHECK-NEXT:    mov v5.d[1], v3.d[0]
-; CHECK-NEXT:    tbl v0.16b, { v4.16b, v5.16b }, v0.16b
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    zip1 v1.2d, v2.2d, v3.2d
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI4_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-NEXT:    ret
   %x = shufflevector <4 x i16> %a, <4 x i16> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %y = shufflevector <4 x i16> %c, <4 x i16> %d, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -277,15 +277,15 @@ define <16 x i8> @shuffle4_v8i8_v16i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <8 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    zip1 v1.2d, v2.2d, v2.2d
 ; CHECK-NEXT:    adrp x8, .LCPI6_0
-; CHECK-NEXT:    mov v2.d[1], v2.d[0]
-; CHECK-NEXT:    mov v0.d[1], v0.d[0]
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI6_0]
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v0.2d
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI6_0]
 ; CHECK-NEXT:    adrp x8, .LCPI6_1
-; CHECK-NEXT:    tbl v3.8b, { v2.16b }, v1.8b
-; CHECK-NEXT:    tbl v2.8b, { v0.16b }, v1.8b
+; CHECK-NEXT:    tbl v4.8b, { v1.16b }, v2.8b
+; CHECK-NEXT:    tbl v3.8b, { v0.16b }, v2.8b
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI6_1]
-; CHECK-NEXT:    tbl v0.16b, { v2.16b, v3.16b }, v0.16b
+; CHECK-NEXT:    tbl v0.16b, { v3.16b, v4.16b }, v0.16b
 ; CHECK-NEXT:    ret
   %x = shufflevector <8 x i8> %a, <8 x i8> %b, <4 x i32> <i32 0, i32 7, i32 5, i32 1>
   %y = shufflevector <8 x i8> %c, <8 x i8> %d, <4 x i32> <i32 0, i32 7, i32 5, i32 1>
@@ -314,17 +314,17 @@ define <16 x i8> @shuffle4_v8i8_v16i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <8 
 define <8 x i8> @shuffle4_v8i8_v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <8 x i8> %d) {
 ; CHECK-LABEL: shuffle4_v8i8_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    zip1 v1.2d, v2.2d, v2.2d
 ; CHECK-NEXT:    adrp x8, .LCPI7_0
-; CHECK-NEXT:    mov v2.d[1], v2.d[0]
-; CHECK-NEXT:    mov v0.d[1], v0.d[0]
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI7_0]
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v0.2d
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI7_0]
 ; CHECK-NEXT:    adrp x8, .LCPI7_1
-; CHECK-NEXT:    tbl v2.8b, { v2.16b }, v1.8b
-; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
+; CHECK-NEXT:    tbl v1.8b, { v1.16b }, v2.8b
+; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v2.8b
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI7_1]
-; CHECK-NEXT:    mov v0.d[1], v2.d[0]
 ; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
 ; CHECK-NEXT:    ret
   %x = shufflevector <8 x i8> %a, <8 x i8> %b, <4 x i32> <i32 0, i32 7, i32 5, i32 1>
@@ -353,17 +353,17 @@ define <8 x i8> @shuffle4_v8i8_v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <8 x 
 define <8 x i16> @shuffle4_v4i8_zext(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c, <4 x i8> %d) {
 ; CHECK-LABEL: shuffle4_v4i8_zext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d5, d2
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    adrp x8, .LCPI8_0
-; CHECK-NEXT:    fmov d4, d0
-; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI8_0]
-; CHECK-NEXT:    mov v4.d[1], v1.d[0]
-; CHECK-NEXT:    mov v5.d[1], v3.d[0]
-; CHECK-NEXT:    bic v4.8h, #255, lsl #8
-; CHECK-NEXT:    bic v5.8h, #255, lsl #8
-; CHECK-NEXT:    tbl v0.16b, { v4.16b, v5.16b }, v0.16b
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    zip1 v1.2d, v2.2d, v3.2d
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI8_0]
+; CHECK-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-NEXT:    bic v1.8h, #255, lsl #8
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-NEXT:    ret
   %x = shufflevector <4 x i8> %a, <4 x i8> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %y = shufflevector <4 x i8> %c, <4 x i8> %d, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -503,13 +503,13 @@ define <12 x i8> @shuffle3_v4i8(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c) {
 define <8 x i16> @shuffle3_v4i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c) {
 ; CHECK-LABEL: shuffle3_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d3, d2
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d2 killed $d2 killed $q1_q2 def $q1_q2
+; CHECK-NEXT:    fmov d3, d1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    adrp x8, .LCPI12_0
-; CHECK-NEXT:    fmov d2, d0
+; CHECK-NEXT:    zip1 v1.2d, v0.2d, v3.2d
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI12_0]
-; CHECK-NEXT:    mov v2.d[1], v1.d[0]
-; CHECK-NEXT:    tbl v0.16b, { v2.16b, v3.16b }, v0.16b
+; CHECK-NEXT:    tbl v0.16b, { v1.16b, v2.16b }, v0.16b
 ; CHECK-NEXT:    ret
   %x = shufflevector <4 x i16> %a, <4 x i16> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %y = shufflevector <4 x i16> %c, <4 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -567,7 +567,7 @@ define <8 x i8> @insert4_v8i8(<8 x i8> %a, <16 x i8> %b, <8 x i8> %c, <16 x i8> 
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    adrp x8, .LCPI14_0
 ; CHECK-NEXT:    adrp x9, .LCPI14_1
-; CHECK-NEXT:    mov v0.d[1], v2.d[0]
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v2.2d
 ; CHECK-NEXT:    mov v3.16b, v1.16b
 ; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI14_0]
 ; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI14_1]
@@ -634,15 +634,15 @@ define <16 x i8> @insert4_v16i8(<8 x i8> %a, <16 x i8> %b, <8 x i8> %c, <16 x i8
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov v4.16b, v3.16b
 ; CHECK-NEXT:    adrp x8, .LCPI15_0
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q31_q0
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    zip1 v7.2d, v0.2d, v2.2d
 ; CHECK-NEXT:    mov v3.16b, v1.16b
 ; CHECK-NEXT:    ldr q5, [x8, :lo12:.LCPI15_0]
-; CHECK-NEXT:    mov v0.d[1], v2.d[0]
 ; CHECK-NEXT:    adrp x8, .LCPI15_1
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI15_1]
-; CHECK-NEXT:    tbl v31.16b, { v3.16b, v4.16b }, v5.16b
-; CHECK-NEXT:    tbl v0.16b, { v31.16b, v0.16b }, v1.16b
+; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI15_1]
+; CHECK-NEXT:    tbl v6.16b, { v3.16b, v4.16b }, v5.16b
+; CHECK-NEXT:    tbl v0.16b, { v6.16b, v7.16b }, v0.16b
 ; CHECK-NEXT:    ret
   %e1 = extractelement <8 x i8> %a, i32 4
   %e2 = extractelement <8 x i8> %c, i32 0

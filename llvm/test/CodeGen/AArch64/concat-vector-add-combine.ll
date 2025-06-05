@@ -102,8 +102,8 @@ define i32 @combine_undef_add_8xi32(i32 %a, i32 %b, i32 %c, i32 %d) local_unname
 ; CHECK-NEXT:    xtn v2.4h, v1.4s
 ; CHECK-NEXT:    shrn v1.4h, v1.4s, #16
 ; CHECK-NEXT:    uhadd v1.4h, v2.4h, v1.4h
-; CHECK-NEXT:    mov v1.d[1], v0.d[0]
-; CHECK-NEXT:    uaddlv s0, v1.8h
+; CHECK-NEXT:    zip1 v0.2d, v1.2d, v0.2d
+; CHECK-NEXT:    uaddlv s0, v0.8h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %a1 = insertelement <8 x i32> poison, i32 %a, i32 0

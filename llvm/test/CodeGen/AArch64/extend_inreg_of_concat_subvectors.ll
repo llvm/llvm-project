@@ -46,7 +46,7 @@ define void @zext_of_concat_extrause(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) nou
 ; CHECK-NEXT:    ldr d1, [x0]
 ; CHECK-NEXT:    add.2s v0, v1, v0
 ; CHECK-NEXT:    movi.2d v1, #0000000000000000
-; CHECK-NEXT:    mov.d v0[1], v0[0]
+; CHECK-NEXT:    zip1.2d v0, v0, v0
 ; CHECK-NEXT:    zip1.4s v1, v0, v1
 ; CHECK-NEXT:    str q0, [x4]
 ; CHECK-NEXT:    ldr q0, [x2]
@@ -60,7 +60,7 @@ define void @zext_of_concat_extrause(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) nou
 ; CHECK-BE-NEXT:    ld1 { v1.2s }, [x0]
 ; CHECK-BE-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-BE-NEXT:    add v0.2s, v1.2s, v0.2s
-; CHECK-BE-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-BE-NEXT:    zip1 v0.2d, v0.2d, v0.2d
 ; CHECK-BE-NEXT:    zip1 v1.4s, v0.4s, v0.4s
 ; CHECK-BE-NEXT:    st1 { v0.4s }, [x4]
 ; CHECK-BE-NEXT:    trn2 v0.4s, v1.4s, v2.4s
@@ -119,8 +119,7 @@ define void @aext_of_concat_extrause(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) nou
 ; CHECK-NEXT:    ldr d0, [x1]
 ; CHECK-NEXT:    ldr d1, [x0]
 ; CHECK-NEXT:    add.2s v0, v1, v0
-; CHECK-NEXT:    mov.16b v1, v0
-; CHECK-NEXT:    mov.d v1[1], v0[0]
+; CHECK-NEXT:    zip1.2d v1, v0, v0
 ; CHECK-NEXT:    zip1.4s v0, v0, v0
 ; CHECK-NEXT:    str q1, [x4]
 ; CHECK-NEXT:    ldr q1, [x2]
@@ -133,8 +132,7 @@ define void @aext_of_concat_extrause(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) nou
 ; CHECK-BE-NEXT:    ld1 { v0.2s }, [x1]
 ; CHECK-BE-NEXT:    ld1 { v1.2s }, [x0]
 ; CHECK-BE-NEXT:    add v0.2s, v1.2s, v0.2s
-; CHECK-BE-NEXT:    mov v1.16b, v0.16b
-; CHECK-BE-NEXT:    mov v1.d[1], v0.d[0]
+; CHECK-BE-NEXT:    zip1 v1.2d, v0.2d, v0.2d
 ; CHECK-BE-NEXT:    zip1 v0.4s, v0.4s, v0.4s
 ; CHECK-BE-NEXT:    st1 { v1.4s }, [x4]
 ; CHECK-BE-NEXT:    ld1 { v1.4s }, [x2]

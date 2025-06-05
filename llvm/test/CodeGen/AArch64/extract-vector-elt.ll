@@ -776,8 +776,8 @@ define i32 @extract_v4i32_vector_insert(<4 x i32> %a, <2 x i32> %b, i32 %c) {
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    bfi x8, x0, #2, #2
-; CHECK-NEXT:    mov v1.d[1], v0.d[0]
-; CHECK-NEXT:    str q1, [sp]
+; CHECK-NEXT:    zip1 v0.2d, v1.2d, v0.2d
+; CHECK-NEXT:    str q0, [sp]
 ; CHECK-NEXT:    ldr w0, [x8]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
