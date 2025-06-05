@@ -210,6 +210,9 @@ def X86call_rvmarker  : SDNode<"X86ISD::CALL_RVMARKER",     SDT_X86Call,
                         [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
                          SDNPVariadic]>;
 
+def X86imp_call  : SDNode<"X86ISD::IMP_CALL",     SDT_X86Call,
+                        [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
+                         SDNPVariadic]>;
 
 def X86NoTrackCall : SDNode<"X86ISD::NT_CALL", SDT_X86Call,
                             [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
@@ -354,6 +357,8 @@ def X86cmpccxadd : SDNode<"X86ISD::CMPCCXADD", SDTX86Cmpccxadd,
 // Define X86-specific addressing mode.
 let WantsParent = true in
 def addr      : ComplexPattern<iPTR, 5, "selectAddr">;
+def gi_addr   : GIComplexOperandMatcher<s32, "selectAddr">,
+                GIComplexPatternEquiv<addr>;
 def lea32addr : ComplexPattern<i32, 5, "selectLEAAddr",
                                [add, sub, mul, X86mul_imm, shl, or, xor, frameindex],
                                []>;
@@ -444,7 +449,11 @@ def i64relocImmSExt32 : PatLeaf<(i64 relocImm), [{
 //
 def imm_su : PatLeaf<(imm), [{
     return !shouldAvoidImmediateInstFormsForSize(N);
-}]>;
+}]> {
+  // TODO : introduce the same check as in SDAG
+  let GISelPredicateCode = [{ return true; }];
+}
+
 def i64immSExt32_su : PatLeaf<(i64immSExt32), [{
     return !shouldAvoidImmediateInstFormsForSize(N);
 }]>;
@@ -500,7 +509,9 @@ def loadi8 : PatFrag<(ops node:$ptr), (i8 (unindexedload node:$ptr)), [{
   ISD::LoadExtType ExtType = LD->getExtensionType();
   return ExtType == ISD::NON_EXTLOAD || ExtType == ISD::EXTLOAD ||
          ExtType == ISD::ZEXTLOAD;
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return isa<GLoad>(MI); }];
+}
 
 // It's always safe to treat a anyext i16 load as a i32 load if the i16 is
 // known to be 32-bit aligned or better. Ditto for i8 to i16.
@@ -512,7 +523,16 @@ def loadi16 : PatFrag<(ops node:$ptr), (i16 (unindexedload node:$ptr)), [{
   if (ExtType == ISD::EXTLOAD && EnablePromoteAnyextLoad)
     return LD->getAlign() >= 2 && LD->isSimple();
   return false;
-}]>;
+}]> {
+  let GISelPredicateCode = [{
+    auto &Load = cast<GLoad>(MI);
+    LLT Ty = MRI.getType(Load.getDstReg());
+    // Non extending load has MMO and destination types of the same size
+    if (Load.getMemSizeInBits() == Ty.getSizeInBits())
+       return true;
+    return Load.getAlign() >= 2 && Load.isSimple();
+  }];
+}
 
 def loadi32 : PatFrag<(ops node:$ptr), (i32 (unindexedload node:$ptr)), [{
   LoadSDNode *LD = cast<LoadSDNode>(N);
@@ -522,7 +542,16 @@ def loadi32 : PatFrag<(ops node:$ptr), (i32 (unindexedload node:$ptr)), [{
   if (ExtType == ISD::EXTLOAD && EnablePromoteAnyextLoad)
     return LD->getAlign() >= 4 && LD->isSimple();
   return false;
-}]>;
+}]> {
+  let GISelPredicateCode = [{
+    auto &Load = cast<GLoad>(MI);
+    LLT Ty = MRI.getType(Load.getDstReg());
+    // Non extending load has MMO and destination types of the same size
+    if (Load.getMemSizeInBits() == Ty.getSizeInBits())
+       return true;
+    return Load.getAlign() >= 4 && Load.isSimple();
+  }];
+}
 
 def loadi64  : PatFrag<(ops node:$ptr), (i64 (load node:$ptr))>;
 def loadf16  : PatFrag<(ops node:$ptr), (f16 (load node:$ptr))>;
@@ -813,15 +842,20 @@ def X86fldf80 : PatFrag<(ops node:$ptr), (X86fld node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::f80;
 }]>;
 
-def X86fild16 : PatFrag<(ops node:$ptr), (X86fild node:$ptr), [{
-  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i16;
-}]>;
-def X86fild32 : PatFrag<(ops node:$ptr), (X86fild node:$ptr), [{
-  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i32;
-}]>;
-def X86fild64 : PatFrag<(ops node:$ptr), (X86fild node:$ptr), [{
-  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i64;
-}]>;
+def X86fild16 : PatFrag<(ops node:$ptr), (X86fild node:$ptr)> {
+  let IsLoad = true;
+  let MemoryVT = i16;
+}
+
+def X86fild32 : PatFrag<(ops node:$ptr), (X86fild node:$ptr)> {
+  let IsLoad = true;
+  let MemoryVT = i32;
+}
+
+def X86fild64 : PatFrag<(ops node:$ptr), (X86fild node:$ptr)> {
+  let IsLoad = true;
+  let MemoryVT = i64;
+}
 
 def X86fist32 : PatFrag<(ops node:$val, node:$ptr),
                         (X86fist node:$val, node:$ptr), [{
@@ -833,18 +867,23 @@ def X86fist64 : PatFrag<(ops node:$val, node:$ptr),
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i64;
 }]>;
 
-def X86fp_to_i16mem : PatFrag<(ops node:$val, node:$ptr),
-                              (X86fp_to_mem node:$val, node:$ptr), [{
-  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i16;
-}]>;
-def X86fp_to_i32mem : PatFrag<(ops node:$val, node:$ptr),
-                              (X86fp_to_mem node:$val, node:$ptr), [{
-  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i32;
-}]>;
-def X86fp_to_i64mem : PatFrag<(ops node:$val, node:$ptr),
-                              (X86fp_to_mem node:$val, node:$ptr), [{
-  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i64;
-}]>;
+def X86fp_to_i16mem
+    : PatFrag<(ops node:$val, node:$ptr), (X86fp_to_mem node:$val, node:$ptr)> {
+  let IsStore = true;
+  let MemoryVT = i16;
+}
+
+def X86fp_to_i32mem
+    : PatFrag<(ops node:$val, node:$ptr), (X86fp_to_mem node:$val, node:$ptr)> {
+  let IsStore = true;
+  let MemoryVT = i32;
+}
+
+def X86fp_to_i64mem
+    : PatFrag<(ops node:$val, node:$ptr), (X86fp_to_mem node:$val, node:$ptr)> {
+  let IsStore = true;
+  let MemoryVT = i64;
+}
 
 //===----------------------------------------------------------------------===//
 // FPStack pattern fragments

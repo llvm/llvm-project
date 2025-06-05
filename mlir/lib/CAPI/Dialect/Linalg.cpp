@@ -120,4 +120,14 @@ mlirLinalgInferConvolutionDimensions(MlirOperation op) {
   return result;
 }
 
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLinalgGetIndexingMapsAttribute(MlirOperation op) {
+  auto linalgOp = llvm::dyn_cast<mlir::linalg::LinalgOp>(unwrap(op));
+  if (!linalgOp)
+    return MlirAttribute{nullptr};
+
+  ArrayAttr attr = linalgOp.getIndexingMaps();
+  return wrap(attr);
+}
+
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Linalg, linalg, LinalgDialect)

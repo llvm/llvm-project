@@ -1,6 +1,6 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -run-pass=gcn-dpp-combine -verify-machineinstrs -o - %s | FileCheck %s -check-prefixes=GCN,GFX1100
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1150 -run-pass=gcn-dpp-combine -verify-machineinstrs -o - %s | FileCheck %s -check-prefixes=GCN,GFX1150
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -run-pass=gcn-dpp-combine -verify-machineinstrs -o - %s | FileCheck %s -check-prefixes=GCN,GFX1150
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -run-pass=gcn-dpp-combine -verify-machineinstrs -o - %s | FileCheck %s -check-prefixes=GCN,GFX1100
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1150 -mattr=-real-true16 -run-pass=gcn-dpp-combine -verify-machineinstrs -o - %s | FileCheck %s -check-prefixes=GCN,GFX1150
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=-real-true16 -run-pass=gcn-dpp-combine -verify-machineinstrs -o - %s | FileCheck %s -check-prefixes=GCN,GFX1150
 
 ---
 

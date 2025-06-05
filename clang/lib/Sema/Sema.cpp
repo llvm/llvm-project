@@ -84,6 +84,28 @@ SourceLocation Sema::getLocForEndOfToken(SourceLocation Loc, unsigned Offset) {
   return Lexer::getLocForEndOfToken(Loc, Offset, SourceMgr, LangOpts);
 }
 
+SourceRange
+Sema::getRangeForNextToken(SourceLocation Loc, bool IncludeMacros,
+                           bool IncludeComments,
+                           std::optional<tok::TokenKind> ExpectedToken) {
+  if (!Loc.isValid())
+    return SourceRange();
+  std::optional<Token> NextToken =
+      Lexer::findNextToken(Loc, SourceMgr, LangOpts, IncludeComments);
+  if (!NextToken)
+    return SourceRange();
+  if (ExpectedToken && NextToken->getKind() != *ExpectedToken)
+    return SourceRange();
+  SourceLocation TokenStart = NextToken->getLocation();
+  SourceLocation TokenEnd = NextToken->getLastLoc();
+  if (!TokenStart.isValid() || !TokenEnd.isValid())
+    return SourceRange();
+  if (!IncludeMacros && (TokenStart.isMacroID() || TokenEnd.isMacroID()))
+    return SourceRange();
+
+  return SourceRange(TokenStart, TokenEnd);
+}
+
 ModuleLoader &Sema::getModuleLoader() const { return PP.getModuleLoader(); }
 
 DarwinSDKInfo *
@@ -200,6 +222,43 @@ public:
       break;
     default:
       break;
+    }
+  }
+  void PragmaDiagnostic(SourceLocation Loc, StringRef Namespace,
+                        diag::Severity Mapping, StringRef Str) override {
+    // If one of the analysis-based diagnostics was enabled while processing
+    // a function, we want to note it in the analysis-based warnings so they
+    // can be run at the end of the function body even if the analysis warnings
+    // are disabled at that point.
+    SmallVector<diag::kind, 256> GroupDiags;
+    diag::Flavor Flavor =
+        Str[1] == 'W' ? diag::Flavor::WarningOrError : diag::Flavor::Remark;
+    StringRef Group = Str.substr(2);
+
+    if (S->PP.getDiagnostics().getDiagnosticIDs()->getDiagnosticsInGroup(
+            Flavor, Group, GroupDiags))
+      return;
+
+    for (diag::kind K : GroupDiags) {
+      // Note: the cases in this switch should be kept in sync with the
+      // diagnostics in AnalysisBasedWarnings::getPolicyInEffectAt().
+      AnalysisBasedWarnings::Policy &Override =
+          S->AnalysisWarnings.getPolicyOverrides();
+      switch (K) {
+      default: break;
+      case diag::warn_unreachable:
+      case diag::warn_unreachable_break:
+      case diag::warn_unreachable_return:
+      case diag::warn_unreachable_loop_increment:
+        Override.enableCheckUnreachable = true;
+        break;
+      case diag::warn_double_lock:
+        Override.enableThreadSafetyAnalysis = true;
+        break;
+      case diag::warn_use_in_invalid_state:
+        Override.enableConsumedAnalysis = true;
+        break;
+      }
     }
   }
 };
@@ -478,12 +537,15 @@ void Sema::Initialize() {
 #include "clang/Basic/OpenCLExtensionTypes.def"
   }
 
-  if (Context.getTargetInfo().hasAArch64SVETypes() ||
+  if (Context.getTargetInfo().hasAArch64ACLETypes() ||
       (Context.getAuxTargetInfo() &&
-       Context.getAuxTargetInfo()->hasAArch64SVETypes())) {
+       Context.getAuxTargetInfo()->hasAArch64ACLETypes())) {
 #define SVE_TYPE(Name, Id, SingletonId)                                        \
   addImplicitTypedef(#Name, Context.SingletonId);
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#define NEON_VECTOR_TYPE(Name, BaseType, ElBits, NumEls, VectorKind)           \
+  addImplicitTypedef(                                                          \
+      #Name, Context.getVectorType(Context.BaseType, NumEls, VectorKind));
+#include "clang/Basic/AArch64ACLETypes.def"
   }
 
   if (Context.getTargetInfo().getTriple().isPPC64()) {
@@ -1411,6 +1473,23 @@ void Sema::ActOnEndOfTranslationUnit() {
     // No initialization is performed for a tentative definition.
     CheckCompleteVariableDeclaration(VD);
 
+    // In C, if the definition is const-qualified and has no initializer, it
+    // is left uninitialized unless it has static or thread storage duration.
+    QualType Type = VD->getType();
+    if (!VD->isInvalidDecl() && !getLangOpts().CPlusPlus &&
+        Type.isConstQualified() && !VD->getAnyInitializer()) {
+      unsigned DiagID = diag::warn_default_init_const_unsafe;
+      if (VD->getStorageDuration() == SD_Static ||
+          VD->getStorageDuration() == SD_Thread)
+        DiagID = diag::warn_default_init_const;
+
+      bool EmitCppCompat = !Diags.isIgnored(
+          diag::warn_cxx_compat_hack_fake_diagnostic_do_not_emit,
+          VD->getLocation());
+
+      Diag(VD->getLocation(), DiagID) << Type << EmitCppCompat;
+    }
+
     // Notify the consumer that we've completed a tentative definition.
     if (!VD->isInvalidDecl())
       Consumer.CompleteTentativeDefinition(VD);
@@ -2008,11 +2087,14 @@ Sema::SemaDiagnosticBuilder::~SemaDiagnosticBuilder() {
   if (ImmediateDiag) {
     // Emit our diagnostic and, if it was a warning or error, output a callstack
     // if Fn isn't a priori known-emitted.
-    bool IsWarningOrError = S.getDiagnostics().getDiagnosticLevel(
-                                DiagID, Loc) >= DiagnosticsEngine::Warning;
     ImmediateDiag.reset(); // Emit the immediate diag.
-    if (IsWarningOrError && ShowCallStack)
-      emitCallStackNotes(S, Fn);
+
+    if (ShowCallStack) {
+      bool IsWarningOrError = S.getDiagnostics().getDiagnosticLevel(
+                                  DiagID, Loc) >= DiagnosticsEngine::Warning;
+      if (IsWarningOrError)
+        emitCallStackNotes(S, Fn);
+    }
   } else {
     assert((!PartialDiagId || ShowCallStack) &&
            "Must always show call stack for deferred diags.");
@@ -2330,8 +2412,8 @@ static void markEscapingByrefs(const FunctionScopeInfo &FSI, Sema &S) {
           CapType.hasNonTrivialToPrimitiveCopyCUnion())
         S.checkNonTrivialCUnion(BC.getVariable()->getType(),
                                 BD->getCaretLocation(),
-                                Sema::NTCUC_BlockCapture,
-                                Sema::NTCUK_Destruct|Sema::NTCUK_Copy);
+                                NonTrivialCUnionContext::BlockCapture,
+                                Sema::NTCUK_Destruct | Sema::NTCUK_Copy);
     }
   }
 

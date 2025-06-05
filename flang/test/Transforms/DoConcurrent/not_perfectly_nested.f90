@@ -19,23 +19,24 @@ program main
    end do
 end
 
-! CHECK: %[[ORIG_K_ALLOC:.*]] = fir.alloca i32 {bindc_name = "k"}
-! CHECK: %[[ORIG_K_DECL:.*]]:2 = hlfir.declare %[[ORIG_K_ALLOC]]
-
-! CHECK: %[[ORIG_J_ALLOC:.*]] = fir.alloca i32 {bindc_name = "j"}
-! CHECK: %[[ORIG_J_DECL:.*]]:2 = hlfir.declare %[[ORIG_J_ALLOC]]
-
 ! CHECK: omp.parallel {
 
 ! CHECK: omp.wsloop {
 ! CHECK: omp.loop_nest ({{[^[:space:]]+}}) {{.*}} {
-! CHECK:   fir.do_loop %[[J_IV:.*]] = {{.*}} {
-! CHECK:     %[[J_IV_CONV:.*]] = fir.convert %[[J_IV]] : (index) -> i32
+! CHECK:   fir.do_concurrent {
+
+! CHECK:     %[[ORIG_J_ALLOC:.*]] = fir.alloca i32 {bindc_name = "j"}
+! CHECK:     %[[ORIG_J_DECL:.*]]:2 = hlfir.declare %[[ORIG_J_ALLOC]]
+
+! CHECK:     %[[ORIG_K_ALLOC:.*]] = fir.alloca i32 {bindc_name = "k"}
+! CHECK:     %[[ORIG_K_DECL:.*]]:2 = hlfir.declare %[[ORIG_K_ALLOC]]
+
+! CHECK:     fir.do_concurrent.loop (%[[J_IV:.*]], %[[K_IV:.*]]) = {{.*}} {
+! CHECK:       %[[J_IV_CONV:.*]] = fir.convert %[[J_IV]] : (index) -> i32
 ! CHECK:       fir.store %[[J_IV_CONV]] to %[[ORIG_J_DECL]]#0
 
-! CHECK:     fir.do_loop %[[K_IV:.*]] = {{.*}} {
 ! CHECK:       %[[K_IV_CONV:.*]] = fir.convert %[[K_IV]] : (index) -> i32
-! CHECK:         fir.store %[[K_IV_CONV]] to %[[ORIG_K_DECL]]#0
+! CHECK:       fir.store %[[K_IV_CONV]] to %[[ORIG_K_DECL]]#0
 ! CHECK:     }
 ! CHECK:   }
 ! CHECK: omp.yield

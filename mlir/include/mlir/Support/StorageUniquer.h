@@ -99,7 +99,7 @@ public:
       if (elements.empty())
         return std::nullopt;
       auto result = allocator.Allocate<T>(elements.size());
-      std::uninitialized_copy(elements.begin(), elements.end(), result);
+      llvm::uninitialized_copy(elements, result);
       return ArrayRef<T>(result, elements.size());
     }
 
@@ -110,7 +110,7 @@ public:
         return StringRef();
 
       char *result = allocator.Allocate<char>(str.size() + 1);
-      std::uninitialized_copy(str.begin(), str.end(), result);
+      llvm::uninitialized_copy(str, result);
       result[str.size()] = 0;
       return StringRef(result, str.size());
     }

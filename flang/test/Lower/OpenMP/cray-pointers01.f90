@@ -33,7 +33,7 @@ contains
 end module
 
 program test_cray_pointers_01
-  real*8, save :: var(*)
+  real*8 :: var(*)
   ! CHECK: %[[BOX_ALLOCA:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf64>>>
   ! CHECK: %[[IVAR_ALLOCA:.*]] = fir.alloca i64 {bindc_name = "ivar", uniq_name = "_QFEivar"}
   ! CHECK: %[[IVAR_DECL_01:.*]]:2 = hlfir.declare %[[IVAR_ALLOCA]] {uniq_name = "_QFEivar"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)

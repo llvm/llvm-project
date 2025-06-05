@@ -186,7 +186,7 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                 [IntrNoMem]>;
   class AdvSIMD_2VectorArg_Tied_Narrow_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                [LLVMHalfElementsVectorType<0>, llvm_anyvector_ty],
+                [LLVMOneNthElementsVectorType<0, 2>, llvm_anyvector_ty],
                 [IntrNoMem]>;
   class AdvSIMD_2VectorArg_Lane_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyint_ty],
@@ -207,11 +207,11 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                [IntrNoMem]>;
   class AdvSIMD_3VectorArg_Tied_Narrow_Intrinsic
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-               [LLVMHalfElementsVectorType<0>, llvm_anyvector_ty,
+               [LLVMOneNthElementsVectorType<0, 2>, llvm_anyvector_ty,
                 LLVMMatchType<1>], [IntrNoMem]>;
   class AdvSIMD_3VectorArg_Scalar_Tied_Narrow_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                [LLVMHalfElementsVectorType<0>, llvm_anyvector_ty, llvm_i32_ty],
+                [LLVMOneNthElementsVectorType<0, 2>, llvm_anyvector_ty, llvm_i32_ty],
                 [IntrNoMem]>;
   class AdvSIMD_CvtFxToFP_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_anyint_ty, llvm_i32_ty],
@@ -1330,7 +1330,7 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                 [IntrNoMem, ImmArg<ArgIndex<0>>]>;
 
   class AdvSIMD_SVE_PUNPKHI_Intrinsic
-    : DefaultAttrsIntrinsic<[LLVMHalfElementsVectorType<0>],
+    : DefaultAttrsIntrinsic<[LLVMOneNthElementsVectorType<0, 2>],
                 [llvm_anyvector_ty],
                 [IntrNoMem]>;
 
@@ -3068,14 +3068,14 @@ let TargetPrefix = "aarch64" in {
       : DefaultAttrsIntrinsic<[],
           [llvm_i32_ty,
           llvm_anyvector_ty,
-          LLVMMatchType<0>], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects]>;
+          LLVMMatchType<0>], [ImmArg<ArgIndex<0>>, IntrInaccessibleMemOnly, IntrHasSideEffects]>;
 
   class SME_OuterProduct_QuarterTile_Single_Multi
       : DefaultAttrsIntrinsic<[],
           [llvm_i32_ty,
           llvm_anyvector_ty,
           LLVMMatchType<0>,
-          LLVMMatchType<0>], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects]>;
+          LLVMMatchType<0>], [ImmArg<ArgIndex<0>>, IntrInaccessibleMemOnly, IntrHasSideEffects]>;
 
   class SME_OuterProduct_QuarterTile_Multi_Multi
       : DefaultAttrsIntrinsic<[],
@@ -3083,7 +3083,7 @@ let TargetPrefix = "aarch64" in {
           llvm_anyvector_ty,
           LLVMMatchType<0>,
           LLVMMatchType<0>,
-          LLVMMatchType<0>], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects]>;
+          LLVMMatchType<0>], [ImmArg<ArgIndex<0>>, IntrInaccessibleMemOnly, IntrHasSideEffects]>;
 
   // 2-way and 4-way multi-vector signed/unsigned Quarter Tile Quarter Product A/S
   foreach mode = ["s", "a"] in {
@@ -3124,6 +3124,14 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_utmopa_za32 : SME_OuterProduct_TMOP_Intrinsic;
   def int_aarch64_sme_sutmopa_za32 : SME_OuterProduct_TMOP_Intrinsic;
   def int_aarch64_sme_ustmopa_za32 : SME_OuterProduct_TMOP_Intrinsic;
+
+  // 16 and 32 bit multi-vector floating point 8 Quarter Tile Quarter Product
+  foreach za = ["za16", "za32"] in {
+    def int_aarch64_sme_fp8_fmop4a_ # za # "_1x1" : SME_OuterProduct_QuarterTile_Single_Single;
+    def int_aarch64_sme_fp8_fmop4a_ # za # "_1x2" : SME_OuterProduct_QuarterTile_Single_Multi;
+    def int_aarch64_sme_fp8_fmop4a_ # za # "_2x1" : SME_OuterProduct_QuarterTile_Single_Multi;
+    def int_aarch64_sme_fp8_fmop4a_ # za # "_2x2" : SME_OuterProduct_QuarterTile_Multi_Multi;
+  }
 
   class SME_AddVectorToTile_Intrinsic
       : DefaultAttrsIntrinsic<[],

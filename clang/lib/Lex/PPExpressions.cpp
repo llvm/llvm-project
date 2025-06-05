@@ -903,9 +903,8 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
   SourceLocation ExprStartLoc = SourceMgr.getExpansionLoc(Tok.getLocation());
   if (EvaluateValue(ResVal, Tok, DT, true, *this)) {
     // Parse error, skip the rest of the macro line.
-    SourceRange ConditionRange = ExprStartLoc;
     if (Tok.isNot(tok::eod))
-      ConditionRange = DiscardUntilEndOfDirective(Tok);
+      DiscardUntilEndOfDirective(Tok);
 
     // Restore 'DisableMacroExpansion'.
     DisableMacroExpansion = DisableMacroExpansionAtStartOfDirective;
@@ -916,7 +915,7 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
     return {std::nullopt,
             false,
             DT.IncludedUndefinedIds,
-            {ExprStartLoc, ConditionRange.getEnd()}};
+            {ExprStartLoc, Tok.getLocation()}};
   }
 
   EvaluatedDefined = DT.State != DefinedTracker::Unknown;
@@ -948,8 +947,10 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
 
     // Restore 'DisableMacroExpansion'.
     DisableMacroExpansion = DisableMacroExpansionAtStartOfDirective;
-    SourceRange ValRange = ResVal.getRange();
-    return {std::nullopt, false, DT.IncludedUndefinedIds, ValRange};
+    return {std::nullopt,
+            false,
+            DT.IncludedUndefinedIds,
+            {ExprStartLoc, Tok.getLocation()}};
   }
 
   if (CheckForEoD) {
@@ -977,4 +978,49 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
   bool EvaluatedDefined;
   return EvaluateDirectiveExpression(IfNDefMacro, Tok, EvaluatedDefined,
                                      CheckForEoD);
+}
+
+static std::optional<CXXStandardLibraryVersionInfo>
+getCXXStandardLibraryVersion(Preprocessor &PP, StringRef MacroName,
+                             CXXStandardLibraryVersionInfo::Library Lib) {
+  MacroInfo *Macro = PP.getMacroInfo(PP.getIdentifierInfo(MacroName));
+  if (!Macro || Macro->getNumTokens() != 1 || !Macro->isObjectLike())
+    return std::nullopt;
+
+  const Token &RevisionDateTok = Macro->getReplacementToken(0);
+
+  bool Invalid = false;
+  llvm::SmallVector<char, 10> Buffer;
+  llvm::StringRef RevisionDate =
+      PP.getSpelling(RevisionDateTok, Buffer, &Invalid);
+  if (!Invalid) {
+    std::uint64_t Value;
+    // We don't use NumericParser to avoid diagnostics
+    if (!RevisionDate.consumeInteger(10, Value))
+      return CXXStandardLibraryVersionInfo{Lib, Value};
+  }
+  return CXXStandardLibraryVersionInfo{CXXStandardLibraryVersionInfo::Unknown,
+                                       0};
+}
+
+std::optional<uint64_t> Preprocessor::getStdLibCxxVersion() {
+  if (!CXXStandardLibraryVersion)
+    CXXStandardLibraryVersion = getCXXStandardLibraryVersion(
+        *this, "__GLIBCXX__", CXXStandardLibraryVersionInfo::LibStdCXX);
+  if (!CXXStandardLibraryVersion)
+    return std::nullopt;
+
+  if (CXXStandardLibraryVersion->Lib ==
+      CXXStandardLibraryVersionInfo::LibStdCXX)
+    return CXXStandardLibraryVersion->Version;
+  return std::nullopt;
+}
+
+bool Preprocessor::NeedsStdLibCxxWorkaroundBefore(uint64_t FixedVersion) {
+  assert(FixedVersion >= 2000'00'00 && FixedVersion <= 2100'00'00 &&
+         "invalid value for __GLIBCXX__");
+  std::optional<std::uint64_t> Ver = getStdLibCxxVersion();
+  if (!Ver)
+    return false;
+  return *Ver < FixedVersion;
 }

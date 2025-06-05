@@ -22,6 +22,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 
 #include "LLVMContextImpl.h"
 
@@ -41,9 +42,9 @@ STATISTIC(NumInstrRenumberings, "Number of renumberings across all blocks");
 // that might be needed to remove debug intrinsics.
 //
 // https://discourse.llvm.org/t/psa-ir-output-changing-from-debug-intrinsics-to-debug-records/79578
-cl::opt<bool> UseNewDbgInfoFormat(
-    "dont-pass-this-flag-please-experimental-debuginfo", cl::Hidden,
-    cl::init(true));
+LLVM_ABI cl::opt<bool>
+    UseNewDbgInfoFormat("dont-pass-this-flag-please-experimental-debuginfo",
+                        cl::Hidden, cl::init(true));
 
 // This cl-opt collects the --experimental-debuginfo-iterators flag and then
 // does nothing with it (because the it gets stored into an otherwise unused
@@ -613,6 +614,9 @@ BasicBlock *BasicBlock::splitBasicBlock(iterator I, const Twine &BBName,
 
   // Save DebugLoc of split point before invalidating iterator.
   DebugLoc Loc = I->getStableDebugLoc();
+  if (Loc)
+    Loc = Loc->getWithoutAtom();
+
   // Move all of the specified instructions from the original basic block into
   // the new basic block.
   New->splice(New->end(), this, I, end());
@@ -642,6 +646,9 @@ BasicBlock *BasicBlock::splitBasicBlockBefore(iterator I, const Twine &BBName) {
   BasicBlock *New = BasicBlock::Create(getContext(), BBName, getParent(), this);
   // Save DebugLoc of split point before invalidating iterator.
   DebugLoc Loc = I->getDebugLoc();
+  if (Loc)
+    Loc = Loc->getWithoutAtom();
+
   // Move all of the specified instructions from the original basic block into
   // the new basic block.
   New->splice(New->end(), this, begin(), I);
@@ -732,9 +739,7 @@ void BasicBlock::renumberInstructions() {
     I.Order = Order++;
 
   // Set the bit to indicate that the instruction order valid and cached.
-  BasicBlockBits Bits = getBasicBlockBits();
-  Bits.InstrOrderValid = true;
-  setBasicBlockBits(Bits);
+  SubclassOptionalData |= InstrOrderValid;
 
   NumInstrRenumberings++;
 }

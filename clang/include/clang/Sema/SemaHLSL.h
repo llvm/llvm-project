@@ -105,6 +105,7 @@ public:
                          HLSLParamModifierAttr::Spelling Spelling);
   void ActOnTopLevelFunction(FunctionDecl *FD);
   void ActOnVariableDeclarator(VarDecl *VD);
+  bool ActOnUninitializedVarDecl(VarDecl *D);
   void ActOnEndOfTranslationUnit(TranslationUnitDecl *TU);
   void CheckEntryPoint(FunctionDecl *FD);
   void CheckSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
@@ -118,6 +119,7 @@ public:
                                        bool IsCompAssign);
   void emitLogicalOperatorFixIt(Expr *LHS, Expr *RHS, BinaryOperatorKind Opc);
 
+  void handleRootSignatureAttr(Decl *D, const ParsedAttr &AL);
   void handleNumThreadsAttr(Decl *D, const ParsedAttr &AL);
   void handleWaveSizeAttr(Decl *D, const ParsedAttr &AL);
   void handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL);
@@ -128,6 +130,8 @@ public:
   void handleResourceBindingAttr(Decl *D, const ParsedAttr &AL);
   void handleParamModifierAttr(Decl *D, const ParsedAttr &AL);
   bool handleResourceTypeAttr(QualType T, const ParsedAttr &AL);
+
+  void handleVkExtBuiltinInputAttr(Decl *D, const ParsedAttr &AL);
 
   bool CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   QualType ProcessResourceTypeAttributes(QualType Wrapped);
@@ -151,8 +155,7 @@ public:
 
   QualType getInoutParameterType(QualType Ty);
 
-  bool TransformInitList(const InitializedEntity &Entity,
-                         const InitializationKind &Kind, InitListExpr *Init);
+  bool transformInitList(const InitializedEntity &Entity, InitListExpr *Init);
 
   void deduceAddressSpace(VarDecl *Decl);
 
@@ -174,6 +177,8 @@ private:
   // buffer which will be created at the end of the translation unit.
   llvm::SmallVector<Decl *> DefaultCBufferDecls;
 
+  uint32_t ImplicitBindingNextOrderID = 0;
+
 private:
   void collectResourceBindingsOnVarDecl(VarDecl *D);
   void collectResourceBindingsOnUserRecordDecl(const VarDecl *VD,
@@ -181,6 +186,11 @@ private:
   void processExplicitBindingsOnDecl(VarDecl *D);
 
   void diagnoseAvailabilityViolations(TranslationUnitDecl *TU);
+
+  bool initGlobalResourceDecl(VarDecl *VD);
+  uint32_t getNextImplicitBindingOrderID() {
+    return ImplicitBindingNextOrderID++;
+  }
 };
 
 } // namespace clang

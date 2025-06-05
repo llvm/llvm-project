@@ -138,7 +138,7 @@ bool NVVMReflect::handleReflectFunction(Module &M, StringRef ReflectName) {
   assert(F->getReturnType()->isIntegerTy() &&
          "_reflect's return type should be integer");
 
-  const bool Changed = F->getNumUses() > 0;
+  const bool Changed = !F->use_empty();
   for (User *U : make_early_inc_range(F->users())) {
     // Reflect function calls look like:
     // @arch = private unnamed_addr addrspace(1) constant [12 x i8]

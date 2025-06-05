@@ -1,9 +1,11 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios -fsyntax-only -verify -fptrauth-intrinsics %s
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -fsyntax-only -verify -fptrauth-intrinsics %s
 
-#if __has_feature(ptrauth_qualifier)
-#warning __ptrauth qualifier enabled!
-// expected-warning@-1 {{__ptrauth qualifier enabled!}}
+#if !__has_extension(ptrauth_qualifier)
+// This error means that the __ptrauth qualifier availability test says  that it
+// is not available. This error is not expected in the output, if it is seen
+// there is a feature detection regression.
+#error __ptrauth qualifier not enabled
 #endif
 
 @interface Foo

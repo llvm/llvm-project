@@ -12,7 +12,6 @@
 #include "TreeTransform.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/ASTLambda.h"
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DependentDiagnostic.h"
@@ -648,21 +647,30 @@ static void instantiateDependentAMDGPUMaxNumWorkGroupsAttr(
   EnterExpressionEvaluationContext Unevaluated(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
-  ExprResult ResultX = S.SubstExpr(Attr.getMaxNumWorkGroupsX(), TemplateArgs);
-  if (!ResultX.isUsable())
-    return;
-  ExprResult ResultY = S.SubstExpr(Attr.getMaxNumWorkGroupsY(), TemplateArgs);
-  if (!ResultY.isUsable())
-    return;
-  ExprResult ResultZ = S.SubstExpr(Attr.getMaxNumWorkGroupsZ(), TemplateArgs);
-  if (!ResultZ.isUsable())
-    return;
+  Expr *XExpr = nullptr;
+  Expr *YExpr = nullptr;
+  Expr *ZExpr = nullptr;
 
-  Expr *XExpr = ResultX.getAs<Expr>();
-  Expr *YExpr = ResultY.getAs<Expr>();
-  Expr *ZExpr = ResultZ.getAs<Expr>();
+  if (Attr.getMaxNumWorkGroupsX()) {
+    ExprResult ResultX = S.SubstExpr(Attr.getMaxNumWorkGroupsX(), TemplateArgs);
+    if (ResultX.isUsable())
+      XExpr = ResultX.getAs<Expr>();
+  }
 
-  S.AMDGPU().addAMDGPUMaxNumWorkGroupsAttr(New, Attr, XExpr, YExpr, ZExpr);
+  if (Attr.getMaxNumWorkGroupsY()) {
+    ExprResult ResultY = S.SubstExpr(Attr.getMaxNumWorkGroupsY(), TemplateArgs);
+    if (ResultY.isUsable())
+      YExpr = ResultY.getAs<Expr>();
+  }
+
+  if (Attr.getMaxNumWorkGroupsZ()) {
+    ExprResult ResultZ = S.SubstExpr(Attr.getMaxNumWorkGroupsZ(), TemplateArgs);
+    if (ResultZ.isUsable())
+      ZExpr = ResultZ.getAs<Expr>();
+  }
+
+  if (XExpr)
+    S.AMDGPU().addAMDGPUMaxNumWorkGroupsAttr(New, Attr, XExpr, YExpr, ZExpr);
 }
 
 // This doesn't take any template parameters, but we have a custom action that
@@ -997,6 +1005,11 @@ TemplateDeclInstantiator::VisitTranslationUnitDecl(TranslationUnitDecl *D) {
 
 Decl *TemplateDeclInstantiator::VisitHLSLBufferDecl(HLSLBufferDecl *Decl) {
   llvm_unreachable("HLSL buffer declarations cannot be instantiated");
+}
+
+Decl *TemplateDeclInstantiator::VisitHLSLRootSignatureDecl(
+    HLSLRootSignatureDecl *Decl) {
+  llvm_unreachable("HLSL root signature declarations cannot be instantiated");
 }
 
 Decl *
@@ -1435,17 +1448,19 @@ Decl *TemplateDeclInstantiator::InstantiateTypedefNameDecl(TypedefNameDecl *D,
   // happen to be processing that implementation, fake up the g++ ?:
   // semantics. See LWG issue 2141 for more information on the bug.  The bugs
   // are fixed in g++ and libstdc++ 4.9.0 (2014-04-22).
-  const DecltypeType *DT = DI->getType()->getAs<DecltypeType>();
-  CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(D->getDeclContext());
-  if (DT && RD && isa<ConditionalOperator>(DT->getUnderlyingExpr()) &&
-      DT->isReferenceType() &&
-      RD->getEnclosingNamespaceContext() == SemaRef.getStdNamespace() &&
-      RD->getIdentifier() && RD->getIdentifier()->isStr("common_type") &&
-      D->getIdentifier() && D->getIdentifier()->isStr("type") &&
-      SemaRef.getSourceManager().isInSystemHeader(D->getBeginLoc()))
-    // Fold it to the (non-reference) type which g++ would have produced.
-    DI = SemaRef.Context.getTrivialTypeSourceInfo(
-      DI->getType().getNonReferenceType());
+  if (SemaRef.getPreprocessor().NeedsStdLibCxxWorkaroundBefore(2014'04'22)) {
+    const DecltypeType *DT = DI->getType()->getAs<DecltypeType>();
+    CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(D->getDeclContext());
+    if (DT && RD && isa<ConditionalOperator>(DT->getUnderlyingExpr()) &&
+        DT->isReferenceType() &&
+        RD->getEnclosingNamespaceContext() == SemaRef.getStdNamespace() &&
+        RD->getIdentifier() && RD->getIdentifier()->isStr("common_type") &&
+        D->getIdentifier() && D->getIdentifier()->isStr("type") &&
+        SemaRef.getSourceManager().isInSystemHeader(D->getBeginLoc()))
+      // Fold it to the (non-reference) type which g++ would have produced.
+      DI = SemaRef.Context.getTrivialTypeSourceInfo(
+          DI->getType().getNonReferenceType());
+  }
 
   // Create the new typedef
   TypedefNameDecl *Typedef;
@@ -2211,8 +2226,8 @@ Decl *TemplateDeclInstantiator::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 
     if (!PrevClassTemplate && QualifierLoc) {
       SemaRef.Diag(Pattern->getLocation(), diag::err_not_tag_in_scope)
-          << llvm::to_underlying(D->getTemplatedDecl()->getTagKind())
-          << Pattern->getDeclName() << DC << QualifierLoc.getSourceRange();
+          << D->getTemplatedDecl()->getTagKind() << Pattern->getDeclName() << DC
+          << QualifierLoc.getSourceRange();
       return nullptr;
     }
   }
@@ -2948,8 +2963,7 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
       if (MSInfo->getPointOfInstantiation().isInvalid()) {
         SourceLocation Loc = D->getLocation(); // FIXME
         MSInfo->setPointOfInstantiation(Loc);
-        SemaRef.PendingLocalImplicitInstantiations.push_back(
-            std::make_pair(Function, Loc));
+        SemaRef.PendingLocalImplicitInstantiations.emplace_back(Function, Loc);
       }
     }
   }
@@ -5474,8 +5488,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
       // definition will be required).
       assert(!Recursive);
       Function->setInstantiationIsPending(true);
-      PendingInstantiations.push_back(
-        std::make_pair(Function, PointOfInstantiation));
+      PendingInstantiations.emplace_back(Function, PointOfInstantiation);
 
       if (llvm::isTimeTraceVerbose()) {
         llvm::timeTraceAddInstantEvent("DeferInstantiation", [&] {
@@ -5597,7 +5610,64 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   Function->setLocation(PatternDecl->getLocation());
   Function->setInnerLocStart(PatternDecl->getInnerLocStart());
   Function->setRangeEnd(PatternDecl->getEndLoc());
-  Function->setDeclarationNameLoc(PatternDecl->getNameInfo().getInfo());
+  // Let the instantiation use the Pattern's DeclarationNameLoc, due to the
+  // following awkwardness:
+  //
+  //   1. There are out-of-tree users of getNameInfo().getSourceRange(), who
+  //   expect the source range of the instantiated declaration to be set to
+  //   point to the definition.
+  //
+  //   2. That getNameInfo().getSourceRange() might return the TypeLocInfo's
+  //   location it tracked.
+  //
+  //   3. Function might come from an (implicit) declaration, while the pattern
+  //   comes from a definition. In these cases, we need the PatternDecl's source
+  //   location.
+  //
+  // To that end, we need to more or less tweak the DeclarationNameLoc. However,
+  // we can't blindly copy the DeclarationNameLoc from the PatternDecl to the
+  // function, since it contains associated TypeLocs that should have already
+  // been transformed. So, we rebuild the TypeLoc for that purpose. Technically,
+  // we should create a new function declaration and assign everything we need,
+  // but InstantiateFunctionDefinition updates the declaration in place.
+  auto NameLocPointsToPattern = [&] {
+    DeclarationNameInfo PatternName = PatternDecl->getNameInfo();
+    DeclarationNameLoc PatternNameLoc = PatternName.getInfo();
+    switch (PatternName.getName().getNameKind()) {
+    case DeclarationName::CXXConstructorName:
+    case DeclarationName::CXXDestructorName:
+    case DeclarationName::CXXConversionFunctionName:
+      break;
+    default:
+      // Cases where DeclarationNameLoc doesn't matter, as it merely contains a
+      // source range.
+      return PatternNameLoc;
+    }
+
+    TypeSourceInfo *TSI = Function->getNameInfo().getNamedTypeInfo();
+    // TSI might be null if the function is named by a constructor template id.
+    // E.g. S<T>() {} for class template S with a template parameter T.
+    if (!TSI) {
+      // We don't care about the DeclarationName of the instantiated function,
+      // but only the DeclarationNameLoc. So if the TypeLoc is absent, we do
+      // nothing.
+      return PatternNameLoc;
+    }
+
+    QualType InstT = TSI->getType();
+    // We want to use a TypeLoc that reflects the transformed type while
+    // preserving the source location from the pattern.
+    TypeLocBuilder TLB;
+    TypeSourceInfo *PatternTSI = PatternName.getNamedTypeInfo();
+    assert(PatternTSI && "Pattern is supposed to have an associated TSI");
+    // FIXME: PatternTSI is not trivial. We should copy the source location
+    // along the TypeLoc chain. However a trivial TypeLoc is sufficient for
+    // getNameInfo().getSourceRange().
+    TLB.pushTrivial(Context, InstT, PatternTSI->getTypeLoc().getBeginLoc());
+    return DeclarationNameLoc::makeNamedTypeLoc(
+        TLB.getTypeSourceInfo(Context, InstT));
+  };
+  Function->setDeclarationNameLoc(NameLocPointsToPattern());
 
   EnterExpressionEvaluationContext EvalContext(
       *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
@@ -5694,8 +5764,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     RebuildTypeSourceInfoForDefaultSpecialMembers();
     SetDeclDefaulted(Function, PatternDecl->getLocation());
   } else {
-    NamedDecl *ND = Function;
-    DeclContext *DC = ND->getLexicalDeclContext();
+    DeclContext *DC = Function->getLexicalDeclContext();
     std::optional<ArrayRef<TemplateArgument>> Innermost;
     if (auto *Primary = Function->getPrimaryTemplate();
         Primary &&
@@ -5776,8 +5845,24 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     savedContext.pop();
   }
 
-  DeclGroupRef DG(Function);
-  Consumer.HandleTopLevelDecl(DG);
+  // We never need to emit the code for a lambda in unevaluated context.
+  // We also can't mangle a lambda in the require clause of a function template
+  // during constraint checking as the MSI ABI would need to mangle the (not yet
+  // specialized) enclosing declaration
+  // FIXME: Should we try to skip this for non-lambda functions too?
+  bool ShouldSkipCG = [&] {
+    auto *RD = dyn_cast<CXXRecordDecl>(Function->getParent());
+    if (!RD || !RD->isLambda())
+      return false;
+
+    return llvm::any_of(ExprEvalContexts, [](auto &Context) {
+      return Context.isUnevaluated() || Context.isImmediateFunctionContext();
+    });
+  }();
+  if (!ShouldSkipCG) {
+    DeclGroupRef DG(Function);
+    Consumer.HandleTopLevelDecl(DG);
+  }
 
   // This class may have local implicit instantiations that need to be
   // instantiation within this scope.
@@ -6008,22 +6093,20 @@ void Sema::InstantiateVariableInitializer(
   else if (OldVar->isInline())
     Var->setImplicitlyInline();
 
+  ContextRAII SwitchContext(*this, Var->getDeclContext());
+
+  EnterExpressionEvaluationContext Evaluated(
+      *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, Var);
+  currentEvaluationContext().InLifetimeExtendingContext =
+      parentEvaluationContext().InLifetimeExtendingContext;
+  currentEvaluationContext().RebuildDefaultArgOrDefaultInit =
+      parentEvaluationContext().RebuildDefaultArgOrDefaultInit;
+
   if (OldVar->getInit()) {
-    EnterExpressionEvaluationContext Evaluated(
-        *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, Var);
-
-    currentEvaluationContext().InLifetimeExtendingContext =
-        parentEvaluationContext().InLifetimeExtendingContext;
-    currentEvaluationContext().RebuildDefaultArgOrDefaultInit =
-        parentEvaluationContext().RebuildDefaultArgOrDefaultInit;
     // Instantiate the initializer.
-    ExprResult Init;
-
-    {
-      ContextRAII SwitchContext(*this, Var->getDeclContext());
-      Init = SubstInitializer(OldVar->getInit(), TemplateArgs,
-                              OldVar->getInitStyle() == VarDecl::CallInit);
-    }
+    ExprResult Init =
+        SubstInitializer(OldVar->getInit(), TemplateArgs,
+                         OldVar->getInitStyle() == VarDecl::CallInit);
 
     if (!Init.isInvalid()) {
       Expr *InitExpr = Init.get();
@@ -6145,8 +6228,7 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
   // unit.
   if (!Def && !DefinitionRequired) {
     if (TSK == TSK_ExplicitInstantiationDefinition) {
-      PendingInstantiations.push_back(
-        std::make_pair(Var, PointOfInstantiation));
+      PendingInstantiations.emplace_back(Var, PointOfInstantiation);
     } else if (TSK == TSK_ImplicitInstantiation) {
       // Warn about missing definition at the end of translation unit.
       if (AtEndOfTU && !getDiagnostics().hasErrorOccurred() &&

@@ -28,11 +28,9 @@ bb:
 }
 ; ALL:      .set .Laliasee_default.num_vgpr, 0
 ; ALL-NEXT: .set .Laliasee_default.num_agpr, 27
-; ALL-NEXT: .set .Laliasee_default.numbered_sgpr, 32
+; ALL-NEXT: .set .Laliasee_default.numbered_sgpr, 0
 
 attributes #0 = { noinline norecurse nounwind optnone }
 attributes #1 = { noinline norecurse nounwind readnone willreturn }
 attributes #2 = { nounwind readnone willreturn }
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

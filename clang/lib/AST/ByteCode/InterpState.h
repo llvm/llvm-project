@@ -32,6 +32,12 @@ class InterpStack;
 class InterpFrame;
 class SourceMapper;
 
+struct StdAllocatorCaller {
+  const Expr *Call = nullptr;
+  QualType AllocType;
+  explicit operator bool() { return Call; }
+};
+
 /// Interpreter context.
 class InterpState final : public State, public SourceMapper {
 public:
@@ -46,6 +52,8 @@ public:
 
   InterpState(const InterpState &) = delete;
   InterpState &operator=(const InterpState &) = delete;
+
+  bool diagnosing() const { return getEvalStatus().Diag != nullptr; }
 
   // Stack frame accessors.
   Frame *getSplitFrame() { return Parent.getCurrentFrame(); }
@@ -116,6 +124,8 @@ public:
   /// \c true otherwise.
   bool maybeDiagnoseDanglingAllocations();
 
+  StdAllocatorCaller getStdAllocatorCaller(StringRef Name) const;
+
 private:
   friend class EvaluationResult;
   friend class InterpStateCCOverride;
@@ -127,7 +137,6 @@ private:
   SourceMapper *M;
   /// Allocator used for dynamic allocations performed via the program.
   DynamicAllocator Alloc;
-  std::optional<bool> ConstantContextOverride;
 
 public:
   /// Reference to the module containing all bytecode.
@@ -147,6 +156,7 @@ public:
   /// Things needed to do speculative execution.
   SmallVectorImpl<PartialDiagnosticAt> *PrevDiags = nullptr;
   unsigned SpeculationDepth = 0;
+  std::optional<bool> ConstantContextOverride;
 
   llvm::SmallVector<
       std::pair<const Expr *, const LifetimeExtendedTemporaryDecl *>>

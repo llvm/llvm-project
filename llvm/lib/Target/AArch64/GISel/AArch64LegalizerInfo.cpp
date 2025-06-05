@@ -361,11 +361,17 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF).lower();
 
-  // TODO: Custom lowering for v2s32, v4s32, v2s64.
   getActionDefinitionsBuilder(G_BITREVERSE)
       .legalFor({s32, s64, v8s8, v16s8})
       .widenScalarToNextPow2(0, /*Min = */ 32)
+      .widenScalarOrEltToNextPow2OrMinSize(0, 8)
       .clampScalar(0, s32, s64)
+      .clampNumElements(0, v8s8, v16s8)
+      .clampNumElements(0, v4s16, v8s16)
+      .clampNumElements(0, v2s32, v4s32)
+      .clampNumElements(0, v2s64, v2s64)
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
+      .moreElementsToNextPow2(0)
       .lower();
 
   getActionDefinitionsBuilder(G_BSWAP)
@@ -1617,8 +1623,10 @@ bool AArch64LegalizerInfo::legalizeSmallCMGlobalValue(
 
 bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                              MachineInstr &MI) const {
-  auto LowerBinOp = [&MI](unsigned Opcode) {
-    MachineIRBuilder MIB(MI);
+  MachineIRBuilder &MIB = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *MIB.getMRI();
+
+  auto LowerBinOp = [&MI, &MIB](unsigned Opcode) {
     MIB.buildInstr(Opcode, {MI.getOperand(0)},
                    {MI.getOperand(2), MI.getOperand(3)});
     MI.eraseFromParent();
@@ -1637,7 +1645,6 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MachineFunction &MF = *MI.getMF();
     auto Val = MF.getRegInfo().createGenericVirtualRegister(
         LLT::scalar(VaListSize * 8));
-    MachineIRBuilder MIB(MI);
     MIB.buildLoad(Val, MI.getOperand(2),
                   *MF.getMachineMemOperand(MachinePointerInfo(),
                                            MachineMemOperand::MOLoad,
@@ -1650,7 +1657,6 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return true;
   }
   case Intrinsic::get_dynamic_area_offset: {
-    MachineIRBuilder &MIB = Helper.MIRBuilder;
     MIB.buildConstant(MI.getOperand(0).getReg(), 0);
     MI.eraseFromParent();
     return true;
@@ -1659,14 +1665,12 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     assert(MI.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS);
     // Anyext the value being set to 64 bit (only the bottom 8 bits are read by
     // the instruction).
-    MachineIRBuilder MIB(MI);
     auto &Value = MI.getOperand(3);
     Register ExtValueReg = MIB.buildAnyExt(LLT::scalar(64), Value).getReg(0);
     Value.setReg(ExtValueReg);
     return true;
   }
   case Intrinsic::aarch64_prefetch: {
-    MachineIRBuilder MIB(MI);
     auto &AddrVal = MI.getOperand(1);
 
     int64_t IsWrite = MI.getOperand(2).getImm();
@@ -1689,8 +1693,6 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::aarch64_neon_smaxv:
   case Intrinsic::aarch64_neon_uminv:
   case Intrinsic::aarch64_neon_sminv: {
-    MachineIRBuilder MIB(MI);
-    MachineRegisterInfo &MRI = *MIB.getMRI();
     bool IsSigned = IntrinsicID == Intrinsic::aarch64_neon_saddv ||
                     IntrinsicID == Intrinsic::aarch64_neon_smaxv ||
                     IntrinsicID == Intrinsic::aarch64_neon_sminv;
@@ -1715,8 +1717,6 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   }
   case Intrinsic::aarch64_neon_uaddlp:
   case Intrinsic::aarch64_neon_saddlp: {
-    MachineIRBuilder MIB(MI);
-
     unsigned Opc = IntrinsicID == Intrinsic::aarch64_neon_uaddlp
                        ? AArch64::G_UADDLP
                        : AArch64::G_SADDLP;
@@ -1727,9 +1727,6 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   }
   case Intrinsic::aarch64_neon_uaddlv:
   case Intrinsic::aarch64_neon_saddlv: {
-    MachineIRBuilder MIB(MI);
-    MachineRegisterInfo &MRI = *MIB.getMRI();
-
     unsigned Opc = IntrinsicID == Intrinsic::aarch64_neon_uaddlv
                        ? AArch64::G_UADDLV
                        : AArch64::G_SADDLV;
@@ -1785,10 +1782,29 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return LowerBinOp(AArch64::G_UMULL);
   case Intrinsic::aarch64_neon_abs: {
     // Lower the intrinsic to G_ABS.
-    MachineIRBuilder MIB(MI);
     MIB.buildInstr(TargetOpcode::G_ABS, {MI.getOperand(0)}, {MI.getOperand(2)});
     MI.eraseFromParent();
     return true;
+  }
+  case Intrinsic::aarch64_neon_sqadd: {
+    if (MRI.getType(MI.getOperand(0).getReg()).isVector())
+      return LowerBinOp(TargetOpcode::G_SADDSAT);
+    break;
+  }
+  case Intrinsic::aarch64_neon_sqsub: {
+    if (MRI.getType(MI.getOperand(0).getReg()).isVector())
+      return LowerBinOp(TargetOpcode::G_SSUBSAT);
+    break;
+  }
+  case Intrinsic::aarch64_neon_uqadd: {
+    if (MRI.getType(MI.getOperand(0).getReg()).isVector())
+      return LowerBinOp(TargetOpcode::G_UADDSAT);
+    break;
+  }
+  case Intrinsic::aarch64_neon_uqsub: {
+    if (MRI.getType(MI.getOperand(0).getReg()).isVector())
+      return LowerBinOp(TargetOpcode::G_USUBSAT);
+    break;
   }
 
   case Intrinsic::vector_reverse:

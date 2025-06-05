@@ -1,4 +1,4 @@
-; RUN: llc --filetype=obj %s -o  - -experimental-debuginfo-iterators=false | dxil-dis -o - | FileCheck %s
+; RUN: llc --filetype=obj %s -o  - | dxil-dis -o - | FileCheck %s
 ; Note: LLVM has soft disabled experimental-debuginfo-iterators in commit 6a45fce
 ; XFAIL: *
 

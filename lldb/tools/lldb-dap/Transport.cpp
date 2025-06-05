@@ -137,7 +137,8 @@ Expected<Message> Transport::Read(const std::chrono::microseconds &timeout) {
 
   DAP_LOG(m_log, "--> ({0}) {1}", m_client_name, *raw_json);
 
-  return json::parse<Message>(*raw_json);
+  return json::parse<Message>(/*JSON=*/*raw_json,
+                              /*RootName=*/"protocol_message");
 }
 
 Error Transport::Write(const Message &message) {

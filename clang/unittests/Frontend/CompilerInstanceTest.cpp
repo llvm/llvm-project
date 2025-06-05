@@ -53,9 +53,10 @@ TEST(CompilerInstance, DefaultVFSOverlayFromInvocation) {
   const std::string VFSArg = "-ivfsoverlay" + FileNameStr;
   const char *Args[] = {"clang", VFSArg.c_str(), "-xc++", "-"};
 
+  DiagnosticOptions DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
       CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
-                                          new DiagnosticOptions());
+                                          DiagOpts);
 
   CreateInvocationOptions CIOpts;
   CIOpts.Diags = Diags;
@@ -66,9 +67,8 @@ TEST(CompilerInstance, DefaultVFSOverlayFromInvocation) {
     FAIL() << "could not create compiler invocation";
   // Create a minimal CompilerInstance which should use the VFS we specified
   // in the CompilerInvocation (as we don't explicitly set our own).
-  CompilerInstance Instance;
+  CompilerInstance Instance(std::move(CInvok));
   Instance.setDiagnostics(Diags.get());
-  Instance.setInvocation(CInvok);
   Instance.createFileManager();
 
   // Check if the virtual file exists which means that our VFS is used by the
@@ -77,17 +77,17 @@ TEST(CompilerInstance, DefaultVFSOverlayFromInvocation) {
 }
 
 TEST(CompilerInstance, AllowDiagnosticLogWithUnownedDiagnosticConsumer) {
-  auto DiagOpts = new DiagnosticOptions();
+  DiagnosticOptions DiagOpts;
   // Tell the diagnostics engine to emit the diagnostic log to STDERR. This
   // ensures that a chained diagnostic consumer is created so that the test can
   // exercise the unowned diagnostic consumer in a chained consumer.
-  DiagOpts->DiagnosticLogFile = "-";
+  DiagOpts.DiagnosticLogFile = "-";
 
   // Create the diagnostic engine with unowned consumer.
   std::string DiagnosticOutput;
   llvm::raw_string_ostream DiagnosticsOS(DiagnosticOutput);
-  auto DiagPrinter = std::make_unique<TextDiagnosticPrinter>(
-      DiagnosticsOS, new DiagnosticOptions());
+  auto DiagPrinter =
+      std::make_unique<TextDiagnosticPrinter>(DiagnosticsOS, DiagOpts);
   CompilerInstance Instance;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
       Instance.createDiagnostics(*llvm::vfs::getRealFileSystem(), DiagOpts,

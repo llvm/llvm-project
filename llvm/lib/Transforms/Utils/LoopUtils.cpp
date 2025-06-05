@@ -958,6 +958,10 @@ constexpr Intrinsic::ID llvm::getReductionIntrinsicID(RecurKind RK) {
     return Intrinsic::vector_reduce_fmaximum;
   case RecurKind::FMinimum:
     return Intrinsic::vector_reduce_fminimum;
+  case RecurKind::FMaximumNum:
+    return Intrinsic::vector_reduce_fmax;
+  case RecurKind::FMinimumNum:
+    return Intrinsic::vector_reduce_fmin;
   }
 }
 
@@ -1053,6 +1057,10 @@ Intrinsic::ID llvm::getMinMaxReductionIntrinsicOp(RecurKind RK) {
     return Intrinsic::minimum;
   case RecurKind::FMaximum:
     return Intrinsic::maximum;
+  case RecurKind::FMinimumNum:
+    return Intrinsic::minimumnum;
+  case RecurKind::FMaximumNum:
+    return Intrinsic::maximumnum;
   }
 }
 
@@ -1101,7 +1109,8 @@ Value *llvm::createMinMaxOp(IRBuilderBase &Builder, RecurKind RK, Value *Left,
                             Value *Right) {
   Type *Ty = Left->getType();
   if (Ty->isIntOrIntVectorTy() ||
-      (RK == RecurKind::FMinimum || RK == RecurKind::FMaximum)) {
+      (RK == RecurKind::FMinimum || RK == RecurKind::FMaximum ||
+       RK == RecurKind::FMinimumNum || RK == RecurKind::FMaximumNum)) {
     // TODO: Add float minnum/maxnum support when FMF nnan is set.
     Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RK);
     return Builder.CreateIntrinsic(Ty, Id, {Left, Right}, nullptr,
@@ -1198,12 +1207,7 @@ Value *llvm::getShuffleReduction(IRBuilderBase &Builder, Value *Src,
 }
 
 Value *llvm::createAnyOfReduction(IRBuilderBase &Builder, Value *Src,
-                                  const RecurrenceDescriptor &Desc,
-                                  PHINode *OrigPhi) {
-  assert(
-      RecurrenceDescriptor::isAnyOfRecurrenceKind(Desc.getRecurrenceKind()) &&
-      "Unexpected reduction kind");
-  Value *InitVal = Desc.getRecurrenceStartValue();
+                                  Value *InitVal, PHINode *OrigPhi) {
   Value *NewVal = nullptr;
 
   // First use the original phi to determine the new value we're trying to
@@ -1233,12 +1237,7 @@ Value *llvm::createAnyOfReduction(IRBuilderBase &Builder, Value *Src,
 }
 
 Value *llvm::createFindLastIVReduction(IRBuilderBase &Builder, Value *Src,
-                                       Value *Start,
-                                       const RecurrenceDescriptor &Desc) {
-  assert(RecurrenceDescriptor::isFindLastIVRecurrenceKind(
-             Desc.getRecurrenceKind()) &&
-         "Unexpected reduction kind");
-  Value *Sentinel = Desc.getSentinelValue();
+                                       Value *Start, Value *Sentinel) {
   Value *MaxRdx = Src->getType()->isVectorTy()
                       ? Builder.CreateIntMaxReduce(Src, true)
                       : Src;
@@ -1320,6 +1319,8 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
   case RecurKind::FMin:
   case RecurKind::FMinimum:
   case RecurKind::FMaximum:
+  case RecurKind::FMinimumNum:
+  case RecurKind::FMaximumNum:
     return Builder.CreateUnaryIntrinsic(getReductionIntrinsicID(RdxKind), Src);
   case RecurKind::FMulAdd:
   case RecurKind::FAdd:

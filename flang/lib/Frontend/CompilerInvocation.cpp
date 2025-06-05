@@ -195,12 +195,13 @@ static bool parseVectorLibArg(Fortran::frontend::CodeGenOptions &opts,
   std::optional<VectorLibrary> val =
       llvm::StringSwitch<std::optional<VectorLibrary>>(arg->getValue())
           .Case("Accelerate", VectorLibrary::Accelerate)
-          .Case("LIBMVEC", VectorLibrary::LIBMVEC)
+          .Case("libmvec", VectorLibrary::LIBMVEC)
           .Case("MASSV", VectorLibrary::MASSV)
           .Case("SVML", VectorLibrary::SVML)
           .Case("SLEEF", VectorLibrary::SLEEF)
           .Case("Darwin_libsystem_m", VectorLibrary::Darwin_libsystem_m)
           .Case("ArmPL", VectorLibrary::ArmPL)
+          .Case("AMDLIBM", VectorLibrary::AMDLIBM)
           .Case("NoLibrary", VectorLibrary::NoLibrary)
           .Default(std::nullopt);
   if (!val.has_value()) {
@@ -269,6 +270,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::driver::options::OPT_fno_stack_arrays, false))
     opts.StackArrays = 1;
 
+  if (args.getLastArg(clang::driver::options::OPT_floop_interchange))
+    opts.InterchangeLoops = 1;
+
   if (args.getLastArg(clang::driver::options::OPT_vectorize_loops))
     opts.VectorizeLoop = 1;
 
@@ -305,10 +309,27 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   for (auto *a : args.filtered(clang::driver::options::OPT_fpass_plugin_EQ))
     opts.LLVMPassPlugins.push_back(a->getValue());
 
+  // -mprefer_vector_width option
+  if (const llvm::opt::Arg *a = args.getLastArg(
+          clang::driver::options::OPT_mprefer_vector_width_EQ)) {
+    llvm::StringRef s = a->getValue();
+    unsigned width;
+    if (s == "none")
+      opts.PreferVectorWidth = "none";
+    else if (s.getAsInteger(10, width))
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << a->getAsString(args) << a->getValue();
+    else
+      opts.PreferVectorWidth = s.str();
+  }
+
   // -fembed-offload-object option
   for (auto *a :
        args.filtered(clang::driver::options::OPT_fembed_offload_object_EQ))
     opts.OffloadObjects.push_back(a->getValue());
+
+  if (args.hasArg(clang::driver::options::OPT_finstrument_functions))
+    opts.InstrumentFunctions = 1;
 
   // -flto=full/thin option.
   if (const llvm::opt::Arg *a =
@@ -1612,13 +1633,10 @@ void CompilerInvocation::setDefaultPredefinitions() {
   }
 
   llvm::Triple targetTriple{llvm::Triple(this->targetOpts.triple)};
-  if (targetTriple.isPPC()) {
-    // '__powerpc__' is a generic macro for any PowerPC cases. e.g. Max integer
-    // size.
-    fortranOptions.predefinitions.emplace_back("__powerpc__", "1");
-  }
   if (targetTriple.isOSLinux()) {
     fortranOptions.predefinitions.emplace_back("__linux__", "1");
+  } else if (targetTriple.isOSAIX()) {
+    fortranOptions.predefinitions.emplace_back("_AIX", "1");
   }
 
   switch (targetTriple.getArch()) {
@@ -1627,6 +1645,20 @@ void CompilerInvocation::setDefaultPredefinitions() {
   case llvm::Triple::ArchType::x86_64:
     fortranOptions.predefinitions.emplace_back("__x86_64__", "1");
     fortranOptions.predefinitions.emplace_back("__x86_64", "1");
+    break;
+  case llvm::Triple::ArchType::ppc:
+  case llvm::Triple::ArchType::ppc64:
+  case llvm::Triple::ArchType::ppcle:
+  case llvm::Triple::ArchType::ppc64le:
+    // '__powerpc__' is a generic macro for any PowerPC.
+    fortranOptions.predefinitions.emplace_back("__powerpc__", "1");
+    if (targetTriple.isOSAIX() && targetTriple.isArch64Bit()) {
+      fortranOptions.predefinitions.emplace_back("__64BIT__", "1");
+    }
+    break;
+  case llvm::Triple::ArchType::aarch64:
+    fortranOptions.predefinitions.emplace_back("__aarch64__", "1");
+    fortranOptions.predefinitions.emplace_back("__aarch64", "1");
     break;
   }
 }

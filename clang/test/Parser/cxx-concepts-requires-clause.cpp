@@ -119,7 +119,8 @@ template<typename T> requires 0
 
 template<typename T> requires foo<T>
 (int) bar() { };
-// expected-error@-1{{expected '(' for function-style cast or type construction}}
+// expected-error@-1{{expected '(' for function-style cast or type construction}} \
+// expected-error@-2{{parentheses are required around this expression in a requires clause}}
 
 template<typename T>
 void bar() requires foo<T>();

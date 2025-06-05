@@ -8,7 +8,6 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyDiagnosticConsumer.h"
-#include "../ClangTidyForceLinker.h"
 #include "../ClangTidyModule.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
@@ -40,9 +39,10 @@ public:
     // Create and set diagnostics engine
     auto *DiagConsumer =
         new ClangTidyDiagnosticConsumer(*Context, &Compiler.getDiagnostics());
+    auto DiagOpts = std::make_unique<DiagnosticOptions>();
     auto DiagEngine = std::make_unique<DiagnosticsEngine>(
-        new DiagnosticIDs, new DiagnosticOptions, DiagConsumer);
-    Context->setDiagnosticsEngine(DiagEngine.get());
+        new DiagnosticIDs, *DiagOpts, DiagConsumer);
+    Context->setDiagnosticsEngine(std::move(DiagOpts), DiagEngine.get());
 
     // Create the AST consumer.
     ClangTidyASTConsumerFactory Factory(*Context);

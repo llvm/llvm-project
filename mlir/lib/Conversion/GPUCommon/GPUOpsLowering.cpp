@@ -125,8 +125,12 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
     // Perform signature modification
     rewriter.modifyOpInPlace(
         gpuFuncOp, [gpuFuncOp, &argIndices, &argTypes, &argAttrs, &argLocs]() {
-          static_cast<FunctionOpInterface>(gpuFuncOp).insertArguments(
-              argIndices, argTypes, argAttrs, argLocs);
+          LogicalResult inserted =
+              static_cast<FunctionOpInterface>(gpuFuncOp).insertArguments(
+                  argIndices, argTypes, argAttrs, argLocs);
+          (void)inserted;
+          assert(succeeded(inserted) &&
+                 "expected GPU funcs to support inserting any argument");
         });
   } else {
     workgroupBuffers.reserve(gpuFuncOp.getNumWorkgroupAttributions());
@@ -539,14 +543,20 @@ LogicalResult GPUPrintfOpToVPrintfLowering::matchAndRewrite(
   // the device code, not the host code
   auto moduleOp = gpuPrintfOp->getParentOfType<gpu::GPUModuleOp>();
 
+  // Create a valid global location removing any metadata attached to the
+  // location as debug info metadata inside of a function cannot be used outside
+  // of that function.
+  Location globalLoc = loc->findInstanceOfOrUnknown<FileLineColLoc>();
+
   auto vprintfType =
       LLVM::LLVMFunctionType::get(rewriter.getI32Type(), {ptrType, ptrType});
-  LLVM::LLVMFuncOp vprintfDecl =
-      getOrDefineFunction(moduleOp, loc, rewriter, "vprintf", vprintfType);
+  LLVM::LLVMFuncOp vprintfDecl = getOrDefineFunction(
+      moduleOp, globalLoc, rewriter, "vprintf", vprintfType);
 
   // Create the global op or find an existing one.
-  LLVM::GlobalOp global = getOrCreateStringConstant(
-      rewriter, loc, moduleOp, llvmI8, "printfFormat_", adaptor.getFormat());
+  LLVM::GlobalOp global =
+      getOrCreateStringConstant(rewriter, globalLoc, moduleOp, llvmI8,
+                                "printfFormat_", adaptor.getFormat());
 
   // Get a pointer to the format string's first element
   Value globalPtr = rewriter.create<LLVM::AddressOfOp>(loc, global);

@@ -357,6 +357,7 @@ _LIBCPP_POP_MACROS
 #    include <initializer_list>
 #    include <iosfwd>
 #    include <new>
+#    include <optional>
 #    include <stdexcept>
 #    include <system_error>
 #    include <type_traits>

@@ -553,7 +553,8 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, LibCall);
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
     setOperationAction(ISD::IS_FPCLASS, MVT::f16, Custom);
-    setOperationAction(ISD::FCOPYSIGN, MVT::f16, Legal);
+    for (auto Op : {ISD::FNEG, ISD::FABS, ISD::FCOPYSIGN})
+      setOperationAction(Op, MVT::f16, Legal);
   }
 
   for (unsigned I = MVT::FIRST_FP_VALUETYPE;
@@ -791,6 +792,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
                        ISD::SINT_TO_FP,
                        ISD::UINT_TO_FP,
                        ISD::STRICT_FP_EXTEND,
+                       ISD::FCOPYSIGN,
                        ISD::BSWAP,
                        ISD::SETCC,
                        ISD::SRL,
@@ -826,19 +828,6 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
 
   // Default to having -disable-strictnode-mutation on
   IsStrictFPEnabled = true;
-
-  if (Subtarget.isTargetzOS()) {
-    struct RTLibCallMapping {
-      RTLIB::Libcall Code;
-      const char *Name;
-    };
-    static RTLibCallMapping RTLibCallCommon[] = {
-#define HANDLE_LIBCALL(code, name) {RTLIB::code, name},
-#include "ZOSLibcallNames.def"
-    };
-    for (auto &E : RTLibCallCommon)
-      setLibcallName(E.Code, E.Name);
-  }
 }
 
 bool SystemZTargetLowering::useSoftFloat() const {
@@ -6922,17 +6911,15 @@ SDValue SystemZTargetLowering::lowerLoadF16(SDValue Op,
   SDValue NewLd;
   if (auto *AtomicLd = dyn_cast<AtomicSDNode>(Op.getNode())) {
     assert(EVT(RegVT) == AtomicLd->getMemoryVT() && "Unhandled f16 load");
-    NewLd = DAG.getAtomic(ISD::ATOMIC_LOAD, DL, MVT::i16, MVT::i64,
-                          AtomicLd->getChain(), AtomicLd->getBasePtr(),
-                          AtomicLd->getMemOperand());
-    cast<AtomicSDNode>(NewLd)->setExtensionType(ISD::EXTLOAD);
+    NewLd = DAG.getAtomicLoad(ISD::EXTLOAD, DL, MVT::i16, MVT::i64,
+                              AtomicLd->getChain(), AtomicLd->getBasePtr(),
+                              AtomicLd->getMemOperand());
   } else {
     LoadSDNode *Ld = cast<LoadSDNode>(Op.getNode());
     assert(EVT(RegVT) == Ld->getMemoryVT() && "Unhandled f16 load");
-    NewLd =
-        DAG.getExtLoad(ISD::EXTLOAD, DL, MVT::i64, Ld->getChain(),
-                       Ld->getBasePtr(), Ld->getPointerInfo(), MVT::i16,
-                       Ld->getOriginalAlign(), Ld->getMemOperand()->getFlags());
+    NewLd = DAG.getExtLoad(ISD::EXTLOAD, DL, MVT::i64, Ld->getChain(),
+                           Ld->getBasePtr(), Ld->getPointerInfo(), MVT::i16,
+                           Ld->getBaseAlign(), Ld->getMemOperand()->getFlags());
   }
   SDValue F16Val = convertToF16(NewLd, DAG);
   return DAG.getMergeValues({F16Val, NewLd.getValue(1)}, DL);
@@ -7948,7 +7935,7 @@ SDValue SystemZTargetLowering::combineLOAD(
       if (HiPart) {
         SDValue EltLoad = DAG.getLoad(
             HiPart->getValueType(0), DL, LD->getChain(), LD->getBasePtr(),
-            LD->getPointerInfo(), LD->getOriginalAlign(),
+            LD->getPointerInfo(), LD->getBaseAlign(),
             LD->getMemOperand()->getFlags(), LD->getAAInfo());
 
         DCI.CombineTo(HiPart, EltLoad, true);
@@ -7958,7 +7945,7 @@ SDValue SystemZTargetLowering::combineLOAD(
         SDValue EltLoad = DAG.getLoad(
             LoPart->getValueType(0), DL, LD->getChain(),
             DAG.getObjectPtrOffset(DL, LD->getBasePtr(), TypeSize::getFixed(8)),
-            LD->getPointerInfo().getWithOffset(8), LD->getOriginalAlign(),
+            LD->getPointerInfo().getWithOffset(8), LD->getBaseAlign(),
             LD->getMemOperand()->getFlags(), LD->getAAInfo());
 
         DCI.CombineTo(LoPart, EltLoad, true);
@@ -8108,7 +8095,7 @@ SDValue SystemZTargetLowering::combineSTORE(
       SDValue AddrSpaceCast = DAG.getAddrSpaceCast(DL, PtrVT, SN->getBasePtr(),
                                                    SYSTEMZAS::PTR32, 0);
       return DAG.getStore(SN->getChain(), DL, SN->getValue(), AddrSpaceCast,
-                          SN->getPointerInfo(), SN->getOriginalAlign(),
+                          SN->getPointerInfo(), SN->getBaseAlign(),
                           SN->getMemOperand()->getFlags(), SN->getAAInfo());
     }
   }
@@ -8182,17 +8169,14 @@ SDValue SystemZTargetLowering::combineSTORE(
     if ((MemVT == MVT::i128 && isI128MovedFromParts(Op1, LoPart, HiPart)) ||
         (MemVT == MVT::f128 && isF128MovedFromParts(Op1, LoPart, HiPart))) {
       SDLoc DL(SN);
-      SDValue Chain0 =
-        DAG.getStore(SN->getChain(), DL, HiPart, SN->getBasePtr(),
-                     SN->getPointerInfo(), SN->getOriginalAlign(),
-                     SN->getMemOperand()->getFlags(), SN->getAAInfo());
-      SDValue Chain1 =
-        DAG.getStore(SN->getChain(), DL, LoPart,
-                     DAG.getObjectPtrOffset(DL, SN->getBasePtr(),
-                                                TypeSize::getFixed(8)),
-                     SN->getPointerInfo().getWithOffset(8),
-                     SN->getOriginalAlign(),
-                     SN->getMemOperand()->getFlags(), SN->getAAInfo());
+      SDValue Chain0 = DAG.getStore(
+          SN->getChain(), DL, HiPart, SN->getBasePtr(), SN->getPointerInfo(),
+          SN->getBaseAlign(), SN->getMemOperand()->getFlags(), SN->getAAInfo());
+      SDValue Chain1 = DAG.getStore(
+          SN->getChain(), DL, LoPart,
+          DAG.getObjectPtrOffset(DL, SN->getBasePtr(), TypeSize::getFixed(8)),
+          SN->getPointerInfo().getWithOffset(8), SN->getBaseAlign(),
+          SN->getMemOperand()->getFlags(), SN->getAAInfo());
 
       return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Chain0, Chain1);
     }
@@ -8545,6 +8529,22 @@ SDValue SystemZTargetLowering::combineINT_TO_FP(
     SDValue ExtOp = DAG.getNode(ExtOpcode, SDLoc(N), ExtVT, Op);
     return DAG.getNode(Opcode, SDLoc(N), OutVT, ExtOp);
   }
+  return SDValue();
+}
+
+SDValue SystemZTargetLowering::combineFCOPYSIGN(
+    SDNode *N, DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+  EVT VT = N->getValueType(0);
+  SDValue ValOp = N->getOperand(0);
+  SDValue SignOp = N->getOperand(1);
+
+  // Remove the rounding which is not needed.
+  if (SignOp.getOpcode() == ISD::FP_ROUND) {
+    SDValue WideOp = SignOp.getOperand(0);
+    return DAG.getNode(ISD::FCOPYSIGN, SDLoc(N), VT, ValOp, WideOp);
+  }
+
   return SDValue();
 }
 
@@ -9137,6 +9137,7 @@ SDValue SystemZTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FP_EXTEND:          return combineFP_EXTEND(N, DCI);
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:         return combineINT_TO_FP(N, DCI);
+  case ISD::FCOPYSIGN:          return combineFCOPYSIGN(N, DCI);
   case ISD::BSWAP:              return combineBSWAP(N, DCI);
   case ISD::SETCC:              return combineSETCC(N, DCI);
   case SystemZISD::BR_CCMASK:   return combineBR_CCMASK(N, DCI);
@@ -9592,7 +9593,7 @@ static void createPHIsForSelects(SmallVector<MachineInstr*, 8> &Selects,
     RegRewriteTable[DestReg] = std::make_pair(TrueReg, FalseReg);
   }
 
-  MF->getProperties().reset(MachineFunctionProperties::Property::NoPHIs);
+  MF->getProperties().resetNoPHIs();
 }
 
 MachineBasicBlock *
@@ -10546,7 +10547,7 @@ SystemZTargetLowering::emitMemMemWrapper(MachineInstr &MI,
           MBB->addLiveIn(SystemZ::CC);
       }
     }
-    MF.getProperties().reset(MachineFunctionProperties::Property::NoPHIs);
+    MF.getProperties().resetNoPHIs();
   }
 
   // Handle any remaining bytes with straight-line code.

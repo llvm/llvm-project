@@ -151,14 +151,14 @@ void UnrollState::unrollWidenInductionByUF(
       IV->getParent()->getEnclosingLoopRegion()->getSinglePredecessor());
   Type *IVTy = TypeInfo.inferScalarType(IV);
   auto &ID = IV->getInductionDescriptor();
-  std::optional<FastMathFlags> FMFs;
+  VPIRFlags Flags;
   if (isa_and_present<FPMathOperator>(ID.getInductionBinOp()))
-    FMFs = ID.getInductionBinOp()->getFastMathFlags();
+    Flags = ID.getInductionBinOp()->getFastMathFlags();
 
   VPValue *ScalarStep = IV->getStepValue();
   VPBuilder Builder(PH);
   VPInstruction *VectorStep = Builder.createNaryOp(
-      VPInstruction::WideIVStep, {&Plan.getVF(), ScalarStep}, IVTy, FMFs,
+      VPInstruction::WideIVStep, {&Plan.getVF(), ScalarStep}, IVTy, Flags,
       IV->getDebugLoc());
 
   ToSkip.insert(VectorStep);
@@ -188,7 +188,7 @@ void UnrollState::unrollWidenInductionByUF(
                                                   Prev,
                                                   VectorStep,
                                               },
-                                              FMFs, IV->getDebugLoc(), Name);
+                                              Flags, IV->getDebugLoc(), Name);
     ToSkip.insert(Add);
     addRecipeForPart(IV, Add, Part);
     Prev = Add;
@@ -327,7 +327,9 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
     // Add all VPValues for all parts to ComputeReductionResult which combines
     // the parts to compute the final reduction value.
     VPValue *Op1;
-    if (match(&R, m_VPInstruction<VPInstruction::ComputeReductionResult>(
+    if (match(&R, m_VPInstruction<VPInstruction::ComputeAnyOfResult>(
+                      m_VPValue(), m_VPValue(), m_VPValue(Op1))) ||
+        match(&R, m_VPInstruction<VPInstruction::ComputeReductionResult>(
                       m_VPValue(), m_VPValue(Op1))) ||
         match(&R, m_VPInstruction<VPInstruction::ComputeFindLastIVResult>(
                       m_VPValue(), m_VPValue(), m_VPValue(Op1)))) {
@@ -337,16 +339,18 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
       continue;
     }
     VPValue *Op0;
-    if (match(&R, m_VPInstruction<VPInstruction::ExtractFromEnd>(
-                      m_VPValue(Op0), m_VPValue(Op1)))) {
+    if (match(&R, m_VPInstruction<VPInstruction::ExtractLastElement>(
+                      m_VPValue(Op0))) ||
+        match(&R, m_VPInstruction<VPInstruction::ExtractPenultimateElement>(
+                      m_VPValue(Op0)))) {
       addUniformForAllParts(cast<VPSingleDefRecipe>(&R));
       if (Plan.hasScalarVFOnly()) {
-        // Extracting from end with VF = 1 implies retrieving the scalar part UF
-        // - Op1.
+        auto *I = cast<VPInstruction>(&R);
+        // Extracting from end with VF = 1 implies retrieving the last or
+        // penultimate scalar part (UF-1 or UF-2).
         unsigned Offset =
-            cast<ConstantInt>(Op1->getLiveInIRValue())->getZExtValue();
-        R.getVPSingleValue()->replaceAllUsesWith(
-            getValueForPart(Op0, UF - Offset));
+            I->getOpcode() == VPInstruction::ExtractLastElement ? 1 : 2;
+        I->replaceAllUsesWith(getValueForPart(Op0, UF - Offset));
         R.eraseFromParent();
       } else {
         // Otherwise we extract from the last part.

@@ -454,14 +454,13 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
   PreprocessorOpts.GeneratePreamble = true;
 
   // Create the compiler instance to use for building the precompiled preamble.
-  std::unique_ptr<CompilerInstance> Clang(
-      new CompilerInstance(std::move(PCHContainerOps)));
+  auto Clang = std::make_unique<CompilerInstance>(std::move(PreambleInvocation),
+                                                  std::move(PCHContainerOps));
 
   // Recover resources if we crash before exiting this method.
   llvm::CrashRecoveryContextCleanupRegistrar<CompilerInstance> CICleanup(
       Clang.get());
 
-  Clang->setInvocation(std::move(PreambleInvocation));
   Clang->setDiagnostics(&Diagnostics);
 
   // Create the target instance.
@@ -513,7 +512,7 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
       std::move(Buffer),
       /*WritePCHFile=*/Storage->getKind() == PCHStorage::Kind::TempFile,
       Callbacks);
-  if (!Act->BeginSourceFile(*Clang.get(), Clang->getFrontendOpts().Inputs[0]))
+  if (!Act->BeginSourceFile(*Clang, Clang->getFrontendOpts().Inputs[0]))
     return BuildPreambleError::BeginSourceFileFailed;
 
   // Performed after BeginSourceFile to ensure Clang->Preprocessor can be
