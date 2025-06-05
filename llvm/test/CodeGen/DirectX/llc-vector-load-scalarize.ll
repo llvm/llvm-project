@@ -103,10 +103,10 @@ define <4 x i32> @multid_load_test() #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(3) getelementptr (i32, ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 1), align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) getelementptr (i32, ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 2), align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(3) getelementptr (i32, ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 3), align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr addrspace(3) getelementptr inbounds ([36 x i32], ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 1), align 4
-; CHECK-NEXT:    [[DOTI13:%.*]] = load i32, ptr addrspace(3) getelementptr (i32, ptr addrspace(3) getelementptr inbounds ([36 x i32], ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 1), i32 1), align 4
-; CHECK-NEXT:    [[DOTI25:%.*]] = load i32, ptr addrspace(3) getelementptr (i32, ptr addrspace(3) getelementptr inbounds ([36 x i32], ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 1), i32 2), align 4
-; CHECK-NEXT:    [[DOTI37:%.*]] = load i32, ptr addrspace(3) getelementptr (i32, ptr addrspace(3) getelementptr inbounds ([36 x i32], ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 1), i32 3), align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr addrspace(3) getelementptr inbounds ([36 x i32], ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 0, i32 1), align 4
+; CHECK-NEXT:    [[DOTI13:%.*]] = load i32, ptr addrspace(3) getelementptr (i32, ptr addrspace(3) getelementptr inbounds ([36 x i32], ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 0, i32 1), i32 1), align 4
+; CHECK-NEXT:    [[DOTI25:%.*]] = load i32, ptr addrspace(3) getelementptr (i32, ptr addrspace(3) getelementptr inbounds ([36 x i32], ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 0, i32 1), i32 2), align 4
+; CHECK-NEXT:    [[DOTI37:%.*]] = load i32, ptr addrspace(3) getelementptr (i32, ptr addrspace(3) getelementptr inbounds ([36 x i32], ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 0, i32 1), i32 3), align 4
 ; CHECK-NEXT:    [[DOTI08:%.*]] = add i32 [[TMP1]], [[TMP5]]
 ; CHECK-NEXT:    [[DOTI19:%.*]] = add i32 [[TMP2]], [[DOTI13]]
 ; CHECK-NEXT:    [[DOTI210:%.*]] = add i32 [[TMP3]], [[DOTI25]]
