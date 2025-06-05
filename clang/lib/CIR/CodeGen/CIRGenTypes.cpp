@@ -388,6 +388,13 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     break;
   }
 
+  case Type::Complex: {
+    const auto *ct = cast<clang::ComplexType>(ty);
+    mlir::Type elementTy = convertType(ct->getElementType());
+    resultType = cir::ComplexType::get(elementTy);
+    break;
+  }
+
   case Type::LValueReference:
   case Type::RValueReference: {
     const ReferenceType *refTy = cast<ReferenceType>(ty);
