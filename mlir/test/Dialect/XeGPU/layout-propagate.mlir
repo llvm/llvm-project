@@ -1,29 +1,16 @@
-// RUN: mlir-opt -xegpu-subgroup-distribute='print-analysis-only=true' -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -xegpu-layout-propagate -split-input-file %s | FileCheck %s
 
-// CHECK: function: test_dpas_f16:
-// CHECK-NEXT: argument: <block argument> of type 'memref<8x16xf16>' at index: 0
-// CHECK-NEXT: layout  : Not assigned.
-// CHECK-NEXT: argument: <block argument> of type 'memref<16x16xf16>' at index: 1
-// CHECK-NEXT: layout  : Not assigned.
-// CHECK-NEXT: argument: <block argument> of type 'memref<8x16xf32>' at index: 2
-// CHECK-NEXT: layout  : Not assigned.
-// CHECK-NEXT: op    : %{{.*}} = arith.constant 0 : index
-// CHECK-NEXT: layout for result #0: Not assigned.
-// CHECK-NEXT: op    : %{{.*}} = arith.constant dense<0.000000e+00> : vector<8x16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T0:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T1:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<16x16xf16> -> !xegpu.tensor_desc<16x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [2, 1]
-// CHECK-NEXT: op    : %[[T2:.*]] = xegpu.load_nd %[[T0]]  : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T3:.*]] = xegpu.load_nd %[[T1]]  : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [2, 1]
-// CHECK-NEXT: op    : %[[T4:.*]] = xegpu.dpas %[[T2]], %[[T3]], %{{.*}} : vector<8x16xf16>, vector<16x16xf16>, vector<8x16xf32> -> vector<8x16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %{{.*}} = xegpu.create_nd_tdesc %{{.*}} : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-func.func @test_dpas_f16(%arg0: memref<8x16xf16>, %arg1: memref<16x16xf16>, %arg2: memref<8x16xf32>) {
+// CHECK-LABEL: func.func @dpas_f16(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<8x16xf16>, %[[ARG1:[0-9a-zA-Z]+]]: memref<16x16xf16>, %[[ARG2:[0-9a-zA-Z]+]]: memref<8x16xf32>) {
+// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} dense<0.000000e+00> : vector<8x16xf32>
+// CHECK: %[[T0:.*]] = xegpu.create_nd_tdesc %[[ARG0]][{{.*}}] : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+// CHECK: %[[T1:.*]] = xegpu.create_nd_tdesc %[[ARG1]][{{.*}}] : memref<16x16xf16> -> !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>>
+// CHECK: %[[T2:.*]] = xegpu.load_nd %[[T0]]  {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : !xegpu.tensor_desc<8x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<8x16xf16>
+// CHECK: %[[T3:.*]] = xegpu.load_nd %[[T1]]  {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>} : !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>> -> vector<16x16xf16>
+// CHECK: %[[T4:.*]] = xegpu.dpas %[[T2]], %[[T3]], %[[CST]] {layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_operand_1 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>, layout_operand_2 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<8x16xf16>, vector<16x16xf16>, vector<8x16xf32> -> vector<8x16xf32>
+// CHECK: %[[T5:.*]] = xegpu.create_nd_tdesc %[[ARG2]][{{.*}}] : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+// CHECK: xegpu.store_nd %[[T4]], %[[T5]]  {layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<8x16xf32>, !xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+func.func @dpas_f16(%arg0: memref<8x16xf16>, %arg1: memref<16x16xf16>, %arg2: memref<8x16xf32>) {
   %c0 = arith.constant 0 : index
   %cst = arith.constant dense<0.000000e+00> : vector<8x16xf32>
   %0 = xegpu.create_nd_tdesc %arg0[%c0, %c0] : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16>
@@ -36,22 +23,11 @@ func.func @test_dpas_f16(%arg0: memref<8x16xf16>, %arg1: memref<16x16xf16>, %arg
   return
 }
 
-
 // -----
-// CHECK: function: test_dpas_i8:
-// CHECK-NEXT: argument: <block argument> of type 'vector<8x32xi8>' at index: 0
-// CHECK-NEXT: layout  : lane_layout: [1, 16], lane_data: [1, 2]
-// CHECK-NEXT: argument: <block argument> of type 'vector<32x16xi8>' at index: 1
-// CHECK-NEXT: layout  : lane_layout: [1, 16], lane_data: [4, 1]
-// CHECK-NEXT: argument: <block argument> of type 'memref<8x16xi32>' at index: 2
-// CHECK-NEXT: layout  : Not assigned.
-// CHECK-NEXT: op    : %{{.*}} = arith.constant 0 : index
-// CHECK-NEXT: layout for result #0: Not assigned.
-// CHECK-NEXT: op    : %[[T0:.*]] = xegpu.dpas %{{.*}} : vector<8x32xi8>, vector<32x16xi8> -> vector<8x16xi32>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T1:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<8x16xi32> -> !xegpu.tensor_desc<8x16xi32>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-func.func @test_dpas_i8(%arg0: vector<8x32xi8>, %arg1: vector<32x16xi8>, %arg2: memref<8x16xi32>) {
+// CHECK-LABEL: func.func @dpas_i8(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: vector<8x32xi8>, %[[ARG1:[0-9a-zA-Z]+]]: vector<32x16xi8>, %[[ARG2:[0-9a-zA-Z]+]]: memref<8x16xi32>) {
+// CHECK: %[[T0:.*]] = xegpu.dpas %[[ARG0]], %[[ARG1]] {layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>, layout_operand_1 = #xegpu.layout<lane_layout = [1, 16], lane_data = [4, 1]>, layout_result_0 = #xegpu.layout<lane_layout = [1, 16],
+func.func @dpas_i8(%arg0: vector<8x32xi8>, %arg1: vector<32x16xi8>, %arg2: memref<8x16xi32>) {
   %c0 = arith.constant 0 : index
   %0 = xegpu.dpas %arg0, %arg1 : vector<8x32xi8>, vector<32x16xi8> -> vector<8x16xi32>
   %1 = xegpu.create_nd_tdesc %arg2[%c0, %c0] : memref<8x16xi32> -> !xegpu.tensor_desc<8x16xi32>
@@ -60,30 +36,10 @@ func.func @test_dpas_i8(%arg0: vector<8x32xi8>, %arg1: vector<32x16xi8>, %arg2: 
 }
 
 // -----
-// CHECK: function: test_load_with_transpose_effect:
-// CHECK-NEXT: argument: <block argument> of type 'memref<8x16xf16>' at index: 0
-// CHECK-NEXT: layout  : Not assigned.
-// CHECK-NEXT: argument: <block argument> of type 'memref<16x16xf16>' at index: 1
-// CHECK-NEXT: layout  : Not assigned.
-// CHECK-NEXT: argument: <block argument> of type 'memref<8x16xf32>' at index: 2
-// CHECK-NEXT: layout  : Not assigned.
-// CHECK-NEXT: op    : %{{.*}} = arith.constant 0 : index
-// CHECK-NEXT: layout for result #0: Not assigned.
-// CHECK-NEXT: op    : %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<8x16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T0:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T1:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<16x16xf16> -> !xegpu.tensor_desc<16x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [16, 1], lane_data: [1, 2]
-// CHECK-NEXT: op    : %[[T2:.*]] = xegpu.load_nd %[[T0]]  : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T3:.*]] = xegpu.load_nd %[[T1]] <{transpose = array<i64: 1, 0>}> : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [2, 1]
-// CHECK-NEXT: op    : %[[T4:.*]] = xegpu.dpas %[[T2]], %[[T3]], %[[CST]] : vector<8x16xf16>, vector<16x16xf16>, vector<8x16xf32> -> vector<8x16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T5:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-func.func @test_load_with_transpose_effect(%arg0: memref<8x16xf16>, %arg1: memref<16x16xf16>, %arg2: memref<8x16xf32>) {
+// CHECK-LABEL: func.func @load_with_transpose_effect(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<8x16xf16>, %[[ARG0:[0-9a-zA-Z]+]]: memref<16x16xf16>, %[[ARG0:[0-9a-zA-Z]+]]: memref<8x16xf32>) {
+// CHECK: %{{.*}} = xegpu.load_nd %{{.*}} <{transpose = array<i64: 1, 0>}> {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>} : !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>> -> vector<16x16xf16>
+func.func @load_with_transpose_effect(%arg0: memref<8x16xf16>, %arg1: memref<16x16xf16>, %arg2: memref<8x16xf32>) {
   %c0 = arith.constant 0 : index
   %cst = arith.constant dense<0.000000e+00> : vector<8x16xf32>
   %0 = xegpu.create_nd_tdesc %arg0[%c0, %c0] : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16>
@@ -97,32 +53,10 @@ func.func @test_load_with_transpose_effect(%arg0: memref<8x16xf16>, %arg1: memre
 }
 
 // -----
-// CHECK: function: test_vector_transpose:
-// CHECK-NEXT: argument: <block argument> of type 'memref<8x16xf16>' at index: 0
-// CHECK-NEXT: layout  : Not assigned.
-// CHECK-NEXT: argument: <block argument> of type 'memref<16x16xf16>' at index: 1
-// CHECK-NEXT: layout  : Not assigned.
-// CHECK-NEXT: argument: <block argument> of type 'memref<8x16xf32>' at index: 2
-// CHECK-NEXT: layout  : Not assigned.
-// CHECK-NEXT: op    : %{{.*}} = arith.constant 0 : index
-// CHECK-NEXT: layout for result #0: Not assigned.
-// CHECK-NEXT: op    : %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<8x16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T0:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T1:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<16x16xf16> -> !xegpu.tensor_desc<16x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [16, 1], lane_data: [1, 2]
-// CHECK-NEXT: op    : %[[T2:.*]] = xegpu.load_nd %[[T0]]  : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T3:.*]] = xegpu.load_nd %[[T1]]  : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [16, 1], lane_data: [1, 2]
-// CHECK-NEXT: op    : %[[T4:.*]] = vector.transpose %[[T3]], [1, 0] : vector<16x16xf16> to vector<16x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [2, 1]
-// CHECK-NEXT: op    : %[[T5:.*]] = xegpu.dpas %[[T2]], %[[T4]], %[[CST]] : vector<8x16xf16>, vector<16x16xf16>, vector<8x16xf32> -> vector<8x16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T6:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-func.func @test_vector_transpose(%arg0: memref<8x16xf16>, %arg1: memref<16x16xf16>, %arg2: memref<8x16xf32>) {
+// CHECK-LABEL: func.func @vector_transpose(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<8x16xf16>, %[[ARG1:[0-9a-zA-Z]+]]: memref<16x16xf16>, %[[ARG2:[0-9a-zA-Z]+]]: memref<8x16xf32>) {
+// CHECK: %{{.*}} = vector.transpose %{{.*}}, [1, 0] {layout_operand_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>, layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>} : vector<16x16xf16> to vector<16x16xf16>
+func.func @vector_transpose(%arg0: memref<8x16xf16>, %arg1: memref<16x16xf16>, %arg2: memref<8x16xf32>) {
   %c0 = arith.constant 0 : index
   %cst = arith.constant dense<0.000000e+00> : vector<8x16xf32>
   %0 = xegpu.create_nd_tdesc %arg0[%c0, %c0] : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16>
@@ -137,22 +71,11 @@ func.func @test_vector_transpose(%arg0: memref<8x16xf16>, %arg1: memref<16x16xf1
 }
 
 // -----
-// CHECK: function: test_extf_truncf:
-// CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<8x16xf16>' at index: 0
-// CHECK-NEXT: layout  : lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<16x16xf16>' at index: 1
-// CHECK-NEXT: layout  : lane_layout: [1, 16], lane_data: [2, 1]
-// CHECK-NEXT: op    : %[[T0:.*]] = xegpu.load_nd %{{.*}}  : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T1:.*]] = xegpu.load_nd %{{.*}}  : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [2, 1]
-// CHECK-NEXT: op    : %[[T2:.*]] = arith.extf %[[T1]] : vector<16x16xf16> to vector<16x16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [2, 1]
-// CHECK-NEXT: op    : %[[T3:.*]] = arith.truncf %[[T2]] : vector<16x16xf32> to vector<16x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [2, 1]
-// CHECK-NEXT: op    : %[[T4:.*]] = xegpu.dpas %[[T0]], %[[T3]] : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
-// CHECK-NEXT: layout for result #0: Not assigned.
-func.func @test_extf_truncf(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu.tensor_desc<16x16xf16>) -> vector<8x16xf32> {
+// CHECK-LABEL: func.func @extf_truncf(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: !xegpu.tensor_desc<8x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>, %[[ARG1:[0-9a-zA-Z]+]]: !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>>) -> vector<8x16xf32> {
+// CHECK: %[[T2:.*]] = arith.extf %{{.*}} {layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>, layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>} : vector<16x16xf16> to vector<16x16xf32>
+// CHECK-NEXT: %{{.*}} = arith.truncf %[[T2]] {layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>, layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>} : vector<16x16xf32> to vector<16x16xf16>
+func.func @extf_truncf(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu.tensor_desc<16x16xf16>) -> vector<8x16xf32> {
   %0 = xegpu.load_nd %arg0  : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
   %1 = xegpu.load_nd %arg1  : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
   %2 = arith.extf %1 : vector<16x16xf16> to vector<16x16xf32>
@@ -162,32 +85,13 @@ func.func @test_extf_truncf(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu.t
 }
 
 // -----
-// CHECK: function: test_load_gather_with_transpose_effect:
-// CHECK-NEXT: argument: <block argument> of type 'memref<8x16xf16>' at index: 0
-// CHECK-NEXT: layout  : Not assigned.
-// CHECK-NEXT: argument: <block argument> of type 'memref<256xf16>' at index: 1
-// CHECK-NEXT: layout  : Not assigned.
-// CHECK-NEXT: argument: <block argument> of type 'memref<8x16xf32>' at index: 2
-// CHECK-NEXT: layout  : Not assigned.
-// CHECK-NEXT: op    : %{{.*}} = arith.constant 0 : index
-// CHECK-NEXT: layout for result #0: Not assigned.
-// CHECK-NEXT: op    : %[[T0:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T1:.*]] = xegpu.load_nd %[[T0]]  : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[CST:.*]] = arith.constant dense<[0, 16, 32, 48, 64, 80, 96, 112, 128, 144, 160, 176, 192, 208, 224, 240]> : vector<16xindex>
-// CHECK-NEXT: layout for result #0: lane_layout: [16], lane_data: [1]
-// CHECK-NEXT: op    : %[[CST0:.*]] = arith.constant dense<true> : vector<16xi1>
-// CHECK-NEXT: layout for result #0: lane_layout: [16], lane_data: [1]
-// CHECK-NEXT: op    : %[[T2:.*]] = xegpu.create_tdesc %{{.*}}, %[[CST]] : memref<256xf16>, vector<16xindex> -> !xegpu.tensor_desc<16x16xf16, #xegpu.scatter_tdesc_attr<chunk_size = 16 : i64>>
-// CHECK-NEXT: layout for result #0: lane_layout: [16, 1], lane_data: [1, 2]
-// CHECK-NEXT: op    : %[[T3:.*]] = xegpu.load %[[T2]], %[[CST0]] <{transpose}> : !xegpu.tensor_desc<16x16xf16, #xegpu.scatter_tdesc_attr<chunk_size = 16 : i64>>, vector<16xi1> -> vector<16x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [2, 1]
-// CHECK-NEXT: op    : %[[T4:.*]] = xegpu.dpas %[[T1]], %[[T3]] : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T5:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-func.func @test_load_gather_with_transpose_effect(%arg0: memref<8x16xf16>, %arg1: memref<256xf16>, %arg2: memref<8x16xf32>) {
+// CHECK-LABEL: func.func @load_gather_with_transpose_effect(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<8x16xf16>, %[[ARG1:[0-9a-zA-Z]+]]: memref<256xf16>, %[[ARG2:[0-9a-zA-Z]+]]: memref<8x16xf32>) {
+// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<[0, 16, 32, 48, 64, 80, 96, 112, 128, 144, 160, 176, 192, 208, 224, 240]> : vector<16xindex>
+// CHECK-NEXT: %[[CST0:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<true> : vector<16xi1>
+// CHECK-NEXT: %[[T2:.*]] = xegpu.create_tdesc %[[ARG1]], %[[CST]] {layout_operand_1 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} : memref<256xf16>, vector<16xindex> -> !xegpu.tensor_desc<16x16xf16, #xegpu.scatter_tdesc_attr<chunk_size = 16 : i64>, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>>
+// CHECK-NEXT: %{{.*}} = xegpu.load %[[T2]], %[[CST0]] <{transpose}> {layout_operand_1 = #xegpu.layout<lane_layout = [16], lane_data = [1]>, layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>} : !xegpu.tensor_desc<16x16xf16, #xegpu.scatter_tdesc_attr<chunk_size = 16 : i64>, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>>, vector<16xi1> -> vector<16x16xf16>
+func.func @load_gather_with_transpose_effect(%arg0: memref<8x16xf16>, %arg1: memref<256xf16>, %arg2: memref<8x16xf32>) {
   %c0 = arith.constant 0 : index
   %0 = xegpu.create_nd_tdesc %arg0[%c0, %c0] : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16>
   %1 = xegpu.load_nd %0  : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
@@ -202,20 +106,13 @@ func.func @test_load_gather_with_transpose_effect(%arg0: memref<8x16xf16>, %arg1
 }
 
 // -----
-// CHECK: function: test_load_gather_1d:
-// CHECK: argument: <block argument> of type 'memref<256xf32>' at index: 0
-// CHECK-NEXT: layout  : Not assigned.
-// CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<16xf32>' at index: 1
-// CHECK-NEXT: layout  : lane_layout: [16], lane_data: [1]
-// CHECK-NEXT: op    : %[[CST:.*]] = arith.constant dense<[0, 16, 32, 48, 64, 80, 96, 112, 128, 144, 160, 176, 192, 208, 224, 240]> : vector<16xindex>
-// CHECK-NEXT: layout for result #0: lane_layout: [16], lane_data: [1]
-// CHECK-NEXT: op    : %[[CST0:.*]] = arith.constant dense<true> : vector<16xi1>
-// CHECK-NEXT: layout for result #0: lane_layout: [16], lane_data: [1]
-// CHECK-NEXT: op    : %[[T0:.*]] = xegpu.create_tdesc %{{.*}}, %[[CST]] : memref<256xf32>, vector<16xindex> -> !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<>>
-// CHECK-NEXT: layout for result #0: lane_layout: [16], lane_data: [1]
-// CHECK-NEXT: op    : %[[T1]] = xegpu.load %[[T0]], %[[CST0]]  : !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<>>, vector<16xi1> -> vector<16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [16], lane_data: [1]
-func.func @test_load_gather_1d(%arg0: memref<256xf32>, %arg1: !xegpu.tensor_desc<16xf32>) {
+// CHECK-LABEL: func.func @load_gather_1d(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<256xf32>, %[[ARG1:[0-9a-zA-Z]+]]: !xegpu.tensor_desc<16xf32, #xegpu.layout<lane_layout = [16], lane_data = [1]>>) {
+// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<[0, 16, 32, 48, 64, 80, 96, 112, 128, 144, 160, 176, 192, 208, 224, 240]> : vector<16xindex>
+// CHECK-NEXT: %[[CST0:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<true> : vector<16xi1>
+// CHECK-NEXT: %[[T0:.*]] = xegpu.create_tdesc %[[ARG0]], %[[CST]] {layout_operand_1 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} : memref<256xf32>, vector<16xindex> -> !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<>, #xegpu.layout<lane_layout = [16], lane_data = [1]>>
+// CHECK-NEXT: %{{.*}} = xegpu.load %[[T0]], %[[CST0]]  {layout_operand_1 = #xegpu.layout<lane_layout = [16], lane_data = [1]>, layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} : !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<>, #xegpu.layout<lane_layout = [16], lane_data = [1]>>, vector<16xi1> -> vector<16xf32>
+func.func @load_gather_1d(%arg0: memref<256xf32>, %arg1: !xegpu.tensor_desc<16xf32>) {
   %cst = arith.constant dense<[0, 16, 32, 48, 64, 80, 96, 112, 128, 144, 160, 176, 192, 208, 224, 240]> : vector<16xindex>
   %cst_0 = arith.constant dense<true> : vector<16xi1>
   %0 = xegpu.create_tdesc %arg0, %cst : memref<256xf32>, vector<16xindex> -> !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<>>
@@ -225,18 +122,11 @@ func.func @test_load_gather_1d(%arg0: memref<256xf32>, %arg1: !xegpu.tensor_desc
 }
 
 // -----
-// CHECK: function: test_store_scatter_with_transpose_effect:
-// CHECK-NEXT: argument: <block argument> of type 'memref<128xf32>' at index: 0
-// CHECK-NEXT: layout  : Not assigned.
-// CHECK-NEXT: op    : %[[CST:.*]] = arith.constant dense<1.000000e+00> : vector<8x16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[CST0:.*]] = arith.constant dense<true> : vector<16xi1>
-// CHECK-NEXT: layout for result #0: lane_layout: [16], lane_data: [1]
-// CHECK-NEXT: op    : %[[CST1:.*]] = arith.constant dense<[0, 16, 32, 48, 64, 80, 96, 112, 128, 144, 160, 176, 192, 208, 224, 240]> : vector<16xindex>
-// CHECK-NEXT: layout for result #0: lane_layout: [16], lane_data: [1]
-// CHECK-NEXT: op    : %[[T0:.*]] = xegpu.create_tdesc %{{.*}}, %[[CST1]] : memref<128xf32>, vector<16xindex> -> !xegpu.tensor_desc<16x8xf32, #xegpu.scatter_tdesc_attr<chunk_size = 8 : i64>>
-// CHECK-NEXT: layout for result #0: lane_layout: [16, 1], lane_data: [1, 1]
-func.func @test_store_scatter_with_transpose_effect(%arg0: memref<128xf32>) {
+// CHECK-LABEL: func.func @store_scatter_with_transpose_effect(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<128xf32>) {
+// CHECK: %[[T0:.*]] = xegpu.create_tdesc %[[ARG0]], %{{.*}} {layout_operand_1 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} : memref<128xf32>, vector<16xindex> -> !xegpu.tensor_desc<16x8xf32, #xegpu.scatter_tdesc_attr<chunk_size = 8 : i64>, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>>
+// CHECK-NEXT: xegpu.store %{{.*}}, %[[T0]], %{{.*}} <{transpose}> {layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_operand_2 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} : vector<8x16xf32>, !xegpu.tensor_desc<16x8xf32, #xegpu.scatter_tdesc_attr<chunk_size = 8 : i64>, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>>, vector<16xi1>
+func.func @store_scatter_with_transpose_effect(%arg0: memref<128xf32>) {
   %cst = arith.constant dense<1.000000e+00> : vector<8x16xf32>
   %cst_0 = arith.constant dense<true> : vector<16xi1>
   %cst_1 = arith.constant dense<[0, 16, 32, 48, 64, 80, 96, 112, 128, 144, 160, 176, 192, 208, 224, 240]> : vector<16xindex>
@@ -246,18 +136,10 @@ func.func @test_store_scatter_with_transpose_effect(%arg0: memref<128xf32>) {
 }
 
 // -----
-// CHECK: function: test_store_scatter_1d:
-// CHECK-NEXT: argument: <block argument> of type 'vector<16xf32>' at index: 0
-// CHECK-NEXT: layout  : lane_layout: [16], lane_data: [1]
-// CHECK-NEXT: argument: <block argument> of type 'memref<256xf32>' at index: 1
-// CHECK-NEXT: layout  : Not assigned.
-// CHECK-NEXT: op    : %[[CST:.*]] = arith.constant dense<[0, 16, 32, 48, 64, 80, 96, 112, 128, 144, 160, 176, 192, 208, 224, 240]> : vector<16xindex>
-// CHECK-NEXT: layout for result #0: lane_layout: [16], lane_data: [1]
-// CHECK-NEXT: op    : %[[CST1:.*]] = arith.constant dense<true> : vector<16xi1>
-// CHECK-NEXT: layout for result #0: lane_layout: [16], lane_data: [1]
-// CHECK-NEXT: op    : %[[T0:.*]] = xegpu.create_tdesc %{{.*}}, %[[CST]] : memref<256xf32>, vector<16xindex> -> !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<>>
-// CHECK-NEXT: layout for result #0: lane_layout: [16], lane_data: [1]
-func.func @test_store_scatter_1d(%arg0: vector<16xf32>, %arg1: memref<256xf32>) {
+// CHECK-LABEL: func.func @store_scatter_1d(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: vector<16xf32>, %[[ARG1:[0-9a-zA-Z]+]]: memref<256xf32>) {
+// CHECK: xegpu.store %[[ARG0]], %{{.*}}, %{{.*}}  {layout_operand_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>, layout_operand_2 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} : vector<16xf32>, !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<>, #xegpu.layout<lane_layout = [16], lane_data = [1]>>, vector<16xi1>
+func.func @store_scatter_1d(%arg0: vector<16xf32>, %arg1: memref<256xf32>) {
   %cst = arith.constant dense<[0, 16, 32, 48, 64, 80, 96, 112, 128, 144, 160, 176, 192, 208, 224, 240]> : vector<16xindex>
   %cst_0 = arith.constant dense<true> : vector<16xi1>
   %0 = xegpu.create_tdesc %arg1, %cst : memref<256xf32>, vector<16xindex> -> !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<>>
@@ -266,30 +148,10 @@ func.func @test_store_scatter_1d(%arg0: vector<16xf32>, %arg1: memref<256xf32>) 
 }
 
 // -----
-// CHECK: function: test_vector_bitcast_i16_to_i8:
-// CHECK-NEXT: argument: <block argument> of type 'memref<8x16xi16>' at index: 0
-// CHECK-NEXT: layout  : Not assigned.
-// CHECK-NEXT: argument: <block argument> of type 'memref<32x16xi8>' at index: 1
-// CHECK-NEXT: layout  : Not assigned.
-// CHECK-NEXT: argument: <block argument> of type 'memref<8x16xi32>' at index: 2
-// CHECK-NEXT: layout  : Not assigned.
-// CHECK-NEXT: op    : %{{.*}} = arith.constant 0 : index
-// CHECK-NEXT: layout for result #0: Not assigned.
-// CHECK-NEXT: op    : %[[T0:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<8x16xi16> -> !xegpu.tensor_desc<8x16xi16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T1:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<32x16xi8> -> !xegpu.tensor_desc<32x16xi8>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [4, 1]
-// CHECK-NEXT: op    : %[[T2:.*]] = xegpu.load_nd %[[T0]]  : !xegpu.tensor_desc<8x16xi16> -> vector<8x16xi16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T3:.*]] = xegpu.load_nd %[[T1]]  : !xegpu.tensor_desc<32x16xi8> -> vector<32x16xi8>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [4, 1]
-// CHECK-NEXT: op    : %[[T4:.*]] = vector.bitcast %[[T2]] : vector<8x16xi16> to vector<8x32xi8>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 2]
-// CHECK-NEXT: op    : %[[T5:.*]] = xegpu.dpas %[[T4]], %[[T3]] : vector<8x32xi8>, vector<32x16xi8> -> vector<8x16xi32>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T6:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<8x16xi32> -> !xegpu.tensor_desc<8x16xi32>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-func.func @test_vector_bitcast_i16_to_i8(%arg0: memref<8x16xi16>, %arg1: memref<32x16xi8>, %arg2: memref<8x16xi32>) {
+// CHECK-LABEL: func.func @vector_bitcast_i16_to_i8(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<8x16xi16>, %[[ARG1:[0-9a-zA-Z]+]]: memref<32x16xi8>, %[[ARG2:[0-9a-zA-Z]+]]: memref<8x16xi32>) {
+// CHECK: %{{.*}} = vector.bitcast %{{.*}} {layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>} : vector<8x16xi16> to vector<8x32xi8>
+func.func @vector_bitcast_i16_to_i8(%arg0: memref<8x16xi16>, %arg1: memref<32x16xi8>, %arg2: memref<8x16xi32>) {
   %c0 = arith.constant 0 : index
   %0 = xegpu.create_nd_tdesc %arg0[%c0, %c0] : memref<8x16xi16> -> !xegpu.tensor_desc<8x16xi16>
   %1 = xegpu.create_nd_tdesc %arg1[%c0, %c0] : memref<32x16xi8> -> !xegpu.tensor_desc<32x16xi8>
@@ -303,32 +165,11 @@ func.func @test_vector_bitcast_i16_to_i8(%arg0: memref<8x16xi16>, %arg1: memref<
 }
 
 // -----
-// CHECK: function: test_vector_bitcast_i8_to_f16:
-// CHECK-NEXT: argument: <block argument> of type 'memref<8x32xi8>' at index: 0
-// CHECK-NEXT: layout  : Not assigned.
-// CHECK-NEXT: argument: <block argument> of type 'memref<16x32xi8>' at index: 1
-// CHECK-NEXT: layout  : Not assigned.
-// CHECK-NEXT: argument: <block argument> of type 'memref<8x16xf32>' at index: 2
-// CHECK-NEXT: layout  : Not assigned.
-// CHECK-NEXT: op    : %{{.*}} = arith.constant 0 : index
-// CHECK-NEXT: layout for result #0: Not assigned.
-// CHECK-NEXT: op    : %[[T0:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<8x32xi8> -> !xegpu.tensor_desc<8x32xi8>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 2]
-// CHECK-NEXT: op    : %[[T1:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<16x32xi8> -> !xegpu.tensor_desc<16x32xi8>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [4, 1]
-// CHECK-NEXT: op    : %[[T2:.*]] = xegpu.load_nd %[[T0]]  : !xegpu.tensor_desc<8x32xi8> -> vector<8x32xi8>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 2]
-// CHECK-NEXT: op    : %[[T3:.*]] = xegpu.load_nd %[[T1]]  : !xegpu.tensor_desc<16x32xi8> -> vector<16x32xi8>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [4, 1]
-// CHECK-NEXT: op    : %[[T4:.*]] = vector.bitcast %[[T2]] : vector<8x32xi8> to vector<8x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T5:.*]] = vector.bitcast %[[T3]] : vector<16x32xi8> to vector<16x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [2, 1]
-// CHECK-NEXT: op    : %[[T6:.*]] = xegpu.dpas %[[T4]], %[[T5]] : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T7:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-func.func @test_vector_bitcast_i8_to_f16(%arg0: memref<8x32xi8>, %arg1: memref<16x32xi8>, %arg2: memref<8x16xf32>) {
+// CHECK-LABEL: func.func @vector_bitcast_i8_to_f16(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<8x32xi8>, %[[ARG1:[0-9a-zA-Z]+]]: memref<16x32xi8>, %[[ARG2:[0-9a-zA-Z]+]]: memref<8x16xf32>) {
+// CHECK: %{{.*}} = vector.bitcast %{{.*}} {layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>, layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<8x32xi8> to vector<8x16xf16>
+// CHECK: %{{.*}} = vector.bitcast %{{.*}} {layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [4, 1]>, layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>} : vector<16x32xi8> to vector<16x16xf16>
+func.func @vector_bitcast_i8_to_f16(%arg0: memref<8x32xi8>, %arg1: memref<16x32xi8>, %arg2: memref<8x16xf32>) {
   %c0 = arith.constant 0 : index
   %0 = xegpu.create_nd_tdesc %arg0[%c0, %c0] : memref<8x32xi8> -> !xegpu.tensor_desc<8x32xi8>
   %1 = xegpu.create_nd_tdesc %arg1[%c0, %c0] : memref<16x32xi8> -> !xegpu.tensor_desc<16x32xi8>
@@ -343,24 +184,12 @@ func.func @test_vector_bitcast_i8_to_f16(%arg0: memref<8x32xi8>, %arg1: memref<1
 }
 
 // -----
-// CHECK: function: test_binary_op_one_use:
-// CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<8x16xf16>' at index: 0
-// CHECK-NEXT: layout  : lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<16x16xf16>' at index: 1
-// CHECK-NEXT: layout  : lane_layout: [1, 16], lane_data: [2, 1]
-// CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<8x16xf32>' at index: 2
-// CHECK-NEXT: layout  : lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T0:.*]] = xegpu.load_nd %{{.*}}  : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T1:.*]] = xegpu.load_nd %{{.*}}  : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [2, 1]
-// CHECK-NEXT: op    : %[[T2:.*]] = xegpu.load_nd %{{.*}}  : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [2, 1]
-// CHECK-NEXT: op    : %[[T3:.*]] = arith.addf %[[T1]], %[[T2]] : vector<16x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [2, 1]
-// CHECK-NEXT: op    : %[[T4:.*]] = xegpu.dpas %[[T0]], %[[T3]] : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-func.func @test_binary_op_one_use(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu.tensor_desc<16x16xf16>, %arg2: !xegpu.tensor_desc<8x16xf32>) {
+// CHECK-LABEL: func.func @binary_op_one_use(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: !xegpu.tensor_desc<8x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>, %[[ARG1:[0-9a-zA-Z]+]]: !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>>, %[[ARG2:[0-9a-zA-Z]+]]: !xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>) {
+// CHECK: %[[T1:.*]] = xegpu.load_nd %[[ARG1]]  {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>} : !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>> -> vector<16x16xf16>
+// CHECK-NEXT: %[[T2:.*]] = xegpu.load_nd %[[ARG1]]  {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>} : !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>> -> vector<16x16xf16>
+// CHECK-NEXT: %{{.*}} = arith.addf %[[T1]], %[[T2]] {layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>, layout_operand_1 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>, layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>} : vector<16x16xf16>
+func.func @binary_op_one_use(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu.tensor_desc<16x16xf16>, %arg2: !xegpu.tensor_desc<8x16xf32>) {
   %0 = xegpu.load_nd %arg0  : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
   %1 = xegpu.load_nd %arg1  : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
   %2 = xegpu.load_nd %arg1  : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
@@ -371,26 +200,13 @@ func.func @test_binary_op_one_use(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !x
 }
 
 // -----
-// CHECK: function: test_binary_op_multiple_uses:
-// CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<8x16xf16>' at index: 0
-// CHECK-NEXT: layout  : lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<16x16xf16>' at index: 1
-// CHECK-NEXT: layout  : lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<8x16xf32>' at index: 2
-// CHECK-NEXT: layout  : lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<16x16xf16>' at index: 3
-// CHECK-NEXT: layout  : lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T0:.*]] = xegpu.load_nd %{{.*}}  : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T1:.*]] = xegpu.load_nd %{{.*}}  : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[CST:.*]] = arith.constant dense<1.000000e+00> : vector<16x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T2:.*]] = arith.addf %[[T1]], %[[CST]] : vector<16x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T3:.*]] = xegpu.dpas %[[T0]], %[[T2]] : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-func.func @test_binary_op_multiple_uses(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu.tensor_desc<16x16xf16>, %arg2: !xegpu.tensor_desc<8x16xf32>, %arg3: !xegpu.tensor_desc<16x16xf16>) {
+// CHECK-LABEL: func.func @binary_op_multiple_uses(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: !xegpu.tensor_desc<8x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>, %[[ARG1:[0-9a-zA-Z]+]]: !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>, %[[ARG2:[0-9a-zA-Z]+]]: !xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>, %[[ARG3:[0-9a-zA-Z]+]]: !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>) {
+// CHECK: %[[T2:.*]] = arith.addf %{{.*}}, %{{.*}} {layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_operand_1 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16x16xf16>
+// CHECK: %[[T3:.*]] = xegpu.dpas %{{.*}}, %[[T2]] {layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_operand_1 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
+// CHECK-NEXT: xegpu.store_nd %[[T3]], %[[ARG2]]  {layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<8x16xf32>, !xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+// CHECK-NEXT: xegpu.store_nd %[[T2]], %[[ARG3]]  {layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16x16xf16>, !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+func.func @binary_op_multiple_uses(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu.tensor_desc<16x16xf16>, %arg2: !xegpu.tensor_desc<8x16xf32>, %arg3: !xegpu.tensor_desc<16x16xf16>) {
   %0 = xegpu.load_nd %arg0  : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
   %1 = xegpu.load_nd %arg1  : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
   %cst = arith.constant dense<1.000000e+00> : vector<16x16xf16>
@@ -402,42 +218,22 @@ func.func @test_binary_op_multiple_uses(%arg0: !xegpu.tensor_desc<8x16xf16>, %ar
 }
 
 // -----
-// CHECK: function: test_for_op:
-// CHECK-NEXT: argument: <block argument> of type 'memref<8x128xf16>' at index: 0
-// CHECK-NEXT: layout  : Not assigned.
-// CHECK-NEXT: argument: <block argument> of type 'memref<128x16xf16>' at index: 1
-// CHECK-NEXT: layout  : Not assigned.
-// CHECK-NEXT: argument: <block argument> of type 'memref<8x16xf32>' at index: 2
-// CHECK-NEXT: layout  : Not assigned.
-// CHECK-NEXT: op    : %{{.*}} = arith.constant 0 : index
-// CHECK-NEXT: layout for result #0: Not assigned.
-// CHECK-NEXT: op    : %{{.*}} = arith.constant 128 : index
-// CHECK-NEXT: layout for result #0: Not assigned.
-// CHECK-NEXT: op    : %{{.*}} = arith.constant 16 : index
-// CHECK-NEXT: layout for result #0: Not assigned.
-// CHECK-NEXT: op    : %[[T0:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<8x128xf16> -> !xegpu.tensor_desc<8x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T1:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<128x16xf16> -> !xegpu.tensor_desc<16x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [2, 1]
-// CHECK-NEXT: op    : %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<8x16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T4:.*]] = xegpu.load_nd %{{.*}}  : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T5:.*]] = xegpu.load_nd %{{.*}}  : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [2, 1]
-// CHECK-NEXT: op    : %[[T6:.*]] = xegpu.dpas %[[T4]], %[[T5]], %{{.*}} : vector<8x16xf16>, vector<16x16xf16>, vector<8x16xf32> -> vector<8x16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T7:.*]] = xegpu.update_nd_offset %{{.*}} : !xegpu.tensor_desc<8x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T8:.*]] = xegpu.update_nd_offset %{{.*}} : !xegpu.tensor_desc<16x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [2, 1]
-// CHECK-NEXT: op    : scf.for
-// CHECK-NEXT: layout for result #0: Not assigned.
-// CHECK-NEXT: layout for result #1: Not assigned.
-// CHECK-NEXT: layout for result #2: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T3:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-func.func @test_for_op(%arg0: memref<8x128xf16>, %arg1: memref<128x16xf16>, %arg2: memref<8x16xf32>) {
+// CHECK-LABEL: func.func @for_op(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<8x128xf16>, %[[ARG1:[0-9a-zA-Z]+]]: memref<128x16xf16>, %[[ARG2:[0-9a-zA-Z]+]]: memref<8x16xf32>) {
+// CHECK: %[[T0:.*]] = xegpu.create_nd_tdesc %[[ARG0]][%{{.*}}] : memref<8x128xf16> -> !xegpu.tensor_desc<8x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+// CHECK-NEXT: %[[T1:.*]] = xegpu.create_nd_tdesc %[[ARG1]][%{{.*}}] : memref<128x16xf16> -> !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>>
+// CHECK-NEXT: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} dense<0.000000e+00> : vector<8x16xf32>
+// CHECK-NEXT: %[[T2:.*]]:3 = scf.for %{{.*}} iter_args(%[[ARG4:.*]] = %[[T0]], %[[ARG5:.*]] = %[[T1]], %[[ARG6:.*]] = %[[CST]]) -> (!xegpu.tensor_desc<8x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>, !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>>, vector<8x16xf32>) {
+// CHECK-NEXT:   %[[T4:.*]] = xegpu.load_nd %[[ARG4]]  {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : !xegpu.tensor_desc<8x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<8x16xf16>
+// CHECK-NEXT:   %[[T5:.*]] = xegpu.load_nd %[[ARG5]]  {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>} : !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>> -> vector<16x16xf16>
+// CHECK-NEXT:   %[[T6:.*]] = xegpu.dpas %[[T4]], %[[T5]], %[[ARG6]] {layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_operand_1 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>, layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<8x16xf16>, vector<16x16xf16>, vector<8x16xf32> -> vector<8x16xf32>
+// CHECK-NEXT:   %[[T7:.*]] = xegpu.update_nd_offset %[[ARG4]], [{{.*}}] : !xegpu.tensor_desc<8x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+// CHECK-NEXT:   %[[T8:.*]] = xegpu.update_nd_offset %[[ARG5]], [{{.*}}] : !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>>
+// CHECK-NEXT:   scf.yield {layout_operand_2 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} %[[T7]], %[[T8]], %[[T6]] : !xegpu.tensor_desc<8x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>, !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>>, vector<8x16xf32>
+// CHECK-NEXT: } {layout_operand_5 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_result_2 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+// CHECK-NEXT: %[[T3:.*]] = xegpu.create_nd_tdesc %[[ARG2]][{{.*}}] : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+// CHECK-NEXT: xegpu.store_nd %[[T2]]#2, %[[T3]]  {layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<8x16xf32>, !xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+func.func @for_op(%arg0: memref<8x128xf16>, %arg1: memref<128x16xf16>, %arg2: memref<8x16xf32>) {
   %c0 = arith.constant 0 : index
   %c128 = arith.constant 128 : index
   %c16 = arith.constant 16 : index
@@ -458,26 +254,16 @@ func.func @test_for_op(%arg0: memref<8x128xf16>, %arg1: memref<128x16xf16>, %arg
 }
 
 // -----
-// CHECK: function: test_if_single_use:
-// CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<8x16xf16>' at index: 0
-// CHECK-NEXT: layout  : lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<16x16xf16>' at index: 1
-// CHECK-NEXT: layout  : lane_layout: [1, 16], lane_data: [2, 1]
-// CHECK-NEXT: argument: <block argument> of type 'i1' at index: 2
-// CHECK-NEXT: layout  : Not assigned.
-// CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<8x16xf32>' at index: 3
-// CHECK-NEXT: layout  : lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T0:.*]] = xegpu.load_nd %{{.*}}  : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T3:.*]] = xegpu.load_nd %{{.*}}  : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [2, 1]
-// CHECK-NEXT: op    : %[[T4:.*]] = xegpu.load_nd %{{.*}}  : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [2, 1]
-// CHECK-NEXT: op    : scf.if
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [2, 1]
-// CHECK-NEXT: op    : %[[T2:.*]] = xegpu.dpas %[[T0]], %{{.*}} : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-func.func @test_if_single_use(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu.tensor_desc<16x16xf16>, %arg2: i1, %arg3: !xegpu.tensor_desc<8x16xf32>) {
+// CHECK-LABEL: func.func @if_single_use(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: !xegpu.tensor_desc<8x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>, %[[ARG1:[0-9a-zA-Z]+]]: !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>>, %[[ARG2:[0-9a-zA-Z]+]]: i1, %[[ARG3:[0-9a-zA-Z]+]]: !xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>) {
+// CHECK:  %{{.*}} = scf.if %[[ARG2]] -> (vector<16x16xf16>) {
+// CHECK-NEXT:    %[[T3:.*]] = xegpu.load_nd %[[ARG1]]  {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>} : !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>> -> vector<16x16xf16>
+// CHECK-NEXT:    scf.yield {layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>} %[[T3]] : vector<16x16xf16>
+// CHECK-NEXT:  } else {
+// CHECK-NEXT:    %[[T4:.*]] = xegpu.load_nd %[[ARG1]]  {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>} : !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>> -> vector<16x16xf16>
+// CHECK-NEXT:    scf.yield {layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>} %[[T4]] : vector<16x16xf16>
+// CHECK-NEXT:  } {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>}
+func.func @if_single_use(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu.tensor_desc<16x16xf16>, %arg2: i1, %arg3: !xegpu.tensor_desc<8x16xf32>) {
   %0 = xegpu.load_nd %arg0  : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
   %1 = scf.if %arg2 -> (vector<16x16xf16>) {
     %3 = xegpu.load_nd %arg1  : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
@@ -492,28 +278,16 @@ func.func @test_if_single_use(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu
 }
 
 // -----
-// CHECK: function: test_if_multiple_uses:
-// CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<8x16xf16>' at index: 0
-// CHECK-NEXT: layout  : lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<16x16xf16>' at index: 1
-// CHECK-NEXT: layout  : lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: argument: <block argument> of type 'i1' at index: 2
-// CHECK-NEXT: layout  : Not assigned.
-// CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<8x16xf32>' at index: 3
-// CHECK-NEXT: layout  : lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<16x16xf16>' at index: 4
-// CHECK-NEXT: layout  : lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T0:.*]] = xegpu.load_nd %{{.*}}  : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T3:.*]] = xegpu.load_nd %{{.*}}  : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T4:.*]] = xegpu.load_nd %{{.*}}  : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : scf.if
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T2:.*]] = xegpu.dpas %[[T0]], %{{.*}} : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-func.func @test_if_multiple_uses(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu.tensor_desc<16x16xf16>, %arg2: i1, %arg3: !xegpu.tensor_desc<8x16xf32>, %arg4: !xegpu.tensor_desc<16x16xf16>) {
+// CHECK-LABEL: func.func @if_multiple_uses(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: !xegpu.tensor_desc<8x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>, %[[ARG1:[0-9a-zA-Z]+]]: !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>, %[[ARG2:[0-9a-zA-Z]+]]: i1, %[[ARG3:[0-9a-zA-Z]+]]: !xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>, %[[ARG4:[0-9a-zA-Z]+]]: !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>) {
+// CHECK: %[[T1:.*]] = scf.if %[[ARG2]] -> (vector<16x16xf16>) {
+// CHECK-NEXT:       %[[T3:.*]] = xegpu.load_nd %[[ARG1]]  {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<16x16xf16>
+// CHECK-NEXT:       scf.yield {layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} %[[T3]] : vector<16x16xf16>
+// CHECK-NEXT:     } else {
+// CHECK-NEXT:       %[[T4:.*]] = xegpu.load_nd %[[ARG1]]  {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<16x16xf16>
+// CHECK-NEXT:       scf.yield {layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} %[[T4]] : vector<16x16xf16>
+// CHECK-NEXT:     } {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+func.func @if_multiple_uses(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu.tensor_desc<16x16xf16>, %arg2: i1, %arg3: !xegpu.tensor_desc<8x16xf32>, %arg4: !xegpu.tensor_desc<16x16xf16>) {
   %0 = xegpu.load_nd %arg0  : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
   %1 = scf.if %arg2 -> (vector<16x16xf16>) {
     %3 = xegpu.load_nd %arg1  : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
@@ -529,16 +303,10 @@ func.func @test_if_multiple_uses(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xe
 }
 
 // -----
-// CHECK: function: test_vector_outer_reduction:
-// CHECK-NEXT: argument: <block argument> of type 'vector<16x16xf32>' at index: 0
-// CHECK-NEXT: layout  : lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<16xf32>' at index: 1
-// CHECK-NEXT: layout  : lane_layout: [16], lane_data: [1]
-// CHECK-NEXT: op    : %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [16], lane_data: [1]
-// CHECK-NEXT: op    : %[[T0:.*]] = vector.multi_reduction <add>, %{{.*}}, %[[CST]] [0] : vector<16x16xf32> to vector<16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [16], lane_data: [1]
-func.func @test_vector_outer_reduction(%arg0: vector<16x16xf32>, %arg1: !xegpu.tensor_desc<16xf32>) {
+// CHECK-LABEL: func.func @vector_outer_reduction(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: vector<16x16xf32>, %[[ARG1:[0-9a-zA-Z]+]]: !xegpu.tensor_desc<16xf32, #xegpu.layout<lane_layout = [16], lane_data = [1]>>) {
+// CHECK: %{{.*}} = vector.multi_reduction <add>, %[[ARG0]], %{{.*}} {layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_operand_1 = #xegpu.layout<lane_layout = [16], lane_data = [1]>, layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} [0] : vector<16x16xf32> to vector<16xf32>
+func.func @vector_outer_reduction(%arg0: vector<16x16xf32>, %arg1: !xegpu.tensor_desc<16xf32>) {
   %cst = arith.constant dense<0.000000e+00> : vector<16xf32>
   %0 = vector.multi_reduction <add>, %arg0, %cst [0] : vector<16x16xf32> to vector<16xf32>
   xegpu.store_nd %0, %arg1  : vector<16xf32>, !xegpu.tensor_desc<16xf32>
@@ -546,16 +314,10 @@ func.func @test_vector_outer_reduction(%arg0: vector<16x16xf32>, %arg1: !xegpu.t
 }
 
 // -----
-// CHECK: function: test_vector_inner_reduction:
-// CHECK-NEXT: argument: <block argument> of type 'vector<16x16xf32>' at index: 0
-// CHECK-NEXT: layout  : lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<16xf32>' at index: 1
-// CHECK-NEXT: layout  : lane_layout: [16], lane_data: [1]
-// CHECK-NEXT: op    : %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [16], lane_data: [1]
-// CHECK-NEXT: op    : %[[T0:.*]] = vector.multi_reduction <add>, %{{.*}}, %[[CST]] [1] : vector<16x16xf32> to vector<16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [16], lane_data: [1]
-func.func @test_vector_inner_reduction(%arg0: vector<16x16xf32>, %arg1: !xegpu.tensor_desc<16xf32>) {
+// CHECK-LABEL: func.func @vector_inner_reduction(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: vector<16x16xf32>, %[[ARG1:[0-9a-zA-Z]+]]: !xegpu.tensor_desc<16xf32, #xegpu.layout<lane_layout = [16], lane_data = [1]>>) {
+// CHECK: %{{.*}} = vector.multi_reduction <add>, %[[ARG0]], %{{.*}} {layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_operand_1 = #xegpu.layout<lane_layout = [16], lane_data = [1]>, layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} [1] : vector<16x16xf32> to vector<16xf32>
+func.func @vector_inner_reduction(%arg0: vector<16x16xf32>, %arg1: !xegpu.tensor_desc<16xf32>) {
   %cst = arith.constant dense<0.000000e+00> : vector<16xf32>
   %0 = vector.multi_reduction <add>, %arg0, %cst [1] : vector<16x16xf32> to vector<16xf32>
   xegpu.store_nd %0, %arg1  : vector<16xf32>, !xegpu.tensor_desc<16xf32>
@@ -563,13 +325,10 @@ func.func @test_vector_inner_reduction(%arg0: vector<16x16xf32>, %arg1: !xegpu.t
 }
 
 // -----
-// CHECK: function: update_nd_offset_1d:
-// CHECK: op    : %[[CST:.*]] = arith.constant dense<1.000000e+00> : vector<16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [16], lane_data: [1]
-// CHECK-NEXT: op    : %[[T0:.*]] = xegpu.create_nd_tdesc %{{.*}}[%{{.*}}] : memref<256xf32> -> !xegpu.tensor_desc<16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [16], lane_data: [1]
-// CHECK-NEXT: op    : %[[T1:.*]] = xegpu.update_nd_offset %[[T0]], [%{{.*}}] : !xegpu.tensor_desc<16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [16], lane_data: [1]
+// CHECK-LABEL: func.func @update_nd_offset_1d(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<256xf32>) {
+// CHECK: %[[T0:.*]] = xegpu.create_nd_tdesc %[[ARG0]][%{{.*}}] : memref<256xf32> -> !xegpu.tensor_desc<16xf32, #xegpu.layout<lane_layout = [16], lane_data = [1]>>
+// CHECK-NEXT: %[[T1:.*]] = xegpu.update_nd_offset %[[T0]], [%{{.*}}] : !xegpu.tensor_desc<16xf32, #xegpu.layout<lane_layout = [16], lane_data = [1]>>
 func.func @update_nd_offset_1d(%arg0: memref<256xf32>){
   %c0 = arith.constant 0 : index
   %c32 = arith.constant 32 : index
@@ -581,13 +340,10 @@ func.func @update_nd_offset_1d(%arg0: memref<256xf32>){
 }
 
 // -----
-// CHECK: function: update_nd_offset_2d:
-// CHECK: op    : %[[CST:.*]] = arith.constant dense<1.000000e+00> : vector<16x16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T0:.*]] = xegpu.create_nd_tdesc %{{.*}}[%{{.*}}] : memref<256x256xf32> -> !xegpu.tensor_desc<16x16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
-// CHECK-NEXT: op    : %[[T1:.*]] = xegpu.update_nd_offset %[[T0]], [%{{.*}}] : !xegpu.tensor_desc<16x16xf32>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
+// CHECK-LABEL: func.func @update_nd_offset_2d(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<256x256xf32>) {
+// CHECK: %[[T0:.*]] = xegpu.create_nd_tdesc %[[ARG0]][%{{.*}}, %{{.*}}] : memref<256x256xf32> -> !xegpu.tensor_desc<16x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+// CHECK-NEXT: %[[T1:.*]] = xegpu.update_nd_offset %[[T0]], [%{{.*}}, %{{.*}}] : !xegpu.tensor_desc<16x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
 func.func @update_nd_offset_2d(%arg0: memref<256x256xf32>){
   %c0 = arith.constant 0 : index
   %c32 = arith.constant 32 : index
@@ -599,10 +355,10 @@ func.func @update_nd_offset_2d(%arg0: memref<256x256xf32>){
 }
 
 // -----
-// CHECK: function: prefetch_2d:
-// CHECK: layout for result #0: Not assigned.
-// CHECK-NEXT: op    : %[[T0:.*]] = xegpu.create_nd_tdesc %{{.*}}[%{{.*}}] : memref<256x256xf16> -> !xegpu.tensor_desc<16x16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
+// CHECK-LABEL: func.func @prefetch_2d(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<256x256xf16>) {
+// CHECK: %[[T0:.*]] = xegpu.create_nd_tdesc %[[ARG0]][%{{.*}}, %{{.*}}] : memref<256x256xf16> -> !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+// CHECK-NEXT: xegpu.prefetch_nd %[[T0]] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
 func.func @prefetch_2d(%arg0: memref<256x256xf16>){
   %c0 = arith.constant 0 : index
   %0 = xegpu.create_nd_tdesc %arg0[%c0, %c0] : memref<256x256xf16> -> !xegpu.tensor_desc<16x16xf16>
@@ -611,9 +367,10 @@ func.func @prefetch_2d(%arg0: memref<256x256xf16>){
 }
 
 // -----
-// CHECK: function: prefetch_1d:
-// CHECK: op    : %[[T0:.*]] = xegpu.create_nd_tdesc %{{.*}}[%{{.*}}] : memref<256xf16> -> !xegpu.tensor_desc<16xf16>
-// CHECK-NEXT: layout for result #0: lane_layout: [16], lane_data: [1]
+// CHECK-LABEL: func.func @prefetch_1d(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<256xf16>) {
+// CHECK: %[[T0:.*]] = xegpu.create_nd_tdesc %[[ARG0]][%{{.*}}] : memref<256xf16> -> !xegpu.tensor_desc<16xf16, #xegpu.layout<lane_layout = [16], lane_data = [1]>>
+// CHECK-NEXT: xegpu.prefetch_nd %[[T0]] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<16xf16, #xegpu.layout<lane_layout = [16], lane_data = [1]>>
 func.func @prefetch_1d(%arg0: memref<256xf16>){
   %c0 = arith.constant 0 : index
   %0 = xegpu.create_nd_tdesc %arg0[%c0] : memref<256xf16> -> !xegpu.tensor_desc<16xf16>
