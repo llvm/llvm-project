@@ -582,7 +582,8 @@ static SmallVector<Value> getCollapsedIndices(RewriterBase &rewriter,
 
 namespace {
 
-/// Helper functon to return the index of the last dynamic dimension in `shape`.
+/// Helper function to return the index of the last dynamic dimension
+/// in `shape` or -1 if there are no dynamic dimensions.
 int64_t lastDynIndex(ArrayRef<int64_t> shape) {
   return static_cast<int64_t>(
       std::distance(

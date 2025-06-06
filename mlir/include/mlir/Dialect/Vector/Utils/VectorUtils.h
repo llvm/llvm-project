@@ -54,9 +54,9 @@ FailureOr<std::pair<int, int>> isTranspose2DSlice(vector::TransposeOp op);
 /// dimensions after ignoring a leading sequence of unit ones.
 ///
 /// For `vectorType` to be a contiguous slice of `memrefType`
-///   a) the N trailing dimensions of the latter must be contiguous, and
-///   b) the trailing N dimensions of `vectorType` and `memrefType`,
-///      except the first of them, must match.
+///   a) the N trailing dimensions of `memrefType` must be contiguous, and
+///   b) the N-1 trailing dimensions of `vectorType` and `memrefType`
+///      must match.
 ///
 /// Examples:
 ///
@@ -69,15 +69,15 @@ FailureOr<std::pair<int, int>> isTranspose2DSlice(vector::TransposeOp op);
 ///   Ex.4 contiguous slice, leading unit dimension of the vector ignored,
 ///        2 != 3 (allowed)
 ///     vector<1x2x2xi32> from memref<5x4x3x2xi32>
-///   Ex.5. contiguous slice, leasing two unit dims of the vector ignored,
+///   Ex.5. contiguous slice, leading two unit dims of the vector ignored,
 ///         2 != 3 (allowed)
 ///     vector<1x1x2x2xi32> from memref<5x4x3x2xi32>
 ///   Ex.6. non-contiguous slice, 2 != 3, no leading sequence of unit dims
 ///     vector<2x1x2x2xi32> from memref<5x4x3x2xi32>)
-///   Ex.7 contiguous slice, memref needs to be contiguous only on the last
+///   Ex.7 contiguous slice, memref needs to be contiguous only in the last
 ///        dimension
 ///     vector<1x1x2xi32> from memref<2x2x2xi32, strided<[8, 4, 1]>>
-///   Ex.8 non-contiguous slice, memref needs to be contiguous one the last
+///   Ex.8 non-contiguous slice, memref needs to be contiguous in the last
 ///        two dimensions, and it isn't
 ///     vector<1x2x2xi32> from memref<2x2x2xi32, strided<[8, 4, 1]>>
 bool isContiguousSlice(MemRefType memrefType, VectorType vectorType);
