@@ -211,6 +211,62 @@ static raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const ComparisonFunc &CompFunc) {
+  switch (CompFunc) {
+  case ComparisonFunc::Never:
+    OS << "Never";
+    break;
+  case ComparisonFunc::Less:
+    OS << "Less";
+    break;
+  case ComparisonFunc::Equal:
+    OS << "Equal";
+    break;
+  case ComparisonFunc::LessEqual:
+    OS << "LessEqual";
+    break;
+  case ComparisonFunc::Greater:
+    OS << "Greater";
+    break;
+  case ComparisonFunc::NotEqual:
+    OS << "NotEqual";
+    break;
+  case ComparisonFunc::GreaterEqual:
+    OS << "GreaterEqual";
+    break;
+  case ComparisonFunc::Always:
+    OS << "Always";
+    break;
+  }
+
+  return OS;
+}
+
+
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const StaticBorderColor &BorderColor) {
+  switch (BorderColor) {
+  case StaticBorderColor::TransparentBlack:
+    OS << "TransparentBlack";
+    break;
+  case StaticBorderColor::OpaqueBlack:
+    OS << "OpaqueBlack";
+    break;
+  case StaticBorderColor::OpaqueWhite:
+    OS << "OpaqueWhite";
+    break;
+  case StaticBorderColor::OpaqueBlackUint:
+    OS << "OpaqueBlackUint";
+    break;
+  case StaticBorderColor::OpaqueWhiteUint:
+    OS << "OpaqueWhiteUint";
+    break;
+  }
+
+  return OS;
+}
+
 static raw_ostream &operator<<(raw_ostream &OS, const ClauseType &Type) {
   switch (Type) {
   case ClauseType::CBuffer:
@@ -399,6 +455,8 @@ raw_ostream &operator<<(raw_ostream &OS, const StaticSampler &Sampler) {
      << ", addressW = " << Sampler.AddressW
      << ", mipLODBias = " << Sampler.MipLODBias
      << ", maxAnisotropy = " << Sampler.MaxAnisotropy
+     << ", comparisonFunc = " << Sampler.CompFunc
+     << ", borderColor = " << Sampler.BorderColor
      << ", minLOD = " << Sampler.MinLOD
      << ", maxLOD = " << Sampler.MaxLOD
      << ", space = " << Sampler.Space
