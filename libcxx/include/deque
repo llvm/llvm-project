@@ -621,7 +621,8 @@ private:
     deque* const __base_;
   };
 
-  static __iter_proper_const_pointer __map_const_ptr_to_iter_const_ptr(__map_proper_const_pointer __mp) _NOEXCEPT {
+  static _LIBCPP_HIDE_FROM_ABI __iter_proper_const_pointer
+  __map_const_ptr_to_iter_const_ptr(__map_proper_const_pointer __mp) _NOEXCEPT {
     return __mp ? pointer_traits<__iter_proper_const_pointer>::pointer_to(*__mp) : nullptr;
   }
 
