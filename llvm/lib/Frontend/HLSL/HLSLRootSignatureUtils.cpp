@@ -251,6 +251,18 @@ raw_ostream &operator<<(raw_ostream &OS, const RootDescriptor &Descriptor) {
   return OS;
 }
 
+raw_ostream &operator<<(raw_ostream &OS, const StaticSampler &Sampler) {
+  OS << "StaticSampler(" << Sampler.Reg
+     << ", mipLODBias = " << Sampler.MipLODBias
+     << ", maxAnisotropy = " << Sampler.MaxAnisotropy
+     << ", minLOD = " << Sampler.MinLOD
+     << ", maxLOD = " << Sampler.MaxLOD
+     << ", space = " << Sampler.Space
+     << ", visibility = " << Sampler.Visibility
+     << ")";
+  return OS;
+}
+
 raw_ostream &operator<<(raw_ostream &OS, const DescriptorTable &Table) {
   OS << "DescriptorTable(numClauses = " << Table.NumClauses
      << ", visibility = " << Table.Visibility << ")";
