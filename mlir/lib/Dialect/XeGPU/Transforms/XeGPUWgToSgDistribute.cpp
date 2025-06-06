@@ -401,92 +401,6 @@ struct WgToSgElementwiseOp : public OpConversionPattern<Op> {
   }
 };
 
-// ---- ARITH ops ----
-using WgToSgAddFOp = WgToSgElementwiseOp<arith::AddFOp>;
-using WgToSgSubFOp = WgToSgElementwiseOp<arith::SubFOp>;
-using WgToSgNegFOp = WgToSgElementwiseOp<arith::NegFOp>;
-using WgToSgAddIOp = WgToSgElementwiseOp<arith::AddIOp>;
-using WgToSgSubIOp = WgToSgElementwiseOp<arith::SubIOp>;
-using WgToSgMulFOp = WgToSgElementwiseOp<arith::MulFOp>;
-using WgToSgMulIOp = WgToSgElementwiseOp<arith::MulIOp>;
-using WgToSgShLIOp = WgToSgElementwiseOp<arith::ShLIOp>;
-using WgToSgShRSIOp = WgToSgElementwiseOp<arith::ShRSIOp>;
-using WgToSgShRUIOp = WgToSgElementwiseOp<arith::ShRUIOp>;
-using WgToSgDivFOp = WgToSgElementwiseOp<arith::DivFOp>;
-using WgToSgDivSIOp = WgToSgElementwiseOp<arith::DivSIOp>;
-using WgToSgDivUIOp = WgToSgElementwiseOp<arith::DivUIOp>;
-using WgToSgMaximumFOp = WgToSgElementwiseOp<arith::MaximumFOp>;
-using WgToSgMinimumFOp = WgToSgElementwiseOp<arith::MinimumFOp>;
-using WgToSgRemSIOp = WgToSgElementwiseOp<arith::RemSIOp>;
-using WgToSgRemUIOp = WgToSgElementwiseOp<arith::RemUIOp>;
-using WgToSgTruncFOp = WgToSgElementwiseOp<arith::TruncFOp>;
-using WgToSgTruncIOp = WgToSgElementwiseOp<arith::TruncIOp>;
-using WgToSgExtFOp = WgToSgElementwiseOp<arith::ExtFOp>;
-using WgToSgExtSIOp = WgToSgElementwiseOp<arith::ExtSIOp>;
-using WgToSgExtUIOp = WgToSgElementwiseOp<arith::ExtUIOp>;
-using WgToSgSIToFPOp = WgToSgElementwiseOp<arith::SIToFPOp>;
-using WgToSgUIToFPOp = WgToSgElementwiseOp<arith::UIToFPOp>;
-using WgToSgFPToSIOp = WgToSgElementwiseOp<arith::FPToSIOp>;
-using WgToSgFPToUIOp = WgToSgElementwiseOp<arith::FPToUIOp>;
-using WgToSgIndexCastUIOp = WgToSgElementwiseOp<arith::IndexCastUIOp>;
-using WgToSgIndexCastOp = WgToSgElementwiseOp<arith::IndexCastOp>;
-using WgToSgBitcastOp = WgToSgElementwiseOp<arith::BitcastOp>;
-using WgToSgCmpIOp = WgToSgElementwiseOp<arith::CmpIOp>;
-using WgToSgCmpFOp = WgToSgElementwiseOp<arith::CmpFOp>;
-using WgToSgAndIOp = WgToSgElementwiseOp<arith::AndIOp>;
-using WgToSgCeilDivSIOp = WgToSgElementwiseOp<arith::CeilDivSIOp>;
-using WgToSgCeilDivUIOp = WgToSgElementwiseOp<arith::CeilDivUIOp>;
-using WgToSgFloorDivSIOp = WgToSgElementwiseOp<arith::FloorDivSIOp>;
-using WgToSgMaxNumFOp = WgToSgElementwiseOp<arith::MaxNumFOp>;
-using WgToSgMaxSIOp = WgToSgElementwiseOp<arith::MaxSIOp>;
-using WgToSgMaxUIOp = WgToSgElementwiseOp<arith::MaxUIOp>;
-using WgToSgMinNumFOp = WgToSgElementwiseOp<arith::MinNumFOp>;
-using WgToSgMinSIOp = WgToSgElementwiseOp<arith::MinSIOp>;
-using WgToSgMinUIOp = WgToSgElementwiseOp<arith::MinUIOp>;
-using WgToSgOrIOp = WgToSgElementwiseOp<arith::OrIOp>;
-using WgToSgRemFOp = WgToSgElementwiseOp<arith::RemFOp>;
-using WgToSgSelectOp = WgToSgElementwiseOp<arith::SelectOp>;
-using WgToSgXOrIOp = WgToSgElementwiseOp<arith::XOrIOp>;
-
-// ---- MATH ops ----
-using WgToSgExpOp = WgToSgElementwiseOp<math::ExpOp>;
-using WgToSgSqrtOp = WgToSgElementwiseOp<math::SqrtOp>;
-using WgToSgAbsFOp = WgToSgElementwiseOp<math::AbsFOp>;
-using WgToSgCosOp = WgToSgElementwiseOp<math::CosOp>;
-using WgToSgCoshOp = WgToSgElementwiseOp<math::CoshOp>;
-using WgToSgAcosOp = WgToSgElementwiseOp<math::AcosOp>;
-using WgToSgAcoshOp = WgToSgElementwiseOp<math::AcoshOp>;
-using WgToSgSinOp = WgToSgElementwiseOp<math::SinOp>;
-using WgToSgSinhOp = WgToSgElementwiseOp<math::SinhOp>;
-using WgToSgAsinOp = WgToSgElementwiseOp<math::AsinOp>;
-using WgToSgAsinhOp = WgToSgElementwiseOp<math::AsinhOp>;
-using WgToSgTanOp = WgToSgElementwiseOp<math::TanOp>;
-using WgToSgTanhOp = WgToSgElementwiseOp<math::TanhOp>;
-using WgToSgAtanOp = WgToSgElementwiseOp<math::AtanOp>;
-using WgToSgAtan2Op = WgToSgElementwiseOp<math::Atan2Op>;
-using WgToSgAtanhOp = WgToSgElementwiseOp<math::AtanhOp>;
-using WgToSgErfOp = WgToSgElementwiseOp<math::ErfOp>;
-using WgToSgLogOp = WgToSgElementwiseOp<math::LogOp>;
-using WgToSgLog2Op = WgToSgElementwiseOp<math::Log2Op>;
-using WgToSgFloorOp = WgToSgElementwiseOp<math::FloorOp>;
-using WgToSgCeilOp = WgToSgElementwiseOp<math::CeilOp>;
-using WgToSgPowFOp = WgToSgElementwiseOp<math::PowFOp>;
-using WgToSgRsqrtOp = WgToSgElementwiseOp<math::RsqrtOp>;
-using WgToSgAbsIOp = WgToSgElementwiseOp<math::AbsIOp>;
-using WgToSgCbrtOp = WgToSgElementwiseOp<math::CbrtOp>;
-using WgToSgCopySignOp = WgToSgElementwiseOp<math::CopySignOp>;
-using WgToSgCtPopOp = WgToSgElementwiseOp<math::CtPopOp>;
-using WgToSgErfcOp = WgToSgElementwiseOp<math::ErfcOp>;
-using WgToSgExp2Op = WgToSgElementwiseOp<math::Exp2Op>;
-using WgToSgExpM1Op = WgToSgElementwiseOp<math::ExpM1Op>;
-using WgToSgFPowIOp = WgToSgElementwiseOp<math::FPowIOp>;
-using WgToSgIPowIOp = WgToSgElementwiseOp<math::IPowIOp>;
-using WgToSgLog10Op = WgToSgElementwiseOp<math::Log10Op>;
-using WgToSgLog1pOp = WgToSgElementwiseOp<math::Log1pOp>;
-using WgToSgRoundOp = WgToSgElementwiseOp<math::RoundOp>;
-using WgToSgRoundEvenOp = WgToSgElementwiseOp<math::RoundEvenOp>;
-using WgToSgTruncOp = WgToSgElementwiseOp<math::TruncOp>;
-
 } // namespace
 
 namespace mlir {
@@ -497,25 +411,55 @@ void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
       patterns.getContext());
   // Add elementwise operations that can be distributed to subgroups
   patterns.add<
-      WgToSgAddFOp, WgToSgSubFOp, WgToSgExpOp, WgToSgSqrtOp, WgToSgAbsFOp,
-      WgToSgCosOp, WgToSgCoshOp, WgToSgAcosOp, WgToSgAcoshOp, WgToSgSinOp,
-      WgToSgSinhOp, WgToSgAsinOp, WgToSgAsinhOp, WgToSgTanOp, WgToSgTanhOp,
-      WgToSgAtanOp, WgToSgAtan2Op, WgToSgAtanhOp, WgToSgErfOp, WgToSgLogOp,
-      WgToSgLog2Op, WgToSgFloorOp, WgToSgCeilOp, WgToSgPowFOp, WgToSgRsqrtOp,
-      WgToSgNegFOp, WgToSgAddIOp, WgToSgSubIOp, WgToSgMulFOp, WgToSgMulIOp,
-      WgToSgShLIOp, WgToSgShRSIOp, WgToSgShRUIOp, WgToSgDivFOp, WgToSgDivSIOp,
-      WgToSgDivUIOp, WgToSgMaximumFOp, WgToSgMinimumFOp, WgToSgRemSIOp,
-      WgToSgRemUIOp, WgToSgTruncFOp, WgToSgTruncIOp, WgToSgExtFOp,
-      WgToSgExtSIOp, WgToSgExtUIOp, WgToSgSIToFPOp, WgToSgUIToFPOp,
-      WgToSgFPToSIOp, WgToSgFPToUIOp, WgToSgIndexCastUIOp, WgToSgIndexCastOp,
-      WgToSgBitcastOp, WgToSgCmpIOp, WgToSgCmpFOp, WgToSgAndIOp,
-      WgToSgCeilDivSIOp, WgToSgCeilDivUIOp, WgToSgFloorDivSIOp, WgToSgMaxNumFOp,
-      WgToSgMaxSIOp, WgToSgMaxUIOp, WgToSgMinNumFOp, WgToSgMinSIOp,
-      WgToSgMinUIOp, WgToSgOrIOp, WgToSgRemFOp, WgToSgSelectOp, WgToSgXOrIOp,
-      WgToSgAbsIOp, WgToSgCbrtOp, WgToSgCopySignOp, WgToSgCtPopOp, WgToSgErfcOp,
-      WgToSgExp2Op, WgToSgExpM1Op, WgToSgFPowIOp, WgToSgIPowIOp, WgToSgLog10Op,
-      WgToSgLog1pOp, WgToSgRoundOp, WgToSgRoundEvenOp, WgToSgTruncOp>(
-      patterns.getContext());
+      WgToSgElementwiseOp<arith::AddFOp>, WgToSgElementwiseOp<arith::SubFOp>,
+      WgToSgElementwiseOp<math::ExpOp>, WgToSgElementwiseOp<math::SqrtOp>,
+      WgToSgElementwiseOp<math::AbsFOp>, WgToSgElementwiseOp<math::CosOp>,
+      WgToSgElementwiseOp<math::CoshOp>, WgToSgElementwiseOp<math::AcosOp>,
+      WgToSgElementwiseOp<math::AcoshOp>, WgToSgElementwiseOp<math::SinOp>,
+      WgToSgElementwiseOp<math::SinhOp>, WgToSgElementwiseOp<math::AsinOp>,
+      WgToSgElementwiseOp<math::AsinhOp>, WgToSgElementwiseOp<math::TanOp>,
+      WgToSgElementwiseOp<math::TanhOp>, WgToSgElementwiseOp<math::AtanOp>,
+      WgToSgElementwiseOp<math::Atan2Op>, WgToSgElementwiseOp<math::AtanhOp>,
+      WgToSgElementwiseOp<math::ErfOp>, WgToSgElementwiseOp<math::LogOp>,
+      WgToSgElementwiseOp<math::Log2Op>, WgToSgElementwiseOp<math::FloorOp>,
+      WgToSgElementwiseOp<math::CeilOp>, WgToSgElementwiseOp<math::PowFOp>,
+      WgToSgElementwiseOp<math::RsqrtOp>, WgToSgElementwiseOp<arith::NegFOp>,
+      WgToSgElementwiseOp<arith::AddIOp>, WgToSgElementwiseOp<arith::SubIOp>,
+      WgToSgElementwiseOp<arith::MulFOp>, WgToSgElementwiseOp<arith::MulIOp>,
+      WgToSgElementwiseOp<arith::ShLIOp>, WgToSgElementwiseOp<arith::ShRSIOp>,
+      WgToSgElementwiseOp<arith::ShRUIOp>, WgToSgElementwiseOp<arith::DivFOp>,
+      WgToSgElementwiseOp<arith::DivSIOp>, WgToSgElementwiseOp<arith::DivUIOp>,
+      WgToSgElementwiseOp<arith::MaximumFOp>,
+      WgToSgElementwiseOp<arith::MinimumFOp>,
+      WgToSgElementwiseOp<arith::RemSIOp>, WgToSgElementwiseOp<arith::RemUIOp>,
+      WgToSgElementwiseOp<arith::TruncFOp>,
+      WgToSgElementwiseOp<arith::TruncIOp>, WgToSgElementwiseOp<arith::ExtFOp>,
+      WgToSgElementwiseOp<arith::ExtSIOp>, WgToSgElementwiseOp<arith::ExtUIOp>,
+      WgToSgElementwiseOp<arith::SIToFPOp>,
+      WgToSgElementwiseOp<arith::UIToFPOp>,
+      WgToSgElementwiseOp<arith::FPToSIOp>,
+      WgToSgElementwiseOp<arith::FPToUIOp>,
+      WgToSgElementwiseOp<arith::IndexCastUIOp>,
+      WgToSgElementwiseOp<arith::IndexCastOp>,
+      WgToSgElementwiseOp<arith::BitcastOp>, WgToSgElementwiseOp<arith::CmpIOp>,
+      WgToSgElementwiseOp<arith::CmpFOp>, WgToSgElementwiseOp<arith::AndIOp>,
+      WgToSgElementwiseOp<arith::CeilDivSIOp>,
+      WgToSgElementwiseOp<arith::CeilDivUIOp>,
+      WgToSgElementwiseOp<arith::FloorDivSIOp>,
+      WgToSgElementwiseOp<arith::MaxNumFOp>,
+      WgToSgElementwiseOp<arith::MaxSIOp>, WgToSgElementwiseOp<arith::MaxUIOp>,
+      WgToSgElementwiseOp<arith::MinNumFOp>,
+      WgToSgElementwiseOp<arith::MinSIOp>, WgToSgElementwiseOp<arith::MinUIOp>,
+      WgToSgElementwiseOp<arith::OrIOp>, WgToSgElementwiseOp<arith::RemFOp>,
+      WgToSgElementwiseOp<arith::SelectOp>, WgToSgElementwiseOp<arith::XOrIOp>,
+      WgToSgElementwiseOp<math::AbsIOp>, WgToSgElementwiseOp<math::CbrtOp>,
+      WgToSgElementwiseOp<math::CopySignOp>, WgToSgElementwiseOp<math::CtPopOp>,
+      WgToSgElementwiseOp<math::ErfcOp>, WgToSgElementwiseOp<math::Exp2Op>,
+      WgToSgElementwiseOp<math::ExpM1Op>, WgToSgElementwiseOp<math::FPowIOp>,
+      WgToSgElementwiseOp<math::IPowIOp>, WgToSgElementwiseOp<math::Log10Op>,
+      WgToSgElementwiseOp<math::Log1pOp>, WgToSgElementwiseOp<math::RoundOp>,
+      WgToSgElementwiseOp<math::RoundEvenOp>,
+      WgToSgElementwiseOp<math::TruncOp>>(patterns.getContext());
 }
 } // namespace xegpu
 } // namespace mlir
