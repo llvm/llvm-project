@@ -1336,7 +1336,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::MUL, MVT::v1i64, Custom);
 
     // Saturates
-    for (MVT VT : { MVT::v8i8, MVT::v4i16, MVT::v2i32,
+    for (MVT VT : { MVT::v8i8, MVT::v4i16, MVT::v2i32, MVT::v1i64,
                     MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64 }) {
       setOperationAction(ISD::SADDSAT, VT, Legal);
       setOperationAction(ISD::UADDSAT, VT, Legal);
@@ -1984,14 +1984,15 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(Op, MVT::f16, Promote);
 
   if (Subtarget->isWindowsArm64EC()) {
-    // FIXME: are there intrinsics we need to exclude from this?
-    for (int i = 0; i < RTLIB::UNKNOWN_LIBCALL; ++i) {
-      auto code = static_cast<RTLIB::Libcall>(i);
-      auto libcallName = getLibcallName(code);
-      if ((libcallName != nullptr) && (libcallName[0] != '#')) {
-        setLibcallName(code, Saver.save(Twine("#") + libcallName).data());
-      }
-    }
+    // FIXME: are there calls we need to exclude from this?
+#define HANDLE_LIBCALL(code, name)                                             \
+  {                                                                            \
+    const char *libcallName = getLibcallName(RTLIB::code);                     \
+    if (libcallName && libcallName[0] != '#')                                  \
+      setLibcallName(RTLIB::code, "#" #name);                                  \
+  }
+#include "llvm/IR/RuntimeLibcalls.def"
+#undef HANDLE_LIBCALL
   }
 }
 
@@ -7751,7 +7752,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     (void)Res;
   }
 
-  SMEAttrs Attrs(MF.getFunction());
+  SMEAttrs Attrs = FuncInfo->getSMEFnAttrs();
   bool IsLocallyStreaming =
       !Attrs.hasStreamingInterface() && Attrs.hasStreamingBody();
   assert(Chain.getOpcode() == ISD::EntryToken && "Unexpected Chain value");
@@ -8105,7 +8106,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
 
   // Create a 16 Byte TPIDR2 object. The dynamic buffer
   // will be expanded and stored in the static object later using a pseudonode.
-  if (SMEAttrs(MF.getFunction()).hasZAState()) {
+  if (Attrs.hasZAState()) {
     TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
     TPIDR2.FrameIndex = MFI.CreateStackObject(16, Align(16), false);
     SDValue SVL = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
@@ -8125,7 +8126,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     Chain = DAG.getNode(
         AArch64ISD::INIT_TPIDR2OBJ, DL, DAG.getVTList(MVT::Other),
         {/*Chain*/ Buffer.getValue(1), /*Buffer ptr*/ Buffer.getValue(0)});
-  } else if (SMEAttrs(MF.getFunction()).hasAgnosticZAInterface()) {
+  } else if (Attrs.hasAgnosticZAInterface()) {
     // Call __arm_sme_state_size().
     SDValue BufferSize =
         DAG.getNode(AArch64ISD::GET_SME_SAVE_SIZE, DL,
@@ -8760,6 +8761,45 @@ getSMToggleCondition(const SMECallAttrs &CallAttrs) {
   llvm_unreachable("Unsupported attributes");
 }
 
+/// Check whether a stack argument requires lowering in a tail call.
+static bool shouldLowerTailCallStackArg(const MachineFunction &MF,
+                                        const CCValAssign &VA, SDValue Arg,
+                                        ISD::ArgFlagsTy Flags, int CallOffset) {
+  // FIXME: We should be able to handle this case, but it's not clear how to.
+  if (Flags.isZExt() || Flags.isSExt())
+    return true;
+
+  for (;;) {
+    // Look through nodes that don't alter the bits of the incoming value.
+    unsigned Op = Arg.getOpcode();
+    if (Op == ISD::ZERO_EXTEND || Op == ISD::ANY_EXTEND || Op == ISD::BITCAST ||
+        Arg->isAssert() || Op == AArch64ISD::ASSERT_ZEXT_BOOL) {
+      Arg = Arg.getOperand(0);
+      continue;
+    }
+    break;
+  }
+
+  // If the argument is a load from the same immutable stack slot, we can reuse
+  // it.
+  if (auto *LoadNode = dyn_cast<LoadSDNode>(Arg)) {
+    if (auto *FINode = dyn_cast<FrameIndexSDNode>(LoadNode->getBasePtr())) {
+      const MachineFrameInfo &MFI = MF.getFrameInfo();
+      int FI = FINode->getIndex();
+      if (!MFI.isImmutableObjectIndex(FI))
+        return true;
+      if (CallOffset != MFI.getObjectOffset(FI))
+        return true;
+      uint64_t SizeInBits = LoadNode->getMemoryVT().getFixedSizeInBits();
+      if (SizeInBits / 8 != MFI.getObjectSize(FI))
+        return true;
+      return false;
+    }
+  }
+
+  return true;
+}
+
 /// LowerCall - Lower a call to a callseq_start + CALL + callseq_end chain,
 /// and add input and output parameter nodes.
 SDValue
@@ -9182,10 +9222,13 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       }
       unsigned LocMemOffset = VA.getLocMemOffset();
       int32_t Offset = LocMemOffset + BEAlign;
-      SDValue PtrOff = DAG.getIntPtrConstant(Offset, DL);
-      PtrOff = DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr, PtrOff);
 
       if (IsTailCall) {
+        // When the frame pointer is perfectly aligned for the tail call and the
+        // same stack argument is passed down intact, we can reuse it.
+        if (!FPDiff && !shouldLowerTailCallStackArg(MF, VA, Arg, Flags, Offset))
+          continue;
+
         Offset = Offset + FPDiff;
         int FI = MF.getFrameInfo().CreateFixedObject(OpSize, Offset, true);
 
@@ -9610,7 +9653,7 @@ AArch64TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
 
   // Emit SMSTOP before returning from a locally streaming function
-  SMEAttrs FuncAttrs(MF.getFunction());
+  SMEAttrs FuncAttrs = FuncInfo->getSMEFnAttrs();
   if (FuncAttrs.hasStreamingBody() && !FuncAttrs.hasStreamingInterface()) {
     if (FuncAttrs.hasStreamingCompatibleInterface()) {
       Register Reg = FuncInfo->getPStateSMReg();
@@ -29208,6 +29251,10 @@ AArch64TargetLowering::LowerVECTOR_DEINTERLEAVE(SDValue Op,
   EVT OpVT = Op.getValueType();
   assert(OpVT.isScalableVector() &&
          "Expected scalable vector in LowerVECTOR_DEINTERLEAVE.");
+
+  if (Op->getNumOperands() != 2)
+    return SDValue();
+
   SDValue Even = DAG.getNode(AArch64ISD::UZP1, DL, OpVT, Op.getOperand(0),
                              Op.getOperand(1));
   SDValue Odd = DAG.getNode(AArch64ISD::UZP2, DL, OpVT, Op.getOperand(0),
@@ -29221,6 +29268,9 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
   EVT OpVT = Op.getValueType();
   assert(OpVT.isScalableVector() &&
          "Expected scalable vector in LowerVECTOR_INTERLEAVE.");
+
+  if (Op->getNumOperands() != 2)
+    return SDValue();
 
   SDValue Lo = DAG.getNode(AArch64ISD::ZIP1, DL, OpVT, Op.getOperand(0),
                            Op.getOperand(1));

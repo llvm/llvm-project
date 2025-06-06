@@ -70,6 +70,12 @@ Changes to the LLVM IR
   `llvm.load.relative`.
 * Inline asm calls no longer accept ``label`` arguments. Use ``callbr`` instead.
 
+* Updated semantics of the `callbr` instruction to clarify that its
+  'indirect labels' are not expected to be reached by indirect (as in
+  register-controlled) branch instructions, and therefore are not
+  guaranteed to start with a `bti` or `endbr64` instruction, where
+  those exist.
+
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -202,6 +208,8 @@ Changes to the RISC-V Backend
   Extensions.
 * `-mcpu=andes-a25` and `-mcpu=andes-ax25` were added.
 * The `Shlcofideleg` extension was added.
+* `-mcpu=sifive-x390` was added.
+* `-mtune=andes-45-series` was added.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -214,6 +222,8 @@ Changes to the Windows Target
 
 Changes to the X86 Backend
 --------------------------
+
+* `fp128` will now use `*f128` libcalls on 32-bit GNU targets as well.
 
 Changes to the OCaml bindings
 -----------------------------
