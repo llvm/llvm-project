@@ -33,6 +33,24 @@ static void SendThreadExitedEvent(DAP &dap, lldb::tid_t tid) {
   dap.SendJSON(llvm::json::Value(std::move(event)));
 }
 
+void SendTargetBasedCapabilities(DAP &dap) {
+  if (!dap.target.IsValid())
+    return;
+
+  // FIXME: stepInTargets request is only supported by the x86
+  // architecture remove when `lldb::InstructionControlFlowKind` is
+  // supported by other architectures
+  const llvm::StringRef target_triple = dap.target.GetTriple();
+  if (target_triple.starts_with("x86"))
+    return;
+
+  protocol::Event event;
+  event.event = "capabilities";
+  event.body = llvm::json::Object{
+      {"capabilities",
+       llvm::json::Object{{"supportsStepInTargetsRequest", false}}}};
+  dap.Send(event);
+}
 // "ProcessEvent": {
 //   "allOf": [
 //     { "$ref": "#/definitions/Event" },

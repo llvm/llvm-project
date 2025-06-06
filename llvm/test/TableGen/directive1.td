@@ -14,9 +14,9 @@ def TestDirectiveLanguage : DirectiveLanguage {
   let flangClauseBaseClass = "TdlClause";
 }
 
-def TDLCV_vala : ClauseVal<"vala",1,1> {}
-def TDLCV_valb : ClauseVal<"valb",2,1> {}
-def TDLCV_valc : ClauseVal<"valc",3,0> { let isDefault = 1; }
+def TDLCV_vala : EnumVal<"vala",1,1> {}
+def TDLCV_valb : EnumVal<"valb",2,1> {}
+def TDLCV_valc : EnumVal<"valc",3,0> { let isDefault = 1; }
 
 def TDLC_ClauseA : Clause<"clausea"> {
   let enumClauseValue = "AKind";

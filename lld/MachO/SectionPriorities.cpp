@@ -21,6 +21,7 @@
 #include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Utils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/Path.h"
@@ -250,7 +251,7 @@ macho::PriorityBuilder::getSymbolPriority(const Defined *sym) {
   if (sym->isAbsolute())
     return std::nullopt;
 
-  auto it = priorities.find(sym->getName());
+  auto it = priorities.find(utils::getRootSymbol(sym->getName()));
   if (it == priorities.end())
     return std::nullopt;
   const SymbolPriorityEntry &entry = it->second;
@@ -330,7 +331,7 @@ void macho::PriorityBuilder::parseOrderFile(StringRef path) {
         break;
       }
     }
-    symbol = line.trim();
+    symbol = utils::getRootSymbol(line.trim());
 
     if (!symbol.empty()) {
       SymbolPriorityEntry &entry = priorities[symbol];
