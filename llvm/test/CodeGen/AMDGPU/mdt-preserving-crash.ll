@@ -29,17 +29,13 @@ define protected amdgpu_kernel void @_RSENC_PRInit______________________________
 ; CHECK-NEXT:    s_cmp_eq_u32 s4, 0
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_2
 ; CHECK-NEXT:  ; %bb.3: ; %if.end60
-; CHECK-NEXT:    s_mov_b64 vcc, exec
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_11
 ; CHECK-NEXT:  ; %bb.4: ; %if.end5.i
-; CHECK-NEXT:    s_mov_b64 vcc, vcc
-; CHECK-NEXT:    s_cbranch_vccz .LBB0_11
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_11
 ; CHECK-NEXT:  ; %bb.5: ; %if.end5.i314
-; CHECK-NEXT:    s_mov_b64 vcc, exec
-; CHECK-NEXT:    s_cbranch_execz .LBB0_11
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_11
 ; CHECK-NEXT:  ; %bb.6: ; %if.end5.i338
-; CHECK-NEXT:    s_mov_b64 vcc, vcc
-; CHECK-NEXT:    s_cbranch_vccz .LBB0_11
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_11
 ; CHECK-NEXT:  ; %bb.7: ; %if.end5.i362
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
@@ -50,7 +46,7 @@ define protected amdgpu_kernel void @_RSENC_PRInit______________________________
 ; CHECK-NEXT:    buffer_store_byte v0, v0, s[0:3], 0 offen
 ; CHECK-NEXT:    s_waitcnt vmcnt(1)
 ; CHECK-NEXT:    buffer_store_byte v1, off, s[0:3], 0 offset:257
-; CHECK-NEXT:    s_cbranch_execz .LBB0_11
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_11
 ; CHECK-NEXT:  ; %bb.8: ; %if.end5.i400
 ; CHECK-NEXT:    flat_load_ubyte v0, v[0:1]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)

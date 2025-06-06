@@ -148,7 +148,7 @@ add_libc_unittest(
     libc.src.time.time_constants
 )
 
-add_libc_unittest(
+add_libc_test(
   mktime_test
   SUITE
     libc_time_unittests

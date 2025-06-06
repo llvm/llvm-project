@@ -56,7 +56,9 @@ set(supported_sources
   product.cpp
   pseudo-unit.cpp
   ragged.cpp
+  reduction.cpp
   stat.cpp
+  stop.cpp
   sum.cpp
   support.cpp
   terminator.cpp

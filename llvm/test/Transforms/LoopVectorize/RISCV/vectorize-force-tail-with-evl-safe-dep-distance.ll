@@ -44,9 +44,9 @@ define void @test(ptr %p) {
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; IF-EVL-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; IF-EVL-NEXT:    br label [[EXIT:%.*]]
 ; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; IF-EVL-NEXT:    br label [[LOOP:%.*]]
 ; IF-EVL:       loop:
 ; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -57,7 +57,7 @@ define void @test(ptr %p) {
 ; IF-EVL-NEXT:    store i64 [[V]], ptr [[A2]], align 8
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[CMP:%.*]] = icmp ne i64 [[IV]], 199
-; IF-EVL-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP3:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP4:![0-9]+]]
 ; IF-EVL:       exit:
 ; IF-EVL-NEXT:    ret void
 ;
@@ -114,7 +114,7 @@ define void @test_may_clobber1(ptr %p) {
 ; IF-EVL-NEXT:    store <4 x i64> [[WIDE_LOAD]], ptr [[TMP5]], align 32
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 200
-; IF-EVL-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; IF-EVL:       scalar.ph:
@@ -129,7 +129,7 @@ define void @test_may_clobber1(ptr %p) {
 ; IF-EVL-NEXT:    store i64 [[V]], ptr [[A2]], align 32
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[CMP:%.*]] = icmp ne i64 [[IV]], 199
-; IF-EVL-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP5:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP6:![0-9]+]]
 ; IF-EVL:       exit:
 ; IF-EVL-NEXT:    ret void
 ;
@@ -254,7 +254,7 @@ define void @test_may_clobber3(ptr %p) {
 ; IF-EVL-NEXT:    store <2 x i64> [[WIDE_LOAD]], ptr [[TMP5]], align 32
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 200
-; IF-EVL-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; IF-EVL:       scalar.ph:
@@ -269,7 +269,7 @@ define void @test_may_clobber3(ptr %p) {
 ; IF-EVL-NEXT:    store i64 [[V]], ptr [[A2]], align 32
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[CMP:%.*]] = icmp ne i64 [[IV]], 199
-; IF-EVL-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP7:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP8:![0-9]+]]
 ; IF-EVL:       exit:
 ; IF-EVL-NEXT:    ret void
 ;
@@ -357,11 +357,11 @@ define void @trivial_due_max_vscale(ptr %p) {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP13]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; IF-EVL-NEXT:    br label [[EXIT:%.*]]
 ; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; IF-EVL-NEXT:    br label [[LOOP:%.*]]
 ; IF-EVL:       loop:
 ; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -372,7 +372,7 @@ define void @trivial_due_max_vscale(ptr %p) {
 ; IF-EVL-NEXT:    store i64 [[V]], ptr [[A2]], align 32
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[CMP:%.*]] = icmp ne i64 [[IV]], 199
-; IF-EVL-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP9:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP10:![0-9]+]]
 ; IF-EVL:       exit:
 ; IF-EVL-NEXT:    ret void
 ;
@@ -441,11 +441,11 @@ define void @no_high_lmul_or_interleave(ptr %p) {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP11]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP8]]
 ; IF-EVL-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; IF-EVL-NEXT:    br label [[EXIT:%.*]]
 ; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; IF-EVL-NEXT:    br label [[LOOP:%.*]]
 ; IF-EVL:       loop:
 ; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -456,7 +456,7 @@ define void @no_high_lmul_or_interleave(ptr %p) {
 ; IF-EVL-NEXT:    store i64 [[V]], ptr [[A2]], align 32
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[CMP:%.*]] = icmp ne i64 [[IV]], 3001
-; IF-EVL-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP11:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP12:![0-9]+]]
 ; IF-EVL:       exit:
 ; IF-EVL-NEXT:    ret void
 ;

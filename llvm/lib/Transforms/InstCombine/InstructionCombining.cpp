@@ -94,6 +94,7 @@
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -1395,6 +1396,26 @@ void InstCombinerImpl::freelyInvertAllUsersOf(Value *I, Value *IgnoredUser) {
                        "canFreelyInvertAllUsersOf() ?");
     }
   }
+
+  // Update pre-existing debug value uses.
+  SmallVector<DbgValueInst *, 4> DbgValues;
+  SmallVector<DbgVariableRecord *, 4> DbgVariableRecords;
+  llvm::findDbgValues(DbgValues, I, &DbgVariableRecords);
+
+  auto InvertDbgValueUse = [&](auto *DbgVal) {
+    SmallVector<uint64_t, 1> Ops = {dwarf::DW_OP_not};
+    for (unsigned Idx = 0, End = DbgVal->getNumVariableLocationOps();
+         Idx != End; ++Idx)
+      if (DbgVal->getVariableLocationOp(Idx) == I)
+        DbgVal->setExpression(
+            DIExpression::appendOpsToArg(DbgVal->getExpression(), Ops, Idx));
+  };
+
+  for (DbgValueInst *DVI : DbgValues)
+    InvertDbgValueUse(DVI);
+
+  for (DbgVariableRecord *DVR : DbgVariableRecords)
+    InvertDbgValueUse(DVR);
 }
 
 /// Given a 'sub' instruction, return the RHS of the instruction if the LHS is a
@@ -1830,7 +1851,7 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
     // Handle some cases that can't be fully simplified, but where we know that
     // the two instructions will fold into one.
     auto WillFold = [&]() {
-      if (!InVal->hasOneUser())
+      if (!InVal->hasUseList() || !InVal->hasOneUser())
         return false;
 
       // icmp of ucmp/scmp with constant will fold to icmp.
@@ -2073,6 +2094,49 @@ static bool shouldMergeGEPs(GEPOperator &GEP, GEPOperator &Src) {
   return true;
 }
 
+/// Find a constant NewC that has property:
+///   shuffle(NewC, ShMask) = C
+/// Returns nullptr if such a constant does not exist e.g. ShMask=<0,0> C=<1,2>
+///
+/// A 1-to-1 mapping is not required. Example:
+/// ShMask = <1,1,2,2> and C = <5,5,6,6> --> NewC = <poison,5,6,poison>
+Constant *InstCombinerImpl::unshuffleConstant(ArrayRef<int> ShMask, Constant *C,
+                                              VectorType *NewCTy) {
+  if (isa<ScalableVectorType>(NewCTy)) {
+    Constant *Splat = C->getSplatValue();
+    if (!Splat)
+      return nullptr;
+    return ConstantVector::getSplat(NewCTy->getElementCount(), Splat);
+  }
+
+  if (cast<FixedVectorType>(NewCTy)->getNumElements() >
+      cast<FixedVectorType>(C->getType())->getNumElements())
+    return nullptr;
+
+  unsigned NewCNumElts = cast<FixedVectorType>(NewCTy)->getNumElements();
+  PoisonValue *PoisonScalar = PoisonValue::get(C->getType()->getScalarType());
+  SmallVector<Constant *, 16> NewVecC(NewCNumElts, PoisonScalar);
+  unsigned NumElts = cast<FixedVectorType>(C->getType())->getNumElements();
+  for (unsigned I = 0; I < NumElts; ++I) {
+    Constant *CElt = C->getAggregateElement(I);
+    if (ShMask[I] >= 0) {
+      assert(ShMask[I] < (int)NumElts && "Not expecting narrowing shuffle");
+      Constant *NewCElt = NewVecC[ShMask[I]];
+      // Bail out if:
+      // 1. The constant vector contains a constant expression.
+      // 2. The shuffle needs an element of the constant vector that can't
+      //    be mapped to a new constant vector.
+      // 3. This is a widening shuffle that copies elements of V1 into the
+      //    extended elements (extending with poison is allowed).
+      if (!CElt || (!isa<PoisonValue>(NewCElt) && NewCElt != CElt) ||
+          I >= NewCNumElts)
+        return nullptr;
+      NewVecC[ShMask[I]] = CElt;
+    }
+  }
+  return ConstantVector::get(NewVecC);
+}
+
 Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
   if (!isa<VectorType>(Inst.getType()))
     return nullptr;
@@ -2192,74 +2256,18 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
   // other binops, so they can be folded. It may also enable demanded elements
   // transforms.
   Constant *C;
-  auto *InstVTy = dyn_cast<FixedVectorType>(Inst.getType());
-  if (InstVTy &&
-      match(&Inst, m_c_BinOp(m_OneUse(m_Shuffle(m_Value(V1), m_Poison(),
+  if (match(&Inst, m_c_BinOp(m_OneUse(m_Shuffle(m_Value(V1), m_Poison(),
                                                 m_Mask(Mask))),
-                             m_ImmConstant(C))) &&
-      cast<FixedVectorType>(V1->getType())->getNumElements() <=
-          InstVTy->getNumElements()) {
-    assert(InstVTy->getScalarType() == V1->getType()->getScalarType() &&
+                             m_ImmConstant(C)))) {
+    assert(Inst.getType()->getScalarType() == V1->getType()->getScalarType() &&
            "Shuffle should not change scalar type");
 
-    // Find constant NewC that has property:
-    //   shuffle(NewC, ShMask) = C
-    // If such constant does not exist (example: ShMask=<0,0> and C=<1,2>)
-    // reorder is not possible. A 1-to-1 mapping is not required. Example:
-    // ShMask = <1,1,2,2> and C = <5,5,6,6> --> NewC = <undef,5,6,undef>
     bool ConstOp1 = isa<Constant>(RHS);
-    ArrayRef<int> ShMask = Mask;
-    unsigned SrcVecNumElts =
-        cast<FixedVectorType>(V1->getType())->getNumElements();
-    PoisonValue *PoisonScalar = PoisonValue::get(C->getType()->getScalarType());
-    SmallVector<Constant *, 16> NewVecC(SrcVecNumElts, PoisonScalar);
-    bool MayChange = true;
-    unsigned NumElts = InstVTy->getNumElements();
-    for (unsigned I = 0; I < NumElts; ++I) {
-      Constant *CElt = C->getAggregateElement(I);
-      if (ShMask[I] >= 0) {
-        assert(ShMask[I] < (int)NumElts && "Not expecting narrowing shuffle");
-        Constant *NewCElt = NewVecC[ShMask[I]];
-        // Bail out if:
-        // 1. The constant vector contains a constant expression.
-        // 2. The shuffle needs an element of the constant vector that can't
-        //    be mapped to a new constant vector.
-        // 3. This is a widening shuffle that copies elements of V1 into the
-        //    extended elements (extending with poison is allowed).
-        if (!CElt || (!isa<PoisonValue>(NewCElt) && NewCElt != CElt) ||
-            I >= SrcVecNumElts) {
-          MayChange = false;
-          break;
-        }
-        NewVecC[ShMask[I]] = CElt;
-      }
-      // If this is a widening shuffle, we must be able to extend with poison
-      // elements. If the original binop does not produce a poison in the high
-      // lanes, then this transform is not safe.
-      // Similarly for poison lanes due to the shuffle mask, we can only
-      // transform binops that preserve poison.
-      // TODO: We could shuffle those non-poison constant values into the
-      //       result by using a constant vector (rather than an poison vector)
-      //       as operand 1 of the new binop, but that might be too aggressive
-      //       for target-independent shuffle creation.
-      if (I >= SrcVecNumElts || ShMask[I] < 0) {
-        Constant *MaybePoison =
-            ConstOp1
-                ? ConstantFoldBinaryOpOperands(Opcode, PoisonScalar, CElt, DL)
-                : ConstantFoldBinaryOpOperands(Opcode, CElt, PoisonScalar, DL);
-        if (!MaybePoison || !isa<PoisonValue>(MaybePoison)) {
-          MayChange = false;
-          break;
-        }
-      }
-    }
-    if (MayChange) {
-      Constant *NewC = ConstantVector::get(NewVecC);
-      // It may not be safe to execute a binop on a vector with poison elements
-      // because the entire instruction can be folded to undef or create poison
-      // that did not exist in the original code.
-      // TODO: The shift case should not be necessary.
-      if (Inst.isIntDivRem() || (Inst.isShift() && ConstOp1))
+    if (Constant *NewC =
+            unshuffleConstant(Mask, C, cast<VectorType>(V1->getType()))) {
+      // For fixed vectors, lanes of NewC not used by the shuffle will be poison
+      // which will cause UB for div/rem. Mask them with a safe constant.
+      if (isa<FixedVectorType>(V1->getType()) && Inst.isIntDivRem())
         NewC = getSafeVectorConstantForBinop(Opcode, NewC, ConstOp1);
 
       // Op(shuffle(V1, Mask), C) -> shuffle(Op(V1, NewC), Mask)
@@ -2499,9 +2507,8 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
       return nullptr;
 
     GEPNoWrapFlags NW = getMergedGEPNoWrapFlags(*Src, *cast<GEPOperator>(&GEP));
-    SmallVector<Value *> Indices;
-    append_range(Indices, drop_end(Src->indices(),
-                                   Src->getNumIndices() - NumVarIndices));
+    SmallVector<Value *> Indices(
+        drop_end(Src->indices(), Src->getNumIndices() - NumVarIndices));
     for (const APInt &Idx : drop_begin(ConstIndices, !IsFirstType)) {
       Indices.push_back(ConstantInt::get(GEP.getContext(), Idx));
       // Even if the total offset is inbounds, we may end up representing it
@@ -3085,64 +3092,12 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   if (GEPType->isVectorTy())
     return nullptr;
 
-  if (GEP.getNumIndices() == 1) {
-    // We can only preserve inbounds if the original gep is inbounds, the add
-    // is nsw, and the add operands are non-negative.
-    auto CanPreserveInBounds = [&](bool AddIsNSW, Value *Idx1, Value *Idx2) {
-      SimplifyQuery Q = SQ.getWithInstruction(&GEP);
-      return GEP.isInBounds() && AddIsNSW && isKnownNonNegative(Idx1, Q) &&
-             isKnownNonNegative(Idx2, Q);
-    };
-
-    // Try to replace ADD + GEP with GEP + GEP.
-    Value *Idx1, *Idx2;
-    if (match(GEP.getOperand(1),
-              m_OneUse(m_Add(m_Value(Idx1), m_Value(Idx2))))) {
-      //   %idx = add i64 %idx1, %idx2
-      //   %gep = getelementptr i32, ptr %ptr, i64 %idx
-      // as:
-      //   %newptr = getelementptr i32, ptr %ptr, i64 %idx1
-      //   %newgep = getelementptr i32, ptr %newptr, i64 %idx2
-      bool IsInBounds = CanPreserveInBounds(
-          cast<OverflowingBinaryOperator>(GEP.getOperand(1))->hasNoSignedWrap(),
-          Idx1, Idx2);
-      auto *NewPtr =
-          Builder.CreateGEP(GEP.getSourceElementType(), GEP.getPointerOperand(),
-                            Idx1, "", IsInBounds);
-      return replaceInstUsesWith(
-          GEP, Builder.CreateGEP(GEP.getSourceElementType(), NewPtr, Idx2, "",
-                                 IsInBounds));
-    }
-    ConstantInt *C;
-    if (match(GEP.getOperand(1), m_OneUse(m_SExtLike(m_OneUse(m_NSWAdd(
-                                     m_Value(Idx1), m_ConstantInt(C))))))) {
-      // %add = add nsw i32 %idx1, idx2
-      // %sidx = sext i32 %add to i64
-      // %gep = getelementptr i32, ptr %ptr, i64 %sidx
-      // as:
-      // %newptr = getelementptr i32, ptr %ptr, i32 %idx1
-      // %newgep = getelementptr i32, ptr %newptr, i32 idx2
-      bool IsInBounds = CanPreserveInBounds(
-          /*IsNSW=*/true, Idx1, C);
-      auto *NewPtr = Builder.CreateGEP(
-          GEP.getSourceElementType(), GEP.getPointerOperand(),
-          Builder.CreateSExt(Idx1, GEP.getOperand(1)->getType()), "",
-          IsInBounds);
-      return replaceInstUsesWith(
-          GEP,
-          Builder.CreateGEP(GEP.getSourceElementType(), NewPtr,
-                            Builder.CreateSExt(C, GEP.getOperand(1)->getType()),
-                            "", IsInBounds));
-    }
-  }
-
   if (!GEP.isInBounds()) {
     unsigned IdxWidth =
         DL.getIndexSizeInBits(PtrOp->getType()->getPointerAddressSpace());
     APInt BasePtrOffset(IdxWidth, 0);
     Value *UnderlyingPtrOp =
-            PtrOp->stripAndAccumulateInBoundsConstantOffsets(DL,
-                                                             BasePtrOffset);
+        PtrOp->stripAndAccumulateInBoundsConstantOffsets(DL, BasePtrOffset);
     bool CanBeNull, CanBeFreed;
     uint64_t DerefBytes = UnderlyingPtrOp->getPointerDereferenceableBytes(
         DL, CanBeNull, CanBeFreed);
@@ -3165,6 +3120,60 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       })) {
     GEP.setNoWrapFlags(GEP.getNoWrapFlags() | GEPNoWrapFlags::noUnsignedWrap());
     return &GEP;
+  }
+
+  // These rewrites are trying to preserve inbounds/nuw attributes. So we want
+  // to do this after having tried to derive "nuw" above.
+  if (GEP.getNumIndices() == 1) {
+    // Given (gep p, x+y) we want to determine the common nowrap flags for both
+    // geps if transforming into (gep (gep p, x), y).
+    auto GetPreservedNoWrapFlags = [&](bool AddIsNUW) {
+      // We can preserve both "inbounds nuw", "nusw nuw" and "nuw" if we know
+      // that x + y does not have unsigned wrap.
+      if (GEP.hasNoUnsignedWrap() && AddIsNUW)
+        return GEP.getNoWrapFlags();
+      return GEPNoWrapFlags::none();
+    };
+
+    // Try to replace ADD + GEP with GEP + GEP.
+    Value *Idx1, *Idx2;
+    if (match(GEP.getOperand(1),
+              m_OneUse(m_AddLike(m_Value(Idx1), m_Value(Idx2))))) {
+      //   %idx = add i64 %idx1, %idx2
+      //   %gep = getelementptr i32, ptr %ptr, i64 %idx
+      // as:
+      //   %newptr = getelementptr i32, ptr %ptr, i64 %idx1
+      //   %newgep = getelementptr i32, ptr %newptr, i64 %idx2
+      bool NUW = match(GEP.getOperand(1), m_NUWAddLike(m_Value(), m_Value()));
+      GEPNoWrapFlags NWFlags = GetPreservedNoWrapFlags(NUW);
+      auto *NewPtr =
+          Builder.CreateGEP(GEP.getSourceElementType(), GEP.getPointerOperand(),
+                            Idx1, "", NWFlags);
+      return replaceInstUsesWith(GEP,
+                                 Builder.CreateGEP(GEP.getSourceElementType(),
+                                                   NewPtr, Idx2, "", NWFlags));
+    }
+    ConstantInt *C;
+    if (match(GEP.getOperand(1), m_OneUse(m_SExtLike(m_OneUse(m_NSWAddLike(
+                                     m_Value(Idx1), m_ConstantInt(C))))))) {
+      // %add = add nsw i32 %idx1, idx2
+      // %sidx = sext i32 %add to i64
+      // %gep = getelementptr i32, ptr %ptr, i64 %sidx
+      // as:
+      // %newptr = getelementptr i32, ptr %ptr, i32 %idx1
+      // %newgep = getelementptr i32, ptr %newptr, i32 idx2
+      bool NUW = match(GEP.getOperand(1),
+                       m_NNegZExt(m_NUWAddLike(m_Value(), m_Value())));
+      GEPNoWrapFlags NWFlags = GetPreservedNoWrapFlags(NUW);
+      auto *NewPtr = Builder.CreateGEP(
+          GEP.getSourceElementType(), GEP.getPointerOperand(),
+          Builder.CreateSExt(Idx1, GEP.getOperand(1)->getType()), "", NWFlags);
+      return replaceInstUsesWith(
+          GEP,
+          Builder.CreateGEP(GEP.getSourceElementType(), NewPtr,
+                            Builder.CreateSExt(C, GEP.getOperand(1)->getType()),
+                            "", NWFlags));
+    }
   }
 
   if (Instruction *R = foldSelectGEP(GEP, Builder))
@@ -3298,16 +3307,14 @@ static bool isAllocSiteRemovable(Instruction *AI,
           continue;
         }
 
-        if (getFreedOperand(cast<CallBase>(I), &TLI) == PI &&
+        if (Family && getFreedOperand(cast<CallBase>(I), &TLI) == PI &&
             getAllocationFamily(I, &TLI) == Family) {
-          assert(Family);
           Users.emplace_back(I);
           continue;
         }
 
-        if (getReallocatedOperand(cast<CallBase>(I)) == PI &&
+        if (Family && getReallocatedOperand(cast<CallBase>(I)) == PI &&
             getAllocationFamily(I, &TLI) == Family) {
-          assert(Family);
           Users.emplace_back(I);
           Worklist.push_back(I);
           continue;
@@ -3405,8 +3412,9 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
       // Replace invoke with a NOP intrinsic to maintain the original CFG
       Module *M = II->getModule();
       Function *F = Intrinsic::getOrInsertDeclaration(M, Intrinsic::donothing);
-      InvokeInst::Create(F, II->getNormalDest(), II->getUnwindDest(), {}, "",
-                         II->getParent());
+      auto *NewII = InvokeInst::Create(
+          F, II->getNormalDest(), II->getUnwindDest(), {}, "", II->getParent());
+      NewII->setDebugLoc(II->getDebugLoc());
     }
 
     // Remove debug intrinsics which describe the value contained within the
@@ -3612,7 +3620,7 @@ Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
 
   KnownFPClass KnownClass;
   Value *Simplified =
-      SimplifyDemandedUseFPClass(RetVal, ~ReturnClass, KnownClass, 0, &RI);
+      SimplifyDemandedUseFPClass(RetVal, ~ReturnClass, KnownClass, &RI);
   if (!Simplified)
     return nullptr;
 
@@ -3949,7 +3957,7 @@ Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
       return replaceOperand(SI, 0, V);
   }
 
-  KnownBits Known = computeKnownBits(Cond, 0, &SI);
+  KnownBits Known = computeKnownBits(Cond, &SI);
   unsigned LeadingKnownZeros = Known.countMinLeadingZeros();
   unsigned LeadingKnownOnes = Known.countMinLeadingOnes();
 
@@ -5621,15 +5629,14 @@ static bool combineInstructionsOverFunction(
   // Iterate while there is work to do.
   unsigned Iteration = 0;
   while (true) {
-    ++Iteration;
-
-    if (Iteration > Opts.MaxIterations && !VerifyFixpoint) {
+    if (Iteration >= Opts.MaxIterations && !VerifyFixpoint) {
       LLVM_DEBUG(dbgs() << "\n\n[IC] Iteration limit #" << Opts.MaxIterations
                         << " on " << F.getName()
                         << " reached; stopping without verifying fixpoint\n");
       break;
     }
 
+    ++Iteration;
     ++NumWorklistIterations;
     LLVM_DEBUG(dbgs() << "\n\nINSTCOMBINE ITERATION #" << Iteration << " on "
                       << F.getName() << "\n");
@@ -5644,13 +5651,12 @@ static bool combineInstructionsOverFunction(
 
     MadeIRChange = true;
     if (Iteration > Opts.MaxIterations) {
-      report_fatal_error(
+      reportFatalUsageError(
           "Instruction Combining on " + Twine(F.getName()) +
-              " did not reach a fixpoint after " + Twine(Opts.MaxIterations) +
-              " iterations. " +
-              "Use 'instcombine<no-verify-fixpoint>' or function attribute "
-              "'instcombine-no-verify-fixpoint' to suppress this error.",
-          /*GenCrashDiag=*/false);
+          " did not reach a fixpoint after " + Twine(Opts.MaxIterations) +
+          " iterations. " +
+          "Use 'instcombine<no-verify-fixpoint>' or function attribute "
+          "'instcombine-no-verify-fixpoint' to suppress this error.");
     }
   }
 

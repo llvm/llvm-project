@@ -14,6 +14,7 @@
 #include "ABIInfoImpl.h"
 #include "CGCXXABI.h"
 #include "CGCleanup.h"
+#include "CGDebugInfo.h"
 #include "CGRecordLayout.h"
 #include "CodeGenFunction.h"
 #include "TargetInfo.h"
@@ -1351,7 +1352,12 @@ static StringRef getIdentStringFromSourceLocation(CodeGenFunction &CGF,
   llvm::raw_svector_ostream OS(Buffer);
   // Build debug location
   PresumedLoc PLoc = CGF.getContext().getSourceManager().getPresumedLoc(Loc);
-  OS << ";" << PLoc.getFilename() << ";";
+  OS << ";";
+  if (auto *DbgInfo = CGF.getDebugInfo())
+    OS << DbgInfo->remapDIPath(PLoc.getFilename());
+  else
+    OS << PLoc.getFilename();
+  OS << ";";
   if (const auto *FD = dyn_cast_or_null<FunctionDecl>(CGF.CurFuncDecl))
     OS << FD->getQualifiedNameAsString();
   OS << ";" << PLoc.getLine() << ";" << PLoc.getColumn() << ";;";
@@ -1369,10 +1375,14 @@ llvm::Value *CGOpenMPRuntime::emitUpdateLocation(CodeGenFunction &CGF,
     SrcLocStr = OMPBuilder.getOrCreateDefaultSrcLocStr(SrcLocStrSize);
   } else {
     std::string FunctionName;
+    std::string FileName;
     if (const auto *FD = dyn_cast_or_null<FunctionDecl>(CGF.CurFuncDecl))
       FunctionName = FD->getQualifiedNameAsString();
     PresumedLoc PLoc = CGF.getContext().getSourceManager().getPresumedLoc(Loc);
-    const char *FileName = PLoc.getFilename();
+    if (auto *DbgInfo = CGF.getDebugInfo())
+      FileName = DbgInfo->remapDIPath(PLoc.getFilename());
+    else
+      FileName = PLoc.getFilename();
     unsigned Line = PLoc.getLine();
     unsigned Column = PLoc.getColumn();
     SrcLocStr = OMPBuilder.getOrCreateSrcLocStr(FunctionName, FileName, Line,
@@ -2614,8 +2624,7 @@ void CGOpenMPRuntime::emitDistributeStaticInit(
   llvm::Value *ThreadId = getThreadID(CGF, Loc);
   llvm::FunctionCallee StaticInitFunction;
   bool isGPUDistribute =
-      CGM.getLangOpts().OpenMPIsTargetDevice &&
-      (CGM.getTriple().isAMDGCN() || CGM.getTriple().isNVPTX());
+      CGM.getLangOpts().OpenMPIsTargetDevice && CGM.getTriple().isGPU();
   StaticInitFunction = OMPBuilder.createForStaticInitFunction(
       Values.IVSize, Values.IVSigned, isGPUDistribute);
 
@@ -2644,8 +2653,7 @@ void CGOpenMPRuntime::emitForStaticFinish(CodeGenFunction &CGF,
       getThreadID(CGF, Loc)};
   auto DL = ApplyDebugLocation::CreateDefaultArtificial(CGF, Loc);
   if (isOpenMPDistributeDirective(DKind) &&
-      CGM.getLangOpts().OpenMPIsTargetDevice &&
-      (CGM.getTriple().isAMDGCN() || CGM.getTriple().isNVPTX()))
+      CGM.getLangOpts().OpenMPIsTargetDevice && CGM.getTriple().isGPU())
     CGF.EmitRuntimeCall(
         OMPBuilder.getOrCreateRuntimeFunction(
             CGM.getModule(), OMPRTL___kmpc_distribute_static_fini),
@@ -3798,7 +3806,7 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
                                                     RValue::get(NumOfElements));
       KmpTaskAffinityInfoArrayTy = C.getVariableArrayType(
           KmpTaskAffinityInfoTy, OVE, ArraySizeModifier::Normal,
-          /*IndexTypeQuals=*/0, SourceRange(Loc, Loc));
+          /*IndexTypeQuals=*/0);
       // Properly emit variable-sized array.
       auto *PD = ImplicitParamDecl::Create(C, KmpTaskAffinityInfoArrayTy,
                                            ImplicitParamKind::Other);
@@ -4261,7 +4269,7 @@ std::pair<llvm::Value *, Address> CGOpenMPRuntime::emitDependClause(
                                                   RValue::get(NumOfElements));
     KmpDependInfoArrayTy =
         C.getVariableArrayType(KmpDependInfoTy, OVE, ArraySizeModifier::Normal,
-                               /*IndexTypeQuals=*/0, SourceRange(Loc, Loc));
+                               /*IndexTypeQuals=*/0);
     // CGF.EmitVariablyModifiedType(KmpDependInfoArrayTy);
     // Properly emit variable-sized array.
     auto *PD = ImplicitParamDecl::Create(C, KmpDependInfoArrayTy,
@@ -8841,10 +8849,14 @@ emitMappingInformation(CodeGenFunction &CGF, llvm::OpenMPIRBuilder &OMPBuilder,
     ExprName = MapExprs.getMapDecl()->getNameAsString();
   }
 
+  std::string FileName;
   PresumedLoc PLoc = CGF.getContext().getSourceManager().getPresumedLoc(Loc);
-  return OMPBuilder.getOrCreateSrcLocStr(PLoc.getFilename(), ExprName,
-                                         PLoc.getLine(), PLoc.getColumn(),
-                                         SrcLocStrSize);
+  if (auto *DbgInfo = CGF.getDebugInfo())
+    FileName = DbgInfo->remapDIPath(PLoc.getFilename());
+  else
+    FileName = PLoc.getFilename();
+  return OMPBuilder.getOrCreateSrcLocStr(FileName, ExprName, PLoc.getLine(),
+                                         PLoc.getColumn(), SrcLocStrSize);
 }
 /// Emit the arrays used to pass the captures and map information to the
 /// offloading runtime library. If there is no map or capture information,
@@ -10533,8 +10545,7 @@ getNDSWDS(const FunctionDecl *FD, ArrayRef<ParamAttrTy> ParamAttrs) {
                       }) &&
          "Invalid size");
 
-  return std::make_tuple(*std::min_element(std::begin(Sizes), std::end(Sizes)),
-                         *std::max_element(std::begin(Sizes), std::end(Sizes)),
+  return std::make_tuple(*llvm::min_element(Sizes), *llvm::max_element(Sizes),
                          OutputBecomesInput);
 }
 
@@ -11352,7 +11363,7 @@ CGOpenMPRuntime::LastprivateConditionalRAII::LastprivateConditionalRAII(
     LastprivateConditionalData &Data =
         CGM.getOpenMPRuntime().LastprivateConditionalStack.emplace_back();
     for (const Decl *VD : NeedToAddForLPCsAsDisabled)
-      Data.DeclToUniqueName.insert(std::make_pair(VD, SmallString<16>()));
+      Data.DeclToUniqueName.try_emplace(VD);
     Data.Fn = CGF.CurFn;
     Data.Disabled = true;
   }

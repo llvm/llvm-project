@@ -70,13 +70,13 @@ void SetExceptionBreakpointsRequestHandler::operator()(
   const auto *filters = arguments->getArray("filters");
   // Keep a list of any exception breakpoint filter names that weren't set
   // so we can clear any exception breakpoints if needed.
-  std::set<std::string> unset_filters;
+  std::set<llvm::StringRef> unset_filters;
   for (const auto &bp : *dap.exception_breakpoints)
-    unset_filters.insert(bp.filter);
+    unset_filters.insert(bp.GetFilter());
 
   for (const auto &value : *filters) {
     const auto filter = GetAsString(value);
-    auto *exc_bp = dap.GetExceptionBreakpoint(std::string(filter));
+    auto *exc_bp = dap.GetExceptionBreakpoint(filter);
     if (exc_bp) {
       exc_bp->SetBreakpoint();
       unset_filters.erase(std::string(filter));

@@ -11,9 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "CGCleanup.h"
+#include "CGDebugInfo.h"
 #include "CGOpenMPRuntime.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "CodeGenPGO.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
@@ -709,7 +711,7 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
   (void)LocalScope.Privatize();
   for (const auto &VLASizePair : WrapperVLASizes)
     VLASizeMap[VLASizePair.second.first] = VLASizePair.second.second;
-  PGO.assignRegionCounters(GlobalDecl(CD), F);
+  PGO->assignRegionCounters(GlobalDecl(CD), F);
   CapturedStmtInfo->EmitBody(*this, CD->getBody());
   (void)LocalScope.ForceCleanup();
   FinishFunction(CD->getBodyRBrace());
@@ -3494,7 +3496,6 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
         Ordered = true;
     }
 
-    llvm::DenseSet<const Expr *> EmittedFinals;
     emitAlignedClause(*this, S);
     bool HasLinears = EmitOMPLinearClauseInit(S);
     // Emit helper vars inits.
@@ -4344,8 +4345,9 @@ void CodeGenFunction::EmitOMPSectionsDirective(const OMPSectionsDirective &S) {
     using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
     using BodyGenCallbackTy = llvm::OpenMPIRBuilder::StorableBodyGenCallbackTy;
 
-    auto FiniCB = [this](InsertPointTy IP) {
-      OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
+    auto FiniCB = [](InsertPointTy IP) {
+      // Don't FinalizeOMPRegion because this is done inside of OMPIRBuilder for
+      // sections.
       return llvm::Error::success();
     };
 
@@ -4782,7 +4784,7 @@ class CheckVarsEscapingUntiedTaskDeclContext final
 
 public:
   explicit CheckVarsEscapingUntiedTaskDeclContext() = default;
-  virtual ~CheckVarsEscapingUntiedTaskDeclContext() = default;
+  ~CheckVarsEscapingUntiedTaskDeclContext() = default;
   void VisitDeclStmt(const DeclStmt *S) {
     if (!S)
       return;

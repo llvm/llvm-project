@@ -735,8 +735,8 @@ define i64 @v_uaddsat_i64(i64 %lhs, i64 %rhs) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_add_co_u32 v2, vcc_lo, v0, v2
-; GFX11-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, v1, v3, vcc_lo
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, null, v1, v3, vcc_lo
 ; GFX11-NEXT:    v_cmp_lt_u64_e32 vcc_lo, v[2:3], v[0:1]
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, v2, -1, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, v3, -1, vcc_lo

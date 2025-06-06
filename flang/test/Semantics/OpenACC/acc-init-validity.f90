@@ -93,7 +93,7 @@ program openacc_init_validity
   !ERROR: At most one DEVICE_NUM clause can appear on the INIT directive
   !$acc init device_num(1) device_num(i)
 
-  !ERROR: At most one DEVICE_TYPE clause can appear on the INIT directive
+  ! OK
   !$acc init device_type(nvidia) device_type(default, *)
 
   !ERROR: Must have LOGICAL or INTEGER type

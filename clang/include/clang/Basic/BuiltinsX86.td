@@ -5365,13 +5365,13 @@ let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<
 
 let Features = "avx10.2-512", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
   def vsqrtbf16512 : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>)">;
-  def vfmaddnepbh512 : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Vector<32, __bf16>, _Vector<32, __bf16>)">;
+  def vfmaddbf16512 : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Vector<32, __bf16>, _Vector<32, __bf16>)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def vfmaddnepbh256 : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>, _Vector<16, __bf16>, _Vector<16, __bf16>)">;
+  def vfmaddbf16256 : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>, _Vector<16, __bf16>, _Vector<16, __bf16>)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def vfmaddnepbh128 : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>, _Vector<8, __bf16>, _Vector<8, __bf16>)">;
+  def vfmaddbf16128 : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>, _Vector<8, __bf16>, _Vector<8, __bf16>)">;
 }

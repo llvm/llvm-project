@@ -43,7 +43,7 @@ define float @ceil_float_ftz(float %a) #0 {
 
 ; CHECK-LABEL: @fabs_double
 define double @fabs_double(double %a) #0 {
-; CHECK: call double @llvm.fabs.f64
+; CHECK: call double @llvm.nvvm.fabs.f64
   %ret = call double @llvm.nvvm.fabs.d(double %a)
   ret double %ret
 }

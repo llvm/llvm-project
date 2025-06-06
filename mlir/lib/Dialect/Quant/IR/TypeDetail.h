@@ -207,11 +207,10 @@ struct UniformQuantizedPerAxisTypeStorage : public QuantizedTypeStorage {
     unsigned getHashValue() const {
       int64_t *scalesCast = llvm::bit_cast<int64_t *>(scales.data());
       ArrayRef<int64_t> scalesBits(scalesCast, scales.size());
-      return llvm::hash_combine(
-          flags, storageType, expressedType,
-          llvm::hash_combine_range(scalesBits.begin(), scalesBits.end()),
-          llvm::hash_combine_range(zeroPoints.begin(), zeroPoints.end()),
-          storageTypeMin, storageTypeMax);
+      return llvm::hash_combine(flags, storageType, expressedType,
+                                llvm::hash_combine_range(scalesBits),
+                                llvm::hash_combine_range(zeroPoints),
+                                storageTypeMin, storageTypeMax);
     }
   };
 
@@ -318,11 +317,9 @@ struct UniformQuantizedSubChannelTypeStorage : public QuantizedTypeStorage {
       }
 
       // Hash the quantized dimensions and block sizes.
-      hash = llvm::hash_combine(
-          hash,
-          llvm::hash_combine_range(quantizedDimensions.begin(),
-                                   quantizedDimensions.end()),
-          llvm::hash_combine_range(blockSizes.begin(), blockSizes.end()));
+      hash = llvm::hash_combine(hash,
+                                llvm::hash_combine_range(quantizedDimensions),
+                                llvm::hash_combine_range(blockSizes));
 
       return hash;
     }

@@ -177,3 +177,37 @@ MCSchedModel::getForwardingDelayCycles(ArrayRef<MCReadAdvanceEntry> Entries,
 
   return std::abs(DelayCycles);
 }
+
+unsigned MCSchedModel::getBypassDelayCycles(const MCSubtargetInfo &STI,
+                                            const MCSchedClassDesc &SCDesc) {
+
+  ArrayRef<MCReadAdvanceEntry> Entries = STI.getReadAdvanceEntries(SCDesc);
+  if (Entries.empty())
+    return 0;
+
+  unsigned MaxLatency = 0;
+  unsigned WriteResourceID = 0;
+  unsigned DefEnd = SCDesc.NumWriteLatencyEntries;
+
+  for (unsigned DefIdx = 0; DefIdx != DefEnd; ++DefIdx) {
+    // Lookup the definition's write latency in SubtargetInfo.
+    const MCWriteLatencyEntry *WLEntry =
+        STI.getWriteLatencyEntry(&SCDesc, DefIdx);
+    unsigned Cycles = 0;
+    // If latency is Invalid (<0), consider 0 cycle latency
+    if (WLEntry->Cycles > 0)
+      Cycles = (unsigned)WLEntry->Cycles;
+    if (Cycles > MaxLatency) {
+      MaxLatency = Cycles;
+      WriteResourceID = WLEntry->WriteResourceID;
+    }
+  }
+
+  for (const MCReadAdvanceEntry &E : Entries) {
+    if (E.WriteResourceID == WriteResourceID)
+      return E.Cycles;
+  }
+
+  // Unable to find WriteResourceID in MCReadAdvanceEntry Entries
+  return 0;
+}

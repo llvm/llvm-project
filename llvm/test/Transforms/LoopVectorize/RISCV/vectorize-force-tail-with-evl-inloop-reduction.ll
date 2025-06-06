@@ -46,10 +46,10 @@ define i32 @add(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; IF-EVL-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; IF-EVL-NEXT:    br label [[FOR_END:%.*]]
 ; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP15]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
+; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[START]], [[ENTRY]] ]
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.body:
 ; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -59,7 +59,7 @@ define i32 @add(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-NEXT:    [[ADD]] = add nsw i32 [[TMP18]], [[RDX]]
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; IF-EVL:       for.end:
 ; IF-EVL-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], [[FOR_BODY]] ], [ [[TMP15]], [[MIDDLE_BLOCK]] ]
 ; IF-EVL-NEXT:    ret i32 [[ADD_LCSSA]]
@@ -154,12 +154,12 @@ define i32 @mul(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-NEXT:    [[MUL]] = mul i32 [[TMP5]], [[RDX]]
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 4
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[IV_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; IF-EVL-NEXT:    br label [[FOR_END:%.*]]
 ; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY1:%.*]] ]
-; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[MUL]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY1]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY1:%.*]] ]
+; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[START]], [[ENTRY1]] ]
 ; IF-EVL-NEXT:    br label [[FOR_BODY1:%.*]]
 ; IF-EVL:       for.body:
 ; IF-EVL-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT1:%.*]], [[FOR_BODY1]] ]
@@ -169,7 +169,7 @@ define i32 @mul(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-NEXT:    [[MUL1]] = mul nsw i32 [[TMP0]], [[RDX1]]
 ; IF-EVL-NEXT:    [[IV_NEXT1]] = add nuw nsw i64 [[IV1]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT1]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY1]], !llvm.loop [[LOOP5:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY1]], !llvm.loop [[LOOP6:![0-9]+]]
 ; IF-EVL:       for.end:
 ; IF-EVL-NEXT:    [[MUL_LCSSA:%.*]] = phi i32 [ [[MUL1]], [[FOR_BODY1]] ], [ [[MUL]], [[MIDDLE_BLOCK]] ]
 ; IF-EVL-NEXT:    ret i32 [[MUL_LCSSA]]
@@ -186,8 +186,7 @@ define i32 @mul(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ [[START:%.*]], [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[VEC_PHI1:%.*]] = phi i32 [ 1, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
-; NO-VP-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; NO-VP-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP0]]
+; NO-VP-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
 ; NO-VP-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 0
 ; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 4
 ; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4
@@ -270,12 +269,12 @@ define i32 @or(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP16]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP8]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; IF-EVL-NEXT:    br label [[FOR_END:%.*]]
 ; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP15]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
+; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[START]], [[ENTRY]] ]
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.body:
 ; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -285,7 +284,7 @@ define i32 @or(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-NEXT:    [[OR]] = or i32 [[TMP18]], [[RDX]]
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; IF-EVL:       for.end:
 ; IF-EVL-NEXT:    [[OR_LCSSA:%.*]] = phi i32 [ [[OR]], [[FOR_BODY]] ], [ [[TMP15]], [[MIDDLE_BLOCK]] ]
 ; IF-EVL-NEXT:    ret i32 [[OR_LCSSA]]
@@ -385,12 +384,12 @@ define i32 @and(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP16]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP8]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; IF-EVL-NEXT:    br label [[FOR_END:%.*]]
 ; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP15]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
+; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[START]], [[ENTRY]] ]
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.body:
 ; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -400,7 +399,7 @@ define i32 @and(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-NEXT:    [[AND]] = and i32 [[TMP18]], [[RDX]]
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; IF-EVL:       for.end:
 ; IF-EVL-NEXT:    [[AND_LCSSA:%.*]] = phi i32 [ [[AND]], [[FOR_BODY]] ], [ [[TMP15]], [[MIDDLE_BLOCK]] ]
 ; IF-EVL-NEXT:    ret i32 [[AND_LCSSA]]
@@ -500,12 +499,12 @@ define i32 @xor(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP16]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP8]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; IF-EVL-NEXT:    br label [[FOR_END:%.*]]
 ; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP15]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
+; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[START]], [[ENTRY]] ]
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.body:
 ; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -515,7 +514,7 @@ define i32 @xor(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-NEXT:    [[XOR]] = xor i32 [[TMP18]], [[RDX]]
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; IF-EVL:       for.end:
 ; IF-EVL-NEXT:    [[XOR_LCSSA:%.*]] = phi i32 [ [[XOR]], [[FOR_BODY]] ], [ [[TMP15]], [[MIDDLE_BLOCK]] ]
 ; IF-EVL-NEXT:    ret i32 [[XOR_LCSSA]]
@@ -615,12 +614,12 @@ define i32 @smin(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP15]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP8]]
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; IF-EVL-NEXT:    br label [[FOR_END:%.*]]
 ; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[RDX_MINMAX]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
+; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[START]], [[ENTRY]] ]
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.body:
 ; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -631,7 +630,7 @@ define i32 @smin(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-NEXT:    [[SMIN]] = select i1 [[CMP_I]], i32 [[TMP17]], i32 [[RDX]]
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; IF-EVL:       for.end:
 ; IF-EVL-NEXT:    [[SMIN_LCSSA:%.*]] = phi i32 [ [[SMIN]], [[FOR_BODY]] ], [ [[RDX_MINMAX]], [[MIDDLE_BLOCK]] ]
 ; IF-EVL-NEXT:    ret i32 [[SMIN_LCSSA]]
@@ -733,12 +732,12 @@ define i32 @smax(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP15]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP8]]
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; IF-EVL-NEXT:    br label [[FOR_END:%.*]]
 ; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[RDX_MINMAX]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
+; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[START]], [[ENTRY]] ]
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.body:
 ; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -749,7 +748,7 @@ define i32 @smax(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-NEXT:    [[SMAX]] = select i1 [[CMP_I]], i32 [[TMP17]], i32 [[RDX]]
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; IF-EVL:       for.end:
 ; IF-EVL-NEXT:    [[SMAX_LCSSA:%.*]] = phi i32 [ [[SMAX]], [[FOR_BODY]] ], [ [[RDX_MINMAX]], [[MIDDLE_BLOCK]] ]
 ; IF-EVL-NEXT:    ret i32 [[SMAX_LCSSA]]
@@ -851,12 +850,12 @@ define i32 @umin(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP15]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP8]]
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; IF-EVL-NEXT:    br label [[FOR_END:%.*]]
 ; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[RDX_MINMAX]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
+; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[START]], [[ENTRY]] ]
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.body:
 ; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -867,7 +866,7 @@ define i32 @umin(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-NEXT:    [[UMIN]] = select i1 [[CMP_I]], i32 [[TMP17]], i32 [[RDX]]
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; IF-EVL:       for.end:
 ; IF-EVL-NEXT:    [[UMIN_LCSSA:%.*]] = phi i32 [ [[UMIN]], [[FOR_BODY]] ], [ [[RDX_MINMAX]], [[MIDDLE_BLOCK]] ]
 ; IF-EVL-NEXT:    ret i32 [[UMIN_LCSSA]]
@@ -969,12 +968,12 @@ define i32 @umax(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP15]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP8]]
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; IF-EVL-NEXT:    br label [[FOR_END:%.*]]
 ; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[RDX_MINMAX]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
+; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[START]], [[ENTRY]] ]
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.body:
 ; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -985,7 +984,7 @@ define i32 @umax(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-NEXT:    [[UMAX]] = select i1 [[CMP_I]], i32 [[TMP17]], i32 [[RDX]]
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; IF-EVL:       for.end:
 ; IF-EVL-NEXT:    [[UMAX_LCSSA:%.*]] = phi i32 [ [[UMAX]], [[FOR_BODY]] ], [ [[RDX_MINMAX]], [[MIDDLE_BLOCK]] ]
 ; IF-EVL-NEXT:    ret i32 [[UMAX_LCSSA]]
@@ -1087,12 +1086,12 @@ define float @fadd(ptr %a, i64 %n, float %start) {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP16]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP8]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; IF-EVL-NEXT:    br label [[FOR_END:%.*]]
 ; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP15]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
+; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[START]], [[ENTRY]] ]
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.body:
 ; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -1102,7 +1101,7 @@ define float @fadd(ptr %a, i64 %n, float %start) {
 ; IF-EVL-NEXT:    [[ADD]] = fadd reassoc float [[TMP18]], [[RDX]]
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; IF-EVL:       for.end:
 ; IF-EVL-NEXT:    [[ADD_LCSSA:%.*]] = phi float [ [[ADD]], [[FOR_BODY]] ], [ [[TMP15]], [[MIDDLE_BLOCK]] ]
 ; IF-EVL-NEXT:    ret float [[ADD_LCSSA]]
@@ -1197,12 +1196,12 @@ define float @fmul(ptr %a, i64 %n, float %start) {
 ; IF-EVL-NEXT:    [[MUL]] = fmul reassoc float [[TMP5]], [[RDX]]
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 4
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[IV_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; IF-EVL-NEXT:    br label [[FOR_END:%.*]]
 ; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY1:%.*]] ]
-; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[MUL]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY1]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY1:%.*]] ]
+; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[START]], [[ENTRY1]] ]
 ; IF-EVL-NEXT:    br label [[FOR_BODY1:%.*]]
 ; IF-EVL:       for.body:
 ; IF-EVL-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT1:%.*]], [[FOR_BODY1]] ]
@@ -1212,7 +1211,7 @@ define float @fmul(ptr %a, i64 %n, float %start) {
 ; IF-EVL-NEXT:    [[MUL1]] = fmul reassoc float [[TMP0]], [[RDX1]]
 ; IF-EVL-NEXT:    [[IV_NEXT1]] = add nuw nsw i64 [[IV1]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT1]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY1]], !llvm.loop [[LOOP23:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY1]], !llvm.loop [[LOOP24:![0-9]+]]
 ; IF-EVL:       for.end:
 ; IF-EVL-NEXT:    [[MUL_LCSSA:%.*]] = phi float [ [[MUL1]], [[FOR_BODY1]] ], [ [[MUL]], [[MIDDLE_BLOCK]] ]
 ; IF-EVL-NEXT:    ret float [[MUL_LCSSA]]
@@ -1229,8 +1228,7 @@ define float @fmul(ptr %a, i64 %n, float %start) {
 ; NO-VP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[VEC_PHI:%.*]] = phi float [ [[START:%.*]], [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[VEC_PHI1:%.*]] = phi float [ 1.000000e+00, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
-; NO-VP-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; NO-VP-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[TMP0]]
+; NO-VP-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDEX]]
 ; NO-VP-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 0
 ; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 4
 ; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP4]], align 4
@@ -1314,12 +1312,12 @@ define float @fmin(ptr %a, i64 %n, float %start) #0 {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP15]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP8]]
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; IF-EVL-NEXT:    br label [[FOR_END:%.*]]
 ; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[RDX_MINMAX_SELECT]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
+; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[START]], [[ENTRY]] ]
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.body:
 ; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -1330,7 +1328,7 @@ define float @fmin(ptr %a, i64 %n, float %start) #0 {
 ; IF-EVL-NEXT:    [[MIN]] = select i1 [[CMP]], float [[TMP17]], float [[RDX]]
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
 ; IF-EVL:       for.end:
 ; IF-EVL-NEXT:    [[MIN_LCSSA:%.*]] = phi float [ [[MIN]], [[FOR_BODY]] ], [ [[RDX_MINMAX_SELECT]], [[MIDDLE_BLOCK]] ]
 ; IF-EVL-NEXT:    ret float [[MIN_LCSSA]]
@@ -1434,12 +1432,12 @@ define float @fmax(ptr %a, i64 %n, float %start) #0 {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP15]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP8]]
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP27:![0-9]+]]
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; IF-EVL-NEXT:    br label [[FOR_END:%.*]]
 ; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[RDX_MINMAX_SELECT]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
+; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[START]], [[ENTRY]] ]
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.body:
 ; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -1450,7 +1448,7 @@ define float @fmax(ptr %a, i64 %n, float %start) #0 {
 ; IF-EVL-NEXT:    [[MAX]] = select i1 [[CMP]], float [[TMP17]], float [[RDX]]
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP27:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
 ; IF-EVL:       for.end:
 ; IF-EVL-NEXT:    [[MAX_LCSSA:%.*]] = phi float [ [[MAX]], [[FOR_BODY]] ], [ [[RDX_MINMAX_SELECT]], [[MIDDLE_BLOCK]] ]
 ; IF-EVL-NEXT:    ret float [[MAX_LCSSA]]
@@ -1548,13 +1546,13 @@ define float @fminimum(ptr %a, i64 %n, float %start) {
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = select <8 x i1> [[TMP1]], <8 x float> [[TMP4]], <8 x float> [[VEC_PHI]]
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 8
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[IV_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP29:![0-9]+]]
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = call float @llvm.vector.reduce.fminimum.v8f32(<8 x float> [[TMP5]])
-; IF-EVL-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; IF-EVL-NEXT:    br label [[FOR_END:%.*]]
 ; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY1:%.*]] ]
-; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP7]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY1]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY1:%.*]] ]
+; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[START]], [[ENTRY1]] ]
 ; IF-EVL-NEXT:    br label [[FOR_BODY1:%.*]]
 ; IF-EVL:       for.body:
 ; IF-EVL-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT1:%.*]], [[FOR_BODY1]] ]
@@ -1564,7 +1562,7 @@ define float @fminimum(ptr %a, i64 %n, float %start) {
 ; IF-EVL-NEXT:    [[MIN]] = tail call float @llvm.minimum.f32(float [[RDX]], float [[TMP0]])
 ; IF-EVL-NEXT:    [[IV_NEXT1]] = add nuw nsw i64 [[IV1]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT1]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY1]], !llvm.loop [[LOOP29:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY1]], !llvm.loop [[LOOP30:![0-9]+]]
 ; IF-EVL:       for.end:
 ; IF-EVL-NEXT:    [[MIN_LCSSA:%.*]] = phi float [ [[MIN]], [[FOR_BODY1]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
 ; IF-EVL-NEXT:    ret float [[MIN_LCSSA]]
@@ -1583,8 +1581,7 @@ define float @fminimum(ptr %a, i64 %n, float %start) {
 ; NO-VP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[VEC_PHI:%.*]] = phi <8 x float> [ [[MINMAX_IDENT_SPLAT]], [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x float> [ [[MINMAX_IDENT_SPLAT]], [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
-; NO-VP-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; NO-VP-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[TMP0]]
+; NO-VP-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDEX]]
 ; NO-VP-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 0
 ; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 8
 ; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x float>, ptr [[TMP4]], align 4
@@ -1661,13 +1658,13 @@ define float @fmaximum(ptr %a, i64 %n, float %start) {
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = select <8 x i1> [[TMP1]], <8 x float> [[TMP4]], <8 x float> [[VEC_PHI]]
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 8
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[IV_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP30:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP31:![0-9]+]]
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = call float @llvm.vector.reduce.fmaximum.v8f32(<8 x float> [[TMP5]])
-; IF-EVL-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; IF-EVL-NEXT:    br label [[FOR_END:%.*]]
 ; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY1:%.*]] ]
-; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP7]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY1]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY1:%.*]] ]
+; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[START]], [[ENTRY1]] ]
 ; IF-EVL-NEXT:    br label [[FOR_BODY1:%.*]]
 ; IF-EVL:       for.body:
 ; IF-EVL-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT1:%.*]], [[FOR_BODY1]] ]
@@ -1677,7 +1674,7 @@ define float @fmaximum(ptr %a, i64 %n, float %start) {
 ; IF-EVL-NEXT:    [[MAX]] = tail call float @llvm.maximum.f32(float [[RDX]], float [[TMP0]])
 ; IF-EVL-NEXT:    [[IV_NEXT1]] = add nuw nsw i64 [[IV1]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT1]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY1]], !llvm.loop [[LOOP31:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY1]], !llvm.loop [[LOOP32:![0-9]+]]
 ; IF-EVL:       for.end:
 ; IF-EVL-NEXT:    [[MAX_LCSSA:%.*]] = phi float [ [[MAX]], [[FOR_BODY1]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
 ; IF-EVL-NEXT:    ret float [[MAX_LCSSA]]
@@ -1696,8 +1693,7 @@ define float @fmaximum(ptr %a, i64 %n, float %start) {
 ; NO-VP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[VEC_PHI:%.*]] = phi <8 x float> [ [[MINMAX_IDENT_SPLAT]], [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x float> [ [[MINMAX_IDENT_SPLAT]], [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
-; NO-VP-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; NO-VP-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[TMP0]]
+; NO-VP-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDEX]]
 ; NO-VP-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 0
 ; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 8
 ; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x float>, ptr [[TMP4]], align 4
@@ -1783,12 +1779,12 @@ define float @fmuladd(ptr %a, ptr %b, i64 %n, float %start) {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP19]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP8]]
 ; IF-EVL-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP33:![0-9]+]]
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; IF-EVL-NEXT:    br label [[FOR_END:%.*]]
 ; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP18]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
+; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[START]], [[ENTRY]] ]
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.body:
 ; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -1800,7 +1796,7 @@ define float @fmuladd(ptr %a, ptr %b, i64 %n, float %start) {
 ; IF-EVL-NEXT:    [[MULADD]] = tail call reassoc float @llvm.fmuladd.f32(float [[TMP21]], float [[TMP22]], float [[RDX]])
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP33:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP34:![0-9]+]]
 ; IF-EVL:       for.end:
 ; IF-EVL-NEXT:    [[MULADD_LCSSA:%.*]] = phi float [ [[MULADD]], [[FOR_BODY]] ], [ [[TMP18]], [[MIDDLE_BLOCK]] ]
 ; IF-EVL-NEXT:    ret float [[MULADD_LCSSA]]
@@ -1903,21 +1899,20 @@ define i32 @anyof_icmp(ptr %a, i64 %n, i32 %start, i32 %inv) {
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[TMP12]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP13]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP10]])
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = icmp slt <vscale x 4 x i32> [[VP_OP_LOAD]], splat (i32 3)
-; IF-EVL-NEXT:    [[TMP15:%.*]] = or <vscale x 4 x i1> [[VEC_PHI]], [[TMP14]]
-; IF-EVL-NEXT:    [[TMP16]] = call <vscale x 4 x i1> @llvm.vp.merge.nxv4i1(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> [[TMP15]], <vscale x 4 x i1> [[VEC_PHI]], i32 [[TMP10]])
+; IF-EVL-NEXT:    [[TMP16]] = call <vscale x 4 x i1> @llvm.vp.merge.nxv4i1(<vscale x 4 x i1> [[TMP14]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> [[VEC_PHI]], i32 [[TMP10]])
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = zext i32 [[TMP10]] to i64
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP17]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP8]]
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP34:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP35:![0-9]+]]
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    [[TMP19:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP16]])
 ; IF-EVL-NEXT:    [[TMP20:%.*]] = freeze i1 [[TMP19]]
 ; IF-EVL-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP20]], i32 [[INV:%.*]], i32 [[START:%.*]]
-; IF-EVL-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; IF-EVL-NEXT:    br label [[FOR_END:%.*]]
 ; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
+; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[START]], [[ENTRY]] ]
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.body:
 ; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -1928,7 +1923,7 @@ define i32 @anyof_icmp(ptr %a, i64 %n, i32 %start, i32 %inv) {
 ; IF-EVL-NEXT:    [[ANYOF]] = select i1 [[CMP_I]], i32 [[INV]], i32 [[RDX]]
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP35:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP36:![0-9]+]]
 ; IF-EVL:       for.end:
 ; IF-EVL-NEXT:    [[ANYOF_LCSSA:%.*]] = phi i32 [ [[ANYOF]], [[FOR_BODY]] ], [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ]
 ; IF-EVL-NEXT:    ret i32 [[ANYOF_LCSSA]]
@@ -2028,21 +2023,20 @@ define i32 @anyof_fcmp(ptr %a, i64 %n, i32 %start, i32 %inv) {
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[TMP12]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[TMP13]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP10]])
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = fcmp fast olt <vscale x 4 x float> [[VP_OP_LOAD]], splat (float 3.000000e+00)
-; IF-EVL-NEXT:    [[TMP15:%.*]] = or <vscale x 4 x i1> [[VEC_PHI]], [[TMP14]]
-; IF-EVL-NEXT:    [[TMP16]] = call <vscale x 4 x i1> @llvm.vp.merge.nxv4i1(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> [[TMP15]], <vscale x 4 x i1> [[VEC_PHI]], i32 [[TMP10]])
+; IF-EVL-NEXT:    [[TMP16]] = call <vscale x 4 x i1> @llvm.vp.merge.nxv4i1(<vscale x 4 x i1> [[TMP14]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> [[VEC_PHI]], i32 [[TMP10]])
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = zext i32 [[TMP10]] to i64
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP17]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP8]]
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP36:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP37:![0-9]+]]
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    [[TMP19:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP16]])
 ; IF-EVL-NEXT:    [[TMP20:%.*]] = freeze i1 [[TMP19]]
 ; IF-EVL-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP20]], i32 [[INV:%.*]], i32 [[START:%.*]]
-; IF-EVL-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; IF-EVL-NEXT:    br label [[FOR_END:%.*]]
 ; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
+; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[START]], [[ENTRY]] ]
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.body:
 ; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -2053,7 +2047,7 @@ define i32 @anyof_fcmp(ptr %a, i64 %n, i32 %start, i32 %inv) {
 ; IF-EVL-NEXT:    [[ANYOF]] = select i1 [[CMP_I]], i32 [[INV]], i32 [[RDX]]
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP37:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP38:![0-9]+]]
 ; IF-EVL:       for.end:
 ; IF-EVL-NEXT:    [[ANYOF_LCSSA:%.*]] = phi i32 [ [[ANYOF]], [[FOR_BODY]] ], [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ]
 ; IF-EVL-NEXT:    ret i32 [[ANYOF_LCSSA]]

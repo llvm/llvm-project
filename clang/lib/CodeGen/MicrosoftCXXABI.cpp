@@ -16,6 +16,7 @@
 #include "ABIInfo.h"
 #include "CGCXXABI.h"
 #include "CGCleanup.h"
+#include "CGDebugInfo.h"
 #include "CGVTables.h"
 #include "CodeGenModule.h"
 #include "CodeGenTypes.h"
@@ -368,7 +369,7 @@ public:
     MicrosoftVTableContext &VTContext = CGM.getMicrosoftVTableContext();
     unsigned NumEntries = 1 + SrcRD->getNumVBases();
     SmallVector<llvm::Constant *, 4> Map(NumEntries,
-                                         llvm::UndefValue::get(CGM.IntTy));
+                                         llvm::PoisonValue::get(CGM.IntTy));
     Map[0] = llvm::ConstantInt::get(CGM.IntTy, 0);
     bool AnyDifferent = false;
     for (const auto &I : SrcRD->vbases()) {
@@ -687,10 +688,10 @@ public:
                                           llvm::Value *MemPtr,
                                           const MemberPointerType *MPT) override;
 
-  llvm::Value *
-  EmitMemberDataPointerAddress(CodeGenFunction &CGF, const Expr *E,
-                               Address Base, llvm::Value *MemPtr,
-                               const MemberPointerType *MPT) override;
+  llvm::Value *EmitMemberDataPointerAddress(CodeGenFunction &CGF, const Expr *E,
+                                            Address Base, llvm::Value *MemPtr,
+                                            const MemberPointerType *MPT,
+                                            bool IsInBounds) override;
 
   llvm::Value *EmitNonNullMemberPointerConversion(
       const MemberPointerType *SrcTy, const MemberPointerType *DstTy,
@@ -1817,9 +1818,7 @@ llvm::GlobalVariable *MicrosoftCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
   // VFTablesMap, thus a simple zero check is not sufficient.
 
   VFTableIdTy ID(RD, VPtrOffset);
-  VTablesMapTy::iterator I;
-  bool Inserted;
-  std::tie(I, Inserted) = VTablesMap.insert(std::make_pair(ID, nullptr));
+  auto [I, Inserted] = VTablesMap.try_emplace(ID);
   if (!Inserted)
     return I->second;
 
@@ -2035,10 +2034,7 @@ const VBTableGlobals &
 MicrosoftCXXABI::enumerateVBTables(const CXXRecordDecl *RD) {
   // At this layer, we can key the cache off of a single class, which is much
   // easier than caching each vbtable individually.
-  llvm::DenseMap<const CXXRecordDecl*, VBTableGlobals>::iterator Entry;
-  bool Added;
-  std::tie(Entry, Added) =
-      VBTablesMap.insert(std::make_pair(RD, VBTableGlobals()));
+  auto [Entry, Added] = VBTablesMap.try_emplace(RD);
   VBTableGlobals &VBGlobals = Entry->second;
   if (!Added)
     return VBGlobals;
@@ -3227,7 +3223,7 @@ llvm::Value *MicrosoftCXXABI::AdjustVirtualBase(
 
 llvm::Value *MicrosoftCXXABI::EmitMemberDataPointerAddress(
     CodeGenFunction &CGF, const Expr *E, Address Base, llvm::Value *MemPtr,
-    const MemberPointerType *MPT) {
+    const MemberPointerType *MPT, bool IsInBounds) {
   assert(MPT->isMemberDataPointer());
   CGBuilderTy &Builder = CGF.Builder;
   const CXXRecordDecl *RD = MPT->getMostRecentCXXRecordDecl();
@@ -3256,9 +3252,10 @@ llvm::Value *MicrosoftCXXABI::EmitMemberDataPointerAddress(
     Addr = Base.emitRawPointer(CGF);
   }
 
-  // Apply the offset, which we assume is non-null.
-  return Builder.CreateInBoundsGEP(CGF.Int8Ty, Addr, FieldOffset,
-                                   "memptr.offset");
+  // Apply the offset.
+  return Builder.CreateGEP(CGF.Int8Ty, Addr, FieldOffset, "memptr.offset",
+                           IsInBounds ? llvm::GEPNoWrapFlags::inBounds()
+                                      : llvm::GEPNoWrapFlags::none());
 }
 
 llvm::Value *

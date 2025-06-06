@@ -76,7 +76,7 @@ declare <1 x iXLen> @llvm.lrint.v1iXLen.v1f16(<1 x half>)
 define <2 x iXLen> @lrint_v2f16(<2 x half> %x) {
 ; X86-AVX-I16-LABEL: lrint_v2f16:
 ; X86-AVX-I16:       # %bb.0:
-; X86-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm0[1,1,1,1,4,5,6,7]
+; X86-AVX-I16-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; X86-AVX-I16-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; X86-AVX-I16-NEXT:    vroundss $4, %xmm1, %xmm1, %xmm1
 ; X86-AVX-I16-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
@@ -96,7 +96,7 @@ define <2 x iXLen> @lrint_v2f16(<2 x half> %x) {
 ; X86-AVX-I16-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X86-AVX-I16-NEXT:    vcvttss2si %xmm2, %eax
 ; X86-AVX-I16-NEXT:    vpinsrw $2, %eax, %xmm1, %xmm1
-; X86-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm0[3,3,3,3,4,5,6,7]
+; X86-AVX-I16-NEXT:    vpsrlq $48, %xmm0, %xmm2
 ; X86-AVX-I16-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X86-AVX-I16-NEXT:    vroundss $4, %xmm2, %xmm2, %xmm2
 ; X86-AVX-I16-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
@@ -140,7 +140,7 @@ define <2 x iXLen> @lrint_v2f16(<2 x half> %x) {
 ;
 ; X64-AVX-I16-LABEL: lrint_v2f16:
 ; X64-AVX-I16:       # %bb.0:
-; X64-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm0[1,1,1,1,4,5,6,7]
+; X64-AVX-I16-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; X64-AVX-I16-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; X64-AVX-I16-NEXT:    vroundss $4, %xmm1, %xmm1, %xmm1
 ; X64-AVX-I16-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
@@ -160,7 +160,7 @@ define <2 x iXLen> @lrint_v2f16(<2 x half> %x) {
 ; X64-AVX-I16-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X64-AVX-I16-NEXT:    vcvttss2si %xmm2, %eax
 ; X64-AVX-I16-NEXT:    vpinsrw $2, %eax, %xmm1, %xmm1
-; X64-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm0[3,3,3,3,4,5,6,7]
+; X64-AVX-I16-NEXT:    vpsrlq $48, %xmm0, %xmm2
 ; X64-AVX-I16-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X64-AVX-I16-NEXT:    vroundss $4, %xmm2, %xmm2, %xmm2
 ; X64-AVX-I16-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
@@ -204,7 +204,7 @@ define <2 x iXLen> @lrint_v2f16(<2 x half> %x) {
 ;
 ; X86-AVX-I32-LABEL: lrint_v2f16:
 ; X86-AVX-I32:       # %bb.0:
-; X86-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm0[1,1,1,1,4,5,6,7]
+; X86-AVX-I32-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; X86-AVX-I32-NEXT:    vroundss $4, %xmm1, %xmm1, %xmm1
 ; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
@@ -226,7 +226,7 @@ define <2 x iXLen> @lrint_v2f16(<2 x half> %x) {
 ;
 ; X64-AVX-I32-LABEL: lrint_v2f16:
 ; X64-AVX-I32:       # %bb.0:
-; X64-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm0[1,1,1,1,4,5,6,7]
+; X64-AVX-I32-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; X64-AVX-I32-NEXT:    vroundss $4, %xmm1, %xmm1, %xmm1
 ; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
@@ -253,7 +253,7 @@ declare <2 x iXLen> @llvm.lrint.v2iXLen.v2f16(<2 x half>)
 define <4 x iXLen> @lrint_v4f16(<4 x half> %x) {
 ; X86-AVX-I16-LABEL: lrint_v4f16:
 ; X86-AVX-I16:       # %bb.0:
-; X86-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm0[1,1,1,1,4,5,6,7]
+; X86-AVX-I16-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; X86-AVX-I16-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; X86-AVX-I16-NEXT:    vroundss $4, %xmm1, %xmm1, %xmm1
 ; X86-AVX-I16-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
@@ -273,7 +273,7 @@ define <4 x iXLen> @lrint_v4f16(<4 x half> %x) {
 ; X86-AVX-I16-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X86-AVX-I16-NEXT:    vcvttss2si %xmm2, %eax
 ; X86-AVX-I16-NEXT:    vpinsrw $2, %eax, %xmm1, %xmm1
-; X86-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm0[3,3,3,3,4,5,6,7]
+; X86-AVX-I16-NEXT:    vpsrlq $48, %xmm0, %xmm2
 ; X86-AVX-I16-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X86-AVX-I16-NEXT:    vroundss $4, %xmm2, %xmm2, %xmm2
 ; X86-AVX-I16-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
@@ -317,7 +317,7 @@ define <4 x iXLen> @lrint_v4f16(<4 x half> %x) {
 ;
 ; X64-AVX-I16-LABEL: lrint_v4f16:
 ; X64-AVX-I16:       # %bb.0:
-; X64-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm0[1,1,1,1,4,5,6,7]
+; X64-AVX-I16-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; X64-AVX-I16-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; X64-AVX-I16-NEXT:    vroundss $4, %xmm1, %xmm1, %xmm1
 ; X64-AVX-I16-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
@@ -337,7 +337,7 @@ define <4 x iXLen> @lrint_v4f16(<4 x half> %x) {
 ; X64-AVX-I16-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X64-AVX-I16-NEXT:    vcvttss2si %xmm2, %eax
 ; X64-AVX-I16-NEXT:    vpinsrw $2, %eax, %xmm1, %xmm1
-; X64-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm0[3,3,3,3,4,5,6,7]
+; X64-AVX-I16-NEXT:    vpsrlq $48, %xmm0, %xmm2
 ; X64-AVX-I16-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X64-AVX-I16-NEXT:    vroundss $4, %xmm2, %xmm2, %xmm2
 ; X64-AVX-I16-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
@@ -381,7 +381,7 @@ define <4 x iXLen> @lrint_v4f16(<4 x half> %x) {
 ;
 ; X86-AVX-I32-LABEL: lrint_v4f16:
 ; X86-AVX-I32:       # %bb.0:
-; X86-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm0[1,1,1,1,4,5,6,7]
+; X86-AVX-I32-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; X86-AVX-I32-NEXT:    vroundss $4, %xmm1, %xmm1, %xmm1
 ; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
@@ -401,7 +401,7 @@ define <4 x iXLen> @lrint_v4f16(<4 x half> %x) {
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X86-AVX-I32-NEXT:    vcvttss2si %xmm2, %eax
 ; X86-AVX-I32-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; X86-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[3,3,3,3,4,5,6,7]
+; X86-AVX-I32-NEXT:    vpsrlq $48, %xmm0, %xmm0
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; X86-AVX-I32-NEXT:    vroundss $4, %xmm0, %xmm0, %xmm0
 ; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
@@ -417,7 +417,7 @@ define <4 x iXLen> @lrint_v4f16(<4 x half> %x) {
 ;
 ; X64-AVX-I32-LABEL: lrint_v4f16:
 ; X64-AVX-I32:       # %bb.0:
-; X64-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm0[1,1,1,1,4,5,6,7]
+; X64-AVX-I32-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; X64-AVX-I32-NEXT:    vroundss $4, %xmm1, %xmm1, %xmm1
 ; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
@@ -437,7 +437,7 @@ define <4 x iXLen> @lrint_v4f16(<4 x half> %x) {
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X64-AVX-I32-NEXT:    vcvttss2si %xmm2, %eax
 ; X64-AVX-I32-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; X64-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[3,3,3,3,4,5,6,7]
+; X64-AVX-I32-NEXT:    vpsrlq $48, %xmm0, %xmm0
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; X64-AVX-I32-NEXT:    vroundss $4, %xmm0, %xmm0, %xmm0
 ; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
@@ -458,7 +458,7 @@ declare <4 x iXLen> @llvm.lrint.v4iXLen.v4f16(<4 x half>)
 define <8 x iXLen> @lrint_v8f16(<8 x half> %x) {
 ; X86-AVX-I16-LABEL: lrint_v8f16:
 ; X86-AVX-I16:       # %bb.0:
-; X86-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm0[1,1,1,1,4,5,6,7]
+; X86-AVX-I16-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; X86-AVX-I16-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; X86-AVX-I16-NEXT:    vroundss $4, %xmm1, %xmm1, %xmm1
 ; X86-AVX-I16-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
@@ -478,7 +478,7 @@ define <8 x iXLen> @lrint_v8f16(<8 x half> %x) {
 ; X86-AVX-I16-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X86-AVX-I16-NEXT:    vcvttss2si %xmm2, %eax
 ; X86-AVX-I16-NEXT:    vpinsrw $2, %eax, %xmm1, %xmm1
-; X86-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm0[3,3,3,3,4,5,6,7]
+; X86-AVX-I16-NEXT:    vpsrlq $48, %xmm0, %xmm2
 ; X86-AVX-I16-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X86-AVX-I16-NEXT:    vroundss $4, %xmm2, %xmm2, %xmm2
 ; X86-AVX-I16-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
@@ -522,7 +522,7 @@ define <8 x iXLen> @lrint_v8f16(<8 x half> %x) {
 ;
 ; X64-AVX-I16-LABEL: lrint_v8f16:
 ; X64-AVX-I16:       # %bb.0:
-; X64-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm0[1,1,1,1,4,5,6,7]
+; X64-AVX-I16-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; X64-AVX-I16-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; X64-AVX-I16-NEXT:    vroundss $4, %xmm1, %xmm1, %xmm1
 ; X64-AVX-I16-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
@@ -542,7 +542,7 @@ define <8 x iXLen> @lrint_v8f16(<8 x half> %x) {
 ; X64-AVX-I16-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X64-AVX-I16-NEXT:    vcvttss2si %xmm2, %eax
 ; X64-AVX-I16-NEXT:    vpinsrw $2, %eax, %xmm1, %xmm1
-; X64-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm0[3,3,3,3,4,5,6,7]
+; X64-AVX-I16-NEXT:    vpsrlq $48, %xmm0, %xmm2
 ; X64-AVX-I16-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X64-AVX-I16-NEXT:    vroundss $4, %xmm2, %xmm2, %xmm2
 ; X64-AVX-I16-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
@@ -614,7 +614,7 @@ define <8 x iXLen> @lrint_v8f16(<8 x half> %x) {
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X86-AVX-I32-NEXT:    vcvttss2si %xmm2, %eax
 ; X86-AVX-I32-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
-; X86-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm0[1,1,1,1,4,5,6,7]
+; X86-AVX-I32-NEXT:    vpsrld $16, %xmm0, %xmm2
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X86-AVX-I32-NEXT:    vroundss $4, %xmm2, %xmm2, %xmm2
 ; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
@@ -634,7 +634,7 @@ define <8 x iXLen> @lrint_v8f16(<8 x half> %x) {
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vcvttss2si %xmm3, %eax
 ; X86-AVX-I32-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
-; X86-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[3,3,3,3,4,5,6,7]
+; X86-AVX-I32-NEXT:    vpsrlq $48, %xmm0, %xmm0
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; X86-AVX-I32-NEXT:    vroundss $4, %xmm0, %xmm0, %xmm0
 ; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
@@ -679,7 +679,7 @@ define <8 x iXLen> @lrint_v8f16(<8 x half> %x) {
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X64-AVX-I32-NEXT:    vcvttss2si %xmm2, %eax
 ; X64-AVX-I32-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
-; X64-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm0[1,1,1,1,4,5,6,7]
+; X64-AVX-I32-NEXT:    vpsrld $16, %xmm0, %xmm2
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X64-AVX-I32-NEXT:    vroundss $4, %xmm2, %xmm2, %xmm2
 ; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
@@ -699,7 +699,7 @@ define <8 x iXLen> @lrint_v8f16(<8 x half> %x) {
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vcvttss2si %xmm3, %eax
 ; X64-AVX-I32-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
-; X64-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[3,3,3,3,4,5,6,7]
+; X64-AVX-I32-NEXT:    vpsrlq $48, %xmm0, %xmm0
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; X64-AVX-I32-NEXT:    vroundss $4, %xmm0, %xmm0, %xmm0
 ; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
@@ -722,7 +722,7 @@ define <16 x iXLen> @lrint_v16f16(<16 x half> %x) {
 ; X86-AVX-I16-LABEL: lrint_v16f16:
 ; X86-AVX-I16:       # %bb.0:
 ; X86-AVX-I16-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; X86-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm1[1,1,1,1,4,5,6,7]
+; X86-AVX-I16-NEXT:    vpsrld $16, %xmm1, %xmm2
 ; X86-AVX-I16-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X86-AVX-I16-NEXT:    vroundss $4, %xmm2, %xmm2, %xmm2
 ; X86-AVX-I16-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
@@ -742,7 +742,7 @@ define <16 x iXLen> @lrint_v16f16(<16 x half> %x) {
 ; X86-AVX-I16-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X86-AVX-I16-NEXT:    vcvttss2si %xmm3, %eax
 ; X86-AVX-I16-NEXT:    vpinsrw $2, %eax, %xmm2, %xmm2
-; X86-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm3 = xmm1[3,3,3,3,4,5,6,7]
+; X86-AVX-I16-NEXT:    vpsrlq $48, %xmm1, %xmm3
 ; X86-AVX-I16-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X86-AVX-I16-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X86-AVX-I16-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
@@ -777,7 +777,7 @@ define <16 x iXLen> @lrint_v16f16(<16 x half> %x) {
 ; X86-AVX-I16-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; X86-AVX-I16-NEXT:    vcvttss2si %xmm1, %eax
 ; X86-AVX-I16-NEXT:    vpinsrw $7, %eax, %xmm2, %xmm1
-; X86-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm0[1,1,1,1,4,5,6,7]
+; X86-AVX-I16-NEXT:    vpsrld $16, %xmm0, %xmm2
 ; X86-AVX-I16-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X86-AVX-I16-NEXT:    vroundss $4, %xmm2, %xmm2, %xmm2
 ; X86-AVX-I16-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
@@ -797,7 +797,7 @@ define <16 x iXLen> @lrint_v16f16(<16 x half> %x) {
 ; X86-AVX-I16-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X86-AVX-I16-NEXT:    vcvttss2si %xmm3, %eax
 ; X86-AVX-I16-NEXT:    vpinsrw $2, %eax, %xmm2, %xmm2
-; X86-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm3 = xmm0[3,3,3,3,4,5,6,7]
+; X86-AVX-I16-NEXT:    vpsrlq $48, %xmm0, %xmm3
 ; X86-AVX-I16-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X86-AVX-I16-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X86-AVX-I16-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
@@ -843,7 +843,7 @@ define <16 x iXLen> @lrint_v16f16(<16 x half> %x) {
 ; X64-AVX-I16-LABEL: lrint_v16f16:
 ; X64-AVX-I16:       # %bb.0:
 ; X64-AVX-I16-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; X64-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm1[1,1,1,1,4,5,6,7]
+; X64-AVX-I16-NEXT:    vpsrld $16, %xmm1, %xmm2
 ; X64-AVX-I16-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X64-AVX-I16-NEXT:    vroundss $4, %xmm2, %xmm2, %xmm2
 ; X64-AVX-I16-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
@@ -863,7 +863,7 @@ define <16 x iXLen> @lrint_v16f16(<16 x half> %x) {
 ; X64-AVX-I16-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X64-AVX-I16-NEXT:    vcvttss2si %xmm3, %eax
 ; X64-AVX-I16-NEXT:    vpinsrw $2, %eax, %xmm2, %xmm2
-; X64-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm3 = xmm1[3,3,3,3,4,5,6,7]
+; X64-AVX-I16-NEXT:    vpsrlq $48, %xmm1, %xmm3
 ; X64-AVX-I16-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X64-AVX-I16-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X64-AVX-I16-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
@@ -898,7 +898,7 @@ define <16 x iXLen> @lrint_v16f16(<16 x half> %x) {
 ; X64-AVX-I16-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; X64-AVX-I16-NEXT:    vcvttss2si %xmm1, %eax
 ; X64-AVX-I16-NEXT:    vpinsrw $7, %eax, %xmm2, %xmm1
-; X64-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm0[1,1,1,1,4,5,6,7]
+; X64-AVX-I16-NEXT:    vpsrld $16, %xmm0, %xmm2
 ; X64-AVX-I16-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X64-AVX-I16-NEXT:    vroundss $4, %xmm2, %xmm2, %xmm2
 ; X64-AVX-I16-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
@@ -918,7 +918,7 @@ define <16 x iXLen> @lrint_v16f16(<16 x half> %x) {
 ; X64-AVX-I16-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X64-AVX-I16-NEXT:    vcvttss2si %xmm3, %eax
 ; X64-AVX-I16-NEXT:    vpinsrw $2, %eax, %xmm2, %xmm2
-; X64-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm3 = xmm0[3,3,3,3,4,5,6,7]
+; X64-AVX-I16-NEXT:    vpsrlq $48, %xmm0, %xmm3
 ; X64-AVX-I16-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X64-AVX-I16-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X64-AVX-I16-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
@@ -991,7 +991,7 @@ define <16 x iXLen> @lrint_v16f16(<16 x half> %x) {
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X86-AVX-I32-NEXT:    vcvttss2si %xmm2, %eax
 ; X86-AVX-I32-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
-; X86-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm0[1,1,1,1,4,5,6,7]
+; X86-AVX-I32-NEXT:    vpsrld $16, %xmm0, %xmm2
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X86-AVX-I32-NEXT:    vroundss $4, %xmm2, %xmm2, %xmm2
 ; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
@@ -1011,7 +1011,7 @@ define <16 x iXLen> @lrint_v16f16(<16 x half> %x) {
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vcvttss2si %xmm3, %eax
 ; X86-AVX-I32-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
-; X86-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm3 = xmm0[3,3,3,3,4,5,6,7]
+; X86-AVX-I32-NEXT:    vpsrlq $48, %xmm0, %xmm3
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
@@ -1048,7 +1048,7 @@ define <16 x iXLen> @lrint_v16f16(<16 x half> %x) {
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vcvttss2si %xmm3, %eax
 ; X86-AVX-I32-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
-; X86-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm3 = xmm0[1,1,1,1,4,5,6,7]
+; X86-AVX-I32-NEXT:    vpsrld $16, %xmm0, %xmm3
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
@@ -1068,7 +1068,7 @@ define <16 x iXLen> @lrint_v16f16(<16 x half> %x) {
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; X86-AVX-I32-NEXT:    vcvttss2si %xmm4, %eax
 ; X86-AVX-I32-NEXT:    vpinsrd $2, %eax, %xmm3, %xmm3
-; X86-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[3,3,3,3,4,5,6,7]
+; X86-AVX-I32-NEXT:    vpsrlq $48, %xmm0, %xmm0
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; X86-AVX-I32-NEXT:    vroundss $4, %xmm0, %xmm0, %xmm0
 ; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
@@ -1114,7 +1114,7 @@ define <16 x iXLen> @lrint_v16f16(<16 x half> %x) {
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X64-AVX-I32-NEXT:    vcvttss2si %xmm2, %eax
 ; X64-AVX-I32-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
-; X64-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm0[1,1,1,1,4,5,6,7]
+; X64-AVX-I32-NEXT:    vpsrld $16, %xmm0, %xmm2
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X64-AVX-I32-NEXT:    vroundss $4, %xmm2, %xmm2, %xmm2
 ; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
@@ -1134,7 +1134,7 @@ define <16 x iXLen> @lrint_v16f16(<16 x half> %x) {
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vcvttss2si %xmm3, %eax
 ; X64-AVX-I32-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
-; X64-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm3 = xmm0[3,3,3,3,4,5,6,7]
+; X64-AVX-I32-NEXT:    vpsrlq $48, %xmm0, %xmm3
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
@@ -1171,7 +1171,7 @@ define <16 x iXLen> @lrint_v16f16(<16 x half> %x) {
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vcvttss2si %xmm3, %eax
 ; X64-AVX-I32-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
-; X64-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm3 = xmm0[1,1,1,1,4,5,6,7]
+; X64-AVX-I32-NEXT:    vpsrld $16, %xmm0, %xmm3
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
@@ -1191,7 +1191,7 @@ define <16 x iXLen> @lrint_v16f16(<16 x half> %x) {
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; X64-AVX-I32-NEXT:    vcvttss2si %xmm4, %eax
 ; X64-AVX-I32-NEXT:    vpinsrd $2, %eax, %xmm3, %xmm3
-; X64-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[3,3,3,3,4,5,6,7]
+; X64-AVX-I32-NEXT:    vpsrlq $48, %xmm0, %xmm0
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; X64-AVX-I32-NEXT:    vroundss $4, %xmm0, %xmm0, %xmm0
 ; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
@@ -1215,7 +1215,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X86-AVX-I16-LABEL: lrint_v32f32:
 ; X86-AVX-I16:       # %bb.0:
 ; X86-AVX-I16-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; X86-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm3 = xmm2[1,1,1,1,4,5,6,7]
+; X86-AVX-I16-NEXT:    vpsrld $16, %xmm2, %xmm3
 ; X86-AVX-I16-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X86-AVX-I16-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X86-AVX-I16-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
@@ -1235,7 +1235,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X86-AVX-I16-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; X86-AVX-I16-NEXT:    vcvttss2si %xmm4, %eax
 ; X86-AVX-I16-NEXT:    vpinsrw $2, %eax, %xmm3, %xmm3
-; X86-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm4 = xmm2[3,3,3,3,4,5,6,7]
+; X86-AVX-I16-NEXT:    vpsrlq $48, %xmm2, %xmm4
 ; X86-AVX-I16-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; X86-AVX-I16-NEXT:    vroundss $4, %xmm4, %xmm4, %xmm4
 ; X86-AVX-I16-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
@@ -1270,7 +1270,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X86-AVX-I16-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X86-AVX-I16-NEXT:    vcvttss2si %xmm2, %eax
 ; X86-AVX-I16-NEXT:    vpinsrw $7, %eax, %xmm3, %xmm2
-; X86-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm3 = xmm0[1,1,1,1,4,5,6,7]
+; X86-AVX-I16-NEXT:    vpsrld $16, %xmm0, %xmm3
 ; X86-AVX-I16-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X86-AVX-I16-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X86-AVX-I16-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
@@ -1290,7 +1290,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X86-AVX-I16-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; X86-AVX-I16-NEXT:    vcvttss2si %xmm4, %eax
 ; X86-AVX-I16-NEXT:    vpinsrw $2, %eax, %xmm3, %xmm3
-; X86-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm4 = xmm0[3,3,3,3,4,5,6,7]
+; X86-AVX-I16-NEXT:    vpsrlq $48, %xmm0, %xmm4
 ; X86-AVX-I16-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; X86-AVX-I16-NEXT:    vroundss $4, %xmm4, %xmm4, %xmm4
 ; X86-AVX-I16-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
@@ -1327,7 +1327,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X86-AVX-I16-NEXT:    vpinsrw $7, %eax, %xmm3, %xmm0
 ; X86-AVX-I16-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
 ; X86-AVX-I16-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; X86-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm3 = xmm2[1,1,1,1,4,5,6,7]
+; X86-AVX-I16-NEXT:    vpsrld $16, %xmm2, %xmm3
 ; X86-AVX-I16-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X86-AVX-I16-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X86-AVX-I16-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
@@ -1347,7 +1347,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X86-AVX-I16-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; X86-AVX-I16-NEXT:    vcvttss2si %xmm4, %eax
 ; X86-AVX-I16-NEXT:    vpinsrw $2, %eax, %xmm3, %xmm3
-; X86-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm4 = xmm2[3,3,3,3,4,5,6,7]
+; X86-AVX-I16-NEXT:    vpsrlq $48, %xmm2, %xmm4
 ; X86-AVX-I16-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; X86-AVX-I16-NEXT:    vroundss $4, %xmm4, %xmm4, %xmm4
 ; X86-AVX-I16-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
@@ -1382,7 +1382,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X86-AVX-I16-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X86-AVX-I16-NEXT:    vcvttss2si %xmm2, %eax
 ; X86-AVX-I16-NEXT:    vpinsrw $7, %eax, %xmm3, %xmm2
-; X86-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm3 = xmm1[1,1,1,1,4,5,6,7]
+; X86-AVX-I16-NEXT:    vpsrld $16, %xmm1, %xmm3
 ; X86-AVX-I16-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X86-AVX-I16-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X86-AVX-I16-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
@@ -1402,7 +1402,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X86-AVX-I16-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; X86-AVX-I16-NEXT:    vcvttss2si %xmm4, %eax
 ; X86-AVX-I16-NEXT:    vpinsrw $2, %eax, %xmm3, %xmm3
-; X86-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm4 = xmm1[3,3,3,3,4,5,6,7]
+; X86-AVX-I16-NEXT:    vpsrlq $48, %xmm1, %xmm4
 ; X86-AVX-I16-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; X86-AVX-I16-NEXT:    vroundss $4, %xmm4, %xmm4, %xmm4
 ; X86-AVX-I16-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
@@ -1448,7 +1448,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X64-AVX-I16-LABEL: lrint_v32f32:
 ; X64-AVX-I16:       # %bb.0:
 ; X64-AVX-I16-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; X64-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm3 = xmm2[1,1,1,1,4,5,6,7]
+; X64-AVX-I16-NEXT:    vpsrld $16, %xmm2, %xmm3
 ; X64-AVX-I16-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X64-AVX-I16-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X64-AVX-I16-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
@@ -1468,7 +1468,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X64-AVX-I16-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; X64-AVX-I16-NEXT:    vcvttss2si %xmm4, %eax
 ; X64-AVX-I16-NEXT:    vpinsrw $2, %eax, %xmm3, %xmm3
-; X64-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm4 = xmm2[3,3,3,3,4,5,6,7]
+; X64-AVX-I16-NEXT:    vpsrlq $48, %xmm2, %xmm4
 ; X64-AVX-I16-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; X64-AVX-I16-NEXT:    vroundss $4, %xmm4, %xmm4, %xmm4
 ; X64-AVX-I16-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
@@ -1503,7 +1503,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X64-AVX-I16-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X64-AVX-I16-NEXT:    vcvttss2si %xmm2, %eax
 ; X64-AVX-I16-NEXT:    vpinsrw $7, %eax, %xmm3, %xmm2
-; X64-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm3 = xmm0[1,1,1,1,4,5,6,7]
+; X64-AVX-I16-NEXT:    vpsrld $16, %xmm0, %xmm3
 ; X64-AVX-I16-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X64-AVX-I16-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X64-AVX-I16-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
@@ -1523,7 +1523,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X64-AVX-I16-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; X64-AVX-I16-NEXT:    vcvttss2si %xmm4, %eax
 ; X64-AVX-I16-NEXT:    vpinsrw $2, %eax, %xmm3, %xmm3
-; X64-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm4 = xmm0[3,3,3,3,4,5,6,7]
+; X64-AVX-I16-NEXT:    vpsrlq $48, %xmm0, %xmm4
 ; X64-AVX-I16-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; X64-AVX-I16-NEXT:    vroundss $4, %xmm4, %xmm4, %xmm4
 ; X64-AVX-I16-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
@@ -1560,7 +1560,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X64-AVX-I16-NEXT:    vpinsrw $7, %eax, %xmm3, %xmm0
 ; X64-AVX-I16-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
 ; X64-AVX-I16-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; X64-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm3 = xmm2[1,1,1,1,4,5,6,7]
+; X64-AVX-I16-NEXT:    vpsrld $16, %xmm2, %xmm3
 ; X64-AVX-I16-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X64-AVX-I16-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X64-AVX-I16-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
@@ -1580,7 +1580,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X64-AVX-I16-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; X64-AVX-I16-NEXT:    vcvttss2si %xmm4, %eax
 ; X64-AVX-I16-NEXT:    vpinsrw $2, %eax, %xmm3, %xmm3
-; X64-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm4 = xmm2[3,3,3,3,4,5,6,7]
+; X64-AVX-I16-NEXT:    vpsrlq $48, %xmm2, %xmm4
 ; X64-AVX-I16-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; X64-AVX-I16-NEXT:    vroundss $4, %xmm4, %xmm4, %xmm4
 ; X64-AVX-I16-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
@@ -1615,7 +1615,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X64-AVX-I16-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X64-AVX-I16-NEXT:    vcvttss2si %xmm2, %eax
 ; X64-AVX-I16-NEXT:    vpinsrw $7, %eax, %xmm3, %xmm2
-; X64-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm3 = xmm1[1,1,1,1,4,5,6,7]
+; X64-AVX-I16-NEXT:    vpsrld $16, %xmm1, %xmm3
 ; X64-AVX-I16-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X64-AVX-I16-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X64-AVX-I16-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
@@ -1635,7 +1635,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X64-AVX-I16-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; X64-AVX-I16-NEXT:    vcvttss2si %xmm4, %eax
 ; X64-AVX-I16-NEXT:    vpinsrw $2, %eax, %xmm3, %xmm3
-; X64-AVX-I16-NEXT:    vpshuflw {{.*#+}} xmm4 = xmm1[3,3,3,3,4,5,6,7]
+; X64-AVX-I16-NEXT:    vpsrlq $48, %xmm1, %xmm4
 ; X64-AVX-I16-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; X64-AVX-I16-NEXT:    vroundss $4, %xmm4, %xmm4, %xmm4
 ; X64-AVX-I16-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
@@ -1709,7 +1709,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vcvttss2si %xmm3, %eax
 ; X86-AVX-I32-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
-; X86-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm3 = xmm2[1,1,1,1,4,5,6,7]
+; X86-AVX-I32-NEXT:    vpsrld $16, %xmm2, %xmm3
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
@@ -1729,7 +1729,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; X86-AVX-I32-NEXT:    vcvttss2si %xmm4, %eax
 ; X86-AVX-I32-NEXT:    vpinsrd $2, %eax, %xmm3, %xmm3
-; X86-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm4 = xmm2[3,3,3,3,4,5,6,7]
+; X86-AVX-I32-NEXT:    vpsrlq $48, %xmm2, %xmm4
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; X86-AVX-I32-NEXT:    vroundss $4, %xmm4, %xmm4, %xmm4
 ; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
@@ -1766,7 +1766,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; X86-AVX-I32-NEXT:    vcvttss2si %xmm4, %eax
 ; X86-AVX-I32-NEXT:    vpinsrd $3, %eax, %xmm3, %xmm3
-; X86-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm4 = xmm2[1,1,1,1,4,5,6,7]
+; X86-AVX-I32-NEXT:    vpsrld $16, %xmm2, %xmm4
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; X86-AVX-I32-NEXT:    vroundss $4, %xmm4, %xmm4, %xmm4
 ; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
@@ -1786,7 +1786,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm5, %xmm5
 ; X86-AVX-I32-NEXT:    vcvttss2si %xmm5, %eax
 ; X86-AVX-I32-NEXT:    vpinsrd $2, %eax, %xmm4, %xmm4
-; X86-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm2[3,3,3,3,4,5,6,7]
+; X86-AVX-I32-NEXT:    vpsrlq $48, %xmm2, %xmm2
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X86-AVX-I32-NEXT:    vroundss $4, %xmm2, %xmm2, %xmm2
 ; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
@@ -1822,7 +1822,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vcvttss2si %xmm3, %eax
 ; X86-AVX-I32-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm2
-; X86-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm3 = xmm1[1,1,1,1,4,5,6,7]
+; X86-AVX-I32-NEXT:    vpsrld $16, %xmm1, %xmm3
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
@@ -1842,7 +1842,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm5, %xmm5
 ; X86-AVX-I32-NEXT:    vcvttss2si %xmm5, %eax
 ; X86-AVX-I32-NEXT:    vpinsrd $2, %eax, %xmm3, %xmm3
-; X86-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm5 = xmm1[3,3,3,3,4,5,6,7]
+; X86-AVX-I32-NEXT:    vpsrlq $48, %xmm1, %xmm5
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm5, %xmm5
 ; X86-AVX-I32-NEXT:    vroundss $4, %xmm5, %xmm5, %xmm5
 ; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm5, %xmm5
@@ -1879,7 +1879,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm5, %xmm5
 ; X86-AVX-I32-NEXT:    vcvttss2si %xmm5, %eax
 ; X86-AVX-I32-NEXT:    vpinsrd $3, %eax, %xmm3, %xmm3
-; X86-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm5 = xmm1[1,1,1,1,4,5,6,7]
+; X86-AVX-I32-NEXT:    vpsrld $16, %xmm1, %xmm5
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm5, %xmm5
 ; X86-AVX-I32-NEXT:    vroundss $4, %xmm5, %xmm5, %xmm5
 ; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm5, %xmm5
@@ -1899,7 +1899,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm6, %xmm6
 ; X86-AVX-I32-NEXT:    vcvttss2si %xmm6, %eax
 ; X86-AVX-I32-NEXT:    vpinsrd $2, %eax, %xmm5, %xmm5
-; X86-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[3,3,3,3,4,5,6,7]
+; X86-AVX-I32-NEXT:    vpsrlq $48, %xmm1, %xmm1
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; X86-AVX-I32-NEXT:    vroundss $4, %xmm1, %xmm1, %xmm1
 ; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
@@ -1949,7 +1949,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vcvttss2si %xmm3, %eax
 ; X64-AVX-I32-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
-; X64-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm3 = xmm2[1,1,1,1,4,5,6,7]
+; X64-AVX-I32-NEXT:    vpsrld $16, %xmm2, %xmm3
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
@@ -1969,7 +1969,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; X64-AVX-I32-NEXT:    vcvttss2si %xmm4, %eax
 ; X64-AVX-I32-NEXT:    vpinsrd $2, %eax, %xmm3, %xmm3
-; X64-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm4 = xmm2[3,3,3,3,4,5,6,7]
+; X64-AVX-I32-NEXT:    vpsrlq $48, %xmm2, %xmm4
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; X64-AVX-I32-NEXT:    vroundss $4, %xmm4, %xmm4, %xmm4
 ; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
@@ -2006,7 +2006,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; X64-AVX-I32-NEXT:    vcvttss2si %xmm4, %eax
 ; X64-AVX-I32-NEXT:    vpinsrd $3, %eax, %xmm3, %xmm3
-; X64-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm4 = xmm2[1,1,1,1,4,5,6,7]
+; X64-AVX-I32-NEXT:    vpsrld $16, %xmm2, %xmm4
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; X64-AVX-I32-NEXT:    vroundss $4, %xmm4, %xmm4, %xmm4
 ; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
@@ -2026,7 +2026,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm5, %xmm5
 ; X64-AVX-I32-NEXT:    vcvttss2si %xmm5, %eax
 ; X64-AVX-I32-NEXT:    vpinsrd $2, %eax, %xmm4, %xmm4
-; X64-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm2[3,3,3,3,4,5,6,7]
+; X64-AVX-I32-NEXT:    vpsrlq $48, %xmm2, %xmm2
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X64-AVX-I32-NEXT:    vroundss $4, %xmm2, %xmm2, %xmm2
 ; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
@@ -2062,7 +2062,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vcvttss2si %xmm3, %eax
 ; X64-AVX-I32-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm2
-; X64-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm3 = xmm1[1,1,1,1,4,5,6,7]
+; X64-AVX-I32-NEXT:    vpsrld $16, %xmm1, %xmm3
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
@@ -2082,7 +2082,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm5, %xmm5
 ; X64-AVX-I32-NEXT:    vcvttss2si %xmm5, %eax
 ; X64-AVX-I32-NEXT:    vpinsrd $2, %eax, %xmm3, %xmm3
-; X64-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm5 = xmm1[3,3,3,3,4,5,6,7]
+; X64-AVX-I32-NEXT:    vpsrlq $48, %xmm1, %xmm5
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm5, %xmm5
 ; X64-AVX-I32-NEXT:    vroundss $4, %xmm5, %xmm5, %xmm5
 ; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm5, %xmm5
@@ -2119,7 +2119,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm5, %xmm5
 ; X64-AVX-I32-NEXT:    vcvttss2si %xmm5, %eax
 ; X64-AVX-I32-NEXT:    vpinsrd $3, %eax, %xmm3, %xmm3
-; X64-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm5 = xmm1[1,1,1,1,4,5,6,7]
+; X64-AVX-I32-NEXT:    vpsrld $16, %xmm1, %xmm5
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm5, %xmm5
 ; X64-AVX-I32-NEXT:    vroundss $4, %xmm5, %xmm5, %xmm5
 ; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm5, %xmm5
@@ -2139,7 +2139,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm6, %xmm6
 ; X64-AVX-I32-NEXT:    vcvttss2si %xmm6, %eax
 ; X64-AVX-I32-NEXT:    vpinsrd $2, %eax, %xmm5, %xmm5
-; X64-AVX-I32-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[3,3,3,3,4,5,6,7]
+; X64-AVX-I32-NEXT:    vpsrlq $48, %xmm1, %xmm1
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; X64-AVX-I32-NEXT:    vroundss $4, %xmm1, %xmm1, %xmm1
 ; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm1, %xmm1

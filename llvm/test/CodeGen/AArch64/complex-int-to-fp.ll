@@ -5,9 +5,12 @@ define void @autogen_SD19655(ptr %addr, ptr %addrfloat) {
 ; CHECK-LABEL: autogen_SD19655:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    scvtf.2d v0, v0
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-NEXT:    str d0, [x1]
+; CHECK-NEXT:    mov.d x8, v0[1]
+; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    scvtf s1, x9
+; CHECK-NEXT:    scvtf s0, x8
+; CHECK-NEXT:    mov.s v1[1], v0[0]
+; CHECK-NEXT:    str d1, [x1]
 ; CHECK-NEXT:    ret
   %T = load <2 x i64>, ptr %addr
   %F = sitofp <2 x i64> %T to <2 x float>
@@ -88,8 +91,12 @@ define <2 x double> @test_unsigned_v2i8_to_v2f64(<2 x i8> %v) nounwind readnone 
 define <2 x float> @test_signed_v2i64_to_v2f32(<2 x i64> %v) nounwind readnone {
 ; CHECK-LABEL: test_signed_v2i64_to_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    scvtf.2d v0, v0
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-NEXT:    mov.d x8, v0[1]
+; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    scvtf s0, x9
+; CHECK-NEXT:    scvtf s1, x8
+; CHECK-NEXT:    mov.s v0[1], v1[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 
   %conv = sitofp <2 x i64> %v to <2 x float>
@@ -98,8 +105,12 @@ define <2 x float> @test_signed_v2i64_to_v2f32(<2 x i64> %v) nounwind readnone {
 define <2 x float> @test_unsigned_v2i64_to_v2f32(<2 x i64> %v) nounwind readnone {
 ; CHECK-LABEL: test_unsigned_v2i64_to_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ucvtf.2d v0, v0
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-NEXT:    mov.d x8, v0[1]
+; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    ucvtf s0, x9
+; CHECK-NEXT:    ucvtf s1, x8
+; CHECK-NEXT:    mov.s v0[1], v1[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 
   %conv = uitofp <2 x i64> %v to <2 x float>

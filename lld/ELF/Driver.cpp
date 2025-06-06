@@ -39,12 +39,10 @@
 #include "Writer.h"
 #include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
-#include "lld/Common/Driver.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Filesystem.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Strings.h"
-#include "lld/Common/TargetOptionsCommandFlags.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -421,8 +419,18 @@ static void checkOptions(Ctx &ctx) {
           << "--pcrel-optimize is only supported on PowerPC64 targets";
   }
 
-  if (ctx.arg.relaxGP && ctx.arg.emachine != EM_RISCV)
-    ErrAlways(ctx) << "--relax-gp is only supported on RISC-V targets";
+  if (ctx.arg.emachine != EM_RISCV) {
+    if (ctx.arg.relaxGP)
+      ErrAlways(ctx) << "--relax-gp is only supported on RISC-V targets";
+    if (ctx.arg.zZicfilpUnlabeledReport != ReportPolicy::None)
+      ErrAlways(ctx) << "-z zicfilip-unlabeled-report is only supported on "
+                        "RISC-V targets";
+    if (ctx.arg.zZicfilpFuncSigReport != ReportPolicy::None)
+      ErrAlways(ctx) << "-z zicfilip-func-sig-report is only supported on "
+                        "RISC-V targets";
+    if (ctx.arg.zZicfissReport != ReportPolicy::None)
+      ErrAlways(ctx) << "-z zicfiss-report is only supported on RISC-V targets";
+  }
 
   if (ctx.arg.emachine != EM_386 && ctx.arg.emachine != EM_X86_64 &&
       ctx.arg.zCetReport != ReportPolicy::None)
@@ -1421,7 +1429,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.mergeArmExidx =
       args.hasFlag(OPT_merge_exidx_entries, OPT_no_merge_exidx_entries, true);
   ctx.arg.mmapOutputFile =
-      args.hasFlag(OPT_mmap_output_file, OPT_no_mmap_output_file, true);
+      args.hasFlag(OPT_mmap_output_file, OPT_no_mmap_output_file, false);
   ctx.arg.nmagic = args.hasFlag(OPT_nmagic, OPT_no_nmagic, false);
   ctx.arg.noinhibitExec = args.hasArg(OPT_noinhibit_exec);
   ctx.arg.nostdlib = args.hasArg(OPT_nostdlib);
@@ -1467,8 +1475,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
 
   if (args.hasArg(OPT_save_temps)) {
     // --save-temps implies saving all temps.
-    for (const char *s : saveTempsValues)
-      ctx.arg.saveTempsArgs.insert(s);
+    ctx.arg.saveTempsArgs.insert_range(saveTempsValues);
   } else {
     for (auto *arg : args.filtered(OPT_save_temps_eq)) {
       StringRef s = arg->getValue();
@@ -1486,6 +1493,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     ctx.arg.randomizeSectionPadding =
         args::getInteger(args, OPT_randomize_section_padding, 0);
   ctx.arg.singleRoRx = !args.hasFlag(OPT_rosegment, OPT_no_rosegment, true);
+  ctx.arg.singleXoRx = !args.hasFlag(OPT_xosegment, OPT_no_xosegment, false);
   ctx.arg.soName = args.getLastArgValue(OPT_soname);
   ctx.arg.sortSection = getSortSection(ctx, args);
   ctx.arg.splitStackAdjustSize =
@@ -1545,6 +1553,15 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.warnSymbolOrdering =
       args.hasFlag(OPT_warn_symbol_ordering, OPT_no_warn_symbol_ordering, true);
   ctx.arg.whyExtract = args.getLastArgValue(OPT_why_extract);
+  for (opt::Arg *arg : args.filtered(OPT_why_live)) {
+    StringRef value(arg->getValue());
+    if (Expected<GlobPattern> pat = GlobPattern::create(arg->getValue())) {
+      ctx.arg.whyLive.emplace_back(std::move(*pat));
+    } else {
+      ErrAlways(ctx) << arg->getSpelling() << ": " << pat.takeError();
+      continue;
+    }
+  }
   ctx.arg.zCombreloc = getZFlag(args, "combreloc", "nocombreloc", true);
   ctx.arg.zCopyreloc = getZFlag(args, "copyreloc", "nocopyreloc", true);
   ctx.arg.zForceBti = hasZOption(args, "force-bti");
@@ -1566,7 +1583,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.zNodlopen = hasZOption(args, "nodlopen");
   ctx.arg.zNow = getZFlag(args, "now", "lazy", false);
   ctx.arg.zOrigin = hasZOption(args, "origin");
-  ctx.arg.zPacPlt = hasZOption(args, "pac-plt");
+  ctx.arg.zPacPlt = getZFlag(args, "pac-plt", "nopac-plt", false);
   ctx.arg.zRelro = getZFlag(args, "relro", "norelro", true);
   ctx.arg.zRetpolineplt = hasZOption(args, "retpolineplt");
   ctx.arg.zRodynamic = hasZOption(args, "rodynamic");
@@ -1628,7 +1645,11 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       std::make_pair("execute-only-report", &ctx.arg.zExecuteOnlyReport),
       std::make_pair("gcs-report", &ctx.arg.zGcsReport),
       std::make_pair("gcs-report-dynamic", &ctx.arg.zGcsReportDynamic),
-      std::make_pair("pauth-report", &ctx.arg.zPauthReport)};
+      std::make_pair("pauth-report", &ctx.arg.zPauthReport),
+      std::make_pair("zicfilp-unlabeled-report",
+                     &ctx.arg.zZicfilpUnlabeledReport),
+      std::make_pair("zicfilp-func-sig-report", &ctx.arg.zZicfilpFuncSigReport),
+      std::make_pair("zicfiss-report", &ctx.arg.zZicfissReport)};
   bool hasGcsReportDynamic = false;
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
@@ -2310,8 +2331,7 @@ static void writeArchiveStats(Ctx &ctx) {
 
   os << "members\textracted\tarchive\n";
 
-  SmallVector<StringRef, 0> archives;
-  DenseMap<CachedHashStringRef, unsigned> all, extracted;
+  DenseMap<CachedHashStringRef, unsigned> extracted;
   for (ELFFileBase *file : ctx.objectFiles)
     if (file->archiveName.size())
       ++extracted[CachedHashStringRef(file->archiveName)];
@@ -2629,6 +2649,18 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
     auto *obj = cast<ObjFile<ELFT>>(file.get());
     obj->parse(/*ignoreComdats=*/true);
 
+    // This is only needed for AArch64 PAuth to set correct key in AUTH GOT
+    // entry based on symbol type (STT_FUNC or not).
+    // TODO: check if PAuth is actually used.
+    if (ctx.arg.emachine == EM_AARCH64) {
+      for (typename ELFT::Sym elfSym : obj->template getGlobalELFSyms<ELFT>()) {
+        StringRef elfSymName = check(elfSym.getName(obj->getStringTable()));
+        if (Symbol *sym = ctx.symtab->find(elfSymName))
+          if (sym->type == STT_NOTYPE)
+            sym->type = elfSym.getType();
+      }
+    }
+
     // For defined symbols in non-relocatable output,
     // compute isExported and parse '@'.
     if (!ctx.arg.relocatable)
@@ -2811,9 +2843,12 @@ static void redirectSymbols(Ctx &ctx, ArrayRef<WrappedSymbol> wrapped) {
 // For AArch64 PAuth-enabled object files, the core info of all of them must
 // match. Missing info for some object files with matching info for remaining
 // ones can be allowed (see -z pauth-report).
+//
+// RISC-V Zicfilp/Zicfiss extension also use the same mechanism to record
+// enabled features in the GNU_PROPERTY_RISCV_FEATURE_1_AND bit mask.
 static void readSecurityNotes(Ctx &ctx) {
   if (ctx.arg.emachine != EM_386 && ctx.arg.emachine != EM_X86_64 &&
-      ctx.arg.emachine != EM_AARCH64)
+      ctx.arg.emachine != EM_AARCH64 && ctx.arg.emachine != EM_RISCV)
     return;
 
   ctx.arg.andFeatures = -1;
@@ -2864,6 +2899,33 @@ static void readSecurityNotes(Ctx &ctx) {
         << f
         << ": -z cet-report: file does not have "
            "GNU_PROPERTY_X86_FEATURE_1_SHSTK property";
+
+    if (ctx.arg.emachine == EM_RISCV) {
+      reportUnless(ctx.arg.zZicfilpUnlabeledReport,
+                   features & GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED)
+          << f
+          << ": -z zicfilp-unlabeled-report: file does not have "
+             "GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED property";
+
+      reportUnless(ctx.arg.zZicfilpFuncSigReport,
+                   features & GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG)
+          << f
+          << ": -z zicfilp-func-sig-report: file does not have "
+             "GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG property";
+
+      if ((features & GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED) &&
+          (features & GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG))
+        Err(ctx) << f
+                 << ": file has conflicting properties: "
+                    "GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED and "
+                    "GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG";
+
+      reportUnless(ctx.arg.zZicfissReport,
+                   features & GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS)
+          << f
+          << ": -z zicfiss-report: file does not have "
+             "GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS property";
+    }
 
     if (ctx.arg.zForceBti && !(features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)) {
       features |= GNU_PROPERTY_AARCH64_FEATURE_1_BTI;

@@ -9,7 +9,6 @@
 #include "ASTUtils.h"
 #include "PtrTypesSemantics.h"
 #include "clang/AST/Attr.h"
-#include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
@@ -30,12 +29,11 @@ bool tryToFindPtrOrigin(
     std::function<bool(const clang::Expr *, bool)> callback) {
   while (E) {
     if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
-      auto *ValDecl = DRE->getDecl();
-      auto QT = ValDecl->getType();
-      auto ValName = ValDecl->getName();
-      if (ValDecl && (ValName.starts_with('k') || ValName.starts_with("_k")) &&
-          QT.isConstQualified()) { // Treat constants such as kCF* as safe.
-        return callback(E, true);
+      if (auto *VD = dyn_cast_or_null<VarDecl>(DRE->getDecl())) {
+        auto QT = VD->getType();
+        if (VD->hasGlobalStorage() && QT.isConstQualified()) {
+          return callback(E, true);
+        }
       }
     }
     if (auto *tempExpr = dyn_cast<MaterializeTemporaryExpr>(E)) {
@@ -119,6 +117,11 @@ bool tryToFindPtrOrigin(
             }
           }
         }
+      }
+
+      if (call->isCallToStdMove() && call->getNumArgs() == 1) {
+        E = call->getArg(0)->IgnoreParenCasts();
+        continue;
       }
 
       if (auto *callee = call->getDirectCallee()) {

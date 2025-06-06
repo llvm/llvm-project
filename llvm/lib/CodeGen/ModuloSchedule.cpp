@@ -181,10 +181,6 @@ void ModuloScheduleExpander::generatePipelinedLoop() {
   // Add branches between prolog and epilog blocks.
   addBranches(*Preheader, PrologBBs, KernelBB, EpilogBBs, VRMap);
 
-  // The intervals of newly created virtual registers are calculated after the
-  // kernel expansion.
-  calculateIntervals();
-
   delete[] VRMap;
   delete[] VRMapPhi;
 }
@@ -549,10 +545,8 @@ void ModuloScheduleExpander::generateExistingPhis(
               if (VRMap[LastStageNum - np - 1].count(LoopVal))
                 PhiOp2 = VRMap[LastStageNum - np - 1][LoopVal];
 
-              if (IsLast && np == NumPhis - 1) {
+              if (IsLast && np == NumPhis - 1)
                 replaceRegUsesAfterLoop(Def, NewReg, BB, MRI);
-                NoIntervalRegs.push_back(NewReg);
-              }
               continue;
             }
           }
@@ -592,10 +586,8 @@ void ModuloScheduleExpander::generateExistingPhis(
       // Check if we need to rename any uses that occurs after the loop. The
       // register to replace depends on whether the Phi is scheduled in the
       // epilog.
-      if (IsLast && np == NumPhis - 1) {
+      if (IsLast && np == NumPhis - 1)
         replaceRegUsesAfterLoop(Def, NewReg, BB, MRI);
-        NoIntervalRegs.push_back(NewReg);
-      }
 
       // In the kernel, a dependent Phi uses the value from this Phi.
       if (InKernel)
@@ -615,10 +607,8 @@ void ModuloScheduleExpander::generateExistingPhis(
     if (NumStages == 0 && IsLast) {
       auto &CurStageMap = VRMap[CurStageNum];
       auto It = CurStageMap.find(LoopVal);
-      if (It != CurStageMap.end()) {
+      if (It != CurStageMap.end())
         replaceRegUsesAfterLoop(Def, It->second, BB, MRI);
-        NoIntervalRegs.push_back(It->second);
-      }
     }
   }
 }
@@ -738,10 +728,8 @@ void ModuloScheduleExpander::generatePhis(
             rewriteScheduledInstr(NewBB, InstrMap, CurStageNum, np, &*BBI, Def,
                                   NewReg);
         }
-        if (IsLast && np == NumPhis - 1) {
+        if (IsLast && np == NumPhis - 1)
           replaceRegUsesAfterLoop(Def, NewReg, BB, MRI);
-          NoIntervalRegs.push_back(NewReg);
-        }
       }
     }
   }
@@ -899,7 +887,6 @@ void ModuloScheduleExpander::addBranches(MachineBasicBlock &PreheaderBB,
 
   // Start from the blocks connected to the kernel and work "out"
   // to the first prolog and the last epilog blocks.
-  SmallVector<MachineInstr *, 4> PrevInsts;
   unsigned MaxIter = PrologBBs.size() - 1;
   for (unsigned i = 0, j = MaxIter; i <= MaxIter; ++i, --j) {
     // Add branches to the prolog that go to the corresponding
@@ -951,14 +938,6 @@ void ModuloScheduleExpander::addBranches(MachineBasicBlock &PreheaderBB,
     LoopInfo->setPreheader(PrologBBs[MaxIter]);
     LoopInfo->adjustTripCount(-(MaxIter + 1));
   }
-}
-
-/// Some registers are generated during the kernel expansion. We calculate the
-/// live intervals of these registers after the expansion.
-void ModuloScheduleExpander::calculateIntervals() {
-  for (Register Reg : NoIntervalRegs)
-    LIS.createAndComputeVirtRegInterval(Reg);
-  NoIntervalRegs.clear();
 }
 
 /// Return true if we can compute the amount the instruction changes
@@ -1081,10 +1060,8 @@ void ModuloScheduleExpander::updateInstruction(MachineInstr *NewMI,
       Register NewReg = MRI.createVirtualRegister(RC);
       MO.setReg(NewReg);
       VRMap[CurStageNum][reg] = NewReg;
-      if (LastDef) {
+      if (LastDef)
         replaceRegUsesAfterLoop(reg, NewReg, BB, MRI);
-        NoIntervalRegs.push_back(NewReg);
-      }
     } else if (MO.isUse()) {
       MachineInstr *Def = MRI.getVRegDef(reg);
       // Compute the stage that contains the last definition for instruction.
@@ -1877,9 +1854,9 @@ void PeelingModuloScheduleExpander::peelPrologAndEpilogs() {
 
   // Create a list of all blocks in order.
   SmallVector<MachineBasicBlock *, 8> Blocks;
-  llvm::copy(PeeledFront, std::back_inserter(Blocks));
+  llvm::append_range(Blocks, PeeledFront);
   Blocks.push_back(BB);
-  llvm::copy(PeeledBack, std::back_inserter(Blocks));
+  llvm::append_range(Blocks, PeeledBack);
 
   // Iterate in reverse order over all instructions, remapping as we go.
   for (MachineBasicBlock *B : reverse(Blocks)) {
@@ -2159,7 +2136,8 @@ MachineInstr *ModuloScheduleExpanderMVE::cloneInstr(MachineInstr *OldMI) {
 /// If it is already dedicated exit, return it. Otherwise, insert a new
 /// block between them and return the new block.
 static MachineBasicBlock *createDedicatedExit(MachineBasicBlock *Loop,
-                                              MachineBasicBlock *Exit) {
+                                              MachineBasicBlock *Exit,
+                                              LiveIntervals &LIS) {
   if (Exit->pred_size() == 1)
     return Exit;
 
@@ -2169,6 +2147,7 @@ static MachineBasicBlock *createDedicatedExit(MachineBasicBlock *Loop,
   MachineBasicBlock *NewExit =
       MF->CreateMachineBasicBlock(Loop->getBasicBlock());
   MF->insert(Loop->getIterator(), NewExit);
+  LIS.insertMBBInMaps(NewExit);
 
   MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
   SmallVector<MachineOperand, 4> Cond;
@@ -2304,12 +2283,17 @@ void ModuloScheduleExpanderMVE::generatePipelinedLoop() {
   NewPreheader = MF.CreateMachineBasicBlock(OrigKernel->getBasicBlock());
 
   MF.insert(OrigKernel->getIterator(), Check);
+  LIS.insertMBBInMaps(Check);
   MF.insert(OrigKernel->getIterator(), Prolog);
+  LIS.insertMBBInMaps(Prolog);
   MF.insert(OrigKernel->getIterator(), NewKernel);
+  LIS.insertMBBInMaps(NewKernel);
   MF.insert(OrigKernel->getIterator(), Epilog);
+  LIS.insertMBBInMaps(Epilog);
   MF.insert(OrigKernel->getIterator(), NewPreheader);
+  LIS.insertMBBInMaps(NewPreheader);
 
-  NewExit = createDedicatedExit(OrigKernel, OrigExit);
+  NewExit = createDedicatedExit(OrigKernel, OrigExit, LIS);
 
   NewPreheader->transferSuccessorsAndUpdatePHIs(OrigPreheader);
   TII->insertUnconditionalBranch(*NewPreheader, OrigKernel, DebugLoc());
@@ -2393,9 +2377,10 @@ void ModuloScheduleExpanderMVE::updateInstrUse(
       UseMO.setReg(NewReg);
     else {
       Register SplitReg = MRI.createVirtualRegister(MRI.getRegClass(OrigReg));
-      BuildMI(*OrigKernel, MI, MI->getDebugLoc(), TII->get(TargetOpcode::COPY),
-              SplitReg)
-          .addReg(NewReg);
+      MachineInstr *NewCopy = BuildMI(*OrigKernel, MI, MI->getDebugLoc(),
+                                      TII->get(TargetOpcode::COPY), SplitReg)
+                                  .addReg(NewReg);
+      LIS.InsertMachineInstrInMaps(*NewCopy);
       UseMO.setReg(SplitReg);
     }
   }
@@ -2479,12 +2464,14 @@ void ModuloScheduleExpanderMVE::generatePhi(
 
     assert(CorrespondReg.isValid());
     Register PhiReg = MRI.createVirtualRegister(MRI.getRegClass(OrigReg));
-    BuildMI(*NewKernel, NewKernel->getFirstNonPHI(), DebugLoc(),
-            TII->get(TargetOpcode::PHI), PhiReg)
-        .addReg(NewReg->second)
-        .addMBB(NewKernel)
-        .addReg(CorrespondReg)
-        .addMBB(Prolog);
+    MachineInstr *NewPhi =
+        BuildMI(*NewKernel, NewKernel->getFirstNonPHI(), DebugLoc(),
+                TII->get(TargetOpcode::PHI), PhiReg)
+            .addReg(NewReg->second)
+            .addMBB(NewKernel)
+            .addReg(CorrespondReg)
+            .addMBB(Prolog);
+    LIS.InsertMachineInstrInMaps(*NewPhi);
     PhiVRMap[UnrollNum][OrigReg] = PhiReg;
   }
 }
@@ -2522,18 +2509,22 @@ void ModuloScheduleExpanderMVE::mergeRegUsesAfterPipeline(Register OrigReg,
   // remaining iterations) with the route that execute the original loop.
   if (!UsesAfterLoop.empty()) {
     Register PhiReg = MRI.createVirtualRegister(MRI.getRegClass(OrigReg));
-    BuildMI(*NewExit, NewExit->getFirstNonPHI(), DebugLoc(),
-            TII->get(TargetOpcode::PHI), PhiReg)
-        .addReg(OrigReg)
-        .addMBB(OrigKernel)
-        .addReg(NewReg)
-        .addMBB(Epilog);
+    MachineInstr *NewPhi =
+        BuildMI(*NewExit, NewExit->getFirstNonPHI(), DebugLoc(),
+                TII->get(TargetOpcode::PHI), PhiReg)
+            .addReg(OrigReg)
+            .addMBB(OrigKernel)
+            .addReg(NewReg)
+            .addMBB(Epilog);
+    LIS.InsertMachineInstrInMaps(*NewPhi);
 
     for (MachineOperand *MO : UsesAfterLoop)
       MO->setReg(PhiReg);
 
-    if (!LIS.hasInterval(PhiReg))
-      LIS.createEmptyInterval(PhiReg);
+    // The interval of OrigReg is invalid and should be recalculated when
+    // LiveInterval::getInterval() is called.
+    if (LIS.hasInterval(OrigReg))
+      LIS.removeInterval(OrigReg);
   }
 
   // Merge routes from the pipelined loop and the bypassed route before the
@@ -2543,12 +2534,14 @@ void ModuloScheduleExpanderMVE::mergeRegUsesAfterPipeline(Register OrigReg,
       Register InitReg, LoopReg;
       getPhiRegs(*Phi, OrigKernel, InitReg, LoopReg);
       Register NewInit = MRI.createVirtualRegister(MRI.getRegClass(InitReg));
-      BuildMI(*NewPreheader, NewPreheader->getFirstNonPHI(), Phi->getDebugLoc(),
-              TII->get(TargetOpcode::PHI), NewInit)
-          .addReg(InitReg)
-          .addMBB(Check)
-          .addReg(NewReg)
-          .addMBB(Epilog);
+      MachineInstr *NewPhi =
+          BuildMI(*NewPreheader, NewPreheader->getFirstNonPHI(),
+                  Phi->getDebugLoc(), TII->get(TargetOpcode::PHI), NewInit)
+              .addReg(InitReg)
+              .addMBB(Check)
+              .addReg(NewReg)
+              .addMBB(Epilog);
+      LIS.InsertMachineInstrInMaps(*NewPhi);
       replacePhiSrc(*Phi, InitReg, NewInit, NewPreheader);
     }
   }
@@ -2571,6 +2564,7 @@ void ModuloScheduleExpanderMVE::generateProlog(
       updateInstrDef(NewMI, PrologVRMap[PrologNum], false);
       NewMIMap[NewMI] = {PrologNum, StageNum};
       Prolog->push_back(NewMI);
+      LIS.InsertMachineInstrInMaps(*NewMI);
     }
   }
 
@@ -2595,7 +2589,6 @@ void ModuloScheduleExpanderMVE::generateKernel(
   SmallVector<ValueMapTy> PhiVRMap;
   PhiVRMap.resize(NumUnroll);
   DenseMap<MachineInstr *, std::pair<int, int>> NewMIMap;
-  DenseMap<MachineInstr *, MachineInstr *> MIMapLastStage0;
   for (int UnrollNum = 0; UnrollNum < NumUnroll; ++UnrollNum) {
     for (MachineInstr *MI : Schedule.getInstructions()) {
       if (MI->isPHI())
@@ -2609,6 +2602,7 @@ void ModuloScheduleExpanderMVE::generateKernel(
       generatePhi(MI, UnrollNum, PrologVRMap, KernelVRMap, PhiVRMap);
       NewMIMap[NewMI] = {UnrollNum, StageNum};
       NewKernel->push_back(NewMI);
+      LIS.InsertMachineInstrInMaps(*NewMI);
     }
   }
 
@@ -2647,6 +2641,7 @@ void ModuloScheduleExpanderMVE::generateEpilog(
       updateInstrDef(NewMI, EpilogVRMap[EpilogNum], StageNum - 1 == EpilogNum);
       NewMIMap[NewMI] = {EpilogNum, StageNum};
       Epilog->push_back(NewMI);
+      LIS.InsertMachineInstrInMaps(*NewMI);
     }
   }
 

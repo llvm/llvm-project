@@ -8,7 +8,6 @@
 
 #include <numeric>
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
@@ -122,7 +121,7 @@ struct CastAwayInsertStridedSliceLeadingOneDim
     Location loc = insertOp.getLoc();
 
     Value newSrcVector = rewriter.create<vector::ExtractOp>(
-        loc, insertOp.getSource(), splatZero(srcDropCount));
+        loc, insertOp.getValueToStore(), splatZero(srcDropCount));
     Value newDstVector = rewriter.create<vector::ExtractOp>(
         loc, insertOp.getDest(), splatZero(dstDropCount));
 
@@ -148,7 +147,7 @@ struct CastAwayInsertLeadingOneDim : public OpRewritePattern<vector::InsertOp> {
 
   LogicalResult matchAndRewrite(vector::InsertOp insertOp,
                                 PatternRewriter &rewriter) const override {
-    Type oldSrcType = insertOp.getSourceType();
+    Type oldSrcType = insertOp.getValueToStoreType();
     Type newSrcType = oldSrcType;
     int64_t oldSrcRank = 0, newSrcRank = 0;
     if (auto type = dyn_cast<VectorType>(oldSrcType)) {
@@ -168,10 +167,10 @@ struct CastAwayInsertLeadingOneDim : public OpRewritePattern<vector::InsertOp> {
     // Trim leading one dimensions from both operands.
     Location loc = insertOp.getLoc();
 
-    Value newSrcVector = insertOp.getSource();
+    Value newSrcVector = insertOp.getValueToStore();
     if (oldSrcRank != 0) {
       newSrcVector = rewriter.create<vector::ExtractOp>(
-          loc, insertOp.getSource(), splatZero(srcDropCount));
+          loc, insertOp.getValueToStore(), splatZero(srcDropCount));
     }
     Value newDstVector = rewriter.create<vector::ExtractOp>(
         loc, insertOp.getDest(), splatZero(dstDropCount));
@@ -231,7 +230,7 @@ struct CastAwayTransferReadLeadingOneDim
     if (read.getTransferRank() == 0)
       return failure();
 
-    auto shapedType = cast<ShapedType>(read.getSource().getType());
+    auto shapedType = cast<ShapedType>(read.getBase().getType());
     if (shapedType.getElementType() != read.getVectorType().getElementType())
       return failure();
 
@@ -261,7 +260,7 @@ struct CastAwayTransferReadLeadingOneDim
     }
 
     auto newRead = rewriter.create<vector::TransferReadOp>(
-        read.getLoc(), newType, read.getSource(), read.getIndices(),
+        read.getLoc(), newType, read.getBase(), read.getIndices(),
         AffineMapAttr::get(newMap), read.getPadding(), mask, inBoundsAttr);
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(read, oldType, newRead);
 
@@ -285,7 +284,7 @@ struct CastAwayTransferWriteLeadingOneDim
     if (write.getTransferRank() == 0)
       return failure();
 
-    auto shapedType = dyn_cast<ShapedType>(write.getSource().getType());
+    auto shapedType = dyn_cast<ShapedType>(write.getBase().getType());
     if (shapedType.getElementType() != write.getVectorType().getElementType())
       return failure();
 
@@ -315,13 +314,13 @@ struct CastAwayTransferWriteLeadingOneDim
       Value newMask = dropUnitDimsFromMask(
           rewriter, write.getLoc(), write.getMask(), newType, newMap, maskType);
       rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
-          write, newVector, write.getSource(), write.getIndices(),
+          write, newVector, write.getBase(), write.getIndices(),
           AffineMapAttr::get(newMap), newMask, inBoundsAttr);
       return success();
     }
 
     rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
-        write, newVector, write.getSource(), write.getIndices(),
+        write, newVector, write.getBase(), write.getIndices(),
         AffineMapAttr::get(newMap), inBoundsAttr);
     return success();
   }
@@ -577,5 +576,4 @@ void mlir::vector::populateCastAwayVectorLeadingOneDimPatterns(
            CastAwayConstantMaskLeadingOneDim, CastAwayTransferReadLeadingOneDim,
            CastAwayTransferWriteLeadingOneDim, CastAwayElementwiseLeadingOneDim,
            CastAwayContractionLeadingOneDim>(patterns.getContext(), benefit);
-  populateShapeCastFoldingPatterns(patterns, benefit);
 }

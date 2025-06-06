@@ -38,7 +38,7 @@ DIBuilder::DIBuilder(Module &m, bool AllowUnresolvedNodes, DICompileUnit *CU)
     if (const auto &IMs = CUNode->getImportedEntities())
       ImportedModules.assign(IMs.begin(), IMs.end());
     if (const auto &MNs = CUNode->getMacros())
-      AllMacrosPerParent.insert({nullptr, {MNs.begin(), MNs.end()}});
+      AllMacrosPerParent.insert({nullptr, {llvm::from_range, MNs}});
   }
 }
 
@@ -272,6 +272,37 @@ DIBasicType *DIBuilder::createBasicType(StringRef Name, uint64_t SizeInBits,
                           0, Encoding, NumExtraInhabitants, Flags);
 }
 
+DIFixedPointType *
+DIBuilder::createBinaryFixedPointType(StringRef Name, uint64_t SizeInBits,
+                                      uint32_t AlignInBits, unsigned Encoding,
+                                      DINode::DIFlags Flags, int Factor) {
+  return DIFixedPointType::get(VMContext, dwarf::DW_TAG_base_type, Name,
+                               SizeInBits, AlignInBits, Encoding, Flags,
+                               DIFixedPointType::FixedPointBinary, Factor,
+                               APInt(), APInt());
+}
+
+DIFixedPointType *
+DIBuilder::createDecimalFixedPointType(StringRef Name, uint64_t SizeInBits,
+                                       uint32_t AlignInBits, unsigned Encoding,
+                                       DINode::DIFlags Flags, int Factor) {
+  return DIFixedPointType::get(VMContext, dwarf::DW_TAG_base_type, Name,
+                               SizeInBits, AlignInBits, Encoding, Flags,
+                               DIFixedPointType::FixedPointDecimal, Factor,
+                               APInt(), APInt());
+}
+
+DIFixedPointType *
+DIBuilder::createRationalFixedPointType(StringRef Name, uint64_t SizeInBits,
+                                        uint32_t AlignInBits, unsigned Encoding,
+                                        DINode::DIFlags Flags, APInt Numerator,
+                                        APInt Denominator) {
+  return DIFixedPointType::get(VMContext, dwarf::DW_TAG_base_type, Name,
+                               SizeInBits, AlignInBits, Encoding, Flags,
+                               DIFixedPointType::FixedPointRational, 0,
+                               Numerator, Denominator);
+}
+
 DIStringType *DIBuilder::createStringType(StringRef Name, uint64_t SizeInBits) {
   assert(!Name.empty() && "Unable to create type without name");
   return DIStringType::get(VMContext, dwarf::DW_TAG_string_type, Name,
@@ -407,10 +438,26 @@ DIDerivedType *DIBuilder::createVariantMemberType(
     DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
     uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
     Constant *Discriminant, DINode::DIFlags Flags, DIType *Ty) {
+  // "ExtraData" is overloaded for bit fields and for variants, so
+  // make sure to disallow this.
+  assert((Flags & DINode::FlagBitField) == 0);
   return DIDerivedType::get(
       VMContext, dwarf::DW_TAG_member, Name, File, LineNumber,
       getNonCompileUnitScope(Scope), Ty, SizeInBits, AlignInBits, OffsetInBits,
       std::nullopt, std::nullopt, Flags, getConstantOrNull(Discriminant));
+}
+
+DIDerivedType *DIBuilder::createVariantMemberType(DIScope *Scope,
+                                                  DINodeArray Elements,
+                                                  Constant *Discriminant,
+                                                  DIType *Ty) {
+  auto *V = DICompositeType::get(VMContext, dwarf::DW_TAG_variant, {}, nullptr,
+                                 0, getNonCompileUnitScope(Scope), {}, 0, 0, 0,
+                                 DINode::FlagZero, Elements, 0, {}, nullptr);
+
+  trackIfUnresolved(V);
+  return createVariantMemberType(Scope, {}, nullptr, 0, 0, 0, 0, Discriminant,
+                                 DINode::FlagZero, V);
 }
 
 DIDerivedType *DIBuilder::createBitFieldMemberType(
@@ -611,7 +658,7 @@ DICompositeType *DIBuilder::createArrayType(
     PointerUnion<DIExpression *, DIVariable *> DL,
     PointerUnion<DIExpression *, DIVariable *> AS,
     PointerUnion<DIExpression *, DIVariable *> AL,
-    PointerUnion<DIExpression *, DIVariable *> RK) {
+    PointerUnion<DIExpression *, DIVariable *> RK, Metadata *BitStride) {
   auto *R = DICompositeType::get(
       VMContext, dwarf::DW_TAG_array_type, Name, File, LineNumber,
       getNonCompileUnitScope(Scope), Ty, Size, AlignInBits, 0, DINode::FlagZero,
@@ -623,7 +670,8 @@ DICompositeType *DIBuilder::createArrayType(
       isa<DIExpression *>(AL) ? (Metadata *)cast<DIExpression *>(AL)
                               : (Metadata *)cast<DIVariable *>(AL),
       isa<DIExpression *>(RK) ? (Metadata *)cast<DIExpression *>(RK)
-                              : (Metadata *)cast<DIVariable *>(RK));
+                              : (Metadata *)cast<DIVariable *>(RK),
+      nullptr, nullptr, 0, BitStride);
   trackIfUnresolved(R);
   return R;
 }
@@ -895,8 +943,7 @@ DISubprogram *DIBuilder::createFunction(
       SPFlags, IsDefinition ? CUNode : nullptr, TParams, Decl, nullptr,
       ThrownTypes, Annotations, TargetFuncName);
 
-  if (IsDefinition)
-    AllSubprograms.push_back(Node);
+  AllSubprograms.push_back(Node);
   trackIfUnresolved(Node);
   return Node;
 }
@@ -933,8 +980,7 @@ DISubprogram *DIBuilder::createMethod(
       Flags, SPFlags, IsDefinition ? CUNode : nullptr, TParams, nullptr,
       nullptr, ThrownTypes);
 
-  if (IsDefinition)
-    AllSubprograms.push_back(SP);
+  AllSubprograms.push_back(SP);
   trackIfUnresolved(SP);
   return SP;
 }

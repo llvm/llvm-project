@@ -469,7 +469,7 @@ define fp128 @uitofp_i8(i8 %x) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    andi a0, a0, 255
+; CHECK-NEXT:    zext.b a0, a0
 ; CHECK-NEXT:    call __floatunsitf
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16

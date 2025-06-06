@@ -18,12 +18,15 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/StaticDataProfileInfo.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/DwarfStringPoolEntry.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
 #include <memory>
@@ -84,7 +87,7 @@ class RemarkStreamer;
 }
 
 /// This class is intended to be used as a driving class for all asm writers.
-class AsmPrinter : public MachineFunctionPass {
+class LLVM_ABI AsmPrinter : public MachineFunctionPass {
 public:
   /// Target machine description.
   TargetMachine &TM;
@@ -131,6 +134,12 @@ public:
   /// purpose of calculating its size (e.g. using the .size directive). By
   /// default, this is equal to CurrentFnSym.
   MCSymbol *CurrentFnSymForSize = nullptr;
+
+  /// Provides the profile information for constants.
+  const StaticDataProfileInfo *SDPI = nullptr;
+
+  /// The profile summary information.
+  const ProfileSummaryInfo *PSI = nullptr;
 
   /// Map a basic block section ID to the begin and end symbols of that section
   ///  which determine the section's range.
@@ -232,7 +241,8 @@ private:
   bool DbgInfoAvailable = false;
 
 protected:
-  explicit AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer);
+  AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer,
+             char &ID = AsmPrinter::ID);
 
 public:
   ~AsmPrinter() override;
@@ -330,6 +340,10 @@ public:
     DwarfUsesRelocationsAcrossSections = Enable;
   }
 
+  /// Returns a section suffix (hot or unlikely) for the constant if profiles
+  /// are available. Returns empty string otherwise.
+  StringRef getConstantSectionSuffix(const Constant *C) const;
+
   //===------------------------------------------------------------------===//
   // XRay instrumentation implementation.
   //===------------------------------------------------------------------===//
@@ -356,7 +370,7 @@ public:
     const class Function *Fn;
     uint8_t Version;
 
-    void emit(int, MCStreamer *) const;
+    LLVM_ABI void emit(int, MCStreamer *) const;
   };
 
   // All the sleds to be emitted.
@@ -497,7 +511,10 @@ public:
                      unsigned MaxBytesToEmit = 0) const;
 
   /// Lower the specified LLVM Constant to an MCExpr.
-  virtual const MCExpr *lowerConstant(const Constant *CV);
+  /// When BaseCV is present, we are lowering the element at BaseCV plus Offset.
+  virtual const MCExpr *lowerConstant(const Constant *CV,
+                                      const Constant *BaseCV = nullptr,
+                                      uint64_t Offset = 0);
 
   /// Print a general LLVM constant to the .s file.
   /// On AIX, when an alias refers to a sub-element of a global variable, the
@@ -632,7 +649,7 @@ public:
                                          StringRef Suffix) const;
 
   /// Return the MCSymbol for the specified ExternalSymbol.
-  MCSymbol *GetExternalSymbolSymbol(Twine Sym) const;
+  MCSymbol *GetExternalSymbolSymbol(const Twine &Sym) const;
 
   /// Return the symbol for the specified jump table entry.
   MCSymbol *GetJTISymbol(unsigned JTID, bool isLinkerPrivate = false) const;
@@ -797,6 +814,17 @@ public:
                            const MCSymbol *BranchLabel) const;
 
   //===------------------------------------------------------------------===//
+  // COFF Helper Routines
+  //===------------------------------------------------------------------===//
+
+  /// Emits symbols and data to allow functions marked with the
+  /// loader-replaceable attribute to be replaceable.
+  void emitCOFFReplaceableFunctionData(Module &M);
+
+  /// Emits the @feat.00 symbol indicating the features enabled in this module.
+  void emitCOFFFeatureSymbol(Module &M);
+
+  //===------------------------------------------------------------------===//
   // Inline Asm Support
   //===------------------------------------------------------------------===//
 
@@ -893,9 +921,8 @@ private:
   // Internal Implementation Details
   //===------------------------------------------------------------------===//
 
-  void emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
-                         ArrayRef<unsigned> JumpTableIndices,
-                         bool JTInDiffSection);
+  virtual void emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
+                                 ArrayRef<unsigned> JumpTableIndices);
 
   void emitJumpTableSizesSection(const MachineJumpTableInfo &MJTI,
                                  const Function &F) const;

@@ -511,10 +511,11 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   if (!Subtarget->isTargetDarwin() && !Subtarget->isTargetIOS() &&
       !Subtarget->isTargetWatchOS() && !Subtarget->isTargetDriverKit()) {
     bool IsHFTarget = TM.Options.FloatABIType == FloatABI::Hard;
-    for (int LCID = 0; LCID < RTLIB::UNKNOWN_LIBCALL; ++LCID)
-      setLibcallCallingConv(static_cast<RTLIB::Libcall>(LCID),
-                            IsHFTarget ? CallingConv::ARM_AAPCS_VFP
-                                       : CallingConv::ARM_AAPCS);
+
+    for (RTLIB::Libcall LC : RTLIB::libcalls()) {
+      setLibcallCallingConv(LC, IsHFTarget ? CallingConv::ARM_AAPCS_VFP
+                                           : CallingConv::ARM_AAPCS);
+    }
   }
 
   if (Subtarget->isTargetMachO()) {
@@ -692,20 +693,17 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
         const RTLIB::Libcall Op;
         const char *const Name;
         const CallingConv::ID CC;
-        const ISD::CondCode Cond;
       } MemOpsLibraryCalls[] = {
-        // Memory operations
-        // RTABI chapter 4.3.4
-        { RTLIB::MEMCPY,  "__aeabi_memcpy",  CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-        { RTLIB::MEMMOVE, "__aeabi_memmove", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-        { RTLIB::MEMSET,  "__aeabi_memset",  CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
+          // Memory operations
+          // RTABI chapter 4.3.4
+          {RTLIB::MEMCPY, "__aeabi_memcpy", CallingConv::ARM_AAPCS},
+          {RTLIB::MEMMOVE, "__aeabi_memmove", CallingConv::ARM_AAPCS},
+          {RTLIB::MEMSET, "__aeabi_memset", CallingConv::ARM_AAPCS},
       };
 
       for (const auto &LC : MemOpsLibraryCalls) {
         setLibcallName(LC.Op, LC.Name);
         setLibcallCallingConv(LC.Op, LC.CC);
-        if (LC.Cond != ISD::SETCC_INVALID)
-          setCmpLibcallCC(LC.Op, LC.Cond);
       }
     }
   }
@@ -901,10 +899,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FEXP, MVT::v2f64, Expand);
     setOperationAction(ISD::FEXP2, MVT::v2f64, Expand);
     setOperationAction(ISD::FEXP10, MVT::v2f64, Expand);
-    // FIXME: Create unittest for FCEIL, FTRUNC, FRINT, FNEARBYINT, FFLOOR.
     setOperationAction(ISD::FCEIL, MVT::v2f64, Expand);
     setOperationAction(ISD::FTRUNC, MVT::v2f64, Expand);
     setOperationAction(ISD::FRINT, MVT::v2f64, Expand);
+    setOperationAction(ISD::FROUNDEVEN, MVT::v2f64, Expand);
     setOperationAction(ISD::FNEARBYINT, MVT::v2f64, Expand);
     setOperationAction(ISD::FFLOOR, MVT::v2f64, Expand);
     setOperationAction(ISD::FMA, MVT::v2f64, Expand);
@@ -927,6 +925,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FCEIL, MVT::v4f32, Expand);
     setOperationAction(ISD::FTRUNC, MVT::v4f32, Expand);
     setOperationAction(ISD::FRINT, MVT::v4f32, Expand);
+    setOperationAction(ISD::FROUNDEVEN, MVT::v4f32, Expand);
     setOperationAction(ISD::FNEARBYINT, MVT::v4f32, Expand);
     setOperationAction(ISD::FFLOOR, MVT::v4f32, Expand);
 
@@ -945,8 +944,15 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FCEIL, MVT::v2f32, Expand);
     setOperationAction(ISD::FTRUNC, MVT::v2f32, Expand);
     setOperationAction(ISD::FRINT, MVT::v2f32, Expand);
+    setOperationAction(ISD::FROUNDEVEN, MVT::v2f32, Expand);
     setOperationAction(ISD::FNEARBYINT, MVT::v2f32, Expand);
     setOperationAction(ISD::FFLOOR, MVT::v2f32, Expand);
+
+    for (ISD::NodeType Op : {ISD::FFLOOR, ISD::FNEARBYINT, ISD::FCEIL,
+                              ISD::FRINT, ISD::FTRUNC, ISD::FROUNDEVEN}) {
+      setOperationAction(Op, MVT::v4f16, Expand);
+      setOperationAction(Op, MVT::v8f16, Expand);
+    }
 
     // Neon does not support some operations on v1i64 and v2i64 types.
     setOperationAction(ISD::MUL, MVT::v1i64, Expand);
@@ -1087,6 +1093,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FCEIL,      MVT::f64, Expand);
     setOperationAction(ISD::FTRUNC,     MVT::f64, Expand);
     setOperationAction(ISD::FRINT,      MVT::f64, Expand);
+    setOperationAction(ISD::FROUNDEVEN, MVT::f64, Expand);
     setOperationAction(ISD::FNEARBYINT, MVT::f64, Expand);
     setOperationAction(ISD::FFLOOR,     MVT::f64, Expand);
     setOperationAction(ISD::SINT_TO_FP, MVT::i32, Custom);
@@ -1221,7 +1228,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ROTR, VT, Expand);
   }
   setOperationAction(ISD::CTTZ,  MVT::i32, Custom);
+  // TODO: These two should be set to LibCall, but this currently breaks
+  //   the Linux kernel build. See #101786.
   setOperationAction(ISD::CTPOP, MVT::i32, Expand);
+  setOperationAction(ISD::CTPOP, MVT::i64, Expand);
   if (!Subtarget->hasV5TOps() || Subtarget->isThumb1Only()) {
     setOperationAction(ISD::CTLZ, MVT::i32, Expand);
     setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, LibCall);
@@ -1531,6 +1541,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FTRUNC, MVT::f32, Legal);
     setOperationAction(ISD::FNEARBYINT, MVT::f32, Legal);
     setOperationAction(ISD::FRINT, MVT::f32, Legal);
+    setOperationAction(ISD::FROUNDEVEN, MVT::f32, Legal);
     setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
     setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
     if (Subtarget->hasNEON()) {
@@ -1547,6 +1558,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FTRUNC, MVT::f64, Legal);
       setOperationAction(ISD::FNEARBYINT, MVT::f64, Legal);
       setOperationAction(ISD::FRINT, MVT::f64, Legal);
+      setOperationAction(ISD::FROUNDEVEN, MVT::f64, Legal);
       setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
       setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
     }
@@ -2938,18 +2950,17 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     assert(!isARMFunc && !isDirect &&
            "Cannot handle call to ARM function or direct call");
     if (NumBytes > 0) {
-      DiagnosticInfoUnsupported Diag(DAG.getMachineFunction().getFunction(),
-                                     "call to non-secure function would "
-                                     "require passing arguments on stack",
-                                     dl.getDebugLoc());
-      DAG.getContext()->diagnose(Diag);
+      DAG.getContext()->diagnose(
+          DiagnosticInfoUnsupported(DAG.getMachineFunction().getFunction(),
+                                    "call to non-secure function would require "
+                                    "passing arguments on stack",
+                                    dl.getDebugLoc()));
     }
     if (isStructRet) {
-      DiagnosticInfoUnsupported Diag(
+      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
           DAG.getMachineFunction().getFunction(),
           "call to non-secure function would return value through pointer",
-          dl.getDebugLoc());
-      DAG.getContext()->diagnose(Diag);
+          dl.getDebugLoc()));
     }
   }
 
@@ -3317,11 +3328,10 @@ ARMTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   if (AFI->isCmseNSEntryFunction() && MF.getFunction().hasStructRetAttr()) {
     // Note: using an empty SDLoc(), as the first line of the function is a
     // better place to report than the last line.
-    DiagnosticInfoUnsupported Diag(
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
         DAG.getMachineFunction().getFunction(),
         "secure entry function would return value through pointer",
-        SDLoc().getDebugLoc());
-    DAG.getContext()->diagnose(Diag);
+        SDLoc().getDebugLoc()));
   }
 
   // Copy the result values into the output registers.
@@ -4807,10 +4817,9 @@ SDValue ARMTargetLowering::LowerFormalArguments(
     VarArgStyleRegisters(CCInfo, DAG, dl, Chain, CCInfo.getStackSize(),
                          TotalArgRegsSaveSize);
     if (AFI->isCmseNSEntryFunction()) {
-      DiagnosticInfoUnsupported Diag(
+      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
           DAG.getMachineFunction().getFunction(),
-          "secure entry function must not be variadic", dl.getDebugLoc());
-      DAG.getContext()->diagnose(Diag);
+          "secure entry function must not be variadic", dl.getDebugLoc()));
     }
   }
 
@@ -4828,10 +4837,9 @@ SDValue ARMTargetLowering::LowerFormalArguments(
   AFI->setArgumentStackSize(StackArgSize);
 
   if (CCInfo.getStackSize() > 0 && AFI->isCmseNSEntryFunction()) {
-    DiagnosticInfoUnsupported Diag(
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
         DAG.getMachineFunction().getFunction(),
-        "secure entry function requires arguments on stack", dl.getDebugLoc());
-    DAG.getContext()->diagnose(Diag);
+        "secure entry function requires arguments on stack", dl.getDebugLoc()));
   }
 
   return Chain;
@@ -10621,7 +10629,6 @@ SDValue ARMTargetLowering::LowerSPONENTRY(SDValue Op, SelectionDAG &DAG) const {
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
 
   EVT VT = getPointerTy(DAG.getDataLayout());
-  SDLoc DL(Op);
   int FI = MFI.CreateFixedObject(4, 0, false);
   return DAG.getFrameIndex(FI, VT);
 }
@@ -12155,7 +12162,7 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                   OpDestReg, OpSizeReg, TotalIterationsReg, IsMemcpy);
 
     // Required to avoid conflict with the MachineVerifier during testing.
-    Properties.reset(MachineFunctionProperties::Property::NoPHIs);
+    Properties.resetNoPHIs();
 
     // Connect the blocks
     TpEntry->addSuccessor(TpLoopBody);
@@ -12450,7 +12457,6 @@ static void attachMEMCPYScratchRegs(const ARMSubtarget *Subtarget,
                                     MachineInstr &MI, const SDNode *Node) {
   bool isThumb1 = Subtarget->isThumb1Only();
 
-  DebugLoc DL = MI.getDebugLoc();
   MachineFunction *MF = MI.getParent()->getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
   MachineInstrBuilder MIB(*MF, MI);
@@ -13960,9 +13966,11 @@ bool ARMTargetLowering::shouldFoldConstantShiftPairToMask(
   return false;
 }
 
-bool ARMTargetLowering::shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
-                                                             EVT VT) const {
-  return Subtarget->hasMVEIntegerOps() && isTypeLegal(VT);
+bool ARMTargetLowering::shouldFoldSelectWithIdentityConstant(
+    unsigned BinOpcode, EVT VT, unsigned SelectOpcode, SDValue X,
+    SDValue Y) const {
+  return Subtarget->hasMVEIntegerOps() && isTypeLegal(VT) &&
+         SelectOpcode == ISD::VSELECT;
 }
 
 bool ARMTargetLowering::preferIncOfAddToSubOfNot(EVT VT) const {
@@ -16316,10 +16324,10 @@ static SDValue CombineBaseUpdate(SDNode *N,
   // Try to fold with other users. Non-constant updates are considered
   // first, and constant updates are sorted to not break a sequence of
   // strided accesses (if there is any).
-  std::stable_sort(BaseUpdates.begin(), BaseUpdates.end(),
-                   [](const BaseUpdateUser &LHS, const BaseUpdateUser &RHS) {
-                     return LHS.ConstInc < RHS.ConstInc;
-                   });
+  llvm::stable_sort(BaseUpdates,
+                    [](const BaseUpdateUser &LHS, const BaseUpdateUser &RHS) {
+                      return LHS.ConstInc < RHS.ConstInc;
+                    });
   for (BaseUpdateUser &User : BaseUpdates) {
     if (TryCombineBaseUpdate(Target, User, /*SimpleConstIncOnly=*/false, DCI))
       return SDValue();
@@ -16771,7 +16779,7 @@ static SDValue PerformSplittingToNarrowingStores(StoreSDNode *St,
   // Details about the old store
   SDValue Ch = St->getChain();
   SDValue BasePtr = St->getBasePtr();
-  Align Alignment = St->getOriginalAlign();
+  Align Alignment = St->getBaseAlign();
   MachineMemOperand::Flags MMOFlags = St->getMemOperand()->getFlags();
   AAMDNodes AAInfo = St->getAAInfo();
 
@@ -16822,7 +16830,7 @@ static SDValue PerformSplittingMVETruncToNarrowingStores(StoreSDNode *St,
   // Details about the old store
   SDValue Ch = St->getChain();
   SDValue BasePtr = St->getBasePtr();
-  Align Alignment = St->getOriginalAlign();
+  Align Alignment = St->getBaseAlign();
   MachineMemOperand::Flags MMOFlags = St->getMemOperand()->getFlags();
   AAMDNodes AAInfo = St->getAAInfo();
 
@@ -16870,7 +16878,7 @@ static SDValue PerformExtractFpToIntStores(StoreSDNode *St, SelectionDAG &DAG) {
   // Create a new integer store to replace the existing floating point version.
   SDValue Ch = St->getChain();
   SDValue BasePtr = St->getBasePtr();
-  Align Alignment = St->getOriginalAlign();
+  Align Alignment = St->getBaseAlign();
   MachineMemOperand::Flags MMOFlags = St->getMemOperand()->getFlags();
   AAMDNodes AAInfo = St->getAAInfo();
   EVT NewToVT = EVT::getIntegerVT(C, VT.getSizeInBits());
@@ -16921,7 +16929,7 @@ static SDValue PerformSTORECombine(SDNode *N,
     SDValue BasePtr = St->getBasePtr();
     SDValue NewST1 = DAG.getStore(
         St->getChain(), DL, StVal.getNode()->getOperand(isBigEndian ? 1 : 0),
-        BasePtr, St->getPointerInfo(), St->getOriginalAlign(),
+        BasePtr, St->getPointerInfo(), St->getBaseAlign(),
         St->getMemOperand()->getFlags());
 
     SDValue OffsetPtr = DAG.getNode(ISD::ADD, DL, MVT::i32, BasePtr,
@@ -16929,8 +16937,7 @@ static SDValue PerformSTORECombine(SDNode *N,
     return DAG.getStore(NewST1.getValue(0), DL,
                         StVal.getNode()->getOperand(isBigEndian ? 0 : 1),
                         OffsetPtr, St->getPointerInfo().getWithOffset(4),
-                        St->getOriginalAlign(),
-                        St->getMemOperand()->getFlags());
+                        St->getBaseAlign(), St->getMemOperand()->getFlags());
   }
 
   if (StVal.getValueType() == MVT::i64 &&
@@ -17912,7 +17919,7 @@ static SDValue PerformSplittingToWideningLoad(SDNode *N, SelectionDAG &DAG) {
   // Details about the old load
   SDValue Ch = LD->getChain();
   SDValue BasePtr = LD->getBasePtr();
-  Align Alignment = LD->getOriginalAlign();
+  Align Alignment = LD->getBaseAlign();
   MachineMemOperand::Flags MMOFlags = LD->getMemOperand()->getFlags();
   AAMDNodes AAInfo = LD->getAAInfo();
 
@@ -18818,7 +18825,7 @@ static SDValue PerformSplittingMVEEXTToWideningLoad(SDNode *N,
   // Details about the old load
   SDValue Ch = LD->getChain();
   SDValue BasePtr = LD->getBasePtr();
-  Align Alignment = LD->getOriginalAlign();
+  Align Alignment = LD->getBaseAlign();
   MachineMemOperand::Flags MMOFlags = LD->getMemOperand()->getFlags();
   AAMDNodes AAInfo = LD->getAAInfo();
 
@@ -19696,7 +19703,7 @@ bool ARMTargetLowering::isLegalAddImmediate(int64_t Imm) const {
   if (Subtarget->isThumb2())
     return ARM_AM::getT2SOImmVal(AbsImm) != -1;
   // Thumb1 only has 8-bit unsigned immediate.
-  return AbsImm >= 0 && AbsImm <= 255;
+  return AbsImm <= 255;
 }
 
 // Return false to prevent folding
@@ -20275,9 +20282,9 @@ bool ARMTargetLowering::ExpandInlineAsm(CallInst *CI) const {
     SplitString(AsmStr, AsmPieces, " \t,");
 
     // rev $0, $1
-    if (AsmPieces.size() == 3 &&
-        AsmPieces[0] == "rev" && AsmPieces[1] == "$0" && AsmPieces[2] == "$1" &&
-        IA->getConstraintString().compare(0, 4, "=l,l") == 0) {
+    if (AsmPieces.size() == 3 && AsmPieces[0] == "rev" &&
+        AsmPieces[1] == "$0" && AsmPieces[2] == "$1" &&
+        IA->getConstraintString().starts_with("=l,l")) {
       IntegerType *Ty = dyn_cast<IntegerType>(CI->getType());
       if (Ty && Ty->getBitWidth() == 32)
         return IntrinsicLowering::LowerToByteSwap(CI);
@@ -21212,7 +21219,7 @@ Instruction *ARMTargetLowering::makeDMB(IRBuilderBase &Builder,
       Value* args[6] = {Builder.getInt32(15), Builder.getInt32(0),
                         Builder.getInt32(0), Builder.getInt32(7),
                         Builder.getInt32(10), Builder.getInt32(5)};
-      return Builder.CreateIntrinsic(Intrinsic::arm_mcr, {}, args);
+      return Builder.CreateIntrinsic(Intrinsic::arm_mcr, args);
     } else {
       // Instead of using barriers, atomic accesses on these subtargets use
       // libcalls.
@@ -21222,7 +21229,7 @@ Instruction *ARMTargetLowering::makeDMB(IRBuilderBase &Builder,
     // Only a full system barrier exists in the M-class architectures.
     Domain = Subtarget->isMClass() ? ARM_MB::SY : Domain;
     Constant *CDomain = Builder.getInt32(Domain);
-    return Builder.CreateIntrinsic(Intrinsic::arm_dmb, {}, CDomain);
+    return Builder.CreateIntrinsic(Intrinsic::arm_dmb, CDomain);
   }
 }
 
@@ -21477,7 +21484,7 @@ Value *ARMTargetLowering::emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy,
         IsAcquire ? Intrinsic::arm_ldaexd : Intrinsic::arm_ldrexd;
 
     Value *LoHi =
-        Builder.CreateIntrinsic(Int, {}, Addr, /*FMFSource=*/nullptr, "lohi");
+        Builder.CreateIntrinsic(Int, Addr, /*FMFSource=*/nullptr, "lohi");
 
     Value *Lo = Builder.CreateExtractValue(LoHi, 0, "lo");
     Value *Hi = Builder.CreateExtractValue(LoHi, 1, "hi");
@@ -21502,7 +21509,7 @@ void ARMTargetLowering::emitAtomicCmpXchgNoStoreLLBalance(
     IRBuilderBase &Builder) const {
   if (!Subtarget->hasV7Ops())
     return;
-  Builder.CreateIntrinsic(Intrinsic::arm_clrex, {}, {});
+  Builder.CreateIntrinsic(Intrinsic::arm_clrex, {});
 }
 
 Value *ARMTargetLowering::emitStoreConditional(IRBuilderBase &Builder,
@@ -21523,7 +21530,7 @@ Value *ARMTargetLowering::emitStoreConditional(IRBuilderBase &Builder,
     Value *Hi = Builder.CreateTrunc(Builder.CreateLShr(Val, 32), Int32Ty, "hi");
     if (!Subtarget->isLittle())
       std::swap(Lo, Hi);
-    return Builder.CreateIntrinsic(Int, {}, {Lo, Hi, Addr});
+    return Builder.CreateIntrinsic(Int, {Lo, Hi, Addr});
   }
 
   Intrinsic::ID Int = IsRelease ? Intrinsic::arm_stlex : Intrinsic::arm_strex;

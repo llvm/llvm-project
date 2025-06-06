@@ -318,6 +318,9 @@ public:
       Opts["__opencl_c_images"] = true;
       Opts["__opencl_c_3d_image_writes"] = true;
       Opts["cl_khr_3d_image_writes"] = true;
+
+      Opts["__opencl_c_generic_address_space"] =
+          GPUKind >= llvm::AMDGPU::GK_GFX700;
     }
   }
 
@@ -412,8 +415,7 @@ public:
     default:
       return CCCR_Warning;
     case CC_C:
-    case CC_OpenCLKernel:
-    case CC_AMDGPUKernelCall:
+    case CC_DeviceKernel:
       return CCCR_OK;
     }
   }

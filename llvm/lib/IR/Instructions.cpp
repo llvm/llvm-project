@@ -39,6 +39,7 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CheckedArithmetic.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
@@ -376,9 +377,17 @@ FPClassTest CallBase::getParamNoFPClass(unsigned i) const {
 }
 
 std::optional<ConstantRange> CallBase::getRange() const {
-  const Attribute RangeAttr = getRetAttr(llvm::Attribute::Range);
-  if (RangeAttr.isValid())
-    return RangeAttr.getRange();
+  Attribute CallAttr = Attrs.getRetAttr(Attribute::Range);
+  Attribute FnAttr;
+  if (const Function *F = getCalledFunction())
+    FnAttr = F->getRetAttribute(Attribute::Range);
+
+  if (CallAttr.isValid() && FnAttr.isValid())
+    return CallAttr.getRange().intersectWith(FnAttr.getRange());
+  if (CallAttr.isValid())
+    return CallAttr.getRange();
+  if (FnAttr.isValid())
+    return FnAttr.getRange();
   return std::nullopt;
 }
 
@@ -440,7 +449,7 @@ bool CallBase::paramHasNonNullAttr(unsigned ArgNo,
       (AllowUndefOrPoison || paramHasAttr(ArgNo, Attribute::NoUndef)))
     return true;
 
-  if (getParamDereferenceableBytes(ArgNo) > 0 &&
+  if (paramHasAttr(ArgNo, Attribute::Dereferenceable) &&
       !NullPointerIsDefined(
           getCaller(),
           getArgOperand(ArgNo)->getType()->getPointerAddressSpace()))
@@ -477,9 +486,10 @@ Attribute CallBase::getFnAttrOnCalledFunction(AK Kind) const {
   return Attribute();
 }
 
-template Attribute
+template LLVM_ABI Attribute
 CallBase::getFnAttrOnCalledFunction(Attribute::AttrKind Kind) const;
-template Attribute CallBase::getFnAttrOnCalledFunction(StringRef Kind) const;
+template LLVM_ABI Attribute
+CallBase::getFnAttrOnCalledFunction(StringRef Kind) const;
 
 template <typename AK>
 Attribute CallBase::getParamAttrOnCalledFunction(unsigned ArgNo,
@@ -491,11 +501,10 @@ Attribute CallBase::getParamAttrOnCalledFunction(unsigned ArgNo,
 
   return Attribute();
 }
-template Attribute
-CallBase::getParamAttrOnCalledFunction(unsigned ArgNo,
-                                       Attribute::AttrKind Kind) const;
-template Attribute CallBase::getParamAttrOnCalledFunction(unsigned ArgNo,
-                                                          StringRef Kind) const;
+template LLVM_ABI Attribute CallBase::getParamAttrOnCalledFunction(
+    unsigned ArgNo, Attribute::AttrKind Kind) const;
+template LLVM_ABI Attribute
+CallBase::getParamAttrOnCalledFunction(unsigned ArgNo, StringRef Kind) const;
 
 void CallBase::getOperandBundlesAsDefs(
     SmallVectorImpl<OperandBundleDef> &Defs) const {
@@ -928,7 +937,7 @@ void CallBrInst::init(FunctionType *FTy, Value *Fn, BasicBlock *Fallthrough,
 
   // Set operands in order of their index to match use-list-order
   // prediction.
-  std::copy(Args.begin(), Args.end(), op_begin());
+  llvm::copy(Args, op_begin());
   NumIndirectDests = IndirectDests.size();
   setDefaultDest(Fallthrough);
   for (unsigned i = 0; i != NumIndirectDests; ++i)
@@ -1473,6 +1482,10 @@ StringRef AtomicRMWInst::getOperationName(BinOp Op) {
     return "fmax";
   case AtomicRMWInst::FMin:
     return "fmin";
+  case AtomicRMWInst::FMaximum:
+    return "fmaximum";
+  case AtomicRMWInst::FMinimum:
+    return "fminimum";
   case AtomicRMWInst::UIncWrap:
     return "uinc_wrap";
   case AtomicRMWInst::UDecWrap:

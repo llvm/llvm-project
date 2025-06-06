@@ -35,6 +35,12 @@ void initializeDXILIntrinsicExpansionLegacyPass(PassRegistry &);
 /// Pass to expand intrinsic operations that lack DXIL opCodes
 ModulePass *createDXILIntrinsicExpansionLegacyPass();
 
+/// Initializer for DXIL CBuffer Access Pass
+void initializeDXILCBufferAccessLegacyPass(PassRegistry &);
+
+/// Pass to translate loads in the cbuffer address space to intrinsics
+ModulePass *createDXILCBufferAccessLegacyPass();
+
 /// Initializer for DXIL Data Scalarization Pass
 void initializeDXILDataScalarizationLegacyPass(PassRegistry &);
 
@@ -46,6 +52,12 @@ void initializeDXILFlattenArraysLegacyPass(PassRegistry &);
 
 /// Pass to flatten arrays into a one dimensional DXIL legal form
 ModulePass *createDXILFlattenArraysLegacyPass();
+
+/// Initializer for DXIL Forward Handle Accesses Pass
+void initializeDXILForwardHandleAccessesLegacyPass(PassRegistry &);
+
+/// Pass to eliminate redundant stores and loads from handle globals.
+FunctionPass *createDXILForwardHandleAccessesLegacyPass();
 
 /// Initializer DXIL legalizationPass
 void initializeDXILLegalizeLegacyPass(PassRegistry &);
@@ -66,6 +78,12 @@ void initializeDXILResourceAccessLegacyPass(PassRegistry &);
 /// Pass to update resource accesses to use load/store directly.
 FunctionPass *createDXILResourceAccessLegacyPass();
 
+/// Initializer for DXILResourceImplicitBindingLegacyPass
+void initializeDXILResourceImplicitBindingLegacyPass(PassRegistry &);
+
+/// Pass to assign register slots to resources without binding.
+ModulePass *createDXILResourceImplicitBindingLegacyPass();
+
 /// Initializer for DXILTranslateMetadata.
 void initializeDXILTranslateMetadataLegacyPass(PassRegistry &);
 
@@ -77,6 +95,12 @@ ModulePass *createDXILPrettyPrinterLegacyPass(raw_ostream &OS);
 
 /// Initializer for DXILPrettyPrinter.
 void initializeDXILPrettyPrinterLegacyPass(PassRegistry &);
+
+/// Initializer for DXILPostOptimizationValidation.
+void initializeDXILPostOptimizationValidationLegacyPass(PassRegistry &);
+
+/// Pass to lowering LLVM intrinsic call to DXIL op function call.
+ModulePass *createDXILPostOptimizationValidationLegacyPass();
 
 /// Initializer for dxil::ShaderFlagsAnalysisWrapper pass.
 void initializeShaderFlagsAnalysisWrapperPass(PassRegistry &);

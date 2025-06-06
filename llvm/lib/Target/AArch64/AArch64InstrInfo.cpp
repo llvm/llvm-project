@@ -21,6 +21,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
@@ -53,7 +54,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include <cassert>
-#include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <utility>
@@ -162,6 +162,7 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
         F.getFnAttributeAsParsedInteger("patchable-function-entry", 9) * 4;
     break;
   case TargetOpcode::PATCHABLE_FUNCTION_EXIT:
+  case TargetOpcode::PATCHABLE_TAIL_CALL:
   case TargetOpcode::PATCHABLE_TYPED_EVENT_CALL:
     // An XRay sled can be 4 bytes of alignment plus a 32-byte block.
     NumBytes = 36;
@@ -1175,6 +1176,9 @@ bool AArch64InstrInfo::isSEHInstruction(const MachineInstr &MI) {
     case AArch64::SEH_PACSignLR:
     case AArch64::SEH_SaveAnyRegQP:
     case AArch64::SEH_SaveAnyRegQPX:
+    case AArch64::SEH_AllocZ:
+    case AArch64::SEH_SaveZReg:
+    case AArch64::SEH_SavePReg:
       return true;
   }
 }
@@ -1277,8 +1281,9 @@ bool AArch64InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
                                       int64_t &CmpValue) const {
   // The first operand can be a frame index where we'd normally expect a
   // register.
+  // FIXME: Pass subregisters out of analyzeCompare
   assert(MI.getNumOperands() >= 2 && "All AArch64 cmps should have 2 operands");
-  if (!MI.getOperand(1).isReg())
+  if (!MI.getOperand(1).isReg() || MI.getOperand(1).getSubReg())
     return false;
 
   switch (MI.getOpcode()) {
@@ -1288,6 +1293,9 @@ bool AArch64InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
   case AArch64::PTEST_PP_ANY:
     SrcReg = MI.getOperand(0).getReg();
     SrcReg2 = MI.getOperand(1).getReg();
+    if (MI.getOperand(2).getSubReg())
+      return false;
+
     // Not sure about the mask and value for now...
     CmpMask = ~0;
     CmpValue = 0;
@@ -1307,6 +1315,11 @@ bool AArch64InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
     // Replace SUBSWrr with SUBWrr if NZCV is not used.
     SrcReg = MI.getOperand(1).getReg();
     SrcReg2 = MI.getOperand(2).getReg();
+
+    // FIXME: Pass subregisters out of analyzeCompare
+    if (MI.getOperand(2).getSubReg())
+      return false;
+
     CmpMask = ~0;
     CmpValue = 0;
     return true;
@@ -2760,6 +2773,9 @@ bool AArch64InstrInfo::isPairableLdStInst(const MachineInstr &MI) {
   case AArch64::LDRXpre:
   case AArch64::LDURSWi:
   case AArch64::LDRSWpre:
+  // SVE instructions.
+  case AArch64::LDR_ZXI:
+  case AArch64::STR_ZXI:
     return true;
   }
 }
@@ -2909,6 +2925,18 @@ bool AArch64InstrInfo::isCandidateToMergeOrPair(const MachineInstr &MI) const {
     Register BaseReg = MI.getOperand(1).getReg();
     const TargetRegisterInfo *TRI = &getRegisterInfo();
     if (MI.modifiesRegister(BaseReg, TRI))
+      return false;
+  }
+
+  // Pairing SVE fills/spills is only valid for little-endian targets that
+  // implement VLS 128.
+  switch (MI.getOpcode()) {
+  default:
+    break;
+  case AArch64::LDR_ZXI:
+  case AArch64::STR_ZXI:
+    if (!Subtarget.isLittleEndian() ||
+        Subtarget.getSVEVectorSizeInBits() != 128)
       return false;
   }
 
@@ -3212,6 +3240,8 @@ bool AArch64InstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI,
       [&](int64_t Scale,
           ExtAddrMode::Formula Form = ExtAddrMode::Formula::Basic) -> bool {
     if (MemI.getOperand(2).getImm() != 0)
+      return false;
+    if ((unsigned)Scale != Scale)
       return false;
     if (!isLegalAddressingMode(NumBytes, /* Offset */ 0, Scale))
       return false;
@@ -5972,10 +6002,16 @@ static void emitFrameOffsetAdj(MachineBasicBlock &MBB,
     }
 
     if (NeedsWinCFI) {
-      assert(Sign == 1 && "SEH directives should always have a positive sign");
       int Imm = (int)(ThisVal << LocalShiftSize);
-      if ((DestReg == AArch64::FP && SrcReg == AArch64::SP) ||
-          (SrcReg == AArch64::FP && DestReg == AArch64::SP)) {
+      if (VScale != 1 && DestReg == AArch64::SP) {
+        if (HasWinCFI)
+          *HasWinCFI = true;
+        BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_AllocZ))
+            .addImm(ThisVal)
+            .setMIFlag(Flag);
+      } else if ((DestReg == AArch64::FP && SrcReg == AArch64::SP) ||
+                 (SrcReg == AArch64::FP && DestReg == AArch64::SP)) {
+        assert(VScale == 1 && "Expected non-scalable operation");
         if (HasWinCFI)
           *HasWinCFI = true;
         if (Imm == 0)
@@ -5987,6 +6023,7 @@ static void emitFrameOffsetAdj(MachineBasicBlock &MBB,
         assert(Offset == 0 && "Expected remaining offset to be zero to "
                               "emit a single SEH directive");
       } else if (DestReg == AArch64::SP) {
+        assert(VScale == 1 && "Expected non-scalable operation");
         if (HasWinCFI)
           *HasWinCFI = true;
         assert(SrcReg == AArch64::SP && "Unexpected SrcReg for SEH_StackAlloc");
@@ -6041,14 +6078,14 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
 
   assert(!(SetNZCV && (NumPredicateVectors || NumDataVectors)) &&
          "SetNZCV not supported with SVE vectors");
-  assert(!(NeedsWinCFI && (NumPredicateVectors || NumDataVectors)) &&
-         "WinCFI not supported with SVE vectors");
+  assert(!(NeedsWinCFI && NumPredicateVectors) &&
+         "WinCFI can't allocate fractions of an SVE data vector");
 
   if (NumDataVectors) {
     emitFrameOffsetAdj(MBB, MBBI, DL, DestReg, SrcReg, NumDataVectors,
-                       UseSVL ? AArch64::ADDSVL_XXI : AArch64::ADDVL_XXI,
-                       TII, Flag, NeedsWinCFI, nullptr, EmitCFAOffset,
-                       CFAOffset, FrameReg);
+                       UseSVL ? AArch64::ADDSVL_XXI : AArch64::ADDVL_XXI, TII,
+                       Flag, NeedsWinCFI, HasWinCFI, EmitCFAOffset, CFAOffset,
+                       FrameReg);
     CFAOffset += StackOffset::getScalable(-NumDataVectors * 16);
     SrcReg = DestReg;
   }
@@ -6056,9 +6093,9 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
   if (NumPredicateVectors) {
     assert(DestReg != AArch64::SP && "Unaligned access to SP");
     emitFrameOffsetAdj(MBB, MBBI, DL, DestReg, SrcReg, NumPredicateVectors,
-                       UseSVL ? AArch64::ADDSPL_XXI : AArch64::ADDPL_XXI,
-                       TII, Flag, NeedsWinCFI, nullptr, EmitCFAOffset,
-                       CFAOffset, FrameReg);
+                       UseSVL ? AArch64::ADDSPL_XXI : AArch64::ADDPL_XXI, TII,
+                       Flag, NeedsWinCFI, HasWinCFI, EmitCFAOffset, CFAOffset,
+                       FrameReg);
   }
 }
 
@@ -9864,24 +9901,14 @@ void AArch64InstrInfo::buildOutlinedFrame(
     It = MBB.insert(It, STRXpre);
 
     if (MF.getInfo<AArch64FunctionInfo>()->needsDwarfUnwindInfo(MF)) {
-      const TargetSubtargetInfo &STI = MF.getSubtarget();
-      const MCRegisterInfo *MRI = STI.getRegisterInfo();
-      unsigned DwarfReg = MRI->getDwarfRegNum(AArch64::LR, true);
+      CFIInstBuilder CFIBuilder(MBB, It, MachineInstr::FrameSetup);
 
       // Add a CFI saying the stack was moved 16 B down.
-      int64_t StackPosEntry =
-          MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, 16));
-      BuildMI(MBB, It, DebugLoc(), get(AArch64::CFI_INSTRUCTION))
-          .addCFIIndex(StackPosEntry)
-          .setMIFlags(MachineInstr::FrameSetup);
+      CFIBuilder.buildDefCFAOffset(16);
 
       // Add a CFI saying that the LR that we want to find is now 16 B higher
       // than before.
-      int64_t LRPosEntry = MF.addFrameInst(
-          MCCFIInstruction::createOffset(nullptr, DwarfReg, -16));
-      BuildMI(MBB, It, DebugLoc(), get(AArch64::CFI_INSTRUCTION))
-          .addCFIIndex(LRPosEntry)
-          .setMIFlags(MachineInstr::FrameSetup);
+      CFIBuilder.buildOffset(AArch64::LR, -16);
     }
 
     // Insert a restore before the terminator for the function.
@@ -10047,8 +10074,7 @@ AArch64InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
       (!MI.getOperand(0).getReg().isVirtual() ||
        MI.getOperand(0).getSubReg() == 0) &&
       (!MI.getOperand(0).getReg().isPhysical() ||
-       MI.findRegisterDefOperandIdx(MI.getOperand(0).getReg() - AArch64::W0 +
-                                        AArch64::X0,
+       MI.findRegisterDefOperandIdx(getXRegFromWReg(MI.getOperand(0).getReg()),
                                     /*TRI=*/nullptr) == -1))
     return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
 

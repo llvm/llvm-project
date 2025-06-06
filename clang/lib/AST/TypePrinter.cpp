@@ -177,7 +177,7 @@ void TypePrinter::spaceBeforePlaceHolder(raw_ostream &OS) {
 
 static SplitQualType splitAccordingToPolicy(QualType QT,
                                             const PrintingPolicy &Policy) {
-  if (Policy.PrintCanonicalTypes)
+  if (Policy.PrintAsCanonical)
     QT = QT.getCanonicalType();
   return QT.split();
 }
@@ -247,6 +247,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::DependentBitInt:
     case Type::BTFTagAttributed:
     case Type::HLSLAttributedResource:
+    case Type::HLSLInlineSpirv:
       CanPrefixQualifiers = true;
       break;
 
@@ -1049,6 +1050,9 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
     OS << "))";
   }
 
+  if (T->hasCFIUncheckedCallee())
+    OS << " __attribute__((cfi_unchecked_callee))";
+
   if (T->hasTrailingReturn()) {
     OS << " -> ";
     print(T->getReturnType(), OS, StringRef());
@@ -1096,8 +1100,8 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
     case CC_AArch64SVEPCS:
       OS << "__attribute__((aarch64_sve_pcs))";
       break;
-    case CC_AMDGPUKernelCall:
-      OS << "__attribute__((amdgpu_kernel))";
+    case CC_DeviceKernel:
+      OS << "__attribute__((device_kernel))";
       break;
     case CC_IntelOclBicc:
       OS << " __attribute__((intel_ocl_bicc))";
@@ -1112,7 +1116,6 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
       OS << " __attribute__((regcall))";
       break;
     case CC_SpirFunction:
-    case CC_OpenCLKernel:
       // Do nothing. These CCs are not available as attributes.
       break;
     case CC_Swift:
@@ -1273,8 +1276,11 @@ void TypePrinter::printTypeOfAfter(const TypeOfType *T, raw_ostream &OS) {}
 
 void TypePrinter::printDecltypeBefore(const DecltypeType *T, raw_ostream &OS) {
   OS << "decltype(";
-  if (T->getUnderlyingExpr())
-    T->getUnderlyingExpr()->printPretty(OS, nullptr, Policy);
+  if (const Expr *E = T->getUnderlyingExpr()) {
+    PrintingPolicy ExprPolicy = Policy;
+    ExprPolicy.PrintAsCanonical = T->isCanonicalUnqualified();
+    E->printPretty(OS, nullptr, ExprPolicy);
+  }
   OS << ')';
   spaceBeforePlaceHolder(OS);
 }
@@ -1548,7 +1554,7 @@ void TypePrinter::printTag(TagDecl *D, raw_ostream &OS) {
     const ASTTemplateArgumentListInfo *TArgAsWritten =
         S->getTemplateArgsAsWritten();
     IncludeStrongLifetimeRAII Strong(Policy);
-    if (TArgAsWritten && !Policy.PrintCanonicalTypes)
+    if (TArgAsWritten && !Policy.PrintAsCanonical)
       printTemplateArgumentList(OS, TArgAsWritten->arguments(), Policy,
                                 TParams);
     else
@@ -1793,9 +1799,7 @@ void TypePrinter::printDependentTemplateSpecializationBefore(
   if (T->getKeyword() != ElaboratedTypeKeyword::None)
     OS << " ";
 
-  if (T->getQualifier())
-    T->getQualifier()->print(OS, Policy);
-  OS << "template " << T->getIdentifier()->getName();
+  T->getDependentTemplateName().print(OS, Policy);
   printTemplateArgumentList(OS, T->template_arguments(), Policy);
   spaceBeforePlaceHolder(OS);
 }
@@ -2015,6 +2019,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::Ptr64:
   case attr::SPtr:
   case attr::UPtr:
+  case attr::PointerAuth:
   case attr::AddressSpace:
   case attr::CmseNSCall:
   case attr::AnnotateType:
@@ -2063,7 +2068,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   }
   case attr::AArch64VectorPcs: OS << "aarch64_vector_pcs"; break;
   case attr::AArch64SVEPcs: OS << "aarch64_sve_pcs"; break;
-  case attr::AMDGPUKernelCall: OS << "amdgpu_kernel"; break;
+  case attr::DeviceKernel:
+    OS << T->getAttr()->getSpelling();
+    break;
   case attr::IntelOclBicc: OS << "inteloclbicc"; break;
   case attr::PreserveMost:
     OS << "preserve_most";
@@ -2086,6 +2093,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     break;
   case attr::NoDeref:
     OS << "noderef";
+    break;
+  case attr::CFIUncheckedCallee:
+    OS << "cfi_unchecked_callee";
     break;
   case attr::AcquireHandle:
     OS << "acquire_handle";
@@ -2135,6 +2145,53 @@ void TypePrinter::printHLSLAttributedResourceAfter(
     printAfter(ContainedTy, OS);
     OS << ")]]";
   }
+}
+
+void TypePrinter::printHLSLInlineSpirvBefore(const HLSLInlineSpirvType *T,
+                                             raw_ostream &OS) {
+  OS << "__hlsl_spirv_type<" << T->getOpcode();
+
+  OS << ", " << T->getSize();
+  OS << ", " << T->getAlignment();
+
+  for (auto &Operand : T->getOperands()) {
+    using SpirvOperandKind = SpirvOperand::SpirvOperandKind;
+
+    OS << ", ";
+    switch (Operand.getKind()) {
+    case SpirvOperandKind::ConstantId: {
+      QualType ConstantType = Operand.getResultType();
+      OS << "vk::integral_constant<";
+      printBefore(ConstantType, OS);
+      printAfter(ConstantType, OS);
+      OS << ", ";
+      OS << Operand.getValue();
+      OS << ">";
+      break;
+    }
+    case SpirvOperandKind::Literal:
+      OS << "vk::Literal<vk::integral_constant<uint, ";
+      OS << Operand.getValue();
+      OS << ">>";
+      break;
+    case SpirvOperandKind::TypeId: {
+      QualType Type = Operand.getResultType();
+      printBefore(Type, OS);
+      printAfter(Type, OS);
+      break;
+    }
+    default:
+      llvm_unreachable("Invalid SpirvOperand kind!");
+      break;
+    }
+  }
+
+  OS << ">";
+}
+
+void TypePrinter::printHLSLInlineSpirvAfter(const HLSLInlineSpirvType *T,
+                                            raw_ostream &OS) {
+  // nothing to do
 }
 
 void TypePrinter::printObjCInterfaceBefore(const ObjCInterfaceType *T,
@@ -2424,9 +2481,8 @@ static void
 printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
         const TemplateParameterList *TPL, bool IsPack, unsigned ParmIndex) {
   // Drop trailing template arguments that match default arguments.
-  if (TPL && Policy.SuppressDefaultTemplateArgs &&
-      !Policy.PrintCanonicalTypes && !Args.empty() && !IsPack &&
-      Args.size() <= TPL->size()) {
+  if (TPL && Policy.SuppressDefaultTemplateArgs && !Policy.PrintAsCanonical &&
+      !Args.empty() && !IsPack && Args.size() <= TPL->size()) {
     llvm::SmallVector<TemplateArgument, 8> OrigArgs;
     for (const TA &A : Args)
       OrigArgs.push_back(getArgument(A));
@@ -2498,14 +2554,45 @@ void clang::printTemplateArgumentList(raw_ostream &OS,
                                       ArrayRef<TemplateArgument> Args,
                                       const PrintingPolicy &Policy,
                                       const TemplateParameterList *TPL) {
-  printTo(OS, Args, Policy, TPL, /*isPack*/ false, /*parmIndex*/ 0);
+  PrintingPolicy InnerPolicy = Policy;
+  InnerPolicy.SuppressScope = false;
+  printTo(OS, Args, InnerPolicy, TPL, /*isPack*/ false, /*parmIndex*/ 0);
 }
 
 void clang::printTemplateArgumentList(raw_ostream &OS,
                                       ArrayRef<TemplateArgumentLoc> Args,
                                       const PrintingPolicy &Policy,
                                       const TemplateParameterList *TPL) {
-  printTo(OS, Args, Policy, TPL, /*isPack*/ false, /*parmIndex*/ 0);
+  PrintingPolicy InnerPolicy = Policy;
+  InnerPolicy.SuppressScope = false;
+  printTo(OS, Args, InnerPolicy, TPL, /*isPack*/ false, /*parmIndex*/ 0);
+}
+
+std::string PointerAuthQualifier::getAsString() const {
+  LangOptions LO;
+  return getAsString(PrintingPolicy(LO));
+}
+
+std::string PointerAuthQualifier::getAsString(const PrintingPolicy &P) const {
+  SmallString<64> Buf;
+  llvm::raw_svector_ostream StrOS(Buf);
+  print(StrOS, P);
+  return StrOS.str().str();
+}
+
+bool PointerAuthQualifier::isEmptyWhenPrinted(const PrintingPolicy &P) const {
+  return !isPresent();
+}
+
+void PointerAuthQualifier::print(raw_ostream &OS,
+                                 const PrintingPolicy &P) const {
+  if (!isPresent())
+    return;
+
+  OS << "__ptrauth(";
+  OS << getKey();
+  OS << "," << unsigned(isAddressDiscriminated()) << ","
+     << getExtraDiscriminator() << ")";
 }
 
 std::string Qualifiers::getAsString() const {
@@ -2536,6 +2623,10 @@ bool Qualifiers::isEmptyWhenPrinted(const PrintingPolicy &Policy) const {
   if (Qualifiers::ObjCLifetime lifetime = getObjCLifetime())
     if (!(lifetime == Qualifiers::OCL_Strong && Policy.SuppressStrongLifetime))
       return false;
+
+  if (PointerAuthQualifier PointerAuth = getPointerAuth();
+      PointerAuth && !PointerAuth.isEmptyWhenPrinted(Policy))
+    return false;
 
   return true;
 }
@@ -2579,6 +2670,12 @@ std::string Qualifiers::getAddrSpaceAsString(LangAS AS) {
     return "groupshared";
   case LangAS::hlsl_constant:
     return "hlsl_constant";
+  case LangAS::hlsl_private:
+    return "hlsl_private";
+  case LangAS::hlsl_device:
+    return "hlsl_device";
+  case LangAS::hlsl_input:
+    return "hlsl_input";
   case LangAS::wasm_funcref:
     return "__funcref";
   default:
@@ -2643,6 +2740,14 @@ void Qualifiers::print(raw_ostream &OS, const PrintingPolicy& Policy,
     case Qualifiers::OCL_Weak: OS << "__weak"; break;
     case Qualifiers::OCL_Autoreleasing: OS << "__autoreleasing"; break;
     }
+  }
+
+  if (PointerAuthQualifier PointerAuth = getPointerAuth()) {
+    if (addSpace)
+      OS << ' ';
+    addSpace = true;
+
+    PointerAuth.print(OS, Policy);
   }
 
   if (appendSpaceIfNonEmpty && addSpace)

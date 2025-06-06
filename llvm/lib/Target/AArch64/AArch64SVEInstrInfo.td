@@ -10,16 +10,35 @@
 //
 //===----------------------------------------------------------------------===//
 
-// For predicated nodes where the entire operation is controlled by a governing
-// predicate, please stick to a similar naming convention as used for the
-// ISD nodes:
+// For predicated nodes where the result is a vector, the operation is
+// controlled by a governing predicate and the inactive lanes are explicitly
+// defined with a value, please stick the following naming convention for ISD
+// nodes:
 //
-//    SDNode      <=>     AArch64ISD
-//    -------------------------------
-//    _m<n>       <=>     _MERGE_OP<n>
-//    _mt         <=>     _MERGE_PASSTHRU
-//    _z          <=>     _MERGE_ZERO
-//    _p          <=>     _PRED
+//    _MERGE_OP<n>        The result value is a vector with inactive lanes equal
+//                        to source operand OP<n>.
+//
+//    _MERGE_ZERO         The result value is a vector with inactive lanes
+//                        actively zeroed.
+//
+//    _MERGE_PASSTHRU     The result value is a vector with inactive lanes equal
+//                        to the last source operand which only purpose is being
+//                        a passthru value.
+//
+// For other cases where no explicit action is needed to set the inactive lanes,
+// or when the result is not a vector and it is needed or helpful to
+// distinguish a node from similar unpredicated nodes, use:
+//
+//    _PRED
+//
+// The TableGen definition names should be based on the ISD node's name:
+//
+//    TableGen SDNode      <=>     AArch64ISD
+//    --------------------------------------------
+//    _m<n>                <=>     _MERGE_OP<n>
+//    _mt                  <=>     _MERGE_PASSTHRU
+//    _z                   <=>     _MERGE_ZERO
+//    _p                   <=>     _PRED
 //
 //  Given the context of this file, it is not strictly necessary to use _p to
 //  distinguish predicated from unpredicated nodes given that most SVE
@@ -32,16 +51,16 @@ def SDT_AArch64_LD1 : SDTypeProfile<1, 3, [
   SDTCVecEltisVT<1,i1>, SDTCisSameNumEltsAs<0,1>
 ]>;
 
-def AArch64ld1_z  : SDNode<"AArch64ISD::LD1_MERGE_ZERO",    SDT_AArch64_LD1, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
-def AArch64ld1s_z : SDNode<"AArch64ISD::LD1S_MERGE_ZERO",   SDT_AArch64_LD1, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
+def AArch64ld1_z  : SDNode<"AArch64ISD::LD1_MERGE_ZERO",    SDT_AArch64_LD1, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ld1s_z : SDNode<"AArch64ISD::LD1S_MERGE_ZERO",   SDT_AArch64_LD1, [SDNPHasChain, SDNPMayLoad]>;
 
 // Non-faulting & first-faulting loads - node definitions
 //
-def AArch64ldnf1_z : SDNode<"AArch64ISD::LDNF1_MERGE_ZERO", SDT_AArch64_LD1, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64ldff1_z : SDNode<"AArch64ISD::LDFF1_MERGE_ZERO", SDT_AArch64_LD1, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64ldnf1_z : SDNode<"AArch64ISD::LDNF1_MERGE_ZERO", SDT_AArch64_LD1, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ldff1_z : SDNode<"AArch64ISD::LDFF1_MERGE_ZERO", SDT_AArch64_LD1, [SDNPHasChain, SDNPMayLoad]>;
 
-def AArch64ldnf1s_z : SDNode<"AArch64ISD::LDNF1S_MERGE_ZERO", SDT_AArch64_LD1, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64ldff1s_z : SDNode<"AArch64ISD::LDFF1S_MERGE_ZERO", SDT_AArch64_LD1, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64ldnf1s_z : SDNode<"AArch64ISD::LDNF1S_MERGE_ZERO", SDT_AArch64_LD1, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ldff1s_z : SDNode<"AArch64ISD::LDFF1S_MERGE_ZERO", SDT_AArch64_LD1, [SDNPHasChain, SDNPMayLoad]>;
 
 // Contiguous load and replicate - node definitions
 //
@@ -66,6 +85,7 @@ def SDT_AArch64_GATHER_VS : SDTypeProfile<1, 4, [
   SDTCVecEltisVT<1,i1>, SDTCisSameNumEltsAs<0,1>
 ]>;
 
+// Unsigned gather loads.
 def AArch64ld1_gather_z             : SDNode<"AArch64ISD::GLD1_MERGE_ZERO",             SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
 def AArch64ld1_gather_scaled_z      : SDNode<"AArch64ISD::GLD1_SCALED_MERGE_ZERO",      SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
 def AArch64ld1_gather_uxtw_z        : SDNode<"AArch64ISD::GLD1_UXTW_MERGE_ZERO",        SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
@@ -74,6 +94,7 @@ def AArch64ld1_gather_uxtw_scaled_z : SDNode<"AArch64ISD::GLD1_UXTW_SCALED_MERGE
 def AArch64ld1_gather_sxtw_scaled_z : SDNode<"AArch64ISD::GLD1_SXTW_SCALED_MERGE_ZERO", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
 def AArch64ld1_gather_imm_z         : SDNode<"AArch64ISD::GLD1_IMM_MERGE_ZERO",         SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad]>;
 
+// Signed gather loads
 def AArch64ld1s_gather_z             : SDNode<"AArch64ISD::GLD1S_MERGE_ZERO",             SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
 def AArch64ld1s_gather_scaled_z      : SDNode<"AArch64ISD::GLD1S_SCALED_MERGE_ZERO",      SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
 def AArch64ld1s_gather_uxtw_z        : SDNode<"AArch64ISD::GLD1S_UXTW_MERGE_ZERO",        SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
@@ -82,22 +103,25 @@ def AArch64ld1s_gather_uxtw_scaled_z : SDNode<"AArch64ISD::GLD1S_UXTW_SCALED_MER
 def AArch64ld1s_gather_sxtw_scaled_z : SDNode<"AArch64ISD::GLD1S_SXTW_SCALED_MERGE_ZERO", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
 def AArch64ld1s_gather_imm_z         : SDNode<"AArch64ISD::GLD1S_IMM_MERGE_ZERO",         SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad]>;
 
-def AArch64ldff1_gather_z             : SDNode<"AArch64ISD::GLDFF1_MERGE_ZERO",             SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64ldff1_gather_scaled_z      : SDNode<"AArch64ISD::GLDFF1_SCALED_MERGE_ZERO",      SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64ldff1_gather_uxtw_z        : SDNode<"AArch64ISD::GLDFF1_UXTW_MERGE_ZERO",        SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64ldff1_gather_sxtw_z        : SDNode<"AArch64ISD::GLDFF1_SXTW_MERGE_ZERO",        SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64ldff1_gather_uxtw_scaled_z : SDNode<"AArch64ISD::GLDFF1_UXTW_SCALED_MERGE_ZERO", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64ldff1_gather_sxtw_scaled_z : SDNode<"AArch64ISD::GLDFF1_SXTW_SCALED_MERGE_ZERO", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64ldff1_gather_imm_z         : SDNode<"AArch64ISD::GLDFF1_IMM_MERGE_ZERO",         SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
+// Unsigned gather loads.
+def AArch64ldff1_gather_z             : SDNode<"AArch64ISD::GLDFF1_MERGE_ZERO",             SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ldff1_gather_scaled_z      : SDNode<"AArch64ISD::GLDFF1_SCALED_MERGE_ZERO",      SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ldff1_gather_uxtw_z        : SDNode<"AArch64ISD::GLDFF1_UXTW_MERGE_ZERO",        SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ldff1_gather_sxtw_z        : SDNode<"AArch64ISD::GLDFF1_SXTW_MERGE_ZERO",        SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ldff1_gather_uxtw_scaled_z : SDNode<"AArch64ISD::GLDFF1_UXTW_SCALED_MERGE_ZERO", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ldff1_gather_sxtw_scaled_z : SDNode<"AArch64ISD::GLDFF1_SXTW_SCALED_MERGE_ZERO", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ldff1_gather_imm_z         : SDNode<"AArch64ISD::GLDFF1_IMM_MERGE_ZERO",         SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad]>;
 
-def AArch64ldff1s_gather_z             : SDNode<"AArch64ISD::GLDFF1S_MERGE_ZERO",             SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64ldff1s_gather_scaled_z      : SDNode<"AArch64ISD::GLDFF1S_SCALED_MERGE_ZERO",      SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64ldff1s_gather_uxtw_z        : SDNode<"AArch64ISD::GLDFF1S_UXTW_MERGE_ZERO",        SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64ldff1s_gather_sxtw_z        : SDNode<"AArch64ISD::GLDFF1S_SXTW_MERGE_ZERO",        SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64ldff1s_gather_uxtw_scaled_z : SDNode<"AArch64ISD::GLDFF1S_UXTW_SCALED_MERGE_ZERO", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64ldff1s_gather_sxtw_scaled_z : SDNode<"AArch64ISD::GLDFF1S_SXTW_SCALED_MERGE_ZERO", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64ldff1s_gather_imm_z         : SDNode<"AArch64ISD::GLDFF1S_IMM_MERGE_ZERO",         SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
+// Signed gather loads.
+def AArch64ldff1s_gather_z             : SDNode<"AArch64ISD::GLDFF1S_MERGE_ZERO",             SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ldff1s_gather_scaled_z      : SDNode<"AArch64ISD::GLDFF1S_SCALED_MERGE_ZERO",      SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ldff1s_gather_uxtw_z        : SDNode<"AArch64ISD::GLDFF1S_UXTW_MERGE_ZERO",        SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ldff1s_gather_sxtw_z        : SDNode<"AArch64ISD::GLDFF1S_SXTW_MERGE_ZERO",        SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ldff1s_gather_uxtw_scaled_z : SDNode<"AArch64ISD::GLDFF1S_UXTW_SCALED_MERGE_ZERO", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ldff1s_gather_sxtw_scaled_z : SDNode<"AArch64ISD::GLDFF1S_SXTW_SCALED_MERGE_ZERO", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ldff1s_gather_imm_z         : SDNode<"AArch64ISD::GLDFF1S_IMM_MERGE_ZERO",         SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad]>;
 
+// Non-temporal gather loads
 def AArch64ldnt1_gather_z  : SDNode<"AArch64ISD::GLDNT1_MERGE_ZERO",  SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad]>;
 def AArch64ldnt1s_gather_z : SDNode<"AArch64ISD::GLDNT1S_MERGE_ZERO", SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad]>;
 // Gather vector base +  scalar offset
@@ -110,6 +134,7 @@ def SDT_AArch64_ST1 : SDTypeProfile<0, 4, [
   SDTCVecEltisVT<2,i1>, SDTCisSameNumEltsAs<0,2>
 ]>;
 
+// Contiguous masked store.
 def AArch64st1 : SDNode<"AArch64ISD::ST1_PRED", SDT_AArch64_ST1, [SDNPHasChain, SDNPMayStore]>;
 
 // Scatter stores - node definitions
@@ -124,6 +149,7 @@ def SDT_AArch64_SCATTER_VS : SDTypeProfile<0, 5, [
   SDTCVecEltisVT<1,i1>, SDTCisSameNumEltsAs<0,1>
 ]>;
 
+// Scatter store
 def AArch64st1_scatter             : SDNode<"AArch64ISD::SST1_PRED",             SDT_AArch64_SCATTER_SV, [SDNPHasChain, SDNPMayStore]>;
 def AArch64st1_scatter_scaled      : SDNode<"AArch64ISD::SST1_SCALED_PRED",      SDT_AArch64_SCATTER_SV, [SDNPHasChain, SDNPMayStore]>;
 def AArch64st1_scatter_uxtw        : SDNode<"AArch64ISD::SST1_UXTW_PRED",        SDT_AArch64_SCATTER_SV, [SDNPHasChain, SDNPMayStore]>;
@@ -132,6 +158,7 @@ def AArch64st1_scatter_uxtw_scaled : SDNode<"AArch64ISD::SST1_UXTW_SCALED_PRED",
 def AArch64st1_scatter_sxtw_scaled : SDNode<"AArch64ISD::SST1_SXTW_SCALED_PRED", SDT_AArch64_SCATTER_SV, [SDNPHasChain, SDNPMayStore]>;
 def AArch64st1_scatter_imm         : SDNode<"AArch64ISD::SST1_IMM_PRED",         SDT_AArch64_SCATTER_VS, [SDNPHasChain, SDNPMayStore]>;
 
+// Non-temporal scatter store
 def AArch64stnt1_scatter : SDNode<"AArch64ISD::SSTNT1_PRED", SDT_AArch64_SCATTER_VS, [SDNPHasChain, SDNPMayStore]>;
 
 // Scatter vector base + scalar offset
@@ -152,6 +179,11 @@ def sve_cntw_imm_neg : ComplexPattern<i64, 1, "SelectRDVLImm<1, 16, -4>">;
 def sve_cntd_imm_neg : ComplexPattern<i64, 1, "SelectRDVLImm<1, 16, -2>">;
 
 def SDT_AArch64Reduce : SDTypeProfile<1, 2, [SDTCisVec<1>, SDTCisVec<2>]>;
+def SDT_AArch64ReduceWithInit : SDTypeProfile<1, 3,
+   [SDTCisVec<1>, SDTCVecEltisVT<1,i1>, SDTCisVec<3>, SDTCisSameNumEltsAs<1,3>]>;
+
+// Floating-point reductions.
+def AArch64fadda_p_node : SDNode<"AArch64ISD::FADDA_PRED", SDT_AArch64ReduceWithInit>;
 def AArch64faddv_p   : SDNode<"AArch64ISD::FADDV_PRED",   SDT_AArch64Reduce>;
 def AArch64fmaxv_p   : SDNode<"AArch64ISD::FMAXV_PRED",   SDT_AArch64Reduce>;
 def AArch64fmaxnmv_p : SDNode<"AArch64ISD::FMAXNMV_PRED", SDT_AArch64Reduce>;
@@ -361,11 +393,8 @@ def AArch64fcvtx_mt  : SDNode<"AArch64ISD::FCVTX_MERGE_PASSTHRU", SDT_AArch64FCV
 def AArch64fcvtzu_mt : SDNode<"AArch64ISD::FCVTZU_MERGE_PASSTHRU", SDT_AArch64FCVT>;
 def AArch64fcvtzs_mt : SDNode<"AArch64ISD::FCVTZS_MERGE_PASSTHRU", SDT_AArch64FCVT>;
 
-def SDT_AArch64ReduceWithInit : SDTypeProfile<1, 3,
-   [SDTCisVec<1>, SDTCVecEltisVT<1,i1>, SDTCisVec<3>, SDTCisSameNumEltsAs<1,3>]>;
 def AArch64clasta_n     : SDNode<"AArch64ISD::CLASTA_N",   SDT_AArch64ReduceWithInit>;
 def AArch64clastb_n     : SDNode<"AArch64ISD::CLASTB_N",   SDT_AArch64ReduceWithInit>;
-def AArch64fadda_p_node : SDNode<"AArch64ISD::FADDA_PRED", SDT_AArch64ReduceWithInit>;
 
 def AArch64fadda_p : PatFrags<(ops node:$op1, node:$op2, node:$op3),
     [(AArch64fadda_p_node node:$op1, node:$op2, node:$op3),
@@ -390,17 +419,16 @@ def AArch64dup_mt : SDNode<"AArch64ISD::DUP_MERGE_PASSTHRU", SDT_AArch64DUP_PRED
 
 def AArch64splice : SDNode<"AArch64ISD::SPLICE", SDT_AArch64Arith>;
 
+// Cast between vectors of the same element type but differ in length.
 def reinterpret_cast : SDNode<"AArch64ISD::REINTERPRET_CAST", SDTUnaryOp>;
 
+let HasOneUse = 1 in
 def AArch64mul_p_oneuse : PatFrag<(ops node:$pred, node:$src1, node:$src2),
-                                  (AArch64mul_p node:$pred, node:$src1, node:$src2), [{
-  return N->hasOneUse();
-}]>;
+                                  (AArch64mul_p node:$pred, node:$src1, node:$src2)>;
 
+let HasOneUse = 1 in
 def AArch64fmul_p_oneuse : PatFrag<(ops node:$pred, node:$src1, node:$src2),
-                                   (AArch64fmul_p node:$pred, node:$src1, node:$src2), [{
-  return N->hasOneUse();
-}]>;
+                                   (AArch64fmul_p node:$pred, node:$src1, node:$src2)>;
 
 
 def AArch64fabd_p : PatFrags<(ops node:$pg, node:$op1, node:$op2),
@@ -432,10 +460,12 @@ def SDT_AArch64Arith_Unpred : SDTypeProfile<1, 2, [
   SDTCisSameAs<0,1>, SDTCisSameAs<1,2>
 ]>;
 
+// Unpredicated vector instructions
 def AArch64bic_node : SDNode<"AArch64ISD::BIC",  SDT_AArch64Arith_Unpred>;
 
 def SDT_AArch64addw : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>]>;
 
+// Wide adds
 def AArch64saddwt : SDNode<"AArch64ISD::SADDWT", SDT_AArch64addw>;
 def AArch64saddwb : SDNode<"AArch64ISD::SADDWB", SDT_AArch64addw>;
 def AArch64uaddwt : SDNode<"AArch64ISD::UADDWT", SDT_AArch64addw>;
@@ -547,12 +577,18 @@ def AArch64umulh : PatFrag<(ops node:$op1, node:$op2),
 
 
 def AArch64bsl  : PatFrags<(ops node:$Op1, node:$Op2, node:$Op3),
-                           [(int_aarch64_sve_bsl node:$Op1, node:$Op2, node:$Op3),
-                            (AArch64bsp node:$Op3, node:$Op1, node:$Op2)]>;
+                           [(AArch64bsp node:$Op3, node:$Op1, node:$Op2),
+                            (or (and node:$Op1, node:$Op3), (and node:$Op2, (vnot node:$Op3)))]>;
 
-def AArch64nbsl : PatFrags<(ops node:$Op1, node:$Op2, node:$Op3),
-                           [(int_aarch64_sve_nbsl node:$Op1, node:$Op2, node:$Op3),
-                            (vnot (AArch64bsp node:$Op3, node:$Op1, node:$Op2))]>;
+def AArch64bsl1n : PatFrag<(ops node:$Op1, node:$Op2, node:$Op3),
+                           (AArch64bsl (vnot node:$Op1), node:$Op2, node:$Op3)>;
+
+def AArch64bsl2n : PatFrags<(ops node:$Op1, node:$Op2, node:$Op3),
+                            [(AArch64bsl node:$Op1, (vnot node:$Op2), node:$Op3),
+                             (or (and node:$Op1, node:$Op3), (vnot (or node:$Op2, node:$Op3)))]>;
+
+def AArch64nbsl : PatFrag<(ops node:$Op1, node:$Op2, node:$Op3),
+                          (vnot (AArch64bsl node:$Op1, node:$Op2, node:$Op3))>;
 
 
 let Predicates = [HasSVE] in {
@@ -654,6 +690,17 @@ let Predicates = [HasSVE_or_SME] in {
 
   defm SDOT_ZZZ : sve_intx_dot<0b0, "sdot", AArch64sdot>;
   defm UDOT_ZZZ : sve_intx_dot<0b1, "udot", AArch64udot>;
+
+  let Predicates = [HasSVE_or_SME] in {
+    def : Pat<(nxv4i32 (partial_reduce_umla nxv4i32:$Acc, nxv16i8:$MulLHS, nxv16i8:$MulRHS)),
+              (UDOT_ZZZ_S $Acc, $MulLHS, $MulRHS)>;
+    def : Pat<(nxv4i32 (partial_reduce_smla nxv4i32:$Acc, nxv16i8:$MulLHS, nxv16i8:$MulRHS)),
+              (SDOT_ZZZ_S $Acc, $MulLHS, $MulRHS)>;
+    def : Pat<(nxv2i64 (partial_reduce_umla nxv2i64:$Acc, nxv8i16:$MulLHS, nxv8i16:$MulRHS)),
+              (UDOT_ZZZ_D $Acc, $MulLHS, $MulRHS)>;
+    def : Pat<(nxv2i64 (partial_reduce_smla nxv2i64:$Acc, nxv8i16:$MulLHS, nxv8i16:$MulRHS)),
+              (SDOT_ZZZ_D $Acc, $MulLHS, $MulRHS)>;
+  } // End HasSVE_or_SME
 
   defm SDOT_ZZZI : sve_intx_dot_by_indexed_elem<0b0, "sdot", int_aarch64_sve_sdot_lane>;
   defm UDOT_ZZZI : sve_intx_dot_by_indexed_elem<0b1, "udot", int_aarch64_sve_udot_lane>;
@@ -982,7 +1029,7 @@ let Predicates = [HasSVE_or_SME] in {
   def MOVPRFX_ZZ : sve_int_bin_cons_misc_0_c<0b00000001, "movprfx", ZPRAny>;
 } // End HasSVE_or_SME
 
-let Predicates = [HasNonStreamingSVE_or_SME2p2] in {
+let Predicates = [HasNonStreamingSVE_or_SSVE_FEXPA] in {
   defm FEXPA_ZZ : sve_int_bin_cons_misc_0_c_fexpa<"fexpa", int_aarch64_sve_fexpa_x>;
 } // End HasSVE
 
@@ -2126,12 +2173,12 @@ let Predicates = [HasSVE_or_SME] in {
 
   defm WHILELT_PWW : sve_int_while4_rr<0b010, "whilelt", int_aarch64_sve_whilelt, int_aarch64_sve_whilegt>;
   defm WHILELE_PWW : sve_int_while4_rr<0b011, "whilele", int_aarch64_sve_whilele, null_frag>;
-  defm WHILELO_PWW : sve_int_while4_rr<0b110, "whilelo", int_aarch64_sve_whilelo, int_aarch64_sve_whilehi>;
+  defm WHILELO_PWW : sve_int_while4_rr<0b110, "whilelo", get_active_lane_mask, int_aarch64_sve_whilehi>;
   defm WHILELS_PWW : sve_int_while4_rr<0b111, "whilels", int_aarch64_sve_whilels, null_frag>;
 
   defm WHILELT_PXX : sve_int_while8_rr<0b010, "whilelt", int_aarch64_sve_whilelt, int_aarch64_sve_whilegt>;
   defm WHILELE_PXX : sve_int_while8_rr<0b011, "whilele", int_aarch64_sve_whilele, null_frag>;
-  defm WHILELO_PXX : sve_int_while8_rr<0b110, "whilelo", int_aarch64_sve_whilelo, int_aarch64_sve_whilehi>;
+  defm WHILELO_PXX : sve_int_while8_rr<0b110, "whilelo", get_active_lane_mask, int_aarch64_sve_whilehi>;
   defm WHILELS_PXX : sve_int_while8_rr<0b111, "whilels", int_aarch64_sve_whilels, null_frag>;
 
   def CTERMEQ_WW : sve_int_cterm<0b0, 0b0, "ctermeq", GPR32>;
@@ -2679,6 +2726,29 @@ let Predicates = [HasSVE_or_SME] in {
               (DECD_ZPiI ZPR:$op, 31, $imm)>;
   }
 
+  // Some INCB/DECB forms have better latency and throughput than ADDVL, so we
+  // prefer using them here.
+  // We could extend this to other INC/DEC (scalar) instructions.
+  let Predicates = [HasSVE_or_SME, UseScalarIncVL, HasFastIncVL], AddedComplexity = 6 in {
+    foreach imm = [ 1, 2, 4 ] in {
+      def : Pat<(add GPR64:$op, (vscale !mul(imm, 16))),
+                (INCB_XPiI GPR64:$op, 31, imm)>;
+
+      def : Pat<(add GPR32:$op, (i32 (trunc (vscale !mul(imm, 16))))),
+                (EXTRACT_SUBREG (INCB_XPiI (INSERT_SUBREG (IMPLICIT_DEF),
+                                            GPR32:$op, sub_32), 31, imm),
+                                 sub_32)>;
+
+      def : Pat<(add GPR64:$op, (vscale !mul(imm, -16))),
+                (DECB_XPiI GPR64:$op, 31, imm)>;
+
+      def : Pat<(add GPR32:$op, (i32 (trunc (vscale !mul(imm, -16))))),
+                (EXTRACT_SUBREG (DECB_XPiI (INSERT_SUBREG (IMPLICIT_DEF),
+                                            GPR32:$op, sub_32), 31, imm),
+                                 sub_32)>;
+      }
+  }
+
   let Predicates = [HasSVE_or_SME, UseScalarIncVL], AddedComplexity = 5 in {
     def : Pat<(add GPR64:$op, (vscale (sve_rdvl_imm i32:$imm))),
               (ADDVL_XXI GPR64:$op, $imm)>;
@@ -2731,7 +2801,7 @@ let Predicates = [HasSVE_or_SME] in {
 
   // For big endian, only BITCASTs involving same sized vector types with same
   // size vector elements can be isel'd directly.
-  let Predicates = [IsLE] in
+  let Predicates = [HasSVE_or_SME, IsLE] in
     foreach VT = [ nxv16i8, nxv8i16, nxv4i32, nxv2i64, nxv8f16, nxv4f32, nxv2f64, nxv8bf16 ] in
       foreach VT2 = [ nxv16i8, nxv8i16, nxv4i32, nxv2i64, nxv8f16, nxv4f32, nxv2f64, nxv8bf16 ] in
         if !ne(VT,VT2) then
@@ -2981,24 +3051,25 @@ let Predicates = [HasSVE_or_SME] in {
   defm : unpred_load<        load, nxv2f32,  LD1W_D,  LD1W_D_IMM, PTRUE_D, am_sve_regreg_lsl2>;
   defm : unpred_load<        load, nxv2f64,    LD1D,    LD1D_IMM, PTRUE_D, am_sve_regreg_lsl3>;
 
-  // Allow using the reg+reg form of ld1b/st1b for memory accesses with the
-  // same width as nxv16i8.  This saves an add in cases where we would
-  // otherwise compute the address separately.
-  multiclass unpred_loadstore_bitcast<ValueType Ty> {
-    let Predicates = [IsLE] in {
+  let Predicates = [HasSVE_or_SME, IsLE] in {
+    // Allow using the reg+reg form of ld1b/st1b for memory accesses with the
+    // same width as nxv16i8.  This saves an add in cases where we would
+    // otherwise compute the address separately.
+    multiclass unpred_loadstore_bitcast<ValueType Ty> {
       def : Pat<(Ty (load (am_sve_regreg_lsl0 GPR64sp:$base, GPR64:$offset))),
                 (LD1B (PTRUE_B 31), GPR64sp:$base, GPR64:$offset)>;
       def : Pat<(store Ty:$val, (am_sve_regreg_lsl0 GPR64sp:$base, GPR64:$offset)),
                 (ST1B ZPR:$val, (PTRUE_B 31), GPR64sp:$base, GPR64:$offset)>;
     }
+
+    defm : unpred_loadstore_bitcast<nxv8i16>;
+    defm : unpred_loadstore_bitcast<nxv8f16>;
+    defm : unpred_loadstore_bitcast<nxv8bf16>;
+    defm : unpred_loadstore_bitcast<nxv4f32>;
+    defm : unpred_loadstore_bitcast<nxv4i32>;
+    defm : unpred_loadstore_bitcast<nxv2i64>;
+    defm : unpred_loadstore_bitcast<nxv2f64>;
   }
-  defm : unpred_loadstore_bitcast<nxv8i16>;
-  defm : unpred_loadstore_bitcast<nxv8f16>;
-  defm : unpred_loadstore_bitcast<nxv8bf16>;
-  defm : unpred_loadstore_bitcast<nxv4f32>;
-  defm : unpred_loadstore_bitcast<nxv4i32>;
-  defm : unpred_loadstore_bitcast<nxv2i64>;
-  defm : unpred_loadstore_bitcast<nxv2f64>;
 
   // Allow using LDR/STR to avoid the predicate dependence.
   let Predicates = [HasSVE_or_SME, IsLE, AllowMisalignedMemAccesses] in
@@ -3420,16 +3491,10 @@ let Predicates = [HasSVE_or_SME] in {
   // Alternative case where insertelement is just scalar_to_vector rather than vector_insert.
   def : Pat<(v1f64 (scalar_to_vector
                      (f64 (vector_extract nxv2f64:$vec, VectorIndexD:$index)))),
-            (EXTRACT_SUBREG
-                (INSvi64lane (IMPLICIT_DEF), (i64 0),
-                    (EXTRACT_SUBREG nxv2f64:$vec, zsub), VectorIndexD:$index),
-                dsub)>;
+            (DUPi64 (EXTRACT_SUBREG nxv2f64:$vec, zsub), VectorIndexD:$index)>;
   def : Pat<(v1i64 (scalar_to_vector
                      (i64 (vector_extract nxv2i64:$vec, VectorIndexD:$index)))),
-            (EXTRACT_SUBREG
-                (INSvi64lane (IMPLICIT_DEF), (i64 0),
-                    (EXTRACT_SUBREG nxv2i64:$vec, zsub), VectorIndexD:$index),
-                 dsub)>;
+            (DUPi64 (EXTRACT_SUBREG nxv2i64:$vec, zsub), VectorIndexD:$index)>;
   } // End HasNEON
 
   let Predicates = [HasNEON] in {
@@ -3476,6 +3541,22 @@ let Predicates = [HasSVE_or_SME] in {
   def : Pat<(f64 (vector_extract nxv2f64:$Zs, (i64 0))),
             (EXTRACT_SUBREG ZPR:$Zs, dsub)>;
   }
+
+  multiclass sve_insert_extract_elt<ValueType VT, ValueType VTScalar, Instruction DUP, Operand IdxTy> {
+    // NOP pattern (needed to avoid pointless DUPs being added by the second pattern).
+    def : Pat<(VT (vector_insert undef,
+                  (VTScalar (vector_extract VT:$vec, (i64 0))), (i64 0))),
+              (VT $vec)>;
+
+    def : Pat<(VT (vector_insert undef,
+                    (VTScalar (vector_extract VT:$vec, (i64 IdxTy:$Idx))), (i64 0))),
+              (DUP ZPR:$vec, IdxTy:$Idx)>;
+  }
+
+  defm : sve_insert_extract_elt<nxv16i8, i32, DUP_ZZI_B, sve_elm_idx_extdup_b>;
+  defm : sve_insert_extract_elt<nxv8i16, i32, DUP_ZZI_H, sve_elm_idx_extdup_h>;
+  defm : sve_insert_extract_elt<nxv4i32, i32, DUP_ZZI_S, sve_elm_idx_extdup_s>;
+  defm : sve_insert_extract_elt<nxv2i64, i64, DUP_ZZI_D, sve_elm_idx_extdup_d>;
 
   multiclass sve_predicated_add<SDNode extend, int value> {
     def : Pat<(nxv16i8 (add ZPR:$op, (extend nxv16i1:$pred))),
@@ -3732,6 +3813,32 @@ let Predicates = [HasSVE2_or_SME] in {
   defm USUBWB_ZZZ : sve2_wide_int_arith_wide<0b110, "usubwb", int_aarch64_sve_usubwb>;
   defm USUBWT_ZZZ : sve2_wide_int_arith_wide<0b111, "usubwt", int_aarch64_sve_usubwt>;
 
+  def : Pat<(nxv2i64 (partial_reduce_umla nxv2i64:$Acc, nxv4i32:$Input, (nxv4i32 (splat_vector (i32 1))))),
+            (UADDWT_ZZZ_D (UADDWB_ZZZ_D $Acc, $Input), $Input)>;
+  def : Pat<(nxv2i64 (partial_reduce_smla nxv2i64:$Acc, nxv4i32:$Input, (nxv4i32 (splat_vector (i32 1))))),
+            (SADDWT_ZZZ_D (SADDWB_ZZZ_D $Acc, $Input), $Input)>;
+  def : Pat<(nxv4i32 (partial_reduce_umla nxv4i32:$Acc, nxv8i16:$Input, (nxv8i16 (splat_vector (i32 1))))),
+            (UADDWT_ZZZ_S (UADDWB_ZZZ_S $Acc, $Input), $Input)>;
+  def : Pat<(nxv4i32 (partial_reduce_smla nxv4i32:$Acc, nxv8i16:$Input, (nxv8i16 (splat_vector (i32 1))))),
+            (SADDWT_ZZZ_S (SADDWB_ZZZ_S $Acc, $Input), $Input)>;
+  def : Pat<(nxv8i16 (partial_reduce_umla nxv8i16:$Acc, nxv16i8:$Input, (nxv16i8 (splat_vector (i32 1))))),
+            (UADDWT_ZZZ_H (UADDWB_ZZZ_H $Acc, $Input), $Input)>;
+  def : Pat<(nxv8i16 (partial_reduce_smla nxv8i16:$Acc, nxv16i8:$Input, (nxv16i8 (splat_vector (i32 1))))),
+            (SADDWT_ZZZ_H (SADDWB_ZZZ_H $Acc, $Input), $Input)>;
+
+  def : Pat<(nxv2i64 (partial_reduce_umla nxv2i64:$Acc, nxv4i32:$LHS, nxv4i32:$RHS)),
+            (UMLALT_ZZZ_D (UMLALB_ZZZ_D $Acc, $LHS, $RHS), $LHS, $RHS)>;
+  def : Pat<(nxv2i64 (partial_reduce_smla nxv2i64:$Acc, nxv4i32:$LHS, nxv4i32:$RHS)),
+            (SMLALT_ZZZ_D (SMLALB_ZZZ_D $Acc, $LHS, $RHS), $LHS, $RHS)>;
+  def : Pat<(nxv4i32 (partial_reduce_umla nxv4i32:$Acc, nxv8i16:$LHS, nxv8i16:$RHS)),
+            (UMLALT_ZZZ_S (UMLALB_ZZZ_S $Acc, $LHS, $RHS), $LHS, $RHS)>;
+  def : Pat<(nxv4i32 (partial_reduce_smla nxv4i32:$Acc, nxv8i16:$LHS, nxv8i16:$RHS)),
+            (SMLALT_ZZZ_S (SMLALB_ZZZ_S $Acc, $LHS, $RHS), $LHS, $RHS)>;
+  def : Pat<(nxv8i16 (partial_reduce_umla nxv8i16:$Acc, nxv16i8:$LHS, nxv16i8:$RHS)),
+            (UMLALT_ZZZ_H (UMLALB_ZZZ_H $Acc, $LHS, $RHS), $LHS, $RHS)>;
+  def : Pat<(nxv8i16 (partial_reduce_smla nxv8i16:$Acc, nxv16i8:$LHS, nxv16i8:$RHS)),
+            (SMLALT_ZZZ_H (SMLALB_ZZZ_H $Acc, $LHS, $RHS), $LHS, $RHS)>;
+
   // SVE2 integer multiply long
   defm SQDMULLB_ZZZ : sve2_wide_int_arith_long<0b11000, "sqdmullb", int_aarch64_sve_sqdmullb>;
   defm SQDMULLT_ZZZ : sve2_wide_int_arith_long<0b11001, "sqdmullt", int_aarch64_sve_sqdmullt>;
@@ -3885,8 +3992,8 @@ let Predicates = [HasSVE2_or_SME] in {
   defm EOR3_ZZZZ  : sve2_int_bitwise_ternary_op<0b000, "eor3",  AArch64eor3>;
   defm BCAX_ZZZZ  : sve2_int_bitwise_ternary_op<0b010, "bcax",  AArch64bcax>;
   defm BSL_ZZZZ   : sve2_int_bitwise_ternary_op<0b001, "bsl",   AArch64bsl>;
-  defm BSL1N_ZZZZ : sve2_int_bitwise_ternary_op<0b011, "bsl1n", int_aarch64_sve_bsl1n>;
-  defm BSL2N_ZZZZ : sve2_int_bitwise_ternary_op<0b101, "bsl2n", int_aarch64_sve_bsl2n>;
+  defm BSL1N_ZZZZ : sve2_int_bitwise_ternary_op<0b011, "bsl1n", AArch64bsl1n>;
+  defm BSL2N_ZZZZ : sve2_int_bitwise_ternary_op<0b101, "bsl2n", AArch64bsl2n>;
   defm NBSL_ZZZZ  : sve2_int_bitwise_ternary_op<0b111, "nbsl",  AArch64nbsl>;
 
   // SVE2 bitwise xor and rotate right by immediate
@@ -3943,12 +4050,12 @@ let Predicates = [HasSVE2_or_SME] in {
   defm WHILEGE_PWW : sve_int_while4_rr<0b000, "whilege", int_aarch64_sve_whilege, null_frag>;
   defm WHILEGT_PWW : sve_int_while4_rr<0b001, "whilegt", int_aarch64_sve_whilegt, int_aarch64_sve_whilelt>;
   defm WHILEHS_PWW : sve_int_while4_rr<0b100, "whilehs", int_aarch64_sve_whilehs, null_frag>;
-  defm WHILEHI_PWW : sve_int_while4_rr<0b101, "whilehi", int_aarch64_sve_whilehi, int_aarch64_sve_whilelo>;
+  defm WHILEHI_PWW : sve_int_while4_rr<0b101, "whilehi", int_aarch64_sve_whilehi, get_active_lane_mask>;
 
   defm WHILEGE_PXX : sve_int_while8_rr<0b000, "whilege", int_aarch64_sve_whilege, null_frag>;
   defm WHILEGT_PXX : sve_int_while8_rr<0b001, "whilegt", int_aarch64_sve_whilegt, int_aarch64_sve_whilelt>;
   defm WHILEHS_PXX : sve_int_while8_rr<0b100, "whilehs", int_aarch64_sve_whilehs, null_frag>;
-  defm WHILEHI_PXX : sve_int_while8_rr<0b101, "whilehi", int_aarch64_sve_whilehi, int_aarch64_sve_whilelo>;
+  defm WHILEHI_PXX : sve_int_while8_rr<0b101, "whilehi", int_aarch64_sve_whilehi, get_active_lane_mask>;
 
   // SVE2 pointer conflict compare
   defm WHILEWR_PXX : sve2_int_while_rr<0b0, "whilewr", "int_aarch64_sve_whilewr">;

@@ -8,7 +8,7 @@
 
 ; CHECK-LABEL: {{^}}kernel2:
 ; CHECK:      .amdhsa_next_free_vgpr max(totalnumvgprs(kernel2.num_agpr, kernel2.num_vgpr), 1, 0)
-; CHECK-NEXT: .amdhsa_next_free_sgpr (max(kernel2.numbered_sgpr+(extrasgprs(kernel2.uses_vcc, kernel2.uses_flat_scratch, 1)), 1, 0))-(extrasgprs(kernel2.uses_vcc, kernel2.uses_flat_scratch, 1))
+; CHECK-NEXT: .amdhsa_next_free_sgpr max(kernel2.numbered_sgpr+extrasgprs(kernel2.uses_vcc, kernel2.uses_flat_scratch, 1), 1, 0)-extrasgprs(kernel2.uses_vcc, kernel2.uses_flat_scratch, 1)
 
 ; CHECK:      .set kernel2.num_vgpr, max(41, .Laliasee_vgpr64_sgpr102.num_vgpr)
 ; CHECK-NEXT: .set kernel2.num_agpr, max(0, .Laliasee_vgpr64_sgpr102.num_agpr)
@@ -21,7 +21,7 @@ bb:
 
 ; CHECK:      .set .Laliasee_vgpr64_sgpr102.num_vgpr, 53
 ; CHECK-NEXT: .set .Laliasee_vgpr64_sgpr102.num_agpr, 0
-; CHECK-NEXT: .set .Laliasee_vgpr64_sgpr102.numbered_sgpr, 32
+; CHECK-NEXT: .set .Laliasee_vgpr64_sgpr102.numbered_sgpr, 0
 define internal void @aliasee_vgpr64_sgpr102() #1 {
 bb:
   call void asm sideeffect "; clobber v52 ", "~{v52}"()
@@ -32,5 +32,3 @@ attributes #0 = { noinline norecurse nounwind optnone }
 attributes #1 = { noinline norecurse nounwind readnone willreturn "amdgpu-waves-per-eu"="4,10" }
 attributes #2 = { nounwind readnone willreturn }
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

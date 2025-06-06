@@ -713,7 +713,8 @@ bool GlobalMergeImpl::run(Module &M) {
       continue;
 
     // Ignore all 'special' globals.
-    if (GV.getName().starts_with("llvm.") || GV.getName().starts_with(".llvm."))
+    if (GV.getName().starts_with("llvm.") ||
+        GV.getName().starts_with(".llvm.") || Section == "llvm.metadata")
       continue;
 
     // Ignore all "required" globals:

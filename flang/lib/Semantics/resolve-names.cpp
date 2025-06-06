@@ -719,6 +719,7 @@ protected:
   void NotePossibleBadForwardRef(const parser::Name &);
   std::optional<SourceName> HadForwardRef(const Symbol &) const;
   bool CheckPossibleBadForwardRef(const Symbol &);
+  bool ConvertToUseError(Symbol &, const SourceName &, const Symbol &used);
 
   bool inSpecificationPart_{false};
   bool deferImplicitTyping_{false};
@@ -767,10 +768,22 @@ protected:
     deferImplicitTyping_ = skipImplicitTyping_ = skip;
   }
 
+  void NoteEarlyDeclaredDummyArgument(Symbol &symbol) {
+    earlyDeclaredDummyArguments_.insert(symbol);
+  }
+  bool IsEarlyDeclaredDummyArgument(Symbol &symbol) {
+    return earlyDeclaredDummyArguments_.find(symbol) !=
+        earlyDeclaredDummyArguments_.end();
+  }
+  void ForgetEarlyDeclaredDummyArgument(Symbol &symbol) {
+    earlyDeclaredDummyArguments_.erase(symbol);
+  }
+
 private:
   Scope *currScope_{nullptr};
   FuncResultStack funcResultStack_{*this};
   std::map<Scope *, DeferredDeclarationState> deferred_;
+  UnorderedSymbolSet earlyDeclaredDummyArguments_;
 };
 
 class ModuleVisitor : public virtual ScopeHandler {
@@ -1383,6 +1396,20 @@ public:
   void Post(const parser::AccEndBlockDirective &) {
     messageHandler().set_currStmtSource(std::nullopt);
   }
+  bool Pre(const parser::AccBeginCombinedDirective &x) {
+    AddAccSourceRange(x.source);
+    return true;
+  }
+  void Post(const parser::AccBeginCombinedDirective &) {
+    messageHandler().set_currStmtSource(std::nullopt);
+  }
+  bool Pre(const parser::AccEndCombinedDirective &x) {
+    AddAccSourceRange(x.source);
+    return true;
+  }
+  void Post(const parser::AccEndCombinedDirective &) {
+    messageHandler().set_currStmtSource(std::nullopt);
+  }
   bool Pre(const parser::AccBeginLoopDirective &x) {
     AddAccSourceRange(x.source);
     return true;
@@ -1484,6 +1511,11 @@ public:
     return false;
   }
 
+  bool Pre(const parser::OpenMPDeclareSimdConstruct &x) {
+    AddOmpSourceRange(x.source);
+    return true;
+  }
+
   bool Pre(const parser::OmpInitializerProc &x) {
     auto &procDes = std::get<parser::ProcedureDesignator>(x.t);
     auto &name = std::get<parser::Name>(procDes.u);
@@ -1493,6 +1525,25 @@ public:
           "Implicit subroutine declaration '%s' in !$OMP DECLARE REDUCTION"_err_en_US,
           name.source);
     }
+    return true;
+  }
+
+  bool Pre(const parser::OmpDeclareVariantDirective &x) {
+    AddOmpSourceRange(x.source);
+    auto FindSymbolOrError = [&](const parser::Name &procName) {
+      auto *symbol{FindSymbol(NonDerivedTypeScope(), procName)};
+      if (!symbol) {
+        context().Say(procName.source,
+            "Implicit subroutine declaration '%s' in !$OMP DECLARE VARIANT"_err_en_US,
+            procName.source);
+      }
+    };
+    auto &baseProcName = std::get<std::optional<parser::Name>>(x.t);
+    if (baseProcName) {
+      FindSymbolOrError(*baseProcName);
+    }
+    auto &varProcName = std::get<parser::Name>(x.t);
+    FindSymbolOrError(varProcName);
     return true;
   }
 
@@ -1610,9 +1661,14 @@ public:
   }
   bool Pre(const parser::OpenMPDeclarativeConstruct &x) {
     AddOmpSourceRange(x.source);
+    // Without skipping implicit typing, declarative constructs
+    // can implicitly declare variables instead of only using the
+    // ones already declared in the Fortran sources.
+    SkipImplicitTyping(true);
     return true;
   }
   void Post(const parser::OpenMPDeclarativeConstruct &) {
+    SkipImplicitTyping(false);
     messageHandler().set_currStmtSource(std::nullopt);
   }
   bool Pre(const parser::OpenMPDepobjConstruct &x) {
@@ -1732,15 +1788,9 @@ void OmpVisitor::ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
   // just following the natural flow, the map clauses gets processed before
   // the type has been fully processed.
   BeginDeclTypeSpec();
-  if (auto &mapperName{std::get<std::optional<parser::Name>>(spec.t)}) {
-    mapperName->symbol =
-        &MakeSymbol(*mapperName, MiscDetails{MiscDetails::Kind::ConstructName});
-  } else {
-    const parser::CharBlock defaultName{"default", 7};
-    MakeSymbol(
-        defaultName, Attrs{}, MiscDetails{MiscDetails::Kind::ConstructName});
-  }
-
+  auto &mapperName{std::get<std::string>(spec.t)};
+  MakeSymbol(parser::CharBlock(mapperName), Attrs{},
+      MiscDetails{MiscDetails::Kind::ConstructName});
   PushScope(Scope::Kind::OtherConstruct, nullptr);
   Walk(std::get<parser::TypeSpec>(spec.t));
   auto &varName{std::get<parser::Name>(spec.t)};
@@ -1942,6 +1992,9 @@ private:
   Scope &topScope_;
 
   void PreSpecificationConstruct(const parser::SpecificationConstruct &);
+  void EarlyDummyTypeDeclaration(
+      const parser::Statement<common::Indirection<parser::TypeDeclarationStmt>>
+          &);
   void CreateCommonBlockSymbols(const parser::CommonStmt &);
   void CreateObjectSymbols(const std::list<parser::ObjectDecl> &, Attr);
   void CreateGeneric(const parser::GenericSpec &);
@@ -3324,9 +3377,19 @@ ModuleVisitor::SymbolRename ModuleVisitor::AddUse(
     // Privacy is not enforced in module files so that generic interfaces
     // can be resolved to private specific procedures in specification
     // expressions.
-    Say(useName, "'%s' is PRIVATE in '%s'"_err_en_US, MakeOpName(useName),
-        useModuleScope_->GetName().value());
-    return {};
+    // Local names that contain currency symbols ('$') are created by the
+    // module file writer when a private name in another module is needed to
+    // process a local declaration.  These can show up in the output of
+    // -fdebug-unparse-with-modules, too, so go easy on them.
+    if (currScope().IsModule() &&
+        localName.ToString().find("$") != std::string::npos) {
+      Say(useName, "'%s' is PRIVATE in '%s'"_warn_en_US, MakeOpName(useName),
+          useModuleScope_->GetName().value());
+    } else {
+      Say(useName, "'%s' is PRIVATE in '%s'"_err_en_US, MakeOpName(useName),
+          useModuleScope_->GetName().value());
+      return {};
+    }
   }
   auto &localSymbol{MakeSymbol(localName)};
   DoAddUse(useName, localName, localSymbol, *useSymbol);
@@ -3335,7 +3398,7 @@ ModuleVisitor::SymbolRename ModuleVisitor::AddUse(
 
 // symbol must be either a Use or a Generic formed by merging two uses.
 // Convert it to a UseError with this additional location.
-static bool ConvertToUseError(
+bool ScopeHandler::ConvertToUseError(
     Symbol &symbol, const SourceName &location, const Symbol &used) {
   if (auto *ued{symbol.detailsIf<UseErrorDetails>()}) {
     ued->add_occurrence(location, used);
@@ -3353,9 +3416,25 @@ static bool ConvertToUseError(
     symbol.set_details(
         UseErrorDetails{*useDetails}.add_occurrence(location, used));
     return true;
-  } else {
-    return false;
   }
+  if (const auto *hostAssocDetails{symbol.detailsIf<HostAssocDetails>()};
+      hostAssocDetails && hostAssocDetails->symbol().has<SubprogramDetails>() &&
+      &symbol.owner() == &currScope() &&
+      &hostAssocDetails->symbol() == currScope().symbol()) {
+    // Handle USE-association of procedure FOO into function/subroutine FOO,
+    // replacing its place-holding HostAssocDetails symbol.
+    context().Warn(common::UsageWarning::UseAssociationIntoSameNameSubprogram,
+        location,
+        "'%s' is use-associated into a subprogram of the same name"_port_en_US,
+        used.name());
+    SourceName created{context().GetTempName(currScope())};
+    Symbol &tmpUse{MakeSymbol(created, Attrs(), UseDetails{location, used})};
+    UseErrorDetails useError{tmpUse.get<UseDetails>()};
+    useError.add_occurrence(location, hostAssocDetails->symbol());
+    symbol.set_details(std::move(useError));
+    return true;
+  }
+  return false;
 }
 
 // Two ultimate symbols are distinct, but they have the same name and come
@@ -4326,7 +4405,9 @@ bool SubprogramVisitor::Pre(const parser::PrefixSpec::Attributes &attrs) {
     }
     if (auto attrs{subp->cudaSubprogramAttrs()}) {
       if (*attrs == common::CUDASubprogramAttrs::Global ||
-          *attrs == common::CUDASubprogramAttrs::Device) {
+          *attrs == common::CUDASubprogramAttrs::Grid_Global ||
+          *attrs == common::CUDASubprogramAttrs::Device ||
+          *attrs == common::CUDASubprogramAttrs::HostDevice) {
         const Scope &scope{currScope()};
         const Scope *mod{FindModuleContaining(scope)};
         if (mod &&
@@ -5549,6 +5630,7 @@ Symbol &DeclarationVisitor::DeclareUnknownEntity(
   } else {
     Symbol &symbol{DeclareEntity<EntityDetails>(name, attrs)};
     if (auto *type{GetDeclTypeSpec()}) {
+      ForgetEarlyDeclaredDummyArgument(symbol);
       SetType(name, *type);
     }
     charInfo_.length.reset();
@@ -5625,6 +5707,7 @@ Symbol &DeclarationVisitor::DeclareProcEntity(
         symbol.set(Symbol::Flag::Subroutine);
       }
     } else if (auto *type{GetDeclTypeSpec()}) {
+      ForgetEarlyDeclaredDummyArgument(symbol);
       SetType(name, *type);
       symbol.set(Symbol::Flag::Function);
     }
@@ -5639,6 +5722,7 @@ Symbol &DeclarationVisitor::DeclareObjectEntity(
   Symbol &symbol{DeclareEntity<ObjectEntityDetails>(name, attrs)};
   if (auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
     if (auto *type{GetDeclTypeSpec()}) {
+      ForgetEarlyDeclaredDummyArgument(symbol);
       SetType(name, *type);
     }
     if (!arraySpec().empty()) {
@@ -5649,9 +5733,11 @@ Symbol &DeclarationVisitor::DeclareObjectEntity(
           context().SetError(symbol);
         }
       } else if (MustBeScalar(symbol)) {
-        context().Warn(common::UsageWarning::PreviousScalarUse, name.source,
-            "'%s' appeared earlier as a scalar actual argument to a specification function"_warn_en_US,
-            name.source);
+        if (!context().HasError(symbol)) {
+          context().Warn(common::UsageWarning::PreviousScalarUse, name.source,
+              "'%s' appeared earlier as a scalar actual argument to a specification function"_warn_en_US,
+              name.source);
+        }
       } else if (details->init() || symbol.test(Symbol::Flag::InDataStmt)) {
         Say(name, "'%s' was initialized earlier as a scalar"_err_en_US);
       } else {
@@ -6288,6 +6374,10 @@ void DeclarationVisitor::Post(const parser::ProcDecl &x) {
   if (!dtDetails) {
     attrs.set(Attr::EXTERNAL);
   }
+  if (derivedTypeInfo_.privateComps &&
+      !attrs.HasAny({Attr::PUBLIC, Attr::PRIVATE})) {
+    attrs.set(Attr::PRIVATE);
+  }
   Symbol &symbol{DeclareProcEntity(name, attrs, procInterface)};
   SetCUDADataAttr(name.source, symbol, cudaDataAttr()); // for error
   symbol.ReplaceName(name.source);
@@ -6607,7 +6697,7 @@ bool DeclarationVisitor::Pre(const parser::BasedPointer &) {
 
 void DeclarationVisitor::Post(const parser::BasedPointer &bp) {
   const parser::ObjectName &pointerName{std::get<0>(bp.t)};
-  auto *pointer{FindSymbol(pointerName)};
+  auto *pointer{FindInScope(pointerName)};
   if (!pointer) {
     pointer = &MakeSymbol(pointerName, ObjectEntityDetails{});
   } else if (!ConvertToObjectEntity(*pointer)) {
@@ -6623,8 +6713,8 @@ void DeclarationVisitor::Post(const parser::BasedPointer &bp) {
         "'%s' cannot be a Cray pointer as it is already a Cray pointee"_err_en_US);
   }
   pointer->set(Symbol::Flag::CrayPointer);
-  const DeclTypeSpec &pointerType{MakeNumericType(
-      TypeCategory::Integer, context().defaultKinds().subscriptIntegerKind())};
+  const DeclTypeSpec &pointerType{MakeNumericType(TypeCategory::Integer,
+      context().targetCharacteristics().integerKindForPointer())};
   const auto *type{pointer->GetType()};
   if (!type) {
     pointer->SetType(pointerType);
@@ -8401,6 +8491,11 @@ const parser::Name *DeclarationVisitor::ResolveDataRef(
       x.u);
 }
 
+static bool TypesMismatchIfNonNull(
+    const DeclTypeSpec *type1, const DeclTypeSpec *type2) {
+  return type1 && type2 && *type1 != *type2;
+}
+
 // If implicit types are allowed, ensure name is in the symbol table.
 // Otherwise, report an error if it hasn't been declared.
 const parser::Name *DeclarationVisitor::ResolveName(const parser::Name &name) {
@@ -8422,13 +8517,30 @@ const parser::Name *DeclarationVisitor::ResolveName(const parser::Name &name) {
     symbol->set(Symbol::Flag::ImplicitOrError, false);
     if (IsUplevelReference(*symbol)) {
       MakeHostAssocSymbol(name, *symbol);
-    } else if (IsDummy(*symbol) ||
-        (!symbol->GetType() && FindCommonBlockContaining(*symbol))) {
+    } else if (IsDummy(*symbol)) {
       CheckEntryDummyUse(name.source, symbol);
+      ConvertToObjectEntity(*symbol);
+      if (IsEarlyDeclaredDummyArgument(*symbol)) {
+        ForgetEarlyDeclaredDummyArgument(*symbol);
+        if (isImplicitNoneType()) {
+          context().Warn(common::LanguageFeature::ForwardRefImplicitNone,
+              name.source,
+              "'%s' was used under IMPLICIT NONE(TYPE) before being explicitly typed"_warn_en_US,
+              name.source);
+        } else if (TypesMismatchIfNonNull(
+                       symbol->GetType(), GetImplicitType(*symbol))) {
+          context().Warn(common::LanguageFeature::ForwardRefExplicitTypeDummy,
+              name.source,
+              "'%s' was used before being explicitly typed (and its implicit type would differ)"_warn_en_US,
+              name.source);
+        }
+      }
+      ApplyImplicitRules(*symbol);
+    } else if (!symbol->GetType() && FindCommonBlockContaining(*symbol)) {
       ConvertToObjectEntity(*symbol);
       ApplyImplicitRules(*symbol);
     } else if (const auto *tpd{symbol->detailsIf<TypeParamDetails>()};
-               tpd && !tpd->attr()) {
+        tpd && !tpd->attr()) {
       Say(name,
           "Type parameter '%s' was referenced before being declared"_err_en_US,
           name.source);
@@ -8971,11 +9083,6 @@ static bool IsLocallyImplicitGlobalSymbol(
   return false;
 }
 
-static bool TypesMismatchIfNonNull(
-    const DeclTypeSpec *type1, const DeclTypeSpec *type2) {
-  return type1 && type2 && *type1 != *type2;
-}
-
 // Check and set the Function or Subroutine flag on symbol; false on error.
 bool ResolveNamesVisitor::SetProcFlag(
     const parser::Name &name, Symbol &symbol, Symbol::Flag flag) {
@@ -9192,6 +9299,10 @@ void ResolveNamesVisitor::PreSpecificationConstruct(
     const parser::SpecificationConstruct &spec) {
   common::visit(
       common::visitors{
+          [&](const parser::Statement<
+              common::Indirection<parser::TypeDeclarationStmt>> &y) {
+            EarlyDummyTypeDeclaration(y);
+          },
           [&](const parser::Statement<Indirection<parser::GenericStmt>> &y) {
             CreateGeneric(std::get<parser::GenericSpec>(y.statement.value().t));
           },
@@ -9218,6 +9329,44 @@ void ResolveNamesVisitor::PreSpecificationConstruct(
           [](const auto &) {},
       },
       spec.u);
+}
+
+void ResolveNamesVisitor::EarlyDummyTypeDeclaration(
+    const parser::Statement<common::Indirection<parser::TypeDeclarationStmt>>
+        &stmt) {
+  context().set_location(stmt.source);
+  const auto &[declTypeSpec, attrs, entities] = stmt.statement.value().t;
+  if (const auto *intrin{
+          std::get_if<parser::IntrinsicTypeSpec>(&declTypeSpec.u)}) {
+    if (const auto *intType{std::get_if<parser::IntegerTypeSpec>(&intrin->u)}) {
+      if (const auto &kind{intType->v}) {
+        if (!parser::Unwrap<parser::KindSelector::StarSize>(*kind) &&
+            !parser::Unwrap<parser::IntLiteralConstant>(*kind)) {
+          return;
+        }
+      }
+      const DeclTypeSpec *type{nullptr};
+      for (const auto &ent : entities) {
+        const auto &objName{std::get<parser::ObjectName>(ent.t)};
+        Resolve(objName, FindInScope(currScope(), objName));
+        if (Symbol * symbol{objName.symbol};
+            symbol && IsDummy(*symbol) && NeedsType(*symbol)) {
+          if (!type) {
+            type = ProcessTypeSpec(declTypeSpec);
+            if (!type || !type->IsNumeric(TypeCategory::Integer)) {
+              break;
+            }
+          }
+          symbol->SetType(*type);
+          NoteEarlyDeclaredDummyArgument(*symbol);
+          // Set the Implicit flag to disable bogus errors from
+          // being emitted later when this declaration is processed
+          // again normally.
+          symbol->set(Symbol::Flag::Implicit);
+        }
+      }
+    }
+  }
 }
 
 void ResolveNamesVisitor::CreateCommonBlockSymbols(
@@ -9306,11 +9455,40 @@ void ResolveNamesVisitor::CreateGeneric(const parser::GenericSpec &x) {
   info.Resolve(&MakeSymbol(symbolName, Attrs{}, std::move(genericDetails)));
 }
 
+static void SetImplicitCUDADevice(bool inDeviceSubprogram, Symbol &symbol) {
+  if (inDeviceSubprogram && symbol.has<ObjectEntityDetails>()) {
+    auto *object{symbol.detailsIf<ObjectEntityDetails>()};
+    if (!object->cudaDataAttr() && !IsValue(symbol) &&
+        !IsFunctionResult(symbol)) {
+      // Implicitly set device attribute if none is set in device context.
+      object->set_cudaDataAttr(common::CUDADataAttr::Device);
+    }
+  }
+}
+
 void ResolveNamesVisitor::FinishSpecificationPart(
     const std::list<parser::DeclarationConstruct> &decls) {
   misparsedStmtFuncFound_ = false;
   funcResultStack().CompleteFunctionResultType();
   CheckImports();
+  bool inDeviceSubprogram{false};
+  Symbol *scopeSym{currScope().symbol()};
+  if (currScope().kind() == Scope::Kind::BlockConstruct) {
+    scopeSym = currScope().parent().symbol();
+  }
+  if (scopeSym) {
+    if (auto *details{scopeSym->detailsIf<SubprogramDetails>()}) {
+      // Check the current procedure is a device procedure to apply implicit
+      // attribute at the end.
+      if (auto attrs{details->cudaSubprogramAttrs()}) {
+        if (*attrs == common::CUDASubprogramAttrs::Device ||
+            *attrs == common::CUDASubprogramAttrs::Global ||
+            *attrs == common::CUDASubprogramAttrs::Grid_Global) {
+          inDeviceSubprogram = true;
+        }
+      }
+    }
+  }
   for (auto &pair : currScope()) {
     auto &symbol{*pair.second};
     if (inInterfaceBlock()) {
@@ -9344,6 +9522,11 @@ void ResolveNamesVisitor::FinishSpecificationPart(
         SetImplicitAttr(symbol, Attr::BIND_C);
         SetBindNameOn(symbol);
       }
+    }
+    if (currScope().kind() == Scope::Kind::BlockConstruct) {
+      // Only look for specification in BlockConstruct. Other cases are done in
+      // ResolveSpecificationParts.
+      SetImplicitCUDADevice(inDeviceSubprogram, symbol);
     }
   }
   currScope().InstantiateDerivedTypes();
@@ -9573,7 +9756,10 @@ void ResolveNamesVisitor::Post(const parser::AssignedGotoStmt &x) {
 void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
   if (std::holds_alternative<parser::CompilerDirective::VectorAlways>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::Unroll>(x.u) ||
-      std::holds_alternative<parser::CompilerDirective::UnrollAndJam>(x.u)) {
+      std::holds_alternative<parser::CompilerDirective::UnrollAndJam>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::NoVector>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::NoUnroll>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::NoUnrollAndJam>(x.u)) {
     return;
   }
   if (const auto *tkr{
@@ -9901,14 +10087,7 @@ void ResolveNamesVisitor::ResolveSpecificationParts(ProgramTree &node) {
     }
     ApplyImplicitRules(symbol);
     // Apply CUDA implicit attributes if needed.
-    if (inDeviceSubprogram && symbol.has<ObjectEntityDetails>()) {
-      auto *object{symbol.detailsIf<ObjectEntityDetails>()};
-      if (!object->cudaDataAttr() && !IsValue(symbol) &&
-          (IsDummy(symbol) || object->IsArray())) {
-        // Implicitly set device attribute if none is set in device context.
-        object->set_cudaDataAttr(common::CUDADataAttr::Device);
-      }
-    }
+    SetImplicitCUDADevice(inDeviceSubprogram, symbol);
     // Main program local objects usually don't have an implied SAVE attribute,
     // as one might think, but in the exceptional case of a derived type
     // local object that contains a coarray, we have to mark it as an

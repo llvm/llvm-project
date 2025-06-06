@@ -203,10 +203,8 @@ define <2 x half> @v_constained_fsub_v2f16_fpexcept_strict(<2 x half> %x, <2 x h
 ; GFX11-SDAG-TRUE16-LABEL: v_constained_fsub_v2f16_fpexcept_strict:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; GFX11-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
+; GFX11-SDAG-TRUE16-NEXT:    v_sub_f16_e32 v0.h, v0.h, v1.h
 ; GFX11-SDAG-TRUE16-NEXT:    v_sub_f16_e32 v0.l, v0.l, v1.l
-; GFX11-SDAG-TRUE16-NEXT:    v_sub_f16_e32 v0.h, v3.l, v2.l
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-FAKE16-LABEL: v_constained_fsub_v2f16_fpexcept_strict:
@@ -292,10 +290,8 @@ define <2 x half> @v_constained_fsub_v2f16_fpexcept_ignore(<2 x half> %x, <2 x h
 ; GFX11-SDAG-TRUE16-LABEL: v_constained_fsub_v2f16_fpexcept_ignore:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; GFX11-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
+; GFX11-SDAG-TRUE16-NEXT:    v_sub_f16_e32 v0.h, v0.h, v1.h
 ; GFX11-SDAG-TRUE16-NEXT:    v_sub_f16_e32 v0.l, v0.l, v1.l
-; GFX11-SDAG-TRUE16-NEXT:    v_sub_f16_e32 v0.h, v3.l, v2.l
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-FAKE16-LABEL: v_constained_fsub_v2f16_fpexcept_ignore:
@@ -381,10 +377,8 @@ define <2 x half> @v_constained_fsub_v2f16_fpexcept_maytrap(<2 x half> %x, <2 x 
 ; GFX11-SDAG-TRUE16-LABEL: v_constained_fsub_v2f16_fpexcept_maytrap:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; GFX11-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
+; GFX11-SDAG-TRUE16-NEXT:    v_sub_f16_e32 v0.h, v0.h, v1.h
 ; GFX11-SDAG-TRUE16-NEXT:    v_sub_f16_e32 v0.l, v0.l, v1.l
-; GFX11-SDAG-TRUE16-NEXT:    v_sub_f16_e32 v0.h, v3.l, v2.l
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-FAKE16-LABEL: v_constained_fsub_v2f16_fpexcept_maytrap:
@@ -480,11 +474,9 @@ define <3 x half> @v_constained_fsub_v3f16_fpexcept_strict(<3 x half> %x, <3 x h
 ; GFX11-SDAG-TRUE16-LABEL: v_constained_fsub_v3f16_fpexcept_strict:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v4, 16, v2
-; GFX11-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v5, 16, v0
+; GFX11-SDAG-TRUE16-NEXT:    v_sub_f16_e32 v0.h, v0.h, v2.h
 ; GFX11-SDAG-TRUE16-NEXT:    v_sub_f16_e32 v0.l, v0.l, v2.l
 ; GFX11-SDAG-TRUE16-NEXT:    v_sub_f16_e32 v1.l, v1.l, v3.l
-; GFX11-SDAG-TRUE16-NEXT:    v_sub_f16_e32 v0.h, v5.l, v4.l
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-FAKE16-LABEL: v_constained_fsub_v3f16_fpexcept_strict:
@@ -616,14 +608,10 @@ define <4 x half> @v_constained_fsub_v4f16_fpexcept_strict(<4 x half> %x, <4 x h
 ; GFX11-SDAG-TRUE16-LABEL: v_constained_fsub_v4f16_fpexcept_strict:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
-; GFX11-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v5, 16, v2
-; GFX11-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
-; GFX11-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v7, 16, v1
-; GFX11-SDAG-TRUE16-NEXT:    v_sub_f16_e32 v1.l, v1.l, v3.l
+; GFX11-SDAG-TRUE16-NEXT:    v_sub_f16_e32 v1.h, v1.h, v3.h
+; GFX11-SDAG-TRUE16-NEXT:    v_sub_f16_e32 v0.h, v0.h, v2.h
 ; GFX11-SDAG-TRUE16-NEXT:    v_sub_f16_e32 v0.l, v0.l, v2.l
-; GFX11-SDAG-TRUE16-NEXT:    v_sub_f16_e32 v0.h, v6.l, v5.l
-; GFX11-SDAG-TRUE16-NEXT:    v_sub_f16_e32 v1.h, v7.l, v4.l
+; GFX11-SDAG-TRUE16-NEXT:    v_sub_f16_e32 v1.l, v1.l, v3.l
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-FAKE16-LABEL: v_constained_fsub_v4f16_fpexcept_strict:
@@ -802,14 +790,10 @@ define amdgpu_ps <2 x half> @s_constained_fsub_v2f16_fpexcept_strict(<2 x half> 
 ;
 ; GFX11-SDAG-TRUE16-LABEL: s_constained_fsub_v2f16_fpexcept_strict:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.h, s3
-; GFX11-SDAG-TRUE16-NEXT:    s_lshr_b32 s0, s2, 16
-; GFX11-SDAG-TRUE16-NEXT:    s_lshr_b32 s1, s3, 16
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.l, s0
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.h, s1
-; GFX11-SDAG-TRUE16-NEXT:    v_sub_f16_e32 v0.l, v0.l, v0.h
-; GFX11-SDAG-TRUE16-NEXT:    v_sub_f16_e32 v1.l, v1.l, v1.h
+; GFX11-SDAG-TRUE16-NEXT:    v_sub_f16_e64 v0.l, s2, s3
+; GFX11-SDAG-TRUE16-NEXT:    s_lshr_b32 s0, s3, 16
+; GFX11-SDAG-TRUE16-NEXT:    s_lshr_b32 s1, s2, 16
+; GFX11-SDAG-TRUE16-NEXT:    v_sub_f16_e64 v1.l, s1, s0
 ; GFX11-SDAG-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-SDAG-TRUE16-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GFX11-SDAG-TRUE16-NEXT:    ; return to shader part epilog

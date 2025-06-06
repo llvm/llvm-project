@@ -10,12 +10,13 @@ target triple = "aarch64-unknown-linux-gnu"
 
 ; CHECK-LABEL: LV: Checking a loop in 'test_v4_v4m'
 ; CHECK: VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.+]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<1024> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -23,7 +24,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     CLONE ir<%gep> = getelementptr ir<%b>, vp<[[STEPS]]>
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep>
 ; CHECK-NEXT:     WIDEN ir<%load> = load vp<[[VEC_PTR]]>
@@ -42,26 +43,27 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<for.cond.cleanup>, scalar.ph
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<for.cond.cleanup>:
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:  EMIT vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:  EMIT-SCALAR vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
 ; CHECK-NEXT: Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.body>:
 ; CHECK-NEXT:   IR   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ] (extra operand: vp<[[RESUME]]> from scalar.ph)
 ; CHECK:        IR   %exitcond = icmp eq i64 %indvars.iv.next, 1024
 ; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.cond.cleanup>:
-; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 
 ; CHECK: VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.+]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<1024> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -69,7 +71,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:     vp<[[STEPS]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:     vp<[[STEPS]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     CLONE ir<%gep> = getelementptr ir<%b>, vp<[[STEPS]]>
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep>
 ; CHECK-NEXT:     WIDEN ir<%load> = load vp<[[VEC_PTR]]>
@@ -88,16 +90,16 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<for.cond.cleanup>, scalar.ph
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<for.cond.cleanup>:
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:  EMIT vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:  EMIT-SCALAR vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
 ; CHECK-NEXT: Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.body>:
 ; CHECK-NEXT:   IR   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ] (extra operand: vp<[[RESUME]]> from scalar.ph)
 ; CHECK:        IR   %exitcond = icmp eq i64 %indvars.iv.next, 1024
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.cond.cleanup>:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 
@@ -107,12 +109,13 @@ target triple = "aarch64-unknown-linux-gnu"
 
 ; CHECK-LABEL: LV: Checking a loop in 'test_v2_v4m'
 ; CHECK: VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<1024> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -120,7 +123,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     CLONE ir<%gep> = getelementptr ir<%b>, vp<[[STEPS]]>
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep>
 ; CHECK-NEXT:     WIDEN ir<%load> = load vp<[[VEC_PTR]]>
@@ -139,26 +142,27 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<for.cond.cleanup>, scalar.ph
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<for.cond.cleanup>:
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:  EMIT vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:  EMIT-SCALAR vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
 ; CHECK-NEXT: Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.body>:
 ; CHECK-NEXT:   IR   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
 ; CHECK:        IR   %exitcond = icmp eq i64 %indvars.iv.next, 1024
 ; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.cond.cleanup>:
-; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 
 ; CHECK: VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<1024> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -166,7 +170,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     CLONE ir<%gep> = getelementptr ir<%b>, vp<[[STEPS]]>
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep>
 ; CHECK-NEXT:     WIDEN ir<%load> = load vp<[[VEC_PTR]]>
@@ -185,16 +189,16 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<for.cond.cleanup>, scalar.ph
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<for.cond.cleanup>:
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:  EMIT vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:  EMIT-SCALAR vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
 ; CHECK-NEXT: Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.body>:
 ; CHECK-NEXT:   IR   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ] (extra operand: vp<[[RESUME]]> from scalar.ph)
 ; CHECK:        IR   %exitcond = icmp eq i64 %indvars.iv.next, 1024
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.cond.cleanup>:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 
@@ -203,12 +207,13 @@ target triple = "aarch64-unknown-linux-gnu"
 
 ; CHECK-LABEL: LV: Checking a loop in 'test_v2_v4'
 ; CHECK: VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<1024> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -216,7 +221,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     CLONE ir<%gep> = getelementptr ir<%b>, vp<[[STEPS]]>
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep>
 ; CHECK-NEXT:     WIDEN ir<%load> = load vp<[[VEC_PTR]]>
@@ -235,26 +240,27 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<for.cond.cleanup>, scalar.ph
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<for.cond.cleanup>:
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:  EMIT vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:  EMIT-SCALAR vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
 ; CHECK-NEXT: Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.body>:
 ; CHECK-NEXT:   IR   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
 ; CHECK:        IR   %exitcond = icmp eq i64 %indvars.iv.next, 1024
 ; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.cond.cleanup>:
-; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 
 ; CHECK: VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.+]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<1024> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -262,7 +268,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     CLONE ir<%gep> = getelementptr ir<%b>, vp<[[STEPS]]>
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep>
 ; CHECK-NEXT:     WIDEN ir<%load> = load vp<[[VEC_PTR]]>
@@ -281,16 +287,16 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<for.cond.cleanup>, scalar.ph
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<for.cond.cleanup>:
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:  EMIT vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:  EMIT-SCALAR vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
 ; CHECK-NEXT: Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.body>:
 ; CHECK-NEXT:   IR   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ] (extra operand: vp<[[RESUME]]> from scalar.ph)
 ; CHECK:        IR   %exitcond = icmp eq i64 %indvars.iv.next, 1024
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.cond.cleanup>:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 
