@@ -208,7 +208,7 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::FREXP_PPCF128, nullptr);
   }
 
-  // Disable most libcalls on AMDGPU and NVPTX
+  // Disable most libcalls on AMDGPU and NVPTX.
   if (TT.isAMDGPU() || TT.isNVPTX()) {
     for (RTLIB::Libcall LC : RTLIB::libcalls()) {
       if (LC < RTLIB::ATOMIC_LOAD || LC > RTLIB::ATOMIC_FETCH_NAND_16)
