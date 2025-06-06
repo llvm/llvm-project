@@ -3177,7 +3177,7 @@ StringRef tools::ParseMPreferVectorWidthOption(clang::DiagnosticsEngine &Diags,
     return "";
 
   StringRef Value = A->getValue();
-  unsigned Width __attribute((uninitialized));
+  unsigned Width;
 
   // Only "none" and Integer values are accepted by
   // -mprefer-vector-width=<value>.
