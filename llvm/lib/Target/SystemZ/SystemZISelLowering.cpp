@@ -828,19 +828,6 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
 
   // Default to having -disable-strictnode-mutation on
   IsStrictFPEnabled = true;
-
-  if (Subtarget.isTargetzOS()) {
-    struct RTLibCallMapping {
-      RTLIB::Libcall Code;
-      const char *Name;
-    };
-    static RTLibCallMapping RTLibCallCommon[] = {
-#define HANDLE_LIBCALL(code, name) {RTLIB::code, name},
-#include "ZOSLibcallNames.def"
-    };
-    for (auto &E : RTLibCallCommon)
-      setLibcallName(E.Code, E.Name);
-  }
 }
 
 bool SystemZTargetLowering::useSoftFloat() const {
@@ -9606,7 +9593,7 @@ static void createPHIsForSelects(SmallVector<MachineInstr*, 8> &Selects,
     RegRewriteTable[DestReg] = std::make_pair(TrueReg, FalseReg);
   }
 
-  MF->getProperties().reset(MachineFunctionProperties::Property::NoPHIs);
+  MF->getProperties().resetNoPHIs();
 }
 
 MachineBasicBlock *
@@ -10560,7 +10547,7 @@ SystemZTargetLowering::emitMemMemWrapper(MachineInstr &MI,
           MBB->addLiveIn(SystemZ::CC);
       }
     }
-    MF.getProperties().reset(MachineFunctionProperties::Property::NoPHIs);
+    MF.getProperties().resetNoPHIs();
   }
 
   // Handle any remaining bytes with straight-line code.

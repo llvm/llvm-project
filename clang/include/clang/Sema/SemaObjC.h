@@ -170,7 +170,7 @@ public:
   bool isSignedCharBool(QualType Ty);
 
   void adornBoolConversionDiagWithTernaryFixit(
-      Expr *SourceExpr, const Sema::SemaDiagnosticBuilder &Builder);
+      const Expr *SourceExpr, const Sema::SemaDiagnosticBuilder &Builder);
 
   /// Check an Objective-C dictionary literal being converted to the given
   /// target type.

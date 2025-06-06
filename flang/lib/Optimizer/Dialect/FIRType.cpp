@@ -1407,6 +1407,13 @@ mlir::Type BaseBoxType::getEleTy() const {
           [](auto type) { return type.getEleTy(); });
 }
 
+mlir::Type BaseBoxType::getBaseAddressType() const {
+  mlir::Type eleTy = getEleTy();
+  if (fir::isa_ref_type(eleTy))
+    return eleTy;
+  return fir::ReferenceType::get(eleTy, isVolatile());
+}
+
 mlir::Type BaseBoxType::unwrapInnerType() const {
   return fir::unwrapInnerType(getEleTy());
 }
@@ -1492,6 +1499,7 @@ bool fir::BaseBoxType::isPointer() const {
   return llvm::isa<fir::PointerType>(getEleTy());
 }
 
+bool BaseBoxType::isVolatile() const { return fir::isa_volatile_type(*this); }
 //===----------------------------------------------------------------------===//
 // FIROpsDialect
 //===----------------------------------------------------------------------===//

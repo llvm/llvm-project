@@ -115,7 +115,7 @@ public:
 
   /// Returns the name of the function decl this code
   /// was generated for.
-  const std::string getName() const {
+  std::string getName() const {
     if (!Source || !getDecl())
       return "<<expr>>";
 
@@ -150,12 +150,13 @@ public:
   /// Returns the source information at a given PC.
   SourceInfo getSource(CodePtr PC) const;
 
-  /// Checks if the function is valid to call in constexpr.
-  bool isConstexpr() const { return IsValid || isLambdaStaticInvoker(); }
+  /// Checks if the function is valid to call.
+  bool isValid() const { return IsValid || isLambdaStaticInvoker(); }
 
   /// Checks if the function is virtual.
   bool isVirtual() const { return Virtual; };
   bool isImmediate() const { return Immediate; }
+  bool isConstexpr() const { return Constexpr; }
 
   /// Checks if the function is a constructor.
   bool isConstructor() const { return Kind == FunctionKind::Ctor; }
@@ -303,6 +304,8 @@ private:
   unsigned Virtual : 1;
   LLVM_PREFERRED_TYPE(bool)
   unsigned Immediate : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned Constexpr : 1;
 
 public:
   /// Dumps the disassembled bytecode to \c llvm::errs().

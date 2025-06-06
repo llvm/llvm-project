@@ -42,20 +42,20 @@
 // OGCG-DAG: %struct.CycleMiddle = type { ptr }
 // OGCG-DAG: %struct.CycleEnd = type { ptr }
 
-struct IncompleteS *p;
-
-// CIR:      cir.global external @p = #cir.ptr<null> : !cir.ptr<!rec_IncompleteS>
-// LLVM-DAG: @p = dso_local global ptr null
-// OGCG-DAG: @p = global ptr null, align 8
-
 struct CompleteS {
   int a;
   char b;
 } cs;
 
 // CIR:       cir.global external @cs = #cir.zero : !rec_CompleteS
-// LLVM-DAG:  @cs = dso_local global %struct.CompleteS zeroinitializer
+// LLVM-DAG:  @cs = global %struct.CompleteS zeroinitializer
 // OGCG-DAG:  @cs = global %struct.CompleteS zeroinitializer, align 4
+
+struct IncompleteS *p;
+
+// CIR:      cir.global external @p = #cir.ptr<null> : !cir.ptr<!rec_IncompleteS>
+// LLVM-DAG: @p = global ptr null
+// OGCG-DAG: @p = global ptr null, align 8
 
 struct InnerS {
   int a;
@@ -70,7 +70,7 @@ struct OuterS {
 struct OuterS os;
 
 // CIR:       cir.global external @os = #cir.zero : !rec_OuterS
-// LLVM-DAG:  @os = dso_local global %struct.OuterS zeroinitializer
+// LLVM-DAG:  @os = global %struct.OuterS zeroinitializer
 // OGCG-DAG:  @os = global %struct.OuterS zeroinitializer, align 4
 
 #pragma pack(push)
@@ -82,7 +82,7 @@ struct PackedS {
 } ps;
 
 // CIR:       cir.global external @ps = #cir.zero : !rec_PackedS
-// LLVM-DAG:  @ps = dso_local global %struct.PackedS zeroinitializer
+// LLVM-DAG:  @ps = global %struct.PackedS zeroinitializer
 // OGCG-DAG:  @ps = global %struct.PackedS zeroinitializer, align 1
 
 struct PackedAndPaddedS {
@@ -91,7 +91,7 @@ struct PackedAndPaddedS {
 } __attribute__((aligned(2))) pps;
 
 // CIR:       cir.global external @pps = #cir.zero : !rec_PackedAndPaddedS
-// LLVM-DAG:  @pps = dso_local global %struct.PackedAndPaddedS zeroinitializer
+// LLVM-DAG:  @pps = global %struct.PackedAndPaddedS zeroinitializer
 // OGCG-DAG:  @pps = global %struct.PackedAndPaddedS zeroinitializer, align 2
 
 #pragma pack(pop)
@@ -102,7 +102,7 @@ struct NodeS {
 } node;
 
 // CIR:      cir.global{{.*}} @node = #cir.zero : !rec_NodeS
-// LLVM-DAG:  @node = dso_local global %struct.NodeS zeroinitializer
+// LLVM-DAG:  @node = global %struct.NodeS zeroinitializer
 // OGCG-DAG:  @node = global %struct.NodeS zeroinitializer
 
 // Mutually dependent types
@@ -112,7 +112,7 @@ struct LeftS {
 } ls;
 
 // CIR:      cir.global{{.*}} @ls = #cir.zero : !rec_LeftS
-// LLVM-DAG:  @ls = dso_local global %struct.LeftS zeroinitializer
+// LLVM-DAG:  @ls = global %struct.LeftS zeroinitializer
 // OGCG-DAG:  @ls = global %struct.LeftS zeroinitializer
 
 struct RightS {
@@ -120,7 +120,7 @@ struct RightS {
 } rs;
 
 // CIR:      cir.global{{.*}} @rs = #cir.zero : !rec_RightS
-// LLVM-DAG:  @rs = dso_local global %struct.RightS zeroinitializer
+// LLVM-DAG:  @rs = global %struct.RightS zeroinitializer
 // OGCG-DAG:  @rs = global %struct.RightS zeroinitializer
 
 struct CycleMiddle;
@@ -130,7 +130,7 @@ struct CycleStart {
 } start;
 
 // CIR:      cir.global{{.*}} @start = #cir.zero : !rec_CycleStart
-// LLVM-DAG:  @start = dso_local global %struct.CycleStart zeroinitializer
+// LLVM-DAG:  @start = global %struct.CycleStart zeroinitializer
 // OGCG-DAG:  @start = global %struct.CycleStart zeroinitializer
 
 struct CycleMiddle {
@@ -138,7 +138,7 @@ struct CycleMiddle {
 } middle;
 
 // CIR:      cir.global{{.*}} @middle = #cir.zero : !rec_CycleMiddle
-// LLVM-DAG:  @middle = dso_local global %struct.CycleMiddle zeroinitializer
+// LLVM-DAG:  @middle = global %struct.CycleMiddle zeroinitializer
 // OGCG-DAG:  @middle = global %struct.CycleMiddle zeroinitializer
 
 struct CycleEnd {
@@ -146,7 +146,7 @@ struct CycleEnd {
 } end;
 
 // CIR:      cir.global{{.*}} @end = #cir.zero : !rec_CycleEnd
-// LLVM-DAG:  @end = dso_local global %struct.CycleEnd zeroinitializer
+// LLVM-DAG:  @end = global %struct.CycleEnd zeroinitializer
 // OGCG-DAG:  @end = global %struct.CycleEnd zeroinitializer
 
 void f(void) {
@@ -191,16 +191,16 @@ char f3(int a) {
 // CIR:      cir.func @f3(%[[ARG_A:.*]]: !s32i
 // CIR-NEXT:   %[[A_ADDR:.*]] = cir.alloca {{.*}} ["a", init] {alignment = 4 : i64}
 // CIR-NEXT:   %[[RETVAL_ADDR:.*]] = cir.alloca {{.*}} ["__retval"] {alignment = 1 : i64}
-// CIR-NEXT:   cir.store %[[ARG_A]], %[[A_ADDR]]
-// CIR-NEXT:   %[[A_VAL:.*]] = cir.load %[[A_ADDR]]
+// CIR-NEXT:   cir.store{{.*}} %[[ARG_A]], %[[A_ADDR]]
+// CIR-NEXT:   %[[A_VAL:.*]] = cir.load{{.*}} %[[A_ADDR]]
 // CIR-NEXT:   %[[CS:.*]] = cir.get_global @cs
 // CIR-NEXT:   %[[CS_A:.*]] = cir.get_member %[[CS]][0] {name = "a"}
-// CIR-NEXT:   cir.store %[[A_VAL]], %[[CS_A]]
+// CIR-NEXT:   cir.store{{.*}} %[[A_VAL]], %[[CS_A]]
 // CIR-NEXT:   %[[CS2:.*]] = cir.get_global @cs
 // CIR-NEXT:   %[[CS_B:.*]] = cir.get_member %[[CS2]][1] {name = "b"}
-// CIR-NEXT:   %[[CS_B_VAL:.*]] = cir.load %[[CS_B]]
-// CIR-NEXT:   cir.store %[[CS_B_VAL]], %[[RETVAL_ADDR]]
-// CIR-NEXT:   %[[RETVAL:.*]] = cir.load %[[RETVAL_ADDR]]
+// CIR-NEXT:   %[[CS_B_VAL:.*]] = cir.load{{.*}} %[[CS_B]]
+// CIR-NEXT:   cir.store{{.*}} %[[CS_B_VAL]], %[[RETVAL_ADDR]]
+// CIR-NEXT:   %[[RETVAL:.*]] = cir.load{{.*}} %[[RETVAL_ADDR]]
 // CIR-NEXT:   cir.return %[[RETVAL]]
 
 // LLVM:      define i8 @f3(i32 %[[ARG_A:.*]])
@@ -209,7 +209,7 @@ char f3(int a) {
 // LLVM-NEXT:   store i32 %[[ARG_A]], ptr %[[A_ADDR]], align 4
 // LLVM-NEXT:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4
 // LLVM-NEXT:   store i32 %[[A_VAL]], ptr @cs, align 4
-// LLVM-NEXT:   %[[CS_B_VAL:.*]] = load i8, ptr getelementptr inbounds nuw (i8, ptr @cs, i64 4), align 1
+// LLVM-NEXT:   %[[CS_B_VAL:.*]] = load i8, ptr getelementptr inbounds nuw (i8, ptr @cs, i64 4), align 4
 // LLVM-NEXT:   store i8 %[[CS_B_VAL]], ptr %[[RETVAL_ADDR]], align 1
 // LLVM-NEXT:   %[[RETVAL:.*]] = load i8, ptr %[[RETVAL_ADDR]], align 1
 // LLVM-NEXT:   ret i8 %[[RETVAL]]
@@ -232,17 +232,17 @@ char f4(int a, struct CompleteS *p) {
 // CIR-NEXT:   %[[A_ADDR:.*]] = cir.alloca {{.*}} ["a", init] {alignment = 4 : i64}
 // CIR-NEXT:   %[[P_ADDR:.*]] = cir.alloca {{.*}} ["p", init] {alignment = 8 : i64}
 // CIR-NEXT:   %[[RETVAL_ADDR:.*]] = cir.alloca {{.*}} ["__retval"] {alignment = 1 : i64}
-// CIR-NEXT:   cir.store %[[ARG_A]], %[[A_ADDR]]
-// CIR-NEXT:   cir.store %[[ARG_P]], %[[P_ADDR]]
-// CIR-NEXT:   %[[A_VAL:.*]] = cir.load %[[A_ADDR]]
-// CIR-NEXT:   %[[P:.*]] = cir.load %[[P_ADDR]]
+// CIR-NEXT:   cir.store{{.*}} %[[ARG_A]], %[[A_ADDR]]
+// CIR-NEXT:   cir.store{{.*}} %[[ARG_P]], %[[P_ADDR]]
+// CIR-NEXT:   %[[A_VAL:.*]] = cir.load{{.*}} %[[A_ADDR]]
+// CIR-NEXT:   %[[P:.*]] = cir.load{{.*}} %[[P_ADDR]]
 // CIR-NEXT:   %[[P_A:.*]] = cir.get_member %[[P]][0] {name = "a"}
-// CIR-NEXT:   cir.store %[[A_VAL]], %[[P_A]]
-// CIR-NEXT:   %[[P2:.*]] = cir.load %[[P_ADDR]]
+// CIR-NEXT:   cir.store{{.*}} %[[A_VAL]], %[[P_A]]
+// CIR-NEXT:   %[[P2:.*]] = cir.load{{.*}} %[[P_ADDR]]
 // CIR-NEXT:   %[[P_B:.*]] = cir.get_member %[[P2]][1] {name = "b"}
-// CIR-NEXT:   %[[P_B_VAL:.*]] = cir.load %[[P_B]]
-// CIR-NEXT:   cir.store %[[P_B_VAL]], %[[RETVAL_ADDR]]
-// CIR-NEXT:   %[[RETVAL:.*]] = cir.load %[[RETVAL_ADDR]]
+// CIR-NEXT:   %[[P_B_VAL:.*]] = cir.load{{.*}} %[[P_B]]
+// CIR-NEXT:   cir.store{{.*}} %[[P_B_VAL]], %[[RETVAL_ADDR]]
+// CIR-NEXT:   %[[RETVAL:.*]] = cir.load{{.*}} %[[RETVAL_ADDR]]
 // CIR-NEXT:   cir.return %[[RETVAL]]
 
 // LLVM:      define i8 @f4(i32 %[[ARG_A:.*]], ptr %[[ARG_P:.*]])
@@ -257,7 +257,7 @@ char f4(int a, struct CompleteS *p) {
 // LLVM-NEXT:   store i32 %[[A_VAL]], ptr %[[P_A]], align 4
 // LLVM-NEXT:   %[[P_VAL2:.*]] = load ptr, ptr %[[P_ADDR]], align 8
 // LLVM-NEXT:   %[[P_B:.*]] = getelementptr %struct.CompleteS, ptr %[[P_VAL2]], i32 0, i32 1
-// LLVM-NEXT:   %[[P_B_VAL:.*]] = load i8, ptr %[[P_B]], align 1
+// LLVM-NEXT:   %[[P_B_VAL:.*]] = load i8, ptr %[[P_B]], align 4
 // LLVM-NEXT:   store i8 %[[P_B_VAL]], ptr %[[RETVAL_ADDR]], align 1
 // LLVM-NEXT:   %[[RETVAL:.*]] = load i8, ptr %[[RETVAL_ADDR]], align 1
 // LLVM-NEXT:   ret i8 %[[RETVAL]]

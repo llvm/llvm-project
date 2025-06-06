@@ -906,6 +906,10 @@ def FeatureStdExtShvsatpa
     : RISCVExtension<1, 0,
                      "vsatp supports all modes supported by satp">;
 
+def FeatureStdExtShlcofideleg
+    : RISCVExtension<1, 0,
+                     "Delegating LCOFI Interrupts to VS-mode">;
+
 def FeatureStdExtSmaia
     : RISCVExtension<1, 0,
                      "Advanced Interrupt Architecture Machine Level">;
@@ -922,9 +926,9 @@ def FeatureStdExtSscsrind
     : RISCVExtension<1, 0, "Indirect CSR Access Supervisor Level">;
 
 def FeatureStdExtSmdbltrp
-    : RISCVExtension<1, 0, "Double Trap Machine Level">;
+    : RISCVExtension<1, 0, "Double Trap Machine Level", [FeatureStdExtZicsr]>;
 def FeatureStdExtSsdbltrp
-    : RISCVExtension<1, 0, "Double Trap Supervisor Level">;
+    : RISCVExtension<1, 0, "Double Trap Supervisor Level", [FeatureStdExtZicsr]>;
 
 def FeatureStdExtSmepmp
     : RISCVExtension<1, 0, "Enhanced Physical Memory Protection">;

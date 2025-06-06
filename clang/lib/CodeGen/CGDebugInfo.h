@@ -210,6 +210,7 @@ private:
   llvm::DIType *CreateType(const FunctionType *Ty, llvm::DIFile *F);
   llvm::DIType *CreateType(const HLSLAttributedResourceType *Ty,
                            llvm::DIFile *F);
+  llvm::DIType *CreateType(const HLSLInlineSpirvType *Ty, llvm::DIFile *F);
   /// Get structure or union type.
   llvm::DIType *CreateType(const RecordType *Tyg);
 
@@ -668,6 +669,9 @@ public:
   void addInstToSpecificSourceAtom(llvm::Instruction *KeyInstruction,
                                    llvm::Value *Backup, uint64_t Atom);
 
+  /// Emit symbol for debugger that holds the pointer to the vtable.
+  void emitVTableSymbol(llvm::GlobalVariable *VTable, const CXXRecordDecl *RD);
+
 private:
   /// Amend \p I's DebugLoc with \p Group (its source atom group) and \p
   /// Rank (lower nonzero rank is higher precedence). Does nothing if \p I
@@ -890,20 +894,6 @@ private:
       std::memcpy(Data + A.size(), B.data(), B.size());
     return StringRef(Data, A.size() + B.size());
   }
-};
-
-/// A scoped helper to set the current source atom group for
-/// CGDebugInfo::addInstToCurrentSourceAtom. A source atom is a source construct
-/// that is "interesting" for debug stepping purposes. We use an atom group
-/// number to track the instruction(s) that implement the functionality for the
-/// atom, plus backup instructions/source locations.
-class ApplyAtomGroup {
-  uint64_t OriginalAtom = 0;
-  CGDebugInfo *DI = nullptr;
-
-public:
-  ApplyAtomGroup(CGDebugInfo *DI);
-  ~ApplyAtomGroup();
 };
 
 /// A scoped helper to set the current debug location to the specified

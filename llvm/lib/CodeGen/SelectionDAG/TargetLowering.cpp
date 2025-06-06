@@ -3801,6 +3801,13 @@ void TargetLowering::computeKnownBitsForTargetInstr(
   Known.resetAll();
 }
 
+void TargetLowering::computeKnownFPClassForTargetInstr(
+    GISelValueTracking &Analysis, Register R, KnownFPClass &Known,
+    const APInt &DemandedElts, const MachineRegisterInfo &MRI,
+    unsigned Depth) const {
+  Known.resetAll();
+}
+
 void TargetLowering::computeKnownBitsForFrameIndex(
   const int FrameIdx, KnownBits &Known, const MachineFunction &MF) const {
   // The low bits are known zero if the pointer is aligned.
@@ -8683,11 +8690,8 @@ SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
 
   SDValue MinMax =
       DAG.getSelectCC(DL, LHS, RHS, LHS, RHS, IsMax ? ISD::SETGT : ISD::SETLT);
-  // If MinMax is NaN, let's quiet it.
-  if (!Flags.hasNoNaNs() && !DAG.isKnownNeverNaN(LHS) &&
-      !DAG.isKnownNeverNaN(RHS)) {
-    MinMax = DAG.getNode(ISD::FCANONICALIZE, DL, VT, MinMax, Flags);
-  }
+
+  // TODO: We need quiet sNaN if strictfp.
 
   // Fixup signed zero behavior.
   if (Options.NoSignedZerosFPMath || Flags.hasNoSignedZeros() ||
