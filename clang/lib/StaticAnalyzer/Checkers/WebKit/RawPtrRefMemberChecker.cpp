@@ -197,43 +197,44 @@ public:
   }
 
   void visitPropImpl(const ObjCContainerDecl *CD,
-                     const ObjCPropertyImplDecl* PID) const {
-   if (BR->getSourceManager().isInSystemHeader(PID->getLocation()))
-     return;
+                     const ObjCPropertyImplDecl *PID) const {
+    if (BR->getSourceManager().isInSystemHeader(PID->getLocation()))
+      return;
 
-   if (PID->getPropertyImplementation() != ObjCPropertyImplDecl::Synthesize)
-     return;
+    if (PID->getPropertyImplementation() != ObjCPropertyImplDecl::Synthesize)
+      return;
 
-   auto *PropDecl = PID->getPropertyDecl();
-   if (auto *IvarDecl = PID->getPropertyIvarDecl()) {
-     if (IvarDeclsToIgnore.contains(IvarDecl))
-       return;
-     IvarDeclsToIgnore.insert(IvarDecl);
-   }
-   auto [IsUnsafe, PropType] = isPropImplUnsafePtr(PropDecl);
-   if (!IsUnsafe)
-     return;
+    auto *PropDecl = PID->getPropertyDecl();
+    if (auto *IvarDecl = PID->getPropertyIvarDecl()) {
+      if (IvarDeclsToIgnore.contains(IvarDecl))
+        return;
+      IvarDeclsToIgnore.insert(IvarDecl);
+    }
+    auto [IsUnsafe, PropType] = isPropImplUnsafePtr(PropDecl);
+    if (!IsUnsafe)
+      return;
 
-   if (auto *MemberCXXRD = PropType->getPointeeCXXRecordDecl())
-     reportBug(PropDecl, PropType, MemberCXXRD, CD);
-   else if (auto *ObjCDecl = getObjCDecl(PropType))
-     reportBug(PropDecl, PropType, ObjCDecl, CD);
+    if (auto *MemberCXXRD = PropType->getPointeeCXXRecordDecl())
+      reportBug(PropDecl, PropType, MemberCXXRD, CD);
+    else if (auto *ObjCDecl = getObjCDecl(PropType))
+      reportBug(PropDecl, PropType, ObjCDecl, CD);
   }
 
-  std::pair<bool, const Type*> isPropImplUnsafePtr(const ObjCPropertyDecl *PD) const {
+  std::pair<bool, const Type *>
+  isPropImplUnsafePtr(const ObjCPropertyDecl *PD) const {
     if (!PD)
-      return { false, nullptr };
+      return {false, nullptr};
 
     auto QT = PD->getType();
     const Type *PropType = QT.getTypePtrOrNull();
     if (!PropType)
-      return { false, nullptr };
+      return {false, nullptr};
 
     // "assign" property doesn't retain even under ARC so treat it as unsafe.
     bool ignoreARC =
         !PD->isReadOnly() && PD->getSetterKind() == ObjCPropertyDecl::Assign;
     auto IsUnsafePtr = isUnsafePtr(QT, ignoreARC);
-    return { IsUnsafePtr && *IsUnsafePtr, PropType };
+    return {IsUnsafePtr && *IsUnsafePtr, PropType};
   }
 
   bool shouldSkipDecl(const RecordDecl *RD) const {
