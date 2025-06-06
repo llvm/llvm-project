@@ -41,6 +41,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TrailingObjects.h"
@@ -172,7 +173,7 @@ class PragmaCommentDecl final
                     PragmaMSCommentKind CommentKind)
       : Decl(PragmaComment, TU, CommentLoc), CommentKind(CommentKind) {}
 
-  virtual void anchor();
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
 public:
   static PragmaCommentDecl *Create(const ASTContext &C, TranslationUnitDecl *DC,
@@ -184,7 +185,7 @@ public:
 
   PragmaMSCommentKind getCommentKind() const { return CommentKind; }
 
-  StringRef getArg() const { return getTrailingObjects<char>(); }
+  StringRef getArg() const { return getTrailingObjects(); }
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
@@ -206,7 +207,7 @@ class PragmaDetectMismatchDecl final
                            size_t ValueStart)
       : Decl(PragmaDetectMismatch, TU, Loc), ValueStart(ValueStart) {}
 
-  virtual void anchor();
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
 public:
   static PragmaDetectMismatchDecl *Create(const ASTContext &C,
@@ -216,8 +217,8 @@ public:
   static PragmaDetectMismatchDecl *
   CreateDeserialized(ASTContext &C, GlobalDeclID ID, unsigned NameValueSize);
 
-  StringRef getName() const { return getTrailingObjects<char>(); }
-  StringRef getValue() const { return getTrailingObjects<char>() + ValueStart; }
+  StringRef getName() const { return getTrailingObjects(); }
+  StringRef getValue() const { return getTrailingObjects() + ValueStart; }
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
@@ -1990,7 +1991,7 @@ public:
     /// Get the unqualified lookup results that should be used in this
     /// defaulted function definition.
     ArrayRef<DeclAccessPair> getUnqualifiedLookups() const {
-      return {getTrailingObjects<DeclAccessPair>(), NumLookups};
+      return getTrailingObjects<DeclAccessPair>(NumLookups);
     }
 
     StringLiteral *getDeletedMessage() const {
@@ -4779,13 +4780,9 @@ private:
 
   explicit OutlinedFunctionDecl(DeclContext *DC, unsigned NumParams);
 
-  ImplicitParamDecl *const *getParams() const {
-    return getTrailingObjects<ImplicitParamDecl *>();
-  }
+  ImplicitParamDecl *const *getParams() const { return getTrailingObjects(); }
 
-  ImplicitParamDecl **getParams() {
-    return getTrailingObjects<ImplicitParamDecl *>();
-  }
+  ImplicitParamDecl **getParams() { return getTrailingObjects(); }
 
 public:
   friend class ASTDeclReader;
@@ -4856,13 +4853,9 @@ private:
 
   explicit CapturedDecl(DeclContext *DC, unsigned NumParams);
 
-  ImplicitParamDecl *const *getParams() const {
-    return getTrailingObjects<ImplicitParamDecl *>();
-  }
+  ImplicitParamDecl *const *getParams() const { return getTrailingObjects(); }
 
-  ImplicitParamDecl **getParams() {
-    return getTrailingObjects<ImplicitParamDecl *>();
-  }
+  ImplicitParamDecl **getParams() { return getTrailingObjects(); }
 
 public:
   friend class ASTDeclReader;
@@ -5031,7 +5024,7 @@ public:
 ///   export void foo();
 /// \endcode
 class ExportDecl final : public Decl, public DeclContext {
-  virtual void anchor();
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
 private:
   friend class ASTDeclReader;
@@ -5176,6 +5169,40 @@ public:
 
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
+};
+
+class HLSLRootSignatureDecl final
+    : public NamedDecl,
+      private llvm::TrailingObjects<HLSLRootSignatureDecl,
+                                    llvm::hlsl::rootsig::RootElement> {
+  friend TrailingObjects;
+
+  unsigned NumElems;
+
+  llvm::hlsl::rootsig::RootElement *getElems() { return getTrailingObjects(); }
+
+  const llvm::hlsl::rootsig::RootElement *getElems() const {
+    return getTrailingObjects();
+  }
+
+  HLSLRootSignatureDecl(DeclContext *DC, SourceLocation Loc, IdentifierInfo *ID,
+                        unsigned NumElems);
+
+public:
+  static HLSLRootSignatureDecl *
+  Create(ASTContext &C, DeclContext *DC, SourceLocation Loc, IdentifierInfo *ID,
+         ArrayRef<llvm::hlsl::rootsig::RootElement> RootElements);
+
+  static HLSLRootSignatureDecl *CreateDeserialized(ASTContext &C,
+                                                   GlobalDeclID ID);
+
+  ArrayRef<llvm::hlsl::rootsig::RootElement> getRootElements() const {
+    return {getElems(), NumElems};
+  }
+
+  // Implement isa/cast/dyncast/etc.
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == HLSLRootSignature; }
 };
 
 /// Insertion operator for diagnostics.  This allows sending NamedDecl's

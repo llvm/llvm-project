@@ -87,16 +87,59 @@ static void fixI8UseChain(Instruction &I,
     return;
   }
 
-  if (auto *Load = dyn_cast<LoadInst>(&I)) {
-    if (!I.getType()->isIntegerTy(8))
-      return;
+  if (auto *Load = dyn_cast<LoadInst>(&I);
+      Load && I.getType()->isIntegerTy(8)) {
     SmallVector<Value *> NewOperands;
     ProcessOperands(NewOperands);
     Type *ElementType = NewOperands[0]->getType();
     if (auto *AI = dyn_cast<AllocaInst>(NewOperands[0]))
       ElementType = AI->getAllocatedType();
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(NewOperands[0])) {
+      ElementType = GEP->getSourceElementType();
+      if (ElementType->isArrayTy())
+        ElementType = ElementType->getArrayElementType();
+    }
     LoadInst *NewLoad = Builder.CreateLoad(ElementType, NewOperands[0]);
     ReplacedValues[Load] = NewLoad;
+    ToRemove.push_back(Load);
+    return;
+  }
+
+  if (auto *Load = dyn_cast<LoadInst>(&I);
+      Load && isa<ConstantExpr>(Load->getPointerOperand())) {
+    auto *CE = dyn_cast<ConstantExpr>(Load->getPointerOperand());
+    if (!(CE->getOpcode() == Instruction::GetElementPtr))
+      return;
+    auto *GEP = dyn_cast<GEPOperator>(CE);
+    if (!GEP->getSourceElementType()->isIntegerTy(8))
+      return;
+
+    Type *ElementType = Load->getType();
+    ConstantInt *Offset = dyn_cast<ConstantInt>(GEP->getOperand(1));
+    uint32_t ByteOffset = Offset->getZExtValue();
+    uint32_t ElemSize = Load->getDataLayout().getTypeAllocSize(ElementType);
+    uint32_t Index = ByteOffset / ElemSize;
+
+    Value *PtrOperand = GEP->getPointerOperand();
+    Type *GEPType = GEP->getPointerOperandType();
+
+    if (auto *GV = dyn_cast<GlobalVariable>(PtrOperand))
+      GEPType = GV->getValueType();
+    if (auto *AI = dyn_cast<AllocaInst>(PtrOperand))
+      GEPType = AI->getAllocatedType();
+
+    if (auto *ArrTy = dyn_cast<ArrayType>(GEPType))
+      GEPType = ArrTy;
+    else
+      GEPType = ArrayType::get(ElementType, 1); // its a scalar
+
+    Value *NewGEP = Builder.CreateGEP(
+        GEPType, PtrOperand, {Builder.getInt32(0), Builder.getInt32(Index)},
+        GEP->getName(), GEP->getNoWrapFlags());
+
+    LoadInst *NewLoad = Builder.CreateLoad(ElementType, NewGEP);
+    ReplacedValues[Load] = NewLoad;
+    Load->replaceAllUsesWith(NewLoad);
     ToRemove.push_back(Load);
     return;
   }
@@ -155,6 +198,7 @@ static void fixI8UseChain(Instruction &I,
       Cast->replaceAllUsesWith(Replacement);
       return;
     }
+
     Value *AdjustedCast = nullptr;
     if (Cast->getOpcode() == Instruction::ZExt)
       AdjustedCast = Builder.CreateZExtOrTrunc(Replacement, Cast->getType());
@@ -163,6 +207,45 @@ static void fixI8UseChain(Instruction &I,
 
     if (AdjustedCast)
       Cast->replaceAllUsesWith(AdjustedCast);
+  }
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
+    if (!GEP->getType()->isPointerTy() ||
+        !GEP->getSourceElementType()->isIntegerTy(8))
+      return;
+
+    Value *BasePtr = GEP->getPointerOperand();
+    if (ReplacedValues.count(BasePtr))
+      BasePtr = ReplacedValues[BasePtr];
+
+    Type *ElementType = BasePtr->getType();
+
+    if (auto *AI = dyn_cast<AllocaInst>(BasePtr))
+      ElementType = AI->getAllocatedType();
+    if (auto *GV = dyn_cast<GlobalVariable>(BasePtr))
+      ElementType = GV->getValueType();
+
+    Type *GEPType = ElementType;
+    if (auto *ArrTy = dyn_cast<ArrayType>(ElementType))
+      ElementType = ArrTy->getArrayElementType();
+    else
+      GEPType = ArrayType::get(ElementType, 1); // its a scalar
+
+    ConstantInt *Offset = dyn_cast<ConstantInt>(GEP->getOperand(1));
+    // Note: i8 to i32 offset conversion without emitting IR requires constant
+    // ints. Since offset conversion is common, we can safely assume Offset is
+    // always a ConstantInt, so no need to have a conditional bail out on
+    // nullptr, instead assert this is the case.
+    assert(Offset && "Offset is expected to be a ConstantInt");
+    uint32_t ByteOffset = Offset->getZExtValue();
+    uint32_t ElemSize = GEP->getDataLayout().getTypeAllocSize(ElementType);
+    assert(ElemSize > 0 && "ElementSize must be set");
+    uint32_t Index = ByteOffset / ElemSize;
+    Value *NewGEP = Builder.CreateGEP(
+        GEPType, BasePtr, {Builder.getInt32(0), Builder.getInt32(Index)},
+        GEP->getName(), GEP->getNoWrapFlags());
+    ReplacedValues[GEP] = NewGEP;
+    GEP->replaceAllUsesWith(NewGEP);
+    ToRemove.push_back(GEP);
   }
 }
 
@@ -175,15 +258,12 @@ static void upcastI8AllocasAndUses(Instruction &I,
 
   Type *SmallestType = nullptr;
 
-  for (User *U : AI->users()) {
-    auto *Load = dyn_cast<LoadInst>(U);
-    if (!Load)
-      continue;
+  auto ProcessLoad = [&](LoadInst *Load) {
     for (User *LU : Load->users()) {
       Type *Ty = nullptr;
-      if (auto *Cast = dyn_cast<CastInst>(LU))
+      if (CastInst *Cast = dyn_cast<CastInst>(LU))
         Ty = Cast->getType();
-      if (CallInst *CI = dyn_cast<CallInst>(LU)) {
+      else if (CallInst *CI = dyn_cast<CallInst>(LU)) {
         if (CI->getIntrinsicID() == Intrinsic::memset)
           Ty = Type::getInt32Ty(CI->getContext());
       }
@@ -194,6 +274,17 @@ static void upcastI8AllocasAndUses(Instruction &I,
       if (!SmallestType ||
           Ty->getPrimitiveSizeInBits() < SmallestType->getPrimitiveSizeInBits())
         SmallestType = Ty;
+    }
+  };
+
+  for (User *U : AI->users()) {
+    if (auto *Load = dyn_cast<LoadInst>(U))
+      ProcessLoad(Load);
+    else if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
+      for (User *GU : GEP->users()) {
+        if (auto *Load = dyn_cast<LoadInst>(GU))
+          ProcessLoad(Load);
+      }
     }
   }
 
@@ -243,6 +334,67 @@ downcastI64toI32InsertExtractElements(Instruction &I,
       Insert->replaceAllUsesWith(Insert32Index);
       ToRemove.push_back(Insert);
     }
+  }
+}
+
+static void emitMemcpyExpansion(IRBuilder<> &Builder, Value *Dst, Value *Src,
+                                ConstantInt *Length) {
+
+  uint64_t ByteLength = Length->getZExtValue();
+  // If length to copy is zero, no memcpy is needed.
+  if (ByteLength == 0)
+    return;
+
+  LLVMContext &Ctx = Builder.getContext();
+  const DataLayout &DL = Builder.GetInsertBlock()->getModule()->getDataLayout();
+
+  auto GetArrTyFromVal = [](Value *Val) -> ArrayType * {
+    assert(isa<AllocaInst>(Val) ||
+           isa<GlobalVariable>(Val) &&
+               "Expected Val to be an Alloca or Global Variable");
+    if (auto *Alloca = dyn_cast<AllocaInst>(Val))
+      return dyn_cast<ArrayType>(Alloca->getAllocatedType());
+    if (auto *GlobalVar = dyn_cast<GlobalVariable>(Val))
+      return dyn_cast<ArrayType>(GlobalVar->getValueType());
+    return nullptr;
+  };
+
+  ArrayType *DstArrTy = GetArrTyFromVal(Dst);
+  assert(DstArrTy && "Expected Dst of memcpy to be a Pointer to an Array Type");
+  if (auto *DstGlobalVar = dyn_cast<GlobalVariable>(Dst))
+    assert(!DstGlobalVar->isConstant() &&
+           "The Dst of memcpy must not be a constant Global Variable");
+  [[maybe_unused]] ArrayType *SrcArrTy = GetArrTyFromVal(Src);
+  assert(SrcArrTy && "Expected Src of memcpy to be a Pointer to an Array Type");
+
+  Type *DstElemTy = DstArrTy->getElementType();
+  uint64_t DstElemByteSize = DL.getTypeStoreSize(DstElemTy);
+  assert(DstElemByteSize > 0 && "Dst element type store size must be set");
+  Type *SrcElemTy = SrcArrTy->getElementType();
+  [[maybe_unused]] uint64_t SrcElemByteSize = DL.getTypeStoreSize(SrcElemTy);
+  assert(SrcElemByteSize > 0 && "Src element type store size must be set");
+
+  // This assumption simplifies implementation and covers currently-known
+  // use-cases for DXIL. It may be relaxed in the future if required.
+  assert(DstElemTy == SrcElemTy &&
+         "The element types of Src and Dst arrays must match");
+
+  [[maybe_unused]] uint64_t DstArrNumElems = DstArrTy->getArrayNumElements();
+  assert(DstElemByteSize * DstArrNumElems >= ByteLength &&
+         "Dst array size must be at least as large as the memcpy length");
+  [[maybe_unused]] uint64_t SrcArrNumElems = SrcArrTy->getArrayNumElements();
+  assert(SrcElemByteSize * SrcArrNumElems >= ByteLength &&
+         "Src array size must be at least as large as the memcpy length");
+
+  uint64_t NumElemsToCopy = ByteLength / DstElemByteSize;
+  assert(ByteLength % DstElemByteSize == 0 &&
+         "memcpy length must be divisible by array element type");
+  for (uint64_t I = 0; I < NumElemsToCopy; ++I) {
+    Value *Offset = ConstantInt::get(Type::getInt32Ty(Ctx), I);
+    Value *SrcPtr = Builder.CreateInBoundsGEP(SrcElemTy, Src, Offset, "gep");
+    Value *SrcVal = Builder.CreateLoad(SrcElemTy, SrcPtr);
+    Value *DstPtr = Builder.CreateInBoundsGEP(DstElemTy, Dst, Offset, "gep");
+    Builder.CreateStore(SrcVal, DstPtr);
   }
 }
 
@@ -296,6 +448,33 @@ static void emitMemsetExpansion(IRBuilder<> &Builder, Value *Dst, Value *Val,
   }
 }
 
+// Expands the instruction `I` into corresponding loads and stores if it is a
+// memcpy call. In that case, the call instruction is added to the `ToRemove`
+// vector. `ReplacedValues` is unused.
+static void legalizeMemCpy(Instruction &I,
+                           SmallVectorImpl<Instruction *> &ToRemove,
+                           DenseMap<Value *, Value *> &ReplacedValues) {
+
+  CallInst *CI = dyn_cast<CallInst>(&I);
+  if (!CI)
+    return;
+
+  Intrinsic::ID ID = CI->getIntrinsicID();
+  if (ID != Intrinsic::memcpy)
+    return;
+
+  IRBuilder<> Builder(&I);
+  Value *Dst = CI->getArgOperand(0);
+  Value *Src = CI->getArgOperand(1);
+  ConstantInt *Length = dyn_cast<ConstantInt>(CI->getArgOperand(2));
+  assert(Length && "Expected Length to be a ConstantInt");
+  ConstantInt *IsVolatile = dyn_cast<ConstantInt>(CI->getArgOperand(3));
+  assert(IsVolatile && "Expected IsVolatile to be a ConstantInt");
+  assert(IsVolatile->getZExtValue() == 0 && "Expected IsVolatile to be false");
+  emitMemcpyExpansion(Builder, Dst, Src, Length);
+  ToRemove.push_back(CI);
+}
+
 static void removeMemSet(Instruction &I,
                          SmallVectorImpl<Instruction *> &ToRemove,
                          DenseMap<Value *, Value *> &ReplacedValues) {
@@ -315,6 +494,20 @@ static void removeMemSet(Instruction &I,
   assert(Size && "Expected Size to be a ConstantInt");
   emitMemsetExpansion(Builder, Dst, Val, Size, ReplacedValues);
   ToRemove.push_back(CI);
+}
+
+static void updateFnegToFsub(Instruction &I,
+                             SmallVectorImpl<Instruction *> &ToRemove,
+                             DenseMap<Value *, Value *> &) {
+  const Intrinsic::ID ID = I.getOpcode();
+  if (ID != Instruction::FNeg)
+    return;
+
+  IRBuilder<> Builder(&I);
+  Value *In = I.getOperand(0);
+  Value *Zero = ConstantFP::get(In->getType(), -0.0);
+  I.replaceAllUsesWith(Builder.CreateFSub(Zero, In));
+  ToRemove.push_back(&I);
 }
 
 namespace {
@@ -348,7 +541,9 @@ private:
     LegalizationPipeline.push_back(fixI8UseChain);
     LegalizationPipeline.push_back(downcastI64toI32InsertExtractElements);
     LegalizationPipeline.push_back(legalizeFreeze);
+    LegalizationPipeline.push_back(legalizeMemCpy);
     LegalizationPipeline.push_back(removeMemSet);
+    LegalizationPipeline.push_back(updateFnegToFsub);
   }
 };
 

@@ -49,6 +49,7 @@ static const unsigned X86AddrSpaceMap[] = {
     0,   // hlsl_constant
     0,   // hlsl_private
     0,   // hlsl_device
+    0,   // hlsl_input
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -866,6 +867,7 @@ public:
     switch (CC) {
     case CC_C:
     case CC_Win64:
+    case CC_X86_64SysV:
       return CCCR_OK;
     default:
       return CCCR_Warning;

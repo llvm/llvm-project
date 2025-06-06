@@ -74,7 +74,106 @@ using namespace llvm;
 
 #define DEBUG_TYPE "machine-scheduler"
 
+STATISTIC(NumInstrsInSourceOrderPreRA,
+          "Number of instructions in source order after pre-RA scheduling");
+STATISTIC(NumInstrsInSourceOrderPostRA,
+          "Number of instructions in source order after post-RA scheduling");
+STATISTIC(NumInstrsScheduledPreRA,
+          "Number of instructions scheduled by pre-RA scheduler");
+STATISTIC(NumInstrsScheduledPostRA,
+          "Number of instructions scheduled by post-RA scheduler");
 STATISTIC(NumClustered, "Number of load/store pairs clustered");
+
+STATISTIC(NumTopPreRA,
+          "Number of scheduling units chosen from top queue pre-RA");
+STATISTIC(NumBotPreRA,
+          "Number of scheduling units chosen from bottom queue pre-RA");
+STATISTIC(NumNoCandPreRA,
+          "Number of scheduling units chosen for NoCand heuristic pre-RA");
+STATISTIC(NumOnly1PreRA,
+          "Number of scheduling units chosen for Only1 heuristic pre-RA");
+STATISTIC(NumPhysRegPreRA,
+          "Number of scheduling units chosen for PhysReg heuristic pre-RA");
+STATISTIC(NumRegExcessPreRA,
+          "Number of scheduling units chosen for RegExcess heuristic pre-RA");
+STATISTIC(NumRegCriticalPreRA,
+          "Number of scheduling units chosen for RegCritical heuristic pre-RA");
+STATISTIC(NumStallPreRA,
+          "Number of scheduling units chosen for Stall heuristic pre-RA");
+STATISTIC(NumClusterPreRA,
+          "Number of scheduling units chosen for Cluster heuristic pre-RA");
+STATISTIC(NumWeakPreRA,
+          "Number of scheduling units chosen for Weak heuristic pre-RA");
+STATISTIC(NumRegMaxPreRA,
+          "Number of scheduling units chosen for RegMax heuristic pre-RA");
+STATISTIC(
+    NumResourceReducePreRA,
+    "Number of scheduling units chosen for ResourceReduce heuristic pre-RA");
+STATISTIC(
+    NumResourceDemandPreRA,
+    "Number of scheduling units chosen for ResourceDemand heuristic pre-RA");
+STATISTIC(
+    NumTopDepthReducePreRA,
+    "Number of scheduling units chosen for TopDepthReduce heuristic pre-RA");
+STATISTIC(
+    NumTopPathReducePreRA,
+    "Number of scheduling units chosen for TopPathReduce heuristic pre-RA");
+STATISTIC(
+    NumBotHeightReducePreRA,
+    "Number of scheduling units chosen for BotHeightReduce heuristic pre-RA");
+STATISTIC(
+    NumBotPathReducePreRA,
+    "Number of scheduling units chosen for BotPathReduce heuristic pre-RA");
+STATISTIC(NumNodeOrderPreRA,
+          "Number of scheduling units chosen for NodeOrder heuristic pre-RA");
+STATISTIC(NumFirstValidPreRA,
+          "Number of scheduling units chosen for FirstValid heuristic pre-RA");
+
+STATISTIC(NumTopPostRA,
+          "Number of scheduling units chosen from top queue post-RA");
+STATISTIC(NumBotPostRA,
+          "Number of scheduling units chosen from bottom queue post-RA");
+STATISTIC(NumNoCandPostRA,
+          "Number of scheduling units chosen for NoCand heuristic post-RA");
+STATISTIC(NumOnly1PostRA,
+          "Number of scheduling units chosen for Only1 heuristic post-RA");
+STATISTIC(NumPhysRegPostRA,
+          "Number of scheduling units chosen for PhysReg heuristic post-RA");
+STATISTIC(NumRegExcessPostRA,
+          "Number of scheduling units chosen for RegExcess heuristic post-RA");
+STATISTIC(
+    NumRegCriticalPostRA,
+    "Number of scheduling units chosen for RegCritical heuristic post-RA");
+STATISTIC(NumStallPostRA,
+          "Number of scheduling units chosen for Stall heuristic post-RA");
+STATISTIC(NumClusterPostRA,
+          "Number of scheduling units chosen for Cluster heuristic post-RA");
+STATISTIC(NumWeakPostRA,
+          "Number of scheduling units chosen for Weak heuristic post-RA");
+STATISTIC(NumRegMaxPostRA,
+          "Number of scheduling units chosen for RegMax heuristic post-RA");
+STATISTIC(
+    NumResourceReducePostRA,
+    "Number of scheduling units chosen for ResourceReduce heuristic post-RA");
+STATISTIC(
+    NumResourceDemandPostRA,
+    "Number of scheduling units chosen for ResourceDemand heuristic post-RA");
+STATISTIC(
+    NumTopDepthReducePostRA,
+    "Number of scheduling units chosen for TopDepthReduce heuristic post-RA");
+STATISTIC(
+    NumTopPathReducePostRA,
+    "Number of scheduling units chosen for TopPathReduce heuristic post-RA");
+STATISTIC(
+    NumBotHeightReducePostRA,
+    "Number of scheduling units chosen for BotHeightReduce heuristic post-RA");
+STATISTIC(
+    NumBotPathReducePostRA,
+    "Number of scheduling units chosen for BotPathReduce heuristic post-RA");
+STATISTIC(NumNodeOrderPostRA,
+          "Number of scheduling units chosen for NodeOrder heuristic post-RA");
+STATISTIC(NumFirstValidPostRA,
+          "Number of scheduling units chosen for FirstValid heuristic post-RA");
 
 namespace llvm {
 
@@ -448,7 +547,7 @@ ScheduleDAGInstrs *MachineSchedulerImpl::createMachineScheduler() {
     return Scheduler;
 
   // Default to GenericScheduler.
-  return createGenericSchedLive(this);
+  return createSchedLive(this);
 }
 
 bool MachineSchedulerImpl::run(MachineFunction &Func, const TargetMachine &TM,
@@ -496,7 +595,7 @@ ScheduleDAGInstrs *PostMachineSchedulerImpl::createPostMachineScheduler() {
     return Scheduler;
 
   // Default to GenericScheduler.
-  return createGenericSchedPostRA(this);
+  return createSchedPostRA(this);
 }
 
 bool PostMachineSchedulerImpl::run(MachineFunction &Func,
@@ -868,6 +967,12 @@ void ScheduleDAGMI::releaseSucc(SUnit *SU, SDep *SuccEdge) {
 
 /// releaseSuccessors - Call releaseSucc on each of SU's successors.
 void ScheduleDAGMI::releaseSuccessors(SUnit *SU) {
+  // Reset the next successor, For example, we want to cluster A B C.
+  // After A is picked, we will set B as next cluster succ, but if we pick
+  // D instead of B after A, then we need to reset the next cluster succ because
+  // we have decided to not pick the cluster candidate B during pickNode().
+  // Leaving B as the NextClusterSucc just make things messy.
+  NextClusterSucc = nullptr;
   for (SDep &Succ : SU->Succs)
     releaseSucc(SU, &Succ);
 }
@@ -905,6 +1010,7 @@ void ScheduleDAGMI::releasePred(SUnit *SU, SDep *PredEdge) {
 
 /// releasePredecessors - Call releasePred on each of SU's predecessors.
 void ScheduleDAGMI::releasePredecessors(SUnit *SU) {
+  NextClusterPred = nullptr;
   for (SDep &Pred : SU->Preds)
     releasePred(SU, &Pred);
 }
@@ -3422,13 +3528,137 @@ bool tryLatency(GenericSchedulerBase::SchedCandidate &TryCand,
 }
 } // end namespace llvm
 
-static void tracePick(GenericSchedulerBase::CandReason Reason, bool IsTop) {
+static void tracePick(GenericSchedulerBase::CandReason Reason, bool IsTop,
+                      bool IsPostRA = false) {
   LLVM_DEBUG(dbgs() << "Pick " << (IsTop ? "Top " : "Bot ")
-                    << GenericSchedulerBase::getReasonStr(Reason) << '\n');
+                    << GenericSchedulerBase::getReasonStr(Reason) << " ["
+                    << (IsPostRA ? "post-RA" : "pre-RA") << "]\n");
+
+  if (IsPostRA) {
+    if (IsTop)
+      NumTopPostRA++;
+    else
+      NumBotPostRA++;
+
+    switch (Reason) {
+    case GenericScheduler::NoCand:
+      NumNoCandPostRA++;
+      return;
+    case GenericScheduler::Only1:
+      NumOnly1PostRA++;
+      return;
+    case GenericScheduler::PhysReg:
+      NumPhysRegPostRA++;
+      return;
+    case GenericScheduler::RegExcess:
+      NumRegExcessPostRA++;
+      return;
+    case GenericScheduler::RegCritical:
+      NumRegCriticalPostRA++;
+      return;
+    case GenericScheduler::Stall:
+      NumStallPostRA++;
+      return;
+    case GenericScheduler::Cluster:
+      NumClusterPostRA++;
+      return;
+    case GenericScheduler::Weak:
+      NumWeakPostRA++;
+      return;
+    case GenericScheduler::RegMax:
+      NumRegMaxPostRA++;
+      return;
+    case GenericScheduler::ResourceReduce:
+      NumResourceReducePostRA++;
+      return;
+    case GenericScheduler::ResourceDemand:
+      NumResourceDemandPostRA++;
+      return;
+    case GenericScheduler::TopDepthReduce:
+      NumTopDepthReducePostRA++;
+      return;
+    case GenericScheduler::TopPathReduce:
+      NumTopPathReducePostRA++;
+      return;
+    case GenericScheduler::BotHeightReduce:
+      NumBotHeightReducePostRA++;
+      return;
+    case GenericScheduler::BotPathReduce:
+      NumBotPathReducePostRA++;
+      return;
+    case GenericScheduler::NodeOrder:
+      NumNodeOrderPostRA++;
+      return;
+    case GenericScheduler::FirstValid:
+      NumFirstValidPostRA++;
+      return;
+    };
+  } else {
+    if (IsTop)
+      NumTopPreRA++;
+    else
+      NumBotPreRA++;
+
+    switch (Reason) {
+    case GenericScheduler::NoCand:
+      NumNoCandPreRA++;
+      return;
+    case GenericScheduler::Only1:
+      NumOnly1PreRA++;
+      return;
+    case GenericScheduler::PhysReg:
+      NumPhysRegPreRA++;
+      return;
+    case GenericScheduler::RegExcess:
+      NumRegExcessPreRA++;
+      return;
+    case GenericScheduler::RegCritical:
+      NumRegCriticalPreRA++;
+      return;
+    case GenericScheduler::Stall:
+      NumStallPreRA++;
+      return;
+    case GenericScheduler::Cluster:
+      NumClusterPreRA++;
+      return;
+    case GenericScheduler::Weak:
+      NumWeakPreRA++;
+      return;
+    case GenericScheduler::RegMax:
+      NumRegMaxPreRA++;
+      return;
+    case GenericScheduler::ResourceReduce:
+      NumResourceReducePreRA++;
+      return;
+    case GenericScheduler::ResourceDemand:
+      NumResourceDemandPreRA++;
+      return;
+    case GenericScheduler::TopDepthReduce:
+      NumTopDepthReducePreRA++;
+      return;
+    case GenericScheduler::TopPathReduce:
+      NumTopPathReducePreRA++;
+      return;
+    case GenericScheduler::BotHeightReduce:
+      NumBotHeightReducePreRA++;
+      return;
+    case GenericScheduler::BotPathReduce:
+      NumBotPathReducePreRA++;
+      return;
+    case GenericScheduler::NodeOrder:
+      NumNodeOrderPreRA++;
+      return;
+    case GenericScheduler::FirstValid:
+      NumFirstValidPreRA++;
+      return;
+    };
+  }
+  llvm_unreachable("Unknown reason!");
 }
 
-static void tracePick(const GenericSchedulerBase::SchedCandidate &Cand) {
-  tracePick(Cand.Reason, Cand.AtTop);
+static void tracePick(const GenericSchedulerBase::SchedCandidate &Cand,
+                      bool IsPostRA = false) {
+  tracePick(Cand.Reason, Cand.AtTop, IsPostRA);
 }
 
 void GenericScheduler::initialize(ScheduleDAGMI *dag) {
@@ -3505,6 +3735,9 @@ void GenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
     RegionPolicy.OnlyBottomUp = false;
     RegionPolicy.OnlyTopDown = false;
   }
+
+  BotIdx = NumRegionInstrs - 1;
+  this->NumRegionInstrs = NumRegionInstrs;
 }
 
 void GenericScheduler::dumpPolicy() const {
@@ -3851,12 +4084,12 @@ SUnit *GenericScheduler::pickNodeBidirectional(bool &IsTopNode) {
   // efficient, but also provides the best heuristics for CriticalPSets.
   if (SUnit *SU = Bot.pickOnlyChoice()) {
     IsTopNode = false;
-    tracePick(Only1, false);
+    tracePick(Only1, /*IsTopNode=*/false);
     return SU;
   }
   if (SUnit *SU = Top.pickOnlyChoice()) {
     IsTopNode = true;
-    tracePick(Only1, true);
+    tracePick(Only1, /*IsTopNode=*/true);
     return SU;
   }
   // Set the bottom-up policy based on the state of the current bottom zone and
@@ -3981,6 +4214,18 @@ SUnit *GenericScheduler::pickNode(bool &IsTopNode) {
 
   LLVM_DEBUG(dbgs() << "Scheduling SU(" << SU->NodeNum << ") "
                     << *SU->getInstr());
+
+  if (IsTopNode) {
+    if (SU->NodeNum == TopIdx++)
+      ++NumInstrsInSourceOrderPreRA;
+  } else {
+    assert(BotIdx < NumRegionInstrs && "out of bounds");
+    if (SU->NodeNum == BotIdx--)
+      ++NumInstrsInSourceOrderPreRA;
+  }
+
+  NumInstrsScheduledPreRA += 1;
+
   return SU;
 }
 
@@ -4028,28 +4273,8 @@ void GenericScheduler::schedNode(SUnit *SU, bool IsTopNode) {
   }
 }
 
-/// Create the standard converging machine scheduler. This will be used as the
-/// default scheduler if the target does not set a default.
-ScheduleDAGMILive *llvm::createGenericSchedLive(MachineSchedContext *C) {
-  ScheduleDAGMILive *DAG =
-      new ScheduleDAGMILive(C, std::make_unique<GenericScheduler>(C));
-  // Register DAG post-processors.
-  //
-  // FIXME: extend the mutation API to allow earlier mutations to instantiate
-  // data and pass it to later mutations. Have a single mutation that gathers
-  // the interesting nodes in one pass.
-  DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII, DAG->TRI));
-
-  const TargetSubtargetInfo &STI = C->MF->getSubtarget();
-  // Add MacroFusion mutation if fusions are not empty.
-  const auto &MacroFusions = STI.getMacroFusions();
-  if (!MacroFusions.empty())
-    DAG->addMutation(createMacroFusionDAGMutation(MacroFusions));
-  return DAG;
-}
-
 static ScheduleDAGInstrs *createConvergingSched(MachineSchedContext *C) {
-  return createGenericSchedLive(C);
+  return createSchedLive(C);
 }
 
 static MachineSchedRegistry
@@ -4104,6 +4329,9 @@ void PostGenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
     RegionPolicy.OnlyBottomUp = false;
     RegionPolicy.OnlyTopDown = false;
   }
+
+  BotIdx = NumRegionInstrs - 1;
+  this->NumRegionInstrs = NumRegionInstrs;
 }
 
 void PostGenericScheduler::registerRoots() {
@@ -4198,12 +4426,12 @@ SUnit *PostGenericScheduler::pickNodeBidirectional(bool &IsTopNode) {
   // efficient, but also provides the best heuristics for CriticalPSets.
   if (SUnit *SU = Bot.pickOnlyChoice()) {
     IsTopNode = false;
-    tracePick(Only1, false);
+    tracePick(Only1, /*IsTopNode=*/false, /*IsPostRA=*/true);
     return SU;
   }
   if (SUnit *SU = Top.pickOnlyChoice()) {
     IsTopNode = true;
-    tracePick(Only1, true);
+    tracePick(Only1, /*IsTopNode=*/true, /*IsPostRA=*/true);
     return SU;
   }
   // Set the bottom-up policy based on the state of the current bottom zone and
@@ -4266,7 +4494,7 @@ SUnit *PostGenericScheduler::pickNodeBidirectional(bool &IsTopNode) {
   }
 
   IsTopNode = Cand.AtTop;
-  tracePick(Cand);
+  tracePick(Cand, /*IsPostRA=*/true);
   return Cand.SU;
 }
 
@@ -4282,7 +4510,7 @@ SUnit *PostGenericScheduler::pickNode(bool &IsTopNode) {
     if (RegionPolicy.OnlyBottomUp) {
       SU = Bot.pickOnlyChoice();
       if (SU) {
-        tracePick(Only1, true);
+        tracePick(Only1, /*IsTopNode=*/true, /*IsPostRA=*/true);
       } else {
         CandPolicy NoPolicy;
         BotCand.reset(NoPolicy);
@@ -4291,14 +4519,14 @@ SUnit *PostGenericScheduler::pickNode(bool &IsTopNode) {
         setPolicy(BotCand.Policy, /*IsPostRA=*/true, Bot, nullptr);
         pickNodeFromQueue(Bot, BotCand);
         assert(BotCand.Reason != NoCand && "failed to find a candidate");
-        tracePick(BotCand);
+        tracePick(BotCand, /*IsPostRA=*/true);
         SU = BotCand.SU;
       }
       IsTopNode = false;
     } else if (RegionPolicy.OnlyTopDown) {
       SU = Top.pickOnlyChoice();
       if (SU) {
-        tracePick(Only1, true);
+        tracePick(Only1, /*IsTopNode=*/true, /*IsPostRA=*/true);
       } else {
         CandPolicy NoPolicy;
         TopCand.reset(NoPolicy);
@@ -4307,7 +4535,7 @@ SUnit *PostGenericScheduler::pickNode(bool &IsTopNode) {
         setPolicy(TopCand.Policy, /*IsPostRA=*/true, Top, nullptr);
         pickNodeFromQueue(Top, TopCand);
         assert(TopCand.Reason != NoCand && "failed to find a candidate");
-        tracePick(TopCand);
+        tracePick(TopCand, /*IsPostRA=*/true);
         SU = TopCand.SU;
       }
       IsTopNode = true;
@@ -4323,6 +4551,18 @@ SUnit *PostGenericScheduler::pickNode(bool &IsTopNode) {
 
   LLVM_DEBUG(dbgs() << "Scheduling SU(" << SU->NodeNum << ") "
                     << *SU->getInstr());
+
+  if (IsTopNode) {
+    if (SU->NodeNum == TopIdx++)
+      ++NumInstrsInSourceOrderPostRA;
+  } else {
+    assert(BotIdx < NumRegionInstrs && "out of bounds");
+    if (SU->NodeNum == BotIdx--)
+      ++NumInstrsInSourceOrderPostRA;
+  }
+
+  NumInstrsScheduledPostRA += 1;
+
   return SU;
 }
 
@@ -4336,18 +4576,6 @@ void PostGenericScheduler::schedNode(SUnit *SU, bool IsTopNode) {
     SU->BotReadyCycle = std::max(SU->BotReadyCycle, Bot.getCurrCycle());
     Bot.bumpNode(SU);
   }
-}
-
-ScheduleDAGMI *llvm::createGenericSchedPostRA(MachineSchedContext *C) {
-  ScheduleDAGMI *DAG =
-      new ScheduleDAGMI(C, std::make_unique<PostGenericScheduler>(C),
-                        /*RemoveKillFlags=*/true);
-  const TargetSubtargetInfo &STI = C->MF->getSubtarget();
-  // Add MacroFusion mutation if fusions are not empty.
-  const auto &MacroFusions = STI.getMacroFusions();
-  if (!MacroFusions.empty())
-    DAG->addMutation(createMacroFusionDAGMutation(MacroFusions));
-  return DAG;
 }
 
 //===----------------------------------------------------------------------===//
@@ -4664,8 +4892,7 @@ unsigned ResourceSegments::getFirstAvailableAt(
     unsigned CurrCycle, unsigned AcquireAtCycle, unsigned ReleaseAtCycle,
     std::function<ResourceSegments::IntervalTy(unsigned, unsigned, unsigned)>
         IntervalBuilder) const {
-  assert(std::is_sorted(std::begin(_Intervals), std::end(_Intervals),
-                        sortIntervals) &&
+  assert(llvm::is_sorted(_Intervals, sortIntervals) &&
          "Cannot execute on an un-sorted set of intervals.");
 
   // Zero resource usage is allowed by TargetSchedule.td but we do not construct

@@ -1,12 +1,12 @@
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL2.0 -ffake-address-space-map -O0 -emit-llvm -o - -triple "spir-unknown-unknown" | FileCheck %s --check-prefixes=COMMON,B32,SPIR,TRIPLESPIR 
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL2.0 -ffake-address-space-map -O0 -emit-llvm -o - -triple "spir64-unknown-unknown" | FileCheck %s --check-prefixes=COMMON,B64,SPIR,TRIPLESPIR 
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL2.0 -ffake-address-space-map -O1 -emit-llvm -o - -triple "spir64-unknown-unknown" | FileCheck %s --check-prefixes=CHECK-LIFETIMES,TRIPLESPIR 
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL3.0 -ffake-address-space-map -O0 -emit-llvm -o - -triple "spir-unknown-unknown" | FileCheck %s --check-prefixes=COMMON,B32,SPIR,TRIPLESPIR 
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL3.0 -ffake-address-space-map -O0 -emit-llvm -o - -triple "spir64-unknown-unknown" | FileCheck %s --check-prefixes=COMMON,B64,SPIR,TRIPLESPIR 
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL3.0 -ffake-address-space-map -O1 -emit-llvm -o - -triple "spir64-unknown-unknown" | FileCheck %s --check-prefixes=CHECK-LIFETIMES,TRIPLESPIR 
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL2.0 -ffake-address-space-map -O0 -emit-llvm -o - -triple "x86_64-unknown-linux-gnu" | FileCheck %s --check-prefixes=COMMON,B64,X86,TRIPLEX86 
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL3.0 -ffake-address-space-map -O0 -emit-llvm -o - -triple "x86_64-unknown-linux-gnu" | FileCheck %s --check-prefixes=COMMON,B64,X86,TRIPLEX86 
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL3.0 -ffake-address-space-map -O1 -emit-llvm -o - -triple "x86_64-unknown-linux-gnu" | FileCheck %s --check-prefixes=CHECK-LIFETIMES,TRIPLEX86 
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL2.0 -ffake-address-space-map -O0 -emit-llvm -o - -triple "spir-unknown-unknown" | FileCheck %s --check-prefixes=COMMON,B32,SPIR 
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL2.0 -ffake-address-space-map -O0 -emit-llvm -o - -triple "spir64-unknown-unknown" | FileCheck %s --check-prefixes=COMMON,B64,SPIR 
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL2.0 -ffake-address-space-map -O1 -emit-llvm -o - -triple "spir64-unknown-unknown" | FileCheck %s --check-prefix=CHECK-LIFETIMES 
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL3.0 -ffake-address-space-map -O0 -emit-llvm -o - -triple "spir-unknown-unknown" | FileCheck %s --check-prefixes=COMMON,B32,SPIR 
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL3.0 -ffake-address-space-map -O0 -emit-llvm -o - -triple "spir64-unknown-unknown" | FileCheck %s --check-prefixes=COMMON,B64,SPIR 
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL3.0 -ffake-address-space-map -O1 -emit-llvm -o - -triple "spir64-unknown-unknown" | FileCheck %s --check-prefix=CHECK-LIFETIMES 
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL2.0 -ffake-address-space-map -O0 -emit-llvm -o - -triple "x86_64-unknown-linux-gnu" | FileCheck %s --check-prefixes=COMMON,B64,X86 
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL3.0 -ffake-address-space-map -O0 -emit-llvm -o - -triple "x86_64-unknown-linux-gnu" | FileCheck %s --check-prefixes=COMMON,B64,X86 
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL3.0 -ffake-address-space-map -O1 -emit-llvm -o - -triple "x86_64-unknown-linux-gnu" | FileCheck %s --check-prefix=CHECK-LIFETIMES 
 
 #pragma OPENCL EXTENSION cl_khr_subgroups : enable
 
@@ -38,12 +38,6 @@ const bl_t block_G = (bl_t) ^ (local void *a) {};
 void callee(int id, __global int *out) {
   out[id] = id;
 }
-
-// TRIPLESPIR: define{{.*}} void @device_side_enqueue(ptr addrspace(1) align 4 %{{.*}}, ptr addrspace(1) align 4 %b, i32 %i)
-// TRIPLESPIR:    call spir_func void @__clang_ocl_kern_imp_device_side_enqueue({{.*}})
-
-// TRIPLEX86: define{{.*}} void @device_side_enqueue(ptr addrspace(1) align 4 %{{.*}}, ptr addrspace(1) align 4 %b, i32 %i)
-// TRIPLEX86:    call void @__clang_ocl_kern_imp_device_side_enqueue({{.*}})
 
 // COMMON-LABEL: define{{.*}} void @__clang_ocl_kern_imp_device_side_enqueue(ptr addrspace(1) align 4 %{{.*}}, ptr addrspace(1) align 4 %b, i32 %i)
 kernel void device_side_enqueue(global int *a, global int *b, int i) {

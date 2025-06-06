@@ -601,6 +601,7 @@ def ConvertGpuOpsToROCDLOps : Pass<"convert-gpu-to-rocdl", "gpu::GPUModuleOp"> {
   let constructor = "mlir::createLowerGpuOpsToROCDLOpsPass()";
   let dependentDialects = [
     "ROCDL::ROCDLDialect",
+    "amdgpu::AMDGPUDialect",
     "cf::ControlFlowDialect",
     "memref::MemRefDialect",
   ];
@@ -1415,7 +1416,7 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
            "bool", /*default=*/"false",
            "Use the preferred alignment of a vector type in load/store "
            "operations instead of the alignment of the element type of the "
-           "memref. This flag is intended for use with hardware which requires" 
+           "memref. This flag is intended for use with hardware which requires"
            "vector alignment, or in application contexts where it is known all "
            "vector access are naturally aligned. ">,
     Option<"amx", "enable-amx",

@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/HLSLRuntime.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/SourceManager.h"
@@ -618,8 +617,10 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__HIP_MEMORY_SCOPE_SYSTEM", "5");
     if (LangOpts.HIPStdPar) {
       Builder.defineMacro("__HIPSTDPAR__");
-      if (LangOpts.HIPStdParInterposeAlloc)
+      if (LangOpts.HIPStdParInterposeAlloc) {
         Builder.defineMacro("__HIPSTDPAR_INTERPOSE_ALLOC__");
+        Builder.defineMacro("__HIPSTDPAR_INTERPOSE_ALLOC_V1__");
+      }
     }
     if (LangOpts.CUDAIsDevice) {
       Builder.defineMacro("__HIP_DEVICE_COMPILE__");

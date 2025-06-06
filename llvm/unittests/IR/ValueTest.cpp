@@ -15,11 +15,12 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 using namespace llvm;
 
-extern cl::opt<bool> UseNewDbgInfoFormat;
+LLVM_ABI extern cl::opt<bool> UseNewDbgInfoFormat;
 
 namespace {
 

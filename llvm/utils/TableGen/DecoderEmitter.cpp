@@ -32,7 +32,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
@@ -1791,7 +1790,7 @@ static std::string findOperandDecoderMethod(const Record *Record) {
   const StringInit *String =
       DecoderString ? dyn_cast<StringInit>(DecoderString->getValue()) : nullptr;
   if (String) {
-    Decoder = std::string(String->getValue());
+    Decoder = String->getValue().str();
     if (!Decoder.empty())
       return Decoder;
   }
@@ -1891,7 +1890,7 @@ static void debugDumpRecord(const Record &Rec) {
 /// constant-valued bit values, and OpInfo.Fields with the ranges of bits to
 /// insert from the decoded instruction.
 static void addOneOperandFields(const Record &EncodingDef, const BitsInit &Bits,
-                                std::map<std::string, std::string> &TiedNames,
+                                std::map<StringRef, StringRef> &TiedNames,
                                 StringRef OpName, OperandInfo &OpInfo) {
   // Some bits of the operand may be required to be 1 depending on the
   // instruction's encoding. Collect those bits.
@@ -1916,8 +1915,8 @@ static void addOneOperandFields(const Record &EncodingDef, const BitsInit &Bits,
       } else {
         Var = dyn_cast<VarInit>(Bits.getBit(J));
       }
-      if (!Var || (Var->getName() != OpName &&
-                   Var->getName() != TiedNames[std::string(OpName)]))
+      if (!Var ||
+          (Var->getName() != OpName && Var->getName() != TiedNames[OpName]))
         break;
     }
     if (I == J)
@@ -1972,22 +1971,22 @@ populateInstruction(const CodeGenTarget &Target, const Record &EncodingDef,
 
   // Search for tied operands, so that we can correctly instantiate
   // operands that are not explicitly represented in the encoding.
-  std::map<std::string, std::string> TiedNames;
-  for (const auto &[I, Op] : enumerate(CGI.Operands)) {
+  std::map<StringRef, StringRef> TiedNames;
+  for (const auto &Op : CGI.Operands) {
     for (const auto &[J, CI] : enumerate(Op.Constraints)) {
-      if (CI.isTied()) {
-        std::pair<unsigned, unsigned> SO =
-            CGI.Operands.getSubOperandNumber(CI.getTiedOperand());
-        std::string TiedName = CGI.Operands[SO.first].SubOpNames[SO.second];
-        if (TiedName.empty())
-          TiedName = CGI.Operands[SO.first].Name;
-        std::string MyName = Op.SubOpNames[J];
-        if (MyName.empty())
-          MyName = Op.Name;
+      if (!CI.isTied())
+        continue;
+      std::pair<unsigned, unsigned> SO =
+          CGI.Operands.getSubOperandNumber(CI.getTiedOperand());
+      StringRef TiedName = CGI.Operands[SO.first].SubOpNames[SO.second];
+      if (TiedName.empty())
+        TiedName = CGI.Operands[SO.first].Name;
+      StringRef MyName = Op.SubOpNames[J];
+      if (MyName.empty())
+        MyName = Op.Name;
 
-        TiedNames[MyName] = TiedName;
-        TiedNames[TiedName] = std::move(MyName);
-      }
+      TiedNames[MyName] = TiedName;
+      TiedNames[TiedName] = MyName;
     }
   }
 
@@ -2149,6 +2148,7 @@ static void insertBits(InsnType &field, InsnType bits, unsigned startBit,
                        unsigned numBits) {
   if constexpr (std::is_integral<InsnType>::value) {
     assert(startBit + numBits <= sizeof field * 8);
+    (void)numBits;
     field |= (InsnType)bits << startBit;
   } else {
     field.insertBits(bits, startBit, numBits);
@@ -2354,7 +2354,7 @@ static void collectHwModesReferencedForEncodings(
     for (const HwModeSelect::PairType &P : MS.second.Items) {
       if (P.second->isSubClassOf("InstructionEncoding")) {
         std::string DecoderNamespace =
-            std::string(P.second->getValueAsString("DecoderNamespace"));
+            P.second->getValueAsString("DecoderNamespace").str();
         if (P.first == DefaultMode) {
           NamespacesWithHwModes[DecoderNamespace].insert("");
         } else {
@@ -2387,7 +2387,7 @@ handleHwModesUnrelatedEncodings(const CodeGenInstruction *Instr,
   }
   case SUPPRESSION_LEVEL1: {
     std::string DecoderNamespace =
-        std::string(InstDef->getValueAsString("DecoderNamespace"));
+        InstDef->getValueAsString("DecoderNamespace").str();
     auto It = NamespacesWithHwModes.find(DecoderNamespace);
     if (It != NamespacesWithHwModes.end()) {
       for (StringRef HwModeName : It->second)
@@ -2506,10 +2506,9 @@ namespace {
         InstrLen[NEI] = Len;
       }
       std::string DecoderNamespace =
-          std::string(EncodingDef->getValueAsString("DecoderNamespace"));
+          EncodingDef->getValueAsString("DecoderNamespace").str();
       if (!NumberedEncoding.HwModeName.empty())
-        DecoderNamespace +=
-            std::string("_") + NumberedEncoding.HwModeName.str();
+        DecoderNamespace += "_" + NumberedEncoding.HwModeName.str();
       OpcMap[{DecoderNamespace, Size}].emplace_back(
           NEI, Target.getInstrIntValue(Def));
     } else {

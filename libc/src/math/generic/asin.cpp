@@ -74,7 +74,7 @@ LLVM_LIBC_FUNCTION(double, asin, (double x)) {
 #else
     unsigned idx;
     DoubleDouble x_sq = fputil::exact_mult(x, x);
-    double err = x * 0x1.0p-51;
+    double err = xbits.abs().get_val() * 0x1.0p-51;
     // Polynomial approximation:
     //   p ~ asin(x)/x
 
@@ -135,12 +135,14 @@ LLVM_LIBC_FUNCTION(double, asin, (double x)) {
                                   x_sign * PI_OVER_TWO.lo);
     }
     // |x| > 1, return NaN.
-    if (xbits.is_finite()) {
+    if (xbits.is_quiet_nan())
+      return x;
+
+    // Set domain error for non-NaN input.
+    if (!xbits.is_nan())
       fputil::set_errno_if_required(EDOM);
-      fputil::raise_except_if_required(FE_INVALID);
-    } else if (xbits.is_signaling_nan()) {
-      fputil::raise_except_if_required(FE_INVALID);
-    }
+
+    fputil::raise_except_if_required(FE_INVALID);
     return FPBits::quiet_nan().get_val();
   }
 

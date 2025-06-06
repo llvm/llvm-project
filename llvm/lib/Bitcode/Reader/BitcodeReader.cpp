@@ -83,7 +83,6 @@
 #include <map>
 #include <memory>
 #include <optional>
-#include <set>
 #include <string>
 #include <system_error>
 #include <tuple>
@@ -102,7 +101,7 @@ static cl::opt<bool> ExpandConstantExprs(
     cl::desc(
         "Expand constant expressions to instructions for testing purposes"));
 
-extern cl::opt<bool> UseNewDbgInfoFormat;
+LLVM_ABI extern cl::opt<bool> UseNewDbgInfoFormat;
 
 namespace {
 
@@ -542,8 +541,7 @@ private:
       : Value(Ty, SubclassID), Opcode(Info.Opcode), Flags(Info.Flags),
         NumOperands(OpIDs.size()), BlockAddressBB(Info.BlockAddressBB),
         SrcElemTy(Info.SrcElemTy), InRange(Info.InRange) {
-    std::uninitialized_copy(OpIDs.begin(), OpIDs.end(),
-                            getTrailingObjects<unsigned>());
+    llvm::uninitialized_copy(OpIDs, getTrailingObjects());
   }
 
   BitcodeConstant &operator=(const BitcodeConstant &) = delete;
@@ -560,7 +558,7 @@ public:
   static bool classof(const Value *V) { return V->getValueID() == SubclassID; }
 
   ArrayRef<unsigned> getOperandIDs() const {
-    return ArrayRef(getTrailingObjects<unsigned>(), NumOperands);
+    return ArrayRef(getTrailingObjects(), NumOperands);
   }
 
   std::optional<ConstantRange> getInRange() const {
@@ -6023,7 +6021,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
               FunctionType::get(FTy->getReturnType(), ArgTys, FTy->isVarArg());
 
           // Update constraint string to use label constraints.
-          std::string Constraints = IA->getConstraintString();
+          std::string Constraints = IA->getConstraintString().str();
           unsigned ArgNo = 0;
           size_t Pos = 0;
           for (const auto &CI : ConstraintInfo) {
@@ -6097,14 +6095,18 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         // seen value here, to avoid expanding a constant expression multiple
         // times.
         auto It = Args.find(BB);
+        BasicBlock *EdgeBB = ConstExprEdgeBBs.lookup({BB, CurBB});
         if (It != Args.end()) {
-          PN->addIncoming(It->second, BB);
+          // If this predecessor was also replaced with a constexpr basic
+          // block, it must be de-duplicated.
+          if (!EdgeBB) {
+            PN->addIncoming(It->second, BB);
+          }
           continue;
         }
 
         // If there already is a block for this edge (from a different phi),
         // use it.
-        BasicBlock *EdgeBB = ConstExprEdgeBBs.lookup({BB, CurBB});
         if (!EdgeBB) {
           // Otherwise, use a temporary block (that we will discard if it
           // turns out to be unnecessary).
@@ -8179,7 +8181,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       break;
     }
 
-    case bitc::FS_COMBINED_ALLOC_INFO: {
+    case bitc::FS_COMBINED_ALLOC_INFO:
+    case bitc::FS_COMBINED_ALLOC_INFO_NO_CONTEXT: {
       unsigned I = 0;
       std::vector<MIBInfo> MIBs;
       unsigned NumMIBs = Record[I++];
@@ -8188,7 +8191,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       while (MIBsRead++ < NumMIBs) {
         assert(Record.size() - I >= 2);
         AllocationType AllocType = (AllocationType)Record[I++];
-        auto StackIdList = parseAllocInfoContext(Record, I);
+        SmallVector<unsigned> StackIdList;
+        if (BitCode == bitc::FS_COMBINED_ALLOC_INFO)
+          StackIdList = parseAllocInfoContext(Record, I);
         MIBs.push_back(MIBInfo(AllocType, std::move(StackIdList)));
       }
       assert(Record.size() - I >= NumVersions);

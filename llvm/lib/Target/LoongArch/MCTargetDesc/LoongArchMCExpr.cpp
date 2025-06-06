@@ -12,13 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoongArchMCExpr.h"
-#include "LoongArchAsmBackend.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
@@ -32,7 +29,7 @@ const LoongArchMCExpr *LoongArchMCExpr::create(const MCExpr *Expr, uint16_t S,
 
 void LoongArchMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   Specifier S = getSpecifier();
-  bool HasVariant = S != VK_None && S != VK_CALL;
+  bool HasVariant = S != VK_None && S != ELF::R_LARCH_B26;
 
   if (HasVariant)
     OS << '%' << getSpecifierName(specifier) << '(';
@@ -63,14 +60,10 @@ StringRef LoongArchMCExpr::getSpecifierName(uint16_t S) {
   switch (S) {
   default:
     llvm_unreachable("Invalid ELF symbol kind");
-  case VK_CALL_PLT:
-    return "plt";
   case ELF::R_LARCH_B16:
     return "b16";
   case ELF::R_LARCH_B21:
     return "b21";
-  case ELF::R_LARCH_B26:
-    return "b26";
   case ELF::R_LARCH_ABS_HI20:
     return "abs_hi20";
   case ELF::R_LARCH_ABS_LO12:
@@ -176,7 +169,7 @@ StringRef LoongArchMCExpr::getSpecifierName(uint16_t S) {
 
 LoongArchMCExpr::Specifier LoongArchMCExpr::parseSpecifier(StringRef name) {
   return StringSwitch<LoongArchMCExpr::Specifier>(name)
-      .Case("plt", VK_CALL_PLT)
+      .Case("plt", ELF::R_LARCH_B26)
       .Case("b16", ELF::R_LARCH_B16)
       .Case("b21", ELF::R_LARCH_B21)
       .Case("b26", ELF::R_LARCH_B26)

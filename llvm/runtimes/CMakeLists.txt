@@ -73,12 +73,7 @@ endfunction()
 macro(set_enable_per_target_runtime_dir)
   # May have been set by llvm/CMakeLists.txt.
   if (NOT DEFINED LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
-    # AIX should fold 32-bit & 64-bit arch libraries into a single archive.
-    if (LLVM_TARGET_TRIPLE MATCHES "aix")
-      set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR OFF)
-    else()
-      set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR ON)
-    endif()
+    set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR ON)
   endif()
 endmacro()
 

@@ -78,8 +78,7 @@ Error BuildIDRewriter::sectionInitializer() {
                                  "out of bounds while reading note section: %s",
                                  toString(Cursor.takeError()).c_str());
 
-      if (Type == ELF::NT_GNU_BUILD_ID && Name.substr(0, 3) == "GNU" &&
-          DescSz) {
+      if (Type == ELF::NT_GNU_BUILD_ID && Name.starts_with("GNU") && DescSz) {
         BuildIDSection = NoteSection;
         BuildID = Desc;
         BC.setFileBuildID(getPrintableBuildID(Desc));

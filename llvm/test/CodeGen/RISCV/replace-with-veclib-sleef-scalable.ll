@@ -2,7 +2,7 @@
 ; RUN: opt -mtriple=riscv64-unknown-linux-gnu -mattr=+v -vector-library=sleefgnuabi -replace-with-veclib -S < %s | FileCheck %s
 
 ;.
-; CHECK: @llvm.compiler.used = appending global [21 x ptr] [ptr @Sleef_cosdx_u10rvvm2, ptr @Sleef_cosfx_u10rvvm2, ptr @Sleef_expfx_u10rvvm2, ptr @Sleef_exp10dx_u10rvvm2, ptr @Sleef_exp10fx_u10rvvm2, ptr @Sleef_exp2dx_u10rvvm2, ptr @Sleef_exp2fx_u10rvvm2, ptr @Sleef_fmadx_rvvm2, ptr @Sleef_fmafx_rvvm2, ptr @Sleef_logdx_u10rvvm2, ptr @Sleef_logfx_u10rvvm2, ptr @Sleef_log10dx_u10rvvm2, ptr @Sleef_log10fx_u10rvvm2, ptr @Sleef_log2dx_u10rvvm2, ptr @Sleef_log2fx_u10rvvm2, ptr @Sleef_powdx_u10rvvm2, ptr @Sleef_powfx_u10rvvm2, ptr @Sleef_sindx_u10rvvm2, ptr @Sleef_sinfx_u10rvvm2, ptr @Sleef_sqrtdx_u05rvvm2, ptr @Sleef_sqrtfx_u05rvvm2], section "llvm.metadata"
+; CHECK: @llvm.compiler.used = appending global [22 x ptr] [ptr @Sleef_cosdx_u10rvvm2, ptr @Sleef_cosfx_u10rvvm2, ptr @Sleef_expdx_u10rvvm2, ptr @Sleef_expfx_u10rvvm2, ptr @Sleef_exp10dx_u10rvvm2, ptr @Sleef_exp10fx_u10rvvm2, ptr @Sleef_exp2dx_u10rvvm2, ptr @Sleef_exp2fx_u10rvvm2, ptr @Sleef_fmadx_rvvm2, ptr @Sleef_fmafx_rvvm2, ptr @Sleef_logdx_u10rvvm2, ptr @Sleef_logfx_u10rvvm2, ptr @Sleef_log10dx_u10rvvm2, ptr @Sleef_log10fx_u10rvvm2, ptr @Sleef_log2dx_u10rvvm2, ptr @Sleef_log2fx_u10rvvm2, ptr @Sleef_powdx_u10rvvm2, ptr @Sleef_powfx_u10rvvm2, ptr @Sleef_sindx_u10rvvm2, ptr @Sleef_sinfx_u10rvvm2, ptr @Sleef_sqrtdx_u05rvvm2, ptr @Sleef_sqrtfx_u05rvvm2], section "llvm.metadata"
 ;.
 define <vscale x 2 x double> @llvm_ceil_vscale_f64(<vscale x 2 x double> %in) {
 ; CHECK-LABEL: define <vscale x 2 x double> @llvm_ceil_vscale_f64(
@@ -67,7 +67,7 @@ define <vscale x 4 x float> @llvm_cos_vscale_f32(<vscale x 4 x float> %in) {
 define <vscale x 2 x double> @llvm_exp_vscale_f64(<vscale x 2 x double> %in) {
 ; CHECK-LABEL: define <vscale x 2 x double> @llvm_exp_vscale_f64(
 ; CHECK-SAME: <vscale x 2 x double> [[IN:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @llvm.exp.nxv2f64(<vscale x 2 x double> [[IN]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @Sleef_expdx_u10rvvm2(<vscale x 2 x double> [[IN]])
 ; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 ;
   %1 = call fast <vscale x 2 x double> @llvm.exp.nxv2f64(<vscale x 2 x double> %in)

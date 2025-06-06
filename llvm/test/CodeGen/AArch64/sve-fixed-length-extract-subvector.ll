@@ -544,11 +544,10 @@ define void @extract_subvector_v32f64(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define void @extract_subvector_legalization_v8i32() vscale_range(2,2) #0 {
 ; CHECK-LABEL: extract_subvector_legalization_v8i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    adrp x8, .LCPI40_0
 ; CHECK-NEXT:    add x8, x8, :lo12:.LCPI40_0
 ; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8]
+; CHECK-NEXT:    ldr z0, [x8]
 ; CHECK-NEXT:    mov z1.d, z0.d
 ; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0

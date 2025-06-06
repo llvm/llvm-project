@@ -33,6 +33,24 @@ static void SendThreadExitedEvent(DAP &dap, lldb::tid_t tid) {
   dap.SendJSON(llvm::json::Value(std::move(event)));
 }
 
+void SendTargetBasedCapabilities(DAP &dap) {
+  if (!dap.target.IsValid())
+    return;
+
+  // FIXME: stepInTargets request is only supported by the x86
+  // architecture remove when `lldb::InstructionControlFlowKind` is
+  // supported by other architectures
+  const llvm::StringRef target_triple = dap.target.GetTriple();
+  if (target_triple.starts_with("x86"))
+    return;
+
+  protocol::Event event;
+  event.event = "capabilities";
+  event.body = llvm::json::Object{
+      {"capabilities",
+       llvm::json::Object{{"supportsStepInTargetsRequest", false}}}};
+  dap.Send(event);
+}
 // "ProcessEvent": {
 //   "allOf": [
 //     { "$ref": "#/definitions/Event" },
@@ -93,7 +111,7 @@ void SendProcessEvent(DAP &dap, LaunchMethod launch_method) {
   exe_fspec.GetPath(exe_path, sizeof(exe_path));
   llvm::json::Object event(CreateEventObject("process"));
   llvm::json::Object body;
-  EmplaceSafeString(body, "name", std::string(exe_path));
+  EmplaceSafeString(body, "name", exe_path);
   const auto pid = dap.target.GetProcess().GetProcessID();
   body.try_emplace("systemProcessId", (int64_t)pid);
   body.try_emplace("isLocalProcess", true);
@@ -222,7 +240,7 @@ void SendContinuedEvent(DAP &dap) {
 
   // If the focus thread is not set then we haven't reported any thread status
   // to the client, so nothing to report.
-  if (!dap.configuration_done_sent || dap.focus_tid == LLDB_INVALID_THREAD_ID) {
+  if (!dap.configuration_done || dap.focus_tid == LLDB_INVALID_THREAD_ID) {
     return;
   }
 

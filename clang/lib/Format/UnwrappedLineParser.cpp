@@ -14,7 +14,6 @@
 
 #include "UnwrappedLineParser.h"
 #include "FormatToken.h"
-#include "FormatTokenLexer.h"
 #include "FormatTokenSource.h"
 #include "Macros.h"
 #include "TokenAnnotator.h"
@@ -25,7 +24,6 @@
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <algorithm>
 #include <utility>
 
 #define DEBUG_TYPE "format-parser"
@@ -1702,6 +1700,11 @@ void UnwrappedLineParser::parseStructuralElement(
       parseLabel(!Style.IndentGotoLabels);
       if (HasLabel)
         *HasLabel = true;
+      return;
+    }
+    if (Style.isJava() && FormatTok->is(Keywords.kw_record)) {
+      parseRecord(/*ParseAsExpr=*/false, /*IsJavaRecord=*/true);
+      addUnwrappedLine();
       return;
     }
     // In all other cases, parse the declaration.
@@ -3996,11 +3999,13 @@ void UnwrappedLineParser::parseJavaEnumBody() {
   addUnwrappedLine();
 }
 
-void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
+void UnwrappedLineParser::parseRecord(bool ParseAsExpr, bool IsJavaRecord) {
+  assert(!IsJavaRecord || FormatTok->is(Keywords.kw_record));
   const FormatToken &InitialToken = *FormatTok;
   nextToken();
 
-  FormatToken *ClassName = nullptr;
+  FormatToken *ClassName =
+      IsJavaRecord && FormatTok->is(tok::identifier) ? FormatTok : nullptr;
   bool IsDerived = false;
   auto IsNonMacroIdentifier = [](const FormatToken *Tok) {
     return Tok->is(tok::identifier) && Tok->TokenText != Tok->TokenText.upper();
@@ -4035,7 +4040,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
     switch (FormatTok->Tok.getKind()) {
     case tok::l_paren:
       // We can have macros in between 'class' and the class name.
-      if (!IsNonMacroIdentifier(Previous) ||
+      if (IsJavaRecord || !IsNonMacroIdentifier(Previous) ||
           // e.g. `struct macro(a) S { int i; };`
           Previous->Previous == &InitialToken) {
         parseParens();
