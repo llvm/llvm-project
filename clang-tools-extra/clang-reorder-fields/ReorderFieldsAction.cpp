@@ -50,6 +50,55 @@ static const RecordDecl *findDefinition(StringRef RecordName,
   return selectFirst<RecordDecl>("recordDecl", Results);
 }
 
+static bool isSafeToRewrite(const RecordDecl *Decl, const ASTContext &Context) {
+  // Don't attempt to rewrite if there is a declaration like 'int a, b;'.
+  SourceLocation LastTypeLoc;
+  for (const auto &Field : Decl->fields()) {
+    SourceLocation TypeLoc =
+        Field->getTypeSourceInfo()->getTypeLoc().getBeginLoc();
+    if (LastTypeLoc.isValid() && TypeLoc == LastTypeLoc)
+      return false;
+    LastTypeLoc = TypeLoc;
+  }
+
+  // Don't attempt to rewrite if a single macro expansion creates multiple
+  // fields.
+  SourceLocation LastMacroLoc;
+  for (const auto &Field : Decl->fields()) {
+    if (!Field->getLocation().isMacroID())
+      continue;
+    SourceLocation MacroLoc =
+        Context.getSourceManager().getExpansionLoc(Field->getLocation());
+    if (LastMacroLoc.isValid() && MacroLoc == LastMacroLoc)
+      return false;
+    LastMacroLoc = MacroLoc;
+  }
+
+  // Skip if there are preprocessor directives present.
+  const SourceManager &SM = Context.getSourceManager();
+  std::pair<FileID, unsigned> FileAndOffset =
+      SM.getDecomposedLoc(Decl->getSourceRange().getBegin());
+  unsigned EndOffset = SM.getFileOffset(Decl->getSourceRange().getEnd());
+  StringRef SrcBuffer = SM.getBufferData(FileAndOffset.first);
+  Lexer L(SM.getLocForStartOfFile(FileAndOffset.first), Context.getLangOpts(),
+          SrcBuffer.data(), SrcBuffer.data() + FileAndOffset.second,
+          SrcBuffer.data() + SrcBuffer.size());
+  IdentifierTable Identifiers(Context.getLangOpts());
+  clang::Token T;
+  while (!L.LexFromRawLexer(T) && L.getCurrentBufferOffset() < EndOffset) {
+    if (T.getKind() == tok::hash) {
+      L.LexFromRawLexer(T);
+      if (T.getKind() == tok::raw_identifier) {
+        clang::IdentifierInfo &II = Identifiers.get(T.getRawIdentifier());
+        if (II.getPPKeywordID() != clang::tok::pp_not_keyword)
+          return false;
+      }
+    }
+  }
+
+  return true;
+}
+
 /// Calculates the new order of fields.
 ///
 /// \returns empty vector if the list of fields doesn't match the definition.
@@ -340,6 +389,8 @@ public:
   void HandleTranslationUnit(ASTContext &Context) override {
     const RecordDecl *RD = findDefinition(RecordName, Context);
     if (!RD)
+      return;
+    if (!isSafeToRewrite(RD, Context))
       return;
     SmallVector<unsigned, 4> NewFieldsOrder =
         getNewFieldsOrder(RD, DesiredFieldsOrder);
