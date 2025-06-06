@@ -1986,18 +1986,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   for (ISD::NodeType Op : {ISD::FLDEXP, ISD::STRICT_FLDEXP, ISD::FFREXP})
     if (isOperationExpand(Op, MVT::f16))
       setOperationAction(Op, MVT::f16, Promote);
-
-  if (Subtarget->isWindowsArm64EC()) {
-    // FIXME: are there calls we need to exclude from this?
-#define HANDLE_LIBCALL(code, name)                                             \
-  {                                                                            \
-    const char *libcallName = getLibcallName(RTLIB::code);                     \
-    if (libcallName && libcallName[0] != '#')                                  \
-      setLibcallName(RTLIB::code, "#" #name);                                  \
-  }
-#include "llvm/IR/RuntimeLibcalls.def"
-#undef HANDLE_LIBCALL
-  }
 }
 
 void AArch64TargetLowering::addTypeForNEON(MVT VT) {
