@@ -3303,6 +3303,13 @@ static void combineMetadata(Instruction *K, const Instruction *J,
                             bool DoesKMove, bool AAOnly = false) {
   SmallVector<std::pair<unsigned, MDNode *>, 4> Metadata;
   K->getAllMetadataOtherThanDebugLoc(Metadata);
+
+  const auto IsAMDGPUMD = [=](unsigned Kind) {
+    return Kind ==
+               K->getContext().getMDKindID("amdgpu.no.fine.grained.memory") ||
+           Kind == K->getContext().getMDKindID("amdgpu.no.remote.memory") ||
+           Kind == K->getContext().getMDKindID("amdgpu.ignore.denormal.mode");
+  };
   for (const auto &MD : Metadata) {
     unsigned Kind = MD.first;
     MDNode *JMD = J->getMetadata(Kind);
@@ -3311,7 +3318,10 @@ static void combineMetadata(Instruction *K, const Instruction *J,
     // TODO: Assert that this switch is exhaustive for fixed MD kinds.
     switch (Kind) {
       default:
-        K->setMetadata(Kind, nullptr); // Remove unknown metadata
+        if (K->isAtomic() && IsAMDGPUMD(Kind))
+          K->setMetadata(Kind, MDNode::intersect(JMD, KMD));
+        else
+          K->setMetadata(Kind, nullptr); // Remove unknown metadata
         break;
       case LLVMContext::MD_dbg:
         llvm_unreachable("getAllMetadataOtherThanDebugLoc returned a MD_dbg");
