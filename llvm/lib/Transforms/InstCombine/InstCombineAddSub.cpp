@@ -1791,31 +1791,20 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   // (X >> log2(N)) + zext(X & (N-1) != 0) --> (X + (N-1)) >> log2(N)
   // This is valid when adding (N-1) to X doesn't overflow.
   {
-    Value *X = nullptr, *Cmp = nullptr;
+    Value *X = nullptr, *Cmp = nullptr, *Shift = nullptr;
     const APInt *ShiftAmt = nullptr, *Mask = nullptr;
     CmpPredicate Pred;
 
     // Match: (X >> C) + zext((X & Mask) != 0)
     // or:    zext((X & Mask) != 0) + (X >> C)
-    Value *Op0 = I.getOperand(0);
-    Value *Op1 = I.getOperand(1);
-
-    // Try matching with shift on left, zext on right
-    bool Matched = false;
-    if (match(Op0, m_LShr(m_Value(X), m_APInt(ShiftAmt))) &&
-        match(Op1, m_ZExt(m_Value(Cmp)))) {
-      Matched = match(Cmp, m_ICmp(Pred, m_And(m_Specific(X), m_APInt(Mask)),
-                                  m_ZeroInt()));
-    } else if (match(Op1, m_LShr(m_Value(X), m_APInt(ShiftAmt))) &&
-               match(Op0, m_ZExt(m_Value(Cmp)))) {
-      Matched = match(Cmp, m_ICmp(Pred, m_And(m_Specific(X), m_APInt(Mask)),
-                                  m_ZeroInt()));
-    }
-
-    if (Matched &&
+    if (match(&I, m_c_Add(m_Value(Shift), m_ZExt(m_Value(Cmp)))) &&
+        match(Shift, m_LShr(m_Value(X), m_APInt(ShiftAmt))) &&
+        Shift->hasOneUse() &&
+        match(Cmp, m_ICmp(Pred, m_And(m_Specific(X), m_LowBitMask(Mask)),
+                          m_ZeroInt())) &&
         Pred == ICmpInst::ICMP_NE &&
         ShiftAmt && ShiftAmt->uge(1) && ShiftAmt->ult(BitWidth) &&
-        Mask && *Mask == (APInt(BitWidth, 1) << *ShiftAmt) - 1) {
+        Mask && Mask->popcount() == *ShiftAmt) {
 
       // Check if X + Mask doesn't overflow
       Constant *MaskC = ConstantInt::get(X->getType(), *Mask);
