@@ -8761,6 +8761,45 @@ getSMToggleCondition(const SMECallAttrs &CallAttrs) {
   llvm_unreachable("Unsupported attributes");
 }
 
+/// Check whether a stack argument requires lowering in a tail call.
+static bool shouldLowerTailCallStackArg(const MachineFunction &MF,
+                                        const CCValAssign &VA, SDValue Arg,
+                                        ISD::ArgFlagsTy Flags, int CallOffset) {
+  // FIXME: We should be able to handle this case, but it's not clear how to.
+  if (Flags.isZExt() || Flags.isSExt())
+    return true;
+
+  for (;;) {
+    // Look through nodes that don't alter the bits of the incoming value.
+    unsigned Op = Arg.getOpcode();
+    if (Op == ISD::ZERO_EXTEND || Op == ISD::ANY_EXTEND || Op == ISD::BITCAST ||
+        Arg->isAssert() || Op == AArch64ISD::ASSERT_ZEXT_BOOL) {
+      Arg = Arg.getOperand(0);
+      continue;
+    }
+    break;
+  }
+
+  // If the argument is a load from the same immutable stack slot, we can reuse
+  // it.
+  if (auto *LoadNode = dyn_cast<LoadSDNode>(Arg)) {
+    if (auto *FINode = dyn_cast<FrameIndexSDNode>(LoadNode->getBasePtr())) {
+      const MachineFrameInfo &MFI = MF.getFrameInfo();
+      int FI = FINode->getIndex();
+      if (!MFI.isImmutableObjectIndex(FI))
+        return true;
+      if (CallOffset != MFI.getObjectOffset(FI))
+        return true;
+      uint64_t SizeInBits = LoadNode->getMemoryVT().getFixedSizeInBits();
+      if (SizeInBits / 8 != MFI.getObjectSize(FI))
+        return true;
+      return false;
+    }
+  }
+
+  return true;
+}
+
 /// LowerCall - Lower a call to a callseq_start + CALL + callseq_end chain,
 /// and add input and output parameter nodes.
 SDValue
@@ -9183,10 +9222,13 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       }
       unsigned LocMemOffset = VA.getLocMemOffset();
       int32_t Offset = LocMemOffset + BEAlign;
-      SDValue PtrOff = DAG.getIntPtrConstant(Offset, DL);
-      PtrOff = DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr, PtrOff);
 
       if (IsTailCall) {
+        // When the frame pointer is perfectly aligned for the tail call and the
+        // same stack argument is passed down intact, we can reuse it.
+        if (!FPDiff && !shouldLowerTailCallStackArg(MF, VA, Arg, Flags, Offset))
+          continue;
+
         Offset = Offset + FPDiff;
         int FI = MF.getFrameInfo().CreateFixedObject(OpSize, Offset, true);
 
