@@ -12829,7 +12829,7 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
       llvm_unreachable("Must have flat address space!");
 
     unsigned AS = getAssociatedType()->getPointerAddressSpace();
-    if (AS != FlatAS.value() || Map.empty())
+    if (AS != *FlatAS || Map.empty())
       return ChangeStatus::UNCHANGED;
 
     LLVMContext &Ctx = getAssociatedValue().getContext();
