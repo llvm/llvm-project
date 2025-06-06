@@ -1955,8 +1955,7 @@ let Predicates = [HasPAuth] in {
   def AUTxMxN : Pseudo<(outs GPR64:$AuthVal, GPR64common:$Scratch),
                        (ins GPR64:$Val, i32imm:$Key,
                             i64imm:$Disc, GPR64:$AddrDisc),
-                       []>, Sched<[WriteI, ReadI]> {
-    let Constraints = "$AuthVal = $Val";
+                       [], "$AuthVal = $Val">, Sched<[WriteI, ReadI]> {
     let isCodeGenOnly = 1;
     let hasSideEffects = 0;
     let mayStore = 0;
