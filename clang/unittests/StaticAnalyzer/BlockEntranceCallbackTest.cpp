@@ -111,10 +111,10 @@ llvm::SmallVector<StringRef> parseEachDiag(StringRef Diags) {
   llvm::SmallVector<StringRef> Fragments;
   llvm::SplitString(Diags, Fragments, "\n");
   // Drop the prefix like "test.BlockEntranceTester: " from each fragment.
-  llvm::for_each(Fragments, [](StringRef &Fragment) {
+  for (StringRef &Fragment : Fragments) {
     Fragment = Fragment.drop_until([](char Ch) { return Ch == ' '; });
     Fragment.consume_front(" ");
-  });
+  }
   llvm::sort(Fragments);
   return Fragments;
 }
