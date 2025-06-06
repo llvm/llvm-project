@@ -1011,8 +1011,8 @@ extern "C" void acc_combined(int N, int cond) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
 }
-extern "C" void acc_combined_deviceptr(int *arg1, int *arg2) {
-  // CHECK: cir.func @acc_combined_deviceptr(%[[ARG1_PARAM:.*]]: !cir.ptr<!s32i>{{.*}}, %[[ARG2_PARAM:.*]]: !cir.ptr<!s32i>{{.*}}) {
+extern "C" void acc_combined_data_clauses(int *arg1, int *arg2) {
+  // CHECK: cir.func @acc_combined_data_clauses(%[[ARG1_PARAM:.*]]: !cir.ptr<!s32i>{{.*}}, %[[ARG2_PARAM:.*]]: !cir.ptr<!s32i>{{.*}}) {
   // CHECK-NEXT: %[[ARG1:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arg1", init]
   // CHECK-NEXT: %[[ARG2:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arg2", init]
   // CHECK-NEXT: cir.store %[[ARG1_PARAM]], %[[ARG1]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
@@ -1079,4 +1079,39 @@ extern "C" void acc_combined_deviceptr(int *arg1, int *arg2) {
   // CHECK-NEXT: } loc
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
+
+#pragma acc parallel loop no_create(arg1)
+  for(unsigned I = 0; I < 5; ++I);
+  // CHECK-NEXT: %[[NOCREATE1:.*]] = acc.nocreate varPtr(%[[ARG1]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg1"}
+  // CHECK-NEXT: acc.parallel combined(loop) dataOperands(%[[NOCREATE1]] : !cir.ptr<!cir.ptr<!s32i>>) {
+  // CHECK-NEXT: acc.loop combined(parallel) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.delete accPtr(%[[NOCREATE1]] : !cir.ptr<!cir.ptr<!s32i>>) {dataClause = #acc<data_clause acc_no_create>, name = "arg1"}
+
+#pragma acc serial loop no_create(arg2)
+  for(unsigned I = 0; I < 5; ++I);
+  // CHECK-NEXT: %[[NOCREATE2:.*]] = acc.nocreate varPtr(%[[ARG2]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg2"}
+  // CHECK-NEXT: acc.serial combined(loop) dataOperands(%[[NOCREATE2]] : !cir.ptr<!cir.ptr<!s32i>>) {
+  // CHECK-NEXT: acc.loop combined(serial) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.delete accPtr(%[[NOCREATE2]] : !cir.ptr<!cir.ptr<!s32i>>) {dataClause = #acc<data_clause acc_no_create>, name = "arg2"}
+
+#pragma acc kernels loop no_create(arg1, arg2) device_type(host) async
+  for(unsigned I = 0; I < 5; ++I);
+  // CHECK-NEXT: %[[NOCREATE1:.*]] = acc.nocreate varPtr(%[[ARG1]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<host>]) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg1"}
+  // CHECK-NEXT: %[[NOCREATE2:.*]] = acc.nocreate varPtr(%[[ARG2]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<host>]) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg2"}
+  // CHECK-NEXT: acc.kernels combined(loop) dataOperands(%[[NOCREATE1]], %[[NOCREATE2]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<host>]) {
+  // CHECK-NEXT: acc.loop combined(kernels) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.delete accPtr(%[[NOCREATE2]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<host>]) {dataClause = #acc<data_clause acc_no_create>, name = "arg2"}
+  // CHECK-NEXT: acc.delete accPtr(%[[NOCREATE1]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<host>]) {dataClause = #acc<data_clause acc_no_create>, name = "arg1"}
 }
