@@ -5604,19 +5604,20 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     // Look through extract element. If the index is non-constant or
     // out-of-range demand all elements, otherwise just the extracted element.
     const Value *Vec = Op->getOperand(0);
-    const Value *Idx = Op->getOperand(1);
-    auto *CIdx = dyn_cast<ConstantInt>(Idx);
 
+    APInt DemandedVecElts;
     if (auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType())) {
       unsigned NumElts = VecTy->getNumElements();
-      APInt DemandedVecElts = APInt::getAllOnes(NumElts);
+      DemandedVecElts = APInt::getAllOnes(NumElts);
+      auto *CIdx = dyn_cast<ConstantInt>(Op->getOperand(1));
       if (CIdx && CIdx->getValue().ult(NumElts))
         DemandedVecElts = APInt::getOneBitSet(NumElts, CIdx->getZExtValue());
-      return computeKnownFPClass(Vec, DemandedVecElts, InterestedClasses, Known,
-                                 Q, Depth + 1);
+    } else {
+      DemandedVecElts = APInt(1, 1);
     }
 
-    break;
+    return computeKnownFPClass(Vec, DemandedVecElts, InterestedClasses, Known,
+                               Q, Depth + 1);
   }
   case Instruction::InsertElement: {
     if (isa<ScalableVectorType>(Op->getType()))

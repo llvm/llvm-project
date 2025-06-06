@@ -1856,6 +1856,9 @@ multiclass VOP3P_Realtriple<GFXGen Gen, bits<8> op, string backing_ps_name = NAM
       VOP3P_Real_dpp<Gen, op, backing_ps_name, asmName>,
       VOP3P_Real_dpp8<Gen, op, backing_ps_name, asmName>;
 
+multiclass VOP3P_Realtriple_gfx11_gfx12<bits<8> op>
+  : VOP3P_Realtriple<GFX11Gen, op>, VOP3P_Realtriple<GFX12Gen, op>;
+
 //===----------------------------------------------------------------------===//
 // GFX12
 //===----------------------------------------------------------------------===//
@@ -1887,7 +1890,7 @@ multiclass VOP3P_Real_gfx11_gfx12<bits<8> op> :
 
 defm V_DOT4_I32_IU8  : VOP3P_Real_gfx11_gfx12<0x16>;
 defm V_DOT8_I32_IU4  : VOP3P_Real_gfx11_gfx12<0x18>;
-defm V_DOT2_F32_BF16 : VOP3P_Real_gfx11_gfx12<0x1a>;
+defm V_DOT2_F32_BF16 : VOP3P_Realtriple_gfx11_gfx12<0x1a>;
 
 let AssemblerPredicate = isGFX11Plus in {
   def : AMDGPUMnemonicAlias<"v_dot4_i32_i8", "v_dot4_i32_iu8">;
