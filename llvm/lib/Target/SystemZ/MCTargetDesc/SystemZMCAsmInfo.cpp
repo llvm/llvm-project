@@ -49,6 +49,7 @@ SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT) {
   CalleeSaveStackSlotSize = 8;
   CodePointerSize = 8;
   CommentString = "*";
+  UsesSetToEquateSymbol = true;
   ExceptionsType = ExceptionHandling::ZOS;
   IsHLASM = true;
   IsLittleEndian = false;
