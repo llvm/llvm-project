@@ -5,6 +5,8 @@
 @A = dso_local global [256 x [256 x float]] zeroinitializer
 @B = dso_local global [256 x [256 x float]] zeroinitializer
 @C = dso_local global [256 x [256 x float]] zeroinitializer
+@D = dso_local global [256 x [256 x [256 x float]]] zeroinitializer
+@E = dso_local global [256 x [256 x [256 x float]]] zeroinitializer
 
 ; Check that the below loops are exchanged for vectorization.
 ;
@@ -103,8 +105,9 @@ exit:
 }
 
 ; Check that the below loops are exchanged to allow innermost loop
-; vectorization. We cannot vectorize the j-loop because it has negative
-; distance dependency, but the i-loop can be vectorized.
+; vectorization. We cannot vectorize the j-loop because it has a lexically
+; backward dependency, but the i-loop can be vectorized because all the
+; loop-carried dependencies are lexically forward.
 ;
 ; for (int i = 0; i < 255; i++) {
 ;   for (int j = 1; j < 256; j++) {
@@ -152,6 +155,81 @@ for.j.body:
 for.i.inc:
   %i.next = add nuw nsw i64 %i, 1
   %cmp.i = icmp eq i64 %i.next, 255
+  br i1 %cmp.i, label %exit, label %for.i.header
+
+exit:
+  ret void
+}
+
+; Check that no interchange is performed for the following loop. The j-loop is
+; vectorizable because all the dependencies are lexically forward. However, at
+; the moment, we don't analyze an execution order between instructions in
+; different BBs, so fail to determine that the j-loop is vectorizable.
+; Therefore, no exchange is performed.
+;
+; for (int i = 0; i < 255; i++) {
+;   for (int j = 0; j < 255; j++) {
+;     for (int k = 0; k < 128; k++) {
+;       E[i][j][k] = D[i+1][j+1][2*k];
+;       if (cond)
+;         D[i][j][k+1] += 1.0;
+;   }
+; }
+
+; CHECK:      --- !Missed
+; CHECK-NEXT: Pass:            loop-interchange
+; CHECK-NEXT: Name:            InterchangeNotProfitable
+; CHECK-NEXT: Function:        multiple_BBs_in_loop
+; CHECK-NEXT: Args:
+; CHECK-NEXT:   - String:          Interchanging loops is not considered to improve cache locality nor vectorization.
+; CHECK:      --- !Missed
+; CHECK-NEXT: Pass:            loop-interchange
+; CHECK-NEXT: Name:            InterchangeNotProfitable
+; CHECK-NEXT: Function:        multiple_BBs_in_loop
+; CHECK-NEXT: Args:
+; CHECK-NEXT:   - String:          Interchanging loops is not considered to improve cache locality nor vectorization.
+define void @multiple_BBs_in_loop() {
+entry:
+  br label %for.i.header
+
+for.i.header:
+  %i = phi i64 [ 0, %entry ], [ %i.inc, %for.i.inc ]
+  %i.inc = add nsw i64 %i, 1
+  br label %for.j.header
+
+for.j.header:
+  %j = phi i64 [ 0, %for.i.header ], [ %j.inc, %for.j.inc ]
+  %j.inc = add nsw i64 %j, 1
+  br label %for.k.body
+
+for.k.body:
+  %k = phi i64 [ 0, %for.j.header ], [ %k.inc, %for.k.inc ]
+  %k.inc = add nsw i64 %k, 1
+  %k.2 = mul nsw i64 %k, 2
+  %d.index = getelementptr nuw inbounds [256 x [256 x [256 x float]]], ptr @D, i64 %i.inc, i64 %j.inc, i64 %k.2
+  %e.index = getelementptr nuw inbounds [256 x [256 x [256 x float]]], ptr @E, i64 %i, i64 %j, i64 %k
+  %d.load = load float, ptr %d.index, align 4
+  store float %d.load, ptr %e.index, align 4
+  %cond = freeze i1 undef
+  br i1 %cond, label %if.then, label %for.k.inc
+
+if.then:
+  %d.index2 = getelementptr nuw inbounds [256 x [256 x [256 x float]]], ptr @D, i64 %i, i64 %j, i64 %k.inc
+  %d.load2 = load float, ptr %d.index2, align 4
+  %add = fadd float %d.load2, 1.0
+  store float %add, ptr %d.index2, align 4
+  br label %for.k.inc
+
+for.k.inc:
+  %cmp.k = icmp eq i64 %k.inc, 128
+  br i1 %cmp.k, label %for.j.inc, label %for.k.body
+
+for.j.inc:
+  %cmp.j = icmp eq i64 %j.inc, 255
+  br i1 %cmp.j, label %for.i.inc, label %for.j.header
+
+for.i.inc:
+  %cmp.i = icmp eq i64 %i.inc, 255
   br i1 %cmp.i, label %exit, label %for.i.header
 
 exit:

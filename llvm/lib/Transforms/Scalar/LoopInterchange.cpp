@@ -19,7 +19,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/LoopCacheAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -120,15 +119,18 @@ static bool noDuplicateRules(ArrayRef<RuleTy> Rules) {
 
 static void printDepMatrix(CharMatrix &DepMatrix) {
   for (auto &Row : DepMatrix) {
-    for (auto D : Row)
+    ArrayRef<char> RowRef(Row);
+
+    // Drop the last element because it is a flag indicating whether the row is
+    // "lexically forward", which doesn't affect the legality check.
+    for (auto D : RowRef.drop_back())
       LLVM_DEBUG(dbgs() << D << " ");
     LLVM_DEBUG(dbgs() << "\n");
   }
 }
 #endif
 
-static bool populateDependencyMatrix(CharMatrix &DepMatrix,
-                                     BitVector &IsNegatedVec, unsigned Level,
+static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
                                      Loop *L, DependenceInfo *DI,
                                      ScalarEvolution *SE,
                                      OptimizationRemarkEmitter *ORE) {
@@ -170,8 +172,19 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix,
   }
   ValueVector::iterator I, IE, J, JE;
 
-  // Manage all found direction vectors, negated and not negated, separately.
-  StringSet<> Seen[2];
+  // Manage direction vectors that are already seen. Map each direction vector
+  // to an index of DepMatrix at which it is stored.
+  StringMap<unsigned> Seen;
+
+  // The i-th element is set iff all dependencies corresponding to the i-th
+  // direction vector in DepMatrix are "lexically forward". The notion
+  // "lexically forward" aligns with what is defined in LAA
+  // (LoopAccessAnalysis).
+  //
+  // We deem a dependence lexically forward if we can prove that the
+  // destination instruction is always executed after the source instruction
+  // within each iteration.
+  BitVector IsForwardFlags;
 
   for (I = MemInstr.begin(), IE = MemInstr.end(); I != IE; ++I) {
     for (J = I, JE = MemInstr.end(); J != JE; ++J) {
@@ -184,11 +197,22 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix,
       // Track Output, Flow, and Anti dependencies.
       if (auto D = DI->depends(Src, Dst)) {
         assert(D->isOrdered() && "Expected an output, flow or anti dep.");
+        bool IsForward = true;
+
+        // If Src and Dst are in the same BB, Src is always executed before Dst
+        // in the same loop iteration. If not, we must check whether one BB
+        // dominates the other to determine if Src and Dst are executed in this
+        // order. At the moment, we don't perform such check.
+        if (Src->getParent() != Dst->getParent())
+          IsForward = false;
+
         // If the direction vector is negative, normalize it to
         // make it non-negative.
         bool Normalized = D->normalize(SE);
-        if (Normalized)
+        if (Normalized) {
           LLVM_DEBUG(dbgs() << "Negative dependence vector normalized.\n");
+          IsForward = false;
+        }
         LLVM_DEBUG(StringRef DepType =
                        D->isFlow() ? "flow" : D->isAnti() ? "anti" : "output";
                    dbgs() << "Found " << DepType
@@ -226,16 +250,27 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix,
           Dep.push_back('I');
         }
 
+        auto [Ite, Inserted] = Seen.try_emplace(
+            StringRef(Dep.data(), Dep.size()), DepMatrix.size());
+
         // Make sure we only add unique entries to the dependency matrix.
-        // Negated vectors (due to normalization) are treated as separate from
-        // non negated ones.
-        if (Seen[Normalized].insert(StringRef(Dep.data(), Dep.size())).second) {
+        if (Inserted) {
           DepMatrix.push_back(Dep);
-          IsNegatedVec.push_back(Normalized);
+          IsForwardFlags.push_back(true);
         }
+        if (!IsForward)
+          IsForwardFlags.reset(Ite->second);
       }
     }
   }
+
+  assert(DepMatrix.size() == IsForwardFlags.size() &&
+         "Dependency matrix and IsForwardVec should have the same size.");
+
+  // If all dependencies corresponding to a direction vector are forward, encode
+  // it to '<', otherwise to '*'.
+  for (unsigned I = 0; I != DepMatrix.size(); I++)
+    DepMatrix[I].push_back(IsForwardFlags[I] ? '<' : '*');
 
   return true;
 }
@@ -285,11 +320,12 @@ static bool isLegalToInterChangeLoops(CharMatrix &DepMatrix,
       continue;
 
     // Check if the direction vector is lexicographically positive (or zero)
-    // for both before/after exchanged.
-    if (isLexicographicallyPositive(Cur, OuterLoopId, Cur.size()) == false)
+    // for both before/after exchanged. Ignore the last element because it
+    // doesn't affect the legality.
+    if (isLexicographicallyPositive(Cur, OuterLoopId, Cur.size() - 1) == false)
       return false;
     std::swap(Cur[InnerLoopId], Cur[OuterLoopId]);
-    if (isLexicographicallyPositive(Cur, OuterLoopId, Cur.size()) == false)
+    if (isLexicographicallyPositive(Cur, OuterLoopId, Cur.size() - 1) == false)
       return false;
   }
   return true;
@@ -429,7 +465,7 @@ public:
   /// Check if the loop interchange is profitable.
   bool isProfitable(const Loop *InnerLoop, const Loop *OuterLoop,
                     unsigned InnerLoopId, unsigned OuterLoopId,
-                    CharMatrix &DepMatrix, const BitVector &IsNegatedVec,
+                    CharMatrix &DepMatrix,
                     const DenseMap<const Loop *, unsigned> &CostMap,
                     std::unique_ptr<CacheCost> &CC);
 
@@ -439,10 +475,9 @@ private:
       const DenseMap<const Loop *, unsigned> &CostMap,
       std::unique_ptr<CacheCost> &CC);
   std::optional<bool> isProfitablePerInstrOrderCost();
-  std::optional<bool>
-  isProfitableForVectorization(unsigned InnerLoopId, unsigned OuterLoopId,
-                               CharMatrix &DepMatrix,
-                               const BitVector &IsNegatedVec);
+  std::optional<bool> isProfitableForVectorization(unsigned InnerLoopId,
+                                                   unsigned OuterLoopId,
+                                                   CharMatrix &DepMatrix);
   Loop *OuterLoop;
   Loop *InnerLoop;
 
@@ -534,9 +569,8 @@ struct LoopInterchange {
                       << "\n");
 
     CharMatrix DependencyMatrix;
-    BitVector IsNegatedVec;
     Loop *OuterMostLoop = *(LoopList.begin());
-    if (!populateDependencyMatrix(DependencyMatrix, IsNegatedVec, LoopNestDepth,
+    if (!populateDependencyMatrix(DependencyMatrix, LoopNestDepth,
                                   OuterMostLoop, DI, SE, ORE)) {
       LLVM_DEBUG(dbgs() << "Populating dependency matrix failed\n");
       return false;
@@ -575,8 +609,8 @@ struct LoopInterchange {
     for (unsigned j = SelecLoopId; j > 0; j--) {
       bool ChangedPerIter = false;
       for (unsigned i = SelecLoopId; i > SelecLoopId - j; i--) {
-        bool Interchanged = processLoop(LoopList, i, i - 1, DependencyMatrix,
-                                        IsNegatedVec, CostMap);
+        bool Interchanged =
+            processLoop(LoopList, i, i - 1, DependencyMatrix, CostMap);
         ChangedPerIter |= Interchanged;
         Changed |= Interchanged;
       }
@@ -591,7 +625,6 @@ struct LoopInterchange {
   bool processLoop(SmallVectorImpl<Loop *> &LoopList, unsigned InnerLoopId,
                    unsigned OuterLoopId,
                    std::vector<std::vector<char>> &DependencyMatrix,
-                   BitVector &IsNegatedVec,
                    const DenseMap<const Loop *, unsigned> &CostMap) {
     Loop *OuterLoop = LoopList[OuterLoopId];
     Loop *InnerLoop = LoopList[InnerLoopId];
@@ -605,7 +638,7 @@ struct LoopInterchange {
     LLVM_DEBUG(dbgs() << "Loops are legal to interchange\n");
     LoopInterchangeProfitability LIP(OuterLoop, InnerLoop, SE, ORE);
     if (!LIP.isProfitable(InnerLoop, OuterLoop, InnerLoopId, OuterLoopId,
-                          DependencyMatrix, IsNegatedVec, CostMap, CC)) {
+                          DependencyMatrix, CostMap, CC)) {
       LLVM_DEBUG(dbgs() << "Interchanging loops not profitable.\n");
       return false;
     }
@@ -1230,57 +1263,39 @@ LoopInterchangeProfitability::isProfitablePerInstrOrderCost() {
   return std::nullopt;
 }
 
-static char flipDirection(char Dir) {
-  switch (Dir) {
-  case '<':
-    return '>';
-  case '>':
-    return '<';
-  case '=':
-  case 'I':
-  case '*':
-    return Dir;
-  default:
-    llvm_unreachable("Unknown direction");
-  }
-}
-
 /// Return true if we can vectorize the loop specified by \p LoopId.
-static bool canVectorize(const CharMatrix &DepMatrix,
-                         const BitVector &IsNegatedVec, unsigned LoopId) {
-  // The loop can be vectorized if there are no negative dependencies. Consider
-  // the dependency of `j` in the following example.
-  //
-  //   Positive: ... = A[i][j]       Negative: ... = A[i][j-1]
-  //             A[i][j-1] = ...               A[i][j] = ...
-  //
-  // In the right case, vectorizing the loop can change the loaded value from
-  // `A[i][j-1]`. At the moment we don't take into account the distance of the
-  // dependency and vector width.
-  // TODO: Considering the dependency distance and the vector width can give a
-  // more accurate result. For example, the following loop can be vectorized if
-  // the vector width is less than or equal to 4 x sizeof(A[0][0]).
+static bool canVectorize(const CharMatrix &DepMatrix, unsigned LoopId) {
   for (unsigned I = 0; I != DepMatrix.size(); I++) {
     char Dir = DepMatrix[I][LoopId];
-    if (IsNegatedVec[I])
-      Dir = flipDirection(Dir);
-    if (Dir != '=' && Dir != 'I' && Dir != '<')
-      return false;
+    char DepType = DepMatrix[I].back();
+    assert((DepType == '<' || DepType == '*') &&
+           "Unexpected element in dependency vector");
+
+    // There are no loop-carried dependencies.
+    if (Dir == '=' || Dir == 'I')
+      continue;
+
+    // If both Dir and DepType are '<', it means that the all dependencies are
+    // lexically forward. Such dependencies don't prevent vectorization.
+    if (Dir == '<' && DepType == '<')
+      continue;
+
+    // We cannot prove that the loop is vectorizable.
+    return false;
   }
   return true;
 }
 
 std::optional<bool> LoopInterchangeProfitability::isProfitableForVectorization(
-    unsigned InnerLoopId, unsigned OuterLoopId, CharMatrix &DepMatrix,
-    const BitVector &IsNegatedVec) {
+    unsigned InnerLoopId, unsigned OuterLoopId, CharMatrix &DepMatrix) {
   // If the outer loop cannot be vectorized, it is not profitable to move this
   // to inner position.
-  if (!canVectorize(DepMatrix, IsNegatedVec, OuterLoopId))
+  if (!canVectorize(DepMatrix, OuterLoopId))
     return false;
 
   // If inner loop cannot be vectorized and outer loop can be then it is
   // profitable to interchange to enable inner loop parallelism.
-  if (!canVectorize(DepMatrix, IsNegatedVec, InnerLoopId))
+  if (!canVectorize(DepMatrix, InnerLoopId))
     return true;
 
   // If both the inner and the outer loop can be vectorized, it is necessary to
@@ -1293,7 +1308,7 @@ std::optional<bool> LoopInterchangeProfitability::isProfitableForVectorization(
 
 bool LoopInterchangeProfitability::isProfitable(
     const Loop *InnerLoop, const Loop *OuterLoop, unsigned InnerLoopId,
-    unsigned OuterLoopId, CharMatrix &DepMatrix, const BitVector &IsNegatedVec,
+    unsigned OuterLoopId, CharMatrix &DepMatrix,
     const DenseMap<const Loop *, unsigned> &CostMap,
     std::unique_ptr<CacheCost> &CC) {
   // isProfitable() is structured to avoid endless loop interchange. If the
@@ -1315,8 +1330,8 @@ bool LoopInterchangeProfitability::isProfitable(
       shouldInterchange = isProfitablePerInstrOrderCost();
       break;
     case RuleTy::ForVectorization:
-      shouldInterchange = isProfitableForVectorization(InnerLoopId, OuterLoopId,
-                                                       DepMatrix, IsNegatedVec);
+      shouldInterchange =
+          isProfitableForVectorization(InnerLoopId, OuterLoopId, DepMatrix);
       break;
     }
 
