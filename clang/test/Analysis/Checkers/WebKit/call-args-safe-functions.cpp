@@ -1,9 +1,12 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UncountedCallArgsChecker -verify %s
 
+#include "mock-types.h"
+
 class Base {
 public:
-    inline void ref();
-    inline void deref();
+    void ref();
+    void deref();
+    void doWork();
 };
 
 class Derived : public Base {
@@ -20,6 +23,7 @@ class SubDerived final : public Derived {
 class OtherObject {
 public:
     Derived* obj();
+    Base* base();
 };
 
 class String {
@@ -62,3 +66,12 @@ void foo(OtherObject* other)
     // expected-warning@-1{{Call argument is uncounted and unsafe}}
     toString(other->obj());
 }
+
+struct SomeStruct {
+  Derived* [[clang::annotate_type("webkit.pointerconversion")]] ptrConversion(Base*);
+
+  void foo(OtherObject& otherObj) {
+    RefPtr ptr = otherObj.base();
+    ptrConversion(ptr.get())->doWork();
+  }
+};
