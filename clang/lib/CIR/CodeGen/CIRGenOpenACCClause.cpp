@@ -14,6 +14,8 @@
 
 #include "CIRGenFunction.h"
 
+#include "clang/AST/ExprCXX.h"
+
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -188,7 +190,7 @@ class OpenACCClauseCIREmitter final
   struct DataOperandInfo {
     mlir::Location beginLoc;
     mlir::Value varValue;
-    llvm::StringRef name;
+    std::string name;
     llvm::SmallVector<mlir::Value> bounds;
   };
 
@@ -225,6 +227,10 @@ class OpenACCClauseCIREmitter final
 
     mlir::Location exprLoc = cgf.cgm.getLoc(curVarExpr->getBeginLoc());
     llvm::SmallVector<mlir::Value> bounds;
+
+    std::string exprString;
+    llvm::raw_string_ostream os(exprString);
+    e->printPretty(os, nullptr, cgf.getContext().getPrintingPolicy());
 
     // Assemble the list of bounds.
     while (isa<ArraySectionExpr, ArraySubscriptExpr>(curVarExpr)) {
@@ -267,20 +273,16 @@ class OpenACCClauseCIREmitter final
       bounds.push_back(createBound(boundLoc, lowerBound, upperBound, extent));
     }
 
-    // TODO: OpenACC: if this is a member expr, emit the VarPtrPtr correctly.
-    if (isa<MemberExpr>(curVarExpr)) {
-      cgf.cgm.errorNYI(curVarExpr->getSourceRange(),
-                       "OpenACC Data clause member expr");
-      return {exprLoc, {}, {}, std::move(bounds)};
-    }
+    if (const auto *memExpr = dyn_cast<MemberExpr>(curVarExpr))
+      return {exprLoc, cgf.emitMemberExpr(memExpr).getPointer(), exprString,
+              std::move(bounds)};
 
     // Sema has made sure that only 4 types of things can get here, array
     // subscript, array section, member expr, or DRE to a var decl (or the
     // former 3 wrapping a var-decl), so we should be able to assume this is
     // right.
     const auto *dre = cast<DeclRefExpr>(curVarExpr);
-    const auto *vd = cast<VarDecl>(dre->getFoundDecl()->getCanonicalDecl());
-    return {exprLoc, cgf.emitDeclRefLValue(dre).getPointer(), vd->getName(),
+    return {exprLoc, cgf.emitDeclRefLValue(dre).getPointer(), exprString,
             std::move(bounds)};
   }
 
