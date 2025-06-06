@@ -917,6 +917,34 @@ public:
            isOSBinFormatELF();
   }
 
+  // ARM EABI is the bare-metal EABI described in ARM ABI documents and
+  // can be accessed via -target arm-none-eabi. This is NOT GNUEABI.
+  // FIXME: Add a flag for bare-metal for that target and set Triple::EABI
+  // even for GNUEABI, so we can make a distinction here and still conform to
+  // the EABI on GNU (and Android) mode. This requires change in Clang, too.
+  // FIXME: The Darwin exception is temporary, while we move users to
+  // "*-*-*-macho" triples as quickly as possible.
+  bool isTargetAEABI() const {
+    return (getEnvironment() == Triple::EABI ||
+            getEnvironment() == Triple::EABIHF) &&
+           !isOSDarwin() && !isOSWindows();
+  }
+
+  bool isTargetGNUAEABI() const {
+    return (getEnvironment() == Triple::GNUEABI ||
+            getEnvironment() == Triple::GNUEABIT64 ||
+            getEnvironment() == Triple::GNUEABIHF ||
+            getEnvironment() == Triple::GNUEABIHFT64) &&
+           !isOSDarwin() && !isOSWindows();
+  }
+
+  bool isTargetMuslAEABI() const {
+    return (getEnvironment() == Triple::MuslEABI ||
+            getEnvironment() == Triple::MuslEABIHF ||
+            getEnvironment() == Triple::OpenHOS) &&
+           !isOSDarwin() && !isOSWindows();
+  }
+
   /// Tests whether the target is T32.
   bool isArmT32() const {
     switch (getSubArch()) {

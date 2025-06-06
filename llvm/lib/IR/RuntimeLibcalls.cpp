@@ -11,6 +11,56 @@
 using namespace llvm;
 using namespace RTLIB;
 
+static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT) {
+  // Register based DivRem for AEABI (RTABI 4.2)
+  if (TT.isTargetAEABI() || TT.isAndroid() || TT.isTargetGNUAEABI() ||
+      TT.isTargetMuslAEABI() || TT.isOSWindows()) {
+    if (TT.isOSWindows()) {
+      const struct {
+        const RTLIB::Libcall Op;
+        const char *const Name;
+        const CallingConv::ID CC;
+      } LibraryCalls[] = {
+          {RTLIB::SDIVREM_I8, "__rt_sdiv", CallingConv::ARM_AAPCS},
+          {RTLIB::SDIVREM_I16, "__rt_sdiv", CallingConv::ARM_AAPCS},
+          {RTLIB::SDIVREM_I32, "__rt_sdiv", CallingConv::ARM_AAPCS},
+          {RTLIB::SDIVREM_I64, "__rt_sdiv64", CallingConv::ARM_AAPCS},
+
+          {RTLIB::UDIVREM_I8, "__rt_udiv", CallingConv::ARM_AAPCS},
+          {RTLIB::UDIVREM_I16, "__rt_udiv", CallingConv::ARM_AAPCS},
+          {RTLIB::UDIVREM_I32, "__rt_udiv", CallingConv::ARM_AAPCS},
+          {RTLIB::UDIVREM_I64, "__rt_udiv64", CallingConv::ARM_AAPCS},
+      };
+
+      for (const auto &LC : LibraryCalls) {
+        Info.setLibcallName(LC.Op, LC.Name);
+        Info.setLibcallCallingConv(LC.Op, LC.CC);
+      }
+    } else {
+      const struct {
+        const RTLIB::Libcall Op;
+        const char *const Name;
+        const CallingConv::ID CC;
+      } LibraryCalls[] = {
+          {RTLIB::SDIVREM_I8, "__aeabi_idivmod", CallingConv::ARM_AAPCS},
+          {RTLIB::SDIVREM_I16, "__aeabi_idivmod", CallingConv::ARM_AAPCS},
+          {RTLIB::SDIVREM_I32, "__aeabi_idivmod", CallingConv::ARM_AAPCS},
+          {RTLIB::SDIVREM_I64, "__aeabi_ldivmod", CallingConv::ARM_AAPCS},
+
+          {RTLIB::UDIVREM_I8, "__aeabi_uidivmod", CallingConv::ARM_AAPCS},
+          {RTLIB::UDIVREM_I16, "__aeabi_uidivmod", CallingConv::ARM_AAPCS},
+          {RTLIB::UDIVREM_I32, "__aeabi_uidivmod", CallingConv::ARM_AAPCS},
+          {RTLIB::UDIVREM_I64, "__aeabi_uldivmod", CallingConv::ARM_AAPCS},
+      };
+
+      for (const auto &LC : LibraryCalls) {
+        Info.setLibcallName(LC.Op, LC.Name);
+        Info.setLibcallCallingConv(LC.Op, LC.CC);
+      }
+    }
+  }
+}
+
 /// Set default libcall names. If a target wants to opt-out of a libcall it
 /// should be placed here.
 void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
@@ -248,6 +298,9 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
       setLibcallCallingConv(LC.Op, LC.CC);
     }
   }
+
+  if (TT.getArch() == Triple::ArchType::arm)
+    setARMLibcallNames(*this, TT);
 
   if (TT.getArch() == Triple::ArchType::avr) {
     // Division rtlib functions (not supported), use divmod functions instead
