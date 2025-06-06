@@ -16,8 +16,8 @@ define protected amdgpu_kernel void @main(ptr addrspace(1) noundef %args.coerce,
 ; CHECK2:      v_readfirstlane_b32
 ; CHECK2:      s_endpgm
 entry:
-    %0 = tail call noundef range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.x()
-    %div1 = lshr i32 %0, 6
+    %wid = tail call noundef range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.x()
+    %div1 = lshr i32 %wid, 6
     %rfl1 = tail call noundef i32 @llvm.amdgcn.readfirstlane.i32(i32 %div1)
     %sub1 = add nsw i32 %args12, 1023
     %div2 = sdiv i32 %sub1, 1024
