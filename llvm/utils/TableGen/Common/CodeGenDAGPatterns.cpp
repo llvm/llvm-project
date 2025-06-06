@@ -147,7 +147,7 @@ bool TypeSetByHwMode::constrain(const TypeSetByHwMode &VTS) {
       unsigned M = I.first;
       if (M == DefaultMode || hasMode(M))
         continue;
-      Map.insert({M, Map.at(DefaultMode)});
+      Map.try_emplace(M, Map.at(DefaultMode));
       Changed = true;
     }
   }
@@ -3297,14 +3297,14 @@ void CodeGenDAGPatterns::ParseNodeTransforms() {
        reverse(Records.getAllDerivedDefinitions("SDNodeXForm"))) {
     const Record *SDNode = XFormNode->getValueAsDef("Opcode");
     StringRef Code = XFormNode->getValueAsString("XFormFunction");
-    SDNodeXForms.insert({XFormNode, NodeXForm(SDNode, Code.str())});
+    SDNodeXForms.try_emplace(XFormNode, NodeXForm(SDNode, Code.str()));
   }
 }
 
 void CodeGenDAGPatterns::ParseComplexPatterns() {
   for (const Record *R :
        reverse(Records.getAllDerivedDefinitions("ComplexPattern")))
-    ComplexPatterns.insert({R, R});
+    ComplexPatterns.try_emplace(R, R);
 }
 
 /// ParsePatternFragments - Parse all of the PatFrag definitions in the .td

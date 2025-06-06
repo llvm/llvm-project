@@ -466,7 +466,7 @@ void CodeGenRegister::computeSecondarySubRegs(CodeGenRegBank &RegBank) {
 
   std::queue<std::pair<CodeGenSubRegIndex *, CodeGenRegister *>> SubRegQueue;
   for (auto [SRI, SubReg] : SubRegs)
-    SubRegQueue.push({SRI, SubReg});
+    SubRegQueue.emplace(SRI, SubReg);
 
   // Look at the leading super-registers of each sub-register. Those are the
   // candidates for new sub-registers, assuming they are fully contained in
@@ -1461,7 +1461,7 @@ void CodeGenRegBank::computeComposites() {
   for (const CodeGenRegister &R : Registers) {
     const CodeGenRegister::SubRegMap &SM = R.getSubRegs();
     for (auto [SRI, SubReg] : SM)
-      SubRegAction[SRI].insert({&R, SubReg});
+      SubRegAction[SRI].try_emplace(&R, SubReg);
   }
 
   // Calculate the composition of two subregisters as compositions of their
@@ -1474,7 +1474,7 @@ void CodeGenRegBank::computeComposites() {
     for (auto [R, SubReg] : Img1) {
       auto F = Img2.find(SubReg);
       if (F != Img2.end())
-        C.insert({R, F->second});
+        C.try_emplace(R, F->second);
     }
     return C;
   };
