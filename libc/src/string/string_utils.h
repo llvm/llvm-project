@@ -14,19 +14,19 @@
 #ifndef LLVM_LIBC_SRC_STRING_STRING_UTILS_H
 #define LLVM_LIBC_SRC_STRING_STRING_UTILS_H
 
+#include "hdr/limits_macros.h"
 #include "hdr/types/size_t.h"
 #include "src/__support/CPP/bitset.h"
 #include "src/__support/CPP/type_traits.h" // cpp::is_same_v
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
-#include "src/string/memory_utils/inline_bzero.h"
-#include "src/string/memory_utils/inline_memcpy.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 template <typename Word> LIBC_INLINE constexpr Word repeat_byte(Word byte) {
-  constexpr size_t BITS_IN_BYTE = 8;
+  static_assert(CHAR_BIT == 8, "repeat_byte assumes a byte is 8 bits.");
+  constexpr size_t BITS_IN_BYTE = CHAR_BIT;
   constexpr size_t BYTE_MASK = 0xff;
   Word result = 0;
   byte = byte & BYTE_MASK;
@@ -189,8 +189,7 @@ LIBC_INLINE char *string_token(char *__restrict src,
   if (LIBC_UNLIKELY(src == nullptr && ((src = *saveptr) == nullptr)))
     return nullptr;
 
-  static_assert(sizeof(char) == sizeof(cpp::byte),
-                "bitset of 256 assumes char is 8 bits");
+  static_assert(CHAR_BIT == 8, "bitset of 256 assumes char is 8 bits");
   cpp::bitset<256> delimiter_set;
   for (; *delimiter_string != '\0'; ++delimiter_string)
     delimiter_set.set(static_cast<size_t>(*delimiter_string));
@@ -220,7 +219,7 @@ LIBC_INLINE size_t strlcpy(char *__restrict dst, const char *__restrict src,
   if (!size)
     return len;
   size_t n = len < size - 1 ? len : size - 1;
-  inline_memcpy(dst, src, n);
+  __builtin_memcpy(dst, src, n);
   dst[n] = '\0';
   return len;
 }

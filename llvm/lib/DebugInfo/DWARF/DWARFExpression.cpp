@@ -123,6 +123,8 @@ static std::vector<Desc> getOpDescriptions() {
   Descriptions[DW_OP_entry_value] = Desc(Op::Dwarf5, Op::SizeLEB);
   Descriptions[DW_OP_regval_type] =
       Desc(Op::Dwarf5, Op::SizeLEB, Op::BaseTypeRef);
+  Descriptions[DW_OP_GNU_implicit_pointer] =
+      Desc(Op::Dwarf4, Op::SizeRefAddr, Op::SignedSizeLEB);
   // This Description acts as a marker that getSubOpDesc must be called
   // to fetch the final Description for the operation. Each such final
   // Description must share the same first SizeSubOpLEB operand.
