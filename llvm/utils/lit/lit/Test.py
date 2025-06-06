@@ -152,7 +152,7 @@ class Result(object):
     """Wrapper for the results of executing an individual test."""
 
     def __init__(
-        self, code, output="", elapsed=None, attempts=None, max_allowed_attempts=None
+        self, code, output="", elapsed=None, attempts=1, max_allowed_attempts=None
     ):
         # The result code.
         self.code = code
