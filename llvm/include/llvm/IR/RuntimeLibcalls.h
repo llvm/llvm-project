@@ -45,7 +45,7 @@ template <> struct enum_iteration_traits<RTLIB::Libcall> {
 
 namespace RTLIB {
 
-// Return an iterator over all Libcall values
+// Return an iterator over all Libcall values.
 static inline auto libcalls() {
   return enum_seq(static_cast<RTLIB::Libcall>(0), RTLIB::UNKNOWN_LIBCALL);
 }
