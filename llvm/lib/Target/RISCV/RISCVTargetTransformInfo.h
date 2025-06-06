@@ -146,6 +146,8 @@ public:
     return false;
   }
 
+  bool preferFlattenControlFlow() const { return false; }
+
   InstructionCost
   getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                         unsigned AddressSpace,

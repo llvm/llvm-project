@@ -351,6 +351,11 @@ static cl::opt<bool> PreferPredicatedReductionSelect(
     cl::desc(
         "Prefer predicating a reduction operation over an after loop select."));
 
+static cl::opt<bool>
+    PreferFlattenControlFlow("prefer-flatten-control-flow", cl::init(true),
+                             cl::Hidden,
+                             cl::desc("Prefer flatten control flow."));
+
 cl::opt<bool> llvm::EnableVPlanNativePath(
     "enable-vplan-native-path", cl::Hidden,
     cl::desc("Enable VPlan-native vectorization path with "
@@ -8958,6 +8963,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
                                        WithoutRuntimeCheck);
   }
   VPlanTransforms::optimizeInductionExitUsers(*Plan, IVEndValues);
+
+  if (!PreferFlattenControlFlow && !TTI.preferFlattenControlFlow())
+    VPlanTransforms::optimizeConditionalVPBB(*Plan);
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
