@@ -688,6 +688,26 @@ bool RISCVDAGToDAGISel::tryUnsignedBitfieldExtract(SDNode *Node, SDLoc DL,
   return true;
 }
 
+bool RISCVDAGToDAGISel::tryUnsignedBitfieldInsertInZero(SDNode *Node, SDLoc DL,
+                                                        MVT VT, SDValue X,
+                                                        unsigned Msb,
+                                                        unsigned Lsb) {
+  // Only supported with XAndesPerf at the moment.
+  if (!Subtarget->hasVendorXAndesPerf())
+    return false;
+
+  unsigned Opc = RISCV::NDS_BFOZ;
+
+  // If the Lsb is equal to the Msb, then the Lsb should be 0.
+  if (Lsb == Msb)
+    Lsb = 0;
+  SDNode *Ubi = CurDAG->getMachineNode(Opc, DL, VT, X,
+                                       CurDAG->getTargetConstant(Lsb, DL, VT),
+                                       CurDAG->getTargetConstant(Msb, DL, VT));
+  ReplaceNode(Node, Ubi);
+  return true;
+}
+
 bool RISCVDAGToDAGISel::tryIndexedLoad(SDNode *Node) {
   // Target does not support indexed loads.
   if (!Subtarget->hasVendorXTHeadMemIdx())
@@ -1323,6 +1343,19 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
             ReplaceNode(Node, SLLI_UW);
             return;
           }
+
+          // Try to use an unsigned bitfield insert (e.g., nds.bfoz) if
+          // available.
+          // Transform (and (shl x, c2), c1)
+          //        -> (<bfinsert> x, msb, lsb)
+          // e.g.
+          //     (and (shl x, 12), 0x00fff000)
+          //     If XLen = 32 and C2 = 12, then
+          //     Msb = 32 - 8 - 1 = 23 and Lsb = 12
+          const unsigned Msb = XLen - Leading - 1;
+          const unsigned Lsb = C2;
+          if (tryUnsignedBitfieldInsertInZero(Node, DL, VT, X, Msb, Lsb))
+            return;
 
           // (srli (slli c2+c3), c3)
           if (OneUseOrZExtW && !IsCANDI) {
