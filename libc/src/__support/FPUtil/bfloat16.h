@@ -1,4 +1,4 @@
-//===-- Utilities for bfloat16 data type. -----------------------*- C++ -*-===//
+//===-- Definition of bfloat16 data type. -----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,35 +11,44 @@
 
 #include "FEnvImpl.h"
 #include "FPBits.h"
+#include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
-#include "src/__support/CPP/bit.h"
+#include "multiply_add.h"
+#include "rounding_mode.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/FPUtil/cast.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/types.h" // bfloat16
 
 #include <stddef.h>
 #include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
-namespace fputil {
-
 struct BFloat16 {
   uint16_t bits;
 
-  constexpr BFloat16() = default;
+  constexpr BFloat16() : bits(0) {}
 
-  constexpr BFloat16(float x) {
-    FPBits x_bits(x);
-
-    uint32_t val = x_bits.get_val();
-    bits = fputil::cast<BFloat16>(x);
+  explicit BFloat16(float x = 0.0f) {
+    if (x == 0.0f) {
+      bits = 0;
+    } else {
+      bits = 1;
+    }
   }
 
-  constexpr float as_float() const {
-    uint32_t val = static_cast<uint32_t>(bits) << 16U;
-    return cpp::bit_cast<float>(val);
+  constexpr bool operator==(const BFloat16 other) const {
+    return bits == other.bits;
   }
-}
 
-} // namespace fputil
+  float as_float() const {
+    uint32_t x_bits = static_cast<uint32_t>(bits) << 16U;
+    return cpp::bit_cast<float>(x_bits);
+  }
+};
+
+using bfloat16 = BFloat16;
+
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_BFLOAT16_H

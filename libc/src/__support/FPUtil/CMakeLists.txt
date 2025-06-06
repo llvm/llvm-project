@@ -264,10 +264,15 @@ add_header_library(
   DEPENDS
     .fenv_impl
     .fp_bits
+    .cast
     .rounding_mode
-    libc.src.__support.CPP.bit
+    libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.__support.CPP.type_traits
+    libc.src.__support.CPP.bit
+    libc.src.__support.big_int
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types
 )
 
 add_subdirectory(generic)
