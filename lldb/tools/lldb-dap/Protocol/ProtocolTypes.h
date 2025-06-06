@@ -24,7 +24,6 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/JSON.h"
 #include <cstdint>
-#include <limits>
 #include <optional>
 #include <string>
 
@@ -415,33 +414,15 @@ bool fromJSON(const llvm::json::Value &, SteppingGranularity &,
               llvm::json::Path);
 llvm::json::Value toJSON(const SteppingGranularity &);
 
-/// A `StepInTarget` can be used in the `stepIn` request and determines into
-/// which single target the `stepIn` request should step.
-struct StepInTarget {
-  /// Unique identifier for a step-in target.
-  lldb::addr_t id = LLDB_INVALID_ADDRESS;
-
-  /// The name of the step-in target (shown in the UI).
-  std::string label;
-
-  /// The line of the step-in target.
-  uint32_t line = LLDB_INVALID_LINE_NUMBER;
-
-  /// Start position of the range covered by the step in target. It is measured
-  /// in UTF-16 code units and the client capability `columnsStartAt1`
-  /// determines whether it is 0- or 1-based.
-  uint32_t column = LLDB_INVALID_COLUMN_NUMBER;
-
-  /// The end line of the range covered by the step-in target.
-  uint32_t endLine = LLDB_INVALID_LINE_NUMBER;
-
-  /// End position of the range covered by the step in target. It is measured in
-  /// UTF-16 code units and the client capability `columnsStartAt1` determines
-  /// whether it is 0- or 1-based.
-  uint32_t endColumn = LLDB_INVALID_COLUMN_NUMBER;
+/// A Thread.
+struct Thread {
+  /// Unique identifier for the thread.
+  lldb::tid_t id = LLDB_INVALID_THREAD_ID;
+  /// The name of the thread.
+  std::string name;
 };
-bool fromJSON(const llvm::json::Value &, StepInTarget &, llvm::json::Path);
-llvm::json::Value toJSON(const StepInTarget &);
+bool fromJSON(const llvm::json::Value &, Thread &, llvm::json::Path);
+llvm::json::Value toJSON(const Thread &);
 
 /// Provides formatting information for a value.
 struct ValueFormat {
@@ -666,7 +647,7 @@ struct DisassembledInstruction {
 
   /// The address of the instruction. Treated as a hex value if prefixed with
   /// `0x`, or as a decimal value otherwise.
-  lldb::addr_t address;
+  lldb::addr_t address = LLDB_INVALID_ADDRESS;
 
   /// Raw bytes representing the instruction and its operands, in an
   /// implementation-defined format.
@@ -706,8 +687,6 @@ struct DisassembledInstruction {
   /// addresses may be presented is 'invalid.'
   /// Values: 'normal', 'invalid'
   std::optional<PresentationHint> presentationHint;
-
-  DisassembledInstruction() : address(0) {}
 };
 bool fromJSON(const llvm::json::Value &,
               DisassembledInstruction::PresentationHint &, llvm::json::Path);

@@ -12,6 +12,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 
 namespace llvm {
@@ -89,7 +90,7 @@ public:
   public:
     const Description &getDescription() const { return Desc; }
     uint8_t getCode() const { return Opcode; }
-    std::optional<unsigned> getSubCode() const;
+    LLVM_ABI std::optional<unsigned> getSubCode() const;
     uint64_t getNumOperands() const { return Operands.size(); }
     ArrayRef<uint64_t> getRawOperands() const { return Operands; };
     uint64_t getRawOperand(unsigned Idx) const { return Operands[Idx]; }
@@ -103,8 +104,9 @@ public:
     bool isError() const { return Error; }
 
   private:
-    bool extract(DataExtractor Data, uint8_t AddressSize, uint64_t Offset,
-                 std::optional<dwarf::DwarfFormat> Format);
+    LLVM_ABI bool extract(DataExtractor Data, uint8_t AddressSize,
+                          uint64_t Offset,
+                          std::optional<dwarf::DwarfFormat> Format);
   };
 
   /// An iterator to go through the expression operations.
@@ -150,7 +152,7 @@ public:
   iterator begin() const { return iterator(this, 0); }
   iterator end() const { return iterator(this, Data.getData().size()); }
 
-  bool operator==(const DWARFExpression &RHS) const;
+  LLVM_ABI bool operator==(const DWARFExpression &RHS) const;
 
   StringRef getData() const { return Data.getData(); }
 
