@@ -1318,75 +1318,141 @@ void WhitespaceManager::alignArrayInitializers(unsigned Start, unsigned End) {
 
 void WhitespaceManager::alignArrayInitializersRightJustified(
     CellDescriptions &&CellDescs) {
-  if (!CellDescs.isRectangular())
+
+  const int ColumnCount = CellDescs.ColumnStartingCellIndices.size();
+  if (ColumnCount < 2)
     return;
 
   const int BracePadding = Style.Cpp11BracedListStyle ? 0 : 1;
+  auto &ColumnStartingIndices = CellDescs.ColumnStartingCellIndices;
   auto &Cells = CellDescs.Cells;
-  // Now go through and fixup the spaces.
-  auto *CellIter = Cells.begin();
-  for (auto i = 0U; i < CellDescs.CellCounts[0]; ++i, ++CellIter) {
-    unsigned NetWidth = 0U;
-    if (isSplitCell(*CellIter))
-      NetWidth = getNetWidth(Cells.begin(), CellIter, CellDescs.InitialSpaces);
-    auto CellWidth = getMaximumCellWidth(CellIter, NetWidth);
 
-    if (Changes[CellIter->Index].Tok->is(tok::r_brace)) {
-      // So in here we want to see if there is a brace that falls
-      // on a line that was split. If so on that line we make sure that
-      // the spaces in front of the brace are enough.
-      const auto *Next = CellIter;
-      do {
-        const FormatToken *Previous = Changes[Next->Index].Tok->Previous;
-        if (Previous && Previous->isNot(TT_LineComment)) {
-          Changes[Next->Index].Spaces = BracePadding;
-          Changes[Next->Index].NewlinesBefore = 0;
-        }
-        Next = Next->NextColumnElement;
-      } while (Next);
-      // Unless the array is empty, we need the position of all the
-      // immediately adjacent cells
-      if (CellIter != Cells.begin()) {
-        auto ThisNetWidth =
-            getNetWidth(Cells.begin(), CellIter, CellDescs.InitialSpaces);
-        auto MaxNetWidth = getMaximumNetWidth(
-            Cells.begin(), CellIter, CellDescs.InitialSpaces,
-            CellDescs.CellCounts[0], CellDescs.CellCounts.size());
-        if (ThisNetWidth < MaxNetWidth)
-          Changes[CellIter->Index].Spaces = (MaxNetWidth - ThisNetWidth);
-        auto RowCount = 1U;
-        auto Offset = std::distance(Cells.begin(), CellIter);
-        for (const auto *Next = CellIter->NextColumnElement; Next;
-             Next = Next->NextColumnElement) {
-          if (RowCount >= CellDescs.CellCounts.size())
-            break;
-          auto *Start = (Cells.begin() + RowCount * CellDescs.CellCounts[0]);
-          auto *End = Start + Offset;
-          ThisNetWidth = getNetWidth(Start, End, CellDescs.InitialSpaces);
-          if (ThisNetWidth < MaxNetWidth)
-            Changes[Next->Index].Spaces = (MaxNetWidth - ThisNetWidth);
-          ++RowCount;
-        }
+  // Calculate column widths
+  SmallVector<unsigned> ColumnWidths;       // Widths from the previous column
+  SmallVector<unsigned> SummedColumnWidths; // Widths from the start of the row
+
+  unsigned CurrentWidth = 0;
+  for (unsigned CellIndex : ColumnStartingIndices) {
+    const CellDescription *current = &Cells[CellIndex];
+
+    // We keep track of the width of split cells separately because if all cells
+    // in a column are split, and none of them are wider than the previous
+    // column, we need to reset the "current width" so subsequent columns are
+    // not moved out farther than expected.
+    //
+    // Given this, where the string was split because of the column limit:
+    //     {
+    //      { test1, test2, "abc "
+    //        "def", e },
+    //      { test3, test4, "abc "
+    //        "def", e },
+    //     }
+    //
+    // The 'e' tokens should not be pushed out like this:
+    //     {
+    //      { test1, test2, "abc "
+    //        "def",        e },
+    //      { test3, test4, "abc "
+    //        "def",        e },
+    //     }
+    unsigned SplitMaxWidth = 0;
+    unsigned MaxWidth = 0;
+    while (current != nullptr) {
+      unsigned CellWidth = calculateCellWidth(*current);
+
+      // If there is a split, then the "width" calculated here is actually
+      // the relative column count from the opening brace, but we want it
+      // from the end of the previous cell.
+      if (current->HasSplit) {
+        // Keep track of the width in case all cells are split in the column.
+        SplitMaxWidth = std::max(SplitMaxWidth, CellWidth);
+
+        // If the width is less than the previous columns combined, we should
+        // skip it would result in the next column starting before the previous
+        // column ended. We skip it by setting it to 0 as that will never be
+        // more than the current max width.
+        if (CellWidth > CurrentWidth)
+          CellWidth -= CurrentWidth;
+        else
+          CellWidth = 0;
+      } else {
+        // +1 for the space after the comma in the previous column in all but
+        // the first column in which we add the brace padding from the opening
+        // brace.
+        CellWidth += (current->Cell > 0) ? 1 : BracePadding;
       }
-    } else {
-      auto ThisWidth =
-          calculateCellWidth(CellIter->Index, CellIter->EndIndex, true) +
-          NetWidth;
-      if (Changes[CellIter->Index].NewlinesBefore == 0) {
-        Changes[CellIter->Index].Spaces = (CellWidth - (ThisWidth + NetWidth));
-        Changes[CellIter->Index].Spaces += (i > 0) ? 1 : BracePadding;
+
+      MaxWidth = std::max(MaxWidth, CellWidth);
+      current = current->NextColumnElement;
+    }
+
+    // If all the cells had splits, and at least one was not empty, use the max
+    // split width as the width of this column so that alignment below will
+    // calculate the right number of spaces, and "reset" the current width
+    // because this column always moves on to a new line which invalidates the
+    // current width.
+    if (MaxWidth == 0 && SplitMaxWidth > 0) {
+      MaxWidth = SplitMaxWidth;
+      CurrentWidth = 0;
+    }
+
+    ColumnWidths.push_back(MaxWidth);
+
+    CurrentWidth += MaxWidth;
+    SummedColumnWidths.push_back(CurrentWidth);
+
+    // +1 for the comma between cells.
+    CurrentWidth++;
+  }
+
+  // Fixup spaces
+  for (RowDescription &Row : CellDescs.Rows) {
+    unsigned WidthSoFarInRow = 0;
+
+    for (unsigned i = Row.StartCellIndex; i < Row.EndCellIndex; i++) {
+      auto &Cell = Cells[i];
+      unsigned CellWidth = calculateCellWidth(Cell);
+
+      if (Cell.HasSplit) {
+        WidthSoFarInRow = CellWidth;
+
+        // This cell has been split on to multiple lines, probably because it
+        // was too long to fit on a single line, so make sure each change in the
+        // cell is aligned to the start of the first change.
+        for (unsigned j = Cell.Index; j < Cell.EndIndex; j++)
+          if (Changes[j].NewlinesBefore > 0)
+            Changes[j].Spaces = Changes[Cell.Index].Spaces;
+
+      } else {
+        auto &Change = Changes[Cell.Index];
+        unsigned AlignmentSpaces = ColumnWidths[Cell.Cell] - CellWidth;
+        // This change's left side is currently flush with the previous cell and
+        // we need to move it so its right side is flush with the end of the
+        // current column. If there are new lines before it, spaces have already
+        // been added in front of it so that it is aligned with the cell on the
+        // previous line.
+        if (Change.NewlinesBefore == 0)
+          Change.Spaces = AlignmentSpaces;
+        else
+          Change.Spaces += AlignmentSpaces;
+
+        WidthSoFarInRow = SummedColumnWidths[Cell.Cell];
       }
-      alignToStartOfCell(CellIter->Index, CellIter->EndIndex);
-      for (const auto *Next = CellIter->NextColumnElement; Next;
-           Next = Next->NextColumnElement) {
-        ThisWidth =
-            calculateCellWidth(Next->Index, Next->EndIndex, true) + NetWidth;
-        if (Changes[Next->Index].NewlinesBefore == 0) {
-          Changes[Next->Index].Spaces = (CellWidth - ThisWidth);
-          Changes[Next->Index].Spaces += (i > 0) ? 1 : BracePadding;
-        }
-        alignToStartOfCell(Next->Index, Next->EndIndex);
-      }
+
+      // +1 for the comma after columns in all but the last column
+      // Note: this can't check Cell.Cell because a row may not have a full set
+      // of columns.
+      if (i < Row.EndCellIndex - 1)
+        WidthSoFarInRow++;
+    }
+
+    // Align the end brace. If there was a trailing comma, the brace is already
+    // aligned on the next line and we do not need to touch it.
+    if (!Row.hasTrailingComma) {
+      auto &EndBrace = Changes[Row.ClosingBraceChangeIndex];
+
+      unsigned AlignmentSpaces = SummedColumnWidths.back() - WidthSoFarInRow;
+      EndBrace.Spaces = AlignmentSpaces + BracePadding;
     }
   }
 }
@@ -1394,47 +1460,91 @@ void WhitespaceManager::alignArrayInitializersRightJustified(
 void WhitespaceManager::alignArrayInitializersLeftJustified(
     CellDescriptions &&CellDescs) {
 
-  if (!CellDescs.isRectangular())
+  const unsigned ColumnCount = CellDescs.ColumnStartingCellIndices.size();
+  if (ColumnCount < 2)
     return;
 
+  const unsigned LastColumnIndex = ColumnCount - 1;
   const int BracePadding = Style.Cpp11BracedListStyle ? 0 : 1;
+  auto &ColumnStartingIndices = CellDescs.ColumnStartingCellIndices;
   auto &Cells = CellDescs.Cells;
-  // Now go through and fixup the spaces.
-  auto *CellIter = Cells.begin();
-  // The first cell of every row needs to be against the left brace.
-  for (const auto *Next = CellIter; Next; Next = Next->NextColumnElement) {
-    auto &Change = Changes[Next->Index];
-    Change.Spaces =
-        Change.NewlinesBefore == 0 ? BracePadding : CellDescs.InitialSpaces;
-  }
-  ++CellIter;
-  for (auto i = 1U; i < CellDescs.CellCounts[0]; i++, ++CellIter) {
-    auto MaxNetWidth = getMaximumNetWidth(
-        Cells.begin(), CellIter, CellDescs.InitialSpaces,
-        CellDescs.CellCounts[0], CellDescs.CellCounts.size());
-    auto ThisNetWidth =
-        getNetWidth(Cells.begin(), CellIter, CellDescs.InitialSpaces);
-    if (Changes[CellIter->Index].NewlinesBefore == 0) {
-      Changes[CellIter->Index].Spaces =
-          MaxNetWidth - ThisNetWidth +
-          (Changes[CellIter->Index].Tok->isNot(tok::r_brace) ? 1
-                                                             : BracePadding);
+
+  // Calculate column starting widths.
+  SmallVector<unsigned> StartWidths;
+
+  // The first column starts after the opening brace's padding.
+  StartWidths.push_back(BracePadding);
+
+  for (unsigned i = 0; i < ColumnCount; i++) {
+    const CellDescription *current = &Cells[ColumnStartingIndices[i]];
+
+    unsigned MaxWidth = 0;
+    while (current != nullptr) {
+      unsigned CellWidth = calculateCellWidth(*current);
+
+      // +1 for the comma after the cell if it exists.
+      if (Changes[current->EndIndex].Tok->is(tok::comma))
+        CellWidth++;
+
+      // +1 for the space after the column if this is not the last column.
+      if (i < LastColumnIndex)
+        CellWidth++;
+
+      // If there is a split, then the "width" calculated here is the relative
+      // column count from the opening brace, otherwise this is the relative
+      // column count from the previous cell. We always want it relative to the
+      // opening brace.
+      if (!current->HasSplit)
+        CellWidth += StartWidths[i];
+
+      MaxWidth = std::max(MaxWidth, CellWidth);
+      current = current->NextColumnElement;
     }
-    auto RowCount = 1U;
-    auto Offset = std::distance(Cells.begin(), CellIter);
-    for (const auto *Next = CellIter->NextColumnElement; Next;
-         Next = Next->NextColumnElement) {
-      if (RowCount >= CellDescs.CellCounts.size())
-        break;
-      auto *Start = (Cells.begin() + RowCount * CellDescs.CellCounts[0]);
-      auto *End = Start + Offset;
-      auto ThisNetWidth = getNetWidth(Start, End, CellDescs.InitialSpaces);
-      if (Changes[Next->Index].NewlinesBefore == 0) {
-        Changes[Next->Index].Spaces =
-            MaxNetWidth - ThisNetWidth +
-            (Changes[Next->Index].Tok->isNot(tok::r_brace) ? 1 : BracePadding);
+
+    // If this is the last column, add the brace padding to the width so that
+    // the end brace gets the necessary padding.
+    if (i == LastColumnIndex)
+      MaxWidth += BracePadding;
+
+    StartWidths.push_back(MaxWidth);
+  }
+
+  // Fixup spaces
+  for (RowDescription &Row : CellDescs.Rows) {
+    unsigned WidthSoFarInRow = 0;
+    for (unsigned i = Row.StartCellIndex; i < Row.EndCellIndex; i++) {
+      auto &Cell = Cells[i];
+      unsigned CellWidth = calculateCellWidth(Cell);
+
+      auto &Change = Changes[Cell.Index];
+
+      // We only want to modify the spaces in front of this cell if there are no
+      // new lines before it. If there are new lines, it has been formatted to
+      // be on its own line, and we are not to change that. We _do_ need to keep
+      // track of how far we are in the line for future columns, though.
+      if (Change.NewlinesBefore == 0) {
+        if (WidthSoFarInRow <= StartWidths[Cell.Cell])
+          Change.Spaces = StartWidths[Cell.Cell] - WidthSoFarInRow;
+
+        WidthSoFarInRow += CellWidth + Change.Spaces;
+      } else if (Cell.HasSplit) {
+        WidthSoFarInRow = CellWidth;
+      } else {
+        WidthSoFarInRow += CellWidth;
       }
-      ++RowCount;
+
+      // +1 for the comma after columns in all but the last column
+      // Note: this can't check Cell.Cell because a row may not have a full set
+      // of columns.
+      if (i < Row.EndCellIndex - 1)
+        WidthSoFarInRow += 1;
+    }
+
+    // Align the end brace. If there was a trailing comma, the brace is already
+    // aligned on the next line and we do not need to touch it.
+    if (!Row.hasTrailingComma) {
+      auto &EndBrace = Changes[Row.ClosingBraceChangeIndex];
+      EndBrace.Spaces = StartWidths.back() - WidthSoFarInRow;
     }
   }
 }
@@ -1455,11 +1565,12 @@ WhitespaceManager::CellDescriptions WhitespaceManager::getCells(unsigned Start,
 
   unsigned Depth = 0;
   unsigned Cell = 0;
-  SmallVector<unsigned> CellCounts;
   unsigned InitialSpaces = 0;
   unsigned InitialTokenLength = 0;
   unsigned EndSpaces = 0;
   SmallVector<CellDescription> Cells;
+  SmallVector<RowDescription> Rows;
+  SmallVector<unsigned> StartingCellIndices;
   const FormatToken *MatchingParen = nullptr;
   for (unsigned i = Start; i < End; ++i) {
     auto &C = Changes[i];
@@ -1470,6 +1581,7 @@ WhitespaceManager::CellDescriptions WhitespaceManager::getCells(unsigned Start,
     if (Depth == 2) {
       if (C.Tok->is(tok::l_brace)) {
         Cell = 0;
+        Rows.push_back(RowDescription{unsigned(Cells.size()), 0, 0, false});
         MatchingParen = C.Tok->MatchingParen;
         if (InitialSpaces == 0) {
           InitialSpaces = C.Spaces + C.TokenLength;
@@ -1494,11 +1606,19 @@ WhitespaceManager::CellDescriptions WhitespaceManager::getCells(unsigned Start,
       }
     } else if (Depth == 1) {
       if (C.Tok == MatchingParen) {
-        if (!Cells.empty())
-          Cells.back().EndIndex = i;
-        Cells.push_back(CellDescription{i, ++Cell, i + 1, false, nullptr});
-        CellCounts.push_back(C.Tok->Previous->isNot(tok::comma) ? Cell + 1
-                                                                : Cell);
+        Rows.back().ClosingBraceChangeIndex = i;
+        Rows.back().EndCellIndex = Cells.size();
+        // If this is an empty row, just push back the cell.
+        if (Cell == 0) {
+          Cells.push_back(CellDescription{i, Cell, i + 1, false, nullptr});
+        } else {
+          if (!Cells.empty())
+            Cells.back().EndIndex = i;
+          Cells.push_back(CellDescription{i, ++Cell, i + 1, false, nullptr});
+        }
+        if (C.Tok->getPreviousNonComment()->is(tok::comma))
+          Rows.back().hasTrailingComma = true;
+
         // Go to the next non-comment and ensure there is a break in front
         const auto *NextNonComment = C.Tok->getNextNonComment();
         while (NextNonComment && NextNonComment->is(tok::comma))
@@ -1564,33 +1684,29 @@ WhitespaceManager::CellDescriptions WhitespaceManager::getCells(unsigned Start,
       }
       if (Changes[i].Tok != C.Tok)
         --i;
+
+      if (Cell >= StartingCellIndices.size())
+        StartingCellIndices.push_back(Cells.size());
       Cells.push_back(CellDescription{i, Cell, i, HasSplit, nullptr});
     }
   }
 
-  return linkCells({Cells, CellCounts, InitialSpaces});
+  return linkCells({Cells, Rows, StartingCellIndices, InitialSpaces});
 }
 
-unsigned WhitespaceManager::calculateCellWidth(unsigned Start, unsigned End,
-                                               bool WithSpaces) const {
+unsigned
+WhitespaceManager::calculateCellWidth(const CellDescription &Cell) const {
   unsigned CellWidth = 0;
-  for (auto i = Start; i < End; i++) {
+  for (auto i = Cell.Index; i < Cell.EndIndex; i++) {
     if (Changes[i].NewlinesBefore > 0)
       CellWidth = 0;
+
+    if (CellWidth != 0)
+      CellWidth += Changes[i].Spaces;
+
     CellWidth += Changes[i].TokenLength;
-    CellWidth += (WithSpaces ? Changes[i].Spaces : 0);
   }
   return CellWidth;
-}
-
-void WhitespaceManager::alignToStartOfCell(unsigned Start, unsigned End) {
-  if ((End - Start) <= 1)
-    return;
-  // If the line is broken anywhere in there make sure everything
-  // is aligned to the parent
-  for (auto i = Start + 1; i < End; i++)
-    if (Changes[i].NewlinesBefore > 0)
-      Changes[i].Spaces = Changes[Start].Spaces;
 }
 
 WhitespaceManager::CellDescriptions
