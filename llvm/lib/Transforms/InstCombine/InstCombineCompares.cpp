@@ -4385,12 +4385,12 @@ Instruction *InstCombinerImpl::foldSelectICmp(CmpPredicate Pred, SelectInst *SI,
 
 // Returns whether V is a Mask ((X + 1) & X == 0) or ~Mask (-Pow2OrZero)
 static bool isMaskOrZero(const Value *V, bool Not, const SimplifyQuery &Q,
-                         unsigned Depth = 0) {
+                         int Depth = MaxAnalysisRecursionDepth) {
   if (Not ? match(V, m_NegatedPower2OrZero()) : match(V, m_LowBitMaskOrZero()))
     return true;
   if (V->getType()->getScalarSizeInBits() == 1)
     return true;
-  if (Depth++ >= DepthLimit::getMaxRecursionDepth())
+  if (Depth-- <= 0)
     return false;
   Value *X;
   const Instruction *I = dyn_cast<Instruction>(V);

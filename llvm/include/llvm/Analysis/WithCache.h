@@ -45,7 +45,7 @@ template <typename Arg> class WithCache {
   mutable KnownBits Known;
 
   void calculateKnownBits(const SimplifyQuery &Q) const {
-    Known = computeKnownBits(Pointer.getPointer(), Q, 0);
+    Known = computeKnownBits(Pointer.getPointer(), Q);
     Pointer.setInt(true);
   }
 

@@ -823,9 +823,9 @@ ConstraintTy ConstraintInfo::getConstraintForSolving(CmpInst::Predicate Pred,
   // with the signed <-> unsigned transfer logic.
   if (CmpInst::isSigned(Pred) &&
       isKnownNonNegative(Op0, DL,
-                         /*Depth=*/DepthLimit::getMaxRecursionDepth() - 1) &&
+                         /*Depth=*/1) &&
       isKnownNonNegative(Op1, DL,
-                         /*Depth=*/DepthLimit::getMaxRecursionDepth() - 1))
+                         /*Depth=*/1))
     Pred = ICmpInst::getUnsignedPredicate(Pred);
 
   SmallVector<Value *> NewVariables;
@@ -899,7 +899,7 @@ void ConstraintInfo::transferToOtherSystem(
   auto IsKnownNonNegative = [this](Value *V) {
     return doesHold(CmpInst::ICMP_SGE, V, ConstantInt::get(V->getType(), 0)) ||
            isKnownNonNegative(V, DL,
-                              /*Depth=*/DepthLimit::getMaxRecursionDepth() - 1);
+                              /*Depth=*/1);
   };
   // Check if we can combine facts from the signed and unsigned systems to
   // derive additional facts.

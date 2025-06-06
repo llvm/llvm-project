@@ -2322,10 +2322,10 @@ foldBitwiseLogicWithIntrinsics(BinaryOperator &I,
 // 0 inside X and for X & Y we try to replace Y with -1 inside X.
 // Return the simplified result of X if successful, and nullptr otherwise.
 // If SimplifyOnly is true, no new instructions will be created.
-static Value *simplifyAndOrWithOpReplaced(Value *V, Value *Op, Value *RepOp,
-                                          bool SimplifyOnly,
-                                          InstCombinerImpl &IC,
-                                          unsigned Depth = 0) {
+static Value *
+simplifyAndOrWithOpReplaced(Value *V, Value *Op, Value *RepOp,
+                            bool SimplifyOnly, InstCombinerImpl &IC,
+                            int Depth = MaxAnalysisRecursionDepth) {
   if (Op == RepOp)
     return nullptr;
 
@@ -2333,16 +2333,16 @@ static Value *simplifyAndOrWithOpReplaced(Value *V, Value *Op, Value *RepOp,
     return RepOp;
 
   auto *I = dyn_cast<BinaryOperator>(V);
-  if (!I || !I->isBitwiseLogicOp() || Depth >= 3)
+  if (!I || !I->isBitwiseLogicOp() || (MaxAnalysisRecursionDepth - Depth) >= 3)
     return nullptr;
 
   if (!I->hasOneUse())
     SimplifyOnly = true;
 
   Value *NewOp0 = simplifyAndOrWithOpReplaced(I->getOperand(0), Op, RepOp,
-                                              SimplifyOnly, IC, Depth + 1);
+                                              SimplifyOnly, IC, Depth - 1);
   Value *NewOp1 = simplifyAndOrWithOpReplaced(I->getOperand(1), Op, RepOp,
-                                              SimplifyOnly, IC, Depth + 1);
+                                              SimplifyOnly, IC, Depth - 1);
   if (!NewOp0 && !NewOp1)
     return nullptr;
 

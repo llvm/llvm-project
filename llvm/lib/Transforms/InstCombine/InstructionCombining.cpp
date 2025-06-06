@@ -2580,7 +2580,7 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
 
 Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
                                            BuilderTy *Builder,
-                                           bool &DoesConsume, unsigned Depth) {
+                                           bool &DoesConsume, int Depth) {
   static Value *const NonNull = reinterpret_cast<Value *>(uintptr_t(1));
   // ~(~(X)) -> X.
   Value *A, *B;
@@ -2594,7 +2594,7 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
   if (match(V, m_ImmConstant(C)))
     return ConstantExpr::getNot(C);
 
-  if (Depth++ >= DepthLimit::getMaxRecursionDepth())
+  if (Depth-- <= 0)
     return nullptr;
 
   // The rest of the cases require that we invert all uses so don't bother
@@ -2689,7 +2689,7 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
       Value *NewIncomingVal =
           getFreelyInvertedImpl(U.get(), /*WillInvertAllUses=*/false,
                                 /*Builder=*/nullptr, LocalDoesConsume,
-                                DepthLimit::getMaxRecursionDepth() - 1);
+                                /*Depth=*/1);
       if (NewIncomingVal == nullptr)
         return nullptr;
       // Make sure that we can safely erase the original PHI node.

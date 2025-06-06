@@ -203,14 +203,14 @@ public:
   /// If the inversion will consume instructions, `DoesConsume` will be set to
   /// true. Otherwise it will be false.
   Value *getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
-                                      BuilderTy *Builder, bool &DoesConsume,
-                                      unsigned Depth);
+                               BuilderTy *Builder, bool &DoesConsume,
+                               int Depth);
 
   Value *getFreelyInverted(Value *V, bool WillInvertAllUses,
                                   BuilderTy *Builder, bool &DoesConsume) {
     DoesConsume = false;
     return getFreelyInvertedImpl(V, WillInvertAllUses, Builder, DoesConsume,
-                                 /*Depth*/ 0);
+                                 /*Depth*/ MaxAnalysisRecursionDepth);
   }
 
   Value *getFreelyInverted(Value *V, bool WillInvertAllUses,
@@ -431,37 +431,38 @@ public:
   virtual Instruction *eraseInstFromFunction(Instruction &I) = 0;
 
   void computeKnownBits(const Value *V, KnownBits &Known,
-                        const Instruction *CxtI, unsigned Depth = 0) const {
+                        const Instruction *CxtI,
+                        int Depth = MaxAnalysisRecursionDepth) const {
     llvm::computeKnownBits(V, Known, SQ.getWithInstruction(CxtI), Depth);
   }
 
   KnownBits computeKnownBits(const Value *V, const Instruction *CxtI,
-                             unsigned Depth = 0) const {
+                             int Depth = MaxAnalysisRecursionDepth) const {
     return llvm::computeKnownBits(V, SQ.getWithInstruction(CxtI), Depth);
   }
 
   bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero = false,
                               const Instruction *CxtI = nullptr,
-                              unsigned Depth = 0) {
+                              int Depth = MaxAnalysisRecursionDepth) {
     return llvm::isKnownToBeAPowerOfTwo(V, OrZero, SQ.getWithInstruction(CxtI),
                                         Depth);
   }
 
   bool MaskedValueIsZero(const Value *V, const APInt &Mask,
                          const Instruction *CxtI = nullptr,
-                         unsigned Depth = 0) const {
+                         int Depth = MaxAnalysisRecursionDepth) const {
     return llvm::MaskedValueIsZero(V, Mask, SQ.getWithInstruction(CxtI), Depth);
   }
 
   unsigned ComputeNumSignBits(const Value *Op,
                               const Instruction *CxtI = nullptr,
-                              unsigned Depth = 0) const {
+                              int Depth = MaxAnalysisRecursionDepth) const {
     return llvm::ComputeNumSignBits(Op, DL, &AC, CxtI, &DT, Depth);
   }
 
-  unsigned ComputeMaxSignificantBits(const Value *Op,
-                                     const Instruction *CxtI = nullptr,
-                                     unsigned Depth = 0) const {
+  unsigned
+  ComputeMaxSignificantBits(const Value *Op, const Instruction *CxtI = nullptr,
+                            int Depth = MaxAnalysisRecursionDepth) const {
     return llvm::ComputeMaxSignificantBits(Op, DL, &AC, CxtI, &DT, Depth);
   }
 
@@ -511,7 +512,7 @@ public:
   virtual bool SimplifyDemandedBits(Instruction *I, unsigned OpNo,
                                     const APInt &DemandedMask, KnownBits &Known,
                                     const SimplifyQuery &Q,
-                                    unsigned Depth = 0) = 0;
+                                    int Depth = MaxAnalysisRecursionDepth) = 0;
 
   bool SimplifyDemandedBits(Instruction *I, unsigned OpNo,
                             const APInt &DemandedMask, KnownBits &Known) {
@@ -521,7 +522,6 @@ public:
 
   virtual Value *
   SimplifyDemandedVectorElts(Value *V, APInt DemandedElts, APInt &UndefElts,
-                             unsigned Depth = 0,
                              bool AllowMultipleUsers = false) = 0;
 
   bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const;

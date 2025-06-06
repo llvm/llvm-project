@@ -199,19 +199,20 @@ public:
   LoadInst *combineLoadToNewType(LoadInst &LI, Type *NewTy,
                                  const Twine &Suffix = "");
 
-  KnownFPClass computeKnownFPClass(Value *Val, FastMathFlags FMF,
-                                   FPClassTest Interested = fcAllFlags,
-                                   const Instruction *CtxI = nullptr,
-                                   unsigned Depth = 0) const {
+  KnownFPClass
+  computeKnownFPClass(Value *Val, FastMathFlags FMF,
+                      FPClassTest Interested = fcAllFlags,
+                      const Instruction *CtxI = nullptr,
+                      int Depth = MaxAnalysisRecursionDepth) const {
     return llvm::computeKnownFPClass(
         Val, FMF, Interested, getSimplifyQuery().getWithInstruction(CtxI),
         Depth);
   }
 
-  KnownFPClass computeKnownFPClass(Value *Val,
-                                   FPClassTest Interested = fcAllFlags,
-                                   const Instruction *CtxI = nullptr,
-                                   unsigned Depth = 0) const {
+  KnownFPClass
+  computeKnownFPClass(Value *Val, FPClassTest Interested = fcAllFlags,
+                      const Instruction *CtxI = nullptr,
+                      int Depth = MaxAnalysisRecursionDepth) const {
     return llvm::computeKnownFPClass(
         Val, Interested, getSimplifyQuery().getWithInstruction(CtxI), Depth);
   }
@@ -462,7 +463,11 @@ private:
   /// If \p HasDereferenceable is true, the simplification will not perform
   /// same object checks.
   Value *simplifyNonNullOperand(Value *V, bool HasDereferenceable,
-                                unsigned Depth = 0);
+                                int Depth = MaxAnalysisRecursionDepth);
+
+  Value *SimplifyDemandedVectorEltsInternal(
+      Value *V, APInt DemandedElts, APInt &PoisonElts,
+      bool AllowMultipleUsers = false, int Depth = MaxAnalysisRecursionDepth);
 
 public:
   /// Create and insert the idiom we use to indicate a block is unreachable
@@ -559,12 +564,12 @@ public:
   /// bits.
   Value *SimplifyDemandedUseBits(Instruction *I, const APInt &DemandedMask,
                                  KnownBits &Known, const SimplifyQuery &Q,
-                                 unsigned Depth = 0);
+                                 int Depth = MaxAnalysisRecursionDepth);
   using InstCombiner::SimplifyDemandedBits;
   bool SimplifyDemandedBits(Instruction *I, unsigned Op,
                             const APInt &DemandedMask, KnownBits &Known,
                             const SimplifyQuery &Q,
-                            unsigned Depth = 0) override;
+                            int Depth = MaxAnalysisRecursionDepth) override;
 
   /// Helper routine of SimplifyDemandedUseBits. It computes KnownZero/KnownOne
   /// bits. It also tries to handle simplifications that can be done based on
@@ -573,7 +578,7 @@ public:
                                          const APInt &DemandedMask,
                                          KnownBits &Known,
                                          const SimplifyQuery &Q,
-                                         unsigned Depth = 0);
+                                         int Depth = MaxAnalysisRecursionDepth);
 
   /// Helper routine of SimplifyDemandedUseBits. It tries to simplify demanded
   /// bit for "r1 = shr x, c1; r2 = shl r1, c2" instruction sequence.
@@ -587,17 +592,17 @@ public:
   bool SimplifyDemandedInstructionBits(Instruction &Inst, KnownBits &Known);
 
   Value *SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
-                                    APInt &PoisonElts, unsigned Depth = 0,
+                                    APInt &PoisonElts,
                                     bool AllowMultipleUsers = false) override;
 
   /// Attempts to replace V with a simpler value based on the demanded
   /// floating-point classes
   Value *SimplifyDemandedUseFPClass(Value *V, FPClassTest DemandedMask,
                                     KnownFPClass &Known, Instruction *CxtI,
-                                    unsigned Depth = 0);
+                                    int Depth = MaxAnalysisRecursionDepth);
   bool SimplifyDemandedFPClass(Instruction *I, unsigned Op,
                                FPClassTest DemandedMask, KnownFPClass &Known,
-                               unsigned Depth = 0);
+                               int Depth = MaxAnalysisRecursionDepth);
 
   /// Common transforms for add / disjoint or
   Instruction *foldAddLikeCommutative(Value *LHS, Value *RHS, bool NSW,
@@ -769,7 +774,7 @@ public:
   Instruction *foldSelectInstWithICmp(SelectInst &SI, ICmpInst *ICI);
   Instruction *foldSelectValueEquivalence(SelectInst &SI, CmpInst &CI);
   bool replaceInInstruction(Value *V, Value *Old, Value *New,
-                            unsigned Depth = 0);
+                            int Depth = MaxAnalysisRecursionDepth);
 
   Value *insertRangeTest(Value *V, const APInt &Lo, const APInt &Hi,
                          bool isSigned, bool Inside);
@@ -807,11 +812,13 @@ public:
   /// actual instructions, otherwise return a non-null dummy value. Return
   /// nullptr on failure. Note, if DoFold is true the caller must ensure that
   /// takeLog2 will succeed, otherwise it may create stray instructions.
-  Value *takeLog2(Value *Op, unsigned Depth, bool AssumeNonZero, bool DoFold);
+  Value *takeLog2(Value *Op, int Depth, bool AssumeNonZero, bool DoFold);
 
   Value *tryGetLog2(Value *Op, bool AssumeNonZero) {
-    if (takeLog2(Op, /*Depth=*/0, AssumeNonZero, /*DoFold=*/false))
-      return takeLog2(Op, /*Depth=*/0, AssumeNonZero, /*DoFold=*/true);
+    if (takeLog2(Op, /*Depth=*/MaxAnalysisRecursionDepth, AssumeNonZero,
+                 /*DoFold=*/false))
+      return takeLog2(Op, /*Depth=*/MaxAnalysisRecursionDepth, AssumeNonZero,
+                      /*DoFold=*/true);
     return nullptr;
   }
 };
@@ -829,6 +836,8 @@ class Negator final {
 
   SmallDenseMap<Value *, Value *> NegationsCache;
 
+  int MaxDepth = 0;
+
   Negator(LLVMContext &C, const DataLayout &DL, const DominatorTree &DT,
           bool IsTrulyNegation);
 
@@ -842,9 +851,11 @@ class Negator final {
 
   std::array<Value *, 2> getSortedOperandsOfBinOp(Instruction *I);
 
-  [[nodiscard]] Value *visitImpl(Value *V, bool IsNSW, unsigned Depth);
+  [[nodiscard]] Value *visitImpl(Value *V, bool IsNSW,
+                                 int Depth = MaxAnalysisRecursionDepth);
 
-  [[nodiscard]] Value *negate(Value *V, bool IsNSW, unsigned Depth);
+  [[nodiscard]] Value *negate(Value *V, bool IsNSW,
+                              int Depth = MaxAnalysisRecursionDepth);
 
   /// Recurse depth-first and attempt to sink the negation.
   /// FIXME: use worklist?

@@ -1231,9 +1231,9 @@ static Value *canonicalizeSPF(ICmpInst &Cmp, Value *TrueVal, Value *FalseVal,
 }
 
 bool InstCombinerImpl::replaceInInstruction(Value *V, Value *Old, Value *New,
-                                            unsigned Depth) {
+                                            int Depth) {
   // Conservatively limit replacement to two instructions upwards.
-  if (Depth == 2)
+  if ((MaxAnalysisRecursionDepth - Depth) == 2)
     return false;
 
   assert(!isa<Constant>(Old) && "Only replace non-constant values");
@@ -1254,7 +1254,7 @@ bool InstCombinerImpl::replaceInInstruction(Value *V, Value *Old, Value *New,
       Worklist.add(I);
       Changed = true;
     } else {
-      Changed |= replaceInInstruction(U, Old, New, Depth + 1);
+      Changed |= replaceInInstruction(U, Old, New, Depth - 1);
     }
   }
   return Changed;
@@ -3640,8 +3640,8 @@ static bool matchFMulByZeroIfResultEqZero(InstCombinerImpl &IC, Value *Cmp0,
 /// Check whether the KnownBits of a select arm may be affected by the
 /// select condition.
 static bool hasAffectedValue(Value *V, SmallPtrSetImpl<Value *> &Affected,
-                             unsigned Depth) {
-  if (Depth == DepthLimit::getMaxRecursionDepth())
+                             int Depth) {
+  if (Depth <= 0)
     return false;
 
   // Ignore the case where the select arm itself is affected. These cases
@@ -3651,13 +3651,13 @@ static bool hasAffectedValue(Value *V, SmallPtrSetImpl<Value *> &Affected,
 
   if (auto *I = dyn_cast<Instruction>(V)) {
     if (isa<PHINode>(I)) {
-      if (Depth == DepthLimit::getMaxRecursionDepth() - 1)
+      if (Depth == 1)
         return false;
-      Depth = DepthLimit::getMaxRecursionDepth() - 2;
+      Depth = 2;
     }
     return any_of(I->operands(), [&](Value *Op) {
       return Op->getType()->isIntOrIntVectorTy() &&
-             hasAffectedValue(Op, Affected, Depth + 1);
+             hasAffectedValue(Op, Affected, Depth - 1);
     });
   }
 
@@ -4120,7 +4120,6 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       }
     }
   }
-
   // Try to simplify a binop sandwiched between 2 selects with the same
   // condition. This is not valid for div/rem because the select might be
   // preventing a division-by-zero.
@@ -4337,7 +4336,8 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     SimplifyQuery Q = SQ.getWithInstruction(&SI).getWithCondContext(CC);
     if (!CC.AffectedValues.empty()) {
       if (!isa<Constant>(TrueVal) &&
-          hasAffectedValue(TrueVal, CC.AffectedValues, /*Depth=*/0)) {
+          hasAffectedValue(TrueVal, CC.AffectedValues,
+                           /*Depth=*/MaxAnalysisRecursionDepth)) {
         KnownBits Known = llvm::computeKnownBits(TrueVal, Q);
         if (Known.isConstant())
           return replaceOperand(SI, 1,
@@ -4346,7 +4346,8 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
       CC.Invert = true;
       if (!isa<Constant>(FalseVal) &&
-          hasAffectedValue(FalseVal, CC.AffectedValues, /*Depth=*/0)) {
+          hasAffectedValue(FalseVal, CC.AffectedValues,
+                           /*Depth=*/MaxAnalysisRecursionDepth)) {
         KnownBits Known = llvm::computeKnownBits(FalseVal, Q);
         if (Known.isConstant())
           return replaceOperand(SI, 2,

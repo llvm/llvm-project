@@ -30,7 +30,7 @@ static cl::opt<bool>
                              "SimplifyDemandedBits() are consistent"),
                     cl::Hidden, cl::init(false));
 
-static cl::opt<unsigned> SimplifyDemandedVectorEltsDepthLimit(
+static cl::opt<int> SimplifyDemandedVectorEltsDepthLimit(
     "instcombine-simplify-vector-elts-depth",
     cl::desc(
         "Depth limit when simplifying vector instructions and their operands"),
@@ -95,8 +95,7 @@ bool InstCombinerImpl::SimplifyDemandedInstructionBits(Instruction &Inst) {
 bool InstCombinerImpl::SimplifyDemandedBits(Instruction *I, unsigned OpNo,
                                             const APInt &DemandedMask,
                                             KnownBits &Known,
-                                            const SimplifyQuery &Q,
-                                            unsigned Depth) {
+                                            const SimplifyQuery &Q, int Depth) {
   Use &U = I->getOperandUse(OpNo);
   Value *V = U.get();
   if (isa<Constant>(V)) {
@@ -117,7 +116,7 @@ bool InstCombinerImpl::SimplifyDemandedBits(Instruction *I, unsigned OpNo,
     return false;
   }
 
-  if (Depth == DepthLimit::getMaxRecursionDepth())
+  if (Depth <= 0)
     return false;
 
   Value *NewVal;
@@ -165,9 +164,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
                                                  const APInt &DemandedMask,
                                                  KnownBits &Known,
                                                  const SimplifyQuery &Q,
-                                                 unsigned Depth) {
+                                                 int Depth) {
   assert(I != nullptr && "Null pointer of Value???");
-  assert(Depth <= DepthLimit::getMaxRecursionDepth() && "Limit Search Depth");
+  assert(Depth >= 0 && "Invalid Search Depth");
   uint32_t BitWidth = DemandedMask.getBitWidth();
   Type *VTy = I->getType();
   assert(
@@ -199,9 +198,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
     // significant bit and all those below it.
     DemandedFromOps = APInt::getLowBitsSet(BitWidth, BitWidth - NLZ);
     if (ShrinkDemandedConstant(I, 0, DemandedFromOps) ||
-        SimplifyDemandedBits(I, 0, DemandedFromOps, LHSKnown, Q, Depth + 1) ||
+        SimplifyDemandedBits(I, 0, DemandedFromOps, LHSKnown, Q, Depth - 1) ||
         ShrinkDemandedConstant(I, 1, DemandedFromOps) ||
-        SimplifyDemandedBits(I, 1, DemandedFromOps, RHSKnown, Q, Depth + 1)) {
+        SimplifyDemandedBits(I, 1, DemandedFromOps, RHSKnown, Q, Depth - 1)) {
       disableWrapFlagsBasedOnUnusedHighBits(I, NLZ);
       return true;
     }
@@ -214,9 +213,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
     break;
   case Instruction::And: {
     // If either the LHS or the RHS are Zero, the result is zero.
-    if (SimplifyDemandedBits(I, 1, DemandedMask, RHSKnown, Q, Depth + 1) ||
+    if (SimplifyDemandedBits(I, 1, DemandedMask, RHSKnown, Q, Depth - 1) ||
         SimplifyDemandedBits(I, 0, DemandedMask & ~RHSKnown.Zero, LHSKnown, Q,
-                             Depth + 1))
+                             Depth - 1))
       return I;
 
     Known = analyzeKnownBitsFromAndXorOr(cast<Operator>(I), LHSKnown, RHSKnown,
@@ -242,9 +241,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
   }
   case Instruction::Or: {
     // If either the LHS or the RHS are One, the result is One.
-    if (SimplifyDemandedBits(I, 1, DemandedMask, RHSKnown, Q, Depth + 1) ||
+    if (SimplifyDemandedBits(I, 1, DemandedMask, RHSKnown, Q, Depth - 1) ||
         SimplifyDemandedBits(I, 0, DemandedMask & ~RHSKnown.One, LHSKnown, Q,
-                             Depth + 1)) {
+                             Depth - 1)) {
       // Disjoint flag may not longer hold.
       I->dropPoisonGeneratingFlags();
       return I;
@@ -282,8 +281,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
     break;
   }
   case Instruction::Xor: {
-    if (SimplifyDemandedBits(I, 1, DemandedMask, RHSKnown, Q, Depth + 1) ||
-        SimplifyDemandedBits(I, 0, DemandedMask, LHSKnown, Q, Depth + 1))
+    if (SimplifyDemandedBits(I, 1, DemandedMask, RHSKnown, Q, Depth - 1) ||
+        SimplifyDemandedBits(I, 0, DemandedMask, LHSKnown, Q, Depth - 1))
       return I;
     Value *LHS, *RHS;
     if (DemandedMask == 1 &&
@@ -374,8 +373,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
     break;
   }
   case Instruction::Select: {
-    if (SimplifyDemandedBits(I, 2, DemandedMask, RHSKnown, Q, Depth + 1) ||
-        SimplifyDemandedBits(I, 1, DemandedMask, LHSKnown, Q, Depth + 1))
+    if (SimplifyDemandedBits(I, 2, DemandedMask, RHSKnown, Q, Depth - 1) ||
+        SimplifyDemandedBits(I, 1, DemandedMask, LHSKnown, Q, Depth - 1))
       return I;
 
     // If the operands are constants, see if we can simplify them.
@@ -447,7 +446,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
     APInt InputDemandedMask = DemandedMask.zextOrTrunc(SrcBitWidth);
     KnownBits InputKnown(SrcBitWidth);
     if (SimplifyDemandedBits(I, 0, InputDemandedMask, InputKnown, Q,
-                             Depth + 1)) {
+                             Depth - 1)) {
       // For zext nneg, we may have dropped the instruction which made the
       // input non-negative.
       I->dropPoisonGeneratingFlags();
@@ -473,7 +472,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
       InputDemandedBits.setBit(SrcBitWidth-1);
 
     KnownBits InputKnown(SrcBitWidth);
-    if (SimplifyDemandedBits(I, 0, InputDemandedBits, InputKnown, Q, Depth + 1))
+    if (SimplifyDemandedBits(I, 0, InputDemandedBits, InputKnown, Q, Depth - 1))
       return I;
 
     // If the input sign bit is known zero, or if the NewBits are not demanded
@@ -534,7 +533,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
     unsigned NLZ = DemandedMask.countl_zero();
     APInt DemandedFromOps = APInt::getLowBitsSet(BitWidth, BitWidth - NLZ);
     if (ShrinkDemandedConstant(I, 1, DemandedFromOps) ||
-        SimplifyDemandedBits(I, 1, DemandedFromOps, RHSKnown, Q, Depth + 1))
+        SimplifyDemandedBits(I, 1, DemandedFromOps, RHSKnown, Q, Depth - 1))
       return disableWrapFlagsBasedOnUnusedHighBits(I, NLZ);
 
     // If low order bits are not demanded and known to be zero in one operand,
@@ -544,7 +543,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
     APInt DemandedFromLHS = DemandedFromOps;
     DemandedFromLHS.clearLowBits(NTZ);
     if (ShrinkDemandedConstant(I, 0, DemandedFromLHS) ||
-        SimplifyDemandedBits(I, 0, DemandedFromLHS, LHSKnown, Q, Depth + 1))
+        SimplifyDemandedBits(I, 0, DemandedFromLHS, LHSKnown, Q, Depth - 1))
       return disableWrapFlagsBasedOnUnusedHighBits(I, NLZ);
 
     // If we are known to be adding zeros to every bit below
@@ -577,7 +576,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
     unsigned NLZ = DemandedMask.countl_zero();
     APInt DemandedFromOps = APInt::getLowBitsSet(BitWidth, BitWidth - NLZ);
     if (ShrinkDemandedConstant(I, 1, DemandedFromOps) ||
-        SimplifyDemandedBits(I, 1, DemandedFromOps, RHSKnown, Q, Depth + 1))
+        SimplifyDemandedBits(I, 1, DemandedFromOps, RHSKnown, Q, Depth - 1))
       return disableWrapFlagsBasedOnUnusedHighBits(I, NLZ);
 
     // If low order bits are not demanded and are known to be zero in RHS,
@@ -587,7 +586,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
     APInt DemandedFromLHS = DemandedFromOps;
     DemandedFromLHS.clearLowBits(NTZ);
     if (ShrinkDemandedConstant(I, 0, DemandedFromLHS) ||
-        SimplifyDemandedBits(I, 0, DemandedFromLHS, LHSKnown, Q, Depth + 1))
+        SimplifyDemandedBits(I, 0, DemandedFromLHS, LHSKnown, Q, Depth - 1))
       return disableWrapFlagsBasedOnUnusedHighBits(I, NLZ);
 
     // If we are known to be subtracting zeros from every bit below
@@ -675,7 +674,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
         if (I->hasNoSignedWrap()) {
           unsigned NumHiDemandedBits = BitWidth - DemandedMask.countr_zero();
           unsigned SignBits =
-              ComputeNumSignBits(I->getOperand(0), Q.CxtI, Depth + 1);
+              ComputeNumSignBits(I->getOperand(0), Q.CxtI, Depth - 1);
           if (SignBits > ShiftAmt && SignBits - ShiftAmt >= NumHiDemandedBits)
             return I->getOperand(0);
         }
@@ -707,7 +706,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
       else if (IOp->hasNoUnsignedWrap())
         DemandedMaskIn.setHighBits(ShiftAmt);
 
-      if (SimplifyDemandedBits(I, 0, DemandedMaskIn, Known, Q, Depth + 1))
+      if (SimplifyDemandedBits(I, 0, DemandedMaskIn, Known, Q, Depth - 1))
         return I;
 
       Known = KnownBits::shl(Known,
@@ -720,7 +719,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
       // demanding those bits from the pre-shifted operand either.
       if (unsigned CTLZ = DemandedMask.countl_zero()) {
         APInt DemandedFromOp(APInt::getLowBitsSet(BitWidth, BitWidth - CTLZ));
-        if (SimplifyDemandedBits(I, 0, DemandedFromOp, Known, Q, Depth + 1)) {
+        if (SimplifyDemandedBits(I, 0, DemandedFromOp, Known, Q, Depth - 1)) {
           // We can't guarantee that nsw/nuw hold after simplifying the operand.
           I->dropPoisonGeneratingFlags();
           return I;
@@ -757,7 +756,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
         // need to shift.
         unsigned NumHiDemandedBits = BitWidth - DemandedMask.countr_zero();
         unsigned SignBits =
-            ComputeNumSignBits(I->getOperand(0), Q.CxtI, Depth + 1);
+            ComputeNumSignBits(I->getOperand(0), Q.CxtI, Depth - 1);
         if (SignBits >= NumHiDemandedBits)
           return I->getOperand(0);
 
@@ -790,7 +789,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
 
       // Unsigned shift right.
       APInt DemandedMaskIn(DemandedMask.shl(ShiftAmt));
-      if (SimplifyDemandedBits(I, 0, DemandedMaskIn, Known, Q, Depth + 1)) {
+      if (SimplifyDemandedBits(I, 0, DemandedMaskIn, Known, Q, Depth - 1)) {
         // exact flag may not longer hold.
         I->dropPoisonGeneratingFlags();
         return I;
@@ -805,7 +804,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
     break;
   }
   case Instruction::AShr: {
-    unsigned SignBits = ComputeNumSignBits(I->getOperand(0), Q.CxtI, Depth + 1);
+    unsigned SignBits = ComputeNumSignBits(I->getOperand(0), Q.CxtI, Depth - 1);
 
     // If we only want bits that already match the signbit then we don't need
     // to shift.
@@ -835,7 +834,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
       bool ShiftedInBitsDemanded = DemandedMask.countl_zero() < ShiftAmt;
       if (ShiftedInBitsDemanded)
         DemandedMaskIn.setSignBit();
-      if (SimplifyDemandedBits(I, 0, DemandedMaskIn, Known, Q, Depth + 1)) {
+      if (SimplifyDemandedBits(I, 0, DemandedMaskIn, Known, Q, Depth - 1)) {
         // exact flag may not longer hold.
         I->dropPoisonGeneratingFlags();
         return I;
@@ -867,7 +866,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
       unsigned RHSTrailingZeros = SA->countr_zero();
       APInt DemandedMaskIn =
           APInt::getHighBitsSet(BitWidth, BitWidth - RHSTrailingZeros);
-      if (SimplifyDemandedBits(I, 0, DemandedMaskIn, LHSKnown, Q, Depth + 1)) {
+      if (SimplifyDemandedBits(I, 0, DemandedMaskIn, LHSKnown, Q, Depth - 1)) {
         // We can't guarantee that "exact" is still true after changing the
         // the dividend.
         I->dropPoisonGeneratingFlags();
@@ -889,7 +888,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
 
       APInt LowBits = *Rem - 1;
       APInt Mask2 = LowBits | APInt::getSignMask(BitWidth);
-      if (SimplifyDemandedBits(I, 0, Mask2, LHSKnown, Q, Depth + 1))
+      if (SimplifyDemandedBits(I, 0, Mask2, LHSKnown, Q, Depth - 1))
         return I;
       Known = KnownBits::srem(LHSKnown, KnownBits::makeConstant(*Rem));
       break;
@@ -951,10 +950,10 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
         unsigned MaskWidth = I->getOperand(1)->getType()->getScalarSizeInBits();
         RHSKnown = KnownBits(MaskWidth);
         // If either the LHS or the RHS are Zero, the result is zero.
-        if (SimplifyDemandedBits(I, 0, DemandedMask, LHSKnown, Q, Depth + 1) ||
+        if (SimplifyDemandedBits(I, 0, DemandedMask, LHSKnown, Q, Depth - 1) ||
             SimplifyDemandedBits(
                 I, 1, (DemandedMask & ~LHSKnown.Zero).zextOrTrunc(MaskWidth),
-                RHSKnown, Q, Depth + 1))
+                RHSKnown, Q, Depth - 1))
           return I;
 
         // TODO: Should be 1-extend
@@ -995,7 +994,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
                          m_PtrAdd(m_Value(InnerPtr), m_ConstantInt(GEPIndex)),
                          m_ConstantInt(PtrMaskImmediate)))) {
 
-          LHSKnown = computeKnownBits(InnerPtr, I, Depth + 1);
+          LHSKnown = computeKnownBits(InnerPtr, I, Depth - 1);
           if (!LHSKnown.isZero()) {
             const unsigned trailingZeros = LHSKnown.countMinTrailingZeros();
             uint64_t PointerAlignBits = (uint64_t(1) << trailingZeros) - 1;
@@ -1041,9 +1040,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
         APInt DemandedMaskRHS(DemandedMask.shl(BitWidth - ShiftAmt));
         if (I->getOperand(0) != I->getOperand(1)) {
           if (SimplifyDemandedBits(I, 0, DemandedMaskLHS, LHSKnown, Q,
-                                   Depth + 1) ||
+                                   Depth - 1) ||
               SimplifyDemandedBits(I, 1, DemandedMaskRHS, RHSKnown, Q,
-                                   Depth + 1)) {
+                                   Depth - 1)) {
             // Range attribute may no longer hold.
             I->dropPoisonGeneratingReturnAttributes();
             return I;
@@ -1051,14 +1050,14 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
         } else { // fshl is a rotate
           // Avoid converting rotate into funnel shift.
           // Only simplify if one operand is constant.
-          LHSKnown = computeKnownBits(I->getOperand(0), I, Depth + 1);
+          LHSKnown = computeKnownBits(I->getOperand(0), I, Depth - 1);
           if (DemandedMaskLHS.isSubsetOf(LHSKnown.Zero | LHSKnown.One) &&
               !match(I->getOperand(0), m_SpecificInt(LHSKnown.One))) {
             replaceOperand(*I, 0, Constant::getIntegerValue(VTy, LHSKnown.One));
             return I;
           }
 
-          RHSKnown = computeKnownBits(I->getOperand(1), I, Depth + 1);
+          RHSKnown = computeKnownBits(I->getOperand(1), I, Depth - 1);
           if (DemandedMaskRHS.isSubsetOf(RHSKnown.Zero | RHSKnown.One) &&
               !match(I->getOperand(1), m_SpecificInt(RHSKnown.One))) {
             replaceOperand(*I, 1, Constant::getIntegerValue(VTy, RHSKnown.One));
@@ -1145,7 +1144,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
 /// DemandedMask, but without modifying the Instruction.
 Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
     Instruction *I, const APInt &DemandedMask, KnownBits &Known,
-    const SimplifyQuery &Q, unsigned Depth) {
+    const SimplifyQuery &Q, int Depth) {
   unsigned BitWidth = DemandedMask.getBitWidth();
   Type *ITy = I->getType();
 
@@ -1158,8 +1157,8 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
   // this instruction has a simpler value in that context.
   switch (I->getOpcode()) {
   case Instruction::And: {
-    llvm::computeKnownBits(I->getOperand(1), RHSKnown, Q, Depth + 1);
-    llvm::computeKnownBits(I->getOperand(0), LHSKnown, Q, Depth + 1);
+    llvm::computeKnownBits(I->getOperand(1), RHSKnown, Q, Depth - 1);
+    llvm::computeKnownBits(I->getOperand(0), LHSKnown, Q, Depth - 1);
     Known = analyzeKnownBitsFromAndXorOr(cast<Operator>(I), LHSKnown, RHSKnown,
                                          Q, Depth);
     computeKnownBitsFromContext(I, Known, Q, Depth);
@@ -1179,8 +1178,8 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
     break;
   }
   case Instruction::Or: {
-    llvm::computeKnownBits(I->getOperand(1), RHSKnown, Q, Depth + 1);
-    llvm::computeKnownBits(I->getOperand(0), LHSKnown, Q, Depth + 1);
+    llvm::computeKnownBits(I->getOperand(1), RHSKnown, Q, Depth - 1);
+    llvm::computeKnownBits(I->getOperand(0), LHSKnown, Q, Depth - 1);
     Known = analyzeKnownBitsFromAndXorOr(cast<Operator>(I), LHSKnown, RHSKnown,
                                          Q, Depth);
     computeKnownBitsFromContext(I, Known, Q, Depth);
@@ -1202,8 +1201,8 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
     break;
   }
   case Instruction::Xor: {
-    llvm::computeKnownBits(I->getOperand(1), RHSKnown, Q, Depth + 1);
-    llvm::computeKnownBits(I->getOperand(0), LHSKnown, Q, Depth + 1);
+    llvm::computeKnownBits(I->getOperand(1), RHSKnown, Q, Depth - 1);
+    llvm::computeKnownBits(I->getOperand(0), LHSKnown, Q, Depth - 1);
     Known = analyzeKnownBitsFromAndXorOr(cast<Operator>(I), LHSKnown, RHSKnown,
                                          Q, Depth);
     computeKnownBitsFromContext(I, Known, Q, Depth);
@@ -1229,11 +1228,11 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
 
     // If an operand adds zeros to every bit below the highest demanded bit,
     // that operand doesn't change the result. Return the other side.
-    llvm::computeKnownBits(I->getOperand(1), RHSKnown, Q, Depth + 1);
+    llvm::computeKnownBits(I->getOperand(1), RHSKnown, Q, Depth - 1);
     if (DemandedFromOps.isSubsetOf(RHSKnown.Zero))
       return I->getOperand(0);
 
-    llvm::computeKnownBits(I->getOperand(0), LHSKnown, Q, Depth + 1);
+    llvm::computeKnownBits(I->getOperand(0), LHSKnown, Q, Depth - 1);
     if (DemandedFromOps.isSubsetOf(LHSKnown.Zero))
       return I->getOperand(1);
 
@@ -1249,13 +1248,13 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
 
     // If an operand subtracts zeros from every bit below the highest demanded
     // bit, that operand doesn't change the result. Return the other side.
-    llvm::computeKnownBits(I->getOperand(1), RHSKnown, Q, Depth + 1);
+    llvm::computeKnownBits(I->getOperand(1), RHSKnown, Q, Depth - 1);
     if (DemandedFromOps.isSubsetOf(RHSKnown.Zero))
       return I->getOperand(0);
 
     bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
     bool NUW = cast<OverflowingBinaryOperator>(I)->hasNoUnsignedWrap();
-    llvm::computeKnownBits(I->getOperand(0), LHSKnown, Q, Depth + 1);
+    llvm::computeKnownBits(I->getOperand(0), LHSKnown, Q, Depth - 1);
     Known = KnownBits::sub(LHSKnown, RHSKnown, NSW, NUW);
     computeKnownBitsFromContext(I, Known, Q, Depth);
     break;
@@ -1397,8 +1396,15 @@ Value *InstCombinerImpl::simplifyShrShlDemandedBits(
 Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
                                                     APInt DemandedElts,
                                                     APInt &PoisonElts,
-                                                    unsigned Depth,
                                                     bool AllowMultipleUsers) {
+  return SimplifyDemandedVectorEltsInternal(
+      V, DemandedElts, PoisonElts, AllowMultipleUsers,
+      SimplifyDemandedVectorEltsDepthLimit.getValue());
+}
+
+Value *InstCombinerImpl::SimplifyDemandedVectorEltsInternal(
+    Value *V, APInt DemandedElts, APInt &PoisonElts, bool AllowMultipleUsers,
+    int Depth) {
   // Cannot analyze scalable type. The number of vector elements is not a
   // compile-time constant.
   if (isa<ScalableVectorType>(V->getType()))
@@ -1451,9 +1457,9 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
   }
 
   // Limit search depth.
-  if (Depth == SimplifyDemandedVectorEltsDepthLimit &&
-      Depth >= DepthLimit::getMaxRecursionDepth())
+  if (Depth <= 0) {
     return nullptr;
+  }
 
   if (!AllowMultipleUsers) {
     // If multiple users are using the root value, proceed with
@@ -1463,7 +1469,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
       // Quit if we find multiple users of a non-root value though.
       // They'll be handled when it's their turn to be visited by
       // the main instcombine process.
-      if (Depth != 0)
+      if (Depth < SimplifyDemandedVectorEltsDepthLimit.getValue())
         // TODO: Just compute the PoisonElts information recursively.
         return nullptr;
 
@@ -1471,7 +1477,6 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
       DemandedElts = EltMask;
     }
   }
-
   Instruction *I = dyn_cast<Instruction>(V);
   if (!I) return nullptr;        // Only analyze instructions.
 
@@ -1480,7 +1485,8 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
                               APInt Demanded, APInt &Undef) {
     auto *II = dyn_cast<IntrinsicInst>(Inst);
     Value *Op = II ? II->getArgOperand(OpNum) : Inst->getOperand(OpNum);
-    if (Value *V = SimplifyDemandedVectorElts(Op, Demanded, Undef, Depth + 1)) {
+    if (Value *V = SimplifyDemandedVectorEltsInternal(
+            Op, Demanded, Undef, /*AllowMultipleUsers=*/false, Depth - 1)) {
       replaceOperand(*Inst, OpNum, V);
       MadeChange = true;
     }
@@ -1970,8 +1976,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
                                                     FPClassTest DemandedMask,
                                                     KnownFPClass &Known,
                                                     Instruction *CxtI,
-                                                    unsigned Depth) {
-  assert(Depth <= DepthLimit::getMaxRecursionDepth() && "Limit Search Depth");
+                                                    int Depth) {
+  assert(Depth && "Invalid Search Depth");
   Type *VTy = V->getType();
 
   assert(Known == KnownFPClass() && "expected uninitialized state");
@@ -1979,13 +1985,13 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
   if (DemandedMask == fcNone)
     return isa<UndefValue>(V) ? nullptr : PoisonValue::get(VTy);
 
-  if (Depth == DepthLimit::getMaxRecursionDepth())
+  if (Depth <= 0)
     return nullptr;
 
   Instruction *I = dyn_cast<Instruction>(V);
   if (!I) {
     // Handle constants and arguments
-    Known = computeKnownFPClass(V, fcAllFlags, CxtI, Depth + 1);
+    Known = computeKnownFPClass(V, fcAllFlags, CxtI, Depth - 1);
     Value *FoldedToConst =
         getFPClassConstant(VTy, DemandedMask & Known.KnownFPClasses);
     return FoldedToConst == V ? nullptr : FoldedToConst;
@@ -2003,7 +2009,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
   switch (I->getOpcode()) {
   case Instruction::FNeg: {
     if (SimplifyDemandedFPClass(I, 0, llvm::fneg(DemandedMask), Known,
-                                Depth + 1))
+                                Depth - 1))
       return I;
     Known.fneg();
     break;
@@ -2013,18 +2019,18 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
     switch (CI->getIntrinsicID()) {
     case Intrinsic::fabs:
       if (SimplifyDemandedFPClass(I, 0, llvm::inverse_fabs(DemandedMask), Known,
-                                  Depth + 1))
+                                  Depth - 1))
         return I;
       Known.fabs();
       break;
     case Intrinsic::arithmetic_fence:
-      if (SimplifyDemandedFPClass(I, 0, DemandedMask, Known, Depth + 1))
+      if (SimplifyDemandedFPClass(I, 0, DemandedMask, Known, Depth - 1))
         return I;
       break;
     case Intrinsic::copysign: {
       // Flip on more potentially demanded classes
       const FPClassTest DemandedMaskAnySign = llvm::unknown_sign(DemandedMask);
-      if (SimplifyDemandedFPClass(I, 0, DemandedMaskAnySign, Known, Depth + 1))
+      if (SimplifyDemandedFPClass(I, 0, DemandedMaskAnySign, Known, Depth - 1))
         return I;
 
       if ((DemandedMask & fcNegative) == DemandedMask) {
@@ -2040,12 +2046,12 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
       }
 
       KnownFPClass KnownSign =
-          computeKnownFPClass(I->getOperand(1), fcAllFlags, CxtI, Depth + 1);
+          computeKnownFPClass(I->getOperand(1), fcAllFlags, CxtI, Depth - 1);
       Known.copysign(KnownSign);
       break;
     }
     default:
-      Known = computeKnownFPClass(I, ~DemandedMask, CxtI, Depth + 1);
+      Known = computeKnownFPClass(I, ~DemandedMask, CxtI, Depth - 1);
       break;
     }
 
@@ -2053,8 +2059,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
   }
   case Instruction::Select: {
     KnownFPClass KnownLHS, KnownRHS;
-    if (SimplifyDemandedFPClass(I, 2, DemandedMask, KnownRHS, Depth + 1) ||
-        SimplifyDemandedFPClass(I, 1, DemandedMask, KnownLHS, Depth + 1))
+    if (SimplifyDemandedFPClass(I, 2, DemandedMask, KnownRHS, Depth - 1) ||
+        SimplifyDemandedFPClass(I, 1, DemandedMask, KnownLHS, Depth - 1))
       return I;
 
     if (KnownLHS.isKnownNever(DemandedMask))
@@ -2067,7 +2073,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
     break;
   }
   default:
-    Known = computeKnownFPClass(I, ~DemandedMask, CxtI, Depth + 1);
+    Known = computeKnownFPClass(I, ~DemandedMask, CxtI, Depth - 1);
     break;
   }
 
@@ -2076,8 +2082,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
 
 bool InstCombinerImpl::SimplifyDemandedFPClass(Instruction *I, unsigned OpNo,
                                                FPClassTest DemandedMask,
-                                               KnownFPClass &Known,
-                                               unsigned Depth) {
+                                               KnownFPClass &Known, int Depth) {
   Use &U = I->getOperandUse(OpNo);
   Value *NewVal =
       SimplifyDemandedUseFPClass(U.get(), DemandedMask, Known, I, Depth);

@@ -987,7 +987,7 @@ static bool canSimplifyNullLoadOrGEP(LoadInst &LI, Value *Op) {
 
 Value *InstCombinerImpl::simplifyNonNullOperand(Value *V,
                                                 bool HasDereferenceable,
-                                                unsigned Depth) {
+                                                int Depth) {
   if (auto *Sel = dyn_cast<SelectInst>(V)) {
     if (isa<ConstantPointerNull>(Sel->getOperand(1)))
       return Sel->getOperand(2);
@@ -1000,13 +1000,13 @@ Value *InstCombinerImpl::simplifyNonNullOperand(Value *V,
     return nullptr;
 
   constexpr unsigned RecursionLimit = 3;
-  if (Depth == RecursionLimit)
+  if ((MaxAnalysisRecursionDepth - Depth) == RecursionLimit)
     return nullptr;
 
   if (auto *GEP = dyn_cast<GetElementPtrInst>(V)) {
     if (HasDereferenceable || GEP->isInBounds()) {
       if (auto *Res = simplifyNonNullOperand(GEP->getPointerOperand(),
-                                             HasDereferenceable, Depth + 1)) {
+                                             HasDereferenceable, Depth - 1)) {
         replaceOperand(*GEP, 0, Res);
         addToWorklist(GEP);
         return nullptr;
@@ -1018,8 +1018,7 @@ Value *InstCombinerImpl::simplifyNonNullOperand(Value *V,
     bool Changed = false;
     for (Use &U : PHI->incoming_values()) {
       // We set Depth to RecursionLimit to avoid expensive recursion.
-      if (auto *Res = simplifyNonNullOperand(U.get(), HasDereferenceable,
-                                             RecursionLimit)) {
+      if (auto *Res = simplifyNonNullOperand(U.get(), HasDereferenceable, 0)) {
         replaceUse(U, Res);
         Changed = true;
       }

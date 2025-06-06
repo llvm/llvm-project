@@ -600,9 +600,9 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
         APInt DemandedElts = findDemandedEltsByAllUsers(SrcVec);
         if (!DemandedElts.isAllOnes()) {
           APInt PoisonElts(NumElts, 0);
-          if (Value *V = SimplifyDemandedVectorElts(
-                  SrcVec, DemandedElts, PoisonElts, 0 /* Depth */,
-                  true /* AllowMultipleUsers */)) {
+          if (Value *V =
+                  SimplifyDemandedVectorElts(SrcVec, DemandedElts, PoisonElts,
+                                             /*AllowMultipleUsers=*/true)) {
             if (V != SrcVec) {
               Worklist.addValue(SrcVec);
               SrcVec->replaceAllUsesWith(V);

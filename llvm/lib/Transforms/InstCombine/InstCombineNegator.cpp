@@ -83,7 +83,7 @@ static cl::opt<bool>
     NegatorEnabled("instcombine-negator-enabled", cl::init(true),
                    cl::desc("Should we attempt to sink negations?"));
 
-static cl::opt<unsigned>
+static cl::opt<int>
     NegatorMaxDepth("instcombine-negator-max-depth",
                     cl::init(NegatorDefaultMaxDepth),
                     cl::desc("What is the maximal lookup depth when trying to "
@@ -119,7 +119,7 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
 
 // FIXME: can this be reworked into a worklist-based algorithm while preserving
 // the depth-first, early bailout traversal?
-[[nodiscard]] Value *Negator::visitImpl(Value *V, bool IsNSW, unsigned Depth) {
+[[nodiscard]] Value *Negator::visitImpl(Value *V, bool IsNSW, int Depth) {
   // -(undef) -> undef.
   if (match(V, m_Undef()))
     return V;
@@ -289,7 +289,7 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
   }
 
   // Rest of the logic is recursive, so if it's time to give up then it's time.
-  if (Depth > NegatorMaxDepth) {
+  if (Depth <= 0) {
     LLVM_DEBUG(dbgs() << "Negator: reached maximal allowed traversal depth in "
                       << *V << ". Giving up.\n");
     ++NegatorTimesDepthLimitReached;
@@ -299,7 +299,7 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
   switch (I->getOpcode()) {
   case Instruction::Freeze: {
     // `freeze` is negatible if its operand is negatible.
-    Value *NegOp = negate(I->getOperand(0), IsNSW, Depth + 1);
+    Value *NegOp = negate(I->getOperand(0), IsNSW, Depth - 1);
     if (!NegOp) // Early return.
       return nullptr;
     return Builder.CreateFreeze(NegOp, I->getName() + ".neg");
@@ -313,7 +313,7 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
       if (DT.dominates(PHI->getParent(), std::get<0>(I)))
         return nullptr;
       if (!(std::get<1>(I) =
-                negate(std::get<0>(I), IsNSW, Depth + 1))) // Early return.
+                negate(std::get<0>(I), IsNSW, Depth - 1))) // Early return.
         return nullptr;
     }
     // All incoming values are indeed negatible. Create negated PHI node.
@@ -348,10 +348,10 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
       return NewSelect;
     }
     // `select` is negatible if both hands of `select` are negatible.
-    Value *NegOp1 = negate(I->getOperand(1), IsNSW, Depth + 1);
+    Value *NegOp1 = negate(I->getOperand(1), IsNSW, Depth - 1);
     if (!NegOp1) // Early return.
       return nullptr;
-    Value *NegOp2 = negate(I->getOperand(2), IsNSW, Depth + 1);
+    Value *NegOp2 = negate(I->getOperand(2), IsNSW, Depth - 1);
     if (!NegOp2)
       return nullptr;
     // Do preserve the metadata!
@@ -361,10 +361,10 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
   case Instruction::ShuffleVector: {
     // `shufflevector` is negatible if both operands are negatible.
     auto *Shuf = cast<ShuffleVectorInst>(I);
-    Value *NegOp0 = negate(I->getOperand(0), IsNSW, Depth + 1);
+    Value *NegOp0 = negate(I->getOperand(0), IsNSW, Depth - 1);
     if (!NegOp0) // Early return.
       return nullptr;
-    Value *NegOp1 = negate(I->getOperand(1), IsNSW, Depth + 1);
+    Value *NegOp1 = negate(I->getOperand(1), IsNSW, Depth - 1);
     if (!NegOp1)
       return nullptr;
     return Builder.CreateShuffleVector(NegOp0, NegOp1, Shuf->getShuffleMask(),
@@ -373,7 +373,7 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
   case Instruction::ExtractElement: {
     // `extractelement` is negatible if source operand is negatible.
     auto *EEI = cast<ExtractElementInst>(I);
-    Value *NegVector = negate(EEI->getVectorOperand(), IsNSW, Depth + 1);
+    Value *NegVector = negate(EEI->getVectorOperand(), IsNSW, Depth - 1);
     if (!NegVector) // Early return.
       return nullptr;
     return Builder.CreateExtractElement(NegVector, EEI->getIndexOperand(),
@@ -383,10 +383,10 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
     // `insertelement` is negatible if both the source vector and
     // element-to-be-inserted are negatible.
     auto *IEI = cast<InsertElementInst>(I);
-    Value *NegVector = negate(IEI->getOperand(0), IsNSW, Depth + 1);
+    Value *NegVector = negate(IEI->getOperand(0), IsNSW, Depth - 1);
     if (!NegVector) // Early return.
       return nullptr;
-    Value *NegNewElt = negate(IEI->getOperand(1), IsNSW, Depth + 1);
+    Value *NegNewElt = negate(IEI->getOperand(1), IsNSW, Depth - 1);
     if (!NegNewElt) // Early return.
       return nullptr;
     return Builder.CreateInsertElement(NegVector, NegNewElt, IEI->getOperand(2),
@@ -394,7 +394,7 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
   }
   case Instruction::Trunc: {
     // `trunc` is negatible if its operand is negatible.
-    Value *NegOp = negate(I->getOperand(0), /* IsNSW */ false, Depth + 1);
+    Value *NegOp = negate(I->getOperand(0), /* IsNSW */ false, Depth - 1);
     if (!NegOp) // Early return.
       return nullptr;
     return Builder.CreateTrunc(NegOp, I->getType(), I->getName() + ".neg");
@@ -402,7 +402,7 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
   case Instruction::Shl: {
     // `shl` is negatible if the first operand is negatible.
     IsNSW &= I->hasNoSignedWrap();
-    if (Value *NegOp0 = negate(I->getOperand(0), IsNSW, Depth + 1))
+    if (Value *NegOp0 = negate(I->getOperand(0), IsNSW, Depth - 1))
       return Builder.CreateShl(NegOp0, I->getOperand(1), I->getName() + ".neg",
                                /* HasNUW */ false, IsNSW);
     // Otherwise, `shl %x, C` can be interpreted as `mul %x, 1<<C`.
@@ -430,7 +430,7 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
     SmallVector<Value *, 2> NegatedOps, NonNegatedOps;
     for (Value *Op : I->operands()) {
       // Can we sink the negation into this operand?
-      if (Value *NegOp = negate(Op, /* IsNSW */ false, Depth + 1)) {
+      if (Value *NegOp = negate(Op, /* IsNSW */ false, Depth - 1)) {
         NegatedOps.emplace_back(NegOp); // Successfully negated operand!
         continue;
       }
@@ -473,10 +473,10 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
     Value *NegatedOp, *OtherOp;
     // First try the second operand, in case it's a constant it will be best to
     // just invert it instead of sinking the `neg` deeper.
-    if (Value *NegOp1 = negate(Ops[1], /* IsNSW */ false, Depth + 1)) {
+    if (Value *NegOp1 = negate(Ops[1], /* IsNSW */ false, Depth - 1)) {
       NegatedOp = NegOp1;
       OtherOp = Ops[0];
-    } else if (Value *NegOp0 = negate(Ops[0], /* IsNSW */ false, Depth + 1)) {
+    } else if (Value *NegOp0 = negate(Ops[0], /* IsNSW */ false, Depth - 1)) {
       NegatedOp = NegOp0;
       OtherOp = Ops[1];
     } else
@@ -492,8 +492,8 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
   llvm_unreachable("Can't get here. We always return from switch.");
 }
 
-[[nodiscard]] Value *Negator::negate(Value *V, bool IsNSW, unsigned Depth) {
-  NegatorMaxDepthVisited.updateMax(Depth);
+[[nodiscard]] Value *Negator::negate(Value *V, bool IsNSW, int Depth) {
+  NegatorMaxDepthVisited.updateMax(MaxDepth - Depth);
   ++NegatorNumValuesVisited;
 
 #if LLVM_ENABLE_STATS
@@ -531,7 +531,11 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
 
 [[nodiscard]] std::optional<Negator::Result> Negator::run(Value *Root,
                                                           bool IsNSW) {
-  Value *Negated = negate(Root, IsNSW, /*Depth=*/0);
+  MaxDepth =
+      NegatorMaxDepth.getNumOccurrences()
+          ? std::max(NegatorMaxDepth.getValue(), MaxAnalysisRecursionDepth)
+          : MaxAnalysisRecursionDepth;
+  Value *Negated = negate(Root, IsNSW, /*Depth=*/MaxDepth);
   if (!Negated) {
     // We must cleanup newly-inserted instructions, to avoid any potential
     // endless combine looping.

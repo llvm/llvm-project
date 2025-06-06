@@ -1916,9 +1916,8 @@ static bool canCreateUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,
 
 static bool isGuaranteedNotToBeUndefOrPoison(Register Reg,
                                              const MachineRegisterInfo &MRI,
-                                             unsigned Depth,
-                                             UndefPoisonKind Kind) {
-  if (Depth >= DepthLimit::getMaxRecursionDepth())
+                                             int Depth, UndefPoisonKind Kind) {
+  if (Depth <= 0)
     return false;
 
   MachineInstr *RegDef = MRI.getVRegDef(Reg);
@@ -1936,7 +1935,7 @@ static bool isGuaranteedNotToBeUndefOrPoison(Register Reg,
     unsigned NumSources = BV->getNumSources();
     for (unsigned I = 0; I < NumSources; ++I)
       if (!::isGuaranteedNotToBeUndefOrPoison(BV->getSourceReg(I), MRI,
-                                              Depth + 1, Kind))
+                                              Depth - 1, Kind))
         return false;
     return true;
   }
@@ -1945,7 +1944,7 @@ static bool isGuaranteedNotToBeUndefOrPoison(Register Reg,
     unsigned NumIncoming = Phi->getNumIncomingValues();
     for (unsigned I = 0; I < NumIncoming; ++I)
       if (!::isGuaranteedNotToBeUndefOrPoison(Phi->getIncomingValue(I), MRI,
-                                              Depth + 1, Kind))
+                                              Depth - 1, Kind))
         return false;
     return true;
   }
@@ -1953,7 +1952,7 @@ static bool isGuaranteedNotToBeUndefOrPoison(Register Reg,
     auto MOCheck = [&](const MachineOperand &MO) {
       if (!MO.isReg())
         return true;
-      return ::isGuaranteedNotToBeUndefOrPoison(MO.getReg(), MRI, Depth + 1,
+      return ::isGuaranteedNotToBeUndefOrPoison(MO.getReg(), MRI, Depth - 1,
                                                 Kind);
     };
     return !::canCreateUndefOrPoison(Reg, MRI,
@@ -1977,21 +1976,20 @@ bool canCreatePoison(Register Reg, const MachineRegisterInfo &MRI,
 
 bool llvm::isGuaranteedNotToBeUndefOrPoison(Register Reg,
                                             const MachineRegisterInfo &MRI,
-                                            unsigned Depth) {
+                                            int Depth) {
   return ::isGuaranteedNotToBeUndefOrPoison(Reg, MRI, Depth,
                                             UndefPoisonKind::UndefOrPoison);
 }
 
 bool llvm::isGuaranteedNotToBePoison(Register Reg,
                                      const MachineRegisterInfo &MRI,
-                                     unsigned Depth) {
+                                     int Depth) {
   return ::isGuaranteedNotToBeUndefOrPoison(Reg, MRI, Depth,
                                             UndefPoisonKind::PoisonOnly);
 }
 
 bool llvm::isGuaranteedNotToBeUndef(Register Reg,
-                                    const MachineRegisterInfo &MRI,
-                                    unsigned Depth) {
+                                    const MachineRegisterInfo &MRI, int Depth) {
   return ::isGuaranteedNotToBeUndefOrPoison(Reg, MRI, Depth,
                                             UndefPoisonKind::UndefOnly);
 }

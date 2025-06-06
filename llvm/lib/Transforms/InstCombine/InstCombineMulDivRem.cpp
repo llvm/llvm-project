@@ -1513,7 +1513,7 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
   return nullptr;
 }
 
-Value *InstCombinerImpl::takeLog2(Value *Op, unsigned Depth, bool AssumeNonZero,
+Value *InstCombinerImpl::takeLog2(Value *Op, int Depth, bool AssumeNonZero,
                                   bool DoFold) {
   auto IfFold = [DoFold](function_ref<Value *()> Fn) {
     if (!DoFold)
@@ -1533,7 +1533,7 @@ Value *InstCombinerImpl::takeLog2(Value *Op, unsigned Depth, bool AssumeNonZero,
     });
 
   // The remaining tests are all recursive, so bail out if we hit the limit.
-  if (Depth++ == DepthLimit::getMaxRecursionDepth())
+  if (Depth-- <= 0)
     return nullptr;
 
   // log2(zext X) -> zext log2(X)

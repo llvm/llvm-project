@@ -17,6 +17,7 @@
 #include "GISelWorkList.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/DebugLoc.h"
@@ -599,19 +600,19 @@ LLVM_ABI bool canCreatePoison(Register Reg, const MachineRegisterInfo &MRI,
                               bool ConsiderFlagsAndMetadata = true);
 
 /// Returns true if \p Reg cannot be poison and undef.
-LLVM_ABI bool isGuaranteedNotToBeUndefOrPoison(Register Reg,
-                                               const MachineRegisterInfo &MRI,
-                                               unsigned Depth = 0);
+LLVM_ABI bool
+isGuaranteedNotToBeUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,
+                                 int Depth = MaxAnalysisRecursionDepth);
 
 /// Returns true if \p Reg cannot be poison, but may be undef.
 LLVM_ABI bool isGuaranteedNotToBePoison(Register Reg,
                                         const MachineRegisterInfo &MRI,
-                                        unsigned Depth = 0);
+                                        int Depth = MaxAnalysisRecursionDepth);
 
 /// Returns true if \p Reg cannot be undef, but may be poison.
 LLVM_ABI bool isGuaranteedNotToBeUndef(Register Reg,
                                        const MachineRegisterInfo &MRI,
-                                       unsigned Depth = 0);
+                                       int Depth = MaxAnalysisRecursionDepth);
 
 /// Get the type back from LLT. It won't be 100 percent accurate but returns an
 /// estimate of the type.
