@@ -15,6 +15,7 @@
 #define LLVM_IR_RUNTIME_LIBCALLS_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Compiler.h"
@@ -36,6 +37,18 @@ enum Libcall {
 #include "llvm/IR/RuntimeLibcalls.def"
 #undef HANDLE_LIBCALL
 };
+} // namespace RTLIB
+
+template <> struct enum_iteration_traits<RTLIB::Libcall> {
+  static constexpr bool is_iterable = true;
+};
+
+namespace RTLIB {
+
+// Return an iterator over all Libcall values.
+static inline auto libcalls() {
+  return enum_seq(static_cast<RTLIB::Libcall>(0), RTLIB::UNKNOWN_LIBCALL);
+}
 
 /// A simple container for information about the supported runtime calls.
 struct RuntimeLibcallsInfo {
