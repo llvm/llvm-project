@@ -542,6 +542,12 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
         }
       }
     } else if (auto *SVI = dyn_cast<ShuffleVectorInst>(I)) {
+      // extractelt (shufflevector %v1, %v2, zeroinitializer) ->
+      // extractelt %v1, 0
+      if (isa<FixedVectorType>(SVI->getType()))
+        if (all_of(SVI->getShuffleMask(), [](int Elt) { return Elt == 0; }))
+          return ExtractElementInst::Create(SVI->getOperand(0), Builder.getInt64(0));
+
       // If this is extracting an element from a shufflevector, figure out where
       // it came from and extract from the appropriate input element instead.
       // Restrict the following transformation to fixed-length vector.
