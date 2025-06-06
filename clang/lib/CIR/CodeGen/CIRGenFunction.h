@@ -447,10 +447,10 @@ public:
     return Address(ptr, convertTypeForMem(t), alignment);
   }
 
-  Address getAddressOfBaseClass(Address value, const CXXRecordDecl *derived,
-                                CastExpr::path_const_iterator pathBegin,
-                                CastExpr::path_const_iterator pathEnd,
-                                bool nullCheckValue, SourceLocation loc);
+  Address getAddressOfBaseClass(
+      Address value, const CXXRecordDecl *derived,
+      llvm::iterator_range<CastExpr::path_const_iterator> path,
+      bool nullCheckValue, SourceLocation loc);
 
   LValue makeAddrLValue(Address addr, QualType ty,
                         AlignmentSource source = AlignmentSource::Type) {

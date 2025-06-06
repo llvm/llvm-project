@@ -102,9 +102,9 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
       Address addr = emitPointerWithAlignment(ce->getSubExpr(), baseInfo);
       const CXXRecordDecl *derived =
           ce->getSubExpr()->getType()->getPointeeCXXRecordDecl();
-      return getAddressOfBaseClass(
-          addr, derived, ce->path_begin(), ce->path_end(),
-          shouldNullCheckClassCastValue(ce), ce->getExprLoc());
+      return getAddressOfBaseClass(addr, derived, ce->path(),
+                                   shouldNullCheckClassCastValue(ce),
+                                   ce->getExprLoc());
     }
 
     case CK_AnyPointerToBlockPointerCast:
@@ -876,9 +876,9 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
     Address thisAddr = lv.getAddress();
 
     // Perform the derived-to-base conversion
-    Address baseAddr = getAddressOfBaseClass(
-        thisAddr, derivedClassDecl, e->path_begin(), e->path_end(),
-        /*NullCheckValue=*/false, e->getExprLoc());
+    Address baseAddr =
+        getAddressOfBaseClass(thisAddr, derivedClassDecl, e->path(),
+                              /*NullCheckValue=*/false, e->getExprLoc());
 
     // TODO: Support accesses to members of base classes in TBAA. For now, we
     // conservatively pretend that the complete object is of the base class

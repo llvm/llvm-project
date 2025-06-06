@@ -1680,15 +1680,14 @@ bool CIRGenModule::verifyModule() const {
 
 // TODO(cir): this can be shared with LLVM codegen.
 CharUnits CIRGenModule::computeNonVirtualBaseClassOffset(
-    const CXXRecordDecl *derivedClass, CastExpr::path_const_iterator start,
-    CastExpr::path_const_iterator end) {
+    const CXXRecordDecl *derivedClass,
+    llvm::iterator_range<CastExpr::path_const_iterator> path) {
   CharUnits offset = CharUnits::Zero();
 
   const ASTContext &astContext = getASTContext();
   const CXXRecordDecl *rd = derivedClass;
 
-  for (CastExpr::path_const_iterator i = start; i != end; ++i) {
-    const CXXBaseSpecifier *base = *i;
+  for (const CXXBaseSpecifier *base : path) {
     assert(!base->isVirtual() && "Should not see virtual bases here!");
 
     // Get the layout.
