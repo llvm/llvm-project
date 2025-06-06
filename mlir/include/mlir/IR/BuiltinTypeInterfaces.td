@@ -119,8 +119,12 @@ def PtrLikeTypeInterface : TypeInterface<"PtrLikeTypeInterface"> {
   let description = [{
     A ptr-like type represents an object storing a memory address. This object
     is constituted by:
-    - A memory address called the base pointer. The base pointer is an 
-      indivisible object.
+    - A memory address called the base pointer. This pointer is treated as a
+      bag of bits without any assumed structure. The bit-width of the base
+      pointer must be a compile-time constant. However, the bit-width may remain
+      opaque or unavailable during transformations that do not depend on the
+      base pointer. Finally, it is considered indivisible in the sense that as
+      a `PtrLikeTypeInterface` value, it has no metadata.
     - Optional metadata about the pointer. For example, the size of the  memory
       region associated with the pointer.
 

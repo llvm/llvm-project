@@ -93,8 +93,9 @@ def Ptr_PtrMetadata : Ptr_Type<"PtrMetadata", "ptr_metadata"> {
   let description = [{
     The `ptr_metadata` type represents an opaque-view of the metadata associated
     with a `ptr-like` object type.
-    It's an error to get a `ptr_metadata` using `ptr-like` type with no
-    metadata.
+
+    Note: It's a verification error to construct a `ptr_metadata` type using a
+    `ptr-like` type with no metadata.
 
     Example:
 
