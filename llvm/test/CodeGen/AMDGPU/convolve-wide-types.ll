@@ -21,15 +21,15 @@ define <4 x half> @test_1(i1 %arg) {
 ; GFX13-NEXT:    v_dual_mov_b32 v20, s2 :: v_dual_mov_b32 v19, s1
 ; GFX13-NEXT:    v_mov_b32_e32 v18, s0
 ; GFX13-NEXT:    v_cndmask_b32_e64 v0, 0, 0x3c003c00, vcc_lo
-; GFX13-NEXT:    v_dual_mov_b32 v22, v21 :: v_dual_mov_b32 v1, v0
-; GFX13-NEXT:    v_dual_mov_b32 v2, v0 :: v_dual_mov_b32 v3, v0
-; GFX13-NEXT:    v_dual_mov_b32 v4, v0 :: v_dual_mov_b32 v5, v0
-; GFX13-NEXT:    v_dual_mov_b32 v6, v0 :: v_dual_mov_b32 v7, v0
-; GFX13-NEXT:    v_dual_mov_b32 v8, v0 :: v_dual_mov_b32 v9, v0
-; GFX13-NEXT:    v_dual_mov_b32 v10, v0 :: v_dual_mov_b32 v11, v0
-; GFX13-NEXT:    v_dual_mov_b32 v12, v0 :: v_dual_mov_b32 v13, v0
-; GFX13-NEXT:    v_dual_mov_b32 v14, v0 :: v_dual_mov_b32 v15, v0
-; GFX13-NEXT:    v_dual_mov_b32 v16, v0 :: v_dual_mov_b32 v17, v0
+; GFX13-NEXT:    v_dual_mov_b32 v22, v21 :: v_dual_mov_b32 v17, v0
+; GFX13-NEXT:    v_dual_mov_b32 v1, v0 :: v_dual_mov_b32 v2, v0
+; GFX13-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v0
+; GFX13-NEXT:    v_dual_mov_b32 v5, v0 :: v_dual_mov_b32 v6, v0
+; GFX13-NEXT:    v_dual_mov_b32 v7, v0 :: v_dual_mov_b32 v8, v0
+; GFX13-NEXT:    v_dual_mov_b32 v9, v0 :: v_dual_mov_b32 v10, v0
+; GFX13-NEXT:    v_dual_mov_b32 v11, v0 :: v_dual_mov_b32 v12, v0
+; GFX13-NEXT:    v_dual_mov_b32 v13, v0 :: v_dual_mov_b32 v14, v0
+; GFX13-NEXT:    v_dual_mov_b32 v15, v0 :: v_dual_mov_b32 v16, v0
 ; GFX13-NEXT:    v_convolve_f16_f16 v[0:1], v[21:22], v[0:17], v[18:20], v[18:20], v[18:20]
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
 bb:

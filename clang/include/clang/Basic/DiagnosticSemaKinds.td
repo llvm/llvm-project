@@ -12476,7 +12476,7 @@ def warn_zero_as_null_pointer_constant : Warning<
   InGroup<DiagGroup<"zero-as-null-pointer-constant">>, DefaultIgnore;
 
 def warn_not_eliding_copy_on_return : Warning<
-  "not eliding copy on return">, 
+  "not eliding copy on return">,
   InGroup<DiagGroup<"nrvo">>, DefaultIgnore;
 
 def err_nullability_cs_multilevel : Error<
@@ -12710,6 +12710,11 @@ def warn_noderef_on_non_pointer_or_array : Warning<
   "'noderef' can only be used on an array or pointer type">, InGroup<IgnoredAttributes>;
 def warn_noderef_to_dereferenceable_pointer : Warning<
   "casting to dereferenceable pointer removes 'noderef' attribute">, InGroup<NoDeref>;
+
+def warn_cast_discards_cfi_unchecked_callee
+    : Warning<"implicit conversion from %0 to %1 discards "
+              "'cfi_unchecked_callee' attribute">,
+      InGroup<DiagGroup<"cfi-unchecked-callee">>;
 
 def err_builtin_launder_invalid_arg : Error<
   "%select{non-pointer|function pointer|void pointer}0 argument to "
@@ -13401,8 +13406,12 @@ def err_acc_device_type_multiple_archs
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
 def note_amdgcn_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
+
+def err_amdgcn_group_atomic_invalid_as : Error<"cooperative atomic requires a global or generic pointer">;
+
 def err_amdgcn_num_wavegroups_value : Error<"number of wavegroups must be 4">;
 def err_amdgcn_wave_size_value : Error<"wave size must be 32">;
 def err_amdgcn_block_dim_invalid_value : Error<"invalid block dimensions">;
 def note_amdgcn_block_dim_valid_value : Note<"number of threads must be %select{non-zero|at most 1024|a multiple of 128}0">;
+
 } // end of sema component.

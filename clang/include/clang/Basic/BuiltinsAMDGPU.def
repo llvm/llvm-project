@@ -844,6 +844,23 @@ TARGET_BUILTIN(__builtin_amdgcn_swmmac_f16_16x16x64_f16, "V8hIbV16hIbV32hV8hiIbI
 TARGET_BUILTIN(__builtin_amdgcn_wmma_f64_16x16x4_f64, "V8dIbV2dIbV2dIsV8d", "nc", "gfx1251-gemm-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_wmma_f64_16x16x8_f64, "V8dIbV4dIbV4dIsV8d", "nc", "gfx1251-gemm-insts,wavefrontsize32")
 
+// GFX12.5 128/256B cooperative atomics
+TARGET_BUILTIN(__builtin_amdgcn_cooperative_atomic_load_32x4B,  "ii*IicC*",  "nc", "gfx1250-insts,wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_cooperative_atomic_store_32x4B, "vi*iIicC*", "nc", "gfx1250-insts,wavefrontsize32")
+
+TARGET_BUILTIN(__builtin_amdgcn_cooperative_atomic_load_16x8B,  "V2iV2i*IicC*",  "nc", "gfx1250-insts,wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_cooperative_atomic_store_16x8B, "vV2i*V2iIicC*", "nc", "gfx1250-insts,wavefrontsize32")
+
+TARGET_BUILTIN(__builtin_amdgcn_cooperative_atomic_load_8x16B,  "V4iV4i*IicC*",  "nc", "gfx1250-insts,wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_cooperative_atomic_store_8x16B, "vV4i*V4iIicC*", "nc", "gfx1250-insts,wavefrontsize32")
+
+TARGET_BUILTIN(__builtin_amdgcn_cooperative_atomic_load_32x8B,  "V2iV2i*IicC*",  "nc", "gfx1250-insts,wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_cooperative_atomic_store_32x8B, "vV2i*V2iIicC*", "nc", "gfx1250-insts,wavefrontsize32")
+
+TARGET_BUILTIN(__builtin_amdgcn_cooperative_atomic_load_16x16B,  "V4iV4i*IicC*",  "nc", "gfx1250-insts,wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_cooperative_atomic_store_16x16B, "vV4i*V4iIicC*", "nc", "gfx1250-insts,wavefrontsize32")
+
+
 //===----------------------------------------------------------------------===//
 // GFX13+ only builtins.
 //===----------------------------------------------------------------------===//

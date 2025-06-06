@@ -608,7 +608,7 @@ static void emitLeafTable(const DirectiveLanguage &DirLang, raw_ostream &OS,
   std::vector<int> Ordering(Directives.size());
   std::iota(Ordering.begin(), Ordering.end(), 0);
 
-  sort(Ordering, [&](int A, int B) {
+  llvm::sort(Ordering, [&](int A, int B) {
     auto &LeavesA = LeafTable[A];
     auto &LeavesB = LeafTable[B];
     int DirA = LeavesA[0], DirB = LeavesB[0];
@@ -839,7 +839,7 @@ static void generateGetDirectiveLanguages(const DirectiveLanguage &DirLang,
         D.getSourceLanguages(), OS,
         [&](const Record *L) {
           StringRef N = L->getValueAsString("name");
-          OS << "SourceLanguage::" << BaseRecord::formatName(N);
+          OS << "SourceLanguage::" << BaseRecord::getSnakeName(N);
         },
         " | ");
     OS << ";\n";
@@ -1113,59 +1113,63 @@ static void generateFlangClauseParserKindMap(const DirectiveLanguage &DirLang,
      << " Parser clause\");\n";
 }
 
-static bool compareClauseName(const Record *R1, const Record *R2) {
-  Clause C1(R1);
-  Clause C2(R2);
-  return (C1.getName() > C2.getName());
+using RecordWithText = std::pair<const Record *, StringRef>;
+
+static bool compareRecordText(const RecordWithText &A,
+                              const RecordWithText &B) {
+  return A.second > B.second;
+}
+
+static std::vector<RecordWithText>
+getSpellingTexts(ArrayRef<const Record *> Records) {
+  std::vector<RecordWithText> List;
+  for (const Record *R : Records) {
+    Clause C(R);
+    List.push_back(std::make_pair(R, C.getName()));
+    llvm::transform(C.getAliases(), std::back_inserter(List),
+                    [R](StringRef S) { return std::make_pair(R, S); });
+  }
+  return List;
 }
 
 // Generate the parser for the clauses.
 static void generateFlangClausesParser(const DirectiveLanguage &DirLang,
                                        raw_ostream &OS) {
   std::vector<const Record *> Clauses = DirLang.getClauses();
-  // Sort clauses in reverse alphabetical order so with clauses with same
-  // beginning, the longer option is tried before.
-  sort(Clauses, compareClauseName);
+  // Sort clauses in the reverse alphabetical order with respect to their
+  // names and aliases, so that longer names are tried before shorter ones.
+  std::vector<std::pair<const Record *, StringRef>> Names =
+      getSpellingTexts(Clauses);
+  llvm::sort(Names, compareRecordText);
   IfDefScope Scope("GEN_FLANG_CLAUSES_PARSER", OS);
   StringRef Base = DirLang.getFlangClauseBaseClass();
 
+  unsigned LastIndex = Names.size() - 1;
   OS << "\n";
-  unsigned Index = 0;
-  unsigned LastClauseIndex = Clauses.size() - 1;
   OS << "TYPE_PARSER(\n";
-  for (const Clause Clause : Clauses) {
-    const std::vector<StringRef> &Aliases = Clause.getAliases();
-    if (Aliases.empty()) {
-      OS << "  \"" << Clause.getName() << "\"";
-    } else {
-      OS << "  ("
-         << "\"" << Clause.getName() << "\"_tok";
-      for (StringRef Alias : Aliases) {
-        OS << " || \"" << Alias << "\"_tok";
-      }
-      OS << ")";
-    }
+  for (auto [Index, RecTxt] : llvm::enumerate(Names)) {
+    auto [R, N] = RecTxt;
+    Clause C(R);
 
-    StringRef FlangClass = Clause.getFlangClass();
-    OS << " >> construct<" << Base << ">(construct<" << Base
-       << "::" << Clause.getFormattedParserClassName() << ">(";
+    StringRef FlangClass = C.getFlangClass();
+    OS << "  \"" << N << "\" >> construct<" << Base << ">(construct<" << Base
+       << "::" << C.getFormattedParserClassName() << ">(";
     if (FlangClass.empty()) {
       OS << "))";
-      if (Index != LastClauseIndex)
+      if (Index != LastIndex)
         OS << " ||";
       OS << "\n";
-      ++Index;
       continue;
     }
 
-    if (Clause.isValueOptional())
+    if (C.isValueOptional())
       OS << "maybe(";
     OS << "parenthesized(";
-    if (Clause.isValueList())
+    if (C.isValueList())
       OS << "nonemptyList(";
 
-    if (!Clause.getPrefix().empty())
-      OS << "\"" << Clause.getPrefix() << ":\" >> ";
+    if (!C.getPrefix().empty())
+      OS << "\"" << C.getPrefix() << ":\" >> ";
 
     // The common Flang parser are used directly. Their name is identical to
     // the Flang class with first letter as lowercase. If the Flang class is
@@ -1181,19 +1185,18 @@ static void generateFlangClausesParser(const DirectiveLanguage &DirLang,
             .Case("ScalarLogicalExpr", "scalarLogicalExpr")
             .Default(("Parser<" + FlangClass + ">{}").toStringRef(Scratch));
     OS << Parser;
-    if (!Clause.getPrefix().empty() && Clause.isPrefixOptional())
+    if (!C.getPrefix().empty() && C.isPrefixOptional())
       OS << " || " << Parser;
-    if (Clause.isValueList()) // close nonemptyList(.
+    if (C.isValueList()) // close nonemptyList(.
       OS << ")";
     OS << ")"; // close parenthesized(.
 
-    if (Clause.isValueOptional()) // close maybe(.
+    if (C.isValueOptional()) // close maybe(.
       OS << ")";
     OS << "))";
-    if (Index != LastClauseIndex)
+    if (Index != LastIndex)
       OS << " ||";
     OS << "\n";
-    ++Index;
   }
   OS << ")\n";
 }

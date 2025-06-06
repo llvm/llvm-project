@@ -154,8 +154,9 @@ public:
     MOTargetFlag2 = 1u << 7,
     MOTargetFlag3 = 1u << 8,
     MOTargetFlag4 = 1u << 9,
+    MOTargetFlag5 = 1u << 10,
 
-    LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ MOTargetFlag4)
+    LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ MOTargetFlag5)
   };
 
 private:

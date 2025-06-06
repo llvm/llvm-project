@@ -83,6 +83,7 @@ public:
   cir::RecordType::RecordKind getRecordKind(const clang::TagTypeKind kind) {
     switch (kind) {
     case clang::TagTypeKind::Class:
+      return cir::RecordType::Class;
     case clang::TagTypeKind::Struct:
       return cir::RecordType::Struct;
     case clang::TagTypeKind::Union:
