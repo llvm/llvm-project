@@ -239,9 +239,10 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
 
   // Force conversion of non-virtual base classes recursively.
   if (const auto *cxxRecordDecl = dyn_cast<CXXRecordDecl>(rd)) {
-    if (cxxRecordDecl->getNumBases() > 0) {
-      cgm.errorNYI(rd->getSourceRange(),
-                   "convertRecordDeclType: derived CXXRecordDecl");
+    for (const auto &base : cxxRecordDecl->bases()) {
+      if (base.isVirtual())
+        continue;
+      convertRecordDeclType(base.getType()->castAs<RecordType>()->getDecl());
     }
   }
 
@@ -384,6 +385,13 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       resultType = cgm.SInt32Ty;
       break;
     }
+    break;
+  }
+
+  case Type::Complex: {
+    const auto *ct = cast<clang::ComplexType>(ty);
+    mlir::Type elementTy = convertType(ct->getElementType());
+    resultType = cir::ComplexType::get(elementTy);
     break;
   }
 
