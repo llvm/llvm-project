@@ -88,10 +88,6 @@ static void addParantheses(const BinaryOperator *BinOp,
 void MathMissingParenthesesCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *BinOp = Result.Nodes.getNodeAs<BinaryOperator>("binOp");
-  std::vector<
-      std::pair<clang::SourceRange, std::pair<const clang::BinaryOperator *,
-                                              const clang::BinaryOperator *>>>
-      Insertions;
   const SourceManager &SM = *Result.SourceManager;
   const clang::LangOptions &LO = Result.Context->getLangOpts();
   addParantheses(BinOp, nullptr, this, SM, LO);

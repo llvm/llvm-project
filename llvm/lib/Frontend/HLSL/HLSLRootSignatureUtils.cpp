@@ -15,7 +15,6 @@
 #include "llvm/ADT/bit.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/IR/Module.h"
 
 namespace llvm {
 namespace hlsl {

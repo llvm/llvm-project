@@ -1584,6 +1584,7 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
     // Convert struct members.
     llvm::SmallVector<mlir::Type> llvmMembers;
     switch (type.getKind()) {
+    case cir::RecordType::Class:
     case cir::RecordType::Struct:
       for (mlir::Type ty : type.getMembers())
         llvmMembers.push_back(convertTypeForMemory(converter, dataLayout, ty));
@@ -1767,6 +1768,7 @@ mlir::LogicalResult CIRToLLVMGetMemberOpLowering::matchAndRewrite(
   assert(recordTy && "expected record type");
 
   switch (recordTy.getKind()) {
+  case cir::RecordType::Class:
   case cir::RecordType::Struct: {
     // Since the base address is a pointer to an aggregate, the first offset
     // is always zero. The second offset tell us which member it will access.

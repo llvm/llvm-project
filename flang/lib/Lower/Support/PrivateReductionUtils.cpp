@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PrivateReductionUtils.h"
+#include "flang/Lower/Support/PrivateReductionUtils.h"
 
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/Allocatable.h"
@@ -42,7 +42,8 @@ static bool hasFinalization(const Fortran::semantics::Symbol &sym) {
 static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
                                 mlir::Location loc, mlir::Type argType,
                                 mlir::Region &cleanupRegion,
-                                const Fortran::semantics::Symbol *sym) {
+                                const Fortran::semantics::Symbol *sym,
+                                bool isDoConcurrent) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   assert(cleanupRegion.empty());
   mlir::Block *block = builder.createBlock(&cleanupRegion, cleanupRegion.end(),
@@ -72,7 +73,10 @@ static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
         fir::MutableBoxValue mutableBox{converted, /*lenParameters=*/{},
                                         /*mutableProperties=*/{}};
         Fortran::lower::genDeallocateIfAllocated(converter, mutableBox, loc);
-        builder.create<mlir::omp::YieldOp>(loc);
+        if (isDoConcurrent)
+          builder.create<fir::YieldOp>(loc);
+        else
+          builder.create<mlir::omp::YieldOp>(loc);
         return;
       }
     }
@@ -100,7 +104,10 @@ static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
     builder.create<fir::FreeMemOp>(loc, cast);
 
     builder.setInsertionPointAfter(ifOp);
-    builder.create<mlir::omp::YieldOp>(loc);
+    if (isDoConcurrent)
+      builder.create<fir::YieldOp>(loc);
+    else
+      builder.create<mlir::omp::YieldOp>(loc);
     return;
   }
 
@@ -115,14 +122,18 @@ static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
     addr = builder.createConvert(loc, heapTy, addr);
 
     builder.create<fir::FreeMemOp>(loc, addr);
-    builder.create<mlir::omp::YieldOp>(loc);
+    if (isDoConcurrent)
+      builder.create<fir::YieldOp>(loc);
+    else
+      builder.create<mlir::omp::YieldOp>(loc);
+
     return;
   }
 
   typeError();
 }
 
-fir::ShapeShiftOp Fortran::lower::omp::getShapeShift(
+fir::ShapeShiftOp Fortran::lower::getShapeShift(
     fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value box,
     bool cannotHaveNonDefaultLowerBounds, bool useDefaultLowerBounds) {
   fir::SequenceType sequenceType = mlir::cast<fir::SequenceType>(
@@ -262,7 +273,7 @@ static mlir::Value generateZeroShapeForRank(fir::FirOpBuilder &builder,
 }
 
 namespace {
-using namespace Fortran::lower::omp;
+using namespace Fortran::lower;
 /// Class to store shared data so we don't have to maintain so many function
 /// arguments
 class PopulateInitAndCleanupRegionsHelper {
@@ -273,12 +284,13 @@ public:
       mlir::Value allocatedPrivVarArg, mlir::Value moldArg,
       mlir::Block *initBlock, mlir::Region &cleanupRegion,
       DeclOperationKind kind, const Fortran::semantics::Symbol *sym,
-      bool cannotHaveLowerBounds)
+      bool cannotHaveLowerBounds, bool isDoConcurrent)
       : converter{converter}, builder{converter.getFirOpBuilder()}, loc{loc},
         argType{argType}, scalarInitValue{scalarInitValue},
         allocatedPrivVarArg{allocatedPrivVarArg}, moldArg{moldArg},
         initBlock{initBlock}, cleanupRegion{cleanupRegion}, kind{kind},
-        sym{sym}, cannotHaveNonDefaultLowerBounds{cannotHaveLowerBounds} {
+        sym{sym}, cannotHaveNonDefaultLowerBounds{cannotHaveLowerBounds},
+        isDoConcurrent{isDoConcurrent} {
     valType = fir::unwrapRefType(argType);
   }
 
@@ -324,8 +336,13 @@ private:
   /// lower bounds then we don't need to generate code to read them.
   bool cannotHaveNonDefaultLowerBounds;
 
+  bool isDoConcurrent;
+
   void createYield(mlir::Value ret) {
-    builder.create<mlir::omp::YieldOp>(loc, ret);
+    if (isDoConcurrent)
+      builder.create<fir::YieldOp>(loc, ret);
+    else
+      builder.create<mlir::omp::YieldOp>(loc, ret);
   }
 
   void initTrivialType() {
@@ -429,11 +446,12 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedScalar(
       /*slice=*/mlir::Value{}, lenParams);
   initializeIfDerivedTypeBox(
       builder, loc, box, getLoadedMoldArg(), needsInitialization,
-      /*isFirstPrivate=*/kind == DeclOperationKind::FirstPrivate);
+      /*isFirstPrivate=*/kind == DeclOperationKind::FirstPrivateOrLocalInit);
   fir::StoreOp lastOp =
       builder.create<fir::StoreOp>(loc, box, allocatedPrivVarArg);
 
-  createCleanupRegion(converter, loc, argType, cleanupRegion, sym);
+  createCleanupRegion(converter, loc, argType, cleanupRegion, sym,
+                      isDoConcurrent);
 
   if (ifUnallocated)
     builder.setInsertionPointAfter(ifUnallocated);
@@ -470,13 +488,14 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
                                                         allocatedArray, shape);
     initializeIfDerivedTypeBox(
         builder, loc, firClass, source, needsInitialization,
-        /*isFirstprivate=*/kind == DeclOperationKind::FirstPrivate);
+        /*isFirstprivate=*/kind == DeclOperationKind::FirstPrivateOrLocalInit);
     builder.create<fir::StoreOp>(loc, firClass, allocatedPrivVarArg);
     if (ifUnallocated)
       builder.setInsertionPointAfter(ifUnallocated);
     createYield(allocatedPrivVarArg);
     mlir::OpBuilder::InsertionGuard guard(builder);
-    createCleanupRegion(converter, loc, argType, cleanupRegion, sym);
+    createCleanupRegion(converter, loc, argType, cleanupRegion, sym,
+                        isDoConcurrent);
     return;
   }
 
@@ -492,7 +511,8 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
          "createTempFromMold decides this statically");
   if (cstNeedsDealloc.has_value() && *cstNeedsDealloc != false) {
     mlir::OpBuilder::InsertionGuard guard(builder);
-    createCleanupRegion(converter, loc, argType, cleanupRegion, sym);
+    createCleanupRegion(converter, loc, argType, cleanupRegion, sym,
+                        isDoConcurrent);
   } else {
     assert(!isAllocatableOrPointer &&
            "Pointer-like arrays must be heap allocated");
@@ -520,7 +540,7 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
 
   initializeIfDerivedTypeBox(
       builder, loc, box, getLoadedMoldArg(), needsInitialization,
-      /*isFirstPrivate=*/kind == DeclOperationKind::FirstPrivate);
+      /*isFirstPrivate=*/kind == DeclOperationKind::FirstPrivateOrLocalInit);
 
   builder.create<fir::StoreOp>(loc, box, allocatedPrivVarArg);
   if (ifUnallocated)
@@ -548,7 +568,8 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxchar(
       loc, eleTy, /*name=*/{}, /*shape=*/{}, /*lenParams=*/len);
   mlir::Value boxChar = charExprHelper.createEmboxChar(privateAddr, len);
 
-  createCleanupRegion(converter, loc, argType, cleanupRegion, sym);
+  createCleanupRegion(converter, loc, argType, cleanupRegion, sym,
+                      isDoConcurrent);
 
   builder.setInsertionPointToEnd(initBlock);
   createYield(boxChar);
@@ -563,10 +584,11 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupUnboxedDerivedType(
   mlir::Value moldBox = builder.create<fir::EmboxOp>(loc, boxedTy, moldArg);
   initializeIfDerivedTypeBox(builder, loc, newBox, moldBox, needsInitialization,
                              /*isFirstPrivate=*/kind ==
-                                 DeclOperationKind::FirstPrivate);
+                                 DeclOperationKind::FirstPrivateOrLocalInit);
 
   if (sym && hasFinalization(*sym))
-    createCleanupRegion(converter, loc, argType, cleanupRegion, sym);
+    createCleanupRegion(converter, loc, argType, cleanupRegion, sym,
+                        isDoConcurrent);
 
   builder.setInsertionPointToEnd(initBlock);
   createYield(allocatedPrivVarArg);
@@ -632,15 +654,17 @@ void PopulateInitAndCleanupRegionsHelper::populateByRefInitAndCleanupRegions() {
        "creating reduction/privatization init region for unsupported type");
 }
 
-void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
+void Fortran::lower::populateByRefInitAndCleanupRegions(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     mlir::Type argType, mlir::Value scalarInitValue, mlir::Block *initBlock,
     mlir::Value allocatedPrivVarArg, mlir::Value moldArg,
     mlir::Region &cleanupRegion, DeclOperationKind kind,
-    const Fortran::semantics::Symbol *sym, bool cannotHaveLowerBounds) {
+    const Fortran::semantics::Symbol *sym, bool cannotHaveLowerBounds,
+    bool isDoConcurrent) {
   PopulateInitAndCleanupRegionsHelper helper(
       converter, loc, argType, scalarInitValue, allocatedPrivVarArg, moldArg,
-      initBlock, cleanupRegion, kind, sym, cannotHaveLowerBounds);
+      initBlock, cleanupRegion, kind, sym, cannotHaveLowerBounds,
+      isDoConcurrent);
   helper.populateByRefInitAndCleanupRegions();
 
   // Often we load moldArg to check something (e.g. length parameters, shape)
