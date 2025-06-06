@@ -2581,9 +2581,15 @@ expandVPMulAccumulateReduction(VPMulAccumulateReductionRecipe *MulAcc) {
       MulAcc->hasNoSignedWrap(), MulAcc->getDebugLoc());
   Mul->insertBefore(MulAcc);
 
-  auto *Red = new VPReductionRecipe(
-      MulAcc->getRecurrenceKind(), FastMathFlags(), MulAcc->getChainOp(), Mul,
-      MulAcc->getCondOp(), MulAcc->isOrdered(), MulAcc->getDebugLoc());
+  // Generate VPReductionRecipe.
+  VPReductionRecipe *Red = nullptr;
+  if (unsigned ScaleFactor = MulAcc->getVFScaleFactor(); ScaleFactor > 1)
+    Red = new VPPartialReductionRecipe(Instruction::Add, MulAcc->getChainOp(),
+                                       Mul, MulAcc->getCondOp(), ScaleFactor);
+  else
+    Red = new VPReductionRecipe(MulAcc->getRecurrenceKind(), FastMathFlags(),
+                                MulAcc->getChainOp(), Mul, MulAcc->getCondOp(),
+                                MulAcc->isOrdered(), MulAcc->getDebugLoc());
   Red->insertBefore(MulAcc);
 
   MulAcc->replaceAllUsesWith(Red);
@@ -2907,12 +2913,43 @@ static void tryToCreateAbstractReductionRecipe(VPReductionRecipe *Red,
   Red->replaceAllUsesWith(AbstractR);
 }
 
+/// This function tries to create an abstract recipe from a partial reduction to
+/// hide its mul and extends from cost estimation.
+static void
+tryToCreateAbstractPartialReductionRecipe(VPPartialReductionRecipe *PRed) {
+  if (PRed->getOpcode() != Instruction::Add)
+    return;
+
+  using namespace llvm::VPlanPatternMatch;
+  auto *BinOp = PRed->getBinOp();
+  if (!match(BinOp,
+             m_Mul(m_ZExtOrSExt(m_VPValue()), m_ZExtOrSExt(m_VPValue()))))
+    return;
+
+  auto *BinOpR = cast<VPWidenRecipe>(BinOp->getDefiningRecipe());
+  VPWidenCastRecipe *Ext0R = dyn_cast<VPWidenCastRecipe>(BinOpR->getOperand(0));
+  VPWidenCastRecipe *Ext1R = dyn_cast<VPWidenCastRecipe>(BinOpR->getOperand(1));
+
+  // TODO: Make work with extends of different signedness
+  if (Ext0R->hasMoreThanOneUniqueUser() || Ext1R->hasMoreThanOneUniqueUser() ||
+      Ext0R->getOpcode() != Ext1R->getOpcode())
+    return;
+
+  auto *AbstractR = new VPMulAccumulateReductionRecipe(
+      PRed, BinOpR, Ext0R, Ext1R, Ext0R->getResultType(),
+      PRed->getVFScaleFactor());
+  AbstractR->insertBefore(PRed);
+  PRed->replaceAllUsesWith(AbstractR);
+}
+
 void VPlanTransforms::convertToAbstractRecipes(VPlan &Plan, VPCostContext &Ctx,
                                                VFRange &Range) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getVectorLoopRegion()))) {
     for (VPRecipeBase &R : *VPBB) {
-      if (auto *Red = dyn_cast<VPReductionRecipe>(&R))
+      if (auto *PRed = dyn_cast<VPPartialReductionRecipe>(&R))
+        tryToCreateAbstractPartialReductionRecipe(PRed);
+      else if (auto *Red = dyn_cast<VPReductionRecipe>(&R))
         tryToCreateAbstractReductionRecipe(Red, Ctx, Range);
     }
   }

@@ -995,11 +995,22 @@ InstructionCost TargetTransformInfo::getShuffleCost(
 
 TargetTransformInfo::PartialReductionExtendKind
 TargetTransformInfo::getPartialReductionExtendKind(Instruction *I) {
-  if (isa<SExtInst>(I))
-    return PR_SignExtend;
-  if (isa<ZExtInst>(I))
-    return PR_ZeroExtend;
+  if (auto *Cast = dyn_cast<CastInst>(I))
+    return getPartialReductionExtendKind(Cast->getOpcode());
   return PR_None;
+}
+
+TargetTransformInfo::PartialReductionExtendKind
+TargetTransformInfo::getPartialReductionExtendKind(
+    Instruction::CastOps ExtOpcode) {
+  switch (ExtOpcode) {
+  case Instruction::CastOps::ZExt:
+    return PR_ZeroExtend;
+  case Instruction::CastOps::SExt:
+    return PR_SignExtend;
+  default:
+    llvm_unreachable("Unexpected cast opcode");
+  }
 }
 
 TTI::CastContextHint
