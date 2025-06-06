@@ -278,16 +278,16 @@ MDNode *MetadataBuilder::BuildDescriptorTableClause(
   StringRef Name =
       getEnumName(dxil::ResourceClass(llvm::to_underlying(Clause.Type)),
                   ArrayRef(ResourceClassNames));
-  return MDNode::get(
-      Ctx, {
-               MDString::get(Ctx, Name),
-               ConstantAsMetadata::get(Builder.getInt32(Clause.NumDescriptors)),
-               ConstantAsMetadata::get(Builder.getInt32(Clause.Reg.Number)),
-               ConstantAsMetadata::get(Builder.getInt32(Clause.Space)),
-               ConstantAsMetadata::get(Builder.getInt32(Clause.Offset)),
-               ConstantAsMetadata::get(
-                   Builder.getInt32(llvm::to_underlying(Clause.Flags))),
-           });
+  Metadata *Operands[] = {
+      MDString::get(Ctx, Name),
+      ConstantAsMetadata::get(Builder.getInt32(Clause.NumDescriptors)),
+      ConstantAsMetadata::get(Builder.getInt32(Clause.Reg.Number)),
+      ConstantAsMetadata::get(Builder.getInt32(Clause.Space)),
+      ConstantAsMetadata::get(Builder.getInt32(Clause.Offset)),
+      ConstantAsMetadata::get(
+          Builder.getInt32(llvm::to_underlying(Clause.Flags))),
+  };
+  return MDNode::get(Ctx, Operands);
 }
 
 MDNode *MetadataBuilder::BuildStaticSampler(const StaticSampler &Sampler) {
