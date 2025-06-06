@@ -2,7 +2,7 @@
 
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
-; CHECK: error: Invalid value for ShaderRegister
+; CHECK: error: Root Signature Node: RootConstantNode expected metadata node of type constant int at index 2 but got string 
 ; CHECK-NOT: Root Signature Definitions
 
 define void @main() #0 {
