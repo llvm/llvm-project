@@ -79,6 +79,16 @@ public:
   friend bool findAndReplaceVectors(llvm::Module &M);
 
 private:
+  typedef std::pair<AllocaInst *, SmallVector<Value *, 4>> AllocaAndGEPs;
+  typedef SmallDenseMap<Value *, AllocaAndGEPs>
+      VectorToArrayMap; // A map from a vector-typed Value to its corresponding
+                        // AllocaInst and GEPs to each element of an array
+  VectorToArrayMap VectorAllocaMap;
+  AllocaAndGEPs createArrayFromVector(IRBuilder<> &Builder, Value *Vec,
+                                      const Twine &Name);
+  bool replaceDynamicInsertElementInst(InsertElementInst &IEI);
+  bool replaceDynamicExtractElementInst(ExtractElementInst &EEI);
+
   GlobalVariable *lookupReplacementGlobal(Value *CurrOperand);
   DenseMap<GlobalVariable *, GlobalVariable *> GlobalMap;
 };
@@ -90,6 +100,7 @@ bool DataScalarizerVisitor::visit(Function &F) {
     for (Instruction &I : make_early_inc_range(*BB))
       MadeChange |= InstVisitor::visit(I);
   }
+  VectorAllocaMap.clear();
   return MadeChange;
 }
 
@@ -172,38 +183,61 @@ bool DataScalarizerVisitor::visitStoreInst(StoreInst &SI) {
   return false;
 }
 
-static bool replaceDynamicInsertElementInst(InsertElementInst &IEI) {
+DataScalarizerVisitor::AllocaAndGEPs
+DataScalarizerVisitor::createArrayFromVector(IRBuilder<> &Builder, Value *Vec,
+                                             const Twine &Name = "") {
+  // If there is already an alloca for this vector, return it
+  auto VA = VectorAllocaMap.find(Vec);
+  if (VA != VectorAllocaMap.end())
+    return VA->second;
+
+  auto InsertPoint = Builder.GetInsertPoint();
+  Builder.SetInsertPointPastAllocas(Builder.GetInsertBlock()->getParent());
+
+  Type *ArrTy = equivalentArrayTypeFromVector(Vec->getType());
+  AllocaInst *ArrAlloca =
+      Builder.CreateAlloca(ArrTy, nullptr, Name + ".alloca");
+  const uint64_t ArrNumElems = ArrTy->getArrayNumElements();
+
+  SmallVector<Value *, 4> GEPs(ArrNumElems);
+  for (unsigned I = 0; I < ArrNumElems; ++I) {
+    Value *EE = Builder.CreateExtractElement(Vec, I, Name + ".extract");
+    GEPs[I] = Builder.CreateInBoundsGEP(
+        ArrTy, ArrAlloca, {Builder.getInt32(0), Builder.getInt32(I)},
+        Name + ".index");
+    Builder.CreateStore(EE, GEPs[I]);
+  }
+
+  VectorAllocaMap.insert({Vec, {ArrAlloca, GEPs}});
+  Builder.SetInsertPoint(InsertPoint);
+  return {ArrAlloca, GEPs};
+}
+
+bool DataScalarizerVisitor::replaceDynamicInsertElementInst(
+    InsertElementInst &IEI) {
   IRBuilder<> Builder(&IEI);
 
   Value *Vec = IEI.getOperand(0);
   Value *Val = IEI.getOperand(1);
   Value *Index = IEI.getOperand(2);
-  Type *IndexTy = Index->getType();
 
-  Type *ArrTy = equivalentArrayTypeFromVector(Vec->getType());
-  Value *ArrAlloca = Builder.CreateAlloca(ArrTy);
-  const uint64_t ArrNumElems = ArrTy->getArrayNumElements();
+  AllocaAndGEPs ArrAllocaAndGEPs =
+      createArrayFromVector(Builder, Vec, IEI.getName());
+  AllocaInst *ArrAlloca = ArrAllocaAndGEPs.first;
+  SmallVector<Value *, 4> &ArrGEPs = ArrAllocaAndGEPs.second;
 
-  SmallVector<Value *, 4> GEPs(ArrNumElems);
-  for (unsigned I = 0; I < ArrNumElems; ++I) {
-    Value *EE = Builder.CreateExtractElement(Vec, I);
-    Value *GEP = Builder.CreateInBoundsGEP(
-        ArrTy, ArrAlloca,
-        {ConstantInt::get(IndexTy, 0), ConstantInt::get(IndexTy, I)});
-    Builder.CreateStore(EE, GEP);
-    GEPs[I] = GEP;
-  }
-
-  Value *GEPForStore = Builder.CreateInBoundsGEP(
-      ArrTy, ArrAlloca, {ConstantInt::get(IndexTy, 0), Index});
+  Type *ArrTy = ArrAlloca->getAllocatedType();
+  Value *GEPForStore =
+      Builder.CreateInBoundsGEP(ArrTy, ArrAlloca, {Builder.getInt32(0), Index},
+                                IEI.getName() + ".dynindex");
   Builder.CreateStore(Val, GEPForStore);
 
   Value *NewIEI = PoisonValue::get(Vec->getType());
-  for (unsigned I = 0; I < ArrNumElems; ++I) {
-    Value *GEP = GEPs[I];
-    Value *Load = Builder.CreateLoad(ArrTy->getArrayElementType(), GEP);
-    NewIEI =
-        Builder.CreateInsertElement(NewIEI, Load, ConstantInt::get(IndexTy, I));
+  for (unsigned I = 0; I < ArrTy->getArrayNumElements(); ++I) {
+    Value *Load = Builder.CreateLoad(ArrTy->getArrayElementType(), ArrGEPs[I],
+                                     IEI.getName() + ".load");
+    NewIEI = Builder.CreateInsertElement(NewIEI, Load, Builder.getInt32(I),
+                                         IEI.getName() + ".insert");
   }
 
   IEI.replaceAllUsesWith(NewIEI);
@@ -219,25 +253,20 @@ bool DataScalarizerVisitor::visitInsertElementInst(InsertElementInst &IEI) {
   return replaceDynamicInsertElementInst(IEI);
 }
 
-static bool replaceDynamicExtractElementInst(ExtractElementInst &EEI) {
+bool DataScalarizerVisitor::replaceDynamicExtractElementInst(
+    ExtractElementInst &EEI) {
   IRBuilder<> Builder(&EEI);
 
-  Value *Index = EEI.getIndexOperand();
-  Type *IndexTy = Index->getType();
+  AllocaAndGEPs ArrAllocaAndGEPs =
+      createArrayFromVector(Builder, EEI.getVectorOperand(), EEI.getName());
+  AllocaInst *ArrAlloca = ArrAllocaAndGEPs.first;
 
-  Type *ArrTy = equivalentArrayTypeFromVector(EEI.getVectorOperandType());
-  Value *ArrAlloca = Builder.CreateAlloca(ArrTy);
-  for (unsigned I = 0; I < ArrTy->getArrayNumElements(); ++I) {
-    Value *EE = Builder.CreateExtractElement(EEI.getVectorOperand(), I);
-    Value *GEP = Builder.CreateInBoundsGEP(
-        ArrTy, ArrAlloca,
-        {ConstantInt::get(IndexTy, 0), ConstantInt::get(IndexTy, I)});
-    Builder.CreateStore(EE, GEP);
-  }
-
-  Value *GEP = Builder.CreateInBoundsGEP(ArrTy, ArrAlloca,
-                                         {ConstantInt::get(IndexTy, 0), Index});
-  Value *Load = Builder.CreateLoad(ArrTy->getArrayElementType(), GEP);
+  Type *ArrTy = ArrAlloca->getAllocatedType();
+  Value *GEP = Builder.CreateInBoundsGEP(
+      ArrTy, ArrAlloca, {Builder.getInt32(0), EEI.getIndexOperand()},
+      EEI.getName() + ".index");
+  Value *Load = Builder.CreateLoad(ArrTy->getArrayElementType(), GEP,
+                                   EEI.getName() + ".load");
 
   EEI.replaceAllUsesWith(Load);
   EEI.eraseFromParent();
@@ -276,8 +305,8 @@ bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
   return true;
 }
 
-Constant *transformInitializer(Constant *Init, Type *OrigType, Type *NewType,
-                               LLVMContext &Ctx) {
+static Constant *transformInitializer(Constant *Init, Type *OrigType,
+                                      Type *NewType, LLVMContext &Ctx) {
   // Handle ConstantAggregateZero (zero-initialized constants)
   if (isa<ConstantAggregateZero>(Init)) {
     return ConstantAggregateZero::get(NewType);
