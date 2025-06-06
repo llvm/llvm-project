@@ -653,6 +653,19 @@ ParsedType Sema::ActOnMSVCUnknownTypeName(const IdentifierInfo &II,
   return CreateParsedType(T, Builder.getTypeSourceInfo(Context, T));
 }
 
+std::pair<IdentifierInfo *, bool>
+Sema::ActOnStartRootSignatureDecl(StringRef Signature) {
+  auto Hash = llvm::hash_value(Signature);
+  std::string IdStr = "__hlsl_rootsig_decl_" + std::to_string(Hash);
+  IdentifierInfo *DeclIdent = &(getASTContext().Idents.get(IdStr));
+
+  // Check if we have already found a decl of the same name
+  LookupResult R(Actions, DeclIdent, SourceLocation(),
+                 Sema::LookupOrdinaryName);
+  bool Found = LookupQualifiedName(R, Actions.CurContext);
+  return {DeclIdent, Found};
+}
+
 DeclSpec::TST Sema::isTagName(IdentifierInfo &II, Scope *S) {
   // Do a tag name lookup in this scope.
   LookupResult R(*this, &II, SourceLocation(), LookupTagName);

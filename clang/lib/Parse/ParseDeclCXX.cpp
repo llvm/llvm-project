@@ -4942,18 +4942,13 @@ void Parser::ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
 
   // Construct our identifier
   StringRef Signature = StrLiteral.value()->getString();
-  auto Hash = llvm::hash_value(Signature);
-  std::string IdStr = "__hlsl_rootsig_decl_" + std::to_string(Hash);
-  IdentifierInfo *DeclIdent = &(Actions.getASTContext().Idents.get(IdStr));
-
-  LookupResult R(Actions, DeclIdent, SourceLocation(),
-                 Sema::LookupOrdinaryName);
-  // Check if we have already found a decl of the same name, if we haven't
-  // then parse the root signature string and construct the in-memory elements
-  if (!Actions.LookupQualifiedName(R, Actions.CurContext)) {
+  auto [DeclIdent, Found] = Actions.ActOnStartRootSignatureDecl(Signature);
+  // If we haven't found an already defined DeclIdent then parse the root
+  // signature string and construct the in-memory elements
+  if (!Found) {
+    // Offset location 1 to account for '"'
     SourceLocation SignatureLoc =
-        StrLiteral.value()->getExprLoc().getLocWithOffset(
-            1); // offset 1 for '"'
+        StrLiteral.value()->getExprLoc().getLocWithOffset(1);
     // Invoke the root signature parser to construct the in-memory constructs
     hlsl::RootSignatureLexer Lexer(Signature, SignatureLoc);
     SmallVector<llvm::hlsl::rootsig::RootElement> RootElements;

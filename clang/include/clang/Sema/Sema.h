@@ -3619,6 +3619,9 @@ public:
                                       SourceLocation NameLoc,
                                       bool IsTemplateTypeArg);
 
+  std::pair<IdentifierInfo *, bool>
+  ActOnStartRootSignatureDecl(StringRef Signature);
+
   class NameClassification {
     NameClassificationKind Kind;
     union {
