@@ -32,8 +32,8 @@ public:
   void apply(ScheduleDAGInstrs *DAG) override;
 };
 
-static bool isMemRead(const MachineInstr *MI) {
-  auto isRead = [](const MachineInstr *MI) {
+static bool isMemLoad(const MachineInstr *MI) {
+  auto isLoad = [](const MachineInstr *MI) {
     return (SIInstrInfo::isDS(*MI) || SIInstrInfo::isVMEM(*MI) ||
             SIInstrInfo::isSMRD(*MI)) &&
            MI->mayLoad();
@@ -42,10 +42,10 @@ static bool isMemRead(const MachineInstr *MI) {
   if (MI->isBundle()) {
     auto I = std::next(MI->getIterator());
     return I != MI->getParent()->instr_end() && I->isInsideBundle() &&
-        isRead(&*I);
+           isLoad(&*I);
   }
 
-  return isRead(MI);
+  return isLoad(MI);
 }
 
 void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
@@ -62,7 +62,7 @@ void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
       if (!PredDep.isBarrier())
         continue;
       SUnit *PredSU = PredDep.getSUnit();
-      if (!isMemRead(PredSU->getInstr()))
+      if (!isMemLoad(PredSU->getInstr()))
         continue;
       SDep ForwardD = PredDep;
       ForwardD.setSUnit(&SU);
