@@ -44,6 +44,10 @@ struct WrapperObj {
     consume(checkedRef);
     // expected-warning@-1{{Call argument is unchecked and unsafe [alpha.webkit.UncheckedCallArgsChecker]}}
   }
+  void bar(WrapperObj& other) {
+    consume(other.checked);
+    // expected-warning@-1{{Call argument is unchecked and unsafe [alpha.webkit.UncheckedCallArgsChecker]}}
+  }
 };
 
 } // namespace call_args_checked

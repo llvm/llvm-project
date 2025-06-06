@@ -302,6 +302,12 @@ namespace member_var {
       // expected-warning@-1{{Local variable 'b' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
       b->method();
     }
+
+    void bar(WrapperObj& wrapper) {
+      CheckedObj* ptr = &wrapper.checked;
+      // expected-warning@-1{{Local variable 'ptr' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
+      ptr->method();
+    }
   };
 
 }
