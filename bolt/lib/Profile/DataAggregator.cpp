@@ -49,6 +49,11 @@ static cl::opt<bool>
                      cl::desc("aggregate basic samples (without LBR info)"),
                      cl::cat(AggregatorCategory));
 
+cl::opt<bool> ArmSPE("spe",
+                     cl::desc("Enable Arm SPE mode. Can combine with `--nl` "
+                              "to use in no-lbr mode"),
+                     cl::cat(AggregatorCategory));
+
 static cl::opt<std::string>
     ITraceAggregation("itrace",
                       cl::desc("Generate LBR info with perf itrace argument"),
@@ -175,11 +180,16 @@ void DataAggregator::start() {
 
   findPerfExecutable();
 
-  if (opts::BasicAggregation) {
-    launchPerfProcess("events without LBR",
-                      MainEventsPPI,
+  if (opts::ArmSPE) {
+    // pid    from_ip      to_ip        predicted/missed not-taken?
+    // 12345  0x123/0x456/PN/-/-/8/RET/-
+    launchPerfProcess("SPE brstack events", MainEventsPPI,
+                      "script -F pid,brstack --itrace=bl",
+                      /*Wait = */ false);
+  } else if (opts::BasicAggregation) {
+    launchPerfProcess("events without LBR", MainEventsPPI,
                       "script -F pid,event,ip",
-                      /*Wait = */false);
+                      /*Wait = */ false);
   } else if (!opts::ITraceAggregation.empty()) {
     std::string ItracePerfScriptArgs = llvm::formatv(
         "script -F pid,brstack --itrace={0}", opts::ITraceAggregation);
@@ -998,9 +1008,21 @@ ErrorOr<LBREntry> DataAggregator::parseLBREntry() {
   if (std::error_code EC = MispredStrRes.getError())
     return EC;
   StringRef MispredStr = MispredStrRes.get();
-  if (MispredStr.size() != 1 ||
-      (MispredStr[0] != 'P' && MispredStr[0] != 'M' && MispredStr[0] != '-')) {
-    reportError("expected single char for mispred bit");
+  // SPE brstack mispredicted flags might be two characters long: 'PN' or 'MN'.
+  bool ValidStrSize = opts::ArmSPE
+                          ? MispredStr.size() >= 1 && MispredStr.size() <= 2
+                          : MispredStr.size() == 1;
+  bool SpeTakenBitErr =
+      (opts::ArmSPE && MispredStr.size() == 2 && MispredStr[1] != 'N');
+  bool PredictionBitErr =
+      !ValidStrSize ||
+      (MispredStr[0] != 'P' && MispredStr[0] != 'M' && MispredStr[0] != '-');
+  if (SpeTakenBitErr)
+    reportError("expected 'N' as SPE prediction bit for a not-taken branch");
+  if (PredictionBitErr)
+    reportError("expected 'P', 'M' or '-' char as a prediction bit");
+
+  if (SpeTakenBitErr || PredictionBitErr) {
     Diag << "Found: " << MispredStr << "\n";
     return make_error_code(llvm::errc::io_error);
   }
@@ -1552,9 +1574,11 @@ void DataAggregator::printBranchStacksDiagnostics(
 }
 
 std::error_code DataAggregator::parseBranchEvents() {
-  outs() << "PERF2BOLT: parse branch events...\n";
-  NamedRegionTimer T("parseBranch", "Parsing branch events", TimerGroupName,
-                     TimerGroupDesc, opts::TimeAggregator);
+  std::string BranchEventTypeStr =
+      !opts::ArmSPE ? "branch events" : "SPE branch events in LBR-format";
+  outs() << "PERF2BOLT: " << BranchEventTypeStr << "...\n";
+  NamedRegionTimer T("parseBranch", "Parsing " + BranchEventTypeStr,
+                     TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
 
   uint64_t NumEntries = 0;
   uint64_t NumSamples = 0;
@@ -1580,7 +1604,8 @@ std::error_code DataAggregator::parseBranchEvents() {
     }
 
     NumEntries += Sample.LBR.size();
-    if (BAT && Sample.LBR.size() == 32 && !NeedsSkylakeFix) {
+    if (this->BC->isX86() && BAT && Sample.LBR.size() == 32 &&
+        !NeedsSkylakeFix) {
       errs() << "PERF2BOLT-WARNING: using Intel Skylake bug workaround\n";
       NeedsSkylakeFix = true;
     }
@@ -1599,10 +1624,17 @@ std::error_code DataAggregator::parseBranchEvents() {
     if (NumSamples && NumSamplesNoLBR == NumSamples) {
       // Note: we don't know if perf2bolt is being used to parse memory samples
       // at this point. In this case, it is OK to parse zero LBRs.
-      errs() << "PERF2BOLT-WARNING: all recorded samples for this binary lack "
-                "LBR. Record profile with perf record -j any or run perf2bolt "
-                "in no-LBR mode with -nl (the performance improvement in -nl "
-                "mode may be limited)\n";
+      if (!opts::ArmSPE)
+        errs()
+            << "PERF2BOLT-WARNING: all recorded samples for this binary lack "
+               "LBR. Record profile with perf record -j any or run perf2bolt "
+               "in no-LBR mode with -nl (the performance improvement in -nl "
+               "mode may be limited)\n";
+      else
+        errs()
+            << "PERF2BOLT-WARNING: all recorded samples for this binary lack "
+               "SPE brstack entries. Record profile with:"
+               "perf record arm_spe_0/branch_filter=1/";
     } else {
       printBranchStacksDiagnostics(NumTotalSamples - NumSamples);
     }

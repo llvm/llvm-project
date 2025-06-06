@@ -78,6 +78,8 @@ public:
   static bool checkPerfDataMagic(StringRef FileName);
 
 private:
+  friend struct PerfSpeEventsTestHelper;
+
   struct PerfBranchSample {
     SmallVector<LBREntry, 32> LBR;
   };
