@@ -40,12 +40,12 @@ namespace llvm {
 namespace exegesis {
 
 static cl::opt<bool> AArch64DisablePacControl(
-    "aarch64-disable-pac-control",
+    "aarch64-keep-pac-keys",
     cl::desc("Disable PAC key control at runtime for benchmarking. Use this if "
              "llvm-exegesis crashes or instruction timings are affected."),
     cl::init(false));
 
-bool isPointerAuth(unsigned Opcode) {
+static bool isPointerAuth(unsigned Opcode) {
   switch (Opcode) {
   default:
     return false;
@@ -75,7 +75,7 @@ bool isPointerAuth(unsigned Opcode) {
   }
 }
 
-bool isLoadTagMultiple(unsigned Opcode) {
+static bool isLoadTagMultiple(unsigned Opcode) {
   switch (Opcode) {
   default:
     return false;
@@ -231,19 +231,17 @@ private:
         // benchmarked, so disable all the keys by default. On the other hand,
         // disabling the keys at run-time can probably crash llvm-exegesis at
         // some later point, depending on how it was built. For that reason, the
-        // user may pass --aarch64-disable-pac-control in case
+        // user may pass --aarch64-keep-pack-keys in case
         // llvm-exegesis crashes or instruction timings are affected.
         // Hence the guard for switching.
         errno = 0;
         long PacKeys = prctl_wrapper(PR_PAC_GET_ENABLED_KEYS);
-        if (PacKeys < 0 || errno == EINVAL)
+        if (PacKeys < 0 && errno == EINVAL)
           return nullptr;
 
         // Disable all PAC keys. Note that while we expect the measurements to
         // be the same with PAC keys disabled, they could potentially be lower
-        // since authentication checks are bypassed.PR_PAC_* prctl operations
-        // return EINVAL when Pointer Authentication is not available, but no
-        // more errors are expected if we got here.
+        // since authentication checks are bypassed.
         if (PacKeys != 0) {
           // Operate on all keys.
           const long KeysToControl =
