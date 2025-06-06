@@ -16,6 +16,148 @@ entry:
   ret i32 %2
 }
 
+define i32 @xmsk_sgt_allzeros_i8(<32 x i8 > %a) {
+; CHECK-LABEL: xmsk_sgt_allzeros_i8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi.d $sp, $sp, -64
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
+; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset 1, -8
+; CHECK-NEXT:    .cfi_offset 22, -16
+; CHECK-NEXT:    addi.d $fp, $sp, 64
+; CHECK-NEXT:    .cfi_def_cfa 22, 0
+; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
+; CHECK-NEXT:    xvrepli.b $xr1, 0
+; CHECK-NEXT:    xvslt.b $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvst $xr0, $sp, 0
+; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 1
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 2
+; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 3
+; CHECK-NEXT:    bstrins.d $a0, $a1, 3, 3
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 4
+; CHECK-NEXT:    bstrins.d $a0, $a1, 4, 4
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 5
+; CHECK-NEXT:    bstrins.d $a0, $a1, 5, 5
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 6
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 6
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 7
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 7
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 8
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 8
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 9
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 9
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 10
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 10
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 11
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 11
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 12
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 12
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 13
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 13
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 14
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 14
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 15
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 16
+; CHECK-NEXT:    slli.d $a1, $a1, 15
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 17
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 16
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 18
+; CHECK-NEXT:    slli.d $a1, $a1, 17
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 19
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 18
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 20
+; CHECK-NEXT:    slli.d $a1, $a1, 19
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 21
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 20
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 22
+; CHECK-NEXT:    slli.d $a1, $a1, 21
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 23
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 22
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 24
+; CHECK-NEXT:    slli.d $a1, $a1, 23
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 25
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 24
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 26
+; CHECK-NEXT:    slli.d $a1, $a1, 25
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 27
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 26
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 28
+; CHECK-NEXT:    slli.d $a1, $a1, 27
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 29
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 28
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 30
+; CHECK-NEXT:    slli.d $a1, $a1, 29
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.b $a1, $sp, 31
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 30
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    slli.d $a1, $a1, 31
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    bstrpick.d $a0, $a0, 31, 0
+; CHECK-NEXT:    addi.d $sp, $fp, -64
+; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
+; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
+; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    ret
+entry:
+  %1 = icmp sgt <32 x i8> %a, splat (i8 0)
+  %2 = bitcast <32 x i1> %1 to i32
+  ret i32 %2
+}
+
 define i32 @xmsk_sgt_allones_i8(<32 x i8 > %a) {
 ; CHECK-LABEL: xmsk_sgt_allones_i8:
 ; CHECK:       # %bb.0: # %entry
@@ -100,6 +242,147 @@ entry:
   ret i4 %2
 }
 
+define i32 @xmsk_sle_allzeros_i8(<32 x i8 > %a) {
+; CHECK-LABEL: xmsk_sle_allzeros_i8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi.d $sp, $sp, -64
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
+; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset 1, -8
+; CHECK-NEXT:    .cfi_offset 22, -16
+; CHECK-NEXT:    addi.d $fp, $sp, 64
+; CHECK-NEXT:    .cfi_def_cfa 22, 0
+; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
+; CHECK-NEXT:    xvslei.b $xr0, $xr0, 0
+; CHECK-NEXT:    xvst $xr0, $sp, 0
+; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 1
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 2
+; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 3
+; CHECK-NEXT:    bstrins.d $a0, $a1, 3, 3
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 4
+; CHECK-NEXT:    bstrins.d $a0, $a1, 4, 4
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 5
+; CHECK-NEXT:    bstrins.d $a0, $a1, 5, 5
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 6
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 6
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 7
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 7
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 8
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 8
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 9
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 9
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 10
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 10
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 11
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 11
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 12
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 12
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 13
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 13
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 14
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 14
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 15
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 16
+; CHECK-NEXT:    slli.d $a1, $a1, 15
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 17
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 16
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 18
+; CHECK-NEXT:    slli.d $a1, $a1, 17
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 19
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 18
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 20
+; CHECK-NEXT:    slli.d $a1, $a1, 19
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 21
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 20
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 22
+; CHECK-NEXT:    slli.d $a1, $a1, 21
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 23
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 22
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 24
+; CHECK-NEXT:    slli.d $a1, $a1, 23
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 25
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 24
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 26
+; CHECK-NEXT:    slli.d $a1, $a1, 25
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 27
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 26
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 28
+; CHECK-NEXT:    slli.d $a1, $a1, 27
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 29
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 28
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 30
+; CHECK-NEXT:    slli.d $a1, $a1, 29
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.b $a1, $sp, 31
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 30
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    slli.d $a1, $a1, 31
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    bstrpick.d $a0, $a0, 31, 0
+; CHECK-NEXT:    addi.d $sp, $fp, -64
+; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
+; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
+; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    ret
+entry:
+  %1 = icmp sle <32 x i8> %a, splat (i8 0)
+  %2 = bitcast <32 x i1> %1 to i32
+  ret i32 %2
+}
+
 define i32 @xmsk_sle_allones_i8(<32 x i8 > %a) {
 ; CHECK-LABEL: xmsk_sle_allones_i8:
 ; CHECK:       # %bb.0: # %entry
@@ -168,4 +451,1297 @@ entry:
   %1 = icmp ne <32 x i8> %a, splat (i8 0)
   %2 = bitcast <32 x i1> %1 to i32
   ret i32 %2
+}
+
+define i4 @xvmsk_sgt_v4i64(<4 x i64> %a, <4 x i64> %b) {
+; CHECK-LABEL: xvmsk_sgt_v4i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.d $sp, $sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    xvslt.d $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 0
+; CHECK-NEXT:    xvpickve2gr.d $a1, $xr0, 1
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 1
+; CHECK-NEXT:    sub.d $a0, $a1, $a0
+; CHECK-NEXT:    xvpickve2gr.d $a1, $xr0, 2
+; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
+; CHECK-NEXT:    xvpickve2gr.d $a1, $xr0, 3
+; CHECK-NEXT:    slli.d $a1, $a1, 3
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    andi $a0, $a0, 15
+; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    ret
+  %x = icmp sgt <4 x i64> %a, %b
+  %res = bitcast <4 x i1> %x to i4
+  ret i4 %res
+}
+
+define i4 @xvmsk_ogt_v4f64(<4 x double> %a, <4 x double> %b) {
+; CHECK-LABEL: xvmsk_ogt_v4f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.d $sp, $sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    xvfcmp.clt.d $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 0
+; CHECK-NEXT:    xvpickve2gr.d $a1, $xr0, 1
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 1
+; CHECK-NEXT:    sub.d $a0, $a1, $a0
+; CHECK-NEXT:    xvpickve2gr.d $a1, $xr0, 2
+; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
+; CHECK-NEXT:    xvpickve2gr.d $a1, $xr0, 3
+; CHECK-NEXT:    slli.d $a1, $a1, 3
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    andi $a0, $a0, 15
+; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    ret
+  %x = fcmp ogt <4 x double> %a, %b
+  %res = bitcast <4 x i1> %x to i4
+  ret i4 %res
+}
+
+define i8 @xvmsk_sgt_v8i32(<8 x i32> %a, <8 x i32> %b) {
+; CHECK-LABEL: xvmsk_sgt_v8i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.d $sp, $sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    xvslt.w $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 0
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 1
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 2
+; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 3
+; CHECK-NEXT:    bstrins.d $a0, $a1, 3, 3
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 4
+; CHECK-NEXT:    bstrins.d $a0, $a1, 4, 4
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 5
+; CHECK-NEXT:    bstrins.d $a0, $a1, 5, 5
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 6
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 6
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 7
+; CHECK-NEXT:    slli.d $a1, $a1, 7
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    andi $a0, $a0, 255
+; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    ret
+  %x = icmp sgt <8 x i32> %a, %b
+  %res = bitcast <8 x i1> %x to i8
+  ret i8 %res
+}
+
+define i8 @xvmsk_ogt_v8f32(<8 x float> %a, <8 x float> %b) {
+; CHECK-LABEL: xvmsk_ogt_v8f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.d $sp, $sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    xvfcmp.clt.s $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 0
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 1
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 2
+; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 3
+; CHECK-NEXT:    bstrins.d $a0, $a1, 3, 3
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 4
+; CHECK-NEXT:    bstrins.d $a0, $a1, 4, 4
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 5
+; CHECK-NEXT:    bstrins.d $a0, $a1, 5, 5
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 6
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 6
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 7
+; CHECK-NEXT:    slli.d $a1, $a1, 7
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    andi $a0, $a0, 255
+; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    ret
+  %x = fcmp ogt <8 x float> %a, %b
+  %res = bitcast <8 x i1> %x to i8
+  ret i8 %res
+}
+
+define i16 @xvmsk_sgt_v16i16(<16 x i16> %a, <16 x i16> %b) {
+; CHECK-LABEL: xvmsk_sgt_v16i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.d $sp, $sp, -64
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
+; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset 1, -8
+; CHECK-NEXT:    .cfi_offset 22, -16
+; CHECK-NEXT:    addi.d $fp, $sp, 64
+; CHECK-NEXT:    .cfi_def_cfa 22, 0
+; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
+; CHECK-NEXT:    xvslt.h $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvst $xr0, $sp, 0
+; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 0
+; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 1
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
+; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 2
+; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
+; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 3
+; CHECK-NEXT:    bstrins.d $a0, $a1, 3, 3
+; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 4
+; CHECK-NEXT:    bstrins.d $a0, $a1, 4, 4
+; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 5
+; CHECK-NEXT:    bstrins.d $a0, $a1, 5, 5
+; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 6
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 6
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 7
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.hu $a2, $sp, 16
+; CHECK-NEXT:    slli.d $a1, $a1, 7
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.hu $a1, $sp, 18
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 8
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.hu $a2, $sp, 20
+; CHECK-NEXT:    slli.d $a1, $a1, 9
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.hu $a1, $sp, 22
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 10
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.hu $a2, $sp, 24
+; CHECK-NEXT:    slli.d $a1, $a1, 11
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.hu $a1, $sp, 26
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 12
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.hu $a2, $sp, 28
+; CHECK-NEXT:    slli.d $a1, $a1, 13
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.h $a1, $sp, 30
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 14
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    slli.d $a1, $a1, 15
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    bstrpick.d $a0, $a0, 15, 0
+; CHECK-NEXT:    addi.d $sp, $fp, -64
+; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
+; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
+; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    ret
+  %x = icmp sgt <16 x i16> %a, %b
+  %res = bitcast <16 x i1> %x to i16
+  ret i16 %res
+}
+
+define i32 @xvmsk_sgt_v32i8(<32 x i8> %a, <32 x i8> %b) {
+; CHECK-LABEL: xvmsk_sgt_v32i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.d $sp, $sp, -64
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
+; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset 1, -8
+; CHECK-NEXT:    .cfi_offset 22, -16
+; CHECK-NEXT:    addi.d $fp, $sp, 64
+; CHECK-NEXT:    .cfi_def_cfa 22, 0
+; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
+; CHECK-NEXT:    xvslt.b $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvst $xr0, $sp, 0
+; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 1
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 2
+; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 3
+; CHECK-NEXT:    bstrins.d $a0, $a1, 3, 3
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 4
+; CHECK-NEXT:    bstrins.d $a0, $a1, 4, 4
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 5
+; CHECK-NEXT:    bstrins.d $a0, $a1, 5, 5
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 6
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 6
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 7
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 7
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 8
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 8
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 9
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 9
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 10
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 10
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 11
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 11
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 12
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 12
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 13
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 13
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 14
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 14
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 15
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 16
+; CHECK-NEXT:    slli.d $a1, $a1, 15
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 17
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 16
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 18
+; CHECK-NEXT:    slli.d $a1, $a1, 17
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 19
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 18
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 20
+; CHECK-NEXT:    slli.d $a1, $a1, 19
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 21
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 20
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 22
+; CHECK-NEXT:    slli.d $a1, $a1, 21
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 23
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 22
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 24
+; CHECK-NEXT:    slli.d $a1, $a1, 23
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 25
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 24
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 26
+; CHECK-NEXT:    slli.d $a1, $a1, 25
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 27
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 26
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 28
+; CHECK-NEXT:    slli.d $a1, $a1, 27
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 29
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 28
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 30
+; CHECK-NEXT:    slli.d $a1, $a1, 29
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.b $a1, $sp, 31
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 30
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    slli.d $a1, $a1, 31
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    bstrpick.d $a0, $a0, 31, 0
+; CHECK-NEXT:    addi.d $sp, $fp, -64
+; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
+; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
+; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    ret
+  %x = icmp sgt <32 x i8> %a, %b
+  %res = bitcast <32 x i1> %x to i32
+  ret i32 %res
+}
+
+define i4 @xvmsk_sgt_and_sgt_v4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64> %c, <4 x i64> %d) {
+; CHECK-LABEL: xvmsk_sgt_and_sgt_v4i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.d $sp, $sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    xvslt.d $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvslt.d $xr1, $xr3, $xr2
+; CHECK-NEXT:    xvand.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 0
+; CHECK-NEXT:    xvpickve2gr.d $a1, $xr0, 1
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 1
+; CHECK-NEXT:    sub.d $a0, $a1, $a0
+; CHECK-NEXT:    xvpickve2gr.d $a1, $xr0, 2
+; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
+; CHECK-NEXT:    xvpickve2gr.d $a1, $xr0, 3
+; CHECK-NEXT:    slli.d $a1, $a1, 3
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    andi $a0, $a0, 15
+; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    ret
+  %x0 = icmp sgt <4 x i64> %a, %b
+  %x1 = icmp sgt <4 x i64> %c, %d
+  %y = and <4 x i1> %x0, %x1
+  %res = bitcast <4 x i1> %y to i4
+  ret i4 %res
+}
+
+define i4 @xvmsk_ogt_and_ogt_v4f64(<4 x double> %a, <4 x double> %b, <4 x double> %c, <4 x double> %d) {
+; CHECK-LABEL: xvmsk_ogt_and_ogt_v4f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.d $sp, $sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    xvfcmp.clt.d $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvfcmp.clt.d $xr1, $xr3, $xr2
+; CHECK-NEXT:    xvand.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 0
+; CHECK-NEXT:    xvpickve2gr.d $a1, $xr0, 1
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 1
+; CHECK-NEXT:    sub.d $a0, $a1, $a0
+; CHECK-NEXT:    xvpickve2gr.d $a1, $xr0, 2
+; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
+; CHECK-NEXT:    xvpickve2gr.d $a1, $xr0, 3
+; CHECK-NEXT:    slli.d $a1, $a1, 3
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    andi $a0, $a0, 15
+; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    ret
+  %x0 = fcmp ogt <4 x double> %a, %b
+  %x1 = fcmp ogt <4 x double> %c, %d
+  %y = and <4 x i1> %x0, %x1
+  %res = bitcast <4 x i1> %y to i4
+  ret i4 %res
+}
+
+define i8 @xvmsk_sgt_and_sgt_v8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d) {
+; CHECK-LABEL: xvmsk_sgt_and_sgt_v8i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.d $sp, $sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    xvslt.w $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvslt.w $xr1, $xr3, $xr2
+; CHECK-NEXT:    xvand.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 0
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 1
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 2
+; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 3
+; CHECK-NEXT:    bstrins.d $a0, $a1, 3, 3
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 4
+; CHECK-NEXT:    bstrins.d $a0, $a1, 4, 4
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 5
+; CHECK-NEXT:    bstrins.d $a0, $a1, 5, 5
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 6
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 6
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 7
+; CHECK-NEXT:    slli.d $a1, $a1, 7
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    andi $a0, $a0, 255
+; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    ret
+  %x0 = icmp sgt <8 x i32> %a, %b
+  %x1 = icmp sgt <8 x i32> %c, %d
+  %y = and <8 x i1> %x0, %x1
+  %res = bitcast <8 x i1> %y to i8
+  ret i8 %res
+}
+
+define i8 @xvmsk_sgt_or_sgt_v8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d) {
+; CHECK-LABEL: xvmsk_sgt_or_sgt_v8i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.d $sp, $sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    xvslt.w $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvslt.w $xr1, $xr3, $xr2
+; CHECK-NEXT:    xvor.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 0
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 1
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 2
+; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 3
+; CHECK-NEXT:    bstrins.d $a0, $a1, 3, 3
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 4
+; CHECK-NEXT:    bstrins.d $a0, $a1, 4, 4
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 5
+; CHECK-NEXT:    bstrins.d $a0, $a1, 5, 5
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 6
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 6
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 7
+; CHECK-NEXT:    slli.d $a1, $a1, 7
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    andi $a0, $a0, 255
+; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    ret
+  %x0 = icmp sgt <8 x i32> %a, %b
+  %x1 = icmp sgt <8 x i32> %c, %d
+  %y = or <8 x i1> %x0, %x1
+  %res = bitcast <8 x i1> %y to i8
+  ret i8 %res
+}
+
+define i8 @xvmsk_sgt_or_slt_and_eq_v8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d, <8 x i32> %e, <8 x i32> %f) {
+; CHECK-LABEL: xvmsk_sgt_or_slt_and_eq_v8i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.d $sp, $sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    xvslt.w $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvslt.w $xr1, $xr2, $xr3
+; CHECK-NEXT:    xvseq.w $xr2, $xr4, $xr5
+; CHECK-NEXT:    xvor.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvand.v $xr0, $xr0, $xr2
+; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 0
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 1
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 2
+; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 3
+; CHECK-NEXT:    bstrins.d $a0, $a1, 3, 3
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 4
+; CHECK-NEXT:    bstrins.d $a0, $a1, 4, 4
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 5
+; CHECK-NEXT:    bstrins.d $a0, $a1, 5, 5
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 6
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 6
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 7
+; CHECK-NEXT:    slli.d $a1, $a1, 7
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    andi $a0, $a0, 255
+; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    ret
+  %x0 = icmp sgt <8 x i32> %a, %b
+  %x1 = icmp slt <8 x i32> %c, %d
+  %x2 = icmp eq <8 x i32> %e, %f
+  %y = or <8 x i1> %x0, %x1
+  %z = and <8 x i1> %y, %x2
+  %res = bitcast <8 x i1> %z to i8
+  ret i8 %res
+}
+
+define i8 @xvmsk_eq_vsel_slt_v8i32(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2) {
+; CHECK-LABEL: xvmsk_eq_vsel_slt_v8i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.d $sp, $sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    xvseq.w $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvslti.w $xr1, $xr2, 0
+; CHECK-NEXT:    xvor.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 0
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 1
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 2
+; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 3
+; CHECK-NEXT:    bstrins.d $a0, $a1, 3, 3
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 4
+; CHECK-NEXT:    bstrins.d $a0, $a1, 4, 4
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 5
+; CHECK-NEXT:    bstrins.d $a0, $a1, 5, 5
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 6
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 6
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 7
+; CHECK-NEXT:    slli.d $a1, $a1, 7
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    andi $a0, $a0, 255
+; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    ret
+  %cmp = icmp eq <8 x i32> %a0, %a1
+  %slt = icmp slt <8 x i32> %a2, zeroinitializer
+  %sel = select <8 x i1> %cmp, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i1> %slt
+  %res = bitcast <8 x i1> %sel to i8
+  ret i8 %res
+}
+
+define i8 @xvmsk_sel_eq_or_eq_or_slt_v8i32(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2, <8 x i32> %a3, i1 %a4) {
+; CHECK-LABEL: xvmsk_sel_eq_or_eq_or_slt_v8i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.d $sp, $sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    andi $a0, $a0, 1
+; CHECK-NEXT:    xvseq.w $xr1, $xr0, $xr1
+; CHECK-NEXT:    xvseq.w $xr0, $xr0, $xr2
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 0
+; CHECK-NEXT:    vinsgr2vr.h $vr2, $a1, 0
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 1
+; CHECK-NEXT:    vinsgr2vr.h $vr2, $a1, 1
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 2
+; CHECK-NEXT:    vinsgr2vr.h $vr2, $a1, 2
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 3
+; CHECK-NEXT:    vinsgr2vr.h $vr2, $a1, 3
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 4
+; CHECK-NEXT:    vinsgr2vr.h $vr2, $a1, 4
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 5
+; CHECK-NEXT:    vinsgr2vr.h $vr2, $a1, 5
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 6
+; CHECK-NEXT:    vinsgr2vr.h $vr2, $a1, 6
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 7
+; CHECK-NEXT:    vinsgr2vr.h $vr2, $a1, 7
+; CHECK-NEXT:    xvslti.w $xr0, $xr3, 0
+; CHECK-NEXT:    addi.d $a1, $zero, -1
+; CHECK-NEXT:    maskeqz $a0, $a1, $a0
+; CHECK-NEXT:    vreplgr2vr.h $vr3, $a0
+; CHECK-NEXT:    vand.v $vr2, $vr2, $vr3
+; CHECK-NEXT:    xvor.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 0
+; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 0
+; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 1
+; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 1
+; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 2
+; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 2
+; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 3
+; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 3
+; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 4
+; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 4
+; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 5
+; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 5
+; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 6
+; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 6
+; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 7
+; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 7
+; CHECK-NEXT:    vor.v $vr0, $vr1, $vr2
+; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 0
+; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 1
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
+; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 2
+; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
+; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 3
+; CHECK-NEXT:    bstrins.d $a0, $a1, 3, 3
+; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 4
+; CHECK-NEXT:    bstrins.d $a0, $a1, 4, 4
+; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 5
+; CHECK-NEXT:    bstrins.d $a0, $a1, 5, 5
+; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 6
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 6
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 7
+; CHECK-NEXT:    slli.d $a1, $a1, 7
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    andi $a0, $a0, 255
+; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    ret
+  %cmp0 = icmp eq <8 x i32> %a0, %a1
+  %cmp1 = icmp eq <8 x i32> %a0, %a2
+  %cmp2 = icmp slt <8 x i32> %a3, zeroinitializer
+  %sel = select i1 %a4, <8 x i1> %cmp1, <8 x i1> zeroinitializer
+  %or0 = or <8 x i1> %cmp2, %cmp0
+  %or1 = or <8 x i1> %or0, %sel
+  %res = bitcast <8 x i1> %or1 to i8
+  ret i8 %res
+}
+
+define i8 @xvmsk_ogt_and_ogt_v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x float> %d) {
+; CHECK-LABEL: xvmsk_ogt_and_ogt_v8f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.d $sp, $sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    xvfcmp.clt.s $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvfcmp.clt.s $xr1, $xr3, $xr2
+; CHECK-NEXT:    xvand.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 0
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 1
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 2
+; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 3
+; CHECK-NEXT:    bstrins.d $a0, $a1, 3, 3
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 4
+; CHECK-NEXT:    bstrins.d $a0, $a1, 4, 4
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 5
+; CHECK-NEXT:    bstrins.d $a0, $a1, 5, 5
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 6
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 6
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 7
+; CHECK-NEXT:    slli.d $a1, $a1, 7
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    andi $a0, $a0, 255
+; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    ret
+  %x0 = fcmp ogt <8 x float> %a, %b
+  %x1 = fcmp ogt <8 x float> %c, %d
+  %y = and <8 x i1> %x0, %x1
+  %res = bitcast <8 x i1> %y to i8
+  ret i8 %res
+}
+
+define i8 @xvmsk_sgt_xor_sgt_v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x float> %d) {
+; CHECK-LABEL: xvmsk_sgt_xor_sgt_v8f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.d $sp, $sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    xvfcmp.clt.s $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvfcmp.clt.s $xr1, $xr3, $xr2
+; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 0
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 1
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 2
+; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 3
+; CHECK-NEXT:    bstrins.d $a0, $a1, 3, 3
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 4
+; CHECK-NEXT:    bstrins.d $a0, $a1, 4, 4
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 5
+; CHECK-NEXT:    bstrins.d $a0, $a1, 5, 5
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 6
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 6
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 7
+; CHECK-NEXT:    slli.d $a1, $a1, 7
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    andi $a0, $a0, 255
+; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    ret
+  %x0 = fcmp ogt <8 x float> %a, %b
+  %x1 = fcmp ogt <8 x float> %c, %d
+  %y = xor <8 x i1> %x0, %x1
+  %res = bitcast <8 x i1> %y to i8
+  ret i8 %res
+}
+
+define i8 @xvmsk_ugt_xor_ueq_and_ogt_v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x float> %d, <8 x float> %e, <8 x float> %f) {
+; CHECK-LABEL: xvmsk_ugt_xor_ueq_and_ogt_v8f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.d $sp, $sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    xvfcmp.cult.s $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvfcmp.cueq.s $xr1, $xr2, $xr3
+; CHECK-NEXT:    xvfcmp.clt.s $xr2, $xr5, $xr4
+; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvand.v $xr0, $xr0, $xr2
+; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 0
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 1
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 2
+; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 3
+; CHECK-NEXT:    bstrins.d $a0, $a1, 3, 3
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 4
+; CHECK-NEXT:    bstrins.d $a0, $a1, 4, 4
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 5
+; CHECK-NEXT:    bstrins.d $a0, $a1, 5, 5
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 6
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 6
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 7
+; CHECK-NEXT:    slli.d $a1, $a1, 7
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    andi $a0, $a0, 255
+; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    ret
+  %x0 = fcmp ugt <8 x float> %a, %b
+  %x1 = fcmp ueq <8 x float> %c, %d
+  %x2 = fcmp ogt <8 x float> %e, %f
+  %y = xor <8 x i1> %x0, %x1
+  %z = and <8 x i1> %y, %x2
+  %res = bitcast <8 x i1> %z to i8
+  ret i8 %res
+}
+
+define i16 @xvmsk_sgt_and_sgt_v16i16(<16 x i16> %a, <16 x i16> %b, <16 x i16> %c, <16 x i16> %d) {
+; CHECK-LABEL: xvmsk_sgt_and_sgt_v16i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.d $sp, $sp, -64
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
+; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset 1, -8
+; CHECK-NEXT:    .cfi_offset 22, -16
+; CHECK-NEXT:    addi.d $fp, $sp, 64
+; CHECK-NEXT:    .cfi_def_cfa 22, 0
+; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
+; CHECK-NEXT:    xvslt.h $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvslt.h $xr1, $xr3, $xr2
+; CHECK-NEXT:    xvand.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvst $xr0, $sp, 0
+; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 0
+; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 1
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
+; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 2
+; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
+; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 3
+; CHECK-NEXT:    bstrins.d $a0, $a1, 3, 3
+; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 4
+; CHECK-NEXT:    bstrins.d $a0, $a1, 4, 4
+; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 5
+; CHECK-NEXT:    bstrins.d $a0, $a1, 5, 5
+; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 6
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 6
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 7
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.hu $a2, $sp, 16
+; CHECK-NEXT:    slli.d $a1, $a1, 7
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.hu $a1, $sp, 18
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 8
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.hu $a2, $sp, 20
+; CHECK-NEXT:    slli.d $a1, $a1, 9
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.hu $a1, $sp, 22
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 10
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.hu $a2, $sp, 24
+; CHECK-NEXT:    slli.d $a1, $a1, 11
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.hu $a1, $sp, 26
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 12
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.hu $a2, $sp, 28
+; CHECK-NEXT:    slli.d $a1, $a1, 13
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.h $a1, $sp, 30
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 14
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    slli.d $a1, $a1, 15
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    bstrpick.d $a0, $a0, 15, 0
+; CHECK-NEXT:    addi.d $sp, $fp, -64
+; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
+; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
+; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    ret
+  %x0 = icmp sgt <16 x i16> %a, %b
+  %x1 = icmp sgt <16 x i16> %c, %d
+  %y = and <16 x i1> %x0, %x1
+  %res = bitcast <16 x i1> %y to i16
+  ret i16 %res
+}
+
+define i32 @xvmsk_sgt_and_sgt_v32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8> %c, <32 x i8> %d) {
+; CHECK-LABEL: xvmsk_sgt_and_sgt_v32i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.d $sp, $sp, -64
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
+; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset 1, -8
+; CHECK-NEXT:    .cfi_offset 22, -16
+; CHECK-NEXT:    addi.d $fp, $sp, 64
+; CHECK-NEXT:    .cfi_def_cfa 22, 0
+; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
+; CHECK-NEXT:    xvslt.b $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvslt.b $xr1, $xr3, $xr2
+; CHECK-NEXT:    xvand.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvst $xr0, $sp, 0
+; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 1
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 2
+; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 3
+; CHECK-NEXT:    bstrins.d $a0, $a1, 3, 3
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 4
+; CHECK-NEXT:    bstrins.d $a0, $a1, 4, 4
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 5
+; CHECK-NEXT:    bstrins.d $a0, $a1, 5, 5
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 6
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 6
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 7
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 7
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 8
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 8
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 9
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 9
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 10
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 10
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 11
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 11
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 12
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 12
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 13
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 13
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 14
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 14
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 15
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 16
+; CHECK-NEXT:    slli.d $a1, $a1, 15
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 17
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 16
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 18
+; CHECK-NEXT:    slli.d $a1, $a1, 17
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 19
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 18
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 20
+; CHECK-NEXT:    slli.d $a1, $a1, 19
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 21
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 20
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 22
+; CHECK-NEXT:    slli.d $a1, $a1, 21
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 23
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 22
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 24
+; CHECK-NEXT:    slli.d $a1, $a1, 23
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 25
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 24
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 26
+; CHECK-NEXT:    slli.d $a1, $a1, 25
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 27
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 26
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 28
+; CHECK-NEXT:    slli.d $a1, $a1, 27
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 29
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 28
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 30
+; CHECK-NEXT:    slli.d $a1, $a1, 29
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.b $a1, $sp, 31
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 30
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    slli.d $a1, $a1, 31
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    bstrpick.d $a0, $a0, 31, 0
+; CHECK-NEXT:    addi.d $sp, $fp, -64
+; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
+; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
+; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    ret
+  %x0 = icmp sgt <32 x i8> %a, %b
+  %x1 = icmp sgt <32 x i8> %c, %d
+  %y = and <32 x i1> %x0, %x1
+  %res = bitcast <32 x i1> %y to i32
+  ret i32 %res
+}
+
+define i8 @xvmsk_eq_v2i64_concat_poison(<2 x i64> %vec) {
+; CHECK-LABEL: xvmsk_eq_v2i64_concat_poison:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.d $sp, $sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    vseqi.d $vr0, $vr0, 0
+; CHECK-NEXT:    vpickve2gr.d $a0, $vr0, 0
+; CHECK-NEXT:    vpickve2gr.d $a1, $vr0, 1
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 1
+; CHECK-NEXT:    sub.d $a0, $a1, $a0
+; CHECK-NEXT:    andi $a0, $a0, 255
+; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    ret
+  %tobool = icmp eq <2 x i64> %vec, zeroinitializer
+  %insertvec = shufflevector <2 x i1> %tobool, <2 x i1> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %res = bitcast <8 x i1> %insertvec to i8
+  ret i8 %res
+}
+
+define i8 @xvmsk_ne_v4i32_concat_poison(<4 x i32> %vec) {
+; CHECK-LABEL: xvmsk_ne_v4i32_concat_poison:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.d $sp, $sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    vseqi.w $vr0, $vr0, 0
+; CHECK-NEXT:    vrepli.b $vr1, -1
+; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 0
+; CHECK-NEXT:    vpickve2gr.w $a1, $vr0, 1
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
+; CHECK-NEXT:    vpickve2gr.w $a1, $vr0, 2
+; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
+; CHECK-NEXT:    vpickve2gr.w $a1, $vr0, 3
+; CHECK-NEXT:    bstrins.d $a0, $a1, 3, 3
+; CHECK-NEXT:    andi $a0, $a0, 255
+; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    ret
+  %tobool = icmp ne <4 x i32> %vec, zeroinitializer
+  %insertvec = shufflevector <4 x i1> %tobool, <4 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+  %res = bitcast <8 x i1> %insertvec to i8
+  ret i8 %res
+}
+
+define i8 @xvmsk_ogt_v4f64_concat_poison(<4 x double> %vec) {
+; CHECK-LABEL: xvmsk_ogt_v4f64_concat_poison:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.d $sp, $sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    xvrepli.b $xr1, 0
+; CHECK-NEXT:    xvfcmp.clt.d $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 3
+; CHECK-NEXT:    xvpickve2gr.d $a1, $xr0, 2
+; CHECK-NEXT:    xvpickve2gr.d $a2, $xr0, 0
+; CHECK-NEXT:    xvpickve2gr.d $a3, $xr0, 1
+; CHECK-NEXT:    andi $a3, $a3, 1
+; CHECK-NEXT:    bstrins.d $a2, $a3, 63, 1
+; CHECK-NEXT:    bstrins.d $a2, $a1, 2, 2
+; CHECK-NEXT:    bstrins.d $a2, $a0, 3, 3
+; CHECK-NEXT:    andi $a0, $a2, 255
+; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    ret
+  %tobool = fcmp ogt <4 x double> %vec, zeroinitializer
+  %insertvec = shufflevector <4 x i1> %tobool, <4 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+  %res = bitcast <8 x i1> %insertvec to i8
+  ret i8 %res
+}
+
+define i32 @xvmsk_trunc_i8(<32 x i8> %a) {
+; CHECK-LABEL: xvmsk_trunc_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.d $sp, $sp, -64
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
+; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset 1, -8
+; CHECK-NEXT:    .cfi_offset 22, -16
+; CHECK-NEXT:    addi.d $fp, $sp, 64
+; CHECK-NEXT:    .cfi_def_cfa 22, 0
+; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
+; CHECK-NEXT:    xvst $xr0, $sp, 0
+; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 1
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 2
+; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 3
+; CHECK-NEXT:    bstrins.d $a0, $a1, 3, 3
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 4
+; CHECK-NEXT:    bstrins.d $a0, $a1, 4, 4
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 5
+; CHECK-NEXT:    bstrins.d $a0, $a1, 5, 5
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 6
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 6
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 7
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 7
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 8
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 8
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 9
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 9
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 10
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 10
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 11
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 11
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 12
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 12
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 13
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 13
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 14
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 14
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 15
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 16
+; CHECK-NEXT:    slli.d $a1, $a1, 15
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 17
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 16
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 18
+; CHECK-NEXT:    slli.d $a1, $a1, 17
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 19
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 18
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 20
+; CHECK-NEXT:    slli.d $a1, $a1, 19
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 21
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 20
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 22
+; CHECK-NEXT:    slli.d $a1, $a1, 21
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 23
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 22
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 24
+; CHECK-NEXT:    slli.d $a1, $a1, 23
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 25
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 24
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 26
+; CHECK-NEXT:    slli.d $a1, $a1, 25
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 27
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 26
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 28
+; CHECK-NEXT:    slli.d $a1, $a1, 27
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.bu $a1, $sp, 29
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 28
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.bu $a2, $sp, 30
+; CHECK-NEXT:    slli.d $a1, $a1, 29
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.b $a1, $sp, 31
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 30
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    slli.d $a1, $a1, 31
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    bstrpick.d $a0, $a0, 31, 0
+; CHECK-NEXT:    addi.d $sp, $fp, -64
+; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
+; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
+; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    ret
+  %y = trunc <32 x i8> %a to <32 x i1>
+  %res = bitcast <32 x i1> %y to i32
+  ret i32 %res
+}
+
+define i16 @xvmsk_trunc_i16(<16 x i16> %a) {
+; CHECK-LABEL: xvmsk_trunc_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.d $sp, $sp, -64
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
+; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset 1, -8
+; CHECK-NEXT:    .cfi_offset 22, -16
+; CHECK-NEXT:    addi.d $fp, $sp, 64
+; CHECK-NEXT:    .cfi_def_cfa 22, 0
+; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
+; CHECK-NEXT:    xvst $xr0, $sp, 0
+; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 0
+; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 1
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
+; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 2
+; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
+; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 3
+; CHECK-NEXT:    bstrins.d $a0, $a1, 3, 3
+; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 4
+; CHECK-NEXT:    bstrins.d $a0, $a1, 4, 4
+; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 5
+; CHECK-NEXT:    bstrins.d $a0, $a1, 5, 5
+; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 6
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 6
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 7
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.hu $a2, $sp, 16
+; CHECK-NEXT:    slli.d $a1, $a1, 7
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.hu $a1, $sp, 18
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 8
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.hu $a2, $sp, 20
+; CHECK-NEXT:    slli.d $a1, $a1, 9
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.hu $a1, $sp, 22
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 10
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.hu $a2, $sp, 24
+; CHECK-NEXT:    slli.d $a1, $a1, 11
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.hu $a1, $sp, 26
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 12
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    ld.hu $a2, $sp, 28
+; CHECK-NEXT:    slli.d $a1, $a1, 13
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ld.h $a1, $sp, 30
+; CHECK-NEXT:    andi $a2, $a2, 1
+; CHECK-NEXT:    slli.d $a2, $a2, 14
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    slli.d $a1, $a1, 15
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    bstrpick.d $a0, $a0, 15, 0
+; CHECK-NEXT:    addi.d $sp, $fp, -64
+; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
+; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
+; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    ret
+  %y = trunc <16 x i16> %a to <16 x i1>
+  %res = bitcast <16 x i1> %y to i16
+  ret i16 %res
+}
+
+define i8 @xvmsk_trunc_i32(<8 x i32> %a) {
+; CHECK-LABEL: xvmsk_trunc_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.d $sp, $sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 0
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 1
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 2
+; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 3
+; CHECK-NEXT:    bstrins.d $a0, $a1, 3, 3
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 4
+; CHECK-NEXT:    bstrins.d $a0, $a1, 4, 4
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 5
+; CHECK-NEXT:    bstrins.d $a0, $a1, 5, 5
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 6
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    slli.d $a1, $a1, 6
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 7
+; CHECK-NEXT:    slli.d $a1, $a1, 7
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    andi $a0, $a0, 255
+; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    ret
+  %y = trunc <8 x i32> %a to <8 x i1>
+  %res = bitcast <8 x i1> %y to i8
+  ret i8 %res
+}
+
+define i4 @xvmsk_trunc_i64(<4 x i64> %a) {
+; CHECK-LABEL: xvmsk_trunc_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.d $sp, $sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 0
+; CHECK-NEXT:    xvpickve2gr.d $a1, $xr0, 1
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
+; CHECK-NEXT:    xvpickve2gr.d $a1, $xr0, 2
+; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
+; CHECK-NEXT:    xvpickve2gr.d $a1, $xr0, 3
+; CHECK-NEXT:    slli.d $a1, $a1, 3
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    andi $a0, $a0, 15
+; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    ret
+  %y = trunc <4 x i64> %a to <4 x i1>
+  %res = bitcast <4 x i1> %y to i4
+  ret i4 %res
 }

@@ -249,3 +249,19 @@ if.then:
 if.end:
   ret i32 1;
 }
+
+define <1 x i64> @test_zext_half(<1 x half> %v1) {
+; CHECK-LABEL: test_zext_half:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-NEXT:    fmov d1, x8
+; CHECK-NEXT:    fcmgt v0.4s, v0.4s, #0.0
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    ret
+  %1 = fcmp ogt <1 x half> %v1, zeroinitializer
+  %2 = zext <1 x i1> %1 to <1 x i64>
+  ret <1 x i64> %2
+}

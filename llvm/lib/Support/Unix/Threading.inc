@@ -318,6 +318,7 @@ static int computeHostNumHardwareThreads() {
     return CPU_COUNT(&mask);
 #elif defined(__linux__)
   cpu_set_t Set;
+  CPU_ZERO(&Set);
   if (sched_getaffinity(0, sizeof(Set), &Set) == 0)
     return CPU_COUNT(&Set);
 #endif

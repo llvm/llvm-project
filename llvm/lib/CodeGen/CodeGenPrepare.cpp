@@ -5945,8 +5945,17 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
   // The current BB may be optimized multiple times, we can't guarantee the
   // reuse of Addr happens later, call findInsertPos to find an appropriate
   // insert position.
-  IRBuilder<> Builder(MemoryInst->getParent(),
-                      findInsertPos(Addr, MemoryInst, SunkAddr));
+  auto InsertPos = findInsertPos(Addr, MemoryInst, SunkAddr);
+
+  // TODO: Adjust insert point considering (Base|Scaled)Reg if possible.
+  if (!SunkAddr) {
+    auto &DT = getDT(*MemoryInst->getFunction());
+    if ((AddrMode.BaseReg && !DT.dominates(AddrMode.BaseReg, &*InsertPos)) ||
+        (AddrMode.ScaledReg && !DT.dominates(AddrMode.ScaledReg, &*InsertPos)))
+      return Modified;
+  }
+
+  IRBuilder<> Builder(MemoryInst->getParent(), InsertPos);
 
   if (SunkAddr) {
     LLVM_DEBUG(dbgs() << "CGP: Reusing nonlocal addrmode: " << AddrMode
