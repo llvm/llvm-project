@@ -37,6 +37,8 @@ using StringElementType = StringPrinter::StringElementType;
 static constexpr std::pair<const char *, Format>
 getElementTraits(StringElementType ElemType) {
   switch (ElemType) {
+  case StringElementType::ASCII:
+    return std::make_pair("", lldb::eFormatUnicode8);
   case StringElementType::UTF8:
     return std::make_pair("u8", lldb::eFormatUnicode8);
   case StringElementType::UTF16:
@@ -49,7 +51,8 @@ getElementTraits(StringElementType ElemType) {
 }
 
 template <StringElementType ElemType>
-static bool CharStringSummaryProvider(ValueObject &valobj, Stream &stream) {
+bool lldb_private::formatters::CharTStringSummaryProvider(ValueObject &valobj,
+                                                          Stream &stream) {
   Address valobj_addr = GetArrayAddressOrPointerValue(valobj);
   if (!valobj_addr.IsValid())
     return false;
@@ -65,6 +68,11 @@ static bool CharStringSummaryProvider(ValueObject &valobj, Stream &stream) {
 
   return true;
 }
+
+// explicit instantiation for ASCII strings
+template bool
+lldb_private::formatters::CharTStringSummaryProvider<StringElementType::ASCII>(
+    ValueObject &, Stream &);
 
 template <StringElementType ElemType>
 static bool CharSummaryProvider(ValueObject &valobj, Stream &stream) {
@@ -96,17 +104,17 @@ static bool CharSummaryProvider(ValueObject &valobj, Stream &stream) {
 
 bool lldb_private::formatters::Char8StringSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &) {
-  return CharStringSummaryProvider<StringElementType::UTF8>(valobj, stream);
+  return CharTStringSummaryProvider<StringElementType::UTF8>(valobj, stream);
 }
 
 bool lldb_private::formatters::Char16StringSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &) {
-  return CharStringSummaryProvider<StringElementType::UTF16>(valobj, stream);
+  return CharTStringSummaryProvider<StringElementType::UTF16>(valobj, stream);
 }
 
 bool lldb_private::formatters::Char32StringSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &) {
-  return CharStringSummaryProvider<StringElementType::UTF32>(valobj, stream);
+  return CharTStringSummaryProvider<StringElementType::UTF32>(valobj, stream);
 }
 
 bool lldb_private::formatters::WCharStringSummaryProvider(
@@ -116,15 +124,7 @@ bool lldb_private::formatters::WCharStringSummaryProvider(
     return false;
 
   // Get a wchar_t basic type from the current type system
-  CompilerType wchar_compiler_type =
-      valobj.GetCompilerType().GetBasicTypeFromAST(lldb::eBasicTypeWChar);
-
-  if (!wchar_compiler_type)
-    return false;
-
-  // Safe to pass nullptr for exe_scope here.
-  std::optional<uint64_t> size =
-      llvm::expectedToOptional(wchar_compiler_type.GetBitSize(nullptr));
+  std::optional<uint64_t> size = GetWCharByteSize(*valobj.GetTargetSP());
   if (!size)
     return false;
   const uint32_t wchar_size = *size;
@@ -136,13 +136,13 @@ bool lldb_private::formatters::WCharStringSummaryProvider(
   options.SetPrefixToken("L");
 
   switch (wchar_size) {
-  case 8:
+  case 1:
     return StringPrinter::ReadStringAndDumpToStream<StringElementType::UTF8>(
         options);
-  case 16:
+  case 2:
     return StringPrinter::ReadStringAndDumpToStream<StringElementType::UTF16>(
         options);
-  case 32:
+  case 4:
     return StringPrinter::ReadStringAndDumpToStream<StringElementType::UTF32>(
         options);
   default:
@@ -177,15 +177,7 @@ bool lldb_private::formatters::WCharSummaryProvider(
     return false;
 
   // Get a wchar_t basic type from the current type system
-  CompilerType wchar_compiler_type =
-      valobj.GetCompilerType().GetBasicTypeFromAST(lldb::eBasicTypeWChar);
-
-  if (!wchar_compiler_type)
-    return false;
-
-    // Safe to pass nullptr for exe_scope here.
-  std::optional<uint64_t> size =
-      llvm::expectedToOptional(wchar_compiler_type.GetBitSize(nullptr));
+  std::optional<uint64_t> size = GetWCharByteSize(*valobj.GetTargetSP());
   if (!size)
     return false;
   const uint32_t wchar_size = *size;
@@ -199,13 +191,13 @@ bool lldb_private::formatters::WCharSummaryProvider(
   options.SetBinaryZeroIsTerminator(false);
 
   switch (wchar_size) {
-  case 8:
+  case 1:
     return StringPrinter::ReadBufferAndDumpToStream<StringElementType::UTF8>(
         options);
-  case 16:
+  case 2:
     return StringPrinter::ReadBufferAndDumpToStream<StringElementType::UTF16>(
         options);
-  case 32:
+  case 4:
     return StringPrinter::ReadBufferAndDumpToStream<StringElementType::UTF32>(
         options);
   default:
@@ -214,3 +206,76 @@ bool lldb_private::formatters::WCharSummaryProvider(
   }
   return true;
 }
+
+std::optional<uint64_t>
+lldb_private::formatters::GetWCharByteSize(Target &target) {
+  TypeSystemClangSP scratch_ts_sp =
+      ScratchTypeSystemClang::GetForTarget(target);
+  if (!scratch_ts_sp)
+    return {};
+
+  return llvm::expectedToOptional(
+      scratch_ts_sp->GetBasicType(lldb::eBasicTypeWChar).GetByteSize(nullptr));
+}
+
+template <StringPrinter::StringElementType element_type>
+bool lldb_private::formatters::StringBufferSummaryProvider(
+    Stream &stream, const TypeSummaryOptions &summary_options,
+    lldb::ValueObjectSP location_sp, uint64_t size, std::string prefix_token) {
+
+  if (size == 0) {
+    stream.PutCString(prefix_token);
+    stream.PutCString("\"\"");
+    return true;
+  }
+
+  if (!location_sp)
+    return false;
+
+  StringPrinter::ReadBufferAndDumpToStreamOptions options(*location_sp);
+
+  if (summary_options.GetCapping() == TypeSummaryCapping::eTypeSummaryCapped) {
+    const auto max_size =
+        location_sp->GetTargetSP()->GetMaximumSizeOfStringSummary();
+    if (size > max_size) {
+      size = max_size;
+      options.SetIsTruncated(true);
+    }
+  }
+
+  {
+    DataExtractor extractor;
+    const size_t bytes_read = location_sp->GetPointeeData(extractor, 0, size);
+    if (bytes_read < size)
+      return false;
+
+    options.SetData(std::move(extractor));
+  }
+  options.SetStream(&stream);
+  if (prefix_token.empty())
+    options.SetPrefixToken(nullptr);
+  else
+    options.SetPrefixToken(prefix_token);
+  options.SetQuote('"');
+  options.SetSourceSize(size);
+  options.SetBinaryZeroIsTerminator(false);
+  return StringPrinter::ReadBufferAndDumpToStream<element_type>(options);
+}
+
+// explicit instantiations for all string element types
+template bool
+lldb_private::formatters::StringBufferSummaryProvider<StringElementType::ASCII>(
+    Stream &, const TypeSummaryOptions &, lldb::ValueObjectSP, uint64_t,
+    std::string);
+template bool
+lldb_private::formatters::StringBufferSummaryProvider<StringElementType::UTF8>(
+    Stream &, const TypeSummaryOptions &, lldb::ValueObjectSP, uint64_t,
+    std::string);
+template bool
+lldb_private::formatters::StringBufferSummaryProvider<StringElementType::UTF16>(
+    Stream &, const TypeSummaryOptions &, lldb::ValueObjectSP, uint64_t,
+    std::string);
+template bool
+lldb_private::formatters::StringBufferSummaryProvider<StringElementType::UTF32>(
+    Stream &, const TypeSummaryOptions &, lldb::ValueObjectSP, uint64_t,
+    std::string);

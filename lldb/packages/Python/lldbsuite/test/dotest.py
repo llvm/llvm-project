@@ -831,6 +831,26 @@ def checkLibstdcxxSupport():
     configuration.skip_categories.append("libstdcxx")
 
 
+def canRunMsvcStlTests():
+    from lldbsuite.test import lldbplatformutil
+
+    platform = lldbplatformutil.getPlatform()
+    if platform == "windows":
+        return True, "MSVC STL is present on Windows"
+    return False, f"Don't know how to build with MSVC's STL on {platform}"
+
+
+def checkMsvcStlSupport():
+    result, reason = canRunMsvcStlTests()
+    if result:
+        return  # msvcstl supported
+    if "msvcstl" in configuration.categories_list:
+        return  # msvcstl category explicitly requested, let it run.
+    if configuration.verbose:
+        print(f"msvcstl tests will not be run because: {reason}")
+    configuration.skip_categories.append("msvcstl")
+
+
 def canRunWatchpointTests():
     from lldbsuite.test import lldbplatformutil
 
@@ -1044,6 +1064,7 @@ def run_suite():
 
     checkLibcxxSupport()
     checkLibstdcxxSupport()
+    checkMsvcStlSupport()
     checkWatchpointSupport()
     checkDebugInfoSupport()
     checkDebugServerSupport()
