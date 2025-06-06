@@ -108,10 +108,14 @@ define <2 x i64> @ashr_v2_metadata(<2 x i64> %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: ashr_v2_metadata:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
+; CHECK-NEXT:    flat_load_dwordx4 v[6:9], v[4:5]
+; CHECK-NEXT:    v_ashrrev_i32_e32 v5, 31, v1
+; CHECK-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_ashrrev_i64 v[0:1], v4, v[0:1]
-; CHECK-NEXT:    v_ashrrev_i64 v[2:3], v6, v[2:3]
+; CHECK-NEXT:    v_ashrrev_i32_e32 v0, v6, v1
+; CHECK-NEXT:    v_ashrrev_i32_e32 v2, v8, v3
+; CHECK-NEXT:    v_mov_b32_e32 v1, v5
+; CHECK-NEXT:    v_mov_b32_e32 v3, v4
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %shift.amt = load <2 x i64>, ptr %arg1.ptr, !range !0, !noundef !{}
   %ashr = ashr <2 x i64> %arg0, %shift.amt
@@ -123,10 +127,14 @@ define <2 x i64> @ashr_exact_v2_metadata(<2 x i64> %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: ashr_exact_v2_metadata:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
+; CHECK-NEXT:    flat_load_dwordx4 v[6:9], v[4:5]
+; CHECK-NEXT:    v_ashrrev_i32_e32 v5, 31, v1
+; CHECK-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_ashrrev_i64 v[0:1], v4, v[0:1]
-; CHECK-NEXT:    v_ashrrev_i64 v[2:3], v6, v[2:3]
+; CHECK-NEXT:    v_ashrrev_i32_e32 v0, v6, v1
+; CHECK-NEXT:    v_ashrrev_i32_e32 v2, v8, v3
+; CHECK-NEXT:    v_mov_b32_e32 v1, v5
+; CHECK-NEXT:    v_mov_b32_e32 v3, v4
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %shift.amt = load <2 x i64>, ptr %arg1.ptr, !range !0, !noundef !{}
   %ashr = ashr exact <2 x i64> %arg0, %shift.amt
@@ -137,12 +145,18 @@ define <3 x i64> @ashr_v3_metadata(<3 x i64> %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: ashr_v3_metadata:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_load_dword v12, v[6:7] offset:16
-; CHECK-NEXT:    flat_load_dwordx4 v[8:11], v[6:7]
+; CHECK-NEXT:    flat_load_dword v0, v[6:7] offset:16
+; CHECK-NEXT:    flat_load_dwordx4 v[9:12], v[6:7]
+; CHECK-NEXT:    v_ashrrev_i32_e32 v7, 31, v1
+; CHECK-NEXT:    v_ashrrev_i32_e32 v8, 31, v3
+; CHECK-NEXT:    v_ashrrev_i32_e32 v6, 31, v5
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_ashrrev_i64 v[4:5], v12, v[4:5]
-; CHECK-NEXT:    v_ashrrev_i64 v[0:1], v8, v[0:1]
-; CHECK-NEXT:    v_ashrrev_i64 v[2:3], v10, v[2:3]
+; CHECK-NEXT:    v_ashrrev_i32_e32 v4, v0, v5
+; CHECK-NEXT:    v_ashrrev_i32_e32 v0, v9, v1
+; CHECK-NEXT:    v_ashrrev_i32_e32 v2, v11, v3
+; CHECK-NEXT:    v_mov_b32_e32 v1, v7
+; CHECK-NEXT:    v_mov_b32_e32 v3, v8
+; CHECK-NEXT:    v_mov_b32_e32 v5, v6
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %shift.amt = load <3 x i64>, ptr %arg1.ptr, !range !0, !noundef !{}
   %ashr = ashr <3 x i64> %arg0, %shift.amt
@@ -153,15 +167,23 @@ define <4 x i64> @ashr_v4_metadata(<4 x i64> %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: ashr_v4_metadata:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_load_dwordx4 v[10:13], v[8:9]
+; CHECK-NEXT:    flat_load_dwordx4 v[12:15], v[8:9]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_load_dwordx4 v[13:16], v[8:9] offset:16
+; CHECK-NEXT:    flat_load_dwordx4 v[15:18], v[8:9] offset:16
 ; CHECK-NEXT:    ; kill: killed $vgpr8 killed $vgpr9
-; CHECK-NEXT:    v_ashrrev_i64 v[0:1], v10, v[0:1]
-; CHECK-NEXT:    v_ashrrev_i64 v[2:3], v12, v[2:3]
+; CHECK-NEXT:    v_ashrrev_i32_e32 v11, 31, v1
+; CHECK-NEXT:    v_ashrrev_i32_e32 v9, 31, v3
+; CHECK-NEXT:    v_ashrrev_i32_e32 v10, 31, v5
+; CHECK-NEXT:    v_ashrrev_i32_e32 v8, 31, v7
+; CHECK-NEXT:    v_ashrrev_i32_e32 v0, v12, v1
+; CHECK-NEXT:    v_ashrrev_i32_e32 v2, v14, v3
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_ashrrev_i64 v[4:5], v13, v[4:5]
-; CHECK-NEXT:    v_ashrrev_i64 v[6:7], v15, v[6:7]
+; CHECK-NEXT:    v_ashrrev_i32_e32 v4, v15, v5
+; CHECK-NEXT:    v_ashrrev_i32_e32 v6, v17, v7
+; CHECK-NEXT:    v_mov_b32_e32 v1, v11
+; CHECK-NEXT:    v_mov_b32_e32 v3, v9
+; CHECK-NEXT:    v_mov_b32_e32 v5, v10
+; CHECK-NEXT:    v_mov_b32_e32 v7, v8
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %shift.amt = load <4 x i64>, ptr %arg1.ptr, !range !0, !noundef !{}
   %ashr = ashr <4 x i64> %arg0, %shift.amt

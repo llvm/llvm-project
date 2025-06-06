@@ -5333,10 +5333,11 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
     break;
   }
   case ISD::SHL:
+  case ISD::SRA:
   case ISD::SRL: {
     // Range metadata can be invalidated when loads are converted to legal types
     // (e.g. v2i64 -> v4i32).
-    // Try to convert vector shl/srl before type legalization so that range
+    // Try to convert vector shl/sra/srl before type legalization so that range
     // metadata can be utilized.
     if (!(N->getValueType(0).isVector() &&
           DCI.getDAGCombineLevel() == BeforeLegalizeTypes) &&
@@ -5344,13 +5345,9 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
       break;
     if (N->getOpcode() == ISD::SHL)
       return performShlCombine(N, DCI);
+    if (N->getOpcode() == ISD::SRA)
+      return performSraCombine(N, DCI);
     return performSrlCombine(N, DCI);
-  }
-  case ISD::SRA: {
-    if (DCI.getDAGCombineLevel() < AfterLegalizeDAG)
-      break;
-
-    return performSraCombine(N, DCI);
   }
   case ISD::TRUNCATE:
     return performTruncateCombine(N, DCI);
