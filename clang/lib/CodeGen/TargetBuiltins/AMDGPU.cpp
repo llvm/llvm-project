@@ -2820,6 +2820,23 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case Builtin::BI__builtin_scalbn:
     return emitBinaryExpMaybeConstrainedFPBuiltin(
         *this, E, Intrinsic::ldexp, Intrinsic::experimental_constrained_ldexp);
+  case AMDGPU::BI__builtin_amdgcn_query_shared_rank:
+  case AMDGPU::BI__builtin_amdgcn_map_shared_rank: {
+    Intrinsic::ID IID;
+    switch (BuiltinID) {
+    case AMDGPU::BI__builtin_amdgcn_map_shared_rank:
+      IID = Intrinsic::amdgcn_map_shared_rank;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_query_shared_rank:
+      IID = Intrinsic::amdgcn_query_shared_rank;
+      break;
+    }
+    SmallVector<Value *, 2> Args;
+    for (int i = 0, e = E->getNumArgs(); i != e; ++i)
+      Args.push_back(EmitScalarExpr(E->getArg(i)));
+    llvm::Function *F = CGM.getIntrinsic(IID);
+    return Builder.CreateCall(F, {Args});
+  }
   default:
     return nullptr;
   }
