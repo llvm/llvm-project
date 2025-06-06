@@ -15,7 +15,8 @@
 // RUN:   -mlir-print-ir-after-all
 // RUN: test -f %t/builtin_module_outer/0_canonicalize.mlir
 // RUN: test -f %t/builtin_module_outer/1_canonicalize.mlir
-// RUN: test -f %t/builtin_module_outer/func_func_symA/1_0_cse.mlir
+// RUN: test -f %t/builtin_module_outer/func_func_sym_A/1_0_cse.mlir
+// RUN: test -f %t/builtin_module_outer/func_func_sym_backslash/1_0_cse.mlir
 // RUN: test -f %t/builtin_module_outer/builtin_module_inner/1_0_canonicalize.mlir
 // RUN: test -f %t/builtin_module_outer/builtin_module_inner/func_func_symB/1_0_0_cse.mlir
 // RUN: test -f %t/builtin_module_outer/builtin_module_inner/func_func_symB/1_0_1_canonicalize.mlir
@@ -26,7 +27,10 @@
 
 builtin.module @outer {
 
-  func.func @symA() {
+  func.func @"sym/A"() {
+    return
+  }
+  func.func @"sym\\backslash"() {
     return
   }
 
@@ -38,4 +42,6 @@ builtin.module @outer {
       return
     }
   }
+
+
 }

@@ -1322,9 +1322,8 @@ Value *LoopIdiomVectorize::expandFindFirstByte(
                                                   Needle0, "needle0");
   LoadNeedle = Builder.CreateSelect(PredNeedle, LoadNeedle, Needle0Splat,
                                     "needle_splat");
-  LoadNeedle =
-      Builder.CreateExtractVector(FixedVectorType::get(CharTy, VF), LoadNeedle,
-                                  ConstantInt::get(I64Ty, 0), "needle_vec");
+  LoadNeedle = Builder.CreateExtractVector(
+      FixedVectorType::get(CharTy, VF), LoadNeedle, uint64_t(0), "needle_vec");
 
   // (2.c) Test if there's a match.
   Value *MatchPred = Builder.CreateIntrinsic(

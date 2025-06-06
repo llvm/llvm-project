@@ -21,7 +21,7 @@ bb:
 
 ; CHECK:      .set .Laliasee_vgpr256_sgpr102.num_vgpr, 253
 ; CHECK-NEXT: .set .Laliasee_vgpr256_sgpr102.num_agpr, 0
-; CHECK-NEXT: .set .Laliasee_vgpr256_sgpr102.numbered_sgpr, 33
+; CHECK-NEXT: .set .Laliasee_vgpr256_sgpr102.numbered_sgpr, 0
 define internal void @aliasee_vgpr256_sgpr102() #1 {
 bb:
   call void asm sideeffect "; clobber v252 ", "~{v252}"()
@@ -32,5 +32,3 @@ attributes #0 = { noinline norecurse nounwind optnone }
 attributes #1 = { noinline norecurse nounwind readnone willreturn "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="1,1" }
 attributes #2 = { nounwind readnone willreturn }
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

@@ -145,7 +145,7 @@ template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
 
 template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
 [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI bool isgreater(_A1 __x, _A2 __y) _NOEXCEPT {
-  using type = typename __promote<_A1, _A2>::type;
+  using type = __promote_t<_A1, _A2>;
   return __builtin_isgreater((type)__x, (type)__y);
 }
 
@@ -153,7 +153,7 @@ template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_ar
 
 template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
 [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI bool isgreaterequal(_A1 __x, _A2 __y) _NOEXCEPT {
-  using type = typename __promote<_A1, _A2>::type;
+  using type = __promote_t<_A1, _A2>;
   return __builtin_isgreaterequal((type)__x, (type)__y);
 }
 
@@ -161,7 +161,7 @@ template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_ar
 
 template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
 [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI bool isless(_A1 __x, _A2 __y) _NOEXCEPT {
-  using type = typename __promote<_A1, _A2>::type;
+  using type = __promote_t<_A1, _A2>;
   return __builtin_isless((type)__x, (type)__y);
 }
 
@@ -169,7 +169,7 @@ template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_ar
 
 template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
 [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI bool islessequal(_A1 __x, _A2 __y) _NOEXCEPT {
-  using type = typename __promote<_A1, _A2>::type;
+  using type = __promote_t<_A1, _A2>;
   return __builtin_islessequal((type)__x, (type)__y);
 }
 
@@ -177,7 +177,7 @@ template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_ar
 
 template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
 [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI bool islessgreater(_A1 __x, _A2 __y) _NOEXCEPT {
-  using type = typename __promote<_A1, _A2>::type;
+  using type = __promote_t<_A1, _A2>;
   return __builtin_islessgreater((type)__x, (type)__y);
 }
 
@@ -185,7 +185,7 @@ template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_ar
 
 template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
 [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI bool isunordered(_A1 __x, _A2 __y) _NOEXCEPT {
-  using type = typename __promote<_A1, _A2>::type;
+  using type = __promote_t<_A1, _A2>;
   return __builtin_isunordered((type)__x, (type)__y);
 }
 

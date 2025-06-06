@@ -636,8 +636,8 @@ define void @pr30172(ptr nocapture %asd, ptr nocapture %bsd) !dbg !5 {;
 ; UNROLL-NO-VF-NEXT:    [[TMP13:%.*]] = icmp slt i32 [[TMP5]], 100
 ; UNROLL-NO-VF-NEXT:    [[TMP17:%.*]] = xor i1 [[TMP12]], true, !dbg [[DBG34:![0-9]+]]
 ; UNROLL-NO-VF-NEXT:    [[TMP14:%.*]] = xor i1 [[TMP13]], true, !dbg [[DBG34]]
-; UNROLL-NO-VF-NEXT:    [[TMP15:%.*]] = icmp sge i32 [[TMP4]], 200, !dbg [[DBG34]]
-; UNROLL-NO-VF-NEXT:    [[TMP16:%.*]] = icmp sge i32 [[TMP5]], 200, !dbg [[DBG34]]
+; UNROLL-NO-VF-NEXT:    [[TMP15:%.*]] = icmp sge i32 [[TMP4]], 200
+; UNROLL-NO-VF-NEXT:    [[TMP16:%.*]] = icmp sge i32 [[TMP5]], 200
 ; UNROLL-NO-VF-NEXT:    [[TMP18:%.*]] = select i1 [[TMP17]], i1 [[TMP15]], i1 false, !dbg [[DBG35:![0-9]+]]
 ; UNROLL-NO-VF-NEXT:    [[TMP19:%.*]] = select i1 [[TMP14]], i1 [[TMP16]], i1 false, !dbg [[DBG35]]
 ; UNROLL-NO-VF-NEXT:    [[TMP20:%.*]] = or i1 [[TMP18]], [[TMP12]]

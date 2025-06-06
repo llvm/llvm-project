@@ -22,64 +22,8 @@ class StringRef;
 
 class LoongArchMCExpr : public MCTargetExpr {
 public:
-  enum Specifier {
-    VK_None,
-    VK_CALL,
-    VK_CALL_PLT,
-    VK_B16,
-    VK_B21,
-    VK_B26,
-    VK_ABS_HI20,
-    VK_ABS_LO12,
-    VK_ABS64_LO20,
-    VK_ABS64_HI12,
-    VK_PCALA_HI20,
-    VK_PCALA_LO12,
-    VK_PCALA64_LO20,
-    VK_PCALA64_HI12,
-    VK_GOT_PC_HI20,
-    VK_GOT_PC_LO12,
-    VK_GOT64_PC_LO20,
-    VK_GOT64_PC_HI12,
-    VK_GOT_HI20,
-    VK_GOT_LO12,
-    VK_GOT64_LO20,
-    VK_GOT64_HI12,
-    VK_TLS_LE_HI20,
-    VK_TLS_LE_LO12,
-    VK_TLS_LE64_LO20,
-    VK_TLS_LE64_HI12,
-    VK_TLS_IE_PC_HI20,
-    VK_TLS_IE_PC_LO12,
-    VK_TLS_IE64_PC_LO20,
-    VK_TLS_IE64_PC_HI12,
-    VK_TLS_IE_HI20,
-    VK_TLS_IE_LO12,
-    VK_TLS_IE64_LO20,
-    VK_TLS_IE64_HI12,
-    VK_TLS_LD_PC_HI20,
-    VK_TLS_LD_HI20,
-    VK_TLS_GD_PC_HI20,
-    VK_TLS_GD_HI20,
-    VK_CALL36,
-    VK_TLS_DESC_PC_HI20,
-    VK_TLS_DESC_PC_LO12,
-    VK_TLS_DESC64_PC_LO20,
-    VK_TLS_DESC64_PC_HI12,
-    VK_TLS_DESC_HI20,
-    VK_TLS_DESC_LO12,
-    VK_TLS_DESC64_LO20,
-    VK_TLS_DESC64_HI12,
-    VK_TLS_DESC_LD,
-    VK_TLS_DESC_CALL,
-    VK_TLS_LE_HI20_R,
-    VK_TLS_LE_ADD_R,
-    VK_TLS_LE_LO12_R,
-    VK_PCREL20_S2,
-    VK_TLS_LD_PCREL20_S2,
-    VK_TLS_GD_PCREL20_S2,
-    VK_TLS_DESC_PCREL20_S2,
-  };
+  using Specifier = uint16_t;
+  enum { VK_None };
 
 private:
   const MCExpr *Expr;
@@ -90,7 +34,7 @@ private:
       : Expr(Expr), specifier(S), RelaxHint(Hint) {}
 
 public:
-  static const LoongArchMCExpr *create(const MCExpr *Expr, Specifier Kind,
+  static const LoongArchMCExpr *create(const MCExpr *Expr, uint16_t S,
                                        MCContext &Ctx, bool Hint = false);
 
   Specifier getSpecifier() const { return specifier; }
@@ -109,7 +53,7 @@ public:
     return E->getKind() == MCExpr::Target;
   }
 
-  static StringRef getSpecifierName(Specifier Kind);
+  static StringRef getSpecifierName(uint16_t S);
   static Specifier parseSpecifier(StringRef name);
 };
 

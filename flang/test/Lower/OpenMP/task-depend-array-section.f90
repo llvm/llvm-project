@@ -49,3 +49,36 @@ end subroutine
 ! CHECK:           }
 ! CHECK:           return
 ! CHECK:         }
+
+subroutine vectorSubscriptArraySection(array, indices)
+  integer :: array(:)
+  integer :: indices(:)
+
+  !$omp task depend (in: array(indices))
+  !$omp end task
+end subroutine
+! CHECK-LABEL:   func.func @_QPvectorsubscriptarraysection(
+! CHECK-SAME:                                              %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "array"},
+! CHECK-SAME:                                              %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "indices"}) {
+! CHECK:           %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_2]] {uniq_name = "_QFvectorsubscriptarraysectionEarray"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %[[VAL_2]] {uniq_name = "_QFvectorsubscriptarraysectionEindices"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+! CHECK:           %[[VAL_5:.*]] = arith.constant 0 : index
+! CHECK:           %[[VAL_6:.*]]:3 = fir.box_dims %[[VAL_4]]#0, %[[VAL_5]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
+! CHECK:           %[[VAL_7:.*]] = fir.shape %[[VAL_6]]#1 : (index) -> !fir.shape<1>
+! CHECK:           %[[VAL_8:.*]] = hlfir.elemental %[[VAL_7]] unordered : (!fir.shape<1>) -> !hlfir.expr<?xi64> {
+! CHECK:           ^bb0(%[[VAL_9:.*]]: index):
+! CHECK:             %[[VAL_10:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_9]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+! CHECK:             %[[VAL_11:.*]] = fir.load %[[VAL_10]] : !fir.ref<i32>
+! CHECK:             %[[VAL_12:.*]] = fir.convert %[[VAL_11]] : (i32) -> i64
+! CHECK:             hlfir.yield_element %[[VAL_12]] : i64
+! CHECK:           }
+! CHECK:           %[[VAL_13:.*]] = arith.constant 1 : index
+! CHECK:           %[[VAL_14:.*]] = hlfir.apply %[[VAL_8]], %[[VAL_13]] : (!hlfir.expr<?xi64>, index) -> i64
+! CHECK:           %[[VAL_15:.*]] = hlfir.designate %[[VAL_3]]#0 (%[[VAL_14]])  : (!fir.box<!fir.array<?xi32>>, i64) -> !fir.ref<i32>
+! CHECK:           omp.task depend(taskdependin -> %[[VAL_15]] : !fir.ref<i32>) {
+! CHECK:             omp.terminator
+! CHECK:           }
+! CHECK:           hlfir.destroy %[[VAL_8]] : !hlfir.expr<?xi64>
+! CHECK:           return
+! CHECK:         }

@@ -97,32 +97,32 @@ void lldb_private::formatters::AddFilter(
   category_sp->AddTypeFilter(type_name, match_type, filter_sp);
 }
 
-size_t lldb_private::formatters::ExtractIndexFromString(const char *item_name) {
+std::optional<size_t>
+lldb_private::formatters::ExtractIndexFromString(const char *item_name) {
   if (!item_name || !*item_name)
-    return UINT32_MAX;
+    return std::nullopt;
   if (*item_name != '[')
-    return UINT32_MAX;
+    return std::nullopt;
   item_name++;
   char *endptr = nullptr;
   unsigned long int idx = ::strtoul(item_name, &endptr, 0);
-  if (idx == 0 && endptr == item_name)
-    return UINT32_MAX;
-  if (idx == ULONG_MAX)
-    return UINT32_MAX;
+  if ((idx == 0 && endptr == item_name) || idx == ULONG_MAX)
+    return std::nullopt;
   return idx;
 }
 
 Address
 lldb_private::formatters::GetArrayAddressOrPointerValue(ValueObject &valobj) {
-  lldb::addr_t data_addr = LLDB_INVALID_ADDRESS;
-  AddressType type;
+  ValueObject::AddrAndType data_addr;
 
   if (valobj.IsPointerType())
-    data_addr = valobj.GetPointerValue(&type);
+    data_addr = valobj.GetPointerValue();
   else if (valobj.IsArrayType())
-    data_addr = valobj.GetAddressOf(/*scalar_is_load_address=*/true, &type);
-  if (data_addr != LLDB_INVALID_ADDRESS && type == eAddressTypeFile)
-    return Address(data_addr, valobj.GetModule()->GetSectionList());
+    data_addr = valobj.GetAddressOf(/*scalar_is_load_address=*/true);
 
-  return data_addr;
+  if (data_addr.address != LLDB_INVALID_ADDRESS &&
+      data_addr.type == eAddressTypeFile)
+    return Address(data_addr.address, valobj.GetModule()->GetSectionList());
+
+  return data_addr.address;
 }

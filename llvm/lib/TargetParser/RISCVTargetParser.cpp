@@ -138,21 +138,6 @@ void getFeaturesForCPU(StringRef CPU,
       EnabledFeatures.push_back(F.substr(1));
 }
 
-namespace RISCVExtensionBitmaskTable {
-#define GET_RISCVExtensionBitmaskTable_IMPL
-#include "llvm/TargetParser/RISCVTargetParserDef.inc"
-
-} // namespace RISCVExtensionBitmaskTable
-
-namespace {
-struct LessExtName {
-  bool operator()(const RISCVExtensionBitmaskTable::RISCVExtensionBitmask &LHS,
-                  StringRef RHS) {
-    return StringRef(LHS.Name) < RHS;
-  }
-};
-} // namespace
-
 } // namespace RISCV
 
 namespace RISCVVType {
@@ -176,6 +161,15 @@ unsigned encodeVTYPE(VLMUL VLMul, unsigned SEW, bool TailAgnostic,
   if (MaskAgnostic)
     VTypeI |= 0x80;
 
+  return VTypeI;
+}
+
+unsigned encodeXSfmmVType(unsigned SEW, unsigned Widen, bool AltFmt) {
+  assert(isValidSEW(SEW) && "Invalid SEW");
+  assert((Widen == 1 || Widen == 2 || Widen == 4) && "Invalid Widen");
+  unsigned VSEWBits = encodeSEW(SEW);
+  unsigned TWiden = Log2_32(Widen) + 1;
+  unsigned VTypeI = (VSEWBits << 3) | AltFmt << 8 | TWiden << 9;
   return VTypeI;
 }
 

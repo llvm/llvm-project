@@ -2113,6 +2113,7 @@ class sve_int_dup_mask_imm<string asm>
 
   let DecoderMethod = "DecodeSVELogicalImmInstruction";
   let hasSideEffects = 0;
+  let isAsCheapAsAMove = 1;
   let isReMaterializable = 1;
   let Uses = [VG];
 }
@@ -5118,6 +5119,7 @@ class sve_int_dup_imm<bits<2> sz8_64, string asm,
   let Inst{4-0}   = Zd;
 
   let hasSideEffects = 0;
+  let isAsCheapAsAMove = 1;
   let isReMaterializable = 1;
   let Uses = [VG];
 }
@@ -5161,6 +5163,7 @@ class sve_int_dup_fpimm<bits<2> sz8_64, Operand fpimmtype,
   let Inst{4-0}   = Zd;
 
   let hasSideEffects = 0;
+  let isAsCheapAsAMove = 1;
   let isReMaterializable = 1;
   let Uses = [VG];
 }

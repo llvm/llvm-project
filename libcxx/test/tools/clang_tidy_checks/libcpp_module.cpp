@@ -16,6 +16,7 @@
 #include "nodebug_on_aliases.hpp"
 #include "proper_version_checks.hpp"
 #include "robust_against_adl.hpp"
+#include "robust_against_operator_ampersand.hpp"
 #include "uglify_attributes.hpp"
 
 namespace {
@@ -29,6 +30,8 @@ public:
     check_factories.registerCheck<libcpp::nodebug_on_aliases>("libcpp-nodebug-on-aliases");
     check_factories.registerCheck<libcpp::proper_version_checks>("libcpp-cpp-version-check");
     check_factories.registerCheck<libcpp::robust_against_adl_check>("libcpp-robust-against-adl");
+    check_factories.registerCheck<libcpp::robust_against_operator_ampersand>(
+        "libcpp-robust-against-operator-ampersand");
     check_factories.registerCheck<libcpp::uglify_attributes>("libcpp-uglify-attributes");
   }
 };

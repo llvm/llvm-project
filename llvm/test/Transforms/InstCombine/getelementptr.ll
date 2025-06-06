@@ -282,8 +282,8 @@ define <2 x i1> @test13_fixed_scalable(i64 %X, ptr %P, <2 x i64> %y) nounwind {
 define <vscale x 2 x i1> @test13_scalable_scalable(i64 %X, ptr %P, <vscale x 2 x i64> %y) nounwind {
 ; CHECK-LABEL: @test13_scalable_scalable(
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[X:%.*]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[A_IDX:%.*]] = shl nsw <vscale x 2 x i64> [[DOTSPLAT]], splat (i64 3)
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nsw <vscale x 2 x i64> [[DOTSPLATINSERT]], splat (i64 3)
+; CHECK-NEXT:    [[A_IDX:%.*]] = shufflevector <vscale x 2 x i64> [[TMP3]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 4
 ; CHECK-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP2]], i64 0
@@ -1326,42 +1326,6 @@ define ptr @PR45084_extra_use(i1 %cond, ptr %p) {
   ret ptr %sel
 }
 
-define ptr @gep_null_inbounds(i64 %idx) {
-; CHECK-LABEL: @gep_null_inbounds(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr null, i64 [[IDX:%.*]]
-; CHECK-NEXT:    ret ptr [[GEP]]
-;
-  %gep = getelementptr inbounds i8, ptr null, i64 %idx
-  ret ptr %gep
-}
-
-define ptr @gep_null_not_inbounds(i64 %idx) {
-; CHECK-LABEL: @gep_null_not_inbounds(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr null, i64 [[IDX:%.*]]
-; CHECK-NEXT:    ret ptr [[GEP]]
-;
-  %gep = getelementptr i8, ptr null, i64 %idx
-  ret ptr %gep
-}
-
-define ptr @gep_null_defined(i64 %idx) null_pointer_is_valid {
-; CHECK-LABEL: @gep_null_defined(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr null, i64 [[IDX:%.*]]
-; CHECK-NEXT:    ret ptr [[GEP]]
-;
-  %gep = getelementptr inbounds i8, ptr null, i64 %idx
-  ret ptr %gep
-}
-
-define ptr @gep_null_inbounds_different_type(i64 %idx1, i64 %idx2) {
-; CHECK-LABEL: @gep_null_inbounds_different_type(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [0 x i8], ptr null, i64 0, i64 [[IDX2:%.*]]
-; CHECK-NEXT:    ret ptr [[GEP]]
-;
-  %gep = getelementptr inbounds [0 x i8], ptr null, i64 %idx1, i64 %idx2
-  ret ptr %gep
-}
-
 define ptr @D98588(ptr %c1, i64 %offset) {
 ; CHECK-LABEL: @D98588(
 ; CHECK-NEXT:    [[C2_NEXT_IDX:%.*]] = shl nsw i64 [[OFFSET:%.*]], 3
@@ -2018,6 +1982,5 @@ define ptr @gep_merge_nusw_const(ptr %p, i64 %idx, i64 %idx2) {
   %gep = getelementptr nusw i8, ptr %gep1, i64 4
   ret ptr %gep
 }
-
 
 !0 = !{!"branch_weights", i32 2, i32 10}

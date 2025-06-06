@@ -1302,6 +1302,7 @@ ItaniumRecordLayoutBuilder::LayoutBase(const BaseSubobjectInfo *Base) {
     setSize(std::max(getSize(), Offset + Layout.getSize()));
 
   // Remember max struct/class alignment.
+  UnadjustedAlignment = std::max(UnadjustedAlignment, BaseAlign);
   UpdateAlignment(BaseAlign, UnpackedAlignTo, PreferredBaseAlign);
 
   return Offset;
@@ -1538,6 +1539,7 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
   uint64_t StorageUnitSize = FieldInfo.Width;
   unsigned FieldAlign = FieldInfo.Align;
   bool AlignIsRequired = FieldInfo.isAlignRequired();
+  unsigned char PaddingInLastUnit = 0;
 
   // UnfilledBitsInLastUnit is the difference between the end of the
   // last allocated bitfield (i.e. the first bit offset available for
@@ -1610,6 +1612,7 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
       if (!LastBitfieldStorageUnitSize && !FieldSize)
         FieldAlign = 1;
 
+      PaddingInLastUnit = UnfilledBitsInLastUnit;
       UnfilledBitsInLastUnit = 0;
       LastBitfieldStorageUnitSize = 0;
     }
@@ -1706,7 +1709,7 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
   // For purposes of diagnostics, we're going to simultaneously
   // compute the field offsets that we would have used if we weren't
   // adding any alignment padding or if the field weren't packed.
-  uint64_t UnpaddedFieldOffset = FieldOffset;
+  uint64_t UnpaddedFieldOffset = FieldOffset - PaddingInLastUnit;
   uint64_t UnpackedFieldOffset = FieldOffset;
 
   // Check if we need to add padding to fit the bitfield within an
@@ -2563,7 +2566,8 @@ struct MicrosoftRecordLayoutBuilder {
   typedef llvm::DenseMap<const CXXRecordDecl *, CharUnits> BaseOffsetsMapTy;
   MicrosoftRecordLayoutBuilder(const ASTContext &Context,
                                EmptySubobjectMap *EmptySubobjects)
-      : Context(Context), EmptySubobjects(EmptySubobjects) {}
+      : Context(Context), EmptySubobjects(EmptySubobjects),
+        RemainingBitsInField(0) {}
 
 private:
   MicrosoftRecordLayoutBuilder(const MicrosoftRecordLayoutBuilder &) = delete;
@@ -3230,6 +3234,11 @@ void MicrosoftRecordLayoutBuilder::finalizeLayout(const RecordDecl *RD) {
   uint64_t UnpaddedSizeInBits = Context.toBits(DataSize);
   UnpaddedSizeInBits -= RemainingBitsInField;
 
+  // MS ABI allocates 1 byte for empty class
+  // (not padding)
+  if (Size.isZero())
+    UnpaddedSizeInBits += 8;
+
   // Respect required alignment.  Note that in 32-bit mode Required alignment
   // may be 0 and cause size not to be updated.
   DataSize = Size;
@@ -3262,6 +3271,7 @@ void MicrosoftRecordLayoutBuilder::finalizeLayout(const RecordDecl *RD) {
   }
   unsigned CharBitNum = Context.getTargetInfo().getCharWidth();
   uint64_t SizeInBits = Context.toBits(Size);
+
   if (SizeInBits > UnpaddedSizeInBits) {
     unsigned int PadSize = SizeInBits - UnpaddedSizeInBits;
     bool InBits = true;

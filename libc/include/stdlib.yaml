@@ -7,9 +7,9 @@ merge_yaml_files:
 macros: []
 types:
   - type_name: __atexithandler_t
-  - type_name: __qsortrcompare_t
   - type_name: __qsortcompare_t
-  - type_name: __bsearchcompare_t
+  - type_name: __qsortrcompare_t
+  - type_name: __search_compare_t
   - type_name: div_t
   - type_name: ldiv_t
   - type_name: lldiv_t
@@ -87,7 +87,7 @@ functions:
       - type: const void *
       - type: size_t
       - type: size_t
-      - type: __bsearchcompare_t
+      - type: __search_compare_t
   - name: div
     standards:
       - stdc
@@ -158,7 +158,7 @@ functions:
       - type: __qsortcompare_t
   - name: qsort_r
     standards:
-      - GNUExtensions
+      - POSIX
     return_type: void
     arguments:
       - type: void *

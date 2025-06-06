@@ -20,8 +20,8 @@ operating system while executing on a GPU.
 We implemented remote procedure calls using unified virtual memory to create a
 shared communicate channel between the two processes. This memory is often
 pinned memory that can be accessed asynchronously and atomically by multiple
-processes simultaneously. This supports means that we can simply provide mutual
-exclusion on a shared better to swap work back and forth between the host system
+processes simultaneously. This support means that we can simply provide mutual
+exclusion on a shared buffer to swap work back and forth between the host system
 and the GPU. We can then use this to create a simple client-server protocol
 using this shared memory.
 
@@ -39,7 +39,7 @@ In order to make this transmission channel thread-safe, we abstract ownership of
 the given mailbox pair and buffer around a port, effectively acting as a lock
 and an index into the allocated buffer slice. The server and device have
 independent locks around the given port. In this scheme, the buffer can be used
-to communicate intent and data generically with the server. We them simply
+to communicate intent and data generically with the server. We then simply
 provide multiple copies of this protocol and expose them as multiple ports.
 
 If this were simply a standard CPU system, this would be sufficient. However,

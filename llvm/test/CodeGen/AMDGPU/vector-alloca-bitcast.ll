@@ -3,8 +3,6 @@
 ; RUN: llc -mtriple=amdgcn-- -mcpu=tonga -mattr=+promote-alloca -verify-machineinstrs < %t.sroa.ll | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-PROMOTE %s
 ; RUN: opt -S -mtriple=amdgcn-- -passes='sroa,amdgpu-promote-alloca,instcombine' < %s | FileCheck -check-prefix=OPT %s
 
-target datalayout = "A5"
-
 ; OPT-LABEL: @vector_read_alloca_bitcast(
 ; OPT-NOT:   alloca
 ; OPT:       %0 = extractelement <4 x i32> <i32 0, i32 1, i32 2, i32 3>, i32 %index

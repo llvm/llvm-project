@@ -13,10 +13,6 @@
 
 #include "ReduceInstructions.h"
 #include "Utils.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/Cloning.h"
-#include <set>
 
 using namespace llvm;
 

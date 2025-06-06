@@ -144,9 +144,11 @@ def TemplateNameKind : EnumPropertyType<"TemplateName::NameKind">;
 def TypeOfKind : EnumPropertyType<"TypeOfKind">;
 def UInt32 : CountPropertyType<"uint32_t">;
 def UInt64 : CountPropertyType<"uint64_t">;
+def UnsignedOrNone : PropertyType;
 def UnaryTypeTransformKind : EnumPropertyType<"UnaryTransformType::UTTKind">;
 def VectorKind : EnumPropertyType<"VectorKind">;
 def TypeCoupledDeclRefInfo : PropertyType;
+def HLSLSpirvOperand : PropertyType<"SpirvOperand"> { let PassByReference = 1; }
 
 def ExceptionSpecInfo : PropertyType<"FunctionProtoType::ExceptionSpecInfo"> {
   let BufferElementTypes = [ QualType ];
@@ -413,7 +415,8 @@ let Class = PropertyTypeCase<APValue, "Union"> in {
     let Read = [{ node.getUnionValue() }];
   }
   def : Creator<[{
-    return APValue(cast<clang::FieldDecl>(fieldDecl), std::move(value));
+    // node.getUnionField() / fieldDecl can be null, thus, using `cast_if_present`
+    return APValue(cast_if_present<clang::FieldDecl>(fieldDecl), std::move(value));
   }]>;
 }
 let Class = PropertyTypeCase<APValue, "AddrLabelDiff"> in {
@@ -727,7 +730,7 @@ let Class = PropertyTypeCase<TemplateName, "SubstTemplateTemplateParm"> in {
   def : Property<"index", UInt32> {
     let Read = [{ parm->getIndex() }];
   }
-  def : Property<"packIndex", Optional<UInt32>> {
+  def : Property<"packIndex", UnsignedOrNone> {
     let Read = [{ parm->getPackIndex() }];
   }
   def : Property<"final", Bool> { let Read = [{ parm->getFinal() }]; }
@@ -860,32 +863,30 @@ let Class = PropertyTypeCase<TemplateArgument, "TemplateExpansion"> in {
   def : Property<"name", TemplateName> {
     let Read = [{ node.getAsTemplateOrTemplatePattern() }];
   }
-  def : Property<"numExpansions", Optional<UInt32>> {
+  def : Property<"numExpansions", UnsignedOrNone> {
     let Read = [{
-      // Translate unsigned -> uint32_t just in case.
-      llvm::transformOptional(node.getNumTemplateExpansions(),
-                              [](unsigned i) { return uint32_t(i); })
+      node.getNumTemplateExpansions()
     }];
   }
   def : Property<"isDefaulted", Bool> {
     let Read = [{ node.getIsDefaulted() }];
   }
   def : Creator<[{
-    auto numExpansionsUnsigned = llvm::transformOptional(
-        numExpansions, [](uint32_t i) { return unsigned(i); });
-
-    return TemplateArgument(name, numExpansionsUnsigned, isDefaulted);
+    return TemplateArgument(name, numExpansions, isDefaulted);
   }]>;
 }
 let Class = PropertyTypeCase<TemplateArgument, "Expression"> in {
   def : Property<"expression", ExprRef> {
     let Read = [{ node.getAsExpr() }];
   }
+  def : Property<"IsCanonical", Bool> {
+    let Read = [{ node.isCanonicalExpr() }];
+  }
   def : Property<"isDefaulted", Bool> {
     let Read = [{ node.getIsDefaulted() }];
   }
   def : Creator<[{
-    return TemplateArgument(expression, isDefaulted);
+    return TemplateArgument(expression, IsCanonical, isDefaulted);
   }]>;
 }
 let Class = PropertyTypeCase<TemplateArgument, "Pack"> in {

@@ -531,6 +531,11 @@ public:
       if (callOp.getClusterSizeZ())
         newCall.getClusterSizeZMutable().assign(callOp.getClusterSizeZ());
       newCallResults.append(newCall.result_begin(), newCall.result_end());
+      if (auto cudaProcAttr =
+              callOp->template getAttrOfType<cuf::ProcAttributeAttr>(
+                  cuf::getProcAttrName())) {
+        newCall->setAttr(cuf::getProcAttrName(), cudaProcAttr);
+      }
     } else if constexpr (std::is_same_v<std::decay_t<A>, fir::CallOp>) {
       fir::CallOp newCall;
       if (callOp.getCallee()) {
@@ -542,6 +547,7 @@ public:
             mlir::TypeRange{newInTypes}.drop_front(dropFront), newResTys));
         newCall = rewriter->create<fir::CallOp>(loc, newResTys, newOpers);
       }
+      newCall.setFastmathAttr(callOp.getFastmathAttr());
       // Always set ABI argument attributes on call operations, even when
       // direct, as required by
       // https://llvm.org/docs/LangRef.html#parameter-attributes.

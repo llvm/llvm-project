@@ -17,6 +17,7 @@
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OperatorKinds.h"
+#include "clang/Basic/UnsignedOrNone.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -414,11 +415,10 @@ class SubstTemplateTemplateParmStorage
 
   SubstTemplateTemplateParmStorage(TemplateName Replacement,
                                    Decl *AssociatedDecl, unsigned Index,
-                                   std::optional<unsigned> PackIndex,
-                                   bool Final)
-      : UncommonTemplateNameStorage(SubstTemplateTemplateParm, Index,
-                                    ((PackIndex ? *PackIndex + 1 : 0) << 1) |
-                                        Final),
+                                   UnsignedOrNone PackIndex, bool Final)
+      : UncommonTemplateNameStorage(
+            SubstTemplateTemplateParm, Index,
+            ((PackIndex.toInternalRepresentation()) << 1) | Final),
         Replacement(Replacement), AssociatedDecl(AssociatedDecl) {
     assert(AssociatedDecl != nullptr);
   }
@@ -436,11 +436,8 @@ public:
   // sugared: it doesn't need to be resugared later.
   bool getFinal() const { return Bits.Data & 1; }
 
-  std::optional<unsigned> getPackIndex() const {
-    auto Data = Bits.Data >> 1;
-    if (Data == 0)
-      return std::nullopt;
-    return Data - 1;
+  UnsignedOrNone getPackIndex() const {
+    return UnsignedOrNone::fromInternalRepresentation(Bits.Data >> 1);
   }
 
   TemplateTemplateParmDecl *getParameter() const;
@@ -450,7 +447,7 @@ public:
 
   static void Profile(llvm::FoldingSetNodeID &ID, TemplateName Replacement,
                       Decl *AssociatedDecl, unsigned Index,
-                      std::optional<unsigned> PackIndex, bool Final);
+                      UnsignedOrNone PackIndex, bool Final);
 };
 
 class DeducedTemplateStorage : public UncommonTemplateNameStorage,

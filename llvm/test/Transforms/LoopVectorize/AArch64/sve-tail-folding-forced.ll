@@ -16,7 +16,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; VPLANS-EMPTY:
 ; VPLANS-NEXT: ir-bb<entry>:
 ; VPLANS-NEXT:  EMIT vp<[[TC]]> = EXPAND SCEV (1 umax %n)
-; VPLANS-NEXT: Successor(s): vector.ph
+; VPLANS-NEXT: Successor(s): scalar.ph, vector.ph
 ; VPLANS-EMPTY:
 ; VPLANS-NEXT: vector.ph:
 ; VPLANS-NEXT:   EMIT vp<[[NEWTC:%[0-9]+]]> = TC > VF ? TC - VF : 0 vp<[[TC]]>
@@ -75,7 +75,7 @@ define void @simple_memset(i32 %val, ptr %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <vscale x 4 x i1> [[TMP15]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[WHILE_END_LOOPEXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[WHILE_END_LOOPEXIT:%.*]]
 ; CHECK:       scalar.ph:
 ;
 entry:

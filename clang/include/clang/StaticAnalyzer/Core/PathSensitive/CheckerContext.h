@@ -51,6 +51,8 @@ public:
       wasInlined(wasInlined) {
     assert(Pred->getState() &&
            "We should not call the checkers on an empty state.");
+    assert(loc.getTag() && "The ProgramPoint associated with CheckerContext "
+                           "must be tagged with the active checker.");
   }
 
   AnalysisManager &getAnalysisManager() {
@@ -150,6 +152,8 @@ public:
   SVal getSVal(const Stmt *S) const {
     return Pred->getSVal(S);
   }
+
+  ConstCFGElementRef getCFGElementRef() const { return Eng.getCFGElementRef(); }
 
   /// Returns true if the value of \p E is greater than or equal to \p
   /// Val under unsigned comparison.

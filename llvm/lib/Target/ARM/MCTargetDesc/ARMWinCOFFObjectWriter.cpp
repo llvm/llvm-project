@@ -44,10 +44,7 @@ unsigned ARMWinCOFFObjectWriter::getRelocType(MCContext &Ctx,
                                               const MCFixup &Fixup,
                                               bool IsCrossSection,
                                               const MCAsmBackend &MAB) const {
-  MCSymbolRefExpr::VariantKind Modifier = Target.isAbsolute()
-                                              ? MCSymbolRefExpr::VK_None
-                                              : Target.getSymA()->getKind();
-
+  auto Spec = Target.getSpecifier();
   unsigned FixupKind = Fixup.getKind();
   if (IsCrossSection) {
     if (FixupKind != FK_Data_4) {
@@ -64,7 +61,7 @@ unsigned ARMWinCOFFObjectWriter::getRelocType(MCContext &Ctx,
     return COFF::IMAGE_REL_ARM_ABSOLUTE;
   }
   case FK_Data_4:
-    switch (Modifier) {
+    switch (Spec) {
     case MCSymbolRefExpr::VK_COFF_IMGREL32:
       return COFF::IMAGE_REL_ARM_ADDR32NB;
     case MCSymbolRefExpr::VK_SECREL:

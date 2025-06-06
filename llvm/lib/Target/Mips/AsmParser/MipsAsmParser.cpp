@@ -25,7 +25,7 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/MC/MCParser/MCAsmParserUtils.h"
@@ -2945,15 +2945,13 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
 
     bool IsPtr64 = ABI.ArePtrs64bit();
     bool IsLocalSym =
-        Res.getSymA()->getSymbol().isInSection() ||
-        Res.getSymA()->getSymbol().isTemporary() ||
-        (Res.getSymA()->getSymbol().isELF() &&
-         cast<MCSymbolELF>(Res.getSymA()->getSymbol()).getBinding() ==
-             ELF::STB_LOCAL);
+        Res.getAddSym()->isInSection() || Res.getAddSym()->isTemporary() ||
+        (Res.getAddSym()->isELF() &&
+         cast<MCSymbolELF>(Res.getAddSym())->getBinding() == ELF::STB_LOCAL);
     // For O32, "$"-prefixed symbols are recognized as temporary while
     // .L-prefixed symbols are not (PrivateGlobalPrefix is "$"). Recognize ".L"
     // manually.
-    if (ABI.IsO32() && Res.getSymA()->getSymbol().getName().starts_with(".L"))
+    if (ABI.IsO32() && Res.getAddSym()->getName().starts_with(".L"))
       IsLocalSym = true;
     bool UseXGOT = STI->hasFeature(Mips::FeatureXGOT) && !IsLocalSym;
 
@@ -3011,7 +3009,7 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
       const MCExpr *CallHiExpr =
           MipsMCExpr::create(MipsMCExpr::MEK_GOT_HI16, SymExpr, getContext());
       const MCExpr *CallLoExpr = MipsMCExpr::create(
-          MipsMCExpr::MEK_GOT_LO16, Res.getSymA(), getContext());
+          Res.getAddSym(), MipsMCExpr::MEK_GOT_LO16, getContext());
 
       TOut.emitRX(Mips::LUi, TmpReg, MCOperand::createExpr(CallHiExpr), IDLoc,
                   STI);
@@ -3042,7 +3040,7 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
       // The daddiu's marked with a '>' may be omitted if they are redundant. If
       // this happens then the last instruction must use $rd as the result
       // register.
-      GotExpr = MipsMCExpr::create(MipsMCExpr::MEK_GOT_DISP, Res.getSymA(),
+      GotExpr = MipsMCExpr::create(Res.getAddSym(), MipsMCExpr::MEK_GOT_DISP,
                                    getContext());
       if (Res.getConstant() != 0) {
         // Symbols fully resolve with just the %got_disp(symbol) but we
@@ -3077,7 +3075,7 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
         // External symbols fully resolve the symbol with just the %got(symbol)
         // but we must still account for any offset to the symbol for
         // expressions like symbol+8.
-        GotExpr = MipsMCExpr::create(MipsMCExpr::MEK_GOT, Res.getSymA(),
+        GotExpr = MipsMCExpr::create(Res.getAddSym(), MipsMCExpr::MEK_GOT,
                                      getContext());
         if (Res.getConstant() != 0)
           LoExpr = MCConstantExpr::create(Res.getConstant(), getContext());
@@ -3773,8 +3771,9 @@ void MipsAsmParser::expandMem16Inst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
         return;
       }
 
-      loadAndAddSymbolAddress(Res.getSymA(), TmpReg, BaseReg,
-                              !ABI.ArePtrs64bit(), IDLoc, Out, STI);
+      loadAndAddSymbolAddress(
+          MCSymbolRefExpr::create(Res.getAddSym(), getContext()), TmpReg,
+          BaseReg, !ABI.ArePtrs64bit(), IDLoc, Out, STI);
       emitInstWithOffset(MCOperand::createImm(int16_t(Res.getConstant())));
     } else {
       // FIXME: Implement 64-bit case.
@@ -7508,7 +7507,7 @@ bool MipsAsmParser::parseSetAssignment() {
   if (MCParserUtils::parseAssignmentExpression(Name, /* allow_redef */ true,
                                                Parser, Sym, Value))
     return true;
-  Sym->setVariableValue(Value);
+  getStreamer().emitAssignment(Sym, Value);
 
   return false;
 }
@@ -8232,7 +8231,7 @@ bool MipsAsmParser::parseSSectionDirective(StringRef Section, unsigned Type) {
 ///  ::= .module noginv
 bool MipsAsmParser::parseDirectiveModule() {
   MCAsmParser &Parser = getParser();
-  MCAsmLexer &Lexer = getLexer();
+  AsmLexer &Lexer = getLexer();
   SMLoc L = Lexer.getLoc();
 
   if (!getTargetStreamer().isModuleDirectiveAllowed()) {
@@ -8473,7 +8472,7 @@ bool MipsAsmParser::parseDirectiveModule() {
 ///  ::= =64
 bool MipsAsmParser::parseDirectiveModuleFP() {
   MCAsmParser &Parser = getParser();
-  MCAsmLexer &Lexer = getLexer();
+  AsmLexer &Lexer = getLexer();
 
   if (Lexer.isNot(AsmToken::Equal)) {
     reportParseError("unexpected token, expected equals sign '='");
@@ -8506,7 +8505,7 @@ bool MipsAsmParser::parseDirectiveModuleFP() {
 bool MipsAsmParser::parseFpABIValue(MipsABIFlagsSection::FpABIKind &FpABI,
                                     StringRef Directive) {
   MCAsmParser &Parser = getParser();
-  MCAsmLexer &Lexer = getLexer();
+  AsmLexer &Lexer = getLexer();
   bool ModuleLevelOptions = Directive == ".module";
 
   if (Lexer.is(AsmToken::Identifier)) {

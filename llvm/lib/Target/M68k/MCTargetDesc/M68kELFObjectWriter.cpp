@@ -33,8 +33,8 @@ public:
   ~M68kELFObjectWriter() override;
 
 protected:
-  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                        const MCFixup &Fixup, bool IsPCRel) const override;
+  unsigned getRelocType(const MCFixup &, const MCValue &,
+                        bool IsPCRel) const override;
 };
 } // namespace
 
@@ -61,11 +61,10 @@ static M68kRelType getType(unsigned Kind, M68kMCExpr::Specifier &Modifier,
   llvm_unreachable("Unimplemented");
 }
 
-unsigned M68kELFObjectWriter::getRelocType(MCContext &Ctx,
+unsigned M68kELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                            const MCValue &Target,
-                                           const MCFixup &Fixup,
                                            bool IsPCRel) const {
-  auto Specifier = M68kMCExpr::Specifier(Target.getAccessVariant());
+  auto Specifier = M68kMCExpr::Specifier(Target.getSpecifier());
   unsigned Kind = Fixup.getKind();
   M68kRelType Type = getType(Kind, Specifier, IsPCRel);
   switch (Specifier) {
@@ -74,8 +73,8 @@ unsigned M68kELFObjectWriter::getRelocType(MCContext &Ctx,
   case M68kMCExpr::VK_TLSLD:
   case M68kMCExpr::VK_TLSLDM:
   case M68kMCExpr::VK_TPOFF:
-    if (auto *S = Target.getSymA())
-      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+    if (auto *SA = Target.getAddSym())
+      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;

@@ -10,6 +10,7 @@
 #define LLVM_MC_MCEXPR_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
 #include <cstdint>
 
@@ -26,8 +27,7 @@ class MCSymbol;
 class MCValue;
 class raw_ostream;
 class StringRef;
-
-using SectionAddrMap = DenseMap<const MCSection *, uint64_t>;
+class MCSymbolRefExpr;
 
 /// Base class for the full range of assembler expressions which are
 /// needed for parsing.
@@ -53,7 +53,7 @@ private:
   SMLoc Loc;
 
   bool evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm,
-                          const SectionAddrMap *Addrs, bool InSet) const;
+                          bool InSet) const;
 
 protected:
   explicit MCExpr(ExprKind Kind, SMLoc Loc, unsigned SubclassData = 0)
@@ -62,8 +62,8 @@ protected:
            "Subclass data too large");
   }
 
-  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                 const SectionAddrMap *Addrs, bool InSet) const;
+  LLVM_ABI bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
+                                          bool InSet) const;
 
   unsigned getSubclassData() const { return SubclassData; }
 
@@ -81,13 +81,13 @@ public:
   /// \name Utility Methods
   /// @{
 
-  void print(raw_ostream &OS, const MCAsmInfo *MAI,
-             int SurroundingPrec = 0) const;
-  void dump() const;
+  LLVM_ABI void print(raw_ostream &OS, const MCAsmInfo *MAI,
+                      int SurroundingPrec = 0) const;
+  LLVM_ABI void dump() const;
 
   /// Returns whether the given symbol is used anywhere in the expression or
   /// subexpressions.
-  bool isSymbolUsedInExpression(const MCSymbol *Sym) const;
+  LLVM_ABI bool isSymbolUsedInExpression(const MCSymbol *Sym) const;
 
   /// @}
   /// \name Expression Evaluation
@@ -97,16 +97,15 @@ public:
   ///
   /// \param Res - The absolute value, if evaluation succeeds.
   /// \return - True on success.
-  bool evaluateAsAbsolute(int64_t &Res, const MCAssembler &Asm,
-                          const SectionAddrMap &Addrs) const;
-  bool evaluateAsAbsolute(int64_t &Res) const;
-  bool evaluateAsAbsolute(int64_t &Res, const MCAssembler &Asm) const;
-  bool evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm) const;
+  LLVM_ABI bool evaluateAsAbsolute(int64_t &Res) const;
+  LLVM_ABI bool evaluateAsAbsolute(int64_t &Res, const MCAssembler &Asm) const;
+  LLVM_ABI bool evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm) const;
 
   /// Aggressive variant of evaluateAsRelocatable when relocations are
   /// unavailable (e.g. .fill). Expects callers to handle errors when true is
   /// returned.
-  bool evaluateKnownAbsolute(int64_t &Res, const MCAssembler &Asm) const;
+  LLVM_ABI bool evaluateKnownAbsolute(int64_t &Res,
+                                      const MCAssembler &Asm) const;
 
   /// Try to evaluate the expression to a relocatable value, i.e. an
   /// expression of the fixed form (a - b + constant).
@@ -114,22 +113,27 @@ public:
   /// \param Res - The relocatable value, if evaluation succeeds.
   /// \param Asm - The assembler object to use for evaluating values.
   /// \return - True on success.
-  bool evaluateAsRelocatable(MCValue &Res, const MCAssembler *Asm) const;
+  LLVM_ABI bool evaluateAsRelocatable(MCValue &Res,
+                                      const MCAssembler *Asm) const;
 
   /// Try to evaluate the expression to the form (a - b + constant) where
   /// neither a nor b are variables.
   ///
   /// This is a more aggressive variant of evaluateAsRelocatable. The intended
   /// use is for when relocations are not available, like the .size directive.
-  bool evaluateAsValue(MCValue &Res, const MCAssembler &Asm) const;
+  LLVM_ABI bool evaluateAsValue(MCValue &Res, const MCAssembler &Asm) const;
 
   /// Find the "associated section" for this expression, which is
   /// currently defined as the absolute section for constants, or
   /// otherwise the section associated with the first defined symbol in the
   /// expression.
-  MCFragment *findAssociatedFragment() const;
+  LLVM_ABI MCFragment *findAssociatedFragment() const;
 
   /// @}
+
+  LLVM_ABI static bool evaluateSymbolicAdd(const MCAssembler *, bool,
+                                           const MCValue &, const MCValue &,
+                                           MCValue &);
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const MCExpr &E) {
@@ -159,9 +163,9 @@ public:
   /// \name Construction
   /// @{
 
-  static const MCConstantExpr *create(int64_t Value, MCContext &Ctx,
-                                      bool PrintInHex = false,
-                                      unsigned SizeInBytes = 0);
+  LLVM_ABI static const MCConstantExpr *create(int64_t Value, MCContext &Ctx,
+                                               bool PrintInHex = false,
+                                               unsigned SizeInBytes = 0);
 
   /// @}
   /// \name Accessors
@@ -196,27 +200,10 @@ public:
   enum VariantKind : uint16_t {
     VK_None,
 
-    VK_GOT,
-    VK_GOTPCREL,
-    VK_PLT,
-    VK_TLVP,    // Mach-O thread local variable relocations
-    VK_TLVPPAGE,
-    VK_TLVPPAGEOFF,
-    VK_PAGE,
-    VK_PAGEOFF,
-    VK_GOTPAGE,
-    VK_GOTPAGEOFF,
     VK_SECREL,
     VK_WEAKREF, // The link between the symbols in .weakref foo, bar
 
     VK_COFF_IMGREL32, // symbol@imgrel (image-relative)
-
-    VK_WASM_TYPEINDEX, // Reference to a symbol's type (signature)
-    VK_WASM_TLSREL,    // Memory address relative to __tls_base
-    VK_WASM_MBREL,     // Memory address relative to __memory_base
-    VK_WASM_TBREL,     // Table index relative to __table_base
-    VK_WASM_GOT_TLS,   // Wasm global index of TLS symbol.
-    VK_WASM_FUNCINDEX, // Wasm function index.
 
     FirstTargetSpecifier,
   };
@@ -224,20 +211,6 @@ public:
 private:
   /// The symbol being referenced.
   const MCSymbol *Symbol;
-
-  // Subclass data stores VariantKind in bits 0..15 and HasSubsectionsViaSymbols
-  // in bit 16.
-  static const unsigned VariantKindBits = 16;
-  static const unsigned VariantKindMask = (1 << VariantKindBits) - 1;
-
-  // FIXME: Remove this bit.
-  static const unsigned HasSubsectionsViaSymbolsBit = 1 << VariantKindBits;
-
-  static unsigned encodeSubclassData(VariantKind Kind,
-                                     bool HasSubsectionsViaSymbols) {
-    return (unsigned)Kind |
-           (HasSubsectionsViaSymbols ? HasSubsectionsViaSymbolsBit : 0);
-  }
 
   explicit MCSymbolRefExpr(const MCSymbol *Symbol, VariantKind Kind,
                            const MCAsmInfo *MAI, SMLoc Loc = SMLoc());
@@ -251,8 +224,10 @@ public:
     return MCSymbolRefExpr::create(Symbol, VK_None, Ctx, Loc);
   }
 
-  static const MCSymbolRefExpr *create(const MCSymbol *Symbol, VariantKind Kind,
-                                       MCContext &Ctx, SMLoc Loc = SMLoc());
+  LLVM_ABI static const MCSymbolRefExpr *create(const MCSymbol *Symbol,
+                                                VariantKind Kind,
+                                                MCContext &Ctx,
+                                                SMLoc Loc = SMLoc());
   static const MCSymbolRefExpr *create(const MCSymbol *Symbol, uint16_t Kind,
                                        MCContext &Ctx, SMLoc Loc = SMLoc()) {
     return MCSymbolRefExpr::create(Symbol, VariantKind(Kind), Ctx, Loc);
@@ -264,13 +239,11 @@ public:
 
   const MCSymbol &getSymbol() const { return *Symbol; }
 
-  VariantKind getKind() const {
-    return (VariantKind)(getSubclassData() & VariantKindMask);
-  }
-
-  bool hasSubsectionsViaSymbols() const {
-    return (getSubclassData() & HasSubsectionsViaSymbolsBit) != 0;
-  }
+  // Some targets encode the relocation specifier within SymA using
+  // MCSymbolRefExpr::SubclassData, which is copied to MCValue::Specifier,
+  // though this method is now deprecated.
+  VariantKind getKind() const { return VariantKind(getSubclassData()); }
+  uint16_t getSpecifier() const { return getSubclassData(); }
 
   /// @}
 
@@ -299,8 +272,8 @@ public:
   /// \name Construction
   /// @{
 
-  static const MCUnaryExpr *create(Opcode Op, const MCExpr *Expr,
-                                   MCContext &Ctx, SMLoc Loc = SMLoc());
+  LLVM_ABI static const MCUnaryExpr *
+  create(Opcode Op, const MCExpr *Expr, MCContext &Ctx, SMLoc Loc = SMLoc());
 
   static const MCUnaryExpr *createLNot(const MCExpr *Expr, MCContext &Ctx, SMLoc Loc = SMLoc()) {
     return create(LNot, Expr, Ctx, Loc);
@@ -376,9 +349,9 @@ public:
   /// \name Construction
   /// @{
 
-  static const MCBinaryExpr *create(Opcode Op, const MCExpr *LHS,
-                                    const MCExpr *RHS, MCContext &Ctx,
-                                    SMLoc Loc = SMLoc());
+  LLVM_ABI static const MCBinaryExpr *create(Opcode Op, const MCExpr *LHS,
+                                             const MCExpr *RHS, MCContext &Ctx,
+                                             SMLoc Loc = SMLoc());
 
   static const MCBinaryExpr *createAdd(const MCExpr *LHS, const MCExpr *RHS,
                                        MCContext &Ctx) {
@@ -502,7 +475,7 @@ public:
 ///
 /// NOTE: All subclasses are required to have trivial destructors because
 /// MCExprs are bump pointer allocated and not destructed.
-class MCTargetExpr : public MCExpr {
+class LLVM_ABI MCTargetExpr : public MCExpr {
   virtual void anchor();
 
 protected:

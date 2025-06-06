@@ -22,6 +22,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 
 #include "LLVMContextImpl.h"
 
@@ -30,19 +31,29 @@ using namespace llvm;
 #define DEBUG_TYPE "ir"
 STATISTIC(NumInstrRenumberings, "Number of renumberings across all blocks");
 
-cl::opt<bool> UseNewDbgInfoFormat(
-    "experimental-debuginfo-iterators",
-    cl::desc("Enable communicating debuginfo positions through iterators, "
-             "eliminating intrinsics. Has no effect if "
-             "--preserve-input-debuginfo-format=true."),
+// This cl-opt exists to control whether variable-location information is
+// produced using intrinsics, or whether DbgRecords are produced. However,
+// it's imminently being phased out, so give it a flag-name that is very
+// unlikely to be used anywhere.
+//
+// If you find yourself needing to use this flag for any period longer than
+// five minutes, please revert the patch making this change, and make contact
+// in this discourse post, where we can discuss any further transition work
+// that might be needed to remove debug intrinsics.
+//
+// https://discourse.llvm.org/t/psa-ir-output-changing-from-debug-intrinsics-to-debug-records/79578
+LLVM_ABI cl::opt<bool>
+    UseNewDbgInfoFormat("dont-pass-this-flag-please-experimental-debuginfo",
+                        cl::Hidden, cl::init(true));
+
+// This cl-opt collects the --experimental-debuginfo-iterators flag and then
+// does nothing with it (because the it gets stored into an otherwise unused
+// cl-opt), so that we can disable debug-intrinsic production without
+// immediately modifying lots of tests. If your tests break because of this
+// change, please see the next comment up.
+static cl::opt<bool> DeliberatelyUnseenDbgInfoFlag(
+    "experimental-debuginfo-iterators", cl::Hidden,
     cl::init(true));
-cl::opt<cl::boolOrDefault> PreserveInputDbgFormat(
-    "preserve-input-debuginfo-format", cl::Hidden,
-    cl::desc("When set to true, IR files will be processed and printed in "
-             "their current debug info format, regardless of default behaviour "
-             "or other flags passed. Has no effect if input IR does not "
-             "contain debug records or intrinsics. Ignored in llvm-link, "
-             "llvm-lto, and llvm-lto2."));
 
 DbgMarker *BasicBlock::createMarker(Instruction *I) {
   assert(IsNewDbgInfoFormat &&
@@ -213,14 +224,12 @@ BasicBlock::~BasicBlock() {
   // nodes.  There are no other possible uses at this point.
   if (hasAddressTaken()) {
     assert(!use_empty() && "There should be at least one blockaddress!");
-    Constant *Replacement =
-      ConstantInt::get(llvm::Type::getInt32Ty(getContext()), 1);
-    while (!use_empty()) {
-      BlockAddress *BA = cast<BlockAddress>(user_back());
-      BA->replaceAllUsesWith(ConstantExpr::getIntToPtr(Replacement,
-                                                       BA->getType()));
-      BA->destroyConstant();
-    }
+    BlockAddress *BA = cast<BlockAddress>(user_back());
+
+    Constant *Replacement = ConstantInt::get(Type::getInt32Ty(getContext()), 1);
+    BA->replaceAllUsesWith(
+        ConstantExpr::getIntToPtr(Replacement, BA->getType()));
+    BA->destroyConstant();
   }
 
   assert(getParent() == nullptr && "BasicBlock still linked into the program!");
@@ -605,6 +614,9 @@ BasicBlock *BasicBlock::splitBasicBlock(iterator I, const Twine &BBName,
 
   // Save DebugLoc of split point before invalidating iterator.
   DebugLoc Loc = I->getStableDebugLoc();
+  if (Loc)
+    Loc = Loc->getWithoutAtom();
+
   // Move all of the specified instructions from the original basic block into
   // the new basic block.
   New->splice(New->end(), this, I, end());
@@ -634,6 +646,9 @@ BasicBlock *BasicBlock::splitBasicBlockBefore(iterator I, const Twine &BBName) {
   BasicBlock *New = BasicBlock::Create(getContext(), BBName, getParent(), this);
   // Save DebugLoc of split point before invalidating iterator.
   DebugLoc Loc = I->getDebugLoc();
+  if (Loc)
+    Loc = Loc->getWithoutAtom();
+
   // Move all of the specified instructions from the original basic block into
   // the new basic block.
   New->splice(New->end(), this, begin(), I);
@@ -724,9 +739,7 @@ void BasicBlock::renumberInstructions() {
     I.Order = Order++;
 
   // Set the bit to indicate that the instruction order valid and cached.
-  BasicBlockBits Bits = getBasicBlockBits();
-  Bits.InstrOrderValid = true;
-  setBasicBlockBits(Bits);
+  SubclassOptionalData |= InstrOrderValid;
 
   NumInstrRenumberings++;
 }

@@ -19,6 +19,7 @@ add_libc_fuzzer(
   SRCS
     hashtable_fuzz.cpp
   DEPENDS
+    libc.hdr.types.ENTRY
     libc.src.__support.HashTable.table
   COMPILE_OPTIONS
     -D__LIBC_EXPLICIT_SIMD_OPT
@@ -30,7 +31,6 @@ if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
   add_libc_fuzzer(
     freelist_heap_fuzz
     SRCS
-      fake_heap.s
       freelist_heap_fuzz.cpp
     DEPENDS
       libc.src.__support.freelist_heap

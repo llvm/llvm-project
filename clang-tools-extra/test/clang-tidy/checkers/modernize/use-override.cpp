@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-use-override,cppcoreguidelines-explicit-virtual-functions %t -- -- -fexceptions
+// RUN: %check_clang_tidy --match-partial-fixes %s modernize-use-override,cppcoreguidelines-explicit-virtual-functions %t -- -- -fexceptions
 
 #define ABSTRACT = 0
 

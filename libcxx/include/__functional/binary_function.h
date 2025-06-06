@@ -21,7 +21,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION)
 
 template <class _Arg1, class _Arg2, class _Result>
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX11 binary_function {
+struct _LIBCPP_DEPRECATED_IN_CXX11 binary_function {
   typedef _Arg1 first_argument_type;
   typedef _Arg2 second_argument_type;
   typedef _Result result_type;

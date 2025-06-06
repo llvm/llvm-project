@@ -28,8 +28,8 @@ private:
 public:
   HexagonELFObjectWriter(uint8_t OSABI, StringRef C);
 
-  unsigned getRelocType(MCContext &Ctx, MCValue const &Target,
-                        MCFixup const &Fixup, bool IsPCRel) const override;
+  unsigned getRelocType(const MCFixup &, const MCValue &,
+                        bool IsPCRel) const override;
 };
 }
 
@@ -38,11 +38,10 @@ HexagonELFObjectWriter::HexagonELFObjectWriter(uint8_t OSABI, StringRef C)
                               /*HasRelocationAddend*/ true),
       CPU(C) {}
 
-unsigned HexagonELFObjectWriter::getRelocType(MCContext &Ctx,
-                                              MCValue const &Target,
-                                              MCFixup const &Fixup,
+unsigned HexagonELFObjectWriter::getRelocType(const MCFixup &Fixup,
+                                              const MCValue &Target,
                                               bool IsPCRel) const {
-  auto Variant = HexagonMCExpr::VariantKind(Target.getAccessVariant());
+  auto Variant = HexagonMCExpr::VariantKind(Target.getSpecifier());
   switch (Variant) {
   case HexagonMCExpr::VK_GD_GOT:
   case HexagonMCExpr::VK_LD_GOT:
@@ -51,8 +50,8 @@ unsigned HexagonELFObjectWriter::getRelocType(MCContext &Ctx,
   case HexagonMCExpr::VK_IE:
   case HexagonMCExpr::VK_IE_GOT:
   case HexagonMCExpr::VK_TPREL:
-    if (auto *S = Target.getSymA())
-      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+    if (auto *SA = Target.getAddSym())
+      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;

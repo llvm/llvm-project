@@ -214,6 +214,14 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix,
             Direction = '*';
           Dep.push_back(Direction);
         }
+
+        // If the Dependence object doesn't have any information, fill the
+        // dependency vector with '*'.
+        if (D->isConfused()) {
+          assert(Dep.empty() && "Expected empty dependency vector");
+          Dep.assign(Level, '*');
+        }
+
         while (Dep.size() != Level) {
           Dep.push_back('I');
         }
@@ -240,18 +248,22 @@ static void interChangeDependencies(CharMatrix &DepMatrix, unsigned FromIndx,
     std::swap(DepMatrix[I][ToIndx], DepMatrix[I][FromIndx]);
 }
 
-// After interchanging, check if the direction vector is valid.
+// Check if a direction vector is lexicographically positive. Return true if it
+// is positive, nullopt if it is "zero", otherwise false.
 // [Theorem] A permutation of the loops in a perfect nest is legal if and only
 // if the direction matrix, after the same permutation is applied to its
 // columns, has no ">" direction as the leftmost non-"=" direction in any row.
-static bool isLexicographicallyPositive(std::vector<char> &DV) {
-  for (unsigned char Direction : DV) {
+static std::optional<bool> isLexicographicallyPositive(std::vector<char> &DV,
+                                                       unsigned Begin,
+                                                       unsigned End) {
+  ArrayRef<char> DVRef(DV);
+  for (unsigned char Direction : DVRef.slice(Begin, End - Begin)) {
     if (Direction == '<')
       return true;
     if (Direction == '>' || Direction == '*')
       return false;
   }
-  return true;
+  return std::nullopt;
 }
 
 // Checks if it is legal to interchange 2 loops.
@@ -265,10 +277,19 @@ static bool isLegalToInterChangeLoops(CharMatrix &DepMatrix,
     // Create temporary DepVector check its lexicographical order
     // before and after swapping OuterLoop vs InnerLoop
     Cur = DepMatrix[Row];
-    if (!isLexicographicallyPositive(Cur))
+
+    // If the surrounding loops already ensure that the direction vector is
+    // lexicographically positive, nothing within the loop will be able to break
+    // the dependence. In such a case we can skip the subsequent check.
+    if (isLexicographicallyPositive(Cur, 0, OuterLoopId) == true)
+      continue;
+
+    // Check if the direction vector is lexicographically positive (or zero)
+    // for both before/after exchanged.
+    if (isLexicographicallyPositive(Cur, OuterLoopId, Cur.size()) == false)
       return false;
     std::swap(Cur[InnerLoopId], Cur[OuterLoopId]);
-    if (!isLexicographicallyPositive(Cur))
+    if (isLexicographicallyPositive(Cur, OuterLoopId, Cur.size()) == false)
       return false;
   }
   return true;
@@ -1505,7 +1526,6 @@ bool LoopInterchangeTransform::transform() {
   BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
   BasicBlock *OuterLoopHeader = OuterLoop->getHeader();
   if (InnerLoopPreHeader != OuterLoopHeader) {
-    SmallPtrSet<Instruction *, 4> NeedsMoving;
     for (Instruction &I :
          make_early_inc_range(make_range(InnerLoopPreHeader->begin(),
                                          std::prev(InnerLoopPreHeader->end()))))
@@ -1554,11 +1574,8 @@ static void updateSuccessor(BranchInst *BI, BasicBlock *OldBB,
                             BasicBlock *NewBB,
                             std::vector<DominatorTree::UpdateType> &DTUpdates,
                             bool MustUpdateOnce = true) {
-  assert((!MustUpdateOnce ||
-          llvm::count_if(successors(BI),
-                         [OldBB](BasicBlock *BB) {
-                           return BB == OldBB;
-                         }) == 1) && "BI must jump to OldBB exactly once.");
+  assert((!MustUpdateOnce || llvm::count(successors(BI), OldBB) == 1) &&
+         "BI must jump to OldBB exactly once.");
   bool Changed = false;
   for (Use &Op : BI->operands())
     if (Op == OldBB) {
@@ -1616,13 +1633,11 @@ static void moveLCSSAPhis(BasicBlock *InnerExit, BasicBlock *InnerHeader,
     P.eraseFromParent();
   }
 
-  SmallVector<PHINode *, 8> LcssaInnerExit;
-  for (PHINode &P : InnerExit->phis())
-    LcssaInnerExit.push_back(&P);
+  SmallVector<PHINode *, 8> LcssaInnerExit(
+      llvm::make_pointer_range(InnerExit->phis()));
 
-  SmallVector<PHINode *, 8> LcssaInnerLatch;
-  for (PHINode &P : InnerLatch->phis())
-    LcssaInnerLatch.push_back(&P);
+  SmallVector<PHINode *, 8> LcssaInnerLatch(
+      llvm::make_pointer_range(InnerLatch->phis()));
 
   // Lcssa PHIs for values used outside the inner loop are in InnerExit.
   // If a PHI node has users outside of InnerExit, it has a use outside the

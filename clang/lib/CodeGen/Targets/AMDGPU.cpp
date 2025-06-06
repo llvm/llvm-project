@@ -8,7 +8,7 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
-#include "clang/Basic/TargetOptions.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 
 using namespace clang;
@@ -198,14 +198,10 @@ ABIArgInfo AMDGPUABIInfo::classifyKernelArgumentType(QualType Ty) const {
         /*ToAS=*/getContext().getTargetAddressSpace(LangAS::cuda_device));
   }
 
-  // FIXME: Should also use this for OpenCL, but it requires addressing the
-  // problem of kernels being called.
-  //
   // FIXME: This doesn't apply the optimization of coercing pointers in structs
   // to global address space when using byref. This would require implementing a
   // new kind of coercion of the in-memory type when for indirect arguments.
-  if (!getContext().getLangOpts().OpenCL && LTy == OrigLTy &&
-      isAggregateTypeForABI(Ty)) {
+  if (LTy == OrigLTy && isAggregateTypeForABI(Ty)) {
     return ABIArgInfo::getIndirectAliased(
         getContext().getTypeAlignInChars(Ty),
         getContext().getTargetAddressSpace(LangAS::opencl_constant),
@@ -302,6 +298,7 @@ public:
   AMDGPUTargetCodeGenInfo(CodeGenTypes &CGT)
       : TargetCodeGenInfo(std::make_unique<AMDGPUABIInfo>(CGT)) {}
 
+  bool supportsLibCall() const override { return false; }
   void setFunctionDeclAttributes(const FunctionDecl *FD, llvm::Function *F,
                                  CodeGenModule &CGM) const;
 
@@ -340,7 +337,7 @@ static bool requiresAMDGPUProtectedVisibility(const Decl *D,
     return false;
 
   return !D->hasAttr<OMPDeclareTargetDeclAttr>() &&
-         (D->hasAttr<OpenCLKernelAttr>() ||
+         (D->hasAttr<DeviceKernelAttr>() ||
           (isa<FunctionDecl>(D) && D->hasAttr<CUDAGlobalAttr>()) ||
           (isa<VarDecl>(D) &&
            (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>() ||
@@ -353,7 +350,7 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
   const auto *ReqdWGS =
       M.getLangOpts().OpenCL ? FD->getAttr<ReqdWorkGroupSizeAttr>() : nullptr;
   const bool IsOpenCLKernel =
-      M.getLangOpts().OpenCL && FD->hasAttr<OpenCLKernelAttr>();
+      M.getLangOpts().OpenCL && FD->hasAttr<DeviceKernelAttr>();
   const bool IsHIPKernel = M.getLangOpts().HIP && FD->hasAttr<CUDAGlobalAttr>();
 
   const auto *FlatWGS = FD->getAttr<AMDGPUFlatWorkGroupSizeAttr>();
@@ -575,7 +572,7 @@ bool AMDGPUTargetCodeGenInfo::shouldEmitDWARFBitFieldSeparators() const {
 void AMDGPUTargetCodeGenInfo::setCUDAKernelCallingConvention(
     const FunctionType *&FT) const {
   FT = getABIInfo().getContext().adjustFunctionType(
-      FT, FT->getExtInfo().withCallingConv(CC_OpenCLKernel));
+      FT, FT->getExtInfo().withCallingConv(CC_DeviceKernel));
 }
 
 /// Return IR struct type for rtinfo struct in rocm-device-libs used for device

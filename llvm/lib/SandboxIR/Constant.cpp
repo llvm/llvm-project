@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/SandboxIR/Constant.h"
-#include "llvm/SandboxIR/Argument.h"
 #include "llvm/SandboxIR/BasicBlock.h"
 #include "llvm/SandboxIR/Context.h"
 #include "llvm/SandboxIR/Function.h"
@@ -324,7 +323,7 @@ template class GlobalWithNodeAPI<GlobalVariable, llvm::GlobalVariable,
 template class GlobalWithNodeAPI<GlobalAlias, llvm::GlobalAlias, GlobalValue,
                                  llvm::GlobalValue>;
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 // These are needed for SandboxIRTest when building with LLVM_BUILD_LLVM_DYLIB
 template LLVM_EXPORT_TEMPLATE GlobalIFunc &
 GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,

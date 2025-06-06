@@ -71,6 +71,10 @@ STATISTIC(NumImportedModules, "Number of modules imported from");
 STATISTIC(NumDeadSymbols, "Number of dead stripped symbols in index");
 STATISTIC(NumLiveSymbols, "Number of live symbols in index");
 
+cl::opt<bool>
+    ForceImportAll("force-import-all", cl::init(false), cl::Hidden,
+                   cl::desc("Import functions with noinline attribute"));
+
 /// Limit on instruction count of imported functions.
 static cl::opt<unsigned> ImportInstrLimit(
     "import-instr-limit", cl::init(100), cl::Hidden, cl::value_desc("N"),
@@ -79,10 +83,6 @@ static cl::opt<unsigned> ImportInstrLimit(
 static cl::opt<int> ImportCutoff(
     "import-cutoff", cl::init(-1), cl::Hidden, cl::value_desc("N"),
     cl::desc("Only import first N functions if N>=0 (default -1)"));
-
-static cl::opt<bool>
-    ForceImportAll("force-import-all", cl::init(false), cl::Hidden,
-                   cl::desc("Import functions with noinline attribute"));
 
 static cl::opt<float>
     ImportInstrFactor("import-instr-evolution-factor", cl::init(0.7),
@@ -181,6 +181,8 @@ static cl::opt<bool> CtxprofMoveRootsToOwnModule(
     cl::desc("Move contextual profiling roots and the graphs under them in "
              "their own module."),
     cl::Hidden, cl::init(false));
+
+extern cl::list<GlobalValue::GUID> MoveSymbolGUID;
 
 namespace llvm {
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
@@ -516,6 +518,7 @@ protected:
       const ModuleSummaryIndex &Index,
       DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists = nullptr)
       : IsPrevailing(IsPrevailing), Index(Index), ExportLists(ExportLists) {}
+  virtual bool canImport(ValueInfo VI) { return true; }
 
 public:
   virtual ~ModuleImportsManager() = default;
@@ -544,6 +547,11 @@ class WorkloadImportsManager : public ModuleImportsManager {
   // determine if a module's import list should be done by the base
   // ModuleImportsManager or by us.
   StringMap<DenseSet<ValueInfo>> Workloads;
+  // Track the roots to avoid importing them due to other callers. We want there
+  // to be only one variant), for which we optimize according to the contextual
+  // profile. "Variants" refers to copies due to importing - we want there to be
+  // just one instance of this function.
+  DenseSet<ValueInfo> Roots;
 
   void
   computeImportForModule(const GVSummaryMapTy &DefinedGVSummaries,
@@ -569,7 +577,6 @@ class WorkloadImportsManager : public ModuleImportsManager {
     GlobalsImporter GVI(Index, DefinedGVSummaries, IsPrevailing, ImportList,
                         ExportLists);
     auto &ValueInfos = SetIter->second;
-    SmallVector<EdgeInfo, 128> GlobWorklist;
     for (auto &VI : llvm::make_early_inc_range(ValueInfos)) {
       auto It = DefinedGVSummaries.find(VI.getGUID());
       if (It != DefinedGVSummaries.end() &&
@@ -599,7 +606,7 @@ class WorkloadImportsManager : public ModuleImportsManager {
       if (PotentialCandidates.empty()) {
         LLVM_DEBUG(dbgs() << "[Workload] Not importing " << VI.name()
                           << " because can't find eligible Callee. Guid is: "
-                          << Function::getGUID(VI.name()) << "\n");
+                          << VI.getGUID() << "\n");
         continue;
       }
       /// We will prefer importing the prevailing candidate, if not, we'll
@@ -652,8 +659,7 @@ class WorkloadImportsManager : public ModuleImportsManager {
         continue;
       }
       LLVM_DEBUG(dbgs() << "[Workload][Including]" << VI.name() << " from "
-                        << ExportingModule << " : "
-                        << Function::getGUID(VI.name()) << "\n");
+                        << ExportingModule << " : " << VI.getGUID() << "\n");
       ImportList.addDefinition(ExportingModule, VI.getGUID());
       GVI.onImportingSummary(*GVS);
       if (ExportLists)
@@ -783,11 +789,14 @@ class WorkloadImportsManager : public ModuleImportsManager {
       }
       auto &Set = Workloads[RootDefiningModule];
       Root.getContainedGuids(ContainedGUIDs);
+      Roots.insert(RootVI);
       for (auto Guid : ContainedGUIDs)
         if (auto VI = Index.getValueInfo(Guid))
           Set.insert(VI);
     }
   }
+
+  bool canImport(ValueInfo VI) override { return !Roots.contains(VI); }
 
 public:
   WorkloadImportsManager(
@@ -883,6 +892,15 @@ void ModuleImportsManager::computeImportForFunction(
       // a non-prevailing def with interposable linkage. The prevailing copy
       // can safely be imported (see shouldImportGlobal()).
       LLVM_DEBUG(dbgs() << "ignored! Target already in destination module.\n");
+      continue;
+    }
+
+    if (!canImport(VI)) {
+      LLVM_DEBUG(
+          dbgs() << "Skipping over " << VI.getGUID()
+                 << " because its import is handled in a different module.");
+      assert(VI.getSummaryList().size() == 1 &&
+             "The root was expected to be an external symbol");
       continue;
     }
 
@@ -1589,13 +1607,23 @@ Error llvm::EmitImportsFiles(
   if (EC)
     return createFileError("cannot open " + OutputFilename,
                            errorCodeToError(EC));
+  processImportsFiles(ModulePath, ModuleToSummariesForIndex,
+                      [&](StringRef M) { ImportsOS << M << "\n"; });
+  return Error::success();
+}
+
+/// Invoke callback \p F on the file paths from which \p ModulePath
+/// will import.
+void llvm::processImportsFiles(
+    StringRef ModulePath,
+    const ModuleToSummariesForIndexTy &ModuleToSummariesForIndex,
+    function_ref<void(const std::string &)> F) {
   for (const auto &ILI : ModuleToSummariesForIndex)
     // The ModuleToSummariesForIndex map includes an entry for the current
     // Module (needed for writing out the index files). We don't want to
     // include it in the imports file, however, so filter it out.
     if (ILI.first != ModulePath)
-      ImportsOS << ILI.first << "\n";
-  return Error::success();
+      F(ILI.first);
 }
 
 bool llvm::convertToDeclaration(GlobalValue &GV) {
@@ -1787,7 +1815,8 @@ void llvm::thinLTOInternalizeModule(Module &TheModule,
       std::string OrigId = GlobalValue::getGlobalIdentifier(
           OrigName, GlobalValue::InternalLinkage,
           TheModule.getSourceFileName());
-      GS = DefinedGlobals.find(GlobalValue::getGUID(OrigId));
+      GS = DefinedGlobals.find(
+          GlobalValue::getGUIDAssumingExternalLinkage(OrigId));
       if (GS == DefinedGlobals.end()) {
         // Also check the original non-promoted non-globalized name. In some
         // cases a preempted weak value is linked in as a local copy because
@@ -1795,7 +1824,8 @@ void llvm::thinLTOInternalizeModule(Module &TheModule,
         // In that case, since it was originally not a local value, it was
         // recorded in the index using the original name.
         // FIXME: This may not be needed once PR27866 is fixed.
-        GS = DefinedGlobals.find(GlobalValue::getGUID(OrigName));
+        GS = DefinedGlobals.find(
+            GlobalValue::getGUIDAssumingExternalLinkage(OrigName));
         assert(GS != DefinedGlobals.end());
       }
     }
@@ -1841,6 +1871,15 @@ Expected<bool> FunctionImporter::importFunctions(
   LLVM_DEBUG(dbgs() << "Starting import for Module "
                     << DestModule.getModuleIdentifier() << "\n");
   unsigned ImportedCount = 0, ImportedGVCount = 0;
+  // Before carrying out any imports, see if this module defines functions in
+  // MoveSymbolGUID. If it does, delete them here (but leave the declaration).
+  // The function will be imported elsewhere, as extenal linkage, and the
+  // destination doesn't yet have its definition.
+  DenseSet<GlobalValue::GUID> MoveSymbolGUIDSet;
+  MoveSymbolGUIDSet.insert_range(MoveSymbolGUID);
+  for (auto &F : DestModule)
+    if (!F.isDeclaration() && MoveSymbolGUIDSet.contains(F.getGUID()))
+      F.deleteBody();
 
   IRMover Mover(DestModule);
 

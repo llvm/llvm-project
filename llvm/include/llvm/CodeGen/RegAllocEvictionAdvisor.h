@@ -66,10 +66,6 @@ enum LiveRangeStage {
   /// Live range will be spilled.  No more splitting will be attempted.
   RS_Spill,
 
-  /// Live range is in memory. Because of other evictions, it might get moved
-  /// in a register in the end.
-  RS_Memory,
-
   /// There is nothing more we can do to this live range.  Abort compilation
   /// if it can't be assigned.
   RS_Done

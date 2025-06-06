@@ -26,9 +26,8 @@ define void @foo(ptr %arg)  {
 ; CHECK-NEXT:    [[PHI:%.*]] = phi float [ 4.000000e+00, %[[BB]] ], [ 0.000000e+00, %[[BB27:.*]] ]
 ; CHECK-NEXT:    [[FADD8:%.*]] = fadd float 0.000000e+00, 0.000000e+00
 ; CHECK-NEXT:    [[FADD9:%.*]] = fadd float [[PHI]], 1.000000e+00
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> <float poison, float 0.000000e+00>, float [[FADD9]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x float> <float 1.000000e+00, float 0.000000e+00>, [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd float [[FADD9]], 1.000000e+00
+; CHECK-NEXT:    [[FADD11:%.*]] = fadd float 0.000000e+00, 0.000000e+00
 ; CHECK-NEXT:    [[FREM:%.*]] = frem float [[TMP2]], 7.000000e+00
 ; CHECK-NEXT:    [[CALL12:%.*]] = call i32 @llvm.x86.sse.cvttss2si(<4 x float> zeroinitializer)
 ; CHECK-NEXT:    switch i32 [[CALL12]], label %[[BB13:.*]] [
@@ -60,7 +59,6 @@ define void @foo(ptr %arg)  {
 ; CHECK-NEXT:    br label %[[BB20:.*]]
 ; CHECK:       [[BB20]]:
 ; CHECK-NEXT:    [[FADD21:%.*]] = fadd float [[FADD18]], 1.000000e+00
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> <float poison, float 0.000000e+00>, float [[FADD21]], i32 0
 ; CHECK-NEXT:    switch i32 0, label %[[BB22:.*]] [
 ; CHECK-NEXT:      i32 125, label %[[BB30]]
 ; CHECK-NEXT:      i32 98, label %[[BB30]]
@@ -71,8 +69,8 @@ define void @foo(ptr %arg)  {
 ; CHECK-NEXT:      i32 121, label %[[BB30]]
 ; CHECK-NEXT:    ]
 ; CHECK:       [[BB22]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x float> <float 1.000000e+00, float 0.000000e+00>, [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x float> [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd float [[FADD21]], 1.000000e+00
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd float 0.000000e+00, 0.000000e+00
 ; CHECK-NEXT:    [[FREM25:%.*]] = frem float [[TMP5]], 7.000000e+00
 ; CHECK-NEXT:    [[FMUL26:%.*]] = fmul float [[FREM25]], 5.000000e+00
 ; CHECK-NEXT:    switch i32 0, label %[[BB27]] [
@@ -86,11 +84,11 @@ define void @foo(ptr %arg)  {
 ; CHECK-NEXT:    ]
 ; CHECK:       [[BB27]]:
 ; CHECK-NEXT:    [[FADD28:%.*]] = fadd float [[TMP5]], 1.000000e+00
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[TMP4]], i32 1
 ; CHECK-NEXT:    [[FADD29:%.*]] = fadd float [[TMP6]], 0.000000e+00
 ; CHECK-NEXT:    br label %[[BB7]]
 ; CHECK:       [[BB30]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = phi <2 x float> [ [[TMP1]], %[[BB7]] ], [ [[TMP1]], %[[BB7]] ], [ [[TMP1]], %[[BB7]] ], [ [[TMP1]], %[[BB7]] ], [ [[TMP1]], %[[BB7]] ], [ [[TMP1]], %[[BB7]] ], [ [[TMP1]], %[[BB7]] ], [ zeroinitializer, %[[BB13]] ], [ zeroinitializer, %[[BB13]] ], [ zeroinitializer, %[[BB13]] ], [ zeroinitializer, %[[BB13]] ], [ zeroinitializer, %[[BB13]] ], [ zeroinitializer, %[[BB13]] ], [ zeroinitializer, %[[BB13]] ], [ [[TMP3]], %[[BB20]] ], [ [[TMP3]], %[[BB20]] ], [ [[TMP3]], %[[BB20]] ], [ [[TMP3]], %[[BB20]] ], [ [[TMP3]], %[[BB20]] ], [ [[TMP3]], %[[BB20]] ], [ [[TMP3]], %[[BB20]] ], [ [[TMP4]], %[[BB22]] ], [ [[TMP4]], %[[BB22]] ], [ [[TMP4]], %[[BB22]] ], [ [[TMP4]], %[[BB22]] ], [ [[TMP4]], %[[BB22]] ], [ [[TMP4]], %[[BB22]] ], [ [[TMP4]], %[[BB22]] ]
+; CHECK-NEXT:    [[PHI31:%.*]] = phi float [ [[TMP2]], %[[BB7]] ], [ [[TMP2]], %[[BB7]] ], [ [[TMP2]], %[[BB7]] ], [ [[TMP2]], %[[BB7]] ], [ [[TMP2]], %[[BB7]] ], [ [[TMP2]], %[[BB7]] ], [ [[TMP2]], %[[BB7]] ], [ 0.000000e+00, %[[BB13]] ], [ 0.000000e+00, %[[BB13]] ], [ 0.000000e+00, %[[BB13]] ], [ 0.000000e+00, %[[BB13]] ], [ 0.000000e+00, %[[BB13]] ], [ 0.000000e+00, %[[BB13]] ], [ 0.000000e+00, %[[BB13]] ], [ [[FADD21]], %[[BB20]] ], [ [[FADD21]], %[[BB20]] ], [ [[FADD21]], %[[BB20]] ], [ [[FADD21]], %[[BB20]] ], [ [[FADD21]], %[[BB20]] ], [ [[FADD21]], %[[BB20]] ], [ [[FADD21]], %[[BB20]] ], [ [[TMP5]], %[[BB22]] ], [ [[TMP5]], %[[BB22]] ], [ [[TMP5]], %[[BB22]] ], [ [[TMP5]], %[[BB22]] ], [ [[TMP5]], %[[BB22]] ], [ [[TMP5]], %[[BB22]] ], [ [[TMP5]], %[[BB22]] ]
+; CHECK-NEXT:    [[PHI32:%.*]] = phi float [ [[FADD11]], %[[BB7]] ], [ [[FADD11]], %[[BB7]] ], [ [[FADD11]], %[[BB7]] ], [ [[FADD11]], %[[BB7]] ], [ [[FADD11]], %[[BB7]] ], [ [[FADD11]], %[[BB7]] ], [ [[FADD11]], %[[BB7]] ], [ 0.000000e+00, %[[BB13]] ], [ 0.000000e+00, %[[BB13]] ], [ 0.000000e+00, %[[BB13]] ], [ 0.000000e+00, %[[BB13]] ], [ 0.000000e+00, %[[BB13]] ], [ 0.000000e+00, %[[BB13]] ], [ 0.000000e+00, %[[BB13]] ], [ 0.000000e+00, %[[BB20]] ], [ 0.000000e+00, %[[BB20]] ], [ 0.000000e+00, %[[BB20]] ], [ 0.000000e+00, %[[BB20]] ], [ 0.000000e+00, %[[BB20]] ], [ 0.000000e+00, %[[BB20]] ], [ 0.000000e+00, %[[BB20]] ], [ [[TMP6]], %[[BB22]] ], [ [[TMP6]], %[[BB22]] ], [ [[TMP6]], %[[BB22]] ], [ [[TMP6]], %[[BB22]] ], [ [[TMP6]], %[[BB22]] ], [ [[TMP6]], %[[BB22]] ], [ [[TMP6]], %[[BB22]] ]
 ; CHECK-NEXT:    ret void
 ;
 bb:
