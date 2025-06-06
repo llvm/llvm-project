@@ -597,8 +597,7 @@ static void reloadCacheAndRecompute(Location loc, RewriterBase &rewriter,
     if (isPtr(original.getType())) {
       restored = rewriter.create<LLVM::LoadOp>(loc, llvmPtrTy, newArg);
       if (!isa<LLVM::LLVMPointerType>(original.getType()))
-        restored = rewriter.create<UnrealizedConversionCastOp>(loc, original.getType(), ValueRange(restored))
-                           .getResult(0);
+        restored = rewriter.create<fir::ConvertOp>(loc, original.getType(), restored);
     } 
     else {
         restored = rewriter.create<fir::LoadOp>(loc, newArg);
@@ -684,9 +683,7 @@ static SplitResult isolateOp(Operation *splitBeforeOp, bool splitAfter,
         getPtrTypeForOmp(original.getType()), original.getLoc());
     if (isPtr(original.getType())) {
       if (!isa<LLVM::LLVMPointerType>(toStore.getType()))
-        toStore = rewriter.create<UnrealizedConversionCastOp>(loc, llvmPtrTy,
-                                                           ValueRange(toStore))
-                      .getResult(0);
+        toStore = rewriter.create<fir::ConvertOp>(loc, llvmPtrTy, toStore);
       rewriter.create<LLVM::StoreOp>(loc, toStore, newArg);
     } else {
       rewriter.create<fir::StoreOp>(loc, toStore, newArg);
