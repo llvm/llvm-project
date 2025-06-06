@@ -12737,7 +12737,6 @@ Value *PPCTargetLowering::emitStoreConditional(IRBuilderBase &Builder,
 
   if (SZ == 8 || SZ == 16)
     Val = Builder.CreateZExt(Val, Builder.getInt32Ty());
-  ;
 
   Value *Call = Builder.CreateIntrinsic(IntID, {Addr, Val},
                                         /*FMFSource=*/nullptr, "stcx");
