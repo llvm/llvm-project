@@ -59327,6 +59327,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     if (all_of(seq<int>(NumOps), [&](int I) {
           return getTargetShuffleMask(Ops[I], /*AllowSentinelZero=*/false,
                                       SrcOps[I], SrcMasks[I]) &&
+                 !is128BitLaneCrossingShuffleMask(OpVT, SrcMasks[I]) &&
                  SrcMasks[I].size() == NumOpElts &&
                  all_of(SrcOps[I], [&OpVT](SDValue V) {
                    return V.getValueType() == OpVT;
