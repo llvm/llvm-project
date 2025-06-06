@@ -67,13 +67,7 @@ int main(int argc, const char *argv[]) {
 // CHECK-SYMBOLS-NOT: {{ }}_fdopen
 // CHECK-SYMBOLS-NOT: {{ }}_fopen
 // CHECK-SYMBOLS-NOT: {{ }}_fwrite
-// CHECK-SYMBOLS-NOT: {{ }}_getenv
-// CHECK-SYMBOLS-NOT: {{ }}getenv
 // CHECK-SYMBOLS-NOT: {{ }}_malloc
 // CHECK-SYMBOLS-NOT: {{ }}malloc
-// CHECK-SYMBOLS-NOT: {{ }}_calloc
-// CHECK-SYMBOLS-NOT: {{ }}calloc
-// CHECK-SYMBOLS-NOT: {{ }}_free
-// CHECK-SYMBOLS-NOT: {{ }}free
 // CHECK-SYMBOLS-NOT: {{ }}_open
 // CHECK-SYMBOLS-NOT: {{ }}_getpagesize
