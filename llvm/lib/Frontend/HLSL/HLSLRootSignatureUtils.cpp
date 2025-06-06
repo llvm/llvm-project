@@ -71,9 +71,7 @@ static raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
-
-static raw_ostream &operator<<(raw_ostream &OS,
-                               const SamplerFilter &Filter) {
+static raw_ostream &operator<<(raw_ostream &OS, const SamplerFilter &Filter) {
   switch (Filter) {
   case SamplerFilter::MinMagMipPoint:
     OS << "MinMagMipPoint";
@@ -242,7 +240,6 @@ static raw_ostream &operator<<(raw_ostream &OS,
 
   return OS;
 }
-
 
 static raw_ostream &operator<<(raw_ostream &OS,
                                const StaticBorderColor &BorderColor) {
@@ -448,8 +445,7 @@ raw_ostream &operator<<(raw_ostream &OS, const RootDescriptor &Descriptor) {
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const StaticSampler &Sampler) {
-  OS << "StaticSampler(" << Sampler.Reg
-     << ", filter = " << Sampler.Filter
+  OS << "StaticSampler(" << Sampler.Reg << ", filter = " << Sampler.Filter
      << ", addressU = " << Sampler.AddressU
      << ", addressV = " << Sampler.AddressV
      << ", addressW = " << Sampler.AddressW
@@ -457,10 +453,8 @@ raw_ostream &operator<<(raw_ostream &OS, const StaticSampler &Sampler) {
      << ", maxAnisotropy = " << Sampler.MaxAnisotropy
      << ", comparisonFunc = " << Sampler.CompFunc
      << ", borderColor = " << Sampler.BorderColor
-     << ", minLOD = " << Sampler.MinLOD
-     << ", maxLOD = " << Sampler.MaxLOD
-     << ", space = " << Sampler.Space
-     << ", visibility = " << Sampler.Visibility
+     << ", minLOD = " << Sampler.MinLOD << ", maxLOD = " << Sampler.MaxLOD
+     << ", space = " << Sampler.Space << ", visibility = " << Sampler.Visibility
      << ")";
   return OS;
 }
