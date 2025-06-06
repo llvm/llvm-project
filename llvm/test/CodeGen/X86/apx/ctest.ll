@@ -95,9 +95,9 @@ define i8 @ctest8rr_zf_double_p(i8 %a, double %b, i8* nocapture %c)  {
 ; NDD-LABEL: ctest8rr_zf_double_p:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    testb %dil, %dil
-; NDD-NEXT:    setne %al
+; NDD-NEXT:    setzune %al
 ; NDD-NEXT:    ucomisd %xmm0, %xmm0
-; NDD-NEXT:    setp %cl
+; NDD-NEXT:    setzup %cl
 ; NDD-NEXT:    andb %cl, %al
 ; NDD-NEXT:    cmpb $1, %al
 ; NDD-NEXT:    jne .LBB2_2
@@ -139,9 +139,9 @@ define i8 @ctest8rr_zf_double_np(i8 %a, double %b, i8* nocapture %c)  {
 ; NDD-LABEL: ctest8rr_zf_double_np:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    testb %dil, %dil
-; NDD-NEXT:    setne %al
+; NDD-NEXT:    setzune %al
 ; NDD-NEXT:    ucomisd %xmm0, %xmm0
-; NDD-NEXT:    setnp %cl
+; NDD-NEXT:    setzunp %cl
 ; NDD-NEXT:    andb %cl, %al
 ; NDD-NEXT:    cmpb $1, %al
 ; NDD-NEXT:    jne .LBB3_2
@@ -858,7 +858,7 @@ define i32 @ctest_nobranch(i32 noundef %a, i32 noundef %b) {
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    testl %edi, %edi
 ; NDD-NEXT:    ctestlel {dfv=} %esi, %esi
-; NDD-NEXT:    setg %al
+; NDD-NEXT:    setzug %al
 ; NDD-NEXT:    movzbl %al, %eax
 ; NDD-NEXT:    retq
 entry:
@@ -884,7 +884,7 @@ define i32 @ctest_continous_nobranch(i32 noundef %a, i32 noundef %b, i32 noundef
 ; NDD-NEXT:    testl %edi, %edi
 ; NDD-NEXT:    ctestlel {dfv=sf} %esi, %esi
 ; NDD-NEXT:    ctestsl {dfv=zf} %edx, %edx
-; NDD-NEXT:    setg %al
+; NDD-NEXT:    setzug %al
 ; NDD-NEXT:    movzbl %al, %eax
 ; NDD-NEXT:    retq
 entry:
@@ -962,10 +962,10 @@ define void @cmp_srem(ptr %p, i32 %a, ptr %b) {
 ; NDD-NEXT:    cltd
 ; NDD-NEXT:    {nf} idivl %edi
 ; NDD-NEXT:    ctestnel {dfv=} %edx, %edx
-; NDD-NEXT:    sete %al
+; NDD-NEXT:    setzue %al
 ; NDD-NEXT:    cmpl $1, %esi
 ; NDD-NEXT:    ccmpael {dfv=zf} $1, %edi
-; NDD-NEXT:    sete %dl
+; NDD-NEXT:    setzue %dl
 ; NDD-NEXT:    orb %dl, %al
 ; NDD-NEXT:    movb %al, (%rcx)
 ; NDD-NEXT:    retq

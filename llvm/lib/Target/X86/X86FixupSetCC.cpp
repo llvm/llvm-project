@@ -79,10 +79,11 @@ bool X86FixupSetCCPass::runOnMachineFunction(MachineFunction &MF) {
       if (MI.definesRegister(X86::EFLAGS, /*TRI=*/nullptr))
         FlagsDefMI = &MI;
 
-      // Find a setcc that is used by a zext.
+      // Find a setcc/setzucc (if ZU is enabled) that is used by a zext.
       // This doesn't have to be the only use, the transformation is safe
       // regardless.
-      if (MI.getOpcode() != X86::SETCCr)
+      if (MI.getOpcode() != X86::SETCCr &&
+          (!ST->hasZU() || MI.getOpcode() != X86::SETZUCCr))
         continue;
 
       MachineInstr *ZExt = nullptr;
@@ -122,7 +123,8 @@ bool X86FixupSetCCPass::runOnMachineFunction(MachineFunction &MF) {
       // register.
       Register ZeroReg = MRI->createVirtualRegister(RC);
       if (ST->hasZU()) {
-        MI.setDesc(TII->get(X86::SETZUCCr));
+        if (MI.getOpcode() != X86::SETZUCCr)
+          MI.setDesc(TII->get(X86::SETZUCCr));
         BuildMI(*ZExt->getParent(), ZExt, ZExt->getDebugLoc(),
                 TII->get(TargetOpcode::IMPLICIT_DEF), ZeroReg);
       } else {
