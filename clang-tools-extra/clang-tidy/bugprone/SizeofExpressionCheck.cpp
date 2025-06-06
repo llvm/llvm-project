@@ -73,7 +73,7 @@ SizeofExpressionCheck::SizeofExpressionCheck(StringRef Name,
       WarnOnSizeOfPointer(Options.get("WarnOnSizeOfPointer", false)),
       WarnOnOffsetDividedBySizeOf(
           Options.get("WarnOnOffsetDividedBySizeOf", true)),
-      WarnOnLoopExprSizeOf(Options.get("WarnOnLoopExprSizeOf", true)) {}
+      WarnOnSizeOfInLoopTermination(Options.get("WarnOnSizeOfInLoopTermination", true)) {}
 
 void SizeofExpressionCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "WarnOnSizeOfConstant", WarnOnSizeOfConstant);
@@ -87,7 +87,7 @@ void SizeofExpressionCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "WarnOnSizeOfPointer", WarnOnSizeOfPointer);
   Options.store(Opts, "WarnOnOffsetDividedBySizeOf",
                 WarnOnOffsetDividedBySizeOf);
-  Options.store(Opts, "WarnOnLoopExprSizeOf", WarnOnLoopExprSizeOf);
+  Options.store(Opts, "WarnOnSizeOfInLoopTermination", WarnOnSizeOfInLoopTermination);
 }
 
 void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
@@ -137,9 +137,9 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
                        this);
   }
 
-  if (WarnOnLoopExprSizeOf) {
+  if (WarnOnSizeOfInLoopTermination) {
     Finder->addMatcher(
-        LoopExpr(has(binaryOperator(has(SizeOfExpr)))).bind("loop-expr"), this);
+        LoopExpr(has(binaryOperator(has(SizeOfExpr.bind("loop-expr"))))), this);
   }
 
   // Detect sizeof(kPtr) where kPtr is 'const char* kPtr = "abc"';

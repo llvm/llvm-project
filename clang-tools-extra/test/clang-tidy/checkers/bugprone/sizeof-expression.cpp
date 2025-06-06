@@ -174,7 +174,7 @@ struct B {
 
 int square(int num, struct B b) {
     struct A arr[10];
-    // CHECK-MESSAGES: :[[@LINE+1]]:5: warning: suspicious usage of 'sizeof' in the loop [bugprone-sizeof-expression]
+    // CHECK-MESSAGES: :[[@LINE+1]]:24: warning: suspicious usage of 'sizeof' in the loop [bugprone-sizeof-expression]
     for(int i = 0; i < sizeof(arr); i++) {
        struct A a = arr[i];
     }
@@ -188,7 +188,7 @@ int square(int num, struct B b) {
        struct A a = arr[i];
     }
 
-    // CHECK-MESSAGES: :[[@LINE+1]]:5: warning: suspicious usage of 'sizeof' in the loop [bugprone-sizeof-expression]
+    // CHECK-MESSAGES: :[[@LINE+1]]:24: warning: suspicious usage of 'sizeof' in the loop [bugprone-sizeof-expression]
     for(int j = 0; j < sizeof(b.a); j++) {
 
     }
