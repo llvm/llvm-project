@@ -430,13 +430,13 @@ define i32 @fcmp_ueq(double %a, double %b) nounwind {
 ; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    mv s1, a0
-; RV64I-NEXT:    call __eqdf2
-; RV64I-NEXT:    seqz s2, a0
+; RV64I-NEXT:    call __unorddf2
+; RV64I-NEXT:    mv s2, a0
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    mv a1, s0
-; RV64I-NEXT:    call __unorddf2
-; RV64I-NEXT:    snez a0, a0
-; RV64I-NEXT:    or a0, a0, s2
+; RV64I-NEXT:    call __eqdf2
+; RV64I-NEXT:    seqz a0, a0
+; RV64I-NEXT:    or a0, s2, a0
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload

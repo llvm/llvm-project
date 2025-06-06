@@ -434,11 +434,7 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
 
     EVT SetCCVT =
         getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), RetVT);
-    if (RetVT == SetCCVT &&
-        getBooleanContents(RetVT) == ZeroOrOneBooleanContent) {
-      // FIXME: Checking the type matches is a hack in case the calling
-      // convention lowering inserted some instructions after the
-      // CopyFromReg. Combines fail to look through the AssertZext.
+    if (getBooleanContents(RetVT) == ZeroOrOneBooleanContent) {
       NewLHS = DAG.getNode(ISD::AssertZext, dl, RetVT, Call.first,
                            DAG.getValueType(MVT::i1));
     }

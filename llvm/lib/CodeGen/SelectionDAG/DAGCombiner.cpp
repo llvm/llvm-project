@@ -14933,6 +14933,25 @@ SDValue DAGCombiner::visitAssertExt(SDNode *N) {
     }
   }
 
+  // If we have (AssertZext (and (AssertSext X, iX), M), iY) and Y is smaller
+  // than X, and the And doesn't change the lower iY bits, we can move the
+  // AssertZext in front of the And and drop the AssertSext.
+  if (Opcode == ISD::AssertZext && N0.getOpcode() == ISD::AND &&
+      N0.hasOneUse() && N0.getOperand(0).getOpcode() == ISD::AssertSext &&
+      isa<ConstantSDNode>(N0.getOperand(1))) {
+    SDValue BigA = N0.getOperand(0);
+    EVT BigA_AssertVT = cast<VTSDNode>(BigA.getOperand(1))->getVT();
+    const APInt &Mask = N0.getConstantOperandAPInt(1);
+    if (AssertVT.bitsLT(BigA_AssertVT) &&
+        Mask.countr_one() >= AssertVT.getScalarSizeInBits()) {
+      SDLoc DL(N);
+      SDValue NewAssert =
+          DAG.getNode(Opcode, DL, N->getValueType(0), BigA.getOperand(0), N1);
+      return DAG.getNode(ISD::AND, DL, N->getValueType(0), NewAssert,
+                         N0.getOperand(1));
+    }
+  }
+
   return SDValue();
 }
 
