@@ -340,6 +340,11 @@ module ptrauth {
   export *
 }
 
+module feature_availability {
+  header "feature-availability.h"
+  export *
+}
+
 /* TO_UPSTREAM(BoundsSafety) ON */
 module ptrcheck {
   header "ptrcheck.h"
