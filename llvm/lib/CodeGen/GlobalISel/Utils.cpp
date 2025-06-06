@@ -2003,6 +2003,17 @@ Type *llvm::getTypeForLLT(LLT Ty, LLVMContext &C) {
   return IntegerType::get(C, Ty.getSizeInBits());
 }
 
+bool llvm::isAssertMI(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  default:
+    return false;
+  case TargetOpcode::G_ASSERT_ALIGN:
+  case TargetOpcode::G_ASSERT_SEXT:
+  case TargetOpcode::G_ASSERT_ZEXT:
+    return true;
+  }
+}
+
 APInt llvm::GIConstant::getScalarValue() const {
   assert(Kind == GIConstantKind::Scalar && "Expected scalar constant");
 

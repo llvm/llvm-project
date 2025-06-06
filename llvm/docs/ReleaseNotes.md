@@ -208,6 +208,8 @@ Changes to the RISC-V Backend
   Extensions.
 * `-mcpu=andes-a25` and `-mcpu=andes-ax25` were added.
 * The `Shlcofideleg` extension was added.
+* `-mcpu=sifive-x390` was added.
+* `-mtune=andes-45-series` was added.
 
 Changes to the WebAssembly Backend
 ----------------------------------
