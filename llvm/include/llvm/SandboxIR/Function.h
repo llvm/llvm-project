@@ -60,7 +60,7 @@ public:
 
   /// Returns the alignment of the given function.
   MaybeAlign getAlign() const {
-    return cast<llvm::GlobalVariable>(Val)->getAlign();
+    return cast<llvm::Function>(Val)->getAlign();
   }
 
   // TODO: Add missing: setAligment(Align)
