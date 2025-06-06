@@ -152,101 +152,101 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
   const struct {
     const RTLIB::Libcall Op;
     const char * const Name;
-    const ISD::CondCode Cond;
+    const CmpInst::Predicate Cond;
   } LibraryCalls[] = {
     // Floating point conversions - EABI Table 6
-    { RTLIB::FPROUND_F64_F32,   "__mspabi_cvtdf",   ISD::SETCC_INVALID },
-    { RTLIB::FPEXT_F32_F64,     "__mspabi_cvtfd",   ISD::SETCC_INVALID },
+    { RTLIB::FPROUND_F64_F32,   "__mspabi_cvtdf",   CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::FPEXT_F32_F64,     "__mspabi_cvtfd",   CmpInst::BAD_ICMP_PREDICATE },
     // The following is NOT implemented in libgcc
-    //{ RTLIB::FPTOSINT_F64_I16,  "__mspabi_fixdi", ISD::SETCC_INVALID },
-    { RTLIB::FPTOSINT_F64_I32,  "__mspabi_fixdli",  ISD::SETCC_INVALID },
-    { RTLIB::FPTOSINT_F64_I64,  "__mspabi_fixdlli", ISD::SETCC_INVALID },
+    //{ RTLIB::FPTOSINT_F64_I16,  "__mspabi_fixdi", CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::FPTOSINT_F64_I32,  "__mspabi_fixdli",  CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::FPTOSINT_F64_I64,  "__mspabi_fixdlli", CmpInst::BAD_ICMP_PREDICATE },
     // The following is NOT implemented in libgcc
-    //{ RTLIB::FPTOUINT_F64_I16,  "__mspabi_fixdu", ISD::SETCC_INVALID },
-    { RTLIB::FPTOUINT_F64_I32,  "__mspabi_fixdul",  ISD::SETCC_INVALID },
-    { RTLIB::FPTOUINT_F64_I64,  "__mspabi_fixdull", ISD::SETCC_INVALID },
+    //{ RTLIB::FPTOUINT_F64_I16,  "__mspabi_fixdu", CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::FPTOUINT_F64_I32,  "__mspabi_fixdul",  CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::FPTOUINT_F64_I64,  "__mspabi_fixdull", CmpInst::BAD_ICMP_PREDICATE },
     // The following is NOT implemented in libgcc
-    //{ RTLIB::FPTOSINT_F32_I16,  "__mspabi_fixfi", ISD::SETCC_INVALID },
-    { RTLIB::FPTOSINT_F32_I32,  "__mspabi_fixfli",  ISD::SETCC_INVALID },
-    { RTLIB::FPTOSINT_F32_I64,  "__mspabi_fixflli", ISD::SETCC_INVALID },
+    //{ RTLIB::FPTOSINT_F32_I16,  "__mspabi_fixfi", CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::FPTOSINT_F32_I32,  "__mspabi_fixfli",  CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::FPTOSINT_F32_I64,  "__mspabi_fixflli", CmpInst::BAD_ICMP_PREDICATE },
     // The following is NOT implemented in libgcc
-    //{ RTLIB::FPTOUINT_F32_I16,  "__mspabi_fixfu", ISD::SETCC_INVALID },
-    { RTLIB::FPTOUINT_F32_I32,  "__mspabi_fixful",  ISD::SETCC_INVALID },
-    { RTLIB::FPTOUINT_F32_I64,  "__mspabi_fixfull", ISD::SETCC_INVALID },
+    //{ RTLIB::FPTOUINT_F32_I16,  "__mspabi_fixfu", CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::FPTOUINT_F32_I32,  "__mspabi_fixful",  CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::FPTOUINT_F32_I64,  "__mspabi_fixfull", CmpInst::BAD_ICMP_PREDICATE },
     // TODO The following IS implemented in libgcc
-    //{ RTLIB::SINTTOFP_I16_F64,  "__mspabi_fltid", ISD::SETCC_INVALID },
-    { RTLIB::SINTTOFP_I32_F64,  "__mspabi_fltlid",  ISD::SETCC_INVALID },
+    //{ RTLIB::SINTTOFP_I16_F64,  "__mspabi_fltid", CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::SINTTOFP_I32_F64,  "__mspabi_fltlid",  CmpInst::BAD_ICMP_PREDICATE },
     // TODO The following IS implemented in libgcc but is not in the EABI
-    { RTLIB::SINTTOFP_I64_F64,  "__mspabi_fltllid", ISD::SETCC_INVALID },
+    { RTLIB::SINTTOFP_I64_F64,  "__mspabi_fltllid", CmpInst::BAD_ICMP_PREDICATE },
     // TODO The following IS implemented in libgcc
-    //{ RTLIB::UINTTOFP_I16_F64,  "__mspabi_fltud", ISD::SETCC_INVALID },
-    { RTLIB::UINTTOFP_I32_F64,  "__mspabi_fltuld",  ISD::SETCC_INVALID },
+    //{ RTLIB::UINTTOFP_I16_F64,  "__mspabi_fltud", CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::UINTTOFP_I32_F64,  "__mspabi_fltuld",  CmpInst::BAD_ICMP_PREDICATE },
     // The following IS implemented in libgcc but is not in the EABI
-    { RTLIB::UINTTOFP_I64_F64,  "__mspabi_fltulld", ISD::SETCC_INVALID },
+    { RTLIB::UINTTOFP_I64_F64,  "__mspabi_fltulld", CmpInst::BAD_ICMP_PREDICATE },
     // TODO The following IS implemented in libgcc
-    //{ RTLIB::SINTTOFP_I16_F32,  "__mspabi_fltif", ISD::SETCC_INVALID },
-    { RTLIB::SINTTOFP_I32_F32,  "__mspabi_fltlif",  ISD::SETCC_INVALID },
+    //{ RTLIB::SINTTOFP_I16_F32,  "__mspabi_fltif", CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::SINTTOFP_I32_F32,  "__mspabi_fltlif",  CmpInst::BAD_ICMP_PREDICATE },
     // TODO The following IS implemented in libgcc but is not in the EABI
-    { RTLIB::SINTTOFP_I64_F32,  "__mspabi_fltllif", ISD::SETCC_INVALID },
+    { RTLIB::SINTTOFP_I64_F32,  "__mspabi_fltllif", CmpInst::BAD_ICMP_PREDICATE },
     // TODO The following IS implemented in libgcc
-    //{ RTLIB::UINTTOFP_I16_F32,  "__mspabi_fltuf", ISD::SETCC_INVALID },
-    { RTLIB::UINTTOFP_I32_F32,  "__mspabi_fltulf",  ISD::SETCC_INVALID },
+    //{ RTLIB::UINTTOFP_I16_F32,  "__mspabi_fltuf", CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::UINTTOFP_I32_F32,  "__mspabi_fltulf",  CmpInst::BAD_ICMP_PREDICATE },
     // The following IS implemented in libgcc but is not in the EABI
-    { RTLIB::UINTTOFP_I64_F32,  "__mspabi_fltullf", ISD::SETCC_INVALID },
+    { RTLIB::UINTTOFP_I64_F32,  "__mspabi_fltullf", CmpInst::BAD_ICMP_PREDICATE },
 
     // Floating point comparisons - EABI Table 7
-    { RTLIB::OEQ_F64, "__mspabi_cmpd", ISD::SETEQ },
-    { RTLIB::UNE_F64, "__mspabi_cmpd", ISD::SETNE },
-    { RTLIB::OGE_F64, "__mspabi_cmpd", ISD::SETGE },
-    { RTLIB::OLT_F64, "__mspabi_cmpd", ISD::SETLT },
-    { RTLIB::OLE_F64, "__mspabi_cmpd", ISD::SETLE },
-    { RTLIB::OGT_F64, "__mspabi_cmpd", ISD::SETGT },
-    { RTLIB::OEQ_F32, "__mspabi_cmpf", ISD::SETEQ },
-    { RTLIB::UNE_F32, "__mspabi_cmpf", ISD::SETNE },
-    { RTLIB::OGE_F32, "__mspabi_cmpf", ISD::SETGE },
-    { RTLIB::OLT_F32, "__mspabi_cmpf", ISD::SETLT },
-    { RTLIB::OLE_F32, "__mspabi_cmpf", ISD::SETLE },
-    { RTLIB::OGT_F32, "__mspabi_cmpf", ISD::SETGT },
+    { RTLIB::OEQ_F64, "__mspabi_cmpd", CmpInst::ICMP_EQ },
+    { RTLIB::UNE_F64, "__mspabi_cmpd", CmpInst::ICMP_NE },
+    { RTLIB::OGE_F64, "__mspabi_cmpd", CmpInst::ICMP_SGE },
+    { RTLIB::OLT_F64, "__mspabi_cmpd", CmpInst::ICMP_SLT },
+    { RTLIB::OLE_F64, "__mspabi_cmpd", CmpInst::ICMP_SLE },
+    { RTLIB::OGT_F64, "__mspabi_cmpd", CmpInst::ICMP_SGT },
+    { RTLIB::OEQ_F32, "__mspabi_cmpf", CmpInst::ICMP_EQ },
+    { RTLIB::UNE_F32, "__mspabi_cmpf", CmpInst::ICMP_NE },
+    { RTLIB::OGE_F32, "__mspabi_cmpf", CmpInst::ICMP_SGE },
+    { RTLIB::OLT_F32, "__mspabi_cmpf", CmpInst::ICMP_SLT },
+    { RTLIB::OLE_F32, "__mspabi_cmpf", CmpInst::ICMP_SLE },
+    { RTLIB::OGT_F32, "__mspabi_cmpf", CmpInst::ICMP_SGT },
 
     // Floating point arithmetic - EABI Table 8
-    { RTLIB::ADD_F64,  "__mspabi_addd", ISD::SETCC_INVALID },
-    { RTLIB::ADD_F32,  "__mspabi_addf", ISD::SETCC_INVALID },
-    { RTLIB::DIV_F64,  "__mspabi_divd", ISD::SETCC_INVALID },
-    { RTLIB::DIV_F32,  "__mspabi_divf", ISD::SETCC_INVALID },
-    { RTLIB::MUL_F64,  "__mspabi_mpyd", ISD::SETCC_INVALID },
-    { RTLIB::MUL_F32,  "__mspabi_mpyf", ISD::SETCC_INVALID },
-    { RTLIB::SUB_F64,  "__mspabi_subd", ISD::SETCC_INVALID },
-    { RTLIB::SUB_F32,  "__mspabi_subf", ISD::SETCC_INVALID },
+    { RTLIB::ADD_F64,  "__mspabi_addd", CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::ADD_F32,  "__mspabi_addf", CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::DIV_F64,  "__mspabi_divd", CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::DIV_F32,  "__mspabi_divf", CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::MUL_F64,  "__mspabi_mpyd", CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::MUL_F32,  "__mspabi_mpyf", CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::SUB_F64,  "__mspabi_subd", CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::SUB_F32,  "__mspabi_subf", CmpInst::BAD_ICMP_PREDICATE },
     // The following are NOT implemented in libgcc
-    // { RTLIB::NEG_F64,  "__mspabi_negd", ISD::SETCC_INVALID },
-    // { RTLIB::NEG_F32,  "__mspabi_negf", ISD::SETCC_INVALID },
+    // { RTLIB::NEG_F64,  "__mspabi_negd", CmpInst::BAD_ICMP_PREDICATE },
+    // { RTLIB::NEG_F32,  "__mspabi_negf", CmpInst::BAD_ICMP_PREDICATE },
 
     // Universal Integer Operations - EABI Table 9
-    { RTLIB::SDIV_I16,   "__mspabi_divi", ISD::SETCC_INVALID },
-    { RTLIB::SDIV_I32,   "__mspabi_divli", ISD::SETCC_INVALID },
-    { RTLIB::SDIV_I64,   "__mspabi_divlli", ISD::SETCC_INVALID },
-    { RTLIB::UDIV_I16,   "__mspabi_divu", ISD::SETCC_INVALID },
-    { RTLIB::UDIV_I32,   "__mspabi_divul", ISD::SETCC_INVALID },
-    { RTLIB::UDIV_I64,   "__mspabi_divull", ISD::SETCC_INVALID },
-    { RTLIB::SREM_I16,   "__mspabi_remi", ISD::SETCC_INVALID },
-    { RTLIB::SREM_I32,   "__mspabi_remli", ISD::SETCC_INVALID },
-    { RTLIB::SREM_I64,   "__mspabi_remlli", ISD::SETCC_INVALID },
-    { RTLIB::UREM_I16,   "__mspabi_remu", ISD::SETCC_INVALID },
-    { RTLIB::UREM_I32,   "__mspabi_remul", ISD::SETCC_INVALID },
-    { RTLIB::UREM_I64,   "__mspabi_remull", ISD::SETCC_INVALID },
+    { RTLIB::SDIV_I16,   "__mspabi_divi", CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::SDIV_I32,   "__mspabi_divli", CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::SDIV_I64,   "__mspabi_divlli", CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::UDIV_I16,   "__mspabi_divu", CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::UDIV_I32,   "__mspabi_divul", CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::UDIV_I64,   "__mspabi_divull", CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::SREM_I16,   "__mspabi_remi", CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::SREM_I32,   "__mspabi_remli", CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::SREM_I64,   "__mspabi_remlli", CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::UREM_I16,   "__mspabi_remu", CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::UREM_I32,   "__mspabi_remul", CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::UREM_I64,   "__mspabi_remull", CmpInst::BAD_ICMP_PREDICATE },
 
     // Bitwise Operations - EABI Table 10
     // TODO: __mspabi_[srli/srai/slli] ARE implemented in libgcc
-    { RTLIB::SRL_I32,    "__mspabi_srll", ISD::SETCC_INVALID },
-    { RTLIB::SRA_I32,    "__mspabi_sral", ISD::SETCC_INVALID },
-    { RTLIB::SHL_I32,    "__mspabi_slll", ISD::SETCC_INVALID },
+    { RTLIB::SRL_I32,    "__mspabi_srll", CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::SRA_I32,    "__mspabi_sral", CmpInst::BAD_ICMP_PREDICATE },
+    { RTLIB::SHL_I32,    "__mspabi_slll", CmpInst::BAD_ICMP_PREDICATE },
     // __mspabi_[srlll/srall/sllll/rlli/rlll] are NOT implemented in libgcc
 
   };
 
   for (const auto &LC : LibraryCalls) {
     setLibcallName(LC.Op, LC.Name);
-    if (LC.Cond != ISD::SETCC_INVALID)
+    if (LC.Cond != CmpInst::BAD_ICMP_PREDICATE)
       setCmpLibcallCC(LC.Op, LC.Cond);
   }
 

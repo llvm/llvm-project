@@ -11,11 +11,47 @@
 using namespace llvm;
 using namespace RTLIB;
 
+void RuntimeLibcallsInfo::initSoftFloatCmpLibcallPredicates() {
+  std::fill(SoftFloatCompareLibcallPredicates,
+            SoftFloatCompareLibcallPredicates + RTLIB::UNKNOWN_LIBCALL,
+            CmpInst::BAD_ICMP_PREDICATE);
+  SoftFloatCompareLibcallPredicates[RTLIB::OEQ_F32] = CmpInst::ICMP_EQ;
+  SoftFloatCompareLibcallPredicates[RTLIB::OEQ_F64] = CmpInst::ICMP_EQ;
+  SoftFloatCompareLibcallPredicates[RTLIB::OEQ_F128] = CmpInst::ICMP_EQ;
+  SoftFloatCompareLibcallPredicates[RTLIB::OEQ_PPCF128] = CmpInst::ICMP_EQ;
+  SoftFloatCompareLibcallPredicates[RTLIB::UNE_F32] = CmpInst::ICMP_NE;
+  SoftFloatCompareLibcallPredicates[RTLIB::UNE_F64] = CmpInst::ICMP_NE;
+  SoftFloatCompareLibcallPredicates[RTLIB::UNE_F128] = CmpInst::ICMP_NE;
+  SoftFloatCompareLibcallPredicates[RTLIB::UNE_PPCF128] = CmpInst::ICMP_NE;
+  SoftFloatCompareLibcallPredicates[RTLIB::OGE_F32] = CmpInst::ICMP_SGE;
+  SoftFloatCompareLibcallPredicates[RTLIB::OGE_F64] = CmpInst::ICMP_SGE;
+  SoftFloatCompareLibcallPredicates[RTLIB::OGE_F128] = CmpInst::ICMP_SGE;
+  SoftFloatCompareLibcallPredicates[RTLIB::OGE_PPCF128] = CmpInst::ICMP_SGE;
+  SoftFloatCompareLibcallPredicates[RTLIB::OLT_F32] = CmpInst::ICMP_SLT;
+  SoftFloatCompareLibcallPredicates[RTLIB::OLT_F64] = CmpInst::ICMP_SLT;
+  SoftFloatCompareLibcallPredicates[RTLIB::OLT_F128] = CmpInst::ICMP_SLT;
+  SoftFloatCompareLibcallPredicates[RTLIB::OLT_PPCF128] = CmpInst::ICMP_SLT;
+  SoftFloatCompareLibcallPredicates[RTLIB::OLE_F32] = CmpInst::ICMP_SLE;
+  SoftFloatCompareLibcallPredicates[RTLIB::OLE_F64] = CmpInst::ICMP_SLE;
+  SoftFloatCompareLibcallPredicates[RTLIB::OLE_F128] = CmpInst::ICMP_SLE;
+  SoftFloatCompareLibcallPredicates[RTLIB::OLE_PPCF128] = CmpInst::ICMP_SLE;
+  SoftFloatCompareLibcallPredicates[RTLIB::OGT_F32] = CmpInst::ICMP_SGT;
+  SoftFloatCompareLibcallPredicates[RTLIB::OGT_F64] = CmpInst::ICMP_SGT;
+  SoftFloatCompareLibcallPredicates[RTLIB::OGT_F128] = CmpInst::ICMP_SGT;
+  SoftFloatCompareLibcallPredicates[RTLIB::OGT_PPCF128] = CmpInst::ICMP_SGT;
+  SoftFloatCompareLibcallPredicates[RTLIB::UO_F32] = CmpInst::ICMP_NE;
+  SoftFloatCompareLibcallPredicates[RTLIB::UO_F64] = CmpInst::ICMP_NE;
+  SoftFloatCompareLibcallPredicates[RTLIB::UO_F128] = CmpInst::ICMP_NE;
+  SoftFloatCompareLibcallPredicates[RTLIB::UO_PPCF128] = CmpInst::ICMP_NE;
+}
+
 /// Set default libcall names. If a target wants to opt-out of a libcall it
 /// should be placed here.
 void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
   std::fill(std::begin(LibcallRoutineNames), std::end(LibcallRoutineNames),
             nullptr);
+
+  initSoftFloatCmpLibcallPredicates();
 
 #define HANDLE_LIBCALL(code, name) setLibcallName(RTLIB::code, name);
 #include "llvm/IR/RuntimeLibcalls.def"
