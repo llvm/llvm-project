@@ -984,6 +984,10 @@ public:
     this->WCharType = TargetInfo::UnsignedShort;
   }
 
+  BuiltinVaListKind getBuiltinVaListKind() const override {
+    return TargetInfo::CharPtrBuiltinVaList;
+  }
+
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override {
     X86_64TargetInfo::getTargetDefines(Opts, Builder);
