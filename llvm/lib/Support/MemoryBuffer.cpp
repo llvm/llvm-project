@@ -15,6 +15,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/AutoConvert.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -34,9 +35,6 @@
 #include <io.h>
 #endif
 
-#ifdef __MVS__
-#include "llvm/Support/AutoConvert.h"
-#endif
 using namespace llvm;
 
 //===----------------------------------------------------------------------===//
@@ -516,7 +514,7 @@ getOpenFileImpl(sys::fs::file_t FD, const Twine &Filename, uint64_t FileSize,
   // off the stream.
   // Note: This only works with the assumption of reading a full file (i.e,
   // Offset == 0 and MapSize == FileSize). Reading a file slice does not work.
-  if (Offset == 0 && MapSize == FileSize && *NeedConversion)
+  if (*NeedConversion && Offset == 0 && MapSize == FileSize)
     return getMemoryBufferForStream(FD, Filename);
 #endif
 

@@ -11,20 +11,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef __MVS__
-
 #include "llvm/Support/AutoConvert.h"
 #include "llvm/Support/Error.h"
 #include <cassert>
 #include <fcntl.h>
 #include <sys/stat.h>
+#if defined(HAVE_UNISTD_H)
 #include <unistd.h>
+#endif
 
 using namespace llvm;
 
 static int savedStdHandleAutoConversionMode[3] = {-1, -1, -1};
 
 int disablezOSAutoConversion(int FD) {
+#ifndef __MVS__
+  return 0;
+#else
   static const struct f_cnvrt Convert = {
       SETCVTOFF, // cvtcmd
       0,         // pccsid
@@ -32,9 +35,13 @@ int disablezOSAutoConversion(int FD) {
   };
 
   return fcntl(FD, F_CONTROL_CVT, &Convert);
+#endif
 }
 
 int restorezOSStdHandleAutoConversion(int FD) {
+#ifndef __MVS__
+  return 0;
+#else
   assert(FD == STDIN_FILENO || FD == STDOUT_FILENO || FD == STDERR_FILENO);
   if (savedStdHandleAutoConversionMode[FD] == -1)
     return 0;
@@ -44,9 +51,13 @@ int restorezOSStdHandleAutoConversion(int FD) {
       0,                                    // fccsid
   };
   return (fcntl(FD, F_CONTROL_CVT, &Cvt));
+#endif
 }
 
 int enablezOSAutoConversion(int FD) {
+#ifndef __MVS__
+  return 0;
+#else
   struct f_cnvrt Query = {
       QUERYCVT, // cvtcmd
       0,        // pccsid
@@ -81,30 +92,35 @@ int enablezOSAutoConversion(int FD) {
   // Assume untagged files to be IBM-1047 encoded.
   Query.fccsid = (Query.fccsid == FT_UNTAGGED) ? CCSID_IBM_1047 : Query.fccsid;
   return fcntl(FD, F_CONTROL_CVT, &Query);
+#endif
 }
 
 std::error_code llvm::disablezOSAutoConversion(int FD) {
+#ifdef __MVS__
   if (::disablezOSAutoConversion(FD) == -1)
     return errnoAsErrorCode();
-
+#endif
   return std::error_code();
 }
 
 std::error_code llvm::enablezOSAutoConversion(int FD) {
+#ifdef __MVS__
   if (::enablezOSAutoConversion(FD) == -1)
     return errnoAsErrorCode();
-
+#endif
   return std::error_code();
 }
 
 std::error_code llvm::restorezOSStdHandleAutoConversion(int FD) {
+#ifdef __MVS__
   if (::restorezOSStdHandleAutoConversion(FD) == -1)
     return errnoAsErrorCode();
-
+#endif
   return std::error_code();
 }
 
 std::error_code llvm::setzOSFileTag(int FD, int CCSID, bool Text) {
+#ifdef __MVS__
   assert((!Text || (CCSID != FT_UNTAGGED && CCSID != FT_BINARY)) &&
          "FT_UNTAGGED and FT_BINARY are not allowed for text files");
   struct file_tag Tag;
@@ -115,9 +131,11 @@ std::error_code llvm::setzOSFileTag(int FD, int CCSID, bool Text) {
 
   if (fcntl(FD, F_SETTAG, &Tag) == -1)
     return errnoAsErrorCode();
+#endif
   return std::error_code();
 }
 
+#ifdef __MVS__
 ErrorOr<__ccsid_t> llvm::getzOSFileTag(const char *FileName, const int FD) {
   // If we have a file descriptor, use it to find out file tagging. Otherwise we
   // need to use stat() with the file path.
@@ -136,8 +154,12 @@ ErrorOr<__ccsid_t> llvm::getzOSFileTag(const char *FileName, const int FD) {
     return std::error_code(errno, std::generic_category());
   return Attr.st_tag.ft_ccsid;
 }
+#endif
 
 ErrorOr<bool> llvm::needzOSConversion(const char *FileName, const int FD) {
+#ifndef __MVS__
+  return false;
+#else
   ErrorOr<__ccsid_t> Ccsid = getzOSFileTag(FileName, FD);
   if (std::error_code EC = Ccsid.getError())
     return EC;
@@ -152,6 +174,5 @@ ErrorOr<bool> llvm::needzOSConversion(const char *FileName, const int FD) {
   default:
     return true;
   }
+#endif
 }
-
-#endif //__MVS__

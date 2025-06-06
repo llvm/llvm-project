@@ -18,8 +18,9 @@
 #include "llvm/Support/Windows/WindowsSupport.h"
 #endif
 
-#ifdef __MVS__
+#if defined(HAVE_UNISTD_H)
 #include <unistd.h>
+#endif
 
 void CleanupStdHandles(void *Cookie) {
   llvm::raw_ostream *Outs = &llvm::outs(), *Errs = &llvm::errs();
@@ -29,7 +30,6 @@ void CleanupStdHandles(void *Cookie) {
   llvm::restorezOSStdHandleAutoConversion(STDOUT_FILENO);
   llvm::restorezOSStdHandleAutoConversion(STDERR_FILENO);
 }
-#endif
 
 using namespace llvm;
 using namespace llvm::sys;
@@ -41,10 +41,10 @@ InitLLVM::InitLLVM(int &Argc, const char **&Argv,
   assert(!Initialized && "InitLLVM was already initialized!");
   Initialized = true;
 #endif
-#ifdef __MVS__
+
   // Bring stdin/stdout/stderr into a known state.
   sys::AddSignalHandler(CleanupStdHandles, nullptr);
-#endif
+
   if (InstallPipeSignalExitHandler)
     // The pipe signal handler must be installed before any other handlers are
     // registered. This is because the Unix \ref RegisterHandlers function does
@@ -97,8 +97,6 @@ InitLLVM::InitLLVM(int &Argc, const char **&Argv,
 }
 
 InitLLVM::~InitLLVM() {
-#ifdef __MVS__
   CleanupStdHandles(nullptr);
-#endif
   llvm_shutdown();
 }
