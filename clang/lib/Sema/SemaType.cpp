@@ -8418,7 +8418,8 @@ static void HandlePtrAuthQualifier(ASTContext &Ctx, QualType &T,
     };
     auto DiagnoseInvalidOptionsParameter = [&](llvm::StringRef Reason) {
       S.Diag(AuthenticationOptionsRange.getBegin(),
-             diag::err_ptrauth_invalid_option) << Reason;
+             diag::err_ptrauth_invalid_option)
+          << Reason;
       Attr.setInvalid();
       IsInvalid = true;
       ReportEvaluationOfExpressionIfNeeded();
@@ -8513,7 +8514,7 @@ static void HandlePtrAuthQualifier(ASTContext &Ctx, QualType &T,
                   StringRef LeadingOption = Option.slice(0, WhitespaceIndex);
                   S.Diag(AuthenticationOptionsRange.getBegin(),
                          diag::err_ptrauth_option_missing_comma)
-                        << LeadingOption;
+                      << LeadingOption;
                 } else {
                   S.Diag(AuthenticationOptionsRange.getBegin(),
                          diag::err_ptrauth_unknown_authentication_option)
