@@ -305,9 +305,19 @@ class OpenACCClauseCIREmitter final
     {
       mlir::OpBuilder::InsertionGuard guardCase(builder);
       builder.setInsertionPointAfter(operation);
-      afterOp = builder.create<AfterOpTy>(opInfo.beginLoc, beforeOp.getResult(),
-                                          opInfo.varValue, structured, implicit,
-                                          opInfo.name, opInfo.bounds);
+
+      if constexpr (std::is_same_v<AfterOpTy, mlir::acc::DeleteOp> ||
+                    std::is_same_v<AfterOpTy, mlir::acc::DetachOp>) {
+        // Detach/Delete ops don't have the variable reference here, so they
+        // take 1 fewer argument to their build function.
+        afterOp = builder.create<AfterOpTy>(
+            opInfo.beginLoc, beforeOp.getResult(), structured, implicit,
+            opInfo.name, opInfo.bounds);
+      } else {
+        afterOp = builder.create<AfterOpTy>(
+            opInfo.beginLoc, beforeOp.getResult(), opInfo.varValue, structured,
+            implicit, opInfo.name, opInfo.bounds);
+      }
     }
 
     // Set the 'rest' of the info for both operations.
@@ -842,6 +852,22 @@ public:
     } else {
       // TODO: When we've implemented this for everything, switch this to an
       // unreachable. data, declare remain.
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitNoCreateClause(const OpenACCNoCreateClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
+                               mlir::acc::KernelsOp>) {
+      for (auto var : clause.getVarList())
+        addDataOperand<mlir::acc::NoCreateOp, mlir::acc::DeleteOp>(
+            var, mlir::acc::DataClause::acc_no_create, /*structured=*/true,
+            /*implicit=*/false);
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToComputeOp(clause);
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. data remains.
       return clauseNotImplemented(clause);
     }
   }

@@ -444,8 +444,8 @@ void acc_parallel(int cond) {
   // CHECK-NEXT: cir.return
 }
 
-void acc_parallel_deviceptr(int *arg1, int *arg2) {
-  // CHECK: cir.func @acc_parallel_deviceptr(%[[ARG1_PARAM:.*]]: !cir.ptr<!s32i>{{.*}}, %[[ARG2_PARAM:.*]]: !cir.ptr<!s32i>{{.*}}) {
+void acc_parallel_data_clauses(int *arg1, int *arg2) {
+  // CHECK: cir.func @acc_parallel_data_clauses(%[[ARG1_PARAM:.*]]: !cir.ptr<!s32i>{{.*}}, %[[ARG2_PARAM:.*]]: !cir.ptr<!s32i>{{.*}}) {
   // CHECK-NEXT: %[[ARG1:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arg1", init]
   // CHECK-NEXT: %[[ARG2:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arg2", init]
   // CHECK-NEXT: cir.store %[[ARG1_PARAM]], %[[ARG1]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
@@ -478,4 +478,23 @@ void acc_parallel_deviceptr(int *arg1, int *arg2) {
   // CHECK-NEXT: acc.parallel dataOperands(%[[DEVPTR1]], %[[DEVPTR2]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) {
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
+
+#pragma acc parallel no_create(arg1)
+  ;
+  // CHECK-NEXT: %[[NOCREATE1:.*]] = acc.nocreate varPtr(%[[ARG1]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg1"}
+  // CHECK-NEXT: acc.parallel dataOperands(%[[NOCREATE1]] : !cir.ptr<!cir.ptr<!s32i>>) {
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.delete accPtr(%[[NOCREATE1]] : !cir.ptr<!cir.ptr<!s32i>>) {dataClause = #acc<data_clause acc_no_create>, name = "arg1"}
+
+#pragma acc parallel no_create(arg1, arg2) device_type(radeon) async
+  ;
+  // CHECK-NEXT: %[[NOCREATE1:.*]] = acc.nocreate varPtr(%[[ARG1]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg1"}
+  // CHECK-NEXT: %[[NOCREATE2:.*]] = acc.nocreate varPtr(%[[ARG2]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg2"}
+  // CHECK-NEXT: acc.parallel dataOperands(%[[NOCREATE1]], %[[NOCREATE2]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) {
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.delete accPtr(%[[NOCREATE2]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) {dataClause = #acc<data_clause acc_no_create>, name = "arg2"}
+  // CHECK-NEXT: acc.delete accPtr(%[[NOCREATE1]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) {dataClause = #acc<data_clause acc_no_create>, name = "arg1"}
 }
+
