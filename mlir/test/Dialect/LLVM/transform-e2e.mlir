@@ -5,7 +5,7 @@ func.func @matmul_tensors(
   %arg0: tensor<2x4xf32>, %arg1: tensor<4x6xf32>, %arg2: tensor<2x6xf32>)
     -> tensor<2x6xf32> {
 // CHECK-NOT: linalg
-// CHECK: llvm.intr.fmuladd{{.*}}
+// CHECK: llvm.intr.fma{{.*}}
   %0 = linalg.matmul  ins(%arg0, %arg1: tensor<2x4xf32>, tensor<4x6xf32>)
                      outs(%arg2: tensor<2x6xf32>)
     -> tensor<2x6xf32>
