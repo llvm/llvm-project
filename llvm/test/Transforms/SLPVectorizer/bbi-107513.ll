@@ -4,7 +4,7 @@
 define i16 @foo() {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND3:%.*]] = select i1 false, i16 1, i16 0
+; CHECK-NEXT:    [[COND3:%.*]] = select i1 true, i16 1, i16 0
 ; CHECK-NEXT:    ret i16 [[COND3]]
 ;
 entry:

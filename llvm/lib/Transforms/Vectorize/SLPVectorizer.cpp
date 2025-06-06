@@ -511,15 +511,15 @@ static bool isSplat(ArrayRef<Value *> VL) {
 }
 
 /// \returns True if \p I is commutative, handles CmpInst and BinaryOperator.
-static bool isCommutative(Instruction *I) {
+static bool isCommutative(Instruction *I, Instruction *InstWithUses) {
   if (auto *Cmp = dyn_cast<CmpInst>(I))
     return Cmp->isCommutative();
   if (auto *BO = dyn_cast<BinaryOperator>(I))
     return BO->isCommutative() ||
            (BO->getOpcode() == Instruction::Sub &&
-            !BO->hasNUsesOrMore(UsesLimit) &&
+            !InstWithUses->hasNUsesOrMore(UsesLimit) &&
             all_of(
-                BO->uses(),
+                InstWithUses->uses(),
                 [](const Use &U) {
                   // Commutative, if icmp eq/ne sub, 0
                   CmpPredicate Pred;
@@ -536,13 +536,15 @@ static bool isCommutative(Instruction *I) {
                           Flag->isOne());
                 })) ||
            (BO->getOpcode() == Instruction::FSub &&
-            !BO->hasNUsesOrMore(UsesLimit) &&
-            all_of(BO->uses(), [](const Use &U) {
+            !InstWithUses->hasNUsesOrMore(UsesLimit) &&
+            all_of(InstWithUses->uses(), [](const Use &U) {
               return match(U.getUser(),
                            m_Intrinsic<Intrinsic::fabs>(m_Specific(U.get())));
             }));
   return I->isCommutative();
 }
+
+static bool isCommutative(Instruction *I) { return isCommutative(I, I); }
 
 template <typename T>
 static std::optional<unsigned> getInsertExtractIndex(const Value *Inst,
@@ -2898,7 +2900,11 @@ public:
           continue;
         }
         auto [SelectedOp, Ops] = convertTo(cast<Instruction>(V), S);
-        bool IsInverseOperation = !isCommutative(SelectedOp);
+        // We cannot check commutativity by the converted instruction
+        // (SelectedOp) because isCommutative also examines def-use
+        // relationships.
+        bool IsInverseOperation =
+            !isCommutative(SelectedOp, cast<Instruction>(V));
         for (unsigned OpIdx : seq<unsigned>(ArgSize)) {
           bool APO = (OpIdx == 0) ? false : IsInverseOperation;
           OpsVec[OpIdx][Lane] = {Operands[OpIdx][Lane], APO, false};
