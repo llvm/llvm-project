@@ -40663,7 +40663,8 @@ static SDValue combineX86ShuffleChainWithExtract(
         continue;
       }
       if (Input.getOpcode() == ISD::INSERT_SUBVECTOR &&
-          Input.getOperand(0).isUndef()) {
+          Input.getOperand(0).isUndef() &&
+          isNullConstant(Input.getOperand(2))) {
         Input = peekThroughBitcasts(Input.getOperand(1));
         continue;
       }
@@ -42913,7 +42914,7 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
           (SubOps.size() == 2 || (SubOps[2].isUndef() && SubOps[3].isUndef())))
         return SDValue();
       // Bail if any subops would have folded into the concat.
-      if (any_of(SubOps, [](SDValue Op) { return isShuffleFoldableLoad(Op); }))
+      if (any_of(SubOps, isShuffleFoldableLoad))
         return SDValue();
       // Concat 4x128 back to 2x256.
       if (SubOps.size() == 4) {
