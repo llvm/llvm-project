@@ -4390,7 +4390,7 @@ static bool isMaskOrZero(const Value *V, bool Not, const SimplifyQuery &Q,
     return true;
   if (V->getType()->getScalarSizeInBits() == 1)
     return true;
-  if (Depth++ >= MaxAnalysisRecursionDepth)
+  if (Depth++ >= DepthLimit::getMaxRecursionDepth())
     return false;
   Value *X;
   const Instruction *I = dyn_cast<Instruction>(V);

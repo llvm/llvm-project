@@ -3664,7 +3664,7 @@ static bool matchFMulByZeroIfResultEqZero(InstCombinerImpl &IC, Value *Cmp0,
 /// select condition.
 static bool hasAffectedValue(Value *V, SmallPtrSetImpl<Value *> &Affected,
                              unsigned Depth) {
-  if (Depth == MaxAnalysisRecursionDepth)
+  if (Depth == DepthLimit::getMaxRecursionDepth())
     return false;
 
   // Ignore the case where the select arm itself is affected. These cases
@@ -3674,9 +3674,9 @@ static bool hasAffectedValue(Value *V, SmallPtrSetImpl<Value *> &Affected,
 
   if (auto *I = dyn_cast<Instruction>(V)) {
     if (isa<PHINode>(I)) {
-      if (Depth == MaxAnalysisRecursionDepth - 1)
+      if (Depth == DepthLimit::getMaxRecursionDepth() - 1)
         return false;
-      Depth = MaxAnalysisRecursionDepth - 2;
+      Depth = DepthLimit::getMaxRecursionDepth() - 2;
     }
     return any_of(I->operands(), [&](Value *Op) {
       return Op->getType()->isIntOrIntVectorTy() &&

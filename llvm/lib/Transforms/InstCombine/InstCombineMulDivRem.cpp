@@ -1533,7 +1533,7 @@ Value *InstCombinerImpl::takeLog2(Value *Op, unsigned Depth, bool AssumeNonZero,
     });
 
   // The remaining tests are all recursive, so bail out if we hit the limit.
-  if (Depth++ == MaxAnalysisRecursionDepth)
+  if (Depth++ == DepthLimit::getMaxRecursionDepth())
     return nullptr;
 
   // log2(zext X) -> zext log2(X)

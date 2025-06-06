@@ -45,6 +45,65 @@ template <typename T> class ArrayRef;
 
 constexpr unsigned MaxAnalysisRecursionDepth = 6;
 
+class DepthLimit {
+public:
+  static DepthLimit &get() {
+    static DepthLimit Instance;
+    return Instance;
+  }
+
+  enum class VTCycle {
+    KNOWNBIT = 0,
+    KNOWNBITCOND = 1,
+    NONZERO = 2,
+    NONEQUAL = 3,
+    IMPLIED = 4,
+    FPCLASS = 5,
+    RANGE = 6,
+    SIGNBITS = 7,
+    NOTUNDEFPOISON = 8,
+    NONE = 9
+  };
+
+  static unsigned getMaxRecursionDepth(VTCycle Cycle, const Value *I,
+                                       unsigned Depth) {
+    if (!get().RecursionDepthOverride || Cycle == VTCycle::NONE)
+      return get().getMaxRecursionDepthImpl();
+
+    if (get().Encountered[Cycle].insert(I).second)
+      return get().getMaxRecursionDepthImpl();
+
+    return Depth;
+  }
+  static unsigned getMaxRecursionDepth() {
+    return get().getMaxRecursionDepthImpl();
+  }
+  static void setOverrideDepthLimit() { get().setOverrideDepthLimitImpl(); }
+  static void resetOverrideDepthLimit() { get().resetOverrideDepthLimitImpl(); }
+
+  DepthLimit(const DepthLimit &) = delete;
+  DepthLimit &operator=(const DepthLimit &) = delete;
+
+private:
+  DepthLimit() {}
+
+  const unsigned MaxAnalysisRecurionsDpeth = 6;
+  bool RecursionDepthOverride = false;
+
+  DenseMap<VTCycle, SmallPtrSet<const Value *, 8>> Encountered;
+
+  unsigned getMaxRecursionDepthImpl() {
+    return RecursionDepthOverride ? -1 : MaxAnalysisRecurionsDpeth;
+  }
+
+  void setOverrideDepthLimitImpl() { RecursionDepthOverride = true; }
+
+  void resetOverrideDepthLimitImpl() {
+    RecursionDepthOverride = false;
+    Encountered.clear();
+  }
+};
+
 /// Determine which bits of V are known to be either zero or one and return
 /// them in the KnownZero/KnownOne bit sets.
 ///
@@ -85,6 +144,13 @@ LLVM_ABI KnownBits computeKnownBits(const Value *V, const SimplifyQuery &Q,
 
 LLVM_ABI void computeKnownBits(const Value *V, KnownBits &Known,
                                const SimplifyQuery &Q, unsigned Depth = 0);
+
+void computeKnownBitsExhaustive(const Value *V, KnownBits &Known,
+                                const DataLayout &DL,
+                                AssumptionCache *AC = nullptr,
+                                const Instruction *CxtI = nullptr,
+                                const DominatorTree *DT = nullptr,
+                                bool UseInstrInfo = true);
 
 /// Compute known bits from the range metadata.
 /// \p KnownZero the set of bits that are known to be zero
