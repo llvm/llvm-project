@@ -3619,8 +3619,15 @@ public:
                                       SourceLocation NameLoc,
                                       bool IsTemplateTypeArg);
 
+  /// Computes the unique Root Signature identifier from the given signature,
+  /// then lookup if there is a previousy created Root Signature decl.
+  ///
+  /// Returns the identifier and if it was found
   std::pair<IdentifierInfo *, bool>
   ActOnStartRootSignatureDecl(StringRef Signature);
+
+  /// Creates the Root Signature decl of the parsed Root Signature elements
+  /// onto the AST and push it onto current Scope
   void ActOnFinishRootSignatureDecl(
       SourceLocation Loc, IdentifierInfo *DeclIdent,
       SmallVector<llvm::hlsl::rootsig::RootElement> &Elements);

@@ -4958,6 +4958,7 @@ void Parser::ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
       return;
     }
 
+    // Perform constructin of declaration
     Actions.ActOnFinishRootSignatureDecl(RootSignatureLoc, DeclIdent,
                                          RootElements);
   }
