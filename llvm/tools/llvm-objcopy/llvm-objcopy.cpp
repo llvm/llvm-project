@@ -138,88 +138,89 @@ static Error executeObjcopyOnRawBinary(ConfigManager &ConfigMgr,
 static Error executeObjcopy(ConfigManager &ConfigMgr) {
   CommonConfig &Config = ConfigMgr.Common;
 
-  Expected<FilePermissionsApplier> PermsApplierOrErr =
-      FilePermissionsApplier::create(Config.InputFilename);
-  if (!PermsApplierOrErr)
-    return PermsApplierOrErr.takeError();
+  if (Config.NeedPositional) {
+    Expected<FilePermissionsApplier> PermsApplierOrErr =
+        FilePermissionsApplier::create(Config.InputFilename);
+    if (!PermsApplierOrErr)
+      return PermsApplierOrErr.takeError();
 
-  std::function<Error(raw_ostream & OutFile)> ObjcopyFunc;
+    std::function<Error(raw_ostream & OutFile)> ObjcopyFunc;
 
-  OwningBinary<llvm::object::Binary> BinaryHolder;
-  std::unique_ptr<MemoryBuffer> MemoryBufferHolder;
+    OwningBinary<llvm::object::Binary> BinaryHolder;
+    std::unique_ptr<MemoryBuffer> MemoryBufferHolder;
 
-  if (Config.InputFormat == FileFormat::Binary ||
-      Config.InputFormat == FileFormat::IHex) {
-    ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
-        MemoryBuffer::getFileOrSTDIN(Config.InputFilename);
-    if (!BufOrErr)
-      return createFileError(Config.InputFilename, BufOrErr.getError());
-    MemoryBufferHolder = std::move(*BufOrErr);
+    if (Config.InputFormat == FileFormat::Binary ||
+        Config.InputFormat == FileFormat::IHex) {
+      ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
+          MemoryBuffer::getFileOrSTDIN(Config.InputFilename);
+      if (!BufOrErr)
+        return createFileError(Config.InputFilename, BufOrErr.getError());
+      MemoryBufferHolder = std::move(*BufOrErr);
 
-    if (Config.InputFormat == FileFormat::Binary)
-      ObjcopyFunc = [&](raw_ostream &OutFile) -> Error {
-        // Handle FileFormat::Binary.
-        return executeObjcopyOnRawBinary(ConfigMgr, *MemoryBufferHolder,
-                                         OutFile);
-      };
-    else
-      ObjcopyFunc = [&](raw_ostream &OutFile) -> Error {
-        // Handle FileFormat::IHex.
-        return executeObjcopyOnIHex(ConfigMgr, *MemoryBufferHolder, OutFile);
-      };
-  } else {
-    Expected<OwningBinary<llvm::object::Binary>> BinaryOrErr =
-        createBinary(Config.InputFilename);
-    if (!BinaryOrErr)
-      return createFileError(Config.InputFilename, BinaryOrErr.takeError());
-    BinaryHolder = std::move(*BinaryOrErr);
-
-    if (Archive *Ar = dyn_cast<Archive>(BinaryHolder.getBinary())) {
-      // Handle Archive.
-      if (Error E = executeObjcopyOnArchive(ConfigMgr, *Ar))
-        return E;
+      if (Config.InputFormat == FileFormat::Binary) {
+        ObjcopyFunc = [&](raw_ostream &OutFile) -> Error {
+          // Handle FileFormat::Binary.
+          return executeObjcopyOnRawBinary(ConfigMgr, *MemoryBufferHolder,
+                                           OutFile);
+        };
+      } else
+        ObjcopyFunc = [&](raw_ostream &OutFile) -> Error {
+          // Handle FileFormat::IHex.
+          return executeObjcopyOnIHex(ConfigMgr, *MemoryBufferHolder, OutFile);
+        };
     } else {
-      // Handle llvm::object::Binary.
-      ObjcopyFunc = [&](raw_ostream &OutFile) -> Error {
-        return executeObjcopyOnBinary(ConfigMgr, *BinaryHolder.getBinary(),
-                                      OutFile);
-      };
+      Expected<OwningBinary<llvm::object::Binary>> BinaryOrErr =
+          createBinary(Config.InputFilename);
+      if (!BinaryOrErr)
+        return createFileError(Config.InputFilename, BinaryOrErr.takeError());
+      BinaryHolder = std::move(*BinaryOrErr);
+
+      if (Archive *Ar = dyn_cast<Archive>(BinaryHolder.getBinary())) {
+        // Handle Archive.
+        if (Error E = executeObjcopyOnArchive(ConfigMgr, *Ar))
+          return E;
+      } else {
+        // Handle llvm::object::Binary.
+        ObjcopyFunc = [&](raw_ostream &OutFile) -> Error {
+          return executeObjcopyOnBinary(ConfigMgr, *BinaryHolder.getBinary(),
+                                        OutFile);
+        };
+      }
     }
-  }
 
-  if (ObjcopyFunc) {
-    if (Config.SplitDWO.empty()) {
-      // Apply transformations described by Config and store result into
-      // Config.OutputFilename using specified ObjcopyFunc function.
-      if (Error E = writeToOutput(Config.OutputFilename, ObjcopyFunc))
-        return E;
-    } else {
-      Config.ExtractDWO = true;
-      Config.StripDWO = false;
-      // Copy .dwo tables from the Config.InputFilename into Config.SplitDWO
-      // file using specified ObjcopyFunc function.
-      if (Error E = writeToOutput(Config.SplitDWO, ObjcopyFunc))
-        return E;
-      Config.ExtractDWO = false;
-      Config.StripDWO = true;
-      // Apply transformations described by Config, remove .dwo tables and
-      // store result into Config.OutputFilename using specified ObjcopyFunc
-      // function.
-      if (Error E = writeToOutput(Config.OutputFilename, ObjcopyFunc))
-        return E;
+    if (ObjcopyFunc) {
+      if (Config.SplitDWO.empty()) {
+        // Apply transformations described by Config and store result into
+        // Config.OutputFilename using specified ObjcopyFunc function.
+        if (Error E = writeToOutput(Config.OutputFilename, ObjcopyFunc))
+          return E;
+      } else {
+        Config.ExtractDWO = true;
+        Config.StripDWO = false;
+        // Copy .dwo tables from the Config.InputFilename into Config.SplitDWO
+        // file using specified ObjcopyFunc function.
+        if (Error E = writeToOutput(Config.SplitDWO, ObjcopyFunc))
+          return E;
+        Config.ExtractDWO = false;
+        Config.StripDWO = true;
+        // Apply transformations described by Config, remove .dwo tables and
+        // store result into Config.OutputFilename using specified ObjcopyFunc
+        // function.
+        if (Error E = writeToOutput(Config.OutputFilename, ObjcopyFunc))
+          return E;
+      }
     }
-  }
 
-  if (Error E =
-          PermsApplierOrErr->apply(Config.OutputFilename, Config.PreserveDates))
-    return E;
-
-  if (!Config.SplitDWO.empty())
-    if (Error E =
-            PermsApplierOrErr->apply(Config.SplitDWO, Config.PreserveDates,
-                                     static_cast<sys::fs::perms>(0666)))
+    if (Error E = PermsApplierOrErr->apply(Config.OutputFilename,
+                                           Config.PreserveDates))
       return E;
 
+    if (!Config.SplitDWO.empty())
+      if (Error E =
+              PermsApplierOrErr->apply(Config.SplitDWO, Config.PreserveDates,
+                                       static_cast<sys::fs::perms>(0666)))
+        return E;
+  }
   return Error::success();
 }
 
