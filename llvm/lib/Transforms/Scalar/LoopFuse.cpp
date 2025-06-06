@@ -100,6 +100,8 @@ STATISTIC(OnlySecondCandidateIsGuarded,
           "The second candidate is guarded while the first one is not");
 STATISTIC(NumHoistedInsts, "Number of hoisted preheader instructions.");
 STATISTIC(NumSunkInsts, "Number of hoisted preheader instructions.");
+STATISTIC(NumDepSafeFused, "Number of fused loops with dependencies "
+                           "proven safe based on the dependence direction");
 
 enum FusionDependenceAnalysisChoice {
   FUSION_DEPENDENCE_ANALYSIS_SCEV,
@@ -1349,6 +1351,33 @@ private:
                           << "\n");
       }
 #endif
+      unsigned Levels = DepResult->getLevels();
+      unsigned SeparateLevels = DepResult->getSeparateLevels();
+      unsigned CurLoopLevel = FC0.L->getLoopDepth();
+
+      bool OuterEqDir = true;
+      for (unsigned II = 1; II <= std::min(CurLoopLevel - 1, Levels); ++II) {
+        unsigned Direction = DepResult->getDirection(II, II > Levels);
+        if (!(Direction & Dependence::DVEntry::EQ)) {
+          // Different accesses in the outer levels of CurLoopLevel
+          OuterEqDir = false;
+          break;
+        }
+      }
+      if (!OuterEqDir || CurLoopLevel > Levels + SeparateLevels) {
+        LLVM_DEBUG(dbgs() << "Safe to fuse with no dependency\n");
+        NumDepSafeFused++;
+        return true;
+      }
+
+      assert(CurLoopLevel > Levels && "Fusion candidates are not separated");
+      unsigned CurDir = DepResult->getDirection(CurLoopLevel, true);
+      if (!(CurDir & Dependence::DVEntry::GT)) {
+        LLVM_DEBUG(dbgs() << "Safe to fuse with backward loop-carried "
+                             "dependency\n");
+        NumDepSafeFused++;
+        return true;
+      }
 
       if (DepResult->getNextPredecessor() || DepResult->getNextSuccessor())
         LLVM_DEBUG(
