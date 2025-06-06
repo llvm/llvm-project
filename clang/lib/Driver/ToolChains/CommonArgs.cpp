@@ -3168,16 +3168,13 @@ void tools::handleInterchangeLoopsArgs(const ArgList &Args,
     CmdArgs.push_back("-floop-interchange");
 }
 
-std::optional<StringRef> tools::ParseMPreferVectorWidthOption(
-    clang::DiagnosticsEngine &Diags, const llvm::opt::ArgList &Args,
-    ArgStringList &CmdArgs, bool isCompilerDriver) {
-  // If this was invoked by the Compiler Driver, we pass through the option
-  // as-is. Otherwise, if this is the Frontend Driver, we want just the value.
-  StringRef Out = isCompilerDriver ? "-mprefer-vector-width=" : "";
-
+// Parse -mprefer-vector-width=. Return the Value string if well-formed.
+// Otherwise, return an empty string and issue a diagnosic message if needed.
+StringRef tools::ParseMPreferVectorWidthOption(clang::DiagnosticsEngine &Diags,
+                                               const llvm::opt::ArgList &Args) {
   Arg *A = Args.getLastArg(clang::driver::options::OPT_mprefer_vector_width_EQ);
   if (!A)
-    return std::nullopt;
+    return "";
 
   StringRef Value = A->getValue();
   unsigned Width __attribute((uninitialized));
@@ -3187,9 +3184,8 @@ std::optional<StringRef> tools::ParseMPreferVectorWidthOption(
   if (Value != "none" && Value.getAsInteger(10, Width)) {
     Diags.Report(clang::diag::err_drv_invalid_value)
         << A->getOption().getName() << Value;
-    return std::nullopt;
+    return "";
   }
 
-  CmdArgs.push_back(Args.MakeArgString(Out + Value));
   return Value;
 }

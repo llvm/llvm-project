@@ -271,9 +271,10 @@ void handleVectorizeLoopsArgs(const llvm::opt::ArgList &Args,
 void handleVectorizeSLPArgs(const llvm::opt::ArgList &Args,
                             llvm::opt::ArgStringList &CmdArgs);
 
-std::optional<StringRef> ParseMPreferVectorWidthOption(
-    clang::DiagnosticsEngine &Diags, const llvm::opt::ArgList &Args,
-    llvm::opt::ArgStringList &CmdArgs, bool isCompilerDriver);
+// Parse -mprefer-vector-width=. Return the Value string if well-formed.
+// Otherwise, return an empty string and issue a diagnosic message if needed.
+StringRef ParseMPreferVectorWidthOption(clang::DiagnosticsEngine &Diags,
+                                        const llvm::opt::ArgList &Args);
 
 } // end namespace tools
 } // end namespace driver
