@@ -59,9 +59,7 @@ public:
   FunctionType *getFunctionType() const;
 
   /// Returns the alignment of the given function.
-  MaybeAlign getAlign() const {
-    return cast<llvm::Function>(Val)->getAlign();
-  }
+  MaybeAlign getAlign() const { return cast<llvm::Function>(Val)->getAlign(); }
 
   // TODO: Add missing: setAligment(Align)
 
