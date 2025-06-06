@@ -1200,3 +1200,34 @@ bool test_val_types() {
 }
 
 }
+
+namespace CWG2369_Regression {
+
+enum class KindEnum {
+  Unknown = 0,
+  Foo = 1,
+};
+
+template <typename T>
+concept KnownKind = T::kind() != KindEnum::Unknown;
+
+template <KnownKind T> struct KnownType;
+
+struct Type {
+  KindEnum kind() const;
+
+  static Type f(Type t);
+
+  template <KnownKind T> static KnownType<T> f(T t);
+
+  static void g() {
+    Type t;
+    f(t);
+  }
+};
+
+template <KnownKind T> struct KnownType {
+  static constexpr KindEnum kind() { return KindEnum::Foo; }
+};
+
+}
