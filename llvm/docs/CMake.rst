@@ -707,7 +707,7 @@ enabled sub-projects. Nearly all of these variable names begin with
   For example, ar will be symlinked to llvm-ar.
 
 **LLVM_INSTALL_CCTOOLS_SYMLINKS**:BOOL
-  Install symliks from the cctools tool names to the corresponding LLVM tools.
+  Install symlinks from the cctools tool names to the corresponding LLVM tools.
   For example, lipo will be symlinked to llvm-lipo.
 
 **LLVM_INSTALL_OCAMLDOC_HTML_DIR**:STRING
