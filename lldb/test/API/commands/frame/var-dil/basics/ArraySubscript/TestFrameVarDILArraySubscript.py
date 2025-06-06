@@ -63,7 +63,7 @@ class TestFrameVarDILArraySubscript(TestBase):
         self.expect(
             "frame var 'int_arr[-1]'",
             error=True,
-            substrs=["unrecognized token"],
+            substrs=["failed to parse integer constant"],
         )
 
         # Test for floating point index
