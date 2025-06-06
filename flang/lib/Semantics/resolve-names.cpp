@@ -1864,7 +1864,7 @@ void OmpVisitor::ProcessReductionSpecifier(
     name = std::get_if<parser::Name>(&procDes->u);
     // This shouldn't be a procedure component: this is the name of the
     // reduction being declared.
-    assert(name && "ProcedureDesignator contained ProcComponentRef");
+    CHECK(name);
     // Prevent the symbol from conflicting with the builtin function name
     mangledName = MangleSpecialFunctions(name->source);
     // Note: the Name inside the parse tree is not updated because it is const.

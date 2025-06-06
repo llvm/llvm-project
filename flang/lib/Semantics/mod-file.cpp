@@ -1049,7 +1049,7 @@ void ModFileWriter::PutUserReduction(
   const auto &details{symbol.get<UserReductionDetails>()};
   // The module content for a OpenMP Declare Reduction is the OpenMP
   // declaration. There may be multiple declarations.
-  // Decls are pointers, so do not use a referene.
+  // Decls are pointers, so do not use a reference.
   for (const auto decl : details.GetDeclList()) {
     common::visit( //
         common::visitors{//
