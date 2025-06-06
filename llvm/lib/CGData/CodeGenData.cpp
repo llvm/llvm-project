@@ -155,14 +155,7 @@ CodeGenData &CodeGenData::getInstance() {
       // Instead, just emit an warning message and fall back as if no CGData
       // were available.
       auto FS = vfs::getRealFileSystem();
-      CodeGenDataReader::Options Opts;
-#ifdef NDEBUG
-      // Do not read the stable function map names for non-assertion builds
-      // to save memory and time for production use.
-      Opts.ReadStableFunctionMapNames = false;
-#endif
-      auto ReaderOrErr =
-          CodeGenDataReader::create(CodeGenDataUsePath, *FS, Opts);
+      auto ReaderOrErr = CodeGenDataReader::create(CodeGenDataUsePath, *FS);
       if (Error E = ReaderOrErr.takeError()) {
         warn(std::move(E), CodeGenDataUsePath);
         return;

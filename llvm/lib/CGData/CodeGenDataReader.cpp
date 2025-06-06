@@ -13,11 +13,18 @@
 #include "llvm/CGData/CodeGenDataReader.h"
 #include "llvm/CGData/OutlinedHashTreeRecord.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 #define DEBUG_TYPE "cg-data-reader"
 
 using namespace llvm;
+
+static cl::opt<bool> IndexedCodeGenDataReadFunctionMapNames(
+    "indexed-codegen-data-read-function-map-names", cl::init(true), cl::Hidden,
+    cl::desc("Read function map names in indexed CodeGenData. Can be "
+             "disabled to save memory and time for final consumption of the "
+             "indexed CodeGenData in production."));
 
 namespace llvm {
 
@@ -106,32 +113,30 @@ Error IndexedCodeGenDataReader::read() {
     const unsigned char *Ptr = Start + Header.StableFunctionMapOffset;
     if (Ptr >= End)
       return error(cgdata_error::eof);
-    FunctionMapRecord.deserialize(Ptr);
+    FunctionMapRecord.deserialize(Ptr, IndexedCodeGenDataReadFunctionMapNames);
   }
 
   return success();
 }
 
 Expected<std::unique_ptr<CodeGenDataReader>>
-CodeGenDataReader::create(const Twine &Path, vfs::FileSystem &FS,
-                          Options Opts) {
+CodeGenDataReader::create(const Twine &Path, vfs::FileSystem &FS) {
   // Set up the buffer to read.
   auto BufferOrError = setupMemoryBuffer(Path, FS);
   if (Error E = BufferOrError.takeError())
     return std::move(E);
-  return CodeGenDataReader::create(std::move(BufferOrError.get()), Opts);
+  return CodeGenDataReader::create(std::move(BufferOrError.get()));
 }
 
 Expected<std::unique_ptr<CodeGenDataReader>>
-CodeGenDataReader::create(std::unique_ptr<MemoryBuffer> Buffer, Options Opts) {
+CodeGenDataReader::create(std::unique_ptr<MemoryBuffer> Buffer) {
   if (Buffer->getBufferSize() == 0)
     return make_error<CGDataError>(cgdata_error::empty_cgdata);
 
   std::unique_ptr<CodeGenDataReader> Reader;
   // Create the reader.
   if (IndexedCodeGenDataReader::hasFormat(*Buffer))
-    Reader =
-        std::make_unique<IndexedCodeGenDataReader>(std::move(Buffer), Opts);
+    Reader = std::make_unique<IndexedCodeGenDataReader>(std::move(Buffer));
   else if (TextCodeGenDataReader::hasFormat(*Buffer))
     Reader = std::make_unique<TextCodeGenDataReader>(std::move(Buffer));
   else

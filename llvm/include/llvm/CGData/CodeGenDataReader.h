@@ -27,12 +27,6 @@ class CodeGenDataReader {
   std::string LastErrorMsg;
 
 public:
-  struct Options {
-    /// Whether to read the Names into the stable function map.
-    /// Names are usually used for validation and debugging purpose.
-    bool ReadStableFunctionMapNames = true;
-  };
-
   CodeGenDataReader() = default;
   virtual ~CodeGenDataReader() = default;
 
@@ -57,20 +51,12 @@ public:
   /// Factory method to create an appropriately typed reader for the given
   /// codegen data file path and file system.
   LLVM_ABI static Expected<std::unique_ptr<CodeGenDataReader>>
-  create(const Twine &Path, vfs::FileSystem &FS) {
-    return create(Path, FS, {});
-  }
-  LLVM_ABI static Expected<std::unique_ptr<CodeGenDataReader>>
-  create(const Twine &Path, vfs::FileSystem &FS, Options Opts);
+  create(const Twine &Path, vfs::FileSystem &FS);
 
   /// Factory method to create an appropriately typed reader for the given
   /// memory buffer.
   LLVM_ABI static Expected<std::unique_ptr<CodeGenDataReader>>
-  create(std::unique_ptr<MemoryBuffer> Buffer) {
-    return create(std::move(Buffer), {});
-  }
-  LLVM_ABI static Expected<std::unique_ptr<CodeGenDataReader>>
-  create(std::unique_ptr<MemoryBuffer> Buffer, Options Opts);
+  create(std::unique_ptr<MemoryBuffer> Buffer);
 
   /// Extract the cgdata embedded in sections from the given object file and
   /// merge them into the GlobalOutlineRecord. This is a static helper that
@@ -91,8 +77,6 @@ protected:
   /// The stable function map that has been read. When it's released by
   // releaseStableFunctionMap(), it's no longer valid.
   StableFunctionMapRecord FunctionMapRecord;
-
-  Options Opts;
 
   /// Set the current error and return same.
   Error error(cgdata_error Err, const std::string &ErrMsg = "") {
@@ -122,11 +106,8 @@ class LLVM_ABI IndexedCodeGenDataReader : public CodeGenDataReader {
   IndexedCGData::Header Header;
 
 public:
-  IndexedCodeGenDataReader(std::unique_ptr<MemoryBuffer> DataBuffer,
-                           Options Opts)
-      : DataBuffer(std::move(DataBuffer)) {
-    this->Opts = Opts;
-  }
+  IndexedCodeGenDataReader(std::unique_ptr<MemoryBuffer> DataBuffer)
+      : DataBuffer(std::move(DataBuffer)) {}
   IndexedCodeGenDataReader(const IndexedCodeGenDataReader &) = delete;
   IndexedCodeGenDataReader &
   operator=(const IndexedCodeGenDataReader &) = delete;
