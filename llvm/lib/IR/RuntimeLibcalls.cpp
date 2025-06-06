@@ -7,9 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/RuntimeLibcalls.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 using namespace RTLIB;
+
+static cl::opt<bool>
+    HexagonEnableFastMathRuntimeCalls("hexagon-fast-math", cl::Hidden,
+                                      cl::desc("Enable Fast Math processing"));
 
 /// Set default libcall names. If a target wants to opt-out of a libcall it
 /// should be placed here.
@@ -301,5 +306,43 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     };
     for (auto &E : RTLibCallCommon)
       setLibcallName(E.Code, E.Name);
+  }
+
+  if (TT.getArch() == Triple::ArchType::hexagon) {
+    setLibcallName(RTLIB::SDIV_I32, "__hexagon_divsi3");
+    setLibcallName(RTLIB::SDIV_I64, "__hexagon_divdi3");
+    setLibcallName(RTLIB::UDIV_I32, "__hexagon_udivsi3");
+    setLibcallName(RTLIB::UDIV_I64, "__hexagon_udivdi3");
+    setLibcallName(RTLIB::SREM_I32, "__hexagon_modsi3");
+    setLibcallName(RTLIB::SREM_I64, "__hexagon_moddi3");
+    setLibcallName(RTLIB::UREM_I32, "__hexagon_umodsi3");
+    setLibcallName(RTLIB::UREM_I64, "__hexagon_umoddi3");
+
+    const bool FastMath = HexagonEnableFastMathRuntimeCalls;
+    // This is the only fast library function for sqrtd.
+    if (FastMath)
+      setLibcallName(RTLIB::SQRT_F64, "__hexagon_fast2_sqrtdf2");
+
+    // Prefix is: nothing  for "slow-math",
+    //            "fast2_" for V5+ fast-math double-precision
+    // (actually, keep fast-math and fast-math2 separate for now)
+    if (FastMath) {
+      setLibcallName(RTLIB::ADD_F64, "__hexagon_fast_adddf3");
+      setLibcallName(RTLIB::SUB_F64, "__hexagon_fast_subdf3");
+      setLibcallName(RTLIB::MUL_F64, "__hexagon_fast_muldf3");
+      setLibcallName(RTLIB::DIV_F64, "__hexagon_fast_divdf3");
+      setLibcallName(RTLIB::DIV_F32, "__hexagon_fast_divsf3");
+    } else {
+      setLibcallName(RTLIB::ADD_F64, "__hexagon_adddf3");
+      setLibcallName(RTLIB::SUB_F64, "__hexagon_subdf3");
+      setLibcallName(RTLIB::MUL_F64, "__hexagon_muldf3");
+      setLibcallName(RTLIB::DIV_F64, "__hexagon_divdf3");
+      setLibcallName(RTLIB::DIV_F32, "__hexagon_divsf3");
+    }
+
+    if (FastMath)
+      setLibcallName(RTLIB::SQRT_F32, "__hexagon_fast2_sqrtf");
+    else
+      setLibcallName(RTLIB::SQRT_F32, "__hexagon_sqrtf");
   }
 }
