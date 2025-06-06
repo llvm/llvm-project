@@ -77,10 +77,9 @@ def : Handle {
   let desc = "Handle of program object";
 }
 
-def : Typedef {
+def : Handle {
   let name = "ol_kernel_handle_t";
   let desc = "Handle of kernel object";
-  let value = "void *";
 }
 
 def ErrorCode : Enum {
@@ -113,6 +112,7 @@ def ErrorCode : Enum {
     Etor<"INVALID_DEVICE", "invalid device">,
     Etor<"INVALID_QUEUE", "invalid queue">,
     Etor<"INVALID_EVENT", "invalid event">,
+    Etor<"INVALID_KERNEL", "invalid kernel">,
   ];
 }
 
