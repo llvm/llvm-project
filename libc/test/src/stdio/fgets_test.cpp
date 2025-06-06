@@ -14,7 +14,7 @@
 #include "src/stdio/fwrite.h"
 #include "test/UnitTest/Test.h"
 
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 
 TEST(LlvmLibcFgetsTest, WriteAndReadCharacters) {
   constexpr char FILENAME[] = "testdata/fgets.test";
@@ -35,7 +35,7 @@ TEST(LlvmLibcFgetsTest, WriteAndReadCharacters) {
   // This is an error and not a real EOF.
   ASSERT_EQ(LIBC_NAMESPACE::feof(file), 0);
   ASSERT_NE(LIBC_NAMESPACE::ferror(file), 0);
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
 
   ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file));
 

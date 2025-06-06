@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/stdlib/atof.h"
 
 #include "test/UnitTest/ErrnoSetterMatcher.h"
@@ -23,13 +23,13 @@ TEST(LlvmLibcAToFTest, SimpleTest) {
   LIBC_NAMESPACE::fputil::FPBits<double> expected_fp =
       LIBC_NAMESPACE::fputil::FPBits<double>(uint64_t(0x405ec00000000000));
 
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
   EXPECT_THAT(LIBC_NAMESPACE::atof("123"),
               Succeeds<double>(expected_fp.get_val()));
 }
 
 TEST(LlvmLibcAToFTest, FailedParsingTest) {
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
   // atof does not flag errors.
   EXPECT_THAT(LIBC_NAMESPACE::atof("???"), Succeeds<double>(0.0));
 }

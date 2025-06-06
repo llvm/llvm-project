@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/stdlib/strtod.h"
 
 #include "test/UnitTest/ErrnoSetterMatcher.h"
@@ -46,7 +46,7 @@ public:
     LIBC_NAMESPACE::fputil::FPBits<double> expected_fp =
         LIBC_NAMESPACE::fputil::FPBits<double>(expectedRawData);
 
-    LIBC_NAMESPACE::libc_errno = 0;
+    libc_errno = 0;
     double result = LIBC_NAMESPACE::strtod(inputString, &str_end);
     if (expectedErrno == 0)
       EXPECT_THAT(result, Succeeds<double>(expected_fp.get_val()));

@@ -11,8 +11,8 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 #include <sys/ioctl.h>   // For ioctl numbers.
 #include <sys/syscall.h> // For syscall numbers.
 
