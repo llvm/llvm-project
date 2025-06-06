@@ -61,6 +61,88 @@ define amdgpu_ps void @v_test_add_v2bf16_vl(<2 x bfloat> %a, ptr addrspace(1) %o
   ret void
 }
 
+define amdgpu_ps void @v_test_sub_v2bf16_vv(<2 x bfloat> %a, <2 x bfloat> %b, ptr addrspace(1) %out) {
+; GCN-LABEL: v_test_sub_v2bf16_vv:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_pk_add_bf16 v0, v0, v1 neg_lo:[0,1] neg_hi:[0,1]
+; GCN-NEXT:    global_store_b32 v[2:3], v0, off
+; GCN-NEXT:    s_endpgm
+  %add = fsub <2 x bfloat> %a, %b
+  store <2 x bfloat> %add, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @v_test_sub_v2bf16_vs(<2 x bfloat> %a, <2 x bfloat> inreg %b, ptr addrspace(1) %out) {
+; GCN-LABEL: v_test_sub_v2bf16_vs:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
+; GCN-NEXT:    v_pk_add_bf16 v0, v0, s0 neg_lo:[0,1] neg_hi:[0,1]
+; GCN-NEXT:    global_store_b32 v[2:3], v0, off
+; GCN-NEXT:    s_endpgm
+  %add = fsub <2 x bfloat> %a, %b
+  store <2 x bfloat> %add, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @v_test_sub_v2bf16_ss(<2 x bfloat> inreg %a, <2 x bfloat> inreg %b, ptr addrspace(1) %out) {
+; GCN-LABEL: v_test_sub_v2bf16_ss:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_pk_add_bf16 v2, s0, s1 neg_lo:[0,1] neg_hi:[0,1]
+; GCN-NEXT:    global_store_b32 v[0:1], v2, off
+; GCN-NEXT:    s_endpgm
+  %add = fsub <2 x bfloat> %a, %b
+  store <2 x bfloat> %add, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @v_test_sub_v2bf16_vc(<2 x bfloat> %a, ptr addrspace(1) %out) {
+; GCN-LABEL: v_test_sub_v2bf16_vc:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
+; GCN-NEXT:    v_pk_add_bf16 v0, v0, -2.0 op_sel_hi:[1,0]
+; GCN-NEXT:    global_store_b32 v[2:3], v0, off
+; GCN-NEXT:    s_endpgm
+  %add = fsub <2 x bfloat> %a, <bfloat 2.0, bfloat 2.0>
+  store <2 x bfloat> %add, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @v_test_sub_v2bf16_vl(<2 x bfloat> %a, ptr addrspace(1) %out) {
+; GCN-LABEL: v_test_sub_v2bf16_vl:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
+; GCN-NEXT:    v_pk_add_bf16 v0, 0xc2c8bf80, v0
+; GCN-NEXT:    global_store_b32 v[2:3], v0, off
+; GCN-NEXT:    s_endpgm
+  %add = fsub <2 x bfloat> %a, <bfloat 1.0, bfloat 100.0>
+  store <2 x bfloat> %add, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @v_test_sub_v2bf16_lv(<2 x bfloat> %a, ptr addrspace(1) %out) {
+; GCN-LABEL: v_test_sub_v2bf16_lv:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
+; GCN-NEXT:    v_pk_add_bf16 v0, 0x42c83f80, v0 neg_lo:[0,1] neg_hi:[0,1]
+; GCN-NEXT:    global_store_b32 v[2:3], v0, off
+; GCN-NEXT:    s_endpgm
+  %add = fsub <2 x bfloat> <bfloat 1.0, bfloat 100.0>, %a
+  store <2 x bfloat> %add, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @v_test_sub_v2bf16_iv(<2 x bfloat> %a, ptr addrspace(1) %out) {
+; GCN-LABEL: v_test_sub_v2bf16_iv:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
+; GCN-NEXT:    v_pk_add_bf16 v0, v0, 1.0 op_sel_hi:[1,0] neg_lo:[1,0] neg_hi:[1,0]
+; GCN-NEXT:    global_store_b32 v[2:3], v0, off
+; GCN-NEXT:    s_endpgm
+  %add = fsub <2 x bfloat> <bfloat 1.0, bfloat 1.0>, %a
+  store <2 x bfloat> %add, ptr addrspace(1) %out
+  ret void
+}
+
 define amdgpu_ps void @v_test_mul_v2bf16_vv(<2 x bfloat> %a, <2 x bfloat> %b, ptr addrspace(1) %out) {
 ; GCN-LABEL: v_test_mul_v2bf16_vv:
 ; GCN:       ; %bb.0:

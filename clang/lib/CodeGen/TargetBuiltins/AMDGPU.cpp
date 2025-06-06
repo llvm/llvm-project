@@ -985,7 +985,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     SmallVector<Value *, 5> Args;
     // last argument is a MD string
     const unsigned ScopeArg = E->getNumArgs() - 1;
-    for (int i = 0; i != ScopeArg; ++i)
+    for (unsigned i = 0; i != ScopeArg; ++i)
       Args.push_back(EmitScalarExpr(E->getArg(i)));
     StringRef Arg = cast<StringLiteral>(E->getArg(ScopeArg)->IgnoreParenCasts())
                         ->getString();
