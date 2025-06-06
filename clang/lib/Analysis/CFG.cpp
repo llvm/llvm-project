@@ -1266,22 +1266,22 @@ private:
       // `1.0` are float16 and double respectively.  In this case, we should do
       // a conversion before comparing L1 and L2.  Their types must be
       // compatible since they are comparing with the same DRE.
-      int8_t Order = Context->getFloatingTypeOrder(NumExpr1->getType(),
-                                                   NumExpr2->getType());
-      bool convertLoseInfo = false;
+      int Order = Context->getFloatingTypeSemanticOrder(NumExpr1->getType(),
+                                                        NumExpr2->getType());
+      bool Ignored = false;
 
       if (Order > 0) {
         // type rank L1 > L2:
-        if (L2.convert(L1.getSemantics(), llvm::APFloat::rmNearestTiesToEven,
-                       &convertLoseInfo))
+        if (llvm::APFloat::opOK !=
+            L2.convert(L1.getSemantics(), llvm::APFloat::rmNearestTiesToEven,
+                       &Ignored))
           return {};
       } else if (Order < 0)
         // type rank L1 < L2:
-        if (L1.convert(L2.getSemantics(), llvm::APFloat::rmNearestTiesToEven,
-                       &convertLoseInfo))
+        if (llvm::APFloat::opOK !=
+            L1.convert(L2.getSemantics(), llvm::APFloat::rmNearestTiesToEven,
+                       &Ignored))
           return {};
-      if (convertLoseInfo)
-        return {}; // If the conversion loses info, bail
 
       llvm::APFloat MidValue = L1;
       MidValue.add(L2, llvm::APFloat::rmNearestTiesToEven);
