@@ -815,8 +815,8 @@ transform::ApplyRegisteredPassOp::apply(transform::TransformRewriter &rewriter,
                << dynamicOption[0];
       }
     } else {
-      assert(false &&
-             "expected options element to be either StringAttr or UnitAttr");
+      llvm_unreachable(
+          "expected options element to be either StringAttr or UnitAttr");
     }
   }
 
@@ -915,8 +915,8 @@ static void printApplyRegisteredPassOptions(OpAsmPrinter &printer,
                                             Operation *op, ArrayAttr options,
                                             ValueRange dynamicOptions) {
   size_t currentDynamicOptionIdx = 0;
-  for (Attribute optionAttr : options) {
-    if (currentDynamicOptionIdx > 0)
+  for (auto [idx, optionAttr] : llvm::enumerate(options)) {
+    if (idx > 0)
       printer << " "; // Interleave options separator.
 
     if (isa<UnitAttr>(optionAttr))

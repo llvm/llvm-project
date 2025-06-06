@@ -79,7 +79,9 @@ module attributes {transform.with_named_sequence} {
     %1 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     // expected-error @below {{failed to add pass or pass pipeline to pipeline: canonicalize}}
     // expected-error @below {{<Pass-Options-Parser>: no such option invalid-option}}
-    transform.apply_registered_pass "canonicalize" with options = "invalid-option=1" to %1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_registered_pass "canonicalize"
+        with options = "invalid-option=1" to %1
+        : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -94,7 +96,9 @@ func.func @valid_pass_option() {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
     %1 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    transform.apply_registered_pass "canonicalize" with options = "top-down=false" to %1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_registered_pass "canonicalize"
+        with options = "top-down=false" to %1
+        : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -110,7 +114,9 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
     %1 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     //transform.apply_registered_pass "canonicalize" with options = "top-down=false,max-iterations=10" to %1 : (!transform.any_op) -> !transform.any_op
-    transform.apply_registered_pass "canonicalize" with options = "top-down=false test-convergence=true" to %1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_registered_pass "canonicalize"
+        with options = "top-down=false test-convergence=true" to %1
+        : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -125,7 +131,9 @@ func.func @valid_pass_options_as_list() {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
     %1 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    transform.apply_registered_pass "canonicalize" with options = "top-down=false" "max-iterations=0" to %1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_registered_pass "canonicalize"
+        with options = "top-down=false" "max-iterations=0" to %1
+        : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -142,7 +150,9 @@ module attributes {transform.with_named_sequence} {
     %1 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %max_iter = transform.param.constant "max-iterations=10" -> !transform.any_param
     %max_rewrites = transform.param.constant "max-num-rewrites=1" -> !transform.any_param
-    %2 = transform.apply_registered_pass "canonicalize" with options = "top-down=false" %max_iter "test-convergence=true" %max_rewrites to %1 : (!transform.any_param, !transform.any_param, !transform.any_op) -> !transform.any_op
+    %2 = transform.apply_registered_pass "canonicalize"
+        with options = "top-down=false" %max_iter "test-convergence=true" %max_rewrites to %1
+        : (!transform.any_param, !transform.any_param, !transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -157,8 +167,10 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
     %1 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %max_iter = transform.param.constant "max-iterations=10" -> !transform.any_param
-    // expected-error @below {{expected at least one option (either a string or a param)}}
-    %2 = transform.apply_registered_pass "canonicalize" with options = ["top-down=false" %max_iter] to %1 : (!transform.any_param, !transform.any_param, !transform.any_op) -> !transform.any_op
+    // expected-error @+2 {{expected at least one option (either a string or a param)}}
+    %2 = transform.apply_registered_pass "canonicalize"
+        with options = ["top-down=false" %max_iter] to %1
+        : (!transform.any_param, !transform.any_param, !transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -172,9 +184,10 @@ func.func @invalid_options_as_pairs() {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
     %1 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %max_iter = transform.param.constant "max-iterations=10" -> !transform.any_param
-    // expected-error @below {{expected 'to'}}
-    %2 = transform.apply_registered_pass "canonicalize" with options = "top-down=" false to %1 : (!transform.any_param, !transform.any_param, !transform.any_op) -> !transform.any_op
+    // expected-error @+2 {{expected 'to'}}
+    %2 = transform.apply_registered_pass "canonicalize"
+        with options = "top-down=" false to %1
+        : (!transform.any_param, !transform.any_param, !transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -190,7 +203,9 @@ module attributes {transform.with_named_sequence} {
     %1 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %pass_options = transform.param.constant 42 -> !transform.any_param
     // expected-error @below {{options passed as a param must be a string, got 42}}
-    transform.apply_registered_pass "canonicalize" with options = %pass_options to %1 : (!transform.any_param, !transform.any_op) -> !transform.any_op
+    transform.apply_registered_pass "canonicalize"
+        with options = %pass_options to %1
+        : (!transform.any_param, !transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -208,7 +223,9 @@ module attributes {transform.with_named_sequence} {
     %y = transform.param.constant "y" -> !transform.any_param
     %pass_options = transform.merge_handles %x, %y : !transform.any_param
     // expected-error @below {{options passed as a param must have a single value associated, param 0 associates 2}}
-    transform.apply_registered_pass "canonicalize" with options = %pass_options to %1 : (!transform.any_param, !transform.any_op) -> !transform.any_op
+    transform.apply_registered_pass "canonicalize"
+        with options = %pass_options to %1
+        : (!transform.any_param, !transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
