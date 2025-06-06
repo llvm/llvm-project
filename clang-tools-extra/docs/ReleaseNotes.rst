@@ -140,7 +140,7 @@ New checks
   <clang-tidy/checks/performance/bool-bitwise-operation>` check.
 
   Finds potentially inefficient use of bitwise operators such as ``&``,  ``|``
-  and their compound analogues on boolean values where logical operators like
+  and their compound analogues on Boolean values where logical operators like
   ``&&`` and ``||`` would be more appropriate.
 
 - New :doc:`portability-avoid-pragma-once
