@@ -3803,8 +3803,7 @@ void Parser::ParseDeclarationSpecifiers(
         // - `return type`.
         SuppressAccessChecks SAC(*this, IsTemplateSpecOrInst);
 
-        const bool Failed =
-            TryAnnotateCXXScopeToken(EnteringContext, ObjectType);
+        const bool Failed = TryAnnotateCXXScopeToken(EnteringContext);
 
         if (IsTemplateSpecOrInst)
           SAC.done();

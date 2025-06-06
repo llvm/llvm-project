@@ -2560,12 +2560,17 @@ bool Parser::ParseUnqualifiedIdOperator(CXXScopeSpec &SS, bool EnteringContext,
 
   // Parse the type-specifier-seq.
   DeclSpec DS(AttrFactory);
-  if (ForPostfixExpression && !SS.isEmpty() && Tok.is(tok::identifier)) {
-    if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                       /*ObjectHasErrors=*/false,
-                                       EnteringContext))
+  if (ForPostfixExpression && Tok.is(tok::identifier)) {
+    CXXScopeSpec NewSS = SS;
+    bool IsDependent = false;
+    if (QualType QT = Actions.GetTypeFromParser(ObjectType); !QT.isNull())
+      IsDependent = QT->isDependentType();
+    if (ParseOptionalCXXScopeSpecifier(
+            NewSS, /*ObjectType=*/IsDependent ? nullptr : ObjectType,
+            /*ObjectHadErrors=*/false, EnteringContext))
       return true;
-    AnnotateScopeToken(SS, /*IsNewAnnotation=*/true);
+    if (SS.isNotEmpty() || NewSS.getScopeRep() != SS.getScopeRep())
+      AnnotateScopeToken(NewSS, /*IsNewAnnotation=*/true);
   }
   if (ParseCXXTypeSpecifierSeq(
           DS,

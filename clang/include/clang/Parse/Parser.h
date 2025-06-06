@@ -359,8 +359,7 @@ public:
   /// Note that this routine emits an error if you call it with ::new or
   /// ::delete as the current tokens, so only call it in contexts where these
   /// are invalid.
-  bool TryAnnotateCXXScopeToken(bool EnteringContext = false,
-                                ParsedType ObjectType = nullptr);
+  bool TryAnnotateCXXScopeToken(bool EnteringContext = false);
 
   bool MightBeCXXScopeToken() {
     return getLangOpts().CPlusPlus &&

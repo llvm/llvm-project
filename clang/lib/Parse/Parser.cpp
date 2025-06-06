@@ -2127,14 +2127,13 @@ bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(
   return false;
 }
 
-bool Parser::TryAnnotateCXXScopeToken(bool EnteringContext,
-                                      ParsedType ObjectType) {
+bool Parser::TryAnnotateCXXScopeToken(bool EnteringContext) {
   assert(getLangOpts().CPlusPlus &&
          "Call sites of this function should be guarded by checking for C++");
   assert(MightBeCXXScopeToken() && "Cannot be a type or scope token!");
 
   CXXScopeSpec SS;
-  if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/ObjectType,
+  if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
                                      /*ObjectHasErrors=*/false,
                                      EnteringContext))
     return true;

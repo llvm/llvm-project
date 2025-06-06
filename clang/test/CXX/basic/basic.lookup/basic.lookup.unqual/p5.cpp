@@ -69,3 +69,18 @@ void foo(T t) {
 }
 
 }
+
+namespace Regression2 {
+
+namespace std {
+struct path {};
+struct S {
+  operator path const&();
+};
+}
+
+void foo() {
+  std::S().operator std::path const&();
+}
+
+}
