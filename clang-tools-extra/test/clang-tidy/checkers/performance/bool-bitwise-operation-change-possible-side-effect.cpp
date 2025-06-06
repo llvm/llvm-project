@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s performance-bool-bitwise-operation %t \
 // RUN:   -config="{CheckOptions: { \
-// RUN:     performance-bool-bitwise-operation.ChangePossibleSideEffects: true }}"
+// RUN:     performance-bool-bitwise-operation.StrictMode: false }}"
 
 bool function_with_possible_side_effects();
 

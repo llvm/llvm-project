@@ -3,11 +3,12 @@
 performance-bool-bitwise-operation
 ==================================
 
-Finds potentially inefficient use of bitwise operators such as ``&``, 
-``|`` and their compound analogues on boolean values where logical 
-operators like ``&&`` and ``||`` would be more appropriate. Bitwise 
-operations on booleans can incur unnecessary performance overhead 
-due to implicit integer conversions and missed short-circuit evaluation.
+Finds potentially inefficient use of bitwise operators such as ``&``,  ``|`` 
+and their compound analogues on boolean values where logical operators like 
+``&&`` and ``||`` would be more appropriate.
+
+Bitwise operations on booleans can incur unnecessary performance overhead due 
+to implicit integer conversions and missed short-circuit evaluation.
 
 .. code-block:: c++
 
@@ -19,7 +20,8 @@ due to implicit integer conversions and missed short-circuit evaluation.
     // error handling
   }
 
-These 3 warnings suggest to assign result of logical ``||`` operation instead of using ``|=`` operator:
+These 3 warnings suggest to assign result of logical ``||`` operation instead 
+of using ``|=`` operator:
 
 .. code-block:: c++
 
@@ -34,7 +36,7 @@ These 3 warnings suggest to assign result of logical ``||`` operation instead of
 Options
 -------
 
-.. option:: ChangePossibleSideEffects
+.. option:: StrictMode
 
-    Enabling this option promotes more fixit hints even when they might
-    change evaluation order or skip side effects. Default value is `false`.
+    Disabling this option promotes more fixit hints even when they might
+    change evaluation order or skip side effects. Default value is `true`.

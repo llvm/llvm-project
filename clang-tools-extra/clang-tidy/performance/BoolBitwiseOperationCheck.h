@@ -30,7 +30,7 @@ public:
   }
 
 private:
-  bool ChangePossibleSideEffects;
+  bool StrictMode;
 };
 
 } // namespace clang::tidy::performance

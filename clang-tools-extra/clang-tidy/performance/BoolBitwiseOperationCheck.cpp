@@ -16,8 +16,8 @@
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::performance {
-namespace {
-std::string tryPrintVariable(const BinaryOperator* E) {
+
+static std::string tryPrintVariable(const BinaryOperator* E) {
   if (E->isCompoundAssignmentOp()) {
     const auto *DelcRefLHS = dyn_cast<DeclRefExpr>(E->getLHS()->IgnoreImpCasts());
     if (DelcRefLHS)
@@ -26,7 +26,7 @@ std::string tryPrintVariable(const BinaryOperator* E) {
   return "values";
 }
 
-bool hasExplicitParentheses(const Expr *E, const SourceManager &SM,
+static bool hasExplicitParentheses(const Expr *E, const SourceManager &SM,
                             const LangOptions &LangOpts) {
   if (!E)
     return false;
@@ -35,9 +35,8 @@ bool hasExplicitParentheses(const Expr *E, const SourceManager &SM,
   const SourceLocation End = E->getEndLoc();
 
   if (Start.isMacroID() || End.isMacroID() || !Start.isValid() ||
-      !End.isValid()) {
+      !End.isValid())
     return false;
-  }
 
   const std::optional<Token> PrevTok =
       Lexer::findPreviousToken(Start, SM, LangOpts, /*IncludeComments=*/false);
@@ -49,16 +48,14 @@ bool hasExplicitParentheses(const Expr *E, const SourceManager &SM,
 }
 
 template <typename AstNode>
-bool isInTemplateFunction(const AstNode *AN, ASTContext &Context) {
-  auto Parents = Context.getParents(*AN);
+static bool isInTemplateFunction(const AstNode *AN, ASTContext &Context) {
+  DynTypedNodeList Parents = Context.getParents(*AN);
   for (const auto &Parent : Parents) {
-    if (const auto *FD = Parent.template get<FunctionDecl>()) {
+    if (const auto *FD = Parent.template get<FunctionDecl>())
       return FD->isTemplateInstantiation() ||
              FD->getTemplatedKind() != FunctionDecl::TK_NonTemplate;
-    }
-    if (const auto *S = Parent.template get<Stmt>()) {
+    if (const auto *S = Parent.template get<Stmt>())
       return isInTemplateFunction(S, Context);
-    }
   }
   return false;
 }
@@ -73,7 +70,7 @@ constexpr std::array<std::pair<llvm::StringRef, llvm::StringRef>, 8U>
                              {"bitor", "or"},
                              {"or_eq", "or"}}};
 
-llvm::StringRef translate(llvm::StringRef Value) {
+static llvm::StringRef translate(llvm::StringRef Value) {
   for (const auto &[Bitwise, Logical] : OperatorsTransformation) {
     if (Value == Bitwise)
       return Logical;
@@ -81,16 +78,14 @@ llvm::StringRef translate(llvm::StringRef Value) {
 
   return {};
 }
-} // namespace
 
 BoolBitwiseOperationCheck::BoolBitwiseOperationCheck(StringRef Name,
                                                      ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context), ChangePossibleSideEffects(Options.get(
-                                         "ChangePossibleSideEffects", false)) {}
+    : ClangTidyCheck(Name, Context), StrictMode(Options.get("StrictMode", true)) {}
 
 void BoolBitwiseOperationCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "ChangePossibleSideEffects", ChangePossibleSideEffects);
+  Options.store(Opts, "StrictMode", StrictMode);
 }
 
 void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
@@ -124,7 +119,7 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
         return E->IgnoreImpCasts()->getType().isVolatileQualified();
       });
   const bool HasSideEffects = MatchedExpr->getRHS()->HasSideEffects(
-      *Result.Context, !ChangePossibleSideEffects);
+      *Result.Context, StrictMode);
   if (HasVolatileOperand || HasSideEffects)
     return;
 
@@ -183,12 +178,11 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   if ((MatchedExpr->getOpcode() == BO_Or && ParentOpcode.has_value() &&
        *ParentOpcode == BO_LAnd) ||
       (MatchedExpr->getOpcode() == BO_And && ParentOpcode.has_value() &&
-       llvm::is_contained({BO_Xor, BO_Or}, *ParentOpcode))) {
+       llvm::is_contained({BO_Xor, BO_Or}, *ParentOpcode)))
     SurroundedExpr = MatchedExpr;
-  } else if (MatchedExpr->getOpcode() == BO_AndAssign &&
-             RHSOpcode.has_value() && *RHSOpcode == BO_LOr) {
+  else if (MatchedExpr->getOpcode() == BO_AndAssign &&
+             RHSOpcode.has_value() && *RHSOpcode == BO_LOr)
     SurroundedExpr = RHS;
-  }
 
   if (hasExplicitParentheses(SurroundedExpr, *Result.SourceManager,
                              Result.Context->getLangOpts()))
