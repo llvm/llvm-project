@@ -1618,7 +1618,7 @@ libc_header_library(
 libc_support_library(
     name = "errno",
     srcs = ["src/errno/libc_errno.cpp"],
-    hdrs = ["src/errno/libc_errno.h"],
+    hdrs = ["src/__support/libc_errno.h"],
     deps = [
         ":__support_common",
         ":__support_cpp_atomic",

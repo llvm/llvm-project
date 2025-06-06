@@ -46,4 +46,7 @@ LIBC_CONFIGURE_OPTIONS = [
 
     # Documentation in libc/src/__support/libc_assert.h
     # "LIBC_COPT_USE_C_ASSERT",
+
+    # Use system errno.
+    "LIBC_ERRNO_MODE=LIBC_ERRNO_MODE_SYSTEM",
 ]
