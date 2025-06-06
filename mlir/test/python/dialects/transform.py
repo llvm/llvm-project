@@ -266,7 +266,10 @@ def testApplyRegisteredPassOp(module: Module):
             transform.AnyOpType.get(), "canonicalize", sequence.bodyTarget
         )
         mod = transform.ApplyRegisteredPassOp(
-            transform.AnyOpType.get(), "canonicalize", mod, options=("top-down=false",)
+            transform.AnyOpType.get(),
+            "canonicalize",
+            mod.result,
+            options=("top-down=false",),
         )
         max_iter = transform.param_constant(
             transform.AnyParamType.get(), StringAttr.get("max-iterations=10")
@@ -274,7 +277,7 @@ def testApplyRegisteredPassOp(module: Module):
         max_rewrites = transform.param_constant(
             transform.AnyParamType.get(), StringAttr.get("max-num-rewrites=1")
         )
-        transform.ApplyRegisteredPassOp(
+        transform.apply_registered_pass(
             transform.AnyOpType.get(),
             "canonicalize",
             mod,
