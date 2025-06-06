@@ -359,7 +359,7 @@ struct F8E8M0ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
       result = b.create<arith::TruncFOp>(resultTy, result, nullptr,
                                          op.getFastmathAttr());
     } else if (resultETy.getIntOrFloatBitWidth() > 32) {
-      result = b.create<arith::ExtFOp>(resultTy, result);
+      result = b.create<arith::ExtFOp>(resultTy, result, op.getFastmathAttr());
     }
     rewriter.replaceOp(op, result);
     return success();
@@ -417,11 +417,13 @@ struct ScalingExtFOpConverter : public OpRewritePattern<arith::ScalingExtFOp> {
     ImplicitLocOpBuilder b(op.getLoc(), rewriter);
     Value inputOperand = op.getIn();
     Value scaleOperand = op.getScale();
+    Type scaleTy = scaleOperand.getType();
     Type scaleETy = getElementTypeOrSelf(scaleOperand);
     // allow implicit exponent extraction from 16/32 bits floats
     if (scaleETy.getIntOrFloatBitWidth() >= 16) {
       scaleETy = b.getF8E8M0Type();
-      scaleOperand = b.create<arith::TruncFOp>(scaleETy, scaleOperand, nullptr,
+      scaleTy = cloneToShapedType(scaleTy, scaleETy);
+      scaleOperand = b.create<arith::TruncFOp>(scaleTy, scaleOperand, nullptr,
                                                op.getFastmathAttr());
     }
     if (!llvm::isa<Float8E8M0FNUType>(scaleETy)) {
@@ -461,8 +463,9 @@ struct ScalingTruncFOpConverter
     // allow implicit exponent extraction from 16/32 bits floats
     if (scaleETy.getIntOrFloatBitWidth() >= 16) {
       scaleETy = b.getF8E8M0Type();
-      scaleOperand = b.create<arith::TruncFOp>(scaleETy, scaleOperand);
-      scaleTy = scaleOperand.getType();
+      scaleTy = cloneToShapedType(scaleTy, scaleETy);
+      scaleOperand = b.create<arith::TruncFOp>(scaleTy, scaleOperand, nullptr,
+                                               op.getFastmathAttr());
     }
     if (!llvm::isa<Float8E8M0FNUType>(scaleETy)) {
       return rewriter.notifyMatchFailure(

@@ -1227,9 +1227,9 @@ def Arith_ScalingExtFOp
           OptionalAttr<Arith_FastMathAttr>:$fastmath)>,
       Results<(outs FloatLike:$out)> {
   let summary =
-      "Upcasts quantized floats using provided scales values following OCP MXFP Spec";
+      "Upcasts input floats using provided scales values following OCP MXFP Spec";
   let description = [{
-  This operation upcasts quantized floating-point values using provided scale 
+  This operation upcasts input floating-point values using provided scale 
   values. It expects both scales and the input operand to be of the same shape, 
   making the operation elementwise. Scales are usually calculated per block 
   following the OCP MXFP spec as described in https://arxiv.org/abs/2310.10537.
@@ -1253,7 +1253,6 @@ def Arith_ScalingExtFOp
     resultTy = get_type(result) 
     scaleTy  = get_type(scale)
     inputTy = get_type(input)
-    assert(scaleTy.shape() == inputTy.shape() == resultTy.shape())
     scale.exponent = arith.truncf(scale) : scaleTy to f8E8M0
     scale.extf = arith.extf(scale.exponent) : f8E8M0 to resultTy
     input.extf = arith.extf(input) : inputTy to resultTy
@@ -1350,7 +1349,7 @@ def Arith_ScalingTruncFOp
   let summary =
       "Downcasts input floating point values using provided scales values following OCP MXFP Spec";
   let description = [{
-    This operation quantizes input using the provided scale values. It expects 
+    This operation downcasts input using the provided scale values. It expects 
     both scales and the input operand to be of the same shape and, therefore, 
     makes the operation elementwise. Scales are usually calculated per block 
     following the OCP MXFP spec as described in https://arxiv.org/abs/2310.10537.
@@ -1378,7 +1377,6 @@ def Arith_ScalingTruncFOp
     scaleTy = get_type(scale)
     inputTy = get_type(input)
     resultTy = get_type(result)
-    assert(scaleTy.shape() == inputTy.shape() == resultTy.shape())
     scale.exponent = arith.truncf(scale) : scaleTy to f8E8M0
     scale.extf = arith.extf(scale.exponent) : f8E8M0 to inputTy
     result = arith.divf(input, scale.extf)
