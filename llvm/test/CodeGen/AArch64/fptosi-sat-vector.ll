@@ -32,8 +32,7 @@ define <1 x i32> @test_signed_v1f32_v1i32(<1 x float> %f) {
 ; CHECK-GI-LABEL: test_signed_v1f32_v1i32:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    fcvtzs w8, s0
-; CHECK-GI-NEXT:    mov v0.s[0], w8
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    fmov s0, w8
 ; CHECK-GI-NEXT:    ret
     %x = call <1 x i32> @llvm.fptosi.sat.v1f32.v1i32(<1 x float> %f)
     ret <1 x i32> %x
@@ -244,18 +243,11 @@ declare <5 x i32> @llvm.fptosi.sat.v5f64.v5i32 (<5 x double>)
 declare <6 x i32> @llvm.fptosi.sat.v6f64.v6i32 (<6 x double>)
 
 define <1 x i32> @test_signed_v1f64_v1i32(<1 x double> %f) {
-; CHECK-SD-LABEL: test_signed_v1f64_v1i32:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzs w8, d0
-; CHECK-SD-NEXT:    fmov s0, w8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_signed_v1f64_v1i32:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fcvtzs w8, d0
-; CHECK-GI-NEXT:    mov v0.s[0], w8
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_signed_v1f64_v1i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs w8, d0
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    ret
     %x = call <1 x i32> @llvm.fptosi.sat.v1f64.v1i32(<1 x double> %f)
     ret <1 x i32> %x
 }
@@ -565,8 +557,7 @@ define <1 x i32> @test_signed_v1f128_v1i32(<1 x fp128> %f) {
 ; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    csel w8, wzr, w19, ne
 ; CHECK-GI-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov v0.s[0], w8
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    fmov s0, w8
 ; CHECK-GI-NEXT:    add sp, sp, #48
 ; CHECK-GI-NEXT:    ret
     %x = call <1 x i32> @llvm.fptosi.sat.v1f128.v1i32(<1 x fp128> %f)
@@ -708,7 +699,7 @@ define <2 x i32> @test_signed_v2f128_v2i32(<2 x fp128> %f) {
 ; CHECK-GI-NEXT:    mov w19, w0
 ; CHECK-GI-NEXT:    mov v1.16b, v0.16b
 ; CHECK-GI-NEXT:    bl __unordtf2
-; CHECK-GI-NEXT:    mov v0.s[0], w21
+; CHECK-GI-NEXT:    fmov s0, w21
 ; CHECK-GI-NEXT:    cmp w0, #0
 ; CHECK-GI-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    csel w8, wzr, w19, ne
@@ -901,7 +892,7 @@ define <3 x i32> @test_signed_v3f128_v3i32(<3 x fp128> %f) {
 ; CHECK-GI-NEXT:    mov w19, w0
 ; CHECK-GI-NEXT:    mov v1.16b, v0.16b
 ; CHECK-GI-NEXT:    bl __unordtf2
-; CHECK-GI-NEXT:    mov v0.s[0], w21
+; CHECK-GI-NEXT:    fmov s0, w21
 ; CHECK-GI-NEXT:    cmp w0, #0
 ; CHECK-GI-NEXT:    csel w8, wzr, w19, ne
 ; CHECK-GI-NEXT:    ldp x20, x19, [sp, #112] // 16-byte Folded Reload
@@ -1141,7 +1132,7 @@ define <4 x i32> @test_signed_v4f128_v4i32(<4 x fp128> %f) {
 ; CHECK-GI-NEXT:    mov w19, w0
 ; CHECK-GI-NEXT:    mov v1.16b, v0.16b
 ; CHECK-GI-NEXT:    bl __unordtf2
-; CHECK-GI-NEXT:    mov v0.s[0], w21
+; CHECK-GI-NEXT:    fmov s0, w21
 ; CHECK-GI-NEXT:    cmp w0, #0
 ; CHECK-GI-NEXT:    ldr x30, [sp, #96] // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    csel w8, wzr, w19, ne
@@ -1188,15 +1179,13 @@ define <1 x i32> @test_signed_v1f16_v1i32(<1 x half> %f) {
 ; CHECK-GI-CVT:       // %bb.0:
 ; CHECK-GI-CVT-NEXT:    fcvt s0, h0
 ; CHECK-GI-CVT-NEXT:    fcvtzs w8, s0
-; CHECK-GI-CVT-NEXT:    mov v0.s[0], w8
-; CHECK-GI-CVT-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-CVT-NEXT:    fmov s0, w8
 ; CHECK-GI-CVT-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: test_signed_v1f16_v1i32:
 ; CHECK-GI-FP16:       // %bb.0:
 ; CHECK-GI-FP16-NEXT:    fcvtzs w8, h0
-; CHECK-GI-FP16-NEXT:    mov v0.s[0], w8
-; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-FP16-NEXT:    fmov s0, w8
 ; CHECK-GI-FP16-NEXT:    ret
     %x = call <1 x i32> @llvm.fptosi.sat.v1f16.v1i32(<1 x half> %f)
     ret <1 x i32> %x
@@ -5545,7 +5534,7 @@ define <2 x i64> @test_signed_v2f128_v2i64(<2 x fp128> %f) {
 ; CHECK-GI-NEXT:    mov x19, x0
 ; CHECK-GI-NEXT:    mov v1.16b, v0.16b
 ; CHECK-GI-NEXT:    bl __unordtf2
-; CHECK-GI-NEXT:    mov v0.d[0], x21
+; CHECK-GI-NEXT:    fmov d0, x21
 ; CHECK-GI-NEXT:    cmp w0, #0
 ; CHECK-GI-NEXT:    csel x8, xzr, x19, ne
 ; CHECK-GI-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
