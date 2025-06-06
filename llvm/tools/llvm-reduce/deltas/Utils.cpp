@@ -39,9 +39,8 @@ Value *llvm::getDefaultValue(Type *T) {
 }
 
 bool llvm::hasAliasUse(Function &F) {
-  return any_of(F.users(), [](User *U) {
-      return isa<GlobalAlias>(U) || isa<GlobalIFunc>(U);
-    });
+  return any_of(F.users(),
+                [](User *U) { return isa<GlobalAlias, GlobalIFunc>(U); });
 }
 
 void llvm::simpleSimplifyCFG(Function &F, ArrayRef<BasicBlock *> BBs,

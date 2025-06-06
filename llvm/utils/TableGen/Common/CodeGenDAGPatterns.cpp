@@ -2930,7 +2930,7 @@ TreePatternNodePtr TreePattern::ParseTreePattern(const Init *TheInit,
     return Res;
   }
 
-  if (isa<IntInit>(TheInit) || isa<BitInit>(TheInit)) {
+  if (isa<IntInit, BitInit>(TheInit)) {
     if (!OpName.empty())
       error("Constant int or bit argument should not have a name!");
     if (isa<BitInit>(TheInit))
