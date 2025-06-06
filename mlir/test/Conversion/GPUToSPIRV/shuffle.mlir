@@ -15,8 +15,8 @@ gpu.module @kernels {
 
     // CHECK: %[[MASK:.+]] = spirv.Constant 8 : i32
     // CHECK: %[[VAL:.+]] = spirv.Constant 4.200000e+01 : f32
-    // CHECK: %{{.+}} = spirv.Constant true
     // CHECK: %{{.+}} = spirv.GroupNonUniformShuffleXor <Subgroup> %[[VAL]], %[[MASK]] : f32, i32
+    // CHECK: %{{.+}} = spirv.Constant true
     %result, %valid = gpu.shuffle xor %val, %mask, %width : f32
     gpu.return
   }
@@ -64,8 +64,8 @@ gpu.module @kernels {
 
     // CHECK: %[[MASK:.+]] = spirv.Constant 8 : i32
     // CHECK: %[[VAL:.+]] = spirv.Constant 4.200000e+01 : f32
-    // CHECK: %{{.+}} = spirv.Constant true
     // CHECK: %{{.+}} = spirv.GroupNonUniformShuffle <Subgroup> %[[VAL]], %[[MASK]] : f32, i32
+    // CHECK: %{{.+}} = spirv.Constant true
     %result, %valid = gpu.shuffle idx %val, %mask, %width : f32
     gpu.return
   }
@@ -92,24 +92,10 @@ gpu.module @kernels {
     // CHECK: %[[OFFSET:.+]] = spirv.Constant 4 : i32
     // CHECK: %[[WIDTH:.+]] = spirv.Constant 16 : i32
     // CHECK: %[[VAL:.+]] = spirv.Constant 4.200000e+01 : f32
-    // CHECK: %{{.+}} = spirv.Constant true
     // CHECK: %{{.+}} = spirv.GroupNonUniformShuffleDown <Subgroup> %[[VAL]], %[[OFFSET]] : f32, i32
 
-    // CHECK: %[[BLOCK_SIZE_X:.+]] = spirv.Constant 16 : i32
-    // CHECK: %[[BLOCK_SIZE_Y:.+]] = spirv.Constant 1 : i32
-    // CHECK: %__builtin__LocalInvocationId___addr = spirv.mlir.addressof @__builtin__LocalInvocationId__ : !spirv.ptr<vector<3xi32>, Input>
-    // CHECK: %[[WORKGROUP:.+]] = spirv.Load "Input" %__builtin__LocalInvocationId___addr : vector<3xi32>
-    // CHECK: %[[THREAD_X:.+]] = spirv.CompositeExtract %[[WORKGROUP]][0 : i32] : vector<3xi32>
-    // CHECK: %__builtin__LocalInvocationId___addr_1 = spirv.mlir.addressof @__builtin__LocalInvocationId__ : !spirv.ptr<vector<3xi32>, Input>
-    // CHECK: %[[WORKGROUP_1:.+]] = spirv.Load "Input" %__builtin__LocalInvocationId___addr_1 : vector<3xi32>
-    // CHECK: %[[THREAD_Y:.+]] = spirv.CompositeExtract %[[WORKGROUP_1]][1 : i32] : vector<3xi32>
-    // CHECK: %__builtin__LocalInvocationId___addr_2 = spirv.mlir.addressof @__builtin__LocalInvocationId__ : !spirv.ptr<vector<3xi32>, Input>
-    // CHECK: %[[WORKGROUP_2:.+]] = spirv.Load "Input" %__builtin__LocalInvocationId___addr_2 : vector<3xi32>
-    // CHECK: %[[THREAD_Z:.+]] = spirv.CompositeExtract %[[WORKGROUP_2]][2 : i32] : vector<3xi32>
-    // CHECK: %[[S0:.+]] = spirv.IMul %[[THREAD_Z]], %[[BLOCK_SIZE_Y]] : i32
-    // CHECK: %[[S1:.+]] = spirv.IAdd %[[S0]], %[[THREAD_Y]] : i32
-    // CHECK: %[[S2:.+]] = spirv.IMul %[[S1]], %[[BLOCK_SIZE_X]] : i32
-    // CHECK: %[[LANE_ID:.+]] = spirv.IAdd %[[S2]], %[[THREAD_X]] : i32
+    // CHECK: %[[INVOCATION_ID_ADDR:.+]] = spirv.mlir.addressof @__builtin__SubgroupLocalInvocationId__ : !spirv.ptr<i32, Input>
+    // CHECK: %[[LANE_ID:.+]] = spirv.Load "Input" %[[INVOCATION_ID_ADDR]] : i32
     // CHECK: %[[VAL_LANE_ID:.+]] = spirv.IAdd %[[LANE_ID]], %[[OFFSET]] : i32
     // CHECK: %[[VALID:.+]] = spirv.ULessThan %[[VAL_LANE_ID]], %[[WIDTH]] : i32
 
@@ -139,24 +125,10 @@ gpu.module @kernels {
     // CHECK: %[[OFFSET:.+]] = spirv.Constant 4 : i32
     // CHECK: %[[WIDTH:.+]] = spirv.Constant 16 : i32
     // CHECK: %[[VAL:.+]] = spirv.Constant 4.200000e+01 : f32
-    // CHECK: %{{.+}} = spirv.Constant true
     // CHECK: %{{.+}} = spirv.GroupNonUniformShuffleUp <Subgroup> %[[VAL]], %[[OFFSET]] : f32, i32
 
-    // CHECK: %[[BLOCK_SIZE_X:.+]] = spirv.Constant 16 : i32
-    // CHECK: %[[BLOCK_SIZE_Y:.+]] = spirv.Constant 1 : i32
-    // CHECK: %__builtin__LocalInvocationId___addr = spirv.mlir.addressof @__builtin__LocalInvocationId__ : !spirv.ptr<vector<3xi32>, Input>
-    // CHECK: %[[WORKGROUP:.+]] = spirv.Load "Input" %__builtin__LocalInvocationId___addr : vector<3xi32>
-    // CHECK: %[[THREAD_X:.+]] = spirv.CompositeExtract %[[WORKGROUP]][0 : i32] : vector<3xi32>
-    // CHECK: %__builtin__LocalInvocationId___addr_1 = spirv.mlir.addressof @__builtin__LocalInvocationId__ : !spirv.ptr<vector<3xi32>, Input>
-    // CHECK: %[[WORKGROUP_1:.+]] = spirv.Load "Input" %__builtin__LocalInvocationId___addr_1 : vector<3xi32>
-    // CHECK: %[[THREAD_Y:.+]] = spirv.CompositeExtract %[[WORKGROUP_1]][1 : i32] : vector<3xi32>
-    // CHECK: %__builtin__LocalInvocationId___addr_2 = spirv.mlir.addressof @__builtin__LocalInvocationId__ : !spirv.ptr<vector<3xi32>, Input>
-    // CHECK: %[[WORKGROUP_2:.+]] = spirv.Load "Input" %__builtin__LocalInvocationId___addr_2 : vector<3xi32>
-    // CHECK: %[[THREAD_Z:.+]] = spirv.CompositeExtract %[[WORKGROUP_2]][2 : i32] : vector<3xi32>
-    // CHECK: %[[S0:.+]] = spirv.IMul %[[THREAD_Z]], %[[BLOCK_SIZE_Y]] : i32
-    // CHECK: %[[S1:.+]] = spirv.IAdd %[[S0]], %[[THREAD_Y]] : i32
-    // CHECK: %[[S2:.+]] = spirv.IMul %[[S1]], %[[BLOCK_SIZE_X]] : i32
-    // CHECK: %[[LANE_ID:.+]] = spirv.IAdd %[[S2]], %[[THREAD_X]] : i32
+    // CHECK: %[[INVOCATION_ID_ADDR:.+]] = spirv.mlir.addressof @__builtin__SubgroupLocalInvocationId__ : !spirv.ptr<i32, Input>
+    // CHECK: %[[LANE_ID:.+]] = spirv.Load "Input" %[[INVOCATION_ID_ADDR]] : i32
     // CHECK: %[[VAL_LANE_ID:.+]] = spirv.ISub %[[LANE_ID]], %[[OFFSET]] : i32
     // CHECK: %[[CST0:.+]] = spirv.Constant 0 : i32
     // CHECK: %[[VALID:.+]] = spirv.SGreaterThanEqual %[[VAL_LANE_ID]], %[[CST0]] : i32

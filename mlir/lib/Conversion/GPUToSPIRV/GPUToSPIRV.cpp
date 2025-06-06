@@ -416,30 +416,6 @@ LogicalResult GPUBarrierConversion::matchAndRewrite(
   return success();
 }
 
-template <typename T>
-Value getDimOp(OpBuilder &builder, MLIRContext *ctx, Location loc,
-               gpu::Dimension dimension) {
-  Type indexType = IndexType::get(ctx);
-  IntegerType i32Type = IntegerType::get(ctx, 32);
-  Value dim = builder.create<T>(loc, indexType, dimension);
-  return builder.create<arith::IndexCastOp>(loc, i32Type, dim);
-}
-
-Value getLaneId(OpBuilder &rewriter, MLIRContext *ctx, Location loc) {
-  Value dimX = getDimOp<gpu::BlockDimOp>(rewriter, ctx, loc, gpu::Dimension::x);
-  Value dimY = getDimOp<gpu::BlockDimOp>(rewriter, ctx, loc, gpu::Dimension::y);
-  Value tidX = getDimOp<gpu::ThreadIdOp>(rewriter, ctx, loc, gpu::Dimension::x);
-  Value tidY = getDimOp<gpu::ThreadIdOp>(rewriter, ctx, loc, gpu::Dimension::y);
-  Value tidZ = getDimOp<gpu::ThreadIdOp>(rewriter, ctx, loc, gpu::Dimension::z);
-  auto i32Type = rewriter.getIntegerType(32);
-  Value tmp1 = rewriter.create<arith::MulIOp>(loc, i32Type, tidZ, dimY);
-  Value tmp2 = rewriter.create<arith::AddIOp>(loc, i32Type, tmp1, tidY);
-  Value tmp3 = rewriter.create<arith::MulIOp>(loc, i32Type, tmp2, dimX);
-  Value laneId = rewriter.create<arith::AddIOp>(loc, i32Type, tmp3, tidX);
-
-  return laneId;
-}
-
 //===----------------------------------------------------------------------===//
 // Shuffle
 //===----------------------------------------------------------------------===//
@@ -460,26 +436,30 @@ LogicalResult GPUShuffleConversion::matchAndRewrite(
         shuffleOp, "shuffle width and target subgroup size mismatch");
 
   Location loc = shuffleOp.getLoc();
-  Value validVal = spirv::ConstantOp::getOne(rewriter.getI1Type(),
-                                             shuffleOp.getLoc(), rewriter);
   auto scope = rewriter.getAttr<spirv::ScopeAttr>(spirv::Scope::Subgroup);
   Value result;
+  Value validVal;
 
   switch (shuffleOp.getMode()) {
-  case gpu::ShuffleMode::XOR:
+  case gpu::ShuffleMode::XOR: {
     result = rewriter.create<spirv::GroupNonUniformShuffleXorOp>(
         loc, scope, adaptor.getValue(), adaptor.getOffset());
+    validVal = spirv::ConstantOp::getOne(rewriter.getI1Type(),
+                                         shuffleOp.getLoc(), rewriter);
     break;
-  case gpu::ShuffleMode::IDX:
+  }
+  case gpu::ShuffleMode::IDX: {
     result = rewriter.create<spirv::GroupNonUniformShuffleOp>(
         loc, scope, adaptor.getValue(), adaptor.getOffset());
+    validVal = spirv::ConstantOp::getOne(rewriter.getI1Type(),
+                                         shuffleOp.getLoc(), rewriter);
     break;
+  }
   case gpu::ShuffleMode::DOWN: {
     result = rewriter.create<spirv::GroupNonUniformShuffleDownOp>(
         loc, scope, adaptor.getValue(), adaptor.getOffset());
 
-    MLIRContext *ctx = shuffleOp.getContext();
-    Value laneId = getLaneId(rewriter, ctx, loc);
+    Value laneId = rewriter.create<gpu::LaneIdOp>(loc, widthAttr);
     Value resultLandId =
         rewriter.create<arith::AddIOp>(loc, laneId, adaptor.getOffset());
     validVal = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult,
@@ -490,8 +470,7 @@ LogicalResult GPUShuffleConversion::matchAndRewrite(
     result = rewriter.create<spirv::GroupNonUniformShuffleUpOp>(
         loc, scope, adaptor.getValue(), adaptor.getOffset());
 
-    MLIRContext *ctx = shuffleOp.getContext();
-    Value laneId = getLaneId(rewriter, ctx, loc);
+    Value laneId = rewriter.create<gpu::LaneIdOp>(loc, widthAttr);
     Value resultLandId =
         rewriter.create<arith::SubIOp>(loc, laneId, adaptor.getOffset());
     auto i32Type = rewriter.getIntegerType(32);
