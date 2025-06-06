@@ -924,7 +924,7 @@ static void printApplyRegisteredPassOptions(OpAsmPrinter &printer,
     else if (auto strAttr = dyn_cast<StringAttr>(optionAttr))
       printer.printAttribute(strAttr);
     else
-      assert(false && "each option should be either a StringAttr or UnitAttr");
+      llvm_unreachable("each option should be either a StringAttr or UnitAttr");
   }
 }
 
