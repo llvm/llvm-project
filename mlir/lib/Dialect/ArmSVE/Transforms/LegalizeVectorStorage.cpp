@@ -298,6 +298,113 @@ struct LegalizeSVEMaskLoadConversion : public OpRewritePattern<memref::LoadOp> {
   }
 };
 
+/// Transforms a `transfer_read` operation so it reads vector of a type that
+/// can be mapped to an LLVM type. This is done by collapsing trailing
+/// dimensions so we obtain a vector type with a single scalable dimension in
+/// the rightmost position.
+///
+/// Example:
+/// ```
+/// %v = vector.transfer_read %M[%i, %j, %c0, %c0], %c0_i8
+///   {in_bounds = [false, true, true, true]}
+///   : memref<?x?x2x8xi8>, vector<2x[4]x2x8xi8>
+/// ```
+/// is rewriten to
+/// ```
+/// %collapse_shape = memref.collapse_shape %M [[0], [1, 2, 3]]
+///   : memref<?x?x2x8xi8> into memref<?x?xi8>
+/// %0 = vector.transfer_read  %collapse_shape[%i, %j], %c0_i8
+///   {in_bounds = [false, true]}
+///   : memref<?x?xi8>, vector<2x[64]xi8>
+/// %1 = vector.shape_cast %0 : vector<2x[64]xi8> to vector<2x[4]x2x8xi8>
+/// ```
+struct LegalizeTransferRead : public OpRewritePattern<vector::TransferReadOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::TransferReadOp readOp,
+                                PatternRewriter &rewriter) const override {
+
+    if (!readOp.getPermutationMap().isMinorIdentity())
+      return rewriter.notifyMatchFailure(readOp, "non-identity permutation");
+
+    // We handle transfers of vectors with rank >= 2 and a single scalable
+    // dimension.
+    VectorType origVT = readOp.getVectorType();
+    ArrayRef<bool> origScalableDims = origVT.getScalableDims();
+    const int64_t origVRank = origVT.getRank();
+    if (origVRank < 2 || llvm::count(origScalableDims, true) != 1)
+      return rewriter.notifyMatchFailure(readOp, "wrong dimensions");
+
+    // Number of trailing dimensions to collapse, including the scalable
+    // dimension.  Nothing to do if the single scalable dimension is already the
+    // last one.
+    const int64_t numCollapseDims = std::distance(
+        llvm::find(origScalableDims, true), origScalableDims.end());
+    if (numCollapseDims < 2)
+      return rewriter.notifyMatchFailure(readOp,
+                                         "scalable dimension is trailing");
+
+    // We want a simple memref (not a tensor) with contiguous elements for at
+    // least all the trailing dimensions up to and including the scalable one.
+    auto memTy = dyn_cast<MemRefType>(readOp.getBase().getType());
+    if (!(memTy && memTy.areTrailingDimsContiguous(numCollapseDims)))
+      return rewriter.notifyMatchFailure(
+          readOp, "non-contiguous memref dimensions to collapse");
+
+    // The collapsed dimensions (excluding the scalable one) of the vector and
+    // the memref must match and the corresponding indices must be in-bounds (it
+    // follows these indices would be zero). This guarantees that the operation
+    // transfers a contiguous block.
+    if (!llvm::equal(memTy.getShape().take_back(numCollapseDims - 1),
+                     origVT.getShape().take_back(numCollapseDims - 1)))
+      return rewriter.notifyMatchFailure(
+          readOp, "memref and vector dimensions do not match");
+
+    SmallVector<bool> origInBounds = readOp.getInBoundsValues();
+    if (!llvm::all_of(
+            ArrayRef<bool>(origInBounds).take_back(numCollapseDims - 1),
+            [](bool v) { return v; }))
+      return rewriter.notifyMatchFailure(readOp,
+                                         "out-if-bounds index to collapse");
+
+    // Collapse the trailing dimensions of the memref.
+    SmallVector<ReassociationIndices> reassoc;
+    for (int64_t i = 0; i < memTy.getRank() - numCollapseDims + 1; ++i)
+      reassoc.push_back({i});
+    for (int64_t i = memTy.getRank() - numCollapseDims + 1; i < memTy.getRank();
+         ++i)
+      reassoc.back().push_back(i);
+    if (!memref::CollapseShapeOp::isGuaranteedCollapsible(memTy, reassoc))
+      return failure();
+    Value collapsedMem = rewriter.create<memref::CollapseShapeOp>(
+        readOp.getLoc(), readOp.getBase(), reassoc);
+
+    // Get a vector type with collapsed trailing dimensions.
+    SmallVector<int64_t> shape(origVT.getShape());
+    for (int64_t i = origVRank - numCollapseDims + 1; i < origVRank; ++i)
+      shape[origVRank - numCollapseDims] *= shape[i];
+    shape.pop_back_n(numCollapseDims - 1);
+    auto collapsedVT =
+        VectorType::get(shape, origVT.getElementType(),
+                        origScalableDims.drop_back(numCollapseDims - 1));
+
+    // Drop the extra (zero) indices.
+    auto indices = readOp.getIndices().drop_back(numCollapseDims - 1);
+
+    // Create the new `transfer_read`.
+    auto newReadOp = rewriter.create<vector::TransferReadOp>(
+        readOp.getLoc(), collapsedVT, collapsedMem, indices,
+        ArrayRef<bool>(origInBounds).drop_back(numCollapseDims - 1));
+
+    // Cast back to the orignal vector type.
+    auto toOrigShape = rewriter.create<vector::ShapeCastOp>(readOp.getLoc(),
+                                                            origVT, newReadOp);
+
+    rewriter.replaceOp(readOp, toOrigShape);
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::arm_sve::populateLegalizeVectorStoragePatterns(
@@ -306,7 +413,8 @@ void mlir::arm_sve::populateLegalizeVectorStoragePatterns(
                LegalizeSVEMaskAllocation<memref::AllocaOp>,
                LegalizeSVEMaskAllocation<memref::AllocOp>,
                LegalizeSVEMaskTypeCastConversion,
-               LegalizeSVEMaskStoreConversion, LegalizeSVEMaskLoadConversion>(
+               LegalizeSVEMaskStoreConversion, LegalizeSVEMaskLoadConversion,
+               LegalizeTransferRead>(
       patterns.getContext());
 }
 
