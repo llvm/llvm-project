@@ -94,9 +94,8 @@ void StableFunctionMapRecord::serialize(
   // reading them if needed.
   const uint64_t NamesByteSizeOffset = Writer.OS.tell();
   Writer.write<uint64_t>(0);
-  for (auto &Name : Names) {
+  for (auto &Name : Names)
     Writer.OS << Name << '\0';
-  }
   // Align current position to 4 bytes.
   uint32_t Padding = offsetToAlignment(Writer.OS.tell(), Align(4));
   for (uint32_t I = 0; I < Padding; ++I)
@@ -139,9 +138,8 @@ void StableFunctionMapRecord::deserialize(const unsigned char *&Ptr,
     return;
   const auto NamesByteSize =
       endian::readNext<uint64_t, endianness::little, unaligned>(Ptr);
+  const auto NamesOffset = reinterpret_cast<uintptr_t>(Ptr);
   if (ReadStableFunctionMapNames) {
-    const auto NamesOffset = reinterpret_cast<uintptr_t>(Ptr);
-    (void)NamesOffset; // Silence unused variable warning.
     for (unsigned I = 0; I < NumNames; ++I) {
       StringRef Name(reinterpret_cast<const char *>(Ptr));
       Ptr += Name.size() + 1;
@@ -153,8 +151,7 @@ void StableFunctionMapRecord::deserialize(const unsigned char *&Ptr,
            "NamesByteSize does not match the actual size of names");
   } else {
     // skip reading Names by advancing the pointer.
-    Ptr = reinterpret_cast<const uint8_t *>(reinterpret_cast<uintptr_t>(Ptr) +
-                                            NamesByteSize);
+    Ptr = reinterpret_cast<const uint8_t *>(NamesOffset + NamesByteSize);
   }
 
   // Read StableFunctionEntries.
