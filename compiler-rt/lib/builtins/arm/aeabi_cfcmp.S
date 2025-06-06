@@ -46,19 +46,16 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_cfcmpeq)
 #if defined(__ARM_FEATURE_PAC_DEFAULT)
         pop {r0-r3, r12, lr}
         aut r12, lr, sp
-        beq 2f
-        b __aeabi_cfcmple
 #else
         pop {r0-r3, lr}
+#endif
 
         // NaN has been ruled out, so __aeabi_cfcmple can't trap
         // Use "it ne" + unconditional branch to guarantee a supported relocation if
         // __aeabi_cfcmple is in a different section for some builds.
         IT(ne)
         bne __aeabi_cfcmple
-#endif
 
-2:
 #if defined(USE_THUMB_2)
         mov r12, #APSR_C
         msr APSR_nzcvq, r12
