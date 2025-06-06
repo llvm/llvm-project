@@ -234,9 +234,10 @@ static json::Value extractValue(const CommentInfo &I) {
 
   case CommentKind::CK_InlineCommandComment: {
     json::Value ArgsArr = Array();
+    auto &ARef = *ArgsArr.getAsArray();
+    ARef.reserve(I.Args.size());
     for (const auto &Arg : I.Args)
-      ArgsArr.getAsArray()->emplace_back(Arg);
-
+      ARef.emplace_back(Arg);
     Child.insert({"Command", I.Name});
     Child.insert({"Args", ArgsArr});
     Child.insert({"Children", ChildArr});
@@ -273,13 +274,15 @@ static json::Value extractValue(const CommentInfo &I) {
 
   case CommentKind::CK_HTMLStartTagComment: {
     json::Value AttrKeysArray = json::Array();
-    for (const auto &Key : I.AttrKeys)
-      AttrKeysArray.getAsArray()->emplace_back(Key);
-
     json::Value AttrValuesArray = json::Array();
-    for (const auto &Val : I.AttrValues)
-      AttrValuesArray.getAsArray()->emplace_back(Val);
-
+    auto &KeyArr = *AttrKeysArray.getAsArray();
+    auto &ValArr = *AttrValuesArray.getAsArray();
+    KeyArr.reserve(I.AttrKeys.size());
+    ValArr.reserve(I.AttrValues.size());
+    for (const auto &K : I.AttrKeys)
+      KeyArr.emplace_back(K);
+    for (const auto &V : I.AttrValues)
+      ValArr.emplace_back(V);
     Child.insert({"Name", I.Name});
     Child.insert({"SelfClosing", I.SelfClosing});
     Child.insert({"AttrKeys", AttrKeysArray});
@@ -325,6 +328,7 @@ static void extractDescriptionFromInfo(ArrayRef<CommentInfo> Descriptions,
     return;
   json::Value DescArr = Array();
   json::Array &DescARef = *DescArr.getAsArray();
+  DescARef.reserve(Descriptions.size());
   for (const CommentInfo &Child : Descriptions)
     DescARef.emplace_back(extractValue(Child));
   EnumValObj.insert({"EnumValueComments", DescArr});
@@ -340,6 +344,7 @@ static json::Value extractValue(const FunctionInfo &I, StringRef ParentInfoDir,
 
   json::Value ParamArr = Array();
   json::Array &ParamARef = *ParamArr.getAsArray();
+  ParamARef.reserve(I.Params.size());
   for (const auto Val : enumerate(I.Params)) {
     json::Value V = Object();
     auto &VRef = *V.getAsObject();
@@ -367,6 +372,7 @@ static json::Value extractValue(const EnumInfo &I,
   Obj.insert({"ID", toHex(toStringRef(I.USR))});
   json::Value EnumArr = Array();
   json::Array &EnumARef = *EnumArr.getAsArray();
+  EnumARef.reserve(I.Members.size());
   for (const EnumValueInfo &M : I.Members) {
     json::Value EnumValue = Object();
     auto &EnumValObj = *EnumValue.getAsObject();
@@ -392,6 +398,7 @@ static void extractScopeChildren(const ScopeChildren &S, Object &Obj,
                                  const ClangDocContext &CDCtx) {
   json::Value NamespaceArr = Array();
   json::Array &NamespaceARef = *NamespaceArr.getAsArray();
+  NamespaceARef.reserve(S.Namespaces.size());
   for (const Reference &Child : S.Namespaces)
     NamespaceARef.emplace_back(extractValue(Child, ParentInfoDir));
 
@@ -400,6 +407,7 @@ static void extractScopeChildren(const ScopeChildren &S, Object &Obj,
 
   json::Value RecordArr = Array();
   json::Array &RecordARef = *RecordArr.getAsArray();
+  RecordARef.reserve(S.Records.size());
   for (const Reference &Child : S.Records)
     RecordARef.emplace_back(extractValue(Child, ParentInfoDir));
 
@@ -408,12 +416,15 @@ static void extractScopeChildren(const ScopeChildren &S, Object &Obj,
 
   json::Value FunctionArr = Array();
   json::Array &FunctionARef = *FunctionArr.getAsArray();
+  FunctionARef.reserve(S.Functions.size());
 
   json::Value PublicFunctionArr = Array();
   json::Array &PublicFunctionARef = *PublicFunctionArr.getAsArray();
+  PublicFunctionARef.reserve(S.Functions.size());
 
   json::Value ProtectedFunctionArr = Array();
   json::Array &ProtectedFunctionARef = *ProtectedFunctionArr.getAsArray();
+  ProtectedFunctionARef.reserve(S.Functions.size());
 
   for (const FunctionInfo &Child : S.Functions) {
     json::Value F = extractValue(Child, ParentInfoDir, CDCtx);
@@ -437,6 +448,7 @@ static void extractScopeChildren(const ScopeChildren &S, Object &Obj,
 
   json::Value EnumArr = Array();
   auto &EnumARef = *EnumArr.getAsArray();
+  EnumARef.reserve(S.Enums.size());
   for (const EnumInfo &Child : S.Enums)
     EnumARef.emplace_back(extractValue(Child, CDCtx));
 
@@ -445,6 +457,7 @@ static void extractScopeChildren(const ScopeChildren &S, Object &Obj,
 
   json::Value TypedefArr = Array();
   auto &TypedefARef = *TypedefArr.getAsArray();
+  TypedefARef.reserve(S.Typedefs.size());
   for (const TypedefInfo &Child : S.Typedefs)
     TypedefARef.emplace_back(extractValue(Child));
 
@@ -481,10 +494,13 @@ static json::Value extractValue(const RecordInfo &I,
   extractScopeChildren(I.Children, RecordValue, BasePath, CDCtx);
   json::Value PublicMembers = Array();
   json::Array &PubMemberRef = *PublicMembers.getAsArray();
+  PubMemberRef.reserve(I.Members.size());
   json::Value ProtectedMembers = Array();
   json::Array &ProtMemberRef = *ProtectedMembers.getAsArray();
+  ProtMemberRef.reserve(I.Members.size());
   json::Value PrivateMembers = Array();
   json::Array &PrivMemberRef = *PrivateMembers.getAsArray();
+  PrivMemberRef.reserve(I.Members.size());
   for (const MemberTypeInfo &Member : I.Members) {
     json::Value MemberValue = Object();
     auto &MVRef = *MemberValue.getAsObject();
@@ -516,20 +532,25 @@ static Error setupTemplateValue(const ClangDocContext &CDCtx, json::Value &V,
   auto InfoPath = I->getRelativeFilePath("");
   SmallString<128> RelativePath = computeRelativePath("", InfoPath);
   sys::path::native(RelativePath, sys::path::Style::posix);
+
+  auto *SSA = StylesheetArr.getAsArray();
+  SSA->reserve(CDCtx.UserStylesheets.size());
   for (const auto &FilePath : CDCtx.UserStylesheets) {
     SmallString<128> StylesheetPath = RelativePath;
     sys::path::append(StylesheetPath, sys::path::Style::posix,
                       sys::path::filename(FilePath));
-    StylesheetArr.getAsArray()->emplace_back(StylesheetPath);
+    SSA->emplace_back(StylesheetPath);
   }
   V.getAsObject()->insert({"Stylesheets", StylesheetArr});
 
   json::Value ScriptArr = Array();
+  auto *SCA = ScriptArr.getAsArray();
+  SCA->reserve(CDCtx.JsScripts.size());
   for (auto Script : CDCtx.JsScripts) {
     SmallString<128> JsPath = RelativePath;
     sys::path::append(JsPath, sys::path::Style::posix,
                       sys::path::filename(Script));
-    ScriptArr.getAsArray()->emplace_back(JsPath);
+    SCA->emplace_back(JsPath);
   }
   V.getAsObject()->insert({"Scripts", ScriptArr});
   return Error::success();
