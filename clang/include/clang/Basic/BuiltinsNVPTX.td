@@ -177,6 +177,7 @@ let Attributes = [NoReturn] in {
 }
 let Attributes = [NoThrow] in {
   def __nvvm_nanosleep : NVPTXBuiltinSMAndPTX<"void(unsigned int)", SM_70, PTX63>;
+  def __nvvm_pm_event_mask : NVPTXBuiltin<"void(_Constant unsigned short)">;
 }
 
 // Min Max
