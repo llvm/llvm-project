@@ -7580,16 +7580,23 @@ static bool isGuaranteedNotToBeUndefOrPoison(
     if (isa<UndefValue>(C))
       return !includesUndef(Kind);
 
-    if (isa<ConstantInt>(C) || isa<GlobalVariable>(C) || isa<ConstantFP>(V) ||
+    if (isa<ConstantInt>(C) || isa<GlobalVariable>(C) || isa<ConstantFP>(C) ||
         isa<ConstantPointerNull>(C) || isa<Function>(C))
       return true;
 
-    if (C->getType()->isVectorTy() && !isa<ConstantExpr>(C)) {
-      if (includesUndef(Kind) && C->containsUndefElement())
-        return false;
-      if (includesPoison(Kind) && C->containsPoisonElement())
-        return false;
-      return !C->containsConstantExpression();
+    if (C->getType()->isVectorTy()) {
+      if (isa<ConstantExpr>(C)) {
+        // Scalable vectors can use a ConstantExpr to build a splat.
+        if (Constant *SplatC = C->getSplatValue())
+          if (isa<ConstantInt>(SplatC) || isa<ConstantFP>(SplatC))
+            return true;
+      } else {
+        if (includesUndef(Kind) && C->containsUndefElement())
+          return false;
+        if (includesPoison(Kind) && C->containsPoisonElement())
+          return false;
+        return !C->containsConstantExpression();
+      }
     }
   }
 
