@@ -1,0 +1,110 @@
+[section:poisson_dist Poisson Distribution]
+
+``#include <boost/math/distributions/poisson.hpp>``
+
+  namespace boost { namespace math {
+  
+  template <class RealType = double, 
+            class ``__Policy``   = ``__policy_class`` >
+  class poisson_distribution;
+
+  typedef poisson_distribution<> poisson;
+
+  template <class RealType, class ``__Policy``>
+  class poisson_distribution
+  { 
+  public:
+    typedef RealType value_type;
+    typedef Policy   policy_type;
+    
+    BOOST_MATH_GPU_ENABLED poisson_distribution(RealType mean = 1); // Constructor.
+    BOOST_MATH_GPU_ENABLED RealType mean()const; // Accessor.
+  }
+   
+  }} // namespaces boost::math
+   
+The [@http://en.wikipedia.org/wiki/Poisson_distribution Poisson distribution]
+is a well-known statistical discrete distribution.
+It expresses the probability of a number of events
+(or failures, arrivals, occurrences ...)
+occurring in a fixed period of time,
+provided these events occur with a known mean rate [lambda]
+(events/time), and are independent of the time since the last event.
+
+The distribution was discovered by Sim[eacute]on-Denis Poisson (1781 to 1840).
+
+It has the Probability Mass Function:
+
+[equation poisson_ref1]
+
+for k events, with an expected number of events [lambda].
+
+The following graph illustrates how the PDF varies with the parameter [lambda]:
+
+[graph poisson_pdf_1]
+
+[discrete_quantile_warning Poisson]
+
+[h4 Member Functions]
+
+   BOOST_MATH_GPU_ENABLED poisson_distribution(RealType mean = 1);
+   
+Constructs a poisson distribution with mean /mean/.
+
+   BOOST_MATH_GPU_ENABLED RealType mean()const;
+   
+Returns the /mean/ of this distribution.
+   
+[h4 Non-member Accessors]
+
+All the [link math_toolkit.dist_ref.nmp usual non-member accessor functions] that are generic to all
+distributions are supported: __usual_accessors.
+For this distribution all non-member accessor functions are marked with `BOOST_MATH_GPU_ENABLED` and can
+be run on both host and device.
+
+The domain of the random variable is \[0, [infin]\].
+
+In this distribution the implementation of `logpdf` is specialized
+to improve numerical accuracy.
+
+[h4 Accuracy]
+
+The Poisson distribution is implemented in terms of the 
+incomplete gamma functions __gamma_p and __gamma_q 
+and as such should have low error rates: but refer to the documentation
+of those functions for more information.
+The quantile and its complement use the inverse gamma functions
+and are therefore probably slightly less accurate: this is because the 
+inverse gamma functions are implemented using an iterative method with a 
+lower tolerance to avoid excessive computation.
+
+[h4 Implementation]
+
+In the following table [lambda] is the mean of the distribution,
+/k/ is the random variable, /p/ is the probability and /q = 1-p/.
+
+[table
+[[Function][Implementation Notes]]
+[[pdf][Using the relation: pdf = e[super -[lambda]] [lambda][super k] \/ k! ]]
+[[logpdf][log(pdf) = -lgamma(k+1) + k*log([lambda]) - [lambda] if k > 0 and [lambda] > 0 ]]
+[[cdf][Using the relation: p = [Gamma](k+1, [lambda]) \/ k! = __gamma_q(k+1, [lambda])]]
+[[cdf complement][Using the relation: q = __gamma_p(k+1, [lambda]) ]]
+[[quantile][Using the relation: k = __gamma_q_inva([lambda], p) - 1]]
+[[quantile from the complement][Using the relation: k = __gamma_p_inva([lambda], q) - 1]]
+[[mean][[lambda]]]
+[[mode][ floor ([lambda]) or [floorlr[lambda]] ]]
+[[skewness][1/[radic][lambda]]]
+[[kurtosis][3 + 1/[lambda]]]
+[[kurtosis excess][1/[lambda]]]
+]
+
+[endsect] [/section:poisson_dist Poisson]
+
+[/ poisson.qbk
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+
+

@@ -1,0 +1,149 @@
+<math  xmlns="http://www.w3.org/1998/Math/MathML" display="block" >
+   <mtable columnalign="left" class="align">
+      <mtr>
+         <mtd columnalign="right" class="align-odd">
+            <msub>
+               <mrow >
+                  <mi >R</mi>
+               </mrow>
+               <mrow >
+                  <mi >F</mi>
+               </mrow>
+            </msub >
+            <mrow >
+               <mo class="MathClass-open">(</mo>
+               <mrow>
+                  <mi >x</mi>
+                  <mo class="MathClass-punc">,</mo>
+                  <mi >y</mi>
+                  <mo class="MathClass-punc">,</mo>
+                  <mi >z</mi>
+               </mrow>
+               <mo class="MathClass-close">)</mo>
+            </mrow>
+         </mtd>
+         <mtd class="align-even">
+            <mo class="MathClass-rel">=</mo>
+            <mn>2</mn>
+            <msub>
+               <mrow >
+                  <mi >R</mi>
+               </mrow>
+               <mrow >
+                  <mi >F</mi>
+               </mrow>
+            </msub >
+            <mrow >
+               <mo class="MathClass-open">(</mo>
+               <mrow>
+                  <mi >x</mi>
+                  <mo class="MathClass-bin">+</mo>
+                  <mi >&#x03BB;</mi>
+                  <mo class="MathClass-punc">,</mo>
+                  <mi >y</mi>
+                  <mo class="MathClass-bin">+</mo>
+                  <mi >&#x03BB;</mi>
+                  <mo class="MathClass-punc">,</mo>
+                  <mi >z</mi>
+                  <mo class="MathClass-bin">+</mo>
+                  <mi >&#x03BB;</mi>
+               </mrow>
+               <mo class="MathClass-close">)</mo>
+            </mrow>
+            <mspace width="2em"/>
+         </mtd>
+         <mtd columnalign="right" class="align-label"></mtd>
+         <mtd class="align-label">
+            <mspace width="2em"/>
+         </mtd>
+      </mtr>
+      <mtr>
+         <mtd columnalign="right" class="align-odd"></mtd>
+         <mtd class="align-even">
+            <mo class="MathClass-rel">=</mo>
+            <msub>
+               <mrow >
+                  <mi >R</mi>
+               </mrow>
+               <mrow >
+                  <mi >F</mi>
+               </mrow>
+            </msub >
+            <mfenced separators="" open="("  close=")" >
+               <mrow>
+                  <mfrac>
+                     <mrow >
+                        <mi >x</mi>
+                        <mo class="MathClass-bin">+</mo>
+                        <mi >&#x03BB;</mi>
+                     </mrow>
+                     <mrow >
+                        <mn>4</mn>
+                     </mrow>
+                  </mfrac>
+                  <mo class="MathClass-punc">,</mo>
+                  <mfrac>
+                     <mrow >
+                        <mi >y</mi>
+                        <mo class="MathClass-bin">+</mo>
+                        <mi >&#x03BB;</mi>
+                     </mrow>
+                     <mrow >
+                        <mn>4</mn>
+                     </mrow>
+                  </mfrac>
+                  <mo class="MathClass-punc">,</mo>
+                  <mfrac>
+                     <mrow >
+                        <mi >z</mi>
+                        <mo class="MathClass-bin">+</mo>
+                        <mi >&#x03BB;</mi>
+                     </mrow>
+                     <mrow >
+                        <mn>4</mn>
+                     </mrow>
+                  </mfrac>
+               </mrow>
+            </mfenced>
+            <mspace width="2em"/>
+         </mtd>
+         <mtd columnalign="right" class="align-label"></mtd>
+         <mtd class="align-label">
+            <mspace width="2em"/>
+         </mtd>
+      </mtr>
+      <mtr>
+         <mtd columnalign="right" class="align-odd">
+            <mi >&#x03BB;</mi>
+         </mtd>
+         <mtd class="align-even">
+            <mo class="MathClass-rel">=</mo>
+            <msqrt>
+               <mrow>
+                  <mi >x</mi>
+                  <mi >y</mi>
+               </mrow>
+            </msqrt>
+            <mo class="MathClass-bin">+</mo>
+            <msqrt>
+               <mrow>
+                  <mi >y</mi>
+                  <mi >z</mi>
+               </mrow>
+            </msqrt>
+            <mo class="MathClass-bin">+</mo>
+            <msqrt>
+               <mrow>
+                  <mi >z</mi>
+                  <mi >x</mi>
+               </mrow>
+            </msqrt>
+            <mspace width="2em"/>
+         </mtd>
+         <mtd columnalign="right" class="align-label"></mtd>
+         <mtd class="align-label">
+            <mspace width="2em"/>
+         </mtd>
+      </mtr>
+   </mtable>
+</math>

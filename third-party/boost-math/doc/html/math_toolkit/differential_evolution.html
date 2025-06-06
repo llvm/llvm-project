@@ -1,0 +1,266 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Differential Evolution</title>
+<link rel="stylesheet" href="../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../optimization.html" title="Chapter 11. Optimization">
+<link rel="prev" href="../optimization.html" title="Chapter 11. Optimization">
+<link rel="next" href="jso.html" title="Algorithm jSO">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="../optimization.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../optimization.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="jso.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="math_toolkit.differential_evolution"></a><a class="link" href="differential_evolution.html" title="Differential Evolution">Differential Evolution</a>
+</h2></div></div></div>
+<h4>
+<a name="math_toolkit.differential_evolution.h0"></a>
+      <span class="phrase"><a name="math_toolkit.differential_evolution.synopsis"></a></span><a class="link" href="differential_evolution.html#math_toolkit.differential_evolution.synopsis">Synopsis</a>
+    </h4>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">optimization</span><span class="special">/</span><span class="identifier">differential_evolution</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">optimization</span> <span class="special">{</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">ArgumentContainer</span><span class="special">&gt;</span> <span class="keyword">struct</span> <span class="identifier">differential_evolution_parameters</span> <span class="special">{</span>
+    <span class="keyword">using</span> <span class="identifier">Real</span> <span class="special">=</span> <span class="keyword">typename</span> <span class="identifier">ArgumentContainer</span><span class="special">::</span><span class="identifier">value_type</span><span class="special">;</span>
+    <span class="identifier">ArgumentContainer</span> <span class="identifier">lower_bounds</span><span class="special">;</span>
+    <span class="identifier">ArgumentContainer</span> <span class="identifier">upper_bounds</span><span class="special">;</span>
+    <span class="identifier">Real</span> <span class="identifier">mutation_factor</span> <span class="special">=</span> <span class="keyword">static_cast</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">&gt;(</span><span class="number">0.65</span><span class="special">);</span>
+    <span class="keyword">double</span> <span class="identifier">crossover_probability</span> <span class="special">=</span> <span class="number">0.5</span><span class="special">;</span>
+    <span class="comment">// Population in each generation:</span>
+    <span class="identifier">size_t</span> <span class="identifier">NP</span> <span class="special">=</span> <span class="number">200</span><span class="special">;</span>
+    <span class="identifier">size_t</span> <span class="identifier">max_generations</span> <span class="special">=</span> <span class="number">1000</span><span class="special">;</span>
+    <span class="identifier">size_t</span> <span class="identifier">threads</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">thread</span><span class="special">::</span><span class="identifier">hardware_concurrency</span><span class="special">();</span>
+    <span class="identifier">ArgumentContainer</span> <span class="keyword">const</span> <span class="special">*</span> <span class="identifier">initial_guess</span> <span class="special">=</span> <span class="keyword">nullptr</span><span class="special">;</span>
+<span class="special">};</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">ArgumentContainer</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">Func</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">URBG</span><span class="special">&gt;</span>
+<span class="identifier">ArgumentContainer</span> <span class="identifier">differential_evolution</span><span class="special">(</span>
+    <span class="keyword">const</span> <span class="identifier">Func</span> <span class="identifier">cost_function</span><span class="special">,</span> <span class="identifier">differential_evolution_parameters</span><span class="special">&lt;</span><span class="identifier">ArgumentContainer</span><span class="special">&gt;</span> <span class="keyword">const</span> <span class="special">&amp;</span><span class="identifier">de_params</span><span class="special">,</span> <span class="identifier">URBG</span> <span class="special">&amp;</span><span class="identifier">g</span><span class="special">,</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">invoke_result_t</span><span class="special">&lt;</span><span class="identifier">Func</span><span class="special">,</span> <span class="identifier">ArgumentContainer</span><span class="special">&gt;</span> <span class="identifier">target_value</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">invoke_result_t</span><span class="special">&lt;</span><span class="identifier">Func</span><span class="special">,</span> <span class="identifier">ArgumentContainer</span><span class="special">&gt;&gt;::</span><span class="identifier">quiet_NaN</span><span class="special">(),</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">atomic</span><span class="special">&lt;</span><span class="keyword">bool</span><span class="special">&gt;</span> <span class="special">*</span><span class="identifier">cancellation</span> <span class="special">=</span> <span class="keyword">nullptr</span><span class="special">,</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span><span class="identifier">ArgumentContainer</span><span class="special">,</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">invoke_result_t</span><span class="special">&lt;</span><span class="identifier">Func</span><span class="special">,</span> <span class="identifier">ArgumentContainer</span><span class="special">&gt;&gt;&gt;</span> <span class="special">*</span><span class="identifier">queries</span> <span class="special">=</span> <span class="keyword">nullptr</span><span class="special">,</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">atomic</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">invoke_result_t</span><span class="special">&lt;</span><span class="identifier">Func</span><span class="special">,</span> <span class="identifier">ArgumentContainer</span><span class="special">&gt;&gt;</span> <span class="special">*</span><span class="identifier">current_minimum_cost</span> <span class="special">=</span> <span class="keyword">nullptr</span><span class="special">);</span>
+
+<span class="special">}</span> <span class="comment">// namespaces</span>
+</pre>
+<p>
+      The <code class="computeroutput"><span class="identifier">differential_evolution</span></code>
+      function provides an implementation of the (classical) differential evolution
+      optimization algorithm, often going by the label <code class="computeroutput"><span class="identifier">de</span><span class="special">/</span><span class="identifier">rand</span><span class="special">/</span><span class="identifier">bin</span><span class="special">/</span><span class="number">1</span></code>.
+      It is capable of minimizing a cost function defined on a continuous space represented
+      by a set of bounds. This function has been designed more for progress observability,
+      graceful cancellation, and post-hoc data analysis than for speed of convergence.
+      We justify this design choice by reference to the "No free lunch"
+      theorem of Wolpert and Macready, which establishes "that for any algorithm,
+      any elevated performance over one class of problems is offset by performance
+      over another class".
+    </p>
+<h4>
+<a name="math_toolkit.differential_evolution.h1"></a>
+      <span class="phrase"><a name="math_toolkit.differential_evolution.parameters"></a></span><a class="link" href="differential_evolution.html#math_toolkit.differential_evolution.parameters">Parameters</a>
+    </h4>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          <code class="computeroutput"><span class="identifier">lower_bounds</span></code>: A container
+          representing the lower bounds of the optimization space along each dimension.
+          The <code class="computeroutput"><span class="special">.</span><span class="identifier">size</span><span class="special">()</span></code> of the bounds should return the dimension
+          of the problem.
+        </li>
+<li class="listitem">
+          <code class="computeroutput"><span class="identifier">upper_bounds</span></code>: A container
+          representing the upper bounds of the optimization space along each dimension.
+          It should have the same size of <code class="computeroutput"><span class="identifier">lower_bounds</span></code>,
+          and each element should be &gt;= the corresponding element of <code class="computeroutput"><span class="identifier">lower_bounds</span></code>.
+        </li>
+<li class="listitem">
+          <code class="computeroutput"><span class="identifier">mutation_factor</span></code>: Also known
+          as <code class="computeroutput"><span class="identifier">F</span></code> or scale factor in
+          the literature. It controls the rate at which the population evolves (default
+          is 0.65).
+        </li>
+<li class="listitem">
+          <code class="computeroutput"><span class="identifier">crossover_probability</span></code>:
+          The crossover probability determining the trade-off between exploration
+          and exploitation (default is 0.5).
+        </li>
+<li class="listitem">
+          <code class="computeroutput"><span class="identifier">NP</span></code>: The population size
+          (default is 200). Parallelization occurs over the population, so this should
+          be "large".
+        </li>
+<li class="listitem">
+          <code class="computeroutput"><span class="identifier">max_generations</span></code>: The maximum
+          number of generations for the optimization (default is 1000).
+        </li>
+<li class="listitem">
+          <code class="computeroutput"><span class="identifier">threads</span></code>: The number of
+          threads to use for parallelization (default is the hardware concurrency).
+          If the objective function is already multithreaded, then this should be
+          set to 1 to prevent oversubscription.
+        </li>
+<li class="listitem">
+          <code class="computeroutput"><span class="identifier">initial_guess</span></code>: An optional
+          guess for where we should start looking for solutions.
+        </li>
+</ul></div>
+<p>
+      The defaults were chosen by a reading of Price, Storn, and Lampinen, chapter
+      3, with the exception of the population size, which we have chosen a bit larger
+      than they found as core counts have increased since publication of this reference
+      and parallelization occurs within each generation. Note that there is a tradeoff
+      between finding global minima and convergence speed. The most robust way of
+      decreasing the probability of getting stuck in a local minima is to increase
+      the population size.
+    </p>
+<h4>
+<a name="math_toolkit.differential_evolution.h2"></a>
+      <span class="phrase"><a name="math_toolkit.differential_evolution.the_function"></a></span><a class="link" href="differential_evolution.html#math_toolkit.differential_evolution.the_function">The
+      function</a>
+    </h4>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">ArgumentContainer</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">Func</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">URBG</span><span class="special">&gt;</span>
+<span class="identifier">ArgumentContainer</span> <span class="identifier">differential_evolution</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">Func</span> <span class="identifier">cost_function</span><span class="special">,</span>
+                                         <span class="identifier">differential_evolution_parameters</span><span class="special">&lt;</span><span class="identifier">ArgumentContainer</span><span class="special">&gt;</span> <span class="keyword">const</span> <span class="special">&amp;</span><span class="identifier">de_params</span><span class="special">,</span>
+                                         <span class="identifier">URBG</span> <span class="special">&amp;</span><span class="identifier">gen</span><span class="special">,</span>
+                                         <span class="identifier">std</span><span class="special">::</span><span class="identifier">invoke_result_t</span><span class="special">&lt;</span><span class="identifier">Func</span><span class="special">,</span> <span class="identifier">ArgumentContainer</span><span class="special">&gt;</span> <span class="identifier">value_to_reach</span>
+                                           <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">invoke_result_t</span><span class="special">&lt;</span><span class="identifier">Func</span><span class="special">,</span> <span class="identifier">ArgumentContainer</span><span class="special">&gt;&gt;::</span><span class="identifier">quiet_NaN</span><span class="special">(),</span>
+                                         <span class="identifier">std</span><span class="special">::</span><span class="identifier">atomic</span><span class="special">&lt;</span><span class="keyword">bool</span><span class="special">&gt;</span> <span class="special">*</span><span class="identifier">cancellation</span> <span class="special">=</span> <span class="keyword">nullptr</span><span class="special">,</span>
+                                         <span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span><span class="identifier">ArgumentContainer</span><span class="special">,</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">invoke_result_t</span><span class="special">&lt;</span><span class="identifier">Func</span><span class="special">,</span> <span class="identifier">ArgumentContainer</span><span class="special">&gt;&gt;&gt;</span> <span class="special">*</span><span class="identifier">queries</span> <span class="special">=</span> <span class="keyword">nullptr</span><span class="special">,</span>
+                                         <span class="identifier">std</span><span class="special">::</span><span class="identifier">atomic</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">invoke_result_t</span><span class="special">&lt;</span><span class="identifier">Func</span><span class="special">,</span> <span class="identifier">ArgumentContainer</span><span class="special">&gt;&gt;</span> <span class="special">*</span><span class="identifier">current_minimum_cost</span> <span class="special">=</span> <span class="keyword">nullptr</span><span class="special">)</span>
+</pre>
+<p>
+      Parameters:
+    </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          <code class="computeroutput"><span class="identifier">cost_function</span></code>: The cost
+          function to be minimized.
+        </li>
+<li class="listitem">
+          <code class="computeroutput"><span class="identifier">de_params</span></code>: The parameters
+          to the algorithm as described above.
+        </li>
+<li class="listitem">
+          <code class="computeroutput"><span class="identifier">rng</span></code>: A uniform random bit
+          generator, like <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">mt19937_64</span></code>.
+        </li>
+<li class="listitem">
+          <code class="computeroutput"><span class="identifier">value_to_reach</span></code>: An optional
+          value that, if reached, stops the optimization. This is the most robust
+          way to terminate the calculation, but in most cases the optimal value of
+          the cost function is unknown. If it is, use it! See the referenced book
+          for clear examples of when target values can be deduced.
+        </li>
+<li class="listitem">
+          <code class="computeroutput"><span class="identifier">cancellation</span></code>: An optional
+          atomic boolean to allow the user to stop the computation and gracefully
+          return the best result found up to that point. N.B.: Cancellation is not
+          immediate; the in-progress generation finishes.
+        </li>
+<li class="listitem">
+          <code class="computeroutput"><span class="identifier">queries</span></code>: An optional vector
+          to store intermediate results during optimization. This is useful for debugging
+          and perhaps volume rendering of the objective function after the calculation
+          is complete.
+        </li>
+<li class="listitem">
+          <code class="computeroutput"><span class="identifier">current_minimum_cost</span></code>: An
+          optional atomic variable to store the current minimum cost during optimization.
+          This allows developers to (e.g.) plot the progress of the minimization
+          over time and in conjunction with the cancellation argument allow halting
+          the computation when the progress stagnates. Refer to Price, Storn, and
+          Lampinen, Section 3.2 for caveats with this approach.
+        </li>
+</ul></div>
+<p>
+      Returns:
+    </p>
+<p>
+      The <code class="computeroutput"><span class="identifier">ArgumentContainer</span></code> corresponding
+      to the minimum cost found by the optimization.
+    </p>
+<p>
+      N.B.: The termination criteria is an "OR", not an "AND".
+      So if the maximum generations is hit, the iteration stops, even if (say) a
+      <code class="computeroutput"><span class="identifier">value_to_reach</span></code> has not been
+      attained.
+    </p>
+<h5>
+<a name="math_toolkit.differential_evolution.h3"></a>
+      <span class="phrase"><a name="math_toolkit.differential_evolution.examples"></a></span><a class="link" href="differential_evolution.html#math_toolkit.differential_evolution.examples">Examples</a>
+    </h5>
+<p>
+      An example use can be found <a href="../../../example/differential_evolution.cpp" target="_top">here</a>.
+      More examples and API use cases can be studied in <a href="../../../test/differential_evolution_test.cpp" target="_top">differential_evolution_test.cpp</a>.
+    </p>
+<h6>
+<a name="math_toolkit.differential_evolution.h4"></a>
+      <span class="phrase"><a name="math_toolkit.differential_evolution.caveats"></a></span><a class="link" href="differential_evolution.html#math_toolkit.differential_evolution.caveats">Caveats</a>
+    </h6>
+<p>
+      We have decided to only support classic <code class="computeroutput"><span class="identifier">de</span><span class="special">/</span><span class="identifier">rand</span><span class="special">/</span><span class="number">1</span><span class="special">/</span><span class="identifier">bin</span></code>
+      because there are too many parameters for this class as it stands, and we have
+      not seen benchmarks that indicate that other variants of the algorithm perform
+      better. If a compelling usecase is provided, support for the <code class="computeroutput"><span class="identifier">de</span><span class="special">/</span><span class="identifier">x</span><span class="special">/</span><span class="identifier">y</span><span class="special">/</span><span class="identifier">z</span></code> variants can be added.
+    </p>
+<p>
+      Supported termination criteria are explicit requests for termination, value-to-reach,
+      and max generations. Price, Storn, and Lampinen, Section 2.8 also list population
+      statistics and lack of accepted trials over many generations as sensible termination
+      criteria. These could be supported if there is demand.
+    </p>
+<p>
+      Parallelization with <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">thread</span></code> does have overhead-especially for
+      very fast function calls. We found that the function call needs to be roughly
+      a microsecond for unambigous parallelization wins. However, we have not provided
+      conditional parallelization as computationally inexpensive cost functions are
+      the exception; not the rule. If there is a clear use case for conditional parallelization
+      (cheap cost function in very high dimensions is a good example), we can provide
+      it.
+    </p>
+<h5>
+<a name="math_toolkit.differential_evolution.h5"></a>
+      <span class="phrase"><a name="math_toolkit.differential_evolution.references"></a></span><a class="link" href="differential_evolution.html#math_toolkit.differential_evolution.references">References</a>
+    </h5>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          Price, Kenneth, Rainer M. Storn, and Jouni A. Lampinen. <span class="emphasis"><em>Differential
+          evolution: a practical approach to global optimization.</em></span> Springer
+          Science &amp; Business Media, 2006.
+        </li>
+<li class="listitem">
+          D. H. Wolpert and W. G. Macready, <span class="emphasis"><em>No free lunch theorems for
+          optimization.</em></span> IEEE Transactions on Evolutionary Computation,
+          vol. 1, no. 1, pp. 67-82, April 1997, doi: 10.1109/4235.585893.
+        </li>
+</ul></div>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="../optimization.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../optimization.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="jso.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

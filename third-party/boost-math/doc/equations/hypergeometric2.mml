@@ -1,0 +1,50 @@
+<?xml version='1.0'?>
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN'
+  'http://www.w3.org/TR/MathML2/dtd/xhtml-math11-f.dtd'
+  [<!ENTITY mathml 'http://www.w3.org/1998/Math/MathML'>]>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head><title>hypergeometric2</title>
+<!-- MathML created with MathCast Equation Editor version 0.89 -->
+</head>
+<body>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mrow>
+    <mi>N</mi>
+    <mo>!</mo>
+    <mspace width="1em"/>
+    <mo>=</mo>
+    <mspace width="1em"/>
+    <munderover>
+      <mo>&#x220F;</mo>
+      <mrow>
+        <mi>i</mi>
+        <mo>=</mo>
+        <mn>0</mn>
+      </mrow>
+      <mrow>
+        <msub>
+          <mi>p</mi>
+          <mi>i</mi>
+        </msub>
+        <mo>&lt;</mo>
+        <mi>N</mi>
+      </mrow>
+    </munderover>
+    <msup>
+      <mrow>
+        <msub>
+          <mi>p</mi>
+          <mi>i</mi>
+        </msub>
+      </mrow>
+      <mrow>
+        <msub>
+          <mi>e</mi>
+          <mi>i</mi>
+        </msub>
+      </mrow>
+    </msup>
+  </mrow>
+</math>
+</body>
+</html>

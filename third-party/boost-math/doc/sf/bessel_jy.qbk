@@ -1,0 +1,552 @@
+[section:bessel_first Bessel Functions of the First and Second Kinds]
+
+[h4 Synopsis]
+
+`#include <boost/math/special_functions/bessel.hpp>`
+
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` cyl_bessel_j(T1 v, T2 x);
+
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` cyl_bessel_j(T1 v, T2 x, const ``__Policy``&);
+
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` cyl_neumann(T1 v, T2 x);
+
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` cyl_neumann(T1 v, T2 x, const ``__Policy``&);
+
+
+[h4 Description]
+
+The functions __cyl_bessel_j and __cyl_neumann return the result of the
+Bessel functions of the first and second kinds respectively:
+
+[expression cyl_bessel_j(v, x) = J[sub v](x)]
+
+[expression cyl_neumann(v, x) = Y[sub v](x) = N[sub v](x)]
+
+where:
+
+[equation bessel2]
+
+[equation bessel3]
+
+The return type of these functions is computed using the __arg_promotion_rules
+when T1 and T2 are different types.  The functions are also optimised for the
+relatively common case that T1 is an integer.
+
+[optional_policy]
+
+The functions return the result of __domain_error whenever the result is
+undefined or complex.  For __cyl_bessel_j this occurs when `x < 0` and v is not
+an integer, or when `x == 0` and `v != 0`.  For __cyl_neumann this occurs
+when `x <= 0`.
+
+The following graph illustrates the cyclic nature of J[sub v]:
+
+[graph cyl_bessel_j]
+
+The following graph shows the behaviour of Y[sub v]: this is also
+cyclic for large /x/, but tends to -[infin] for small /x/:
+
+[graph cyl_neumann]
+
+[h4 Testing]
+
+There are two sets of test values: spot values calculated using
+[@http://functions.wolfram.com functions.wolfram.com],
+and a much larger set of tests computed using
+a simplified version of this implementation
+(with all the special case handling removed).
+
+[h4 Accuracy]
+
+The following tables show how the accuracy of these functions
+varies on various platforms, along with comparisons to other 
+libraries.  Note that the cyclic nature of these
+functions means that they have an infinite number of irrational
+roots: in general these functions have arbitrarily large /relative/
+errors when the arguments are sufficiently close to a root.  Of
+course the absolute error in such cases is always small.
+Note that only results for the widest floating-point type on the
+system are given as narrower types have __zero_error.  All values
+are relative errors in units of epsilon.  Most of the gross errors
+exhibited by other libraries occur for very large arguments - you will 
+need to drill down into the actual program output if you need more 
+information on this.
+
+[table_cyl_bessel_j_integer_orders_]
+
+[table_cyl_bessel_j]
+
+[table_cyl_neumann_integer_orders_]
+
+[table_cyl_neumann]
+
+Note that for large /x/ these functions are largely dependent on
+the accuracy of the `std::sin` and `std::cos` functions.
+
+Comparison to GSL and __cephes is interesting: both __cephes and this library optimise
+the integer order case - leading to identical results - simply using the general
+case is for the most part slightly more accurate though, as noted by the
+better accuracy of GSL in the integer argument cases.  This implementation tends to
+perform much better when the arguments become large, __cephes in particular produces
+some remarkably inaccurate results with some of the test data (no significant figures
+correct), and even GSL performs badly with some inputs to J[sub v].  Note that
+by way of double-checking these results, the worst performing __cephes and GSL cases
+were recomputed using [@http://functions.wolfram.com functions.wolfram.com],
+and the result checked against our test data: no errors in the test data were found.
+
+The following error plot are based on an exhaustive search of the functions domain for J0 and Y0, 
+MSVC-15.5 at `double` precision, other compilers and precisions are very similar - the plots simply 
+illustrate the relatively large errors as you approach a zero, and the very low errors elsewhere.
+
+[graph j0__double]
+
+[graph y0__double]
+
+
+[h4 Implementation]
+
+The implementation is mostly about filtering off various special cases:
+
+When /x/ is negative, then the order /v/ must be an integer or the
+result is a domain error.  If the order is an integer then the function
+is odd for odd orders and even for even orders, so we reflect to /x > 0/.
+
+When the order /v/ is negative then the reflection formulae can be used to
+move to /v > 0/:
+
+[equation bessel9]
+
+[equation bessel10]
+
+Note that if the order is an integer, then these formulae reduce to:
+
+[expression J[sub -n] = (-1)[super n]J[sub n]]
+
+[expression Y[sub -n] = (-1)[super n]Y[sub n]]
+
+However, in general, a negative order implies that we will need to compute
+both J and Y.
+
+When /x/ is large compared to the order /v/ then the asymptotic expansions
+for large /x/ in M. Abramowitz and I.A. Stegun,
+['Handbook of Mathematical Functions] 9.2.19 are used
+(these were found to be more reliable
+than those in A&S 9.2.5).
+
+When the order /v/ is an integer the method first relates the result
+to J[sub 0], J[sub 1], Y[sub 0] and Y[sub 1] using either
+forwards or backwards recurrence (Miller's algorithm) depending upon which is stable.
+The values for J[sub 0], J[sub 1], Y[sub 0] and Y[sub 1] are
+calculated using the rational minimax approximations on
+root-bracketing intervals for small ['|x|] and Hankel asymptotic
+expansion for large ['|x|]. The coefficients are from:
+
+[:W.J. Cody, ['ALGORITHM 715: SPECFUN - A Portable FORTRAN Package of
+Special Function Routines and Test Drivers], ACM Transactions on Mathematical
+Software, vol 19, 22 (1993).]
+
+and
+
+[:J.F. Hart et al, ['Computer Approximations], John Wiley & Sons, New York, 1968.]
+
+These approximations are accurate to around 19 decimal digits: therefore
+these methods are not used when type T has more than 64 binary digits.
+
+When /x/ is smaller than machine epsilon then the following approximations for
+Y[sub 0](x), Y[sub 1](x), Y[sub 2](x) and Y[sub n](x) can be used
+(see: [@http://functions.wolfram.com/03.03.06.0037.01 http://functions.wolfram.com/03.03.06.0037.01],
+[@http://functions.wolfram.com/03.03.06.0038.01 http://functions.wolfram.com/03.03.06.0038.01],
+[@http://functions.wolfram.com/03.03.06.0039.01 http://functions.wolfram.com/03.03.06.0039.01]
+and [@http://functions.wolfram.com/03.03.06.0040.01 http://functions.wolfram.com/03.03.06.0040.01]):
+
+[equation bessel_y0_small_z]
+
+[equation bessel_y1_small_z]
+
+[equation bessel_y2_small_z]
+
+[equation bessel_yn_small_z]
+
+When /x/ is small compared to /v/ and /v/ is not an integer, then the following
+series approximation can be used for Y[sub v](x), this is also an area where other
+approximations are often too slow to converge to be used
+(see [@http://functions.wolfram.com/03.03.06.0034.01 http://functions.wolfram.com/03.03.06.0034.01]):
+
+[equation bessel_yv_small_z]
+
+When /x/ is small compared to /v/, J[sub v]x is best computed directly from the series:
+
+[equation bessel2]
+
+In the general case we compute J[sub v] and
+Y[sub v] simultaneously.
+
+To get the initial values, let
+[mu] = [nu] - floor([nu] + 1/2), then [mu] is the fractional part
+of [nu] such that
+|[mu]| <= 1/2 (we need this for convergence later). The idea is to
+calculate J[sub [mu]](x), J[sub [mu]+1](x), Y[sub [mu]](x), Y[sub [mu]+1](x)
+and use them to obtain J[sub [nu]](x), Y[sub [nu]](x).
+
+The algorithm is called Steed's method, which needs two
+continued fractions as well as the Wronskian:
+
+[equation bessel8]
+
+[equation bessel11]
+
+[equation bessel12]
+
+See: F.S. Acton, ['Numerical Methods that Work],
+    The Mathematical Association of America, Washington, 1997.
+
+The continued fractions are computed using the modified Lentz's method
+(W.J. Lentz, ['Generating Bessel functions in Mie scattering calculations
+using continued fractions], Applied Optics, vol 15, 668 (1976)).
+Their convergence rates depend on ['x], therefore we need
+different strategies for large ['x] and small ['x]:
+
+[:['x > v], CF1 needs O(['x]) iterations to converge, CF2 converges rapidly]
+
+[:['x <= v], CF1 converges rapidly, CF2 fails to converge when ['x] [^->] 0]
+
+When ['x] is large (['x] > 2), both continued fractions converge (CF1
+may be slow for really large ['x]). J[sub [mu]], J[sub [mu]+1],
+Y[sub [mu]], Y[sub [mu]+1] can be calculated by
+
+[equation bessel13]
+
+where
+
+[equation bessel14]
+
+J[sub [nu]] and Y[sub [mu]] are then calculated using backward
+(Miller's algorithm) and forward recurrence respectively.
+
+When ['x] is small (['x] <= 2), CF2 convergence may fail (but CF1
+works very well). The solution here is Temme's series:
+
+[equation bessel15]
+
+where
+
+[equation bessel16]
+
+g[sub k] and h[sub k]
+are also computed by recursions (involving gamma functions), but the
+formulas are a little complicated, readers are referred to
+N.M. Temme, ['On the numerical evaluation of the ordinary Bessel function
+of the second kind], Journal of Computational Physics, vol 21, 343 (1976).
+Note Temme's series converge only for |[mu]| <= 1/2.
+
+As the previous case, Y[sub [nu]] is calculated from the forward
+recurrence, so is Y[sub [nu]+1]. With these two
+values and f[sub [nu]], the Wronskian yields J[sub [nu]](x) directly
+without backward recurrence.
+
+[endsect] [/section:bessel_first Bessel Functions of the First and Second Kinds]
+
+[section:bessel_root Finding Zeros of Bessel Functions of the First and Second Kinds]
+
+[h4 Synopsis]
+
+`#include <boost/math/special_functions/bessel.hpp>`
+
+Functions for obtaining both a single zero or root of the Bessel function,
+and placing multiple zeros into a container like `std::vector`
+by providing an output iterator.
+
+The signature of the single value functions are:
+
+  template <class T>
+  T cyl_bessel_j_zero(
+           T v,            // Floating-point value for Jv.
+           int m);         // 1-based index of zero.
+
+  template <class T>
+  T cyl_neumann_zero(
+           T v,            // Floating-point value for Jv.
+           int m);         // 1-based index of zero.
+
+and for multiple zeros:
+
+ template <class T, class OutputIterator>
+ OutputIterator cyl_bessel_j_zero(
+                      T v,                       // Floating-point value for Jv.
+                      int start_index,           // 1-based index of first zero.
+                      unsigned number_of_zeros,  // How many zeros to generate.
+                      OutputIterator out_it);    // Destination for zeros.
+
+ template <class T, class OutputIterator>
+ OutputIterator cyl_neumann_zero(
+                      T v,                       // Floating-point value for Jv.
+                      int start_index,           // 1-based index of zero.
+                      unsigned number_of_zeros,  // How many zeros to generate
+                      OutputIterator out_it);    // Destination for zeros.
+
+There are also versions which allow control of the __policy_section for error handling and precision.
+
+  template <class T>
+  T cyl_bessel_j_zero(
+           T v,            // Floating-point value for Jv.
+           int m,          // 1-based index of zero.
+           const Policy&); // Policy to use.
+
+  template <class T>
+  T cyl_neumann_zero(
+           T v,            // Floating-point value for Jv.
+           int m,          // 1-based index of zero.
+           const Policy&); // Policy to use.
+
+
+ template <class T, class OutputIterator>
+ OutputIterator cyl_bessel_j_zero(
+                      T v,                       // Floating-point value for Jv.
+                      int start_index,           // 1-based index of first zero.
+                      unsigned number_of_zeros,  // How many zeros to generate.
+                      OutputIterator out_it,     // Destination for zeros.
+                      const Policy& pol);        // Policy to use.
+
+ template <class T, class OutputIterator>
+ OutputIterator cyl_neumann_zero(
+                      T v,                       // Floating-point value for Jv.
+                      int start_index,           // 1-based index of zero.
+                      unsigned number_of_zeros,  // How many zeros to generate.
+                      OutputIterator out_it,     // Destination for zeros.
+                      const Policy& pol);        // Policy to use.
+
+[h4 Description]
+
+Every real order [nu] cylindrical Bessel and Neumann functions have an infinite
+number of zeros on the positive real axis. The real zeros on the positive real
+axis can be found by solving for the roots of
+
+[:['J[sub [nu]](j[sub [nu], m]) = 0]]
+
+[:['Y[sub [nu]](y[sub [nu], m]) = 0]]
+
+Here, ['j[sub [nu], m]] represents the ['m[super th]]
+root of the cylindrical Bessel function of order ['[nu]],
+and ['y[sub [nu], m]] represents the ['m[super th]]
+root of the cylindrical Neumann function of order ['[nu]].
+
+The zeros or roots (values of `x` where the function crosses the horizontal `y = 0` axis)
+of the Bessel and Neumann functions are computed by two functions,
+`cyl_bessel_j_zero` and `cyl_neumann_zero`.
+
+In each case the index or rank of the zero
+returned is 1-based, which is to say:
+
+[:cyl_bessel_j_zero(v, 1);]
+
+returns the first zero of Bessel J.
+
+Passing an `start_index <= 0` results in a `std::domain_error` being raised.
+
+For certain parameters, however, the zero'th root is defined and
+it has a value of zero. For example, the zero'th root
+of `J[sub v](x)` is defined and it has a value of zero for all
+values of `v > 0` and for negative integer values of `v = -n`.
+Similar cases are described in the implementation details below.
+
+The order `v` of `J` can be positive, negative and zero for the `cyl_bessel_j`
+and `cyl_neumann` functions, but not infinite nor NaN.
+
+[graph bessel_j_zeros]
+
+[graph neumann_y_zeros]
+
+[h4 Examples of finding Bessel and Neumann zeros]
+
+[import ../../example/bessel_zeros_example_1.cpp]
+
+[bessel_zeros_example_1]
+[bessel_zeros_example_2]
+
+[import ../../example/bessel_zeros_interator_example.cpp]
+
+[bessel_zeros_iterator_example_1]
+[bessel_zeros_iterator_example_2]
+
+[import ../../example/neumann_zeros_example_1.cpp]
+
+[neumann_zeros_example_1]
+[neumann_zeros_example_2]
+
+[import ../../example/bessel_errors_example.cpp]
+
+[bessel_errors_example_1]
+[bessel_errors_example_2]
+
+The full code (and output) for these examples is at
+[@../../example/bessel_zeros_example_1.cpp Bessel zeros],
+[@../../example/bessel_zeros_interator_example.cpp Bessel zeros iterator],
+[@../../example/neumann_zeros_example_1.cpp Neumann zeros],
+[@../../example/bessel_errors_example.cpp  Bessel error messages].
+
+[h3 Implementation]
+
+Various methods are used to compute initial estimates
+for ['j[sub [nu], m]] and ['y[sub [nu], m]] ; these are described in detail below.
+
+After finding the initial estimate of a given root,
+its precision is subsequently refined to the desired level
+using Newton-Raphson iteration from Boost.Math's __root_finding_with_derivatives
+utilities combined with the functions __cyl_bessel_j  and __cyl_neumann.
+
+Newton iteration requires both ['J[sub [nu]](x)] or ['Y[sub [nu]](x)]
+as well as its derivative. The derivatives of ['J[sub [nu]](x)] and ['Y[sub [nu]](x)]
+with respect to  ['x] are given by __Abramowitz_Stegun.
+In particular,
+
+[expression d/[sub dx] ['J[sub [nu]](x)] = ['J[sub [nu]-1](x)] - [nu] J[sub [nu]](x) / x]
+
+[expression d/[sub dx] ['Y[sub [nu]](x)] = ['Y[sub [nu]-1](x)] - [nu] Y[sub [nu]](x) / x]
+
+Enumeration of the rank of a root (in other words the index of a root)
+begins with one and counts up, in other words
+['m,=1,2,3,[ellipsis]] The value of the first root is always greater than zero.
+
+For certain special parameters, cylindrical Bessel functions
+and cylindrical Neumann functions have a root at the origin. For example,
+['J[sub [nu]](x)] has a root at the origin for every positive order
+['[nu] > 0], and for every negative integer order
+['[nu] = -n] with ['n [isin] [negative] [super +]] and ['n [ne] 0].
+
+In addition, ['Y[sub [nu]](x)] has a root at the origin
+for every negative half-integer order ['[nu] = -n/2], with ['n [isin] [negative] [super +]] and
+and ['n [ne] 0].
+
+For these special parameter values, the origin with
+a value of ['x = 0] is provided as the ['0[super th]]
+root generated by `cyl_bessel_j_zero()`
+and `cyl_neumann_zero()`.
+
+When calculating initial estimates for the roots
+of Bessel functions, a distinction is made between
+positive order and negative order, and different
+methods are used for these. In addition, different algorithms
+are used for the first root ['m = 1] and
+for subsequent roots with higher rank ['m [ge] 2].
+Furthermore, estimates of the roots for Bessel functions
+with order above and below a cutoff at ['[nu] = 2.2]
+are calculated with different methods.
+
+Calculations of the estimates of ['j[sub [nu],1]] and ['y[sub [nu],1]]
+with ['0 [le] [nu] < 2.2] use empirically tabulated values.
+The coefficients for these have been generated by a
+computer algebra system.
+
+Calculations of the estimates of ['j[sub [nu],1]] and ['y[sub [nu],1]]
+with ['[nu][ge] 2.2] use Eqs.9.5.14 and 9.5.15 in __Abramowitz_Stegun.
+
+In particular,
+[expression j[sub [nu],1] [cong] [nu] + 1.85575 [nu][super [frac13]] + 1.033150 [nu][super -[frac13]] - 0.00397 [nu][super -1] - 0.0908 [nu][super -5/3] + 0.043 [nu][super -7/3] + [ellipsis]]
+
+and
+
+[expression y[sub [nu],1] [cong] [nu] + 0.93157 [nu][super [frac13]] + 0.26035 [nu][super -[frac13]] + 0.01198 [nu][super -1] - 0.0060 [nu][super -5/3] - 0.001 [nu][super -7/3] + [ellipsis]]
+
+Calculations of the estimates of ['j[sub [nu], m]]  and  ['y[sub [nu], m]]
+with rank ['m > 2] and ['0 [le] [nu] < 2.2]  use
+McMahon's approximation, as described in M. Abramowitz and I. A. Stegan, Section 9.5 and 9.5.12.
+In particular,
+
+[:['j[sub [nu],m], y[sub [nu],m] [cong]]]
+[:[:[beta] - ([mu]-1) / 8[beta]]]
+[:[:['- 4([mu]-1)(7[mu] - 31) / 3(8[beta])[super 3]]]]
+[:[:['-32([mu]-1)(83[mu][sup2] - 982[mu] + 3779) / 15(8[beta])[super 5]]]]
+[:[:['-64([mu]-1)(6949[mu][super 3] - 153855[mu][sup2] + 1585743[mu]- 6277237) / 105(8a)[super 7]]]]
+[:[:['- [ellipsis]] [emquad] (5)]]
+
+where ['[mu] = 4[nu][super 2]] and ['[beta] = (m + [frac12][nu] - [frac14])[pi]]
+for ['j[sub [nu],m]] and
+['[beta] = (m + [frac12][nu] -[frac34])[pi] for ['y[sub [nu],m]]].
+
+Calculations of the estimates of ['j[sub [nu], m]]  and  ['y[sub [nu], m]]
+with ['[nu] [ge] 2.2] use
+one term in the asymptotic expansion given in
+Eq.9.5.22 and top line of Eq.9.5.26 combined with Eq. 9.3.39,
+all in __Abramowitz_Stegun explicit and easy-to-understand treatment
+for asymptotic expansion of zeros.
+The latter two equations are expressed for argument ['(x)] greater than one.
+(Olver also gives the series form of the equations in
+[@http://dlmf.nist.gov/10.21#vi [sect]10.21(vi) McMahon's Asymptotic Expansions for Large Zeros] - using slightly different variable names).
+
+In summary,
+
+[expression j[sub [nu], m] [sim] [nu]x(-[zeta]) + f[sub 1](-[zeta]/[nu])]
+
+where ['-[zeta] = [nu][super -2/3]a[sub m]] and ['a[sub m]] is
+the absolute value of the ['m[super th]] root of ['Ai(x)] on the negative real axis.
+
+Here ['x = x(-[zeta])] is the inverse of the function
+
+[expression [frac23](-[zeta])[super 3/2] = [radic](x[sup2] - 1) - cos[supminus][sup1](1/x)]     (7)
+
+Furthermore,
+
+[expression f[sub 1](-[zeta]) = [frac12]x(-[zeta]) {h(-[zeta])}[sup2] [sdot] b[sub 0](-[zeta])]
+
+where
+
+[expression h(-[zeta]) = {4(-[zeta]) / (x[sup2] - 1)}[super 4]]
+
+and
+
+[expression b[sub 0](-[zeta]) = -5/(48[zeta][sup2]) + 1/(-[zeta])[super [frac12]] [sdot] { 5/(24(x[super 2]-1)[super 3/2]) + 1/(8(x[super 2]-1)[super [frac12])]}]
+
+When solving for ['x(-[zeta])] in Eq. 7 above,
+the right-hand-side is expanded to order 2 in
+a Taylor series for large ['x]. This results in
+
+[expression [frac23](-[zeta])[super 3/2] [approx] x + 1/2x - [pi]/2]
+
+The positive root of the resulting quadratic equation
+is used to find an initial estimate ['x(-[zeta])].
+This initial estimate is subsequently refined with
+several steps of Newton-Raphson iteration
+in Eq. 7.
+
+Estimates of the roots of cylindrical Bessel functions
+of negative order on the positive real axis are found
+using interlacing relations. For example, the ['m[super th]]
+root of the cylindrical Bessel function ['j[sub -[nu],m]]
+is bracketed by the ['m[super th]] root and the
+['(m+1)[super th]] root of the Bessel function of
+corresponding positive integer order. In other words,
+
+[expression j[sub n[nu], m] < j[sub -[nu], m] < j[sub n[nu], m+1]]
+
+where ['m > 1] and ['n[sub [nu]]] represents the integral
+floor of the absolute value of ['|-[nu]|].
+
+Similar bracketing relations are used to find estimates
+of the roots of Neumann functions of negative order,
+whereby a discontinuity at every negative half-integer
+order needs to be handled.
+
+Bracketing relations do not hold for the first root
+of cylindrical Bessel functions and cylindrical Neumann
+functions with negative order. Therefore, iterative algorithms
+combined with root-finding via bisection are used
+to localize ['j[sub -[nu],1]] and ['y[sub -[nu],1]].
+
+[h3 Testing]
+
+The precision of evaluation of zeros was tested at 50 decimal digits using `cpp_dec_float_50`
+and found identical with spot values computed by __WolframAlpha.
+
+[endsect]  [/section:bessel Finding Zeros of Bessel Functions of the First and Second Kinds]
+
+[/
+  Copyright 2006, 2013 John Maddock, Paul A. Bristow, Xiaogang Zhang and Christopher Kormanyos.
+
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

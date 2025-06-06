@@ -1,0 +1,166 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Cardinal Trigonometric interpolation</title>
+<link rel="stylesheet" href="../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../interpolation.html" title="Chapter 13. Interpolation">
+<link rel="prev" href="bezier_polynomial.html" title="Bezier Polynomials">
+<link rel="next" href="cubic_hermite.html" title="Cubic Hermite interpolation">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="bezier_polynomial.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../interpolation.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="cubic_hermite.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="math_toolkit.cardinal_trigonometric"></a><a class="link" href="cardinal_trigonometric.html" title="Cardinal Trigonometric interpolation">Cardinal Trigonometric
+    interpolation</a>
+</h2></div></div></div>
+<h4>
+<a name="math_toolkit.cardinal_trigonometric.h0"></a>
+      <span class="phrase"><a name="math_toolkit.cardinal_trigonometric.synopsis"></a></span><a class="link" href="cardinal_trigonometric.html#math_toolkit.cardinal_trigonometric.synopsis">Synopsis</a>
+    </h4>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">interpolators</span><span class="special">/</span><span class="identifier">cardinal_trigonometric</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">math</span><span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">interpolators</span> <span class="special">{</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">RandomAccessContainer</span><span class="special">&gt;</span>
+<span class="keyword">class</span> <span class="identifier">cardinal_trigonometric</span>
+<span class="special">{</span>
+<span class="keyword">public</span><span class="special">:</span>
+    <span class="identifier">cardinal_trigonometric</span><span class="special">(</span><span class="identifier">RandomAccessContainer</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">y</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">t0</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">h</span><span class="special">);</span>
+
+    <span class="identifier">Real</span> <span class="keyword">operator</span><span class="special">()(</span><span class="identifier">Real</span> <span class="identifier">t</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
+
+    <span class="identifier">Real</span> <span class="identifier">prime</span><span class="special">(</span><span class="identifier">Real</span> <span class="identifier">t</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
+
+    <span class="identifier">Real</span> <span class="identifier">double_prime</span><span class="special">(</span><span class="identifier">Real</span> <span class="identifier">t</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
+
+    <span class="identifier">Real</span> <span class="identifier">period</span><span class="special">()</span> <span class="keyword">const</span><span class="special">;</span>
+
+    <span class="identifier">Real</span> <span class="identifier">integrate</span><span class="special">()</span> <span class="keyword">const</span><span class="special">;</span>
+
+    <span class="identifier">Real</span> <span class="identifier">squared_l2</span><span class="special">()</span> <span class="keyword">const</span><span class="special">;</span>
+<span class="special">};</span>
+<span class="special">}}}</span>
+</pre>
+<h4>
+<a name="math_toolkit.cardinal_trigonometric.h1"></a>
+      <span class="phrase"><a name="math_toolkit.cardinal_trigonometric.cardinal_trigonometric_interpola"></a></span><a class="link" href="cardinal_trigonometric.html#math_toolkit.cardinal_trigonometric.cardinal_trigonometric_interpola">Cardinal
+      Trigonometric Interpolation</a>
+    </h4>
+<p>
+      The cardinal trigonometric interpolation problem takes uniformly spaced samples
+      <span class="emphasis"><em>y</em></span><sub>j</sub> of a periodic function <span class="emphasis"><em>f</em></span> defined
+      via <span class="emphasis"><em>y</em></span><sub><span class="emphasis"><em>j</em></span></sub> = <span class="emphasis"><em>f</em></span>(<span class="emphasis"><em>t</em></span><sub>0</sub> +
+      <span class="emphasis"><em>j</em></span> <span class="emphasis"><em>h</em></span>) and represents them as a linear
+      combination of sines and cosines. If the period of <span class="emphasis"><em>f</em></span> is
+      <span class="emphasis"><em>T</em></span>, and the number of data points is <span class="emphasis"><em>n = 2m</em></span>
+      or <span class="emphasis"><em>n = 2m+1</em></span>, we hope to have
+    </p>
+<p>
+      <span class="emphasis"><em>f</em></span>(<span class="emphasis"><em>t</em></span>) ≈ <span class="emphasis"><em>a</em></span><sub>0</sub>/2
+      + ∑<sub><span class="emphasis"><em>k</em></span> = 1</sub><sup><span class="emphasis"><em>m</em></span></sup> <span class="emphasis"><em>a</em></span><sub><span class="emphasis"><em>k</em></span></sub> cos(2π
+      <span class="emphasis"><em>k</em></span> (<span class="emphasis"><em>t</em></span>-<span class="emphasis"><em>t</em></span><sub>0</sub>) /T)
+      + <span class="emphasis"><em>b</em></span><sub><span class="emphasis"><em>k</em></span></sub> sin(2π <span class="emphasis"><em>k</em></span>
+      (<span class="emphasis"><em>t</em></span>-<span class="emphasis"><em>t</em></span><sub>0</sub>)/T)
+    </p>
+<p>
+      Convergence rates depend on the number of continuous derivatives of <span class="emphasis"><em>f</em></span>;
+      see either Atkinson or Kress for details.
+    </p>
+<p>
+      A simple use of this interpolator is shown below:
+    </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">vector</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">interpolators</span><span class="special">/</span><span class="identifier">cardinal_trigonometric</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">interpolators</span><span class="special">::</span><span class="identifier">cardinal_trigonometric</span><span class="special">;</span>
+<span class="special">...</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">v</span><span class="special">(</span><span class="number">17</span><span class="special">,</span> <span class="number">3.2</span><span class="special">);</span>
+<span class="keyword">auto</span> <span class="identifier">ct</span> <span class="special">=</span> <span class="identifier">cardinal_trigonometric</span><span class="special">(</span><span class="identifier">v</span><span class="special">,</span> <span class="comment">/*t0 = */</span> <span class="number">0.0</span><span class="special">,</span> <span class="comment">/* h = */</span> <span class="number">0.125</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"ct(1.3) = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">ct</span><span class="special">(</span><span class="number">1.3</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="string">"\n"</span><span class="special">;</span>
+
+<span class="comment">// Derivative:</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">ct</span><span class="special">.</span><span class="identifier">prime</span><span class="special">(</span><span class="number">1.2</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="string">"\n"</span><span class="special">;</span>
+<span class="comment">// Second derivative:</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">ct</span><span class="special">.</span><span class="identifier">double_prime</span><span class="special">(</span><span class="number">1.2</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="string">"\n"</span><span class="special">;</span>
+</pre>
+<p>
+      The period is always given by <code class="computeroutput"><span class="identifier">v</span><span class="special">.</span><span class="identifier">size</span><span class="special">()*</span><span class="identifier">h</span></code>. Off-by-one errors are common in programming,
+      and hence if you wonder what this interpolator believes the period to be, you
+      can query it with the <code class="computeroutput"><span class="special">.</span><span class="identifier">period</span><span class="special">()</span></code> member function.
+    </p>
+<p>
+      In addition, the transform into the trigonometric basis gives a trivial way
+      to compute the integral of the function over a period; this is done via the
+      <code class="computeroutput"><span class="special">.</span><span class="identifier">integrate</span><span class="special">()</span></code> member function. Evaluation of the square
+      of the L<sup>2</sup> norm is trivial in this basis; it is computed by the <code class="computeroutput"><span class="special">.</span><span class="identifier">squared_l2</span><span class="special">()</span></code> member function.
+    </p>
+<p>
+      Below is a graph of a <span class="emphasis"><em>C</em></span><sup>∞</sup> bump function approximated
+      by trigonometric series. The graphs are visually indistinguishable at 20 samples.
+    </p>
+<p>
+      <span class="inlinemediaobject"><object type="image/svg+xml" data="../../graphs/fourier_bump.svg"></object></span>
+    </p>
+<h4>
+<a name="math_toolkit.cardinal_trigonometric.h2"></a>
+      <span class="phrase"><a name="math_toolkit.cardinal_trigonometric.caveats"></a></span><a class="link" href="cardinal_trigonometric.html#math_toolkit.cardinal_trigonometric.caveats">Caveats</a>
+    </h4>
+<p>
+      This routine depends on FFTW3, and hence will only compile in float, double,
+      long double, and quad precision, unlike the large bulk of the library which
+      is compatible with arbitrary precision arithmetic. The FFTW linker flags must
+      be added to the compile step, i.e., <code class="computeroutput"><span class="special">-</span><span class="identifier">lm</span> <span class="special">-</span><span class="identifier">lfftw3</span></code>
+      for double precision, <code class="computeroutput"><span class="special">-</span><span class="identifier">lm</span>
+      <span class="special">-</span><span class="identifier">lfftw3f</span></code>
+      for float, so on.
+    </p>
+<p>
+      Evaluation of derivatives is done by differentiation of Horner's method. As
+      always, differentiation amplifies noise; and because some rounding error is
+      produced by computation of the Fourier coefficients, this error is amplified
+      by differentiation.
+    </p>
+<h4>
+<a name="math_toolkit.cardinal_trigonometric.h3"></a>
+      <span class="phrase"><a name="math_toolkit.cardinal_trigonometric.references"></a></span><a class="link" href="cardinal_trigonometric.html#math_toolkit.cardinal_trigonometric.references">References</a>
+    </h4>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          Atkinson, Kendall, and Weimin Han. <span class="emphasis"><em>Theoretical numerical analysis.</em></span>
+          Vol. 39. Berlin: Springer, 2005.
+        </li>
+<li class="listitem">
+          Kress, Rainer. <span class="emphasis"><em>Numerical Analysis.</em></span> 1998. Academic
+          Edition 1.
+        </li>
+</ul></div>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="bezier_polynomial.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../interpolation.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="cubic_hermite.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

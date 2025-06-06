@@ -1,0 +1,153 @@
+[/
+Copyright (c) 2019 Nick Thompson
+Use, modification and distribution are subject to the
+Boost Software License, Version 1.0. (See accompanying file
+LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:empirical_cdf Empirical Cumulative Distribution Function]
+
+[heading Synopsis]
+
+```
+#include <boost/math/distributions/empirical_cumulative_distribution_function.hpp>
+
+namespace boost{ namespace math{
+
+template <class RandomAccessContainer>
+class empirical_cumulative_distribution_function
+{
+public:
+    using Real = typename RandomAccessContainer::value_type;
+    empirical_cumulative_distribution_function(RandomAccessContainer && v, bool sorted = false);
+
+    auto operator()(Real t) const;
+
+    RandomAccessContainer&& return_data();
+};
+
+}}
+```
+
+[heading Empirical Cumulative Distribution Function]
+
+The empirical cumulative distribution function is a step function constructed from observed data which converges to the true cumulative distribution function in the limit of infinite data.
+This function is a basic building block of hypothesis testing workflows that attempt to answer the question "does my data come from a given distribution?"
+These tests require computing quadratures over some function of the empirical CDF and the supposed CDF to create a distance measurement, and hence it is occasionally useful to construct a continuous callable from the data.
+
+An example usage is demonstrated below:
+
+```
+#include <vector>
+#include <random>
+#include <boost/math/distributions/empirical_cumulative_distribution_function.hpp>
+using boost::math::empirical_cumulative_distribution_function;
+std::random_device rd;
+std::mt19937 gen{rd()};
+std::normal_distribution<double> dis(0, 1);
+size_t n = 128;
+std::vector<double> v(n);
+for (size_t i = 0; i < n; ++i) {
+  v[i] = dis(gen);
+}
+
+auto ecdf = empirical_cumulative_distribution_function(std::move(v));
+std::cout << "ecdf(0.0) = " << ecdf(0.0) << "\n";
+// should print approximately 0.5 . . .
+```
+
+The empirical distribution function requires sorted data.
+By default, the constructor sorts it for you at O(Nlog(N)) cost.
+
+If your data is already sorted, you can specify this and the constructor simply moves your data into the class:
+
+```
+std::sort(v.begin(), v.end());
+auto ecdf = empirical_cumulative_distribution_function(std::move(v), /* already sorted = */ true);
+```
+
+If you want your data back after being done with the object, use
+
+```
+v = ecdf.return_data();
+```
+
+This operation invalidates `ecdf`; it can no longer be used.
+
+The call operator complexity is O(log(N)), as it requires a call to `std::upper_bound`.
+
+Works with both integer and floating point types.
+If the input data consists of integers, the output of the call operator is a double. Requires C++17.
+
+[$../graphs/empiricial_cumulative_distribution_gauss.svg]
+
+[$../graphs/empiricial_cumulative_distribution_uniform.svg]
+
+
+[heading Performance]
+
+```
+------------------------------------------------------
+Benchmark                                         Time
+------------------------------------------------------
+ECDFConstructorSorted<double>/8                4.52 ns
+ECDFConstructorSorted<double>/16               5.20 ns
+ECDFConstructorSorted<double>/32               5.22 ns
+ECDFConstructorSorted<double>/64               7.37 ns
+ECDFConstructorSorted<double>/128              7.16 ns
+ECDFConstructorSorted<double>/256              8.97 ns
+ECDFConstructorSorted<double>/512              8.44 ns
+ECDFConstructorSorted<double>/1024             9.07 ns
+ECDFConstructorSorted<double>/2048             11.4 ns
+ECDFConstructorSorted<double>/4096             12.6 ns
+ECDFConstructorSorted<double>/8192             11.4 ns
+ECDFConstructorSorted<double>/16384            16.0 ns
+ECDFConstructorSorted<double>/32768            17.0 ns
+ECDFConstructorSorted<double>/65536            19.5 ns
+ECDFConstructorSorted<double>/131072           15.8 ns
+ECDFConstructorSorted<double>/262144           17.9 ns
+ECDFConstructorSorted<double>/524288           26.7 ns
+ECDFConstructorSorted<double>/1048576          29.5 ns
+ECDFConstructorSorted<double>/2097152          31.8 ns
+ECDFConstructorSorted<double>/4194304          32.8 ns
+ECDFConstructorSorted<double>/8388608          35.4 ns
+ECDFConstructorSorted<double>/16777216         30.4 ns
+ECDFConstructorSorted<double>_BigO             1.27 lgN
+ECDFConstructorSorted<double>_RMS                20 %
+ECDFConstructorUnsorted<double>/8               155 ns
+ECDFConstructorUnsorted<double>/64             2095 ns
+ECDFConstructorUnsorted<double>/512           22212 ns
+ECDFConstructorUnsorted<double>/4096         220821 ns
+ECDFConstructorUnsorted<double>/32768       1996380 ns
+ECDFConstructorUnsorted<double>/262144     18916039 ns
+ECDFConstructorUnsorted<double>/2097152   194250013 ns
+ECDFConstructorUnsorted<double>/16777216 2281469424 ns
+ECDFConstructorUnsorted<double>_BigO           5.65 NlgN
+ECDFConstructorUnsorted<double>_RMS               6 %
+Shuffle<double>/8                              82.4 ns
+Shuffle<double>/64                              731 ns
+Shuffle<double>/512                            5876 ns
+Shuffle<double>/4096                          46864 ns
+Shuffle<double>/32768                        385265 ns
+Shuffle<double>/262144                      4663866 ns
+Shuffle<double>/2097152                    54686332 ns
+Shuffle<double>/16777216                  875309099 ns
+Shuffle<double>_BigO                           2.16 NlgN
+Shuffle<double>_RMS                              12 %
+ECDFEvaluation<double>/8                       48.6 ns
+ECDFEvaluation<double>/64                      61.3 ns
+ECDFEvaluation<double>/512                     85.1 ns
+ECDFEvaluation<double>/4096                     105 ns
+ECDFEvaluation<double>/32768                    131 ns
+ECDFEvaluation<double>/262144                   196 ns
+ECDFEvaluation<double>/2097152                  391 ns
+ECDFEvaluation<double>/16777216                 715 ns
+ECDFEvaluation<double>_BigO                   18.19 lgN
+ECDFEvaluation<double>_RMS                       60 %
+```
+
+The call to the unsorted constructor is in fact a little faster than indicated, as the data must be shuffled after being sorted in the benchmark.
+This is itself a fairly expensive operation.
+
+[endsect]
+[/section:empirical_cdf]
