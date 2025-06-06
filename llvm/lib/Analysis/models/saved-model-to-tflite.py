@@ -31,7 +31,10 @@ def main(argv):
     src_json = os.path.join(sm_dir, json_file)
     if tf.io.gfile.exists(src_json):
         tf.io.gfile.copy(src_json, os.path.join(tfl_dir, json_file))
-
+    tf.mlir.experimental.tflite_to_tosa_bytecode(
+        tfl_path,
+        os.path.join(tfl_dir, 'model.tosa')
+    )
 
 if __name__ == "__main__":
     main(sys.argv)
