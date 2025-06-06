@@ -17,5 +17,5 @@ class DeclFromSubmoduleTestCase(TestBase):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "return 0", lldb.SBFileSpec("main.cpp"))
 
-        self.expect_expr("func(1, 2)", result_type=int, result_value=3)
-        self.expect_expr("func(1)", result_type=int, result_value=1)
+        self.expect_expr("func(1, 2)", result_type="int", result_value="3")
+        self.expect_expr("func(1)", result_type="int", result_value="1")
