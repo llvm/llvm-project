@@ -7,9 +7,8 @@ define ptr @basic(ptr %ptr, i64 %offset1, i64 %offset2) {
 ; CHECK-LABEL: define ptr @basic(
 ; CHECK-SAME: ptr [[PTR:%.*]], i64 [[OFFSET1:%.*]], i64 [[OFFSET2:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_UCHAR4:%.*]], ptr [[PTR]], i64 [[OFFSET1]]
-; CHECK-NEXT:    [[GEP12:%.*]] = getelementptr i8, ptr [[TMP1]], i64 32
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_UCHAR4]], ptr [[GEP12]], i64 [[OFFSET2]]
-; CHECK-NEXT:    [[GEP24:%.*]] = getelementptr i8, ptr [[TMP2]], i64 40
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_UCHAR4]], ptr [[TMP1]], i64 [[OFFSET2]]
+; CHECK-NEXT:    [[GEP24:%.*]] = getelementptr i8, ptr [[TMP2]], i64 72
 ; CHECK-NEXT:    ret ptr [[GEP24]]
 ;
   %offset3 = add i64 %offset1, 8
@@ -25,12 +24,11 @@ define i32 @more_interesting(ptr %ptr, i32 %offset1, i32 %offset2) {
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[OFFSET1]] to i64
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [[STRUCT_UCHAR4:%.*]], ptr [[PTR]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[IDXPROM1:%.*]] = sext i32 [[OFFSET2]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_UCHAR4]], ptr [[GEP1]], i64 [[IDXPROM1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i32 8
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_UCHAR4]], ptr [[GEP1]], i64 [[IDXPROM1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 8
 ; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[IDXPROM2:%.*]] = sext i32 [[OFFSET2]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [[STRUCT_UCHAR4]], ptr [[TMP2]], i64 [[IDXPROM2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP3]], i32 -8
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_UCHAR4]], ptr [[TMP1]], i64 [[IDXPROM2]]
 ; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[V1]], [[V2]]
 ; CHECK-NEXT:    ret i32 [[R]]
@@ -52,10 +50,9 @@ define i32 @more_interesting(ptr %ptr, i32 %offset1, i32 %offset2) {
 define ptr @test_0(ptr %p, i32 %i) {
 ; CHECK-LABEL: define ptr @test_0(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[I:%.*]]) {
-; CHECK-NEXT:    [[PTRADD:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i32 1
 ; CHECK-NEXT:    [[I_PROM:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw i8, ptr [[PTRADD]], i64 [[I_PROM]]
-; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nusw i8, ptr [[TMP1]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw i8, ptr [[P]], i64 [[I_PROM]]
+; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nusw i8, ptr [[TMP1]], i64 2
 ; CHECK-NEXT:    ret ptr [[ARRAYIDX22]]
 ;
   %ptradd = getelementptr nuw inbounds i8, ptr %p, i32 1
@@ -69,10 +66,9 @@ define ptr @test_0(ptr %p, i32 %i) {
 define ptr @test_1(ptr %p, i32 %i) {
 ; CHECK-LABEL: define ptr @test_1(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[I:%.*]]) {
-; CHECK-NEXT:    [[PTRADD:%.*]] = getelementptr inbounds i8, ptr [[P]], i32 1
 ; CHECK-NEXT:    [[I_PROM:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[PTRADD]], i64 [[I_PROM]]
-; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[I_PROM]]
+; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 2
 ; CHECK-NEXT:    ret ptr [[ARRAYIDX22]]
 ;
   %ptradd = getelementptr inbounds i8, ptr %p, i32 1
@@ -86,10 +82,9 @@ define ptr @test_1(ptr %p, i32 %i) {
 define ptr @test_2(ptr %p, i32 %i) {
 ; CHECK-LABEL: define ptr @test_2(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[I:%.*]]) {
-; CHECK-NEXT:    [[PTRADD:%.*]] = getelementptr nusw i8, ptr [[P]], i32 1
 ; CHECK-NEXT:    [[I_PROM:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[PTRADD]], i64 [[I_PROM]]
-; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw i8, ptr [[P]], i64 [[I_PROM]]
+; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nusw i8, ptr [[TMP1]], i64 2
 ; CHECK-NEXT:    ret ptr [[ARRAYIDX22]]
 ;
   %ptradd = getelementptr nusw i8, ptr %p, i32 1
@@ -103,10 +98,9 @@ define ptr @test_2(ptr %p, i32 %i) {
 define ptr @test_3(ptr %p, i32 %i) {
 ; CHECK-LABEL: define ptr @test_3(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[I:%.*]]) {
-; CHECK-NEXT:    [[PTRADD:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i32 1
 ; CHECK-NEXT:    [[I_PROM:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[PTRADD]], i64 [[I_PROM]]
-; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[I_PROM]]
+; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 2
 ; CHECK-NEXT:    ret ptr [[ARRAYIDX22]]
 ;
   %ptradd = getelementptr nuw inbounds i8, ptr %p, i32 1
@@ -120,10 +114,9 @@ define ptr @test_3(ptr %p, i32 %i) {
 define ptr @test_4(ptr %p, i32 %i) {
 ; CHECK-LABEL: define ptr @test_4(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[I:%.*]]) {
-; CHECK-NEXT:    [[PTRADD:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i32 1
 ; CHECK-NEXT:    [[I_PROM:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw i8, ptr [[PTRADD]], i64 [[I_PROM]]
-; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nusw i8, ptr [[TMP1]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw i8, ptr [[P]], i64 [[I_PROM]]
+; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nusw i8, ptr [[TMP1]], i64 2
 ; CHECK-NEXT:    ret ptr [[ARRAYIDX22]]
 ;
   %ptradd = getelementptr nuw inbounds i8, ptr %p, i32 1
@@ -137,10 +130,9 @@ define ptr @test_4(ptr %p, i32 %i) {
 define ptr @test_5(ptr %p, i32 %i) {
 ; CHECK-LABEL: define ptr @test_5(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[I:%.*]]) {
-; CHECK-NEXT:    [[PTRADD:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i32 1
 ; CHECK-NEXT:    [[I_PROM:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[PTRADD]], i64 [[I_PROM]]
-; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[I_PROM]]
+; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 2
 ; CHECK-NEXT:    ret ptr [[ARRAYIDX22]]
 ;
   %ptradd = getelementptr nuw inbounds i8, ptr %p, i32 1
@@ -154,9 +146,8 @@ define ptr @test_5(ptr %p, i32 %i) {
 define ptr @test_6(ptr %p, i64 %i) {
 ; CHECK-LABEL: define ptr @test_6(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[I:%.*]]) {
-; CHECK-NEXT:    [[PTRADD:%.*]] = getelementptr nusw nuw i8, ptr [[P]], i32 -1
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nuw i8, ptr [[PTRADD]], i64 [[I]]
-; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nuw i8, ptr [[TMP1]], i64 -10
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nuw i8, ptr [[P]], i64 [[I]]
+; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nuw i8, ptr [[TMP1]], i64 -11
 ; CHECK-NEXT:    ret ptr [[ARRAYIDX22]]
 ;
   %ptradd = getelementptr nuw nusw i8, ptr %p, i32 -1
@@ -169,9 +160,8 @@ define ptr @test_6(ptr %p, i64 %i) {
 define ptr @test_7(ptr %p, i64 %i) {
 ; CHECK-LABEL: define ptr @test_7(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[I:%.*]]) {
-; CHECK-NEXT:    [[PTRADD:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i32 -1
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw nuw i8, ptr [[PTRADD]], i64 [[I]]
-; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nusw nuw i8, ptr [[TMP1]], i64 -10
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw nuw i8, ptr [[P]], i64 [[I]]
+; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nusw nuw i8, ptr [[TMP1]], i64 -11
 ; CHECK-NEXT:    ret ptr [[ARRAYIDX22]]
 ;
   %ptradd = getelementptr nuw inbounds i8, ptr %p, i32 -1
@@ -184,9 +174,8 @@ define ptr @test_7(ptr %p, i64 %i) {
 define ptr @test_8(ptr %p, i64 %i) {
 ; CHECK-LABEL: define ptr @test_8(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[I:%.*]]) {
-; CHECK-NEXT:    [[PTRADD:%.*]] = getelementptr nuw i8, ptr [[P]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw nuw i8, ptr [[PTRADD]], i64 [[I]]
-; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nusw nuw i8, ptr [[TMP1]], i64 -10
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nuw i8, ptr [[P]], i64 [[I]]
+; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nuw i8, ptr [[TMP1]], i64 -9
 ; CHECK-NEXT:    ret ptr [[ARRAYIDX22]]
 ;
   %ptradd = getelementptr nuw i8, ptr %p, i32 1
@@ -199,9 +188,8 @@ define ptr @test_8(ptr %p, i64 %i) {
 define ptr @test_9(ptr %p, i64 %i) {
 ; CHECK-LABEL: define ptr @test_9(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[I:%.*]]) {
-; CHECK-NEXT:    [[PTRADD:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw nuw i8, ptr [[PTRADD]], i64 [[I]]
-; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nusw nuw i8, ptr [[TMP1]], i64 -10
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw nuw i8, ptr [[P]], i64 [[I]]
+; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nusw nuw i8, ptr [[TMP1]], i64 -9
 ; CHECK-NEXT:    ret ptr [[ARRAYIDX22]]
 ;
   %ptradd = getelementptr nuw inbounds i8, ptr %p, i32 1
@@ -214,9 +202,8 @@ define ptr @test_9(ptr %p, i64 %i) {
 define ptr @test_10(ptr %p, i64 %i) {
 ; CHECK-LABEL: define ptr @test_10(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[I:%.*]]) {
-; CHECK-NEXT:    [[PTRADD:%.*]] = getelementptr nuw i8, ptr [[P]], i32 -1
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw nuw i8, ptr [[PTRADD]], i64 [[I]]
-; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nusw nuw i8, ptr [[TMP1]], i64 10
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nuw i8, ptr [[P]], i64 [[I]]
+; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nuw i8, ptr [[TMP1]], i64 9
 ; CHECK-NEXT:    ret ptr [[ARRAYIDX22]]
 ;
   %ptradd = getelementptr nuw i8, ptr %p, i32 -1
@@ -229,9 +216,8 @@ define ptr @test_10(ptr %p, i64 %i) {
 define ptr @test_11(ptr %p, i64 %i) {
 ; CHECK-LABEL: define ptr @test_11(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[I:%.*]]) {
-; CHECK-NEXT:    [[PTRADD:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i32 -1
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw nuw i8, ptr [[PTRADD]], i64 [[I]]
-; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nusw nuw i8, ptr [[TMP1]], i64 10
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw nuw i8, ptr [[P]], i64 [[I]]
+; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nusw nuw i8, ptr [[TMP1]], i64 9
 ; CHECK-NEXT:    ret ptr [[ARRAYIDX22]]
 ;
   %ptradd = getelementptr nuw inbounds i8, ptr %p, i32 -1
@@ -244,9 +230,8 @@ define ptr @test_11(ptr %p, i64 %i) {
 define ptr @test_12(ptr %p, i64 %i) {
 ; CHECK-LABEL: define ptr @test_12(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[I:%.*]]) {
-; CHECK-NEXT:    [[PTRADD:%.*]] = getelementptr nusw nuw i8, ptr [[P]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nuw i8, ptr [[PTRADD]], i64 [[I]]
-; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nuw i8, ptr [[TMP1]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nuw i8, ptr [[P]], i64 [[I]]
+; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nuw i8, ptr [[TMP1]], i64 2
 ; CHECK-NEXT:    ret ptr [[ARRAYIDX22]]
 ;
   %ptradd = getelementptr nuw nusw i8, ptr %p, i32 1
@@ -259,9 +244,8 @@ define ptr @test_12(ptr %p, i64 %i) {
 define ptr @test_13(ptr %p, i64 %i) {
 ; CHECK-LABEL: define ptr @test_13(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[I:%.*]]) {
-; CHECK-NEXT:    [[PTRADD:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw nuw i8, ptr [[PTRADD]], i64 [[I]]
-; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nusw nuw i8, ptr [[TMP1]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw nuw i8, ptr [[P]], i64 [[I]]
+; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nusw nuw i8, ptr [[TMP1]], i64 2
 ; CHECK-NEXT:    ret ptr [[ARRAYIDX22]]
 ;
   %ptradd = getelementptr nuw inbounds i8, ptr %p, i32 1
@@ -274,10 +258,9 @@ define ptr @test_13(ptr %p, i64 %i) {
 define ptr @test_14(ptr %p, i32 %i) {
 ; CHECK-LABEL: define ptr @test_14(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[I:%.*]]) {
-; CHECK-NEXT:    [[PTRADD:%.*]] = getelementptr nusw nuw i8, ptr [[P]], i32 -1
 ; CHECK-NEXT:    [[I_PROM:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nuw i8, ptr [[PTRADD]], i64 [[I_PROM]]
-; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nuw i8, ptr [[TMP1]], i64 -10
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nuw i8, ptr [[P]], i64 [[I_PROM]]
+; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nuw i8, ptr [[TMP1]], i64 -11
 ; CHECK-NEXT:    ret ptr [[ARRAYIDX22]]
 ;
   %ptradd = getelementptr nuw nusw i8, ptr %p, i32 -1
@@ -291,10 +274,9 @@ define ptr @test_14(ptr %p, i32 %i) {
 define ptr @test_15(ptr %p, i32 %i) {
 ; CHECK-LABEL: define ptr @test_15(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[I:%.*]]) {
-; CHECK-NEXT:    [[PTRADD:%.*]] = getelementptr nusw nuw i8, ptr [[P]], i32 -1
 ; CHECK-NEXT:    [[I_PROM:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[PTRADD]], i64 [[I_PROM]]
-; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 -10
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw nuw i8, ptr [[P]], i64 [[I_PROM]]
+; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nusw nuw i8, ptr [[TMP1]], i64 -11
 ; CHECK-NEXT:    ret ptr [[ARRAYIDX22]]
 ;
   %ptradd = getelementptr nuw nusw i8, ptr %p, i32 -1
@@ -308,10 +290,9 @@ define ptr @test_15(ptr %p, i32 %i) {
 define ptr @test_16(ptr %p, i32 %i) {
 ; CHECK-LABEL: define ptr @test_16(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[I:%.*]]) {
-; CHECK-NEXT:    [[PTRADD:%.*]] = getelementptr nuw i8, ptr [[P]], i32 1
 ; CHECK-NEXT:    [[I_PROM:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw nuw i8, ptr [[PTRADD]], i64 [[I_PROM]]
-; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nusw nuw i8, ptr [[TMP1]], i64 -10
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nuw i8, ptr [[P]], i64 [[I_PROM]]
+; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nuw i8, ptr [[TMP1]], i64 -9
 ; CHECK-NEXT:    ret ptr [[ARRAYIDX22]]
 ;
   %ptradd = getelementptr nuw i8, ptr %p, i32 1
@@ -325,10 +306,9 @@ define ptr @test_16(ptr %p, i32 %i) {
 define ptr @test_17(ptr %p, i32 %i) {
 ; CHECK-LABEL: define ptr @test_17(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[I:%.*]]) {
-; CHECK-NEXT:    [[PTRADD:%.*]] = getelementptr nusw nuw i8, ptr [[P]], i32 1
 ; CHECK-NEXT:    [[I_PROM:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[PTRADD]], i64 [[I_PROM]]
-; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 -10
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw nuw i8, ptr [[P]], i64 [[I_PROM]]
+; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nusw nuw i8, ptr [[TMP1]], i64 -9
 ; CHECK-NEXT:    ret ptr [[ARRAYIDX22]]
 ;
   %ptradd = getelementptr nuw nusw i8, ptr %p, i32 1
@@ -342,10 +322,9 @@ define ptr @test_17(ptr %p, i32 %i) {
 define ptr @test_18(ptr %p, i32 %i) {
 ; CHECK-LABEL: define ptr @test_18(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[I:%.*]]) {
-; CHECK-NEXT:    [[PTRADD:%.*]] = getelementptr nusw nuw i8, ptr [[P]], i32 -1
 ; CHECK-NEXT:    [[I_PROM:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nuw i8, ptr [[PTRADD]], i64 [[I_PROM]]
-; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nuw i8, ptr [[TMP1]], i64 10
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nuw i8, ptr [[P]], i64 [[I_PROM]]
+; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nuw i8, ptr [[TMP1]], i64 9
 ; CHECK-NEXT:    ret ptr [[ARRAYIDX22]]
 ;
   %ptradd = getelementptr nuw nusw i8, ptr %p, i32 -1
@@ -359,10 +338,9 @@ define ptr @test_18(ptr %p, i32 %i) {
 define ptr @test_19(ptr %p, i32 %i) {
 ; CHECK-LABEL: define ptr @test_19(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[I:%.*]]) {
-; CHECK-NEXT:    [[PTRADD:%.*]] = getelementptr nusw nuw i8, ptr [[P]], i32 -1
 ; CHECK-NEXT:    [[I_PROM:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[PTRADD]], i64 [[I_PROM]]
-; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 10
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw nuw i8, ptr [[P]], i64 [[I_PROM]]
+; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nusw nuw i8, ptr [[TMP1]], i64 9
 ; CHECK-NEXT:    ret ptr [[ARRAYIDX22]]
 ;
   %ptradd = getelementptr nuw nusw i8, ptr %p, i32 -1
@@ -376,10 +354,9 @@ define ptr @test_19(ptr %p, i32 %i) {
 define ptr @test_20(ptr %p, i32 %i) {
 ; CHECK-LABEL: define ptr @test_20(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[I:%.*]]) {
-; CHECK-NEXT:    [[PTRADD:%.*]] = getelementptr nuw i8, ptr [[P]], i32 1
 ; CHECK-NEXT:    [[I_PROM:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw nuw i8, ptr [[PTRADD]], i64 [[I_PROM]]
-; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nusw nuw i8, ptr [[TMP1]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nuw i8, ptr [[P]], i64 [[I_PROM]]
+; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nuw i8, ptr [[TMP1]], i64 2
 ; CHECK-NEXT:    ret ptr [[ARRAYIDX22]]
 ;
   %ptradd = getelementptr nuw i8, ptr %p, i32 1
@@ -393,10 +370,9 @@ define ptr @test_20(ptr %p, i32 %i) {
 define ptr @test_21(ptr %p, i32 %i) {
 ; CHECK-LABEL: define ptr @test_21(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[I:%.*]]) {
-; CHECK-NEXT:    [[PTRADD:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i32 1
 ; CHECK-NEXT:    [[I_PROM:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw nuw i8, ptr [[PTRADD]], i64 [[I_PROM]]
-; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nusw nuw i8, ptr [[TMP1]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw nuw i8, ptr [[P]], i64 [[I_PROM]]
+; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr nusw nuw i8, ptr [[TMP1]], i64 2
 ; CHECK-NEXT:    ret ptr [[ARRAYIDX22]]
 ;
   %ptradd = getelementptr nuw inbounds i8, ptr %p, i32 1
