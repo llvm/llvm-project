@@ -178,6 +178,11 @@ void InlineFunc() {
 void OutlineFunc();
 };
 
+void InlineUse() {
+  StructTy s;
+  s.InlineFunc();
+}
+
 void StructTy::OutlineFunc() {
   // CHECK: cir.func {{.*}}OutlineFunc{{.*}}
   // CHECK-NEXT: %[[THIS:.*]] = cir.alloca !cir.ptr<!rec_StructTy>, !cir.ptr<!cir.ptr<!rec_StructTy>>, ["this", init]
