@@ -51,9 +51,10 @@
 #  define _LIBCPP_ABI_FIX_UNORDERED_NODE_POINTER_UB
 #  define _LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB
 #  define _LIBCPP_ABI_FIX_UNORDERED_CONTAINER_SIZE_TYPE
-// Give reverse_iterator<T> one data member of type T, not two.
-// Also, in C++17 and later, don't derive iterator types from std::iterator.
+// In C++17 and later, don't derive iterator types from std::iterator.
 #  define _LIBCPP_ABI_NO_ITERATOR_BASES
+// Give reverse_iterator<T> one data member of type T, not two.
+#  define _LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER
 // Use the smallest possible integer type to represent the index of the variant.
 // Previously libc++ used "unsigned int" exclusively.
 #  define _LIBCPP_ABI_VARIANT_INDEX_TYPE_OPTIMIZATION
@@ -132,6 +133,14 @@
 // are deprecated.
 #  if defined(__FreeBSD__)
 #    define _LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR
+#  endif
+#endif
+
+#if defined(_LIBCPP_ABI_NO_ITERATOR_BASES) && !defined(_LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER)
+#  ifndef _LIBCPP_ONLY_NO_ITERATOR_BASES
+#    error "You probably want to define _LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER. This has been split out from"   \
+ " _LIBCPP_ABI_NO_ITERATOR_BASES to allow only removing the second iterator member, since they aren't really related." \
+ "If you actually want this ABI configuration, please define _LIBCPP_ONLY_NO_ITERATOR_BASES instead."
 #  endif
 #endif
 
