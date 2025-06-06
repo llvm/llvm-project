@@ -67,8 +67,8 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::FMAX_F128, "fmaxf128");
     setLibcallName(RTLIB::FMINIMUM_F128, "fminimumf128");
     setLibcallName(RTLIB::FMAXIMUM_F128, "fmaximumf128");
-    setLibcallName(RTLIB::FMINIMUMNUM_F128, "fminimum_numf128");
-    setLibcallName(RTLIB::FMAXIMUMNUM_F128, "fmaximum_numf128");
+    setLibcallName(RTLIB::FMINIMUM_NUM_F128, "fminimum_numf128");
+    setLibcallName(RTLIB::FMAXIMUM_NUM_F128, "fmaximum_numf128");
     setLibcallName(RTLIB::LROUND_F128, "lroundf128");
     setLibcallName(RTLIB::LLROUND_F128, "llroundf128");
     setLibcallName(RTLIB::LRINT_F128, "lrintf128");
