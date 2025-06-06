@@ -83,6 +83,7 @@ static llvm::cl::opt<bool> LimitedCoverage(
     llvm::cl::desc("Emit limited coverage mapping information (experimental)"));
 
 static const char AnnotationSection[] = "llvm.metadata";
+static constexpr auto ErrnoTBAAMDName = "llvm.errno.tbaa";
 
 static CGCXXABI *createCXXABI(CodeGenModule &CGM) {
   switch (CGM.getContext().getCXXABIKind()) {
@@ -1470,6 +1471,17 @@ void CodeGenModule::Release() {
             Entry->isDeclarationForLinker())
           getDiags().Report(I.second, diag::err_ppc_impossible_musttail) << 2;
       }
+    }
+  }
+
+  // Emit `!llvm.errno.tbaa`, a module-level metadata that specifies the TBAA
+  // for an integer access.
+  if (TBAA) {
+    TBAAAccessInfo TBAAInfo = getTBAAAccessInfo(Context.IntTy);
+    llvm::MDNode *IntegerNode = getTBAAAccessTagInfo(TBAAInfo);
+    if (IntegerNode) {
+      auto *ErrnoTBAAMD = TheModule.getOrInsertNamedMetadata(ErrnoTBAAMDName);
+      ErrnoTBAAMD->addOperand(IntegerNode);
     }
   }
 }
