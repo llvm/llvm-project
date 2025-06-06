@@ -3907,6 +3907,64 @@ static bool checkCVTFixedPointOperandWithFBits(SelectionDAG *CurDAG, SDValue N,
                                                unsigned RegWidth,
                                                bool isReciprocal) {
   APFloat FVal(0.0);
+
+  if (N.getOpcode() == ISD::BUILD_VECTOR) {
+    EVT VT = N.getValueType();
+    EVT EltVT = VT.getVectorElementType();
+
+    unsigned NumElts = N.getNumOperands();
+    SDValue FirstOp = N.getOperand(0);
+
+    ConstantFPSDNode *FirstCN = dyn_cast<ConstantFPSDNode>(FirstOp);
+    if (!FirstCN)
+      return false;
+
+    APFloat FirstVal = FirstCN->getValueAPF();
+    if (EltVT == MVT::f16) {
+      bool ignored;
+      FirstVal.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven,
+                       &ignored);
+    }
+
+    // Handle reciprocal case if needed
+    if (isReciprocal) {
+      if (!FirstVal.getExactInverse(&FirstVal))
+        return false;
+    }
+
+    bool IsExact;
+    APSInt IntVal(65, true);
+    FirstVal.convertToInteger(IntVal, APFloat::rmTowardZero, &IsExact);
+
+    if (!IsExact || !IntVal.isPowerOf2())
+      return false;
+
+    unsigned FBits = IntVal.logBase2();
+    if (FBits == 0 || FBits > RegWidth)
+      return false;
+
+    APInt FirstBits = FirstVal.bitcastToAPInt();
+
+    for (unsigned i = 1; i < NumElts; ++i) {
+      ConstantFPSDNode *CN = dyn_cast<ConstantFPSDNode>(N.getOperand(i));
+      if (!CN)
+        return false;
+
+      APFloat ElemVal = CN->getValueAPF();
+      if (EltVT == MVT::f16) {
+        bool ignored;
+        ElemVal.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven,
+                        &ignored);
+      }
+
+      if (ElemVal.bitcastToAPInt() != FirstBits)
+        return false;
+    }
+
+    FixedPos = CurDAG->getTargetConstant(FBits, SDLoc(N), MVT::i32);
+    return true;
+  }
+
   if (ConstantFPSDNode *CN = dyn_cast<ConstantFPSDNode>(N))
     FVal = CN->getValueAPF();
   else if (LoadSDNode *LN = dyn_cast<LoadSDNode>(N)) {
