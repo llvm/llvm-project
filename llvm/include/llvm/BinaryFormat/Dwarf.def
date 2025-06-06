@@ -887,6 +887,7 @@ HANDLE_DW_OP(0xed, WASM_location, -1, -1, 0, WASM)
 HANDLE_DW_OP(0xee, WASM_location_int, -1, -1, 0, WASM)
 // Historic and not implemented in LLVM.
 HANDLE_DW_OP(0xf0, APPLE_uninit, -1, -1, 0, APPLE)
+HANDLE_DW_OP(0xf2, GNU_implicit_pointer, 2, 0, 4, GNU)
 // The GNU entry value extension.
 HANDLE_DW_OP(0xf3, GNU_entry_value, 2, 0, 0, GNU)
 HANDLE_DW_OP(0xf8, PGI_omp_thread_num, -1, -1, 0, PGI)
