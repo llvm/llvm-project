@@ -666,10 +666,10 @@ static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
       return reportValueError(Ctx, "AddressU", Sampler.AddressU);
 
     if (!verifyAddress(Sampler.AddressV))
-      return reportValueError(Ctx, "AddressU", Sampler.AddressV);
+      return reportValueError(Ctx, "AddressV", Sampler.AddressV);
 
     if (!verifyAddress(Sampler.AddressW))
-      return reportValueError(Ctx, "AddressU", Sampler.AddressW);
+      return reportValueError(Ctx, "AddressW", Sampler.AddressW);
 
     if (!verifyMipLODBias(Sampler.MipLODBias))
       return reportValueError(Ctx, "MipLODBias", Sampler.MipLODBias);
@@ -680,17 +680,14 @@ static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
     if (!verifyComparisonFunc(Sampler.ComparisonFunc))
       return reportValueError(Ctx, "ComparisonFunc", Sampler.ComparisonFunc);
 
-    if (!verifyComparisonFunc(Sampler.ComparisonFunc))
-      return reportValueError(Ctx, "ComparisonFunc", Sampler.ComparisonFunc);
-
     if (!verifyBorderColor(Sampler.BorderColor))
-      return reportValueError(Ctx, "BorderColor ", Sampler.BorderColor);
+      return reportValueError(Ctx, "BorderColor", Sampler.BorderColor);
 
     if (!verifyLOD(Sampler.MinLOD))
-      return reportValueError(Ctx, "MinLOD ", Sampler.MinLOD);
+      return reportValueError(Ctx, "MinLOD", Sampler.MinLOD);
 
     if (!verifyLOD(Sampler.MaxLOD))
-      return reportValueError(Ctx, "MaxLOD ", Sampler.MaxLOD);
+      return reportValueError(Ctx, "MaxLOD", Sampler.MaxLOD);
 
     if (!verifyRegisterValue(Sampler.ShaderRegister))
       return reportValueError(Ctx, "ShaderRegister", Sampler.ShaderRegister);
