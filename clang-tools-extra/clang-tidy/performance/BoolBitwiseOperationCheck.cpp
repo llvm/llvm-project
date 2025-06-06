@@ -17,9 +17,10 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::performance {
 
-static std::string tryPrintVariable(const BinaryOperator* E) {
+static std::string tryPrintVariable(const BinaryOperator *E) {
   if (E->isCompoundAssignmentOp()) {
-    const auto *DelcRefLHS = dyn_cast<DeclRefExpr>(E->getLHS()->IgnoreImpCasts());
+    const auto *DelcRefLHS =
+        dyn_cast<DeclRefExpr>(E->getLHS()->IgnoreImpCasts());
     if (DelcRefLHS)
       return "variable '" + DelcRefLHS->getDecl()->getNameAsString() + "'";
   }
@@ -27,7 +28,7 @@ static std::string tryPrintVariable(const BinaryOperator* E) {
 }
 
 static bool hasExplicitParentheses(const Expr *E, const SourceManager &SM,
-                            const LangOptions &LangOpts) {
+                                   const LangOptions &LangOpts) {
   if (!E)
     return false;
 
@@ -81,7 +82,8 @@ static llvm::StringRef translate(llvm::StringRef Value) {
 
 BoolBitwiseOperationCheck::BoolBitwiseOperationCheck(StringRef Name,
                                                      ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context), StrictMode(Options.get("StrictMode", true)) {}
+    : ClangTidyCheck(Name, Context),
+      StrictMode(Options.get("StrictMode", true)) {}
 
 void BoolBitwiseOperationCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
@@ -105,10 +107,10 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedExpr = Result.Nodes.getNodeAs<BinaryOperator>("op");
 
   auto Diag = diag(MatchedExpr->getOperatorLoc(),
-                   "use logical operator '%0' for boolean %1 instead of bitwise operator '%2'")
+                   "use logical operator '%0' for boolean %1 instead of "
+                   "bitwise operator '%2'")
               << translate(MatchedExpr->getOpcodeStr())
-              << tryPrintVariable(MatchedExpr)
-              << MatchedExpr->getOpcodeStr();
+              << tryPrintVariable(MatchedExpr) << MatchedExpr->getOpcodeStr();
 
   if (isInTemplateFunction(MatchedExpr, *Result.Context))
     return;
@@ -118,8 +120,8 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
       [](const Expr *E) {
         return E->IgnoreImpCasts()->getType().isVolatileQualified();
       });
-  const bool HasSideEffects = MatchedExpr->getRHS()->HasSideEffects(
-      *Result.Context, StrictMode);
+  const bool HasSideEffects =
+      MatchedExpr->getRHS()->HasSideEffects(*Result.Context, StrictMode);
   if (HasVolatileOperand || HasSideEffects)
     return;
 
@@ -180,8 +182,8 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
       (MatchedExpr->getOpcode() == BO_And && ParentOpcode.has_value() &&
        llvm::is_contained({BO_Xor, BO_Or}, *ParentOpcode)))
     SurroundedExpr = MatchedExpr;
-  else if (MatchedExpr->getOpcode() == BO_AndAssign &&
-             RHSOpcode.has_value() && *RHSOpcode == BO_LOr)
+  else if (MatchedExpr->getOpcode() == BO_AndAssign && RHSOpcode.has_value() &&
+           *RHSOpcode == BO_LOr)
     SurroundedExpr = RHS;
 
   if (hasExplicitParentheses(SurroundedExpr, *Result.SourceManager,
