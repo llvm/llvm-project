@@ -12,6 +12,8 @@
 
 #include "clang/Sema/SemaRISCV.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
@@ -67,6 +69,12 @@ static const PrototypeDescriptor RVSiFiveVectorSignatureTable[] = {
 #undef DECL_SIGNATURE_TABLE
 };
 
+static const PrototypeDescriptor RVAndesVectorSignatureTable[] = {
+#define DECL_SIGNATURE_TABLE
+#include "clang/Basic/riscv_andes_vector_builtin_sema.inc"
+#undef DECL_SIGNATURE_TABLE
+};
+
 static const RVVIntrinsicRecord RVVIntrinsicRecords[] = {
 #define DECL_INTRINSIC_RECORDS
 #include "clang/Basic/riscv_vector_builtin_sema.inc"
@@ -79,6 +87,12 @@ static const RVVIntrinsicRecord RVSiFiveVectorIntrinsicRecords[] = {
 #undef DECL_INTRINSIC_RECORDS
 };
 
+static const RVVIntrinsicRecord RVAndesVectorIntrinsicRecords[] = {
+#define DECL_INTRINSIC_RECORDS
+#include "clang/Basic/riscv_andes_vector_builtin_sema.inc"
+#undef DECL_INTRINSIC_RECORDS
+};
+
 // Get subsequence of signature table.
 static ArrayRef<PrototypeDescriptor>
 ProtoSeq2ArrayRef(IntrinsicKind K, uint16_t Index, uint8_t Length) {
@@ -87,6 +101,8 @@ ProtoSeq2ArrayRef(IntrinsicKind K, uint16_t Index, uint8_t Length) {
     return ArrayRef(&RVVSignatureTable[Index], Length);
   case IntrinsicKind::SIFIVE_VECTOR:
     return ArrayRef(&RVSiFiveVectorSignatureTable[Index], Length);
+  case IntrinsicKind::ANDES_VECTOR:
+    return ArrayRef(&RVAndesVectorSignatureTable[Index], Length);
   }
   llvm_unreachable("Unhandled IntrinsicKind");
 }
@@ -165,6 +181,7 @@ private:
   RVVTypeCache TypeCache;
   bool ConstructedRISCVVBuiltins;
   bool ConstructedRISCVSiFiveVectorBuiltins;
+  bool ConstructedRISCVAndesVectorBuiltins;
 
   // List of all RVV intrinsic.
   std::vector<RVVIntrinsicDef> IntrinsicList;
@@ -190,6 +207,7 @@ public:
   RISCVIntrinsicManagerImpl(clang::Sema &S) : S(S), Context(S.Context) {
     ConstructedRISCVVBuiltins = false;
     ConstructedRISCVSiFiveVectorBuiltins = false;
+    ConstructedRISCVAndesVectorBuiltins = false;
   }
 
   // Initialize IntrinsicList
@@ -205,8 +223,10 @@ public:
 void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
     ArrayRef<RVVIntrinsicRecord> Recs, IntrinsicKind K) {
   const TargetInfo &TI = Context.getTargetInfo();
-  static const std::pair<const char *, RVVRequire> FeatureCheckList[] = {
+  static const std::pair<const char *, unsigned> FeatureCheckList[] = {
       {"64bit", RVV_REQ_RV64},
+      {"xandesvdot", RVV_REQ_Xandesvdot},
+      {"xandesvpackfph", RVV_REQ_Xandesvpackfph},
       {"xsfvcp", RVV_REQ_Xsfvcp},
       {"xsfvfnrclipxfqf", RVV_REQ_Xsfvfnrclipxfqf},
       {"xsfvfwmaccqqq", RVV_REQ_Xsfvfwmaccqqq},
@@ -231,7 +251,7 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
   for (auto &Record : Recs) {
     // Check requirements.
     if (llvm::any_of(FeatureCheckList, [&](const auto &Item) {
-          return (Record.RequiredExtensions & Item.second) == Item.second &&
+          return Record.RequiredExtensions[Item.second] &&
                  !TI.hasFeature(Item.first);
         }))
       continue;
@@ -281,20 +301,6 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
 
       if ((BaseTypeI & Record.TypeRangeMask) != BaseTypeI)
         continue;
-
-      // TODO: Remove the check below and use RequiredFeatures in
-      // riscv_vector.td to check the intrinsics instead, the type check should
-      // be done in checkRVVTypeSupport. This check also not able to work on the
-      // intrinsics that have Float16 but the BaseType is not Float16 such as
-      // `vfcvt_f_x_v`.
-      if (BaseType == BasicType::Float16) {
-        if ((Record.RequiredExtensions & RVV_REQ_Zvfhmin) == RVV_REQ_Zvfhmin) {
-          if (!TI.hasFeature("zvfhmin"))
-            continue;
-        } else if (!TI.hasFeature("zvfh")) {
-          continue;
-        }
-      }
 
       // Expanded with different LMUL.
       for (int Log2LMUL = -3; Log2LMUL <= 3; Log2LMUL++) {
@@ -369,6 +375,12 @@ void RISCVIntrinsicManagerImpl::InitIntrinsicList() {
     ConstructedRISCVSiFiveVectorBuiltins = true;
     ConstructRVVIntrinsics(RVSiFiveVectorIntrinsicRecords,
                            IntrinsicKind::SIFIVE_VECTOR);
+  }
+  if (S.RISCV().DeclareAndesVectorBuiltins &&
+      !ConstructedRISCVAndesVectorBuiltins) {
+    ConstructedRISCVAndesVectorBuiltins = true;
+    ConstructRVVIntrinsics(RVAndesVectorIntrinsicRecords,
+                           IntrinsicKind::ANDES_VECTOR);
   }
 }
 
@@ -533,8 +545,10 @@ bool SemaRISCV::CheckLMUL(CallExpr *TheCall, unsigned ArgNum) {
          << Arg->getSourceRange();
 }
 
-static bool CheckInvalidVLENandLMUL(const TargetInfo &TI, CallExpr *TheCall,
-                                    Sema &S, QualType Type, int EGW) {
+static bool CheckInvalidVLENandLMUL(const TargetInfo &TI,
+                                    llvm::StringMap<bool> &FunctionFeatureMap,
+                                    CallExpr *TheCall, Sema &S, QualType Type,
+                                    int EGW) {
   assert((EGW == 128 || EGW == 256) && "EGW can only be 128 or 256 bits");
 
   // LMUL * VLEN >= EGW
@@ -555,7 +569,7 @@ static bool CheckInvalidVLENandLMUL(const TargetInfo &TI, CallExpr *TheCall,
   // Vscale is VLEN/RVVBitsPerBlock.
   unsigned MinRequiredVLEN = VScaleFactor * llvm::RISCV::RVVBitsPerBlock;
   std::string RequiredExt = "zvl" + std::to_string(MinRequiredVLEN) + "b";
-  if (!TI.hasFeature(RequiredExt))
+  if (!TI.hasFeature(RequiredExt) && !FunctionFeatureMap.lookup(RequiredExt))
     return S.Diag(TheCall->getBeginLoc(),
                   diag::err_riscv_type_requires_extension)
            << Type << RequiredExt;
@@ -567,6 +581,10 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
                                          unsigned BuiltinID,
                                          CallExpr *TheCall) {
   ASTContext &Context = getASTContext();
+  const FunctionDecl *FD = SemaRef.getCurFunctionDecl();
+  llvm::StringMap<bool> FunctionFeatureMap;
+  Context.getFunctionFeatureMap(FunctionFeatureMap, FD);
+
   // vmulh.vv, vmulh.vx, vmulhu.vv, vmulhu.vx, vmulhsu.vv, vmulhsu.vx,
   // vsmul.vv, vsmul.vx are not included for EEW=64 in Zve64*.
   switch (BuiltinID) {
@@ -623,10 +641,6 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
     ASTContext::BuiltinVectorTypeInfo Info = Context.getBuiltinVectorTypeInfo(
         TheCall->getType()->castAs<BuiltinType>());
 
-    const FunctionDecl *FD = SemaRef.getCurFunctionDecl();
-    llvm::StringMap<bool> FunctionFeatureMap;
-    Context.getFunctionFeatureMap(FunctionFeatureMap, FD);
-
     if (Context.getTypeSize(Info.ElementType) == 64 && !TI.hasFeature("v") &&
         !FunctionFeatureMap.lookup("v"))
       return Diag(TheCall->getBeginLoc(),
@@ -637,13 +651,34 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
   }
   }
 
+  auto CheckVSetVL = [&](unsigned SEWOffset, unsigned LMULOffset) -> bool {
+    const FunctionDecl *FD = SemaRef.getCurFunctionDecl();
+    llvm::StringMap<bool> FunctionFeatureMap;
+    Context.getFunctionFeatureMap(FunctionFeatureMap, FD);
+    llvm::APSInt SEWResult;
+    llvm::APSInt LMULResult;
+    if (SemaRef.BuiltinConstantArg(TheCall, SEWOffset, SEWResult) ||
+        SemaRef.BuiltinConstantArg(TheCall, LMULOffset, LMULResult))
+      return true;
+    int SEWValue = SEWResult.getSExtValue();
+    int LMULValue = LMULResult.getSExtValue();
+    if (((SEWValue == 0 && LMULValue == 5) || // e8mf8
+         (SEWValue == 1 && LMULValue == 6) || // e16mf4
+         (SEWValue == 2 && LMULValue == 7) || // e32mf2
+         SEWValue == 3) &&                    // e64
+        !TI.hasFeature("zve64x") &&
+        !FunctionFeatureMap.lookup("zve64x"))
+      return Diag(TheCall->getBeginLoc(),
+                  diag::err_riscv_builtin_requires_extension)
+             << /* IsExtension */ true << TheCall->getSourceRange() << "zve64x";
+    return SemaRef.BuiltinConstantArgRange(TheCall, SEWOffset, 0, 3) ||
+           CheckLMUL(TheCall, LMULOffset);
+  };
   switch (BuiltinID) {
   case RISCVVector::BI__builtin_rvv_vsetvli:
-    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 3) ||
-           CheckLMUL(TheCall, 2);
+    return CheckVSetVL(1, 2);
   case RISCVVector::BI__builtin_rvv_vsetvlimax:
-    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 3) ||
-           CheckLMUL(TheCall, 1);
+    return CheckVSetVL(0, 1);
   case RISCVVector::BI__builtin_rvv_vget_v: {
     ASTContext::BuiltinVectorTypeInfo ResVecInfo =
         Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(
@@ -679,22 +714,26 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
   case RISCVVector::BI__builtin_rvv_vaeskf2_vi_tu:
   case RISCVVector::BI__builtin_rvv_vaeskf2_vi:
   case RISCVVector::BI__builtin_rvv_vsm4k_vi_tu: {
-    QualType Op1Type = TheCall->getArg(0)->getType();
-    QualType Op2Type = TheCall->getArg(1)->getType();
-    return CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Op1Type, 128) ||
-           CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Op2Type, 128) ||
+    QualType Arg0Type = TheCall->getArg(0)->getType();
+    QualType Arg1Type = TheCall->getArg(1)->getType();
+    return CheckInvalidVLENandLMUL(TI, FunctionFeatureMap, TheCall, SemaRef,
+                                   Arg0Type, 128) ||
+           CheckInvalidVLENandLMUL(TI, FunctionFeatureMap, TheCall, SemaRef,
+                                   Arg1Type, 128) ||
            SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 31);
   }
   case RISCVVector::BI__builtin_rvv_vsm3c_vi_tu:
   case RISCVVector::BI__builtin_rvv_vsm3c_vi: {
-    QualType Op1Type = TheCall->getArg(0)->getType();
-    return CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Op1Type, 256) ||
+    QualType Arg0Type = TheCall->getArg(0)->getType();
+    return CheckInvalidVLENandLMUL(TI, FunctionFeatureMap, TheCall, SemaRef,
+                                   Arg0Type, 256) ||
            SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 31);
   }
   case RISCVVector::BI__builtin_rvv_vaeskf1_vi:
   case RISCVVector::BI__builtin_rvv_vsm4k_vi: {
-    QualType Op1Type = TheCall->getArg(0)->getType();
-    return CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Op1Type, 128) ||
+    QualType Arg0Type = TheCall->getArg(0)->getType();
+    return CheckInvalidVLENandLMUL(TI, FunctionFeatureMap, TheCall, SemaRef,
+                                   Arg0Type, 128) ||
            SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 31);
   }
   case RISCVVector::BI__builtin_rvv_vaesdf_vv:
@@ -719,10 +758,12 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
   case RISCVVector::BI__builtin_rvv_vaesz_vs_tu:
   case RISCVVector::BI__builtin_rvv_vsm4r_vv_tu:
   case RISCVVector::BI__builtin_rvv_vsm4r_vs_tu: {
-    QualType Op1Type = TheCall->getArg(0)->getType();
-    QualType Op2Type = TheCall->getArg(1)->getType();
-    return CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Op1Type, 128) ||
-           CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Op2Type, 128);
+    QualType Arg0Type = TheCall->getArg(0)->getType();
+    QualType Arg1Type = TheCall->getArg(1)->getType();
+    return CheckInvalidVLENandLMUL(TI, FunctionFeatureMap, TheCall, SemaRef,
+                                   Arg0Type, 128) ||
+           CheckInvalidVLENandLMUL(TI, FunctionFeatureMap, TheCall, SemaRef,
+                                   Arg1Type, 128);
   }
   case RISCVVector::BI__builtin_rvv_vsha2ch_vv:
   case RISCVVector::BI__builtin_rvv_vsha2cl_vv:
@@ -730,22 +771,24 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
   case RISCVVector::BI__builtin_rvv_vsha2ch_vv_tu:
   case RISCVVector::BI__builtin_rvv_vsha2cl_vv_tu:
   case RISCVVector::BI__builtin_rvv_vsha2ms_vv_tu: {
-    QualType Op1Type = TheCall->getArg(0)->getType();
-    QualType Op2Type = TheCall->getArg(1)->getType();
-    QualType Op3Type = TheCall->getArg(2)->getType();
+    QualType Arg0Type = TheCall->getArg(0)->getType();
+    QualType Arg1Type = TheCall->getArg(1)->getType();
+    QualType Arg2Type = TheCall->getArg(2)->getType();
     ASTContext::BuiltinVectorTypeInfo Info =
-        Context.getBuiltinVectorTypeInfo(Op1Type->castAs<BuiltinType>());
+        Context.getBuiltinVectorTypeInfo(Arg0Type->castAs<BuiltinType>());
     uint64_t ElemSize = Context.getTypeSize(Info.ElementType);
-    if (ElemSize == 64 && !TI.hasFeature("zvknhb"))
+    if (ElemSize == 64 && !TI.hasFeature("zvknhb") &&
+        !FunctionFeatureMap.lookup("zvknhb"))
       return Diag(TheCall->getBeginLoc(),
                   diag::err_riscv_builtin_requires_extension)
              << /* IsExtension */ true << TheCall->getSourceRange() << "zvknhb";
 
-    return CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Op1Type,
-                                   ElemSize * 4) ||
-           CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Op2Type,
-                                   ElemSize * 4) ||
-           CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Op3Type, ElemSize * 4);
+    return CheckInvalidVLENandLMUL(TI, FunctionFeatureMap, TheCall, SemaRef,
+                                   Arg0Type, ElemSize * 4) ||
+           CheckInvalidVLENandLMUL(TI, FunctionFeatureMap, TheCall, SemaRef,
+                                   Arg1Type, ElemSize * 4) ||
+           CheckInvalidVLENandLMUL(TI, FunctionFeatureMap, TheCall, SemaRef,
+                                   Arg2Type, ElemSize * 4);
   }
 
   case RISCVVector::BI__builtin_rvv_sf_vc_i_se:
@@ -1444,25 +1487,14 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  // Check the attribute argument. Argument is optional.
-  if (!AL.checkAtMostNumArgs(SemaRef, 1))
-    return;
-
-  StringRef Str;
-  SourceLocation ArgLoc;
-
-  // 'machine'is the default interrupt mode.
-  if (AL.getNumArgs() == 0)
-    Str = "machine";
-  else if (!SemaRef.checkStringLiteralArgumentAttr(AL, 0, Str, &ArgLoc))
-    return;
-
   // Semantic checks for a function with the 'interrupt' attribute:
   // - Must be a function.
   // - Must have no parameters.
   // - Must have the 'void' return type.
-  // - The attribute itself must either have no argument or one of the
-  //   valid interrupt types, see [RISCVInterruptDocs].
+  // - The attribute itself must have at most 2 arguments
+  // - The attribute arguments must be string literals, and valid choices.
+  // - The attribute arguments must be a valid combination
+  // - The current target must support the right extensions for the combination.
 
   if (D->getFunctionType() == nullptr) {
     Diag(D->getLocation(), diag::warn_attribute_wrong_decl_type)
@@ -1471,26 +1503,116 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
   }
 
   if (hasFunctionProto(D) && getFunctionOrMethodNumParams(D) != 0) {
-    Diag(D->getLocation(), diag::warn_interrupt_attribute_invalid)
-        << /*RISC-V*/ 2 << 0;
+    Diag(D->getLocation(), diag::warn_interrupt_signal_attribute_invalid)
+        << /*RISC-V*/ 2 << /*interrupt*/ 0 << 0;
     return;
   }
 
   if (!getFunctionOrMethodResultType(D)->isVoidType()) {
-    Diag(D->getLocation(), diag::warn_interrupt_attribute_invalid)
-        << /*RISC-V*/ 2 << 1;
+    Diag(D->getLocation(), diag::warn_interrupt_signal_attribute_invalid)
+        << /*RISC-V*/ 2 << /*interrupt*/ 0 << 1;
     return;
   }
 
-  RISCVInterruptAttr::InterruptType Kind;
-  if (!RISCVInterruptAttr::ConvertStrToInterruptType(Str, Kind)) {
-    Diag(AL.getLoc(), diag::warn_attribute_type_not_supported)
-        << AL << Str << ArgLoc;
+  if (!AL.checkAtMostNumArgs(SemaRef, 2))
+    return;
+
+  bool HasSiFiveCLICType = false;
+  bool HasUnaryType = false;
+
+  SmallSet<RISCVInterruptAttr::InterruptType, 2> Types;
+  for (unsigned ArgIndex = 0; ArgIndex < AL.getNumArgs(); ++ArgIndex) {
+    RISCVInterruptAttr::InterruptType Type;
+    StringRef TypeString;
+    SourceLocation Loc;
+
+    if (!SemaRef.checkStringLiteralArgumentAttr(AL, ArgIndex, TypeString, &Loc))
+      return;
+
+    if (!RISCVInterruptAttr::ConvertStrToInterruptType(TypeString, Type)) {
+      std::string TypeLiteral = ("\"" + TypeString + "\"").str();
+      Diag(AL.getLoc(), diag::warn_attribute_type_not_supported)
+          << AL << TypeLiteral << Loc;
+      return;
+    }
+
+    switch (Type) {
+    case RISCVInterruptAttr::machine:
+      // "machine" could be combined with the SiFive CLIC types, or could be
+      // just "machine".
+      break;
+    case RISCVInterruptAttr::SiFiveCLICPreemptible:
+    case RISCVInterruptAttr::SiFiveCLICStackSwap:
+      // SiFive-CLIC types can be combined with each other and "machine"
+      HasSiFiveCLICType = true;
+      break;
+    case RISCVInterruptAttr::supervisor:
+    case RISCVInterruptAttr::qcinest:
+    case RISCVInterruptAttr::qcinonest:
+      // "supervisor" and "qci-(no)nest" cannot be combined with any other types
+      HasUnaryType = true;
+      break;
+    }
+
+    Types.insert(Type);
+  }
+
+  if (HasUnaryType && Types.size() > 1) {
+    Diag(AL.getLoc(), diag::err_riscv_attribute_interrupt_invalid_combination);
     return;
   }
 
-  D->addAttr(::new (getASTContext())
-                 RISCVInterruptAttr(getASTContext(), AL, Kind));
+  if (HasUnaryType && HasSiFiveCLICType) {
+    Diag(AL.getLoc(), diag::err_riscv_attribute_interrupt_invalid_combination);
+    return;
+  }
+
+  // "machine" is the default, if nothing is specified.
+  if (AL.getNumArgs() == 0)
+    Types.insert(RISCVInterruptAttr::machine);
+
+  const TargetInfo &TI = getASTContext().getTargetInfo();
+  llvm::StringMap<bool> FunctionFeatureMap;
+  getASTContext().getFunctionFeatureMap(FunctionFeatureMap,
+                                        dyn_cast<FunctionDecl>(D));
+
+  auto HasFeature = [&](StringRef FeatureName) -> bool {
+    return TI.hasFeature(FeatureName) || FunctionFeatureMap.lookup(FeatureName);
+  };
+
+  for (RISCVInterruptAttr::InterruptType Type : Types) {
+    switch (Type) {
+    // The QCI interrupt types require Xqciint
+    case RISCVInterruptAttr::qcinest:
+    case RISCVInterruptAttr::qcinonest: {
+      if (!HasFeature("experimental-xqciint")) {
+        Diag(AL.getLoc(),
+             diag::err_riscv_attribute_interrupt_requires_extension)
+            << RISCVInterruptAttr::ConvertInterruptTypeToStr(Type) << "Xqciint";
+        return;
+      }
+    } break;
+    // The SiFive CLIC interrupt types require Xsfmclic
+    case RISCVInterruptAttr::SiFiveCLICPreemptible:
+    case RISCVInterruptAttr::SiFiveCLICStackSwap: {
+      if (!HasFeature("experimental-xsfmclic")) {
+        Diag(AL.getLoc(),
+             diag::err_riscv_attribute_interrupt_requires_extension)
+            << RISCVInterruptAttr::ConvertInterruptTypeToStr(Type)
+            << "XSfmclic";
+        return;
+      }
+    } break;
+    default:
+      break;
+    }
+  }
+
+  SmallVector<RISCVInterruptAttr::InterruptType, 2> TypesVec(Types.begin(),
+                                                             Types.end());
+
+  D->addAttr(::new (getASTContext()) RISCVInterruptAttr(
+      getASTContext(), AL, TypesVec.data(), TypesVec.size()));
 }
 
 bool SemaRISCV::isAliasValid(unsigned BuiltinID, StringRef AliasName) {

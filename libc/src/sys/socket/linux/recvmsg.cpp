@@ -20,8 +20,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(ssize_t, recvmsg,
-                   (int sockfd, struct msghdr *msg, int flags)) {
+LLVM_LIBC_FUNCTION(ssize_t, recvmsg, (int sockfd, msghdr *msg, int flags)) {
 #ifdef SYS_recvmsg
   ssize_t ret =
       LIBC_NAMESPACE::syscall_impl<ssize_t>(SYS_recvmsg, sockfd, msg, flags);
@@ -40,9 +39,11 @@ LLVM_LIBC_FUNCTION(ssize_t, recvmsg,
   }
 
   // Unpoison the msghdr, as well as all its components.
+  MSAN_UNPOISON(msg, sizeof(msghdr));
   MSAN_UNPOISON(msg->msg_name, msg->msg_namelen);
+
   for (size_t i = 0; i < msg->msg_iovlen; ++i) {
-    MSAN_UNPOISON(msg->msg_iov->iov_base, msg->msg_iov->iov_len);
+    MSAN_UNPOISON(msg->msg_iov[i].iov_base, msg->msg_iov[i].iov_len);
   }
   MSAN_UNPOISON(msg->msg_control, msg->msg_controllen);
 

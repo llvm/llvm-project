@@ -77,8 +77,6 @@ private:
   llvm::SetVector<const semantics::Symbol *> preDeterminedSymbols;
   llvm::SetVector<const semantics::Symbol *> allPrivatizedSymbols;
 
-  llvm::DenseMap<const semantics::Symbol *, mlir::omp::PrivateClauseOp>
-      symToPrivatizer;
   lower::AbstractConverter &converter;
   semantics::SemanticsContext &semaCtx;
   fir::FirOpBuilder &firOpBuilder;
@@ -86,7 +84,8 @@ private:
   lower::pft::Evaluation &eval;
   bool shouldCollectPreDeterminedSymbols;
   bool useDelayedPrivatization;
-  lower::SymMap *symTable;
+  llvm::SmallSet<const semantics::Symbol *, 16> mightHaveReadHostSym;
+  lower::SymMap &symTable;
   OMPConstructSymbolVisitor visitor;
 
   bool needBarrier();
@@ -99,13 +98,11 @@ private:
       const omp::ObjectList &objects,
       llvm::SetVector<const semantics::Symbol *> &symbolSet);
   void collectSymbolsForPrivatization();
-  void insertBarrier();
+  void insertBarrier(mlir::omp::PrivateClauseOps *clauseOps);
   void collectDefaultSymbols();
   void collectImplicitSymbols();
   void collectPreDeterminedSymbols();
   void privatize(mlir::omp::PrivateClauseOps *clauseOps);
-  void doPrivatize(const semantics::Symbol *sym,
-                   mlir::omp::PrivateClauseOps *clauseOps);
   void copyLastPrivatize(mlir::Operation *op);
   void insertLastPrivateCompare(mlir::Operation *op);
   void cloneSymbol(const semantics::Symbol *sym);
@@ -122,8 +119,12 @@ public:
                        const List<Clause> &clauses,
                        lower::pft::Evaluation &eval,
                        bool shouldCollectPreDeterminedSymbols,
-                       bool useDelayedPrivatization = false,
-                       lower::SymMap *symTable = nullptr);
+                       bool useDelayedPrivatization, lower::SymMap &symTable);
+
+  DataSharingProcessor(lower::AbstractConverter &converter,
+                       semantics::SemanticsContext &semaCtx,
+                       lower::pft::Evaluation &eval,
+                       bool useDelayedPrivatization, lower::SymMap &symTable);
 
   // Privatisation is split into two steps.
   // Step1 performs cloning of all privatisation clauses and copying for
@@ -151,6 +152,9 @@ public:
                ? allPrivatizedSymbols.getArrayRef()
                : llvm::ArrayRef<const semantics::Symbol *>();
   }
+
+  void privatizeSymbol(const semantics::Symbol *symToPrivatize,
+                       mlir::omp::PrivateClauseOps *clauseOps);
 };
 
 } // namespace omp

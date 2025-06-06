@@ -15,8 +15,8 @@ entry:
   %f1 = alloca %class.foo, align 1
   %f2 = alloca %class.foo.0, align 1
   store i32 0, ptr %retval, align 4
-  call void @llvm.dbg.declare(metadata ptr %f1, metadata !11, metadata !DIExpression()), !dbg !16
-  call void @llvm.dbg.declare(metadata ptr %f2, metadata !17, metadata !DIExpression()), !dbg !23
+    #dbg_declare(ptr %f1, !11, !DIExpression(), !16)
+    #dbg_declare(ptr %f2, !17, !DIExpression(), !23)
   ret i32 0, !dbg !24
 }
 ; Function Attrs: nounwind readnone speculatable willreturn

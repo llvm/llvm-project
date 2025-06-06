@@ -2,6 +2,8 @@
 # RUN: llc -mtriple powerpc64le-unknown-linux-gnu -o - %s -verify-machineinstrs \
 # RUN:   -run-pass=machine-sink | FileCheck %s
 
+# RUN: llc -mtriple powerpc64le-unknown-linux-gnu -o - %s -verify-machineinstrs \
+# RUN:   -passes=machine-sink | FileCheck %s
 --- |
   ; ModuleID = 'sink-down-more-instructions-1.ll'
   source_filename = "sink-down-more-instructions-1.c"

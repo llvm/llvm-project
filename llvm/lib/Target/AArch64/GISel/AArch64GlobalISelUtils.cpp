@@ -9,11 +9,9 @@
 /// GlobalISel pipeline.
 //===----------------------------------------------------------------------===//
 #include "AArch64GlobalISelUtils.h"
-#include "AArch64InstrInfo.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/InstrTypes.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 

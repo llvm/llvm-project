@@ -174,6 +174,9 @@ struct InlineTreeNode {
   uint32_t CallSiteProbe;
   // Index in PseudoProbeDesc.GUID, UINT32_MAX for same as previous (omitted)
   uint32_t GUIDIndex;
+  // Decoded contents, ParentIndexDelta becomes absolute value.
+  uint64_t GUID;
+  uint64_t Hash;
   bool operator==(const InlineTreeNode &) const { return false; }
 };
 } // end namespace bolt
@@ -227,8 +230,8 @@ LLVM_YAML_STRONG_TYPEDEF(uint16_t, PROFILE_PF)
 
 template <> struct ScalarBitSetTraits<PROFILE_PF> {
   static void bitset(IO &io, PROFILE_PF &value) {
-    io.bitSetCase(value, "lbr", BinaryFunction::PF_LBR);
-    io.bitSetCase(value, "sample", BinaryFunction::PF_SAMPLE);
+    io.bitSetCase(value, "lbr", BinaryFunction::PF_BRANCH);
+    io.bitSetCase(value, "sample", BinaryFunction::PF_BASIC);
     io.bitSetCase(value, "memevent", BinaryFunction::PF_MEMEVENT);
   }
 };

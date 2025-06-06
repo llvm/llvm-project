@@ -141,7 +141,9 @@ uint64_t llvm::get_threadid() {
 #elif defined(__ANDROID__)
   return uint64_t(gettid());
 #elif defined(__linux__)
-  return uint64_t(syscall(SYS_gettid));
+  return uint64_t(syscall(__NR_gettid));
+#elif defined(_AIX)
+  return uint64_t(thread_self());
 #else
   return uint64_t(pthread_self());
 #endif
@@ -387,7 +389,7 @@ static int computeHostNumPhysicalCores() {
 static int computeHostNumPhysicalCores() {
   return sysconf(_SC_NPROCESSORS_ONLN);
 }
-#elif defined(__linux__) && !defined(__ANDROID__)
+#elif defined(__linux__)
 static int computeHostNumPhysicalCores() {
   cpu_set_t Affinity;
   if (sched_getaffinity(0, sizeof(Affinity), &Affinity) == 0)

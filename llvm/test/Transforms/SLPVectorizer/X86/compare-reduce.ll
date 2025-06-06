@@ -82,7 +82,7 @@ define float @merge_anyof_v4f32_wrong_first(<4 x float> %x) {
 ; CHECK-LABEL: @merge_anyof_v4f32_wrong_first(
 ; CHECK-NEXT:    [[X3:%.*]] = extractelement <4 x float> [[X:%.*]], i32 3
 ; CHECK-NEXT:    [[CMP3WRONG:%.*]] = fcmp olt float [[X3]], 4.200000e+01
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt <4 x float> [[X]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt <4 x float> [[X]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP1]])
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = or i1 [[TMP2]], [[CMP3WRONG]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[OP_RDX]], float -1.000000e+00, float 1.000000e+00
@@ -109,7 +109,7 @@ define float @merge_anyof_v4f32_wrong_last(<4 x float> %x) {
 ; CHECK-LABEL: @merge_anyof_v4f32_wrong_last(
 ; CHECK-NEXT:    [[X3:%.*]] = extractelement <4 x float> [[X:%.*]], i32 3
 ; CHECK-NEXT:    [[CMP3WRONG:%.*]] = fcmp olt float [[X3]], 4.200000e+01
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt <4 x float> [[X]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt <4 x float> [[X]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP1]])
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = or i1 [[TMP2]], [[CMP3WRONG]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[OP_RDX]], float -1.000000e+00, float 1.000000e+00
@@ -136,7 +136,7 @@ define i32 @merge_anyof_v4i32_wrong_middle(<4 x i32> %x) {
 ; CHECK-LABEL: @merge_anyof_v4i32_wrong_middle(
 ; CHECK-NEXT:    [[X3:%.*]] = extractelement <4 x i32> [[X:%.*]], i32 3
 ; CHECK-NEXT:    [[CMP3WRONG:%.*]] = icmp slt i32 [[X3]], 42
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[X]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[X]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP1]])
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = or i1 [[TMP2]], [[CMP3WRONG]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[OP_RDX]], i32 -1, i32 1

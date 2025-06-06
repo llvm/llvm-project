@@ -10,6 +10,8 @@
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <cstdalign>
 
 #ifndef __alignas_is_defined

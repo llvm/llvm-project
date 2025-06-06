@@ -5,7 +5,9 @@ add_lldb_library(lldbDataFormatters NO_PLUGIN_DEPENDENCIES
   FormatCache.cpp
   FormatClasses.cpp
   FormatManager.cpp
+  FormatterBytecode.cpp
   FormattersHelpers.cpp
+  FormatterSection.cpp
   LanguageCategory.cpp
   StringPrinter.cpp
   TypeCategory.cpp
@@ -16,6 +18,8 @@ add_lldb_library(lldbDataFormatters NO_PLUGIN_DEPENDENCIES
   ValueObjectPrinter.cpp
   VectorType.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbCore
     lldbInterpreter
@@ -23,7 +27,4 @@ add_lldb_library(lldbDataFormatters NO_PLUGIN_DEPENDENCIES
     lldbTarget
     lldbUtility
     lldbValueObject
-
-  LINK_COMPONENTS
-    Support
   )

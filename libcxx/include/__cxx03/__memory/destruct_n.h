@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_DESTRUCT_N_H
-#define _LIBCPP___MEMORY_DESTRUCT_N_H
+#ifndef _LIBCPP___CXX03___MEMORY_DESTRUCT_N_H
+#define _LIBCPP___CXX03___MEMORY_DESTRUCT_N_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/integral_constant.h>
@@ -60,4 +60,4 @@ public:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_DESTRUCT_N_H
+#endif // _LIBCPP___CXX03___MEMORY_DESTRUCT_N_H

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; CHECK-LABEL: test1
 ; CHECK: m[[REG1:([0-1])]] = r0

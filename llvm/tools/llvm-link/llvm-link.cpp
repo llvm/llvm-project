@@ -129,17 +129,7 @@ static cl::opt<bool> IgnoreNonBitcode(
     cl::desc("Do not report an error for non-bitcode files in archives"),
     cl::Hidden);
 
-static cl::opt<bool> TryUseNewDbgInfoFormat(
-    "try-experimental-debuginfo-iterators",
-    cl::desc("Enable debuginfo iterator positions, if they're built in"),
-    cl::init(false));
-
 extern cl::opt<bool> UseNewDbgInfoFormat;
-extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
-extern cl::opt<bool> WriteNewDbgInfoFormat;
-extern bool WriteNewDbgInfoFormatToBitcode;
-
-extern cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat;
 
 static ExitOnError ExitOnErr;
 
@@ -449,9 +439,8 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
       }
 
       // Promotion
-      if (renameModuleForThinLTO(*M, *Index,
-                                 /*ClearDSOLocalOnDeclarations=*/false))
-        return true;
+      renameModuleForThinLTO(*M, *Index,
+                             /*ClearDSOLocalOnDeclarations=*/false);
     }
 
     if (Verbose)
@@ -488,15 +477,6 @@ int main(int argc, char **argv) {
 
   cl::HideUnrelatedOptions({&LinkCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "llvm linker\n");
-
-  // Load bitcode into the new debug info format by default.
-  if (LoadBitcodeIntoNewDbgInfoFormat == cl::boolOrDefault::BOU_UNSET)
-    LoadBitcodeIntoNewDbgInfoFormat = cl::boolOrDefault::BOU_TRUE;
-
-  // Since llvm-link collects multiple IR modules together, for simplicity's
-  // sake we disable the "PreserveInputDbgFormat" flag to enforce a single
-  // debug info format.
-  PreserveInputDbgFormat = cl::boolOrDefault::BOU_FALSE;
 
   LLVMContext Context;
   Context.setDiagnosticHandler(std::make_unique<LLVMLinkDiagnosticHandler>(),
@@ -551,10 +531,10 @@ int main(int argc, char **argv) {
       Composite->removeDebugIntrinsicDeclarations();
   };
   if (OutputAssembly) {
-    SetFormat(WriteNewDbgInfoFormat);
+    SetFormat(UseNewDbgInfoFormat);
     Composite->print(Out.os(), nullptr, PreserveAssemblyUseListOrder);
   } else if (Force || !CheckBitcodeOutputToConsole(Out.os())) {
-    SetFormat(UseNewDbgInfoFormat && WriteNewDbgInfoFormatToBitcode);
+    SetFormat(UseNewDbgInfoFormat);
     WriteBitcodeToFile(*Composite, Out.os(), PreserveBitcodeUseListOrder);
   }
 

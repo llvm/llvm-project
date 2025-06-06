@@ -78,11 +78,13 @@ set(sources
   X86SpeculativeLoadHardening.cpp
   X86SpeculativeExecutionSideEffectSuppression.cpp
   X86Subtarget.cpp
+  X86SuppressAPXForReloc.cpp
   X86TargetMachine.cpp
   X86TargetObjectFile.cpp
   X86TargetTransformInfo.cpp
   X86VZeroUpper.cpp
   X86WinEHState.cpp
+  X86WinEHUnwindV2.cpp
   X86WinFixupBufferSecurityCheck.cpp
   X86InsertWait.cpp
   GISel/X86CallLowering.cpp

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++98 -verify -fblocks %s 
+// RUN: %clang_cc1 -fsyntax-only -std=c++98 -verify -fblocks %s
 namespace A {
   struct C {
     static int cx;
@@ -111,7 +111,7 @@ void A2::CC::NC::m(); // expected-error{{out-of-line declaration of a member mus
 
 namespace E {
   int X = 5;
-  
+
   namespace Nested {
     enum E {
       X = 0
@@ -146,7 +146,7 @@ Operators::operator bool() {
 
 namespace A {
   void g(int&); // expected-note{{type of 1st parameter of member declaration does not match definition ('int &' vs 'const int &')}}
-} 
+}
 
 void A::f() {} // expected-error-re{{out-of-line definition of 'f' does not match any declaration in namespace 'A'{{$}}}}
 
@@ -486,3 +486,11 @@ struct x; // expected-note {{template is declared here}}
 template <typename T>
 int issue55962 = x::a; // expected-error {{use of class template 'x' requires template arguments}} \
                        // expected-warning {{variable templates are a C++14 extension}}
+
+namespace ForwardDeclared {
+  typedef class A B;
+  struct A {
+    enum C {};
+    void F(B::C);
+  };
+}

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ABIInfoImpl.h"
+#include "HLSLBufferLayoutBuilder.h"
 #include "TargetInfo.h"
 
 using namespace clang;
@@ -52,6 +53,14 @@ public:
 
   unsigned getOpenCLKernelCallingConv() const override;
   llvm::Type *getOpenCLType(CodeGenModule &CGM, const Type *T) const override;
+  llvm::Type *
+  getHLSLType(CodeGenModule &CGM, const Type *Ty,
+              const SmallVector<int32_t> *Packoffsets = nullptr) const override;
+  llvm::Type *getSPIRVImageTypeFromHLSLResource(
+      const HLSLAttributedResourceType::Attributes &attributes,
+      llvm::Type *ElementType, llvm::LLVMContext &Ctx) const;
+  void
+  setOCLKernelStubCallingConvention(const FunctionType *&FT) const override;
 };
 class SPIRVTargetCodeGenInfo : public CommonSPIRTargetCodeGenInfo {
 public:
@@ -60,6 +69,8 @@ public:
   void setCUDAKernelCallingConvention(const FunctionType *&FT) const override;
   LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
                                   const VarDecl *D) const override;
+  void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
+                           CodeGen::CodeGenModule &M) const override;
   llvm::SyncScope::ID getLLVMSyncScopeID(const LangOptions &LangOpts,
                                          SyncScope Scope,
                                          llvm::AtomicOrdering Ordering,
@@ -150,8 +161,10 @@ ABIArgInfo SPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
       // copied to be valid on the device.
       // This behavior follows the CUDA spec
       // https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#global-function-argument-processing,
-      // and matches the NVPTX implementation.
-      return getNaturalAlignIndirect(Ty, /* byval */ true);
+      // and matches the NVPTX implementation. TODO: hardcoding to 0 should be
+      // revisited if HIPSPV / byval starts making use of the AS of an indirect
+      // arg.
+      return getNaturalAlignIndirect(Ty, /*AddrSpace=*/0, /*byval=*/true);
     }
   }
   return classifyArgumentType(Ty);
@@ -166,7 +179,8 @@ ABIArgInfo SPIRVABIInfo::classifyArgumentType(QualType Ty) const {
   // Records with non-trivial destructors/copy-constructors should not be
   // passed by value.
   if (auto RAA = getRecordArgABI(Ty, getCXXABI()))
-    return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   RAA == CGCXXABI::RAA_DirectInMemory);
 
   if (const RecordType *RT = Ty->getAs<RecordType>()) {
     const RecordDecl *RD = RT->getDecl();
@@ -214,9 +228,15 @@ void SPIRVTargetCodeGenInfo::setCUDAKernelCallingConvention(
   // Convert HIP kernels to SPIR-V kernels.
   if (getABIInfo().getContext().getLangOpts().HIP) {
     FT = getABIInfo().getContext().adjustFunctionType(
-        FT, FT->getExtInfo().withCallingConv(CC_OpenCLKernel));
+        FT, FT->getExtInfo().withCallingConv(CC_DeviceKernel));
     return;
   }
+}
+
+void CommonSPIRTargetCodeGenInfo::setOCLKernelStubCallingConvention(
+    const FunctionType *&FT) const {
+  FT = getABIInfo().getContext().adjustFunctionType(
+      FT, FT->getExtInfo().withCallingConv(CC_SpirFunction));
 }
 
 LangAS
@@ -239,6 +259,41 @@ SPIRVTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
     return AddrSpace;
 
   return DefaultGlobalAS;
+}
+
+void SPIRVTargetCodeGenInfo::setTargetAttributes(
+    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
+  if (!M.getLangOpts().HIP ||
+      M.getTarget().getTriple().getVendor() != llvm::Triple::AMD)
+    return;
+  if (GV->isDeclaration())
+    return;
+
+  auto F = dyn_cast<llvm::Function>(GV);
+  if (!F)
+    return;
+
+  auto FD = dyn_cast_or_null<FunctionDecl>(D);
+  if (!FD)
+    return;
+  if (!FD->hasAttr<CUDAGlobalAttr>())
+    return;
+
+  unsigned N = M.getLangOpts().GPUMaxThreadsPerBlock;
+  if (auto FlatWGS = FD->getAttr<AMDGPUFlatWorkGroupSizeAttr>())
+    N = FlatWGS->getMax()->EvaluateKnownConstInt(M.getContext()).getExtValue();
+
+  // We encode the maximum flat WG size in the first component of the 3D
+  // max_work_group_size attribute, which will get reverse translated into the
+  // original AMDGPU attribute when targeting AMDGPU.
+  auto Int32Ty = llvm::IntegerType::getInt32Ty(M.getLLVMContext());
+  llvm::Metadata *AttrMDArgs[] = {
+      llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(Int32Ty, N)),
+      llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(Int32Ty, 1)),
+      llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(Int32Ty, 1))};
+
+  F->setMetadata("max_work_group_size",
+                 llvm::MDNode::get(M.getLLVMContext(), AttrMDArgs));
 }
 
 llvm::SyncScope::ID
@@ -321,6 +376,184 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getOpenCLType(CodeGenModule &CGM,
   }
 
   return nullptr;
+}
+
+// Gets a spirv.IntegralConstant or spirv.Literal. If IntegralType is present,
+// returns an IntegralConstant, otherwise returns a Literal.
+static llvm::Type *getInlineSpirvConstant(CodeGenModule &CGM,
+                                          llvm::Type *IntegralType,
+                                          llvm::APInt Value) {
+  llvm::LLVMContext &Ctx = CGM.getLLVMContext();
+
+  // Convert the APInt value to an array of uint32_t words
+  llvm::SmallVector<uint32_t> Words;
+
+  while (Value.ugt(0)) {
+    uint32_t Word = Value.trunc(32).getZExtValue();
+    Value.lshrInPlace(32);
+
+    Words.push_back(Word);
+  }
+  if (Words.size() == 0)
+    Words.push_back(0);
+
+  if (IntegralType)
+    return llvm::TargetExtType::get(Ctx, "spirv.IntegralConstant",
+                                    {IntegralType}, Words);
+  return llvm::TargetExtType::get(Ctx, "spirv.Literal", {}, Words);
+}
+
+static llvm::Type *getInlineSpirvType(CodeGenModule &CGM,
+                                      const HLSLInlineSpirvType *SpirvType) {
+  llvm::LLVMContext &Ctx = CGM.getLLVMContext();
+
+  llvm::SmallVector<llvm::Type *> Operands;
+
+  for (auto &Operand : SpirvType->getOperands()) {
+    using SpirvOperandKind = SpirvOperand::SpirvOperandKind;
+
+    llvm::Type *Result = nullptr;
+    switch (Operand.getKind()) {
+    case SpirvOperandKind::ConstantId: {
+      llvm::Type *IntegralType =
+          CGM.getTypes().ConvertType(Operand.getResultType());
+      llvm::APInt Value = Operand.getValue();
+
+      Result = getInlineSpirvConstant(CGM, IntegralType, Value);
+      break;
+    }
+    case SpirvOperandKind::Literal: {
+      llvm::APInt Value = Operand.getValue();
+      Result = getInlineSpirvConstant(CGM, nullptr, Value);
+      break;
+    }
+    case SpirvOperandKind::TypeId: {
+      QualType TypeOperand = Operand.getResultType();
+      if (auto *RT = TypeOperand->getAs<RecordType>()) {
+        auto *RD = RT->getDecl();
+        assert(RD->isCompleteDefinition() &&
+               "Type completion should have been required in Sema");
+
+        const FieldDecl *HandleField = RD->findFirstNamedDataMember();
+        if (HandleField) {
+          QualType ResourceType = HandleField->getType();
+          if (ResourceType->getAs<HLSLAttributedResourceType>()) {
+            TypeOperand = ResourceType;
+          }
+        }
+      }
+      Result = CGM.getTypes().ConvertType(TypeOperand);
+      break;
+    }
+    default:
+      llvm_unreachable("HLSLInlineSpirvType had invalid operand!");
+      break;
+    }
+
+    assert(Result);
+    Operands.push_back(Result);
+  }
+
+  return llvm::TargetExtType::get(Ctx, "spirv.Type", Operands,
+                                  {SpirvType->getOpcode(), SpirvType->getSize(),
+                                   SpirvType->getAlignment()});
+}
+
+llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
+    CodeGenModule &CGM, const Type *Ty,
+    const SmallVector<int32_t> *Packoffsets) const {
+  llvm::LLVMContext &Ctx = CGM.getLLVMContext();
+
+  if (auto *SpirvType = dyn_cast<HLSLInlineSpirvType>(Ty))
+    return getInlineSpirvType(CGM, SpirvType);
+
+  auto *ResType = dyn_cast<HLSLAttributedResourceType>(Ty);
+  if (!ResType)
+    return nullptr;
+
+  const HLSLAttributedResourceType::Attributes &ResAttrs = ResType->getAttrs();
+  switch (ResAttrs.ResourceClass) {
+  case llvm::dxil::ResourceClass::UAV:
+  case llvm::dxil::ResourceClass::SRV: {
+    // TypedBuffer and RawBuffer both need element type
+    QualType ContainedTy = ResType->getContainedType();
+    if (ContainedTy.isNull())
+      return nullptr;
+
+    assert(!ResAttrs.IsROV &&
+           "Rasterizer order views not implemented for SPIR-V yet");
+
+    llvm::Type *ElemType = CGM.getTypes().ConvertType(ContainedTy);
+    if (!ResAttrs.RawBuffer) {
+      // convert element type
+      return getSPIRVImageTypeFromHLSLResource(ResAttrs, ElemType, Ctx);
+    }
+
+    llvm::ArrayType *RuntimeArrayType = llvm::ArrayType::get(ElemType, 0);
+    uint32_t StorageClass = /* StorageBuffer storage class */ 12;
+    bool IsWritable = ResAttrs.ResourceClass == llvm::dxil::ResourceClass::UAV;
+    return llvm::TargetExtType::get(Ctx, "spirv.VulkanBuffer",
+                                    {RuntimeArrayType},
+                                    {StorageClass, IsWritable});
+  }
+  case llvm::dxil::ResourceClass::CBuffer: {
+    QualType ContainedTy = ResType->getContainedType();
+    if (ContainedTy.isNull() || !ContainedTy->isStructureType())
+      return nullptr;
+
+    llvm::Type *BufferLayoutTy =
+        HLSLBufferLayoutBuilder(CGM, "spirv.Layout")
+            .createLayoutType(ContainedTy->getAsStructureType(), Packoffsets);
+    uint32_t StorageClass = /* Uniform storage class */ 2;
+    return llvm::TargetExtType::get(Ctx, "spirv.VulkanBuffer", {BufferLayoutTy},
+                                    {StorageClass, false});
+    break;
+  }
+  case llvm::dxil::ResourceClass::Sampler:
+    return llvm::TargetExtType::get(Ctx, "spirv.Sampler");
+  }
+  return nullptr;
+}
+
+llvm::Type *CommonSPIRTargetCodeGenInfo::getSPIRVImageTypeFromHLSLResource(
+    const HLSLAttributedResourceType::Attributes &attributes,
+    llvm::Type *ElementType, llvm::LLVMContext &Ctx) const {
+
+  if (ElementType->isVectorTy())
+    ElementType = ElementType->getScalarType();
+
+  assert((ElementType->isIntegerTy() || ElementType->isFloatingPointTy()) &&
+         "The element type for a SPIR-V resource must be a scalar integer or "
+         "floating point type.");
+
+  // These parameters correspond to the operands to the OpTypeImage SPIR-V
+  // instruction. See
+  // https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#OpTypeImage.
+  SmallVector<unsigned, 6> IntParams(6, 0);
+
+  // Dim
+  // For now we assume everything is a buffer.
+  IntParams[0] = 5;
+
+  // Depth
+  // HLSL does not indicate if it is a depth texture or not, so we use unknown.
+  IntParams[1] = 2;
+
+  // Arrayed
+  IntParams[2] = 0;
+
+  // MS
+  IntParams[3] = 0;
+
+  // Sampled
+  IntParams[4] =
+      attributes.ResourceClass == llvm::dxil::ResourceClass::UAV ? 2 : 1;
+
+  // Image format.
+  // Setting to unknown for now.
+  IntParams[5] = 0;
+
+  return llvm::TargetExtType::get(Ctx, "spirv.Image", {ElementType}, IntParams);
 }
 
 std::unique_ptr<TargetCodeGenInfo>

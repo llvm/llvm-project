@@ -119,8 +119,7 @@ struct SpecSig {
   }
 
   friend hash_code hash_value(const SpecSig &S) {
-    return hash_combine(hash_value(S.Key),
-                        hash_combine_range(S.Args.begin(), S.Args.end()));
+    return hash_combine(hash_value(S.Key), hash_combine_range(S.Args));
   }
 };
 
@@ -176,7 +175,7 @@ public:
                   SCCPSolver &Solver)
       : GetBFI(GetBFI), F(F), DL(DL), TTI(TTI), Solver(Solver) {}
 
-  bool isBlockExecutable(BasicBlock *BB) {
+  bool isBlockExecutable(BasicBlock *BB) const {
     return Solver.isBlockExecutable(BB) && !DeadBlocks.contains(BB);
   }
 
@@ -189,8 +188,9 @@ public:
 private:
   friend class InstVisitor<InstCostVisitor, Constant *>;
 
-  static bool canEliminateSuccessor(BasicBlock *BB, BasicBlock *Succ,
-                                    DenseSet<BasicBlock *> &DeadBlocks);
+  Constant *findConstantFor(Value *V) const;
+
+  bool canEliminateSuccessor(BasicBlock *BB, BasicBlock *Succ) const;
 
   Cost getCodeSizeSavingsForUser(Instruction *User, Value *Use = nullptr,
                                  Constant *C = nullptr);

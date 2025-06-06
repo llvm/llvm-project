@@ -13,7 +13,6 @@
 #include "MCTargetDesc/MipsMCNaCl.h"
 #include "Mips.h"
 #include "MipsInstrInfo.h"
-#include "MipsRegisterInfo.h"
 #include "MipsSubtarget.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
@@ -42,7 +41,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
-#include <algorithm>
 #include <cassert>
 #include <iterator>
 #include <memory>
@@ -209,9 +207,7 @@ namespace {
 
   class MipsDelaySlotFiller : public MachineFunctionPass {
   public:
-    MipsDelaySlotFiller() : MachineFunctionPass(ID) {
-      initializeMipsDelaySlotFillerPass(*PassRegistry::getPassRegistry());
-    }
+    MipsDelaySlotFiller() : MachineFunctionPass(ID) {}
 
     StringRef getPassName() const override { return "Mips Delay Slot Filler"; }
 
@@ -231,8 +227,7 @@ namespace {
     }
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -403,7 +398,7 @@ void RegDefsUses::addLiveOut(const MachineBasicBlock &MBB,
   for (const MachineBasicBlock *S : MBB.successors())
     if (S != &SuccBB)
       for (const auto &LI : S->liveins())
-        Uses.set(LI.PhysReg);
+        Uses.set(LI.PhysReg.id());
 }
 
 bool RegDefsUses::update(const MachineInstr &MI, unsigned Begin, unsigned End) {
@@ -564,9 +559,10 @@ Iter MipsDelaySlotFiller::replaceWithCompactBranch(MachineBasicBlock &MBB,
   Branch = TII->genInstrWithNewOpc(NewOpcode, Branch);
 
   auto *ToErase = cast<MachineInstr>(&*std::next(Branch));
-  // Update call site info for the Branch.
-  if (ToErase->shouldUpdateCallSiteInfo())
-    ToErase->getMF()->moveCallSiteInfo(ToErase, cast<MachineInstr>(&*Branch));
+  // Update call info for the Branch.
+  if (ToErase->shouldUpdateAdditionalCallInfo())
+    ToErase->getMF()->moveAdditionalCallInfo(ToErase,
+                                             cast<MachineInstr>(&*Branch));
   ToErase->eraseFromParent();
   return Branch;
 }
@@ -879,9 +875,9 @@ MipsDelaySlotFiller::selectSuccBB(MachineBasicBlock &B) const {
 
   // Select the successor with the larget edge weight.
   auto &Prob = getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
-  MachineBasicBlock *S = *std::max_element(
-      B.succ_begin(), B.succ_end(),
-      [&](const MachineBasicBlock *Dst0, const MachineBasicBlock *Dst1) {
+  MachineBasicBlock *S =
+      *llvm::max_element(B.successors(), [&](const MachineBasicBlock *Dst0,
+                                             const MachineBasicBlock *Dst1) {
         return Prob.getEdgeProbability(&B, Dst0) <
                Prob.getEdgeProbability(&B, Dst1);
       });

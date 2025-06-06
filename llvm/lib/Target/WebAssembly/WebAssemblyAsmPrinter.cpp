@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyAsmPrinter.h"
+#include "MCTargetDesc/WebAssemblyMCExpr.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
@@ -23,7 +24,6 @@
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyRegisterInfo.h"
 #include "WebAssemblyRuntimeLibcallSignatures.h"
-#include "WebAssemblyTargetMachine.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallSet.h"
@@ -518,7 +518,6 @@ void WebAssemblyAsmPrinter::EmitTargetFeatures(Module &M) {
 
     // Silently ignore invalid metadata
     if (Entry.Prefix != wasm::WASM_FEATURE_PREFIX_USED &&
-        Entry.Prefix != wasm::WASM_FEATURE_PREFIX_REQUIRED &&
         Entry.Prefix != wasm::WASM_FEATURE_PREFIX_DISALLOWED)
       return;
 
@@ -593,8 +592,7 @@ void WebAssemblyAsmPrinter::EmitFunctionAttributes(Module &M) {
 
     for (auto &Sym : Symbols) {
       OutStreamer->emitValue(
-          MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_WASM_FUNCINDEX,
-                                  OutContext),
+          MCSymbolRefExpr::create(Sym, WebAssembly::S_FUNCINDEX, OutContext),
           4);
     }
     OutStreamer->popSection();
@@ -754,6 +752,11 @@ bool WebAssemblyAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 
   return AsmPrinter::PrintAsmMemoryOperand(MI, OpNo, ExtraCode, OS);
 }
+
+char WebAssemblyAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(WebAssemblyAsmPrinter, "webassembly-asm-printer",
+                "WebAssembly Assmebly Printer", false, false)
 
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyAsmPrinter() {

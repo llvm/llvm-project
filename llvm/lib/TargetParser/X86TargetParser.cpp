@@ -135,9 +135,17 @@ constexpr FeatureBitset FeaturesSapphireRapids =
     FeatureAVX512BF16 | FeatureAVX512FP16 | FeatureAVXVNNI | FeatureCLDEMOTE |
     FeatureENQCMD | FeatureMOVDIR64B | FeatureMOVDIRI | FeaturePTWRITE |
     FeatureSERIALIZE | FeatureSHSTK | FeatureTSXLDTRK | FeatureUINTR |
-    FeatureWAITPKG;
+    FeatureWAITPKG | FeatureAVX512DQ | FeatureAVX512VL;
 constexpr FeatureBitset FeaturesGraniteRapids =
     FeaturesSapphireRapids | FeatureAMX_FP16 | FeaturePREFETCHI;
+constexpr FeatureBitset FeaturesDiamondRapids =
+    FeaturesGraniteRapids | FeatureAMX_COMPLEX | FeatureAVX10_2_512 |
+    FeatureCMPCCXADD | FeatureAVXIFMA | FeatureAVXNECONVERT |
+    FeatureAVXVNNIINT8 | FeatureAVXVNNIINT16 | FeatureSHA512 | FeatureSM3 |
+    FeatureSM4 | FeatureEGPR | FeatureZU | FeatureCCMP | FeaturePush2Pop2 |
+    FeaturePPX | FeatureNDD | FeatureNF | FeatureCF | FeatureMOVRS |
+    FeatureAMX_MOVRS | FeatureAMX_AVX512 | FeatureAMX_FP8 | FeatureAMX_TF32 |
+    FeatureAMX_TRANSPOSE | FeatureUSERMSR;
 
 // Intel Atom processors.
 // Bonnell has feature parity with Core2 and adds MOVBE.
@@ -381,6 +389,8 @@ constexpr ProcInfo Processors[] = {
   { {"emeraldrapids"}, CK_Emeraldrapids, FEATURE_AVX512FP16, FeaturesSapphireRapids, 'n', false },
   // Clearwaterforest microarchitecture based processors.
   { {"clearwaterforest"}, CK_Lunarlake, FEATURE_AVX2, FeaturesClearwaterforest, 'p', false },
+  // Diamond Rapids microarchitecture based processors.
+  { {"diamondrapids"}, CK_Diamondrapids, FEATURE_AVX10_2_512, FeaturesDiamondRapids, 'z', false },
   // Knights Landing processor.
   { {"knl"}, CK_KNL, FEATURE_AVX512F, FeaturesKNL, 'Z', false },
   { {"mic_avx512"}, CK_KNL, FEATURE_AVX512F, FeaturesKNL, 'Z', true },
@@ -600,6 +610,10 @@ constexpr FeatureBitset ImpliedFeaturesAMX_INT8 = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_COMPLEX = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_FP8 = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_TRANSPOSE = FeatureAMX_TILE;
+constexpr FeatureBitset ImpliedFeaturesAMX_MOVRS = FeatureAMX_TILE;
+constexpr FeatureBitset ImpliedFeaturesAMX_AVX512 =
+    FeatureAMX_TILE | FeatureAVX10_2_512;
+constexpr FeatureBitset ImpliedFeaturesAMX_TF32 = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesHRESET = {};
 
 constexpr FeatureBitset ImpliedFeaturesPREFETCHI = {};
@@ -610,8 +624,7 @@ constexpr FeatureBitset ImpliedFeaturesAVXVNNIINT8 = FeatureAVX2;
 constexpr FeatureBitset ImpliedFeaturesAVXIFMA = FeatureAVX2;
 constexpr FeatureBitset ImpliedFeaturesAVXNECONVERT = FeatureAVX2;
 constexpr FeatureBitset ImpliedFeaturesSHA512 = FeatureAVX2;
-constexpr FeatureBitset ImpliedFeaturesAVX512FP16 =
-    FeatureAVX512BW | FeatureAVX512DQ | FeatureAVX512VL;
+constexpr FeatureBitset ImpliedFeaturesAVX512FP16 = FeatureAVX512BW;
 // Key Locker Features
 constexpr FeatureBitset ImpliedFeaturesKL = FeatureSSE2;
 constexpr FeatureBitset ImpliedFeaturesWIDEKL = FeatureKL;
@@ -623,8 +636,8 @@ constexpr FeatureBitset ImpliedFeaturesAVXVNNI = FeatureAVX2;
 constexpr FeatureBitset ImpliedFeaturesAVX10_1 =
     FeatureAVX512CD | FeatureAVX512VBMI | FeatureAVX512IFMA |
     FeatureAVX512VNNI | FeatureAVX512BF16 | FeatureAVX512VPOPCNTDQ |
-    FeatureAVX512VBMI2 | FeatureAVX512BITALG | FeatureVAES | FeatureVPCLMULQDQ |
-    FeatureAVX512FP16;
+    FeatureAVX512VBMI2 | FeatureAVX512BITALG | FeatureAVX512FP16 |
+    FeatureAVX512DQ | FeatureAVX512VL;
 constexpr FeatureBitset ImpliedFeaturesAVX10_1_512 =
     FeatureAVX10_1 | FeatureEVEX512;
 constexpr FeatureBitset ImpliedFeaturesAVX10_2 = FeatureAVX10_1;

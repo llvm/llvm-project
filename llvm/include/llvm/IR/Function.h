@@ -32,6 +32,7 @@
 #include "llvm/IR/OperandTraits.h"
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -284,6 +285,18 @@ public:
     setValueSubclassData((getSubclassDataFromValue() & 0xc00f) | (ID << 4));
   }
 
+  /// Does it have a kernel calling convention?
+  bool hasKernelCallingConv() const {
+    switch (getCallingConv()) {
+    default:
+      return false;
+    case CallingConv::PTX_Kernel:
+    case CallingConv::AMDGPU_KERNEL:
+    case CallingConv::SPIR_KERNEL:
+      return true;
+    }
+  }
+
   enum ProfileCountType { PCT_Real, PCT_Synthetic };
 
   /// Class to represent profile counts.
@@ -333,12 +346,6 @@ public:
   /// Returns the set of GUIDs that needs to be imported to the function for
   /// sample PGO, to enable the same inlines as the profiled optimized binary.
   DenseSet<GlobalValue::GUID> getImportGUIDs() const;
-
-  /// Set the section prefix for this function.
-  void setSectionPrefix(StringRef Prefix);
-
-  /// Get the section prefix for this function.
-  std::optional<StringRef> getSectionPrefix() const;
 
   /// hasGC/getGC/setGC/clearGC - The name of the garbage collection algorithm
   ///                             to use during code generation.
@@ -565,7 +572,7 @@ public:
   bool onlyWritesMemory() const;
   void setOnlyWritesMemory();
 
-  /// Determine if the call can access memmory only using pointers based
+  /// Determine if the call can access memory only using pointers based
   /// on its arguments.
   bool onlyAccessesArgMemory() const;
   void setOnlyAccessesArgMemory();
@@ -785,8 +792,9 @@ public:
 
 private:
   // These need access to the underlying BB list.
-  friend void BasicBlock::removeFromParent();
-  friend iplist<BasicBlock>::iterator BasicBlock::eraseFromParent();
+  LLVM_ABI_FRIEND friend void BasicBlock::removeFromParent();
+  LLVM_ABI_FRIEND friend iplist<BasicBlock>::iterator
+  BasicBlock::eraseFromParent();
   template <class BB_t, class BB_i_t, class BI_t, class II_t>
   friend class InstIterator;
   friend class llvm::SymbolTableListTraits<llvm::BasicBlock>;
@@ -942,9 +950,14 @@ public:
   ///
   void viewCFG() const;
 
+  /// viewCFG - This function is meant for use from the debugger. It works just
+  /// like viewCFG(), but generates the dot file with the given file name.
+  void viewCFG(const char *OutputFileName) const;
+
   /// Extended form to print edge weights.
   void viewCFG(bool ViewCFGOnly, const BlockFrequencyInfo *BFI,
-               const BranchProbabilityInfo *BPI) const;
+               const BranchProbabilityInfo *BPI,
+               const char *OutputFileName = nullptr) const;
 
   /// viewCFGOnly - This function is meant for use from the debugger.  It works
   /// just like viewCFG, but it does not include the contents of basic blocks
@@ -952,6 +965,10 @@ public:
   /// this can make the graph smaller.
   ///
   void viewCFGOnly() const;
+
+  /// viewCFG - This function is meant for use from the debugger. It works just
+  /// like viewCFGOnly(), but generates the dot file with the given file name.
+  void viewCFGOnly(const char *OutputFileName) const;
 
   /// Extended form to print edge weights.
   void viewCFGOnly(const BlockFrequencyInfo *BFI,
@@ -1033,12 +1050,19 @@ private:
   void setValueSubclassDataBit(unsigned Bit, bool On);
 };
 
+namespace CallingConv {
+
+// TODO: Need similar function for support of argument in position. General
+// version on FunctionType + Attributes + CallingConv::ID?
+LLVM_ABI LLVM_READNONE bool supportsNonVoidReturnType(CallingConv::ID CC);
+} // namespace CallingConv
+
 /// Check whether null pointer dereferencing is considered undefined behavior
 /// for a given function or an address space.
 /// Null pointer access in non-zero address space is not considered undefined.
 /// Return value: false => null pointer dereference is undefined.
 /// Return value: true =>  null pointer dereference is not undefined.
-bool NullPointerIsDefined(const Function *F, unsigned AS = 0);
+LLVM_ABI bool NullPointerIsDefined(const Function *F, unsigned AS = 0);
 
 template <> struct OperandTraits<Function> : public HungoffOperandTraits {};
 

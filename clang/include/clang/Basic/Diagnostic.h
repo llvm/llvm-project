@@ -20,9 +20,9 @@
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
@@ -40,6 +40,10 @@
 namespace llvm {
 class Error;
 class raw_ostream;
+class MemoryBuffer;
+namespace vfs {
+class FileSystem;
+} // namespace vfs
 } // namespace llvm
 
 namespace clang {
@@ -88,18 +92,15 @@ public:
   /// modification is known.
   FixItHint() = default;
 
-  bool isNull() const {
-    return !RemoveRange.isValid();
-  }
+  bool isNull() const { return !RemoveRange.isValid(); }
 
   /// Create a code modification hint that inserts the given
   /// code string at a specific location.
-  static FixItHint CreateInsertion(SourceLocation InsertionLoc,
-                                   StringRef Code,
+  static FixItHint CreateInsertion(SourceLocation InsertionLoc, StringRef Code,
                                    bool BeforePreviousInsertions = false) {
     FixItHint Hint;
     Hint.RemoveRange =
-      CharSourceRange::getCharRange(InsertionLoc, InsertionLoc);
+        CharSourceRange::getCharRange(InsertionLoc, InsertionLoc);
     Hint.CodeToInsert = std::string(Code);
     Hint.BeforePreviousInsertions = BeforePreviousInsertions;
     return Hint;
@@ -107,12 +108,13 @@ public:
 
   /// Create a code modification hint that inserts the given
   /// code from \p FromRange at a specific location.
-  static FixItHint CreateInsertionFromRange(SourceLocation InsertionLoc,
-                                            CharSourceRange FromRange,
-                                        bool BeforePreviousInsertions = false) {
+  static FixItHint
+  CreateInsertionFromRange(SourceLocation InsertionLoc,
+                           CharSourceRange FromRange,
+                           bool BeforePreviousInsertions = false) {
     FixItHint Hint;
     Hint.RemoveRange =
-      CharSourceRange::getCharRange(InsertionLoc, InsertionLoc);
+        CharSourceRange::getCharRange(InsertionLoc, InsertionLoc);
     Hint.InsertFromRange = FromRange;
     Hint.BeforePreviousInsertions = BeforePreviousInsertions;
     return Hint;
@@ -139,8 +141,7 @@ public:
     return Hint;
   }
 
-  static FixItHint CreateReplacement(SourceRange RemoveRange,
-                                     StringRef Code) {
+  static FixItHint CreateReplacement(SourceRange RemoveRange, StringRef Code) {
     return CreateReplacement(CharSourceRange::getTokenRange(RemoveRange), Code);
   }
 };
@@ -280,7 +281,10 @@ public:
     ak_qualtype_pair,
 
     /// Attr *
-    ak_attr
+    ak_attr,
+
+    /// Expr *
+    ak_expr,
   };
 
   /// Represents on argument value, which is a union discriminated
@@ -326,7 +330,7 @@ private:
   unsigned ConstexprBacktraceLimit = 0;
 
   IntrusiveRefCntPtr<DiagnosticIDs> Diags;
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
+  DiagnosticOptions &DiagOpts;
   DiagnosticConsumer *Client = nullptr;
   std::unique_ptr<DiagnosticConsumer> Owner;
   SourceManager *SourceMgr = nullptr;
@@ -371,10 +375,12 @@ private:
     // Map extensions to warnings or errors?
     diag::Severity ExtBehavior = diag::Severity::Ignored;
 
-    DiagState()
+    DiagnosticIDs &DiagIDs;
+
+    DiagState(DiagnosticIDs &DiagIDs)
         : IgnoreAllWarnings(false), EnableAllWarnings(false),
           WarningsAsErrors(false), ErrorsAsFatal(false),
-          SuppressSystemWarnings(false) {}
+          SuppressSystemWarnings(false), DiagIDs(DiagIDs) {}
 
     using iterator = llvm::DenseMap<unsigned, DiagnosticMapping>::iterator;
     using const_iterator =
@@ -544,20 +550,23 @@ private:
   /// avoid redundancy across arguments.
   ///
   /// This is a hack to avoid a layering violation between libbasic and libsema.
-  using ArgToStringFnTy = void (*)(
-      ArgumentKind Kind, intptr_t Val,
-      StringRef Modifier, StringRef Argument,
-      ArrayRef<ArgumentValue> PrevArgs,
-      SmallVectorImpl<char> &Output,
-      void *Cookie,
-      ArrayRef<intptr_t> QualTypeVals);
+  using ArgToStringFnTy = void (*)(ArgumentKind Kind, intptr_t Val,
+                                   StringRef Modifier, StringRef Argument,
+                                   ArrayRef<ArgumentValue> PrevArgs,
+                                   SmallVectorImpl<char> &Output, void *Cookie,
+                                   ArrayRef<intptr_t> QualTypeVals);
 
   void *ArgToStringCookie = nullptr;
   ArgToStringFnTy ArgToStringFn;
 
+  /// Whether the diagnostic should be suppressed in FilePath.
+  llvm::unique_function<bool(diag::kind, SourceLocation /*DiagLoc*/,
+                             const SourceManager &) const>
+      DiagSuppressionMapping;
+
 public:
   explicit DiagnosticsEngine(IntrusiveRefCntPtr<DiagnosticIDs> Diags,
-                             IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
+                             DiagnosticOptions &DiagOpts,
                              DiagnosticConsumer *client = nullptr,
                              bool ShouldOwnClient = true);
   DiagnosticsEngine(const DiagnosticsEngine &) = delete;
@@ -573,7 +582,7 @@ public:
   }
 
   /// Retrieve the diagnostic options.
-  DiagnosticOptions &getDiagnosticOptions() const { return *DiagOpts; }
+  DiagnosticOptions &getDiagnosticOptions() const { return DiagOpts; }
 
   using diag_mapping_range = llvm::iterator_range<DiagState::const_iterator>;
 
@@ -642,9 +651,7 @@ public:
 
   /// Retrieve the maximum number of template instantiation
   /// notes to emit along with a given diagnostic.
-  unsigned getTemplateBacktraceLimit() const {
-    return TemplateBacktraceLimit;
-  }
+  unsigned getTemplateBacktraceLimit() const { return TemplateBacktraceLimit; }
 
   /// Specify the maximum number of constexpr evaluation
   /// notes to emit along with a given diagnostic.
@@ -730,9 +737,7 @@ public:
   /// fails.
   ///
   /// By default, we show all candidates.
-  void setShowOverloads(OverloadsShown Val) {
-    ShowOverloads = Val;
-  }
+  void setShowOverloads(OverloadsShown Val) { ShowOverloads = Val; }
   OverloadsShown getShowOverloads() const { return ShowOverloads; }
 
   /// When a call or operator fails, print out up to this many candidate
@@ -871,9 +876,7 @@ public:
   unsigned getNumErrors() const { return NumErrors; }
   unsigned getNumWarnings() const { return NumWarnings; }
 
-  void setNumWarnings(unsigned NumWarnings) {
-    this->NumWarnings = NumWarnings;
-  }
+  void setNumWarnings(unsigned NumWarnings) { this->NumWarnings = NumWarnings; }
 
   /// Return an ID for a diagnostic with the specified format string and
   /// level.
@@ -884,6 +887,8 @@ public:
   /// \param FormatString A fixed diagnostic format string that will be hashed
   /// and mapped to a unique DiagID.
   template <unsigned N>
+  // TODO: Deprecate this once all uses are removed from Clang.
+  // [[deprecated("Use a CustomDiagDesc instead of a Level")]]
   unsigned getCustomDiagID(Level L, const char (&FormatString)[N]) {
     return Diags->getCustomDiagID((DiagnosticIDs::Level)L,
                                   StringRef(FormatString, N - 1));
@@ -891,9 +896,8 @@ public:
 
   /// Converts a diagnostic argument (as an intptr_t) into the string
   /// that represents it.
-  void ConvertArgToString(ArgumentKind Kind, intptr_t Val,
-                          StringRef Modifier, StringRef Argument,
-                          ArrayRef<ArgumentValue> PrevArgs,
+  void ConvertArgToString(ArgumentKind Kind, intptr_t Val, StringRef Modifier,
+                          StringRef Argument, ArrayRef<ArgumentValue> PrevArgs,
                           SmallVectorImpl<char> &Output,
                           ArrayRef<intptr_t> QualTypeVals) const {
     ArgToStringFn(Kind, Val, Modifier, Argument, PrevArgs, Output,
@@ -945,6 +949,26 @@ public:
   Level getDiagnosticLevel(unsigned DiagID, SourceLocation Loc) const {
     return (Level)Diags->getDiagnosticLevel(DiagID, Loc, *this);
   }
+
+  /// Diagnostic suppression mappings can be used to suppress specific
+  /// diagnostics in specific files.
+  /// Mapping file is expected to be a special case list with sections denoting
+  /// diagnostic groups and `src` entries for globs to suppress. `emit` category
+  /// can be used to disable suppression. Longest glob that matches a filepath
+  /// takes precedence. For example:
+  ///   [unused]
+  ///   src:clang/*
+  ///   src:clang/foo/*=emit
+  ///   src:clang/foo/bar/*
+  ///
+  /// Such a mappings file suppress all diagnostics produced by -Wunused in all
+  /// sources under `clang/` directory apart from `clang/foo/`. Diagnostics
+  /// under `clang/foo/bar/` will also be suppressed. Note that the FilePath is
+  /// matched against the globs as-is.
+  /// These take presumed locations into account, and can still be overriden by
+  /// clang-diagnostics pragmas.
+  void setDiagSuppressionMapping(llvm::MemoryBuffer &Input);
+  bool isSuppressedViaMapping(diag::kind DiagId, SourceLocation DiagLoc) const;
 
   /// Issue the message to the client.
   ///
@@ -1038,8 +1062,9 @@ class DiagnosticErrorTrap {
   unsigned NumUnrecoverableErrors;
 
 public:
-  explicit DiagnosticErrorTrap(DiagnosticsEngine &Diag)
-      : Diag(Diag) { reset(); }
+  explicit DiagnosticErrorTrap(DiagnosticsEngine &Diag) : Diag(Diag) {
+    reset();
+  }
 
   /// Determine whether any errors have occurred since this
   /// object instance was created.
@@ -1242,7 +1267,8 @@ protected:
   bool Emit() {
     // If this diagnostic is inactive, then its soul was stolen by the copy ctor
     // (or by a subclass, as in SemaDiagnosticBuilder).
-    if (!isActive()) return false;
+    if (!isActive())
+      return false;
 
     // Process the diagnostic.
     bool Result = DiagObj->EmitDiagnostic(*this, IsForceEmit);
@@ -1393,6 +1419,25 @@ operator<<(const StreamingDiagnostic &DB, T *DC) {
   return DB;
 }
 
+// Convert scoped enums to their underlying type, so that we don't have
+// clutter the emitting code with `llvm::to_underlying()`.
+// We also need to disable implicit conversion for the first argument,
+// because classes that derive from StreamingDiagnostic define their own
+// templated operator<< that accept a wide variety of types, leading
+// to ambiguity.
+template <typename T, typename U,
+          typename UnderlyingU = typename std::enable_if_t<
+              std::is_enum_v<std::remove_reference_t<U>>,
+              std::underlying_type<std::remove_reference_t<U>>>::type>
+inline std::enable_if_t<
+    std::is_same_v<std::remove_const_t<T>, StreamingDiagnostic> &&
+        !std::is_convertible_v<U, UnderlyingU>,
+    const StreamingDiagnostic &>
+operator<<(const T &DB, U &&SE) {
+  DB << llvm::to_underlying(SE);
+  return DB;
+}
+
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
                                              SourceLocation L) {
   DB.AddSourceRange(CharSourceRange::getTokenRange(L));
@@ -1498,7 +1543,9 @@ public:
   unsigned getID() const { return DiagID; }
   const SourceLocation &getLocation() const { return DiagLoc; }
   bool hasSourceManager() const { return DiagObj->hasSourceManager(); }
-  SourceManager &getSourceManager() const { return DiagObj->getSourceManager();}
+  SourceManager &getSourceManager() const {
+    return DiagObj->getSourceManager();
+  }
 
   unsigned getNumArgs() const { return DiagStorage.NumDiagArgs; }
 
@@ -1654,8 +1701,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const StoredDiagnostic &);
 /// formats and prints fully processed diagnostics.
 class DiagnosticConsumer {
 protected:
-  unsigned NumWarnings = 0;       ///< Number of warnings reported
-  unsigned NumErrors = 0;         ///< Number of errors reported
+  unsigned NumWarnings = 0; ///< Number of warnings reported
+  unsigned NumErrors = 0;   ///< Number of errors reported
 
 public:
   DiagnosticConsumer() = default;
@@ -1759,7 +1806,7 @@ const char ToggleHighlight = 127;
 /// warning options specified on the command line.
 void ProcessWarningOptions(DiagnosticsEngine &Diags,
                            const DiagnosticOptions &Opts,
-                           bool ReportDiags = true);
+                           llvm::vfs::FileSystem &VFS, bool ReportDiags = true);
 void EscapeStringForDiagnostic(StringRef Str, SmallVectorImpl<char> &OutStr);
 } // namespace clang
 

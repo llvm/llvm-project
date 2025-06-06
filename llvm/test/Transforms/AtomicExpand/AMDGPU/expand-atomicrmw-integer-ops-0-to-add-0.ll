@@ -4,7 +4,7 @@
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=atomic-expand -mcpu=gfx90a %s | FileCheck -check-prefixes=CHECK,GFX90A %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=atomic-expand -mcpu=gfx1030 %s | FileCheck -check-prefixes=CHECK,GFX10 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=atomic-expand -mcpu=gfx1100 %s | FileCheck -check-prefixes=CHECK,GFX11 %s
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=atomic-expand -mcpu=gfx940 %s | FileCheck -check-prefixes=CHECK,GFX940 %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=atomic-expand -mcpu=gfx942 %s | FileCheck -check-prefixes=CHECK,GFX942 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=atomic-expand -mcpu=gfx1200 %s | FileCheck -check-prefixes=CHECK,GFX12 %s
 
 ; Test that system scoped atomicrmw or 0 is transformed to add 0.
@@ -40,14 +40,14 @@ define i32 @test_atomicrmw_or_0_flat_system(ptr %ptr) {
 ; CHECK:       atomicrmw.private:
 ; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(5)
 ; CHECK-NEXT:    [[LOADED_PRIVATE:%.*]] = load i32, ptr addrspace(5) [[TMP1]], align 4
-; CHECK-NEXT:    [[NEW:%.*]] = or i32 [[LOADED_PRIVATE]], 0
+; CHECK-NEXT:    [[NEW:%.*]] = add i32 [[LOADED_PRIVATE]], 0
 ; CHECK-NEXT:    store i32 [[NEW]], ptr addrspace(5) [[TMP1]], align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
 ; CHECK:       atomicrmw.global:
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add ptr [[PTR]], i32 0 seq_cst, align 4, !noalias.addrspace [[META1:![0-9]+]]
+; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw add ptr [[PTR]], i32 0 seq_cst, align 4, !noalias.addrspace [[META1:![0-9]+]]
 ; CHECK-NEXT:    br label [[ATOMICRMW_PHI]]
 ; CHECK:       atomicrmw.phi:
-; CHECK-NEXT:    [[RES1:%.*]] = phi i32 [ [[LOADED_PRIVATE]], [[ATOMICRMW_PRIVATE]] ], [ [[RES]], [[ATOMICRMW_GLOBAL]] ]
+; CHECK-NEXT:    [[RES1:%.*]] = phi i32 [ [[LOADED_PRIVATE]], [[ATOMICRMW_PRIVATE]] ], [ [[TMP2]], [[ATOMICRMW_GLOBAL]] ]
 ; CHECK-NEXT:    br label [[ATOMICRMW_END:%.*]]
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    ret i32 [[RES1]]
@@ -332,4 +332,4 @@ define i32 @test_atomicrmw_sub_0_global_agent__amdgpu_no_fine_grained_memory__am
 ; GFX803: {{.*}}
 ; GFX900: {{.*}}
 ; GFX90A: {{.*}}
-; GFX940: {{.*}}
+; GFX942: {{.*}}

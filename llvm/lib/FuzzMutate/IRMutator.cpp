@@ -122,9 +122,8 @@ getInsertionRange(BasicBlock &BB) {
 }
 
 void InjectorIRStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
-  SmallVector<Instruction *, 32> Insts;
-  for (Instruction &I : getInsertionRange(BB))
-    Insts.push_back(&I);
+  SmallVector<Instruction *, 32> Insts(
+      llvm::make_pointer_range(getInsertionRange(BB)));
   if (Insts.size() < 1)
     return;
 
@@ -357,6 +356,62 @@ static uint64_t getUniqueCaseValue(SmallSet<uint64_t, 4> &CasesTaken,
   return tmp;
 }
 
+/// Determines whether a function is unsupported by the current mutator's
+/// implementation. The function returns true if any of the following criteria
+/// are met:
+///   * The function accepts metadata or token types as arguments.
+///   * The function has ABI attributes that could cause UB.
+///   * The function uses a non-callable CC that may result in UB.
+static bool isUnsupportedFunction(Function *F) {
+  // Some functions accept metadata type or token type as arguments.
+  // We don't call those functions for now.
+  // For example, `@llvm.dbg.declare(metadata, metadata, metadata)`
+  // https://llvm.org/docs/SourceLevelDebugging.html#llvm-dbg-declare
+  auto IsUnsupportedTy = [](Type *T) {
+    return T->isMetadataTy() || T->isTokenTy();
+  };
+
+  if (IsUnsupportedTy(F->getReturnType()) ||
+      any_of(F->getFunctionType()->params(), IsUnsupportedTy)) {
+    return true;
+  }
+
+  // ABI attributes must be specified both at the function
+  // declaration/definition and call-site, otherwise the
+  // behavior may be undefined.
+  // We don't call those functions for now to prevent UB from happening.
+  auto IsABIAttribute = [](AttributeSet A) {
+    static const Attribute::AttrKind ABIAttrs[] = {
+        Attribute::StructRet,      Attribute::ByVal,
+        Attribute::InAlloca,       Attribute::InReg,
+        Attribute::StackAlignment, Attribute::SwiftSelf,
+        Attribute::SwiftAsync,     Attribute::SwiftError,
+        Attribute::Preallocated,   Attribute::ByRef,
+        Attribute::ZExt,           Attribute::SExt};
+
+    return std::any_of(
+        std::begin(ABIAttrs), std::end(ABIAttrs),
+        [&](Attribute::AttrKind kind) { return A.hasAttribute(kind); });
+  };
+
+  auto FuncAttrs = F->getAttributes();
+  if (IsABIAttribute(FuncAttrs.getRetAttrs())) {
+    return true;
+  }
+  for (size_t i = 0; i < F->arg_size(); i++) {
+    if (IsABIAttribute(FuncAttrs.getParamAttrs(i))) {
+      return true;
+    }
+  }
+
+  // If it is not satisfied, the IR will be invalid.
+  if (!isCallableCC(F->getCallingConv())) {
+    return true;
+  }
+
+  return false;
+}
+
 void InsertFunctionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   Module *M = BB.getParent()->getParent();
   // If nullptr is selected, we will create a new function declaration.
@@ -367,15 +422,8 @@ void InsertFunctionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
 
   auto RS = makeSampler(IB.Rand, Functions);
   Function *F = RS.getSelection();
-  // Some functions accept metadata type or token type as arguments.
-  // We don't call those functions for now.
-  // For example, `@llvm.dbg.declare(metadata, metadata, metadata)`
-  // https://llvm.org/docs/SourceLevelDebugging.html#llvm-dbg-declare
-  auto IsUnsupportedTy = [](Type *T) {
-    return T->isMetadataTy() || T->isTokenTy();
-  };
-  if (!F || IsUnsupportedTy(F->getReturnType()) ||
-      any_of(F->getFunctionType()->params(), IsUnsupportedTy)) {
+
+  if (!F || isUnsupportedFunction(F)) {
     F = IB.createFunctionDeclaration(*M);
   }
 
@@ -391,13 +439,13 @@ void InsertFunctionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
                                          BasicBlock::iterator InsertPt) {
     StringRef Name = isRetVoid ? nullptr : "C";
     CallInst *Call = CallInst::Create(FTy, F, Srcs, Name, InsertPt);
+    Call->setCallingConv(F->getCallingConv());
     // Don't return this call inst if it return void as it can't be sinked.
     return isRetVoid ? nullptr : Call;
   };
 
-  SmallVector<Instruction *, 32> Insts;
-  for (Instruction &I : getInsertionRange(BB))
-    Insts.push_back(&I);
+  SmallVector<Instruction *, 32> Insts(
+      llvm::make_pointer_range(getInsertionRange(BB)));
   if (Insts.size() < 1)
     return;
 
@@ -421,9 +469,8 @@ void InsertFunctionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
 }
 
 void InsertCFGStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
-  SmallVector<Instruction *, 32> Insts;
-  for (Instruction &I : getInsertionRange(BB))
-    Insts.push_back(&I);
+  SmallVector<Instruction *, 32> Insts(
+      llvm::make_pointer_range(getInsertionRange(BB)));
   if (Insts.size() < 1)
     return;
 
@@ -561,9 +608,8 @@ void InsertPHIStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
     }
     PHI->addIncoming(Src, Pred);
   }
-  SmallVector<Instruction *, 32> InstsAfter;
-  for (Instruction &I : getInsertionRange(BB))
-    InstsAfter.push_back(&I);
+  SmallVector<Instruction *, 32> InstsAfter(
+      llvm::make_pointer_range(getInsertionRange(BB)));
   IB.connectToSink(BB, InstsAfter, PHI);
 }
 
@@ -573,9 +619,8 @@ void SinkInstructionStrategy::mutate(Function &F, RandomIRBuilder &IB) {
   }
 }
 void SinkInstructionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
-  SmallVector<Instruction *, 32> Insts;
-  for (Instruction &I : getInsertionRange(BB))
-    Insts.push_back(&I);
+  SmallVector<Instruction *, 32> Insts(
+      llvm::make_pointer_range(getInsertionRange(BB)));
   if (Insts.size() < 1)
     return;
   // Choose an Instruction to mutate.
@@ -660,7 +705,7 @@ void ShuffleBlockStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   Instruction *Terminator = BB.getTerminator();
   // Then put instructions back.
   for (Instruction *I : Insts) {
-    I->insertBefore(Terminator);
+    I->insertBefore(Terminator->getIterator());
   }
 }
 

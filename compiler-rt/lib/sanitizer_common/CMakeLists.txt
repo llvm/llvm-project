@@ -11,6 +11,7 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_flags.cpp
   sanitizer_flag_parser.cpp
   sanitizer_fuchsia.cpp
+  sanitizer_haiku.cpp
   sanitizer_libc.cpp
   sanitizer_libignore.cpp
   sanitizer_linux.cpp
@@ -28,6 +29,7 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_procmaps_common.cpp
   sanitizer_procmaps_bsd.cpp
   sanitizer_procmaps_fuchsia.cpp
+  sanitizer_procmaps_haiku.cpp
   sanitizer_procmaps_linux.cpp
   sanitizer_procmaps_mac.cpp
   sanitizer_procmaps_solaris.cpp
@@ -227,6 +229,9 @@ set(SANITIZER_COMMON_DEFINITIONS
 
 # note: L not I, this is nodefaultlibs for msvc
 append_list_if(MSVC /Zl SANITIZER_COMMON_CFLAGS)
+if(HAIKU)
+   list(APPEND SANITIZER_COMMON_CFLAGS -I/system/develop/headers/private -I/system/develop/headers/private/system/arch/x86_64 -I/system/develop/headers/private/system)
+endif()
 set(SANITIZER_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 
 # Too many existing bugs, needs cleanup.

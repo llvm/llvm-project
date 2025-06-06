@@ -322,11 +322,6 @@ typedef enum {
 } LLVMRealPredicate;
 
 typedef enum {
-  LLVMLandingPadCatch,    /**< A catch clause   */
-  LLVMLandingPadFilter    /**< A filter clause  */
-} LLVMLandingPadClauseTy;
-
-typedef enum {
   LLVMNotThreadLocal = 0,
   LLVMGeneralDynamicTLSModel,
   LLVMLocalDynamicTLSModel,
@@ -398,6 +393,12 @@ typedef enum {
   LLVMAtomicRMWBinOpUSubCond, /**<Subtracts the value only if no unsigned
                                  overflow */
   LLVMAtomicRMWBinOpUSubSat,  /**<Subtracts the value, clamping to zero */
+  LLVMAtomicRMWBinOpFMaximum, /**< Sets the value if it's greater than the
+                           original using an floating point comparison and
+                           return the old one */
+  LLVMAtomicRMWBinOpFMinimum, /**< Sets the value if it's smaller than the
+                           original using an floating point comparison and
+                           return the old one */
 } LLVMAtomicRMWBinOp;
 
 typedef enum {
@@ -2356,6 +2357,16 @@ LLVMBool LLVMIsConstantString(LLVMValueRef c);
 const char *LLVMGetAsString(LLVMValueRef c, size_t *Length);
 
 /**
+ * Get the raw, underlying bytes of the given constant data sequential.
+ *
+ * This is the same as LLVMGetAsString except it works for all constant data
+ * sequentials, not just i8 arrays.
+ *
+ * @see ConstantDataSequential::getRawDataValues()
+ */
+const char *LLVMGetRawDataValues(LLVMValueRef c, size_t *SizeInBytes);
+
+/**
  * Create an anonymous ConstantStruct with the specified values.
  *
  * @see llvm::ConstantStruct::getAnon()
@@ -2392,6 +2403,18 @@ LLVMValueRef LLVMConstArray(LLVMTypeRef ElementTy,
  */
 LLVMValueRef LLVMConstArray2(LLVMTypeRef ElementTy, LLVMValueRef *ConstantVals,
                              uint64_t Length);
+
+/**
+ * Create a ConstantDataArray from raw values.
+ *
+ * ElementTy must be one of i8, i16, i32, i64, half, bfloat, float, or double.
+ * Data points to a contiguous buffer of raw values in the host endianness. The
+ * element count is inferred from the element type and the data size in bytes.
+ *
+ * @see llvm::ConstantDataArray::getRaw()
+ */
+LLVMValueRef LLVMConstDataArray(LLVMTypeRef ElementTy, const char *Data,
+                                size_t SizeInBytes);
 
 /**
  * Create a non-anonymous ConstantStruct from values.
@@ -2464,9 +2487,6 @@ LLVMValueRef LLVMConstNUWAdd(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant)
 LLVMValueRef LLVMConstSub(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstNSWSub(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstNUWSub(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
-LLVMValueRef LLVMConstMul(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
-LLVMValueRef LLVMConstNSWMul(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
-LLVMValueRef LLVMConstNUWMul(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstXor(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
                            LLVMValueRef *ConstantIndices, unsigned NumIndices);
@@ -2551,6 +2571,7 @@ void LLVMSetUnnamedAddress(LLVMValueRef Global, LLVMUnnamedAddr UnnamedAddr);
  * type of a global value which is always a pointer type.
  *
  * @see llvm::GlobalValue::getValueType()
+ * @see llvm::Function::getFunctionType()
  */
 LLVMTypeRef LLVMGlobalGetValueType(LLVMValueRef Global);
 
@@ -2834,10 +2855,8 @@ LLVMTypeRef LLVMIntrinsicGetType(LLVMContextRef Ctx, unsigned ID,
 const char *LLVMIntrinsicGetName(unsigned ID, size_t *NameLength);
 
 /** Deprecated: Use LLVMIntrinsicCopyOverloadedName2 instead. */
-const char *LLVMIntrinsicCopyOverloadedName(unsigned ID,
-                                            LLVMTypeRef *ParamTypes,
-                                            size_t ParamCount,
-                                            size_t *NameLength);
+char *LLVMIntrinsicCopyOverloadedName(unsigned ID, LLVMTypeRef *ParamTypes,
+                                      size_t ParamCount, size_t *NameLength);
 
 /**
  * Copies the name of an overloaded intrinsic identified by a given list of
@@ -2850,10 +2869,9 @@ const char *LLVMIntrinsicCopyOverloadedName(unsigned ID,
  *
  * @see llvm::Intrinsic::getName()
  */
-const char *LLVMIntrinsicCopyOverloadedName2(LLVMModuleRef Mod, unsigned ID,
-                                             LLVMTypeRef *ParamTypes,
-                                             size_t ParamCount,
-                                             size_t *NameLength);
+char *LLVMIntrinsicCopyOverloadedName2(LLVMModuleRef Mod, unsigned ID,
+                                       LLVMTypeRef *ParamTypes,
+                                       size_t ParamCount, size_t *NameLength);
 
 /**
  * Obtain if the intrinsic identified by the given ID is overloaded.

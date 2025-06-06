@@ -162,8 +162,13 @@ if config.host_os not in [
     "NetBSD",
     "SunOS",
     "AIX",
+    "Haiku",
 ]:
     config.unsupported = True
+
+config.substitutions.append(
+    ("%shared_lib_flag", "-dynamiclib" if (config.host_os == "Darwin") else "-shared")
+)
 
 if config.host_os in ["AIX"]:
     config.available_features.add("system-aix")
@@ -178,3 +183,6 @@ if config.android:
 
 if config.have_curl:
     config.available_features.add("curl")
+
+if config.host_os in ("AIX", "Darwin", "Linux"):
+    config.available_features.add("continuous-mode")

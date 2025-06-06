@@ -97,6 +97,20 @@ def SPIRV_CooperativeMatrixPropertiesNVAttr :
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
+def SPIRV_CacheControlLoadINTELAttr :
+    SPIRV_Attr<"CacheControlLoadINTEL", "cache_control_load_intel"> {
+  let parameters = (ins "unsigned":$cache_level,
+                        "mlir::spirv::LoadCacheControl":$load_cache_control);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def SPIRV_CacheControlStoreINTELAttr :
+    SPIRV_Attr<"CacheControlStoreINTEL", "cache_control_store_intel"> {
+  let parameters = (ins "unsigned":$cache_level,
+                        "mlir::spirv::StoreCacheControl":$store_cache_control);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
 def SPIRV_CooperativeMatrixPropertiesNVArrayAttr :
     TypedArrayAttrBase<SPIRV_CooperativeMatrixPropertiesNVAttr,
                        "CooperativeMatrixPropertiesNV array attribute">;

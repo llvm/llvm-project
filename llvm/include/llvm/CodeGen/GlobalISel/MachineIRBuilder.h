@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -232,7 +233,7 @@ private:
 /// It keeps internally the insertion point and debug location for all
 /// the new instructions we want to create.
 /// This information can be modified via the related setters.
-class MachineIRBuilder {
+class LLVM_ABI MachineIRBuilder {
 
   MachineIRBuilderState State;
 
@@ -1073,6 +1074,11 @@ public:
   /// Build and insert an unmerge of \p Res sized pieces to cover \p Op
   MachineInstrBuilder buildUnmerge(LLT Res, const SrcOp &Op);
 
+  /// Build and insert an unmerge of pieces with \p Attrs register attributes to
+  /// cover \p Op
+  MachineInstrBuilder buildUnmerge(MachineRegisterInfo::VRegAttrs Attrs,
+                                   const SrcOp &Op);
+
   /// Build and insert \p Res = G_BUILD_VECTOR \p Op0, ...
   ///
   /// G_BUILD_VECTOR creates a vector value from multiple scalar registers.
@@ -1171,6 +1177,17 @@ public:
 
   MachineInstrBuilder buildInsert(const DstOp &Res, const SrcOp &Src,
                                   const SrcOp &Op, unsigned Index);
+
+  /// Build and insert \p Res = G_STEP_VECTOR \p Step
+  ///
+  /// G_STEP_VECTOR returns a scalable vector of linear sequence of step \p Step
+  /// into \p Res.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res must be a generic virtual register with scalable vector type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildStepVector(const DstOp &Res, unsigned Step);
 
   /// Build and insert \p Res = G_VSCALE \p MinElts
   ///
@@ -1359,10 +1376,9 @@ public:
   MachineInstrBuilder buildExtractVectorElementConstant(const DstOp &Res,
                                                         const SrcOp &Val,
                                                         const int Idx) {
-    auto TLI = getMF().getSubtarget().getTargetLowering();
-    unsigned VecIdxWidth = TLI->getVectorIdxTy(getDataLayout()).getSizeInBits();
-    return buildExtractVectorElement(
-        Res, Val, buildConstant(LLT::scalar(VecIdxWidth), Idx));
+    const TargetLowering *TLI = getMF().getSubtarget().getTargetLowering();
+    LLT IdxTy = TLI->getVectorIdxLLT(getDataLayout());
+    return buildExtractVectorElement(Res, Val, buildConstant(IdxTy, Idx));
   }
 
   /// Build and insert \p Res = G_EXTRACT_VECTOR_ELT \p Val, \p Idx
@@ -1648,6 +1664,42 @@ public:
         const DstOp &OldValRes, const SrcOp &Addr, const SrcOp &Val,
         MachineMemOperand &MMO);
 
+  /// Build and insert `OldValRes<def> = G_ATOMICRMW_FMAXIMUM Addr, Val, MMO`.
+  ///
+  /// Atomically replace the value at \p Addr with the floating point maximum of
+  /// \p Val and the original value. Puts the original value from \p Addr in \p
+  /// OldValRes.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p OldValRes must be a generic virtual register.
+  /// \pre \p Addr must be a generic virtual register with pointer type.
+  /// \pre \p OldValRes, and \p Val must be generic virtual registers of the
+  ///      same type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildAtomicRMWFMaximum(const DstOp &OldValRes,
+                                             const SrcOp &Addr,
+                                             const SrcOp &Val,
+                                             MachineMemOperand &MMO);
+
+  /// Build and insert `OldValRes<def> = G_ATOMICRMW_FMINIMUM Addr, Val, MMO`.
+  ///
+  /// Atomically replace the value at \p Addr with the floating point minimum of
+  /// \p Val and the original value. Puts the original value from \p Addr in \p
+  /// OldValRes.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p OldValRes must be a generic virtual register.
+  /// \pre \p Addr must be a generic virtual register with pointer type.
+  /// \pre \p OldValRes, and \p Val must be generic virtual registers of the
+  ///      same type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildAtomicRMWFMinimum(const DstOp &OldValRes,
+                                             const SrcOp &Addr,
+                                             const SrcOp &Val,
+                                             MachineMemOperand &MMO);
+
   /// Build and insert `OldValRes<def> = G_ATOMICRMW_USUB_COND Addr, Val, MMO`.
   ///
   /// Atomically replace the value at \p Addr with the original value minus \p
@@ -1754,6 +1806,34 @@ public:
                                const SrcOp &Src1,
                                std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_MUL, {Dst}, {Src0, Src1}, Flags);
+  }
+
+  /// Build and insert \p Res = G_ABDS \p Op0, \p Op1
+  ///
+  /// G_ABDS return the signed absolute difference of \p Op0 and \p Op1.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res, \p Op0 and \p Op1 must be generic virtual registers
+  ///      with the same (scalar or vector) type).
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildAbds(const DstOp &Dst, const SrcOp &Src0,
+                                const SrcOp &Src1) {
+    return buildInstr(TargetOpcode::G_ABDS, {Dst}, {Src0, Src1});
+  }
+
+  /// Build and insert \p Res = G_ABDU \p Op0, \p Op1
+  ///
+  /// G_ABDU return the unsigned absolute difference of \p Op0 and \p Op1.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res, \p Op0 and \p Op1 must be generic virtual registers
+  ///      with the same (scalar or vector) type).
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildAbdu(const DstOp &Dst, const SrcOp &Src0,
+                                const SrcOp &Src1) {
+    return buildInstr(TargetOpcode::G_ABDU, {Dst}, {Src0, Src1});
   }
 
   MachineInstrBuilder buildUMulH(const DstOp &Dst, const SrcOp &Src0,

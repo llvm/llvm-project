@@ -156,13 +156,19 @@ has required reviewers. In which case, you must have approval from all of those
 reviewers.
 
 When providing an unqualified LGTM (approval to commit), it is the
-responsibility of the reviewer to have reviewed all of the discussion and
+responsibility of the reviewer to have reviewed all of the prior discussion and
 feedback from all reviewers ensuring that all feedback has been addressed and
 that all other reviewers will almost surely be satisfied with the patch being
 approved. If unsure, the reviewer should provide a qualified approval, (e.g.,
 "LGTM, but please wait for @someone, @someone_else"). You may also do this if
 you are fairly certain that a particular community member will wish to review,
 even if that person hasn't done so yet.
+
+If additional feedback is provided after acceptance (by the same reviewer or
+another), the author should use their best judgement in deciding whether that
+feedback can be incorporated into the change without comment (say a typo) or
+requires further review discussion. More substantial comments (e.g., about the
+design) will usually require further discussion. If unsure, ask the reviewer.
 
 Note that, if a reviewer has requested a particular community member to review,
 and after a week that community member has yet to respond, feel free to ping
@@ -266,3 +272,21 @@ Developers should participate in code reviews as both reviewers and
 authors. If someone is kind enough to review your code, you should return the
 favor for someone else. Note that anyone is welcome to review and give feedback
 on a patch, but approval of patches should be consistent with the policy above.
+
+Upstreaming Changes to LLVM
+===========================
+
+When upstreaming your own changes from a downstream project to LLVM, simply
+follow the process outlined above.
+
+When upstreaming changes originally written by someone else:  
+
+* Ensure that there are no obstacles to upstreaming the code. In some cases,
+  this simply means checking with the original author(s) to ensure they are
+  aware of and approve the upstreaming. In other cases, licensing
+  considerations may be more complex.
+* Properly attribute the original changes, e.g., by creating a commit with
+  multiple authors (`GitHub guide <https://docs.github.com/en/pull-requests/committing-changes-to-your-project/creating-and-editing-commits/creating-a-commit-with-multiple-authors>`_).
+* Invite the original author(s) to review the changes, and also include
+  additional reviewers. Specifically, an LGTM from a (co-)author should not be
+  taken as approval to land a change.

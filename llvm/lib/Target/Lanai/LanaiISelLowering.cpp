@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "LanaiISelLowering.h"
-#include "Lanai.h"
 #include "LanaiCondCode.h"
 #include "LanaiMachineFunctionInfo.h"
 #include "LanaiSubtarget.h"
@@ -27,7 +26,6 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
@@ -529,7 +527,8 @@ SDValue LanaiTargetLowering::LowerCCCArguments(
 
 bool LanaiTargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
+    const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
 
@@ -875,8 +874,7 @@ SDValue LanaiTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
 
   LPCC::CondCode CC = IntCondCCodeToICC(Cond, DL, RHS, DAG);
   SDValue TargetCC = DAG.getConstant(CC, DL, MVT::i32);
-  SDValue Glue =
-      DAG.getNode(LanaiISD::SET_FLAG, DL, MVT::Glue, LHS, RHS, TargetCC);
+  SDValue Glue = DAG.getNode(LanaiISD::SET_FLAG, DL, MVT::Glue, LHS, RHS);
 
   return DAG.getNode(LanaiISD::BR_CC, DL, Op.getValueType(), Chain, Dest,
                      TargetCC, Glue);
@@ -975,8 +973,7 @@ SDValue LanaiTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
 
   LPCC::CondCode CC = IntCondCCodeToICC(Cond, DL, RHS, DAG);
   SDValue TargetCC = DAG.getConstant(CC, DL, MVT::i32);
-  SDValue Glue =
-      DAG.getNode(LanaiISD::SET_FLAG, DL, MVT::Glue, LHS, RHS, TargetCC);
+  SDValue Glue = DAG.getNode(LanaiISD::SET_FLAG, DL, MVT::Glue, LHS, RHS);
 
   return DAG.getNode(LanaiISD::SETCC, DL, Op.getValueType(), TargetCC, Glue);
 }
@@ -992,12 +989,10 @@ SDValue LanaiTargetLowering::LowerSELECT_CC(SDValue Op,
 
   LPCC::CondCode CC = IntCondCCodeToICC(Cond, DL, RHS, DAG);
   SDValue TargetCC = DAG.getConstant(CC, DL, MVT::i32);
-  SDValue Glue =
-      DAG.getNode(LanaiISD::SET_FLAG, DL, MVT::Glue, LHS, RHS, TargetCC);
+  SDValue Glue = DAG.getNode(LanaiISD::SET_FLAG, DL, MVT::Glue, LHS, RHS);
 
-  SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Glue);
-  return DAG.getNode(LanaiISD::SELECT_CC, DL, VTs, TrueV, FalseV, TargetCC,
-                     Glue);
+  return DAG.getNode(LanaiISD::SELECT_CC, DL, Op.getValueType(), TrueV, FalseV,
+                     TargetCC, Glue);
 }
 
 SDValue LanaiTargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
@@ -1090,37 +1085,6 @@ SDValue LanaiTargetLowering::LowerFRAMEADDR(SDValue Op,
         DAG.getLoad(VT, DL, DAG.getEntryNode(), Ptr, MachinePointerInfo());
   }
   return FrameAddr;
-}
-
-const char *LanaiTargetLowering::getTargetNodeName(unsigned Opcode) const {
-  switch (Opcode) {
-  case LanaiISD::ADJDYNALLOC:
-    return "LanaiISD::ADJDYNALLOC";
-  case LanaiISD::RET_GLUE:
-    return "LanaiISD::RET_GLUE";
-  case LanaiISD::CALL:
-    return "LanaiISD::CALL";
-  case LanaiISD::SELECT_CC:
-    return "LanaiISD::SELECT_CC";
-  case LanaiISD::SETCC:
-    return "LanaiISD::SETCC";
-  case LanaiISD::SUBBF:
-    return "LanaiISD::SUBBF";
-  case LanaiISD::SET_FLAG:
-    return "LanaiISD::SET_FLAG";
-  case LanaiISD::BR_CC:
-    return "LanaiISD::BR_CC";
-  case LanaiISD::Wrapper:
-    return "LanaiISD::Wrapper";
-  case LanaiISD::HI:
-    return "LanaiISD::HI";
-  case LanaiISD::LO:
-    return "LanaiISD::LO";
-  case LanaiISD::SMALL:
-    return "LanaiISD::SMALL";
-  default:
-    return nullptr;
-  }
 }
 
 SDValue LanaiTargetLowering::LowerConstantPool(SDValue Op,

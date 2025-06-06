@@ -12,7 +12,6 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/AssemblyAnnotationWriter.h"
@@ -20,7 +19,6 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -277,7 +275,7 @@ bool SimpleLoopSafetyInfo::isGuaranteedToExecute(const Instruction &Inst,
     // exit.  At the moment, we use a (cheap) hack for the common case where
     // the instruction of interest is the first one in the block.
     return !HeaderMayThrow ||
-           Inst.getParent()->getFirstNonPHIOrDbg() == &Inst;
+           &*Inst.getParent()->getFirstNonPHIOrDbg() == &Inst;
 
   // If there is a path from header to exit or latch that doesn't lead to our
   // instruction's block, return false.

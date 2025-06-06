@@ -17,29 +17,28 @@ define dso_local i32 @check_boundaries() #0 {
 ; CHECK-NEXT:    .cfi_offset r30, -8
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     memw(r29+#4) = #0
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     memw(r29+#8) = #0
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
 ; CHECK-NEXT:     memw(r29+#8) = #1
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     r1 = memw(r29+#8)
-; CHECK-NEXT:     memw(r29+#12) = #2
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     memw(r29+#16) = #3
-; CHECK-NEXT:     memw(r29+#20) = #4
-; CHECK-NEXT:    }
+; CHECK-EMPTY:
+; CHECK-NEXT:    } :mem_noshuf
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     p0 = cmp.eq(r1,#0)
-; CHECK-NEXT:     if (p0.new) memw(r29+#16) = #3
-; CHECK-NEXT:     if (p0.new) memw(r29+#12) = #2
+; CHECK-NEXT:     memw(r29+#12) = #2
+; CHECK-NEXT:     memw(r29+#16) = #3
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     memw(r29+#20) = #4
+; CHECK-NEXT:     if (p0) memw(r29+#16) = #3
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     if (p0) memw(r29+#12) = #2
 ; CHECK-NEXT:     if (p0) memw(r29+#20) = #4
-; CHECK-NEXT:     if (p0) memw(r29+#8) = #1
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     if (p0) memw(r29+#8) = #1
 ; CHECK-NEXT:     if (!p0) memw(r29+#16) = #1
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
@@ -94,15 +93,15 @@ define dso_local i32 @main() #0 {
 ; CHECK-NEXT:    .cfi_offset r30, -8
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     memw(r29+#4) = #0
-; CHECK-NEXT:     memw(r0+#0) = #1
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     memw(r29+#8) = #1
-; CHECK-NEXT:     memw(r29+#12) = #2
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     memw(r29+#12) = #2
 ; CHECK-NEXT:     memw(r29+#16) = #3
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
 ; CHECK-NEXT:     memw(r29+#20) = #4
+; CHECK-NEXT:     memw(r0+#0) = #1
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    //# InlineAsm Start
 ; CHECK-NEXT:    //# InlineAsm End

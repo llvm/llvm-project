@@ -48,12 +48,18 @@ protected:
     if (Triple.isPPC())
       GTEST_SKIP();
 
+    auto PageSize = sys::Process::getPageSize();
+    if (!PageSize) {
+      consumeError(PageSize.takeError());
+      GTEST_SKIP();
+    }
+
     ES = std::make_unique<ExecutionSession>(
         std::make_unique<UnsupportedExecutorProcessControl>(
-            nullptr, nullptr, JTMB->getTargetTriple().getTriple()));
+            nullptr, nullptr, JTMB->getTargetTriple().getTriple(), *PageSize));
     JD = &ES->createBareJITDylib("main");
     ObjLinkingLayer = std::make_unique<ObjectLinkingLayer>(
-        *ES, std::make_unique<InProcessMemoryManager>(16384));
+        *ES, std::make_unique<InProcessMemoryManager>(*PageSize));
     DL = std::make_unique<DataLayout>(std::move(*DLOrErr));
   }
   JITDylib *JD{nullptr};
@@ -81,8 +87,8 @@ TEST_F(JITLinkRedirectionManagerTest, BasicRedirectionOperation) {
                         JD->getDefaultResourceTracker(),
                         {{RedirectableSymbol, MakeTarget(initialTarget)}}),
                     Succeeded());
-  auto RTDef = cantFail(ES->lookup({JD}, RedirectableSymbol));
 
+  auto RTDef = cantFail(ES->lookup({JD}, RedirectableSymbol));
   auto RTPtr = RTDef.getAddress().toPtr<int (*)()>();
   auto Result = RTPtr();
   EXPECT_EQ(Result, 42) << "Failed to call initial target";

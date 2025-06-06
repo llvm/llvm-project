@@ -16,14 +16,12 @@
 #include "Arch/RISCV.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/MultilibBuilder.h"
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
-#include "llvm/Support/raw_ostream.h"
 
 #include <sstream>
 
@@ -128,27 +126,6 @@ BareMetal::BareMetal(const Driver &D, const llvm::Triple &Triple,
   }
 }
 
-/// Is the triple {arm,armeb,thumb,thumbeb}-none-none-{eabi,eabihf} ?
-static bool isARMBareMetal(const llvm::Triple &Triple) {
-  if (Triple.getArch() != llvm::Triple::arm &&
-      Triple.getArch() != llvm::Triple::thumb &&
-      Triple.getArch() != llvm::Triple::armeb &&
-      Triple.getArch() != llvm::Triple::thumbeb)
-    return false;
-
-  if (Triple.getVendor() != llvm::Triple::UnknownVendor)
-    return false;
-
-  if (Triple.getOS() != llvm::Triple::UnknownOS)
-    return false;
-
-  if (Triple.getEnvironment() != llvm::Triple::EABI &&
-      Triple.getEnvironment() != llvm::Triple::EABIHF)
-    return false;
-
-  return true;
-}
-
 /// Is the triple {aarch64.aarch64_be}-none-elf?
 static bool isAArch64BareMetal(const llvm::Triple &Triple) {
   if (Triple.getArch() != llvm::Triple::aarch64 &&
@@ -183,9 +160,11 @@ static bool isPPCBareMetal(const llvm::Triple &Triple) {
          Triple.getEnvironment() == llvm::Triple::EABI;
 }
 
-static void findMultilibsFromYAML(const ToolChain &TC, const Driver &D,
-                                  StringRef MultilibPath, const ArgList &Args,
-                                  DetectedMultilibs &Result) {
+static void
+findMultilibsFromYAML(const ToolChain &TC, const Driver &D,
+                      StringRef MultilibPath, const ArgList &Args,
+                      DetectedMultilibs &Result,
+                      SmallVector<StringRef> &CustomFlagsMacroDefines) {
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MB =
       D.getVFS().getBufferForFile(MultilibPath);
   if (!MB)
@@ -196,7 +175,8 @@ static void findMultilibsFromYAML(const ToolChain &TC, const Driver &D,
   if (ErrorOrMultilibSet.getError())
     return;
   Result.Multilibs = ErrorOrMultilibSet.get();
-  if (Result.Multilibs.select(D, Flags, Result.SelectedMultilibs))
+  if (Result.Multilibs.select(D, Flags, Result.SelectedMultilibs,
+                              &CustomFlagsMacroDefines))
     return;
   D.Diag(clang::diag::warn_drv_missing_multilib) << llvm::join(Flags, " ");
   std::stringstream ss;
@@ -255,9 +235,13 @@ void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
     // If multilib.yaml is found, update sysroot so it doesn't use a target
     // specific suffix
     SysRoot = computeBaseSysRoot(D, /*IncludeTriple=*/false);
-    findMultilibsFromYAML(*this, D, *MultilibPath, Args, Result);
+    SmallVector<StringRef> CustomFlagMacroDefines;
+    findMultilibsFromYAML(*this, D, *MultilibPath, Args, Result,
+                          CustomFlagMacroDefines);
     SelectedMultilibs = Result.SelectedMultilibs;
     Multilibs = Result.Multilibs;
+    MultilibMacroDefines.append(CustomFlagMacroDefines.begin(),
+                                CustomFlagMacroDefines.end());
   } else if (isRISCVBareMetal(Triple)) {
     if (findRISCVMultilibs(D, Triple, Args, Result)) {
       SelectedMultilibs = Result.SelectedMultilibs;
@@ -267,7 +251,7 @@ void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
 }
 
 bool BareMetal::handlesTarget(const llvm::Triple &Triple) {
-  return isARMBareMetal(Triple) || isAArch64BareMetal(Triple) ||
+  return arm::isARMEABIBareMetal(Triple) || isAArch64BareMetal(Triple) ||
          isRISCVBareMetal(Triple) || isPPCBareMetal(Triple);
 }
 
@@ -414,38 +398,6 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
   }
 }
 
-void BareMetal::AddCXXStdlibLibArgs(const ArgList &Args,
-                                    ArgStringList &CmdArgs) const {
-  switch (GetCXXStdlibType(Args)) {
-  case ToolChain::CST_Libcxx:
-    CmdArgs.push_back("-lc++");
-    if (Args.hasArg(options::OPT_fexperimental_library))
-      CmdArgs.push_back("-lc++experimental");
-    CmdArgs.push_back("-lc++abi");
-    break;
-  case ToolChain::CST_Libstdcxx:
-    CmdArgs.push_back("-lstdc++");
-    CmdArgs.push_back("-lsupc++");
-    break;
-  }
-  CmdArgs.push_back("-lunwind");
-}
-
-void BareMetal::AddLinkRuntimeLib(const ArgList &Args,
-                                  ArgStringList &CmdArgs) const {
-  ToolChain::RuntimeLibType RLT = GetRuntimeLibType(Args);
-  switch (RLT) {
-  case ToolChain::RLT_CompilerRT: {
-    CmdArgs.push_back(getCompilerRTArgString(Args, "builtins"));
-    return;
-  }
-  case ToolChain::RLT_Libgcc:
-    CmdArgs.push_back("-lgcc");
-    return;
-  }
-  llvm_unreachable("Unhandled RuntimeLibType.");
-}
-
 void baremetal::StaticLibTool::ConstructJob(Compilation &C, const JobAction &JA,
                                             const InputInfo &Output,
                                             const InputInfoList &Inputs,
@@ -532,36 +484,34 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   for (const auto &LibPath : TC.getLibraryPaths())
     CmdArgs.push_back(Args.MakeArgString(llvm::Twine("-L", LibPath)));
 
-  if (TC.ShouldLinkCXXStdlib(Args))
+  if (TC.ShouldLinkCXXStdlib(Args)) {
+    bool OnlyLibstdcxxStatic = Args.hasArg(options::OPT_static_libstdcxx) &&
+                               !Args.hasArg(options::OPT_static);
+    if (OnlyLibstdcxxStatic)
+      CmdArgs.push_back("-Bstatic");
     TC.AddCXXStdlibLibArgs(Args, CmdArgs);
+    if (OnlyLibstdcxxStatic)
+      CmdArgs.push_back("-Bdynamic");
+    CmdArgs.push_back("-lm");
+  }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
+    AddRunTimeLibs(TC, D, CmdArgs, Args);
+
     CmdArgs.push_back("-lc");
-    CmdArgs.push_back("-lm");
-
-    TC.AddLinkRuntimeLib(Args, CmdArgs);
   }
 
-  if (D.isUsingLTO()) {
-    assert(!Inputs.empty() && "Must have at least one input.");
-    // Find the first filename InputInfo object.
-    auto Input = llvm::find_if(
-        Inputs, [](const InputInfo &II) -> bool { return II.isFilename(); });
-    if (Input == Inputs.end())
-      // For a very rare case, all of the inputs to the linker are
-      // InputArg. If that happens, just use the first InputInfo.
-      Input = Inputs.begin();
-
-    addLTOOptions(TC, Args, CmdArgs, Output, *Input,
+  if (D.isUsingLTO())
+    addLTOOptions(TC, Args, CmdArgs, Output, Inputs,
                   D.getLTOMode() == LTOK_Thin);
-  }
+
   if (TC.getTriple().isRISCV())
     CmdArgs.push_back("-X");
 
   // The R_ARM_TARGET2 relocation must be treated as R_ARM_REL32 on arm*-*-elf
   // and arm*-*-eabi (the default is R_ARM_GOT_PREL, used on arm*-*-linux and
   // arm*-*-*bsd).
-  if (isARMBareMetal(TC.getTriple()))
+  if (arm::isARMEABIBareMetal(TC.getTriple()))
     CmdArgs.push_back("--target2=rel");
 
   CmdArgs.push_back("-o");
@@ -596,4 +546,9 @@ SanitizerMask BareMetal::getSupportedSanitizers() const {
     Res |= SanitizerKind::KernelHWAddress;
   }
   return Res;
+}
+
+SmallVector<std::string>
+BareMetal::getMultilibMacroDefinesStr(llvm::opt::ArgList &Args) const {
+  return MultilibMacroDefines;
 }

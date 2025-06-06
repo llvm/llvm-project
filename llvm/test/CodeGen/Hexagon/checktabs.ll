@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck --strict-whitespace %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck --strict-whitespace %s
 ; Make sure we are emitting tabs as formatting.
 ; CHECK:	{
 ; CHECK-NEXT:		{{jump|r}}

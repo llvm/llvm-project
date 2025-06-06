@@ -185,3 +185,23 @@ template<typename T> struct S {
   friend void X::f(T::type);
 };
 }
+
+namespace GH113324 {
+template <typename = int> struct S1 {
+  friend void f1(S1, int = 0); // expected-error {{friend declaration specifying a default argument must be a definition}}
+  friend void f2(S1 a, S1 = decltype(a){}); // expected-error {{friend declaration specifying a default argument must be a definition}}
+};
+
+template <class T> using alias = int;
+template <typename T> struct S2 {
+  // FIXME: We miss diagnosing the default argument instantiation failure
+  // (forming reference to void)
+  friend void f3(S2, int a = alias<T &>(1)); // expected-error {{friend declaration specifying a default argument must be a definition}}
+};
+
+void test() {
+  f1(S1<>{});
+  f2(S1<>{});
+  f3(S2<void>());
+}
+} // namespace GH113324

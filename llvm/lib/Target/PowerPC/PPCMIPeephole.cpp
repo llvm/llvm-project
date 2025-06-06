@@ -30,7 +30,6 @@
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "MCTargetDesc/PPCPredicates.h"
 #include "PPC.h"
-#include "PPCInstrBuilder.h"
 #include "PPCInstrInfo.h"
 #include "PPCMachineFunctionInfo.h"
 #include "PPCTargetMachine.h"
@@ -43,7 +42,6 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 
@@ -113,9 +111,7 @@ struct PPCMIPeephole : public MachineFunctionPass {
   MachineRegisterInfo *MRI;
   LiveVariables *LV;
 
-  PPCMIPeephole() : MachineFunctionPass(ID) {
-    initializePPCMIPeepholePass(*PassRegistry::getPassRegistry());
-  }
+  PPCMIPeephole() : MachineFunctionPass(ID) {}
 
 private:
   MachineDominatorTree *MDT;
@@ -188,12 +184,11 @@ public:
 
 #define addRegToUpdate(R) addRegToUpdateWithLine(R, __LINE__)
 void PPCMIPeephole::addRegToUpdateWithLine(Register Reg, int Line) {
-  if (!Register::isVirtualRegister(Reg))
+  if (!Reg.isVirtual())
     return;
   if (RegsToUpdate.insert(Reg).second)
-    LLVM_DEBUG(dbgs() << "Adding register: " << Register::virtReg2Index(Reg)
-                      << " on line " << Line
-                      << " for re-computation of kill flags\n");
+    LLVM_DEBUG(dbgs() << "Adding register: " << printReg(Reg) << " on line "
+                      << Line << " for re-computation of kill flags\n");
 }
 
 // Initialize class variables.
@@ -500,7 +495,6 @@ bool PPCMIPeephole::simplifyCode() {
           NumConvertedToImmediateForm++;
           SomethingChanged = true;
           Simplified = true;
-          continue;
         }
       }
     } while (SomethingChanged && FixedPointRegToImm);

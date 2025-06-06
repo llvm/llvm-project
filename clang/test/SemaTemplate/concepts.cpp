@@ -1165,3 +1165,38 @@ concept C = invalid; // expected-error {{use of undeclared identifier 'invalid'}
 bool val2 = C<int>;
 
 } // namespace GH109780
+
+namespace GH121980 {
+
+template <class>
+concept has_member_difference_type; // expected-error {{expected '='}}
+
+template <has_member_difference_type> struct incrementable_traits; // expected-note {{declared here}}
+
+template <has_member_difference_type Tp>
+struct incrementable_traits<Tp>; // expected-error {{not more specialized than the primary}}
+
+}
+
+namespace InjectedClassNameType {
+
+template <class, class _Err> class expected {
+public:
+  template <class...>
+  expected(...);
+
+  template <class _T2, class _E2>
+  friend bool operator==(expected x, expected<_T2, _E2>)
+    requires requires {
+      { x };
+    }
+  {
+    return true;
+  }
+};
+
+bool test_val_types() {
+  return expected<void, int>() == 1;
+}
+
+}

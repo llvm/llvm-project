@@ -440,14 +440,14 @@ bool EmulateInstructionARM64::CreateFunctionEntryUnwind(
   unwind_plan.Clear();
   unwind_plan.SetRegisterKind(eRegisterKindLLDB);
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   // Our previous Call Frame Address is the stack pointer
-  row->GetCFAValue().SetIsRegisterPlusOffset(gpr_sp_arm64, 0);
-  row->SetRegisterLocationToSame(gpr_lr_arm64, /*must_replace=*/false);
-  row->SetRegisterLocationToSame(gpr_fp_arm64, /*must_replace=*/false);
+  row.GetCFAValue().SetIsRegisterPlusOffset(gpr_sp_arm64, 0);
+  row.SetRegisterLocationToSame(gpr_lr_arm64, /*must_replace=*/false);
+  row.SetRegisterLocationToSame(gpr_fp_arm64, /*must_replace=*/false);
 
-  unwind_plan.AppendRow(row);
+  unwind_plan.AppendRow(std::move(row));
   unwind_plan.SetSourceName("EmulateInstructionARM64");
   unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
   unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolYes);

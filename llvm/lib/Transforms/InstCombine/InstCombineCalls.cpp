@@ -62,6 +62,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
@@ -163,7 +164,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
   // introduce the unaligned memory access which will be later transformed
   // into libcall in CodeGen. This is not evident performance gain so disable
   // it now.
-  if (isa<AtomicMemTransferInst>(MI))
+  if (MI->isAtomic())
     if (*CopyDstAlign < Size || *CopySrcAlign < Size)
       return nullptr;
 
@@ -203,7 +204,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
     L->setVolatile(MT->isVolatile());
     S->setVolatile(MT->isVolatile());
   }
-  if (isa<AtomicMemTransferInst>(MI)) {
+  if (MI->isAtomic()) {
     // atomics have to be unordered
     L->setOrdering(AtomicOrdering::Unordered);
     S->setOrdering(AtomicOrdering::Unordered);
@@ -254,9 +255,8 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
   // introduce the unaligned memory access which will be later transformed
   // into libcall in CodeGen. This is not evident performance gain so disable
   // it now.
-  if (isa<AtomicMemSetInst>(MI))
-    if (Alignment < Len)
-      return nullptr;
+  if (MI->isAtomic() && Alignment < Len)
+    return nullptr;
 
   // memset(s,c,n) -> store s, c (for n=1,2,4,8)
   if (Len <= 8 && isPowerOf2_32((uint32_t)Len)) {
@@ -275,7 +275,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
     for_each(at::getDVRAssignmentMarkers(S), replaceOpForAssignmentMarkers);
 
     S->setAlignment(Alignment);
-    if (isa<AtomicMemSetInst>(MI))
+    if (MI->isAtomic())
       S->setOrdering(AtomicOrdering::Unordered);
 
     // Set the size of the copy to 0, it will be deleted on the next iteration.
@@ -505,8 +505,10 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
 
   // If ctlz/cttz is only used as a shift amount, set is_zero_poison to true.
   if (II.hasOneUse() && match(Op1, m_Zero()) &&
-      match(II.user_back(), m_Shift(m_Value(), m_Specific(&II))))
+      match(II.user_back(), m_Shift(m_Value(), m_Specific(&II)))) {
+    II.dropUBImplyingAttrsAndMetadata();
     return IC.replaceOperand(II, 1, IC.Builder.getTrue());
+  }
 
   Constant *C;
 
@@ -586,7 +588,20 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
     }
   }
 
-  KnownBits Known = IC.computeKnownBits(Op0, 0, &II);
+  // cttz(Pow2) -> Log2(Pow2)
+  // ctlz(Pow2) -> BitWidth - 1 - Log2(Pow2)
+  if (auto *R = IC.tryGetLog2(Op0, match(Op1, m_One()))) {
+    if (IsTZ)
+      return IC.replaceInstUsesWith(II, R);
+    BinaryOperator *BO = BinaryOperator::CreateSub(
+        ConstantInt::get(R->getType(), R->getType()->getScalarSizeInBits() - 1),
+        R);
+    BO->setHasNoSignedWrap();
+    BO->setHasNoUnsignedWrap();
+    return BO;
+  }
+
+  KnownBits Known = IC.computeKnownBits(Op0, &II);
 
   // Create a mask for bits above (ctlz) or below (cttz) the first known one.
   unsigned PossibleZeros = IsTZ ? Known.countMaxTrailingZeros()
@@ -669,7 +684,7 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombinerImpl &IC) {
   }
 
   KnownBits Known(BitWidth);
-  IC.computeKnownBits(Op0, Known, 0, &II);
+  IC.computeKnownBits(Op0, Known, &II);
 
   // If all bits are zero except for exactly one fixed bit, then the result
   // must be 0 or 1, and we can get that answer by shifting to LSB:
@@ -801,9 +816,12 @@ removeTriviallyEmptyRange(IntrinsicInst &EndI, InstCombinerImpl &IC,
 }
 
 Instruction *InstCombinerImpl::visitVAEndInst(VAEndInst &I) {
-  removeTriviallyEmptyRange(I, *this, [](const IntrinsicInst &I) {
-    return I.getIntrinsicID() == Intrinsic::vastart ||
-           I.getIntrinsicID() == Intrinsic::vacopy;
+  removeTriviallyEmptyRange(I, *this, [&I](const IntrinsicInst &II) {
+    // Bail out on the case where the source va_list of a va_copy is destroyed
+    // immediately by a follow-up va_end.
+    return II.getIntrinsicID() == Intrinsic::vastart ||
+           (II.getIntrinsicID() == Intrinsic::vacopy &&
+            I.getArgOperand(0) != II.getArgOperand(1));
   });
   return nullptr;
 }
@@ -837,6 +855,35 @@ InstCombinerImpl::foldIntrinsicWithOverflowCommon(IntrinsicInst *II) {
   if (OptimizeOverflowCheck(WO->getBinaryOp(), WO->isSigned(), WO->getLHS(),
                             WO->getRHS(), *WO, OperationResult, OverflowResult))
     return createOverflowTuple(WO, OperationResult, OverflowResult);
+
+  // See whether we can optimize the overflow check with assumption information.
+  for (User *U : WO->users()) {
+    if (!match(U, m_ExtractValue<1>(m_Value())))
+      continue;
+
+    for (auto &AssumeVH : AC.assumptionsFor(U)) {
+      if (!AssumeVH)
+        continue;
+      CallInst *I = cast<CallInst>(AssumeVH);
+      if (!match(I->getArgOperand(0), m_Not(m_Specific(U))))
+        continue;
+      if (!isValidAssumeForContext(I, II, /*DT=*/nullptr,
+                                   /*AllowEphemerals=*/true))
+        continue;
+      Value *Result =
+          Builder.CreateBinOp(WO->getBinaryOp(), WO->getLHS(), WO->getRHS());
+      Result->takeName(WO);
+      if (auto *Inst = dyn_cast<Instruction>(Result)) {
+        if (WO->isSigned())
+          Inst->setHasNoSignedWrap();
+        else
+          Inst->setHasNoUnsignedWrap();
+      }
+      return createOverflowTuple(WO, Result,
+                                 ConstantInt::getFalse(U->getType()));
+    }
+  }
+
   return nullptr;
 }
 
@@ -1052,7 +1099,7 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
 }
 
 static std::optional<bool> getKnownSign(Value *Op, const SimplifyQuery &SQ) {
-  KnownBits Known = computeKnownBits(Op, /*Depth=*/0, SQ);
+  KnownBits Known = computeKnownBits(Op, SQ);
   if (Known.isNonNegative())
     return false;
   if (Known.isNegative())
@@ -1175,9 +1222,8 @@ Instruction *InstCombinerImpl::matchSAddSubSat(IntrinsicInst &MinMax1) {
 
   // The two operands of the add/sub must be nsw-truncatable to the NewTy. This
   // is usually achieved via a sext from a smaller type.
-  if (ComputeMaxSignificantBits(AddSub->getOperand(0), 0, AddSub) >
-          NewBitWidth ||
-      ComputeMaxSignificantBits(AddSub->getOperand(1), 0, AddSub) > NewBitWidth)
+  if (ComputeMaxSignificantBits(AddSub->getOperand(0), AddSub) > NewBitWidth ||
+      ComputeMaxSignificantBits(AddSub->getOperand(1), AddSub) > NewBitWidth)
     return nullptr;
 
   // Finally create and return the sat intrinsic, truncated to the new type
@@ -1352,9 +1398,8 @@ static Instruction *factorizeMinMaxTree(IntrinsicInst *II) {
 
 /// If all arguments of the intrinsic are unary shuffles with the same mask,
 /// try to shuffle after the intrinsic.
-static Instruction *
-foldShuffledIntrinsicOperands(IntrinsicInst *II,
-                              InstCombiner::BuilderTy &Builder) {
+Instruction *
+InstCombinerImpl::foldShuffledIntrinsicOperands(IntrinsicInst *II) {
   // TODO: This should be extended to handle other intrinsics like fshl, ctpop,
   //       etc. Use llvm::isTriviallyVectorizable() and related to determine
   //       which intrinsics are safe to shuffle?
@@ -1372,9 +1417,11 @@ foldShuffledIntrinsicOperands(IntrinsicInst *II,
   }
 
   Value *X;
+  Constant *C;
   ArrayRef<int> Mask;
-  if (!match(II->getArgOperand(0),
-             m_Shuffle(m_Value(X), m_Undef(), m_Mask(Mask))))
+  auto *NonConstArg = find_if_not(II->args(), IsaPred<Constant>);
+  if (!NonConstArg ||
+      !match(NonConstArg, m_Shuffle(m_Value(X), m_Poison(), m_Mask(Mask))))
     return nullptr;
 
   // At least 1 operand must have 1 use because we are creating 2 instructions.
@@ -1382,15 +1429,21 @@ foldShuffledIntrinsicOperands(IntrinsicInst *II,
     return nullptr;
 
   // See if all arguments are shuffled with the same mask.
-  SmallVector<Value *, 4> NewArgs(II->arg_size());
-  NewArgs[0] = X;
+  SmallVector<Value *, 4> NewArgs;
   Type *SrcTy = X->getType();
-  for (unsigned i = 1, e = II->arg_size(); i != e; ++i) {
-    if (!match(II->getArgOperand(i),
-               m_Shuffle(m_Value(X), m_Undef(), m_SpecificMask(Mask))) ||
-        X->getType() != SrcTy)
+  for (Value *Arg : II->args()) {
+    if (match(Arg, m_Shuffle(m_Value(X), m_Poison(), m_SpecificMask(Mask))) &&
+        X->getType() == SrcTy)
+      NewArgs.push_back(X);
+    else if (match(Arg, m_ImmConstant(C))) {
+      // If it's a constant, try find the constant that would be shuffled to C.
+      if (Constant *ShuffledC =
+              unshuffleConstant(Mask, C, cast<VectorType>(SrcTy)))
+        NewArgs.push_back(ShuffledC);
+      else
+        return nullptr;
+    } else
       return nullptr;
-    NewArgs[i] = X;
   }
 
   // intrinsic (shuf X, M), (shuf Y, M), ... --> shuf (intrinsic X, Y, ...), M
@@ -1510,7 +1563,11 @@ static bool leftDistributesOverRight(Instruction::BinaryOps LOp, bool HasNUW,
   switch (ROp) {
   case Intrinsic::umax:
   case Intrinsic::umin:
-    return HasNUW && LOp == Instruction::Add;
+    if (HasNUW && LOp == Instruction::Add)
+      return true;
+    if (HasNUW && LOp == Instruction::Shl)
+      return true;
+    return false;
   case Intrinsic::smax:
   case Intrinsic::smin:
     return HasNSW && LOp == Instruction::Add;
@@ -1548,29 +1605,37 @@ foldIntrinsicUsingDistributiveLaws(IntrinsicInst *II,
   if (!leftDistributesOverRight(InnerOpcode, HasNUW, HasNSW, TopLevelOpcode))
     return nullptr;
 
-  assert(II->isCommutative() && Op0->isCommutative() &&
-         "Only inner and outer commutative op codes are supported.");
-
   Value *A = Op0->getOperand(0);
   Value *B = Op0->getOperand(1);
   Value *C = Op1->getOperand(0);
   Value *D = Op1->getOperand(1);
 
-  // Attempts to swap variables such that A always equals C
-  if (A != C && A != D)
-    std::swap(A, B);
-  if (A == C || A == D) {
-    if (A != C)
+  // Attempts to swap variables such that A equals C or B equals D,
+  // if the inner operation is commutative.
+  if (Op0->isCommutative() && A != C && B != D) {
+    if (A == D || B == C)
       std::swap(C, D);
-    Value *NewIntrinsic = Builder.CreateBinaryIntrinsic(TopLevelOpcode, B, D);
-    BinaryOperator *NewBinop =
-        cast<BinaryOperator>(Builder.CreateBinOp(InnerOpcode, NewIntrinsic, A));
-    NewBinop->setHasNoSignedWrap(HasNSW);
-    NewBinop->setHasNoUnsignedWrap(HasNUW);
-    return NewBinop;
+    else
+      return nullptr;
   }
 
-  return nullptr;
+  BinaryOperator *NewBinop;
+  if (A == C) {
+    Value *NewIntrinsic = Builder.CreateBinaryIntrinsic(TopLevelOpcode, B, D);
+    NewBinop =
+        cast<BinaryOperator>(Builder.CreateBinOp(InnerOpcode, A, NewIntrinsic));
+  } else if (B == D) {
+    Value *NewIntrinsic = Builder.CreateBinaryIntrinsic(TopLevelOpcode, A, C);
+    NewBinop =
+        cast<BinaryOperator>(Builder.CreateBinOp(InnerOpcode, NewIntrinsic, B));
+  } else {
+    return nullptr;
+  }
+
+  NewBinop->setHasNoUnsignedWrap(HasNUW);
+  NewBinop->setHasNoSignedWrap(HasNSW);
+
+  return NewBinop;
 }
 
 /// CallInst simplification. This mostly only handles folding of intrinsic
@@ -1597,55 +1662,32 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
 
   IntrinsicInst *II = dyn_cast<IntrinsicInst>(&CI);
-  if (!II) return visitCallBase(CI);
-
-  // For atomic unordered mem intrinsics if len is not a positive or
-  // not a multiple of element size then behavior is undefined.
-  if (auto *AMI = dyn_cast<AtomicMemIntrinsic>(II))
-    if (ConstantInt *NumBytes = dyn_cast<ConstantInt>(AMI->getLength()))
-      if (NumBytes->isNegative() ||
-          (NumBytes->getZExtValue() % AMI->getElementSizeInBytes() != 0)) {
-        CreateNonTerminatorUnreachable(AMI);
-        assert(AMI->getType()->isVoidTy() &&
-               "non void atomic unordered mem intrinsic");
-        return eraseInstFromFunction(*AMI);
-      }
+  if (!II)
+    return visitCallBase(CI);
 
   // Intrinsics cannot occur in an invoke or a callbr, so handle them here
   // instead of in visitCallBase.
   if (auto *MI = dyn_cast<AnyMemIntrinsic>(II)) {
-    bool Changed = false;
-
-    // memmove/cpy/set of zero bytes is a noop.
-    if (Constant *NumBytes = dyn_cast<Constant>(MI->getLength())) {
+    if (ConstantInt *NumBytes = dyn_cast<ConstantInt>(MI->getLength())) {
+      // memmove/cpy/set of zero bytes is a noop.
       if (NumBytes->isNullValue())
         return eraseInstFromFunction(CI);
+
+      // For atomic unordered mem intrinsics if len is not a positive or
+      // not a multiple of element size then behavior is undefined.
+      if (MI->isAtomic() &&
+          (NumBytes->isNegative() ||
+           (NumBytes->getZExtValue() % MI->getElementSizeInBytes() != 0))) {
+        CreateNonTerminatorUnreachable(MI);
+        assert(MI->getType()->isVoidTy() &&
+               "non void atomic unordered mem intrinsic");
+        return eraseInstFromFunction(*MI);
+      }
     }
 
     // No other transformations apply to volatile transfers.
-    if (auto *M = dyn_cast<MemIntrinsic>(MI))
-      if (M->isVolatile())
-        return nullptr;
-
-    // If we have a memmove and the source operation is a constant global,
-    // then the source and dest pointers can't alias, so we can change this
-    // into a call to memcpy.
-    if (auto *MMI = dyn_cast<AnyMemMoveInst>(MI)) {
-      if (GlobalVariable *GVSrc = dyn_cast<GlobalVariable>(MMI->getSource()))
-        if (GVSrc->isConstant()) {
-          Module *M = CI.getModule();
-          Intrinsic::ID MemCpyID =
-              isa<AtomicMemMoveInst>(MMI)
-                  ? Intrinsic::memcpy_element_unordered_atomic
-                  : Intrinsic::memcpy;
-          Type *Tys[3] = { CI.getArgOperand(0)->getType(),
-                           CI.getArgOperand(1)->getType(),
-                           CI.getArgOperand(2)->getType() };
-          CI.setCalledFunction(
-              Intrinsic::getOrInsertDeclaration(M, MemCpyID, Tys));
-          Changed = true;
-        }
-    }
+    if (MI->isVolatile())
+      return nullptr;
 
     if (AnyMemTransferInst *MTI = dyn_cast<AnyMemTransferInst>(MI)) {
       // memmove(x,x,size) -> noop.
@@ -1677,7 +1719,25 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return eraseInstFromFunction(CI);
     }
 
-    if (Changed) return II;
+    // If we have a memmove and the source operation is a constant global,
+    // then the source and dest pointers can't alias, so we can change this
+    // into a call to memcpy.
+    if (auto *MMI = dyn_cast<AnyMemMoveInst>(MI)) {
+      if (GlobalVariable *GVSrc = dyn_cast<GlobalVariable>(MMI->getSource()))
+        if (GVSrc->isConstant()) {
+          Module *M = CI.getModule();
+          Intrinsic::ID MemCpyID =
+              MMI->isAtomic()
+                  ? Intrinsic::memcpy_element_unordered_atomic
+                  : Intrinsic::memcpy;
+          Type *Tys[3] = { CI.getArgOperand(0)->getType(),
+                           CI.getArgOperand(1)->getType(),
+                           CI.getArgOperand(2)->getType() };
+          CI.setCalledFunction(
+              Intrinsic::getOrInsertDeclaration(M, MemCpyID, Tys));
+          return II;
+        }
+    }
   }
 
   // For fixed width vector result intrinsics, use the generic demanded vector
@@ -1734,9 +1794,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *X;
     if (match(IIOperand, m_Neg(m_Value(X))))
       return replaceOperand(*II, 0, X);
-    if (match(IIOperand, m_Select(m_Value(), m_Value(X), m_Neg(m_Deferred(X)))))
-      return replaceOperand(*II, 0, X);
-    if (match(IIOperand, m_Select(m_Value(), m_Neg(m_Value(X)), m_Deferred(X))))
+    if (match(IIOperand, m_c_Select(m_Neg(m_Value(X)), m_Deferred(X))))
       return replaceOperand(*II, 0, X);
 
     Value *Y;
@@ -1818,6 +1876,34 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return CastInst::Create(Instruction::ZExt, NarrowMaxMin, II->getType());
       }
     }
+    // If C is not 0:
+    //   umax(nuw_shl(x, C), x + 1) -> x == 0 ? 1 : nuw_shl(x, C)
+    // If C is not 0 or 1:
+    //   umax(nuw_mul(x, C), x + 1) -> x == 0 ? 1 : nuw_mul(x, C)
+    auto foldMaxMulShift = [&](Value *A, Value *B) -> Instruction * {
+      const APInt *C;
+      Value *X;
+      if (!match(A, m_NUWShl(m_Value(X), m_APInt(C))) &&
+          !(match(A, m_NUWMul(m_Value(X), m_APInt(C))) && !C->isOne()))
+        return nullptr;
+      if (C->isZero())
+        return nullptr;
+      if (!match(B, m_OneUse(m_Add(m_Specific(X), m_One()))))
+        return nullptr;
+
+      Value *Cmp = Builder.CreateICmpEQ(X, ConstantInt::get(X->getType(), 0));
+      Value *NewSelect =
+          Builder.CreateSelect(Cmp, ConstantInt::get(X->getType(), 1), A);
+      return replaceInstUsesWith(*II, NewSelect);
+    };
+
+    if (IID == Intrinsic::umax) {
+      if (Instruction *I = foldMaxMulShift(I0, I1))
+        return I;
+      if (Instruction *I = foldMaxMulShift(I1, I0))
+        return I;
+    }
+
     // If both operands of unsigned min/max are sign-extended, it is still ok
     // to narrow the operation.
     [[fallthrough]];
@@ -1840,6 +1926,29 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return CastInst::Create(Instruction::SExt, NarrowMaxMin, II->getType());
       }
     }
+
+    // smax(smin(X, MinC), MaxC) -> smin(smax(X, MaxC), MinC) if MinC s>= MaxC
+    // umax(umin(X, MinC), MaxC) -> umin(umax(X, MaxC), MinC) if MinC u>= MaxC
+    const APInt *MinC, *MaxC;
+    auto CreateCanonicalClampForm = [&](bool IsSigned) {
+      auto MaxIID = IsSigned ? Intrinsic::smax : Intrinsic::umax;
+      auto MinIID = IsSigned ? Intrinsic::smin : Intrinsic::umin;
+      Value *NewMax = Builder.CreateBinaryIntrinsic(
+          MaxIID, X, ConstantInt::get(X->getType(), *MaxC));
+      return replaceInstUsesWith(
+          *II, Builder.CreateBinaryIntrinsic(
+                   MinIID, NewMax, ConstantInt::get(X->getType(), *MinC)));
+    };
+    if (IID == Intrinsic::smax &&
+        match(I0, m_OneUse(m_Intrinsic<Intrinsic::smin>(m_Value(X),
+                                                        m_APInt(MinC)))) &&
+        match(I1, m_APInt(MaxC)) && MinC->sgt(*MaxC))
+      return CreateCanonicalClampForm(true);
+    if (IID == Intrinsic::umax &&
+        match(I0, m_OneUse(m_Intrinsic<Intrinsic::umin>(m_Value(X),
+                                                        m_APInt(MinC)))) &&
+        match(I1, m_APInt(MaxC)) && MinC->ugt(*MaxC))
+      return CreateCanonicalClampForm(false);
 
     // umin(i1 X, i1 Y) -> and i1 X, Y
     // smax(i1 X, i1 Y) -> and i1 X, Y
@@ -2050,7 +2159,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
-    KnownBits Known = computeKnownBits(IIOperand, 0, II);
+    KnownBits Known = computeKnownBits(IIOperand, II);
     uint64_t LZ = alignDown(Known.countMinLeadingZeros(), 8);
     uint64_t TZ = alignDown(Known.countMinTrailingZeros(), 8);
     unsigned BW = Known.getBitWidth();
@@ -2198,6 +2307,27 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
               matchBSwapOrBitReverse(*II, /*MatchBSwaps*/ true,
                                      /*MatchBitReversals*/ true))
         return BitOp;
+    }
+
+    // fshl(X, X, Neg(Y)) --> fshr(X, X, Y)
+    // fshr(X, X, Neg(Y)) --> fshl(X, X, Y)
+    // if BitWidth is a power-of-2
+    Value *Y;
+    if (Op0 == Op1 && isPowerOf2_32(BitWidth) &&
+        match(II->getArgOperand(2), m_Neg(m_Value(Y)))) {
+      Module *Mod = II->getModule();
+      Function *OppositeShift = Intrinsic::getOrInsertDeclaration(
+          Mod, IID == Intrinsic::fshl ? Intrinsic::fshr : Intrinsic::fshl, Ty);
+      return CallInst::Create(OppositeShift, {Op0, Op1, Y});
+    }
+
+    // fshl(X, 0, Y) --> shl(X, and(Y, BitWidth - 1)) if bitwidth is a
+    // power-of-2
+    if (IID == Intrinsic::fshl && isPowerOf2_32(BitWidth) &&
+        match(Op1, m_ZeroInt())) {
+      Value *Op2 = II->getArgOperand(2);
+      Value *And = Builder.CreateAnd(Op2, ConstantInt::get(Ty, BitWidth - 1));
+      return BinaryOperator::CreateShl(Op0, And);
     }
 
     // Left or right might be masked.
@@ -2471,13 +2601,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         default:
           llvm_unreachable("unexpected intrinsic ID");
         }
-        Value *V = Builder.CreateBinaryIntrinsic(
-            IID, X, ConstantFP::get(Arg0->getType(), Res), II);
         // TODO: Conservatively intersecting FMF. If Res == C2, the transform
         //       was a simplification (so Arg0 and its original flags could
         //       propagate?)
-        if (auto *CI = dyn_cast<CallInst>(V))
-          CI->andIRFlags(M);
+        Value *V = Builder.CreateBinaryIntrinsic(
+            IID, X, ConstantFP::get(Arg0->getType(), Res),
+            FMFSource::intersect(II, M));
         return replaceInstUsesWith(*II, V);
       }
     }
@@ -2572,13 +2701,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::fmuladd: {
     // Try to simplify the underlying FMul.
-    if (Value *V = simplifyFMulInst(II->getArgOperand(0), II->getArgOperand(1),
-                                    II->getFastMathFlags(),
-                                    SQ.getWithInstruction(II))) {
-      auto *FAdd = BinaryOperator::CreateFAdd(V, II->getArgOperand(2));
-      FAdd->copyFastMathFlags(II);
-      return FAdd;
-    }
+    if (Value *V =
+            simplifyFMulInst(II->getArgOperand(0), II->getArgOperand(1),
+                             II->getFastMathFlags(), SQ.getWithInstruction(II)))
+      return BinaryOperator::CreateFAddFMF(V, II->getArgOperand(2),
+                                           II->getFastMathFlags());
 
     [[fallthrough]];
   }
@@ -2605,11 +2732,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // Try to simplify the underlying FMul. We can only apply simplifications
     // that do not require rounding.
     if (Value *V = simplifyFMAFMul(Src0, Src1, II->getFastMathFlags(),
-                                   SQ.getWithInstruction(II))) {
-      auto *FAdd = BinaryOperator::CreateFAdd(V, Src2);
-      FAdd->copyFastMathFlags(II);
-      return FAdd;
-    }
+                                   SQ.getWithInstruction(II)))
+      return BinaryOperator::CreateFAddFMF(V, Src2, II->getFastMathFlags());
 
     // fma x, y, 0 -> fmul x, y
     // This is always valid for -0.0, but requires nsz for +0.0 as
@@ -2627,7 +2751,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::copysign: {
     Value *Mag = II->getArgOperand(0), *Sign = II->getArgOperand(1);
     if (std::optional<bool> KnownSignBit = computeKnownFPSignBit(
-            Sign, /*Depth=*/0, getSimplifyQuery().getWithInstruction(II))) {
+            Sign, getSimplifyQuery().getWithInstruction(II))) {
       if (*KnownSignBit) {
         // If we know that the sign argument is negative, reduce to FNABS:
         // copysign Mag, -Sign --> fneg (fabs Mag)
@@ -2644,8 +2768,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // Propagate sign argument through nested calls:
     // copysign Mag, (copysign ?, X) --> copysign Mag, X
     Value *X;
-    if (match(Sign, m_Intrinsic<Intrinsic::copysign>(m_Value(), m_Value(X))))
-      return replaceOperand(*II, 1, X);
+    if (match(Sign, m_Intrinsic<Intrinsic::copysign>(m_Value(), m_Value(X)))) {
+      Value *CopySign =
+          Builder.CreateCopySign(Mag, X, FMFSource::intersect(II, Sign));
+      return replaceInstUsesWith(*II, CopySign);
+    }
 
     // Clear sign-bit of constant magnitude:
     // copysign -MagC, X --> copysign MagC, X
@@ -2677,7 +2804,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     if (match(Arg, m_Select(m_Value(Cond), m_Value(TVal), m_Value(FVal)))) {
       // fabs (select Cond, TrueC, FalseC) --> select Cond, AbsT, AbsF
-      if (isa<Constant>(TVal) || isa<Constant>(FVal)) {
+      if (Arg->hasOneUse() ? (isa<Constant>(TVal) || isa<Constant>(FVal))
+                           : (isa<Constant>(TVal) && isa<Constant>(FVal))) {
         CallInst *AbsT = Builder.CreateCall(II->getCalledFunction(), {TVal});
         CallInst *AbsF = Builder.CreateCall(II->getCalledFunction(), {FVal});
         SelectInst *SI = SelectInst::Create(Cond, AbsT, AbsF);
@@ -2700,8 +2828,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
               m_CopySign(m_Value(Magnitude), m_Value(Sign)))) {
       // fabs (copysign x, y) -> (fabs x)
       CallInst *AbsSign =
-          Builder.CreateCall(II->getCalledFunction(), {Magnitude});
-      AbsSign->copyFastMathFlags(II);
+          Builder.CreateUnaryIntrinsic(Intrinsic::fabs, Magnitude, II);
       return replaceInstUsesWith(*II, AbsSign);
     }
 
@@ -2808,16 +2935,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Value *NewLdexp = nullptr;
       Value *Select = nullptr;
       if (match(SelectRHS, m_ZeroInt())) {
-        NewLdexp = Builder.CreateLdexp(Src, SelectLHS);
+        NewLdexp = Builder.CreateLdexp(Src, SelectLHS, II);
         Select = Builder.CreateSelect(SelectCond, NewLdexp, Src);
       } else if (match(SelectLHS, m_ZeroInt())) {
-        NewLdexp = Builder.CreateLdexp(Src, SelectRHS);
+        NewLdexp = Builder.CreateLdexp(Src, SelectRHS, II);
         Select = Builder.CreateSelect(SelectCond, Src, NewLdexp);
       }
 
       if (NewLdexp) {
         Select->takeName(II);
-        cast<Instruction>(NewLdexp)->copyFastMathFlags(II);
         return replaceInstUsesWith(*II, Select);
       }
     }
@@ -2973,8 +3099,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           ID0 != Intrinsic::hexagon_V6_vandqrt_128B)
         break;
       Value *Bytes = Op0->getArgOperand(1), *Mask = II->getArgOperand(1);
-      uint64_t Bytes1 = computeKnownBits(Bytes, 0, Op0).One.getZExtValue();
-      uint64_t Mask1 = computeKnownBits(Mask, 0, II).One.getZExtValue();
+      uint64_t Bytes1 = computeKnownBits(Bytes, Op0).One.getZExtValue();
+      uint64_t Mask1 = computeKnownBits(Mask, II).One.getZExtValue();
       // Check if every byte has common bits in Bytes and Mask.
       uint64_t C = Bytes1 & Mask1;
       if ((C & 0xFF) && (C & 0xFF00) && (C & 0xFF0000) && (C & 0xFF000000))
@@ -3186,7 +3312,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       if (auto *Replacement = buildAssumeFromKnowledge(
               {RetainedKnowledge{Attribute::NonNull, 0, A}}, Next, &AC, &DT)) {
 
-        Replacement->insertBefore(Next);
+        Replacement->insertBefore(Next->getIterator());
         AC.registerAssumption(Replacement);
         return RemoveConditionFromAssume(II);
       }
@@ -3199,12 +3325,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // call void @llvm.assume(i1 %D)
     // into
     // call void @llvm.assume(i1 true) [ "align"(i32* [[A]], i64  Constant + 1)]
-    uint64_t AlignMask;
+    uint64_t AlignMask = 1;
     if (EnableKnowledgeRetention &&
-        match(IIOperand,
-              m_SpecificICmp(ICmpInst::ICMP_EQ,
-                             m_And(m_Value(A), m_ConstantInt(AlignMask)),
-                             m_Zero()))) {
+        (match(IIOperand, m_Not(m_Trunc(m_Value(A)))) ||
+         match(IIOperand,
+               m_SpecificICmp(ICmpInst::ICMP_EQ,
+                              m_And(m_Value(A), m_ConstantInt(AlignMask)),
+                              m_Zero())))) {
       if (isPowerOf2_64(AlignMask + 1)) {
         uint64_t Offset = 0;
         match(A, m_Add(m_Value(A), m_ConstantInt(Offset)));
@@ -3218,7 +3345,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           if (auto *Replacement =
                   buildAssumeFromKnowledge(RK, Next, &AC, &DT)) {
 
-            Replacement->insertAfter(II);
+            Replacement->insertAfter(II->getIterator());
             AC.registerAssumption(Replacement);
           }
           return RemoveConditionFromAssume(II);
@@ -3264,7 +3391,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // If there is a dominating assume with the same condition as this one,
     // then this one is redundant, and should be removed.
     KnownBits Known(1);
-    computeKnownBits(IIOperand, Known, 0, II);
+    computeKnownBits(IIOperand, Known, II);
     if (Known.isAllOnes() && isAssumeWithEmptyBundle(cast<AssumeInst>(*II)))
       return eraseInstFromFunction(*II);
 
@@ -3302,7 +3429,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         while (MoveI != NextInst) {
           auto *Temp = MoveI;
           MoveI = MoveI->getNextNonDebugInstruction();
-          Temp->moveBefore(II);
+          Temp->moveBefore(II->getIterator());
         }
         replaceOperand(*II, 0, Builder.CreateAnd(CurrCond, NextCond));
       }
@@ -3693,6 +3820,21 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     break;
   }
+  case Intrinsic::frexp: {
+    Value *X;
+    // The first result is idempotent with the added complication of the struct
+    // return, and the second result is zero because the value is already
+    // normalized.
+    if (match(II->getArgOperand(0), m_ExtractValue<0>(m_Value(X)))) {
+      if (match(X, m_Intrinsic<Intrinsic::frexp>(m_Value()))) {
+        X = Builder.CreateInsertValue(
+            X, Constant::getNullValue(II->getType()->getStructElementType(1)),
+            1);
+        return replaceInstUsesWith(*II, X);
+      }
+    }
+    break;
+  }
   default: {
     // Handle target specific intrinsics
     std::optional<Instruction *> V = targetInstCombineIntrinsic(*II);
@@ -3713,7 +3855,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         if (Instruction *R = FoldOpIntoSelect(*II, Sel))
           return R;
 
-  if (Instruction *Shuf = foldShuffledIntrinsicOperands(II, Builder))
+  if (Instruction *Shuf = foldShuffledIntrinsicOperands(II))
     return Shuf;
 
   // Some intrinsics (like experimental_gc_statepoint) can be used in invoke
@@ -3918,10 +4060,23 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
   unsigned ArgNo = 0;
 
   for (Value *V : Call.args()) {
-    if (V->getType()->isPointerTy() &&
-        !Call.paramHasAttr(ArgNo, Attribute::NonNull) &&
-        isKnownNonZero(V, getSimplifyQuery().getWithInstruction(&Call)))
-      ArgNos.push_back(ArgNo);
+    if (V->getType()->isPointerTy()) {
+      // Simplify the nonnull operand if the parameter is known to be nonnull.
+      // Otherwise, try to infer nonnull for it.
+      bool HasDereferenceable = Call.getParamDereferenceableBytes(ArgNo) > 0;
+      if (Call.paramHasAttr(ArgNo, Attribute::NonNull) ||
+          (HasDereferenceable &&
+           !NullPointerIsDefined(Call.getFunction(),
+                                 V->getType()->getPointerAddressSpace()))) {
+        if (Value *Res = simplifyNonNullOperand(V, HasDereferenceable)) {
+          replaceOperand(Call, ArgNo, Res);
+          Changed = true;
+        }
+      } else if (isKnownNonZero(V,
+                                getSimplifyQuery().getWithInstruction(&Call))) {
+        ArgNos.push_back(ArgNo);
+      }
+    }
     ArgNo++;
   }
 
@@ -4132,13 +4287,14 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
     DenseMap<Value *, unsigned> Val2Idx;
     std::vector<Value *> NewLiveGc;
     for (Value *V : Bundle->Inputs) {
-      if (Val2Idx.count(V))
+      auto [It, Inserted] = Val2Idx.try_emplace(V);
+      if (!Inserted)
         continue;
       if (LiveGcValues.count(V)) {
-        Val2Idx[V] = NewLiveGc.size();
+        It->second = NewLiveGc.size();
         NewLiveGc.push_back(V);
       } else
-        Val2Idx[V] = NumOfGCLives;
+        It->second = NumOfGCLives;
     }
     // Update all gc.relocates
     for (const GCRelocateInst *Reloc : GCSP.getGCRelocates()) {

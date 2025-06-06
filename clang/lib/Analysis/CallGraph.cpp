@@ -21,7 +21,6 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -147,6 +146,9 @@ void CallGraph::addNodesForBlocks(DeclContext *D) {
 }
 
 CallGraph::CallGraph() {
+  ShouldWalkTypesOfTypeLocs = false;
+  ShouldVisitTemplateInstantiations = true;
+  ShouldVisitImplicitCode = true;
   Root = getOrInsertNode(nullptr);
 }
 

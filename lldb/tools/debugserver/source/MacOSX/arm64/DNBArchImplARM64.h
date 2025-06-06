@@ -15,6 +15,10 @@
 #include <map>
 #include <vector>
 
+#if !defined(ARM_SME_STATE)
+#include "sme_thread_status.h"
+#endif
+
 #if defined(ARM_THREAD_STATE64_COUNT)
 
 #include "DNBArch.h"
@@ -93,7 +97,6 @@ public:
   bool DisableHardwareWatchpoint_helper(uint32_t hw_break_index,
                                         bool also_set_on_task);
 
-protected:
   kern_return_t EnableHardwareSingleStep(bool enable);
   static bool FixGenericRegisterNumber(uint32_t &set, uint32_t &reg);
 
@@ -102,6 +105,8 @@ protected:
     e_regSetGPR, // ARM_THREAD_STATE64,
     e_regSetVFP, // ARM_NEON_STATE64,
     e_regSetEXC, // ARM_EXCEPTION_STATE64,
+    e_regSetSVE, // ARM_SVE_Z_STATE1, ARM_SVE_Z_STATE2, ARM_SVE_P_STATE
+    e_regSetSME, // ARM_SME_STATE, ARM_SME_ZA_STATE1..16, ARM_SME2_STATE
     e_regSetDBG, // ARM_DEBUG_STATE64,
     kNumRegisterSets
   };
@@ -119,20 +124,39 @@ protected:
   typedef arm_neon_state64_t FPU;
   typedef arm_exception_state64_t EXC;
 
+  struct SVE {
+    uint8_t z[32][256]; // arm_sve_z_state_t z[2]
+    uint8_t p[16][32];  // arm_sve_p_state_t p
+  };
+
+  struct SME {
+    uint64_t svcr;   // arm_sme_state_t
+    uint64_t tpidr2; // arm_sme_state_t
+    uint16_t svl_b;  // arm_sme_state_t
+
+    std::vector<uint8_t> za;
+    uint8_t zt0[64];
+
+    SME() {
+      if (DNBArchMachARM64::CPUHasSME()) {
+        int svl = GetSMEMaxSVL();
+        za.resize(svl * svl, 0);
+      }
+    }
+  };
+
   static const DNBRegisterInfo g_gpr_registers[];
-  static const DNBRegisterInfo g_vfp_registers[];
   static const DNBRegisterInfo g_exc_registers[];
-  static const DNBRegisterSetInfo g_reg_sets[];
 
   static const size_t k_num_gpr_registers;
-  static const size_t k_num_vfp_registers;
   static const size_t k_num_exc_registers;
   static const size_t k_num_all_registers;
-  static const size_t k_num_register_sets;
 
   struct Context {
     GPR gpr;
     FPU vfp;
+    SVE sve;
+    SME sme;
     EXC exc;
   };
 
@@ -141,6 +165,8 @@ protected:
     arm_debug_state64_t dbg;
     kern_return_t gpr_errs[2]; // Read/Write errors
     kern_return_t vfp_errs[2]; // Read/Write errors
+    kern_return_t sve_errs[2]; // Read/Write errors
+    kern_return_t sme_errs[2]; // Read/Write errors
     kern_return_t exc_errs[2]; // Read/Write errors
     kern_return_t dbg_errs[2]; // Read/Write errors
     State() {
@@ -148,6 +174,8 @@ protected:
       for (i = 0; i < kNumErrors; i++) {
         gpr_errs[i] = -1;
         vfp_errs[i] = -1;
+        sve_errs[i] = -1;
+        sme_errs[i] = -1;
         exc_errs[i] = -1;
         dbg_errs[i] = -1;
       }
@@ -163,11 +191,15 @@ protected:
         // we got any kind of error.
         case e_regSetALL:
           return gpr_errs[err_idx] | vfp_errs[err_idx] | exc_errs[err_idx] |
-                 dbg_errs[err_idx];
+                 sve_errs[err_idx] | sme_errs[err_idx] | dbg_errs[err_idx];
         case e_regSetGPR:
           return gpr_errs[err_idx];
         case e_regSetVFP:
           return vfp_errs[err_idx];
+        case e_regSetSVE:
+          return sve_errs[err_idx];
+        case e_regSetSME:
+          return sme_errs[err_idx];
         case e_regSetEXC:
           return exc_errs[err_idx];
         // case e_regSetDBG:   return dbg_errs[err_idx];
@@ -183,6 +215,8 @@ protected:
         case e_regSetALL:
           gpr_errs[err_idx] = err;
           vfp_errs[err_idx] = err;
+          sve_errs[err_idx] = err;
+          sme_errs[err_idx] = err;
           dbg_errs[err_idx] = err;
           exc_errs[err_idx] = err;
           return true;
@@ -193,6 +227,14 @@ protected:
 
         case e_regSetVFP:
           vfp_errs[err_idx] = err;
+          return true;
+
+        case e_regSetSVE:
+          sve_errs[err_idx] = err;
+          return true;
+
+        case e_regSetSME:
+          sme_errs[err_idx] = err;
           return true;
 
         case e_regSetEXC:
@@ -215,11 +257,15 @@ protected:
 
   kern_return_t GetGPRState(bool force);
   kern_return_t GetVFPState(bool force);
+  kern_return_t GetSVEState(bool force);
+  kern_return_t GetSMEState(bool force);
   kern_return_t GetEXCState(bool force);
   kern_return_t GetDBGState(bool force);
 
   kern_return_t SetGPRState();
   kern_return_t SetVFPState();
+  kern_return_t SetSVEState();
+  kern_return_t SetSMEState();
   kern_return_t SetEXCState();
   kern_return_t SetDBGState(bool also_set_on_task);
 
@@ -246,7 +292,16 @@ protected:
     uint32_t control;
   };
 
-protected:
+  static bool CPUHasSME();
+  static bool CPUHasSME2();
+  static unsigned int GetSMEMaxSVL();
+
+private:
+  static DNBRegisterInfo *get_vfp_registerinfo(size_t &num_vfp_registers);
+  static DNBRegisterInfo *get_sve_registerinfo(size_t &num_sve_registers);
+  static DNBRegisterInfo *get_sme_registerinfo(size_t &num_sme_registers);
+  static void initialize_reg_sets();
+
   MachThread *m_thread;
   State m_state;
   arm_debug_state64_t m_dbg_save;
@@ -264,6 +319,9 @@ protected:
 
   typedef std::map<uint32_t, Context> SaveRegisterStates;
   SaveRegisterStates m_saved_register_states;
+
+  DNBArchMachARM64(const DNBArchMachARM64 &) = delete;
+  DNBArchMachARM64 &operator=(const DNBArchMachARM64 &) = delete;
 };
 
 #endif // #if defined (ARM_THREAD_STATE64_COUNT)

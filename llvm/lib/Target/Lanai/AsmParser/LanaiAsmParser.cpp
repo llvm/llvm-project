@@ -11,13 +11,12 @@
 #include "LanaiInstrInfo.h"
 #include "MCTargetDesc/LanaiMCExpr.h"
 #include "TargetInfo/LanaiTargetInfo.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
@@ -30,7 +29,6 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -93,7 +91,7 @@ public:
 
 private:
   MCAsmParser &Parser;
-  MCAsmLexer &Lexer;
+  AsmLexer &Lexer;
 
   const MCSubtargetInfo &SubtargetInfo;
 };

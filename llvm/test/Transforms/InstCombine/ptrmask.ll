@@ -23,7 +23,7 @@ define ptr @ptrmask_combine_consecutive_preserve_attrs(ptr %p0, i64 %m1) {
 define <2 x ptr> @ptrmask_combine_consecutive_preserve_attrs_vecs(<2 x ptr> %p0, <2 x i64> %m1) {
 ; CHECK-LABEL: define <2 x ptr> @ptrmask_combine_consecutive_preserve_attrs_vecs
 ; CHECK-SAME: (<2 x ptr> [[P0:%.*]], <2 x i64> [[M1:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i64> [[M1]], <i64 12345, i64 12345>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i64> [[M1]], splat (i64 12345)
 ; CHECK-NEXT:    [[R:%.*]] = call align 128 <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P0]], <2 x i64> [[TMP1]])
 ; CHECK-NEXT:    ret <2 x ptr> [[R]]
 ;
@@ -114,7 +114,7 @@ define ptr addrspace(1) @ptrmask_combine_add_alignment2(ptr addrspace(1) align 3
 define <2 x ptr> @ptrmask_combine_add_alignment_vec(<2 x ptr> %p) {
 ; CHECK-LABEL: define <2 x ptr> @ptrmask_combine_add_alignment_vec
 ; CHECK-SAME: (<2 x ptr> [[P:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call align 32 <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P]], <2 x i64> <i64 -96, i64 -96>)
+; CHECK-NEXT:    [[R:%.*]] = call align 32 <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P]], <2 x i64> splat (i64 -96))
 ; CHECK-NEXT:    ret <2 x ptr> [[R]]
 ;
   %r = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> %p, <2 x i64> <i64 -96, i64 -96>)
@@ -411,7 +411,7 @@ define ptr @ptrmask_to_modified_gep_zero_argument() {
 define ptr @ptrmask_to_preserves_inbounds(ptr align 16 %p) {
 ; CHECK-LABEL: define ptr @ptrmask_to_preserves_inbounds
 ; CHECK-SAME: (ptr align 16 [[P:%.*]]) {
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 28
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 28
 ; CHECK-NEXT:    ret ptr [[GEP1]]
 ;
   %gep = getelementptr inbounds i8, ptr %p, i32 31
@@ -435,7 +435,7 @@ define <2 x ptr> @ptrmask_of_gep_vector_type_unimplemented(<2 x ptr> align 8 %p)
 ; CHECK-LABEL: define <2 x ptr> @ptrmask_of_gep_vector_type_unimplemented
 ; CHECK-SAME: (<2 x ptr> align 8 [[P:%.*]]) {
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, <2 x ptr> [[P]], i64 17
-; CHECK-NEXT:    [[PM:%.*]] = call align 32 <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[GEP]], <2 x i64> <i64 -96, i64 -96>)
+; CHECK-NEXT:    [[PM:%.*]] = call align 32 <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[GEP]], <2 x i64> splat (i64 -96))
 ; CHECK-NEXT:    ret <2 x ptr> [[PM]]
 ;
   %gep = getelementptr i8, <2 x ptr> %p, i32 17
@@ -520,7 +520,7 @@ define ptr @ptrmask_is_useless4(i64 %i, i64 %m) {
 define <2 x ptr> @ptrmask_is_useless_vec(<2 x i64> %i, <2 x i64> %m) {
 ; CHECK-LABEL: define <2 x ptr> @ptrmask_is_useless_vec
 ; CHECK-SAME: (<2 x i64> [[I:%.*]], <2 x i64> [[M:%.*]]) {
-; CHECK-NEXT:    [[I0:%.*]] = and <2 x i64> [[I]], <i64 31, i64 31>
+; CHECK-NEXT:    [[I0:%.*]] = and <2 x i64> [[I]], splat (i64 31)
 ; CHECK-NEXT:    [[P0:%.*]] = inttoptr <2 x i64> [[I0]] to <2 x ptr>
 ; CHECK-NEXT:    [[R:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P0]], <2 x i64> [[M]])
 ; CHECK-NEXT:    ret <2 x ptr> [[R]]
@@ -577,4 +577,17 @@ define ptr @ptrmask_is_useless_fail1(i64 %i, i64 %m) {
   %p0 = inttoptr i64 %i0 to ptr
   %r = call ptr @llvm.ptrmask.p0.i64(ptr %p0, i64 %m0)
   ret ptr %r
+}
+
+@GC_arrays = external global { i8, i8, i64 }
+
+define ptr @ptrmask_demandedbits_constantexpr() {
+; CHECK-LABEL: define ptr @ptrmask_demandedbits_constantexpr() {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ALIGNED_RESULT:%.*]] = call align 8 ptr @llvm.ptrmask.p0.i64(ptr nonnull @GC_arrays, i64 -8)
+; CHECK-NEXT:    ret ptr [[ALIGNED_RESULT]]
+;
+entry:
+  %aligned_result = call ptr @llvm.ptrmask.p0.i64(ptr getelementptr inbounds (i8, ptr @GC_arrays, i64 1), i64 -8)
+  ret ptr %aligned_result
 }

@@ -170,7 +170,7 @@ public:
       Inst->eraseFromParent();
       return;
     }
-    Inst->moveBefore(getCoroBegin()->getNextNode());
+    Inst->moveBefore(std::next(getCoroBegin()->getIterator()));
   }
 
   // Info argument of coro.id is
@@ -217,8 +217,8 @@ public:
     return cast<Function>(getArgOperand(CoroutineArg)->stripPointerCasts());
   }
   void setCoroutineSelf() {
-    assert(isa<ConstantPointerNull>(getArgOperand(CoroutineArg)) &&
-           "Coroutine argument is already assigned");
+    if (!isa<ConstantPointerNull>(getArgOperand(CoroutineArg)))
+      assert(getCoroutine() == getFunction() && "Don't change coroutine.");
     setArgOperand(CoroutineArg, getFunction());
   }
 

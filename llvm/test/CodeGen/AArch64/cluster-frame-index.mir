@@ -1,4 +1,5 @@
 #RUN: llc -mtriple=aarch64-- -mcpu=cyclone -run-pass machine-scheduler -o - %s | FileCheck %s
+#RUN: llc -mtriple=aarch64-- -mcpu=cyclone -passes=machine-scheduler -o - %s | FileCheck %s
 ---
 name:            merge_stack
 # CHECK-LABEL: name: merge_stack

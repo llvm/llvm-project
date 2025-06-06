@@ -25,9 +25,9 @@
 ; optimally packed, this requires
 
 
-@lds0 = internal unnamed_addr addrspace(3) global [32 x <4 x i32>] undef, align 16
-@lds2 = internal unnamed_addr addrspace(3) global [32 x i64] undef, align 8
-@lds1 = internal unnamed_addr addrspace(3) global [73 x i32] undef, align 4
+@lds0 = internal unnamed_addr addrspace(3) global [32 x <4 x i32>] poison, align 16
+@lds2 = internal unnamed_addr addrspace(3) global [32 x i64] poison, align 8
+@lds1 = internal unnamed_addr addrspace(3) global [73 x i32] poison, align 4
 
 
 ; GCN-LABEL: {{^}}promote_alloca_size_order_0:
@@ -92,8 +92,8 @@ entry:
   ret void
 }
 
-@lds3 = internal unnamed_addr addrspace(3) global [13 x i32] undef, align 4
-@lds4 = internal unnamed_addr addrspace(3) global [63 x <4 x i32>] undef, align 16
+@lds3 = internal unnamed_addr addrspace(3) global [13 x i32] poison, align 4
+@lds4 = internal unnamed_addr addrspace(3) global [63 x <4 x i32>] poison, align 16
 
 ; The guess from the alignment padding pushes this over the determined
 ; size limit, so it isn't promoted

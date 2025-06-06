@@ -270,11 +270,46 @@ namespace CallingConv {
     /// Preserve X1-X15, X19-X29, SP, Z0-Z31, P0-P15.
     AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1 = 111,
 
+    /// Calling convention used for RISC-V V-extension fixed vectors.
+    RISCV_VLSCall_32 = 112,
+    RISCV_VLSCall_64 = 113,
+    RISCV_VLSCall_128 = 114,
+    RISCV_VLSCall_256 = 115,
+    RISCV_VLSCall_512 = 116,
+    RISCV_VLSCall_1024 = 117,
+    RISCV_VLSCall_2048 = 118,
+    RISCV_VLSCall_4096 = 119,
+    RISCV_VLSCall_8192 = 120,
+    RISCV_VLSCall_16384 = 121,
+    RISCV_VLSCall_32768 = 122,
+    RISCV_VLSCall_65536 = 123,
+
     /// The highest possible ID. Must be some 2^k - 1.
     MaxID = 1023
   };
 
 } // end namespace CallingConv
+
+/// \return true if the calling convention allows the function to be called
+/// directly or indirectly via a call-like instruction.
+constexpr bool isCallableCC(CallingConv::ID CC) {
+  switch (CC) {
+  case CallingConv::AMDGPU_CS_Chain:
+  case CallingConv::AMDGPU_CS_ChainPreserve:
+  case CallingConv::AMDGPU_CS:
+  case CallingConv::AMDGPU_ES:
+  case CallingConv::AMDGPU_GS:
+  case CallingConv::AMDGPU_HS:
+  case CallingConv::AMDGPU_KERNEL:
+  case CallingConv::AMDGPU_LS:
+  case CallingConv::AMDGPU_PS:
+  case CallingConv::AMDGPU_VS:
+  case CallingConv::SPIR_KERNEL:
+    return false;
+  default:
+    return true;
+  }
+}
 
 } // end namespace llvm
 

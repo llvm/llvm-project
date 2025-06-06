@@ -208,9 +208,10 @@ void DebugCounter::print(raw_ostream &OS) const {
   OS << "Counters and values:\n";
   for (auto &CounterName : CounterNames) {
     unsigned CounterID = getCounterId(std::string(CounterName));
-    OS << left_justify(RegisteredCounters[CounterID], 32) << ": {"
-       << Us.Counters[CounterID].Count << ",";
-    printChunks(OS, Us.Counters[CounterID].Chunks);
+    const CounterInfo &C = Us.Counters[CounterID];
+    OS << left_justify(RegisteredCounters[CounterID], 32) << ": {" << C.Count
+       << ",";
+    printChunks(OS, C.Chunks);
     OS << "}\n";
   }
 }
@@ -247,6 +248,8 @@ bool DebugCounter::shouldExecuteImpl(unsigned CounterName) {
   return true;
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void DebugCounter::dump() const {
   print(dbgs());
 }
+#endif

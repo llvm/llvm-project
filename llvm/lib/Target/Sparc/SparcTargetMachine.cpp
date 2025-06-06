@@ -28,6 +28,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSparcTarget() {
   RegisterTargetMachine<SparcelTargetMachine> Z(getTheSparcelTarget());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeSparcAsmPrinterPass(PR);
   initializeSparcDAGToDAGISelLegacyPass(PR);
   initializeErrataWorkaroundPass(PR);
 }
@@ -107,11 +108,12 @@ SparcTargetMachine::SparcTargetMachine(const Target &T, const Triple &TT,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOptLevel OL, bool JIT,
                                        bool is64bit)
-    : LLVMTargetMachine(T, computeDataLayout(TT, is64bit), TT, CPU, FS, Options,
-                        getEffectiveRelocModel(RM),
-                        getEffectiveSparcCodeModel(
-                            CM, getEffectiveRelocModel(RM), is64bit, JIT),
-                        OL),
+    : CodeGenTargetMachineImpl(
+          T, computeDataLayout(TT, is64bit), TT, CPU, FS, Options,
+          getEffectiveRelocModel(RM),
+          getEffectiveSparcCodeModel(CM, getEffectiveRelocModel(RM), is64bit,
+                                     JIT),
+          OL),
       TLOF(std::make_unique<SparcELFTargetObjectFile>()), is64Bit(is64bit) {
   initAsmInfo();
 }

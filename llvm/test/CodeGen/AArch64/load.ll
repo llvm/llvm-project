@@ -353,19 +353,19 @@ define <7 x i8> @load_v7i8(ptr %ptr) {
 ; CHECK-GI-LABEL: load_v7i8:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr b0, [x0]
-; CHECK-GI-NEXT:    ldr b1, [x0, #1]
+; CHECK-GI-NEXT:    add x8, x0, #1
 ; CHECK-GI-NEXT:    mov v0.b[0], v0.b[0]
-; CHECK-GI-NEXT:    mov v0.b[1], v1.b[0]
-; CHECK-GI-NEXT:    ldr b1, [x0, #2]
-; CHECK-GI-NEXT:    mov v0.b[2], v1.b[0]
-; CHECK-GI-NEXT:    ldr b1, [x0, #3]
-; CHECK-GI-NEXT:    mov v0.b[3], v1.b[0]
-; CHECK-GI-NEXT:    ldr b1, [x0, #4]
-; CHECK-GI-NEXT:    mov v0.b[4], v1.b[0]
-; CHECK-GI-NEXT:    ldr b1, [x0, #5]
-; CHECK-GI-NEXT:    mov v0.b[5], v1.b[0]
-; CHECK-GI-NEXT:    ldr b1, [x0, #6]
-; CHECK-GI-NEXT:    mov v0.b[6], v1.b[0]
+; CHECK-GI-NEXT:    ld1 { v0.b }[1], [x8]
+; CHECK-GI-NEXT:    add x8, x0, #2
+; CHECK-GI-NEXT:    ld1 { v0.b }[2], [x8]
+; CHECK-GI-NEXT:    add x8, x0, #3
+; CHECK-GI-NEXT:    ld1 { v0.b }[3], [x8]
+; CHECK-GI-NEXT:    add x8, x0, #4
+; CHECK-GI-NEXT:    ld1 { v0.b }[4], [x8]
+; CHECK-GI-NEXT:    add x8, x0, #5
+; CHECK-GI-NEXT:    ld1 { v0.b }[5], [x8]
+; CHECK-GI-NEXT:    add x8, x0, #6
+; CHECK-GI-NEXT:    ld1 { v0.b }[6], [x8]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %a = load <7 x i8>, ptr %ptr
@@ -464,4 +464,18 @@ define <2 x fp128> @load_v2f128(ptr %p) {
 ; CHECK-NEXT:    ret
   %a = load <2 x fp128>, ptr %p
   ret <2 x fp128> %a
+}
+
+define i32 @load_i8_s16_extrasuse(ptr %ptr, ptr %ptr2) {
+; CHECK-LABEL: load_i8_s16_extrasuse:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    sxtb w0, w8
+; CHECK-NEXT:    str w8, [x1]
+; CHECK-NEXT:    ret
+  %a = load i32, ptr %ptr
+  %s = shl i32 %a, 24
+  %b = ashr i32 %s, 24
+  store i32 %a, ptr %ptr2
+  ret i32 %b
 }

@@ -14,6 +14,7 @@
 #include "CGObjCRuntime.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "CodeGenPGO.h"
 #include "ConstantEmitter.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
@@ -23,7 +24,6 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/CodeGenABITypes.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/IR/Constants.h"
@@ -806,7 +806,7 @@ static llvm::Value *emitARCRetainLoadOfScalar(CodeGenFunction &CGF,
 /// its pointer, name, and types registered in the class structure.
 void CodeGenFunction::GenerateObjCMethod(const ObjCMethodDecl *OMD) {
   StartObjCMethod(OMD, OMD->getClassInterface());
-  PGO.assignRegionCounters(GlobalDecl(OMD), CurFn);
+  PGO->assignRegionCounters(GlobalDecl(OMD), CurFn);
   assert(isa<CompoundStmt>(OMD->getBody()));
   incrementProfileCounter(OMD->getBody());
   EmitCompoundStmtWithoutScope(*cast<CompoundStmt>(OMD->getBody()));
@@ -1985,7 +1985,7 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
       llvm::Constant *StaticData[] = {
           EmitCheckSourceLocation(S.getBeginLoc()),
           EmitCheckTypeDescriptor(QualType(InterfaceTy, 0))};
-      EmitCheck({{IsClass, SanitizerKind::ObjCCast}},
+      EmitCheck({{IsClass, SanitizerKind::SO_ObjCCast}},
                 SanitizerHandler::InvalidObjCCast,
                 ArrayRef<llvm::Constant *>(StaticData), CurrentItem);
     }
@@ -2387,7 +2387,8 @@ static llvm::Value *emitOptimizedARCReturnCall(llvm::Value *value,
   // FIXME: Do this on all targets and at -O0 too. This can be enabled only if
   // the target backend knows how to handle the operand bundle.
   if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0 &&
-      (Arch == llvm::Triple::aarch64 || Arch == llvm::Triple::x86_64)) {
+      (Arch == llvm::Triple::aarch64 || Arch == llvm::Triple::aarch64_32 ||
+       Arch == llvm::Triple::x86_64)) {
     llvm::Value *bundleArgs[] = {EP};
     llvm::OperandBundleDef OB("clang.arc.attachedcall", bundleArgs);
     auto *oldCall = cast<llvm::CallBase>(value);

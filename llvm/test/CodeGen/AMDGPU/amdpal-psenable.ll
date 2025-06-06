@@ -11,7 +11,8 @@
 ; GCN-NEXT: amdpal.pipelines:
 ; GCN-NEXT:   - .hardware_stages:
 ; GCN-NEXT:       .ps:
-; GCN-NEXT:         .entry_point:    amdpal_psenable
+; GCN-NEXT:         .entry_point:    _amdgpu_ps_main
+; GCN-NEXT:         .entry_point_symbol:    amdpal_psenable
 ; GCN-NEXT:         .scratch_memory_size: 0
 ; GCN:     .registers:
 ; GCN-NEXT:       '0x2c0a (SPI_SHADER_PGM_RSRC1_PS)':

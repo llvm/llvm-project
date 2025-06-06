@@ -16,8 +16,9 @@ Goal and usage
 ==============
 
 Users of sanitizer tools, such as :doc:`AddressSanitizer`,
-:doc:`ThreadSanitizer`, :doc:`MemorySanitizer` or :doc:`UndefinedBehaviorSanitizer`
-may want to disable or alter some checks for certain source-level entities to:
+:doc:`HardwareAssistedAddressSanitizerDesign`, :doc:`ThreadSanitizer`,
+:doc:`MemorySanitizer` or :doc:`UndefinedBehaviorSanitizer` may want to disable
+or alter some checks for certain source-level entities to:
 
 * speedup hot function, which is known to be correct;
 * ignore a function that does some low-level magic (e.g. walks through the
@@ -51,14 +52,13 @@ Example
 Usage with UndefinedBehaviorSanitizer
 =====================================
 
-The arithmetic overflow sanitizers ``unsigned-integer-overflow`` and
-``signed-integer-overflow`` as well as the implicit integer truncation
-sanitizers ``implicit-signed-integer-truncation`` and
-``implicit-unsigned-integer-truncation`` support the ability to adjust
-instrumentation based on type.
+``unsigned-integer-overflow``, ``signed-integer-overflow``,
+``implicit-signed-integer-truncation``,
+``implicit-unsigned-integer-truncation``, and ``enum`` sanitizers support the
+ability to adjust instrumentation based on type.
 
 By default, supported sanitizers will have their instrumentation disabled for
-types specified within an ignorelist.
+entries specified within an ignorelist.
 
 .. code-block:: bash
 
@@ -77,10 +77,10 @@ For example, supplying the above ``ignorelist.txt`` to
 ``-fsanitize-ignorelist=ignorelist.txt`` disables overflow sanitizer
 instrumentation for arithmetic operations containing values of type ``int``.
 
-The ``=sanitize`` category is also supported. Any types assigned to the
-``sanitize`` category will have their sanitizer instrumentation remain. If the
-same type appears within or across ignorelists with different categories the
-``sanitize`` category takes precedence -- regardless of order.
+The ``=sanitize`` category is also supported. Any ``=sanitize`` category
+entries enable sanitizer instrumentation, even if it was ignored by entries
+before. Entries can be ``src``, ``type``, ``global``, ``fun``, and
+``mainfile``.
 
 With this, one may disable instrumentation for some or all types and
 specifically allow instrumentation for one or many types -- including types
@@ -102,6 +102,36 @@ supported sanitizers.
     U b = toobig;    // not instrumented
     char c = toobig; // also not instrumented
   }
+
+If multiple entries match the source, then the latest entry takes the
+precedence. Here are a few examples.
+
+.. code-block:: bash
+
+  $ cat ignorelist1.txt
+  # test.cc will be instrumented.
+  src:*
+  src:*/mylib/*=sanitize
+  src:*/mylib/test.cc
+
+  $ cat ignorelist2.txt
+  # test.cc will not be instrumented.
+  src:*
+  src:*/mylib/test.cc
+  src:*/mylib/*=sanitize
+
+  $ cat ignorelist3.txt
+  # Type T will not be instrumented.
+  type:*
+  type:T=sanitize
+  type:T
+
+  $ cat ignorelist4.txt
+  # Function `bad_bar`` will be instrumented.
+  # Function `good_bar` will not be instrumented.
+  fun:*
+  fun:*bar
+  fun:bad_bar=sanitize
 
 Format
 ======
@@ -140,7 +170,6 @@ tool-specific docs.
 
 .. code-block:: bash
 
-    # The line above is explained in the note above
     # Lines starting with # are ignored.
     # Turn off checks for the source file
     # Entries without sections are placed into [*] and apply to all sanitizers

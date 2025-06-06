@@ -397,6 +397,10 @@ def skipIf(
     )
 
 
+def skip(bugnumber=None):
+    return _decorateTest(DecorateMode.Skip, bugnumber=bugnumber)
+
+
 def _skip_fn_for_android(reason, api_levels, archs):
     def impl():
         result = lldbplatformutil.match_android_device(
@@ -989,13 +993,19 @@ def skipUnlessAArch64MTELinuxCompiler(func):
 
     def is_toolchain_with_mte():
         compiler_path = lldbplatformutil.getCompiler()
-        compiler = os.path.basename(compiler_path)
-        f = tempfile.NamedTemporaryFile()
+        f = tempfile.NamedTemporaryFile(delete=False)
         if lldbplatformutil.getPlatform() == "windows":
             return "MTE tests are not compatible with 'windows'"
 
-        cmd = "echo 'int main() {}' | %s -x c -o %s -" % (compiler_path, f.name)
-        if os.popen(cmd).close() is not None:
+        # Note hostos may be Windows.
+        f.close()
+
+        cmd = f"{compiler_path} -x c -o {f.name} -"
+        if (
+            subprocess.run(cmd, shell=True, input="int main() {}".encode()).returncode
+            != 0
+        ):
+            os.remove(f.name)
             # Cannot compile at all, don't skip the test
             # so that we report the broken compiler normally.
             return None
@@ -1010,12 +1020,10 @@ def skipUnlessAArch64MTELinuxCompiler(func):
             int main() {
                 void* ptr = __arm_mte_create_random_tag((void*)(0), 0);
             }"""
-        cmd = "echo '%s' | %s -march=armv8.5-a+memtag -x c -o %s -" % (
-            test_src,
-            compiler_path,
-            f.name,
-        )
-        if os.popen(cmd).close() is not None:
+        cmd = f"{compiler_path} -march=armv8.5-a+memtag -x c -o {f.name} -"
+        res = subprocess.run(cmd, shell=True, input=test_src.encode())
+        os.remove(f.name)
+        if res.returncode != 0:
             return "Toolchain does not support MTE"
         return None
 
@@ -1094,3 +1102,15 @@ def skipUnlessFeature(feature):
                 return "%s is not supported on this system." % feature
 
     return skipTestIfFn(is_feature_enabled)
+
+
+def skipIfBuildType(types: list[str]):
+    """Skip tests if built in a specific CMAKE_BUILD_TYPE.
+
+    Supported types include 'Release', 'RelWithDebInfo', 'Debug', 'MinSizeRel'.
+    """
+    types = [name.lower() for name in types]
+    return unittest.skipIf(
+        configuration.cmake_build_type.lower() in types,
+        "skip on {} build type(s)".format(", ".join(types)),
+    )

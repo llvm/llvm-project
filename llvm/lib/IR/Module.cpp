@@ -39,6 +39,7 @@
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -53,7 +54,7 @@
 
 using namespace llvm;
 
-extern cl::opt<bool> UseNewDbgInfoFormat;
+LLVM_ABI extern cl::opt<bool> UseNewDbgInfoFormat;
 
 //===----------------------------------------------------------------------===//
 // Methods to implement the globals and functions lists.
@@ -61,10 +62,10 @@ extern cl::opt<bool> UseNewDbgInfoFormat;
 
 // Explicit instantiations of SymbolTableListTraits since some of the methods
 // are not in the public header file.
-template class llvm::SymbolTableListTraits<Function>;
-template class llvm::SymbolTableListTraits<GlobalVariable>;
-template class llvm::SymbolTableListTraits<GlobalAlias>;
-template class llvm::SymbolTableListTraits<GlobalIFunc>;
+template class LLVM_EXPORT_TEMPLATE llvm::SymbolTableListTraits<Function>;
+template class LLVM_EXPORT_TEMPLATE llvm::SymbolTableListTraits<GlobalVariable>;
+template class LLVM_EXPORT_TEMPLATE llvm::SymbolTableListTraits<GlobalAlias>;
+template class LLVM_EXPORT_TEMPLATE llvm::SymbolTableListTraits<GlobalIFunc>;
 
 //===----------------------------------------------------------------------===//
 // Primitive Module methods.
@@ -75,6 +76,41 @@ Module::Module(StringRef MID, LLVMContext &C)
       ModuleID(std::string(MID)), SourceFileName(std::string(MID)),
       IsNewDbgInfoFormat(UseNewDbgInfoFormat) {
   Context.addModule(this);
+}
+
+Module &Module::operator=(Module &&Other) {
+  assert(&Context == &Other.Context && "Module must be in the same Context");
+
+  dropAllReferences();
+
+  ModuleID = std::move(Other.ModuleID);
+  SourceFileName = std::move(Other.SourceFileName);
+  IsNewDbgInfoFormat = std::move(Other.IsNewDbgInfoFormat);
+
+  GlobalList.clear();
+  GlobalList.splice(GlobalList.begin(), Other.GlobalList);
+
+  FunctionList.clear();
+  FunctionList.splice(FunctionList.begin(), Other.FunctionList);
+
+  AliasList.clear();
+  AliasList.splice(AliasList.begin(), Other.AliasList);
+
+  IFuncList.clear();
+  IFuncList.splice(IFuncList.begin(), Other.IFuncList);
+
+  NamedMDList.clear();
+  NamedMDList.splice(NamedMDList.begin(), Other.NamedMDList);
+  GlobalScopeAsm = std::move(Other.GlobalScopeAsm);
+  OwnedMemoryBuffer = std::move(Other.OwnedMemoryBuffer);
+  Materializer = std::move(Other.Materializer);
+  TargetTriple = std::move(Other.TargetTriple);
+  DL = std::move(Other.DL);
+  CurrentIntrinsicIds = std::move(Other.CurrentIntrinsicIds);
+  UniquedIntrinsicNames = std::move(Other.UniquedIntrinsicNames);
+  ModuleFlags = std::move(Other.ModuleFlags);
+  Context.addModule(this);
+  return *this;
 }
 
 Module::~Module() {
@@ -215,12 +251,9 @@ GlobalVariable *Module::getGlobalVariable(StringRef Name,
 }
 
 /// getOrInsertGlobal - Look up the specified global in the module symbol table.
-///   1. If it does not exist, add a declaration of the global and return it.
-///   2. Else, the global exists but has the wrong type: return the function
-///      with a constantexpr cast to the right type.
-///   3. Finally, if the existing global is the correct declaration, return the
-///      existing global.
-Constant *Module::getOrInsertGlobal(
+/// If it does not exist, add a declaration of the global and return it.
+/// Otherwise, return the existing global.
+GlobalVariable *Module::getOrInsertGlobal(
     StringRef Name, Type *Ty,
     function_ref<GlobalVariable *()> CreateGlobalCallback) {
   // See if we have a definition for the specified global already.
@@ -234,7 +267,7 @@ Constant *Module::getOrInsertGlobal(
 }
 
 // Overload to construct a global variable using its constructor's defaults.
-Constant *Module::getOrInsertGlobal(StringRef Name, Type *Ty) {
+GlobalVariable *Module::getOrInsertGlobal(StringRef Name, Type *Ty) {
   return getOrInsertGlobal(Name, Ty, [&] {
     return new GlobalVariable(*this, Ty, false, GlobalVariable::ExternalLinkage,
                               nullptr, Name);
@@ -879,4 +912,12 @@ VersionTuple Module::getDarwinTargetVariantSDKVersion() const {
 
 void Module::setDarwinTargetVariantSDKVersion(VersionTuple Version) {
   addSDKVersionMD(Version, *this, "darwin.target_variant.SDK Version");
+}
+
+StringRef Module::getTargetABIFromMD() {
+  StringRef TargetABI;
+  if (auto *TargetABIMD =
+          dyn_cast_or_null<MDString>(getModuleFlag("target-abi")))
+    TargetABI = TargetABIMD->getString();
+  return TargetABI;
 }

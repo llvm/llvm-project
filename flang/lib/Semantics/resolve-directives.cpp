@@ -19,8 +19,11 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/expression.h"
+#include "flang/Semantics/openmp-dsa.h"
+#include "flang/Semantics/openmp-modifiers.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/Support/Debug.h"
 #include <list>
 #include <map>
 #include <sstream>
@@ -110,10 +113,9 @@ protected:
   const parser::Name *GetLoopIndex(const parser::DoConstruct &);
   const parser::DoConstruct *GetDoConstructIf(
       const parser::ExecutionPartConstruct &);
-  Symbol *DeclareNewPrivateAccessEntity(const Symbol &, Symbol::Flag, Scope &);
-  Symbol *DeclarePrivateAccessEntity(
-      const parser::Name &, Symbol::Flag, Scope &);
-  Symbol *DeclarePrivateAccessEntity(Symbol &, Symbol::Flag, Scope &);
+  Symbol *DeclareNewAccessEntity(const Symbol &, Symbol::Flag, Scope &);
+  Symbol *DeclareAccessEntity(const parser::Name &, Symbol::Flag, Scope &);
+  Symbol *DeclareAccessEntity(Symbol &, Symbol::Flag, Scope &);
   Symbol *DeclareOrMarkOtherAccessEntity(const parser::Name &, Symbol::Flag);
 
   UnorderedSymbolSet dataSharingAttributeObjects_; // on one directive
@@ -350,6 +352,18 @@ public:
     return true;
   }
 
+  bool Pre(const parser::OmpDirectiveSpecification &x) {
+    PushContext(x.source, x.DirId());
+    return true;
+  }
+  void Post(const parser::OmpDirectiveSpecification &) { PopContext(); }
+
+  bool Pre(const parser::OmpMetadirectiveDirective &x) {
+    PushContext(x.source, llvm::omp::Directive::OMPD_metadirective);
+    return true;
+  }
+  void Post(const parser::OmpMetadirectiveDirective &) { PopContext(); }
+
   bool Pre(const parser::OpenMPBlockConstruct &);
   void Post(const parser::OpenMPBlockConstruct &);
 
@@ -385,11 +399,36 @@ public:
 
   bool Pre(const parser::OpenMPDepobjConstruct &x) {
     PushContext(x.source, llvm::omp::Directive::OMPD_depobj);
-    auto &object{std::get<parser::OmpObject>(x.t)};
-    ResolveOmpObject(object, Symbol::Flag::OmpDependObject);
+    for (auto &arg : x.v.Arguments().v) {
+      if (auto *locator{std::get_if<parser::OmpLocator>(&arg.u)}) {
+        if (auto *object{std::get_if<parser::OmpObject>(&locator->u)}) {
+          ResolveOmpObject(*object, Symbol::Flag::OmpDependObject);
+        }
+      }
+    }
     return true;
   }
   void Post(const parser::OpenMPDepobjConstruct &) { PopContext(); }
+
+  bool Pre(const parser::OpenMPFlushConstruct &x) {
+    PushContext(x.source, llvm::omp::Directive::OMPD_flush);
+    for (auto &arg : x.v.Arguments().v) {
+      if (auto *locator{std::get_if<parser::OmpLocator>(&arg.u)}) {
+        if (auto *object{std::get_if<parser::OmpObject>(&locator->u)}) {
+          if (auto *name{std::get_if<parser::Name>(&object->u)}) {
+            // ResolveOmpCommonBlockName resolves the symbol as a side effect
+            if (!ResolveOmpCommonBlockName(name)) {
+              context_.Say(name->source, // 2.15.3
+                  "COMMON block must be declared in the same scoping unit "
+                  "in which the OpenMP directive or clause appears"_err_en_US);
+            }
+          }
+        }
+      }
+    }
+    return true;
+  }
+  void Post(const parser::OpenMPFlushConstruct &) { PopContext(); }
 
   bool Pre(const parser::OpenMPRequiresConstruct &x) {
     using Flags = WithOmpDeclarative::RequiresFlags;
@@ -398,7 +437,7 @@ public:
 
     // Gather information from the clauses.
     Flags flags;
-    std::optional<common::OmpAtomicDefaultMemOrderType> memOrder;
+    std::optional<common::OmpMemoryOrderType> memOrder;
     for (const auto &clause : std::get<parser::OmpClauseList>(x.t).v) {
       flags |= common::visit(
           common::visitors{
@@ -431,11 +470,20 @@ public:
   bool Pre(const parser::OpenMPDeclareTargetConstruct &);
   void Post(const parser::OpenMPDeclareTargetConstruct &) { PopContext(); }
 
+  bool Pre(const parser::OpenMPDeclareMapperConstruct &);
+  void Post(const parser::OpenMPDeclareMapperConstruct &) { PopContext(); }
+
+  bool Pre(const parser::OpenMPDeclareReductionConstruct &);
+  void Post(const parser::OpenMPDeclareReductionConstruct &) { PopContext(); }
+
   bool Pre(const parser::OpenMPThreadprivate &);
   void Post(const parser::OpenMPThreadprivate &) { PopContext(); }
 
   bool Pre(const parser::OpenMPDeclarativeAllocate &);
   void Post(const parser::OpenMPDeclarativeAllocate &) { PopContext(); }
+
+  bool Pre(const parser::OpenMPDispatchConstruct &);
+  void Post(const parser::OpenMPDispatchConstruct &) { PopContext(); }
 
   bool Pre(const parser::OpenMPExecutableAllocate &);
   void Post(const parser::OpenMPExecutableAllocate &);
@@ -458,6 +506,14 @@ public:
   }
 
   // 2.15.3 Data-Sharing Attribute Clauses
+  bool Pre(const parser::OmpClause::Inclusive &x) {
+    ResolveOmpObjectList(x.v, Symbol::Flag::OmpInclusiveScan);
+    return false;
+  }
+  bool Pre(const parser::OmpClause::Exclusive &x) {
+    ResolveOmpObjectList(x.v, Symbol::Flag::OmpExclusiveScan);
+    return false;
+  }
   void Post(const parser::OmpDefaultClause &);
   bool Pre(const parser::OmpClause::Shared &x) {
     ResolveOmpObjectList(x.v, Symbol::Flag::OmpShared);
@@ -490,54 +546,69 @@ public:
     return false;
   }
   bool Pre(const parser::OmpLinearClause &x) {
-    common::visit(common::visitors{
-                      [&](const parser::OmpLinearClause::WithoutModifier
-                              &linearWithoutModifier) {
-                        ResolveOmpNameList(linearWithoutModifier.names,
-                            Symbol::Flag::OmpLinear);
-                      },
-                      [&](const parser::OmpLinearClause::WithModifier
-                              &linearWithModifier) {
-                        ResolveOmpNameList(
-                            linearWithModifier.names, Symbol::Flag::OmpLinear);
-                      },
-                  },
-        x.u);
+    auto &objects{std::get<parser::OmpObjectList>(x.t)};
+    ResolveOmpObjectList(objects, Symbol::Flag::OmpLinear);
+    return false;
+  }
+
+  bool Pre(const parser::OmpClause::Uniform &x) {
+    ResolveOmpNameList(x.v, Symbol::Flag::OmpUniform);
+    return false;
+  }
+
+  bool Pre(const parser::OmpInReductionClause &x) {
+    auto &objects{std::get<parser::OmpObjectList>(x.t)};
+    ResolveOmpObjectList(objects, Symbol::Flag::OmpInReduction);
     return false;
   }
 
   bool Pre(const parser::OmpClause::Reduction &x) {
-    const parser::OmpReductionOperator &opr{
-        std::get<parser::OmpReductionOperator>(x.v.t)};
-    auto createDummyProcSymbol = [&](const parser::Name *name) {
-      // If name resolution failed, create a dummy symbol
-      const auto namePair{
-          currScope().try_emplace(name->source, Attrs{}, ProcEntityDetails{})};
-      auto &newSymbol{*namePair.first->second};
-      if (context_.intrinsics().IsIntrinsic(name->ToString())) {
-        newSymbol.attrs().set(Attr::INTRINSIC);
-      }
-      name->symbol = &newSymbol;
-    };
-    if (const auto *procD{parser::Unwrap<parser::ProcedureDesignator>(opr.u)}) {
-      if (const auto *name{parser::Unwrap<parser::Name>(procD->u)}) {
-        if (!name->symbol) {
-          if (!ResolveName(name)) {
-            createDummyProcSymbol(name);
+    const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};
+    ResolveOmpObjectList(objList, Symbol::Flag::OmpReduction);
+
+    if (auto &modifiers{OmpGetModifiers(x.v)}) {
+      auto createDummyProcSymbol = [&](const parser::Name *name) {
+        // If name resolution failed, create a dummy symbol
+        const auto namePair{currScope().try_emplace(
+            name->source, Attrs{}, ProcEntityDetails{})};
+        auto &newSymbol{*namePair.first->second};
+        if (context_.intrinsics().IsIntrinsic(name->ToString())) {
+          newSymbol.attrs().set(Attr::INTRINSIC);
+        }
+        name->symbol = &newSymbol;
+      };
+
+      for (auto &mod : *modifiers) {
+        if (!std::holds_alternative<parser::OmpReductionIdentifier>(mod.u)) {
+          continue;
+        }
+        auto &opr{std::get<parser::OmpReductionIdentifier>(mod.u)};
+        if (auto *procD{parser::Unwrap<parser::ProcedureDesignator>(opr.u)}) {
+          if (auto *name{parser::Unwrap<parser::Name>(procD->u)}) {
+            if (!name->symbol) {
+              if (!ResolveName(name)) {
+                createDummyProcSymbol(name);
+              }
+            }
+          }
+          if (auto *procRef{
+                  parser::Unwrap<parser::ProcComponentRef>(procD->u)}) {
+            if (!procRef->v.thing.component.symbol) {
+              if (!ResolveName(&procRef->v.thing.component)) {
+                createDummyProcSymbol(&procRef->v.thing.component);
+              }
+            }
           }
         }
       }
-      if (const auto *procRef{
-              parser::Unwrap<parser::ProcComponentRef>(procD->u)}) {
-        if (!procRef->v.thing.component.symbol) {
-          if (!ResolveName(&procRef->v.thing.component)) {
-            createDummyProcSymbol(&procRef->v.thing.component);
-          }
+      using ReductionModifier = parser::OmpReductionModifier;
+      if (auto *maybeModifier{
+              OmpGetUniqueModifier<ReductionModifier>(modifiers)}) {
+        if (maybeModifier->v == ReductionModifier::Value::Inscan) {
+          ResolveOmpObjectList(objList, Symbol::Flag::OmpInScanReduction);
         }
       }
     }
-    const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};
-    ResolveOmpObjectList(objList, Symbol::Flag::OmpReduction);
     return false;
   }
 
@@ -553,9 +624,17 @@ public:
     return false;
   }
 
-  void Post(const parser::OmpDependSinkVec &x) {
-    const auto &name{std::get<parser::Name>(x.t)};
-    ResolveName(&name);
+  void Post(const parser::OmpIteration &x) {
+    if (const auto &name{std::get<parser::Name>(x.t)}; !name.symbol) {
+      auto *symbol{currScope().FindSymbol(name.source)};
+      if (!symbol) {
+        // OmpIteration must use an existing object. If there isn't one,
+        // create a fake one and flag an error later.
+        symbol = &currScope().MakeSymbol(
+            name.source, Attrs{}, EntityDetails(/*isDummy=*/true));
+      }
+      Resolve(name, symbol);
+    }
   }
 
   bool Pre(const parser::OmpClause::UseDevicePtr &x) {
@@ -606,28 +685,25 @@ public:
 
   void Post(const parser::OmpMapClause &x) {
     Symbol::Flag ompFlag = Symbol::Flag::OmpMapToFrom;
-    // There is only one `type' allowed, but it's parsed as a list. Multiple
-    // types are diagnosed in the semantic checks for OpenMP.
-    if (const auto &mapType{
-            std::get<std::optional<std::list<parser::OmpMapClause::Type>>>(
-                x.t)}) {
-      switch (mapType->front()) {
-      case parser::OmpMapClause::Type::To:
+    auto &mods{OmpGetModifiers(x)};
+    if (auto *mapType{OmpGetUniqueModifier<parser::OmpMapType>(mods)}) {
+      switch (mapType->v) {
+      case parser::OmpMapType::Value::To:
         ompFlag = Symbol::Flag::OmpMapTo;
         break;
-      case parser::OmpMapClause::Type::From:
+      case parser::OmpMapType::Value::From:
         ompFlag = Symbol::Flag::OmpMapFrom;
         break;
-      case parser::OmpMapClause::Type::Tofrom:
+      case parser::OmpMapType::Value::Tofrom:
         ompFlag = Symbol::Flag::OmpMapToFrom;
         break;
-      case parser::OmpMapClause::Type::Alloc:
+      case parser::OmpMapType::Value::Alloc:
         ompFlag = Symbol::Flag::OmpMapAlloc;
         break;
-      case parser::OmpMapClause::Type::Release:
+      case parser::OmpMapType::Value::Release:
         ompFlag = Symbol::Flag::OmpMapRelease;
         break;
-      case parser::OmpMapClause::Type::Delete:
+      case parser::OmpMapType::Value::Delete:
         ompFlag = Symbol::Flag::OmpMapDelete;
         break;
       }
@@ -679,13 +755,15 @@ private:
 
   Symbol::Flags ompFlagsRequireNewSymbol{Symbol::Flag::OmpPrivate,
       Symbol::Flag::OmpLinear, Symbol::Flag::OmpFirstPrivate,
-      Symbol::Flag::OmpLastPrivate, Symbol::Flag::OmpReduction,
-      Symbol::Flag::OmpCriticalLock, Symbol::Flag::OmpCopyIn,
-      Symbol::Flag::OmpUseDevicePtr, Symbol::Flag::OmpUseDeviceAddr,
-      Symbol::Flag::OmpIsDevicePtr, Symbol::Flag::OmpHasDeviceAddr};
+      Symbol::Flag::OmpLastPrivate, Symbol::Flag::OmpShared,
+      Symbol::Flag::OmpReduction, Symbol::Flag::OmpCriticalLock,
+      Symbol::Flag::OmpCopyIn, Symbol::Flag::OmpUseDevicePtr,
+      Symbol::Flag::OmpUseDeviceAddr, Symbol::Flag::OmpIsDevicePtr,
+      Symbol::Flag::OmpHasDeviceAddr, Symbol::Flag::OmpUniform};
 
-  Symbol::Flags ompFlagsRequireMark{
-      Symbol::Flag::OmpThreadprivate, Symbol::Flag::OmpDeclareTarget};
+  Symbol::Flags ompFlagsRequireMark{Symbol::Flag::OmpThreadprivate,
+      Symbol::Flag::OmpDeclareTarget, Symbol::Flag::OmpExclusiveScan,
+      Symbol::Flag::OmpInclusiveScan, Symbol::Flag::OmpInScanReduction};
 
   Symbol::Flags dataCopyingAttributeFlags{
       Symbol::Flag::OmpCopyIn, Symbol::Flag::OmpCopyPrivate};
@@ -754,12 +832,28 @@ private:
   std::int64_t ordCollapseLevel{0};
 
   void AddOmpRequiresToScope(Scope &, WithOmpDeclarative::RequiresFlags,
-      std::optional<common::OmpAtomicDefaultMemOrderType>);
+      std::optional<common::OmpMemoryOrderType>);
   void IssueNonConformanceWarning(
       llvm::omp::Directive D, parser::CharBlock source);
 
-  void CreateImplicitSymbols(
-      const Symbol *symbol, std::optional<Symbol::Flag> setFlag = std::nullopt);
+  void CreateImplicitSymbols(const Symbol *symbol);
+
+  void AddToContextObjectWithExplicitDSA(Symbol &symbol, Symbol::Flag flag) {
+    AddToContextObjectWithDSA(symbol, flag);
+    if (dataSharingAttributeFlags.test(flag)) {
+      symbol.set(Symbol::Flag::OmpExplicit);
+    }
+  }
+
+  // Clear any previous data-sharing attribute flags and set the new ones.
+  // Needed when setting PreDetermined DSAs, that take precedence over
+  // Implicit ones.
+  void SetSymbolDSA(Symbol &symbol, Symbol::Flags flags) {
+    symbol.flags() &= ~(dataSharingAttributeFlags |
+        Symbol::Flags{Symbol::Flag::OmpExplicit, Symbol::Flag::OmpImplicit,
+            Symbol::Flag::OmpPreDetermined});
+    symbol.flags() |= flags;
+  }
 };
 
 template <typename T>
@@ -796,7 +890,7 @@ const parser::DoConstruct *DirectiveAttributeVisitor<T>::GetDoConstructIf(
 }
 
 template <typename T>
-Symbol *DirectiveAttributeVisitor<T>::DeclareNewPrivateAccessEntity(
+Symbol *DirectiveAttributeVisitor<T>::DeclareNewAccessEntity(
     const Symbol &object, Symbol::Flag flag, Scope &scope) {
   assert(object.owner() != currScope());
   auto &symbol{MakeAssocSymbol(object.name(), object, scope)};
@@ -809,20 +903,20 @@ Symbol *DirectiveAttributeVisitor<T>::DeclareNewPrivateAccessEntity(
 }
 
 template <typename T>
-Symbol *DirectiveAttributeVisitor<T>::DeclarePrivateAccessEntity(
+Symbol *DirectiveAttributeVisitor<T>::DeclareAccessEntity(
     const parser::Name &name, Symbol::Flag flag, Scope &scope) {
   if (!name.symbol) {
     return nullptr; // not resolved by Name Resolution step, do nothing
   }
-  name.symbol = DeclarePrivateAccessEntity(*name.symbol, flag, scope);
+  name.symbol = DeclareAccessEntity(*name.symbol, flag, scope);
   return name.symbol;
 }
 
 template <typename T>
-Symbol *DirectiveAttributeVisitor<T>::DeclarePrivateAccessEntity(
+Symbol *DirectiveAttributeVisitor<T>::DeclareAccessEntity(
     Symbol &object, Symbol::Flag flag, Scope &scope) {
   if (object.owner() != currScope()) {
-    return DeclareNewPrivateAccessEntity(object, flag, scope);
+    return DeclareNewAccessEntity(object, flag, scope);
   } else {
     object.set(flag);
     return &object;
@@ -908,7 +1002,14 @@ void AccAttributeVisitor::Post(
   const auto &clauseList = std::get<parser::AccClauseList>(x.t);
   for (const auto &clause : clauseList.v) {
     // Restriction - line 2414
-    DoNotAllowAssumedSizedArray(GetAccObjectList(clause));
+    // We assume the restriction is present because clauses that require
+    // moving data would require the size of the data to be present, but
+    // the deviceptr and present clauses do not require moving data and
+    // thus we permit them.
+    if (!std::holds_alternative<parser::AccClause::Deviceptr>(clause.u) &&
+        !std::holds_alternative<parser::AccClause::Present>(clause.u)) {
+      DoNotAllowAssumedSizedArray(GetAccObjectList(clause));
+    }
   }
 }
 
@@ -989,88 +1090,78 @@ void AccAttributeVisitor::AddRoutineInfoToSymbol(
     Symbol &symbol, const parser::OpenACCRoutineConstruct &x) {
   if (symbol.has<SubprogramDetails>()) {
     Fortran::semantics::OpenACCRoutineInfo info;
-    const auto &clauses = std::get<Fortran::parser::AccClauseList>(x.t);
+    std::vector<OpenACCRoutineDeviceTypeInfo *> currentDevices;
+    currentDevices.push_back(&info);
+    const auto &clauses{std::get<Fortran::parser::AccClauseList>(x.t)};
     for (const Fortran::parser::AccClause &clause : clauses.v) {
-      if (std::get_if<Fortran::parser::AccClause::Seq>(&clause.u)) {
-        if (info.deviceTypeInfos().empty()) {
-          info.set_isSeq();
-        } else {
-          info.deviceTypeInfos().back().set_isSeq();
-        }
-      } else if (const auto *gangClause =
-                     std::get_if<Fortran::parser::AccClause::Gang>(&clause.u)) {
-        if (info.deviceTypeInfos().empty()) {
-          info.set_isGang();
-        } else {
-          info.deviceTypeInfos().back().set_isGang();
-        }
-        if (gangClause->v) {
-          const Fortran::parser::AccGangArgList &x = *gangClause->v;
-          for (const Fortran::parser::AccGangArg &gangArg : x.v) {
-            if (const auto *dim =
-                    std::get_if<Fortran::parser::AccGangArg::Dim>(&gangArg.u)) {
-              if (const auto v{EvaluateInt64(context_, dim->v)}) {
-                if (info.deviceTypeInfos().empty()) {
-                  info.set_gangDim(*v);
-                } else {
-                  info.deviceTypeInfos().back().set_gangDim(*v);
-                }
-              }
-            }
-          }
-        }
-      } else if (std::get_if<Fortran::parser::AccClause::Vector>(&clause.u)) {
-        if (info.deviceTypeInfos().empty()) {
-          info.set_isVector();
-        } else {
-          info.deviceTypeInfos().back().set_isVector();
-        }
-      } else if (std::get_if<Fortran::parser::AccClause::Worker>(&clause.u)) {
-        if (info.deviceTypeInfos().empty()) {
-          info.set_isWorker();
-        } else {
-          info.deviceTypeInfos().back().set_isWorker();
+      if (const auto *dTypeClause{
+              std::get_if<Fortran::parser::AccClause::DeviceType>(&clause.u)}) {
+        currentDevices.clear();
+        for (const auto &deviceTypeExpr : dTypeClause->v.v) {
+          currentDevices.push_back(&info.add_deviceTypeInfo(deviceTypeExpr.v));
         }
       } else if (std::get_if<Fortran::parser::AccClause::Nohost>(&clause.u)) {
         info.set_isNohost();
-      } else if (const auto *bindClause =
-                     std::get_if<Fortran::parser::AccClause::Bind>(&clause.u)) {
-        if (const auto *name =
-                std::get_if<Fortran::parser::Name>(&bindClause->v.u)) {
-          if (Symbol *sym = ResolveFctName(*name)) {
-            if (info.deviceTypeInfos().empty()) {
-              info.set_bindName(sym->name().ToString());
-            } else {
-              info.deviceTypeInfos().back().set_bindName(
-                  sym->name().ToString());
+      } else if (std::get_if<Fortran::parser::AccClause::Seq>(&clause.u)) {
+        for (auto &device : currentDevices) {
+          device->set_isSeq();
+        }
+      } else if (std::get_if<Fortran::parser::AccClause::Vector>(&clause.u)) {
+        for (auto &device : currentDevices) {
+          device->set_isVector();
+        }
+      } else if (std::get_if<Fortran::parser::AccClause::Worker>(&clause.u)) {
+        for (auto &device : currentDevices) {
+          device->set_isWorker();
+        }
+      } else if (const auto *gangClause{
+                     std::get_if<Fortran::parser::AccClause::Gang>(
+                         &clause.u)}) {
+        for (auto &device : currentDevices) {
+          device->set_isGang();
+        }
+        if (gangClause->v) {
+          const Fortran::parser::AccGangArgList &x = *gangClause->v;
+          int numArgs{0};
+          for (const Fortran::parser::AccGangArg &gangArg : x.v) {
+            CHECK(numArgs <= 1 && "expecting 0 or 1 gang dim args");
+            if (const auto *dim{std::get_if<Fortran::parser::AccGangArg::Dim>(
+                    &gangArg.u)}) {
+              if (const auto v{EvaluateInt64(context_, dim->v)}) {
+                for (auto &device : currentDevices) {
+                  device->set_gangDim(*v);
+                }
+              }
+            }
+            numArgs++;
+          }
+        }
+      } else if (const auto *bindClause{
+                     std::get_if<Fortran::parser::AccClause::Bind>(
+                         &clause.u)}) {
+        if (const auto *name{
+                std::get_if<Fortran::parser::Name>(&bindClause->v.u)}) {
+          if (Symbol * sym{ResolveFctName(*name)}) {
+            Symbol &ultimate{sym->GetUltimate()};
+            for (auto &device : currentDevices) {
+              device->set_bindName(SymbolRef{ultimate});
             }
           } else {
             context_.Say((*name).source,
                 "No function or subroutine declared for '%s'"_err_en_US,
                 (*name).source);
           }
-        } else if (const auto charExpr =
+        } else if (const auto charExpr{
                        std::get_if<Fortran::parser::ScalarDefaultCharExpr>(
-                           &bindClause->v.u)) {
-          auto *charConst =
+                           &bindClause->v.u)}) {
+          auto *charConst{
               Fortran::parser::Unwrap<Fortran::parser::CharLiteralConstant>(
-                  *charExpr);
+                  *charExpr)};
           std::string str{std::get<std::string>(charConst->t)};
-          std::stringstream bindName;
-          bindName << "\"" << str << "\"";
-          if (info.deviceTypeInfos().empty()) {
-            info.set_bindName(bindName.str());
-          } else {
-            info.deviceTypeInfos().back().set_bindName(bindName.str());
+          for (auto &device : currentDevices) {
+            device->set_bindName(std::string(str));
           }
         }
-      } else if (const auto *dType =
-                     std::get_if<Fortran::parser::AccClause::DeviceType>(
-                         &clause.u)) {
-        const parser::AccDeviceTypeExprList &deviceTypeExprList = dType->v;
-        OpenACCRoutineDeviceTypeInfo dtypeInfo;
-        dtypeInfo.set_dType(deviceTypeExprList.v.front().v);
-        info.add_deviceTypeInfo(dtypeInfo);
       }
     }
     symbol.get<SubprogramDetails>().add_openACCRoutineInfo(info);
@@ -1532,6 +1623,20 @@ void AccAttributeVisitor::CheckMultipleAppearances(
   }
 }
 
+#ifndef NDEBUG
+
+#define DEBUG_TYPE "omp"
+
+static llvm::raw_ostream &operator<<(
+    llvm::raw_ostream &os, const Symbol::Flags &flags);
+
+namespace dbg {
+static void DumpAssocSymbols(llvm::raw_ostream &os, const Symbol &sym);
+static std::string ScopeSourcePos(const Fortran::semantics::Scope &scope);
+} // namespace dbg
+
+#endif
+
 bool OmpAttributeVisitor::Pre(const parser::OpenMPBlockConstruct &x) {
   const auto &beginBlockDir{std::get<parser::OmpBeginBlockDirective>(x.t)};
   const auto &beginDir{std::get<parser::OmpBlockDirective>(beginBlockDir.t)};
@@ -1613,11 +1718,11 @@ void OmpAttributeVisitor::Post(const parser::OpenMPBlockConstruct &x) {
 
 bool OmpAttributeVisitor::Pre(
     const parser::OpenMPSimpleStandaloneConstruct &x) {
-  const auto &standaloneDir{
-      std::get<parser::OmpSimpleStandaloneDirective>(x.t)};
+  const auto &standaloneDir{std::get<parser::OmpDirectiveName>(x.v.t)};
   switch (standaloneDir.v) {
   case llvm::omp::Directive::OMPD_barrier:
   case llvm::omp::Directive::OMPD_ordered:
+  case llvm::omp::Directive::OMPD_scan:
   case llvm::omp::Directive::OMPD_target_enter_data:
   case llvm::omp::Directive::OMPD_target_exit_data:
   case llvm::omp::Directive::OMPD_target_update:
@@ -1671,6 +1776,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   case llvm::omp::Directive::OMPD_teams_distribute_parallel_do:
   case llvm::omp::Directive::OMPD_teams_distribute_parallel_do_simd:
   case llvm::omp::Directive::OMPD_teams_distribute_simd:
+  case llvm::omp::Directive::OMPD_teams_loop:
   case llvm::omp::Directive::OMPD_tile:
   case llvm::omp::Directive::OMPD_unroll:
     PushContext(beginDir.source, beginDir.v);
@@ -1723,12 +1829,12 @@ void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
       }
     }
   }
-  // If this symbol is already Private or Firstprivate in the enclosing
-  // OpenMP parallel or task then there is nothing to do here.
+  // If this symbol already has an explicit data-sharing attribute in the
+  // enclosing OpenMP parallel or task then there is nothing to do here.
   if (auto *symbol{targetIt->scope.FindSymbol(iv.source)}) {
     if (symbol->owner() == targetIt->scope) {
-      if (symbol->test(Symbol::Flag::OmpPrivate) ||
-          symbol->test(Symbol::Flag::OmpFirstPrivate)) {
+      if (symbol->test(Symbol::Flag::OmpExplicit) &&
+          (symbol->flags() & dataSharingAttributeFlags).any()) {
         return;
       }
     }
@@ -1737,7 +1843,8 @@ void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
   // parallel or task
   if (auto *symbol{ResolveOmp(iv, Symbol::Flag::OmpPrivate, targetIt->scope)}) {
     targetIt++;
-    symbol->set(Symbol::Flag::OmpPreDetermined);
+    SetSymbolDSA(
+        *symbol, {Symbol::Flag::OmpPreDetermined, Symbol::Flag::OmpPrivate});
     iv.symbol = symbol; // adjust the symbol within region
     for (auto it{dirContext_.rbegin()}; it != targetIt; ++it) {
       AddToContextObjectWithDSA(*symbol, Symbol::Flag::OmpPrivate, *it);
@@ -1753,7 +1860,6 @@ void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
 // Use of DO CONCURRENT inside OpenMP construct is unspecified behavior
 // till OpenMP-5.0 standard.
 // In above both cases we skip the privatization of iteration variables.
-// [OpenMP 5.1] DO CONCURRENT indices are private
 bool OmpAttributeVisitor::Pre(const parser::DoConstruct &x) {
   if (!dirContext_.empty() && GetContext().withinConstruct) {
     llvm::SmallVector<const parser::Name *> ivs;
@@ -1761,20 +1867,6 @@ bool OmpAttributeVisitor::Pre(const parser::DoConstruct &x) {
       const parser::Name *iv{GetLoopIndex(x)};
       if (iv && iv->symbol)
         ivs.push_back(iv);
-    } else if (x.IsDoConcurrent()) {
-      const Fortran::parser::LoopControl *loopControl = &*x.GetLoopControl();
-      const Fortran::parser::LoopControl::Concurrent &concurrent =
-          std::get<Fortran::parser::LoopControl::Concurrent>(loopControl->u);
-      const Fortran::parser::ConcurrentHeader &concurrentHeader =
-          std::get<Fortran::parser::ConcurrentHeader>(concurrent.t);
-      const std::list<Fortran::parser::ConcurrentControl> &controls =
-          std::get<std::list<Fortran::parser::ConcurrentControl>>(
-              concurrentHeader.t);
-      for (const auto &control : controls) {
-        const parser::Name *iv{&std::get<0>(control.t)};
-        if (iv && iv->symbol)
-          ivs.push_back(iv);
-      }
     }
     ordCollapseLevel--;
     for (auto iv : ivs) {
@@ -1786,9 +1878,6 @@ bool OmpAttributeVisitor::Pre(const parser::DoConstruct &x) {
       if (ordCollapseLevel) {
         if (const auto *details{iv->symbol->detailsIf<HostAssocDetails>()}) {
           const Symbol *tpSymbol = &details->symbol();
-          // TODO: DoConcurrent won't capture the following check because a new
-          // symbol is declared in ResolveIndexName(), which will not have the
-          // OmpThreadprivate flag.
           if (tpSymbol->test(Symbol::Flag::OmpThreadprivate)) {
             context_.Say(iv->source,
                 "Loop iteration variable %s is not allowed in THREADPRIVATE."_err_en_US,
@@ -1846,6 +1935,7 @@ std::int64_t OmpAttributeVisitor::GetAssociatedLoopLevelFromClauses(
 //     construct with multiple associated do-loops are lastprivate.
 void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
     const parser::OpenMPLoopConstruct &x) {
+  unsigned version{context_.langOptions().OpenMPVersion};
   std::int64_t level{GetContext().associatedLoopLevel};
   if (level <= 0) {
     return;
@@ -1860,22 +1950,30 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
   }
 
   const auto &outer{std::get<std::optional<parser::DoConstruct>>(x.t)};
-  for (const parser::DoConstruct *loop{&*outer}; loop && level > 0; --level) {
-    // go through all the nested do-loops and resolve index variables
-    const parser::Name *iv{GetLoopIndex(*loop)};
-    if (iv) {
-      if (auto *symbol{ResolveOmp(*iv, ivDSA, currScope())}) {
-        symbol->set(Symbol::Flag::OmpPreDetermined);
-        iv->symbol = symbol; // adjust the symbol within region
-        AddToContextObjectWithDSA(*symbol, ivDSA);
-      }
+  if (outer.has_value()) {
+    for (const parser::DoConstruct *loop{&*outer}; loop && level > 0; --level) {
+      // go through all the nested do-loops and resolve index variables
+      const parser::Name *iv{GetLoopIndex(*loop)};
+      if (iv) {
+        if (auto *symbol{ResolveOmp(*iv, ivDSA, currScope())}) {
+          SetSymbolDSA(*symbol, {Symbol::Flag::OmpPreDetermined, ivDSA});
+          iv->symbol = symbol; // adjust the symbol within region
+          AddToContextObjectWithDSA(*symbol, ivDSA);
+        }
 
-      const auto &block{std::get<parser::Block>(loop->t)};
-      const auto it{block.begin()};
-      loop = it != block.end() ? GetDoConstructIf(*it) : nullptr;
+        const auto &block{std::get<parser::Block>(loop->t)};
+        const auto it{block.begin()};
+        loop = it != block.end() ? GetDoConstructIf(*it) : nullptr;
+      }
     }
+    CheckAssocLoopLevel(level, GetAssociatedClause());
+  } else {
+    context_.Say(GetContext().directiveSource,
+        "A DO loop must follow the %s directive"_err_en_US,
+        parser::ToUpperCaseLetters(
+            llvm::omp::getOpenMPDirectiveName(GetContext().directive, version)
+                .str()));
   }
-  CheckAssocLoopLevel(level, GetAssociatedClause());
 }
 void OmpAttributeVisitor::CheckAssocLoopLevel(
     std::int64_t level, const parser::OmpClause *clause) {
@@ -1930,7 +2028,8 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareTargetConstruct &x) {
                  parser::Unwrap<parser::OmpClauseList>(spec.u)}) {
     for (const auto &clause : clauseList->v) {
       if (const auto *toClause{std::get_if<parser::OmpClause::To>(&clause.u)}) {
-        ResolveOmpObjectList(toClause->v, Symbol::Flag::OmpDeclareTarget);
+        auto &objList{std::get<parser::OmpObjectList>(toClause->v.t)};
+        ResolveOmpObjectList(objList, Symbol::Flag::OmpDeclareTarget);
       } else if (const auto *linkClause{
                      std::get_if<parser::OmpClause::Link>(&clause.u)}) {
         ResolveOmpObjectList(linkClause->v, Symbol::Flag::OmpDeclareTarget);
@@ -1940,6 +2039,17 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareTargetConstruct &x) {
       }
     }
   }
+  return true;
+}
+
+bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareMapperConstruct &x) {
+  PushContext(x.source, llvm::omp::Directive::OMPD_declare_mapper);
+  return true;
+}
+
+bool OmpAttributeVisitor::Pre(
+    const parser::OpenMPDeclareReductionConstruct &x) {
+  PushContext(x.source, llvm::omp::Directive::OMPD_declare_reduction);
   return true;
 }
 
@@ -1957,7 +2067,13 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclarativeAllocate &x) {
   return false;
 }
 
+bool OmpAttributeVisitor::Pre(const parser::OpenMPDispatchConstruct &x) {
+  PushContext(x.source, llvm::omp::Directive::OMPD_dispatch);
+  return true;
+}
+
 bool OmpAttributeVisitor::Pre(const parser::OpenMPExecutableAllocate &x) {
+  IssueNonConformanceWarning(llvm::omp::Directive::OMPD_allocate, x.source);
   PushContext(x.source, llvm::omp::Directive::OMPD_allocate);
   const auto &list{std::get<std::optional<parser::OmpObjectList>>(x.t)};
   if (list) {
@@ -1980,20 +2096,25 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPAllocatorsConstruct &x) {
 }
 
 void OmpAttributeVisitor::Post(const parser::OmpDefaultClause &x) {
-  if (!dirContext_.empty()) {
-    switch (x.v) {
-    case parser::OmpDefaultClause::Type::Private:
-      SetContextDefaultDSA(Symbol::Flag::OmpPrivate);
-      break;
-    case parser::OmpDefaultClause::Type::Firstprivate:
-      SetContextDefaultDSA(Symbol::Flag::OmpFirstPrivate);
-      break;
-    case parser::OmpDefaultClause::Type::Shared:
-      SetContextDefaultDSA(Symbol::Flag::OmpShared);
-      break;
-    case parser::OmpDefaultClause::Type::None:
-      SetContextDefaultDSA(Symbol::Flag::OmpNone);
-      break;
+  // The DEFAULT clause may also be used on METADIRECTIVE. In that case
+  // there is nothing to do.
+  using DataSharingAttribute = parser::OmpDefaultClause::DataSharingAttribute;
+  if (auto *dsa{std::get_if<DataSharingAttribute>(&x.u)}) {
+    if (!dirContext_.empty()) {
+      switch (*dsa) {
+      case DataSharingAttribute::Private:
+        SetContextDefaultDSA(Symbol::Flag::OmpPrivate);
+        break;
+      case DataSharingAttribute::Firstprivate:
+        SetContextDefaultDSA(Symbol::Flag::OmpFirstPrivate);
+        break;
+      case DataSharingAttribute::Shared:
+        SetContextDefaultDSA(Symbol::Flag::OmpShared);
+        break;
+      case DataSharingAttribute::None:
+        SetContextDefaultDSA(Symbol::Flag::OmpNone);
+        break;
+      }
     }
   }
 }
@@ -2056,17 +2177,16 @@ void OmpAttributeVisitor::Post(const parser::OpenMPAllocatorsConstruct &x) {
           std::get<parser::OmpObjectList>(alloc->v.t),
           std::get<parser::Statement<parser::AllocateStmt>>(x.t).statement);
 
-      const auto &allocMod{
-          std::get<std::optional<parser::OmpAllocateClause::AllocateModifier>>(
-              alloc->v.t)};
+      auto &modifiers{OmpGetModifiers(alloc->v)};
+      bool hasAllocator{
+          OmpGetUniqueModifier<parser::OmpAllocatorSimpleModifier>(modifiers) ||
+          OmpGetUniqueModifier<parser::OmpAllocatorComplexModifier>(modifiers)};
+
       // TODO: As with allocate directive, exclude the case when a requires
       //       directive with the dynamic_allocators clause is present in
       //       the same compilation unit (OMP5.0 2.11.3).
       if (IsNestedInDirective(llvm::omp::Directive::OMPD_target) &&
-          (!allocMod.has_value() ||
-              std::holds_alternative<
-                  parser::OmpAllocateClause::AllocateModifier::Align>(
-                  allocMod->u))) {
+          !hasAllocator) {
         context_.Say(x.source,
             "ALLOCATORS directives that appear in a TARGET region "
             "must specify an allocator"_err_en_US);
@@ -2078,11 +2198,15 @@ void OmpAttributeVisitor::Post(const parser::OpenMPAllocatorsConstruct &x) {
 
 static bool IsPrivatizable(const Symbol *sym) {
   auto *misc{sym->detailsIf<MiscDetails>()};
-  return !IsProcedure(*sym) && !IsNamedConstant(*sym) &&
-      !semantics::IsAssumedSizeArray(
-          *sym) && /* OpenMP 5.2, 5.1.1: Assumed-size arrays are shared*/
+  return IsVariableName(*sym) && !IsProcedure(*sym) && !IsNamedConstant(*sym) &&
+      ( // OpenMP 5.2, 5.1.1: Assumed-size arrays are shared
+          !semantics::IsAssumedSizeArray(*sym) ||
+          // If CrayPointer is among the DSA list then the
+          // CrayPointee is Privatizable
+          sym->test(Symbol::Flag::CrayPointee)) &&
       !sym->owner().IsDerivedType() &&
       sym->owner().kind() != Scope::Kind::ImpliedDos &&
+      sym->owner().kind() != Scope::Kind::Forall &&
       !sym->detailsIf<semantics::AssocEntityDetails>() &&
       !sym->detailsIf<semantics::NamelistDetails>() &&
       (!misc ||
@@ -2093,42 +2217,48 @@ static bool IsPrivatizable(const Symbol *sym) {
               misc->kind() != MiscDetails::Kind::ConstructName));
 }
 
-void OmpAttributeVisitor::CreateImplicitSymbols(
-    const Symbol *symbol, std::optional<Symbol::Flag> setFlag) {
+void OmpAttributeVisitor::CreateImplicitSymbols(const Symbol *symbol) {
   if (!IsPrivatizable(symbol)) {
     return;
   }
 
+  LLVM_DEBUG(llvm::dbgs() << "CreateImplicitSymbols: " << *symbol << '\n');
+
   // Implicitly determined DSAs
   // OMP 5.2 5.1.1 - Variables Referenced in a Construct
   Symbol *lastDeclSymbol = nullptr;
-  std::optional<Symbol::Flag> prevDSA;
+  Symbol::Flags prevDSA;
   for (int dirDepth{0}; dirDepth < (int)dirContext_.size(); ++dirDepth) {
     DirContext &dirContext = dirContext_[dirDepth];
-    std::optional<Symbol::Flag> dsa;
+    Symbol::Flags dsa;
 
-    for (auto symMap : dirContext.objectWithDSA) {
-      // if the `symbol` already has a data-sharing attribute
-      if (symMap.first->name() == symbol->name()) {
-        dsa = symMap.second;
-        break;
+    Scope &scope{context_.FindScope(dirContext.directiveSource)};
+    auto it{scope.find(symbol->name())};
+    if (it != scope.end()) {
+      // There is already a symbol in the current scope, use its DSA.
+      dsa = GetSymbolDSA(*it->second);
+    } else {
+      for (auto symMap : dirContext.objectWithDSA) {
+        if (symMap.first->name() == symbol->name()) {
+          // `symbol` already has a data-sharing attribute in the current
+          // context, use it.
+          dsa.set(symMap.second);
+          break;
+        }
       }
     }
 
     // When handling each implicit rule for a given symbol, one of the
-    // following 3 actions may be taken:
-    // 1. Declare a new private symbol.
-    // 2. Create a new association symbol with no flags, that will represent
-    //    a shared symbol in the current scope. Note that symbols without
-    //    any private flags are considered as shared.
-    // 3. Use the last declared private symbol, by inserting a new symbol
-    //    in the scope being processed, associated with it.
-    //    If no private symbol was declared previously, then no association
-    //    is needed and the symbol from the enclosing scope will be
-    //    inherited by the current one.
+    // following actions may be taken:
+    // 1. Declare a new private or shared symbol.
+    // 2. Use the last declared symbol, by inserting a new symbol in the
+    //    scope being processed, associated with it.
+    //    If no symbol was declared previously, then no association is needed
+    //    and the symbol from the enclosing scope will be inherited by the
+    //    current one.
     //
     // Because of how symbols are collected in lowering, not inserting a new
-    // symbol in the last case could lead to the conclusion that a symbol
+    // symbol in the second case could lead to the conclusion that a symbol
     // from an enclosing construct was declared in the current construct,
     // which would result in wrong privatization code being generated.
     // Consider the following example:
@@ -2146,45 +2276,70 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
     // it would have the private flag set.
     // This would make x appear to be defined in p2, causing it to be
     // privatized in p2 and its privatization in p1 to be skipped.
-    auto makePrivateSymbol = [&](Symbol::Flag flag) {
+    auto makeSymbol = [&](Symbol::Flags flags) {
       const Symbol *hostSymbol =
           lastDeclSymbol ? lastDeclSymbol : &symbol->GetUltimate();
-      lastDeclSymbol = DeclareNewPrivateAccessEntity(
+      assert(flags.LeastElement());
+      Symbol::Flag flag = *flags.LeastElement();
+      lastDeclSymbol = DeclareNewAccessEntity(
           *hostSymbol, flag, context_.FindScope(dirContext.directiveSource));
-      if (setFlag) {
-        lastDeclSymbol->set(*setFlag);
-      }
+      lastDeclSymbol->flags() |= flags;
       return lastDeclSymbol;
-    };
-    auto makeSharedSymbol = [&](std::optional<Symbol::Flag> flag = {}) {
-      const Symbol *hostSymbol =
-          lastDeclSymbol ? lastDeclSymbol : &symbol->GetUltimate();
-      Symbol &assocSymbol = MakeAssocSymbol(symbol->name(), *hostSymbol,
-          context_.FindScope(dirContext.directiveSource));
-      if (flag) {
-        assocSymbol.set(*flag);
-      }
     };
     auto useLastDeclSymbol = [&]() {
       if (lastDeclSymbol) {
-        makeSharedSymbol();
+        const Symbol *hostSymbol =
+            lastDeclSymbol ? lastDeclSymbol : &symbol->GetUltimate();
+        MakeAssocSymbol(symbol->name(), *hostSymbol,
+            context_.FindScope(dirContext.directiveSource));
       }
     };
+
+#ifndef NDEBUG
+    auto printImplicitRule = [&](const char *id) {
+      LLVM_DEBUG(llvm::dbgs() << "\t" << id << ": dsa: " << dsa << '\n');
+      LLVM_DEBUG(
+          llvm::dbgs() << "\t\tScope: " << dbg::ScopeSourcePos(scope) << '\n');
+    };
+#define PRINT_IMPLICIT_RULE(id) printImplicitRule(id)
+#else
+#define PRINT_IMPLICIT_RULE(id)
+#endif
 
     bool taskGenDir = llvm::omp::taskGeneratingSet.test(dirContext.directive);
     bool targetDir = llvm::omp::allTargetSet.test(dirContext.directive);
     bool parallelDir = llvm::omp::allParallelSet.test(dirContext.directive);
     bool teamsDir = llvm::omp::allTeamsSet.test(dirContext.directive);
 
-    if (dsa.has_value()) {
-      if (dsa.value() == Symbol::Flag::OmpShared &&
-          (parallelDir || taskGenDir || teamsDir)) {
-        makeSharedSymbol(Symbol::Flag::OmpShared);
+    if (dsa.any()) {
+      if (parallelDir || taskGenDir || teamsDir) {
+        Symbol *prevDeclSymbol{lastDeclSymbol};
+        // NOTE As `dsa` will match that of the symbol in the current scope
+        //      (if any), we won't override the DSA of any existing symbol.
+        if ((dsa & dataSharingAttributeFlags).any()) {
+          makeSymbol(dsa);
+        }
+        // Fix host association of explicit symbols, as they can be created
+        // before implicit ones in enclosing scope.
+        if (prevDeclSymbol && prevDeclSymbol != lastDeclSymbol &&
+            lastDeclSymbol->test(Symbol::Flag::OmpExplicit)) {
+          const auto *hostAssoc{lastDeclSymbol->detailsIf<HostAssocDetails>()};
+          if (hostAssoc && hostAssoc->symbol() != *prevDeclSymbol) {
+            lastDeclSymbol->set_details(HostAssocDetails{*prevDeclSymbol});
+          }
+        }
       }
-      // Private symbols will have been declared already.
       prevDSA = dsa;
+      PRINT_IMPLICIT_RULE("0) already has DSA");
       continue;
     }
+
+    // NOTE Because of how lowering uses OmpImplicit flag, we can only set it
+    //      for symbols with private DSA.
+    //      Also, as the default clause is handled separately in lowering,
+    //      don't mark its symbols with OmpImplicit either.
+    //      Ideally, lowering should be changed and all implicit symbols
+    //      should be marked with OmpImplicit.
 
     if (dirContext.defaultDSA == Symbol::Flag::OmpPrivate ||
         dirContext.defaultDSA == Symbol::Flag::OmpFirstPrivate ||
@@ -2194,33 +2349,34 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
       if (!parallelDir && !taskGenDir && !teamsDir) {
         return;
       }
-      if (dirContext.defaultDSA != Symbol::Flag::OmpShared) {
-        makePrivateSymbol(dirContext.defaultDSA);
-      } else {
-        makeSharedSymbol();
-      }
-      dsa = dirContext.defaultDSA;
+      dsa = {dirContext.defaultDSA};
+      makeSymbol(dsa);
+      PRINT_IMPLICIT_RULE("1) default");
     } else if (parallelDir) {
       // 2) parallel -> shared
-      makeSharedSymbol();
-      dsa = Symbol::Flag::OmpShared;
+      dsa = {Symbol::Flag::OmpShared};
+      makeSymbol(dsa);
+      PRINT_IMPLICIT_RULE("2) parallel");
     } else if (!taskGenDir && !targetDir) {
       // 3) enclosing context
-      useLastDeclSymbol();
       dsa = prevDSA;
+      useLastDeclSymbol();
+      PRINT_IMPLICIT_RULE("3) enclosing context");
     } else if (targetDir) {
       // TODO 4) not mapped target variable -> firstprivate
       dsa = prevDSA;
     } else if (taskGenDir) {
       // TODO 5) dummy arg in orphaned taskgen construct -> firstprivate
-      if (prevDSA == Symbol::Flag::OmpShared) {
+      if (prevDSA.test(Symbol::Flag::OmpShared)) {
         // 6) shared in enclosing context -> shared
-        makeSharedSymbol();
-        dsa = Symbol::Flag::OmpShared;
+        dsa = {Symbol::Flag::OmpShared};
+        makeSymbol(dsa);
+        PRINT_IMPLICIT_RULE("6) taskgen: shared");
       } else {
         // 7) firstprivate
-        dsa = Symbol::Flag::OmpFirstPrivate;
-        makePrivateSymbol(*dsa)->set(Symbol::Flag::OmpImplicit);
+        dsa = {Symbol::Flag::OmpFirstPrivate};
+        makeSymbol(dsa)->set(Symbol::Flag::OmpImplicit);
+        PRINT_IMPLICIT_RULE("7) taskgen: firstprivate");
       }
     }
     prevDSA = dsa;
@@ -2241,21 +2397,29 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
         if (symbol != found) {
           name.symbol = found; // adjust the symbol within region
         } else if (GetContext().defaultDSA == Symbol::Flag::OmpNone &&
-            !symbol->test(Symbol::Flag::OmpThreadprivate) &&
+            !symbol->GetUltimate().test(Symbol::Flag::OmpThreadprivate) &&
             // Exclude indices of sequential loops that are privatised in
             // the scope of the parallel region, and not in this scope.
             // TODO: check whether this should be caught in IsObjectWithDSA
             !symbol->test(Symbol::Flag::OmpPrivate)) {
-          context_.Say(name.source,
-              "The DEFAULT(NONE) clause requires that '%s' must be listed in "
-              "a data-sharing attribute clause"_err_en_US,
-              symbol->name());
+          if (symbol->GetUltimate().test(Symbol::Flag::CrayPointee)) {
+            std::string crayPtrName{
+                semantics::GetCrayPointer(*symbol).name().ToString()};
+            if (!IsObjectWithDSA(*currScope().FindSymbol(crayPtrName)))
+              context_.Say(name.source,
+                  "The DEFAULT(NONE) clause requires that the Cray Pointer '%s' must be listed in a data-sharing attribute clause"_err_en_US,
+                  crayPtrName);
+          } else {
+            context_.Say(name.source,
+                "The DEFAULT(NONE) clause requires that '%s' must be listed in a data-sharing attribute clause"_err_en_US,
+                symbol->name());
+          }
         }
       }
     }
 
     if (Symbol * found{currScope().FindSymbol(name.source)}) {
-      if (found->test(semantics::Symbol::Flag::OmpThreadprivate))
+      if (found->GetUltimate().test(semantics::Symbol::Flag::OmpThreadprivate))
         return;
     }
 
@@ -2278,7 +2442,7 @@ void OmpAttributeVisitor::ResolveOmpName(
   if (ResolveName(&name)) {
     if (auto *resolvedSymbol{ResolveOmp(name, ompFlag, currScope())}) {
       if (dataSharingAttributeFlags.test(ompFlag)) {
-        AddToContextObjectWithDSA(*resolvedSymbol, ompFlag);
+        AddToContextObjectWithExplicitDSA(*resolvedSymbol, ompFlag);
       }
     }
   } else if (ompFlag == Symbol::Flag::OmpCriticalLock) {
@@ -2341,8 +2505,27 @@ void OmpAttributeVisitor::ResolveOmpObjectList(
   }
 }
 
+/// True if either symbol is in a namelist or some other symbol in the same
+/// equivalence set as symbol is in a namelist.
+static bool SymbolOrEquivalentIsInNamelist(const Symbol &symbol) {
+  auto isInNamelist{[](const Symbol &sym) {
+    const Symbol &ultimate{sym.GetUltimate()};
+    return ultimate.test(Symbol::Flag::InNamelist);
+  }};
+
+  const EquivalenceSet *eqv{FindEquivalenceSet(symbol)};
+  if (!eqv) {
+    return isInNamelist(symbol);
+  }
+
+  return llvm::any_of(*eqv, [isInNamelist](const EquivalenceObject &obj) {
+    return isInNamelist(obj.symbol);
+  });
+}
+
 void OmpAttributeVisitor::ResolveOmpObject(
     const parser::OmpObject &ompObject, Symbol::Flag ompFlag) {
+  unsigned version{context_.langOptions().OpenMPVersion};
   common::visit(
       common::visitors{
           [&](const parser::Designator &designator) {
@@ -2365,14 +2548,14 @@ void OmpAttributeVisitor::ResolveOmpObject(
                             Symbol::OmpFlagToClauseName(secondOmpFlag),
                             parser::ToUpperCaseLetters(
                                 llvm::omp::getOpenMPDirectiveName(
-                                    GetContext().directive)
+                                    GetContext().directive, version)
                                     .str()));
                       }
                     };
                 if (dataCopyingAttributeFlags.test(ompFlag)) {
                   CheckDataCopyingClause(*name, *symbol, ompFlag);
                 } else {
-                  AddToContextObjectWithDSA(*symbol, ompFlag);
+                  AddToContextObjectWithExplicitDSA(*symbol, ompFlag);
                   if (dataSharingAttributeFlags.test(ompFlag)) {
                     CheckMultipleAppearances(*name, *symbol, ompFlag);
                   }
@@ -2401,11 +2584,10 @@ void OmpAttributeVisitor::ResolveOmpObject(
                       "in which the %s directive appears"_err_en_US,
                       parser::ToUpperCaseLetters(
                           llvm::omp::getOpenMPDirectiveName(
-                              GetContext().directive)
+                              GetContext().directive, version)
                               .str()));
                 }
                 if (ompFlag == Symbol::Flag::OmpReduction) {
-                  const Symbol &ultimateSymbol{symbol->GetUltimate()};
                   // Using variables inside of a namelist in OpenMP reductions
                   // is allowed by the standard, but is not allowed for
                   // privatisation. This looks like an oversight. If the
@@ -2413,10 +2595,29 @@ void OmpAttributeVisitor::ResolveOmpObject(
                   // mapping for the reduction variable: resulting in incorrect
                   // results. Disabling this hoisting could make some real
                   // production code go slower. See discussion in #109303
-                  if (ultimateSymbol.test(Symbol::Flag::InNamelist)) {
+                  if (SymbolOrEquivalentIsInNamelist(*symbol)) {
                     context_.Say(name->source,
                         "Variable '%s' in NAMELIST cannot be in a REDUCTION clause"_err_en_US,
                         name->ToString());
+                  }
+                }
+                if (ompFlag == Symbol::Flag::OmpInclusiveScan ||
+                    ompFlag == Symbol::Flag::OmpExclusiveScan) {
+                  if (!symbol->test(Symbol::Flag::OmpInScanReduction)) {
+                    context_.Say(name->source,
+                        "List item %s must appear in REDUCTION clause "
+                        "with the INSCAN modifier of the parent "
+                        "directive"_err_en_US,
+                        name->ToString());
+                  }
+                }
+                if (ompFlag == Symbol::Flag::OmpDeclareTarget) {
+                  if (symbol->IsFuncResult()) {
+                    if (Symbol * func{currScope().symbol()}) {
+                      CHECK(func->IsSubprogram());
+                      func->set(ompFlag);
+                      name->symbol = func;
+                    }
                   }
                 }
                 if (GetContext().directive ==
@@ -2458,8 +2659,14 @@ void OmpAttributeVisitor::ResolveOmpObject(
                               GetContext().directive))) {
                     for (Symbol::Flag ompFlag1 : dataMappingAttributeFlags) {
                       for (Symbol::Flag ompFlag2 : dataSharingAttributeFlags) {
-                        checkExclusivelists(
-                            hostAssocSym, ompFlag1, symbol, ompFlag2);
+                        if ((hostAssocSym->test(ompFlag2) &&
+                                hostAssocSym->test(
+                                    Symbol::Flag::OmpExplicit)) ||
+                            (symbol->test(ompFlag2) &&
+                                symbol->test(Symbol::Flag::OmpExplicit))) {
+                          checkExclusivelists(
+                              hostAssocSym, ompFlag1, symbol, ompFlag2);
+                        }
                       }
                     }
                   }
@@ -2494,7 +2701,7 @@ void OmpAttributeVisitor::ResolveOmpObject(
                   if (dataCopyingAttributeFlags.test(ompFlag)) {
                     CheckDataCopyingClause(name, *resolvedObject, ompFlag);
                   } else {
-                    AddToContextObjectWithDSA(*resolvedObject, ompFlag);
+                    AddToContextObjectWithExplicitDSA(*resolvedObject, ompFlag);
                   }
                   details.replace_object(*resolvedObject, index);
                 }
@@ -2513,7 +2720,7 @@ void OmpAttributeVisitor::ResolveOmpObject(
 Symbol *OmpAttributeVisitor::ResolveOmp(
     const parser::Name &name, Symbol::Flag ompFlag, Scope &scope) {
   if (ompFlagsRequireNewSymbol.test(ompFlag)) {
-    return DeclarePrivateAccessEntity(name, ompFlag, scope);
+    return DeclareAccessEntity(name, ompFlag, scope);
   } else {
     return DeclareOrMarkOtherAccessEntity(name, ompFlag);
   }
@@ -2522,7 +2729,7 @@ Symbol *OmpAttributeVisitor::ResolveOmp(
 Symbol *OmpAttributeVisitor::ResolveOmp(
     Symbol &symbol, Symbol::Flag ompFlag, Scope &scope) {
   if (ompFlagsRequireNewSymbol.test(ompFlag)) {
-    return DeclarePrivateAccessEntity(symbol, ompFlag, scope);
+    return DeclareAccessEntity(symbol, ompFlag, scope);
   } else {
     return DeclareOrMarkOtherAccessEntity(symbol, ompFlag);
   }
@@ -2610,7 +2817,7 @@ void ResolveOmpTopLevelParts(
   // program units. Modules are skipped because their REQUIRES clauses should be
   // propagated via USE statements instead.
   WithOmpDeclarative::RequiresFlags combinedFlags;
-  std::optional<common::OmpAtomicDefaultMemOrderType> combinedMemOrder;
+  std::optional<common::OmpMemoryOrderType> combinedMemOrder;
 
   // Function to go through non-module top level program units and extract
   // REQUIRES information to be processed by a function-like argument.
@@ -2653,7 +2860,7 @@ void ResolveOmpTopLevelParts(
         flags{details.ompRequires()}) {
       combinedFlags |= *flags;
     }
-    if (const common::OmpAtomicDefaultMemOrderType *
+    if (const common::OmpMemoryOrderType *
         memOrder{details.ompAtomicDefaultMemOrder()}) {
       if (combinedMemOrder && *combinedMemOrder != *memOrder) {
         context.Say(symbol.scope()->sourceRange(),
@@ -2701,10 +2908,16 @@ static bool IsSymbolThreadprivate(const Symbol &symbol) {
 }
 
 static bool IsSymbolPrivate(const Symbol &symbol) {
-  if (symbol.test(Symbol::Flag::OmpPrivate) ||
-      symbol.test(Symbol::Flag::OmpFirstPrivate)) {
+  LLVM_DEBUG(llvm::dbgs() << "IsSymbolPrivate(" << symbol.name() << "):\n");
+  LLVM_DEBUG(dbg::DumpAssocSymbols(llvm::dbgs(), symbol));
+
+  if (Symbol::Flags dsa{GetSymbolDSA(symbol)}; dsa.any()) {
+    if (dsa.test(Symbol::Flag::OmpShared)) {
+      return false;
+    }
     return true;
   }
+
   // A symbol that has not gone through constructs that may privatize the
   // original symbol may be predetermined as private.
   // (OMP 5.2 5.1.1 - Variables Referenced in a Construct)
@@ -2765,7 +2978,7 @@ void OmpAttributeVisitor::CheckObjectIsPrivatizable(
     clauseName = "LASTPRIVATE";
   }
 
-  if (ultimateSymbol.test(Symbol::Flag::InNamelist)) {
+  if (SymbolOrEquivalentIsInNamelist(symbol)) {
     context_.Say(name.source,
         "Variable '%s' in NAMELIST cannot be in a %s clause"_err_en_US,
         name.ToString(), clauseName.str());
@@ -2807,6 +3020,7 @@ void OmpAttributeVisitor::CheckSourceLabel(const parser::Label &label) {
 void OmpAttributeVisitor::CheckLabelContext(const parser::CharBlock source,
     const parser::CharBlock target, std::optional<DirContext> sourceContext,
     std::optional<DirContext> targetContext) {
+  unsigned version{context_.langOptions().OpenMPVersion};
   if (targetContext &&
       (!sourceContext ||
           (sourceContext->scope != targetContext->scope &&
@@ -2815,8 +3029,8 @@ void OmpAttributeVisitor::CheckLabelContext(const parser::CharBlock source,
     context_
         .Say(source, "invalid branch into an OpenMP structured block"_err_en_US)
         .Attach(target, "In the enclosing %s directive branched into"_en_US,
-            parser::ToUpperCaseLetters(
-                llvm::omp::getOpenMPDirectiveName(targetContext->directive)
+            parser::ToUpperCaseLetters(llvm::omp::getOpenMPDirectiveName(
+                targetContext->directive, version)
                     .str()));
   }
   if (sourceContext &&
@@ -2828,8 +3042,8 @@ void OmpAttributeVisitor::CheckLabelContext(const parser::CharBlock source,
         .Say(source,
             "invalid branch leaving an OpenMP structured block"_err_en_US)
         .Attach(target, "Outside the enclosing %s directive"_en_US,
-            parser::ToUpperCaseLetters(
-                llvm::omp::getOpenMPDirectiveName(sourceContext->directive)
+            parser::ToUpperCaseLetters(llvm::omp::getOpenMPDirectiveName(
+                sourceContext->directive, version)
                     .str()));
   }
 }
@@ -2862,17 +3076,19 @@ void OmpAttributeVisitor::CheckNameInAllocateStmt(
       }
     }
   }
+  unsigned version{context_.langOptions().OpenMPVersion};
   context_.Say(source,
       "Object '%s' in %s directive not "
       "found in corresponding ALLOCATE statement"_err_en_US,
       name.ToString(),
       parser::ToUpperCaseLetters(
-          llvm::omp::getOpenMPDirectiveName(GetContext().directive).str()));
+          llvm::omp::getOpenMPDirectiveName(GetContext().directive, version)
+              .str()));
 }
 
 void OmpAttributeVisitor::AddOmpRequiresToScope(Scope &scope,
     WithOmpDeclarative::RequiresFlags flags,
-    std::optional<common::OmpAtomicDefaultMemOrderType> memOrder) {
+    std::optional<common::OmpMemoryOrderType> memOrder) {
   Scope *scopeIter = &scope;
   do {
     if (Symbol * symbol{scopeIter->symbol()}) {
@@ -2913,9 +3129,10 @@ void OmpAttributeVisitor::IssueNonConformanceWarning(
     llvm::omp::Directive D, parser::CharBlock source) {
   std::string warnStr;
   llvm::raw_string_ostream warnStrOS(warnStr);
+  unsigned version{context_.langOptions().OpenMPVersion};
   warnStrOS << "OpenMP directive "
             << parser::ToUpperCaseLetters(
-                   llvm::omp::getOpenMPDirectiveName(D).str())
+                   llvm::omp::getOpenMPDirectiveName(D, version).str())
             << " has been deprecated";
 
   auto setAlternativeStr = [&warnStrOS](llvm::StringRef alt) {
@@ -2940,10 +3157,69 @@ void OmpAttributeVisitor::IssueNonConformanceWarning(
   case llvm::omp::OMPD_parallel_master_taskloop_simd:
     setAlternativeStr("PARALLEL_MASKED TASKLOOP SIMD");
     break;
+  case llvm::omp::OMPD_allocate:
+    setAlternativeStr("ALLOCATORS");
+    break;
   case llvm::omp::OMPD_target_loop:
   default:;
   }
   context_.Warn(common::UsageWarning::OpenMPUsage, source, "%s"_warn_en_US,
       warnStrOS.str());
 }
+
+#ifndef NDEBUG
+
+static llvm::raw_ostream &operator<<(
+    llvm::raw_ostream &os, const Symbol::Flags &flags) {
+  flags.Dump(os, Symbol::EnumToString);
+  return os;
+}
+
+namespace dbg {
+
+static llvm::raw_ostream &operator<<(
+    llvm::raw_ostream &os, std::optional<parser::SourcePosition> srcPos) {
+  if (srcPos) {
+    os << *srcPos.value().path << ":" << srcPos.value().line << ": ";
+  }
+  return os;
+}
+
+static std::optional<parser::SourcePosition> GetSourcePosition(
+    const Fortran::semantics::Scope &scope,
+    const Fortran::parser::CharBlock &src) {
+  parser::AllCookedSources &allCookedSources{
+      scope.context().allCookedSources()};
+  if (std::optional<parser::ProvenanceRange> prange{
+          allCookedSources.GetProvenanceRange(src)}) {
+    return allCookedSources.allSources().GetSourcePosition(prange->start());
+  }
+  return std::nullopt;
+}
+
+// Returns a string containing the source location of `scope` followed by
+// its first source line.
+static std::string ScopeSourcePos(const Fortran::semantics::Scope &scope) {
+  const parser::CharBlock &sourceRange{scope.sourceRange()};
+  std::string src{sourceRange.ToString()};
+  size_t nl{src.find('\n')};
+  std::string str;
+  llvm::raw_string_ostream ss{str};
+
+  ss << GetSourcePosition(scope, sourceRange) << src.substr(0, nl);
+  return str;
+}
+
+static void DumpAssocSymbols(llvm::raw_ostream &os, const Symbol &sym) {
+  os << '\t' << sym << '\n';
+  os << "\t\tOwner: " << ScopeSourcePos(sym.owner()) << '\n';
+  if (const auto *details{sym.detailsIf<HostAssocDetails>()}) {
+    DumpAssocSymbols(os, details->symbol());
+  }
+}
+
+} // namespace dbg
+
+#endif
+
 } // namespace Fortran::semantics
