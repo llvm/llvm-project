@@ -48,12 +48,16 @@ static const MachineMemOperand::Flags MOLastUse =
     MachineMemOperand::MOTargetFlag2;
 
 #if LLPC_BUILD_NPI
-/// Use two MMO flags to enocde the 2-bit cache fill size field for GFX13+
-static const MachineMemOperand::Flags MOCFSB0 =
+/// Mark the MMO of cooperative load/store atomics.
+static const MachineMemOperand::Flags MOCooperative =
     MachineMemOperand::MOTargetFlag3;
 
-static const MachineMemOperand::Flags MOCFSB1 =
+/// Use two MMO flags to enocde the 2-bit cache fill size field for GFX13+
+static const MachineMemOperand::Flags MOCFSB0 =
     MachineMemOperand::MOTargetFlag4;
+
+static const MachineMemOperand::Flags MOCFSB1 =
+    MachineMemOperand::MOTargetFlag5;
 
 #endif /* LLPC_BUILD_NPI */
 /// Utility to store machine instructions worklist.
@@ -1421,6 +1425,8 @@ public:
 
   /// Fix operands in Inst to fix 16bit SALU to VALU lowering.
   void legalizeOperandsVALUt16(MachineInstr &Inst,
+                               MachineRegisterInfo &MRI) const;
+  void legalizeOperandsVALUt16(MachineInstr &Inst, unsigned OpIdx,
                                MachineRegisterInfo &MRI) const;
 
   /// Replace the instructions opcode with the equivalent VALU

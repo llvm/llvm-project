@@ -317,6 +317,8 @@ Non-comprehensive list of changes in this release
   ``sizeof`` or ``typeof`` expression. (#GH138444)
 - Deprecation warning is emitted for the deprecated ``__reference_binds_to_temporary`` intrinsic.
   ``__reference_constructs_from_temporary`` should be used instead. (#GH44056)
+- Added `__builtin_get_vtable_pointer` to directly load the primary vtable pointer from a
+  polymorphic object.
 
 New Compiler Flags
 ------------------
@@ -612,6 +614,8 @@ Improvements to Clang's diagnostics
   diagnostic group ``-Wimplicit-int-comparison-on-negation``, grouped under
   ``-Wimplicit-int-conversion``, so user can turn it off independently.
 
+- Improved the FixIts for unused lambda captures.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -681,6 +685,8 @@ Bug Fixes in This Version
 - Fixed an assertion failure in serialization of constexpr structs containing unions. (#GH140130)
 - Fixed duplicate entries in TableGen that caused the wrong attribute to be selected. (GH#140701)
 - Fixed type mismatch error when 'builtin-elementwise-math' arguments have different qualifiers, this should be well-formed. (#GH141397)
+- Constant evaluation now correctly runs the destructor of a variable declared in 
+  the second clause of a C-style ``for`` loop. (#GH139818)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -702,6 +708,15 @@ Bug Fixes to Compiler Builtins
   Note that, it is generally unsafe to ``memcpy`` non-trivially copyable types that
   are ``__builtin_is_cpp_trivially_relocatable``. It is recommended to use
   ``__builtin_trivially_relocate`` instead.
+
+- ``__reference_binds_to_temporary``, ``__reference_constructs_from_temporary``
+  and ``__reference_converts_from_temporary`` intrinsics no longer consider
+  function references can bind to temporary objects. (#GH114344)
+
+- ``__reference_constructs_from_temporary`` and
+  ``__reference_converts_from_temporary`` intrinsics detect reference binding
+  to prvalue instead of xvalue now if the second operand is an object type, per
+  `LWG3819 <https://cplusplus.github.io/LWG/issue3819>`_.
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -817,6 +832,8 @@ Bug Fixes to C++ Support
 - Clang modules now allow a module and its user to differ on TrivialAutoVarInit*
 - Fixed an access checking bug when initializing non-aggregates in default arguments (#GH62444), (#GH83608)
 - Fixed a pack substitution bug in deducing class template partial specializations. (#GH53609)
+- Fixed a crash when constant evaluating some explicit object member assignment operators. (#GH142835)
+- Fixed an access checking bug when substituting into concepts (#GH115838)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -833,7 +850,7 @@ Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Fixed crash when ``-print-stats`` is enabled in compiling IR files. (#GH131608)
-- Fix code completion crash involving PCH serialzied templates. (#GH139019)
+- Fix code completion crash involving PCH serialized templates. (#GH139019)
 
 OpenACC Specific Changes
 ------------------------
@@ -1036,7 +1053,9 @@ Sanitizers
 ----------
 
 - ``-fsanitize=vptr`` is no longer a part of ``-fsanitize=undefined``.
-- Sanitizer ignorelists now support the syntax ``src:*=sanitize``.
+- Sanitizer ignorelists now support the syntax ``src:*=sanitize``,
+  ``type:*=sanitize``, ``fun:*=sanitize``, ``global:*=sanitize``,
+  and ``mainfile:*=sanitize``.
 
 Python Binding Changes
 ----------------------

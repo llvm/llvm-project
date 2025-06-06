@@ -21,6 +21,7 @@ def AddrSpaces {
   int Constant32Bit = 6;
 #ifdef LLPC_BUILD_NPI
   int LaneShared = 10;
+  int Distributed = 11;
 #endif /* LLPC_BUILD_NPI */
 }
 
@@ -475,9 +476,12 @@ def StoreAddress_laneshared : AddressSpaceList<[ AddrSpaces.LaneShared ]>;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
-foreach as = [ "global", "flat", "constant", "local", "private", "region", "laneshared" ] in {
-#else /* LLPC_BUILD_NPI */
+def LoadAddress_distributed : AddressSpaceList<[ AddrSpaces.Distributed ]>;
+#endif /* LLPC_BUILD_NPI */
 
+#ifdef LLPC_BUILD_NPI
+foreach as = [ "global", "flat", "constant", "local", "private", "region", "laneshared", "distributed" ] in {
+#else /* LLPC_BUILD_NPI */
 foreach as = [ "global", "flat", "constant", "local", "private", "region" ] in {
 #endif /* LLPC_BUILD_NPI */
 let AddressSpaces = !cast<AddressSpaceList>("LoadAddress_"#as).AddrSpaces in {
@@ -523,6 +527,12 @@ def atomic_load_nonext_64_#as : PatFrag<(ops node:$ptr), (atomic_load_nonext_64 
   let IsAtomic = 1;
 }
 
+#ifdef LLPC_BUILD_NPI
+def atomic_load_nonext_128_#as : PatFrag<(ops node:$ptr), (atomic_load_nonext_128 node:$ptr)> {
+  let IsAtomic = 1;
+}
+
+#endif /* LLPC_BUILD_NPI */
 def atomic_load_zext_8_#as : PatFrag<(ops node:$ptr), (atomic_load_zext_8 node:$ptr)> {
   let IsAtomic = 1;
 }
@@ -546,7 +556,10 @@ def atomic_load_sext_16_#as : PatFrag<(ops node:$ptr), (atomic_load_sext_16 node
 def atomic_load_aext_16_#as : PatFrag<(ops node:$ptr), (atomic_load_aext_16 node:$ptr)> {
   let IsAtomic = 1;
 }
+#ifdef LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
 
+#endif /* LLPC_BUILD_NPI */
 } // End let AddressSpaces
 } // End foreach as
 
@@ -591,6 +604,10 @@ def atomic_store_32_#as : PatFrag<(ops node:$val, node:$ptr),
                                   (atomic_store_32 node:$val, node:$ptr)>;
 def atomic_store_64_#as : PatFrag<(ops node:$val, node:$ptr),
                                   (atomic_store_64 node:$val, node:$ptr)>;
+#ifdef LLPC_BUILD_NPI
+def atomic_store_128_#as : PatFrag<(ops node:$val, node:$ptr),
+                                   (atomic_store_128 node:$val, node:$ptr)>;
+#endif /* LLPC_BUILD_NPI */
 } // End let IsAtomic = 1, AddressSpaces = ...
 } // End foreach as
 

@@ -208,6 +208,8 @@ Changes to the RISC-V Backend
   Extensions.
 * `-mcpu=andes-a25` and `-mcpu=andes-ax25` were added.
 * The `Shlcofideleg` extension was added.
+* `-mcpu=sifive-x390` was added.
+* `-mtune=andes-45-series` was added.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -220,6 +222,8 @@ Changes to the Windows Target
 
 Changes to the X86 Backend
 --------------------------
+
+* `fp128` will now use `*f128` libcalls on 32-bit GNU targets as well.
 
 Changes to the OCaml bindings
 -----------------------------
@@ -262,6 +266,7 @@ Changes to the LLVM tools
 * llvm-strip now supports continuing to process files on encountering an error.
 * In llvm-objcopy/llvm-strip's ELF port, `--discard-locals` and `--discard-all` now allow and preserve symbols referenced by relocations.
   ([#47468](https://github.com/llvm/llvm-project/issues/47468))
+* llvm-addr2line now supports a `+` prefix when specifying an address.
 
 Changes to LLDB
 ---------------------------------

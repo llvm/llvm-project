@@ -1998,6 +1998,12 @@ class getSOPSrcForVT<ValueType VT> {
   RegisterOperand ret = !if(!eq(VT.Size, 64), SSrc_b64, SSrc_b32);
 }
 
+#ifdef LLPC_BUILD_NPI
+class getSRegForVT<ValueType VT> {
+  RegisterClass ret = !if(!eq(VT.Size, 64), SReg_64_XEXEC_XNULL, SReg_32);
+}
+
+#endif /* LLPC_BUILD_NPI */
 // Returns the vreg register class to use for source operand given VT
 class getVregSrcForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 1> {
   RegisterOperand ret =
@@ -3332,6 +3338,7 @@ def VOP_F64_F64_I32 : VOPProfile <[f64, f64, i32, untyped]>;
 def VOP_I32_F32_F32 : VOPProfile <[i32, f32, f32, untyped]>;
 def VOP_I32_F32_I32 : VOPProfile <[i32, f32, i32, untyped]>;
 def VOP_I32_I32_I32 : VOPProfile <[i32, i32, i32, untyped]>;
+def VOP_I16_F32_F32 : VOPProfile <[i16, f32, f32, untyped]>;
 def VOP_I32_I32_I32_ARITH : VOPProfile <[i32, i32, i32, untyped], /*EnableClamp=*/1>;
 #ifdef LLPC_BUILD_NPI
 def VOP_I64_I64_I64_ARITH : VOPProfile <[i64, i64, i64, untyped], /*EnableClamp=*/1>;

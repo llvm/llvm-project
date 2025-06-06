@@ -960,7 +960,10 @@ cc_library(
         "include/llvm/Analysis/WithCache.h",
     ] + [":llvm_intrinsics_headers"],
     copts = llvm_copts,
-    textual_hdrs = glob(["include/llvm/IR/*.def"]),
+    textual_hdrs = glob([
+        "include/llvm/IR/*.def",
+        "lib/IR/*.def",
+    ]),
     deps = [
         ":BinaryFormat",
         ":Demangle",
@@ -2113,7 +2116,6 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/AArch64/AArch64GenSubtargetInfo.inc": ["-gen-subtarget"],
             "lib/Target/AArch64/AArch64GenDisassemblerTables.inc": [
                 "-gen-disassembler",
-                "--large-decoder-table",
             ],
             "lib/Target/AArch64/AArch64GenSystemOperands.inc": ["-gen-searchable-tables"],
             "lib/Target/AArch64/AArch64GenExegesis.inc": ["-gen-exegesis"],

@@ -154,8 +154,15 @@ public:
     MOTargetFlag2 = 1u << 7,
     MOTargetFlag3 = 1u << 8,
     MOTargetFlag4 = 1u << 9,
+#if LLPC_BUILD_NPI
+    MOTargetFlag5 = 1u << 10,
+#endif /* LLPC_BUILD_NPI */
 
+#if LLPC_BUILD_NPI
+    LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ MOTargetFlag5)
+#else /* LLPC_BUILD_NPI */
     LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ MOTargetFlag4)
+#endif /* LLPC_BUILD_NPI */
   };
 
 private:

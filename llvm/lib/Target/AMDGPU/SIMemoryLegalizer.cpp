@@ -64,7 +64,7 @@ enum class SIAtomicScope {
   WAVEFRONT,
   WORKGROUP,
 #if LLPC_BUILD_NPI
-  CLUSTER,
+  CLUSTER, // Promoted to AGENT on targets without workgroup clusters.
 #endif /* LLPC_BUILD_NPI */
   AGENT,
   SYSTEM
@@ -124,10 +124,17 @@ private:
   bool IsNonTemporal = false;
   bool IsLastUse = false;
 #if LLPC_BUILD_NPI
+  bool IsCooperative = false;
   unsigned CFSBits = 0;
 #endif /* LLPC_BUILD_NPI */
 
+#if LLPC_BUILD_NPI
+  // TODO: Should we assume Cooperative=true if no MMO is present?
+#endif /* LLPC_BUILD_NPI */
   SIMemOpInfo(
+#if LLPC_BUILD_NPI
+      const GCNSubtarget &ST,
+#endif /* LLPC_BUILD_NPI */
       AtomicOrdering Ordering = AtomicOrdering::SequentiallyConsistent,
       SIAtomicScope Scope = SIAtomicScope::SYSTEM,
       SIAtomicAddrSpace OrderingAddrSpace = SIAtomicAddrSpace::ATOMIC,
@@ -136,7 +143,7 @@ private:
       AtomicOrdering FailureOrdering = AtomicOrdering::SequentiallyConsistent,
       bool IsVolatile = false, bool IsNonTemporal = false,
 #if LLPC_BUILD_NPI
-      bool IsLastUse = false, unsigned CFSBits = 0)
+      bool IsLastUse = false, bool IsCooperative = false, unsigned CFSBits = 0)
 #else /* LLPC_BUILD_NPI */
       bool IsLastUse = false)
 #endif /* LLPC_BUILD_NPI */
@@ -145,12 +152,15 @@ private:
         IsCrossAddressSpaceOrdering(IsCrossAddressSpaceOrdering),
         IsVolatile(IsVolatile), IsNonTemporal(IsNonTemporal),
 #if LLPC_BUILD_NPI
-        IsLastUse(IsLastUse), CFSBits(CFSBits) {
+        IsLastUse(IsLastUse), IsCooperative(IsCooperative), CFSBits(CFSBits) {
 #else /* LLPC_BUILD_NPI */
         IsLastUse(IsLastUse) {
 #endif /* LLPC_BUILD_NPI */
 
     if (Ordering == AtomicOrdering::NotAtomic) {
+#if LLPC_BUILD_NPI
+      assert(!IsCooperative && "Cannot be cooperative & non-atomic!");
+#endif /* LLPC_BUILD_NPI */
       assert(Scope == SIAtomicScope::NONE &&
              OrderingAddrSpace == SIAtomicAddrSpace::NONE &&
              !IsCrossAddressSpaceOrdering &&
@@ -195,6 +205,13 @@ private:
 #endif /* LLPC_BUILD_NPI */
       this->Scope = std::min(Scope, SIAtomicScope::AGENT);
     }
+#if LLPC_BUILD_NPI
+
+    // On targets that have no concept of a workgroup cluster, use
+    // AGENT scope as a conservatively correct alternative.
+    if (this->Scope == SIAtomicScope::CLUSTER && !ST.hasClusters())
+      this->Scope = SIAtomicScope::AGENT;
+#endif /* LLPC_BUILD_NPI */
   }
 
 public:
@@ -250,6 +267,11 @@ public:
   /// create this SIMemOpInfo is last use, false otherwise.
   bool isLastUse() const { return IsLastUse; }
 
+#if LLPC_BUILD_NPI
+  /// \returns True if this is a cooperative load or store atomic.
+  bool isCooperative() const { return IsCooperative; }
+
+#endif /* LLPC_BUILD_NPI */
   /// \returns True if ordering constraint of the machine instruction used to
   /// create this SIMemOpInfo is unordered or higher, false otherwise.
   bool isAtomic() const {
@@ -265,6 +287,9 @@ public:
 class SIMemOpAccess final {
 private:
   const AMDGPUMachineModuleInfo *MMI = nullptr;
+#if LLPC_BUILD_NPI
+  const GCNSubtarget &ST;
+#endif /* LLPC_BUILD_NPI */
 
   /// Reports unsupported message \p Msg for \p MI to LLVM context.
 #if LLPC_BUILD_NPI
@@ -296,7 +321,11 @@ private:
 public:
   /// Construct class to support accessing the machine memory operands
   /// of instructions in the machine function \p MF.
+#if LLPC_BUILD_NPI
+  SIMemOpAccess(const AMDGPUMachineModuleInfo &MMI, const GCNSubtarget &ST);
+#else /* LLPC_BUILD_NPI */
   SIMemOpAccess(const AMDGPUMachineModuleInfo &MMI);
+#endif /* LLPC_BUILD_NPI */
 
   /// \returns Load info if \p MI is a load operation, "std::nullopt" otherwise.
 #if LLPC_BUILD_NPI
@@ -399,6 +428,14 @@ public:
     return false;
   };
 
+#if LLPC_BUILD_NPI
+  /// Handle cooperative load/store atomics.
+  virtual bool handleCooperativeAtomic(MachineInstr &MI) const {
+    llvm_unreachable(
+        "cooperative atomics are not available on this architecture");
+  }
+
+#endif /* LLPC_BUILD_NPI */
   /// Inserts any necessary instructions at position \p Pos relative
   /// to instruction \p MI to ensure memory instructions before \p Pos of kind
   /// \p Op associated with address spaces \p AddrSpace have completed. Used
@@ -699,6 +736,8 @@ public:
 #if LLPC_BUILD_NPI
   bool finalizeStore(MachineBasicBlock::iterator &MI,
                      bool Atomic) const override;
+
+  virtual bool handleCooperativeAtomic(MachineInstr &MI) const override;
 #else /* LLPC_BUILD_NPI */
   bool expandSystemScopeStore(MachineBasicBlock::iterator &MI) const override;
 #endif /* LLPC_BUILD_NPI */
@@ -919,8 +958,14 @@ SIAtomicAddrSpace SIMemOpAccess::toSIAtomicAddrSpace(unsigned AS) const {
   return SIAtomicAddrSpace::OTHER;
 }
 
+#if LLPC_BUILD_NPI
+SIMemOpAccess::SIMemOpAccess(const AMDGPUMachineModuleInfo &MMI_,
+                             const GCNSubtarget &ST)
+    : MMI(&MMI_), ST(ST) {}
+#else /* LLPC_BUILD_NPI */
 SIMemOpAccess::SIMemOpAccess(const AMDGPUMachineModuleInfo &MMI_)
     : MMI(&MMI_) {}
+#endif /* LLPC_BUILD_NPI */
 
 #if LLPC_BUILD_NPI
 std::optional<SIMemOpInfo>
@@ -939,6 +984,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
   bool IsVolatile = false;
   bool IsLastUse = false;
 #if LLPC_BUILD_NPI
+  bool IsCooperative = false;
   unsigned CFSBits = 0;
 #endif /* LLPC_BUILD_NPI */
 
@@ -949,6 +995,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
     IsVolatile |= MMO->isVolatile();
     IsLastUse |= MMO->getFlags() & MOLastUse;
 #if LLPC_BUILD_NPI
+    IsCooperative |= MMO->getFlags() & MOCooperative;
     CFSBits = (MMO->getFlags() / MOCFSB0) & 0x3;
     InstrAddrSpace |= toSIAtomicAddrSpace(MMO->getPointerInfo().getAddrSpace());
 #else /* LLPC_BUILD_NPI */
@@ -1004,10 +1051,14 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
       return std::nullopt;
     }
   }
+#if LLPC_BUILD_NPI
+  return SIMemOpInfo(ST, Ordering, Scope, OrderingAddrSpace, InstrAddrSpace,
+#else /* LLPC_BUILD_NPI */
   return SIMemOpInfo(Ordering, Scope, OrderingAddrSpace, InstrAddrSpace,
+#endif /* LLPC_BUILD_NPI */
                      IsCrossAddressSpaceOrdering, FailureOrdering, IsVolatile,
 #if LLPC_BUILD_NPI
-                     IsNonTemporal, IsLastUse, CFSBits);
+                     IsNonTemporal, IsLastUse, IsCooperative, CFSBits);
 #else /* LLPC_BUILD_NPI */
                      IsNonTemporal, IsLastUse);
 #endif /* LLPC_BUILD_NPI */
@@ -1026,7 +1077,11 @@ SIMemOpAccess::getLoadInfo(const MachineBasicBlock::iterator &MI) const {
 
   // Be conservative if there are no memory operands.
   if (MI->getNumMemOperands() == 0)
+#if LLPC_BUILD_NPI
+    return SIMemOpInfo(ST);
+#else /* LLPC_BUILD_NPI */
     return SIMemOpInfo();
+#endif /* LLPC_BUILD_NPI */
 
   return constructFromMIWithMMO(MI);
 }
@@ -1044,7 +1099,11 @@ SIMemOpAccess::getStoreInfo(const MachineBasicBlock::iterator &MI) const {
 
   // Be conservative if there are no memory operands.
   if (MI->getNumMemOperands() == 0)
+#if LLPC_BUILD_NPI
+    return SIMemOpInfo(ST);
+#else /* LLPC_BUILD_NPI */
     return SIMemOpInfo();
+#endif /* LLPC_BUILD_NPI */
 
   return constructFromMIWithMMO(MI);
 }
@@ -1087,7 +1146,7 @@ SIMemOpAccess::getAtomicFenceInfo(const MachineBasicBlock::iterator &MI) const {
   }
 
 #if LLPC_BUILD_NPI
-  return SIMemOpInfo(Ordering, Scope, OrderingAddrSpace,
+  return SIMemOpInfo(ST, Ordering, Scope, OrderingAddrSpace,
                      SIAtomicAddrSpace::ATOMIC, IsCrossAddressSpaceOrdering,
                      AtomicOrdering::NotAtomic);
 #else /* LLPC_BUILD_NPI */
@@ -1110,7 +1169,11 @@ std::optional<SIMemOpInfo> SIMemOpAccess::getAtomicCmpxchgOrRmwInfo(
 
   // Be conservative if there are no memory operands.
   if (MI->getNumMemOperands() == 0)
+#if LLPC_BUILD_NPI
+    return SIMemOpInfo(ST);
+#else /* LLPC_BUILD_NPI */
     return SIMemOpInfo();
+#endif /* LLPC_BUILD_NPI */
 
   return constructFromMIWithMMO(MI);
 }
@@ -1167,9 +1230,6 @@ bool SIGfx6CacheControl::enableLoadCacheBypass(
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-#if LLPC_BUILD_NPI
-    case SIAtomicScope::CLUSTER:
-#endif /* LLPC_BUILD_NPI */
       // Set L1 cache policy to MISS_EVICT.
       // Note: there is no L2 cache bypass policy at the ISA level.
       Changed |= enableGLCBit(MI);
@@ -1288,9 +1348,6 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-#if LLPC_BUILD_NPI
-    case SIAtomicScope::CLUSTER:
-#endif /* LLPC_BUILD_NPI */
       VMCnt |= true;
       break;
     case SIAtomicScope::WORKGROUP:
@@ -1308,9 +1365,6 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-#if LLPC_BUILD_NPI
-    case SIAtomicScope::CLUSTER:
-#endif /* LLPC_BUILD_NPI */
     case SIAtomicScope::WORKGROUP:
       // If no cross address space ordering then an "S_WAITCNT lgkmcnt(0)" is
       // not needed as LDS operations for all waves are executed in a total
@@ -1334,9 +1388,6 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-#if LLPC_BUILD_NPI
-    case SIAtomicScope::CLUSTER:
-#endif /* LLPC_BUILD_NPI */
       // If no cross address space ordering then an GDS "S_WAITCNT lgkmcnt(0)"
       // is not needed as GDS operations for all waves are executed in a total
       // global ordering as observed by all waves. Required if also
@@ -1392,9 +1443,6 @@ bool SIGfx6CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-#if LLPC_BUILD_NPI
-    case SIAtomicScope::CLUSTER:
-#endif /* LLPC_BUILD_NPI */
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_WBINVL1));
       Changed = true;
       break;
@@ -1455,9 +1503,6 @@ bool SIGfx7CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-#if LLPC_BUILD_NPI
-    case SIAtomicScope::CLUSTER:
-#endif /* LLPC_BUILD_NPI */
       BuildMI(MBB, MI, DL, TII->get(InvalidateL1));
       Changed = true;
       break;
@@ -1495,9 +1540,6 @@ bool SIGfx90ACacheControl::enableLoadCacheBypass(
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-#if LLPC_BUILD_NPI
-    case SIAtomicScope::CLUSTER:
-#endif /* LLPC_BUILD_NPI */
       // Set the L1 cache policy to MISS_LRU.
       // Note: there is no L2 cache bypass policy at the ISA level.
       Changed |= enableGLCBit(MI);
@@ -1540,9 +1582,6 @@ bool SIGfx90ACacheControl::enableStoreCacheBypass(
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-#if LLPC_BUILD_NPI
-    case SIAtomicScope::CLUSTER:
-#endif /* LLPC_BUILD_NPI */
       /// Do not set glc for store atomic operations as they implicitly write
       /// through the L1 cache.
       break;
@@ -1578,9 +1617,6 @@ bool SIGfx90ACacheControl::enableRMWCacheBypass(
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-#if LLPC_BUILD_NPI
-    case SIAtomicScope::CLUSTER:
-#endif /* LLPC_BUILD_NPI */
       /// Do not set glc for RMW atomic operations as they implicitly bypass
       /// the L1 cache, and the glc bit is instead used to indicate if they are
       /// return or no-return.
@@ -1701,9 +1737,6 @@ bool SIGfx90ACacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
       Changed = true;
       break;
     case SIAtomicScope::AGENT:
-#if LLPC_BUILD_NPI
-    case SIAtomicScope::CLUSTER:
-#endif /* LLPC_BUILD_NPI */
       // Same as GFX7.
       break;
     case SIAtomicScope::WORKGROUP:
@@ -1770,9 +1803,6 @@ bool SIGfx90ACacheControl::insertRelease(MachineBasicBlock::iterator &MI,
       Changed = true;
       break;
     case SIAtomicScope::AGENT:
-#if LLPC_BUILD_NPI
-    case SIAtomicScope::CLUSTER:
-#endif /* LLPC_BUILD_NPI */
     case SIAtomicScope::WORKGROUP:
     case SIAtomicScope::WAVEFRONT:
     case SIAtomicScope::SINGLETHREAD:
@@ -1807,9 +1837,6 @@ bool SIGfx940CacheControl::enableLoadCacheBypass(
       Changed |= enableSC1Bit(MI);
       break;
     case SIAtomicScope::AGENT:
-#if LLPC_BUILD_NPI
-    case SIAtomicScope::CLUSTER:
-#endif /* LLPC_BUILD_NPI */
       // Set SC bits to indicate agent scope.
       Changed |= enableSC1Bit(MI);
       break;
@@ -1854,9 +1881,6 @@ bool SIGfx940CacheControl::enableStoreCacheBypass(
       Changed |= enableSC1Bit(MI);
       break;
     case SIAtomicScope::AGENT:
-#if LLPC_BUILD_NPI
-    case SIAtomicScope::CLUSTER:
-#endif /* LLPC_BUILD_NPI */
       // Set SC bits to indicate agent scope.
       Changed |= enableSC1Bit(MI);
       break;
@@ -1896,9 +1920,6 @@ bool SIGfx940CacheControl::enableRMWCacheBypass(
       Changed |= enableSC1Bit(MI);
       break;
     case SIAtomicScope::AGENT:
-#if LLPC_BUILD_NPI
-    case SIAtomicScope::CLUSTER:
-#endif /* LLPC_BUILD_NPI */
     case SIAtomicScope::WORKGROUP:
     case SIAtomicScope::WAVEFRONT:
     case SIAtomicScope::SINGLETHREAD:
@@ -1987,9 +2008,6 @@ bool SIGfx940CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
       Changed = true;
       break;
     case SIAtomicScope::AGENT:
-#if LLPC_BUILD_NPI
-    case SIAtomicScope::CLUSTER:
-#endif /* LLPC_BUILD_NPI */
       // Ensures that following loads will not see stale remote date or local
       // MTYPE NC global data. Local MTYPE RW and CC memory will never be stale
       // due to the memory probes.
@@ -2075,9 +2093,6 @@ bool SIGfx940CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
       Changed = true;
       break;
     case SIAtomicScope::AGENT:
-#if LLPC_BUILD_NPI
-    case SIAtomicScope::CLUSTER:
-#endif /* LLPC_BUILD_NPI */
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_WBL2))
           // Set SC bits to indicate agent scope.
           .addImm(AMDGPU::CPol::SC1);
@@ -2121,9 +2136,6 @@ bool SIGfx10CacheControl::enableLoadCacheBypass(
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-#if LLPC_BUILD_NPI
-    case SIAtomicScope::CLUSTER:
-#endif /* LLPC_BUILD_NPI */
       // Set the L0 and L1 cache policies to MISS_EVICT.
       // Note: there is no L2 cache coherent bypass control at the ISA level.
       Changed |= enableGLCBit(MI);
@@ -2229,9 +2241,6 @@ bool SIGfx10CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-#if LLPC_BUILD_NPI
-    case SIAtomicScope::CLUSTER:
-#endif /* LLPC_BUILD_NPI */
       if ((Op & SIMemOp::LOAD) != SIMemOp::NONE)
         VMCnt |= true;
       if ((Op & SIMemOp::STORE) != SIMemOp::NONE)
@@ -2264,9 +2273,6 @@ bool SIGfx10CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-#if LLPC_BUILD_NPI
-    case SIAtomicScope::CLUSTER:
-#endif /* LLPC_BUILD_NPI */
     case SIAtomicScope::WORKGROUP:
       // If no cross address space ordering then an "S_WAITCNT lgkmcnt(0)" is
       // not needed as LDS operations for all waves are executed in a total
@@ -2290,9 +2296,6 @@ bool SIGfx10CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-#if LLPC_BUILD_NPI
-    case SIAtomicScope::CLUSTER:
-#endif /* LLPC_BUILD_NPI */
       // If no cross address space ordering then an GDS "S_WAITCNT lgkmcnt(0)"
       // is not needed as GDS operations for all waves are executed in a total
       // global ordering as observed by all waves. Required if also
@@ -2355,9 +2358,6 @@ bool SIGfx10CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-#if LLPC_BUILD_NPI
-    case SIAtomicScope::CLUSTER:
-#endif /* LLPC_BUILD_NPI */
       // The order of invalidates matter here. We must invalidate "outer in"
       // so L1 -> L0 to avoid L0 pulling in stale data from L1 when it is
       // invalidated.
@@ -2407,9 +2407,6 @@ bool SIGfx11CacheControl::enableLoadCacheBypass(
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-#if LLPC_BUILD_NPI
-    case SIAtomicScope::CLUSTER:
-#endif /* LLPC_BUILD_NPI */
       // Set the L0 and L1 cache policies to MISS_EVICT.
       // Note: there is no L2 cache coherent bypass control at the ISA level.
       Changed |= enableGLCBit(MI);
@@ -2928,7 +2925,12 @@ bool SIGfx12CacheControl::expandSystemScopeStore(
       return insertWaitsBeforeSystemScopeStore(MI);
     return false;
   }
+#else /* LLPC_BUILD_NPI */
+  if (CPol && ((CPol->getImm() & CPol::SCOPE) == CPol::SCOPE_SYS))
+    return insertWaitsBeforeSystemScopeStore(MI);
+#endif /* LLPC_BUILD_NPI */
 
+#if LLPC_BUILD_NPI
   // GFX1250 only: Require SCOPE_SE on stores that may hit the scratch address
   // space, or if the "cu-stores" target feature is disabled.
   if (Scope != CPol::SCOPE_CU)
@@ -2936,11 +2938,21 @@ bool SIGfx12CacheControl::expandSystemScopeStore(
 
   if (!ST.hasCUStores() || TII->mayAccessScratchThroughFlat(*MI))
     return setScope(MI, CPol::SCOPE_SE);
-#else /* LLPC_BUILD_NPI */
-  if (CPol && ((CPol->getImm() & CPol::SCOPE) == CPol::SCOPE_SYS))
-    return insertWaitsBeforeSystemScopeStore(MI);
-#endif /* LLPC_BUILD_NPI */
 
+  return false;
+}
+
+bool SIGfx12CacheControl::handleCooperativeAtomic(MachineInstr &MI) const {
+  if (!ST.hasGFX1250Insts())
+    return false;
+
+  // Cooperative atomics need to be SCOPE_DEV or higher.
+  MachineOperand *CPol = TII->getNamedOperand(MI, OpName::cpol);
+  assert(CPol && "No CPol operand?");
+  const unsigned Scope = CPol->getImm() & CPol::SCOPE;
+  if (Scope < CPol::SCOPE_DEV)
+    return setScope(MI, CPol::SCOPE_DEV);
+#endif /* LLPC_BUILD_NPI */
   return false;
 }
 
@@ -3043,6 +3055,13 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
                                            MOI.getOrderingAddrSpace());
     }
 
+#if LLPC_BUILD_NPI
+    // Handle cooperative atomics after cache bypass step, as it may override
+    // the scope of the instruction to a greater scope.
+    if (MOI.isCooperative())
+      Changed |= CC->handleCooperativeAtomic(*MI);
+
+#endif /* LLPC_BUILD_NPI */
     if (Order == AtomicOrdering::SequentiallyConsistent)
       Changed |= CC->insertWait(MI, MOI.getScope(), MOI.getOrderingAddrSpace(),
                                 SIMemOp::LOAD | SIMemOp::STORE,
@@ -3093,6 +3112,13 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
                                             MOI.getOrderingAddrSpace());
     }
 
+#if LLPC_BUILD_NPI
+    // Handle cooperative atomics after cache bypass step, as it may override
+    // the scope of the instruction to a greater scope.
+    if (MOI.isCooperative())
+      Changed |= CC->handleCooperativeAtomic(*MI);
+
+#endif /* LLPC_BUILD_NPI */
     if (MOI.getOrdering() == AtomicOrdering::Release ||
         MOI.getOrdering() == AtomicOrdering::SequentiallyConsistent)
       Changed |= CC->insertRelease(MI, MOI.getScope(),
@@ -3251,8 +3277,14 @@ SIMemoryLegalizerPass::run(MachineFunction &MF,
 bool SIMemoryLegalizer::run(MachineFunction &MF) {
   bool Changed = false;
 
+#if LLPC_BUILD_NPI
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  SIMemOpAccess MOA(MMI.getObjFileInfo<AMDGPUMachineModuleInfo>(), ST);
+  CC = SICacheControl::create(ST);
+#else /* LLPC_BUILD_NPI */
   SIMemOpAccess MOA(MMI.getObjFileInfo<AMDGPUMachineModuleInfo>());
   CC = SICacheControl::create(MF.getSubtarget<GCNSubtarget>());
+#endif /* LLPC_BUILD_NPI */
 
   for (auto &MBB : MF) {
     for (auto MI = MBB.begin(); MI != MBB.end(); ++MI) {

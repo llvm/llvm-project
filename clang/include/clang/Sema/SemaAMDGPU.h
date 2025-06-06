@@ -26,6 +26,10 @@ public:
 
   bool CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
 
+#if LLPC_BUILD_NPI
+  bool checkCoopAtomicFunctionCall(CallExpr *TheCall, bool IsStore);
+
+#endif /* LLPC_BUILD_NPI */
   bool checkMovDPPFunctionCall(CallExpr *TheCall, unsigned NumArgs,
                                unsigned NumDataArgs);
 

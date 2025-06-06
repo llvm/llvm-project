@@ -12476,7 +12476,11 @@ def warn_zero_as_null_pointer_constant : Warning<
   InGroup<DiagGroup<"zero-as-null-pointer-constant">>, DefaultIgnore;
 
 def warn_not_eliding_copy_on_return : Warning<
+#ifdef LLPC_BUILD_NPI
+  "not eliding copy on return">,
+#else /* LLPC_BUILD_NPI */
   "not eliding copy on return">, 
+#endif /* LLPC_BUILD_NPI */
   InGroup<DiagGroup<"nrvo">>, DefaultIgnore;
 
 def err_nullability_cs_multilevel : Error<
@@ -12711,6 +12715,11 @@ def warn_noderef_on_non_pointer_or_array : Warning<
 def warn_noderef_to_dereferenceable_pointer : Warning<
   "casting to dereferenceable pointer removes 'noderef' attribute">, InGroup<NoDeref>;
 
+def warn_cast_discards_cfi_unchecked_callee
+    : Warning<"implicit conversion from %0 to %1 discards "
+              "'cfi_unchecked_callee' attribute">,
+      InGroup<DiagGroup<"cfi-unchecked-callee">>;
+
 def err_builtin_launder_invalid_arg : Error<
   "%select{non-pointer|function pointer|void pointer}0 argument to "
   "'__builtin_launder' is not allowed">;
@@ -12802,6 +12811,14 @@ def err_bit_cast_non_trivially_copyable : Error<
   "'__builtin_bit_cast' %select{source|destination}0 type must be trivially copyable">;
 def err_bit_cast_type_size_mismatch : Error<
   "size of '__builtin_bit_cast' source type %0 does not match destination type %1 (%2 vs %3 bytes)">;
+
+def err_get_vtable_pointer_incorrect_type
+    : Error<"__builtin_get_vtable_pointer requires an argument of%select{| "
+            "polymorphic}0 class pointer type"
+            ", but %1 %select{was provided|has no virtual methods}0">;
+def err_get_vtable_pointer_requires_complete_type
+    : Error<"__builtin_get_vtable_pointer requires an argument with a complete "
+            "type, but %0 is incomplete">;
 
 // SYCL-specific diagnostics
 def warn_sycl_kernel_num_of_template_params : Warning<
@@ -13396,9 +13413,13 @@ def err_acc_device_type_multiple_archs
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
 def note_amdgcn_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
 #ifdef LLPC_BUILD_NPI
+
+def err_amdgcn_group_atomic_invalid_as : Error<"cooperative atomic requires a global or generic pointer">;
+
 def err_amdgcn_num_wavegroups_value : Error<"number of wavegroups must be 4">;
 def err_amdgcn_wave_size_value : Error<"wave size must be 32">;
 def err_amdgcn_block_dim_invalid_value : Error<"invalid block dimensions">;
 def note_amdgcn_block_dim_valid_value : Note<"number of threads must be %select{non-zero|at most 1024|a multiple of 128}0">;
+
 #endif /* LLPC_BUILD_NPI */
 } // end of sema component.

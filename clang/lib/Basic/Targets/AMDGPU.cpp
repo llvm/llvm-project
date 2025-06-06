@@ -69,6 +69,7 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsGenMap = {
     // will break loudly.
     llvm::AMDGPUAS::PRIVATE_ADDRESS, // hlsl_private
     llvm::AMDGPUAS::GLOBAL_ADDRESS,  // hlsl_device
+    llvm::AMDGPUAS::PRIVATE_ADDRESS, // hlsl_input
 #if LLPC_BUILD_NPI
     // Wasm address space values for this target are dummy values
     llvm::AMDGPUAS::FLAT_ADDRESS,    // wasm_funcref
@@ -101,6 +102,7 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsPrivMap = {
     llvm::AMDGPUAS::CONSTANT_ADDRESS, // hlsl_constant
     llvm::AMDGPUAS::PRIVATE_ADDRESS,  // hlsl_private
     llvm::AMDGPUAS::GLOBAL_ADDRESS,   // hlsl_device
+    llvm::AMDGPUAS::PRIVATE_ADDRESS,  // hlsl_input
 #if LLPC_BUILD_NPI
     // Wasm address space values for this target are dummy values
     llvm::AMDGPUAS::FLAT_ADDRESS,     // wasm_funcref

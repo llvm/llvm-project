@@ -45,6 +45,7 @@ static const unsigned ZOSAddressMap[] = {
     0, // hlsl_constant
     0, // hlsl_private
     0, // hlsl_device
+    0, // hlsl_input
 #if LLPC_BUILD_NPI
     0, // wasm_funcref
     0  // hip_lane_shared
@@ -249,7 +250,7 @@ public:
     switch (CC) {
     case CC_C:
     case CC_Swift:
-    case CC_OpenCLKernel:
+    case CC_DeviceKernel:
       return CCCR_OK;
     case CC_SwiftAsync:
       return CCCR_Error;

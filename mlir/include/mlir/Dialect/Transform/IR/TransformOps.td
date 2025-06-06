@@ -399,15 +399,16 @@ def ApplyLoopInvariantCodeMotionOp : TransformDialectOp<"apply_licm",
 }
 
 def ApplyRegisteredPassOp : TransformDialectOp<"apply_registered_pass",
-    [TransformOpInterface, TransformEachOpTrait,
-     FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface]> {
+    [DeclareOpInterfaceMethods<TransformOpInterface>,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "Applies the specified registered pass or pass pipeline";
   let description = [{
     This transform applies the specified pass or pass pipeline to the targeted
     ops. The name of the pass/pipeline is specified as a string attribute, as
     set during pass/pipeline registration. Optionally, pass options may be
-    specified as a string attribute. The pass options syntax is identical to the
-    one used with "mlir-opt".
+    specified as (space-separated) string attributes with the option to pass
+    these attributes via params. The pass options syntax is identical to the one
+    used with "mlir-opt".
 
     This op first looks for a pass pipeline with the specified name. If no such
     pipeline exists, it looks for a pass with the specified name. If no such
@@ -420,21 +421,17 @@ def ApplyRegisteredPassOp : TransformDialectOp<"apply_registered_pass",
     of targeted ops.
   }];
 
-  let arguments = (ins TransformHandleTypeInterface:$target,
-                       StrAttr:$pass_name,
-                       DefaultValuedAttr<StrAttr, "\"\"">:$options);
+  let arguments = (ins StrAttr:$pass_name,
+                       DefaultValuedAttr<ArrayAttr, "{}">:$options,
+                       Variadic<TransformParamTypeInterface>:$dynamic_options,
+                       TransformHandleTypeInterface:$target);
   let results = (outs TransformHandleTypeInterface:$result);
   let assemblyFormat = [{
-    $pass_name `to` $target attr-dict `:` functional-type(operands, results)
+    $pass_name (`with` `options` `=`
+      custom<ApplyRegisteredPassOptions>($options, $dynamic_options)^)?
+      `to` $target attr-dict `:` functional-type(operands, results)
   }];
-
-  let extraClassDeclaration = [{
-    ::mlir::DiagnosedSilenceableFailure applyToOne(
-      ::mlir::transform::TransformRewriter &rewriter,
-      ::mlir::Operation *target,
-      ::mlir::transform::ApplyToEachResultList &results,
-      ::mlir::transform::TransformState &state);
-  }];
+  let hasVerifier = 1;
 }
 
 def CastOp : TransformDialectOp<"cast",

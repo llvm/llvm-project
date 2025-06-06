@@ -424,11 +424,44 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
     case GK_GFX1302:
     case GK_GFX1301:
     case GK_GFX1300:
+      Features["ci-insts"] = true;
+      Features["dot7-insts"] = true;
+      Features["dot8-insts"] = true;
+      Features["dl-insts"] = true;
+      Features["16-bit-insts"] = true;
+      Features["dpp"] = true;
+      Features["gfx8-insts"] = true;
+      Features["gfx9-insts"] = true;
+      Features["gfx10-insts"] = true;
+      Features["gfx10-3-insts"] = true;
+      Features["gfx11-insts"] = true;
+      Features["gfx12-insts"] = true;
+      Features["gfx1250-insts"] = true;
+      Features["bitop3-insts"] = true;
+      Features["prng-inst"] = true;
+      Features["tanh-insts"] = true;
+      Features["tensor-cvt-lut-insts"] = true;
+      Features["transpose-load-f4f6-insts"] = true;
+      Features["bf16-trans-insts"] = true;
+      Features["bf16-cvt-insts"] = true;
+      Features["bf16-pk-insts"] = true;
+      Features["fp8-conversion-insts"] = true;
+      Features["fp8e5m3-insts"] = true;
+      Features["permlane16-swap"] = true;
+      Features["ashr-pk-insts"] = true;
+      Features["atomic-buffer-pk-add-bf16-inst"] = true;
+      Features["vmem-pref-insts"] = true;
+      Features["atomic-fadd-rtn-insts"] = true;
+      Features["atomic-buffer-global-pk-add-f16-insts"] = true;
+      Features["atomic-flat-pk-add-16-insts"] = true;
+      Features["atomic-global-pk-add-bf16-inst"] = true;
+      Features["atomic-ds-pk-add-16-insts"] = true;
+      Features["gfx1251-gemm-insts"] = true;
       Features["gfx13-insts"] = true;
       Features["parallel-bit-insts"] = true;
       Features["f32-to-f16bf16-cvt-sr-insts"] = true;
       Features["f16bf16-to-fp6bf6-cvt-scale-insts"] = true;
-      [[fallthrough]];
+      break;
     case GK_GFX1251:
       Features["gfx1251-gemm-insts"] = true;
       [[fallthrough]];

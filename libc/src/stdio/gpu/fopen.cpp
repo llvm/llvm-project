@@ -12,6 +12,7 @@
 #include "src/stdio/gpu/file.h"
 
 #include "hdr/types/FILE.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
