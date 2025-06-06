@@ -678,10 +678,19 @@ static std::unique_ptr<HTMLNode> genHTML(const CommentInfo &I) {
     return std::make_unique<TextNode>(I.Text);
   }
 
-  // For now, no handling — fallthrough.
-  default:
+  // For now, return nullptr for unsupported comment kinds
+  case CommentKind::CK_InlineCommandComment:
+  case CommentKind::CK_HTMLStartTagComment:
+  case CommentKind::CK_HTMLEndTagComment:
+  case CommentKind::CK_ParamCommandComment:
+  case CommentKind::CK_TParamCommandComment:
+  case CommentKind::CK_VerbatimBlockComment:
+  case CommentKind::CK_VerbatimBlockLineComment:
+  case CommentKind::CK_VerbatimLineComment:
+  case CommentKind::CK_Unknown:
     return nullptr;
   }
+  llvm_unreachable("Unhandled CommentKind");
 }
 
 static std::unique_ptr<TagNode> genHTML(const std::vector<CommentInfo> &C) {
