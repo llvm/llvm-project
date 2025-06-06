@@ -283,30 +283,6 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
 llvm::json::Value CreateExtendedStackFrameLabel(lldb::SBThread &thread,
                                                 lldb::SBFormat &format);
 
-/// Create a "Thread" object for a LLDB thread object.
-///
-/// This function will fill in the following keys in the returned
-/// object:
-///   "id" - the thread ID as an integer
-///   "name" - the thread name as a string which combines the LLDB
-///            thread index ID along with the string name of the thread
-///            from the OS if it has a name.
-///
-/// \param[in] thread
-///     The LLDB thread to use when populating out the "Thread"
-///     object.
-///
-/// \param[in] format
-///     The LLDB format to use when populating out the "Thread"
-///     object.
-///
-/// \return
-///     A "Thread" JSON object with that follows the formal JSON
-///     definition outlined by Microsoft.
-llvm::json::Value CreateThread(lldb::SBThread &thread, lldb::SBFormat &format);
-
-llvm::json::Array GetThreads(lldb::SBProcess process, lldb::SBFormat &format);
-
 /// Create a "StoppedEvent" object for a LLDB thread object.
 ///
 /// This function will fill in the following keys in the returned

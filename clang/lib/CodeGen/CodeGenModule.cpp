@@ -1146,8 +1146,13 @@ void CodeGenModule::Release() {
                               1);
   }
 
-  if (CodeGenOpts.UniqueSourceFileNames) {
-    getModule().addModuleFlag(llvm::Module::Max, "Unique Source File Names", 1);
+  if (!CodeGenOpts.UniqueSourceFileIdentifier.empty()) {
+    getModule().addModuleFlag(
+        llvm::Module::Append, "Unique Source File Identifier",
+        llvm::MDTuple::get(
+            TheModule.getContext(),
+            llvm::MDString::get(TheModule.getContext(),
+                                CodeGenOpts.UniqueSourceFileIdentifier)));
   }
 
   if (LangOpts.Sanitize.has(SanitizerKind::KCFI)) {

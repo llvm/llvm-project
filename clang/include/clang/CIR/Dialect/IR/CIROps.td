@@ -1778,11 +1778,6 @@ def GetMemberOp : CIR_Op<"get_member"> {
 
     /// Return the record type pointed by the base pointer.
     cir::PointerType getAddrTy() { return getAddr().getType(); }
-
-    /// Return the result type.
-    cir::PointerType getResultTy() {
-      return getResult().getType();
-    }
   }];
 
   let hasVerifier = 1;
