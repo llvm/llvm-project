@@ -391,7 +391,6 @@ orderSpellings(ArrayRef<Spelling::Value> Spellings) {
                     [](const Spelling::Value &A, const Spelling::Value &B) {
                       return A.Versions < B.Versions;
                     });
-
   return List;
 }
 
@@ -417,8 +416,8 @@ static void generateGetName(ArrayRef<const Record *> Records, raw_ostream &OS,
     } else {
       OS << " {\n";
       std::string SpellingsName = Ident + "_spellings";
-      OS << "      static constexpr llvm::directive::Spelling "
-         << SpellingsName << "[] = {\n";
+      OS << "      static constexpr llvm::directive::Spelling " << SpellingsName
+         << "[] = {\n";
       for (auto &S : Spellings) {
         OS << "          {\"" << S.Name << "\", {" << S.Versions.Min << ", "
            << S.Versions.Max << "}},\n";
