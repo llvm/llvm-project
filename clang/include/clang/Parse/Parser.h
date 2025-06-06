@@ -5134,12 +5134,13 @@ private:
   ExprResult ParseExpressionTrait();
 
   //===--------------------------------------------------------------------===//
-  // Pointer Authentication: Builtins to help work with pointer authentication qualifiers
+  // Pointer Authentication: Builtins to help work with pointer authentication
+  // qualifiers
 
   /// ParseBuiltinPtrauthTypeTrait - Parse the pointer authentication
-  /// pseudo-functions. These consist of a number of operations to query
-  /// the authenticationschema of a type, or to generate information for
-  /// the construction of authentication schemas.
+  /// pseudo-functions. These consist of a number of operations to query the
+  /// authentication schema of a type, or to generate information for the
+  /// construction of authentication schemas.
   ///
   /// \verbatim
   ///       primary-expression:
