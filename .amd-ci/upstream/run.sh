@@ -26,14 +26,12 @@ execute_and_check()
 WORKSPACE=$PWD
 touch "${WORKSPACE}"/build_success.txt
 
-execute_and_check "cd ${WORKSPACE}/llvm-project/llvm/"
-LLVM_VERSION_MAJOR=$(grep -w "set(LLVM_VERSION_MAJOR" CMakeLists.txt | awk -F' ' '{print $NF}' | tr -d ')')
-LLVM_VERSION_MINOR=$(grep -w "set(LLVM_VERSION_MINOR" CMakeLists.txt | awk -F' ' '{print $NF}' | tr -d ')')
-LLVM_VERSION_PATCH=$(grep -w "set(LLVM_VERSION_PATCH" CMakeLists.txt | awk -F' ' '{print $NF}' | tr -d ')')
+_ver_file=llvm-project/cmake/Modules/LLVMVersion.cmake
+LLVM_VERSION_MAJOR=$(grep -w "set(LLVM_VERSION_MAJOR" "${_ver_file}" | awk -F' ' '{print $NF}' | tr -d ')')
+LLVM_VERSION_MINOR=$(grep -w "set(LLVM_VERSION_MINOR" "${_ver_file}" | awk -F' ' '{print $NF}' | tr -d ')')
+LLVM_VERSION_PATCH=$(grep -w "set(LLVM_VERSION_PATCH" "${_ver_file}" | awk -F' ' '{print $NF}' | tr -d ')')
 CLANG_VERSION=$LLVM_VERSION_MAJOR.$LLVM_VERSION_MINOR.$LLVM_VERSION_PATCH
 echo "CLANG_VERSION value is - $CLANG_VERSION" > "${WORKSPACE}"/VERSION_AND_COMMIT_HASH_OF_BUILD_"${BUILD_NUMBER}".txt
-
-execute_and_check "cd  ${WORKSPACE}"
 
 echo "source  aocc-essentials/build_essentials/linux/aocc_env.sh"
 source aocc-essentials/build_essentials/linux/aocc_env.sh
