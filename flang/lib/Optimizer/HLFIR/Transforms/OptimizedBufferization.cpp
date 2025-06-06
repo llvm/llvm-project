@@ -572,13 +572,11 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
   // hlfir.assign, check there are no effects which make this unsafe
 
   // keep track of any values written to in the elemental, as these can't be
-  // read from between the elemental and the assignment
+  // read from or written to between the elemental and the assignment
+  mlir::SmallVector<mlir::Value, 1> notToBeAccessedBeforeAssign;
   // likewise, values read in the elemental cannot be written to between the
   // elemental and the assign
-  mlir::SmallVector<mlir::Value, 1> notToBeAccessedBeforeAssign;
-  // any accesses to the array between the array and the assignment means it
-  // would be unsafe to move the elemental to the assignment
-  notToBeAccessedBeforeAssign.push_back(match.array);
+  mlir::SmallVector<mlir::Value, 1> notToBeWrittenBeforeAssign;
 
   // 1) side effects in the elemental body - it isn't sufficient to just look
   // for ordered elementals because we also cannot support out of order reads
@@ -593,10 +591,12 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
   for (const mlir::MemoryEffects::EffectInstance &effect : *effects) {
     mlir::AliasResult res = containsReadOrWriteEffectOn(effect, match.array);
     if (res.isNo()) {
-      if (mlir::isa<mlir::MemoryEffects::Write, mlir::MemoryEffects::Read>(
-              effect.getEffect()))
-        if (effect.getValue())
+      if (effect.getValue()) {
+        if (mlir::isa<mlir::MemoryEffects::Write>(effect.getEffect()))
           notToBeAccessedBeforeAssign.push_back(effect.getValue());
+        else if (mlir::isa<mlir::MemoryEffects::Read>(effect.getEffect()))
+          notToBeWrittenBeforeAssign.push_back(effect.getValue());
+      }
 
       // this is safe in the elemental
       continue;
@@ -669,8 +669,20 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
       mlir::AliasResult res = containsReadOrWriteEffectOn(effect, val);
       if (!res.isNo()) {
         LLVM_DEBUG(llvm::dbgs()
-                   << "diasllowed side-effect: " << effect.getValue() << " for "
+                   << "disallowed side-effect: " << effect.getValue() << " for "
                    << elemental.getLoc() << "\n");
+        return std::nullopt;
+      }
+    }
+    // Anything that is read inside the elemental can only be safely read
+    // between the elemental and the assignment.
+    for (mlir::Value val : notToBeWrittenBeforeAssign) {
+      mlir::AliasResult res = containsReadOrWriteEffectOn(effect, val);
+      if (!res.isNo() &&
+          !mlir::isa<mlir::MemoryEffects::Read>(effect.getEffect())) {
+        LLVM_DEBUG(llvm::dbgs()
+                   << "disallowed non-read side-effect: " << effect.getValue()
+                   << " for " << elemental.getLoc() << "\n");
         return std::nullopt;
       }
     }
