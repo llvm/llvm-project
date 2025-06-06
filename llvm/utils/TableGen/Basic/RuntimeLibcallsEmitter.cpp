@@ -165,10 +165,10 @@ void RuntimeLibcallEmitter::emitTargetOverrideFunc(
     // for (const Record *LibCallImpl : LibCallImplList) {
     for (const RuntimeLibcallImpl &LibCallImpl : LibCallImplList) {
       const RuntimeLibcall *Provides = LibCallImpl.getProvides();
-      OS << "  LibcallRoutineNames[";
+      OS << "  LibcallImpls[";
       Provides->emitEnumEntry(OS);
       OS << "] = ";
-      LibCallImpl.emitQuotedLibcallFuncName(OS);
+      LibCallImpl.emitEnumEntry(OS);
       OS << ";\n";
     }
   }
@@ -180,7 +180,7 @@ void RuntimeLibcallEmitter::emitGetRuntimeLibcallEnum(raw_ostream &OS) const {
   OS << "#ifdef GET_RUNTIME_LIBCALL_ENUM\n"
         "namespace llvm {\n"
         "namespace RTLIB {\n"
-        "enum Libcall {\n";
+        "enum Libcall : unsigned short {\n";
 
   size_t CallTypeEnumVal = 0;
   for (const RuntimeLibcall &LibCall : RuntimeLibcallDefList) {
@@ -192,6 +192,18 @@ void RuntimeLibcallEmitter::emitGetRuntimeLibcallEnum(raw_ostream &OS) const {
 
   OS << "  UNKNOWN_LIBCALL = " << CallTypeEnumVal
      << "\n};\n\n"
+        "enum LibcallImpl : unsigned short {\n"
+        "  Unsupported = 0,\n";
+
+  // FIXME: Emit this in a different namespace. And maybe use enum class.
+  size_t LibCallImplEnumVal = 1;
+  for (const RuntimeLibcallImpl &LibCall : RuntimeLibcallImplDefList) {
+    OS << "  " << LibCall.getName() << " = " << LibCallImplEnumVal++ << ", // "
+       << LibCall.getLibcallFuncName() << '\n';
+  }
+
+  OS << "  NumLibcallImpls = " << LibCallImplEnumVal
+     << "\n};\n"
         "} // End namespace RTLIB\n"
         "} // End namespace llvm\n"
         "#endif\n\n";
@@ -203,16 +215,16 @@ void RuntimeLibcallEmitter::emitWindowsArm64LibCallNameOverrides(
   OS << "void "
         "llvm::RTLIB::RuntimeLibcallsInfo::setWindowsArm64LibCallNameOverrides("
         ") {\n"
-        "  static const char *const "
-        "WindowsArm64RoutineNames[RTLIB::UNKNOWN_LIBCALL + 1] = {\n";
+        "  static const RTLIB::LibcallImpl "
+        "WindowsArm64RoutineImpls[RTLIB::UNKNOWN_LIBCALL + 1] = {\n";
   for (const RuntimeLibcall &LibCall : RuntimeLibcallDefList) {
     auto I = LibCallToDefaultImpl.find(&LibCall);
     if (I == LibCallToDefaultImpl.end())
-      OS << "    nullptr,";
+      OS << "    RTLIB::Unsupported,";
     else {
       const RuntimeLibcallImpl *LibCallImpl = I->second;
       assert(LibCallImpl);
-      OS << "    \"#" << LibCallImpl->getLibcallFuncName() << "\",";
+      OS << "    RTLIB::arm64ec_" << LibCallImpl->getName() << ',';
     }
 
     OS << " // ";
@@ -220,12 +232,12 @@ void RuntimeLibcallEmitter::emitWindowsArm64LibCallNameOverrides(
     OS << '\n';
   }
 
-  OS << "    nullptr // RTLIB::UNKNOWN_LIBCALL\n"
+  OS << "    RTLIB::Unsupported // RTLIB::UNKNOWN_LIBCALL\n"
         "  };\n\n"
-        "  std::memcpy(LibcallRoutineNames, WindowsArm64RoutineNames,\n"
-        "              sizeof(LibcallRoutineNames));\n"
-        "  static_assert(sizeof(LibcallRoutineNames) == "
-        "sizeof(WindowsArm64RoutineNames),\n"
+        "  std::memcpy(LibcallImpls, WindowsArm64RoutineImpls,\n"
+        "              sizeof(LibcallImpls));\n"
+        "  static_assert(sizeof(LibcallImpls) == "
+        "sizeof(WindowsArm64RoutineImpls),\n"
         "                \"libcall array size should match\");\n"
         "}\n#endif\n\n";
 }
@@ -235,19 +247,19 @@ void RuntimeLibcallEmitter::emitGetInitRuntimeLibcallNames(
   // TODO: Emit libcall names as string offset table.
 
   OS << "#ifdef GET_INIT_RUNTIME_LIBCALL_NAMES\n"
-        "const char *const "
+        "const RTLIB::LibcallImpl "
         "llvm::RTLIB::RuntimeLibcallsInfo::"
-        "DefaultLibcallRoutineNames[RTLIB::UNKNOWN_LIBCALL + 1] = {\n";
+        "DefaultLibcallImpls[RTLIB::UNKNOWN_LIBCALL + 1] = {\n";
 
   for (const RuntimeLibcall &LibCall : RuntimeLibcallDefList) {
     auto I = LibCallToDefaultImpl.find(&LibCall);
-    if (I == LibCallToDefaultImpl.end())
-      OS << "  nullptr,";
-    else {
+    if (I == LibCallToDefaultImpl.end()) {
+      OS << "  RTLIB::Unsupported,";
+    } else {
       const RuntimeLibcallImpl *LibCallImpl = I->second;
       OS << "  ";
-      LibCallImpl->emitQuotedLibcallFuncName(OS);
-      OS << ',';
+      LibCallImpl->emitEnumEntry(OS);
+      OS << ",";
     }
 
     OS << " // ";
@@ -255,8 +267,36 @@ void RuntimeLibcallEmitter::emitGetInitRuntimeLibcallNames(
     OS << '\n';
   }
 
-  OS << "  nullptr // RTLIB::UNKNOWN_LIBCALL\n"
+  OS << "  RTLIB::Unsupported\n"
         "};\n\n";
+
+  // Emit the implementation names
+  OS << "const char *const llvm::RTLIB::RuntimeLibcallsInfo::"
+        "LibCallImplNames[RTLIB::NumLibcallImpls] = {\n"
+        "  nullptr, // RTLIB::Unsupported\n";
+
+  for (const RuntimeLibcallImpl &LibCallImpl : RuntimeLibcallImplDefList) {
+    OS << "  \"" << LibCallImpl.getLibcallFuncName() << "\", // ";
+    LibCallImpl.emitEnumEntry(OS);
+    OS << '\n';
+  }
+
+  OS << "};\n\n";
+
+  // Emit the reverse mapping from implementation libraries to RTLIB::Libcall
+  OS << "const RTLIB::Libcall llvm::RTLIB::RuntimeLibcallsInfo::"
+        "ImplToLibcall[RTLIB::NumLibcallImpls] = {\n"
+        "  RTLIB::UNKNOWN_LIBCALL, // RTLIB::Unsupported\n";
+
+  for (const RuntimeLibcallImpl &LibCallImpl : RuntimeLibcallImplDefList) {
+    const RuntimeLibcall *Provides = LibCallImpl.getProvides();
+    OS << "  ";
+    Provides->emitEnumEntry(OS);
+    OS << ", // ";
+    LibCallImpl.emitEnumEntry(OS);
+    OS << '\n';
+  }
+  OS << "};\n\n";
 
   std::vector<RuntimeLibcallImpl> ZOSRuntimeLibcallImplList =
       getRuntimeLibcallImplSet("ZOSRuntimeLibcallImpl");
