@@ -124,7 +124,7 @@ static void serializeReference(const SmallVector<Reference, 4> &References,
   json::Value ReferencesArray = Array();
   json::Array &ReferencesArrayRef = *ReferencesArray.getAsArray();
   ReferencesArrayRef.reserve(References.size());
-  for (const auto& Reference : References) {
+  for (const auto &Reference : References) {
     json::Value ReferenceVal = Object();
     auto &ReferenceObj = *ReferenceVal.getAsObject();
     auto BasePath = Reference.getRelativeFilePath("");
