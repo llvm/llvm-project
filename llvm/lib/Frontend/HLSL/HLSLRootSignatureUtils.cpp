@@ -234,12 +234,12 @@ MDNode *MetadataBuilder::BuildRootConstants(const RootConstants &Constants) {
 
 MDNode *MetadataBuilder::BuildRootDescriptor(const RootDescriptor &Descriptor) {
   IRBuilder<> Builder(Ctx);
-  llvm::SmallString<7> Name;
-  llvm::raw_svector_ostream OS(Name);
-  OS << "Root" << ClauseType(llvm::to_underlying(Descriptor.Type));
-
+  StringRef TypeName =
+      getEnumName(dxil::ResourceClass(llvm::to_underlying(Descriptor.Type)),
+                  ArrayRef(ResourceClassNames));
+  llvm::SmallString<7> Name({"Root", TypeName});
   Metadata *Operands[] = {
-      MDString::get(Ctx, OS.str()),
+      MDString::get(Ctx, Name),
       ConstantAsMetadata::get(
           Builder.getInt32(llvm::to_underlying(Descriptor.Visibility))),
       ConstantAsMetadata::get(Builder.getInt32(Descriptor.Reg.Number)),
@@ -275,12 +275,12 @@ MDNode *MetadataBuilder::BuildDescriptorTable(const DescriptorTable &Table) {
 MDNode *MetadataBuilder::BuildDescriptorTableClause(
     const DescriptorTableClause &Clause) {
   IRBuilder<> Builder(Ctx);
-  std::string Name;
-  llvm::raw_string_ostream OS(Name);
-  OS << Clause.Type;
+  StringRef Name =
+      getEnumName(dxil::ResourceClass(llvm::to_underlying(Clause.Type)),
+                  ArrayRef(ResourceClassNames));
   return MDNode::get(
       Ctx, {
-               MDString::get(Ctx, OS.str()),
+               MDString::get(Ctx, Name),
                ConstantAsMetadata::get(Builder.getInt32(Clause.NumDescriptors)),
                ConstantAsMetadata::get(Builder.getInt32(Clause.Reg.Number)),
                ConstantAsMetadata::get(Builder.getInt32(Clause.Space)),
