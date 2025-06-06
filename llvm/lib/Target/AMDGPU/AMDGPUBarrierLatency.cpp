@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-/// \file This file contains a DAG scheduling mutation to add data dependency
-///       edges between ATOMIC_FENCE instructions and preceeding memory
-///       accesses that might be affected by the fence.
+/// \file This file contains a DAG scheduling mutation to add latency to
+///       barrier edges between ATOMIC_FENCE instructions and preceeding
+///       memory accesses potentially affected by the fence.
 ///       This is beneficial when a fence would cause wait count insertion,
 ///       as more instructions will be scheduled before the fence hiding
 ///       memory latency.
@@ -33,61 +33,48 @@ public:
 };
 
 static bool isMemRead(const MachineInstr *MI) {
-  return (SIInstrInfo::isDS(*MI) || SIInstrInfo::isVMEM(*MI) ||
-          SIInstrInfo::isSMRD(*MI)) &&
-         MI->mayLoad();
-}
+  auto isRead = [](const MachineInstr *MI) {
+    return (SIInstrInfo::isDS(*MI) || SIInstrInfo::isVMEM(*MI) ||
+            SIInstrInfo::isSMRD(*MI)) &&
+           MI->mayLoad();
+  };
 
-static const MachineInstr *getReadInstr(const MachineInstr *MI) {
   if (MI->isBundle()) {
     auto I = std::next(MI->getIterator());
-    if (I != MI->getParent()->instr_end() && I->isInsideBundle() &&
-        isMemRead(&*I))
-      return &*I;
-  } else if (isMemRead(MI)) {
-    return MI;
+    return I != MI->getParent()->instr_end() && I->isInsideBundle() &&
+        isRead(&*I);
   }
 
-  return nullptr;
+  return isRead(MI);
 }
 
 void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
   const unsigned SyntheticLatency = 2000;
-  const unsigned MaxTracked = 32;
-  SmallVector<std::pair<SUnit *, const MachineInstr *>, MaxTracked> ReadOps;
-  unsigned NextIdx = 0;
-
   for (SUnit &SU : DAG->SUnits) {
-    auto *MI = SU.getInstr();
-    auto *ReadMI = getReadInstr(MI);
-
-    // Record read operations.
-    // If SU represents a bundle, then ReadMI is the first instruction in the
-    // bundle.
-    if (ReadMI) {
-      if (ReadOps.size() < MaxTracked) {
-        ReadOps.emplace_back(&SU, ReadMI);
-      } else {
-        ReadOps[NextIdx] = std::pair(&SU, ReadMI);
-        NextIdx = (NextIdx + 1) % MaxTracked;
-      }
+    const MachineInstr *MI = SU.getInstr();
+    if (MI->getOpcode() != AMDGPU::ATOMIC_FENCE)
       continue;
-    }
 
-    // Create new edges on ATOMIC_FENCE for recorded reads.
-    // We don't consider the scope of the fence so it is possible there will
-    // be no impact of this fence on the recorded operations.
-    if (MI->getOpcode() == AMDGPU::ATOMIC_FENCE) {
-      for (auto &DSOp : ReadOps) {
-        Register DstReg = DSOp.second->getOperand(0).getReg();
-        SDep Edge = SDep(DSOp.first, SDep::Data, DstReg);
-        Edge.setLatency(SyntheticLatency);
-        DAG->addEdge(&SU, Edge);
+    // Update latency on barrier edges of ATOMIC_FENCE.
+    // We don't consider the scope of the fence or type of instruction
+    // involved in the barrier edge.
+    for (SDep &PredDep : SU.Preds) {
+      if (!PredDep.isBarrier())
+        continue;
+      SUnit *PredSU = PredDep.getSUnit();
+      if (!isMemRead(PredSU->getInstr()))
+        continue;
+      SDep ForwardD = PredDep;
+      ForwardD.setSUnit(&SU);
+      for (SDep &SuccDep : PredSU->Succs) {
+        if (SuccDep == ForwardD) {
+          SuccDep.setLatency(SuccDep.getLatency() + SyntheticLatency);
+          break;
+        }
       }
-      // Clear tracked operations
-      ReadOps.clear();
-      NextIdx = 0;
-      continue;
+      PredDep.setLatency(PredDep.getLatency() + SyntheticLatency);
+      PredSU->setDepthDirty();
+      SU.setDepthDirty();
     }
   }
 }

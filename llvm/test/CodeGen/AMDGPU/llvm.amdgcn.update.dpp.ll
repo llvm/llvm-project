@@ -143,14 +143,13 @@ define weak_odr amdgpu_kernel void @dpp_test1(ptr %arg) local_unnamed_addr {
 ; GFX8-OPT:       ; %bb.0: ; %bb
 ; GFX8-OPT-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX8-OPT-NEXT:    s_mov_b32 m0, -1
-; GFX8-OPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX8-OPT-NEXT:    ds_read_b32 v1, v0
+; GFX8-OPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX8-OPT-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX8-OPT-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-OPT-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-OPT-NEXT:    v_add_u32_e32 v4, vcc, v1, v1
+; GFX8-OPT-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-OPT-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
-; GFX8-OPT-NEXT:    s_nop 0
 ; GFX8-OPT-NEXT:    v_mov_b32_dpp v2, v4 quad_perm:[1,0,3,2] row_mask:0xf bank_mask:0xf
 ; GFX8-OPT-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
 ; GFX8-OPT-NEXT:    v_add_u32_e32 v2, vcc, v2, v4
