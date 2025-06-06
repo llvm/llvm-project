@@ -368,4 +368,11 @@ struct TemplateD {
 // CHECK-MESSAGES: :[[@LINE-7]]:3: note: 2 lines including whitespace and comments (threshold 0)
 // CHECK-MESSAGES: :[[@LINE-8]]:3: note: 2 statements (threshold 0)
 
-
+void instantiate() {
+  TemplateC<int> c;
+  TemplateD<int> d(5);
+}
+// CHECK-MESSAGES: :[[@LINE-4]]:6: warning: function 'instantiate' exceeds recommended size/complexity thresholds [readability-function-size]
+// CHECK-MESSAGES: :[[@LINE-5]]:6: note: 3 lines including whitespace and comments (threshold 0)
+// CHECK-MESSAGES: :[[@LINE-6]]:6: note: 2 statements (threshold 0)
+// CHECK-MESSAGES: :[[@LINE-7]]:6: note: 2 variables (threshold 1)
