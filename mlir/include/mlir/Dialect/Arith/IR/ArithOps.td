@@ -1226,8 +1226,8 @@ def Arith_ScalingExtFOp
       Arguments<(ins FloatLike:$in, FloatLike:$scale,
           OptionalAttr<Arith_FastMathAttr>:$fastmath)>,
       Results<(outs FloatLike:$out)> {
-  let summary =
-      "Upcasts input floats using provided scales values following OCP MXFP Spec";
+  let summary = "Upcasts input floats using provided scales values following "
+                "OCP MXFP Spec";
   let description = [{
   This operation upcasts input floating-point values using provided scale 
   values. It expects both scales and the input operand to be of the same shape, 
@@ -1346,8 +1346,8 @@ def Arith_ScalingTruncFOp
           OptionalAttr<Arith_RoundingModeAttr>:$roundingmode,
           OptionalAttr<Arith_FastMathAttr>:$fastmath)>,
       Results<(outs FloatLike:$out)> {
-  let summary =
-      "Downcasts input floating point values using provided scales values following OCP MXFP Spec";
+  let summary = "Downcasts input floating point values using provided scales "
+                "values following OCP MXFP Spec";
   let description = [{
     This operation downcasts input using the provided scale values. It expects 
     both scales and the input operand to be of the same shape and, therefore, 
