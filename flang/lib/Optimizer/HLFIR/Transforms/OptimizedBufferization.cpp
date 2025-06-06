@@ -700,10 +700,17 @@ llvm::LogicalResult ElementalAssignBufferization::matchAndRewrite(
 
   mlir::Location loc = elemental->getLoc();
   fir::FirOpBuilder builder(rewriter, elemental.getOperation());
-  auto extents = hlfir::getIndexExtents(loc, builder, elemental.getShape());
+  auto rhsExtents = hlfir::getIndexExtents(loc, builder, elemental.getShape());
 
   // create the loop at the assignment
   builder.setInsertionPoint(match->assign);
+  hlfir::Entity lhs{match->array};
+  lhs = hlfir::derefPointersAndAllocatables(loc, builder, lhs);
+  mlir::Value lhsShape = hlfir::genShape(loc, builder, lhs);
+  llvm::SmallVector<mlir::Value> lhsExtents =
+      hlfir::getIndexExtents(loc, builder, lhsShape);
+  llvm::SmallVector<mlir::Value> extents =
+      fir::factory::deduceOptimalExtents(rhsExtents, lhsExtents);
 
   // Generate a loop nest looping around the hlfir.elemental shape and clone
   // hlfir.elemental region inside the inner loop
@@ -717,8 +724,8 @@ llvm::LogicalResult ElementalAssignBufferization::matchAndRewrite(
   rewriter.eraseOp(yield);
 
   // Assign the element value to the array element for this iteration.
-  auto arrayElement = hlfir::getElementAt(
-      loc, builder, hlfir::Entity{match->array}, loopNest.oneBasedIndices);
+  auto arrayElement =
+      hlfir::getElementAt(loc, builder, lhs, loopNest.oneBasedIndices);
   builder.create<hlfir::AssignOp>(
       loc, elementValue, arrayElement, /*realloc=*/false,
       /*keep_lhs_length_if_realloc=*/false, match->assign.getTemporaryLhs());
