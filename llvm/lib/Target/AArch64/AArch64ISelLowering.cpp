@@ -29210,6 +29210,28 @@ AArch64TargetLowering::LowerVECTOR_DEINTERLEAVE(SDValue Op,
   assert(OpVT.isScalableVector() &&
          "Expected scalable vector in LowerVECTOR_DEINTERLEAVE.");
 
+  // Are multi-register uzp instructions available?
+  if (Subtarget->hasSME2() && Subtarget->isStreaming() &&
+      OpVT.getVectorElementType() != MVT::i1) {
+    Intrinsic::ID IntID;
+    switch (Op->getNumOperands()) {
+    default:
+      return SDValue();
+    case 2:
+      IntID = Intrinsic::aarch64_sve_uzp_x2;
+      break;
+    case 4:
+      IntID = Intrinsic::aarch64_sve_uzp_x4;
+      break;
+    }
+
+    SmallVector<SDValue, 5> Ops;
+    Ops.push_back(DAG.getTargetConstant(IntID, DL, MVT::i64));
+    for (unsigned I = 0; I < Op.getNumOperands(); ++I)
+      Ops.push_back(Op.getOperand(I));
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Op->getVTList(), Ops);
+  }
+
   if (Op->getNumOperands() != 2)
     return SDValue();
 
@@ -29226,6 +29248,28 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
   EVT OpVT = Op.getValueType();
   assert(OpVT.isScalableVector() &&
          "Expected scalable vector in LowerVECTOR_INTERLEAVE.");
+
+  // Are multi-register zip instructions available?
+  if (Subtarget->hasSME2() && Subtarget->isStreaming() &&
+      OpVT.getVectorElementType() != MVT::i1) {
+    Intrinsic::ID IntID;
+    switch (Op->getNumOperands()) {
+    default:
+      return SDValue();
+    case 2:
+      IntID = Intrinsic::aarch64_sve_zip_x2;
+      break;
+    case 4:
+      IntID = Intrinsic::aarch64_sve_zip_x4;
+      break;
+    }
+
+    SmallVector<SDValue, 5> Ops;
+    Ops.push_back(DAG.getTargetConstant(IntID, DL, MVT::i64));
+    for (unsigned I = 0; I < Op.getNumOperands(); ++I)
+      Ops.push_back(Op.getOperand(I));
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Op->getVTList(), Ops);
+  }
 
   if (Op->getNumOperands() != 2)
     return SDValue();
