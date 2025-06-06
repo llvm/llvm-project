@@ -82,6 +82,9 @@ add_lldb_library(lldbTarget
   UnwindLLDB.cpp
   VerboseTrapFrameRecognizer.cpp
 
+  LINK_COMPONENTS
+    Support
+    MC
   LINK_LIBS
     lldbBreakpoint
     lldbCore
@@ -92,10 +95,6 @@ add_lldb_library(lldbTarget
     lldbUtility
     lldbValueObject
     lldbPluginProcessUtility
-
-  LINK_COMPONENTS
-    Support
-    MC
   )
 
 add_dependencies(lldbTarget

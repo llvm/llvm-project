@@ -84,6 +84,10 @@ public:
     return true;
   }
 
+  void HandleInlineFunctionDefinition(FunctionDecl *D) override {
+    Gen->HandleInlineFunctionDefinition(D);
+  }
+
   void HandleTranslationUnit(ASTContext &C) override {
     Gen->HandleTranslationUnit(C);
 
@@ -134,6 +138,10 @@ public:
       break;
     }
     }
+  }
+
+  void CompleteTentativeDefinition(VarDecl *D) override {
+    Gen->CompleteTentativeDefinition(D);
   }
 };
 } // namespace cir

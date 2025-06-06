@@ -20,9 +20,11 @@ define protected amdgpu_kernel void @foo(ptr addrspace(1) %arg, ptr addrspace(1)
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[18:19]
-; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], 0
-; CHECK-NEXT:    buffer_load_dword v3, off, s[0:3], 0 offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_mov_b64 s[4:5], src_private_base
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    v_mov_b32_e32 v3, s5
+; CHECK-NEXT:    flat_load_dwordx2 v[2:3], v[2:3]
+; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; CHECK-NEXT:    s_endpgm
 bb:

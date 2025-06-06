@@ -582,6 +582,15 @@ llvm::json::Value toJSON(const SteppingGranularity &SG) {
   llvm_unreachable("unhandled stepping granularity.");
 }
 
+bool fromJSON(const json::Value &Params, Thread &T, json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("id", T.id) && O.map("name", T.name);
+}
+
+json::Value toJSON(const Thread &T) {
+  return json::Object{{"id", T.id}, {"name", T.name}};
+}
+
 bool fromJSON(const llvm::json::Value &Params, ValueFormat &VF,
               llvm::json::Path P) {
   json::ObjectMapper O(Params, P);
@@ -821,22 +830,20 @@ llvm::json::Value toJSON(const DisassembledInstruction::PresentationHint &PH) {
 
 bool fromJSON(const llvm::json::Value &Params, DisassembledInstruction &DI,
               llvm::json::Path P) {
-  std::optional<llvm::StringRef> raw_address =
-      Params.getAsObject()->getString("address");
-  if (!raw_address) {
-    P.report("missing 'address' field");
+  llvm::json::ObjectMapper O(Params, P);
+  std::string raw_address;
+  if (!O || !O.map("address", raw_address))
     return false;
-  }
 
-  std::optional<lldb::addr_t> address = DecodeMemoryReference(*raw_address);
+  std::optional<lldb::addr_t> address = DecodeMemoryReference(raw_address);
   if (!address) {
-    P.report("invalid 'address'");
+    P.field("address").report("expected string encoded uint64_t");
     return false;
   }
 
   DI.address = *address;
-  llvm::json::ObjectMapper O(Params, P);
-  return O && O.map("instruction", DI.instruction) &&
+
+  return O.map("instruction", DI.instruction) &&
          O.mapOptional("instructionBytes", DI.instructionBytes) &&
          O.mapOptional("symbol", DI.symbol) &&
          O.mapOptional("location", DI.location) &&
@@ -847,8 +854,15 @@ bool fromJSON(const llvm::json::Value &Params, DisassembledInstruction &DI,
 }
 
 llvm::json::Value toJSON(const DisassembledInstruction &DI) {
-  llvm::json::Object result{{"address", "0x" + llvm::utohexstr(DI.address)},
-                            {"instruction", DI.instruction}};
+  llvm::json::Object result{{"instruction", DI.instruction}};
+  if (DI.address == LLDB_INVALID_ADDRESS) {
+    // VS Code has explicit comparisons to the string "-1" in order to check for
+    // invalid instructions. See
+    // https://github.com/microsoft/vscode/blob/main/src/vs/workbench/contrib/debug/browser/disassemblyView.ts
+    result.insert({"address", "-1"});
+  } else {
+    result.insert({"address", "0x" + llvm::utohexstr(DI.address)});
+  }
 
   if (DI.instructionBytes)
     result.insert({"instructionBytes", *DI.instructionBytes});

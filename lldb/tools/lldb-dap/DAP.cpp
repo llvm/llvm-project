@@ -820,7 +820,7 @@ void DAP::SendTerminatedEvent() {
   });
 }
 
-llvm::Error DAP::Disconnect() { return Disconnect(is_attach); }
+llvm::Error DAP::Disconnect() { return Disconnect(!is_attach); }
 
 llvm::Error DAP::Disconnect(bool terminateDebuggee) {
   lldb::SBError error;
@@ -1240,7 +1240,10 @@ void DAP::EventThread() {
             // automatically restarted.
             if (!lldb::SBProcess::GetRestartedFromEvent(event)) {
               SendStdOutStdErr(*this, process);
-              SendThreadStoppedEvent(*this);
+              if (llvm::Error err = SendThreadStoppedEvent(*this))
+                DAP_LOG_ERROR(log, std::move(err),
+                              "({1}) reporting thread stopped: {0}",
+                              transport.GetClientName());
             }
             break;
           case lldb::eStateRunning:
@@ -1292,15 +1295,7 @@ void DAP::EventThread() {
 
             llvm::StringRef reason;
             bool id_only = false;
-            if (event_mask & lldb::SBTarget::eBroadcastBitModulesLoaded) {
-              modules.insert(module_id);
-              reason = "new";
-            } else {
-              // If this is a module we've never told the client about, don't
-              // send an event.
-              if (!modules.contains(module_id))
-                continue;
-
+            if (modules.contains(module_id)) {
               if (event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded) {
                 modules.erase(module_id);
                 reason = "removed";
@@ -1308,6 +1303,9 @@ void DAP::EventThread() {
               } else {
                 reason = "changed";
               }
+            } else {
+              modules.insert(module_id);
+              reason = "new";
             }
 
             llvm::json::Object body;
@@ -1367,6 +1365,89 @@ void DAP::EventThread() {
       }
     }
   }
+}
+
+std::vector<protocol::Breakpoint> DAP::SetSourceBreakpoints(
+    const protocol::Source &source,
+    const std::optional<std::vector<protocol::SourceBreakpoint>> &breakpoints) {
+  std::vector<protocol::Breakpoint> response_breakpoints;
+  if (source.sourceReference) {
+    // Breakpoint set by assembly source.
+    auto &existing_breakpoints =
+        m_source_assembly_breakpoints[*source.sourceReference];
+    response_breakpoints =
+        SetSourceBreakpoints(source, breakpoints, existing_breakpoints);
+  } else {
+    // Breakpoint set by a regular source file.
+    const auto path = source.path.value_or("");
+    auto &existing_breakpoints = m_source_breakpoints[path];
+    response_breakpoints =
+        SetSourceBreakpoints(source, breakpoints, existing_breakpoints);
+  }
+
+  return response_breakpoints;
+}
+
+std::vector<protocol::Breakpoint> DAP::SetSourceBreakpoints(
+    const protocol::Source &source,
+    const std::optional<std::vector<protocol::SourceBreakpoint>> &breakpoints,
+    SourceBreakpointMap &existing_breakpoints) {
+  std::vector<protocol::Breakpoint> response_breakpoints;
+
+  SourceBreakpointMap request_breakpoints;
+  if (breakpoints) {
+    for (const auto &bp : *breakpoints) {
+      SourceBreakpoint src_bp(*this, bp);
+      std::pair<uint32_t, uint32_t> bp_pos(src_bp.GetLine(),
+                                           src_bp.GetColumn());
+      request_breakpoints.try_emplace(bp_pos, src_bp);
+
+      const auto [iv, inserted] =
+          existing_breakpoints.try_emplace(bp_pos, src_bp);
+      // We check if this breakpoint already exists to update it.
+      if (inserted) {
+        if (llvm::Error error = iv->second.SetBreakpoint(source)) {
+          protocol::Breakpoint invalid_breakpoint;
+          invalid_breakpoint.message = llvm::toString(std::move(error));
+          invalid_breakpoint.verified = false;
+          response_breakpoints.push_back(std::move(invalid_breakpoint));
+          existing_breakpoints.erase(iv);
+          continue;
+        }
+      } else {
+        iv->second.UpdateBreakpoint(src_bp);
+      }
+
+      protocol::Breakpoint response_breakpoint =
+          iv->second.ToProtocolBreakpoint();
+      response_breakpoint.source = source;
+
+      if (!response_breakpoint.line &&
+          src_bp.GetLine() != LLDB_INVALID_LINE_NUMBER)
+        response_breakpoint.line = src_bp.GetLine();
+      if (!response_breakpoint.column &&
+          src_bp.GetColumn() != LLDB_INVALID_COLUMN_NUMBER)
+        response_breakpoint.column = src_bp.GetColumn();
+      response_breakpoints.push_back(std::move(response_breakpoint));
+    }
+  }
+
+  // Delete any breakpoints in this source file that aren't in the
+  // request_bps set. There is no call to remove breakpoints other than
+  // calling this function with a smaller or empty "breakpoints" list.
+  for (auto it = existing_breakpoints.begin();
+       it != existing_breakpoints.end();) {
+    auto request_pos = request_breakpoints.find(it->first);
+    if (request_pos == request_breakpoints.end()) {
+      // This breakpoint no longer exists in this source file, delete it
+      target.BreakpointDelete(it->second.GetID());
+      it = existing_breakpoints.erase(it);
+    } else {
+      ++it;
+    }
+  }
+
+  return response_breakpoints;
 }
 
 void DAP::RegisterRequests() {

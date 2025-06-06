@@ -1338,6 +1338,7 @@ void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
     assert(!Member->isBaseInitializer());
     assert(Member->isAnyMemberInitializer() &&
            "Delegating initializer on non-delegating constructor");
+    ApplyAtomGroup Grp(getDebugInfo());
     CM.addMemberInitializer(Member);
   }
   CM.finish();
@@ -2805,6 +2806,7 @@ SanitizerInfoFromCFICheckKind(CodeGenFunction::CFITypeCheckKind TCK) {
   case CodeGenFunction::CFITCK_VMFCall:
     llvm_unreachable("unexpected sanitizer kind");
   }
+  llvm_unreachable("Unknown CFITypeCheckKind enum");
 }
 
 void CodeGenFunction::EmitVTablePtrCheckForCall(const CXXRecordDecl *RD,
