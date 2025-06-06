@@ -11040,8 +11040,7 @@ SDValue AArch64TargetLowering::LowerSETCCCARRY(SDValue Op,
 static SDValue emitVectorComparison(SDValue LHS, SDValue RHS,
                                     AArch64CC::CondCode CC, bool NoNans, EVT VT,
                                     const SDLoc &DL, SelectionDAG &DAG) {
-  EVT SrcVT = LHS.getValueType();
-  assert(VT.getSizeInBits() == SrcVT.getSizeInBits() &&
+  assert(VT.getSizeInBits() == LHS.getValueType().getSizeInBits() &&
          "function only supposed to emit natural comparisons");
 
   switch (CC) {
