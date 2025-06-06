@@ -850,7 +850,7 @@ Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Fixed crash when ``-print-stats`` is enabled in compiling IR files. (#GH131608)
-- Fix code completion crash involving PCH serialzied templates. (#GH139019)
+- Fix code completion crash involving PCH serialized templates. (#GH139019)
 
 OpenACC Specific Changes
 ------------------------
