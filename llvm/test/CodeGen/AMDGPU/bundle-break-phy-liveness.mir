@@ -12,18 +12,23 @@ body: |
     ; GCN-CLAUSE-LABEL: name: clause_implicit_def
     ; GCN-CLAUSE: liveins: $vgpr0, $sgpr32
     ; GCN-CLAUSE-NEXT: {{  $}}
-    ; GCN-CLAUSE-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr0, $sgpr32, 8, 0, implicit $exec, implicit $flat_scr
-    ; GCN-CLAUSE-NEXT: $vgpr2 = IMPLICIT_DEF
-    ; GCN-CLAUSE-NEXT: $vgpr3 = IMPLICIT_DEF
-    ; GCN-CLAUSE-NEXT: SCRATCH_STORE_DWORDX2_SADDR $vgpr2_vgpr3, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr
+    ; GCN-CLAUSE-NEXT: BUNDLE implicit-def $vgpr2, implicit-def $vgpr2_lo16, implicit-def $vgpr2_hi16, implicit-def $vgpr3, implicit-def $vgpr3_lo16, implicit-def $vgpr3_hi16, implicit $vgpr0, implicit $sgpr32, implicit $exec, implicit $flat_scr {
+    ; GCN-CLAUSE-NEXT:   S_CLAUSE 1
+    ; GCN-CLAUSE-NEXT:   SCRATCH_STORE_DWORD_SADDR $vgpr0, $sgpr32, 8, 0, implicit $exec, implicit $flat_scr
+    ; GCN-CLAUSE-NEXT:   $vgpr2 = IMPLICIT_DEF
+    ; GCN-CLAUSE-NEXT:   $vgpr3 = IMPLICIT_DEF
+    ; GCN-CLAUSE-NEXT:   SCRATCH_STORE_DWORDX2_SADDR internal $vgpr2_vgpr3, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr
+    ; GCN-CLAUSE-NEXT: }
     ;
     ; GCN-BUNDLE-LABEL: name: clause_implicit_def
     ; GCN-BUNDLE: liveins: $vgpr0, $sgpr32
     ; GCN-BUNDLE-NEXT: {{  $}}
-    ; GCN-BUNDLE-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr0, $sgpr32, 8, 0, implicit $exec, implicit $flat_scr
-    ; GCN-BUNDLE-NEXT: $vgpr2 = IMPLICIT_DEF
-    ; GCN-BUNDLE-NEXT: $vgpr3 = IMPLICIT_DEF
-    ; GCN-BUNDLE-NEXT: SCRATCH_STORE_DWORDX2_SADDR $vgpr2_vgpr3, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr
+    ; GCN-BUNDLE-NEXT: BUNDLE implicit-def $vgpr2, implicit-def $vgpr2_lo16, implicit-def $vgpr2_hi16, implicit-def $vgpr3, implicit-def $vgpr3_lo16, implicit-def $vgpr3_hi16, implicit $vgpr0, implicit $sgpr32, implicit $exec, implicit $flat_scr {
+    ; GCN-BUNDLE-NEXT:   SCRATCH_STORE_DWORD_SADDR $vgpr0, $sgpr32, 8, 0, implicit $exec, implicit $flat_scr
+    ; GCN-BUNDLE-NEXT:   $vgpr2 = IMPLICIT_DEF
+    ; GCN-BUNDLE-NEXT:   $vgpr3 = IMPLICIT_DEF
+    ; GCN-BUNDLE-NEXT:   SCRATCH_STORE_DWORDX2_SADDR internal $vgpr2_vgpr3, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr
+    ; GCN-BUNDLE-NEXT: }
     SCRATCH_STORE_DWORD_SADDR $vgpr0, $sgpr32, 8, 0, implicit $exec, implicit $flat_scr
     $vgpr2 = IMPLICIT_DEF
     $vgpr3 = IMPLICIT_DEF

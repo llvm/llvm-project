@@ -184,8 +184,7 @@ bool SIPostRABundler::run(MachineFunction &MF) {
           if (I->getNumExplicitDefs() != 0)
             Defs.insert(I->defs().begin()->getReg());
           ++ClauseLength;
-        } else if (!I->isMetaInstruction() ||
-                   I->getOpcode() == AMDGPU::IMPLICIT_DEF) {
+        } else if (!I->isMetaInstruction()) {
           // Allow meta instructions in between bundle candidates, but do not
           // start or end a bundle on one.
           //

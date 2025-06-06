@@ -151,7 +151,7 @@ public:
     // It's safe to treat the rest as illegal.
     if (MI.getOpcode() == AMDGPU::S_NOP)
       return HARDCLAUSE_INTERNAL;
-    if (MI.isMetaInstruction() && MI.getOpcode() != AMDGPU::IMPLICIT_DEF)
+    if (MI.isMetaInstruction())
       return HARDCLAUSE_IGNORE;
     return HARDCLAUSE_ILLEGAL;
   }
