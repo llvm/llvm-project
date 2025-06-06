@@ -838,6 +838,11 @@ void CIRGenModule::maybeSetTrivialComdat(const Decl &d, mlir::Operation *op) {
   assert(!cir::MissingFeatures::opFuncSetComdat());
 }
 
+void CIRGenModule::updateCompletedType(const TagDecl *td) {
+  // Make sure that this type is translated.
+  genTypes.updateCompletedType(td);
+}
+
 // TODO(CIR): this could be a common method between LLVM codegen.
 static bool isVarDeclStrongDefinition(const ASTContext &astContext,
                                       CIRGenModule &cgm, const VarDecl *vd,
@@ -1145,6 +1150,7 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
 
   // No code generation needed.
   case Decl::UsingShadow:
+  case Decl::Empty:
     break;
 
   // C++ Decls
