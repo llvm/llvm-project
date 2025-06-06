@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -fobjc-runtime-has-weak -fobjc-weak -fobjc-arc -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++11 -fobjc-runtime-has-weak -fobjc-weak -fobjc-arc -triple x86_64-apple-darwin -fsyntax-only -verify %s
 
 void __attribute__((trivial_abi)) foo(); // expected-warning {{'trivial_abi' attribute only applies to classes}}
 

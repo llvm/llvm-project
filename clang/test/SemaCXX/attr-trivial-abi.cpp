@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify=expected,itanium %s -std=c++11
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,itanium %s -triple x86_64-unknown-linux -std=c++11
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,windows %s -triple x86_64-windows-msvc -std=c++11
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,scei %s -triple x86_64-scei-ps4 -std=c++11
 
