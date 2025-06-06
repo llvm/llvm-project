@@ -1364,6 +1364,49 @@ def GPU_ShuffleOp : GPU_Op<
   ];
 }
 
+def GPU_RotateOp : GPU_Op<
+    "rotate", [Pure, AllTypesMatch<["value", "rotateResult"]>]>,
+    Arguments<(ins AnyIntegerOrFloatOr1DVector:$value, I32:$offset, I32:$width)>,
+    Results<(outs AnyIntegerOrFloatOr1DVector:$rotateResult)> {
+  let summary = "Rotate values within a subgroup.";
+  let description = [{
+    The "rotate" op moves values across lanes (a.k.a., invocations, work items)
+    within the same subgroup. The `width` argument specifies the number of lanes
+    that participate in the rotation, and must be uniform across all lanes.
+    Further, the first `width` lanes of the subgroup must be active.
+
+    `width` must be a power of two, and `offset` must be in the range
+    `[0, width)`.
+
+    Return the `rotateResult` of the invocation whose id within the group is
+    calculated as follows:
+
+    Invocation ID = ((LocalId + Delta) & (width - 1)) + (LocalId & ~(width - 1))
+
+    Returns the `rotateResult` if the current lane id is smaller than `width`.
+
+    example:
+
+    ```mlir
+    %cst1 = arith.constant 1 : i32
+    %1 = gpu.rotate %0, %cst1, %width : f32
+    ```
+
+    For lane `k`, returns the value from lane `(k + cst1) % width`.
+  }];
+
+  let assemblyFormat = [{
+    $value `,` $offset `,` $width attr-dict `:` type($value)
+  }];
+
+  let builders = [
+    // Helper function that creates a rotate with constant offset/width.
+    OpBuilder<(ins "Value":$value, "int32_t":$offset, "int32_t":$width)>
+  ];
+
+  let hasVerifier = 1;
+}
+
 def GPU_BarrierOp : GPU_Op<"barrier"> {
   let summary = "Synchronizes all work items of a workgroup.";
   let description = [{
