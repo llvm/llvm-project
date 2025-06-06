@@ -16,4 +16,4 @@ run
 
 process save-core --plugin-name=notaplugin dump
 # CHECK-LABEL: process save-core --plugin-name=notaplugin dump
-# CHECK: error: plugin name 'notaplugin' is not a valid ObjectFile plugin name
+# CHECK: error: plugin name 'notaplugin' is not a valid ObjectFile plugin name. Valid names are:{{.*}}minidump{{.*}}
