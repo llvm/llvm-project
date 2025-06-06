@@ -1,5 +1,4 @@
 ! Tests delayed privatization for `targets ... private(..)` for allocatables.
-! XFAIL: *
 
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization-staging \
 ! RUN:   -o - %s 2>&1 | FileCheck %s
@@ -65,8 +64,9 @@ end subroutine target_allocatable
 ! CHECK-NEXT:   %[[C0:.*]] = arith.constant 0 : index
 ! CHECK-NEXT:   %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[MOLD]], %[[C0]]
 ! CHECK-NEXT:   %[[SHAPE:.*]] = fir.shape %[[BOX_DIMS]]#1
-! CHECK-NEXT:   %[[DATA_ALLOC:.*]] = fir.alloca !fir.array<?xf32>, %[[BOX_DIMS]]#1
+! CHECK-NEXT:   %[[DATA_ALLOC:.*]] = fir.allocmem !fir.array<?xf32>, %[[BOX_DIMS]]#1
 ! CHECK-NEXT:   %[[DECL:.*]]:2 = hlfir.declare %[[DATA_ALLOC:.*]](%[[SHAPE]])
+! CHECK-NEXT:   %[[TRUE:.*]] = arith.constant true
 ! CHECK-NEXT:   %[[C0_2:.*]] = arith.constant 0 : index
 ! CHECK-NEXT:   %[[BOX_DIMS_2:.*]]:3 = fir.box_dims %[[MOLD]], %[[C0_2]]
 ! CHECK-NEXT:   %[[SHAPE_SHIFT:.*]] = fir.shape_shift %[[BOX_DIMS_2]]#0, %[[BOX_DIMS_2]]#1
