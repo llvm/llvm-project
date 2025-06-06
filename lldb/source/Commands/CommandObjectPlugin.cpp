@@ -297,7 +297,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    DoPluginEnableDisable(command, result, true);
+    DoPluginEnableDisable(command, result, /*enable=*/true);
   }
 };
 
@@ -313,7 +313,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    DoPluginEnableDisable(command, result, false);
+    DoPluginEnableDisable(command, result, /*enable=*/false);
   }
 };
 
