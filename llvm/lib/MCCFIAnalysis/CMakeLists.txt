@@ -8,5 +8,6 @@ add_llvm_component_library(LLVMMCCFIAnalysis
 
   LINK_COMPONENTS
   MC
+  DebugInfoDWARF
   Support
   )

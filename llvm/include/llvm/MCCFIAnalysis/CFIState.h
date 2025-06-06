@@ -2,12 +2,18 @@
 #define LLVM_TOOLS_LLVM_MC_CFI_STATE_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include <optional>
 #include <string>
 namespace llvm {
 
 using DWARFRegType = int64_t;
+
+dwarf::CFIProgram convertMC2DWARF(MCContext &Context,
+                                  MCCFIInstruction CFIDirective,
+                                  int64_t CFAOffset);
 
 struct RegisterCFIState {
   enum Approach {
