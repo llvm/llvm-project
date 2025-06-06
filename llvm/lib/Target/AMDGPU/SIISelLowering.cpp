@@ -15088,7 +15088,6 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
 SDValue SITargetLowering::performPtrAddCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
-  EVT VT = N->getValueType(0);
   SDLoc DL(N);
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);

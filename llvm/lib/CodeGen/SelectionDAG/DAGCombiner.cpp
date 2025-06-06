@@ -2689,58 +2689,60 @@ SDValue DAGCombiner::visitPTRADD(SDNode *N) {
   if (isNullConstant(N0))
     return N1;
 
-  if (N0.getOpcode() == ISD::PTRADD &&
-      !reassociationCanBreakAddressingModePattern(ISD::PTRADD, DL, N, N0, N1)) {
-    SDValue X = N0.getOperand(0);
-    SDValue Y = N0.getOperand(1);
-    SDValue Z = N1;
-    bool N0OneUse = N0.hasOneUse();
-    bool YIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Y);
-    bool ZIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Z);
+  if (N0.getOpcode() != ISD::PTRADD ||
+      reassociationCanBreakAddressingModePattern(ISD::PTRADD, DL, N, N0, N1))
+    return SDValue();
 
-    // (ptradd (ptradd x, y), z) -> (ptradd x, (add y, z)) if:
-    //   * y is a constant and (ptradd x, y) has one use; or
-    //   * y and z are both constants.
-    if ((YIsConstant && N0OneUse) || (YIsConstant && ZIsConstant)) {
-      SDNodeFlags Flags;
-      // If both additions in the original were NUW, the new ones are as well.
-      if (N->getFlags().hasNoUnsignedWrap() &&
-          N0->getFlags().hasNoUnsignedWrap())
-        Flags |= SDNodeFlags::NoUnsignedWrap;
-      SDValue Add = DAG.getNode(ISD::ADD, DL, IntVT, {Y, Z}, Flags);
-      AddToWorklist(Add.getNode());
-      return DAG.getMemBasePlusOffset(X, Add, DL, Flags);
-    }
+  SDValue X = N0.getOperand(0);
+  SDValue Y = N0.getOperand(1);
+  SDValue Z = N1;
+  bool N0OneUse = N0.hasOneUse();
+  bool YIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Y);
+  bool ZIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Z);
 
-    // TODO: There is another possible fold here that was proven useful.
-    // It would be this:
-    //
-    // (ptradd (ptradd x, y), z) -> (ptradd (ptradd x, z), y) if:
-    //   * (ptradd x, y) has one use; and
-    //   * y is a constant; and
-    //   * z is not a constant.
-    //
-    // In some cases, specifically in AArch64's FEAT_CPA, it exposes the
-    // opportunity to select more complex instructions such as SUBPT and
-    // MSUBPT. However, a hypothetical corner case has been found that we could
-    // not avoid. Consider this (pseudo-POSIX C):
-    //
-    // char *foo(char *x, int z) {return (x + LARGE_CONSTANT) + z;}
-    // char *p = mmap(LARGE_CONSTANT);
-    // char *q = foo(p, -LARGE_CONSTANT);
-    //
-    // Then x + LARGE_CONSTANT is one-past-the-end, so valid, and a
-    // further + z takes it back to the start of the mapping, so valid,
-    // regardless of the address mmap gave back. However, if mmap gives you an
-    // address < LARGE_CONSTANT (ignoring high bits), x - LARGE_CONSTANT will
-    // borrow from the high bits (with the subsequent + z carrying back into
-    // the high bits to give you a well-defined pointer) and thus trip
-    // FEAT_CPA's pointer corruption checks.
-    //
-    // We leave this fold as an opportunity for future work, addressing the
-    // corner case for FEAT_CPA, as well as reconciling the solution with the
-    // more general application of pointer arithmetic in other future targets.
+  // (ptradd (ptradd x, y), z) -> (ptradd x, (add y, z)) if:
+  //   * y is a constant and (ptradd x, y) has one use; or
+  //   * y and z are both constants.
+  if ((YIsConstant && N0OneUse) || (YIsConstant && ZIsConstant)) {
+    SDNodeFlags Flags;
+    // If both additions in the original were NUW, the new ones are as well.
+    if (N->getFlags().hasNoUnsignedWrap() && N0->getFlags().hasNoUnsignedWrap())
+      Flags |= SDNodeFlags::NoUnsignedWrap;
+    SDValue Add = DAG.getNode(ISD::ADD, DL, IntVT, {Y, Z}, Flags);
+    AddToWorklist(Add.getNode());
+    return DAG.getMemBasePlusOffset(X, Add, DL, Flags);
   }
+
+  // TODO: There is another possible fold here that was proven useful.
+  // It would be this:
+  //
+  // (ptradd (ptradd x, y), z) -> (ptradd (ptradd x, z), y) if:
+  //   * (ptradd x, y) has one use; and
+  //   * y is a constant; and
+  //   * z is not a constant.
+  //
+  // In some cases, specifically in AArch64's FEAT_CPA, it exposes the
+  // opportunity to select more complex instructions such as SUBPT and
+  // MSUBPT. However, a hypothetical corner case has been found that we could
+  // not avoid. Consider this (pseudo-POSIX C):
+  //
+  // char *foo(char *x, int z) {return (x + LARGE_CONSTANT) + z;}
+  // char *p = mmap(LARGE_CONSTANT);
+  // char *q = foo(p, -LARGE_CONSTANT);
+  //
+  // Then x + LARGE_CONSTANT is one-past-the-end, so valid, and a
+  // further + z takes it back to the start of the mapping, so valid,
+  // regardless of the address mmap gave back. However, if mmap gives you an
+  // address < LARGE_CONSTANT (ignoring high bits), x - LARGE_CONSTANT will
+  // borrow from the high bits (with the subsequent + z carrying back into
+  // the high bits to give you a well-defined pointer) and thus trip
+  // FEAT_CPA's pointer corruption checks.
+  //
+  // We leave this fold as an opportunity for future work, addressing the
+  // corner case for FEAT_CPA, as well as reconciling the solution with the
+  // more general application of pointer arithmetic in other future targets.
+  // For now each architecture that wants this fold must implement it in the
+  // target-specific code (see e.g. SITargetLowering::performPtrAddCombine)
 
   return SDValue();
 }
