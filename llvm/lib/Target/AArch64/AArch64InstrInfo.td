@@ -7269,6 +7269,13 @@ def : Pat<(v4i16 (vec_ins_or_scal_vec GPR32:$Rn)),
           (SUBREG_TO_REG (i32 0),
                          (f32 (COPY_TO_REGCLASS GPR32:$Rn, FPR32)), ssub)>;
 
+def : Pat<(v2i32 (vec_ins_or_scal_vec GPR32:$Rn)),
+          (INSERT_SUBREG (v2i32 (IMPLICIT_DEF)), GPR32:$Rn, ssub)>;
+def : Pat<(v4i32 (vec_ins_or_scal_vec GPR32:$Rn)),
+          (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), GPR32:$Rn, ssub)>;
+def : Pat<(v2i64 (vec_ins_or_scal_vec GPR64:$Rn)),
+          (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)), GPR64:$Rn, dsub)>;
+
 def : Pat<(v4f16 (vec_ins_or_scal_vec (f16 FPR16:$Rn))),
           (INSERT_SUBREG (v4f16 (IMPLICIT_DEF)), FPR16:$Rn, hsub)>;
 def : Pat<(v8f16 (vec_ins_or_scal_vec (f16 FPR16:$Rn))),
@@ -7278,16 +7285,6 @@ def : Pat<(v4bf16 (vec_ins_or_scal_vec (bf16 FPR16:$Rn))),
           (INSERT_SUBREG (v4bf16 (IMPLICIT_DEF)), FPR16:$Rn, hsub)>;
 def : Pat<(v8bf16 (vec_ins_or_scal_vec (bf16 FPR16:$Rn))),
           (INSERT_SUBREG (v8bf16 (IMPLICIT_DEF)), FPR16:$Rn, hsub)>;
-
-def : Pat<(v2i32 (vec_ins_or_scal_vec (i32 FPR32:$Rn))),
-            (v2i32 (INSERT_SUBREG (v2i32 (IMPLICIT_DEF)),
-                                  (i32 FPR32:$Rn), ssub))>;
-def : Pat<(v4i32 (vec_ins_or_scal_vec (i32 FPR32:$Rn))),
-            (v4i32 (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)),
-                                  (i32 FPR32:$Rn), ssub))>;
-def : Pat<(v2i64 (vec_ins_or_scal_vec (i64 FPR64:$Rn))),
-            (v2i64 (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)),
-                                  (i64 FPR64:$Rn), dsub))>;
 
 def : Pat<(v4f16 (vec_ins_or_scal_vec (f16 FPR16:$Rn))),
           (INSERT_SUBREG (v4f16 (IMPLICIT_DEF)), FPR16:$Rn, hsub)>;
