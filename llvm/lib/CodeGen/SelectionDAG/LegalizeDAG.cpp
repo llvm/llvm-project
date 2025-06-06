@@ -3960,6 +3960,9 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     if (SDValue Expanded = TLI.expandFunnelShift(Node, DAG))
       Results.push_back(Expanded);
     break;
+  case ISD::CLMUL:
+    Results.push_back(TLI.expandCLMUL(Node, DAG));
+    break;
   case ISD::ROTL:
   case ISD::ROTR:
     if (SDValue Expanded = TLI.expandROT(Node, true /*AllowVectorOps*/, DAG))
