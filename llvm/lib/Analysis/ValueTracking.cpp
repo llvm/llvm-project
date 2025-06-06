@@ -5612,8 +5612,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       auto *CIdx = dyn_cast<ConstantInt>(Op->getOperand(1));
       if (CIdx && CIdx->getValue().ult(NumElts))
         DemandedVecElts = APInt::getOneBitSet(NumElts, CIdx->getZExtValue());
-    } else
+    } else {
       DemandedVecElts = APInt(1, 1);
+    }
 
     return computeKnownFPClass(Vec, DemandedVecElts, InterestedClasses, Known,
                                Q, Depth + 1);
