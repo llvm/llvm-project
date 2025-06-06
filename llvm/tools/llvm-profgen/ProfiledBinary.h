@@ -205,6 +205,8 @@ class ProfiledBinary {
   // The file offset of each executable segment.
   std::vector<uint64_t> TextSegmentOffsets;
 
+  std::vector<uint64_t> ReadOnlyDataSegmentOffsets;
+
   // Mutiple MC component info
   std::unique_ptr<const MCRegisterInfo> MRI;
   std::unique_ptr<const MCAsmInfo> AsmInfo;
