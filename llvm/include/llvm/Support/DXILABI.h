@@ -119,7 +119,6 @@ enum class RootFlags : uint32_t {
   DenyMeshShaderRootAccess = 0x200,
   CBVSRVUAVHeapDirectlyIndexed = 0x400,
   SamplerHeapDirectlyIndexed = 0x800,
-  ValidFlags = 0x00000fff
 };
 
 // D3D12_ROOT_DESCRIPTOR_FLAGS
@@ -128,7 +127,6 @@ enum class RootDescriptorFlags : unsigned {
   DataVolatile = 0x2,
   DataStaticWhileSetAtExecute = 0x4,
   DataStatic = 0x8,
-  ValidFlags = 0xe,
 };
 
 // D3D12_DESCRIPTOR_RANGE_FLAGS
@@ -139,8 +137,6 @@ enum class DescriptorRangeFlags : unsigned {
   DataStaticWhileSetAtExecute = 0x4,
   DataStatic = 0x8,
   DescriptorsStaticKeepingBufferBoundsChecks = 0x10000,
-  ValidFlags = 0x1000f,
-  ValidSamplerFlags = DescriptorsVolatile,
 };
 
 // D3D12_SHADER_VISIBILITY

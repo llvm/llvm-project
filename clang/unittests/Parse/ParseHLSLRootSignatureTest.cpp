@@ -207,7 +207,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Offset,
             DescriptorTableOffsetAppend);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
-            DescriptorRangeFlags::ValidFlags);
+            DescriptorRangeFlags(0x1000f)); // All valid flags
 
   Elem = Elements[4];
   ASSERT_TRUE(std::holds_alternative<DescriptorTable>(Elem));
@@ -405,7 +405,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidSamplerFlagsTest) {
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::Sampler);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
-            DescriptorRangeFlags::ValidSamplerFlags);
+            DescriptorRangeFlags::DescriptorsVolatile); // Valid sampler flags
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
@@ -497,7 +497,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootFlagsTest) {
 
   Elem = Elements[2];
   ASSERT_TRUE(std::holds_alternative<RootFlags>(Elem));
-  ASSERT_EQ(std::get<RootFlags>(Elem), RootFlags::ValidFlags);
+  ASSERT_EQ(std::get<RootFlags>(Elem), RootFlags(0xfff)); // Valid flags
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
@@ -546,7 +546,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility,
             ShaderVisibility::Geometry);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
-            RootDescriptorFlags::ValidFlags);
+            RootDescriptorFlags(0xe)); // All valid flags
 
   Elem = Elements[2];
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
