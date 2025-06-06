@@ -1420,65 +1420,65 @@ EliminateDuplicatePHINodesNaiveImpl(BasicBlock *BB,
   return Changed;
 }
 
+// This implementation doesn't currently consider undef operands
+// specially. Theoretically, two phis which are identical except for
+// one having an undef where the other doesn't could be collapsed.
+
+struct PHIDenseMapInfo {
+  static PHINode *getEmptyKey() {
+    return DenseMapInfo<PHINode *>::getEmptyKey();
+  }
+
+  static PHINode *getTombstoneKey() {
+    return DenseMapInfo<PHINode *>::getTombstoneKey();
+  }
+
+  static bool isSentinel(const PHINode *PN) {
+    return PN == getEmptyKey() || PN == getTombstoneKey();
+  }
+
+  // WARNING: this logic must be kept in sync with
+  //          Instruction::isIdenticalToWhenDefined()!
+  static unsigned getHashValueImpl(const PHINode *PN) {
+    // Compute a hash value on the operands. Instcombine will likely have
+    // sorted them, which helps expose duplicates, but we have to check all
+    // the operands to be safe in case instcombine hasn't run.
+    return static_cast<unsigned>(
+        hash_combine(hash_combine_range(PN->operand_values()),
+                     hash_combine_range(PN->blocks())));
+  }
+
+  static unsigned getHashValue(const PHINode *PN) {
+#ifndef NDEBUG
+    // If -phicse-debug-hash was specified, return a constant -- this
+    // will force all hashing to collide, so we'll exhaustively search
+    // the table for a match, and the assertion in isEqual will fire if
+    // there's a bug causing equal keys to hash differently.
+    if (PHICSEDebugHash)
+      return 0;
+#endif
+    return getHashValueImpl(PN);
+  }
+
+  static bool isEqualImpl(const PHINode *LHS, const PHINode *RHS) {
+    if (isSentinel(LHS) || isSentinel(RHS))
+      return LHS == RHS;
+    return LHS->isIdenticalTo(RHS);
+  }
+
+  static bool isEqual(const PHINode *LHS, const PHINode *RHS) {
+    // These comparisons are nontrivial, so assert that equality implies
+    // hash equality (DenseMap demands this as an invariant).
+    bool Result = isEqualImpl(LHS, RHS);
+    assert(!Result || (isSentinel(LHS) && LHS == RHS) ||
+           getHashValueImpl(LHS) == getHashValueImpl(RHS));
+    return Result;
+  }
+};
+
 static bool
 EliminateDuplicatePHINodesSetBasedImpl(BasicBlock *BB,
                                        SmallPtrSetImpl<PHINode *> &ToRemove) {
-  // This implementation doesn't currently consider undef operands
-  // specially. Theoretically, two phis which are identical except for
-  // one having an undef where the other doesn't could be collapsed.
-
-  struct PHIDenseMapInfo {
-    static PHINode *getEmptyKey() {
-      return DenseMapInfo<PHINode *>::getEmptyKey();
-    }
-
-    static PHINode *getTombstoneKey() {
-      return DenseMapInfo<PHINode *>::getTombstoneKey();
-    }
-
-    static bool isSentinel(PHINode *PN) {
-      return PN == getEmptyKey() || PN == getTombstoneKey();
-    }
-
-    // WARNING: this logic must be kept in sync with
-    //          Instruction::isIdenticalToWhenDefined()!
-    static unsigned getHashValueImpl(PHINode *PN) {
-      // Compute a hash value on the operands. Instcombine will likely have
-      // sorted them, which helps expose duplicates, but we have to check all
-      // the operands to be safe in case instcombine hasn't run.
-      return static_cast<unsigned>(
-          hash_combine(hash_combine_range(PN->operand_values()),
-                       hash_combine_range(PN->blocks())));
-    }
-
-    static unsigned getHashValue(PHINode *PN) {
-#ifndef NDEBUG
-      // If -phicse-debug-hash was specified, return a constant -- this
-      // will force all hashing to collide, so we'll exhaustively search
-      // the table for a match, and the assertion in isEqual will fire if
-      // there's a bug causing equal keys to hash differently.
-      if (PHICSEDebugHash)
-        return 0;
-#endif
-      return getHashValueImpl(PN);
-    }
-
-    static bool isEqualImpl(PHINode *LHS, PHINode *RHS) {
-      if (isSentinel(LHS) || isSentinel(RHS))
-        return LHS == RHS;
-      return LHS->isIdenticalTo(RHS);
-    }
-
-    static bool isEqual(PHINode *LHS, PHINode *RHS) {
-      // These comparisons are nontrivial, so assert that equality implies
-      // hash equality (DenseMap demands this as an invariant).
-      bool Result = isEqualImpl(LHS, RHS);
-      assert(!Result || (isSentinel(LHS) && LHS == RHS) ||
-             getHashValueImpl(LHS) == getHashValueImpl(RHS));
-      return Result;
-    }
-  };
-
   // Set of unique PHINodes.
   DenseSet<PHINode *, PHIDenseMapInfo> PHISet;
   PHISet.reserve(4 * PHICSENumPHISmallSize);
@@ -1523,6 +1523,111 @@ bool llvm::EliminateDuplicatePHINodes(BasicBlock *BB) {
   for (PHINode *PN : ToRemove)
     PN->eraseFromParent();
   return Changed;
+}
+
+#ifndef NDEBUG // Should this be under EXPENSIVE_CHECKS?
+// New PHI nodes should not reference one another but they may reference
+// themselves or existing PHI nodes, and existing PHI nodes may reference new
+// PHI nodes.
+static bool
+PHIAreRefEachOther(const iterator_range<BasicBlock::phi_iterator> &NewPHIs) {
+  SmallPtrSet<PHINode *, 8> NewPHISet;
+  for (PHINode &PN : NewPHIs)
+    NewPHISet.insert(&PN);
+  for (PHINode &PHI : NewPHIs) {
+    for (Value *V : PHI.incoming_values()) {
+      PHINode *IncPHI = dyn_cast<PHINode>(V);
+      if (IncPHI && IncPHI != &PHI && NewPHISet.contains(IncPHI))
+        return true;
+    }
+  }
+  return false;
+}
+#endif
+
+bool EliminateNewDuplicatePHINodesN2(BasicBlock *BB,
+                                     BasicBlock::phi_iterator FirstExistingPN) {
+  auto ReplaceIfIdentical = [](PHINode &PHI, PHINode &ReplPHI) {
+    if (!PHI.isIdenticalToWhenDefined(&ReplPHI))
+      return false;
+    PHI.replaceAllUsesWith(&ReplPHI);
+    PHI.eraseFromParent();
+    return true;
+  };
+
+  // Deduplicate new PHIs first to reduce the number of comparisons on the
+  // following new -> existing pass.
+  bool Changed = false;
+  for (auto I = BB->phis().begin(); I != FirstExistingPN; ++I) {
+    for (auto J = std::next(I); J != FirstExistingPN;) {
+      Changed |= ReplaceIfIdentical(*J++, *I);
+    }
+  }
+
+  // Iterate over existing PHIs and replace identical new PHIs.
+  for (PHINode &ExistingPHI : make_range(FirstExistingPN, BB->phis().end())) {
+    auto I = BB->phis().begin();
+    assert(I != FirstExistingPN); // Should be at least one new PHI.
+    do {
+      Changed |= ReplaceIfIdentical(*I++, ExistingPHI);
+    } while (I != FirstExistingPN);
+    if (BB->phis().begin() == FirstExistingPN)
+      return Changed;
+  }
+  return Changed;
+}
+
+bool EliminateNewDuplicatePHINodesSet(
+    BasicBlock *BB, BasicBlock::phi_iterator FirstExistingPN) {
+  auto Replace = [](PHINode &PHI, PHINode &ReplPHI) {
+    PHI.replaceAllUsesWith(&ReplPHI);
+    PHI.eraseFromParent();
+    return true;
+  };
+
+  DenseSet<PHINode *, PHIDenseMapInfo> NewPHISet;
+  NewPHISet.reserve(4 * PHICSENumPHISmallSize);
+
+  // Deduplicate new PHIs, note that NewPHISet remains consistent because new
+  // PHIs are not reference each other.
+  bool Changed = false;
+  for (PHINode &NewPHI :
+       make_early_inc_range(make_range(BB->phis().begin(), FirstExistingPN))) {
+    auto [I, Inserted] = NewPHISet.insert(&NewPHI);
+    if (!Inserted)
+      Changed |= Replace(NewPHI, **I);
+  }
+
+  // Iterate over existing PHIs and replace matching new PHIs.
+  for (PHINode &ExistingPHI : make_range(FirstExistingPN, BB->phis().end())) {
+    assert(!NewPHISet.empty()); // Should be at least one new PHI.
+    auto I = NewPHISet.find(&ExistingPHI);
+    if (I == NewPHISet.end())
+      continue;
+    Changed |= Replace(**I, ExistingPHI);
+    NewPHISet.erase(I);
+    if (NewPHISet.empty())
+      return Changed;
+  }
+  return Changed;
+}
+
+bool llvm::EliminateNewDuplicatePHINodes(
+    BasicBlock *BB, BasicBlock::phi_iterator FirstExistingPN) {
+
+  if (hasNItemsOrLess(BB->phis(), 1))
+    return false;
+
+  auto NewPHIs = make_range(BB->phis().begin(), FirstExistingPN);
+  assert(!PHIAreRefEachOther(NewPHIs));
+
+  // Both functions perform identical pass over existing PHIs and differ in time
+  // spent on new PHI duplicate check which depends on the number of new PHIs.
+  // Therefore make a choice based on the number of new PHIs and not the total
+  // number of PHIs in the block.
+  return hasNItemsOrLess(NewPHIs, PHICSENumPHISmallSize)
+             ? EliminateNewDuplicatePHINodesN2(BB, FirstExistingPN)
+             : EliminateNewDuplicatePHINodesSet(BB, FirstExistingPN);
 }
 
 Align llvm::tryEnforceAlignment(Value *V, Align PrefAlign,
