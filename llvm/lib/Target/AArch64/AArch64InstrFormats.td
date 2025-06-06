@@ -1817,7 +1817,6 @@ class APASI : SimpleSystemI<0, (ins GPR64:$Xt), "apas", "\t$Xt">, Sched<[]> {
   bits<5> Xt;
   let Inst{20-5} = 0b0111001110000000;
   let Inst{4-0} = Xt;
-  let DecoderNamespace = "APAS";
 }
 
 // Hint instructions that take both a CRm and a 3-bit immediate.
@@ -6256,24 +6255,6 @@ multiclass SIMDThreeSameVector<bit U, bits<5> opc, string asm,
          [(set (v2i64 V128:$Rd), (OpNode (v2i64 V128:$Rn), (v2i64 V128:$Rm)))]>;
 }
 
-multiclass SIMDThreeSameVectorExtraPatterns<string inst, SDPatternOperator OpNode> {
-  def : Pat<(v8i8 (OpNode V64:$LHS, V64:$RHS)),
-          (!cast<Instruction>(inst#"v8i8") V64:$LHS, V64:$RHS)>;
-  def : Pat<(v4i16 (OpNode V64:$LHS, V64:$RHS)),
-          (!cast<Instruction>(inst#"v4i16") V64:$LHS, V64:$RHS)>;
-  def : Pat<(v2i32 (OpNode V64:$LHS, V64:$RHS)),
-          (!cast<Instruction>(inst#"v2i32") V64:$LHS, V64:$RHS)>;
-
-  def : Pat<(v16i8 (OpNode V128:$LHS, V128:$RHS)),
-          (!cast<Instruction>(inst#"v16i8") V128:$LHS, V128:$RHS)>;
-  def : Pat<(v8i16 (OpNode V128:$LHS, V128:$RHS)),
-          (!cast<Instruction>(inst#"v8i16") V128:$LHS, V128:$RHS)>;
-  def : Pat<(v4i32 (OpNode V128:$LHS, V128:$RHS)),
-          (!cast<Instruction>(inst#"v4i32") V128:$LHS, V128:$RHS)>;
-  def : Pat<(v2i64 (OpNode V128:$LHS, V128:$RHS)),
-          (!cast<Instruction>(inst#"v2i64") V128:$LHS, V128:$RHS)>;
-}
-
 // As above, but D sized elements unsupported.
 multiclass SIMDThreeSameVectorBHS<bit U, bits<5> opc, string asm,
                                   SDPatternOperator OpNode> {
@@ -7782,9 +7763,9 @@ multiclass SIMDThreeScalarD<bit U, bits<5> opc, string asm,
 }
 
 multiclass SIMDThreeScalarBHSD<bit U, bits<5> opc, string asm,
-                               SDPatternOperator OpNode> {
+                               SDPatternOperator OpNode, SDPatternOperator SatOp> {
   def v1i64  : BaseSIMDThreeScalar<U, 0b111, opc, FPR64, asm,
-    [(set (v1i64 FPR64:$Rd), (OpNode (v1i64 FPR64:$Rn), (v1i64 FPR64:$Rm)))]>;
+    [(set (v1i64 FPR64:$Rd), (SatOp (v1i64 FPR64:$Rn), (v1i64 FPR64:$Rm)))]>;
   def v1i32  : BaseSIMDThreeScalar<U, 0b101, opc, FPR32, asm, []>;
   def v1i16  : BaseSIMDThreeScalar<U, 0b011, opc, FPR16, asm, []>;
   def v1i8   : BaseSIMDThreeScalar<U, 0b001, opc, FPR8 , asm, []>;
@@ -9861,14 +9842,15 @@ multiclass SIMDIndexedLongSD<bit U, bits<4> opc, string asm,
 }
 
 multiclass SIMDIndexedLongSQDMLXSDTied<bit U, bits<4> opc, string asm,
-                                       SDPatternOperator Accum> {
+                                       SDPatternOperator VecAcc,
+                                       SDPatternOperator ScalAcc> {
   def v4i16_indexed : BaseSIMDIndexedTied<0, U, 0, 0b01, opc,
                                       V128, V64,
                                       V128_lo, VectorIndexH,
                                       asm, ".4s", ".4s", ".4h", ".h",
     [(set (v4i32 V128:$dst),
-          (Accum (v4i32 V128:$Rd),
-                 (v4i32 (int_aarch64_neon_sqdmull
+          (VecAcc (v4i32 V128:$Rd),
+                  (v4i32 (int_aarch64_neon_sqdmull
                              (v4i16 V64:$Rn),
                              (dup_v8i16 (v8i16 V128_lo:$Rm),
                                          VectorIndexH:$idx)))))]> {
@@ -9883,8 +9865,8 @@ multiclass SIMDIndexedLongSQDMLXSDTied<bit U, bits<4> opc, string asm,
                                       V128_lo, VectorIndexH,
                                       asm#"2", ".4s", ".4s", ".8h", ".h",
     [(set (v4i32 V128:$dst),
-          (Accum (v4i32 V128:$Rd),
-                 (v4i32 (int_aarch64_neon_sqdmull
+          (VecAcc (v4i32 V128:$Rd),
+                  (v4i32 (int_aarch64_neon_sqdmull
                             (extract_high_v8i16 (v8i16 V128:$Rn)),
                             (extract_high_dup_v8i16 (v8i16 V128_lo:$Rm), VectorIndexH:$idx)))))]> {
     bits<3> idx;
@@ -9898,8 +9880,8 @@ multiclass SIMDIndexedLongSQDMLXSDTied<bit U, bits<4> opc, string asm,
                                       V128, VectorIndexS,
                                       asm, ".2d", ".2d", ".2s", ".s",
     [(set (v2i64 V128:$dst),
-        (Accum (v2i64 V128:$Rd),
-               (v2i64 (int_aarch64_neon_sqdmull
+        (VecAcc (v2i64 V128:$Rd),
+                (v2i64 (int_aarch64_neon_sqdmull
                           (v2i32 V64:$Rn),
                           (dup_v4i32 (v4i32 V128:$Rm), VectorIndexS:$idx)))))]> {
     bits<2> idx;
@@ -9912,8 +9894,8 @@ multiclass SIMDIndexedLongSQDMLXSDTied<bit U, bits<4> opc, string asm,
                                       V128, VectorIndexS,
                                       asm#"2", ".2d", ".2d", ".4s", ".s",
     [(set (v2i64 V128:$dst),
-          (Accum (v2i64 V128:$Rd),
-                 (v2i64 (int_aarch64_neon_sqdmull
+          (VecAcc (v2i64 V128:$Rd),
+                  (v2i64 (int_aarch64_neon_sqdmull
                             (extract_high_v4i32 (v4i32 V128:$Rn)),
                             (extract_high_dup_v4i32 (v4i32 V128:$Rm), VectorIndexS:$idx)))))]> {
     bits<2> idx;
@@ -9930,8 +9912,8 @@ multiclass SIMDIndexedLongSQDMLXSDTied<bit U, bits<4> opc, string asm,
     let Inst{20} = idx{0};
   }
 
-  def : Pat<(i32 (Accum (i32 FPR32Op:$Rd),
-                        (i32 (vector_extract
+  def : Pat<(i32 (ScalAcc (i32 FPR32Op:$Rd),
+                          (i32 (vector_extract
                                     (v4i32 (int_aarch64_neon_sqdmull
                                                 (v4i16 V64:$Rn),
                                                 (v4i16 V64:$Rm))),
@@ -9942,8 +9924,8 @@ multiclass SIMDIndexedLongSQDMLXSDTied<bit U, bits<4> opc, string asm,
                         (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rm, dsub),
                         (i64 0))>;
 
-  def : Pat<(i32 (Accum (i32 FPR32Op:$Rd),
-                        (i32 (vector_extract
+  def : Pat<(i32 (ScalAcc (i32 FPR32Op:$Rd),
+                          (i32 (vector_extract
                                     (v4i32 (int_aarch64_neon_sqdmull
                                                 (v4i16 V64:$Rn),
                                                 (dup_v8i16 (v8i16 V128_lo:$Rm),
@@ -9959,8 +9941,8 @@ multiclass SIMDIndexedLongSQDMLXSDTied<bit U, bits<4> opc, string asm,
                                       FPR64Op, FPR32Op, V128, VectorIndexS,
                                       asm, ".s", "", "", ".s",
     [(set (i64 FPR64Op:$dst),
-          (Accum (i64 FPR64Op:$Rd),
-                 (i64 (int_aarch64_neon_sqdmulls_scalar
+          (ScalAcc (i64 FPR64Op:$Rd),
+                   (i64 (int_aarch64_neon_sqdmulls_scalar
                             (i32 FPR32Op:$Rn),
                             (i32 (vector_extract (v4i32 V128:$Rm),
                                                  VectorIndexS:$idx))))))]> {

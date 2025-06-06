@@ -5198,7 +5198,8 @@ bool AArch64FastISel::fastSelectInstruction(const Instruction *I) {
 FastISel *AArch64::createFastISel(FunctionLoweringInfo &FuncInfo,
                                         const TargetLibraryInfo *LibInfo) {
 
-  SMEAttrs CallerAttrs(*FuncInfo.Fn);
+  SMEAttrs CallerAttrs =
+      FuncInfo.MF->getInfo<AArch64FunctionInfo>()->getSMEFnAttrs();
   if (CallerAttrs.hasZAState() || CallerAttrs.hasZT0State() ||
       CallerAttrs.hasStreamingInterfaceOrBody() ||
       CallerAttrs.hasStreamingCompatibleInterface() ||
