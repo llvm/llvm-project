@@ -20,10 +20,12 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/PGOOptions.h"
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
+#include <functional>
 #include <optional>
 #include <string>
 #include <utility>
@@ -72,6 +74,10 @@ namespace yaml {
 struct MachineFunctionInfo;
 } // namespace yaml
 
+class TargetMachine;
+using PassConfigCallback =
+    std::function<void(TargetMachine &, PassManagerBase &, TargetPassConfig *)>;
+
 //===----------------------------------------------------------------------===//
 ///
 /// Primary interface to the complete machine description for the target
@@ -119,6 +125,9 @@ protected: // Can only create subclasses.
   std::optional<PGOOptions> PGOOption;
 
 public:
+  static ManagedStatic<SmallVector<PassConfigCallback, 1>>
+      TargetPassConfigCallbacks;
+
   mutable TargetOptions Options;
 
   TargetMachine(const TargetMachine &) = delete;
@@ -518,6 +527,11 @@ public:
 
   // MachineRegisterInfo callback function
   virtual void registerMachineRegisterInfoCallback(MachineFunction &MF) const {}
+
+  // TargetPassConfig callback function
+  static void registerTargetPassConfigCallback(const PassConfigCallback &C) {
+    TargetPassConfigCallbacks->push_back(C);
+  }
 };
 
 } // end namespace llvm
