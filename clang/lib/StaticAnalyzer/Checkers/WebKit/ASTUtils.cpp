@@ -9,7 +9,6 @@
 #include "ASTUtils.h"
 #include "PtrTypesSemantics.h"
 #include "clang/AST/Attr.h"
-#include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
@@ -118,6 +117,11 @@ bool tryToFindPtrOrigin(
             }
           }
         }
+      }
+
+      if (call->isCallToStdMove() && call->getNumArgs() == 1) {
+        E = call->getArg(0)->IgnoreParenCasts();
+        continue;
       }
 
       if (auto *callee = call->getDirectCallee()) {

@@ -136,6 +136,12 @@ New checks
   Finds unintended character output from ``unsigned char`` and ``signed char``
   to an ``ostream``.
 
+- New :doc:`portability-avoid-pragma-once
+  <clang-tidy/checks/portability/avoid-pragma-once>` check.
+
+  Finds uses of ``#pragma once`` and suggests replacing them with standard
+  include guards (``#ifndef``/``#define``/``#endif``) for improved portability.
+
 - New :doc:`readability-ambiguous-smartptr-reset-call
   <clang-tidy/checks/readability/ambiguous-smartptr-reset-call>` check.
 
@@ -147,6 +153,11 @@ New check aliases
 
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Improved :doc:`bugprone-crtp-constructor-accessibility
+  <clang-tidy/checks/bugprone/crtp-constructor-accessibility>` check by fixing
+  false positives on deleted constructors that cannot be used to construct
+  objects, even if they have public or protected access.
 
 - Improved :doc:`bugprone-optional-value-conversion
   <clang-tidy/checks/bugprone/optional-value-conversion>` check to detect
@@ -205,7 +216,7 @@ Changes in existing checks
 
 - Improved :doc:`modernize-use-default-member-init
   <clang-tidy/checks/modernize/use-default-member-init>` check by matching
-  ``constexpr`` and ``static``` values on member initialization and by detecting
+  arithmetic operations, ``constexpr`` and ``static`` values, and detecting
   explicit casting of built-in types within member list initialization.
 
 - Improved :doc:`modernize-use-designated-initializers
@@ -225,6 +236,13 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-std-numbers>` check to support math
   functions of different precisions.
 
+- Improved :doc:`modernize-use-trailing-return-type
+  <clang-tidy/checks/modernize/use-trailing-return-type>` check by adding
+  support to modernize lambda signatures to use trailing return type and adding
+  two new options: `TransformFunctions` and `TransformLambdas` to control
+  whether function declarations and lambdas should be transformed by the check.
+  Fixed false positives when lambda was matched as a function in C++11 mode.
+
 - Improved :doc:`performance-move-const-arg
   <clang-tidy/checks/performance/move-const-arg>` check by fixing false
   negatives on ternary operators calling ``std::move``.
@@ -233,6 +251,19 @@ Changes in existing checks
   <clang-tidy/checks/performance/unnecessary-value-param>` check performance by
   tolerating fix-it breaking compilation when functions is used as pointers
   to avoid matching usage of functions within the current compilation unit.
+
+- Improved :doc:`readability-math-missing-parentheses
+  <clang-tidy/checks/readability/math-missing-parentheses>` check by fixing
+  false negatives where math expressions are the operand of assignment operators
+  or comparison operators.
+
+- Improved :doc:`readability-qualified-auto
+  <clang-tidy/checks/readability/qualified-auto>` check by adding the option
+  `AllowedTypes`, that excludes specified types from adding qualifiers.
+
+- Improved :doc:`readability-redundant-smartptr-get
+  <clang-tidy/checks/readability/redundant-smartptr-get>` check by fixing
+  some false positives involving smart pointers to arrays.
 
 Removed checks
 ^^^^^^^^^^^^^^

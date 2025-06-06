@@ -70,6 +70,12 @@ Changes to the LLVM IR
   `llvm.load.relative`.
 * Inline asm calls no longer accept ``label`` arguments. Use ``callbr`` instead.
 
+* Updated semantics of the `callbr` instruction to clarify that its
+  'indirect labels' are not expected to be reached by indirect (as in
+  register-controlled) branch instructions, and therefore are not
+  guaranteed to start with a `bti` or `endbr64` instruction, where
+  those exist.
+
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -138,6 +144,7 @@ Changes to the LoongArch Backend
 --------------------------------
 
 * Changing the default code model from `small` to `medium` for 64-bit.
+* Added inline asm support for the `q` constraint.
 
 Changes to the MIPS Backend
 ---------------------------
@@ -200,6 +207,9 @@ Changes to the RISC-V Backend
 * Adds experimental assembler support for the SiFive Xsfmm* Attached Matrix
   Extensions.
 * `-mcpu=andes-a25` and `-mcpu=andes-ax25` were added.
+* The `Shlcofideleg` extension was added.
+* `-mcpu=sifive-x390` was added.
+* `-mtune=andes-45-series` was added.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -212,6 +222,8 @@ Changes to the Windows Target
 
 Changes to the X86 Backend
 --------------------------
+
+* `fp128` will now use `*f128` libcalls on 32-bit GNU targets as well.
 
 Changes to the OCaml bindings
 -----------------------------
@@ -254,6 +266,7 @@ Changes to the LLVM tools
 * llvm-strip now supports continuing to process files on encountering an error.
 * In llvm-objcopy/llvm-strip's ELF port, `--discard-locals` and `--discard-all` now allow and preserve symbols referenced by relocations.
   ([#47468](https://github.com/llvm/llvm-project/issues/47468))
+* llvm-addr2line now supports a `+` prefix when specifying an address.
 
 Changes to LLDB
 ---------------------------------
@@ -278,6 +291,13 @@ Changes to LLDB
   supporting reverse execution, such as [rr](https://rr-project.org).
   When using reverse execution, `process continue --forward` returns to the
   forward execution.
+* LLDB now supports RISC-V 32-bit ELF core files.
+* LLDB now supports siginfo descriptions for Linux user-space signals. User space
+  signals will now have descriptions describing the method and sender.
+  ```
+    stop reason = SIGSEGV: sent by tkill system call (sender pid=649752, uid=2667987)
+  ```
+* ELF Cores can now have their siginfo structures inspected using `thread siginfo`.
 
 ### Changes to lldb-dap
 

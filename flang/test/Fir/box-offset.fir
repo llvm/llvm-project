@@ -21,6 +21,9 @@ func.func @test_box_offset(%unlimited : !fir.ref<!fir.class<none>>, %type_star :
 
   %addr6 = fir.box_offset %type_star base_addr : (!fir.ref<!fir.box<!fir.array<?xnone>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xnone>>>
   %tdesc6 = fir.box_offset %type_star derived_type : (!fir.ref<!fir.box<!fir.array<?xnone>>>) -> !fir.llvm_ptr<!fir.tdesc<none>>
+
+  %boxchar = fir.alloca !fir.boxchar<1>
+  %addr7 = fir.box_offset %boxchar base_addr : (!fir.ref<!fir.boxchar<1>>) -> !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>
   return
 }
 // CHECK-LABEL:   func.func @test_box_offset(
@@ -40,3 +43,5 @@ func.func @test_box_offset(%unlimited : !fir.ref<!fir.class<none>>, %type_star :
 // CHECK:           %[[VAL_13:.*]] = fir.box_offset %[[VAL_0]] derived_type : (!fir.ref<!fir.class<none>>) -> !fir.llvm_ptr<!fir.tdesc<none>>
 // CHECK:           %[[VAL_14:.*]] = fir.box_offset %[[VAL_1]] base_addr : (!fir.ref<!fir.box<!fir.array<?xnone>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xnone>>>
 // CHECK:           %[[VAL_15:.*]] = fir.box_offset %[[VAL_1]] derived_type : (!fir.ref<!fir.box<!fir.array<?xnone>>>) -> !fir.llvm_ptr<!fir.tdesc<none>>
+// CHECK:           %[[VAL_16:.*]] = fir.alloca !fir.boxchar<1>
+// CHECK:           %[[VAL_17:.*]] = fir.box_offset %[[VAL_16]] base_addr : (!fir.ref<!fir.boxchar<1>>) -> !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>

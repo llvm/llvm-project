@@ -848,13 +848,8 @@ ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
   const llvm::Triple &T = Context.getTargetInfo().getTriple();
   const bool IsOpenMPGPUTarget =
       getLangOpts().OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN());
-  // Don't report an error if 'throw' is used in system headers or in an OpenMP
-  // target region compiled for a GPU architecture.
-  if (!IsOpenMPGPUTarget && !getLangOpts().CXXExceptions &&
-      !getSourceManager().isInSystemHeader(OpLoc) && !getLangOpts().CUDA) {
-    // Delay error emission for the OpenMP device code.
-    targetDiag(OpLoc, diag::err_exceptions_disabled) << "throw";
-  }
+
+  DiagnoseExceptionUse(OpLoc, /* IsTry= */ false);
 
   // In OpenMP target regions, we replace 'throw' with a trap on GPU targets.
   if (IsOpenMPGPUTarget)
@@ -2164,6 +2159,10 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     assert(InitStyle == CXXNewInitializationStyle::Parens &&
            "paren init for non-call init");
     Exprs = MultiExprArg(List->getExprs(), List->getNumExprs());
+  } else if (auto *List = dyn_cast_or_null<CXXParenListInitExpr>(Initializer)) {
+    assert(InitStyle == CXXNewInitializationStyle::Parens &&
+           "paren init for non-call init");
+    Exprs = List->getInitExprs();
   }
 
   // C++11 [expr.new]p15:
@@ -6411,6 +6410,11 @@ QualType Sema::FindCompositePointerType(SourceLocation Loc,
             EPI1.ExtInfo.getNoReturn() && EPI2.ExtInfo.getNoReturn();
         EPI1.ExtInfo = EPI1.ExtInfo.withNoReturn(Noreturn);
         EPI2.ExtInfo = EPI2.ExtInfo.withNoReturn(Noreturn);
+
+        bool CFIUncheckedCallee =
+            EPI1.CFIUncheckedCallee || EPI2.CFIUncheckedCallee;
+        EPI1.CFIUncheckedCallee = CFIUncheckedCallee;
+        EPI2.CFIUncheckedCallee = CFIUncheckedCallee;
 
         // The result is nothrow if both operands are.
         SmallVector<QualType, 8> ExceptionTypeStorage;

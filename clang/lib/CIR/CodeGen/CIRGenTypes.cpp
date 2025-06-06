@@ -152,11 +152,13 @@ isSafeToConvert(const RecordDecl *rd, CIRGenTypes &cgt,
   // out, don't do it.  This includes virtual base classes which get laid out
   // when a class is translated, even though they aren't embedded by-value into
   // the class.
-  if (isa<CXXRecordDecl>(rd)) {
-    assert(!cir::MissingFeatures::cxxSupport());
-    cgt.getCGModule().errorNYI(rd->getSourceRange(),
-                               "isSafeToConvert: CXXRecordDecl");
-    return false;
+  if (auto *crd = dyn_cast<CXXRecordDecl>(rd)) {
+    if (crd->getNumBases() > 0) {
+      assert(!cir::MissingFeatures::cxxSupport());
+      cgt.getCGModule().errorNYI(rd->getSourceRange(),
+                                 "isSafeToConvert: CXXRecordDecl with bases");
+      return false;
+    }
   }
 
   // If this type would require laying out members that are currently being laid
@@ -237,9 +239,10 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
 
   // Force conversion of non-virtual base classes recursively.
   if (const auto *cxxRecordDecl = dyn_cast<CXXRecordDecl>(rd)) {
-    if (cxxRecordDecl->getNumBases() > 0) {
-      cgm.errorNYI(rd->getSourceRange(),
-                   "convertRecordDeclType: derived CXXRecordDecl");
+    for (const auto &base : cxxRecordDecl->bases()) {
+      if (base.isVirtual())
+        continue;
+      convertRecordDeclType(base.getType()->castAs<RecordType>()->getDecl());
     }
   }
 
@@ -382,6 +385,13 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       resultType = cgm.SInt32Ty;
       break;
     }
+    break;
+  }
+
+  case Type::Complex: {
+    const auto *ct = cast<clang::ComplexType>(ty);
+    mlir::Type elementTy = convertType(ct->getElementType());
+    resultType = cir::ComplexType::get(elementTy);
     break;
   }
 

@@ -49,7 +49,9 @@ class DAPTestCaseBase(TestBase):
         self.build_and_create_debug_adapter(dictionary={"EXE": unique_name})
         return self.getBuildArtifact(unique_name)
 
-    def set_source_breakpoints(self, source_path, lines, data=None):
+    def set_source_breakpoints(
+        self, source_path, lines, data=None, wait_for_resolve=True
+    ):
         """Sets source breakpoints and returns an array of strings containing
         the breakpoint IDs ("1", "2") for each breakpoint that was set.
         Parameter data is array of data objects for breakpoints.
@@ -65,9 +67,13 @@ class DAPTestCaseBase(TestBase):
         breakpoint_ids = []
         for breakpoint in breakpoints:
             breakpoint_ids.append("%i" % (breakpoint["id"]))
+        if wait_for_resolve:
+            self.wait_for_breakpoints_to_resolve(breakpoint_ids)
         return breakpoint_ids
 
-    def set_source_breakpoints_assembly(self, source_reference, lines, data=None):
+    def set_source_breakpoints_assembly(
+        self, source_reference, lines, data=None, wait_for_resolve=True
+    ):
         response = self.dap_server.request_setBreakpoints(
             Source(source_reference=source_reference),
             lines,
@@ -79,9 +85,13 @@ class DAPTestCaseBase(TestBase):
         breakpoint_ids = []
         for breakpoint in breakpoints:
             breakpoint_ids.append("%i" % (breakpoint["id"]))
+        if wait_for_resolve:
+            self.wait_for_breakpoints_to_resolve(breakpoint_ids)
         return breakpoint_ids
 
-    def set_function_breakpoints(self, functions, condition=None, hitCondition=None):
+    def set_function_breakpoints(
+        self, functions, condition=None, hitCondition=None, wait_for_resolve=True
+    ):
         """Sets breakpoints by function name given an array of function names
         and returns an array of strings containing the breakpoint IDs
         ("1", "2") for each breakpoint that was set.
@@ -95,7 +105,21 @@ class DAPTestCaseBase(TestBase):
         breakpoint_ids = []
         for breakpoint in breakpoints:
             breakpoint_ids.append("%i" % (breakpoint["id"]))
+        if wait_for_resolve:
+            self.wait_for_breakpoints_to_resolve(breakpoint_ids)
         return breakpoint_ids
+
+    def wait_for_breakpoints_to_resolve(
+        self, breakpoint_ids: list[str], timeout: Optional[float] = DEFAULT_TIMEOUT
+    ):
+        unresolved_breakpoints = self.dap_server.wait_for_breakpoints_to_be_verified(
+            breakpoint_ids, timeout
+        )
+        self.assertEqual(
+            len(unresolved_breakpoints),
+            0,
+            f"Expected to resolve all breakpoints. Unresolved breakpoint ids: {unresolved_breakpoints}",
+        )
 
     def waitUntil(self, condition_callback):
         for _ in range(20):

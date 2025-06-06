@@ -160,6 +160,11 @@ class TargetWatchpointCreateByAddressPITestCase(TestBase):
     # No size constraint on MIPS for watches
     @skipIf(archs=["mips", "mipsel", "mips64", "mips64el"])
     @skipIf(archs=["s390x"])  # Likewise on SystemZ
+    @skipIf(
+        oslist=["windows"],
+        archs=["x86_64"],
+        bugnumber="github.com/llvm/llvm-project/issues/142196",
+    )
     def test_watch_address_with_invalid_watch_size(self):
         """Exercise SBTarget.WatchpointCreateByAddress() API but pass an invalid watch_size."""
         self.build()

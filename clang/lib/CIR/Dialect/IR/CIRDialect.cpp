@@ -17,11 +17,11 @@
 
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
-#include "mlir/Support/LogicalResult.h"
 
 #include "clang/CIR/Dialect/IR/CIROpsDialect.cpp.inc"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.cpp.inc"
 #include "clang/CIR/MissingFeatures.h"
+
 #include <numeric>
 
 using namespace mlir;
@@ -231,9 +231,11 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
   }
 
   if (isa<cir::ZeroAttr>(attrType)) {
-    if (isa<cir::RecordType, cir::ArrayType, cir::VectorType>(opType))
+    if (isa<cir::RecordType, cir::ArrayType, cir::VectorType, cir::ComplexType>(
+            opType))
       return success();
-    return op->emitOpError("zero expects struct or array type");
+    return op->emitOpError(
+        "zero expects struct, array, vector, or complex type");
   }
 
   if (mlir::isa<cir::BoolAttr>(attrType)) {
@@ -253,7 +255,8 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     return success();
   }
 
-  if (mlir::isa<cir::ConstArrayAttr, cir::ConstVectorAttr>(attrType))
+  if (mlir::isa<cir::ConstArrayAttr, cir::ConstVectorAttr,
+                cir::ConstComplexAttr>(attrType))
     return success();
 
   assert(isa<TypedAttr>(attrType) && "What else could we be looking at here?");
@@ -287,8 +290,16 @@ LogicalResult cir::ContinueOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult cir::CastOp::verify() {
-  const mlir::Type resType = getResult().getType();
-  const mlir::Type srcType = getSrc().getType();
+  mlir::Type resType = getType();
+  mlir::Type srcType = getSrc().getType();
+
+  if (mlir::isa<cir::VectorType>(srcType) &&
+      mlir::isa<cir::VectorType>(resType)) {
+    // Use the element type of the vector to verify the cast kind. (Except for
+    // bitcast, see below.)
+    srcType = mlir::dyn_cast<cir::VectorType>(srcType).getElementType();
+    resType = mlir::dyn_cast<cir::VectorType>(resType).getElementType();
+  }
 
   switch (getKind()) {
   case cir::CastKind::int_to_bool: {
@@ -437,7 +448,7 @@ static Value tryFoldCastChain(cir::CastOp op) {
 }
 
 OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
-  if (getSrc().getType() == getResult().getType()) {
+  if (getSrc().getType() == getType()) {
     switch (getKind()) {
     case cir::CastKind::integral: {
       // TODO: for sign differences, it's possible in certain conditions to
@@ -602,10 +613,10 @@ verifyCallCommInSymbolUses(mlir::Operation *op,
     unsigned numCallOperands = callIf.getNumArgOperands();
     unsigned numFnOpOperands = fnType.getNumInputs();
 
-    assert(!cir::MissingFeatures::opCallVariadic());
-
-    if (numCallOperands != numFnOpOperands)
+    if (!fnType.isVarArg() && numCallOperands != numFnOpOperands)
       return op->emitOpError("incorrect number of operands for callee");
+    if (fnType.isVarArg() && numCallOperands < numFnOpOperands)
+      return op->emitOpError("too few operands for callee");
 
     for (unsigned i = 0, e = numFnOpOperands; i != e; ++i)
       if (callIf.getArgOperand(i).getType() != fnType.getInput(i))
@@ -1133,6 +1144,9 @@ void cir::GlobalOp::build(OpBuilder &odsBuilder, OperationState &odsState,
   cir::GlobalLinkageKindAttr linkageAttr =
       cir::GlobalLinkageKindAttr::get(odsBuilder.getContext(), linkage);
   odsState.addAttribute(getLinkageAttrName(odsState.name), linkageAttr);
+
+  odsState.addAttribute(getGlobalVisibilityAttrName(odsState.name),
+                        cir::VisibilityAttr::get(odsBuilder.getContext()));
 }
 
 static void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, cir::GlobalOp op,
@@ -1427,15 +1441,32 @@ OpFoldResult cir::SelectOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 LogicalResult cir::ShiftOp::verify() {
   mlir::Operation *op = getOperation();
-  mlir::Type resType = getResult().getType();
-  const bool isOp0Vec = mlir::isa<cir::VectorType>(op->getOperand(0).getType());
-  const bool isOp1Vec = mlir::isa<cir::VectorType>(op->getOperand(1).getType());
-  if (isOp0Vec != isOp1Vec)
+  auto op0VecTy = mlir::dyn_cast<cir::VectorType>(op->getOperand(0).getType());
+  auto op1VecTy = mlir::dyn_cast<cir::VectorType>(op->getOperand(1).getType());
+  if (!op0VecTy ^ !op1VecTy)
     return emitOpError() << "input types cannot be one vector and one scalar";
-  if (isOp1Vec && op->getOperand(1).getType() != resType) {
-    return emitOpError() << "shift amount must have the type of the result "
-                         << "if it is vector shift";
+
+  if (op0VecTy) {
+    if (op0VecTy.getSize() != op1VecTy.getSize())
+      return emitOpError() << "input vector types must have the same size";
+
+    auto opResultTy = mlir::dyn_cast<cir::VectorType>(getType());
+    if (!opResultTy)
+      return emitOpError() << "the type of the result must be a vector "
+                           << "if it is vector shift";
+
+    auto op0VecEleTy = mlir::cast<cir::IntType>(op0VecTy.getElementType());
+    auto op1VecEleTy = mlir::cast<cir::IntType>(op1VecTy.getElementType());
+    if (op0VecEleTy.getWidth() != op1VecEleTy.getWidth())
+      return emitOpError()
+             << "vector operands do not have the same elements sizes";
+
+    auto resVecEleTy = mlir::cast<cir::IntType>(opResultTy.getElementType());
+    if (op0VecEleTy.getWidth() != resVecEleTy.getWidth())
+      return emitOpError() << "vector operands and result type do not have the "
+                              "same elements sizes";
   }
+
   return mlir::success();
 }
 
@@ -1492,7 +1523,7 @@ LogicalResult cir::GetMemberOp::verify() {
   if (recordTy.getMembers().size() <= getIndex())
     return emitError() << "member index out of bounds";
 
-  if (recordTy.getMembers()[getIndex()] != getResultTy().getPointee())
+  if (recordTy.getMembers()[getIndex()] != getType().getPointee())
     return emitError() << "member type mismatch";
 
   return mlir::success();
@@ -1506,7 +1537,7 @@ LogicalResult cir::VecCreateOp::verify() {
   // Verify that the number of arguments matches the number of elements in the
   // vector, and that the type of all the arguments matches the type of the
   // elements in the vector.
-  const VectorType vecTy = getResult().getType();
+  const cir::VectorType vecTy = getType();
   if (getElements().size() != vecTy.getSize()) {
     return emitOpError() << "operand count of " << getElements().size()
                          << " doesn't match vector type " << vecTy
@@ -1546,6 +1577,68 @@ OpFoldResult cir::VecExtractOp::fold(FoldAdaptor adaptor) {
     return {};
 
   return elements[index];
+}
+
+//===----------------------------------------------------------------------===//
+// VecShuffleDynamicOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult cir::VecShuffleDynamicOp::fold(FoldAdaptor adaptor) {
+  mlir::Attribute vec = adaptor.getVec();
+  mlir::Attribute indices = adaptor.getIndices();
+  if (mlir::isa_and_nonnull<cir::ConstVectorAttr>(vec) &&
+      mlir::isa_and_nonnull<cir::ConstVectorAttr>(indices)) {
+    auto vecAttr = mlir::cast<cir::ConstVectorAttr>(vec);
+    auto indicesAttr = mlir::cast<cir::ConstVectorAttr>(indices);
+    auto vecTy = mlir::cast<cir::VectorType>(vecAttr.getType());
+
+    mlir::ArrayAttr vecElts = vecAttr.getElts();
+    mlir::ArrayAttr indicesElts = indicesAttr.getElts();
+
+    const uint64_t numElements = vecElts.size();
+
+    SmallVector<mlir::Attribute, 16> elements;
+    elements.reserve(numElements);
+
+    const uint64_t maskBits = llvm::NextPowerOf2(numElements - 1) - 1;
+    for (const auto &idxAttr : indicesElts.getAsRange<cir::IntAttr>()) {
+      uint64_t idxValue = idxAttr.getUInt();
+      uint64_t newIdx = idxValue & maskBits;
+      elements.push_back(vecElts[newIdx]);
+    }
+
+    return cir::ConstVectorAttr::get(
+        vecTy, mlir::ArrayAttr::get(getContext(), elements));
+  }
+
+  return {};
+}
+
+LogicalResult cir::VecShuffleDynamicOp::verify() {
+  // The number of elements in the two input vectors must match.
+  if (getVec().getType().getSize() !=
+      mlir::cast<cir::VectorType>(getIndices().getType()).getSize()) {
+    return emitOpError() << ": the number of elements in " << getVec().getType()
+                         << " and " << getIndices().getType() << " don't match";
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// VecTernaryOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::VecTernaryOp::verify() {
+  // Verify that the condition operand has the same number of elements as the
+  // other operands.  (The automatic verification already checked that all
+  // operands are vector types and that the second and third operands are the
+  // same type.)
+  if (getCond().getType().getSize() != getLhs().getType().getSize()) {
+    return emitOpError() << ": the number of elements in "
+                         << getCond().getType() << " and " << getLhs().getType()
+                         << " don't match";
+  }
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

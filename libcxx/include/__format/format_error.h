@@ -22,7 +22,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
 
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_DIAGNOSTIC_PUSH
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wweak-vtables")
 class _LIBCPP_EXPORTED_FROM_ABI format_error : public runtime_error {
@@ -35,7 +34,6 @@ public:
   ~format_error() noexcept override = default;
 };
 _LIBCPP_DIAGNOSTIC_POP
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 [[noreturn]] inline _LIBCPP_HIDE_FROM_ABI void __throw_format_error(const char* __s) {
 #  if _LIBCPP_HAS_EXCEPTIONS
