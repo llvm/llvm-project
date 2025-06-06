@@ -60,11 +60,18 @@ plugin disable instrumentation-runtime
 # Test plugin enable with multiple arguments.
 plugin enable system-runtime instrumentation-runtime
 # CHECK-LABEL: plugin enable system-runtime instrumentation-runtime
-CHECK: system-runtime
-CHECK:   [+] systemruntime-macosx           System runtime plugin for Mac OS X native libraries.
-CHECK: instrumentation-runtime
-CHECK:   [+] AddressSanitizer               AddressSanitizer instrumentation runtime plugin.
+# CHECK: system-runtime
+# CHECK:   [+] systemruntime-macosx           System runtime plugin for Mac OS X native libraries.
+# CHECK: instrumentation-runtime
+# CHECK:   [+] AddressSanitizer               AddressSanitizer instrumentation runtime plugin.
 
+# Test plugin disable with multiple arguments.
+plugin disable system-runtime instrumentation-runtime
+# CHECK-LABEL: plugin disable system-runtime instrumentation-runtime
+# CHECK: system-runtime
+# CHECK:   [-] systemruntime-macosx           System runtime plugin for Mac OS X native libraries.
+# CHECK: instrumentation-runtime
+# CHECK:   [-] AddressSanitizer               AddressSanitizer instrumentation runtime plugin.
 
 # Test plugin enable/disable for unknown plugin returns an error.
 # RUN: %lldb -o "plugin enable some-plugin-that-does-not-exist" 2>&1 | FileCheck %s --check-prefix=ERROR_PLUGIN_NOT_FOUND
@@ -77,5 +84,4 @@ CHECK:   [+] AddressSanitizer               AddressSanitizer instrumentation run
 # ERROR_ARGUMENTS_ENABLE: error: 'plugin enable' requires one or more arguments
 
 # RUN: %lldb -o "plugin disable" 2>&1 | FileCheck %s --check-prefix=ERROR_ARGUMENTS_DISABLE
-# RUN: %lldb -o "plugin disable a b c" 2>&1 | FileCheck %s --check-prefix=ERROR_ARGUMENTS_DISABLE
-# ERROR_ARGUMENTS_DISABLE: error: 'plugin disable' requires one argument
+# ERROR_ARGUMENTS_DISABLE: error: 'plugin disable' requires one or more arguments

@@ -261,6 +261,30 @@ private:
   PluginListCommandOptions m_options;
 };
 
+static void DoPluginEnableDisable(Args &command, CommandReturnObject &result,
+                                  bool enable) {
+  const char *name = enable ? "enable" : "disable";
+  size_t argc = command.GetArgumentCount();
+  if (argc == 0) {
+    result.AppendErrorWithFormat("'plugin %s' requires one or more arguments",
+                                 name);
+    return;
+  }
+  result.SetStatus(eReturnStatusSuccessFinishResult);
+
+  for (size_t i = 0; i < argc; ++i) {
+    llvm::StringRef pattern = command[i].ref();
+    int num_matching = SetEnableOnMatchingPlugins(pattern, result, enable);
+
+    if (num_matching == 0) {
+      result.AppendErrorWithFormat(
+          "Found no matching plugins to %s for pattern '%s'", name,
+          pattern.data());
+      break;
+    }
+  }
+}
+
 class CommandObjectPluginEnable : public CommandObjectParsed {
 public:
   CommandObjectPluginEnable(CommandInterpreter &interpreter)
@@ -273,23 +297,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    size_t argc = command.GetArgumentCount();
-    if (argc == 0) {
-      result.AppendError("'plugin enable' requires one or more arguments");
-      return;
-    }
-    result.SetStatus(eReturnStatusSuccessFinishResult);
-
-    for (size_t i = 0; i < argc; ++i)
-    {
-      llvm::StringRef pattern = command[i].ref();
-      int num_matching = SetEnableOnMatchingPlugins(pattern, result, true);
-
-      if (num_matching == 0) {
-        result.AppendErrorWithFormat("Found no matching plugins to enable for pattern '%s'",pattern.data());
-        break;
-      }
-    }
+    DoPluginEnableDisable(command, result, true);
   }
 };
 
@@ -305,18 +313,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    size_t argc = command.GetArgumentCount();
-    if (argc != 1) {
-      result.AppendError("'plugin disable' requires one argument");
-      return;
-    }
-    llvm::StringRef pattern = command[0].ref();
-    result.SetStatus(eReturnStatusSuccessFinishResult);
-
-    int num_matching = SetEnableOnMatchingPlugins(pattern, result, false);
-
-    if (num_matching == 0)
-      result.AppendErrorWithFormat("Found no matching plugins to disable");
+    DoPluginEnableDisable(command, result, false);
   }
 };
 
