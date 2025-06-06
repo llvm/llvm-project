@@ -1,5 +1,6 @@
 // RUN: fir-opt --fir-add-alias-tags %s | FileCheck --check-prefixes=ALL,DEFAULT %s
 // RUN: fir-opt --fir-add-alias-tags --local-alloc-tbaa %s | FileCheck --check-prefixes=ALL,LOCAL %s
+// RUN: fir-opt --fir-add-alias-tags --local-alloc-tbaa  --ptr-local-alloc-tbaa %s | FileCheck --check-prefixes=ALL,PTR-LOCAL %s
 
 // Test AddAliasTagsPass creating sub-tree for TARGET/POINTER variables.
 
@@ -298,7 +299,8 @@ module {
     %83 = fir.array_coor %80(%82) %c1 : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, !fir.shift<1>, index) -> !fir.ref<f32>
 // real, pointer :: localp(:)
 // DEFAULT-NOT: fir.store{{.*}}tbaa
-// LOCAL: fir.store{{.*}}{tbaa = [#[[TARGETTAG]]]} : !fir.ref<f32>
+// LOCAL-NOT: fir.store{{.*}}{tbaa = [#[[TARGETTAG]]]} : !fir.ref<f32>
+// PTR-LOCAL: fir.store{{.*}}{tbaa = [#[[TARGETTAG]]]} : !fir.ref<f32>
     fir.store %cst to %83 : !fir.ref<f32>
 // ALL-NOT: fir.load{{.*}}tbaa
     %84 = fir.load %27 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>

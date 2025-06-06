@@ -50,6 +50,15 @@ static llvm::cl::opt<bool>
 static llvm::cl::opt<bool> enableLocalAllocs(
     "local-alloc-tbaa", llvm::cl::init(false), llvm::cl::Hidden,
     llvm::cl::desc("Add TBAA tags to local allocations. UNSAFE."));
+// This is **known unsafe** (miscompare in Fujitsu: Fortran/0614/0614_0005.f
+// for ARM). Detailed analysis of the root cause:
+// https://github.com/llvm/llvm-project/issues/141928
+// The code is kept so that these may be tried with new benchmarks to see if
+// this is worth fixing in the future. This flag has no effect unless
+// enableLocalAllocs is set
+static llvm::cl::opt<bool> enablePtrLocalAllocs(
+    "ptr-local-alloc-tbaa", llvm::cl::init(false), llvm::cl::Hidden,
+    llvm::cl::desc("Add TBAA tags to local pointer allocations. UNSAFE."));
 
 namespace {
 
@@ -287,6 +296,9 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
                  << "WARN: unknown defining op for SourceKind::Allocate " << *op
                  << "\n");
     } else if (source.isPointer()) {
+      // Do not add tbaa tags for local pointers unless flag is set
+      if (!enablePtrLocalAllocs)
+        return;
       LLVM_DEBUG(llvm::dbgs().indent(2)
                  << "Found reference to allocation at " << *op << "\n");
       tag = state.getFuncTreeWithScope(func, scopeOp).targetDataTree.getTag();
