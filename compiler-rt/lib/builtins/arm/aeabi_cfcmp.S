@@ -50,6 +50,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_cfcmpeq)
         b __aeabi_cfcmple
 #else
         pop {r0-r3, lr}
+
         // NaN has been ruled out, so __aeabi_cfcmple can't trap
         // Use "it ne" + unconditional branch to guarantee a supported relocation if
         // __aeabi_cfcmple is in a different section for some builds.
