@@ -246,7 +246,9 @@ public:
                         swift::reflection::DescriptorFinder *descriptor_finder,
                         const swift::reflection::TypeRef *tr,
                         std::function<bool(SuperClassType)> fn) override {
-    while (tr) {
+    // Guard against faulty self-referential metadata.
+    unsigned limit = 256;
+    while (tr && --limit) {
       if (fn({[=]() -> const swift::reflection::RecordTypeInfo * {
                 auto ti_or_err = GetRecordTypeInfo(*tr, tip, descriptor_finder);
                 if (!ti_or_err) {
