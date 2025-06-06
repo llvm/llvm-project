@@ -1114,4 +1114,39 @@ extern "C" void acc_combined_data_clauses(int *arg1, int *arg2) {
   // CHECK-NEXT: } loc
   // CHECK-NEXT: acc.delete accPtr(%[[NOCREATE2]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<host>]) {dataClause = #acc<data_clause acc_no_create>, name = "arg2"}
   // CHECK-NEXT: acc.delete accPtr(%[[NOCREATE1]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<host>]) {dataClause = #acc<data_clause acc_no_create>, name = "arg1"}
+
+#pragma acc parallel loop present(arg1)
+  for(unsigned I = 0; I < 5; ++I);
+  // CHECK-NEXT: %[[NOCREATE1:.*]] = acc.present varPtr(%[[ARG1]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg1"}
+  // CHECK-NEXT: acc.parallel combined(loop) dataOperands(%[[NOCREATE1]] : !cir.ptr<!cir.ptr<!s32i>>) {
+  // CHECK-NEXT: acc.loop combined(parallel) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.delete accPtr(%[[NOCREATE1]] : !cir.ptr<!cir.ptr<!s32i>>) {dataClause = #acc<data_clause acc_present>, name = "arg1"}
+
+#pragma acc serial loop present(arg2)
+  for(unsigned I = 0; I < 5; ++I);
+  // CHECK-NEXT: %[[NOCREATE2:.*]] = acc.present varPtr(%[[ARG2]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg2"}
+  // CHECK-NEXT: acc.serial combined(loop) dataOperands(%[[NOCREATE2]] : !cir.ptr<!cir.ptr<!s32i>>) {
+  // CHECK-NEXT: acc.loop combined(serial) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.delete accPtr(%[[NOCREATE2]] : !cir.ptr<!cir.ptr<!s32i>>) {dataClause = #acc<data_clause acc_present>, name = "arg2"}
+
+#pragma acc kernels loop present(arg1, arg2) device_type(host) async
+  for(unsigned I = 0; I < 5; ++I);
+  // CHECK-NEXT: %[[NOCREATE1:.*]] = acc.present varPtr(%[[ARG1]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<host>]) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg1"}
+  // CHECK-NEXT: %[[NOCREATE2:.*]] = acc.present varPtr(%[[ARG2]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<host>]) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg2"}
+  // CHECK-NEXT: acc.kernels combined(loop) dataOperands(%[[NOCREATE1]], %[[NOCREATE2]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<host>]) {
+  // CHECK-NEXT: acc.loop combined(kernels) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.delete accPtr(%[[NOCREATE2]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<host>]) {dataClause = #acc<data_clause acc_present>, name = "arg2"}
+  // CHECK-NEXT: acc.delete accPtr(%[[NOCREATE1]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<host>]) {dataClause = #acc<data_clause acc_present>, name = "arg1"}
 }

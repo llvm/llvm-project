@@ -871,6 +871,22 @@ public:
       return clauseNotImplemented(clause);
     }
   }
+
+  void VisitPresentClause(const OpenACCPresentClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
+                               mlir::acc::KernelsOp>) {
+      for (auto var : clause.getVarList())
+        addDataOperand<mlir::acc::PresentOp, mlir::acc::DeleteOp>(
+            var, mlir::acc::DataClause::acc_present, /*structured=*/true,
+            /*implicit=*/false);
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToComputeOp(clause);
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. data & declare remain.
+      return clauseNotImplemented(clause);
+    }
+  }
 };
 
 template <typename OpTy>
