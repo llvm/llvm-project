@@ -2513,7 +2513,7 @@ void testValueInRangeOfEnumerationValues() {
   // expected-error@-1 {{constexpr variable 'x2' must be initialized by a constant expression}}
   // expected-note@-2 {{integer value 8 is outside the valid range of values [-8, 7] for the enumeration type 'E1'}}
   E1 x2b = static_cast<E1>(8); // ok, not a constant expression context
-  static_assert(static_cast<E1>(8));
+  static_assert(static_cast<E1>(8), "");
   // expected-error@-1 {{static assertion expression is not an integral constant expression}}
   // expected-note@-2 {{integer value 8 is outside the valid range of values [-8, 7] for the enumeration type 'E1'}}
 
