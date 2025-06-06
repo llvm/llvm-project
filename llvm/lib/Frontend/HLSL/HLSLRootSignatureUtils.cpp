@@ -15,112 +15,48 @@
 #include "llvm/ADT/bit.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/ScopedPrinter.h"
 
 namespace llvm {
 namespace hlsl {
 namespace rootsig {
 
-static raw_ostream &operator<<(raw_ostream &OS, const Register &Reg) {
-  switch (Reg.ViewType) {
-  case RegisterType::BReg:
-    OS << "b";
-    break;
-  case RegisterType::TReg:
-    OS << "t";
-    break;
-  case RegisterType::UReg:
-    OS << "u";
-    break;
-  case RegisterType::SReg:
-    OS << "s";
-    break;
-  }
-  OS << Reg.Number;
-  return OS;
+template <typename T>
+static StringRef getEnumName(const T Value, ArrayRef<EnumEntry<T>> Enums) {
+  for (const auto &EnumItem : Enums)
+    if (EnumItem.Value == Value)
+      return EnumItem.Name;
+  return "";
 }
 
-static raw_ostream &operator<<(raw_ostream &OS,
-                               const ShaderVisibility &Visibility) {
-  switch (Visibility) {
-  case ShaderVisibility::All:
-    OS << "All";
-    break;
-  case ShaderVisibility::Vertex:
-    OS << "Vertex";
-    break;
-  case ShaderVisibility::Hull:
-    OS << "Hull";
-    break;
-  case ShaderVisibility::Domain:
-    OS << "Domain";
-    break;
-  case ShaderVisibility::Geometry:
-    OS << "Geometry";
-    break;
-  case ShaderVisibility::Pixel:
-    OS << "Pixel";
-    break;
-  case ShaderVisibility::Amplification:
-    OS << "Amplification";
-    break;
-  case ShaderVisibility::Mesh:
-    OS << "Mesh";
-    break;
-  }
+template <typename T>
+static raw_ostream &printEnum(raw_ostream &OS, const T Value,
+                              ArrayRef<EnumEntry<T>> Enums) {
+  OS << getEnumName(Value, Enums);
 
   return OS;
 }
 
-static raw_ostream &operator<<(raw_ostream &OS, const ClauseType &Type) {
-  switch (Type) {
-  case ClauseType::CBuffer:
-    OS << "CBV";
-    break;
-  case ClauseType::SRV:
-    OS << "SRV";
-    break;
-  case ClauseType::UAV:
-    OS << "UAV";
-    break;
-  case ClauseType::Sampler:
-    OS << "Sampler";
-    break;
-  }
-
-  return OS;
-}
-
-static raw_ostream &operator<<(raw_ostream &OS,
-                               const DescriptorRangeFlags &Flags) {
+template <typename T>
+static raw_ostream &printFlags(raw_ostream &OS, const T Value,
+                               ArrayRef<EnumEntry<T>> Flags) {
   bool FlagSet = false;
-  unsigned Remaining = llvm::to_underlying(Flags);
+  unsigned Remaining = llvm::to_underlying(Value);
   while (Remaining) {
     unsigned Bit = 1u << llvm::countr_zero(Remaining);
     if (Remaining & Bit) {
       if (FlagSet)
         OS << " | ";
 
-      switch (static_cast<DescriptorRangeFlags>(Bit)) {
-      case DescriptorRangeFlags::DescriptorsVolatile:
-        OS << "DescriptorsVolatile";
-        break;
-      case DescriptorRangeFlags::DataVolatile:
-        OS << "DataVolatile";
-        break;
-      case DescriptorRangeFlags::DataStaticWhileSetAtExecute:
-        OS << "DataStaticWhileSetAtExecute";
-        break;
-      case DescriptorRangeFlags::DataStatic:
-        OS << "DataStatic";
-        break;
-      case DescriptorRangeFlags::DescriptorsStaticKeepingBufferBoundsChecks:
-        OS << "DescriptorsStaticKeepingBufferBoundsChecks";
-        break;
-      default:
+      bool Found = false;
+      for (const auto &FlagItem : Flags)
+        if (FlagItem.Value == T(Bit)) {
+          OS << FlagItem.Name;
+          Found = true;
+          break;
+        }
+      if (!Found)
         OS << "invalid: " << Bit;
-        break;
-      }
-
       FlagSet = true;
     }
     Remaining &= ~Bit;
@@ -128,6 +64,68 @@ static raw_ostream &operator<<(raw_ostream &OS,
 
   if (!FlagSet)
     OS << "None";
+  return OS;
+}
+
+static const EnumEntry<RegisterType> RegisterNames[] = {
+    {"b", RegisterType::BReg},
+    {"t", RegisterType::TReg},
+    {"u", RegisterType::UReg},
+    {"s", RegisterType::SReg},
+};
+
+static raw_ostream &operator<<(raw_ostream &OS, const Register &Reg) {
+  printEnum(OS, Reg.ViewType, ArrayRef(RegisterNames));
+  OS << Reg.Number;
+
+  return OS;
+}
+
+static const EnumEntry<ShaderVisibility> VisibilityNames[] = {
+    {"All", ShaderVisibility::All},
+    {"Vertex", ShaderVisibility::Vertex},
+    {"Hull", ShaderVisibility::Hull},
+    {"Domain", ShaderVisibility::Domain},
+    {"Geometry", ShaderVisibility::Geometry},
+    {"Pixel", ShaderVisibility::Pixel},
+    {"Amplification", ShaderVisibility::Amplification},
+    {"Mesh", ShaderVisibility::Mesh},
+};
+
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const ShaderVisibility &Visibility) {
+  printEnum(OS, Visibility, ArrayRef(VisibilityNames));
+
+  return OS;
+}
+
+static const EnumEntry<dxil::ResourceClass> ResourceClassNames[] = {
+    {"CBV", dxil::ResourceClass::CBuffer},
+    {"SRV", dxil::ResourceClass::SRV},
+    {"UAV", dxil::ResourceClass::UAV},
+    {"Sampler", dxil::ResourceClass::Sampler},
+};
+
+static raw_ostream &operator<<(raw_ostream &OS, const ClauseType &Type) {
+  printEnum(OS, dxil::ResourceClass(llvm::to_underlying(Type)),
+            ArrayRef(ResourceClassNames));
+
+  return OS;
+}
+
+static const EnumEntry<DescriptorRangeFlags> DescriptorRangeFlagNames[] = {
+    {"DescriptorsVolatile", DescriptorRangeFlags::DescriptorsVolatile},
+    {"DataVolatile", DescriptorRangeFlags::DataVolatile},
+    {"DataStaticWhileSetAtExecute",
+     DescriptorRangeFlags::DataStaticWhileSetAtExecute},
+    {"DataStatic", DescriptorRangeFlags::DataStatic},
+    {"DescriptorsStaticKeepingBufferBoundsChecks",
+     DescriptorRangeFlags::DescriptorsStaticKeepingBufferBoundsChecks},
+};
+
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const DescriptorRangeFlags &Flags) {
+  printFlags(OS, Flags, ArrayRef(DescriptorRangeFlagNames));
 
   return OS;
 }
