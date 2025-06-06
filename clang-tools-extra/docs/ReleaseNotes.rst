@@ -236,6 +236,13 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-std-numbers>` check to support math
   functions of different precisions.
 
+- Improved :doc:`modernize-use-trailing-return-type
+  <clang-tidy/checks/modernize/use-trailing-return-type>` check by adding
+  support to modernize lambda signatures to use trailing return type and adding
+  two new options: `TransformFunctions` and `TransformLambdas` to control
+  whether function declarations and lambdas should be transformed by the check.
+  Fixed false positives when lambda was matched as a function in C++11 mode.
+
 - Improved :doc:`performance-move-const-arg
   <clang-tidy/checks/performance/move-const-arg>` check by fixing false
   negatives on ternary operators calling ``std::move``.

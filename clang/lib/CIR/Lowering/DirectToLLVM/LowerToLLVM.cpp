@@ -105,7 +105,7 @@ static mlir::Value emitFromMemory(mlir::ConversionPatternRewriter &rewriter,
                                   cir::LoadOp op, mlir::Value value) {
 
   // TODO(cir): Handle other types similarly to clang's codegen EmitFromMemory
-  if (auto boolTy = mlir::dyn_cast<cir::BoolType>(op.getResult().getType())) {
+  if (auto boolTy = mlir::dyn_cast<cir::BoolType>(op.getType())) {
     // Create a cast value from specified size in datalayout to i1
     assert(value.getType().isInteger(dataLayout.getTypeSizeInBits(boolTy)));
     return createIntCast(rewriter, value, rewriter.getI1Type());
@@ -456,7 +456,7 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
   }
   case cir::CastKind::integral: {
     mlir::Type srcType = castOp.getSrc().getType();
-    mlir::Type dstType = castOp.getResult().getType();
+    mlir::Type dstType = castOp.getType();
     mlir::Value llvmSrcVal = adaptor.getOperands().front();
     mlir::Type llvmDstType = getTypeConverter()->convertType(dstType);
     cir::IntType srcIntType =
@@ -471,11 +471,10 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
   }
   case cir::CastKind::floating: {
     mlir::Value llvmSrcVal = adaptor.getOperands().front();
-    mlir::Type llvmDstTy =
-        getTypeConverter()->convertType(castOp.getResult().getType());
+    mlir::Type llvmDstTy = getTypeConverter()->convertType(castOp.getType());
 
     mlir::Type srcTy = elementTypeIfVector(castOp.getSrc().getType());
-    mlir::Type dstTy = elementTypeIfVector(castOp.getResult().getType());
+    mlir::Type dstTy = elementTypeIfVector(castOp.getType());
 
     if (!mlir::isa<cir::CIRFPTypeInterface>(dstTy) ||
         !mlir::isa<cir::CIRFPTypeInterface>(srcTy))
@@ -563,8 +562,7 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
     mlir::Type dstTy = castOp.getType();
     mlir::Value llvmSrcVal = adaptor.getOperands().front();
     mlir::Type llvmDstTy = getTypeConverter()->convertType(dstTy);
-    if (mlir::cast<cir::IntType>(
-            elementTypeIfVector(castOp.getResult().getType()))
+    if (mlir::cast<cir::IntType>(elementTypeIfVector(castOp.getType()))
             .isSigned())
       rewriter.replaceOpWithNewOp<mlir::LLVM::FPToSIOp>(castOp, llvmDstTy,
                                                         llvmSrcVal);
@@ -681,8 +679,8 @@ mlir::LogicalResult CIRToLLVMAllocaOpLowering::matchAndRewrite(
       op.getLoc(), typeConverter->convertType(rewriter.getIndexType()), 1);
   mlir::Type elementTy =
       convertTypeForMemory(*getTypeConverter(), dataLayout, op.getAllocaType());
-  mlir::Type resultTy = convertTypeForMemory(*getTypeConverter(), dataLayout,
-                                             op.getResult().getType());
+  mlir::Type resultTy =
+      convertTypeForMemory(*getTypeConverter(), dataLayout, op.getType());
 
   assert(!cir::MissingFeatures::addressSpace());
   assert(!cir::MissingFeatures::opAllocaAnnotations());
@@ -754,8 +752,8 @@ mlir::LogicalResult CIRToLLVMCallOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
     cir::LoadOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  const mlir::Type llvmTy = convertTypeForMemory(
-      *getTypeConverter(), dataLayout, op.getResult().getType());
+  const mlir::Type llvmTy =
+      convertTypeForMemory(*getTypeConverter(), dataLayout, op.getType());
   assert(!cir::MissingFeatures::opLoadStoreMemOrder());
   std::optional<size_t> opAlign = op.getAlignment();
   unsigned alignment =

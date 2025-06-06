@@ -1135,18 +1135,28 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     emitGlobalOpenACCDecl(cast<OpenACCDeclareDecl>(decl));
     break;
   case Decl::Enum:
+  case Decl::Using:          // using X; [C++]
   case Decl::UsingDirective: // using namespace X; [C++]
   case Decl::Typedef:
   case Decl::TypeAlias: // using foo = bar; [C++11]
   case Decl::Record:
-  case Decl::CXXRecord:
     assert(!cir::MissingFeatures::generateDebugInfo());
+    break;
+
+  // No code generation needed.
+  case Decl::UsingShadow:
     break;
 
   // C++ Decls
   case Decl::LinkageSpec:
   case Decl::Namespace:
     emitDeclContext(Decl::castToDeclContext(decl));
+    break;
+
+  case Decl::ClassTemplateSpecialization:
+  case Decl::CXXRecord:
+    assert(!cir::MissingFeatures::generateDebugInfo());
+    assert(!cir::MissingFeatures::cxxRecordStaticMembers());
     break;
   }
 }
