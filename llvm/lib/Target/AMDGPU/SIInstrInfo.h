@@ -1380,6 +1380,8 @@ public:
   /// Fix operands in Inst to fix 16bit SALU to VALU lowering.
   void legalizeOperandsVALUt16(MachineInstr &Inst,
                                MachineRegisterInfo &MRI) const;
+  void legalizeOperandsVALUt16(MachineInstr &Inst, unsigned OpIdx,
+                               MachineRegisterInfo &MRI) const;
 
   /// Replace the instructions opcode with the equivalent VALU
   /// opcode.  This function will also move the users of MachineInstruntions

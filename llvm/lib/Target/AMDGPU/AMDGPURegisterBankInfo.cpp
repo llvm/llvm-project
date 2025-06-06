@@ -5753,6 +5753,9 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_global_load_async_to_lds_b32:
     case Intrinsic::amdgcn_global_load_async_to_lds_b64:
     case Intrinsic::amdgcn_global_load_async_to_lds_b128:
+    case Intrinsic::amdgcn_dds_load_async_to_lds_b32:
+    case Intrinsic::amdgcn_dds_load_async_to_lds_b64:
+    case Intrinsic::amdgcn_dds_load_async_to_lds_b128:
     case Intrinsic::amdgcn_load_to_lds:
     case Intrinsic::amdgcn_global_load_lds: {
       OpdsMapping[1] = getVGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);

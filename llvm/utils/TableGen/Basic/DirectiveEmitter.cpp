@@ -147,7 +147,7 @@ static void generateEnumBitmask(ArrayRef<const Record *> Records,
 
 // Generate enums for values that clauses can take.
 // Also generate function declarations for get<Enum>Name(StringRef Str).
-static void generateEnumClauseVal(ArrayRef<const Record *> Records,
+static void generateClauseEnumVal(ArrayRef<const Record *> Records,
                                   raw_ostream &OS,
                                   const DirectiveLanguage &DirLang,
                                   std::string &EnumHelperFuncs) {
@@ -166,8 +166,8 @@ static void generateEnumClauseVal(ArrayRef<const Record *> Records,
 
     OS << "\n";
     OS << "enum class " << Enum << " {\n";
-    for (const ClauseVal CVal : ClauseVals)
-      OS << "  " << CVal.getRecordName() << "=" << CVal.getValue() << ",\n";
+    for (const EnumVal Val : ClauseVals)
+      OS << "  " << Val.getRecordName() << "=" << Val.getValue() << ",\n";
     OS << "};\n";
 
     if (DirLang.hasMakeEnumAvailableInNamespace()) {
@@ -306,9 +306,9 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
                     DirLang.getClausePrefix(),
                     DirLang.hasMakeEnumAvailableInNamespace());
 
-  // Emit ClauseVal enumeration
+  // Emit ClauseVals enumeration
   std::string EnumHelperFuncs;
-  generateEnumClauseVal(DirLang.getClauses(), OS, DirLang, EnumHelperFuncs);
+  generateClauseEnumVal(DirLang.getClauses(), OS, DirLang, EnumHelperFuncs);
 
   // Generic function signatures
   OS << "\n";
@@ -412,9 +412,11 @@ static void generateGetKind(ArrayRef<const Record *> Records, raw_ostream &OS,
   OS << "}\n";
 }
 
-// Generate function implementation for get<ClauseVal>Kind(StringRef Str)
-static void generateGetKindClauseVal(const DirectiveLanguage &DirLang,
-                                     raw_ostream &OS) {
+// Generate function implementations for
+//   <enumClauseValue> get<enumClauseValue>(StringRef Str) and
+//   StringRef get<enumClauseValue>Name(<enumClauseValue>)
+static void generateGetClauseVal(const DirectiveLanguage &DirLang,
+                                 raw_ostream &OS) {
   StringRef Lang = DirLang.getName();
   std::string Qual = getQualifier(DirLang);
 
@@ -445,10 +447,9 @@ static void generateGetKindClauseVal(const DirectiveLanguage &DirLang,
     OS << Qual << Enum << " " << Qual << "get" << Enum
        << "(llvm::StringRef Str) {\n";
     OS << "  return StringSwitch<" << Enum << ">(Str)\n";
-    for (const auto &CV : ClauseVals) {
-      ClauseVal CVal(CV);
-      OS << "    .Case(\"" << CVal.getFormattedName() << "\"," << CV->getName()
-         << ")\n";
+    for (const EnumVal Val : ClauseVals) {
+      OS << "    .Case(\"" << Val.getFormattedName() << "\","
+         << Val.getRecordName() << ")\n";
     }
     OS << "    .Default(" << DefaultName << ");\n";
     OS << "}\n";
@@ -457,10 +458,9 @@ static void generateGetKindClauseVal(const DirectiveLanguage &DirLang,
     OS << "llvm::StringRef " << Qual << "get" << Lang << Enum << "Name(" << Qual
        << Enum << " x) {\n";
     OS << "  switch (x) {\n";
-    for (const auto &CV : ClauseVals) {
-      ClauseVal CVal(CV);
-      OS << "    case " << CV->getName() << ":\n";
-      OS << "      return \"" << CVal.getFormattedName() << "\";\n";
+    for (const EnumVal Val : ClauseVals) {
+      OS << "    case " << Val.getRecordName() << ":\n";
+      OS << "      return \"" << Val.getFormattedName() << "\";\n";
     }
     OS << "  }\n"; // switch
     OS << "  llvm_unreachable(\"Invalid " << Lang << " " << Enum
@@ -1318,8 +1318,9 @@ void emitDirectivesBasicImpl(const DirectiveLanguage &DirLang,
   // getClauseName(Clause Kind)
   generateGetName(DirLang.getClauses(), OS, "Clause", DirLang, CPrefix);
 
-  // get<ClauseVal>Kind(StringRef Str)
-  generateGetKindClauseVal(DirLang, OS);
+  // <enumClauseValue> get<enumClauseValue>(StringRef Str) ; string -> value
+  // StringRef get<enumClauseValue>Name(<enumClauseValue>) ; value -> string
+  generateGetClauseVal(DirLang, OS);
 
   // isAllowedClauseForDirective(Directive D, Clause C, unsigned Version)
   generateIsAllowedClause(DirLang, OS);

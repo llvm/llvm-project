@@ -41,27 +41,99 @@ public:
   bool runOnModule(Module &M);
 };
 
-static void
-recordLaneSharedAbsoluteAddress(Module *M, GlobalVariable *GV, uint32_t Offset,
-                                DenseSet<Value *> *PtrSet = nullptr) {
-  // Use the 28th bit to indicate VGPR.
-  uint32_t Address = PtrSet ? (Offset | (1 << 28)) : Offset;
-  // Write the specified address into metadata where it can be retrieved by
-  // the assembler. Format is a half open range, [Address Address+1)
-  LLVMContext &Ctx = M->getContext();
-  auto *IntTy = M->getDataLayout().getIntPtrType(Ctx, AMDGPUAS::LANE_SHARED);
-  auto *MinC = ConstantAsMetadata::get(ConstantInt::get(IntTy, Address));
-  auto *MaxC = ConstantAsMetadata::get(ConstantInt::get(IntTy, Address + 1));
-  GV->setMetadata(LLVMContext::MD_absolute_symbol,
-                  MDNode::get(Ctx, {MinC, MaxC}));
-  if (PtrSet) {
-    // Set the metadata for all the pointers to this GV
-    // to facilitate the VGPR-promotion during Instruction selection.
-    MDNode *EmptyMD = MDNode::get(Ctx, {});
-    for (Value *Ptr : *PtrSet) {
-      if (auto *Inst = dyn_cast<Instruction>(Ptr))
-        Inst->setMetadata("laneshared-in-vgpr", EmptyMD);
+// Assign absolute addresses to lane-shared GVs.
+//
+// This function is used both for GVs assigned to scratch and for GVs assigned
+// to VGPRs. In the latter case, all optional arguments must be specified.
+static void assignAbsoluteAddresses(
+    SmallVectorImpl<GlobalVariable *> &GVs,
+    const VariableFunctionMap &GV2Kernels, uint32_t EndAddress = 1u << 28,
+    SmallVectorImpl<GlobalVariable *> *GVsInOverflow = nullptr,
+    DenseMap<GlobalVariable *, DenseSet<Value *>> *VGPRPtrSets = nullptr) {
+  if (GVs.empty())
+    return;
+
+  Module &M = *GVs[0]->getParent();
+  LLVMContext &Ctx = M.getContext();
+  auto DL = M.getDataLayout();
+  bool IsVGPRs = VGPRPtrSets != nullptr;
+  auto *IntTy = M.getDataLayout().getIntPtrType(Ctx, AMDGPUAS::LANE_SHARED);
+
+  // Sort the GVs by the number of kernels that use them, so that we assign
+  // the GVs that are used by more kernels first. This helps pack lane-shared
+  // variables that are used by multiple kernels, since we must assign them a
+  // module absolute address.
+  llvm::stable_sort(GVs, [&](GlobalVariable *A, GlobalVariable *B) {
+    return GV2Kernels.find(A)->second.size() >
+           GV2Kernels.find(B)->second.size();
+  });
+
+  DenseMap<Function *, uint32_t> Kernel2Offset;
+  for (auto *GV : GVs) {
+    auto Kernels = GV2Kernels.find(GV);
+    assert(Kernels != GV2Kernels.end());
+
+    // Determine the lowest address that we can guarantee does not conflict with
+    // already assigned addresses for all relevant kernels.
+    uint32_t Address = 0;
+    for (auto *Kernel : Kernels->second)
+      Address = std::max(Address, Kernel2Offset[Kernel]);
+
+    uint32_t Align = std::max<uint32_t>(GV->getAlignment(), 4u);
+    Address = alignTo(Address, Align);
+
+    // Determine the size of the variable.
+    uint32_t GVBytes = DL.getTypeAllocSize(GV->getValueType());
+    if (Address + GVBytes > EndAddress) {
+      if (!GVsInOverflow) {
+        report_fatal_error("Lane-shared variable exceeds the maximum address "
+                           "space size");
+      }
+      GVsInOverflow->push_back(GV);
+      continue;
     }
+
+    // Update the per-kernel offsets.
+    for (auto *Kernel : Kernels->second)
+      Kernel2Offset[Kernel] = Address + GVBytes;
+
+    // Write the specified address into metadata where it can be retrieved by
+    // the assembler. The metadata represents the half-open range of possible
+    // symbol values, i.e. [Address, Address + 1).
+    //
+    // Use the 28th bit to indicate VGPR.
+    if (IsVGPRs)
+      Address |= (1 << 28);
+
+    auto *MinC = ConstantAsMetadata::get(ConstantInt::get(IntTy, Address));
+    auto *MaxC = ConstantAsMetadata::get(ConstantInt::get(IntTy, Address + 1));
+    GV->setMetadata(LLVMContext::MD_absolute_symbol,
+                    MDNode::get(Ctx, {MinC, MaxC}));
+
+    if (IsVGPRs) {
+      // Set the metadata for all the pointers to this GV
+      // to facilitate the VGPR-promotion during Instruction selection.
+      MDNode *EmptyMD = MDNode::get(Ctx, {});
+      auto PtrSetsIt = VGPRPtrSets->find(GV);
+      assert(PtrSetsIt != VGPRPtrSets->end());
+      for (Value *Ptr : PtrSetsIt->second) {
+        if (auto *Inst = dyn_cast<Instruction>(Ptr))
+          Inst->setMetadata("laneshared-in-vgpr", EmptyMD);
+      }
+    }
+  }
+
+  // Record per-kernel allocation bound as metadata.
+  unsigned MDKindID = Ctx.getMDKindID(IsVGPRs ? "laneshared-vgpr-size"
+                                              : "laneshared-scratch-size");
+
+  for (auto K : Kernel2Offset) {
+    Function *Kernel = K.first;
+    unsigned Offset = alignTo(K.second, 4);
+    Kernel->setMetadata(
+        MDKindID, MDNode::get(M.getContext(),
+                              {ConstantAsMetadata::get(ConstantInt::get(
+                                  Type::getInt32Ty(M.getContext()), Offset))}));
   }
 }
 
@@ -183,9 +255,16 @@ bool AMDGPUAssignLaneShared::runOnModule(Module &M) {
       }
     }
   }
+
+  // Filter out any lane-shared GVs that are never used.
+  llvm::erase_if(LaneSharedGlobals, [&](GlobalVariable *GV) {
+    return GV2Kernels.find(GV) == GV2Kernels.end();
+  });
+  if (LaneSharedGlobals.empty())
+    return false;
+
   // Find lane-shared GVs that can be promoted into VGPRs.
   SmallVector<GlobalVariable *> GVsInVGPR;
-  SmallVector<GlobalVariable *> GVsInOverflow;
   SmallVector<GlobalVariable *> GVsInScratch;
   DenseMap<GlobalVariable *, DenseSet<Value *>> GVPtrSets;
   for (auto *GV : LaneSharedGlobals) {
@@ -198,106 +277,15 @@ bool AMDGPUAssignLaneShared::runOnModule(Module &M) {
       GVsInScratch.push_back(GV);
     }
   }
-  // GV that gets used in multiple kernels should get a module absolute address
-  // either in VGPRs or in scratch. GV that gets used in only one kernel then
-  // gets a kernel relative address on top of the module absolute address.
-  unsigned LaneSharedVGPRSize = 0;
-  auto DL = M.getDataLayout();
-  DenseMap<Function *, unsigned> Kernel2Offset;
-  for (auto *GV : GVsInVGPR) {
-    if (GV2Kernels.find(GV) == GV2Kernels.end())
-      continue;
-    if (GV2Kernels[GV].size() <= 1)
-      continue;
-    unsigned GVBytes = DL.getTypeAllocSize(GV->getValueType());
-    if (LaneSharedVGPRSize + GVBytes > MaxLaneSharedVGPRs * 4) {
-      GVsInOverflow.push_back(GV);
-      continue;
-    }
-    recordLaneSharedAbsoluteAddress(&M, GV, LaneSharedVGPRSize, &GVPtrSets[GV]);
 
-    LaneSharedVGPRSize = alignTo(LaneSharedVGPRSize + GVBytes, 4u);
+  // Assign VGPRs to GVs and record related metadata. This also records GVs that
+  // overflow the available space and must be assigned to scratch.
+  assignAbsoluteAddresses(GVsInVGPR, GV2Kernels, MaxLaneSharedVGPRs * 4,
+                          &GVsInScratch, &GVPtrSets);
 
-    for (auto *Kernel : GV2Kernels[GV])
-      Kernel2Offset[Kernel] =
-          std::max(LaneSharedVGPRSize, Kernel2Offset[Kernel]);
-  }
-  for (auto *GV : GVsInVGPR) {
-    if (GV2Kernels.find(GV) == GV2Kernels.end())
-      continue;
-    if (GV2Kernels[GV].size() != 1)
-      continue;
+  // Assign remaining GVs to scratch.
+  assignAbsoluteAddresses(GVsInScratch, GV2Kernels);
 
-    Function *Kernel = *GV2Kernels[GV].begin();
-    Kernel2Offset[Kernel] = std::max(LaneSharedVGPRSize, Kernel2Offset[Kernel]);
-
-    unsigned GVBytes = DL.getTypeAllocSize(GV->getValueType());
-    if (Kernel2Offset[Kernel] + GVBytes > MaxLaneSharedVGPRs * 4) {
-      GVsInOverflow.push_back(GV);
-      continue;
-    }
-    recordLaneSharedAbsoluteAddress(&M, GV, Kernel2Offset[Kernel],
-                                    &GVPtrSets[GV]);
-
-    Kernel2Offset[Kernel] = alignTo(Kernel2Offset[Kernel] + GVBytes, 4u);
-  }
-  // Lambda to record kernel offset as metadata with a given metadata name.
-  auto RecordKernelOffsetMetadata = [&](const std::string &MetadataName) {
-    for (auto K : Kernel2Offset) {
-      Function *Kernel = K.first;
-      unsigned Offset = K.second;
-      Kernel->setMetadata(
-          MetadataName,
-          MDNode::get(M.getContext(),
-                      {ConstantAsMetadata::get(ConstantInt::get(
-                          Type::getInt32Ty(M.getContext()), Offset))}));
-    }
-  };
-
-  RecordKernelOffsetMetadata("laneshared-vgpr-size");
-  Kernel2Offset.clear();
-
-  GVsInOverflow.insert(GVsInOverflow.end(), GVsInScratch.begin(),
-                       GVsInScratch.end());
-  // Perform the similar assignment for GVsInOverflow to scratch.
-  unsigned LaneSharedScratchSize = 0;
-  for (auto *GV : GVsInOverflow) {
-    if (GV2Kernels.find(GV) == GV2Kernels.end())
-      continue;
-    if (GV2Kernels[GV].size() <= 1)
-      continue;
-    unsigned GVBytes = DL.getTypeAllocSize(GV->getValueType());
-    recordLaneSharedAbsoluteAddress(&M, GV, LaneSharedScratchSize);
-
-    Align Alignment =
-        DL.getValueOrABITypeAlignment(GV->getAlign(), GV->getValueType());
-    LaneSharedScratchSize = alignTo(LaneSharedScratchSize, Alignment);
-    LaneSharedScratchSize = LaneSharedScratchSize + GVBytes;
-
-    for (auto *Kernel : GV2Kernels[GV])
-      Kernel2Offset[Kernel] =
-          std::max(LaneSharedScratchSize, Kernel2Offset[Kernel]);
-  }
-  for (auto *GV : GVsInOverflow) {
-    if (GV2Kernels.find(GV) == GV2Kernels.end())
-      continue;
-    if (GV2Kernels[GV].size() != 1)
-      continue;
-
-    Function *Kernel = *GV2Kernels[GV].begin();
-    Kernel2Offset[Kernel] =
-        std::max(LaneSharedScratchSize, Kernel2Offset[Kernel]);
-
-    unsigned GVBytes = DL.getTypeAllocSize(GV->getValueType());
-    recordLaneSharedAbsoluteAddress(&M, GV, Kernel2Offset[Kernel]);
-
-    Align Alignment =
-        DL.getValueOrABITypeAlignment(GV->getAlign(), GV->getValueType());
-    Kernel2Offset[Kernel] = alignTo(Kernel2Offset[Kernel], Alignment);
-    Kernel2Offset[Kernel] = Kernel2Offset[Kernel] + GVBytes;
-  }
-
-  RecordKernelOffsetMetadata("laneshared-scratch-size");
   return true;
 }
 

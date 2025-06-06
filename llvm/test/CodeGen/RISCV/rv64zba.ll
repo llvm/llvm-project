@@ -4274,3 +4274,92 @@ entry:
   %and = and i64 %add, 4294967295
   ret i64 %and
 }
+
+define ptr @shl_and_gep(ptr %p, i64 %i) {
+; CHECK-LABEL: shl_and_gep:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srliw a1, a1, 2
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    ret
+  %shl = shl i64 %i, 1
+  %and = and i64 %shl, 8589934584
+  %gep = getelementptr i8, ptr %p, i64 %and
+  ret ptr %gep
+}
+
+define ptr @shr_and_gep(ptr %p, i64 %i) {
+; CHECK-LABEL: shr_and_gep:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srliw a1, a1, 6
+; CHECK-NEXT:    slli a1, a1, 1
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    ret
+  %lshr = lshr i64 %i, 6
+  %and = and i64 %lshr, 67108863
+  %gep = getelementptr i16, ptr %p, i64 %and
+  ret ptr %gep
+}
+
+define ptr @slt_select_gep(ptr %p, i32 %y) {
+; CHECK-LABEL: slt_select_gep:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srli a1, a1, 28
+; CHECK-NEXT:    andi a1, a1, 8
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    addi a0, a0, 16
+; CHECK-NEXT:    ret
+  %cmp = icmp slt i32 %y, 0
+  %select = select i1 %cmp, i64 24, i64 16
+  %gep = getelementptr i8, ptr %p, i64 %select
+  ret ptr %gep
+}
+
+define i32 @shr_and_add(i32 %x, i32 %y) {
+; CHECK-LABEL: shr_and_add:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srliw a1, a1, 9
+; CHECK-NEXT:    slli a1, a1, 2
+; CHECK-NEXT:    addw a0, a0, a1
+; CHECK-NEXT:    ret
+  %lshr = lshr i32 %y, 7
+  %and = and i32 %lshr, 33554428
+  %add = add i32 %x, %and
+  ret i32 %add
+}
+
+define ptr @udiv1280_gep(ptr %p, i16 zeroext %i) {
+; RV64I-LABEL: udiv1280_gep:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a2, 13
+; RV64I-NEXT:    addi a2, a2, -819
+; RV64I-NEXT:    mul a1, a1, a2
+; RV64I-NEXT:    srliw a1, a1, 26
+; RV64I-NEXT:    slli a1, a1, 3
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: udiv1280_gep:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    lui a2, 13
+; RV64ZBA-NEXT:    addi a2, a2, -819
+; RV64ZBA-NEXT:    mul a1, a1, a2
+; RV64ZBA-NEXT:    srli a1, a1, 23
+; RV64ZBA-NEXT:    srliw a1, a1, 3
+; RV64ZBA-NEXT:    sh3add.uw a0, a1, a0
+; RV64ZBA-NEXT:    ret
+;
+; RV64XANDESPERF-LABEL: udiv1280_gep:
+; RV64XANDESPERF:       # %bb.0:
+; RV64XANDESPERF-NEXT:    lui a2, 13
+; RV64XANDESPERF-NEXT:    addi a2, a2, -819
+; RV64XANDESPERF-NEXT:    mul a1, a1, a2
+; RV64XANDESPERF-NEXT:    srli a1, a1, 23
+; RV64XANDESPERF-NEXT:    srliw a1, a1, 3
+; RV64XANDESPERF-NEXT:    nds.lea.d.ze a0, a0, a1
+; RV64XANDESPERF-NEXT:    ret
+  %udiv = udiv i16 %i, 1280
+  %idx.ext = zext nneg i16 %udiv to i64
+  %add.ptr = getelementptr i64, ptr %p, i64 %idx.ext
+  ret ptr %add.ptr
+}

@@ -208,6 +208,8 @@ struct MissingFeatures {
   static bool deferredDecls() { return false; }
   static bool setTargetAttributes() { return false; }
   static bool coverageMapping() { return false; }
+  static bool peepholeProtection() { return false; }
+  static bool instrumentation() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
@@ -232,8 +234,9 @@ struct MissingFeatures {
   static bool ptrDiffOp() { return false; }
   static bool ptrStrideOp() { return false; }
   static bool switchOp() { return false; }
-  static bool ternaryOp() { return false; }
+  static bool throwOp() { return false; }
   static bool tryOp() { return false; }
+  static bool vecTernaryOp() { return false; }
   static bool zextOp() { return false; }
 
   // Future CIR attributes
