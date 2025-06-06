@@ -81,10 +81,7 @@ struct RuntimeLibcallsInfo {
     return LibcallCallingConvs[Call];
   }
 
-  iterator_range<const char **> getLibcallNames() {
-    return llvm::make_range(LibcallRoutineNames,
-                            LibcallRoutineNames + RTLIB::UNKNOWN_LIBCALL);
-  }
+  ArrayRef<const char *> getLibcallNames() const { return LibcallRoutineNames; }
 
 private:
   /// Stores the name each libcall.
