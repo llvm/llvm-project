@@ -173,7 +173,7 @@ public:
                              const MachineOperand *AUTAddrDisc,
                              Register Scratch,
                              std::optional<AArch64PACKey::ID> PACKey,
-                             uint64_t PACDisc, unsigned PACAddrDisc);
+                             uint64_t PACDisc, Register PACAddrDisc);
 
   // Emit the sequence to compute the discriminator.
   //
@@ -1871,6 +1871,8 @@ Register AArch64AsmPrinter::emitPtrauthDiscriminator(uint16_t Disc,
                                                      Register AddrDisc,
                                                      Register ScratchReg,
                                                      bool MayUseAddrAsScratch) {
+  assert(ScratchReg == AArch64::X16 || ScratchReg == AArch64::X17 ||
+         !STI->isX16X17Safer());
   // So far we've used NoRegister in pseudos.  Now we need real encodings.
   if (AddrDisc == AArch64::NoRegister)
     AddrDisc = AArch64::XZR;
@@ -2073,7 +2075,7 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
     Register AUTVal, AArch64PACKey::ID AUTKey, uint64_t AUTDisc,
     const MachineOperand *AUTAddrDisc, Register Scratch,
     std::optional<AArch64PACKey::ID> PACKey, uint64_t PACDisc,
-    unsigned PACAddrDisc) {
+    Register PACAddrDisc) {
   const bool IsAUTPAC = PACKey.has_value();
 
   // We expand AUT/AUTPAC into a sequence of the form
