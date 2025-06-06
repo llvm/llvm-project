@@ -1,14 +1,16 @@
-## Test that long branches are not relaxed with -riscv-asm-relax-branches=0
+## Test that long branches are not relaxed with .option exact
 # RUN: split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c \
-# RUN:       -riscv-asm-relax-branches=0 %t/pass.s \
+# RUN:       %t/pass.s \
 # RUN:     | llvm-objdump -dr -M no-aliases - \
 # RUN:     | FileCheck %t/pass.s
 # RUN: not llvm-mc -filetype=obj -triple=riscv64 -mattr=+c -o /dev/null \
-# RUN:       -riscv-asm-relax-branches=0 %t/fail.s 2>&1 \
+# RUN:       %t/fail.s 2>&1 \
 # RUN:     | FileCheck %t/fail.s
 
 #--- pass.s
+  .option exact
+
   .text
 test_undefined:
 ## Branches to undefined symbols should not be relaxed
@@ -33,6 +35,8 @@ test_defined_in_range:
 bar:
 
 #--- fail.s
+  .option exact
+
   .text
 ## Branches to defined out-of-range symbols should report an error
 test_defined_out_of_range:
