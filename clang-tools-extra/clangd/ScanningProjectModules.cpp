@@ -66,7 +66,7 @@ public:
   ///
   /// TODO: We should handle the case that there are multiple source files
   /// declaring the same module.
-  PathRef getSourceForModuleName(llvm::StringRef ModuleName) const;
+  std::string getSourceForModuleName(llvm::StringRef ModuleName) const;
 
   /// Return the direct required modules. Indirect required modules are not
   /// included.
@@ -140,7 +140,7 @@ void ModuleDependencyScanner::globalScan(
   GlobalScanned = true;
 }
 
-PathRef ModuleDependencyScanner::getSourceForModuleName(
+std::string ModuleDependencyScanner::getSourceForModuleName(
     llvm::StringRef ModuleName) const {
   assert(
       GlobalScanned &&
@@ -189,7 +189,7 @@ public:
 
   /// RequiredSourceFile is not used intentionally. See the comments of
   /// ModuleDependencyScanner for detail.
-  PathRef
+  std::string
   getSourceForModuleName(llvm::StringRef ModuleName,
                          PathRef RequiredSourceFile = PathRef()) override {
     Scanner.globalScan(Mangler);

@@ -42,7 +42,7 @@ public:
       llvm::unique_function<void(tooling::CompileCommand &, PathRef) const>;
 
   virtual std::vector<std::string> getRequiredModules(PathRef File) = 0;
-  virtual PathRef
+  virtual std::string
   getSourceForModuleName(llvm::StringRef ModuleName,
                          PathRef RequiredSrcFile = PathRef()) = 0;
 
