@@ -239,7 +239,7 @@
 #endif
 
 #if __has_attribute(uninitialized)
-#define LLVM_ATTRIBUTE_UNINITIALIED __attribute__((uninitialized))
+#define LLVM_ATTRIBUTE_UNINITIALIZED __attribute__((uninitialized))
 #else
 #define LLVM_ATTRIBUTE_UNINITIALIZED
 #endif
