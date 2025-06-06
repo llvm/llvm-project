@@ -1535,7 +1535,6 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    Returns a pair for the swapped registers. The first element of the return corresponds
                                                    to the swapped element of the first argument.
 
-
   llvm.amdgcn.permlane32.swap                      Provide direct access to `v_permlane32_swap_b32` instruction on supported targets.
                                                    Swaps the values across lanes of first 2 operands. Rows 2 and 3 of the first operand are
                                                    swapped with rows 0 and 1 of the second operand (one row is 16 lanes).
@@ -1551,7 +1550,6 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    Opportunistically, loads from different workgroups can also combined when specifying the
                                                    workgroup select bits.
 
-=======
   llvm.amdgcn.mov.dpp                              The llvm.amdgcn.mov.dpp.`<type>` intrinsic represents the mov.dpp operation in AMDGPU.
                                                    This operation is being deprecated and can be replaced with llvm.amdgcn.update.dpp.
 
@@ -1598,6 +1596,95 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 .. TODO::
 
    List AMDGPU intrinsics.
+
+'``llvm.amdgcn.cooperative.atomic``' Intrinsics
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``llvm.amdgcn.cooperative.atomic`` :ref:`family of intrinsics<amdgpu-cooperative-atomic-intrinsics-table>`
+provide atomic load and store operations to a naturally-aligned contiguous memory regions.
+Memory is accessed cooperatively by a collection of convergent threads, with each thread accessing
+a fraction of the contiguous memory region.
+
+  .. TODO::
+
+     The memory model described here is imprecise; see SWDEV-536264.
+
+This intrinsic has a memory ordering and may be used to synchronize-with another cooperative atomic.
+If the memory ordering is relaxed, it may pair with a fence if that same fence is executed by
+all participating threads with the same synchronization scope and set of address spaces.
+
+In both cases, a synchronize-with relation can only be established between cooperative atomics with the
+same total access size.
+
+Each target may have additional restrictions on how the intrinsic may be used; see
+:ref:`the table below<amdgpu-llvm-ir-cooperative-atomic-intrinsics-availability>`.
+Targets not covered in the table do not support these intrinsics.
+
+  .. table:: AMDGPU Cooperative Atomic Intrinsics Availability
+    :name: amdgpu-llvm-ir-cooperative-atomic-intrinsics-availability
+
+    =============== =============================================================
+    GFX Version     Target Restrictions
+    =============== =============================================================
+    GFX 12.5        :ref:`amdgpu-amdhsa-memory-model-gfx125x-cooperative-atomics`
+    =============== =============================================================
+
+If the intrinsic is used without meeting all of the above conditions, or the target-specific conditions,
+then this intrinsic causes undefined behavior.
+
+  .. table:: AMDGPU Cooperative Atomic Intrinsics
+    :name: amdgpu-cooperative-atomic-intrinsics-table
+
+    ======================================================= =========== ============ ==========
+    LLVM Intrinsic                                          Number of   Access Size  Total Size
+                                                            Threads     Per Thread
+                                                            Used
+    ======================================================= =========== ============ ==========
+    ``llvm.amdgcn.cooperative.atomic.store.32x4B``          32          4B           128B
+
+    ``llvm.amdgcn.cooperative.atomic.load.32x4B``           32          4B           128B
+
+    ``llvm.amdgcn.cooperative.atomic.store.16x8B``          16          8B           128B
+
+    ``llvm.amdgcn.cooperative.atomic.load.16x8B``           16          8B           128B
+
+    ``llvm.amdgcn.cooperative.atomic.store.8x16B``          8           16B          128B
+
+    ``llvm.amdgcn.cooperative.atomic.load.8x16B``           8           16B          128B
+
+    ``llvm.amdgcn.cooperative.atomic.store.32x8B``          32          8B           256B
+
+    ``llvm.amdgcn.cooperative.atomic.load.32x8B``           32          8B           256B
+
+    ``llvm.amdgcn.cooperative.atomic.store.16x16B``         16          16B          256B
+
+    ``llvm.amdgcn.cooperative.atomic.load.16x16B``          16          16B          256B
+    ======================================================= =========== ============ ==========
+
+The intrinsics are available for the global (``.p1`` suffix) and generic (``.p0`` suffix) address spaces.
+
+The atomic ordering operand (3rd operand for ``.store``, 2nd for ``.load``) is an integer that follows the
+C ABI encoding of atomic memory orderings. The supported values are in
+:ref:`the table below<amdgpu-cooperative-atomic-intrinsics-atomic-memory-orderings-table>`.
+
+  .. table:: AMDGPU Cooperative Atomic Intrinsics Atomic Memory Orderings
+    :name: amdgpu-cooperative-atomic-intrinsics-atomic-memory-orderings-table
+
+    ====== ================ =================================
+    Value  Atomic Memory    Notes
+           Ordering
+    ====== ================ =================================
+    ``0``  ``relaxed``      The default for unsupported values.
+
+    ``2``  ``acquire``      Only for ``.load``
+
+    ``3``  ``release``      Only for ``.store``
+
+    ``5``  ``seq_cst``
+    ====== ================ =================================
+
+The last argument of the intrinsic is the synchronization scope
+as a metadata string, which must be one of the supported :ref:`memory scopes<amdgpu-memory-scopes>`.
 
 .. _amdgpu_metadata:
 
@@ -17040,6 +17127,8 @@ For GFX125x:
   This section is currently incomplete and has inaccuracies. It is WIP that will
   be updated as information is determined.
 
+
+
 The code sequences used to implement the memory model for GFX125x are defined in
 table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-table`.
 
@@ -17080,6 +17169,60 @@ the instruction in the code sequence that references the table.
      TBA
      ============ ============ ============== ========== ================================
 
+.. _amdgpu-amdhsa-memory-model-gfx125x-cooperative-atomics:
+
+'``llvm.amdgcn.cooperative.atomic``' Intrinsics
+"""""""""""""""""""""""""""""""""""""""""""""""""
+
+The collection of convergent threads participating in a cooperative atomic must belong
+to the same wave32.
+
+Only naturally-aligned, contiguous groups of lanes may be used;
+see :ref:`the table below<gfx125x-cooperative-atomic-intrinsics-table>` for the set of
+possible lane groups.
+128B cooperative atomics may be executed by more than one group per wave.
+256B cooperative atomics may be executed by only *one* group per wave.
+Using an unsupported lane group, or using more lane groups per wave than the maximum will
+cause undefined behavior.
+
+Using the intrinsic also causes undefined behavior if it loads or stores to addresses that:
+
+* Are not in the global address space (e.g.: private and local addresses spaces).
+* Are only reachable through a bus that does not support 128B/256B requests
+  (e.g.: host memory over PCIe)
+* Any other unsupported addresses (TBD, needs refinement)
+
+.. TODO::
+
+   Enumerate all cases where UB is invoked when using this intrinsic instead of hand-waving
+   "specific global memory locations".
+
+.. table:: GFX125x Cooperative Atomic Intrinsics
+  :name: gfx125x-cooperative-atomic-intrinsics-table
+
+  ======================================================= =======================================
+  LLVM Intrinsic                                          Lane Groups
+  ======================================================= =======================================
+  ``llvm.amdgcn.cooperative.atomic.store.32x4B``          ``0-31``
+
+  ``llvm.amdgcn.cooperative.atomic.load.32x4B``           ``0-31``
+
+  ``llvm.amdgcn.cooperative.atomic.store.16x8B``          ``0-15``, ``16-31``
+
+  ``llvm.amdgcn.cooperative.atomic.load.16x8B``           ``0-15``, ``16-31``
+
+  ``llvm.amdgcn.cooperative.atomic.store.8x16B``          ``0-7``, ``8-15``, ``16-23``, ``24-31``
+
+  ``llvm.amdgcn.cooperative.atomic.load.8x16B``           ``0-7``, ``8-15``, ``16-23``, ``24-31``
+
+  ``llvm.amdgcn.cooperative.atomic.store.32x8B``          ``0-31``
+
+  ``llvm.amdgcn.cooperative.atomic.load.32x8B``           ``0-31``
+
+  ``llvm.amdgcn.cooperative.atomic.store.16x16B``         ``0-15`` OR ``16-31``
+
+  ``llvm.amdgcn.cooperative.atomic.load.16x16B``          ``0-15`` OR ``16-31``
+  ======================================================= =======================================
 
 .. _amdgpu-amdhsa-trap-handler-abi:
 

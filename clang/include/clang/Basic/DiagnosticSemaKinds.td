@@ -12476,7 +12476,7 @@ def warn_zero_as_null_pointer_constant : Warning<
   InGroup<DiagGroup<"zero-as-null-pointer-constant">>, DefaultIgnore;
 
 def warn_not_eliding_copy_on_return : Warning<
-  "not eliding copy on return">, 
+  "not eliding copy on return">,
   InGroup<DiagGroup<"nrvo">>, DefaultIgnore;
 
 def err_nullability_cs_multilevel : Error<
@@ -13401,8 +13401,12 @@ def err_acc_device_type_multiple_archs
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
 def note_amdgcn_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
+
+def err_amdgcn_group_atomic_invalid_as : Error<"cooperative atomic requires a global or generic pointer">;
+
 def err_amdgcn_num_wavegroups_value : Error<"number of wavegroups must be 4">;
 def err_amdgcn_wave_size_value : Error<"wave size must be 32">;
 def err_amdgcn_block_dim_invalid_value : Error<"invalid block dimensions">;
 def note_amdgcn_block_dim_valid_value : Note<"number of threads must be %select{non-zero|at most 1024|a multiple of 128}0">;
+
 } // end of sema component.

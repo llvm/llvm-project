@@ -9823,6 +9823,7 @@ SIInstrInfo::getSerializableMachineMemOperandTargetFlags() const {
       {
           {MONoClobber, "amdgpu-noclobber"},
           {MOLastUse, "amdgpu-last-use"},
+          {MOCooperative, "amdgpu-cooperative"},
           {MOCFSB0, "amdgpu-cfs0"},
           {MOCFSB1, "amdgpu-cfs1"},
       };

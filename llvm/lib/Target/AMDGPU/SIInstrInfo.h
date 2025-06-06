@@ -47,12 +47,16 @@ static const MachineMemOperand::Flags MONoClobber =
 static const MachineMemOperand::Flags MOLastUse =
     MachineMemOperand::MOTargetFlag2;
 
-/// Use two MMO flags to enocde the 2-bit cache fill size field for GFX13+
-static const MachineMemOperand::Flags MOCFSB0 =
+/// Mark the MMO of cooperative load/store atomics.
+static const MachineMemOperand::Flags MOCooperative =
     MachineMemOperand::MOTargetFlag3;
 
-static const MachineMemOperand::Flags MOCFSB1 =
+/// Use two MMO flags to enocde the 2-bit cache fill size field for GFX13+
+static const MachineMemOperand::Flags MOCFSB0 =
     MachineMemOperand::MOTargetFlag4;
+
+static const MachineMemOperand::Flags MOCFSB1 =
+    MachineMemOperand::MOTargetFlag5;
 
 /// Utility to store machine instructions worklist.
 struct SIInstrWorklist {
