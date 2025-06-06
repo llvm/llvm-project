@@ -96,14 +96,14 @@ struct IfConversion : public OpRewritePattern<fir::IfOp> {
     mlir::detail::TypedValue<mlir::IntegerType> condition = ifOp.getCondition();
     ValueTypeRange<ResultRange> resultTypes = ifOp.getResultTypes();
     bool hasResult = !resultTypes.empty();
-    auto scfIfOp = rewriter.create<scf::IfOp>(loc, resultTypes, condition,
-                                              !ifOp.getElseRegion().empty());
+    mlir::scf::IfOp scfIfOp = rewriter.create<scf::IfOp>(
+        loc, resultTypes, condition, !ifOp.getElseRegion().empty());
     // then region
     assert(!ifOp.getThenRegion().empty() && "must have then region");
-    auto &firThenBlock = ifOp.getThenRegion().front();
-    auto &scfThenBlock = scfIfOp.getThenRegion().front();
-    auto &firThenOps = firThenBlock.getOperations();
-    mlir::Operation *firThenTerminator = firThenBlock.getTerminator();
+    Block &firThenBlock = ifOp.getThenRegion().front();
+    Block &scfThenBlock = scfIfOp.getThenRegion().front();
+    llvm::iplist<Operation> &firThenOps = firThenBlock.getOperations();
+    Operation *firThenTerminator = firThenBlock.getTerminator();
 
     rewriter.setInsertionPointToStart(&scfThenBlock);
     // not splice terminator
@@ -119,9 +119,9 @@ struct IfConversion : public OpRewritePattern<fir::IfOp> {
 
     // else region
     if (!ifOp.getElseRegion().empty()) {
-      auto &firElseBlock = ifOp.getElseRegion().front();
-      auto &scfElseBlock = scfIfOp.getElseRegion().front();
-      auto &firElseOps = firElseBlock.getOperations();
+      Block &firElseBlock = ifOp.getElseRegion().front();
+      Block &scfElseBlock = scfIfOp.getElseRegion().front();
+      llvm::iplist<Operation> &firElseOps = firElseBlock.getOperations();
       mlir::Operation *firElseTerminator = firElseBlock.getTerminator();
 
       rewriter.setInsertionPointToStart(&scfElseBlock);
