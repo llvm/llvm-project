@@ -16,7 +16,6 @@
 #include <__algorithm/ranges_adjacent_find.h>
 #include <__algorithm/ranges_equal.h>
 #include <__algorithm/ranges_inplace_merge.h>
-#include <__algorithm/ranges_partition_point.h>
 #include <__algorithm/ranges_sort.h>
 #include <__algorithm/ranges_unique.h>
 #include <__algorithm/remove_if.h>
