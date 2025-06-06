@@ -8680,6 +8680,7 @@ public:
   // FIXME: This is in Sema because it requires
   // overload resolution, can we move to ASTContext?
   bool IsCXXTriviallyRelocatableType(QualType T);
+  bool IsCXXTriviallyRelocatableType(const CXXRecordDecl &RD);
 
   //// Determines if a type is replaceable
   /// according to the C++26 rules.
