@@ -32,6 +32,7 @@
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -258,6 +259,7 @@ struct ValueEqualityComparisonCase {
 class SimplifyCFGOpt {
   const TargetTransformInfo &TTI;
   DomTreeUpdater *DTU;
+  UniformityInfo *UI;
   const DataLayout &DL;
   ArrayRef<WeakVH> LoopHeaders;
   const SimplifyCFGOptions &Options;
@@ -306,9 +308,10 @@ class SimplifyCFGOpt {
 
 public:
   SimplifyCFGOpt(const TargetTransformInfo &TTI, DomTreeUpdater *DTU,
-                 const DataLayout &DL, ArrayRef<WeakVH> LoopHeaders,
-                 const SimplifyCFGOptions &Opts)
-      : TTI(TTI), DTU(DTU), DL(DL), LoopHeaders(LoopHeaders), Options(Opts) {
+                 const DataLayout &DL, UniformityInfo *UI,
+                 ArrayRef<WeakVH> LoopHeaders, const SimplifyCFGOptions &Opts)
+      : TTI(TTI), DTU(DTU), UI(UI), DL(DL), LoopHeaders(LoopHeaders),
+        Options(Opts) {
     assert((!DTU || !DTU->hasPostDomTree()) &&
            "SimplifyCFG is not yet capable of maintaining validity of a "
            "PostDomTree, so don't ask for it.");
@@ -3490,6 +3493,17 @@ static bool blockIsSimpleEnoughToThreadThrough(BasicBlock *BB) {
   return true;
 }
 
+static bool blockIsFreeToThreadThrough(BasicBlock *BB, PHINode *PN) {
+  unsigned Size = 0;
+  for (Instruction &I : BB->instructionsWithoutDebug(false)) {
+    if (&I == PN)
+      continue;
+    if (++Size > 1)
+      return false;
+  }
+  return true;
+}
+
 static ConstantInt *getKnownValueOnEdge(Value *V, BasicBlock *From,
                                         BasicBlock *To) {
   // Don't look past the block defining the value, we might get the value from
@@ -3511,10 +3525,9 @@ static ConstantInt *getKnownValueOnEdge(Value *V, BasicBlock *From,
 /// If we have a conditional branch on something for which we know the constant
 /// value in predecessors (e.g. a phi node in the current block), thread edges
 /// from the predecessor to their ultimate destination.
-static std::optional<bool>
-foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
-                                            const DataLayout &DL,
-                                            AssumptionCache *AC) {
+static std::optional<bool> foldCondBranchOnValueKnownInPredecessorImpl(
+    BranchInst *BI, DomTreeUpdater *DTU, const DataLayout &DL,
+    const TargetTransformInfo &TTI, UniformityInfo *UI, AssumptionCache *AC) {
   SmallMapVector<ConstantInt *, SmallSetVector<BasicBlock *, 2>, 2> KnownValues;
   BasicBlock *BB = BI->getParent();
   Value *Cond = BI->getCondition();
@@ -3554,6 +3567,16 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
 
     if (RealDest == BB)
       continue; // Skip self loops.
+
+    // Check to see that we're not duplicating instructions into divergent
+    // branches. Doing so would essentially double the execution time, since
+    // the instructions will be executed by divergent threads serially.
+    if (TTI.hasBranchDivergence() && UI &&
+        !blockIsFreeToThreadThrough(BB, PN) &&
+        any_of(PredBBs, [&](BasicBlock *PredBB) {
+          return UI->hasDivergentTerminator(*PredBB);
+        }))
+      continue;
 
     // Skip if the predecessor's terminator is an indirect branch.
     if (any_of(PredBBs, [](BasicBlock *PredBB) {
@@ -3669,15 +3692,15 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
   return false;
 }
 
-static bool foldCondBranchOnValueKnownInPredecessor(BranchInst *BI,
-                                                    DomTreeUpdater *DTU,
-                                                    const DataLayout &DL,
-                                                    AssumptionCache *AC) {
+static bool foldCondBranchOnValueKnownInPredecessor(
+    BranchInst *BI, DomTreeUpdater *DTU, const DataLayout &DL,
+    const TargetTransformInfo &TTI, UniformityInfo *UI, AssumptionCache *AC) {
   std::optional<bool> Result;
   bool EverChanged = false;
   do {
     // Note that None means "we changed things, but recurse further."
-    Result = foldCondBranchOnValueKnownInPredecessorImpl(BI, DTU, DL, AC);
+    Result =
+        foldCondBranchOnValueKnownInPredecessorImpl(BI, DTU, DL, TTI, UI, AC);
     EverChanged |= Result == std::nullopt || *Result;
   } while (Result == std::nullopt);
   return EverChanged;
@@ -8081,7 +8104,7 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
   // If this is a branch on something for which we know the constant value in
   // predecessors (e.g. a phi node in the current block), thread control
   // through this block.
-  if (foldCondBranchOnValueKnownInPredecessor(BI, DTU, DL, Options.AC))
+  if (foldCondBranchOnValueKnownInPredecessor(BI, DTU, DL, TTI, UI, Options.AC))
     return requestResimplify();
 
   // Scan predecessor blocks for conditional branches.
@@ -8406,9 +8429,9 @@ bool SimplifyCFGOpt::run(BasicBlock *BB) {
 }
 
 bool llvm::simplifyCFG(BasicBlock *BB, const TargetTransformInfo &TTI,
-                       DomTreeUpdater *DTU, const SimplifyCFGOptions &Options,
+                       DomTreeUpdater *DTU, UniformityInfo *UI,
+                       const SimplifyCFGOptions &Options,
                        ArrayRef<WeakVH> LoopHeaders) {
-  return SimplifyCFGOpt(TTI, DTU, BB->getDataLayout(), LoopHeaders,
-                        Options)
+  return SimplifyCFGOpt(TTI, DTU, BB->getDataLayout(), UI, LoopHeaders, Options)
       .run(BB);
 }
