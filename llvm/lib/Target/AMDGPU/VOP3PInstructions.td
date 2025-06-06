@@ -2488,7 +2488,7 @@ multiclass VOP3P_Real_gfx11_gfx12_gfx13<bits<8> op> :
 
 defm V_DOT4_I32_IU8  : VOP3P_Real_gfx11_gfx12_gfx13<0x16>;
 defm V_DOT8_I32_IU4  : VOP3P_Real_gfx11_gfx12_gfx13<0x18>;
-defm V_DOT2_F32_BF16 : VOP3P_Real_gfx11_gfx12<0x1a>;
+defm V_DOT2_F32_BF16 : VOP3P_Realtriple_gfx11_gfx12<0x1a>;
 
 let AssemblerPredicate = isGFX11Plus in {
   def : AMDGPUMnemonicAlias<"v_dot4_i32_i8", "v_dot4_i32_iu8">;

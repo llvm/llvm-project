@@ -349,10 +349,7 @@ mlir::Value fir::factory::createUnallocatedBox(
   const bool isAssumedRank = baseBoxType.isAssumedRank();
   if (isAssumedRank)
     baseBoxType = baseBoxType.getBoxTypeWithNewShape(/*rank=*/0);
-  auto baseAddrType = baseBoxType.getEleTy();
-  if (!fir::isa_ref_type(baseAddrType))
-    baseAddrType =
-        builder.getRefType(baseAddrType, fir::isa_volatile_type(baseBoxType));
+  auto baseAddrType = baseBoxType.getBaseAddressType();
   auto type = fir::unwrapRefType(baseAddrType);
   auto eleTy = fir::unwrapSequenceType(type);
   if (auto recTy = mlir::dyn_cast<fir::RecordType>(eleTy))
@@ -980,5 +977,22 @@ mlir::Value fir::factory::genNullBoxStorage(fir::FirOpBuilder &builder,
   mlir::Value nullBox = fir::factory::createUnallocatedBox(
       builder, loc, boxTy, /*nonDeferredParams=*/{});
   builder.create<fir::StoreOp>(loc, nullBox, boxStorage);
+  return boxStorage;
+}
+
+mlir::Value fir::factory::getAndEstablishBoxStorage(
+    fir::FirOpBuilder &builder, mlir::Location loc, fir::BaseBoxType boxTy,
+    mlir::Value shape, llvm::ArrayRef<mlir::Value> typeParams,
+    mlir::Value polymorphicMold) {
+  mlir::Value boxStorage = builder.createTemporary(loc, boxTy);
+  mlir::Value nullAddr =
+      builder.createNullConstant(loc, boxTy.getBaseAddressType());
+  mlir::Value box =
+      builder.create<fir::EmboxOp>(loc, boxTy, nullAddr, shape,
+                                   /*emptySlice=*/mlir::Value{},
+                                   fir::factory::elideLengthsAlreadyInType(
+                                       boxTy.unwrapInnerType(), typeParams),
+                                   polymorphicMold);
+  builder.create<fir::StoreOp>(loc, box, boxStorage);
   return boxStorage;
 }
