@@ -828,6 +828,7 @@ Bug Fixes to C++ Support
 - Clang modules now allow a module and its user to differ on TrivialAutoVarInit*
 - Fixed an access checking bug when initializing non-aggregates in default arguments (#GH62444), (#GH83608)
 - Fixed a pack substitution bug in deducing class template partial specializations. (#GH53609)
+- Fixed an access checking bug when substituting into concepts (#GH115838)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
