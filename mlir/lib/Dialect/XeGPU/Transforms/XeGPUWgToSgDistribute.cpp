@@ -317,8 +317,7 @@ struct WgToSgPrefetchNdOp : public OpConversionPattern<xegpu::PrefetchNdOp> {
   }
 };
 
-// This pattern matches elementwise ops (unary/binary) in math/arith dialects
-// with 1D or 2D vector types
+// This pattern transforms elementwise ops (unary/binary) in math/arith dialect
 template <typename Op>
 struct WgToSgElementwiseOp : public OpConversionPattern<Op> {
   using OpConversionPattern<Op>::OpConversionPattern;
@@ -344,7 +343,6 @@ struct WgToSgElementwiseOp : public OpConversionPattern<Op> {
       }
     }
 
-    // Check for layout attribute with sgLayout
     auto layout = dyn_cast_or_null<xegpu::LayoutAttr>(op->getAttr("layout"));
     if (!layout || !layout.getSgLayout())
       return rewriter.notifyMatchFailure(
@@ -364,7 +362,6 @@ struct WgToSgElementwiseOp : public OpConversionPattern<Op> {
       }
     }
 
-    // Each operand is a list of values
     size_t numVariants = adaptor.getOperands().empty()
                              ? 0
                              : adaptor.getOperands().front().size();
@@ -586,7 +583,6 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
           }
         }
 
-        // check layout attribute
         auto layout = dyn_cast_or_null<xegpu::LayoutAttr>(
             op->getAttrOfType<xegpu::LayoutAttr>("layout"));
         return isLegal(layout);

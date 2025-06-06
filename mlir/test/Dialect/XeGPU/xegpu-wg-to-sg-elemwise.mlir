@@ -1,8 +1,8 @@
 // RUN: mlir-opt --xegpu-wg-to-sg-distribute -split-input-file %s | FileCheck %s
 
-gpu.module @test_elementwise_ops {
-   // CHECK-LABEL: test_elemwise_ops 
-   gpu.func @test_elemwise_ops(%a: memref<24x32xf32>, %b: memref<24x32xf32>, %c: memref<24x32xi32>, %d: memref<24x32xi32>) {
+gpu.module @elementwise_ops {
+   // CHECK-LABEL: elemwise_ops
+   gpu.func @elemwise_ops(%a: memref<24x32xf32>, %b: memref<24x32xf32>, %c: memref<24x32xi32>, %d: memref<24x32xi32>) {
         %tdesc_a = xegpu.create_nd_tdesc %a[0, 0] : memref<24x32xf32>
           -> !xegpu.tensor_desc<24x32xf32, #xegpu.layout<sg_layout = [2, 4], sg_data = [12, 8], lane_layout = [2, 8], lane_data = [1, 1]>>
         %tdesc_b = xegpu.create_nd_tdesc %b[0, 0] : memref<24x32xf32>
@@ -193,8 +193,8 @@ gpu.module @test_elementwise_ops {
     }
 
     // 1 to N decomposition of elementwise operations
-    // CHECK-LABEL: test_elemwise_ops_sg_rr_assignment
-    gpu.func @test_elemwise_ops_sg_rr_assignment(%a: memref<24x32xf32>, %b: memref<24x32xf32>, %c: memref<24x32xi32>, %d: memref<24x32xi32>) {
+    // CHECK-LABEL: elemwise_ops_rr_assignment
+    gpu.func @elemwise_ops_rr_assignment(%a: memref<24x32xf32>, %b: memref<24x32xf32>, %c: memref<24x32xi32>, %d: memref<24x32xi32>) {
         %tdesc_a = xegpu.create_nd_tdesc %a[0, 0] : memref<24x32xf32>
           -> !xegpu.tensor_desc<24x32xf32, #xegpu.layout<sg_layout = [4, 4], sg_data = [2, 2], lane_layout = [2, 2], lane_data = [1, 1]>>
         %tdesc_b = xegpu.create_nd_tdesc %b[0, 0] : memref<24x32xf32>
@@ -219,45 +219,85 @@ gpu.module @test_elementwise_ops {
 
         // Floating point ops
         // CHECK-COUNT-12: arith.addf {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: arith.addf
         // CHECK-COUNT-12: arith.subf {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: arith.subf
         // CHECK-COUNT-12: math.exp {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: math.exp
         // CHECK-COUNT-12: math.sqrt {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: math.sqrt
         // CHECK-COUNT-12: math.absf {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: math.absf
         // CHECK-COUNT-12: math.cos {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: math.cos
         // CHECK-COUNT-12: math.cosh {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: math.cosh
         // CHECK-COUNT-12: math.acos {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: math.acos
         // CHECK-COUNT-12: math.acosh {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: math.acosh
         // CHECK-COUNT-12: math.sin {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: math.sin
         // CHECK-COUNT-12: math.sinh {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: math.sinh
         // CHECK-COUNT-12: math.asin {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: math.asin
         // CHECK-COUNT-12: math.asinh {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: math.asinh
         // CHECK-COUNT-12: math.tan {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: math.tan
         // CHECK-COUNT-12: math.tanh {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: math.tanh
         // CHECK-COUNT-12: math.atan {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: math.atan
         // CHECK-COUNT-12: math.atan2 {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: math.atan2
         // CHECK-COUNT-12: math.atanh {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: math.atanh
         // CHECK-COUNT-12: math.erf {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: math.erf
         // CHECK-COUNT-12: math.log {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: math.log
         // CHECK-COUNT-12: math.log2 {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: math.log2
         // CHECK-COUNT-12: math.floor {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: math.floor
         // CHECK-COUNT-12: math.ceil {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: math.ceil
         // CHECK-COUNT-12: math.powf {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: math.powf
         // CHECK-COUNT-12: math.rsqrt {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: math.rsqrt
         // CHECK-COUNT-12: arith.negf {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: arith.negf
         // CHECK-COUNT-12: arith.mulf {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: arith.mulf
         // CHECK-COUNT-12: arith.divf {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: arith.divf
         // CHECK-COUNT-12: arith.maximumf {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: arith.maximumf
         // CHECK-COUNT-12: arith.minimumf {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: arith.minimumf
         // CHECK-COUNT-12: arith.addi {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xi32>
+        // CHECK-NOT: arith.addi
         // CHECK-COUNT-12: arith.subi {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xi32>
+        // CHECK-NOT: arith.subi
         // CHECK-COUNT-12: arith.muli {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xi32>
+        // CHECK-NOT: arith.muli
         // CHECK-COUNT-12: arith.shli {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xi32>
+        // CHECK-NOT: arith.shli
         // CHECK-COUNT-12: arith.shrsi {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xi32>
+        // CHECK-NOT: arith.shrsi
         // CHECK-COUNT-12: arith.shrui {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xi32>
+        // CHECK-NOT: arith.shrui
         // CHECK-COUNT-12: arith.divsi {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xi32>
+        // CHECK-NOT: arith.divsi
         // CHECK-COUNT-12: arith.divui {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xi32>
+        // CHECK-NOT: arith.divui
         // CHECK-COUNT-12: arith.remsi {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xi32>
+        // CHECK-NOT: arith.remsi
         // CHECK-COUNT-12: arith.remui {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xi32>
+        // CHECK-NOT: arith.remui
         %addf = arith.addf %load_a, %load_b
           {layout = #xegpu.layout<sg_layout = [4, 4], sg_data = [2, 2], lane_layout = [2, 2], lane_data = [1, 1]>}
           : vector<24x32xf32>
@@ -384,8 +424,8 @@ gpu.module @test_elementwise_ops {
         gpu.return
     }
 
-    // CHECK-LABEL: test_all_type_conversion_ops
-    gpu.func @test_all_type_conversion_ops(
+    // CHECK-LABEL: type_conversion_ops
+    gpu.func @type_conversion_ops(
         %a: memref<24x32xf32>, %b: memref<24x32xi32>, %c: memref<24x32xi32>, %d: memref<24x32xi32>) {
         %tdesc_a = xegpu.create_nd_tdesc %a[0, 0] : memref<24x32xf32>
           -> !xegpu.tensor_desc<24x32xf32, #xegpu.layout<sg_layout = [2, 4], sg_data = [12, 8], lane_layout = [2, 8], lane_data = [1, 1]>>
@@ -476,8 +516,8 @@ gpu.module @test_elementwise_ops {
     }
 
 
-    // CHECK-LABEL: gpu.func @test_all_type_conversion_ops_rr_assignment
-    gpu.func @test_all_type_conversion_ops_rr_assignment(
+    // CHECK-LABEL: gpu.func @type_conversion_ops_rr_assignment
+    gpu.func @type_conversion_ops_rr_assignment(
         %a: memref<24x32xf32>, %b: memref<24x32xi32>, %c: memref<24x32xi32>, %d: memref<24x32xi32>) {
         %tdesc_a = xegpu.create_nd_tdesc %a[0, 0] : memref<24x32xf32>
           -> !xegpu.tensor_desc<24x32xf32, #xegpu.layout<sg_layout = [4, 4], sg_data = [2, 2], lane_layout = [2, 2], lane_data = [1, 1]>>
@@ -502,17 +542,29 @@ gpu.module @test_elementwise_ops {
           -> vector<24x32xi32>
 
         // CHECK-COUNT-12: arith.truncf {{.*}} {layout_result_0 =  #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32> to vector<2x2xf16>
+        // CHECK-NOT: arith.truncf
         // CHECK-COUNT-12: arith.trunci {{.*}} {layout_result_0 =  #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xi32> to vector<2x2xi16>
+        // CHECK-NOT: arith.trunci
         // CHECK-COUNT-12: arith.extf {{.*}} {layout_result_0 =  #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf16> to vector<2x2xf32>
+        // CHECK-NOT: arith.extf
         // CHECK-COUNT-12: arith.extsi {{.*}} {layout_result_0 =  #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xi16> to vector<2x2xi32>
+        // CHECK-NOT: arith.extsi
         // CHECK-COUNT-12: arith.extui {{.*}} {layout_result_0 =  #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xi16> to vector<2x2xi32>
+        // CHECK-NOT: arith.extui
         // CHECK-COUNT-12: arith.sitofp {{.*}} {layout_result_0 =  #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xi32> to vector<2x2xf32>
+        // CHECK-NOT: arith.sitofp
         // CHECK-COUNT-12: arith.uitofp {{.*}} {layout_result_0 =  #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xi32> to vector<2x2xf32>
+        // CHECK-NOT: arith.uitofp
         // CHECK-COUNT-12: arith.fptosi {{.*}} {layout_result_0 =  #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32> to vector<2x2xi32>
+        // CHECK-NOT: arith.fptosi
         // CHECK-COUNT-12: arith.fptoui {{.*}} {layout_result_0 =  #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32> to vector<2x2xi32>
+        // CHECK-NOT: arith.fptoui
         // CHECK-COUNT-12: arith.index_castui {{.*}} {layout_result_0 =  #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xi32> to vector<2x2xindex>
+        // CHECK-NOT: arith.index_castui
         // CHECK-COUNT-12: arith.index_cast {{.*}} {layout_result_0 =  #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xindex> to vector<2x2xi32>
+        // CHECK-NOT: arith.index_cast
         // CHECK-COUNT-12: arith.bitcast {{.*}} {layout_result_0 =  #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xi32> to vector<2x2xf32>
+        // CHECK-NOT: arith.bitcast
         // TruncFOp: f32 -> f16
         %truncf = arith.truncf %load_a
           {layout = #xegpu.layout<sg_layout = [4, 4], sg_data = [2, 2], lane_layout = [2, 2], lane_data = [1, 1]>}
@@ -567,8 +619,8 @@ gpu.module @test_elementwise_ops {
         gpu.return
     }
 
-    // CHECK-LABEL: gpu.func @test_cmp_ops
-    gpu.func @test_cmp_ops(%a: memref<24x32xf32>, %b: memref<24x32xf32>, %c: memref<24x32xi32>, %d: memref<24x32xi32>) {
+    // CHECK-LABEL: gpu.func @comparison_ops
+    gpu.func @comparison_ops(%a: memref<24x32xf32>, %b: memref<24x32xf32>, %c: memref<24x32xi32>, %d: memref<24x32xi32>) {
         %tdesc_a = xegpu.create_nd_tdesc %a[0, 0] : memref<24x32xf32>
           -> !xegpu.tensor_desc<24x32xf32, #xegpu.layout<sg_layout = [2, 4], sg_data = [12, 8], lane_layout = [2, 8], lane_data = [1, 1]>>
         %tdesc_b = xegpu.create_nd_tdesc %b[0, 0] : memref<24x32xf32>
@@ -693,8 +745,8 @@ gpu.module @test_elementwise_ops {
         gpu.return
     }
 
-    // CHECK-LABEL: gpu.func @test_cmp_ops_rr_assignment
-    gpu.func @test_cmp_ops_rr_assignment(%a: memref<24x32xf32>, %b: memref<24x32xf32>, %c: memref<24x32xi32>, %d: memref<24x32xi32>) {
+    // CHECK-LABEL: gpu.func @comparison_ops_rr_assignment
+    gpu.func @comparison_ops_rr_assignment(%a: memref<24x32xf32>, %b: memref<24x32xf32>, %c: memref<24x32xi32>, %d: memref<24x32xi32>) {
         %tdesc_a = xegpu.create_nd_tdesc %a[0, 0] : memref<24x32xf32>
           -> !xegpu.tensor_desc<24x32xf32, #xegpu.layout<sg_layout = [4, 4], sg_data = [2, 2], lane_layout = [2, 2], lane_data = [1, 1]>>
         %tdesc_b = xegpu.create_nd_tdesc %b[0, 0] : memref<24x32xf32>
@@ -718,30 +770,54 @@ gpu.module @test_elementwise_ops {
           -> vector<24x32xi32>
 
         // CHECK-COUNT-12: arith.cmpi eq, {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xi32>
+        // CHECK-NOT: arith.cmpi eq
         // CHECK-COUNT-12: arith.cmpi ne, {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xi32>
+        // CHECK-NOT: arith.cmpi ne
         // CHECK-COUNT-12: arith.cmpi slt, {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xi32>
+        // CHECK-NOT: arith.cmpi slt
         // CHECK-COUNT-12: arith.cmpi sle, {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xi32>
+        // CHECK-NOT: arith.cmpi sle
         // CHECK-COUNT-12: arith.cmpi sgt, {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xi32>
+        // CHECK-NOT: arith.cmpi sgt
         // CHECK-COUNT-12: arith.cmpi sge, {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xi32>
+        // CHECK-NOT: arith.cmpi sge
         // CHECK-COUNT-12: arith.cmpi ult, {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xi32>
+        // CHECK-NOT: arith.cmpi ult
         // CHECK-COUNT-12: arith.cmpi ule, {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xi32>
+        // CHECK-NOT: arith.cmpi ule
         // CHECK-COUNT-12: arith.cmpi ugt, {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xi32>
+        // CHECK-NOT: arith.cmpi ugt
         // CHECK-COUNT-12: arith.cmpi uge, {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xi32>
+        // CHECK-NOT: arith.cmpi uge
         // Floating point comparisons
         // CHECK-COUNT-12: arith.cmpf oeq, {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: arith.cmpf oeq
         // CHECK-COUNT-12: arith.cmpf ogt, {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: arith.cmpf ogt
         // CHECK-COUNT-12: arith.cmpf oge, {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: arith.cmpf oge
         // CHECK-COUNT-12: arith.cmpf olt, {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: arith.cmpf olt
         // CHECK-COUNT-12: arith.cmpf ole, {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: arith.cmpf ole
         // CHECK-COUNT-12: arith.cmpf one, {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: arith.cmpf one
         // CHECK-COUNT-12: arith.cmpf ord, {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: arith.cmpf ord
         // CHECK-COUNT-12: arith.cmpf ueq, {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: arith.cmpf ueq
         // CHECK-COUNT-12: arith.cmpf ugt, {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: arith.cmpf ugt
         // CHECK-COUNT-12: arith.cmpf uge, {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: arith.cmpf uge
         // CHECK-COUNT-12: arith.cmpf ult, {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: arith.cmpf ult
         // CHECK-COUNT-12: arith.cmpf ule, {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: arith.cmpf ule
         // CHECK-COUNT-12: arith.cmpf une, {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: arith.cmpf une
         // CHECK-COUNT-12: arith.cmpf uno, {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+        // CHECK-NOT: arith.cmpf uno
 
         // Integer comparisons
         %cmpi_eq = arith.cmpi eq, %load_c, %load_d
@@ -822,7 +898,8 @@ gpu.module @test_elementwise_ops {
         gpu.return
     }
 
-   gpu.func @test_extra_elemwise_ops(
+   // CHECK-LABEL: gpu.func @elementwise_ops
+   gpu.func @elementwise_ops(
         %a: memref<24x32xf32>, %b: memref<24x32xf32>, %c: memref<24x32xi32>, %d: memref<24x32xi32>, %e: memref<24x32xi1>) {
         %tdesc_a = xegpu.create_nd_tdesc %a[0, 0] : memref<24x32xf32>
           -> !xegpu.tensor_desc<24x32xf32, #xegpu.layout<sg_layout = [2, 4], sg_data = [12, 8], lane_layout = [2, 8], lane_data = [1, 1]>>
