@@ -4515,6 +4515,13 @@ def OMPCaptureKind : Attr {
   }];
 }
 
+def OMPIterator : Attr {
+  // This attribute has no spellings as it is only ever created implicitly.
+  let Spellings = [];
+  let SemaHandler = 0;
+  let Documentation = [InternalOnly];
+}
+
 def OMPReferencedVar : Attr {
   // This attribute has no spellings as it is only ever created implicitly.
   let Spellings = [];
