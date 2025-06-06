@@ -175,8 +175,7 @@ void DebugCounter::push_back(const std::string &Val) {
 #ifdef NDEBUG
   // isCountingEnabled is hardcoded to false in NDEBUG.
   errs() << "Requested --debug-counter in LLVM build without assertions. This "
-            "is a "
-            "no-op.\n";
+            "is a no-op.\n";
 #endif
 
   // The strings should come in as counter=chunk_list
