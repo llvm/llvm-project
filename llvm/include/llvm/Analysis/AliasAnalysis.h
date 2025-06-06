@@ -149,8 +149,9 @@ LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, AliasResult AR);
 struct LLVM_ABI CaptureAnalysis {
   virtual ~CaptureAnalysis() = 0;
 
-  /// Check whether Object is not captured before instruction I. If OrAt is
-  /// true, captures by instruction I itself are also considered.
+  /// Return how Object may be captured before instruction I, considering only
+  /// provenance captures. If OrAt is true, captures by instruction I itself
+  /// are also considered.
   ///
   /// If I is nullptr, then captures at any point will be considered.
   virtual CaptureComponents
@@ -176,9 +177,10 @@ class LLVM_ABI EarliestEscapeAnalysis final : public CaptureAnalysis {
   const LoopInfo *LI;
 
   /// Map from identified local object to an instruction before which it does
-  /// not escape, or nullptr if it never escapes. The "earliest" instruction
-  /// may be a conservative approximation, e.g. the first instruction in the
-  /// function is always a legal choice.
+  /// not escape (or nullptr if it never escapes) and the possible components
+  /// that may be captured (by any instruction, not necessarily the earliest
+  /// one). The "earliest" instruction may be a conservative approximation,
+  /// e.g. the first instruction in the function is always a legal choice.
   DenseMap<const Value *, std::pair<Instruction *, CaptureComponents>>
       EarliestEscapes;
 
