@@ -33,6 +33,12 @@ LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
                                  const RootConstants &Constants);
 
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const RootDescriptor &Descriptor);
+
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const StaticSampler &StaticSampler);
+
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
                                  const DescriptorTableClause &Clause);
 
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const DescriptorTable &Table);
