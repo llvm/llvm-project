@@ -15,6 +15,7 @@ class TestSwiftForwardInteropExpressions(TestBase):
              self, bkpt_str, lldb.SBFileSpec('main.swift'))
          return thread
 
+    @skipIf(bugnumber='rdar://152745034')
     @skipIfLinux # rdar://106871422"
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false')) # rdar://106871275
     @swiftTest
