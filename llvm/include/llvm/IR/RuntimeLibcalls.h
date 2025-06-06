@@ -116,7 +116,7 @@ private:
   // opcode.
   CmpInst::Predicate SoftFloatCompareLibcallPredicates[RTLIB::UNKNOWN_LIBCALL];
 
-  static bool darwinHasSinCos(const Triple &TT) {
+  static bool darwinHasSinCosStret(const Triple &TT) {
     assert(TT.isOSDarwin() && "should be called with darwin triple");
     // Don't bother with 32 bit x86.
     if (TT.getArch() == Triple::x86)
@@ -129,6 +129,12 @@ private:
       return !TT.isOSVersionLT(7, 0);
     // Any other darwin such as WatchOS/TvOS is new enough.
     return true;
+  }
+
+  /// Return true if the target has sincosf/sincos/sincosl functions
+  static bool hasSinCos(const Triple &TT) {
+    return TT.isGNUEnvironment() || TT.isOSFuchsia() ||
+           (TT.isAndroid() && !TT.isAndroidVersionLT(9));
   }
 
   void initSoftFloatCmpLibcallPredicates();
