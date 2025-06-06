@@ -11,16 +11,15 @@
 #define _LIBCPP___FLAT_MAP_FLAT_MAP_H
 
 #include <__algorithm/lexicographical_compare_three_way.h>
+#include <__algorithm/lower_bound.h>
 #include <__algorithm/min.h>
 #include <__algorithm/ranges_adjacent_find.h>
 #include <__algorithm/ranges_equal.h>
 #include <__algorithm/ranges_inplace_merge.h>
-#include <__algorithm/ranges_lower_bound.h>
-#include <__algorithm/ranges_partition_point.h>
 #include <__algorithm/ranges_sort.h>
 #include <__algorithm/ranges_unique.h>
-#include <__algorithm/ranges_upper_bound.h>
 #include <__algorithm/remove_if.h>
+#include <__algorithm/upper_bound.h>
 #include <__assert>
 #include <__compare/synth_three_way.h>
 #include <__concepts/swappable.h>
@@ -863,6 +862,13 @@ private:
     __containers_.values.erase(__containers_.values.begin() + __dist, __containers_.values.end());
   }
 
+  template <class _Self, class _KeyIter>
+  _LIBCPP_HIDE_FROM_ABI static auto __corresponding_mapped_it(_Self&& __self, _KeyIter&& __key_iter) {
+    return __self.__containers_.values.begin() +
+           static_cast<ranges::range_difference_t<mapped_container_type>>(
+               ranges::distance(__self.__containers_.keys.begin(), __key_iter));
+  }
+
   template <bool _WasSorted, class _InputIterator, class _Sentinel>
   _LIBCPP_HIDE_FROM_ABI void __append_sort_merge_unique(_InputIterator __first, _Sentinel __last) {
     auto __on_failure        = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
@@ -903,7 +909,8 @@ private:
 
   template <class _Self, class _Kp>
   _LIBCPP_HIDE_FROM_ABI static auto __key_equal_range(_Self&& __self, const _Kp& __key) {
-    auto __it   = ranges::lower_bound(__self.__containers_.keys, __key, __self.__compare_);
+    auto __it =
+        std::lower_bound(__self.__containers_.keys.begin(), __self.__containers_.keys.end(), __key, __self.__compare_);
     auto __last = __self.__containers_.keys.end();
     if (__it == __last || __self.__compare_(__key, *__it)) {
       return std::make_pair(__it, __it);
@@ -914,42 +921,30 @@ private:
   template <class _Self, class _Kp>
   _LIBCPP_HIDE_FROM_ABI static auto __equal_range_impl(_Self&& __self, const _Kp& __key) {
     auto [__key_first, __key_last] = __key_equal_range(__self, __key);
-
-    const auto __make_mapped_iter = [&](const auto& __key_iter) {
-      return __self.__containers_.values.begin() +
-             static_cast<ranges::range_difference_t<mapped_container_type>>(
-                 ranges::distance(__self.__containers_.keys.begin(), __key_iter));
-    };
-
-    using __iterator_type = ranges::iterator_t<decltype(__self)>;
-    return std::make_pair(__iterator_type(__key_first, __make_mapped_iter(__key_first)),
-                          __iterator_type(__key_last, __make_mapped_iter(__key_last)));
+    using __iterator_type          = ranges::iterator_t<decltype(__self)>;
+    return std::make_pair(__iterator_type(__key_first, __corresponding_mapped_it(__self, __key_first)),
+                          __iterator_type(__key_last, __corresponding_mapped_it(__self, __key_last)));
   }
 
   template <class _Res, class _Self, class _Kp>
   _LIBCPP_HIDE_FROM_ABI static _Res __lower_bound(_Self&& __self, _Kp& __x) {
-    return __binary_search<_Res>(__self, ranges::lower_bound, __x);
+    auto __key_iter =
+        std::lower_bound(__self.__containers_.keys.begin(), __self.__containers_.keys.end(), __x, __self.__compare_);
+    auto __mapped_iter = __corresponding_mapped_it(__self, __key_iter);
+    return _Res(std::move(__key_iter), std::move(__mapped_iter));
   }
 
   template <class _Res, class _Self, class _Kp>
   _LIBCPP_HIDE_FROM_ABI static _Res __upper_bound(_Self&& __self, _Kp& __x) {
-    return __binary_search<_Res>(__self, ranges::upper_bound, __x);
-  }
-
-  template <class _Res, class _Self, class _Fn, class _Kp>
-  _LIBCPP_HIDE_FROM_ABI static _Res __binary_search(_Self&& __self, _Fn __search_fn, _Kp& __x) {
-    auto __key_iter = __search_fn(__self.__containers_.keys, __x, __self.__compare_);
-    auto __mapped_iter =
-        __self.__containers_.values.begin() +
-        static_cast<ranges::range_difference_t<mapped_container_type>>(
-            ranges::distance(__self.__containers_.keys.begin(), __key_iter));
-
+    auto __key_iter =
+        std::upper_bound(__self.__containers_.keys.begin(), __self.__containers_.keys.end(), __x, __self.__compare_);
+    auto __mapped_iter = __corresponding_mapped_it(__self, __key_iter);
     return _Res(std::move(__key_iter), std::move(__mapped_iter));
   }
 
   template <class _KeyArg, class... _MArgs>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __try_emplace(_KeyArg&& __key, _MArgs&&... __mapped_args) {
-    auto __key_it    = ranges::lower_bound(__containers_.keys, __key, __compare_);
+    auto __key_it    = std::lower_bound(__containers_.keys.begin(), __containers_.keys.end(), __key, __compare_);
     auto __mapped_it = __containers_.values.begin() + ranges::distance(__containers_.keys.begin(), __key_it);
 
     if (__key_it == __containers_.keys.end() || __compare_(__key, *__key_it)) {

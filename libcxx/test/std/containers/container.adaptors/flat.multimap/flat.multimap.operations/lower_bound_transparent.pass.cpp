@@ -18,6 +18,7 @@
 #include <cassert>
 #include <deque>
 #include <flat_map>
+#include <functional>
 #include <string>
 #include <utility>
 
@@ -101,6 +102,13 @@ int main(int, char**) {
     auto it = m.lower_bound(Transparent<int>{3});
     assert(it != m.end());
     assert(transparent_used);
+  }
+  {
+    // LWG4239 std::string and C string literal
+    using M = std::flat_multimap<std::string, int, std::less<>>;
+    M m{{"alpha", 1}, {"beta", 2}, {"beta", 1}, {"eta", 3}, {"gamma", 3}};
+    auto it = m.lower_bound("charlie");
+    assert(it == m.begin() + 3);
   }
 
   return 0;

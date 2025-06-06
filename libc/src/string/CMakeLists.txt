@@ -15,10 +15,8 @@ add_header_library(
   HDRS
     string_utils.h
   DEPENDS
-    .memory_utils.inline_bzero
-    .memory_utils.inline_memcpy
     libc.hdr.types.size_t
-    libc.include.stdlib
+    libc.hdr.limits_macros
     libc.src.__support.CPP.bitset
     libc.src.__support.CPP.type_traits
     libc.src.__support.common
