@@ -8,7 +8,6 @@
 //.
 // OPTNONE: @__hip_cuid_ = addrspace(1) global i8 0
 // OPTNONE: @llvm.compiler.used = appending addrspace(1) global [1 x ptr] [ptr addrspacecast (ptr addrspace(1) @__hip_cuid_ to ptr)], section "llvm.metadata"
-// OPTNONE: @__oclc_ABI_version = weak_odr hidden local_unnamed_addr addrspace(4) constant i32 500
 //.
 __device__ void extern_func();
 
@@ -39,7 +38,7 @@ __global__ void kernel() {
 // OPTNONE: attributes #[[ATTR2]] = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,1024" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
 // OPTNONE: attributes #[[ATTR3]] = { convergent nounwind }
 //.
-// OPTNONE: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 500}
+// OPTNONE: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
 // OPTNONE: [[META1:![0-9]+]] = !{i32 1, !"amdgpu_printf_kind", !"hostcall"}
 // OPTNONE: [[META2:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 //.

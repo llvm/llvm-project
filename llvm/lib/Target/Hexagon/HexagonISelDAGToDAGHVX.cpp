@@ -195,9 +195,9 @@ bool Coloring::color() {
     Q.insert(N);
     for (unsigned I = 0; I != Q.size(); ++I) {
       NodeSet &Ns = Edges[Q[I]];
-      Q.insert(Ns.begin(), Ns.end());
+      Q.insert_range(Ns);
     }
-    FirstQ.insert(Q.begin(), Q.end());
+    FirstQ.insert_range(Q);
   };
   for (Node N : Needed)
     Enqueue(N);
@@ -1062,8 +1062,7 @@ static SmallVector<unsigned, 4> getInputSegmentList(ShuffleMask SM,
       Segs.set(M >> Shift);
   }
 
-  for (unsigned B : Segs.set_bits())
-    SegList.push_back(B);
+  llvm::append_range(SegList, Segs.set_bits());
   return SegList;
 }
 
@@ -1270,11 +1269,11 @@ OpRef HvxSelector::packs(ShuffleMask SM, OpRef Va, OpRef Vb,
     return OpRef::fail();
 
   if (Vb.isUndef()) {
-    std::copy(SM.Mask.begin(), SM.Mask.end(), NewMask.begin());
+    llvm::copy(SM.Mask, NewMask.begin());
     return Va;
   }
   if (Va.isUndef()) {
-    std::copy(SM.Mask.begin(), SM.Mask.end(), NewMask.begin());
+    llvm::copy(SM.Mask, NewMask.begin());
     ShuffleVectorSDNode::commuteMask(NewMask);
     return Vb;
   }
@@ -1984,7 +1983,7 @@ SmallVector<uint32_t, 8> HvxSelector::getPerfectCompletions(ShuffleMask SM,
   // same as in P. This implies that P == Q.
 
   // There can be a situation where there are more entries with the same
-  // bits set than there are set bits (e.g. value 9 occuring more than 2
+  // bits set than there are set bits (e.g. value 9 occurring more than 2
   // times). In such cases it will be impossible to complete this to a
   // perfect shuffle.
   SmallVector<uint32_t, 8> Sorted(Worklist);
@@ -1995,7 +1994,7 @@ SmallVector<uint32_t, 8> HvxSelector::getPerfectCompletions(ShuffleMask SM,
     while (++I != E && P == Sorted[I])
       ++Count;
     if ((unsigned)llvm::popcount(P) < Count) {
-      // Reset all occurences of P, if there are more occurrences of P
+      // Reset all occurrences of P, if there are more occurrences of P
       // than there are bits in P.
       llvm::replace(Worklist, P, 0U);
     }
@@ -2223,7 +2222,7 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   // V6_vdeal{b,h}
   // V6_vshuff{b,h}
 
-  // V6_vshufoe{b,h}  those are quivalent to vshuffvdd(..,{1,2})
+  // V6_vshufoe{b,h}  those are equivalent to vshuffvdd(..,{1,2})
   // V6_vshuffvdd (V6_vshuff)
   // V6_dealvdd (V6_vdeal)
 

@@ -33,7 +33,6 @@ class GenericUnorderedDataFormatterTestCase(TestBase):
             self.runCmd("type summary clear", check=False)
             self.runCmd("type filter clear", check=False)
             self.runCmd("type synth clear", check=False)
-            self.runCmd("settings set target.max-children-count 256", check=False)
             self.runCmd("settings set auto-one-line-summaries true", check=False)
 
         # Execute the cleanup function during test case tear down.
@@ -83,9 +82,9 @@ class GenericUnorderedDataFormatterTestCase(TestBase):
             [
                 "IntsUnorderedSet",
                 "size=5 {",
-                "\[\d\] = 5",
-                "\[\d\] = 3",
-                "\[\d\] = 2",
+                r"\[\d\] = 5",
+                r"\[\d\] = 3",
+                r"\[\d\] = 2",
             ],
         )
 
@@ -94,9 +93,9 @@ class GenericUnorderedDataFormatterTestCase(TestBase):
             [
                 "StringsUnorderedSet",
                 "size=5 {",
-                '\[\d\] = "is"',
-                '\[\d\] = "world"',
-                '\[\d\] = "hello"',
+                r'\[\d\] = "is"',
+                r'\[\d\] = "world"',
+                r'\[\d\] = "hello"',
             ],
         )
 
@@ -105,9 +104,9 @@ class GenericUnorderedDataFormatterTestCase(TestBase):
             [
                 "IntsUnorderedMultiSet",
                 "size=6 {",
-                "(\[\d\] = 3(\\n|.)+){3}",
-                "\[\d\] = 2",
-                "\[\d\] = 1",
+                "(\\[\\d\\] = 3(\\n|.)+){3}",
+                r"\[\d\] = 2",
+                r"\[\d\] = 1",
             ],
         )
 
@@ -116,14 +115,14 @@ class GenericUnorderedDataFormatterTestCase(TestBase):
             [
                 "StringsUnorderedMultiSet",
                 "size=5 {",
-                '(\[\d\] = "is"(\\n|.)+){2}',
-                '(\[\d\] = "world"(\\n|.)+){2}',
+                '(\\[\\d\\] = "is"(\\n|.)+){2}',
+                '(\\[\\d\\] = "world"(\\n|.)+){2}',
             ],
         )
 
     def look_for_content_and_continue(self, var_name, patterns):
-        self.expect(("frame variable %s" % var_name), patterns=patterns)
-        self.expect(("frame variable %s" % var_name), patterns=patterns)
+        self.expect(("frame variable %s" % var_name), ordered=False, patterns=patterns)
+        self.expect(("frame variable %s" % var_name), ordered=False, patterns=patterns)
         self.runCmd("continue")
 
     @add_test_categories(["libstdcxx"])

@@ -182,7 +182,6 @@ LLVMObjectFileRef LLVMCreateObjectFile(LLVMMemoryBufferRef MemBuf) {
   std::unique_ptr<MemoryBuffer> Buf(unwrap(MemBuf));
   Expected<std::unique_ptr<ObjectFile>> ObjOrErr(
       ObjectFile::createObjectFile(Buf->getMemBufferRef()));
-  std::unique_ptr<ObjectFile> Obj;
   if (!ObjOrErr) {
     // TODO: Actually report errors helpfully.
     consumeError(ObjOrErr.takeError());

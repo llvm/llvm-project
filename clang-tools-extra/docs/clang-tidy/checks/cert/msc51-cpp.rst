@@ -37,4 +37,4 @@ Options
 .. option:: DisallowedSeedTypes
 
    A comma-separated list of the type names which are disallowed.
-   Default values are ``time_t``, ``std::time_t``.
+   Default value is `time_t,std::time_t`.

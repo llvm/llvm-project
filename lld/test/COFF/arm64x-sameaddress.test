@@ -1,0 +1,56 @@
+REQUIRES: aarch64
+RUN: split-file %s %t.dir && cd %t.dir
+
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows func-arm64ec.s -o func-arm64ec.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows func-arm64.s -o func-arm64.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows drectve.s -o drectve.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows drectve.s -o drectve-arm64.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64ec.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows %S/Inputs/loadconfig-arm64.s -o loadconfig-arm64.obj
+
+RUN: lld-link -machine:arm64x -dll -noentry -out:out.dll loadconfig-arm64.obj loadconfig-arm64ec.obj \
+RUN:          func-arm64.obj func-arm64ec.obj drectve.obj
+
+RUN: lld-link -machine:arm64x -dll -noentry -out:out-cmd.dll loadconfig-arm64.obj loadconfig-arm64ec.obj \
+RUN:          func-arm64.obj func-arm64ec.obj -arm64xsameaddress:func
+
+RUN: lld-link -machine:arm64ec -dll -noentry -out:out-ec.dll loadconfig-arm64ec.obj func-arm64ec.obj drectve.obj
+
+RUN: lld-link -machine:arm64x -dll -noentry -out:out-warn.dll loadconfig-arm64.obj loadconfig-arm64ec.obj \
+RUN:          func-arm64.obj func-arm64ec.obj drectve-arm64.obj 2>&1 | FileCheck --check-prefix=WARN %s
+WARN: lld-link: warning: -arm64xsameaddress: is not allowed in non-ARM64EC files (drectve-arm64.obj)
+
+#--- func-arm64.s
+        .section .text,"xr",discard,func
+        .globl func
+func:
+        mov x0, #1
+        ret
+
+#--- func-arm64ec.s
+        .section .text,"xr",discard,"#func"
+        .globl "#func"
+"#func":
+        mov x0, #2
+        ret
+
+        .weak_anti_dep func
+        .set func,"#func"
+
+        .section .wowthk,"xr",discard,entry_thunk
+        .globl entry_thunk
+entry_thunk:
+        mov x0, #3
+        ret
+
+        .section .test,"dr"
+        .rva func
+
+	.section .hybmp$x,"yi"
+	.symidx "#func"
+	.symidx entry_thunk
+	.word 1
+
+#--- drectve.s
+        .section .drectve, "yn"
+        .ascii " -arm64xsameaddress:func"

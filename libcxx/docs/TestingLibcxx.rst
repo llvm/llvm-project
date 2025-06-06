@@ -116,6 +116,7 @@ Additional tools
 The libc++ test suite uses a few optional tools to improve the code quality.
 
 These tools are:
+
 - clang-tidy (you might need additional dev packages to compile libc++-specific clang-tidy checks)
 
 Reproducing CI issues locally
@@ -291,7 +292,7 @@ tests using exceptions. The code to write a test manually would be:
 
 .. code-block:: cpp
 
-  void test_excption([[maybe_unused]] int arg) {
+  void test_exception([[maybe_unused]] int arg) {
   #ifndef TEST_HAS_NO_EXCEPTIONS // do nothing when tests are disabled
     try {
       foo(arg);
@@ -308,7 +309,7 @@ The same test using a macro:
 
 .. code-block:: cpp
 
-  void test_excption([[maybe_unused]] int arg) {
+  void test_exception([[maybe_unused]] int arg) {
     TEST_VALIDATE_EXCEPTION(bar,
                             [](const bar& e) {
                               LIBCPP_ASSERT(e.what() == what);
@@ -470,12 +471,9 @@ removed from the Standard. These tests should be written like:
 Benchmarks
 ==========
 
-Libc++ contains benchmark tests separately from the test of the test suite.
-The benchmarks are written using the `Google Benchmark`_ library, a copy of which
-is stored in the libc++ repository.
-
-For more information about using the Google Benchmark library, see the
-`official documentation <https://github.com/google/benchmark>`_.
+Libc++'s test suite also contains benchmarks. The benchmarks are written using the `Google Benchmark`_
+library, a copy of which is stored in the LLVM monorepo. For more information about using the Google
+Benchmark library, see the `official documentation <https://github.com/google/benchmark>`_.
 
 The benchmarks are located under ``libcxx/test/benchmarks``. Running a benchmark
 works in the same way as running a test. Both the benchmarks and the tests share

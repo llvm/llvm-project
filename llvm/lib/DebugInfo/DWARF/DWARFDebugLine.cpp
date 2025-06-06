@@ -340,8 +340,8 @@ parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
           return createStringError(
               errc::invalid_argument,
               "failed to parse file entry because the MD5 hash is invalid");
-        std::uninitialized_copy_n(Value.getAsBlock()->begin(), 16,
-                                  FileEntry.Checksum.begin());
+        llvm::uninitialized_copy(*Value.getAsBlock(),
+                                 FileEntry.Checksum.begin());
         break;
       default:
         break;
@@ -1274,13 +1274,14 @@ Error DWARFDebugLine::LineTable::parse(
 
   // Sort all sequences so that address lookup will work faster.
   if (!Sequences.empty()) {
-    llvm::sort(Sequences, Sequence::orderByHighPC);
+    llvm::stable_sort(Sequences, Sequence::orderByHighPC);
     // Note: actually, instruction address ranges of sequences should not
     // overlap (in shared objects and executables). If they do, the address
     // lookup would still work, though, but result would be ambiguous.
     // We don't report warning in this case. For example,
     // sometimes .so compiled from multiple object files contains a few
     // rudimentary sequences for address ranges [0x0, 0xsomething).
+    // Address ranges may also overlap when using ICF.
   }
 
   // Terminate the table with a final blank line to clearly delineate it from
@@ -1538,8 +1539,7 @@ bool DWARFDebugLine::LineTable::getFileLineInfoForAddress(
     return false;
   // Take file number and line/column from the row.
   const auto &Row = Rows[RowIndex];
-  if (Row.Line == 0 ||
-      !getFileNameByIndex(Row.File, CompDir, Kind, Result.FileName))
+  if (!getFileNameByIndex(Row.File, CompDir, Kind, Result.FileName))
     return false;
   Result.Line = Row.Line;
   Result.Column = Row.Column;

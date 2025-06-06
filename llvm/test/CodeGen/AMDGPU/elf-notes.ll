@@ -43,7 +43,7 @@
 ; OSABI-HSA-ELF:     .sgpr_count:     96
 ; OSABI-HSA-ELF:     .sgpr_spill_count: 0
 ; OSABI-HSA-ELF:     .symbol:         elf_notes.kd
-; OSABI-HSA-ELF:     .vgpr_count:     0
+; OSABI-HSA-ELF:     .vgpr_count:     1
 ; OSABI-HSA-ELF:     .vgpr_spill_count: 0
 ; OSABI-HSA-ELF:     .wavefront_size: 64
 ; OSABI-HSA-ELF: amdhsa.target:   amdgcn-amd-amdhsa--gfx802
@@ -66,7 +66,7 @@
 ; OSABI-PAL-ELF: amdpal.pipelines:
 ; OSABI-PAL-ELF:   - .hardware_stages:
 ; OSABI-PAL-ELF:       .cs:
-; OSABI-PAL-ELF:         .entry_point:    _amdgpu_cs
+; OSABI-PAL-ELF:         .entry_point:    _amdgpu_cs_main
 ; OSABI-PAL-ELF:         .entry_point_symbol:    elf_notes
 ; OSABI-PAL-ELF:         .scratch_memory_size: 0
 ; OSABI-PAL-ELF:         .sgpr_count:     96

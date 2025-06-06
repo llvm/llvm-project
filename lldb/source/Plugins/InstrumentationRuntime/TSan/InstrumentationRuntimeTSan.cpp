@@ -864,13 +864,14 @@ bool InstrumentationRuntimeTSan::NotifyBreakpointHit(
               CreateStopReasonWithInstrumentationData(
                   *thread_sp, stop_reason_description, report));
 
-    StreamFile &s = process_sp->GetTarget().GetDebugger().GetOutputStream();
-    s.Printf("ThreadSanitizer report breakpoint hit. Use 'thread "
-             "info -s' to get extended information about the "
-             "report.\n");
+    lldb::StreamSP s =
+        process_sp->GetTarget().GetDebugger().GetAsyncOutputStream();
+    s->Printf("ThreadSanitizer report breakpoint hit. Use 'thread "
+              "info -s' to get extended information about the "
+              "report.\n");
 
     return true; // Return true to stop the target
-  } else
+  }
     return false; // Let target run
 }
 

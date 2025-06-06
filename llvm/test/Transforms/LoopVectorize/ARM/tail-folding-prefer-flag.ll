@@ -21,8 +21,7 @@ define dso_local void @flag_overrules_hint(ptr noalias nocapture %A, ptr noalias
 ; PREDFLAG-LABEL: flag_overrules_hint(
 ; PREDFLAG:  vector.body:
 ; PREDFLAG:  %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; PREDFLAG:  %[[ELEM0:.*]] = add i64 %index, 0
-; PREDFLAG:  %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 %[[ELEM0]], i64 430)
+; PREDFLAG:  %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 %index, i64 430)
 ; PREDFLAG:  %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0({{.*}}, <4 x i1> %active.lane.mask
 ; PREDFLAG:  %wide.masked.load1 = call <4 x i32> @llvm.masked.load.v4i32.p0({{.*}}, <4 x i1> %active.lane.mask
 ; PREDFLAG:  %{{.*}} = add nsw <4 x i32> %wide.masked.load1, %wide.masked.load
@@ -52,11 +51,10 @@ for.body:
 
 define dso_local void @interleave4(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C, i32 %N) local_unnamed_addr #0 {
 ; PREDFLAG-LABEL: interleave4(
-; PREDFLAG:  %[[ADD1:.*]] = add i32 %index, 0
 ; PREDFLAG:  %[[ADD2:.*]] = add i32 %index, 4
 ; PREDFLAG:  %[[ADD3:.*]] = add i32 %index, 8
 ; PREDFLAG:  %[[ADD4:.*]] = add i32 %index, 12
-; PREDFLAG:  %[[ALM1:active.lane.mask.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %[[ADD1]], i32 %N)
+; PREDFLAG:  %[[ALM1:active.lane.mask.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %N)
 ; PREDFLAG:  %[[ALM2:active.lane.mask.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %[[ADD2]], i32 %N)
 ; PREDFLAG:  %[[ALM3:active.lane.mask.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %[[ADD3]], i32 %N)
 ; PREDFLAG:  %[[ALM4:active.lane.mask.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %[[ADD4]], i32 %N)

@@ -51,7 +51,7 @@ protected:
   bool SupportIndirectSymViaGOTPCRel = false;
   bool SupportGOTPCRelWithOffset = true;
   bool SupportDebugThreadLocalLocation = true;
-  bool SupportDSOLocalEquivalentLowering = false;
+  uint32_t PLTPCRelativeSpecifier = 0;
 
   /// PersonalityEncoding, LSDAEncoding, TTypeEncoding - Some encoding values
   /// for EH.
@@ -103,6 +103,13 @@ public:
   virtual MCSection *getSectionForConstant(const DataLayout &DL,
                                            SectionKind Kind, const Constant *C,
                                            Align &Alignment) const;
+
+  /// Similar to the function above, but append \p SectionSuffix to the section
+  /// name.
+  virtual MCSection *getSectionForConstant(const DataLayout &DL,
+                                           SectionKind Kind, const Constant *C,
+                                           Align &Alignment,
+                                           StringRef SectionSuffix) const;
 
   virtual MCSection *
   getSectionForMachineBasicBlock(const Function &F,
@@ -196,20 +203,19 @@ public:
   /// emitting the address in debug info.
   virtual const MCExpr *getDebugThreadLocalSymbol(const MCSymbol *Sym) const;
 
-  virtual const MCExpr *lowerRelativeReference(const GlobalValue *LHS,
-                                               const GlobalValue *RHS,
-                                               const TargetMachine &TM) const {
+  virtual const MCExpr *lowerRelativeReference(
+      const GlobalValue *LHS, const GlobalValue *RHS, int64_t Addend,
+      std::optional<int64_t> PCRelativeOffset, const TargetMachine &TM) const {
     return nullptr;
   }
 
-  /// Target supports a native lowering of a dso_local_equivalent constant
-  /// without needing to replace it with equivalent IR.
-  bool supportDSOLocalEquivalentLowering() const {
-    return SupportDSOLocalEquivalentLowering;
-  }
+  /// Target supports a PC-relative relocation that references the PLT of a
+  /// function.
+  bool hasPLTPCRelative() const { return PLTPCRelativeSpecifier; }
 
-  virtual const MCExpr *lowerDSOLocalEquivalent(const DSOLocalEquivalent *Equiv,
-                                                const TargetMachine &TM) const {
+  virtual const MCExpr *lowerDSOLocalEquivalent(
+      const MCSymbol *LHS, const MCSymbol *RHS, int64_t Addend,
+      std::optional<int64_t> PCRelativeOffset, const TargetMachine &TM) const {
     return nullptr;
   }
 

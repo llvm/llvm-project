@@ -1,3 +1,4 @@
+#include "attach.h"
 #include <atomic>
 #include <cassert>
 #include <chrono>
@@ -128,6 +129,15 @@ static void swap_chars() {
                :
                : "r"('0'), "r"('1'), "r"(&g_c1), "r"(&g_c2)
                : "memory");
+#elif defined(__riscv)
+  asm volatile("sb %1, (%2)\n\t"
+               "sb %0, (%3)\n\t"
+               "sb %0, (%2)\n\t"
+               "sb %1, (%3)\n\t"
+               :
+               : "r"('0'), "r"('1'), "r"(&g_c1), "r"(&g_c2)
+               : "memory");
+
 #else
 #warning This may generate unpredictible assembly and cause the single-stepping test to fail.
 #warning Please add appropriate assembly for your target.
@@ -148,7 +158,7 @@ static void trap() {
   asm volatile("udf #254");
 #elif defined(__powerpc__)
   asm volatile("trap");
-#elif __has_builtin(__builtin_debugtrap())
+#elif __has_builtin(__builtin_debugtrap)
   __builtin_debugtrap();
 #else
 #warning Don't know how to generate a trap. Some tests may fail.

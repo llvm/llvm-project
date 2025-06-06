@@ -26,4 +26,4 @@ jobs:
       build_target: check-llvm-codegen-spirv
       projects:
       extra_cmake_args: '-DLLVM_TARGETS_TO_BUILD="SPIRV" -DLLVM_INCLUDE_SPIRV_TOOLS_TESTS=ON'
-      os_list: '["ubuntu-22.04"]'
+      os_list: '["ubuntu-24.04"]'

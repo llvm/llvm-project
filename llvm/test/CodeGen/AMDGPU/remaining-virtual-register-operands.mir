@@ -1,0 +1,71 @@
+# RUN: not llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -start-before=greedy,2 -filetype=null %s 2>&1 | FileCheck %s
+
+# This testcase fails register allocation at the same time it performs
+# virtual register splitting (by introducing VGPR to AGPR copies). We
+# still need to enqueue and allocate the newly split vregs after the
+# failure.
+
+# The machine verifier should not complain about usage of register
+# which is marked as killed in previous instruction.  This happens due
+# to when register allocator is out of registers it takes the first
+# available register.
+
+# CHECK: error: <unknown>:0:0: ran out of registers during register allocation
+
+--- |
+
+  define amdgpu_kernel void @alloc_failure_with_split_vregs(float %v0, float %v1) #0 {
+    ret void
+  }
+
+  attributes #0 = { "amdgpu-waves-per-eu"="10,10" "target-cpu"="gfx908" }
+
+...
+---
+name:            alloc_failure_with_split_vregs
+alignment:       1
+tracksRegLiveness: true
+noPhis:          true
+isSSA:           false
+noVRegs:         false
+hasFakeUses:     false
+tracksDebugUserValues: true
+registers:
+  - { id: 0, class: sgpr_64, preferred-register: '$sgpr8_sgpr9', flags: [  ] }
+  - { id: 1, class: areg_512, preferred-register: '%2', flags: [  ] }
+  - { id: 2, class: vreg_512, preferred-register: '%1', flags: [  ] }
+  - { id: 3, class: areg_512, preferred-register: '%4', flags: [  ] }
+  - { id: 4, class: av_512, preferred-register: '$agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15',
+      flags: [  ] }
+  - { id: 5, class: areg_512, preferred-register: '%2', flags: [  ] }
+  - { id: 6, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 7, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 8, class: vgpr_32, preferred-register: '', flags: [  ] }
+machineFunctionInfo:
+  isEntryFunction: true
+  scratchRSrcReg:  '$sgpr56_sgpr57_sgpr58_sgpr59'
+  stackPtrOffsetReg: '$sgpr32'
+  occupancy:       8
+  vgprForAGPRCopy: '$vgpr23'
+  sgprForEXECCopy: '$sgpr58_sgpr59'
+body:             |
+  bb.0:
+    liveins: $sgpr8_sgpr9
+
+    renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed renamable $sgpr8_sgpr9, 0, 0 :: (dereferenceable invariant load (s64), align 16, addrspace 4)
+    %6:vgpr_32 = COPY renamable $sgpr0
+    INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 10 /* regdef */, implicit-def $agpr0
+    undef %4.sub0:av_512 = COPY $agpr0
+    %3:areg_512 = COPY %4
+    %7:vgpr_32 = COPY killed renamable $sgpr1
+    early-clobber %1:areg_512 = V_MFMA_F32_16X16X1F32_e64 %6, %7, %3, 0, 0, 0, implicit $mode, implicit $exec, implicit $mode, implicit $exec
+    %2:vreg_512 = COPY %1
+    %2.sub8:vreg_512 = COPY %4.sub0
+    %5:areg_512 = COPY %2
+    %5:areg_512 = V_MFMA_F32_16X16X1F32_mac_e64 %6, %7, %5, 0, 0, 0, implicit $mode, implicit $exec
+    %8:vgpr_32 = COPY %5.sub3
+    $agpr1 = COPY %8
+    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 9 /* reguse */, killed $agpr1
+    S_ENDPGM 0
+
+...

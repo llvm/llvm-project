@@ -131,3 +131,6 @@ double3 test_min_double3(double3 p0, double3 p1) { return min(p0, p1); }
 // CHECK-LABEL: define noundef nofpclass(nan inf) <4 x double> @_Z16test_min_double4
 // CHECK: call reassoc nnan ninf nsz arcp afn <4 x double> @llvm.minnum.v4f64
 double4 test_min_double4(double4 p0, double4 p1) { return min(p0, p1); }
+// CHECK-LABEL: define noundef nofpclass(nan inf) <4 x double> {{.*}}test_min_double4_mismatch
+// CHECK: call reassoc nnan ninf nsz arcp afn <4 x double> @llvm.minnum.v4f64
+double4 test_min_double4_mismatch(double4 p0, double p1) { return min(p0, p1); }

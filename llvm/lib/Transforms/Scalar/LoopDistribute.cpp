@@ -58,6 +58,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -143,7 +144,7 @@ public:
   /// Moves this partition into \p Other.  This partition becomes empty
   /// after this.
   void moveTo(InstPartition &Other) {
-    Other.Set.insert(Set.begin(), Set.end());
+    Other.Set.insert_range(Set);
     Set.clear();
     Other.DepCycle |= DepCycle;
   }
@@ -224,6 +225,7 @@ public:
     // Delete the instructions backwards, as it has a reduced likelihood of
     // having to update as many def-use and use-def chains.
     for (auto *Inst : reverse(Unused)) {
+      salvageDebugInfo(*Inst);
       if (!Inst->use_empty())
         Inst->replaceAllUsesWith(PoisonValue::get(Inst->getType()));
       Inst->eraseFromParent();
@@ -385,14 +387,13 @@ public:
 
     // Merge the member of an equivalence class into its class leader.  This
     // makes the members empty.
-    for (ToBeMergedT::iterator I = ToBeMerged.begin(), E = ToBeMerged.end();
-         I != E; ++I) {
-      if (!I->isLeader())
+    for (const auto &C : ToBeMerged) {
+      if (!C->isLeader())
         continue;
 
-      auto PartI = I->getData();
-      for (auto *PartJ : make_range(std::next(ToBeMerged.member_begin(I)),
-                                   ToBeMerged.member_end())) {
+      auto PartI = C->getData();
+      for (auto *PartJ : make_range(std::next(ToBeMerged.member_begin(*C)),
+                                    ToBeMerged.member_end())) {
         PartJ->moveTo(*PartI);
       }
     }

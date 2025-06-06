@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
+#include "mlir/Interfaces/RuntimeVerifiableOpInterface.h"
 #include "mlir/Interfaces/SubsetOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 
@@ -49,8 +50,8 @@ void TensorDialect::initialize() {
       >();
   addInterfaces<TensorInlinerInterface>();
   declarePromisedInterfaces<
-      bufferization::BufferizableOpInterface, CastOp, CollapseShapeOp, DimOp,
-      EmptyOp, ExpandShapeOp, ExtractSliceOp, ExtractOp, FromElementsOp,
+      bufferization::BufferizableOpInterface, CastOp, CollapseShapeOp, ConcatOp,
+      DimOp, EmptyOp, ExpandShapeOp, ExtractSliceOp, ExtractOp, FromElementsOp,
       GenerateOp, InsertOp, InsertSliceOp, PadOp, ParallelInsertSliceOp, RankOp,
       ReshapeOp, SplatOp>();
   declarePromisedInterfaces<transform::FindPayloadReplacementOpInterface,
@@ -58,12 +59,14 @@ void TensorDialect::initialize() {
                             InsertSliceOp, ReshapeOp>();
   declarePromisedInterfaces<ReifyRankedShapedTypeOpInterface, ExpandShapeOp,
                             CollapseShapeOp, PadOp>();
+  declarePromisedInterfaces<RuntimeVerifiableOpInterface, CastOp, DimOp,
+                            ExtractOp, InsertOp, ExtractSliceOp>();
   declarePromisedInterfaces<SubsetOpInterface, ExtractSliceOp, InsertSliceOp,
                             ParallelInsertSliceOp>();
   declarePromisedInterfaces<SubsetInsertionOpInterface, InsertSliceOp,
                             ParallelInsertSliceOp>();
   declarePromisedInterface<SubsetExtractionOpInterface, ExtractSliceOp>();
-  declarePromisedInterfaces<TilingInterface, PadOp, PackOp, UnPackOp>();
+  declarePromisedInterfaces<TilingInterface, PadOp>();
   declarePromisedInterfaces<ValueBoundsOpInterface, CastOp, DimOp, EmptyOp,
                             ExtractSliceOp, PadOp, RankOp>();
 }

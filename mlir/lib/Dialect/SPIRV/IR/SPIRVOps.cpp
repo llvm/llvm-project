@@ -35,6 +35,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/InterleavedRange.h"
 #include <cassert>
 #include <numeric>
 #include <optional>
@@ -164,34 +165,6 @@ static void printOneResultOp(Operation *op, OpAsmPrinter &p) {
   p.printOptionalAttrDict(op->getAttrs());
   // Now we can output only one type for all operands and the result.
   p << " : " << resultType;
-}
-
-template <typename Op>
-static LogicalResult verifyImageOperands(Op imageOp,
-                                         spirv::ImageOperandsAttr attr,
-                                         Operation::operand_range operands) {
-  if (!attr) {
-    if (operands.empty())
-      return success();
-
-    return imageOp.emitError("the Image Operands should encode what operands "
-                             "follow, as per Image Operands");
-  }
-
-  // TODO: Add the validation rules for the following Image Operands.
-  spirv::ImageOperands noSupportOperands =
-      spirv::ImageOperands::Bias | spirv::ImageOperands::Lod |
-      spirv::ImageOperands::Grad | spirv::ImageOperands::ConstOffset |
-      spirv::ImageOperands::Offset | spirv::ImageOperands::ConstOffsets |
-      spirv::ImageOperands::Sample | spirv::ImageOperands::MinLod |
-      spirv::ImageOperands::MakeTexelAvailable |
-      spirv::ImageOperands::MakeTexelVisible |
-      spirv::ImageOperands::SignExtend | spirv::ImageOperands::ZeroExtend;
-
-  if (spirv::bitEnumContainsAll(attr.getValue(), noSupportOperands))
-    llvm_unreachable("unimplemented operands of Image Operands");
-
-  return success();
 }
 
 template <typename BlockReadWriteOpTy>
@@ -803,8 +776,6 @@ void spirv::EntryPointOp::build(OpBuilder &builder, OperationState &state,
 ParseResult spirv::EntryPointOp::parse(OpAsmParser &parser,
                                        OperationState &result) {
   spirv::ExecutionModel execModel;
-  SmallVector<OpAsmParser::UnresolvedOperand, 0> identifiers;
-  SmallVector<Type, 0> idTypes;
   SmallVector<Attribute, 4> interfaceVars;
 
   FlatSymbolRefAttr fn;
@@ -835,10 +806,8 @@ void spirv::EntryPointOp::print(OpAsmPrinter &printer) {
   printer << " \"" << stringifyExecutionModel(getExecutionModel()) << "\" ";
   printer.printSymbolName(getFn());
   auto interfaceVars = getInterface().getValue();
-  if (!interfaceVars.empty()) {
-    printer << ", ";
-    llvm::interleaveComma(interfaceVars, printer);
-  }
+  if (!interfaceVars.empty())
+    printer << ", " << llvm::interleaved(interfaceVars);
 }
 
 LogicalResult spirv::EntryPointOp::verify() {
@@ -890,13 +859,9 @@ void spirv::ExecutionModeOp::print(OpAsmPrinter &printer) {
   printer << " ";
   printer.printSymbolName(getFn());
   printer << " \"" << stringifyExecutionMode(getExecutionMode()) << "\"";
-  auto values = this->getValues();
-  if (values.empty())
-    return;
-  printer << ", ";
-  llvm::interleaveComma(values, printer, [&](Attribute a) {
-    printer << llvm::cast<IntegerAttr>(a).getInt();
-  });
+  ArrayAttr values = this->getValues();
+  if (!values.empty())
+    printer << ", " << llvm::interleaved(values.getAsValueRange<IntegerAttr>());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1049,6 +1014,24 @@ LogicalResult spirv::FuncOp::verifyType() {
 
 LogicalResult spirv::FuncOp::verifyBody() {
   FunctionType fnType = getFunctionType();
+  if (!isExternal()) {
+    Block &entryBlock = front();
+
+    unsigned numArguments = this->getNumArguments();
+    if (entryBlock.getNumArguments() != numArguments)
+      return emitOpError("entry block must have ")
+             << numArguments << " arguments to match function signature";
+
+    for (auto [index, fnArgType, blockArgType] :
+         llvm::enumerate(getArgumentTypes(), entryBlock.getArgumentTypes())) {
+      if (blockArgType != fnArgType) {
+        return emitOpError("type of entry block argument #")
+               << index << '(' << blockArgType
+               << ") must match the type of the corresponding argument in "
+               << "function signature(" << fnArgType << ')';
+      }
+    }
+  }
 
   auto walkResult = walk([fnType](Operation *op) -> WalkResult {
     if (auto retOp = dyn_cast<spirv::ReturnOp>(op)) {
@@ -1834,13 +1817,8 @@ ParseResult spirv::SpecConstantCompositeOp::parse(OpAsmParser &parser,
 void spirv::SpecConstantCompositeOp::print(OpAsmPrinter &printer) {
   printer << " ";
   printer.printSymbolName(getSymName());
-  printer << " (";
-  auto constituents = this->getConstituents().getValue();
-
-  if (!constituents.empty())
-    llvm::interleaveComma(constituents, printer);
-
-  printer << ") : " << getType();
+  printer << " (" << llvm::interleaved(this->getConstituents().getValue())
+          << ") : " << getType();
 }
 
 LogicalResult spirv::SpecConstantCompositeOp::verify() {
@@ -2003,85 +1981,6 @@ LogicalResult spirv::GLLdexpOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// spirv.ImageDrefGather
-//===----------------------------------------------------------------------===//
-
-LogicalResult spirv::ImageDrefGatherOp::verify() {
-  VectorType resultType = llvm::cast<VectorType>(getResult().getType());
-  auto sampledImageType =
-      llvm::cast<spirv::SampledImageType>(getSampledimage().getType());
-  auto imageType =
-      llvm::cast<spirv::ImageType>(sampledImageType.getImageType());
-
-  if (resultType.getNumElements() != 4)
-    return emitOpError("result type must be a vector of four components");
-
-  Type elementType = resultType.getElementType();
-  Type sampledElementType = imageType.getElementType();
-  if (!llvm::isa<NoneType>(sampledElementType) &&
-      elementType != sampledElementType)
-    return emitOpError(
-        "the component type of result must be the same as sampled type of the "
-        "underlying image type");
-
-  spirv::Dim imageDim = imageType.getDim();
-  spirv::ImageSamplingInfo imageMS = imageType.getSamplingInfo();
-
-  if (imageDim != spirv::Dim::Dim2D && imageDim != spirv::Dim::Cube &&
-      imageDim != spirv::Dim::Rect)
-    return emitOpError(
-        "the Dim operand of the underlying image type must be 2D, Cube, or "
-        "Rect");
-
-  if (imageMS != spirv::ImageSamplingInfo::SingleSampled)
-    return emitOpError("the MS operand of the underlying image type must be 0");
-
-  spirv::ImageOperandsAttr attr = getImageoperandsAttr();
-  auto operandArguments = getOperandArguments();
-
-  return verifyImageOperands(*this, attr, operandArguments);
-}
-
-//===----------------------------------------------------------------------===//
-// spirv.ImageWriteOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult spirv::ImageWriteOp::verify() {
-  ImageType imageType = cast<ImageType>(getImage().getType());
-  Type sampledType = imageType.getElementType();
-  ImageSamplerUseInfo samplerInfo = imageType.getSamplerUseInfo();
-
-  if (!llvm::is_contained({spirv::ImageSamplerUseInfo::SamplerUnknown,
-                           spirv::ImageSamplerUseInfo::NoSampler},
-                          samplerInfo)) {
-    return emitOpError(
-        "the sampled operand of the underlying image must be 0 or 2");
-  }
-
-  // TODO: Do we need check for: "If the Arrayed operand is 1, then additional
-  // capabilities may be required; e.g., ImageCubeArray, or ImageMSArray."?
-
-  if (imageType.getDim() == spirv::Dim::SubpassData) {
-    return emitOpError(
-        "the Dim operand of the underlying image must not be SubpassData");
-  }
-
-  Type texelType = getElementTypeOrSelf(getTexel());
-  if (!isa<NoneType>(sampledType) && texelType != sampledType) {
-    return emitOpError(
-        "the texel component type must match the image sampled type");
-  }
-
-  // TODO: Ideally it should be somewhere verified that "The Image Format must
-  // not be Unknown, unless the StorageImageWriteWithoutFormat Capability was
-  // declared." This function however may not be the suitable place for such
-  // verification.
-
-  return verifyImageOperands(*this, getImageOperandsAttr(),
-                             getOperandArguments());
-}
-
-//===----------------------------------------------------------------------===//
 // spirv.ShiftLeftLogicalOp
 //===----------------------------------------------------------------------===//
 
@@ -2103,71 +2002,6 @@ LogicalResult spirv::ShiftRightArithmeticOp::verify() {
 
 LogicalResult spirv::ShiftRightLogicalOp::verify() {
   return verifyShiftOp(*this);
-}
-
-//===----------------------------------------------------------------------===//
-// spirv.ImageQuerySize
-//===----------------------------------------------------------------------===//
-
-LogicalResult spirv::ImageQuerySizeOp::verify() {
-  spirv::ImageType imageType =
-      llvm::cast<spirv::ImageType>(getImage().getType());
-  Type resultType = getResult().getType();
-
-  spirv::Dim dim = imageType.getDim();
-  spirv::ImageSamplingInfo samplingInfo = imageType.getSamplingInfo();
-  spirv::ImageSamplerUseInfo samplerInfo = imageType.getSamplerUseInfo();
-  switch (dim) {
-  case spirv::Dim::Dim1D:
-  case spirv::Dim::Dim2D:
-  case spirv::Dim::Dim3D:
-  case spirv::Dim::Cube:
-    if (samplingInfo != spirv::ImageSamplingInfo::MultiSampled &&
-        samplerInfo != spirv::ImageSamplerUseInfo::SamplerUnknown &&
-        samplerInfo != spirv::ImageSamplerUseInfo::NoSampler)
-      return emitError(
-          "if Dim is 1D, 2D, 3D, or Cube, "
-          "it must also have either an MS of 1 or a Sampled of 0 or 2");
-    break;
-  case spirv::Dim::Buffer:
-  case spirv::Dim::Rect:
-    break;
-  default:
-    return emitError("the Dim operand of the image type must "
-                     "be 1D, 2D, 3D, Buffer, Cube, or Rect");
-  }
-
-  unsigned componentNumber = 0;
-  switch (dim) {
-  case spirv::Dim::Dim1D:
-  case spirv::Dim::Buffer:
-    componentNumber = 1;
-    break;
-  case spirv::Dim::Dim2D:
-  case spirv::Dim::Cube:
-  case spirv::Dim::Rect:
-    componentNumber = 2;
-    break;
-  case spirv::Dim::Dim3D:
-    componentNumber = 3;
-    break;
-  default:
-    break;
-  }
-
-  if (imageType.getArrayedInfo() == spirv::ImageArrayedInfo::Arrayed)
-    componentNumber += 1;
-
-  unsigned resultComponentNumber = 1;
-  if (auto resultVectorType = llvm::dyn_cast<VectorType>(resultType))
-    resultComponentNumber = resultVectorType.getNumElements();
-
-  if (componentNumber != resultComponentNumber)
-    return emitError("expected the result to have ")
-           << componentNumber << " component(s), but found "
-           << resultComponentNumber << " component(s)";
-
-  return success();
 }
 
 //===----------------------------------------------------------------------===//

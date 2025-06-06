@@ -10,10 +10,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Instruction.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/StructuralHash.h"
 #include "llvm/SandboxIR/Instruction.h"
-#include <sstream>
 
 using namespace llvm::sandboxir;
 
@@ -347,13 +345,14 @@ void Tracker::save() {
 
 void Tracker::revert() {
   assert(State == TrackerState::Record && "Forgot to save()!");
-  State = TrackerState::Disabled;
+  State = TrackerState::Reverting;
   for (auto &Change : reverse(Changes))
     Change->revert(*this);
   Changes.clear();
 #if !defined(NDEBUG) && defined(EXPENSIVE_CHECKS)
   SnapshotChecker.expectNoDiff();
 #endif
+  State = TrackerState::Disabled;
 }
 
 void Tracker::accept() {

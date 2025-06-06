@@ -3,8 +3,10 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx810 -verify-machineinstrs | FileCheck -check-prefixes=GFX81 %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs | FileCheck -check-prefixes=GFX9 %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck -check-prefixes=GFX10PLUS,GFX10 %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs | FileCheck -check-prefixes=GFX10PLUS,GFX11 %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 -amdgpu-enable-delay-alu=0 -verify-machineinstrs | FileCheck -check-prefixes=GFX12 %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -amdgpu-enable-delay-alu=0 -verify-machineinstrs | FileCheck -check-prefixes=GFX10PLUS,GFX11,GFX11-TRUE16 %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -amdgpu-enable-delay-alu=0 -verify-machineinstrs | FileCheck -check-prefixes=GFX10PLUS,GFX11,GFX11-FAKE16 %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 -mattr=+real-true16 -amdgpu-enable-delay-alu=0 -verify-machineinstrs | FileCheck -check-prefixes=GFX12,GFX12-TRUE16 %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 -mattr=-real-true16 -amdgpu-enable-delay-alu=0 -verify-machineinstrs | FileCheck -check-prefixes=GFX12,GFX12-FAKE16 %s
 
 define amdgpu_ps half @image_sample_2d_f16(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s, float %t) {
 ; TONGA-LABEL: image_sample_2d_f16:
@@ -121,33 +123,63 @@ define amdgpu_ps half @image_sample_2d_f16_tfe(<8 x i32> inreg %rsrc, <4 x i32> 
 ; GFX10-NEXT:    global_store_dword v4, v1, s[12:13]
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
-; GFX11-LABEL: image_sample_2d_f16_tfe:
-; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    s_mov_b32 s14, exec_lo
-; GFX11-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX11-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v3, v1
-; GFX11-NEXT:    v_mov_b32_e32 v2, v0
-; GFX11-NEXT:    v_mov_b32_e32 v5, v4
-; GFX11-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v5
-; GFX11-NEXT:    s_and_b32 exec_lo, exec_lo, s14
-; GFX11-NEXT:    image_sample v[0:1], v[2:3], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D tfe d16
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    global_store_b32 v4, v1, s[12:13]
-; GFX11-NEXT:    ; return to shader part epilog
+; GFX11-TRUE16-LABEL: image_sample_2d_f16_tfe:
+; GFX11-TRUE16:       ; %bb.0: ; %main_body
+; GFX11-TRUE16-NEXT:    s_mov_b32 s14, exec_lo
+; GFX11-TRUE16-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v3, v2
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v4, v3
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v3, v2
+; GFX11-TRUE16-NEXT:    s_and_b32 exec_lo, exec_lo, s14
+; GFX11-TRUE16-NEXT:    image_sample v[3:4], v[0:1], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D tfe d16
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v3.l
+; GFX11-TRUE16-NEXT:    global_store_b32 v2, v4, s[12:13]
+; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: image_sample_2d_f16_tfe:
-; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    s_mov_b32 s14, exec_lo
-; GFX12-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX12-NEXT:    v_mov_b32_e32 v4, 0
-; GFX12-NEXT:    v_dual_mov_b32 v2, v1 :: v_dual_mov_b32 v3, v0
-; GFX12-NEXT:    v_mov_b32_e32 v5, v4
-; GFX12-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v5
-; GFX12-NEXT:    s_and_b32 exec_lo, exec_lo, s14
-; GFX12-NEXT:    image_sample v[0:1], [v3, v2], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D tfe d16
-; GFX12-NEXT:    s_wait_samplecnt 0x0
-; GFX12-NEXT:    global_store_b32 v4, v1, s[12:13]
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX11-FAKE16-LABEL: image_sample_2d_f16_tfe:
+; GFX11-FAKE16:       ; %bb.0: ; %main_body
+; GFX11-FAKE16-NEXT:    s_mov_b32 s14, exec_lo
+; GFX11-FAKE16-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v3, v1
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v2, v0
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v5, v4
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v5
+; GFX11-FAKE16-NEXT:    s_and_b32 exec_lo, exec_lo, s14
+; GFX11-FAKE16-NEXT:    image_sample v[0:1], v[2:3], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D tfe d16
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    global_store_b32 v4, v1, s[12:13]
+; GFX11-FAKE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-TRUE16-LABEL: image_sample_2d_f16_tfe:
+; GFX12-TRUE16:       ; %bb.0: ; %main_body
+; GFX12-TRUE16-NEXT:    s_mov_b32 s14, exec_lo
+; GFX12-TRUE16-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v3, v2
+; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v4, v3
+; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v3, v2
+; GFX12-TRUE16-NEXT:    s_and_b32 exec_lo, exec_lo, s14
+; GFX12-TRUE16-NEXT:    image_sample v[3:4], [v0, v1], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D tfe d16
+; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v3.l
+; GFX12-TRUE16-NEXT:    global_store_b32 v2, v4, s[12:13]
+; GFX12-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-FAKE16-LABEL: image_sample_2d_f16_tfe:
+; GFX12-FAKE16:       ; %bb.0: ; %main_body
+; GFX12-FAKE16-NEXT:    s_mov_b32 s14, exec_lo
+; GFX12-FAKE16-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v4, 0
+; GFX12-FAKE16-NEXT:    v_dual_mov_b32 v2, v1 :: v_dual_mov_b32 v3, v0
+; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v5, v4
+; GFX12-FAKE16-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v5
+; GFX12-FAKE16-NEXT:    s_and_b32 exec_lo, exec_lo, s14
+; GFX12-FAKE16-NEXT:    image_sample v[0:1], [v3, v2], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D tfe d16
+; GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-FAKE16-NEXT:    global_store_b32 v4, v1, s[12:13]
+; GFX12-FAKE16-NEXT:    ; return to shader part epilog
 main_body:
   %tex = call {half,i32} @llvm.amdgcn.image.sample.2d.f16i32.f32(i32 1, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 1, i32 0)
   %tex.vec = extractvalue {half, i32} %tex, 0
@@ -259,7 +291,7 @@ main_body:
   %tex.vec = extractvalue {<2 x half>, i32} %tex, 0
   %tex.err = extractvalue {<2 x half>, i32} %tex, 1
   %tex.vecf = bitcast <2 x half> %tex.vec to float
-  %r.0 = insertelement <2 x float> undef, float %tex.vecf, i32 0
+  %r.0 = insertelement <2 x float> poison, float %tex.vecf, i32 0
   %tex.errf = bitcast i32 %tex.err to float
   %r = insertelement <2 x float> %r.0, float %tex.errf, i32 1
   ret <2 x float> %r
@@ -315,7 +347,7 @@ define amdgpu_ps <2 x float> @image_sample_b_2d_v3f16(<8 x i32> inreg %rsrc, <4 
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
   %tex = call <3 x half> @llvm.amdgcn.image.sample.b.2d.v3f16.f32.f32(i32 7, float %bias, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
-  %tex_wide = shufflevector <3 x half> %tex, <3 x half> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %tex_wide = shufflevector <3 x half> %tex, <3 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %r = bitcast <4 x half> %tex_wide to <2 x float>
   ret <2 x float> %r
 }
@@ -410,12 +442,12 @@ define amdgpu_ps <4 x float> @image_sample_b_2d_v3f16_tfe(<8 x i32> inreg %rsrc,
 main_body:
   %tex = call {<3 x half>,i32} @llvm.amdgcn.image.sample.b.2d.v3f16i32.f32.f32(i32 7, float %bias, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 1, i32 0)
   %tex.vec = extractvalue {<3 x half>, i32} %tex, 0
-  %tex.vec_wide = shufflevector <3 x half> %tex.vec, <3 x half> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %tex.vec_wide = shufflevector <3 x half> %tex.vec, <3 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %tex.err = extractvalue {<3 x half>, i32} %tex, 1
   %tex.vecf = bitcast <4 x half> %tex.vec_wide to <2 x float>
   %tex.vecf.0 = extractelement <2 x float> %tex.vecf, i32 0
   %tex.vecf.1 = extractelement <2 x float> %tex.vecf, i32 1
-  %r.0 = insertelement <4 x float> undef, float %tex.vecf.0, i32 0
+  %r.0 = insertelement <4 x float> poison, float %tex.vecf.0, i32 0
   %r.1 = insertelement <4 x float> %r.0, float %tex.vecf.1, i32 1
   %tex.errf = bitcast i32 %tex.err to float
   %r = insertelement <4 x float> %r.1, float %tex.errf, i32 2
@@ -571,7 +603,7 @@ main_body:
   %tex.vecf = bitcast <4 x half> %tex.vec to <2 x float>
   %tex.vecf.0 = extractelement <2 x float> %tex.vecf, i32 0
   %tex.vecf.1 = extractelement <2 x float> %tex.vecf, i32 1
-  %r.0 = insertelement <4 x float> undef, float %tex.vecf.0, i32 0
+  %r.0 = insertelement <4 x float> poison, float %tex.vecf.0, i32 0
   %r.1 = insertelement <4 x float> %r.0, float %tex.vecf.1, i32 1
   %tex.errf = bitcast i32 %tex.err to float
   %r = insertelement <4 x float> %r.1, float %tex.errf, i32 2

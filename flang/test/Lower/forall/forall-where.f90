@@ -137,8 +137,7 @@ end subroutine test_nested_forall_where
 ! CHECK:             %[[VAL_109:.*]] = arith.constant 1 : i64
 ! CHECK:             %[[VAL_110:.*]] = arith.subi %[[VAL_108]], %[[VAL_109]] : i64
 ! CHECK:             %[[VAL_111:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_106]], %[[VAL_110]] : (!fir.box<!fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>>, i64, i64) -> !fir.ref<!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>
-! CHECK:             %[[VAL_112:.*]] = fir.field_index data, !fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>
-! CHECK:             %[[VAL_113:.*]] = fir.coordinate_of %[[VAL_111]], %[[VAL_112]] : (!fir.ref<!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>, !fir.field) -> !fir.ref<!fir.array<100xf32>>
+! CHECK:             %[[VAL_113:.*]] = fir.coordinate_of %[[VAL_111]], data : (!fir.ref<!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>) -> !fir.ref<!fir.array<100xf32>>
 ! CHECK:             %[[VAL_114:.*]] = arith.constant 100 : index
 ! CHECK:             %[[VAL_115:.*]] = fir.shape %[[VAL_114]] : (index) -> !fir.shape<1>
 ! CHECK:             %[[VAL_116:.*]] = fir.array_load %[[VAL_113]](%[[VAL_115]]) : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.array<100xf32>

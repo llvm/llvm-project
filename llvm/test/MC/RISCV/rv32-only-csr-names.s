@@ -41,11 +41,15 @@ csrrs t1, henvcfgh, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system registe
 
 csrrs t1, htimedeltah, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register 'htimedeltah' is RV32 only
 
+csrrs t1, hedelegh, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register 'hedelegh' is RV32 only
+
 csrrs t1, mstatush, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register 'mstatush' is RV32 only
 
 csrrs t1, menvcfgh, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register 'menvcfgh' is RV32 only
 
 csrrs t1, mseccfgh, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register 'mseccfgh' is RV32 only
+
+csrrs t1, medelegh, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register 'medelegh' is RV32 only
 
 csrrs t1, pmpcfg1, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register 'pmpcfg1' is RV32 only
 csrrs t1, pmpcfg3, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register 'pmpcfg3' is RV32 only

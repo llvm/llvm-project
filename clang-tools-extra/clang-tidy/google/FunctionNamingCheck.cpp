@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "FunctionNamingCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/Support/Regex.h"
 

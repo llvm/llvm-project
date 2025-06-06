@@ -386,7 +386,9 @@ module m01
     call contiguous(a) ! ok
     call pointer(a) ! ok
     call pointer(b) ! ok
+    !ERROR: VOLATILE target associated with non-VOLATILE pointer
     call pointer(c) ! ok
+    !ERROR: VOLATILE target associated with non-VOLATILE pointer
     call pointer(d) ! ok
     call valueassumedsize(a) ! ok
     call valueassumedsize(b) ! ok

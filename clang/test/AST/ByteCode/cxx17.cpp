@@ -1,5 +1,10 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++17 -verify=expected,both %s
-// RUN: %clang_cc1 -std=c++17 -verify=ref,both %s
+// RUN: %clang_cc1 -std=c++17 -verify=expected,both %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++17 -verify=ref,both      %s
+
+[[clang::require_constant_initialization]] int cc = cc; // both-error {{variable does not have a constant initializer}} \
+                                                        // both-note {{attribute here}} \
+                                                        // both-note {{ead of object outside its lifetime}}
+
 
 struct F { int a; int b;};
 constexpr F getF() {
@@ -125,3 +130,14 @@ namespace constant {
   }
   static_assert(f());
 }
+
+
+template <int a> struct i; // both-note {{template is declared here}}
+template <> struct i<0> {};
+
+template <int x> constexpr auto c() {
+  i<x> g; // both-error {{implicit instantiation of undefined template 'i<1>'}}
+  return 0;
+}
+
+auto y = c<1>(); // both-note {{in instantiation of function template specialization 'c<1>' requested here}}

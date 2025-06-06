@@ -36,7 +36,8 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
               } else if (auto whyNot{WhyNotDefinable(name.source,
                              context_.FindScope(name.source),
                              {DefinabilityFlag::PointerDefinition,
-                                 DefinabilityFlag::AcceptAllocatable},
+                                 DefinabilityFlag::AcceptAllocatable,
+                                 DefinabilityFlag::PotentialDeallocation},
                              *symbol)}) {
                 // Catch problems with non-definability of the
                 // pointer/allocatable
@@ -74,7 +75,8 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
                 } else if (auto whyNot{WhyNotDefinable(source,
                                context_.FindScope(source),
                                {DefinabilityFlag::PointerDefinition,
-                                   DefinabilityFlag::AcceptAllocatable},
+                                   DefinabilityFlag::AcceptAllocatable,
+                                   DefinabilityFlag::PotentialDeallocation},
                                *expr)}) {
                   context_
                       .Say(source,
@@ -89,6 +91,9 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
                           "Object in DEALLOCATE statement is not deallocatable"_err_en_US)
                       .Attach(std::move(
                           whyNot->set_severity(parser::Severity::Because)));
+                } else if (evaluate::ExtractCoarrayRef(*expr)) { // F'2023 C955
+                  context_.Say(source,
+                      "Component in DEALLOCATE statement may not be coindexed"_err_en_US);
                 }
               }
             },

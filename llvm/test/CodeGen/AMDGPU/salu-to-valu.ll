@@ -474,7 +474,7 @@ bb2:
 
 bb4:
   %tmp5 = phi i32 [ %tmp3, %bb2 ], [ %tmp, %bb1 ]
-  store volatile i32 %tmp5, ptr addrspace(1) undef
+  store volatile i32 %tmp5, ptr addrspace(1) poison
   br label %bb1
 }
 

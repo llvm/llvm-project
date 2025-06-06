@@ -12,29 +12,21 @@ declare double @llvm.minnum.f64(double, double)
 define float @maxnum_float(float %x, float %y) {
 ; LA32F-LABEL: maxnum_float:
 ; LA32F:       # %bb.0:
-; LA32F-NEXT:    fmax.s $fa1, $fa1, $fa1
-; LA32F-NEXT:    fmax.s $fa0, $fa0, $fa0
 ; LA32F-NEXT:    fmax.s $fa0, $fa0, $fa1
 ; LA32F-NEXT:    ret
 ;
 ; LA32D-LABEL: maxnum_float:
 ; LA32D:       # %bb.0:
-; LA32D-NEXT:    fmax.s $fa1, $fa1, $fa1
-; LA32D-NEXT:    fmax.s $fa0, $fa0, $fa0
 ; LA32D-NEXT:    fmax.s $fa0, $fa0, $fa1
 ; LA32D-NEXT:    ret
 ;
 ; LA64F-LABEL: maxnum_float:
 ; LA64F:       # %bb.0:
-; LA64F-NEXT:    fmax.s $fa1, $fa1, $fa1
-; LA64F-NEXT:    fmax.s $fa0, $fa0, $fa0
 ; LA64F-NEXT:    fmax.s $fa0, $fa0, $fa1
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: maxnum_float:
 ; LA64D:       # %bb.0:
-; LA64D-NEXT:    fmax.s $fa1, $fa1, $fa1
-; LA64D-NEXT:    fmax.s $fa0, $fa0, $fa0
 ; LA64D-NEXT:    fmax.s $fa0, $fa0, $fa1
 ; LA64D-NEXT:    ret
   %z = call float @llvm.maxnum.f32(float %x, float %y)
@@ -48,15 +40,13 @@ define double @maxnum_double(double %x, double %y) {
 ; LA32F-NEXT:    .cfi_def_cfa_offset 16
 ; LA32F-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32F-NEXT:    .cfi_offset 1, -4
-; LA32F-NEXT:    bl %plt(fmax)
+; LA32F-NEXT:    bl fmax
 ; LA32F-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32F-NEXT:    addi.w $sp, $sp, 16
 ; LA32F-NEXT:    ret
 ;
 ; LA32D-LABEL: maxnum_double:
 ; LA32D:       # %bb.0:
-; LA32D-NEXT:    fmax.d $fa1, $fa1, $fa1
-; LA32D-NEXT:    fmax.d $fa0, $fa0, $fa0
 ; LA32D-NEXT:    fmax.d $fa0, $fa0, $fa1
 ; LA32D-NEXT:    ret
 ;
@@ -66,15 +56,14 @@ define double @maxnum_double(double %x, double %y) {
 ; LA64F-NEXT:    .cfi_def_cfa_offset 16
 ; LA64F-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64F-NEXT:    .cfi_offset 1, -8
-; LA64F-NEXT:    bl %plt(fmax)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(fmax)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64F-NEXT:    addi.d $sp, $sp, 16
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: maxnum_double:
 ; LA64D:       # %bb.0:
-; LA64D-NEXT:    fmax.d $fa1, $fa1, $fa1
-; LA64D-NEXT:    fmax.d $fa0, $fa0, $fa0
 ; LA64D-NEXT:    fmax.d $fa0, $fa0, $fa1
 ; LA64D-NEXT:    ret
   %z = call double @llvm.maxnum.f64(double %x, double %y)
@@ -84,29 +73,21 @@ define double @maxnum_double(double %x, double %y) {
 define float @minnum_float(float %x, float %y) {
 ; LA32F-LABEL: minnum_float:
 ; LA32F:       # %bb.0:
-; LA32F-NEXT:    fmax.s $fa1, $fa1, $fa1
-; LA32F-NEXT:    fmax.s $fa0, $fa0, $fa0
 ; LA32F-NEXT:    fmin.s $fa0, $fa0, $fa1
 ; LA32F-NEXT:    ret
 ;
 ; LA32D-LABEL: minnum_float:
 ; LA32D:       # %bb.0:
-; LA32D-NEXT:    fmax.s $fa1, $fa1, $fa1
-; LA32D-NEXT:    fmax.s $fa0, $fa0, $fa0
 ; LA32D-NEXT:    fmin.s $fa0, $fa0, $fa1
 ; LA32D-NEXT:    ret
 ;
 ; LA64F-LABEL: minnum_float:
 ; LA64F:       # %bb.0:
-; LA64F-NEXT:    fmax.s $fa1, $fa1, $fa1
-; LA64F-NEXT:    fmax.s $fa0, $fa0, $fa0
 ; LA64F-NEXT:    fmin.s $fa0, $fa0, $fa1
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: minnum_float:
 ; LA64D:       # %bb.0:
-; LA64D-NEXT:    fmax.s $fa1, $fa1, $fa1
-; LA64D-NEXT:    fmax.s $fa0, $fa0, $fa0
 ; LA64D-NEXT:    fmin.s $fa0, $fa0, $fa1
 ; LA64D-NEXT:    ret
   %z = call float @llvm.minnum.f32(float %x, float %y)
@@ -120,15 +101,13 @@ define double @minnum_double(double %x, double %y) {
 ; LA32F-NEXT:    .cfi_def_cfa_offset 16
 ; LA32F-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32F-NEXT:    .cfi_offset 1, -4
-; LA32F-NEXT:    bl %plt(fmin)
+; LA32F-NEXT:    bl fmin
 ; LA32F-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32F-NEXT:    addi.w $sp, $sp, 16
 ; LA32F-NEXT:    ret
 ;
 ; LA32D-LABEL: minnum_double:
 ; LA32D:       # %bb.0:
-; LA32D-NEXT:    fmax.d $fa1, $fa1, $fa1
-; LA32D-NEXT:    fmax.d $fa0, $fa0, $fa0
 ; LA32D-NEXT:    fmin.d $fa0, $fa0, $fa1
 ; LA32D-NEXT:    ret
 ;
@@ -138,15 +117,14 @@ define double @minnum_double(double %x, double %y) {
 ; LA64F-NEXT:    .cfi_def_cfa_offset 16
 ; LA64F-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64F-NEXT:    .cfi_offset 1, -8
-; LA64F-NEXT:    bl %plt(fmin)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(fmin)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64F-NEXT:    addi.d $sp, $sp, 16
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: minnum_double:
 ; LA64D:       # %bb.0:
-; LA64D-NEXT:    fmax.d $fa1, $fa1, $fa1
-; LA64D-NEXT:    fmax.d $fa0, $fa0, $fa0
 ; LA64D-NEXT:    fmin.d $fa0, $fa0, $fa1
 ; LA64D-NEXT:    ret
   %z = call double @llvm.minnum.f64(double %x, double %y)

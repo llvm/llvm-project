@@ -5,37 +5,6 @@
 ; CHECK-GI:       warning: Instruction selection used fallback path for v16i4
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for v16i1
 
-declare <1 x i8> @llvm.uadd.sat.v1i8(<1 x i8>, <1 x i8>)
-declare <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8>, <2 x i8>)
-declare <4 x i8> @llvm.uadd.sat.v4i8(<4 x i8>, <4 x i8>)
-declare <8 x i8> @llvm.uadd.sat.v8i8(<8 x i8>, <8 x i8>)
-declare <12 x i8> @llvm.uadd.sat.v12i8(<12 x i8>, <12 x i8>)
-declare <16 x i8> @llvm.uadd.sat.v16i8(<16 x i8>, <16 x i8>)
-declare <32 x i8> @llvm.uadd.sat.v32i8(<32 x i8>, <32 x i8>)
-declare <64 x i8> @llvm.uadd.sat.v64i8(<64 x i8>, <64 x i8>)
-
-declare <1 x i16> @llvm.uadd.sat.v1i16(<1 x i16>, <1 x i16>)
-declare <2 x i16> @llvm.uadd.sat.v2i16(<2 x i16>, <2 x i16>)
-declare <4 x i16> @llvm.uadd.sat.v4i16(<4 x i16>, <4 x i16>)
-declare <8 x i16> @llvm.uadd.sat.v8i16(<8 x i16>, <8 x i16>)
-declare <12 x i16> @llvm.uadd.sat.v12i16(<12 x i16>, <12 x i16>)
-declare <16 x i16> @llvm.uadd.sat.v16i16(<16 x i16>, <16 x i16>)
-declare <32 x i16> @llvm.uadd.sat.v32i16(<32 x i16>, <32 x i16>)
-
-declare <16 x i1> @llvm.uadd.sat.v16i1(<16 x i1>, <16 x i1>)
-declare <16 x i4> @llvm.uadd.sat.v16i4(<16 x i4>, <16 x i4>)
-
-declare <2 x i32> @llvm.uadd.sat.v2i32(<2 x i32>, <2 x i32>)
-declare <4 x i32> @llvm.uadd.sat.v4i32(<4 x i32>, <4 x i32>)
-declare <8 x i32> @llvm.uadd.sat.v8i32(<8 x i32>, <8 x i32>)
-declare <16 x i32> @llvm.uadd.sat.v16i32(<16 x i32>, <16 x i32>)
-declare <2 x i64> @llvm.uadd.sat.v2i64(<2 x i64>, <2 x i64>)
-declare <4 x i64> @llvm.uadd.sat.v4i64(<4 x i64>, <4 x i64>)
-declare <8 x i64> @llvm.uadd.sat.v8i64(<8 x i64>, <8 x i64>)
-
-declare <4 x i24> @llvm.uadd.sat.v4i24(<4 x i24>, <4 x i24>)
-declare <2 x i128> @llvm.uadd.sat.v2i128(<2 x i128>, <2 x i128>)
-
 define <16 x i8> @v16i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; CHECK-LABEL: v16i8:
 ; CHECK:       // %bb.0:
@@ -198,23 +167,20 @@ define void @v2i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-SD-NEXT:    mov v1.s[1], w11
 ; CHECK-SD-NEXT:    add v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    umin v0.2s, v0.2s, v2.2s
-; CHECK-SD-NEXT:    mov w8, v0.s[1]
-; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    strb w9, [x2]
-; CHECK-SD-NEXT:    strb w8, [x2, #1]
+; CHECK-SD-NEXT:    mov s1, v0.s[1]
+; CHECK-SD-NEXT:    str b0, [x2]
+; CHECK-SD-NEXT:    stur b1, [x2, #1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v2i8:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr b0, [x0]
 ; CHECK-GI-NEXT:    ldr b1, [x1]
+; CHECK-GI-NEXT:    add x8, x0, #1
+; CHECK-GI-NEXT:    add x9, x1, #1
+; CHECK-GI-NEXT:    ld1 { v0.b }[1], [x8]
+; CHECK-GI-NEXT:    ld1 { v1.b }[1], [x9]
 ; CHECK-GI-NEXT:    add x8, x2, #1
-; CHECK-GI-NEXT:    ldr b2, [x0, #1]
-; CHECK-GI-NEXT:    ldr b3, [x1, #1]
-; CHECK-GI-NEXT:    mov v0.b[0], v0.b[0]
-; CHECK-GI-NEXT:    mov v1.b[0], v1.b[0]
-; CHECK-GI-NEXT:    mov v0.b[1], v2.b[0]
-; CHECK-GI-NEXT:    mov v1.b[1], v3.b[0]
 ; CHECK-GI-NEXT:    uqadd v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    st1 { v0.b }[0], [x2]
 ; CHECK-GI-NEXT:    st1 { v0.b }[1], [x8]
@@ -255,10 +221,9 @@ define void @v2i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-SD-NEXT:    mov v1.s[1], w11
 ; CHECK-SD-NEXT:    add v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    umin v0.2s, v0.2s, v2.2s
-; CHECK-SD-NEXT:    mov w8, v0.s[1]
-; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    strh w9, [x2]
-; CHECK-SD-NEXT:    strh w8, [x2, #2]
+; CHECK-SD-NEXT:    mov s1, v0.s[1]
+; CHECK-SD-NEXT:    str h0, [x2]
+; CHECK-SD-NEXT:    str h1, [x2, #2]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v2i16:
@@ -325,7 +290,7 @@ define void @v1i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-SD-NEXT:    ldr b0, [x0]
 ; CHECK-SD-NEXT:    ldr b1, [x1]
 ; CHECK-SD-NEXT:    uqadd v0.8b, v0.8b, v1.8b
-; CHECK-SD-NEXT:    st1 { v0.b }[0], [x2]
+; CHECK-SD-NEXT:    str b0, [x2]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v1i8:
@@ -391,6 +356,32 @@ define <16 x i1> @v16i1(<16 x i1> %x, <16 x i1> %y) nounwind {
   ret <16 x i1> %z
 }
 
+define void @v1i32(ptr %px, ptr %py, ptr %pz) nounwind {
+; CHECK-SD-LABEL: v1i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr s0, [x0]
+; CHECK-SD-NEXT:    ldr s1, [x1]
+; CHECK-SD-NEXT:    uqadd v0.2s, v0.2s, v1.2s
+; CHECK-SD-NEXT:    str s0, [x2]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: v1i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr w8, [x0]
+; CHECK-GI-NEXT:    ldr w9, [x1]
+; CHECK-GI-NEXT:    adds w8, w8, w9
+; CHECK-GI-NEXT:    cset w9, hs
+; CHECK-GI-NEXT:    tst w9, #0x1
+; CHECK-GI-NEXT:    csinv w8, w8, wzr, eq
+; CHECK-GI-NEXT:    str w8, [x2]
+; CHECK-GI-NEXT:    ret
+  %x = load <1 x i32>, ptr %px
+  %y = load <1 x i32>, ptr %py
+  %z = call <1 x i32> @llvm.uadd.sat.v1i32(<1 x i32> %x, <1 x i32> %y)
+  store <1 x i32> %z, ptr %pz
+  ret void
+}
+
 define <2 x i32> @v2i32(<2 x i32> %x, <2 x i32> %y) nounwind {
 ; CHECK-LABEL: v2i32:
 ; CHECK:       // %bb.0:
@@ -443,6 +434,32 @@ define <16 x i32> @v16i32(<16 x i32> %x, <16 x i32> %y) nounwind {
 ; CHECK-GI-NEXT:    ret
   %z = call <16 x i32> @llvm.uadd.sat.v16i32(<16 x i32> %x, <16 x i32> %y)
   ret <16 x i32> %z
+}
+
+define void @v1i64(ptr %px, ptr %py, ptr %pz) nounwind {
+; CHECK-SD-LABEL: v1i64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    ldr d1, [x1]
+; CHECK-SD-NEXT:    uqadd d0, d0, d1
+; CHECK-SD-NEXT:    str d0, [x2]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: v1i64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr x8, [x0]
+; CHECK-GI-NEXT:    ldr x9, [x1]
+; CHECK-GI-NEXT:    adds x8, x8, x9
+; CHECK-GI-NEXT:    cset w9, hs
+; CHECK-GI-NEXT:    tst w9, #0x1
+; CHECK-GI-NEXT:    csinv x8, x8, xzr, eq
+; CHECK-GI-NEXT:    str x8, [x2]
+; CHECK-GI-NEXT:    ret
+  %x = load <1 x i64>, ptr %px
+  %y = load <1 x i64>, ptr %py
+  %z = call <1 x i64> @llvm.uadd.sat.v1i64(<1 x i64> %x, <1 x i64> %y)
+  store <1 x i64> %z, ptr %pz
+  ret void
 }
 
 define <2 x i64> @v2i64(<2 x i64> %x, <2 x i64> %y) nounwind {

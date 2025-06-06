@@ -49,7 +49,7 @@
 // TR-NEXT:    [[TMP7:%.*]] = xor i1 [[TMP6]], true, !nosanitize [[META2]]
 // TR-NEXT:    [[TMP8:%.*]] = or i1 [[OR]], [[TMP7]], !nosanitize [[META2]]
 // TR-NEXT:    [[TMP9:%.*]] = and i1 [[TMP5]], [[TMP8]], !nosanitize [[META2]]
-// TR-NEXT:    br i1 [[TMP9]], label %[[CONT:.*]], label %[[TRAP:.*]], !nosanitize [[META2]]
+// TR-NEXT:    br i1 [[TMP9]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3:![0-9]+]], !nosanitize [[META2]]
 // TR:       [[TRAP]]:
 // TR-NEXT:    tail call void @llvm.ubsantrap(i8 3) #[[ATTR5:[0-9]+]], !nosanitize [[META2]]
 // TR-NEXT:    unreachable, !nosanitize [[META2]]
@@ -86,7 +86,7 @@ int div(int x, int y) {
 }
 
 // CHECK-LABEL: define dso_local i32 @null(
-// CHECK-SAME: ptr noundef readonly [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef readonly captures(address_is_null) [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = icmp eq ptr [[X]], null, !nosanitize [[META2]]
 //
@@ -102,21 +102,21 @@ int div(int x, int y) {
 // CHECK-NEXT:    ret i32 [[TMP2]]
 //
 // TR-LABEL: define dso_local i32 @null(
-// TR-SAME: ptr noundef readonly [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// TR-SAME: ptr noundef readonly captures(address_is_null) [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // TR-NEXT:  [[ENTRY:.*:]]
 // TR-NEXT:    [[TMP0:%.*]] = icmp eq ptr [[X]], null, !nosanitize [[META2]]
 // TR-NEXT:    [[TMP1:%.*]] = tail call i1 @llvm.allow.ubsan.check(i8 29), !nosanitize [[META2]]
 // TR-NEXT:    [[DOTNOT1:%.*]] = and i1 [[TMP0]], [[TMP1]]
-// TR-NEXT:    br i1 [[DOTNOT1]], label %[[TRAP:.*]], label %[[CONT:.*]], !nosanitize [[META2]]
+// TR-NEXT:    br i1 [[DOTNOT1]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof [[PROF4:![0-9]+]], !nosanitize [[META2]]
 // TR:       [[TRAP]]:
 // TR-NEXT:    tail call void @llvm.ubsantrap(i8 22) #[[ATTR5]], !nosanitize [[META2]]
 // TR-NEXT:    unreachable, !nosanitize [[META2]]
 // TR:       [[CONT]]:
-// TR-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4, !tbaa [[TBAA3:![0-9]+]]
+// TR-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4, !tbaa [[TBAA5:![0-9]+]]
 // TR-NEXT:    ret i32 [[TMP2]]
 //
 // REC-LABEL: define dso_local i32 @null(
-// REC-SAME: ptr noundef readonly [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// REC-SAME: ptr noundef readonly captures(address_is_null) [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // REC-NEXT:  [[ENTRY:.*:]]
 // REC-NEXT:    [[TMP0:%.*]] = icmp eq ptr [[X]], null, !nosanitize [[META2]]
 // REC-NEXT:    [[TMP1:%.*]] = tail call i1 @llvm.allow.ubsan.check(i8 29), !nosanitize [[META2]]
@@ -159,7 +159,7 @@ int null(int* x) {
 // TR-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i1 } [[TMP0]], 1, !nosanitize [[META2]]
 // TR-NEXT:    [[TMP2:%.*]] = tail call i1 @llvm.allow.ubsan.check(i8 41), !nosanitize [[META2]]
 // TR-NEXT:    [[DOTDEMORGAN:%.*]] = and i1 [[TMP1]], [[TMP2]]
-// TR-NEXT:    br i1 [[DOTDEMORGAN]], label %[[TRAP:.*]], label %[[CONT:.*]], !nosanitize [[META2]]
+// TR-NEXT:    br i1 [[DOTDEMORGAN]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof [[PROF4]], !nosanitize [[META2]]
 // TR:       [[TRAP]]:
 // TR-NEXT:    tail call void @llvm.ubsantrap(i8 0) #[[ATTR5]], !nosanitize [[META2]]
 // TR-NEXT:    unreachable, !nosanitize [[META2]]
@@ -224,7 +224,7 @@ void use(double*);
 // TR-NEXT:    br i1 [[TMP3]], label %[[TRAP:.*]], label %[[BB4:.*]]
 // TR:       [[BB4]]:
 // TR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[VLA]], i64 [[IDXPROM]]
-// TR-NEXT:    [[TMP5:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[TBAA7:![0-9]+]]
+// TR-NEXT:    [[TMP5:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[TBAA9:![0-9]+]]
 // TR-NEXT:    ret double [[TMP5]]
 // TR:       [[TRAP]]:
 // TR-NEXT:    call void @llvm.ubsantrap(i8 71) #[[ATTR5]], !nosanitize [[META2]]
@@ -267,12 +267,14 @@ double lbounds(int b, int i) {
 // CHECK: [[META10]] = !{!"double", [[META7]], i64 0}
 //.
 // TR: [[META2]] = !{}
-// TR: [[TBAA3]] = !{[[META4:![0-9]+]], [[META4]], i64 0}
-// TR: [[META4]] = !{!"int", [[META5:![0-9]+]], i64 0}
-// TR: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
-// TR: [[META6]] = !{!"Simple C/C++ TBAA"}
-// TR: [[TBAA7]] = !{[[META8:![0-9]+]], [[META8]], i64 0}
-// TR: [[META8]] = !{!"double", [[META5]], i64 0}
+// TR: [[PROF3]] = !{!"branch_weights", i32 1048575, i32 1}
+// TR: [[PROF4]] = !{!"branch_weights", i32 1, i32 1048575}
+// TR: [[TBAA5]] = !{[[META6:![0-9]+]], [[META6]], i64 0}
+// TR: [[META6]] = !{!"int", [[META7:![0-9]+]], i64 0}
+// TR: [[META7]] = !{!"omnipotent char", [[META8:![0-9]+]], i64 0}
+// TR: [[META8]] = !{!"Simple C/C++ TBAA"}
+// TR: [[TBAA9]] = !{[[META10:![0-9]+]], [[META10]], i64 0}
+// TR: [[META10]] = !{!"double", [[META7]], i64 0}
 //.
 // REC: [[META2]] = !{}
 // REC: [[PROF3]] = !{!"branch_weights", i32 1048575, i32 1}

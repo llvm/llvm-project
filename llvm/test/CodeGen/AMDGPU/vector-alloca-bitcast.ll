@@ -3,8 +3,6 @@
 ; RUN: llc -mtriple=amdgcn-- -mcpu=tonga -mattr=+promote-alloca -verify-machineinstrs < %t.sroa.ll | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-PROMOTE %s
 ; RUN: opt -S -mtriple=amdgcn-- -passes='sroa,amdgpu-promote-alloca,instcombine' < %s | FileCheck -check-prefix=OPT %s
 
-target datalayout = "A5"
-
 ; OPT-LABEL: @vector_read_alloca_bitcast(
 ; OPT-NOT:   alloca
 ; OPT:       %0 = extractelement <4 x i32> <i32 0, i32 1, i32 2, i32 3>, i32 %index
@@ -15,14 +13,11 @@ target datalayout = "A5"
 ; GCN-ALLOCA:         buffer_load_dword
 
 ; GCN-PROMOTE: s_cmp_eq_u32 s{{[0-9]+}}, 1
-; GCN-PROMOTE: s_cselect_b64 [[CC1:[^,]+]], -1, 0
+; GCN-PROMOTE: s_cselect_b32 [[IND1:s[0-9]+]], 1, 0
 ; GCN-PROMOTE: s_cmp_lg_u32 s{{[0-9]+}}, 2
-; GCN-PROMOTE: v_cndmask_b32_e{{32|64}} [[IND1:v[0-9]+]], 0, 1, [[CC1]]
-; GCN-PROMOTE: s_cselect_b64 vcc, -1, 0
+; GCN-PROMOTE: s_cselect_b32 [[IND2:s[0-9]+]], [[IND1]], 2
 ; GCN-PROMOTE: s_cmp_lg_u32 s{{[0-9]+}}, 3
-; GCN-PROMOTE: v_cndmask_b32_e{{32|64}} [[IND2:v[0-9]+]], 2, [[IND1]], vcc
-; GCN-PROMOTE: s_cselect_b64 vcc, -1, 0
-; GCN-PROMOTE: v_cndmask_b32_e{{32|64}} [[IND3:v[0-9]+]], 3, [[IND2]], vcc
+; GCN-PROMOTE: s_cselect_b32 [[IND3:s[0-9]+]], [[IND2]], 3
 ; GCN-PROMOTE: ScratchSize: 0
 
 define amdgpu_kernel void @vector_read_alloca_bitcast(ptr addrspace(1) %out, i32 %index) {
@@ -51,7 +46,7 @@ entry:
 ; GCN-ALLOCA-COUNT-5: buffer_store_dword
 ; GCN-ALLOCA:         buffer_load_dword
 
-; GCN-PROMOTE-COUNT-7: v_cndmask
+; GCN-PROMOTE-COUNT-7: s_cselect_b32
 
 ; GCN-PROMOTE: ScratchSize: 0
 
@@ -76,7 +71,7 @@ entry:
 ; OPT-LABEL: @vector_write_read_bitcast_to_float(
 ; OPT-NOT:   alloca
 ; OPT: bb2:
-; OPT:  %promotealloca = phi <6 x float> [ undef, %bb ], [ %0, %bb2 ]
+; OPT:  %promotealloca = phi <6 x float> [ zeroinitializer, %bb ], [ %0, %bb2 ]
 ; OPT:  %0 = insertelement <6 x float> %promotealloca, float %tmp71, i32 %tmp10
 ; OPT: .preheader:
 ; OPT:  %bc = bitcast <6 x float> %0 to <6 x i32>
@@ -136,7 +131,7 @@ bb15:                                             ; preds = %.preheader
 ; OPT-LABEL: @vector_write_read_bitcast_to_double(
 ; OPT-NOT:   alloca
 ; OPT: bb2:
-; OPT:  %promotealloca = phi <6 x double> [ undef, %bb ], [ %0, %bb2 ]
+; OPT:  %promotealloca = phi <6 x double> [ zeroinitializer, %bb ], [ %0, %bb2 ]
 ; OPT:  %0 = insertelement <6 x double> %promotealloca, double %tmp71, i32 %tmp10
 ; OPT: .preheader:
 ; OPT:  %bc = bitcast <6 x double> %0 to <6 x i64>
@@ -197,7 +192,7 @@ bb15:                                             ; preds = %.preheader
 ; OPT-LABEL: @vector_write_read_bitcast_to_i64(
 ; OPT-NOT:   alloca
 ; OPT: bb2:
-; OPT:  %promotealloca = phi <6 x i64> [ undef, %bb ], [ %0, %bb2 ]
+; OPT:  %promotealloca = phi <6 x i64> [ zeroinitializer, %bb ], [ %0, %bb2 ]
 ; OPT:  %0 = insertelement <6 x i64> %promotealloca, i64 %tmp6, i32 %tmp9
 ; OPT: .preheader:
 ; OPT:  %1 = extractelement <6 x i64> %0, i32 %tmp18
@@ -292,14 +287,11 @@ entry:
 ; GCN-ALLOCA:         buffer_load_dword
 
 ; GCN-PROMOTE: s_cmp_eq_u32 s{{[0-9]+}}, 1
-; GCN-PROMOTE: s_cselect_b64 [[CC1:[^,]+]], -1, 0
+; GCN-PROMOTE: s_cselect_b32 [[IND1:s[0-9]+]], 1, 0
 ; GCN-PROMOTE: s_cmp_lg_u32 s{{[0-9]+}}, 2
-; GCN-PROMOTE: v_cndmask_b32_e{{32|64}} [[IND1:v[0-9]+]], 0, 1, [[CC1]]
-; GCN-PROMOTE: s_cselect_b64 vcc, -1, 0
+; GCN-PROMOTE: s_cselect_b32 [[IND2:s[0-9]+]], [[IND1]], 2
 ; GCN-PROMOTE: s_cmp_lg_u32 s{{[0-9]+}}, 3
-; GCN-PROMOTE: v_cndmask_b32_e{{32|64}} [[IND2:v[0-9]+]], 2, [[IND1]], vcc
-; GCN-PROMOTE: s_cselect_b64 vcc, -1, 0
-; GCN-PROMOTE: v_cndmask_b32_e{{32|64}} [[IND3:v[0-9]+]], 3, [[IND2]], vcc
+; GCN-PROMOTE: s_cselect_b32 [[IND3:s[0-9]+]], [[IND2]], 3
 
 ; GCN-PROMOTE: ScratchSize: 0
 

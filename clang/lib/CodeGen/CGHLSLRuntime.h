@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CGHLSLRUNTIME_H
 #define LLVM_CLANG_LIB_CODEGEN_CGHLSLRUNTIME_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
@@ -46,25 +47,33 @@
     }                                                                          \
   }
 
+using ResourceClass = llvm::dxil::ResourceClass;
+
 namespace llvm {
 class GlobalVariable;
 class Function;
 class StructType;
+class Metadata;
 } // namespace llvm
 
 namespace clang {
+class NamedDecl;
 class VarDecl;
 class ParmVarDecl;
+class InitListExpr;
 class HLSLBufferDecl;
 class HLSLResourceBindingAttr;
 class Type;
+class RecordType;
 class DeclContext;
+class HLSLPackOffsetAttr;
 
 class FunctionDecl;
 
 namespace CodeGen {
 
 class CodeGenModule;
+class CodeGenFunction;
 
 class CGHLSLRuntime {
 public:
@@ -77,6 +86,8 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(Cross, cross)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Degrees, degrees)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Frac, frac)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(FlattenedThreadIdInGroup,
+                                   flattened_thread_id_in_group)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Lerp, lerp)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Normalize, normalize)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Rsqrt, rsqrt)
@@ -106,8 +117,6 @@ public:
 
   GENERATE_HLSL_INTRINSIC_FUNCTION(CreateResourceGetPointer,
                                    resource_getpointer)
-  GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromBinding,
-                                   resource_handlefrombinding)
   GENERATE_HLSL_INTRINSIC_FUNCTION(BufferUpdateCounter, resource_updatecounter)
   GENERATE_HLSL_INTRINSIC_FUNCTION(GroupMemoryBarrierWithGroupSync,
                                    group_memory_barrier_with_group_sync)
@@ -116,24 +125,14 @@ public:
   // End of reserved area for HLSL intrinsic getters.
   //===----------------------------------------------------------------------===//
 
-  struct BufferResBinding {
-    // The ID like 2 in register(b2, space1).
-    std::optional<unsigned> Reg;
-    // The Space like 1 is register(b2, space1).
-    // Default value is 0.
-    unsigned Space;
-    BufferResBinding(HLSLResourceBindingAttr *Attr);
-  };
-  struct Buffer {
-    Buffer(const HLSLBufferDecl *D);
-    llvm::StringRef Name;
-    // IsCBuffer - Whether the buffer is a cbuffer (and not a tbuffer).
-    bool IsCBuffer;
-    BufferResBinding Binding;
-    // Global variable and offset for each constant.
-    std::vector<std::pair<llvm::GlobalVariable *, unsigned>> Constants;
-    llvm::StructType *LayoutStruct = nullptr;
-  };
+  // Returns ID of the intrinsic that initializes resource handle from binding
+  // and a bool value indicating whether the last argument of the intrinsic is
+  // the resource name (not all targets need that).
+  std::pair<llvm::Intrinsic::ID, bool> getCreateHandleFromBindingIntrinsic();
+
+  // Same as above but for implicit binding.
+  std::pair<llvm::Intrinsic::ID, bool>
+  getCreateHandleFromImplicitBindingIntrinsic();
 
 protected:
   CodeGenModule &CGM;
@@ -145,9 +144,10 @@ public:
   CGHLSLRuntime(CodeGenModule &CGM) : CGM(CGM) {}
   virtual ~CGHLSLRuntime() {}
 
-  llvm::Type *convertHLSLSpecificType(const Type *T);
+  llvm::Type *
+  convertHLSLSpecificType(const Type *T,
+                          SmallVector<int32_t> *Packoffsets = nullptr);
 
-  void annotateHLSLResource(const VarDecl *D, llvm::GlobalVariable *GV);
   void generateGlobalCtorDtorCalls();
 
   void addBuffer(const HLSLBufferDecl *D);
@@ -161,16 +161,21 @@ public:
 
   llvm::Instruction *getConvergenceToken(llvm::BasicBlock &BB);
 
+  llvm::TargetExtType *
+  getHLSLBufferLayoutType(const RecordType *LayoutStructTy);
+  void addHLSLBufferLayoutType(const RecordType *LayoutStructTy,
+                               llvm::TargetExtType *LayoutTy);
+  void emitInitListOpaqueValues(CodeGenFunction &CGF, InitListExpr *E);
+
 private:
-  void addBufferResourceAnnotation(llvm::GlobalVariable *GV,
-                                   llvm::hlsl::ResourceClass RC,
-                                   llvm::hlsl::ResourceKind RK, bool IsROV,
-                                   llvm::hlsl::ElementType ET,
-                                   BufferResBinding &Binding);
-  void addConstant(VarDecl *D, Buffer &CB);
-  void addBufferDecls(const DeclContext *DC, Buffer &CB);
+  void emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
+                                    llvm::GlobalVariable *BufGV);
+  void initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
+                                   llvm::GlobalVariable *GV,
+                                   HLSLResourceBindingAttr *RBA);
   llvm::Triple::ArchType getArch();
-  llvm::SmallVector<Buffer> Buffers;
+
+  llvm::DenseMap<const clang::RecordType *, llvm::TargetExtType *> LayoutTypes;
 };
 
 } // namespace CodeGen

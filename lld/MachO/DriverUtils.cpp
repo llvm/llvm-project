@@ -9,8 +9,6 @@
 #include "Config.h"
 #include "Driver.h"
 #include "InputFiles.h"
-#include "ObjC.h"
-#include "Target.h"
 
 #include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
@@ -237,6 +235,23 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
     return file;
   }
 
+  // Frameworks can be found from different symlink paths, so resolve
+  // symlinks and look up in the dylib cache.
+  DylibFile *&realfile = file;
+  SmallString<128> realPath;
+  std::error_code err = fs::real_path(mbref.getBufferIdentifier(), realPath);
+  if (!err) {
+    CachedHashStringRef resolvedPath(uniqueSaver().save(StringRef(realPath)));
+    realfile = loadedDylibs[resolvedPath];
+    if (realfile) {
+      if (explicitlyLinked)
+        realfile->setExplicitlyLinked();
+
+      file = realfile;
+      return realfile;
+    }
+  }
+
   DylibFile *newFile;
   file_magic magic = identify_magic(mbref.getBuffer());
   if (magic == file_magic::tapi_file) {
@@ -248,6 +263,7 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
     }
     file =
         make<DylibFile>(**result, umbrella, isBundleLoader, explicitlyLinked);
+    realfile = file;
 
     // parseReexports() can recursively call loadDylib(). That's fine since
     // we wrote the DylibFile we just loaded to the loadDylib cache via the
@@ -263,6 +279,7 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
            magic == file_magic::macho_executable ||
            magic == file_magic::macho_bundle);
     file = make<DylibFile>(mbref, umbrella, isBundleLoader, explicitlyLinked);
+    realfile = file;
 
     // parseLoadCommands() can also recursively call loadDylib(). See comment
     // in previous block for why this means we must copy `file` here.
@@ -272,9 +289,8 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
   }
 
   if (explicitlyLinked && !newFile->allowableClients.empty()) {
-    bool allowed = std::any_of(
-        newFile->allowableClients.begin(), newFile->allowableClients.end(),
-        [&](StringRef allowableClient) {
+    bool allowed =
+        llvm::any_of(newFile->allowableClients, [&](StringRef allowableClient) {
           // We only do a prefix match to match LD64's behaviour.
           return allowableClient.starts_with(config->clientName);
         });

@@ -13,7 +13,7 @@ end program acc_atomic_test
 ! CHECK: %[[G_DECL:.*]]:2 = hlfir.declare %[[VAR_G]] {uniq_name = "_QFEg"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK: %[[VAR_H:.*]] = fir.alloca f32 {bindc_name = "h", uniq_name = "_QFEh"}
 ! CHECK: %[[H_DECL:.*]]:2 = hlfir.declare %[[VAR_H]] {uniq_name = "_QFEh"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-! CHECK: acc.atomic.read %[[G_DECL]]#1 = %[[H_DECL]]#1 : !fir.ref<f32>, !fir.ref<f32>, f32
+! CHECK: acc.atomic.read %[[G_DECL]]#0 = %[[H_DECL]]#0 : !fir.ref<f32>, !fir.ref<f32>, f32
 ! CHECK: return
 ! CHECK: }
 
@@ -55,4 +55,4 @@ end
 ! CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {uniq_name = "_QFatomic_read_with_castEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: %[[Y:.*]] = fir.alloca i64 {bindc_name = "y", uniq_name = "_QFatomic_read_with_castEy"}
 ! CHECK: %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y]] {uniq_name = "_QFatomic_read_with_castEy"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
-! CHECK: acc.atomic.read %[[Y_DECL]]#1 = %[[X_DECL]]#1 : !fir.ref<i64>, !fir.ref<i32>, i32
+! CHECK: acc.atomic.read %[[Y_DECL]]#0 = %[[X_DECL]]#0 : !fir.ref<i64>, !fir.ref<i32>, i32

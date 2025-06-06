@@ -70,6 +70,23 @@ MPFRNumber MPFRNumber::acosh() const {
   return result;
 }
 
+MPFRNumber MPFRNumber::acospi() const {
+  MPFRNumber result(*this);
+
+#if MPFR_VERSION_MAJOR > 4 ||                                                  \
+    (MPFR_VERSION_MAJOR == 4 && MPFR_VERSION_MINOR >= 2)
+  mpfr_acospi(result.value, value, mpfr_rounding);
+  return result;
+#else
+  MPFRNumber value_acos(0.0, 1280);
+  mpfr_acos(value_acos.value, value, MPFR_RNDN);
+  MPFRNumber value_pi(0.0, 1280);
+  mpfr_const_pi(value_pi.value, MPFR_RNDN);
+  mpfr_div(result.value, value_acos.value, value_pi.value, mpfr_rounding);
+  return result;
+#endif
+}
+
 MPFRNumber MPFRNumber::add(const MPFRNumber &b) const {
   MPFRNumber result(*this);
   mpfr_add(result.value, value, b.value, mpfr_rounding);
@@ -263,7 +280,7 @@ MPFRNumber MPFRNumber::frexp(int &exp) {
   MPFRNumber result(*this);
   mpfr_exp_t resultExp;
   mpfr_frexp(&resultExp, result.value, value, mpfr_rounding);
-  exp = resultExp;
+  exp = static_cast<int>(resultExp);
   return result;
 }
 
@@ -307,7 +324,7 @@ MPFRNumber MPFRNumber::remquo(const MPFRNumber &divisor, int &quotient) {
   MPFRNumber remainder(*this);
   long q;
   mpfr_remquo(remainder.value, &q, value, divisor.value, mpfr_rounding);
-  quotient = q;
+  quotient = static_cast<int>(q);
   return remainder;
 }
 

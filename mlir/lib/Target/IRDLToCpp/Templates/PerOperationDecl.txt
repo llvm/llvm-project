@@ -1,0 +1,185 @@
+R"(
+//===----------------------------------------------------------------------===//
+// __NAMESPACE_PATH__::__OP_CPP_NAME__ declarations
+//===----------------------------------------------------------------------===//
+
+__NAMESPACE_OPEN__
+
+namespace detail {
+
+class __OP_CPP_NAME__GenericAdaptorBase {
+public:
+  struct Properties {
+  };
+public:
+  __OP_CPP_NAME__GenericAdaptorBase(::mlir::Operation *op) 
+    : odsAttrs(op->getRawDictionaryAttrs()), odsOpName(op->getName()), 
+               odsRegions(op->getRegions()) 
+  {}
+
+  /// Return the unstructured operand index of a structured operand along with
+  // the amount of unstructured operands it contains.
+  std::pair<unsigned, unsigned>
+  getStructuredOperandIndexAndLength (unsigned index, 
+                                      unsigned odsOperandsSize) {
+    return {index, 1};
+  }
+
+  const Properties &getProperties() {
+    return properties;
+  }
+
+  ::mlir::DictionaryAttr getAttributes() {
+    return odsAttrs;
+  }
+protected:
+  ::mlir::DictionaryAttr odsAttrs;
+  ::std::optional<::mlir::OperationName> odsOpName;
+  Properties properties;
+  ::mlir::RegionRange odsRegions;
+};
+
+} // namespace detail
+
+template <typename RangeT>
+class __OP_CPP_NAME__GenericAdaptor 
+  : public detail::__OP_CPP_NAME__GenericAdaptorBase {
+  using ValueT = ::llvm::detail::ValueOfRange<RangeT>;
+  using Base = detail::__OP_CPP_NAME__GenericAdaptorBase;
+public:
+  __OP_CPP_NAME__GenericAdaptor(RangeT values, ::mlir::DictionaryAttr attrs,
+                                ::mlir::OpaqueProperties properties, 
+                                ::mlir::RegionRange regions = {}) 
+    : __OP_CPP_NAME__GenericAdaptor(values, attrs, 
+      (properties ? *properties.as<::mlir::EmptyProperties *>() 
+      : ::mlir::EmptyProperties{}), regions) {}
+
+  __OP_CPP_NAME__GenericAdaptor(RangeT values, 
+                                const __OP_CPP_NAME__GenericAdaptorBase &base)
+    : Base(base), odsOperands(values) {}
+
+  // This template parameter allows using __OP_CPP_NAME__ which is declared 
+  // later.
+  template <typename LateInst = __OP_CPP_NAME__,
+            typename = std::enable_if_t<
+                         std::is_same_v<LateInst, __OP_CPP_NAME__>>>
+  __OP_CPP_NAME__GenericAdaptor(RangeT values, LateInst op) 
+    : Base(op), odsOperands(values) {}
+
+  /// Return the unstructured operand index of a structured operand along with
+  // the amount of unstructured operands it contains.
+  std::pair<unsigned, unsigned>
+  getStructuredOperandIndexAndLength(unsigned index) {
+    return Base::getStructuredOperandIndexAndLength(index, odsOperands.size());
+  }
+
+  /// Get the n-th structured operand (single value, variadic or optional).
+  RangeT getStructuredOperands(unsigned index) {
+    auto valueRange = getStructuredOperandIndexAndLength(index);
+    return {std::next(odsOperands.begin(), valueRange.first),
+             std::next(odsOperands.begin(), 
+                       valueRange.first + valueRange.second)};
+  }
+
+  RangeT getOperands() {
+    return odsOperands;
+  }
+
+  __OP_OPERAND_GETTER_DECLS__
+
+private:
+  RangeT odsOperands;
+};
+
+class __OP_CPP_NAME__Adaptor 
+  : public __OP_CPP_NAME__GenericAdaptor<::mlir::ValueRange> {
+public:
+  using __OP_CPP_NAME__GenericAdaptor::__OP_CPP_NAME__GenericAdaptor;
+  __OP_CPP_NAME__Adaptor(__OP_CPP_NAME__ op);
+
+  ::llvm::LogicalResult verify(::mlir::Location loc);
+};
+
+class __OP_CPP_NAME__ : public ::mlir::Op<__OP_CPP_NAME__> {
+public:
+  using Op::Op;
+  using Op::print;
+  using Adaptor = __OP_CPP_NAME__Adaptor;
+  template <typename RangeT>
+  using GenericAdaptor = __OP_CPP_NAME__GenericAdaptor<RangeT>;
+  using FoldAdaptor = GenericAdaptor<::llvm::ArrayRef<::mlir::Attribute>>;
+  static ::llvm::ArrayRef<::llvm::StringRef> getAttributeNames() {
+    return {};
+  }
+
+  static constexpr ::llvm::StringLiteral getOperationName() {
+    return ::llvm::StringLiteral("__DIALECT_NAME__.__OP_NAME__");
+  }
+
+  static ::llvm::ArrayRef<::llvm::StringRef> getOperandNames() {
+    static ::llvm::StringRef operandNames[] = __OP_OPERAND_INITIALIZER_LIST__;
+    return operandNames;
+  }
+
+  static ::llvm::StringRef getOperandName(unsigned index) {
+    assert(index < __OP_OPERAND_COUNT__ && "invalid attribute index");
+    return getOperandNames()[index];
+  }
+
+  static ::llvm::ArrayRef<::llvm::StringRef> getResultNames() {
+    static ::llvm::StringRef resultNames[] = __OP_RESULT_INITIALIZER_LIST__;
+    return resultNames;
+  }
+
+  static ::llvm::StringRef getResultName(unsigned index) {
+    assert(index < __OP_RESULT_COUNT__ && "invalid attribute index");
+    return getResultNames()[index];
+  }
+
+  /// Return the unstructured operand index of a structured operand along with
+  // the amount of unstructured operands it contains.
+  std::pair<unsigned, unsigned>
+  getStructuredOperandIndexAndLength(unsigned index) {
+    return {index, 1};
+  }
+
+  /// Get the n-th structured operand (single value, variadic or optional).
+  ::mlir::Operation::operand_range getStructuredOperands(unsigned index) {
+    auto valueRange = getStructuredOperandIndexAndLength(index);
+    return {std::next(getOperation()->operand_begin(), valueRange.first),
+             std::next(getOperation()->operand_begin(), 
+                       valueRange.first + valueRange.second)};
+  }
+
+  /// Return the unstructured result index of a structured result along with
+  // the amount of unstructured results it contains.
+  std::pair<unsigned, unsigned>
+  getStructuredResultIndexAndLength(unsigned index) {
+    return {index, 1};
+  }
+
+  /// Get the n-th structured result (single value, variadic or optional).
+  ::mlir::Operation::result_range getStructuredResults(unsigned index) {
+    auto valueRange = getStructuredResultIndexAndLength(index);
+    return {std::next(getOperation()->result_begin(), valueRange.first),
+             std::next(getOperation()->result_begin(), 
+                       valueRange.first + valueRange.second)};
+  }
+
+  __OP_OPERAND_GETTER_DECLS__
+  __OP_RESULT_GETTER_DECLS__
+  
+  __OP_BUILD_DECLS__
+  static void build(::mlir::OpBuilder &odsBuilder, 
+                    ::mlir::OperationState &odsState, 
+                    ::mlir::TypeRange resultTypes, 
+                    ::mlir::ValueRange operands, 
+                    ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {});
+};
+
+
+__NAMESPACE_CLOSE__
+
+MLIR_DECLARE_EXPLICIT_TYPE_ID(__NAMESPACE_PATH__::__OP_CPP_NAME__)
+
+)"

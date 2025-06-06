@@ -280,6 +280,53 @@ a number of different tests.
   normal interface.  This may be true even on targets where pointer
   authentication is not enabled by default.
 
+__ptrauth Qualifier
+^^^^^^^^^^^^^^^^^^^
+
+``__ptrauth(key, address, discriminator)`` is an extended type
+qualifier which causes so-qualified objects to hold pointers or pointer sized
+integers signed using the specified schema rather than the default schema for
+such types.
+
+In the current implementation in Clang, the qualified type must be a C pointer
+type, either to a function or to an object, or a pointer sized integer.  It
+currently cannot be an Objective-C pointer type, a C++ reference type, or a
+block pointer type; these restrictions may be lifted in the future.
+
+The qualifier's operands are as follows:
+
+- ``key`` - an expression evaluating to a key value from ``<ptrauth.h>``; must
+  be a constant expression
+
+- ``address`` - whether to use address diversity (1) or not (0); must be
+  a constant expression with one of these two values
+
+- ``discriminator`` - a constant discriminator; must be a constant expression
+
+See `Discriminators`_ for more information about discriminators.
+
+Currently the operands must be constant-evaluable even within templates. In the
+future this restriction may be lifted to allow value-dependent expressions as
+long as they instantiate to a constant expression.
+
+Consistent with the ordinary C/C++ rule for parameters, top-level ``__ptrauth``
+qualifiers on a parameter (after parameter type adjustment) are ignored when
+deriving the type of the function.  The parameter will be passed using the
+default ABI for the unqualified pointer type.
+
+If ``x`` is an object of type ``__ptrauth(key, address, discriminator) T``,
+then the signing schema of the value stored in ``x`` is a key of ``key`` and
+a discriminator determined as follows:
+
+- if ``address`` is 0, then the discriminator is ``discriminator``;
+
+- if ``address`` is 1 and ``discriminator`` is 0, then the discriminator is
+  ``&x``; otherwise
+
+- if ``address`` is 1 and ``discriminator`` is non-zero, then the discriminator
+  is ``ptrauth_blend_discriminator(&x, discriminator)``; see
+  `ptrauth_blend_discriminator`_.
+
 ``<ptrauth.h>``
 ~~~~~~~~~~~~~~~
 
@@ -507,7 +554,7 @@ with this idea:
 
 - It's unclear whether this kind of encryption is even possible without
   increasing the storage size of a signed pointer.  If the storage size can be
-  increased, brute-force atacks can be equally well mitigated by simply storing
+  increased, brute-force attacks can be equally well mitigated by simply storing
   a larger signature.
 
 - It would likely be impossible to implement a ``strip`` operation, which might

@@ -15,11 +15,15 @@
 #ifndef LLVM_ADT_EQUIVALENCECLASSES_H
 #define LLVM_ADT_EQUIVALENCECLASSES_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/Allocator.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
-#include <set>
 
 namespace llvm {
 
@@ -31,8 +35,7 @@ namespace llvm {
 ///
 /// This implementation is an efficient implementation that only stores one copy
 /// of the element being indexed per entry in the set, and allows any arbitrary
-/// type to be indexed (as long as it can be ordered with operator< or a
-/// comparator is provided).
+/// type to be indexed (as long as it can be implements DenseMapInfo).
 ///
 /// Here is a simple example using integers:
 ///
@@ -56,18 +59,18 @@ namespace llvm {
 ///   4
 ///   5 1 2
 ///
-template <class ElemTy, class Compare = std::less<ElemTy>>
-class EquivalenceClasses {
+template <class ElemTy> class EquivalenceClasses {
+public:
   /// ECValue - The EquivalenceClasses data structure is just a set of these.
   /// Each of these represents a relation for a value.  First it stores the
-  /// value itself, which provides the ordering that the set queries.  Next, it
-  /// provides a "next pointer", which is used to enumerate all of the elements
-  /// in the unioned set.  Finally, it defines either a "end of list pointer" or
-  /// "leader pointer" depending on whether the value itself is a leader.  A
-  /// "leader pointer" points to the node that is the leader for this element,
-  /// if the node is not a leader.  A "end of list pointer" points to the last
-  /// node in the list of members of this list.  Whether or not a node is a
-  /// leader is determined by a bit stolen from one of the pointers.
+  /// value itself. Next, it provides a "next pointer", which is used to
+  /// enumerate all of the elements in the unioned set.  Finally, it defines
+  /// either a "end of list pointer" or "leader pointer" depending on whether
+  /// the value itself is a leader. A "leader pointer" points to the node that
+  /// is the leader for this element, if the node is not a leader.  A "end of
+  /// list pointer" points to the last node in the list of members of this list.
+  /// Whether or not a node is a leader is determined by a bit stolen from one
+  /// of the pointers.
   class ECValue {
     friend class EquivalenceClasses;
 
@@ -77,11 +80,15 @@ class EquivalenceClasses {
     // ECValue ctor - Start out with EndOfList pointing to this node, Next is
     // Null, isLeader = true.
     ECValue(const ElemTy &Elt)
-      : Leader(this), Next((ECValue*)(intptr_t)1), Data(Elt) {}
+        : Leader(this),
+          Next(reinterpret_cast<ECValue *>(static_cast<intptr_t>(1))),
+          Data(Elt) {}
 
     const ECValue *getLeader() const {
-      if (isLeader()) return this;
-      if (Leader->isLeader()) return Leader;
+      if (isLeader())
+        return this;
+      if (Leader->isLeader())
+        return Leader;
       // Path compression.
       return Leader = Leader->getLeader();
     }
@@ -93,12 +100,16 @@ class EquivalenceClasses {
 
     void setNext(const ECValue *NewNext) const {
       assert(getNext() == nullptr && "Already has a next pointer!");
-      Next = (const ECValue*)((intptr_t)NewNext | (intptr_t)isLeader());
+      Next = reinterpret_cast<const ECValue *>(
+          reinterpret_cast<intptr_t>(NewNext) |
+          static_cast<intptr_t>(isLeader()));
     }
 
   public:
-    ECValue(const ECValue &RHS) : Leader(this), Next((ECValue*)(intptr_t)1),
-                                  Data(RHS.Data) {
+    ECValue(const ECValue &RHS)
+        : Leader(this),
+          Next(reinterpret_cast<ECValue *>(static_cast<intptr_t>(1))),
+          Data(RHS.Data) {
       // Only support copying of singleton nodes.
       assert(RHS.isLeader() && RHS.getNext() == nullptr && "Not a singleton!");
     }
@@ -107,48 +118,31 @@ class EquivalenceClasses {
     const ElemTy &getData() const { return Data; }
 
     const ECValue *getNext() const {
-      return (ECValue*)((intptr_t)Next & ~(intptr_t)1);
+      return reinterpret_cast<ECValue *>(reinterpret_cast<intptr_t>(Next) &
+                                         ~static_cast<intptr_t>(1));
     }
   };
 
-  /// A wrapper of the comparator, to be passed to the set.
-  struct ECValueComparator {
-    using is_transparent = void;
-
-    ECValueComparator() : compare(Compare()) {}
-
-    bool operator()(const ECValue &lhs, const ECValue &rhs) const {
-      return compare(lhs.Data, rhs.Data);
-    }
-
-    template <typename T>
-    bool operator()(const T &lhs, const ECValue &rhs) const {
-      return compare(lhs, rhs.Data);
-    }
-
-    template <typename T>
-    bool operator()(const ECValue &lhs, const T &rhs) const {
-      return compare(lhs.Data, rhs);
-    }
-
-    const Compare compare;
-  };
-
+private:
   /// TheMapping - This implicitly provides a mapping from ElemTy values to the
   /// ECValues, it just keeps the key as part of the value.
-  std::set<ECValue, ECValueComparator> TheMapping;
+  DenseMap<ElemTy, ECValue *> TheMapping;
+
+  /// List of all members, used to provide a determinstic iteration order.
+  SmallVector<const ECValue *> Members;
+
+  mutable BumpPtrAllocator ECValueAllocator;
 
 public:
   EquivalenceClasses() = default;
-  EquivalenceClasses(const EquivalenceClasses &RHS) {
-    operator=(RHS);
-  }
+  EquivalenceClasses(const EquivalenceClasses &RHS) { operator=(RHS); }
 
-  const EquivalenceClasses &operator=(const EquivalenceClasses &RHS) {
+  EquivalenceClasses &operator=(const EquivalenceClasses &RHS) {
     TheMapping.clear();
-    for (iterator I = RHS.begin(), E = RHS.end(); I != E; ++I)
-      if (I->isLeader()) {
-        member_iterator MI = RHS.member_begin(I);
+    Members.clear();
+    for (const auto &E : RHS)
+      if (E->isLeader()) {
+        member_iterator MI = RHS.member_begin(*E);
         member_iterator LeaderIt = member_begin(insert(*MI));
         for (++MI; MI != member_end(); ++MI)
           unionSets(LeaderIt, member_begin(insert(*MI)));
@@ -161,28 +155,33 @@ public:
   //
 
   /// iterator* - Provides a way to iterate over all values in the set.
-  using iterator =
-      typename std::set<ECValue, ECValueComparator>::const_iterator;
+  using iterator = typename SmallVector<const ECValue *>::const_iterator;
 
-  iterator begin() const { return TheMapping.begin(); }
-  iterator end() const { return TheMapping.end(); }
+  iterator begin() const { return Members.begin(); }
+  iterator end() const { return Members.end(); }
 
   bool empty() const { return TheMapping.empty(); }
 
   /// member_* Iterate over the members of an equivalence class.
   class member_iterator;
-  member_iterator member_begin(iterator I) const {
+  member_iterator member_begin(const ECValue &ECV) const {
     // Only leaders provide anything to iterate over.
-    return member_iterator(I->isLeader() ? &*I : nullptr);
-  }
-  member_iterator member_end() const {
-    return member_iterator(nullptr);
+    return member_iterator(ECV.isLeader() ? &ECV : nullptr);
   }
 
-  /// findValue - Return an iterator to the specified value.  If it does not
-  /// exist, end() is returned.
-  iterator findValue(const ElemTy &V) const {
-    return TheMapping.find(V);
+  member_iterator member_end() const { return member_iterator(nullptr); }
+
+  iterator_range<member_iterator> members(const ECValue &ECV) const {
+    return make_range(member_begin(ECV), member_end());
+  }
+
+  iterator_range<member_iterator> members(const ElemTy &V) const {
+    return make_range(findLeader(V), member_end());
+  }
+
+  /// Returns true if \p V is contained an equivalence class.
+  bool contains(const ElemTy &V) const {
+    return TheMapping.find(V) != TheMapping.end();
   }
 
   /// getLeaderValue - Return the leader for the specified value that is in the
@@ -207,8 +206,9 @@ public:
   /// Note that this is a linear time operation.
   unsigned getNumClasses() const {
     unsigned NC = 0;
-    for (iterator I = begin(), E = end(); I != E; ++I)
-      if (I->isLeader()) ++NC;
+    for (const auto &E : *this)
+      if (E->isLeader())
+        ++NC;
     return NC;
   }
 
@@ -217,31 +217,92 @@ public:
 
   /// insert - Insert a new value into the union/find set, ignoring the request
   /// if the value already exists.
-  iterator insert(const ElemTy &Data) {
-    return TheMapping.insert(ECValue(Data)).first;
+  const ECValue &insert(const ElemTy &Data) {
+    auto I = TheMapping.insert({Data, nullptr});
+    if (!I.second)
+      return *I.first->second;
+
+    auto *ECV = new (ECValueAllocator) ECValue(Data);
+    I.first->second = ECV;
+    Members.push_back(ECV);
+    return *ECV;
+  }
+
+  /// erase - Erase a value from the union/find set, return "true" if erase
+  /// succeeded, or "false" when the value was not found.
+  bool erase(const ElemTy &V) {
+    if (!TheMapping.contains(V))
+      return false;
+    const ECValue *Cur = TheMapping[V];
+    const ECValue *Next = Cur->getNext();
+    // If the current element is the leader and has a successor element,
+    // update the successor element's 'Leader' field to be the last element,
+    // set the successor element's stolen bit, and set the 'Leader' field of
+    // all other elements in same class to be the successor element.
+    if (Cur->isLeader() && Next) {
+      Next->Leader = Cur->Leader;
+      Next->Next = reinterpret_cast<const ECValue *>(
+          reinterpret_cast<intptr_t>(Next->Next) | static_cast<intptr_t>(1));
+
+      const ECValue *NewLeader = Next;
+      while ((Next = Next->getNext())) {
+        Next->Leader = NewLeader;
+      }
+    } else if (!Cur->isLeader()) {
+      const ECValue *Leader = findLeader(V).Node;
+      const ECValue *Pre = Leader;
+      while (Pre->getNext() != Cur) {
+        Pre = Pre->getNext();
+      }
+      if (!Next) {
+        // If the current element is the last element(not leader), set the
+        // successor of the current element's predecessor to null, and set
+        // the 'Leader' field of the class leader to the predecessor element.
+        Pre->Next = nullptr;
+        Leader->Leader = Pre;
+      } else {
+        // If the current element is in the middle of class, then simply
+        // connect the predecessor element and the successor element.
+        Pre->Next = reinterpret_cast<const ECValue *>(
+            reinterpret_cast<intptr_t>(Next) |
+            static_cast<intptr_t>(Pre->isLeader()));
+        Next->Leader = Pre;
+      }
+    }
+
+    // Update 'TheMapping' and 'Members'.
+    assert(TheMapping.contains(V) && "Can't find input in TheMapping!");
+    TheMapping.erase(V);
+    auto I = find(Members, Cur);
+    assert(I != Members.end() && "Can't find input in members!");
+    Members.erase(I);
+    return true;
   }
 
   /// findLeader - Given a value in the set, return a member iterator for the
   /// equivalence class it is in.  This does the path-compression part that
   /// makes union-find "union findy".  This returns an end iterator if the value
   /// is not in the equivalence class.
-  member_iterator findLeader(iterator I) const {
-    if (I == TheMapping.end()) return member_end();
-    return member_iterator(I->getLeader());
-  }
   member_iterator findLeader(const ElemTy &V) const {
-    return findLeader(TheMapping.find(V));
+    auto I = TheMapping.find(V);
+    if (I == TheMapping.end())
+      return member_iterator(nullptr);
+    return findLeader(*I->second);
+  }
+  member_iterator findLeader(const ECValue &ECV) const {
+    return member_iterator(ECV.getLeader());
   }
 
   /// union - Merge the two equivalence sets for the specified values, inserting
   /// them if they do not already exist in the equivalence set.
   member_iterator unionSets(const ElemTy &V1, const ElemTy &V2) {
-    iterator V1I = insert(V1), V2I = insert(V2);
+    const ECValue &V1I = insert(V1), &V2I = insert(V2);
     return unionSets(findLeader(V1I), findLeader(V2I));
   }
   member_iterator unionSets(member_iterator L1, member_iterator L2) {
     assert(L1 != member_end() && L2 != member_end() && "Illegal inputs!");
-    if (L1 == L2) return L1;   // Unifying the same two sets, noop.
+    if (L1 == L2)
+      return L1; // Unifying the same two sets, noop.
 
     // Otherwise, this is a real union operation.  Set the end of the L1 list to
     // point to the L2 leader node.
@@ -297,7 +358,7 @@ public:
       return *this;
     }
 
-    member_iterator operator++(int) {    // postincrement operators.
+    member_iterator operator++(int) { // postincrement operators.
       member_iterator tmp = *this;
       ++*this;
       return tmp;

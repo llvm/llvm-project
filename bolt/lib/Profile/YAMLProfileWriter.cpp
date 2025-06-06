@@ -133,12 +133,9 @@ std::vector<yaml::bolt::PseudoProbeInfo>
 YAMLProfileWriter::convertNodeProbes(NodeIdToProbes &NodeProbes) {
   struct BlockProbeInfoHasher {
     size_t operator()(const yaml::bolt::PseudoProbeInfo &BPI) const {
-      auto HashCombine = [](auto &Range) {
-        return llvm::hash_combine_range(Range.begin(), Range.end());
-      };
-      return llvm::hash_combine(HashCombine(BPI.BlockProbes),
-                                HashCombine(BPI.CallProbes),
-                                HashCombine(BPI.IndCallProbes));
+      return llvm::hash_combine(llvm::hash_combine_range(BPI.BlockProbes),
+                                llvm::hash_combine_range(BPI.CallProbes),
+                                llvm::hash_combine_range(BPI.IndCallProbes));
     }
   };
 
@@ -218,7 +215,7 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
   const MCPseudoProbeDecoder *PseudoProbeDecoder =
       opts::ProfileWritePseudoProbes ? BC.getPseudoProbeDecoder() : nullptr;
 
-  const uint16_t LBRProfile = BF.getProfileFlags() & BinaryFunction::PF_LBR;
+  const uint16_t LBRProfile = BF.getProfileFlags() & BinaryFunction::PF_BRANCH;
 
   // Prepare function and block hashes
   BF.computeHash(UseDFS);

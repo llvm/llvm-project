@@ -427,17 +427,15 @@ getOpndList(SmallVectorImpl<SDValue> &Ops,
     if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(CLI.Callee)) {
       Mips16Libcall Find = { RTLIB::UNKNOWN_LIBCALL, S->getSymbol() };
 
-      if (std::binary_search(std::begin(HardFloatLibCalls),
-                             std::end(HardFloatLibCalls), Find))
+      if (llvm::binary_search(HardFloatLibCalls, Find))
         LookupHelper = false;
       else {
         const char *Symbol = S->getSymbol();
         Mips16IntrinsicHelperType IntrinsicFind = { Symbol, "" };
         const Mips16HardFloatInfo::FuncSignature *Signature =
             Mips16HardFloatInfo::findFuncSignature(Symbol);
-        if (!IsPICCall && (Signature && (FuncInfo->StubsNeeded.find(Symbol) ==
-                                         FuncInfo->StubsNeeded.end()))) {
-          FuncInfo->StubsNeeded[Symbol] = Signature;
+        if (!IsPICCall && Signature &&
+            FuncInfo->StubsNeeded.try_emplace(Symbol, Signature).second) {
           //
           // S2 is normally saved if the stub is for a function which
           // returns a float or double value and is not otherwise. This is
@@ -470,8 +468,7 @@ getOpndList(SmallVectorImpl<SDValue> &Ops,
       Mips16Libcall Find = { RTLIB::UNKNOWN_LIBCALL,
                              G->getGlobal()->getName().data() };
 
-      if (std::binary_search(std::begin(HardFloatLibCalls),
-                             std::end(HardFloatLibCalls), Find))
+      if (llvm::binary_search(HardFloatLibCalls, Find))
         LookupHelper = false;
     }
     if (LookupHelper)

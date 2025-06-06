@@ -303,12 +303,12 @@ void AMDGPUCustomBehaviour::generateWaitCntInfo() {
 bool AMDGPUCustomBehaviour::isVMEM(const MCInstrDesc &MCID) {
   return MCID.TSFlags & SIInstrFlags::MUBUF ||
          MCID.TSFlags & SIInstrFlags::MTBUF ||
-         MCID.TSFlags & SIInstrFlags::MIMG;
+         MCID.TSFlags & SIInstrFlags::MIMG || MCID.TSFlags & SIInstrFlags::FLAT;
 }
 
 // taken from SIInstrInfo::hasModifiersSet()
 bool AMDGPUCustomBehaviour::hasModifiersSet(
-    const std::unique_ptr<Instruction> &Inst, unsigned OpName) const {
+    const std::unique_ptr<Instruction> &Inst, AMDGPU::OpName OpName) const {
   int Idx = AMDGPU::getNamedOperandIdx(Inst->getOpcode(), OpName);
   if (Idx == -1)
     return false;
@@ -328,7 +328,9 @@ bool AMDGPUCustomBehaviour::isGWS(uint16_t Opcode) const {
 
 // taken from SIInstrInfo::isAlwaysGDS()
 bool AMDGPUCustomBehaviour::isAlwaysGDS(uint16_t Opcode) const {
-  return Opcode == AMDGPU::DS_ORDERED_COUNT || isGWS(Opcode);
+  return Opcode == AMDGPU::DS_ORDERED_COUNT ||
+         Opcode == AMDGPU::DS_ADD_GS_REG_RTN ||
+         Opcode == AMDGPU::DS_SUB_GS_REG_RTN || isGWS(Opcode);
 }
 
 } // namespace llvm::mca

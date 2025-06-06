@@ -683,8 +683,8 @@ subroutine vec_xlds_testi64a(arg1, arg2, res)
 ! LLVMIR: %[[arg1:.*]] = load i64, ptr %0, align 8
 ! LLVMIR: %[[addr:.*]] = getelementptr i8, ptr %1, i64 %[[arg1]]
 ! LLVMIR: %[[ld:.*]] = load i64, ptr %[[addr]], align 8
-! LLVMIR: %[[insrt:.*]] = insertelement <2 x i64> undef, i64 %[[ld]], i32 0
-! LLVMIR: %[[shfl:.*]] = shufflevector <2 x i64> %[[insrt]], <2 x i64> undef, <2 x i32> zeroinitializer
+! LLVMIR: %[[insrt:.*]] = insertelement <2 x i64> poison, i64 %[[ld]], i32 0
+! LLVMIR: %[[shfl:.*]] = shufflevector <2 x i64> %[[insrt]], <2 x i64> poison, <2 x i32> zeroinitializer
 ! LLVMIR: store <2 x i64> %[[shfl]], ptr %2, align 16
 end subroutine vec_xlds_testi64a
 
@@ -698,8 +698,8 @@ subroutine vec_xlds_testf64a(arg1, arg2, res)
 ! LLVMIR: %[[arg1:.*]] = load i64, ptr %0, align 8
 ! LLVMIR: %[[addr:.*]] = getelementptr i8, ptr %1, i64 %[[arg1]]
 ! LLVMIR: %[[ld:.*]] = load i64, ptr %[[addr]], align 8
-! LLVMIR: %[[insrt:.*]] = insertelement <2 x i64> undef, i64 %[[ld]], i32 0
-! LLVMIR: %[[shfl:.*]] = shufflevector <2 x i64> %[[insrt]], <2 x i64> undef, <2 x i32> zeroinitializer
+! LLVMIR: %[[insrt:.*]] = insertelement <2 x i64> poison, i64 %[[ld]], i32 0
+! LLVMIR: %[[shfl:.*]] = shufflevector <2 x i64> %[[insrt]], <2 x i64> poison, <2 x i32> zeroinitializer
 ! LLVMIR: %[[bc:.*]] = bitcast <2 x i64> %[[shfl]] to <2 x double>
 ! LLVMIR: store <2 x double> %[[bc]], ptr %2, align 16
 end subroutine vec_xlds_testf64a

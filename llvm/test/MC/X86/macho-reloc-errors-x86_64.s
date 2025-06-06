@@ -10,7 +10,7 @@
         mov %rax, thing@TLVP
 
 // CHECK-ERROR: 3:9: error: 32-bit absolute addressing is not supported in 64-bit mode
-// CHECK-ERROR: 4:9: error: unsupported subtraction of qualified symbol
+// CHECK-ERROR: 4:9: error: expected relocatable expression
 // CHECK-ERROR: 5:9: error: unsupported pc-relative relocation of difference
 // CHECK-ERROR: 6:9: error: unsupported relocation with identical base
 // CHECK-ERROR: 7:9: error: unsupported relocation with subtraction expression, symbol 'thing' can not be undefined in a subtraction expression

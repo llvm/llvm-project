@@ -2,6 +2,8 @@ add_mlir_interface(SymbolInterfaces)
 add_mlir_interface(RegionKindInterface)
 
 set(LLVM_TARGET_DEFINITIONS OpAsmInterface.td)
+mlir_tablegen(OpAsmAttrInterface.h.inc -gen-attr-interface-decls)
+mlir_tablegen(OpAsmAttrInterface.cpp.inc -gen-attr-interface-defs)
 mlir_tablegen(OpAsmOpInterface.h.inc -gen-op-interface-decls)
 mlir_tablegen(OpAsmOpInterface.cpp.inc -gen-op-interface-defs)
 mlir_tablegen(OpAsmTypeInterface.h.inc -gen-type-interface-decls)

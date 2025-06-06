@@ -1425,3 +1425,57 @@ define <32 x i64> @vadd_vx_v32i64_evl27(<32 x i64> %va, <32 x i1> %m) {
   %v = call <32 x i64> @llvm.vp.add.v32i64(<32 x i64> %va, <32 x i64> splat (i64 -1), <32 x i1> %m, i32 27)
   ret <32 x i64> %v
 }
+
+define <2 x i64> @vadd_vx_v2i64_to_sub(<2 x i64> %va, <2 x i1> %m, i32 zeroext %evl) nounwind {
+; RV32-LABEL: vadd_vx_v2i64_to_sub:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    li a1, -256
+; RV32-NEXT:    li a2, 1
+; RV32-NEXT:    sw a2, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    addi a1, sp, 8
+; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV32-NEXT:    vlse64.v v9, (a1), zero
+; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; RV32-NEXT:    vadd.vv v8, v9, v8, v0.t
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vadd_vx_v2i64_to_sub:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a1, -1
+; RV64-NEXT:    srli a1, a1, 24
+; RV64-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; RV64-NEXT:    vsub.vx v8, v8, a1, v0.t
+; RV64-NEXT:    ret
+  %v = call <2 x i64> @llvm.vp.add.v2i64(<2 x i64> splat (i64 -1099511627775), <2 x i64> %va, <2 x i1> %m, i32 %evl)
+  ret <2 x i64> %v
+}
+
+define <2 x i64> @vadd_vx_v2i64_to_sub_swapped(<2 x i64> %va, <2 x i1> %m, i32 zeroext %evl) nounwind {
+; RV32-LABEL: vadd_vx_v2i64_to_sub_swapped:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    li a1, -256
+; RV32-NEXT:    li a2, 1
+; RV32-NEXT:    sw a2, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    addi a1, sp, 8
+; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV32-NEXT:    vlse64.v v9, (a1), zero
+; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; RV32-NEXT:    vadd.vv v8, v8, v9, v0.t
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vadd_vx_v2i64_to_sub_swapped:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a1, -1
+; RV64-NEXT:    srli a1, a1, 24
+; RV64-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; RV64-NEXT:    vsub.vx v8, v8, a1, v0.t
+; RV64-NEXT:    ret
+  %v = call <2 x i64> @llvm.vp.add.v2i64(<2 x i64> %va, <2 x i64> splat (i64 -1099511627775), <2 x i1> %m, i32 %evl)
+  ret <2 x i64> %v
+}

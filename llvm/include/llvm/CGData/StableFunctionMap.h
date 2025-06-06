@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/StructuralHash.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -78,22 +79,22 @@ struct StableFunctionMap {
   const HashFuncsMapType &getFunctionMap() const { return HashToFuncs; }
 
   /// Get the NameToId vector for serialization.
-  const SmallVector<std::string> getNames() const { return IdToName; }
+  ArrayRef<std::string> getNames() const { return IdToName; }
 
   /// Get an existing ID associated with the given name or create a new ID if it
   /// doesn't exist.
-  unsigned getIdOrCreateForName(StringRef Name);
+  LLVM_ABI unsigned getIdOrCreateForName(StringRef Name);
 
   /// Get the name associated with a given ID
-  std::optional<std::string> getNameForId(unsigned Id) const;
+  LLVM_ABI std::optional<std::string> getNameForId(unsigned Id) const;
 
   /// Insert a `StableFunction` object into the function map. This method
   /// handles the uniquing of string names and create a `StableFunctionEntry`
   /// for insertion.
-  void insert(const StableFunction &Func);
+  LLVM_ABI void insert(const StableFunction &Func);
 
   /// Merge a \p OtherMap into this function map.
-  void merge(const StableFunctionMap &OtherMap);
+  LLVM_ABI void merge(const StableFunctionMap &OtherMap);
 
   /// \returns true if there is no stable function entry.
   bool empty() const { return size() == 0; }
@@ -107,10 +108,10 @@ struct StableFunctionMap {
 
   /// \returns the size of StableFunctionMap.
   /// \p Type is the type of size to return.
-  size_t size(SizeType Type = UniqueHashCount) const;
+  LLVM_ABI size_t size(SizeType Type = UniqueHashCount) const;
 
   /// Finalize the stable function map by trimming content.
-  void finalize(bool SkipTrim = false);
+  LLVM_ABI void finalize(bool SkipTrim = false);
 
 private:
   /// Insert a `StableFunctionEntry` into the function map directly. This

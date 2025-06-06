@@ -51,9 +51,7 @@ using namespace PatternMatch;
 static const unsigned MaxProcessedPerValue = 500;
 
 char LazyValueInfoWrapperPass::ID = 0;
-LazyValueInfoWrapperPass::LazyValueInfoWrapperPass() : FunctionPass(ID) {
-  initializeLazyValueInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+LazyValueInfoWrapperPass::LazyValueInfoWrapperPass() : FunctionPass(ID) {}
 INITIALIZE_PASS_BEGIN(LazyValueInfoWrapperPass, "lazy-value-info",
                 "Lazy Value Information Analysis", false, true)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
@@ -694,6 +692,9 @@ LazyValueInfoImpl::solveBlockValueNonLocal(Value *Val, BasicBlock *BB) {
   // canonicalizing to make this true rather than relying on this happy
   // accident.
   for (BasicBlock *Pred : predecessors(BB)) {
+    // Skip self loops.
+    if (Pred == BB)
+      continue;
     std::optional<ValueLatticeElement> EdgeResult = getEdgeValue(Val, Pred, BB);
     if (!EdgeResult)
       // Explore that input, then return here
@@ -1700,7 +1701,8 @@ ValueLatticeElement LazyValueInfoImpl::getValueAtUse(const Use &U) {
     // of a cycle, we might end up reasoning about values from different cycle
     // iterations (PR60629).
     if (!CurrI->hasOneUse() ||
-        !isSafeToSpeculativelyExecuteWithVariableReplaced(CurrI))
+        !isSafeToSpeculativelyExecuteWithVariableReplaced(
+            CurrI, /*IgnoreUBImplyingAttrs=*/false))
       break;
     CurrU = &*CurrI->use_begin();
   }

@@ -285,7 +285,7 @@ Example usage:
    }  // LIBC_NAMESPACE_DECL
 
 Having hidden visibility on the namespace ensures extern declarations in a given TU
-have known visibility and never generate GOT indirextions. The attribute guarantees
+have known visibility and never generate GOT indirections. The attribute guarantees
 this independently of global compile options and build systems.
 
 ..

@@ -1,5 +1,4 @@
 ; RUN: %llc_dwarf -mtriple x86_64-gnu-linux -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
-; RUN: %llc_dwarf --try-experimental-debuginfo-iterators -mtriple x86_64-gnu-linux -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 ; Build from the following source with clang -O2.
 
 ; The important details are that 'x's abstract definition is first built during
@@ -38,7 +37,7 @@
 ; CHECK-NOT: DW_TAG
 ; CHECK:     DW_AT_name ("b")
 ; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:       DW_TAG_lexical_block
+; CHECK:       [[LB_DECL:.*]]: DW_TAG_lexical_block
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:   DW_TAG_variable
 ; CHECK-NOT: DW_TAG
@@ -83,7 +82,9 @@
 
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:     DW_TAG_lexical_block
-; CHECK-NOT: {{DW_TAG|NULL}}
+; CHECK-NOT:   {{DW_TAG|NULL}}
+; CHECK:       DW_AT_abstract_origin {{.*}}[[LB_DECL]]
+; CHECK-NOT:   {{DW_TAG|NULL}}
 ; CHECK:       DW_TAG_variable
 ; CHECK-NOT: DW_TAG
 ; CHECK:         DW_AT_abstract_origin {{.*}} "s"

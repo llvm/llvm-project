@@ -1,0 +1,6 @@
+
+FlatProfiles:
+  - Guid:            1234
+    Counters:        [ 5, 6, 7 ]
+  - Guid:            5555
+    Counters:        [ 1 ]

@@ -33,7 +33,6 @@ add_flang_nongtest_unittest(intrinsics
   FortranDecimal
   FortranSemantics
   FortranParser
-  FortranRuntime
 )
 
 add_flang_nongtest_unittest(logical
@@ -55,20 +54,6 @@ add_flang_nongtest_unittest(real
   FortranSemantics
 )
 llvm_update_compile_flags(real.test)
-
-add_flang_nongtest_unittest(reshape
-  NonGTestTesting
-  FortranSemantics
-  FortranEvaluate
-  FortranRuntime
-)
-
-add_flang_nongtest_unittest(ISO-Fortran-binding
-  NonGTestTesting
-  FortranEvaluate
-  FortranSemantics
-  FortranRuntime
-)
 
 add_flang_nongtest_unittest(folding
   FortranSupport

@@ -21,12 +21,9 @@ cbuffer A {
 
 // AST: HLSLBufferDecl {{.*}} line:11:9 cbuffer A
 // AST-NEXT: HLSLResourceClassAttr {{.*}} Implicit CBuffer
-// AST-NEXT: HLSLResourceAttr {{.*}} Implicit CBuffer
+// AST-NEXT: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
 // AST-NEXT: FullComment
 // AST-NEXT: ParagraphComment
 // AST-NEXT: TextComment {{.*}} Text=" CBuffer decl."
 // AST-NEXT: VarDecl {{.*}} a 'hlsl_constant float'
 // AST-NEXT: VarDecl {{.*}} b 'hlsl_constant int'
-// AST-NEXT: CXXRecordDecl {{.*}} implicit class __layout_A definition
-// AST: FieldDecl {{.*}} a 'float'
-// AST-NEXT: FieldDecl {{.*}} b 'int'

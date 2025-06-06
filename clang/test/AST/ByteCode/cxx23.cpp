@@ -73,6 +73,12 @@ constexpr int k(int n) {
 }
 constexpr int k0 = k(0);
 
+#if __cplusplus >= 202302L
+constexpr int &b = b; // all-error {{must be initialized by a constant expression}} \
+                      // all-note {{initializer of 'b' is not a constant expression}} \
+                      // all-note {{declared here}}
+#endif
+
 namespace StaticLambdas {
   constexpr auto static_capture_constexpr() {
     char n = 'n';
@@ -303,4 +309,22 @@ namespace NonLiteralDtorInParam {
     constexpr auto D = F2(L); // all23-error {{must be initialized by a constant expression}} \
                               // expected23-note {{non-constexpr function '~NonLiteral' cannot be used in a constant expression}}
   }
+}
+
+namespace ZeroSizedArray {
+  struct S {
+    constexpr ~S() {
+    }
+  };
+  constexpr int foo() {
+    S s[0];
+    return 1;
+  }
+  static_assert(foo() == 1);
+}
+namespace VoidCast {
+  constexpr int a = 12;
+  constexpr const int *b = &a;
+  constexpr int *f = (int*)(void*)b; // all-error {{must be initialized by a constant expression}} \
+                                     // all-note {{cast from 'void *' is not allowed in a constant expression}}
 }

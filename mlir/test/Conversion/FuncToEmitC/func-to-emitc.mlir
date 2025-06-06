@@ -1,4 +1,5 @@
 // RUN: mlir-opt -split-input-file -convert-func-to-emitc %s | FileCheck %s
+// RUN: mlir-opt -split-input-file -convert-to-emitc="filter-dialects=func" %s | FileCheck %s
 
 // CHECK-LABEL: emitc.func @foo()
 // CHECK-NEXT: return

@@ -27,7 +27,7 @@ using namespace mlir::tblgen;
 static std::string getUniqueOutputLabel(const RecordKeeper &records,
                                         StringRef tag) {
   // Use the input file name when generating a unique name.
-  std::string inputFilename = records.getInputFilename();
+  StringRef inputFilename = records.getInputFilename();
 
   // Drop all but the base filename.
   StringRef nameRef = sys::path::filename(inputFilename);
@@ -53,6 +53,7 @@ void StaticVerifierFunctionEmitter::emitOpConstraints(
   NamespaceEmitter namespaceEmitter(os, Operator(*opDefs[0]).getCppNamespace());
   emitTypeConstraints();
   emitAttrConstraints();
+  emitPropConstraints();
   emitSuccessorConstraints();
   emitRegionConstraints();
 }
@@ -65,6 +66,7 @@ void StaticVerifierFunctionEmitter::emitPatternConstraints(
 
 //===----------------------------------------------------------------------===//
 // Constraint Getters
+//===----------------------------------------------------------------------===//
 
 StringRef StaticVerifierFunctionEmitter::getTypeConstraintFn(
     const Constraint &constraint) const {
@@ -79,6 +81,15 @@ std::optional<StringRef> StaticVerifierFunctionEmitter::getAttrConstraintFn(
     const Constraint &constraint) const {
   const auto *it = attrConstraints.find(constraint);
   return it == attrConstraints.end() ? std::optional<StringRef>()
+                                     : StringRef(it->second);
+}
+
+// Find a uniqued property constraint. Since not all property constraints can
+// be uniqued, return std::nullopt if one was not found.
+std::optional<StringRef> StaticVerifierFunctionEmitter::getPropConstraintFn(
+    const Constraint &constraint) const {
+  const auto *it = propConstraints.find(constraint);
+  return it == propConstraints.end() ? std::optional<StringRef>()
                                      : StringRef(it->second);
 }
 
@@ -100,6 +111,7 @@ StringRef StaticVerifierFunctionEmitter::getRegionConstraintFn(
 
 //===----------------------------------------------------------------------===//
 // Constraint Emission
+//===----------------------------------------------------------------------===//
 
 /// Code templates for emitting type, attribute, successor, and region
 /// constraints. Each of these templates require the following arguments:
@@ -143,6 +155,25 @@ static ::llvm::LogicalResult {0}(
   });
 }
 )";
+
+/// Code for a property constraint. These may be called from ops only.
+/// Property constraints cannot reference anything other than `$_self` and
+/// `$_op`. {3} is the interface type of the property.
+static const char *const propConstraintCode = R"(
+  static ::llvm::LogicalResult {0}(
+      {3} prop, ::llvm::StringRef propName, llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) {{
+    if (!({1}))
+      return emitError() << "property '" << propName
+          << "' failed to satisfy constraint: {2}";
+    return ::mlir::success();
+  }
+  static ::llvm::LogicalResult {0}(
+      ::mlir::Operation *op, {3} prop, ::llvm::StringRef propName) {{
+    return {0}(prop, propName, [op]() {{
+      return op->emitOpError();
+    });
+  }
+  )";
 
 /// Code for a successor constraint.
 static const char *const successorConstraintCode = R"(
@@ -208,6 +239,20 @@ void StaticVerifierFunctionEmitter::emitAttrConstraints() {
   emitConstraints(attrConstraints, "attr", attrConstraintCode);
 }
 
+/// Unlike with the other helpers, this one has to substitute in the interface
+/// type of the property, so we can't just use the generic function.
+void StaticVerifierFunctionEmitter::emitPropConstraints() {
+  FmtContext ctx;
+  ctx.addSubst("_op", "*op").withSelf("prop");
+  for (auto &it : propConstraints) {
+    auto propConstraint = cast<PropConstraint>(it.first);
+    os << formatv(propConstraintCode, it.second,
+                  tgfmt(propConstraint.getConditionTemplate(), &ctx),
+                  escapeString(it.first.getSummary()),
+                  propConstraint.getInterfaceType());
+  }
+}
+
 void StaticVerifierFunctionEmitter::emitSuccessorConstraints() {
   emitConstraints(successorConstraints, "successor", successorConstraintCode);
 }
@@ -234,6 +279,7 @@ void StaticVerifierFunctionEmitter::emitPatternConstraints() {
 
 //===----------------------------------------------------------------------===//
 // Constraint Uniquing
+//===----------------------------------------------------------------------===//
 
 /// An attribute constraint that references anything other than itself and the
 /// current op cannot be generically extracted into a function. Most
@@ -246,6 +292,20 @@ static bool canUniqueAttrConstraint(Attribute attr) {
                     &ctx.withSelf("attr").addSubst("_op", "*op"))
                   .str();
   return !StringRef(test).contains("<no-subst-found>");
+}
+
+/// A property constraint that references anything other than itself and the
+/// current op cannot be generically extracted into a function, just as with
+/// canUnequePropConstraint(). Additionally, property constraints without
+/// an interface type specified can't be uniqued, and ones that are a literal
+/// "true" shouldn't be constrained.
+static bool canUniquePropConstraint(Property prop) {
+  FmtContext ctx;
+  auto test = tgfmt(prop.getConditionTemplate(),
+                    &ctx.withSelf("prop").addSubst("_op", "*op"))
+                  .str();
+  return !StringRef(test).contains("<no-subst-found>") && test != "true" &&
+         !prop.getInterfaceType().empty();
 }
 
 std::string StaticVerifierFunctionEmitter::getUniqueName(StringRef kind,
@@ -282,6 +342,13 @@ void StaticVerifierFunctionEmitter::collectOpConstraints(
           !namedAttr.attr.isDerivedAttr() &&
           canUniqueAttrConstraint(namedAttr.attr))
         collectConstraint(attrConstraints, "attr", namedAttr.attr);
+    }
+    /// Collect non-trivial property constraints.
+    for (const NamedProperty &namedProp : op.getProperties()) {
+      if (!namedProp.prop.getPredicate().isNull() &&
+          canUniquePropConstraint(namedProp.prop)) {
+        collectConstraint(propConstraints, "prop", namedProp.prop);
+      }
     }
     /// Collect successor constraints.
     for (const NamedSuccessor &successor : op.getSuccessors()) {

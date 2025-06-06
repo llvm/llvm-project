@@ -16,6 +16,7 @@
 
 #include "mlir/Support/LLVM.h"
 #include "mlir/TableGen/Argument.h"
+#include "mlir/TableGen/EnumInfo.h"
 #include "mlir/TableGen/Operator.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
@@ -78,8 +79,8 @@ public:
   // Returns true if this DAG leaf is specifying a constant attribute.
   bool isConstantAttr() const;
 
-  // Returns true if this DAG leaf is specifying an enum attribute case.
-  bool isEnumAttrCase() const;
+  // Returns true if this DAG leaf is specifying an enum case.
+  bool isEnumCase() const;
 
   // Returns true if this DAG leaf is specifying a string attribute.
   bool isStringAttr() const;
@@ -90,9 +91,9 @@ public:
   // Returns this DAG leaf as an constant attribute. Asserts if fails.
   ConstantAttr getAsConstantAttr() const;
 
-  // Returns this DAG leaf as an enum attribute case.
-  // Precondition: isEnumAttrCase()
-  EnumAttrCase getAsEnumAttrCase() const;
+  // Returns this DAG leaf as an enum case.
+  // Precondition: isEnumCase()
+  EnumCase getAsEnumCase() const;
 
   // Returns the matching condition template inside this DAG leaf. Assumes the
   // leaf is an operand/attribute matcher and asserts otherwise.

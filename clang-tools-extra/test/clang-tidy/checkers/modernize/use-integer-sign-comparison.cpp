@@ -1,5 +1,6 @@
+// RUN: %check_clang_tidy --match-partial-fixes -std=c++20 %s modernize-use-integer-sign-comparison %t
+
 // CHECK-FIXES: #include <utility>
-// RUN: %check_clang_tidy -std=c++20 %s modernize-use-integer-sign-comparison %t
 
 // The code that triggers the check
 #define MAX_MACRO(a, b) (a < b) ? b : a

@@ -37,6 +37,11 @@ struct GPUToNVVMPipelineOptions
       *this, "cubin-format",
       llvm::cl::desc("Compilation format to use to serialize to cubin."),
       llvm::cl::init("fatbin")};
+  PassOptions::Option<std::string> cmdOptions{
+      *this, "ptxas-cmd-options",
+      llvm::cl::desc(
+          "Command line options to pass to the downstream compiler."),
+      llvm::cl::init("")};
   PassOptions::Option<int> optLevel{
       *this, "opt-level",
       llvm::cl::desc("Optimization level for NVVM compilation"),

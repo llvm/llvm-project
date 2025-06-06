@@ -260,8 +260,8 @@ void MCDCRecord::findIndependencePairs() {
   // Will be replaced to shorter expr.
   unsigned TVTrueIdx = std::distance(
       TV.begin(),
-      std::find_if(TV.begin(), TV.end(),
-                   [&](auto I) { return (I.second == MCDCRecord::MCDC_True); })
+      llvm::find_if(TV,
+                    [&](auto I) { return (I.second == MCDCRecord::MCDC_True); })
 
   );
   for (unsigned I = TVTrueIdx; I < NumTVs; ++I) {
@@ -933,8 +933,7 @@ Error CoverageMapping::loadFunctionRecord(
   }
 
   // Don't create records for (filenames, function) pairs we've already seen.
-  auto FilenamesHash = hash_combine_range(Record.Filenames.begin(),
-                                          Record.Filenames.end());
+  auto FilenamesHash = hash_combine_range(Record.Filenames);
   if (!RecordProvenance[FilenamesHash].insert(hash_value(OrigFuncName)).second)
     return Error::success();
 

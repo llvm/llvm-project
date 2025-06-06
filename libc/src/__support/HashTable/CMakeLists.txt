@@ -25,7 +25,7 @@ add_header_library(
     table.h
   DEPENDS
     .bitmask
-    libc.include.llvm-libc-types.ENTRY
+    libc.hdr.types.ENTRY
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.new
     libc.src.__support.hash

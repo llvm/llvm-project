@@ -40,9 +40,7 @@ public:
   static char ID;
 
 public:
-  AMDGPURegBankLegalize() : MachineFunctionPass(ID) {
-    initializeAMDGPURegBankLegalizePass(*PassRegistry::getPassRegistry());
-  }
+  AMDGPURegBankLegalize() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -60,8 +58,7 @@ public:
   // If there were no phis and we do waterfall expansion machine verifier would
   // fail.
   MachineFunctionProperties getClearedProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoPHIs);
+    return MachineFunctionProperties().setNoPHIs();
   }
 };
 
@@ -89,13 +86,12 @@ const RegBankLegalizeRules &getRules(const GCNSubtarget &ST,
   static SmallDenseMap<unsigned, std::unique_ptr<RegBankLegalizeRules>>
       CacheForRuleSet;
   std::lock_guard<std::mutex> Lock(GlobalMutex);
-  if (!CacheForRuleSet.contains(ST.getGeneration())) {
-    auto Rules = std::make_unique<RegBankLegalizeRules>(ST, MRI);
-    CacheForRuleSet[ST.getGeneration()] = std::move(Rules);
-  } else {
-    CacheForRuleSet[ST.getGeneration()]->refreshRefs(ST, MRI);
-  }
-  return *CacheForRuleSet[ST.getGeneration()];
+  auto [It, Inserted] = CacheForRuleSet.try_emplace(ST.getGeneration());
+  if (Inserted)
+    It->second = std::make_unique<RegBankLegalizeRules>(ST, MRI);
+  else
+    It->second->refreshRefs(ST, MRI);
+  return *It->second;
 }
 
 class AMDGPURegBankLegalizeCombiner {
@@ -217,6 +213,13 @@ public:
       return;
     }
 
+    if (DstTy == S64 && TruncSrcTy == S32) {
+      B.buildMergeLikeInstr(MI.getOperand(0).getReg(),
+                            {TruncSrc, B.buildUndef({SgprRB, S32})});
+      cleanUpAfterCombine(MI, Trunc);
+      return;
+    }
+
     if (DstTy == S32 && TruncSrcTy == S16) {
       B.buildAnyExt(Dst, TruncSrc);
       cleanUpAfterCombine(MI, Trunc);
@@ -253,8 +256,7 @@ public:
 }
 
 bool AMDGPURegBankLegalize::runOnMachineFunction(MachineFunction &MF) {
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
 
   // Setup the instruction builder with CSE.
@@ -306,12 +308,18 @@ bool AMDGPURegBankLegalize::runOnMachineFunction(MachineFunction &MF) {
     // Opcodes that support pretty much all combinations of reg banks and LLTs
     // (except S1). There is no point in writing rules for them.
     if (Opc == AMDGPU::G_BUILD_VECTOR || Opc == AMDGPU::G_UNMERGE_VALUES ||
-        Opc == AMDGPU::G_MERGE_VALUES) {
+        Opc == AMDGPU::G_MERGE_VALUES || Opc == AMDGPU::G_BITCAST) {
       RBLHelper.applyMappingTrivial(*MI);
       continue;
     }
 
     // Opcodes that also support S1.
+    if (Opc == G_FREEZE &&
+        MRI.getType(MI->getOperand(0).getReg()) != LLT::scalar(1)) {
+      RBLHelper.applyMappingTrivial(*MI);
+      continue;
+    }
+
     if ((Opc == AMDGPU::G_CONSTANT || Opc == AMDGPU::G_FCONSTANT ||
          Opc == AMDGPU::G_IMPLICIT_DEF)) {
       Register Dst = MI->getOperand(0).getReg();

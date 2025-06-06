@@ -6,7 +6,7 @@ define i32 @foo(i32 %v1, double %v2, i1 %arg, i32 %arg2) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 poison, i32 undef>, i32 [[V1:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = sitofp <2 x i32> [[TMP0]] to <2 x double>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
 ; CHECK-NEXT:    br label [[FOR_COND15_PREHEADER:%.*]]
 ; CHECK:       for.cond15.preheader:
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
@@ -15,7 +15,7 @@ define i32 @foo(i32 %v1, double %v2, i1 %arg, i32 %arg2) {
 ; CHECK:       if.end:
 ; CHECK-NEXT:    br label [[FOR_COND15:%.*]]
 ; CHECK:       for.end39:
-; CHECK-NEXT:    switch i32 %arg2, label [[DO_BODY:%.*]] [
+; CHECK-NEXT:    switch i32 [[ARG2:%.*]], label [[DO_BODY:%.*]] [
 ; CHECK-NEXT:      i32 0, label [[SW_BB:%.*]]
 ; CHECK-NEXT:      i32 1, label [[SW_BB195:%.*]]
 ; CHECK-NEXT:    ]
@@ -26,8 +26,7 @@ define i32 @foo(i32 %v1, double %v2, i1 %arg, i32 %arg2) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP6:%.*]] = load <4 x double>, ptr [[ARRAYIDX43]], align 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul <4 x double> [[TMP6]], [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x double> [[TMP7]], <4 x double> poison, <4 x i32> <i32 3, i32 1, i32 2, i32 0>
-; CHECK-NEXT:    [[TMP9:%.*]] = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> undef, <4 x double> [[TMP2]], <4 x double> [[TMP8]])
+; CHECK-NEXT:    [[TMP9:%.*]] = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> undef, <4 x double> [[TMP2]], <4 x double> [[TMP7]])
 ; CHECK-NEXT:    br label [[SW_EPILOG:%.*]]
 ; CHECK:       sw.bb195:
 ; CHECK-NEXT:    br label [[SW_EPILOG]]
@@ -39,7 +38,7 @@ define i32 @foo(i32 %v1, double %v2, i1 %arg, i32 %arg2) {
 ; CHECK:       if.end.1:
 ; CHECK-NEXT:    br label [[FOR_COND15_1:%.*]]
 ; CHECK:       for.cond15.1:
-; CHECK-NEXT:    br i1 %arg, label [[FOR_END39:%.*]], label [[FOR_COND15_PREHEADER]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[FOR_END39:%.*]], label [[FOR_COND15_PREHEADER]]
 ;
 entry:
   %conv = sitofp i32 undef to double

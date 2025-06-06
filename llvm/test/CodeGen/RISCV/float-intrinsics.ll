@@ -802,23 +802,6 @@ define float @maxnum_f32(float %a, float %b) nounwind {
   ret float %1
 }
 
-; TODO: FMINNAN and FMAXNAN aren't handled in
-; SelectionDAGLegalize::ExpandNode.
-
-; declare float @llvm.minimum.f32(float, float)
-
-; define float @fminimum_f32(float %a, float %b) nounwind {
-;   %1 = call float @llvm.minimum.f32(float %a, float %b)
-;   ret float %1
-; }
-
-; declare float @llvm.maximum.f32(float, float)
-
-; define float @fmaximum_f32(float %a, float %b) nounwind {
-;   %1 = call float @llvm.maximum.f32(float %a, float %b)
-;   ret float %1
-; }
-
 declare float @llvm.copysign.f32(float, float)
 
 define float @copysign_f32(float %a, float %b) nounwind {
@@ -1672,7 +1655,7 @@ define i1 @fpclass(float %x) {
 ; RV64I-NEXT:    lui a3, 522240
 ; RV64I-NEXT:    lui a4, 1046528
 ; RV64I-NEXT:    srli a0, a0, 33
-; RV64I-NEXT:    addiw a2, a2, -1
+; RV64I-NEXT:    addi a2, a2, -1
 ; RV64I-NEXT:    slti a1, a1, 0
 ; RV64I-NEXT:    addi a5, a0, -1
 ; RV64I-NEXT:    sltu a2, a5, a2
@@ -1781,7 +1764,7 @@ define i1 @isqnan_fpclass(float %x) {
 ; RV64I-NEXT:    slli a0, a0, 33
 ; RV64I-NEXT:    lui a1, 523264
 ; RV64I-NEXT:    srli a0, a0, 33
-; RV64I-NEXT:    addiw a1, a1, -1
+; RV64I-NEXT:    addi a1, a1, -1
 ; RV64I-NEXT:    slt a0, a1, a0
 ; RV64I-NEXT:    ret
   %1 = call i1 @llvm.is.fpclass.f32(float %x, i32 2)  ; qnan
@@ -2170,7 +2153,7 @@ define i1 @isnotfinite_fpclass(float %x) {
 ; RV64I-NEXT:    slli a0, a0, 33
 ; RV64I-NEXT:    lui a1, 522240
 ; RV64I-NEXT:    srli a0, a0, 33
-; RV64I-NEXT:    addiw a1, a1, -1
+; RV64I-NEXT:    addi a1, a1, -1
 ; RV64I-NEXT:    slt a0, a1, a0
 ; RV64I-NEXT:    ret
   %1 = call i1 @llvm.is.fpclass.f32(float %x, i32 519)  ; ox207 = "inf|nan"

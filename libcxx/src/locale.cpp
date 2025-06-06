@@ -34,10 +34,6 @@
 #  define _CTYPE_DISABLE_MACROS
 #endif
 
-#if __has_include("<langinfo.h>")
-#  include <langinfo.h>
-#endif
-
 #include "include/atomic_support.h"
 #include "include/sso_allocator.h"
 
@@ -482,7 +478,7 @@ void locale::__imp::install(facet* f, long id) {
 
 const locale::facet* locale::__imp::use_facet(long id) const {
   if (!has_facet(id))
-    __throw_bad_cast();
+    std::__throw_bad_cast();
   return facets_[static_cast<size_t>(id)];
 }
 
@@ -602,7 +598,7 @@ long locale::id::__get() {
 collate_byname<char>::collate_byname(const char* n, size_t refs)
     : collate<char>(refs), __l_(__locale::__newlocale(_LIBCPP_ALL_MASK, n, 0)) {
   if (__l_ == 0)
-    __throw_runtime_error(
+    std::__throw_runtime_error(
         ("collate_byname<char>::collate_byname"
          " failed to construct for " +
          string(n))
@@ -612,7 +608,7 @@ collate_byname<char>::collate_byname(const char* n, size_t refs)
 collate_byname<char>::collate_byname(const string& name, size_t refs)
     : collate<char>(refs), __l_(__locale::__newlocale(_LIBCPP_ALL_MASK, name.c_str(), 0)) {
   if (__l_ == 0)
-    __throw_runtime_error(
+    std::__throw_runtime_error(
         ("collate_byname<char>::collate_byname"
          " failed to construct for " +
          name)
@@ -646,7 +642,7 @@ collate_byname<char>::string_type collate_byname<char>::do_transform(const char_
 collate_byname<wchar_t>::collate_byname(const char* n, size_t refs)
     : collate<wchar_t>(refs), __l_(__locale::__newlocale(_LIBCPP_ALL_MASK, n, 0)) {
   if (__l_ == 0)
-    __throw_runtime_error(
+    std::__throw_runtime_error(
         ("collate_byname<wchar_t>::collate_byname(size_t refs)"
          " failed to construct for " +
          string(n))
@@ -656,7 +652,7 @@ collate_byname<wchar_t>::collate_byname(const char* n, size_t refs)
 collate_byname<wchar_t>::collate_byname(const string& name, size_t refs)
     : collate<wchar_t>(refs), __l_(__locale::__newlocale(_LIBCPP_ALL_MASK, name.c_str(), 0)) {
   if (__l_ == 0)
-    __throw_runtime_error(
+    std::__throw_runtime_error(
         ("collate_byname<wchar_t>::collate_byname(size_t refs)"
          " failed to construct for " +
          name)
@@ -1049,7 +1045,7 @@ const unsigned short* ctype<char>::__classic_upper_table() _NOEXCEPT {
 ctype_byname<char>::ctype_byname(const char* name, size_t refs)
     : ctype<char>(0, false, refs), __l_(__locale::__newlocale(_LIBCPP_ALL_MASK, name, 0)) {
   if (__l_ == 0)
-    __throw_runtime_error(
+    std::__throw_runtime_error(
         ("ctype_byname<char>::ctype_byname"
          " failed to construct for " +
          string(name))
@@ -1059,7 +1055,7 @@ ctype_byname<char>::ctype_byname(const char* name, size_t refs)
 ctype_byname<char>::ctype_byname(const string& name, size_t refs)
     : ctype<char>(0, false, refs), __l_(__locale::__newlocale(_LIBCPP_ALL_MASK, name.c_str(), 0)) {
   if (__l_ == 0)
-    __throw_runtime_error(
+    std::__throw_runtime_error(
         ("ctype_byname<char>::ctype_byname"
          " failed to construct for " +
          name)
@@ -1094,7 +1090,7 @@ const char* ctype_byname<char>::do_tolower(char_type* low, const char_type* high
 ctype_byname<wchar_t>::ctype_byname(const char* name, size_t refs)
     : ctype<wchar_t>(refs), __l_(__locale::__newlocale(_LIBCPP_ALL_MASK, name, 0)) {
   if (__l_ == 0)
-    __throw_runtime_error(
+    std::__throw_runtime_error(
         ("ctype_byname<wchar_t>::ctype_byname"
          " failed to construct for " +
          string(name))
@@ -1104,7 +1100,7 @@ ctype_byname<wchar_t>::ctype_byname(const char* name, size_t refs)
 ctype_byname<wchar_t>::ctype_byname(const string& name, size_t refs)
     : ctype<wchar_t>(refs), __l_(__locale::__newlocale(_LIBCPP_ALL_MASK, name.c_str(), 0)) {
   if (__l_ == 0)
-    __throw_runtime_error(
+    std::__throw_runtime_error(
         ("ctype_byname<wchar_t>::ctype_byname"
          " failed to construct for " +
          name)
@@ -1344,7 +1340,7 @@ codecvt<wchar_t, char, mbstate_t>::codecvt(size_t refs) : locale::facet(refs), _
 codecvt<wchar_t, char, mbstate_t>::codecvt(const char* nm, size_t refs)
     : locale::facet(refs), __l_(__locale::__newlocale(_LIBCPP_ALL_MASK, nm, 0)) {
   if (__l_ == 0)
-    __throw_runtime_error(
+    std::__throw_runtime_error(
         ("codecvt_byname<wchar_t, char, mbstate_t>::codecvt_byname"
          " failed to construct for " +
          string(nm))
@@ -3957,7 +3953,7 @@ static bool is_narrow_non_breaking_space(const char* ptr) {
 }
 
 static bool is_non_breaking_space(const char* ptr) {
-  // https://www.fileformat.info/info/unicode/char/0a/index.htm
+  // https://www.fileformat.info/info/unicode/char/a0/index.htm
   return ptr[0] == '\xc2' && ptr[1] == '\xa0';
 }
 #endif // _LIBCPP_HAS_WIDE_CHARACTERS
@@ -4061,7 +4057,7 @@ void numpunct_byname<char>::__init(const char* nm) {
   if (strcmp(nm, "C") != 0) {
     __libcpp_unique_locale loc(nm);
     if (!loc)
-      __throw_runtime_error(
+      std::__throw_runtime_error(
           ("numpunct_byname<char>::numpunct_byname"
            " failed to construct for " +
            string(nm))
@@ -4092,7 +4088,7 @@ void numpunct_byname<wchar_t>::__init(const char* nm) {
   if (strcmp(nm, "C") != 0) {
     __libcpp_unique_locale loc(nm);
     if (!loc)
-      __throw_runtime_error(
+      std::__throw_runtime_error(
           ("numpunct_byname<wchar_t>::numpunct_byname"
            " failed to construct for " +
            string(nm))
@@ -4444,12 +4440,12 @@ const wstring& __time_get_c_storage<wchar_t>::__r() const {
 
 __time_get::__time_get(const char* nm) : __loc_(__locale::__newlocale(_LIBCPP_ALL_MASK, nm, 0)) {
   if (__loc_ == 0)
-    __throw_runtime_error(("time_get_byname failed to construct for " + string(nm)).c_str());
+    std::__throw_runtime_error(("time_get_byname failed to construct for " + string(nm)).c_str());
 }
 
 __time_get::__time_get(const string& nm) : __loc_(__locale::__newlocale(_LIBCPP_ALL_MASK, nm.c_str(), 0)) {
   if (__loc_ == 0)
-    __throw_runtime_error(("time_get_byname failed to construct for " + nm).c_str());
+    std::__throw_runtime_error(("time_get_byname failed to construct for " + nm).c_str());
 }
 
 __time_get::~__time_get() { __locale::__freelocale(__loc_); }
@@ -4610,7 +4606,7 @@ wstring __time_get_storage<wchar_t>::__analyze(char fmt, const ctype<wchar_t>& c
   const char* bb = buf;
   size_t j       = __locale::__mbsrtowcs(wbb, &bb, countof(wbuf), &mb, __loc_);
   if (j == size_t(-1))
-    __throw_runtime_error("locale not supported");
+    std::__throw_runtime_error("locale not supported");
   wchar_t* wbe = wbb + j;
   wstring result;
   while (wbb != wbe) {
@@ -4771,7 +4767,7 @@ void __time_get_storage<wchar_t>::init(const ctype<wchar_t>& ct) {
     const char* bb = buf;
     size_t j       = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, __loc_);
     if (j == size_t(-1) || j == 0)
-      __throw_runtime_error("locale not supported");
+      std::__throw_runtime_error("locale not supported");
     wbe = wbuf + j;
     __weeks_[i].assign(wbuf, wbe);
     __locale::__strftime(buf, countof(buf), "%a", &t, __loc_);
@@ -4779,7 +4775,7 @@ void __time_get_storage<wchar_t>::init(const ctype<wchar_t>& ct) {
     bb = buf;
     j  = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, __loc_);
     if (j == size_t(-1) || j == 0)
-      __throw_runtime_error("locale not supported");
+      std::__throw_runtime_error("locale not supported");
     wbe = wbuf + j;
     __weeks_[i + 7].assign(wbuf, wbe);
   }
@@ -4791,7 +4787,7 @@ void __time_get_storage<wchar_t>::init(const ctype<wchar_t>& ct) {
     const char* bb = buf;
     size_t j       = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, __loc_);
     if (j == size_t(-1) || j == 0)
-      __throw_runtime_error("locale not supported");
+      std::__throw_runtime_error("locale not supported");
     wbe = wbuf + j;
     __months_[i].assign(wbuf, wbe);
     __locale::__strftime(buf, countof(buf), "%b", &t, __loc_);
@@ -4799,7 +4795,7 @@ void __time_get_storage<wchar_t>::init(const ctype<wchar_t>& ct) {
     bb = buf;
     j  = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, __loc_);
     if (j == size_t(-1) || j == 0)
-      __throw_runtime_error("locale not supported");
+      std::__throw_runtime_error("locale not supported");
     wbe = wbuf + j;
     __months_[i + 12].assign(wbuf, wbe);
   }
@@ -4810,7 +4806,7 @@ void __time_get_storage<wchar_t>::init(const ctype<wchar_t>& ct) {
   const char* bb = buf;
   size_t j       = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, __loc_);
   if (j == size_t(-1))
-    __throw_runtime_error("locale not supported");
+    std::__throw_runtime_error("locale not supported");
   wbe = wbuf + j;
   __am_pm_[0].assign(wbuf, wbe);
   t.tm_hour = 13;
@@ -4819,7 +4815,7 @@ void __time_get_storage<wchar_t>::init(const ctype<wchar_t>& ct) {
   bb = buf;
   j  = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, __loc_);
   if (j == size_t(-1))
-    __throw_runtime_error("locale not supported");
+    std::__throw_runtime_error("locale not supported");
   wbe = wbuf + j;
   __am_pm_[1].assign(wbuf, wbe);
   __c_ = __analyze('c', ct);
@@ -5029,12 +5025,12 @@ time_base::dateorder __time_get_storage<wchar_t>::__do_date_order() const {
 
 __time_put::__time_put(const char* nm) : __loc_(__locale::__newlocale(_LIBCPP_ALL_MASK, nm, 0)) {
   if (__loc_ == 0)
-    __throw_runtime_error(("time_put_byname failed to construct for " + string(nm)).c_str());
+    std::__throw_runtime_error(("time_put_byname failed to construct for " + string(nm)).c_str());
 }
 
 __time_put::__time_put(const string& nm) : __loc_(__locale::__newlocale(_LIBCPP_ALL_MASK, nm.c_str(), 0)) {
   if (__loc_ == 0)
-    __throw_runtime_error(("time_put_byname failed to construct for " + nm).c_str());
+    std::__throw_runtime_error(("time_put_byname failed to construct for " + nm).c_str());
 }
 
 __time_put::~__time_put() {
@@ -5059,7 +5055,7 @@ void __time_put::__do_put(wchar_t* __wb, wchar_t*& __we, const tm* __tm, char __
   const char* __nb = __nar;
   size_t j         = __locale::__mbsrtowcs(__wb, &__nb, countof(__wb, __we), &mb, __loc_);
   if (j == size_t(-1))
-    __throw_runtime_error("locale not supported");
+    std::__throw_runtime_error("locale not supported");
   __we = __wb + j;
 }
 #endif // _LIBCPP_HAS_WIDE_CHARACTERS
@@ -5431,7 +5427,7 @@ void moneypunct_byname<char, false>::init(const char* nm) {
   typedef moneypunct<char, false> base;
   __libcpp_unique_locale loc(nm);
   if (!loc)
-    __throw_runtime_error(("moneypunct_byname failed to construct for " + string(nm)).c_str());
+    std::__throw_runtime_error(("moneypunct_byname failed to construct for " + string(nm)).c_str());
 
   __locale::__lconv_t* lc = __locale::__localeconv(loc.get());
   if (!checked_string_to_char_convert(__decimal_point_, lc->mon_decimal_point, loc.get()))
@@ -5466,7 +5462,7 @@ void moneypunct_byname<char, true>::init(const char* nm) {
   typedef moneypunct<char, true> base;
   __libcpp_unique_locale loc(nm);
   if (!loc)
-    __throw_runtime_error(("moneypunct_byname failed to construct for " + string(nm)).c_str());
+    std::__throw_runtime_error(("moneypunct_byname failed to construct for " + string(nm)).c_str());
 
   __locale::__lconv_t* lc = __locale::__localeconv(loc.get());
   if (!checked_string_to_char_convert(__decimal_point_, lc->mon_decimal_point, loc.get()))
@@ -5522,7 +5518,7 @@ void moneypunct_byname<wchar_t, false>::init(const char* nm) {
   typedef moneypunct<wchar_t, false> base;
   __libcpp_unique_locale loc(nm);
   if (!loc)
-    __throw_runtime_error(("moneypunct_byname failed to construct for " + string(nm)).c_str());
+    std::__throw_runtime_error(("moneypunct_byname failed to construct for " + string(nm)).c_str());
   __locale::__lconv_t* lc = __locale::__localeconv(loc.get());
   if (!checked_string_to_wchar_convert(__decimal_point_, lc->mon_decimal_point, loc.get()))
     __decimal_point_ = base::do_decimal_point();
@@ -5534,7 +5530,7 @@ void moneypunct_byname<wchar_t, false>::init(const char* nm) {
   const char* bb = lc->currency_symbol;
   size_t j       = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, loc.get());
   if (j == size_t(-1))
-    __throw_runtime_error("locale not supported");
+    std::__throw_runtime_error("locale not supported");
   wchar_t* wbe = wbuf + j;
   __curr_symbol_.assign(wbuf, wbe);
   if (lc->frac_digits != CHAR_MAX)
@@ -5548,7 +5544,7 @@ void moneypunct_byname<wchar_t, false>::init(const char* nm) {
     bb = lc->positive_sign;
     j  = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, loc.get());
     if (j == size_t(-1))
-      __throw_runtime_error("locale not supported");
+      std::__throw_runtime_error("locale not supported");
     wbe = wbuf + j;
     __positive_sign_.assign(wbuf, wbe);
   }
@@ -5559,7 +5555,7 @@ void moneypunct_byname<wchar_t, false>::init(const char* nm) {
     bb = lc->negative_sign;
     j  = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, loc.get());
     if (j == size_t(-1))
-      __throw_runtime_error("locale not supported");
+      std::__throw_runtime_error("locale not supported");
     wbe = wbuf + j;
     __negative_sign_.assign(wbuf, wbe);
   }
@@ -5576,7 +5572,7 @@ void moneypunct_byname<wchar_t, true>::init(const char* nm) {
   typedef moneypunct<wchar_t, true> base;
   __libcpp_unique_locale loc(nm);
   if (!loc)
-    __throw_runtime_error(("moneypunct_byname failed to construct for " + string(nm)).c_str());
+    std::__throw_runtime_error(("moneypunct_byname failed to construct for " + string(nm)).c_str());
 
   __locale::__lconv_t* lc = __locale::__localeconv(loc.get());
   if (!checked_string_to_wchar_convert(__decimal_point_, lc->mon_decimal_point, loc.get()))
@@ -5589,7 +5585,7 @@ void moneypunct_byname<wchar_t, true>::init(const char* nm) {
   const char* bb = lc->int_curr_symbol;
   size_t j       = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, loc.get());
   if (j == size_t(-1))
-    __throw_runtime_error("locale not supported");
+    std::__throw_runtime_error("locale not supported");
   wchar_t* wbe = wbuf + j;
   __curr_symbol_.assign(wbuf, wbe);
   if (lc->int_frac_digits != CHAR_MAX)
@@ -5607,7 +5603,7 @@ void moneypunct_byname<wchar_t, true>::init(const char* nm) {
     bb = lc->positive_sign;
     j  = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, loc.get());
     if (j == size_t(-1))
-      __throw_runtime_error("locale not supported");
+      std::__throw_runtime_error("locale not supported");
     wbe = wbuf + j;
     __positive_sign_.assign(wbuf, wbe);
   }
@@ -5622,7 +5618,7 @@ void moneypunct_byname<wchar_t, true>::init(const char* nm) {
     bb = lc->negative_sign;
     j  = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, loc.get());
     if (j == size_t(-1))
-      __throw_runtime_error("locale not supported");
+      std::__throw_runtime_error("locale not supported");
     wbe = wbuf + j;
     __negative_sign_.assign(wbuf, wbe);
   }

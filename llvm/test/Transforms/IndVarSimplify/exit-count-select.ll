@@ -4,11 +4,11 @@
 define i32 @logical_and_2ops(i32 %n, i32 %m) {
 ; CHECK-LABEL: @logical_and_2ops(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = freeze i32 [[M:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze i32 [[M:%.*]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 [[N:%.*]])
 ; CHECK-NEXT:    ret i32 [[UMIN]]
 ;
@@ -28,11 +28,11 @@ exit:
 define i32 @logical_or_2ops(i32 %n, i32 %m) {
 ; CHECK-LABEL: @logical_or_2ops(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = freeze i32 [[M:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze i32 [[M:%.*]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 [[N:%.*]])
 ; CHECK-NEXT:    ret i32 [[UMIN]]
 ;
@@ -52,13 +52,13 @@ exit:
 define i32 @logical_and_3ops(i32 %n, i32 %m, i32 %k) {
 ; CHECK-LABEL: @logical_and_3ops(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = freeze i32 [[K:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = freeze i32 [[M:%.*]]
-; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 [[TMP1]])
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze i32 [[K:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i32 [[M:%.*]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 [[TMP1]])
 ; CHECK-NEXT:    [[UMIN1:%.*]] = call i32 @llvm.umin.i32(i32 [[UMIN]], i32 [[N:%.*]])
 ; CHECK-NEXT:    ret i32 [[UMIN1]]
 ;
@@ -80,13 +80,13 @@ exit:
 define i32 @logical_or_3ops(i32 %n, i32 %m, i32 %k) {
 ; CHECK-LABEL: @logical_or_3ops(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = freeze i32 [[K:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = freeze i32 [[M:%.*]]
-; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 [[TMP1]])
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze i32 [[K:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i32 [[M:%.*]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 [[TMP1]])
 ; CHECK-NEXT:    [[UMIN1:%.*]] = call i32 @llvm.umin.i32(i32 [[UMIN]], i32 [[N:%.*]])
 ; CHECK-NEXT:    ret i32 [[UMIN1]]
 ;

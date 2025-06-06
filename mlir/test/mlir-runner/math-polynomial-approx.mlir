@@ -274,6 +274,77 @@ func.func @erf() {
 }
 
 // -------------------------------------------------------------------------- //
+// Erfc.
+// -------------------------------------------------------------------------- //
+func.func @erfc_f32(%a : f32) {
+  %r = math.erfc %a : f32
+  vector.print %r : f32
+  return
+}
+
+func.func @erfc_4xf32(%a : vector<4xf32>) {
+  %r = math.erfc %a : vector<4xf32>
+  vector.print %r : vector<4xf32>
+  return
+}
+
+func.func @erfc() {
+  // CHECK: 1.00027
+  %val1 = arith.constant -2.431864e-4 : f32
+  call @erfc_f32(%val1) : (f32) -> ()
+
+  // CHECK: 0.257905
+  %val2 = arith.constant 0.79999 : f32
+  call @erfc_f32(%val2) : (f32) -> ()
+
+  // CHECK: 0.257899
+  %val3 = arith.constant 0.8 : f32
+  call @erfc_f32(%val3) : (f32) -> ()
+
+  // CHECK: 0.00467794
+  %val4 = arith.constant 1.99999 : f32
+  call @erfc_f32(%val4) : (f32) -> ()
+
+  // CHECK: 0.00467774
+  %val5 = arith.constant 2.0 : f32
+  call @erfc_f32(%val5) : (f32) -> ()
+
+  // CHECK: 1.13736e-07
+  %val6 = arith.constant 3.74999 : f32
+  call @erfc_f32(%val6) : (f32) -> ()
+
+  // CHECK: 1.13727e-07
+  %val7 = arith.constant 3.75 : f32
+  call @erfc_f32(%val7) : (f32) -> ()
+
+  // CHECK: 2
+  %negativeInf = arith.constant 0xff800000 : f32
+  call @erfc_f32(%negativeInf) : (f32) -> ()
+
+  // CHECK: 2, 2, 1.91376, 1.73145
+  %vecVals1 = arith.constant dense<[-3.4028235e+38, -4.54318, -1.2130899, -7.8234202e-01]> : vector<4xf32>
+  call @erfc_4xf32(%vecVals1) : (vector<4xf32>) -> ()
+
+  // CHECK: 1, 1, 1, 0.878681
+  %vecVals2 = arith.constant dense<[-1.1754944e-38, 0.0, 1.1754944e-38, 1.0793410e-01]> : vector<4xf32>
+  call @erfc_4xf32(%vecVals2) : (vector<4xf32>) -> ()
+
+  // CHECK: 0.0805235, 0.000931045, 6.40418e-08, 0
+  %vecVals3 = arith.constant dense<[1.23578, 2.34093, 3.82342, 3.4028235e+38]> : vector<4xf32>
+  call @erfc_4xf32(%vecVals3) : (vector<4xf32>) -> ()
+
+  // CHECK: 0
+  %inf = arith.constant 0x7f800000 : f32
+  call @erfc_f32(%inf) : (f32) -> ()
+
+  // CHECK: nan
+  %nan = arith.constant 0x7fc00000 : f32
+  call @erfc_f32(%nan) : (f32) -> ()
+
+  return
+}
+
+// -------------------------------------------------------------------------- //
 // Exp.
 // -------------------------------------------------------------------------- //
 func.func @exp_f32(%a : f32) {
@@ -772,6 +843,7 @@ func.func @main() {
   call @log2(): () -> ()
   call @log1p(): () -> ()
   call @erf(): () -> ()
+  call @erfc(): () -> ()
   call @exp(): () -> ()
   call @expm1(): () -> ()
   call @sin(): () -> ()

@@ -30,7 +30,7 @@ define ptr @f1() nounwind {
 ; LA32PIC-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32PIC-NEXT:    pcalau12i $a0, %gd_pc_hi20(unspecified)
 ; LA32PIC-NEXT:    addi.w $a0, $a0, %got_pc_lo12(unspecified)
-; LA32PIC-NEXT:    bl %plt(__tls_get_addr)
+; LA32PIC-NEXT:    bl __tls_get_addr
 ; LA32PIC-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32PIC-NEXT:    addi.w $sp, $sp, 16
 ; LA32PIC-NEXT:    ret
@@ -41,7 +41,8 @@ define ptr @f1() nounwind {
 ; LA64PIC-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64PIC-NEXT:    pcalau12i $a0, %gd_pc_hi20(unspecified)
 ; LA64PIC-NEXT:    addi.d $a0, $a0, %got_pc_lo12(unspecified)
-; LA64PIC-NEXT:    bl %plt(__tls_get_addr)
+; LA64PIC-NEXT:    pcaddu18i $ra, %call36(__tls_get_addr)
+; LA64PIC-NEXT:    jirl $ra, $ra, 0
 ; LA64PIC-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64PIC-NEXT:    addi.d $sp, $sp, 16
 ; LA64PIC-NEXT:    ret
@@ -143,7 +144,7 @@ define ptr @f2() nounwind {
 ; LA32PIC-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32PIC-NEXT:    pcalau12i $a0, %ld_pc_hi20(ld)
 ; LA32PIC-NEXT:    addi.w $a0, $a0, %got_pc_lo12(ld)
-; LA32PIC-NEXT:    bl %plt(__tls_get_addr)
+; LA32PIC-NEXT:    bl __tls_get_addr
 ; LA32PIC-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32PIC-NEXT:    addi.w $sp, $sp, 16
 ; LA32PIC-NEXT:    ret
@@ -154,7 +155,8 @@ define ptr @f2() nounwind {
 ; LA64PIC-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64PIC-NEXT:    pcalau12i $a0, %ld_pc_hi20(ld)
 ; LA64PIC-NEXT:    addi.d $a0, $a0, %got_pc_lo12(ld)
-; LA64PIC-NEXT:    bl %plt(__tls_get_addr)
+; LA64PIC-NEXT:    pcaddu18i $ra, %call36(__tls_get_addr)
+; LA64PIC-NEXT:    jirl $ra, $ra, 0
 ; LA64PIC-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64PIC-NEXT:    addi.d $sp, $sp, 16
 ; LA64PIC-NEXT:    ret

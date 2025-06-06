@@ -18,7 +18,7 @@ struct A {
 };
 }
 int N::f() { return 0; }
-int N::g() { return 0; } 
+int N::g() { return 0; }
 // expected-error@-1 {{out-of-line definition of 'g' does not match any declaration in namespace 'cwg1900::N'}}
 } // namespace cwg1900
 
@@ -84,7 +84,7 @@ namespace cwg1909 { // cwg1909: 3.7
   };
   struct C {
     template<typename T> static int C;
-    // expected-error@-1 {{member 'C' has the same name as its class}} 
+    // expected-error@-1 {{member 'C' has the same name as its class}}
     // cxx98-11-error@-2 {{variable templates are a C++14 extension}}
   };
   struct D {
@@ -105,7 +105,7 @@ class X {
   // FIXME: this is ill-formed, because A<T>::B::C does not end with a simple-template-id
   template <typename T>
   friend class A<T>::B::C;
-  // expected-warning@-1 {{dependent nested name specifier 'A<T>::B::' for friend class declaration is not supported; turning off access control for 'X'}}
+  // expected-warning@-1 {{dependent nested name specifier 'A<T>::B' for friend class declaration is not supported; turning off access control for 'X'}}
 };
 template<> struct A<int> {
   typedef struct Q B;
@@ -170,7 +170,7 @@ class X {
   // FIXME: this is ill-formed, because A<T>::B::C does not end with a simple-template-id
   template <typename T>
   friend class A<T>::B::C;
-  // expected-warning@-1 {{dependent nested name specifier 'A<T>::B::' for friend class declaration is not supported; turning off access control for 'X'}}
+  // expected-warning@-1 {{dependent nested name specifier 'A<T>::B' for friend class declaration is not supported; turning off access control for 'X'}}
 };
 } // namespace cwg1945
 

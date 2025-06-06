@@ -15,7 +15,6 @@
 #include "clang/Sema/SemaOpenACC.h"
 
 #include <optional>
-#include <variant>
 
 using namespace clang;
 

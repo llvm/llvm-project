@@ -6,7 +6,7 @@
 ; Tests aimed to check optimization which combines
 ; two comparison operations and logic operation into
 ; one select(min/max) operation and one comparison
-; operaion.
+; operation.
 
 ; 4 patterns below will be converted to umin+less.
 define i1 @ulo(i64 %c, i64 %a, i64 %b) {

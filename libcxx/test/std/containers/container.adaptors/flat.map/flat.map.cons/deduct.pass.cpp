@@ -11,6 +11,7 @@
 // <flat_map>
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <climits>
 #include <deque>
@@ -19,6 +20,7 @@
 #include <flat_map>
 #include <functional>
 #include <ranges>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -334,6 +336,24 @@ int main(int, char**) {
   test_initializer_list_compare();
   test_from_range();
   test_from_range_compare();
+
+#if TEST_STD_VER >= 23
+  std::vector<std::pair<const int, float>> pair_vec = {{1, 1.1f}, {2, 2.2f}, {3, 3.3f}};
+  std::flat_map fm1(pair_vec.begin(), pair_vec.end());
+  ASSERT_SAME_TYPE(decltype(fm1), std::flat_map<int, float>);
+
+  std::vector<std::tuple<int, double>> tuple_vec = {{10, 1.1}, {20, 2.2}, {30, 3.3}};
+  std::flat_map fm2(tuple_vec.begin(), tuple_vec.end());
+  ASSERT_SAME_TYPE(decltype(fm2), std::flat_map<int, double>);
+
+  std::vector<std::array<long, 2>> array_vec = {{100L, 101L}, {200L, 201L}, {300L, 301L}};
+  std::flat_map fm3(array_vec.begin(), array_vec.end());
+  ASSERT_SAME_TYPE(decltype(fm3), std::flat_map<long, long>);
+
+  std::vector<std::pair<int, char>> non_const_key_pair_vec = {{5, 'a'}, {6, 'b'}};
+  std::flat_map fm4(non_const_key_pair_vec.begin(), non_const_key_pair_vec.end());
+  ASSERT_SAME_TYPE(decltype(fm4), std::flat_map<int, char>);
+#endif
 
   AssociativeContainerDeductionGuidesSfinaeAway<std::flat_map, std::flat_map<int, short>>();
 

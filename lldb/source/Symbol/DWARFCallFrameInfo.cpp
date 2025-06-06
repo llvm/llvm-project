@@ -151,26 +151,57 @@ DWARFCallFrameInfo::DWARFCallFrameInfo(ObjectFile &objfile,
                                        SectionSP &section_sp, Type type)
     : m_objfile(objfile), m_section_sp(section_sp), m_type(type) {}
 
-bool DWARFCallFrameInfo::GetUnwindPlan(const Address &addr,
-                                       UnwindPlan &unwind_plan) {
-  return GetUnwindPlan(AddressRange(addr, 1), unwind_plan);
+std::unique_ptr<UnwindPlan>
+DWARFCallFrameInfo::GetUnwindPlan(const Address &addr) {
+  return GetUnwindPlan({AddressRange(addr, 1)}, addr);
 }
 
-bool DWARFCallFrameInfo::GetUnwindPlan(const AddressRange &range,
-                                       UnwindPlan &unwind_plan) {
+std::unique_ptr<UnwindPlan>
+DWARFCallFrameInfo::GetUnwindPlan(llvm::ArrayRef<AddressRange> ranges,
+                                  const Address &addr) {
   FDEEntryMap::Entry fde_entry;
-  Address addr = range.GetBaseAddress();
 
   // Make sure that the Address we're searching for is the same object file as
   // this DWARFCallFrameInfo, we only store File offsets in m_fde_index.
   ModuleSP module_sp = addr.GetModule();
   if (module_sp.get() == nullptr || module_sp->GetObjectFile() == nullptr ||
       module_sp->GetObjectFile() != &m_objfile)
-    return false;
+    return nullptr;
 
-  if (std::optional<FDEEntryMap::Entry> entry = GetFirstFDEEntryInRange(range))
-    return FDEToUnwindPlan(entry->data, addr, unwind_plan);
-  return false;
+  std::vector<AddressRange> valid_ranges;
+
+  auto result = std::make_unique<UnwindPlan>(GetRegisterKind());
+  result->SetSourceName(m_type == EH ? "eh_frame CFI" : "DWARF CFI");
+  // In theory the debug_frame info should be valid at all call sites
+  // ("asynchronous unwind info" as it is sometimes called) but in practice
+  // gcc et al all emit call frame info for the prologue and call sites, but
+  // not for the epilogue or all the other locations during the function
+  // reliably.
+  result->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  result->SetSourcedFromCompiler(eLazyBoolYes);
+  result->SetUnwindPlanForSignalTrap(eLazyBoolNo);
+  for (const AddressRange &range : ranges) {
+    std::optional<FDEEntryMap::Entry> entry = GetFirstFDEEntryInRange(range);
+    if (!entry)
+      continue;
+    std::optional<FDE> fde = ParseFDE(entry->data, addr);
+    if (!fde)
+      continue;
+    int64_t slide =
+        fde->range.GetBaseAddress().GetFileAddress() - addr.GetFileAddress();
+    valid_ranges.push_back(std::move(fde->range));
+    if (fde->for_signal_trap)
+      result->SetUnwindPlanForSignalTrap(eLazyBoolYes);
+    result->SetReturnAddressRegister(fde->return_addr_reg_num);
+    for (UnwindPlan::Row &row : fde->rows) {
+      row.SlideOffset(slide);
+      result->AppendRow(std::move(row));
+    }
+  }
+  result->SetPlanValidAddressRanges(std::move(valid_ranges));
+  if (result->GetRowCount() == 0)
+    return nullptr;
+  return result;
 }
 
 bool DWARFCallFrameInfo::GetAddressRange(Address addr, AddressRange &range) {
@@ -522,15 +553,15 @@ void DWARFCallFrameInfo::GetFDEIndex() {
   m_fde_index_initialized = true;
 }
 
-bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
-                                         Address startaddr,
-                                         UnwindPlan &unwind_plan) {
+std::optional<DWARFCallFrameInfo::FDE>
+DWARFCallFrameInfo::ParseFDE(dw_offset_t dwarf_offset,
+                             const Address &startaddr) {
   Log *log = GetLog(LLDBLog::Unwind);
   lldb::offset_t offset = dwarf_offset;
   lldb::offset_t current_entry = offset;
 
-  if (m_section_sp.get() == nullptr || m_section_sp->IsEncrypted())
-    return false;
+  if (!m_section_sp || m_section_sp->IsEncrypted())
+    return std::nullopt;
 
   if (!m_cfi_data_initialized)
     GetCFIData();
@@ -550,20 +581,8 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
 
   // Translate the CIE_id from the eh_frame format, which is relative to the
   // FDE offset, into a __eh_frame section offset
-  if (m_type == EH) {
-    unwind_plan.SetSourceName("eh_frame CFI");
+  if (m_type == EH)
     cie_offset = current_entry + (is_64bit ? 12 : 4) - cie_offset;
-    unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
-  } else {
-    unwind_plan.SetSourceName("DWARF CFI");
-    // In theory the debug_frame info should be valid at all call sites
-    // ("asynchronous unwind info" as it is sometimes called) but in practice
-    // gcc et al all emit call frame info for the prologue and call sites, but
-    // not for the epilogue or all the other locations during the function
-    // reliably.
-    unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
-  }
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolYes);
 
   const CIE *cie = GetCIE(cie_offset);
   assert(cie != nullptr);
@@ -583,55 +602,20 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
                      m_objfile.GetSectionList());
   range.SetByteSize(range_len);
 
-  addr_t lsda_data_file_address = LLDB_INVALID_ADDRESS;
+  // Skip the LSDA, if present.
+  if (cie->augmentation[0] == 'z')
+    offset += (uint32_t)m_cfi_data.GetULEB128(&offset);
 
-  if (cie->augmentation[0] == 'z') {
-    uint32_t aug_data_len = (uint32_t)m_cfi_data.GetULEB128(&offset);
-    if (aug_data_len != 0 && cie->lsda_addr_encoding != DW_EH_PE_omit) {
-      lldb::offset_t saved_offset = offset;
-      lsda_data_file_address =
-          GetGNUEHPointer(m_cfi_data, &offset, cie->lsda_addr_encoding,
-                          pc_rel_addr, text_addr, data_addr);
-      if (offset - saved_offset != aug_data_len) {
-        // There is more in the augmentation region than we know how to process;
-        // don't read anything.
-        lsda_data_file_address = LLDB_INVALID_ADDRESS;
-      }
-      offset = saved_offset;
-    }
-    offset += aug_data_len;
-  }
-  unwind_plan.SetUnwindPlanForSignalTrap(
-    strchr(cie->augmentation, 'S') ? eLazyBoolYes : eLazyBoolNo);
-
-  Address lsda_data;
-  Address personality_function_ptr;
-
-  if (lsda_data_file_address != LLDB_INVALID_ADDRESS &&
-      cie->personality_loc != LLDB_INVALID_ADDRESS) {
-    m_objfile.GetModule()->ResolveFileAddress(lsda_data_file_address,
-                                              lsda_data);
-    m_objfile.GetModule()->ResolveFileAddress(cie->personality_loc,
-                                              personality_function_ptr);
-  }
-
-  if (lsda_data.IsValid() && personality_function_ptr.IsValid()) {
-    unwind_plan.SetLSDAAddress(lsda_data);
-    unwind_plan.SetPersonalityFunctionPtr(personality_function_ptr);
-  }
+  FDE fde;
+  fde.for_signal_trap = strchr(cie->augmentation, 'S') != nullptr;
+  fde.range = range;
+  fde.return_addr_reg_num = cie->return_addr_reg_num;
 
   uint32_t code_align = cie->code_align;
   int32_t data_align = cie->data_align;
 
-  unwind_plan.SetPlanValidAddressRange(range);
-  UnwindPlan::Row *cie_initial_row = new UnwindPlan::Row;
-  *cie_initial_row = cie->initial_row;
-  UnwindPlan::RowSP row(cie_initial_row);
-
-  unwind_plan.SetRegisterKind(GetRegisterKind());
-  unwind_plan.SetReturnAddressRegister(cie->return_addr_reg_num);
-
-  std::vector<UnwindPlan::RowSP> stack;
+  UnwindPlan::Row row = cie->initial_row;
+  std::vector<UnwindPlan::Row> stack;
 
   UnwindPlan::Row::AbstractRegisterLocation reg_location;
   while (m_cfi_data.ValidOffset(offset) && offset < end_offset) {
@@ -640,7 +624,7 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
     uint8_t extended_opcode = inst & 0x3F;
 
     if (!HandleCommonDwarfOpcode(primary_opcode, extended_opcode, data_align,
-                                 offset, *row)) {
+                                 offset, row)) {
       if (primary_opcode) {
         switch (primary_opcode) {
         case DW_CFA_advance_loc: // (Row Creation Instruction)
@@ -650,11 +634,8 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
           // that is computed by taking the current entry's location value and
           // adding (delta * code_align). All other values in the new row are
           // initially identical to the current row.
-          unwind_plan.AppendRow(row);
-          UnwindPlan::Row *newrow = new UnwindPlan::Row;
-          *newrow = *row.get();
-          row.reset(newrow);
-          row->SlideOffset(extended_opcode * code_align);
+          fde.rows.push_back(row);
+          row.SlideOffset(extended_opcode * code_align);
           break;
         }
 
@@ -669,14 +650,12 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
           // state, so we need to convert our eh_frame register number from the
           // EH frame info, to a register index
 
-          if (unwind_plan.IsValidRowIndex(0) &&
-              unwind_plan.GetRowAtIndex(0)->GetRegisterInfo(reg_num,
-                                                            reg_location))
-            row->SetRegisterInfo(reg_num, reg_location);
+          if (fde.rows[0].GetRegisterInfo(reg_num, reg_location))
+            row.SetRegisterInfo(reg_num, reg_location);
           else {
             // If the register was not set in the first row, remove the
             // register info to keep the unmodified value from the caller.
-            row->RemoveRegisterInfo(reg_num);
+            row.RemoveRegisterInfo(reg_num);
           }
           break;
         }
@@ -690,12 +669,9 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
           // specified address as the location. All other values in the new row
           // are initially identical to the current row. The new location value
           // should always be greater than the current one.
-          unwind_plan.AppendRow(row);
-          UnwindPlan::Row *newrow = new UnwindPlan::Row;
-          *newrow = *row.get();
-          row.reset(newrow);
-          row->SetOffset(m_cfi_data.GetAddress(&offset) -
-                         startaddr.GetFileAddress());
+          fde.rows.push_back(row);
+          row.SetOffset(m_cfi_data.GetAddress(&offset) -
+                        startaddr.GetFileAddress());
           break;
         }
 
@@ -704,11 +680,8 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
           // takes a single uword argument that represents a constant delta.
           // This instruction is identical to DW_CFA_advance_loc except for the
           // encoding and size of the delta argument.
-          unwind_plan.AppendRow(row);
-          UnwindPlan::Row *newrow = new UnwindPlan::Row;
-          *newrow = *row.get();
-          row.reset(newrow);
-          row->SlideOffset(m_cfi_data.GetU8(&offset) * code_align);
+          fde.rows.push_back(row);
+          row.SlideOffset(m_cfi_data.GetU8(&offset) * code_align);
           break;
         }
 
@@ -717,11 +690,8 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
           // takes a single uword argument that represents a constant delta.
           // This instruction is identical to DW_CFA_advance_loc except for the
           // encoding and size of the delta argument.
-          unwind_plan.AppendRow(row);
-          UnwindPlan::Row *newrow = new UnwindPlan::Row;
-          *newrow = *row.get();
-          row.reset(newrow);
-          row->SlideOffset(m_cfi_data.GetU16(&offset) * code_align);
+          fde.rows.push_back(row);
+          row.SlideOffset(m_cfi_data.GetU16(&offset) * code_align);
           break;
         }
 
@@ -730,11 +700,8 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
           // takes a single uword argument that represents a constant delta.
           // This instruction is identical to DW_CFA_advance_loc except for the
           // encoding and size of the delta argument.
-          unwind_plan.AppendRow(row);
-          UnwindPlan::Row *newrow = new UnwindPlan::Row;
-          *newrow = *row.get();
-          row.reset(newrow);
-          row->SlideOffset(m_cfi_data.GetU32(&offset) * code_align);
+          fde.rows.push_back(row);
+          row.SlideOffset(m_cfi_data.GetU32(&offset) * code_align);
           break;
         }
 
@@ -744,10 +711,8 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
           // number. This instruction is identical to DW_CFA_restore except for
           // the encoding and size of the register argument.
           uint32_t reg_num = (uint32_t)m_cfi_data.GetULEB128(&offset);
-          if (unwind_plan.IsValidRowIndex(0) &&
-              unwind_plan.GetRowAtIndex(0)->GetRegisterInfo(reg_num,
-                                                            reg_location))
-            row->SetRegisterInfo(reg_num, reg_location);
+          if (fde.rows[0].GetRegisterInfo(reg_num, reg_location))
+            row.SetRegisterInfo(reg_num, reg_location);
           break;
         }
 
@@ -761,9 +726,6 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
           // useful for compilers that move epilogue code into the body of a
           // function.)
           stack.push_back(row);
-          UnwindPlan::Row *newrow = new UnwindPlan::Row;
-          *newrow = *row.get();
-          row.reset(newrow);
           break;
         }
 
@@ -785,10 +747,10 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
                      __FUNCTION__, dwarf_offset, startaddr.GetFileAddress());
             break;
           }
-          lldb::addr_t offset = row->GetOffset();
-          row = stack.back();
+          int64_t offset = row.GetOffset();
+          row = std::move(stack.back());
           stack.pop_back();
-          row->SetOffset(offset);
+          row.SetOffset(offset);
           break;
         }
 
@@ -812,9 +774,8 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
       }
     }
   }
-  unwind_plan.AppendRow(row);
-
-  return true;
+  fde.rows.push_back(row);
+  return fde;
 }
 
 bool DWARFCallFrameInfo::HandleCommonDwarfOpcode(uint8_t primary_opcode,

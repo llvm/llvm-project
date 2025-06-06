@@ -23,9 +23,8 @@
 #include "../../../test_compare.h"
 #include "test_allocator.h"
 
-int main(int, char**)
-{
-    {
+int main(int, char**) {
+  {
     typedef test_less<int> Cmp;
     typedef test_allocator<int> A;
     typedef std::set<int, Cmp, A> C;
@@ -42,8 +41,8 @@ int main(int, char**)
     assert(*++i == V(6));
     assert(m.key_comp() == Cmp(10));
     assert(m.get_allocator() == A(4));
-    }
-    {
+  }
+  {
     typedef test_less<int> Cmp;
     typedef test_allocator<int> A;
     typedef std::set<int, Cmp, A> C;
@@ -59,7 +58,7 @@ int main(int, char**)
     assert(*++i == V(5));
     assert(*++i == V(6));
     assert(m.get_allocator() == A(4));
-    }
+  }
 
   return 0;
 }

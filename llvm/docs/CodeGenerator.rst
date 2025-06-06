@@ -2088,7 +2088,7 @@ frame.  LLVM takes advantage of having no TOC to provide space to save the frame
 pointer in the PowerPC linkage area of the caller frame.  Other details of
 PowerPC ABI can be found at `PowerPC ABI
 <http://developer.apple.com/documentation/DeveloperTools/Conceptual/LowLevelABI/Articles/32bitPowerPC.html>`_\
-. Note: This link describes the 32 bit ABI.  The 64 bit ABI is similar except
+. Note: This link describes the 32-bit ABI.  The 64-bit ABI is similar except
 space for GPRs are 8 bytes wide (not 4) and r13 is reserved for system use.
 
 Frame Layout
@@ -2137,8 +2137,8 @@ function epilog can also use the link to pop the frame from the stack.  The
 third entry in the linkage area is used to save the return address from the lr
 register. Finally, as mentioned above, the last entry is used to save the
 previous frame pointer (r31.)  The entries in the linkage area are the size of a
-GPR, thus the linkage area is 24 bytes long in 32 bit mode and 48 bytes in 64
-bit mode.
+GPR, thus the linkage area is 24 bytes long in 32-bit mode and 48 bytes in
+64-bit mode.
 
 32 bit linkage area:
 
@@ -2207,13 +2207,13 @@ parameter area must be large enough to store all the parameters for the largest
 call sequence made by the caller.  The size must also be minimally large enough
 to spill registers r3-r10.  This allows callees blind to the call signature,
 such as thunks and vararg functions, enough space to cache the argument
-registers.  Therefore, the parameter area is minimally 32 bytes (64 bytes in 64
-bit mode.)  Also note that since the parameter area is a fixed offset from the
+registers.  Therefore, the parameter area is minimally 32 bytes (64 bytes in
+64-bit mode.)  Also note that since the parameter area is a fixed offset from the
 top of the frame, that a callee can access its split arguments using fixed
 offsets from the stack pointer (or base pointer.)
 
 Combining the information about the linkage, parameter areas and alignment. A
-stack frame is minimally 64 bytes in 32 bit mode and 128 bytes in 64 bit mode.
+stack frame is minimally 64 bytes in 32-bit mode and 128 bytes in 64-bit mode.
 
 The *dynamic area* starts out as size zero.  If a function uses dynamic alloca
 then space is added to the stack, the linkage and parameter areas are shifted to
@@ -2221,7 +2221,7 @@ top of stack, and the new space is available immediately below the linkage and
 parameter areas.  The cost of shifting the linkage and parameter areas is minor
 since only the link value needs to be copied.  The link value can be easily
 fetched by adding the original frame size to the base pointer.  Note that
-allocations in the dynamic space need to observe 16 byte alignment.
+allocations in the dynamic space need to observe 16-byte alignment.
 
 The *locals area* is where the llvm compiler reserves space for local variables.
 
@@ -2343,7 +2343,7 @@ When BPF_CLASS(code) == BPF_ALU or BPF_ALU64 or BPF_JMP,
 ::
 
   BPF_X     0x1  use src_reg register as source operand
-  BPF_K     0x0  use 32 bit immediate as source operand
+  BPF_K     0x0  use 32-bit immediate as source operand
 
 and four MSB bits store operation code
 

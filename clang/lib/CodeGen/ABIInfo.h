@@ -110,7 +110,8 @@ public:
   /// A convenience method to return an indirect ABIArgInfo with an
   /// expected alignment equal to the ABI alignment of the given type.
   CodeGen::ABIArgInfo
-  getNaturalAlignIndirect(QualType Ty, bool ByVal = true, bool Realign = false,
+  getNaturalAlignIndirect(QualType Ty, unsigned AddrSpace, bool ByVal = true,
+                          bool Realign = false,
                           llvm::Type *Padding = nullptr) const;
 
   CodeGen::ABIArgInfo getNaturalAlignIndirectInReg(QualType Ty,

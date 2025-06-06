@@ -21,7 +21,6 @@ foo:
 ; CHECK: cbi 31, 7                 ; encoding: [0xff,0x98]
 
 ; CHECK: cbi bar-2, 2              ; encoding: [0bAAAAA010,0x98]
-; CHECK:                           ;   fixup A - offset: 0, value: bar-2, kind: fixup_port5
 
 ; CHECK-INST: cbi 3, 5
 ; CHECK-INST: cbi 1, 1

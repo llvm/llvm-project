@@ -42,12 +42,12 @@ void uses(unsigned Parm) {
   while (1);
 
   // expected-error@+2{{OpenACC 'num_gangs' clause with more than 1 argument may not appear on a 'parallel' construct with a 'reduction' clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'reduction' clause is here}}
 #pragma acc parallel reduction(+:Parm) num_gangs(Parm, IVar)
   while (1);
 
   // expected-error@+2{{OpenACC 'reduction' clause may not appear on a 'parallel' construct with a 'num_gangs' clause with more than 1 argument}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'num_gangs' clause is here}}
 #pragma acc parallel num_gangs(Parm, IVar) reduction(+:Var)
   while (1);
 
