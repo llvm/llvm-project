@@ -1306,6 +1306,7 @@ private:
     if (Tok->is(TT_TableGenMultiLineString))
       return true;
     auto *Prev = Tok->getPreviousNonComment();
+    auto *Next = Tok->getNextNonComment();
     switch (bool IsIf = false; Tok->Tok.getKind()) {
     case tok::plus:
     case tok::minus:
@@ -1435,10 +1436,10 @@ private:
           if (Prev->isAccessSpecifierKeyword())
             Line.Type = LT_AccessModifier;
         }
-      } else if (canBeObjCSelectorComponent(*Prev) && Tok->Next &&
-                 (Tok->Next->isOneOf(tok::r_paren, tok::comma) ||
-                  (canBeObjCSelectorComponent(*Tok->Next) && Tok->Next->Next &&
-                   Tok->Next->Next->is(tok::colon)))) {
+      } else if (canBeObjCSelectorComponent(*Prev) && Next &&
+                 (Next->isOneOf(tok::r_paren, tok::comma) ||
+                  (canBeObjCSelectorComponent(*Next) && Next->Next &&
+                   Next->Next->is(tok::colon)))) {
         // This handles a special macro in ObjC code where selectors including
         // the colon are passed as macro arguments.
         Tok->setType(TT_ObjCMethodExpr);
@@ -1476,10 +1477,8 @@ private:
     case tok::kw_for:
       if (Style.isJavaScript()) {
         // x.for and {for: ...}
-        if ((Prev && Prev->is(tok::period)) ||
-            (Tok->Next && Tok->Next->is(tok::colon))) {
+        if ((Prev && Prev->is(tok::period)) || (Next && Next->is(tok::colon)))
           break;
-        }
         // JS' for await ( ...
         if (CurrentToken && CurrentToken->is(Keywords.kw_await))
           next();
@@ -1690,9 +1689,9 @@ private:
         CurrentToken->Previous->setType(TT_OverloadedOperator);
       break;
     case tok::question:
-      if (Style.isJavaScript() && Tok->Next &&
-          Tok->Next->isOneOf(tok::semi, tok::comma, tok::colon, tok::r_paren,
-                             tok::r_brace, tok::r_square)) {
+      if (Style.isJavaScript() && Next &&
+          Next->isOneOf(tok::semi, tok::comma, tok::colon, tok::r_paren,
+                        tok::r_brace, tok::r_square)) {
         // Question marks before semicolons, colons, etc. indicate optional
         // types (fields, parameters), e.g.
         //   function(x?: string, y?) {...}
@@ -1709,8 +1708,7 @@ private:
       if (Style.isCSharp()) {
         // `Type?)`, `Type?>`, `Type? name;`, and `Type? name =` can only be
         // nullable types.
-        if (const auto *Next = Tok->getNextNonComment();
-            Next && (Next->isOneOf(tok::r_paren, tok::greater) ||
+        if (Next && (Next->isOneOf(tok::r_paren, tok::greater) ||
                      Next->startsSequence(tok::identifier, tok::semi) ||
                      Next->startsSequence(tok::identifier, tok::equal))) {
           Tok->setType(TT_CSharpNullable);
@@ -1723,10 +1721,8 @@ private:
         // cond ? id : "B";
         // cond ? cond2 ? "A" : "B" : "C";
         if (!Contexts.back().IsExpression && Line.MustBeDeclaration &&
-            (!Tok->Next ||
-             !Tok->Next->isOneOf(tok::identifier, tok::string_literal) ||
-             !Tok->Next->Next ||
-             !Tok->Next->Next->isOneOf(tok::colon, tok::question))) {
+            (!Next || !Next->isOneOf(tok::identifier, tok::string_literal) ||
+             !Next->Next || !Next->Next->isOneOf(tok::colon, tok::question))) {
           Tok->setType(TT_CSharpNullable);
           break;
         }
@@ -1773,20 +1769,19 @@ private:
                        Keywords.kw___has_include_next)) {
         parseHasInclude();
       }
-      if (Style.isCSharp() && Tok->is(Keywords.kw_where) && Tok->Next &&
-          Tok->Next->isNot(tok::l_paren)) {
-        Tok->setType(TT_CSharpGenericTypeConstraint);
-        parseCSharpGenericTypeConstraint();
-        if (!Prev)
-          Line.IsContinuation = true;
-      }
-      if (Style.isTableGen()) {
+      if (Style.isCSharp()) {
+        if (Tok->is(Keywords.kw_where) && Next && Next->isNot(tok::l_paren)) {
+          Tok->setType(TT_CSharpGenericTypeConstraint);
+          parseCSharpGenericTypeConstraint();
+          if (!Prev)
+            Line.IsContinuation = true;
+        }
+      } else if (Style.isTableGen()) {
         if (Tok->is(Keywords.kw_assert)) {
           if (!parseTableGenValue())
             return false;
         } else if (Tok->isOneOf(Keywords.kw_def, Keywords.kw_defm) &&
-                   (!Tok->Next ||
-                    !Tok->Next->isOneOf(tok::colon, tok::l_brace))) {
+                   (!Next || !Next->isOneOf(tok::colon, tok::l_brace))) {
           // The case NameValue appears.
           if (!parseTableGenValue(true))
             return false;

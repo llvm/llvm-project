@@ -703,7 +703,7 @@ struct TupleExpander : SetTheory::Expander {
           RV.setValue(BitInit::get(RK, true));
 
         // Copy fields from the RegisterTuples def.
-        if (Field == "SubRegIndices" || Field == "CompositeIndices") {
+        if (Field == "SubRegIndices") {
           NewReg->addValue(*Def->getValue(Field));
           continue;
         }
@@ -1333,7 +1333,7 @@ CodeGenSubRegIndex *CodeGenRegBank::getSubRegIdx(const Record *Def) {
 
 const CodeGenSubRegIndex *
 CodeGenRegBank::findSubRegIdx(const Record *Def) const {
-  return Def2SubRegIdx.lookup(Def);
+  return Def2SubRegIdx.at(Def);
 }
 
 CodeGenRegister *CodeGenRegBank::getReg(const Record *Def) {
