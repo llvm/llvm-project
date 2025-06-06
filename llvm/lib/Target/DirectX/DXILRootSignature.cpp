@@ -432,6 +432,11 @@ static bool verifyRangeType(uint32_t Type) {
   return false;
 }
 
+template <typename... FlagTypes>
+static bool isFlagSet(uint32_t Flags, FlagTypes... FlagsToCheck) {
+  return ((Flags & llvm::to_underlying(FlagsToCheck)) | ...) == Flags;
+}
+
 static bool verifyDescriptorRangeFlag(uint32_t Version, uint32_t Type,
                                       uint32_t FlagsVal) {
   using FlagT = dxbc::DescriptorRangeFlag;
