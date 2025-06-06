@@ -1400,7 +1400,7 @@ public:
   }
 
   bool hasValue() const override {
-    return Insts.size() == 1 && OpcodeValues.count(Insts[0]);
+    return Insts.size() == 1 && OpcodeValues.contains(Insts[0]);
   }
 
   // TODO: This is used for the SwitchMatcher optimization. We should be able to
