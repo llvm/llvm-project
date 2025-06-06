@@ -659,24 +659,26 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
   ldp    x28,x29, [x0, #0x0E0]
 #if defined(_LIBUNWIND_AARCH64_PC_PROTECTION)
 #define __VOFFSET 0x118
-  // Authenticate return address with the address of the context.
-  ldr    x30,     [x0, #0x100]  // __pc
+  // See the description in Registers_arm64
+  ldr    x30,     [x0, #0x100]    // __pc
   mov    x17, x30
-  mov    x16,  x0
-  hint   0xc      // autia1716
-  xpaclri
-  cmp    x17, x30
+  mov    x16,  x0                 // auth with the buffer's address
+  movk   x16, #0xface, lsl #48    // blinded with a constant
+  hint   0xc                      // autia1716
+  hint   0x7                      // xpaclri
+  cmp    x17, x30                 // check if the auth failed
   b.ne   LauthError
   mov    x1, x17
-  ldr    x30,     [x0, #0x110]  // __pc2
+  ldr    x30,     [x0, #0x110]    // __pc2
   mov    x17, x30
-  hint   0xc // autia1716
-  xpaclri
-  cmp    x17, x30
+  ldr    x16,     [x0, #0x100]    // Auth the second part with the signed first part
+  hint   0xc                      // autia1716
+  hint   0x7                      // xpaclri
+  cmp    x17, x30                 // check if the auth failed
   b.ne   LauthError
   lsl    x17, x17, 32
   orr    x30, x17, x1
-  mov    x16, xzr
+  mov    x16, xzr                 // clearup registers
   mov    x17, xzr
 #else
 #define __VOFFSET 0x110

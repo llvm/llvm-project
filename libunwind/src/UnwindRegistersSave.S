@@ -746,11 +746,12 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   str    x1,      [x0, #0x0F8]
 #if defined(_LIBUNWIND_AARCH64_PC_PROTECTION)
 #define __VOFFSET 0x118
-  // Sign the return address as pc with the address of the context
-  // buttom and the top word signed and stored sepearetly.
+  // See the description in Registers_arm64
   mov    w17, w30                 // lower part of the PC
   mov    x16, x0                  // sign with the address of the context
+  movk   x16, #0xface, lsl #48    // blinded with a constant
   hint   0x8                      // pacia1716
+  mov    x16, x17                 // sign the second part with the first part
   str    x17,     [x0, #0x100]    // store to __pc
   mov    x17, x30                 // upper part of the PC
   lsr    x17, x17, 32

@@ -1829,19 +1829,18 @@ class _LIBUNWIND_HIDDEN Registers_arm64 {
   struct GPRs;
 
 private:
-  /// The program counter is used effectively as a return address
-  /// when the context is restored therefore protect it with PAC.
-  /// The base address of the context is used with the A key for
-  /// authentication and signing. Return address authentication is
-  /// still managed according to the unwind info. In some cases
-  /// the LR contains significant bits in the space for the PAC bits the
-  /// value of the PC is stored in 2 halfs and each signed.
-  inline uint64_t getDiscriminator() const {
-    return reinterpret_cast<uint64_t>(this);
-  }
 #if defined(_LIBUNWIND_AARCH64_PC_PROTECTION)
+  /// The program counter is effectively used as a return address when the
+  /// context is restored; therefore, it should be protected with PAC to prevent
+  /// arbitrary returns. The base address of the context is blended with a
+  /// discriminator using the A key for authentication and signing. Return
+  /// address authentication is still managed according to the unwind
+  /// information. In some cases, the LR contains significant bits in the space
+  /// reserved for PAC bits, so the value of the PC is stored in two halves.
+  ///  The second half is signed using the first half as a discriminator to bind
+  ///  the two halves together.
 #if defined(_LIBUNWIND_PTRAUTH_AVAILABLE)
-/// Use Pointer Authentication Intrinsics when available.
+  /// Use Pointer Authentication Intrinsics when available.
 #define __libunwind_ptrauth_auth_data(__value, __key, __discriminator)         \
   ptrauth_auth_data(__value, __key, __discriminator)
 #define __libunwind_ptrauth_auth_and_resign(pointer, oldKey, oldDiscriminator, \
@@ -1850,6 +1849,8 @@ private:
                           newDiscriminator)
 #define __libunwind_ptrauth_sign_unauthenticated(__value, __key, __data)       \
   ptrauth_sign_unauthenticated(__value, __key, __data)
+#define __libunwind_ptrauth_blend_discriminator(__ptr, __data)                 \
+  ptrauth_blend_discriminator(__ptr, __data)
 #else // !_LIBUNWIND_PTRAUTH_AVAILABLE
   typedef enum {
     ptrauth_key_asia = 0,
@@ -1900,14 +1901,21 @@ private:
         __libunwind_ptrauth_auth_data(pointer, oldKey, oldDiscriminator),
         newKey, newDiscriminator);
   }
+#define __libunwind_ptrauth_blend_discriminator(__ptr, __data)                 \
+  ptrauth_blend_discriminator(__ptr, __data)
 #endif
+  inline uint64_t
+  __libunwind_ptrauth_blend_discriminator(uint64_t __ptr,
+                                          uint16_t __data) const {
+    return (__ptr & (~0 >> 16)) | ((uint64_t)__data << 48);
+  }
   // Authenticate the currently stored PC and return it's raw value.
   inline uint64_t authPC(const struct GPRs *gprs,
                          uint64_t discriminator) const {
+    uint64_t upper = (uint64_t)__libunwind_ptrauth_auth_data(
+        (void *)gprs->__pc2, ptrauth_key_asia, gprs->__pc);
     uint64_t lower = (uint64_t)__libunwind_ptrauth_auth_data(
         (void *)gprs->__pc, ptrauth_key_asia, discriminator);
-    uint64_t upper = (uint64_t)__libunwind_ptrauth_auth_data(
-        (void *)gprs->__pc2, ptrauth_key_asia, discriminator);
     return (upper << 32) | lower;
   }
 
@@ -1917,19 +1925,26 @@ private:
         (void *)(value & (((uint64_t)~0) >> 32)), ptrauth_key_asia,
         getDiscriminator());
     _registers.__pc2 = (uint64_t)__libunwind_ptrauth_sign_unauthenticated(
-        (void *)(value >> 32), ptrauth_key_asia, getDiscriminator());
+        (void *)(value >> 32), ptrauth_key_asia, _registers.__pc);
   }
 
   // Update the signature on the current PC.
   inline void resignPC(uint64_t oldDiscriminator) {
+    uint64_t old_signed_pc = _registers.__pc;
     _registers.__pc = (uint64_t)__libunwind_ptrauth_auth_and_resign(
         (void *)_registers.__pc, ptrauth_key_asia, oldDiscriminator,
         ptrauth_key_asia, getDiscriminator());
     _registers.__pc2 = (uint64_t)__libunwind_ptrauth_auth_and_resign(
-        (void *)_registers.__pc2, ptrauth_key_asia, oldDiscriminator,
-        ptrauth_key_asia, getDiscriminator());
+        (void *)_registers.__pc2, ptrauth_key_asia, old_signed_pc,
+        ptrauth_key_asia, _registers.__pc);
   }
 #else //! defined(_LIBUNWIND_AARCH64_PC_PROTECTION))
+  inline uint64_t
+  __libunwind_ptrauth_blend_discriminator(uint64_t __ptr,
+                                          uint16_t __data) const {
+    (void)__data;
+    return __ptr;
+  }
   // Remote unwinding is not supported by this protection.
   inline uint64_t authPC(const struct GPRs *gprs,
                          const uint64_t discriminator) const {
@@ -1939,6 +1954,11 @@ private:
   inline void updatePC(const uint64_t value) { _registers.__pc = value; }
   inline void resignPC(uint64_t oldDiscriminator) { (void)oldDiscriminator; }
 #endif
+
+  inline uint64_t getDiscriminator() const {
+    return __libunwind_ptrauth_blend_discriminator(
+        reinterpret_cast<uint64_t>(this), 0xface);
+  }
 
 public:
   Registers_arm64();
@@ -2010,7 +2030,8 @@ inline Registers_arm64::Registers_arm64(const void *registers) {
                 "expected VFP registers to be at offset 272");
 #endif
   // getcontext signs the PC with the base address of the context.
-  resignPC(reinterpret_cast<uint64_t>(registers));
+  resignPC(__libunwind_ptrauth_blend_discriminator(
+      reinterpret_cast<uint64_t>(registers), 0xface));
   memcpy(_vectorHalfRegisters,
          static_cast<const uint8_t *>(registers) + sizeof(GPRs),
          sizeof(_vectorHalfRegisters));
