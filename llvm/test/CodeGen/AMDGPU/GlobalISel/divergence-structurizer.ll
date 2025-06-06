@@ -535,8 +535,10 @@ define amdgpu_ps i32 @irreducible_cfg(i32 %x, i32 %y, i32 %a0, i32 %a1, i32 %a2,
 ; GFX10-NEXT:    ; in Loop: Header=BB6_2 Depth=1
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; GFX10-NEXT:    s_and_b32 s4, exec_lo, s5
-; GFX10-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX10-NEXT:    s_or_b32 s1, s4, s1
+; GFX10-NEXT:    s_and_b32 s0, s0, 1
+; GFX10-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX10-NEXT:    s_cselect_b32 s0, exec_lo, 0
 ; GFX10-NEXT:    s_andn2_b32 exec_lo, exec_lo, s1
 ; GFX10-NEXT:    s_cbranch_execz .LBB6_8
 ; GFX10-NEXT:  .LBB6_2: ; %irr.guard
@@ -566,6 +568,7 @@ define amdgpu_ps i32 @irreducible_cfg(i32 %x, i32 %y, i32 %a0, i32 %a1, i32 %a2,
 ; GFX10-NEXT:    s_and_b32 s2, exec_lo, s3
 ; GFX10-NEXT:    s_mov_b32 s5, exec_lo
 ; GFX10-NEXT:    s_or_b32 s2, s0, s2
+; GFX10-NEXT:    ; implicit-def: $sgpr0
 ; GFX10-NEXT:    s_and_saveexec_b32 s6, s4
 ; GFX10-NEXT:    s_cbranch_execz .LBB6_1
 ; GFX10-NEXT:  ; %bb.5: ; %.preheader
@@ -582,9 +585,10 @@ define amdgpu_ps i32 @irreducible_cfg(i32 %x, i32 %y, i32 %a0, i32 %a1, i32 %a2,
 ; GFX10-NEXT:  ; %bb.7: ; %Flow
 ; GFX10-NEXT:    ; in Loop: Header=BB6_2 Depth=1
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
-; GFX10-NEXT:    s_andn2_b32 s0, s5, exec_lo
-; GFX10-NEXT:    s_and_b32 s4, exec_lo, 0
-; GFX10-NEXT:    s_or_b32 s5, s0, s4
+; GFX10-NEXT:    s_andn2_b32 s4, s5, exec_lo
+; GFX10-NEXT:    s_and_b32 s5, exec_lo, 0
+; GFX10-NEXT:    s_mov_b32 s0, 1
+; GFX10-NEXT:    s_or_b32 s5, s4, s5
 ; GFX10-NEXT:    s_branch .LBB6_1
 ; GFX10-NEXT:  .LBB6_8: ; %.exit
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s1
