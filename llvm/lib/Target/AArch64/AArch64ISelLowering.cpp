@@ -1511,6 +1511,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Legal);
     }
 
+    if (Subtarget->hasSVE2p1() ||
+        (Subtarget->hasSME2() && Subtarget->isStreaming()))
+      setOperationAction(ISD::GET_ACTIVE_LANE_MASK, MVT::nxv32i1, Custom);
+
     for (auto VT : {MVT::v16i8, MVT::v8i8, MVT::v4i16, MVT::v2i32})
       setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Custom);
   }
@@ -8761,6 +8765,45 @@ getSMToggleCondition(const SMECallAttrs &CallAttrs) {
   llvm_unreachable("Unsupported attributes");
 }
 
+/// Check whether a stack argument requires lowering in a tail call.
+static bool shouldLowerTailCallStackArg(const MachineFunction &MF,
+                                        const CCValAssign &VA, SDValue Arg,
+                                        ISD::ArgFlagsTy Flags, int CallOffset) {
+  // FIXME: We should be able to handle this case, but it's not clear how to.
+  if (Flags.isZExt() || Flags.isSExt())
+    return true;
+
+  for (;;) {
+    // Look through nodes that don't alter the bits of the incoming value.
+    unsigned Op = Arg.getOpcode();
+    if (Op == ISD::ZERO_EXTEND || Op == ISD::ANY_EXTEND || Op == ISD::BITCAST ||
+        Arg->isAssert() || Op == AArch64ISD::ASSERT_ZEXT_BOOL) {
+      Arg = Arg.getOperand(0);
+      continue;
+    }
+    break;
+  }
+
+  // If the argument is a load from the same immutable stack slot, we can reuse
+  // it.
+  if (auto *LoadNode = dyn_cast<LoadSDNode>(Arg)) {
+    if (auto *FINode = dyn_cast<FrameIndexSDNode>(LoadNode->getBasePtr())) {
+      const MachineFrameInfo &MFI = MF.getFrameInfo();
+      int FI = FINode->getIndex();
+      if (!MFI.isImmutableObjectIndex(FI))
+        return true;
+      if (CallOffset != MFI.getObjectOffset(FI))
+        return true;
+      uint64_t SizeInBits = LoadNode->getMemoryVT().getFixedSizeInBits();
+      if (SizeInBits / 8 != MFI.getObjectSize(FI))
+        return true;
+      return false;
+    }
+  }
+
+  return true;
+}
+
 /// LowerCall - Lower a call to a callseq_start + CALL + callseq_end chain,
 /// and add input and output parameter nodes.
 SDValue
@@ -9183,10 +9226,13 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       }
       unsigned LocMemOffset = VA.getLocMemOffset();
       int32_t Offset = LocMemOffset + BEAlign;
-      SDValue PtrOff = DAG.getIntPtrConstant(Offset, DL);
-      PtrOff = DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr, PtrOff);
 
       if (IsTailCall) {
+        // When the frame pointer is perfectly aligned for the tail call and the
+        // same stack argument is passed down intact, we can reuse it.
+        if (!FPDiff && !shouldLowerTailCallStackArg(MF, VA, Arg, Flags, Offset))
+          continue;
+
         Offset = Offset + FPDiff;
         int FI = MF.getFrameInfo().CreateFixedObject(OpSize, Offset, true);
 
@@ -17939,7 +17985,7 @@ performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                                 /*IsEqual=*/false))
     return While;
 
-  if (!ST->hasSVE2p1())
+  if (!ST->hasSVE2p1() && !(ST->hasSME2() && ST->isStreaming()))
     return SDValue();
 
   if (!N->hasNUsesOfValue(2, 0))
@@ -27096,6 +27142,37 @@ void AArch64TargetLowering::ReplaceExtractSubVectorResults(
   Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, Half));
 }
 
+void AArch64TargetLowering::ReplaceGetActiveLaneMaskResults(
+    SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const {
+  assert((Subtarget->hasSVE2p1() ||
+          (Subtarget->hasSME2() && Subtarget->isStreaming())) &&
+         "Custom lower of get.active.lane.mask missing required feature.");
+
+  assert(N->getValueType(0) == MVT::nxv32i1 &&
+         "Unexpected result type for get.active.lane.mask");
+
+  SDLoc DL(N);
+  SDValue Idx = N->getOperand(0);
+  SDValue TC = N->getOperand(1);
+
+  assert(Idx.getValueType().getFixedSizeInBits() <= 64 &&
+         "Unexpected operand type for get.active.lane.mask");
+
+  if (Idx.getValueType() != MVT::i64) {
+    Idx = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Idx);
+    TC = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, TC);
+  }
+
+  SDValue ID =
+      DAG.getTargetConstant(Intrinsic::aarch64_sve_whilelo_x2, DL, MVT::i64);
+  EVT HalfVT = N->getValueType(0).getHalfNumVectorElementsVT(*DAG.getContext());
+  auto WideMask =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, {HalfVT, HalfVT}, {ID, Idx, TC});
+
+  Results.push_back(DAG.getNode(ISD::CONCAT_VECTORS, DL, N->getValueType(0),
+                                {WideMask.getValue(0), WideMask.getValue(1)}));
+}
+
 // Create an even/odd pair of X registers holding integer value V.
 static SDValue createGPRPairNode(SelectionDAG &DAG, SDValue V) {
   SDLoc dl(V.getNode());
@@ -27481,6 +27558,9 @@ void AArch64TargetLowering::ReplaceNodeResults(
     // Custom lowering has been requested for INSERT_SUBVECTOR and
     // CONCAT_VECTORS -- but delegate to common code for result type
     // legalisation
+    return;
+  case ISD::GET_ACTIVE_LANE_MASK:
+    ReplaceGetActiveLaneMaskResults(N, Results, DAG);
     return;
   case ISD::INTRINSIC_WO_CHAIN: {
     EVT VT = N->getValueType(0);

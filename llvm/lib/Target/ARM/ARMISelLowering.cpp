@@ -511,10 +511,11 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   if (!Subtarget->isTargetDarwin() && !Subtarget->isTargetIOS() &&
       !Subtarget->isTargetWatchOS() && !Subtarget->isTargetDriverKit()) {
     bool IsHFTarget = TM.Options.FloatABIType == FloatABI::Hard;
-    for (int LCID = 0; LCID < RTLIB::UNKNOWN_LIBCALL; ++LCID)
-      setLibcallCallingConv(static_cast<RTLIB::Libcall>(LCID),
-                            IsHFTarget ? CallingConv::ARM_AAPCS_VFP
-                                       : CallingConv::ARM_AAPCS);
+
+    for (RTLIB::Libcall LC : RTLIB::libcalls()) {
+      setLibcallCallingConv(LC, IsHFTarget ? CallingConv::ARM_AAPCS_VFP
+                                           : CallingConv::ARM_AAPCS);
+    }
   }
 
   if (Subtarget->isTargetMachO()) {

@@ -1094,7 +1094,6 @@ public:
             interpreter, "breakpoint list",
             "List some or all breakpoints at configurable levels of detail.",
             nullptr) {
-    CommandArgumentEntry arg;
     CommandArgumentData bp_id_arg;
 
     // Define the first (and only) variant of this arg.

@@ -1453,6 +1453,15 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
   ASSERT_EQ(Tokens.size(), 17u) << Tokens;
   EXPECT_TOKEN(Tokens[4], tok::ampamp, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[5], tok::kw_requires, TT_RequiresClause);
+
+  Tokens = annotate("auto foo() -> auto *\n"
+                    "  requires(not bar)\n"
+                    "{\n"
+                    "  return baz;\n"
+                    "}");
+  ASSERT_EQ(Tokens.size(), 18u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::kw_requires, TT_RequiresClause);
+  EXPECT_TOKEN(Tokens[12], tok::l_brace, TT_FunctionLBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsRequiresExpressions) {
