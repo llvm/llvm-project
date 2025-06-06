@@ -59320,6 +59320,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                                   Op.getOpcode() == X86ISD::UNPCKL ||
                                   Op.getOpcode() == X86ISD::UNPCKH);
       })) {
+    // Collect the individual per-lane v2f64/v4f64 shuffles.
     MVT OpVT = Ops[0].getSimpleValueType();
     unsigned NumOpElts = OpVT.getVectorNumElements();
     SmallVector<SmallVector<SDValue, 2>, 4> SrcOps(NumOps);
@@ -59333,6 +59334,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                    return V.getValueType() == OpVT;
                  });
         })) {
+      // Concatenate the shuffle masks into SHUFPD mask and collect subops.
       bool Unary = true;
       unsigned SHUFPDMask = 0;
       SmallVector<SDValue, 4> LHS(NumOps), RHS(NumOps);
@@ -59343,6 +59345,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         for (unsigned J = 0; J != NumOpElts; ++J)
           SHUFPDMask |= (SrcMasks[I][J] & 1) << ((I * NumOpElts) + J);
       }
+      // Concat SHUFPD LHS/RHS operands - if they match then it will become a
+      // PERMILPD mask and we can always profitably concatenate them.
       SDValue Concat0 =
           combineConcatVectorOps(DL, VT, LHS, DAG, Subtarget, Depth + 1);
       SDValue Concat1 =
