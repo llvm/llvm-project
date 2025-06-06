@@ -26,6 +26,7 @@ class DynamicLibrary::HandleSet {
   typedef std::vector<void *> HandleList;
   HandleList Handles;
   void *Process = nullptr;
+  bool ProcessAdded = false;
 
 public:
   static void *DLOpen(const char *Filename, std::string *Err);
@@ -66,6 +67,7 @@ public:
       }
 #endif
       Process = Handle;
+      ProcessAdded = true;
     }
     return true;
   }
@@ -97,11 +99,11 @@ public:
     assert(!((Order & SO_LoadedFirst) && (Order & SO_LoadedLast)) &&
            "Invalid Ordering");
 
-    if (!Process || (Order & SO_LoadedFirst)) {
+    if (!ProcessAdded || (Order & SO_LoadedFirst)) {
       if (void *Ptr = LibLookup(Symbol, Order))
         return Ptr;
     }
-    if (Process) {
+    if (ProcessAdded) {
       // Use OS facilities to search the current binary and all loaded libs.
       if (void *Ptr = DLSym(Process, Symbol))
         return Ptr;
