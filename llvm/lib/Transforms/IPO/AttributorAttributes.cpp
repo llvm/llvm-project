@@ -12791,7 +12791,7 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
     removeAS(*FlatAS);
 
     unsigned AS = getAssociatedType()->getPointerAddressSpace();
-    if (AS != FlatAS.value()) {
+    if (AS != *FlatAS) {
       removeAS(AS);
       indicateOptimisticFixpoint();
     }
