@@ -249,8 +249,17 @@ class ApplyRegisteredPassOp(ApplyRegisteredPassOp):
         )
 
 
-def apply_registered_pass(result, pass_name, target, *, options=[], loc=None, ip=None) -> Value:
-  return ApplyRegisteredPassOp(result=result, pass_name=pass_name, target=target, options=options, loc=loc, ip=ip).result
+def apply_registered_pass(
+    result, pass_name, target, *, options=[], loc=None, ip=None
+) -> Value:
+    return ApplyRegisteredPassOp(
+        result=result,
+        pass_name=pass_name,
+        target=target,
+        options=options,
+        loc=loc,
+        ip=ip,
+    ).result
 
 
 AnyOpTypeT = NewType("AnyOpType", AnyOpType)
