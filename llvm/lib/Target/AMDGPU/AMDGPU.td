@@ -2277,7 +2277,6 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureLshlAddU64Inst,
    FeatureAddSubU64Insts,
    FeatureWMMA128bInsts,
-   FeatureSetPrioIncWgInst,
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -3141,6 +3140,7 @@ def HasParallelBitInsts : Predicate<"Subtarget->hasParallelBitInsts()">,
 def HasLdsBarrierArriveAtomic : Predicate<"Subtarget->hasLdsBarrierArriveAtomic()">,
   AssemblerPredicate<(all_of FeatureLdsBarrierArriveAtomic)>;
 
+// TODO-GFX13: Enable this selectively on GFX13, to be confirmed at a later date.
 def HasSetPrioIncWgInst : Predicate<"Subtarget->hasSetPrioIncWgInst()">,
  AssemblerPredicate<(all_of FeatureSetPrioIncWgInst)>;
 

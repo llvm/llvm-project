@@ -17,6 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/TableGen/Record.h"
 #include <algorithm>
 #include <string>
@@ -94,6 +95,52 @@ private:
   }
 };
 
+class Versioned {
+public:
+  int getMinVersion(const Record *R) const {
+    int64_t Min = R->getValueAsInt("minVersion");
+    assert(llvm::isInt<IntWidth>(Min) && "Value out of range of 'int'");
+    return Min;
+  }
+
+  int getMaxVersion(const Record *R) const {
+    int64_t Max = R->getValueAsInt("maxVersion");
+    assert(llvm::isInt<IntWidth>(Max) && "Value out of range of 'int'");
+    return Max;
+  }
+
+private:
+  constexpr static int IntWidth = 8 * sizeof(int);
+};
+
+// Range of specification versions: [Min, Max]
+// Default value: all possible versions.
+// This is the same structure as the one emitted into the generated sources.
+#define STRUCT_VERSION_RANGE                                                   \
+  struct VersionRange {                                                        \
+    int Min = 1;                                                               \
+    int Max = 0x7fffffff;                                                      \
+  }
+
+STRUCT_VERSION_RANGE;
+
+class Spelling : public Versioned {
+public:
+  using Value = std::pair<StringRef, VersionRange>;
+
+  Spelling(const Record *Def) : Def(Def) {}
+
+  StringRef getText() const { return Def->getValueAsString("spelling"); }
+  VersionRange getVersions() const {
+    return VersionRange{getMinVersion(Def), getMaxVersion(Def)};
+  }
+
+  Value get() const { return std::make_pair(getText(), getVersions()); }
+
+private:
+  const Record *Def;
+};
+
 // Note: In all the classes below, allow implicit construction from Record *,
 // to allow writing code like:
 //  for (const Directive D : getDirectives()) {
@@ -109,7 +156,31 @@ class BaseRecord {
 public:
   BaseRecord(const Record *Def) : Def(Def) {}
 
-  StringRef getName() const { return Def->getValueAsString("name"); }
+  std::vector<Spelling::Value> getSpellings() const {
+    std::vector<Spelling::Value> List;
+    llvm::transform(Def->getValueAsListOfDefs("spellings"),
+                    std::back_inserter(List),
+                    [](const Record *R) { return Spelling(R).get(); });
+    return List;
+  }
+
+  StringRef getSpellingForIdentifier() const {
+    // From all spellings, pick the first one with the minimum version
+    // (i.e. pick the first from all the oldest ones). This guarantees
+    // that given several equivalent (in terms of versions) names, the
+    // first one is used, e.g. given
+    //   Clause<[Spelling<"foo">, Spelling<"bar">]> ...
+    // "foo" will be the selected spelling.
+    //
+    // This is a suitable spelling for generating an identifier name,
+    // since it will remain unchanged when any potential new spellings
+    // are added.
+    Spelling::Value Oldest{"not found", {/*Min=*/INT_MAX, 0}};
+    for (auto V : getSpellings())
+      if (V.second.Min < Oldest.second.Min)
+        Oldest = V;
+    return Oldest.first;
+  }
 
   // Returns the name of the directive formatted for output. Whitespace are
   // replaced with underscores.
@@ -149,7 +220,9 @@ public:
   }
 
   std::string getFormattedName() const {
-    return getSnakeName(Def->getValueAsString("name"));
+    if (auto maybeName = Def->getValueAsOptionalString("name"))
+      return getSnakeName(*maybeName);
+    return getSnakeName(getSpellingForIdentifier());
   }
 
   bool isDefault() const { return Def->getValueAsBit("isDefault"); }
@@ -201,7 +274,7 @@ public:
 
   // Clang uses a different format for names of its directives enum.
   std::string getClangAccSpelling() const {
-    StringRef Name = Def->getValueAsString("name");
+    StringRef Name = getSpellingForIdentifier();
 
     // Clang calls the 'unknown' value 'invalid'.
     if (Name == "unknown")
@@ -233,7 +306,7 @@ public:
   // ex: async -> Async
   //     num_threads -> NumThreads
   std::string getFormattedParserClassName() const {
-    StringRef Name = Def->getValueAsString("name");
+    StringRef Name = getSpellingForIdentifier();
     return BaseRecord::getUpperCamelName(Name, "_");
   }
 
@@ -245,7 +318,7 @@ public:
         !ClangSpelling.empty())
       return ClangSpelling.str();
 
-    StringRef Name = Def->getValueAsString("name");
+    StringRef Name = getSpellingForIdentifier();
     return BaseRecord::getUpperCamelName(Name, "_");
   }
 
