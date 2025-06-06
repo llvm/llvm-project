@@ -1083,10 +1083,10 @@ void Options::addConditionalCC1Args(std::vector<std::string> &ArgStrings,
   // Add specific to platform arguments.
   PathSeq PlatformSearchPaths =
       getPathsForPlatform(FEOpts.SystemFwkPaths, mapToPlatformType(Targ));
-  llvm::for_each(PlatformSearchPaths, [&ArgStrings](const StringRef Path) {
+  for (StringRef Path : PlatformSearchPaths) {
     ArgStrings.push_back("-iframework");
     ArgStrings.push_back(Path.str());
-  });
+  }
 
   // Add specific to header type arguments.
   if (Type == HeaderType::Project)
