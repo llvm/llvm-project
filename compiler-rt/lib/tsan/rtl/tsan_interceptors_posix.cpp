@@ -3082,7 +3082,6 @@ void InitializeInterceptors() {
 #if SANITIZER_LINUX
   TSAN_INTERCEPT(clone);
 #endif
-
 #if !SANITIZER_ANDROID
   TSAN_INTERCEPT(dl_iterate_phdr);
 #endif
