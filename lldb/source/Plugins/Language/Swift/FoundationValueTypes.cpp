@@ -86,6 +86,7 @@ bool lldb_private::formatters::swift::NotificationName_SummaryProvider(
   return true;
 }
 
+
 bool lldb_private::formatters::swift::URL_SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   static ConstString g__url("_url");
