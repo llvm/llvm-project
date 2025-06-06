@@ -227,8 +227,7 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
   // 1. Filter out NYI cases.
   auto packedTensorType =
       cast<RankedTensorType>(packOp->getResultTypes().front());
-  if (llvm::any_of(packOp.getStaticInnerTiles(),
-                   [](int64_t size) { return ShapedType::isDynamic(size); })) {
+  if (llvm::any_of(packOp.getStaticInnerTiles(), ShapedType::isDynamic)) {
     return rewriter.notifyMatchFailure(
         packOp,
         "non-static shape NYI, needs a more powerful tensor.expand_shape op");

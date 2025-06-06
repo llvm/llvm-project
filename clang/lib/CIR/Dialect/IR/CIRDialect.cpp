@@ -231,9 +231,11 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
   }
 
   if (isa<cir::ZeroAttr>(attrType)) {
-    if (isa<cir::RecordType, cir::ArrayType, cir::VectorType>(opType))
+    if (isa<cir::RecordType, cir::ArrayType, cir::VectorType, cir::ComplexType>(
+            opType))
       return success();
-    return op->emitOpError("zero expects struct or array type");
+    return op->emitOpError(
+        "zero expects struct, array, vector, or complex type");
   }
 
   if (mlir::isa<cir::BoolAttr>(attrType)) {
@@ -253,7 +255,8 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     return success();
   }
 
-  if (mlir::isa<cir::ConstArrayAttr, cir::ConstVectorAttr>(attrType))
+  if (mlir::isa<cir::ConstArrayAttr, cir::ConstVectorAttr,
+                cir::ConstComplexAttr>(attrType))
     return success();
 
   assert(isa<TypedAttr>(attrType) && "What else could we be looking at here?");
@@ -287,7 +290,7 @@ LogicalResult cir::ContinueOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult cir::CastOp::verify() {
-  mlir::Type resType = getResult().getType();
+  mlir::Type resType = getType();
   mlir::Type srcType = getSrc().getType();
 
   if (mlir::isa<cir::VectorType>(srcType) &&
@@ -445,7 +448,7 @@ static Value tryFoldCastChain(cir::CastOp op) {
 }
 
 OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
-  if (getSrc().getType() == getResult().getType()) {
+  if (getSrc().getType() == getType()) {
     switch (getKind()) {
     case cir::CastKind::integral: {
       // TODO: for sign differences, it's possible in certain conditions to
@@ -1447,7 +1450,7 @@ LogicalResult cir::ShiftOp::verify() {
     if (op0VecTy.getSize() != op1VecTy.getSize())
       return emitOpError() << "input vector types must have the same size";
 
-    auto opResultTy = mlir::dyn_cast<cir::VectorType>(getResult().getType());
+    auto opResultTy = mlir::dyn_cast<cir::VectorType>(getType());
     if (!opResultTy)
       return emitOpError() << "the type of the result must be a vector "
                            << "if it is vector shift";
@@ -1520,7 +1523,7 @@ LogicalResult cir::GetMemberOp::verify() {
   if (recordTy.getMembers().size() <= getIndex())
     return emitError() << "member index out of bounds";
 
-  if (recordTy.getMembers()[getIndex()] != getResultTy().getPointee())
+  if (recordTy.getMembers()[getIndex()] != getType().getPointee())
     return emitError() << "member type mismatch";
 
   return mlir::success();
@@ -1534,7 +1537,7 @@ LogicalResult cir::VecCreateOp::verify() {
   // Verify that the number of arguments matches the number of elements in the
   // vector, and that the type of all the arguments matches the type of the
   // elements in the vector.
-  const VectorType vecTy = getResult().getType();
+  const cir::VectorType vecTy = getType();
   if (getElements().size() != vecTy.getSize()) {
     return emitOpError() << "operand count of " << getElements().size()
                          << " doesn't match vector type " << vecTy
