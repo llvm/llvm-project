@@ -58671,7 +58671,6 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       break;
     }
     case X86ISD::SHUFP: {
-      // TODO: Add SHUFPD support if/when necessary.
       if (!IsSplat &&
           (VT == MVT::v8f32 ||
            (VT == MVT::v16f32 && Subtarget.useAVX512Regs())) &&
@@ -58740,7 +58739,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
             DAG.getNode(X86ISD::VPERMILPI, DL, FloatVT, Res, Op0.getOperand(1));
         return DAG.getBitcast(VT, Res);
       }
-      if (!IsSplat && (VT == MVT::v4f64 || VT == MVT::v8f64)) {
+      if (!IsSplat && VT == MVT::v8f64) {
         unsigned NumSubElts = Op0.getValueType().getVectorNumElements();
         uint64_t Mask = (1ULL << NumSubElts) - 1;
         uint64_t Idx = 0;
