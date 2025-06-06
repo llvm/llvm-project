@@ -47,6 +47,24 @@ bool FunctionSamples::ProfileIsPreInlined = false;
 bool FunctionSamples::UseMD5 = false;
 bool FunctionSamples::HasUniqSuffix = true;
 bool FunctionSamples::ProfileIsFS = false;
+
+std::error_code
+serializeTypeMap(const TypeCountMap &Map,
+                 const MapVector<FunctionId, uint32_t> &NameTable,
+                 raw_ostream &OS) {
+  encodeULEB128(Map.size(), OS);
+  for (const auto &[TypeName, SampleCount] : Map) {
+    if (auto NameIndexIter = NameTable.find(TypeName);
+        NameIndexIter != NameTable.end()) {
+      encodeULEB128(NameIndexIter->second, OS);
+    } else {
+      // If the type is not in the name table, we cannot serialize it.
+      return sampleprof_error::truncated_name_table;
+    }
+    encodeULEB128(SampleCount, OS);
+  }
+  return sampleprof_error::success;
+}
 } // namespace sampleprof
 } // namespace llvm
 
@@ -91,6 +109,10 @@ class SampleProfErrorCategoryType : public std::error_category {
       return "Zlib is unavailable";
     case sampleprof_error::hash_mismatch:
       return "Function hash mismatch";
+    case sampleprof_error::illegal_line_offset:
+      return "Illegal line offset in sample profile data";
+    case sampleprof_error::duplicate_vtable_type:
+      return "Duplicate vtable type in one map";
     }
     llvm_unreachable("A value of sampleprof_error has no message.");
   }
@@ -124,11 +146,17 @@ sampleprof_error SampleRecord::merge(const SampleRecord &Other,
   for (const auto &I : Other.getCallTargets()) {
     mergeSampleProfErrors(Result, addCalledTarget(I.first, I.second, Weight));
   }
+  for (const auto &[TypeName, Count] : Other.getVTableAccessCounts())
+    mergeSampleProfErrors(Result,
+                          addVTableAccessCount(TypeName, Count, Weight));
+
   return Result;
 }
 
-std::error_code SampleRecord::serialize(
-    raw_ostream &OS, const MapVector<FunctionId, uint32_t> &NameTable) const {
+std::error_code
+SampleRecord::serialize(raw_ostream &OS,
+                        const MapVector<FunctionId, uint32_t> &NameTable,
+                        bool SerializeVTableProf) const {
   encodeULEB128(getSamples(), OS);
   encodeULEB128(getCallTargets().size(), OS);
   for (const auto &J : getSortedCallTargets()) {
@@ -143,6 +171,8 @@ std::error_code SampleRecord::serialize(
     }
     encodeULEB128(CalleeSamples, OS);
   }
+  if (SerializeVTableProf)
+    return serializeTypeMap(VTableAccessCounts, NameTable, OS);
   return sampleprof_error::success;
 }
 
@@ -150,7 +180,7 @@ std::error_code SampleRecord::serialize(
 LLVM_DUMP_METHOD void LineLocation::dump() const { print(dbgs()); }
 #endif
 
-void LineLocation::serialize(raw_ostream &OS) {
+void LineLocation::serialize(raw_ostream &OS) const {
   encodeULEB128(LineOffset, OS);
   encodeULEB128(Discriminator, OS);
 }
@@ -163,7 +193,30 @@ void SampleRecord::print(raw_ostream &OS, unsigned Indent) const {
     for (const auto &I : getSortedCallTargets())
       OS << " " << I.first << ":" << I.second;
   }
+  if (!VTableAccessCounts.empty()) {
+    OS << ", vtables:";
+    for (const auto [Type, Count] : VTableAccessCounts)
+      OS << " " << Type << ":" << Count;
+  }
   OS << "\n";
+}
+
+static sampleprof_error addWeightSample(uint64_t S, uint64_t Weight,
+                                        uint64_t &Samples) {
+  bool Overflowed;
+  Samples = SaturatingMultiplyAdd(S, Weight, Samples, &Overflowed);
+  return Overflowed ? sampleprof_error::counter_overflow
+                    : sampleprof_error::success;
+}
+
+sampleprof_error SampleRecord::addCalledTarget(FunctionId F, uint64_t S,
+                                               uint64_t Weight) {
+  return addWeightSample(S, Weight, CallTargets[F]);
+}
+
+sampleprof_error SampleRecord::addVTableAccessCount(FunctionId F, uint64_t S,
+                                                    uint64_t Weight) {
+  return addWeightSample(S, Weight, VTableAccessCounts[F]);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -204,11 +257,21 @@ void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
     SampleSorter<LineLocation, FunctionSamplesMap> SortedCallsiteSamples(
         CallsiteSamples);
     for (const auto &CS : SortedCallsiteSamples.get()) {
-      for (const auto &FS : CS->second) {
+      for (const auto &[FuncId, FuncSample] : CS->second) {
         OS.indent(Indent + 2);
-        OS << CS->first << ": inlined callee: " << FS.second.getFunction()
+        OS << CS->first << ": inlined callee: " << FuncSample.getFunction()
            << ": ";
-        FS.second.print(OS, Indent + 4);
+        FuncSample.print(OS, Indent + 4);
+      }
+      const LineLocation &Loc = CS->first;
+      auto TypeSamplesIter = VirtualCallsiteTypes.find(Loc);
+      if (TypeSamplesIter != VirtualCallsiteTypes.end()) {
+        OS.indent(Indent + 2);
+        OS << Loc << ": vtables: ";
+        for (const auto &TypeSample : TypeSamplesIter->second) {
+          OS << TypeSample.first << ":" << TypeSample.second << " ";
+        }
+        OS << "\n";
       }
     }
     OS.indent(Indent);
