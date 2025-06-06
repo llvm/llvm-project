@@ -316,24 +316,8 @@ func.func @scaling_truncf_f32_to_f4E2M1FN(%arg0 : f32, %arg1: f8E8M0FNU) -> f4E2
 }
 
 // SCHECK-LABEL: @scaling_truncf_f32_to_f4E2M1FN
-// SCHECK: %[[C2:.+]] = arith.constant 2 : i32
-// SCHECK: %[[C1:.+]] = arith.constant 1 : i32
-// SCHECK: %[[EMAX:.+]] = arith.shli %[[C1]], %[[C2]] : i32
-// SCHECK: %[[EMAXF32:.+]] = arith.sitofp %[[EMAX]] : i32 to f32
 // SCHECK: %[[SCALEF32:.+]] = arith.extf %arg1 : f8E8M0FNU to f32
-// SCHECK: %[[SCALEDIV:.+]] = arith.divf %[[SCALEF32]], %[[EMAXF32]] : f32
-// SCHECK: %[[SCALEDIVF8:.+]] = arith.truncf %[[SCALEDIV]] : f32 to f8E8M0FNU
-// SCHECK: %[[SCALEDIVI8:.+]] =  arith.bitcast %[[SCALEDIVF8]] : f8E8M0FNU to i8
-// SCHECK: %[[C0:.+]] = arith.constant 0 : i8
-// SCHECK: %[[UFLOWCOND:.+]] = arith.cmpi eq, %[[C0]], %[[SCALEDIVI8]] : i8
-// SCHECK: %[[CLAMPVAL:.+]] = arith.constant 5.877470e-39 : f32
-// SCHECK: %[[CLAMP:.+]] = arith.select %[[UFLOWCOND]], %[[CLAMPVAL]], %[[SCALEDIV]] : f32 
-// SCHECK: %[[INPUTEXP:.+]] = arith.truncf %arg0 : f32 to f8E8M0FNU
-// SCHECK: %[[INPUTEXPI8:.+]] = arith.bitcast %[[INPUTEXP]] : f8E8M0FNU to i8
-// SCHECK: %[[FLUSHCOND:.+]] = arith.cmpi eq, %[[C0]], %[[INPUTEXPI8]] : i8
-// SCHECK: %[[CF0:.+]] = arith.constant 0.000000e+00 : f32
-// SCHECK: %[[FLUSHINPUT:.+]] = arith.select %[[FLUSHCOND]], %[[CF0]], %arg0 : f32
-// SCHECK: %[[DIVF:.+]] = arith.divf %[[FLUSHINPUT]], %[[CLAMP]] : f32
+// SCHECK: %[[DIVF:.+]] = arith.divf %arg0, %[[SCALEF32]] : f32
 // SCHECK: %[[RESULT:.+]] = arith.truncf %[[DIVF]] : f32 to f4E2M1FN
 // SCHECK: return %[[RESULT]]
 
@@ -345,26 +329,9 @@ func.func @scaling_truncf_vector_f16_to_f6E3M2FN(%arg0 : vector<4xf16>, %arg1: v
 }
 
 // SCHECK-LABEL: @scaling_truncf_vector_f16_to_f6E3M2FN
-// SCHECK: %[[INPUTF32:.+]] = arith.extf %arg0 : vector<4xf16> to vector<4xf32>
-// SCHECK: %[[C2:.+]] = arith.constant dense<4> : vector<4xi32>
-// SCHECK: %[[C1:.+]] = arith.constant dense<1> : vector<4xi32>
-// SCHECK: %[[EMAX:.+]] = arith.shli %[[C1]], %[[C2]] : vector<4xi32>
-// SCHECK: %[[EMAXF32:.+]] = arith.sitofp %[[EMAX]] : vector<4xi32> to vector<4xf32>
-// SCHECK: %[[SCALEF32:.+]] = arith.extf %arg1 : vector<4xf8E8M0FNU> to vector<4xf32>
-// SCHECK: %[[SCALEDIV:.+]] = arith.divf %[[SCALEF32]], %[[EMAXF32]] : vector<4xf32>
-// SCHECK: %[[SCALEDIVF8:.+]] = arith.truncf %[[SCALEDIV]] : vector<4xf32> to vector<4xf8E8M0FNU>
-// SCHECK: %[[SCALEDIVI8:.+]] =  arith.bitcast %[[SCALEDIVF8]] : vector<4xf8E8M0FNU> to vector<4xi8>
-// SCHECK: %[[C0:.+]] = arith.constant dense<0> : vector<4xi8>
-// SCHECK: %[[UFLOWCOND:.+]] = arith.cmpi eq, %[[C0]], %[[SCALEDIVI8]] : vector<4xi8>
-// SCHECK: %[[CLAMPVAL:.+]] = arith.constant dense<5.877470e-39> : vector<4xf32>
-// SCHECK: %[[CLAMP:.+]] = arith.select %[[UFLOWCOND]], %[[CLAMPVAL]], %[[SCALEDIV]] : vector<4xi1>, vector<4xf32>
-// SCHECK: %[[INPUTEXP:.+]] = arith.truncf %[[INPUTF32]] : vector<4xf32> to vector<4xf8E8M0FNU>
-// SCHECK: %[[INPUTEXPI8:.+]] = arith.bitcast %[[INPUTEXP]] : vector<4xf8E8M0FNU> to vector<4xi8> 
-// SCHECK: %[[FLUSHCOND:.+]] = arith.cmpi eq, %[[C0]], %[[INPUTEXPI8]] : vector<4xi8>
-// SCHECK: %[[CF0:.+]] = arith.constant dense<0.000000e+00> : vector<4xf32>
-// SCHECK: %[[FLUSHINPUT:.+]] = arith.select %[[FLUSHCOND]], %[[CF0]], %[[INPUTF32]] : vector<4xi1>, vector<4xf32>
-// SCHECK: %[[DIVF:.+]] = arith.divf %[[FLUSHINPUT]], %[[CLAMP]] : vector<4xf32>
-// SCHECK: %[[RESULT:.+]] = arith.truncf %[[DIVF]] : vector<4xf32> to vector<4xf6E3M2FN>
+// SCHECK: %[[SCALEF16:.+]] = arith.extf %arg1 : vector<4xf8E8M0FNU> to vector<4xf16>
+// SCHECK: %[[DIVF:.+]] = arith.divf %arg0, %[[SCALEF16]] : vector<4xf16>
+// SCHECK: %[[RESULT:.+]] = arith.truncf %[[DIVF]] : vector<4xf16> to vector<4xf6E3M2FN>
 // SCHECK: return %[[RESULT]] : vector<4xf6E3M2FN>
 
 // -----
@@ -374,7 +341,7 @@ func.func @scaling_truncf_propagate_rounding_mode(%arg0 : vector<4xf16>, %arg1: 
     return %0 : vector<4xf6E3M2FN>
 }
 // SCHECK-LABEL: @scaling_truncf_propagate_rounding_mode
-// SCHECK: %[[TRUNCF:.+]] = arith.truncf [[_:%[a-zA-Z0-9_]+]] to_nearest_even : vector<4xf32> to vector<4xf6E3M2FN>
+// SCHECK: %[[TRUNCF:.+]] = arith.truncf [[_:%[a-zA-Z0-9_]+]] to_nearest_even : vector<4xf16> to vector<4xf6E3M2FN>
 // SCHECK: return %[[TRUNCF]] : vector<4xf6E3M2FN>
 
 // -----

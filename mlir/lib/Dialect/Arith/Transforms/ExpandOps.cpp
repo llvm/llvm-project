@@ -13,8 +13,6 @@
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/ADT/APFloat.h"
-#include <cstdint>
 
 namespace mlir {
 namespace arith {
@@ -24,16 +22,6 @@ namespace arith {
 } // namespace mlir
 
 using namespace mlir;
-
-static Value createFloatConst(Location loc, Type type, float value,
-                              PatternRewriter &rewriter) {
-  auto attr = rewriter.getFloatAttr(getElementTypeOrSelf(type), value);
-  if (auto shapedTy = dyn_cast<ShapedType>(type)) {
-    return rewriter.create<arith::ConstantOp>(
-        loc, DenseElementsAttr::get(shapedTy, attr));
-  }
-  return rewriter.create<arith::ConstantOp>(loc, attr);
-}
 
 /// Create an integer or index constant.
 static Value createConst(Location loc, Type type, int value,
@@ -368,7 +356,8 @@ struct F8E8M0ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
     f32Bits = b.create<arith::SelectOp>(isNan, cF32NaN, f32Bits);
     Value result = b.create<arith::BitcastOp>(f32Ty, f32Bits);
     if (resultETy.getIntOrFloatBitWidth() < 32) {
-      result = b.create<arith::TruncFOp>(resultTy, result);
+      result = b.create<arith::TruncFOp>(resultTy, result, nullptr,
+                                         op.getFastmathAttr());
     } else if (resultETy.getIntOrFloatBitWidth() > 32) {
       result = b.create<arith::ExtFOp>(resultTy, result);
     }
@@ -406,9 +395,10 @@ struct F8E8M0TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     Type f32Ty = cloneToShapedType(operandTy, b.getF32Type());
 
     if (operandETy.getIntOrFloatBitWidth() < 32) {
-      operand = b.create<arith::ExtFOp>(f32Ty, operand);
+      operand = b.create<arith::ExtFOp>(f32Ty, operand, op.getFastmathAttr());
     } else if (operandETy.getIntOrFloatBitWidth() > 32) {
-      operand = b.create<arith::TruncFOp>(f32Ty, operand);
+      operand = b.create<arith::TruncFOp>(
+          f32Ty, operand, op.getRoundingmodeAttr(), op.getFastmathAttr());
     }
     Value f32Bits = b.create<arith::BitcastOp>(i32Ty, operand);
     Value cF32MantissaWidth = createConst(op->getLoc(), i32Ty, 23, rewriter);
@@ -431,7 +421,8 @@ struct ScalingExtFOpConverter : public OpRewritePattern<arith::ScalingExtFOp> {
     // allow implicit exponent extraction from 16/32 bits floats
     if (scaleETy.getIntOrFloatBitWidth() >= 16) {
       scaleETy = b.getF8E8M0Type();
-      scaleOperand = b.create<arith::TruncFOp>(scaleETy, scaleOperand);
+      scaleOperand = b.create<arith::TruncFOp>(scaleETy, scaleOperand, nullptr,
+                                               op.getFastmathAttr());
     }
     if (!llvm::isa<Float8E8M0FNUType>(scaleETy)) {
       return rewriter.notifyMatchFailure(
@@ -441,14 +432,22 @@ struct ScalingExtFOpConverter : public OpRewritePattern<arith::ScalingExtFOp> {
     Type resultTy = op.getType();
     // extf on scale will essentially create floating point number
     // of type resulTy that is 2^scale and will also propagate NaNs
-    Value scaleExt = b.create<arith::ExtFOp>(resultTy, scaleOperand);
-    Value inputExt = b.create<arith::ExtFOp>(resultTy, inputOperand);
-    Value result = b.create<arith::MulFOp>(inputExt, scaleExt);
+    Value scaleExt =
+        b.create<arith::ExtFOp>(resultTy, scaleOperand, op.getFastmathAttr());
+    Value inputExt =
+        b.create<arith::ExtFOp>(resultTy, inputOperand, op.getFastmathAttr());
+    Value result =
+        b.create<arith::MulFOp>(inputExt, scaleExt, op.getFastmathAttr());
     rewriter.replaceOp(op, result);
     return success();
   }
 };
 
+/*
+Expands arith.ScalingTruncFOp(in, scale) into
+  scale = arith.truncf(scale) : scaleTy -> f8E8M0FNU
+  result = arith.truncf(in / (2^scale))
+ */
 struct ScalingTruncFOpConverter
     : public OpRewritePattern<arith::ScalingTruncFOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -470,68 +469,14 @@ struct ScalingTruncFOpConverter
           op, "scaling_truncf is using scales type which can not be converted "
               "to f8E8M0FNU");
     }
-
     Type resultTy = op.getType();
-    Type resultETy = getElementTypeOrSelf(op.getOut());
-
     Type inputTy = inputOperand.getType();
-    Type inputETy = getElementTypeOrSelf(inputOperand);
-
-    Type i8Ty = cloneToShapedType(resultTy, b.getI8Type());
-    Type i32Ty = cloneToShapedType(resultTy, b.getI32Type());
-    Type f32Ty = cloneToShapedType(resultTy, b.getF32Type());
-
-    if (inputETy.getIntOrFloatBitWidth() < 32) {
-      inputOperand = b.create<arith::ExtFOp>(f32Ty, inputOperand);
-    } else if (inputETy.getIntOrFloatBitWidth() > 32) {
-      inputOperand = b.create<arith::TruncFOp>(f32Ty, inputOperand);
-    }
-    inputTy = inputOperand.getType();
-    inputETy = getElementTypeOrSelf(inputOperand);
-
-    // normalize scale by exponent of the max normal value (emax) in result type
-    // as per the OCP MXFP spec
-    // https://github.com/microsoft/microxcaling/blob/7bc41952de394f5cc5e782baf132e7c7542eb4e4/mx/mx_ops.py#L277
-    // here this normalization is carried in f32. Therefore instead of
-    // subtraction it does the DivFOp
-    const llvm::fltSemantics &resultFltSemantics =
-        llvm::cast<FloatType>(resultETy).getFloatSemantics();
-    int maxExponent = APFloat::semanticsMaxExponent(resultFltSemantics);
-    Value cEmax = createConst(op->getLoc(), i32Ty, maxExponent, rewriter);
-    Value c1 = createConst(op->getLoc(), i32Ty, 1, rewriter);
-    Value cPow2 = b.create<arith::ShLIOp>(c1, cEmax);
-    Value cPow2F32 = b.create<arith::SIToFPOp>(f32Ty, cPow2);
-    Value scaleF32 = b.create<arith::ExtFOp>(f32Ty, scaleOperand);
-    // note that spec also does the clamping but it should only be done for
-    // underflows because dividing by 2^emax will only make it smaller.
-    // https://github.com/microsoft/microxcaling/blob/7bc41952de394f5cc5e782baf132e7c7542eb4e4/mx/mx_ops.py#L282
-    Value scaleNormalizedF32 = b.create<arith::DivFOp>(scaleF32, cPow2F32);
-    // If it has underflown then scale will be a denorm FP32 number after
-    // division. Clamp underflows to 2^-127 as per the spec implementation
-    Value scaleNormalizedExponentF8 =
-        b.create<arith::TruncFOp>(scaleTy, scaleNormalizedF32);
-    Value scaleNormalizedExponentU8 =
-        b.create<arith::BitcastOp>(i8Ty, scaleNormalizedExponentF8);
-    Value cI8Zero = createConst(op.getLoc(), i8Ty, 0x00, rewriter);
-    Value scaleClampCond = b.create<arith::CmpIOp>(
-        arith::CmpIPredicate::eq, cI8Zero, scaleNormalizedExponentU8);
-    // 5.8e-39 is 2^-127, it is a denorm value in f32
-    float clampValue = 5.87747e-39;
-    Value scaleClampValue =
-        createFloatConst(op.getLoc(), f32Ty, clampValue, rewriter);
-    Value clampedScale = b.create<arith::SelectOp>(
-        scaleClampCond, scaleClampValue, scaleNormalizedF32);
-    // flush denorms by checking if exponent part of input operand is zero
-    // or not.
-    Value inputExponent = b.create<arith::TruncFOp>(scaleTy, inputOperand);
-    Value inputExponentU8 = b.create<arith::BitcastOp>(i8Ty, inputExponent);
-    Value inputFlushCond = b.create<arith::CmpIOp>(arith::CmpIPredicate::eq,
-                                                   cI8Zero, inputExponentU8);
-    Value inputTyZero = createFloatConst(op.getLoc(), inputTy, 0, rewriter);
-    Value flushedInput =
-        b.create<arith::SelectOp>(inputFlushCond, inputTyZero, inputOperand);
-    Value result = b.create<arith::DivFOp>(flushedInput, clampedScale);
-    // propagate rounding mode and fast math attributes
+    // this will create a floating point number of type
+    // inputTy that is 2^scale and will also propagate NaNs
+    scaleOperand =
+        b.create<arith::ExtFOp>(inputTy, scaleOperand, op.getFastmathAttr());
+    Value result = b.create<arith::DivFOp>(inputOperand, scaleOperand,
+                                           op.getFastmathAttr());
     Value resultCast = b.create<arith::TruncFOp>(
         resultTy, result, op.getRoundingmodeAttr(), op.getFastmathAttr());
     rewriter.replaceOp(op, resultCast);

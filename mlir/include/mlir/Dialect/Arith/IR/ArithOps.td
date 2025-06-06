@@ -1354,6 +1354,10 @@ def Arith_ScalingTruncFOp
     both scales and the input operand to be of the same shape and, therefore, 
     makes the operation elementwise. Scales are usually calculated per block 
     following the OCP MXFP spec as described in https://arxiv.org/abs/2310.10537.
+    Users are required to normalize and clamp the scales as necessary before calling
+    passing them to this operation.  OCP MXFP spec also does the flushing of denorms
+    on the input operand, which should be handled during lowering by passing appropriate 
+    fastMath flag to this operation. 
 
     If scales are calculated per block where blockSize != 1, scales may require 
     broadcasting to make this operation elementwise. For example, let's say the 
@@ -1369,23 +1373,17 @@ def Arith_ScalingTruncFOp
     broadcasted to `<dim1 x dim2 x dim3 ... (dimN/blockSize) x blockSize>`. Note 
     that there could be multiple quantization axes. Internally, 
     `arith.scaling_truncf` would perform the following:
- 
+
     ```
-    scaleETy = get_type(scale)
-    inputETy = get_type(input)
-    resultETy = get_type(result)
-    // prepare Scale values with normalization and clamping
-    scale.exponent = arith.truncf(scale) : scaleETy to f8E8M0
-    scale.extf = arith.extf(scale.exponent)  : f8E8M0 to inputETy
-    // emax is calculated as exponent of the largest normal value in quantized type.
-    scale.normalize = arith.divf(scale.extf, emax)   
-    scale.clamped = clamp(scale.normalize) // clamp underflows
-    input.flused = flush_denorms(input)
-    result = arith.divf(input.flushed, scale.clamped)
-    result.cast = arith.truncf(result, resultETy)
+    scaleTy = get_type(scale)
+    inputTy = get_type(input)
+    resultTy = get_type(result)
+    assert(scaleTy.shape() == inputTy.shape() == resultTy.shape())
+    scale.exponent = arith.truncf(scale) : scaleTy to f8E8M0
+    scale.extf = arith.extf(scale.exponent) : f8E8M0 to inputTy
+    result = arith.divf(input, scale.extf)
+    result.cast = arith.truncf(result, resultTy)
     ```
-    Flushing of denorms in input and scale normalization with emax is added as per 
-    the OCP MXFP spec. 
   }];
   let hasVerifier = 1;
   let assemblyFormat =
