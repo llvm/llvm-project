@@ -3668,6 +3668,36 @@ static unsigned maxNestingDepth(const AnnotatedLine &Line) {
   return Result;
 }
 
+// Returns the token after the first qualifier of the name, or nullptr if there
+// is no qualifier.
+static FormatToken* skipNameQualifier(const FormatToken *Tok) {
+  // Qualified names must start with an identifier.
+  if (!Tok->is(tok::identifier))
+    return nullptr;
+
+  Tok = Tok->getNextNonComment();
+  if (Tok == nullptr)
+    return nullptr;
+
+  // Consider:       A::B::B()
+  //            Tok --^
+  if (Tok->is(tok::coloncolon))
+    return Tok->getNextNonComment();
+
+  // Consider:       A<float>::B<int>::B()
+  //            Tok --^
+  if (Tok->is(TT_TemplateOpener)) {
+    if (!Tok->MatchingParen)
+      return nullptr;
+
+    Tok = Tok->MatchingParen;
+    if (Tok->startsSequence(TT_TemplateCloser, tok::coloncolon))
+      return Tok->getNextNonComment()->getNextNonComment();
+  }
+
+  return nullptr;
+}
+
 // Returns the name of a function with no return type, e.g. a constructor or
 // destructor.
 static FormatToken *getFunctionName(const AnnotatedLine &Line,
@@ -3697,6 +3727,21 @@ static FormatToken *getFunctionName(const AnnotatedLine &Line,
       continue;
     }
 
+    // Skip past template typename declarations that may precede the
+    // constructor/destructor name.
+    if (Tok->is(tok::kw_template)) {
+      Tok = Tok->getNextNonComment();
+      if (!Tok)
+        return nullptr;
+
+      assert(Tok->is(TT_TemplateOpener));
+      Tok = Tok->MatchingParen;
+      if (!Tok)
+        return nullptr;
+
+      continue;
+    }
+
     // A qualified name may start from the global namespace.
     if (Tok->is(tok::coloncolon)) {
       Tok = Tok->Next;
@@ -3705,12 +3750,11 @@ static FormatToken *getFunctionName(const AnnotatedLine &Line,
     }
 
     // Skip to the unqualified part of the name.
-    while (Tok->startsSequence(tok::identifier, tok::coloncolon)) {
-      assert(Tok->Next);
-      Tok = Tok->Next->Next;
-      if (!Tok)
-        return nullptr;
-    }
+    while (FormatToken *Next = skipNameQualifier(Tok))
+      Tok = Next;
+
+    if (!Tok)
+      return nullptr;
 
     // Skip the `~` if a destructor name.
     if (Tok->is(tok::tilde)) {
@@ -3737,10 +3781,18 @@ static bool isCtorOrDtorName(const FormatToken *Tok) {
   if (Prev && Prev->is(tok::tilde))
     Prev = Prev->Previous;
 
-  if (!Prev || !Prev->endsSequence(tok::coloncolon, tok::identifier))
+  // Consider: A::A() and A<int>::A()
+  if (!Prev || (!Prev->endsSequence(tok::coloncolon, tok::identifier) &&
+                !Prev->endsSequence(tok::coloncolon, TT_TemplateCloser))) {
     return false;
+  }
 
   assert(Prev->Previous);
+  if (Prev->Previous->is(TT_TemplateCloser) && Prev->Previous->MatchingParen) {
+    Prev = Prev->Previous->MatchingParen;
+    assert(Prev->Previous);
+  }
+
   return Prev->Previous->TokenText == Tok->TokenText;
 }
 
