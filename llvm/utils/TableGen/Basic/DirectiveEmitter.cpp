@@ -642,8 +642,8 @@ static void emitLeafTable(const DirectiveLanguage &DirLang, raw_ostream &OS,
     auto &LeavesB = LeafTable[B];
     int DirA = LeavesA[0], DirB = LeavesB[0];
     // First of all, end directives compare greater than non-end directives.
-    int IsEndA = EndDirectives.contains(DirA);
-    int IsEndB = EndDirectives.contains(DirB);
+    bool IsEndA = EndDirectives.contains(DirA);
+    bool IsEndB = EndDirectives.contains(DirB);
     if (IsEndA != IsEndB)
       return IsEndA < IsEndB;
     if (LeavesA[1] == 0 && LeavesB[1] == 0)
