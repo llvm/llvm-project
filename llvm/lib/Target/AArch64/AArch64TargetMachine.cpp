@@ -280,13 +280,15 @@ void AArch64TargetMachine::reset() { SubtargetMap.clear(); }
 //===----------------------------------------------------------------------===//
 // AArch64 Lowering public interface.
 //===----------------------------------------------------------------------===//
-static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
+static std::unique_ptr<TargetLoweringObjectFile>
+createTLOF(const Triple &TT, const TargetOptions &Options) {
   if (TT.isOSBinFormatMachO())
     return std::make_unique<AArch64_MachoTargetObjectFile>();
   if (TT.isOSBinFormatCOFF())
     return std::make_unique<AArch64_COFFTargetObjectFile>();
 
-  return std::make_unique<AArch64_ELFTargetObjectFile>();
+  return std::make_unique<AArch64_ELFTargetObjectFile>(
+      Options.SupportIndirectSymViaGOTPCRel_AArch64_ELF);
 }
 
 // Helper function to build a DataLayout string
@@ -367,7 +369,7 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
           computeDefaultCPU(TT, CPU), FS, Options,
           getEffectiveRelocModel(TT, RM),
           getEffectiveAArch64CodeModel(TT, CM, JIT), OL),
-      TLOF(createTLOF(getTargetTriple())), isLittle(LittleEndian) {
+      TLOF(createTLOF(getTargetTriple(), Options)), isLittle(LittleEndian) {
   initAsmInfo();
 
   if (TT.isOSBinFormatMachO()) {
