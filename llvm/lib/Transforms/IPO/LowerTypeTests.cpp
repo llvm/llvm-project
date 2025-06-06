@@ -2498,7 +2498,8 @@ PreservedAnalyses SimplifyTypeTestsPass::run(Module &M,
   //
   // We look for things like:
   //
-  // sub (i64 ptrtoint (ptr @_Z2fpv to i64), i64 ptrtoint (ptr @__typeid__ZTSFvvE_global_addr to i64))
+  // sub (i64 ptrtoint (ptr @_Z2fpv to i64), i64 ptrtoint (ptr
+  // @__typeid__ZTSFvvE_global_addr to i64))
   //
   // which gets replaced with 0 if _Z2fpv (more specifically _Z2fpv.cfi, the
   // function referred to by the jump table) is a member of the type _ZTSFvv, as

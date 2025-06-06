@@ -83,6 +83,7 @@ public:
   cir::RecordType::RecordKind getRecordKind(const clang::TagTypeKind kind) {
     switch (kind) {
     case clang::TagTypeKind::Class:
+      return cir::RecordType::Class;
     case clang::TagTypeKind::Struct:
       return cir::RecordType::Struct;
     case clang::TagTypeKind::Union:
@@ -93,6 +94,34 @@ public:
       llvm_unreachable("enums are not records");
     }
     llvm_unreachable("Unsupported record kind");
+  }
+
+  /// Get a CIR named record type.
+  ///
+  /// If a record already exists and is complete, but the client tries to fetch
+  /// it with a different set of attributes, this method will crash.
+  cir::RecordType getCompleteRecordTy(llvm::ArrayRef<mlir::Type> members,
+                                      llvm::StringRef name, bool packed,
+                                      bool padded) {
+    const auto nameAttr = getStringAttr(name);
+    auto kind = cir::RecordType::RecordKind::Struct;
+    assert(!cir::MissingFeatures::astRecordDeclAttr());
+
+    // Create or get the record.
+    auto type =
+        getType<cir::RecordType>(members, nameAttr, packed, padded, kind);
+
+    // If we found an existing type, verify that either it is incomplete or
+    // it matches the requested attributes.
+    assert(!type.isIncomplete() ||
+           (type.getMembers() == members && type.getPacked() == packed &&
+            type.getPadded() == padded));
+
+    // Complete an incomplete record or ensure the existing complete record
+    // matches the requested attributes.
+    type.complete(members, packed, padded);
+
+    return type;
   }
 
   /// Get an incomplete CIR struct type. If we have a complete record

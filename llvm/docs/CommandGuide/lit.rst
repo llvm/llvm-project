@@ -63,12 +63,12 @@ GENERAL OPTIONS
 
  Show :program:`lit`'s version number and exit.
 
-.. option:: -j N, --workers=N
+.. option:: -j N, --workers N
 
  Run ``N`` tests in parallel.  By default, this is automatically chosen to
  match the number of detected available CPUs.
 
-.. option:: --config-prefix=NAME
+.. option:: --config-prefix NAME
 
  Search for :file:`{NAME}.cfg` and :file:`{NAME}.site.cfg` when searching for
  test suites, instead of :file:`lit.cfg` and :file:`lit.site.cfg`.
@@ -157,7 +157,7 @@ EXECUTION OPTIONS
 
  Disable sharding for GoogleTest format.
 
-.. option:: --path=PATH
+.. option:: --path PATH
 
  Specify an additional ``PATH`` to use when searching for executables in tests.
 
@@ -178,7 +178,7 @@ EXECUTION OPTIONS
  feature that can be used to conditionally disable (or expect failure in)
  certain tests.
 
-.. option:: --vg-arg=ARG
+.. option:: --vg-arg ARG
 
  When :option:`--vg` is used, specify an additional argument to pass to
  :program:`valgrind` itself.
@@ -208,7 +208,7 @@ EXECUTION OPTIONS
  Maximum time to spend running a single test (in seconds). 0 means no time
  limit. [Default: 0]
 
-.. option:: --timeout=N
+.. option:: --timeout N
 
  Spend at most ``N`` seconds (approximately) running each individual test.
  ``0`` means no time limit, and ``0`` is the default. Note that this is not an
@@ -268,17 +268,17 @@ The timing data is stored in the `test_exec_root` in a file named
 `.lit_test_times.txt`. If this file does not exist, then `lit` checks the
 `test_source_root` for the file to optionally accelerate clean builds.
 
-.. option:: --max-tests=N
+.. option:: --max-tests N
 
  Run at most ``N`` tests and then terminate.
 
-.. option:: --max-time=N
+.. option:: --max-time N
 
  Spend at most ``N`` seconds (approximately) running tests and then terminate.
  Note that this is not an alias for :option:`--timeout`; the two are
  different kinds of maximums.
 
-.. option:: --order={lexical,random,smart}
+.. option:: --order {lexical,random,smart}
 
  Define the order in which tests are run. The supported values are:
 
@@ -300,21 +300,21 @@ The timing data is stored in the `test_exec_root` in a file named
 
  Run failed tests first (DEPRECATED: use ``--order=smart``).
 
-.. option:: --filter=REGEXP
+.. option:: --filter REGEXP
 
   Run only those tests whose name matches the regular expression specified in
   ``REGEXP``. The environment variable ``LIT_FILTER`` can be also used in place
   of this option, which is especially useful in environments where the call
   to ``lit`` is issued indirectly.
 
-.. option:: --filter-out=REGEXP
+.. option:: --filter-out REGEXP
 
   Filter out those tests whose name matches the regular expression specified in
   ``REGEXP``. The environment variable ``LIT_FILTER_OUT`` can be also used in
   place of this option, which is especially useful in environments where the
   call to ``lit`` is issued indirectly.
 
-.. option:: --xfail=LIST
+.. option:: --xfail LIST
 
   Treat those tests whose name is in the semicolon separated list ``LIST`` as
   ``XFAIL``. This can be helpful when one does not want to modify the test
@@ -346,7 +346,7 @@ The timing data is stored in the `test_exec_root` in a file named
 
     LIT_XFAIL="affinity/kmp-hw-subset.c;libomptarget :: x86_64-pc-linux-gnu :: offloading/memory_manager.cpp"
 
-.. option:: --xfail-not=LIST
+.. option:: --xfail-not LIST
 
   Do not treat the specified tests as ``XFAIL``.  The environment variable
   ``LIT_XFAIL_NOT`` can also be used in place of this option.  The syntax is the
@@ -356,7 +356,7 @@ The timing data is stored in the `test_exec_root` in a file named
   primary purpose is to suppress an ``XPASS`` result without modifying a test
   case that uses the ``XFAIL`` directive.
 
-.. option:: --num-shards=M
+.. option:: --num-shards M
 
  Divide the set of selected tests into ``M`` equal-sized subsets or
  "shards", and run only one of them.  Must be used with the
@@ -366,7 +366,7 @@ The timing data is stored in the `test_exec_root` in a file named
  testsuites, for parallel execution on separate machines (say in a large
  testing farm).
 
-.. option:: --run-shard=N
+.. option:: --run-shard N
 
  Select which shard to run, assuming the ``--num-shards=M`` option was
  provided. The two options must be used together, and the value of ``N``
