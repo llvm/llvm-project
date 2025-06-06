@@ -14,10 +14,10 @@ uint64_t __emupac_autda(uint64_t ptr, uint64_t disc);
 
 int main(int argc, char **argv) {
   char stack_object1;
-  uint64_t ptr1 = (uint64_t)stack_object1;
+  uint64_t ptr1 = (uint64_t)&stack_object1;
 
   char stack_object2;
-  uint64_t ptr2 = (uint64_t)stack_object2;
+  uint64_t ptr2 = (uint64_t)&stack_object2;
 
   switch (atoi(argv[1])) {
   case 1: {
@@ -32,7 +32,7 @@ int main(int argc, char **argv) {
     break;
   }
   case 2: {
-    // Test that negative addresses (addressses controlled by TTBR1,
+    // Test that negative addresses (addresses controlled by TTBR1,
     // conventionally kernel addresses) can be signed and authenticated.
     uint64_t unsigned_ptr = -1ULL;
     uint64_t signed_ptr = __emupac_pacda(unsigned_ptr, ptr2);
