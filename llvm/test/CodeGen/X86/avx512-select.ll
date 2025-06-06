@@ -743,7 +743,8 @@ define i8 @julia_issue36955(<8 x i1> %mask, <8 x double> %a) {
 ; X86-AVX512F-LABEL: julia_issue36955:
 ; X86-AVX512F:       # %bb.0:
 ; X86-AVX512F-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
-; X86-AVX512F-NEXT:    vcmplepd %zmm0, %zmm1, %k0
+; X86-AVX512F-NEXT:    vcmpnlepd %zmm0, %zmm1, %k0
+; X86-AVX512F-NEXT:    knotw %k0, %k0
 ; X86-AVX512F-NEXT:    kmovw %k0, %eax
 ; X86-AVX512F-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-AVX512F-NEXT:    vzeroupper
@@ -752,7 +753,8 @@ define i8 @julia_issue36955(<8 x i1> %mask, <8 x double> %a) {
 ; X64-AVX512F-LABEL: julia_issue36955:
 ; X64-AVX512F:       # %bb.0:
 ; X64-AVX512F-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
-; X64-AVX512F-NEXT:    vcmplepd %zmm0, %zmm1, %k0
+; X64-AVX512F-NEXT:    vcmpnlepd %zmm0, %zmm1, %k0
+; X64-AVX512F-NEXT:    knotw %k0, %k0
 ; X64-AVX512F-NEXT:    kmovw %k0, %eax
 ; X64-AVX512F-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-AVX512F-NEXT:    vzeroupper
@@ -761,7 +763,8 @@ define i8 @julia_issue36955(<8 x i1> %mask, <8 x double> %a) {
 ; X86-AVX512BW-LABEL: julia_issue36955:
 ; X86-AVX512BW:       # %bb.0:
 ; X86-AVX512BW-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
-; X86-AVX512BW-NEXT:    vcmplepd %zmm0, %zmm1, %k0
+; X86-AVX512BW-NEXT:    vcmpnlepd %zmm0, %zmm1, %k0
+; X86-AVX512BW-NEXT:    knotw %k0, %k0
 ; X86-AVX512BW-NEXT:    kmovd %k0, %eax
 ; X86-AVX512BW-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-AVX512BW-NEXT:    vzeroupper
@@ -770,7 +773,8 @@ define i8 @julia_issue36955(<8 x i1> %mask, <8 x double> %a) {
 ; X64-AVX512BW-LABEL: julia_issue36955:
 ; X64-AVX512BW:       # %bb.0:
 ; X64-AVX512BW-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
-; X64-AVX512BW-NEXT:    vcmplepd %zmm0, %zmm1, %k0
+; X64-AVX512BW-NEXT:    vcmpnlepd %zmm0, %zmm1, %k0
+; X64-AVX512BW-NEXT:    knotw %k0, %k0
 ; X64-AVX512BW-NEXT:    kmovd %k0, %eax
 ; X64-AVX512BW-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-AVX512BW-NEXT:    vzeroupper

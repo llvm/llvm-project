@@ -45540,6 +45540,10 @@ static SDValue combineCastedMaskArithmetic(SDNode *N, SelectionDAG &DAG,
   if (!sd_match(Op, m_OneUse(m_BitwiseLogic(m_Value(LHS), m_Value(RHS)))))
     return SDValue();
 
+  // WIP: Fixes one of the failures but triggers more.
+  //if (isBitwiseNot(Op))
+  //  return SDValue();
+
   // If either operand was bitcast from DstVT, then perform logic with DstVT (at
   // least one of the getBitcast() will fold away).
   if (sd_match(LHS, m_OneUse(m_BitCast(m_SpecificVT(DstVT)))) ||
@@ -48138,8 +48142,9 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   // Check if the first operand is all zeros and Cond type is vXi1.
   // If this an avx512 target we can improve the use of zero masking by
   // swapping the operands and inverting the condition.
-  if (N->getOpcode() == ISD::VSELECT && Cond.hasOneUse() &&
-      Subtarget.hasAVX512() && CondVT.getVectorElementType() == MVT::i1 &&
+  if (!DCI.isBeforeLegalize() && N->getOpcode() == ISD::VSELECT &&
+      Cond.hasOneUse() && Subtarget.hasAVX512() &&
+      CondVT.getVectorElementType() == MVT::i1 &&
       ISD::isBuildVectorAllZeros(LHS.getNode()) &&
       !ISD::isBuildVectorAllZeros(RHS.getNode())) {
     // Invert the cond to not(cond) : xor(op,allones)=not(op)
