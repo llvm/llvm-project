@@ -172,6 +172,20 @@ def form_duplane : GICombineRule <
   (apply [{ applyDupLane(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
+// Clean up G_UNMERGE(G_DUPLANE16) -> G_DUPLANE16
+class unmerge_duplane<Instruction Op> : GICombineRule <
+  (defs root:$root),
+  (match (Op $a, $src, $c),
+         (G_UNMERGE_VALUES $d1, $d2, $a):$root,
+         [{ return MRI.getType(${d1}.getReg()).getSizeInBits() == 64; }]),
+  (apply (GIReplaceReg $d2, $d1), (Op $d1, $src, $c))
+>;
+def unmerge_duplane8 : unmerge_duplane<G_DUPLANE8>;
+def unmerge_duplane16 : unmerge_duplane<G_DUPLANE16>;
+def unmerge_duplane32 : unmerge_duplane<G_DUPLANE32>;
+def unmerge_duplane64 : unmerge_duplane<G_DUPLANE64>;
+def unmerge_duplanes : GICombineGroup<[unmerge_duplane8, unmerge_duplane16, unmerge_duplane32, unmerge_duplane64]>;
+
 def shuffle_vector_lowering : GICombineGroup<[dup, rev, ext, zip, uzp, trn, fullrev,
                                               form_duplane, shuf_to_ins]>;
 
@@ -325,7 +339,8 @@ def AArch64PostLegalizerLowering
                         lower_vector_fcmp, form_truncstore,
                         vector_sext_inreg_to_shift,
                         unmerge_ext_to_unmerge, lower_mulv2s64,
-                        vector_unmerge_lowering, insertelt_nonconst]> {
+                        vector_unmerge_lowering, insertelt_nonconst,
+                        unmerge_duplanes]> {
 }
 
 // Post-legalization combines which are primarily optimizations.

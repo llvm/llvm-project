@@ -401,16 +401,10 @@ define <4 x i16> @test_build_illegal(<4 x i32> %in) {
 ; SelectionDAGBuilder here. We then added a DUPLANE on top of that, preventing
 ; the formation of an indexed-by-7 MLS.
 define <4 x i16> @test_high_splat(<4 x i16> %a, <4 x i16> %b, <8 x i16> %v) #0 {
-; CHECK-SD-LABEL: test_high_splat:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mls.4h v0, v1, v2[7]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_high_splat:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup.8h v2, v2[7]
-; CHECK-GI-NEXT:    mls.4h v0, v2, v1
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_high_splat:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mls.4h v0, v1, v2[7]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <8 x i16> %v, <8 x i16> undef, <4 x i32> <i32 7, i32 7, i32 7, i32 7>
   %mul = mul <4 x i16> %shuffle, %b
