@@ -245,6 +245,11 @@ Changes in existing checks
   tolerating fix-it breaking compilation when functions is used as pointers
   to avoid matching usage of functions within the current compilation unit.
 
+- Improved :doc:`readability-function-size
+  <clang-tidy/checks/readability/function-size>` check by adding new option
+  `CountMemberInitAsStmt` that allows counting class member initializers in
+  constructors as statements.
+
 - Improved :doc:`readability-math-missing-parentheses
   <clang-tidy/checks/readability/math-missing-parentheses>` check by fixing
   false negatives where math expressions are the operand of assignment operators
