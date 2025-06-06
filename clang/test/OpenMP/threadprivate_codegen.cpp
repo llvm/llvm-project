@@ -958,11 +958,13 @@ int foobar() {
 // OMP50-TLS: define {{.*}}void [[ST_S4_ST_DTOR2]](ptr {{.*}})
 
 // CHECK-TLS:      define internal void @__tls_init()
-// CHECK-TLS:      [[GRD:%.*]] = load i8, ptr @__tls_guard
+// CHECK-TLS:      [[TLS_ADR_1:%.*]] = call align 1 ptr @llvm.threadlocal.address.p0(ptr align 1 @__tls_guard)
+// CHECK-TLS-NEXT: [[GRD:%.*]] = load i8, ptr [[TLS_ADR_1]]
 // CHECK-TLS-NEXT: [[IS_INIT:%.*]] = icmp eq i8 [[GRD]], 0
 // CHECK-TLS-NEXT: br i1 [[IS_INIT]], label %[[INIT_LABEL:[^,]+]], label %[[DONE_LABEL:[^,]+]]{{.*}}
 // CHECK-TLS:      [[INIT_LABEL]]
-// CHECK-TLS-NEXT: store i8 1, ptr @__tls_guard
+// CHECK-TLS-NEXT: [[TLS_ADR_2:%.*]] = call align 1 ptr @llvm.threadlocal.address.p0(ptr align 1 @__tls_guard)
+// CHECK-TLS-NEXT: store i8 1, ptr [[TLS_ADR_2]]
 // CHECK-TLS:      call void [[GS1_CXX_INIT]]
 // CHECK-TLS-NOT:  call void [[GS2_CXX_INIT]]
 // CHECK-TLS:      call void [[ARR_X_CXX_INIT]]
@@ -3829,11 +3831,13 @@ int foobar() {
 // CHECK-TLS1-LABEL: define {{[^@]+}}@__tls_init
 // CHECK-TLS1-SAME: () #[[ATTR0]] {
 // CHECK-TLS1-NEXT:  entry:
-// CHECK-TLS1-NEXT:    [[TMP0:%.*]] = load i8, ptr @__tls_guard, align 1
+// CHECK-TLS1-NEXT:    [[TLS_ADR_3:%.*]] = call align 1 ptr @llvm.threadlocal.address.p0(ptr align 1 @__tls_guard)
+// CHECK-TLS1-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TLS_ADR_3]], align 1
 // CHECK-TLS1-NEXT:    [[GUARD_UNINITIALIZED:%.*]] = icmp eq i8 [[TMP0]], 0
 // CHECK-TLS1-NEXT:    br i1 [[GUARD_UNINITIALIZED]], label [[INIT:%.*]], label [[EXIT:%.*]], !prof [[PROF3]]
 // CHECK-TLS1:       init:
-// CHECK-TLS1-NEXT:    store i8 1, ptr @__tls_guard, align 1
+// CHECK-TLS1-NEXT:    [[TLS_ADR_4:%.*]] = call align 1 ptr @llvm.threadlocal.address.p0(ptr align 1 @__tls_guard)
+// CHECK-TLS1-NEXT:    store i8 1, ptr [[TLS_ADR_4]], align 1
 // CHECK-TLS1-NEXT:    call void @__cxx_global_var_init()
 // CHECK-TLS1-NEXT:    call void @__cxx_global_var_init.2()
 // CHECK-TLS1-NEXT:    br label [[EXIT]]
@@ -4366,11 +4370,13 @@ int foobar() {
 // CHECK-TLS2-LABEL: define {{[^@]+}}@__tls_init
 // CHECK-TLS2-SAME: () #[[ATTR6]] {
 // CHECK-TLS2-NEXT:  entry:
-// CHECK-TLS2-NEXT:    [[TMP0:%.*]] = load i8, ptr @__tls_guard, align 1
+// CHECK-TLS2-NEXT:    [[TLS_ADR_5:%.*]] = call align 1 ptr @llvm.threadlocal.address.p0(ptr align 1 @__tls_guard)
+// CHECK-TLS2-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TLS_ADR_5]], align 1
 // CHECK-TLS2-NEXT:    [[GUARD_UNINITIALIZED:%.*]] = icmp eq i8 [[TMP0]], 0
 // CHECK-TLS2-NEXT:    br i1 [[GUARD_UNINITIALIZED]], label [[INIT:%.*]], label [[EXIT:%.*]], !prof [[PROF3]]
 // CHECK-TLS2:       init:
-// CHECK-TLS2-NEXT:    store i8 1, ptr @__tls_guard, align 1
+// CHECK-TLS2-NEXT:    [[TLS_ADR_6:%.*]] = call align 1 ptr @llvm.threadlocal.address.p0(ptr align 1 @__tls_guard)
+// CHECK-TLS2-NEXT:    store i8 1, ptr [[TLS_ADR_6]], align 1
 // CHECK-TLS2-NEXT:    call void @__cxx_global_var_init()
 // CHECK-TLS2-NEXT:    call void @__cxx_global_var_init.2()
 // CHECK-TLS2-NEXT:    br label [[EXIT]]
@@ -4918,11 +4924,13 @@ int foobar() {
 // CHECK-TLS3-LABEL: define {{[^@]+}}@__tls_init
 // CHECK-TLS3-SAME: () #[[ATTR0]] !dbg [[DBG326:![0-9]+]] {
 // CHECK-TLS3-NEXT:  entry:
-// CHECK-TLS3-NEXT:    [[TMP0:%.*]] = load i8, ptr @__tls_guard, align 1, !dbg [[DBG327:![0-9]+]]
+// CHECK-TLS3-NEXT:    [[TLS_ADR_7:%.*]] = call align 1 ptr @llvm.threadlocal.address.p0(ptr align 1 @__tls_guard)
+// CHECK-TLS3-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TLS_ADR_7]], align 1, !dbg [[DBG327:![0-9]+]]
 // CHECK-TLS3-NEXT:    [[GUARD_UNINITIALIZED:%.*]] = icmp eq i8 [[TMP0]], 0, !dbg [[DBG327]]
 // CHECK-TLS3-NEXT:    br i1 [[GUARD_UNINITIALIZED]], label [[INIT:%.*]], label [[EXIT:%.*]], !dbg [[DBG327]], !prof [[PROF206]]
 // CHECK-TLS3:       init:
-// CHECK-TLS3-NEXT:    store i8 1, ptr @__tls_guard, align 1, !dbg [[DBG327]]
+// CHECK-TLS3-NEXT:    [[TLS_ADR_8:%.*]] = call align 1 ptr @llvm.threadlocal.address.p0(ptr align 1 @__tls_guard)
+// CHECK-TLS3-NEXT:    store i8 1, ptr [[TLS_ADR_8]], align 1, !dbg [[DBG327]]
 // CHECK-TLS3-NEXT:    call void @__cxx_global_var_init(), !dbg [[DBG327]]
 // CHECK-TLS3-NEXT:    call void @__cxx_global_var_init.2(), !dbg [[DBG327]]
 // CHECK-TLS3-NEXT:    br label [[EXIT]], !dbg [[DBG327]]
@@ -5482,11 +5490,13 @@ int foobar() {
 // CHECK-TLS4-LABEL: define {{[^@]+}}@__tls_init
 // CHECK-TLS4-SAME: () #[[ATTR6]] !dbg [[DBG326:![0-9]+]] {
 // CHECK-TLS4-NEXT:  entry:
-// CHECK-TLS4-NEXT:    [[TMP0:%.*]] = load i8, ptr @__tls_guard, align 1, !dbg [[DBG327:![0-9]+]]
+// CHECK-TLS4-NEXT:    [[TLS_ADR_9:%.*]] = call align 1 ptr @llvm.threadlocal.address.p0(ptr align 1 @__tls_guard)
+// CHECK-TLS4-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TLS_ADR_9]], align 1, !dbg [[DBG327:![0-9]+]]
 // CHECK-TLS4-NEXT:    [[GUARD_UNINITIALIZED:%.*]] = icmp eq i8 [[TMP0]], 0, !dbg [[DBG327]]
 // CHECK-TLS4-NEXT:    br i1 [[GUARD_UNINITIALIZED]], label [[INIT:%.*]], label [[EXIT:%.*]], !dbg [[DBG327]], !prof [[PROF119]]
 // CHECK-TLS4:       init:
-// CHECK-TLS4-NEXT:    store i8 1, ptr @__tls_guard, align 1, !dbg [[DBG327]]
+// CHECK-TLS4-NEXT:    [[TLS_ADR_10:%.*]] = call align 1 ptr @llvm.threadlocal.address.p0(ptr align 1 @__tls_guard)
+// CHECK-TLS4-NEXT:    store i8 1, ptr [[TLS_ADR_10]], align 1, !dbg [[DBG327]]
 // CHECK-TLS4-NEXT:    call void @__cxx_global_var_init(), !dbg [[DBG327]]
 // CHECK-TLS4-NEXT:    call void @__cxx_global_var_init.2(), !dbg [[DBG327]]
 // CHECK-TLS4-NEXT:    br label [[EXIT]], !dbg [[DBG327]]
