@@ -1471,10 +1471,10 @@ void CodeGenRegBank::computeComposites() {
     RegMap C;
     const RegMap &Img1 = SubRegAction.at(Sub1);
     const RegMap &Img2 = SubRegAction.at(Sub2);
-    for (auto [SRI, SubReg] : Img1) {
+    for (auto [R, SubReg] : Img1) {
       auto F = Img2.find(SubReg);
       if (F != Img2.end())
-        C.insert({SRI, F->second});
+        C.insert({R, F->second});
     }
     return C;
   };
