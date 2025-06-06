@@ -70,18 +70,18 @@ uint32_t spirv::getPrefixedOpcode(uint32_t wordCount, spirv::Opcode opcode) {
 void spirv::encodeStringLiteralInto(SmallVectorImpl<uint32_t> &binary,
                                     StringRef literal) {
   // We need to encode the literal and the null termination.
-  auto encodingSize = literal.size() / 4 + 1;
-  auto sizeOfDataToCopy = literal.size();
+  size_t encodingSize = literal.size() / 4 + 1;
+  size_t sizeOfDataToCopy = literal.size();
   if (encodingSize >= kMaxLiteralWordCount) {
-    // reserve one word for the null termination
+    // Reserve one word for the null termination
     encodingSize = kMaxLiteralWordCount - 1;
-    // do not override the last word (null termination) when copying
+    // Do not override the last word (null termination) when copying
     sizeOfDataToCopy = (encodingSize - 1) * 4;
-    LLVM_DEBUG(llvm::dbgs() << "Truncating string literal to max size ("
-                            << std::to_string(kMaxLiteralWordCount - 1)
-                            << "): " << literal << "\n");
+    LLVM_DEBUG(llvm::dbgs()
+               << "Truncating string literal to max size ("
+               << (kMaxLiteralWordCount - 1) << "): " << literal << "\n");
   }
-  auto bufferStartSize = binary.size();
+  size_t bufferStartSize = binary.size();
   binary.resize(bufferStartSize + encodingSize, 0);
   std::memcpy(binary.data() + bufferStartSize, literal.data(),
               sizeOfDataToCopy);
