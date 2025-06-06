@@ -62,6 +62,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -660,10 +661,20 @@ Sema::ActOnStartRootSignatureDecl(StringRef Signature) {
   IdentifierInfo *DeclIdent = &(getASTContext().Idents.get(IdStr));
 
   // Check if we have already found a decl of the same name
-  LookupResult R(Actions, DeclIdent, SourceLocation(),
-                 Sema::LookupOrdinaryName);
-  bool Found = LookupQualifiedName(R, Actions.CurContext);
+  LookupResult R(*this, DeclIdent, SourceLocation(), Sema::LookupOrdinaryName);
+  bool Found = LookupQualifiedName(R, this->CurContext);
   return {DeclIdent, Found};
+}
+
+void Sema::ActOnFinishRootSignatureDecl(
+    SourceLocation Loc, IdentifierInfo *DeclIdent,
+    SmallVector<llvm::hlsl::rootsig::RootElement> &Elements) {
+  // Create the Root Signature
+  auto *SignatureDecl = HLSLRootSignatureDecl::Create(
+      getASTContext(), /*DeclContext=*/CurContext, Loc, DeclIdent, Elements);
+
+  SignatureDecl->setImplicit();
+  PushOnScopeChains(SignatureDecl, getCurScope());
 }
 
 DeclSpec::TST Sema::isTagName(IdentifierInfo &II, Scope *S) {

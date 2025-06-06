@@ -4958,12 +4958,8 @@ void Parser::ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
       return;
     }
 
-    // Create the Root Signature
-    auto *SignatureDecl = HLSLRootSignatureDecl::Create(
-        Actions.getASTContext(), /*DeclContext=*/Actions.CurContext,
-        RootSignatureLoc, DeclIdent, RootElements);
-    SignatureDecl->setImplicit();
-    Actions.PushOnScopeChains(SignatureDecl, getCurScope());
+    Actions.ActOnFinishRootSignatureDecl(RootSignatureLoc, DeclIdent,
+                                         RootElements);
   }
 
   // Create the arg for the ParsedAttr

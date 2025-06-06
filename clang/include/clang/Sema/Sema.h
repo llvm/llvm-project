@@ -3621,6 +3621,9 @@ public:
 
   std::pair<IdentifierInfo *, bool>
   ActOnStartRootSignatureDecl(StringRef Signature);
+  void ActOnFinishRootSignatureDecl(
+      SourceLocation Loc, IdentifierInfo *DeclIdent,
+      SmallVector<llvm::hlsl::rootsig::RootElement> &Elements);
 
   class NameClassification {
     NameClassificationKind Kind;
