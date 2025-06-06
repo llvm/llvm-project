@@ -567,8 +567,7 @@ TARGET_BUILTIN(__builtin_altivec_vextsh2w, "V4SiV8Ss", "", "power9-vector")
 TARGET_BUILTIN(__builtin_altivec_vextsh2d, "V2SLLiV8Ss", "", "power9-vector")
 TARGET_BUILTIN(__builtin_altivec_vextsw2d, "V2SLLiV4Si", "", "power9-vector")
 
-// P9 BCD builtins (the signature used here is for informational purposes only
-// as front-end emits custom codegens for these set of builtins.)                                                    
+// P9 Binary-coded decimal (BCD) builtins.
 TARGET_BUILTIN(__builtin_ppc_national2packed, "V16UcV16UcUc", "t", "power9-vector")
 TARGET_BUILTIN(__builtin_ppc_packed2national, "V16UcV16Uc", "", "power9-vector")
 TARGET_BUILTIN(__builtin_ppc_packed2zoned, "V16UcV16UcUc", "t", "power9-vector")
