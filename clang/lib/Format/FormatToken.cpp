@@ -93,6 +93,16 @@ bool FormatToken::opensBlockOrBlockTypeList(const FormatStyle &Style) const {
          (is(tok::less) && Style.isProto());
 }
 
+bool FormatToken::opensAlignedArrayInitializer(const FormatStyle &Style) const {
+  if (isNot(tok::l_brace) ||
+      Style.AlignArrayOfStructures == FormatStyle::AIAS_None) {
+    return false;
+  }
+
+  const FormatToken *Next = getNextNonComment();
+  return Next != nullptr && Next->StartsColumn;
+}
+
 TokenRole::~TokenRole() {}
 
 void TokenRole::precomputeFormattingInfos(const FormatToken *Token) {}
