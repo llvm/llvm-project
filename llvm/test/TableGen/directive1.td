@@ -355,7 +355,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // IMPL-NEXT:      case TDLC_clauseb:
 // IMPL-NEXT:        return "clauseb";
 // IMPL-NEXT:      case TDLC_clausec: {
-// IMPL-NEXT:        static const llvm::directive::Spelling TDLC_clausec_spellings[] = {
+// IMPL-NEXT:        static constexpr llvm::directive::Spelling TDLC_clausec_spellings[] = {
 // IMPL-NEXT:            {"clausec", {0, 2147483647}},
 // IMPL-NEXT:            {"ccccccc", {0, 2147483647}},
 // IMPL-NEXT:        };

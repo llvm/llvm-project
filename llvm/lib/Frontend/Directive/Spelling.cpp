@@ -1,4 +1,4 @@
-//===-- Spelling.cpp ---------------------------------------------- C++ -*-===//
+//===-------------------------------------------------------------- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,13 +13,14 @@
 
 #include <cassert>
 
-static bool Contains(llvm::directive::VersionRange V, int P) {
+using namespace llvm;
+
+static bool Contains(directive::VersionRange V, int P) {
   return V.Min <= P && P <= V.Max;
 }
 
 llvm::StringRef llvm::directive::FindName(
-    llvm::iterator_range<const llvm::directive::Spelling *> Range,
-    unsigned Version) {
+    llvm::iterator_range<const directive::Spelling *> Range, unsigned Version) {
   assert(llvm::isInt<8 * sizeof(int)>(Version) && "Version value out of range");
 
   int V = Version;

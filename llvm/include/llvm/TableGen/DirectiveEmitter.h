@@ -116,7 +116,7 @@ private:
 
 class Spelling : public Versioned {
 public:
-  using Value = llvm::directive::Spelling;
+  using Value = directive::Spelling;
 
   Spelling(const Record *Def) : Def(Def) {}
 

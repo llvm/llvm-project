@@ -1,4 +1,4 @@
-//===-- Spelling.h ------------------------------------------------ C++ -*-===//
+//===-------------------------------------------------------------- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,6 +12,7 @@
 #include "llvm/ADT/iterator_range.h"
 
 #include <limits>
+#include <tuple>
 
 namespace llvm::directive {
 
@@ -21,13 +22,11 @@ struct VersionRange {
   // in the maximum range.
   int Min = 0;
   int Max = MaxValue;
-};
 
-inline bool operator<(const VersionRange &A, const VersionRange &B) {
-  if (A.Min != B.Min)
-    return A.Min < B.Min;
-  return A.Max < B.Max;
-}
+  bool operator<(const VersionRange &R) const {
+    return std::tie(Min, Max) < std::tie(R.Min, R.Max);
+  }
+};
 
 struct Spelling {
   StringRef Name;

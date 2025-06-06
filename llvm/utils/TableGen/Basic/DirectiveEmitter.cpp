@@ -387,18 +387,6 @@ static std::vector<Spelling::Value>
 orderSpellings(ArrayRef<Spelling::Value> Spellings) {
   std::vector<Spelling::Value> List(Spellings.begin(), Spellings.end());
 
-  // There are two intertwined orderings: (1) the order between spellings
-  // (used here), and (2) the order between a spelling and a version (used
-  // at runtime).
-  // Define order (2) as such that the first A that is not less than V
-  // will be the selected spelling given V. Specifically,
-  //   V <(2) A  <=>  V < A.Min
-  //   A <(2) V  <=>  A.Max < V
-  //
-  // The orders have to be compatible, i.e.
-  //   A <(2) V and !(V <(2) B)  =>  A <(1) B, and
-  //   !(A <(2) v) and V <(2) B  =>  A <(1) B
-  // In other words, the transitive closure of (2) must contain (1).
   llvm::stable_sort(List,
                     [](const Spelling::Value &A, const Spelling::Value &B) {
                       return A.Versions < B.Versions;
@@ -421,7 +409,7 @@ static void generateGetName(ArrayRef<const Record *> Records, raw_ostream &OS,
     BaseRecord Rec(R);
     std::string Ident = getIdentifierName(R, Prefix);
     OS << "    case " << Ident << ":";
-    auto Spellings(orderSpellings(Rec.getSpellings()));
+    std::vector<Spelling::Value> Spellings(orderSpellings(Rec.getSpellings()));
     assert(Spellings.size() != 0 && "No spellings for this item");
     if (Spellings.size() == 1) {
       OS << "\n";
@@ -429,8 +417,8 @@ static void generateGetName(ArrayRef<const Record *> Records, raw_ostream &OS,
     } else {
       OS << " {\n";
       std::string SpellingsName = Ident + "_spellings";
-      OS << "      static const llvm::directive::Spelling " << SpellingsName
-         << "[] = {\n";
+      OS << "      static constexpr llvm::directive::Spelling "
+         << SpellingsName << "[] = {\n";
       for (auto &S : Spellings) {
         OS << "          {\"" << S.Name << "\", {" << S.Versions.Min << ", "
            << S.Versions.Max << "}},\n";
@@ -484,11 +472,10 @@ static void generateGetKind(ArrayRef<const Record *> Records, raw_ostream &OS,
 
     for (auto &[Name, Versions] : Rec.getSpellings()) {
       OS << "    .Case(\"" << Name << "\", {" << Ident << ", ";
-      if (Versions.Min == All.Min && Versions.Max == All.Max) {
+      if (Versions.Min == All.Min && Versions.Max == All.Max)
         OS << "All})\n";
-      } else {
+      else
         OS << "{" << Versions.Min << ", " << Versions.Max << "}})\n";
-      }
     }
   }
   OS << "    .Default({" << DefaultName << ", All});\n";
