@@ -3925,7 +3925,7 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
   if (!TypeUnitsUnderConstruction.empty() && AddrPool.hasBeenUsed())
     return;
 
-  auto Ins = TypeSignatures.insert(std::make_pair(CTy, 0));
+  auto Ins = TypeSignatures.try_emplace(CTy);
   if (!Ins.second) {
     CU.addDIETypeSignature(RefDie, Ins.first->second);
     return;
