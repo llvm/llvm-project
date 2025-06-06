@@ -46,15 +46,12 @@ ExpressionOp createExpression(Operation *op, OpBuilder &builder) {
 ClassOp createClass(FuncOp funcOp, OpBuilder &builder) {
   builder.setInsertionPoint(funcOp);
 
-  // 2. Create the class
   auto classOp = builder.create<emitc::ClassOp>(
       funcOp.getLoc(), builder.getStringAttr("MyModelClass"));
 
-  // Create a block inside the class body and set insertion point
   builder.createBlock(&classOp.getBody());
   builder.setInsertionPointToStart(&classOp.getBody().front());
 
-  // 3. Extract input/output names from function arguments
   SmallVector<std::pair<StringRef, Type>> fields;
   llvm::SmallDenseMap<Value, Value> argToFieldMap;
 
@@ -69,7 +66,6 @@ ClassOp createClass(FuncOp funcOp, OpBuilder &builder) {
                 .getElementType()));
         fields.push_back({fieldName.str(), fieldType});
 
-        // 4.Create the class fields
         auto typeAttr = TypeAttr::get(val.getType());
         mlir::Attribute emptyAttr = builder.getAttr<mlir::UnitAttr>();
         auto dictAttr = DictionaryAttr::get(
@@ -77,17 +73,19 @@ ClassOp createClass(FuncOp funcOp, OpBuilder &builder) {
             {builder.getNamedAttr(fieldName.str(), emptyAttr)});
         builder.create<emitc::FieldOp>(funcOp.getLoc(), fieldName, typeAttr,
                                        /* attributes*/ dictAttr);
-        // 5. Get the pointers to the class fields
-        auto pointer = emitc::PointerType::get(
-            dyn_cast_or_null<emitc::ArrayType>(val.getType()).getElementType());
-        auto ptr = builder.create<emitc::GetFieldOp>(
-            funcOp.getLoc(), pointer, val, "MyModelClass", fieldName);
-        argToFieldMap[val] = ptr;
+
+        // TODO: From my current understanding, we need to instantiate a class
+        // so we can get the pointers from .field but we can't do that in here
+        // so I'm unsure how I can rewrite the following line to ensure
+        // GetFieldOp works correctly. auto pointer =
+        // emitc::PointerType::get(dyn_cast_or_null<emitc::ArrayType>(val.getType()).getElementType());
+        // auto ptr = builder.create<emitc::GetFieldOp>(funcOp.getLoc(),
+        // pointer, val, "MyModelClass", fieldName);
+        argToFieldMap[val] = nullptr;
       }
     }
   }
 
-  // Create the new function inside the class
   auto funcContext = funcOp.getContext();
   auto inputTypes = funcOp.getFunctionType().getInputs();
   auto results = funcOp.getFunctionType().getResults();
@@ -99,10 +97,8 @@ ClassOp createClass(FuncOp funcOp, OpBuilder &builder) {
   builder.createBlock(&newFuncOp.getBody());
   builder.setInsertionPointToStart(&newFuncOp.getBody().front());
 
-  // 7. Remap original arguments to field pointers
   IRMapping mapper;
 
-  // 8. move or clone operations from original function
   auto body = llvm::make_early_inc_range(funcOp.getBody().front());
   for (Operation &opToClone : body) {
     if (isa<emitc::ConstantOp>(opToClone) ||
@@ -115,7 +111,8 @@ ClassOp createClass(FuncOp funcOp, OpBuilder &builder) {
     }
   }
 
-  // if (funcOp->use_empty()) funcOp->erase();
+  // TODO: Need to erase the funcOp after all this. Using funcOp->erase raises
+  // errors:
 
   return classOp;
 }
