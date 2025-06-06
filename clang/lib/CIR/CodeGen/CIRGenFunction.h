@@ -327,6 +327,8 @@ public:
     PrototypeWrapper(const clang::ObjCMethodDecl *md) : p(md) {}
   };
 
+  bool isLValueSuitableForInlineAtomic(LValue lv);
+
   /// An abstract representation of regular/ObjC call/message targets.
   class AbstractCallee {
     /// The function declaration of the callee.
@@ -763,6 +765,10 @@ public:
 
   mlir::LogicalResult emitForStmt(const clang::ForStmt &s);
 
+  /// Emit the computation of the specified expression of complex type,
+  /// returning the result.
+  mlir::Value emitComplexExpr(const Expr *e);
+
   void emitCompoundStmt(const clang::CompoundStmt &s);
 
   void emitCompoundStmtWithoutScope(const clang::CompoundStmt &s);
@@ -848,6 +854,9 @@ public:
 
   void emitScalarInit(const clang::Expr *init, mlir::Location loc,
                       LValue lvalue, bool capturedByInit = false);
+
+  void emitStoreOfComplex(mlir::Location loc, mlir::Value v, LValue dest,
+                          bool isInit);
 
   void emitStoreOfScalar(mlir::Value value, Address addr, bool isVolatile,
                          clang::QualType ty, bool isInit = false,

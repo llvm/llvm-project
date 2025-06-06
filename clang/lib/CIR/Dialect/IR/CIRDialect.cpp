@@ -1642,6 +1642,34 @@ LogicalResult cir::VecTernaryOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// ComplexCreateOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::ComplexCreateOp::verify() {
+  if (getType().getElementType() != getReal().getType()) {
+    emitOpError()
+        << "operand type of cir.complex.create does not match its result type";
+    return failure();
+  }
+
+  return success();
+}
+
+OpFoldResult cir::ComplexCreateOp::fold(FoldAdaptor adaptor) {
+  mlir::Attribute real = adaptor.getReal();
+  mlir::Attribute imag = adaptor.getImag();
+  if (!real || !imag)
+    return {};
+
+  // When both of real and imag are constants, we can fold the operation into an
+  // `#cir.const_complex` operation.
+  auto realAttr = mlir::cast<mlir::TypedAttr>(real);
+  auto imagAttr = mlir::cast<mlir::TypedAttr>(imag);
+  auto complexTy = cir::ComplexType::get(realAttr.getType());
+  return cir::ConstComplexAttr::get(complexTy, realAttr, imagAttr);
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
