@@ -12,7 +12,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-#if LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_SYSTEM
+#if LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_SYSTEM_INLINE
 
 #if LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_UNDEFINED
 
@@ -46,11 +46,16 @@ Errno::operator int() { return shared_errno; }
 void Errno::operator=(int a) { *__llvm_libc_errno() = a; }
 Errno::operator int() { return *__llvm_libc_errno(); }
 
+#elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_SYSTEM
+
+void Errno::operator=(int a) { errno = a; }
+Errno::operator int() { return errno; }
+
 #endif
 
 // Define the global `libc_errno` instance.
 Errno libc_errno;
 
-#endif // LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_SYSTEM
+#endif // LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_SYSTEM_INLINE
 
 } // namespace LIBC_NAMESPACE_DECL

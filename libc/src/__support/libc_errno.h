@@ -39,7 +39,13 @@
 #define LIBC_ERRNO_MODE_EXTERNAL 4
 // libc uses system `<errno.h>` `errno` macro directly in the overlay mode; in
 // fullbuild mode, effectively the same as `LIBC_ERRNO_MODE_EXTERNAL`.
+// In this mode, the public C++ symbol `LIBC_NAMESPACE::libc_errno ` is still
+// exported and get redirected to the system `errno` inside its implementation.
 #define LIBC_ERRNO_MODE_SYSTEM 5
+// In this mode, the libc_errno is simply a macro resolved to `errno` from the
+// system header <errno.h>.  There is no need to link against the
+// `libc.src.errno.errno` object.
+#define LIBC_ERRNO_MODE_SYSTEM_INLINE 6
 
 #if !defined(LIBC_ERRNO_MODE) || LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_DEFAULT
 #undef LIBC_ERRNO_MODE
@@ -55,17 +61,19 @@
     LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_THREAD_LOCAL &&                         \
     LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_SHARED &&                               \
     LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_EXTERNAL &&                             \
-    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_SYSTEM
+    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_SYSTEM &&                               \
+    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_SYSTEM_INLINE
 #error LIBC_ERRNO_MODE must be one of the following values: \
 LIBC_ERRNO_MODE_DEFAULT, \
 LIBC_ERRNO_MODE_UNDEFINED, \
 LIBC_ERRNO_MODE_THREAD_LOCAL, \
 LIBC_ERRNO_MODE_SHARED, \
 LIBC_ERRNO_MODE_EXTERNAL, \
-LIBC_ERRNO_MODE_SYSTEM
+LIBC_ERRNO_MODE_SYSTEM, \
+LIBC_ERRNO_MODE_SYSTEM_INLINE.
 #endif
 
-#if LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_SYSTEM
+#if LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_SYSTEM_INLINE
 
 #include <errno.h>
 
