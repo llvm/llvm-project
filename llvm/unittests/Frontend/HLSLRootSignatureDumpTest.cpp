@@ -177,4 +177,60 @@ TEST(HLSLRootSignatureTest, AllRootFlagsDump) {
   EXPECT_EQ(Out, Expected);
 }
 
+TEST(HLSLRootSignatureTest, RootCBVDump) {
+  RootDescriptor Descriptor;
+  Descriptor.Type = DescriptorType::CBuffer;
+  Descriptor.Reg = {RegisterType::BReg, 0};
+  Descriptor.setDefaultFlags();
+
+  std::string Out;
+  llvm::raw_string_ostream OS(Out);
+  OS << Descriptor;
+  OS.flush();
+
+  std::string Expected = "RootCBV(b0, space = 0, "
+                         "visibility = All, "
+                         "flags = DataStaticWhileSetAtExecute)";
+  EXPECT_EQ(Out, Expected);
+}
+
+TEST(HLSLRootSignatureTest, RootSRVDump) {
+  RootDescriptor Descriptor;
+  Descriptor.Type = DescriptorType::SRV;
+  Descriptor.Reg = {RegisterType::TReg, 0};
+  Descriptor.Space = 42;
+  Descriptor.Visibility = ShaderVisibility::Geometry;
+  Descriptor.Flags = RootDescriptorFlags::None;
+
+  std::string Out;
+  llvm::raw_string_ostream OS(Out);
+  OS << Descriptor;
+  OS.flush();
+
+  std::string Expected =
+      "RootSRV(t0, space = 42, visibility = Geometry, flags = None)";
+  EXPECT_EQ(Out, Expected);
+}
+
+TEST(HLSLRootSignatureTest, RootUAVDump) {
+  RootDescriptor Descriptor;
+  Descriptor.Type = DescriptorType::UAV;
+  Descriptor.Reg = {RegisterType::UReg, 92374};
+  Descriptor.Space = 932847;
+  Descriptor.Visibility = ShaderVisibility::Hull;
+  Descriptor.Flags = RootDescriptorFlags::ValidFlags;
+
+  std::string Out;
+  llvm::raw_string_ostream OS(Out);
+  OS << Descriptor;
+  OS.flush();
+
+  std::string Expected =
+      "RootUAV(u92374, space = 932847, visibility = Hull, flags = "
+      "DataVolatile | "
+      "DataStaticWhileSetAtExecute | "
+      "DataStatic)";
+  EXPECT_EQ(Out, Expected);
+}
+
 } // namespace

@@ -132,6 +132,42 @@ static raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const RootDescriptorFlags &Flags) {
+  bool FlagSet = false;
+  unsigned Remaining = llvm::to_underlying(Flags);
+  while (Remaining) {
+    unsigned Bit = 1u << llvm::countr_zero(Remaining);
+    if (Remaining & Bit) {
+      if (FlagSet)
+        OS << " | ";
+
+      switch (static_cast<RootDescriptorFlags>(Bit)) {
+      case RootDescriptorFlags::DataVolatile:
+        OS << "DataVolatile";
+        break;
+      case RootDescriptorFlags::DataStaticWhileSetAtExecute:
+        OS << "DataStaticWhileSetAtExecute";
+        break;
+      case RootDescriptorFlags::DataStatic:
+        OS << "DataStatic";
+        break;
+      default:
+        OS << "invalid: " << Bit;
+        break;
+      }
+
+      FlagSet = true;
+    }
+    Remaining &= ~Bit;
+  }
+
+  if (!FlagSet)
+    OS << "None";
+
+  return OS;
+}
+
 raw_ostream &operator<<(raw_ostream &OS, const RootFlags &Flags) {
   OS << "RootFlags(";
   bool FlagSet = false;
@@ -201,6 +237,16 @@ raw_ostream &operator<<(raw_ostream &OS, const RootConstants &Constants) {
   OS << "RootConstants(num32BitConstants = " << Constants.Num32BitConstants
      << ", " << Constants.Reg << ", space = " << Constants.Space
      << ", visibility = " << Constants.Visibility << ")";
+
+  return OS;
+}
+
+raw_ostream &operator<<(raw_ostream &OS, const RootDescriptor &Descriptor) {
+  ClauseType Type = ClauseType(llvm::to_underlying(Descriptor.Type));
+  OS << "Root" << Type << "(" << Descriptor.Reg
+     << ", space = " << Descriptor.Space
+     << ", visibility = " << Descriptor.Visibility
+     << ", flags = " << Descriptor.Flags << ")";
 
   return OS;
 }
