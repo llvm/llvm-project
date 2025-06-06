@@ -710,6 +710,9 @@ Bug Fixes to Attribute Support
 - Clang will warn if a complete type specializes a deprecated partial specialization.
   (#GH44496)
 
+- ``[[nodiscard]]`` is now respected on Objective-C and Objective-C++ methods.
+  (#GH141504)
+
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
