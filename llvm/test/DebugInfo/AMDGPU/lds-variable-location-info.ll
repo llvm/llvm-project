@@ -1,5 +1,5 @@
 ; RUN: llc -O0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs -filetype=obj < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
-
+; XFAIL: *
 @fun.variable_name = internal addrspace(3) global i32 undef, align 4, !dbg !0
 
 

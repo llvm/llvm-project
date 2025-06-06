@@ -396,9 +396,13 @@ any option of a multiversioned function is undefined.
   }];
 }
 
-def SYCLKernelDocs : Documentation {
+def DeviceKernelDocs : Documentation {
   let Category = DocCatFunction;
+  let Heading = "device_kernel, sycl_kernel, nvptx_kernel, amdgpu_kernel, "
+                "kernel, __kernel";
   let Content = [{
+These attributes specify that the function represents a kernel for device offloading.
+The specific semantics depend on the offloading language, target, and attribute spelling.
 The ``sycl_kernel`` attribute specifies that a function template will be used
 to outline device code and to generate an OpenCL kernel.
 Here is a code example of the SYCL program, which demonstrates the compiler's
@@ -4392,8 +4396,6 @@ annotated parameter.
       addToSet(str, s); // Not detected.
     }
   }
-
-.. _`lifetimebound`: https://clang.llvm.org/docs/AttributeReference.html#lifetimebound
   }];
 }
 
@@ -9038,14 +9040,14 @@ def CoroLifetimeBoundDoc : Documentation {
   let Category = DocCatDecl;
   let Content = [{
 The ``[[clang::coro_lifetimebound]]`` is a class attribute which can be applied
-to a coroutine return type (`CRT`_) (i.e.
+to a coroutine return type (`coro_return_type, coro_wrapper`_) (i.e.
 it should also be annotated with ``[[clang::coro_return_type]]``).
 
 All parameters of a function are considered to be lifetime bound if the function returns a
 coroutine return type (CRT) annotated with ``[[clang::coro_lifetimebound]]``.
 This lifetime bound analysis can be disabled for a coroutine wrapper or a coroutine by annotating the function
 with ``[[clang::coro_disable_lifetimebound]]`` function attribute .
-See `documentation`_ of ``[[clang::lifetimebound]]`` for details about lifetime bound analysis.
+See documentation of `lifetimebound`_ for details about lifetime bound analysis.
 
 
 Reference parameters of a coroutine are susceptible to capturing references to temporaries or local variables.
@@ -9105,9 +9107,6 @@ but do not pass them to the underlying coroutine or pass them by value.
   void use() {
     auto task = coro_wrapper(1); // use of temporary is fine as the argument is not lifetime bound.
   }
-
-.. _`documentation`: https://clang.llvm.org/docs/AttributeReference.html#lifetimebound
-.. _`CRT`: https://clang.llvm.org/docs/AttributeReference.html#coro-return-type
 }];
 }
 

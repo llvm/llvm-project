@@ -5944,7 +5944,7 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
 }
 
 static GlobalDecl getGlobalDeclForDirectCall(const FunctionDecl *FD) {
-  if (FD->hasAttr<OpenCLKernelAttr>())
+  if (DeviceKernelAttr::isOpenCLSpelling(FD->getAttr<DeviceKernelAttr>()))
     return GlobalDecl(FD, KernelReferenceKind::Stub);
   return GlobalDecl(FD);
 }
@@ -6375,7 +6375,7 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
   const auto *FnType = cast<FunctionType>(PointeeType);
 
   if (const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl);
-      FD && FD->hasAttr<OpenCLKernelAttr>())
+      FD && DeviceKernelAttr::isOpenCLSpelling(FD->getAttr<DeviceKernelAttr>()))
     CGM.getTargetCodeGenInfo().setOCLKernelStubCallingConvention(FnType);
 
   bool CFIUnchecked =
