@@ -212,7 +212,7 @@ func.func @transfer_read_dynamic_dim_to_flatten(
 // CHECK:              %[[C0_I32:.*]] = arith.constant 0 : i32
 // CHECK:              %[[C0:.*]] = arith.constant 0 : index
 // CHECK:              %[[COLLAPSED:.*]] = memref.collapse_shape %[[MEM]]
-// CHECK-SAME-LITERAL:   [[0], [1, 2, 3]]
+// CHECK-SAME{LITERAL}:  [[0], [1, 2, 3]]
 // CHECK-SAME:           memref<1x?x4x6xi32> into memref<1x?xi32>
 // CHECK:              %[[COLLAPSED_IDX:.*]] = affine.apply #[[$MAP]]()[%[[IDX_1]], %[[IDX_2]]]
 // CHECK:              %[[VEC_1D:.*]] = vector.transfer_read %[[COLLAPSED]][%[[C0]], %[[COLLAPSED_IDX]]],
@@ -490,7 +490,7 @@ func.func @transfer_write_dynamic_to_flatten(
 
 // CHECK:              %[[C0:.*]] = arith.constant 0 : index
 // CHECK:              %[[COLLAPSED_MEM:.*]] = memref.collapse_shape %[[MEM]]
-// CHECK-SAME-LITERAL:   [[0], [1, 2, 3]]
+// CHECK-SAME{LITERAL}:  [[0], [1, 2, 3]]
 // CHECK-SAME:           : memref<1x?x4x6xi32> into memref<1x?xi32>
 // CHECK:              %[[COLLAPSED_IDX:.*]] = affine.apply #[[$MAP]]()[%[[IDX_1]], %[[IDX_2]]]
 // CHECK:              %[[VEC_1D:.*]] = vector.shape_cast %[[VEC]] : vector<1x2x6xi32> to vector<12xi32>
