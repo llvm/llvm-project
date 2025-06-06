@@ -587,8 +587,9 @@ enum class TemplateSubstitutionKind : char {
     /// specializations that will need to be instantiated after the
     /// enclosing class's instantiation is complete.
     SmallVector<std::pair<ClassTemplateDecl *,
-                                ClassTemplatePartialSpecializationDecl *>, 1>
-      OutOfLinePartialSpecs;
+                          ClassTemplatePartialSpecializationDecl *>,
+                1>
+        OutOfLinePartialSpecs;
 
     /// A list of out-of-line variable template partial
     /// specializations that will need to be instantiated after the
@@ -596,7 +597,7 @@ enum class TemplateSubstitutionKind : char {
     /// FIXME: Verify that this is needed.
     SmallVector<
         std::pair<VarTemplateDecl *, VarTemplatePartialSpecializationDecl *>, 1>
-    OutOfLineVarPartialSpecs;
+        OutOfLineVarPartialSpecs;
 
   public:
     TemplateDeclInstantiator(Sema &SemaRef, DeclContext *Owner,
