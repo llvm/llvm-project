@@ -67,8 +67,8 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::FMAX_F128, "fmaxf128");
     setLibcallName(RTLIB::FMINIMUM_F128, "fminimumf128");
     setLibcallName(RTLIB::FMAXIMUM_F128, "fmaximumf128");
-    setLibcallName(RTLIB::FMINIMUMNUM_F128, "fminimum_numf128");
-    setLibcallName(RTLIB::FMAXIMUMNUM_F128, "fmaximum_numf128");
+    setLibcallName(RTLIB::FMINIMUM_NUM_F128, "fminimum_numf128");
+    setLibcallName(RTLIB::FMAXIMUM_NUM_F128, "fmaximum_numf128");
     setLibcallName(RTLIB::LROUND_F128, "lroundf128");
     setLibcallName(RTLIB::LLROUND_F128, "llroundf128");
     setLibcallName(RTLIB::LRINT_F128, "lrintf128");
@@ -208,19 +208,12 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::FREXP_PPCF128, nullptr);
   }
 
-  // Disable most libcalls on AMDGPU.
-  if (TT.isAMDGPU()) {
-    for (int I = 0; I < RTLIB::UNKNOWN_LIBCALL; ++I) {
-      if (I < RTLIB::ATOMIC_LOAD || I > RTLIB::ATOMIC_FETCH_NAND_16)
-        setLibcallName(static_cast<RTLIB::Libcall>(I), nullptr);
+  // Disable most libcalls on AMDGPU and NVPTX.
+  if (TT.isAMDGPU() || TT.isNVPTX()) {
+    for (RTLIB::Libcall LC : RTLIB::libcalls()) {
+      if (LC < RTLIB::ATOMIC_LOAD || LC > RTLIB::ATOMIC_FETCH_NAND_16)
+        setLibcallName(LC, nullptr);
     }
-  }
-
-  // Disable most libcalls on NVPTX.
-  if (TT.isNVPTX()) {
-    for (int I = 0; I < RTLIB::UNKNOWN_LIBCALL; ++I)
-      if (I < RTLIB::ATOMIC_LOAD || I > RTLIB::ATOMIC_FETCH_NAND_16)
-        setLibcallName(static_cast<RTLIB::Libcall>(I), nullptr);
   }
 
   if (TT.isOSMSVCRT()) {

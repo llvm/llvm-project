@@ -2,6 +2,10 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+xandesperf -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s
 
+; NDS.BFOZ
+
+; MSB >= LSB
+
 define i32 @bfoz_from_and_i32(i32 %x) {
 ; CHECK-LABEL: bfoz_from_and_i32:
 ; CHECK:       # %bb.0:
@@ -59,6 +63,94 @@ define i64 @bfoz_from_lshr_and_i64(i64 %x) {
   %shifted = lshr i64 %masked, 24
   ret i64 %shifted
 }
+
+; MSB = 0
+
+define i32 @bfoz_from_and_shl_with_msb_zero_i32(i32 %x) {
+; CHECK-LABEL: bfoz_from_and_shl_with_msb_zero_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfoz a0, a0, 0, 15
+; CHECK-NEXT:    ret
+  %shifted = shl i32 %x, 15
+  %masked = and i32 %shifted, 32768
+  ret i32 %masked
+}
+
+define i64 @bfoz_from_and_shl_with_msb_zero_i64(i64 %x) {
+; CHECK-LABEL: bfoz_from_and_shl_with_msb_zero_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfoz a0, a0, 0, 48
+; CHECK-NEXT:    ret
+  %shifted = shl i64 %x, 48
+  %masked = and i64 %shifted, 281474976710656
+  ret i64 %masked
+}
+
+define i32 @bfoz_from_lshr_shl_with_msb_zero_i32(i32 %x) {
+; CHECK-LABEL: bfoz_from_lshr_shl_with_msb_zero_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfoz a0, a0, 0, 18
+; CHECK-NEXT:    ret
+  %shl = shl i32 %x, 31
+  %lshr = lshr i32 %shl, 13
+  ret i32 %lshr
+}
+
+define i64 @bfoz_from_lshr_shl_with_msb_zero_i64(i64 %x) {
+; CHECK-LABEL: bfoz_from_lshr_shl_with_msb_zero_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfoz a0, a0, 0, 44
+; CHECK-NEXT:    ret
+  %shl = shl i64 %x, 63
+  %lshr = lshr i64 %shl, 19
+  ret i64 %lshr
+}
+
+; MSB < LSB
+
+define i32 @bfoz_from_and_shl_i32(i32 %x) {
+; CHECK-LABEL: bfoz_from_and_shl_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfoz a0, a0, 12, 23
+; CHECK-NEXT:    ret
+  %shifted = shl i32 %x, 12
+  %masked = and i32 %shifted, 16773120
+  ret i32 %masked
+}
+
+define i64 @bfoz_from_and_shl_i64(i64 %x) {
+; CHECK-LABEL: bfoz_from_and_shl_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfoz a0, a0, 24, 35
+; CHECK-NEXT:    ret
+  %shifted = shl i64 %x, 24
+  %masked = and i64 %shifted, 68702699520
+  ret i64 %masked
+}
+
+define i32 @bfoz_from_lshr_shl_i32(i32 %x) {
+; CHECK-LABEL: bfoz_from_lshr_shl_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfoz a0, a0, 19, 24
+; CHECK-NEXT:    ret
+  %shl = shl i32 %x, 26
+  %lshr = lshr i32 %shl, 7
+  ret i32 %lshr
+}
+
+define i64 @bfoz_from_lshr_shl_i64(i64 %x) {
+; CHECK-LABEL: bfoz_from_lshr_shl_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfoz a0, a0, 25, 48
+; CHECK-NEXT:    ret
+  %shl = shl i64 %x, 40
+  %lshr = lshr i64 %shl, 15
+  ret i64 %lshr
+}
+
+; NDS.BFOS
+
+; MSB >= LSB
 
 define i32 @bfos_from_ashr_shl_i32(i32 %x) {
 ; CHECK-LABEL: bfos_from_ashr_shl_i32:
