@@ -4239,10 +4239,7 @@ SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
     }
     Vec = DAG.getNode(ISD::BUILD_VECTOR, SL, ConcatType, HiAndLoOps);
   } else {
-    if (Known.getMinValue().getZExtValue() == (ElementType.getSizeInBits() - 1))
-      Vec = DAG.getBuildVector(ConcatType, SL, {HiShift, HiShift});
-    else
-      Vec = DAG.getBuildVector(ConcatType, SL, {NewShift, HiShift});
+    Vec = DAG.getBuildVector(ConcatType, SL, {NewShift, HiShift});
   }
   return DAG.getNode(ISD::BITCAST, SL, VT, Vec);
 }
