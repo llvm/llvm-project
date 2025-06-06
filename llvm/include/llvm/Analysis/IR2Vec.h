@@ -84,7 +84,7 @@ protected:
   mutable BBEmbeddingsMap BBVecMap;
   mutable InstEmbeddingsMap InstVecMap;
 
-  Embedder(const Function &F, const Vocab &Vocabulary, unsigned Dimension);
+  Embedder(const Function &F, const Vocab &Vocabulary);
 
   /// Helper function to compute embeddings. It generates embeddings for all
   /// the instructions and basic blocks in the function F. Logic of computing
@@ -110,10 +110,8 @@ public:
   virtual ~Embedder() = default;
 
   /// Factory method to create an Embedder object.
-  static Expected<std::unique_ptr<Embedder>> create(IR2VecKind Mode,
-                                                    const Function &F,
-                                                    const Vocab &Vocabulary,
-                                                    unsigned Dimension);
+  static Expected<std::unique_ptr<Embedder>>
+  create(IR2VecKind Mode, const Function &F, const Vocab &Vocabulary);
 
   /// Returns a map containing instructions and the corresponding embeddings for
   /// the function F if it has been computed. If not, it computes the embeddings
@@ -149,9 +147,8 @@ private:
   void computeEmbeddings(const BasicBlock &BB) const override;
 
 public:
-  SymbolicEmbedder(const Function &F, const Vocab &Vocabulary,
-                   unsigned Dimension)
-      : Embedder(F, Vocabulary, Dimension) {
+  SymbolicEmbedder(const Function &F, const Vocab &Vocabulary)
+      : Embedder(F, Vocabulary) {
     FuncVector = Embedding(Dimension, 0);
   }
 };

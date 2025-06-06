@@ -189,7 +189,7 @@ func.func @assume_alignment(%0 : memref<4x4xf16>) {
   // CHECK-NEXT: %[[ALIGN:.*]] = llvm.mlir.constant(16 : index) : i64
   // CHECK-NEXT: llvm.intr.assume %[[TRUE]] ["align"(%[[PTR]], %[[ALIGN]] : !llvm.ptr, i64)] : i1
   // CHECK-INTERFACE: llvm.intr.assume
-  memref.assume_alignment %0, 16 : memref<4x4xf16>
+  %1 = memref.assume_alignment %0, 16 : memref<4x4xf16>
   return
 }
 
@@ -205,7 +205,7 @@ func.func @assume_alignment_w_offset(%0 : memref<4x4xf16, strided<[?, ?], offset
   // CHECK-DAG: %[[ALIGN:.*]] = llvm.mlir.constant(16 : index) : i64
   // CHECK-NEXT: llvm.intr.assume %[[TRUE]] ["align"(%[[BUFF_ADDR]], %[[ALIGN]] : !llvm.ptr, i64)] : i1
   // CHECK-INTERFACE: llvm.intr.assume
-  memref.assume_alignment %0, 16 : memref<4x4xf16, strided<[?, ?], offset: ?>>
+  %1 = memref.assume_alignment %0, 16 : memref<4x4xf16, strided<[?, ?], offset: ?>>
   return
 }
 // -----
