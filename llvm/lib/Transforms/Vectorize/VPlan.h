@@ -970,9 +970,9 @@ private:
 
 #if !defined(NDEBUG)
   /// Return the number of operands determined by the opcode of the
-  /// VPInstruction. Returns -1 if the number of operands cannot be determined
+  /// VPInstruction. Returns -1u if the number of operands cannot be determined
   /// directly by the opcode.
-  unsigned getNumOperandsForOpcode() const;
+  static unsigned getNumOperandsForOpcode(unsigned Opcode);
 #endif
 
 public:

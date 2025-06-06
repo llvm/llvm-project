@@ -413,20 +413,20 @@ VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
       Opcode(Opcode), Name(Name.str()) {
   assert(flagsValidForOpcode(getOpcode()) &&
          "Set flags not supported for the provided opcode");
-  assert((getNumOperandsForOpcode() == -1u ||
-          getNumOperandsForOpcode() == getNumOperands()) &&
+  assert((getNumOperandsForOpcode(Opcode) == -1u ||
+          getNumOperandsForOpcode(Opcode) == getNumOperands()) &&
          "number of operands does not match opcode");
 }
 
 #ifndef NDEBUG
-unsigned VPInstruction::getNumOperandsForOpcode() const {
-  if (Instruction::isUnaryOp(getOpcode()) || Instruction::isCast(getOpcode()))
+unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
+  if (Instruction::isUnaryOp(Opcode) || Instruction::isCast(Opcode))
     return 1;
 
-  if (Instruction::isBinaryOp(getOpcode()))
+  if (Instruction::isBinaryOp(Opcode))
     return 2;
 
-  switch (getOpcode()) {
+  switch (Opcode) {
   case VPInstruction::StepVector:
     return 0;
   case Instruction::Alloca:
@@ -452,15 +452,16 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::ComputeReductionResult:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
-  case VPInstruction::WideIVStep:
   case VPInstruction::PtrAdd:
+  case VPInstruction::WideIVStep:
     return 2;
   case Instruction::Select:
+  case VPInstruction::ComputeAnyOfResult:
   case VPInstruction::ComputeFindLastIVResult:
     return 3;
   case Instruction::Call:
-  case Instruction::PHI:
   case Instruction::GetElementPtr:
+  case Instruction::PHI:
   case Instruction::Switch:
     // Cannot determine the number of operands from the opcode.
     return -1u;
@@ -2772,10 +2773,7 @@ static void scalarizeInstruction(const Instruction *Instr,
 
   // Replace the operands of the cloned instructions with their scalar
   // equivalents in the new loop.
-  auto OpRange = RepRecipe->operands();
-  if (isa<CallBase>(Cloned))
-    OpRange = drop_end(OpRange);
-  for (const auto &I : enumerate(OpRange)) {
+  for (const auto &I : enumerate(RepRecipe->operands())) {
     auto InputLane = Lane;
     VPValue *Operand = I.value();
     if (vputils::isSingleScalar(Operand))
