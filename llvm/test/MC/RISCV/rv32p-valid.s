@@ -1,5 +1,5 @@
 # RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-p -M no-aliases -show-encoding \
-# RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
+# RUN:     | FileCheck -check-prefixes=CHECK-ASM %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+experimental-p < %s \
 # RUN:     | llvm-objdump --mattr=+experimental-p -M no-aliases -d -r --no-print-imm-hex - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
@@ -73,3 +73,6 @@ psabs.b t0, t1
 # CHECK-ASM-AND-OBJ: plui.h gp, 32
 # CHECK-ASM: encoding: [0x9b,0x21,0x20,0xf0]
 plui.h gp, 32
+# CHECK-ASM-AND-OBJ: plui.h gp, -412
+# CHECK-ASM: encoding: [0x9b,0xa1,0x64,0xf0]
+plui.h gp, 612

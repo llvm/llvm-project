@@ -18,6 +18,8 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
+def simm10 : RISCVSImmLeafOp<10>;
+
 // A 10-bit signed immediate allowing range [-512, 1023]
 // but will decode to [-512, 511].
 def simm10_unsigned : RISCVOp {
@@ -38,14 +40,15 @@ def simm10_unsigned : RISCVOp {
 //===----------------------------------------------------------------------===//
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVPUnaryImm10<bits<7> funct7, string opcodestr>
-    : RVInstIBase<0b010, OPC_OP_IMM_32, (outs GPR:$rd), (ins simm10_unsigned:$simm10u),
-                  opcodestr, "$rd, $simm10u"> {
-  bits<10> simm10u;
+class RVPUnaryImm10<bits<7> funct7, string opcodestr,
+                    DAGOperand TyImm10 = simm10>
+    : RVInstIBase<0b010, OPC_OP_IMM_32, (outs GPR:$rd), (ins TyImm10:$imm10),
+                  opcodestr, "$rd, $imm10"> {
+  bits<10> imm10;
 
   let Inst{31-25} = funct7;
-  let Inst{24-16} = simm10u{8-0};
-  let Inst{15}    = simm10u{9};
+  let Inst{24-16} = imm10{8-0};
+  let Inst{15}    = imm10{9};
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
@@ -155,7 +158,6 @@ def PSEXT_W_H      : RVPUnaryWUF<0b01, 0b00101, "psext.w.h">;
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in
-def PLUI_H : RVPUnaryImm10<0b1111000, "plui.h">;
+def PLUI_H : RVPUnaryImm10<0b1111000, "plui.h", simm10_unsigned>;
 let Predicates = [HasStdExtP, IsRV64] in
-def PLUI_W : RVPUnaryImm10<0b1111001, "plui.w">;
-
+def PLUI_W : RVPUnaryImm10<0b1111001, "plui.w", simm10_unsigned>;

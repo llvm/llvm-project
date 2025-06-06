@@ -3,6 +3,8 @@
 
 # Imm overflow
 pli.h a0, 0x400
+# CHECK-ERROR: immediate must be an integer in the range [-512, 511]
+plui.h a1, 0x400
 # CHECK-ERROR: immediate must be an integer in the range [-512, 1023]
 pli.b a0, 0x200
 # CHECK-ERROR: immediate must be an integer in the range [0, 255]
