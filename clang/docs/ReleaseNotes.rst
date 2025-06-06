@@ -685,6 +685,8 @@ Bug Fixes in This Version
 - Fixed an assertion failure in serialization of constexpr structs containing unions. (#GH140130)
 - Fixed duplicate entries in TableGen that caused the wrong attribute to be selected. (GH#140701)
 - Fixed type mismatch error when 'builtin-elementwise-math' arguments have different qualifiers, this should be well-formed. (#GH141397)
+- Constant evaluation now correctly runs the destructor of a variable declared in 
+  the second clause of a C-style ``for`` loop. (#GH139818)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -830,6 +832,8 @@ Bug Fixes to C++ Support
 - Clang modules now allow a module and its user to differ on TrivialAutoVarInit*
 - Fixed an access checking bug when initializing non-aggregates in default arguments (#GH62444), (#GH83608)
 - Fixed a pack substitution bug in deducing class template partial specializations. (#GH53609)
+- Fixed a crash when constant evaluating some explicit object member assignment operators. (#GH142835)
+- Fixed an access checking bug when substituting into concepts (#GH115838)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -846,7 +850,7 @@ Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Fixed crash when ``-print-stats`` is enabled in compiling IR files. (#GH131608)
-- Fix code completion crash involving PCH serialzied templates. (#GH139019)
+- Fix code completion crash involving PCH serialized templates. (#GH139019)
 
 OpenACC Specific Changes
 ------------------------
@@ -1049,7 +1053,7 @@ Sanitizers
 ----------
 
 - ``-fsanitize=vptr`` is no longer a part of ``-fsanitize=undefined``.
-- Sanitizer ignorelists now support the syntax ``src:*=sanitize``, 
+- Sanitizer ignorelists now support the syntax ``src:*=sanitize``,
   ``type:*=sanitize``, ``fun:*=sanitize``, ``global:*=sanitize``,
   and ``mainfile:*=sanitize``.
 

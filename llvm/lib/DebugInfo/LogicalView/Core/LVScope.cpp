@@ -1717,11 +1717,19 @@ void LVScopeCompileUnit::print(raw_ostream &OS, bool Full) const {
 
 void LVScopeCompileUnit::printExtra(raw_ostream &OS, bool Full) const {
   OS << formattedKind(kind()) << " '" << getName() << "'\n";
-  if (options().getPrintFormatting() && options().getAttributeProducer())
-    printAttributes(OS, Full, "{Producer} ",
-                    const_cast<LVScopeCompileUnit *>(this), getProducer(),
-                    /*UseQuotes=*/true,
-                    /*PrintRef=*/false);
+  if (options().getPrintFormatting()) {
+    if (options().getAttributeProducer())
+      printAttributes(OS, Full, "{Producer} ",
+                      const_cast<LVScopeCompileUnit *>(this), getProducer(),
+                      /*UseQuotes=*/true,
+                      /*PrintRef=*/false);
+    if (options().getAttributeLanguage())
+      if (auto SL = getSourceLanguage(); SL.isValid())
+        printAttributes(OS, Full, "{Language} ",
+                        const_cast<LVScopeCompileUnit *>(this), SL.getName(),
+                        /*UseQuotes=*/true,
+                        /*PrintRef=*/false);
+  }
 
   // Reset file index, to allow its children to print the correct filename.
   options().resetFilenameIndex();

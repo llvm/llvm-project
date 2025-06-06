@@ -9,7 +9,6 @@ load("@rules_python//python:defs.bzl", "py_binary")
 load(
     ":libc_build_rules.bzl",
     "libc_function",
-    "libc_generated_header",
     "libc_header_library",
     "libc_math_function",
     "libc_support_library",
@@ -89,14 +88,6 @@ py_binary(
     srcs = glob(["utils/hdrgen/hdrgen/**/*.py"]),
     imports = ["utils/hdrgen"],
     main = "utils/hdrgen/hdrgen/main.py",
-    deps = ["@pyyaml//:yaml"],
-)
-
-libc_generated_header(
-    name = "include_stdbit_h",
-    hdr = "include/stdbit.h",
-    other_srcs = ["include/stdbit.h.def"],
-    yaml_template = "include/stdbit.yaml",
 )
 
 # Library containing all headers that can be transitively included by generated llvm-libc
@@ -4197,9 +4188,10 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_cpp_bitset",
+        ":__support_cpp_type_traits",
         ":__support_macros_optimization",
+        ":hdr_limits_macros",
         ":llvm_libc_types_size_t",
-        ":string_memory_utils",
         ":types_size_t",
     ],
 )
