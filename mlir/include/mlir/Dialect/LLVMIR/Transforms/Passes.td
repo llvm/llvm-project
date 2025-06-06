@@ -73,4 +73,23 @@ def DIScopeForLLVMFuncOpPass : Pass<"ensure-debug-info-scope-on-llvm-func", "::m
   ];
 }
 
+def FoldIntToPtrPtrToIntPass : Pass<"fold-llvm-inttoptr-ptrtoint", "LLVM::LLVMFuncOp"> {
+  let summary = "Fold inttoptr/ptrtoint operation sequences";
+  let description = [{
+    This pass folds sequences of inttoptr and ptrtoint operations that cancel
+    each other out. Specifically:
+      * inttoptr(ptrtoint(x)) -> x
+      * ptrtoint(inttoptr(x)) -> x
+
+    The pass takes a sequence of address space bitwidths to make sure folding
+    is safe. If the bitwidth information is not available for an address space,
+    the pass will not fold any operations involving that address space.
+  }];
+  let dependentDialects = ["LLVM::LLVMDialect"];
+  let options = [
+    ListOption<"addrSpaceBWs", "address-space-bitwidths", "unsigned",
+               "List of address space bitwidths sorted by associated index to each address space.">
+  ];
+}
+
 #endif // MLIR_DIALECT_LLVMIR_TRANSFORMS_PASSES

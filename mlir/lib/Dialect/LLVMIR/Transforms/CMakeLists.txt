@@ -4,6 +4,7 @@ add_mlir_dialect_library(MLIRLLVMIRTransforms
   DIExpressionRewriter.cpp
   DIScopeForLLVMFuncOp.cpp
   InlinerInterfaceImpl.cpp
+  IntToPtrPtrToIntFolding.cpp
   LegalizeForExport.cpp
   OptimizeForNVVM.cpp
   RequestCWrappers.cpp
