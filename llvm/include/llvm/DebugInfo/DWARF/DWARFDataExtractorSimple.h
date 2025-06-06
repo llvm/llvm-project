@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Non relocating, low-level dwarf-data extractor. Suitable for use from
-// libraries that cannot have build-time dependencies on relocation providers.
-
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFDATAEXTRACTORSIMPLE_H
 #define LLVM_DEBUGINFO_DWARF_DWARFDATAEXTRACTORSIMPLE_H
 
@@ -180,6 +177,9 @@ public:
     return Result;
   }
 };
+
+// Non relocating, low-level dwarf-data extractor. Suitable for use from
+// libraries that cannot have build-time dependencies on relocation providers.
 
 class DWARFDataExtractorSimple
     : public DWARFDataExtractorBase<DWARFDataExtractorSimple> {
