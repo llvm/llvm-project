@@ -86,6 +86,10 @@ NS_REQUIRES_PROPERTY_DEFINITIONS
 }
 @property(nonatomic, readonly, strong) NSString *prop_string1;
 @property(nonatomic, readonly, strong) NSString *prop_string2;
+@property(nonatomic, assign) NSString *prop_string3;
+// expected-warning@-1{{Property 'prop_string3' in 'NoSynthObject' is a raw pointer to retainable type 'NSString'; member variables must be a RetainPtr}}
+@property(nonatomic, unsafe_unretained) NSString *prop_string4;
+// expected-warning@-1{{Property 'prop_string4' in 'NoSynthObject' is a raw pointer to retainable type 'NSString'; member variables must be a RetainPtr}}
 @end
 
 @implementation NoSynthObject
@@ -93,4 +97,6 @@ NS_REQUIRES_PROPERTY_DEFINITIONS
   return nil;
 }
 @synthesize prop_string2;
+@synthesize prop_string3;
+@synthesize prop_string4;
 @end
