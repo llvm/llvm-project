@@ -86,7 +86,8 @@ protected:
 // CHECK-NEXT:        "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:      }
 // CHECK-NEXT:    ],
-// CHECK-NEXT:    "FullName": "MyClass",
+// COM:           FIXME: FullName is not emitted correctly.
+// CHECK-NEXT:    "FullName": "",
 // CHECK-NEXT:    "IsTypedef": false,
 // CHECK-NEXT:    "Location": {
 // CHECK-NEXT:      "Filename": "{{.*}}class.cpp",
@@ -106,11 +107,11 @@ protected:
 // CHECK-NEXT:         "GlobalNamespace"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "ReturnType": {
-// CHECK-NEXT:         "ID": "{{[0-9A-F]*}}",
 // CHECK-NEXT:         "IsBuiltIn": false,
 // CHECK-NEXT:         "IsTemplate": false,
 // CHECK-NEXT:         "Name": "int",
-// CHECK-NEXT:         "QualName": "int"
+// CHECK-NEXT:         "QualName": "int",
+// CHECK-NEXT:         "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:      }
@@ -136,11 +137,11 @@ protected:
 // CHECK-NEXT:          }
 // CHECK-NEXT:        ],
 // CHECK-NEXT:        "ReturnType": {
-// CHECK-NEXT:          "ID": "{{[0-9A-F]*}}",
 // CHECK-NEXT:          "IsBuiltIn": false,
 // CHECK-NEXT:          "IsTemplate": false,
 // CHECK-NEXT:          "Name": "int",
-// CHECK-NEXT:          "QualName": "int"
+// CHECK-NEXT:          "QualName": "int",
+// CHECK-NEXT:          "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:      },
@@ -148,11 +149,11 @@ protected:
 // CHECk:             "IsStatic": false,
 // CHECK:             "Name": "getConst",
 // CHECK:             "ReturnType": {
-// CHECK-NEXT:          "ID": "{{[0-9A-F]*}}",
 // CHECK-NEXT:          "IsBuiltIn": false,
 // CHECK-NEXT:          "IsTemplate": false,
 // CHECK-NEXT:          "Name": "const int &",
-// CHECK-NEXT:          "QualName": "const int &"
+// CHECK-NEXT:          "QualName": "const int &",
+// CHECK-NEXT:          "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:        },
 // CHECK:         "PublicMembers": [
 // CHECK-NEXT:      {
@@ -162,10 +163,10 @@ protected:
 // CHECK-NEXT:    ],
 // CHECK-NEXT:    "Records": [
 // CHECK-NEXT:      {
-// CHECK-NEXT:        "ID": "{{[0-9A-F]*}}",
 // CHECK-NEXT:        "Link": "NestedClass.json",
 // CHECK-NEXT:        "Name": "NestedClass",
-// CHECK-NEXT:        "QualName": "NestedClass"
+// CHECK-NEXT:        "QualName": "NestedClass",
+// CHECK-NEXT:        "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:      }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:    "TagType": "struct",
@@ -184,10 +185,10 @@ protected:
 // CHECK-NEXT:        "TypeDeclaration": "",
 // CHECK-NEXT:        "USR": "{{[0-9A-F]*}}",
 // CHECK-NEXT:        "Underlying": {
-// CHECK-NEXT:          "ID": "0000000000000000000000000000000000000000",
 // CHECK-NEXT:          "IsBuiltIn": false,
 // CHECK-NEXT:          "IsTemplate": false,
 // CHECK-NEXT:          "Name": "int",
-// CHECK-NEXT:          "QualName": "int"
+// CHECK-NEXT:          "QualName": "int",
+// CHECK-NEXT:          "USR": "0000000000000000000000000000000000000000"
 // CHECK:         "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:  }

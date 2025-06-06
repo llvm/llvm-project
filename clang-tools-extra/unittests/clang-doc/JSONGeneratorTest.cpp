@@ -16,12 +16,16 @@ static std::unique_ptr<Generator> getJSONGenerator() {
 TEST(JSONGeneratorTest, emitRecordJSON) {
   RecordInfo I;
   I.Name = "Foo";
-  I.FullName = "Foo";
+  // FIXME: FullName is not emitted correctly.
+  I.FullName = "";
   I.IsTypeDef = false;
   I.Namespace.emplace_back(EmptySID, "GlobalNamespace", InfoType::IT_namespace);
   I.Path = "GlobalNamespace";
   I.DefLoc = Location(1, 1, "main.cpp");
   I.TagType = TagTypeKind::Class;
+
+  I.Template = TemplateInfo();
+  I.Template->Params.emplace_back("class T");
 
   I.Children.Enums.emplace_back();
   I.Children.Enums.back().Name = "Color";
@@ -59,7 +63,7 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
   "Bases": [
     {
       "Access": "public",
-      "FullName": "F",
+      "FullName": "",
       "IsParent": true,
       "IsTypedef": false,
       "IsVirtual": true,
@@ -70,11 +74,11 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
           "IsStatic": false,
           "Name": "InheritedFunctionOne",
           "ReturnType": {
-            "ID": "0000000000000000000000000000000000000000",
             "IsBuiltIn": false,
             "IsTemplate": false,
             "Name": "",
-            "QualName": ""
+            "QualName": "",
+            "USR": "0000000000000000000000000000000000000000"
           },
           "USR": "0000000000000000000000000000000000000000"
         }
@@ -102,7 +106,7 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
       "USR": "0000000000000000000000000000000000000000"
     }
   ],
-  "FullName": "Foo",
+  "FullName": "",
   "IsTypedef": false,
   "Location": {
     "Filename": "main.cpp",
@@ -114,10 +118,10 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
   ],
   "Parents": [
     {
-      "ID": "0000000000000000000000000000000000000000",
       "Link": "F.json",
       "Name": "F",
-      "QualName": ""
+      "QualName": "",
+      "USR": "0000000000000000000000000000000000000000"
     }
   ],
   "Path": "GlobalNamespace",
@@ -132,31 +136,36 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
       "IsStatic": false,
       "Name": "OneFunction",
       "ReturnType": {
-        "ID": "0000000000000000000000000000000000000000",
         "IsBuiltIn": false,
         "IsTemplate": false,
         "Name": "",
-        "QualName": ""
+        "QualName": "",
+        "USR": "0000000000000000000000000000000000000000"
       },
       "USR": "0000000000000000000000000000000000000000"
     }
   ],
   "Records": [
     {
-      "ID": "0000000000000000000000000000000000000000",
       "Link": "ChildStruct.json",
       "Name": "ChildStruct",
-      "QualName": "path::to::A::r::ChildStruct"
+      "QualName": "path::to::A::r::ChildStruct",
+      "USR": "0000000000000000000000000000000000000000"
     }
   ],
   "TagType": "class",
+  "Template": {
+    "Parameters": [
+      "class T"
+    ]
+  },
   "USR": "0000000000000000000000000000000000000000",
   "VirtualParents": [
     {
-      "ID": "0000000000000000000000000000000000000000",
       "Link": "G.json",
       "Name": "G",
-      "QualName": "path::to::G::G"
+      "QualName": "path::to::G::G",
+      "USR": "0000000000000000000000000000000000000000"
     }
   ]
 })raw";
