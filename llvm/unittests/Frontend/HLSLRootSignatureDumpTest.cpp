@@ -233,4 +233,69 @@ TEST(HLSLRootSignatureTest, RootUAVDump) {
   EXPECT_EQ(Out, Expected);
 }
 
+TEST(HLSLRootSignatureTest, DefaultStaticSamplerDump) {
+  StaticSampler Sampler;
+  Sampler.Reg = {RegisterType::SReg, 0};
+
+  std::string Out;
+  llvm::raw_string_ostream OS(Out);
+  OS << Sampler;
+  OS.flush();
+
+  std::string Expected = "StaticSampler(s0, "
+                         "filter = Anisotropic, "
+                         "addressU = Wrap, "
+                         "addressV = Wrap, "
+                         "addressW = Wrap, "
+                         "mipLODBias = 0.000000e+00, "
+                         "maxAnisotropy = 16, "
+                         "comparisonFunc = LessEqual, "
+                         "borderColor = OpaqueWhite, "
+                         "minLOD = 0.000000e+00, "
+                         "maxLOD = 3.402823e+38, "
+                         "space = 0, "
+                         "visibility = All"
+                         ")";
+  EXPECT_EQ(Out, Expected);
+}
+
+TEST(HLSLRootSignatureTest, DefinedStaticSamplerDump) {
+  StaticSampler Sampler;
+  Sampler.Reg = {RegisterType::SReg, 0};
+
+  Sampler.Filter = SamplerFilter::ComparisonMinMagLinearMipPoint;
+  Sampler.AddressU = TextureAddressMode::Mirror;
+  Sampler.AddressV = TextureAddressMode::Border;
+  Sampler.AddressW = TextureAddressMode::Clamp;
+  Sampler.MipLODBias = 4.8f;
+  Sampler.MaxAnisotropy = 32;
+  Sampler.CompFunc = ComparisonFunc::NotEqual;
+  Sampler.BorderColor = StaticBorderColor::OpaqueBlack;
+  Sampler.MinLOD = 1.0f;
+  Sampler.MaxLOD = 32.0f;
+  Sampler.Space = 7;
+  Sampler.Visibility = ShaderVisibility::Domain;
+
+  std::string Out;
+  llvm::raw_string_ostream OS(Out);
+  OS << Sampler;
+  OS.flush();
+
+  std::string Expected = "StaticSampler(s0, "
+                         "filter = ComparisonMinMagLinearMipPoint, "
+                         "addressU = Mirror, "
+                         "addressV = Border, "
+                         "addressW = Clamp, "
+                         "mipLODBias = 4.800000e+00, "
+                         "maxAnisotropy = 32, "
+                         "comparisonFunc = NotEqual, "
+                         "borderColor = OpaqueBlack, "
+                         "minLOD = 1.000000e+00, "
+                         "maxLOD = 3.200000e+01, "
+                         "space = 7, "
+                         "visibility = Domain"
+                         ")";
+  EXPECT_EQ(Out, Expected);
+}
+
 } // namespace
