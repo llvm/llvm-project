@@ -48121,8 +48121,9 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   // Check if the first operand is all zeros and Cond type is vXi1.
   // If this an avx512 target we can improve the use of zero masking by
   // swapping the operands and inverting the condition.
-  if (N->getOpcode() == ISD::VSELECT && Cond.hasOneUse() &&
-      Subtarget.hasAVX512() && CondVT.getVectorElementType() == MVT::i1 &&
+  if (!DCI.isBeforeLegalize() && N->getOpcode() == ISD::VSELECT &&
+      Cond.hasOneUse() && Subtarget.hasAVX512() &&
+      CondVT.getVectorElementType() == MVT::i1 &&
       ISD::isBuildVectorAllZeros(LHS.getNode()) &&
       !ISD::isBuildVectorAllZeros(RHS.getNode())) {
     // Invert the cond to not(cond) : xor(op,allones)=not(op)
