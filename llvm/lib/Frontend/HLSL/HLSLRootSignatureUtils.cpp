@@ -71,6 +71,146 @@ static raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
+
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const SamplerFilter &Filter) {
+  switch (Filter) {
+  case SamplerFilter::MinMagMipPoint:
+    OS << "MinMagMipPoint";
+    break;
+  case SamplerFilter::MinMagPointMipLinear:
+    OS << "MinMagPointMipLinear";
+    break;
+  case SamplerFilter::MinPointMagLinearMipPoint:
+    OS << "MinPointMagLinearMipPoint";
+    break;
+  case SamplerFilter::MinPointMagMipLinear:
+    OS << "MinPointMagMipLinear";
+    break;
+  case SamplerFilter::MinLinearMagMipPoint:
+    OS << "MinLinearMagMipPoint";
+    break;
+  case SamplerFilter::MinLinearMagPointMipLinear:
+    OS << "MinLinearMagPointMipLinear";
+    break;
+  case SamplerFilter::MinMagLinearMipPoint:
+    OS << "MinMagLinearMipPoint";
+    break;
+  case SamplerFilter::MinMagMipLinear:
+    OS << "MinMagMipLinear";
+    break;
+  case SamplerFilter::Anisotropic:
+    OS << "Anisotropic";
+    break;
+  case SamplerFilter::ComparisonMinMagMipPoint:
+    OS << "ComparisonMinMagMipPoint";
+    break;
+  case SamplerFilter::ComparisonMinMagPointMipLinear:
+    OS << "ComparisonMinMagPointMipLinear";
+    break;
+  case SamplerFilter::ComparisonMinPointMagLinearMipPoint:
+    OS << "ComparisonMinPointMagLinearMipPoint";
+    break;
+  case SamplerFilter::ComparisonMinPointMagMipLinear:
+    OS << "ComparisonMinPointMagMipLinear";
+    break;
+  case SamplerFilter::ComparisonMinLinearMagMipPoint:
+    OS << "ComparisonMinLinearMagMipPoint";
+    break;
+  case SamplerFilter::ComparisonMinLinearMagPointMipLinear:
+    OS << "ComparisonMinLinearMagPointMipLinear";
+    break;
+  case SamplerFilter::ComparisonMinMagLinearMipPoint:
+    OS << "ComparisonMinMagLinearMipPoint";
+    break;
+  case SamplerFilter::ComparisonMinMagMipLinear:
+    OS << "ComparisonMinMagMipLinear";
+    break;
+  case SamplerFilter::ComparisonAnisotropic:
+    OS << "ComparisonAnisotropic";
+    break;
+  case SamplerFilter::MinimumMinMagMipPoint:
+    OS << "MinimumMinMagMipPoint";
+    break;
+  case SamplerFilter::MinimumMinMagPointMipLinear:
+    OS << "MinimumMinMagPointMipLinear";
+    break;
+  case SamplerFilter::MinimumMinPointMagLinearMipPoint:
+    OS << "MinimumMinPointMagLinearMipPoint";
+    break;
+  case SamplerFilter::MinimumMinPointMagMipLinear:
+    OS << "MinimumMinPointMagMipLinear";
+    break;
+  case SamplerFilter::MinimumMinLinearMagMipPoint:
+    OS << "MinimumMinLinearMagMipPoint";
+    break;
+  case SamplerFilter::MinimumMinLinearMagPointMipLinear:
+    OS << "MinimumMinLinearMagPointMipLinear";
+    break;
+  case SamplerFilter::MinimumMinMagLinearMipPoint:
+    OS << "MinimumMinMagLinearMipPoint";
+    break;
+  case SamplerFilter::MinimumMinMagMipLinear:
+    OS << "MinimumMinMagMipLinear";
+    break;
+  case SamplerFilter::MinimumAnisotropic:
+    OS << "MinimumAnisotropic";
+    break;
+  case SamplerFilter::MaximumMinMagMipPoint:
+    OS << "MaximumMinMagMipPoint";
+    break;
+  case SamplerFilter::MaximumMinMagPointMipLinear:
+    OS << "MaximumMinMagPointMipLinear";
+    break;
+  case SamplerFilter::MaximumMinPointMagLinearMipPoint:
+    OS << "MaximumMinPointMagLinearMipPoint";
+    break;
+  case SamplerFilter::MaximumMinPointMagMipLinear:
+    OS << "MaximumMinPointMagMipLinear";
+    break;
+  case SamplerFilter::MaximumMinLinearMagMipPoint:
+    OS << "MaximumMinLinearMagMipPoint";
+    break;
+  case SamplerFilter::MaximumMinLinearMagPointMipLinear:
+    OS << "MaximumMinLinearMagPointMipLinear";
+    break;
+  case SamplerFilter::MaximumMinMagLinearMipPoint:
+    OS << "MaximumMinMagLinearMipPoint";
+    break;
+  case SamplerFilter::MaximumMinMagMipLinear:
+    OS << "MaximumMinMagMipLinear";
+    break;
+  case SamplerFilter::MaximumAnisotropic:
+    OS << "MaximumAnisotropic";
+    break;
+  }
+
+  return OS;
+}
+
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const TextureAddressMode &Address) {
+  switch (Address) {
+  case TextureAddressMode::Wrap:
+    OS << "Wrap";
+    break;
+  case TextureAddressMode::Mirror:
+    OS << "Mirror";
+    break;
+  case TextureAddressMode::Clamp:
+    OS << "Clamp";
+    break;
+  case TextureAddressMode::Border:
+    OS << "Border";
+    break;
+  case TextureAddressMode::MirrorOnce:
+    OS << "MirrorOnce";
+    break;
+  }
+
+  return OS;
+}
+
 static raw_ostream &operator<<(raw_ostream &OS, const ClauseType &Type) {
   switch (Type) {
   case ClauseType::CBuffer:
@@ -253,6 +393,10 @@ raw_ostream &operator<<(raw_ostream &OS, const RootDescriptor &Descriptor) {
 
 raw_ostream &operator<<(raw_ostream &OS, const StaticSampler &Sampler) {
   OS << "StaticSampler(" << Sampler.Reg
+     << ", filter = " << Sampler.Filter
+     << ", addressU = " << Sampler.AddressU
+     << ", addressV = " << Sampler.AddressV
+     << ", addressW = " << Sampler.AddressW
      << ", mipLODBias = " << Sampler.MipLODBias
      << ", maxAnisotropy = " << Sampler.MaxAnisotropy
      << ", minLOD = " << Sampler.MinLOD
