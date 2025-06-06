@@ -2665,7 +2665,7 @@ define [4 x float] @constant_aggregate_zero() {
 
 define <vscale x 4 x float> @scalable_splat_pnorm() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define <vscale x 4 x float> @scalable_splat_pnorm
+; CHECK-LABEL: define noundef <vscale x 4 x float> @scalable_splat_pnorm
 ; CHECK-SAME: () #[[ATTR3]] {
 ; CHECK-NEXT:    ret <vscale x 4 x float> splat (float 1.000000e+00)
 ;
