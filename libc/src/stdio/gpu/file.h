@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/RPC/rpc_client.h"
+#include "src/__support/common.h"
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/string/string_utils.h"
 
