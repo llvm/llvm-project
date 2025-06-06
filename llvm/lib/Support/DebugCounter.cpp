@@ -174,7 +174,7 @@ void DebugCounter::push_back(const std::string &Val) {
     return;
 #ifdef NDEBUG
   // isCountingEnabled is hardcoded to false in NDEBUG.
-  errs() << "Requested --debug-counter in non-debug LLVM build. This is a "
+  errs() << "Requested --debug-counter in LLVM build without assertions. This is a "
             "no-op.\n";
 #endif
 
