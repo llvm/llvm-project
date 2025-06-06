@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// REQUIRES: std-at-least-c++20
 
 // ITER_TRAITS(I)
 
@@ -14,7 +14,7 @@
 // a specialization generated from the primary template. Otherwise,
 // ITER_TRAITS(I) denotes iterator_traits<I>.
 
-#include <iterator>
+#include <__iterator/concepts.h>
 #include <type_traits>
 
 #include "test_iterators.h"
@@ -27,8 +27,8 @@ template<> struct std::iterator_traits<B> {};
 template<> struct std::iterator_traits<C> : std::iterator_traits<A> {};
 template<> struct std::iterator_traits<D> : std::iterator_traits<int*> {};
 
-static_assert(std::is_same<std::_ITER_TRAITS<int*>, std::iterator_traits<int*>>::value, "");
-static_assert(std::is_same<std::_ITER_TRAITS<A>, A>::value, "");
-static_assert(std::is_same<std::_ITER_TRAITS<B>, std::iterator_traits<B>>::value, "");
-static_assert(std::is_same<std::_ITER_TRAITS<C>, std::iterator_traits<C>>::value, "");
-static_assert(std::is_same<std::_ITER_TRAITS<D>, std::iterator_traits<D>>::value, "");
+static_assert(std::is_same<std::_ITER_TRAITS<int*>, std::iterator_traits<int*>>::value);
+static_assert(std::is_same<std::_ITER_TRAITS<A>, A>::value);
+static_assert(std::is_same<std::_ITER_TRAITS<B>, std::iterator_traits<B>>::value);
+static_assert(std::is_same<std::_ITER_TRAITS<C>, std::iterator_traits<C>>::value);
+static_assert(std::is_same<std::_ITER_TRAITS<D>, std::iterator_traits<D>>::value);
