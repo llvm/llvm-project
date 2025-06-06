@@ -39,11 +39,11 @@ def Ptr_FromPtrOp : Pointer_Op<"from_ptr", [
     Example:
 
     ```mlir
-    %typed_ptr = ptr.from_ptr %ptr : !ptr.ptr<0> -> !my.ptr<f32, 0>
-    %memref = ptr.from_ptr %ptr metadata %md : !ptr.ptr<0> -> memref<f32, 0>
+    %typed_ptr = ptr.from_ptr %ptr : !ptr.ptr<#ptr.generic_space> -> !my.ptr<f32, #ptr.generic_space>
+    %memref = ptr.from_ptr %ptr metadata %md : !ptr.ptr<#ptr.generic_space> -> memref<f32, #ptr.generic_space>
   
     // Cast the `%ptr` to a memref without utilizing metadata.
-    %memref = ptr.from_ptr %ptr : !ptr.ptr<0> -> memref<f32, 0>
+    %memref = ptr.from_ptr %ptr : !ptr.ptr<#ptr.generic_space> -> memref<f32, #ptr.generic_space>
     ```
   }];
 
@@ -98,8 +98,8 @@ def Ptr_PtrAddOp : Pointer_Op<"ptr_add", [
     Example:
 
     ```mlir
-    %x_off  = ptr.ptr_add %x, %off : !ptr.ptr<0>, i32
-    %x_off0 = ptr.ptr_add nusw %x, %off : !ptr.ptr<0>, i32
+    %x_off  = ptr.ptr_add %x, %off : !ptr.ptr<#ptr.generic_space>, i32
+    %x_off0 = ptr.ptr_add nusw %x, %off : !ptr.ptr<#ptr.generic_space>, i32
     ```
   }];
 
@@ -134,8 +134,8 @@ def Ptr_ToPtrOp : Pointer_Op<"to_ptr", [Pure]> {
     Example:
 
     ```mlir
-    %ptr0 = ptr.to_ptr %my_ptr : !my.ptr<f32, 0> -> !ptr.ptr<0>
-    %ptr1 = ptr.to_ptr %memref : memref<f32, 0> -> !ptr.ptr<0>
+    %ptr0 = ptr.to_ptr %my_ptr : !my.ptr<f32, #ptr.generic_space> -> !ptr.ptr<#ptr.generic_space>
+    %ptr1 = ptr.to_ptr %memref : memref<f32, #ptr.generic_space> -> !ptr.ptr<#ptr.generic_space>
     ```
   }];
 
