@@ -4188,9 +4188,10 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_cpp_bitset",
+        ":__support_cpp_type_traits",
         ":__support_macros_optimization",
+        ":hdr_limits_macros",
         ":llvm_libc_types_size_t",
-        ":string_memory_utils",
         ":types_size_t",
     ],
 )

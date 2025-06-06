@@ -11040,8 +11040,7 @@ SDValue AArch64TargetLowering::LowerSETCCCARRY(SDValue Op,
 static SDValue emitVectorComparison(SDValue LHS, SDValue RHS,
                                     AArch64CC::CondCode CC, bool NoNans, EVT VT,
                                     const SDLoc &DL, SelectionDAG &DAG) {
-  EVT SrcVT = LHS.getValueType();
-  assert(VT.getSizeInBits() == SrcVT.getSizeInBits() &&
+  assert(VT.getSizeInBits() == LHS.getValueType().getSizeInBits() &&
          "function only supposed to emit natural comparisons");
 
   switch (CC) {
@@ -24667,6 +24666,19 @@ static SDValue performBRCONDCombine(SDNode *N,
   unsigned CC = CCVal->getAsZExtVal();
   if (CC != AArch64CC::EQ && CC != AArch64CC::NE)
     return SDValue();
+
+  // Fold away brcond(NE, cmp(csel(1, 0, CC, Cmp), 1)) -> brcond(~CC, Cmp)
+  if (isCMP(Cmp) && CC == AArch64CC::NE && isOneConstant(Cmp.getOperand(1))) {
+    SDValue CSel = Cmp.getOperand(0);
+    auto CSelCC = getCSETCondCode(CSel);
+    if (CSelCC) {
+      SDLoc DL(N);
+      return DAG.getNode(
+          N->getOpcode(), DL, N->getVTList(), Chain, Dest,
+          DAG.getConstant(getInvertedCondCode(*CSelCC), DL, MVT::i32),
+          CSel.getOperand(3));
+    }
+  }
 
   unsigned CmpOpc = Cmp.getOpcode();
   if (CmpOpc != AArch64ISD::ADDS && CmpOpc != AArch64ISD::SUBS)
