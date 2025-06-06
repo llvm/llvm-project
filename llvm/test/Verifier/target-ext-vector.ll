@@ -8,13 +8,13 @@ define <2 x target("llvm.test.vectorelement")> @vec_ops(<2 x target("llvm.test.v
 ; CHECK-NEXT:    store <2 x target("llvm.test.vectorelement")> [[X]], ptr [[A]], {{.*}}
 ; CHECK-NEXT:    [[LOAD:%.*]] = load <2 x target("llvm.test.vectorelement")>, ptr [[A]], {{.*}}
 ; CHECK-NEXT:    [[ELT:%.*]] = extractelement <2 x target("llvm.test.vectorelement")> [[LOAD]], i64 0
-; CHECK-NEXT:    [[RES:%.*]] = insertelement <2 x target("llvm.test.vectorelement")> undef, target("llvm.test.vectorelement") [[ELT]], i64 1
+; CHECK-NEXT:    [[RES:%.*]] = insertelement <2 x target("llvm.test.vectorelement")> poison, target("llvm.test.vectorelement") [[ELT]], i64 1
 ; CHECK-NEXT:    ret <2 x target("llvm.test.vectorelement")> [[RES]]
 ;
   %a = alloca <2 x target("llvm.test.vectorelement")>
   store <2 x target("llvm.test.vectorelement")> %x, ptr %a
   %load = load <2 x target("llvm.test.vectorelement")>, ptr %a
   %elt = extractelement <2 x target("llvm.test.vectorelement")> %load, i64 0
-  %res = insertelement <2 x target("llvm.test.vectorelement")> undef, target("llvm.test.vectorelement") %elt, i64 1
+  %res = insertelement <2 x target("llvm.test.vectorelement")> poison, target("llvm.test.vectorelement") %elt, i64 1
   ret <2 x target("llvm.test.vectorelement")> %res
 }

@@ -794,8 +794,7 @@ bool VectorType::isValidElementType(Type *ElemTy) {
       ElemTy->isPointerTy() || ElemTy->getTypeID() == TypedPointerTyID)
     return true;
   if (auto *TTy = dyn_cast<TargetExtType>(ElemTy))
-    return TTy->hasProperty(TargetExtType::CanBeVectorElement) &&
-           TTy->isSized();
+    return TTy->hasProperty(TargetExtType::CanBeVectorElement);
   return false;
 }
 
@@ -974,7 +973,10 @@ struct TargetTypeInfo {
 
   template <typename... ArgTys>
   TargetTypeInfo(Type *LayoutType, ArgTys... Properties)
-      : LayoutType(LayoutType), Properties((0 | ... | Properties)) {}
+      : LayoutType(LayoutType), Properties((0 | ... | Properties)) {
+    if (this->Properties & TargetExtType::CanBeVectorElement)
+      assert(LayoutType->isSized() && "Vector element type must be sized");
+  }
 };
 } // anonymous namespace
 
@@ -1044,7 +1046,7 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
   }
 
   // Type used to test vector element target extension property.
-  // Can be removed once a public target extension type uses CanBeVectorElement
+  // Can be removed once a public target extension type uses CanBeVectorElement.
   if (Name == "llvm.test.vectorelement") {
     return TargetTypeInfo(Type::getInt32Ty(C), TargetExtType::CanBeLocal,
                           TargetExtType::CanBeVectorElement);
