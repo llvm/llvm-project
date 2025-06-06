@@ -66,11 +66,15 @@ class TestStopHooks(TestBase):
 
     def test_stop_hooks_scripted_right_lines(self):
         """Test that a scripted stop hook fires when there is a function match"""
-        self.stop_hooks_scripted(5, "-I 0 -f main.c -l 1 -e %d" % (self.main_start_line))
+        self.stop_hooks_scripted(
+            5, "-I 0 -f main.c -l 1 -e %d" % (self.main_start_line)
+        )
 
     def test_stop_hooks_scripted_wrong_lines(self):
         """Test that a scripted stop hook doesn't fire when the function does not match"""
-        self.stop_hooks_scripted(0, "-I 0 -f main.c -l %d -e 100" % (self.main_start_line))
+        self.stop_hooks_scripted(
+            0, "-I 0 -f main.c -l %d -e 100" % (self.main_start_line)
+        )
 
     def test_stop_hooks_scripted_auto_continue(self):
         """Test that the --auto-continue flag works"""
