@@ -29,11 +29,9 @@ namespace opts {
 extern cl::OptionCategory BoltCategory;
 extern llvm::cl::opt<unsigned> Verbosity;
 
-static cl::opt<bool>
-DumpData("dump-data",
-  cl::desc("dump parsed bolt data for debugging"),
-  cl::Hidden,
-  cl::cat(BoltCategory));
+cl::opt<bool> DumpData("dump-data",
+                       cl::desc("dump parsed bolt data for debugging"),
+                       cl::Hidden, cl::cat(BoltCategory));
 
 } // namespace opts
 
@@ -1353,35 +1351,35 @@ bool DataReader::hasLocalsWithFileName() const {
 }
 
 void DataReader::dump() const {
-  for (const auto &KV : NamesToBranches) {
-    const StringRef Name = KV.first;
-    const FuncBranchData &FBD = KV.second;
-    Diag << Name << " branches:\n";
-    for (const BranchInfo &BI : FBD.Data)
+  for (const auto &[Name, FBD] : NamesToBranches) {
+    Diag << Name << ": " << FBD.Data.size() << " branches:\n";
+    size_t Branches = 0;
+    size_t EntryCount = 1;
+    for (const BranchInfo &BI : FBD.Data) {
       Diag << BI.From.Name << " " << BI.From.Offset << " " << BI.To.Name << " "
            << BI.To.Offset << " " << BI.Mispreds << " " << BI.Branches << "\n";
-    Diag << Name << " entry points:\n";
-    for (const BranchInfo &BI : FBD.EntryData)
+      Branches += BI.Branches;
+    }
+    Diag << Name << ": " << FBD.EntryData.size() << " entry points:\n";
+    for (const BranchInfo &BI : FBD.EntryData) {
       Diag << BI.From.Name << " " << BI.From.Offset << " " << BI.To.Name << " "
            << BI.To.Offset << " " << BI.Mispreds << " " << BI.Branches << "\n";
+      EntryCount += BI.Branches;
+    }
+    Diag << Name << " branches/entry: " << 1.0 * Branches / EntryCount << '\n';
   }
 
-  for (auto I = EventNames.begin(), E = EventNames.end(); I != E; ++I) {
-    StringRef Event = I->getKey();
+  for (StringRef Event : EventNames.keys())
     Diag << "Data was collected with event: " << Event << "\n";
-  }
-  for (const auto &KV : NamesToBasicSamples) {
-    const StringRef Name = KV.first;
-    const FuncBasicSampleData &FSD = KV.second;
-    Diag << Name << " samples:\n";
+
+  for (const auto &[Name, FSD] : NamesToBasicSamples) {
+    Diag << Name << ": " << FSD.Data.size() << " basic samples:\n";
     for (const BasicSampleInfo &SI : FSD.Data)
       Diag << SI.Loc.Name << " " << SI.Loc.Offset << " " << SI.Hits << "\n";
   }
 
-  for (const auto &KV : NamesToMemEvents) {
-    const StringRef Name = KV.first;
-    const FuncMemData &FMD = KV.second;
-    Diag << "Memory events for " << Name;
+  for (const auto &[Name, FMD] : NamesToMemEvents) {
+    Diag << Name << ": " << FMD.Data.size() << " memory events:\n";
     Location LastOffset(0);
     for (const MemInfo &MI : FMD.Data) {
       if (MI.Offset == LastOffset)
