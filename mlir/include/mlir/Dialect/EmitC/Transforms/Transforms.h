@@ -28,6 +28,12 @@ ExpressionOp createExpression(Operation *op, OpBuilder &builder);
 /// Populates `patterns` with expression-related patterns.
 void populateExpressionPatterns(RewritePatternSet &patterns);
 
+//===----------------------------------------------------------------------===//
+// Convert Func to Class Transform
+//===----------------------------------------------------------------------===//
+
+ClassOp createClass(FuncOp funcOp, OpBuilder &builder);
+
 } // namespace emitc
 } // namespace mlir
 

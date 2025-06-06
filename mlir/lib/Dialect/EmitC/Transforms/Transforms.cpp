@@ -43,6 +43,83 @@ ExpressionOp createExpression(Operation *op, OpBuilder &builder) {
   return expressionOp;
 }
 
+ClassOp createClass(FuncOp funcOp, OpBuilder &builder) {
+  builder.setInsertionPoint(funcOp);
+
+  // 2. Create the class
+  auto classOp = builder.create<emitc::ClassOp>(
+      funcOp.getLoc(), builder.getStringAttr("MyModelClass"));
+
+  // Create a block inside the class body and set insertion point
+  builder.createBlock(&classOp.getBody());
+  builder.setInsertionPointToStart(&classOp.getBody().front());
+
+  // 3. Extract input/output names from function arguments
+  SmallVector<std::pair<StringRef, Type>> fields;
+  llvm::SmallDenseMap<Value, Value> argToFieldMap;
+
+  auto argAttrs = funcOp.getArgAttrs();
+  if (argAttrs) {
+    for (const auto [arg, val] : zip(*argAttrs, funcOp.getArguments())) {
+      if (auto da = dyn_cast<mlir::DictionaryAttr>(arg)) {
+        auto nv = da.getNamed("tf_saved_model.index_path")->getValue();
+        auto fieldName = cast<mlir::StringAttr>(cast<mlir::ArrayAttr>(nv)[0]);
+        auto fieldType = emitc::LValueType::get(emitc::PointerType::get(
+            dyn_cast_or_null<emitc::ArrayType>(val.getType())
+                .getElementType()));
+        fields.push_back({fieldName.str(), fieldType});
+
+        // 4.Create the class fields
+        auto typeAttr = TypeAttr::get(val.getType());
+        mlir::Attribute emptyAttr = builder.getAttr<mlir::UnitAttr>();
+        auto dictAttr = DictionaryAttr::get(
+            builder.getContext(),
+            {builder.getNamedAttr(fieldName.str(), emptyAttr)});
+        builder.create<emitc::FieldOp>(funcOp.getLoc(), fieldName, typeAttr,
+                                       /* attributes*/ dictAttr);
+        // 5. Get the pointers to the class fields
+        auto pointer = emitc::PointerType::get(
+            dyn_cast_or_null<emitc::ArrayType>(val.getType()).getElementType());
+        auto ptr = builder.create<emitc::GetFieldOp>(
+            funcOp.getLoc(), pointer, val, "MyModelClass", fieldName);
+        argToFieldMap[val] = ptr;
+      }
+    }
+  }
+
+  // Create the new function inside the class
+  auto funcContext = funcOp.getContext();
+  auto inputTypes = funcOp.getFunctionType().getInputs();
+  auto results = funcOp.getFunctionType().getResults();
+  auto funcType = FunctionType::get(funcContext, inputTypes, results);
+  auto loc = funcOp.getLoc();
+  auto newFuncOp = builder.create<emitc::FuncOp>(
+      loc, builder.getStringAttr("execute"), funcType);
+
+  builder.createBlock(&newFuncOp.getBody());
+  builder.setInsertionPointToStart(&newFuncOp.getBody().front());
+
+  // 7. Remap original arguments to field pointers
+  IRMapping mapper;
+
+  // 8. move or clone operations from original function
+  auto body = llvm::make_early_inc_range(funcOp.getBody().front());
+  for (Operation &opToClone : body) {
+    if (isa<emitc::ConstantOp>(opToClone) ||
+        isa<emitc::SubscriptOp>(opToClone) || isa<emitc::LoadOp>(opToClone) ||
+        isa<emitc::AddOp>(opToClone) || isa<emitc::AssignOp>(opToClone) ||
+        isa<emitc::ReturnOp>(opToClone)) {
+      builder.clone(opToClone, mapper);
+    } else {
+      opToClone.emitOpError("Unsupported operation found");
+    }
+  }
+
+  // if (funcOp->use_empty()) funcOp->erase();
+
+  return classOp;
+}
+
 } // namespace emitc
 } // namespace mlir
 

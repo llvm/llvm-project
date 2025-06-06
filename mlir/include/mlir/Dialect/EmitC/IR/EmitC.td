@@ -1572,4 +1572,120 @@ def EmitC_SwitchOp : EmitC_Op<"switch", [RecursiveMemoryEffects,
   let hasVerifier = 1;
 }
 
+def EmitC_ClassOp : EmitC_Op<"class", [AutomaticAllocationScope,
+                                       IsolatedFromAbove, OpAsmOpInterface]> {
+  let summary =
+      "Represents a C++ class definition, encapsulating fields and methods.";
+
+  let description = [{
+    The `emitc.class` operation defines a C++ class, acting as a container
+    for its data fields (`emitc.variable`) and methods (`emitc.func`).
+    It creates a distinct scope, isolating its contents from the surrounding
+    MLIR region, similar to how C++ classes encapsulate their internals.
+
+    Example:
+    ```mlir
+    emitc.class @MyModelClass {
+        emitc.field @another_feature : !emitc.lvalue<!emitc.ptr<f32>>
+        emitc.field @some_feature : !emitc.lvalue<!emitc.ptr<f32>>
+        emitc.field @output_0 : !emitc.lvalue<!emitc.ptr<f32>>
+
+        emitc.func @main() attributes {tf.entry_function = {inputs = "serving_default_another_feature:0,serving_default_some_feature:0", outputs = "PartitionedCall:0"}, tf_saved_model.exported_names = ["serving_default"]} {
+          %c0 = "emitc.constant"() <{value = 0 : index}> : () -> !emitc.size_t
+
+          %some_ptr = emitc.get_field %self : @MyModelClass, @some_feature -> !emitc.ptr<f32>
+          %another_ptr = emitc.get_field %self : @MyModelClass, @another_feature -> !emitc.ptr<f32>
+          %output_ptr = emitc.get_field %self : @MyModelClass, @output_0 -> !emitc.ptr<f32>
+
+          %v1 = subscript %some_ptr[%c0] : (!emitc.ptr<f32>, !emitc.size_t) -> !emitc.lvalue<f32>
+          %v1_val = load %v1 : !emitc.lvalue<f32> -> f32
+
+          %v2 = subscript %another_ptr[%c0] : (!emitc.ptr<f32>, !emitc.size_t) -> !emitc.lvalue<f32>
+          %v2_val = load %v2 : !emitc.lvalue<f32> -> f32
+
+          %v3_val = add %v1_val, %v2_val : (f32, f32) -> f32
+
+          %output_lvalue = subscript %output_ptr[%c0] : (!emitc.ptr<f32>, !emitc.size_t) -> !emitc.lvalue<f32>
+          assign %v3_val, %output_lvalue : (f32, !emitc.lvalue<f32>) -> ()
+
+          return
+        }
+      }
+    }
+
+    ```
+  }];
+
+  let arguments = (ins SymbolNameAttr:$sym_name);
+
+  let regions = (region AnyRegion:$body);
+
+  let builders = [];
+
+  let extraClassDeclaration = [{
+    // Returns the body block containing class members and methods.
+    Block &getBlock();
+  }];
+
+  let hasCustomAssemblyFormat = 1;
+
+  let assemblyFormat = "`class` $sym_name attr-dict-with-keyword $body";
+}
+
+def EmitC_FieldOp : EmitC_Op<"field", [Symbol]> {
+  let summary = "A field within a class";
+  let description = [{
+    The `emitc.field` operation declares a named field within an `emitc.class`
+    operation. The field's type must be an EmitC type. An optional initial value can be provided.
+
+    Example with initial values:
+
+    ```mlir
+    emitc.class @MyModelClass {
+      emitc.field @another_feature : !emitc.lvalue<!emitc.ptr<f32>> = #emitc.value<0.0> : !emitc.f32
+      emitc.field @some_feature : !emitc.lvalue<!emitc.ptr<f32>> = #emitc.value<1.0> : !emitc.f32
+      emitc.field @output_0 : !emitc.lvalue<!emitc.ptr<f32>>
+    }
+    ```
+    Example without initial value:
+    ```mlir
+    emitc.class @MyModelClass {
+      emitc.field @another_feature : !emitc.lvalue<!emitc.ptr<f32>>
+    }
+    ```
+  }];
+
+  let arguments = (ins SymbolNameAttr:$sym_name, TypeAttr:$type,
+      OptionalAttr<AnyAttr>:$initial_value);
+
+  let assemblyFormat = "$sym_name `:` $type (`=` $initial_value^)? attr-dict";
+
+  let hasVerifier = 1;
+}
+
+def EmitC_GetFieldOp
+    : EmitC_Op<"get_field", [Pure, DeclareOpInterfaceMethods<
+                                       SymbolUserOpInterface>]> {
+  let summary = "Obtain access to a field within a class instance";
+  let description = [{
+     The `emitc.get_field` operation retrieves the lvalue of a
+     named field from a given class instance.
+
+     Example:
+
+     ```mlir
+     %some_ptr = emitc.get_field %self : @MyModelClass, @some_feature -> !emitc.ptr<f32>
+     %another_ptr = emitc.get_field %self : @MyModelClass, @another_feature -> !emitc.ptr<f32>
+     %output_ptr = emitc.get_field %self : @MyModelClass, @output_0 -> !emitc.ptr<f32>
+     ```
+  }];
+
+  let arguments = (ins AnyTypeOf<[EmitC_LValueType, EmitC_PointerType]>:$base,
+      FlatSymbolRefAttr:$class_name, FlatSymbolRefAttr:$field_name);
+
+  let results = (outs AnyTypeOf<[EmitC_LValueType, EmitC_PointerType]>:$result);
+  let assemblyFormat = "$base `:` type($base) $class_name `,` $field_name `->` "
+                       "type($result) attr-dict";
+}
+
 #endif // MLIR_DIALECT_EMITC_IR_EMITC
