@@ -1475,10 +1475,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setMinimumJumpTableEntries(PPCMinimumJumpTableEntries);
 
   setMinFunctionAlignment(Align(4));
-  if (Subtarget.hasPartwordAtomics())
-    setMinCmpXchgSizeInBits(8);
-  else
-    setMinCmpXchgSizeInBits(32);
+  setMinCmpXchgSizeInBits(Subtarget.hasPartwordAtomics() ? 8 : 32);
 
   switch (Subtarget.getCPUDirective()) {
   default: break;
@@ -12739,12 +12736,12 @@ Value *PPCTargetLowering::emitStoreConditional(IRBuilderBase &Builder,
   }
 
   if (SZ == 8 || SZ == 16)
-    Val = Builder.CreateZExt(Val, Builder.getIntNTy(32));;
+    Val = Builder.CreateZExt(Val, Builder.getInt32Ty());
+  ;
 
   Value *Call = Builder.CreateIntrinsic(IntID, {Addr, Val},
                                         /*FMFSource=*/nullptr, "stcx");
-  Value *Not = Builder.CreateXor(Call,Builder.getInt32(1));
-  return Not;
+  return Builder.CreateXor(Call, Builder.getInt32(1));
 }
 
 // The mappings for emitLeading/TrailingFence is taken from

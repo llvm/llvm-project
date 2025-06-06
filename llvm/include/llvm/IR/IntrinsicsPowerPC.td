@@ -1837,16 +1837,16 @@ let TargetPrefix = "ppc" in {
                               Intrinsic<[],[],[]>;
   def int_ppc_lbarx :
     Intrinsic<[llvm_i32_ty], [llvm_ptr_ty],
-              [IntrReadMem, IntrArgMemOnly, IntrNoDuplicate]>;
+              [IntrReadMem, IntrArgMemOnly]>;
   def int_ppc_lharx :
     Intrinsic<[llvm_i32_ty],[llvm_ptr_ty],
-              [IntrReadMem, IntrArgMemOnly, IntrNoDuplicate]>;
+              [IntrReadMem, IntrArgMemOnly]>;
   def int_ppc_lwarx :
     Intrinsic<[llvm_i32_ty], [llvm_ptr_ty],
-              [IntrReadMem, IntrArgMemOnly, IntrNoDuplicate]>;
+              [IntrReadMem, IntrArgMemOnly]>;
   def int_ppc_ldarx :
     Intrinsic<[llvm_i64_ty],[llvm_ptr_ty],
-              [IntrReadMem, IntrArgMemOnly, IntrNoDuplicate]>;
+              [IntrReadMem, IntrArgMemOnly]>;
 
   def int_ppc_stdcx :
     ClangBuiltin<"__builtin_ppc_stdcx">,
