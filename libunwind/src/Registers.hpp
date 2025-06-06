@@ -1829,6 +1829,8 @@ class _LIBUNWIND_HIDDEN Registers_arm64 {
   struct GPRs;
 
 private:
+#define PAC_DISCRIMINATOR ((uint16_t)0xFACEU)
+
 #if defined(_LIBUNWIND_AARCH64_PC_PROTECTION)
   /// The program counter is effectively used as a return address when the
   /// context is restored; therefore, it should be protected with PAC to prevent
@@ -1901,14 +1903,13 @@ private:
         __libunwind_ptrauth_auth_data(pointer, oldKey, oldDiscriminator),
         newKey, newDiscriminator);
   }
-#define __libunwind_ptrauth_blend_discriminator(__ptr, __data)                 \
-  ptrauth_blend_discriminator(__ptr, __data)
-#endif
   inline uint64_t
-  __libunwind_ptrauth_blend_discriminator(uint64_t __ptr,
+  __libunwind_ptrauth_blend_discriminator(const void *__ptr,
                                           uint16_t __data) const {
-    return (__ptr & (~0 >> 16)) | ((uint64_t)__data << 48);
+    return (reinterpret_cast<uint64_t>(__ptr) & (~0 >> 16)) |
+           ((uint64_t)__data << 48);
   }
+#endif
   // Authenticate the currently stored PC and return it's raw value.
   inline uint64_t authPC(const struct GPRs *gprs,
                          uint64_t discriminator) const {
@@ -1920,7 +1921,7 @@ private:
   }
 
   // Sign and store the new PC.
-  inline void updatePC(uint64_t value) {
+  inline void updatePC(uint64_t value) __attribute__((always_inline)) {
     _registers.__pc = (uint64_t)__libunwind_ptrauth_sign_unauthenticated(
         (void *)(value & (((uint64_t)~0) >> 32)), ptrauth_key_asia,
         getDiscriminator());
@@ -1940,7 +1941,7 @@ private:
   }
 #else //! defined(_LIBUNWIND_AARCH64_PC_PROTECTION))
   inline uint64_t
-  __libunwind_ptrauth_blend_discriminator(uint64_t __ptr,
+  __libunwind_ptrauth_blend_discriminator(const void *__ptr,
                                           uint16_t __data) const {
     (void)__data;
     return __ptr;
@@ -1956,8 +1957,7 @@ private:
 #endif
 
   inline uint64_t getDiscriminator() const {
-    return __libunwind_ptrauth_blend_discriminator(
-        reinterpret_cast<uint64_t>(this), 0xface);
+    return __libunwind_ptrauth_blend_discriminator(this, PAC_DISCRIMINATOR);
   }
 
 public:
@@ -2030,8 +2030,8 @@ inline Registers_arm64::Registers_arm64(const void *registers) {
                 "expected VFP registers to be at offset 272");
 #endif
   // getcontext signs the PC with the base address of the context.
-  resignPC(__libunwind_ptrauth_blend_discriminator(
-      reinterpret_cast<uint64_t>(registers), 0xface));
+  resignPC(
+      __libunwind_ptrauth_blend_discriminator(registers, PAC_DISCRIMINATOR));
   memcpy(_vectorHalfRegisters,
          static_cast<const uint8_t *>(registers) + sizeof(GPRs),
          sizeof(_vectorHalfRegisters));
