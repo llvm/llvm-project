@@ -611,8 +611,7 @@ static SourceLanguage MapDWLangToCVLang(unsigned DWLang) {
 }
 
 void CodeViewDebug::beginModule(Module *M) {
-  // If module doesn't have named metadata anchors or COFF debug section
-  // is not available, skip any debug info related stuff.
+  // If COFF debug section is not available, skip any debug info related stuff.
   if (!Asm->getObjFileLowering().getCOFFDebugSymbolsSection()) {
     Asm = nullptr;
     return;
@@ -633,9 +632,9 @@ void CodeViewDebug::beginModule(Module *M) {
   const auto *CU = cast<DICompileUnit>(Node);
 
   CurrentSourceLanguage = MapDWLangToCVLang(CU->getSourceLanguage());
-  NoDebug =
+  OnlyCompilerInfo =
       !M->getCodeViewFlag() || CU->getEmissionKind() == DICompileUnit::NoDebug;
-  if (NoDebug)
+  if (OnlyCompilerInfo)
     return;
 
   collectGlobalVariableInfo();
@@ -663,7 +662,7 @@ void CodeViewDebug::endModule() {
   emitObjName();
   emitCompilerInformation();
   endCVSubsection(CompilerInfo);
-  if (NoDebug)
+  if (OnlyCompilerInfo)
     return;
 
   emitInlineeLinesSubsection();
@@ -1453,7 +1452,7 @@ void CodeViewDebug::collectVariableInfo(const DISubprogram *SP) {
 }
 
 void CodeViewDebug::beginFunctionImpl(const MachineFunction *MF) {
-  if (NoDebug)
+  if (OnlyCompilerInfo)
     return;
 
   const TargetSubtargetInfo &TSI = MF->getSubtarget();
@@ -3047,7 +3046,7 @@ void CodeViewDebug::collectLexicalBlockInfo(
 }
 
 void CodeViewDebug::endFunctionImpl(const MachineFunction *MF) {
-  if (NoDebug)
+  if (OnlyCompilerInfo)
     return;
 
   const Function &GV = MF->getFunction();
@@ -3108,7 +3107,7 @@ static bool isUsableDebugLoc(DebugLoc DL) {
 
 void CodeViewDebug::beginInstruction(const MachineInstr *MI) {
   DebugHandlerBase::beginInstruction(MI);
-  if (NoDebug)
+  if (OnlyCompilerInfo)
     return;
 
   // Ignore DBG_VALUE and DBG_LABEL locations and function prologue.

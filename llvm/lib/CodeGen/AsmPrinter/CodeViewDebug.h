@@ -99,7 +99,7 @@ private:
   codeview::CPUType TheCPU;
 
   /// Whether to emit compiler information only.
-  bool NoDebug = false;
+  bool OnlyCompilerInfo = false;
 
   static LocalVarDef createDefRangeMem(uint16_t CVRegister, int Offset);
 

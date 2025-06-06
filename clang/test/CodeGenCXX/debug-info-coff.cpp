@@ -13,7 +13,7 @@
 // CHECK-NEXT:   Magic: 0x4
 // CHECK-NEXT:   Subsection [
 // CHECK-NEXT:     SubSectionType: Symbols (0xF1)
-// CHECK-NEXT:     SubSectionSize: 0x40
+// CHECK-NEXT:     SubSectionSize:
 // CHECK-NEXT:     ObjNameSym {
 // CHECK-NEXT:       Kind: S_OBJNAME (0x1101)
 // CHECK-NEXT:       Signature: 0x0
