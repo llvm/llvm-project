@@ -93,6 +93,7 @@ static void serializeCommonAttributes(const Info &I, json::Object &Obj,
   if (!I.Description.empty()) {
     json::Value DescArray = json::Array();
     auto &DescArrayRef = *DescArray.getAsArray();
+    DescArrayRef.reserve(I.Description.size());
     for (const auto &Comment : I.Description)
       DescArrayRef.push_back(serializeComment(Comment));
     Obj["Description"] = DescArray;
@@ -122,6 +123,7 @@ static void serializeReference(const SmallVector<Reference, 4> &References,
                                Object &Obj, std::string Key) {
   json::Value ReferencesArray = Array();
   json::Array &ReferencesArrayRef = *ReferencesArray.getAsArray();
+  ReferencesArrayRef.reserve(References.size());
   for (const auto& Reference : References) {
     json::Value ReferenceVal = Object();
     auto &ReferenceObj = *ReferenceVal.getAsObject();
@@ -140,6 +142,7 @@ static void serializeCommonChildren(const ScopeChildren &Children,
   if (!Children.Enums.empty()) {
     json::Value EnumsArray = Array();
     auto &EnumsArrayRef = *EnumsArray.getAsArray();
+    EnumsArrayRef.reserve(Children.Enums.size());
     for (const auto &Enum : Children.Enums) {
       json::Value EnumVal = Object();
       auto &EnumObj = *EnumVal.getAsObject();
@@ -152,6 +155,7 @@ static void serializeCommonChildren(const ScopeChildren &Children,
   if (!Children.Typedefs.empty()) {
     json::Value TypedefsArray = Array();
     auto &TypedefsArrayRef = *TypedefsArray.getAsArray();
+    TypedefsArrayRef.reserve(Children.Typedefs.size());
     for (const auto &Typedef : Children.Typedefs) {
       json::Value TypedefVal = Object();
       auto &TypedefObj = *TypedefVal.getAsObject();
@@ -164,6 +168,7 @@ static void serializeCommonChildren(const ScopeChildren &Children,
   if (!Children.Records.empty()) {
     json::Value RecordsArray = Array();
     auto &RecordsArrayRef = *RecordsArray.getAsArray();
+    RecordsArrayRef.reserve(Children.Records.size());
     for (const auto &Record : Children.Records) {
       json::Value RecordVal = Object();
       auto &RecordObj = *RecordVal.getAsObject();
@@ -187,6 +192,7 @@ static void serializeInfo(const TemplateInfo &Template, Object &Obj) {
     if (!Template.Specialization->Params.empty()) {
       json::Value ParamsArray = Array();
       auto &ParamsArrayRef = *ParamsArray.getAsArray();
+      ParamsArrayRef.reserve(Template.Specialization->Params.size());
       for (const auto &Param : Template.Specialization->Params)
         ParamsArrayRef.push_back(Param.Contents);
       TemplateSpecializationObj["Parameters"] = ParamsArray;
@@ -197,6 +203,7 @@ static void serializeInfo(const TemplateInfo &Template, Object &Obj) {
   if (!Template.Params.empty()) {
     json::Value ParamsArray = Array();
     auto &ParamsArrayRef = *ParamsArray.getAsArray();
+    ParamsArrayRef.reserve(Template.Params.size());
     for (const auto &Param : Template.Params)
       ParamsArrayRef.push_back(Param.Contents);
     TemplateObj["Parameters"] = ParamsArray;
@@ -225,6 +232,7 @@ static void serializeInfo(const FunctionInfo &F, json::Object &Obj,
   if (!F.Params.empty()) {
     json::Value ParamsArray = json::Array();
     auto &ParamsArrayRef = *ParamsArray.getAsArray();
+    ParamsArrayRef.reserve(F.Params.size());
     for (const auto &Param : F.Params) {
       json::Value ParamVal = Object();
       auto &ParamObj = *ParamVal.getAsObject();
@@ -256,6 +264,7 @@ static void serializeInfo(const EnumInfo &I, json::Object &Obj,
   if (!I.Members.empty()) {
     json::Value MembersArray = Array();
     auto &MembersArrayRef = *MembersArray.getAsArray();
+    MembersArrayRef.reserve(I.Members.size());
     for (const auto &Member : I.Members) {
       json::Value MemberVal = Object();
       auto &MemberObj = *MemberVal.getAsObject();
@@ -338,6 +347,7 @@ static void serializeInfo(const RecordInfo &I, json::Object &Obj,
   if (!I.Bases.empty()) {
     json::Value BasesArray = Array();
     json::Array &BasesArrayRef = *BasesArray.getAsArray();
+    BasesArrayRef.reserve(I.Bases.size());
     for (const auto &BaseInfo : I.Bases) {
       json::Value BaseInfoVal = Object();
       auto &BaseInfoObj = *BaseInfoVal.getAsObject();
