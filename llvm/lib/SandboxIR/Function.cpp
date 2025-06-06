@@ -19,9 +19,9 @@ FunctionType *Function::getFunctionType() const {
 
 void Function::setAlignment(MaybeAlign Align) {
   Ctx.getTracker()
-      .emplaceIfTracking<GenericSetter<&Function::getAlign,
-                                       &Function::setAlignment>>(this);
-  cast<llvm::GlobalVariable>(Val)->setAlignment(Align);
+      .emplaceIfTracking<
+          GenericSetter<&Function::getAlign, &Function::setAlignment>>(this);
+  cast<llvm::Function>(Val)->setAlignment(Align);
 }
 
 #ifndef NDEBUG

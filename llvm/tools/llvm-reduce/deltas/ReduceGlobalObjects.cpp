@@ -17,9 +17,7 @@ static bool shouldReduceAlign(GlobalVariable *GV) {
   return GV->getAlign().has_value();
 }
 
-static bool shouldReduceAlign(Function *F) {
-  return F->getAlign().has_value();
-}
+static bool shouldReduceAlign(Function *F) { return F->getAlign().has_value(); }
 
 static bool shouldReduceComdat(GlobalObject &GO) { return GO.hasComdat(); }
 
