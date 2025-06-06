@@ -12835,6 +12835,7 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
     LLVMContext &Ctx = getAssociatedValue().getContext();
     MDNode *NoAliasASNode = nullptr;
     MDBuilder MDB(Ctx);
+    // Has to use iterator to get the range info.
     for (RangeMap::const_iterator I = Map.begin(); I != Map.end(); I++) {
       if (!I.value())
         continue;
