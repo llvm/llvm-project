@@ -33,11 +33,12 @@ void DylibSymbolResolver::resolveAsync(
 
       void *Addr = DL.getAddressOfSymbol(DemangledSymName);
       if (!Addr && E.Required)
-        Result.emplace_back();
-      else
-        // FIXME: determine accurate JITSymbolFlags.
-        Result.push_back(
-            {ExecutorAddr::fromPtr(Addr), JITSymbolFlags::Exported});
+        OnResolve(make_error<StringError>(Twine("Missing definition for ") +
+                                              DemangledSymName,
+                                          inconvertibleErrorCode()));
+
+      // FIXME: determine accurate JITSymbolFlags.
+      Result.push_back({ExecutorAddr::fromPtr(Addr), JITSymbolFlags::Exported});
     }
   }
 
