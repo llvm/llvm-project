@@ -1401,6 +1401,79 @@ void FileOp::build(OpBuilder &builder, OperationState &state, StringRef id) {
 }
 
 //===----------------------------------------------------------------------===//
+// FieldOp
+//===----------------------------------------------------------------------===//
+LogicalResult FieldOp::verify() {
+  if (!isSupportedEmitCType(getType())) {
+    return emitOpError("expected valid emitc type");
+  }
+
+  if (!getInitialValue().has_value()) {
+    return success();
+  }
+
+  Attribute initValue = getInitialValue().value();
+  // Check that the type of the initial value is compatible with the type of
+  // the global variable.
+  if (auto elementsAttr = llvm::dyn_cast<ElementsAttr>(initValue)) {
+    auto initialValueType = elementsAttr.getType();
+    if (!initialValueType) {
+      return emitOpError("initial value attribute must have a type");
+    }
+    auto fieldType = getType();
+    if (initialValueType != fieldType) {
+      if (auto lvalueType = dyn_cast<LValueType>(fieldType)) {
+        auto innerFieldType = lvalueType.getValueType();
+        if (innerFieldType != initialValueType) {
+          return emitOpError("initial value type ")
+                 << initialValueType << " is not compatible with field type "
+                 << fieldType << " its inner type " << innerFieldType;
+        }
+
+      } else {
+        return emitOpError("initial value type ")
+               << initialValueType << " is not compatible with field type "
+               << fieldType;
+      }
+    }
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// GetFieldOp
+//===----------------------------------------------------------------------===//
+LogicalResult GetFieldOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  auto classNameAttr = getClassNameAttr();
+  auto fieldNameAttr = getFieldNameAttr();
+  if (!classNameAttr || !fieldNameAttr) {
+    return emitError("class and field name attributes are mandatory");
+  }
+  StringRef className = classNameAttr.getValue();
+  StringRef fieldName = fieldNameAttr.getValue();
+
+  auto fieldOp =
+      symbolTable.lookupNearestSymbolFrom<FieldOp>(*this, getFieldNameAttr());
+
+  if (!fieldOp) {
+    return emitOpError("field '")
+           << fieldName << "' not found in class '" << className << "'";
+  }
+
+  Type getFieldResultType = getResult().getType();
+  Type fieldType = fieldOp.getType();
+
+  if (fieldType != getFieldResultType) {
+    return emitOpError("result type ")
+           << getFieldResultType << " does not match field '" << fieldName
+           << "' type " << fieldType;
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 

@@ -15,6 +15,7 @@ namespace mlir {
 namespace emitc {
 
 #define GEN_PASS_DECL_FORMEXPRESSIONSPASS
+#define GEN_PASS_DECL_CONVERTFUNCTOCLASSPASS
 #include "mlir/Dialect/EmitC/Transforms/Passes.h.inc"
 
 //===----------------------------------------------------------------------===//
