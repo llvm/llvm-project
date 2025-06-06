@@ -58739,18 +58739,6 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
             DAG.getNode(X86ISD::VPERMILPI, DL, FloatVT, Res, Op0.getOperand(1));
         return DAG.getBitcast(VT, Res);
       }
-      if (!IsSplat && VT == MVT::v8f64) {
-        unsigned NumSubElts = Op0.getValueType().getVectorNumElements();
-        uint64_t Mask = (1ULL << NumSubElts) - 1;
-        uint64_t Idx = 0;
-        for (unsigned I = 0; I != NumOps; ++I) {
-          uint64_t SubIdx = Ops[I].getConstantOperandVal(1);
-          Idx |= (SubIdx & Mask) << (I * NumSubElts);
-        }
-        return DAG.getNode(X86ISD::VPERMILPI, DL, VT,
-                           ConcatSubOperand(VT, Ops, 0),
-                           DAG.getTargetConstant(Idx, DL, MVT::i8));
-      }
       break;
     case X86ISD::VPERMILPV:
       if (!IsSplat && (VT.is256BitVector() ||
@@ -59322,7 +59310,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
   }
 
   // We can always convert per-lane vXf64 shuffles into VSHUFPD.
-  if (!IsSplat && NumOps == 2 && VT == MVT::v4f64 &&
+  if (!IsSplat &&
+      (VT == MVT::v4f64 || (VT == MVT::v8f64 && Subtarget.useAVX512Regs())) &&
       all_of(Ops, [](SDValue Op) {
         return Op.hasOneUse() && (Op.getOpcode() == X86ISD::MOVDDUP ||
                                   Op.getOpcode() == X86ISD::SHUFP ||
@@ -59331,25 +59320,33 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                                   Op.getOpcode() == X86ISD::UNPCKL ||
                                   Op.getOpcode() == X86ISD::UNPCKH);
       })) {
-    SmallVector<SDValue, 2> SrcOps0, SrcOps1;
-    SmallVector<int, 8> SrcMask0, SrcMask1;
-    if (getTargetShuffleMask(Ops[0], /*AllowSentinelZero=*/false, SrcOps0,
-                             SrcMask0) &&
-        getTargetShuffleMask(Ops[1], /*AllowSentinelZero=*/false, SrcOps1,
-                             SrcMask1)) {
-      assert(SrcMask0.size() == 2 && SrcMask1.size() == 2 && "Bad shuffles");
-      SDValue LHS[] = {SrcOps0[SrcMask0[0] / 2], SrcOps1[SrcMask1[0] / 2]};
-      SDValue RHS[] = {SrcOps0[SrcMask0[1] / 2], SrcOps1[SrcMask1[1] / 2]};
+    MVT OpVT = Ops[0].getSimpleValueType();
+    unsigned NumOpElts = OpVT.getVectorNumElements();
+    SmallVector<SmallVector<SDValue, 2>, 4> SrcOps(NumOps);
+    SmallVector<SmallVector<int, 8>, 4> SrcMasks(NumOps);
+    if (all_of(seq<int>(NumOps), [&](int I) {
+          return getTargetShuffleMask(Ops[I], /*AllowSentinelZero=*/false,
+                                      SrcOps[I], SrcMasks[I]) &&
+                 SrcMasks[I].size() == NumOpElts &&
+                 all_of(SrcOps[I], [&OpVT](SDValue V) {
+                   return V.getValueType() == OpVT;
+                 });
+        })) {
+      bool Unary = true;
+      unsigned SHUFPDMask = 0;
+      SmallVector<SDValue, 4> LHS(NumOps), RHS(NumOps);
+      for (unsigned I = 0; I != NumOps; ++I) {
+        LHS[I] = SrcOps[I][SrcMasks[I][0] / NumOpElts];
+        RHS[I] = SrcOps[I][SrcMasks[I][1] / NumOpElts];
+        Unary &= LHS[I] == RHS[I];
+        for (unsigned J = 0; J != NumOpElts; ++J)
+          SHUFPDMask |= (SrcMasks[I][J] & 1) << ((I * NumOpElts) + J);
+      }
       SDValue Concat0 =
           combineConcatVectorOps(DL, VT, LHS, DAG, Subtarget, Depth + 1);
       SDValue Concat1 =
           combineConcatVectorOps(DL, VT, RHS, DAG, Subtarget, Depth + 1);
-      if (Concat0 || Concat1) {
-        unsigned SHUFPDMask = 0;
-        SHUFPDMask |= (SrcMask0[0] & 1) << 0;
-        SHUFPDMask |= (SrcMask0[1] & 1) << 1;
-        SHUFPDMask |= (SrcMask1[0] & 1) << 2;
-        SHUFPDMask |= (SrcMask1[1] & 1) << 3;
+      if (Unary || Concat0 || Concat1) {
         Concat0 =
             Concat0 ? Concat0 : DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, LHS);
         Concat1 =
