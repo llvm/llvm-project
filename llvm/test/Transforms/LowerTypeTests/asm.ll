@@ -3,10 +3,9 @@
 
 define void @call(ptr %p) {
   ; CHECK:      movl $__typeid_allones7_global_addr, %eax
-  ; CHECK-NEXT: movq %rdi, %rcx
-  ; CHECK-NEXT: subq %rax, %rcx
-  ; CHECK-NEXT: rorq $__typeid_allones7_align, %rcx
-  ; CHECK-NEXT: cmpq $__typeid_allones7_size_m1@ABS8, %rcx
+  ; CHECK-NEXT: subq %rdi, %rax
+  ; CHECK-NEXT: rorq $__typeid_allones7_align, %rax
+  ; CHECK-NEXT: cmpq $__typeid_allones7_size_m1@ABS8, %rax
   %x = call i1 @llvm.type.test(ptr %p, metadata !"allones7")
   br i1 %x, label %t, label %f
 
