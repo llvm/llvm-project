@@ -1288,10 +1288,15 @@ void WhitespaceManager::alignArrayInitializers(unsigned Start, unsigned End) {
 void WhitespaceManager::alignArrayInitializersRightJustified(
     CellDescriptions &&CellDescs) {
 
+  const int ColumnCount = CellDescs.ColumnStartingCellIndices.size();
+  if (ColumnCount < 2)
+
   // If there are less than two rows, there is nothing to align.
   if (CellDescs.Rows.size() < 2)
     return;
 
+  const int BracePadding = Style.Cpp11BracedListStyle ? 0 : 1;
+  auto &ColumnStartingIndices = CellDescs.ColumnStartingCellIndices;
   // If there are less than 2 columns, there is nothing to align.
   const int ColumnCount = CellDescs.ColumnStartingCellIndices.size();
   if (ColumnCount < 2)
