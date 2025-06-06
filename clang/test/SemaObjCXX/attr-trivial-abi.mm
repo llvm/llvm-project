@@ -108,7 +108,8 @@ namespace deletedCopyMoveConstructor {
     CopyMoveDeleted(CopyMoveDeleted &&) = delete;
   };
 
-  struct __attribute__((trivial_abi)) S18 { // expected-warning {{'trivial_abi' cannot be applied to 'S18'}} expected-note {{copy constructors and move constructors are all deleted}}
+  struct __attribute__((trivial_abi)) S18 { // expected-warning {{'trivial_abi' cannot be applied to 'S18'}} \
+                                            // expected-note {{'trivial_abi' is disallowed on 'S18' because it has a field of a non-trivial class type}}
     CopyMoveDeleted a;
   };
 
