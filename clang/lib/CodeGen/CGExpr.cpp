@@ -4595,7 +4595,32 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
         E->getType(), !getLangOpts().PointerOverflowDefined, SignedIndices,
         E->getExprLoc(), &arrayType, E->getBase());
     EltBaseInfo = ArrayLV.getBaseInfo();
-    EltTBAAInfo = CGM.getTBAAInfoForSubobject(ArrayLV, E->getType());
+    if (!CGM.getCodeGenOpts().NewStructPathTBAA) {
+      // Since CodeGenTBAA::getTypeInfoHelper only handles array types for
+      // new struct path TBAA, we must a use a plain access.
+      EltTBAAInfo = CGM.getTBAAInfoForSubobject(ArrayLV, E->getType());
+    } else if (ArrayLV.getTBAAInfo().isMayAlias()) {
+      EltTBAAInfo = TBAAAccessInfo::getMayAliasInfo();
+    } else if (ArrayLV.getTBAAInfo().isIncomplete()) {
+      // The array element is complete, even if the array is not.
+      EltTBAAInfo = CGM.getTBAAAccessInfo(E->getType());
+    } else {
+      // The TBAA access info from the array (base) lvalue is ordinary. We will
+      // adapt it to create access info for the element.
+      EltTBAAInfo = ArrayLV.getTBAAInfo();
+
+      // We retain the TBAA struct path (BaseType and Offset members) from the
+      // array. In the TBAA representation, we map any array access to the
+      // element at index 0, as the index is generally a runtime value. This
+      // element has the same offset in the base type as the array itself.
+      // If the array lvalue had no base type, there is no point trying to
+      // generate one, since an array itself is not a valid base type.
+
+      // We also retain the access type from the base lvalue, but the access
+      // size must be updated to the size of an individual element.
+      EltTBAAInfo.Size =
+          getContext().getTypeSizeInChars(E->getType()).getQuantity();
+    }
   } else {
     // The base must be a pointer; emit it with an estimate of its alignment.
     Address BaseAddr =
@@ -5919,7 +5944,7 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
 }
 
 static GlobalDecl getGlobalDeclForDirectCall(const FunctionDecl *FD) {
-  if (FD->hasAttr<OpenCLKernelAttr>())
+  if (DeviceKernelAttr::isOpenCLSpelling(FD->getAttr<DeviceKernelAttr>()))
     return GlobalDecl(FD, KernelReferenceKind::Stub);
   return GlobalDecl(FD);
 }
@@ -6350,7 +6375,7 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
   const auto *FnType = cast<FunctionType>(PointeeType);
 
   if (const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl);
-      FD && FD->hasAttr<OpenCLKernelAttr>())
+      FD && DeviceKernelAttr::isOpenCLSpelling(FD->getAttr<DeviceKernelAttr>()))
     CGM.getTargetCodeGenInfo().setOCLKernelStubCallingConvention(FnType);
 
   bool CFIUnchecked =
