@@ -5948,10 +5948,12 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
   auto InsertPos = findInsertPos(Addr, MemoryInst, SunkAddr);
 
   // TODO: Adjust insert point considering (Base|Scaled)Reg if possible.
-  if (!SunkAddr &&
-      ((AddrMode.BaseReg && !DT->dominates(AddrMode.BaseReg, &*InsertPos)) ||
-       (AddrMode.ScaledReg && !DT->dominates(AddrMode.ScaledReg, &*InsertPos))))
-    return Modified;
+  if (!SunkAddr) {
+    auto &DT = getDT(*MemoryInst->getFunction());
+    if ((AddrMode.BaseReg && !DT.dominates(AddrMode.BaseReg, &*InsertPos)) ||
+        (AddrMode.ScaledReg && !DT.dominates(AddrMode.ScaledReg, &*InsertPos)))
+      return Modified;
+  }
 
   IRBuilder<> Builder(MemoryInst->getParent(), InsertPos);
 
