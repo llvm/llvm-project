@@ -8,9 +8,9 @@ template<typename T> requires Bar<T> && true struct S<T> { };
 
 template<typename T> concept True2 = sizeof(T) >= 0;
 template<typename T> concept Foo2 = True2<T*>;
-// expected-error@-1{{'type name' declared as a pointer to a reference of type 'type-parameter-0-0 &'}}
+// expected-error@-1 3{{'type name' declared as a pointer to a reference of type 'type-parameter-0-0 &'}}
 template<typename T> concept Bar2 = Foo2<T&>;
-// expected-note@-1{{while substituting into concept arguments here; substitution failures not allowed in concept arguments}}
+// expected-note@-1 3{{while substituting into concept arguments here; substitution failures not allowed in concept arguments}}
 template<typename T> requires Bar2<T> struct S2 { };
 // expected-note@-1{{template is declared here}}
 template<typename T> requires Bar2<T> && true struct S2<T> { };
@@ -71,13 +71,13 @@ namespace non_type_pack {
 namespace PR47174 {
 // This checks that we don't crash with a failed substitution on the first constrained argument when
 // performing normalization.
-template <Bar2 T, True U>
+template <Bar2 T, True U> // expected-note {{while calculating associated constraint of template 'S3' here}}
 requires true struct S3; // expected-note {{template is declared here}}
 template <True T, True U>
 requires true struct S3<T, U>; // expected-error {{class template partial specialization is not more specialized than the primary template}}
 
 // Same as above, for the second position (but this was already working).
-template <True T, Bar2 U>
+template <True T, Bar2 U> // expected-note {{while calculating associated constraint of template 'S4' here}}
 requires true struct S4; // expected-note {{template is declared here}}
 template <True T, True U>
 requires true struct S4<T, U>; // expected-error {{class template partial specialization is not more specialized than the primary template}}
@@ -96,7 +96,7 @@ template<class T> requires C1<T> && C2<T> void t1() = delete; // expected-note {
 template void t1<X>();
 void t1() { t1<X>(); } // expected-error {{call to deleted function 't1'}}
 
-template<class T> requires C1<T> void t2() {}; // expected-note 2 {{candidate function}} 
+template<class T> requires C1<T> void t2() {}; // expected-note 2 {{candidate function}}
 template<class T> requires C2<T> void t2() {}; // expected-note 2 {{candidate function}}
 template void t2<X>(); // expected-error {{partial ordering for explicit instantiation of 't2' is ambiguous}}
 void t2() { t2<X>(); } // expected-error {{call to 't2' is ambiguous}}

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=c++2c -verify %s
 
-template <class T> concept A = true;
+template <class T> concept A = (T(), true);
 template <class T> concept C = A<T> && true;
 template <class T> concept D = A<T> && __is_same(T, int);
 
