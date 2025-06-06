@@ -76,6 +76,33 @@ using namespace clang;
 using namespace CodeGen;
 using namespace llvm;
 
+/// Some builtins do not have library implementation on some targets and
+/// are instead emitted as LLVM IRs by some target builtin emitters.
+/// FIXME: Remove this when library support is added
+static bool shouldEmitBuiltinAsIR(unsigned BuiltinID,
+                                  const Builtin::Context &BI,
+                                  const CodeGenFunction &CGF) {
+  if (!CGF.CGM.getLangOpts().MathErrno &&
+      CGF.CurFPFeatures.getExceptionMode() ==
+          LangOptions::FPExceptionModeKind::FPE_Ignore &&
+      !CGF.CGM.getTargetCodeGenInfo().supportsLibCall()) {
+    switch (BuiltinID) {
+    default:
+      return false;
+    case Builtin::BIlogbf:
+    case Builtin::BI__builtin_logbf:
+    case Builtin::BIlogb:
+    case Builtin::BI__builtin_logb:
+    case Builtin::BIscalbnf:
+    case Builtin::BI__builtin_scalbnf:
+    case Builtin::BIscalbn:
+    case Builtin::BI__builtin_scalbn:
+      return true;
+    }
+  }
+  return false;
+}
+
 static void initializeAlloca(CodeGenFunction &CGF, AllocaInst *AI, Value *Size,
                              Align AlignmentInBytes) {
   ConstantInt *Byte;
@@ -2882,7 +2909,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // disabled.
   // Math intrinsics are generated only when math-errno is disabled. Any pragmas
   // or attributes that affect math-errno should prevent or allow math
-  // intrincs to be generated. Intrinsics are generated:
+  // intrinsics to be generated. Intrinsics are generated:
   //   1- In fast math mode, unless math-errno is overriden
   //      via '#pragma float_control(precise, on)', or via an
   //      'attribute__((optnone))'.
@@ -6429,13 +6456,15 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // If this is an alias for a lib function (e.g. __builtin_sin), emit
   // the call using the normal call path, but using the unmangled
   // version of the function name.
-  if (getContext().BuiltinInfo.isLibFunction(BuiltinID))
+  const auto &BI = getContext().BuiltinInfo;
+  if (!shouldEmitBuiltinAsIR(BuiltinID, BI, *this) &&
+      BI.isLibFunction(BuiltinID))
     return emitLibraryCall(*this, FD, E,
                            CGM.getBuiltinLibFunction(FD, BuiltinID));
 
   // If this is a predefined lib function (e.g. malloc), emit the call
   // using exactly the normal call path.
-  if (getContext().BuiltinInfo.isPredefinedLibFunction(BuiltinID))
+  if (BI.isPredefinedLibFunction(BuiltinID))
     return emitLibraryCall(*this, FD, E, CGM.getRawFunctionPointer(FD));
 
   // Check that a call to a target specific builtin has the correct target
@@ -20662,6 +20691,57 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_s_prefetch_data:
     return emitBuiltinWithOneOverloadedType<2>(
         *this, E, Intrinsic::amdgcn_s_prefetch_data);
+  case Builtin::BIlogbf:
+  case Builtin::BI__builtin_logbf: {
+    Value *Src0 = EmitScalarExpr(E->getArg(0));
+    Function *FrExpFunc = CGM.getIntrinsic(
+        Intrinsic::frexp, {Src0->getType(), Builder.getInt32Ty()});
+    CallInst *FrExp = Builder.CreateCall(FrExpFunc, Src0);
+    Value *Exp = Builder.CreateExtractValue(FrExp, 1);
+    Value *Add = Builder.CreateAdd(
+        Exp, ConstantInt::getSigned(Exp->getType(), -1), "", false, true);
+    Value *SIToFP = Builder.CreateSIToFP(Add, Builder.getFloatTy());
+    Value *Fabs =
+        emitBuiltinWithOneOverloadedType<1>(*this, E, Intrinsic::fabs);
+    Value *FCmpONE = Builder.CreateFCmpONE(
+        Fabs, ConstantFP::getInfinity(Builder.getFloatTy()));
+    Value *Sel1 = Builder.CreateSelect(FCmpONE, SIToFP, Fabs);
+    Value *FCmpOEQ =
+        Builder.CreateFCmpOEQ(Src0, ConstantFP::getZero(Builder.getFloatTy()));
+    Value *Sel2 = Builder.CreateSelect(
+        FCmpOEQ,
+        ConstantFP::getInfinity(Builder.getFloatTy(), /*Negative=*/true), Sel1);
+    return Sel2;
+  }
+  case Builtin::BIlogb:
+  case Builtin::BI__builtin_logb: {
+    Value *Src0 = EmitScalarExpr(E->getArg(0));
+    Function *FrExpFunc = CGM.getIntrinsic(
+        Intrinsic::frexp, {Src0->getType(), Builder.getInt32Ty()});
+    CallInst *FrExp = Builder.CreateCall(FrExpFunc, Src0);
+    Value *Exp = Builder.CreateExtractValue(FrExp, 1);
+    Value *Add = Builder.CreateAdd(
+        Exp, ConstantInt::getSigned(Exp->getType(), -1), "", false, true);
+    Value *SIToFP = Builder.CreateSIToFP(Add, Builder.getDoubleTy());
+    Value *Fabs =
+        emitBuiltinWithOneOverloadedType<1>(*this, E, Intrinsic::fabs);
+    Value *FCmpONE = Builder.CreateFCmpONE(
+        Fabs, ConstantFP::getInfinity(Builder.getDoubleTy()));
+    Value *Sel1 = Builder.CreateSelect(FCmpONE, SIToFP, Fabs);
+    Value *FCmpOEQ =
+        Builder.CreateFCmpOEQ(Src0, ConstantFP::getZero(Builder.getDoubleTy()));
+    Value *Sel2 = Builder.CreateSelect(
+        FCmpOEQ,
+        ConstantFP::getInfinity(Builder.getDoubleTy(), /*Negative=*/true),
+        Sel1);
+    return Sel2;
+  }
+  case Builtin::BIscalbnf:
+  case Builtin::BI__builtin_scalbnf:
+  case Builtin::BIscalbn:
+  case Builtin::BI__builtin_scalbn:
+    return emitBinaryExpMaybeConstrainedFPBuiltin(
+        *this, E, Intrinsic::ldexp, Intrinsic::experimental_constrained_ldexp);
   default:
     return nullptr;
   }
