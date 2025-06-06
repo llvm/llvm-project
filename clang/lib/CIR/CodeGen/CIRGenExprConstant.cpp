@@ -577,12 +577,33 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
   case APValue::Union:
     cgm.errorNYI("ConstExprEmitter::tryEmitPrivate struct or union");
     return {};
-  case APValue::FixedPoint:
   case APValue::ComplexInt:
-  case APValue::ComplexFloat:
+  case APValue::ComplexFloat: {
+    mlir::Type desiredType = cgm.convertType(destType);
+    cir::ComplexType complexType =
+        mlir::dyn_cast<cir::ComplexType>(desiredType);
+
+    mlir::Type complexElemTy = complexType.getElementType();
+    if (isa<cir::IntType>(complexElemTy)) {
+      llvm::APSInt real = value.getComplexIntReal();
+      llvm::APSInt imag = value.getComplexIntImag();
+      return builder.getAttr<cir::ConstComplexAttr>(
+          complexType, builder.getAttr<cir::IntAttr>(complexElemTy, real),
+          builder.getAttr<cir::IntAttr>(complexElemTy, imag));
+    }
+
+    assert(isa<cir::CIRFPTypeInterface>(complexElemTy) &&
+           "expected floating-point type");
+    llvm::APFloat real = value.getComplexFloatReal();
+    llvm::APFloat imag = value.getComplexFloatImag();
+    return builder.getAttr<cir::ConstComplexAttr>(
+        complexType, builder.getAttr<cir::FPAttr>(complexElemTy, real),
+        builder.getAttr<cir::FPAttr>(complexElemTy, imag));
+  }
+  case APValue::FixedPoint:
   case APValue::AddrLabelDiff:
-    cgm.errorNYI("ConstExprEmitter::tryEmitPrivate fixed point, complex int, "
-                 "complex float, addr label diff");
+    cgm.errorNYI(
+        "ConstExprEmitter::tryEmitPrivate fixed point, addr label diff");
     return {};
   }
   llvm_unreachable("Unknown APValue kind");

@@ -1464,9 +1464,13 @@ def ShiftOp : CIR_Op<"shift", [Pure]> {
     ```
   }];
 
-  let results = (outs CIR_AnyIntOrVecOfInt:$result);
-  let arguments = (ins CIR_AnyIntOrVecOfInt:$value, CIR_AnyIntOrVecOfInt:$amount,
-                       UnitAttr:$isShiftleft);
+  let arguments = (ins
+    CIR_AnyIntOrVecOfIntType:$value,
+    CIR_AnyIntOrVecOfIntType:$amount,
+    UnitAttr:$isShiftleft
+  );
+
+  let results = (outs CIR_AnyIntOrVecOfIntType:$result);
 
   let assemblyFormat = [{
     `(`
@@ -1774,11 +1778,6 @@ def GetMemberOp : CIR_Op<"get_member"> {
 
     /// Return the record type pointed by the base pointer.
     cir::PointerType getAddrTy() { return getAddr().getType(); }
-
-    /// Return the result type.
-    cir::PointerType getResultTy() {
-      return getResult().getType();
-    }
   }];
 
   let hasVerifier = 1;
@@ -2050,7 +2049,7 @@ def VecCreateOp : CIR_Op<"vec.create", [Pure]> {
     in the vector type.
   }];
 
-  let arguments = (ins Variadic<CIR_AnyType>:$elements);
+  let arguments = (ins Variadic<CIR_VectorElementType>:$elements);
   let results = (outs CIR_VectorType:$result);
 
   let assemblyFormat = [{
@@ -2085,7 +2084,7 @@ def VecInsertOp : CIR_Op<"vec.insert", [Pure,
 
   let arguments = (ins
     CIR_VectorType:$vec,
-    AnyType:$value,
+    CIR_VectorElementType:$value,
     CIR_AnyFundamentalIntType:$index
   );
 
@@ -2118,7 +2117,7 @@ def VecExtractOp : CIR_Op<"vec.extract", [Pure,
   }];
 
   let arguments = (ins CIR_VectorType:$vec, CIR_AnyFundamentalIntType:$index);
-  let results = (outs CIR_AnyType:$result);
+  let results = (outs CIR_VectorElementType:$result);
 
   let assemblyFormat = [{
     $vec `[` $index `:` type($index) `]` attr-dict `:` qualified(type($vec))
@@ -2180,13 +2179,50 @@ def VecShuffleDynamicOp : CIR_Op<"vec.shuffle.dynamic",
     ```
   }];
 
-  let arguments = (ins CIR_VectorType:$vec, IntegerVector:$indices);
+  let arguments = (ins CIR_VectorType:$vec, CIR_VectorOfIntType:$indices);
   let results = (outs CIR_VectorType:$result);
   let assemblyFormat = [{
     $vec `:` qualified(type($vec)) `,` $indices `:` qualified(type($indices))
     attr-dict
   }];
 
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// VecTernaryOp
+//===----------------------------------------------------------------------===//
+
+def VecTernaryOp : CIR_Op<"vec.ternary",
+                   [Pure, AllTypesMatch<["result", "lhs", "rhs"]>]> {
+  let summary = "The `cond ? a : b` ternary operator for vector types";
+  let description = [{
+    The `cir.vec.ternary` operation represents the C/C++ ternary operator,
+    `?:`, for vector types, which does a `select` on individual elements of the
+    vectors. Unlike a regular `?:` operator, there is no short circuiting. All
+    three arguments are always evaluated.  Because there is no short
+    circuiting, there are no regions in this operation, unlike cir.ternary.
+
+    The first argument is a vector of integral type. The second and third
+    arguments are vectors of the same type and have the same number of elements
+    as the first argument.
+
+    The result is a vector of the same type as the second and third arguments.
+    Each element of the result is `(bool)a[n] ? b[n] : c[n]`.
+  }];
+
+  let arguments = (ins
+    CIR_VectorOfIntType:$cond,
+    CIR_VectorType:$lhs,
+    CIR_VectorType:$rhs
+  );
+
+  let results = (outs CIR_VectorType:$result);
+  let assemblyFormat = [{
+    `(` $cond `,` $lhs`,` $rhs `)` `:` qualified(type($cond)) `,`
+    qualified(type($lhs)) attr-dict
+  }];
   let hasVerifier = 1;
 }
 

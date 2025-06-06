@@ -480,9 +480,9 @@ public:
       clang::StorageClass storage, bool is_inline);
 
   CompilerType
-  CreateFunctionType(const CompilerType &result_type, const CompilerType *args,
-                     unsigned num_args, bool is_variadic, unsigned type_quals,
-                     clang::CallingConv cc = clang::CC_C,
+  CreateFunctionType(const CompilerType &result_type,
+                     llvm::ArrayRef<CompilerType> args, bool is_variadic,
+                     unsigned type_quals, clang::CallingConv cc = clang::CC_C,
                      clang::RefQualifierKind ref_qual = clang::RQ_None);
 
   clang::ParmVarDecl *
@@ -1074,7 +1074,7 @@ public:
 #endif
 
   /// \see lldb_private::TypeSystem::Dump
-  void Dump(llvm::raw_ostream &output) override;
+  void Dump(llvm::raw_ostream &output, llvm::StringRef filter) override;
 
   /// Dump clang AST types from the symbol file.
   ///
@@ -1318,7 +1318,7 @@ public:
   }
 
   /// \see lldb_private::TypeSystem::Dump
-  void Dump(llvm::raw_ostream &output) override;
+  void Dump(llvm::raw_ostream &output, llvm::StringRef filter) override;
 
   UserExpression *GetUserExpression(llvm::StringRef expr,
                                     llvm::StringRef prefix,
