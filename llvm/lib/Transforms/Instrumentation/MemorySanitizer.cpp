@@ -4161,9 +4161,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   // Instrument AVX permutation intrinsic.
   // We apply the same permutation (argument index 1) to the shadow.
-  void handleAvxVpermilvar(IntrinsicInst &I) {
+  void handleAVXVpermilvar(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
     Value *Shadow = getShadow(&I, 0);
+    insertShadowCheck(I.getArgOperand(1), &I);
 
     // Shadows are integer-ish types but some intrinsics require a
     // different (e.g., floating-point) type.
@@ -5126,7 +5127,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx_vpermilvar_ps:
     case Intrinsic::x86_avx_vpermilvar_ps_256:
     case Intrinsic::x86_avx512_vpermilvar_ps_512: {
-      handleAvxVpermilvar(I);
+      handleAVXVpermilvar(I);
       break;
     }
 
