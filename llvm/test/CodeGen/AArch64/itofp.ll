@@ -3315,11 +3315,11 @@ define <3 x double> @stofp_v3i8_v3f64(<3 x i8> %a) {
 ; CHECK-GI-NEXT:    sshr v0.4h, v0.4h, #8
 ; CHECK-GI-NEXT:    smov x8, v0.h[0]
 ; CHECK-GI-NEXT:    smov x9, v0.h[1]
-; CHECK-GI-NEXT:    mov v1.d[0], x8
+; CHECK-GI-NEXT:    fmov d1, x8
 ; CHECK-GI-NEXT:    smov x8, v0.h[2]
 ; CHECK-GI-NEXT:    mov v1.d[1], x9
 ; CHECK-GI-NEXT:    smov x9, v0.h[3]
-; CHECK-GI-NEXT:    mov v2.d[0], x8
+; CHECK-GI-NEXT:    fmov d2, x8
 ; CHECK-GI-NEXT:    scvtf v0.2d, v1.2d
 ; CHECK-GI-NEXT:    mov v2.d[1], x9
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
@@ -3360,11 +3360,11 @@ define <3 x double> @utofp_v3i8_v3f64(<3 x i8> %a) {
 ; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    umov w8, v0.h[0]
 ; CHECK-GI-NEXT:    umov w9, v0.h[1]
-; CHECK-GI-NEXT:    mov v1.d[0], x8
+; CHECK-GI-NEXT:    fmov d1, x8
 ; CHECK-GI-NEXT:    umov w8, v0.h[2]
 ; CHECK-GI-NEXT:    mov v1.d[1], x9
 ; CHECK-GI-NEXT:    umov w9, v0.h[3]
-; CHECK-GI-NEXT:    mov v2.d[0], x8
+; CHECK-GI-NEXT:    fmov d2, x8
 ; CHECK-GI-NEXT:    ucvtf v0.2d, v1.2d
 ; CHECK-GI-NEXT:    mov v2.d[1], x9
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
