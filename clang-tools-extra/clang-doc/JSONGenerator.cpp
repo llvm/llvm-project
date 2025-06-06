@@ -372,6 +372,39 @@ static void serializeInfo(const RecordInfo &I, json::Object &Obj,
   serializeCommonChildren(I.Children, Obj, RepositoryUrl);
 }
 
+static void serializeInfo(const NamespaceInfo &I, json::Object &Obj,
+                          std::optional<StringRef> RepositoryUrl) {
+  serializeCommonAttributes(I, Obj, RepositoryUrl);
+  SmallString<64> BasePath = I.getRelativeFilePath("");
+  Obj["NamespacePath"] = BasePath;
+
+  if (!I.Children.Namespaces.empty()) {
+    json::Value NamespacesArray = Array();
+    auto &NamespacesArrayRef = *NamespacesArray.getAsArray();
+    for (auto &Namespace : I.Children.Namespaces) {
+      json::Value NamespaceVal = Object();
+      auto &NamespaceObj = *NamespaceVal.getAsObject();
+      serializeReference(Namespace, NamespaceObj, BasePath);
+      NamespacesArrayRef.push_back(NamespaceVal);
+    }
+    Obj["Namespaces"] = NamespacesArray;
+  }
+
+  if (!I.Children.Functions.empty()) {
+    json::Value FunctionsArray = Array();
+    auto &FunctionsArrayRef = *FunctionsArray.getAsArray();
+    for (const auto &Function : I.Children.Functions) {
+      json::Value FunctionVal = Object();
+      auto &FunctionObj = *FunctionVal.getAsObject();
+      serializeInfo(Function, FunctionObj, RepositoryUrl);
+      FunctionsArrayRef.push_back(FunctionVal);
+    }
+    Obj["Functions"] = FunctionsArray;
+  }
+
+  serializeCommonChildren(I.Children, Obj, RepositoryUrl);
+}
+
 Error JSONGenerator::generateDocs(
     StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
     const ClangDocContext &CDCtx) {
@@ -414,6 +447,7 @@ Error JSONGenerator::generateDocForInfo(Info *I, raw_ostream &OS,
 
   switch (I->IT) {
   case InfoType::IT_namespace:
+    serializeInfo(*static_cast<NamespaceInfo *>(I), Obj, CDCtx.RepositoryUrl);
     break;
   case InfoType::IT_record:
     serializeInfo(*static_cast<RecordInfo *>(I), Obj, CDCtx.RepositoryUrl);
