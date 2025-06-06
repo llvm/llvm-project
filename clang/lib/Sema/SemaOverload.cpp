@@ -756,8 +756,8 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
 
   case TemplateDeductionResult::DeducedMismatch:
   case TemplateDeductionResult::DeducedMismatchNested: {
-    // FIXME: Should allocate from normal heap so that we can free this later.
-    auto *Saved = new (Context) DFIDeducedMismatchArgs;
+    // Allocate from normal heap so that we can free this later.
+    auto *Saved = new DFIDeducedMismatchArgs;
     Saved->FirstArg = Info.FirstArg;
     Saved->SecondArg = Info.SecondArg;
     Saved->TemplateArgs = Info.takeSugared();
@@ -767,8 +767,8 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
   }
 
   case TemplateDeductionResult::NonDeducedMismatch: {
-    // FIXME: Should allocate from normal heap so that we can free this later.
-    DFIArguments *Saved = new (Context) DFIArguments;
+    // Allocate from normal heap so that we can free this later.
+    DFIArguments *Saved = new DFIArguments;
     Saved->FirstArg = Info.FirstArg;
     Saved->SecondArg = Info.SecondArg;
     Result.Data = Saved;
@@ -779,8 +779,8 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
     // FIXME: It's slightly wasteful to allocate two TemplateArguments for this.
   case TemplateDeductionResult::Inconsistent:
   case TemplateDeductionResult::Underqualified: {
-    // FIXME: Should allocate from normal heap so that we can free this later.
-    DFIParamWithArguments *Saved = new (Context) DFIParamWithArguments;
+    // Allocate from normal heap so that we can free this later.
+    DFIParamWithArguments *Saved = new DFIParamWithArguments;
     Saved->Param = Info.Param;
     Saved->FirstArg = Info.FirstArg;
     Saved->SecondArg = Info.SecondArg;
@@ -799,7 +799,8 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
     break;
 
   case TemplateDeductionResult::ConstraintsNotSatisfied: {
-    CNSInfo *Saved = new (Context) CNSInfo;
+    // Allocate from normal heap so that we can free this later.
+    CNSInfo *Saved = new CNSInfo;
     Saved->TemplateArgs = Info.takeSugared();
     Saved->Satisfaction = Info.AssociatedConstraintsSatisfaction;
     Result.Data = Saved;
@@ -831,14 +832,21 @@ void DeductionFailureInfo::Destroy() {
   case TemplateDeductionResult::IncompletePack:
   case TemplateDeductionResult::Inconsistent:
   case TemplateDeductionResult::Underqualified:
+    delete static_cast<DFIParamWithArguments *>(Data);
+    Data = nullptr;
+    break;
   case TemplateDeductionResult::DeducedMismatch:
   case TemplateDeductionResult::DeducedMismatchNested:
+    delete static_cast<DFIDeducedMismatchArgs *>(Data);
+    Data = nullptr;
+    break;
   case TemplateDeductionResult::NonDeducedMismatch:
-    // FIXME: Destroy the data?
+    // Destroy the data
+    delete static_cast<DFIArguments *>(Data);
     Data = nullptr;
     break;
 
-  case TemplateDeductionResult::SubstitutionFailure:
+  case TemplateDeductionResult::SubstitutionFailure: {
     // FIXME: Destroy the template argument list?
     Data = nullptr;
     if (PartialDiagnosticAt *Diag = getSFINAEDiagnostic()) {
@@ -846,16 +854,18 @@ void DeductionFailureInfo::Destroy() {
       HasDiagnostic = false;
     }
     break;
-
-  case TemplateDeductionResult::ConstraintsNotSatisfied:
-    // FIXME: Destroy the template argument list?
+  }
+  case TemplateDeductionResult::ConstraintsNotSatisfied: {
+    // Destroy the data
+    CNSInfo *Ptr = static_cast<CNSInfo *>(Data);
+    delete Ptr;
     Data = nullptr;
     if (PartialDiagnosticAt *Diag = getSFINAEDiagnostic()) {
       Diag->~PartialDiagnosticAt();
       HasDiagnostic = false;
     }
     break;
-
+  }
   // Unhandled
   case TemplateDeductionResult::MiscellaneousDeductionFailure:
   case TemplateDeductionResult::AlreadyDiagnosed:
