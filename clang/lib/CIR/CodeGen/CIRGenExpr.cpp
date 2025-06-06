@@ -1637,6 +1637,7 @@ cir::AllocaOp CIRGenFunction::createTempAlloca(mlir::Type ty,
           .getDefiningOp());
 }
 
+
 /// Try to emit a reference to the given value without producing it as
 /// an l-value.  For many cases, this is just an optimization, but it avoids
 /// us needing to emit global copies of variables if they're named without
@@ -1689,4 +1690,15 @@ mlir::Value CIRGenFunction::emitScalarConstant(
     return {};
   }
   return builder.getConstant(getLoc(e->getSourceRange()), constant.getValue());
+}
+
+/// An LValue is a candidate for having its loads and stores be made atomic if
+/// we are operating under /volatile:ms *and* the LValue itself is volatile and
+/// performing such an operation can be performed without a libcall.
+bool CIRGenFunction::isLValueSuitableForInlineAtomic(LValue lv) {
+  if (!cgm.getLangOpts().MSVolatile)
+    return false;
+
+  cgm.errorNYI("LValueSuitableForInlineAtomic LangOpts MSVolatile");
+  return false;
 }
