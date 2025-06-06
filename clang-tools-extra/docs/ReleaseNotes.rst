@@ -139,9 +139,9 @@ New checks
 - New :doc:`performance-bool-bitwise-operation
   <clang-tidy/checks/performance/bool-bitwise-operation>` check.
 
-  Finds potentially unefficient uses of bitwise operators such as ``|``, 
-  ``&`` and their compound analogues with ``bool`` type and suggests replacing
-  them with logical ones, like ``||`` and ``&&``.
+  Finds potentially inefficient use of bitwise operators such as ``&``, 
+  ``|`` and their compound analogues on boolean values where logical 
+  operators like ``&&`` and ``||`` would be more appropriate.
 
 - New :doc:`portability-avoid-pragma-once
   <clang-tidy/checks/portability/avoid-pragma-once>` check.

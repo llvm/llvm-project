@@ -17,6 +17,15 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::performance {
 namespace {
+std::string tryPrintVariable(const BinaryOperator* E) {
+  if (E->isCompoundAssignmentOp()) {
+    const auto *DelcRefLHS = dyn_cast<DeclRefExpr>(E->getLHS()->IgnoreImpCasts());
+    if (DelcRefLHS)
+      return "variable '" + DelcRefLHS->getDecl()->getNameAsString() + "'";
+  }
+  return "values";
+}
+
 bool hasExplicitParentheses(const Expr *E, const SourceManager &SM,
                             const LangOptions &LangOpts) {
   if (!E)
@@ -101,7 +110,10 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedExpr = Result.Nodes.getNodeAs<BinaryOperator>("op");
 
   auto Diag = diag(MatchedExpr->getOperatorLoc(),
-                   "use logical operator instead of bitwise one for bool");
+                   "use logical operator '%0' for boolean %1 instead of bitwise operator '%2'")
+              << translate(MatchedExpr->getOpcodeStr())
+              << tryPrintVariable(MatchedExpr)
+              << MatchedExpr->getOpcodeStr();
 
   if (isInTemplateFunction(MatchedExpr, *Result.Context))
     return;
@@ -136,7 +148,7 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   if (TranslatedSpelling.empty())
     return;
 
-  std::string FixSpelling = TranslatedSpelling.str();
+  const std::string FixSpelling = TranslatedSpelling.str();
 
   FixItHint InsertEqual, ReplaceOperator, InsertBrace1, InsertBrace2;
   if (MatchedExpr->isCompoundAssignmentOp()) {
