@@ -305,21 +305,15 @@ public:
   }
 
   /// Returns the alignment of the given variable.
-  MaybeAlign getAlign() const {
-    return GlobalObject::getAlign();
-  }
+  MaybeAlign getAlign() const { return GlobalObject::getAlign(); }
 
   /// Sets the alignment attribute of the GlobalVariable.
-  void setAlignment(Align Align) {
-    GlobalObject::setAlignment(Align);
-  }
+  void setAlignment(Align Align) { GlobalObject::setAlignment(Align); }
 
   /// Sets the alignment attribute of the GlobalVariable.
   /// This method will be deprecated as the alignment property should always be
   /// defined.
-  void setAlignment(MaybeAlign Align) {
-    GlobalObject::setAlignment(Align);
-  }
+  void setAlignment(MaybeAlign Align) { GlobalObject::setAlignment(Align); }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {

@@ -284,9 +284,8 @@ PoisonValue *PoisonValue::getElementValue(unsigned Idx) const {
 
 void GlobalVariable::setAlignment(MaybeAlign Align) {
   Ctx.getTracker()
-      .emplaceIfTracking<
-          GenericSetter<&GlobalVariable::getAlign, &GlobalVariable::setAlignment>>(
-          this);
+      .emplaceIfTracking<GenericSetter<&GlobalVariable::getAlign,
+                                       &GlobalVariable::setAlignment>>(this);
   cast<llvm::GlobalVariable>(Val)->setAlignment(Align);
 }
 

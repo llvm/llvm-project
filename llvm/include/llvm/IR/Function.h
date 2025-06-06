@@ -1042,22 +1042,16 @@ public:
   ///
   /// Note that this is the alignment of the code, not the alignment of a
   /// function pointer.
-  MaybeAlign getAlign() const {
-    return GlobalObject::getAlign();
-  }
+  MaybeAlign getAlign() const { return GlobalObject::getAlign(); }
 
   /// Sets the alignment attribute of the Function.
-  void setAlignment(Align Align) {
-    GlobalObject::setAlignment(Align);
-  }
+  void setAlignment(Align Align) { GlobalObject::setAlignment(Align); }
 
   /// Sets the alignment attribute of the Function.
   ///
   /// This method will be deprecated as the alignment property should always be
   /// defined.
-  void setAlignment(MaybeAlign Align) {
-    GlobalObject::setAlignment(Align);
-  }
+  void setAlignment(MaybeAlign Align) { GlobalObject::setAlignment(Align); }
 
 private:
   void allocHungoffUselist();
