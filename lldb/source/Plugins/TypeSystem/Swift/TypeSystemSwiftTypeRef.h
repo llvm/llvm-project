@@ -297,12 +297,15 @@ public:
                       CompilerType *original_type) override;
   /// Determine whether this is a builtin SIMD type.
   static bool IsSIMDType(CompilerType type);
+  static bool IsOptionalType(lldb::opaque_compiler_type_t type);
+  static CompilerType GetOptionalType(CompilerType type);
   /// Like \p IsImportedType(), but even returns Clang types that are also Swift
   /// builtins (int <-> Swift.Int) as Clang types.
   CompilerType GetAsClangTypeOrNull(lldb::opaque_compiler_type_t type,
                                     bool *is_imported = nullptr);
   bool IsErrorType(lldb::opaque_compiler_type_t type) override;
   CompilerType GetErrorType() override;
+  CompilerType GetWeakReferent(lldb::opaque_compiler_type_t type) override;
   CompilerType GetReferentType(lldb::opaque_compiler_type_t type) override;
   CompilerType GetInstanceType(lldb::opaque_compiler_type_t type,
                                ExecutionContextScope *exe_scope) override;

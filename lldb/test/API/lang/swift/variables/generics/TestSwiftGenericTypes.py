@@ -40,10 +40,9 @@ class TestSwiftGenericTypes(TestBase):
                     substrs=['(Int) c = 255'])
 
         self.expect("frame variable --raw-output --show-types o_some",
-                    substrs=['(Swift.Optional<Swift.String>) o_some = some {',
-                             '(Swift.String) some ='])
+                    substrs=['(Swift.Optional<Swift.String>) o_some = some {}'])
         self.expect("frame variable --raw-output --show-types o_none",
-                    substrs=['(Swift.Optional<Swift.String>) o_none = none'])
+                    substrs=['(Swift.Optional<Swift.String>) o_none = nil'])
 
         self.expect(
             "frame variable o_some o_none",

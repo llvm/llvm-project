@@ -32,8 +32,9 @@ enum EGenericMulti<T> {
 enum ETuple {
   indirect case a(Int, String)
   indirect case b(Int)
-  case c(Int)
-  case d
+  indirect case c(Int)
+  case d(Int)
+  case e
 }
 
 enum ETree<T> {
@@ -50,11 +51,12 @@ func main() {
   let tuple_a = ETuple.a(23, "hello")
   let tuple_b = ETuple.b(42)
   let tuple_c = ETuple.c(32)
-  let tuple_d = ETuple.d
+  let tuple_d = ETuple.d(16)
+  let tuple_e = ETuple.e
   let tree = ETree<Int>.node(
       ETree<Int>.node(ETree<Int>.leaf(1),
                       ETree<Int>.leaf(2)),
-      ETree<Int>.leaf(3))
+    ETree<Int>.leaf(3))
   print("break here")
 }
 

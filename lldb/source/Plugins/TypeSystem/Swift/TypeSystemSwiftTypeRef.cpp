@@ -3238,7 +3238,8 @@ bool TypeSystemSwiftTypeRef::IsPossibleDynamicType(opaque_compiler_type_t type,
         StringRef name = node->getText();
         return name == swift::BUILTIN_TYPE_NAME_RAWPOINTER ||
                name == swift::BUILTIN_TYPE_NAME_NATIVEOBJECT ||
-               name == swift::BUILTIN_TYPE_NAME_BRIDGEOBJECT;
+               name == swift::BUILTIN_TYPE_NAME_BRIDGEOBJECT ||
+               name == swift::BUILTIN_TYPE_NAME_UNKNOWNOBJECT;
       }
       default:
         return ContainsGenericTypeParameter(node);
@@ -4516,6 +4517,40 @@ CompilerType TypeSystemSwiftTypeRef::GetErrorType() {
 }
 
 CompilerType
+TypeSystemSwiftTypeRef::GetWeakReferent(opaque_compiler_type_t type) {
+  // FIXME: This is very similar to TypeSystemSwiftTypeRef::GetReferentType().
+  using namespace swift::Demangle;
+  Demangler dem;
+  auto mangled = AsMangledName(type);
+  NodePointer n = dem.demangleSymbol(mangled);
+  if (!n || n->getKind() != Node::Kind::Global || !n->hasChildren())
+    return {};
+  n = n->getFirstChild();
+  if (!n || n->getKind() != Node::Kind::TypeMangling || !n->hasChildren())
+    return {};
+  n = n->getFirstChild();
+  if (!n || n->getKind() != Node::Kind::Type || !n->hasChildren())
+    return {};
+  n = n->getFirstChild();
+  if (!n ||
+      (n->getKind() != Node::Kind::Weak &&
+       n->getKind() != Node::Kind::Unowned &&
+       n->getKind() != Node::Kind::Unmanaged) ||
+      !n->hasChildren())
+    return {};
+  n = n->getFirstChild();
+  if (!n || n->getKind() != Node::Kind::Type || !n->hasChildren())
+    return {};
+  // FIXME: We only need to canonicalize this node, not the entire type.
+  n = CanonicalizeSugar(dem, n->getFirstChild());
+  if (!n || n->getKind() != Node::Kind::SugaredOptional || !n->hasChildren())
+    return {};
+  n = n->getFirstChild();
+  return RemangleAsType(dem, n,
+                        SwiftLanguageRuntime::GetManglingFlavor(mangled));
+}
+
+CompilerType
 TypeSystemSwiftTypeRef::GetReferentType(opaque_compiler_type_t type) {
   auto impl = [&]() -> CompilerType {
     using namespace swift::Demangle;
@@ -5001,7 +5036,11 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
           auto case_name = runtime->GetEnumCaseName({weak_from_this(), type},
                                                     data, &exe_ctx);
           if (case_name && !case_name->empty()) {
-            s.PutCString(*case_name);
+            // The syntactic sugar for `.none` is `nil`.
+            if (*case_name == "none" && IsOptionalType(type))
+              s << "nil";
+            else
+              s << *case_name;
             return true;
           }
           if (!case_name)
@@ -5192,6 +5231,46 @@ static bool IsSIMDNode(NodePointer node) {
   return false;
 }
 #endif
+
+bool TypeSystemSwiftTypeRef::IsOptionalType(lldb::opaque_compiler_type_t type) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  swift::Demangle::NodePointer global = dem.demangleSymbol(AsMangledName(type));
+  using Kind = swift::Demangle::Node::Kind;
+  swift::Demangle::NodePointer node = swift_demangle::ChildAtPath(
+      global, {Kind::TypeMangling, Kind::Type, Kind::BoundGenericEnum,
+               Kind::Type, Kind::Enum});
+  if (!node || node->getNumChildren() != 2)
+    return false;
+  NodePointer module = node->getChild(0);
+  NodePointer identifier = node->getChild(1);
+  return module->getKind() == Node::Kind::Module &&
+         module->getText() == swift::STDLIB_NAME &&
+         identifier->getKind() == Node::Kind::Identifier &&
+         identifier->getText() == "Optional";
+}
+
+CompilerType TypeSystemSwiftTypeRef::GetOptionalType(CompilerType type) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  swift::Demangle::NodePointer global =
+      dem.demangleSymbol(type.GetMangledTypeName().GetStringRef());
+  using Kind = swift::Demangle::Node::Kind;
+  auto *bge = swift_demangle::ChildAtPath(
+      global, {Kind::TypeMangling, Kind::Type, Kind::BoundGenericEnum});
+  if (!bge || bge->getNumChildren() != 2)
+    return {};
+  auto optional_type = swift_demangle::NodeAtPath(bge->getChild(1),
+                                                  {Kind::TypeList, Kind::Type});
+  if (!optional_type)
+    return {};
+  auto ts = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>();
+  if (!ts)
+    return {};
+  return ts->RemangleAsType(
+      dem, optional_type,
+      SwiftLanguageRuntime::GetManglingFlavor(type.GetMangledTypeName()));
+}
 
 bool TypeSystemSwiftTypeRef::IsTypedefType(opaque_compiler_type_t type) {
   auto impl = [&]() {

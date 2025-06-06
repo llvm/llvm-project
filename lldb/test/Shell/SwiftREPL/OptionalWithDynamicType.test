@@ -23,11 +23,11 @@ let b = a as NSObject
 // CHECK:   x = "MyClass"
 
 let c = a as MyClass?
-// CHECK: c: MyClass? = {{.*}} {
+// CHECK: c: MyClass? = {{[^ ]*}} {
 // CHECK:   ObjectiveC.NSObject
 // CHECK:   x = "MyClass"
 
 let d = a as NSObject?
-// CHECK: d: NSObject? = {{.*}} {
+// CHECK: d: NSObject? = {{[^ ]*}} {
 // CHECK:   ObjectiveC.NSObject
 // CHECK:   x = "MyClass"

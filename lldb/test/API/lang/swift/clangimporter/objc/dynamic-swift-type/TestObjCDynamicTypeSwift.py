@@ -23,17 +23,11 @@ class TestCase(TestBase):
 
         # With dynamic typing, the Swift runtime produces Swift child values.
         self.expect("v app", substrs=["App?) app = 0x"])
-        self.expect("v app.name", startstr='(String) app.name = "Debugger"')
+        self.expect("v -d run app.name", startstr='(String) app.name = "Debugger"')
         self.expect(
             "v app.version", startstr="((Int, Int)) app.version = (0 = 1, 1 = 0)"
         )
 
-        documents = """\
-([a.Document]?) app.recentDocuments = 1 value {
-  [0] = {
-    kind = binary
-    path = "/path/to/something"
-  }
-}
-"""
-        self.expect("v app.recentDocuments", startstr=documents)
+        self.expect("v app.recentDocuments",
+                    substrs=['[a.Document]?', 'app.recentDocuments', '1 value',
+                             '[0]', 'kind = binary', 'path = "/path/to/something"'])

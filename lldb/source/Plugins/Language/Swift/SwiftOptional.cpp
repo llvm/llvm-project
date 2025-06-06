@@ -18,6 +18,8 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/ValueObject/ValueObjectCast.h"
+#include "lldb/ValueObject/ValueObjectMemory.h"
 #include "lldb/lldb-enumerations.h"
 
 using namespace lldb;
@@ -55,65 +57,128 @@ ExtractSomeIfAny(ValueObject *optional,
   if (!optional)
     return {};
 
-  static ConstString g_Some("some");
-  static ConstString g_None("none");
+  static ConstString g_some("some");
+  static ConstString g_none("none");
 
   ValueObjectSP non_synth_valobj = optional->GetNonSyntheticValue();
   if (!non_synth_valobj)
     return {};
 
-  ConstString value(non_synth_valobj->GetValueAsCString());
+  if (!(non_synth_valobj->GetCompilerType()
+            .GetTypeSystem()
+            .dyn_cast_or_null<TypeSystemSwift>()
+            .get()))
+    return {};
+
+  auto process_sp = optional->GetProcessSP();
+  if (!process_sp)
+    return {};
+  auto *runtime = SwiftLanguageRuntime::Get(process_sp);
+  if (!runtime)
+    return {};
+
+  ValueObjectSP value_sp;
+  auto project_instance_ptr =
+      [&](ValueObject &valobj, CompilerType projected_type,
+          TypeSystemSwift::NonTriviallyManagedReferenceKind kind)
+      -> llvm::Expected<ValueObjectSP> {
+    // ObjC reference?
+    if (kind == TypeSystemSwift::NonTriviallyManagedReferenceKind::eWeak &&
+        runtime->IsObjCInstance(valobj))
+      return ValueObjectCast::Create(
+          valobj, valobj.GetPointerValue() ? g_some : g_none, projected_type);
+
+    // Unowned/strong reference.
+    if (kind != TypeSystemSwift::NonTriviallyManagedReferenceKind::eWeak)
+      return ValueObjectCast::Create(
+          valobj, valobj.GetPointerValue() ? g_some : g_none, projected_type);
+
+    Status error;
+    lldb::addr_t ptr =
+        runtime->FixupAddress(valobj.GetPointerValue(), projected_type, error);
+    // Needed for resilience.
+    ptr = runtime->MaskMaybeBridgedPointer(ptr);
+    auto exe_ctx = valobj.GetExecutionContextRef().Lock(true);
+    return ValueObjectMemory::Create(exe_ctx.GetBestExecutionContextScope(),
+                                     g_some, ptr, projected_type);
+  };
+
+  auto project_enum =
+      [&](ValueObject &valobj) -> llvm::Expected<ValueObjectSP> {
+    CompilerType type = valobj.GetCompilerType();
+    auto ts = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
+    if (!ts)
+      return llvm::createStringError("not a Swift type");
+    if (auto kind =
+            ts->GetNonTriviallyManagedReferenceKind(type.GetOpaqueQualType()))
+      return project_instance_ptr(
+          valobj, ts->GetWeakReferent(type.GetOpaqueQualType()), *kind);
+
+    return runtime->SwiftLanguageRuntime::ProjectEnum(valobj);
+  };
+
+  // ObjC pointer.
+  auto static_valobj = non_synth_valobj->GetStaticValue();
+  if (static_valobj && !(static_valobj->GetCompilerType()
+                             .GetTypeSystem()
+                             .dyn_cast_or_null<TypeSystemSwift>()
+                             .get())) {
+    value_sp = static_valobj;
+    ValueObjectSP dyn_value_sp =
+        value_sp->GetDynamicValue(eDynamicDontRunTarget);
+    if (dyn_value_sp) {
+      // GetDynamicValue may map the an ObjC pointer back into Swift
+      // as an Optional type. Unwrap the Optional.
+      value_sp = dyn_value_sp;
+      CompilerType dyn_type = value_sp->GetCompilerType();
+      auto ts =
+          dyn_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>();
+      if (!ts)
+        return value_sp;
+      if (ts->IsOptionalType(dyn_type.GetOpaqueQualType()))
+        return ValueObjectCast::Create(
+            *value_sp, g_some,
+            TypeSystemSwiftTypeRef::GetOptionalType(dyn_type));
+    }
+    return value_sp;
+  }
+
+  llvm::Expected<ValueObjectSP> projected = project_enum(*non_synth_valobj);
+  if (!projected) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters), projected.takeError(),
+                   "{0}");
+    // Some Optionals (TestExternalProviderExtraInhabitants) cannot be
+    // projected. They worked by accident in the old implementation,
+    // this hack makes the test pass, but it is not correct.
+    CompilerType projected_type =
+        TypeSystemSwiftTypeRef::GetOptionalType(optional->GetCompilerType());
+    if (!projected_type)
+      return {};
+    return ValueObjectCast::Create(
+        *optional, optional->GetPointerValue() ? g_some : g_none,
+        projected_type);
+  }
+  if (!*projected)
+    return nullptr;
+
+  ConstString value = (*projected)->GetName();
 
   if (!value)
     return {};
 
-  if (value == g_None)
-    return nullptr;
+  if (value != g_some)
+    return {};
 
-  ValueObjectSP value_sp(
-      non_synth_valobj->GetChildMemberWithName(g_Some, true));
+  value_sp = *projected;
   if (!value_sp)
     return {};
 
-  auto process_sp = optional->GetProcessSP();
-  auto *swift_runtime = SwiftLanguageRuntime::Get(process_sp);
-
-  CompilerType type = non_synth_valobj->GetCompilerType();
-  auto type_system = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
-  if (!type_system)
-    return {};
-  if (auto kind = type_system->GetNonTriviallyManagedReferenceKind(
-          type.GetOpaqueQualType())) {
-    if (*kind == TypeSystemSwift::NonTriviallyManagedReferenceKind::eWeak) {
-      if (swift_runtime) {
-        lldb::addr_t original_ptr =
-            value_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
-        lldb::addr_t tweaked_ptr =
-            swift_runtime->MaybeMaskNonTrivialReferencePointer(original_ptr,
-                                                               *kind);
-        if (original_ptr != tweaked_ptr) {
-          CompilerType value_type(value_sp->GetCompilerType());
-          DataBufferSP buffer_sp(
-              new DataBufferHeap(&tweaked_ptr, sizeof(tweaked_ptr)));
-          DataExtractor extractor(buffer_sp, process_sp->GetByteOrder(),
-                                  process_sp->GetAddressByteSize());
-          ExecutionContext exe_ctx(process_sp);
-          value_sp = ValueObject::CreateValueObjectFromData(
-              value_sp->GetName().AsCString(), extractor, exe_ctx, value_type);
-          if (!value_sp)
-            return {};
-          else
-            value_sp->SetSyntheticChildrenGenerated(true);
-        }
-      }
-    }
-  }
   lldb::DynamicValueType use_dynamic;
 
   // FIXME: We usually want to display the dynamic value of an optional's
   // payload, but we don't have a simple way to determine whether the dynamic
   // value was actually requested. Consult the target setting as a workaround.
-  if (swift_runtime->CouldHaveDynamicValue(*value_sp))
+  if (runtime->CouldHaveDynamicValue(*value_sp))
     // FIXME (cont): Here, we'd like to use some new API to determine whether
     // a dynamic value was actually requested.
     use_dynamic = eDynamicDontRunTarget;
@@ -123,9 +188,6 @@ ExtractSomeIfAny(ValueObject *optional,
   ValueObjectSP dyn_value_sp = value_sp->GetDynamicValue(use_dynamic);
   if (dyn_value_sp)
     value_sp = dyn_value_sp;
-
-  if (synthetic_value && value_sp->HasSyntheticValue())
-    value_sp = value_sp->GetSyntheticValue();
 
   return value_sp;
 }
@@ -143,7 +205,10 @@ SwiftOptional_SummaryProvider_Impl(ValueObject &valobj, Stream &stream,
     return true;
   }
 
-  const char *summary = some->GetSummaryAsCString();
+  if (some->HasSyntheticValue())
+    some = some->GetSyntheticValue();
+
+  const char *summary = some->GetSummaryAsCString(lldb::eLanguageTypeSwift);
   const char *value = some->GetValueAsCString();
 
   if (summary)
@@ -200,7 +265,8 @@ bool lldb_private::formatters::swift::SwiftOptionalSummaryProvider::
   lldb_private::Flags some_flags(some->GetCompilerType().GetTypeInfo());
 
   if (some_flags.AllSet(eTypeIsSwift)) {
-    if (some_flags.AnySet(eTypeInstanceIsPointer | eTypeIsProtocol))
+    if (some_flags.AnySet(eTypeInstanceIsPointer | eTypeIsProtocol |
+                          lldb::eTypeIsEnumeration))
       return true;
   }
 
@@ -221,18 +287,21 @@ bool lldb_private::formatters::swift::SwiftOptionalSummaryProvider::
 
 lldb_private::formatters::swift::SwiftOptionalSyntheticFrontEnd::
     SwiftOptionalSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
-    : SyntheticChildrenFrontEnd(*valobj_sp.get()), m_is_none(false),
-      m_children(false), m_some(nullptr) {}
+    : SyntheticChildrenFrontEnd(*valobj_sp.get()) {
+  Update();
+}
 
 bool lldb_private::formatters::swift::SwiftOptionalSyntheticFrontEnd::IsEmpty()
     const {
-  return (m_is_none == true || m_children == false || m_some == nullptr);
+  return (m_is_none == true || m_some == nullptr);
 }
 
 llvm::Expected<uint32_t> lldb_private::formatters::swift::
     SwiftOptionalSyntheticFrontEnd::CalculateNumChildren() {
   if (IsEmpty())
     return 0;
+  if (m_some->HasSyntheticValue())
+    return m_some->GetSyntheticValue()->GetNumChildren();
   return m_some->GetNumChildren();
 }
 
@@ -240,19 +309,23 @@ lldb::ValueObjectSP lldb_private::formatters::swift::
     SwiftOptionalSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (IsEmpty())
     return nullptr;
-  auto child = m_some->GetChildAtIndex(idx, true);
-  if (child && m_some->IsSyntheticChildrenGenerated())
+
+  ValueObjectSP some = m_some;
+  if (some->HasSyntheticValue())
+    some = some->GetSyntheticValue();
+
+  auto child = some->GetChildAtIndex(idx, true);
+  if (child && some->IsSyntheticChildrenGenerated())
     child->SetSyntheticChildrenGenerated(true);
   return child;
 }
 
-lldb::ChildCacheState lldb_private::formatters::swift::SwiftOptionalSyntheticFrontEnd::Update() {
+lldb::ChildCacheState
+lldb_private::formatters::swift::SwiftOptionalSyntheticFrontEnd::Update() {
   m_some = nullptr;
   m_is_none = true;
-  m_children = false;
 
-  std::optional<ValueObjectSP> maybe_some =
-      ExtractSomeIfAny(&m_backend, true);
+  std::optional<ValueObjectSP> maybe_some = ExtractSomeIfAny(&m_backend, false);
   if (!maybe_some)
     return ChildCacheState::eRefetch;
 
@@ -260,13 +333,10 @@ lldb::ChildCacheState lldb_private::formatters::swift::SwiftOptionalSyntheticFro
 
   if (!m_some) {
     m_is_none = true;
-    m_children = false;
     return ChildCacheState::eRefetch;
   }
 
   m_is_none = false;
-
-  m_children = m_some->HasChildren();
 
   return ChildCacheState::eRefetch;
 }
@@ -278,8 +348,6 @@ bool lldb_private::formatters::swift::SwiftOptionalSyntheticFrontEnd::
 
 llvm::Expected<size_t> lldb_private::formatters::swift::
     SwiftOptionalSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
-  static ConstString g_Some("some");
-
   if (IsEmpty())
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());
@@ -289,8 +357,12 @@ llvm::Expected<size_t> lldb_private::formatters::swift::
 
 lldb::ValueObjectSP lldb_private::formatters::swift::
     SwiftOptionalSyntheticFrontEnd::GetSyntheticValue() {
-  if (m_some && m_some->CanProvideValue())
-    return m_some->GetSP();
+  return m_some;
+  if (m_some && m_some->CanProvideValue()) {
+    if (m_some->HasSyntheticValue())
+      return m_some->GetSyntheticValue();
+    return m_some;
+  }
   return nullptr;
 }
 

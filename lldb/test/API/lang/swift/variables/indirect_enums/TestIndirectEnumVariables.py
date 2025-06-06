@@ -98,6 +98,8 @@ class TestIndirectEnumVariables(TestBase):
         GP_ADTEnumType = self.get_variable("GP_ADTEnumType")
         GP_Recursive = self.get_variable("GP_Recursive")
 
+        if self.TraceOn():
+            self.expect("frame variable -d run -t")
         self.check_enum(
             GP_StructType,
             value='StructType',
@@ -105,26 +107,24 @@ class TestIndirectEnumVariables(TestBase):
             child_value='12')
 
         self.check_enum(
-            GP_TupleType,
-            value='TupleType',
-            child_path=[
-                0,
-                0],
-            child_value='12')
+            GP_TupleType, value="TupleType", child_path=[0], child_value="12"
+        )
         self.check_enum(
-            GP_TupleType, value='TupleType', child_path=[
-                0, 1], child_summary='"Hello World"')
+            GP_TupleType,
+            value="TupleType",
+            child_path=[1],
+            child_summary='"Hello World"',
+        )
 
         self.check_enum(
-            GP_ClassType, value='ClassType', child_path=[
-                0, 0, 0], child_summary='"Hello World"')
-        self.check_enum(
             GP_ClassType,
-            value='ClassType',
-            child_path=[
-                0,
-                1],
-            child_value='12')
+            value="ClassType",
+            child_path=[0, 0],
+            child_summary='"Hello World"',
+        )
+        self.check_enum(
+            GP_ClassType, value="ClassType", child_path=[1], child_value="12"
+        )
 
         self.check_enum(
             GP_ProtocolType_Struct,
@@ -134,39 +134,24 @@ class TestIndirectEnumVariables(TestBase):
 
         self.check_enum(
             GP_ProtocolType_Class,
-            value='ProtocolType',
-            child_path=[
-                0,
-                0,
-                0],
-            child_summary='"Hello World"')
+            value="ProtocolType",
+            child_path=[0, 0],
+            child_summary='"Hello World"',
+        )
+
         self.check_enum(
             GP_ProtocolType_Class,
-            value='ProtocolType',
-            child_path=[
-                0,
-                1],
-            child_value='12')
+            value="ProtocolType",
+            child_path=[1],
+            child_value="12",
+        )
+
+        self.check_enum(GP_CEnumType, value="CEnumType", child_path=[], child_value="B")
 
         self.check_enum(
-            GP_CEnumType,
-            value='CEnumType',
-            child_path=[0],
-            child_value='B')
+            GP_ADTEnumType, value="ADTEnumType", child_path=[], child_value="12"
+        )
 
         self.check_enum(
-            GP_ADTEnumType,
-            value='ADTEnumType',
-            child_path=[
-                0,
-                0],
-            child_value='12')
-
-        self.check_enum(
-            GP_Recursive,
-            value='Recursive',
-            child_path=[
-                0,
-                0],
-            child_value='12')
-
+            GP_Recursive, value="Recursive", child_path=[], child_value="12"
+        )

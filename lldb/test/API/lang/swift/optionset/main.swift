@@ -47,8 +47,8 @@ func main() {
   //%self.expect('expression sdk_option_exhaustive', substrs=['[.firstEqual, .insertionIndex]'])
   //%self.expect('frame variable sdk_option_nonexhaustive', substrs=['[.firstEqual, 0x1]'])
   //%self.expect('expression sdk_option_nonexhaustive', substrs=['[.firstEqual, 0x1]'])
-  //%self.expect('frame variable sdk_option_nonevalid', substrs=['rawValue = 12'])
-  //%self.expect('expression sdk_option_nonevalid', substrs=['rawValue = 12'])
+  //%self.expect('frame variable sdk_option_nonevalid', substrs=['rawValue = 0xC'])
+  //%self.expect('expression sdk_option_nonevalid', substrs=['rawValue = 0xC'])
 }
 
 main()

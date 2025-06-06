@@ -23,7 +23,7 @@ class TestSwiftCTypeIvar(TestBase):
             self,
             a.GetChildAtIndex(0),
             typename="Swift.Optional<Foo.BridgedPtr>",
-            value="none",
+            value="nil",
         )
 
         b = self.frame().FindVariable("b")
@@ -31,5 +31,5 @@ class TestSwiftCTypeIvar(TestBase):
             self,
             a.GetChildAtIndex(0),
             typename="Swift.Optional<Foo.BridgedPtr>",
-            value="none",
+            value="nil",
         )
