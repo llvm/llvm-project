@@ -1308,6 +1308,8 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
         ++i;
       }
     }
+    if (supers.empty())
+      return llvm::createStringError("could not get instance type info");
 
     // Handle the "real" fields.
     auto *object = supers[0].get_record_type_info();
