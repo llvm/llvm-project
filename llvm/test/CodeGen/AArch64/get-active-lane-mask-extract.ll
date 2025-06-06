@@ -219,7 +219,7 @@ define void @test_2x32bit_mask_with_32bit_index_and_trip_count(i32 %i, i32 %n) #
 ; CHECK-SVE2p1-SME2-NEXT:    whilelo { p0.b, p1.b }, x10, x9
 ; CHECK-SVE2p1-SME2-NEXT:    whilelo { p2.b, p3.b }, x8, x9
 ; CHECK-SVE2p1-SME2-NEXT:    b use
-  %r = call <vscale x 64 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 %i, i32 %n)
+  %r = call <vscale x 64 x i1> @llvm.get.active.lane.mask.nxv64i1.i32(i32 %i, i32 %n)
   %v0 = call <vscale x 16 x i1> @llvm.vector.extract.nxv16i1.nxv64i1.i64(<vscale x 64 x i1> %r, i64 0)
   %v1 = call <vscale x 16 x i1> @llvm.vector.extract.nxv16i1.nxv64i1.i64(<vscale x 64 x i1> %r, i64 16)
   %v2 = call <vscale x 16 x i1> @llvm.vector.extract.nxv16i1.nxv64i1.i64(<vscale x 64 x i1> %r, i64 32)
