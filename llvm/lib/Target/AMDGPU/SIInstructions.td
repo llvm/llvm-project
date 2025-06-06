@@ -1840,22 +1840,21 @@ def : GCNPat <
   (UniformUnaryFrag<fabs> (v2fp16vt SReg_32:$src)),
   (S_AND_B32 SReg_32:$src, (S_MOV_B32 (i32 0x7fff7fff)))
 >;
-}
 
 // This is really (fneg (fabs v2f16:$src))
 //
 // fabs is not reported as free because there is modifier for it in
 // VOP3P instructions, so it is turned into the bit op.
 def : GCNPat <
-  (UniformUnaryFrag<fneg> (v2f16 (bitconvert (and_oneuse (i32 SReg_32:$src), 0x7fff7fff)))),
+  (UniformUnaryFrag<fneg> (v2fp16vt (bitconvert (and_oneuse (i32 SReg_32:$src), 0x7fff7fff)))),
   (S_OR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x80008000))) // Set sign bit
 >;
 
 def : GCNPat <
-  (UniformUnaryFrag<fneg> (v2f16 (fabs SReg_32:$src))),
+  (UniformUnaryFrag<fneg> (v2fp16vt (fabs SReg_32:$src))),
   (S_OR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x80008000))) // Set sign bit
 >;
-
+}
 
 // COPY_TO_REGCLASS is needed to avoid using SCC from S_XOR_B32 instead
 // of the real value.
@@ -1986,12 +1985,12 @@ def : GCNPat <
   (fabs (v2fp16vt VGPR_32:$src)),
   (V_AND_B32_e64 (S_MOV_B32 (i32 0x7fff7fff)), VGPR_32:$src)
 >;
-}
 
 def : GCNPat <
-  (fneg (v2f16 (fabs VGPR_32:$src))),
+  (fneg (v2fp16vt (fabs VGPR_32:$src))),
   (V_OR_B32_e64 (S_MOV_B32 (i32 0x80008000)), VGPR_32:$src)
 >;
+}
 
 def : GCNPat <
   (fabs (f64 VReg_64:$src)),
