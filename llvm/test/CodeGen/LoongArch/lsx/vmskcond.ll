@@ -17,63 +17,10 @@ entry:
 define i16 @vmsk_sgt_allzeros_i8(<16 x i8 > %a) {
 ; CHECK-LABEL: vmsk_sgt_allzeros_i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vrepli.b $vr1, 0
 ; CHECK-NEXT:    vslt.b $vr0, $vr1, $vr0
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 1
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 2
-; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 3
-; CHECK-NEXT:    bstrins.d $a0, $a1, 3, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 4
-; CHECK-NEXT:    bstrins.d $a0, $a1, 4, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 5
-; CHECK-NEXT:    bstrins.d $a0, $a1, 5, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 6
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 6
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 7
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 7
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 8
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 8
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 9
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 9
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 10
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 10
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 11
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 11
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 12
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 12
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 13
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 13
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 14
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 14
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 15
-; CHECK-NEXT:    slli.d $a1, $a1, 15
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vmskltz.b $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
 entry:
   %1 = icmp sgt <16 x i8> %a, splat (i8 0)
@@ -156,62 +103,9 @@ entry:
 define i16 @vmsk_sle_allzeros_i8(<16 x i8 > %a) {
 ; CHECK-LABEL: vmsk_sle_allzeros_i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vslei.b $vr0, $vr0, 0
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 1
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 2
-; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 3
-; CHECK-NEXT:    bstrins.d $a0, $a1, 3, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 4
-; CHECK-NEXT:    bstrins.d $a0, $a1, 4, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 5
-; CHECK-NEXT:    bstrins.d $a0, $a1, 5, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 6
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 6
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 7
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 7
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 8
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 8
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 9
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 9
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 10
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 10
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 11
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 11
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 12
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 12
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 13
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 13
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 14
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 14
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 15
-; CHECK-NEXT:    slli.d $a1, $a1, 15
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vmskltz.b $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
 entry:
   %1 = icmp sle <16 x i8> %a, splat (i8 0)
@@ -282,19 +176,14 @@ entry:
 define i2 @vmsk_sgt_v2i8(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: vmsk_sgt_v2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vslt.b $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vilvl.b $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vilvl.h $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vilvl.w $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vslli.d $vr0, $vr0, 56
 ; CHECK-NEXT:    vsrai.d $vr0, $vr0, 56
-; CHECK-NEXT:    vpickve2gr.d $a0, $vr0, 1
-; CHECK-NEXT:    vpickve2gr.d $a1, $vr0, 0
-; CHECK-NEXT:    bstrins.d $a1, $a0, 63, 1
-; CHECK-NEXT:    andi $a0, $a1, 3
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vmskltz.d $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
   %x = icmp sgt <2 x i8> %a, %b
   %res = bitcast <2 x i1> %x to i2
@@ -304,18 +193,13 @@ define i2 @vmsk_sgt_v2i8(<2 x i8> %a, <2 x i8> %b) {
 define i2 @vmsk_sgt_v2i16(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-LABEL: vmsk_sgt_v2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vslt.h $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vilvl.h $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vilvl.w $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vslli.d $vr0, $vr0, 48
 ; CHECK-NEXT:    vsrai.d $vr0, $vr0, 48
-; CHECK-NEXT:    vpickve2gr.d $a0, $vr0, 1
-; CHECK-NEXT:    vpickve2gr.d $a1, $vr0, 0
-; CHECK-NEXT:    bstrins.d $a1, $a0, 63, 1
-; CHECK-NEXT:    andi $a0, $a1, 3
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vmskltz.d $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
   %x = icmp sgt <2 x i16> %a, %b
   %res = bitcast <2 x i1> %x to i2
@@ -325,17 +209,12 @@ define i2 @vmsk_sgt_v2i16(<2 x i16> %a, <2 x i16> %b) {
 define i2 @vmsk_sgt_v2i32(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: vmsk_sgt_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vslt.w $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vshuf4i.w $vr0, $vr0, 16
 ; CHECK-NEXT:    vslli.d $vr0, $vr0, 32
 ; CHECK-NEXT:    vsrai.d $vr0, $vr0, 32
-; CHECK-NEXT:    vpickve2gr.d $a0, $vr0, 1
-; CHECK-NEXT:    vpickve2gr.d $a1, $vr0, 0
-; CHECK-NEXT:    bstrins.d $a1, $a0, 63, 1
-; CHECK-NEXT:    andi $a0, $a1, 3
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vmskltz.d $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
   %x = icmp sgt <2 x i32> %a, %b
   %res = bitcast <2 x i1> %x to i2
@@ -345,15 +224,9 @@ define i2 @vmsk_sgt_v2i32(<2 x i32> %a, <2 x i32> %b) {
 define i2 @vmsk_sgt_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: vmsk_sgt_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vslt.d $vr0, $vr1, $vr0
-; CHECK-NEXT:    vpickve2gr.d $a0, $vr0, 0
-; CHECK-NEXT:    vpickve2gr.d $a1, $vr0, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 1
-; CHECK-NEXT:    sub.d $a0, $a1, $a0
-; CHECK-NEXT:    andi $a0, $a0, 3
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vmskltz.d $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
   %x = icmp sgt <2 x i64> %a, %b
   %res = bitcast <2 x i1> %x to i2
@@ -363,15 +236,9 @@ define i2 @vmsk_sgt_v2i64(<2 x i64> %a, <2 x i64> %b) {
 define i2 @vmsk_ogt_v2f64(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: vmsk_ogt_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vfcmp.clt.d $vr0, $vr1, $vr0
-; CHECK-NEXT:    vpickve2gr.d $a0, $vr0, 0
-; CHECK-NEXT:    vpickve2gr.d $a1, $vr0, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 1
-; CHECK-NEXT:    sub.d $a0, $a1, $a0
-; CHECK-NEXT:    andi $a0, $a0, 3
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vmskltz.d $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
   %x = fcmp ogt <2 x double> %a, %b
   %res = bitcast <2 x i1> %x to i2
@@ -381,24 +248,13 @@ define i2 @vmsk_ogt_v2f64(<2 x double> %a, <2 x double> %b) {
 define i4 @vmsk_sgt_v4i8(<4 x i8> %a, <4 x i8> %b) {
 ; CHECK-LABEL: vmsk_sgt_v4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vslt.b $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vilvl.b $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vilvl.h $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vslli.w $vr0, $vr0, 24
 ; CHECK-NEXT:    vsrai.w $vr0, $vr0, 24
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; CHECK-NEXT:    vpickve2gr.w $a1, $vr0, 1
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
-; CHECK-NEXT:    vpickve2gr.w $a1, $vr0, 2
-; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
-; CHECK-NEXT:    vpickve2gr.w $a1, $vr0, 3
-; CHECK-NEXT:    slli.d $a1, $a1, 3
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    andi $a0, $a0, 15
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vmskltz.w $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
   %x = icmp sgt <4 x i8> %a, %b
   %res = bitcast <4 x i1> %x to i4
@@ -408,23 +264,12 @@ define i4 @vmsk_sgt_v4i8(<4 x i8> %a, <4 x i8> %b) {
 define i4 @vmsk_sgt_v4i16(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: vmsk_sgt_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vslt.h $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vilvl.h $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vslli.w $vr0, $vr0, 16
 ; CHECK-NEXT:    vsrai.w $vr0, $vr0, 16
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; CHECK-NEXT:    vpickve2gr.w $a1, $vr0, 1
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
-; CHECK-NEXT:    vpickve2gr.w $a1, $vr0, 2
-; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
-; CHECK-NEXT:    vpickve2gr.w $a1, $vr0, 3
-; CHECK-NEXT:    slli.d $a1, $a1, 3
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    andi $a0, $a0, 15
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vmskltz.w $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
   %x = icmp sgt <4 x i16> %a, %b
   %res = bitcast <4 x i1> %x to i4
@@ -434,20 +279,9 @@ define i4 @vmsk_sgt_v4i16(<4 x i16> %a, <4 x i16> %b) {
 define i4 @vmsk_sgt_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: vmsk_sgt_v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vslt.w $vr0, $vr1, $vr0
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; CHECK-NEXT:    vpickve2gr.w $a1, $vr0, 1
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
-; CHECK-NEXT:    vpickve2gr.w $a1, $vr0, 2
-; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
-; CHECK-NEXT:    vpickve2gr.w $a1, $vr0, 3
-; CHECK-NEXT:    slli.d $a1, $a1, 3
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    andi $a0, $a0, 15
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vmskltz.w $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
   %x = icmp sgt <4 x i32> %a, %b
   %res = bitcast <4 x i1> %x to i4
@@ -457,20 +291,9 @@ define i4 @vmsk_sgt_v4i32(<4 x i32> %a, <4 x i32> %b) {
 define i4 @vmsk_ogt_v4f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: vmsk_ogt_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vfcmp.clt.s $vr0, $vr1, $vr0
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; CHECK-NEXT:    vpickve2gr.w $a1, $vr0, 1
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
-; CHECK-NEXT:    vpickve2gr.w $a1, $vr0, 2
-; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
-; CHECK-NEXT:    vpickve2gr.w $a1, $vr0, 3
-; CHECK-NEXT:    slli.d $a1, $a1, 3
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    andi $a0, $a0, 15
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vmskltz.w $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
   %x = fcmp ogt <4 x float> %a, %b
   %res = bitcast <4 x i1> %x to i4
@@ -480,33 +303,12 @@ define i4 @vmsk_ogt_v4f32(<4 x float> %a, <4 x float> %b) {
 define i8 @vmsk_sgt_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: vmsk_sgt_v8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vslt.b $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vilvl.b $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vslli.h $vr0, $vr0, 8
 ; CHECK-NEXT:    vsrai.h $vr0, $vr0, 8
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 1
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 2
-; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 3
-; CHECK-NEXT:    bstrins.d $a0, $a1, 3, 3
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 4
-; CHECK-NEXT:    bstrins.d $a0, $a1, 4, 4
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 5
-; CHECK-NEXT:    bstrins.d $a0, $a1, 5, 5
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 6
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 6
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 7
-; CHECK-NEXT:    slli.d $a1, $a1, 7
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vmskltz.h $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
   %x = icmp sgt <8 x i8> %a, %b
   %res = bitcast <8 x i1> %x to i8
@@ -516,30 +318,9 @@ define i8 @vmsk_sgt_v8i8(<8 x i8> %a, <8 x i8> %b) {
 define i8 @vmsk_sgt_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: vmsk_sgt_v8i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vslt.h $vr0, $vr1, $vr0
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 1
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 2
-; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 3
-; CHECK-NEXT:    bstrins.d $a0, $a1, 3, 3
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 4
-; CHECK-NEXT:    bstrins.d $a0, $a1, 4, 4
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 5
-; CHECK-NEXT:    bstrins.d $a0, $a1, 5, 5
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 6
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 6
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 7
-; CHECK-NEXT:    slli.d $a1, $a1, 7
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vmskltz.h $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
   %x = icmp sgt <8 x i16> %a, %b
   %res = bitcast <8 x i1> %x to i8
@@ -549,62 +330,9 @@ define i8 @vmsk_sgt_v8i16(<8 x i16> %a, <8 x i16> %b) {
 define i16 @vmsk_sgt_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: vmsk_sgt_v16i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vslt.b $vr0, $vr1, $vr0
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 1
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 2
-; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 3
-; CHECK-NEXT:    bstrins.d $a0, $a1, 3, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 4
-; CHECK-NEXT:    bstrins.d $a0, $a1, 4, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 5
-; CHECK-NEXT:    bstrins.d $a0, $a1, 5, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 6
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 6
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 7
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 7
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 8
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 8
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 9
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 9
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 10
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 10
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 11
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 11
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 12
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 12
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 13
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 13
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 14
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 14
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 15
-; CHECK-NEXT:    slli.d $a1, $a1, 15
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vmskltz.b $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
   %x = icmp sgt <16 x i8> %a, %b
   %res = bitcast <16 x i1> %x to i16
@@ -614,8 +342,6 @@ define i16 @vmsk_sgt_v16i8(<16 x i8> %a, <16 x i8> %b) {
 define i2 @vmsk_sgt_and_sgt_v2i8(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d) {
 ; CHECK-LABEL: vmsk_sgt_and_sgt_v2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vslt.b $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vslt.b $vr1, $vr3, $vr2
 ; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
@@ -624,11 +350,8 @@ define i2 @vmsk_sgt_and_sgt_v2i8(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8>
 ; CHECK-NEXT:    vilvl.w $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vslli.d $vr0, $vr0, 56
 ; CHECK-NEXT:    vsrai.d $vr0, $vr0, 56
-; CHECK-NEXT:    vpickve2gr.d $a0, $vr0, 1
-; CHECK-NEXT:    vpickve2gr.d $a1, $vr0, 0
-; CHECK-NEXT:    bstrins.d $a1, $a0, 63, 1
-; CHECK-NEXT:    andi $a0, $a1, 3
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vmskltz.d $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
   %x0 = icmp sgt <2 x i8> %a, %b
   %x1 = icmp sgt <2 x i8> %c, %d
@@ -640,8 +363,6 @@ define i2 @vmsk_sgt_and_sgt_v2i8(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8>
 define i2 @vmsk_sgt_and_sgt_v2i16(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c, <2 x i16> %d) {
 ; CHECK-LABEL: vmsk_sgt_and_sgt_v2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vslt.h $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vslt.h $vr1, $vr3, $vr2
 ; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
@@ -649,11 +370,8 @@ define i2 @vmsk_sgt_and_sgt_v2i16(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c, <2 x
 ; CHECK-NEXT:    vilvl.w $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vslli.d $vr0, $vr0, 48
 ; CHECK-NEXT:    vsrai.d $vr0, $vr0, 48
-; CHECK-NEXT:    vpickve2gr.d $a0, $vr0, 1
-; CHECK-NEXT:    vpickve2gr.d $a1, $vr0, 0
-; CHECK-NEXT:    bstrins.d $a1, $a0, 63, 1
-; CHECK-NEXT:    andi $a0, $a1, 3
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vmskltz.d $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
   %x0 = icmp sgt <2 x i16> %a, %b
   %x1 = icmp sgt <2 x i16> %c, %d
@@ -665,19 +383,14 @@ define i2 @vmsk_sgt_and_sgt_v2i16(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c, <2 x
 define i2 @vmsk_sgt_and_sgt_v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x i32> %d) {
 ; CHECK-LABEL: vmsk_sgt_and_sgt_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vslt.w $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vslt.w $vr1, $vr3, $vr2
 ; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vshuf4i.w $vr0, $vr0, 16
 ; CHECK-NEXT:    vslli.d $vr0, $vr0, 32
 ; CHECK-NEXT:    vsrai.d $vr0, $vr0, 32
-; CHECK-NEXT:    vpickve2gr.d $a0, $vr0, 1
-; CHECK-NEXT:    vpickve2gr.d $a1, $vr0, 0
-; CHECK-NEXT:    bstrins.d $a1, $a0, 63, 1
-; CHECK-NEXT:    andi $a0, $a1, 3
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vmskltz.d $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
   %x0 = icmp sgt <2 x i32> %a, %b
   %x1 = icmp sgt <2 x i32> %c, %d
@@ -689,17 +402,11 @@ define i2 @vmsk_sgt_and_sgt_v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x
 define i2 @vmsk_sgt_and_sgt_v2i64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c, <2 x i64> %d) {
 ; CHECK-LABEL: vmsk_sgt_and_sgt_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vslt.d $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vslt.d $vr1, $vr3, $vr2
 ; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vpickve2gr.d $a0, $vr0, 0
-; CHECK-NEXT:    vpickve2gr.d $a1, $vr0, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 1
-; CHECK-NEXT:    sub.d $a0, $a1, $a0
-; CHECK-NEXT:    andi $a0, $a0, 3
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vmskltz.d $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
   %x0 = icmp sgt <2 x i64> %a, %b
   %x1 = icmp sgt <2 x i64> %c, %d
@@ -711,17 +418,11 @@ define i2 @vmsk_sgt_and_sgt_v2i64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c, <2 x
 define i2 @vmsk_ogt_and_ogt_v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c, <2 x double> %d) {
 ; CHECK-LABEL: vmsk_ogt_and_ogt_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vfcmp.clt.d $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vfcmp.clt.d $vr1, $vr3, $vr2
 ; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vpickve2gr.d $a0, $vr0, 0
-; CHECK-NEXT:    vpickve2gr.d $a1, $vr0, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 1
-; CHECK-NEXT:    sub.d $a0, $a1, $a0
-; CHECK-NEXT:    andi $a0, $a0, 3
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vmskltz.d $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
   %x0 = fcmp ogt <2 x double> %a, %b
   %x1 = fcmp ogt <2 x double> %c, %d
@@ -733,8 +434,6 @@ define i2 @vmsk_ogt_and_ogt_v2f64(<2 x double> %a, <2 x double> %b, <2 x double>
 define i4 @vmsk_sgt_and_sgt_v4i8(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c, <4 x i8> %d) {
 ; CHECK-LABEL: vmsk_sgt_and_sgt_v4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vslt.b $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vslt.b $vr1, $vr3, $vr2
 ; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
@@ -742,17 +441,8 @@ define i4 @vmsk_sgt_and_sgt_v4i8(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c, <4 x i8>
 ; CHECK-NEXT:    vilvl.h $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vslli.w $vr0, $vr0, 24
 ; CHECK-NEXT:    vsrai.w $vr0, $vr0, 24
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; CHECK-NEXT:    vpickve2gr.w $a1, $vr0, 1
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
-; CHECK-NEXT:    vpickve2gr.w $a1, $vr0, 2
-; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
-; CHECK-NEXT:    vpickve2gr.w $a1, $vr0, 3
-; CHECK-NEXT:    slli.d $a1, $a1, 3
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    andi $a0, $a0, 15
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vmskltz.w $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
   %x0 = icmp sgt <4 x i8> %a, %b
   %x1 = icmp sgt <4 x i8> %c, %d
@@ -764,25 +454,14 @@ define i4 @vmsk_sgt_and_sgt_v4i8(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c, <4 x i8>
 define i4 @vmsk_sgt_and_sgt_v4i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x i16> %d) {
 ; CHECK-LABEL: vmsk_sgt_and_sgt_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vslt.h $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vslt.h $vr1, $vr3, $vr2
 ; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vilvl.h $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vslli.w $vr0, $vr0, 16
 ; CHECK-NEXT:    vsrai.w $vr0, $vr0, 16
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; CHECK-NEXT:    vpickve2gr.w $a1, $vr0, 1
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
-; CHECK-NEXT:    vpickve2gr.w $a1, $vr0, 2
-; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
-; CHECK-NEXT:    vpickve2gr.w $a1, $vr0, 3
-; CHECK-NEXT:    slli.d $a1, $a1, 3
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    andi $a0, $a0, 15
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vmskltz.w $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
   %x0 = icmp sgt <4 x i16> %a, %b
   %x1 = icmp sgt <4 x i16> %c, %d
@@ -794,22 +473,11 @@ define i4 @vmsk_sgt_and_sgt_v4i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x
 define i4 @vmsk_sgt_and_sgt_v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d) {
 ; CHECK-LABEL: vmsk_sgt_and_sgt_v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vslt.w $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vslt.w $vr1, $vr3, $vr2
 ; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; CHECK-NEXT:    vpickve2gr.w $a1, $vr0, 1
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
-; CHECK-NEXT:    vpickve2gr.w $a1, $vr0, 2
-; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
-; CHECK-NEXT:    vpickve2gr.w $a1, $vr0, 3
-; CHECK-NEXT:    slli.d $a1, $a1, 3
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    andi $a0, $a0, 15
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vmskltz.w $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
   %x0 = icmp sgt <4 x i32> %a, %b
   %x1 = icmp sgt <4 x i32> %c, %d
@@ -821,22 +489,11 @@ define i4 @vmsk_sgt_and_sgt_v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x
 define i4 @vmsk_ogt_and_ogt_v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x float> %d) {
 ; CHECK-LABEL: vmsk_ogt_and_ogt_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vfcmp.clt.s $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vfcmp.clt.s $vr1, $vr3, $vr2
 ; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; CHECK-NEXT:    vpickve2gr.w $a1, $vr0, 1
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
-; CHECK-NEXT:    vpickve2gr.w $a1, $vr0, 2
-; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
-; CHECK-NEXT:    vpickve2gr.w $a1, $vr0, 3
-; CHECK-NEXT:    slli.d $a1, $a1, 3
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    andi $a0, $a0, 15
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vmskltz.w $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
   %x0 = fcmp ogt <4 x float> %a, %b
   %x1 = fcmp ogt <4 x float> %c, %d
@@ -848,35 +505,14 @@ define i4 @vmsk_ogt_and_ogt_v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c
 define i8 @vmsk_sgt_and_sgt_v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <8 x i8> %d) {
 ; CHECK-LABEL: vmsk_sgt_and_sgt_v8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vslt.b $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vslt.b $vr1, $vr3, $vr2
 ; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vilvl.b $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vslli.h $vr0, $vr0, 8
 ; CHECK-NEXT:    vsrai.h $vr0, $vr0, 8
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 1
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 2
-; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 3
-; CHECK-NEXT:    bstrins.d $a0, $a1, 3, 3
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 4
-; CHECK-NEXT:    bstrins.d $a0, $a1, 4, 4
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 5
-; CHECK-NEXT:    bstrins.d $a0, $a1, 5, 5
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 6
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 6
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 7
-; CHECK-NEXT:    slli.d $a1, $a1, 7
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vmskltz.h $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
   %x0 = icmp sgt <8 x i8> %a, %b
   %x1 = icmp sgt <8 x i8> %c, %d
@@ -888,32 +524,11 @@ define i8 @vmsk_sgt_and_sgt_v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <8 x i8>
 define i8 @vmsk_sgt_and_sgt_v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c, <8 x i16> %d) {
 ; CHECK-LABEL: vmsk_sgt_and_sgt_v8i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vslt.h $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vslt.h $vr1, $vr3, $vr2
 ; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 1
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 2
-; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 3
-; CHECK-NEXT:    bstrins.d $a0, $a1, 3, 3
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 4
-; CHECK-NEXT:    bstrins.d $a0, $a1, 4, 4
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 5
-; CHECK-NEXT:    bstrins.d $a0, $a1, 5, 5
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 6
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 6
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 7
-; CHECK-NEXT:    slli.d $a1, $a1, 7
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vmskltz.h $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
   %x0 = icmp sgt <8 x i16> %a, %b
   %x1 = icmp sgt <8 x i16> %c, %d
@@ -925,64 +540,11 @@ define i8 @vmsk_sgt_and_sgt_v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c, <8 x
 define i16 @vmsk_sgt_and_sgt_v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <16 x i8> %d) {
 ; CHECK-LABEL: vmsk_sgt_and_sgt_v16i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vslt.b $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vslt.b $vr1, $vr3, $vr2
 ; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 1
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 2
-; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 3
-; CHECK-NEXT:    bstrins.d $a0, $a1, 3, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 4
-; CHECK-NEXT:    bstrins.d $a0, $a1, 4, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 5
-; CHECK-NEXT:    bstrins.d $a0, $a1, 5, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 6
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 6
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 7
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 7
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 8
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 8
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 9
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 9
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 10
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 10
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 11
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 11
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 12
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 12
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 13
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 13
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 14
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 14
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 15
-; CHECK-NEXT:    slli.d $a1, $a1, 15
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vmskltz.b $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
   %x0 = icmp sgt <16 x i8> %a, %b
   %x1 = icmp sgt <16 x i8> %c, %d
@@ -994,61 +556,10 @@ define i16 @vmsk_sgt_and_sgt_v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <16
 define i16 @vmsk_trunc_i8(<16 x i8> %a) {
 ; CHECK-LABEL: vmsk_trunc_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 1
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 2
-; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 3
-; CHECK-NEXT:    bstrins.d $a0, $a1, 3, 3
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 4
-; CHECK-NEXT:    bstrins.d $a0, $a1, 4, 4
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 5
-; CHECK-NEXT:    bstrins.d $a0, $a1, 5, 5
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 6
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 6
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 7
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 7
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 8
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 8
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 9
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 9
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 10
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 10
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 11
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 11
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 12
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 12
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 13
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 13
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 14
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 14
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 15
-; CHECK-NEXT:    slli.d $a1, $a1, 15
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vslli.b $vr0, $vr0, 7
+; CHECK-NEXT:    vsrai.b $vr0, $vr0, 7
+; CHECK-NEXT:    vmskltz.b $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
   %y = trunc <16 x i8> %a to <16 x i1>
   %res = bitcast <16 x i1> %y to i16
@@ -1058,29 +569,10 @@ define i16 @vmsk_trunc_i8(<16 x i8> %a) {
 define i8 @vmsk_trunc_i16(<8 x i16> %a) {
 ; CHECK-LABEL: vmsk_trunc_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 1
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 2
-; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 3
-; CHECK-NEXT:    bstrins.d $a0, $a1, 3, 3
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 4
-; CHECK-NEXT:    bstrins.d $a0, $a1, 4, 4
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 5
-; CHECK-NEXT:    bstrins.d $a0, $a1, 5, 5
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 6
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a1, $a1, 6
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 7
-; CHECK-NEXT:    slli.d $a1, $a1, 7
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    andi $a0, $a0, 255
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vslli.h $vr0, $vr0, 15
+; CHECK-NEXT:    vsrai.h $vr0, $vr0, 15
+; CHECK-NEXT:    vmskltz.h $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
   %y = trunc <8 x i16> %a to <8 x i1>
   %res = bitcast <8 x i1> %y to i8
@@ -1090,19 +582,10 @@ define i8 @vmsk_trunc_i16(<8 x i16> %a) {
 define i4 @vmsk_trunc_i32(<4 x i32> %a) {
 ; CHECK-LABEL: vmsk_trunc_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; CHECK-NEXT:    vpickve2gr.w $a1, $vr0, 1
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 1
-; CHECK-NEXT:    vpickve2gr.w $a1, $vr0, 2
-; CHECK-NEXT:    bstrins.d $a0, $a1, 2, 2
-; CHECK-NEXT:    vpickve2gr.w $a1, $vr0, 3
-; CHECK-NEXT:    slli.d $a1, $a1, 3
-; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    andi $a0, $a0, 15
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vslli.w $vr0, $vr0, 31
+; CHECK-NEXT:    vsrai.w $vr0, $vr0, 31
+; CHECK-NEXT:    vmskltz.w $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
   %y = trunc <4 x i32> %a to <4 x i1>
   %res = bitcast <4 x i1> %y to i4
@@ -1112,13 +595,10 @@ define i4 @vmsk_trunc_i32(<4 x i32> %a) {
 define i2 @vmsk_trunc_i64(<2 x i64> %a) {
 ; CHECK-LABEL: vmsk_trunc_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    vpickve2gr.d $a0, $vr0, 1
-; CHECK-NEXT:    vpickve2gr.d $a1, $vr0, 0
-; CHECK-NEXT:    bstrins.d $a1, $a0, 63, 1
-; CHECK-NEXT:    andi $a0, $a1, 3
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vslli.d $vr0, $vr0, 63
+; CHECK-NEXT:    vsrai.d $vr0, $vr0, 63
+; CHECK-NEXT:    vmskltz.d $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
   %y = trunc <2 x i64> %a to <2 x i1>
   %res = bitcast <2 x i1> %y to i2
