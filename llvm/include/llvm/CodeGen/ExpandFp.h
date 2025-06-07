@@ -20,7 +20,7 @@ private:
   const TargetMachine *TM;
 
 public:
-  explicit ExpandFpPass(const TargetMachine *TM_) : TM(TM_) {}
+  explicit ExpandFpPass(const TargetMachine &TM_) : TM(&TM_) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
