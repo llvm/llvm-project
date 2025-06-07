@@ -73,6 +73,11 @@ enum NodeType : unsigned {
   UNPACK_VECTOR,
 
   FCOPYSIGN,
+  FMAXNUM3,
+  FMINNUM3,
+  FMAXIMUM3,
+  FMINIMUM3,
+
   DYNAMIC_STACKALLOC,
   STACKRESTORE,
   STACKSAVE,
@@ -299,6 +304,7 @@ private:
 
   SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;

@@ -405,6 +405,46 @@ multiclass FMINIMUMMAXIMUM<string OpcStr, bit NaN, SDNode OpNode> {
                Requires<[hasBF16Math, hasSM<80>, hasPTX<70>]>;
 }
 
+// 3-input min/max (sm_100+) for f32 only
+multiclass FMINIMUMMAXIMUM3<string OpcStr, SDNode OpNode> {
+   def f32rrr_ftz :
+     NVPTXInst<(outs Float32Regs:$dst),
+               (ins Float32Regs:$a, Float32Regs:$b, Float32Regs:$c),
+               !strconcat(OpcStr, ".ftz.f32 \t$dst, $a, $b, $c;"),
+               [(set f32:$dst, (OpNode f32:$a, f32:$b, f32:$c))]>,
+               Requires<[doF32FTZ, hasPTX<88>, hasSM<100>]>;
+   def f32rri_ftz :
+     NVPTXInst<(outs Float32Regs:$dst),
+               (ins Float32Regs:$a, Float32Regs:$b, f32imm:$c),
+               !strconcat(OpcStr, ".ftz.f32 \t$dst, $a, $b, $c;"),
+               [(set f32:$dst, (OpNode f32:$a, f32:$b, fpimm:$c))]>,
+               Requires<[doF32FTZ, hasPTX<88>, hasSM<100>]>;
+   def f32rii_ftz :
+     NVPTXInst<(outs Float32Regs:$dst),
+               (ins Float32Regs:$a, f32imm:$b, f32imm:$c),
+               !strconcat(OpcStr, ".ftz.f32 \t$dst, $a, $b, $c;"),
+               [(set f32:$dst, (OpNode f32:$a, fpimm:$b, fpimm:$c))]>,
+               Requires<[doF32FTZ, hasPTX<88>, hasSM<100>]>;
+   def f32rrr :
+     NVPTXInst<(outs Float32Regs:$dst),
+               (ins Float32Regs:$a, Float32Regs:$b, Float32Regs:$c),
+               !strconcat(OpcStr, ".f32 \t$dst, $a, $b, $c;"),
+               [(set f32:$dst, (OpNode f32:$a, f32:$b, f32:$c))]>,
+               Requires<[hasPTX<88>, hasSM<100>]>;
+   def f32rri :
+     NVPTXInst<(outs Float32Regs:$dst),
+               (ins Float32Regs:$a, Float32Regs:$b, f32imm:$c),
+               !strconcat(OpcStr, ".f32 \t$dst, $a, $b, $c;"),
+               [(set f32:$dst, (OpNode f32:$a, Float32Regs:$b, fpimm:$c))]>,
+               Requires<[hasPTX<88>, hasSM<100>]>;
+   def f32rii :
+     NVPTXInst<(outs Float32Regs:$dst),
+               (ins Float32Regs:$a, f32imm:$b, f32imm:$c),
+               !strconcat(OpcStr, ".f32 \t$dst, $a, $b, $c;"),
+               [(set f32:$dst, (OpNode f32:$a, fpimm:$b, fpimm:$c))]>,
+               Requires<[hasPTX<88>, hasSM<100>]>;
+}
+
 // Template for instructions which take three FP args.  The
 // instructions are named "<OpcStr>.f<Width>" (e.g. "add.f64").
 //
@@ -1147,6 +1187,20 @@ defm FMIN : FMINIMUMMAXIMUM<"min", /* NaN */ false, fminnum>;
 defm FMAX : FMINIMUMMAXIMUM<"max", /* NaN */ false, fmaxnum>;
 defm FMINNAN : FMINIMUMMAXIMUM<"min.NaN", /* NaN */ true, fminimum>;
 defm FMAXNAN : FMINIMUMMAXIMUM<"max.NaN", /* NaN */ true, fmaximum>;
+
+def nvptx_fminnum3 : SDNode<"NVPTXISD::FMINNUM3", SDTFPTernaryOp,
+                            [SDNPCommutative, SDNPAssociative]>;
+def nvptx_fmaxnum3 : SDNode<"NVPTXISD::FMAXNUM3", SDTFPTernaryOp,
+                             [SDNPCommutative, SDNPAssociative]>;
+def nvptx_fminimum3 : SDNode<"NVPTXISD::FMINIMUM3", SDTFPTernaryOp,
+                             [SDNPCommutative, SDNPAssociative]>;
+def nvptx_fmaximum3 : SDNode<"NVPTXISD::FMAXIMUM3", SDTFPTernaryOp,
+                             [SDNPCommutative, SDNPAssociative]>;
+
+defm FMIN3 : FMINIMUMMAXIMUM3<"min", nvptx_fminnum3>;
+defm FMAX3 : FMINIMUMMAXIMUM3<"max", nvptx_fmaxnum3>;
+defm FMINNAN3 : FMINIMUMMAXIMUM3<"min.NaN", nvptx_fminimum3>;
+defm FMAXNAN3 : FMINIMUMMAXIMUM3<"max.NaN", nvptx_fmaximum3>;
 
 defm FABS  : F2<"abs", fabs>;
 defm FNEG  : F2<"neg", fneg>;
