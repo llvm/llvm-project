@@ -119,7 +119,7 @@ public:
 
   /// Prints out the pass in the textual representation of pipelines. If this is
   /// an adaptor pass, print its pass managers.
-  void printAsTextualPipeline(raw_ostream &os);
+  void printAsTextualPipeline(raw_ostream &os, bool pretty = false);
 
   //===--------------------------------------------------------------------===//
   // Statistics
