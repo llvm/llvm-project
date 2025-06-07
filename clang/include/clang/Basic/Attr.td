@@ -416,7 +416,7 @@ class SubjectList<list<AttrSubject> subjects, SubjectDiag diag = WarnDiag,
   string CustomDiag = customDiag;
 }
 
-class LangOpt<string name, code customCode = [{}]> {
+class LangOpt<string name, code customCode = [{}], bit silentlyIgnore = 0> {
   // The language option to test; ignored when custom code is supplied.
   string Name = name;
 
@@ -1597,6 +1597,18 @@ def DeviceKernel : DeclOrTypeAttr {
     return isOpenCLSpelling(*A);
     }
 }];
+}
+
+def GlobalStorageNonLocalVar : SubsetSubject<Var,
+                                             [{S->hasGlobalStorage() &&
+                                               !S->isLocalVarDeclOrParm()}],
+                                             "global variables">;
+
+def SYCLExternal : InheritableAttr {
+  let Spellings = [Clang<"sycl_external">];
+  let Subjects = SubjectList<[Function, GlobalStorageNonLocalVar]>;
+  let LangOpts = [SYCLDevice];
+  let Documentation = [SYCLExternalDocs];
 }
 
 def SYCLKernelEntryPoint : InheritableAttr {
