@@ -6885,8 +6885,7 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
     int Sz = TE.Scalars.size();
     if (isSplat(TE.Scalars) && !allConstant(TE.Scalars) &&
         count_if(TE.Scalars, IsaPred<UndefValue>) == Sz - 1) {
-      const auto *It =
-          find_if(TE.Scalars, [](Value *V) { return !isConstant(V); });
+      const auto *It = find_if_not(TE.Scalars, isConstant);
       if (It == TE.Scalars.begin())
         return OrdersType();
       auto *Ty = getWidenedType(TE.Scalars.front()->getType(), Sz);
@@ -15321,13 +15320,11 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
         if (TEUseEI.UserTE->State == TreeEntry::Vectorize &&
             (TEUseEI.UserTE->getOpcode() != Instruction::PHI ||
              TEUseEI.UserTE->isAltShuffle()) &&
-            all_of(TEUseEI.UserTE->Scalars,
-                   [](Value *V) { return isUsedOutsideBlock(V); })) {
+            all_of(TEUseEI.UserTE->Scalars, isUsedOutsideBlock)) {
           if (UseEI.UserTE->State != TreeEntry::Vectorize ||
               (UseEI.UserTE->getOpcode() == Instruction::PHI &&
                !UseEI.UserTE->isAltShuffle()) ||
-              any_of(UseEI.UserTE->Scalars,
-                     [](Value *V) { return !isUsedOutsideBlock(V); }))
+              !all_of(UseEI.UserTE->Scalars, isUsedOutsideBlock))
             continue;
         }
 
