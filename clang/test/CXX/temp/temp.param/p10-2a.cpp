@@ -27,10 +27,10 @@ using b4 = B<short, char>; // expected-error {{constraints not satisfied for ali
 
 template<typename... T>
 concept C3 = (sizeof(T) + ...) == 12;
-// expected-note@-1 {{because 'sizeof(char[11]) == 12' (11 == 12) evaluated to false}}
-// expected-note@-2 {{because 'sizeof(char[10]) == 12' (10 == 12) evaluated to false}}
-// expected-note@-3 3{{because 'sizeof(int) == 12' (4 == 12) evaluated to false}}
-// expected-note@-4 6{{because 'sizeof(short) == 12' (2 == 12) evaluated to false}}
+// expected-note@-1 {{because '(sizeof(char[11])) == 12' (11 == 12) evaluated to false}}
+// expected-note@-2 {{because '(sizeof(char[10])) == 12' (10 == 12) evaluated to false}}
+// expected-note@-3 3{{because '(sizeof(int)) == 12' (4 == 12) evaluated to false}}
+// expected-note@-4 6{{because '(sizeof(short)) == 12' (2 == 12) evaluated to false}}
 
 template<C3 T1, C3 T2, C3 T3>
 // expected-note@-1 {{because 'char[11]' does not satisfy 'C3'}}
