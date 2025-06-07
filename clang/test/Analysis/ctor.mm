@@ -849,11 +849,11 @@ B::B() : x(1) {
   // constructor could have been called on an initialized piece of memory),
   // so no uninitialized value warning here, and these should be symbols, not
   // undefined values, for later comparison.
-  glob_y = static_cast<D *>(this)->y;
-  glob_z = static_cast<D *>(this)->z;
-  glob_w = static_cast<D *>(this)->w;
-  static_cast<D *>(this)->y = 2;
-  static_cast<D *>(this)->z = 3;
-  static_cast<D *>(this)->w = 4;
+  glob_y = static_cast<D *>(this)->y; // expected-warning {{static downcast}}
+  glob_z = static_cast<D *>(this)->z; // expected-warning {{static downcast}}
+  glob_w = static_cast<D *>(this)->w; // expected-warning {{static downcast}}
+  static_cast<D *>(this)->y = 2; // expected-warning {{static downcast}}
+  static_cast<D *>(this)->z = 3; // expected-warning {{static downcast}}
+  static_cast<D *>(this)->w = 4; // expected-warning {{static downcast}}
 }
 }

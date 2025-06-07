@@ -21,7 +21,7 @@ void sink(Base *b) {
 }
 
 void sink_cast(Base *b) {
-    delete[] static_cast<Derived*>(b); // no-warning
+    delete[] static_cast<Derived*>(b); // expected-warning {{static downcast from 'Base' to 'Derived'}}
 }
 
 void sink_derived(Derived *d) {
@@ -62,7 +62,7 @@ void safe_function() {
     delete[] d; // no-warning
 
     Base *b = new Derived[10];
-    delete[] static_cast<Derived*>(b); // no-warning
+    delete[] static_cast<Derived*>(b); // expected-warning {{static downcast from 'Base' to 'Derived'}}
 
     Base *sb = new Derived[10];
     sink_cast(sb); // no-warning
@@ -77,7 +77,8 @@ void multiple_derived() {
     // expected-note@-1{{Deleting an array of 'DoubleDerived' objects as their base class 'Base' is undefined}}
 
     Base *b2 = new DoubleDerived[10]; // expected-note{{Casting from 'DoubleDerived' to 'Base' here}}
-    Derived *d2 = static_cast<Derived*>(b2); // expected-note{{Casting from 'Base' to 'Derived' here}}
+    Derived *d2 = static_cast<Derived*>(b2); // expected-note{{Casting from 'Base' to 'Derived' here}} \
+                                             // expected-warning {{static downcast from 'Base' to 'Derived'}}
     delete[] d2; // expected-warning{{Deleting an array of 'DoubleDerived' objects as their base class 'Derived' is undefined}}
     // expected-note@-1{{Deleting an array of 'DoubleDerived' objects as their base class 'Derived' is undefined}}
 
@@ -87,12 +88,13 @@ void multiple_derived() {
     // expected-note@-1{{Deleting an array of 'DoubleDerived' objects as their base class 'Base' is undefined}}
 
     Base *b4 = new DoubleDerived[10];
-    Derived *d4 = static_cast<Derived*>(b4);
-    DoubleDerived *dd4 = static_cast<DoubleDerived*>(d4);
+    Derived *d4 = static_cast<Derived*>(b4); // expected-warning {{static downcast from 'Base' to 'Derived'}}
+    DoubleDerived *dd4 = static_cast<DoubleDerived*>(d4); // expected-warning {{static downcast from 'Derived' to 'DoubleDerived'}}
     delete[] dd4; // no-warning
 
     Base *b5 = new DoubleDerived[10]; // expected-note{{Casting from 'DoubleDerived' to 'Base' here}}
-    DoubleDerived *dd5 = static_cast<DoubleDerived*>(b5); // expected-note{{Casting from 'Base' to 'DoubleDerived' here}}
+    DoubleDerived *dd5 = static_cast<DoubleDerived*>(b5); // expected-note{{Casting from 'Base' to 'DoubleDerived' here}} \
+                                                          // expected-warning {{static downcast from 'Base' to 'DoubleDerived'}}
     Derived *d5 = dd5; // expected-note{{Casting from 'DoubleDerived' to 'Derived' here}}
     delete[] d5; // expected-warning{{Deleting an array of 'DoubleDerived' objects as their base class 'Derived' is undefined}}
     // expected-note@-1{{Deleting an array of 'DoubleDerived' objects as their base class 'Derived' is undefined}}
@@ -103,7 +105,8 @@ void unrelated_casts() {
     Base &b2 = *b; // no-note: See the FIXME.
 
     // FIXME: Displaying casts of reference types is not supported.
-    Derived &d2 = static_cast<Derived&>(b2); // no-note: See the FIXME.
+    Derived &d2 = static_cast<Derived&>(b2); // expected-warning {{static downcast from 'Base' to 'Derived'}}
+                                             // no-note: See the FIXME.
 
     Derived *d = &d2; // no-note: See the FIXME.
     delete[] d; // expected-warning{{Deleting an array of 'DoubleDerived' objects as their base class 'Derived' is undefined}}
