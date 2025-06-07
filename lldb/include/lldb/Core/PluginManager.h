@@ -212,6 +212,8 @@ public:
   static Status SaveCore(const lldb::ProcessSP &process_sp,
                          lldb_private::SaveCoreOptions &core_options);
 
+  static llvm::SmallVector<llvm::StringRef> GetSaveCorePluginNames();
+
   // ObjectContainer
   static bool RegisterPlugin(
       llvm::StringRef name, llvm::StringRef description,

@@ -800,6 +800,16 @@ Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
   return error;
 }
 
+llvm::SmallVector<llvm::StringRef> PluginManager::GetSaveCorePluginNames() {
+  llvm::SmallVector<llvm::StringRef> plugin_names;
+  auto instances = GetObjectFileInstances().GetSnapshot();
+  for (auto &instance : instances) {
+    if (instance.save_core)
+      plugin_names.emplace_back(instance.name);
+  }
+  return plugin_names;
+}
+
 #pragma mark ObjectContainer
 
 struct ObjectContainerInstance
