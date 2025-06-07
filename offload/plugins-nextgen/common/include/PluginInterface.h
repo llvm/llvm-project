@@ -1217,130 +1217,141 @@ public:
 
   /// Returns non-zero if the \p Image is compatible with the plugin. This
   /// function does not require the plugin to be initialized before use.
-  int32_t is_plugin_compatible(__tgt_device_image *Image);
+  virtual int32_t is_plugin_compatible(__tgt_device_image *Image);
 
   /// Returns non-zero if the \p Image is compatible with the device.
-  int32_t is_device_compatible(int32_t DeviceId, __tgt_device_image *Image);
+  virtual int32_t is_device_compatible(int32_t DeviceId,
+                                       __tgt_device_image *Image);
 
   /// Returns non-zero if the plugin device has been initialized.
-  int32_t is_device_initialized(int32_t DeviceId) const;
+  virtual int32_t is_device_initialized(int32_t DeviceId) const;
 
   /// Initialize the device inside of the plugin.
-  int32_t init_device(int32_t DeviceId);
+  virtual int32_t init_device(int32_t DeviceId);
 
   /// Return the number of devices this plugin can support.
-  int32_t number_of_devices();
+  virtual int32_t number_of_devices();
 
   /// Returns non-zero if the data can be exchanged between the two devices.
-  int32_t is_data_exchangable(int32_t SrcDeviceId, int32_t DstDeviceId);
+  virtual int32_t is_data_exchangable(int32_t SrcDeviceId, int32_t DstDeviceId);
 
   /// Initializes the record and replay mechanism inside the plugin.
-  int32_t initialize_record_replay(int32_t DeviceId, int64_t MemorySize,
-                                   void *VAddr, bool isRecord, bool SaveOutput,
-                                   uint64_t &ReqPtrArgOffset);
+  virtual int32_t initialize_record_replay(int32_t DeviceId, int64_t MemorySize,
+                                           void *VAddr, bool isRecord,
+                                           bool SaveOutput,
+                                           uint64_t &ReqPtrArgOffset);
 
   /// Loads the associated binary into the plugin and returns a handle to it.
-  int32_t load_binary(int32_t DeviceId, __tgt_device_image *TgtImage,
-                      __tgt_device_binary *Binary);
+  virtual int32_t load_binary(int32_t DeviceId, __tgt_device_image *TgtImage,
+                              __tgt_device_binary *Binary);
 
   /// Allocates memory that is accessively to the given device.
-  void *data_alloc(int32_t DeviceId, int64_t Size, void *HostPtr, int32_t Kind);
+  virtual void *data_alloc(int32_t DeviceId, int64_t Size, void *HostPtr,
+                           int32_t Kind);
 
   /// Deallocates memory on the given device.
-  int32_t data_delete(int32_t DeviceId, void *TgtPtr, int32_t Kind);
+  virtual int32_t data_delete(int32_t DeviceId, void *TgtPtr, int32_t Kind);
 
   /// Locks / pins host memory using the plugin runtime.
-  int32_t data_lock(int32_t DeviceId, void *Ptr, int64_t Size,
-                    void **LockedPtr);
+  virtual int32_t data_lock(int32_t DeviceId, void *Ptr, int64_t Size,
+                            void **LockedPtr);
 
   /// Unlocks / unpins host memory using the plugin runtime.
-  int32_t data_unlock(int32_t DeviceId, void *Ptr);
+  virtual int32_t data_unlock(int32_t DeviceId, void *Ptr);
 
   /// Notify the runtime about a new mapping that has been created outside.
-  int32_t data_notify_mapped(int32_t DeviceId, void *HstPtr, int64_t Size);
+  virtual int32_t data_notify_mapped(int32_t DeviceId, void *HstPtr,
+                                     int64_t Size);
 
   /// Notify t he runtime about a mapping that has been deleted.
-  int32_t data_notify_unmapped(int32_t DeviceId, void *HstPtr);
+  virtual int32_t data_notify_unmapped(int32_t DeviceId, void *HstPtr);
 
   /// Copy data to the given device.
-  int32_t data_submit(int32_t DeviceId, void *TgtPtr, void *HstPtr,
-                      int64_t Size);
+  virtual int32_t data_submit(int32_t DeviceId, void *TgtPtr, void *HstPtr,
+                              int64_t Size);
 
   /// Copy data to the given device asynchronously.
-  int32_t data_submit_async(int32_t DeviceId, void *TgtPtr, void *HstPtr,
-                            int64_t Size, __tgt_async_info *AsyncInfoPtr);
+  virtual int32_t data_submit_async(int32_t DeviceId, void *TgtPtr,
+                                    void *HstPtr, int64_t Size,
+                                    __tgt_async_info *AsyncInfoPtr);
 
   /// Copy data from the given device.
-  int32_t data_retrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr,
-                        int64_t Size);
+  virtual int32_t data_retrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr,
+                                int64_t Size);
 
   /// Copy data from the given device asynchronously.
-  int32_t data_retrieve_async(int32_t DeviceId, void *HstPtr, void *TgtPtr,
-                              int64_t Size, __tgt_async_info *AsyncInfoPtr);
+  virtual int32_t data_retrieve_async(int32_t DeviceId, void *HstPtr,
+                                      void *TgtPtr, int64_t Size,
+                                      __tgt_async_info *AsyncInfoPtr);
 
   /// Exchange memory addresses between two devices.
-  int32_t data_exchange(int32_t SrcDeviceId, void *SrcPtr, int32_t DstDeviceId,
-                        void *DstPtr, int64_t Size);
+  virtual int32_t data_exchange(int32_t SrcDeviceId, void *SrcPtr,
+                                int32_t DstDeviceId, void *DstPtr,
+                                int64_t Size);
 
   /// Exchange memory addresses between two devices asynchronously.
-  int32_t data_exchange_async(int32_t SrcDeviceId, void *SrcPtr,
-                              int DstDeviceId, void *DstPtr, int64_t Size,
-                              __tgt_async_info *AsyncInfo);
+  virtual int32_t data_exchange_async(int32_t SrcDeviceId, void *SrcPtr,
+                                      int DstDeviceId, void *DstPtr,
+                                      int64_t Size,
+                                      __tgt_async_info *AsyncInfo);
 
   /// Begin executing a kernel on the given device.
-  int32_t launch_kernel(int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs,
-                        ptrdiff_t *TgtOffsets, KernelArgsTy *KernelArgs,
-                        __tgt_async_info *AsyncInfoPtr);
+  virtual int32_t launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
+                                void **TgtArgs, ptrdiff_t *TgtOffsets,
+                                KernelArgsTy *KernelArgs,
+                                __tgt_async_info *AsyncInfoPtr);
 
   /// Synchronize an asyncrhonous queue with the plugin runtime.
-  int32_t synchronize(int32_t DeviceId, __tgt_async_info *AsyncInfoPtr);
+  virtual int32_t synchronize(int32_t DeviceId, __tgt_async_info *AsyncInfoPtr);
 
   /// Query the current state of an asynchronous queue.
-  int32_t query_async(int32_t DeviceId, __tgt_async_info *AsyncInfoPtr);
+  virtual int32_t query_async(int32_t DeviceId, __tgt_async_info *AsyncInfoPtr);
 
   /// Prints information about the given devices supported by the plugin.
-  void print_device_info(int32_t DeviceId);
+  virtual void print_device_info(int32_t DeviceId);
 
   /// Creates an event in the given plugin if supported.
-  int32_t create_event(int32_t DeviceId, void **EventPtr);
+  virtual int32_t create_event(int32_t DeviceId, void **EventPtr);
 
   /// Records an event that has occurred.
-  int32_t record_event(int32_t DeviceId, void *EventPtr,
-                       __tgt_async_info *AsyncInfoPtr);
+  virtual int32_t record_event(int32_t DeviceId, void *EventPtr,
+                               __tgt_async_info *AsyncInfoPtr);
 
   /// Wait until an event has occurred.
-  int32_t wait_event(int32_t DeviceId, void *EventPtr,
-                     __tgt_async_info *AsyncInfoPtr);
+  virtual int32_t wait_event(int32_t DeviceId, void *EventPtr,
+                             __tgt_async_info *AsyncInfoPtr);
 
   /// Synchronize execution until an event is done.
-  int32_t sync_event(int32_t DeviceId, void *EventPtr);
+  virtual int32_t sync_event(int32_t DeviceId, void *EventPtr);
 
   /// Remove the event from the plugin.
-  int32_t destroy_event(int32_t DeviceId, void *EventPtr);
+  virtual int32_t destroy_event(int32_t DeviceId, void *EventPtr);
 
   /// Remove the event from the plugin.
   void set_info_flag(uint32_t NewInfoLevel);
 
   /// Creates an asynchronous queue for the given plugin.
-  int32_t init_async_info(int32_t DeviceId, __tgt_async_info **AsyncInfoPtr);
+  virtual int32_t init_async_info(int32_t DeviceId,
+                                  __tgt_async_info **AsyncInfoPtr);
 
   /// Creates device information to be used for diagnostics.
-  int32_t init_device_info(int32_t DeviceId, __tgt_device_info *DeviceInfo,
-                           const char **ErrStr);
+  virtual int32_t init_device_info(int32_t DeviceId,
+                                   __tgt_device_info *DeviceInfo,
+                                   const char **ErrStr);
 
   /// Sets the offset into the devices for use by OMPT.
   int32_t set_device_identifier(int32_t UserId, int32_t DeviceId);
 
   /// Returns if the plugin can support automatic copy.
-  int32_t use_auto_zero_copy(int32_t DeviceId);
+  virtual int32_t use_auto_zero_copy(int32_t DeviceId);
 
   /// Look up a global symbol in the given binary.
-  int32_t get_global(__tgt_device_binary Binary, uint64_t Size,
-                     const char *Name, void **DevicePtr);
+  virtual int32_t get_global(__tgt_device_binary Binary, uint64_t Size,
+                             const char *Name, void **DevicePtr);
 
   /// Look up a kernel function in the given binary.
-  int32_t get_function(__tgt_device_binary Binary, const char *Name,
-                       void **KernelPtr);
+  virtual int32_t get_function(__tgt_device_binary Binary, const char *Name,
+                               void **KernelPtr);
 
 private:
   /// Indicates if the platform runtime has been fully initialized.

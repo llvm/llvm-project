@@ -145,7 +145,7 @@ if(DEFINED LIBOMPTARGET_BUILD_CUDA_PLUGIN OR
   message(WARNING "Option removed, use 'LIBOMPTARGET_PLUGINS_TO_BUILD' instead")
 endif()
 
-set(LIBOMPTARGET_ALL_PLUGIN_TARGETS amdgpu cuda host)
+set(LIBOMPTARGET_ALL_PLUGIN_TARGETS mpi amdgpu cuda host)
 set(LIBOMPTARGET_PLUGINS_TO_BUILD "all" CACHE STRING
     "Semicolon-separated list of plugins to use: cuda, amdgpu, host or \"all\".")
 
@@ -200,8 +200,10 @@ set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} powerpc64-ibm-linux-g
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} powerpc64-ibm-linux-gnu-LTO")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} x86_64-unknown-linux-gnu")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} x86_64-unknown-linux-gnu-LTO")
+set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} x86_64-unknown-linux-gnu-mpi")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} nvptx64-nvidia-cuda")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} nvptx64-nvidia-cuda-LTO")
+set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} nvptx64-nvidia-cuda-mpi")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} nvptx64-nvidia-cuda-JIT-LTO")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} s390x-ibm-linux-gnu")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} s390x-ibm-linux-gnu-LTO")
@@ -362,6 +364,8 @@ set(LIBOMPTARGET_LLVM_LIBRARY_DIR "${LLVM_LIBRARY_DIR}" CACHE STRING
   "Path to folder containing llvm library libomptarget.so")
 set(LIBOMPTARGET_LLVM_LIBRARY_INTDIR "${LIBOMPTARGET_INTDIR}" CACHE STRING
   "Path to folder where intermediate libraries will be output")
+
+set(LIBOMPTARGET_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libomptarget)
 
 add_subdirectory(tools/offload-tblgen)
 
