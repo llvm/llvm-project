@@ -335,8 +335,6 @@ define void @typei1_orig(i64 %a, ptr %p, ptr %q) {
 ; CHECK-GI-NEXT:    cmtst v0.8h, v0.8h, v0.8h
 ; CHECK-GI-NEXT:    mvn v1.16b, v1.16b
 ; CHECK-GI-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    shl v0.16b, v0.16b, #7
-; CHECK-GI-NEXT:    sshr v0.16b, v0.16b, #7
 ; CHECK-GI-NEXT:    str q0, [x1]
 ; CHECK-GI-NEXT:    ret
   %tmp = xor <16 x i1> zeroinitializer, <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
