@@ -399,10 +399,14 @@ contains
 end
 !Expect: m7c.mod
 !module m7c
-! use m7a, only: g => g_integer
-! use m7b, only: g => g_real
+! usem7a, only: m7a$s=>s
+! usem7b, only: m7b$s=>s
+! private::m7a$s
+! private::m7b$s
 ! private :: s
 ! interface g
+!  procedure :: m7a$s
+!  procedure :: m7b$s
 !  procedure :: s
 ! end interface
 !contains
@@ -481,10 +485,14 @@ contains
 end
 !Expect: m8c.mod
 !module m8c
-! use m8a, only: g
-! use m8b, only: g
+! usem8a,only:m8a$s=>s
+! usem8b,only:m8b$s=>s
+! private::m8a$s
+! private::m8b$s
 ! private :: s
 ! interface g
+!  procedure::m8a$s
+!  procedure::m8b$s
 !  procedure :: s
 ! end interface
 !contains
@@ -536,10 +544,12 @@ contains
 end
 !Expect: m9b.mod
 !module m9b
-! use m9a,only:g
+! use m9a,only:m9a$s=>s
+! private::m9a$s
 ! private::s
 ! interface g
-!   procedure::s
+!  procedure::m9a$s
+!  procedure::s
 ! end interface
 !contains
 ! subroutine s(x)
@@ -553,22 +563,48 @@ end
 
 module m10a
   interface operator(.ne.)
+    module procedure proc
   end interface
+ contains
+  elemental logical function proc(x, y)
+    logical, intent(in) :: x
+    integer, intent(in) :: y
+  end
 end
 !Expect: m10a.mod
 !module m10a
 ! interface operator(.ne.)
+!  procedure::proc
 ! end interface
+!contains
+! elementalfunctionproc(x,y)
+!  logical(4),intent(in)::x
+!  integer(4),intent(in)::y
+!  logical(4)::proc
+! end
 !end
 
 module m10b
   interface operator(<>)
+    module procedure proc
   end interface
+ contains
+  elemental logical function proc(x, y)
+    logical, intent(in) :: x
+    real, intent(in) :: y
+  end
 end
 !Expect: m10b.mod
 !module m10b
 ! interface operator(<>)
+!  procedure::proc
 ! end interface
+!contains
+! elementalfunctionproc(x,y)
+!  logical(4),intent(in)::x
+!  real(4),intent(in)::y
+!  logical(4)::proc
+! end
 !end
 
 module m10c
@@ -579,9 +615,13 @@ module m10c
 end
 !Expect: m10c.mod
 !module m10c
-! use m10a,only:operator(.ne.)
-! use m10b,only:operator(.ne.)
+! usem10a,only:m10a$proc=>proc
+! usem10b,only:m10b$proc=>proc
+! private::m10a$proc
+! private::m10b$proc
 ! interface operator(.ne.)
+!  procedure::m10a$proc
+!  procedure::m10b$proc
 ! end interface
 !end
 
@@ -592,9 +632,13 @@ module m10d
 end
 !Expect: m10d.mod
 !module m10d
-! use m10a,only:operator(.ne.)
-! use m10c,only:operator(.ne.)
+! usem10a,only:m10a$proc=>proc
+! usem10b,only:m10b$proc=>proc
+! private::m10a$proc
+! private::m10b$proc
 ! interface operator(.ne.)
+!  procedure::m10a$proc
+!  procedure::m10b$proc
 ! end interface
 ! private::operator(.ne.)
 !end

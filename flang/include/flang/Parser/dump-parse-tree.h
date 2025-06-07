@@ -214,6 +214,8 @@ public:
   NODE(CompilerDirective, NoVector)
   NODE(CompilerDirective, NoUnroll)
   NODE(CompilerDirective, NoUnrollAndJam)
+  NODE(CompilerDirective, BeginNestedHermeticModule)
+  NODE(CompilerDirective, EndNestedHermeticModule)
   NODE(parser, ComplexLiteralConstant)
   NODE(parser, ComplexPart)
   NODE(parser, ComponentArraySpec)
