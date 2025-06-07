@@ -46,6 +46,7 @@
 #include "LibCxxVariant.h"
 #include "LibStdcpp.h"
 #include "MSVCUndecoratedNameParser.h"
+#include "MsvcStl.h"
 #include "lldb/lldb-enumerations.h"
 
 using namespace lldb;
@@ -1372,6 +1373,33 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
           "${var.__y_} ${var.__m_} ${var.__wdl_}")));
 }
 
+template <StringPrinter::StringElementType element_type>
+static bool
+LibstdcppOrMsvcStringSummaryProvider(ValueObject &valobj, Stream &stream,
+                                     const TypeSummaryOptions &options) {
+  ValueObjectSP libstdcpp = valobj.GetChildMemberWithName("_M_dataplus");
+  if (libstdcpp) {
+    ValueObjectSP ptr = libstdcpp->GetChildMemberWithName("_M_p");
+    if (!ptr)
+      return false;
+    return CharTStringSummaryProvider<element_type>(*ptr, stream);
+  }
+  return MsvcStlStringSummaryProvider<element_type>(valobj, stream, options);
+}
+
+static bool
+LibstdcppOrMsvcWStringSummaryProvider(ValueObject &valobj, Stream &stream,
+                                      const TypeSummaryOptions &options) {
+  ValueObjectSP libstdcpp = valobj.GetChildMemberWithName("_M_dataplus");
+  if (libstdcpp) {
+    ValueObjectSP ptr = libstdcpp->GetChildMemberWithName("_M_p");
+    if (!ptr)
+      return false;
+    return WCharStringSummaryProvider(*ptr, stream, options);
+  }
+  return MsvcStlWStringSummaryProvider(valobj, stream, options);
+}
+
 static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   if (!cpp_category_sp)
     return;
@@ -1385,8 +1413,11 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       .SetShowMembersOneLiner(false)
       .SetHideItemNames(false);
 
-  lldb::TypeSummaryImplSP std_string_summary_sp(
-      new StringSummaryFormat(stl_summary_flags, "${var._M_dataplus._M_p}"));
+  lldb::TypeSummaryImplSP std_string_summary_sp(new CXXFunctionSummaryFormat(
+      stl_summary_flags,
+      LibstdcppOrMsvcStringSummaryProvider<
+          StringPrinter::StringElementType::ASCII>,
+      "libstdc++/MSVC STL std::string summary provider"));
 
   lldb::TypeSummaryImplSP cxx11_string_summary_sp(new CXXFunctionSummaryFormat(
       stl_summary_flags, LibStdcppStringSummaryProvider,
@@ -1418,10 +1449,9 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                                   eFormatterMatchExact,
                                   cxx11_string_summary_sp);
 
-  // making sure we force-pick the summary for printing wstring (_M_p is a
-  // wchar_t*)
-  lldb::TypeSummaryImplSP std_wstring_summary_sp(
-      new StringSummaryFormat(stl_summary_flags, "${var._M_dataplus._M_p%S}"));
+  lldb::TypeSummaryImplSP std_wstring_summary_sp(new CXXFunctionSummaryFormat(
+      stl_summary_flags, LibstdcppOrMsvcWStringSummaryProvider,
+      "libstdc++/MSVC STL std::wstring summary provider"));
 
   cpp_category_sp->AddTypeSummary("std::wstring", eFormatterMatchExact,
                                   std_wstring_summary_sp);

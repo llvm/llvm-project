@@ -10,12 +10,17 @@
 #ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_CXXSTRINGTYPES_H
 #define LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_CXXSTRINGTYPES_H
 
+#include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/ValueObject/ValueObject.h"
 
 namespace lldb_private {
 namespace formatters {
+
+template <StringPrinter::StringElementType element_type>
+bool CharTStringSummaryProvider(ValueObject &valobj, Stream &stream);
+
 bool Char8StringSummaryProvider(ValueObject &valobj, Stream &stream,
                                 const TypeSummaryOptions &options); // char8_t*
 
@@ -42,6 +47,36 @@ bool Char32SummaryProvider(ValueObject &valobj, Stream &stream,
 
 bool WCharSummaryProvider(ValueObject &valobj, Stream &stream,
                           const TypeSummaryOptions &options); // wchar_t
+
+template <StringPrinter::StringElementType element_type>
+bool StdStringSummaryProviderImpl(ValueObject &valobj, Stream &stream,
+                                  const TypeSummaryOptions &summary_options,
+                                  std::string prefix_token,
+                                  lldb::ValueObjectSP location_sp,
+                                  uint64_t size);
+
+bool StdStringSummaryProvider(ValueObject &valobj, Stream &stream,
+                              const TypeSummaryOptions &summary_options,
+                              std::string prefix_token,
+                              lldb::ValueObjectSP location_sp, uint64_t size);
+bool StdU8StringSummaryProvider(ValueObject &valobj, Stream &stream,
+                                const TypeSummaryOptions &summary_options,
+                                std::string prefix_token,
+                                lldb::ValueObjectSP location_sp, uint64_t size);
+bool StdU16StringSummaryProvider(ValueObject &valobj, Stream &stream,
+                                 const TypeSummaryOptions &summary_options,
+                                 std::string prefix_token,
+                                 lldb::ValueObjectSP location_sp,
+                                 uint64_t size);
+bool StdU32StringSummaryProvider(ValueObject &valobj, Stream &stream,
+                                 const TypeSummaryOptions &summary_options,
+                                 std::string prefix_token,
+                                 lldb::ValueObjectSP location_sp,
+                                 uint64_t size);
+bool StdWStringSummaryProvider(ValueObject &valobj, Stream &stream,
+                               const TypeSummaryOptions &summary_options,
+                               std::string prefix_token,
+                               lldb::ValueObjectSP location_sp, uint64_t size);
 
 } // namespace formatters
 } // namespace lldb_private
