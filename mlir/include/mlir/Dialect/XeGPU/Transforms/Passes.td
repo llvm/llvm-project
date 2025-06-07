@@ -27,10 +27,18 @@ def XeGPUSubgroupDistribute : Pass<"xegpu-subgroup-distribute"> {
   }];
   let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect",
                            "vector::VectorDialect"];
-  let options = [Option<
-      "printOnly", "print-analysis-only", "bool",
-      /*default=*/"false",
-      "Print the result of the subgroup map propagation analysis and exit.">];
+}
+
+def XeGPULayoutPropagate : Pass<"xegpu-layout-propagate"> {
+  let summary = "Propagate XeGPU layout information";
+  let description = [{
+    This pass propagates the XeGPU layout information accross ops. Starting
+    from a set of anchor operations (e.g. `dpas`, `store_nd`), this will
+    propagate the layouts required for operands and results to the producers or
+    consumers.
+  }];
+  let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect",
+                           "vector::VectorDialect"];
 }
 
 def XeGPUWgToSgDistribute : Pass<"xegpu-wg-to-sg-distribute"> {
