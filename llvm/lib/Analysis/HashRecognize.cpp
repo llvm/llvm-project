@@ -443,10 +443,12 @@ getRecurrences(BasicBlock *LoopLatch, const PHINode *IndVar, const Loop &L) {
 }
 
 PolynomialInfo::PolynomialInfo(unsigned TripCount, Value *LHS, const APInt &RHS,
-                               Value *ComputedValue, bool ByteOrderSwapped,
-                               Value *LHSAux)
+                               Value *ComputedValue, PHINode *LCSSAPhi,
+                               bool ByteOrderSwapped,
+                               const CRCTable &SarwateTable, Value *LHSAux)
     : TripCount(TripCount), LHS(LHS), RHS(RHS), ComputedValue(ComputedValue),
-      ByteOrderSwapped(ByteOrderSwapped), LHSAux(LHSAux) {}
+      LCSSAPhi(LCSSAPhi), ByteOrderSwapped(ByteOrderSwapped),
+      SarwateTable(SarwateTable), LHSAux(LHSAux) {}
 
 /// In the big-endian case, checks the bottom N bits against CheckFn, and that
 /// the rest are unknown. In the little-endian case, checks the top N bits
@@ -557,14 +559,14 @@ std::variant<PolynomialInfo, ErrBits, StringRef>
 HashRecognize::recognizeCRC() const {
   if (!L.isInnermost())
     return "Loop is not innermost";
-  unsigned TC = SE.getSmallConstantMaxTripCount(&L);
-  if (!TC || TC > 256)
-    return "Unable to find a small constant trip count";
   BasicBlock *Latch = L.getLoopLatch();
   BasicBlock *Exit = L.getExitBlock();
   const PHINode *IndVar = L.getCanonicalInductionVariable();
   if (!Latch || !Exit || !IndVar || L.getNumBlocks() != 1)
     return "Loop not in canonical form";
+  unsigned TC = SE.getSmallConstantTripCount(&L);
+  if (!TC || TC > 256)
+    return "Unable to find a small constant trip count";
 
   auto R = getRecurrences(Latch, IndVar, L);
   if (!R)
@@ -592,11 +594,13 @@ HashRecognize::recognizeCRC() const {
   // true even if it is only really used in an outer loop's exit block, since
   // the loop is in LCSSA form.
   auto *ComputedValue = cast<SelectInst>(ConditionalRecurrence.Step);
-  if (none_of(ComputedValue->users(), [Exit](User *U) {
-        auto *UI = dyn_cast<Instruction>(U);
-        return UI && UI->getParent() == Exit;
-      }))
+  auto LCSSAIt = find_if(ComputedValue->users(), [Exit](User *U) {
+    auto *UI = dyn_cast<PHINode>(U);
+    return UI && UI->getNumIncomingValues() == 1 && UI->getParent() == Exit;
+  });
+  if (LCSSAIt == ComputedValue->user_end())
     return "Unable to find use of computed value in loop exit block";
+  PHINode *LCSSAPhi = cast<PHINode>(*LCSSAIt);
 
   assert(ConditionalRecurrence.ExtraConst &&
          "Expected ExtraConst in conditional recurrence");
@@ -621,8 +625,9 @@ HashRecognize::recognizeCRC() const {
     return ErrBits(ResultBits, TC, *ByteOrderSwapped);
 
   Value *LHSAux = SimpleRecurrence ? SimpleRecurrence.Start : nullptr;
+  const CRCTable &SarwateTable = genSarwateTable(GenPoly, *ByteOrderSwapped);
   return PolynomialInfo(TC, ConditionalRecurrence.Start, GenPoly, ComputedValue,
-                        *ByteOrderSwapped, LHSAux);
+                        LCSSAPhi, *ByteOrderSwapped, SarwateTable, LHSAux);
 }
 
 void CRCTable::print(raw_ostream &OS) const {
@@ -676,7 +681,7 @@ void HashRecognize::print(raw_ostream &OS) const {
     OS << "\n";
   }
   OS.indent(2) << "Computed CRC lookup table:\n";
-  genSarwateTable(Info.RHS, Info.ByteOrderSwapped).print(OS);
+  Info.SarwateTable.print(OS);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -690,13 +695,17 @@ PreservedAnalyses HashRecognizePrinterPass::run(Loop &L,
                                                 LoopAnalysisManager &AM,
                                                 LoopStandardAnalysisResults &AR,
                                                 LPMUpdater &) {
-  AM.getResult<HashRecognizeAnalysis>(L, AR).print(OS);
+  HashRecognize(L, AR.SE).print(OS);
   return PreservedAnalyses::all();
 }
 
-HashRecognize HashRecognizeAnalysis::run(Loop &L, LoopAnalysisManager &AM,
-                                         LoopStandardAnalysisResults &AR) {
-  return {L, AR.SE};
+std::optional<PolynomialInfo>
+HashRecognizeAnalysis::run(Loop &L, LoopAnalysisManager &AM,
+                           LoopStandardAnalysisResults &AR) {
+  auto Res = HashRecognize(L, AR.SE).recognizeCRC();
+  if (std::holds_alternative<PolynomialInfo>(Res))
+    return std::get<PolynomialInfo>(Res);
+  return std::nullopt;
 }
 
 AnalysisKey HashRecognizeAnalysis::Key;

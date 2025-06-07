@@ -18,19 +18,19 @@ define i16 @crc16.le.tc8(i8 %msg, i16 %checksum) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV_BITS:%.*]] = mul i8 [[IV]], 8
+; CHECK-NEXT:    [[IV_BITS:%.*]] = shl i8 [[IV]], 3
 ; CHECK-NEXT:    [[DATA_LO_INDEXER:%.*]] = shl i8 [[MSG]], [[IV_BITS]]
-; CHECK-NEXT:    [[DATA_HI_INDEXER:%.*]] = ashr i8 [[DATA_LO_INDEXER]], 8
+; CHECK-NEXT:    [[DATA_HI_INDEXER:%.*]] = ashr i8 [[DATA_LO_INDEXER]], 0
 ; CHECK-NEXT:    [[DATA_INDEXER:%.*]] = zext i8 [[DATA_HI_INDEXER]] to i16
 ; CHECK-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i16 -1, [[DATA_INDEXER]]
-; CHECK-NEXT:    [[CRC_LE_SHIFT:%.*]] = ashr i16 [[XOR_CRC_DATA]], 255
-; CHECK-NEXT:    [[CRC_INDEXER:%.*]] = and i16 [[XOR_CRC_DATA]], 255
-; CHECK-NEXT:    [[CRC_TBL_INDEXER:%.*]] = getelementptr inbounds i8, ptr @.crctable, i16 [[CRC_INDEXER]]
+; CHECK-NEXT:    [[CRC_LE_SHIFT:%.*]] = ashr i16 [[XOR_CRC_DATA]], 8
+; CHECK-NEXT:    [[CRC_LO_INDEXER:%.*]] = and i16 [[XOR_CRC_DATA]], 255
+; CHECK-NEXT:    [[CRC_TBL_INDEXER:%.*]] = getelementptr inbounds i8, ptr @.crctable, i16 [[CRC_LO_INDEXER]]
 ; CHECK-NEXT:    [[CRC_TBL_INDEX:%.*]] = load i16, ptr [[CRC_TBL_INDEXER]], align 2
 ; CHECK-NEXT:    [[XOR_CRCSHIFT_TBL:%.*]] = xor i16 [[CRC_LE_SHIFT]], [[CRC_TBL_INDEX]]
 ; CHECK-NEXT:    [[FINALIZE_CRC:%.*]] = xor i16 [[XOR_CRCSHIFT_TBL]], -1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
-; CHECK-NEXT:    [[EXIT_COND1:%.*]] = icmp ult i8 [[IV]], 0
+; CHECK-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i8 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[EXIT_COND1]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[FINALIZE_CRC]], %[[LOOP]] ]
@@ -66,19 +66,19 @@ define i16 @crc16.le.tc8.udiv(i8 %msg, i16 %checksum) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV_BITS:%.*]] = mul i8 [[IV]], 8
+; CHECK-NEXT:    [[IV_BITS:%.*]] = shl i8 [[IV]], 3
 ; CHECK-NEXT:    [[DATA_LO_INDEXER:%.*]] = shl i8 [[MSG]], [[IV_BITS]]
-; CHECK-NEXT:    [[DATA_HI_INDEXER:%.*]] = ashr i8 [[DATA_LO_INDEXER]], 8
+; CHECK-NEXT:    [[DATA_HI_INDEXER:%.*]] = ashr i8 [[DATA_LO_INDEXER]], 0
 ; CHECK-NEXT:    [[DATA_INDEXER:%.*]] = zext i8 [[DATA_HI_INDEXER]] to i16
 ; CHECK-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i16 -1, [[DATA_INDEXER]]
-; CHECK-NEXT:    [[CRC_LE_SHIFT:%.*]] = ashr i16 [[XOR_CRC_DATA]], 255
-; CHECK-NEXT:    [[CRC_INDEXER:%.*]] = and i16 [[XOR_CRC_DATA]], 255
-; CHECK-NEXT:    [[CRC_TBL_INDEXER:%.*]] = getelementptr inbounds i8, ptr @.crctable.1, i16 [[CRC_INDEXER]]
+; CHECK-NEXT:    [[CRC_LE_SHIFT:%.*]] = ashr i16 [[XOR_CRC_DATA]], 8
+; CHECK-NEXT:    [[CRC_LO_INDEXER:%.*]] = and i16 [[XOR_CRC_DATA]], 255
+; CHECK-NEXT:    [[CRC_TBL_INDEXER:%.*]] = getelementptr inbounds i8, ptr @.crctable.1, i16 [[CRC_LO_INDEXER]]
 ; CHECK-NEXT:    [[CRC_TBL_INDEX:%.*]] = load i16, ptr [[CRC_TBL_INDEXER]], align 2
 ; CHECK-NEXT:    [[XOR_CRCSHIFT_TBL:%.*]] = xor i16 [[CRC_LE_SHIFT]], [[CRC_TBL_INDEX]]
 ; CHECK-NEXT:    [[FINALIZE_CRC:%.*]] = xor i16 [[XOR_CRCSHIFT_TBL]], -1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
-; CHECK-NEXT:    [[EXIT_COND1:%.*]] = icmp ult i8 [[IV]], 0
+; CHECK-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i8 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[EXIT_COND1]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[FINALIZE_CRC]], %[[LOOP]] ]
@@ -114,19 +114,19 @@ define i16 @crc16.le.tc16(i16 %msg, i16 %checksum) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV_BITS:%.*]] = mul i8 [[IV]], 8
+; CHECK-NEXT:    [[IV_BITS:%.*]] = shl i8 [[IV]], 3
 ; CHECK-NEXT:    [[IV_INDEXER:%.*]] = zext i8 [[IV_BITS]] to i16
 ; CHECK-NEXT:    [[DATA_LO_INDEXER:%.*]] = shl i16 [[MSG]], [[IV_INDEXER]]
 ; CHECK-NEXT:    [[DATA_HI_INDEXER:%.*]] = ashr i16 [[DATA_LO_INDEXER]], 8
 ; CHECK-NEXT:    [[XOR_CRC_DATA2:%.*]] = xor i16 -1, [[DATA_HI_INDEXER]]
-; CHECK-NEXT:    [[CRC_LE_SHIFT:%.*]] = ashr i16 [[XOR_CRC_DATA2]], 255
-; CHECK-NEXT:    [[CRC_INDEXER:%.*]] = and i16 [[XOR_CRC_DATA2]], 255
-; CHECK-NEXT:    [[CRC_TBL_INDEXER:%.*]] = getelementptr inbounds i8, ptr @.crctable.2, i16 [[CRC_INDEXER]]
+; CHECK-NEXT:    [[CRC_LE_SHIFT:%.*]] = ashr i16 [[XOR_CRC_DATA2]], 8
+; CHECK-NEXT:    [[CRC_LO_INDEXER:%.*]] = and i16 [[XOR_CRC_DATA2]], 255
+; CHECK-NEXT:    [[CRC_TBL_INDEXER:%.*]] = getelementptr inbounds i8, ptr @.crctable.2, i16 [[CRC_LO_INDEXER]]
 ; CHECK-NEXT:    [[CRC_TBL_INDEX:%.*]] = load i16, ptr [[CRC_TBL_INDEXER]], align 2
 ; CHECK-NEXT:    [[XOR_CRCSHIFT_TBL:%.*]] = xor i16 [[CRC_LE_SHIFT]], [[CRC_TBL_INDEX]]
 ; CHECK-NEXT:    [[FINALIZE_CRC:%.*]] = xor i16 [[XOR_CRCSHIFT_TBL]], -1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
-; CHECK-NEXT:    [[EXIT_COND1:%.*]] = icmp ult i8 [[IV]], 1
+; CHECK-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i8 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[EXIT_COND1]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[FINALIZE_CRC]], %[[LOOP]] ]
@@ -164,16 +164,22 @@ define i16 @crc16.be.tc8.crc.init.li(i16 %checksum, i8 %msg) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[CRC_BE_SHIFT:%.*]] = shl i16 [[CRC_INIT]], 255
-; CHECK-NEXT:    [[CRC_HI_INDEXER:%.*]] = ashr i16 [[CRC_INIT]], 8
+; CHECK-NEXT:    [[IV_BITS:%.*]] = shl i32 [[IV]], 3
+; CHECK-NEXT:    [[IV_INDEXER:%.*]] = trunc i32 [[IV_BITS]] to i16
+; CHECK-NEXT:    [[DATA_LO_INDEXER:%.*]] = shl i16 [[CRC_INIT]], [[IV_INDEXER]]
+; CHECK-NEXT:    [[DATA_HI_INDEXER:%.*]] = ashr i16 [[DATA_LO_INDEXER]], 8
+; CHECK-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i16 -1, [[DATA_HI_INDEXER]]
+; CHECK-NEXT:    [[CRC_BE_SHIFT:%.*]] = shl i16 [[XOR_CRC_DATA]], 8
+; CHECK-NEXT:    [[CRC_HI_INDEXER:%.*]] = ashr i16 [[XOR_CRC_DATA]], 8
 ; CHECK-NEXT:    [[CRC_TBL_INDEXER:%.*]] = getelementptr inbounds i8, ptr @.crctable.3, i16 [[CRC_HI_INDEXER]]
 ; CHECK-NEXT:    [[CRC_TBL_INDEX:%.*]] = load i16, ptr [[CRC_TBL_INDEXER]], align 2
 ; CHECK-NEXT:    [[XOR_CRCSHIFT_TBL:%.*]] = xor i16 [[CRC_BE_SHIFT]], [[CRC_TBL_INDEX]]
+; CHECK-NEXT:    [[FINALIZE_CRC:%.*]] = xor i16 [[XOR_CRCSHIFT_TBL]], -1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; CHECK-NEXT:    [[EXIT_COND1:%.*]] = icmp ult i32 [[IV]], 0
+; CHECK-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i32 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[EXIT_COND1]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[XOR_CRCSHIFT_TBL]], %[[LOOP]] ]
+; CHECK-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[FINALIZE_CRC]], %[[LOOP]] ]
 ; CHECK-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
 ;
 entry:
@@ -204,16 +210,22 @@ define i16 @crc16.be.tc8.crc.init.arg(i16 %crc.init) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[CRC_BE_SHIFT:%.*]] = shl i16 [[CRC_INIT]], 255
-; CHECK-NEXT:    [[CRC_HI_INDEXER:%.*]] = ashr i16 [[CRC_INIT]], 8
+; CHECK-NEXT:    [[IV_BITS:%.*]] = shl i32 [[IV]], 3
+; CHECK-NEXT:    [[IV_INDEXER:%.*]] = trunc i32 [[IV_BITS]] to i16
+; CHECK-NEXT:    [[DATA_LO_INDEXER:%.*]] = shl i16 [[CRC_INIT]], [[IV_INDEXER]]
+; CHECK-NEXT:    [[DATA_HI_INDEXER:%.*]] = ashr i16 [[DATA_LO_INDEXER]], 8
+; CHECK-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i16 -1, [[DATA_HI_INDEXER]]
+; CHECK-NEXT:    [[CRC_BE_SHIFT:%.*]] = shl i16 [[XOR_CRC_DATA]], 8
+; CHECK-NEXT:    [[CRC_HI_INDEXER:%.*]] = ashr i16 [[XOR_CRC_DATA]], 8
 ; CHECK-NEXT:    [[CRC_TBL_INDEXER:%.*]] = getelementptr inbounds i8, ptr @.crctable.4, i16 [[CRC_HI_INDEXER]]
 ; CHECK-NEXT:    [[CRC_TBL_INDEX:%.*]] = load i16, ptr [[CRC_TBL_INDEXER]], align 2
 ; CHECK-NEXT:    [[XOR_CRCSHIFT_TBL:%.*]] = xor i16 [[CRC_BE_SHIFT]], [[CRC_TBL_INDEX]]
+; CHECK-NEXT:    [[FINALIZE_CRC:%.*]] = xor i16 [[XOR_CRCSHIFT_TBL]], -1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; CHECK-NEXT:    [[EXIT_COND1:%.*]] = icmp ult i32 [[IV]], 0
+; CHECK-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i32 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[EXIT_COND1]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[XOR_CRCSHIFT_TBL]], %[[LOOP]] ]
+; CHECK-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[FINALIZE_CRC]], %[[LOOP]] ]
 ; CHECK-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
 ;
 entry:
@@ -241,16 +253,22 @@ define i16 @crc16.be.tc8.crc.init.arg.flipped.sb.check(i16 %crc.init) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[CRC_BE_SHIFT:%.*]] = shl i16 [[CRC_INIT]], 255
-; CHECK-NEXT:    [[CRC_HI_INDEXER:%.*]] = ashr i16 [[CRC_INIT]], 8
+; CHECK-NEXT:    [[IV_BITS:%.*]] = shl i32 [[IV]], 3
+; CHECK-NEXT:    [[IV_INDEXER:%.*]] = trunc i32 [[IV_BITS]] to i16
+; CHECK-NEXT:    [[DATA_LO_INDEXER:%.*]] = shl i16 [[CRC_INIT]], [[IV_INDEXER]]
+; CHECK-NEXT:    [[DATA_HI_INDEXER:%.*]] = ashr i16 [[DATA_LO_INDEXER]], 8
+; CHECK-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i16 -1, [[DATA_HI_INDEXER]]
+; CHECK-NEXT:    [[CRC_BE_SHIFT:%.*]] = shl i16 [[XOR_CRC_DATA]], 8
+; CHECK-NEXT:    [[CRC_HI_INDEXER:%.*]] = ashr i16 [[XOR_CRC_DATA]], 8
 ; CHECK-NEXT:    [[CRC_TBL_INDEXER:%.*]] = getelementptr inbounds i8, ptr @.crctable.5, i16 [[CRC_HI_INDEXER]]
 ; CHECK-NEXT:    [[CRC_TBL_INDEX:%.*]] = load i16, ptr [[CRC_TBL_INDEXER]], align 2
 ; CHECK-NEXT:    [[XOR_CRCSHIFT_TBL:%.*]] = xor i16 [[CRC_BE_SHIFT]], [[CRC_TBL_INDEX]]
+; CHECK-NEXT:    [[FINALIZE_CRC:%.*]] = xor i16 [[XOR_CRCSHIFT_TBL]], -1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; CHECK-NEXT:    [[EXIT_COND1:%.*]] = icmp ult i32 [[IV]], 0
+; CHECK-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i32 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[EXIT_COND1]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[XOR_CRCSHIFT_TBL]], %[[LOOP]] ]
+; CHECK-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[FINALIZE_CRC]], %[[LOOP]] ]
 ; CHECK-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
 ;
 entry:
@@ -289,16 +307,20 @@ define i8 @crc8.be.tc8.ptr.nested.loop(ptr %msg, i32 %loop.limit) {
 ; CHECK-NEXT:    br label %[[INNER_LOOP:.*]]
 ; CHECK:       [[INNER_LOOP]]:
 ; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i32 [ 0, %[[PH]] ], [ [[INNER_IV_NEXT:%.*]], %[[INNER_LOOP]] ]
-; CHECK-NEXT:    [[CRC_BE_SHIFT:%.*]] = shl i8 [[CRC_INIT]], -1
-; CHECK-NEXT:    [[CRC_HI_INDEXER:%.*]] = ashr i8 [[CRC_INIT]], 0
+; CHECK-NEXT:    [[IV_BITS:%.*]] = shl i32 [[INNER_IV]], 3
+; CHECK-NEXT:    [[IV_INDEXER:%.*]] = trunc i32 [[IV_BITS]] to i8
+; CHECK-NEXT:    [[DATA_LO_INDEXER:%.*]] = shl i8 [[CRC_INIT]], [[IV_INDEXER]]
+; CHECK-NEXT:    [[DATA_HI_INDEXER:%.*]] = ashr i8 [[DATA_LO_INDEXER]], 0
+; CHECK-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i8 -1, [[DATA_HI_INDEXER]]
+; CHECK-NEXT:    [[CRC_HI_INDEXER:%.*]] = ashr i8 [[XOR_CRC_DATA]], 0
 ; CHECK-NEXT:    [[CRC_TBL_INDEXER:%.*]] = getelementptr inbounds i8, ptr @.crctable.6, i8 [[CRC_HI_INDEXER]]
 ; CHECK-NEXT:    [[CRC_TBL_INDEX:%.*]] = load i8, ptr [[CRC_TBL_INDEXER]], align 1
-; CHECK-NEXT:    [[XOR_CRCSHIFT_TBL:%.*]] = xor i8 [[CRC_BE_SHIFT]], [[CRC_TBL_INDEX]]
+; CHECK-NEXT:    [[FINALIZE_CRC:%.*]] = xor i8 [[XOR_CRC_DATA]], -1
 ; CHECK-NEXT:    [[INNER_IV_NEXT]] = add nuw nsw i32 [[INNER_IV]], 1
-; CHECK-NEXT:    [[EXIT_COND1:%.*]] = icmp ult i32 [[INNER_IV]], 0
+; CHECK-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i32 [[INNER_IV]], 0
 ; CHECK-NEXT:    br i1 [[EXIT_COND1]], label %[[INNER_LOOP]], label %[[INNER_EXIT]]
 ; CHECK:       [[INNER_EXIT]]:
-; CHECK-NEXT:    [[CRC_NEXT_LCSSA]] = phi i8 [ [[XOR_CRCSHIFT_TBL]], %[[INNER_LOOP]] ]
+; CHECK-NEXT:    [[CRC_NEXT_LCSSA]] = phi i8 [ [[FINALIZE_CRC]], %[[INNER_LOOP]] ]
 ; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add i32 [[OUTER_IV]], 1
 ; CHECK-NEXT:    br label %[[OUTER_LOOP]]
 ; CHECK:       [[EXIT]]:
@@ -347,19 +369,19 @@ define i32 @crc32.le.tc8.data32(i32 %checksum, i32 %msg) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV_BITS:%.*]] = mul i8 [[IV]], 8
+; CHECK-NEXT:    [[IV_BITS:%.*]] = shl i8 [[IV]], 3
 ; CHECK-NEXT:    [[IV_INDEXER:%.*]] = zext i8 [[IV_BITS]] to i32
 ; CHECK-NEXT:    [[DATA_LO_INDEXER:%.*]] = shl i32 [[MSG]], [[IV_INDEXER]]
 ; CHECK-NEXT:    [[DATA_HI_INDEXER:%.*]] = ashr i32 [[DATA_LO_INDEXER]], 24
 ; CHECK-NEXT:    [[XOR_CRC_DATA2:%.*]] = xor i32 -1, [[DATA_HI_INDEXER]]
-; CHECK-NEXT:    [[CRC_LE_SHIFT:%.*]] = ashr i32 [[XOR_CRC_DATA2]], 255
-; CHECK-NEXT:    [[CRC_INDEXER:%.*]] = and i32 [[XOR_CRC_DATA2]], 255
-; CHECK-NEXT:    [[CRC_TBL_INDEXER:%.*]] = getelementptr inbounds i8, ptr @.crctable.7, i32 [[CRC_INDEXER]]
+; CHECK-NEXT:    [[CRC_LE_SHIFT:%.*]] = ashr i32 [[XOR_CRC_DATA2]], 8
+; CHECK-NEXT:    [[CRC_LO_INDEXER:%.*]] = and i32 [[XOR_CRC_DATA2]], 255
+; CHECK-NEXT:    [[CRC_TBL_INDEXER:%.*]] = getelementptr inbounds i8, ptr @.crctable.7, i32 [[CRC_LO_INDEXER]]
 ; CHECK-NEXT:    [[CRC_TBL_INDEX:%.*]] = load i32, ptr [[CRC_TBL_INDEXER]], align 4
 ; CHECK-NEXT:    [[XOR_CRCSHIFT_TBL:%.*]] = xor i32 [[CRC_LE_SHIFT]], [[CRC_TBL_INDEX]]
 ; CHECK-NEXT:    [[FINALIZE_CRC:%.*]] = xor i32 [[XOR_CRCSHIFT_TBL]], -1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
-; CHECK-NEXT:    [[EXIT_COND1:%.*]] = icmp ult i8 [[IV]], 0
+; CHECK-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i8 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[EXIT_COND1]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[FINALIZE_CRC]], %[[LOOP]] ]

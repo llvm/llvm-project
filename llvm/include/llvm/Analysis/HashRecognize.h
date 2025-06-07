@@ -63,8 +63,15 @@ struct PolynomialInfo {
   // the case of CRC, which must be zero.
   Value *ComputedValue;
 
+  // The LCSSA PHI node in the exit block of the loop that uses ComputedValue.
+  PHINode *LCSSAPhi;
+
   // Set to true in the case of big-endian.
   bool ByteOrderSwapped;
+
+  // The generated Sarwate lookup-table, which can be used to optimize CRC in
+  // the absence of target-specific instructions.
+  CRCTable SarwateTable;
 
   // An optional auxiliary checksum that augments the LHS. In the case of CRC,
   // it is XOR'ed with the LHS, so that the computation's final remainder is
@@ -72,8 +79,8 @@ struct PolynomialInfo {
   Value *LHSAux;
 
   PolynomialInfo(unsigned TripCount, Value *LHS, const APInt &RHS,
-                 Value *ComputedValue, bool ByteOrderSwapped,
-                 Value *LHSAux = nullptr);
+                 Value *ComputedValue, PHINode *LCSSAPhi, bool ByteOrderSwapped,
+                 const CRCTable &SarwateTable, Value *LHSAux = nullptr);
 };
 
 /// The analysis.
@@ -113,7 +120,7 @@ class HashRecognizeAnalysis : public AnalysisInfoMixin<HashRecognizeAnalysis> {
   static AnalysisKey Key;
 
 public:
-  using Result = HashRecognize;
+  using Result = std::optional<PolynomialInfo>;
   Result run(Loop &L, LoopAnalysisManager &AM, LoopStandardAnalysisResults &AR);
 };
 } // namespace llvm
