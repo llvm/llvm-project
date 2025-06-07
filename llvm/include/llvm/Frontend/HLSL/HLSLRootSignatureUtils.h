@@ -27,6 +27,11 @@ class Metadata;
 namespace hlsl {
 namespace rootsig {
 
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const RootFlags &Flags);
+
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const RootConstants &Constants);
+
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
                                  const DescriptorTableClause &Clause);
 
