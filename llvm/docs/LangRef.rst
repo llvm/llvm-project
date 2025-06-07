@@ -1748,8 +1748,8 @@ Currently, only the following parameter attributes are defined:
     It is similar to ``byval`` in the regard that it is generally used to pass
     structs and arrays by value, and the memory is caller-invisible when the
     function returns. However, unlike ``byval``, it is intended for ABIs where the
-    *callee* allocates the hidden copy, rather than the caller. Stores that would
-    only be visible on the normal return path may be optimized out. Likewise,
+    *callee* explicitly allocates the temporary copy. Stores that would only be
+    visible on the normal return path may be optimized out. Likewise,
     optimizations may assume that the pointer does not alias any memory that
     outlives the call.
 
