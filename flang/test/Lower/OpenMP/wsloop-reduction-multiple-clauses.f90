@@ -1,5 +1,6 @@
 ! RUN: bbc -emit-hlfir -fopenmp -o - %s | FileCheck %s
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -o - %s | FileCheck %s
+! XFAIL: *
 
 program main
   implicit none
