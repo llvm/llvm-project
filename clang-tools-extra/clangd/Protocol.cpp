@@ -497,6 +497,12 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R,
       if (auto Cancel = StaleRequestSupport->getBoolean("cancel"))
         R.CancelsStaleRequests = *Cancel;
     }
+    if (auto *OffsetEncoding = General->get("positionEncodings")) {
+      R.offsetEncoding.emplace();
+      if (!fromJSON(*OffsetEncoding, *R.offsetEncoding,
+                    P.field("general").field("positionEncodings")))
+        return false;
+    }
   }
   if (auto *OffsetEncoding = O->get("offsetEncoding")) {
     R.offsetEncoding.emplace();
