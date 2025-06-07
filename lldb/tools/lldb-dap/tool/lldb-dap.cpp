@@ -10,7 +10,6 @@
 #include "DAPLog.h"
 #include "EventHelper.h"
 #include "Handler/RequestHandler.h"
-#include "RunInTerminal.h"
 #include "Transport.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBStream.h"
@@ -67,7 +66,9 @@ typedef int socklen_t;
 #else
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <sys/un.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #endif
 
@@ -162,7 +163,6 @@ static void PrintVersion() {
 // In case of errors launching the target, a suitable error message will be
 // emitted to the debug adapter.
 static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
-                                             llvm::StringRef comm_file,
                                              lldb::pid_t debugger_pid,
                                              char *argv[]) {
 #if defined(_WIN32)
@@ -170,37 +170,55 @@ static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
       "runInTerminal is only supported on POSIX systems");
 #else
 
-  // On Linux with the Yama security module enabled, a process can only attach
-  // to its descendants by default. In the runInTerminal case the target
-  // process is launched by the client so we need to allow tracing explicitly.
-#if defined(__linux__)
-  if (debugger_pid != LLDB_INVALID_PROCESS_ID)
-    (void)prctl(PR_SET_PTRACER, debugger_pid, 0, 0, 0);
-#endif
-
-  RunInTerminalLauncherCommChannel comm_channel(comm_file);
-  if (llvm::Error err = comm_channel.NotifyPid())
-    return err;
-
-  // We will wait to be attached with a timeout. We don't wait indefinitely
-  // using a signal to prevent being paused forever.
-
-  // This env var should be used only for tests.
-  const char *timeout_env_var = getenv("LLDB_DAP_RIT_TIMEOUT_IN_MS");
-  int timeout_in_ms =
-      timeout_env_var != nullptr ? atoi(timeout_env_var) : 20000;
-  if (llvm::Error err = comm_channel.WaitUntilDebugAdapterAttaches(
-          std::chrono::milliseconds(timeout_in_ms))) {
-    return err;
+  auto pid = fork();
+  if (pid < 0) {
+    return llvm::createStringError(
+        std::error_code(errno, std::generic_category()), "fork failed");
   }
-
-  const char *target = target_arg.getValue();
-  execvp(target, argv);
-
-  std::string error = std::strerror(errno);
-  comm_channel.NotifyError(error);
-  return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                 std::move(error));
+  if (pid == 0) {
+    // On Linux with the Yama security module enabled, a process can only attach
+    // to its descendants by default. In the runInTerminal case the target
+    // process is launched by the client so we need to allow tracing explicitly.
+#if defined(__linux__)
+    if (debugger_pid != LLDB_INVALID_PROCESS_ID)
+      (void)prctl(PR_SET_PTRACER, debugger_pid, 0, 0, 0);
+#endif
+    if (kill(debugger_pid, SIGUSR1)) {
+      return llvm::createStringError(
+          std::error_code(errno, std::generic_category()),
+          "Failed to notify debugger of target pid");
+    }
+    if (raise(SIGSTOP)) {
+      return llvm::createStringError(
+          std::error_code(errno, std::generic_category()),
+          "Target process failed to stop itself");
+    }
+    const char *target = target_arg.getValue();
+    execvp(target, argv);
+    std::string error = std::strerror(errno);
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   std::move(error));
+  }
+  if (pid > 0) {
+    // This env var should be used only for tests.
+    const char *timeout_env_var = getenv("LLDB_DAP_RIT_TIMEOUT_IN_MS");
+    int timeout_in_ms =
+        timeout_env_var != nullptr ? atoi(timeout_env_var) : 20000;
+    std::this_thread::sleep_for(std::chrono::milliseconds(timeout_in_ms));
+    // the child should have either continued or exited by now, kill it if not
+    auto status = waitpid(pid, nullptr, WNOHANG | WCONTINUED);
+    if (status < 0) {
+      kill(pid, SIGKILL);
+      return llvm::createStringError(
+          std::error_code(errno, std::generic_category()), "waitpid failed");
+    }
+    if (status == 0) {
+      kill(pid, SIGKILL);
+      return llvm::createStringError("runInTerminal target did not resume in "
+                                     "time (debugger process died?)");
+    }
+  }
+  return llvm::Error::success();
 #endif
 }
 
@@ -407,17 +425,15 @@ int main(int argc, char *argv[]) {
   }
 
   if (llvm::opt::Arg *target_arg = input_args.getLastArg(OPT_launch_target)) {
-    if (llvm::opt::Arg *comm_file = input_args.getLastArg(OPT_comm_file)) {
+    if (llvm::opt::Arg *debugger_pid =
+            input_args.getLastArg(OPT_debugger_pid)) {
       lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
-      llvm::opt::Arg *debugger_pid = input_args.getLastArg(OPT_debugger_pid);
-      if (debugger_pid) {
-        llvm::StringRef debugger_pid_value = debugger_pid->getValue();
-        if (debugger_pid_value.getAsInteger(10, pid)) {
-          llvm::errs() << "'" << debugger_pid_value
-                       << "' is not a valid "
-                          "PID\n";
-          return EXIT_FAILURE;
-        }
+      llvm::StringRef debugger_pid_value = debugger_pid->getValue();
+      if (debugger_pid_value.getAsInteger(10, pid)) {
+        llvm::errs() << "'" << debugger_pid_value
+                     << "' is not a valid "
+                        "PID\n";
+        return EXIT_FAILURE;
       }
       int target_args_pos = argc;
       for (int i = 0; i < argc; i++) {
@@ -426,14 +442,14 @@ int main(int argc, char *argv[]) {
           break;
         }
       }
-      if (llvm::Error err =
-              LaunchRunInTerminalTarget(*target_arg, comm_file->getValue(), pid,
-                                        argv + target_args_pos)) {
+      if (llvm::Error err = LaunchRunInTerminalTarget(*target_arg, pid,
+                                                      argv + target_args_pos)) {
         llvm::errs() << llvm::toString(std::move(err)) << '\n';
         return EXIT_FAILURE;
       }
+      return EXIT_SUCCESS;
     } else {
-      llvm::errs() << "\"--launch-target\" requires \"--comm-file\" to be "
+      llvm::errs() << "\"--launch-target\" requires \"--debugger-pid\" to be "
                       "specified\n";
       return EXIT_FAILURE;
     }
