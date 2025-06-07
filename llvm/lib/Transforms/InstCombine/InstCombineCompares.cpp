@@ -7728,36 +7728,41 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     }
   }
 
-  // In case of a comparison with add/sub instructions having the same operands,
-  // check whether cmp operands have same signed no wrap. If so, just compare
-  // the sub's second operand and zero.
-  // For example:
-  //   %tmp1 = sub nsw i8 %x, %y
-  //   %tmp2 = add nsw i8 %x, %y
-  //   %cmp = icmp sgt i8 %tmp1, %tmp2
-  // transform this into:
-  //   %cmp = icmp slt i32 %y, 0
+  // When comparing results of sub and add instructions with identical operands,
+  // optimization is valid when the comparison type and overflow flags satisfy:
+  //   - Signed comparisons (slt/sgt/sle/sge) require 'nsw' flags
+  //   - Unsigned comparisons (ult/ugt/ule/uge) require 'nuw' flags
+  //   - Equality comparisons (eq/ne) accept either 'nsw' or 'nuw'
+  //
+  // If conditions are met, the comparison simplifies to a zero comparison on
+  // the second operand of the sub instruction with the swapped predicate.
+  // Example transformation for signed comparison:
+  //   %sub = sub nsw i8 %x, %y
+  //   %add = add nsw i8 %x, %y
+  //   %cmp = icmp sgt i8 %sub, %add  // (x - y) > (x + y)
+  // becomes:
+  //   %cmp = icmp slt i8 %y, 0      // y < 0
+  //
   // This handles similar cases to transform.
   {
     Value *A, *B;
     auto *I0 = dyn_cast<OverflowingBinaryOperator>(Op0);
     auto *I1 = dyn_cast<OverflowingBinaryOperator>(Op1);
-    bool UnsignedCmp = ICmpInst::isUnsigned(Pred);
-    bool SignedCmp = ICmpInst::isSigned(Pred);
-    bool EqualityCmp = ICmpInst::isEquality(Pred);
-
     if (I0 && I1) {
       bool I0NUW = I0->hasNoUnsignedWrap();
       bool I1NUW = I1->hasNoUnsignedWrap();
       bool I0NSW = I0->hasNoSignedWrap();
       bool I1NSW = I1->hasNoSignedWrap();
+      bool UnsignedCmp = ICmpInst::isUnsigned(Pred);
+      bool SignedCmp = ICmpInst::isSigned(Pred);
+      bool EqualityCmp = ICmpInst::isEquality(Pred);
+      CmpPredicate CmpPred;
       if ((UnsignedCmp && I0NUW && I1NUW) || (SignedCmp && I0NSW && I1NSW) ||
-          (EqualityCmp && ((I0NUW && I1NUW) || (I0NSW && I1NSW)))) {
-        if (match(I0, m_Sub(m_Value(A), m_Value(B))) &&
-            match(I1, m_Add(m_Specific(A), m_Specific(B)))) {
-          return new ICmpInst(I.getSwappedPredicate(), B,
+          (EqualityCmp && ((I0NUW || I0NSW) && (I1NUW || I1NSW)))) {
+        if (match(&I, m_c_ICmp(CmpPred, m_Sub(m_Value(A), m_Value(B)),
+                               m_c_Add(m_Deferred(A), m_Deferred(B)))))
+          return new ICmpInst(CmpPredicate::getSwapped(CmpPred), B,
                               ConstantInt::get(Op0->getType(), 0));
-        }
       }
     }
   }
