@@ -47,6 +47,7 @@ struct AllocatorOptions {
 void InitializeAllocator(const AllocatorOptions &options);
 void ReInitializeAllocator(const AllocatorOptions &options);
 void GetAllocatorOptions(AllocatorOptions *options);
+void ApplyAllocatorOptions(const AllocatorOptions &options);
 
 class AsanChunkView {
  public:
