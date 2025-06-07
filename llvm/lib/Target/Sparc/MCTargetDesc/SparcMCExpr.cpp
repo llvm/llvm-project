@@ -133,16 +133,3 @@ uint16_t SparcMCExpr::getFixupKind() const {
   assert(uint16_t(specifier) < FirstTargetFixupKind);
   return specifier;
 }
-
-bool SparcMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                            const MCAssembler *Asm) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
-    return false;
-
-  Res.setSpecifier(specifier);
-  return true;
-}
-
-void SparcMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
-  Streamer.visitUsedExpr(*getSubExpr());
-}

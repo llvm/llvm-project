@@ -15,6 +15,7 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Casting.h"
@@ -171,6 +172,9 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI,
       OS << ')';
     return;
   }
+
+  case MCExpr::Specifier:
+    return cast<MCSpecifierExpr>(this)->printImpl(OS, MAI);
   }
 
   llvm_unreachable("Invalid expression kind!");
@@ -207,6 +211,9 @@ bool MCExpr::isSymbolUsedInExpression(const MCSymbol *Sym) const {
         static_cast<const MCUnaryExpr *>(this)->getSubExpr();
     return SubExpr->isSymbolUsedInExpression(Sym);
   }
+  case MCExpr::Specifier:
+    return static_cast<const MCSpecifierExpr *>(this)->isSymbolUsedInExpression(
+        Sym);
   }
 
   llvm_unreachable("Unknown expr kind!");
@@ -702,6 +709,8 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
 
     return true;
   }
+  case Specifier:
+    return cast<MCSpecifierExpr>(this)->evaluateAsRelocatableImpl(Res, Asm);
   }
 
   llvm_unreachable("Invalid assembly expression kind!");
@@ -750,7 +759,21 @@ MCFragment *MCExpr::findAssociatedFragment() const {
     // Otherwise, return the first non-null fragment.
     return LHS_F ? LHS_F : RHS_F;
   }
+
+  case Specifier:
+    return cast<MCSpecifierExpr>(this)->getSubExpr()->findAssociatedFragment();
   }
 
   llvm_unreachable("Invalid assembly expression kind!");
+}
+
+MCSpecifierExpr::~MCSpecifierExpr() {}
+
+bool MCSpecifierExpr::evaluateAsRelocatableImpl(MCValue &Res,
+                                                const MCAssembler *Asm) const {
+  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
+    return false;
+
+  Res.setSpecifier(specifier);
+  return !Res.getSubSym();
 }
