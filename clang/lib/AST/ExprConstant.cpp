@@ -6836,7 +6836,7 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
       // and make sure we've initialized every step along it.
       auto IndirectFieldChain = IFD->chain();
       for (auto *C : IndirectFieldChain) {
-        FD = cast<FieldDecl>(C);
+        FD = cast<FieldDecl>(C)->getCanonicalDecl();
         CXXRecordDecl *CD = cast<CXXRecordDecl>(FD->getParent());
         // Switch the union field if it differs. This happens if we had
         // preceding zero-initialization, and we're now initializing a union
