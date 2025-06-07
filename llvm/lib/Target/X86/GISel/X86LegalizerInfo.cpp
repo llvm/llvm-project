@@ -842,8 +842,8 @@ bool X86LegalizerInfo::legalizeNarrowingStore(MachineInstr &MI,
 }
 
 bool X86LegalizerInfo::legalizeFAbs(MachineInstr &MI,
-                                         MachineRegisterInfo &MRI,
-                                         LegalizerHelper &Helper) const {
+                                    MachineRegisterInfo &MRI,
+                                    LegalizerHelper &Helper) const {
 
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
   Register SrcReg = MI.getOperand(1).getReg();
