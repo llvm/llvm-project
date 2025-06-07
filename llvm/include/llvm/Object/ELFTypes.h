@@ -914,9 +914,10 @@ struct BBAddrMap {
     uint32_t Size = 0;   // Size of the basic block.
     Metadata MD = {false, false, false, false,
                    false}; // Metdata for this basic block.
+    uint64_t Hash = 0;     // Hash for this basic block.
 
-    BBEntry(uint32_t ID, uint32_t Offset, uint32_t Size, Metadata MD)
-        : ID(ID), Offset(Offset), Size(Size), MD(MD){};
+    BBEntry(uint32_t ID, uint32_t Offset, uint32_t Size, Metadata MD, uint64_t Hash)
+        : ID(ID), Offset(Offset), Size(Size), MD(MD), Hash(Hash){};
 
     bool operator==(const BBEntry &Other) const {
       return ID == Other.ID && Offset == Other.Offset && Size == Other.Size &&

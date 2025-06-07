@@ -895,6 +895,7 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
           uint32_t Offset = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
           uint32_t Size = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
           uint32_t MD = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+          uint64_t Hash = readULEB128As<uint64_t>(Data, Cur, ULEBSizeErr);
           if (Version >= 1) {
             // Offset is calculated relative to the end of the previous BB.
             Offset += PrevBBEndOffset;
@@ -906,7 +907,7 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
             MetadataDecodeErr = MetadataOrErr.takeError();
             break;
           }
-          BBEntries.push_back({ID, Offset, Size, *MetadataOrErr});
+          BBEntries.push_back({ID, Offset, Size, *MetadataOrErr, Hash});
         }
         TotalNumBlocks += BBEntries.size();
       }
