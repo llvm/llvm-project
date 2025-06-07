@@ -286,6 +286,7 @@ void initializeScalarizerLegacyPassPass(PassRegistry &);
 void initializeScavengerTestPass(PassRegistry &);
 void initializeScopedNoAliasAAWrapperPassPass(PassRegistry &);
 void initializeSeparateConstOffsetFromGEPLegacyPassPass(PassRegistry &);
+void initializeSinkGEPConstOffsetLegacyPassPass(PassRegistry &);
 void initializeShadowStackGCLoweringPass(PassRegistry &);
 void initializeShrinkWrapLegacyPass(PassRegistry &);
 void initializeSingleLoopExtractorPass(PassRegistry &);
