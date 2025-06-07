@@ -800,7 +800,10 @@ std::string PlatformRemoteGDBServer::MakeUrl(const char *scheme,
                                              const char *hostname,
                                              uint16_t port, const char *path) {
   StreamString result;
-  result.Printf("%s://[%s]", scheme, hostname);
+  result.Printf("%s://", scheme);
+  if (strlen(hostname) > 0)
+    result.Printf("[%s]", hostname);
+
   if (port != 0)
     result.Printf(":%u", port);
   if (path)
