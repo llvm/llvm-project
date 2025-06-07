@@ -186,9 +186,9 @@ static bool IsPTXVectorType(MVT VT) {
   }
 }
 
-static bool Is16bitsType(MVT VT) {
+static bool isPackedElementVT(MVT VT) {
   return (VT.SimpleTy == MVT::f16 || VT.SimpleTy == MVT::bf16 ||
-          VT.SimpleTy == MVT::i16);
+          VT.SimpleTy == MVT::i16 || VT.SimpleTy == MVT::f32);
 }
 
 // When legalizing vector loads/stores, this function is called, which does two
@@ -321,11 +321,8 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
   }
 
   ComputeValueVTs(TLI, DL, Ty, TempVTs, &TempOffsets, StartingOffset);
-  for (unsigned i = 0, e = TempVTs.size(); i != e; ++i) {
-    EVT VT = TempVTs[i];
-    uint64_t Off = TempOffsets[i];
-    // Split vectors into individual elements, except for v2f16, which
-    // we will pass as a single scalar.
+  for (auto [VT, Off] : zip(TempVTs, TempOffsets)) {
+    // Split vectors into individual elements, except for packed types
     if (VT.isVector()) {
       unsigned NumElts = VT.getVectorNumElements();
       EVT EltVT = VT.getVectorElementType();
@@ -333,10 +330,10 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
       // TargetLoweringBase::getVectorTypeBreakdown() which is invoked in
       // ComputePTXValueVTs() cannot currently break down non-power-of-2 sized
       // vectors.
-      if ((Is16bitsType(EltVT.getSimpleVT())) && NumElts % 2 == 0 &&
+      if (isPackedElementVT(EltVT.getSimpleVT()) && NumElts > 1 &&
           isPowerOf2_32(NumElts)) {
-        // Vectors with an even number of f16 elements will be passed to
-        // us as an array of v2f16/v2bf16 elements. We must match this so we
+        // Vectors with an even number of elements will be passed to
+        // us as an array of pairs of 2 elements. We must match this so we
         // stay in sync with Ins/Outs.
         switch (EltVT.getSimpleVT().SimpleTy) {
         case MVT::f16:
@@ -347,6 +344,9 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
           break;
         case MVT::i16:
           EltVT = MVT::v2i16;
+          break;
+        case MVT::f32:
+          EltVT = MVT::v2f32;
           break;
         default:
           llvm_unreachable("Unexpected type");
@@ -592,6 +592,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   addRegisterClass(MVT::v2f16, &NVPTX::Int32RegsRegClass);
   addRegisterClass(MVT::bf16, &NVPTX::Int16RegsRegClass);
   addRegisterClass(MVT::v2bf16, &NVPTX::Int32RegsRegClass);
+  addRegisterClass(MVT::v2f32, &NVPTX::Int64RegsRegClass);
 
   // Conversion to/from FP16/FP16x2 is always legal.
   setOperationAction(ISD::BUILD_VECTOR, MVT::v2f16, Custom);
@@ -628,6 +629,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4i8, Custom);
   setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v4i8, Custom);
 
+  // No support for these operations with v2f32.
+  setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v2f32, Expand);
+  setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v2f32, Expand);
+
   // Custom conversions to/from v2i8.
   setOperationAction(ISD::BITCAST, MVT::v2i8, Custom);
 
@@ -653,11 +658,15 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   // Operations not directly supported by NVPTX.
   for (MVT VT : {MVT::bf16, MVT::f16, MVT::v2bf16, MVT::v2f16, MVT::f32,
-                 MVT::f64, MVT::i1, MVT::i8, MVT::i16, MVT::v2i16, MVT::v4i8,
-                 MVT::i32, MVT::i64}) {
+                 MVT::v2f32, MVT::f64, MVT::i1, MVT::i8, MVT::i16, MVT::v2i16,
+                 MVT::v4i8, MVT::i32, MVT::i64}) {
     setOperationAction(ISD::SELECT_CC, VT, Expand);
     setOperationAction(ISD::BR_CC, VT, Expand);
   }
+
+  // Not directly supported. TLI would attempt to expand operations like
+  // FMINIMUM(v2f32) using invalid SETCC and VSELECT nodes.
+  setOperationAction(ISD::VSELECT, MVT::v2f32, Expand);
 
   // Some SIGN_EXTEND_INREG can be done using cvt instruction.
   // For others we will expand to a SHL/SRA pair.
@@ -843,6 +852,11 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   if (STI.allowFP16Math() || STI.hasBF16Math())
     setTargetDAGCombine(ISD::SETCC);
 
+  // Combine packed reduction operations (e.g. fadd.f32x2) with vector shuffles
+  // when one of their lanes is a no-op.
+  if (STI.allowFP16Math() || STI.hasBF16Math() || STI.hasF32x2Instructions())
+    setTargetDAGCombine({ISD::FADD, ISD::FMUL, ISD::FMINIMUM, ISD::FMAXIMUM});
+
   // Promote fp16 arithmetic if fp16 hardware isn't available or the
   // user passed --nvptx-no-fp16-math. The flag is useful because,
   // although sm_53+ GPUs have some sort of FP16 support in
@@ -857,6 +871,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setBF16OperationAction(Op, MVT::bf16, Legal, Promote);
     if (getOperationAction(Op, MVT::bf16) == Promote)
       AddPromotedToType(Op, MVT::bf16, MVT::f32);
+    setOperationAction(Op, MVT::v2f32,
+                       STI.hasF32x2Instructions() ? Legal : Expand);
   }
 
   // On SM80, we select add/mul/sub as fma to avoid promotion to float
@@ -878,6 +894,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   setBF16OperationAction(ISD::FNEG, MVT::bf16, Legal, Expand);
   setBF16OperationAction(ISD::FNEG, MVT::v2bf16, Legal, Expand);
+  setOperationAction(ISD::FNEG, MVT::v2f32, Expand);
   // (would be) Library functions.
 
   // These map to conversion instructions for scalar FP types.
@@ -888,6 +905,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setOperationAction(Op, MVT::f64, Legal);
     setOperationAction(Op, MVT::v2f16, Expand);
     setOperationAction(Op, MVT::v2bf16, Expand);
+    setOperationAction(Op, MVT::v2f32, Expand);
     setBF16OperationAction(Op, MVT::bf16, Legal, Promote);
     if (getOperationAction(Op, MVT::bf16) == Promote)
       AddPromotedToType(Op, MVT::bf16, MVT::f32);
@@ -902,6 +920,11 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
       setOperationAction(ISD::FP_ROUND, VT, Custom);
     }
   }
+
+  // Expand v2f32 = fp_extend
+  setOperationAction(ISD::FP_EXTEND, MVT::v2f32, Expand);
+  // Expand v2[b]f16 = fp_round v2f32
+  setOperationAction(ISD::FP_ROUND, {MVT::v2bf16, MVT::v2f16}, Expand);
 
   // sm_80 only has conversions between f32 and bf16. Custom lower all other
   // bf16 conversions.
@@ -942,12 +965,14 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setOperationAction(Op, MVT::f64, Legal);
     setOperationAction(Op, MVT::v2f16, Expand);
     setOperationAction(Op, MVT::v2bf16, Expand);
+    setOperationAction(Op, MVT::v2f32, Expand);
     setOperationAction(Op, MVT::bf16, Promote);
     AddPromotedToType(Op, MVT::bf16, MVT::f32);
   }
   setOperationAction(ISD::FREM, {MVT::f32, MVT::f64}, Custom);
 
   setOperationAction(ISD::FABS, {MVT::f32, MVT::f64}, Legal);
+  setOperationAction(ISD::FABS, MVT::v2f32, Expand);
   if (STI.getPTXVersion() >= 65) {
     setFP16OperationAction(ISD::FABS, MVT::f16, Legal, Promote);
     setFP16OperationAction(ISD::FABS, MVT::v2f16, Legal, Expand);
@@ -969,6 +994,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setBF16OperationAction(Op, MVT::bf16, Legal, Promote);
     if (getOperationAction(Op, MVT::bf16) == Promote)
       AddPromotedToType(Op, MVT::bf16, MVT::f32);
+    setOperationAction(Op, MVT::v2f32, Expand);
   }
   bool SupportsF32MinMaxNaN =
       STI.getSmVersion() >= 80 && STI.getPTXVersion() >= 70;
@@ -978,6 +1004,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setFP16OperationAction(Op, MVT::v2f16, Legal, Expand);
     setBF16OperationAction(Op, MVT::bf16, Legal, Expand);
     setBF16OperationAction(Op, MVT::v2bf16, Legal, Expand);
+    setOperationAction(Op, MVT::v2f32, Expand);
   }
 
   // Custom lowering for inline asm with 128-bit operands
@@ -990,6 +1017,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // - bf16/bf16x2 (sm_90+, PTX 7.8+)
   // When f16/bf16 types aren't supported, they are promoted/expanded to f32.
   setOperationAction(ISD::FEXP2, MVT::f32, Legal);
+  setOperationAction(ISD::FEXP2, MVT::v2f32, Expand);
   setFP16OperationAction(ISD::FEXP2, MVT::f16, Legal, Promote);
   setFP16OperationAction(ISD::FEXP2, MVT::v2f16, Legal, Expand);
   setBF16OperationAction(ISD::FEXP2, MVT::bf16, Legal, Promote);
@@ -1001,7 +1029,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setOperationAction(ISD::FLOG2, MVT::f32, Legal);
     setOperationPromotedToType(ISD::FLOG2, MVT::f16, MVT::f32);
     setOperationPromotedToType(ISD::FLOG2, MVT::bf16, MVT::f32);
-    setOperationAction(ISD::FLOG2, {MVT::v2f16, MVT::v2bf16}, Expand);
+    setOperationAction(ISD::FLOG2, {MVT::v2f16, MVT::v2bf16, MVT::v2f32},
+                       Expand);
   }
 
   setOperationAction(ISD::ADDRSPACECAST, {MVT::i32, MVT::i64}, Custom);
@@ -3126,22 +3155,38 @@ SDValue NVPTXTargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
                       MachinePointerInfo(SV));
 }
 
+static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
+                              SmallVectorImpl<SDValue> &Results,
+                              const NVPTXSubtarget &STI);
+
 SDValue NVPTXTargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   if (Op.getValueType() == MVT::i1)
     return LowerLOADi1(Op, DAG);
 
-  // v2f16/v2bf16/v2i16/v4i8 are legal, so we can't rely on legalizer to handle
-  // unaligned loads and have to handle it here.
   EVT VT = Op.getValueType();
-  if (Isv2x16VT(VT) || VT == MVT::v4i8) {
-    LoadSDNode *Load = cast<LoadSDNode>(Op);
-    EVT MemVT = Load->getMemoryVT();
-    if (!allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
-                                        MemVT, *Load->getMemOperand())) {
-      SDValue Ops[2];
-      std::tie(Ops[0], Ops[1]) = expandUnalignedLoad(Load, DAG);
-      return DAG.getMergeValues(Ops, SDLoc(Op));
-    }
+  if (!(Isv2x16VT(VT) || VT == MVT::v4i8 || VT == MVT::v2f32))
+      return SDValue();
+
+  // v2f32/v2f16/v2bf16/v2i16/v4i8 are legal, so we can't rely on legalizer to
+  // handle unaligned loads and have to handle it here.
+  LoadSDNode *Load = cast<LoadSDNode>(Op);
+  EVT MemVT = Load->getMemoryVT();
+  if (!allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
+                                      MemVT, *Load->getMemOperand())) {
+    SDValue Ops[2];
+    std::tie(Ops[0], Ops[1]) = expandUnalignedLoad(Load, DAG);
+    return DAG.getMergeValues(Ops, SDLoc(Op));
+  }
+
+  if (VT == MVT::v2f32) {
+    // If we have instructions accessing f32 elements, it's better to not pack
+    // them. Lower the load now as `f32,f32,ch = LoadV2` (ld.v2.f32), rather
+    // than waiting until ISel when it'll be lowered as ld.b64.
+    SmallVector<SDValue, 2> Results;
+    ReplaceLoadVector(Op.getNode(), DAG, Results, STI);
+    if (!Results.empty())
+      // if we succeeded, return it
+      return DAG.getMergeValues(Results, SDLoc(Op));
   }
 
   return SDValue();
@@ -3179,12 +3224,12 @@ SDValue NVPTXTargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
 
   // v2f16 is legal, so we can't rely on legalizer to handle unaligned
   // stores and have to handle it here.
-  if ((Isv2x16VT(VT) || VT == MVT::v4i8) &&
+  if ((Isv2x16VT(VT) || VT == MVT::v2f32 || VT == MVT::v4i8) &&
       !allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
                                       VT, *Store->getMemOperand()))
     return expandUnalignedStore(Store, DAG);
 
-  // v2f16, v2bf16 and v2i16 don't need special handling.
+  // v2f16/v2bf16/v2i16 don't need special handling.
   if (Isv2x16VT(VT) || VT == MVT::v4i8)
     return SDValue();
 
@@ -3454,19 +3499,15 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
       unsigned I = 0;
       for (const unsigned NumElts : VectorInfo) {
         const EVT EltVT = VTs[I];
-        const EVT LoadVT = [&]() -> EVT {
-          // i1 is loaded/stored as i8.
-          if (EltVT == MVT::i1)
-            return MVT::i8;
-          // getLoad needs a vector type, but it can't handle
-          // vectors which contain v2f16 or v2bf16 elements. So we must load
-          // using i32 here and then bitcast back.
-          if (EltVT.isVector())
-            return MVT::getIntegerVT(EltVT.getFixedSizeInBits());
-          return EltVT;
-        }();
+        // i1 is loaded/stored as i8
+        const EVT LoadVT = EltVT == MVT::i1 ? MVT::i8 : EltVT;
+        // If the element is v2f16/v2bf16/v2f32/etc, then it really holds 2
+        // packed elements of type f16/bf16/f32.
+        const unsigned PackingAmt =
+            LoadVT.isVector() ? LoadVT.getVectorNumElements() : 1;
 
-        const EVT VecVT = EVT::getVectorVT(F->getContext(), LoadVT, NumElts);
+        const EVT VecVT = EVT::getVectorVT(
+            F->getContext(), LoadVT.getScalarType(), NumElts * PackingAmt);
         SDValue VecAddr = DAG.getObjectPtrOffset(
             dl, ArgSymbol, TypeSize::getFixed(Offsets[I]));
 
@@ -3486,8 +3527,10 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
         if (P.getNode())
           P.getNode()->setIROrder(Arg.getArgNo() + 1);
         for (const unsigned J : llvm::seq(NumElts)) {
-          SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, LoadVT, P,
-                                    DAG.getIntPtrConstant(J, dl));
+          SDValue Elt = DAG.getNode(LoadVT.isVector() ? ISD::EXTRACT_SUBVECTOR
+                                                      : ISD::EXTRACT_VECTOR_ELT,
+                                    dl, LoadVT, P,
+                                    DAG.getIntPtrConstant(J * PackingAmt, dl));
 
           // Extend or truncate the element if necessary (e.g. an i8 is loaded
           // into an i16 register)
@@ -3501,9 +3544,6 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
                               Elt);
           } else if (ExpactedVT.bitsLT(Elt.getValueType())) {
             Elt = DAG.getNode(ISD::TRUNCATE, dl, ExpactedVT, Elt);
-          } else {
-            // v2f16 was loaded as an i32. Now we must bitcast it back.
-            Elt = DAG.getBitcast(EltVT, Elt);
           }
           InVals.push_back(Elt);
         }
@@ -3595,6 +3635,9 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   const auto VectorInfo = VectorizePTXValueVTs(VTs, Offsets, RetAlign);
   unsigned I = 0;
   for (const unsigned NumElts : VectorInfo) {
+    // amount to subdivide. If not v2f32, we don't consider packing
+    const unsigned PackingAmt = VTs[I] == MVT::v2f32 ? 2 : 1;
+
     const Align CurrentAlign = commonAlignment(RetAlign, Offsets[I]);
     if (NumElts == 1 && RetTy->isAggregateType() &&
         CurrentAlign < DAG.getEVTAlign(VTs[I])) {
@@ -3610,11 +3653,16 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     SmallVector<SDValue, 6> StoreOperands{
         Chain, DAG.getConstant(Offsets[I], dl, MVT::i32)};
 
-    for (const unsigned J : llvm::seq(NumElts))
-      StoreOperands.push_back(GetRetVal(I + J));
+    for (const unsigned J : llvm::seq(NumElts)) {
+      SDValue Operand = GetRetVal(I + J);
+      if (PackingAmt > 1)
+        DAG.ExtractVectorElements(Operand, StoreOperands);
+      else
+        StoreOperands.push_back(Operand);
+    }
 
     NVPTXISD::NodeType Op;
-    switch (NumElts) {
+    switch (NumElts * PackingAmt) {
     case 1:
       Op = NVPTXISD::StoreRetval;
       break;
@@ -3631,6 +3679,8 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     // Adjust type of load/store op if we've extended the scalar
     // return value.
     EVT TheStoreType = ExtendIntegerRetVal ? MVT::i32 : VTs[I];
+    if (PackingAmt > 1)
+      TheStoreType = TheStoreType.getScalarType();
     Chain = DAG.getMemIntrinsicNode(
         Op, dl, DAG.getVTList(MVT::Other), StoreOperands, TheStoreType,
         MachinePointerInfo(), CurrentAlign, MachineMemOperand::MOStore);
@@ -5083,6 +5133,9 @@ static SDValue PerformADDCombine(SDNode *N,
   return PerformADDCombineWithOperands(N, N1, N0, DCI);
 }
 
+static SDValue PerformPackedFOpCombine(SDNode *N,
+                                       TargetLowering::DAGCombinerInfo &DCI);
+
 /// PerformFADDCombine - Target-specific dag combine xforms for ISD::FADD.
 ///
 static SDValue PerformFADDCombine(SDNode *N,
@@ -5092,6 +5145,8 @@ static SDValue PerformFADDCombine(SDNode *N,
   SDValue N1 = N->getOperand(1);
 
   EVT VT = N0.getValueType();
+  if (VT.isVector())
+      return PerformPackedFOpCombine(N, DCI);
   if (VT.isVector() || !(VT == MVT::f32 || VT == MVT::f64))
     return SDValue();
 
@@ -5101,6 +5156,54 @@ static SDValue PerformFADDCombine(SDNode *N,
 
   // If that didn't work, try again with the operands commuted.
   return PerformFADDCombineWithOperands(N, N1, N0, DCI, OptLevel);
+}
+
+// For vector reductions that are unrolled into packed ops (e.g. fadd.f32x2),
+// the final reduction op needs to produce a scalar. By default, this results in
+// a final packed op where one of the lanes is undef:
+//
+// v1: v2f32 = fadd reassoc a, b
+// ...
+// v[N-2]: v2f32 = fadd reassoc v[N-4], v[N-3]
+//
+// # now we combine v[N-2]:0 with v[N-2]:1
+//
+// v[N-1]: v2f32 = vector_shuffle<1,u> v[N-2], undef:v2f32
+// vN: v2f32 = fadd reassoc v[N-1], v[N-2]
+//
+// result: f32 = extractelt vN, 0
+//
+// We convert this to a scalar op.
+static SDValue PerformPackedFOpCombine(SDNode *N,
+                                       TargetLowering::DAGCombinerInfo &DCI) {
+  // Convert (fop.x2 (vector_shuffle<1,u> V), V) -> ((fop V:1, V:0), undef)
+  const EVT VectorVT = N->getValueType(0);
+  if (!(VectorVT == MVT::v2f32 || Isv2x16VT(VectorVT)))
+    return SDValue();
+
+  SDValue VecOp0 = N->getOperand(0);
+  SDValue VecOp1 = N->getOperand(1);
+
+  // canonicalize shuffle to op0
+  if (VecOp1.getOpcode() == ISD::VECTOR_SHUFFLE)
+    std::swap(VecOp0, VecOp1);
+
+  if (VecOp0.getOpcode() != ISD::VECTOR_SHUFFLE)
+    return SDValue();
+
+  auto *ShuffleOp = cast<ShuffleVectorSDNode>(VecOp0);
+  // check for dead lane
+  if (!(ShuffleOp->getMaskElt(0) == 1 && ShuffleOp->getMaskElt(1) == -1))
+    return SDValue();
+
+  SDLoc DL(N);
+  const EVT ScalarVT = VectorVT.getScalarType();
+  SDValue Lane0 = DCI.DAG.getNode(
+      N->getOpcode(), DL, ScalarVT,
+      DCI.DAG.getExtractVectorElt(DL, ScalarVT, VecOp0.getOperand(0), 1),
+      DCI.DAG.getExtractVectorElt(DL, ScalarVT, VecOp1, 0));
+  SDValue Lane1 = DCI.DAG.getUNDEF(ScalarVT);
+  return DCI.DAG.getBuildVector(VectorVT, DL, {Lane0, Lane1});
 }
 
 static SDValue PerformANDCombine(SDNode *N,
@@ -5519,10 +5622,10 @@ static SDValue PerformEXTRACTCombine(SDNode *N,
       IsPTXVectorType(VectorVT.getSimpleVT()))
     return SDValue(); // Native vector loads already combine nicely w/
                       // extract_vector_elt.
-  // Don't mess with singletons or v2*16, v4i8 and v8i8 types, we already
-  // handle them OK.
-  if (VectorVT.getVectorNumElements() == 1 || Isv2x16VT(VectorVT) ||
-      VectorVT == MVT::v4i8 || VectorVT == MVT::v8i8)
+  // Don't mess with singletons or packed types (v2f32, v2*16, v4i8 and v8i8),
+  // we already handle them OK.
+  if (VectorVT.getVectorNumElements() == 1 || VectorVT == MVT::v2f32 ||
+      Isv2x16VT(VectorVT) || VectorVT == MVT::v4i8 || VectorVT == MVT::v8i8)
     return SDValue();
 
   // Don't mess with undef values as sra may be simplified to 0, not undef.
@@ -5676,6 +5779,10 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
       return PerformADDCombine(N, DCI, OptLevel);
     case ISD::FADD:
       return PerformFADDCombine(N, DCI, OptLevel);
+    case ISD::FMUL:
+    case ISD::FMINIMUM:
+    case ISD::FMAXIMUM:
+      return PerformPackedFOpCombine(N, DCI);
     case ISD::MUL:
       return PerformMULCombine(N, DCI, OptLevel);
     case ISD::SHL:

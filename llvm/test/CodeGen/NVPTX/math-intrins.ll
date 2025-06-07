@@ -576,9 +576,9 @@ define <2 x half> @minnum_v2half(<2 x half> %a, <2 x half> %b) {
 ; CHECK-F16-NEXT:    .reg .b32 %r<4>;
 ; CHECK-F16-EMPTY:
 ; CHECK-F16-NEXT:  // %bb.0:
-; CHECK-F16-NEXT:    ld.param.b32 %r1, [minnum_v2half_param_1];
-; CHECK-F16-NEXT:    ld.param.b32 %r2, [minnum_v2half_param_0];
-; CHECK-F16-NEXT:    min.f16x2 %r3, %r2, %r1;
+; CHECK-F16-NEXT:    ld.param.b32 %r1, [minnum_v2half_param_0];
+; CHECK-F16-NEXT:    ld.param.b32 %r2, [minnum_v2half_param_1];
+; CHECK-F16-NEXT:    min.f16x2 %r3, %r1, %r2;
 ; CHECK-F16-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-F16-NEXT:    ret;
 ;
@@ -919,9 +919,9 @@ define <2 x half> @minimum_v2half(<2 x half> %a, <2 x half> %b) {
 ; CHECK-F16-NEXT:    .reg .b32 %r<4>;
 ; CHECK-F16-EMPTY:
 ; CHECK-F16-NEXT:  // %bb.0:
-; CHECK-F16-NEXT:    ld.param.b32 %r1, [minimum_v2half_param_1];
-; CHECK-F16-NEXT:    ld.param.b32 %r2, [minimum_v2half_param_0];
-; CHECK-F16-NEXT:    min.NaN.f16x2 %r3, %r2, %r1;
+; CHECK-F16-NEXT:    ld.param.b32 %r1, [minimum_v2half_param_0];
+; CHECK-F16-NEXT:    ld.param.b32 %r2, [minimum_v2half_param_1];
+; CHECK-F16-NEXT:    min.NaN.f16x2 %r3, %r1, %r2;
 ; CHECK-F16-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-F16-NEXT:    ret;
 ;
@@ -1117,9 +1117,9 @@ define <2 x half> @maxnum_v2half(<2 x half> %a, <2 x half> %b) {
 ; CHECK-F16-NEXT:    .reg .b32 %r<4>;
 ; CHECK-F16-EMPTY:
 ; CHECK-F16-NEXT:  // %bb.0:
-; CHECK-F16-NEXT:    ld.param.b32 %r1, [maxnum_v2half_param_1];
-; CHECK-F16-NEXT:    ld.param.b32 %r2, [maxnum_v2half_param_0];
-; CHECK-F16-NEXT:    max.f16x2 %r3, %r2, %r1;
+; CHECK-F16-NEXT:    ld.param.b32 %r1, [maxnum_v2half_param_0];
+; CHECK-F16-NEXT:    ld.param.b32 %r2, [maxnum_v2half_param_1];
+; CHECK-F16-NEXT:    max.f16x2 %r3, %r1, %r2;
 ; CHECK-F16-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-F16-NEXT:    ret;
 ;
@@ -1456,9 +1456,9 @@ define <2 x half> @maximum_v2half(<2 x half> %a, <2 x half> %b) {
 ; CHECK-F16-NEXT:    .reg .b32 %r<4>;
 ; CHECK-F16-EMPTY:
 ; CHECK-F16-NEXT:  // %bb.0:
-; CHECK-F16-NEXT:    ld.param.b32 %r1, [maximum_v2half_param_1];
-; CHECK-F16-NEXT:    ld.param.b32 %r2, [maximum_v2half_param_0];
-; CHECK-F16-NEXT:    max.NaN.f16x2 %r3, %r2, %r1;
+; CHECK-F16-NEXT:    ld.param.b32 %r1, [maximum_v2half_param_0];
+; CHECK-F16-NEXT:    ld.param.b32 %r2, [maximum_v2half_param_1];
+; CHECK-F16-NEXT:    max.NaN.f16x2 %r3, %r1, %r2;
 ; CHECK-F16-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-F16-NEXT:    ret;
 ;

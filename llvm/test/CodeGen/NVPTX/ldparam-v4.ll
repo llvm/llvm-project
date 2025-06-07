@@ -7,8 +7,8 @@ declare <4 x float> @bar()
 define void @foo(ptr %ptr) {
 ; CHECK-LABEL: foo(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<9>;
-; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [foo_param_0];
@@ -18,9 +18,11 @@ define void @foo(ptr %ptr) {
 ; CHECK-NEXT:    bar,
 ; CHECK-NEXT:    (
 ; CHECK-NEXT:    );
-; CHECK-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [retval0];
+; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [retval0];
 ; CHECK-NEXT:    } // callseq 0
-; CHECK-NEXT:    st.v4.b32 [%rd1], {%r1, %r2, %r3, %r4};
+; CHECK-NEXT:    mov.b64 {%r1, %r2}, %rd3;
+; CHECK-NEXT:    mov.b64 {%r3, %r4}, %rd2;
+; CHECK-NEXT:    st.v4.b32 [%rd1], {%r3, %r4, %r1, %r2};
 ; CHECK-NEXT:    ret;
   %val = tail call <4 x float> @bar()
   store <4 x float> %val, ptr %ptr

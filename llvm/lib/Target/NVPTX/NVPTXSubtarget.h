@@ -116,6 +116,10 @@ public:
 
     return HasTcgen05 && PTXVersion >= 86;
   }
+  // f32x2 instructions in Blackwell family
+  bool hasF32x2Instructions() const {
+    return SmVersion >= 100 && PTXVersion >= 86;
+  }
 
   // Prior to CUDA 12.3 ptxas did not recognize that the trap instruction
   // terminates a basic block. Instead, it would assume that control flow
