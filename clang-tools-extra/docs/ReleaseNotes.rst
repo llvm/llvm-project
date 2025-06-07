@@ -124,6 +124,12 @@ New checks
   pointer and store it as class members without handle the copy and move
   constructors and the assignments.
 
+- New :doc:`bugprone-invalid-enum-default-initialization
+  <clang-tidy/checks/bugprone/invalid-enum-default-initialization>` check.
+
+  Detects default initialization (to 0) of variables with ``enum`` type where
+  the enum has no enumerator with value of 0.
+
 - New :doc:`bugprone-misleading-setter-of-reference
   <clang-tidy/checks/bugprone/misleading-setter-of-reference>` check.
 
