@@ -33,19 +33,19 @@ using PC = std::pair<const int, long>;
 
 void test_copy() {
   {
-    std::flat_map<long, short> source = {{1, 2}, {2, 3}};
+    std::flat_map<long, short> source = {{1, short{2}}, {2, short{3}}};
     std::flat_map s(source);
     ASSERT_SAME_TYPE(decltype(s), decltype(source));
     assert(s == source);
   }
   {
-    std::flat_map<long, short, std::greater<long>> source = {{1, 2}, {2, 3}};
+    std::flat_map<long, short, std::greater<long>> source = {{1, short{2}}, {2, short{3}}};
     std::flat_map s{source}; // braces instead of parens
     ASSERT_SAME_TYPE(decltype(s), decltype(source));
     assert(s == source);
   }
   {
-    std::flat_map<long, short, std::greater<long>> source = {{1, 2}, {2, 3}};
+    std::flat_map<long, short, std::greater<long>> source = {{1, short{2}}, {2, short{3}}};
     std::flat_map s(source, std::allocator<int>());
     ASSERT_SAME_TYPE(decltype(s), decltype(source));
     assert(s == source);
@@ -57,7 +57,7 @@ void test_containers() {
   std::deque<short, test_allocator<short>> vs({1, 2, 1, 4, 5}, test_allocator<int>(0, 43));
   std::deque<int, test_allocator<int>> sorted_ks({1, 2, 3, INT_MAX}, test_allocator<int>(0, 42));
   std::deque<short, test_allocator<short>> sorted_vs({1, 2, 5, 4}, test_allocator<int>(0, 43));
-  const std::pair<int, short> expected[] = {{1, 1}, {2, 2}, {3, 5}, {INT_MAX, 4}};
+  const std::pair<int, short> expected[] = {{1, short{1}}, {2, short{2}}, {3, short{5}}, {INT_MAX, short{4}}};
   {
     std::flat_map s(ks, vs);
 
@@ -97,7 +97,7 @@ void test_containers_compare() {
   std::deque<short, test_allocator<short>> vs({1, 2, 1, 4, 5}, test_allocator<int>(0, 43));
   std::deque<int, test_allocator<int>> sorted_ks({INT_MAX, 3, 2, 1}, test_allocator<int>(0, 42));
   std::deque<short, test_allocator<short>> sorted_vs({4, 5, 2, 1}, test_allocator<int>(0, 43));
-  const std::pair<int, short> expected[] = {{INT_MAX, 4}, {3, 5}, {2, 2}, {1, 1}};
+  const std::pair<int, short> expected[] = {{INT_MAX, short{4}}, {3, short{5}}, {2, short{2}}, {1, short{1}}};
   {
     std::flat_map s(ks, vs, std::greater<int>());
 
@@ -280,8 +280,9 @@ void test_initializer_list_compare() {
 }
 
 void test_from_range() {
-  std::list<std::pair<int, short>> r     = {{1, 1}, {2, 2}, {1, 1}, {INT_MAX, 4}, {3, 5}};
-  const std::pair<int, short> expected[] = {{1, 1}, {2, 2}, {3, 5}, {INT_MAX, 4}};
+  std::list<std::pair<int, short>> r = {
+      {1, short{1}}, {2, short{2}}, {1, short{1}}, {INT_MAX, short{4}}, {3, short{5}}};
+  const std::pair<int, short> expected[] = {{1, short{1}}, {2, short{2}}, {3, short{5}}, {INT_MAX, short{4}}};
   {
     std::flat_map s(std::from_range, r);
     ASSERT_SAME_TYPE(decltype(s), std::flat_map<int, short, std::less<int>>);
@@ -303,8 +304,9 @@ void test_from_range() {
 }
 
 void test_from_range_compare() {
-  std::list<std::pair<int, short>> r     = {{1, 1}, {2, 2}, {1, 1}, {INT_MAX, 4}, {3, 5}};
-  const std::pair<int, short> expected[] = {{INT_MAX, 4}, {3, 5}, {2, 2}, {1, 1}};
+  std::list<std::pair<int, short>> r = {
+      {1, short{1}}, {2, short{2}}, {1, short{1}}, {INT_MAX, short{4}}, {3, short{5}}};
+  const std::pair<int, short> expected[] = {{INT_MAX, short{4}}, {3, short{5}}, {2, short{2}}, {1, short{1}}};
   {
     std::flat_map s(std::from_range, r, std::greater<int>());
     ASSERT_SAME_TYPE(decltype(s), std::flat_map<int, short, std::greater<int>>);
