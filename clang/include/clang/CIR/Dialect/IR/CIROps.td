@@ -2366,7 +2366,7 @@ def ComplexCreateOp : CIR_Op<"complex.create", [Pure, SameTypeOperands]> {
     ```mlir
     %0 = cir.const #cir.fp<1.000000e+00> : !cir.double
     %1 = cir.const #cir.fp<2.000000e+00> : !cir.double
-    %2 = cir.complex.create %0, %1 : !cir.complex<!cir.double>
+    %2 = cir.complex.create %0, %1 : !cir.double -> !cir.complex<!cir.double>
     ```
   }];
 
