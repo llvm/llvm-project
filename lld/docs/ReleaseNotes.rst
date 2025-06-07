@@ -58,6 +58,9 @@ ELF Improvements
   on executable sections.
   (`#128883 <https://github.com/llvm/llvm-project/pull/128883>`_)
 
+* Added ``--unresolved-symbols=@<file>`` flag to specify path to a file with the
+  list of unresolved symbols that will not trigger an error during lininking.
+
 Breaking changes
 ----------------
 * Executable-only and readable-executable sections are now allowed to be placed
