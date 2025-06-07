@@ -827,13 +827,8 @@ bool DataAggregator::doTrace(const LBREntry &First, const LBREntry &Second,
                     << FromFunc->getPrintName() << ":"
                     << Twine::utohexstr(First.To) << " to "
                     << Twine::utohexstr(Second.From) << ".\n");
-  for (auto [From, To] : *FTs) {
-    if (BAT) {
-      From = BAT->translate(FromFunc->getAddress(), From, /*IsBranchSrc=*/true);
-      To = BAT->translate(FromFunc->getAddress(), To, /*IsBranchSrc=*/false);
-    }
+  for (auto [From, To] : *FTs)
     doIntraBranch(*ParentFunc, From, To, Count, false);
-  }
 
   return true;
 }
@@ -972,7 +967,7 @@ bool DataAggregator::recordExit(BinaryFunction &BF, uint64_t From, bool Mispred,
   return true;
 }
 
-ErrorOr<LBREntry> DataAggregator::parseLBREntry() {
+ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
   LBREntry Res;
   ErrorOr<StringRef> FromStrRes = parseString('/');
   if (std::error_code EC = FromStrRes.getError())
@@ -2289,6 +2284,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
       YamlBF.Id = BF->getFunctionNumber();
       YamlBF.Hash = BAT->getBFHash(FuncAddress);
       YamlBF.ExecCount = BF->getKnownExecutionCount();
+      YamlBF.ExternEntryCount = BF->getExternEntryCount();
       YamlBF.NumBasicBlocks = BAT->getNumBasicBlocks(FuncAddress);
       const BoltAddressTranslation::BBHashMapTy &BlockMap =
           BAT->getBBHashMap(FuncAddress);
@@ -2398,16 +2394,10 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
 
 void DataAggregator::dump() const { DataReader::dump(); }
 
-void DataAggregator::dump(const LBREntry &LBR) const {
-  Diag << "From: " << Twine::utohexstr(LBR.From)
-       << " To: " << Twine::utohexstr(LBR.To) << " Mispred? " << LBR.Mispred
-       << "\n";
-}
-
 void DataAggregator::dump(const PerfBranchSample &Sample) const {
   Diag << "Sample LBR entries: " << Sample.LBR.size() << "\n";
   for (const LBREntry &LBR : Sample.LBR)
-    dump(LBR);
+    Diag << LBR << '\n';
 }
 
 void DataAggregator::dump(const PerfMemSample &Sample) const {
