@@ -32,5 +32,9 @@ int main(int, char**) {
   assert(lk0.mutex() == nullptr);
   assert(!lk0.owns_lock());
 
+  // Test Test self move assignment.
+  lk1 = std::move(lk1);
+  assert(lk1.mutex() == std::addressof(m0));
+  assert(lk1.owns_lock());
   return 0;
 }
