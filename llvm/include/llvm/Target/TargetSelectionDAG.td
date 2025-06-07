@@ -1061,7 +1061,9 @@ class OutPatFrag<dag ops, dag frag>
 // PatLeaf's are pattern fragments that have no operands.  This is just a helper
 // to define immediates and other common things concisely.
 class PatLeaf<dag frag, code pred = [{}], SDNodeXForm xform = NOOP_SDNodeXForm>
- : PatFrag<(ops), frag, pred, xform>;
+ : PatFrag<(ops), frag, pred, xform> {
+  code GISelLeafPredicateCode = ?;
+}
 
 
 // ImmLeaf is a pattern fragment with a constraint on the immediate.  The
