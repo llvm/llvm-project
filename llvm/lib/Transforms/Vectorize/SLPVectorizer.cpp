@@ -511,6 +511,12 @@ static bool isSplat(ArrayRef<Value *> VL) {
 }
 
 /// \returns True if \p I is commutative, handles CmpInst and BinaryOperator.
+/// For BinaryOperator, it also checks if \p InstWithUses is used in specific
+/// patterns that make it effectively commutative (like equality comparisons
+/// with zero).
+/// \param I The instruction to check for commutativity
+/// \param InstWithUses The instruction whose uses are analyzed for special
+/// patterns
 static bool isCommutative(Instruction *I, Instruction *InstWithUses) {
   if (auto *Cmp = dyn_cast<CmpInst>(I))
     return Cmp->isCommutative();
