@@ -11,6 +11,7 @@
 
 #include "llvm/IR/Function.h"
 #include "llvm/SandboxIR/Constant.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::sandboxir {
 
@@ -56,7 +57,7 @@ public:
     LLVMBBToBB BBGetter(Ctx);
     return iterator(cast<llvm::Function>(Val)->end(), BBGetter);
   }
-  FunctionType *getFunctionType() const;
+  LLVM_ABI FunctionType *getFunctionType() const;
 
 #ifndef NDEBUG
   void verify() const final {
