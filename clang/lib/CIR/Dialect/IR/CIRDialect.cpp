@@ -1580,8 +1580,41 @@ OpFoldResult cir::VecExtractOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
-// VecShuffle
+// VecShuffleOp
 //===----------------------------------------------------------------------===//
+
+OpFoldResult cir::VecShuffleOp::fold(FoldAdaptor adaptor) {
+  mlir::Attribute vec1 = adaptor.getVec1();
+  mlir::Attribute vec2 = adaptor.getVec2();
+
+  if (!mlir::isa_and_nonnull<cir::ConstVectorAttr>(vec1) ||
+      !mlir::isa_and_nonnull<cir::ConstVectorAttr>(vec2)) {
+    return {};
+  }
+
+  auto vec1Attr = mlir::cast<cir::ConstVectorAttr>(vec1);
+  auto vec2Attr = mlir::cast<cir::ConstVectorAttr>(vec2);
+
+  mlir::ArrayAttr vec1Elts = vec1Attr.getElts();
+  mlir::ArrayAttr vec2Elts = vec2Attr.getElts();
+  mlir::ArrayAttr indicesElts = adaptor.getIndices();
+
+  SmallVector<mlir::Attribute, 16> elements;
+  elements.reserve(indicesElts.size());
+
+  uint64_t vec1Size = vec1Elts.size();
+  for (const auto &idxAttr : indicesElts.getAsRange<cir::IntAttr>()) {
+    uint64_t idxValue = idxAttr.getUInt();
+    if (idxValue < vec1Size) {
+      elements.push_back(vec1Elts[idxValue]);
+    } else {
+      elements.push_back(vec2Elts[idxValue - vec1Size]);
+    }
+  }
+
+  return cir::ConstVectorAttr::get(
+      getType(), mlir::ArrayAttr::get(getContext(), elements));
+}
 
 LogicalResult cir::VecShuffleOp::verify() {
   // The number of elements in the indices array must match the number of
@@ -1613,7 +1646,6 @@ OpFoldResult cir::VecShuffleDynamicOp::fold(FoldAdaptor adaptor) {
       mlir::isa_and_nonnull<cir::ConstVectorAttr>(indices)) {
     auto vecAttr = mlir::cast<cir::ConstVectorAttr>(vec);
     auto indicesAttr = mlir::cast<cir::ConstVectorAttr>(indices);
-    auto vecTy = mlir::cast<cir::VectorType>(vecAttr.getType());
 
     mlir::ArrayAttr vecElts = vecAttr.getElts();
     mlir::ArrayAttr indicesElts = indicesAttr.getElts();
@@ -1631,7 +1663,7 @@ OpFoldResult cir::VecShuffleDynamicOp::fold(FoldAdaptor adaptor) {
     }
 
     return cir::ConstVectorAttr::get(
-        vecTy, mlir::ArrayAttr::get(getContext(), elements));
+        getType(), mlir::ArrayAttr::get(getContext(), elements));
   }
 
   return {};
