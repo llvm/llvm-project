@@ -129,6 +129,29 @@ void CIRGenerator::emitDeferredDecls() {
   deferredInlineMemberFuncDefs.clear();
 }
 
+/// HandleTagDeclDefinition - This callback is invoked each time a TagDecl to
+/// (e.g. struct, union, enum, class) is completed. This allows the client to
+/// hack on the type, which can occur at any point in the file (because these
+/// can be defined in declspecs).
+void CIRGenerator::HandleTagDeclDefinition(TagDecl *d) {
+  if (diags.hasErrorOccurred())
+    return;
+
+  // Don't allow re-entrant calls to CIRGen triggered by PCH deserialization to
+  // emit deferred decls.
+  HandlingTopLevelDeclRAII handlingDecl(*this, /*EmitDeferred=*/false);
+
+  cgm->updateCompletedType(d);
+
+  // For MSVC compatibility, treat declarations of static data members with
+  // inline initializers as definitions.
+  if (astContext->getTargetInfo().getCXXABI().isMicrosoft())
+    cgm->errorNYI(d->getSourceRange(), "HandleTagDeclDefinition: MSABI");
+  // For OpenMP emit declare reduction functions, if required.
+  if (astContext->getLangOpts().OpenMP)
+    cgm->errorNYI(d->getSourceRange(), "HandleTagDeclDefinition: OpenMP");
+}
+
 void CIRGenerator::CompleteTentativeDefinition(VarDecl *d) {
   if (diags.hasErrorOccurred())
     return;

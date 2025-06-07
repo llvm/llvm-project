@@ -241,6 +241,9 @@ public:
 
   void emitTentativeDefinition(const VarDecl *d);
 
+  // Make sure that this type is translated.
+  void updateCompletedType(const clang::TagDecl *td);
+
   bool supportsCOMDAT() const;
   void maybeSetTrivialComdat(const clang::Decl &d, mlir::Operation *op);
 
