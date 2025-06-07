@@ -282,7 +282,6 @@ define void @byval_not_readonly_2(ptr byval(i8) %written) readonly {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@byval_not_readonly_2
 ; CHECK-SAME: (ptr noalias nofree noundef nonnull writeonly byval(i8) captures(none) dereferenceable(1) [[WRITTEN:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    store i8 0, ptr [[WRITTEN]], align 1
 ; CHECK-NEXT:    ret void
 ;
   store i8 0, ptr %written
@@ -310,7 +309,6 @@ define void @byval_not_readnone_2(ptr byval(i8) %written) readnone {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@byval_not_readnone_2
 ; CHECK-SAME: (ptr noalias nofree noundef nonnull writeonly byval(i8) captures(none) dereferenceable(1) [[WRITTEN:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    store i8 0, ptr [[WRITTEN]], align 1
 ; CHECK-NEXT:    ret void
 ;
   store i8 0, ptr %written
@@ -321,7 +319,6 @@ define void @byval_no_fnarg(ptr byval(i8) %written) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define {{[^@]+}}@byval_no_fnarg
 ; CHECK-SAME: (ptr noalias nofree noundef nonnull writeonly byval(i8) captures(none) dereferenceable(1) [[WRITTEN:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    store i8 0, ptr [[WRITTEN]], align 1
 ; CHECK-NEXT:    ret void
 ;
   store i8 0, ptr %written
