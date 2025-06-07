@@ -22,8 +22,19 @@ define i32 @get_sp() {
   ret i32 %1
 }
 
+define i32 @get_$sp() {
+; CHECK-LABEL: get_$sp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    jr $ra
+; CHECK-NEXT:    move $2, $sp
+  %1 = call i32 @llvm.read_register.i32(metadata !2)
+  ret i32 %1
+}
+
 !llvm.named.register.$28 = !{!0}
 !llvm.named.register.sp = !{!1}
+!llvm.named.register.$sp = !{!2}
 
 !0 = !{!"$28"}
 !1 = !{!"sp"}
+!2 = !{!"$sp"}
