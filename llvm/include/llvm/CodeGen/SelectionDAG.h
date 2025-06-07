@@ -953,8 +953,17 @@ public:
   }
 
   /// Insert \p SubVec at the \p Idx element of \p Vec.
+  /// If \p SkipUndef is true and \p SubVec is UNDEF/POISON, then \p Vec is
+  /// returned.
   SDValue getInsertSubvector(const SDLoc &DL, SDValue Vec, SDValue SubVec,
-                             unsigned Idx) {
+                             unsigned Idx, bool SkipUndef = false) {
+    // Skipping insert of UNDEF could result in POISON elements remaining in the
+    // resulting vector. The SkipUndef is useful in situations when getNode
+    // can't reason well enough about ignoring the insert, e.g. when having
+    // scalable vectors and the user of this method knows that the subvector
+    // being replaced isn't POISON.
+    if (SkipUndef && SubVec.isUndef())
+      return Vec;
     return getNode(ISD::INSERT_SUBVECTOR, DL, Vec.getValueType(), Vec, SubVec,
                    getVectorIdxConstant(Idx, DL));
   }
