@@ -8,8 +8,10 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
+#include <flat_map>
 #include <ranges>
 #include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -33,6 +35,21 @@ constexpr bool test() {
         std::__product_iterator_traits<Iter>::__get_iterator_element<0>(it);
 
     assert(*it1 == 1);
+  }
+  if (!std::is_constant_evaluated()) {
+    // Test __make_product_iterator
+    using M = std::flat_map<int, int>;
+    M m{{1, 1}, {2, 2}, {3, 3}};
+    using Iter         = std::ranges::iterator_t<const M>;
+    const auto& keys   = m.keys();
+    const auto& values = m.values();
+
+    auto it_keys   = std::ranges::begin(keys);
+    auto it_values = std::ranges::begin(values);
+
+    auto it = std::__product_iterator_traits<Iter>::__make_product_iterator(it_keys, it_values);
+    assert(it->first == 1);
+    assert(it->second == 1);
   }
 
   return true;

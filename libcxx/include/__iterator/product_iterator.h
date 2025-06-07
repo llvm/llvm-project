@@ -23,6 +23,10 @@
 // - template <size_t _N>
 //   static decltype(auto) Traits::__get_iterator_element(It&& __it)
 //   Returns the _Nth iterator element of the given product iterator.
+//
+// - template <class... _Iters>
+//   static _Iterator __make_product_iterator(_Iters&&...);
+//   Creates a product iterator from the given underlying iterators.
 
 #include <__config>
 #include <__cstddef/size_t.h>
