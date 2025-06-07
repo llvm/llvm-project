@@ -3076,9 +3076,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::arm_neon_aesd:
   case Intrinsic::arm_neon_aese:
   case Intrinsic::aarch64_crypto_aesd:
-  case Intrinsic::aarch64_crypto_aese: {
+  case Intrinsic::aarch64_crypto_aese:
+  case Intrinsic::aarch64_sve_aesd:
+  case Intrinsic::aarch64_sve_aese: {
     Value *DataArg = II->getArgOperand(0);
     Value *KeyArg  = II->getArgOperand(1);
+
+    // Accept zero on either operand.
+    if (!match(KeyArg, m_ZeroInt()))
+      std::swap(KeyArg, DataArg);
 
     // Try to use the builtin XOR in AESE and AESD to eliminate a prior XOR
     Value *Data, *Key;
