@@ -514,6 +514,10 @@ static bool isSplat(ArrayRef<Value *> VL) {
 /// For BinaryOperator, it also checks if \p InstWithUses is used in specific
 /// patterns that make it effectively commutative (like equality comparisons
 /// with zero).
+/// In most cases, users should not call this function directly (since \p I and
+/// \p InstWithUses are the same). However, when analyzing interchangeable
+/// instructions, we need to use the converted opcode along with the original
+/// uses.
 /// \param I The instruction to check for commutativity
 /// \param InstWithUses The instruction whose uses are analyzed for special
 /// patterns
@@ -550,6 +554,7 @@ static bool isCommutative(Instruction *I, Instruction *InstWithUses) {
   return I->isCommutative();
 }
 
+/// This is a helper function to check whether \p I is commutative.
 static bool isCommutative(Instruction *I) { return isCommutative(I, I); }
 
 template <typename T>
