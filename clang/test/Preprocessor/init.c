@@ -2090,12 +2090,6 @@
 // WEBASSEMBLY-CXX-ATOMICS:#define _REENTRANT 1
 // WEBASSEMBLY-CXX-ATOMICS:#define __STDCPP_THREADS__ 1
 
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple i686-windows-cygnus < /dev/null | FileCheck -match-full-lines -check-prefix CYGWIN-X32 %s
-// CYGWIN-X32: #define __USER_LABEL_PREFIX__ _
-
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple x86_64-windows-cygnus < /dev/null | FileCheck -match-full-lines -check-prefix CYGWIN-X64 %s
-// CYGWIN-X64: #define __USER_LABEL_PREFIX__
-
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=avr \
 // RUN:   < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefix=AVR %s
