@@ -4552,7 +4552,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                                           false /*IsRegularKeywordAttribute*/);
       ParsedAttr *nullabilityAttr = Pool.create(
           S.getNullabilityKeyword(*inferNullability), SourceRange(pointerLoc),
-          nullptr, SourceLocation(), nullptr, 0, form);
+          AttributeScopeInfo(), nullptr, 0, form);
 
       attrs.addAtEnd(nullabilityAttr);
 
@@ -5735,10 +5735,10 @@ static void transferARCOwnershipToDeclaratorChunk(TypeProcessingState &state,
 
   // If there wasn't one, add one (with an invalid source location
   // so that we don't make an AttributedType for it).
-  ParsedAttr *attr = D.getAttributePool().create(
-      &S.Context.Idents.get("objc_ownership"), SourceLocation(),
-      /*scope*/ nullptr, SourceLocation(),
-      /*args*/ &Args, 1, ParsedAttr::Form::GNU());
+  ParsedAttr *attr =
+      D.getAttributePool().create(&S.Context.Idents.get("objc_ownership"),
+                                  SourceLocation(), AttributeScopeInfo(),
+                                  /*args*/ &Args, 1, ParsedAttr::Form::GNU());
   chunk.getAttrs().addAtEnd(attr);
   // TODO: mark whether we did this inference?
 }
