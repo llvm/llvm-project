@@ -1,13 +1,13 @@
-// RUN: %clang_cc1 %s -triple arm64-apple-macosx    -fsized-deallocation    -faligned-allocation -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -o - -Wno-c++26-extensions | FileCheck --check-prefixes=CHECK,CHECK_SIZED_ALIGNED  %s
-// RUN: %clang_cc1 %s -triple arm64-apple-macosx -fno-sized-deallocation    -faligned-allocation -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -o - -Wno-c++26-extensions | FileCheck --check-prefixes=CHECK,CHECK_NO_SIZE_ALIGNED %s
-// RUN: %clang_cc1 %s -triple arm64-apple-macosx -fno-sized-deallocation -fno-aligned-allocation -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -o - -Wno-c++26-extensions | FileCheck --check-prefixes=CHECK,CHECK_NO_SIZE_NO_ALIGN %s
-// RUN: %clang_cc1 %s -triple arm64-apple-macosx    -fsized-deallocation -fno-aligned-allocation -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -o - -Wno-c++26-extensions | FileCheck --check-prefixes=CHECK,CHECK_SIZED_NO_ALIGN %s
+// RUN: %clang_cc1 %s -triple arm64-apple-macosx -fcxx-type-aware-allocators    -fsized-deallocation    -faligned-allocation -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -o - -Wno-c++26-extensions | FileCheck --check-prefixes=CHECK,CHECK_SIZED_ALIGNED  %s
+// RUN: %clang_cc1 %s -triple arm64-apple-macosx -fcxx-type-aware-allocators -fno-sized-deallocation    -faligned-allocation -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -o - -Wno-c++26-extensions | FileCheck --check-prefixes=CHECK,CHECK_NO_SIZE_ALIGNED %s
+// RUN: %clang_cc1 %s -triple arm64-apple-macosx -fcxx-type-aware-allocators -fno-sized-deallocation -fno-aligned-allocation -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -o - -Wno-c++26-extensions | FileCheck --check-prefixes=CHECK,CHECK_NO_SIZE_NO_ALIGN %s
+// RUN: %clang_cc1 %s -triple arm64-apple-macosx -fcxx-type-aware-allocators    -fsized-deallocation -fno-aligned-allocation -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -o - -Wno-c++26-extensions | FileCheck --check-prefixes=CHECK,CHECK_SIZED_NO_ALIGN %s
+
 // Test default behaviour with c++26
 // RUN: %clang_cc1 %s -triple arm64-apple-macosx    -fsized-deallocation    -faligned-allocation -emit-llvm -fcxx-exceptions -fexceptions -std=c++26 -o -  | FileCheck --check-prefixes=CHECK,CHECK_SIZED_ALIGNED  %s
 // RUN: %clang_cc1 %s -triple arm64-apple-macosx -fno-sized-deallocation    -faligned-allocation -emit-llvm -fcxx-exceptions -fexceptions -std=c++26 -o -  | FileCheck --check-prefixes=CHECK,CHECK_NO_SIZE_ALIGNED %s
 // RUN: %clang_cc1 %s -triple arm64-apple-macosx -fno-sized-deallocation -fno-aligned-allocation -emit-llvm -fcxx-exceptions -fexceptions -std=c++26 -o -  | FileCheck --check-prefixes=CHECK,CHECK_NO_SIZE_NO_ALIGN %s
 // RUN: %clang_cc1 %s -triple arm64-apple-macosx    -fsized-deallocation -fno-aligned-allocation -emit-llvm -fcxx-exceptions -fexceptions -std=c++26 -o -  | FileCheck --check-prefixes=CHECK,CHECK_SIZED_NO_ALIGN %s
-
 
 namespace std {
   template <class T> struct type_identity {
