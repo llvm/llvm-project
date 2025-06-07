@@ -13,7 +13,7 @@ define void @f1(i1 %a) {
 ; CHECK:       [[BB2]]:
 ; CHECK-NEXT:    br label %[[BB3]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ 0, %[[BB2]] ], [ 1, %[[BB1]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = zext i1 [[A]] to i64
 ; CHECK-NEXT:    [[INTTOPTR:%.*]] = inttoptr i64 [[PHI]] to ptr
 ; CHECK-NEXT:    store i32 0, ptr [[INTTOPTR]], align 4
 ; CHECK-NEXT:    br label %[[BB1]]
