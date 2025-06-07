@@ -22,7 +22,7 @@ class LookupAction : public ASTFrontendAction {
   void ExecuteAction() override {
     CompilerInstance &CI = getCompilerInstance();
     ASSERT_FALSE(CI.hasSema());
-    CI.createSema(getTranslationUnitKind(), nullptr);
+    CI.createSema(getTranslationUnitKind(), nullptr, nullptr);
     ASSERT_TRUE(CI.hasSema());
     Sema &S = CI.getSema();
     ParseAST(S);

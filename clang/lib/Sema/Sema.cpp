@@ -64,6 +64,7 @@
 #include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/SemaSPIRV.h"
 #include "clang/Sema/SemaSYCL.h"
+#include "clang/Sema/SemaSummarizer.h"
 #include "clang/Sema/SemaSwift.h"
 #include "clang/Sema/SemaSystemZ.h"
 #include "clang/Sema/SemaWasm.h"
@@ -248,7 +249,8 @@ const unsigned Sema::MaxAlignmentExponent;
 const uint64_t Sema::MaximumAlignment;
 
 Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
-           TranslationUnitKind TUKind, CodeCompleteConsumer *CodeCompleter)
+           TranslationUnitKind TUKind, CodeCompleteConsumer *CodeCompleter,
+           SummaryConsumer *SummaryConsumer)
     : SemaBase(*this), CollectStats(false), TUKind(TUKind),
       CurFPFeatures(pp.getLangOpts()), LangOpts(pp.getLangOpts()), PP(pp),
       Context(ctxt), Consumer(consumer), Diags(PP.getDiagnostics()),
@@ -263,6 +265,9 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       BPFPtr(std::make_unique<SemaBPF>(*this)),
       CodeCompletionPtr(
           std::make_unique<SemaCodeCompletion>(*this, CodeCompleter)),
+      SummarizerPtr(SummaryConsumer ? std::make_unique<SemaSummarizer>(
+                                          *this, SummaryConsumer)
+                                    : nullptr),
       CUDAPtr(std::make_unique<SemaCUDA>(*this)),
       DirectXPtr(std::make_unique<SemaDirectX>(*this)),
       HLSLPtr(std::make_unique<SemaHLSL>(*this)),

@@ -37,7 +37,7 @@ public:
     if (!CI.hasPreprocessor())
       return;
     if (!CI.hasSema())
-      CI.createSema(getTranslationUnitKind(), nullptr);
+      CI.createSema(getTranslationUnitKind(), nullptr, nullptr);
   }
 };
 

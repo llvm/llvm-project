@@ -125,6 +125,7 @@ class CXXBasePath;
 class CXXBasePaths;
 class CXXFieldCollector;
 class CodeCompleteConsumer;
+class SummaryConsumer;
 enum class ComparisonCategoryType : unsigned char;
 class ConstraintSatisfaction;
 class DarwinSDKInfo;
@@ -159,6 +160,7 @@ class SemaARM;
 class SemaAVR;
 class SemaBPF;
 class SemaCodeCompletion;
+class SemaSummarizer;
 class SemaCUDA;
 class SemaDirectX;
 class SemaHLSL;
@@ -883,7 +885,8 @@ class Sema final : public SemaBase {
 public:
   Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
        TranslationUnitKind TUKind = TU_Complete,
-       CodeCompleteConsumer *CompletionConsumer = nullptr);
+       CodeCompleteConsumer *CompletionConsumer = nullptr,
+       SummaryConsumer *SummaryConsumer = nullptr);
   ~Sema();
 
   /// Perform initialization that occurs after the parser has been
@@ -1564,6 +1567,7 @@ private:
   std::unique_ptr<SemaAVR> AVRPtr;
   std::unique_ptr<SemaBPF> BPFPtr;
   std::unique_ptr<SemaCodeCompletion> CodeCompletionPtr;
+  std::unique_ptr<SemaSummarizer> SummarizerPtr;
   std::unique_ptr<SemaCUDA> CUDAPtr;
   std::unique_ptr<SemaDirectX> DirectXPtr;
   std::unique_ptr<SemaHLSL> HLSLPtr;

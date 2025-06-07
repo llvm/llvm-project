@@ -52,7 +52,7 @@ void EnsureSemaIsCreated(CompilerInstance &CI, FrontendAction &Action) {
 
   if (!CI.hasSema())
     CI.createSema(Action.getTranslationUnitKind(),
-                  GetCodeCompletionConsumer(CI));
+                  GetCodeCompletionConsumer(CI), nullptr);
 }
 } // namespace
 

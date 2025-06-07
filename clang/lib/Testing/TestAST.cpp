@@ -69,7 +69,7 @@ void createMissingComponents(CompilerInstance &Clang) {
   if (!Clang.hasASTContext())
     Clang.createASTContext();
   if (!Clang.hasSema())
-    Clang.createSema(TU_Complete, /*CodeCompleteConsumer=*/nullptr);
+    Clang.createSema(TU_Complete, /*CodeCompleteConsumer=*/nullptr, nullptr);
 }
 
 } // namespace

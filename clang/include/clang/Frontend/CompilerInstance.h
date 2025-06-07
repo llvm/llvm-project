@@ -48,6 +48,7 @@ class ModuleFile;
 }
 
 class CodeCompleteConsumer;
+class SummaryConsumer;
 class DiagnosticsEngine;
 class DiagnosticConsumer;
 class FileManager;
@@ -120,6 +121,9 @@ class CompilerInstance : public ModuleLoader {
 
   /// The code completion consumer.
   std::unique_ptr<CodeCompleteConsumer> CompletionConsumer;
+
+  /// The summary consumer.
+  std::unique_ptr<SummaryConsumer> TheSummaryConsumer;
 
   /// The semantic analysis object.
   std::unique_ptr<Sema> TheSema;
@@ -607,6 +611,18 @@ public:
     return *CompletionConsumer;
   }
 
+  /// @}
+  /// @name Summary
+  /// @{
+
+  bool hasSummaryConsumer() const { return (bool)TheSummaryConsumer; }
+
+  SummaryConsumer &getSummaryConsumer() const {
+    assert(TheSummaryConsumer &&
+           "Compiler instance has no code summary consumer!");
+    return *TheSummaryConsumer;
+  }
+
   /// setCodeCompletionConsumer - Replace the current code completion consumer;
   /// the compiler instance takes ownership of \p Value.
   void setCodeCompletionConsumer(CodeCompleteConsumer *Value);
@@ -736,9 +752,12 @@ public:
       Preprocessor &PP, StringRef Filename, unsigned Line, unsigned Column,
       const CodeCompleteOptions &Opts, raw_ostream &OS);
 
+  void createSummaryConsumer();
+
   /// Create the Sema object to be used for parsing.
   void createSema(TranslationUnitKind TUKind,
-                  CodeCompleteConsumer *CompletionConsumer);
+                  CodeCompleteConsumer *CompletionConsumer,
+                  SummaryConsumer *SummaryConsumer);
 
   /// Create the frontend timer and replace any existing one with it.
   void createFrontendTimer();

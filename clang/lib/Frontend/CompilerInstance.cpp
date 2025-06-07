@@ -37,6 +37,7 @@
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/SummaryConsumer.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
@@ -741,10 +742,16 @@ CompilerInstance::createCodeCompletionConsumer(Preprocessor &PP,
   return new PrintingCodeCompleteConsumer(Opts, OS);
 }
 
+void CompilerInstance::createSummaryConsumer() {
+  TheSummaryConsumer.reset(
+      getFrontendOpts().SummaryFile.empty() ? nullptr : new SummaryConsumer());
+}
+
 void CompilerInstance::createSema(TranslationUnitKind TUKind,
-                                  CodeCompleteConsumer *CompletionConsumer) {
+                                  CodeCompleteConsumer *CompletionConsumer,
+                                  SummaryConsumer *SummaryConsumer) {
   TheSema.reset(new Sema(getPreprocessor(), getASTContext(), getASTConsumer(),
-                         TUKind, CompletionConsumer));
+                         TUKind, CompletionConsumer, SummaryConsumer));
 
   // Set up API notes.
   TheSema->APINotes.setSwiftVersion(getAPINotesOpts().SwiftVersion);

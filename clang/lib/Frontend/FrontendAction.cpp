@@ -1339,8 +1339,16 @@ void ASTFrontendAction::ExecuteAction() {
   if (CI.hasCodeCompletionConsumer())
     CompletionConsumer = &CI.getCodeCompletionConsumer();
 
+  CI.createSummaryConsumer();
+
+  // Use a code completion consumer?
+  SummaryConsumer *SummaryConsumer = nullptr;
+  if (CI.hasSummaryConsumer())
+    SummaryConsumer = &CI.getSummaryConsumer();
+
   if (!CI.hasSema())
-    CI.createSema(getTranslationUnitKind(), CompletionConsumer);
+    CI.createSema(getTranslationUnitKind(), CompletionConsumer,
+                  SummaryConsumer);
 
   ParseAST(CI.getSema(), CI.getFrontendOpts().ShowStats,
            CI.getFrontendOpts().SkipFunctionBodies);

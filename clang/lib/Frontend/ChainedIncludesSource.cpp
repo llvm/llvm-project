@@ -142,7 +142,7 @@ IntrusiveRefCntPtr<ExternalSemaSource> clang::createChainedIncludesSource(
     Clang->getASTContext().setASTMutationListener(
                                             consumer->GetASTMutationListener());
     Clang->setASTConsumer(std::move(consumer));
-    Clang->createSema(TU_Prefix, nullptr);
+    Clang->createSema(TU_Prefix, nullptr, nullptr);
 
     if (firstInclude) {
       Preprocessor &PP = Clang->getPreprocessor();

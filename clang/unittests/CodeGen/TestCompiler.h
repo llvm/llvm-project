@@ -69,7 +69,7 @@ struct TestCompiler {
 
     compiler.setASTConsumer(std::move(Consumer));
 
-    compiler.createSema(clang::TU_Prefix, nullptr);
+    compiler.createSema(clang::TU_Prefix, nullptr, nullptr);
 
     clang::SourceManager &sm = compiler.getSourceManager();
     sm.setMainFileID(sm.createFileID(

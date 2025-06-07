@@ -194,7 +194,7 @@ protected:
   void ExecuteAction() override {
     CompilerInstance &CI = getCompilerInstance();
     ASSERT_FALSE(CI.hasSema());
-    CI.createSema(getTranslationUnitKind(), nullptr);
+    CI.createSema(getTranslationUnitKind(), nullptr, nullptr);
     ASSERT_TRUE(CI.hasDiagnostics());
     DiagnosticsEngine &Diagnostics = CI.getDiagnostics();
     DiagnosticConsumer *Client = Diagnostics.getClient();
