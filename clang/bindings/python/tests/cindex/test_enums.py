@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 
 from clang.cindex import (
     AccessSpecifier,
@@ -13,6 +14,7 @@ from clang.cindex import (
     TemplateArgumentKind,
     TLSKind,
     TokenKind,
+    TranslationUnit,
     TypeKind,
 )
 
@@ -46,8 +48,53 @@ class TestEnums(unittest.TestCase):
 
     def test_duplicate_ids(self):
         """Check that no two kinds have the same id"""
-        # for enum in self.enums:
         for enum in self.enums:
             num_declared_variants = len(enum._member_map_.keys())
             num_unique_variants = len(list(enum))
             self.assertEqual(num_declared_variants, num_unique_variants)
+
+    def test_all_variants(self):
+        """Check that all libclang enum values are also defined in cindex"""
+        cenum_to_pythonenum = {
+            "CX_CXXAccessSpecifier": AccessSpecifier,
+            "CXAvailabilityKind": AvailabilityKind,
+            "CXBinaryOperatorKind": BinaryOperator,
+            "CXCursorKind": CursorKind,
+            "CXCursor_ExceptionSpecificationKind": ExceptionSpecificationKind,
+            "CXLinkageKind": LinkageKind,
+            "CXRefQualifierKind": RefQualifierKind,
+            "CX_StorageClass": StorageClass,
+            "CXTemplateArgumentKind": TemplateArgumentKind,
+            "CXTLSKind": TLSKind,
+            "CXTokenKind": TokenKind,
+            "CXTypeKind": TypeKind,
+        }
+
+        indexheader = (
+            Path(__file__).parent.parent.parent.parent.parent
+            / "include/clang-c/Index.h"
+        )
+        tu = TranslationUnit.from_source(indexheader, ["-x", "c++"])
+
+        enum_variant_map = {}
+        # For all enums in self.enums, extract all enum variants defined in Index.h
+        for cursor in tu.cursor.walk_preorder():
+            type_class = cenum_to_pythonenum.get(cursor.type.spelling)
+            if (
+                cursor.kind == CursorKind.ENUM_CONSTANT_DECL
+                and type_class in self.enums
+            ):
+                if type_class not in enum_variant_map:
+                    enum_variant_map[type_class] = []
+                enum_variant_map[type_class].append(cursor.enum_value)
+
+        for enum in self.enums:
+            with self.subTest(enum):
+                python_kinds = set([kind.value for kind in enum])
+                c_kinds = set(enum_variant_map[enum])
+                missing_python_kinds = c_kinds - python_kinds
+                self.assertEqual(
+                    missing_python_kinds,
+                    set(),
+                    f"Please ensure these variants are defined inside {enum} in cindex.py.",
+                )
