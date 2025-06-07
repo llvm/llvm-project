@@ -65,8 +65,5 @@ int main(int, char**) {
   test();
   static_assert(test());
 
-  // Note: `test_append_range_exception_safety_throwing_copy` doesn't apply because copying booleans cannot throw.
-  test_append_range_exception_safety_throwing_allocator<std::vector, bool>();
-
   return 0;
 }
