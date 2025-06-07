@@ -2217,6 +2217,20 @@ static bool IsPrivatizable(const Symbol *sym) {
               misc->kind() != MiscDetails::Kind::ConstructName));
 }
 
+static bool IsSymbolStaticStorageDuration(const Symbol &symbol) {
+  LLVM_DEBUG(llvm::dbgs() << "IsSymbolStaticStorageDuration(" << symbol.name()
+                          << "):\n");
+  auto ultSym = symbol.GetUltimate();
+  // Module-scope variable
+  return (ultSym.owner().kind() == Scope::Kind::Module) ||
+      // Data statement variable
+      (ultSym.flags().test(Symbol::Flag::InDataStmt)) ||
+      // Save attribute variable
+      (ultSym.attrs().test(Attr::SAVE)) ||
+      // Referenced in a common block
+      (ultSym.flags().test(Symbol::Flag::InCommonBlock));
+}
+
 void OmpAttributeVisitor::CreateImplicitSymbols(const Symbol *symbol) {
   if (!IsPrivatizable(symbol)) {
     return;
@@ -2310,6 +2324,7 @@ void OmpAttributeVisitor::CreateImplicitSymbols(const Symbol *symbol) {
     bool targetDir = llvm::omp::allTargetSet.test(dirContext.directive);
     bool parallelDir = llvm::omp::allParallelSet.test(dirContext.directive);
     bool teamsDir = llvm::omp::allTeamsSet.test(dirContext.directive);
+    bool isStaticStorageDuration = IsSymbolStaticStorageDuration(*symbol);
 
     if (dsa.any()) {
       if (parallelDir || taskGenDir || teamsDir) {
@@ -2367,7 +2382,7 @@ void OmpAttributeVisitor::CreateImplicitSymbols(const Symbol *symbol) {
       dsa = prevDSA;
     } else if (taskGenDir) {
       // TODO 5) dummy arg in orphaned taskgen construct -> firstprivate
-      if (prevDSA.test(Symbol::Flag::OmpShared)) {
+      if (prevDSA.test(Symbol::Flag::OmpShared) || isStaticStorageDuration) {
         // 6) shared in enclosing context -> shared
         dsa = {Symbol::Flag::OmpShared};
         makeSymbol(dsa);
