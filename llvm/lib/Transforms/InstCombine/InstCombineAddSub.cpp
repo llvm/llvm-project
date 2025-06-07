@@ -1797,14 +1797,8 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
 
     // Match: (X >> C) + zext((X & Mask) != 0)
     // or:    zext((X & Mask) != 0) + (X >> C)
-    if (match(&I, m_c_Add(m_Value(Shift), m_ZExt(m_Value(Cmp)))) &&
-        match(Shift, m_LShr(m_Value(X), m_APInt(ShiftAmt))) &&
-        Shift->hasOneUse() &&
-        match(Cmp, m_ICmp(Pred, m_And(m_Specific(X), m_LowBitMask(Mask)),
-                          m_ZeroInt())) &&
-        Pred == ICmpInst::ICMP_NE &&
-        ShiftAmt && ShiftAmt->uge(1) && ShiftAmt->ult(BitWidth) &&
-        Mask && Mask->popcount() == *ShiftAmt) {
+    if (match(&I, m_c_Add(m_OneUse(m_LShr(m_Value(X), m_APInt(ShiftAmt))), m_ZExt(m_SpecificICmp(ICmpInst::ICMP_NE, m_And(m_Deferred(X), m_LowBitMask(Mask)),
+                          m_ZeroInt())))) && Mask->popcount() == *ShiftAmt) {
 
       // Check if X + Mask doesn't overflow
       Constant *MaskC = ConstantInt::get(X->getType(), *Mask);
@@ -1812,9 +1806,7 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
 
       if (WillNotOverflowUnsigned) {
         // (X + Mask) >> ShiftAmt
-        bool WillNotOverflowSigned = willNotOverflowSignedAdd(X, MaskC, I);
-        Value *Add = Builder.CreateAdd(X, MaskC, "", WillNotOverflowUnsigned,
-                                      WillNotOverflowSigned);
+        Value *Add = Builder.CreateNUWAdd(X, MaskC);
         return BinaryOperator::CreateLShr(Add, ConstantInt::get(X->getType(), *ShiftAmt));
       }
     }
