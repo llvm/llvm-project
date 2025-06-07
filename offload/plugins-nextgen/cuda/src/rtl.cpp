@@ -157,6 +157,20 @@ struct CUDAKernelTy : public GenericKernelTy {
                    KernelLaunchParamsTy LaunchParams,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override;
 
+  /// Return maximum block size for maximum occupancy
+  Expected<size_t> maxGroupSize(GenericDeviceTy &,
+                                size_t DynamicMemSize) const override {
+    int minGridSize;
+    int maxBlockSize;
+    auto Res = cuOccupancyMaxPotentialBlockSize(
+        &minGridSize, &maxBlockSize, Func, NULL, DynamicMemSize, INT_MAX);
+    if (auto Err = Plugin::check(
+            Res, "error in cuOccupancyMaxPotentialBlockSize: %s")) {
+      return Err;
+    }
+    return maxBlockSize;
+  }
+
 private:
   /// The CUDA kernel function to execute.
   CUfunction Func;
