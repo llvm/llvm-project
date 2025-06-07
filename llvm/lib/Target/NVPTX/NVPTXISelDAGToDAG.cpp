@@ -2556,18 +2556,24 @@ void NVPTXDAGToDAGISel::SelectCpAsyncBulkTensorG2SCommon(SDNode *N,
   // We have {Chain, Intrinsic-ID} followed by the actual intrisic args:
   // {dst, mbar, src, dims{d0...dN}, im2col_offsets{dims-2}
   // multicast, cache_hint,
-  // multicast_flag, cache_hint_flag}
+  // multicast_flag, cache_hint_flag, 2cta_mode_flag}
   // NumOperands = {Chain, IID} + {Actual intrinsic args}
-  //             = {2}          + {7 + dims + im2col_offsets}
+  //             = {2}          + {8 + dims + im2col_offsets}
   size_t NumOps = N->getNumOperands();
   size_t NumDims = IsIm2Col ? GetDimsFromIntrinsic(N->getConstantOperandVal(1))
-                            : (NumOps - 9);
+                            : (NumOps - 10);
   // Offsets is always 'NumDims - 2' and only for im2col mode
   size_t NumOffsets = IsIm2Col ? (NumDims - 2) : 0;
-  bool IsCacheHint = N->getConstantOperandVal(NumOps - 1) == 1;
-  bool IsMultiCast = N->getConstantOperandVal(NumOps - 2) == 1;
+  bool Is2CTAMode = N->getConstantOperandVal(NumOps - 1) == 1;
+  bool IsCacheHint = N->getConstantOperandVal(NumOps - 2) == 1;
+  bool IsMultiCast = N->getConstantOperandVal(NumOps - 3) == 1;
   size_t NumBaseArgs = NumDims + NumOffsets + 3; // for {dst, mbar, src}
   size_t MultiCastIdx = NumBaseArgs + 2;         // for Chain and IID
+
+  if (Is2CTAMode && !Subtarget->hasCpAsyncBulkTensor2CTASupport())
+    report_fatal_error(
+        formatv("CpAsyncBulkTensorG2S 2CTA mode is not supported on sm_{}",
+                Subtarget->getSmVersion()));
 
   SDLoc DL(N);
   SmallVector<SDValue, 8> Ops(N->ops().slice(2, NumBaseArgs));
@@ -2579,6 +2585,9 @@ void NVPTXDAGToDAGISel::SelectCpAsyncBulkTensorG2SCommon(SDNode *N,
   // Push CacheHint operand, if available
   if (IsCacheHint)
     Ops.push_back(N->getOperand(MultiCastIdx + 1));
+
+  // Flag for 2-CTA mode
+  Ops.push_back(CurDAG->getTargetConstant(Is2CTAMode, DL, MVT::i1));
 
   // Finally, the chain operand
   Ops.push_back(N->getOperand(0));

@@ -1016,7 +1016,7 @@ Syntax:
 
 .. code-block:: llvm
 
-  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i1 %flag_cta_group)
   declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.2d(..., i32 %d0, i32 %d1, ...)
   declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.3d(..., i32 %d0, i32 %d1, i32 %d2, ...)
   declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
@@ -1034,18 +1034,22 @@ source tensor is preserved at the destination. The dimension of the
 tensor data ranges from 1d to 5d with the coordinates specified
 by the ``i32 %d0 ... i32 %d4`` arguments.
 
-* The last two arguments to these intrinsics are boolean flags
-  indicating support for cache_hint and/or multicast modifiers.
-  These flag arguments must be compile-time constants. The backend
-  looks through these flags and lowers the intrinsics appropriately.
+* The last three arguments to these intrinsics are boolean flags
+  indicating support for multicast, cache_hint and cta_group::2
+  modifiers. These flag arguments must be compile-time constants.
+  The backend looks through these flags and lowers the intrinsics
+  appropriately.
 
-* The Nth argument (denoted by ``i1 flag_ch``) when set, indicates
+* The argument denoted by ``i1 flag_ch`` when set, indicates
   a valid cache_hint (``i64 %ch``) and generates the ``.L2::cache_hint``
   variant of the PTX instruction.
 
-* The [N-1]th argument (denoted by ``i1 flag_mc``) when set, indicates
-  the presence of a multicast mask (``i16 %mc``) and generates the PTX
-  instruction with the ``.multicast::cluster`` modifier.
+* The argument denoted by ``i1 flag_mc`` when set, indicates
+  the presence of a multicast mask (``i16 %mc``) and generates
+  the PTX instruction with the ``.multicast::cluster`` modifier.
+
+* The argument denoted by ``i1 flag_cta_group`` when set, generates
+  the ``.cta_group::2`` variant of the PTX instruction.
 
 For more information, refer PTX ISA
 `<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`_.
