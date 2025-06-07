@@ -329,9 +329,9 @@ static bool shouldBeInlined(ExpressionOp expressionOp) {
   if (hasDeferredEmission(user))
     return false;
 
-  // Do not inline expressions used by ops with the CExpression trait. If this
-  // was intended, the user could have been merged into the expression op.
-  return !user->hasTrait<OpTrait::emitc::CExpression>();
+  // Do not inline expressions used by ops with the CExpressionInterface. If
+  // this was intended, the user could have been merged into the expression op.
+  return !isa<emitc::CExpressionInterface>(*user);
 }
 
 static LogicalResult printConstantOp(CppEmitter &emitter, Operation *operation,
