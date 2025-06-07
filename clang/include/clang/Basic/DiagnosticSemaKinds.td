@@ -1764,7 +1764,8 @@ def err_user_defined_msg_constexpr : Error<
 
 // Type traits explanations
 def note_unsatisfied_trait : Note<"%0 is not %enum_select<TraitName>{"
-                                  "%TriviallyRelocatable{trivially relocatable}"
+                                  "%TriviallyRelocatable{trivially relocatable}|"
+                                  "%TriviallyCopyable{trivially copyable}"
                                   "}1">;
 
 def note_unsatisfied_trait_reason
@@ -1774,8 +1775,10 @@ def note_unsatisfied_trait_reason
            "%HasArcLifetime{has an ARC lifetime qualifier}|"
            "%VLA{is a variably-modified type}|"
            "%VBase{has a virtual base %1}|"
-           "%NRBase{has a non-trivially-relocatable base %1}|"
-           "%NRField{has a non-trivially-relocatable member %1 of type %2}|"
+           "%NTRBase{has a non-trivially-relocatable base %1}|"
+           "%NTRField{has a non-trivially-relocatable member %1 of type %2}|"
+           "%NTCBase{has a non-trivially-copyable base %1}|"
+           "%NTCField{has a non-trivially-copyable member %1 of type %2}|"
            "%DeletedDtr{has a %select{deleted|user-provided}1 destructor}|"
            "%UserProvidedCtr{has a user provided %select{copy|move}1 "
            "constructor}|"
@@ -3105,8 +3108,6 @@ def err_reference_to_function_with_unsatisfied_constraints : Error<
   "invalid reference to function %0: constraints not satisfied">;
 def err_requires_expr_local_parameter_default_argument : Error<
   "default arguments not allowed for parameters of a requires expression">;
-def err_requires_expr_parameter_referenced_in_evaluated_context : Error<
-  "constraint variable %0 cannot be used in an evaluated context">;
 def note_expr_requirement_expr_substitution_error : Note<
   "%select{and|because}0 '%1' would be invalid: %2">;
 def note_expr_requirement_expr_unknown_substitution_error : Note<
@@ -12711,6 +12712,11 @@ def warn_noderef_on_non_pointer_or_array : Warning<
 def warn_noderef_to_dereferenceable_pointer : Warning<
   "casting to dereferenceable pointer removes 'noderef' attribute">, InGroup<NoDeref>;
 
+def warn_cast_discards_cfi_unchecked_callee
+    : Warning<"implicit conversion from %0 to %1 discards "
+              "'cfi_unchecked_callee' attribute">,
+      InGroup<DiagGroup<"cfi-unchecked-callee">>;
+
 def err_builtin_launder_invalid_arg : Error<
   "%select{non-pointer|function pointer|void pointer}0 argument to "
   "'__builtin_launder' is not allowed">;
@@ -12802,6 +12808,14 @@ def err_bit_cast_non_trivially_copyable : Error<
   "'__builtin_bit_cast' %select{source|destination}0 type must be trivially copyable">;
 def err_bit_cast_type_size_mismatch : Error<
   "size of '__builtin_bit_cast' source type %0 does not match destination type %1 (%2 vs %3 bytes)">;
+
+def err_get_vtable_pointer_incorrect_type
+    : Error<"__builtin_get_vtable_pointer requires an argument of%select{| "
+            "polymorphic}0 class pointer type"
+            ", but %1 %select{was provided|has no virtual methods}0">;
+def err_get_vtable_pointer_requires_complete_type
+    : Error<"__builtin_get_vtable_pointer requires an argument with a complete "
+            "type, but %0 is incomplete">;
 
 // SYCL-specific diagnostics
 def warn_sycl_kernel_num_of_template_params : Warning<
