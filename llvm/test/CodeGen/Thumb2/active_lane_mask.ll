@@ -306,9 +306,10 @@ define void @test_width2(ptr nocapture readnone %x, ptr nocapture %y, i8 zeroext
 ; CHECK-NEXT:    ldrne.w r3, [r12]
 ; CHECK-NEXT:    vmovne.32 q0[0], r3
 ; CHECK-NEXT:    lsls r0, r0, #30
-; CHECK-NEXT:    itt mi
+; CHECK-NEXT:    ittt mi
 ; CHECK-NEXT:    ldrmi.w r0, [r12, #4]
 ; CHECK-NEXT:    vmovmi.32 q0[2], r0
+; CHECK-NEXT:    vmovmi.32 q0[3], r0
 ; CHECK-NEXT:    vmrs r3, p0
 ; CHECK-NEXT:    and r0, r3, #1
 ; CHECK-NEXT:    ubfx r3, r3, #8, #1

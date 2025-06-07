@@ -110,9 +110,10 @@ define void @foo_sext_v2i64_v2i32(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-LE-NEXT:    ldrne r3, [r2]
 ; CHECK-LE-NEXT:    vmovne.32 q1[0], r3
 ; CHECK-LE-NEXT:    lsls r1, r1, #30
-; CHECK-LE-NEXT:    itt mi
+; CHECK-LE-NEXT:    ittt mi
 ; CHECK-LE-NEXT:    ldrmi r1, [r2, #4]
 ; CHECK-LE-NEXT:    vmovmi.32 q1[2], r1
+; CHECK-LE-NEXT:    vmovmi.32 q1[3], r0
 ; CHECK-LE-NEXT:    vmov r2, s6
 ; CHECK-LE-NEXT:    movs r1, #0
 ; CHECK-LE-NEXT:    vmov r3, s0
@@ -219,9 +220,9 @@ define void @foo_sext_v2i64_v2i32_unaligned(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-LE-NEXT:    sub sp, #4
 ; CHECK-LE-NEXT:    ldrd r12, lr, [r1]
 ; CHECK-LE-NEXT:    movs r1, #0
-; CHECK-LE-NEXT:    @ implicit-def: $q0
+; CHECK-LE-NEXT:    @ implicit-def: $q1
 ; CHECK-LE-NEXT:    rsbs.w r3, r12, #0
-; CHECK-LE-NEXT:    vmov q1[2], q1[0], r12, lr
+; CHECK-LE-NEXT:    vmov q0[2], q0[0], r12, lr
 ; CHECK-LE-NEXT:    sbcs.w r3, r1, r12, asr #31
 ; CHECK-LE-NEXT:    csetm r3, lt
 ; CHECK-LE-NEXT:    rsbs.w r4, lr, #0
@@ -232,23 +233,24 @@ define void @foo_sext_v2i64_v2i32_unaligned(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-LE-NEXT:    lsls r3, r1, #31
 ; CHECK-LE-NEXT:    itt ne
 ; CHECK-LE-NEXT:    ldrne r3, [r2]
-; CHECK-LE-NEXT:    vmovne.32 q0[0], r3
+; CHECK-LE-NEXT:    vmovne.32 q1[0], r3
 ; CHECK-LE-NEXT:    lsls r1, r1, #30
-; CHECK-LE-NEXT:    itt mi
+; CHECK-LE-NEXT:    ittt mi
 ; CHECK-LE-NEXT:    ldrmi r1, [r2, #4]
-; CHECK-LE-NEXT:    vmovmi.32 q0[2], r1
-; CHECK-LE-NEXT:    vmov r2, s2
+; CHECK-LE-NEXT:    vmovmi.32 q1[2], r1
+; CHECK-LE-NEXT:    vmovmi.32 q1[3], r0
+; CHECK-LE-NEXT:    vmov r2, s6
 ; CHECK-LE-NEXT:    movs r1, #0
-; CHECK-LE-NEXT:    vmov r3, s4
-; CHECK-LE-NEXT:    vmov r4, s0
-; CHECK-LE-NEXT:    vmov q0[2], q0[0], r4, r2
+; CHECK-LE-NEXT:    vmov r3, s0
+; CHECK-LE-NEXT:    vmov r4, s4
+; CHECK-LE-NEXT:    vmov q1[2], q1[0], r4, r2
 ; CHECK-LE-NEXT:    rsbs r5, r3, #0
 ; CHECK-LE-NEXT:    asr.w r12, r2, #31
 ; CHECK-LE-NEXT:    sbcs.w r2, r1, r3, asr #31
-; CHECK-LE-NEXT:    vmov r3, s6
+; CHECK-LE-NEXT:    vmov r3, s2
 ; CHECK-LE-NEXT:    csetm r2, lt
 ; CHECK-LE-NEXT:    asr.w lr, r4, #31
-; CHECK-LE-NEXT:    vmov q0[3], q0[1], lr, r12
+; CHECK-LE-NEXT:    vmov q1[3], q1[1], lr, r12
 ; CHECK-LE-NEXT:    rsbs r5, r3, #0
 ; CHECK-LE-NEXT:    sbcs.w r3, r1, r3, asr #31
 ; CHECK-LE-NEXT:    bfi r1, r2, #0, #1
@@ -256,11 +258,11 @@ define void @foo_sext_v2i64_v2i32_unaligned(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-LE-NEXT:    bfi r1, r2, #1, #1
 ; CHECK-LE-NEXT:    lsls r2, r1, #31
 ; CHECK-LE-NEXT:    itt ne
-; CHECK-LE-NEXT:    vmovne r2, r3, d0
+; CHECK-LE-NEXT:    vmovne r2, r3, d2
 ; CHECK-LE-NEXT:    strdne r2, r3, [r0]
 ; CHECK-LE-NEXT:    lsls r1, r1, #30
 ; CHECK-LE-NEXT:    itt mi
-; CHECK-LE-NEXT:    vmovmi r1, r2, d1
+; CHECK-LE-NEXT:    vmovmi r1, r2, d3
 ; CHECK-LE-NEXT:    strdmi r1, r2, [r0, #8]
 ; CHECK-LE-NEXT:    add sp, #4
 ; CHECK-LE-NEXT:    pop {r4, r5, r7, pc}
@@ -363,9 +365,10 @@ define void @foo_zext_v2i64_v2i32(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-LE-NEXT:    ldrne r3, [r2]
 ; CHECK-LE-NEXT:    vmovne.32 q0[0], r3
 ; CHECK-LE-NEXT:    lsls r1, r1, #30
-; CHECK-LE-NEXT:    itt mi
+; CHECK-LE-NEXT:    ittt mi
 ; CHECK-LE-NEXT:    ldrmi r1, [r2, #4]
 ; CHECK-LE-NEXT:    vmovmi.32 q0[2], r1
+; CHECK-LE-NEXT:    vmovmi.32 q0[3], r0
 ; CHECK-LE-NEXT:    vmov r2, s4
 ; CHECK-LE-NEXT:    movs r1, #0
 ; CHECK-LE-NEXT:    vand q0, q0, q2
@@ -478,9 +481,10 @@ define void @foo_zext_v2i64_v2i32_unaligned(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-LE-NEXT:    ldrne r3, [r2]
 ; CHECK-LE-NEXT:    vmovne.32 q0[0], r3
 ; CHECK-LE-NEXT:    lsls r1, r1, #30
-; CHECK-LE-NEXT:    itt mi
+; CHECK-LE-NEXT:    ittt mi
 ; CHECK-LE-NEXT:    ldrmi r1, [r2, #4]
 ; CHECK-LE-NEXT:    vmovmi.32 q0[2], r1
+; CHECK-LE-NEXT:    vmovmi.32 q0[3], r0
 ; CHECK-LE-NEXT:    vmov r2, s4
 ; CHECK-LE-NEXT:    movs r1, #0
 ; CHECK-LE-NEXT:    vand q0, q0, q2
