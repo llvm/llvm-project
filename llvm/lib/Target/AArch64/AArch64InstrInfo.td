@@ -2001,7 +2001,9 @@ let Predicates = [HasPAuth] in {
     def DZB  : SignAuthZero<prefix_z,  0b11, !strconcat(asm, "dzb"), op>;
   }
 
+  let usesCustomInserter = true in
   defm PAC : SignAuth<0b000, 0b010, "pac", int_ptrauth_sign>;
+
   defm AUT : SignAuth<0b001, 0b011, "aut", null_frag>;
 
   def XPACI : ClearAuth<0, "xpaci">;
@@ -2149,6 +2151,9 @@ let Predicates = [HasPAuth] in {
 
   def LOADgotAUTH : Pseudo<(outs GPR64common:$dst), (ins i64imm:$addr), []>,
                Sched<[WriteI, ReadI]> {
+    // Make it possible to eliminate dead instruction after folding it
+    // into LOADgotPAC.
+    let hasSideEffects = 0;
     let Defs = [X16,X17,NZCV];
     let Size = 44;
   }

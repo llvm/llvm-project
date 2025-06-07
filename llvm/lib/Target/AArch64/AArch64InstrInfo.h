@@ -790,6 +790,39 @@ static inline unsigned getPACOpcodeForKey(AArch64PACKey::ID K, bool Zero) {
   llvm_unreachable("Unhandled AArch64PACKey::ID enum");
 }
 
+static inline AArch64PACKey::ID getKeyForPACOpcode(unsigned Opcode) {
+  switch (Opcode) {
+  case AArch64::PACDA:
+  case AArch64::PACDZA:
+    return AArch64PACKey::DA;
+  case AArch64::PACDB:
+  case AArch64::PACDZB:
+    return AArch64PACKey::DB;
+  case AArch64::PACIA:
+  case AArch64::PACIZA:
+    return AArch64PACKey::IA;
+  case AArch64::PACIB:
+  case AArch64::PACIZB:
+    return AArch64PACKey::IB;
+  }
+  llvm_unreachable("Unhandled PAC opcode");
+}
+
+static inline bool isPACWithZeroDisc(unsigned Opcode) {
+  switch (Opcode) {
+  case AArch64::PACDA:
+  case AArch64::PACDB:
+  case AArch64::PACIA:
+  case AArch64::PACIB:
+    return false;
+  case AArch64::PACDZA:
+  case AArch64::PACDZB:
+  case AArch64::PACIZA:
+  case AArch64::PACIZB:
+    return true;
+  }
+  llvm_unreachable("Unhandled PAC opcode");
+}
 // struct TSFlags {
 #define TSFLAG_ELEMENT_SIZE_TYPE(X)      (X)        // 3-bits
 #define TSFLAG_DESTRUCTIVE_INST_TYPE(X) ((X) << 3)  // 4-bits
