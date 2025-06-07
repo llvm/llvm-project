@@ -203,7 +203,7 @@ void ReplCompletionConsumer::ProcessCodeCompleteResults(
     }
   }
 
-  std::sort(Results.begin(), Results.end());
+  llvm::sort(Results);
 }
 
 class IncrementalSyntaxOnlyAction : public SyntaxOnlyAction {

@@ -446,13 +446,13 @@ void emitVersionedInfo(
     llvm::function_ref<void(raw_ostream &,
                             const typename MakeDependent<T>::Type &)>
         emitInfo) {
-  std::sort(VI.begin(), VI.end(),
-            [](const std::pair<VersionTuple, T> &LHS,
-               const std::pair<VersionTuple, T> &RHS) -> bool {
-              assert((&LHS == &RHS || LHS.first != RHS.first) &&
-                     "two entries for the same version");
-              return LHS.first < RHS.first;
-            });
+  llvm::sort(VI,
+             [](const std::pair<VersionTuple, T> &LHS,
+                const std::pair<VersionTuple, T> &RHS) -> bool {
+               assert((&LHS == &RHS || LHS.first != RHS.first) &&
+                      "two entries for the same version");
+               return LHS.first < RHS.first;
+             });
 
   llvm::support::endian::Writer writer(OS, llvm::endianness::little);
   writer.write<uint16_t>(VI.size());
