@@ -18,7 +18,7 @@ try:
 except ImportError as e:
     raise RuntimeError("Error loading imports from extension module") from e
 
-from typing import Optional, Sequence, Union, NewType
+from typing import Dict, Optional, Sequence, Union, NewType
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
@@ -214,43 +214,77 @@ class YieldOp(YieldOp):
         super().__init__(_get_op_results_or_values(operands), loc=loc, ip=ip)
 
 
+@register_attribute_builder("ParamOperandIndexAttr")
+def _paramOperandIndexAttr(x: int, context) -> Attribute:
+    return Attribute.parse(f"#transform.param_operand_index<{x}>", context=context)
+
+
 @_ods_cext.register_operation(_Dialect, replace=True)
 class ApplyRegisteredPassOp(ApplyRegisteredPassOp):
     def __init__(
         self,
         result: Type,
         pass_name: Union[str, StringAttr],
-        target: Value,
+        target: Union[Operation, Value, OpView],
         *,
-        options: Sequence[Union[str, StringAttr, Value, Operation]] = [],
+        options: Dict[
+            Union[str, StringAttr],
+            Union[Attribute, Value, Operation, OpView],
+        ] = {},
         loc=None,
         ip=None,
     ):
-        static_options = []
+        options_dict = {}
         dynamic_options = []
-        for opt in options:
-            if isinstance(opt, str):
-                static_options.append(StringAttr.get(opt))
-            elif isinstance(opt, StringAttr):
-                static_options.append(opt)
-            elif isinstance(opt, Value):
-                static_options.append(UnitAttr.get())
-                dynamic_options.append(_get_op_result_or_value(opt))
+
+        ParamOperandIndexAttr = AttrBuilder.get("ParamOperandIndexAttr")
+        context = (loc and loc.context) or Context.current
+
+        cur_param_operand_idx = 0
+        for key, value in options.items():
+            if isinstance(key, StringAttr):
+                key = key.value
+
+            if isinstance(value, (Value, Operation, OpView)):
+                value = _get_op_result_or_value(value)
+                # v = Attribute.parse(
+                #    f"#transform.param_operand_index<{cur_param_operand_idx}>",
+                #    context=context,
+                # )
+                v = _paramOperandIndexAttr(cur_param_operand_idx, context)
+                options_dict[key] = v
+                cur_param_operand_idx += 1
+                dynamic_options.append(value)
+            elif isinstance(value, Attribute):
+                options_dict[key] = value
+            elif isinstance(value, str):
+                options_dict[key] = StringAttr.get(value)
             else:
-                raise TypeError(f"Unsupported option type: {type(opt)}")
+                raise TypeError(f"Unsupported option type: {type(value)}")
+        if len(options_dict) > 0:
+            print(options_dict, cur_param_operand_idx)
         super().__init__(
             result,
             pass_name,
             dynamic_options,
             target=_get_op_result_or_value(target),
-            options=static_options,
+            options=DictAttr.get(options_dict),
             loc=loc,
             ip=ip,
         )
 
 
 def apply_registered_pass(
-    result, pass_name, target, *, options=[], loc=None, ip=None
+    result: Type,
+    pass_name: Union[str, StringAttr],
+    target: Union[Operation, Value, OpView],
+    *,
+    options: Dict[
+        Union[str, StringAttr],
+        Union[Attribute, Value, Operation, OpView],
+    ] = {},
+    loc=None,
+    ip=None,
 ) -> Value:
     return ApplyRegisteredPassOp(
         result=result,
