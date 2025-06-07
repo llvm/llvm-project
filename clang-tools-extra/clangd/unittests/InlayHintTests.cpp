@@ -1025,6 +1025,7 @@ TEST(ParameterHints, FunctionPointer) {
 TEST(ParameterHints, ArgMatchesParam) {
   assertParameterHints(R"cpp(
     void foo(int param);
+    void prefixConvention(int aParam);
     struct S {
       static const int param = 42;
     };
@@ -1032,6 +1033,12 @@ TEST(ParameterHints, ArgMatchesParam) {
       int param = 42;
       // Do not show redundant "param: param".
       foo(param);
+      // Some codebases have a naming convention of prefixing
+      // parameter names with "a", e.g. "aParam". (The "a"
+      // stands for "argument", used as an (imprecise) synonym
+      // for "parameter".)
+      // Do not show "aParam: param" either.
+      prefixConvention(param);
       // But show it if the argument is qualified.
       foo($param[[S::param]]);
     }
@@ -1040,6 +1047,8 @@ TEST(ParameterHints, ArgMatchesParam) {
       void bar() {
         // Do not show "param: param" for member-expr.
         foo(param);
+        // Nor "aParam: param"
+        prefixConvention(param);
       }
     };
   )cpp",
