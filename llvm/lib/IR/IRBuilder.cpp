@@ -457,10 +457,10 @@ CallInst *IRBuilderBase::CreateInvariantStart(Value *Ptr, ConstantInt *Size) {
 }
 
 static MaybeAlign getAlign(Value *Ptr) {
-  if (auto *O = dyn_cast<GlobalObject>(Ptr))
-    return O->getAlign();
+  if (auto *V = dyn_cast<GlobalVariable>(Ptr))
+    return V->getAlign();
   if (auto *A = dyn_cast<GlobalAlias>(Ptr))
-    return A->getAliaseeObject()->getAlign();
+    return getAlign(A->getAliaseeObject());
   return {};
 }
 
