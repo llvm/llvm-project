@@ -10,6 +10,11 @@
 # FIXME: Enable this test on Windows/arm64 once that backend is available.
 # UNSUPPORTED: target=aarch64-pc-windows-{{.*}}
 #
+# On MinGW targets, when compiling the main() function, it gets
+# an implicitly generated call to __main(), which is missing in
+# this context.
+# XFAIL: target={{.*}}-windows-gnu
+#
 # Check that synthesized archive member names are unambiguous, even if an
 # archive contains multiple files with the same name.
 #
