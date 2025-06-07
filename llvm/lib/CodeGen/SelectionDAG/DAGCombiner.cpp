@@ -16392,12 +16392,11 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
     return SDValue();
 
   bool AllowMultipleMaybePoisonOperands =
-      N0.getOpcode() == ISD::SELECT_CC ||
-      N0.getOpcode() == ISD::SETCC ||
+      N0.getOpcode() == ISD::SELECT_CC || N0.getOpcode() == ISD::SETCC ||
       N0.getOpcode() == ISD::BUILD_VECTOR ||
       N0.getOpcode() == ISD::BUILD_PAIR ||
       N0.getOpcode() == ISD::VECTOR_SHUFFLE ||
-      N0.getOpcode() == ISD::CONCAT_VECTORS;
+      N0.getOpcode() == ISD::CONCAT_VECTORS || N0.getOpcode() == ISD::FMUL;
 
   // Avoid turning a BUILD_VECTOR that can be recognized as "all zeros", "all
   // ones" or "constant" into something that depends on FrozenUndef. We can
@@ -16495,7 +16494,17 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
                              SVN->getMask());
   } else {
     // NOTE: this strips poison generating flags.
-    R = DAG.getNode(N0.getOpcode(), SDLoc(N0), N0->getVTList(), Ops);
+    // Folding freeze(op(x, ...)) -> op(freeze(x), ...) does not require nnan,
+    // ninf, nsz, or fast.
+    // However, contract, reassoc, afn, and arcp should be preserved,
+    // as these fast-math flags do not introduce poison values.
+    SDNodeFlags SrcFlags = N0->getFlags();
+    SDNodeFlags SafeFlags;
+    SafeFlags.setAllowContract(SrcFlags.hasAllowContract());
+    SafeFlags.setAllowReassociation(SrcFlags.hasAllowReassociation());
+    SafeFlags.setApproximateFuncs(SrcFlags.hasApproximateFuncs());
+    SafeFlags.setAllowReciprocal(SrcFlags.hasAllowReciprocal());
+    R = DAG.getNode(N0.getOpcode(), SDLoc(N0), N0->getVTList(), Ops, SafeFlags);
   }
   assert(DAG.isGuaranteedNotToBeUndefOrPoison(R, /*PoisonOnly*/ false) &&
          "Can't create node that may be undef/poison!");
@@ -16733,29 +16742,6 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
           PreferredFusedOpcode, SL, VT,
           matcher.getNode(ISD::FP_EXTEND, SL, VT, N10.getOperand(0)),
           matcher.getNode(ISD::FP_EXTEND, SL, VT, N10.getOperand(1)), N0);
-    }
-  }
-
-  // fold (fadd (freeze (fmul x, y)), z) -> (fma x, y, z).
-  bool CanContract =
-      (Options.UnsafeFPMath || N->getFlags().hasAllowContract()) &&
-      (Options.NoSignedZerosFPMath || N->getFlags().hasNoSignedZeros());
-  if (CanContract && N0.getOpcode() == ISD::FREEZE) {
-    SDValue FrozenMul = N0.getOperand(0);
-    if (matcher.match(FrozenMul, ISD::FMUL) && isContractableFMUL(FrozenMul)) {
-      SDValue X = FrozenMul.getOperand(0);
-      SDValue Y = FrozenMul.getOperand(1);
-      return matcher.getNode(PreferredFusedOpcode, SL, VT, X, Y, N1);
-    }
-  }
-
-  // fold (fadd x, (freeze (fmul y, z))) -> (fma y, z, x)
-  if (CanContract && N1.getOpcode() == ISD::FREEZE) {
-    SDValue FrozenMul = N1.getOperand(0);
-    if (matcher.match(FrozenMul, ISD::FMUL) && isContractableFMUL(FrozenMul)) {
-      SDValue X = FrozenMul.getOperand(0);
-      SDValue Y = FrozenMul.getOperand(1);
-      return matcher.getNode(PreferredFusedOpcode, SL, VT, X, Y, N0);
     }
   }
 
@@ -17033,31 +17019,6 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
                 matcher.getNode(ISD::FP_EXTEND, SL, VT, N000.getOperand(1)),
                 N1));
       }
-    }
-  }
-
-  // fold (fsub (freeze (fmul x, y)), z) -> (fma x, y, (fneg z))
-  bool CanContract =
-      (Options.UnsafeFPMath || N->getFlags().hasAllowContract()) &&
-      (Options.NoSignedZerosFPMath || N->getFlags().hasNoSignedZeros());
-  if (CanContract && N0.getOpcode() == ISD::FREEZE) {
-    SDValue FrozenMul = N0.getOperand(0);
-    if (matcher.match(FrozenMul, ISD::FMUL) && isContractableFMUL(FrozenMul)) {
-      SDValue X = FrozenMul.getOperand(0);
-      SDValue Y = FrozenMul.getOperand(1);
-      SDValue NegZ = matcher.getNode(ISD::FNEG, SL, VT, N1);
-      return matcher.getNode(PreferredFusedOpcode, SL, VT, X, Y, NegZ);
-    }
-  }
-
-  // fold (fsub z, (freeze(fmul x, y))) -> (fma (fneg x), y, z)
-  if (CanContract && N1.getOpcode() == ISD::FREEZE) {
-    SDValue FrozenMul = N1.getOperand(0);
-    if (matcher.match(FrozenMul, ISD::FMUL) && isContractableFMUL(FrozenMul)) {
-      SDValue X = FrozenMul.getOperand(0);
-      SDValue Y = FrozenMul.getOperand(1);
-      SDValue NegX = matcher.getNode(ISD::FNEG, SL, VT, X);
-      return matcher.getNode(PreferredFusedOpcode, SL, VT, NegX, Y, N0);
     }
   }
 
