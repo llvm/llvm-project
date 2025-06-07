@@ -109,8 +109,8 @@ define float @fma_freeze_sink_multiple_maybe_poison_nnan_add(float %x, float %y)
   %fadd_y = fadd reassoc nnan nsz arcp contract float %y, 1.000000e+00
   %mul = fmul reassoc nnan nsz arcp contract afn float %fsub_x, %fadd_y
   %mul.fr = freeze float %mul
-  %sub = fadd reassoc nsz arcp contract afn contract float %mul.fr, 1.000000e+00
-  ret float %sub
+  %add = fadd reassoc nsz arcp contract afn contract float %mul.fr, 1.000000e+00
+  ret float %add
 }
 
 define float @fma_freeze_sink_multiple_maybe_poison_nnan_sub(float %x, float %y) {
