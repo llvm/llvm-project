@@ -1599,6 +1599,14 @@ LogicalResult cir::VecShuffleOp::verify() {
                          << " and " << getResult().getType() << " don't match";
   }
 
+  const uint64_t maxValidIndex =
+      getVec1().getType().getSize() + getVec2().getType().getSize() - 1;
+  for (const auto &idxAttr : getIndices().getAsRange<cir::IntAttr>()) {
+    if (idxAttr.getUInt() > maxValidIndex)
+      return emitOpError() << ": index for __builtin_shufflevector must be "
+                              "less than the total number of vector elements";
+  }
+
   return success();
 }
 
