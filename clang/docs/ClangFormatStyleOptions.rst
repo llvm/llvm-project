@@ -2541,6 +2541,40 @@ the configuration (without a prefix: ``Auto``).
 
   * ``bool IndentBraces`` Indent the wrapped braces themselves.
 
+  * ``bool IndentBracesLambdaNested`` Indent nested wrapped lambda braces.
+
+    .. code-block:: c++
+
+      false:
+      function(
+          []()
+          {
+            return true;
+          });
+
+      true:
+      function(
+          []()
+            {
+              return true;
+            });
+
+  * ``bool IndentBracesLambdaUnnested`` Indent unnested wrapped lambda braces.
+
+    .. code-block:: c++
+
+      false:
+      auto foo = []()
+      {
+        return true;
+      };
+
+      true:
+      auto foo = []()
+        {
+          return true;
+        };
+
   * ``bool SplitEmptyFunction`` If ``false``, empty function body can be put on a single line.
     This option is used only if the opening brace of the function has
     already been wrapped, i.e. the ``AfterFunction`` brace wrapping mode is

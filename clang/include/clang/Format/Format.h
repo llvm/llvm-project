@@ -1547,6 +1547,38 @@ struct FormatStyle {
     bool BeforeWhile;
     /// Indent the wrapped braces themselves.
     bool IndentBraces;
+    /// Indent nested wrapped lambda braces.
+    /// \code
+    ///   false:
+    ///   function(
+    ///       []()
+    ///       {
+    ///         return true;
+    ///       });
+    ///
+    ///   true:
+    ///   function(
+    ///       []()
+    ///         {
+    ///           return true;
+    ///         });
+    /// \endcode
+    bool IndentBracesLambdaNested;
+    /// Indent unnested wrapped lambda braces.
+    /// \code
+    ///   false:
+    ///   auto foo = []()
+    ///   {
+    ///     return true;
+    ///   };
+    ///
+    ///   true:
+    ///   auto foo = []()
+    ///     {
+    ///       return true;
+    ///     };
+    /// \endcode
+    bool IndentBracesLambdaUnnested;
     /// If ``false``, empty function body can be put on a single line.
     /// This option is used only if the opening brace of the function has
     /// already been wrapped, i.e. the ``AfterFunction`` brace wrapping mode is

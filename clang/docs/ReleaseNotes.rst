@@ -988,6 +988,8 @@ clang-format
   ``enum`` enumerator lists.
 - Add ``OneLineFormatOffRegex`` option for turning formatting off for one line.
 - Add ``SpaceAfterOperatorKeyword`` option.
+- Add ``IndentBracesLambdaNested`` and ``IndentBracesLambdaUnnested`` to
+  ``BraceWrapping`` options for controlling wrapped lambda brace indentation.
 
 clang-refactor
 --------------
