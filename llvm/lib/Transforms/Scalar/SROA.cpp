@@ -2028,11 +2028,29 @@ static Value *convertValue(const DataLayout &DL, IRBuilderTy &IRB, Value *V,
     // cannot use `bitcast` (which has restrict on the same address space) or
     // `addrspacecast` (which is not always no-op casting). Instead, use a pair
     // of no-op `ptrtoint`/`inttoptr` casts through an integer with the same bit
-    // size.
+    // size. If the original value is a single-element vector it must be bitcast
+    // to a scalar before address space conversion. If the value must be
+    // converted to a single-element vector, a bitcast must be added after
+    // address space conversion.
     if (OldAS != NewAS) {
       assert(DL.getPointerSize(OldAS) == DL.getPointerSize(NewAS));
-      return IRB.CreateIntToPtr(IRB.CreatePtrToInt(V, DL.getIntPtrType(OldTy)),
-                                NewTy);
+      auto ConvertPtrAddrSpace = [&](Value *V, Type *NewTy) {
+        return IRB.CreateIntToPtr(
+            IRB.CreatePtrToInt(V, DL.getIntPtrType(V->getType())), NewTy);
+      };
+      if (OldTy->isVectorTy() && !NewTy->isVectorTy()) {
+        auto *VecTy = cast<FixedVectorType>(OldTy);
+        assert(VecTy->getNumElements() == 1);
+        return ConvertPtrAddrSpace(
+            IRB.CreateBitCast(V, VecTy->getElementType()), NewTy);
+      } else if (!OldTy->isVectorTy() && NewTy->isVectorTy()) {
+        auto *VecTy = cast<FixedVectorType>(NewTy);
+        assert(VecTy->getNumElements() == 1);
+        return IRB.CreateBitCast(
+            ConvertPtrAddrSpace(V, VecTy->getElementType()), NewTy);
+      } else {
+        return ConvertPtrAddrSpace(V, NewTy);
+      }
     }
   }
 
