@@ -18,6 +18,8 @@ add_lldb_library(lldbDataFormatters NO_PLUGIN_DEPENDENCIES
   ValueObjectPrinter.cpp
   VectorType.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbCore
     lldbInterpreter
@@ -25,7 +27,4 @@ add_lldb_library(lldbDataFormatters NO_PLUGIN_DEPENDENCIES
     lldbTarget
     lldbUtility
     lldbValueObject
-
-  LINK_COMPONENTS
-    Support
   )

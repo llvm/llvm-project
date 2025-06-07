@@ -1868,6 +1868,29 @@ If the request failed, the behavior of these intrinsics is undefined.
 
 For more information, refer `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/?a#parallel-synchronization-and-communication-instructions-clusterlaunchcontrol-query-cancel>`__.
 
+Perf Monitor Event Intrinsics
+-----------------------------
+
+'``llvm.nvvm.pm.event.mask``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare void @llvm.nvvm.pm.event.mask(i16 immarg %mask_val)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.pm.event.mask``' intrinsic triggers one or more
+performance monitor events. Each bit in the 16-bit immediate operand
+``%mask_val`` controls an event.
+
+For more information on the pmevent instructions, refer to the PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#miscellaneous-instructions-pmevent>`_.
+
 Other Intrinsics
 ----------------
 
