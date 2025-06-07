@@ -2136,6 +2136,51 @@ static void canonicalizeShuffleVectorByLane(const SDLoc &DL,
   }
 }
 
+/// Lower VECTOR_SHUFFLE as lane permute and then shuffle (if possible).
+/// Only for 256-bit vector.
+///
+/// For example:
+/// %2 = shufflevector <4 x i64> %0, <4 x i64> posion,
+///                    <4 x i64> <i32 0, i32 3, i32 2, i32 0>
+/// is lowerded to:
+///     (XVPERMI $xr2, $xr0, 78)
+///     (XVSHUF  $xr1, $xr2, $xr0)
+///     (XVORI   $xr0, $xr1, 0)
+static SDValue lowerVECTOR_SHUFFLEAsLanePermuteAndShuffle(const SDLoc &DL,
+                                                          ArrayRef<int> Mask,
+                                                          MVT VT, SDValue V1,
+                                                          SDValue V2,
+                                                          SelectionDAG &DAG) {
+  assert(VT.is256BitVector() && "Only for 256-bit vector shuffles!");
+  int Size = Mask.size();
+  int LaneSize = Size / 2;
+
+  bool LaneCrossing[2] = {false, false};
+  for (int i = 0; i < Size; ++i)
+    if (Mask[i] >= 0 && ((Mask[i] % Size) / LaneSize) != (i / LaneSize))
+      LaneCrossing[(Mask[i] % Size) / LaneSize] = true;
+
+  // Ensure that all lanes ared involved.
+  if (!LaneCrossing[0] && !LaneCrossing[1])
+    return SDValue();
+
+  SmallVector<int> InLaneMask;
+  InLaneMask.assign(Mask.begin(), Mask.end());
+  for (int i = 0; i < Size; ++i) {
+    int &M = InLaneMask[i];
+    if (M < 0)
+      continue;
+    if (((M % Size) / LaneSize) != (i / LaneSize))
+      M = (M % LaneSize) + ((i / LaneSize) * LaneSize) + Size;
+  }
+
+  SDValue Flipped = DAG.getBitcast(MVT::v4i64, V1);
+  Flipped = DAG.getVectorShuffle(MVT::v4i64, DL, Flipped,
+                                 DAG.getUNDEF(MVT::v4i64), {2, 3, 0, 1});
+  Flipped = DAG.getBitcast(VT, Flipped);
+  return DAG.getVectorShuffle(VT, DL, V1, Flipped, InLaneMask);
+}
+
 /// Dispatching routine to lower various 256-bit LoongArch vector shuffles.
 ///
 /// This routine breaks down the specific type of 256-bit shuffle and
@@ -2167,6 +2212,9 @@ static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
     if ((Result = lowerVECTOR_SHUFFLE_XVREPLVEI(DL, NewMask, VT, V1, V2, DAG)))
       return Result;
     if ((Result = lowerVECTOR_SHUFFLE_XVSHUF4I(DL, NewMask, VT, V1, V2, DAG)))
+      return Result;
+    if ((Result = lowerVECTOR_SHUFFLEAsLanePermuteAndShuffle(DL, NewMask, VT,
+                                                             V1, V2, DAG)))
       return Result;
 
     // TODO: This comment may be enabled in the future to better match the
