@@ -818,7 +818,7 @@ bool llvm::isNoAliasCall(const Value *V) {
 
 static bool isNoAliasOrByValArgument(const Value *V) {
   if (const Argument *A = dyn_cast<Argument>(V))
-    return A->hasNoAliasAttr() || A->hasByValAttr();
+    return A->hasNoAliasAttr() || A->hasByValAttr() || A->hasDeadOnReturnAttr();
   return false;
 }
 
