@@ -87,13 +87,67 @@ struct DoLoopConversion : public OpRewritePattern<fir::DoLoopOp> {
     return success();
   }
 };
+
+struct IfConversion : public OpRewritePattern<fir::IfOp> {
+  using OpRewritePattern<fir::IfOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(fir::IfOp ifOp,
+                                PatternRewriter &rewriter) const override {
+    mlir::Location loc = ifOp.getLoc();
+    mlir::detail::TypedValue<mlir::IntegerType> condition = ifOp.getCondition();
+    ValueTypeRange<ResultRange> resultTypes = ifOp.getResultTypes();
+    bool hasResult = !resultTypes.empty();
+    mlir::scf::IfOp scfIfOp = rewriter.create<scf::IfOp>(
+        loc, resultTypes, condition, !ifOp.getElseRegion().empty());
+    // then region
+    assert(!ifOp.getThenRegion().empty() && "must have then region");
+    Block &firThenBlock = ifOp.getThenRegion().front();
+    Block &scfThenBlock = scfIfOp.getThenRegion().front();
+    llvm::iplist<Operation> &firThenOps = firThenBlock.getOperations();
+    Operation *firThenTerminator = firThenBlock.getTerminator();
+
+    rewriter.setInsertionPointToStart(&scfThenBlock);
+    // not splice terminator
+    scfThenBlock.getOperations().splice(scfThenBlock.begin(), firThenOps,
+                                        firThenOps.begin(),
+                                        std::prev(firThenOps.end()));
+    // create terminator scf.yield
+    if (hasResult) {
+      rewriter.setInsertionPointToEnd(&scfThenBlock);
+      mlir::OperandRange thenResults = firThenTerminator->getOperands();
+      rewriter.create<scf::YieldOp>(firThenTerminator->getLoc(), thenResults);
+    }
+
+    // else region
+    if (!ifOp.getElseRegion().empty()) {
+      Block &firElseBlock = ifOp.getElseRegion().front();
+      Block &scfElseBlock = scfIfOp.getElseRegion().front();
+      llvm::iplist<Operation> &firElseOps = firElseBlock.getOperations();
+      mlir::Operation *firElseTerminator = firElseBlock.getTerminator();
+
+      rewriter.setInsertionPointToStart(&scfElseBlock);
+      scfElseBlock.getOperations().splice(scfElseBlock.begin(), firElseOps,
+                                          firElseOps.begin(),
+                                          std::prev(firElseOps.end()));
+
+      if (hasResult) {
+        rewriter.setInsertionPointToEnd(&scfElseBlock);
+        mlir::OperandRange elseResults = firElseTerminator->getOperands();
+        rewriter.create<scf::YieldOp>(firElseTerminator->getLoc(), elseResults);
+      }
+    }
+
+    scfIfOp->setAttrs(ifOp->getAttrs());
+    rewriter.replaceOp(ifOp, scfIfOp);
+    return success();
+  }
+};
 } // namespace
 
 void FIRToSCFPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
-  patterns.add<DoLoopConversion>(patterns.getContext());
+  patterns.add<DoLoopConversion, IfConversion>(patterns.getContext());
   ConversionTarget target(getContext());
-  target.addIllegalOp<fir::DoLoopOp>();
+  target.addIllegalOp<fir::DoLoopOp, fir::IfOp>();
   target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
