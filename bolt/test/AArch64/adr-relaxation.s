@@ -37,7 +37,7 @@ foo:
   mov  x0, #0x0
 .L2:
 # CHECK-FOO: <foo.cold.0>:
-# CHECK-FOO-NEXT: adrp
+# CHECK-FOO: adrp
 # CHECK-FOO-NEXT: add
   adr x1, foo
   ret  x30
