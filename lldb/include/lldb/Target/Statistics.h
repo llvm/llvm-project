@@ -196,12 +196,21 @@ public:
     return !GetSummaryOnly();
   }
 
+  void SetIncludePlugins(bool value) { m_include_plugins = value; }
+  bool GetIncludePlugins() const {
+    if (m_include_plugins.has_value())
+      return m_include_plugins.value();
+    // Default to true in both default mode and summary mode.
+    return true;
+  }
+
 private:
   std::optional<bool> m_summary_only;
   std::optional<bool> m_load_all_debug_info;
   std::optional<bool> m_include_targets;
   std::optional<bool> m_include_modules;
   std::optional<bool> m_include_transcript;
+  std::optional<bool> m_include_plugins;
 };
 
 /// A class that represents statistics about a TypeSummaryProviders invocations
