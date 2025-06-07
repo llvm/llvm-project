@@ -62,6 +62,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -651,6 +652,29 @@ ParsedType Sema::ActOnMSVCUnknownTypeName(const IdentifierInfo &II,
   DepTL.setElaboratedKeywordLoc(SourceLocation());
   DepTL.setQualifierLoc(QualifierLoc);
   return CreateParsedType(T, Builder.getTypeSourceInfo(Context, T));
+}
+
+std::pair<IdentifierInfo *, bool>
+Sema::ActOnStartRootSignatureDecl(StringRef Signature) {
+  auto Hash = llvm::hash_value(Signature);
+  std::string IdStr = "__hlsl_rootsig_decl_" + std::to_string(Hash);
+  IdentifierInfo *DeclIdent = &(getASTContext().Idents.get(IdStr));
+
+  // Check if we have already found a decl of the same name
+  LookupResult R(*this, DeclIdent, SourceLocation(), Sema::LookupOrdinaryName);
+  bool Found = LookupQualifiedName(R, this->CurContext);
+  return {DeclIdent, Found};
+}
+
+void Sema::ActOnFinishRootSignatureDecl(
+    SourceLocation Loc, IdentifierInfo *DeclIdent,
+    SmallVector<llvm::hlsl::rootsig::RootElement> &Elements) {
+  // Create the Root Signature
+  auto *SignatureDecl = HLSLRootSignatureDecl::Create(
+      getASTContext(), /*DeclContext=*/CurContext, Loc, DeclIdent, Elements);
+
+  SignatureDecl->setImplicit();
+  PushOnScopeChains(SignatureDecl, getCurScope());
 }
 
 DeclSpec::TST Sema::isTagName(IdentifierInfo &II, Scope *S) {
