@@ -7751,18 +7751,11 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
       bool I1NUW = I1->hasNoUnsignedWrap();
       bool I0NSW = I0->hasNoSignedWrap();
       bool I1NSW = I1->hasNoSignedWrap();
-      bool Swaped = false;
       if ((UnsignedCmp && I0NUW && I1NUW) || (SignedCmp && I0NSW && I1NSW) ||
-          (EqualityCmp && I0NUW && I0NSW && I1NUW && I1NSW)) {
-        if (I0->getOpcode() == Instruction::Add &&
-            I1->getOpcode() == Instruction::Sub) {
-          std::swap(I0, I1);
-          Swaped = true;
-        }
+          (EqualityCmp && ((I0NUW && I1NUW) || (I0NSW && I1NSW)))) {
         if (match(I0, m_Sub(m_Value(A), m_Value(B))) &&
-            (match(I1, m_Add(m_Specific(A), m_Specific(B))) ||
-             match(I1, m_Add(m_Specific(B), m_Specific(A))))) {
-          return new ICmpInst(Swaped ? Pred : I.getSwappedPredicate(), B,
+            match(I1, m_Add(m_Specific(A), m_Specific(B)))) {
+          return new ICmpInst(I.getSwappedPredicate(), B,
                               ConstantInt::get(Op0->getType(), 0));
         }
       }
