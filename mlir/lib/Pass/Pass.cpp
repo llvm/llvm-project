@@ -82,12 +82,12 @@ void Pass::copyOptionValuesFrom(const Pass *other) {
 
 /// Prints out the pass in the textual representation of pipelines. If this is
 /// an adaptor pass, print its pass managers.
-void Pass::printAsTextualPipeline(raw_ostream &os) {
+void Pass::printAsTextualPipeline(raw_ostream &os, bool pretty) {
   // Special case for adaptors to print its pass managers.
   if (auto *adaptor = dyn_cast<OpToOpPassAdaptor>(this)) {
     llvm::interleave(
         adaptor->getPassManagers(),
-        [&](OpPassManager &pm) { pm.printAsTextualPipeline(os); },
+        [&](OpPassManager &pm) { pm.printAsTextualPipeline(os, pretty); },
         [&] { os << ","; });
     return;
   }
@@ -394,14 +394,24 @@ StringRef OpPassManager::getOpAnchorName() const {
 /// of pipelines.
 void printAsTextualPipeline(
     raw_indented_ostream &os, StringRef anchorName,
-    const llvm::iterator_range<OpPassManager::pass_iterator> &passes) {
-  os << anchorName << "(\n";
-  os.indent();
+    const llvm::iterator_range<OpPassManager::pass_iterator> &passes,
+    bool pretty = false) {
+  os << anchorName << "(";
+  if (pretty) {
+    os << "\n";
+    os.indent();
+  }
   llvm::interleave(
       passes, [&](mlir::Pass &pass) { pass.printAsTextualPipeline(os); },
-      [&]() { os << ",\n"; });
-  os << "\n";
-  os.unindent();
+      [&]() {
+        os << ",";
+        if (pretty)
+          os << "\n";
+      });
+  if (pretty) {
+    os << "\n";
+    os.unindent();
+  }
   os << ")";
 }
 void printAsTextualPipeline(
@@ -410,18 +420,19 @@ void printAsTextualPipeline(
   raw_indented_ostream indentedOS(os);
   printAsTextualPipeline(indentedOS, anchorName, passes);
 }
-void OpPassManager::printAsTextualPipeline(raw_ostream &os) const {
+void OpPassManager::printAsTextualPipeline(raw_ostream &os, bool pretty) const {
   StringRef anchorName = getOpAnchorName();
   raw_indented_ostream indentedOS(os);
   ::printAsTextualPipeline(
       indentedOS, anchorName,
       {MutableArrayRef<std::unique_ptr<Pass>>{impl->passes}.begin(),
-       MutableArrayRef<std::unique_ptr<Pass>>{impl->passes}.end()});
+       MutableArrayRef<std::unique_ptr<Pass>>{impl->passes}.end()},
+      pretty);
 }
 
 void OpPassManager::dump() {
   llvm::errs() << "Pass Manager with " << impl->passes.size() << " passes:\n";
-  printAsTextualPipeline(llvm::errs());
+  printAsTextualPipeline(llvm::errs(), /*pretty=*/true);
   llvm::errs() << "\n";
 }
 
@@ -476,7 +487,6 @@ llvm::hash_code OpPassManager::hash() {
   }
   return hashCode;
 }
-
 
 //===----------------------------------------------------------------------===//
 // OpToOpPassAdaptor
@@ -882,7 +892,8 @@ LogicalResult PassManager::run(Operation *op) {
   // Initialize all of the passes within the pass manager with a new generation.
   llvm::hash_code newInitKey = context->getRegistryHash();
   llvm::hash_code pipelineKey = hash();
-  if (newInitKey != initializationKey || pipelineKey != pipelineInitializationKey) {
+  if (newInitKey != initializationKey ||
+      pipelineKey != pipelineInitializationKey) {
     if (failed(initialize(context, impl->initializationGeneration + 1)))
       return failure();
     initializationKey = newInitKey;
