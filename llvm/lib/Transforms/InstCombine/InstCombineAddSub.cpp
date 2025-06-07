@@ -1791,14 +1791,18 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   // (X >> log2(N)) + zext(X & (N-1) != 0) --> (X + (N-1)) >> log2(N)
   // This is valid when adding (N-1) to X doesn't overflow.
   {
-    Value *X = nullptr, *Cmp = nullptr, *Shift = nullptr;
+    Value *X = nullptr;
     const APInt *ShiftAmt = nullptr, *Mask = nullptr;
     CmpPredicate Pred;
 
     // Match: (X >> C) + zext((X & Mask) != 0)
     // or:    zext((X & Mask) != 0) + (X >> C)
-    if (match(&I, m_c_Add(m_OneUse(m_LShr(m_Value(X), m_APInt(ShiftAmt))), m_ZExt(m_SpecificICmp(ICmpInst::ICMP_NE, m_And(m_Deferred(X), m_LowBitMask(Mask)),
-                          m_ZeroInt())))) && Mask->popcount() == *ShiftAmt) {
+    if (match(&I, m_c_Add(m_OneUse(m_LShr(m_Value(X), m_APInt(ShiftAmt))),
+                          m_ZExt(m_SpecificICmp(
+                              ICmpInst::ICMP_NE,
+                              m_And(m_Deferred(X), m_LowBitMask(Mask)),
+                              m_ZeroInt())))) &&
+        Mask->popcount() == *ShiftAmt) {
 
       // Check if X + Mask doesn't overflow
       Constant *MaskC = ConstantInt::get(X->getType(), *Mask);
@@ -1807,7 +1811,8 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
       if (WillNotOverflowUnsigned) {
         // (X + Mask) >> ShiftAmt
         Value *Add = Builder.CreateNUWAdd(X, MaskC);
-        return BinaryOperator::CreateLShr(Add, ConstantInt::get(X->getType(), *ShiftAmt));
+        return BinaryOperator::CreateLShr(
+            Add, ConstantInt::get(X->getType(), *ShiftAmt));
       }
     }
   }
