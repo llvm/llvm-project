@@ -130,8 +130,6 @@ BasicBlock::iterator Instruction::insertInto(BasicBlock *ParentBB,
   return getIterator();
 }
 
-LLVM_ABI extern cl::opt<bool> UseNewDbgInfoFormat;
-
 void Instruction::insertBefore(BasicBlock &BB,
                                InstListType::iterator InsertPos) {
   assert(!DebugMarker);

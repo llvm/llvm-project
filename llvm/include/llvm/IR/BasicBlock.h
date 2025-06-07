@@ -87,8 +87,7 @@ public:
 
   /// Convert variable location debugging information stored in dbg.value
   /// intrinsics into DbgMarkers / DbgRecords. Deletes all dbg.values in
-  /// the process and sets IsNewDbgInfoFormat = true. Only takes effect if
-  /// the UseNewDbgInfoFormat LLVM command line option is given.
+  /// the process and sets IsNewDbgInfoFormat = true.
   LLVM_ABI void convertToNewDbgValues();
 
   /// Convert variable location debugging information stored in DbgMarkers and

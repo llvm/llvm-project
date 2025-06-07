@@ -20,8 +20,6 @@
 #include "gtest/gtest.h"
 using namespace llvm;
 
-LLVM_ABI extern cl::opt<bool> UseNewDbgInfoFormat;
-
 namespace {
 
 TEST(ValueTest, UsedInBasicBlock) {
@@ -258,8 +256,6 @@ TEST(ValueTest, getLocalSlotDeath) {
 TEST(ValueTest, replaceUsesOutsideBlock) {
   // Check that Value::replaceUsesOutsideBlock(New, BB) replaces uses outside
   // BB, including dbg.* uses of MetadataAsValue(ValueAsMetadata(this)).
-  bool OldDbgValueMode = UseNewDbgInfoFormat;
-  UseNewDbgInfoFormat = false;
   const auto *IR = R"(
     define i32 @f() !dbg !6 {
     entry:
@@ -302,6 +298,7 @@ TEST(ValueTest, replaceUsesOutsideBlock) {
   auto GetNext = [](auto *I) { return &*++I->getIterator(); };
 
   Function *F = M->getFunction("f");
+  F->convertFromNewDbgValues();
   // Entry.
   BasicBlock *Entry = &F->front();
   Instruction *A = &Entry->front();
@@ -320,7 +317,6 @@ TEST(ValueTest, replaceUsesOutsideBlock) {
   // These users are outside Entry so should be changed.
   ASSERT_TRUE(ExitDbg->getValue(0) == cast<Value>(B));
   ASSERT_TRUE(Ret->getOperand(0) == cast<Value>(B));
-  UseNewDbgInfoFormat = OldDbgValueMode;
 }
 
 TEST(ValueTest, replaceUsesOutsideBlockDbgVariableRecord) {

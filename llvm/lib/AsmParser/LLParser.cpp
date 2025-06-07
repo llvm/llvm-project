@@ -64,8 +64,6 @@ static cl::opt<bool> AllowIncompleteIR(
         "Allow incomplete IR on a best effort basis (references to unknown "
         "metadata will be dropped)"));
 
-LLVM_ABI extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
-
 static std::string getTypeString(Type *T) {
   std::string Result;
   raw_string_ostream Tmp(Result);
@@ -443,7 +441,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   UpgradeNVVMAnnotations(*M);
   UpgradeSectionAttributes(*M);
 
-  M->setIsNewDbgInfoFormat(UseNewDbgInfoFormat);
+  M->setIsNewDbgInfoFormat(true);
 
   if (!Slots)
     return false;

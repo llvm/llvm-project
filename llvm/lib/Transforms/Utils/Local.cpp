@@ -88,8 +88,6 @@
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
-extern cl::opt<bool> UseNewDbgInfoFormat;
-
 #define DEBUG_TYPE "local"
 
 STATISTIC(NumRemoved, "Number of unreachable basic blocks removed");
@@ -1691,16 +1689,10 @@ static void insertDbgValueOrDbgVariableRecord(DIBuilder &Builder, Value *DV,
                                               DIExpression *DIExpr,
                                               const DebugLoc &NewLoc,
                                               BasicBlock::iterator Instr) {
-  if (!UseNewDbgInfoFormat) {
-    Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc, Instr);
-  } else {
-    // RemoveDIs: if we're using the new debug-info format, allocate a
-    // DbgVariableRecord directly instead of a dbg.value intrinsic.
-    ValueAsMetadata *DVAM = ValueAsMetadata::get(DV);
-    DbgVariableRecord *DV =
-        new DbgVariableRecord(DVAM, DIVar, DIExpr, NewLoc.get());
-    Instr->getParent()->insertDbgRecordBefore(DV, Instr);
-  }
+  ValueAsMetadata *DVAM = ValueAsMetadata::get(DV);
+  DbgVariableRecord *DVRec =
+      new DbgVariableRecord(DVAM, DIVar, DIExpr, NewLoc.get());
+  Instr->getParent()->insertDbgRecordBefore(DVRec, Instr);
 }
 
 static void insertDbgValueOrDbgVariableRecordAfter(
@@ -1838,7 +1830,6 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR,
   // then we want to insert a dbg.value for the corresponding fragment.
   LLVM_DEBUG(dbgs() << "Failed to convert dbg.declare to dbg.value: " << *DVR
                     << '\n');
-  assert(UseNewDbgInfoFormat);
 
   // For now, when there is a store to parts of the variable (but we do not
   // know which part) we insert an dbg.value intrinsic to indicate that we
@@ -1919,7 +1910,6 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR, LoadInst *LI,
   // future if multi-location support is added to the IR, it might be
   // preferable to keep tracking both the loaded value and the original
   // address in case the alloca can not be elided.
-  assert(UseNewDbgInfoFormat);
 
   // Create a DbgVariableRecord directly and insert.
   ValueAsMetadata *LIVAM = ValueAsMetadata::get(LI);
