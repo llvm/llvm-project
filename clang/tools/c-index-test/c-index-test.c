@@ -5199,13 +5199,13 @@ static void flush_atexit(void) {
 int main(int argc, const char **argv) {
   thread_info client_data;
 
-#ifdef __MVS__
+  // On z/OS we need to enable auto conversion
   if (enablezOSAutoConversion(fileno(stdout)) == -1)
     fprintf(stderr, "Setting conversion on stdout failed\n");
 
+  // On z/OS we need to enable auto conversion
   if (enablezOSAutoConversion(fileno(stderr)) == -1)
     fprintf(stderr, "Setting conversion on stderr failed\n");
-#endif
 
   atexit(flush_atexit);
 
