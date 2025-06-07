@@ -2056,6 +2056,14 @@ module std [system] {
     export *
   }
 
+  module text_encoding {
+    module get_locale_encoding { header "__text_encoding/get_locale_encoding.h" }
+    module text_encoding { header "__text_encoding/text_encoding.h" }
+
+    header "text_encoding"
+    export *
+  }
+  
   module thread {
     module formatter              { header "__thread/formatter.h" }
     module id                     { header "__thread/id.h" }
