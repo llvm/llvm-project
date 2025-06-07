@@ -236,6 +236,8 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, BeforeLambdaBody);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, BeforeWhile);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, IndentBraces);
+  CHECK_PARSE_NESTED_BOOL(BraceWrapping, IndentBracesLambdaNested);
+  CHECK_PARSE_NESTED_BOOL(BraceWrapping, IndentBracesLambdaUnnested);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, SplitEmptyFunction);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, SplitEmptyRecord);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, SplitEmptyNamespace);

@@ -24358,6 +24358,84 @@ TEST_F(FormatTest, LambdaBracesInGNU) {
                Style);
 }
 
+TEST_F(FormatTest, LambdaBracesIndentationNested) {
+  auto Style = getLLVMStyle();
+  EXPECT_EQ(Style.LambdaBodyIndentation, FormatStyle::LBI_Signature);
+
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.BeforeLambdaBody = true;
+  verifyFormat("function(\n"
+               "    [&]()\n"
+               "    {\n"
+               "      for (int i = 0; i < y; ++i)\n"
+               "        return 97;\n"
+               "    });",
+               Style);
+
+  Style.BraceWrapping.IndentBracesLambdaNested = true;
+  verifyFormat("function(\n"
+               "    [&]()\n"
+               "      {\n"
+               "        for (int i = 0; i < y; ++i)\n"
+               "          return 97;\n"
+               "      });",
+               Style);
+
+  Style.LambdaBodyIndentation = FormatStyle::LBI_OuterScope;
+  verifyFormat("function([&]()\n"
+               "  {\n"
+               "    for (int i = 0; i < y; ++i)\n"
+               "      return 97;\n"
+               "  });",
+               Style);
+
+  Style.BraceWrapping.IndentBracesLambdaNested = false;
+  verifyFormat("function([&]()\n"
+               "{\n"
+               "  for (int i = 0; i < y; ++i)\n"
+               "    return 97;\n"
+               "});",
+               Style);
+}
+
+TEST_F(FormatTest, LambdaBracesIndentationUnnested) {
+  auto Style = getLLVMStyle();
+  EXPECT_EQ(Style.LambdaBodyIndentation, FormatStyle::LBI_Signature);
+
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.BeforeLambdaBody = true;
+  verifyFormat("auto x = [&]()\n"
+               "{\n"
+               "  for (int i = 0; i < y; ++i)\n"
+               "    return 97;\n"
+               "};",
+               Style);
+
+  Style.BraceWrapping.IndentBracesLambdaUnnested = true;
+  verifyFormat("auto x = [&]()\n"
+               "  {\n"
+               "    for (int i = 0; i < y; ++i)\n"
+               "      return 97;\n"
+               "  };",
+               Style);
+
+  Style.LambdaBodyIndentation = FormatStyle::LBI_OuterScope;
+  verifyFormat("auto x = [&]()\n"
+               "  {\n"
+               "    for (int i = 0; i < y; ++i)\n"
+               "      return 97;\n"
+               "  };",
+               Style);
+
+  Style.BraceWrapping.IndentBracesLambdaUnnested = false;
+  verifyFormat("auto x = [&]()\n"
+               "{\n"
+               "  for (int i = 0; i < y; ++i)\n"
+               "    return 97;\n"
+               "};",
+               Style);
+}
+
 TEST_F(FormatTest, FormatsBlocks) {
   FormatStyle ShortBlocks = getLLVMStyle();
   ShortBlocks.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Always;
