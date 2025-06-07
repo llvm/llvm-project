@@ -22,11 +22,34 @@
 #include <cassert>
 #include <format>
 #include <type_traits>
+#include <variant>
 
 #include "constexpr_char_traits.h"
 #include "make_string.h"
 #include "min_allocator.h"
 #include "test_macros.h"
+
+template <class Context>
+struct limited_visitor {
+  using CharT = Context::char_type;
+
+  void operator()(std::monostate) const {}
+  void operator()(bool) const {}
+  void operator()(CharT) const {}
+  void operator()(int) const {}
+  void operator()(unsigned int) const {}
+  void operator()(long long) const {}
+  void operator()(unsigned long long) const {}
+  void operator()(float) const {}
+  void operator()(double) const {}
+  void operator()(long double) const {}
+  void operator()(const CharT*) const {}
+  void operator()(std::basic_string_view<CharT>) const {}
+  void operator()(const void*) const {}
+  void operator()(const std::basic_format_arg<Context>::handle&) const {}
+
+  void operator()(auto) const = delete;
+};
 
 template <class Context, class To, class From>
 void test(From value) {
@@ -35,6 +58,9 @@ void test(From value) {
 
   LIBCPP_ASSERT(format_args.__size() == 1);
   assert(format_args.get(0));
+
+  // https://github.com/llvm/llvm-project/issues/139582
+  format_args.get(0).visit(limited_visitor<Context>{});
 
   auto result = format_args.get(0).visit([v = To(value)](auto a) -> To {
     if constexpr (std::is_same_v<To, decltype(a)>) {
@@ -59,6 +85,9 @@ void test_handle(T value) {
 
   LIBCPP_ASSERT(format_args.__size() == 1);
   assert(format_args.get(0));
+
+  // https://github.com/llvm/llvm-project/issues/139582
+  format_args.get(0).visit(limited_visitor<Context>{});
 
   format_args.get(0).visit([](auto a) {
     assert((std::is_same_v<decltype(a), typename std::basic_format_arg<Context>::handle>));
