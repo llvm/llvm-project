@@ -3356,6 +3356,27 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(Op);
     break;
   }
+  case ISD::FCANONICALIZE: {
+    // This implements llvm.canonicalize.f* by multiplication with 1.0,
+    // as suggested in https://llvm.org/docs/LangRef.html#id2335. It uses
+    // strict_fp operations even outside a strict_fp context in order to
+    // guarantee that the canonicalization is not optimized away by later
+    // passes.
+
+    // Get operand x.
+    SDValue Operand = Node->getOperand(0);
+    // Get fp value type used.
+    EVT VT = Operand.getValueType();
+    // Produce appropriately-typed 1.0 constant.
+    SDValue One = DAG.getConstantFP(1.0, dl, VT);
+    // Produce multiplication node x * 1.0.
+    SDValue Chain = DAG.getEntryNode();
+    SDValue Mul = DAG.getNode(ISD::STRICT_FMUL, dl, {VT, MVT::Other},
+                              {Chain, Operand, One});
+
+    Results.push_back(Mul);
+    break;
+  }
   case ISD::SIGN_EXTEND_INREG: {
     EVT ExtraVT = cast<VTSDNode>(Node->getOperand(1))->getVT();
     EVT VT = Node->getValueType(0);
