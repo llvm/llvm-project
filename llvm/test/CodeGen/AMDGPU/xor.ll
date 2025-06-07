@@ -21,8 +21,8 @@ define amdgpu_kernel void @xor_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_xor_b32_e32 v1, v3, v1
 ; SI-NEXT:    v_xor_b32_e32 v0, v2, v0
+; SI-NEXT:    v_xor_b32_e32 v1, v3, v1
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -40,8 +40,8 @@ define amdgpu_kernel void @xor_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; VI-NEXT:    v_mov_b32_e32 v4, s0
 ; VI-NEXT:    v_mov_b32_e32 v5, s1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_xor_b32_e32 v1, v1, v3
 ; VI-NEXT:    v_xor_b32_e32 v0, v0, v2
+; VI-NEXT:    v_xor_b32_e32 v1, v1, v3
 ; VI-NEXT:    flat_store_dwordx2 v[4:5], v[0:1]
 ; VI-NEXT:    s_endpgm
   %a = load <2 x i32>, ptr addrspace(1) %in0
