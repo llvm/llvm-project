@@ -3108,8 +3108,6 @@ def err_reference_to_function_with_unsatisfied_constraints : Error<
   "invalid reference to function %0: constraints not satisfied">;
 def err_requires_expr_local_parameter_default_argument : Error<
   "default arguments not allowed for parameters of a requires expression">;
-def err_requires_expr_parameter_referenced_in_evaluated_context : Error<
-  "constraint variable %0 cannot be used in an evaluated context">;
 def note_expr_requirement_expr_substitution_error : Note<
   "%select{and|because}0 '%1' would be invalid: %2">;
 def note_expr_requirement_expr_unknown_substitution_error : Note<
