@@ -2623,6 +2623,55 @@ CodeGenRegBank::getMinimalPhysRegClass(const Record *RegRecord,
   return BestRC;
 }
 
+const CodeGenRegisterClass *
+CodeGenRegBank::getSuperRegForSubReg(const ValueTypeByHwMode &ValueTy,
+                                     const CodeGenSubRegIndex *SubIdx,
+                                     bool MustBeAllocatable) const {
+  std::vector<const CodeGenRegisterClass *> Candidates;
+  auto &RegClasses = getRegClasses();
+
+  // Try to find a register class which supports ValueTy, and also contains
+  // SubIdx.
+  for (const CodeGenRegisterClass &RC : RegClasses) {
+    // Is there a subclass of this class which contains this subregister index?
+    const CodeGenRegisterClass *SubClassWithSubReg =
+        RC.getSubClassWithSubReg(SubIdx);
+    if (!SubClassWithSubReg)
+      continue;
+
+    // We have a class. Check if it supports this value type.
+    if (!llvm::is_contained(SubClassWithSubReg->VTs, ValueTy))
+      continue;
+
+    // If necessary, check that it is allocatable.
+    if (MustBeAllocatable && !SubClassWithSubReg->Allocatable)
+      continue;
+
+    // We have a register class which supports both the value type and
+    // subregister index. Remember it.
+    Candidates.push_back(SubClassWithSubReg);
+  }
+
+  // If we didn't find anything, we're done.
+  if (Candidates.empty())
+    return nullptr;
+
+  // Find and return the largest of our candidate classes.
+  llvm::stable_sort(Candidates, [&](const CodeGenRegisterClass *A,
+                                    const CodeGenRegisterClass *B) {
+    if (A->getMembers().size() > B->getMembers().size())
+      return true;
+
+    if (A->getMembers().size() < B->getMembers().size())
+      return false;
+
+    // Order by name as a tie-breaker.
+    return StringRef(A->getName()) < B->getName();
+  });
+
+  return Candidates[0];
+}
+
 BitVector
 CodeGenRegBank::computeCoveredRegisters(ArrayRef<const Record *> Regs) {
   SetVector<const CodeGenRegister *> Set;
