@@ -89,8 +89,13 @@ public:
       const llvm::opt::ArgList &DriverArgs, const JobAction &JA,
       const llvm::fltSemantics *FPType = nullptr) const override;
 
-  static bool isWave64(const llvm::opt::ArgList &DriverArgs,
-                       llvm::AMDGPU::GPUKind Kind);
+  /// Return whether the GPU of kind \p Kind has wavefront size 64 by driver
+  /// arguments \p DriverArgs. When \p Explicit is true, only return true
+  /// if wavefront size is set to 64 by arguments explicitly. When
+  /// \p DiagInvalid is true, diagnose invalid -mwavefrontsize64 arguments.
+  static bool isWave64(const Driver &D, const llvm::opt::ArgList &DriverArgs,
+                       llvm::AMDGPU::GPUKind Kind, bool DiagInvalid = false,
+                       bool Explicit = false);
   /// Needed for using lto.
   bool HasNativeLLVMSupport() const override {
     return true;
