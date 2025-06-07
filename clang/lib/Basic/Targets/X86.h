@@ -979,6 +979,7 @@ public:
     if (Opts.CPlusPlus)
       Builder.defineMacro("_GNU_SOURCE");
   }
+
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::CharPtrBuiltinVaList;
   }
