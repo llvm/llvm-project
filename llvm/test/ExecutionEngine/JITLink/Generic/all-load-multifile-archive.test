@@ -7,7 +7,7 @@
 # RUN:     | FileCheck %s
 #
 # FIXME: Enable this test on Windows/arm64 once that backend is available.
-# UNSUPPORTED: target=aarch64-pc-windows-{{.*}}
+# UNSUPPORTED: target=aarch64-{{.*}}-windows-{{.*}}
 #
 # Check that the llvm-jitlink -all-load option loads all members of
 # multi-file archives.
