@@ -1764,7 +1764,8 @@ def err_user_defined_msg_constexpr : Error<
 
 // Type traits explanations
 def note_unsatisfied_trait : Note<"%0 is not %enum_select<TraitName>{"
-                                  "%TriviallyRelocatable{trivially relocatable}"
+                                  "%TriviallyRelocatable{trivially relocatable}|"
+                                  "%TriviallyCopyable{trivially copyable}"
                                   "}1">;
 
 def note_unsatisfied_trait_reason
@@ -1774,8 +1775,10 @@ def note_unsatisfied_trait_reason
            "%HasArcLifetime{has an ARC lifetime qualifier}|"
            "%VLA{is a variably-modified type}|"
            "%VBase{has a virtual base %1}|"
-           "%NRBase{has a non-trivially-relocatable base %1}|"
-           "%NRField{has a non-trivially-relocatable member %1 of type %2}|"
+           "%NTRBase{has a non-trivially-relocatable base %1}|"
+           "%NTRField{has a non-trivially-relocatable member %1 of type %2}|"
+           "%NTCBase{has a non-trivially-copyable base %1}|"
+           "%NTCField{has a non-trivially-copyable member %1 of type %2}|"
            "%DeletedDtr{has a %select{deleted|user-provided}1 destructor}|"
            "%UserProvidedCtr{has a user provided %select{copy|move}1 "
            "constructor}|"
