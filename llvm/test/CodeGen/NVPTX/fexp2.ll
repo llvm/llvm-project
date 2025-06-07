@@ -86,34 +86,40 @@ define <2 x float> @exp2_test_v(<2 x float> %in) {
 ; CHECK-LABEL: exp2_test_v(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ld.param.v2.b32 {%r1, %r2}, [exp2_test_v_param_0];
 ; CHECK-NEXT:    ex2.approx.f32 %r3, %r2;
 ; CHECK-NEXT:    ex2.approx.f32 %r4, %r1;
-; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-NEXT:    mov.b64 %rd1, {%r4, %r3};
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
 ; CHECK-NEXT:    ret;
 ;
 ; CHECK-FP16-LABEL: exp2_test_v(
 ; CHECK-FP16:       {
 ; CHECK-FP16-NEXT:    .reg .b32 %r<5>;
+; CHECK-FP16-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-FP16-EMPTY:
 ; CHECK-FP16-NEXT:  // %bb.0: // %entry
 ; CHECK-FP16-NEXT:    ld.param.v2.b32 {%r1, %r2}, [exp2_test_v_param_0];
 ; CHECK-FP16-NEXT:    ex2.approx.f32 %r3, %r2;
 ; CHECK-FP16-NEXT:    ex2.approx.f32 %r4, %r1;
-; CHECK-FP16-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-FP16-NEXT:    mov.b64 %rd1, {%r4, %r3};
+; CHECK-FP16-NEXT:    st.param.b64 [func_retval0], %rd1;
 ; CHECK-FP16-NEXT:    ret;
 ;
 ; CHECK-BF16-LABEL: exp2_test_v(
 ; CHECK-BF16:       {
 ; CHECK-BF16-NEXT:    .reg .b32 %r<5>;
+; CHECK-BF16-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-BF16-EMPTY:
 ; CHECK-BF16-NEXT:  // %bb.0: // %entry
 ; CHECK-BF16-NEXT:    ld.param.v2.b32 {%r1, %r2}, [exp2_test_v_param_0];
 ; CHECK-BF16-NEXT:    ex2.approx.f32 %r3, %r2;
 ; CHECK-BF16-NEXT:    ex2.approx.f32 %r4, %r1;
-; CHECK-BF16-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-BF16-NEXT:    mov.b64 %rd1, {%r4, %r3};
+; CHECK-BF16-NEXT:    st.param.b64 [func_retval0], %rd1;
 ; CHECK-BF16-NEXT:    ret;
 entry:
   %exp2 = call <2 x float> @llvm.exp2.v2f32(<2 x float> %in)
