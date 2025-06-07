@@ -423,6 +423,12 @@ Value *createAnyOfReduction(IRBuilderBase &B, Value *Src, Value *InitVal,
 Value *createFindLastIVReduction(IRBuilderBase &B, Value *Src, Value *Start,
                                  Value *Sentinel);
 
+/// Create a reduction of the given vector \p Src for a reduction of the
+/// kind RecurKind::MinMaxFirstIdx or RecurKind::MinMaxLastIdx. The reduction
+/// operation is described by \p Desc.
+Value *createMinMaxIdxReduction(IRBuilderBase &B, Value *Src, Value *Start,
+                                const RecurrenceDescriptor &Desc);
+
 /// Create an ordered reduction intrinsic using the given recurrence
 /// kind \p RdxKind.
 Value *createOrderedReduction(IRBuilderBase &B, RecurKind RdxKind, Value *Src,
