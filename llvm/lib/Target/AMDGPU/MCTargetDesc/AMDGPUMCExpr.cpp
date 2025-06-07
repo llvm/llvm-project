@@ -557,6 +557,8 @@ static void knownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
   case MCExpr::ExprKind::Target: {
     targetOpKnownBitsMapHelper(Expr, KBM, Depth);
     return;
+  case MCExpr::Specifier:
+    llvm_unreachable("unused by this backend");
   }
   }
 }

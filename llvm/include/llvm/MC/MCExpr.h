@@ -38,6 +38,7 @@ public:
     Constant,  ///< Constant expressions.
     SymbolRef, ///< References to labels and assigned expressions.
     Unary,     ///< Unary expressions.
+    Specifier, ///< Expression with a relocation specifier.
     Target     ///< Target specific expression.
   };
 
@@ -499,6 +500,33 @@ public:
 
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;
+  }
+};
+
+/// Extension point for target-specific MCExpr subclasses with a relocation
+/// specifier, serving as a replacement for MCSymbolRefExpr::VariantKind.
+/// Limit this to top-level use, avoiding its inclusion as a subexpression.
+class LLVM_ABI MCSpecifierExpr : public MCExpr {
+protected:
+  using Spec = uint16_t;
+  const MCExpr *Expr;
+  // Target-specific relocation specifier code
+  const Spec specifier;
+
+protected:
+  explicit MCSpecifierExpr(const MCExpr *Expr, Spec S)
+      : MCExpr(Specifier, SMLoc()), Expr(Expr), specifier(S) {}
+  virtual ~MCSpecifierExpr();
+
+public:
+  Spec getSpecifier() const { return specifier; }
+  const MCExpr *getSubExpr() const { return Expr; }
+
+  virtual void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const = 0;
+  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm) const;
+
+  static bool classof(const MCExpr *E) {
+    return E->getKind() == MCExpr::Specifier;
   }
 };
 
