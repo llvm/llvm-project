@@ -305,6 +305,12 @@ inlineCall(InlinerInterface &interface,
            CallOpInterface call, CallableOpInterface callable, Region *src,
            bool shouldCloneInlinedRegion = true);
 
+namespace builtin {
+/// Register the builtin dialect inliner interface external model.
+void registerBuiltinDialectInlinerInterfaceExternalModel(
+    DialectRegistry &registry);
+} // namespace builtin
+
 } // namespace mlir
 
 #endif // MLIR_TRANSFORMS_INLININGUTILS_H
