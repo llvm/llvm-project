@@ -197,6 +197,9 @@ public:
   bool SetLoadAddress(Target &target, lldb::addr_t value, bool value_is_offset,
                       bool &changed);
 
+  bool SetLoadAddressByType(Target &target, lldb::addr_t value,
+                            bool value_is_offset, bool &changed, int type_id);
+
   /// \copydoc SymbolContextScope::CalculateSymbolContext(SymbolContext*)
   ///
   /// \see SymbolContextScope

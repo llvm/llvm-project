@@ -227,6 +227,8 @@ StringExtractorGDBRemote::GetServerPacketType() const {
         return eServerPacketType_qLaunchGDBServer;
       if (PACKET_MATCHES("qLaunchSuccess"))
         return eServerPacketType_qLaunchSuccess;
+      if (PACKET_MATCHES("qLDXINFO"))
+        return eServerPacketType_qLDXINFO;
       break;
 
     case 'M':

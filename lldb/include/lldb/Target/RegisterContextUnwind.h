@@ -67,6 +67,10 @@ public:
 
   bool ReadPC(lldb::addr_t &start_pc);
 
+#ifdef _AIX
+  bool ReadLR(lldb::addr_t &lr);
+#endif
+
   // Indicates whether this frame *behaves* like frame zero -- the currently
   // executing frame -- or not.  This can be true in the middle of the stack
   // above asynchronous trap handlers (sigtramp) for instance.
