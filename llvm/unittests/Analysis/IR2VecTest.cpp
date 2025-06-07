@@ -32,13 +32,6 @@ public:
   void computeEmbeddings() const override {}
   void computeEmbeddings(const BasicBlock &BB) const override {}
   using Embedder::lookupVocab;
-  static void addVectors(Embedding &Dst, const Embedding &Src) {
-    Embedder::addVectors(Dst, Src);
-  }
-  static void addScaledVector(Embedding &Dst, const Embedding &Src,
-                              float Factor) {
-    Embedder::addScaledVector(Dst, Src, Factor);
-  }
 };
 
 TEST(IR2VecTest, CreateSymbolicEmbedder) {
@@ -79,8 +72,19 @@ TEST(IR2VecTest, AddVectors) {
   Embedding E1 = {1.0, 2.0, 3.0};
   Embedding E2 = {0.5, 1.5, -1.0};
 
-  TestableEmbedder::addVectors(E1, E2);
+  E1 += E2;
   EXPECT_THAT(E1, ElementsAre(1.5, 3.5, 2.0));
+
+  // Check that E2 is unchanged
+  EXPECT_THAT(E2, ElementsAre(0.5, 1.5, -1.0));
+}
+
+TEST(IR2VecTest, SubtractVectors) {
+  Embedding E1 = {1.0, 2.0, 3.0};
+  Embedding E2 = {0.5, 1.5, -1.0};
+
+  E1 -= E2;
+  EXPECT_THAT(E1, ElementsAre(0.5, 0.5, 4.0));
 
   // Check that E2 is unchanged
   EXPECT_THAT(E2, ElementsAre(0.5, 1.5, -1.0));
@@ -90,11 +94,34 @@ TEST(IR2VecTest, AddScaledVector) {
   Embedding E1 = {1.0, 2.0, 3.0};
   Embedding E2 = {2.0, 0.5, -1.0};
 
-  TestableEmbedder::addScaledVector(E1, E2, 0.5f);
+  E1.scaleAndAdd(E2, 0.5f);
   EXPECT_THAT(E1, ElementsAre(2.0, 2.25, 2.5));
 
   // Check that E2 is unchanged
   EXPECT_THAT(E2, ElementsAre(2.0, 0.5, -1.0));
+}
+
+TEST(IR2VecTest, ApproximatelyEqual) {
+  Embedding E1 = {1.0, 2.0, 3.0};
+  Embedding E2 = {1.0000001, 2.0000001, 3.0000001};
+  EXPECT_TRUE(E1.approximatelyEquals(E2)); // Diff = 1e-7
+
+  Embedding E3 = {1.00002, 2.00002, 3.00002}; // Diff = 2e-5
+  EXPECT_FALSE(E1.approximatelyEquals(E3));
+  EXPECT_TRUE(E1.approximatelyEquals(E3, 3e-5));
+
+  Embedding E_clearly_within = {1.0000005, 2.0000005, 3.0000005}; // Diff = 5e-7
+  EXPECT_TRUE(E1.approximatelyEquals(E_clearly_within));
+
+  Embedding E_clearly_outside = {1.00001, 2.00001, 3.00001}; // Diff = 1e-5
+  EXPECT_FALSE(E1.approximatelyEquals(E_clearly_outside));
+
+  Embedding E4 = {1.0, 2.0, 3.5}; // Large diff
+  EXPECT_FALSE(E1.approximatelyEquals(E4, 0.01));
+
+  Embedding E5 = {1.0, 2.0, 3.0};
+  EXPECT_TRUE(E1.approximatelyEquals(E5, 0.0));
+  EXPECT_TRUE(E1.approximatelyEquals(E5));
 }
 
 #if GTEST_HAS_DEATH_TEST
@@ -102,14 +129,26 @@ TEST(IR2VecTest, AddScaledVector) {
 TEST(IR2VecTest, MismatchedDimensionsAddVectors) {
   Embedding E1 = {1.0, 2.0};
   Embedding E2 = {1.0};
-  EXPECT_DEATH(TestableEmbedder::addVectors(E1, E2),
-               "Vectors must have the same dimension");
+  EXPECT_DEATH(E1 += E2, "Vectors must have the same dimension");
+}
+
+TEST(IR2VecTest, MismatchedDimensionsSubtractVectors) {
+  Embedding E1 = {1.0, 2.0};
+  Embedding E2 = {1.0};
+  EXPECT_DEATH(E1 -= E2, "Vectors must have the same dimension");
 }
 
 TEST(IR2VecTest, MismatchedDimensionsAddScaledVector) {
   Embedding E1 = {1.0, 2.0};
   Embedding E2 = {1.0};
-  EXPECT_DEATH(TestableEmbedder::addScaledVector(E1, E2, 1.0f),
+  EXPECT_DEATH(E1.scaleAndAdd(E2, 1.0f),
+               "Vectors must have the same dimension");
+}
+
+TEST(IR2VecTest, MismatchedDimensionsApproximatelyEqual) {
+  Embedding E1 = {1.0, 2.0};
+  Embedding E2 = {1.010};
+  EXPECT_DEATH(E1.approximatelyEquals(E2),
                "Vectors must have the same dimension");
 }
 #endif // NDEBUG
@@ -136,8 +175,9 @@ TEST(IR2VecTest, ZeroDimensionEmbedding) {
   Embedding E1;
   Embedding E2;
   // Should be no-op, but not crash
-  TestableEmbedder::addVectors(E1, E2);
-  TestableEmbedder::addScaledVector(E1, E2, 1.0f);
+  E1 += E2;
+  E1 -= E2;
+  E1.scaleAndAdd(E2, 1.0f);
   EXPECT_TRUE(E1.empty());
 }
 
