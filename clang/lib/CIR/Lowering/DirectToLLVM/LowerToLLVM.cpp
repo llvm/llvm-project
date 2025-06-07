@@ -671,6 +671,38 @@ mlir::LogicalResult CIRToLLVMPtrStrideOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMBaseClassAddrOpLowering::matchAndRewrite(
+    cir::BaseClassAddrOp baseClassOp, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  const mlir::Type resultType =
+      getTypeConverter()->convertType(baseClassOp.getType());
+  mlir::Value derivedAddr = adaptor.getDerivedAddr();
+  llvm::SmallVector<mlir::LLVM::GEPArg, 1> offset = {
+      adaptor.getOffset().getZExtValue()};
+  mlir::Type byteType = mlir::IntegerType::get(resultType.getContext(), 8,
+                                               mlir::IntegerType::Signless);
+  if (adaptor.getOffset().getZExtValue() == 0) {
+    rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(
+        baseClassOp, resultType, adaptor.getDerivedAddr());
+    return mlir::success();
+  }
+
+  if (baseClassOp.getAssumeNotNull()) {
+    rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
+        baseClassOp, resultType, byteType, derivedAddr, offset);
+  } else {
+    auto loc = baseClassOp.getLoc();
+    mlir::Value isNull = rewriter.create<mlir::LLVM::ICmpOp>(
+        loc, mlir::LLVM::ICmpPredicate::eq, derivedAddr,
+        rewriter.create<mlir::LLVM::ZeroOp>(loc, derivedAddr.getType()));
+    mlir::Value adjusted = rewriter.create<mlir::LLVM::GEPOp>(
+        loc, resultType, byteType, derivedAddr, offset);
+    rewriter.replaceOpWithNewOp<mlir::LLVM::SelectOp>(baseClassOp, isNull,
+                                                      derivedAddr, adjusted);
+  }
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMAllocaOpLowering::matchAndRewrite(
     cir::AllocaOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -1750,6 +1782,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                                              dl);
   patterns.add<
       // clang-format off
+               CIRToLLVMBaseClassAddrOpLowering,
                CIRToLLVMBinOpLowering,
                CIRToLLVMBrCondOpLowering,
                CIRToLLVMBrOpLowering,
