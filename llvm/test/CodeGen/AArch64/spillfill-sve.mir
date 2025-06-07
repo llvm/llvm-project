@@ -38,7 +38,7 @@ body:             |
     ; CHECK-LABEL: name: spills_fills_stack_id_ppr
     ; CHECK: stack:
     ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 2, alignment: 2
-    ; CHECK-NEXT:     stack-id: scalable-vector, callee-saved-register: ''
+    ; CHECK-NEXT:     stack-id: scalable-pred-vector, callee-saved-register: ''
 
     ; EXPAND-LABEL: name: spills_fills_stack_id_ppr
     ; EXPAND: STR_PXI $p0, $sp, 7
@@ -81,7 +81,7 @@ body:             |
     ; CHECK-LABEL: name: spills_fills_stack_id_ppr2
     ; CHECK: stack:
     ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 4, alignment: 2
-    ; CHECK-NEXT:     stack-id: scalable-vector, callee-saved-register: ''
+    ; CHECK-NEXT:     stack-id: scalable-pred-vector, callee-saved-register: ''
 
     ; EXPAND-LABEL: name: spills_fills_stack_id_ppr2
     ; EXPAND: STR_PXI $p0, $sp, 6
@@ -126,7 +126,7 @@ body:             |
     ; CHECK-LABEL: name: spills_fills_stack_id_ppr2
     ; CHECK: stack:
     ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 4, alignment: 2
-    ; CHECK-NEXT:     stack-id: scalable-vector, callee-saved-register: ''
+    ; CHECK-NEXT:     stack-id: scalable-pred-vector, callee-saved-register: ''
 
     ; EXPAND-LABEL: name: spills_fills_stack_id_ppr2mul2
     ; EXPAND: STR_PXI $p0, $sp, 6
@@ -171,7 +171,7 @@ body:             |
     ; CHECK-LABEL: name: spills_fills_stack_id_pnr
     ; CHECK: stack:
     ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 2, alignment: 2
-    ; CHECK-NEXT:     stack-id: scalable-vector, callee-saved-register: ''
+    ; CHECK-NEXT:     stack-id: scalable-pred-vector, callee-saved-register: ''
 
     ; EXPAND-LABEL: name: spills_fills_stack_id_pnr
     ; EXPAND: STR_PXI $pn0, $sp, 7
@@ -210,7 +210,7 @@ body:             |
     ; CHECK-LABEL: name: spills_fills_stack_id_virtreg_pnr
     ; CHECK: stack:
     ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 2, alignment: 2
-    ; CHECK-NEXT:     stack-id: scalable-vector, callee-saved-register: ''
+    ; CHECK-NEXT:     stack-id: scalable-pred-vector, callee-saved-register: ''
 
     ; EXPAND-LABEL: name: spills_fills_stack_id_virtreg_pnr
     ; EXPAND: renamable $pn8 = WHILEGE_CXX_B
