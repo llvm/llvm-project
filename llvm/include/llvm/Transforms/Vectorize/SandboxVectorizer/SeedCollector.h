@@ -300,7 +300,8 @@ class SeedCollector {
   }
 
 public:
-  SeedCollector(BasicBlock *BB, ScalarEvolution &SE);
+  SeedCollector(BasicBlock *BB, ScalarEvolution &SE, bool CollectStores,
+                bool CollectLoads);
   ~SeedCollector();
 
   iterator_range<SeedContainer::iterator> getStoreSeeds() {
