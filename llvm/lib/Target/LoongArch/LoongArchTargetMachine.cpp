@@ -188,7 +188,7 @@ void LoongArchPassConfig::addCodeGenPrepare() {
 }
 
 bool LoongArchPassConfig::addInstSelector() {
-  addPass(createLoongArchISelDag(getLoongArchTargetMachine()));
+  addPass(createLoongArchISelDag(getLoongArchTargetMachine(), getOptLevel()));
 
   return false;
 }
