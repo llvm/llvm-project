@@ -170,7 +170,6 @@ headers_not_available = list(map(Header, [
     "linalg",
     "rcu",
     "spanstream",
-    "stacktrace",
     "stdfloat",
     "text_encoding",
 ]))
@@ -226,6 +225,7 @@ lit_header_restrictions = {
     "semaphore": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
     "shared_mutex": "// UNSUPPORTED: no-threads, c++03, c++11",
     "sstream": "// UNSUPPORTED: no-localization",
+    "stacktrace": "// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20",
     "stdatomic.h": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17, c++20",
     "stop_token": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
     "streambuf": "// UNSUPPORTED: no-localization",
@@ -275,6 +275,7 @@ mandatory_inclusions = {
     "regex": ["compare", "initializer_list"],
     "set": ["compare", "initializer_list"],
     "stack": ["compare", "initializer_list"],
+    "stacktrace": ["compare"],
     "string_view": ["compare"],
     "string": ["compare", "initializer_list"],
     "syncstream": ["ostream"],

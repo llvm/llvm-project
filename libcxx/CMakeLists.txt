@@ -131,6 +131,11 @@ option(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS
    the shared library they shipped should turn this on and see `include/__configuration/availability.h`
    for more details." OFF)
 
+option(LIBCXX_STACKTRACE_ALLOW_TOOLS_AT_RUNTIME
+   "For C++23 <stacktrace>: whether to allow invocation of `addr2line`, `llvm-addr2line`, or `atos`
+   at runtime (if it's available in `PATH`) to resolve call-chain addresses in the stacktrace
+   into source locations, if other methods are not available." ON)
+
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   set(LIBCXX_DEFAULT_TEST_CONFIG "llvm-libc++-shared-gcc.cfg.in")
 elseif(MINGW)
@@ -758,6 +763,7 @@ config_define(${LIBCXX_ENABLE_UNICODE} _LIBCPP_HAS_UNICODE)
 config_define(${LIBCXX_ENABLE_WIDE_CHARACTERS} _LIBCPP_HAS_WIDE_CHARACTERS)
 config_define(${LIBCXX_ENABLE_TIME_ZONE_DATABASE} _LIBCPP_HAS_TIME_ZONE_DATABASE)
 config_define(${LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS} _LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS)
+config_define(${LIBCXX_STACKTRACE_ALLOW_TOOLS_AT_RUNTIME} _LIBCPP_STACKTRACE_ALLOW_TOOLS_AT_RUNTIME)
 
 # TODO: Remove in LLVM 21. We're leaving an error to make this fail explicitly.
 if (LIBCXX_ENABLE_ASSERTIONS)

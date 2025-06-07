@@ -1293,7 +1293,6 @@ feature_test_macros = [
             "name": "__cpp_lib_stacktrace",
             "values": {"c++23": 202011},
             "headers": ["stacktrace"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_starts_ends_with",
