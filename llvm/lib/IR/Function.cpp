@@ -146,6 +146,12 @@ bool Argument::hasByValAttr() const {
   return hasAttribute(Attribute::ByVal);
 }
 
+bool Argument::hasDeadOnReturnAttr() const {
+  if (!getType()->isPointerTy())
+    return false;
+  return hasAttribute(Attribute::DeadOnReturn);
+}
+
 bool Argument::hasByRefAttr() const {
   if (!getType()->isPointerTy())
     return false;
@@ -176,7 +182,8 @@ bool Argument::hasPassPointeeByValueCopyAttr() const {
   AttributeList Attrs = getParent()->getAttributes();
   return Attrs.hasParamAttr(getArgNo(), Attribute::ByVal) ||
          Attrs.hasParamAttr(getArgNo(), Attribute::InAlloca) ||
-         Attrs.hasParamAttr(getArgNo(), Attribute::Preallocated);
+         Attrs.hasParamAttr(getArgNo(), Attribute::Preallocated) ||
+         Attrs.hasParamAttr(getArgNo(), Attribute::DeadOnReturn);
 }
 
 bool Argument::hasPointeeInMemoryValueAttr() const {

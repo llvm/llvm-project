@@ -855,3 +855,11 @@ bb:
   store ptr null, ptr null, align 8
   ret void
 }
+
+define void @test50(ptr dead_on_return %p) {
+; CHECK-LABEL: @test50(
+; CHECK-NEXT:    ret void
+;
+  store i8 0, ptr %p
+  ret void
+}

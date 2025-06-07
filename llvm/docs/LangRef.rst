@@ -1741,6 +1741,20 @@ Currently, only the following parameter attributes are defined:
 
     This attribute cannot be applied to return values.
 
+``dead_on_return``
+    This attribute indicates that the memory pointed to by the argument is dead
+    upon normal function return.
+
+    It is similar to ``byval`` in the regard that it is generally used to pass
+    structs and arrays by value, and the memory is caller-invisible when the
+    function returns. However, unlike ``byval``, it is intended for ABIs where the
+    *callee* allocates the hidden copy, rather than the caller. Stores that would
+    only be visible on the normal return path may be optimized out. Likewise,
+    optimizations may assume that the pointer does not alias any memory that
+    outlives the call.
+
+    This attribute cannot be applied to return values.
+
 ``range(<ty> <a>, <b>)``
     This attribute expresses the possible range of the parameter or return value.
     If the value is not in the specified range, it is converted to poison.
