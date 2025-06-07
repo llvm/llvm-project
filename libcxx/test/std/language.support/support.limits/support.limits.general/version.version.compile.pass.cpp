@@ -164,6 +164,14 @@
 #    error "__cpp_lib_clamp should not be defined before c++17"
 #  endif
 
+#  ifdef __cpp_lib_common_reference
+#    error "__cpp_lib_common_reference should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_common_reference_wrapper
+#    error "__cpp_lib_common_reference_wrapper should not be defined before c++20"
+#  endif
+
 #  ifdef __cpp_lib_complex_udls
 #    error "__cpp_lib_complex_udls should not be defined before c++14"
 #  endif
@@ -1047,6 +1055,14 @@
 
 #  ifdef __cpp_lib_clamp
 #    error "__cpp_lib_clamp should not be defined before c++17"
+#  endif
+
+#  ifdef __cpp_lib_common_reference
+#    error "__cpp_lib_common_reference should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_common_reference_wrapper
+#    error "__cpp_lib_common_reference_wrapper should not be defined before c++20"
 #  endif
 
 #  ifndef __cpp_lib_complex_udls
@@ -2037,6 +2053,14 @@
 #  endif
 #  if __cpp_lib_clamp != 201603L
 #    error "__cpp_lib_clamp should have the value 201603L in c++17"
+#  endif
+
+#  ifdef __cpp_lib_common_reference
+#    error "__cpp_lib_common_reference should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_common_reference_wrapper
+#    error "__cpp_lib_common_reference_wrapper should not be defined before c++20"
 #  endif
 
 #  ifndef __cpp_lib_complex_udls
@@ -3255,6 +3279,20 @@
 #  endif
 #  if __cpp_lib_clamp != 201603L
 #    error "__cpp_lib_clamp should have the value 201603L in c++20"
+#  endif
+
+#  ifndef __cpp_lib_common_reference
+#    error "__cpp_lib_common_reference should be defined in c++20"
+#  endif
+#  if __cpp_lib_common_reference != 202302L
+#    error "__cpp_lib_common_reference should have the value 202302L in c++20"
+#  endif
+
+#  ifndef __cpp_lib_common_reference_wrapper
+#    error "__cpp_lib_common_reference_wrapper should be defined in c++20"
+#  endif
+#  if __cpp_lib_common_reference_wrapper != 202302L
+#    error "__cpp_lib_common_reference_wrapper should have the value 202302L in c++20"
 #  endif
 
 #  ifndef __cpp_lib_complex_udls
@@ -4692,6 +4730,20 @@
 #  endif
 #  if __cpp_lib_clamp != 201603L
 #    error "__cpp_lib_clamp should have the value 201603L in c++23"
+#  endif
+
+#  ifndef __cpp_lib_common_reference
+#    error "__cpp_lib_common_reference should be defined in c++23"
+#  endif
+#  if __cpp_lib_common_reference != 202302L
+#    error "__cpp_lib_common_reference should have the value 202302L in c++23"
+#  endif
+
+#  ifndef __cpp_lib_common_reference_wrapper
+#    error "__cpp_lib_common_reference_wrapper should be defined in c++23"
+#  endif
+#  if __cpp_lib_common_reference_wrapper != 202302L
+#    error "__cpp_lib_common_reference_wrapper should have the value 202302L in c++23"
 #  endif
 
 #  ifndef __cpp_lib_complex_udls
@@ -6363,6 +6415,20 @@
 #  endif
 #  if __cpp_lib_clamp != 201603L
 #    error "__cpp_lib_clamp should have the value 201603L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_common_reference
+#    error "__cpp_lib_common_reference should be defined in c++26"
+#  endif
+#  if __cpp_lib_common_reference != 202302L
+#    error "__cpp_lib_common_reference should have the value 202302L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_common_reference_wrapper
+#    error "__cpp_lib_common_reference_wrapper should be defined in c++26"
+#  endif
+#  if __cpp_lib_common_reference_wrapper != 202302L
+#    error "__cpp_lib_common_reference_wrapper should have the value 202302L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_complex_udls
