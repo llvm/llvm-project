@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/AffineExpr.h"
@@ -64,6 +65,19 @@ static SmallVector<Value> unrollIndex(OpBuilder &b, Location loc, Value index,
   return *multiIndex;
 }
 
+// Generate the affine expression to compute the convolved index
+// for the input as `oIndex * stride + fIndex`,
+// where oIndex: output iterator; fIndex: filter iterator.
+static AffineExpr getConvolvedExpr(OpBuilder &b, int64_t stride,
+                                   bool useSymbols = true) {
+  AffineExpr oExpr, fExpr;
+  if (useSymbols)
+    bindSymbols(b.getContext(), oExpr, fExpr);
+  else
+    bindDims(b.getContext(), oExpr, fExpr);
+  return AffineExpr(stride * oExpr + fExpr);
+}
+
 // Given indices corresponding to iterators in the output (oIndex) and filter
 // (fIndex) for a convolution, compute the convolved index for the
 // input as `oIndex * stride + fIndex`.
@@ -71,7 +85,7 @@ static Value getConvolvedIndex(OpBuilder &b, Location loc, Value oIndex,
                                Value fIndex, int64_t stride) {
   AffineExpr oExpr, fExpr;
   bindSymbols(b.getContext(), oExpr, fExpr);
-  AffineMap convMap = AffineMap::get(0, 2, stride * oExpr + fExpr);
+  AffineMap convMap = AffineMap::get(0, 2, getConvolvedExpr(b, stride));
   return affine::makeComposedAffineApply(b, loc, convMap, {oIndex, fIndex});
 }
 
@@ -556,44 +570,40 @@ rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNhwcFhwcOp convOp) {
   auto reduction = utils::IteratorType::reduction;
   SmallVector<utils::IteratorType> img2colIterators(nloops, parallel);
 
+  // Recover the original iteration indices from the problem/input sizes.
+  auto mIndicesExprs =
+      delinearize(rewriter.getAffineDimExpr(1U), ArrayRef<int64_t>{ow, 1});
+  auto kIndicesExprs = delinearize(rewriter.getAffineDimExpr(2U),
+                                   ArrayRef<int64_t>{fw * ic, ic, 1});
+  auto hIndicesMap = AffineMap::inferFromExprList(
+      {ArrayRef{mIndicesExprs[0], kIndicesExprs[0]}}, rewriter.getContext())[0];
+  auto wIndicesMap = AffineMap::inferFromExprList(
+      {ArrayRef{mIndicesExprs[1], kIndicesExprs[1]}}, rewriter.getContext())[0];
+  // Compute the input indexing map, to map the output indices to the input
+  // offsets
+  auto bIndexExpr = rewriter.getAffineDimExpr(0U);
+  auto hIndexExpr =
+      getConvolvedExpr(rewriter, convOp.getStrides().getValues<int64_t>()[0],
+                       /*useSymbols*/ false)
+          .compose(hIndicesMap);
+  auto wIndexExpr =
+      getConvolvedExpr(rewriter, convOp.getStrides().getValues<int64_t>()[1],
+                       /*useSymbols*/ false)
+          .compose(wIndicesMap);
+  auto cIndexExpr = kIndicesExprs[2];
+  auto inMap = AffineMap::inferFromExprList(
+      {ArrayRef{bIndexExpr, hIndexExpr, wIndexExpr, cIndexExpr}},
+      rewriter.getContext())[0];
+
   SmallVector<AffineMap> img2colIndexingMaps = {
-      AffineMap::getMultiDimIdentityMap(nloops, context)};
+      inMap, AffineMap::getMultiDimIdentityMap(nloops, context)};
 
   auto img2ColTensor = rewriter.create<linalg::GenericOp>(
       loc, colTensor.getType(),
-      /*inputs=*/ValueRange{}, /*outputs=*/colTensor, img2colIndexingMaps,
+      /*inputs=*/input, /*outputs=*/colTensor, img2colIndexingMaps,
       img2colIterators,
       [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
-        // Get the iterators named based on the matmul (batch, m, k).
-        Value bIndex = nestedBuilder.create<linalg::IndexOp>(loc, 0);
-        Value mIndex = nestedBuilder.create<linalg::IndexOp>(loc, 1);
-        Value kIndex = nestedBuilder.create<linalg::IndexOp>(loc, 2);
-
-        // Recover the original iteration indices from the problem/input sizes.
-        SmallVector<Value> mIndices = unrollIndex(
-            nestedBuilder, nestedLoc, mIndex, ArrayRef<int64_t>{oh, ow});
-        auto ohIndex = mIndices[0];
-        auto owIndex = mIndices[1];
-
-        SmallVector<Value> kIndices = unrollIndex(
-            nestedBuilder, nestedLoc, kIndex, ArrayRef<int64_t>{fh, fw, ic});
-        auto fhIndex = kIndices[0];
-        auto fwIndex = kIndices[1];
-        auto icIndex = kIndices[2];
-
-        // Extract the input element corresponding to the expanded indices.
-        Value hIndex =
-            getConvolvedIndex(nestedBuilder, nestedLoc, ohIndex, fhIndex,
-                              convOp.getStrides().getValues<int64_t>()[0]);
-        Value wIndex =
-            getConvolvedIndex(nestedBuilder, nestedLoc, owIndex, fwIndex,
-                              convOp.getStrides().getValues<int64_t>()[1]);
-
-        // im2col[n, oh*ow, fh*fw*ic] = input[n, sh*oh + fh, sw*ow + fw, ic]
-        SmallVector<Value> extractionIndices{bIndex, hIndex, wIndex, icIndex};
-        Value inputVal = nestedBuilder.create<tensor::ExtractOp>(
-            loc, input, extractionIndices);
-        nestedBuilder.create<linalg::YieldOp>(nestedLoc, inputVal);
+        nestedBuilder.create<linalg::YieldOp>(nestedLoc, args[0]);
       });
 
   // Because we didn't transpose the filters we don't actually have a batched
