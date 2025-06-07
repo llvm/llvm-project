@@ -118,6 +118,15 @@ merge_relocatable_object(
   .do_start
 )
 
+# HACK: Is this even ok?
+# For reference: `Scrt1` is used when `-fpie` vs `crt1` for `-fno-pie`
+merge_relocatable_object(
+  Scrt1
+  .${LIBC_TARGET_ARCHITECTURE}.start
+  .${LIBC_TARGET_ARCHITECTURE}.tls
+  .do_start
+)
+
 add_startup_object(
   crti
   SRC
@@ -131,7 +140,7 @@ add_startup_object(
 )
 
 add_custom_target(libc-startup)
-set(startup_components crt1 crti crtn)
+set(startup_components Scrt1 crt1 crti crtn)
 foreach(target IN LISTS startup_components)
   set(fq_target_name libc.startup.linux.${target})
   add_dependencies(libc-startup ${fq_target_name})
