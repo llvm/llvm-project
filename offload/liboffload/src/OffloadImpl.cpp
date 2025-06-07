@@ -399,7 +399,7 @@ ol_event_handle_t makeEvent(ol_queue_handle_t Queue) {
 }
 
 Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
-                    ol_device_handle_t DstDevice, void *SrcPtr,
+                    ol_device_handle_t DstDevice, const void *SrcPtr,
                     ol_device_handle_t SrcDevice, size_t Size,
                     ol_event_handle_t *EventOut) {
   if (DstDevice == HostDevice() && SrcDevice == HostDevice()) {

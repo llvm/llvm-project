@@ -161,7 +161,17 @@ enum NodeType : unsigned {
   VBSRL,
 
   // Scalar load broadcast to vector
-  VLDREPL
+  VLDREPL,
+
+  // Vector mask set by condition
+  VMSKLTZ,
+  VMSKGEZ,
+  VMSKEQZ,
+  VMSKNEZ,
+  XVMSKLTZ,
+  XVMSKGEZ,
+  XVMSKEQZ,
+  XVMSKNEZ,
 
   // Intrinsic operations end =============================================
 };

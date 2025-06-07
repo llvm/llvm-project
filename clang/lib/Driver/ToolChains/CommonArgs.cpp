@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "Arch/AArch64.h"
 #include "Arch/ARM.h"
 #include "Arch/CSKY.h"
@@ -3166,4 +3166,26 @@ void tools::handleInterchangeLoopsArgs(const ArgList &Args,
   if (Args.hasFlag(options::OPT_floop_interchange, InterchangeAliasOption,
                    options::OPT_fno_loop_interchange, EnableInterchange))
     CmdArgs.push_back("-floop-interchange");
+}
+
+// Parse -mprefer-vector-width=. Return the Value string if well-formed.
+// Otherwise, return an empty string and issue a diagnosic message if needed.
+StringRef tools::ParseMPreferVectorWidthOption(clang::DiagnosticsEngine &Diags,
+                                               const llvm::opt::ArgList &Args) {
+  Arg *A = Args.getLastArg(clang::driver::options::OPT_mprefer_vector_width_EQ);
+  if (!A)
+    return "";
+
+  StringRef Value = A->getValue();
+  unsigned Width LLVM_ATTRIBUTE_UNINITIALIZED;
+
+  // Only "none" and Integer values are accepted by
+  // -mprefer-vector-width=<value>.
+  if (Value != "none" && Value.getAsInteger(10, Width)) {
+    Diags.Report(clang::diag::err_drv_invalid_value)
+        << A->getOption().getName() << Value;
+    return "";
+  }
+
+  return Value;
 }

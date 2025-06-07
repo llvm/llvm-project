@@ -12,10 +12,10 @@
 
 #include "DataSharingProcessor.h"
 
-#include "PrivateReductionUtils.h"
 #include "Utils.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/PFTBuilder.h"
+#include "flang/Lower/Support/PrivateReductionUtils.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
@@ -537,38 +537,10 @@ void DataSharingProcessor::privatizeSymbol(
     return;
   }
 
-  auto initGen = [&](mlir::omp::PrivateClauseOp result, mlir::Type argType) {
-    lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(*symToPrivatize);
-    assert(hsb && "Host symbol box not found");
-    hlfir::Entity entity{hsb.getAddr()};
-    bool cannotHaveNonDefaultLowerBounds =
-        !entity.mayHaveNonDefaultLowerBounds();
-
-    mlir::Region &initRegion = result.getInitRegion();
-    mlir::Location symLoc = hsb.getAddr().getLoc();
-    mlir::Block *initBlock = firOpBuilder.createBlock(
-        &initRegion, /*insertPt=*/{}, {argType, argType}, {symLoc, symLoc});
-
-    bool emitCopyRegion =
-        symToPrivatize->test(semantics::Symbol::Flag::OmpFirstPrivate);
-
-    populateByRefInitAndCleanupRegions(
-        converter, symLoc, argType, /*scalarInitValue=*/nullptr, initBlock,
-        result.getInitPrivateArg(), result.getInitMoldArg(),
-        result.getDeallocRegion(),
-        emitCopyRegion ? omp::DeclOperationKind::FirstPrivate
-                       : omp::DeclOperationKind::Private,
-        symToPrivatize, cannotHaveNonDefaultLowerBounds);
-    // TODO: currently there are false positives from dead uses of the mold
-    // arg
-    if (result.initReadsFromMold())
-      mightHaveReadHostSym.insert(symToPrivatize);
-  };
-
   Fortran::lower::privatizeSymbol<mlir::omp::PrivateClauseOp,
                                   mlir::omp::PrivateClauseOps>(
-      converter, firOpBuilder, symTable, initGen, allPrivatizedSymbols,
-      symToPrivatize, clauseOps);
+      converter, firOpBuilder, symTable, allPrivatizedSymbols,
+      mightHaveReadHostSym, symToPrivatize, clauseOps);
 }
 } // namespace omp
 } // namespace lower

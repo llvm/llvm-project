@@ -35,6 +35,10 @@ using ErrBits = std::tuple<KnownBits, unsigned, bool>;
 /// A custom std::array with 256 entries, that also has a print function.
 struct CRCTable : public std::array<APInt, 256> {
   void print(raw_ostream &OS) const;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 };
 
 /// The structure that is returned when a polynomial algorithm was recognized by
@@ -88,6 +92,10 @@ public:
   CRCTable genSarwateTable(const APInt &GenPoly, bool ByteOrderSwapped) const;
 
   void print(raw_ostream &OS) const;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 };
 
 class HashRecognizePrinterPass

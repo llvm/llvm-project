@@ -45,16 +45,9 @@ class VPPhiAccessors;
 // coming from the input IR and instructions which VPlan will generate if
 // executed.
 class VPValue {
-  friend class VPBuilder;
   friend class VPDef;
   friend struct VPDoubleValueDef;
-  friend class VPInstruction;
   friend class VPInterleaveRecipe;
-  friend struct VPlanTransforms;
-  friend class VPBasicBlock;
-  friend class VPInterleavedAccessInfo;
-  friend class VPSlotTracker;
-  friend class VPRecipeBase;
   friend class VPlan;
 
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).

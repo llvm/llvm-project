@@ -582,26 +582,13 @@ llvm::json::Value toJSON(const SteppingGranularity &SG) {
   llvm_unreachable("unhandled stepping granularity.");
 }
 
-bool fromJSON(const json::Value &Params, StepInTarget &SIT, json::Path P) {
+bool fromJSON(const json::Value &Params, Thread &T, json::Path P) {
   json::ObjectMapper O(Params, P);
-  return O && O.map("id", SIT.id) && O.map("label", SIT.label) &&
-         O.map("line", SIT.line) && O.map("column", SIT.column) &&
-         O.map("endLine", SIT.endLine) && O.map("endColumn", SIT.endColumn);
+  return O && O.map("id", T.id) && O.map("name", T.name);
 }
 
-llvm::json::Value toJSON(const StepInTarget &SIT) {
-  json::Object target{{"id", SIT.id}, {"label", SIT.label}};
-
-  if (SIT.line != LLDB_INVALID_LINE_NUMBER)
-    target.insert({"line", SIT.line});
-  if (SIT.column != LLDB_INVALID_COLUMN_NUMBER)
-    target.insert({"column", SIT.column});
-  if (SIT.endLine != LLDB_INVALID_LINE_NUMBER)
-    target.insert({"endLine", SIT.endLine});
-  if (SIT.endLine != LLDB_INVALID_COLUMN_NUMBER)
-    target.insert({"endColumn", SIT.endColumn});
-
-  return target;
+json::Value toJSON(const Thread &T) {
+  return json::Object{{"id", T.id}, {"name", T.name}};
 }
 
 bool fromJSON(const llvm::json::Value &Params, ValueFormat &VF,
@@ -843,22 +830,20 @@ llvm::json::Value toJSON(const DisassembledInstruction::PresentationHint &PH) {
 
 bool fromJSON(const llvm::json::Value &Params, DisassembledInstruction &DI,
               llvm::json::Path P) {
-  std::optional<llvm::StringRef> raw_address =
-      Params.getAsObject()->getString("address");
-  if (!raw_address) {
-    P.report("missing 'address' field");
+  llvm::json::ObjectMapper O(Params, P);
+  std::string raw_address;
+  if (!O || !O.map("address", raw_address))
     return false;
-  }
 
-  std::optional<lldb::addr_t> address = DecodeMemoryReference(*raw_address);
+  std::optional<lldb::addr_t> address = DecodeMemoryReference(raw_address);
   if (!address) {
-    P.report("invalid 'address'");
+    P.field("address").report("expected string encoded uint64_t");
     return false;
   }
 
   DI.address = *address;
-  llvm::json::ObjectMapper O(Params, P);
-  return O && O.map("instruction", DI.instruction) &&
+
+  return O.map("instruction", DI.instruction) &&
          O.mapOptional("instructionBytes", DI.instructionBytes) &&
          O.mapOptional("symbol", DI.symbol) &&
          O.mapOptional("location", DI.location) &&

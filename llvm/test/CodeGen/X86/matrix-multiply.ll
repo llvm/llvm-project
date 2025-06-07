@@ -119,9 +119,9 @@ define <4 x double> @test_mul2x2_f64(<4 x double> %a0, <4 x double> %a1) nounwin
 ;
 ; AVX1-LABEL: test_mul2x2_f64:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vshufpd {{.*#+}} ymm2 = ymm1[1,1,3,3]
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm3 = ymm0[2,3,2,3]
-; AVX1-NEXT:    vmulpd %ymm2, %ymm3, %ymm2
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3,2,3]
+; AVX1-NEXT:    vshufpd {{.*#+}} ymm3 = ymm1[1,1,3,3]
+; AVX1-NEXT:    vmulpd %ymm3, %ymm2, %ymm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    vmovddup {{.*#+}} ymm1 = ymm1[0,0,2,2]
 ; AVX1-NEXT:    vmulpd %ymm1, %ymm0, %ymm0

@@ -14,7 +14,6 @@ static_library("DWARF") {
     "DWARFCFIProgram.cpp",
     "DWARFCompileUnit.cpp",
     "DWARFContext.cpp",
-    "DWARFDataExtractor.cpp",
     "DWARFDebugAbbrev.cpp",
     "DWARFDebugAddr.cpp",
     "DWARFDebugArangeSet.cpp",

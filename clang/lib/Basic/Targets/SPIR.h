@@ -50,6 +50,7 @@ static const unsigned SPIRDefIsPrivMap[] = {
     12, // hlsl_constant
     10, // hlsl_private
     11, // hlsl_device
+    7,  // hlsl_input
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -85,6 +86,7 @@ static const unsigned SPIRDefIsGenMap[] = {
     0,  // hlsl_constant
     10, // hlsl_private
     11, // hlsl_device
+    7,  // hlsl_input
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -191,7 +193,7 @@ public:
   }
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
-    return (CC == CC_SpirFunction || CC == CC_OpenCLKernel) ? CCCR_OK
+    return (CC == CC_SpirFunction || CC == CC_DeviceKernel) ? CCCR_OK
                                                             : CCCR_Warning;
   }
 

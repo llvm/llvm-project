@@ -287,164 +287,6 @@ add_entrypoint_object(
     -O2
 )
 
-# The following functions currently are not implemented natively and borrow from
-# existing implementations. This will be removed in the future.
-add_entrypoint_object(
-  acos
-  SRCS
-    acos.cpp
-  HDRS
-    ../acos.h
-  COMPILE_OPTIONS
-    ${bitcode_link_flags}
-    -O2
-  VENDOR
-)
-
-add_entrypoint_object(
-  acosh
-  SRCS
-    acosh.cpp
-  HDRS
-    ../acosh.h
-  COMPILE_OPTIONS
-    ${bitcode_link_flags}
-    -O2
-  VENDOR
-)
-
-add_entrypoint_object(
-  asin
-  SRCS
-    asin.cpp
-  HDRS
-    ../asin.h
-  COMPILE_OPTIONS
-    ${bitcode_link_flags}
-    -O2
-  VENDOR
-)
-
-add_entrypoint_object(
-  asinh
-  SRCS
-    asinh.cpp
-  HDRS
-    ../asinh.h
-  COMPILE_OPTIONS
-    ${bitcode_link_flags}
-    -O2
-  VENDOR
-)
-
-add_entrypoint_object(
-  atan
-  SRCS
-    atan.cpp
-  HDRS
-    ../atan.h
-  COMPILE_OPTIONS
-    ${bitcode_link_flags}
-    -O2
-  VENDOR
-)
-
-add_entrypoint_object(
-  atanh
-  SRCS
-    atanh.cpp
-  HDRS
-    ../atanh.h
-  COMPILE_OPTIONS
-    ${bitcode_link_flags}
-    -O2
-  VENDOR
-)
-
-add_entrypoint_object(
-  cos
-  SRCS
-    cos.cpp
-  HDRS
-    ../cos.h
-  COMPILE_OPTIONS
-    ${bitcode_link_flags}
-    -O2
-  VENDOR
-)
-
-add_entrypoint_object(
-  cosh
-  SRCS
-    cosh.cpp
-  HDRS
-    ../cosh.h
-  COMPILE_OPTIONS
-    ${bitcode_link_flags}
-    -O2
-  VENDOR
-)
-
-add_entrypoint_object(
-  erf
-  SRCS
-    erf.cpp
-  HDRS
-    ../erf.h
-  COMPILE_OPTIONS
-    ${bitcode_link_flags}
-    -O2
-  VENDOR
-)
-
-add_entrypoint_object(
-  powi
-  SRCS
-    powi.cpp
-  HDRS
-    ../powi.h
-  COMPILE_OPTIONS
-    ${bitcode_link_flags}
-    -O2
-  VENDOR
-)
-
-add_entrypoint_object(
-  powif
-  SRCS
-    powif.cpp
-  HDRS
-    ../powif.h
-  COMPILE_OPTIONS
-    ${bitcode_link_flags}
-    -O2
-  VENDOR
-)
-
-add_entrypoint_object(
-  sinh
-  SRCS
-    sinh.cpp
-  HDRS
-    ../sinh.h
-  COMPILE_OPTIONS
-    ${bitcode_link_flags}
-    -O2
-  VENDOR
-)
-
-add_entrypoint_object(
-  tanh
-  SRCS
-    tanh.cpp
-  HDRS
-    ../tanh.h
-  COMPILE_OPTIONS
-    ${bitcode_link_flags}
-    -O2
-  VENDOR
-)
-
 add_entrypoint_object(
   tgamma
   SRCS
@@ -454,7 +296,6 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${bitcode_link_flags}
     -O2
-  VENDOR
 )
 
 add_entrypoint_object(
@@ -466,7 +307,6 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${bitcode_link_flags}
     -O2
-  VENDOR
 )
 
 add_entrypoint_object(
@@ -478,7 +318,6 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${bitcode_link_flags}
     -O2
-  VENDOR
 )
 
 add_entrypoint_object(
@@ -490,5 +329,4 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${bitcode_link_flags}
     -O2
-  VENDOR
 )

@@ -20,11 +20,12 @@
 #include "llvm/MCA/HardwareUnits/LSUnit.h"
 #include "llvm/MCA/HardwareUnits/ResourceManager.h"
 #include "llvm/MCA/Support.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace mca {
 
-class SchedulerStrategy {
+class LLVM_ABI SchedulerStrategy {
 public:
   SchedulerStrategy() = default;
   virtual ~SchedulerStrategy();
@@ -37,7 +38,7 @@ public:
 };
 
 /// Default instruction selection strategy used by class Scheduler.
-class DefaultSchedulerStrategy : public SchedulerStrategy {
+class LLVM_ABI DefaultSchedulerStrategy : public SchedulerStrategy {
   /// This method ranks instructions based on their age, and the number of known
   /// users. The lower the rank value, the better.
   int computeRank(const InstRef &Lhs) const {
@@ -131,7 +132,7 @@ class Scheduler : public HardwareUnit {
   /// Verify the given selection strategy and set the Strategy member
   /// accordingly.  If no strategy is provided, the DefaultSchedulerStrategy is
   /// used.
-  void initializeStrategy(std::unique_ptr<SchedulerStrategy> S);
+  LLVM_ABI void initializeStrategy(std::unique_ptr<SchedulerStrategy> S);
 
   /// Issue an instruction without updating the ready queue.
   void issueInstructionImpl(
@@ -183,7 +184,7 @@ public:
   ///
   /// This method is also responsible for setting field HadTokenStall if
   /// IR cannot be dispatched to the Scheduler due to unavailable resources.
-  Status isAvailable(const InstRef &IR);
+  LLVM_ABI Status isAvailable(const InstRef &IR);
 
   /// Reserves buffer and LSUnit queue resources that are necessary to issue
   /// this instruction.
@@ -195,20 +196,19 @@ public:
   /// If IR is a memory operation, then the Scheduler queries the LS unit to
   /// obtain a LS token. An LS token is used internally to track memory
   /// dependencies.
-  bool dispatch(InstRef &IR);
+  LLVM_ABI bool dispatch(InstRef &IR);
 
   /// Issue an instruction and populates a vector of used pipeline resources,
   /// and a vector of instructions that transitioned to the ready state as a
   /// result of this event.
-  void issueInstruction(
+  LLVM_ABI void issueInstruction(
       InstRef &IR,
       SmallVectorImpl<std::pair<ResourceRef, ReleaseAtCycles>> &Used,
-      SmallVectorImpl<InstRef> &Pending,
-      SmallVectorImpl<InstRef> &Ready);
+      SmallVectorImpl<InstRef> &Pending, SmallVectorImpl<InstRef> &Ready);
 
   /// Returns true if IR has to be issued immediately, or if IR is a zero
   /// latency instruction.
-  bool mustIssueImmediately(const InstRef &IR) const;
+  LLVM_ABI bool mustIssueImmediately(const InstRef &IR) const;
 
   /// This routine notifies the Scheduler that a new cycle just started.
   ///
@@ -222,10 +222,10 @@ public:
   /// disjoint. An instruction is allowed to transition from the WAIT state to
   /// the READY state (going through the PENDING state) within a single cycle.
   /// That means, instructions may appear in both the Pending and Ready set.
-  void cycleEvent(SmallVectorImpl<ResourceRef> &Freed,
-                  SmallVectorImpl<InstRef> &Executed,
-                  SmallVectorImpl<InstRef> &Pending,
-                  SmallVectorImpl<InstRef> &Ready);
+  LLVM_ABI void cycleEvent(SmallVectorImpl<ResourceRef> &Freed,
+                           SmallVectorImpl<InstRef> &Executed,
+                           SmallVectorImpl<InstRef> &Pending,
+                           SmallVectorImpl<InstRef> &Ready);
 
   /// Convert a resource mask into a valid llvm processor resource identifier.
   ///
@@ -238,7 +238,7 @@ public:
   /// Select the next instruction to issue from the ReadySet. Returns an invalid
   /// instruction reference if there are no ready instructions, or if processor
   /// resources are not available.
-  InstRef select();
+  LLVM_ABI InstRef select();
 
   bool isReadySetEmpty() const { return ReadySet.empty(); }
   bool isWaitSetEmpty() const { return WaitSet.empty(); }
@@ -248,13 +248,13 @@ public:
   /// populated by instructions that were not issued because of unsolved
   /// register dependencies.  Vector MemDeps is populated by instructions that
   /// were not issued because of unsolved memory dependencies.
-  void analyzeDataDependencies(SmallVectorImpl<InstRef> &RegDeps,
-                               SmallVectorImpl<InstRef> &MemDeps);
+  LLVM_ABI void analyzeDataDependencies(SmallVectorImpl<InstRef> &RegDeps,
+                                        SmallVectorImpl<InstRef> &MemDeps);
 
   /// Returns a mask of busy resources, and populates vector Insts with
   /// instructions that could not be issued to the underlying pipelines because
   /// not all pipeline resources were available.
-  uint64_t analyzeResourcePressure(SmallVectorImpl<InstRef> &Insts);
+  LLVM_ABI uint64_t analyzeResourcePressure(SmallVectorImpl<InstRef> &Insts);
 
   // Returns true if the dispatch logic couldn't dispatch a full group due to
   // unavailable scheduler and/or LS resources.

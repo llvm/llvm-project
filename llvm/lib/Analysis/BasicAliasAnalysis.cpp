@@ -199,7 +199,17 @@ CaptureAnalysis::~CaptureAnalysis() = default;
 bool SimpleCaptureAnalysis::isNotCapturedBefore(const Value *Object,
                                                 const Instruction *I,
                                                 bool OrAt) {
-  return isNonEscapingLocalObject(Object, &IsCapturedCache);
+  if (!isIdentifiedFunctionLocal(Object))
+    return false;
+
+  auto [CacheIt, Inserted] = IsCapturedCache.insert({Object, false});
+  if (!Inserted)
+    return CacheIt->second;
+
+  bool Ret = !capturesAnything(PointerMayBeCaptured(
+      Object, /*ReturnCaptures=*/false, CaptureComponents::Provenance));
+  CacheIt->second = Ret;
+  return Ret;
 }
 
 static bool isNotInCycle(const Instruction *I, const DominatorTree *DT,

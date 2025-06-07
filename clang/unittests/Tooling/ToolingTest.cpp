@@ -771,25 +771,6 @@ TEST(ClangToolTest, BaseVirtualFileSystemUsage) {
   EXPECT_EQ(0, Tool.run(Action.get()));
 }
 
-// Check -cc1 command doesn't fail.
-TEST(ClangToolTest, CC1Arg) {
-  FixedCompilationDatabase Compilations("/", {"-cc1"});
-  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
-      new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
-  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
-  OverlayFileSystem->pushOverlay(InMemoryFileSystem);
-
-  InMemoryFileSystem->addFile(
-      "a.cpp", 0, llvm::MemoryBuffer::getMemBuffer("int main() {}"));
-
-  ClangTool Tool(Compilations, std::vector<std::string>(1, "a.cpp"),
-                 std::make_shared<PCHContainerOperations>(), OverlayFileSystem);
-  std::unique_ptr<FrontendActionFactory> Action(
-      newFrontendActionFactory<SyntaxOnlyAction>());
-  EXPECT_EQ(0, Tool.run(Action.get()));
-}
-
 // Check getClangStripDependencyFileAdjuster doesn't strip args after -MD/-MMD.
 TEST(ClangToolTest, StripDependencyFileAdjuster) {
   FixedCompilationDatabase Compilations("/", {"-MD", "-c", "-MMD", "-w"});

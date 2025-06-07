@@ -1,4 +1,4 @@
-//===- HashRecognize.h ------------------------------------------*- C++ -*-===//
+//===- HashRecognize.cpp ----------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -274,7 +274,7 @@ struct RecurrenceInfo {
   RecurrenceInfo(const Loop &L) : L(L) {}
   operator bool() const { return BO; }
 
-  void print(raw_ostream &OS, unsigned Indent) const {
+  void print(raw_ostream &OS, unsigned Indent = 0) const {
     OS.indent(Indent) << "Phi: ";
     Phi->print(OS);
     OS << "\n";
@@ -293,6 +293,10 @@ struct RecurrenceInfo {
       OS << "\n";
     }
   }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const { print(dbgs()); }
+#endif
 
   bool matchSimpleRecurrence(const PHINode *P);
   bool matchConditionalRecurrence(
@@ -628,6 +632,10 @@ void CRCTable::print(raw_ostream &OS) const {
   }
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void CRCTable::dump() const { print(dbgs()); }
+#endif
+
 void HashRecognize::print(raw_ostream &OS) const {
   if (!L.isInnermost())
     return;
@@ -670,6 +678,10 @@ void HashRecognize::print(raw_ostream &OS) const {
   OS.indent(2) << "Computed CRC lookup table:\n";
   genSarwateTable(Info.RHS, Info.ByteOrderSwapped).print(OS);
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void HashRecognize::dump() const { print(dbgs()); }
+#endif
 
 HashRecognize::HashRecognize(const Loop &L, ScalarEvolution &SE)
     : L(L), SE(SE) {}

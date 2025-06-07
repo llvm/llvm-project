@@ -405,25 +405,15 @@ define i16 @test_sqrdmlah_v1i16(i16 %acc, i16 %x, i16 %y) {
 }
 
 define i32 @test_sqrdmlah_v1i32(i32 %acc, i32 %x, i32 %y) {
-; CHECK-SD-LABEL: test_sqrdmlah_v1i32:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fmov s0, w1
-; CHECK-SD-NEXT:    fmov s1, w2
-; CHECK-SD-NEXT:    sqrdmulh v0.4s, v0.4s, v1.4s
-; CHECK-SD-NEXT:    fmov s1, w0
-; CHECK-SD-NEXT:    sqadd v0.4s, v1.4s, v0.4s
-; CHECK-SD-NEXT:    fmov w0, s0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_sqrdmlah_v1i32:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov v0.s[0], w1
-; CHECK-GI-NEXT:    mov v1.s[0], w2
-; CHECK-GI-NEXT:    sqrdmulh v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    mov v1.s[0], w0
-; CHECK-GI-NEXT:    sqadd v0.4s, v1.4s, v0.4s
-; CHECK-GI-NEXT:    fmov w0, s0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_sqrdmlah_v1i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s0, w1
+; CHECK-NEXT:    fmov s1, w2
+; CHECK-NEXT:    sqrdmulh v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    sqadd v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
   %x_vec = insertelement <4 x i32> undef, i32 %x, i64 0
   %y_vec = insertelement <4 x i32> undef, i32 %y, i64 0
   %prod_vec = call <4 x i32> @llvm.aarch64.neon.sqrdmulh.v4i32(<4 x i32> %x_vec,  <4 x i32> %y_vec)
@@ -454,25 +444,15 @@ define i16 @test_sqrdmlsh_v1i16(i16 %acc, i16 %x, i16 %y) {
 }
 
 define i32 @test_sqrdmlsh_v1i32(i32 %acc, i32 %x, i32 %y) {
-; CHECK-SD-LABEL: test_sqrdmlsh_v1i32:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fmov s0, w1
-; CHECK-SD-NEXT:    fmov s1, w2
-; CHECK-SD-NEXT:    sqrdmulh v0.4s, v0.4s, v1.4s
-; CHECK-SD-NEXT:    fmov s1, w0
-; CHECK-SD-NEXT:    sqsub v0.4s, v1.4s, v0.4s
-; CHECK-SD-NEXT:    fmov w0, s0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_sqrdmlsh_v1i32:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov v0.s[0], w1
-; CHECK-GI-NEXT:    mov v1.s[0], w2
-; CHECK-GI-NEXT:    sqrdmulh v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    mov v1.s[0], w0
-; CHECK-GI-NEXT:    sqsub v0.4s, v1.4s, v0.4s
-; CHECK-GI-NEXT:    fmov w0, s0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_sqrdmlsh_v1i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s0, w1
+; CHECK-NEXT:    fmov s1, w2
+; CHECK-NEXT:    sqrdmulh v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    sqsub v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
   %x_vec = insertelement <4 x i32> undef, i32 %x, i64 0
   %y_vec = insertelement <4 x i32> undef, i32 %y, i64 0
   %prod_vec = call <4 x i32> @llvm.aarch64.neon.sqrdmulh.v4i32(<4 x i32> %x_vec,  <4 x i32> %y_vec)

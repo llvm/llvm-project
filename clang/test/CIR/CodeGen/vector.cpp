@@ -1070,3 +1070,58 @@ void foo17() {
 // OGCG: %[[VEC_A:.*]] = alloca <2 x double>, align 16
 // OGCG: %[[TMP:.*]] = load <2 x double>, ptr %[[VEC_A]], align 16
 // OGCG: %[[RES:.*]]= fptoui <2 x double> %[[TMP]] to <2 x i16>
+
+void foo20() {
+  vi4 a;
+  vi4 b;
+  vi4 c;
+  vi4 r = c ? a : b;
+}
+
+// CIR: %[[RES:.*]] = cir.vec.ternary({{.*}}, {{.*}}, {{.*}}) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+
+// LLVM: %[[VEC_COND:.*]] = icmp ne <4 x i32> {{.*}}, zeroinitializer
+// LLVM: %[[RES:.*]] = select <4 x i1> %[[VEC_COND]], <4 x i32> {{.*}}, <4 x i32> {{.*}}
+
+// OGCG: %[[VEC_COND:.*]] = icmp ne <4 x i32> {{.*}}, zeroinitializer
+// OGCG: %[[RES:.*]] = select <4 x i1> %[[VEC_COND]], <4 x i32> {{.*}}, <4 x i32> {{.*}}
+
+void foo21() {
+  vi4 a;
+  vi4 b;
+  vi4 r = (a > b) ? (a - b) : (b - a);
+}
+
+// CIR: %[[VEC_COND:.*]] = cir.vec.cmp(gt, {{.*}}, {{.*}}) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+// CIR: %[[LHS:.*]] = cir.binop(sub, {{.*}}, {{.*}}) : !cir.vector<4 x !s32i>
+// CIR: %[[RHS:.*]] = cir.binop(sub, {{.*}}, {{.*}}) : !cir.vector<4 x !s32i>
+// CIR: %[[RES:.*]] = cir.vec.ternary(%[[VEC_COND]], %[[LHS]], %[[RHS]]) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+
+// LLVM: %[[CMP:.*]] = icmp sgt <4 x i32> {{.*}}, {{.*}}
+// LLVM: %[[SEXT:.*]] = sext <4 x i1> %[[CMP]] to <4 x i32>
+// LLVM: %[[LHS:.*]] = sub <4 x i32> {{.*}}, {{.*}}
+// LLVM: %[[RHS:.*]] = sub <4 x i32> {{.*}}, {{.*}}
+// LLVM: %[[VEC_COND:.*]] = icmp ne <4 x i32> %[[SEXT]], zeroinitializer
+// LLVM: %[[RES:.*]] = select <4 x i1> %[[VEC_COND]], <4 x i32> %[[LHS]], <4 x i32> %[[RHS]]
+
+// OGCG: %[[CMP:.*]] = icmp sgt <4 x i32> {{.*}}, {{.*}}
+// OGCG: %[[SEXT:.*]] = sext <4 x i1> %[[CMP]] to <4 x i32>
+// OGCG: %[[LHS:.*]] = sub <4 x i32> {{.*}}, {{.*}}
+// OGCG: %[[RHS:.*]] = sub <4 x i32> {{.*}}, {{.*}}
+// OGCG: %[[VEC_COND:.*]] = icmp ne <4 x i32> %[[SEXT]], zeroinitializer
+// OGCG: %[[RES:.*]] = select <4 x i1> %[[VEC_COND]], <4 x i32> %[[LHS]], <4 x i32> %[[RHS]]
+
+void foo22() {
+  vf4 a;
+  vf4 b;
+  vi4 c;
+  vf4 r = c ? a : b;
+}
+
+// CIR: %[[RES:.*]] = cir.vec.ternary({{.*}}, {{.*}}, {{.*}}) : !cir.vector<4 x !s32i>, !cir.vector<4 x !cir.float>
+
+// LLVM: %[[VEC_COND:.*]] = icmp ne <4 x i32> {{.*}}, zeroinitializer
+// LLVM: %[[RES:.*]] = select <4 x i1> %[[VEC_COND]], <4 x float> {{.*}}, <4 x float> {{.*}}
+
+// OGCG: %[[VEC_COND:.*]] = icmp ne <4 x i32> {{.*}}, zeroinitializer
+// OGCG: %[[RES:.*]] = select <4 x i1> %[[VEC_COND]], <4 x float> {{.*}}, <4 x float> {{.*}}

@@ -1240,7 +1240,10 @@ void DAP::EventThread() {
             // automatically restarted.
             if (!lldb::SBProcess::GetRestartedFromEvent(event)) {
               SendStdOutStdErr(*this, process);
-              SendThreadStoppedEvent(*this);
+              if (llvm::Error err = SendThreadStoppedEvent(*this))
+                DAP_LOG_ERROR(log, std::move(err),
+                              "({1}) reporting thread stopped: {0}",
+                              transport.GetClientName());
             }
             break;
           case lldb::eStateRunning:

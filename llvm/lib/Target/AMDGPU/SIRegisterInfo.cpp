@@ -4060,9 +4060,9 @@ SIRegisterInfo::getNumDefinedPhysRegs(const MachineRegisterInfo &MRI,
                                       const TargetRegisterClass &RC) const {
   for (MCPhysReg Reg : reverse(RC.getRegisters())) {
     for (MCRegAliasIterator AI(Reg, this, true); AI.isValid(); ++AI) {
-      if (std::any_of(
-              MRI.def_instr_begin(*AI), MRI.def_instr_end(),
-              [](const MachineInstr &MI) { return !MI.isImplicitDef(); }))
+      if (llvm::any_of(MRI.def_instructions(*AI), [](const MachineInstr &MI) {
+            return !MI.isImplicitDef();
+          }))
         return getHWRegIndex(Reg) + 1;
     }
   }

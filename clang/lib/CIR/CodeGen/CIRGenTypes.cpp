@@ -239,9 +239,10 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
 
   // Force conversion of non-virtual base classes recursively.
   if (const auto *cxxRecordDecl = dyn_cast<CXXRecordDecl>(rd)) {
-    if (cxxRecordDecl->getNumBases() > 0) {
-      cgm.errorNYI(rd->getSourceRange(),
-                   "convertRecordDeclType: derived CXXRecordDecl");
+    for (const auto &base : cxxRecordDecl->bases()) {
+      if (base.isVirtual())
+        continue;
+      convertRecordDeclType(base.getType()->castAs<RecordType>()->getDecl());
     }
   }
 
@@ -387,6 +388,13 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     break;
   }
 
+  case Type::Complex: {
+    const auto *ct = cast<clang::ComplexType>(ty);
+    mlir::Type elementTy = convertType(ct->getElementType());
+    resultType = cir::ComplexType::get(elementTy);
+    break;
+  }
+
   case Type::LValueReference:
   case Type::RValueReference: {
     const ReferenceType *refTy = cast<ReferenceType>(ty);
@@ -424,8 +432,6 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   }
 
   case Type::Enum: {
-    // TODO(cir): Implement updateCompletedType for enums.
-    assert(!cir::MissingFeatures::updateCompletedType());
     const EnumDecl *ED = cast<EnumType>(ty)->getDecl();
     if (auto integerType = ED->getIntegerType(); !integerType.isNull())
       return convertType(integerType);
@@ -577,4 +583,41 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeGlobalDeclaration(GlobalDecl gd) {
   }
 
   return arrangeFunctionDeclaration(fd);
+}
+
+// When we find the full definition for a TagDecl, replace the 'opaque' type we
+// previously made for it if applicable.
+void CIRGenTypes::updateCompletedType(const TagDecl *td) {
+  // If this is an enum being completed, then we flush all non-struct types
+  // from the cache. This allows function types and other things that may be
+  // derived from the enum to be recomputed.
+  if (const auto *ed = dyn_cast<EnumDecl>(td)) {
+    // Classic codegen clears the type cache if it contains an entry for this
+    // enum type that doesn't use i32 as the underlying type, but I can't find
+    // a test case that meets that condition. C++ doesn't allow forward
+    // declaration of enums, and C doesn't allow an incomplete forward
+    // declaration with a non-default type.
+    assert(
+        !typeCache.count(ed->getTypeForDecl()) ||
+        (convertType(ed->getIntegerType()) == typeCache[ed->getTypeForDecl()]));
+    // If necessary, provide the full definition of a type only used with a
+    // declaration so far.
+    assert(!cir::MissingFeatures::generateDebugInfo());
+    return;
+  }
+
+  // If we completed a RecordDecl that we previously used and converted to an
+  // anonymous type, then go ahead and complete it now.
+  const auto *rd = cast<RecordDecl>(td);
+  if (rd->isDependentType())
+    return;
+
+  // Only complete if we converted it already. If we haven't converted it yet,
+  // we'll just do it lazily.
+  if (recordDeclTypes.count(astContext.getTagDeclType(rd).getTypePtr()))
+    convertRecordDeclType(rd);
+
+  // If necessary, provide the full definition of a type only used with a
+  // declaration so far.
+  assert(!cir::MissingFeatures::generateDebugInfo());
 }

@@ -883,6 +883,21 @@ cc_library(
 )
 
 cc_library(
+    name = "TestMemRefToLLVMWithTransforms",
+    srcs = glob(["lib/Conversion/MemRefToLLVM/*.cpp"]),
+    deps = [
+        "//mlir:FuncDialect",
+        "//mlir:FuncToLLVM",
+        "//mlir:IR",
+        "//mlir:LLVMCommonConversion",
+        "//mlir:LLVMDialect",
+        "//mlir:MemRefToLLVM",
+        "//mlir:MemRefTransforms",
+        "//mlir:Pass",
+    ],
+)
+
+cc_library(
     name = "TestMesh",
     srcs = glob(["lib/Dialect/Mesh/**/*.cpp"]),
     includes = ["lib/Dialect/Test"],

@@ -7,6 +7,7 @@
 
 set(LLVM_TARGET_DEFINITIONS ${CMAKE_CURRENT_SOURCE_DIR}/OffloadAPI.td)
 set(files_to_copy "")
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/generated)
 
 macro(offload_tablegen file)
     tablegen(OFFLOAD generated/${file}.gen ${ARGN})
@@ -42,5 +43,7 @@ else()
             COMMAND ${CMAKE_COMMAND} -E copy_if_different generated/${file}.gen ${CMAKE_CURRENT_BINARY_DIR}/${file}
             DEPENDS generated/${file}.gen
         )
+        add_custom_target(OffloadAPI.${file} DEPENDS ${file})
+        add_dependencies(OffloadAPI OffloadAPI.${file})
     endforeach()
 endif()

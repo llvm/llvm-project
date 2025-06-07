@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -emit-llvm -o - %s | FileCheck %s
 
 // CHECK: !dx.rootsignatures = !{![[#EMPTY_ENTRY:]], ![[#DT_ENTRY:]],
-// CHECK-SAME: ![[#RF_ENTRY:]], ![[#RC_ENTRY:]], ![[#RD_ENTRY:]]}
+// CHECK-SAME: ![[#RF_ENTRY:]], ![[#RC_ENTRY:]], ![[#RD_ENTRY:]], ![[#SS_ENTRY:]]}
 
 // CHECK: ![[#EMPTY_ENTRY]] = !{ptr @EmptyEntry, ![[#EMPTY:]]}
 // CHECK: ![[#EMPTY]] = !{}
@@ -65,6 +65,40 @@ void RootConstantsEntry() {}
 [shader("compute"), RootSignature(SampleRootDescriptors)]
 [numthreads(1,1,1)]
 void RootDescriptorsEntry() {}
+
+// CHECK: ![[#SS_ENTRY]] = !{ptr @StaticSamplerEntry, ![[#SS_RS:]]}
+// CHECK: ![[#SS_RS]] = !{![[#STATIC_SAMPLER:]]}
+
+// checking filter = 0x4
+// CHECK: ![[#STATIC_SAMPLER]] = !{!"StaticSampler", i32 4,
+
+// checking texture address[U|V|W]
+// CHECK-SAME: i32 2, i32 3, i32 5,
+
+// checking mipLODBias, maxAnisotropy, comparisonFunc, borderColor
+// CHECK-SAME: float 0x40403999A0000000, i32 9, i32 3, i32 2,
+
+// checking minLOD, maxLOD
+// CHECK-SAME: float -1.280000e+02, float 1.280000e+02,
+
+// checking register, space and visibility
+// CHECK-SAME: i32 42, i32 0, i32 0}
+
+#define SampleStaticSampler \
+  "StaticSampler(s42, " \
+  " filter = FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT, " \
+  " addressU = TEXTURE_ADDRESS_MIRROR, " \
+  " addressV = TEXTURE_ADDRESS_CLAMP, " \
+  " addressW = TEXTURE_ADDRESS_MIRRORONCE, " \
+  " mipLODBias = 32.45f, maxAnisotropy = 9, " \
+  " comparisonFunc = COMPARISON_EQUAL, " \
+  " borderColor = STATIC_BORDER_COLOR_OPAQUE_WHITE, " \
+  " minLOD = -128.f, maxLOD = 128.f, " \
+  " space = 0, visibility = SHADER_VISIBILITY_ALL, " \
+  ")"
+[shader("compute"), RootSignature(SampleStaticSampler)]
+[numthreads(1,1,1)]
+void StaticSamplerEntry() {}
 
 // Sanity test to ensure no root is added for this function as there is only
 // two entries in !dx.roosignatures

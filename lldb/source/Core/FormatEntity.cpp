@@ -124,6 +124,7 @@ constexpr Definition g_function_child_entries[] = {
     Definition("initial-function", EntryType::FunctionInitial),
     Definition("changed", EntryType::FunctionChanged),
     Definition("is-optimized", EntryType::FunctionIsOptimized),
+    Definition("is-inlined", EntryType::FunctionIsInlined),
     Definition("prefix", EntryType::FunctionPrefix),
     Definition("scope", EntryType::FunctionScope),
     Definition("basename", EntryType::FunctionBasename),
@@ -402,6 +403,7 @@ const char *FormatEntity::Entry::TypeToCString(Type t) {
     ENUM_TO_CSTR(FunctionInitial);
     ENUM_TO_CSTR(FunctionChanged);
     ENUM_TO_CSTR(FunctionIsOptimized);
+    ENUM_TO_CSTR(FunctionIsInlined);
     ENUM_TO_CSTR(LineEntryFile);
     ENUM_TO_CSTR(LineEntryLineNumber);
     ENUM_TO_CSTR(LineEntryColumn);
@@ -1926,6 +1928,10 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
       is_optimized = true;
     }
     return is_optimized;
+  }
+
+  case Entry::Type::FunctionIsInlined: {
+    return sc && sc->block && sc->block->GetInlinedFunctionInfo();
   }
 
   case Entry::Type::FunctionInitial:
