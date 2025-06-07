@@ -6803,7 +6803,7 @@ SDValue LoongArchTargetLowering::LowerFormalArguments(
   else
     analyzeInputArgs(MF, CCInfo, Ins, /*IsRet=*/false, CC_LoongArch);
 
-  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
+  for (unsigned i = 0, e = ArgLocs.size(), InsIdx = 0; i != e; ++i, ++InsIdx) {
     CCValAssign &VA = ArgLocs[i];
     SDValue ArgValue;
     // Passing f64 on LA32D with a soft float ABI must be handled as a special
@@ -6812,7 +6812,7 @@ SDValue LoongArchTargetLowering::LowerFormalArguments(
       assert(VA.needsCustom());
       ArgValue = unpackF64OnLA32DSoftABI(DAG, Chain, VA, ArgLocs[++i], DL);
     } else if (VA.isRegLoc())
-      ArgValue = unpackFromRegLoc(DAG, Chain, VA, DL, Ins[i], *this);
+      ArgValue = unpackFromRegLoc(DAG, Chain, VA, DL, Ins[InsIdx], *this);
     else
       ArgValue = unpackFromMemLoc(DAG, Chain, VA, DL);
     if (VA.getLocInfo() == CCValAssign::Indirect) {
@@ -6820,17 +6820,18 @@ SDValue LoongArchTargetLowering::LowerFormalArguments(
       // load all parts of it here (using the same address).
       InVals.push_back(DAG.getLoad(VA.getValVT(), DL, Chain, ArgValue,
                                    MachinePointerInfo()));
-      unsigned ArgIndex = Ins[i].OrigArgIndex;
-      unsigned ArgPartOffset = Ins[i].PartOffset;
+      unsigned ArgIndex = Ins[InsIdx].OrigArgIndex;
+      unsigned ArgPartOffset = Ins[InsIdx].PartOffset;
       assert(ArgPartOffset == 0);
-      while (i + 1 != e && Ins[i + 1].OrigArgIndex == ArgIndex) {
+      while (i + 1 != e && Ins[InsIdx + 1].OrigArgIndex == ArgIndex) {
         CCValAssign &PartVA = ArgLocs[i + 1];
-        unsigned PartOffset = Ins[i + 1].PartOffset - ArgPartOffset;
+        unsigned PartOffset = Ins[InsIdx + 1].PartOffset - ArgPartOffset;
         SDValue Offset = DAG.getIntPtrConstant(PartOffset, DL);
         SDValue Address = DAG.getNode(ISD::ADD, DL, PtrVT, ArgValue, Offset);
         InVals.push_back(DAG.getLoad(PartVA.getValVT(), DL, Chain, Address,
                                      MachinePointerInfo()));
         ++i;
+        ++InsIdx;
       }
       continue;
     }
