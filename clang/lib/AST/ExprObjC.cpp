@@ -273,7 +273,7 @@ QualType ObjCMessageExpr::getCallReturnType(ASTContext &Ctx) const {
   return Ctx.getReferenceQualifiedType(this);
 }
 
-std::pair<const NamedDecl *, const Attr *>
+std::pair<const NamedDecl *, const WarnUnusedResultAttr *>
 ObjCMessageExpr::getUnusedResultAttr(ASTContext &Ctx) const {
   // If the callee is marked nodiscard, return that attribute
   if (const ObjCMethodDecl *MD = getMethodDecl())

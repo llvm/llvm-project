@@ -2,13 +2,13 @@
 
 struct [[nodiscard]] expected {};
 
-typedef expected E;
+typedef struct expected E;
 
 @interface INTF
 - (int) a [[nodiscard]];
 + (int) b [[nodiscard]];
-- (expected) c;
-+ (expected) d;
+- (struct expected) c;
++ (struct expected) d;
 - (E) e;
 + (E) f;
 - (void) g [[nodiscard]]; // expected-warning {{attribute 'nodiscard' cannot be applied to Objective-C method without return value}}

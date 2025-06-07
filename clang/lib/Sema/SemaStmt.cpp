@@ -295,8 +295,7 @@ void DiagnoseUnused(Sema &S, const Expr *E, std::optional<unsigned> DiagID) {
       return;
 
     auto [OffendingDecl, A] = CE->getUnusedResultAttr(S.Context);
-    if (DiagnoseNoDiscard(S, OffendingDecl,
-                          cast_or_null<WarnUnusedResultAttr>(A), Loc, R1, R2,
+    if (DiagnoseNoDiscard(S, OffendingDecl, A, Loc, R1, R2,
                           /*isCtor=*/false))
       return;
 
@@ -346,8 +345,7 @@ void DiagnoseUnused(Sema &S, const Expr *E, std::optional<unsigned> DiagID) {
     }
 
     auto [OffendingDecl, A] = ME->getUnusedResultAttr(S.Context);
-    if (DiagnoseNoDiscard(S, OffendingDecl,
-                          cast_or_null<WarnUnusedResultAttr>(A), Loc, R1, R2,
+    if (DiagnoseNoDiscard(S, OffendingDecl, A, Loc, R1, R2,
                           /*isCtor=*/false))
       return;
   } else if (const PseudoObjectExpr *POE = dyn_cast<PseudoObjectExpr>(E)) {
