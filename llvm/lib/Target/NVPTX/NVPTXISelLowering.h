@@ -72,6 +72,13 @@ enum NodeType : unsigned {
   /// converting it to a vector.
   UNPACK_VECTOR,
 
+  /// These nodes are equivalent to the corresponding ISD nodes except that
+  /// they truncate to an i8 output and then sign or zero extend that value back
+  /// to i16. This is a workaround for the fact that NVPTX does not consider
+  /// i8 to be a legal type. TODO: consider making i8 legal and removing these.
+  TRUNCATE_SSAT_U_I8,
+  TRUNCATE_SSAT_S_I8,
+
   FCOPYSIGN,
   DYNAMIC_STACKALLOC,
   STACKRESTORE,
