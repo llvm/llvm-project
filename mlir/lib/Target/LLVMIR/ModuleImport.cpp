@@ -2636,6 +2636,10 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
     funcOp.setTargetFeaturesAttr(
         LLVM::TargetFeaturesAttr::get(context, attr.getValueAsString()));
 
+  if (llvm::Attribute attr = func->getFnAttribute("prefer-vector-width");
+      attr.isStringAttribute())
+    funcOp.setPreferVectorWidth(attr.getValueAsString());
+
   if (llvm::Attribute attr = func->getFnAttribute("unsafe-fp-math");
       attr.isStringAttribute())
     funcOp.setUnsafeFpMath(attr.getValueAsBool());

@@ -2586,9 +2586,12 @@ void CheckHelper::CheckProcBinding(
   }
   if (overridden) {
     if (isInaccessibleDeferred) {
-      SayWithDeclaration(*overridden,
-          "Override of PRIVATE DEFERRED '%s' must appear in its module"_err_en_US,
-          symbol.name());
+      evaluate::AttachDeclaration(
+          Warn(common::LanguageFeature::InaccessibleDeferredOverride,
+              symbol.name(),
+              "Override of PRIVATE DEFERRED '%s' should appear in its module"_warn_en_US,
+              symbol.name()),
+          *overridden);
     }
     if (overridden->attrs().test(Attr::NON_OVERRIDABLE)) {
       SayWithDeclaration(*overridden,

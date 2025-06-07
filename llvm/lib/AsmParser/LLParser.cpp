@@ -44,6 +44,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ModRef.h"
@@ -63,7 +64,7 @@ static cl::opt<bool> AllowIncompleteIR(
         "Allow incomplete IR on a best effort basis (references to unknown "
         "metadata will be dropped)"));
 
-extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
+LLVM_ABI extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
 
 static std::string getTypeString(Type *T) {
   std::string Result;

@@ -15,6 +15,7 @@
 #define LLVM_CLANG_LIB_CIR_CIRGENCXXABI_H
 
 #include "CIRGenCall.h"
+#include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 
 #include "clang/AST/Mangle.h"
@@ -34,7 +35,17 @@ public:
       : cgm(cgm), mangleContext(cgm.getASTContext().createMangleContext()) {}
   virtual ~CIRGenCXXABI();
 
+  void setCXXABIThisValue(CIRGenFunction &cgf, mlir::Value thisPtr);
+
 public:
+  clang::ImplicitParamDecl *getThisDecl(CIRGenFunction &cgf) {
+    return cgf.cxxabiThisDecl;
+  }
+
+  /// Emit the ABI-specific prolog for the function
+  virtual void emitInstanceFunctionProlog(SourceLocation Loc,
+                                          CIRGenFunction &cgf) = 0;
+
   /// Get the type of the implicit "this" parameter used by a method. May return
   /// zero if no specific type is applicable, e.g. if the ABI expects the "this"
   /// parameter to point to some artificial offset in a complete object due to
@@ -46,6 +57,9 @@ public:
 
   /// Build a parameter variable suitable for 'this'.
   void buildThisParam(CIRGenFunction &cgf, FunctionArgList &params);
+
+  /// Loads the incoming C++ this pointer as it was passed by the caller.
+  mlir::Value loadIncomingCXXThis(CIRGenFunction &cgf);
 
   /// Returns true if the given constructor or destructor is one of the kinds
   /// that the ABI says returns 'this' (only applies when called non-virtually

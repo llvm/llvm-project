@@ -690,7 +690,6 @@ _LIBCPP_PUSH_MACROS
 #  endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 // basic_string
 
@@ -3435,8 +3434,8 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocat
 
   if (__fits_in_sso(__target_capacity)) {
     __annotation_guard __g(*this);
-    traits_type::copy(std::__to_address(__get_short_pointer()), std::__to_address(__ptr), __size + 1);
     __set_short_size(__size);
+    traits_type::copy(std::__to_address(__get_short_pointer()), std::__to_address(__ptr), __size + 1);
     __alloc_traits::deallocate(__alloc_, __ptr, __cap);
     return;
   }
@@ -4009,7 +4008,6 @@ inline constexpr bool __format::__enable_insertable<std::basic_string<wchar_t>> 
 
 #  endif
 
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

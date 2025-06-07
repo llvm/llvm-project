@@ -174,6 +174,7 @@ def AssumeAlignmentOp : MemRef_Op<"assume_alignment", [
   }];
 
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

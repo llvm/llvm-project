@@ -98,6 +98,8 @@ Type RecordType::parse(mlir::AsmParser &parser) {
     kind = RecordKind::Struct;
   else if (parser.parseOptionalKeyword("union").succeeded())
     kind = RecordKind::Union;
+  else if (parser.parseOptionalKeyword("class").succeeded())
+    kind = RecordKind::Class;
   else {
     parser.emitError(loc, "unknown record type");
     return {};
@@ -167,6 +169,9 @@ void RecordType::print(mlir::AsmPrinter &printer) const {
     break;
   case RecordKind::Union:
     printer << "union ";
+    break;
+  case RecordKind::Class:
+    printer << "class ";
     break;
   }
 
@@ -553,17 +558,30 @@ LongDoubleType::getABIAlignment(const mlir::DataLayout &dataLayout,
 }
 
 //===----------------------------------------------------------------------===//
-// Floating-point and Float-point Vector type helpers
+// ComplexType Definitions
 //===----------------------------------------------------------------------===//
 
-bool cir::isFPOrFPVectorTy(mlir::Type t) {
-  assert(!cir::MissingFeatures::vectorType());
-  return isAnyFloatingPointType(t);
+llvm::TypeSize
+cir::ComplexType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
+                                    mlir::DataLayoutEntryListRef params) const {
+  // C17 6.2.5p13:
+  //   Each complex type has the same representation and alignment requirements
+  //   as an array type containing exactly two elements of the corresponding
+  //   real type.
+
+  return dataLayout.getTypeSizeInBits(getElementType()) * 2;
 }
 
-//===----------------------------------------------------------------------===//
-// FuncType Definitions
-//===----------------------------------------------------------------------===//
+uint64_t
+cir::ComplexType::getABIAlignment(const mlir::DataLayout &dataLayout,
+                                  mlir::DataLayoutEntryListRef params) const {
+  // C17 6.2.5p13:
+  //   Each complex type has the same representation and alignment requirements
+  //   as an array type containing exactly two elements of the corresponding
+  //   real type.
+
+  return dataLayout.getTypeABIAlignment(getElementType());
+}
 
 FuncType FuncType::clone(TypeRange inputs, TypeRange results) const {
   assert(results.size() == 1 && "expected exactly one result type");
@@ -693,17 +711,7 @@ mlir::LogicalResult cir::VectorType::verify(
     mlir::Type elementType, uint64_t size) {
   if (size == 0)
     return emitError() << "the number of vector elements must be non-zero";
-
-  // Check if it a valid FixedVectorType
-  if (mlir::isa<cir::PointerType, cir::FP128Type>(elementType))
-    return success();
-
-  // Check if it a valid VectorType
-  if (mlir::isa<cir::IntType>(elementType) ||
-      isAnyFloatingPointType(elementType))
-    return success();
-
-  return emitError() << "unsupported element type for CIR vector";
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

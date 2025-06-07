@@ -139,6 +139,13 @@ int main(int, char**) {
     };
     test_erase_exception_guarantee(erase_transparent);
   }
+  {
+    // LWG4239 std::string and C string literal
+    using M = std::flat_map<std::string, int, std::less<>>;
+    M m{{"alpha", 1}, {"beta", 2}, {"epsilon", 1}, {"eta", 3}, {"gamma", 3}};
+    auto n = m.erase("beta");
+    assert(n == 1);
+  }
 
   return 0;
 }

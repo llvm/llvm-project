@@ -151,6 +151,10 @@ public:
 
   const CIRGenFunctionInfo &arrangeGlobalDeclaration(GlobalDecl gd);
 
+  /// UpdateCompletedType - when we find the full definition for a TagDecl,
+  /// replace the 'opaque' type we previously made for it if applicable.
+  void updateCompletedType(const clang::TagDecl *td);
+
   /// Free functions are functions that are compatible with an ordinary C
   /// function pointer type.
   const CIRGenFunctionInfo &

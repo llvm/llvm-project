@@ -565,6 +565,12 @@ struct OverflowTracking {
   bool HasNSW = true;
   bool IsDisjoint = true;
 
+#ifndef NDEBUG
+  /// Opcode of merged instructions. All instructions passed to mergeFlags must
+  /// have the same opcode.
+  std::optional<unsigned> Opcode;
+#endif
+
   // Note: At the moment, users are responsible to manage AllKnownNonNegative
   // and AllKnownNonZero manually. AllKnownNonNegative can be true in a case
   // where one of the operands is negative, but one the operators is not NSW.

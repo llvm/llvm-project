@@ -54,7 +54,7 @@
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp -fopenmp-targets=spirv64-intel \
 // RUN: --sysroot=%S/Inputs/spirv-openmp/ %s 2>&1 | FileCheck --check-prefix=CHECK-GPULIB %s
-// CHECK-GPULIB: "-cc1" "-triple" "spirv64-intel"{{.*}}"-mlink-builtin-bitcode" "{{.*}}libomptarget-spirv64.bc"
+// CHECK-GPULIB: "-cc1" "-triple" "spirv64-intel"{{.*}}"-mlink-builtin-bitcode" "{{.*}}libomptarget-spirv.bc"
 
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=spirv64-intel \
 // RUN:        --libomptarget-spirv-bc-path=%t/ -nogpulib %s 2>&1 \

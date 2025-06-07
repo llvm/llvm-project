@@ -1678,15 +1678,12 @@ def : FlatLoadPat_D16 <FLAT_LOAD_SHORT_D16, load_d16_lo_flat, v2f16>;
 let OtherPredicates = [HasFlatGlobalInsts] in {
 
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_aext_8_global, i32>;
-defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_aext_8_global, i16>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_zext_8_global, i32>;
-defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_zext_8_global, i16>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_aext_16_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_nonext_16_global, i16>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_zext_16_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_zext_16_global, i16>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_SBYTE, atomic_load_sext_8_global, i32>;
-defm : GlobalFLATLoadPats <GLOBAL_LOAD_SBYTE, atomic_load_sext_8_global, i16>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, extloadi8_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, zextloadi8_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_SBYTE, sextloadi8_global, i32>;
@@ -1702,6 +1699,9 @@ defm : GlobalFLATLoadPats <GLOBAL_LOAD_SBYTE, sextloadi8_global, i16>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_SSHORT, atomic_load_sext_16_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_zext_16_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, load_global, i16>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_aext_8_global, i16>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_zext_8_global, i16>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_SBYTE, atomic_load_sext_8_global, i16>;
 }
 
 let OtherPredicates = [HasFlatGlobalInsts, D16PreservesUnusedBits], True16Predicate = UseRealTrue16Insts in {
@@ -1709,6 +1709,9 @@ defm : GlobalFLATLoadPats_D16_t16<"GLOBAL_LOAD_UBYTE_D16", extloadi8_global, i16
 defm : GlobalFLATLoadPats_D16_t16<"GLOBAL_LOAD_UBYTE_D16", zextloadi8_global, i16>;
 defm : GlobalFLATLoadPats_D16_t16<"GLOBAL_LOAD_SBYTE_D16", sextloadi8_global, i16>;
 defm : GlobalFLATLoadPats_D16_t16<"GLOBAL_LOAD_SHORT_D16", load_global, i16>;
+defm : GlobalFLATLoadPats_D16_t16<"GLOBAL_LOAD_UBYTE_D16", atomic_load_aext_8_global, i16>;
+defm : GlobalFLATLoadPats_D16_t16<"GLOBAL_LOAD_UBYTE_D16", atomic_load_zext_8_global, i16>;
+defm : GlobalFLATLoadPats_D16_t16<"GLOBAL_LOAD_SBYTE_D16", atomic_load_sext_8_global, i16>;
 defm : GlobalFLATStorePats_D16_t16<"GLOBAL_STORE_BYTE", truncstorei8_global, i16>;
 defm : GlobalFLATStorePats_D16_t16<"GLOBAL_STORE_SHORT", store_global, i16>;
 } // end OtherPredicates = [HasFlatGlobalInsts, D16PreservesUnusedBits], True16Predicate = UseRealTrue16Insts

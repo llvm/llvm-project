@@ -15,7 +15,6 @@
 #include <system_error>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 // class error_category
 
@@ -35,5 +34,4 @@ bool error_category::equivalent(const error_code& code, int condition) const noe
   return *this == code.category() && code.value() == condition;
 }
 
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

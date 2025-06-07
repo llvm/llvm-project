@@ -177,6 +177,12 @@ def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface", [DLTIQuer
       /*methodName=*/"getFunctionPointerAlignmentIdentifier",
       /*args=*/(ins "::mlir::MLIRContext *":$context)
     >,
+    InterfaceMethod<
+      /*description=*/"Returns the legal int widths identifier.",
+      /*retTy=*/"::mlir::StringAttr",
+      /*methodName=*/"getLegalIntWidthsIdentifier",
+      /*args=*/(ins "::mlir::MLIRContext *":$context)
+    >,
     // Implementations may override this if they have an efficient lookup
     // mechanism.
     InterfaceMethod<
@@ -569,6 +575,18 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return ::mlir::detail::getDefaultFunctionPointerAlignment(entry);
+      }]
+    >,
+    StaticInterfaceMethod<
+      /*description=*/"Returns the legal int widths, each width in bits computed "
+                      "using the relevant entries. The data layout object "
+                      "can be used for recursive queries.",
+      /*retTy=*/"Attribute",
+      /*methodName=*/"getLegalIntWidths",
+      /*args=*/(ins "::mlir::DataLayoutEntryInterface":$entry),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::detail::getDefaultLegalIntWidths(entry);
       }]
     >,
     StaticInterfaceMethod<

@@ -15,8 +15,10 @@
 #define LLVM_IR_RUNTIME_LIBCALLS_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
@@ -35,6 +37,18 @@ enum Libcall {
 #include "llvm/IR/RuntimeLibcalls.def"
 #undef HANDLE_LIBCALL
 };
+} // namespace RTLIB
+
+template <> struct enum_iteration_traits<RTLIB::Libcall> {
+  static constexpr bool is_iterable = true;
+};
+
+namespace RTLIB {
+
+// Return an iterator over all Libcall values.
+static inline auto libcalls() {
+  return enum_seq(static_cast<RTLIB::Libcall>(0), RTLIB::UNKNOWN_LIBCALL);
+}
 
 /// A simple container for information about the supported runtime calls.
 struct RuntimeLibcallsInfo {
@@ -67,9 +81,9 @@ struct RuntimeLibcallsInfo {
     return LibcallCallingConvs[Call];
   }
 
-  iterator_range<const char **> getLibcallNames() {
-    return llvm::make_range(LibcallRoutineNames,
-                            LibcallRoutineNames + RTLIB::UNKNOWN_LIBCALL);
+  ArrayRef<const char *> getLibcallNames() const {
+    // Trim UNKNOWN_LIBCALL from the end
+    return ArrayRef(LibcallRoutineNames).drop_back();
   }
 
 private:
@@ -96,7 +110,7 @@ private:
 
   /// Set default libcall names. If a target wants to opt-out of a libcall it
   /// should be placed here.
-  void initLibcalls(const Triple &TT);
+  LLVM_ABI void initLibcalls(const Triple &TT);
 };
 
 } // namespace RTLIB

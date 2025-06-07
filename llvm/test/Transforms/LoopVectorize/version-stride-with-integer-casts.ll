@@ -487,8 +487,7 @@ define void @sext_of_i1_stride(i1 %g, ptr %dst) mustprogress {
 ; CHECK-NEXT:    [[IND_END:%.*]] = mul i64 [[N_VEC]], [[G_64]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, ptr [[DST]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, ptr [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, ptr [[DST]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i16, ptr [[TMP6]], i32 -3
 ; CHECK-NEXT:    store <4 x i16> splat (i16 -1), ptr [[TMP7]], align 2
 ; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]

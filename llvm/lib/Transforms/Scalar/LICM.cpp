@@ -1928,8 +1928,9 @@ bool isNotCapturedBeforeOrInLoop(const Value *V, const Loop *L,
   // loop header, as the loop header is reachable from any instruction inside
   // the loop.
   // TODO: ReturnCaptures=true shouldn't be necessary here.
-  return !PointerMayBeCapturedBefore(V, /* ReturnCaptures */ true,
-                                     L->getHeader()->getTerminator(), DT);
+  return capturesNothing(PointerMayBeCapturedBefore(
+      V, /*ReturnCaptures=*/true, L->getHeader()->getTerminator(), DT,
+      /*IncludeI=*/false, CaptureComponents::Provenance));
 }
 
 /// Return true if we can prove that a caller cannot inspect the object if an

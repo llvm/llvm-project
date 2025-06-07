@@ -1526,8 +1526,6 @@ add_instruction:
   if (uint64_t Offset = getFirstInstructionOffset())
     Labels[Offset] = BC.Ctx->createNamedTempSymbol();
 
-  clearList(Relocations);
-
   if (!IsSimple) {
     clearList(Instructions);
     return createNonFatalBOLTError("");
@@ -3244,15 +3242,25 @@ void BinaryFunction::setTrapOnEntry() {
 }
 
 void BinaryFunction::setIgnored() {
+  IsIgnored = true;
+
   if (opts::processAllFunctions()) {
     // We can accept ignored functions before they've been disassembled.
-    // In that case, they would still get disassembled and emited, but not
+    // In that case, they would still get disassembled and emitted, but not
     // optimized.
-    assert(CurrentState == State::Empty &&
-           "cannot ignore non-empty functions in current mode");
-    IsIgnored = true;
+    if (CurrentState != State::Empty) {
+      BC.errs() << "BOLT-ERROR: cannot ignore non-empty function " << *this
+                << " in current mode\n";
+      exit(1);
+    }
     return;
   }
+
+  IsSimple = false;
+  LLVM_DEBUG(dbgs() << "Ignoring " << getPrintName() << '\n');
+
+  if (CurrentState == State::Empty)
+    return;
 
   clearDisasmState();
 
@@ -3273,9 +3281,11 @@ void BinaryFunction::setIgnored() {
 
   CurrentState = State::Empty;
 
-  IsIgnored = true;
-  IsSimple = false;
-  LLVM_DEBUG(dbgs() << "Ignoring " << getPrintName() << '\n');
+  // Fix external references in the original function body.
+  if (BC.HasRelocations) {
+    LLVM_DEBUG(dbgs() << "Scanning refs in " << *this << '\n');
+    scanExternalRefs();
+  }
 }
 
 void BinaryFunction::duplicateConstantIslands() {
@@ -3764,7 +3774,6 @@ void BinaryFunction::postProcessBranches() {
 
 MCSymbol *BinaryFunction::addEntryPointAtOffset(uint64_t Offset) {
   assert(Offset && "cannot add primary entry point");
-  assert(CurrentState == State::Empty || CurrentState == State::Disassembled);
 
   const uint64_t EntryPointAddress = getAddress() + Offset;
   MCSymbol *LocalSymbol = getOrCreateLocalLabel(EntryPointAddress);
@@ -3772,6 +3781,8 @@ MCSymbol *BinaryFunction::addEntryPointAtOffset(uint64_t Offset) {
   MCSymbol *EntrySymbol = getSecondaryEntryPointSymbol(LocalSymbol);
   if (EntrySymbol)
     return EntrySymbol;
+
+  assert(CurrentState == State::Empty || CurrentState == State::Disassembled);
 
   if (BinaryData *EntryBD = BC.getBinaryDataAtAddress(EntryPointAddress)) {
     EntrySymbol = EntryBD->getSymbol();

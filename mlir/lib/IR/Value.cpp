@@ -51,6 +51,18 @@ Block *Value::getParentBlock() {
   return llvm::cast<BlockArgument>(*this).getOwner();
 }
 
+unsigned Value::getNumUses() const {
+  return (unsigned)std::distance(use_begin(), use_end());
+}
+
+bool Value::hasNUses(unsigned n) const {
+  return hasNItems(use_begin(), use_end(), n);
+}
+
+bool Value::hasNUsesOrMore(unsigned n) const {
+  return hasNItemsOrMore(use_begin(), use_end(), n);
+}
+
 //===----------------------------------------------------------------------===//
 // Value::UseLists
 //===----------------------------------------------------------------------===//

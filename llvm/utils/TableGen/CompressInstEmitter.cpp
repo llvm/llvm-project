@@ -541,9 +541,9 @@ getReqFeatures(std::set<std::pair<bool, StringRef>> &FeaturesSet,
           !cast<DefInit>(Arg)->getDef()->isSubClassOf("SubtargetFeature"))
         PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
       if (IsOr)
-        AnyOfSet.insert({IsNot, cast<DefInit>(Arg)->getDef()->getName()});
+        AnyOfSet.emplace(IsNot, cast<DefInit>(Arg)->getDef()->getName());
       else
-        FeaturesSet.insert({IsNot, cast<DefInit>(Arg)->getDef()->getName()});
+        FeaturesSet.emplace(IsNot, cast<DefInit>(Arg)->getDef()->getName());
     }
 
     if (IsOr)

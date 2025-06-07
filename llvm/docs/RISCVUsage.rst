@@ -123,6 +123,7 @@ on support follow.
      ``Sha``           Supported
      ``Shcounterenw``  Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Shgatpa``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Shlcofideleg``  Supported
      ``Shtvala``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Shvsatpa``      Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Shvstvala``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)

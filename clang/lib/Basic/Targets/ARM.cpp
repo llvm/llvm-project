@@ -14,7 +14,6 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/TargetBuiltins.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
@@ -1405,7 +1404,7 @@ ARMTargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_AAPCS_VFP:
   case CC_Swift:
   case CC_SwiftAsync:
-  case CC_OpenCLKernel:
+  case CC_DeviceKernel:
     return CCCR_OK;
   default:
     return CCCR_Warning;
@@ -1480,7 +1479,7 @@ WindowsARMTargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_X86VectorCall:
     return CCCR_Ignore;
   case CC_C:
-  case CC_OpenCLKernel:
+  case CC_DeviceKernel:
   case CC_PreserveMost:
   case CC_PreserveAll:
   case CC_Swift:

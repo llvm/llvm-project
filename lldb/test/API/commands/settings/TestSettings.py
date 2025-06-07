@@ -169,7 +169,6 @@ class SettingsCommandTestCase(TestBase):
         )
 
     # rdar://problem/10712130
-    @skipIf(oslist=["windows"], bugnumber="llvm.org/pr44431")
     def test_set_frame_format(self):
         """Test that 'set frame-format' with a backtick char in the format string works as well as fullpath."""
         self.build()

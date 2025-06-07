@@ -24,7 +24,6 @@
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signposts.h"
-#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <limits>
 #include <optional>

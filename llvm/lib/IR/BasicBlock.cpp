@@ -22,6 +22,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 
 #include "LLVMContextImpl.h"
 
@@ -41,9 +42,9 @@ STATISTIC(NumInstrRenumberings, "Number of renumberings across all blocks");
 // that might be needed to remove debug intrinsics.
 //
 // https://discourse.llvm.org/t/psa-ir-output-changing-from-debug-intrinsics-to-debug-records/79578
-cl::opt<bool> UseNewDbgInfoFormat(
-    "dont-pass-this-flag-please-experimental-debuginfo", cl::Hidden,
-    cl::init(true));
+LLVM_ABI cl::opt<bool>
+    UseNewDbgInfoFormat("dont-pass-this-flag-please-experimental-debuginfo",
+                        cl::Hidden, cl::init(true));
 
 // This cl-opt collects the --experimental-debuginfo-iterators flag and then
 // does nothing with it (because the it gets stored into an otherwise unused

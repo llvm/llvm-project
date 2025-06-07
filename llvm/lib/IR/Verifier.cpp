@@ -2382,6 +2382,31 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
       CheckFailed("'allockind()' can't be both zeroed and uninitialized");
   }
 
+  if (Attribute A = Attrs.getFnAttr("alloc-variant-zeroed"); A.isValid()) {
+    StringRef S = A.getValueAsString();
+    Check(!S.empty(), "'alloc-variant-zeroed' must not be empty");
+    Function *Variant = M.getFunction(S);
+    if (Variant) {
+      Attribute Family = Attrs.getFnAttr("alloc-family");
+      Attribute VariantFamily = Variant->getFnAttribute("alloc-family");
+      if (Family.isValid())
+        Check(VariantFamily.isValid() &&
+                  VariantFamily.getValueAsString() == Family.getValueAsString(),
+              "'alloc-variant-zeroed' must name a function belonging to the "
+              "same 'alloc-family'");
+
+      Check(Variant->hasFnAttribute(Attribute::AllocKind) &&
+                (Variant->getFnAttribute(Attribute::AllocKind).getAllocKind() &
+                 AllocFnKind::Zeroed) != AllocFnKind::Unknown,
+            "'alloc-variant-zeroed' must name a function with "
+            "'allockind(\"zeroed\")'");
+
+      Check(FT == Variant->getFunctionType(),
+            "'alloc-variant-zeroed' must name a function with the same "
+            "signature");
+    }
+  }
+
   if (Attrs.hasFnAttr(Attribute::VScaleRange)) {
     unsigned VScaleMin = Attrs.getFnAttrs().getVScaleRangeMin();
     if (VScaleMin == 0)

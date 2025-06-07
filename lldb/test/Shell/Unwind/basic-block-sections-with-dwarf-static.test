@@ -22,7 +22,7 @@ image show-unwind --cached true -n foo
 # CHECK-NEXT: This UnwindPlan is sourced from the compiler: yes.
 # CHECK-NEXT: This UnwindPlan is valid at all instruction locations: no.
 # CHECK-NEXT: This UnwindPlan is for a trap handler function: no.
-# CHECK-NEXT: Address range of this UnwindPlan: [{{.*}}.text + 6-0x000000000000000b)[{{.*}}.text + 12-0x000000000000001b)[{{.*}}.text + 43-0x0000000000000039)[{{.*}}.text + 58-0x0000000000000045)
+# CHECK-NEXT: Address range of this UnwindPlan: [{{.*}}.text + 6-11)[{{.*}}.text + 12-27)[{{.*}}.text + 43-57)[{{.*}}.text + 58-69)
 # CHECK-NEXT: row[0]:  -37: CFA=rsp+32 => rbx=[CFA-16] rip=[CFA-8]
 # CHECK-NEXT: row[1]:  -33: CFA=rsp +8 => rbx=[CFA-16] rip=[CFA-8]
 # CHECK-NEXT: row[2]:  -31: CFA=rsp+32 => rbx=[CFA-16] rip=[CFA-8]
@@ -43,7 +43,7 @@ image show-unwind --cached true -n bar
 # CHECK-NEXT: This UnwindPlan is sourced from the compiler: yes.
 # CHECK-NEXT: This UnwindPlan is valid at all instruction locations: no.
 # CHECK-NEXT: This UnwindPlan is for a trap handler function: no.
-# CHECK-NEXT: Address range of this UnwindPlan: [{{.*}}.text + 27-0x000000000000002b)
+# CHECK-NEXT: Address range of this UnwindPlan: [{{.*}}.text + 27-43)
 # CHECK-NEXT: row[0]:    0: CFA=rsp +8 => rip=[CFA-8]
 # CHECK-NEXT: row[1]:    4: CFA=rsp+96 => rip=[CFA-8]
 # CHECK-NEXT: row[2]:   15: CFA=rsp +8 => rip=[CFA-8]

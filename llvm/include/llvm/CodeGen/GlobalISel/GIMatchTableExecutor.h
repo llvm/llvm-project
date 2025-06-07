@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/Function.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
 #include <bitset>
 #include <cstddef>
@@ -631,7 +632,7 @@ protected:
     /// Whenever a type index is negative, we look here instead.
     SmallVector<LLT, 4> RecordedTypes;
 
-    MatcherState(unsigned MaxRenderers);
+    LLVM_ABI MatcherState(unsigned MaxRenderers);
   };
 
   bool shouldOptForSize(const MachineFunction *MF) const {
@@ -668,7 +669,7 @@ public:
   };
 
 protected:
-  GIMatchTableExecutor();
+  LLVM_ABI GIMatchTableExecutor();
 
   /// Execute a given matcher table and return true if the match was successful
   /// and false otherwise.
@@ -715,20 +716,21 @@ protected:
     llvm_unreachable("Subclass does not implement runCustomAction!");
   }
 
-  bool isOperandImmEqual(const MachineOperand &MO, int64_t Value,
-                         const MachineRegisterInfo &MRI,
-                         bool Splat = false) const;
+  LLVM_ABI bool isOperandImmEqual(const MachineOperand &MO, int64_t Value,
+                                  const MachineRegisterInfo &MRI,
+                                  bool Splat = false) const;
 
   /// Return true if the specified operand is a G_PTR_ADD with a G_CONSTANT on
   /// the right-hand side. GlobalISel's separation of pointer and integer types
   /// means that we don't need to worry about G_OR with equivalent semantics.
-  bool isBaseWithConstantOffset(const MachineOperand &Root,
-                                const MachineRegisterInfo &MRI) const;
+  LLVM_ABI bool isBaseWithConstantOffset(const MachineOperand &Root,
+                                         const MachineRegisterInfo &MRI) const;
 
   /// Return true if MI can obviously be folded into IntoMI.
   /// MI and IntoMI do not need to be in the same basic blocks, but MI must
   /// preceed IntoMI.
-  bool isObviouslySafeToFold(MachineInstr &MI, MachineInstr &IntoMI) const;
+  LLVM_ABI bool isObviouslySafeToFold(MachineInstr &MI,
+                                      MachineInstr &IntoMI) const;
 
   template <typename Ty> static Ty readBytesAs(const uint8_t *MatchTable) {
     Ty Ret;

@@ -6634,8 +6634,12 @@ SDValue DAGTypeLegalizer::WidenVecRes_SETCC(SDNode *N) {
     InOp1 = GetWidenedVector(InOp1);
     InOp2 = GetWidenedVector(InOp2);
   } else {
-    InOp1 = DAG.WidenVector(InOp1, SDLoc(N));
-    InOp2 = DAG.WidenVector(InOp2, SDLoc(N));
+    SDValue Poison = DAG.getPOISON(WidenInVT);
+    SDValue ZeroIdx = DAG.getVectorIdxConstant(0, SDLoc(N));
+    InOp1 = DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N), WidenInVT, Poison,
+                        InOp1, ZeroIdx);
+    InOp2 = DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N), WidenInVT, Poison,
+                        InOp2, ZeroIdx);
   }
 
   // Assume that the input and output will be widen appropriately.  If not,

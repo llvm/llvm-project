@@ -235,6 +235,17 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCCombinedConstruct(
     llvm_unreachable("invalid compute construct kind");
   }
 }
+
+mlir::LogicalResult CIRGenFunction::emitOpenACCHostDataConstruct(
+    const OpenACCHostDataConstruct &s) {
+  mlir::Location start = getLoc(s.getSourceRange().getBegin());
+  mlir::Location end = getLoc(s.getSourceRange().getEnd());
+
+  return emitOpenACCOpAssociatedStmt<HostDataOp, mlir::acc::TerminatorOp>(
+      start, end, s.getDirectiveKind(), s.getDirectiveLoc(), s.clauses(),
+      s.getStructuredBlock());
+}
+
 mlir::LogicalResult CIRGenFunction::emitOpenACCEnterDataConstruct(
     const OpenACCEnterDataConstruct &s) {
   cgm.errorNYI(s.getSourceRange(), "OpenACC EnterData Construct");
@@ -243,11 +254,6 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCEnterDataConstruct(
 mlir::LogicalResult CIRGenFunction::emitOpenACCExitDataConstruct(
     const OpenACCExitDataConstruct &s) {
   cgm.errorNYI(s.getSourceRange(), "OpenACC ExitData Construct");
-  return mlir::failure();
-}
-mlir::LogicalResult CIRGenFunction::emitOpenACCHostDataConstruct(
-    const OpenACCHostDataConstruct &s) {
-  cgm.errorNYI(s.getSourceRange(), "OpenACC HostData Construct");
   return mlir::failure();
 }
 mlir::LogicalResult

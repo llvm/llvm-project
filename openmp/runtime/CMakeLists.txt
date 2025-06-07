@@ -190,6 +190,8 @@ set(VE FALSE)
 set(S390X FALSE)
 set(WASM FALSE)
 set(PPC FALSE)
+set(SPARC FALSE)
+set(SPARCV9 FALSE)
 if("${LIBOMP_ARCH}" STREQUAL "i386" OR "${LIBOMP_ARCH}" STREQUAL "32")    # IA-32 architecture
   set(IA32 TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "x86_64" OR "${LIBOMP_ARCH}" STREQUAL "32e") # Intel(R) 64 architecture
@@ -226,6 +228,10 @@ elseif("${LIBOMP_ARCH}" STREQUAL "s390x") # S390x (Z) architecture
     set(S390X TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "wasm32") # WebAssembly architecture
     set(WASM TRUE)
+elseif("${LIBOMP_ARCH}" STREQUAL "sparc") # SPARC architecture
+    set(SPARC TRUE)
+elseif("${LIBOMP_ARCH}" STREQUAL "sparcv9") # SPARC V9 architecture
+    set(SPARCV9 TRUE)
 endif()
 
 # Set some flags based on build_type

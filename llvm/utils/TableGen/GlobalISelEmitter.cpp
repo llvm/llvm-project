@@ -1333,7 +1333,7 @@ Error GlobalISelEmitter::importLeafNodeRenderer(
     }
 
     if (R->isSubClassOf("SubRegIndex")) {
-      const CodeGenSubRegIndex *SubRegIndex = CGRegs.getSubRegIdx(R);
+      const CodeGenSubRegIndex *SubRegIndex = CGRegs.findSubRegIdx(R);
       MIBuilder.addRenderer<ImmRenderer>(SubRegIndex->EnumValue);
       return Error::success();
     }
@@ -1606,7 +1606,8 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
     if (!SubRegInit)
       return failedImport("EXTRACT_SUBREG child #1 is not a subreg index");
 
-    CodeGenSubRegIndex *SubIdx = CGRegs.getSubRegIdx(SubRegInit->getDef());
+    const CodeGenSubRegIndex *SubIdx =
+        CGRegs.findSubRegIdx(SubRegInit->getDef());
     const TreePatternNode &ValChild = Dst.getChild(0);
     if (!ValChild.isLeaf()) {
       // We really have to handle the source instruction, and then insert a
@@ -1675,7 +1676,8 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
 
       if (const DefInit *SubRegInit =
               dyn_cast<DefInit>(SubRegChild.getLeafValue())) {
-        CodeGenSubRegIndex *SubIdx = CGRegs.getSubRegIdx(SubRegInit->getDef());
+        const CodeGenSubRegIndex *SubIdx =
+            CGRegs.findSubRegIdx(SubRegInit->getDef());
 
         if (Error Err = importNodeRenderer(M, DstMIBuilder, ValChild, InsertPt))
           return Err;
@@ -2004,7 +2006,7 @@ const CodeGenRegisterClass *GlobalISelEmitter::inferSuperRegisterClass(
   const DefInit *SubRegInit = dyn_cast<DefInit>(SubRegIdxNode.getLeafValue());
   if (!SubRegInit)
     return nullptr;
-  const CodeGenSubRegIndex *SubIdx = CGRegs.getSubRegIdx(SubRegInit->getDef());
+  const CodeGenSubRegIndex *SubIdx = CGRegs.findSubRegIdx(SubRegInit->getDef());
 
   // Use the information we found above to find a minimal register class which
   // supports the subregister and type we want.
@@ -2034,7 +2036,7 @@ const CodeGenSubRegIndex *GlobalISelEmitter::inferSubRegIndexForNode(
   const DefInit *SubRegInit = dyn_cast<DefInit>(SubRegIdxNode.getLeafValue());
   if (!SubRegInit)
     return nullptr;
-  return CGRegs.getSubRegIdx(SubRegInit->getDef());
+  return CGRegs.findSubRegIdx(SubRegInit->getDef());
 }
 
 Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {

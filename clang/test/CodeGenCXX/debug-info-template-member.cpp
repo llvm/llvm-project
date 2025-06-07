@@ -22,7 +22,32 @@ inline int add3(int x) {
 // CHECK: [[X]] = !DIGlobalVariableExpression(var: [[XV:.*]], expr: !DIExpression())
 // CHECK: [[XV]] = distinct !DIGlobalVariable(name: "x",
 // CHECK-SAME:                                type: ![[OUTER_FOO_INNER_ID:[0-9]+]]
-//
+
+// CHECK: [[C:![0-9]*]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "MyClass"
+// CHECK-SAME:                             elements: [[C_MEM:![0-9]*]]
+// CHECK-SAME:                             vtableHolder: [[C]]
+// CHECK-SAME:                             identifier: "_ZTS7MyClass")
+// CHECK: [[C_MEM]] = !{[[C_VPTR:![0-9]*]], [[C_FUNC:![0-9]*]]}
+// CHECK: [[C_VPTR]] = !DIDerivedType(tag: DW_TAG_member, name: "_vptr$MyClass"
+
+// CHECK: [[C_FUNC]] = !DISubprogram(name: "func",{{.*}} line: 9,
+
+// CHECK: [[VIRT_TEMP:![0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "virt<elem>"
+// CHECK-SAME:             elements: [[VIRT_MEM:![0-9]*]]
+// CHECK-SAME:             vtableHolder: [[VIRT_TEMP]]
+// CHECK-SAME:             templateParams: [[VIRT_TEMP_PARAM:![0-9]*]]
+// CHECK-SAME:             identifier: "_ZTS4virtI4elemE"
+
+// CHECK: [[ELEM:![0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "elem"
+// CHECK-SAME:                                elements: [[ELEM_MEM:![0-9]*]]
+// CHECK-SAME:                                identifier: "_ZTS4elem"
+// CHECK: [[ELEM_MEM]] = !{[[ELEM_X:![0-9]*]]}
+// CHECK: [[ELEM_X]] = !DIDerivedType(tag: DW_TAG_member, name: "x", scope: [[ELEM]]
+// CHECK-SAME:                        baseType: [[VIRT_TEMP:![0-9]+]]
+
+// CHECK: [[VIRT_TEMP_PARAM]] = !{[[VIRT_T:![0-9]*]]}
+// CHECK: [[VIRT_T]] = !DITemplateTypeParameter(name: "T", type: [[ELEM]])
+
 // CHECK: {{![0-9]+}} = distinct !DIGlobalVariable(
 // CHECK-SAME: name: "var"
 // CHECK-SAME: templateParams: {{![0-9]+}}
@@ -46,33 +71,8 @@ inline int add3(int x) {
 // CHECK: [[FOO_FUNC_TYPE]] = !DISubroutineType(types: [[FOO_FUNC_PARAMS:![0-9]*]])
 // CHECK: [[FOO_FUNC_PARAMS]] = !{null, !{{[0-9]*}}, ![[OUTER_FOO_INNER_ID]]}
 
-// CHECK: [[C:![0-9]*]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "MyClass"
-// CHECK-SAME:                             elements: [[C_MEM:![0-9]*]]
-// CHECK-SAME:                             vtableHolder: [[C]]
-// CHECK-SAME:                             identifier: "_ZTS7MyClass")
-// CHECK: [[C_MEM]] = !{[[C_VPTR:![0-9]*]], [[C_FUNC:![0-9]*]]}
-// CHECK: [[C_VPTR]] = !DIDerivedType(tag: DW_TAG_member, name: "_vptr$MyClass"
-
-// CHECK: [[C_FUNC]] = !DISubprogram(name: "func",{{.*}} line: 9,
-
 // CHECK: !DISubprogram(name: "add<2>"
 // CHECK-SAME:          scope: [[C]]
-//
-// CHECK: [[VIRT_TEMP:![0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "virt<elem>"
-// CHECK-SAME:             elements: [[VIRT_MEM:![0-9]*]]
-// CHECK-SAME:             vtableHolder: [[VIRT_TEMP]]
-// CHECK-SAME:             templateParams: [[VIRT_TEMP_PARAM:![0-9]*]]
-// CHECK-SAME:             identifier: "_ZTS4virtI4elemE"
-
-// CHECK: [[ELEM:![0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "elem"
-// CHECK-SAME:                                elements: [[ELEM_MEM:![0-9]*]]
-// CHECK-SAME:                                identifier: "_ZTS4elem"
-// CHECK: [[ELEM_MEM]] = !{[[ELEM_X:![0-9]*]]}
-// CHECK: [[ELEM_X]] = !DIDerivedType(tag: DW_TAG_member, name: "x", scope: [[ELEM]]
-// CHECK-SAME:                        baseType: [[VIRT_TEMP:![0-9]+]]
-
-// CHECK: [[VIRT_TEMP_PARAM]] = !{[[VIRT_T:![0-9]*]]}
-// CHECK: [[VIRT_T]] = !DITemplateTypeParameter(name: "T", type: [[ELEM]])
 
 template<typename T>
 struct outer {

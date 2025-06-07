@@ -184,6 +184,13 @@ class ReturnRec {
 public:
   ReturnRec(const Record *rec) : rec(rec) {}
   StringRef getValue() const { return rec->getValueAsString("value"); }
+  // Strip the "OL_ERRC_" from the value, resulting in just "FOO" from
+  // "OL_ERRC_FOO"
+  StringRef getUnprefixedValue() const {
+    constexpr const char *ERRC = "ERRC_";
+    auto Start = getValue().find(ERRC) + strlen(ERRC);
+    return getValue().substr(Start);
+  }
   std::vector<StringRef> getConditions() const {
     return rec->getValueAsListOfStrings("conditions");
   }

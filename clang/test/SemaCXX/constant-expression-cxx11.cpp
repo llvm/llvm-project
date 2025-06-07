@@ -2513,6 +2513,9 @@ void testValueInRangeOfEnumerationValues() {
   // expected-error@-1 {{constexpr variable 'x2' must be initialized by a constant expression}}
   // expected-note@-2 {{integer value 8 is outside the valid range of values [-8, 7] for the enumeration type 'E1'}}
   E1 x2b = static_cast<E1>(8); // ok, not a constant expression context
+  static_assert(static_cast<E1>(8), "");
+  // expected-error@-1 {{static assertion expression is not an integral constant expression}}
+  // expected-note@-2 {{integer value 8 is outside the valid range of values [-8, 7] for the enumeration type 'E1'}}
 
   constexpr E2 x3 = static_cast<E2>(-8);
   // expected-error@-1 {{constexpr variable 'x3' must be initialized by a constant expression}}
@@ -2551,6 +2554,10 @@ void testValueInRangeOfEnumerationValues() {
   // expected-note@-2 {{integer value 2147483648 is outside the valid range of values [-2147483648, 2147483647] for the enumeration type 'EMaxInt'}}
 
   const NumberType neg_one = (NumberType) ((NumberType) 0 - (NumberType) 1); // ok, not a constant expression context
+  constexpr NumberType neg_one_constexpr = neg_one;
+  // expected-error@-1 {{constexpr variable 'neg_one_constexpr' must be initialized by a constant expression}}
+  // expected-note@-2 {{initializer of 'neg_one' is not a constant expression}}
+  // expected-note@-4 {{declared here}}
 
   CONSTEXPR_CAST_TO_SYSTEM_ENUM_OUTSIDE_OF_RANGE;
   // expected-error@-1 {{constexpr variable 'system_enum' must be initialized by a constant expression}}

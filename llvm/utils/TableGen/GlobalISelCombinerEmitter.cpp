@@ -1161,7 +1161,7 @@ bool CombineRuleBuilder::buildPermutationsToEmit() {
     PermutationsToEmit.clear();
 
     for (const auto &Perm : CurPerms) {
-      assert(!Perm.count(Pat.get()) && "Pattern already emitted?");
+      assert(!Perm.contains(Pat.get()) && "Pattern already emitted?");
       for (unsigned K = 0; K < NumAlts; ++K) {
         PatternAlternatives NewPerm = Perm;
         NewPerm[Pat.get()] = K;

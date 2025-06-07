@@ -73,6 +73,7 @@ def FILL_PPR_FROM_ZPR_SLOT_PSEUDO :
 }
 
 def SDTZALoadStore : SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisPtrTy<1>, SDTCisInt<2>]>;
+// SME ZA loads and stores
 def AArch64SMELdr : SDNode<"AArch64ISD::SME_ZA_LDR", SDTZALoadStore,
                              [SDNPHasChain, SDNPSideEffect, SDNPMayLoad]>;
 def AArch64SMEStr : SDNode<"AArch64ISD::SME_ZA_STR", SDTZALoadStore,
@@ -285,7 +286,7 @@ class SME2_Tile_VG4_Multi_Pat<string name, SDPatternOperator intrinsic, Operand 
 
 class SME2_Zero_Matrix_Pat<string name, SDPatternOperator intrinsic, Operand offset_ty, ComplexPattern tileslice>
     : Pat<(intrinsic (i32 (tileslice MatrixIndexGPR32Op8_11:$base, offset_ty:$offset))),
-    (!cast<Instruction>(name) $base, $offset)>; 
+    (!cast<Instruction>(name) $base, $offset)>;
 
 class SME2_Tile_Movaz_Pat<string name, SDPatternOperator intrinsic, ValueType out_vt, Operand tile_imm, Operand index_ty, ComplexPattern tileslice>
     : Pat<(out_vt (intrinsic tile_imm:$tile, (i32 (tileslice MatrixIndexGPR32Op12_15:$base, index_ty:$offset)))),
@@ -2337,7 +2338,7 @@ multiclass sme2_int_mla_long_array_vg2_single<string mnemonic, bits<2> op, SDPat
 multiclass sme2_fp_mla_long_array_vg4_single<string mnemonic, bits<3> op, MatrixOperand matrix_ty,
                                              RegisterOperand multi_vector_ty, ZPRRegOp vector_ty,
                                              ValueType zpr_ty, SDPatternOperator intrinsic, list<Register> uses=[]> {
-  def NAME : sme2_mla_long_array_vg24_single<0b00, 0b1, op{2-1}, op{0}, matrix_ty, multi_vector_ty, 
+  def NAME : sme2_mla_long_array_vg24_single<0b00, 0b1, op{2-1}, op{0}, matrix_ty, multi_vector_ty,
                                              vector_ty, mnemonic, "vgx4">, SMEPseudo2Instr<NAME, 1> {
     let Uses = uses;
   }
@@ -5437,7 +5438,7 @@ multiclass sme2p1_zero_matrix<string mnemonic> {
   def : SME2_Zero_Matrix_Pat<NAME # _4Z_PSEUDO, int_aarch64_sme_zero_za64_vg4x1, uimm1s4range, tileslicerange1s4>;
   def : SME2_Zero_Matrix_Pat<NAME # _VG2_4Z_PSEUDO, int_aarch64_sme_zero_za64_vg4x2, uimm0s4range, tileslicerange0s4>;
   def : SME2_Zero_Matrix_Pat<NAME # _VG4_4Z_PSEUDO, int_aarch64_sme_zero_za64_vg4x4, uimm0s4range, tileslicerange0s4>;
-} 
+}
 
 //===----------------------------------------------------------------------===//
 // SME2.1 lookup table expand two non-contiguous registers

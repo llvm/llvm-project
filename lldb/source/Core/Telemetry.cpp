@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 #include "lldb/Core/Telemetry.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/Telemetry.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/UUID.h"

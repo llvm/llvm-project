@@ -607,7 +607,7 @@ namespace function_prototypes {
   void t0() { foo0(&bar0); }
 
   template<class T> void foo1(fptr1<const T *>) {
-     static_assert(__is_same(T, char));  
+     static_assert(__is_same(T, char));
   }
   void bar1(const char * __restrict);
   void t1() { foo1(&bar1); }

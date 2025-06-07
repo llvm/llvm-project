@@ -325,3 +325,53 @@ cleanup:
   %retval.0 = phi i1 [ false, %if.then ], [ true, %if.end ]
   ret i1 %retval.0
 }
+
+; From https://github.com/llvm/llvm-project/issues/139050.
+; FIXME: This should be vectorized.
+define i8 @masked_min_reduction(ptr %data, ptr %mask) {
+; CHECK-LABEL: @masked_min_reduction(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[ACC:%.*]] = phi i8 [ -1, [[ENTRY]] ], [ [[TMP21:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[DATA:%.*]] = getelementptr i8, ptr [[DATA1:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i8, ptr [[DATA]], align 1
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[MASK:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[M:%.*]] = load i8, ptr [[TMP7]], align 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[M]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i8 @llvm.umin.i8(i8 [[ACC]], i8 [[VAL]])
+; CHECK-NEXT:    [[TMP21]] = select i1 [[COND]], i8 [[TMP0]], i8 [[ACC]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw nsw i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP20]], label [[EXIT:%.*]], label [[VECTOR_BODY]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i8 [[TMP21]]
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %next, %loop ]
+  %acc = phi i8 [ 255, %entry ], [ %acc_next, %loop ]
+
+  %ptr_i = getelementptr i8, ptr %data, i64 %i
+  %val = load i8, ptr %ptr_i, align 1
+
+  %mask_ptr = getelementptr i8, ptr %mask, i64 %i
+  %m = load i8, ptr %mask_ptr, align 1
+  %cond = icmp eq i8 %m, 0
+
+  ; Use select to implement masking
+  %masked_val = select i1 %cond, i8 %val, i8 255
+
+  ; min reduction
+  %acc_next = call i8 @llvm.umin.i8(i8 %acc, i8 %masked_val)
+
+  %next = add i64 %i, 1
+  %cmp = icmp ult i64 %next, 1024
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i8 %acc_next
+}

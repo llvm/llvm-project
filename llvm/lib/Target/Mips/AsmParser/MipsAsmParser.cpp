@@ -1783,6 +1783,8 @@ static bool isEvaluated(const MCExpr *Expr) {
   }
   case MCExpr::Unary:
     return isEvaluated(cast<MCUnaryExpr>(Expr)->getSubExpr());
+  case MCExpr::Specifier:
+    llvm_unreachable("unused by this backend");
   case MCExpr::Target:
     return true;
   }

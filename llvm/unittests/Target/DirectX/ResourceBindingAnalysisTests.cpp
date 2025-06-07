@@ -64,7 +64,7 @@ TEST_F(ResourceBindingAnalysisTest, TestTrivialCase) {
   StringRef Assembly = R"(
 define void @main() {
 entry:
-  %handle = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, i1 false)
+  %handle = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, i1 false, ptr null)
   ret void
 }
   )";
@@ -107,16 +107,16 @@ TEST_F(ResourceBindingAnalysisTest, TestManyBindings) {
 %__cblayout_CB = type <{ i32 }>
 define void @main() {
 entry:
-  %handleCB = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 4, 0)) @llvm.dx.resource.handlefrombinding(i32 0, i32 3, i32 1, i32 0, i1 false)
-  %handleA = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 20, i32 10, i32 5, i32 0, i1 false)
-  %handleB = call target("dx.RawBuffer", i32, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, i1 false)
-  %handleC = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, i1 false)
-  %handleD = call target("dx.RawBuffer", i32, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 5, i32 4, i1 false)
-  %handleE = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 2, i32 2, i32 0, i1 false)
-  %handleS1 = call target("dx.Sampler", 0) @llvm.dx.resource.handlefrombinding(i32 2, i32 5, i32 1, i32 0, i1 false)
-  %handleS2 = call target("dx.Sampler", 0) @llvm.dx.resource.handlefrombinding(i32 2, i32 4, i32 1, i32 0, i1 false)
+  %handleCB = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 4, 0)) @llvm.dx.resource.handlefrombinding(i32 0, i32 3, i32 1, i32 0, i1 false, ptr null)
+  %handleA = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 20, i32 10, i32 5, i32 0, i1 false, ptr null)
+  %handleB = call target("dx.RawBuffer", i32, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, i1 false, ptr null)
+  %handleC = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, i1 false, ptr null)
+  %handleD = call target("dx.RawBuffer", i32, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 5, i32 4, i1 false, ptr null)
+  %handleE = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 2, i32 2, i32 0, i1 false, ptr null)
+  %handleS1 = call target("dx.Sampler", 0) @llvm.dx.resource.handlefrombinding(i32 2, i32 5, i32 1, i32 0, i1 false, ptr null)
+  %handleS2 = call target("dx.Sampler", 0) @llvm.dx.resource.handlefrombinding(i32 2, i32 4, i32 1, i32 0, i1 false, ptr null)
   ; duplicate binding for the same resource
-  %handleD2 = call target("dx.RawBuffer", i32, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 5, i32 4, i1 false)
+  %handleD2 = call target("dx.RawBuffer", i32, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 5, i32 4, i1 false, ptr null)
   ret void
 }
   )";
@@ -167,13 +167,12 @@ TEST_F(ResourceBindingAnalysisTest, TestUnboundedAndOverlap) {
   // StructuredBuffer<float> C[]  : register(t0, space2);
   // StructuredBuffer<float> D    : register(t4, space2); /* overlapping */
   StringRef Assembly = R"(
-%__cblayout_CB = type <{ i32 }>
 define void @main() {
 entry:
-  %handleA = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 -1, i32 10, i1 false)
-  %handleB = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 3, i32 0, i1 false)
-  %handleC = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 2, i32 0, i32 -1, i32 100, i1 false)
-  %handleD = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 2, i32 4, i32 1, i32 0, i1 false)
+  %handleA = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 -1, i32 10, i1 false, ptr null)
+  %handleB = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 3, i32 0, i1 false, ptr null)
+  %handleC = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 2, i32 0, i32 -1, i32 100, i1 false, ptr null)
+  %handleD = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 2, i32 4, i32 1, i32 0, i1 false, ptr null)
   ret void
 }
   )";
@@ -198,11 +197,12 @@ TEST_F(ResourceBindingAnalysisTest, TestExactOverlap) {
   // StructuredBuffer<float> A  : register(t5);
   // StructuredBuffer<float> B  : register(t5);
   StringRef Assembly = R"(
-%__cblayout_CB = type <{ i32 }>
+@A.str = private unnamed_addr constant [2 x i8] c"A\00", align 1
+@B.str = private unnamed_addr constant [2 x i8] c"B\00", align 1
 define void @main() {
 entry:
-  %handleA = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, i1 false)
-  %handleB = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, i1 false)
+  %handleA = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, i1 false, ptr @A.str)
+  %handleB = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, i1 false, ptr @B.str)
   ret void
 }
   )";
@@ -213,9 +213,7 @@ entry:
       MAM->getResult<DXILResourceBindingAnalysis>(*M);
 
   EXPECT_EQ(false, DRBI.hasImplicitBinding());
-  // FIXME (XFAIL): detecting overlap of two resource with identical binding
-  // is not yet supported (llvm/llvm-project#110723).
-  EXPECT_EQ(false, DRBI.hasOverlappingBinding());
+  EXPECT_EQ(true, DRBI.hasOverlappingBinding());
 
   DXILResourceBindingInfo::BindingSpaces &SRVSpaces =
       DRBI.getBindingSpaces(ResourceClass::SRV);
@@ -235,9 +233,9 @@ TEST_F(ResourceBindingAnalysisTest, TestEndOfRange) {
 %__cblayout_CB = type <{ i32 }>
 define void @main() {
 entry:
-  %handleA = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 -1, i32 1, i32 0, i1 false)
-  %handleB = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 1, i32 -10, i32 10, i32 50, i1 false)
-  %handleC = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 2, i32 2147483647, i32 10, i32 100, i1 false)
+  %handleA = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 -1, i32 1, i32 0, i1 false, ptr null)
+  %handleB = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 1, i32 -10, i32 10, i32 50, i1 false, ptr null)
+  %handleC = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 2, i32 2147483647, i32 10, i32 100, i1 false, ptr null)
   ret void
 }
   )";
@@ -267,8 +265,8 @@ TEST_F(ResourceBindingAnalysisTest, TestImplicitFlag) {
   StringRef Assembly = R"(
 define void @main() {
 entry:
-  %handleA = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 100, i32 5, i32 1, i32 0, i1 false)
-  %handleB = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefromimplicitbinding(i32 0, i32 0, i32 1, i32 0, i1 false)
+  %handleA = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 100, i32 5, i32 1, i32 0, i1 false, ptr null)
+  %handleB = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefromimplicitbinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
   ret void
 }
   )";

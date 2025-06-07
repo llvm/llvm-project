@@ -589,12 +589,11 @@ bool GCNMaxILPSchedStrategy::tryCandidate(SchedCandidate &Cand,
   // This is a best effort to set things up for a post-RA pass. Optimizations
   // like generating loads of multiple registers should ideally be done within
   // the scheduler pass by combining the loads during DAG postprocessing.
-  const SUnit *CandNextClusterSU =
-      Cand.AtTop ? DAG->getNextClusterSucc() : DAG->getNextClusterPred();
-  const SUnit *TryCandNextClusterSU =
-      TryCand.AtTop ? DAG->getNextClusterSucc() : DAG->getNextClusterPred();
-  if (tryGreater(TryCand.SU == TryCandNextClusterSU,
-                 Cand.SU == CandNextClusterSU, TryCand, Cand, Cluster))
+  const ClusterInfo *CandCluster = Cand.AtTop ? TopCluster : BotCluster;
+  const ClusterInfo *TryCandCluster = TryCand.AtTop ? TopCluster : BotCluster;
+  if (tryGreater(TryCandCluster && TryCandCluster->contains(TryCand.SU),
+                 CandCluster && CandCluster->contains(Cand.SU), TryCand, Cand,
+                 Cluster))
     return TryCand.Reason != NoCand;
 
   // Avoid increasing the max critical pressure in the scheduled region.
@@ -664,12 +663,11 @@ bool GCNMaxMemoryClauseSchedStrategy::tryCandidate(SchedCandidate &Cand,
 
   // MaxMemoryClause-specific: We prioritize clustered instructions as we would
   // get more benefit from clausing these memory instructions.
-  const SUnit *CandNextClusterSU =
-      Cand.AtTop ? DAG->getNextClusterSucc() : DAG->getNextClusterPred();
-  const SUnit *TryCandNextClusterSU =
-      TryCand.AtTop ? DAG->getNextClusterSucc() : DAG->getNextClusterPred();
-  if (tryGreater(TryCand.SU == TryCandNextClusterSU,
-                 Cand.SU == CandNextClusterSU, TryCand, Cand, Cluster))
+  const ClusterInfo *CandCluster = Cand.AtTop ? TopCluster : BotCluster;
+  const ClusterInfo *TryCandCluster = TryCand.AtTop ? TopCluster : BotCluster;
+  if (tryGreater(TryCandCluster && TryCandCluster->contains(TryCand.SU),
+                 CandCluster && CandCluster->contains(Cand.SU), TryCand, Cand,
+                 Cluster))
     return TryCand.Reason != NoCand;
 
   // We only compare a subset of features when comparing nodes between
@@ -937,12 +935,10 @@ void GCNScheduleDAGMILive::finalizeSchedule() {
   // GCNScheduleDAGMILive::schedule().
   LiveIns.resize(Regions.size());
   Pressure.resize(Regions.size());
-  RescheduleRegions.resize(Regions.size());
   RegionsWithHighRP.resize(Regions.size());
   RegionsWithExcessRP.resize(Regions.size());
   RegionsWithMinOcc.resize(Regions.size());
   RegionsWithIGLPInstrs.resize(Regions.size());
-  RescheduleRegions.set();
   RegionsWithHighRP.reset();
   RegionsWithExcessRP.reset();
   RegionsWithMinOcc.reset();
@@ -1236,10 +1232,7 @@ bool ClusteredLowOccStage::initGCNRegion() {
 }
 
 bool PreRARematStage::initGCNRegion() {
-  if (!DAG.RescheduleRegions[RegionIdx])
-    return false;
-
-  return GCNSchedStage::initGCNRegion();
+  return RescheduleRegions[RegionIdx] && GCNSchedStage::initGCNRegion();
 }
 
 void GCNSchedStage::setupNewBlock() {
@@ -1258,7 +1251,6 @@ void GCNSchedStage::setupNewBlock() {
 
 void GCNSchedStage::finalizeGCNRegion() {
   DAG.Regions[RegionIdx] = std::pair(DAG.RegionBegin, DAG.RegionEnd);
-  DAG.RescheduleRegions[RegionIdx] = false;
   if (S.HasHighPressure)
     DAG.RegionsWithHighRP[RegionIdx] = true;
 
@@ -1271,7 +1263,7 @@ void GCNSchedStage::finalizeGCNRegion() {
     SavedMutations.swap(DAG.Mutations);
 
   DAG.exitRegion();
-  RegionIdx++;
+  advanceRegion();
 }
 
 void GCNSchedStage::checkScheduling() {
@@ -1332,10 +1324,9 @@ void GCNSchedStage::checkScheduling() {
   unsigned MaxSGPRs = ST.getMaxNumSGPRs(MF);
 
   if (PressureAfter.getVGPRNum(ST.hasGFX90AInsts()) > MaxVGPRs ||
-      PressureAfter.getVGPRNum(false) > MaxArchVGPRs ||
+      PressureAfter.getArchVGPRNum() > MaxArchVGPRs ||
       PressureAfter.getAGPRNum() > MaxArchVGPRs ||
       PressureAfter.getSGPRNum() > MaxSGPRs) {
-    DAG.RescheduleRegions[RegionIdx] = true;
     DAG.RegionsWithHighRP[RegionIdx] = true;
     DAG.RegionsWithExcessRP[RegionIdx] = true;
   }
@@ -1577,9 +1568,6 @@ void GCNSchedStage::revertScheduling() {
   DAG.RegionsWithMinOcc[RegionIdx] =
       PressureBefore.getOccupancy(ST) == DAG.MinOccupancy;
   LLVM_DEBUG(dbgs() << "Attempting to revert scheduling.\n");
-  DAG.RescheduleRegions[RegionIdx] =
-      S.hasNextStage() &&
-      S.getNextStage() != GCNSchedStageID::UnclusteredHighRPReschedule;
   DAG.RegionEnd = DAG.RegionBegin;
   int SkippedDebugInstr = 0;
   for (MachineInstr *MI : Unsched) {
@@ -2154,7 +2142,7 @@ void PreRARematStage::rematerialize() {
   AchievedOcc = TargetOcc;
   for (auto &[I, OriginalRP] : ImpactedRegions) {
     bool IsEmptyRegion = DAG.Regions[I].first == DAG.Regions[I].second;
-    DAG.RescheduleRegions[I] = !IsEmptyRegion;
+    RescheduleRegions[I] = !IsEmptyRegion;
     if (!RecomputeRP.contains(I))
       continue;
 

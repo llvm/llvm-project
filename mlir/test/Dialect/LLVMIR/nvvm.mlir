@@ -579,11 +579,43 @@ func.func @st_bulk(%addr_gen: !llvm.ptr, %addr_shared: !llvm.ptr<3>, %size: i64)
 }
 
 // CHECK-LABEL: @dot_accumulate_4way
-func.func @dot_accumulate_4way(%a: i32, %a_vec: vector<4xi8>, %b: i32, %b_vec: vector<4xi8>, %c: i32) {
+func.func @dot_accumulate_4way(%a_vec: vector<4xi8>, %b_vec: vector<4xi8>, %c: i32) {
   // CHECK:   nvvm.dot.accumulate.4way %{{.*}}, %{{.*}}, %{{.*}} : vector<4xi8>, vector<4xi8>
-  %1 = nvvm.dot.accumulate.4way %a_vec <u8>, %b_vec <u8>, %c: vector<4xi8>, vector<4xi8>
+  %1 = nvvm.dot.accumulate.4way %a_vec <unsigned>, %b_vec <unsigned>, %c: vector<4xi8>, vector<4xi8>
   // CHECK:   nvvm.dot.accumulate.4way %{{.*}}, %{{.*}}, %{{.*}} : vector<4xi8>, vector<4xi8>
-  %3 = nvvm.dot.accumulate.4way %a_vec <s8>, %b_vec <s8>, %c: vector<4xi8>, vector<4xi8>
+  %3 = nvvm.dot.accumulate.4way %a_vec <signed>, %b_vec <signed>, %c: vector<4xi8>, vector<4xi8>
+  return
+}
+
+// CHECK-LABEL: @dot_accumulate_2way
+func.func @dot_accumulate_2way(%a_vec: vector<2xi16>, %b_vec: vector<4xi8>, %c: i32) {
+  // CHECK:   nvvm.dot.accumulate.2way %{{.*}}, %{{.*}}, %{{.*}} {b_hi = false} : vector<2xi16>, vector<4xi8>
+  %1 = nvvm.dot.accumulate.2way %a_vec <unsigned>, %b_vec <unsigned>, %c {b_hi = false}: vector<2xi16>, vector<4xi8>
+  // CHECK:   nvvm.dot.accumulate.2way %{{.*}}, %{{.*}}, %{{.*}} {b_hi = true} : vector<2xi16>, vector<4xi8>
+  %3 = nvvm.dot.accumulate.2way %a_vec <signed>, %b_vec <signed>, %c {b_hi = true}: vector<2xi16>, vector<4xi8>
+  return
+}
+
+// CHECK-LABEL: @prefetch
+func.func @prefetch(%gen_ptr: !llvm.ptr, %local_ptr: !llvm.ptr<5>, %global_ptr: !llvm.ptr<1>) {
+  // CHECK:   nvvm.prefetch level = L1, %{{.*}}
+  nvvm.prefetch level = L1, %gen_ptr : !llvm.ptr<0>
+  // CHECK:   nvvm.prefetch level = L1, %{{.*}}
+  nvvm.prefetch level = L1, %local_ptr : !llvm.ptr<5>
+  // CHECK:   nvvm.prefetch level = L1, %{{.*}}
+  nvvm.prefetch level = L1, %global_ptr : !llvm.ptr<1>
+  // CHECK:   nvvm.prefetch level = L2, %{{.*}}
+  nvvm.prefetch level = L2, %gen_ptr : !llvm.ptr<0>
+  // CHECK:   nvvm.prefetch level = L2, %{{.*}}
+  nvvm.prefetch level = L2, %local_ptr : !llvm.ptr<5>
+  // CHECK:   nvvm.prefetch level = L2, %{{.*}}
+  nvvm.prefetch level = L2, %global_ptr : !llvm.ptr<1>
+  // CHECK:   nvvm.prefetch level = L2, %{{.*}}
+  nvvm.prefetch level = L2, %global_ptr, evict_priority = evict_last : !llvm.ptr<1>
+  // CHECK:   nvvm.prefetch level = L2, %{{.*}}
+  nvvm.prefetch level = L2, %global_ptr, evict_priority = evict_normal : !llvm.ptr<1>
+  // CHECK:   nvvm.prefetch level = L1 uniform, %{{.*}}
+  nvvm.prefetch level = L1 uniform, %gen_ptr : !llvm.ptr
   return
 }
 

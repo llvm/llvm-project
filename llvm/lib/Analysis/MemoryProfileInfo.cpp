@@ -11,42 +11,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/MemoryProfileInfo.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Format.h"
 
 using namespace llvm;
 using namespace llvm::memprof;
 
 #define DEBUG_TYPE "memory-profile-info"
-
-// Upper bound on lifetime access density (accesses per byte per lifetime sec)
-// for marking an allocation cold.
-cl::opt<float> MemProfLifetimeAccessDensityColdThreshold(
-    "memprof-lifetime-access-density-cold-threshold", cl::init(0.05),
-    cl::Hidden,
-    cl::desc("The threshold the lifetime access density (accesses per byte per "
-             "lifetime sec) must be under to consider an allocation cold"));
-
-// Lower bound on lifetime to mark an allocation cold (in addition to accesses
-// per byte per sec above). This is to avoid pessimizing short lived objects.
-cl::opt<unsigned> MemProfAveLifetimeColdThreshold(
-    "memprof-ave-lifetime-cold-threshold", cl::init(200), cl::Hidden,
-    cl::desc("The average lifetime (s) for an allocation to be considered "
-             "cold"));
-
-// Lower bound on average lifetime accesses density (total life time access
-// density / alloc count) for marking an allocation hot.
-cl::opt<unsigned> MemProfMinAveLifetimeAccessDensityHotThreshold(
-    "memprof-min-ave-lifetime-access-density-hot-threshold", cl::init(1000),
-    cl::Hidden,
-    cl::desc("The minimum TotalLifetimeAccessDensity / AllocCount for an "
-             "allocation to be considered hot"));
-
-cl::opt<bool>
-    MemProfUseHotHints("memprof-use-hot-hints", cl::init(false), cl::Hidden,
-                       cl::desc("Enable use of hot hints (only supported for "
-                                "unambigously hot allocations)"));
 
 cl::opt<bool> MemProfReportHintedSizes(
     "memprof-report-hinted-sizes", cl::init(false), cl::Hidden,
@@ -55,7 +29,7 @@ cl::opt<bool> MemProfReportHintedSizes(
 // This is useful if we have enabled reporting of hinted sizes, and want to get
 // information from the indexing step for all contexts (especially for testing),
 // or have specified a value less than 100% for -memprof-cloning-cold-threshold.
-cl::opt<bool> MemProfKeepAllNotColdContexts(
+LLVM_ABI cl::opt<bool> MemProfKeepAllNotColdContexts(
     "memprof-keep-all-not-cold-contexts", cl::init(false), cl::Hidden,
     cl::desc("Keep all non-cold contexts (increases cloning overheads)"));
 
@@ -72,26 +46,23 @@ cl::opt<unsigned> MinCallsiteColdBytePercent(
     cl::desc("Min percent of cold bytes at a callsite to discard non-cold "
              "contexts"));
 
-AllocationType llvm::memprof::getAllocType(uint64_t TotalLifetimeAccessDensity,
-                                           uint64_t AllocCount,
-                                           uint64_t TotalLifetime) {
-  // The access densities are multiplied by 100 to hold 2 decimal places of
-  // precision, so need to divide by 100.
-  if (((float)TotalLifetimeAccessDensity) / AllocCount / 100 <
-          MemProfLifetimeAccessDensityColdThreshold
-      // Lifetime is expected to be in ms, so convert the threshold to ms.
-      && ((float)TotalLifetime) / AllocCount >=
-             MemProfAveLifetimeColdThreshold * 1000)
-    return AllocationType::Cold;
+// Enable saving context size information for largest cold contexts, which can
+// be used to flag contexts for more aggressive cloning and reporting.
+cl::opt<unsigned> MinPercentMaxColdSize(
+    "memprof-min-percent-max-cold-size", cl::init(100), cl::Hidden,
+    cl::desc("Min percent of max cold bytes for critical cold context"));
 
-  // The access densities are multiplied by 100 to hold 2 decimal places of
-  // precision, so need to divide by 100.
-  if (MemProfUseHotHints &&
-      ((float)TotalLifetimeAccessDensity) / AllocCount / 100 >
-          MemProfMinAveLifetimeAccessDensityHotThreshold)
-    return AllocationType::Hot;
+bool llvm::memprof::metadataIncludesAllContextSizeInfo() {
+  return MemProfReportHintedSizes || MinClonedColdBytePercent < 100;
+}
 
-  return AllocationType::NotCold;
+bool llvm::memprof::metadataMayIncludeContextSizeInfo() {
+  return metadataIncludesAllContextSizeInfo() || MinPercentMaxColdSize < 100;
+}
+
+bool llvm::memprof::recordContextSizeInfoForAnalysis() {
+  return metadataMayIncludeContextSizeInfo() ||
+         MinCallsiteColdBytePercent < 100;
 }
 
 MDNode *llvm::memprof::buildCallstackMetadata(ArrayRef<uint64_t> CallStack,
@@ -142,13 +113,6 @@ std::string llvm::memprof::getAllocTypeAttributeString(AllocationType Type) {
     assert(false && "Unexpected alloc type");
   }
   llvm_unreachable("invalid alloc type");
-}
-
-static void addAllocTypeAttribute(LLVMContext &Ctx, CallBase *CI,
-                                  AllocationType AllocType) {
-  auto AllocTypeString = getAllocTypeAttributeString(AllocType);
-  auto A = llvm::Attribute::get(Ctx, "memprof", AllocTypeString);
-  CI->addFnAttr(A);
 }
 
 bool llvm::memprof::hasSingleAllocType(uint8_t AllocTypes) {
@@ -223,7 +187,8 @@ void CallStackTrie::addCallStack(MDNode *MIB) {
 static MDNode *createMIBNode(LLVMContext &Ctx, ArrayRef<uint64_t> MIBCallStack,
                              AllocationType AllocType,
                              ArrayRef<ContextTotalSize> ContextSizeInfo,
-                             uint64_t &TotalBytes, uint64_t &ColdBytes) {
+                             const uint64_t MaxColdSize, uint64_t &TotalBytes,
+                             uint64_t &ColdBytes) {
   SmallVector<Metadata *> MIBPayload(
       {buildCallstackMetadata(MIBCallStack, Ctx)});
   MIBPayload.push_back(
@@ -239,12 +204,21 @@ static MDNode *createMIBNode(LLVMContext &Ctx, ArrayRef<uint64_t> MIBCallStack,
 
   for (const auto &[FullStackId, TotalSize] : ContextSizeInfo) {
     TotalBytes += TotalSize;
-    if (AllocType == AllocationType::Cold)
+    bool LargeColdContext = false;
+    if (AllocType == AllocationType::Cold) {
       ColdBytes += TotalSize;
+      // If we have the max cold context size from summary information and have
+      // requested identification of contexts above a percentage of the max, see
+      // if this context qualifies.
+      if (MaxColdSize > 0 && MinPercentMaxColdSize < 100 &&
+          TotalSize * 100 >= MaxColdSize * MinPercentMaxColdSize)
+        LargeColdContext = true;
+    }
     // Only add the context size info as metadata if we need it in the thin
-    // link (currently if reporting of hinted sizes is enabled or we have
-    // specified a threshold for marking allocations cold after cloning).
-    if (MemProfReportHintedSizes || MinClonedColdBytePercent < 100) {
+    // link (currently if reporting of hinted sizes is enabled, we have
+    // specified a threshold for marking allocations cold after cloning, or we
+    // have identified this as a large cold context of interest above).
+    if (metadataIncludesAllContextSizeInfo() || LargeColdContext) {
       auto *FullStackIdMD = ValueAsMetadata::get(
           ConstantInt::get(Type::getInt64Ty(Ctx), FullStackId));
       auto *TotalSizeMD = ValueAsMetadata::get(
@@ -412,9 +386,9 @@ bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
   if (hasSingleAllocType(Node->AllocTypes)) {
     std::vector<ContextTotalSize> ContextSizeInfo;
     collectContextSizeInfo(Node, ContextSizeInfo);
-    MIBNodes.push_back(createMIBNode(Ctx, MIBCallStack,
-                                     (AllocationType)Node->AllocTypes,
-                                     ContextSizeInfo, TotalBytes, ColdBytes));
+    MIBNodes.push_back(
+        createMIBNode(Ctx, MIBCallStack, (AllocationType)Node->AllocTypes,
+                      ContextSizeInfo, MaxColdSize, TotalBytes, ColdBytes));
     return true;
   }
 
@@ -468,13 +442,16 @@ bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
   std::vector<ContextTotalSize> ContextSizeInfo;
   collectContextSizeInfo(Node, ContextSizeInfo);
   MIBNodes.push_back(createMIBNode(Ctx, MIBCallStack, AllocationType::NotCold,
-                                   ContextSizeInfo, TotalBytes, ColdBytes));
+                                   ContextSizeInfo, MaxColdSize, TotalBytes,
+                                   ColdBytes));
   return true;
 }
 
 void CallStackTrie::addSingleAllocTypeAttribute(CallBase *CI, AllocationType AT,
                                                 StringRef Descriptor) {
-  addAllocTypeAttribute(CI->getContext(), CI, AT);
+  auto AllocTypeString = getAllocTypeAttributeString(AT);
+  auto A = llvm::Attribute::get(CI->getContext(), "memprof", AllocTypeString);
+  CI->addFnAttr(A);
   if (MemProfReportHintedSizes) {
     std::vector<ContextTotalSize> ContextSizeInfo;
     collectContextSizeInfo(Alloc, ContextSizeInfo);
@@ -484,6 +461,12 @@ void CallStackTrie::addSingleAllocTypeAttribute(CallBase *CI, AllocationType AT,
              << getAllocTypeAttributeString(AT) << ": " << TotalSize << "\n";
     }
   }
+  if (ORE)
+    ORE->emit(OptimizationRemark(DEBUG_TYPE, "MemprofAttribute", CI)
+              << ore::NV("AllocationCall", CI) << " in function "
+              << ore::NV("Caller", CI->getFunction())
+              << " marked with memprof allocation attribute "
+              << ore::NV("Attribute", AllocTypeString));
 }
 
 // Build and attach the minimal necessary MIB metadata. If the alloc has a

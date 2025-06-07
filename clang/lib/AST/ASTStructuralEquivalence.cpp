@@ -458,7 +458,7 @@ CheckStructurallyEquivalentAttributes(StructuralEquivalenceContext &Context,
   // If either declaration has an attribute on it, we treat the declarations
   // as not being structurally equivalent.
   // FIXME: this should be handled on a case-by-case basis via tablegen in
-  // Attr.td. There are multiple cases to consider: one declation with the
+  // Attr.td. There are multiple cases to consider: one declaration with the
   // attribute, another without it; different attribute syntax|spellings for
   // the same semantic attribute, differences in attribute arguments, order
   // in which attributes are applied, how to merge attributes if the types are
@@ -1157,6 +1157,23 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       return false;
     break;
 
+  case Type::HLSLInlineSpirv:
+    if (cast<HLSLInlineSpirvType>(T1)->getOpcode() !=
+            cast<HLSLInlineSpirvType>(T2)->getOpcode() ||
+        cast<HLSLInlineSpirvType>(T1)->getSize() !=
+            cast<HLSLInlineSpirvType>(T2)->getSize() ||
+        cast<HLSLInlineSpirvType>(T1)->getAlignment() !=
+            cast<HLSLInlineSpirvType>(T2)->getAlignment())
+      return false;
+    for (size_t I = 0; I < cast<HLSLInlineSpirvType>(T1)->getOperands().size();
+         I++) {
+      if (cast<HLSLInlineSpirvType>(T1)->getOperands()[I] !=
+          cast<HLSLInlineSpirvType>(T2)->getOperands()[I]) {
+        return false;
+      }
+    }
+    break;
+
   case Type::Paren:
     if (!IsStructurallyEquivalent(Context, cast<ParenType>(T1)->getInnerType(),
                                   cast<ParenType>(T2)->getInnerType()))
@@ -1734,9 +1751,20 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   // fulfill the preceding requirements. ... Otherwise, the structure, union,
   // or enumerated types are incompatible.
 
-  if (!NameIsStructurallyEquivalent(*D1, *D2)) {
+  // Note: "the same tag" refers to the identifier for the structure; two
+  // structures without names are not compatible within a TU. In C23, if either
+  // declaration has no name, they're not equivalent. However, the paragraph
+  // after the bulleted list goes on to talk about compatibility of anonymous
+  // structure and union members, so this prohibition only applies to top-level
+  // declarations; if either declaration is not a member, they cannot be
+  // compatible.
+  if (Context.LangOpts.C23 && (!D1->getIdentifier() || !D2->getIdentifier()) &&
+      (!D1->getDeclContext()->isRecord() || !D2->getDeclContext()->isRecord()))
     return false;
-  }
+
+  // Otherwise, check the names for equivalence.
+  if (!NameIsStructurallyEquivalent(*D1, *D2))
+    return false;
 
   if (D1->isUnion() != D2->isUnion()) {
     if (Context.Complain) {

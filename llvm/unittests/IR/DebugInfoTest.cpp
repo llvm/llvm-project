@@ -19,6 +19,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Utils/Local.h"
 
@@ -26,7 +27,7 @@
 
 using namespace llvm;
 
-extern cl::opt<bool> UseNewDbgInfoFormat;
+LLVM_ABI extern cl::opt<bool> UseNewDbgInfoFormat;
 
 static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
   SMDiagnostic Err;

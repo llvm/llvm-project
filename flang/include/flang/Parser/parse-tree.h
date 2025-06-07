@@ -3540,7 +3540,7 @@ WRAPPER_CLASS(OmpLocatorList, std::list<OmpLocator>);
 struct OmpMapperSpecifier {
   // Absent mapper-identifier is equivalent to DEFAULT.
   TUPLE_CLASS_BOILERPLATE(OmpMapperSpecifier);
-  std::tuple<std::optional<Name>, TypeSpec, Name> t;
+  std::tuple<std::string, TypeSpec, Name> t;
 };
 
 // Ref: [4.5:222:1-5], [5.0:305:20-27], [5.1:337:11-19], [5.2:139:18-23],

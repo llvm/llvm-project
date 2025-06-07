@@ -229,3 +229,14 @@ namespace DefaultArgVsPartialSpec {
   > struct S;
   template<typename T> struct S<T> {}; // expected-error {{non-type template argument specializes a template parameter with dependent type 'T'}}
 }
+
+namespace LateDefined {
+  template <class> struct A;
+  struct B {
+    typedef A<B> X;
+  };
+  template <> struct A<B> {
+    void f();
+  };
+  void A<B>::f() {}
+}

@@ -496,7 +496,15 @@ bool Scanner::lexModuleDirectiveBody(DirectiveKind Kind, const char *&First,
                                      const char *const End) {
   const char *DirectiveLoc = Input.data() + CurDirToks.front().Offset;
   for (;;) {
+    // Keep a copy of the First char incase it needs to be reset.
+    const char *Previous = First;
     const dependency_directives_scan::Token &Tok = lexToken(First, End);
+    if ((Tok.is(tok::hash) || Tok.is(tok::at)) &&
+        (Tok.Flags & clang::Token::StartOfLine)) {
+      CurDirToks.pop_back();
+      First = Previous;
+      return false;
+    }
     if (Tok.is(tok::eof))
       return reportError(
           DirectiveLoc,
@@ -846,6 +854,7 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
   if (*First == '@')
     return lexAt(First, End);
 
+  // Handle module directives for C++20 modules.
   if (*First == 'i' || *First == 'e' || *First == 'm')
     return lexModule(First, End);
 

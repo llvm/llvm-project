@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssembly.h"
-#include "CommonArgs.h"
 #include "Gnu.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Options.h"

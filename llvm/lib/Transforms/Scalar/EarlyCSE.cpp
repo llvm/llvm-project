@@ -400,7 +400,9 @@ static bool isEqualImpl(SimpleValue LHS, SimpleValue RHS) {
     return LII->getArgOperand(0) == RII->getArgOperand(1) &&
            LII->getArgOperand(1) == RII->getArgOperand(0) &&
            std::equal(LII->arg_begin() + 2, LII->arg_end(),
-                      RII->arg_begin() + 2, RII->arg_end());
+                      RII->arg_begin() + 2, RII->arg_end()) &&
+           LII->hasSameSpecialState(RII, /*IgnoreAlignment=*/false,
+                                    /*IntersectAttrs=*/true);
   }
 
   // See comment above in `getHashValue()`.
@@ -1698,16 +1700,8 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
     if (MemInst.isValid() && MemInst.isStore()) {
       LoadValue InVal = AvailableLoads.lookup(MemInst.getPointerOperand());
       if (InVal.DefInst &&
-          InVal.DefInst == getMatchingValue(InVal, MemInst, CurrentGeneration)) {
-        // It is okay to have a LastStore to a different pointer here if MemorySSA
-        // tells us that the load and store are from the same memory generation.
-        // In that case, LastStore should keep its present value since we're
-        // removing the current store.
-        assert((!LastStore ||
-                ParseMemoryInst(LastStore, TTI).getPointerOperand() ==
-                    MemInst.getPointerOperand() ||
-                MSSA) &&
-               "can't have an intervening store if not using MemorySSA!");
+          InVal.DefInst ==
+              getMatchingValue(InVal, MemInst, CurrentGeneration)) {
         LLVM_DEBUG(dbgs() << "EarlyCSE DSE (writeback): " << Inst << '\n');
         if (!DebugCounter::shouldExecute(CSECounter)) {
           LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");

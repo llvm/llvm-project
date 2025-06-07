@@ -19,14 +19,3 @@ const M68kMCExpr *M68kMCExpr::create(const MCExpr *Expr, Specifier S,
 }
 
 void M68kMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {}
-
-bool M68kMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                           const MCAssembler *Asm) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
-    return false;
-
-  Res.setSpecifier(specifier);
-  return !Res.getSubSym();
-}
-
-void M68kMCExpr::visitUsedExpr(MCStreamer &S) const { S.visitUsedExpr(*Expr); }

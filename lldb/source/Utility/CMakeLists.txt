@@ -81,12 +81,11 @@ add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
   XcodeSDK.cpp
   ZipFile.cpp
 
-  LINK_LIBS
-    ${LLDB_SYSTEM_LIBS}
-    # lldbUtility does not depend on other LLDB libraries
-
   LINK_COMPONENTS
     BinaryFormat
     Support
     TargetParser
+  LINK_LIBS
+    ${LLDB_SYSTEM_LIBS}
+    # lldbUtility does not depend on other LLDB libraries
   )

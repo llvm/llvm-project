@@ -1985,6 +1985,10 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasTrailingReturn : 1;
 
+    /// Whether this function has is a cfi unchecked callee.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned CFIUncheckedCallee : 1;
+
     /// Extra information which affects how the function is called, like
     /// regparm and the calling convention.
     LLVM_PREFERRED_TYPE(CallingConv)
@@ -2566,6 +2570,8 @@ public:
   bool isSignableIntegerType(const ASTContext &Ctx) const;
   bool isAnyPointerType() const;   // Any C pointer or ObjC object pointer
   bool isCountAttributedType() const;
+  bool isCFIUncheckedCalleeFunctionType() const;
+  bool hasPointeeToToCFIUncheckedCalleeFunctionType() const;
   bool isBlockPointerType() const;
   bool isVoidPointerType() const;
   bool isReferenceType() const;
@@ -2691,6 +2697,7 @@ public:
   bool isHLSLSpecificType() const; // Any HLSL specific type
   bool isHLSLBuiltinIntangibleType() const; // Any HLSL builtin intangible type
   bool isHLSLAttributedResourceType() const;
+  bool isHLSLInlineSpirvType() const;
   bool isHLSLResourceRecord() const;
   bool isHLSLIntangibleType()
       const; // Any HLSL intangible type (builtin, array, class)
@@ -3093,7 +3100,7 @@ public:
 #include "clang/Basic/OpenCLExtensionTypes.def"
 // SVE Types
 #define SVE_TYPE(Name, Id, SingletonId) Id,
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 // PPC MMA Types
 #define PPC_VECTOR_TYPE(Name, Id, Size) Id,
 #include "clang/Basic/PPCTypes.def"
@@ -4712,6 +4719,10 @@ public:
   /// type.
   bool getNoReturnAttr() const { return getExtInfo().getNoReturn(); }
 
+  /// Determine whether this is a function prototype that includes the
+  /// cfi_unchecked_callee attribute.
+  bool getCFIUncheckedCalleeAttr() const;
+
   bool getCmseNSCallAttr() const { return getExtInfo().getCmseNSCall(); }
   CallingConv getCallConv() const { return getExtInfo().getCC(); }
   ExtInfo getExtInfo() const { return ExtInfo(FunctionTypeBits.ExtInfo); }
@@ -5248,8 +5259,12 @@ public:
   /// the various bits of extra information about a function prototype.
   struct ExtProtoInfo {
     FunctionType::ExtInfo ExtInfo;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned Variadic : 1;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned HasTrailingReturn : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned CFIUncheckedCallee : 1;
     unsigned AArch64SMEAttributes : 9;
     Qualifiers TypeQuals;
     RefQualifierKind RefQualifier = RQ_None;
@@ -5259,16 +5274,22 @@ public:
     FunctionEffectsRef FunctionEffects;
 
     ExtProtoInfo()
-        : Variadic(false), HasTrailingReturn(false),
+        : Variadic(false), HasTrailingReturn(false), CFIUncheckedCallee(false),
           AArch64SMEAttributes(SME_NormalFunction) {}
 
     ExtProtoInfo(CallingConv CC)
         : ExtInfo(CC), Variadic(false), HasTrailingReturn(false),
-          AArch64SMEAttributes(SME_NormalFunction) {}
+          CFIUncheckedCallee(false), AArch64SMEAttributes(SME_NormalFunction) {}
 
     ExtProtoInfo withExceptionSpec(const ExceptionSpecInfo &ESI) {
       ExtProtoInfo Result(*this);
       Result.ExceptionSpec = ESI;
+      return Result;
+    }
+
+    ExtProtoInfo withCFIUncheckedCallee(bool CFIUncheckedCallee) {
+      ExtProtoInfo Result(*this);
+      Result.CFIUncheckedCallee = CFIUncheckedCallee;
       return Result;
     }
 
@@ -5431,6 +5452,7 @@ public:
     EPI.Variadic = isVariadic();
     EPI.EllipsisLoc = getEllipsisLoc();
     EPI.HasTrailingReturn = hasTrailingReturn();
+    EPI.CFIUncheckedCallee = hasCFIUncheckedCallee();
     EPI.ExceptionSpec = getExceptionSpecInfo();
     EPI.TypeQuals = getMethodQuals();
     EPI.RefQualifier = getRefQualifier();
@@ -5555,6 +5577,10 @@ public:
 
   /// Whether this function prototype has a trailing return type.
   bool hasTrailingReturn() const { return FunctionTypeBits.HasTrailingReturn; }
+
+  bool hasCFIUncheckedCallee() const {
+    return FunctionTypeBits.CFIUncheckedCallee;
+  }
 
   Qualifiers getMethodQuals() const {
     if (hasExtQualifiers())
@@ -6362,6 +6388,143 @@ public:
   // Returns handle type from HLSL resource, if the type is a resource
   static const HLSLAttributedResourceType *
   findHandleTypeOnResource(const Type *RT);
+};
+
+/// Instances of this class represent operands to a SPIR-V type instruction.
+class SpirvOperand {
+public:
+  enum SpirvOperandKind : unsigned char {
+    Invalid,    ///< Uninitialized.
+    ConstantId, ///< Integral value to represent as a SPIR-V OpConstant
+                ///< instruction ID.
+    Literal,    ///< Integral value to represent as an immediate literal.
+    TypeId,     ///< Type to represent as a SPIR-V type ID.
+
+    Max,
+  };
+
+private:
+  SpirvOperandKind Kind = Invalid;
+
+  QualType ResultType;
+  llvm::APInt Value; // Signedness of constants is represented by ResultType.
+
+public:
+  SpirvOperand() : Kind(Invalid), ResultType(), Value() {}
+
+  SpirvOperand(SpirvOperandKind Kind, QualType ResultType, llvm::APInt Value)
+      : Kind(Kind), ResultType(ResultType), Value(Value) {}
+
+  SpirvOperand(const SpirvOperand &Other) { *this = Other; }
+  ~SpirvOperand() {}
+
+  SpirvOperand &operator=(const SpirvOperand &Other) {
+    this->Kind = Other.Kind;
+    this->ResultType = Other.ResultType;
+    this->Value = Other.Value;
+    return *this;
+  }
+
+  bool operator==(const SpirvOperand &Other) const {
+    return Kind == Other.Kind && ResultType == Other.ResultType &&
+           Value == Other.Value;
+  }
+
+  bool operator!=(const SpirvOperand &Other) const { return !(*this == Other); }
+
+  SpirvOperandKind getKind() const { return Kind; }
+
+  bool isValid() const { return Kind != Invalid && Kind < Max; }
+  bool isConstant() const { return Kind == ConstantId; }
+  bool isLiteral() const { return Kind == Literal; }
+  bool isType() const { return Kind == TypeId; }
+
+  llvm::APInt getValue() const {
+    assert((isConstant() || isLiteral()) &&
+           "This is not an operand with a value!");
+    return Value;
+  }
+
+  QualType getResultType() const {
+    assert((isConstant() || isType()) &&
+           "This is not an operand with a result type!");
+    return ResultType;
+  }
+
+  static SpirvOperand createConstant(QualType ResultType, llvm::APInt Val) {
+    return SpirvOperand(ConstantId, ResultType, Val);
+  }
+
+  static SpirvOperand createLiteral(llvm::APInt Val) {
+    return SpirvOperand(Literal, QualType(), Val);
+  }
+
+  static SpirvOperand createType(QualType T) {
+    return SpirvOperand(TypeId, T, llvm::APSInt());
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) const {
+    ID.AddInteger(Kind);
+    ID.AddPointer(ResultType.getAsOpaquePtr());
+    Value.Profile(ID);
+  }
+};
+
+/// Represents an arbitrary, user-specified SPIR-V type instruction.
+class HLSLInlineSpirvType final
+    : public Type,
+      public llvm::FoldingSetNode,
+      private llvm::TrailingObjects<HLSLInlineSpirvType, SpirvOperand> {
+  friend class ASTContext; // ASTContext creates these
+  friend TrailingObjects;
+
+private:
+  uint32_t Opcode;
+  uint32_t Size;
+  uint32_t Alignment;
+  size_t NumOperands;
+
+  HLSLInlineSpirvType(uint32_t Opcode, uint32_t Size, uint32_t Alignment,
+                      ArrayRef<SpirvOperand> Operands)
+      : Type(HLSLInlineSpirv, QualType(), TypeDependence::None), Opcode(Opcode),
+        Size(Size), Alignment(Alignment), NumOperands(Operands.size()) {
+    for (size_t I = 0; I < NumOperands; I++) {
+      // Since Operands are stored as a trailing object, they have not been
+      // initialized yet. Call the constructor manually.
+      auto *Operand =
+          new (&getTrailingObjects<SpirvOperand>()[I]) SpirvOperand();
+      *Operand = Operands[I];
+    }
+  }
+
+public:
+  uint32_t getOpcode() const { return Opcode; }
+  uint32_t getSize() const { return Size; }
+  uint32_t getAlignment() const { return Alignment; }
+  ArrayRef<SpirvOperand> getOperands() const {
+    return {getTrailingObjects<SpirvOperand>(), NumOperands};
+  }
+
+  bool isSugared() const { return false; }
+  QualType desugar() const { return QualType(this, 0); }
+
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    Profile(ID, Opcode, Size, Alignment, getOperands());
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, uint32_t Opcode,
+                      uint32_t Size, uint32_t Alignment,
+                      ArrayRef<SpirvOperand> Operands) {
+    ID.AddInteger(Opcode);
+    ID.AddInteger(Size);
+    ID.AddInteger(Alignment);
+    for (auto &Operand : Operands)
+      Operand.Profile(ID);
+  }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == HLSLInlineSpirv;
+  }
 };
 
 class TemplateTypeParmType : public Type, public llvm::FoldingSetNode {
@@ -8253,6 +8416,27 @@ inline bool Type::isObjectPointerType() const {
     return false;
 }
 
+inline bool Type::isCFIUncheckedCalleeFunctionType() const {
+  if (const auto *Fn = getAs<FunctionProtoType>())
+    return Fn->hasCFIUncheckedCallee();
+  return false;
+}
+
+inline bool Type::hasPointeeToToCFIUncheckedCalleeFunctionType() const {
+  QualType Pointee;
+  if (const auto *PT = getAs<PointerType>())
+    Pointee = PT->getPointeeType();
+  else if (const auto *RT = getAs<ReferenceType>())
+    Pointee = RT->getPointeeType();
+  else if (const auto *MPT = getAs<MemberPointerType>())
+    Pointee = MPT->getPointeeType();
+  else if (const auto *DT = getAs<DecayedType>())
+    Pointee = DT->getPointeeType();
+  else
+    return false;
+  return Pointee->isCFIUncheckedCalleeFunctionType();
+}
+
 inline bool Type::isFunctionPointerType() const {
   if (const auto *T = getAs<PointerType>())
     return T->getPointeeType()->isFunctionType();
@@ -8495,11 +8679,16 @@ inline bool Type::isHLSLBuiltinIntangibleType() const {
 }
 
 inline bool Type::isHLSLSpecificType() const {
-  return isHLSLBuiltinIntangibleType() || isHLSLAttributedResourceType();
+  return isHLSLBuiltinIntangibleType() || isHLSLAttributedResourceType() ||
+         isHLSLInlineSpirvType();
 }
 
 inline bool Type::isHLSLAttributedResourceType() const {
   return isa<HLSLAttributedResourceType>(this);
+}
+
+inline bool Type::isHLSLInlineSpirvType() const {
+  return isa<HLSLInlineSpirvType>(this);
 }
 
 inline bool Type::isTemplateTypeParmType() const {

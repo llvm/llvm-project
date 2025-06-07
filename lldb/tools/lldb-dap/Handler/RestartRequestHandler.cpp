@@ -145,7 +145,11 @@ void RestartRequestHandler::operator()(
   // Because we're restarting, configuration has already happened so we can
   // continue the process right away.
   if (dap.stop_at_entry) {
-    SendThreadStoppedEvent(dap);
+    if (llvm::Error err = SendThreadStoppedEvent(dap, /*on_entry=*/true)) {
+      EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
+      dap.SendJSON(llvm::json::Value(std::move(response)));
+      return;
+    }
   } else {
     dap.target.GetProcess().Continue();
   }
