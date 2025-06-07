@@ -2735,7 +2735,9 @@ inline void OmpStructureChecker::ErrIfNonScalarAssignmentStmt(
           "statement"_err_en_US);
     if (v->Rank() != 0 ||
         (v->GetType().has_value() &&
-            v->GetType()->category() == common::TypeCategory::Character))
+            v->GetType()->category() == common::TypeCategory::Character) ||
+        (v->GetType().has_value() &&
+            v->GetType()->category() == common::TypeCategory::Derived))
       context_.Say(var.GetSource(),
           "Expected scalar variable "
           "on the LHS of atomic assignment "

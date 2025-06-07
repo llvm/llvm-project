@@ -159,4 +159,13 @@ program sample
     !ERROR: Expected scalar variable on the LHS of atomic assignment statement
     !ERROR: Expected scalar expression on the RHS of atomic assignment statement
         l = r
+
+    !$omp atomic read
+    !ERROR: Expected scalar variable on the LHS of atomic assignment statement
+    !ERROR: Expected scalar variable of intrinsic type on RHS of atomic assignment statement
+        z = sample_type(2,2)
+
+    !$omp atomic write
+    !ERROR: Expected scalar variable on the LHS of atomic assignment statement
+        z = sample_type(2,2)
 end program
