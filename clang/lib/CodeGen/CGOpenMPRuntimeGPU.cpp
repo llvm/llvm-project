@@ -323,7 +323,7 @@ public:
   CheckVarsEscapingDeclContext(CodeGenFunction &CGF,
                                ArrayRef<const ValueDecl *> TeamsReductions)
       : CGF(CGF), EscapedDecls(llvm::from_range, TeamsReductions) {}
-  virtual ~CheckVarsEscapingDeclContext() = default;
+  ~CheckVarsEscapingDeclContext() = default;
   void VisitDeclStmt(const DeclStmt *S) {
     if (!S)
       return;

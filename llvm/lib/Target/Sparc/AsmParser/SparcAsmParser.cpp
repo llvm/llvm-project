@@ -19,7 +19,7 @@
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
@@ -1661,6 +1661,9 @@ static bool hasGOTReference(const MCExpr *Expr) {
 
   case MCExpr::Unary:
     return hasGOTReference(cast<MCUnaryExpr>(Expr)->getSubExpr());
+
+  case MCExpr::Specifier:
+    llvm_unreachable("unused by this backend");
   }
   return false;
 }

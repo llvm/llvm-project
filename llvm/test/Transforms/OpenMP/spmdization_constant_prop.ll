@@ -8,7 +8,7 @@
 ; CHECK: store i32 1, ptr addrspace(3) @IsSPMDMode
 ; CHECK-NOT: store i32 0, ptr addrspace(3) @IsSPMDMode
 ;
-target datalayout = "A5-G1-ni:7:8:9-p7:160:256:256:32-p8:128:128-p9:192:256:256:32"
+target datalayout = "A5-G1-ni:7:8:9-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32"
 target triple = "amdgcn-amd-amdhsa"
 
 %struct.ident_t = type { i32, i32, i32, i32, ptr }

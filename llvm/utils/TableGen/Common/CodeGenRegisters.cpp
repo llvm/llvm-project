@@ -99,7 +99,7 @@ void CodeGenSubRegIndex::updateComponents(CodeGenRegBank &RegBank) {
   if (!Parts.empty()) {
     if (Parts.size() < 2)
       PrintFatalError(TheDef->getLoc(),
-                      "CoveredBySubRegs must have two or more entries");
+                      "CoveringSubRegIndices must have two or more entries");
     SmallVector<CodeGenSubRegIndex *, 8> IdxParts;
     for (const Record *Part : Parts)
       IdxParts.push_back(RegBank.getSubRegIdx(Part));
@@ -466,7 +466,7 @@ void CodeGenRegister::computeSecondarySubRegs(CodeGenRegBank &RegBank) {
 
   std::queue<std::pair<CodeGenSubRegIndex *, CodeGenRegister *>> SubRegQueue;
   for (auto [SRI, SubReg] : SubRegs)
-    SubRegQueue.push({SRI, SubReg});
+    SubRegQueue.emplace(SRI, SubReg);
 
   // Look at the leading super-registers of each sub-register. Those are the
   // candidates for new sub-registers, assuming they are fully contained in
@@ -650,8 +650,7 @@ struct TupleExpander : SetTheory::Expander {
 
       // Take the cost list of the first register in the tuple.
       const ListInit *CostList = Proto->getValueAsListInit("CostPerUse");
-      SmallVector<const Init *, 2> CostPerUse;
-      llvm::append_range(CostPerUse, *CostList);
+      SmallVector<const Init *, 2> CostPerUse(CostList->getElements());
 
       const StringInit *AsmName = StringInit::get(RK, "");
       if (!RegNames.empty()) {
@@ -704,7 +703,7 @@ struct TupleExpander : SetTheory::Expander {
           RV.setValue(BitInit::get(RK, true));
 
         // Copy fields from the RegisterTuples def.
-        if (Field == "SubRegIndices" || Field == "CompositeIndices") {
+        if (Field == "SubRegIndices") {
           NewReg->addValue(*Def->getValue(Field));
           continue;
         }
@@ -771,7 +770,7 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
 
   // Alternative allocation orders may be subsets.
   SetTheory::RecSet Order;
-  for (auto [Idx, AltOrderElem] : enumerate(AltOrders->getValues())) {
+  for (auto [Idx, AltOrderElem] : enumerate(AltOrders->getElements())) {
     RegBank.getSets().evaluate(AltOrderElem, Order, R->getLoc());
     Orders[1 + Idx].append(Order.begin(), Order.end());
     // Verify that all altorder members are regclass members.
@@ -1334,7 +1333,7 @@ CodeGenSubRegIndex *CodeGenRegBank::getSubRegIdx(const Record *Def) {
 
 const CodeGenSubRegIndex *
 CodeGenRegBank::findSubRegIdx(const Record *Def) const {
-  return Def2SubRegIdx.lookup(Def);
+  return Def2SubRegIdx.at(Def);
 }
 
 CodeGenRegister *CodeGenRegBank::getReg(const Record *Def) {
@@ -1462,7 +1461,7 @@ void CodeGenRegBank::computeComposites() {
   for (const CodeGenRegister &R : Registers) {
     const CodeGenRegister::SubRegMap &SM = R.getSubRegs();
     for (auto [SRI, SubReg] : SM)
-      SubRegAction[SRI].insert({&R, SubReg});
+      SubRegAction[SRI].try_emplace(&R, SubReg);
   }
 
   // Calculate the composition of two subregisters as compositions of their
@@ -1472,10 +1471,10 @@ void CodeGenRegBank::computeComposites() {
     RegMap C;
     const RegMap &Img1 = SubRegAction.at(Sub1);
     const RegMap &Img2 = SubRegAction.at(Sub2);
-    for (auto [SRI, SubReg] : Img1) {
+    for (auto [R, SubReg] : Img1) {
       auto F = Img2.find(SubReg);
       if (F != Img2.end())
-        C.insert({SRI, F->second});
+        C.try_emplace(R, F->second);
     }
     return C;
   };
@@ -1533,7 +1532,7 @@ void CodeGenRegBank::computeComposites() {
         if (CodeGenSubRegIndex *Prev =
                 Idx1->addComposite(Idx2, Idx3, getHwModes())) {
           // If the composition was not user-defined, always emit a warning.
-          if (!UserDefined.count({Idx1, Idx2}) ||
+          if (!UserDefined.contains({Idx1, Idx2}) ||
               agree(compose(Idx1, Idx2), SubRegAction.at(Idx3)))
             PrintWarning(Twine("SubRegIndex ") + Idx1->getQualifiedName() +
                          " and " + Idx2->getQualifiedName() +
@@ -2409,7 +2408,7 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
     if (RC->getSubClassWithSubReg(SubIdx) != RC)
       continue;
 
-    if (ImpliedSubRegIndices.count(SubIdx))
+    if (ImpliedSubRegIndices.contains(SubIdx))
       continue;
 
     // Build list of (Sub, Super) pairs for this SubIdx, sorted by Sub. Note
@@ -2640,13 +2639,13 @@ CodeGenRegBank::computeCoveredRegisters(ArrayRef<const Record *> Regs) {
   // Second, find all super-registers that are completely covered by the set.
   for (unsigned i = 0; i != Set.size(); ++i) {
     for (const CodeGenRegister *Super : Set[i]->getSuperRegs()) {
-      if (!Super->CoveredBySubRegs || Set.count(Super))
+      if (!Super->CoveredBySubRegs || Set.contains(Super))
         continue;
       // This new super-register is covered by its sub-registers.
       bool AllSubsInSet = true;
       const CodeGenRegister::SubRegMap &SRM = Super->getSubRegs();
       for (auto [_, SR] : SRM)
-        if (!Set.count(SR)) {
+        if (!Set.contains(SR)) {
           AllSubsInSet = false;
           break;
         }

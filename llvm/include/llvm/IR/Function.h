@@ -32,6 +32,7 @@
 #include "llvm/IR/OperandTraits.h"
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -791,8 +792,9 @@ public:
 
 private:
   // These need access to the underlying BB list.
-  friend void BasicBlock::removeFromParent();
-  friend iplist<BasicBlock>::iterator BasicBlock::eraseFromParent();
+  LLVM_ABI_FRIEND friend void BasicBlock::removeFromParent();
+  LLVM_ABI_FRIEND friend iplist<BasicBlock>::iterator
+  BasicBlock::eraseFromParent();
   template <class BB_t, class BB_i_t, class BI_t, class II_t>
   friend class InstIterator;
   friend class llvm::SymbolTableListTraits<llvm::BasicBlock>;
@@ -1052,8 +1054,7 @@ namespace CallingConv {
 
 // TODO: Need similar function for support of argument in position. General
 // version on FunctionType + Attributes + CallingConv::ID?
-LLVM_READNONE
-bool supportsNonVoidReturnType(CallingConv::ID CC);
+LLVM_ABI LLVM_READNONE bool supportsNonVoidReturnType(CallingConv::ID CC);
 } // namespace CallingConv
 
 /// Check whether null pointer dereferencing is considered undefined behavior
@@ -1061,7 +1062,7 @@ bool supportsNonVoidReturnType(CallingConv::ID CC);
 /// Null pointer access in non-zero address space is not considered undefined.
 /// Return value: false => null pointer dereference is undefined.
 /// Return value: true =>  null pointer dereference is not undefined.
-bool NullPointerIsDefined(const Function *F, unsigned AS = 0);
+LLVM_ABI bool NullPointerIsDefined(const Function *F, unsigned AS = 0);
 
 template <> struct OperandTraits<Function> : public HungoffOperandTraits {};
 

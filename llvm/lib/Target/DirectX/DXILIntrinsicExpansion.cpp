@@ -70,6 +70,15 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::vector_reduce_add:
   case Intrinsic::vector_reduce_fadd:
     return true;
+  case Intrinsic::dx_resource_load_typedbuffer:
+    // We need to handle doubles and vector of doubles.
+    return F.getReturnType()
+        ->getStructElementType(0)
+        ->getScalarType()
+        ->isDoubleTy();
+  case Intrinsic::dx_resource_store_typedbuffer:
+    // We need to handle doubles and vector of doubles.
+    return F.getFunctionType()->getParamType(2)->getScalarType()->isDoubleTy();
   }
   return false;
 }
@@ -532,6 +541,110 @@ static Value *expandRadiansIntrinsic(CallInst *Orig) {
   return Builder.CreateFMul(X, PiOver180);
 }
 
+static bool expandTypedBufferLoadIntrinsic(CallInst *Orig) {
+  IRBuilder<> Builder(Orig);
+
+  Type *BufferTy = Orig->getType()->getStructElementType(0);
+  assert(BufferTy->getScalarType()->isDoubleTy() &&
+         "Only expand double or double2");
+
+  unsigned ExtractNum = 2;
+  if (auto *VT = dyn_cast<FixedVectorType>(BufferTy)) {
+    assert(VT->getNumElements() == 2 &&
+           "TypedBufferLoad double vector has wrong size");
+    ExtractNum = 4;
+  }
+
+  Type *Ty = VectorType::get(Builder.getInt32Ty(), ExtractNum, false);
+
+  Type *LoadType = StructType::get(Ty, Builder.getInt1Ty());
+  CallInst *Load =
+      Builder.CreateIntrinsic(LoadType, Intrinsic::dx_resource_load_typedbuffer,
+                              {Orig->getOperand(0), Orig->getOperand(1)});
+
+  // extract the buffer load's result
+  Value *Extract = Builder.CreateExtractValue(Load, {0});
+
+  SmallVector<Value *> ExtractElements;
+  for (unsigned I = 0; I < ExtractNum; ++I)
+    ExtractElements.push_back(
+        Builder.CreateExtractElement(Extract, Builder.getInt32(I)));
+
+  // combine into double(s)
+  Value *Result = PoisonValue::get(BufferTy);
+  for (unsigned I = 0; I < ExtractNum; I += 2) {
+    Value *Dbl =
+        Builder.CreateIntrinsic(Builder.getDoubleTy(), Intrinsic::dx_asdouble,
+                                {ExtractElements[I], ExtractElements[I + 1]});
+    if (ExtractNum == 4)
+      Result =
+          Builder.CreateInsertElement(Result, Dbl, Builder.getInt32(I / 2));
+    else
+      Result = Dbl;
+  }
+
+  Value *CheckBit = nullptr;
+  for (User *U : make_early_inc_range(Orig->users())) {
+    auto *EVI = cast<ExtractValueInst>(U);
+    ArrayRef<unsigned> Indices = EVI->getIndices();
+    assert(Indices.size() == 1);
+
+    if (Indices[0] == 0) {
+      // Use of the value(s)
+      EVI->replaceAllUsesWith(Result);
+    } else {
+      // Use of the check bit
+      assert(Indices[0] == 1 && "Unexpected type for typedbufferload");
+      if (!CheckBit)
+        CheckBit = Builder.CreateExtractValue(Load, {1});
+      EVI->replaceAllUsesWith(CheckBit);
+    }
+    EVI->eraseFromParent();
+  }
+  Orig->eraseFromParent();
+  return true;
+}
+
+static bool expandTypedBufferStoreIntrinsic(CallInst *Orig) {
+  IRBuilder<> Builder(Orig);
+
+  Type *BufferTy = Orig->getFunctionType()->getParamType(2);
+  assert(BufferTy->getScalarType()->isDoubleTy() &&
+         "Only expand double or double2");
+
+  unsigned ExtractNum = 2;
+  if (auto *VT = dyn_cast<FixedVectorType>(BufferTy)) {
+    assert(VT->getNumElements() == 2 &&
+           "TypedBufferStore double vector has wrong size");
+    ExtractNum = 4;
+  }
+
+  Type *SplitElementTy = Builder.getInt32Ty();
+  if (ExtractNum == 4)
+    SplitElementTy = VectorType::get(SplitElementTy, 2, false);
+
+  // split our double(s)
+  auto *SplitTy = llvm::StructType::get(SplitElementTy, SplitElementTy);
+  Value *Split = Builder.CreateIntrinsic(SplitTy, Intrinsic::dx_splitdouble,
+                                         Orig->getOperand(2));
+  // create our vector
+  Value *LowBits = Builder.CreateExtractValue(Split, 0);
+  Value *HighBits = Builder.CreateExtractValue(Split, 1);
+  Value *Val;
+  if (ExtractNum == 2) {
+    Val = PoisonValue::get(VectorType::get(SplitElementTy, 2, false));
+    Val = Builder.CreateInsertElement(Val, LowBits, Builder.getInt32(0));
+    Val = Builder.CreateInsertElement(Val, HighBits, Builder.getInt32(1));
+  } else
+    Val = Builder.CreateShuffleVector(LowBits, HighBits, {0, 2, 1, 3});
+
+  Builder.CreateIntrinsic(Builder.getVoidTy(),
+                          Intrinsic::dx_resource_store_typedbuffer,
+                          {Orig->getOperand(0), Orig->getOperand(1), Val});
+  Orig->eraseFromParent();
+  return true;
+}
+
 static Intrinsic::ID getMaxForClamp(Intrinsic::ID ClampIntrinsic) {
   if (ClampIntrinsic == Intrinsic::dx_uclamp)
     return Intrinsic::umax;
@@ -659,6 +772,14 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     break;
   case Intrinsic::dx_radians:
     Result = expandRadiansIntrinsic(Orig);
+    break;
+  case Intrinsic::dx_resource_load_typedbuffer:
+    if (expandTypedBufferLoadIntrinsic(Orig))
+      return true;
+    break;
+  case Intrinsic::dx_resource_store_typedbuffer:
+    if (expandTypedBufferStoreIntrinsic(Orig))
+      return true;
     break;
   case Intrinsic::usub_sat:
     Result = expandUsubSat(Orig);

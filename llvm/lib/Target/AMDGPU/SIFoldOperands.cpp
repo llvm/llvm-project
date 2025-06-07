@@ -191,8 +191,7 @@ public:
   }
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::IsSSA);
+    return MachineFunctionProperties().setIsSSA();
   }
 };
 
@@ -375,6 +374,12 @@ bool SIFoldOperandsImpl::canUseImmWithOpSel(FoldCandidate &Fold) const {
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
+    // VOP3 packed instructions ignore op_sel source modifiers, we cannot encode
+    // two different constants.
+    if ((TSFlags & SIInstrFlags::VOP3) && !(TSFlags & SIInstrFlags::VOP3P) &&
+        static_cast<uint16_t>(Fold.ImmToFold) !=
+            static_cast<uint16_t>(Fold.ImmToFold >> 16))
+      return false;
     break;
   }
 
@@ -767,17 +772,6 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
     return true;
   }
 
-  // Inlineable constant might have been folded into Imm operand of fmaak or
-  // fmamk and we are trying to fold a non-inlinable constant.
-  if ((Opc == AMDGPU::S_FMAAK_F32 || Opc == AMDGPU::S_FMAMK_F32) &&
-      !OpToFold->isReg() && !TII->isInlineConstant(*OpToFold)) {
-    unsigned ImmIdx = Opc == AMDGPU::S_FMAAK_F32 ? 3 : 2;
-    MachineOperand &OpImm = MI->getOperand(ImmIdx);
-    if (!OpImm.isReg() &&
-        TII->isInlineConstant(*MI, MI->getOperand(OpNo), OpImm))
-      return tryToFoldAsFMAAKorMK();
-  }
-
   // Special case for s_fmac_f32 if we are trying to fold into Src0 or Src1.
   // By changing into fmamk we can untie Src2.
   // If folding for Src0 happens first and it is identical operand to Src1 we
@@ -787,24 +781,6 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
       (OpNo != 1 || !MI->getOperand(1).isIdenticalTo(MI->getOperand(2)))) {
     if (tryToFoldAsFMAAKorMK())
       return true;
-  }
-
-  // Check the case where we might introduce a second constant operand to a
-  // scalar instruction
-  if (TII->isSALU(MI->getOpcode())) {
-    const MCInstrDesc &InstDesc = MI->getDesc();
-    const MCOperandInfo &OpInfo = InstDesc.operands()[OpNo];
-
-    // Fine if the operand can be encoded as an inline constant
-    if (!OpToFold->isReg() && !TII->isInlineConstant(*OpToFold, OpInfo)) {
-      // Otherwise check for another constant
-      for (unsigned i = 0, e = InstDesc.getNumOperands(); i != e; ++i) {
-        auto &Op = MI->getOperand(i);
-        if (OpNo != i && !Op.isReg() &&
-            !TII->isInlineConstant(Op, InstDesc.operands()[i]))
-          return false;
-      }
-    }
   }
 
   appendFoldCandidate(FoldList, MI, OpNo, OpToFold);
@@ -895,6 +871,8 @@ SIFoldOperandsImpl::isRegSeqSplat(MachineInstr &RegSeq) const {
   if (!SrcRC)
     return {};
 
+  // TODO: Recognize 64-bit splats broken into 32-bit pieces (i.e. recognize
+  // every other other element is 0 for 64-bit immediates)
   int64_t Imm;
   for (unsigned I = 0, E = Defs.size(); I != E; ++I) {
     const MachineOperand *Op = Defs[I].first;
@@ -924,10 +902,41 @@ MachineOperand *SIFoldOperandsImpl::tryFoldRegSeqSplat(
   if (!AMDGPU::isSISrcOperand(Desc, UseOpIdx))
     return nullptr;
 
-  // FIXME: Verify SplatRC is compatible with the use operand
-  uint8_t OpTy = Desc.operands()[UseOpIdx].OperandType;
-  if (!TII->isInlineConstant(*SplatVal, OpTy) ||
-      !TII->isOperandLegal(*UseMI, UseOpIdx, SplatVal))
+  int16_t RCID = Desc.operands()[UseOpIdx].RegClass;
+  if (RCID == -1)
+    return nullptr;
+
+  // Special case 0/-1, since when interpreted as a 64-bit element both halves
+  // have the same bits. Effectively this code does not handle 64-bit element
+  // operands correctly, as the incoming 64-bit constants are already split into
+  // 32-bit sequence elements.
+  //
+  // TODO: We should try to figure out how to interpret the reg_sequence as a
+  // split 64-bit splat constant, or use 64-bit pseudos for materializing f64
+  // constants.
+  if (SplatVal->getImm() != 0 && SplatVal->getImm() != -1) {
+    const TargetRegisterClass *OpRC = TRI->getRegClass(RCID);
+    // We need to figure out the scalar type read by the operand. e.g. the MFMA
+    // operand will be AReg_128, and we want to check if it's compatible with an
+    // AReg_32 constant.
+    uint8_t OpTy = Desc.operands()[UseOpIdx].OperandType;
+    switch (OpTy) {
+    case AMDGPU::OPERAND_REG_INLINE_AC_INT32:
+    case AMDGPU::OPERAND_REG_INLINE_AC_FP32:
+      OpRC = TRI->getSubRegisterClass(OpRC, AMDGPU::sub0);
+      break;
+    case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
+      OpRC = TRI->getSubRegisterClass(OpRC, AMDGPU::sub0_sub1);
+      break;
+    default:
+      return nullptr;
+    }
+
+    if (!TRI->getCommonSubClass(OpRC, SplatRC))
+      return nullptr;
+  }
+
+  if (!TII->isOperandLegal(*UseMI, UseOpIdx, SplatVal))
     return nullptr;
 
   return SplatVal;
@@ -1039,14 +1048,13 @@ void SIFoldOperandsImpl::foldOperand(
         }
       }
 
-      if (tryToFoldACImm(UseMI->getOperand(0), RSUseMI, OpNo, FoldList))
-        continue;
-
       if (RSUse->getSubReg() != RegSeqDstSubReg)
         continue;
 
-      foldOperand(OpToFold, RSUseMI, RSUseMI->getOperandNo(RSUse), FoldList,
-                  CopiesToReplace);
+      if (tryToFoldACImm(UseMI->getOperand(0), RSUseMI, OpNo, FoldList))
+        continue;
+
+      foldOperand(OpToFold, RSUseMI, OpNo, FoldList, CopiesToReplace);
     }
 
     return;
@@ -1878,10 +1886,6 @@ bool SIFoldOperandsImpl::tryFoldFoldableCopy(
   if (!DstReg.isVirtual())
     return false;
 
-  if (OpToFold.isReg() &&
-      foldCopyToVGPROfScalarAddOfFrameIndex(DstReg, OpToFold.getReg(), MI))
-    return true;
-
   // Fold copy to AGPR through reg_sequence
   // TODO: Handle with subregister extract
   if (OpToFold.isReg() && MI.isCopy() && !MI.getOperand(1).getSubReg()) {
@@ -1916,7 +1920,14 @@ bool SIFoldOperandsImpl::tryFoldFoldableCopy(
     Changed = true;
   }
 
-  return Changed;
+  if (Changed)
+    return true;
+
+  // Run this after foldInstOperand to avoid turning scalar additions into
+  // vector additions when the result scalar result could just be folded into
+  // the user(s).
+  return OpToFold.isReg() &&
+         foldCopyToVGPROfScalarAddOfFrameIndex(DstReg, OpToFold.getReg(), MI);
 }
 
 // Clamp patterns are canonically selected to v_max_* instructions, so only

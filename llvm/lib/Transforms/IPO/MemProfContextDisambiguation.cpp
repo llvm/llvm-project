@@ -2183,6 +2183,9 @@ ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(
 
   updateStackNodes();
 
+  if (ExportToDot)
+    exportToDot("poststackupdate");
+
   handleCallsitesWithMultipleTargets();
 
   markBackedges();
@@ -2232,9 +2235,8 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
           CallStack<MIBInfo, SmallVector<unsigned>::const_iterator>
               EmptyContext;
           unsigned I = 0;
-          assert(
-              (!MemProfReportHintedSizes && MinClonedColdBytePercent >= 100) ||
-              AN.ContextSizeInfos.size() == AN.MIBs.size());
+          assert(!metadataMayIncludeContextSizeInfo() ||
+                 AN.ContextSizeInfos.size() == AN.MIBs.size());
           // Now add all of the MIBs and their stack nodes.
           for (auto &MIB : AN.MIBs) {
             CallStack<MIBInfo, SmallVector<unsigned>::const_iterator>
@@ -2285,6 +2287,9 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
     exportToDot("prestackupdate");
 
   updateStackNodes();
+
+  if (ExportToDot)
+    exportToDot("poststackupdate");
 
   handleCallsitesWithMultipleTargets();
 
@@ -2945,7 +2950,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::print(
   // Make a copy of the computed context ids that we can sort for stability.
   auto ContextIds = getContextIds();
   std::vector<uint32_t> SortedIds(ContextIds.begin(), ContextIds.end());
-  llvm::sort(SortedIds);
+  std::sort(SortedIds.begin(), SortedIds.end());
   for (auto Id : SortedIds)
     OS << " " << Id;
   OS << "\n";
@@ -2977,7 +2982,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextEdge::print(
      << " AllocTypes: " << getAllocTypeString(AllocTypes);
   OS << " ContextIds:";
   std::vector<uint32_t> SortedIds(ContextIds.begin(), ContextIds.end());
-  llvm::sort(SortedIds);
+  std::sort(SortedIds.begin(), SortedIds.end());
   for (auto Id : SortedIds)
     OS << " " << Id;
 }
@@ -3012,7 +3017,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::printTotalSizes(
     DenseSet<uint32_t> ContextIds = Node->getContextIds();
     auto AllocTypeFromCall = getAllocationCallType(Node->Call);
     std::vector<uint32_t> SortedIds(ContextIds.begin(), ContextIds.end());
-    llvm::sort(SortedIds);
+    std::sort(SortedIds.begin(), SortedIds.end());
     for (auto Id : SortedIds) {
       auto TypeI = ContextIdToAllocationType.find(Id);
       assert(TypeI != ContextIdToAllocationType.end());
@@ -3211,7 +3216,7 @@ private:
     std::string IdString = "ContextIds:";
     if (ContextIds.size() < 100) {
       std::vector<uint32_t> SortedIds(ContextIds.begin(), ContextIds.end());
-      llvm::sort(SortedIds);
+      std::sort(SortedIds.begin(), SortedIds.end());
       for (auto Id : SortedIds)
         IdString += (" " + Twine(Id)).str();
     } else {

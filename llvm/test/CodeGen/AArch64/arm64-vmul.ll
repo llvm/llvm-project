@@ -2863,3 +2863,187 @@ define <1 x i64> @test_mul_v1i64(<1 x i64> %lhs, <1 x i64> %rhs) nounwind {
   %prod = mul <1 x i64> %lhs, %rhs
   ret <1 x i64> %prod
 }
+
+define <4 x i32> @sqdmlal4s_lib(<4 x i32> %dst, <4 x i16> %v1, <4 x i16> %v2) {
+; CHECK-LABEL: sqdmlal4s_lib:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqdmlal.4s v0, v1, v2
+; CHECK-NEXT:    ret
+  %tmp  = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %v1, <4 x i16> %v2)
+  %sum = call <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32> %dst, <4 x i32> %tmp)
+  ret <4 x i32> %sum
+}
+
+define <2 x i64> @sqdmlal2d_lib(<2 x i64> %dst, <2 x i32> %v1, <2 x i32> %v2) {
+; CHECK-LABEL: sqdmlal2d_lib:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqdmlal.2d v0, v1, v2
+; CHECK-NEXT:    ret
+  %tmp  = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> %v1, <2 x i32> %v2)
+  %sum = call <2 x i64> @llvm.sadd.sat.v2i64(<2 x i64> %dst, <2 x i64> %tmp)
+  ret <2 x i64> %sum
+}
+
+define <4 x i32> @sqdmlal2_4s_lib(<4 x i32> %dst, <8 x i16> %v1, <8 x i16> %v2) {
+; CHECK-LABEL: sqdmlal2_4s_lib:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqdmlal2.4s v0, v1, v2
+; CHECK-NEXT:    ret
+  %tmp0 = shufflevector <8 x i16> %v1, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %tmp1 = shufflevector <8 x i16> %v2, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %tmp2  = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %tmp0, <4 x i16> %tmp1)
+  %sum = call <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32> %dst, <4 x i32> %tmp2)
+  ret <4 x i32> %sum
+}
+
+define <2 x i64> @sqdmlal2_2d_lib(<2 x i64> %dst, <4 x i32> %v1, <4 x i32> %v2) {
+; CHECK-LABEL: sqdmlal2_2d_lib:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqdmlal2.2d v0, v1, v2
+; CHECK-NEXT:    ret
+  %tmp0 = shufflevector <4 x i32> %v1, <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+  %tmp1 = shufflevector <4 x i32> %v2, <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+  %tmp2  = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> %tmp0, <2 x i32> %tmp1)
+  %sum = call <2 x i64> @llvm.sadd.sat.v2i64(<2 x i64> %dst, <2 x i64> %tmp2)
+  ret <2 x i64> %sum
+}
+
+define <4 x i32> @sqdmlal_lane_4s_lib(<4 x i32> %dst, <4 x i16> %v1, <4 x i16> %v2) {
+; CHECK-LABEL: sqdmlal_lane_4s_lib:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    sqdmlal.4s v0, v1, v2[3]
+; CHECK-NEXT:    ret
+  %tmp0 = shufflevector <4 x i16> %v2, <4 x i16> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  %tmp1  = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %v1, <4 x i16> %tmp0)
+  %sum = call <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32> %dst, <4 x i32> %tmp1)
+  ret <4 x i32> %sum
+}
+
+define <2 x i64> @sqdmlal_lane_2d_lib(<2 x i64> %dst, <2 x i32> %v1, <2 x i32> %v2) {
+; CHECK-LABEL: sqdmlal_lane_2d_lib:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    sqdmlal.2d v0, v1, v2[1]
+; CHECK-NEXT:    ret
+  %tmp0 = shufflevector <2 x i32> %v2, <2 x i32> poison, <2 x i32> <i32 1, i32 1>
+  %tmp1  = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> %v1, <2 x i32> %tmp0)
+  %sum = call <2 x i64> @llvm.sadd.sat.v2i64(<2 x i64> %dst, <2 x i64> %tmp1)
+  ret <2 x i64> %sum
+}
+
+define <4 x i32> @sqdmlal2_lane_4s_lib(<4 x i32> %dst, <8 x i16> %v1, <8 x i16> %v2) {
+; CHECK-LABEL: sqdmlal2_lane_4s_lib:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqdmlal2.4s v0, v1, v2[7]
+; CHECK-NEXT:    ret
+  %tmp0 = shufflevector <8 x i16> %v1, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %tmp1 = shufflevector <8 x i16> %v2, <8 x i16> poison, <4 x i32> <i32 7, i32 7, i32 7, i32 7>
+  %tmp2  = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %tmp0, <4 x i16> %tmp1)
+  %sum = call <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32> %dst, <4 x i32> %tmp2)
+  ret <4 x i32> %sum
+}
+
+define <2 x i64> @sqdmlal2_lane_2d_lib(<2 x i64> %dst, <4 x i32> %v1, <4 x i32> %v2) {
+; CHECK-LABEL: sqdmlal2_lane_2d_lib:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqdmlal2.2d v0, v1, v2[1]
+; CHECK-NEXT:    ret
+  %tmp0 = shufflevector <4 x i32> %v1, <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+  %tmp1 = shufflevector <4 x i32> %v2, <4 x i32> poison, <2 x i32> <i32 1, i32 1>
+  %tmp2  = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> %tmp0, <2 x i32> %tmp1)
+  %sum = call <2 x i64> @llvm.sadd.sat.v2i64(<2 x i64> %dst, <2 x i64> %tmp2)
+  ret <2 x i64> %sum
+}
+
+define <4 x i32> @sqdmlsl4s_lib(<4 x i32> %dst, <4 x i16> %v1, <4 x i16> %v2) {
+; CHECK-LABEL: sqdmlsl4s_lib:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqdmlsl.4s v0, v1, v2
+; CHECK-NEXT:    ret
+  %tmp  = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %v1, <4 x i16> %v2)
+  %sum = call <4 x i32> @llvm.ssub.sat.v4i32(<4 x i32> %dst, <4 x i32> %tmp)
+  ret <4 x i32> %sum
+}
+
+define <2 x i64> @sqdmlsl2d_lib(<2 x i64> %dst, <2 x i32> %v1, <2 x i32> %v2) {
+; CHECK-LABEL: sqdmlsl2d_lib:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqdmlsl.2d v0, v1, v2
+; CHECK-NEXT:    ret
+  %tmp  = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> %v1, <2 x i32> %v2)
+  %sum = call <2 x i64> @llvm.ssub.sat.v2i64(<2 x i64> %dst, <2 x i64> %tmp)
+  ret <2 x i64> %sum
+}
+
+define <4 x i32> @sqdmlsl2_4s_lib(<4 x i32> %dst, <8 x i16> %v1, <8 x i16> %v2) {
+; CHECK-LABEL: sqdmlsl2_4s_lib:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqdmlsl2.4s v0, v1, v2
+; CHECK-NEXT:    ret
+  %tmp0 = shufflevector <8 x i16> %v1, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %tmp1 = shufflevector <8 x i16> %v2, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %tmp2  = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %tmp0, <4 x i16> %tmp1)
+  %sum = call <4 x i32> @llvm.ssub.sat.v4i32(<4 x i32> %dst, <4 x i32> %tmp2)
+  ret <4 x i32> %sum
+}
+
+define <2 x i64> @sqdmlsl2_2d_lib(<2 x i64> %dst, <4 x i32> %v1, <4 x i32> %v2) {
+; CHECK-LABEL: sqdmlsl2_2d_lib:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqdmlsl2.2d v0, v1, v2
+; CHECK-NEXT:    ret
+  %tmp0 = shufflevector <4 x i32> %v1, <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+  %tmp1 = shufflevector <4 x i32> %v2, <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+  %tmp2  = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> %tmp0, <2 x i32> %tmp1)
+  %sum = call <2 x i64> @llvm.ssub.sat.v2i64(<2 x i64> %dst, <2 x i64> %tmp2)
+  ret <2 x i64> %sum
+}
+
+define <4 x i32> @sqdmlsl_lane_4s_lib(<4 x i32> %dst, <4 x i16> %v1, <4 x i16> %v2) {
+; CHECK-LABEL: sqdmlsl_lane_4s_lib:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    sqdmlsl.4s v0, v1, v2[3]
+; CHECK-NEXT:    ret
+  %tmp0 = shufflevector <4 x i16> %v2, <4 x i16> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  %tmp1  = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %v1, <4 x i16> %tmp0)
+  %sum = call <4 x i32> @llvm.ssub.sat.v4i32(<4 x i32> %dst, <4 x i32> %tmp1)
+  ret <4 x i32> %sum
+}
+
+define <2 x i64> @sqdmlsl_lane_2d_lib(<2 x i64> %dst, <2 x i32> %v1, <2 x i32> %v2) {
+; CHECK-LABEL: sqdmlsl_lane_2d_lib:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    sqdmlsl.2d v0, v1, v2[1]
+; CHECK-NEXT:    ret
+  %tmp0 = shufflevector <2 x i32> %v2, <2 x i32> poison, <2 x i32> <i32 1, i32 1>
+  %tmp1  = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> %v1, <2 x i32> %tmp0)
+  %sum = call <2 x i64> @llvm.ssub.sat.v2i64(<2 x i64> %dst, <2 x i64> %tmp1)
+  ret <2 x i64> %sum
+}
+
+define <4 x i32> @sqdmlsl2_lane_4s_lib(<4 x i32> %dst, <8 x i16> %v1, <8 x i16> %v2) {
+; CHECK-LABEL: sqdmlsl2_lane_4s_lib:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqdmlsl2.4s v0, v1, v2[7]
+; CHECK-NEXT:    ret
+  %tmp0 = shufflevector <8 x i16> %v1, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %tmp1 = shufflevector <8 x i16> %v2, <8 x i16> poison, <4 x i32> <i32 7, i32 7, i32 7, i32 7>
+  %tmp2  = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %tmp0, <4 x i16> %tmp1)
+  %sum = call <4 x i32> @llvm.ssub.sat.v4i32(<4 x i32> %dst, <4 x i32> %tmp2)
+  ret <4 x i32> %sum
+}
+
+define <2 x i64> @sqdmlsl2_lane_2d_lib(<2 x i64> %dst, <4 x i32> %v1, <4 x i32> %v2) {
+; CHECK-LABEL: sqdmlsl2_lane_2d_lib:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqdmlsl2.2d v0, v1, v2[1]
+; CHECK-NEXT:    ret
+  %tmp0 = shufflevector <4 x i32> %v1, <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+  %tmp1 = shufflevector <4 x i32> %v2, <4 x i32> poison, <2 x i32> <i32 1, i32 1>
+  %tmp2  = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> %tmp0, <2 x i32> %tmp1)
+  %sum = call <2 x i64> @llvm.ssub.sat.v2i64(<2 x i64> %dst, <2 x i64> %tmp2)
+  ret <2 x i64> %sum
+}

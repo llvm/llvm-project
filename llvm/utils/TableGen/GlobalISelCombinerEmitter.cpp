@@ -1161,7 +1161,7 @@ bool CombineRuleBuilder::buildPermutationsToEmit() {
     PermutationsToEmit.clear();
 
     for (const auto &Perm : CurPerms) {
-      assert(!Perm.count(Pat.get()) && "Pattern already emitted?");
+      assert(!Perm.contains(Pat.get()) && "Pattern already emitted?");
       for (unsigned K = 0; K < NumAlts; ++K) {
         PatternAlternatives NewPerm = Perm;
         NewPerm[Pat.get()] = K;
@@ -1404,7 +1404,7 @@ bool CombineRuleBuilder::addFeaturePredicates(RuleMatcher &M) {
     return true;
 
   const ListInit *Preds = RuleDef.getValueAsListInit("Predicates");
-  for (const Init *PI : Preds->getValues()) {
+  for (const Init *PI : Preds->getElements()) {
     const DefInit *Pred = dyn_cast<DefInit>(PI);
     if (!Pred)
       continue;
