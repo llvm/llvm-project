@@ -446,11 +446,18 @@ bool NVPTXDAGToDAGISel::tryUNPACK_VECTOR(SDNode *N) {
 bool NVPTXDAGToDAGISel::tryEXTRACT_VECTOR_ELEMENT(SDNode *N) {
   SDValue Vector = N->getOperand(0);
 
-  // We only care about 16x2 as it's the only real vector type we
-  // need to deal with.
   MVT VT = Vector.getSimpleValueType();
-  if (!Isv2x16VT(VT))
+  if (!(NVPTX::isPackedVectorTy(VT) && VT.getVectorNumElements() == 2))
     return false;
+
+  unsigned Opcode;
+  if (VT.is32BitVector())
+    Opcode = NVPTX::I32toV2I16;
+  else if (VT.is64BitVector())
+    Opcode = NVPTX::I64toV2I32;
+  else
+    llvm_unreachable("Unhandled packed type");
+
   // Find and record all uses of this vector that extract element 0 or 1.
   SmallVector<SDNode *, 4> E0, E1;
   for (auto *U : Vector.getNode()->users()) {
@@ -474,11 +481,11 @@ bool NVPTXDAGToDAGISel::tryEXTRACT_VECTOR_ELEMENT(SDNode *N) {
   if (E0.empty() || E1.empty())
     return false;
 
-  // Merge (f16 extractelt(V, 0), f16 extractelt(V,1))
-  // into f16,f16 SplitF16x2(V)
+  // Merge (EltTy extractelt(V, 0), EltTy extractelt(V,1))
+  // into EltTy,EltTy Split[EltTy]x2(V)
   MVT EltVT = VT.getVectorElementType();
   SDNode *ScatterOp =
-      CurDAG->getMachineNode(NVPTX::I32toV2I16, SDLoc(N), EltVT, EltVT, Vector);
+      CurDAG->getMachineNode(Opcode, SDLoc(N), EltVT, EltVT, Vector);
   for (auto *Node : E0)
     ReplaceUses(SDValue(Node, 0), SDValue(ScatterOp, 0));
   for (auto *Node : E1)
@@ -994,6 +1001,7 @@ pickOpcodeForVT(MVT::SimpleValueType VT, std::optional<unsigned> Opcode_i8,
   case MVT::i32:
   case MVT::f32:
     return Opcode_i32;
+  case MVT::v2f32:
   case MVT::i64:
   case MVT::f64:
     return Opcode_i64;
