@@ -28,6 +28,13 @@ struct CPUModel {
   uint32_t MVendorID;
   uint64_t MArchID;
   uint64_t MImpID;
+
+  bool isValid() const { return MVendorID != 0 && MArchID != 0 && MImpID != 0; }
+
+  bool operator==(const CPUModel &Other) const {
+    return MVendorID == Other.MVendorID && MArchID == Other.MArchID &&
+           MImpID == Other.MImpID;
+  }
 };
 
 struct CPUInfo {
@@ -55,6 +62,7 @@ bool hasFastScalarUnalignedAccess(StringRef CPU);
 bool hasFastVectorUnalignedAccess(StringRef CPU);
 bool hasValidCPUModel(StringRef CPU);
 CPUModel getCPUModel(StringRef CPU);
+StringRef getCPUNameFromCPUModel(const CPUModel &Model);
 
 } // namespace RISCV
 
