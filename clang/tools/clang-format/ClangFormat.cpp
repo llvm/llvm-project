@@ -285,27 +285,22 @@ static bool fillRanges(MemoryBuffer *Code,
     return true;
   }
   for (unsigned I = 0, E = Offsets.size(), Size = Lengths.size(); I < E; ++I) {
-    auto Offset = Offsets[I];
+    const auto Offset = Offsets[I];
     if (Offset >= Code->getBufferSize()) {
       errs() << "error: offset " << Offset << " is outside the file\n";
       return true;
     }
-    const auto Start =
-        Sources.getLocForStartOfFile(ID).getLocWithOffset(Offset);
-    SourceLocation End;
+    unsigned Length;
     if (I < Size) {
-      const auto L = Lengths[I];
-      if (Offset + L > Code->getBufferSize()) {
-        errs() << "error: invalid length " << L << ", offset + length ("
-               << Offset + L << ") is outside the file.\n";
+      Length = Lengths[I];
+      if (Offset + Length > Code->getBufferSize()) {
+        errs() << "error: invalid length " << Length << ", offset + length ("
+               << Offset + Length << ") is outside the file.\n";
         return true;
       }
-      End = Start.getLocWithOffset(L);
     } else {
-      End = Sources.getLocForEndOfFile(ID);
+      Length = Sources.getFileOffset(Sources.getLocForEndOfFile(ID)) - Offset;
     }
-    Offset = Sources.getFileOffset(Start);
-    const auto Length = Sources.getFileOffset(End) - Offset;
     Ranges.push_back(tooling::Range(Offset, Length));
   }
   return false;
