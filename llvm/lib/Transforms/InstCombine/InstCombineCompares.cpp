@@ -6514,72 +6514,76 @@ bool InstCombinerImpl::OptimizeOverflowCheck(Instruction::BinaryOps BinaryOp,
   llvm_unreachable("Unexpected overflow result");
 }
 
-/// Recognize and process idiom involving test for multiplication
+/// Recognize and process idiom involving test for unsigned
 /// overflow.
 ///
 /// The caller has matched a pattern of the form:
+///   I = cmp u (add(zext A, zext B), V
 ///   I = cmp u (mul(zext A, zext B), V
 /// The function checks if this is a test for overflow and if so replaces
-/// multiplication with call to 'mul.with.overflow' intrinsic.
+/// addition/multiplication with call to the right intrinsic.
 ///
 /// \param I Compare instruction.
-/// \param MulVal Result of 'mult' instruction.  It is one of the arguments of
+/// \param Val Result of add/mul instruction.  It is one of the arguments of
 ///               the compare instruction.  Must be of integer type.
 /// \param OtherVal The other argument of compare instruction.
 /// \returns Instruction which must replace the compare instruction, NULL if no
 ///          replacement required.
-static Instruction *processUMulZExtIdiom(ICmpInst &I, Value *MulVal,
-                                         const APInt *OtherVal,
-                                         InstCombinerImpl &IC) {
+static Instruction *processUZExtIdiom(ICmpInst &I, Value *Val,
+                                      const APInt *OtherVal,
+                                      InstCombinerImpl &IC) {
   // Don't bother doing this transformation for pointers, don't do it for
   // vectors.
-  if (!isa<IntegerType>(MulVal->getType()))
+  if (!isa<IntegerType>(Val->getType()))
     return nullptr;
 
-  auto *MulInstr = dyn_cast<Instruction>(MulVal);
-  if (!MulInstr)
+  auto *Instr = dyn_cast<Instruction>(Val);
+  if (!Instr)
     return nullptr;
-  assert(MulInstr->getOpcode() == Instruction::Mul);
 
-  auto *LHS = cast<ZExtInst>(MulInstr->getOperand(0)),
-       *RHS = cast<ZExtInst>(MulInstr->getOperand(1));
+  unsigned Opcode = Instr->getOpcode();
+  assert(Opcode == Instruction::Add || Opcode == Instruction::Mul);
+
+  auto *LHS = cast<ZExtInst>(Instr->getOperand(0)),
+       *RHS = cast<ZExtInst>(Instr->getOperand(1));
   assert(LHS->getOpcode() == Instruction::ZExt);
   assert(RHS->getOpcode() == Instruction::ZExt);
   Value *A = LHS->getOperand(0), *B = RHS->getOperand(0);
 
-  // Calculate type and width of the result produced by mul.with.overflow.
+  // Calculate type and width of the result produced by add/mul.with.overflow.
   Type *TyA = A->getType(), *TyB = B->getType();
   unsigned WidthA = TyA->getPrimitiveSizeInBits(),
            WidthB = TyB->getPrimitiveSizeInBits();
-  unsigned MulWidth;
-  Type *MulType;
+  unsigned ResultWidth;
+  Type *ResultType;
   if (WidthB > WidthA) {
-    MulWidth = WidthB;
-    MulType = TyB;
+    ResultWidth = WidthB;
+    ResultType = TyB;
   } else {
-    MulWidth = WidthA;
-    MulType = TyA;
+    ResultWidth = WidthA;
+    ResultType = TyA;
   }
 
-  // In order to replace the original mul with a narrower mul.with.overflow,
-  // all uses must ignore upper bits of the product.  The number of used low
-  // bits must be not greater than the width of mul.with.overflow.
-  if (MulVal->hasNUsesOrMore(2))
-    for (User *U : MulVal->users()) {
+  // In order to replace the original result with a narrower
+  // add/mul.with.overflow intrinsic, all uses must ignore upper bits of the
+  // result. The number of used low bits must be not greater than the width of
+  // add/mul.with.overflow.
+  if (Val->hasNUsesOrMore(2))
+    for (User *U : Val->users()) {
       if (U == &I)
         continue;
       if (TruncInst *TI = dyn_cast<TruncInst>(U)) {
-        // Check if truncation ignores bits above MulWidth.
+        // Check if truncation ignores bits above ResultWidth.
         unsigned TruncWidth = TI->getType()->getPrimitiveSizeInBits();
-        if (TruncWidth > MulWidth)
+        if (TruncWidth > ResultWidth)
           return nullptr;
       } else if (BinaryOperator *BO = dyn_cast<BinaryOperator>(U)) {
-        // Check if AND ignores bits above MulWidth.
+        // Check if AND ignores bits above ResultWidth.
         if (BO->getOpcode() != Instruction::And)
           return nullptr;
         if (ConstantInt *CI = dyn_cast<ConstantInt>(BO->getOperand(1))) {
           const APInt &CVal = CI->getValue();
-          if (CVal.getBitWidth() - CVal.countl_zero() > MulWidth)
+          if (CVal.getBitWidth() - CVal.countl_zero() > ResultWidth)
             return nullptr;
         } else {
           // In this case we could have the operand of the binary operation
@@ -6597,9 +6601,9 @@ static Instruction *processUMulZExtIdiom(ICmpInst &I, Value *MulVal,
   switch (I.getPredicate()) {
   case ICmpInst::ICMP_UGT: {
     // Recognize pattern:
-    //   mulval = mul(zext A, zext B)
-    //   cmp ugt mulval, max
-    APInt MaxVal = APInt::getMaxValue(MulWidth);
+    //   val = add/mul(zext A, zext B)
+    //   cmp ugt val, max
+    APInt MaxVal = APInt::getMaxValue(ResultWidth);
     MaxVal = MaxVal.zext(OtherVal->getBitWidth());
     if (MaxVal.eq(*OtherVal))
       break; // Recognized
@@ -6608,9 +6612,9 @@ static Instruction *processUMulZExtIdiom(ICmpInst &I, Value *MulVal,
 
   case ICmpInst::ICMP_ULT: {
     // Recognize pattern:
-    //   mulval = mul(zext A, zext B)
-    //   cmp ule mulval, max + 1
-    APInt MaxVal = APInt::getOneBitSet(OtherVal->getBitWidth(), MulWidth);
+    //   val = add/mul(zext A, zext B)
+    //   cmp ule val, max + 1
+    APInt MaxVal = APInt::getOneBitSet(OtherVal->getBitWidth(), ResultWidth);
     if (MaxVal.eq(*OtherVal))
       break; // Recognized
     return nullptr;
@@ -6621,38 +6625,42 @@ static Instruction *processUMulZExtIdiom(ICmpInst &I, Value *MulVal,
   }
 
   InstCombiner::BuilderTy &Builder = IC.Builder;
-  Builder.SetInsertPoint(MulInstr);
+  Builder.SetInsertPoint(Instr);
 
-  // Replace: mul(zext A, zext B) --> mul.with.overflow(A, B)
-  Value *MulA = A, *MulB = B;
-  if (WidthA < MulWidth)
-    MulA = Builder.CreateZExt(A, MulType);
-  if (WidthB < MulWidth)
-    MulB = Builder.CreateZExt(B, MulType);
-  CallInst *Call =
-      Builder.CreateIntrinsic(Intrinsic::umul_with_overflow, MulType,
-                              {MulA, MulB}, /*FMFSource=*/nullptr, "umul");
-  IC.addToWorklist(MulInstr);
+  // Replace: add/mul(zext A, zext B) --> add/mul.with.overflow(A, B)
+  Value *ResultA = A, *ResultB = B;
+  if (WidthA < ResultWidth)
+    ResultA = Builder.CreateZExt(A, ResultType);
+  if (WidthB < ResultWidth)
+    ResultB = Builder.CreateZExt(B, ResultType);
+  CallInst *Call = Builder.CreateIntrinsic(
+      Opcode == Instruction::Add ? Intrinsic::uadd_with_overflow
+                                 : Intrinsic::umul_with_overflow,
+      ResultType, {ResultA, ResultB}, /*FMFSource=*/nullptr,
+      Opcode == Instruction::Add ? "uadd" : "umul");
+  IC.addToWorklist(Instr);
 
-  // If there are uses of mul result other than the comparison, we know that
+  // If there are uses of the result other than the comparison, we know that
   // they are truncation or binary AND. Change them to use result of
-  // mul.with.overflow and adjust properly mask/size.
-  if (MulVal->hasNUsesOrMore(2)) {
-    Value *Mul = Builder.CreateExtractValue(Call, 0, "umul.value");
-    for (User *U : make_early_inc_range(MulVal->users())) {
+  // add/mul.with.overflow and adjust properly mask/size.
+  if (Val->hasNUsesOrMore(2)) {
+    Value *Extract = Builder.CreateExtractValue(
+        Call, 0, Opcode == Instruction::Add ? "uadd.value" : "umul.value");
+    for (User *U : make_early_inc_range(Val->users())) {
       if (U == &I)
         continue;
       if (TruncInst *TI = dyn_cast<TruncInst>(U)) {
-        if (TI->getType()->getPrimitiveSizeInBits() == MulWidth)
-          IC.replaceInstUsesWith(*TI, Mul);
+        if (TI->getType()->getPrimitiveSizeInBits() == ResultWidth)
+          IC.replaceInstUsesWith(*TI, Extract);
         else
-          TI->setOperand(0, Mul);
+          TI->setOperand(0, Extract);
       } else if (BinaryOperator *BO = dyn_cast<BinaryOperator>(U)) {
         assert(BO->getOpcode() == Instruction::And);
-        // Replace (mul & mask) --> zext (mul.with.overflow & short_mask)
+        // Replace (Extract & mask) --> zext (add/mul.with.overflow &
+        // short_mask)
         ConstantInt *CI = cast<ConstantInt>(BO->getOperand(1));
-        APInt ShortMask = CI->getValue().trunc(MulWidth);
-        Value *ShortAnd = Builder.CreateAnd(Mul, ShortMask);
+        APInt ShortMask = CI->getValue().trunc(ResultWidth);
+        Value *ShortAnd = Builder.CreateAnd(Extract, ShortMask);
         Value *Zext = Builder.CreateZExt(ShortAnd, BO->getType());
         IC.replaceInstUsesWith(*BO, Zext);
       } else {
@@ -7789,10 +7797,12 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
       }
     }
 
+    // (zext X) + (zext Y)  --> llvm.uadd.with.overflow.
     // (zext X) * (zext Y)  --> llvm.umul.with.overflow.
-    if (match(Op0, m_NUWMul(m_ZExt(m_Value(X)), m_ZExt(m_Value(Y)))) &&
+    if ((match(Op0, m_NUWAdd(m_ZExt(m_Value(X)), m_ZExt(m_Value(Y)))) ||
+         match(Op0, m_NUWMul(m_ZExt(m_Value(X)), m_ZExt(m_Value(Y))))) &&
         match(Op1, m_APInt(C))) {
-      if (Instruction *R = processUMulZExtIdiom(I, Op0, C, *this))
+      if (Instruction *R = processUZExtIdiom(I, Op0, C, *this))
         return R;
     }
 
