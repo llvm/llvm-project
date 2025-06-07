@@ -827,11 +827,11 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI void __reserve(size_t __size) {
-    if constexpr (requires { __containers_.keys.reserve(__size); }) {
+    if constexpr (__container_traits<_KeyContainer>::__reservable) {
       __containers_.keys.reserve(__size);
     }
 
-    if constexpr (requires { __containers_.values.reserve(__size); }) {
+    if constexpr (__container_traits<_MappedContainer>::__reservable) {
       __containers_.values.reserve(__size);
     }
   }
