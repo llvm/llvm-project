@@ -266,6 +266,7 @@ Parser::ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
                          /*AllowDestructorName=*/false,
                          /*AllowConstructorName=*/false,
                          /*AllowDeductionGuide=*/false,
+                         /*ForPostfixExpression=*/false,
                          /*TemplateKWLoc=*/nullptr, Result)) {
     SkipUntil(tok::semi);
     return nullptr;
