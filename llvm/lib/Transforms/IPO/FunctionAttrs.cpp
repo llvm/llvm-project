@@ -2071,24 +2071,36 @@ static void addNoRecurseAttrs(const SCCNodeSet &SCCNodes,
   if (!F || !F->hasExactDefinition() || F->doesNotRecurse())
     return;
 
-  // If all of the calls in F are identifiable and are to norecurse functions, F
-  // is norecurse. This check also detects self-recursion as F is not currently
-  // marked norecurse, so any called from F to F will not be marked norecurse.
-  for (auto &BB : *F)
-    for (auto &I : BB.instructionsWithoutDebug())
+  if (F->hasAddressTaken())
+    return;
+  // If all of the calls in F are identifiable and can be proven to not
+  // callback F, F is norecurse. This check also detects self-recursion
+  // as F is not currently marked norecurse, so any call from F to F
+  // will not be marked norecurse.
+  for (auto &BB : *F) {
+    for (auto &I : BB.instructionsWithoutDebug()) {
       if (auto *CB = dyn_cast<CallBase>(&I)) {
         Function *Callee = CB->getCalledFunction();
-        if (!Callee || Callee == F ||
-            (!Callee->doesNotRecurse() &&
-             !(Callee->isDeclaration() &&
-               Callee->hasFnAttribute(Attribute::NoCallback))))
-          // Function calls a potentially recursive function.
-          return;
-      }
 
-  // Every call was to a non-recursive function other than this function, and
-  // we have no indirect recursion as the SCC size is one. This function cannot
-  // recurse.
+        if (!Callee || Callee == F)
+          return;
+
+        if (Callee->doesNotRecurse())
+          continue;
+
+        // External call with NoCallback attribute.
+        if (Callee->isDeclaration()) {
+          if (Callee->hasFnAttribute(Attribute::NoCallback))
+            continue;
+          return;
+        }
+      }
+    }
+  }
+
+  // Every call was either to an external function guaranteed to not make a
+  // call to this function or a direct call to internal function and we have no
+  // indirect recursion as the SCC size is one. This function cannot recurse.
   F->setDoesNotRecurse();
   ++NumNoRecurse;
   Changed.insert(F);
