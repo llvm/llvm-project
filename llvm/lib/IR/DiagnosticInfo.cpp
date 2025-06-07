@@ -25,6 +25,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -211,12 +212,23 @@ DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key,
   else if (isa<Constant>(V)) {
     raw_string_ostream OS(Val);
     V->printAsOperand(OS, /*PrintType=*/false);
+  } else if (auto *I = dyn_cast<IntrinsicInst>(V)) {
+    raw_string_ostream OS(Val);
+    OS << "call " << *V->getType() << " @" << I->getCalledFunction()->getName();
   } else if (auto *I = dyn_cast<Instruction>(V)) {
     Val = I->getOpcodeName();
   } else if (auto *MD = dyn_cast<MetadataAsValue>(V)) {
     if (auto *S = dyn_cast<MDString>(MD->getMetadata()))
       Val = S->getString();
   }
+}
+
+DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key,
+                                                   const Instruction &I)
+    : Key(std::string(Key)) {
+  Loc = I.getDebugLoc();
+  raw_string_ostream OS(Val);
+  OS << I;
 }
 
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, const Type *T)

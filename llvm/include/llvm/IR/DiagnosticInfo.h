@@ -516,6 +516,7 @@ public:
 
     explicit Argument(StringRef Str = "") : Key("String"), Val(Str) {}
     LLVM_ABI Argument(StringRef Key, const Value *V);
+    LLVM_ABI Argument(StringRef Key, const Instruction &I);
     LLVM_ABI Argument(StringRef Key, const Type *T);
     LLVM_ABI Argument(StringRef Key, StringRef S);
     Argument(StringRef Key, const char *S) : Argument(Key, StringRef(S)) {};
