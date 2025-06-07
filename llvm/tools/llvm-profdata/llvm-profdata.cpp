@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -30,6 +31,7 @@
 #include "llvm/Support/BalancedPartitioning.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Discriminator.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
@@ -75,6 +77,9 @@ cl::SubCommand MergeSubcommand(
     "Takes several profiles and merge them together. See detailed "
     "documentation in "
     "https://llvm.org/docs/CommandGuide/llvm-profdata.html#profdata-merge");
+cl::SubCommand
+    MemprofBinarySubcommand("memprof-binary",
+                            "LLVM MemProf binary access profile data");
 
 namespace {
 enum ProfileKinds { instr, sample, memory };
@@ -93,12 +98,11 @@ enum class ShowFormat { Text, Json, Yaml };
 } // namespace
 
 // Common options.
-cl::opt<std::string> OutputFilename("output", cl::value_desc("output"),
-                                    cl::init("-"), cl::desc("Output file"),
-                                    cl::sub(ShowSubcommand),
-                                    cl::sub(OrderSubcommand),
-                                    cl::sub(OverlapSubcommand),
-                                    cl::sub(MergeSubcommand));
+cl::opt<std::string>
+    OutputFilename("output", cl::value_desc("output"), cl::init("-"),
+                   cl::desc("Output file"), cl::sub(ShowSubcommand),
+                   cl::sub(OrderSubcommand), cl::sub(OverlapSubcommand),
+                   cl::sub(MemprofBinarySubcommand), cl::sub(MergeSubcommand));
 // NOTE: cl::alias must not have cl::sub(), since aliased option's cl::sub()
 // will be used. llvm::cl::alias::done() method asserts this condition.
 static cl::alias OutputFilenameA("o", cl::desc("Alias for --output"),
@@ -637,7 +641,7 @@ public:
     return New.empty() ? Name : FunctionId(New);
   }
 };
-}
+} // namespace
 
 struct WeightedFile {
   std::string Filename;
@@ -890,13 +894,11 @@ getFuncName(const StringMap<InstrProfWriter::ProfilingData>::value_type &Val) {
   return Val.first();
 }
 
-static std::string
-getFuncName(const SampleProfileMap::value_type &Val) {
+static std::string getFuncName(const SampleProfileMap::value_type &Val) {
   return Val.second.getContext().toString();
 }
 
-template <typename T>
-static void filterFunctions(T &ProfileMap) {
+template <typename T> static void filterFunctions(T &ProfileMap) {
   bool hasFilter = !FuncNameFilter.empty();
   bool hasNegativeFilter = !FuncNameNegativeFilter.empty();
   if (!hasFilter && !hasNegativeFilter)
@@ -1497,8 +1499,8 @@ remapSamples(const sampleprof::FunctionSamples &Samples,
                           BodySample.second.getSamples());
     for (const auto &Target : BodySample.second.getCallTargets()) {
       Result.addCalledTargetSamples(BodySample.first.LineOffset,
-                                    MaskedDiscriminator,
-                                    Remapper(Target.first), Target.second);
+                                    MaskedDiscriminator, Remapper(Target.first),
+                                    Target.second);
     }
   }
   for (const auto &CallsiteSamples : Samples.getCallsiteSamples()) {
@@ -1515,12 +1517,8 @@ remapSamples(const sampleprof::FunctionSamples &Samples,
 }
 
 static sampleprof::SampleProfileFormat FormatMap[] = {
-    sampleprof::SPF_None,
-    sampleprof::SPF_Text,
-    sampleprof::SPF_None,
-    sampleprof::SPF_Ext_Binary,
-    sampleprof::SPF_GCC,
-    sampleprof::SPF_Binary};
+    sampleprof::SPF_None,       sampleprof::SPF_Text, sampleprof::SPF_None,
+    sampleprof::SPF_Ext_Binary, sampleprof::SPF_GCC,  sampleprof::SPF_Binary};
 
 static std::unique_ptr<MemoryBuffer>
 getInputFileBuf(const StringRef &InputFile) {
@@ -3389,7 +3387,8 @@ static int show_main(StringRef ProgName) {
     exitWithErrorCode(EC, OutputFilename);
 
   if (ShowAllFunctions && !FuncNameFilter.empty())
-    WithColor::warning() << "-function argument ignored: showing all functions\n";
+    WithColor::warning()
+        << "-function argument ignored: showing all functions\n";
 
   if (!DebugInfoFilename.empty())
     return showDebugInfoCorrelation(DebugInfoFilename, SFormat, OS);
@@ -3466,6 +3465,251 @@ static int order_main() {
   return 0;
 }
 
+using SegmentEntry = ::llvm::memprof::SegmentEntry;
+using BinaryAccessHeader = ::llvm::memprof::BinaryAccessHeader;
+
+/*
+  The format of the binary access profile:
+  // header
+  BinaryAccessHeader header;
+  // segment info
+  SegmentEntry entry1;
+  SegmentEntry entry2;
+  ...
+  // memblock addresses
+  u64 MemBlockAddress1;
+  u64 MemBlockAddress2;
+  ...
+  // end
+
+BinaryAccessHeader is defined in MemProfBinaryAccessData.inc
+PACKED(struct BinaryAccessHeader {
+  uint64_t Magic;
+  uint64_t Version;
+  uint64_t TotalSize;
+  uint64_t SegmentOffset;
+  uint64_t NumSegments;
+  uint64_t MemAddressOffset;
+  uint64_t NumMemBlockAddresses;
+});
+SegmentEntry is defined in MemProfData.inc
+  struct SegmentEntry {
+  uint64_t Start; // segment start address
+  uint64_t End;   // segment end address
+  uint64_t Offset;  // binary offset at runtime
+  uint64_t BuildIdSize;
+  uint8_t BuildId[MEMPROF_BUILDID_MAX_SIZE] = {0};
+#define MEMPROF_BUILDID_MAX_SIZE 32ULL
+*/
+
+static bool ShouldSwapBytes = false;
+template <typename value_type>
+inline value_type maybe_byte_swap(value_type value) {
+  if (ShouldSwapBytes)
+    llvm::sys::swapByteOrder(value);
+  return value;
+}
+
+std::string getBuildIdString(const SegmentEntry &Entry) {
+  // If the build id is unset print a helpful string instead of all zeros.
+  if (Entry.BuildIdSize == 0)
+    return "<None>";
+
+  std::string Str;
+  raw_string_ostream OS(Str);
+  for (size_t I = 0; I < Entry.BuildIdSize; I++) {
+    OS << format_hex_no_prefix(Entry.BuildId[I], 2);
+  }
+  return OS.str();
+}
+
+// This function categorizes memory block addresses according to their
+// corresponding binaries. Note that both segments and memory addresses are
+// contiguous and synchronized within each binary in the buffers, although the
+// arrangement of entries across different binaries may vary. Within each
+// binary, entries are pre-sorted in ascending order. The function identifies
+// and tracks the boundaries in the buffer for each binary using its UUID.
+// Subsequently, it outputs these sorted memory addresses as binary offsets into
+// separate files, each file being named after the binary's UUID.
+static int memprof_binary_show_covered_per_binary(
+    const SegmentEntry *SegmentPtr, uint64_t NumSegments,
+    const uint64_t *MemAddressPtr, uint64_t NumMemBlockAddresses,
+    const std::string &OutputDirectory) {
+  if (!llvm::sys::fs::is_directory(OutputDirectory))
+    if (auto EC = llvm::sys::fs::create_directories(OutputDirectory))
+      exitWithErrorCode(EC, "Failed to create the output directory: " +
+                                OutputDirectory);
+
+  struct BinaryInfo {
+    const std::string UUID; // Unique identifier for the binary
+    uint64_t Base;          // Runtime base address of the binary
+    uint64_t End; // Runtime end address of the last segment in the binary
+    uint64_t FirstAddrIdx = 0; // Index of the first address in MemAddressPtr[]
+    uint64_t LastAddrIdx = 0;  // Index of the last address in MemAddressPtr[]
+    BinaryInfo(const std::string &UUID, uint64_t Base, uint64_t End)
+        : UUID(UUID), Base(Base), End(End) {}
+  };
+
+  // Segment entries are contiguous by binary (identified by UUID) and sorted by
+  // their start address in ascending order. This loop updates UUID and the
+  // base/end addresses for each binary.
+  SmallVector<BinaryInfo> Binaries;
+  std::string LastUUID;
+  for (uint64_t I = 0; I < NumSegments; ++I) {
+    const SegmentEntry &Entry = SegmentPtr[I];
+    std::string CurrUUID = getBuildIdString(Entry);
+    if (CurrUUID == LastUUID) {
+      assert(maybe_byte_swap(Entry.Offset) == Binaries.back().Base &&
+             "Segment entries within the same binary should have the same "
+             "base address");
+      assert(maybe_byte_swap(Entry.Start) >= Binaries.back().End &&
+             "Segment entries within the same binary should not overlap and "
+             "must be sorted in ascending order.");
+      // Update the end address of the current binary.
+      Binaries.back().End = maybe_byte_swap(Entry.End);
+    } else {
+      // Create and add a new BinaryInfo instance.
+      Binaries.emplace_back(CurrUUID, maybe_byte_swap(Entry.Offset),
+                            maybe_byte_swap(Entry.End));
+      LastUUID = CurrUUID;
+    }
+  }
+
+  // Get the first binary.
+  uint64_t BinIdx = 0;
+  BinaryInfo *CurreBinaryInfo = &Binaries[BinIdx];
+  // The first/last address indices have been already zero-initialized.
+  assert(CurreBinaryInfo->FirstAddrIdx == 0);
+  assert(CurreBinaryInfo->LastAddrIdx == 0);
+
+  // Memory block addresses are also contiguous by binary and sorted in
+  // ascending order within each binary. This loop updates the first and last
+  // address indices for each binary.
+  for (uint64_t AddrIdx = 0; AddrIdx < NumMemBlockAddresses; ++AddrIdx) {
+    uint64_t Addr = maybe_byte_swap(MemAddressPtr[AddrIdx]);
+
+    if (Addr >= CurreBinaryInfo->Base && Addr < CurreBinaryInfo->End) {
+      // Update the last address index for the current binary.
+      CurreBinaryInfo->LastAddrIdx = AddrIdx;
+    } else {
+      // If the address is out of range, it must belong to the next binary.
+      ++BinIdx;
+      assert(BinIdx < Binaries.size() && "Invalid binary index");
+      CurreBinaryInfo = &Binaries[BinIdx];
+      assert(Addr >= CurreBinaryInfo->Base && Addr < CurreBinaryInfo->End &&
+             "The address does not belong to the current binary.");
+      // Initialize the first and last address indices for the new current
+      // binary.
+      CurreBinaryInfo->FirstAddrIdx = AddrIdx;
+      CurreBinaryInfo->LastAddrIdx = AddrIdx;
+    }
+  }
+
+  for (auto &Binary : Binaries) {
+    std::error_code EC;
+    std::string OutputFilenameWithUUID = OutputDirectory + "/" + Binary.UUID;
+    raw_fd_ostream OS(OutputFilenameWithUUID.data(), EC,
+                      sys::fs::OF_TextWithCRLF);
+    if (EC)
+      exitWithErrorCode(EC, OutputFilenameWithUUID);
+
+    for (uint64_t I = Binary.FirstAddrIdx; I <= Binary.LastAddrIdx; ++I) {
+      uint64_t Addr = maybe_byte_swap(MemAddressPtr[I]);
+      uint64_t BinaryOffset = Addr - Binary.Base;
+      OS << "0x" << llvm::utohexstr(BinaryOffset) << "\n";
+    }
+  }
+  return 0;
+}
+
+cl::opt<std::string> MemprofBinaryAccessFilename(
+    cl::Positional, cl::desc("<memprof-binary-access-profile-file>"),
+    cl::sub(MemprofBinarySubcommand));
+cl::opt<bool> ShowCoveredPerBinary(
+    "show-covered", cl::init(false),
+    cl::desc("Show runtime memory access addresses without runtime offset "
+             "per binary."),
+    cl::sub(MemprofBinarySubcommand));
+cl::opt<std::string> OutputDirectory(
+    "output-dir", cl::value_desc("output-dir"), cl::init("out"),
+    cl::desc("Output Directory for per binary memory access profiles"),
+    cl::sub(MemprofBinarySubcommand));
+
+static int memprof_binary_access_main() {
+  auto Buffer = getInputFileBuf(MemprofBinaryAccessFilename);
+  const char *Ptr = Buffer->getBufferStart();
+
+  // 1) check if the header is valid
+  if (Buffer->getBufferSize() < sizeof(BinaryAccessHeader))
+    exitWithError("[MemProf] The binary access profile header is corrupted.");
+  BinaryAccessHeader Header =
+      *reinterpret_cast<const BinaryAccessHeader *>(Ptr);
+  uint64_t SegmentOffset = maybe_byte_swap(Header.SegmentOffset);
+  uint64_t NumSegments = maybe_byte_swap(Header.NumSegments);
+  uint64_t MemAddressOffset = maybe_byte_swap(Header.MemAddressOffset);
+  uint64_t NumMemBlockAddresses = maybe_byte_swap(Header.NumMemBlockAddresses);
+  Ptr += sizeof(BinaryAccessHeader);
+
+  // check if the host and target endianness match
+  ShouldSwapBytes = (Header.Magic != MEMPROF_BINARY_ACCESS_RAW_MAGIC_64);
+  if (Header.Magic != maybe_byte_swap(MEMPROF_BINARY_ACCESS_RAW_MAGIC_64))
+    exitWithError("[MemProf] The binary access profile Magic is invalid.");
+
+  // 2) check if segment entries are valid and print segment entries
+  if (Buffer->getBufferEnd() < Buffer->getBufferStart() + SegmentOffset +
+                                   NumSegments * sizeof(SegmentEntry)) {
+    exitWithError("[MemProf] The binary access profile segment is corrupted.");
+  }
+
+  // 3) check if memblock addresses are valid and print memblock addresses
+  if (Buffer->getBufferEnd() < Buffer->getBufferStart() + MemAddressOffset +
+                                   sizeof(uint64_t) * NumMemBlockAddresses)
+    exitWithError("[MemProf] The binary access profile memblock is corrupted.");
+
+  if (ShowCoveredPerBinary) {
+    return memprof_binary_show_covered_per_binary(
+        reinterpret_cast<const SegmentEntry *>(Buffer->getBufferStart() +
+                                               SegmentOffset),
+        NumSegments,
+        reinterpret_cast<const uint64_t *>(Buffer->getBufferStart() +
+                                           MemAddressOffset),
+        NumMemBlockAddresses, OutputDirectory);
+  }
+
+  std::error_code EC;
+  raw_fd_ostream OS(OutputFilename.data(), EC, sys::fs::OF_TextWithCRLF);
+  if (EC)
+    exitWithErrorCode(EC, OutputFilename);
+
+  OS << "Header:\n";
+  OS << "Version: " << maybe_byte_swap(Header.Version) << "\n";
+  OS << "TotalSize: " << maybe_byte_swap(Header.TotalSize) << "\n";
+  OS << "NumSegments: " << NumSegments << "\n";
+  OS << "NumMemBlockAddresses: " << NumMemBlockAddresses << "\n";
+
+  Ptr =
+      reinterpret_cast<const char *>(Buffer->getBufferStart() + SegmentOffset);
+  while (NumSegments--) {
+    SegmentEntry Entry = *reinterpret_cast<const SegmentEntry *>(Ptr);
+    Ptr += sizeof(SegmentEntry);
+    OS << "BuildId: " << getBuildIdString(Entry) << "\n";
+    OS << "Start: 0x" << llvm::utohexstr(maybe_byte_swap(Entry.Start)) << "\n";
+    OS << "End: 0x" << llvm::utohexstr(maybe_byte_swap(Entry.End)) << "\n";
+    OS << "Offset: 0x" << llvm::utohexstr(maybe_byte_swap(Entry.Offset))
+       << "\n";
+  }
+
+  OS << "MemBlockAddresses:\n";
+  Ptr = reinterpret_cast<const char *>(Buffer->getBufferStart() +
+                                       MemAddressOffset);
+  while (NumMemBlockAddresses--) {
+    uint64_t Addr = maybe_byte_swap(*reinterpret_cast<const uint64_t *>(Ptr));
+    Ptr += sizeof(uint64_t);
+    OS << "0x" << llvm::utohexstr(Addr) << "\n";
+  }
+  return 0;
+}
+
 int llvm_profdata_main(int argc, char **argvNonConst,
                        const llvm::ToolContext &) {
   const char **argv = const_cast<const char **>(argvNonConst);
@@ -3493,6 +3737,8 @@ int llvm_profdata_main(int argc, char **argvNonConst,
   if (MergeSubcommand)
     return merge_main(ProgName);
 
+  if (MemprofBinarySubcommand)
+    return memprof_binary_access_main();
   errs() << ProgName
          << ": Unknown command. Run llvm-profdata --help for usage.\n";
   return 1;
