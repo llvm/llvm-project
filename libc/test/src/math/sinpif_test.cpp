@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/math/sinpif.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/src/math/sdcomp26094.h"
@@ -21,7 +21,7 @@ using LIBC_NAMESPACE::testing::SDCOMP26094_VALUES;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcSinpifTest, SpecialNumbers) {
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
 
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::sinpif(aNaN));
   EXPECT_MATH_ERRNO(0);

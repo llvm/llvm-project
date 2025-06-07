@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/stdlib/strtof.h"
 
 #include "test/UnitTest/FPMatcher.h"
@@ -43,7 +43,7 @@ public:
     LIBC_NAMESPACE::fputil::FPBits<float> expected_fp =
         LIBC_NAMESPACE::fputil::FPBits<float>(expectedRawData);
 
-    LIBC_NAMESPACE::libc_errno = 0;
+    libc_errno = 0;
     float result = LIBC_NAMESPACE::strtof(inputString, &str_end);
 
     EXPECT_EQ(str_end - inputString, expectedStrLen);
