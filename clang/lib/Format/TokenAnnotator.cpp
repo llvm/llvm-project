@@ -1961,6 +1961,19 @@ private:
     return Type;
   }
 
+  void markTokenAsTemplateArgumentInLine() {
+    int TemplateDepth = 0;
+    for (FormatToken *Tok = Line.First; Tok; Tok = Tok->Next) {
+      if (Tok->is(TT_TemplateCloser))
+        --TemplateDepth;
+
+      Tok->InTemplateArgumentList = (TemplateDepth > 0);
+
+      if (Tok->is(TT_TemplateOpener))
+        ++TemplateDepth;
+    }
+  }
+
 public:
   LineType parseLine() {
     if (!CurrentToken)
@@ -2058,6 +2071,7 @@ public:
       if (ctx.ContextType == Context::StructArrayInitializer)
         return LT_ArrayOfStructInitializer;
 
+    markTokenAsTemplateArgumentInLine();
     return LT_Other;
   }
 
@@ -5613,6 +5627,8 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
   // BreakFunctionDefinitionParameters or AlignAfterOpenBracket.
   if (Style.BinPackParameters == FormatStyle::BPPS_AlwaysOnePerLine &&
       Line.MightBeFunctionDecl && !Left.opensScope() &&
+      (Style.ApplyAlwaysOnePerLineToTemplateArguments ||
+       !Left.InTemplateArgumentList) &&
       startsNextParameter(Right, Style)) {
     return true;
   }
