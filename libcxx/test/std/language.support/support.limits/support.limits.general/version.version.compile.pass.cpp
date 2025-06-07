@@ -644,6 +644,10 @@
 #    error "__cpp_lib_ranges_contains should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_enumerate
+#    error "__cpp_lib_ranges_enumerate should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_find_last
 #    error "__cpp_lib_ranges_find_last should not be defined before c++23"
 #  endif
@@ -1566,6 +1570,10 @@
 
 #  ifdef __cpp_lib_ranges_contains
 #    error "__cpp_lib_ranges_contains should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_enumerate
+#    error "__cpp_lib_ranges_enumerate should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_ranges_find_last
@@ -2661,6 +2669,10 @@
 
 #  ifdef __cpp_lib_ranges_contains
 #    error "__cpp_lib_ranges_contains should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_enumerate
+#    error "__cpp_lib_ranges_enumerate should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_ranges_find_last
@@ -4023,6 +4035,10 @@
 
 #  ifdef __cpp_lib_ranges_contains
 #    error "__cpp_lib_ranges_contains should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_enumerate
+#    error "__cpp_lib_ranges_enumerate should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_ranges_find_last
@@ -5577,6 +5593,13 @@
 #  endif
 #  if __cpp_lib_ranges_contains != 202207L
 #    error "__cpp_lib_ranges_contains should have the value 202207L in c++23"
+#  endif
+
+#  ifndef __cpp_lib_ranges_enumerate
+#    error "__cpp_lib_ranges_enumerate should be defined in c++23"
+#  endif
+#  if __cpp_lib_ranges_enumerate != 202302L
+#    error "__cpp_lib_ranges_enumerate should have the value 202302L in c++23"
 #  endif
 
 #  ifndef __cpp_lib_ranges_find_last
@@ -7479,6 +7502,13 @@
 #  endif
 #  if __cpp_lib_ranges_contains != 202207L
 #    error "__cpp_lib_ranges_contains should have the value 202207L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_ranges_enumerate
+#    error "__cpp_lib_ranges_enumerate should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_enumerate != 202302L
+#    error "__cpp_lib_ranges_enumerate should have the value 202302L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_ranges_find_last
