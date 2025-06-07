@@ -147,7 +147,7 @@ bool TypeSetByHwMode::constrain(const TypeSetByHwMode &VTS) {
       unsigned M = I.first;
       if (M == DefaultMode || hasMode(M))
         continue;
-      Map.insert({M, Map.at(DefaultMode)});
+      Map.try_emplace(M, Map.at(DefaultMode));
       Changed = true;
     }
   }
@@ -730,8 +730,8 @@ bool TypeInfer::EnforceSameNumElts(TypeSetByHwMode &V, TypeSetByHwMode &W) {
   // processed identically.
   auto NoLength = [](const SmallDenseSet<ElementCount> &Lengths,
                      MVT T) -> bool {
-    return !Lengths.count(T.isVector() ? T.getVectorElementCount()
-                                       : ElementCount());
+    return !Lengths.contains(T.isVector() ? T.getVectorElementCount()
+                                          : ElementCount());
   };
 
   SmallVector<unsigned, 4> Modes;
@@ -778,7 +778,7 @@ bool TypeInfer::EnforceSameSize(TypeSetByHwMode &A, TypeSetByHwMode &B) {
   typedef SmallSet<TypeSize, 2, TypeSizeComparator> TypeSizeSet;
 
   auto NoSize = [](const TypeSizeSet &Sizes, MVT T) -> bool {
-    return !Sizes.count(T.getSizeInBits());
+    return !Sizes.contains(T.getSizeInBits());
   };
 
   SmallVector<unsigned, 4> Modes;
@@ -3297,14 +3297,14 @@ void CodeGenDAGPatterns::ParseNodeTransforms() {
        reverse(Records.getAllDerivedDefinitions("SDNodeXForm"))) {
     const Record *SDNode = XFormNode->getValueAsDef("Opcode");
     StringRef Code = XFormNode->getValueAsString("XFormFunction");
-    SDNodeXForms.insert({XFormNode, NodeXForm(SDNode, Code.str())});
+    SDNodeXForms.try_emplace(XFormNode, NodeXForm(SDNode, Code.str()));
   }
 }
 
 void CodeGenDAGPatterns::ParseComplexPatterns() {
   for (const Record *R :
        reverse(Records.getAllDerivedDefinitions("ComplexPattern")))
-    ComplexPatterns.insert({R, R});
+    ComplexPatterns.try_emplace(R, R);
 }
 
 /// ParsePatternFragments - Parse all of the PatFrag definitions in the .td
@@ -3331,7 +3331,7 @@ void CodeGenDAGPatterns::ParsePatternFragments(bool OutFrags) {
     auto ArgsCopy = Args;
     SmallDenseSet<StringRef, 4> OperandsSet(llvm::from_range, ArgsCopy);
 
-    if (OperandsSet.count(""))
+    if (OperandsSet.contains(""))
       P->error("Cannot have unnamed 'node' values in pattern fragment!");
 
     // Parse the operands list.

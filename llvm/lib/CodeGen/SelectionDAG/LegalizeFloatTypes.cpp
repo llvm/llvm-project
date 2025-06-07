@@ -335,16 +335,16 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FMAXNUM(SDNode *N) {
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FMINIMUMNUM(SDNode *N) {
   return SoftenFloatRes_Binary(
-      N, GetFPLibCall(N->getValueType(0), RTLIB::FMINIMUMNUM_F32,
-                      RTLIB::FMINIMUMNUM_F64, RTLIB::FMINIMUMNUM_F80,
-                      RTLIB::FMINIMUMNUM_F128, RTLIB::FMINIMUMNUM_PPCF128));
+      N, GetFPLibCall(N->getValueType(0), RTLIB::FMINIMUM_NUM_F32,
+                      RTLIB::FMINIMUM_NUM_F64, RTLIB::FMINIMUM_NUM_F80,
+                      RTLIB::FMINIMUM_NUM_F128, RTLIB::FMINIMUM_NUM_PPCF128));
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FMAXIMUMNUM(SDNode *N) {
   return SoftenFloatRes_Binary(
-      N, GetFPLibCall(N->getValueType(0), RTLIB::FMAXIMUMNUM_F32,
-                      RTLIB::FMAXIMUMNUM_F64, RTLIB::FMAXIMUMNUM_F80,
-                      RTLIB::FMAXIMUMNUM_F128, RTLIB::FMAXIMUMNUM_PPCF128));
+      N, GetFPLibCall(N->getValueType(0), RTLIB::FMAXIMUM_NUM_F32,
+                      RTLIB::FMAXIMUM_NUM_F64, RTLIB::FMAXIMUM_NUM_F80,
+                      RTLIB::FMAXIMUM_NUM_F128, RTLIB::FMAXIMUM_NUM_PPCF128));
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FMINIMUM(SDNode *N) {
@@ -1143,6 +1143,9 @@ bool DAGTypeLegalizer::SoftenFloatOperand(SDNode *N, unsigned OpNo) {
     Res = SoftenFloatOp_ATOMIC_STORE(N, OpNo);
     break;
   case ISD::FCOPYSIGN:   Res = SoftenFloatOp_FCOPYSIGN(N); break;
+  case ISD::FAKE_USE:
+    Res = SoftenFloatOp_FAKE_USE(N);
+    break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
@@ -1477,6 +1480,12 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_LLRINT(SDNode *N) {
                                              RTLIB::LLRINT_PPCF128));
 }
 
+SDValue DAGTypeLegalizer::SoftenFloatOp_FAKE_USE(SDNode *N) {
+  SDValue Op1 = BitConvertToInteger(N->getOperand(1));
+  return DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0),
+                     N->getOperand(0), Op1);
+}
+
 //===----------------------------------------------------------------------===//
 //  Float Result Expansion
 //===----------------------------------------------------------------------===//
@@ -1712,9 +1721,9 @@ void DAGTypeLegalizer::ExpandFloatRes_FMINIMUMNUM(SDNode *N, SDValue &Lo,
                                                   SDValue &Hi) {
   ExpandFloatRes_Binary(
       N,
-      GetFPLibCall(N->getValueType(0), RTLIB::FMINIMUMNUM_F32,
-                   RTLIB::FMINIMUMNUM_F64, RTLIB::FMINIMUMNUM_F80,
-                   RTLIB::FMINIMUMNUM_F128, RTLIB::FMINIMUMNUM_PPCF128),
+      GetFPLibCall(N->getValueType(0), RTLIB::FMINIMUM_NUM_F32,
+                   RTLIB::FMINIMUM_NUM_F64, RTLIB::FMINIMUM_NUM_F80,
+                   RTLIB::FMINIMUM_NUM_F128, RTLIB::FMINIMUM_NUM_PPCF128),
       Lo, Hi);
 }
 
@@ -1722,9 +1731,9 @@ void DAGTypeLegalizer::ExpandFloatRes_FMAXIMUMNUM(SDNode *N, SDValue &Lo,
                                                   SDValue &Hi) {
   ExpandFloatRes_Binary(
       N,
-      GetFPLibCall(N->getValueType(0), RTLIB::FMAXIMUMNUM_F32,
-                   RTLIB::FMAXIMUMNUM_F64, RTLIB::FMAXIMUMNUM_F80,
-                   RTLIB::FMAXIMUMNUM_F128, RTLIB::FMAXIMUMNUM_PPCF128),
+      GetFPLibCall(N->getValueType(0), RTLIB::FMAXIMUM_NUM_F32,
+                   RTLIB::FMAXIMUM_NUM_F64, RTLIB::FMAXIMUM_NUM_F80,
+                   RTLIB::FMAXIMUM_NUM_F128, RTLIB::FMAXIMUM_NUM_PPCF128),
       Lo, Hi);
 }
 

@@ -1048,6 +1048,8 @@ const MCExpr *VEAsmParser::extractSpecifier(const MCExpr *E,
   case MCExpr::Target:
   case MCExpr::Constant:
     return nullptr;
+  case MCExpr::Specifier:
+    llvm_unreachable("unused by this backend");
 
   case MCExpr::SymbolRef: {
     const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(E);
