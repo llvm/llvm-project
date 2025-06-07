@@ -442,9 +442,9 @@ getRecurrences(BasicBlock *LoopLatch, const PHINode *IndVar, const Loop &L) {
   return std::make_pair(SimpleRecurrence, ConditionalRecurrence);
 }
 
-PolynomialInfo::PolynomialInfo(unsigned TripCount, const Value *LHS,
-                               const APInt &RHS, const Value *ComputedValue,
-                               bool ByteOrderSwapped, const Value *LHSAux)
+PolynomialInfo::PolynomialInfo(unsigned TripCount, Value *LHS, const APInt &RHS,
+                               Value *ComputedValue, bool ByteOrderSwapped,
+                               Value *LHSAux)
     : TripCount(TripCount), LHS(LHS), RHS(RHS), ComputedValue(ComputedValue),
       ByteOrderSwapped(ByteOrderSwapped), LHSAux(LHSAux) {}
 
@@ -563,7 +563,7 @@ HashRecognize::recognizeCRC() const {
   BasicBlock *Latch = L.getLoopLatch();
   BasicBlock *Exit = L.getExitBlock();
   const PHINode *IndVar = L.getCanonicalInductionVariable();
-  if (!Latch || !Exit || !IndVar)
+  if (!Latch || !Exit || !IndVar || L.getNumBlocks() != 1)
     return "Loop not in canonical form";
 
   auto R = getRecurrences(Latch, IndVar, L);
@@ -620,7 +620,7 @@ HashRecognize::recognizeCRC() const {
   if (!checkExtractBits(ResultBits, TC, IsZero, *ByteOrderSwapped))
     return ErrBits(ResultBits, TC, *ByteOrderSwapped);
 
-  const Value *LHSAux = SimpleRecurrence ? SimpleRecurrence.Start : nullptr;
+  Value *LHSAux = SimpleRecurrence ? SimpleRecurrence.Start : nullptr;
   return PolynomialInfo(TC, ConditionalRecurrence.Start, GenPoly, ComputedValue,
                         *ByteOrderSwapped, LHSAux);
 }
