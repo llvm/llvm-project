@@ -79,7 +79,7 @@ public:
   LLVM_ABI bool hasByValAttr() const;
 
   /// Return true if this argument has the dead_on_return attribute.
-  bool hasDeadOnReturnAttr() const;
+  LLVM_ABI bool hasDeadOnReturnAttr() const;
 
   /// Return true if this argument has the byref attribute.
   LLVM_ABI bool hasByRefAttr() const;
