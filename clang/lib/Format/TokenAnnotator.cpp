@@ -3630,6 +3630,29 @@ static unsigned maxNestingDepth(const AnnotatedLine &Line) {
   return Result;
 }
 
+static bool startsQualifiedName(const FormatToken *Tok) {
+  // Consider:       A::B::B()
+  //           Tok --^
+  if (Tok->startsSequence(tok::identifier, tok::coloncolon))
+    return true;
+
+  // Consider:       A<float>::B<int>::B()
+  //           Tok --^
+  if (Tok->startsSequence(tok::identifier, TT_TemplateOpener)) {
+    Tok = Tok->getNextNonComment();
+    assert(Tok);
+    assert(Tok->is(TT_TemplateOpener));
+
+    if (!Tok->MatchingParen)
+      return false;
+
+    return Tok->MatchingParen->startsSequence(TT_TemplateCloser,
+                                              tok::coloncolon);
+  }
+
+  return false;
+}
+
 // Returns the name of a function with no return type, e.g. a constructor or
 // destructor.
 static FormatToken *getFunctionName(const AnnotatedLine &Line,
@@ -3659,6 +3682,21 @@ static FormatToken *getFunctionName(const AnnotatedLine &Line,
       continue;
     }
 
+    // Skip past template typename declarations that may precede the
+    // constructor/destructor name
+    if (Tok->is(tok::kw_template)) {
+      Tok = Tok->getNextNonComment();
+      if (!Tok)
+        return nullptr;
+
+      assert(Tok->is(TT_TemplateOpener));
+      Tok = Tok->MatchingParen;
+      if (!Tok)
+        return nullptr;
+
+      continue;
+    }
+
     // A qualified name may start from the global namespace.
     if (Tok->is(tok::coloncolon)) {
       Tok = Tok->Next;
@@ -3667,9 +3705,23 @@ static FormatToken *getFunctionName(const AnnotatedLine &Line,
     }
 
     // Skip to the unqualified part of the name.
-    while (Tok->startsSequence(tok::identifier, tok::coloncolon)) {
-      assert(Tok->Next);
-      Tok = Tok->Next->Next;
+    while (startsQualifiedName(Tok)) {
+      Tok = Tok->getNextNonComment();
+      if (!Tok)
+        return nullptr;
+
+      // Skip template types if this is a templated type name
+      if (Tok->is(TT_TemplateOpener)) {
+        Tok = Tok->MatchingParen;
+        if (!Tok)
+          return nullptr;
+
+        Tok = Tok->getNextNonComment();
+        if (!Tok)
+          return nullptr;
+      }
+
+      Tok = Tok->getNextNonComment();
       if (!Tok)
         return nullptr;
     }
@@ -3699,10 +3751,18 @@ static bool isCtorOrDtorName(const FormatToken *Tok) {
   if (Prev && Prev->is(tok::tilde))
     Prev = Prev->Previous;
 
-  if (!Prev || !Prev->endsSequence(tok::coloncolon, tok::identifier))
+  // Consider: A::A() and A<int>::A()
+  if (!Prev || (!Prev->endsSequence(tok::coloncolon, tok::identifier) &&
+                !Prev->endsSequence(tok::coloncolon, TT_TemplateCloser))) {
     return false;
+  }
 
   assert(Prev->Previous);
+  if (Prev->Previous->is(TT_TemplateCloser) && Prev->Previous->MatchingParen) {
+    Prev = Prev->Previous->MatchingParen;
+    assert(Prev->Previous);
+  }
+
   return Prev->Previous->TokenText == Tok->TokenText;
 }
 
