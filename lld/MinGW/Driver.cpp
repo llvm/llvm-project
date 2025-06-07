@@ -555,9 +555,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     add("-libpath:" + StringRef(a->getValue()));
   }
   StringRef dllPrefix = "lib";
-  for (auto *a : args.filtered(OPT_dll_search_prefix)) {
-    dllPrefix = a->getValue();
-  }
+  if (auto *arg = args.getLastArg(OPT_dll_search_prefix))
+    dllPrefix = arg->getValue();
 
   StringRef prefix = "";
   bool isStatic = false;
