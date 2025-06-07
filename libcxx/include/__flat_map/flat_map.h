@@ -930,7 +930,8 @@ private:
   }
 
   template <class _Self, class _KeyIter>
-  _LIBCPP_HIDE_FROM_ABI static auto __corresponding_mapped_it(_Self&& __self, _KeyIter&& __key_iter) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static auto
+  __corresponding_mapped_it(_Self&& __self, _KeyIter&& __key_iter) {
     return __self.__containers_.values.begin() +
            static_cast<ranges::range_difference_t<mapped_container_type>>(
                ranges::distance(__self.__containers_.keys.begin(), __key_iter));
