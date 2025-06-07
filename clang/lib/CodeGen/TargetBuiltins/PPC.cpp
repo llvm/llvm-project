@@ -294,6 +294,34 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F, Ops, "");
   }
 
+  // BCD convert builtins for P9
+  case PPC::BI__builtin_ppc_national2packed:
+  case PPC::BI__builtin_ppc_packed2zoned:
+  case PPC::BI__builtin_ppc_zoned2packed: {
+    SmallVector<Value *, 3> Ops;
+    // Zero extending unsigned char to 32 bits by using Int32ty
+    llvm::Type *Int32Ty = llvm::IntegerType::get(getLLVMContext(), 32);
+    Ops.push_back(EmitScalarExpr(E->getArg(0)));
+    Ops.push_back(EmitScalarExpr(E->getArg(1)));
+    Ops.push_back(Builder.CreateZExtOrTrunc(EmitScalarExpr(E->getArg(2)),
+                                            Int32Ty, "zext_mode"));
+
+    switch (BuiltinID) {
+    default:
+      llvm_unreachable("Unsupported BCD convert intrinsic!");
+    case PPC::BI__builtin_ppc_national2packed:
+      ID = Intrinsic::ppc_national2packed;
+      break;
+    case PPC::BI__builtin_ppc_packed2zoned:
+      ID = Intrinsic::ppc_packed2zoned;
+      break;
+    case PPC::BI__builtin_ppc_zoned2packed:
+      ID = Intrinsic::ppc_zoned2packed;
+      break;
+    }
+    return Builder.CreateIntrinsic(ID, Ops);
+  }
+
   // vec_st, vec_xst_be
   case PPC::BI__builtin_altivec_stvx:
   case PPC::BI__builtin_altivec_stvxl:
