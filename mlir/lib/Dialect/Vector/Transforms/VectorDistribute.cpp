@@ -1459,27 +1459,6 @@ private:
   WarpShuffleFromIdxFn warpShuffleFromIdxFn;
 };
 
-/// Pattern to convert vector.extractelement to vector.extract.
-struct WarpOpExtractElement : public WarpDistributionPattern {
-  using Base::Base;
-  LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
-                                PatternRewriter &rewriter) const override {
-    OpOperand *operand =
-        getWarpResult(warpOp, llvm::IsaPred<vector::ExtractElementOp>);
-    if (!operand)
-      return failure();
-    auto extractOp = operand->get().getDefiningOp<vector::ExtractElementOp>();
-    SmallVector<OpFoldResult> indices;
-    if (auto pos = extractOp.getPosition()) {
-      indices.push_back(pos);
-    }
-    rewriter.setInsertionPoint(extractOp);
-    rewriter.replaceOpWithNewOp<vector::ExtractOp>(
-        extractOp, extractOp.getVector(), indices);
-    return success();
-  }
-};
-
 /// Pattern to move out vector.insert with a scalar input.
 /// Only supports 1-D and 0-D destinations for now.
 struct WarpOpInsertScalar : public WarpDistributionPattern {
@@ -1683,26 +1662,6 @@ struct WarpOpInsert : public WarpDistributionPattern {
     }
 
     rewriter.replaceAllUsesWith(newWarpOp->getResult(operandNumber), newResult);
-    return success();
-  }
-};
-
-struct WarpOpInsertElement : public WarpDistributionPattern {
-  using Base::Base;
-  LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
-                                PatternRewriter &rewriter) const override {
-    OpOperand *operand =
-        getWarpResult(warpOp, llvm::IsaPred<vector::InsertElementOp>);
-    if (!operand)
-      return failure();
-    auto insertOp = operand->get().getDefiningOp<vector::InsertElementOp>();
-    SmallVector<OpFoldResult> indices;
-    if (auto pos = insertOp.getPosition()) {
-      indices.push_back(pos);
-    }
-    rewriter.setInsertionPoint(insertOp);
-    rewriter.replaceOpWithNewOp<vector::InsertOp>(
-        insertOp, insertOp.getSource(), insertOp.getDest(), indices);
     return success();
   }
 };
@@ -1965,12 +1924,12 @@ void mlir::vector::populatePropagateWarpVectorDistributionPatterns(
     const WarpShuffleFromIdxFn &warpShuffleFromIdxFn, PatternBenefit benefit,
     PatternBenefit readBenefit) {
   patterns.add<WarpOpTransferRead>(patterns.getContext(), readBenefit);
-  patterns.add<WarpOpElementwise, WarpOpDeadResult, WarpOpBroadcast,
-               WarpOpShapeCast, WarpOpExtract, WarpOpForwardOperand,
-               WarpOpConstant, WarpOpExtractElement, WarpOpInsertElement,
-               WarpOpInsertScalar, WarpOpInsert, WarpOpCreateMask,
-               WarpOpExtractStridedSlice, WarpOpInsertStridedSlice>(
-      patterns.getContext(), benefit);
+  patterns
+      .add<WarpOpElementwise, WarpOpDeadResult, WarpOpBroadcast,
+           WarpOpShapeCast, WarpOpExtract, WarpOpForwardOperand, WarpOpConstant,
+           WarpOpInsertScalar, WarpOpInsert, WarpOpCreateMask,
+           WarpOpExtractStridedSlice, WarpOpInsertStridedSlice>(
+          patterns.getContext(), benefit);
   patterns.add<WarpOpExtractScalar>(patterns.getContext(), warpShuffleFromIdxFn,
                                     benefit);
   patterns.add<WarpOpScfForOp>(patterns.getContext(), distributionMapFn,
