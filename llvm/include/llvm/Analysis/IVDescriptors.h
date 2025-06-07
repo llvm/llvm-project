@@ -172,8 +172,7 @@ public:
 
   /// Returns a struct describing if the instruction is a
   /// Select(FCmp(X, Y), (Z = X op PHINode), PHINode) instruction pattern.
-  LLVM_ABI static InstDesc isConditionalRdxPattern(RecurKind Kind,
-                                                   Instruction *I);
+  LLVM_ABI static InstDesc isConditionalRdxPattern(Instruction *I);
 
   /// Returns the opcode corresponding to the RecurrenceKind.
   LLVM_ABI static unsigned getOpcode(RecurKind Kind);

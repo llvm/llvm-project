@@ -84,6 +84,28 @@ SourceLocation Sema::getLocForEndOfToken(SourceLocation Loc, unsigned Offset) {
   return Lexer::getLocForEndOfToken(Loc, Offset, SourceMgr, LangOpts);
 }
 
+SourceRange
+Sema::getRangeForNextToken(SourceLocation Loc, bool IncludeMacros,
+                           bool IncludeComments,
+                           std::optional<tok::TokenKind> ExpectedToken) {
+  if (!Loc.isValid())
+    return SourceRange();
+  std::optional<Token> NextToken =
+      Lexer::findNextToken(Loc, SourceMgr, LangOpts, IncludeComments);
+  if (!NextToken)
+    return SourceRange();
+  if (ExpectedToken && NextToken->getKind() != *ExpectedToken)
+    return SourceRange();
+  SourceLocation TokenStart = NextToken->getLocation();
+  SourceLocation TokenEnd = NextToken->getLastLoc();
+  if (!TokenStart.isValid() || !TokenEnd.isValid())
+    return SourceRange();
+  if (!IncludeMacros && (TokenStart.isMacroID() || TokenEnd.isMacroID()))
+    return SourceRange();
+
+  return SourceRange(TokenStart, TokenEnd);
+}
+
 ModuleLoader &Sema::getModuleLoader() const { return PP.getModuleLoader(); }
 
 DarwinSDKInfo *
@@ -1353,8 +1375,7 @@ void Sema::ActOnEndOfTranslationUnit() {
 
     CurrentModule->NamedModuleHasInit =
         DoesModNeedInit(CurrentModule) ||
-        llvm::any_of(CurrentModule->submodules(),
-                     [&](auto *SubM) { return DoesModNeedInit(SubM); });
+        llvm::any_of(CurrentModule->submodules(), DoesModNeedInit);
   }
 
   if (TUKind == TU_ClangModule) {

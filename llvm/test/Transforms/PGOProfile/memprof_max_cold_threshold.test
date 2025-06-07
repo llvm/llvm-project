@@ -1,6 +1,8 @@
 ;; Test the -memprof-min-percent-max-cold-size flag for annotating only the
 ;; largest contexts with size info.
 
+; REQUIRES: x86_64-linux
+
 ; RUN: split-file %s %t
 
 ;; Specify version 4 so that a summary is generated.
