@@ -32,6 +32,7 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
@@ -267,6 +268,16 @@ computeShapeInfoForInst(Instruction *I,
     auto OpShape = ShapeMap.find(MatrixA);
     if (OpShape != ShapeMap.end())
       return OpShape->second;
+  }
+
+  if (auto *Select = dyn_cast<SelectInst>(I)) {
+    Type *CondTy = Select->getCondition()->getType();
+    for (Use &Op : CondTy->isVectorTy() ? Select->operands()
+                                        : drop_begin(Select->operands())) {
+      auto OpShape = ShapeMap.find(Op);
+      if (OpShape != ShapeMap.end())
+        return OpShape->second;
+    }
   }
 
   if (isUniformShape(I)) {
@@ -620,7 +631,8 @@ public:
       default:
         return false;
       }
-    return isUniformShape(V) || isa<StoreInst>(V) || isa<LoadInst>(V);
+    return isUniformShape(V) || isa<StoreInst>(V) || isa<LoadInst>(V) ||
+           isa<SelectInst>(V);
   }
 
   /// Propagate the shape information of instructions to their users.
@@ -707,6 +719,14 @@ public:
       } else if (isa<StoreInst>(V)) {
         // Nothing to do.  We forward-propagated to this so we would just
         // backward propagate to an instruction with an already known shape.
+      } else if (auto *Select = dyn_cast<SelectInst>(V)) {
+        ShapeInfo Shape = ShapeMap[V];
+        Type *CondTy = Select->getCondition()->getType();
+        for (Use &Op : CondTy->isVectorTy() ? Select->operands()
+                                            : drop_begin(Select->operands())) {
+          if (setShapeInfo(Op, Shape))
+            pushInstruction(Select, WorkList);
+        }
       } else if (isUniformShape(V)) {
         // Propagate to all operands.
         ShapeInfo Shape = ShapeMap[V];
@@ -1066,6 +1086,8 @@ public:
         VisitUnaryOperator(UnOp, SI);
       else if (CallInst *CInst = dyn_cast<CallInst>(Inst))
         VisitCallInst(CInst);
+      else if (auto *Select = dyn_cast<SelectInst>(Inst))
+        VisitSelectInst(Select, SI);
       else if (match(Inst, m_Load(m_Value(Op1))))
         VisitLoad(cast<LoadInst>(Inst), SI, Op1, Builder);
       else if (match(Inst, m_Store(m_Value(Op1), m_Value(Op2))))
@@ -2170,6 +2192,38 @@ public:
 
     for (unsigned I = 0; I < SI.getNumVectors(); ++I)
       Result.addVector(BuildVectorOp(M.getVector(I)));
+
+    finalizeLowering(Inst,
+                     Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
+                                             Result.getNumVectors()),
+                     Builder);
+  }
+
+  /// Lower selects.
+  void VisitSelectInst(SelectInst *Inst, const ShapeInfo &Shape) {
+    Value *Cond = Inst->getOperand(0);
+    Value *OpA = Inst->getOperand(1);
+    Value *OpB = Inst->getOperand(2);
+
+    IRBuilder<> Builder(Inst);
+
+    MatrixTy Result;
+    MatrixTy A = getMatrix(OpA, Shape, Builder);
+    MatrixTy B = getMatrix(OpB, Shape, Builder);
+
+    Value *CondV[2];
+    if (isa<FixedVectorType>(Cond->getType())) {
+      MatrixTy C = getMatrix(Cond, Shape, Builder);
+      CondV[0] = C.getVector(0);
+      CondV[1] = C.getVector(1);
+    } else {
+      CondV[0] = Cond;
+      CondV[1] = Cond;
+    }
+
+    for (unsigned I = 0, E = Shape.getNumVectors(); I != E; ++I)
+      Result.addVector(
+          Builder.CreateSelect(CondV[I], A.getVector(I), B.getVector(I)));
 
     finalizeLowering(Inst,
                      Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
