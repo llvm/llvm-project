@@ -779,13 +779,9 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned IOCTL_SOUND_PCM_WRITE_FILTER = SOUND_PCM_WRITE_FILTER;
 #endif // SOUND_VERSION
   unsigned IOCTL_TCFLSH = TCFLSH;
-  unsigned IOCTL_TCGETA = TCGETA;
   unsigned IOCTL_TCGETS = TCGETS;
   unsigned IOCTL_TCSBRK = TCSBRK;
   unsigned IOCTL_TCSBRKP = TCSBRKP;
-  unsigned IOCTL_TCSETA = TCSETA;
-  unsigned IOCTL_TCSETAF = TCSETAF;
-  unsigned IOCTL_TCSETAW = TCSETAW;
   unsigned IOCTL_TCSETS = TCSETS;
   unsigned IOCTL_TCSETSF = TCSETSF;
   unsigned IOCTL_TCSETSW = TCSETSW;
