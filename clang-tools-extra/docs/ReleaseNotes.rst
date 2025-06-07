@@ -232,9 +232,19 @@ Changes in existing checks
   matched scenarios of ``find`` and ``rfind`` methods and fixing false
   positives when those methods were called with 3 arguments.
 
+- Improved :doc:`modernize-use-std-format
+  <clang-tidy/checks/modernize/use-std-format>` check to correctly match
+  when the format string is converted to a different type by an implicit
+  constructor call.
+
 - Improved :doc:`modernize-use-std-numbers
   <clang-tidy/checks/modernize/use-std-numbers>` check to support math
   functions of different precisions.
+
+- Improved :doc:`modernize-use-std-print
+  <clang-tidy/checks/modernize/use-std-print>` check to correctly match
+  when the format string is converted to a different type by an implicit
+  constructor call.
 
 - Improved :doc:`modernize-use-trailing-return-type
   <clang-tidy/checks/modernize/use-trailing-return-type>` check by adding
