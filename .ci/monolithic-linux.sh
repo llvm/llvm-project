@@ -102,51 +102,25 @@ if [[ "${runtimes}" != "" ]]; then
     exit 1
   fi
 
-  echo "--- ninja install-clang"
-
-  ninja -C ${BUILD_DIR} install-clang install-clang-resource-headers
-
-  RUNTIMES_BUILD_DIR="${MONOREPO_ROOT}/build-runtimes"
-  INSTALL_DIR="${BUILD_DIR}/install"
-  mkdir -p ${RUNTIMES_BUILD_DIR}
-
   echo "--- cmake runtimes C++26"
 
-  rm -rf "${RUNTIMES_BUILD_DIR}"
-  cmake -S "${MONOREPO_ROOT}/runtimes" -B "${RUNTIMES_BUILD_DIR}" -GNinja \
-      -D CMAKE_C_COMPILER="${INSTALL_DIR}/bin/clang" \
-      -D CMAKE_CXX_COMPILER="${INSTALL_DIR}/bin/clang++" \
-      -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
-      -D LIBCXX_CXX_ABI=libcxxabi \
-      -D CMAKE_BUILD_TYPE=RelWithDebInfo \
-      -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-      -D LIBCXX_TEST_PARAMS="std=c++26" \
-      -D LIBCXXABI_TEST_PARAMS="std=c++26" \
-      -D LLVM_LIT_ARGS="${lit_args}"
+  cmake \
+    -D LIBCXX_TEST_PARAMS="std=c++26" \
+    -D LIBCXXABI_TEST_PARAMS="std=c++26" \
+    "${BUILD_DIR}"
 
   echo "--- ninja runtimes C++26"
 
-  ninja -vC "${RUNTIMES_BUILD_DIR}" ${runtime_targets}
+  ninja -C "${BUILD_DIR}" ${runtime_targets}
 
   echo "--- cmake runtimes clang modules"
 
-  # We don't need to do a clean build of runtimes, because LIBCXX_TEST_PARAMS
-  # and LIBCXXABI_TEST_PARAMS only affect lit configuration, which successfully
-  # propagates without a clean build. Other that those two variables, builds
-  # are supposed to be the same.
-
-  cmake -S "${MONOREPO_ROOT}/runtimes" -B "${RUNTIMES_BUILD_DIR}" -GNinja \
-      -D CMAKE_C_COMPILER="${INSTALL_DIR}/bin/clang" \
-      -D CMAKE_CXX_COMPILER="${INSTALL_DIR}/bin/clang++" \
-      -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
-      -D LIBCXX_CXX_ABI=libcxxabi \
-      -D CMAKE_BUILD_TYPE=RelWithDebInfo \
-      -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-      -D LIBCXX_TEST_PARAMS="enable_modules=clang" \
-      -D LIBCXXABI_TEST_PARAMS="enable_modules=clang" \
-      -D LLVM_LIT_ARGS="${lit_args}"
+  cmake \
+    -D LIBCXX_TEST_PARAMS="enable_modules=clang" \
+    -D LIBCXXABI_TEST_PARAMS="enable_modules=clang" \
+    "${BUILD_DIR}"
 
   echo "--- ninja runtimes clang modules"
 
-  ninja -vC "${RUNTIMES_BUILD_DIR}" ${runtime_targets}
+  ninja -C "${BUILD_DIR}" ${runtime_targets}
 fi
