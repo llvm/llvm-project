@@ -1,5 +1,12 @@
 # Build for the AddressSanitizer runtime support library.
 
+set(COMPILER_RT_ASAN_BUILD_SHARED_LIBS_default ON)
+if (CMAKE_SYSTEM_NAME STREQUAL "WASI")
+  set(COMPILER_RT_ASAN_BUILD_SHARED_LIBS_default OFF)
+endif()
+option(COMPILER_RT_ASAN_BUILD_SHARED_LIBS
+	"Build AddressSanitizer shared libraries" ${COMPILER_RT_ASAN_BUILD_SHARED_LIBS_default})
+
 set(ASAN_SOURCES
   asan_allocator.cpp
   asan_activation.cpp
@@ -307,25 +314,27 @@ else()
     endif()
 
     set(ASAN_DYNAMIC_WEAK_INTERCEPTION)
-    add_compiler_rt_runtime(clang_rt.asan
-      SHARED
-      ARCHS ${arch}
-      OBJECT_LIBS ${ASAN_COMMON_RUNTIME_OBJECT_LIBS}
-              RTAsan_dynamic
-              # The only purpose of RTAsan_dynamic_version_script_dummy is to
-              # carry a dependency of the shared runtime on the version script.
-              # Replacing it with a straightforward
-              # add_dependencies(clang_rt.asan-dynamic-${arch} clang_rt.asan-dynamic-${arch}-version-list)
-              # generates an order-only dependency in ninja.
-              RTAsan_dynamic_version_script_dummy
-              RTUbsan_cxx
-              ${ASAN_DYNAMIC_WEAK_INTERCEPTION}
-      CFLAGS ${ASAN_DYNAMIC_CFLAGS}
-      LINK_FLAGS ${ASAN_DYNAMIC_LINK_FLAGS}
-                ${VERSION_SCRIPT_FLAG}
-      LINK_LIBS ${ASAN_DYNAMIC_LIBS}
-      DEFS ${ASAN_DYNAMIC_DEFINITIONS}
-      PARENT_TARGET asan)
+    if (COMPILER_RT_ASAN_BUILD_SHARED_LIBS)
+      add_compiler_rt_runtime(clang_rt.asan
+        SHARED
+        ARCHS ${arch}
+        OBJECT_LIBS ${ASAN_COMMON_RUNTIME_OBJECT_LIBS}
+                RTAsan_dynamic
+                # The only purpose of RTAsan_dynamic_version_script_dummy is to
+                # carry a dependency of the shared runtime on the version script.
+                # Replacing it with a straightforward
+                # add_dependencies(clang_rt.asan-dynamic-${arch} clang_rt.asan-dynamic-${arch}-version-list)
+                # generates an order-only dependency in ninja.
+                RTAsan_dynamic_version_script_dummy
+                RTUbsan_cxx
+                ${ASAN_DYNAMIC_WEAK_INTERCEPTION}
+        CFLAGS ${ASAN_DYNAMIC_CFLAGS}
+        LINK_FLAGS ${ASAN_DYNAMIC_LINK_FLAGS}
+                  ${VERSION_SCRIPT_FLAG}
+        LINK_LIBS ${ASAN_DYNAMIC_LIBS}
+        DEFS ${ASAN_DYNAMIC_DEFINITIONS}
+        PARENT_TARGET asan)
+    endif()
 
     if (SANITIZER_USE_SYMBOLS AND NOT ${arch} STREQUAL "i386")
       add_sanitizer_rt_symbols(clang_rt.asan_cxx
