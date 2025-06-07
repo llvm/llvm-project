@@ -23,6 +23,7 @@
 #include "clang/Basic/AllDiagnostics.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/OptionUtils.h"
@@ -309,19 +310,8 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   for (auto *a : args.filtered(clang::driver::options::OPT_fpass_plugin_EQ))
     opts.LLVMPassPlugins.push_back(a->getValue());
 
-  // -mprefer_vector_width option
-  if (const llvm::opt::Arg *a = args.getLastArg(
-          clang::driver::options::OPT_mprefer_vector_width_EQ)) {
-    llvm::StringRef s = a->getValue();
-    unsigned width;
-    if (s == "none")
-      opts.PreferVectorWidth = "none";
-    else if (s.getAsInteger(10, width))
-      diags.Report(clang::diag::err_drv_invalid_value)
-          << a->getAsString(args) << a->getValue();
-    else
-      opts.PreferVectorWidth = s.str();
-  }
+  opts.PreferVectorWidth =
+      clang::driver::tools::ParseMPreferVectorWidthOption(diags, args);
 
   // -fembed-offload-object option
   for (auto *a :
