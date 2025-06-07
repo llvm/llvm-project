@@ -96,3 +96,35 @@ define float @fma_from_freeze_mul_sub_right_with_nnan(float %x, float %y) {
   %sub = fsub nnan contract float 1.000000e+00, %mul.fr
   ret float %sub
 }
+
+define float @fma_freeze_sink_multiple_maybe_poison_nnan_add(float %x, float %y) {
+; CHECK-LABEL: fma_freeze_sink_multiple_maybe_poison_nnan_add:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_dual_subrev_f32 v0, 1.0, v0 :: v_dual_add_f32 v1, 1.0, v1
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_fma_f32 v0, v0, v1, 1.0
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %fadd_x = fsub reassoc nnan nsz arcp contract float %x, 1.000000e+00
+  %fadd_y = fadd reassoc nnan nsz arcp contract float %y, 1.000000e+00
+  %mul = fmul reassoc nnan nsz arcp contract afn float %fadd_x, %fadd_y
+  %mul.fr = freeze float %mul
+  %sub = fadd reassoc nsz arcp contract afn contract float %mul.fr, 1.000000e+00
+  ret float %sub
+}
+
+define float @fma_freeze_sink_multiple_maybe_poison_nnan_sub(float %x, float %y) {
+; CHECK-LABEL: fma_freeze_sink_multiple_maybe_poison_nnan_sub:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_dual_add_f32 v0, 1.0, v0 :: v_dual_add_f32 v1, -1.0, v1
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_fma_f32 v0, v0, v1, -1.0
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %fadd_x = fadd reassoc nnan nsz arcp contract float %x, 1.000000e+00
+  %fadd_y = fsub reassoc nnan nsz arcp contract float %y, 1.000000e+00
+  %mul = fmul reassoc nnan nsz arcp contract afn float %fadd_x, %fadd_y
+  %mul.fr = freeze float %mul
+  %sub = fsub reassoc nsz arcp contract afn contract float %mul.fr, 1.000000e+00
+  ret float %sub
+}
