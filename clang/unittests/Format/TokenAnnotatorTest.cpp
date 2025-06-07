@@ -1453,6 +1453,15 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
   ASSERT_EQ(Tokens.size(), 17u) << Tokens;
   EXPECT_TOKEN(Tokens[4], tok::ampamp, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[5], tok::kw_requires, TT_RequiresClause);
+
+  Tokens = annotate("auto foo() -> auto *\n"
+                    "  requires(not bar)\n"
+                    "{\n"
+                    "  return baz;\n"
+                    "}");
+  ASSERT_EQ(Tokens.size(), 18u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::kw_requires, TT_RequiresClause);
+  EXPECT_TOKEN(Tokens[12], tok::l_brace, TT_FunctionLBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsRequiresExpressions) {
@@ -2263,6 +2272,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsFunctionDeclarationNames) {
   EXPECT_TOKEN(Tokens[11], tok::identifier, TT_FunctionDeclarationName);
   EXPECT_TOKEN(Tokens[16], tok::l_paren, TT_FunctionDeclarationLParen);
   EXPECT_TOKEN(Tokens[18], tok::arrow, TT_TrailingReturnArrow);
+
+  Tokens = annotate("void __stdcall f();");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::identifier, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_FunctionDeclarationLParen);
 
   Tokens = annotate("int iso_time(time_t);");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;

@@ -913,7 +913,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   if (!ResourceDir.empty())
     Opts.ResourceDir = ResourceDir;
   Opts.BuildDynamicSymbolIndex = true;
-  std::vector<std::unique_ptr<SymbolIndex>> IdxStack;
 #if CLANGD_ENABLE_REMOTE
   if (RemoteIndexAddress.empty() != ProjectRoot.empty()) {
     llvm::errs() << "remote-index-address and project-path have to be "
