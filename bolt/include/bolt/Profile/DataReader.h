@@ -32,18 +32,6 @@ namespace bolt {
 
 class BinaryFunction;
 
-struct LBREntry {
-  uint64_t From;
-  uint64_t To;
-  bool Mispred;
-};
-
-inline raw_ostream &operator<<(raw_ostream &OS, const LBREntry &LBR) {
-  OS << "0x" << Twine::utohexstr(LBR.From) << " -> 0x"
-     << Twine::utohexstr(LBR.To);
-  return OS;
-}
-
 struct Location {
   bool IsSymbol;
   StringRef Name;
