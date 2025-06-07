@@ -7,9 +7,9 @@ define float @fma_from_freeze_mul_add_left(float %x, float %y) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_fma_f32 v0, v0, v1, 1.0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %mul = fmul reassoc nsz arcp contract afn float %x, %y
+  %mul = fmul contract float %x, %y
   %mul.fr = freeze float %mul
-  %add = fadd reassoc nsz arcp contract afn float %mul.fr, 1.000000e+00
+  %add = fadd contract float %mul.fr, 1.000000e+00
   ret float %add
 }
 
@@ -19,9 +19,9 @@ define float @fma_from_freeze_mul_add_left_with_nnan(float %x, float %y) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_fma_f32 v0, v0, v1, 1.0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %mul = fmul reassoc nnan nsz arcp contract afn float %x, %y
+  %mul = fmul nnan contract afn float %x, %y
   %mul.fr = freeze float %mul
-  %add = fadd reassoc nnan nsz arcp contract afn float %mul.fr, 1.000000e+00
+  %add = fadd nnan contract float %mul.fr, 1.000000e+00
   ret float %add
 }
 
@@ -31,9 +31,9 @@ define float @fma_from_freeze_mul_add_right(float %x, float %y) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_fma_f32 v0, v0, v1, 1.0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %mul = fmul reassoc nsz arcp contract afn float %x, %y
+  %mul = fmul contract float %x, %y
   %mul.fr = freeze float %mul
-  %add = fadd reassoc nsz arcp contract afn float 1.000000e+00, %mul.fr
+  %add = fadd contract float 1.000000e+00, %mul.fr
   ret float %add
 }
 
@@ -43,9 +43,9 @@ define float @fma_from_freeze_mul_add_right_with_nnan(float %x, float %y) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_fma_f32 v0, v0, v1, 1.0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %mul = fmul reassoc nnan nsz arcp contract afn float %x, %y
+  %mul = fmul nnan contract float %x, %y
   %mul.fr = freeze float %mul
-  %add = fadd reassoc nnan nsz arcp contract afn float 1.000000e+00, %mul.fr
+  %add = fadd nnan contract float 1.000000e+00, %mul.fr
   ret float %add
 }
 
@@ -55,9 +55,9 @@ define float @fma_from_freeze_mul_sub_left(float %x, float %y) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_fma_f32 v0, v0, v1, -1.0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %mul = fmul reassoc nsz arcp contract afn float %x, %y
+  %mul = fmul contract float %x, %y
   %mul.fr = freeze float %mul
-  %sub = fsub reassoc nsz arcp contract afn float %mul.fr, 1.000000e+00
+  %sub = fsub contract float %mul.fr, 1.000000e+00
   ret float %sub
 }
 
@@ -67,9 +67,9 @@ define float @fma_from_freeze_mul_sub_left_with_nnan(float %x, float %y) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_fma_f32 v0, v0, v1, -1.0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %mul = fmul reassoc nnan nsz arcp contract afn float %x, %y
+  %mul = fmul nnan contract float %x, %y
   %mul.fr = freeze float %mul
-  %sub = fsub reassoc nnan nsz arcp contract afn float %mul.fr, 1.000000e+00
+  %sub = fsub nnan contract float %mul.fr, 1.000000e+00
   ret float %sub
 }
 
@@ -79,9 +79,9 @@ define float @fma_from_freeze_mul_sub_right(float %x, float %y) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_fma_f32 v0, -v0, v1, 1.0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %mul = fmul reassoc nsz arcp contract afn float %x, %y
+  %mul = fmul contract float %x, %y
   %mul.fr = freeze float %mul
-  %sub = fsub reassoc nsz arcp contract afn float 1.000000e+00, %mul.fr
+  %sub = fsub contract float 1.000000e+00, %mul.fr
   ret float %sub
 }
 
@@ -91,8 +91,8 @@ define float @fma_from_freeze_mul_sub_right_with_nnan(float %x, float %y) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_fma_f32 v0, -v0, v1, 1.0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %mul = fmul reassoc nnan nsz arcp contract afn float %x, %y
+  %mul = fmul nnan contract float %x, %y
   %mul.fr = freeze float %mul
-  %sub = fsub reassoc nnan nsz arcp contract afn float 1.000000e+00, %mul.fr
+  %sub = fsub nnan contract float 1.000000e+00, %mul.fr
   ret float %sub
 }
