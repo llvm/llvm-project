@@ -112,7 +112,16 @@ define i64 @test_atomicrmw_add_i64_global_system__amdgpu_no_fine_grained_memory_
 define i64 @test_atomicrmw_sub_i64_global_system(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_sub_i64_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw sub ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[NEW:%.*]] = sub i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[TMP2:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP2]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
   %res = atomicrmw sub ptr addrspace(1) %ptr, i64 %value seq_cst
@@ -122,7 +131,16 @@ define i64 @test_atomicrmw_sub_i64_global_system(ptr addrspace(1) %ptr, i64 %val
 define i64 @test_atomicrmw_sub_i64_global_system__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_sub_i64_global_system__amdgpu_no_fine_grained_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw sub ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[NEW:%.*]] = sub i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[TMP2:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP2]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
   %res = atomicrmw sub ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0
@@ -132,7 +150,16 @@ define i64 @test_atomicrmw_sub_i64_global_system__amdgpu_no_fine_grained_memory(
 define i64 @test_atomicrmw_sub_i64_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_sub_i64_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw sub ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[NEW:%.*]] = sub i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[TMP2:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP2]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
   %res = atomicrmw sub ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory !0
@@ -142,7 +169,16 @@ define i64 @test_atomicrmw_sub_i64_global_system__amdgpu_no_remote_memory(ptr ad
 define i64 @test_atomicrmw_sub_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_sub_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw sub ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[NEW:%.*]] = sub i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[TMP2:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP2]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
   %res = atomicrmw sub ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
@@ -157,7 +193,16 @@ define i64 @test_atomicrmw_sub_i64_global_system__amdgpu_no_fine_grained_memory_
 define i64 @test_atomicrmw_and_i64_global_system(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_and_i64_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw and ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[NEW:%.*]] = and i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[TMP2:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP2]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
   %res = atomicrmw and ptr addrspace(1) %ptr, i64 %value seq_cst
@@ -167,7 +212,16 @@ define i64 @test_atomicrmw_and_i64_global_system(ptr addrspace(1) %ptr, i64 %val
 define i64 @test_atomicrmw_and_i64_global_system__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_and_i64_global_system__amdgpu_no_fine_grained_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw and ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[NEW:%.*]] = and i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[TMP2:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP2]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
   %res = atomicrmw and ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0
@@ -177,7 +231,16 @@ define i64 @test_atomicrmw_and_i64_global_system__amdgpu_no_fine_grained_memory(
 define i64 @test_atomicrmw_and_i64_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_and_i64_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw and ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[NEW:%.*]] = and i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[TMP2:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP2]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
   %res = atomicrmw and ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory !0
@@ -187,7 +250,16 @@ define i64 @test_atomicrmw_and_i64_global_system__amdgpu_no_remote_memory(ptr ad
 define i64 @test_atomicrmw_and_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_and_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw and ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[NEW:%.*]] = and i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[TMP2:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP2]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
   %res = atomicrmw and ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
@@ -287,7 +359,16 @@ define i64 @test_atomicrmw_nand_i64_global_system__amdgpu_no_fine_grained_memory
 define i64 @test_atomicrmw_or_i64_global_system(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_or_i64_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw or ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[NEW:%.*]] = or i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[TMP2:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP2]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
   %res = atomicrmw or ptr addrspace(1) %ptr, i64 %value seq_cst
@@ -297,7 +378,16 @@ define i64 @test_atomicrmw_or_i64_global_system(ptr addrspace(1) %ptr, i64 %valu
 define i64 @test_atomicrmw_or_i64_global_system__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_or_i64_global_system__amdgpu_no_fine_grained_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw or ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[NEW:%.*]] = or i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[TMP2:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP2]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
   %res = atomicrmw or ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0
@@ -307,7 +397,16 @@ define i64 @test_atomicrmw_or_i64_global_system__amdgpu_no_fine_grained_memory(p
 define i64 @test_atomicrmw_or_i64_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_or_i64_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw or ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[NEW:%.*]] = or i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[TMP2:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP2]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
   %res = atomicrmw or ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory !0
@@ -317,7 +416,16 @@ define i64 @test_atomicrmw_or_i64_global_system__amdgpu_no_remote_memory(ptr add
 define i64 @test_atomicrmw_or_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_or_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw or ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[NEW:%.*]] = or i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[TMP2:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP2]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
   %res = atomicrmw or ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
@@ -332,7 +440,16 @@ define i64 @test_atomicrmw_or_i64_global_system__amdgpu_no_fine_grained_memory__
 define i64 @test_atomicrmw_xor_i64_global_system(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_xor_i64_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw xor ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[NEW:%.*]] = xor i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[TMP2:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP2]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
   %res = atomicrmw xor ptr addrspace(1) %ptr, i64 %value seq_cst
@@ -342,7 +459,16 @@ define i64 @test_atomicrmw_xor_i64_global_system(ptr addrspace(1) %ptr, i64 %val
 define i64 @test_atomicrmw_xor_i64_global_system__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_xor_i64_global_system__amdgpu_no_fine_grained_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw xor ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[NEW:%.*]] = xor i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[TMP2:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP2]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
   %res = atomicrmw xor ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0
@@ -352,7 +478,16 @@ define i64 @test_atomicrmw_xor_i64_global_system__amdgpu_no_fine_grained_memory(
 define i64 @test_atomicrmw_xor_i64_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_xor_i64_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw xor ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[NEW:%.*]] = xor i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[TMP2:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP2]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
   %res = atomicrmw xor ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory !0
@@ -362,7 +497,16 @@ define i64 @test_atomicrmw_xor_i64_global_system__amdgpu_no_remote_memory(ptr ad
 define i64 @test_atomicrmw_xor_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_xor_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw xor ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[NEW:%.*]] = xor i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[TMP2:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP2]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
   %res = atomicrmw xor ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
@@ -717,7 +861,18 @@ define i64 @test_atomicrmw_umin_i64_global_system__amdgpu_no_fine_grained_memory
 define i64 @test_atomicrmw_uinc_wrap_i64_global_system(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_uinc_wrap_i64_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw uinc_wrap ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[TMP2:%.*]] = add i64 [[LOADED]], 1
+; COMMON-NEXT:    [[TMP3:%.*]] = icmp uge i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i64 0, i64 [[TMP2]]
+; COMMON-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP4]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
   %res = atomicrmw uinc_wrap ptr addrspace(1) %ptr, i64 %value seq_cst
@@ -727,7 +882,18 @@ define i64 @test_atomicrmw_uinc_wrap_i64_global_system(ptr addrspace(1) %ptr, i6
 define i64 @test_atomicrmw_uinc_wrap_i64_global_system__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_uinc_wrap_i64_global_system__amdgpu_no_fine_grained_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw uinc_wrap ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[TMP2:%.*]] = add i64 [[LOADED]], 1
+; COMMON-NEXT:    [[TMP3:%.*]] = icmp uge i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i64 0, i64 [[TMP2]]
+; COMMON-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP4]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
   %res = atomicrmw uinc_wrap ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0
@@ -737,7 +903,18 @@ define i64 @test_atomicrmw_uinc_wrap_i64_global_system__amdgpu_no_fine_grained_m
 define i64 @test_atomicrmw_uinc_wrap_i64_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_uinc_wrap_i64_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw uinc_wrap ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[TMP2:%.*]] = add i64 [[LOADED]], 1
+; COMMON-NEXT:    [[TMP3:%.*]] = icmp uge i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i64 0, i64 [[TMP2]]
+; COMMON-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP4]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
   %res = atomicrmw uinc_wrap ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory !0
@@ -747,7 +924,18 @@ define i64 @test_atomicrmw_uinc_wrap_i64_global_system__amdgpu_no_remote_memory(
 define i64 @test_atomicrmw_uinc_wrap_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_uinc_wrap_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw uinc_wrap ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[TMP2:%.*]] = add i64 [[LOADED]], 1
+; COMMON-NEXT:    [[TMP3:%.*]] = icmp uge i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i64 0, i64 [[TMP2]]
+; COMMON-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP4]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
   %res = atomicrmw uinc_wrap ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
@@ -762,7 +950,20 @@ define i64 @test_atomicrmw_uinc_wrap_i64_global_system__amdgpu_no_fine_grained_m
 define i64 @test_atomicrmw_udec_wrap_i64_global_system(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_udec_wrap_i64_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw udec_wrap ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[TMP2:%.*]] = sub i64 [[LOADED]], 1
+; COMMON-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[LOADED]], 0
+; COMMON-NEXT:    [[TMP4:%.*]] = icmp ugt i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[TMP5:%.*]] = or i1 [[TMP3]], [[TMP4]]
+; COMMON-NEXT:    [[NEW:%.*]] = select i1 [[TMP5]], i64 [[VALUE]], i64 [[TMP2]]
+; COMMON-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP6]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP6]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
   %res = atomicrmw udec_wrap ptr addrspace(1) %ptr, i64 %value seq_cst
@@ -772,7 +973,20 @@ define i64 @test_atomicrmw_udec_wrap_i64_global_system(ptr addrspace(1) %ptr, i6
 define i64 @test_atomicrmw_udec_wrap_i64_global_system__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_udec_wrap_i64_global_system__amdgpu_no_fine_grained_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw udec_wrap ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[TMP2:%.*]] = sub i64 [[LOADED]], 1
+; COMMON-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[LOADED]], 0
+; COMMON-NEXT:    [[TMP4:%.*]] = icmp ugt i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[TMP5:%.*]] = or i1 [[TMP3]], [[TMP4]]
+; COMMON-NEXT:    [[NEW:%.*]] = select i1 [[TMP5]], i64 [[VALUE]], i64 [[TMP2]]
+; COMMON-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP6]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP6]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
   %res = atomicrmw udec_wrap ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0
@@ -782,7 +996,20 @@ define i64 @test_atomicrmw_udec_wrap_i64_global_system__amdgpu_no_fine_grained_m
 define i64 @test_atomicrmw_udec_wrap_i64_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_udec_wrap_i64_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw udec_wrap ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[TMP2:%.*]] = sub i64 [[LOADED]], 1
+; COMMON-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[LOADED]], 0
+; COMMON-NEXT:    [[TMP4:%.*]] = icmp ugt i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[TMP5:%.*]] = or i1 [[TMP3]], [[TMP4]]
+; COMMON-NEXT:    [[NEW:%.*]] = select i1 [[TMP5]], i64 [[VALUE]], i64 [[TMP2]]
+; COMMON-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP6]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP6]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
   %res = atomicrmw udec_wrap ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory !0
@@ -792,7 +1019,20 @@ define i64 @test_atomicrmw_udec_wrap_i64_global_system__amdgpu_no_remote_memory(
 define i64 @test_atomicrmw_udec_wrap_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_udec_wrap_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw udec_wrap ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[TMP2:%.*]] = sub i64 [[LOADED]], 1
+; COMMON-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[LOADED]], 0
+; COMMON-NEXT:    [[TMP4:%.*]] = icmp ugt i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[TMP5:%.*]] = or i1 [[TMP3]], [[TMP4]]
+; COMMON-NEXT:    [[NEW:%.*]] = select i1 [[TMP5]], i64 [[VALUE]], i64 [[TMP2]]
+; COMMON-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP6]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP6]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
   %res = atomicrmw udec_wrap ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
