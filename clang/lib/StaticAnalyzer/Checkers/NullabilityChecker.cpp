@@ -69,6 +69,7 @@ const char *getNullabilityString(Nullability Nullab) {
 }
 
 // These enums are used as an index to ErrorMessages array.
+// FIXME: ErrorMessages no longer exists, perhaps remove this as well?
 enum class ErrorKind : int {
   NilAssignedToNonnull,
   NilPassedToNonnull,
@@ -714,8 +715,7 @@ void NullabilityChecker::checkPreStmt(const ReturnStmt *S,
   if (ChecksEnabled[CK_NullReturnedFromNonnull] && NullReturnedFromNonNull &&
       RetExprTypeLevelNullability != Nullability::Nonnull &&
       !InSuppressedMethodFamily) {
-    static CheckerProgramPointTag Tag(this, "NullReturnedFromNonnull");
-    ExplodedNode *N = C.generateErrorNode(State, &Tag);
+    ExplodedNode *N = C.generateErrorNode(State);
     if (!N)
       return;
 
@@ -750,8 +750,7 @@ void NullabilityChecker::checkPreStmt(const ReturnStmt *S,
         Nullness != NullConstraint::IsNotNull &&
         TrackedNullabValue == Nullability::Nullable &&
         RequiredNullability == Nullability::Nonnull) {
-      static CheckerProgramPointTag Tag(this, "NullableReturnedFromNonnull");
-      ExplodedNode *N = C.addTransition(State, C.getPredecessor(), &Tag);
+      ExplodedNode *N = C.addTransition(State, C.getPredecessor());
 
       SmallString<256> SBuf;
       llvm::raw_svector_ostream OS(SBuf);
@@ -1299,8 +1298,7 @@ void NullabilityChecker::checkBind(SVal L, SVal V, const Stmt *S,
       ValNullability != Nullability::Nonnull &&
       ValueExprTypeLevelNullability != Nullability::Nonnull &&
       !isARCNilInitializedLocal(C, S)) {
-    static CheckerProgramPointTag Tag(this, "NullPassedToNonnull");
-    ExplodedNode *N = C.generateErrorNode(State, &Tag);
+    ExplodedNode *N = C.generateErrorNode(State);
     if (!N)
       return;
 
@@ -1342,8 +1340,7 @@ void NullabilityChecker::checkBind(SVal L, SVal V, const Stmt *S,
       return;
     if (ChecksEnabled[CK_NullablePassedToNonnull] &&
         LocNullability == Nullability::Nonnull) {
-      static CheckerProgramPointTag Tag(this, "NullablePassedToNonnull");
-      ExplodedNode *N = C.addTransition(State, C.getPredecessor(), &Tag);
+      ExplodedNode *N = C.addTransition(State, C.getPredecessor());
       reportBugIfInvariantHolds("Nullable pointer is assigned to a pointer "
                                 "which is expected to have non-null value",
                                 ErrorKind::NullableAssignedToNonnull,

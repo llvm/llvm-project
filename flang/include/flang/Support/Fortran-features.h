@@ -55,7 +55,8 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     UndefinableAsynchronousOrVolatileActual, AutomaticInMainProgram, PrintCptr,
     SavedLocalInSpecExpr, PrintNamelist, AssumedRankPassedToNonAssumedRank,
     IgnoreIrrelevantAttributes, Unsigned, AmbiguousStructureConstructor,
-    ContiguousOkForSeqAssociation, ForwardRefExplicitTypeDummy)
+    ContiguousOkForSeqAssociation, ForwardRefExplicitTypeDummy,
+    InaccessibleDeferredOverride)
 
 // Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
