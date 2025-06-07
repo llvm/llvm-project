@@ -55354,10 +55354,17 @@ static SDValue combineFMinNumFMaxNum(SDNode *N, SelectionDAG &DAG,
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
+  auto IsMinMaxLegal = [&](EVT VT) {
+    if (!TLI.isTypeLegal(VT))
+      return false;
+    return VT.getScalarType() != MVT::f16 ||
+           (Subtarget.hasFP16() && (VT == MVT::v32f16 || Subtarget.hasVLX()));
+  };
+
   if (!((Subtarget.hasSSE1() && VT == MVT::f32) ||
         (Subtarget.hasSSE2() && VT == MVT::f64) ||
         (Subtarget.hasFP16() && VT == MVT::f16) ||
-        (VT.isVector() && TLI.isTypeLegal(VT))))
+        (VT.isVector() && IsMinMaxLegal(VT))))
     return SDValue();
 
   SDValue Op0 = N->getOperand(0);
