@@ -179,3 +179,41 @@ half3 test_lerp_half_scalar(half3 x, half3 y, half s) { return lerp(x, y, s); }
 float3 test_lerp_float_scalar(float3 x, float3 y, float s) {
   return lerp(x, y, s);
 }
+
+// CHECK: define [[FNATTRS]] <2 x float> @_Z23test_lerp_float_scalar1Dv2_ff(
+// CHECK:    [[SPLATINSERT:%.*]] = insertelement <2 x float> poison, float %{{.*}}, i64 0
+// CHECK:    [[SPLAT:%.*]] = shufflevector <2 x float> [[SPLATINSERT]], <2 x float> poison, <2 x i32> zeroinitializer
+// CHECK:    [[LERP:%.*]] = call {{.*}} <2 x float> @llvm.[[TARGET]].lerp.v2f32(<2 x float> {{.*}}, <2 x float> {{.*}}, <2 x float> [[SPLAT]])
+// CHECK:    ret <2 x float> [[LERP]]
+float2 test_lerp_float_scalar1(float2 v, float s) {
+  return lerp(v, v, s);
+}
+
+// CHECK: define [[FNATTRS]] <2 x float> @_Z23test_lerp_float_scalar2Dv2_ff(
+// CHECK:    [[SPLATINSERT:%.*]] = insertelement <2 x float> poison, float %{{.*}}, i64 0
+// CHECK:    [[SPLAT:%.*]] = shufflevector <2 x float> [[SPLATINSERT]], <2 x float> poison, <2 x i32> zeroinitializer
+// CHECK:    [[LERP:%.*]] = call {{.*}} <2 x float> @llvm.[[TARGET]].lerp.v2f32(<2 x float> {{.*}}, <2 x float> [[SPLAT]], <2 x float> {{.*}})
+// CHECK:    ret <2 x float> [[LERP]]
+float2 test_lerp_float_scalar2(float2 v, float s) {
+  return lerp(v, s, v);
+}
+
+// CHECK: define [[FNATTRS]] <2 x float> @_Z23test_lerp_float_scalar3Dv2_ff(
+// CHECK:    [[SPLATINSERT:%.*]] = insertelement <2 x float> poison, float %{{.*}}, i64 0
+// CHECK:    [[SPLAT:%.*]] = shufflevector <2 x float> [[SPLATINSERT]], <2 x float> poison, <2 x i32> zeroinitializer
+// CHECK:    [[LERP:%.*]] = call {{.*}} <2 x float> @llvm.[[TARGET]].lerp.v2f32(<2 x float> [[SPLAT]], <2 x float> {{.*}}, <2 x float> {{.*}})
+// CHECK:    ret <2 x float> [[LERP]]
+float2 test_lerp_float_scalar3(float2 v, float s) {
+  return lerp(s, v, v);
+}
+
+// CHECK: define [[FNATTRS]] <2 x float> @_Z23test_lerp_float_scalar4Dv2_ff(
+// CHECK:    [[SPLATINSERT0:%.*]] = insertelement <2 x float> poison, float %{{.*}}, i64 0
+// CHECK:    [[SPLAT0:%.*]] = shufflevector <2 x float> [[SPLATINSERT0]], <2 x float> poison, <2 x i32> zeroinitializer
+// CHECK:    [[SPLATINSERT1:%.*]] = insertelement <2 x float> poison, float %{{.*}}, i64 0
+// CHECK:    [[SPLAT1:%.*]] = shufflevector <2 x float> [[SPLATINSERT1]], <2 x float> poison, <2 x i32> zeroinitializer
+// CHECK:    [[LERP:%.*]] = call {{.*}} <2 x float> @llvm.[[TARGET]].lerp.v2f32(<2 x float> {{.*}}, <2 x float> [[SPLAT0]], <2 x float> [[SPLAT1]])
+// CHECK:    ret <2 x float> [[LERP]]
+float2 test_lerp_float_scalar4(float2 v, float s) {
+  return lerp(v, s, s);
+}
