@@ -12,7 +12,6 @@
 #include "hdr/types/wchar_t.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "src/string/memory_utils/inline_memcpy.h"
 #include "src/string/string_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -20,7 +19,7 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(wchar_t *, wcscpy,
                    (wchar_t *__restrict s1, const wchar_t *__restrict s2)) {
   size_t size = internal::string_length(s2) + 1;
-  inline_memcpy(s1, s2, size * sizeof(wchar_t));
+  __builtin_memcpy(s1, s2, size * sizeof(wchar_t));
   return s1;
 }
 
