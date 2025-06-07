@@ -43,8 +43,8 @@ define i1 @test-same-operands-sub-add-nsw-nuw-icmp-eq(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[B]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %sub = sub nuw nsw i8 %a, %b
-  %add = add nuw nsw i8 %a, %b
+  %sub = sub nsw i8 %a, %b
+  %add = add nuw i8 %a, %b
   %cmp = icmp eq i8 %sub, %add
   ret i1 %cmp
 }
@@ -61,13 +61,10 @@ define i1 @test-same-operands-sub-add-nsw-icmp-eq(i8 %a, i8 %b) {
   ret i1 %cmp
 }
 
-; Should floded by foldICmpCommutative in the future
 define i1 @test-add-sub-nsw-icmp-sgt(i8 %a, i8 %b) {
 ; CHECK-LABEL: define i1 @test-add-sub-nsw-icmp-sgt(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i8 [[A]], [[B]]
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[A]], [[B]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[ADD]], [[SUB]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[B]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sub = sub nsw i8 %a, %b
@@ -76,14 +73,10 @@ define i1 @test-add-sub-nsw-icmp-sgt(i8 %a, i8 %b) {
   ret i1 %cmp
 }
 
-; Should floded by foldICmpCommutative in the future
 define i1 @test-add-sub-nuw-icmp-uge(i8 %a, i8 %b) {
 ; CHECK-LABEL: define i1 @test-add-sub-nuw-icmp-uge(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
-; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i8 [[A]], [[B]]
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[A]], [[B]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[ADD]], [[SUB]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %sub = sub nuw i8 %a, %b
   %add = add nuw i8 %a, %b
@@ -106,14 +99,10 @@ define i1 @test-add-sub-nuw-icmp-sge(i8 %a, i8 %b) {
   ret i1 %cmp
 }
 
-; Should floded by foldICmpCommutative in the future
 define i1 @test-add-swap-sub-nuw-icmp-uge(i8 %a, i8 %b) {
 ; CHECK-LABEL: define i1 @test-add-swap-sub-nuw-icmp-uge(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
-; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i8 [[A]], [[B]]
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[B]], [[A]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[ADD]], [[SUB]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %sub = sub nuw i8 %a, %b
   %add = add nuw i8 %b, %a

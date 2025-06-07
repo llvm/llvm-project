@@ -7728,9 +7728,13 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     }
   }
 
-  // In case of a comparison with add/sub instructions having the same operands,
-  // check whether cmp operands have same signed no wrap. If so, just compare
-  // the sub's second operand and zero.
+  // If comparing to add and sub instructions with the same operands, check if
+  // the cmp type and add/sub instruction overflow satisfy the following
+  // constraints:
+  //    Signed cmp equals nsw;
+  //    Unsigned cmp equals nuw;
+  //    Equal cmp equals nsw or nuw.
+  // If yes, only the second operand of sub is compared to zero.
   // For example:
   //   %tmp1 = sub nsw i8 %x, %y
   //   %tmp2 = add nsw i8 %x, %y
@@ -7742,22 +7746,21 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     Value *A, *B;
     auto *I0 = dyn_cast<OverflowingBinaryOperator>(Op0);
     auto *I1 = dyn_cast<OverflowingBinaryOperator>(Op1);
-    bool UnsignedCmp = ICmpInst::isUnsigned(Pred);
-    bool SignedCmp = ICmpInst::isSigned(Pred);
-    bool EqualityCmp = ICmpInst::isEquality(Pred);
-
     if (I0 && I1) {
       bool I0NUW = I0->hasNoUnsignedWrap();
       bool I1NUW = I1->hasNoUnsignedWrap();
       bool I0NSW = I0->hasNoSignedWrap();
       bool I1NSW = I1->hasNoSignedWrap();
+      bool UnsignedCmp = ICmpInst::isUnsigned(Pred);
+      bool SignedCmp = ICmpInst::isSigned(Pred);
+      bool EqualityCmp = ICmpInst::isEquality(Pred);
+      CmpPredicate CmpPred;
       if ((UnsignedCmp && I0NUW && I1NUW) || (SignedCmp && I0NSW && I1NSW) ||
-          (EqualityCmp && ((I0NUW && I1NUW) || (I0NSW && I1NSW)))) {
-        if (match(I0, m_Sub(m_Value(A), m_Value(B))) &&
-            match(I1, m_Add(m_Specific(A), m_Specific(B)))) {
-          return new ICmpInst(I.getSwappedPredicate(), B,
+          (EqualityCmp && ((I0NUW || I0NSW) && (I1NUW || I1NSW)))) {
+        if (match(&I, m_c_ICmp(CmpPred, m_Sub(m_Value(A), m_Value(B)),
+                               m_c_Add(m_Deferred(A), m_Deferred(B)))))
+          return new ICmpInst(CmpPredicate::getSwapped(CmpPred), B,
                               ConstantInt::get(Op0->getType(), 0));
-        }
       }
     }
   }
