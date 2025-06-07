@@ -1335,13 +1335,12 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
   }
 
   if (Style.BraceWrapping.BeforeLambdaBody && Current.is(TT_LambdaLBrace)) {
-    const auto Nested = Current.NestingLevel != 0;
+    const auto Nested = Current.NestingLevel > 0;
     const auto From = Style.LambdaBodyIndentation == FormatStyle::LBI_Signature
                           ? CurrentState.Indent
                           : State.FirstIndent;
-    const auto Indent =
-        (Style.BraceWrapping.IndentBracesLambdaNested && Nested) ||
-        (Style.BraceWrapping.IndentBracesLambdaUnnested && !Nested);
+    const auto Indent = Nested ? Style.BraceWrapping.IndentBracesLambdaNested
+                               : Style.BraceWrapping.IndentBracesLambdaUnnested;
     return From + (Indent * Style.IndentWidth);
   }
 
@@ -2126,10 +2125,9 @@ void ContinuationIndenter::moveStateToNewBlock(LineState &State, bool NewLine) {
   if (Style.LambdaBodyIndentation == FormatStyle::LBI_OuterScope &&
       State.NextToken->is(TT_LambdaLBrace) &&
       !State.Line->MightBeFunctionDecl) {
-    const auto Nested = State.NextToken->NestingLevel != 0;
-    const auto Indent =
-        (Style.BraceWrapping.IndentBracesLambdaNested && Nested) ||
-        (Style.BraceWrapping.IndentBracesLambdaUnnested && !Nested);
+    const auto Nested = State.NextToken->NestingLevel > 0;
+    const auto Indent = Nested ? Style.BraceWrapping.IndentBracesLambdaNested
+                               : Style.BraceWrapping.IndentBracesLambdaUnnested;
     State.Stack.back().NestedBlockIndent =
         State.FirstIndent + (Indent * Style.IndentWidth);
   }
