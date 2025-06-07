@@ -4438,7 +4438,8 @@ the type size is smaller than the type's store size.
       < vscale x <# elements> x <elementtype> > ; Scalable vector
 
 The number of elements is a constant integer value larger than 0;
-elementtype may be any integer, floating-point or pointer type. Vectors
+elementtype may be any integer, floating-point, pointer type, or a sized  
+target extension type that has the ``CanBeVectorElement`` property. Vectors
 of size zero are not allowed. For scalable vectors, the total number of
 elements is a constant multiple (called vscale) of the specified number
 of elements; vscale is a positive integer that is unknown at compile time
