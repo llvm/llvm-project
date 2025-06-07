@@ -406,7 +406,8 @@ void printAsTextualPipeline(
     os.indent();
   }
   llvm::interleave(
-      passes, [&](mlir::Pass &pass) { pass.printAsTextualPipeline(os, pretty); },
+      passes,
+      [&](mlir::Pass &pass) { pass.printAsTextualPipeline(os, pretty); },
       [&]() {
         os << ",";
         if (pretty)
@@ -420,7 +421,8 @@ void printAsTextualPipeline(
 }
 void printAsTextualPipeline(
     raw_ostream &os, StringRef anchorName,
-    const llvm::iterator_range<OpPassManager::pass_iterator> &passes, bool pretty) {
+    const llvm::iterator_range<OpPassManager::pass_iterator> &passes,
+    bool pretty) {
   raw_indented_ostream indentedOS(os);
   printAsTextualPipeline(indentedOS, anchorName, passes, pretty);
 }
