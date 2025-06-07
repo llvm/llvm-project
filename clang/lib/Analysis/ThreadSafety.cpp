@@ -1141,11 +1141,10 @@ public:
 
   void warnIfMutexNotHeld(const FactSet &FSet, const NamedDecl *D,
                           const Expr *Exp, AccessKind AK, Expr *MutexExp,
-                          ProtectedOperationKind POK, til::LiteralPtr *Self,
+                          ProtectedOperationKind POK, til::SExpr *Self,
                           SourceLocation Loc);
   void warnIfMutexHeld(const FactSet &FSet, const NamedDecl *D, const Expr *Exp,
-                       Expr *MutexExp, til::LiteralPtr *Self,
-                       SourceLocation Loc);
+                       Expr *MutexExp, til::SExpr *Self, SourceLocation Loc);
 
   void checkAccess(const FactSet &FSet, const Expr *Exp, AccessKind AK,
                    ProtectedOperationKind POK);
@@ -1599,7 +1598,7 @@ class BuildLockset : public ConstStmtVisitor<BuildLockset> {
   }
 
   void handleCall(const Expr *Exp, const NamedDecl *D,
-                  til::LiteralPtr *Self = nullptr,
+                  til::SExpr *Self = nullptr,
                   SourceLocation Loc = SourceLocation());
   void examineArguments(const FunctionDecl *FD,
                         CallExpr::const_arg_iterator ArgBegin,
@@ -1629,7 +1628,7 @@ public:
 /// of at least the passed in AccessKind.
 void ThreadSafetyAnalyzer::warnIfMutexNotHeld(
     const FactSet &FSet, const NamedDecl *D, const Expr *Exp, AccessKind AK,
-    Expr *MutexExp, ProtectedOperationKind POK, til::LiteralPtr *Self,
+    Expr *MutexExp, ProtectedOperationKind POK, til::SExpr *Self,
     SourceLocation Loc) {
   LockKind LK = getLockKindFromAccessKind(AK);
   CapabilityExpr Cp = SxBuilder.translateAttrExpr(MutexExp, D, Exp, Self);
@@ -1688,8 +1687,7 @@ void ThreadSafetyAnalyzer::warnIfMutexNotHeld(
 /// Warn if the LSet contains the given lock.
 void ThreadSafetyAnalyzer::warnIfMutexHeld(const FactSet &FSet,
                                            const NamedDecl *D, const Expr *Exp,
-                                           Expr *MutexExp,
-                                           til::LiteralPtr *Self,
+                                           Expr *MutexExp, til::SExpr *Self,
                                            SourceLocation Loc) {
   CapabilityExpr Cp = SxBuilder.translateAttrExpr(MutexExp, D, Exp, Self);
   if (Cp.isInvalid()) {
@@ -1857,7 +1855,7 @@ void ThreadSafetyAnalyzer::checkPtAccess(const FactSet &FSet, const Expr *Exp,
 ///              of an implicitly called cleanup function.
 /// \param Loc   If \p Exp = nullptr, the location.
 void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
-                              til::LiteralPtr *Self, SourceLocation Loc) {
+                              til::SExpr *Self, SourceLocation Loc) {
   CapExprSet ExclusiveLocksToAdd, SharedLocksToAdd;
   CapExprSet ExclusiveLocksToRemove, SharedLocksToRemove, GenericLocksToRemove;
   CapExprSet ScopedReqsAndExcludes;
@@ -1869,7 +1867,7 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
     const auto *TagT = Exp->getType()->getAs<TagType>();
     if (D->hasAttrs() && TagT && Exp->isPRValue()) {
       til::LiteralPtr *Placeholder =
-          Analyzer->SxBuilder.createVariable(nullptr);
+          cast<til::LiteralPtr>(Analyzer->SxBuilder.createVariable(nullptr));
       [[maybe_unused]] auto inserted =
           Analyzer->ConstructedObjects.insert({Exp, Placeholder});
       assert(inserted.second && "Are we visiting the same expression again?");
