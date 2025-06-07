@@ -12,7 +12,7 @@ public:
 
   SummaryConsumer *SummaryConsumer;
 
-  void SummarizeFunctionBody(FunctionDecl *FD) const;
+  void SummarizeFunctionBody(const FunctionDecl *FD);
 };
 } // namespace clang
 
