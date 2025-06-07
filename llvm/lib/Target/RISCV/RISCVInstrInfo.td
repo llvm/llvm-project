@@ -363,9 +363,9 @@ def bare_simm13_lsb0 : BareSImm13Lsb0MaybeSym,
   let OperandType = "OPERAND_PCREL";
 }
 
-// We need this (sort of) duplicate defintion since adding ImmLeaf to
-// bare_simm13_lsb0 above makes it not sit well with patterns where it is used to
-// match with a basic block (eg. BccPat<>).
+// We need this (sort of) duplicate definition since adding ImmLeaf to
+// bare_simm13_lsb0 above makes it not sit well with codegen patterns where it
+// is used to match with a basic block (eg. BccPat<>).
 def bare_simm13_lsb0_bb: BareSImm13Lsb0MaybeSym;
 
 class UImm20OperandMaybeSym : RISCVUImmOp<20> {

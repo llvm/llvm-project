@@ -118,5 +118,61 @@ test:
 .L12:
    ret
 
+# Check that instructions are first compressed and then relaxed
+
+# CHECK-INST:         qc.beqi    a0, 0xa, 0xf44c
+# CHECK-INST-NEXT:    jal     zero, 0x1089c
+# CHECK-INST-RELAX:         qc.beqi    a0, 0xa, 0xf44c
+# CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
+   qc.e.bnei a0, 10, .L13
+.fill 1300, 4, 0
+.L13:
+   ret
+
+# CHECK-INST:         qc.bnei    a0, 0xa, 0x108a6
+# CHECK-INST-NEXT:    jal     zero, 0x11cf6
+# CHECK-INST-RELAX:         qc.bnei    a0, 0xa, 0x108a6
+# CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
+   qc.e.beqi a0, 10, .L14
+.fill 1300, 4, 0
+.L14:
+   ret
+
+# CHECK-INST:         qc.bgei    a0, 0xa, 0x11d00
+# CHECK-INST-NEXT:    jal     zero, 0x13150
+# CHECK-INST-RELAX:         qc.bgei    a0, 0xa, 0x11d00
+# CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
+   qc.e.blti a0, 10, .L15
+.fill 1300, 4, 0
+.L15:
+   ret
+
+# CHECK-INST:         qc.blti    a0, 0xa, 0x1315a
+# CHECK-INST-NEXT:    jal     zero, 0x145aa
+# CHECK-INST-RELAX:         qc.blti    a0, 0xa, 0x1315a
+# CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
+   qc.e.bgei a0, 10, .L16
+.fill 1300, 4, 0
+.L16:
+   ret
+
+# CHECK-INST:         qc.bgeui    a0, 0xa, 0x145b4
+# CHECK-INST-NEXT:    jal     zero, 0x15a04
+# CHECK-INST-RELAX:         qc.bgeui    a0, 0xa, 0x145b4
+# CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
+   qc.e.bltui a0, 10, .L17
+.fill 1300, 4, 0
+.L17:
+   ret
+
+# CHECK-INST:         qc.bltui    a0, 0xa, 0x15a0e
+# CHECK-INST-NEXT:    jal     zero, 0x16e5e
+# CHECK-INST-RELAX:         qc.bltui    a0, 0xa, 0x15a0e
+# CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
+   qc.e.bgeui a0, 10, .L18
+.fill 1300, 4, 0
+.L18:
+   ret
+
 .Lfunc_end0:
        .size   test, .Lfunc_end0-test
