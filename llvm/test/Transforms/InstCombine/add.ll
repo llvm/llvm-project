@@ -4430,4 +4430,88 @@ define i32 @ceil_div_wrong_cmp(i32 range(i32 0, 100) %x) {
   %r = add i32 %shr, %ext
   ret i32 %r
 }
+
+; Multi-use test: all intermediate values have uses
+define i32 @ceil_div_multi_use(i32 range(i32 0, 100) %x) {
+; CHECK-LABEL: @ceil_div_multi_use(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X:%.*]], 3
+; CHECK-NEXT:    call void @use_i32(i32 [[SHR]])
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 7
+; CHECK-NEXT:    call void @use_i32(i32 [[AND]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    call void @use_i32(i32 [[EXT]])
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i32 [[SHR]], [[EXT]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %shr = lshr i32 %x, 3
+  call void @use_i32(i32 %shr)
+  %and = and i32 %x, 7
+  call void @use_i32(i32 %and)
+  %cmp = icmp ne i32 %and, 0
+  %ext = zext i1 %cmp to i32
+  call void @use_i32(i32 %ext)
+  %r = add i32 %shr, %ext
+  ret i32 %r
+}
+
+; Commuted test: add operands are swapped  
+define i32 @ceil_div_commuted(i32 range(i32 0, 100) %x) {
+; CHECK-LABEL: @ceil_div_commuted(
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i32 [[X:%.*]], 7
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[TMP1]], 3
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %shr = lshr i32 %x, 3
+  %and = and i32 %x, 7
+  %cmp = icmp ne i32 %and, 0
+  %ext = zext i1 %cmp to i32
+  %r = add i32 %ext, %shr  ; Operands swapped
+  ret i32 %r
+}
+
+; Commuted with multi-use
+define i32 @ceil_div_commuted_multi_use(i32 range(i32 0, 100) %x) {
+; CHECK-LABEL: @ceil_div_commuted_multi_use(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X:%.*]], 3
+; CHECK-NEXT:    call void @use_i32(i32 [[SHR]])
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    call void @use_i32(i32 [[EXT]])
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i32 [[SHR]], [[EXT]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %shr = lshr i32 %x, 3
+  call void @use_i32(i32 %shr)
+  %and = and i32 %x, 7
+  %cmp = icmp ne i32 %and, 0
+  %ext = zext i1 %cmp to i32
+  call void @use_i32(i32 %ext)
+  %r = add i32 %ext, %shr  ; Operands swapped
+  ret i32 %r
+}
+
+; Multi-use with vector type
+define <2 x i32> @ceil_div_vec_multi_use(<2 x i32> range(i32 0, 1000) %x) {
+; CHECK-LABEL: @ceil_div_vec_multi_use(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i32> [[X:%.*]], splat (i32 3)
+; CHECK-NEXT:    call void @use_vec(<2 x i32> [[SHR]])
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X]], splat (i32 7)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[AND]], zeroinitializer
+; CHECK-NEXT:    [[EXT:%.*]] = zext <2 x i1> [[CMP]] to <2 x i32>
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw <2 x i32> [[SHR]], [[EXT]]
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %shr = lshr <2 x i32> %x, <i32 3, i32 3>
+  call void @use_vec(<2 x i32> %shr)
+  %and = and <2 x i32> %x, <i32 7, i32 7>
+  %cmp = icmp ne <2 x i32> %and, <i32 0, i32 0>
+  %ext = zext <2 x i1> %cmp to <2 x i32>
+  %r = add <2 x i32> %shr, %ext
+  ret <2 x i32> %r
+}
+
+declare void @use_i32(i32)
+declare void @use_vec(<2 x i32>)
 declare void @fake_func(i32)
