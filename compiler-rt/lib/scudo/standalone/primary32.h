@@ -46,6 +46,7 @@ public:
   typedef typename Config::CompactPtrT CompactPtrT;
   typedef typename Config::SizeClassMap SizeClassMap;
   static const uptr GroupSizeLog = Config::getGroupSizeLog();
+  static const bool ZeroOnDealloc = Config::getZeroOnDealloc();
   // The bytemap can only track UINT8_MAX - 1 classes.
   static_assert(SizeClassMap::LargestClassId <= (UINT8_MAX - 1), "");
   // Regions should be large enough to hold the largest Block.
