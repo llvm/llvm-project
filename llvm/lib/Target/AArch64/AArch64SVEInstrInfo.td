@@ -4064,8 +4064,10 @@ let Predicates = [HasSVE2_or_SME] in {
 
 let Predicates = [HasSVEAES, HasNonStreamingSVE2_or_SSVE_AES] in {
   // SVE2 crypto destructive binary operations
-  defm AESE_ZZZ_B : sve2_crypto_des_bin_op<0b00, "aese", ZPR8, int_aarch64_sve_aese, nxv16i8>;
-  defm AESD_ZZZ_B : sve2_crypto_des_bin_op<0b01, "aesd", ZPR8, int_aarch64_sve_aesd, nxv16i8>;
+  let isCommutable = 1 in {
+  def AESE_ZZZ_B : sve2_crypto_des_bin_op<0b00, "aese", ZPR8, int_aarch64_sve_aese, nxv16i8>;
+  def AESD_ZZZ_B : sve2_crypto_des_bin_op<0b01, "aesd", ZPR8, int_aarch64_sve_aesd, nxv16i8>;
+  }
 
   // SVE2 crypto unary operations
   defm AESMC_ZZ_B  : sve2_crypto_unary_op<0b0, "aesmc",  int_aarch64_sve_aesmc>;
@@ -4082,7 +4084,7 @@ let Predicates = [HasSVE2SM4] in {
   // SVE2 crypto constructive binary operations
   defm SM4EKEY_ZZZ_S : sve2_crypto_cons_bin_op<0b0, "sm4ekey", ZPR32, int_aarch64_sve_sm4ekey, nxv4i32>;
   // SVE2 crypto destructive binary operations
-  defm SM4E_ZZZ_S : sve2_crypto_des_bin_op<0b10, "sm4e", ZPR32, int_aarch64_sve_sm4e, nxv4i32>;
+  def SM4E_ZZZ_S : sve2_crypto_des_bin_op<0b10, "sm4e", ZPR32, int_aarch64_sve_sm4e, nxv4i32>;
 } // End HasSVE2SM4
 
 let Predicates = [HasSVE2SHA3] in {

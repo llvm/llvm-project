@@ -9235,11 +9235,12 @@ multiclass sve2_crypto_cons_bin_op<bit opc, string asm, ZPRRegOp zprty,
   def : SVE_2_Op_Pat<vt, op, vt, vt, !cast<Instruction>(NAME)>;
 }
 
-class sve2_crypto_des_bin_op<bits<2> opc, string asm, ZPRRegOp zprty>
+class sve2_crypto_des_bin_op<bits<2> opc, string asm, ZPRRegOp zprty,
+                             SDPatternOperator op, ValueType vt>
 : I<(outs zprty:$Zdn), (ins zprty:$_Zdn, zprty:$Zm),
   asm, "\t$Zdn, $_Zdn, $Zm",
   "",
-  []>, Sched<[]> {
+  [(set (vt zprty:$Zdn), (op (vt zprty:$_Zdn), (vt zprty:$Zm)))]>, Sched<[]> {
   bits<5> Zdn;
   bits<5> Zm;
   let Inst{31-17} = 0b010001010010001;
@@ -9251,12 +9252,6 @@ class sve2_crypto_des_bin_op<bits<2> opc, string asm, ZPRRegOp zprty>
 
   let Constraints = "$Zdn = $_Zdn";
   let hasSideEffects = 0;
-}
-
-multiclass sve2_crypto_des_bin_op<bits<2> opc, string asm, ZPRRegOp zprty,
-                                  SDPatternOperator op, ValueType vt> {
-  def NAME : sve2_crypto_des_bin_op<opc, asm, zprty>;
-  def : SVE_2_Op_Pat<vt, op, vt, vt, !cast<Instruction>(NAME)>;
 }
 
 class sve2_crypto_unary_op<bit opc, string asm, ZPRRegOp zprty>
