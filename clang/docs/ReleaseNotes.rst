@@ -618,6 +618,8 @@ Improvements to Clang's diagnostics
 
 - Improved the FixIts for unused lambda captures.
 
+- Clang now diagnoses ``-Wunused-member-function`` with a specific message for constructors.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
