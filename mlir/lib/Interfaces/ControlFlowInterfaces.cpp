@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
@@ -78,6 +79,53 @@ detail::verifyBranchSuccessorOperands(Operation *op, unsigned succNo,
                              << " of successor #" << succNo;
   }
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// WeightedBranchOpInterface
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verifyWeights(Operation *op, DenseI32ArrayAttr weights,
+                                   int64_t expectedWeightsNum,
+                                   llvm::StringRef weightAnchorName,
+                                   llvm::StringRef weightRefName) {
+  if (!weights)
+    return success();
+
+  if (weights.size() != expectedWeightsNum)
+    return op->emitError() << "expects number of " << weightAnchorName
+                           << " weights to match number of " << weightRefName
+                           << ": " << weights.size() << " vs "
+                           << expectedWeightsNum;
+
+  for (auto [index, weight] : llvm::enumerate(weights.asArrayRef()))
+    if (weight < 0)
+      return op->emitError() << "weight #" << index << " must be non-negative";
+
+  return success();
+}
+
+LogicalResult detail::verifyBranchWeights(Operation *op) {
+  auto weights = cast<WeightedBranchOpInterface>(op).getBranchWeightsOrNull();
+  unsigned successorsNum = op->getNumSuccessors();
+  // CallOpInterface operations without successors may only have
+  // one weight, though it seems to be redundant and indicate
+  // 100% probability of calling the callee(s).
+  // TODO: maybe we should remove this interface for calls without
+  // successors.
+  int64_t weightsNum =
+      (successorsNum == 0 && isa<CallOpInterface>(op)) ? 1 : successorsNum;
+  return verifyWeights(op, weights, weightsNum, "branch", "successors");
+}
+
+//===----------------------------------------------------------------------===//
+// WeightedRegionBranchOpInterface
+//===----------------------------------------------------------------------===//
+
+LogicalResult detail::verifyRegionBranchWeights(Operation *op) {
+  auto weights =
+      cast<WeightedRegionBranchOpInterface>(op).getRegionWeightsOrNull();
+  return verifyWeights(op, weights, op->getNumRegions(), "region", "regions");
 }
 
 //===----------------------------------------------------------------------===//
