@@ -904,6 +904,10 @@ static bool hasAllOneValues(DenseIntElementsAttr attr) {
 static FailureOr<Operation *>
 winogradConv2DHelper(RewriterBase &rewriter, linalg::Conv2DNhwcFhwcOp convOp,
                      int64_t m, int64_t r) {
+  if (!convOp.hasPureTensorSemantics())
+    return rewriter.notifyMatchFailure(
+        convOp, "expected pure tensor semantics for linalg.conv_2d_nhwc_fhwc");
+
   Value input = convOp.getInputs()[0];
   Value filter = convOp.getInputs()[1];
   Value output = convOp.getOutputs()[0];
