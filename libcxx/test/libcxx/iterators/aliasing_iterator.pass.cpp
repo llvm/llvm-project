@@ -8,9 +8,9 @@
 
 // ADDITIONAL_COMPILE_FLAGS(clang): -Wprivate-header
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+#include "test_macros.h"
 
-#include <__iterator/aliasing_iterator.h>
+#include TEST_LIBCPP_INTERNAL_POSSIBLY_FROZEN_INCLUDE(__iterator/aliasing_iterator.h)
 #include <cassert>
 
 struct NonTrivial {

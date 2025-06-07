@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+#include "test_macros.h"
 
-#include <__utility/is_valid_range.h>
+#include TEST_LIBCPP_INTERNAL_POSSIBLY_FROZEN_INCLUDE(__utility/is_valid_range.h)
 #include <cassert>
 
 #include "test_macros.h"

@@ -7,18 +7,19 @@
 //===----------------------------------------------------------------------===//
 //
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+// ADDITIONAL_COMPILE_FLAGS: -Wprivate-header
 
 #include "test_macros.h"
 
-TEST_CLANG_DIAGNOSTIC_IGNORED("-Wprivate-header")
-#include <__type_traits/conjunction.h>
-#include <__type_traits/disjunction.h>
-#include <__type_traits/is_valid_expansion.h>
-#include <__type_traits/negation.h>
+#include TEST_LIBCPP_INTERNAL_POSSIBLY_FROZEN_INCLUDE(__type_traits/conjunction.h)
+#include TEST_LIBCPP_INTERNAL_POSSIBLY_FROZEN_INCLUDE(__type_traits/disjunction.h)
+#include TEST_LIBCPP_INTERNAL_POSSIBLY_FROZEN_INCLUDE(__type_traits/is_valid_expansion.h)
+#include TEST_LIBCPP_INTERNAL_POSSIBLY_FROZEN_INCLUDE(__type_traits/negation.h)
 #include <cassert>
 #include <type_traits>
 #include <utility>
+
+#include "test_macros.h"
 
 struct Bomb;
 template <int N, class T = Bomb >
