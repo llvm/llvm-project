@@ -6193,19 +6193,31 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
                                    (Right.isBlockIndentedInitRBrace(Style)));
   }
 
-  // We only break before r_paren if we're in a block indented context.
+  // We can break before r_paren if we're in a block indented context or
+  // a control statement with an explicit style option.
   if (Right.is(tok::r_paren)) {
-    if (Style.AlignAfterOpenBracket != FormatStyle::BAS_BlockIndent ||
-        !Right.MatchingParen) {
+    if (!Right.MatchingParen)
       return false;
-    }
     auto Next = Right.Next;
     if (Next && Next->is(tok::r_paren))
       Next = Next->Next;
     if (Next && Next->is(tok::l_paren))
       return false;
     const FormatToken *Previous = Right.MatchingParen->Previous;
-    return !(Previous && (Previous->is(tok::kw_for) || Previous->isIf()));
+    if (!Previous)
+      return false;
+    if (Previous->isIf())
+      return Style.BreakBeforeCloseBracketIf;
+    auto IsLoopConditional = [&](const FormatToken &Tok) {
+      return Tok.isOneOf(tok::kw_for, tok::kw_while) ||
+             (Style.isJavaScript() && Tok.is(Keywords.kw_await) &&
+              Tok.Previous && Tok.Previous->is(tok::kw_for));
+    };
+    if (IsLoopConditional(*Previous))
+      return Style.BreakBeforeCloseBracketLoop;
+    if (Previous->is(tok::kw_switch))
+      return Style.BreakBeforeCloseBracketSwitch;
+    return Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent;
   }
 
   if (Left.isOneOf(tok::r_paren, TT_TrailingAnnotation) &&
