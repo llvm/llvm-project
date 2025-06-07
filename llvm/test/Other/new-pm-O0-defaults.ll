@@ -10,9 +10,6 @@
 ; RUN: opt -disable-verify -verify-analysis-invalidation=0 -debug-pass-manager \
 ; RUN:     -passes='default<O0>' -S %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-DEFAULT,CHECK-CORO
-; RUN: opt -disable-verify -verify-analysis-invalidation=0 -debug-pass-manager -enable-matrix \
-; RUN:     -passes='default<O0>' -S %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-DEFAULT,CHECK-MATRIX,CHECK-CORO
 ; RUN: opt -disable-verify -verify-analysis-invalidation=0 -debug-pass-manager -debug-info-for-profiling \
 ; RUN:     -passes='default<O0>' -S %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-DIS,CHECK-CORO
@@ -34,12 +31,14 @@
 ; CHECK-DIS-NEXT: Running pass: AddDiscriminatorsPass
 ; CHECK-DIS-NEXT: Running pass: AlwaysInlinerPass
 ; CHECK-DIS-NEXT: Running analysis: ProfileSummaryAnalysis
+; CHECK-DIS: Running pass: LowerMatrixIntrinsicsPass
+; CHECK-DIS-NEXT: Running analysis: TargetIRAnalysis
 ; CHECK-DEFAULT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-DEFAULT-NEXT: Running pass: EntryExitInstrumenterPass
 ; CHECK-DEFAULT-NEXT: Running pass: AlwaysInlinerPass
 ; CHECK-DEFAULT-NEXT: Running analysis: ProfileSummaryAnalysis
-; CHECK-MATRIX: Running pass: LowerMatrixIntrinsicsPass
-; CHECK-MATRIX-NEXT: Running analysis: TargetIRAnalysis
+; CHECK-DEFAULT: Running pass: LowerMatrixIntrinsicsPass
+; CHECK-DEFAULT-NEXT: Running analysis: TargetIRAnalysis
 ; CHECK-CORO-NEXT: Running pass: CoroConditionalWrapper
 ; CHECK-PRE-LINK: Running pass: CanonicalizeAliasesPass
 ; CHECK-PRE-LINK-NEXT: Running pass: NameAnonGlobalPass
