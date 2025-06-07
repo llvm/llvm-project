@@ -281,6 +281,8 @@ define internal void @__omp_outlined__(ptr noalias %.global_tid., ptr noalias %.
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID__ADDR]] to ptr addrspace(5)
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[DOTBOUND_TID__ADDR]] to ptr addrspace(5)
 ; CHECK-NEXT:    call void @leaf() #[[ATTR8]]
 ; CHECK-NEXT:    ret void
 ;
@@ -289,6 +291,8 @@ define internal void @__omp_outlined__(ptr noalias %.global_tid., ptr noalias %.
 ; CHECK-DISABLE-SPMDIZATION-NEXT:  entry:
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
+; CHECK-DISABLE-SPMDIZATION-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID__ADDR]] to ptr addrspace(5)
+; CHECK-DISABLE-SPMDIZATION-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[DOTBOUND_TID__ADDR]] to ptr addrspace(5)
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    call void @leaf() #[[ATTR8]]
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    ret void
 ;
@@ -310,6 +314,9 @@ define internal void @__omp_outlined___wrapper(i16 zeroext %0, i32 %1) #2 {
 ; CHECK-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[DOTADDR]] to ptr addrspace(5)
+; CHECK-NEXT:    [[TMP3:%.*]] = addrspacecast ptr [[DOTADDR1]] to ptr addrspace(5)
+; CHECK-NEXT:    [[TMP4:%.*]] = addrspacecast ptr [[DOTZERO_ADDR]] to ptr addrspace(5)
 ; CHECK-NEXT:    call void @__kmpc_get_shared_variables(ptr [[GLOBAL_ARGS]])
 ; CHECK-NEXT:    call void @__omp_outlined__(ptr [[DOTADDR1]], ptr [[DOTZERO_ADDR]]) #[[ATTR8]]
 ; CHECK-NEXT:    ret void
@@ -321,6 +328,9 @@ define internal void @__omp_outlined___wrapper(i16 zeroext %0, i32 %1) #2 {
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca ptr, align 8
+; CHECK-DISABLE-SPMDIZATION-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[DOTADDR]] to ptr addrspace(5)
+; CHECK-DISABLE-SPMDIZATION-NEXT:    [[TMP3:%.*]] = addrspacecast ptr [[DOTADDR1]] to ptr addrspace(5)
+; CHECK-DISABLE-SPMDIZATION-NEXT:    [[TMP4:%.*]] = addrspacecast ptr [[DOTZERO_ADDR]] to ptr addrspace(5)
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    call void @__kmpc_get_shared_variables(ptr [[GLOBAL_ARGS]])
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    call void @__omp_outlined__(ptr [[DOTADDR1]], ptr [[DOTZERO_ADDR]]) #[[ATTR8]]
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    ret void
