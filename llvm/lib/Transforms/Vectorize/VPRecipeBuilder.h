@@ -92,12 +92,10 @@ class VPRecipeBuilder {
   /// Range. The function should not be called for memory instructions or calls.
   bool shouldWiden(Instruction *I, VFRange &Range) const;
 
-  /// Check if the load or store instruction \p I should widened for \p
+  /// Check if the load or store instruction \p VPI should widened for \p
   /// Range.Start and potentially masked. Such instructions are handled by a
   /// recipe that takes an additional VPInstruction for the mask.
-  VPWidenMemoryRecipe *tryToWidenMemory(Instruction *I,
-                                        ArrayRef<VPValue *> Operands,
-                                        VFRange &Range);
+  VPWidenMemoryRecipe *tryToWidenMemory(VPInstruction *VPI, VFRange &Range);
 
   /// Check if an induction recipe should be constructed for \p Phi. If so build
   /// and return it. If not, return null.
@@ -114,20 +112,19 @@ class VPRecipeBuilder {
   /// Handle call instructions. If \p CI can be widened for \p Range.Start,
   /// return a new VPWidenCallRecipe or VPWidenIntrinsicRecipe. Range.End may be
   /// decreased to ensure same decision from \p Range.Start to \p Range.End.
-  VPSingleDefRecipe *tryToWidenCall(CallInst *CI, ArrayRef<VPValue *> Operands,
-                                    VFRange &Range);
+  VPSingleDefRecipe *tryToWidenCall(VPInstruction *VPI, VFRange &Range);
 
   /// Check if \p I has an opcode that can be widened and return a VPWidenRecipe
   /// if it can. The function should only be called if the cost-model indicates
   /// that widening should be performed.
-  VPWidenRecipe *tryToWiden(Instruction *I, ArrayRef<VPValue *> Operands);
+  VPWidenRecipe *tryToWiden(Instruction *I, VPInstruction *VPI);
 
   /// Makes Histogram count operations safe for vectorization, by emitting a
   /// llvm.experimental.vector.histogram.add intrinsic in place of the
   /// Load + Add|Sub + Store operations that perform the histogram in the
   /// original scalar loop.
   VPHistogramRecipe *tryToWidenHistogram(const HistogramInfo *HI,
-                                         ArrayRef<VPValue *> Operands);
+                                         VPInstruction *VPI);
 
   /// Examines reduction operations to see if the target can use a cheaper
   /// operation with a wider per-iteration input VF and narrower PHI VF.
@@ -170,8 +167,7 @@ public:
 
   /// Create and return a partial reduction recipe for a reduction instruction
   /// along with binary operation and reduction phi operands.
-  VPRecipeBase *tryToCreatePartialReduction(Instruction *Reduction,
-                                            ArrayRef<VPValue *> Operands,
+  VPRecipeBase *tryToCreatePartialReduction(VPInstruction *Reduction,
                                             unsigned ScaleFactor);
 
   /// Set the recipe created for given ingredient.
