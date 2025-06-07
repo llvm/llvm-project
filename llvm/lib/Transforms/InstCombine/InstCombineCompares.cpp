@@ -7728,6 +7728,47 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     }
   }
 
+  // In case of a comparison with add/sub instructions having the same operands,
+  // check whether cmp operands have same signed no wrap. If so, just compare
+  // the sub's second operand and zero.
+  // For example:
+  //   %tmp1 = sub nsw i8 %x, %y
+  //   %tmp2 = add nsw i8 %x, %y
+  //   %cmp = icmp sgt i8 %tmp1, %tmp2
+  // transform this into:
+  //   %cmp = icmp slt i32 %y, 0
+  // This handles similar cases to transform.
+  {
+    Value *A, *B;
+    auto *I0 = dyn_cast<OverflowingBinaryOperator>(Op0);
+    auto *I1 = dyn_cast<OverflowingBinaryOperator>(Op1);
+    bool UnsignedCmp = ICmpInst::isUnsigned(Pred);
+    bool SignedCmp = ICmpInst::isSigned(Pred);
+    bool EqualityCmp = ICmpInst::isEquality(Pred);
+
+    if (I0 && I1) {
+      bool I0NUW = I0->hasNoUnsignedWrap();
+      bool I1NUW = I1->hasNoUnsignedWrap();
+      bool I0NSW = I0->hasNoSignedWrap();
+      bool I1NSW = I1->hasNoSignedWrap();
+      bool Swaped = false;
+      if ((UnsignedCmp && I0NUW && I1NUW) || (SignedCmp && I0NSW && I1NSW) ||
+          (EqualityCmp && I0NUW && I0NSW && I1NUW && I1NSW)) {
+        if (I0->getOpcode() == Instruction::Add &&
+            I1->getOpcode() == Instruction::Sub) {
+          std::swap(I0, I1);
+          Swaped = true;
+        }
+        if (match(I0, m_Sub(m_Value(A), m_Value(B))) &&
+            (match(I1, m_Add(m_Specific(A), m_Specific(B))) ||
+             match(I1, m_Add(m_Specific(B), m_Specific(A))))) {
+          return new ICmpInst(Swaped ? Pred : I.getSwappedPredicate(), B,
+                              ConstantInt::get(Op0->getType(), 0));
+        }
+      }
+    }
+  }
+
   // Try to optimize equality comparisons against alloca-based pointers.
   if (Op0->getType()->isPointerTy() && I.isEquality()) {
     assert(Op1->getType()->isPointerTy() &&
