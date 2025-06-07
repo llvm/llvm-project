@@ -3930,12 +3930,25 @@ struct BoxOffsetOpConversion : public fir::FIROpConversion<fir::BoxOffsetOp> {
                   mlir::ConversionPatternRewriter &rewriter) const override {
 
     mlir::Type pty = ::getLlvmPtrType(boxOffset.getContext());
-    mlir::Type boxType = fir::unwrapRefType(boxOffset.getBoxRef().getType());
-    mlir::Type llvmBoxTy =
-        lowerTy().convertBoxTypeAsStruct(mlir::cast<fir::BaseBoxType>(boxType));
-    int fieldId = boxOffset.getField() == fir::BoxFieldAttr::derived_type
-                      ? getTypeDescFieldId(boxType)
-                      : kAddrPosInBox;
+    mlir::Type boxRefType = fir::unwrapRefType(boxOffset.getBoxRef().getType());
+
+    assert((mlir::isa<fir::BaseBoxType>(boxRefType) ||
+            mlir::isa<fir::BoxCharType>(boxRefType)) &&
+           "boxRef should be a reference to either fir.box or fir.boxchar");
+
+    mlir::Type llvmBoxTy;
+    int fieldId;
+    if (auto boxType = mlir::dyn_cast_or_null<fir::BaseBoxType>(boxRefType)) {
+      llvmBoxTy = lowerTy().convertBoxTypeAsStruct(
+          mlir::cast<fir::BaseBoxType>(boxType));
+      fieldId = boxOffset.getField() == fir::BoxFieldAttr::derived_type
+                    ? getTypeDescFieldId(boxType)
+                    : kAddrPosInBox;
+    } else {
+      auto boxCharType = mlir::cast<fir::BoxCharType>(boxRefType);
+      llvmBoxTy = lowerTy().convertType(boxCharType);
+      fieldId = kAddrPosInBox;
+    }
     rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
         boxOffset, pty, llvmBoxTy, adaptor.getBoxRef(),
         llvm::ArrayRef<mlir::LLVM::GEPArg>{0, fieldId});
