@@ -53,7 +53,7 @@ for header in headers:
 //--- {header}.pass.cpp
 {lit_header_restrictions.get(header, '')}
 {lit_header_undeprecations.get(header, '')}
-// UNSUPPORTED: clang-modules-build
+// SUPPORTED: clang-modules-build
 // UNSUPPORTED: c++03
 
 // Some of the functions' return type, reverse_iterator, is not exported from
@@ -62,6 +62,7 @@ for header in headers:
 
 #include <{header}>
 #include <cassert>
+#include <initializer_list>
 
 #include "test_macros.h"
 
