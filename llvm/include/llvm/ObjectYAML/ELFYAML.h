@@ -117,7 +117,7 @@ struct FileHeader {
   llvm::yaml::Hex8 ABIVersion;
   ELF_ET Type;
   std::optional<ELF_EM> Machine;
-  ELF_EF Flags;
+  std::optional<ELF_EF> Flags;
   llvm::yaml::Hex64 Entry;
   std::optional<StringRef> SectionHeaderStringTable;
 
