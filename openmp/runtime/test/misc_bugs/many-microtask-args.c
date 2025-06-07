@@ -1,4 +1,8 @@
 // RUN: %libomp-compile-and-run
+//
+// Issue #139905
+// XFAIL: target={{sparc.*}}
+
 #include <stdio.h>
 
 int main()
