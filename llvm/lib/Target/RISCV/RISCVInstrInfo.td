@@ -2029,9 +2029,11 @@ def ReadFFLAGS : ReadSysReg<SysRegFFLAGS, [FFLAGS]>;
 def WriteFFLAGS : WriteSysReg<SysRegFFLAGS, [FFLAGS]>;
 }
 
+let hasPostISelHook = 1 in {
 def ReadFCSR : ReadSysReg<SysRegFCSR, [FRM, FFLAGS]>;
 def WriteFCSR : WriteSysReg<SysRegFCSR, [FRM, FFLAGS]>;
 def WriteFCSRImm : WriteSysRegImm<SysRegFCSR, [FRM, FFLAGS]>;
+}
 
 /// Other pseudo-instructions
 
