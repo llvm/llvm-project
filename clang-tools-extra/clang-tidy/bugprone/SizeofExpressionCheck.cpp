@@ -72,7 +72,8 @@ SizeofExpressionCheck::SizeofExpressionCheck(StringRef Name,
           Options.get("WarnOnSizeOfPointerToAggregate", true)),
       WarnOnSizeOfPointer(Options.get("WarnOnSizeOfPointer", false)),
       WarnOnOffsetDividedBySizeOf(
-          Options.get("WarnOnOffsetDividedBySizeOf", true)) {}
+          Options.get("WarnOnOffsetDividedBySizeOf", true)),
+      WarnOnSizeOfInLoopTermination(Options.get("WarnOnSizeOfInLoopTermination", true)) {}
 
 void SizeofExpressionCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "WarnOnSizeOfConstant", WarnOnSizeOfConstant);
@@ -86,12 +87,18 @@ void SizeofExpressionCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "WarnOnSizeOfPointer", WarnOnSizeOfPointer);
   Options.store(Opts, "WarnOnOffsetDividedBySizeOf",
                 WarnOnOffsetDividedBySizeOf);
+  Options.store(Opts, "WarnOnSizeOfInLoopTermination", WarnOnSizeOfInLoopTermination);
 }
 
 void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
   // FIXME:
   // Some of the checks should not match in template code to avoid false
   // positives if sizeof is applied on template argument.
+
+  auto LoopExpr =
+      [](const ast_matchers::internal::Matcher<Stmt> &InnerMatcher) {
+        return stmt(anyOf(forStmt(InnerMatcher), whileStmt(InnerMatcher)));
+      };
 
   const auto IntegerExpr = ignoringParenImpCasts(integerLiteral());
   const auto ConstantExpr = ignoringParenImpCasts(
@@ -128,6 +135,11 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
     Finder->addMatcher(sizeOfExpr(has(ignoringParenImpCasts(cxxThisExpr())))
                            .bind("sizeof-this"),
                        this);
+  }
+
+  if (WarnOnSizeOfInLoopTermination) {
+    Finder->addMatcher(
+        LoopExpr(has(binaryOperator(has(SizeOfExpr.bind("loop-expr"))))), this);
   }
 
   // Detect sizeof(kPtr) where kPtr is 'const char* kPtr = "abc"';
@@ -348,6 +360,9 @@ void SizeofExpressionCheck::check(const MatchFinder::MatchResult &Result) {
   } else if (const auto *E = Result.Nodes.getNodeAs<Expr>("sizeof-charp")) {
     diag(E->getBeginLoc(),
          "suspicious usage of 'sizeof(char*)'; do you mean 'strlen'?")
+        << E->getSourceRange();
+  } else if (const auto *E = Result.Nodes.getNodeAs<Stmt>("loop-expr")) {
+    diag(E->getBeginLoc(), "suspicious usage of 'sizeof' in the loop")
         << E->getSourceRange();
   } else if (const auto *E = Result.Nodes.getNodeAs<Expr>("sizeof-pointer")) {
     diag(E->getBeginLoc(), "suspicious usage of 'sizeof()' on an expression "
