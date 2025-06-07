@@ -16,6 +16,8 @@
 #include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Utils/GPUUtils.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include <optional>
@@ -86,6 +88,24 @@ void populateGpuLowerSubgroupReduceToDPPPatterns(RewritePatternSet &patterns,
 void populateGpuLowerClusteredSubgroupReduceToDPPPatterns(
     RewritePatternSet &patterns, unsigned subgroupSize, amdgpu::Chipset chipset,
     PatternBenefit benefit = 1);
+
+/// Set up a type converter to convert unsupported source types to
+/// supported target types.
+void populateImitateUnsupportedTypesTypeConverter(TypeConverter &typeConverter,
+                                                  ArrayRef<Type> sourceTypes,
+                                                  ArrayRef<Type> targetTypes);
+
+/// Collect a set of pattern needed to imitate unsupported source types
+/// using supported target types.
+void populateImitateUnsupportedTypesConversionPatterns(
+    RewritePatternSet &patterns, TypeConverter &typeConverter,
+    ArrayRef<Type> sourceTypes, ArrayRef<Type> targetTypes,
+    DenseMap<StringAttr, FunctionType> &convertedFuncTypes);
+
+/// Set up a dialect conversion to reject operations on unsupported
+/// float types.
+void configureImitateUnsupportedTypesLegality(ConversionTarget &target,
+                                              TypeConverter &typeConverter);
 
 /// Collect all patterns to rewrite ops within the GPU dialect.
 inline void populateGpuRewritePatterns(RewritePatternSet &patterns) {
