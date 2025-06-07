@@ -1301,6 +1301,7 @@ static Value *simplifyUsingControlFlow(InstCombiner &Self, PHINode &PN,
 
   // Determine which value the condition of the idom has for which successor.
   LLVMContext &Context = PN.getContext();
+  unsigned PNBitWidth = PN.getType()->getScalarSizeInBits();
   auto *IDom = DT.getNode(BB)->getIDom()->getBlock();
   Value *Cond;
   SmallDenseMap<ConstantInt *, BasicBlock *, 8> SuccForValue;
@@ -1318,61 +1319,101 @@ static Value *simplifyUsingControlFlow(InstCombiner &Self, PHINode &PN,
     AddSucc(ConstantInt::getFalse(Context), BI->getSuccessor(1));
   } else if (auto *SI = dyn_cast<SwitchInst>(IDom->getTerminator())) {
     Cond = SI->getCondition();
+    unsigned CondBitWidth = Cond->getType()->getScalarSizeInBits();
     ++SuccCount[SI->getDefaultDest()];
-    for (auto Case : SI->cases())
-      AddSucc(Case.getCaseValue(), Case.getCaseSuccessor());
+    for (auto Case : SI->cases()) {
+      ConstantInt *CaseValue = Case.getCaseValue();
+      if (CondBitWidth > PNBitWidth) {
+        CaseValue = ConstantInt::get(
+            Context, Case.getCaseValue()->getValue().trunc(PNBitWidth));
+      }
+      AddSucc(CaseValue, Case.getCaseSuccessor());
+    }
   } else {
     return nullptr;
   }
 
-  if (Cond->getType() != PN.getType())
-    return nullptr;
+  unsigned CondBitWidth = Cond->getType()->getScalarSizeInBits();
 
   // Check that edges outgoing from the idom's terminators dominate respective
   // inputs of the Phi.
-  std::optional<bool> Invert;
-  for (auto Pair : zip(PN.incoming_values(), PN.blocks())) {
-    auto *Input = cast<ConstantInt>(std::get<0>(Pair));
-    BasicBlock *Pred = std::get<1>(Pair);
-    auto IsCorrectInput = [&](ConstantInt *Input) {
-      // The input needs to be dominated by the corresponding edge of the idom.
-      // This edge cannot be a multi-edge, as that would imply that multiple
-      // different condition values follow the same edge.
-      auto It = SuccForValue.find(Input);
-      return It != SuccForValue.end() && SuccCount[It->second] == 1 &&
-             DT.dominates(BasicBlockEdge(IDom, It->second),
-                          BasicBlockEdge(Pred, BB));
-    };
+  auto CheckInputs = [&](Instruction::CastOps CastType) -> std::optional<bool> {
+    std::optional<bool> Invert;
+    for (auto Pair : zip(PN.incoming_values(), PN.blocks())) {
+      auto *Input = cast<ConstantInt>(std::get<0>(Pair));
+      BasicBlock *Pred = std::get<1>(Pair);
 
-    // Depending on the constant, the condition may need to be inverted.
-    bool NeedsInvert;
-    if (IsCorrectInput(Input))
-      NeedsInvert = false;
-    else if (IsCorrectInput(cast<ConstantInt>(ConstantExpr::getNot(Input))))
-      NeedsInvert = true;
-    else
-      return nullptr;
+      auto IsCorrectInput = [&](ConstantInt *Input) {
+        if (CondBitWidth < PNBitWidth) {
+          if ((CastType == Instruction::SExt &&
+               !Input->getValue().isSignedIntN(CondBitWidth)) ||
+              (CastType == Instruction::ZExt &&
+               !Input->getValue().isIntN(CondBitWidth)))
+            return false;
 
-    // Make sure the inversion requirement is always the same.
-    if (Invert && *Invert != NeedsInvert)
-      return nullptr;
+          Input =
+              ConstantInt::get(Context, Input->getValue().trunc(CondBitWidth));
+        }
+        // The input needs to be dominated by the corresponding edge of the
+        // idom. This edge cannot be a multi-edge, as that would imply that
+        // multiple different condition values follow the same edge.
+        auto It = SuccForValue.find(Input);
+        return It != SuccForValue.end() && SuccCount[It->second] == 1 &&
+               DT.dominates(BasicBlockEdge(IDom, It->second),
+                            BasicBlockEdge(Pred, BB));
+      };
 
-    Invert = NeedsInvert;
+      // Depending on the constant, the condition may need to be inverted.
+      bool NeedsInvert;
+      if (IsCorrectInput(Input))
+        NeedsInvert = false;
+      else if (IsCorrectInput(cast<ConstantInt>(ConstantExpr::getNot(Input))))
+        NeedsInvert = true;
+      else
+        return std::nullopt;
+
+      // Make sure the inversion requirement is always the same.
+      if (Invert && *Invert != NeedsInvert)
+        return std::nullopt;
+
+      Invert = NeedsInvert;
+    }
+    return Invert;
+  };
+
+  Instruction::CastOps CastType =
+      CondBitWidth == PNBitWidth  ? Instruction::BitCast
+      : CondBitWidth < PNBitWidth ? Instruction::ZExt
+                                  : Instruction::Trunc;
+
+  auto Result = CheckInputs(CastType);
+  if (!Result && CondBitWidth < PNBitWidth) {
+    CastType = Instruction::SExt;
+    Result = CheckInputs(CastType);
   }
+  if (!Result)
+    return nullptr;
+  bool Invert = *Result;
 
-  if (!*Invert)
+  if (!Invert && CastType == Instruction::BitCast)
     return Cond;
+
+  auto InsertPt = BB->getFirstInsertionPt();
+  if (InsertPt == BB->end())
+    return nullptr;
+
+  Self.Builder.SetInsertPoint(&*BB, InsertPt);
+
+  if (CastType != Instruction::BitCast) {
+    Cond = Self.Builder.CreateCast(CastType, Cond, PN.getType());
+    if (!Invert)
+      return Cond;
+  }
 
   // This Phi is actually opposite to branching condition of IDom. We invert
   // the condition that will potentially open up some opportunities for
   // sinking.
-  auto InsertPt = BB->getFirstInsertionPt();
-  if (InsertPt != BB->end()) {
-    Self.Builder.SetInsertPoint(&*BB, InsertPt);
-    return Self.Builder.CreateNot(Cond);
-  }
-
-  return nullptr;
+  return Self.Builder.CreateNot(Cond);
 }
 
 // Fold  iv = phi(start, iv.next = iv2.next op start)
