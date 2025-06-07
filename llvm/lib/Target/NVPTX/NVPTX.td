@@ -33,20 +33,61 @@ class FeaturePTX<int version>:
    SubtargetFeature<"ptx"# version, "PTXVersion",
                     "" # version,
                     "Use PTX version " # version>;
-
+//
+// NVPTX Architecture Hierarchy and Ordering:
+// 
+// Family: 2/3/5/6/7/8/9/10/12 (Follows Onion model, older family is compatible with newer family)
+// Arch: 2*/3*/5*/6*/7*/8*/9*/10*/12*
+//
+// Family-specific: F*f : F*f > F* =>
+// + The plain base architecture is compatible with the family-specific architecture
+//   (e.g. sm_100 compatible with >= sm_100*f*)
+// + The family-specific architecture is compatible with future family-specific
+//   architectures within the same family (e.g. sm_100f compatible with >= sm_10X*f*
+//   but not with sm_12X*f*)
+//
+//    Family and SM Target Definition:
+//    +----------------+--------------------------------------------------------+
+//    | Family         | Target SM architectures included                       |
+//    +----------------+--------------------------------------------------------+
+//    | sm_10x family  | sm_100f, sm_103f, future targets in sm_10x family      |
+//    | sm_101 family  | sm_101f (exception)                                    |
+//    | sm_12x family  | sm_120f, sm_121f, future targets in sm_12x family      |
+//    +----------------+--------------------------------------------------------+
+//
+// Architecture-specific: F*a : F*a > F*f > F* =>
+// + The plain base architecture is compatible with the architecture-specific architecture
+//   (e.g. sm_100 compatible with >= sm_100*a*)
+// + The family-specific architecture is compatible with the architecture-specific architecture
+//   (e.g. sm_100f compatible with >= sm_100*a*)
+// + The architecture-specific architecture is incompatible with any other architecture
+//   (e.g. sm_100a is only compatible with sm_100*a*)
+//
+// Encoding: Arch * 1000 + 'f' * 10 + 'a' * 1 (where 'a' ⇒ 'f')
+// 
+// This encoding allows simple implementation of the partial ordering of the architectures.
+//  + Compare Family and Arch by dividing FullSMVersion by 1000 and 100 respectively before the comparison.
+//  + Compare within the family by comparing FullSMVersion, given both belongs to the same family.
+//  + Detect 'a' variants by checking FullSMVersion % 10.
+//
 foreach sm = [20, 21, 30, 32, 35, 37, 50, 52, 53,
               60, 61, 62, 70, 72, 75, 80, 86, 87,
-              89, 90, 100, 101, 103, 120, 121] in
-  def SM#sm: FeatureSM<""#sm, !mul(sm, 10)>;
+              89, 90, 100, 101, 103, 120, 121] in {
+  // Base SM version (e.g. FullSMVersion for sm_100 is 10000)
+  def SM#sm : FeatureSM<""#sm, !mul(sm, 100)>;
 
-// Arch-specific targets. PTX for these is not compatible with any other
-// architectures.
-def SM90a : FeatureSM<"90a", 901>;
-def SM100a: FeatureSM<"100a", 1001>;
-def SM101a: FeatureSM<"101a", 1011>;
-def SM103a: FeatureSM<"103a", 1031>;
-def SM120a: FeatureSM<"120a", 1201>;
-def SM121a: FeatureSM<"121a", 1211>;
+  // Family-specific targets which are compatible within same family
+  // (e.g. FullSMVersion for sm_100f is 10010)
+  if !ge(sm, 100) then {
+    def SM#sm#f : FeatureSM<""#sm#"f", !add(!mul(sm, 100), 10)>;
+  }
+
+  // Architecture-specific targets which are incompatible across architectures
+  // (e.g. FullSMVersion for sm_100a is 10011)
+  if !ge(sm, 90) then {
+    def SM#sm#a : FeatureSM<""#sm#"a", !add(!mul(sm, 100), 11)>;
+  }
+}
 
 foreach version = [32, 40, 41, 42, 43, 50, 60, 61, 62, 63, 64, 65,
                    70, 71, 72, 73, 74, 75, 76, 77, 78,
@@ -83,14 +124,19 @@ def : Proc<"sm_90",   [SM90, PTX78]>;
 def : Proc<"sm_90a",  [SM90a, PTX80]>;
 def : Proc<"sm_100",  [SM100, PTX86]>;
 def : Proc<"sm_100a", [SM100a, PTX86]>;
+def : Proc<"sm_100f", [SM100f, PTX88]>;
 def : Proc<"sm_101",  [SM101, PTX86]>;
 def : Proc<"sm_101a", [SM101a, PTX86]>;
+def : Proc<"sm_101f", [SM101f, PTX88]>;
 def : Proc<"sm_103",  [SM103, PTX88]>;
 def : Proc<"sm_103a", [SM103a, PTX88]>;
+def : Proc<"sm_103f", [SM103f, PTX88]>;
 def : Proc<"sm_120",  [SM120, PTX87]>;
 def : Proc<"sm_120a", [SM120a, PTX87]>;
+def : Proc<"sm_120f", [SM120f, PTX88]>;
 def : Proc<"sm_121",  [SM121, PTX88]>;
 def : Proc<"sm_121a", [SM121a, PTX88]>;
+def : Proc<"sm_121f", [SM121f, PTX88]>;
 
 def NVPTXInstrInfo : InstrInfo {
 }
