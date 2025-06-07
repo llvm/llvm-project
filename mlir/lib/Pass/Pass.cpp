@@ -88,7 +88,11 @@ void Pass::printAsTextualPipeline(raw_ostream &os, bool pretty) {
     llvm::interleave(
         adaptor->getPassManagers(),
         [&](OpPassManager &pm) { pm.printAsTextualPipeline(os, pretty); },
-        [&] { os << ","; });
+        [&] {
+          os << ",";
+          if (pretty)
+            os << "\n";
+        });
     return;
   }
   // Otherwise, print the pass argument followed by its options. If the pass
@@ -402,7 +406,7 @@ void printAsTextualPipeline(
     os.indent();
   }
   llvm::interleave(
-      passes, [&](mlir::Pass &pass) { pass.printAsTextualPipeline(os); },
+      passes, [&](mlir::Pass &pass) { pass.printAsTextualPipeline(os, pretty); },
       [&]() {
         os << ",";
         if (pretty)
@@ -416,9 +420,9 @@ void printAsTextualPipeline(
 }
 void printAsTextualPipeline(
     raw_ostream &os, StringRef anchorName,
-    const llvm::iterator_range<OpPassManager::pass_iterator> &passes) {
+    const llvm::iterator_range<OpPassManager::pass_iterator> &passes, bool pretty) {
   raw_indented_ostream indentedOS(os);
-  printAsTextualPipeline(indentedOS, anchorName, passes);
+  printAsTextualPipeline(indentedOS, anchorName, passes, pretty);
 }
 void OpPassManager::printAsTextualPipeline(raw_ostream &os, bool pretty) const {
   StringRef anchorName = getOpAnchorName();
