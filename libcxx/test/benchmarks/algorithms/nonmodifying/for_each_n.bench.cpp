@@ -41,12 +41,7 @@ int main(int argc, char** argv) {
           ->Arg(8)
           ->Arg(32)
           ->Arg(50) // non power-of-two
-          ->Arg(1024)
-          ->Arg(4096)
-          ->Arg(8192)
-          ->Arg(1 << 14)
-          ->Arg(1 << 16)
-          ->Arg(1 << 18);
+          ->Arg(8192);
     };
     bm.operator()<std::vector<int>>("std::for_each_n(vector<int>)", std_for_each_n);
     bm.operator()<std::deque<int>>("std::for_each_n(deque<int>)", std_for_each_n);
@@ -84,12 +79,7 @@ int main(int argc, char** argv) {
           ->Arg(8)
           ->Arg(32)
           ->Arg(50) // non power-of-two
-          ->Arg(1024)
-          ->Arg(4096)
-          ->Arg(8192)
-          ->Arg(1 << 14)
-          ->Arg(1 << 16)
-          ->Arg(1 << 18);
+          ->Arg(8192);
     };
     bm.operator()<std::vector<std::vector<int>>>("std::for_each_n(join_view(vector<vector<int>>))", std_for_each_n);
     bm.operator()<std::vector<std::vector<int>>>(

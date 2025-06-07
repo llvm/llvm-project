@@ -43,7 +43,10 @@ private:
   template <class _Iter, class _Sent, class _Proj, class _Func>
   _LIBCPP_HIDE_FROM_ABI constexpr static for_each_result<_Iter, _Func>
   __for_each_impl(_Iter __first, _Sent __last, _Func& __func, _Proj& __proj) {
-    if constexpr (!std::assignable_from<_Iter&, _Sent> && sized_sentinel_for<_Sent, _Iter>) {
+    // In the case where we have different iterator and sentinel types, the segmented iterator optimization
+    // in std::for_each will not kick in. Therefore, we prefer std::for_each_n in that case (whenever we can
+    // obtain the `n`).
+    if constexpr (!std::assignable_from<_Iter&, _Sent> && std::sized_sentinel_for<_Sent, _Iter>) {
       auto __n   = __last - __first;
       auto __end = std::__for_each_n(std::move(__first), __n, __func, __proj);
       return {std::move(__end), std::move(__func)};
