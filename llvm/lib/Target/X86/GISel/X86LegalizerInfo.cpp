@@ -673,7 +673,7 @@ bool X86LegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     return legalizeSITOFP(MI, MRI, Helper);
   case TargetOpcode::G_FPTOSI:
     return legalizeFPTOSI(MI, MRI, Helper);
-  case  TargetOpcode::G_FABS:
+  case TargetOpcode::G_FABS:
     return legalizeFAbs(MI, MRI, Helper);
   }
   llvm_unreachable("expected switch to return");
@@ -841,8 +841,7 @@ bool X86LegalizerInfo::legalizeNarrowingStore(MachineInstr &MI,
   return true;
 }
 
-bool X86LegalizerInfo::legalizeFAbs(MachineInstr &MI,
-                                    MachineRegisterInfo &MRI,
+bool X86LegalizerInfo::legalizeFAbs(MachineInstr &MI, MachineRegisterInfo &MRI,
                                     LegalizerHelper &Helper) const {
 
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
