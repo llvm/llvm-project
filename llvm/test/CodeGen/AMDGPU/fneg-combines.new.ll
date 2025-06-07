@@ -1624,20 +1624,20 @@ define double @v_fneg_inv2pi_minimum_f64(double %a) #0 {
 ; SI-NEXT:    s_mov_b32 s4, 0x6dc9c882
 ; SI-NEXT:    s_mov_b32 s5, 0xbfc45f30
 ; SI-NEXT:    v_max_f64 v[2:3], -v[0:1], s[4:5]
-; SI-NEXT:    v_cmp_u_f64_e64 vcc, -v[0:1], -v[0:1]
+; SI-NEXT:    v_cmp_o_f64_e64 vcc, -v[0:1], -v[0:1]
 ; SI-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
-; SI-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
-; SI-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_fneg_inv2pi_minimum_f64:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_min_f64 v[2:3], v[0:1], 0.15915494309189532
-; VI-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[0:1]
+; VI-NEXT:    v_cmp_o_f64_e32 vcc, v[0:1], v[0:1]
 ; VI-NEXT:    v_mov_b32_e32 v1, 0xfff80000
-; VI-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
-; VI-NEXT:    v_cndmask_b32_e64 v1, -v3, v1, vcc
+; VI-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; VI-NEXT:    v_cndmask_b32_e64 v1, v1, -v3, vcc
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %min = call double @llvm.minimum.f64(double 0x3fc45f306dc9c882, double %a)
   %fneg = fneg double %min
@@ -1651,20 +1651,20 @@ define double @v_fneg_neg_inv2pi_minimum_f64(double %a) #0 {
 ; SI-NEXT:    s_mov_b32 s4, 0x6dc9c882
 ; SI-NEXT:    s_mov_b32 s5, 0x3fc45f30
 ; SI-NEXT:    v_max_f64 v[2:3], -v[0:1], s[4:5]
-; SI-NEXT:    v_cmp_u_f64_e64 vcc, -v[0:1], -v[0:1]
+; SI-NEXT:    v_cmp_o_f64_e64 vcc, -v[0:1], -v[0:1]
 ; SI-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
-; SI-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
-; SI-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_fneg_neg_inv2pi_minimum_f64:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_max_f64 v[2:3], -v[0:1], 0.15915494309189532
-; VI-NEXT:    v_cmp_u_f64_e64 vcc, -v[0:1], -v[0:1]
+; VI-NEXT:    v_cmp_o_f64_e64 vcc, -v[0:1], -v[0:1]
 ; VI-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
-; VI-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
-; VI-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
+; VI-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; VI-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %min = call double @llvm.minimum.f64(double 0xbfc45f306dc9c882, double %a)
   %fneg = fneg double %min
