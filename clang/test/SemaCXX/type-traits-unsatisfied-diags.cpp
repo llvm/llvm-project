@@ -142,6 +142,137 @@ static_assert(__builtin_is_cpp_trivially_relocatable(U2));
 // expected-note@-1 {{because it has a deleted destructor}} \
 // expected-note@-1 {{because it has a non-trivially-relocatable member 'b' of type 'B'}} \
 // expected-note@#tr-U2 {{'U2' defined here}}
+}
+
+namespace replaceable {
+
+extern int vla_size;
+static_assert(__builtin_is_replaceable(int[vla_size]));
+// expected-error@-1 {{static assertion failed due to requirement '__builtin_is_replaceable(int[vla_size])'}} \
+// expected-note@-1 {{'int[vla_size]' is not replaceable}} \
+// expected-note@-1 {{because it is a variably-modified type}}
+
+struct S; // expected-note {{forward declaration of 'replaceable::S'}}
+static_assert(__builtin_is_replaceable(S));
+// expected-error@-1 {{incomplete type 'S' used in type trait expression}}
+
+static_assert(__builtin_is_replaceable(const volatile int));
+// expected-error@-1 {{static assertion failed due to requirement '__builtin_is_replaceable(const volatile int)}} \
+// expected-note@-1 {{'const volatile int' is not replaceable}} \
+// expected-note@-1 {{because it is const}} \
+// expected-note@-1 {{because it is volatile}}
+
+
+static_assert(__builtin_is_replaceable(void()));
+// expected-error@-1 {{static assertion failed due to requirement '__builtin_is_replaceable(void ())}} \
+// expected-note@-1 {{'void ()' is not replaceable}} \
+// expected-note@-1 {{because it not a scalar or class type}}
+
+struct B {
+ virtual ~B();
+};
+struct S : virtual B { // #replaceable-S
+    S();
+    int & a;
+    const int ci;
+    B & b;
+    B c;
+    ~S();
+};
+static_assert(__builtin_is_replaceable(S));
+// expected-error@-1 {{static assertion failed due to requirement '__builtin_is_replaceable(replaceable::S)'}} \
+// expected-note@-1 {{'S' is not replaceable}} \
+// expected-note@-1 {{because it has a non-replaceable base 'B'}} \
+// expected-note@-1 {{because it has a non-replaceable member 'a' of type 'int &'}} \
+// expected-note@-1 {{because it has a non-replaceable member 'ci' of type 'const int'}} \
+// expected-note@-1 {{because it has a non-replaceable member 'b' of type 'B &'}} \
+// expected-note@-1 {{because it has a non-replaceable member 'c' of type 'B'}} \
+// expected-note@-1 {{because it has a user-provided destructor}} \
+// expected-note@-1 {{because it has a deleted copy assignment operator}}
+// expected-note@#replaceable-S {{'S' defined here}}
+
+struct S2 { // #replaceable-S2
+    S2(S2&&);
+    S2& operator=(const S2&);
+};
+static_assert(__builtin_is_replaceable(S2));
+// expected-error@-1 {{static assertion failed due to requirement '__builtin_is_replaceable(replaceable::S2)'}} \
+// expected-note@-1 {{'S2' is not replaceable}} \
+// expected-note@-1 {{because it has a user provided move constructor}} \
+// expected-note@-1 {{because it has a user provided copy assignment operator}} \
+// expected-note@#replaceable-S2 {{'S2' defined here}}
+
+
+struct S3 { // #replaceable-S3
+    ~S3() = delete;
+};
+static_assert(__builtin_is_replaceable(S3));
+// expected-error@-1 {{static assertion failed due to requirement '__builtin_is_replaceable(replaceable::S3)'}} \
+// expected-note@-1 {{'S3' is not replaceable}} \
+// expected-note@-1 {{because it has a deleted destructor}} \
+// expected-note@#replaceable-S3 {{'S3' defined here}}
+
+
+union U { // #replaceable-U
+    U(const U&);
+    U(U&&);
+    U& operator=(const U&);
+    U& operator=(U&&);
+};
+static_assert(__builtin_is_replaceable(U));
+// expected-error@-1 {{static assertion failed due to requirement '__builtin_is_replaceable(replaceable::U)'}} \
+// expected-note@-1 {{'U' is not replaceable}} \
+// expected-note@-1 {{because it is a union with a user-declared copy constructor}} \
+// expected-note@-1 {{because it is a union with a user-declared copy assignment operator}} \
+// expected-note@-1 {{because it is a union with a user-declared move constructor}} \
+// expected-note@-1 {{because it is a union with a user-declared move assignment operator}}
+// expected-note@#replaceable-U {{'U' defined here}}
+struct S4 replaceable_if_eligible { // #replaceable-S4
+    ~S4();
+    B b;
+};
+static_assert(__builtin_is_replaceable(S4));
+// expected-error@-1 {{static assertion failed due to requirement '__builtin_is_replaceable(replaceable::S4)'}} \
+// expected-note@-1 {{'S4' is not replaceable}} \
+// expected-note@-1 {{because it has a non-replaceable member 'b' of type 'B'}} \
+// expected-note@#replaceable-S4 {{'S4' defined here}}
+
+union U2 replaceable_if_eligible { // #replaceable-U2
+    U2(const U2&);
+    U2(U2&&);
+    B b;
+};
+static_assert(__builtin_is_replaceable(U2));
+// expected-error@-1 {{static assertion failed due to requirement '__builtin_is_replaceable(replaceable::U2)'}} \
+// expected-note@-1 {{'U2' is not replaceable}} \
+// expected-note@-1 {{because it has a deleted destructor}} \
+// expected-note@-1 {{because it has a non-replaceable member 'b' of type 'B'}} \
+// expected-note@-1 {{because it has a deleted copy assignment operator}} \
+// expected-note@#replaceable-U2 {{'U2' defined here}}
+
+struct UD1 {  // #replaceable-UD1
+    UD1(const UD1&) = delete;
+    UD1 & operator=(const UD1&) = delete;
+
+};
+static_assert(__builtin_is_replaceable(UD1));
+// expected-error@-1 {{static assertion failed due to requirement '__builtin_is_replaceable(replaceable::UD1)'}} \
+// expected-note@-1 {{'UD1' is not replaceable}} \
+// expected-note@-1 {{because it has a deleted copy constructor}} \
+// expected-note@-1 {{because it has a deleted copy assignment operator}} \
+// expected-note@#replaceable-UD1 {{'UD1' defined here}}
+
+
+struct UD2 {  // #replaceable-UD2
+    UD2(UD2&&) = delete;
+    UD2 & operator=(UD2&&) = delete;
+};
+static_assert(__builtin_is_replaceable(UD2));
+// expected-error@-1 {{static assertion failed due to requirement '__builtin_is_replaceable(replaceable::UD2)'}} \
+// expected-note@-1 {{'UD2' is not replaceable}} \
+// expected-note@-1 {{because it has a deleted move constructor}} \
+// expected-note@-1 {{because it has a deleted move assignment operator}} \
+// expected-note@#replaceable-UD2 {{'UD2' defined here}}
 
 }
 
