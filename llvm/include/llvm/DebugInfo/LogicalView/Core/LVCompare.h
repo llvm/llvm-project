@@ -77,7 +77,7 @@ public:
   LLVM_ABI void printItem(LVElement *Element, LVComparePass Pass);
   LLVM_ABI void print(raw_ostream &OS) const;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#if defined(LLVM_BUILD_DEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() const { print(dbgs()); }
 #endif
 };

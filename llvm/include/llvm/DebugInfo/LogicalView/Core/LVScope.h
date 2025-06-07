@@ -326,7 +326,7 @@ public:
   virtual void printWarnings(raw_ostream &OS, bool Full = true) const {}
   virtual void printMatchedElements(raw_ostream &OS, bool UseMatchedElements) {}
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#if defined(LLVM_BUILD_DEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() const override { print(dbgs()); }
 #endif
 };

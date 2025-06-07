@@ -254,12 +254,14 @@ void LVOptions::resolveDependencies() {
 
   calculateIndentationSize();
 
+#ifdef LLVM_BUILD_DEBUG
   // Print collected command line options.
   LLVM_DEBUG({ dump(); });
+#endif
 }
 
 void LVOptions::calculateIndentationSize() {
-#ifndef NDEBUG
+#ifdef LLVM_BUILD_DEBUG
   if (getInternalID()) {
     std::string String = hexSquareString(0);
     IndentationSize += String.length();

@@ -503,6 +503,11 @@ set(LLVM_LIBRARY_DIR      ${LLVM_LIBRARY_OUTPUT_INTDIR}) # --libdir
 set(LLVM_MAIN_SRC_DIR     ${CMAKE_CURRENT_SOURCE_DIR}  ) # --src-root
 set(LLVM_MAIN_INCLUDE_DIR ${LLVM_MAIN_SRC_DIR}/include ) # --includedir
 set(LLVM_BINARY_DIR       ${CMAKE_CURRENT_BINARY_DIR}  ) # --prefix
+if( uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
+  set(LLVM_BUILD_DEBUG ON)
+else()
+  set(LLVM_BUILD_DEBUG OFF)
+endif()
 
 
 # Note: LLVM_CMAKE_DIR does not include generated files
