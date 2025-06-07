@@ -8,7 +8,7 @@
 //
 // This file implements the LiveVariablePrinter and SourcePrinter classes to
 // keep track of DWARF info as the current address is updated, and print out the
-// source file line and variable liveness as needed.
+// source file line and variable or inlined function liveness as needed.
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,12 +16,76 @@
 #include "llvm-objdump.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #define DEBUG_TYPE "objdump"
 
 namespace llvm {
 namespace objdump {
+
+bool InlinedFunction::liveAtAddress(object::SectionedAddress Addr) {
+  if (!Range.valid())
+    return false;
+
+  return Range.LowPC <= Addr.Address && Range.HighPC > Addr.Address;
+}
+
+void InlinedFunction::print(raw_ostream &OS, const MCRegisterInfo &MRI) const {
+  const char *MangledCallerName = FuncDie.getName(DINameKind::LinkageName);
+  if (!MangledCallerName)
+    return;
+
+  if (Demangle)
+    OS << "inlined into " << demangle(MangledCallerName);
+  else
+    OS << "inlined into " << MangledCallerName;
+}
+
+void InlinedFunction::dump(raw_ostream &OS) const {
+  OS << Name << " @ " << Range << ": ";
+}
+
+void InlinedFunction::printElementLine(raw_ostream &OS,
+                                       object::SectionedAddress Addr,
+                                       bool IsEnd) const {
+  bool LiveIn = !IsEnd && Range.LowPC == Addr.Address;
+  bool LiveOut = IsEnd && Range.HighPC == Addr.Address;
+  if (!(LiveIn || LiveOut))
+    return;
+
+  uint32_t CallFile, CallLine, CallColumn, CallDiscriminator;
+  InlinedFuncDie.getCallerFrame(CallFile, CallLine, CallColumn,
+                                CallDiscriminator);
+  const DWARFDebugLine::LineTable *LineTable =
+      Unit->getContext().getLineTableForUnit(Unit);
+  std::string FileName;
+  if (!LineTable->hasFileAtIndex(CallFile))
+    return;
+  if (!LineTable->getFileNameByIndex(
+          CallFile, Unit->getCompilationDir(),
+          DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, FileName))
+    return;
+
+  if (FileName.empty())
+    return;
+
+  const char *MangledCallerName = FuncDie.getName(DINameKind::LinkageName);
+  if (!MangledCallerName)
+    return;
+
+  std::string CallerName = MangledCallerName;
+  std::string CalleeName = Name;
+  if (Demangle) {
+    CallerName = demangle(MangledCallerName);
+    CalleeName = demangle(Name);
+  }
+
+  OS << "; " << FileName << ":" << CallLine << ":" << CallColumn << ": ";
+  if (IsEnd)
+    OS << "end of ";
+  OS << CalleeName << " inlined into " << CallerName << "\n";
+}
 
 bool LiveVariable::liveAtAddress(object::SectionedAddress Addr) {
   if (LocExpr.Range == std::nullopt)
@@ -48,6 +112,23 @@ void LiveVariable::print(raw_ostream &OS, const MCRegisterInfo &MRI) const {
   Expression.printCompact(OS, GetRegName);
 }
 
+void LiveVariable::dump(raw_ostream &OS) const {
+  OS << Name << " @ " << LocExpr.Range << ": ";
+}
+
+void LiveVariablePrinter::addInlinedFunction(DWARFDie FuncDie,
+                                             DWARFDie InlinedFuncDie) {
+  uint64_t FuncLowPC, FuncHighPC, SectionIndex;
+  if (!InlinedFuncDie.getLowAndHighPC(FuncLowPC, FuncHighPC, SectionIndex))
+    return;
+
+  DWARFUnit *U = InlinedFuncDie.getDwarfUnit();
+  const char *InlinedFuncName = InlinedFuncDie.getName(DINameKind::LinkageName);
+  DWARFAddressRange Range{FuncLowPC, FuncHighPC, SectionIndex};
+  LiveElements.emplace_back(std::make_unique<InlinedFunction>(
+      InlinedFuncName, U, FuncDie, InlinedFuncDie, Range));
+}
+
 void LiveVariablePrinter::addVariable(DWARFDie FuncDie, DWARFDie VarDie) {
   uint64_t FuncLowPC, FuncHighPC, SectionIndex;
   FuncDie.getLowAndHighPC(FuncLowPC, FuncHighPC, SectionIndex);
@@ -66,7 +147,8 @@ void LiveVariablePrinter::addVariable(DWARFDie FuncDie, DWARFDie VarDie) {
 
   for (const DWARFLocationExpression &LocExpr : *Locs) {
     if (LocExpr.Range) {
-      LiveVariables.emplace_back(LocExpr, VarName, U, FuncDie);
+      LiveElements.emplace_back(
+          std::make_unique<LiveVariable>(LocExpr, VarName, U, FuncDie));
     } else {
       // If the LocExpr does not have an associated range, it is valid for
       // the whole of the function.
@@ -74,22 +156,28 @@ void LiveVariablePrinter::addVariable(DWARFDie FuncDie, DWARFDie VarDie) {
       // LocExpr, does that happen in reality?
       DWARFLocationExpression WholeFuncExpr{
           DWARFAddressRange(FuncLowPC, FuncHighPC, SectionIndex), LocExpr.Expr};
-      LiveVariables.emplace_back(WholeFuncExpr, VarName, U, FuncDie);
+      LiveElements.emplace_back(
+          std::make_unique<LiveVariable>(WholeFuncExpr, VarName, U, FuncDie));
     }
   }
 }
 
 void LiveVariablePrinter::addFunction(DWARFDie D) {
   for (const DWARFDie &Child : D.children()) {
-    if (Child.getTag() == dwarf::DW_TAG_variable ||
-        Child.getTag() == dwarf::DW_TAG_formal_parameter)
+    if (DbgVariables != DVDisabled &&
+        (Child.getTag() == dwarf::DW_TAG_variable ||
+         Child.getTag() == dwarf::DW_TAG_formal_parameter))
       addVariable(D, Child);
-    else
+    else if (DbgInlinedFunctions != DVDisabled &&
+             Child.getTag() == dwarf::DW_TAG_inlined_subroutine) {
+      addInlinedFunction(D, Child);
+      addFunction(Child);
+    } else
       addFunction(Child);
   }
 }
 
-// Get the column number (in characters) at which the first live variable
+// Get the column number (in characters) at which the first live element
 // line should be printed.
 unsigned LiveVariablePrinter::getIndentLevel() const {
   return DbgIndent + getInstStartColumn(STI);
@@ -99,7 +187,7 @@ unsigned LiveVariablePrinter::getIndentLevel() const {
 // printed line, and return the index of that column.
 // TODO: formatted_raw_ostream uses "column" to mean a number of characters
 // since the last \n, and we use it to mean the number of slots in which we
-// put live variable lines. Pick a less overloaded word.
+// put live element lines. Pick a less overloaded word.
 unsigned LiveVariablePrinter::moveToFirstVarColumn(formatted_raw_ostream &OS) {
   // Logical column number: column zero is the first column we print in, each
   // logical column is 2 physical columns wide.
@@ -127,9 +215,9 @@ unsigned LiveVariablePrinter::findFreeColumn() {
 }
 
 void LiveVariablePrinter::dump() const {
-  for (const LiveVariable &LV : LiveVariables) {
-    dbgs() << LV.VarName << " @ " << LV.LocExpr.Range << ": ";
-    LV.print(dbgs(), MRI);
+  for (const std::unique_ptr<LiveElement> &LE : LiveElements) {
+    LE->dump(dbgs());
+    LE->print(dbgs(), MRI);
     dbgs() << "\n";
   }
 }
@@ -150,44 +238,54 @@ void LiveVariablePrinter::addCompileUnit(DWARFDie D) {
 void LiveVariablePrinter::update(object::SectionedAddress ThisAddr,
                                  object::SectionedAddress NextAddr,
                                  bool IncludeDefinedVars) {
+  // Do not create live ranges when debug-inlined-funcs option is provided with
+  // line format option.
+  if (DbgInlinedFunctions == DVLine)
+    return;
+
   // First, check variables which have already been assigned a column, so
   // that we don't change their order.
-  SmallSet<unsigned, 8> CheckedVarIdxs;
+  SmallSet<unsigned, 8> CheckedElementIdxs;
   for (unsigned ColIdx = 0, End = ActiveCols.size(); ColIdx < End; ++ColIdx) {
     if (!ActiveCols[ColIdx].isActive())
       continue;
-    CheckedVarIdxs.insert(ActiveCols[ColIdx].VarIdx);
-    LiveVariable &LV = LiveVariables[ActiveCols[ColIdx].VarIdx];
-    ActiveCols[ColIdx].LiveIn = LV.liveAtAddress(ThisAddr);
-    ActiveCols[ColIdx].LiveOut = LV.liveAtAddress(NextAddr);
+
+    CheckedElementIdxs.insert(ActiveCols[ColIdx].ElementIdx);
+    const std::unique_ptr<LiveElement> &LE =
+        LiveElements[ActiveCols[ColIdx].ElementIdx];
+    ActiveCols[ColIdx].LiveIn = LE->liveAtAddress(ThisAddr);
+    ActiveCols[ColIdx].LiveOut = LE->liveAtAddress(NextAddr);
+    std::string Name = Demangle ? demangle(LE->getName()) : LE->getName();
     LLVM_DEBUG(dbgs() << "pass 1, " << ThisAddr.Address << "-"
-                      << NextAddr.Address << ", " << LV.VarName << ", Col "
-                      << ColIdx << ": LiveIn=" << ActiveCols[ColIdx].LiveIn
+                      << NextAddr.Address << ", " << Name << ", Col " << ColIdx
+                      << ": LiveIn=" << ActiveCols[ColIdx].LiveIn
                       << ", LiveOut=" << ActiveCols[ColIdx].LiveOut << "\n");
 
     if (!ActiveCols[ColIdx].LiveIn && !ActiveCols[ColIdx].LiveOut)
-      ActiveCols[ColIdx].VarIdx = Column::NullVarIdx;
+      ActiveCols[ColIdx].ElementIdx = Column::NullElementIdx;
   }
 
   // Next, look for variables which don't already have a column, but which
   // are now live.
   if (IncludeDefinedVars) {
-    for (unsigned VarIdx = 0, End = LiveVariables.size(); VarIdx < End;
-         ++VarIdx) {
-      if (CheckedVarIdxs.count(VarIdx))
+    for (unsigned ElementIdx = 0, End = LiveElements.size(); ElementIdx < End;
+         ++ElementIdx) {
+      if (CheckedElementIdxs.count(ElementIdx))
         continue;
-      LiveVariable &LV = LiveVariables[VarIdx];
-      bool LiveIn = LV.liveAtAddress(ThisAddr);
-      bool LiveOut = LV.liveAtAddress(NextAddr);
+
+      const std::unique_ptr<LiveElement> &LE = LiveElements[ElementIdx];
+      bool LiveIn = LE->liveAtAddress(ThisAddr);
+      bool LiveOut = LE->liveAtAddress(NextAddr);
       if (!LiveIn && !LiveOut)
         continue;
 
       unsigned ColIdx = findFreeColumn();
+      std::string Name = Demangle ? demangle(LE->getName()) : LE->getName();
       LLVM_DEBUG(dbgs() << "pass 2, " << ThisAddr.Address << "-"
-                        << NextAddr.Address << ", " << LV.VarName << ", Col "
+                        << NextAddr.Address << ", " << Name << ", Col "
                         << ColIdx << ": LiveIn=" << LiveIn
                         << ", LiveOut=" << LiveOut << "\n");
-      ActiveCols[ColIdx].VarIdx = VarIdx;
+      ActiveCols[ColIdx].ElementIdx = ElementIdx;
       ActiveCols[ColIdx].LiveIn = LiveIn;
       ActiveCols[ColIdx].LiveOut = LiveOut;
       ActiveCols[ColIdx].MustDrawLabel = true;
@@ -205,7 +303,7 @@ enum class LineChar {
   LabelHoriz,
 };
 const char *LiveVariablePrinter::getLineChar(LineChar C) const {
-  bool IsASCII = DbgVariables == DVASCII;
+  bool IsASCII = DbgVariables == DVASCII || DbgInlinedFunctions == DVASCII;
   switch (C) {
   case LineChar::RangeStart:
     return IsASCII ? "^" : (const char *)u8"\u2548";
@@ -251,8 +349,8 @@ void LiveVariablePrinter::printAfterOtherLine(formatted_raw_ostream &OS,
   OS << "\n";
 }
 
-/// Print any live variable range info needed to the right of a
-/// non-instruction line of disassembly. This is where we print the variable
+/// Print any live element range info needed to the right of a
+/// non-instruction line of disassembly. This is where we print the element
 /// names and expressions, with thin line-drawing characters connecting them
 /// to the live range which starts at the next instruction. If MustPrint is
 /// true, we have to print at least one line (with the continuation of any
@@ -276,17 +374,20 @@ void LiveVariablePrinter::printBetweenInsts(formatted_raw_ostream &OS,
           OS << "  ";
       }
 
+      const std::unique_ptr<LiveElement> &LE =
+          LiveElements[ActiveCols[ColIdx].ElementIdx];
       // Then print the variable name and location of the new live range,
       // with box drawing characters joining it to the live range line.
       OS << getLineChar(ActiveCols[ColIdx].LiveIn ? LineChar::LabelCornerActive
                                                   : LineChar::LabelCornerNew)
          << getLineChar(LineChar::LabelHoriz) << " ";
-      WithColor(OS, raw_ostream::GREEN)
-          << LiveVariables[ActiveCols[ColIdx].VarIdx].VarName;
+
+      std::string Name = Demangle ? demangle(LE->getName()) : LE->getName();
+      WithColor(OS, raw_ostream::GREEN) << Name;
       OS << " = ";
       {
         WithColor ExprColor(OS, raw_ostream::CYAN);
-        LiveVariables[ActiveCols[ColIdx].VarIdx].print(OS, MRI);
+        LE->print(OS, MRI);
       }
 
       // If there are any columns to the right of the expression we just
@@ -316,7 +417,7 @@ void LiveVariablePrinter::printBetweenInsts(formatted_raw_ostream &OS,
     printAfterOtherLine(OS, false);
 }
 
-/// Print the live variable ranges to the right of a disassembled instruction.
+/// Print the live element ranges to the right of a disassembled instruction.
 void LiveVariablePrinter::printAfterInst(formatted_raw_ostream &OS) {
   if (!ActiveCols.size())
     return;
@@ -334,6 +435,24 @@ void LiveVariablePrinter::printAfterInst(formatted_raw_ostream &OS) {
     else
       llvm_unreachable("var must be live in or out!");
   }
+}
+
+void LiveVariablePrinter::printStartLine(formatted_raw_ostream &OS,
+                                         object::SectionedAddress Addr) {
+  // Print a line to idenfity the start of an inlined function if line format
+  // is specified.
+  if (DbgInlinedFunctions == DVLine)
+    for (const std::unique_ptr<LiveElement> &LE : LiveElements)
+      LE->printElementLine(OS, Addr, false);
+}
+
+void LiveVariablePrinter::printEndLine(formatted_raw_ostream &OS,
+                                       object::SectionedAddress Addr) {
+  // Print a line to idenfity the end of an inlined function if line format is
+  // specified.
+  if (DbgInlinedFunctions == DVLine)
+    for (const std::unique_ptr<LiveElement> &LE : LiveElements)
+      LE->printElementLine(OS, Addr, true);
 }
 
 bool SourcePrinter::cacheSource(const DILineInfo &LineInfo) {
@@ -418,13 +537,14 @@ void SourcePrinter::printSourceLine(formatted_raw_ostream &OS,
   }
 
   if (PrintLines)
-    printLines(OS, LineInfo, Delimiter, LVP);
+    printLines(OS, Address, LineInfo, Delimiter, LVP);
   if (PrintSource)
     printSources(OS, LineInfo, ObjectFilename, Delimiter, LVP);
   OldLineInfo = LineInfo;
 }
 
 void SourcePrinter::printLines(formatted_raw_ostream &OS,
+                               object::SectionedAddress Address,
                                const DILineInfo &LineInfo, StringRef Delimiter,
                                LiveVariablePrinter &LVP) {
   bool PrintFunctionName = LineInfo.FunctionName != DILineInfo::BadString &&
