@@ -91,3 +91,8 @@ test.with_optional_properties nested = some<none>
 // CHECK-SAME: ints = [1, 2] strings = ["a", "b"] nested = {{\[}}[1, 2], [3, 4]] opt = [-1, -2] explicitOptions = [none, 0] explicitUnits = [unit, unit_absent]
 // GENERIC: "test.with_array_properties"()
 test.with_array_properties ints = [1, 2] strings = ["a", "b"] nested = [[1, 2], [3, 4]] opt = [-1, -2] explicitOptions = [none, 0] explicitUnits = [unit, unit_absent] [] thats_has_default
+
+// CHECK:   test.with_print_properties_hook a = 42{{$}}
+// GENERIC:   "test.with_print_properties_hook"()
+// GENERIC-SAME: <{printing_through_custom_hook = true, a = 42}> : () -> ()
+test.with_print_properties_hook a = 42
