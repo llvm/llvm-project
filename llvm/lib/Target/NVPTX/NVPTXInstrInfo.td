@@ -158,6 +158,7 @@ def hasHWROT32 : Predicate<"Subtarget->hasHWROT32()">;
 def noHWROT32 : Predicate<"!Subtarget->hasHWROT32()">;
 def hasDotInstructions : Predicate<"Subtarget->hasDotInstructions()">;
 def hasTcgen05Instructions : Predicate<"Subtarget->hasTcgen05Instructions()">;
+def hasF32x2Instructions : Predicate<"Subtarget->hasF32x2Instructions()">;
 
 def True : Predicate<"true">;
 def False : Predicate<"false">;
@@ -193,6 +194,7 @@ class ValueToRegClass<ValueType T> {
      !eq(name, "bf16"): Int16Regs,
      !eq(name, "v2bf16"): Int32Regs,
      !eq(name, "f32"): Float32Regs,
+     !eq(name, "v2f32"): Int64Regs,
      !eq(name, "f64"): Float64Regs,
      !eq(name, "ai32"): Int32ArgRegs,
      !eq(name, "ai64"): Int64ArgRegs,
@@ -239,6 +241,7 @@ def BF16RT   : RegTyInfo<bf16, Int16Regs, bf16imm, fpimm, supports_imm = 0>;
 
 def F16X2RT  : RegTyInfo<v2f16, Int32Regs, ?, ?, supports_imm = 0>;
 def BF16X2RT : RegTyInfo<v2bf16, Int32Regs, ?, ?, supports_imm = 0>;
+def F32X2RT  : RegTyInfo<v2f32, Int64Regs, ?, ?, supports_imm = 0>;
 
 
 // This class provides a basic wrapper around an NVPTXInst that abstracts the
@@ -461,6 +464,18 @@ multiclass F3<string op_str, SDPatternOperator op_pat> {
               [(set f16:$dst, (op_pat f16:$a, f16:$b))]>,
               Requires<[useFP16Math]>;
 
+  def f32x2rr_ftz :
+    BasicNVPTXInst<(outs Int64Regs:$dst),
+              (ins Int64Regs:$a, Int64Regs:$b),
+              op_str # ".ftz.f32x2",
+              [(set v2f32:$dst, (op_pat v2f32:$a, v2f32:$b))]>,
+              Requires<[hasF32x2Instructions, doF32FTZ]>;
+  def f32x2rr :
+    BasicNVPTXInst<(outs Int64Regs:$dst),
+              (ins Int64Regs:$a, Int64Regs:$b),
+              op_str # ".f32x2",
+              [(set v2f32:$dst, (op_pat v2f32:$a, v2f32:$b))]>,
+              Requires<[hasF32x2Instructions]>;
   def f16x2rr_ftz :
     BasicNVPTXInst<(outs Int32Regs:$dst),
               (ins Int32Regs:$a, Int32Regs:$b),
@@ -838,6 +853,9 @@ foreach vt = [v2f16, v2bf16, v2i16, v4i8] in {
 def : Pat<(vt (select i1:$p, vt:$a, vt:$b)),
           (SELP_b32rr $a, $b, $p)>;
 }
+
+def : Pat<(v2f32 (select i1:$p, v2f32:$a, v2f32:$b)),
+          (SELP_b64rr $a, $b, $p)>;
 
 //-----------------------------------
 // Test Instructions
@@ -1387,6 +1405,8 @@ defm BFMA16       : FMA<"fma.rn.bf16", BF16RT, [hasBF16Math]>;
 defm BFMA16x2     : FMA<"fma.rn.bf16x2", BF16X2RT, [hasBF16Math]>;
 defm FMA32_ftz    : FMA<"fma.rn.ftz.f32", F32RT, [doF32FTZ]>;
 defm FMA32        : FMA<"fma.rn.f32", F32RT>;
+defm FMA32x2_ftz  : FMA<"fma.rn.ftz.f32x2", F32X2RT, [hasF32x2Instructions, doF32FTZ]>;
+defm FMA32x2      : FMA<"fma.rn.f32x2", F32X2RT, [hasF32x2Instructions]>;
 defm FMA64        : FMA<"fma.rn.f64", F64RT>;
 
 // sin/cos
@@ -2739,6 +2759,7 @@ def : Pat<(i32 (trunc (sra i64:$s, (i32 32)))), (I64toI32H $s)>;
 def: Pat<(i32 (sext (extractelt v2i16:$src, 0))),
          (CVT_INREG_s32_s16 $src)>;
 
+// Handle extracting one element from the pair (32-bit types)
 foreach vt = [v2f16, v2bf16, v2i16] in {
   def : Pat<(extractelt vt:$src, 0), (I32toI16L_Sink $src)>, Requires<[hasPTX<71>]>;
   def : Pat<(extractelt vt:$src, 1), (I32toI16H_Sink $src)>, Requires<[hasPTX<71>]>;
@@ -2750,9 +2771,20 @@ foreach vt = [v2f16, v2bf16, v2i16] in {
             (V2I16toI32 $a, $b)>;
 }
 
+// Same thing for the 64-bit type v2f32.
+foreach vt = [v2f32] in {
+  def : Pat<(extractelt vt:$src, 0), (I64toI32L_Sink $src)>, Requires<[hasPTX<71>]>;
+  def : Pat<(extractelt vt:$src, 1), (I64toI32H_Sink $src)>, Requires<[hasPTX<71>]>;
+
+  def : Pat<(extractelt vt:$src, 0), (I64toI32L $src)>;
+  def : Pat<(extractelt vt:$src, 1), (I64toI32H $src)>;
+
+  def : Pat<(vt (build_vector vt.ElementType:$a, vt.ElementType:$b)), 
+            (V2I32toI64 $a, $b)>;
+}
+
 def: Pat<(v2i16 (scalar_to_vector i16:$a)),
          (CVT_u32_u16 $a, CvtNONE)>;
-
 
 def nvptx_build_vector : SDNode<"NVPTXISD::BUILD_VECTOR", SDTypeProfile<1, 2, []>, []>;
 
