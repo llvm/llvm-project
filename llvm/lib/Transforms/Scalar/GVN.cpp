@@ -2579,6 +2579,17 @@ bool GVNPass::propagateEquality(Value *LHS, Value *RHS,
 
       continue;
     }
+
+    // Propagate equality that result from truncation with no unsigned wrap
+    // like (trunc nuw i64 %v to i1) == "true" or (trunc nuw i64 %v to i1) ==
+    // "false"
+    if (auto *Trunc = dyn_cast<TruncInst>(LHS)) {
+      if (Trunc->hasNoUnsignedWrap() && Trunc->getType()->isIntegerTy(1)) {
+        Value *Input = Trunc->getOperand(0);
+        Worklist.push_back({Input,
+                            ConstantInt::get(Input->getType(), IsKnownTrue)});
+      }
+    }
   }
 
   return Changed;
