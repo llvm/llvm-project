@@ -18,6 +18,7 @@
 #include "mlir/IR/Threading.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Support/FileUtilities.h"
+#include "mlir/Support/IndentedOstream.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -392,18 +393,28 @@ StringRef OpPassManager::getOpAnchorName() const {
 /// Prints out the passes of the pass manager as the textual representation
 /// of pipelines.
 void printAsTextualPipeline(
-    raw_ostream &os, StringRef anchorName,
+    raw_indented_ostream &os, StringRef anchorName,
     const llvm::iterator_range<OpPassManager::pass_iterator> &passes) {
-  os << anchorName << "(";
+  os << anchorName << "(\n";
+  os.indent();
   llvm::interleave(
       passes, [&](mlir::Pass &pass) { pass.printAsTextualPipeline(os); },
-      [&]() { os << ","; });
+      [&]() { os << ",\n"; });
+  os << "\n";
+  os.unindent();
   os << ")";
+}
+void printAsTextualPipeline(
+    raw_ostream &os, StringRef anchorName,
+    const llvm::iterator_range<OpPassManager::pass_iterator> &passes) {
+  raw_indented_ostream indentedOS(os);
+  printAsTextualPipeline(indentedOS, anchorName, passes);
 }
 void OpPassManager::printAsTextualPipeline(raw_ostream &os) const {
   StringRef anchorName = getOpAnchorName();
+  raw_indented_ostream indentedOS(os);
   ::printAsTextualPipeline(
-      os, anchorName,
+      indentedOS, anchorName,
       {MutableArrayRef<std::unique_ptr<Pass>>{impl->passes}.begin(),
        MutableArrayRef<std::unique_ptr<Pass>>{impl->passes}.end()});
 }
