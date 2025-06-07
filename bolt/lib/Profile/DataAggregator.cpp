@@ -1426,7 +1426,7 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
       const BinaryFunction *TraceBF =
           getBinaryFunctionContainingAddress(TraceFrom);
       FTInfo &Info = FallthroughLBRs[Trace(TraceFrom, TraceTo)];
-      if (TraceBF->containsAddress(LBR.From))
+      if (TraceBF && TraceBF->containsAddress(LBR.From))
         ++Info.InternCount;
       else
         ++Info.ExternCount;
