@@ -198,14 +198,14 @@ static Value genVectorReducInit(PatternRewriter &rewriter, Location loc,
   case vector::CombiningKind::ADD:
   case vector::CombiningKind::XOR:
     // Initialize reduction vector to: | 0 | .. | 0 | r |
-    return rewriter.create<vector::InsertOp>(
-        loc, r, constantZero(rewriter, loc, vtp),
-        constantIndex(rewriter, loc, 0));
+    return rewriter.create<vector::InsertOp>(loc, r,
+                                             constantZero(rewriter, loc, vtp),
+                                             constantIndex(rewriter, loc, 0));
   case vector::CombiningKind::MUL:
     // Initialize reduction vector to: | 1 | .. | 1 | r |
-    return rewriter.create<vector::InsertOp>(
-        loc, r, constantOne(rewriter, loc, vtp),
-        constantIndex(rewriter, loc, 0));
+    return rewriter.create<vector::InsertOp>(loc, r,
+                                             constantOne(rewriter, loc, vtp),
+                                             constantIndex(rewriter, loc, 0));
   case vector::CombiningKind::AND:
   case vector::CombiningKind::OR:
     // Initialize reduction vector to: | r | .. | r | r |
@@ -646,7 +646,8 @@ static LogicalResult cleanReducChain(PatternRewriter &rewriter, Operation *op,
 ///   s = vsum(v)                  v = for { }
 ///   u = broadcast(s)       ->    for (v) { }
 ///   for (u) { }
-struct ReducChainBroadcastRewriter : public OpRewritePattern<vector::BroadcastOp> {
+struct ReducChainBroadcastRewriter
+    : public OpRewritePattern<vector::BroadcastOp> {
 public:
   using OpRewritePattern<vector::BroadcastOp>::OpRewritePattern;
 
