@@ -887,6 +887,22 @@ public:
       return clauseNotImplemented(clause);
     }
   }
+
+  void VisitAttachClause(const OpenACCAttachClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
+                               mlir::acc::KernelsOp>) {
+      for (auto var : clause.getVarList())
+        addDataOperand<mlir::acc::AttachOp, mlir::acc::DetachOp>(
+            var, mlir::acc::DataClause::acc_attach, /*structured=*/true,
+            /*implicit=*/false);
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToComputeOp(clause);
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. data, enter data remain.
+      return clauseNotImplemented(clause);
+    }
+  }
 };
 
 template <typename OpTy>
