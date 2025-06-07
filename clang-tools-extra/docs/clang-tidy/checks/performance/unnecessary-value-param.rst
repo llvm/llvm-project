@@ -56,7 +56,11 @@ Will become:
 
 Because the fix-it needs to change the signature of the function, it may break
 builds if the function is used in multiple translation units or some codes
-depends on funcion signatures.
+depends on function signatures.
+
+Note: This check does not suggest passing parameters by reference in coroutines
+because, after a coroutine suspend point, references could be dangling and no
+longer valid, so suggested changes may result in hard-to-find bugs and crashes.
 
 Options
 -------

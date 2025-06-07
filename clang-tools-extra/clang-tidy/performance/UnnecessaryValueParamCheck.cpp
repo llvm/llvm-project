@@ -65,6 +65,7 @@ void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
           TK_AsIs,
           functionDecl(hasBody(stmt()), isDefinition(), unless(isImplicit()),
                        unless(cxxMethodDecl(anyOf(isOverride(), isFinal()))),
+                       unless(hasBody(coroutineBodyStmt())),
                        has(typeLoc(forEach(ExpensiveValueParamDecl))),
                        decl().bind("functionDecl"))),
       this);
