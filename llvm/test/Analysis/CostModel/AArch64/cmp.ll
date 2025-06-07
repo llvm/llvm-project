@@ -62,7 +62,7 @@ define void @andcmp() {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %av4i32 = and <4 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %cv4i32 = icmp ne <4 x i32> %av4i32, zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %c32not0 = icmp eq i32 %a32, 1
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %c64sle = icmp sle i64 %a64, 0
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: %c64sle = icmp sle i64 %a64, 0
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %a8 = and i8 undef, undef
