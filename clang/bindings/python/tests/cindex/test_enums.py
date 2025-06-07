@@ -96,5 +96,5 @@ class TestEnums(unittest.TestCase):
                 self.assertEqual(
                     missing_python_kinds,
                     set(),
-                    f"Please ensure these variants are defined inside {enum} in cindex.py.",
+                    f"Please ensure these are defined in {enum} in cindex.py.",
                 )
