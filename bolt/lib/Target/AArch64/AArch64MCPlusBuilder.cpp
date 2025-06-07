@@ -2186,73 +2186,71 @@ public:
         llvm_unreachable("unhandled!");
         break;
 
+      // ORR <Wd>, <Wn>, #<imm>
+      // ORR <Xd>, <Xn>, #<imm>
       case AArch64::ORRWri:
       case AArch64::ORRXri:
         if (I->Op1 == 0) {
-          MCInst Inst;
-          Inst.setOpcode(I->Opcode);
-          Inst.addOperand(MCOperand::createReg(Dest));
-          Inst.addOperand(MCOperand::createReg(BitSize == 32 ? AArch64::WZR
-                                                             : AArch64::XZR));
-          Inst.addOperand(MCOperand::createImm(I->Op2));
+          MCInst Inst = MCInstBuilder(I->Opcode)
+                            .addReg(Dest)
+                            .addReg(BitSize == 32 ? AArch64::WZR : AArch64::XZR)
+                            .addImm(I->Op2);
           Insts.push_back(Inst);
         } else {
-          MCInst Inst;
-          Inst.setOpcode(I->Opcode);
-          Inst.addOperand(MCOperand::createReg(Dest));
-          Inst.addOperand(MCOperand::createReg(Dest));
-          Inst.addOperand(MCOperand::createImm(I->Op2));
+          MCInst Inst =
+              MCInstBuilder(I->Opcode).addReg(Dest).addReg(Dest).addImm(I->Op2);
           Insts.push_back(Inst);
         }
         break;
+      // ORR <Wd>, <Wn>, <Wm>, <shift> #<amount>
+      // ORR <Xd>, <Xn>, <Xm>, <shift> #<amount>
       case AArch64::ORRWrs:
       case AArch64::ORRXrs: {
-        MCInst Inst;
-        Inst.setOpcode(I->Opcode);
-        Inst.addOperand(MCOperand::createReg(Dest));
-        Inst.addOperand(MCOperand::createReg(Dest));
-        Inst.addOperand(MCOperand::createReg(Dest));
-        Inst.addOperand(MCOperand::createImm(I->Op2));
+        MCInst Inst = MCInstBuilder(I->Opcode)
+                          .addReg(Dest)
+                          .addReg(Dest)
+                          .addReg(Dest)
+                          .addImm(I->Op1) // Shift type
+                          .addImm(I->Op2);
         Insts.push_back(Inst);
       } break;
+      // AND Xd, Xn, #imm
+      // EOR Xd, Xn, #imm
       case AArch64::ANDXri:
       case AArch64::EORXri:
         if (I->Op1 == 0) {
-          MCInst Inst;
-          Inst.setOpcode(I->Opcode);
-          Inst.addOperand(MCOperand::createReg(Dest));
-          Inst.addOperand(MCOperand::createReg(BitSize == 32 ? AArch64::WZR
-                                                             : AArch64::XZR));
-          Inst.addOperand(MCOperand::createImm(I->Op2));
+          MCInst Inst = MCInstBuilder(I->Opcode)
+                            .addReg(Dest)
+                            .addReg(BitSize == 32 ? AArch64::WZR : AArch64::XZR)
+                            .addImm(I->Op2);
           Insts.push_back(Inst);
         } else {
-          MCInst Inst;
-          Inst.setOpcode(I->Opcode);
-          Inst.addOperand(MCOperand::createReg(Dest));
-          Inst.addOperand(MCOperand::createReg(Dest));
-          Inst.addOperand(MCOperand::createImm(I->Op2));
+          MCInst Inst =
+              MCInstBuilder(I->Opcode).addReg(Dest).addReg(Dest).addImm(I->Op2);
           Insts.push_back(Inst);
         }
         break;
+      // MOVZ Wd, #imm16, LSL #shift
+      // MOVZ Xd, #imm16, LSL #shift
+      // MOVN Wd, #imm16, LSL #shift
+      // MOVN Xd, #imm16, LSL #shift
       case AArch64::MOVNWi:
       case AArch64::MOVNXi:
       case AArch64::MOVZWi:
       case AArch64::MOVZXi: {
-        MCInst Inst;
-        Inst.setOpcode(I->Opcode);
-        Inst.addOperand(MCOperand::createReg(Dest));
-        Inst.addOperand(MCOperand::createImm(I->Op1));
-        Inst.addOperand(MCOperand::createImm(I->Op2));
+        MCInst Inst =
+            MCInstBuilder(I->Opcode).addReg(Dest).addImm(I->Op1).addImm(I->Op2);
         Insts.push_back(Inst);
       } break;
+      // MOVK Wd, #imm16, LSL #shift
+      // MOVK Xd, #imm16, LSL #shift
       case AArch64::MOVKWi:
       case AArch64::MOVKXi: {
-        MCInst Inst;
-        Inst.setOpcode(I->Opcode);
-        Inst.addOperand(MCOperand::createReg(Dest));
-        Inst.addOperand(MCOperand::createReg(Dest));
-        Inst.addOperand(MCOperand::createImm(I->Op1));
-        Inst.addOperand(MCOperand::createImm(I->Op2));
+        MCInst Inst = MCInstBuilder(I->Opcode)
+                          .addReg(Dest)
+                          .addReg(Dest)
+                          .addImm(I->Op1)
+                          .addImm(I->Op2);
         Insts.push_back(Inst);
       } break;
       }
