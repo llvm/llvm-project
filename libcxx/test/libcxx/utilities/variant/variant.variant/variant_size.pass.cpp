@@ -70,6 +70,22 @@ struct type_with_index {
 #endif
 };
 
+struct alignas(16) A16 {};
+struct VariantWithNoUniqueAddress {
+  TEST_NO_UNIQUE_ADDRESS std::variant<A16> a;
+  bool b;
+};
+struct VariantWithoutNoUniqueAddress {
+  std::variant<A16> a;
+  bool b;
+};
+constexpr bool ExpectSmallerSizeWithNoUniqueAddress =
+#ifdef _LIBCPP_ABI_VARIANT_NO_UNIQUE_ADDRESS_OPTIMIZATION
+    true;
+#else
+    false;
+#endif
+
 int main(int, char**) {
   test_index_type<unsigned char>();
   // This won't compile due to template depth issues.
@@ -83,6 +99,9 @@ int main(int, char**) {
   static_assert(sizeof(std::variant<long, long, long>) == sizeof(type_with_index<long>));
   static_assert(sizeof(std::variant<char, int, long>) == sizeof(type_with_index<long>));
   static_assert(sizeof(std::variant<std::size_t, std::size_t, std::size_t>) == sizeof(type_with_index<std::size_t>));
+
+  static_assert((sizeof(VariantWithNoUniqueAddress) < sizeof(VariantWithoutNoUniqueAddress)) ==
+                ExpectSmallerSizeWithNoUniqueAddress);
 
   return 0;
 }
