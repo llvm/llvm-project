@@ -7250,6 +7250,9 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
     Value *StartV = getStartValueFromReductionResult(EpiRedResult);
     Value *SentinelV = EpiRedResult->getOperand(2)->getLiveInIRValue();
     using namespace llvm::PatternMatch;
+    MainResumeValue = cast<VPInstruction>(EpiRedHeaderPhi->getStartValue())
+                          ->getOperand(0)
+                          ->getUnderlyingValue();
     Value *Cmp, *OrigResumeV, *CmpOp;
     [[maybe_unused]] bool IsExpectedPattern =
         match(MainResumeValue,
@@ -7260,7 +7263,11 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
          ((CmpOp == StartV && isGuaranteedNotToBeUndefOrPoison(CmpOp))));
     assert(IsExpectedPattern && "Unexpected reduction resume pattern");
     MainResumeValue = OrigResumeV;
+  } else {
+    if (auto *VPI = dyn_cast<VPInstruction>(EpiRedHeaderPhi->getStartValue()))
+      MainResumeValue = VPI->getOperand(0)->getUnderlyingValue();
   }
+
   PHINode *MainResumePhi = cast<PHINode>(MainResumeValue);
 
   // When fixing reductions in the epilogue loop we should already have
@@ -8276,9 +8283,6 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
       return Recipe;
 
     VPHeaderPHIRecipe *PhiRecipe = nullptr;
-    assert((Legal->isReductionVariable(Phi) ||
-            Legal->isFixedOrderRecurrence(Phi)) &&
-           "can only widen reductions and fixed-order recurrences here");
     VPValue *StartV = Operands[0];
     if (Legal->isReductionVariable(Phi)) {
       const RecurrenceDescriptor &RdxDesc = Legal->getRecurrenceDescriptor(Phi);
@@ -8291,12 +8295,17 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
       PhiRecipe = new VPReductionPHIRecipe(
           Phi, RdxDesc.getRecurrenceKind(), *StartV, CM.isInLoopReduction(Phi),
           CM.useOrderedReductions(RdxDesc), ScaleFactor);
-    } else {
+    } else if (Legal->isFixedOrderRecurrence(Phi)) {
       // TODO: Currently fixed-order recurrences are modeled as chains of
       // first-order recurrences. If there are no users of the intermediate
       // recurrences in the chain, the fixed order recurrence should be modeled
       // directly, enabling more efficient codegen.
       PhiRecipe = new VPFirstOrderRecurrencePHIRecipe(Phi, *StartV);
+    } else {
+      // Failed to identify phi as reduction or fixed-order recurrence. Keep the
+      // original VPWidenPHIRecipe for now, to be legalized later if possible.
+      setRecipe(Phi, R);
+      return nullptr;
     }
     // Add backedge value.
     PhiRecipe->addOperand(Operands[1]);
@@ -8481,7 +8490,7 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
     // TODO: Extract final value from induction recipe initially, optimize to
     // pre-computed end value together in optimizeInductionExitUsers.
     auto *VectorPhiR =
-        cast<VPHeaderPHIRecipe>(Builder.getRecipe(&ScalarPhiIRI->getIRPhi()));
+        cast<VPSingleDefRecipe>(Builder.getRecipe(&ScalarPhiIRI->getIRPhi()));
     if (auto *WideIVR = dyn_cast<VPWidenInductionRecipe>(VectorPhiR)) {
       if (VPInstruction *ResumePhi = addResumePhiRecipeForInduction(
               WideIVR, VectorPHBuilder, ScalarPHBuilder, TypeInfo,
@@ -8503,7 +8512,7 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
     // which for FORs is a vector whose last element needs to be extracted. The
     // start value provides the value if the loop is bypassed.
     bool IsFOR = isa<VPFirstOrderRecurrencePHIRecipe>(VectorPhiR);
-    auto *ResumeFromVectorLoop = VectorPhiR->getBackedgeValue();
+    auto *ResumeFromVectorLoop = VectorPhiR->getOperand(1);
     assert(VectorRegion->getSingleSuccessor() == Plan.getMiddleBlock() &&
            "Cannot handle loops with uncountable early exits");
     if (IsFOR)
@@ -8512,7 +8521,7 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
           "vector.recur.extract");
     StringRef Name = IsFOR ? "scalar.recur.init" : "bc.merge.rdx";
     auto *ResumePhiR = ScalarPHBuilder.createScalarPhi(
-        {ResumeFromVectorLoop, VectorPhiR->getStartValue()}, {}, Name);
+        {ResumeFromVectorLoop, VectorPhiR->getOperand(0)}, {}, Name);
     ScalarPhiIRI->addOperand(ResumePhiR);
   }
 }
@@ -8783,6 +8792,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
       VPRecipeBase *Recipe =
           RecipeBuilder.tryToCreateWidenRecipe(SingleDef, Range);
       if (!Recipe) {
+        if (isa<VPWidenPHIRecipe>(SingleDef))
+          continue;
         SmallVector<VPValue *, 4> Operands(R.operands());
         Recipe = RecipeBuilder.handleReplication(Instr, Operands, Range);
       }
@@ -8845,6 +8856,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // Adjust the recipes for any inloop reductions.
   adjustRecipesForReductions(Plan, RecipeBuilder, Range.Start);
 
+  // Try to convert remaining VPWidenPHIRecipes to reduction recipes.
+  if (!VPlanTransforms::runPass(VPlanTransforms::legalizeUnclassifiedPhis,
+                                *Plan))
+    return nullptr;
   // Apply mandatory transformation to handle FP maxnum/minnum reduction with
   // NaNs if possible, bail out otherwise.
   if (!VPlanTransforms::runPass(VPlanTransforms::handleMaxMinNumReductions,
@@ -9317,6 +9332,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       PhiR->setOperand(0, StartV);
     }
   }
+
   for (VPRecipeBase *R : ToDelete)
     R->eraseFromParent();
 
