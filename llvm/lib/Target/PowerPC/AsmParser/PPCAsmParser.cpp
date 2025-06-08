@@ -37,9 +37,6 @@ DEFINE_PPC_REGCLASSES
 static int64_t
 EvaluateCRExpr(const MCExpr *E) {
   switch (E->getKind()) {
-  case MCExpr::Target:
-    return -1;
-
   case MCExpr::Constant: {
     int64_t Res = cast<MCConstantExpr>(E)->getValue();
     return Res < 0 ? -1 : Res;
@@ -88,6 +85,8 @@ EvaluateCRExpr(const MCExpr *E) {
     return Res < 0 ? -1 : Res;
   }
   case MCExpr::Specifier:
+    return -1;
+  case MCExpr::Target:
     llvm_unreachable("unused by this backend");
   }
 
@@ -1374,7 +1373,7 @@ const MCExpr *PPCAsmParser::extractSpecifier(const MCExpr *E,
   switch (E->getKind()) {
   case MCExpr::Constant:
     break;
-  case MCExpr::Target: {
+  case MCExpr::Specifier: {
     // Detect error but do not return a modified expression.
     auto *TE = cast<PPCMCExpr>(E);
     Spec = TE->getSpecifier();
@@ -1422,7 +1421,7 @@ const MCExpr *PPCAsmParser::extractSpecifier(const MCExpr *E,
       return MCBinaryExpr::create(BE->getOpcode(), LHS, RHS, Context);
     break;
   }
-  case MCExpr::Specifier:
+  case MCExpr::Target:
     llvm_unreachable("unused by this backend");
   }
 
@@ -1437,7 +1436,7 @@ bool PPCAsmParser::parseExpression(const MCExpr *&EVal) {
   if (getParser().parseExpression(EVal))
     return true;
 
-  auto Spec = PPCMCExpr::VK_None;
+  uint16_t Spec = PPCMCExpr::VK_None;
   const MCExpr *E = extractSpecifier(EVal, Spec);
   if (Spec != PPCMCExpr::VK_None)
     EVal = PPCMCExpr::create(Spec, E, getParser().getContext());
