@@ -1348,10 +1348,24 @@ private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static void __assign_value(__get_node_value_type_t<value_type>& __lhs, _From&& __rhs) {
     using __key_type = typename _NodeTypes::key_type;
 
-    // This is technically UB, since the object was constructed as `const`.
-    // Clang doesn't optimize on this currently though.
-    const_cast<__key_type&>(__lhs.first) = const_cast<__copy_cvref_t<_From, __key_type>&&>(__rhs.first);
-    __lhs.second                         = std::forward<_From>(__rhs).second;
+    if(std::is_constant_evaluated()){
+      __get_node_value_type_t<value_type> tmp {__rhs.first, __rhs.second};
+      // tmp.first = const_cast<__copy_cvref_t<_From, __key_type>&&>(__rhs.first);
+      // tmp.second                         = std::forward<_From>(__rhs).second;
+      // __lhs = pair<const int, double>
+      // TODO: use a better name
+      using foo_type = __get_node_value_type_t<value_type>;
+      // const_cast is not allowed at constexpr time.
+      // we get around this by deleting and creating a new node value
+      __lhs.~foo_type();
+      new (&__lhs)(foo_type) (tmp);
+      // __lhs = std::move(tmp);
+    } else {
+      // This is technically UB, since the object was constructed as `const`.
+      // Clang doesn't optimize on this currently though.
+      const_cast<__key_type&>(__lhs.first) = const_cast<__copy_cvref_t<_From, __key_type>&&>(__rhs.first);
+      __lhs.second                         = std::forward<_From>(__rhs).second;
+    }
   }
 
   template <class _To, class _From, class _ValueT = _Tp, __enable_if_t<!__is_tree_value_type<_ValueT>::value, int> = 0>
