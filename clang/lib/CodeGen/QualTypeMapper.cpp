@@ -30,9 +30,18 @@
 namespace clang {
 namespace mapper {
 
+/// Main entry point for converting Clang QualType to LLVM ABI Type.
+/// This method performs type canonicalization, caching, and dispatches
+/// to specialized conversion methods based on the type kind.
+///
+/// \param QT The Clang QualType to convert
+/// \return Corresponding LLVM ABI Type representation, or nullptr on error
 const llvm::abi::Type *QualTypeMapper::convertType(QualType QT) {
+  // Canonicalize type and strip qualifiers
+  // This ensures consistent type representation across different contexts
   QT = QT.getCanonicalType().getUnqualifiedType();
 
+  // Results are cached since type conversion may be expensive
   auto It = TypeCache.find(QT);
   if (It != TypeCache.end())
     return It->second;
@@ -53,6 +62,7 @@ const llvm::abi::Type *QualTypeMapper::convertType(QualType QT) {
   } else if (const auto *ET = dyn_cast<EnumType>(QT.getTypePtr())) {
     Result = convertEnumType(ET);
   } else if (const auto *BIT = dyn_cast<BitIntType>(QT.getTypePtr())) {
+    // Handle C23 _BitInt(N) types - arbitrary precision integers
     QualType QT(BIT, 0);
     uint64_t NumBits = BIT->getNumBits();
     bool IsSigned = BIT->isSigned();
@@ -60,6 +70,7 @@ const llvm::abi::Type *QualTypeMapper::convertType(QualType QT) {
     return Builder.getIntegerType(NumBits, TypeAlign, IsSigned);
   } else if (isa<ObjCObjectType>(QT.getTypePtr()) ||
              isa<ObjCObjectPointerType>(QT.getTypePtr())) {
+    // Objective-C objects are represented as pointers in the ABI
     auto PointerSize = ASTCtx.getTargetInfo().getPointerWidth(LangAS::Default);
     llvm::Align PointerAlign =
         llvm::Align(ASTCtx.getTargetInfo().getPointerAlign(LangAS::Default));
@@ -71,6 +82,12 @@ const llvm::abi::Type *QualTypeMapper::convertType(QualType QT) {
   return Result;
 }
 
+/// Converts C/C++ builtin types to LLVM ABI types.
+/// This handles all fundamental scalar types including integers, floats,
+/// and special types like void and bool.
+///
+/// \param BT The BuiltinType to convert
+/// \return Corresponding LLVM ABI integer, float, or void type
 const llvm::abi::Type *
 QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
   QualType QT(BT, 0);
@@ -113,11 +130,18 @@ QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
                                 getTypeAlign(QT));
 
   default:
+    // Unhandled BuiltinTypes are treated as unsigned integers.
     return Builder.getIntegerType(ASTCtx.getTypeSize(QualType(BT, 0)),
                                   getTypeAlign(QualType(BT, 0)), false);
   }
 }
 
+/// Converts array types to LLVM ABI array representations.
+/// Handles different array kinds: constant arrays, incomplete arrays,
+/// and variable-length arrays.
+///
+/// \param AT The ArrayType to convert
+/// \return LLVM ABI ArrayType or PointerType
 const llvm::abi::Type *
 QualTypeMapper::convertArrayType(const clang::ArrayType *AT) {
   const llvm::abi::Type *ElementType = convertType(AT->getElementType());
@@ -130,9 +154,14 @@ QualTypeMapper::convertArrayType(const clang::ArrayType *AT) {
     return Builder.getArrayType(ElementType, 0);
   if (const auto *VAT = dyn_cast<VariableArrayType>(AT))
     return createPointerTypeForPointee(VAT->getPointeeType());
+  // Fallback for other array types
   return Builder.getArrayType(ElementType, 1);
 }
 
+/// Converts vector types to LLVM ABI vector representations.
+///
+/// \param VT The VectorType to convert
+/// \return LLVM ABI VectorType with element type, count, and alignment
 const llvm::abi::Type *QualTypeMapper::convertVectorType(const VectorType *VT) {
   const llvm::abi::Type *ElementType = convertType(VT->getElementType());
   uint64_t NumElements = VT->getNumElements();
@@ -142,6 +171,12 @@ const llvm::abi::Type *QualTypeMapper::convertVectorType(const VectorType *VT) {
   return Builder.getVectorType(ElementType, NumElements, VectorAlign);
 }
 
+/// Converts record types (struct/class/union) to LLVM ABI representations.
+/// This is the main dispatch method that handles different record kinds
+/// and delegates to specialized converters.
+///
+/// \param RT The RecordType to convert
+/// \return LLVM ABI StructType or UnionType
 const llvm::abi::Type *QualTypeMapper::convertRecordType(const RecordType *RT) {
   const RecordDecl *RD = RT->getDecl()->getDefinition();
   if (!RD) {
@@ -161,6 +196,14 @@ const llvm::abi::Type *QualTypeMapper::convertRecordType(const RecordType *RT) {
   return convertStructType(RD);
 }
 
+/// Converts C++ classes with inheritance to LLVM ABI struct representations.
+/// This method handles the complex layout of C++ objects including:
+/// - Virtual table pointers for polymorphic classes
+/// - Base class subobjects (both direct and virtual bases)
+/// - Member field layout with proper offsets
+///
+/// \param RD The C++ record declaration
+/// \return LLVM ABI StructType representing the complete object layout
 const llvm::abi::StructType *
 QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
   const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(RD);
@@ -176,9 +219,7 @@ QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
     if (Base.isVirtual())
       continue;
 
-    const RecordType *BaseRT = Base.getType()->getAs<RecordType>();
-    if (!BaseRT)
-      continue;
+    const RecordType *BaseRT = Base.getType()->castAs<RecordType>();
 
     const llvm::abi::Type *BaseType = convertType(Base.getType());
     uint64_t BaseOffset =
@@ -215,16 +256,33 @@ QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
   return Builder.getStructType(Fields, Size, Alignment);
 }
 
+/// Converts reference types to pointer representations in the ABI.
+/// Both lvalue references (T&) and rvalue references (T&&) are represented
+/// as pointers at the ABI level.
+///
+/// \param RT The ReferenceType to convert
+/// \return LLVM ABI PointerType
 const llvm::abi::Type *
 QualTypeMapper::convertReferenceType(const ReferenceType *RT) {
   return createPointerTypeForPointee(RT->getPointeeType());
 }
 
+/// Converts pointer types to LLVM ABI pointer representations.
+/// Takes into account address space information for the pointed-to type.
+///
+/// \param PT The PointerType to convert
+/// \return LLVM ABI PointerType with appropriate size and alignment
 const llvm::abi::Type *
 QualTypeMapper::convertPointerType(const clang::PointerType *PT) {
   return createPointerTypeForPointee(PT->getPointeeType());
 }
 
+/// Converts enumeration types to their underlying integer representations.
+/// This method handles various enum states and falls back to safe defaults
+/// when enum information is incomplete or invalid.
+///
+/// \param ET The EnumType to convert
+/// \return LLVM ABI IntegerType representing the enum's underlying type
 const llvm::abi::Type *
 QualTypeMapper::convertEnumType(const clang::EnumType *ET) {
   if (!ET)
@@ -246,19 +304,15 @@ QualTypeMapper::convertEnumType(const clang::EnumType *ET) {
   }
   QualType UnderlyingType = ED->getIntegerType();
 
-  if (UnderlyingType.isNull()) {
+  if (UnderlyingType.isNull())
     UnderlyingType = ED->getPromotionType();
-  }
 
-  if (UnderlyingType.isNull()) {
+  if (UnderlyingType.isNull())
     UnderlyingType = ASTCtx.IntTy;
-  }
 
-  if (const auto *BT = dyn_cast<BuiltinType>(UnderlyingType.getTypePtr())) {
+  if (const auto *BT = dyn_cast<BuiltinType>(UnderlyingType.getTypePtr()))
     return convertBuiltinType(BT);
-  }
 
-  // For non-builtin underlying types, extract type information safely
   uint64_t TypeSize = ASTCtx.getTypeSize(UnderlyingType);
   llvm::Align TypeAlign = getTypeAlign(UnderlyingType);
   bool IsSigned = UnderlyingType->isSignedIntegerType();
@@ -266,6 +320,12 @@ QualTypeMapper::convertEnumType(const clang::EnumType *ET) {
   return Builder.getIntegerType(TypeSize, TypeAlign, IsSigned);
 }
 
+/// Converts plain C structs and C++ classes without inheritance.
+/// This handles the simpler case where we only need to layout member fields
+/// without considering base classes or virtual functions.
+///
+/// \param RD The RecordDecl to convert
+/// \return LLVM ABI StructType
 const llvm::abi::StructType *
 QualTypeMapper::convertStructType(const clang::RecordDecl *RD) {
   const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(RD);
@@ -280,6 +340,12 @@ QualTypeMapper::convertStructType(const clang::RecordDecl *RD) {
   return Builder.getStructType(Fields, Size, Alignment);
 }
 
+/// Converts C union types where all fields occupy the same memory location.
+/// The union size is determined by its largest member, and all fields
+/// start at offset 0.
+///
+/// \param RD The RecordDecl representing the union
+/// \return LLVM ABI UnionType
 const llvm::abi::UnionType *
 QualTypeMapper::convertUnionType(const clang::RecordDecl *RD) {
   const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(RD);
@@ -307,6 +373,13 @@ QualTypeMapper::createPointerTypeForPointee(QualType PointeeType) {
   return Builder.getPointerType(PointerSize, Alignment);
 }
 
+/// Processes the fields of a record (struct/class/union) and populates
+/// the Fields vector with FieldInfo objects containing type, offset,
+/// and bitfield information.
+///
+/// \param RD The RecordDecl whose fields to process
+/// \param Fields Output vector to populate with field information
+/// \param Layout The AST record layout containing field offset information
 void QualTypeMapper::computeFieldInfo(
     const RecordDecl *RD, SmallVectorImpl<llvm::abi::FieldInfo> &Fields,
     const ASTRecordLayout &Layout) {
@@ -319,9 +392,8 @@ void QualTypeMapper::computeFieldInfo(
     bool IsBitField = FD->isBitField();
     uint64_t BitFieldWidth = 0;
 
-    if (IsBitField) {
+    if (IsBitField)
       BitFieldWidth = FD->getBitWidthValue();
-    }
 
     Fields.emplace_back(FieldType, OffsetInBits, IsBitField, BitFieldWidth);
     ++FieldIndex;
