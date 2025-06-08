@@ -1345,7 +1345,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __move_assign_alloc(__tree&, false_type) _NOEXCEPT {}
 
   template <class _From, class _ValueT = _Tp, __enable_if_t<__is_tree_value_type<_ValueT>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI static void __assign_value(__get_node_value_type_t<value_type>& __lhs, _From&& __rhs) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static void __assign_value(__get_node_value_type_t<value_type>& __lhs, _From&& __rhs) {
     using __key_type = typename _NodeTypes::key_type;
 
     // This is technically UB, since the object was constructed as `const`.
