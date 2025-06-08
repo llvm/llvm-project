@@ -208,6 +208,11 @@ Changes in existing checks
   <clang-tidy/checks/misc/unused-using-decls>` check by fixing false positives
   on ``operator""`` with template parameters.
 
+- Improved :doc:`misc-unconventional-assign-operator
+  <clang-tidy/checks/misc/misc-unconventional-assign-operator>` check by fixing
+  false positives when copy assignment operator function in a template class
+  returns the result of another assignment to ``*this``(``return *this=...``).
+
 - Improved :doc:`misc-use-internal-linkage
   <clang-tidy/checks/misc/use-internal-linkage>` check by fix false positives
   for function or variable in header file which contains macro expansion and
