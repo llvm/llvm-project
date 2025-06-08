@@ -209,7 +209,7 @@ Changes in existing checks
   on ``operator""`` with template parameters.
 
 - Improved :doc:`misc-unconventional-assign-operator
-  <clang-tidy/checks/misc/misc-unconventional-assign-operator>` check by fixing
+  <clang-tidy/checks/misc/unconventional-assign-operator>` check by fixing
   false positives when copy assignment operator function in a template class
   returns the result of another assignment to ``*this``(``return *this=...``).
 
