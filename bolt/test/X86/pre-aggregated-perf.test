@@ -67,10 +67,10 @@ BASIC-ERROR: BOLT-INFO: 0 out of 7 functions in the binary (0.0%) have non-empty
 BASIC-SUCCESS: BOLT-INFO: 4 out of 7 functions in the binary (57.1%) have non-empty execution profile
 CHECK-BASIC-NL: no_lbr cycles
 
-PERF2BOLT: 0 [unknown] 0 1 main 53c 0 2
+PERF2BOLT: 0 [unknown] 7f36d18d60c0 1 main 53c 0 2
 PERF2BOLT: 1 main 451 1 SolveCubic 0 0 2
-PERF2BOLT: 1 main 490 0 [unknown] 0 0 1
-PERF2BOLT: 1 main 537 0 [unknown] 0 0 1
+PERF2BOLT: 1 main 490 0 [unknown] 4005f0 0 1
+PERF2BOLT: 1 main 537 0 [unknown] 400610 0 1
 PERF2BOLT: 1 usqrt 30 1 usqrt 32 0 22
 PERF2BOLT: 1 usqrt 30 1 usqrt 39 4 33
 PERF2BOLT: 1 usqrt 35 1 usqrt 39 0 22
