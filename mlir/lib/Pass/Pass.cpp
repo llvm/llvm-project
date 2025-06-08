@@ -81,7 +81,8 @@ void Pass::copyOptionValuesFrom(const Pass *other) {
 }
 
 /// Prints out the pass in the textual representation of pipelines. If this is
-/// an adaptor pass, print its pass managers.
+/// an adaptor pass, print its pass managers. When `pretty` is true, the
+/// printed pipeline is formatted for readability.
 void Pass::printAsTextualPipeline(raw_ostream &os, bool pretty) {
   // Special case for adaptors to print its pass managers.
   if (auto *adaptor = dyn_cast<OpToOpPassAdaptor>(this)) {
@@ -395,7 +396,8 @@ StringRef OpPassManager::getOpAnchorName() const {
 }
 
 /// Prints out the passes of the pass manager as the textual representation
-/// of pipelines.
+/// of pipelines. When `pretty` is true, the printed pipeline is formatted for
+/// readability.
 void printAsTextualPipeline(
     raw_indented_ostream &os, StringRef anchorName,
     const llvm::iterator_range<OpPassManager::pass_iterator> &passes,
