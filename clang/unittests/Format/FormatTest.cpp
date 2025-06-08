@@ -24372,7 +24372,7 @@ TEST_F(FormatTest, LambdaBracesIndentationNested) {
                "    });",
                Style);
 
-  Style.BraceWrapping.IndentBracesLambdaNested = true;
+  Style.BraceWrapping.IndentLambdaBracesNested = true;
   verifyFormat("function(\n"
                "    [&]()\n"
                "      {\n"
@@ -24389,7 +24389,7 @@ TEST_F(FormatTest, LambdaBracesIndentationNested) {
                "  });",
                Style);
 
-  Style.BraceWrapping.IndentBracesLambdaNested = false;
+  Style.BraceWrapping.IndentLambdaBracesNested = false;
   verifyFormat("function([&]()\n"
                "{\n"
                "  for (int i = 0; i < y; ++i)\n"
@@ -24411,7 +24411,7 @@ TEST_F(FormatTest, LambdaBracesIndentationUnnested) {
                "};",
                Style);
 
-  Style.BraceWrapping.IndentBracesLambdaUnnested = true;
+  Style.BraceWrapping.IndentLambdaBracesUnnested = true;
   verifyFormat("auto x = [&]()\n"
                "  {\n"
                "    for (int i = 0; i < y; ++i)\n"
@@ -24427,7 +24427,7 @@ TEST_F(FormatTest, LambdaBracesIndentationUnnested) {
                "  };",
                Style);
 
-  Style.BraceWrapping.IndentBracesLambdaUnnested = false;
+  Style.BraceWrapping.IndentLambdaBracesUnnested = false;
   verifyFormat("auto x = [&]()\n"
                "{\n"
                "  for (int i = 0; i < y; ++i)\n"

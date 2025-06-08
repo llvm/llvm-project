@@ -1339,8 +1339,8 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
     const auto From = Style.LambdaBodyIndentation == FormatStyle::LBI_Signature
                           ? CurrentState.Indent
                           : State.FirstIndent;
-    const auto Indent = Nested ? Style.BraceWrapping.IndentBracesLambdaNested
-                               : Style.BraceWrapping.IndentBracesLambdaUnnested;
+    const auto Indent = Nested ? Style.BraceWrapping.IndentLambdaBracesNested
+                               : Style.BraceWrapping.IndentLambdaBracesUnnested;
     return From + (Indent * Style.IndentWidth);
   }
 
@@ -2126,8 +2126,8 @@ void ContinuationIndenter::moveStateToNewBlock(LineState &State, bool NewLine) {
       State.NextToken->is(TT_LambdaLBrace) &&
       !State.Line->MightBeFunctionDecl) {
     const auto Nested = State.NextToken->NestingLevel > 0;
-    const auto Indent = Nested ? Style.BraceWrapping.IndentBracesLambdaNested
-                               : Style.BraceWrapping.IndentBracesLambdaUnnested;
+    const auto Indent = Nested ? Style.BraceWrapping.IndentLambdaBracesNested
+                               : Style.BraceWrapping.IndentLambdaBracesUnnested;
     State.Stack.back().NestedBlockIndent =
         State.FirstIndent + (Indent * Style.IndentWidth);
   }

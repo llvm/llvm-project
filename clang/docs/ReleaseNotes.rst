@@ -685,7 +685,7 @@ Bug Fixes in This Version
 - Fixed an assertion failure in serialization of constexpr structs containing unions. (#GH140130)
 - Fixed duplicate entries in TableGen that caused the wrong attribute to be selected. (GH#140701)
 - Fixed type mismatch error when 'builtin-elementwise-math' arguments have different qualifiers, this should be well-formed. (#GH141397)
-- Constant evaluation now correctly runs the destructor of a variable declared in 
+- Constant evaluation now correctly runs the destructor of a variable declared in
   the second clause of a C-style ``for`` loop. (#GH139818)
 
 Bug Fixes to Compiler Builtins
@@ -988,7 +988,7 @@ clang-format
   ``enum`` enumerator lists.
 - Add ``OneLineFormatOffRegex`` option for turning formatting off for one line.
 - Add ``SpaceAfterOperatorKeyword`` option.
-- Add ``IndentBracesLambdaNested`` and ``IndentBracesLambdaUnnested`` to
+- Add ``IndentLambdaBracesNested`` and ``IndentLambdaBracesUnnested`` to
   ``BraceWrapping`` options for controlling wrapped lambda brace indentation.
 
 clang-refactor

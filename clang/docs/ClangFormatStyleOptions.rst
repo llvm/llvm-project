@@ -2541,7 +2541,7 @@ the configuration (without a prefix: ``Auto``).
 
   * ``bool IndentBraces`` Indent the wrapped braces themselves.
 
-  * ``bool IndentBracesLambdaNested`` Indent nested wrapped lambda braces.
+  * ``bool IndentLambdaBracesNested`` Indent nested wrapped lambda braces.
 
     .. code-block:: c++
 
@@ -2559,7 +2559,7 @@ the configuration (without a prefix: ``Auto``).
               return true;
             });
 
-  * ``bool IndentBracesLambdaUnnested`` Indent unnested wrapped lambda braces.
+  * ``bool IndentLambdaBracesUnnested`` Indent unnested wrapped lambda braces.
 
     .. code-block:: c++
 

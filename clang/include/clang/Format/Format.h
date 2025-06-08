@@ -1563,7 +1563,7 @@ struct FormatStyle {
     ///           return true;
     ///         });
     /// \endcode
-    bool IndentBracesLambdaNested;
+    bool IndentLambdaBracesNested;
     /// Indent unnested wrapped lambda braces.
     /// \code
     ///   false:
@@ -1578,7 +1578,7 @@ struct FormatStyle {
     ///       return true;
     ///     };
     /// \endcode
-    bool IndentBracesLambdaUnnested;
+    bool IndentLambdaBracesUnnested;
     /// If ``false``, empty function body can be put on a single line.
     /// This option is used only if the opening brace of the function has
     /// already been wrapped, i.e. the ``AfterFunction`` brace wrapping mode is
