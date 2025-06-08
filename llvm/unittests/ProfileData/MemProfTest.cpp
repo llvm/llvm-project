@@ -15,22 +15,20 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/ProfileData/IndexedMemProfData.h"
+#include "llvm/ProfileData/MemProfCommon.h"
 #include "llvm/ProfileData/MemProfData.inc"
 #include "llvm/ProfileData/MemProfRadixTree.h"
 #include "llvm/ProfileData/MemProfReader.h"
-#include "llvm/ProfileData/MemProfSummary.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 #include <initializer_list>
 
-using namespace llvm;
-
-extern cl::opt<float> MemProfLifetimeAccessDensityColdThreshold;
-extern cl::opt<unsigned> MemProfAveLifetimeColdThreshold;
-extern cl::opt<unsigned> MemProfMinAveLifetimeAccessDensityHotThreshold;
-extern cl::opt<bool> MemProfUseHotHints;
+extern llvm::cl::opt<float> MemProfLifetimeAccessDensityColdThreshold;
+extern llvm::cl::opt<unsigned> MemProfAveLifetimeColdThreshold;
+extern llvm::cl::opt<unsigned> MemProfMinAveLifetimeAccessDensityHotThreshold;
+extern llvm::cl::opt<bool> MemProfUseHotHints;
 
 namespace llvm {
 namespace memprof {

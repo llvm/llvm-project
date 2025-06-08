@@ -18,6 +18,7 @@
 #include "llvm/Support/ErrorHandling.h"
 
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Types.h"
@@ -89,6 +90,8 @@ public:
       return cir::IntAttr::get(ty, 0);
     if (cir::isAnyFloatingPointType(ty))
       return cir::FPAttr::getZero(ty);
+    if (auto complexType = mlir::dyn_cast<cir::ComplexType>(ty))
+      return cir::ZeroAttr::get(complexType);
     if (auto arrTy = mlir::dyn_cast<cir::ArrayType>(ty))
       return cir::ZeroAttr::get(arrTy);
     if (auto vecTy = mlir::dyn_cast<cir::VectorType>(ty))
@@ -167,9 +170,7 @@ public:
   }
 
   mlir::TypedAttr getConstPtrAttr(mlir::Type type, int64_t value) {
-    auto valueAttr = mlir::IntegerAttr::get(
-        mlir::IntegerType::get(type.getContext(), 64), value);
-    return cir::ConstPtrAttr::get(type, valueAttr);
+    return cir::ConstPtrAttr::get(type, getI64IntegerAttr(value));
   }
 
   mlir::Value createAlloca(mlir::Location loc, cir::PointerType addrType,
@@ -197,14 +198,9 @@ public:
 
   mlir::Value createDummyValue(mlir::Location loc, mlir::Type type,
                                clang::CharUnits alignment) {
-    auto addr = createAlloca(loc, getPointerTo(type), type, {},
-                             getSizeFromCharUnits(getContext(), alignment));
-    mlir::IntegerAttr alignAttr;
-    uint64_t align = alignment.getQuantity();
-    if (align)
-      alignAttr = getI64IntegerAttr(align);
-
-    return create<cir::LoadOp>(loc, addr, /*isDeref=*/false, alignAttr);
+    mlir::IntegerAttr alignmentAttr = getAlignmentAttr(alignment);
+    auto addr = createAlloca(loc, getPointerTo(type), type, {}, alignmentAttr);
+    return create<cir::LoadOp>(loc, addr, /*isDeref=*/false, alignmentAttr);
   }
 
   cir::PtrStrideOp createPtrStride(mlir::Location loc, mlir::Value base,
@@ -304,6 +300,24 @@ public:
 
   mlir::Value createOr(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     return createBinop(loc, lhs, cir::BinOpKind::Or, rhs);
+  }
+
+  mlir::Value createSelect(mlir::Location loc, mlir::Value condition,
+                           mlir::Value trueValue, mlir::Value falseValue) {
+    assert(trueValue.getType() == falseValue.getType() &&
+           "trueValue and falseValue should have the same type");
+    return create<cir::SelectOp>(loc, trueValue.getType(), condition, trueValue,
+                                 falseValue);
+  }
+
+  mlir::Value createLogicalAnd(mlir::Location loc, mlir::Value lhs,
+                               mlir::Value rhs) {
+    return createSelect(loc, lhs, rhs, getBool(false, loc));
+  }
+
+  mlir::Value createLogicalOr(mlir::Location loc, mlir::Value lhs,
+                              mlir::Value rhs) {
+    return createSelect(loc, lhs, getBool(true, loc), rhs);
   }
 
   mlir::Value createMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
@@ -428,13 +442,29 @@ public:
     return OpBuilder::InsertPoint(block, block->begin());
   };
 
-  mlir::IntegerAttr getSizeFromCharUnits(mlir::MLIRContext *ctx,
-                                         clang::CharUnits size) {
-    // Note that mlir::IntegerType is used instead of cir::IntType here
-    // because we don't need sign information for this to be useful, so keep
-    // it simple.
-    return mlir::IntegerAttr::get(mlir::IntegerType::get(ctx, 64),
-                                  size.getQuantity());
+  //
+  // Alignment and size helpers
+  //
+
+  // Note that mlir::IntegerType is used instead of cir::IntType here because we
+  // don't need sign information for these to be useful, so keep it simple.
+
+  // For 0 alignment, any overload of `getAlignmentAttr` returns an empty
+  // attribute.
+  mlir::IntegerAttr getAlignmentAttr(clang::CharUnits alignment) {
+    return getAlignmentAttr(alignment.getQuantity());
+  }
+
+  mlir::IntegerAttr getAlignmentAttr(llvm::Align alignment) {
+    return getAlignmentAttr(alignment.value());
+  }
+
+  mlir::IntegerAttr getAlignmentAttr(int64_t alignment) {
+    return alignment ? getI64IntegerAttr(alignment) : mlir::IntegerAttr();
+  }
+
+  mlir::IntegerAttr getSizeFromCharUnits(clang::CharUnits size) {
+    return getI64IntegerAttr(size.getQuantity());
   }
 
   /// Create a loop condition.
