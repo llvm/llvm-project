@@ -374,12 +374,14 @@ struct LoopNest {
 /// loop constructs currently.
 LoopNest genLoopNest(mlir::Location loc, fir::FirOpBuilder &builder,
                      mlir::ValueRange extents, bool isUnordered = false,
-                     bool emitWorkshareLoop = false);
+                     bool emitWorkshareLoop = false,
+                     bool couldVectorize = true);
 inline LoopNest genLoopNest(mlir::Location loc, fir::FirOpBuilder &builder,
                             mlir::Value shape, bool isUnordered = false,
-                            bool emitWorkshareLoop = false) {
+                            bool emitWorkshareLoop = false,
+                            bool couldVectorize = true) {
   return genLoopNest(loc, builder, getIndexExtents(loc, builder, shape),
-                     isUnordered, emitWorkshareLoop);
+                     isUnordered, emitWorkshareLoop, couldVectorize);
 }
 
 /// The type of a callback that generates the body of a reduction

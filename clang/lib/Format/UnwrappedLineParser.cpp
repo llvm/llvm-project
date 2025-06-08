@@ -14,7 +14,6 @@
 
 #include "UnwrappedLineParser.h"
 #include "FormatToken.h"
-#include "FormatTokenLexer.h"
 #include "FormatTokenSource.h"
 #include "Macros.h"
 #include "TokenAnnotator.h"
@@ -25,7 +24,6 @@
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <algorithm>
 #include <utility>
 
 #define DEBUG_TYPE "format-parser"
@@ -3487,6 +3485,7 @@ bool UnwrappedLineParser::parseRequires(bool SeenEqual) {
   case tok::r_paren:
   case tok::kw_noexcept:
   case tok::kw_const:
+  case tok::star:
   case tok::amp:
     // This is a requires clause.
     parseRequiresClause(RequiresToken);

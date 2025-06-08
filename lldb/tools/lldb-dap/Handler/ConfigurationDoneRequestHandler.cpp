@@ -8,8 +8,9 @@
 
 #include "DAP.h"
 #include "EventHelper.h"
-#include "JSONUtils.h"
+#include "LLDBUtils.h"
 #include "Protocol/ProtocolRequests.h"
+#include "ProtocolUtils.h"
 #include "RequestHandler.h"
 #include "lldb/API/SBDebugger.h"
 
@@ -51,11 +52,9 @@ ConfigurationDoneRequestHandler::Run(const ConfigurationDoneArguments &) const {
   SendProcessEvent(dap, dap.is_attach ? Attach : Launch);
 
   if (dap.stop_at_entry)
-    SendThreadStoppedEvent(dap);
-  else
-    process.Continue();
+    return SendThreadStoppedEvent(dap, /*on_entry=*/true);
 
-  return Error::success();
+  return ToError(process.Continue());
 }
 
 } // namespace lldb_dap

@@ -38,6 +38,32 @@ define dso_local double @test(ptr nocapture noundef readonly %data, ptr nocaptur
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP16:%.*]] = call double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[TMP14]])
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ [[TMP16]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.cond.cleanup.loopexit:
+; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi double [ [[ADD:%.*]], [[FOR_BODY]] ], [ [[TMP16]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    [[RES_0_LCSSA:%.*]] = phi double [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[ADD_LCSSA]], [[FOR_COND_CLEANUP_LOOPEXIT]] ]
+; CHECK-NEXT:    ret double [[RES_0_LCSSA]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[RES_07:%.*]] = phi double [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ADD]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[OFFSET]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[IDXPROM1:%.*]] = sext i32 [[TMP17]] to i64
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, ptr [[DATA]], i64 [[IDXPROM1]]
+; CHECK-NEXT:    [[TMP18:%.*]] = load double, ptr [[ARRAYIDX2]], align 8
+; CHECK-NEXT:    [[ADD]] = fadd double [[RES_07]], [[TMP18]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ;
 ; SVE-LABEL: @test(
 ; SVE-NEXT:  entry:
@@ -70,6 +96,32 @@ define dso_local double @test(ptr nocapture noundef readonly %data, ptr nocaptur
 ; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP11]]
 ; SVE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; SVE:       middle.block:
+; SVE-NEXT:    [[TMP15:%.*]] = call double @llvm.vector.reduce.fadd.nxv2f64(double -0.000000e+00, <vscale x 2 x double> [[TMP9]])
+; SVE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
+; SVE-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
+; SVE:       scalar.ph:
+; SVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ [[TMP15]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[FOR_BODY_PREHEADER]] ]
+; SVE-NEXT:    br label [[FOR_BODY:%.*]]
+; SVE:       for.cond.cleanup.loopexit:
+; SVE-NEXT:    [[ADD_LCSSA:%.*]] = phi double [ [[ADD:%.*]], [[FOR_BODY]] ], [ [[TMP15]], [[MIDDLE_BLOCK]] ]
+; SVE-NEXT:    br label [[FOR_COND_CLEANUP]]
+; SVE:       for.cond.cleanup:
+; SVE-NEXT:    [[RES_0_LCSSA:%.*]] = phi double [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[ADD_LCSSA]], [[FOR_COND_CLEANUP_LOOPEXIT]] ]
+; SVE-NEXT:    ret double [[RES_0_LCSSA]]
+; SVE:       for.body:
+; SVE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; SVE-NEXT:    [[RES_07:%.*]] = phi double [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ADD]], [[FOR_BODY]] ]
+; SVE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[OFFSET]], i64 [[INDVARS_IV]]
+; SVE-NEXT:    [[TMP13:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; SVE-NEXT:    [[IDXPROM1:%.*]] = sext i32 [[TMP13]] to i64
+; SVE-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, ptr [[DATA]], i64 [[IDXPROM1]]
+; SVE-NEXT:    [[TMP14:%.*]] = load double, ptr [[ARRAYIDX2]], align 8
+; SVE-NEXT:    [[ADD]] = fadd double [[RES_07]], [[TMP14]]
+; SVE-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; SVE-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; SVE-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ;
 entry:
   %cmp6 = icmp sgt i32 %size, 0

@@ -2322,7 +2322,7 @@ void AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
   }
 
   if (!TM.getTargetTriple().isOSBinFormatMachO() || !getIFuncMCSubtargetInfo())
-    llvm::report_fatal_error("IFuncs are not supported on this platform");
+    reportFatalUsageError("IFuncs are not supported on this platform");
 
   // On Darwin platforms, emit a manually-constructed .symbol_resolver that
   // implements the symbol resolution duties of the IFunc.
@@ -4330,6 +4330,8 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
       OutStreamer->emitLabel(Sym);
   } else if (isVerbose() && MBB.isMachineBlockAddressTaken()) {
     OutStreamer->AddComment("Block address taken");
+  } else if (isVerbose() && MBB.isInlineAsmBrIndirectTarget()) {
+    OutStreamer->AddComment("Inline asm indirect target");
   }
 
   // Print some verbose block comments.

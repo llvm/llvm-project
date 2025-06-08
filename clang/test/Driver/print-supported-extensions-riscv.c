@@ -119,6 +119,7 @@
 // CHECK-NEXT:     sha                  1.0       'Sha' (Augmented Hypervisor)
 // CHECK-NEXT:     shcounterenw         1.0       'Shcounterenw' (Support writeable hcounteren enable bit for any hpmcounter that is not read-only zero)
 // CHECK-NEXT:     shgatpa              1.0       'Shgatpa' (SvNNx4 mode supported for all modes supported by satp, as well as Bare)
+// CHECK-NEXT:     shlcofideleg         1.0       'Shlcofideleg' (Delegating LCOFI Interrupts to VS-mode)
 // CHECK-NEXT:     shtvala              1.0       'Shtvala' (htval provides all needed values)
 // CHECK-NEXT:     shvsatpa             1.0       'Shvsatpa' (vsatp supports all modes supported by satp)
 // CHECK-NEXT:     shvstvala            1.0       'Shvstvala' (vstval provides all needed values)

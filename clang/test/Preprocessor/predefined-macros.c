@@ -228,6 +228,7 @@
 // CHECK-SPIRV32-DAG: #define __SPIRV__ 1
 // CHECK-SPIRV32-DAG: #define __SPIRV32__ 1
 // CHECK-SPIRV32-NOT: #define __SPIRV64__ 1
+// CHECK-SPIRV32-NOT: #define __spirv__ 1
 
 // RUN: %clang_cc1 %s -E -dM -o - -x cl -triple spirv64-unknown-unknown \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-SPIRV64
@@ -235,6 +236,7 @@
 // CHECK-SPIRV64-DAG: #define __SPIRV__ 1
 // CHECK-SPIRV64-DAG: #define __SPIRV64__ 1
 // CHECK-SPIRV64-NOT: #define __SPIRV32__ 1
+// CHECK-SPIRV64-NOT: #define __spirv__ 1
 
 // RUN: %clang_cc1 %s -E -dM -o - -x cl -triple spirv64-amd-amdhsa \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-SPIRV64-AMDGCN
@@ -245,6 +247,7 @@
 // CHECK-SPIRV64-AMDGCN-DAG: #define __AMDGCN__ 1
 // CHECK-SPIRV64-AMDGCN-DAG: #define __AMDGPU__ 1
 // CHECK-SPIRV64-AMDGCN-NOT: #define __SPIRV32__ 1
+// CHECK-SPIRV64-AMDGCN-NOT: #define __spirv__ 1
 
 // RUN: %clang_cc1 %s -E -dM -o - -x hip -triple x86_64-unknown-linux-gnu \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-HIP

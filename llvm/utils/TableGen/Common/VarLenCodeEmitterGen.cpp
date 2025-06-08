@@ -241,21 +241,21 @@ void VarLenCodeEmitterGen::run(raw_ostream &OS) {
         const CodeGenHwModes &HWM = Target.getHwModes();
         EncodingInfoByHwMode EBM(DI->getDef(), HWM);
         for (const auto [Mode, EncodingDef] : EBM) {
-          Modes.insert({Mode, "_" + HWM.getMode(Mode).Name.str()});
+          Modes.try_emplace(Mode, "_" + HWM.getMode(Mode).Name.str());
           const RecordVal *RV = EncodingDef->getValue("Inst");
           const DagInit *DI = cast<DagInit>(RV->getValue());
-          VarLenInsts[R].insert({Mode, VarLenInst(DI, RV)});
+          VarLenInsts[R].try_emplace(Mode, VarLenInst(DI, RV));
         }
         continue;
       }
     }
     const RecordVal *RV = R->getValue("Inst");
     const DagInit *DI = cast<DagInit>(RV->getValue());
-    VarLenInsts[R].insert({Universal, VarLenInst(DI, RV)});
+    VarLenInsts[R].try_emplace(Universal, VarLenInst(DI, RV));
   }
 
   if (Modes.empty())
-    Modes.insert({Universal, ""}); // Base case, skip suffix.
+    Modes.try_emplace(Universal, ""); // Base case, skip suffix.
 
   // Emit function declaration
   OS << "void " << Target.getName()

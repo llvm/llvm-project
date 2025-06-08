@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
 #include "src/sys/mman/madvise.h"
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/munmap.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
@@ -17,10 +17,10 @@
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+using LlvmLibcMadviseTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
-TEST(LlvmLibcMadviseTest, NoError) {
+TEST_F(LlvmLibcMadviseTest, NoError) {
   size_t alloc_size = 128;
-  LIBC_NAMESPACE::libc_errno = 0;
   void *addr = LIBC_NAMESPACE::mmap(nullptr, alloc_size, PROT_READ,
                                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   ASSERT_ERRNO_SUCCESS();
@@ -37,8 +37,7 @@ TEST(LlvmLibcMadviseTest, NoError) {
   EXPECT_THAT(LIBC_NAMESPACE::munmap(addr, alloc_size), Succeeds());
 }
 
-TEST(LlvmLibcMadviseTest, Error_BadPtr) {
-  LIBC_NAMESPACE::libc_errno = 0;
+TEST_F(LlvmLibcMadviseTest, Error_BadPtr) {
   EXPECT_THAT(LIBC_NAMESPACE::madvise(nullptr, 8, MADV_SEQUENTIAL),
               Fails(ENOMEM));
 }

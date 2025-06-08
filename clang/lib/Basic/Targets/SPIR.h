@@ -47,9 +47,10 @@ static const unsigned SPIRDefIsPrivMap[] = {
     0,  // ptr32_uptr
     0,  // ptr64
     0,  // hlsl_groupshared
-    2,  // hlsl_constant
+    12, // hlsl_constant
     10, // hlsl_private
     11, // hlsl_device
+    7,  // hlsl_input
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -85,6 +86,7 @@ static const unsigned SPIRDefIsGenMap[] = {
     0,  // hlsl_constant
     10, // hlsl_private
     11, // hlsl_device
+    7,  // hlsl_input
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -191,7 +193,7 @@ public:
   }
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
-    return (CC == CC_SpirFunction || CC == CC_OpenCLKernel) ? CCCR_OK
+    return (CC == CC_SpirFunction || CC == CC_DeviceKernel) ? CCCR_OK
                                                             : CCCR_Warning;
   }
 
@@ -293,6 +295,8 @@ public:
     assert(Triple.isSPIRV() && "Invalid architecture for SPIR-V.");
   }
 
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
+
   bool hasFeature(StringRef Feature) const override {
     return Feature == "spirv";
   }
@@ -320,8 +324,6 @@ public:
     resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-"
                     "v256:256-v512:512-v1024:1024-n8:16:32:64-G10");
   }
-
-  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;

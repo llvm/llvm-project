@@ -63,7 +63,7 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX4]], align 4
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; IF-EVL:       for.cond.cleanup:
 ; IF-EVL-NEXT:    ret void
 ;

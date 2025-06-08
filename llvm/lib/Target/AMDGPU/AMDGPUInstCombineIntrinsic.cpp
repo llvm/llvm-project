@@ -365,8 +365,7 @@ bool GCNTTIImpl::canSimplifyLegacyMulToMul(const Instruction &I,
   }
 
   SimplifyQuery SQ = IC.getSimplifyQuery().getWithInstruction(&I);
-  if (isKnownNeverInfOrNaN(Op0, /*Depth=*/0, SQ) &&
-      isKnownNeverInfOrNaN(Op1, /*Depth=*/0, SQ)) {
+  if (isKnownNeverInfOrNaN(Op0, SQ) && isKnownNeverInfOrNaN(Op1, SQ)) {
     // Neither operand is infinity or NaN.
     return true;
   }
@@ -1526,6 +1525,12 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (isa<ConstantPointerNull>(II.getArgOperand(0)))
       return IC.replaceInstUsesWith(II, ConstantInt::getFalse(II.getType()));
     break;
+  }
+  case Intrinsic::amdgcn_make_buffer_rsrc: {
+    Value *Src = II.getArgOperand(0);
+    if (isa<PoisonValue>(Src))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
+    return std::nullopt;
   }
   case Intrinsic::amdgcn_raw_buffer_store_format:
   case Intrinsic::amdgcn_struct_buffer_store_format:

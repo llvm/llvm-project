@@ -21,7 +21,8 @@ namespace clang::tidy::bugprone {
 /// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/misplaced-operator-in-strlen-in-alloc.html
 class MisplacedOperatorInStrlenInAllocCheck : public ClangTidyCheck {
 public:
-  MisplacedOperatorInStrlenInAllocCheck(StringRef Name, ClangTidyContext *Context)
+  MisplacedOperatorInStrlenInAllocCheck(StringRef Name,
+                                        ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;

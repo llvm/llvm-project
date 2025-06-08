@@ -125,7 +125,8 @@ private:
     ExitOnErr(CXXRuntimeoverrides.enable(MainJD, Mangle));
   }
 
-  static std::unique_ptr<SectionMemoryManager> createMemMgr() {
+  static std::unique_ptr<SectionMemoryManager>
+  createMemMgr(const MemoryBuffer &) {
     return std::make_unique<SectionMemoryManager>();
   }
 

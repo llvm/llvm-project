@@ -99,6 +99,8 @@ def VMConstraint  : RISCVVConstraint<0b100>;
 //
 // * vcompress: The destination vector register group cannot overlap the
 // source vector register group or the source mask register
+def WidenVNoMask : RISCVVConstraint<!or(VS2Constraint.Value,
+                                        VS1Constraint.Value)>;
 def WidenV       : RISCVVConstraint<!or(VS2Constraint.Value,
                                         VS1Constraint.Value,
                                         VMConstraint.Value)>;

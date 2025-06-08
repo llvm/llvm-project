@@ -8,25 +8,25 @@
 
 !RUN: %flang_fc1 -emit-llvm -fopenmp %s -o - | FileCheck %s
 
-!CHECK-DAG: define internal void @_copy_box_Uxi32(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
-!CHECK-DAG: define internal void @_copy_box_10xi32(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
-!CHECK-DAG: define internal void @_copy_i64(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
-!CHECK-DAG: define internal void @_copy_box_Uxi64(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
-!CHECK-DAG: define internal void @_copy_f32(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
-!CHECK-DAG: define internal void @_copy_box_2x3xf32(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
-!CHECK-DAG: define internal void @_copy_z32(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
-!CHECK-DAG: define internal void @_copy_box_10xz32(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
-!CHECK-DAG: define internal void @_copy_l32(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
-!CHECK-DAG: define internal void @_copy_box_5xl32(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
-!CHECK-DAG: define internal void @_copy_c8x8(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
-!CHECK-DAG: define internal void @_copy_box_10xc8x8(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
-!CHECK-DAG: define internal void @_copy_c16x5(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
-!CHECK-DAG: define internal void @_copy_rec__QFtest_typesTdt(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
-!CHECK-DAG: define internal void @_copy_box_heap_Uxi32(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
-!CHECK-DAG: define internal void @_copy_box_ptr_Uxc8x9(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
+!CHECK-DAG: define internal void @_copy_box_Uxi32(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
+!CHECK-DAG: define internal void @_copy_box_10xi32(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
+!CHECK-DAG: define internal void @_copy_i64(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
+!CHECK-DAG: define internal void @_copy_box_Uxi64(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
+!CHECK-DAG: define internal void @_copy_f32(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
+!CHECK-DAG: define internal void @_copy_box_2x3xf32(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
+!CHECK-DAG: define internal void @_copy_z32(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
+!CHECK-DAG: define internal void @_copy_box_10xz32(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
+!CHECK-DAG: define internal void @_copy_l32(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
+!CHECK-DAG: define internal void @_copy_box_5xl32(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
+!CHECK-DAG: define internal void @_copy_c8x8(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
+!CHECK-DAG: define internal void @_copy_box_10xc8x8(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
+!CHECK-DAG: define internal void @_copy_c16x5(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
+!CHECK-DAG: define internal void @_copy_rec__QFtest_typesTdt(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
+!CHECK-DAG: define internal void @_copy_box_heap_Uxi32(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
+!CHECK-DAG: define internal void @_copy_box_ptr_Uxc8x9(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
 
 !CHECK-LABEL: define internal void @_copy_i32(
-!CHECK-SAME:                         ptr captures(none) %[[DST:.*]], ptr captures(none) %[[SRC:.*]]){{.*}} {
+!CHECK-SAME:                         ptr {{[^%]*}}%[[DST:.*]], ptr {{[^%]*}}%[[SRC:.*]]){{.*}} {
 !CHECK-NEXT:    %[[SRC_VAL:.*]] = load i32, ptr %[[SRC]]
 !CHECK-NEXT:    store i32 %[[SRC_VAL]], ptr %[[DST]]
 !CHECK-NEXT:    ret void

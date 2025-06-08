@@ -571,6 +571,17 @@ bool Pointer::pointsToLiteral() const {
   return E && !isa<MaterializeTemporaryExpr, StringLiteral>(E);
 }
 
+bool Pointer::pointsToStringLiteral() const {
+  if (isZero() || !isBlockPointer())
+    return false;
+
+  if (block()->isDynamic())
+    return false;
+
+  const Expr *E = block()->getDescriptor()->asExpr();
+  return E && isa<StringLiteral>(E);
+}
+
 std::optional<std::pair<Pointer, Pointer>>
 Pointer::computeSplitPoint(const Pointer &A, const Pointer &B) {
   if (!A.isBlockPointer() || !B.isBlockPointer())

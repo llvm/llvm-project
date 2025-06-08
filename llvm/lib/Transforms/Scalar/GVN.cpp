@@ -2579,6 +2579,14 @@ bool GVNPass::propagateEquality(Value *LHS, Value *RHS,
 
       continue;
     }
+
+    // Propagate equalities that results from truncation with no unsigned wrap
+    // like (trunc nuw i64 %v to i1) == "true" or (trunc nuw i64 %v to i1) ==
+    // "false"
+    if (match(LHS, m_NUWTrunc(m_Value(A)))) {
+      Worklist.emplace_back(A, ConstantInt::get(A->getType(), IsKnownTrue));
+      continue;
+    }
   }
 
   return Changed;

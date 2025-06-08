@@ -63,7 +63,7 @@ func.func @memref_load_i4(%arg0: index) -> i4 {
 
 func.func @memref_load_i4_rank2(%arg0: index, %arg1: index) -> i4 {
     %0 = memref.alloc() : memref<3x125xi4>
-    %align0 =memref.assume_alignment %0, 64 : memref<3x125xi4>
+    %align0 = memref.assume_alignment %0, 64 : memref<3x125xi4>
     %1 = memref.load %align0[%arg0,%arg1] : memref<3x125xi4>
     return %1 : i4
 }

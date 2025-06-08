@@ -855,7 +855,7 @@ BasicBlock *FuncPGOInstrumentation<Edge, BBInfo>::getInstrBB(Edge *E) {
   auto canInstrument = [](BasicBlock *BB) -> BasicBlock * {
     // There are basic blocks (such as catchswitch) cannot be instrumented.
     // If the returned first insertion point is the end of BB, skip this BB.
-    if (BB->getFirstInsertionPt() == BB->end())
+    if (BB->getFirstNonPHIOrDbgOrAlloca() == BB->end())
       return nullptr;
     return BB;
   };
@@ -952,7 +952,7 @@ void FunctionInstrumenter::instrument() {
       Name, PointerType::get(M.getContext(), 0));
   if (PGOFunctionEntryCoverage) {
     auto &EntryBB = F.getEntryBlock();
-    IRBuilder<> Builder(&EntryBB, EntryBB.getFirstInsertionPt());
+    IRBuilder<> Builder(&EntryBB, EntryBB.getFirstNonPHIOrDbgOrAlloca());
     // llvm.instrprof.cover(i8* <name>, i64 <hash>, i32 <num-counters>,
     //                      i32 <index>)
     Builder.CreateIntrinsic(
@@ -1010,7 +1010,7 @@ void FunctionInstrumenter::instrument() {
   if (PGOTemporalInstrumentation) {
     NumCounters += PGOBlockCoverage ? 8 : 1;
     auto &EntryBB = F.getEntryBlock();
-    IRBuilder<> Builder(&EntryBB, EntryBB.getFirstInsertionPt());
+    IRBuilder<> Builder(&EntryBB, EntryBB.getFirstNonPHIOrDbgOrAlloca());
     // llvm.instrprof.timestamp(i8* <name>, i64 <hash>, i32 <num-counters>,
     //                          i32 <index>)
     Builder.CreateIntrinsic(Intrinsic::instrprof_timestamp,
@@ -1021,7 +1021,7 @@ void FunctionInstrumenter::instrument() {
   }
 
   for (auto *InstrBB : InstrumentBBs) {
-    IRBuilder<> Builder(InstrBB, InstrBB->getFirstInsertionPt());
+    IRBuilder<> Builder(InstrBB, InstrBB->getFirstNonPHIOrDbgOrAlloca());
     assert(Builder.GetInsertPoint() != InstrBB->end() &&
            "Cannot get the Instrumentation point");
     // llvm.instrprof.increment(i8* <name>, i64 <hash>, i32 <num-counters>,
@@ -2086,10 +2086,12 @@ static void verifyFuncBFI(PGOUseFunc &Func, LoopInfo &LI,
 
   unsigned BBNum = 0, BBMisMatchNum = 0, NonZeroBBNum = 0;
   for (auto &BBI : F) {
-    uint64_t CountValue = 0;
-    uint64_t BFICountValue = 0;
+    PGOUseBBInfo *BBInfo = Func.findBBInfo(&BBI);
+    if (!BBInfo)
+      continue;
 
-    CountValue = Func.getBBInfo(&BBI).Count.value_or(CountValue);
+    uint64_t CountValue = BBInfo->Count.value_or(CountValue);
+    uint64_t BFICountValue = 0;
 
     BBNum++;
     if (CountValue)

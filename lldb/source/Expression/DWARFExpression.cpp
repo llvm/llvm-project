@@ -155,6 +155,7 @@ GetOpcodeDataSize(const DataExtractor &data, const lldb::offset_t data_offset,
   case DW_OP_APPLE_uninit:
   case DW_OP_PGI_omp_thread_num:
   case DW_OP_hi_user:
+  case DW_OP_GNU_implicit_pointer:
     break;
 
   case DW_OP_addr:

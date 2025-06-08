@@ -1993,8 +1993,7 @@ LogicalResult BytecodeReader::Impl::sortUseListOrder(Value value) {
   UseListOrderStorage customOrder =
       valueToUseListMap.at(value.getAsOpaquePointer());
   SmallVector<unsigned, 4> shuffle = std::move(customOrder.indices);
-  uint64_t numUses =
-      std::distance(value.getUses().begin(), value.getUses().end());
+  uint64_t numUses = value.getNumUses();
 
   // If the encoding was a pair of indices `(src, dst)` for every permutation,
   // reconstruct the shuffle vector for every use. Initialize the shuffle vector
