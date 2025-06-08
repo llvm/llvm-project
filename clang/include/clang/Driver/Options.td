@@ -5941,6 +5941,10 @@ def save_temps : Flag<["-", "--"], "save-temps">, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, FlangOption, FC1Option]>,
   Alias<save_temps_EQ>, AliasArgs<["cwd"]>,
   HelpText<"Alias for --save-temps=cwd">;
+def summaries_dir_EQ : Joined<["-", "--"], "summaries-dir=">, Flags<[NoXarchOption]>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Read summaries about different functions from this directory">,
+  MarshallingInfoString<FrontendOpts<"SummaryDirPath">>;
 def emit_summaries_EQ : Joined<["-", "--"], "emit-summaries=">, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Save summaries about the different functions. <arg> can be set to 'cwd' for "

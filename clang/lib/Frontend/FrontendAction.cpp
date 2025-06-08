@@ -46,7 +46,9 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
+#include <fstream>
 #include <memory>
+#include <sstream>
 #include <system_error>
 using namespace clang;
 
@@ -958,6 +960,33 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
       if (!Found) {
         CI.getDiagnostics().Report(diag::err_fe_no_pch_in_dir) << PCHInclude;
         return false;
+      }
+    }
+  }
+
+  // FIXME: lookup dirs recursively
+  if (!CI.getFrontendOpts().SummaryDirPath.empty()) {
+    FileManager &FileMgr = CI.getFileManager();
+
+    StringRef SummaryDirPath = CI.getFrontendOpts().SummaryDirPath;
+    if (auto SummaryDir = FileMgr.getOptionalDirectoryRef(SummaryDirPath)) {
+      std::error_code EC;
+      SmallString<128> DirNative;
+      llvm::sys::path::native(SummaryDir->getName(), DirNative);
+
+      llvm::vfs::FileSystem &FS = FileMgr.getVirtualFileSystem();
+      for (llvm::vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC),
+                                         DirEnd;
+           Dir != DirEnd && !EC; Dir.increment(EC)) {
+        if (llvm::sys::path::extension(Dir->path()) == ".json") {
+          std::ifstream t(Dir->path().str());
+          std::stringstream buffer;
+          buffer << t.rdbuf();
+
+          auto JSON = llvm::json::parse(buffer.str());
+          if (JSON)
+            JSON->dump();
+        }
       }
     }
   }

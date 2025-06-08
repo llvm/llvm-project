@@ -537,6 +537,9 @@ public:
   /// Filename to write summaries about function definitions to.
   std::string SummaryFile;
 
+  /// The directory used to load summary files.
+  std::string SummaryDirPath;
+
 public:
   FrontendOptions()
       : DisableFree(false), RelocatablePCH(false), ShowHelp(false),

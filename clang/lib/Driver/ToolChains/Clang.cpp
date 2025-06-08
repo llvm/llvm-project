@@ -5470,6 +5470,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.getLastArg(options::OPT_save_temps_EQ))
     Args.AddLastArg(CmdArgs, options::OPT_save_temps_EQ);
 
+  if (Args.getLastArg(options::OPT_summaries_dir_EQ))
+    Args.AddLastArg(CmdArgs, options::OPT_summaries_dir_EQ);
+
   // FIXME: This needs to be cleaned up and needs proper error handling as well.
   if (const Arg *A = Args.getLastArg(options::OPT_emit_summaries_EQ)) {
     llvm::SmallString<10> input;
