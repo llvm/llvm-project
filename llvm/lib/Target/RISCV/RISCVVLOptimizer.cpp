@@ -83,8 +83,7 @@ struct OperandInfo {
   OperandInfo() = delete;
 
   static bool EMULAndEEWAreEqual(const OperandInfo &A, const OperandInfo &B) {
-    return A.Log2EEW == B.Log2EEW && A.EMUL->first == B.EMUL->first &&
-           A.EMUL->second == B.EMUL->second;
+    return A.Log2EEW == B.Log2EEW && A.EMUL == B.EMUL;
   }
 
   static bool EEWAreEqual(const OperandInfo &A, const OperandInfo &B) {
@@ -1299,12 +1298,7 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
   // Instructions like reductions may use a vector register as a scalar
   // register. In this case, we should treat it as only reading the first lane.
   if (isVectorOpUsedAsScalarOp(UserOp)) {
-    [[maybe_unused]] Register R = UserOp.getReg();
-    [[maybe_unused]] const TargetRegisterClass *RC = MRI->getRegClass(R);
-    assert(RISCV::VRRegClass.hasSubClassEq(RC) &&
-           "Expect LMUL 1 register class for vector as scalar operands!");
     LLVM_DEBUG(dbgs() << "    Used this operand as a scalar operand\n");
-
     return MachineOperand::CreateImm(1);
   }
 

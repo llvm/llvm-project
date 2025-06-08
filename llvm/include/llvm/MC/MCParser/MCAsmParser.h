@@ -24,7 +24,6 @@
 
 namespace llvm {
 
-class MCAsmLexer;
 class MCAsmInfo;
 class MCAsmParserExtension;
 class MCExpr;
@@ -164,8 +163,8 @@ public:
   MCContext &getContext() { return Ctx; }
   MCStreamer &getStreamer() { return Out; }
   SourceMgr &getSourceManager() { return SrcMgr; }
-  MCAsmLexer &getLexer() { return Lexer; }
-  const MCAsmLexer &getLexer() const { return Lexer; }
+  AsmLexer &getLexer() { return Lexer; }
+  const AsmLexer &getLexer() const { return Lexer; }
 
   MCTargetAsmParser &getTargetParser() const { return *TargetParser; }
   void setTargetParser(MCTargetAsmParser &P);
@@ -309,7 +308,7 @@ public:
   /// on error.
   /// \return - False on success.
   virtual bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
-                                AsmTypeInfo *TypeInfo) = 0;
+                                AsmTypeInfo *TypeInfo = nullptr) = 0;
 
   /// Parse an arbitrary expression, assuming that an initial '(' has
   /// already been consumed.
@@ -333,6 +332,9 @@ public:
 
   /// Parse a .gnu_attribute.
   bool parseGNUAttribute(SMLoc L, int64_t &Tag, int64_t &IntegerValue);
+
+  bool parseAtSpecifier(const MCExpr *&Res, SMLoc &EndLoc);
+  const MCExpr *applySpecifier(const MCExpr *E, uint32_t Variant);
 };
 
 /// Create an MCAsmParser instance for parsing assembly similar to gas syntax

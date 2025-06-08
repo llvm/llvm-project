@@ -994,6 +994,12 @@ static bool setShiftFlags(BinaryOperator &I, const SimplifyQuery &Q) {
       I.setIsExact();
       return true;
     }
+    // Infer 'exact' flag if shift amount is cttz(x) on the same operand.
+    if (match(I.getOperand(1), m_Intrinsic<Intrinsic::cttz>(
+                                   m_Specific(I.getOperand(0)), m_Value()))) {
+      I.setIsExact();
+      return true;
+    }
   }
 
   // Compute what we know about shift count.

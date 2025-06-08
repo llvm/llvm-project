@@ -193,7 +193,7 @@ EXECUTION OPTIONS
 
 .. option:: --report-failures-only
 
- Only include unresolved, timed out, failed and unexpectedly passed tests in the report.
+ Only include failures (see :ref:`test-status-results`) in the report.
 
 .. option:: --resultdb-output RESULTDB_OUTPUT
 
@@ -217,6 +217,19 @@ EXECUTION OPTIONS
 .. option:: --max-failures MAX_FAILURES
 
  Stop execution after the given number of failures.
+
+.. option:: --max-retries-per-test N
+
+ Retry running failed tests at most ``N`` times.
+ Out of the following options to rerun failed tests the
+ :option:`--max-retries-per-test` is the only one that doesn't
+ require a change in the test scripts or the test config:
+
+  * :option:`--max-retries-per-test` lit option
+  * ``config.test_retry_attempts`` test suite option
+  * ``ALLOW_RETRIES:`` annotation in test script
+
+ Any option in the list above overrules its predecessor.
 
 .. option:: --allow-empty-runs
 
@@ -384,8 +397,9 @@ ADDITIONAL OPTIONS
 EXIT STATUS
 -----------
 
-:program:`lit` will exit with an exit code of 1 if there are any FAIL or XPASS
-results.  Otherwise, it will exit with the status 0.  Other exit codes are used
+:program:`lit` will exit with an exit code of 1 if there are any failures
+(see :ref:`test-status-results`) and :option:`--ignore-fail` has not been
+passed.  Otherwise, it will exit with the status 0.  Other exit codes are used
 for non-test related failures (for example a user error or an internal program
 error).
 
@@ -461,8 +475,10 @@ Each test ultimately produces one of the following eight results:
 
 **TIMEOUT**
 
- The test was run, but it timed out before it was able to complete. This is
- considered a failure.
+ The test was run, but it timed out before it was able to complete.
+
+Unresolved (**UNRESOLVED**), timed out (**TIMEOUT**), failed (**FAIL**) and
+unexpectedly passed (**XPASS**) tests are considered failures.
 
 Depending on the test format tests may produce additional information about
 their status (generally only for failures).  See the :ref:`output-options`

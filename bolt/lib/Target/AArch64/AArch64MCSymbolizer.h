@@ -33,7 +33,7 @@ protected:
 
 public:
   AArch64MCSymbolizer(BinaryFunction &Function, bool CreateNewSymbols = true)
-      : MCSymbolizer(*Function.getBinaryContext().Ctx.get(), nullptr),
+      : MCSymbolizer(*Function.getBinaryContext().Ctx, nullptr),
         Function(Function), CreateNewSymbols(CreateNewSymbols) {}
 
   AArch64MCSymbolizer(const AArch64MCSymbolizer &) = delete;

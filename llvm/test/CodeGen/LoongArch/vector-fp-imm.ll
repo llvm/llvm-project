@@ -132,8 +132,7 @@ define void @test_f2(ptr %P, ptr %S) nounwind {
 ; LA64D-NEXT:    lu52i.d $a0, $a0, 1024
 ; LA64D-NEXT:    vreplgr2vr.d $vr1, $a0
 ; LA64D-NEXT:    vfadd.s $vr0, $vr0, $vr1
-; LA64D-NEXT:    vpickve2gr.d $a0, $vr0, 0
-; LA64D-NEXT:    st.d $a0, $a1, 0
+; LA64D-NEXT:    vstelm.d $vr0, $a1, 0, 0
 ; LA64D-NEXT:    ret
   %p = load %f2, ptr %P
   %R = fadd %f2 %p, < float 1.000000e+00, float 2.000000e+00 >
@@ -379,14 +378,14 @@ define void @test_d2(ptr %P, ptr %S) nounwind {
 ; LA32F-NEXT:    move $a0, $a2
 ; LA32F-NEXT:    move $a1, $a4
 ; LA32F-NEXT:    move $a2, $zero
-; LA32F-NEXT:    bl %plt(__adddf3)
+; LA32F-NEXT:    bl __adddf3
 ; LA32F-NEXT:    move $s2, $a0
 ; LA32F-NEXT:    move $s3, $a1
 ; LA32F-NEXT:    lu12i.w $a3, 262144
 ; LA32F-NEXT:    move $a0, $fp
 ; LA32F-NEXT:    move $a1, $s0
 ; LA32F-NEXT:    move $a2, $zero
-; LA32F-NEXT:    bl %plt(__adddf3)
+; LA32F-NEXT:    bl __adddf3
 ; LA32F-NEXT:    st.w $a0, $s1, 8
 ; LA32F-NEXT:    st.w $a1, $s1, 12
 ; LA32F-NEXT:    st.w $s2, $s1, 0
@@ -484,28 +483,28 @@ define void @test_d4(ptr %P, ptr %S) nounwind {
 ; LA32F-NEXT:    move $a0, $a2
 ; LA32F-NEXT:    move $a1, $a4
 ; LA32F-NEXT:    move $a2, $zero
-; LA32F-NEXT:    bl %plt(__adddf3)
+; LA32F-NEXT:    bl __adddf3
 ; LA32F-NEXT:    move $s6, $a0
 ; LA32F-NEXT:    move $s7, $a1
 ; LA32F-NEXT:    lu12i.w $a3, 262144
 ; LA32F-NEXT:    move $a0, $s3
 ; LA32F-NEXT:    move $a1, $s4
 ; LA32F-NEXT:    move $a2, $zero
-; LA32F-NEXT:    bl %plt(__adddf3)
+; LA32F-NEXT:    bl __adddf3
 ; LA32F-NEXT:    move $s3, $a0
 ; LA32F-NEXT:    move $s4, $a1
 ; LA32F-NEXT:    lu12i.w $a3, 262272
 ; LA32F-NEXT:    move $a0, $s1
 ; LA32F-NEXT:    move $a1, $s2
 ; LA32F-NEXT:    move $a2, $zero
-; LA32F-NEXT:    bl %plt(__adddf3)
+; LA32F-NEXT:    bl __adddf3
 ; LA32F-NEXT:    move $s1, $a0
 ; LA32F-NEXT:    move $s2, $a1
 ; LA32F-NEXT:    lu12i.w $a3, 262400
 ; LA32F-NEXT:    move $a0, $fp
 ; LA32F-NEXT:    move $a1, $s0
 ; LA32F-NEXT:    move $a2, $zero
-; LA32F-NEXT:    bl %plt(__adddf3)
+; LA32F-NEXT:    bl __adddf3
 ; LA32F-NEXT:    st.w $a0, $s5, 24
 ; LA32F-NEXT:    st.w $a1, $s5, 28
 ; LA32F-NEXT:    st.w $s1, $s5, 16
@@ -660,7 +659,7 @@ define void @test_d8(ptr %P, ptr %S) nounwind {
 ; LA32F-NEXT:    move $a0, $a2
 ; LA32F-NEXT:    move $a1, $a4
 ; LA32F-NEXT:    move $a2, $zero
-; LA32F-NEXT:    bl %plt(__adddf3)
+; LA32F-NEXT:    bl __adddf3
 ; LA32F-NEXT:    st.w $a0, $sp, 40 # 4-byte Folded Spill
 ; LA32F-NEXT:    st.w $a1, $sp, 36 # 4-byte Folded Spill
 ; LA32F-NEXT:    lu12i.w $a3, 262144
@@ -668,7 +667,7 @@ define void @test_d8(ptr %P, ptr %S) nounwind {
 ; LA32F-NEXT:    move $a1, $s0
 ; LA32F-NEXT:    move $a2, $zero
 ; LA32F-NEXT:    move $s0, $a3
-; LA32F-NEXT:    bl %plt(__adddf3)
+; LA32F-NEXT:    bl __adddf3
 ; LA32F-NEXT:    st.w $a0, $sp, 24 # 4-byte Folded Spill
 ; LA32F-NEXT:    st.w $a1, $sp, 20 # 4-byte Folded Spill
 ; LA32F-NEXT:    lu12i.w $s7, 262272
@@ -676,42 +675,42 @@ define void @test_d8(ptr %P, ptr %S) nounwind {
 ; LA32F-NEXT:    move $a1, $s2
 ; LA32F-NEXT:    move $a2, $zero
 ; LA32F-NEXT:    move $a3, $s7
-; LA32F-NEXT:    bl %plt(__adddf3)
+; LA32F-NEXT:    bl __adddf3
 ; LA32F-NEXT:    st.w $a0, $sp, 12 # 4-byte Folded Spill
 ; LA32F-NEXT:    move $s2, $a1
 ; LA32F-NEXT:    lu12i.w $a3, 262400
 ; LA32F-NEXT:    move $a0, $s5
 ; LA32F-NEXT:    move $a1, $s6
 ; LA32F-NEXT:    move $a2, $zero
-; LA32F-NEXT:    bl %plt(__adddf3)
+; LA32F-NEXT:    bl __adddf3
 ; LA32F-NEXT:    move $s5, $a0
 ; LA32F-NEXT:    move $s6, $a1
 ; LA32F-NEXT:    move $a0, $s3
 ; LA32F-NEXT:    move $a1, $s4
 ; LA32F-NEXT:    move $a2, $zero
 ; LA32F-NEXT:    lu12i.w $a3, 261888
-; LA32F-NEXT:    bl %plt(__adddf3)
+; LA32F-NEXT:    bl __adddf3
 ; LA32F-NEXT:    move $s3, $a0
 ; LA32F-NEXT:    move $s4, $a1
 ; LA32F-NEXT:    move $a0, $s8
 ; LA32F-NEXT:    ld.w $a1, $sp, 16 # 4-byte Folded Reload
 ; LA32F-NEXT:    move $a2, $zero
 ; LA32F-NEXT:    move $a3, $s0
-; LA32F-NEXT:    bl %plt(__adddf3)
+; LA32F-NEXT:    bl __adddf3
 ; LA32F-NEXT:    move $s8, $a0
 ; LA32F-NEXT:    move $s0, $a1
 ; LA32F-NEXT:    ld.w $a0, $sp, 32 # 4-byte Folded Reload
 ; LA32F-NEXT:    ld.w $a1, $sp, 28 # 4-byte Folded Reload
 ; LA32F-NEXT:    move $a2, $zero
 ; LA32F-NEXT:    move $a3, $s7
-; LA32F-NEXT:    bl %plt(__adddf3)
+; LA32F-NEXT:    bl __adddf3
 ; LA32F-NEXT:    move $s7, $a0
 ; LA32F-NEXT:    move $s1, $a1
 ; LA32F-NEXT:    ld.w $a0, $sp, 48 # 4-byte Folded Reload
 ; LA32F-NEXT:    ld.w $a1, $sp, 44 # 4-byte Folded Reload
 ; LA32F-NEXT:    move $a2, $zero
 ; LA32F-NEXT:    lu12i.w $a3, 262400
-; LA32F-NEXT:    bl %plt(__adddf3)
+; LA32F-NEXT:    bl __adddf3
 ; LA32F-NEXT:    st.w $a0, $fp, 56
 ; LA32F-NEXT:    st.w $a1, $fp, 60
 ; LA32F-NEXT:    st.w $s7, $fp, 48

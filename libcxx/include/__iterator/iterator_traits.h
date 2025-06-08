@@ -22,6 +22,7 @@
 #include <__fwd/pair.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/readable_traits.h>
+#include <__tuple/tuple_element.h>
 #include <__type_traits/common_reference.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/detected_or.h>
@@ -61,15 +62,15 @@ using iter_reference_t = decltype(*std::declval<_Tp&>());
 #endif // _LIBCPP_STD_VER >= 20
 
 template <class _Iter>
-struct _LIBCPP_TEMPLATE_VIS iterator_traits;
+struct iterator_traits;
 
-struct _LIBCPP_TEMPLATE_VIS input_iterator_tag {};
-struct _LIBCPP_TEMPLATE_VIS output_iterator_tag {};
-struct _LIBCPP_TEMPLATE_VIS forward_iterator_tag : public input_iterator_tag {};
-struct _LIBCPP_TEMPLATE_VIS bidirectional_iterator_tag : public forward_iterator_tag {};
-struct _LIBCPP_TEMPLATE_VIS random_access_iterator_tag : public bidirectional_iterator_tag {};
+struct input_iterator_tag {};
+struct output_iterator_tag {};
+struct forward_iterator_tag : public input_iterator_tag {};
+struct bidirectional_iterator_tag : public forward_iterator_tag {};
+struct random_access_iterator_tag : public bidirectional_iterator_tag {};
 #if _LIBCPP_STD_VER >= 20
-struct _LIBCPP_TEMPLATE_VIS contiguous_iterator_tag : public random_access_iterator_tag {};
+struct contiguous_iterator_tag : public random_access_iterator_tag {};
 #endif
 
 template <class _Iter>
@@ -372,7 +373,7 @@ struct __iterator_traits<_Iter, true>
 //    the client expects instead of failing at compile time.
 
 template <class _Iter>
-struct _LIBCPP_TEMPLATE_VIS iterator_traits : __iterator_traits<_Iter, __has_iterator_typedefs<_Iter>::value> {
+struct iterator_traits : __iterator_traits<_Iter, __has_iterator_typedefs<_Iter>::value> {
   using __primary_template _LIBCPP_NODEBUG = iterator_traits;
 };
 #endif // _LIBCPP_STD_VER >= 20
@@ -381,7 +382,7 @@ template <class _Tp>
 #if _LIBCPP_STD_VER >= 20
   requires is_object_v<_Tp>
 #endif
-struct _LIBCPP_TEMPLATE_VIS iterator_traits<_Tp*> {
+struct iterator_traits<_Tp*> {
   typedef ptrdiff_t difference_type;
   typedef __remove_cv_t<_Tp> value_type;
   typedef _Tp* pointer;
@@ -466,6 +467,18 @@ using __has_exactly_bidirectional_iterator_category _LIBCPP_NODEBUG =
 template <class _InputIterator>
 using __iter_value_type _LIBCPP_NODEBUG = typename iterator_traits<_InputIterator>::value_type;
 
+#if _LIBCPP_STD_VER >= 23
+template <class _InputIterator>
+using __iter_key_type _LIBCPP_NODEBUG = remove_const_t<tuple_element_t<0, __iter_value_type<_InputIterator>>>;
+
+template <class _InputIterator>
+using __iter_mapped_type _LIBCPP_NODEBUG = tuple_element_t<1, __iter_value_type<_InputIterator>>;
+
+template <class _InputIterator>
+using __iter_to_alloc_type _LIBCPP_NODEBUG =
+    pair<const tuple_element_t<0, __iter_value_type<_InputIterator>>,
+         tuple_element_t<1, __iter_value_type<_InputIterator>>>;
+#else
 template <class _InputIterator>
 using __iter_key_type _LIBCPP_NODEBUG =
     __remove_const_t<typename iterator_traits<_InputIterator>::value_type::first_type>;
@@ -477,6 +490,7 @@ template <class _InputIterator>
 using __iter_to_alloc_type _LIBCPP_NODEBUG =
     pair<const typename iterator_traits<_InputIterator>::value_type::first_type,
          typename iterator_traits<_InputIterator>::value_type::second_type>;
+#endif // _LIBCPP_STD_VER >= 23
 
 template <class _Iter>
 using __iterator_category_type _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::iterator_category;

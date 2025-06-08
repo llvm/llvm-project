@@ -643,9 +643,7 @@ EHFrameCFIBlockInspector EHFrameCFIBlockInspector::FromEdgeScan(Block &B) {
     return EHFrameCFIBlockInspector(nullptr);
   if (B.edges_size() == 1)
     return EHFrameCFIBlockInspector(&*B.edges().begin());
-  SmallVector<Edge *, 3> Es;
-  for (auto &E : B.edges())
-    Es.push_back(&E);
+  SmallVector<Edge *, 3> Es(llvm::make_pointer_range(B.edges()));
   assert(Es.size() >= 2 && Es.size() <= 3 && "Unexpected number of edges");
   llvm::sort(Es, [](const Edge *LHS, const Edge *RHS) {
     return LHS->getOffset() < RHS->getOffset();

@@ -161,10 +161,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-void initializeNVPTXLowerArgsLegacyPassPass(PassRegistry &);
-}
-
 namespace {
 class NVPTXLowerArgsLegacyPass : public FunctionPass {
   bool runOnFunction(Function &F) override;
@@ -269,18 +265,9 @@ static void convertToParamAS(Use *OldUse, Value *Param, bool HasCvtaParam,
     if (HasCvtaParam) {
       auto GetParamAddrCastToGeneric =
           [](Value *Addr, Instruction *OriginalUser) -> Value * {
-        PointerType *ReturnTy =
-            PointerType::get(OriginalUser->getContext(), ADDRESS_SPACE_GENERIC);
-        Function *CvtToGen = Intrinsic::getOrInsertDeclaration(
-            OriginalUser->getModule(), Intrinsic::nvvm_ptr_param_to_gen,
-            {ReturnTy, PointerType::get(OriginalUser->getContext(),
-                                        ADDRESS_SPACE_PARAM)});
-
-        // Cast param address to generic address space
-        Value *CvtToGenCall =
-            CallInst::Create(CvtToGen, Addr, Addr->getName() + ".gen",
-                             OriginalUser->getIterator());
-        return CvtToGenCall;
+        IRBuilder<> IRB(OriginalUser);
+        Type *GenTy = IRB.getPtrTy(ADDRESS_SPACE_GENERIC);
+        return IRB.CreateAddrSpaceCast(Addr, GenTy, Addr->getName() + ".gen");
       };
       auto *ParamInGenericAS =
           GetParamAddrCastToGeneric(I.NewParam, I.OldInstruction);
@@ -519,23 +506,24 @@ void copyByValParam(Function &F, Argument &Arg) {
   BasicBlock::iterator FirstInst = F.getEntryBlock().begin();
   Type *StructType = Arg.getParamByValType();
   const DataLayout &DL = F.getDataLayout();
-  AllocaInst *AllocA = new AllocaInst(StructType, DL.getAllocaAddrSpace(),
-                                      Arg.getName(), FirstInst);
+  IRBuilder<> IRB(&*FirstInst);
+  AllocaInst *AllocA = IRB.CreateAlloca(StructType, nullptr, Arg.getName());
   // Set the alignment to alignment of the byval parameter. This is because,
   // later load/stores assume that alignment, and we are going to replace
   // the use of the byval parameter with this alloca instruction.
-  AllocA->setAlignment(F.getParamAlign(Arg.getArgNo())
-                           .value_or(DL.getPrefTypeAlign(StructType)));
+  AllocA->setAlignment(
+      Arg.getParamAlign().value_or(DL.getPrefTypeAlign(StructType)));
   Arg.replaceAllUsesWith(AllocA);
 
-  Value *ArgInParam = new AddrSpaceCastInst(
-      &Arg, PointerType::get(Arg.getContext(), ADDRESS_SPACE_PARAM),
-      Arg.getName(), FirstInst);
+  Value *ArgInParam =
+      IRB.CreateIntrinsic(Intrinsic::nvvm_internal_addrspace_wrap,
+                          {IRB.getPtrTy(ADDRESS_SPACE_PARAM), Arg.getType()},
+                          &Arg, {}, Arg.getName());
+
   // Be sure to propagate alignment to this load; LLVM doesn't know that NVPTX
   // addrspacecast preserves alignment.  Since params are constant, this load
   // is definitely not volatile.
   const auto ArgSize = *AllocA->getAllocationSize(DL);
-  IRBuilder<> IRB(&*FirstInst);
   IRB.CreateMemCpy(AllocA, AllocA->getAlign(), ArgInParam, AllocA->getAlign(),
                    ArgSize);
 }
@@ -543,12 +531,12 @@ void copyByValParam(Function &F, Argument &Arg) {
 
 static void handleByValParam(const NVPTXTargetMachine &TM, Argument *Arg) {
   Function *Func = Arg->getParent();
-  bool HasCvtaParam =
-      TM.getSubtargetImpl(*Func)->hasCvtaParam() && isKernelFunction(*Func);
-  bool IsGridConstant = HasCvtaParam && isParamGridConstant(*Arg);
+  assert(isKernelFunction(*Func));
+  const bool HasCvtaParam = TM.getSubtargetImpl(*Func)->hasCvtaParam();
+  const bool IsGridConstant = HasCvtaParam && isParamGridConstant(*Arg);
   const DataLayout &DL = Func->getDataLayout();
   BasicBlock::iterator FirstInst = Func->getEntryBlock().begin();
-  Type *StructType = Arg->getParamByValType();
+  [[maybe_unused]] Type *StructType = Arg->getParamByValType();
   assert(StructType && "Missing byval type");
 
   ArgUseChecker AUC(DL, IsGridConstant);
@@ -558,13 +546,13 @@ static void handleByValParam(const NVPTXTargetMachine &TM, Argument *Arg) {
   if (ArgUseIsReadOnly && AUC.Conditionals.empty()) {
     // Convert all loads and intermediate operations to use parameter AS and
     // skip creation of a local copy of the argument.
-    SmallVector<Use *, 16> UsesToUpdate;
-    for (Use &U : Arg->uses())
-      UsesToUpdate.push_back(&U);
+    SmallVector<Use *, 16> UsesToUpdate(llvm::make_pointer_range(Arg->uses()));
 
-    Value *ArgInParamAS = new AddrSpaceCastInst(
-        Arg, PointerType::get(StructType->getContext(), ADDRESS_SPACE_PARAM),
-        Arg->getName(), FirstInst);
+    IRBuilder<> IRB(&*FirstInst);
+    Value *ArgInParamAS = IRB.CreateIntrinsic(
+        Intrinsic::nvvm_internal_addrspace_wrap,
+        {IRB.getPtrTy(ADDRESS_SPACE_PARAM), Arg->getType()}, {Arg});
+
     for (Use *U : UsesToUpdate)
       convertToParamAS(U, ArgInParamAS, HasCvtaParam, IsGridConstant);
     LLVM_DEBUG(dbgs() << "No need to copy or cast " << *Arg << "\n");
@@ -582,30 +570,31 @@ static void handleByValParam(const NVPTXTargetMachine &TM, Argument *Arg) {
   // However, we're still not allowed to write to it. If the user specified
   // `__grid_constant__` for the argument, we'll consider escaped pointer as
   // read-only.
-  if (HasCvtaParam && (ArgUseIsReadOnly || IsGridConstant)) {
+  if (IsGridConstant || (HasCvtaParam && ArgUseIsReadOnly)) {
     LLVM_DEBUG(dbgs() << "Using non-copy pointer to " << *Arg << "\n");
     // Replace all argument pointer uses (which might include a device function
     // call) with a cast to the generic address space using cvta.param
     // instruction, which avoids a local copy.
     IRBuilder<> IRB(&Func->getEntryBlock().front());
 
-    // Cast argument to param address space
-    auto *CastToParam = cast<AddrSpaceCastInst>(IRB.CreateAddrSpaceCast(
-        Arg, IRB.getPtrTy(ADDRESS_SPACE_PARAM), Arg->getName() + ".param"));
+    // Cast argument to param address space. Because the backend will emit the
+    // argument already in the param address space, we need to use the noop
+    // intrinsic, this had the added benefit of preventing other optimizations
+    // from folding away this pair of addrspacecasts.
+    auto *ParamSpaceArg =
+        IRB.CreateIntrinsic(Intrinsic::nvvm_internal_addrspace_wrap,
+                            {IRB.getPtrTy(ADDRESS_SPACE_PARAM), Arg->getType()},
+                            Arg, {}, Arg->getName() + ".param");
 
-    // Cast param address to generic address space. We do not use an
-    // addrspacecast to generic here, because, LLVM considers `Arg` to be in the
-    // generic address space, and a `generic -> param` cast followed by a `param
-    // -> generic` cast will be folded away. The `param -> generic` intrinsic
-    // will be correctly lowered to `cvta.param`.
-    Value *CvtToGenCall = IRB.CreateIntrinsic(
-        IRB.getPtrTy(ADDRESS_SPACE_GENERIC), Intrinsic::nvvm_ptr_param_to_gen,
-        CastToParam, nullptr, CastToParam->getName() + ".gen");
+    // Cast param address to generic address space.
+    Value *GenericArg = IRB.CreateAddrSpaceCast(
+        ParamSpaceArg, IRB.getPtrTy(ADDRESS_SPACE_GENERIC),
+        Arg->getName() + ".gen");
 
-    Arg->replaceAllUsesWith(CvtToGenCall);
+    Arg->replaceAllUsesWith(GenericArg);
 
     // Do not replace Arg in the cast to param space
-    CastToParam->setOperand(0, Arg);
+    ParamSpaceArg->setOperand(0, Arg);
   } else
     copyByValParam(*Func, *Arg);
 }
@@ -678,11 +667,8 @@ static bool runOnKernelFunction(const NVPTXTargetMachine &TM, Function &F) {
 
   LLVM_DEBUG(dbgs() << "Lowering kernel args of " << F.getName() << "\n");
   for (Argument &Arg : F.args()) {
-    if (Arg.getType()->isPointerTy()) {
-      if (Arg.hasByValAttr())
-        handleByValParam(TM, &Arg);
-      else if (TM.getDrvInterface() == NVPTX::CUDA)
-        markPointerAsGlobal(&Arg);
+    if (Arg.getType()->isPointerTy() && Arg.hasByValAttr()) {
+      handleByValParam(TM, &Arg);
     } else if (Arg.getType()->isIntegerTy() &&
                TM.getDrvInterface() == NVPTX::CUDA) {
       HandleIntToPtr(Arg);
@@ -699,10 +685,9 @@ static bool runOnDeviceFunction(const NVPTXTargetMachine &TM, Function &F) {
       cast<NVPTXTargetLowering>(TM.getSubtargetImpl()->getTargetLowering());
 
   for (Argument &Arg : F.args())
-    if (Arg.getType()->isPointerTy() && Arg.hasByValAttr()) {
-      markPointerAsAS(&Arg, ADDRESS_SPACE_LOCAL);
+    if (Arg.getType()->isPointerTy() && Arg.hasByValAttr())
       adjustByValArgAlignment(&Arg, &Arg, TLI);
-    }
+
   return true;
 }
 
@@ -723,12 +708,14 @@ static bool copyFunctionByValArgs(Function &F) {
   LLVM_DEBUG(dbgs() << "Creating a copy of byval args of " << F.getName()
                     << "\n");
   bool Changed = false;
-  for (Argument &Arg : F.args())
-    if (Arg.getType()->isPointerTy() && Arg.hasByValAttr() &&
-        !(isParamGridConstant(Arg) && isKernelFunction(F))) {
-      copyByValParam(F, Arg);
-      Changed = true;
-    }
+  if (isKernelFunction(F)) {
+    for (Argument &Arg : F.args())
+      if (Arg.getType()->isPointerTy() && Arg.hasByValAttr() &&
+          !isParamGridConstant(Arg)) {
+        copyByValParam(F, Arg);
+        Changed = true;
+      }
+  }
   return Changed;
 }
 

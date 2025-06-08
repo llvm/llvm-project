@@ -6,8 +6,8 @@ target triple="aarch64--"
 
 ; CHECK-LABEL: name: func
 ; CHECK: DBG_VALUE
-define void @func(i32 %a) !dbg !4 {
-  call void @llvm.dbg.declare(metadata i32 %a, metadata !5, metadata !DIExpression()), !dbg !7
+define void @func(ptr %a) !dbg !4 {
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !5, metadata !DIExpression()), !dbg !7
   ret void
 }
 

@@ -150,7 +150,7 @@ public:
   mlir::Block *getAllocaBlock();
 
   /// Safely create a reference type to the type `eleTy`.
-  mlir::Type getRefType(mlir::Type eleTy);
+  mlir::Type getRefType(mlir::Type eleTy, bool isVolatile = false);
 
   /// Create a sequence of `eleTy` with `rank` dimensions of unknown size.
   mlir::Type getVarLenSeqTy(mlir::Type eleTy, unsigned rank = 1);
@@ -396,6 +396,15 @@ public:
   /// Lazy creation of fir.convert op.
   mlir::Value createConvert(mlir::Location loc, mlir::Type toTy,
                             mlir::Value val);
+
+  /// Create a fir.convert op with a volatile cast if the source value's type
+  /// does not match the target type's volatility.
+  mlir::Value createConvertWithVolatileCast(mlir::Location loc, mlir::Type toTy,
+                                            mlir::Value val);
+
+  /// Cast \p value to have \p isVolatile volatility.
+  mlir::Value createVolatileCast(mlir::Location loc, bool isVolatile,
+                                 mlir::Value value);
 
   /// Create a fir.store of \p val into \p addr. A lazy conversion
   /// of \p val to the element type of \p addr is created if needed.
@@ -870,7 +879,7 @@ llvm::SmallVector<mlir::Value>
 elideLengthsAlreadyInType(mlir::Type type, mlir::ValueRange lenParams);
 
 /// Get the address space which should be used for allocas
-uint64_t getAllocaAddressSpace(mlir::DataLayout *dataLayout);
+uint64_t getAllocaAddressSpace(const mlir::DataLayout *dataLayout);
 
 /// The two vectors of MLIR values have the following property:
 ///   \p extents1[i] must have the same value as \p extents2[i]
@@ -903,6 +912,18 @@ void genDimInfoFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
                        llvm::SmallVectorImpl<mlir::Value> *lbounds,
                        llvm::SmallVectorImpl<mlir::Value> *extents,
                        llvm::SmallVectorImpl<mlir::Value> *strides);
+
+/// Generate an LLVM dialect lifetime start marker at the current insertion
+/// point given an fir.alloca and its constant size in bytes. Returns the value
+/// to be passed to the lifetime end marker.
+mlir::Value genLifetimeStart(mlir::OpBuilder &builder, mlir::Location loc,
+                             fir::AllocaOp alloc, int64_t size,
+                             const mlir::DataLayout *dl);
+
+/// Generate an LLVM dialect lifetime end marker at the current insertion point
+/// given an llvm.ptr value and the constant size in bytes of its storage.
+void genLifetimeEnd(mlir::OpBuilder &builder, mlir::Location loc,
+                    mlir::Value mem, int64_t size);
 
 } // namespace fir::factory
 

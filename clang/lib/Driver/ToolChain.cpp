@@ -378,7 +378,7 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
 
   // Sort and remove duplicates.
   std::sort(Result.begin(), Result.end());
-  Result.erase(std::unique(Result.begin(), Result.end()), Result.end());
+  Result.erase(llvm::unique(Result), Result.end());
   return Result;
 }
 
@@ -389,10 +389,9 @@ ToolChain::getSanitizerArgs(const llvm::opt::ArgList &JobArgs) const {
   return SanArgs;
 }
 
-const XRayArgs& ToolChain::getXRayArgs() const {
-  if (!XRayArguments)
-    XRayArguments.reset(new XRayArgs(*this, Args));
-  return *XRayArguments;
+const XRayArgs ToolChain::getXRayArgs(const llvm::opt::ArgList &JobArgs) const {
+  XRayArgs XRayArguments(*this, JobArgs);
+  return XRayArguments;
 }
 
 namespace {
@@ -502,8 +501,7 @@ ToolChain::getTargetAndModeFromProgramName(StringRef PN) {
   StringRef Prefix(ProgName);
   Prefix = Prefix.slice(0, LastComponent);
   std::string IgnoredError;
-  bool IsRegistered =
-      llvm::TargetRegistry::lookupTarget(std::string(Prefix), IgnoredError);
+  bool IsRegistered = llvm::TargetRegistry::lookupTarget(Prefix, IgnoredError);
   return ParsedClangName{std::string(Prefix), ModeSuffix, DS->ModeFlag,
                          IsRegistered};
 }
@@ -744,9 +742,12 @@ std::string ToolChain::buildCompilerRTBasename(const llvm::opt::ArgList &Args,
     Suffix = IsITANMSVCWindows ? ".lib" : ".a";
     break;
   case ToolChain::FT_Shared:
-    Suffix = TT.isOSWindows()
-                 ? (TT.isWindowsGNUEnvironment() ? ".dll.a" : ".lib")
-                 : ".so";
+    if (TT.isOSWindows())
+      Suffix = TT.isWindowsGNUEnvironment() ? ".dll.a" : ".lib";
+    else if (TT.isOSAIX())
+      Suffix = ".a";
+    else
+      Suffix = ".so";
     break;
   }
 
@@ -816,8 +817,7 @@ void ToolChain::addFortranRuntimeLibs(const ArgList &Args,
       if (AsNeeded)
         addAsNeededOption(*this, Args, CmdArgs, /*as_needed=*/false);
     }
-    CmdArgs.push_back("-lflang_rt.runtime");
-    addArchSpecificRPath(*this, Args, CmdArgs);
+    addFlangRTLibPath(Args, CmdArgs);
 
     // needs libexecinfo for backtrace functions
     if (getTriple().isOSFreeBSD() || getTriple().isOSNetBSD() ||
@@ -848,6 +848,20 @@ void ToolChain::addFortranRuntimeLibraryPath(const llvm::opt::ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString("-libpath:" + DefaultLibPath));
   else
     CmdArgs.push_back(Args.MakeArgString("-L" + DefaultLibPath));
+}
+
+void ToolChain::addFlangRTLibPath(const ArgList &Args,
+                                  llvm::opt::ArgStringList &CmdArgs) const {
+  // Link static flang_rt.runtime.a or shared flang_rt.runtime.so.
+  // On AIX, default to static flang-rt.
+  if (Args.hasFlag(options::OPT_static_libflangrt,
+                   options::OPT_shared_libflangrt, getTriple().isOSAIX()))
+    CmdArgs.push_back(
+        getCompilerRTArgString(Args, "runtime", ToolChain::FT_Static, true));
+  else {
+    CmdArgs.push_back("-lflang_rt.runtime");
+    addArchSpecificRPath(*this, Args, CmdArgs);
+  }
 }
 
 // Android target triples contain a target version. If we don't have libraries
@@ -918,6 +932,15 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
   const llvm::Triple &T = getTriple();
   if (auto Path = getPathForTriple(T))
     return *Path;
+
+  if (T.isOSAIX() && T.getEnvironment() == Triple::UnknownEnvironment) {
+    // Strip unknown environment from the triple.
+    const llvm::Triple AIXTriple(
+        llvm::Triple(T.getArchName(), T.getVendorName(),
+                     llvm::Triple::getOSTypeName(T.getOS())));
+    if (auto Path = getPathForTriple(AIXTriple))
+      return *Path;
+  }
 
   if (T.isOSzOS() &&
       (!T.getOSVersion().empty() || !T.getEnvironmentVersion().empty())) {
@@ -1350,10 +1373,17 @@ ToolChain::CXXStdlibType ToolChain::GetCXXStdlibType(const ArgList &Args) const{
   return *cxxStdlibType;
 }
 
+/// Utility function to add a system framework directory to CC1 arguments.
+void ToolChain::addSystemFrameworkInclude(const llvm::opt::ArgList &DriverArgs,
+                                          llvm::opt::ArgStringList &CC1Args,
+                                          const Twine &Path) {
+  CC1Args.push_back("-internal-iframework");
+  CC1Args.push_back(DriverArgs.MakeArgString(Path));
+}
+
 /// Utility function to add a system include directory to CC1 arguments.
-/*static*/ void ToolChain::addSystemInclude(const ArgList &DriverArgs,
-                                            ArgStringList &CC1Args,
-                                            const Twine &Path) {
+void ToolChain::addSystemInclude(const ArgList &DriverArgs,
+                                 ArgStringList &CC1Args, const Twine &Path) {
   CC1Args.push_back("-internal-isystem");
   CC1Args.push_back(DriverArgs.MakeArgString(Path));
 }
@@ -1366,9 +1396,9 @@ ToolChain::CXXStdlibType ToolChain::GetCXXStdlibType(const ArgList &Args) const{
 /// "C" semantics. These semantics are *ignored* by and large today, but its
 /// important to preserve the preprocessor changes resulting from the
 /// classification.
-/*static*/ void ToolChain::addExternCSystemInclude(const ArgList &DriverArgs,
-                                                   ArgStringList &CC1Args,
-                                                   const Twine &Path) {
+void ToolChain::addExternCSystemInclude(const ArgList &DriverArgs,
+                                        ArgStringList &CC1Args,
+                                        const Twine &Path) {
   CC1Args.push_back("-internal-externc-isystem");
   CC1Args.push_back(DriverArgs.MakeArgString(Path));
 }
@@ -1380,19 +1410,28 @@ void ToolChain::addExternCSystemIncludeIfExists(const ArgList &DriverArgs,
     addExternCSystemInclude(DriverArgs, CC1Args, Path);
 }
 
+/// Utility function to add a list of system framework directories to CC1.
+void ToolChain::addSystemFrameworkIncludes(const ArgList &DriverArgs,
+                                           ArgStringList &CC1Args,
+                                           ArrayRef<StringRef> Paths) {
+  for (const auto &Path : Paths) {
+    CC1Args.push_back("-internal-iframework");
+    CC1Args.push_back(DriverArgs.MakeArgString(Path));
+  }
+}
+
 /// Utility function to add a list of system include directories to CC1.
-/*static*/ void ToolChain::addSystemIncludes(const ArgList &DriverArgs,
-                                             ArgStringList &CC1Args,
-                                             ArrayRef<StringRef> Paths) {
+void ToolChain::addSystemIncludes(const ArgList &DriverArgs,
+                                  ArgStringList &CC1Args,
+                                  ArrayRef<StringRef> Paths) {
   for (const auto &Path : Paths) {
     CC1Args.push_back("-internal-isystem");
     CC1Args.push_back(DriverArgs.MakeArgString(Path));
   }
 }
 
-/*static*/ std::string ToolChain::concat(StringRef Path, const Twine &A,
-                                         const Twine &B, const Twine &C,
-                                         const Twine &D) {
+std::string ToolChain::concat(StringRef Path, const Twine &A, const Twine &B,
+                              const Twine &C, const Twine &D) {
   SmallString<128> Result(Path);
   llvm::sys::path::append(Result, llvm::sys::path::Style::posix, A, B, C, D);
   return std::string(Result);
@@ -1409,7 +1448,7 @@ std::string ToolChain::detectLibcxxVersion(StringRef IncludePath) const {
     StringRef VersionText = llvm::sys::path::filename(LI->path());
     int Version;
     if (VersionText[0] == 'v' &&
-        !VersionText.slice(1, StringRef::npos).getAsInteger(10, Version)) {
+        !VersionText.substr(1).getAsInteger(10, Version)) {
       if (Version > MaxVersion) {
         MaxVersion = Version;
         MaxVersionString = std::string(VersionText);

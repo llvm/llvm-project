@@ -31,6 +31,14 @@ static FileLineColLoc extractFileLoc(Location loc) {
     return extractFileLoc(nameLoc.getChildLoc());
   if (auto opaqueLoc = dyn_cast<OpaqueLoc>(loc))
     return extractFileLoc(opaqueLoc.getFallbackLocation());
+  if (auto fusedLoc = dyn_cast<FusedLoc>(loc)) {
+    for (auto loc : fusedLoc.getLocations()) {
+      if (auto fileLoc = extractFileLoc(loc))
+        return fileLoc;
+    }
+  }
+  if (auto callerLoc = dyn_cast<CallSiteLoc>(loc))
+    return extractFileLoc(callerLoc.getCaller());
   return FileLineColLoc();
 }
 
@@ -41,45 +49,82 @@ static void addScopeToFunction(LLVM::LLVMFuncOp llvmFunc,
                                LLVM::DICompileUnitAttr compileUnitAttr) {
 
   Location loc = llvmFunc.getLoc();
-  if (loc->findInstanceOf<mlir::FusedLocWith<LLVM::DISubprogramAttr>>())
+  if (loc->findInstanceOf<FusedLocWith<LLVM::DISubprogramAttr>>())
     return;
 
   MLIRContext *context = llvmFunc->getContext();
 
-  // Filename, line and colmun to associate to the function.
+  // Filename and line associate to the function.
   LLVM::DIFileAttr fileAttr;
-  int64_t line = 1, col = 1;
-  FileLineColLoc fileLoc = extractFileLoc(loc);
-  if (!fileLoc && compileUnitAttr) {
-    fileAttr = compileUnitAttr.getFile();
-  } else if (!fileLoc) {
-    fileAttr = LLVM::DIFileAttr::get(context, "<unknown>", "");
-  } else {
+  int64_t line = 1;
+  if (FileLineColLoc fileLoc = extractFileLoc(loc)) {
     line = fileLoc.getLine();
-    col = fileLoc.getColumn();
     StringRef inputFilePath = fileLoc.getFilename().getValue();
     fileAttr =
         LLVM::DIFileAttr::get(context, llvm::sys::path::filename(inputFilePath),
                               llvm::sys::path::parent_path(inputFilePath));
+  } else {
+    fileAttr = compileUnitAttr
+                   ? compileUnitAttr.getFile()
+                   : LLVM::DIFileAttr::get(context, "<unknown>", "");
   }
   auto subroutineTypeAttr =
       LLVM::DISubroutineTypeAttr::get(context, llvm::dwarf::DW_CC_normal, {});
 
-  // Only definitions need a distinct identifier and a compilation unit.
+  // Figure out debug information (`subprogramFlags` and `compileUnitAttr`) to
+  // attach to the function definition / declaration. External functions are
+  // declarations only and are defined in a different compile unit, so mark
+  // them appropriately in `subprogramFlags` and set an empty `compileUnitAttr`.
   DistinctAttr id;
   auto subprogramFlags = LLVM::DISubprogramFlags::Optimized;
   if (!llvmFunc.isExternal()) {
-    id = mlir::DistinctAttr::create(mlir::UnitAttr::get(context));
+    id = DistinctAttr::create(UnitAttr::get(context));
     subprogramFlags = subprogramFlags | LLVM::DISubprogramFlags::Definition;
   } else {
     compileUnitAttr = {};
   }
-  auto funcName = StringAttr::get(context, llvmFunc.getName());
+  auto funcNameAttr = llvmFunc.getNameAttr();
   auto subprogramAttr = LLVM::DISubprogramAttr::get(
-      context, id, compileUnitAttr, fileAttr, funcName, funcName, fileAttr,
-      /*line=*/line, /*scopeline=*/col, subprogramFlags, subroutineTypeAttr,
+      context, id, compileUnitAttr, fileAttr, funcNameAttr, funcNameAttr,
+      fileAttr,
+      /*line=*/line, /*scopeLine=*/line, subprogramFlags, subroutineTypeAttr,
       /*retainedNodes=*/{}, /*annotations=*/{});
   llvmFunc->setLoc(FusedLoc::get(context, {loc}, subprogramAttr));
+}
+
+// Get a nested loc for inlined functions.
+static Location getNestedLoc(Operation *op, LLVM::DIScopeAttr scopeAttr,
+                             Location calleeLoc) {
+  auto calleeFileName = extractFileLoc(calleeLoc).getFilename();
+  auto *context = op->getContext();
+  LLVM::DIFileAttr calleeFileAttr =
+      LLVM::DIFileAttr::get(context, llvm::sys::path::filename(calleeFileName),
+                            llvm::sys::path::parent_path(calleeFileName));
+  auto lexicalBlockFileAttr = LLVM::DILexicalBlockFileAttr::get(
+      context, scopeAttr, calleeFileAttr, /*discriminator=*/0);
+  Location loc = calleeLoc;
+  // Recurse if the callee location is again a call site.
+  if (auto callSiteLoc = dyn_cast<CallSiteLoc>(calleeLoc)) {
+    auto nestedLoc = callSiteLoc.getCallee();
+    loc = getNestedLoc(op, lexicalBlockFileAttr, nestedLoc);
+  }
+  return FusedLoc::get(context, {loc}, lexicalBlockFileAttr);
+}
+
+static void setLexicalBlockFileAttr(Operation *op) {
+  if (auto callSiteLoc = dyn_cast<CallSiteLoc>(op->getLoc())) {
+    auto callerLoc = callSiteLoc.getCaller();
+    auto calleeLoc = callSiteLoc.getCallee();
+    LLVM::DIScopeAttr scopeAttr;
+    // We assemble the full inline stack so the parent of this loc must be a
+    // function
+    auto funcOp = op->getParentOfType<LLVM::LLVMFuncOp>();
+    if (auto funcOpLoc = llvm::dyn_cast_if_present<FusedLoc>(funcOp.getLoc())) {
+      scopeAttr = cast<LLVM::DISubprogramAttr>(funcOpLoc.getMetadata());
+      op->setLoc(
+          CallSiteLoc::get(getNestedLoc(op, scopeAttr, calleeLoc), callerLoc));
+    }
+  }
 }
 
 namespace {
@@ -99,15 +144,12 @@ struct DIScopeForLLVMFuncOpPass
       return signalPassFailure();
     }
 
-    // To find a DICompileUnitAttr attached to a parent (the module for
-    // example), otherwise create a default one.
-    // Find a DICompileUnitAttr attached to the module, otherwise create a
-    // default one.
+    // Find a DICompileUnitAttr attached to a parent (the module for example),
+    // otherwise create a default one.
     LLVM::DICompileUnitAttr compileUnitAttr;
-    auto fusedCompileUnitAttr =
-        module->getLoc()
-            ->findInstanceOf<mlir::FusedLocWith<LLVM::DICompileUnitAttr>>();
-    if (fusedCompileUnitAttr) {
+    if (auto fusedCompileUnitAttr =
+            module->getLoc()
+                ->findInstanceOf<FusedLocWith<LLVM::DICompileUnitAttr>>()) {
       compileUnitAttr = fusedCompileUnitAttr.getMetadata();
     } else {
       LLVM::DIFileAttr fileAttr;
@@ -126,9 +168,14 @@ struct DIScopeForLLVMFuncOpPass
           /*isOptimized=*/true, emissionKind);
     }
 
-    // Create subprograms for each function with the same distinct compile unit.
-    module.walk([&](LLVM::LLVMFuncOp func) {
-      addScopeToFunction(func, compileUnitAttr);
+    module.walk<WalkOrder::PreOrder>([&](Operation *op) -> void {
+      if (auto funcOp = dyn_cast<LLVM::LLVMFuncOp>(op)) {
+        // Create subprograms for each function with the same distinct compile
+        // unit.
+        addScopeToFunction(funcOp, compileUnitAttr);
+      } else {
+        setLexicalBlockFileAttr(op);
+      }
     });
   }
 };

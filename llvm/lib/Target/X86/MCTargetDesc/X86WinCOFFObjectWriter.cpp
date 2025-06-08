@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/X86FixupKinds.h"
-#include "MCTargetDesc/X86MCExpr.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/MC/MCContext.h"
@@ -59,8 +58,7 @@ unsigned X86WinCOFFObjectWriter::getRelocType(MCContext &Ctx,
     }
   }
 
-  auto Modifier = Target.isAbsolute() ? MCSymbolRefExpr::VK_None
-                                      : Target.getSymA()->getKind();
+  auto Spec = Target.getSpecifier();
   if (Is64Bit) {
     switch (FixupKind) {
     case FK_PCRel_4:
@@ -76,9 +74,9 @@ unsigned X86WinCOFFObjectWriter::getRelocType(MCContext &Ctx,
     case FK_Data_4:
     case X86::reloc_signed_4byte:
     case X86::reloc_signed_4byte_relax:
-      if (Modifier == MCSymbolRefExpr::VK_COFF_IMGREL32)
+      if (Spec == MCSymbolRefExpr::VK_COFF_IMGREL32)
         return COFF::IMAGE_REL_AMD64_ADDR32NB;
-      if (Modifier == MCSymbolRefExpr::VK_SECREL)
+      if (Spec == MCSymbolRefExpr::VK_SECREL)
         return COFF::IMAGE_REL_AMD64_SECREL;
       return COFF::IMAGE_REL_AMD64_ADDR32;
     case FK_Data_8:
@@ -100,9 +98,9 @@ unsigned X86WinCOFFObjectWriter::getRelocType(MCContext &Ctx,
     case FK_Data_4:
     case X86::reloc_signed_4byte:
     case X86::reloc_signed_4byte_relax:
-      if (Modifier == MCSymbolRefExpr::VK_COFF_IMGREL32)
+      if (Spec == MCSymbolRefExpr::VK_COFF_IMGREL32)
         return COFF::IMAGE_REL_I386_DIR32NB;
-      if (Modifier == MCSymbolRefExpr::VK_SECREL)
+      if (Spec == MCSymbolRefExpr::VK_SECREL)
         return COFF::IMAGE_REL_I386_SECREL;
       return COFF::IMAGE_REL_I386_DIR32;
     case FK_SecRel_2:

@@ -7,16 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsMCExpr.h"
-#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 
@@ -26,7 +23,12 @@ using namespace llvm;
 
 const MipsMCExpr *MipsMCExpr::create(MipsMCExpr::Specifier S,
                                      const MCExpr *Expr, MCContext &Ctx) {
-  return new (Ctx) MipsMCExpr(S, Expr);
+  return new (Ctx) MipsMCExpr(Expr, S);
+}
+
+const MipsMCExpr *MipsMCExpr::create(const MCSymbol *Sym, Specifier S,
+                                     MCContext &Ctx) {
+  return new (Ctx) MipsMCExpr(MCSymbolRefExpr::create(Sym, Ctx), S);
 }
 
 const MipsMCExpr *MipsMCExpr::createGpOff(MipsMCExpr::Specifier S,

@@ -476,6 +476,21 @@ bool IOHandlerEditline::SetPrompt(llvm::StringRef prompt) {
   return true;
 }
 
+bool IOHandlerEditline::SetUseColor(bool use_color) {
+  m_color = use_color;
+
+#if LLDB_ENABLE_LIBEDIT
+  if (m_editline_up) {
+    m_editline_up->UseColor(use_color);
+    m_editline_up->SetSuggestionAnsiPrefix(ansi::FormatAnsiTerminalCodes(
+        m_debugger.GetAutosuggestionAnsiPrefix()));
+    m_editline_up->SetSuggestionAnsiSuffix(ansi::FormatAnsiTerminalCodes(
+        m_debugger.GetAutosuggestionAnsiSuffix()));
+  }
+#endif
+  return true;
+}
+
 const char *IOHandlerEditline::GetContinuationPrompt() {
   return (m_continuation_prompt.empty() ? nullptr
                                         : m_continuation_prompt.c_str());

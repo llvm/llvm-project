@@ -194,7 +194,7 @@ func.func @fold_add_splat_f32() -> tensor<10xf32> {
 func.func @fold_div_zero_lhs_i32(%arg0: tensor<i32>) -> tensor<i32> {
   %zero = "tosa.const"() {values = dense<0> : tensor<i32>} : () -> tensor<i32>
   // CHECK: %[[ZERO:.+]] = "tosa.const"() <{values = dense<0>
-  %div = tosa.int_div %zero, %arg0 : (tensor<i32>, tensor<i32>) -> tensor<i32>
+  %div = tosa.intdiv %zero, %arg0 : (tensor<i32>, tensor<i32>) -> tensor<i32>
   // CHECK: return %[[ZERO]]
   return %div : tensor<i32>
 }
@@ -204,7 +204,7 @@ func.func @fold_div_zero_lhs_i32(%arg0: tensor<i32>) -> tensor<i32> {
 // CHECK-LABEL: @fold_div_one_rhs_i32
 func.func @fold_div_one_rhs_i32(%arg0: tensor<i32>) -> tensor<i32> {
   %one = "tosa.const"() {values = dense<1> : tensor<i32>} : () -> tensor<i32>
-  %div = tosa.int_div %arg0, %one : (tensor<i32>, tensor<i32>) -> tensor<i32>
+  %div = tosa.intdiv %arg0, %one : (tensor<i32>, tensor<i32>) -> tensor<i32>
   // CHECK: return %arg0
   return %div : tensor<i32>
 }
@@ -216,7 +216,7 @@ func.func @fold_div_splat_i32() -> tensor<i32> {
   %lhs = "tosa.const"() {values = dense<10> : tensor<i32>} : () -> tensor<i32>
   %rhs = "tosa.const"() {values = dense<-3> : tensor<i32>} : () -> tensor<i32>
   // CHECK: %[[SPLAT:.+]] = "tosa.const"() <{values = dense<-3>
-  %div = tosa.int_div %lhs, %rhs : (tensor<i32>, tensor<i32>) -> tensor<i32>
+  %div = tosa.intdiv %lhs, %rhs : (tensor<i32>, tensor<i32>) -> tensor<i32>
   // CHECK: return %[[SPLAT]]
   return %div : tensor<i32>
 }

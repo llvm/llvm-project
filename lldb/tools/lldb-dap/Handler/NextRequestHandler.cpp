@@ -8,72 +8,38 @@
 
 #include "DAP.h"
 #include "EventHelper.h"
-#include "JSONUtils.h"
+#include "Protocol/ProtocolTypes.h"
 #include "RequestHandler.h"
+#include "llvm/Support/Error.h"
+
+using namespace llvm;
+using namespace lldb;
+using namespace lldb_dap::protocol;
 
 namespace lldb_dap {
 
-// "NextRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "Next request; value of command field is 'next'. The
-//                     request starts the debuggee to run again for one step.
-//                     The debug adapter first sends the NextResponse and then
-//                     a StoppedEvent (event type 'step') after the step has
-//                     completed.",
-//     "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "next" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/NextArguments"
-//       }
-//     },
-//     "required": [ "command", "arguments"  ]
-//   }]
-// },
-// "NextArguments": {
-//   "type": "object",
-//   "description": "Arguments for 'next' request.",
-//   "properties": {
-//     "threadId": {
-//       "type": "integer",
-//       "description": "Execute 'next' for this thread."
-//     },
-//     "granularity": {
-//       "$ref": "#/definitions/SteppingGranularity",
-//       "description": "Stepping granularity. If no granularity is specified, a
-//                       granularity of `statement` is assumed."
-//     }
-//   },
-//   "required": [ "threadId" ]
-// },
-// "NextResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to 'next' request. This is just an
-//                     acknowledgement, so no body field is required."
-//   }]
-// }
-void NextRequestHandler::operator()(const llvm::json::Object &request) const {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  const auto *arguments = request.getObject("arguments");
-  lldb::SBThread thread = dap.GetLLDBThread(*arguments);
-  if (thread.IsValid()) {
-    // Remember the thread ID that caused the resume so we can set the
-    // "threadCausedFocus" boolean value in the "stopped" events.
-    dap.focus_tid = thread.GetThreadID();
-    if (HasInstructionGranularity(*arguments)) {
-      thread.StepInstruction(/*step_over=*/true);
-    } else {
-      thread.StepOver();
-    }
+/// The request executes one step (in the given granularity) for the specified
+/// thread and allows all other threads to run freely by resuming them. If the
+/// debug adapter supports single thread execution (see capability
+/// `supportsSingleThreadExecutionRequests`), setting the `singleThread`
+/// argument to true prevents other suspended threads from resuming. The debug
+/// adapter first sends the response and then a `stopped` event (with reason
+/// `step`) after the step has completed.
+Error NextRequestHandler::Run(const NextArguments &args) const {
+  lldb::SBThread thread = dap.GetLLDBThread(args.threadId);
+  if (!thread.IsValid())
+    return make_error<DAPError>("invalid thread");
+
+  // Remember the thread ID that caused the resume so we can set the
+  // "threadCausedFocus" boolean value in the "stopped" events.
+  dap.focus_tid = thread.GetThreadID();
+  if (args.granularity == eSteppingGranularityInstruction) {
+    thread.StepInstruction(/*step_over=*/true);
   } else {
-    response["success"] = llvm::json::Value(false);
+    thread.StepOver(args.singleThread ? eOnlyThisThread : eOnlyDuringStepping);
   }
-  dap.SendJSON(llvm::json::Value(std::move(response)));
+
+  return Error::success();
 }
 
 } // namespace lldb_dap

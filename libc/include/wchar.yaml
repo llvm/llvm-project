@@ -27,3 +27,48 @@ functions:
     return_type: wint_t
     arguments:
       - type: int
+  - name: wmemset
+    standards:
+      - stdc
+    return_type: wchar_t*
+    arguments:
+      - type: wchar_t*
+      - type: wchar_t
+      - type: size_t
+  - name: wcschr
+    standards:
+      - stdc
+    return_type: const wchar_t *
+    arguments: 
+      - type: const wchar_t *
+      - type: wchar_t
+  - name: wcspbrk
+    standards:
+      - stdc
+    return_type: const wchar_t *
+    arguments:
+      - type: const wchar_t *
+      - type: const wchar_t *
+  - name: wcsspn
+    standards:
+      - stdc
+    return_type: size_t
+    arguments: 
+      - type: const wchar_t *
+      - type: const wchar_t *
+  - name: wmemcmp
+    standards:
+      - stdc
+    return_type: int
+    arguments: 
+      - type: const wchar_t *
+      - type: const wchar_t *
+      - type: size_t
+  - name: wmemcpy
+    standards:
+      - stdc
+    return_type: wchar_t *
+    arguments: 
+      - type: __restrict wchar_t *
+      - type: const __restrict wchar_t *
+      - type: size_t

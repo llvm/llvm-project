@@ -124,7 +124,7 @@ bool PlacementNewChecker::checkPlaceCapacityIsSufficient(
             "requires {1} bytes. Current overhead requires the size of {2} "
             "bytes",
             SizeOfPlaceCI->getValue(), SizeOfTargetCI->getValue(),
-            *SizeOfPlaceCI->getValue().get() - SizeOfTargetCI->getValue()));
+            *SizeOfPlaceCI->getValue() - SizeOfTargetCI->getValue()));
       else if (IsArrayTypeAllocated &&
                SizeOfPlaceCI->getValue() == SizeOfTargetCI->getValue())
         Msg = std::string(llvm::formatv(

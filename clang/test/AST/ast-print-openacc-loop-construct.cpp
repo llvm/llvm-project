@@ -10,28 +10,28 @@ void foo() {
 #pragma acc loop
   for(int i = 0;i<5;++i);
 
-// CHECK: #pragma acc loop device_type(SomeStruct)
+// CHECK: #pragma acc loop device_type(default)
 // CHECK-NEXT: for (int i = 0; i < 5; ++i)
 // CHECK-NEXT: ;
-#pragma acc loop device_type(SomeStruct)
+#pragma acc loop device_type(default)
   for(int i = 0;i<5;++i);
 
-// CHECK: #pragma acc loop device_type(int)
+// CHECK: #pragma acc loop device_type(nvidia)
 // CHECK-NEXT: for (int i = 0; i < 5; ++i)
 // CHECK-NEXT: ;
-#pragma acc loop device_type(int)
+#pragma acc loop device_type(nvidia)
   for(int i = 0;i<5;++i);
 
-// CHECK: #pragma acc loop dtype(bool)
+// CHECK: #pragma acc loop dtype(radeon)
 // CHECK-NEXT: for (int i = 0; i < 5; ++i)
 // CHECK-NEXT: ;
-#pragma acc loop dtype(bool)
+#pragma acc loop dtype(radeon)
   for(int i = 0;i<5;++i);
 
-// CHECK: #pragma acc loop dtype(AnotherIdent)
+// CHECK: #pragma acc loop dtype(host)
 // CHECK-NEXT: for (int i = 0; i < 5; ++i)
 // CHECK-NEXT: ;
-#pragma acc loop dtype(AnotherIdent)
+#pragma acc loop dtype(host)
   for(int i = 0;i<5;++i);
 
 // CHECK: #pragma acc loop independent

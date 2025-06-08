@@ -75,7 +75,8 @@ void OptionValueArray::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
   }
 }
 
-llvm::json::Value OptionValueArray::ToJSON(const ExecutionContext *exe_ctx) {
+llvm::json::Value
+OptionValueArray::ToJSON(const ExecutionContext *exe_ctx) const {
   llvm::json::Array json_array;
   const uint32_t size = m_values.size();
   for (uint32_t i = 0; i < size; ++i)
