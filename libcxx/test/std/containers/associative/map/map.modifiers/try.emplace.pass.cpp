@@ -183,7 +183,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
   return true;
 }
 
-int nmain(int, char**) {
+int main(int, char**) {
   assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
