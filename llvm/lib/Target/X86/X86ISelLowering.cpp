@@ -35424,10 +35424,11 @@ bool X86TargetLowering::isBinOp(unsigned Opcode) const {
   switch (Opcode) {
   // These are non-commutative binops.
   // TODO: Add more X86ISD opcodes once we have test coverage.
-  case X86ISD::ANDNP:
-  case X86ISD::PCMPGT:
   case X86ISD::FMAX:
   case X86ISD::FMIN:
+    return Subtarget.hasVLX();
+  case X86ISD::ANDNP:
+  case X86ISD::PCMPGT:
   case X86ISD::FANDN:
   case X86ISD::VPSHA:
   case X86ISD::VPSHL:
@@ -44212,6 +44213,12 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
           insertSubVector(UndefVec, ExtOp, 0, TLO.DAG, DL, ExtSizeInBits);
       return TLO.CombineTo(Op, Insert);
     }
+    case X86ISD::FMAX:
+    case X86ISD::FMIN: {
+      if (VT.getVectorElementType() == MVT::f16 && !Subtarget.hasVLX())
+        break;
+      [[fallthrough]];
+    }
       // Zero upper elements.
     case X86ISD::VZEXT_MOVL:
       // Variable blend.
@@ -44241,8 +44248,6 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     case X86ISD::VSRLV:
     case X86ISD::VSRAV:
       // Float ops.
-    case X86ISD::FMAX:
-    case X86ISD::FMIN:
     case X86ISD::FMAXC:
     case X86ISD::FMINC:
     case X86ISD::FRSQRT:
@@ -55368,25 +55373,46 @@ static SDValue combineFMinNumFMaxNum(SDNode *N, SelectionDAG &DAG,
   SDLoc DL(N);
   auto MinMaxOp = N->getOpcode() == ISD::FMAXNUM ? X86ISD::FMAX : X86ISD::FMIN;
 
+  auto GetNodeOrWiden = [&](SDValue Op0, SDValue Op1) {
+    if ((VT != MVT::v8f16 && VT != MVT::v16f16) || Subtarget.hasVLX())
+      return DAG.getNode(MinMaxOp, DL, VT, Op0, Op1, N->getFlags());
+    Op0 = widenSubVector(MVT::v32f16, Op0, /*ZeroNewElements=*/false, Subtarget,
+                         DAG, DL);
+    Op1 = widenSubVector(MVT::v32f16, Op1, /*ZeroNewElements=*/false, Subtarget,
+                         DAG, DL);
+    SDValue Res =
+        DAG.getNode(MinMaxOp, DL, MVT::v32f16, Op0, Op1, N->getFlags());
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res,
+                       DAG.getVectorIdxConstant(0, DL));
+  };
+
   // If we don't have to respect NaN inputs, this is a direct translation to x86
   // min/max instructions.
   if (DAG.getTarget().Options.NoNaNsFPMath || N->getFlags().hasNoNaNs())
-    return DAG.getNode(MinMaxOp, DL, VT, Op0, Op1, N->getFlags());
+    return GetNodeOrWiden(Op0, Op1);
 
   // If one of the operands is known non-NaN use the native min/max instructions
   // with the non-NaN input as second operand.
   if (DAG.isKnownNeverNaN(Op1))
-    return DAG.getNode(MinMaxOp, DL, VT, Op0, Op1, N->getFlags());
+    return GetNodeOrWiden(Op0, Op1);
   if (DAG.isKnownNeverNaN(Op0))
-    return DAG.getNode(MinMaxOp, DL, VT, Op1, Op0, N->getFlags());
+    return GetNodeOrWiden(Op1, Op0);
 
   // If we have to respect NaN inputs, this takes at least 3 instructions.
   // Favor a library call when operating on a scalar and minimizing code size.
   if (!VT.isVector() && DAG.getMachineFunction().getFunction().hasMinSize())
     return SDValue();
 
+  EVT WindenVT = VT;
+  if ((VT == MVT::v8f16 || VT == MVT::v16f16) && !Subtarget.hasVLX()) {
+    WindenVT = MVT::v32f16;
+    Op0 = widenSubVector(MVT::v32f16, Op0, /*ZeroNewElements=*/false, Subtarget,
+                         DAG, DL);
+    Op1 = widenSubVector(MVT::v32f16, Op1, /*ZeroNewElements=*/false, Subtarget,
+                         DAG, DL);
+  }
   EVT SetCCType = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
-                                         VT);
+                                         WindenVT);
 
   // There are 4 possibilities involving NaN inputs, and these are the required
   // outputs:
@@ -55407,12 +55433,16 @@ static SDValue combineFMinNumFMaxNum(SDNode *N, SelectionDAG &DAG,
   // use those instructions for fmaxnum by selecting away a NaN input.
 
   // If either operand is NaN, the 2nd source operand (Op0) is passed through.
-  SDValue MinOrMax = DAG.getNode(MinMaxOp, DL, VT, Op1, Op0);
+  SDValue MinOrMax = DAG.getNode(MinMaxOp, DL, WindenVT, Op1, Op0);
   SDValue IsOp0Nan = DAG.getSetCC(DL, SetCCType, Op0, Op0, ISD::SETUO);
 
   // If Op0 is a NaN, select Op1. Otherwise, select the max. If both operands
   // are NaN, the NaN value of Op1 is the result.
-  return DAG.getSelect(DL, VT, IsOp0Nan, Op1, MinOrMax);
+  SDValue Res = DAG.getSelect(DL, WindenVT, IsOp0Nan, Op1, MinOrMax);
+  if (VT != WindenVT)
+    Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res,
+                      DAG.getVectorIdxConstant(0, DL));
+  return Res;
 }
 
 static SDValue combineX86INT_TO_FP(SDNode *N, SelectionDAG &DAG,
