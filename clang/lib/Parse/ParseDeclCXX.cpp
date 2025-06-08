@@ -2649,9 +2649,9 @@ void Parser::MaybeParseAndDiagnoseDeclSpecAfterCXX11VirtSpecifierSeq(
   // handled by the caller.  Diagnose everything else.
   ParseTypeQualifierListOpt(
       DS, AR_NoAttributesParsed, /*AtomicOrPtrauthAllowed=*/false,
-      /*IdentifierRequired=*/false, llvm::function_ref<void()>([&]() {
+      /*IdentifierRequired=*/false, [&]() {
         Actions.CodeCompletion().CodeCompleteFunctionQualifiers(DS, D, &VS);
-      }));
+      });
   D.ExtendWithDeclSpec(DS);
 
   if (D.isFunctionDeclarator()) {

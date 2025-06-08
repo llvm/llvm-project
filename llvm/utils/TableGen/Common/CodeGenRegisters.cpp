@@ -466,7 +466,7 @@ void CodeGenRegister::computeSecondarySubRegs(CodeGenRegBank &RegBank) {
 
   std::queue<std::pair<CodeGenSubRegIndex *, CodeGenRegister *>> SubRegQueue;
   for (auto [SRI, SubReg] : SubRegs)
-    SubRegQueue.push({SRI, SubReg});
+    SubRegQueue.emplace(SRI, SubReg);
 
   // Look at the leading super-registers of each sub-register. Those are the
   // candidates for new sub-registers, assuming they are fully contained in
@@ -1461,7 +1461,7 @@ void CodeGenRegBank::computeComposites() {
   for (const CodeGenRegister &R : Registers) {
     const CodeGenRegister::SubRegMap &SM = R.getSubRegs();
     for (auto [SRI, SubReg] : SM)
-      SubRegAction[SRI].insert({&R, SubReg});
+      SubRegAction[SRI].try_emplace(&R, SubReg);
   }
 
   // Calculate the composition of two subregisters as compositions of their
@@ -1474,7 +1474,7 @@ void CodeGenRegBank::computeComposites() {
     for (auto [R, SubReg] : Img1) {
       auto F = Img2.find(SubReg);
       if (F != Img2.end())
-        C.insert({R, F->second});
+        C.try_emplace(R, F->second);
     }
     return C;
   };
@@ -1532,7 +1532,7 @@ void CodeGenRegBank::computeComposites() {
         if (CodeGenSubRegIndex *Prev =
                 Idx1->addComposite(Idx2, Idx3, getHwModes())) {
           // If the composition was not user-defined, always emit a warning.
-          if (!UserDefined.count({Idx1, Idx2}) ||
+          if (!UserDefined.contains({Idx1, Idx2}) ||
               agree(compose(Idx1, Idx2), SubRegAction.at(Idx3)))
             PrintWarning(Twine("SubRegIndex ") + Idx1->getQualifiedName() +
                          " and " + Idx2->getQualifiedName() +
@@ -2408,7 +2408,7 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
     if (RC->getSubClassWithSubReg(SubIdx) != RC)
       continue;
 
-    if (ImpliedSubRegIndices.count(SubIdx))
+    if (ImpliedSubRegIndices.contains(SubIdx))
       continue;
 
     // Build list of (Sub, Super) pairs for this SubIdx, sorted by Sub. Note
@@ -2639,13 +2639,13 @@ CodeGenRegBank::computeCoveredRegisters(ArrayRef<const Record *> Regs) {
   // Second, find all super-registers that are completely covered by the set.
   for (unsigned i = 0; i != Set.size(); ++i) {
     for (const CodeGenRegister *Super : Set[i]->getSuperRegs()) {
-      if (!Super->CoveredBySubRegs || Set.count(Super))
+      if (!Super->CoveredBySubRegs || Set.contains(Super))
         continue;
       // This new super-register is covered by its sub-registers.
       bool AllSubsInSet = true;
       const CodeGenRegister::SubRegMap &SRM = Super->getSubRegs();
       for (auto [_, SR] : SRM)
-        if (!Set.count(SR)) {
+        if (!Set.contains(SR)) {
           AllSubsInSet = false;
           break;
         }

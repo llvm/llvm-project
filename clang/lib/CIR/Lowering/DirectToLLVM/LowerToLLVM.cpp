@@ -1770,6 +1770,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMVecExtractOpLowering,
                CIRToLLVMVecInsertOpLowering,
                CIRToLLVMVecCmpOpLowering,
+               CIRToLLVMVecShuffleOpLowering,
                CIRToLLVMVecShuffleDynamicOpLowering,
                CIRToLLVMVecTernaryOpLowering
       // clang-format on
@@ -1919,6 +1920,23 @@ mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
   // must be sign-extended to the correct result type.
   rewriter.replaceOpWithNewOp<mlir::LLVM::SExtOp>(
       op, typeConverter->convertType(op.getType()), bitResult);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMVecShuffleOpLowering::matchAndRewrite(
+    cir::VecShuffleOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  // LLVM::ShuffleVectorOp takes an ArrayRef of int for the list of indices.
+  // Convert the ClangIR ArrayAttr of IntAttr constants into a
+  // SmallVector<int>.
+  SmallVector<int, 8> indices;
+  std::transform(
+      op.getIndices().begin(), op.getIndices().end(),
+      std::back_inserter(indices), [](mlir::Attribute intAttr) {
+        return mlir::cast<cir::IntAttr>(intAttr).getValue().getSExtValue();
+      });
+  rewriter.replaceOpWithNewOp<mlir::LLVM::ShuffleVectorOp>(
+      op, adaptor.getVec1(), adaptor.getVec2(), indices);
   return mlir::success();
 }
 

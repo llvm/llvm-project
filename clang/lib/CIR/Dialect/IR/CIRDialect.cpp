@@ -1580,6 +1580,29 @@ OpFoldResult cir::VecExtractOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// VecShuffle
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::VecShuffleOp::verify() {
+  // The number of elements in the indices array must match the number of
+  // elements in the result type.
+  if (getIndices().size() != getResult().getType().getSize()) {
+    return emitOpError() << ": the number of elements in " << getIndices()
+                         << " and " << getResult().getType() << " don't match";
+  }
+
+  // The element types of the two input vectors and of the result type must
+  // match.
+  if (getVec1().getType().getElementType() !=
+      getResult().getType().getElementType()) {
+    return emitOpError() << ": element types of " << getVec1().getType()
+                         << " and " << getResult().getType() << " don't match";
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // VecShuffleDynamicOp
 //===----------------------------------------------------------------------===//
 
@@ -1639,6 +1662,38 @@ LogicalResult cir::VecTernaryOp::verify() {
                          << " don't match";
   }
   return success();
+}
+
+OpFoldResult cir::VecTernaryOp::fold(FoldAdaptor adaptor) {
+  mlir::Attribute cond = adaptor.getCond();
+  mlir::Attribute lhs = adaptor.getLhs();
+  mlir::Attribute rhs = adaptor.getRhs();
+
+  if (!mlir::isa_and_nonnull<cir::ConstVectorAttr>(cond) ||
+      !mlir::isa_and_nonnull<cir::ConstVectorAttr>(lhs) ||
+      !mlir::isa_and_nonnull<cir::ConstVectorAttr>(rhs))
+    return {};
+  auto condVec = mlir::cast<cir::ConstVectorAttr>(cond);
+  auto lhsVec = mlir::cast<cir::ConstVectorAttr>(lhs);
+  auto rhsVec = mlir::cast<cir::ConstVectorAttr>(rhs);
+
+  mlir::ArrayAttr condElts = condVec.getElts();
+
+  SmallVector<mlir::Attribute, 16> elements;
+  elements.reserve(condElts.size());
+
+  for (const auto &[idx, condAttr] :
+       llvm::enumerate(condElts.getAsRange<cir::IntAttr>())) {
+    if (condAttr.getSInt()) {
+      elements.push_back(lhsVec.getElts()[idx]);
+    } else {
+      elements.push_back(rhsVec.getElts()[idx]);
+    }
+  }
+
+  cir::VectorType vecTy = getLhs().getType();
+  return cir::ConstVectorAttr::get(
+      vecTy, mlir::ArrayAttr::get(getContext(), elements));
 }
 
 //===----------------------------------------------------------------------===//
