@@ -1358,7 +1358,7 @@ private:
       // const_cast is not allowed at constexpr time.
       // we get around this by deleting and creating a new node value
       __lhs.~foo_type();
-      new (&__lhs)(foo_type) (tmp);
+      new (std::addressof(__lhs))(foo_type) (tmp);
       // __lhs = std::move(tmp);
     } else {
       // This is technically UB, since the object was constructed as `const`.
