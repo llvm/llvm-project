@@ -69,7 +69,7 @@ struct __is_product_iterator_of_size<_Tp, _Size, __enable_if_t<__product_iterato
 
 template <class _Iterator, size_t _Nth>
 using __product_iterator_element_t _LIBCPP_NODEBUG =
-    decltype(__product_iterator_traits<_Iterator>::__get_iterator_element<_Nth>(std::declval<_Iterator>()));
+    decltype(__product_iterator_traits<_Iterator>::template __get_iterator_element<_Nth>(std::declval<_Iterator>()));
 
 _LIBCPP_END_NAMESPACE_STD
 
