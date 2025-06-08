@@ -70,6 +70,16 @@ Code completion
 Code actions
 ^^^^^^^^^^^^
 
+- New ``clangd`` code action: "Override pure virtual methods". When invoked on a
+  class definition, this action automatically generates C++ ``override``
+  declarations for all pure virtual methods inherited from its base classes that
+  have not yet been implemented. The generated method stubs include a ``TODO``
+  comment and a ``static_assert(false, "Method 'method_name' is not
+  implemented.")`` to prompt the user for the actual implementation. The
+  overrides are intelligently grouped under their original access specifiers
+  (e.g., ``public``, ``protected``), creating new access specifier blocks if
+  necessary.
+
 Signature help
 ^^^^^^^^^^^^^^
 
