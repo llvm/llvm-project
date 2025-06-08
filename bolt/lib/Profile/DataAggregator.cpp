@@ -733,8 +733,10 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
   // corresponds to a return (if \p IsFrom) or a call continuation (otherwise).
   auto handleAddress = [&](uint64_t &Addr, bool IsFrom) {
     BinaryFunction *Func = getBinaryFunctionContainingAddress(Addr);
-    if (!Func)
+    if (!Func) {
+      Addr = 0;
       return std::pair{Func, false};
+    }
 
     Addr -= Func->getAddress();
 
