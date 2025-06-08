@@ -283,7 +283,7 @@ static bool fillRanges(MemoryBuffer *Code,
     Lengths.push_back(Sources.getFileOffset(Sources.getLocForEndOfFile(ID)) -
                       Offsets[0]);
   } else if (Offsets.size() != Lengths.size()) {
-    errs() << "error: number of -offset and -length arguments must match.\n";
+    errs() << "error: number of -offset and -length arguments must match\n";
     return true;
   }
   for (unsigned I = 0, E = Offsets.size(); I < E; ++I) {
@@ -293,12 +293,16 @@ static bool fillRanges(MemoryBuffer *Code,
       return true;
     }
     const auto Length = Lengths[I];
-    if (Offset + Length > Code->getBufferSize()) {
-      errs() << "error: invalid length " << Length << ", offset + length ("
-             << Offset + Length << ") is outside the file.\n";
+    if (Length == 0) {
+      errs() << "error: length should be at least 1\n";
       return true;
     }
-    Ranges.push_back(tooling::Range(Offset, Length));
+    if (Offset + Length > Code->getBufferSize()) {
+      errs() << "error: invalid length " << Length << ", offset + length ("
+             << Offset + Length << ") is outside the file\n";
+      return true;
+    }
+    Ranges.push_back(tooling::Range(Offset, Length - 1));
   }
   return false;
 }
