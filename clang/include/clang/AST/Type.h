@@ -5816,8 +5816,8 @@ class TypedefType final : public Type,
   friend class ASTContext; // ASTContext creates these.
   friend TrailingObjects;
 
-  TypedefType(TypeClass tc, const TypedefNameDecl *D, QualType underlying,
-              QualType can);
+  TypedefType(TypeClass tc, const TypedefNameDecl *D, QualType UnderlyingType,
+              bool HasTypeDifferentFromDecl);
 
 public:
   TypedefNameDecl *getDecl() const { return Decl; }
