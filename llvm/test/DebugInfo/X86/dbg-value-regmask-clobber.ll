@@ -16,7 +16,7 @@
 ; argc is the first debug location.
 ; ASM: .Ldebug_loc1:
 ; ASM-NEXT: .quad   .Lfunc_begin0-.Lfunc_begin0
-; ASM-NEXT: .quad   [[argc_range_end]]-.Lfunc_begin0
+; ASM-NEXT: .quad   .Ltmp3-.Lfunc_begin0
 ; ASM-NEXT: .short  1                       # Loc expr size
 ; ASM-NEXT: .byte   82                      # super-register DW_OP_reg2
 
