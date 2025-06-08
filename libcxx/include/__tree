@@ -1259,20 +1259,20 @@ public:
     return __lower_bound(__v, __root(), __end_node());
   }
   template <class _Key>
-  _LIBCPP_HIDE_FROM_ABI const_iterator
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator
   __lower_bound(const _Key& __v, __node_pointer __root, __end_node_pointer __result) const;
   template <class _Key>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator upper_bound(const _Key& __v) {
     return __upper_bound(__v, __root(), __end_node());
   }
   template <class _Key>
-  _LIBCPP_HIDE_FROM_ABI iterator __upper_bound(const _Key& __v, __node_pointer __root, __end_node_pointer __result);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator __upper_bound(const _Key& __v, __node_pointer __root, __end_node_pointer __result);
   template <class _Key>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator upper_bound(const _Key& __v) const {
     return __upper_bound(__v, __root(), __end_node());
   }
   template <class _Key>
-  _LIBCPP_HIDE_FROM_ABI const_iterator
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator
   __upper_bound(const _Key& __v, __node_pointer __root, __end_node_pointer __result) const;
   template <class _Key>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, iterator> __equal_range_unique(const _Key& __k);
@@ -2288,7 +2288,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree<_Tp, _Compare, _Allocator>::__lower_bound(c
 
 template <class _Tp, class _Compare, class _Allocator>
 template <class _Key>
-typename __tree<_Tp, _Compare, _Allocator>::const_iterator __tree<_Tp, _Compare, _Allocator>::__lower_bound(
+_LIBCPP_CONSTEXPR_SINCE_CXX26 typename __tree<_Tp, _Compare, _Allocator>::const_iterator __tree<_Tp, _Compare, _Allocator>::__lower_bound(
     const _Key& __v, __node_pointer __root, __end_node_pointer __result) const {
   while (__root != nullptr) {
     if (!value_comp()(__root->__value_, __v)) {
@@ -2302,7 +2302,7 @@ typename __tree<_Tp, _Compare, _Allocator>::const_iterator __tree<_Tp, _Compare,
 
 template <class _Tp, class _Compare, class _Allocator>
 template <class _Key>
-typename __tree<_Tp, _Compare, _Allocator>::iterator
+_LIBCPP_CONSTEXPR_SINCE_CXX26 typename __tree<_Tp, _Compare, _Allocator>::iterator
 __tree<_Tp, _Compare, _Allocator>::__upper_bound(const _Key& __v, __node_pointer __root, __end_node_pointer __result) {
   while (__root != nullptr) {
     if (value_comp()(__v, __root->__value_)) {
@@ -2316,7 +2316,7 @@ __tree<_Tp, _Compare, _Allocator>::__upper_bound(const _Key& __v, __node_pointer
 
 template <class _Tp, class _Compare, class _Allocator>
 template <class _Key>
-typename __tree<_Tp, _Compare, _Allocator>::const_iterator __tree<_Tp, _Compare, _Allocator>::__upper_bound(
+_LIBCPP_CONSTEXPR_SINCE_CXX26 typename __tree<_Tp, _Compare, _Allocator>::const_iterator __tree<_Tp, _Compare, _Allocator>::__upper_bound(
     const _Key& __v, __node_pointer __root, __end_node_pointer __result) const {
   while (__root != nullptr) {
     if (value_comp()(__v, __root->__value_)) {
