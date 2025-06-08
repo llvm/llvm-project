@@ -441,3 +441,4 @@ declare <3 x float> @llvm.amdgcn.image.msaa.load.x.2dmsaa.v3f32.i32(i32, i32, i3
 declare <4 x float> @llvm.amdgcn.image.msaa.load.x.2dmsaa.v4f32.i32(i32, i32, i32, i32, <8 x i32>, i32, i32) #0
 
 attributes #0 = { nounwind readonly willreturn}
+
