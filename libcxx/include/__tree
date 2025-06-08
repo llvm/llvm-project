@@ -1185,14 +1185,14 @@ public:
   }
 
   template <class _ValueT = _Tp, __enable_if_t<__is_tree_value_type<_ValueT>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI void
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
   __insert_multi_from_orphaned_node(const_iterator __p, __get_node_value_type_t<_Tp>&& __value) {
     using __key_type = typename _NodeTypes::key_type;
     __emplace_hint_multi(__p, const_cast<__key_type&&>(__value.first), std::move(__value.second));
   }
 
   template <class _ValueT = _Tp, __enable_if_t<!__is_tree_value_type<_ValueT>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI void __insert_multi_from_orphaned_node(const_iterator __p, _Tp&& __value) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __insert_multi_from_orphaned_node(const_iterator __p, _Tp&& __value) {
     __emplace_hint_multi(__p, std::move(__value));
   }
 
