@@ -1584,16 +1584,13 @@ OpFoldResult cir::VecExtractOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult cir::VecShuffleOp::fold(FoldAdaptor adaptor) {
-  mlir::Attribute vec1 = adaptor.getVec1();
-  mlir::Attribute vec2 = adaptor.getVec2();
-
-  if (!mlir::isa_and_nonnull<cir::ConstVectorAttr>(vec1) ||
-      !mlir::isa_and_nonnull<cir::ConstVectorAttr>(vec2)) {
+  auto vec1Attr =
+      mlir::dyn_cast_if_present<cir::ConstVectorAttr>(adaptor.getVec1());
+  auto vec2Attr =
+      mlir::dyn_cast_if_present<cir::ConstVectorAttr>(adaptor.getVec2());
+  if (!vec1Attr || !vec2Attr)
     return {};
-  }
 
-  auto vec1Attr = mlir::cast<cir::ConstVectorAttr>(vec1);
-  auto vec2Attr = mlir::cast<cir::ConstVectorAttr>(vec2);
   mlir::Type vec1ElemTy =
       mlir::cast<cir::VectorType>(vec1Attr.getType()).getElementType();
 
