@@ -8912,6 +8912,8 @@ private:
                             bool OuterMightBeMessageSend = false);
 
   ///@}
+
+  TemplateParameterLists *TemplateParamsFromAlias = nullptr;
 };
 
 } // end namespace clang

@@ -886,11 +886,17 @@ Decl *Parser::ParseAliasDeclarationAfterDeclarator(
         << FixItHint::CreateRemoval(SourceRange(D.EllipsisLoc));
 
   Decl *DeclFromDeclSpec = nullptr;
+
+  this->TemplateParamsFromAlias = TemplateInfo.TemplateParams;
+
   TypeResult TypeAlias =
       ParseTypeName(nullptr,
                     TemplateInfo.Kind != ParsedTemplateKind::NonTemplate ? DeclaratorContext::AliasTemplate
                                       : DeclaratorContext::AliasDecl,
                     AS, &DeclFromDeclSpec, &Attrs);
+
+  this->TemplateParamsFromAlias = nullptr;
+
   if (OwnedType)
     *OwnedType = DeclFromDeclSpec;
 
@@ -2173,6 +2179,17 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
     assert(Tok.is(tok::l_brace) ||
            (getLangOpts().CPlusPlus && Tok.is(tok::colon)) ||
            isClassCompatibleKeyword());
+
+    if (TemplateParamsFromAlias) {
+      for (const TemplateParameterList *TPL : *TemplateParamsFromAlias) {
+        for (NamedDecl *D : *TPL) {
+          D->setInvalidDecl(true);
+          auto *TTPD = dyn_cast<TemplateTypeParmDecl>(D);
+          TTPD->setTypeForDecl(Actions.Context.IntTy.getTypePtr());
+        }
+      }
+    }
+
     if (SkipBody.ShouldSkip)
       SkipCXXMemberSpecification(StartLoc, AttrFixitLoc, TagType,
                                  TagOrTempResult.get());
