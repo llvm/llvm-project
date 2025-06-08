@@ -580,8 +580,10 @@ void DataAggregator::processProfile(BinaryContext &BC) {
     }
   }
 
-  for (auto &FuncBranches : NamesToBranches)
+  for (auto &FuncBranches : NamesToBranches) {
     llvm::stable_sort(FuncBranches.second.Data);
+    llvm::stable_sort(FuncBranches.second.EntryData);
+  }
 
   for (auto &MemEvents : NamesToMemEvents)
     llvm::stable_sort(MemEvents.second.Data);
