@@ -135,15 +135,23 @@ public:
 class VectorType : public Type {
 private:
   const Type *ElementType;
-  uint64_t NumElements;
+  ElementCount NumElements;
 
 public:
-  VectorType(const Type *ElemType, uint64_t NumElems, Align Align)
-      : Type(TypeKind::Vector, ElemType->getSizeInBits() * NumElems, Align),
+  VectorType(const Type *ElemType, ElementCount NumElems, Align Align)
+      : Type(
+            TypeKind::Vector,
+            NumElems.isScalable()
+                ? TypeSize(ElemType->getSizeInBits().getFixedValue() *
+                               NumElems.getKnownMinValue(),
+                           true)
+                : TypeSize::getFixed(ElemType->getSizeInBits().getFixedValue() *
+                                     NumElems.getFixedValue()),
+            Align),
         ElementType(ElemType), NumElements(NumElems) {}
 
   const Type *getElementType() const { return ElementType; }
-  uint64_t getNumElements() const { return NumElements; }
+  ElementCount getNumElements() const { return NumElements; }
 
   static bool classof(const Type *T) {
     return T->getKind() == TypeKind::Vector;
