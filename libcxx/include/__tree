@@ -735,7 +735,7 @@ public:
     return pointer_traits<pointer>::pointer_to(__get_np()->__value_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI __tree_iterator& operator++() {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_iterator& operator++() {
     __ptr_ = std::__tree_next_iter<__end_node_pointer>(static_cast<__node_base_pointer>(__ptr_));
     return *this;
   }
@@ -745,7 +745,7 @@ public:
     return __t;
   }
 
-  _LIBCPP_HIDE_FROM_ABI __tree_iterator& operator--() {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_iterator& operator--() {
     __ptr_ = static_cast<__end_node_pointer>(std::__tree_prev_iter<__node_base_pointer>(__ptr_));
     return *this;
   }
@@ -824,7 +824,7 @@ public:
     return pointer_traits<pointer>::pointer_to(__get_np()->__value_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI __tree_const_iterator& operator++() {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_const_iterator& operator++() {
     __ptr_ = std::__tree_next_iter<__end_node_pointer>(static_cast<__node_base_pointer>(__ptr_));
     return *this;
   }
