@@ -290,3 +290,47 @@ static_assert(__is_trivially_copyable(S12));
 // expected-note@-1 {{'S12' is not trivially copyable}} \
 // expected-note@#tc-S12 {{'S12' defined here}}
 }
+
+namespace constructible {
+
+struct S1 { // #c-S1
+    S1(int);
+};
+static_assert(__is_constructible(S1, int, float));
+// expected-error@-1 {{static assertion failed due to requirement '__is_constructible(constructible::S1, int, float)'}} \
+// expected-note@-1 {{'S1' is not constructible with provided types}} \
+// expected-note@#c-S1 {{'S1' defined here}}
+
+struct S2 { // #c-S2
+    S2(int, float, double);
+};
+static_assert(__is_constructible(S2, float));
+// expected-error@-1 {{static assertion failed due to requirement '__is_constructible(constructible::S2, float)'}} \
+// expected-note@-1 {{'S2' is not constructible with provided types}} \
+// expected-note@#c-S2 {{'S2' defined here}}
+
+static_assert(__is_constructible(void));
+// expected-error@-1 {{static assertion failed due to requirement '__is_constructible(void)'}} \
+// expected-note@-1 {{'void' is not constructible with provided types}} \
+// expected-note@-1 {{because it is a cv void type}}
+
+static_assert(__is_constructible(const void));
+// expected-error@-1 {{static assertion failed due to requirement '__is_constructible(const void)'}} \
+// expected-note@-1 {{'const void' is not constructible with provided types}} \
+// expected-note@-1 {{because it is a cv void type}}
+
+static_assert(__is_constructible(volatile void));
+// expected-error@-1 {{static assertion failed due to requirement '__is_constructible(volatile void)'}} \
+// expected-note@-1 {{'volatile void' is not constructible with provided types}} \
+// expected-note@-1 {{because it is a cv void type}}
+
+static_assert(__is_constructible(int ()));
+// expected-error@-1 {{static assertion failed due to requirement '__is_constructible(int ())'}} \
+// expected-note@-1 {{'int ()' is not constructible with provided types}} \
+// expected-note@-1 {{because it is a function type}}
+
+static_assert(__is_constructible(void (int, float)));
+// expected-error@-1 {{static assertion failed due to requirement '__is_constructible(void (int, float))'}} \
+// expected-note@-1 {{'void (int, float)' is not constructible with provided types}} \
+// expected-note@-1 {{because it is a function type}}
+}

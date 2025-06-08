@@ -1765,7 +1765,8 @@ def err_user_defined_msg_constexpr : Error<
 // Type traits explanations
 def note_unsatisfied_trait : Note<"%0 is not %enum_select<TraitName>{"
                                   "%TriviallyRelocatable{trivially relocatable}|"
-                                  "%TriviallyCopyable{trivially copyable}"
+                                  "%TriviallyCopyable{trivially copyable}|"
+                                  "%Constructible{constructible with provided types}"
                                   "}1">;
 
 def note_unsatisfied_trait_reason
@@ -1785,7 +1786,9 @@ def note_unsatisfied_trait_reason
            "%UserProvidedAssign{has a user provided %select{copy|move}1 "
            "assignment operator}|"
            "%UnionWithUserDeclaredSMF{is a union with a user-declared "
-           "%sub{select_special_member_kind}1}"
+           "%sub{select_special_member_kind}1}|"
+           "%FunctionType{is a function type}|"
+           "%CVVoidType{is a cv void type}"
            "}0">;
 
 def warn_consteval_if_always_true : Warning<
