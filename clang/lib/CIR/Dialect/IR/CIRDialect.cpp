@@ -1594,6 +1594,8 @@ OpFoldResult cir::VecShuffleOp::fold(FoldAdaptor adaptor) {
 
   auto vec1Attr = mlir::cast<cir::ConstVectorAttr>(vec1);
   auto vec2Attr = mlir::cast<cir::ConstVectorAttr>(vec2);
+  mlir::Type vec1ElemTy =
+      mlir::cast<cir::VectorType>(vec1Attr.getType()).getElementType();
 
   mlir::ArrayAttr vec1Elts = vec1Attr.getElts();
   mlir::ArrayAttr vec2Elts = vec2Attr.getElts();
@@ -1604,6 +1606,11 @@ OpFoldResult cir::VecShuffleOp::fold(FoldAdaptor adaptor) {
 
   uint64_t vec1Size = vec1Elts.size();
   for (const auto &idxAttr : indicesElts.getAsRange<cir::IntAttr>()) {
+    if (idxAttr.getSInt() == -1) {
+      elements.push_back(cir::UndefAttr::get(vec1ElemTy));
+      continue;
+    }
+
     uint64_t idxValue = idxAttr.getUInt();
     if (idxValue < vec1Size) {
       elements.push_back(vec1Elts[idxValue]);
