@@ -542,26 +542,32 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
     return Result;
 
   const auto &SM = Diag.getSourceManager();
-
-  bool ShowInSystemHeader =
-      IsCustomDiag
-          ? CustomDiagInfo->getDescription(DiagID).ShouldShowInSystemHeader()
-          : !GetDiagInfo(DiagID) || GetDiagInfo(DiagID)->WarnShowInSystemHeader;
-
   // If we are in a system header, we ignore it. We look at the diagnostic class
   // because we also want to ignore extensions and warnings in -Werror and
   // -pedantic-errors modes, which *map* warnings/extensions to errors.
-  if (State->SuppressSystemWarnings && !ShowInSystemHeader && Loc.isValid() &&
-      SM.isInSystemHeader(SM.getExpansionLoc(Loc)))
-    return diag::Severity::Ignored;
+  if (State->SuppressSystemWarnings && Loc.isValid() &&
+      SM.isInSystemHeader(SM.getExpansionLoc(Loc))) {
+    bool ShowInSystemHeader = true;
+    if (IsCustomDiag)
+      ShowInSystemHeader =
+          CustomDiagInfo->getDescription(DiagID).ShouldShowInSystemHeader();
+    else if (const StaticDiagInfoRec *Rec = GetDiagInfo(DiagID))
+      ShowInSystemHeader = Rec->WarnShowInSystemHeader;
 
+    if (!ShowInSystemHeader)
+      return diag::Severity::Ignored;
+  }
   // We also ignore warnings due to system macros
-  bool ShowInSystemMacro =
-      !GetDiagInfo(DiagID) || GetDiagInfo(DiagID)->WarnShowInSystemMacro;
-  if (State->SuppressSystemWarnings && !ShowInSystemMacro && Loc.isValid() &&
-      SM.isInSystemMacro(Loc))
-    return diag::Severity::Ignored;
+  if (State->SuppressSystemWarnings && Loc.isValid() &&
+      SM.isInSystemMacro(Loc)) {
 
+    bool ShowInSystemMacro = true;
+    if (const StaticDiagInfoRec *Rec = GetDiagInfo(DiagID))
+      ShowInSystemMacro = Rec->WarnShowInSystemMacro;
+
+    if (!ShowInSystemMacro)
+      return diag::Severity::Ignored;
+  }
   // Clang-diagnostics pragmas always take precedence over suppression mapping.
   if (!Mapping.isPragma() && Diag.isSuppressedViaMapping(DiagID, Loc))
     return diag::Severity::Ignored;

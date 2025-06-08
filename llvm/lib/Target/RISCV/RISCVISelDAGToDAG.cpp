@@ -601,8 +601,8 @@ bool RISCVDAGToDAGISel::tryShrinkShlLogicImm(SDNode *Node) {
 }
 
 bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
-  // Only supported with XTHeadBb at the moment.
-  if (!Subtarget->hasVendorXTHeadBb())
+  // Only supported with XTHeadBb/XAndesPerf at the moment.
+  if (!Subtarget->hasVendorXTHeadBb() && !Subtarget->hasVendorXAndesPerf())
     return false;
 
   auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
@@ -615,7 +615,9 @@ bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
 
   auto BitfieldExtract = [&](SDValue N0, unsigned Msb, unsigned Lsb, SDLoc DL,
                              MVT VT) {
-    return CurDAG->getMachineNode(RISCV::TH_EXT, DL, VT, N0.getOperand(0),
+    unsigned Opc =
+        Subtarget->hasVendorXTHeadBb() ? RISCV::TH_EXT : RISCV::NDS_BFOS;
+    return CurDAG->getMachineNode(Opc, DL, VT, N0.getOperand(0),
                                   CurDAG->getTargetConstant(Msb, DL, VT),
                                   CurDAG->getTargetConstant(Lsb, DL, VT));
   };
@@ -683,6 +685,26 @@ bool RISCVDAGToDAGISel::tryUnsignedBitfieldExtract(SDNode *Node, SDLoc DL,
                                        CurDAG->getTargetConstant(Msb, DL, VT),
                                        CurDAG->getTargetConstant(Lsb, DL, VT));
   ReplaceNode(Node, Ube);
+  return true;
+}
+
+bool RISCVDAGToDAGISel::tryUnsignedBitfieldInsertInZero(SDNode *Node, SDLoc DL,
+                                                        MVT VT, SDValue X,
+                                                        unsigned Msb,
+                                                        unsigned Lsb) {
+  // Only supported with XAndesPerf at the moment.
+  if (!Subtarget->hasVendorXAndesPerf())
+    return false;
+
+  unsigned Opc = RISCV::NDS_BFOZ;
+
+  // If the Lsb is equal to the Msb, then the Lsb should be 0.
+  if (Lsb == Msb)
+    Lsb = 0;
+  SDNode *Ubi = CurDAG->getMachineNode(Opc, DL, VT, X,
+                                       CurDAG->getTargetConstant(Lsb, DL, VT),
+                                       CurDAG->getTargetConstant(Msb, DL, VT));
+  ReplaceNode(Node, Ubi);
   return true;
 }
 
@@ -1049,11 +1071,11 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     unsigned ShAmt = N1C->getZExtValue();
     uint64_t Mask = N0.getConstantOperandVal(1);
 
-    if (ShAmt <= 32 && isShiftedMask_64(Mask)) {
+    if (isShiftedMask_64(Mask)) {
       unsigned XLen = Subtarget->getXLen();
       unsigned LeadingZeros = XLen - llvm::bit_width(Mask);
       unsigned TrailingZeros = llvm::countr_zero(Mask);
-      if (TrailingZeros > 0 && LeadingZeros == 32) {
+      if (ShAmt <= 32 && TrailingZeros > 0 && LeadingZeros == 32) {
         // Optimize (shl (and X, C2), C) -> (slli (srliw X, C3), C3+C)
         // where C2 has 32 leading zeros and C3 trailing zeros.
         SDNode *SRLIW = CurDAG->getMachineNode(
@@ -1321,6 +1343,19 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
             ReplaceNode(Node, SLLI_UW);
             return;
           }
+
+          // Try to use an unsigned bitfield insert (e.g., nds.bfoz) if
+          // available.
+          // Transform (and (shl x, c2), c1)
+          //        -> (<bfinsert> x, msb, lsb)
+          // e.g.
+          //     (and (shl x, 12), 0x00fff000)
+          //     If XLen = 32 and C2 = 12, then
+          //     Msb = 32 - 8 - 1 = 23 and Lsb = 12
+          const unsigned Msb = XLen - Leading - 1;
+          const unsigned Lsb = C2;
+          if (tryUnsignedBitfieldInsertInZero(Node, DL, VT, X, Msb, Lsb))
+            return;
 
           // (srli (slli c2+c3), c3)
           if (OneUseOrZExtW && !IsCANDI) {
@@ -3114,34 +3149,44 @@ bool RISCVDAGToDAGISel::selectSHXADDOp(SDValue N, unsigned ShAmt,
       else
         Mask &= maskTrailingOnes<uint64_t>(XLen - C2);
 
-      // Look for (and (shl y, c2), c1) where c1 is a shifted mask with no
-      // leading zeros and c3 trailing zeros. We can use an SRLI by c2+c3
-      // followed by a SHXADD with c3 for the X amount.
       if (isShiftedMask_64(Mask)) {
         unsigned Leading = XLen - llvm::bit_width(Mask);
         unsigned Trailing = llvm::countr_zero(Mask);
-        if (LeftShift && Leading == 0 && C2 < Trailing && Trailing == ShAmt) {
-          SDLoc DL(N);
-          EVT VT = N.getValueType();
-          Val = SDValue(CurDAG->getMachineNode(
-                            RISCV::SRLI, DL, VT, N0.getOperand(0),
-                            CurDAG->getTargetConstant(Trailing - C2, DL, VT)),
-                        0);
-          return true;
-        }
+        if (Trailing != ShAmt)
+          return false;
+
+        unsigned Opcode;
+        // Look for (and (shl y, c2), c1) where c1 is a shifted mask with no
+        // leading zeros and c3 trailing zeros. We can use an SRLI by c3-c2
+        // followed by a SHXADD with c3 for the X amount.
+        if (LeftShift && Leading == 0 && C2 < Trailing)
+          Opcode = RISCV::SRLI;
+        // Look for (and (shl y, c2), c1) where c1 is a shifted mask with 32-c2
+        // leading zeros and c3 trailing zeros. We can use an SRLIW by c3-c2
+        // followed by a SHXADD with c3 for the X amount.
+        else if (LeftShift && Leading == 32 - C2 && C2 < Trailing)
+          Opcode = RISCV::SRLIW;
         // Look for (and (shr y, c2), c1) where c1 is a shifted mask with c2
-        // leading zeros and c3 trailing zeros. We can use an SRLI by C3
+        // leading zeros and c3 trailing zeros. We can use an SRLI by c2+c3
         // followed by a SHXADD using c3 for the X amount.
-        if (!LeftShift && Leading == C2 && Trailing == ShAmt) {
-          SDLoc DL(N);
-          EVT VT = N.getValueType();
-          Val = SDValue(
-              CurDAG->getMachineNode(
-                  RISCV::SRLI, DL, VT, N0.getOperand(0),
-                  CurDAG->getTargetConstant(Leading + Trailing, DL, VT)),
-              0);
-          return true;
-        }
+        else if (!LeftShift && Leading == C2)
+          Opcode = RISCV::SRLI;
+        // Look for (and (shr y, c2), c1) where c1 is a shifted mask with 32+c2
+        // leading zeros and c3 trailing zeros. We can use an SRLIW by c2+c3
+        // followed by a SHXADD using c3 for the X amount.
+        else if (!LeftShift && Leading == 32 + C2)
+          Opcode = RISCV::SRLIW;
+        else
+          return false;
+
+        SDLoc DL(N);
+        EVT VT = N.getValueType();
+        ShAmt = LeftShift ? Trailing - C2 : Trailing + C2;
+        Val = SDValue(
+            CurDAG->getMachineNode(Opcode, DL, VT, N0.getOperand(0),
+                                   CurDAG->getTargetConstant(ShAmt, DL, VT)),
+            0);
+        return true;
       }
     } else if (N0.getOpcode() == ISD::SRA && N0.hasOneUse() &&
                isa<ConstantSDNode>(N0.getOperand(1))) {

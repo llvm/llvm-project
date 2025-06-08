@@ -1067,7 +1067,7 @@ CXXDefaultInitExpr::CXXDefaultInitExpr(const ASTContext &Ctx,
   CXXDefaultInitExprBits.HasRewrittenInit = RewrittenInitExpr != nullptr;
 
   if (CXXDefaultInitExprBits.HasRewrittenInit)
-    *getTrailingObjects<Expr *>() = RewrittenInitExpr;
+    *getTrailingObjects() = RewrittenInitExpr;
 
   assert(Field->hasInClassInitializer());
 
@@ -1437,8 +1437,7 @@ ExprWithCleanups::ExprWithCleanups(Expr *subexpr,
     : FullExpr(ExprWithCleanupsClass, subexpr) {
   ExprWithCleanupsBits.CleanupsHaveSideEffects = CleanupsHaveSideEffects;
   ExprWithCleanupsBits.NumObjects = objects.size();
-  for (unsigned i = 0, e = objects.size(); i != e; ++i)
-    getTrailingObjects<CleanupObject>()[i] = objects[i];
+  llvm::copy(objects, getTrailingObjects());
 }
 
 ExprWithCleanups *ExprWithCleanups::Create(const ASTContext &C, Expr *subexpr,
@@ -1474,7 +1473,7 @@ CXXUnresolvedConstructExpr::CXXUnresolvedConstructExpr(
       TypeAndInitForm(TSI, IsListInit), LParenLoc(LParenLoc),
       RParenLoc(RParenLoc) {
   CXXUnresolvedConstructExprBits.NumArgs = Args.size();
-  auto **StoredArgs = getTrailingObjects<Expr *>();
+  auto **StoredArgs = getTrailingObjects();
   for (unsigned I = 0; I != Args.size(); ++I)
     StoredArgs[I] = Args[I];
   setDependence(computeDependence(this));
@@ -1800,8 +1799,7 @@ FunctionParmPackExpr::FunctionParmPackExpr(QualType T, ValueDecl *ParamPack,
     : Expr(FunctionParmPackExprClass, T, VK_LValue, OK_Ordinary),
       ParamPack(ParamPack), NameLoc(NameLoc), NumParameters(NumParams) {
   if (Params)
-    std::uninitialized_copy(Params, Params + NumParams,
-                            getTrailingObjects<ValueDecl *>());
+    std::uninitialized_copy(Params, Params + NumParams, getTrailingObjects());
   setDependence(ExprDependence::TypeValueInstantiation |
                 ExprDependence::UnexpandedPack);
 }
@@ -2003,7 +2001,8 @@ CXXFoldExpr::CXXFoldExpr(QualType T, UnresolvedLookupExpr *Callee,
                          UnsignedOrNone NumExpansions)
     : Expr(CXXFoldExprClass, T, VK_PRValue, OK_Ordinary), LParenLoc(LParenLoc),
       EllipsisLoc(EllipsisLoc), RParenLoc(RParenLoc),
-      NumExpansions(NumExpansions), Opcode(Opcode) {
+      NumExpansions(NumExpansions) {
+  CXXFoldExprBits.Opcode = Opcode;
   // We rely on asserted invariant to distinguish left and right folds.
   assert(((LHS && LHS->containsUnexpandedParameterPack()) !=
           (RHS && RHS->containsUnexpandedParameterPack())) &&

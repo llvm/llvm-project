@@ -26,6 +26,7 @@
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Discriminator.h"
 #include <cassert>
 #include <climits>
@@ -68,7 +69,7 @@ enum Tag : uint16_t;
 class DbgVariableIntrinsic;
 class DbgVariableRecord;
 
-extern cl::opt<bool> EnableFSDiscriminator;
+LLVM_ABI extern cl::opt<bool> EnableFSDiscriminator;
 
 class DITypeRefArray {
   const MDTuple *N = nullptr;
@@ -165,7 +166,7 @@ protected:
   void setTag(unsigned Tag) { SubclassData16 = Tag; }
 
 public:
-  dwarf::Tag getTag() const;
+  LLVM_ABI dwarf::Tag getTag() const;
 
   /// Debug info flags.
   ///
@@ -181,15 +182,15 @@ public:
     LLVM_MARK_AS_BITMASK_ENUM(FlagLargest)
   };
 
-  static DIFlags getFlag(StringRef Flag);
-  static StringRef getFlagString(DIFlags Flag);
+  LLVM_ABI static DIFlags getFlag(StringRef Flag);
+  LLVM_ABI static StringRef getFlagString(DIFlags Flag);
 
   /// Split up a flags bitfield.
   ///
   /// Split \c Flags into \c SplitFlags, a vector of its components.  Returns
   /// any remaining (unrecognized) bits.
-  static DIFlags splitFlags(DIFlags Flags,
-                            SmallVectorImpl<DIFlags> &SplitFlags);
+  LLVM_ABI static DIFlags splitFlags(DIFlags Flags,
+                                     SmallVectorImpl<DIFlags> &SplitFlags);
 
   static bool classof(const Metadata *MD) {
     switch (MD->getMetadataID()) {
@@ -257,9 +258,11 @@ class GenericDINode : public DINode {
                    DwarfOps, Storage, ShouldCreate);
   }
 
-  static GenericDINode *getImpl(LLVMContext &Context, unsigned Tag,
-                                MDString *Header, ArrayRef<Metadata *> DwarfOps,
-                                StorageType Storage, bool ShouldCreate = true);
+  LLVM_ABI static GenericDINode *getImpl(LLVMContext &Context, unsigned Tag,
+                                         MDString *Header,
+                                         ArrayRef<Metadata *> DwarfOps,
+                                         StorageType Storage,
+                                         bool ShouldCreate = true);
 
   TempGenericDINode cloneImpl() const {
     return getTemporary(getContext(), getTag(), getHeader(),
@@ -281,7 +284,7 @@ public:
   /// Return a (temporary) clone of this.
   TempGenericDINode clone() const { return cloneImpl(); }
 
-  dwarf::Tag getTag() const;
+  LLVM_ABI dwarf::Tag getTag() const;
   StringRef getHeader() const { return getStringOperand(0); }
   MDString *getRawHeader() const { return getOperandAs<MDString>(0); }
 
@@ -317,8 +320,8 @@ class DIAssignID : public MDNode {
 
   ~DIAssignID() { dropAllReferences(); }
 
-  static DIAssignID *getImpl(LLVMContext &Context, StorageType Storage,
-                             bool ShouldCreate = true);
+  LLVM_ABI static DIAssignID *getImpl(LLVMContext &Context, StorageType Storage,
+                                      bool ShouldCreate = true);
 
   TempDIAssignID cloneImpl() const { return getTemporary(getContext()); }
 
@@ -352,18 +355,19 @@ class DISubrange : public DINode {
 
   ~DISubrange() = default;
 
-  static DISubrange *getImpl(LLVMContext &Context, int64_t Count,
-                             int64_t LowerBound, StorageType Storage,
-                             bool ShouldCreate = true);
+  LLVM_ABI static DISubrange *getImpl(LLVMContext &Context, int64_t Count,
+                                      int64_t LowerBound, StorageType Storage,
+                                      bool ShouldCreate = true);
 
-  static DISubrange *getImpl(LLVMContext &Context, Metadata *CountNode,
-                             int64_t LowerBound, StorageType Storage,
-                             bool ShouldCreate = true);
+  LLVM_ABI static DISubrange *getImpl(LLVMContext &Context, Metadata *CountNode,
+                                      int64_t LowerBound, StorageType Storage,
+                                      bool ShouldCreate = true);
 
-  static DISubrange *getImpl(LLVMContext &Context, Metadata *CountNode,
-                             Metadata *LowerBound, Metadata *UpperBound,
-                             Metadata *Stride, StorageType Storage,
-                             bool ShouldCreate = true);
+  LLVM_ABI static DISubrange *getImpl(LLVMContext &Context, Metadata *CountNode,
+                                      Metadata *LowerBound,
+                                      Metadata *UpperBound, Metadata *Stride,
+                                      StorageType Storage,
+                                      bool ShouldCreate = true);
 
   TempDISubrange cloneImpl() const {
     return getTemporary(getContext(), getRawCountNode(), getRawLowerBound(),
@@ -394,13 +398,13 @@ public:
 
   typedef PointerUnion<ConstantInt *, DIVariable *, DIExpression *> BoundType;
 
-  BoundType getCount() const;
+  LLVM_ABI BoundType getCount() const;
 
-  BoundType getLowerBound() const;
+  LLVM_ABI BoundType getLowerBound() const;
 
-  BoundType getUpperBound() const;
+  LLVM_ABI BoundType getUpperBound() const;
 
-  BoundType getStride() const;
+  LLVM_ABI BoundType getStride() const;
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DISubrangeKind;
@@ -416,10 +420,10 @@ class DIGenericSubrange : public DINode {
 
   ~DIGenericSubrange() = default;
 
-  static DIGenericSubrange *getImpl(LLVMContext &Context, Metadata *CountNode,
-                                    Metadata *LowerBound, Metadata *UpperBound,
-                                    Metadata *Stride, StorageType Storage,
-                                    bool ShouldCreate = true);
+  LLVM_ABI static DIGenericSubrange *
+  getImpl(LLVMContext &Context, Metadata *CountNode, Metadata *LowerBound,
+          Metadata *UpperBound, Metadata *Stride, StorageType Storage,
+          bool ShouldCreate = true);
 
   TempDIGenericSubrange cloneImpl() const {
     return getTemporary(getContext(), getRawCountNode(), getRawLowerBound(),
@@ -441,10 +445,10 @@ public:
 
   using BoundType = PointerUnion<DIVariable *, DIExpression *>;
 
-  BoundType getCount() const;
-  BoundType getLowerBound() const;
-  BoundType getUpperBound() const;
-  BoundType getStride() const;
+  LLVM_ABI BoundType getCount() const;
+  LLVM_ABI BoundType getLowerBound() const;
+  LLVM_ABI BoundType getUpperBound() const;
+  LLVM_ABI BoundType getStride() const;
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIGenericSubrangeKind;
@@ -460,8 +464,8 @@ class DIEnumerator : public DINode {
   friend class MDNode;
 
   APInt Value;
-  DIEnumerator(LLVMContext &C, StorageType Storage, const APInt &Value,
-               bool IsUnsigned, ArrayRef<Metadata *> Ops);
+  LLVM_ABI DIEnumerator(LLVMContext &C, StorageType Storage, const APInt &Value,
+                        bool IsUnsigned, ArrayRef<Metadata *> Ops);
   DIEnumerator(LLVMContext &C, StorageType Storage, int64_t Value,
                bool IsUnsigned, ArrayRef<Metadata *> Ops)
       : DIEnumerator(C, Storage, APInt(64, Value, !IsUnsigned), IsUnsigned,
@@ -474,9 +478,10 @@ class DIEnumerator : public DINode {
     return getImpl(Context, Value, IsUnsigned,
                    getCanonicalMDString(Context, Name), Storage, ShouldCreate);
   }
-  static DIEnumerator *getImpl(LLVMContext &Context, const APInt &Value,
-                               bool IsUnsigned, MDString *Name,
-                               StorageType Storage, bool ShouldCreate = true);
+  LLVM_ABI static DIEnumerator *getImpl(LLVMContext &Context,
+                                        const APInt &Value, bool IsUnsigned,
+                                        MDString *Name, StorageType Storage,
+                                        bool ShouldCreate = true);
 
   TempDIEnumerator cloneImpl() const {
     return getTemporary(getContext(), getValue(), isUnsigned(), getName());
@@ -529,8 +534,8 @@ public:
   inline StringRef getDirectory() const;
   inline std::optional<StringRef> getSource() const;
 
-  StringRef getName() const;
-  DIScope *getScope() const;
+  LLVM_ABI StringRef getName() const;
+  LLVM_ABI DIScope *getScope() const;
 
   /// Return the raw underlying file.
   ///
@@ -630,11 +635,11 @@ private:
                    Source ? MDString::get(Context, *Source) : nullptr, Storage,
                    ShouldCreate);
   }
-  static DIFile *getImpl(LLVMContext &Context, MDString *Filename,
-                         MDString *Directory,
-                         std::optional<ChecksumInfo<MDString *>> CS,
-                         MDString *Source, StorageType Storage,
-                         bool ShouldCreate = true);
+  LLVM_ABI static DIFile *getImpl(LLVMContext &Context, MDString *Filename,
+                                  MDString *Directory,
+                                  std::optional<ChecksumInfo<MDString *>> CS,
+                                  MDString *Source, StorageType Storage,
+                                  bool ShouldCreate = true);
 
   TempDIFile cloneImpl() const {
     return getTemporary(getContext(), getFilename(), getDirectory(),
@@ -675,8 +680,9 @@ public:
   }
   MDString *getRawSource() const { return Source; }
 
-  static StringRef getChecksumKindAsString(ChecksumKind CSKind);
-  static std::optional<ChecksumKind> getChecksumKind(StringRef CSKindStr);
+  LLVM_ABI static StringRef getChecksumKindAsString(ChecksumKind CSKind);
+  LLVM_ABI static std::optional<ChecksumKind>
+  getChecksumKind(StringRef CSKindStr);
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIFileKind;
@@ -754,7 +760,7 @@ public:
 
   unsigned getLine() const { return Line; }
   uint64_t getSizeInBits() const { return SizeInBits; }
-  uint32_t getAlignInBits() const;
+  LLVM_ABI uint32_t getAlignInBits() const;
   uint32_t getAlignInBytes() const { return getAlignInBits() / CHAR_BIT; }
   uint64_t getOffsetInBits() const { return OffsetInBits; }
   uint32_t getNumExtraInhabitants() const { return NumExtraInhabitants; }
@@ -855,11 +861,12 @@ protected:
                    SizeInBits, AlignInBits, Encoding, NumExtraInhabitants,
                    Flags, Storage, ShouldCreate);
   }
-  static DIBasicType *getImpl(LLVMContext &Context, unsigned Tag,
-                              MDString *Name, uint64_t SizeInBits,
-                              uint32_t AlignInBits, unsigned Encoding,
-                              uint32_t NumExtraInhabitants, DIFlags Flags,
-                              StorageType Storage, bool ShouldCreate = true);
+  LLVM_ABI static DIBasicType *getImpl(LLVMContext &Context, unsigned Tag,
+                                       MDString *Name, uint64_t SizeInBits,
+                                       uint32_t AlignInBits, unsigned Encoding,
+                                       uint32_t NumExtraInhabitants,
+                                       DIFlags Flags, StorageType Storage,
+                                       bool ShouldCreate = true);
 
   TempDIBasicType cloneImpl() const {
     return getTemporary(getContext(), getTag(), getName(), getSizeInBits(),
@@ -905,7 +912,7 @@ public:
 
   /// Return the signedness of this type, or std::nullopt if this type is
   /// neither signed nor unsigned.
-  std::optional<Signedness> getSignedness() const;
+  LLVM_ABI std::optional<Signedness> getSignedness() const;
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIBasicTypeKind ||
@@ -963,7 +970,7 @@ class DIFixedPointType : public DIBasicType {
                    SizeInBits, AlignInBits, Encoding, Flags, Kind, Factor,
                    Numerator, Denominator, Storage, ShouldCreate);
   }
-  static DIFixedPointType *
+  LLVM_ABI static DIFixedPointType *
   getImpl(LLVMContext &Context, unsigned Tag, MDString *Name,
           uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding,
           DIFlags Flags, unsigned Kind, int Factor, APInt Numerator,
@@ -986,8 +993,9 @@ public:
     LastFixedPointKind = FixedPointRational,
   };
 
-  static std::optional<FixedPointKind> getFixedPointKind(StringRef Str);
-  static const char *fixedPointKindString(FixedPointKind);
+  LLVM_ABI static std::optional<FixedPointKind>
+  getFixedPointKind(StringRef Str);
+  LLVM_ABI static const char *fixedPointKindString(FixedPointKind);
 
   DEFINE_MDNODE_GET(DIFixedPointType,
                     (unsigned Tag, MDString *Name, uint64_t SizeInBits,
@@ -1010,7 +1018,7 @@ public:
   bool isDecimal() const { return Kind == FixedPointDecimal; }
   bool isRational() const { return Kind == FixedPointRational; }
 
-  bool isSigned() const;
+  LLVM_ABI bool isSigned() const;
 
   FixedPointKind getKind() const { return static_cast<FixedPointKind>(Kind); }
 
@@ -1062,12 +1070,11 @@ class DIStringType : public DIType {
                    StringLength, StrLenExp, StrLocationExp, SizeInBits,
                    AlignInBits, Encoding, Storage, ShouldCreate);
   }
-  static DIStringType *getImpl(LLVMContext &Context, unsigned Tag,
-                               MDString *Name, Metadata *StringLength,
-                               Metadata *StrLenExp, Metadata *StrLocationExp,
-                               uint64_t SizeInBits, uint32_t AlignInBits,
-                               unsigned Encoding, StorageType Storage,
-                               bool ShouldCreate = true);
+  LLVM_ABI static DIStringType *
+  getImpl(LLVMContext &Context, unsigned Tag, MDString *Name,
+          Metadata *StringLength, Metadata *StrLenExp, Metadata *StrLocationExp,
+          uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding,
+          StorageType Storage, bool ShouldCreate = true);
 
   TempDIStringType cloneImpl() const {
     return getTemporary(getContext(), getTag(), getRawName(),
@@ -1193,7 +1200,7 @@ private:
                    DWARFAddressSpace, PtrAuthData, Flags, ExtraData,
                    Annotations.get(), Storage, ShouldCreate);
   }
-  static DIDerivedType *
+  LLVM_ABI static DIDerivedType *
   getImpl(LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
           unsigned Line, Metadata *Scope, Metadata *BaseType,
           uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
@@ -1247,7 +1254,7 @@ public:
     return DWARFAddressSpace;
   }
 
-  std::optional<PtrAuthData> getPtrAuthData() const;
+  LLVM_ABI std::optional<PtrAuthData> getPtrAuthData() const;
 
   /// Get extra data associated with this derived type.
   ///
@@ -1274,19 +1281,19 @@ public:
 
   /// Get casted version of extra data.
   /// @{
-  DIType *getClassType() const;
+  LLVM_ABI DIType *getClassType() const;
 
   DIObjCProperty *getObjCProperty() const {
     return dyn_cast_or_null<DIObjCProperty>(getExtraData());
   }
 
-  uint32_t getVBPtrOffset() const;
+  LLVM_ABI uint32_t getVBPtrOffset() const;
 
-  Constant *getStorageOffsetInBits() const;
+  LLVM_ABI Constant *getStorageOffsetInBits() const;
 
-  Constant *getConstant() const;
+  LLVM_ABI Constant *getConstant() const;
 
-  Constant *getDiscriminantValue() const;
+  LLVM_ABI Constant *getDiscriminantValue() const;
   /// @}
 
   static bool classof(const Metadata *MD) {
@@ -1331,13 +1338,12 @@ private:
                    UpperBound, Stride, Bias, Storage, ShouldCreate);
   }
 
-  static DISubrangeType *getImpl(LLVMContext &Context, MDString *Name,
-                                 Metadata *File, unsigned Line, Metadata *Scope,
-                                 uint64_t SizeInBits, uint32_t AlignInBits,
-                                 DIFlags Flags, Metadata *BaseType,
-                                 Metadata *LowerBound, Metadata *UpperBound,
-                                 Metadata *Stride, Metadata *Bias,
-                                 StorageType Storage, bool ShouldCreate = true);
+  LLVM_ABI static DISubrangeType *
+  getImpl(LLVMContext &Context, MDString *Name, Metadata *File, unsigned Line,
+          Metadata *Scope, uint64_t SizeInBits, uint32_t AlignInBits,
+          DIFlags Flags, Metadata *BaseType, Metadata *LowerBound,
+          Metadata *UpperBound, Metadata *Stride, Metadata *Bias,
+          StorageType Storage, bool ShouldCreate = true);
 
   TempDISubrangeType cloneImpl() const {
     return getTemporary(getContext(), getName(), getFile(), getLine(),
@@ -1346,7 +1352,7 @@ private:
                         getRawUpperBound(), getRawStride(), getRawBias());
   }
 
-  BoundType convertRawToBound(Metadata *IN) const;
+  LLVM_ABI BoundType convertRawToBound(Metadata *IN) const;
 
 public:
   DEFINE_MDNODE_GET(DISubrangeType,
@@ -1449,7 +1455,7 @@ class DICompositeType : public DIType {
         Associated, Allocated, Rank, Annotations.get(), Specification,
         NumExtraInhabitants, BitStride, Storage, ShouldCreate);
   }
-  static DICompositeType *
+  LLVM_ABI static DICompositeType *
   getImpl(LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
           unsigned Line, Metadata *Scope, Metadata *BaseType,
           uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
@@ -1519,7 +1525,7 @@ public:
   /// a new node.
   ///
   /// Else, returns \c nullptr.
-  static DICompositeType *
+  LLVM_ABI static DICompositeType *
   getODRType(LLVMContext &Context, MDString &Identifier, unsigned Tag,
              MDString *Name, Metadata *File, unsigned Line, Metadata *Scope,
              Metadata *BaseType, uint64_t SizeInBits, uint32_t AlignInBits,
@@ -1530,8 +1536,8 @@ public:
              Metadata *Discriminator, Metadata *DataLocation,
              Metadata *Associated, Metadata *Allocated, Metadata *Rank,
              Metadata *Annotations, Metadata *BitStride);
-  static DICompositeType *getODRTypeIfExists(LLVMContext &Context,
-                                             MDString &Identifier);
+  LLVM_ABI static DICompositeType *getODRTypeIfExists(LLVMContext &Context,
+                                                      MDString &Identifier);
 
   /// Build a DICompositeType with the given ODR identifier.
   ///
@@ -1542,7 +1548,7 @@ public:
   ///
   /// If not \a LLVMContext::isODRUniquingDebugTypes(), this function returns
   /// nullptr.
-  static DICompositeType *
+  LLVM_ABI static DICompositeType *
   buildODRType(LLVMContext &Context, MDString &Identifier, unsigned Tag,
                MDString *Name, Metadata *File, unsigned Line, Metadata *Scope,
                Metadata *BaseType, uint64_t SizeInBits, uint32_t AlignInBits,
@@ -1675,10 +1681,10 @@ class DISubroutineType : public DIType {
                                    bool ShouldCreate = true) {
     return getImpl(Context, Flags, CC, TypeArray.get(), Storage, ShouldCreate);
   }
-  static DISubroutineType *getImpl(LLVMContext &Context, DIFlags Flags,
-                                   uint8_t CC, Metadata *TypeArray,
-                                   StorageType Storage,
-                                   bool ShouldCreate = true);
+  LLVM_ABI static DISubroutineType *getImpl(LLVMContext &Context, DIFlags Flags,
+                                            uint8_t CC, Metadata *TypeArray,
+                                            StorageType Storage,
+                                            bool ShouldCreate = true);
 
   TempDISubroutineType cloneImpl() const {
     return getTemporary(getContext(), getFlags(), getCC(), getTypeArray());
@@ -1735,10 +1741,12 @@ public:
     LastDebugNameTableKind = Apple
   };
 
-  static std::optional<DebugEmissionKind> getEmissionKind(StringRef Str);
-  static const char *emissionKindString(DebugEmissionKind EK);
-  static std::optional<DebugNameTableKind> getNameTableKind(StringRef Str);
-  static const char *nameTableKindString(DebugNameTableKind PK);
+  LLVM_ABI static std::optional<DebugEmissionKind>
+  getEmissionKind(StringRef Str);
+  LLVM_ABI static const char *emissionKindString(DebugEmissionKind EK);
+  LLVM_ABI static std::optional<DebugNameTableKind>
+  getNameTableKind(StringRef Str);
+  LLVM_ABI static const char *nameTableKindString(DebugNameTableKind PK);
 
 private:
   unsigned SourceLanguage;
@@ -1779,7 +1787,7 @@ private:
         getCanonicalMDString(Context, SysRoot),
         getCanonicalMDString(Context, SDK), Storage, ShouldCreate);
   }
-  static DICompileUnit *
+  LLVM_ABI static DICompileUnit *
   getImpl(LLVMContext &Context, unsigned SourceLanguage, Metadata *File,
           MDString *Producer, bool IsOptimized, MDString *Flags,
           unsigned RuntimeVersion, MDString *SplitDebugFilename,
@@ -1932,11 +1940,11 @@ public:
   ///
   /// Return this if it's an \a DISubprogram; otherwise, look up the scope
   /// chain.
-  DISubprogram *getSubprogram() const;
+  LLVM_ABI DISubprogram *getSubprogram() const;
 
   /// Traverses the scope chain rooted at RootScope until it hits a Subprogram,
   /// recreating the chain with "NewSP" instead.
-  static DILocalScope *
+  LLVM_ABI static DILocalScope *
   cloneScopeForSubprogram(DILocalScope &RootScope, DISubprogram &NewSP,
                           LLVMContext &Ctx,
                           DenseMap<const MDNode *, MDNode *> &Cache);
@@ -1945,7 +1953,7 @@ public:
   ///
   /// Return this if it's not a \a DILexicalBlockFIle; otherwise, look up the
   /// scope chain.
-  DILocalScope *getNonLexicalBlockFileScope() const;
+  LLVM_ABI DILocalScope *getNonLexicalBlockFileScope() const;
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DISubprogramKind ||
@@ -1979,21 +1987,21 @@ public:
     LLVM_MARK_AS_BITMASK_ENUM(SPFlagLargest)
   };
 
-  static DISPFlags getFlag(StringRef Flag);
-  static StringRef getFlagString(DISPFlags Flag);
+  LLVM_ABI static DISPFlags getFlag(StringRef Flag);
+  LLVM_ABI static StringRef getFlagString(DISPFlags Flag);
 
   /// Split up a flags bitfield for easier printing.
   ///
   /// Split \c Flags into \c SplitFlags, a vector of its components.  Returns
   /// any remaining (unrecognized) bits.
-  static DISPFlags splitFlags(DISPFlags Flags,
-                              SmallVectorImpl<DISPFlags> &SplitFlags);
+  LLVM_ABI static DISPFlags splitFlags(DISPFlags Flags,
+                                       SmallVectorImpl<DISPFlags> &SplitFlags);
 
   // Helper for converting old bitfields to new flags word.
-  static DISPFlags toSPFlags(bool IsLocalToUnit, bool IsDefinition,
-                             bool IsOptimized,
-                             unsigned Virtuality = SPFlagNonvirtual,
-                             bool IsMainSubprogram = false);
+  LLVM_ABI static DISPFlags toSPFlags(bool IsLocalToUnit, bool IsDefinition,
+                                      bool IsOptimized,
+                                      unsigned Virtuality = SPFlagNonvirtual,
+                                      bool IsMainSubprogram = false);
 
 private:
   DIFlags Flags;
@@ -2022,7 +2030,7 @@ private:
                    getCanonicalMDString(Context, TargetFuncName),
                    Storage, ShouldCreate);
   }
-  static DISubprogram *
+  LLVM_ABI static DISubprogram *
   getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
           MDString *LinkageName, Metadata *File, unsigned Line, Metadata *Type,
           unsigned ScopeLine, Metadata *ContainingType, unsigned VirtualIndex,
@@ -2219,7 +2227,7 @@ public:
   /// Check if this subprogram describes the given function.
   ///
   /// FIXME: Should this be looking through bitcasts?
-  bool describes(const Function *F) const;
+  LLVM_ABI bool describes(const Function *F) const;
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DISubprogramKind;
@@ -2246,11 +2254,10 @@ class DILocation : public MDNode {
              ArrayRef<Metadata *> MDs, bool ImplicitCode);
   ~DILocation() { dropAllReferences(); }
 
-  static DILocation *getImpl(LLVMContext &Context, unsigned Line,
-                             unsigned Column, Metadata *Scope,
-                             Metadata *InlinedAt, bool ImplicitCode,
-                             uint64_t AtomGroup, uint8_t AtomRank,
-                             StorageType Storage, bool ShouldCreate = true);
+  LLVM_ABI static DILocation *
+  getImpl(LLVMContext &Context, unsigned Line, unsigned Column, Metadata *Scope,
+          Metadata *InlinedAt, bool ImplicitCode, uint64_t AtomGroup,
+          uint8_t AtomRank, StorageType Storage, bool ShouldCreate = true);
   static DILocation *getImpl(LLVMContext &Context, unsigned Line,
                              unsigned Column, DILocalScope *Scope,
                              DILocation *InlinedAt, bool ImplicitCode,
@@ -2444,13 +2451,14 @@ public:
   /// use the scope of any location.
   ///
   /// \p LocA \p LocB: The locations to be merged.
-  static DILocation *getMergedLocation(DILocation *LocA, DILocation *LocB);
+  LLVM_ABI static DILocation *getMergedLocation(DILocation *LocA,
+                                                DILocation *LocB);
 
   /// Try to combine the vector of locations passed as input in a single one.
   /// This function applies getMergedLocation() repeatedly left-to-right.
   ///
   /// \p Locs: The locations to be merged.
-  static DILocation *getMergedLocations(ArrayRef<DILocation *> Locs);
+  LLVM_ABI static DILocation *getMergedLocations(ArrayRef<DILocation *> Locs);
 
   /// Return the masked discriminator value for an input discrimnator value D
   /// (i.e. zero out the (B+1)-th and above bits for D (B is 0-base).
@@ -2499,12 +2507,12 @@ public:
   /// The return is std::nullopt if the values cannot be encoded in 32 bits -
   /// for example, values for BD or DF larger than 12 bits. Otherwise, the
   /// return is the encoded value.
-  static std::optional<unsigned> encodeDiscriminator(unsigned BD, unsigned DF,
-                                                     unsigned CI);
+  LLVM_ABI static std::optional<unsigned>
+  encodeDiscriminator(unsigned BD, unsigned DF, unsigned CI);
 
   /// Raw decoder for values in an encoded discriminator D.
-  static void decodeDiscriminator(unsigned D, unsigned &BD, unsigned &DF,
-                                  unsigned &CI);
+  LLVM_ABI static void decodeDiscriminator(unsigned D, unsigned &BD,
+                                           unsigned &DF, unsigned &CI);
 
   /// Returns the duplication factor for a given encoded discriminator \p D, or
   /// 1 if no value or 0 is encoded.
@@ -2538,8 +2546,8 @@ public:
 
 class DILexicalBlockBase : public DILocalScope {
 protected:
-  DILexicalBlockBase(LLVMContext &C, unsigned ID, StorageType Storage,
-                     ArrayRef<Metadata *> Ops);
+  LLVM_ABI DILexicalBlockBase(LLVMContext &C, unsigned ID, StorageType Storage,
+                              ArrayRef<Metadata *> Ops);
   ~DILexicalBlockBase() = default;
 
 public:
@@ -2585,9 +2593,10 @@ class DILexicalBlock : public DILexicalBlockBase {
                    ShouldCreate);
   }
 
-  static DILexicalBlock *getImpl(LLVMContext &Context, Metadata *Scope,
-                                 Metadata *File, unsigned Line, unsigned Column,
-                                 StorageType Storage, bool ShouldCreate = true);
+  LLVM_ABI static DILexicalBlock *getImpl(LLVMContext &Context, Metadata *Scope,
+                                          Metadata *File, unsigned Line,
+                                          unsigned Column, StorageType Storage,
+                                          bool ShouldCreate = true);
 
   TempDILexicalBlock cloneImpl() const {
     return getTemporary(getContext(), getScope(), getFile(), getLine(),
@@ -2634,10 +2643,11 @@ class DILexicalBlockFile : public DILexicalBlockBase {
                    ShouldCreate);
   }
 
-  static DILexicalBlockFile *getImpl(LLVMContext &Context, Metadata *Scope,
-                                     Metadata *File, unsigned Discriminator,
-                                     StorageType Storage,
-                                     bool ShouldCreate = true);
+  LLVM_ABI static DILexicalBlockFile *getImpl(LLVMContext &Context,
+                                              Metadata *Scope, Metadata *File,
+                                              unsigned Discriminator,
+                                              StorageType Storage,
+                                              bool ShouldCreate = true);
 
   TempDILexicalBlockFile cloneImpl() const {
     return getTemporary(getContext(), getScope(), getFile(),
@@ -2755,9 +2765,10 @@ class DINamespace : public DIScope {
     return getImpl(Context, Scope, getCanonicalMDString(Context, Name),
                    ExportSymbols, Storage, ShouldCreate);
   }
-  static DINamespace *getImpl(LLVMContext &Context, Metadata *Scope,
-                              MDString *Name, bool ExportSymbols,
-                              StorageType Storage, bool ShouldCreate = true);
+  LLVM_ABI static DINamespace *getImpl(LLVMContext &Context, Metadata *Scope,
+                                       MDString *Name, bool ExportSymbols,
+                                       StorageType Storage,
+                                       bool ShouldCreate = true);
 
   TempDINamespace cloneImpl() const {
     return getTemporary(getContext(), getScope(), getName(),
@@ -2809,11 +2820,11 @@ class DIModule : public DIScope {
                    getCanonicalMDString(Context, APINotesFile), LineNo, IsDecl,
                    Storage, ShouldCreate);
   }
-  static DIModule *getImpl(LLVMContext &Context, Metadata *File,
-                           Metadata *Scope, MDString *Name,
-                           MDString *ConfigurationMacros, MDString *IncludePath,
-                           MDString *APINotesFile, unsigned LineNo, bool IsDecl,
-                           StorageType Storage, bool ShouldCreate = true);
+  LLVM_ABI static DIModule *
+  getImpl(LLVMContext &Context, Metadata *File, Metadata *Scope, MDString *Name,
+          MDString *ConfigurationMacros, MDString *IncludePath,
+          MDString *APINotesFile, unsigned LineNo, bool IsDecl,
+          StorageType Storage, bool ShouldCreate = true);
 
   TempDIModule cloneImpl() const {
     return getTemporary(getContext(), getFile(), getScope(), getName(),
@@ -2901,10 +2912,9 @@ class DITemplateTypeParameter : public DITemplateParameter {
     return getImpl(Context, getCanonicalMDString(Context, Name), Type,
                    IsDefault, Storage, ShouldCreate);
   }
-  static DITemplateTypeParameter *getImpl(LLVMContext &Context, MDString *Name,
-                                          Metadata *Type, bool IsDefault,
-                                          StorageType Storage,
-                                          bool ShouldCreate = true);
+  LLVM_ABI static DITemplateTypeParameter *
+  getImpl(LLVMContext &Context, MDString *Name, Metadata *Type, bool IsDefault,
+          StorageType Storage, bool ShouldCreate = true);
 
   TempDITemplateTypeParameter cloneImpl() const {
     return getTemporary(getContext(), getName(), getType(), isDefault());
@@ -2944,11 +2954,10 @@ class DITemplateValueParameter : public DITemplateParameter {
     return getImpl(Context, Tag, getCanonicalMDString(Context, Name), Type,
                    IsDefault, Value, Storage, ShouldCreate);
   }
-  static DITemplateValueParameter *getImpl(LLVMContext &Context, unsigned Tag,
-                                           MDString *Name, Metadata *Type,
-                                           bool IsDefault, Metadata *Value,
-                                           StorageType Storage,
-                                           bool ShouldCreate = true);
+  LLVM_ABI static DITemplateValueParameter *
+  getImpl(LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *Type,
+          bool IsDefault, Metadata *Value, StorageType Storage,
+          bool ShouldCreate = true);
 
   TempDITemplateValueParameter cloneImpl() const {
     return getTemporary(getContext(), getTag(), getName(), getType(),
@@ -2981,8 +2990,9 @@ class DIVariable : public DINode {
   unsigned Line;
 
 protected:
-  DIVariable(LLVMContext &C, unsigned ID, StorageType Storage, signed Line,
-             ArrayRef<Metadata *> Ops, uint32_t AlignInBits = 0);
+  LLVM_ABI DIVariable(LLVMContext &C, unsigned ID, StorageType Storage,
+                      signed Line, ArrayRef<Metadata *> Ops,
+                      uint32_t AlignInBits = 0);
   ~DIVariable() = default;
 
 public:
@@ -2994,7 +3004,7 @@ public:
   uint32_t getAlignInBits() const { return SubclassData32; }
   uint32_t getAlignInBytes() const { return getAlignInBits() / CHAR_BIT; }
   /// Determines the size of the variable's type.
-  std::optional<uint64_t> getSizeInBits() const;
+  LLVM_ABI std::optional<uint64_t> getSizeInBits() const;
 
   /// Return the signedness of this variable's type, or std::nullopt if this
   /// type is neither signed nor unsigned.
@@ -3053,9 +3063,10 @@ class DIExpression : public MDNode {
         Elements(Elements.begin(), Elements.end()) {}
   ~DIExpression() = default;
 
-  static DIExpression *getImpl(LLVMContext &Context,
-                               ArrayRef<uint64_t> Elements, StorageType Storage,
-                               bool ShouldCreate = true);
+  LLVM_ABI static DIExpression *getImpl(LLVMContext &Context,
+                                        ArrayRef<uint64_t> Elements,
+                                        StorageType Storage,
+                                        bool ShouldCreate = true);
 
   TempDIExpression cloneImpl() const {
     return getTemporary(getContext(), getElements());
@@ -3078,7 +3089,7 @@ public:
   enum SignedOrUnsignedConstant { SignedConstant, UnsignedConstant };
   /// Determine whether this represents a constant value, if so
   // return it's sign information.
-  std::optional<SignedOrUnsignedConstant> isConstant() const;
+  LLVM_ABI std::optional<SignedOrUnsignedConstant> isConstant() const;
 
   /// Return the number of unique location operands referred to (via
   /// DW_OP_LLVM_arg) in this expression; this is not necessarily the number of
@@ -3088,7 +3099,7 @@ public:
   ///    DW_OP_LLVM_arg 0, DW_OP_mul)
   /// This function would return 2, as there are two unique location operands
   /// (0 and 1).
-  uint64_t getNumLocationOperands() const;
+  LLVM_ABI uint64_t getNumLocationOperands() const;
 
   using element_iterator = ArrayRef<uint64_t>::iterator;
 
@@ -3121,7 +3132,7 @@ public:
     /// Return the size of the operand.
     ///
     /// Return the number of elements in the operand (1 + args).
-    unsigned getSize() const;
+    LLVM_ABI unsigned getSize() const;
 
     /// Append the elements of this operand to \p V.
     void appendToVector(SmallVectorImpl<uint64_t> &V) const {
@@ -3194,17 +3205,17 @@ public:
   }
   /// @}
 
-  bool isValid() const;
+  LLVM_ABI bool isValid() const;
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIExpressionKind;
   }
 
   /// Return whether the first element a DW_OP_deref.
-  bool startsWithDeref() const;
+  LLVM_ABI bool startsWithDeref() const;
 
   /// Return whether there is exactly one operator and it is a DW_OP_deref;
-  bool isDeref() const;
+  LLVM_ABI bool isDeref() const;
 
   using FragmentInfo = DbgVariableFragmentInfo;
 
@@ -3212,11 +3223,11 @@ public:
   /// aren't known to be zero/sign (depending on the type of Var) and which
   /// are within the size of this fragment (if it is one). If we can't deduce
   /// anything from the expression this will return the size of Var.
-  std::optional<uint64_t> getActiveBits(DIVariable *Var);
+  LLVM_ABI std::optional<uint64_t> getActiveBits(DIVariable *Var);
 
   /// Retrieve the details of this fragment expression.
-  static std::optional<FragmentInfo> getFragmentInfo(expr_op_iterator Start,
-                                                     expr_op_iterator End);
+  LLVM_ABI static std::optional<FragmentInfo>
+  getFragmentInfo(expr_op_iterator Start, expr_op_iterator End);
 
   /// Retrieve the details of this fragment expression.
   std::optional<FragmentInfo> getFragmentInfo() const {
@@ -3227,23 +3238,24 @@ public:
   bool isFragment() const { return getFragmentInfo().has_value(); }
 
   /// Return whether this is an implicit location description.
-  bool isImplicit() const;
+  LLVM_ABI bool isImplicit() const;
 
   /// Return whether the location is computed on the expression stack, meaning
   /// it cannot be a simple register location.
-  bool isComplex() const;
+  LLVM_ABI bool isComplex() const;
 
   /// Return whether the evaluated expression makes use of a single location at
   /// the start of the expression, i.e. if it contains only a single
   /// DW_OP_LLVM_arg op as its first operand, or if it contains none.
-  bool isSingleLocationExpression() const;
+  LLVM_ABI bool isSingleLocationExpression() const;
 
   /// Returns a reference to the elements contained in this expression, skipping
   /// past the leading `DW_OP_LLVM_arg, 0` if one is present.
   /// Similar to `convertToNonVariadicExpression`, but faster and cheaper - it
   /// does not check whether the expression is a single-location expression, and
   /// it returns elements rather than creating a new DIExpression.
-  std::optional<ArrayRef<uint64_t>> getSingleLocationExpressionElements() const;
+  LLVM_ABI std::optional<ArrayRef<uint64_t>>
+  getSingleLocationExpressionElements() const;
 
   /// Removes all elements from \p Expr that do not apply to an undef debug
   /// value, which includes every operator that computes the value/location on
@@ -3251,12 +3263,13 @@ public:
   /// of this function always a single-location expression) while leaving
   /// everything that defines what the computed value applies to, i.e. the
   /// fragment information.
-  static const DIExpression *convertToUndefExpression(const DIExpression *Expr);
+  LLVM_ABI static const DIExpression *
+  convertToUndefExpression(const DIExpression *Expr);
 
   /// If \p Expr is a non-variadic expression (i.e. one that does not contain
   /// DW_OP_LLVM_arg), returns \p Expr converted to variadic form by adding a
   /// leading [DW_OP_LLVM_arg, 0] to the expression; otherwise returns \p Expr.
-  static const DIExpression *
+  LLVM_ABI static const DIExpression *
   convertToVariadicExpression(const DIExpression *Expr);
 
   /// If \p Expr is a valid single-location expression, i.e. it refers to only a
@@ -3266,7 +3279,7 @@ public:
   /// See also `getSingleLocationExpressionElements` above, which skips
   /// checking `isSingleLocationExpression` and returns a list of elements
   /// rather than a DIExpression.
-  static std::optional<const DIExpression *>
+  LLVM_ABI static std::optional<const DIExpression *>
   convertToNonVariadicExpression(const DIExpression *Expr);
 
   /// Inserts the elements of \p Expr into \p Ops modified to a canonical form,
@@ -3274,9 +3287,9 @@ public:
   /// implied derefence from the \p IsIndirect flag into the expression. This
   /// allows us to check equivalence between expressions with differing
   /// directness or variadicness.
-  static void canonicalizeExpressionOps(SmallVectorImpl<uint64_t> &Ops,
-                                        const DIExpression *Expr,
-                                        bool IsIndirect);
+  LLVM_ABI static void canonicalizeExpressionOps(SmallVectorImpl<uint64_t> &Ops,
+                                                 const DIExpression *Expr,
+                                                 bool IsIndirect);
 
   /// Determines whether two debug values should produce equivalent DWARF
   /// expressions, using their DIExpressions and directness, ignoring the
@@ -3289,17 +3302,18 @@ public:
   /// whose second operand is an immediate value.
   /// \p SecondExpr and \p SecondIndirect have the same meaning as the prior
   /// arguments, but apply to the second debug value.
-  static bool isEqualExpression(const DIExpression *FirstExpr,
-                                bool FirstIndirect,
-                                const DIExpression *SecondExpr,
-                                bool SecondIndirect);
+  LLVM_ABI static bool isEqualExpression(const DIExpression *FirstExpr,
+                                         bool FirstIndirect,
+                                         const DIExpression *SecondExpr,
+                                         bool SecondIndirect);
 
   /// Append \p Ops with operations to apply the \p Offset.
-  static void appendOffset(SmallVectorImpl<uint64_t> &Ops, int64_t Offset);
+  LLVM_ABI static void appendOffset(SmallVectorImpl<uint64_t> &Ops,
+                                    int64_t Offset);
 
   /// If this is a constant offset, extract it. If there is no expression,
   /// return true with an offset of zero.
-  bool extractIfOffset(int64_t &Offset) const;
+  LLVM_ABI bool extractIfOffset(int64_t &Offset) const;
 
   /// Assuming that the expression operates on an address, extract a constant
   /// offset and the successive ops. Return false if the expression contains
@@ -3308,18 +3322,19 @@ public:
   ///
   /// We don't try very hard to interpret the expression because we assume that
   /// foldConstantMath has canonicalized the expression.
-  bool extractLeadingOffset(int64_t &OffsetInBytes,
-                            SmallVectorImpl<uint64_t> &RemainingOps) const;
+  LLVM_ABI bool
+  extractLeadingOffset(int64_t &OffsetInBytes,
+                       SmallVectorImpl<uint64_t> &RemainingOps) const;
 
   /// Returns true iff this DIExpression contains at least one instance of
   /// `DW_OP_LLVM_arg, n` for all n in [0, N).
-  bool hasAllLocationOps(unsigned N) const;
+  LLVM_ABI bool hasAllLocationOps(unsigned N) const;
 
   /// Checks if the last 4 elements of the expression are DW_OP_constu <DWARF
   /// Address Space> DW_OP_swap DW_OP_xderef and extracts the <DWARF Address
   /// Space>.
-  static const DIExpression *extractAddressClass(const DIExpression *Expr,
-                                                 unsigned &AddrClass);
+  LLVM_ABI static const DIExpression *
+  extractAddressClass(const DIExpression *Expr, unsigned &AddrClass);
 
   /// Used for DIExpression::prepend.
   enum PrependOps : uint8_t {
@@ -3332,36 +3347,38 @@ public:
 
   /// Prepend \p DIExpr with a deref and offset operation and optionally turn it
   /// into a stack value or/and an entry value.
-  static DIExpression *prepend(const DIExpression *Expr, uint8_t Flags,
-                               int64_t Offset = 0);
+  LLVM_ABI static DIExpression *prepend(const DIExpression *Expr, uint8_t Flags,
+                                        int64_t Offset = 0);
 
   /// Prepend \p DIExpr with the given opcodes and optionally turn it into a
   /// stack value.
-  static DIExpression *prependOpcodes(const DIExpression *Expr,
-                                      SmallVectorImpl<uint64_t> &Ops,
-                                      bool StackValue = false,
-                                      bool EntryValue = false);
+  LLVM_ABI static DIExpression *prependOpcodes(const DIExpression *Expr,
+                                               SmallVectorImpl<uint64_t> &Ops,
+                                               bool StackValue = false,
+                                               bool EntryValue = false);
 
   /// Append the opcodes \p Ops to \p DIExpr. Unlike \ref appendToStack, the
   /// returned expression is a stack value only if \p DIExpr is a stack value.
   /// If \p DIExpr describes a fragment, the returned expression will describe
   /// the same fragment.
-  static DIExpression *append(const DIExpression *Expr, ArrayRef<uint64_t> Ops);
+  LLVM_ABI static DIExpression *append(const DIExpression *Expr,
+                                       ArrayRef<uint64_t> Ops);
 
   /// Convert \p DIExpr into a stack value if it isn't one already by appending
   /// DW_OP_deref if needed, and appending \p Ops to the resulting expression.
   /// If \p DIExpr describes a fragment, the returned expression will describe
   /// the same fragment.
-  static DIExpression *appendToStack(const DIExpression *Expr,
-                                     ArrayRef<uint64_t> Ops);
+  LLVM_ABI static DIExpression *appendToStack(const DIExpression *Expr,
+                                              ArrayRef<uint64_t> Ops);
 
   /// Create a copy of \p Expr by appending the given list of \p Ops to each
   /// instance of the operand `DW_OP_LLVM_arg, \p ArgNo`. This is used to
   /// modify a specific location used by \p Expr, such as when salvaging that
   /// location.
-  static DIExpression *appendOpsToArg(const DIExpression *Expr,
-                                      ArrayRef<uint64_t> Ops, unsigned ArgNo,
-                                      bool StackValue = false);
+  LLVM_ABI static DIExpression *appendOpsToArg(const DIExpression *Expr,
+                                               ArrayRef<uint64_t> Ops,
+                                               unsigned ArgNo,
+                                               bool StackValue = false);
 
   /// Create a copy of \p Expr with each instance of
   /// `DW_OP_LLVM_arg, \p OldArg` replaced with `DW_OP_LLVM_arg, \p NewArg`,
@@ -3369,8 +3386,8 @@ public:
   /// for all Arg > \p OldArg.
   /// This is used when replacing one of the operands of a debug value list
   /// with another operand in the same list and deleting the old operand.
-  static DIExpression *replaceArg(const DIExpression *Expr, uint64_t OldArg,
-                                  uint64_t NewArg);
+  LLVM_ABI static DIExpression *replaceArg(const DIExpression *Expr,
+                                           uint64_t OldArg, uint64_t NewArg);
 
   /// Create a DIExpression to describe one part of an aggregate variable that
   /// is fragmented across multiple Values. The DW_OP_LLVM_fragment operation
@@ -3383,7 +3400,7 @@ public:
   /// \return             Creating a fragment expression may fail if \c Expr
   ///                     contains arithmetic operations that would be
   ///                     truncated.
-  static std::optional<DIExpression *>
+  LLVM_ABI static std::optional<DIExpression *>
   createFragmentExpression(const DIExpression *Expr, unsigned OffsetInBits,
                            unsigned SizeInBits);
 
@@ -3433,7 +3450,7 @@ public:
   /// and offsets because different debug records store the information in
   /// different places (dbg_assign has two DIExpressions - one contains the
   /// fragment info for the entire intrinsic).
-  static bool calculateFragmentIntersect(
+  LLVM_ABI static bool calculateFragmentIntersect(
       const DataLayout &DL, const Value *SliceStart, uint64_t SliceOffsetInBits,
       uint64_t SliceSizeInBits, const Value *DbgPtr, int64_t DbgPtrOffsetInBits,
       int64_t DbgExtractOffsetInBits, DIExpression::FragmentInfo VarFrag,
@@ -3443,12 +3460,14 @@ public:
   using ExtOps = std::array<uint64_t, 6>;
 
   /// Returns the ops for a zero- or sign-extension in a DIExpression.
-  static ExtOps getExtOps(unsigned FromSize, unsigned ToSize, bool Signed);
+  LLVM_ABI static ExtOps getExtOps(unsigned FromSize, unsigned ToSize,
+                                   bool Signed);
 
   /// Append a zero- or sign-extension to \p Expr. Converts the expression to a
   /// stack value if it isn't one already.
-  static DIExpression *appendExt(const DIExpression *Expr, unsigned FromSize,
-                                 unsigned ToSize, bool Signed);
+  LLVM_ABI static DIExpression *appendExt(const DIExpression *Expr,
+                                          unsigned FromSize, unsigned ToSize,
+                                          bool Signed);
 
   /// Check if fragments overlap between a pair of FragmentInfos.
   static bool fragmentsOverlap(const FragmentInfo &A, const FragmentInfo &B) {
@@ -3472,18 +3491,18 @@ public:
 
   /// Check if the expression consists of exactly one entry value operand.
   /// (This is the only configuration of entry values that is supported.)
-  bool isEntryValue() const;
+  LLVM_ABI bool isEntryValue() const;
 
   /// Try to shorten an expression with an initial constant operand.
   /// Returns a new expression and constant on success, or the original
   /// expression and constant on failure.
-  std::pair<DIExpression *, const ConstantInt *>
+  LLVM_ABI std::pair<DIExpression *, const ConstantInt *>
   constantFold(const ConstantInt *CI);
 
   /// Try to shorten an expression with constant math operations that can be
   /// evaluated at compile time. Returns a new expression on success, or the old
   /// expression if there is nothing to be reduced.
-  DIExpression *foldConstantMath();
+  LLVM_ABI DIExpression *foldConstantMath();
 };
 
 inline bool operator==(const DIExpression::FragmentInfo &A,
@@ -3621,7 +3640,7 @@ class DIGlobalVariable : public DIVariable {
                    cast_or_null<Metadata>(TemplateParams), AlignInBits,
                    Annotations.get(), Storage, ShouldCreate);
   }
-  static DIGlobalVariable *
+  LLVM_ABI static DIGlobalVariable *
   getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
           MDString *LinkageName, Metadata *File, unsigned Line, Metadata *Type,
           bool IsLocalToUnit, bool IsDefinition,
@@ -3696,10 +3715,11 @@ class DICommonBlock : public DIScope {
     return getImpl(Context, Scope, Decl, getCanonicalMDString(Context, Name),
                    File, LineNo, Storage, ShouldCreate);
   }
-  static DICommonBlock *getImpl(LLVMContext &Context, Metadata *Scope,
-                                Metadata *Decl, MDString *Name, Metadata *File,
-                                unsigned LineNo, StorageType Storage,
-                                bool ShouldCreate = true);
+  LLVM_ABI static DICommonBlock *getImpl(LLVMContext &Context, Metadata *Scope,
+                                         Metadata *Decl, MDString *Name,
+                                         Metadata *File, unsigned LineNo,
+                                         StorageType Storage,
+                                         bool ShouldCreate = true);
 
   TempDICommonBlock cloneImpl() const {
     return getTemporary(getContext(), getScope(), getDecl(), getName(),
@@ -3765,12 +3785,11 @@ class DILocalVariable : public DIVariable {
                    Line, Type, Arg, Flags, AlignInBits, Annotations.get(),
                    Storage, ShouldCreate);
   }
-  static DILocalVariable *getImpl(LLVMContext &Context, Metadata *Scope,
-                                  MDString *Name, Metadata *File, unsigned Line,
-                                  Metadata *Type, unsigned Arg, DIFlags Flags,
-                                  uint32_t AlignInBits, Metadata *Annotations,
-                                  StorageType Storage,
-                                  bool ShouldCreate = true);
+  LLVM_ABI static DILocalVariable *
+  getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name, Metadata *File,
+          unsigned Line, Metadata *Type, unsigned Arg, DIFlags Flags,
+          uint32_t AlignInBits, Metadata *Annotations, StorageType Storage,
+          bool ShouldCreate = true);
 
   TempDILocalVariable cloneImpl() const {
     return getTemporary(getContext(), getScope(), getName(), getFile(),
@@ -3844,9 +3863,10 @@ class DILabel : public DINode {
     return getImpl(Context, Scope, getCanonicalMDString(Context, Name), File,
                    Line, Storage, ShouldCreate);
   }
-  static DILabel *getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
-                          Metadata *File, unsigned Line, StorageType Storage,
-                          bool ShouldCreate = true);
+  LLVM_ABI static DILabel *getImpl(LLVMContext &Context, Metadata *Scope,
+                                   MDString *Name, Metadata *File,
+                                   unsigned Line, StorageType Storage,
+                                   bool ShouldCreate = true);
 
   TempDILabel cloneImpl() const {
     return getTemporary(getContext(), getScope(), getName(), getFile(),
@@ -3913,11 +3933,10 @@ class DIObjCProperty : public DINode {
                    getCanonicalMDString(Context, SetterName), Attributes, Type,
                    Storage, ShouldCreate);
   }
-  static DIObjCProperty *getImpl(LLVMContext &Context, MDString *Name,
-                                 Metadata *File, unsigned Line,
-                                 MDString *GetterName, MDString *SetterName,
-                                 unsigned Attributes, Metadata *Type,
-                                 StorageType Storage, bool ShouldCreate = true);
+  LLVM_ABI static DIObjCProperty *
+  getImpl(LLVMContext &Context, MDString *Name, Metadata *File, unsigned Line,
+          MDString *GetterName, MDString *SetterName, unsigned Attributes,
+          Metadata *Type, StorageType Storage, bool ShouldCreate = true);
 
   TempDIObjCProperty cloneImpl() const {
     return getTemporary(getContext(), getName(), getFile(), getLine(),
@@ -3995,7 +4014,7 @@ class DIImportedEntity : public DINode {
                    getCanonicalMDString(Context, Name), Elements.get(), Storage,
                    ShouldCreate);
   }
-  static DIImportedEntity *
+  LLVM_ABI static DIImportedEntity *
   getImpl(LLVMContext &Context, unsigned Tag, Metadata *Scope, Metadata *Entity,
           Metadata *File, unsigned Line, MDString *Name, Metadata *Elements,
           StorageType Storage, bool ShouldCreate = true);
@@ -4049,7 +4068,7 @@ class DIGlobalVariableExpression : public MDNode {
       : MDNode(C, DIGlobalVariableExpressionKind, Storage, Ops) {}
   ~DIGlobalVariableExpression() = default;
 
-  static DIGlobalVariableExpression *
+  LLVM_ABI static DIGlobalVariableExpression *
   getImpl(LLVMContext &Context, Metadata *Variable, Metadata *Expression,
           StorageType Storage, bool ShouldCreate = true);
 
@@ -4152,9 +4171,10 @@ class DIMacro : public DIMacroNode {
     return getImpl(Context, MIType, Line, getCanonicalMDString(Context, Name),
                    getCanonicalMDString(Context, Value), Storage, ShouldCreate);
   }
-  static DIMacro *getImpl(LLVMContext &Context, unsigned MIType, unsigned Line,
-                          MDString *Name, MDString *Value, StorageType Storage,
-                          bool ShouldCreate = true);
+  LLVM_ABI static DIMacro *getImpl(LLVMContext &Context, unsigned MIType,
+                                   unsigned Line, MDString *Name,
+                                   MDString *Value, StorageType Storage,
+                                   bool ShouldCreate = true);
 
   TempDIMacro cloneImpl() const {
     return getTemporary(getContext(), getMacinfoType(), getLine(), getName(),
@@ -4208,9 +4228,10 @@ class DIMacroFile : public DIMacroNode {
                    Elements.get(), Storage, ShouldCreate);
   }
 
-  static DIMacroFile *getImpl(LLVMContext &Context, unsigned MIType,
-                              unsigned Line, Metadata *File, Metadata *Elements,
-                              StorageType Storage, bool ShouldCreate = true);
+  LLVM_ABI static DIMacroFile *getImpl(LLVMContext &Context, unsigned MIType,
+                                       unsigned Line, Metadata *File,
+                                       Metadata *Elements, StorageType Storage,
+                                       bool ShouldCreate = true);
 
   TempDIMacroFile cloneImpl() const {
     return getTemporary(getContext(), getMacinfoType(), getLine(), getFile(),
@@ -4269,12 +4290,13 @@ class DIArgList : public Metadata, ReplaceableMetadataImpl {
   }
   ~DIArgList() { untrack(); }
 
-  void track();
-  void untrack();
+  LLVM_ABI void track();
+  LLVM_ABI void untrack();
   void dropAllReferences(bool Untrack);
 
 public:
-  static DIArgList *get(LLVMContext &Context, ArrayRef<ValueAsMetadata *> Args);
+  LLVM_ABI static DIArgList *get(LLVMContext &Context,
+                                 ArrayRef<ValueAsMetadata *> Args);
 
   ArrayRef<ValueAsMetadata *> getArgs() const { return Args; }
 
@@ -4289,7 +4311,7 @@ public:
     return ReplaceableMetadataImpl::getAllDbgVariableRecordUsers();
   }
 
-  void handleChangedOperand(void *Ref, Metadata *New);
+  LLVM_ABI void handleChangedOperand(void *Ref, Metadata *New);
 };
 
 /// Identifies a unique instance of a variable.
@@ -4312,11 +4334,11 @@ class DebugVariable {
 
   /// Fragment that will overlap all other fragments. Used as default when
   /// caller demands a fragment.
-  static const FragmentInfo DefaultFragment;
+  LLVM_ABI static const FragmentInfo DefaultFragment;
 
 public:
-  DebugVariable(const DbgVariableIntrinsic *DII);
-  DebugVariable(const DbgVariableRecord *DVR);
+  LLVM_ABI DebugVariable(const DbgVariableIntrinsic *DII);
+  LLVM_ABI DebugVariable(const DbgVariableRecord *DVR);
 
   DebugVariable(const DILocalVariable *Var,
                 std::optional<FragmentInfo> FragmentInfo,
@@ -4383,7 +4405,7 @@ template <> struct DenseMapInfo<DebugVariable> {
 /// information).
 class DebugVariableAggregate : public DebugVariable {
 public:
-  DebugVariableAggregate(const DbgVariableIntrinsic *DVI);
+  LLVM_ABI DebugVariableAggregate(const DbgVariableIntrinsic *DVI);
   DebugVariableAggregate(const DebugVariable &V)
       : DebugVariable(V.getVariable(), std::nullopt, V.getInlinedAt()) {}
 };

@@ -17,6 +17,7 @@
 include "clang/CIR/Dialect/IR/CIRDialect.td"
 include "clang/CIR/Dialect/IR/CIRTypes.td"
 include "clang/CIR/Dialect/IR/CIRAttrs.td"
+include "clang/CIR/Dialect/IR/CIRAttrConstraints.td"
 
 include "clang/CIR/Interfaces/CIROpInterfaces.td"
 include "clang/CIR/Interfaces/CIRLoopOpInterface.td"
@@ -1464,9 +1465,13 @@ def ShiftOp : CIR_Op<"shift", [Pure]> {
     ```
   }];
 
-  let results = (outs CIR_AnyIntOrVecOfInt:$result);
-  let arguments = (ins CIR_AnyIntOrVecOfInt:$value, CIR_AnyIntOrVecOfInt:$amount,
-                       UnitAttr:$isShiftleft);
+  let arguments = (ins
+    CIR_AnyIntOrVecOfIntType:$value,
+    CIR_AnyIntOrVecOfIntType:$amount,
+    UnitAttr:$isShiftleft
+  );
+
+  let results = (outs CIR_AnyIntOrVecOfIntType:$result);
 
   let assemblyFormat = [{
     `(`
@@ -1774,11 +1779,6 @@ def GetMemberOp : CIR_Op<"get_member"> {
 
     /// Return the record type pointed by the base pointer.
     cir::PointerType getAddrTy() { return getAddr().getType(); }
-
-    /// Return the result type.
-    cir::PointerType getResultTy() {
-      return getResult().getType();
-    }
   }];
 
   let hasVerifier = 1;
@@ -2050,7 +2050,7 @@ def VecCreateOp : CIR_Op<"vec.create", [Pure]> {
     in the vector type.
   }];
 
-  let arguments = (ins Variadic<CIR_AnyType>:$elements);
+  let arguments = (ins Variadic<CIR_VectorElementType>:$elements);
   let results = (outs CIR_VectorType:$result);
 
   let assemblyFormat = [{
@@ -2085,7 +2085,7 @@ def VecInsertOp : CIR_Op<"vec.insert", [Pure,
 
   let arguments = (ins
     CIR_VectorType:$vec,
-    AnyType:$value,
+    CIR_VectorElementType:$value,
     CIR_AnyFundamentalIntType:$index
   );
 
@@ -2118,7 +2118,7 @@ def VecExtractOp : CIR_Op<"vec.extract", [Pure,
   }];
 
   let arguments = (ins CIR_VectorType:$vec, CIR_AnyFundamentalIntType:$index);
-  let results = (outs CIR_AnyType:$result);
+  let results = (outs CIR_VectorElementType:$result);
 
   let assemblyFormat = [{
     $vec `[` $index `:` type($index) `]` attr-dict `:` qualified(type($vec))
@@ -2157,6 +2157,52 @@ def VecCmpOp : CIR_Op<"vec.cmp", [Pure, SameTypeOperands]> {
 }
 
 //===----------------------------------------------------------------------===//
+// VecShuffleOp
+//===----------------------------------------------------------------------===//
+
+// TODO: Create an interface that both VecShuffleOp and VecShuffleDynamicOp
+// implement.  This could be useful for passes that don't care how the vector
+// shuffle was specified.
+
+def VecShuffleOp : CIR_Op<"vec.shuffle",
+                   [Pure, AllTypesMatch<["vec1", "vec2"]>]> {
+  let summary = "Combine two vectors using indices passed as constant integers";
+  let description = [{
+    The `cir.vec.shuffle` operation implements the documented form of Clang's
+    `__builtin_shufflevector`, where the indices of the shuffled result are
+    integer constants.
+
+    The two input vectors, which must have the same type, are concatenated.
+    Each of the integer constant arguments is interpreted as an index into that
+    concatenated vector, with a value of -1 meaning that the result value
+    doesn't matter. The result vector, which must have the same element type as
+    the input vectors and the same number of elements as the list of integer
+    constant indices, is constructed by taking the elements at the given
+    indices from the concatenated vector. The size of the result vector does
+    not have to match the size of the individual input vectors or of the
+    concatenated vector.
+
+    ```mlir
+    %new_vec = cir.vec.shuffle(%vec_1, %vec_2 : !cir.vector<2 x !s32i>)
+        [#cir.int<3> : !s64i, #cir.int<1> : !s64i] : !cir.vector<2 x !s32i>
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_VectorType:$vec1,
+    CIR_VectorType:$vec2,
+    CIR_IntArrayAttr:$indices
+  );
+
+  let results = (outs CIR_VectorType:$result);
+  let assemblyFormat = [{
+    `(` $vec1 `,` $vec2 `:` qualified(type($vec1)) `)` $indices `:`
+     qualified(type($result)) attr-dict
+  }];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // VecShuffleDynamicOp
 //===----------------------------------------------------------------------===//
 
@@ -2180,7 +2226,7 @@ def VecShuffleDynamicOp : CIR_Op<"vec.shuffle.dynamic",
     ```
   }];
 
-  let arguments = (ins CIR_VectorType:$vec, IntegerVector:$indices);
+  let arguments = (ins CIR_VectorType:$vec, CIR_VectorOfIntType:$indices);
   let results = (outs CIR_VectorType:$result);
   let assemblyFormat = [{
     $vec `:` qualified(type($vec)) `,` $indices `:` qualified(type($indices))
@@ -2188,6 +2234,45 @@ def VecShuffleDynamicOp : CIR_Op<"vec.shuffle.dynamic",
   }];
 
   let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// VecTernaryOp
+//===----------------------------------------------------------------------===//
+
+def VecTernaryOp : CIR_Op<"vec.ternary",
+                   [Pure, AllTypesMatch<["result", "lhs", "rhs"]>]> {
+  let summary = "The `cond ? a : b` ternary operator for vector types";
+  let description = [{
+    The `cir.vec.ternary` operation represents the C/C++ ternary operator,
+    `?:`, for vector types, which does a `select` on individual elements of the
+    vectors. Unlike a regular `?:` operator, there is no short circuiting. All
+    three arguments are always evaluated.  Because there is no short
+    circuiting, there are no regions in this operation, unlike cir.ternary.
+
+    The first argument is a vector of integral type. The second and third
+    arguments are vectors of the same type and have the same number of elements
+    as the first argument.
+
+    The result is a vector of the same type as the second and third arguments.
+    Each element of the result is `(bool)a[n] ? b[n] : c[n]`.
+  }];
+
+  let arguments = (ins
+    CIR_VectorOfIntType:$cond,
+    CIR_VectorType:$lhs,
+    CIR_VectorType:$rhs
+  );
+
+  let results = (outs CIR_VectorType:$result);
+  let assemblyFormat = [{
+    `(` $cond `,` $lhs`,` $rhs `)` `:` qualified(type($cond)) `,`
+    qualified(type($lhs)) attr-dict
+  }];
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD
