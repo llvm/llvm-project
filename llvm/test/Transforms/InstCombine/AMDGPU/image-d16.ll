@@ -122,7 +122,7 @@ main_body:
   ret half %addf_sum.2
 }
 
-define void @image_sample_2d_multi_fptrunc_to_d16(<8 x i32> %surf_desc, <4 x i32> %samp, float %u, float %v, ptr addrspace(7) %out) {
+define amdgpu_ps half @image_sample_2d_multi_fptrunc_to_d16(<8 x i32> %surf_desc, <4 x i32> %samp, float %u, float %v) {
 ; GFX7-LABEL: @image_sample_2d_multi_fptrunc_to_d16(
 ; GFX7-NEXT:  main_body:
 ; GFX7-NEXT:    [[SAMPLE:%.*]] = call <3 x float> @llvm.amdgcn.image.sample.lz.2d.v3f32.f32.v8i32.v4i32(i32 7, float [[U:%.*]], float [[V:%.*]], <8 x i32> [[SURF_DESC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
@@ -134,8 +134,7 @@ define void @image_sample_2d_multi_fptrunc_to_d16(<8 x i32> %surf_desc, <4 x i32
 ; GFX7-NEXT:    [[H2:%.*]] = fptrunc float [[E2]] to half
 ; GFX7-NEXT:    [[MUL:%.*]] = fmul half [[H0]], [[H1]]
 ; GFX7-NEXT:    [[RES:%.*]] = fadd half [[MUL]], [[H2]]
-; GFX7-NEXT:    store half [[RES]], ptr addrspace(7) [[OUT:%.*]], align 2
-; GFX7-NEXT:    ret void
+; GFX7-NEXT:    ret half [[RES]]
 ;
 ; GFX81PLUS-LABEL: @image_sample_2d_multi_fptrunc_to_d16(
 ; GFX81PLUS-NEXT:  main_body:
@@ -148,8 +147,7 @@ define void @image_sample_2d_multi_fptrunc_to_d16(<8 x i32> %surf_desc, <4 x i32
 ; GFX81PLUS-NEXT:    [[H2:%.*]] = fptrunc float [[E2]] to half
 ; GFX81PLUS-NEXT:    [[MUL:%.*]] = fmul half [[H0]], [[H1]]
 ; GFX81PLUS-NEXT:    [[RES:%.*]] = fadd half [[MUL]], [[H2]]
-; GFX81PLUS-NEXT:    store half [[RES]], ptr addrspace(7) [[OUT:%.*]], align 2
-; GFX81PLUS-NEXT:    ret void
+; GFX81PLUS-NEXT:    ret half [[RES]]
 ;
 main_body:
   %sample = call <4 x float> @llvm.amdgcn.image.sample.lz.2d.v4f32.f32.v8i32.v4i32(i32 15, float %u, float %v, <8 x i32> %surf_desc, <4 x i32> %samp, i1 false, i32 0, i32 0)
@@ -161,8 +159,7 @@ main_body:
   %h2 = fptrunc float %e2 to half
   %mul = fmul half %h0, %h1
   %res = fadd half %mul, %h2
-  store half %res, ptr addrspace(7) %out, align 2
-  ret void
+  ret half %res
 }
 
 define amdgpu_ps half @image_gather4_2d_v4f32(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s, half %t) {
@@ -444,4 +441,3 @@ declare <3 x float> @llvm.amdgcn.image.msaa.load.x.2dmsaa.v3f32.i32(i32, i32, i3
 declare <4 x float> @llvm.amdgcn.image.msaa.load.x.2dmsaa.v4f32.i32(i32, i32, i32, i32, <8 x i32>, i32, i32) #0
 
 attributes #0 = { nounwind readonly willreturn}
-
