@@ -78,6 +78,13 @@ public:
   static bool checkPerfDataMagic(StringRef FileName);
 
 private:
+  struct LBREntry {
+    uint64_t From;
+    uint64_t To;
+    bool Mispred;
+  };
+  friend raw_ostream &operator<<(raw_ostream &OS, const LBREntry &);
+
   struct PerfBranchSample {
     SmallVector<LBREntry, 32> LBR;
   };
@@ -92,24 +99,30 @@ private:
     uint64_t Addr;
   };
 
+  /// Container for the unit of branch data.
+  /// Backwards compatible with legacy use for branches and fall-throughs:
+  /// - if \p Branch is FT_ONLY or FT_EXTERNAL_ORIGIN, the trace only contains
+  ///   fall-through data,
+  /// - if \p To is EXTERNAL, the trace only contains branch data.
   struct Trace {
+    static constexpr const uint64_t EXTERNAL = 0ULL;
+    static constexpr const uint64_t FT_ONLY = -1ULL;
+    static constexpr const uint64_t FT_EXTERNAL_ORIGIN = -2ULL;
+    static constexpr const uint64_t EXTERNAL_RETURN = -3ULL;
+
+    uint64_t Branch;
     uint64_t From;
     uint64_t To;
-    Trace(uint64_t From, uint64_t To) : From(From), To(To) {}
     bool operator==(const Trace &Other) const {
-      return From == Other.From && To == Other.To;
+      return Branch == Other.Branch && From == Other.From && To == Other.To;
     }
   };
+  friend raw_ostream &operator<<(raw_ostream &OS, const Trace &);
 
   struct TraceHash {
     size_t operator()(const Trace &L) const {
-      return std::hash<uint64_t>()(L.From << 32 | L.To);
+      return llvm::hash_combine(L.Branch, L.From, L.To);
     }
-  };
-
-  struct FTInfo {
-    uint64_t InternCount{0};
-    uint64_t ExternCount{0};
   };
 
   struct TakenBranchInfo {
@@ -119,8 +132,11 @@ private:
 
   /// Intermediate storage for profile data. We save the results of parsing
   /// and use them later for processing and assigning profile.
-  std::unordered_map<Trace, TakenBranchInfo, TraceHash> BranchLBRs;
-  std::unordered_map<Trace, FTInfo, TraceHash> FallthroughLBRs;
+  std::unordered_map<Trace, TakenBranchInfo, TraceHash> TraceMap;
+  std::vector<std::pair<Trace, TakenBranchInfo>> Traces;
+  /// Pre-populated addresses of returns, coming from pre-aggregated data or
+  /// disassembly. Used to disambiguate call-continuation fall-throughs.
+  std::unordered_set<uint64_t> Returns;
   std::unordered_map<uint64_t, uint64_t> BasicSamples;
   std::vector<PerfMemSample> MemSamples;
 
@@ -193,8 +209,8 @@ private:
   /// Return a vector of offsets corresponding to a trace in a function
   /// if the trace is valid, std::nullopt otherwise.
   std::optional<SmallVector<std::pair<uint64_t, uint64_t>, 16>>
-  getFallthroughsInTrace(BinaryFunction &BF, const LBREntry &First,
-                         const LBREntry &Second, uint64_t Count = 1) const;
+  getFallthroughsInTrace(BinaryFunction &BF, const Trace &Trace, uint64_t Count,
+                         bool IsReturn) const;
 
   /// Record external entry into the function \p BF.
   ///
@@ -255,11 +271,10 @@ private:
                      uint64_t Mispreds);
 
   /// Register a \p Branch.
-  bool doBranch(uint64_t From, uint64_t To, uint64_t Count, uint64_t Mispreds);
+  bool doBranch(const Trace &Trace, uint64_t Count, uint64_t Mispreds);
 
   /// Register a trace between two LBR entries supplied in execution order.
-  bool doTrace(const LBREntry &First, const LBREntry &Second,
-               uint64_t Count = 1);
+  bool doTrace(const Trace &Trace, uint64_t Count);
 
   /// Parser helpers
   /// Return false if we exhausted our parser buffer and finished parsing
@@ -372,7 +387,7 @@ private:
   /// File format syntax:
   /// E <event>
   /// S <start> <count>
-  /// T <start> <end> <ft_end> <count>
+  /// [TR] <start> <end> <ft_end> <count>
   /// B <start> <end> <count> <mispred_count>
   /// [Ff] <start> <end> <count>
   ///
@@ -387,6 +402,7 @@ private:
   ///       jump to the block
   /// T - an aggregated trace: branch from <start> to <end> with a fall-through
   ///       to <ft_end>
+  /// R - an aggregated trace originating at a return
   ///
   /// <id> - build id of the object containing the address. We can skip it for
   /// the main binary and use "X" for an unknown object. This will save some
@@ -476,7 +492,6 @@ private:
 
   /// Debugging dump methods
   void dump() const;
-  void dump(const LBREntry &LBR) const;
   void dump(const PerfBranchSample &Sample) const;
   void dump(const PerfMemSample &Sample) const;
 
@@ -504,6 +519,30 @@ public:
 
   friend class YAMLProfileWriter;
 };
+
+inline raw_ostream &operator<<(raw_ostream &OS,
+                               const DataAggregator::LBREntry &L) {
+  OS << formatv("{0:x} -> {1:x}/{2}", L.From, L.To, L.Mispred ? 'M' : 'P');
+  return OS;
+}
+
+inline raw_ostream &operator<<(raw_ostream &OS,
+                               const DataAggregator::Trace &T) {
+  switch (T.Branch) {
+  case DataAggregator::Trace::FT_ONLY:
+  case DataAggregator::Trace::FT_EXTERNAL_ORIGIN:
+    break;
+  case DataAggregator::Trace::EXTERNAL_RETURN:
+    OS << "0 -> ";
+    break;
+  default:
+    OS << Twine::utohexstr(T.Branch) << " -> ";
+  }
+  OS << Twine::utohexstr(T.From);
+  if (T.To)
+    OS << " ... " << Twine::utohexstr(T.To);
+  return OS;
+}
 } // namespace bolt
 } // namespace llvm
 
