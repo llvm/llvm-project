@@ -792,6 +792,12 @@ Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
     }
   }
 
+  // report for one plugin if a name is specified.
+  if (error.Success() && !plugin_name.empty())
+    error = Status::FromErrorStringWithFormatv(
+        "\"{}\" plugin is not able to save a core for this process.",
+        plugin_name);
+
   // Check to see if any of the object file plugins tried and failed to save.
   // If none ran, set the error message.
   if (error.Success())

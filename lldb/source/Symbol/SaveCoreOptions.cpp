@@ -29,16 +29,9 @@ Status SaveCoreOptions::SetPluginName(const char *name) {
     llvm::SmallVector<llvm::StringRef> plugin_names =
         PluginManager::GetSaveCorePluginNames();
     if (!plugin_names.empty()) {
-      stream.PutCString(" valid values are: ");
-      bool is_first = true;
-      for (llvm::StringRef plugin_name : plugin_names) {
-        llvm::StringRef delimiter = ", ";
-        if (is_first) {
-          delimiter = "";
-          is_first = false;
-        }
-        stream.Printf("%s\"%s\"", delimiter.data(), plugin_name.data());
-      }
+      stream.PutCString(" Valid values are: ");
+      std::string plugin_names_str = llvm::join(plugin_names, ", ");
+      stream.PutCString(plugin_names_str);
       stream.PutChar('.');
     }
     return Status(stream.GetString().str());

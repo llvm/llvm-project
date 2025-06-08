@@ -97,6 +97,10 @@ public:
   static void ProcessNames(CommandInterpreter &interpreter,
                            CompletionRequest &request, SearchFilter *searcher);
 
+  static void ProcessSaveCorePluginNames(CommandInterpreter &interpreter,
+                                         CompletionRequest &request,
+                                         SearchFilter *searcher);
+
   static void DisassemblyFlavors(CommandInterpreter &interpreter,
                                  CompletionRequest &request,
                                  SearchFilter *searcher);
