@@ -63,6 +63,7 @@ protected:
   void emitDiagnosticMessage(FullSourceLoc Loc, PresumedLoc PLoc,
                              DiagnosticsEngine::Level Level, StringRef Message,
                              ArrayRef<CharSourceRange> Ranges,
+                             unsigned NestingLevel,
                              DiagOrStoredDiag D) override;
 
   void emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
@@ -75,8 +76,8 @@ protected:
                        SmallVectorImpl<CharSourceRange> &Ranges,
                        ArrayRef<FixItHint> Hints) override;
 
-  void beginDiagnostic(DiagOrStoredDiag D,
-                       DiagnosticsEngine::Level Level) override;
+  void beginDiagnostic(DiagOrStoredDiag D, DiagnosticsEngine::Level Level,
+                       unsigned NestingLevel) override;
   void endDiagnostic(DiagOrStoredDiag D,
                      DiagnosticsEngine::Level Level) override;
 };
@@ -619,7 +620,8 @@ void SDiagsWriter::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
   SDiagsRenderer Renderer(*this, *LangOpts, State->DiagOpts);
   Renderer.emitDiagnostic(
       FullSourceLoc(Info.getLocation(), Info.getSourceManager()), DiagLevel,
-      State->diagBuf, Info.getRanges(), Info.getFixItHints(), &Info);
+      State->diagBuf, Info.getRanges(), Info.getFixItHints(),
+      Info.getNestingLevel(), &Info);
 }
 
 static serialized_diags::Level getStableLevel(DiagnosticsEngine::Level Level) {
@@ -669,6 +671,7 @@ void SDiagsWriter::EmitDiagnosticMessage(FullSourceLoc Loc, PresumedLoc PLoc,
 void SDiagsRenderer::emitDiagnosticMessage(
     FullSourceLoc Loc, PresumedLoc PLoc, DiagnosticsEngine::Level Level,
     StringRef Message, ArrayRef<clang::CharSourceRange> Ranges,
+    unsigned NestingLevel,
     DiagOrStoredDiag D) {
   Writer.EmitDiagnosticMessage(Loc, PLoc, Level, Message, D);
 }
@@ -682,7 +685,8 @@ void SDiagsWriter::ExitDiagBlock() {
 }
 
 void SDiagsRenderer::beginDiagnostic(DiagOrStoredDiag D,
-                                     DiagnosticsEngine::Level Level) {
+                                     DiagnosticsEngine::Level Level,
+                                     unsigned NestingLevel) {
   if (Level == DiagnosticsEngine::Note)
     Writer.EnterDiagBlock();
 }

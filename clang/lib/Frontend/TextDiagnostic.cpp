@@ -70,7 +70,13 @@ static void applyTemplateHighlighting(raw_ostream &OS, StringRef Str,
 }
 
 /// Number of spaces to indent when word-wrapping.
-const unsigned WordWrapIndentation = 6;
+constexpr unsigned WordWrapIndentation = 4;
+
+/// Number of spaces per indent level.
+constexpr unsigned IndentWidth = 4;
+
+/// Maximum indentation level.
+constexpr unsigned MaxIndentWidth = 6 * IndentWidth;
 
 static int bytesSincePreviousTabOrLineBegin(StringRef SourceLine, size_t i) {
   int bytes = 0;
@@ -604,7 +610,10 @@ static unsigned findEndOfWord(unsigned Start, StringRef Str,
 /// \returns true if word-wrapping was required, or false if the
 /// string fit on the first line.
 static bool printWordWrapped(raw_ostream &OS, StringRef Str, unsigned Columns,
-                             unsigned Column, bool Bold) {
+                             unsigned Column, bool Bold, unsigned NestingLevel) {
+  unsigned BaseIndent = std::min(NestingLevel * IndentWidth, MaxIndentWidth);
+  Columns -= BaseIndent;
+
   const unsigned Length = std::min(Str.find('\n'), Str.size());
   bool TextNormal = true;
 
@@ -636,7 +645,7 @@ static bool printWordWrapped(raw_ostream &OS, StringRef Str, unsigned Columns,
     // This word does not fit on the current line, so wrap to the next
     // line.
     OS << '\n';
-    OS.indent(WordWrapIndentation);
+    OS.indent(BaseIndent + WordWrapIndentation);
     applyTemplateHighlighting(OS, Str.substr(WordStart, WordLength),
                               TextNormal, Bold);
     Column = WordWrapIndentation + WordLength;
@@ -661,8 +670,40 @@ TextDiagnostic::~TextDiagnostic() {}
 void TextDiagnostic::emitDiagnosticMessage(
     FullSourceLoc Loc, PresumedLoc PLoc, DiagnosticsEngine::Level Level,
     StringRef Message, ArrayRef<clang::CharSourceRange> Ranges,
+    unsigned NestingLevel,
     DiagOrStoredDiag D) {
   uint64_t StartOfLocationInfo = OS.tell();
+
+  // The fancy format prints things in a different order.
+  if (DiagOpts.getFormat() == TextDiagnosticFormat::Fancy) {
+    OS.indent(BaseIndent);
+
+    printDiagnosticLevel(OS, Level, DiagOpts.ShowColors);
+    printDiagnosticMessage(OS,
+                           /*IsSupplemental*/ Level == DiagnosticsEngine::Note,
+                           Message, OS.tell() - StartOfLocationInfo,
+                           DiagOpts.MessageLength, DiagOpts.ShowColors,
+                           NestingLevel);
+
+    if (DiagOpts.ShowLocation && Loc.isValid()) {
+      OS << '\n';
+      for (auto [Loc, PLoc] : IncludeStack) {
+        OS.indent(BaseIndent + 6);
+        OS << "- included from ";
+        emitDiagnosticLoc(Loc, PLoc, Level, /*Ranges=*/{});
+        OS.resetColor();
+        OS << '\n';
+      }
+
+      OS.indent(BaseIndent + 6);
+      OS << "- at ";
+      emitDiagnosticLoc(Loc, PLoc, Level, Ranges);
+      OS.resetColor();
+      OS << "\n\n";
+    }
+
+    return;
+  }
 
   // Emit the location of this particular diagnostic.
   if (Loc.isValid())
@@ -676,7 +717,8 @@ void TextDiagnostic::emitDiagnosticMessage(
   printDiagnosticMessage(OS,
                          /*IsSupplemental*/ Level == DiagnosticsEngine::Note,
                          Message, OS.tell() - StartOfLocationInfo,
-                         DiagOpts.MessageLength, DiagOpts.ShowColors);
+                         DiagOpts.MessageLength, DiagOpts.ShowColors,
+                         /*NestingLevel=*/0);
 }
 
 /*static*/ void
@@ -715,7 +757,8 @@ void TextDiagnostic::printDiagnosticMessage(raw_ostream &OS,
                                             bool IsSupplemental,
                                             StringRef Message,
                                             unsigned CurrentColumn,
-                                            unsigned Columns, bool ShowColors) {
+                                            unsigned Columns, bool ShowColors,
+                                            unsigned NestingLevel) {
   bool Bold = false;
   if (ShowColors && !IsSupplemental) {
     // Print primary diagnostic messages in bold and without color, to visually
@@ -725,7 +768,7 @@ void TextDiagnostic::printDiagnosticMessage(raw_ostream &OS,
   }
 
   if (Columns)
-    printWordWrapped(OS, Message, Columns, CurrentColumn, Bold);
+    printWordWrapped(OS, Message, Columns, CurrentColumn, Bold, NestingLevel);
   else {
     bool Normal = true;
     applyTemplateHighlighting(OS, Message, Normal, Bold);
@@ -773,6 +816,20 @@ void TextDiagnostic::emitFilename(StringRef Filename, const SourceManager &SM) {
   OS << Filename;
 }
 
+void TextDiagnostic::beginDiagnostic(DiagOrStoredDiag D,
+                                     DiagnosticsEngine::Level Level,
+                                     unsigned NestingLevel) {
+  if (DiagOpts.getFormat() == TextDiagnosticFormat::Fancy) {
+    BaseIndent = std::min(NestingLevel * IndentWidth, MaxIndentWidth);
+    IncludeStack.clear();
+    if (LastLevel != DiagnosticsEngine::Ignored)
+      OS << "\n";
+  }
+}
+
+void TextDiagnostic::endDiagnostic(DiagOrStoredDiag D,
+                                   DiagnosticsEngine::Level Level) {}
+
 /// Print out the file/line/column information and include trace.
 ///
 /// This method handles the emission of the diagnostic location information.
@@ -804,6 +861,7 @@ void TextDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
   switch (DiagOpts.getFormat()) {
   case DiagnosticOptions::SARIF:
   case DiagnosticOptions::Clang:
+  case DiagnosticOptions::Fancy:
     if (DiagOpts.ShowLine)
       OS << ':' << LineNo;
     break;
@@ -827,6 +885,7 @@ void TextDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
   switch (DiagOpts.getFormat()) {
   case DiagnosticOptions::SARIF:
   case DiagnosticOptions::Clang:
+  case DiagnosticOptions::Fancy:
   case DiagnosticOptions::Vi:    OS << ':';    break;
   case DiagnosticOptions::MSVC:
     // MSVC2013 and before print 'file(4) : error'. MSVC2015 gets rid of the
@@ -879,7 +938,18 @@ void TextDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
 }
 
 void TextDiagnostic::emitIncludeLocation(FullSourceLoc Loc, PresumedLoc PLoc) {
-  if (DiagOpts.ShowLocation && PLoc.isValid()) {
+  if (!DiagOpts.ShowLocation)
+    return;
+
+  if (DiagOpts.getFormat() == TextDiagnosticFormat::Fancy) {
+    if (!PLoc.isValid())
+      return;
+
+    IncludeStack.emplace_back(Loc, PLoc);
+    return;
+  }
+
+  if (PLoc.isValid()) {
     OS << "In file included from ";
     emitFilename(PLoc.getFilename(), Loc.getManager());
     OS << ':' << PLoc.getLine() << ":\n";
@@ -1340,7 +1410,7 @@ void TextDiagnostic::emitSnippetAndCaret(
           : 0;
   auto indentForLineNumbers = [&] {
     if (MaxLineNoDisplayWidth > 0)
-      OS.indent(MaxLineNoDisplayWidth + 2) << "| ";
+      OS.indent(BaseIndent + MaxLineNoDisplayWidth + 2) << "| ";
   };
 
   // Prepare source highlighting information for the lines we're about to
@@ -1451,7 +1521,7 @@ void TextDiagnostic::emitSnippet(StringRef SourceLine,
   // Emit line number.
   if (MaxLineNoDisplayWidth > 0) {
     unsigned LineNoDisplayWidth = getNumDisplayWidth(DisplayLineNo);
-    OS.indent(MaxLineNoDisplayWidth - LineNoDisplayWidth + 1)
+    OS.indent(BaseIndent + MaxLineNoDisplayWidth - LineNoDisplayWidth + 1)
         << DisplayLineNo << " | ";
   }
 

@@ -76,6 +76,7 @@ protected:
                                      DiagnosticsEngine::Level Level,
                                      StringRef Message,
                                      ArrayRef<CharSourceRange> Ranges,
+                                     unsigned NestingLevel,
                                      DiagOrStoredDiag Info) = 0;
 
   virtual void emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
@@ -94,12 +95,13 @@ protected:
                                           StringRef ModuleName) = 0;
 
   virtual void beginDiagnostic(DiagOrStoredDiag D,
-                               DiagnosticsEngine::Level Level) {}
+                               DiagnosticsEngine::Level Level,
+                               unsigned NestingLevel) {}
   virtual void endDiagnostic(DiagOrStoredDiag D,
                              DiagnosticsEngine::Level Level) {}
 
 private:
-  void emitBasicNote(StringRef Message);
+  void emitBasicNote(StringRef Message, unsigned CurrentNestingLevel);
   void emitIncludeStack(FullSourceLoc Loc, PresumedLoc PLoc,
                         DiagnosticsEngine::Level Level);
   void emitIncludeStackRecursively(FullSourceLoc Loc);
@@ -110,10 +112,12 @@ private:
                  ArrayRef<CharSourceRange> Ranges, ArrayRef<FixItHint> Hints);
   void emitSingleMacroExpansion(FullSourceLoc Loc,
                                 DiagnosticsEngine::Level Level,
-                                ArrayRef<CharSourceRange> Ranges);
+                                ArrayRef<CharSourceRange> Ranges,
+                                unsigned CurrentNestingLevel);
   void emitMacroExpansions(FullSourceLoc Loc, DiagnosticsEngine::Level Level,
                            ArrayRef<CharSourceRange> Ranges,
-                           ArrayRef<FixItHint> Hints);
+                           ArrayRef<FixItHint> Hints,
+                           unsigned CurrentNestingLevel);
 
 public:
   /// Emit a diagnostic.
@@ -128,9 +132,11 @@ public:
   /// \param Message The diagnostic message to emit.
   /// \param Ranges The underlined ranges for this code snippet.
   /// \param FixItHints The FixIt hints active for this diagnostic.
+  /// \param NestingLevel How deeply this diagnostic is nested.
   void emitDiagnostic(FullSourceLoc Loc, DiagnosticsEngine::Level Level,
                       StringRef Message, ArrayRef<CharSourceRange> Ranges,
                       ArrayRef<FixItHint> FixItHints,
+                      unsigned NestingLevel = 0,
                       DiagOrStoredDiag D = (Diagnostic *)nullptr);
 
   void emitStoredDiagnostic(StoredDiagnostic &Diag);

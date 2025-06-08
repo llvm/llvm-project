@@ -137,7 +137,10 @@ void TextDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
     TextDiagnostic::printDiagnosticMessage(
         OS, /*IsSupplemental=*/Level == DiagnosticsEngine::Note,
         DiagMessageStream.str(), OS.tell() - StartOfLocationInfo,
-        DiagOpts.MessageLength, DiagOpts.ShowColors);
+        DiagOpts.MessageLength, DiagOpts.ShowColors,
+        DiagOpts.getFormat() == TextDiagnosticFormat::Fancy
+            ? Info.getNestingLevel()
+            : 0);
     OS.flush();
     return;
   }
@@ -149,7 +152,8 @@ void TextDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
 
   TextDiag->emitDiagnostic(
       FullSourceLoc(Info.getLocation(), Info.getSourceManager()), Level,
-      DiagMessageStream.str(), Info.getRanges(), Info.getFixItHints());
+      DiagMessageStream.str(), Info.getRanges(), Info.getFixItHints(),
+      Info.getNestingLevel(), &Info);
 
   OS.flush();
 }

@@ -87,14 +87,16 @@ void DiagnosticRenderer::emitDiagnostic(FullSourceLoc Loc,
                                         StringRef Message,
                                         ArrayRef<CharSourceRange> Ranges,
                                         ArrayRef<FixItHint> FixItHints,
+                                        unsigned NestingLevel,
                                         DiagOrStoredDiag D) {
   assert(Loc.hasManager() || Loc.isInvalid());
 
-  beginDiagnostic(D, Level);
+  beginDiagnostic(D, Level, NestingLevel);
 
   if (!Loc.isValid())
     // If we have no source location, just emit the diagnostic message.
-    emitDiagnosticMessage(Loc, PresumedLoc(), Level, Message, Ranges, D);
+    emitDiagnosticMessage(Loc, PresumedLoc(), Level, Message, Ranges,
+                          NestingLevel, D);
   else {
     // Get the ranges into a local array we can hack on.
     SmallVector<CharSourceRange, 20> MutableRanges(Ranges);
@@ -121,13 +123,13 @@ void DiagnosticRenderer::emitDiagnostic(FullSourceLoc Loc,
     emitIncludeStack(Loc, PLoc, Level);
 
     // Next, emit the actual diagnostic message and caret.
-    emitDiagnosticMessage(Loc, PLoc, Level, Message, Ranges, D);
+    emitDiagnosticMessage(Loc, PLoc, Level, Message, Ranges, NestingLevel, D);
     emitCaret(Loc, Level, MutableRanges, FixItHints);
 
     // If this location is within a macro, walk from UnexpandedLoc up to Loc
     // and produce a macro backtrace.
     if (UnexpandedLoc.isValid() && UnexpandedLoc.isMacroID()) {
-      emitMacroExpansions(UnexpandedLoc, Level, MutableRanges, FixItHints);
+      emitMacroExpansions(UnexpandedLoc, Level, MutableRanges, FixItHints, NestingLevel);
     }
   }
 
@@ -140,12 +142,14 @@ void DiagnosticRenderer::emitDiagnostic(FullSourceLoc Loc,
 void DiagnosticRenderer::emitStoredDiagnostic(StoredDiagnostic &Diag) {
   emitDiagnostic(Diag.getLocation(), Diag.getLevel(), Diag.getMessage(),
                  Diag.getRanges(), Diag.getFixIts(),
+                 Diag.getNestingLevel().value_or(0),
                  &Diag);
 }
 
-void DiagnosticRenderer::emitBasicNote(StringRef Message) {
+void DiagnosticRenderer::emitBasicNote(StringRef Message,
+                                       unsigned CurrentNestingLevel) {
   emitDiagnosticMessage(FullSourceLoc(), PresumedLoc(), DiagnosticsEngine::Note,
-                        Message, {}, DiagOrStoredDiag());
+                        Message, {}, CurrentNestingLevel + 1, DiagOrStoredDiag());
 }
 
 /// Prints an include stack when appropriate for a particular
@@ -429,7 +433,8 @@ void DiagnosticRenderer::emitCaret(FullSourceLoc Loc,
 /// macro expansion message
 void DiagnosticRenderer::emitSingleMacroExpansion(
     FullSourceLoc Loc, DiagnosticsEngine::Level Level,
-    ArrayRef<CharSourceRange> Ranges) {
+    ArrayRef<CharSourceRange> Ranges,
+    unsigned CurrentNestingLevel) {
   // Find the spelling location for the macro definition. We must use the
   // spelling location here to avoid emitting a macro backtrace for the note.
   FullSourceLoc SpellingLoc = Loc.getSpellingLoc();
@@ -448,7 +453,7 @@ void DiagnosticRenderer::emitSingleMacroExpansion(
     Message << "expanded from macro '" << MacroName << "'";
 
   emitDiagnostic(SpellingLoc, DiagnosticsEngine::Note, Message.str(),
-                 SpellingRanges, {});
+                 SpellingRanges, {}, CurrentNestingLevel + 1);
 }
 
 /// A helper function to check if the current ranges are all inside the same
@@ -504,7 +509,8 @@ rangesInsideSameMacroArgExpansion(FullSourceLoc Loc,
 void DiagnosticRenderer::emitMacroExpansions(FullSourceLoc Loc,
                                              DiagnosticsEngine::Level Level,
                                              ArrayRef<CharSourceRange> Ranges,
-                                             ArrayRef<FixItHint> Hints) {
+                                             ArrayRef<FixItHint> Hints,
+                                             unsigned NestingLevel) {
   assert(Loc.isValid() && "must have a valid source location here");
   const SourceManager &SM = Loc.getManager();
   SourceLocation L = Loc;
@@ -541,7 +547,7 @@ void DiagnosticRenderer::emitMacroExpansions(FullSourceLoc Loc,
   if (MacroDepth <= MacroLimit || MacroLimit == 0) {
     for (auto I = LocationStack.rbegin(), E = LocationStack.rend();
          I != E; ++I)
-      emitSingleMacroExpansion(FullSourceLoc(*I, SM), Level, Ranges);
+      emitSingleMacroExpansion(FullSourceLoc(*I, SM), Level, Ranges, NestingLevel);
     return;
   }
 
@@ -551,19 +557,19 @@ void DiagnosticRenderer::emitMacroExpansions(FullSourceLoc Loc,
   for (auto I = LocationStack.rbegin(),
             E = LocationStack.rbegin() + MacroStartMessages;
        I != E; ++I)
-    emitSingleMacroExpansion(FullSourceLoc(*I, SM), Level, Ranges);
+    emitSingleMacroExpansion(FullSourceLoc(*I, SM), Level, Ranges, NestingLevel);
 
   SmallString<200> MessageStorage;
   llvm::raw_svector_ostream Message(MessageStorage);
   Message << "(skipping " << (MacroDepth - MacroLimit)
           << " expansions in backtrace; use -fmacro-backtrace-limit=0 to "
              "see all)";
-  emitBasicNote(Message.str());
+  emitBasicNote(Message.str(), NestingLevel);
 
   for (auto I = LocationStack.rend() - MacroEndMessages,
             E = LocationStack.rend();
        I != E; ++I)
-    emitSingleMacroExpansion(FullSourceLoc(*I, SM), Level, Ranges);
+    emitSingleMacroExpansion(FullSourceLoc(*I, SM), Level, Ranges, NestingLevel);
 }
 
 DiagnosticNoteRenderer::~DiagnosticNoteRenderer() = default;

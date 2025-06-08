@@ -89,7 +89,8 @@ public:
   ~CXDiagnosticRenderer() override {}
 
   void beginDiagnostic(DiagOrStoredDiag D,
-                       DiagnosticsEngine::Level Level) override {
+                       DiagnosticsEngine::Level Level,
+                       unsigned NestingLevel) override {
 
     const StoredDiagnostic *SD =
         dyn_cast_if_present<const StoredDiagnostic *>(D);
@@ -110,6 +111,7 @@ public:
   void emitDiagnosticMessage(FullSourceLoc Loc, PresumedLoc PLoc,
                              DiagnosticsEngine::Level Level, StringRef Message,
                              ArrayRef<CharSourceRange> Ranges,
+                             unsigned NestingLevel,
                              DiagOrStoredDiag D) override {
     if (!D.isNull())
       return;

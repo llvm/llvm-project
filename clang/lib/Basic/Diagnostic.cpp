@@ -662,8 +662,18 @@ void DiagnosticsEngine::Report(const StoredDiagnostic &storedDiag) {
   Report(DiagLevel, Info);
 }
 
-void DiagnosticsEngine::Report(Level DiagLevel, const Diagnostic &Info) {
+void DiagnosticsEngine::Report(Level DiagLevel, Diagnostic &Info) {
   assert(DiagLevel != Ignored && "Cannot emit ignored diagnostics!");
+
+  if (!getEnableNesting()) {
+    Info.setNestingLevel(0);
+  } else if (Info.shouldUseDefaultNestingLevel()) {
+    Info.setNestingLevel(DiagLevel == Note ? GlobalNestingLevel + 1
+                                           : GlobalNestingLevel);
+  } else {
+    Info.setNestingLevel(Info.getNestingLevel() + GlobalNestingLevel);
+  }
+
   Client->HandleDiagnostic(DiagLevel, Info);
   if (Client->IncludeInDiagnosticCounts()) {
     if (DiagLevel == Warning)
@@ -796,14 +806,15 @@ DiagnosticBuilder::DiagnosticBuilder(const DiagnosticBuilder &D)
 Diagnostic::Diagnostic(const DiagnosticsEngine *DO,
                        const DiagnosticBuilder &DiagBuilder)
     : DiagObj(DO), DiagLoc(DiagBuilder.DiagLoc), DiagID(DiagBuilder.DiagID),
+      NestingLevel(DiagBuilder.getStorage()->NestingLevel.value_or(0)),
       FlagValue(DiagBuilder.FlagValue), DiagStorage(*DiagBuilder.getStorage()) {
 }
 
 Diagnostic::Diagnostic(const DiagnosticsEngine *DO, SourceLocation DiagLoc,
                        unsigned DiagID, const DiagnosticStorage &DiagStorage,
-                       StringRef StoredDiagMessage)
-    : DiagObj(DO), DiagLoc(DiagLoc), DiagID(DiagID), DiagStorage(DiagStorage),
-      StoredDiagMessage(StoredDiagMessage) {}
+                       StringRef StoredDiagMessage, unsigned NestingLevel)
+    : DiagObj(DO), DiagLoc(DiagLoc), DiagID(DiagID), NestingLevel(NestingLevel),
+      DiagStorage(DiagStorage), StoredDiagMessage(StoredDiagMessage) {}
 
 DiagnosticConsumer::~DiagnosticConsumer() = default;
 
@@ -1450,19 +1461,21 @@ StoredDiagnostic::StoredDiagnostic(DiagnosticsEngine::Level Level,
       "Valid source location without setting a source manager for diagnostic");
   if (Info.getLocation().isValid())
     Loc = FullSourceLoc(Info.getLocation(), Info.getSourceManager());
-  SmallString<64> Message;
-  Info.FormatDiagnostic(Message);
-  this->Message.assign(Message.begin(), Message.end());
-  this->Ranges.assign(Info.getRanges().begin(), Info.getRanges().end());
-  this->FixIts.assign(Info.getFixItHints().begin(), Info.getFixItHints().end());
+  SmallString<64> Msg;
+  Info.FormatDiagnostic(Msg);
+  Message.assign(Msg.begin(), Msg.end());
+  Ranges.assign(Info.getRanges().begin(), Info.getRanges().end());
+  FixIts.assign(Info.getFixItHints().begin(), Info.getFixItHints().end());
+  NestingLevel = Info.getNestingLevel();
 }
 
 StoredDiagnostic::StoredDiagnostic(DiagnosticsEngine::Level Level, unsigned ID,
                                    StringRef Message, FullSourceLoc Loc,
                                    ArrayRef<CharSourceRange> Ranges,
-                                   ArrayRef<FixItHint> FixIts)
-    : ID(ID), Level(Level), Loc(Loc), Message(Message),
-      Ranges(Ranges.begin(), Ranges.end()),
+                                   ArrayRef<FixItHint> FixIts,
+                                   UnsignedOrNone NestingLevel)
+    : ID(ID), Level(Level), NestingLevel(NestingLevel), Loc(Loc),
+      Message(Message), Ranges(Ranges.begin(), Ranges.end()),
       FixIts(FixIts.begin(), FixIts.end()) {}
 
 llvm::raw_ostream &clang::operator<<(llvm::raw_ostream &OS,

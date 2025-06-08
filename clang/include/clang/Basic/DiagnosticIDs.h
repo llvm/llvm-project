@@ -92,6 +92,10 @@ namespace clang {
       Remark          ///< A diagnostic that indicates normal progress through
                       ///< compilation.
     };
+
+    /// Diagnostic nesting level; this can be any positive integer; we only
+    /// use an enum for this so we can treat it as a separate type.
+    enum class NestingLevel : unsigned {};
   } // end namespace diag
 } // end namespace clang
 

@@ -74,7 +74,7 @@ class DiagnosticOptions {
   friend class CompilerInvocationBase;
 
 public:
-  enum TextDiagnosticFormat { Clang, MSVC, Vi, SARIF };
+  enum TextDiagnosticFormat { Clang, MSVC, Vi, SARIF, Fancy };
 
   // Default values.
   enum {

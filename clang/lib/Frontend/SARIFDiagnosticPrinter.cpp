@@ -74,6 +74,7 @@ void SARIFDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
 
   SARIFDiag->emitDiagnostic(
       FullSourceLoc(Info.getLocation(), Info.getSourceManager()), Level,
-      DiagMessageStream.str(), Info.getRanges(), Info.getFixItHints(), &Info);
+      DiagMessageStream.str(), Info.getRanges(), Info.getFixItHints(),
+      Info.getNestingLevel(), &Info);
 }
 } // namespace clang

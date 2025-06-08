@@ -353,6 +353,9 @@ IntrusiveRefCntPtr<DiagnosticsEngine> CompilerInstance::createDiagnostics(
   } else
     Diags->setClient(new TextDiagnosticPrinter(llvm::errs(), Opts));
 
+  // TODO: Make this configurable.
+  Diags->setEnableNesting(true);
+
   // Chain in -verify checker, if requested.
   if (Opts.VerifyDiagnostics)
     Diags->setClient(new VerifyDiagnosticConsumer(*Diags));

@@ -105,6 +105,9 @@ public:
     // Copy fix-its.
     for (unsigned I = 0, N = Other.getNumFixItHints(); I != N; ++I)
       AddFixItHint(Other.getFixItHint(I));
+
+    if (!Other.shouldUseDefaultNestingLevel())
+      SetNestingLevel(Other.getNestingLevel());
   }
 
   PartialDiagnostic &operator=(const PartialDiagnostic &Other) {
@@ -162,6 +165,9 @@ public:
     // Add all fix-its.
     for (const FixItHint &Fix : DiagStorage->FixItHints)
       DB.AddFixItHint(Fix);
+
+    if (DiagStorage->NestingLevel)
+      DB.SetNestingLevel(DiagStorage->NestingLevel);
   }
 
   void EmitToString(DiagnosticsEngine &Diags,
