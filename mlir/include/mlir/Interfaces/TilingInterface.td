@@ -404,6 +404,7 @@ def PartialReductionOpInterface :
             "Location ":$loc,
             "::mlir::ReductionTilingStrategy":$tilingStrategy,
             "ValueRange":$init,
+            "ValueRange":$ivs,
             "::mlir::ArrayRef<::mlir::OpFoldResult>":$offsets,
             "::mlir::ArrayRef<::mlir::OpFoldResult>":$sizes,
             "const ::llvm::SetVector<unsigned> &":$reductionDims),
@@ -442,6 +443,8 @@ def PartialReductionOpInterface :
         /*args=*/(ins
             "::mlir::OpBuilder &":$b,
             "unsigned":$resultNumber,
+            "ValueRange":$ivs,
+            "ReductionTilingStrategy":$tilingStrategy,
             "::mlir::ArrayRef<::mlir::OpFoldResult> ":$offsets,
             "::mlir::ArrayRef<::mlir::OpFoldResult> ":$sizes,
             "const ::mlir::SetVector<unsigned> &":$reductionDims,
