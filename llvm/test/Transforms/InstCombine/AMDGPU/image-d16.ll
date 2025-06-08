@@ -122,7 +122,7 @@ main_body:
   ret half %addf_sum.2
 }
 
-define amdgpu_gs half @image_sample_2d_multi_fptrunc_to_d16(<8 x i32> %surf_desc, <4 x i32> %samp, float %u, float %v) {
+define amdgpu_ps half @image_sample_2d_multi_fptrunc_to_d16(<8 x i32> %surf_desc, <4 x i32> %samp, float %u, float %v) {
 ; GFX7-LABEL: @image_sample_2d_multi_fptrunc_to_d16(
 ; GFX7-NEXT:  main_body:
 ; GFX7-NEXT:    [[SAMPLE:%.*]] = call <3 x float> @llvm.amdgcn.image.sample.lz.2d.v3f32.f32.v8i32.v4i32(i32 7, float [[U:%.*]], float [[V:%.*]], <8 x i32> [[SURF_DESC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
@@ -159,7 +159,7 @@ main_body:
   ret half %res
 }
 
-define amdgpu_gs half @image_sample_2d_extractelement_multi_use_no_d16(<8 x i32> %surf_desc, <4 x i32> %sampler_desc, float %u, float %v) {
+define amdgpu_ps half @image_sample_2d_extractelement_multi_use_no_d16(<8 x i32> %surf_desc, <4 x i32> %sampler_desc, float %u, float %v) {
 ; GFX7-LABEL: @image_sample_2d_extractelement_multi_use_no_d16(
 ; GFX7-NEXT:  main_body:
 ; GFX7-NEXT:    [[SAMPLE:%.*]] = call <2 x float> @llvm.amdgcn.image.sample.lz.2d.v2f32.f32.v8i32.v4i32(i32 3, float [[U:%.*]], float [[V:%.*]], <8 x i32> [[SURF_DESC:%.*]], <4 x i32> [[SAMPLER_DESC:%.*]], i1 false, i32 0, i32 0)
@@ -199,7 +199,7 @@ main_body:
   ret half %res
 }
 
-define amdgpu_gs bfloat @image_sample_2d_multi_fptrunc_non_half_no_d16(<8 x i32> %surf_desc, <4 x i32> %sampler_desc, float %u, float %v) {
+define amdgpu_ps bfloat @image_sample_2d_multi_fptrunc_non_half_no_d16(<8 x i32> %surf_desc, <4 x i32> %sampler_desc, float %u, float %v) {
 ; GFX7-LABEL: @image_sample_2d_multi_fptrunc_non_half_no_d16(
 ; GFX7-NEXT:  main_body:
 ; GFX7-NEXT:    [[SAMPLE:%.*]] = call <3 x float> @llvm.amdgcn.image.sample.lz.2d.v3f32.f32.v8i32.v4i32(i32 7, float [[U:%.*]], float [[V:%.*]], <8 x i32> [[SURF_DESC:%.*]], <4 x i32> [[SAMPLER_DESC:%.*]], i1 false, i32 0, i32 0)
