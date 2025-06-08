@@ -503,7 +503,8 @@ ToolChain::getTargetAndModeFromProgramName(StringRef PN) {
   // the time being and should be removed once AMD Classic Flang has been
   // removed from ROCm.
   if (FlangNew) {
-    if (!::getenv("AMD_NOWARN_FLANG_NEW")) {
+    // flang-new warning is overwarning, disabling until fixed.
+    if (false && !::getenv("AMD_NOWARN_FLANG_NEW")) {
       // The solution with "llvm::errs()" is not ideal, but the driver object
       // is not been constructed yet, so we cannot use the Diag() infrastructure
       // for this.
