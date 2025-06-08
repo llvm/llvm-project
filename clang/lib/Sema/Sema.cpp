@@ -1147,6 +1147,9 @@ void Sema::ActOnStartOfTranslationUnit() {
   if (getLangOpts().CPlusPlusModules &&
       getLangOpts().getCompilingModule() == LangOptions::CMK_HeaderUnit)
     HandleStartOfHeaderUnit();
+  
+  if(SummarizerPtr)
+    SummarizerPtr->ActOnStartOfSourceFile();
 }
 
 void Sema::ActOnEndOfTranslationUnitFragment(TUFragmentKind Kind) {
@@ -1222,6 +1225,8 @@ void Sema::ActOnEndOfTranslationUnit() {
   assert(DelayedDiagnostics.getCurrentPool() == nullptr
          && "reached end of translation unit with a pool attached?");
 
+  if(SummarizerPtr)
+    SummarizerPtr->ActOnEndOfSourceFile();
   // If code completion is enabled, don't perform any end-of-translation-unit
   // work.
   if (PP.isCodeCompletionEnabled())

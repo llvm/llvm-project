@@ -743,8 +743,16 @@ CompilerInstance::createCodeCompletionConsumer(Preprocessor &PP,
 }
 
 void CompilerInstance::createSummaryConsumer() {
-  TheSummaryConsumer.reset(
-      getFrontendOpts().SummaryFile.empty() ? nullptr : new SummaryConsumer());
+  const std::string& SummaryFile = getFrontendOpts().SummaryFile;
+  if(SummaryFile.empty())
+    return;
+
+  std::error_code EC;
+  // FIXME: this being static is a design error
+  static llvm::raw_fd_ostream SummaryOS(SummaryFile, EC, llvm::sys::fs::CD_CreateAlways);
+
+  if(!EC)
+    TheSummaryConsumer.reset(new JSONPrintingSummaryConsumer(SummaryOS));
 }
 
 void CompilerInstance::createSema(TranslationUnitKind TUKind,

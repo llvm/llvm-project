@@ -1253,12 +1253,6 @@ void FrontendAction::EndSourceFile() {
   // Finalize the action.
   EndSourceFileAction();
 
-  if (CI.hasSema() && !CI.getFrontendOpts().SummaryFile.empty()) {
-    std::error_code EC;
-    llvm::raw_fd_ostream(CI.getFrontendOpts().SummaryFile, EC,
-                         llvm::sys::fs::CD_CreateAlways);
-  }
-
   // Sema references the ast consumer, so reset sema first.
   //
   // FIXME: There is more per-file stuff we could just drop here?

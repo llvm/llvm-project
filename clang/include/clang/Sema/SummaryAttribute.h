@@ -34,7 +34,8 @@ public:
   // FIXME: This should receive all the parsed summaries as well.
   virtual bool merge(FunctionSummary &Summary) = 0;
 
-  virtual std::string serialize() const { return Str; };
+  // FIXME: bad design
+  static std::string serialize(SummaryAttribute Attr) { return AttrToStr[Attr]; };
   virtual std::optional<SummaryAttribute> parse(std::string_view Input) const {
     if (Str == Input)
       return Attr;

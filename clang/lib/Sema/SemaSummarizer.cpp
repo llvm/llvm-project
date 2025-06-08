@@ -87,6 +87,16 @@ SemaSummarizer::SemaSummarizer(Sema &S, SummaryConsumer *SummaryConsumer)
   Attributes.emplace_back(std::make_unique<NoWriteGlobalAttrManager>());
 }
 
+void SemaSummarizer::ActOnStartOfSourceFile() {
+  if(TheSummaryConsumer)
+    TheSummaryConsumer->ProcessStartOfSourceFile();
+}
+
+void SemaSummarizer::ActOnEndOfSourceFile() {
+  if(TheSummaryConsumer)
+    TheSummaryConsumer->ProcessEndOfSourceFile();
+}
+
 void SemaSummarizer::SummarizeFunctionBody(const FunctionDecl *FD) {
   FunctionSummary Summary(FD);
   CallCollector::CollectCalledFunctions(FD, Summary);
@@ -95,6 +105,9 @@ void SemaSummarizer::SummarizeFunctionBody(const FunctionDecl *FD) {
     if (const auto &InferredAttr = Attr->infer(FD))
       Summary.addAttribute(*InferredAttr);
   }
+
+  if(TheSummaryConsumer)
+    TheSummaryConsumer->ProcessFunctionSummary(Summary);
 }
 
 } // namespace clang

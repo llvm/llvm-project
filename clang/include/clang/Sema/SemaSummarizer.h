@@ -15,8 +15,12 @@ class FunctionSummary {
 public:
   FunctionSummary(const clang::FunctionDecl *FD);
 
+  SmallVector<char> getID() const { return ID; }
+  const std::set<SummaryAttribute> &getFunctionAttrs() const { return FunctionAttrs; }
+  const std::set<SmallVector<char>> &getCalls() const { return Calls; }
+
   void addAttribute(SummaryAttribute Attr) { FunctionAttrs.emplace(Attr); }
-  bool hasAttribute(SummaryAttribute Attr) { return FunctionAttrs.count(Attr); }
+  bool hasAttribute(SummaryAttribute Attr) const { return FunctionAttrs.count(Attr); }
 
   void addCall(const clang::FunctionDecl *FD);
 };
@@ -28,7 +32,11 @@ public:
   std::vector<std::unique_ptr<SummaryAttributeManager>> Attributes;
   SummaryConsumer *TheSummaryConsumer;
 
+  void ActOnStartOfSourceFile();
+  void ActOnEndOfSourceFile();
+  
   void SummarizeFunctionBody(const FunctionDecl *FD);
+
 };
 } // namespace clang
 
