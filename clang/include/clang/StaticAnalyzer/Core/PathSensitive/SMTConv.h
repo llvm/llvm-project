@@ -18,6 +18,8 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "llvm/Support/SMTAPI.h"
 
+#include <algorithm>
+
 namespace clang {
 namespace ento {
 
@@ -570,23 +572,42 @@ public:
   // TODO: Refactor to put elsewhere
   static inline QualType getAPSIntType(ASTContext &Ctx,
                                        const llvm::APSInt &Int) {
-    return Ctx.getIntTypeForBitwidth(Int.getBitWidth(), Int.isSigned());
+    QualType Ty = Ctx.getIntTypeForBitwidth(Int.getBitWidth(), Int.isSigned());
+    // If Ty is Null, could be because the original type was a _BitInt.
+    // Get the bit size and round up to next power of 2, max char size
+    if (Ty.isNull()) {
+      unsigned CharTypeSize = Ctx.getTypeSize(Ctx.CharTy);
+      unsigned pow2DestWidth =
+          std::max(llvm::bit_ceil(Int.getBitWidth()), CharTypeSize);
+      Ty = Ctx.getIntTypeForBitwidth(pow2DestWidth, Int.isSigned());
+    }
+    return Ty;
+  }
+
+  static inline bool IsPower2(unsigned bits) {
+    return bits > 0 && (bits & (bits - 1)) == 0;
   }
 
   // Get the QualTy for the input APSInt, and fix it if it has a bitwidth of 1.
   static inline std::pair<llvm::APSInt, QualType>
   fixAPSInt(ASTContext &Ctx, const llvm::APSInt &Int) {
     llvm::APSInt NewInt;
+    unsigned APSIntBitwidth = Int.getBitWidth();
+    QualType Ty = getAPSIntType(Ctx, Int);
 
     // FIXME: This should be a cast from a 1-bit integer type to a boolean type,
     // but the former is not available in Clang. Instead, extend the APSInt
     // directly.
-    if (Int.getBitWidth() == 1 && getAPSIntType(Ctx, Int).isNull()) {
+    if (APSIntBitwidth == 1 && Ty.isNull()) {
       NewInt = Int.extend(Ctx.getTypeSize(Ctx.BoolTy));
+      Ty = getAPSIntType(Ctx, NewInt);
+    } else if (!IsPower2(APSIntBitwidth) && !getAPSIntType(Ctx, Int).isNull()) {
+      Ty = getAPSIntType(Ctx, Int);
+      NewInt = Int.extend(Ctx.getTypeSize(Ty));
     } else
       NewInt = Int;
 
-    return std::make_pair(NewInt, getAPSIntType(Ctx, NewInt));
+    return std::make_pair(NewInt, Ty);
   }
 
   // Perform implicit type conversion on binary symbolic expressions.
