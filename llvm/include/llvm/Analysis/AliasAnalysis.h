@@ -912,7 +912,7 @@ LLVM_ABI bool isIdentifiedFunctionLocal(const Value *V);
 LLVM_ABI bool isBaseOfObject(const Value *V);
 
 /// Returns true if the pointer is one which would have been considered an
-/// escape by isNonEscapingLocalObject.
+/// escape by isNotCapturedBefore.
 LLVM_ABI bool isEscapeSource(const Value *V);
 
 /// Return true if Object memory is not visible after an unwind, in the sense

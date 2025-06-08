@@ -2600,8 +2600,7 @@ private:
   void ParseTypeQualifierListOpt(
       DeclSpec &DS, unsigned AttrReqs = AR_AllAttributesParsed,
       bool AtomicOrPtrauthAllowed = true, bool IdentifierRequired = false,
-      std::optional<llvm::function_ref<void()>> CodeCompletionHandler =
-          std::nullopt);
+      llvm::function_ref<void()> CodeCompletionHandler = {});
 
   /// ParseDirectDeclarator
   /// \verbatim
@@ -7075,6 +7074,10 @@ private:
   // #pragma optimize("gsty", on|off)
   bool HandlePragmaMSOptimize(StringRef PragmaName,
                               SourceLocation PragmaLocation);
+
+  // #pragma intrinsic("foo")
+  bool HandlePragmaMSIntrinsic(StringRef PragmaName,
+                               SourceLocation PragmaLocation);
 
   /// Handle the annotation token produced for
   /// #pragma align...
