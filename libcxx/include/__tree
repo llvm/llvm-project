@@ -1317,9 +1317,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __copy_assign_alloc(const __tree&, false_type) {}
 
 private:
-  _LIBCPP_HIDE_FROM_ABI __node_base_pointer& __find_leaf_low(__parent_pointer& __parent, const key_type& __v);
-  _LIBCPP_HIDE_FROM_ABI __node_base_pointer& __find_leaf_high(__parent_pointer& __parent, const key_type& __v);
-  _LIBCPP_HIDE_FROM_ABI __node_base_pointer&
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_base_pointer& __find_leaf_low(__parent_pointer& __parent, const key_type& __v);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_base_pointer& __find_leaf_high(__parent_pointer& __parent, const key_type& __v);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_base_pointer&
   __find_leaf(const_iterator __hint, __parent_pointer& __parent, const key_type& __v);
 
   template <class... _Args>
@@ -1679,7 +1679,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void __tree<_Tp, _Compare, _Allocator>::clear() _N
 // Set __parent to parent of null leaf
 // Return reference to null leaf
 template <class _Tp, class _Compare, class _Allocator>
-typename __tree<_Tp, _Compare, _Allocator>::__node_base_pointer&
+_LIBCPP_CONSTEXPR_SINCE_CXX26 typename __tree<_Tp, _Compare, _Allocator>::__node_base_pointer&
 __tree<_Tp, _Compare, _Allocator>::__find_leaf_low(__parent_pointer& __parent, const key_type& __v) {
   __node_pointer __nd = __root();
   if (__nd != nullptr) {
@@ -1709,7 +1709,7 @@ __tree<_Tp, _Compare, _Allocator>::__find_leaf_low(__parent_pointer& __parent, c
 // Set __parent to parent of null leaf
 // Return reference to null leaf
 template <class _Tp, class _Compare, class _Allocator>
-typename __tree<_Tp, _Compare, _Allocator>::__node_base_pointer&
+_LIBCPP_CONSTEXPR_SINCE_CXX26 typename __tree<_Tp, _Compare, _Allocator>::__node_base_pointer&
 __tree<_Tp, _Compare, _Allocator>::__find_leaf_high(__parent_pointer& __parent, const key_type& __v) {
   __node_pointer __nd = __root();
   if (__nd != nullptr) {
@@ -1742,7 +1742,7 @@ __tree<_Tp, _Compare, _Allocator>::__find_leaf_high(__parent_pointer& __parent, 
 // Set __parent to parent of null leaf
 // Return reference to null leaf
 template <class _Tp, class _Compare, class _Allocator>
-typename __tree<_Tp, _Compare, _Allocator>::__node_base_pointer&
+_LIBCPP_CONSTEXPR_SINCE_CXX26 typename __tree<_Tp, _Compare, _Allocator>::__node_base_pointer&
 __tree<_Tp, _Compare, _Allocator>::__find_leaf(const_iterator __hint, __parent_pointer& __parent, const key_type& __v) {
   if (__hint == end() || !value_comp()(*__hint, __v)) // check before
   {
