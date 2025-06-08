@@ -523,7 +523,8 @@ public:
   const MCExpr *getSubExpr() const { return Expr; }
 
   virtual void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const = 0;
-  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm) const;
+  virtual bool evaluateAsRelocatableImpl(MCValue &Res,
+                                         const MCAssembler *Asm) const;
 
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Specifier;
