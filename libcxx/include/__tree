@@ -1253,7 +1253,7 @@ public:
     return __lower_bound(__v, __root(), __end_node());
   }
   template <class _Key>
-  _LIBCPP_HIDE_FROM_ABI iterator __lower_bound(const _Key& __v, __node_pointer __root, __end_node_pointer __result);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator __lower_bound(const _Key& __v, __node_pointer __root, __end_node_pointer __result);
   template <class _Key>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator lower_bound(const _Key& __v) const {
     return __lower_bound(__v, __root(), __end_node());
@@ -2275,7 +2275,7 @@ __tree<_Tp, _Compare, _Allocator>::__count_multi(const _Key& __k) const {
 template <class _Tp, class _Compare, class _Allocator>
 template <class _Key>
 typename __tree<_Tp, _Compare, _Allocator>::iterator
-__tree<_Tp, _Compare, _Allocator>::__lower_bound(const _Key& __v, __node_pointer __root, __end_node_pointer __result) {
+_LIBCPP_CONSTEXPR_SINCE_CXX26 __tree<_Tp, _Compare, _Allocator>::__lower_bound(const _Key& __v, __node_pointer __root, __end_node_pointer __result) {
   while (__root != nullptr) {
     if (!value_comp()(__root->__value_, __v)) {
       __result = static_cast<__end_node_pointer>(__root);
