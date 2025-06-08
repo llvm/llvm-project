@@ -8,7 +8,7 @@ define <8 x float> @insert_f32_firstelt_of_low_subvector(<8 x float> %x, float %
 ; ALL-LABEL: insert_f32_firstelt_of_low_subvector:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
-; ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1,2,3,4,5,6,7]
+; ALL-NEXT:    vmovss {{.*#+}} ymm0 = ymm1[0],ymm0[1,2,3]
 ; ALL-NEXT:    retq
   %i0 = insertelement <8 x float> %x, float %s, i32 0
   ret <8 x float> %i0
@@ -94,7 +94,7 @@ define <8 x float> @insert_f32_firstelt_of_high_subvector(<8 x float> %x, float 
 ; AVX-LABEL: insert_f32_firstelt_of_high_subvector:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
 ;
@@ -202,9 +202,9 @@ define <4 x i64> @insert_i64_firstelt_of_high_subvector(<4 x i64> %x, i64 %s) {
 define <8 x float> @insert_f32_firstelts(<8 x float> %x, float %s) {
 ; AVX-LABEL: insert_f32_firstelts:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vblendps {{.*#+}} xmm2 = xmm1[0],xmm0[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm2 = xmm1[0],xmm0[1,2,3]
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
 ; AVX-NEXT:    retq
 ;

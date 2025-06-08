@@ -235,7 +235,7 @@ define void @PR42833() {
 ; AVX1-NEXT:    vmovdqa c+144(%rip), %xmm3
 ; AVX1-NEXT:    vpaddd %xmm3, %xmm3, %xmm3
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
-; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm2[1,2,3,4,5,6,7]
+; AVX1-NEXT:    vmovss {{.*#+}} ymm0 = ymm0[0],ymm2[1,2,3]
 ; AVX1-NEXT:    vmovdqa d+144(%rip), %xmm2
 ; AVX1-NEXT:    vpsubd c+144(%rip), %xmm2, %xmm2
 ; AVX1-NEXT:    vmovups %ymm0, c+128(%rip)
@@ -317,7 +317,7 @@ define void @PR42833() {
 ; XOP-NEXT:    vmovdqa c+144(%rip), %xmm3
 ; XOP-NEXT:    vpaddd %xmm3, %xmm3, %xmm3
 ; XOP-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
-; XOP-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm2[1,2,3,4,5,6,7]
+; XOP-NEXT:    vmovss {{.*#+}} ymm0 = ymm0[0],ymm2[1,2,3]
 ; XOP-NEXT:    vmovdqa d+144(%rip), %xmm2
 ; XOP-NEXT:    vpsubd c+144(%rip), %xmm2, %xmm2
 ; XOP-NEXT:    vmovups %ymm0, c+128(%rip)
