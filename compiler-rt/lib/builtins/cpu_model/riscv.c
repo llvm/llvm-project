@@ -134,6 +134,10 @@ struct {
 #define ZCLSD_BITMASK (1ULL << 9)
 #define ZCMP_GROUPID 1
 #define ZCMP_BITMASK (1ULL << 10)
+#define ZIFENCEI_GROUPID 1
+#define ZIFENCEI_BITMASK (1ULL << 11)
+#define ZMMUL_GROUPID 1
+#define ZMMUL_BITMASK (1ULL << 12)
 
 #if defined(__linux__)
 
