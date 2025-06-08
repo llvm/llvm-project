@@ -835,7 +835,7 @@ public:
     return __t;
   }
 
-  _LIBCPP_HIDE_FROM_ABI __tree_const_iterator& operator--() {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_const_iterator& operator--() {
     __ptr_ = static_cast<__end_node_pointer>(std::__tree_prev_iter<__node_base_pointer>(__ptr_));
     return *this;
   }
@@ -941,10 +941,10 @@ private:
   _LIBCPP_COMPRESSED_PAIR(size_type, __size_, value_compare, __value_comp_);
 
 public:
-  _LIBCPP_HIDE_FROM_ABI __end_node_pointer __end_node() _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __end_node_pointer __end_node() _NOEXCEPT {
     return pointer_traits<__end_node_pointer>::pointer_to(__end_node_);
   }
-  _LIBCPP_HIDE_FROM_ABI __end_node_pointer __end_node() const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __end_node_pointer __end_node() const _NOEXCEPT {
     return pointer_traits<__end_node_pointer>::pointer_to(const_cast<__end_node_t&>(__end_node_));
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_allocator& __node_alloc() _NOEXCEPT {
@@ -952,9 +952,9 @@ public:
   }
 
 private:
-  _LIBCPP_HIDE_FROM_ABI const __node_allocator& __node_alloc() const _NOEXCEPT { return __node_alloc_; }
-  _LIBCPP_HIDE_FROM_ABI __end_node_pointer& __begin_node() _NOEXCEPT { return __begin_node_; }
-  _LIBCPP_HIDE_FROM_ABI const __end_node_pointer& __begin_node() const _NOEXCEPT { return __begin_node_; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const __node_allocator& __node_alloc() const _NOEXCEPT { return __node_alloc_; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __end_node_pointer& __begin_node() _NOEXCEPT { return __begin_node_; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const __end_node_pointer& __begin_node() const _NOEXCEPT { return __begin_node_; }
 
 public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 allocator_type __alloc() const _NOEXCEPT {
@@ -1196,7 +1196,7 @@ public:
     __emplace_hint_multi(__p, std::move(__value));
   }
 
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool>
   __node_assign_unique(const __container_value_type& __v, __node_pointer __dest);
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator __node_insert_multi(__node_pointer __nd);
@@ -1405,7 +1405,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree<_Tp, _Compare, _Allocator>::__tree(const va
 }
 
 template <class _Tp, class _Compare, class _Allocator>
-__tree<_Tp, _Compare, _Allocator>::__tree(const allocator_type& __a)
+_LIBCPP_CONSTEXPR_SINCE_CXX26 __tree<_Tp, _Compare, _Allocator>::__tree(const allocator_type& __a)
     : __begin_node_(), __node_alloc_(__node_allocator(__a)), __size_(0) {
   __begin_node() = __end_node();
 }
@@ -1514,7 +1514,7 @@ __tree<_Tp, _Compare, _Allocator>::__assign_multi(_InputIterator __first, _Input
 }
 
 template <class _Tp, class _Compare, class _Allocator>
-__tree<_Tp, _Compare, _Allocator>::__tree(const __tree& __t)
+_LIBCPP_CONSTEXPR_SINCE_CXX26 __tree<_Tp, _Compare, _Allocator>::__tree(const __tree& __t)
     : __begin_node_(),
       __node_alloc_(__node_traits::select_on_container_copy_construction(__t.__node_alloc())),
       __size_(0),
@@ -1944,7 +1944,9 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 typename __tree<_Tp, _Compare, _Allocator>::__node
 __tree<_Tp, _Compare, _Allocator>::__construct_node(_Args&&... __args) {
   __node_allocator& __na = __node_alloc();
   __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-  __node_traits::construct(__na, std::addressof(__h->__value_), std::forward<_Args>(__args)...);
+  __node_traits::construct(__na, std::addressof(*__h), std::forward<_Args>(__args)...);
+  // __node_traits::construct(__na, std::addressof(__h->__value_), std::forward<_Args>(__args)...);
+  // note: construction of subobject of object outside its lifetime is not allowed in a constant expression
   __h.get_deleter().__value_constructed = true;
   return __h;
 }
