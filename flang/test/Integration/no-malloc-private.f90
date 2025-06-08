@@ -1,5 +1,4 @@
 ! RUN: %flang_fc1 -emit-llvm -fopenmp -o - -x f95 %s | FileCheck %s
-! XFAIL: *
 subroutine foo(state,ilast,jlast,vals)
   real, intent(in) :: state(:,:)
   integer, intent(in) :: ilast, jlast

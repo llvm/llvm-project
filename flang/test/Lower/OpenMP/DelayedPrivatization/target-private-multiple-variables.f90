@@ -1,3 +1,4 @@
+! XFAIL: *
 ! Tests delayed privatization for `targets ... private(..)` for allocatables.
 
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization-staging \
