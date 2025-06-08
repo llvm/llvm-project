@@ -733,8 +733,10 @@ bool DataAggregator::doBranch(const Trace &Trace, uint64_t Count,
   // corresponds to a return (if \p IsFrom) or a call continuation (otherwise).
   auto handleAddress = [&](uint64_t &Addr, bool IsFrom) {
     BinaryFunction *Func = getBinaryFunctionContainingAddress(Addr);
-    if (!Func)
+    if (!Func) {
+      Addr = 0;
       return std::pair{Func, false};
+    }
 
     Addr -= Func->getAddress();
 
@@ -843,8 +845,9 @@ DataAggregator::getFallthroughsInTrace(BinaryFunction &BF, const Trace &Trace,
 
   // Adjust FromBB if the first LBR is a return from the last instruction in
   // the previous block (that instruction should be a call).
-  if (From == FromBB->getOffset() && !BF.containsAddress(Trace.Branch) &&
-      !FromBB->isEntryPoint() && !FromBB->isLandingPad()) {
+  if (Trace.Branch != Trace::FT_ONLY && !BF.containsAddress(Trace.Branch) &&
+      From == FromBB->getOffset() && !FromBB->isEntryPoint() &&
+      !FromBB->isLandingPad()) {
     const BinaryBasicBlock *PrevBB =
         BF.getLayout().getBlock(FromBB->getIndex() - 1);
     if (PrevBB->getSuccessor(FromBB->getLabel())) {
@@ -1380,8 +1383,8 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
     // chronological order)
     if (NeedsSkylakeFix && NumEntry <= 2)
       continue;
-    TakenBranchInfo &Info = TraceMap[Trace{LBR.From, LBR.To,
-                                     NextLBR ? NextLBR->From : Trace::EXTERNAL}];
+    TakenBranchInfo &Info = TraceMap[Trace{
+        LBR.From, LBR.To, NextLBR ? NextLBR->From : Trace::EXTERNAL}];
     ++Info.TakenCount;
     Info.MispredCount += LBR.Mispred;
     NextLBR = &LBR;
