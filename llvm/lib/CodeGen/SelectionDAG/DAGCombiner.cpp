@@ -16392,12 +16392,11 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
     return SDValue();
 
   bool AllowMultipleMaybePoisonOperands =
-      N0.getOpcode() == ISD::SELECT_CC ||
-      N0.getOpcode() == ISD::SETCC ||
+      N0.getOpcode() == ISD::SELECT_CC || N0.getOpcode() == ISD::SETCC ||
       N0.getOpcode() == ISD::BUILD_VECTOR ||
       N0.getOpcode() == ISD::BUILD_PAIR ||
       N0.getOpcode() == ISD::VECTOR_SHUFFLE ||
-      N0.getOpcode() == ISD::CONCAT_VECTORS;
+      N0.getOpcode() == ISD::CONCAT_VECTORS || N0.getOpcode() == ISD::FMUL;
 
   // Avoid turning a BUILD_VECTOR that can be recognized as "all zeros", "all
   // ones" or "constant" into something that depends on FrozenUndef. We can
@@ -16495,7 +16494,17 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
                              SVN->getMask());
   } else {
     // NOTE: this strips poison generating flags.
-    R = DAG.getNode(N0.getOpcode(), SDLoc(N0), N0->getVTList(), Ops);
+    // Folding freeze(op(x, ...)) -> op(freeze(x), ...) does not require nnan,
+    // ninf, nsz, or fast.
+    // However, contract, reassoc, afn, and arcp should be preserved,
+    // as these fast-math flags do not introduce poison values.
+    SDNodeFlags SrcFlags = N0->getFlags();
+    SDNodeFlags SafeFlags;
+    SafeFlags.setAllowContract(SrcFlags.hasAllowContract());
+    SafeFlags.setAllowReassociation(SrcFlags.hasAllowReassociation());
+    SafeFlags.setApproximateFuncs(SrcFlags.hasApproximateFuncs());
+    SafeFlags.setAllowReciprocal(SrcFlags.hasAllowReciprocal());
+    R = DAG.getNode(N0.getOpcode(), SDLoc(N0), N0->getVTList(), Ops, SafeFlags);
   }
   assert(DAG.isGuaranteedNotToBeUndefOrPoison(R, /*PoisonOnly*/ false) &&
          "Can't create node that may be undef/poison!");
