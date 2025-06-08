@@ -209,7 +209,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _NodePtr __tree_prev_
 
 // Returns:  pointer to a node which has no children
 template <class _NodePtr>
-_LIBCPP_HIDE_FROM_ABI _NodePtr __tree_leaf(_NodePtr __x) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _NodePtr __tree_leaf(_NodePtr __x) _NOEXCEPT {
   _LIBCPP_ASSERT_INTERNAL(__x != nullptr, "node shouldn't be null");
   while (true) {
     if (__x->__left_ != nullptr) {

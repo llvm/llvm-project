@@ -67,12 +67,12 @@ TEST_CONSTEXPR_CXX26 bool duplicate_keys_test() {
 
 TEST_CONSTEXPR_CXX26 bool test() {
   test_basic();
-  // duplicate_keys_test();
+  duplicate_keys_test();
   return true;
 }
 
 int main(int, char**) {
-  // assert(test());
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif
