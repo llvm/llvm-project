@@ -222,8 +222,6 @@ bool X86FixupInstTuningPass::processInstruction(
     return ProcessUNPCKToIntDomain(NewOpc);
   };
   
-  
-  
   auto ProcessBLENDToMOV = [&](unsigned MovOpc) -> bool {
     if (!MI.getOperand(NumOperands - 1).isImm() ||
         MI.getOperand(NumOperands - 1).getImm() != 1)
@@ -237,12 +235,7 @@ bool X86FixupInstTuningPass::processInstruction(
     MI.removeOperand(NumOperands - 1);
     return true;
   };
-
-
-
-
   switch (Opc) {
-  
   case X86::VBLENDPSrri:
   case X86::VBLENDPSYrri:
   case X86::VBLENDMPSZ128rrkz:
@@ -253,7 +246,6 @@ bool X86FixupInstTuningPass::processInstruction(
       return false;
     return ProcessBLENDToMOV(X86::VMOVSSrr);
   }
-
   case X86::VBLENDPDrri:
   case X86::VBLENDPDYrri:
   case X86::VBLENDMPDZ128rrkz:
@@ -264,11 +256,6 @@ bool X86FixupInstTuningPass::processInstruction(
       return false;
     return ProcessBLENDToMOV(X86::VMOVSDrr);
   }
-
-    
-    
-    
-    
   case X86::VPERMILPDri:
     return ProcessVPERMILPDri(X86::VSHUFPDrri);
   case X86::VPERMILPDYri:
