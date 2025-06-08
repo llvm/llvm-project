@@ -820,9 +820,8 @@ tensorExtractVectorizationPrecondition(Operation *op, bool vectorizeNDExtract) {
       return failure();
   }
 
-  if (llvm::any_of(extractOp->getResultTypes(), [](Type type) {
-        return !VectorType::isValidElementType(type);
-      })) {
+  if (!llvm::all_of(extractOp->getResultTypes(),
+                    VectorType::isValidElementType)) {
     return failure();
   }
 
@@ -2287,14 +2286,12 @@ static LogicalResult vectorizeLinalgOpPrecondition(
             })) {
       continue;
     }
-    if (llvm::any_of(innerOp.getOperandTypes(), [](Type type) {
-          return !VectorType::isValidElementType(type);
-        })) {
+    if (!llvm::all_of(innerOp.getOperandTypes(),
+                      VectorType::isValidElementType)) {
       return failure();
     }
-    if (llvm::any_of(innerOp.getResultTypes(), [](Type type) {
-          return !VectorType::isValidElementType(type);
-        })) {
+    if (!llvm::all_of(innerOp.getResultTypes(),
+                      VectorType::isValidElementType)) {
       return failure();
     }
   }
