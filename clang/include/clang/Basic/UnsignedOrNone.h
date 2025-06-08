@@ -29,6 +29,14 @@ struct UnsignedOrNone {
   }
   constexpr unsigned toInternalRepresentation() const { return Rep; }
 
+  constexpr unsigned value_or(unsigned val) const {
+    return operator bool() ? **this : val;
+  }
+
+  constexpr UnsignedOrNone value_or(UnsignedOrNone val) const {
+    return operator bool() ? *this : val;
+  }
+
   explicit constexpr operator bool() const { return Rep != 0; }
   unsigned operator*() const {
     assert(operator bool());
