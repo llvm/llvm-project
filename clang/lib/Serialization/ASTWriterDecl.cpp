@@ -1389,7 +1389,7 @@ void ASTDeclWriter::VisitBindingDecl(BindingDecl *D) {
 
 void ASTDeclWriter::VisitFileScopeAsmDecl(FileScopeAsmDecl *D) {
   VisitDecl(D);
-  Record.AddStmt(D->getAsmString());
+  Record.AddStmt(D->getAsmStringExpr());
   Record.AddSourceLocation(D->getRParenLoc());
   Code = serialization::DECL_FILE_SCOPE_ASM;
 }
