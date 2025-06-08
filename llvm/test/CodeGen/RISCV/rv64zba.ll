@@ -24,8 +24,7 @@ define i64 @slliuw(i64 %a) nounwind {
 ;
 ; RV64XANDESPERF-LABEL: slliuw:
 ; RV64XANDESPERF:       # %bb.0:
-; RV64XANDESPERF-NEXT:    slli a0, a0, 32
-; RV64XANDESPERF-NEXT:    srli a0, a0, 31
+; RV64XANDESPERF-NEXT:    nds.bfoz a0, a0, 1, 32
 ; RV64XANDESPERF-NEXT:    ret
   %conv1 = shl i64 %a, 1
   %shl = and i64 %conv1, 8589934590

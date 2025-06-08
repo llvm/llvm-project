@@ -7364,6 +7364,14 @@ getIntrinsicForMaskedAtomicRMWBinOp(unsigned GRLen,
       return Intrinsic::loongarch_masked_atomicrmw_sub_i32;
     case AtomicRMWInst::Nand:
       return Intrinsic::loongarch_masked_atomicrmw_nand_i32;
+    case AtomicRMWInst::UMax:
+      return Intrinsic::loongarch_masked_atomicrmw_umax_i32;
+    case AtomicRMWInst::UMin:
+      return Intrinsic::loongarch_masked_atomicrmw_umin_i32;
+    case AtomicRMWInst::Max:
+      return Intrinsic::loongarch_masked_atomicrmw_max_i32;
+    case AtomicRMWInst::Min:
+      return Intrinsic::loongarch_masked_atomicrmw_min_i32;
       // TODO: support other AtomicRMWInst.
     }
   }
@@ -7387,19 +7395,22 @@ LoongArchTargetLowering::shouldExpandAtomicCmpXchgInIR(
 Value *LoongArchTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
     IRBuilderBase &Builder, AtomicCmpXchgInst *CI, Value *AlignedAddr,
     Value *CmpVal, Value *NewVal, Value *Mask, AtomicOrdering Ord) const {
+  unsigned GRLen = Subtarget.getGRLen();
   AtomicOrdering FailOrd = CI->getFailureOrdering();
   Value *FailureOrdering =
       Builder.getIntN(Subtarget.getGRLen(), static_cast<uint64_t>(FailOrd));
-
-  // TODO: Support cmpxchg on LA32.
-  Intrinsic::ID CmpXchgIntrID = Intrinsic::loongarch_masked_cmpxchg_i64;
-  CmpVal = Builder.CreateSExt(CmpVal, Builder.getInt64Ty());
-  NewVal = Builder.CreateSExt(NewVal, Builder.getInt64Ty());
-  Mask = Builder.CreateSExt(Mask, Builder.getInt64Ty());
+  Intrinsic::ID CmpXchgIntrID = Intrinsic::loongarch_masked_cmpxchg_i32;
+  if (GRLen == 64) {
+    CmpXchgIntrID = Intrinsic::loongarch_masked_cmpxchg_i64;
+    CmpVal = Builder.CreateSExt(CmpVal, Builder.getInt64Ty());
+    NewVal = Builder.CreateSExt(NewVal, Builder.getInt64Ty());
+    Mask = Builder.CreateSExt(Mask, Builder.getInt64Ty());
+  }
   Type *Tys[] = {AlignedAddr->getType()};
   Value *Result = Builder.CreateIntrinsic(
       CmpXchgIntrID, Tys, {AlignedAddr, CmpVal, NewVal, Mask, FailureOrdering});
-  Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
+  if (GRLen == 64)
+    Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
   return Result;
 }
 

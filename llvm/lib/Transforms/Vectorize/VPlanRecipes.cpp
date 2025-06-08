@@ -1118,15 +1118,8 @@ void VPPhi::print(raw_ostream &O, const Twine &Indent,
                   VPSlotTracker &SlotTracker) const {
   O << Indent << "EMIT" << (isSingleScalar() ? "-SCALAR" : "") << " ";
   printAsOperand(O, SlotTracker);
-  const VPBasicBlock *Parent = getParent();
-  if (Parent == Parent->getPlan()->getScalarPreheader()) {
-    // TODO: Use regular printing for resume-phis as well
-    O << " = resume-phi ";
-    printOperands(O, SlotTracker);
-  } else {
-    O << " = phi ";
-    printPhiOperands(O, SlotTracker);
-  }
+  O << " = phi ";
+  printPhiOperands(O, SlotTracker);
 }
 #endif
 
