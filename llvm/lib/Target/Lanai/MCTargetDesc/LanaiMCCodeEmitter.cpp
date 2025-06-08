@@ -90,7 +90,7 @@ static Lanai::Fixups FixupKind(const MCExpr *Expr) {
   if (isa<MCSymbolRefExpr>(Expr))
     return Lanai::FIXUP_LANAI_21;
   if (const LanaiMCExpr *McExpr = dyn_cast<LanaiMCExpr>(Expr)) {
-    LanaiMCExpr::VariantKind ExprKind = McExpr->getKind();
+    LanaiMCExpr::Spec ExprKind = McExpr->getSpecifier();
     switch (ExprKind) {
     case LanaiMCExpr::VK_Lanai_None:
       return Lanai::FIXUP_LANAI_21;
