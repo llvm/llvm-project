@@ -511,8 +511,8 @@ uint64_t BoltAddressTranslation::translate(uint64_t FuncAddress,
 
 std::optional<BoltAddressTranslation::FallthroughListTy>
 BoltAddressTranslation::getFallthroughsInTrace(uint64_t FuncAddress,
-                                               uint64_t From,
-                                               uint64_t To) const {
+                                               uint64_t From, uint64_t To,
+                                               bool IsReturn) const {
   SmallVector<std::pair<uint64_t, uint64_t>, 16> Res;
 
   // Filter out trivial case
@@ -530,6 +530,12 @@ BoltAddressTranslation::getFallthroughsInTrace(uint64_t FuncAddress,
   auto FromIter = Map.upper_bound(From);
   if (FromIter == Map.begin())
     return Res;
+
+  // For fall-throughs originating at returns, go back one entry to cover call
+  // site.
+  if (IsReturn)
+    --FromIter;
+
   // Skip instruction entries, to create fallthroughs we are only interested in
   // BB boundaries
   do {
@@ -546,7 +552,7 @@ BoltAddressTranslation::getFallthroughsInTrace(uint64_t FuncAddress,
     return Res;
 
   for (auto Iter = FromIter; Iter != ToIter;) {
-    const uint32_t Src = Iter->first;
+    const uint32_t Src = Iter->second >> 1;
     if (Iter->second & BRANCHENTRY) {
       ++Iter;
       continue;
@@ -557,7 +563,7 @@ BoltAddressTranslation::getFallthroughsInTrace(uint64_t FuncAddress,
       ++Iter;
     if (Iter->second & BRANCHENTRY)
       break;
-    Res.emplace_back(Src, Iter->first);
+    Res.emplace_back(Src, Iter->second >> 1);
   }
 
   return Res;

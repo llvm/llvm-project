@@ -98,12 +98,13 @@ public:
                      bool IsBranchSrc) const;
 
   /// Use the map keys containing basic block addresses to infer fall-throughs
-  /// taken in the path started at FirstLBR.To and ending at SecondLBR.From.
+  /// taken in the path starting at \p From and ending at \p To.
   /// Return std::nullopt if trace is invalid or the list of fall-throughs
   /// otherwise.
   std::optional<FallthroughListTy> getFallthroughsInTrace(uint64_t FuncAddress,
                                                           uint64_t From,
-                                                          uint64_t To) const;
+                                                          uint64_t To,
+                                                          bool IsReturn) const;
 
   /// If available, fetch the address of the hot part linked to the cold part
   /// at \p Address. Return 0 otherwise.
