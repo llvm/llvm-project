@@ -21,6 +21,11 @@ except ImportError as e:
 from typing import Dict, Optional, Sequence, Union, NewType
 
 
+@register_attribute_builder("ParamOperandIndexAttr")
+def _paramOperandIndexAttr(x: int, context) -> Attribute:
+    return Attribute.parse(f"#transform.param_operand_index<{x}>", context=context)
+
+
 @_ods_cext.register_operation(_Dialect, replace=True)
 class CastOp(CastOp):
     def __init__(
@@ -214,11 +219,6 @@ class YieldOp(YieldOp):
         super().__init__(_get_op_results_or_values(operands), loc=loc, ip=ip)
 
 
-@register_attribute_builder("ParamOperandIndexAttr")
-def _paramOperandIndexAttr(x: int, context) -> Attribute:
-    return Attribute.parse(f"#transform.param_operand_index<{x}>", context=context)
-
-
 @_ods_cext.register_operation(_Dialect, replace=True)
 class ApplyRegisteredPassOp(ApplyRegisteredPassOp):
     def __init__(
@@ -227,10 +227,12 @@ class ApplyRegisteredPassOp(ApplyRegisteredPassOp):
         pass_name: Union[str, StringAttr],
         target: Union[Operation, Value, OpView],
         *,
-        options: Dict[
-            Union[str, StringAttr],
-            Union[Attribute, Value, Operation, OpView],
-        ] = {},
+        options: Optional[
+            Dict[
+                Union[str, StringAttr],
+                Union[Attribute, Value, Operation, OpView],
+            ]
+        ] = None,
         loc=None,
         ip=None,
     ):
@@ -241,20 +243,16 @@ class ApplyRegisteredPassOp(ApplyRegisteredPassOp):
         context = (loc and loc.context) or Context.current
 
         cur_param_operand_idx = 0
-        for key, value in options.items():
+        for key, value in options.items() if options is not None else {}:
             if isinstance(key, StringAttr):
                 key = key.value
 
             if isinstance(value, (Value, Operation, OpView)):
-                value = _get_op_result_or_value(value)
-                # v = Attribute.parse(
-                #    f"#transform.param_operand_index<{cur_param_operand_idx}>",
-                #    context=context,
-                # )
-                v = _paramOperandIndexAttr(cur_param_operand_idx, context)
-                options_dict[key] = v
+                dynamic_options.append(_get_op_result_or_value(value))
+                options_dict[key] = ParamOperandIndexAttr(
+                    cur_param_operand_idx, context
+                )
                 cur_param_operand_idx += 1
-                dynamic_options.append(value)
             elif isinstance(value, Attribute):
                 options_dict[key] = value
             elif isinstance(value, str):
@@ -279,10 +277,12 @@ def apply_registered_pass(
     pass_name: Union[str, StringAttr],
     target: Union[Operation, Value, OpView],
     *,
-    options: Dict[
-        Union[str, StringAttr],
-        Union[Attribute, Value, Operation, OpView],
-    ] = {},
+    options: Optional[
+        Dict[
+            Union[str, StringAttr],
+            Union[Attribute, Value, Operation, OpView],
+        ]
+    ] = None,
     loc=None,
     ip=None,
 ) -> Value:
