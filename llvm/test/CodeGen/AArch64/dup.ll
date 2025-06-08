@@ -6,11 +6,6 @@
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for duplane0_v2i8
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for loaddup_v2i8
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for loaddup_str_v2i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for loaddup_str_v3i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for loaddup_str_v4i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for loaddup_str_v8i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for loaddup_str_v16i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for loaddup_str_v32i8
 
 define <2 x i8> @dup_v2i8(i8 %a) {
 ; CHECK-LABEL: dup_v2i8:
@@ -127,14 +122,25 @@ entry:
 }
 
 define <3 x i8> @loaddup_str_v3i8(ptr %p) {
-; CHECK-LABEL: loaddup_str_v3i8:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, x0
-; CHECK-NEXT:    ldrb w0, [x0]
-; CHECK-NEXT:    strb wzr, [x8]
-; CHECK-NEXT:    mov w1, w0
-; CHECK-NEXT:    mov w2, w0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: loaddup_str_v3i8:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov x8, x0
+; CHECK-SD-NEXT:    ldrb w0, [x0]
+; CHECK-SD-NEXT:    strb wzr, [x8]
+; CHECK-SD-NEXT:    mov w1, w0
+; CHECK-SD-NEXT:    mov w2, w0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: loaddup_str_v3i8:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ldr b0, [x0]
+; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    strb wzr, [x8]
+; CHECK-GI-NEXT:    dup v0.8b, v0.b[0]
+; CHECK-GI-NEXT:    umov w0, v0.b[0]
+; CHECK-GI-NEXT:    umov w1, v0.b[1]
+; CHECK-GI-NEXT:    umov w2, v0.b[2]
+; CHECK-GI-NEXT:    ret
 entry:
   %a = load i8, ptr %p
   %b = insertelement <3 x i8> poison, i8 %a, i64 0
@@ -201,12 +207,21 @@ entry:
 }
 
 define <4 x i8> @loaddup_str_v4i8(ptr %p) {
-; CHECK-LABEL: loaddup_str_v4i8:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    strb wzr, [x0]
-; CHECK-NEXT:    dup v0.4h, w8
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: loaddup_str_v4i8:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ldrb w8, [x0]
+; CHECK-SD-NEXT:    strb wzr, [x0]
+; CHECK-SD-NEXT:    dup v0.4h, w8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: loaddup_str_v4i8:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ldr b0, [x0]
+; CHECK-GI-NEXT:    strb wzr, [x0]
+; CHECK-GI-NEXT:    dup v0.8b, v0.b[0]
+; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    ret
 entry:
   %a = load i8, ptr %p
   %b = insertelement <4 x i8> poison, i8 %a, i64 0
@@ -250,11 +265,18 @@ entry:
 }
 
 define <8 x i8> @loaddup_str_v8i8(ptr %p) {
-; CHECK-LABEL: loaddup_str_v8i8:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ld1r { v0.8b }, [x0]
-; CHECK-NEXT:    strb wzr, [x0]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: loaddup_str_v8i8:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ld1r { v0.8b }, [x0]
+; CHECK-SD-NEXT:    strb wzr, [x0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: loaddup_str_v8i8:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ldr b0, [x0]
+; CHECK-GI-NEXT:    strb wzr, [x0]
+; CHECK-GI-NEXT:    dup v0.8b, v0.b[0]
+; CHECK-GI-NEXT:    ret
 entry:
   %a = load i8, ptr %p
   %b = insertelement <8 x i8> poison, i8 %a, i64 0
@@ -297,11 +319,18 @@ entry:
 }
 
 define <16 x i8> @loaddup_str_v16i8(ptr %p) {
-; CHECK-LABEL: loaddup_str_v16i8:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ld1r { v0.16b }, [x0]
-; CHECK-NEXT:    strb wzr, [x0]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: loaddup_str_v16i8:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ld1r { v0.16b }, [x0]
+; CHECK-SD-NEXT:    strb wzr, [x0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: loaddup_str_v16i8:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ldr b0, [x0]
+; CHECK-GI-NEXT:    strb wzr, [x0]
+; CHECK-GI-NEXT:    dup v0.16b, v0.b[0]
+; CHECK-GI-NEXT:    ret
 entry:
   %a = load i8, ptr %p
   %b = insertelement <16 x i8> poison, i8 %a, i64 0
@@ -353,12 +382,20 @@ entry:
 }
 
 define <32 x i8> @loaddup_str_v32i8(ptr %p) {
-; CHECK-LABEL: loaddup_str_v32i8:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ld1r { v0.16b }, [x0]
-; CHECK-NEXT:    strb wzr, [x0]
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: loaddup_str_v32i8:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ld1r { v0.16b }, [x0]
+; CHECK-SD-NEXT:    strb wzr, [x0]
+; CHECK-SD-NEXT:    mov v1.16b, v0.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: loaddup_str_v32i8:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ldr b1, [x0]
+; CHECK-GI-NEXT:    strb wzr, [x0]
+; CHECK-GI-NEXT:    dup v0.16b, v1.b[0]
+; CHECK-GI-NEXT:    dup v1.16b, v1.b[0]
+; CHECK-GI-NEXT:    ret
 entry:
   %a = load i8, ptr %p
   %b = insertelement <32 x i8> poison, i8 %a, i64 0
