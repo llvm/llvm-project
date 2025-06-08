@@ -1533,6 +1533,17 @@ LogicalResult cir::GetMemberOp::verify() {
 // VecCreateOp
 //===----------------------------------------------------------------------===//
 
+OpFoldResult cir::VecCreateOp::fold(FoldAdaptor adaptor) {
+  auto elements = getElements();
+  if (std::any_of(elements.begin(), elements.end(), [](mlir::Value attr) {
+        return !mlir::isa<cir::ConstantOp>(attr.getDefiningOp());
+      }))
+    return {};
+
+  return cir::ConstVectorAttr::get(
+      getType(), mlir::ArrayAttr::get(getContext(), adaptor.getElements()));
+}
+
 LogicalResult cir::VecCreateOp::verify() {
   // Verify that the number of arguments matches the number of elements in the
   // vector, and that the type of all the arguments matches the type of the
