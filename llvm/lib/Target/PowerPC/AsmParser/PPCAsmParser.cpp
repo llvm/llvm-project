@@ -87,6 +87,8 @@ EvaluateCRExpr(const MCExpr *E) {
 
     return Res < 0 ? -1 : Res;
   }
+  case MCExpr::Specifier:
+    llvm_unreachable("unused by this backend");
   }
 
   llvm_unreachable("Invalid expression kind!");
@@ -1420,6 +1422,8 @@ const MCExpr *PPCAsmParser::extractSpecifier(const MCExpr *E,
       return MCBinaryExpr::create(BE->getOpcode(), LHS, RHS, Context);
     break;
   }
+  case MCExpr::Specifier:
+    llvm_unreachable("unused by this backend");
   }
 
   return E;
