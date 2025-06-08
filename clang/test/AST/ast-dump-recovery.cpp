@@ -423,6 +423,7 @@ void returnInitListFromVoid() {
   // CHECK-NEXT:   `-IntegerLiteral {{.*}} 'int' 8
 }
 
+void FuncTakingUnknown(Unknown);
 void RecoveryExprForInvalidDecls(Unknown InvalidDecl) {
   InvalidDecl + 1;
   // CHECK:      BinaryOperator {{.*}}
@@ -432,6 +433,11 @@ void RecoveryExprForInvalidDecls(Unknown InvalidDecl) {
   InvalidDecl();
   // CHECK:      CallExpr {{.*}}
   // CHECK-NEXT: `-RecoveryExpr {{.*}} '<dependent type>'
+  FuncTakingUnknown(InvalidDecl);
+  // CHECK:      CallExpr {{.*}} '<dependent type>'
+  // CHECK-NEXT: |-UnresolvedLookupExpr {{.*}} '<overloaded function type>'
+  // CHECK-NEXT: `-RecoveryExpr {{.*}} '<dependent type>'
+  // CHECK-NEXT:   `-DeclRefExpr {{.*}} 'InvalidDecl' 'int'
 }
 
 void InitializerOfInvalidDecl() {
