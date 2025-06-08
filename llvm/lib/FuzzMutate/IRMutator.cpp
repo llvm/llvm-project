@@ -389,9 +389,9 @@ static bool isUnsupportedFunction(Function *F) {
         Attribute::Preallocated,   Attribute::ByRef,
         Attribute::ZExt,           Attribute::SExt};
 
-    return std::any_of(
-        std::begin(ABIAttrs), std::end(ABIAttrs),
-        [&](Attribute::AttrKind kind) { return A.hasAttribute(kind); });
+    return llvm::any_of(ABIAttrs, [&](Attribute::AttrKind kind) {
+      return A.hasAttribute(kind);
+    });
   };
 
   auto FuncAttrs = F->getAttributes();
