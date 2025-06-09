@@ -7218,12 +7218,15 @@ static Value *getStartValueFromReductionResult(VPInstruction *RdxResult) {
   return StartVPV->getLiveInIRValue();
 }
 
-// If \p R is a Compute{Reduction,AnyOf,FindLastIV}Result when vectorizing the
+// If \p EpiResumePhiR is resume VPPhi for a reduction when vectorizing the
 // epilog loop, fix the reduction's scalar PHI node by adding the incoming value
 // from the main vector loop.
 static void fixReductionScalarResumeWhenVectorizingEpilog(
-    VPRecipeBase *R, VPTransformState &State, BasicBlock *BypassBlock) {
-  auto *EpiRedResult = dyn_cast<VPInstruction>(R);
+    VPPhi *EpiResumePhiR, VPTransformState &State, BasicBlock *BypassBlock) {
+  // Get the VPInstruction computing the reduction result in the middle block.
+  // The first operand may not be from the middle block if it is not connected
+  // to the scalar preheader. In that case, there's nothing to fix.
+  auto *EpiRedResult = dyn_cast<VPInstruction>(EpiResumePhiR->getOperand(0));
   if (!EpiRedResult ||
       (EpiRedResult->getOpcode() != VPInstruction::ComputeAnyOfResult &&
        EpiRedResult->getOpcode() != VPInstruction::ComputeReductionResult &&
@@ -7274,12 +7277,7 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
   // When fixing reductions in the epilogue loop we should already have
   // created a bc.merge.rdx Phi after the main vector body. Ensure that we carry
   // over the incoming values correctly.
-  using namespace VPlanPatternMatch;
-  assert(count_if(EpiRedResult->users(), IsaPred<VPPhi>) == 1 &&
-         "ResumePhi must have a single user");
-  auto *EpiResumePhiVPI =
-      cast<VPInstruction>(*find_if(EpiRedResult->users(), IsaPred<VPPhi>));
-  auto *EpiResumePhi = cast<PHINode>(State.get(EpiResumePhiVPI, true));
+  auto *EpiResumePhi = cast<PHINode>(State.get(EpiResumePhiR, true));
   EpiResumePhi->setIncomingValueForBlock(
       BypassBlock, MainResumePhi->getIncomingValueForBlock(BypassBlock));
 }
@@ -7388,17 +7386,13 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       }
     }
     VPBasicBlock *ScalarPH = BestVPlan.getScalarPreheader();
-    ArrayRef<VPBlockBase *> ScalarPreds = ScalarPH->getPredecessors();
-    if (!ScalarPreds.empty()) {
+    if (ScalarPH->getNumPredecessors() > 0) {
       // If ScalarPH has predecessors, we may need to update its reduction
-      // resume values. If there is a middle block, it must be the first
-      // predecessor. Note that the first predecessor may not be the middle
-      // block, if the middle block doesn't branch to the scalar preheader. In
-      // that case, fixReductionScalarResumeWhenVectorizingEpilog will be a
-      // no-op.
-      auto *MiddleVPBB = cast<VPBasicBlock>(ScalarPreds[0]);
-      for (VPRecipeBase &R : *MiddleVPBB)
-        fixReductionScalarResumeWhenVectorizingEpilog(&R, State, BypassBlock);
+      // resume values.
+      for (VPRecipeBase &R : ScalarPH->phis()) {
+        fixReductionScalarResumeWhenVectorizingEpilog(cast<VPPhi>(&R), State,
+                                                      BypassBlock);
+      }
     }
   }
 
