@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// REQUIRES: std-at-least-c++20
 
 // <chrono>
 
@@ -13,27 +13,21 @@
 
 // constexpr time_point& operator--();
 
-#include <chrono>
 #include <cassert>
+#include <chrono>
 
 #include "test_macros.h"
 
-constexpr bool constexpr_test() {
+constexpr bool test() {
   typedef std::chrono::system_clock Clock;
   typedef std::chrono::milliseconds Duration;
-  std::chrono::time_point<Clock, Duration> t(Duration(5));
-  return (--t).time_since_epoch() == Duration(4);
+  std::chrono::time_point<Clock, Duration> t{Duration{5}};
+  std::chrono::time_point<Clock, Duration>& tref{--t};
+  return &tref == &t && tref.time_since_epoch() == Duration{4};
 }
 
 int main(int, char**) {
-  typedef std::chrono::system_clock Clock;
-  typedef std::chrono::milliseconds Duration;
-  std::chrono::time_point<Clock, Duration> t(Duration(3));
-  std::chrono::time_point<Clock, Duration>& tref = --t;
-  assert(&tref == &t);
-  assert(t.time_since_epoch() == Duration(2));
-
-  static_assert(constexpr_test());
-
+  assert(test());
+  static_assert(test());
   return 0;
 }
