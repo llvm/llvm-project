@@ -1586,26 +1586,25 @@ OpFoldResult cir::VecExtractOp::fold(FoldAdaptor adaptor) {
 LogicalResult cir::VecShuffleOp::verify() {
   // The number of elements in the indices array must match the number of
   // elements in the result type.
-  if (getIndices().size() != getResult().getType().getSize()) {
+  if (getIndices().size() != getResult().getType().getSize())
     return emitOpError() << ": the number of elements in " << getIndices()
                          << " and " << getResult().getType() << " don't match";
-  }
 
   // The element types of the two input vectors and of the result type must
   // match.
   if (getVec1().getType().getElementType() !=
-      getResult().getType().getElementType()) {
+      getResult().getType().getElementType())
     return emitOpError() << ": element types of " << getVec1().getType()
                          << " and " << getResult().getType() << " don't match";
-  }
 
   const uint64_t maxValidIndex =
       getVec1().getType().getSize() + getVec2().getType().getSize() - 1;
-  for (const auto &idxAttr : getIndices().getAsRange<cir::IntAttr>()) {
-    if (idxAttr.getSInt() != -1 && idxAttr.getUInt() > maxValidIndex)
-      return emitOpError() << ": index for __builtin_shufflevector must be "
-                              "less than the total number of vector elements";
-  }
+  if (llvm::any_of(
+          getIndices().getAsRange<cir::IntAttr>(), [&](cir::IntAttr idxAttr) {
+            return idxAttr.getSInt() != -1 && idxAttr.getUInt() > maxValidIndex;
+          }))
+    return emitOpError() << ": index for __builtin_shufflevector must be "
+                            "less than the total number of vector elements";
 
   return success();
 }
