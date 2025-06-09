@@ -875,7 +875,14 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     }
 
     if (!AMDGPU::SReg_32RegClass.contains(SrcReg)) {
-      reportIllegalCopy(this, MBB, MI, DL, DestReg, SrcReg, KillSrc);
+      // We invoke BuildMI() only when we have verified that the source register
+      // is a VGPR and the destination register is a SGPR, and since we cannot
+      // transfer data directly from VGPR to SGPR, we use
+      // AMDGPU::V_READFIRSTLANE_B32
+      assert(AMDGPU::SReg_32RegClass.contains(DestReg));
+      assert(AMDGPU::VGPR_32RegClass.contains(SrcReg));
+      BuildMI(MBB, MI, DL, this->get(AMDGPU::V_READFIRSTLANE_B32), DestReg)
+          .addReg(SrcReg);
       return;
     }
 
