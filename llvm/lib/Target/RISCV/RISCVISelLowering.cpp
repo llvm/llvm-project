@@ -14887,6 +14887,9 @@ static SDValue combineShlAddIAddImpl(SDNode *N, SDValue AddI, SDValue Other,
   if (!sd_match(SHLVal, m_BinOp(ISD::SHL, m_Value(), m_ConstInt(VShift))))
     return SDValue();
 
+  if (!SHLVal.hasOneUse())
+    return SDValue();
+
   if (VShift.slt(1) || VShift.sgt(3))
     return SDValue();
 
