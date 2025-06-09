@@ -18455,8 +18455,8 @@ static SDValue foldReduceOperandViaVQDOT(SDValue InVec, const SDLoc &DL,
     }
   }
 
-  // reduce (zext a) <--> reduce (mul zext a. zext 1)
-  // reduce (sext a) <--> reduce (mul sext a. sext 1)
+  // reduce (zext a) <--> partial_reduce_umla 0, a, 1
+  // reduce (sext a) <--> partial_reduce_smla 0, a, 1
   if (InVec.getOpcode() == ISD::ZERO_EXTEND ||
       InVec.getOpcode() == ISD::SIGN_EXTEND) {
     SDValue A = InVec.getOperand(0);
@@ -18472,12 +18472,10 @@ static SDValue foldReduceOperandViaVQDOT(SDValue InVec, const SDLoc &DL,
     return DAG.getNode(Opc, DL, ResVT, {DAG.getConstant(0, DL, ResVT), A, B});
   }
 
-  // mul (sext, sext) -> vqdot
-  // mul (zext, zext) -> vqdotu
-  // mul (sext, zext) -> vqdotsu
-  // mul (zext, sext) -> vqdotsu (swapped)
-  // TODO: Improve .vx handling - we end up with a sub-vector insert
-  // which confuses the splat pattern matching.  Also, match vqdotus.vx
+  // mul (sext a, sext b) -> partial_reduce_smla 0, a, b
+  // mul (zext a, zext b) -> partial_reduce_umla 0, a, b
+  // mul (sext a, zext b) -> partial_reduce_ssmla 0, a, b
+  // mul (zext a, sext b) -> partial_reduce_smla 0, b, a (swapped)
   if (InVec.getOpcode() != ISD::MUL)
     return SDValue();
 
@@ -18493,25 +18491,23 @@ static SDValue foldReduceOperandViaVQDOT(SDValue InVec, const SDLoc &DL,
       !TLI.isTypeLegal(A.getValueType()))
     return SDValue();
 
-  MVT ResVT = getQDOTXResultType(OpVT.getSimpleVT());
-  if (A.getOpcode() == B.getOpcode()) {
-    // TODO: handle ANY_EXTEND and zext nonneg here
-    if (A.getOpcode() != ISD::SIGN_EXTEND && A.getOpcode() != ISD::ZERO_EXTEND)
-      return SDValue();
-
-    bool IsSigned = A.getOpcode() == ISD::SIGN_EXTEND;
-    unsigned Opc =
-        IsSigned ? ISD::PARTIAL_REDUCE_SMLA : ISD::PARTIAL_REDUCE_UMLA;
-    return DAG.getNode(
-        Opc, DL, ResVT,
-        {DAG.getConstant(0, DL, ResVT), A.getOperand(0), B.getOperand(0)});
-  }
-  if (B.getOpcode() != ISD::ZERO_EXTEND)
+  unsigned Opc;
+  if (A.getOpcode() == ISD::SIGN_EXTEND && B.getOpcode() == ISD::SIGN_EXTEND)
+    Opc = ISD::PARTIAL_REDUCE_SMLA;
+  else if (A.getOpcode() == ISD::ZERO_EXTEND &&
+           B.getOpcode() == ISD::ZERO_EXTEND)
+    Opc = ISD::PARTIAL_REDUCE_UMLA;
+  else if (A.getOpcode() == ISD::SIGN_EXTEND &&
+           B.getOpcode() == ISD::ZERO_EXTEND)
+    Opc = ISD::PARTIAL_REDUCE_SUMLA;
+  else if (A.getOpcode() == ISD::ZERO_EXTEND &&
+           B.getOpcode() == ISD::SIGN_EXTEND) {
+    Opc = ISD::PARTIAL_REDUCE_SUMLA;
     std::swap(A, B);
-  if (A.getOpcode() != ISD::SIGN_EXTEND || B.getOpcode() != ISD::ZERO_EXTEND)
+  } else
     return SDValue();
 
-  unsigned Opc = ISD::PARTIAL_REDUCE_SUMLA;
+  MVT ResVT = getQDOTXResultType(OpVT.getSimpleVT());
   return DAG.getNode(
       Opc, DL, ResVT,
       {DAG.getConstant(0, DL, ResVT), A.getOperand(0), B.getOperand(0)});
