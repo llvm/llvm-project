@@ -643,7 +643,8 @@ def OMP_EndAssumes : Directive<[Spelling<"end assumes">]> {
   let category = OMP_BeginAssumes.category;
   let languages = OMP_BeginAssumes.languages;
 }
-def OMP_BeginDeclareTarget : Directive<[Spelling<"begin declare target">]> {
+def OMP_BeginDeclareTarget : Directive<[Spelling<"begin declare target", 1, 52>,
+                                        Spelling<"begin declare_target", 60>]> {
   let allowedClauses = [
     VersionedClause<OMPC_DeviceType>,
     VersionedClause<OMPC_Indirect>,
@@ -654,17 +655,21 @@ def OMP_BeginDeclareTarget : Directive<[Spelling<"begin declare target">]> {
   let category = CA_Declarative;
   let languages = [L_C];
 }
-def OMP_EndDeclareTarget : Directive<[Spelling<"end declare target">]> {
+def OMP_EndDeclareTarget : Directive<[Spelling<"end declare target", 1, 52>,
+                                      Spelling<"end declare_target", 60>]> {
   let association = AS_Delimited;
   let category = OMP_BeginDeclareTarget.category;
   let languages = OMP_BeginDeclareTarget.languages;
 }
-def OMP_BeginDeclareVariant : Directive<[Spelling<"begin declare variant">]> {
+def OMP_BeginDeclareVariant
+    : Directive<[Spelling<"begin declare variant", 1, 52>,
+                 Spelling<"begin declare_variant", 60>]> {
   let association = AS_Delimited;
   let category = CA_Declarative;
   let languages = [L_C];
 }
-def OMP_EndDeclareVariant : Directive<[Spelling<"end declare variant">]> {
+def OMP_EndDeclareVariant : Directive<[Spelling<"end declare variant", 1, 52>,
+                                       Spelling<"end declare_variant", 60>]> {
   let association = AS_Delimited;
   let category = OMP_BeginDeclareVariant.category;
   let languages = OMP_BeginDeclareVariant.languages;
