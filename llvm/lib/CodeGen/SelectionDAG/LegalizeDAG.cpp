@@ -4601,14 +4601,14 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                     RTLIB::FMAX_PPCF128, Results);
     break;
   case ISD::FMINIMUMNUM:
-    ExpandFPLibCall(Node, RTLIB::FMINIMUMNUM_F32, RTLIB::FMINIMUMNUM_F64,
-                    RTLIB::FMINIMUMNUM_F80, RTLIB::FMINIMUMNUM_F128,
-                    RTLIB::FMINIMUMNUM_PPCF128, Results);
+    ExpandFPLibCall(Node, RTLIB::FMINIMUM_NUM_F32, RTLIB::FMINIMUM_NUM_F64,
+                    RTLIB::FMINIMUM_NUM_F80, RTLIB::FMINIMUM_NUM_F128,
+                    RTLIB::FMINIMUM_NUM_PPCF128, Results);
     break;
   case ISD::FMAXIMUMNUM:
-    ExpandFPLibCall(Node, RTLIB::FMAXIMUMNUM_F32, RTLIB::FMAXIMUMNUM_F64,
-                    RTLIB::FMAXIMUMNUM_F80, RTLIB::FMAXIMUMNUM_F128,
-                    RTLIB::FMAXIMUMNUM_PPCF128, Results);
+    ExpandFPLibCall(Node, RTLIB::FMAXIMUM_NUM_F32, RTLIB::FMAXIMUM_NUM_F64,
+                    RTLIB::FMAXIMUM_NUM_F80, RTLIB::FMAXIMUM_NUM_F128,
+                    RTLIB::FMAXIMUM_NUM_PPCF128, Results);
     break;
   case ISD::FSQRT:
   case ISD::STRICT_FSQRT:

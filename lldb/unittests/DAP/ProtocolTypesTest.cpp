@@ -7,12 +7,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "Protocol/ProtocolTypes.h"
+#include "Protocol/ProtocolRequests.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Testing/Support/Error.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+using namespace llvm;
 using namespace lldb;
 using namespace lldb_dap;
 using namespace lldb_dap::protocol;
+using llvm::json::parse;
+using llvm::json::Value;
+
+/// Returns a pretty printed json string of a `llvm::json::Value`.
+static std::string pp(const json::Value &E) {
+  return formatv("{0:2}", E).str();
+}
 
 template <typename T> static llvm::Expected<T> roundtrip(const T &input) {
   llvm::json::Value value = toJSON(input);
@@ -578,27 +590,79 @@ TEST(ProtocolTypesTest, DisassembledInstruction) {
   instruction.presentationHint =
       DisassembledInstruction::eDisassembledInstructionPresentationHintNormal;
 
-  llvm::Expected<DisassembledInstruction> deserialized_instruction =
-      roundtrip(instruction);
-  ASSERT_THAT_EXPECTED(deserialized_instruction, llvm::Succeeded());
+  StringLiteral json = R"({
+  "address": "0x12345678",
+  "column": 5,
+  "endColumn": 10,
+  "endLine": 15,
+  "instruction": "mov eax, ebx",
+  "instructionBytes": "0F 1F 00",
+  "line": 10,
+  "location": {
+    "name": "test.cpp",
+    "path": "/path/to/test.cpp",
+    "presentationHint": "normal",
+    "sourceReference": 123
+  },
+  "presentationHint": "normal",
+  "symbol": "main"
+})";
 
-  EXPECT_EQ(instruction.address, deserialized_instruction->address);
-  EXPECT_EQ(instruction.instructionBytes,
-            deserialized_instruction->instructionBytes);
-  EXPECT_EQ(instruction.instruction, deserialized_instruction->instruction);
-  EXPECT_EQ(instruction.symbol, deserialized_instruction->symbol);
-  EXPECT_EQ(instruction.location->name,
-            deserialized_instruction->location->name);
-  EXPECT_EQ(instruction.location->path,
-            deserialized_instruction->location->path);
-  EXPECT_EQ(instruction.location->sourceReference,
-            deserialized_instruction->location->sourceReference);
-  EXPECT_EQ(instruction.location->presentationHint,
-            deserialized_instruction->location->presentationHint);
-  EXPECT_EQ(instruction.line, deserialized_instruction->line);
-  EXPECT_EQ(instruction.column, deserialized_instruction->column);
-  EXPECT_EQ(instruction.endLine, deserialized_instruction->endLine);
-  EXPECT_EQ(instruction.endColumn, deserialized_instruction->endColumn);
-  EXPECT_EQ(instruction.presentationHint,
-            deserialized_instruction->presentationHint);
+  // Validate toJSON
+  EXPECT_EQ(json, pp(instruction));
+
+  // Validate fromJSON
+  EXPECT_THAT_EXPECTED(parse<DisassembledInstruction>(json),
+                       HasValue(Value(instruction)));
+  // Validate parsing errors
+  EXPECT_THAT_EXPECTED(
+      parse<DisassembledInstruction>(R"({"address":1})",
+                                     "disassemblyInstruction"),
+      FailedWithMessage("expected string at disassemblyInstruction.address"));
+  EXPECT_THAT_EXPECTED(parse<DisassembledInstruction>(R"({"address":"-1"})",
+                                                      "disassemblyInstruction"),
+                       FailedWithMessage("expected string encoded uint64_t at "
+                                         "disassemblyInstruction.address"));
+  EXPECT_THAT_EXPECTED(parse<DisassembledInstruction>(
+                           R"({"address":"0xfffffffffffffffffffffffffff"})",
+                           "disassemblyInstruction"),
+                       FailedWithMessage("expected string encoded uint64_t at "
+                                         "disassemblyInstruction.address"));
+}
+
+TEST(ProtocolTypesTest, Thread) {
+  const Thread thread{1, "thr1"};
+  const StringRef json = R"({
+  "id": 1,
+  "name": "thr1"
+})";
+  // Validate toJSON
+  EXPECT_EQ(json, pp(thread));
+  // Validate fromJSON
+  EXPECT_THAT_EXPECTED(parse<Thread>(json), HasValue(Value(thread)));
+  // Validate parsing errors
+  EXPECT_THAT_EXPECTED(parse<Thread>(R"({"id":1})", "thread"),
+                       FailedWithMessage("missing value at thread.name"));
+  EXPECT_THAT_EXPECTED(parse<Thread>(R"({"id":"one"})", "thread"),
+                       FailedWithMessage("expected uint64_t at thread.id"));
+  EXPECT_THAT_EXPECTED(parse<Thread>(R"({"id":1,"name":false})", "thread"),
+                       FailedWithMessage("expected string at thread.name"));
+}
+
+TEST(ProtocolTypesTest, ThreadResponseBody) {
+  const ThreadsResponseBody body{{{1, "thr1"}, {2, "thr2"}}};
+  const StringRef json = R"({
+  "threads": [
+    {
+      "id": 1,
+      "name": "thr1"
+    },
+    {
+      "id": 2,
+      "name": "thr2"
+    }
+  ]
+})";
+  // Validate toJSON
+  EXPECT_EQ(json, pp(body));
 }

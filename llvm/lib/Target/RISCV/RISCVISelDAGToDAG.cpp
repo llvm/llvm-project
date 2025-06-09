@@ -613,8 +613,8 @@ bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
   if (!N0.hasOneUse())
     return false;
 
-  auto BitfieldExtract = [&](SDValue N0, unsigned Msb, unsigned Lsb, SDLoc DL,
-                             MVT VT) {
+  auto BitfieldExtract = [&](SDValue N0, unsigned Msb, unsigned Lsb,
+                             const SDLoc &DL, MVT VT) {
     unsigned Opc =
         Subtarget->hasVendorXTHeadBb() ? RISCV::TH_EXT : RISCV::NDS_BFOS;
     return CurDAG->getMachineNode(Opc, DL, VT, N0.getOperand(0),
@@ -671,9 +671,10 @@ bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
   return false;
 }
 
-bool RISCVDAGToDAGISel::tryUnsignedBitfieldExtract(SDNode *Node, SDLoc DL,
-                                                   MVT VT, SDValue X,
-                                                   unsigned Msb, unsigned Lsb) {
+bool RISCVDAGToDAGISel::tryUnsignedBitfieldExtract(SDNode *Node,
+                                                   const SDLoc &DL, MVT VT,
+                                                   SDValue X, unsigned Msb,
+                                                   unsigned Lsb) {
   // Only supported with XTHeadBb/XAndesPerf at the moment.
   if (!Subtarget->hasVendorXTHeadBb() && !Subtarget->hasVendorXAndesPerf())
     return false;
@@ -685,6 +686,26 @@ bool RISCVDAGToDAGISel::tryUnsignedBitfieldExtract(SDNode *Node, SDLoc DL,
                                        CurDAG->getTargetConstant(Msb, DL, VT),
                                        CurDAG->getTargetConstant(Lsb, DL, VT));
   ReplaceNode(Node, Ube);
+  return true;
+}
+
+bool RISCVDAGToDAGISel::tryUnsignedBitfieldInsertInZero(SDNode *Node,
+                                                        const SDLoc &DL, MVT VT,
+                                                        SDValue X, unsigned Msb,
+                                                        unsigned Lsb) {
+  // Only supported with XAndesPerf at the moment.
+  if (!Subtarget->hasVendorXAndesPerf())
+    return false;
+
+  unsigned Opc = RISCV::NDS_BFOZ;
+
+  // If the Lsb is equal to the Msb, then the Lsb should be 0.
+  if (Lsb == Msb)
+    Lsb = 0;
+  SDNode *Ubi = CurDAG->getMachineNode(Opc, DL, VT, X,
+                                       CurDAG->getTargetConstant(Lsb, DL, VT),
+                                       CurDAG->getTargetConstant(Msb, DL, VT));
+  ReplaceNode(Node, Ubi);
   return true;
 }
 
@@ -1051,11 +1072,11 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     unsigned ShAmt = N1C->getZExtValue();
     uint64_t Mask = N0.getConstantOperandVal(1);
 
-    if (ShAmt <= 32 && isShiftedMask_64(Mask)) {
+    if (isShiftedMask_64(Mask)) {
       unsigned XLen = Subtarget->getXLen();
       unsigned LeadingZeros = XLen - llvm::bit_width(Mask);
       unsigned TrailingZeros = llvm::countr_zero(Mask);
-      if (TrailingZeros > 0 && LeadingZeros == 32) {
+      if (ShAmt <= 32 && TrailingZeros > 0 && LeadingZeros == 32) {
         // Optimize (shl (and X, C2), C) -> (slli (srliw X, C3), C3+C)
         // where C2 has 32 leading zeros and C3 trailing zeros.
         SDNode *SRLIW = CurDAG->getMachineNode(
@@ -1323,6 +1344,19 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
             ReplaceNode(Node, SLLI_UW);
             return;
           }
+
+          // Try to use an unsigned bitfield insert (e.g., nds.bfoz) if
+          // available.
+          // Transform (and (shl x, c2), c1)
+          //        -> (<bfinsert> x, msb, lsb)
+          // e.g.
+          //     (and (shl x, 12), 0x00fff000)
+          //     If XLen = 32 and C2 = 12, then
+          //     Msb = 32 - 8 - 1 = 23 and Lsb = 12
+          const unsigned Msb = XLen - Leading - 1;
+          const unsigned Lsb = C2;
+          if (tryUnsignedBitfieldInsertInZero(Node, DL, VT, X, Msb, Lsb))
+            return;
 
           // (srli (slli c2+c3), c3)
           if (OneUseOrZExtW && !IsCANDI) {
