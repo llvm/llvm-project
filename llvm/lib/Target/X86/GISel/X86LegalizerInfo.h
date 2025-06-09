@@ -49,6 +49,12 @@ private:
   bool legalizeNarrowingStore(MachineInstr &MI, MachineRegisterInfo &MRI,
                               LegalizerHelper &Helper) const;
 
+  bool legalizeSITOFP(MachineInstr &MI, MachineRegisterInfo &MRI,
+                      LegalizerHelper &Helper) const;
+
+  bool legalizeFPTOSI(MachineInstr &MI, MachineRegisterInfo &MRI,
+                      LegalizerHelper &Helper) const;
+
   bool legalizeFPExtAndTrunc(MachineInstr &MI, MachineRegisterInfo &MRI,
                              LegalizerHelper &Helper) const;
 };

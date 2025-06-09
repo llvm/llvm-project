@@ -38,3 +38,15 @@ mlir::Value CIRGenBuilderTy::getArrayElement(mlir::Location arrayLocBegin,
   const mlir::Type flatPtrTy = basePtr.getType();
   return create<cir::PtrStrideOp>(arrayLocEnd, flatPtrTy, basePtr, idx);
 }
+
+// This can't be defined in Address.h because that file is included by
+// CIRGenBuilder.h
+Address Address::withElementType(CIRGenBuilderTy &builder,
+                                 mlir::Type elemTy) const {
+  assert(!cir::MissingFeatures::addressOffset());
+  assert(!cir::MissingFeatures::addressIsKnownNonNull());
+  assert(!cir::MissingFeatures::addressPointerAuthInfo());
+
+  return Address(builder.createPtrBitcast(getBasePointer(), elemTy), elemTy,
+                 getAlignment());
+}

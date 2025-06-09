@@ -2617,6 +2617,19 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
   }
 }
 
+void ExprEngine::runCheckersForBlockEntrance(const NodeBuilderContext &BldCtx,
+                                             const BlockEntrance &Entrance,
+                                             ExplodedNode *Pred,
+                                             ExplodedNodeSet &Dst) {
+  llvm::PrettyStackTraceFormat CrashInfo(
+      "Processing block entrance B%d -> B%d",
+      Entrance.getPreviousBlock()->getBlockID(),
+      Entrance.getBlock()->getBlockID());
+  currBldrCtx = &BldCtx;
+  getCheckerManager().runCheckersForBlockEntrance(Dst, Pred, Entrance, *this);
+  currBldrCtx = nullptr;
+}
+
 //===----------------------------------------------------------------------===//
 // Branch processing.
 //===----------------------------------------------------------------------===//

@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/TargetParser/Triple.h"
 
 #define GET_SUBTARGETINFO_HEADER
 #include "AArch64GenSubtargetInfo.inc"
@@ -33,7 +34,6 @@
 namespace llvm {
 class GlobalValue;
 class StringRef;
-class Triple;
 
 class AArch64Subtarget final : public AArch64GenSubtargetInfo {
 public:

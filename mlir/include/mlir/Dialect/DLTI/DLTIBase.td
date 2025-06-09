@@ -70,6 +70,9 @@ def DLTI_Dialect : Dialect {
 
     constexpr const static ::llvm::StringLiteral
     kDataLayoutFunctionPointerAlignmentKey = "dlti.function_pointer_alignment";
+
+    constexpr const static ::llvm::StringLiteral
+    kDataLayoutLegalIntWidthsKey = "dlti.legal_int_widths";
   }];
 
   let useDefaultAttributePrinterParser = 1;

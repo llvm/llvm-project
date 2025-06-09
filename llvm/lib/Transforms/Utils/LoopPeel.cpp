@@ -351,6 +351,7 @@ bool llvm::canPeelLastIteration(const Loop &L, ScalarEvolution &SE) {
                     m_BasicBlock(Succ1), m_BasicBlock(Succ2))) &&
          ((Pred == CmpInst::ICMP_EQ && Succ2 == L.getHeader()) ||
           (Pred == CmpInst::ICMP_NE && Succ1 == L.getHeader())) &&
+         Bound->getType()->isIntegerTy() && 
          SE.isLoopInvariant(SE.getSCEV(Bound), &L) &&
          match(SE.getSCEV(Inc),
                m_scev_AffineAddRec(m_SCEV(), m_scev_One(), m_SpecificLoop(&L)));
@@ -922,7 +923,7 @@ static void cloneLoopBlocks(
     // InsertTop, using the incoming value from the preheader for the original
     // preheader (when skipping the main loop) and the incoming value from the
     // latch for the latch (when continuing from the main loop).
-    IRBuilder<> B(InsertTop->getTerminator());
+    IRBuilder<> B(InsertTop, InsertTop->getFirstNonPHIIt());
     for (BasicBlock::iterator I = Header->begin(); isa<PHINode>(I); ++I) {
       PHINode *NewPHI = cast<PHINode>(VMap[&*I]);
       PHINode *PN = B.CreatePHI(NewPHI->getType(), 2);
@@ -1256,7 +1257,11 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
     // Now adjust users of the original exit values by replacing them with the
     // exit value from the peeled iteration and remove them.
     for (const auto &[P, E] : ExitValues) {
-      P->replaceAllUsesWith(isa<Constant>(E) ? E : &*VMap.lookup(E));
+      Instruction *ExitInst = dyn_cast<Instruction>(E);
+      if (ExitInst && L->contains(ExitInst))
+        P->replaceAllUsesWith(&*VMap[ExitInst]);
+      else
+        P->replaceAllUsesWith(E);
       P->eraseFromParent();
     }
     formLCSSA(*L, DT, LI, SE);

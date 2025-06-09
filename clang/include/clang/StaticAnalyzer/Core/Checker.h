@@ -221,6 +221,22 @@ public:
   }
 };
 
+class BlockEntrance {
+  template <typename CHECKER>
+  static void _checkBlockEntrance(void *Checker,
+                                  const clang::BlockEntrance &Entrance,
+                                  CheckerContext &C) {
+    ((const CHECKER *)Checker)->checkBlockEntrance(Entrance, C);
+  }
+
+public:
+  template <typename CHECKER>
+  static void _register(CHECKER *checker, CheckerManager &mgr) {
+    mgr._registerForBlockEntrance(CheckerManager::CheckBlockEntranceFunc(
+        checker, _checkBlockEntrance<CHECKER>));
+  }
+};
+
 class EndAnalysis {
   template <typename CHECKER>
   static void _checkEndAnalysis(void *checker, ExplodedGraph &G,
@@ -536,6 +552,8 @@ public:
 template <typename... CHECKs>
 class Checker : public CheckerBase, public CHECKs... {
 public:
+  using BlockEntrance = clang::BlockEntrance;
+
   template <typename CHECKER>
   static void _register(CHECKER *Chk, CheckerManager &Mgr) {
     (CHECKs::_register(Chk, Mgr), ...);
@@ -565,6 +583,8 @@ public:
 template <typename... CHECKs>
 class CheckerFamily : public CheckerBackend, public CHECKs... {
 public:
+  using BlockEntrance = clang::BlockEntrance;
+
   template <typename CHECKER>
   static void _register(CHECKER *Chk, CheckerManager &Mgr) {
     (CHECKs::_register(Chk, Mgr), ...);
@@ -586,20 +606,6 @@ public:
   void dispatchEvent(const EVENT &event) const {
     Mgr->_dispatchEvent(event);
   }
-};
-
-/// Tag that can use a checker name as a message provider
-/// (see SimpleProgramPointTag).
-/// FIXME: This is a cargo cult class which is copied into several checkers but
-/// does not provide anything useful.
-/// The only added functionality provided by this class (compared to
-/// SimpleProgramPointTag) is that it composes the tag description string from
-/// two arguments -- but tag descriptions only appear in debug output so there
-/// is no reason to bother with this.
-class CheckerProgramPointTag : public SimpleProgramPointTag {
-public:
-  CheckerProgramPointTag(StringRef CheckerName, StringRef Msg);
-  CheckerProgramPointTag(const CheckerBase *Checker, StringRef Msg);
 };
 
 /// We dereferenced a location that may be null.
