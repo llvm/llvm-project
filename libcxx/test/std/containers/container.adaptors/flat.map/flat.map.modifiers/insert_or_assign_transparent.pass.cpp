@@ -254,6 +254,18 @@ int main(int, char**) {
     };
     test_emplace_exception_guarantee(insert_or_assign_iter);
   }
+  {
+    // LWG4239 std::string and C string literal
+    using M = std::flat_map<std::string, int, std::less<>>;
+    M m{{"alpha", 1}, {"beta", 2}, {"epsilon", 1}, {"eta", 3}, {"gamma", 3}};
+    auto [it, inserted] = m.insert_or_assign("alpha", 2);
+    assert(!inserted);
+    assert(it == m.begin());
+    assert(it->second == 2);
+    auto it2 = m.insert_or_assign(m.begin(), "beta2", 2);
+    assert(it2 == m.begin() + 2);
+    assert(it2->second == 2);
+  }
 
   return 0;
 }

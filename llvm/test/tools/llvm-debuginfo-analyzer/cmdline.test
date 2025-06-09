@@ -51,6 +51,7 @@ HELP-ALL:     =gaps                    -   Missing debug location (gaps).
 HELP-ALL:     =generated               -   Compiler generated elements.
 HELP-ALL:     =global                  -   Element referenced across Compile Units.
 HELP-ALL:     =inserted                -   Generated inlined abstract references.
+HELP-ALL:     =language                -   Source language name.
 HELP-ALL:     =level                   -   Lexical scope level (File=0, Compile Unit=1).
 HELP-ALL:     =linkage                 -   Linkage name.
 HELP-ALL:     =local                   -   Element referenced only in the Compile Unit.
