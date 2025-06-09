@@ -10,8 +10,14 @@
 #define LLVM_LIBC_SHARED_LIBC_COMMON_H
 
 // Use system errno.
-#undef LIBC_ERRNO_MODE
+#ifdef LIBC_ERRNO_MODE
+#if LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_SYSTEM_INLINE
+#error                                                                         \
+    "LIBC_ERRNO_MODE was set to something different from LIBC_ERRNO_MODE_SYSTEM_INLINE."
+#endif // LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_SYSTEM_INLINE
+#else
 #define LIBC_ERRNO_MODE LIBC_ERRNO_MODE_SYSTEM_INLINE
+#endif // LIBC_ERRNO_MODE
 
 #ifndef LIBC_NAMESPACE
 #define LIBC_NAMESPACE __llvm_libc
