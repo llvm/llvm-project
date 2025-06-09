@@ -48,7 +48,8 @@ using namespace lldb_private;
 GDBRemoteCommunicationServerPlatform::GDBRemoteCommunicationServerPlatform(
     FileSpec debugserver_path, const Socket::SocketProtocol socket_protocol,
     uint16_t gdbserver_port)
-    : m_debugserver_path(std::move(debugserver_path)),
+    : GDBRemoteCommunicationServerCommon("gdb-server-platform"),
+      m_debugserver_path(std::move(debugserver_path)),
       m_socket_protocol(socket_protocol), m_gdbserver_port(gdbserver_port) {
 
   RegisterMemberFunctionHandler(

@@ -72,8 +72,9 @@ enum GDBRemoteServerError {
 
 // GDBRemoteCommunicationServerLLGS constructor
 GDBRemoteCommunicationServerLLGS::GDBRemoteCommunicationServerLLGS(
-    MainLoop &mainloop, NativeProcessProtocol::Manager &process_manager)
-    : GDBRemoteCommunicationServerCommon(), m_mainloop(mainloop),
+    MainLoop &mainloop, NativeProcessProtocol::Manager &process_manager,
+    llvm::StringRef name)
+    : GDBRemoteCommunicationServerCommon(name), m_mainloop(mainloop),
       m_process_manager(process_manager), m_current_process(nullptr),
       m_continue_process(nullptr), m_stdio_communication() {
   RegisterPacketHandlers();

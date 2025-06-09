@@ -31,7 +31,9 @@ public:
       std::function<PacketResult(StringExtractorGDBRemote &packet,
                                  Status &error, bool &interrupt, bool &quit)>;
 
-  GDBRemoteCommunicationServer();
+  /// \param[in] name
+  ///     The name of the communication channel.
+  GDBRemoteCommunicationServer(llvm::StringRef name);
 
   ~GDBRemoteCommunicationServer() override;
 

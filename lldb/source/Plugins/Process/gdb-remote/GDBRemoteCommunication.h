@@ -104,7 +104,9 @@ public:
     bool m_timeout_modified;
   };
 
-  GDBRemoteCommunication();
+  /// \param[in] name
+  ///     The name of the communication channel.
+  GDBRemoteCommunication(llvm::StringRef name);
 
   ~GDBRemoteCommunication() override;
 
@@ -190,7 +192,15 @@ protected:
   bool DecompressPacket();
 
 private:
-#if HAVE_LIBCOMPRESSION
+  // Promise used to grab the port number from listening thread
+  std::promise<uint16_t> m_port_promise;
+
+  HostThread m_listen_thread;
+  std::string m_listen_url;
+
+  std::string m_name;
+
+#if defined(HAVE_LIBCOMPRESSION)
   CompressionType m_decompression_scratch_type = CompressionType::None;
   void *m_decompression_scratch = nullptr;
 #endif

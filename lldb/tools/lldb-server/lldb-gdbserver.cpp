@@ -454,7 +454,7 @@ int main_gdbserver(int argc, char *argv[]) {
   }
 
   NativeProcessManager manager(mainloop);
-  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager, "gdb-server");
 
   // Install the mock GPU plugin.
   gdb_server.InstallPlugin(std::make_unique<LLDBServerPluginMockGPU>(gdb_server));

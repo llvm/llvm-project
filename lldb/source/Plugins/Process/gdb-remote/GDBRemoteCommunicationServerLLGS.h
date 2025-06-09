@@ -37,9 +37,15 @@ class GDBRemoteCommunicationServerLLGS
     : public GDBRemoteCommunicationServerCommon,
       public NativeProcessProtocol::NativeDelegate {
 public:
-  // Constructors and Destructors
+  /// \param[in] mainloop
+  ///     The main loop.
+  /// \param[in] process_manager
+  ///     The process manager.
+  /// \param[in] name
+  ///     The name of the communication channel.
   GDBRemoteCommunicationServerLLGS(
-      MainLoop &mainloop, NativeProcessProtocol::Manager &process_manager);
+      MainLoop &mainloop, NativeProcessProtocol::Manager &process_manager,
+      llvm::StringRef name);
 
   void SetLaunchInfo(const ProcessLaunchInfo &info);
 

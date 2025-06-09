@@ -25,7 +25,9 @@ class ProcessGDBRemote;
 
 class GDBRemoteCommunicationServerCommon : public GDBRemoteCommunicationServer {
 public:
-  GDBRemoteCommunicationServerCommon();
+  /// \param[in] name
+  ///     The name of the communication channel.
+  GDBRemoteCommunicationServerCommon(llvm::StringRef name);
 
   ~GDBRemoteCommunicationServerCommon() override;
 
