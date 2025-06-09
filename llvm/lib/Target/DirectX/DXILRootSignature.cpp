@@ -347,7 +347,7 @@ static bool isFlagSet(uint32_t Flags, FlagTypes... FlagsToCheck) {
 
 static bool verifyDescriptorRangeFlag(uint32_t Version, uint32_t Type,
                                       uint32_t Flags) {
-  bool IsSampler =
+  const bool IsSampler =
       (Type == llvm::to_underlying(dxbc::DescriptorRangeType::Sampler));
 
   if (Version == 1) {
