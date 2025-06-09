@@ -235,7 +235,7 @@ size_t StringTableBuilder::add(CachedHashStringRef S, uint8_t Priority) {
   if (Priority)
     StringPriorityMap[S] = std::max(Priority, StringPriorityMap[S]);
 
-  auto P = StringIndexMap.insert(std::make_pair(S, 0));
+  auto P = StringIndexMap.try_emplace(S);
   if (P.second) {
     size_t Start = alignTo(Size, Alignment);
     P.first->second = Start;

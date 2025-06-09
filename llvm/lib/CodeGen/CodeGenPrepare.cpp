@@ -5447,11 +5447,17 @@ bool AddressingModeMatcher::matchAddr(Value *Addr, unsigned Depth) {
       TPT.getRestorationPoint();
   if (ConstantInt *CI = dyn_cast<ConstantInt>(Addr)) {
     if (CI->getValue().isSignedIntN(64)) {
-      // Fold in immediates if legal for the target.
-      AddrMode.BaseOffs += CI->getSExtValue();
-      if (TLI.isLegalAddressingMode(DL, AddrMode, AccessTy, AddrSpace))
-        return true;
-      AddrMode.BaseOffs -= CI->getSExtValue();
+      // Check if the addition would result in a signed overflow.
+      int64_t Result;
+      bool Overflow =
+          AddOverflow(AddrMode.BaseOffs, CI->getSExtValue(), Result);
+      if (!Overflow) {
+        // Fold in immediates if legal for the target.
+        AddrMode.BaseOffs = Result;
+        if (TLI.isLegalAddressingMode(DL, AddrMode, AccessTy, AddrSpace))
+          return true;
+        AddrMode.BaseOffs -= CI->getSExtValue();
+      }
     }
   } else if (GlobalValue *GV = dyn_cast<GlobalValue>(Addr)) {
     // If this is a global variable, try to fold it into the addressing mode.
@@ -5939,8 +5945,17 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
   // The current BB may be optimized multiple times, we can't guarantee the
   // reuse of Addr happens later, call findInsertPos to find an appropriate
   // insert position.
-  IRBuilder<> Builder(MemoryInst->getParent(),
-                      findInsertPos(Addr, MemoryInst, SunkAddr));
+  auto InsertPos = findInsertPos(Addr, MemoryInst, SunkAddr);
+
+  // TODO: Adjust insert point considering (Base|Scaled)Reg if possible.
+  if (!SunkAddr) {
+    auto &DT = getDT(*MemoryInst->getFunction());
+    if ((AddrMode.BaseReg && !DT.dominates(AddrMode.BaseReg, &*InsertPos)) ||
+        (AddrMode.ScaledReg && !DT.dominates(AddrMode.ScaledReg, &*InsertPos)))
+      return Modified;
+  }
+
+  IRBuilder<> Builder(MemoryInst->getParent(), InsertPos);
 
   if (SunkAddr) {
     LLVM_DEBUG(dbgs() << "CGP: Reusing nonlocal addrmode: " << AddrMode

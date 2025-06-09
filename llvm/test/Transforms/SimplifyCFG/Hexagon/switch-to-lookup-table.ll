@@ -43,7 +43,7 @@ define i32 @foo(i32 %x) #0 section ".tcm_text" {
 ; DISABLE:       sw.default:
 ; DISABLE-NEXT:    br label [[RETURN]]
 ; DISABLE:       return:
-; DISABLE-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 19, [[SW_DEFAULT]] ], [ 33, [[SW_BB5]] ], [ 12, [[SW_BB4]] ], [ 22, [[SW_BB3]] ], [ 14, [[SW_BB2]] ], [ 20, [[SW_BB1]] ], [ 9, [[ENTRY:%.*]] ]
+; DISABLE-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 19, [[SW_DEFAULT]] ], [ 20, [[SW_BB1]] ], [ 14, [[SW_BB2]] ], [ 22, [[SW_BB3]] ], [ 12, [[SW_BB4]] ], [ 33, [[SW_BB5]] ], [ 9, [[ENTRY:%.*]] ]
 ; DISABLE-NEXT:    ret i32 [[RETVAL_0]]
 ;
 entry:
