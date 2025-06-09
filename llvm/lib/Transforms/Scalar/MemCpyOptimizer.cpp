@@ -1367,8 +1367,8 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
   return true;
 }
 
-/// Determine whether the pointer V had only undefined content from Def up to
-/// the given Size, either because it was freshly alloca'd or started its
+/// Determine whether the pointer V had only undefined content (due to Def) up
+/// to the given Size, either because it was freshly alloca'd or started its
 /// lifetime.
 static bool hasUndefContents(MemorySSA *MSSA, BatchAAResults &AA, Value *V,
                              MemoryDef *Def, Value *Size) {
@@ -1404,8 +1404,8 @@ static bool hasUndefContents(MemorySSA *MSSA, BatchAAResults &AA, Value *V,
   return false;
 }
 
-static bool coversInputFully(MemorySSA *MSSA, MemCpyInst *MemCpy,
-                             MemIntrinsic *MemSrc, BatchAAResults &BAA) {
+static bool inputFullyCoveredBySrc(MemorySSA *MSSA, MemCpyInst *MemCpy,
+                                   MemIntrinsic *MemSrc, BatchAAResults &BAA) {
   // If the memcpy is larger than the previous, but the memory was undef prior
   // to that, we can just ignore the tail. Technically we're only
   // interested in the bytes from 0..MemSrcOffset and
@@ -1452,7 +1452,6 @@ bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
     MOffset = *Offset;
   }
 
-  MaybeAlign MDestAlign = MemCpy->getDestAlign();
   if (MOffset != 0 || MemSetSize != CopySize) {
     // Make sure the memcpy doesn't read any more than what the memset wrote,
     // other than undef. Don't worry about sizes larger than i64. A known memset
@@ -1466,7 +1465,7 @@ bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
     if (!CCopySize)
       return false;
     if (CCopySize->getZExtValue() + MOffset > CMemSetSize->getZExtValue()) {
-      if (!coversInputFully(MSSA, MemCpy, MemSet, BAA))
+      if (!inputFullyCoveredBySrc(MSSA, MemCpy, MemSet, BAA))
         return false;
       // Clip the memcpy to the bounds of the memset
       if (MOffset == 0)
