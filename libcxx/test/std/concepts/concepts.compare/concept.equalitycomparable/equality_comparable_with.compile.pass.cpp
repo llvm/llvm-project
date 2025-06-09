@@ -1132,14 +1132,8 @@ static_assert(
 static_assert(
     !check_equality_comparable_with<one_way_ne, explicit_operators>());
 
-#if TEST_STD_VER < 23
-static_assert(!check_equality_comparable_with<move_only_equality_with_int, int>());
-static_assert(!check_equality_comparable_with<std::unique_ptr<int>, std::nullptr_t>());
-#else
 // P2404
 static_assert(check_equality_comparable_with<move_only_equality_with_int, int>());
 static_assert(check_equality_comparable_with<std::unique_ptr<int>, std::nullptr_t>());
-#endif // TEST_STD_VER < 23
-
 static_assert(!check_equality_comparable_with<nonmovable_equality_with_int, int>());
 } // namespace types_fit_for_purpose
