@@ -16,6 +16,8 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
+#include "hdr/sys_stat_macros.h"
+
 #include "hdr/sys_ioctl_macros.h"
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
@@ -24,12 +26,12 @@ TEST(LlvmLibcSysIoctlTest, InvalidCommandAndFIONREAD) {
   LIBC_NAMESPACE::libc_errno = 0;
 
   // Setup the test file
-  constexpr const char *TEST_FILE_NAME = "testdata/ioctl.test";
+  constexpr const char *TEST_FILE_NAME = "ioctl.test";
   constexpr const char TEST_MSG[] = "ioctl test";
   constexpr int TEST_MSG_SIZE = sizeof(TEST_MSG) - 1;
   auto TEST_FILE = libc_make_test_file_path(TEST_FILE_NAME);
   int new_test_file_fd =
-      LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_WRONLY, 0644);
+      LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
   ASSERT_THAT(
       (int)LIBC_NAMESPACE::write(new_test_file_fd, TEST_MSG, TEST_MSG_SIZE),
       Succeeds(TEST_MSG_SIZE));

@@ -1,7 +1,5 @@
 add_custom_target(libc_sys_ioctl_unittests)
 
-add_subdirectory(testdata)
-
 add_libc_unittest(
   ioctl_test
   SUITE
