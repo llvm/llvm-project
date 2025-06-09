@@ -18,7 +18,7 @@
 # RUN: llvm-mc --filetype=obj --triple=riscv64 f3-f.s -o f3-f.o
 
 ## ZICFILP-unlabeled should be enabled when it's enabled in all inputs or when
-## it's forced on
+## it's forced on.
 # RUN: ld.lld rv32-f1-s.o rv32-f2-s.o rv32-f3-s.o -o out.rv32 --fatal-warnings
 # RUN: llvm-readelf -n out.rv32 | FileCheck --check-prefix=ZICFILP %s
 # RUN: ld.lld f1-s.o f2-s.o f3-s.o -o out --fatal-warnings
@@ -39,7 +39,7 @@
 # RUN: llvm-readelf -n out.no.so | count 0
 
 ## ZICFILP-unlabeled should be disabled with zicfilp=never, even if
-## ZICFILP-unlabeled is present in all inputs
+## ZICFILP-unlabeled is present in all inputs.
 # RUN: ld.lld f1-s.o f2-s.o f3-s.o -z zicfilp=unlabeled -z zicfilp=never -o out.never --fatal-warnings
 # RUN: llvm-readelf -n out.never | count 0
 
@@ -64,7 +64,7 @@
 # CONFLICT: error: f1-c.o: file has conflicting properties: GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED and GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG
 # FORCE-CONFLICT: warning: f3-f.o: -z zicfilp=unlabeled: file has conflicting property: GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG
 
-## -z zicfilp=unlabeled should override and disable ZICFILP-func-sig
+## -z zicfilp=unlabeled should override and disable ZICFILP-func-sig.
 # RUN: llvm-readelf -n out.override | FileCheck --check-prefixes=ZICFILP,OVERRIDE %s
 # OVERRIDE-NOT: ZICFILP-func-sig
 

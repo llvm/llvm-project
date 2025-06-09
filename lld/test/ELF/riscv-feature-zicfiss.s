@@ -13,7 +13,7 @@
 # RUN: llvm-mc --filetype=obj --triple=riscv64 f3.s   -o f3.o
 # RUN: llvm-mc --filetype=obj --triple=riscv64 f3-s.s -o f3-s.o
 
-## ZICFISS should be enabled when it's enabled in all inputs or when it's forced on
+## ZICFISS should be enabled when it's enabled in all inputs or when it's forced on.
 # RUN: ld.lld rv32-f1-s.o rv32-f2-s.o rv32-f3-s.o -o out.rv32 --fatal-warnings
 # RUN: llvm-readelf -n out.rv32 | FileCheck --check-prefix=ZICFISS %s
 # RUN: ld.lld f1-s.o f2-s.o f3-s.o -o out --fatal-warnings
@@ -33,7 +33,7 @@
 # RUN: llvm-readelf -n out.no.so | count 0
 
 ## ZICFISS should be disabled with zicfiss=never, even if ZICFISS is present in
-## all inputs
+## all inputs.
 # RUN: ld.lld f1-s.o f2-s.o f3-s.o -z zicfiss=always -z zicfiss=never -o out.never --fatal-warnings
 # RUN: llvm-readelf -n out.never | count 0
 

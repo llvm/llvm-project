@@ -3039,7 +3039,7 @@ static void readSecurityNotes(Ctx &ctx) {
   else if (ctx.arg.zGcs == GcsPolicy::Never)
     ctx.arg.andFeatures &= ~GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
 
-  // Force enable/disable Zicfilp
+  // Force enable/disable Zicfilp.
   if (ctx.arg.zZicfilp == ZicfilpPolicy::Unlabeled) {
     ctx.arg.andFeatures |= GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED;
     ctx.arg.andFeatures &= ~GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG;
@@ -3050,7 +3050,7 @@ static void readSecurityNotes(Ctx &ctx) {
     ctx.arg.andFeatures &= ~(GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED |
                              GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG);
 
-  // Force enable/disable Zicfiss
+  // Force enable/disable Zicfiss.
   if (ctx.arg.zZicfiss == ZicfissPolicy::Always)
     ctx.arg.andFeatures |= GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS;
   else if (ctx.arg.zZicfiss == ZicfissPolicy::Never)
