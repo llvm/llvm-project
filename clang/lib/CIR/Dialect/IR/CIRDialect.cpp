@@ -1603,10 +1603,9 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
   auto lhsVecAttr = mlir::cast<cir::ConstVectorAttr>(lhs);
   auto rhsVecAttr = mlir::cast<cir::ConstVectorAttr>(rhs);
 
-  auto inputElemTy =
+  mlir::Type inputElemTy =
       mlir::cast<cir::VectorType>(lhsVecAttr.getType()).getElementType();
-  if (!mlir::isa<cir::IntType>(inputElemTy) &&
-      !mlir::isa<cir::CIRFPTypeInterface>(inputElemTy))
+  if (!isAnyIntegerOrFloatingPointType(inputElemTy))
     return {};
 
   cir::CmpOpKind opKind = adaptor.getKind();
