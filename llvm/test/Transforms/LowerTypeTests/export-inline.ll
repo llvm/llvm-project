@@ -1,3 +1,5 @@
+; REQUIRES: x86-registered-target
+
 ; RUN: opt -mtriple=i686-unknown-linux -S -passes=lowertypetests -lowertypetests-summary-action=export -lowertypetests-read-summary=%S/Inputs/use-typeid1-typeid2.yaml -lowertypetests-write-summary=%t %s | FileCheck --check-prefixes=CHECK,CHECK-X86-32 %s
 ; RUN: FileCheck --check-prefixes=SUMMARY,SUMMARY-X86,SUMMARY-X86-32 %s < %t
 
