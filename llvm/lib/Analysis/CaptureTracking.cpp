@@ -447,27 +447,3 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
 
   // All uses examined.
 }
-
-bool llvm::isNonEscapingLocalObject(
-    const Value *V, SmallDenseMap<const Value *, bool, 8> *IsCapturedCache) {
-  SmallDenseMap<const Value *, bool, 8>::iterator CacheIt;
-  if (IsCapturedCache) {
-    bool Inserted;
-    std::tie(CacheIt, Inserted) = IsCapturedCache->insert({V, false});
-    if (!Inserted)
-      // Found cached result, return it!
-      return CacheIt->second;
-  }
-
-  // If this is an identified function-local object, check to see if it escapes.
-  // We only care about provenance here, not address capture.
-  if (isIdentifiedFunctionLocal(V)) {
-    bool Ret = !capturesAnything(PointerMayBeCaptured(
-        V, /*ReturnCaptures=*/false, CaptureComponents::Provenance));
-    if (IsCapturedCache)
-      CacheIt->second = Ret;
-    return Ret;
-  }
-
-  return false;
-}

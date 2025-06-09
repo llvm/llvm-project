@@ -2300,12 +2300,14 @@ are listed below.
 .. option:: -f[no-]unique-source-file-names
 
    When enabled, allows the compiler to assume that each object file
-   passed to the linker has been compiled using a unique source file
-   path. This is useful for reducing link times when doing ThinLTO
-   in combination with whole-program devirtualization or CFI.
+   passed to the linker has a unique identifier. The identifier for
+   an object file is either the source file path or the value of the
+   argument `-funique-source-file-identifier` if specified. This is
+   useful for reducing link times when doing ThinLTO in combination with
+   whole-program devirtualization or CFI.
 
-   The full source path passed to the compiler must be unique. This
-   means that, for example, the following is a usage error:
+   The full source path or identifier passed to the compiler must be
+   unique. This means that, for example, the following is a usage error:
 
    .. code-block:: console
 
@@ -2326,6 +2328,11 @@ are listed below.
 
    A misuse of this flag may result in a duplicate symbol error at
    link time.
+
+.. option:: -funique-source-file-identifier=IDENTIFIER
+
+   Used with `-funique-source-file-names` to specify a source file
+   identifier.
 
 .. option:: -fforce-emit-vtables
 
