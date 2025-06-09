@@ -118,6 +118,7 @@ public:
     return selectSHXADD_UWOp(N, ShAmt, Val);
   }
 
+  bool selectZExtImm32(SDValue N, SDValue &Val);
   bool selectNegImm(SDValue N, SDValue &Val);
   bool selectInvLogicImm(SDValue N, SDValue &Val);
 

@@ -3307,6 +3307,31 @@ bool RISCVDAGToDAGISel::selectSHXADD_UWOp(SDValue N, unsigned ShAmt,
   return false;
 }
 
+bool RISCVDAGToDAGISel::selectZExtImm32(SDValue N, SDValue &Val) {
+  if (!isa<ConstantSDNode>(N))
+    return false;
+  int64_t Imm = cast<ConstantSDNode>(N)->getSExtValue();
+  if ((Imm >> 31) != 1)
+    return false;
+
+  if (any_of(N->users(),
+             [](const SDNode *U) { return U->getOpcode() != ISD::ADD; }))
+    return false;
+
+  int64_t LeadingOnesImm = 0xffffffff00000000 | Imm;
+  int OrigImmCost = RISCVMatInt::getIntMatCost(APInt(64, Imm), 64, *Subtarget,
+                                               /*CompressionCost=*/true);
+  int LeadingOnesImmCost =
+      RISCVMatInt::getIntMatCost(APInt(64, LeadingOnesImm), 64, *Subtarget,
+                                 /*CompressionCost=*/true);
+  if (OrigImmCost <= LeadingOnesImmCost)
+    return false;
+
+  Val = selectImm(CurDAG, SDLoc(N), N->getSimpleValueType(0), LeadingOnesImm,
+                  *Subtarget);
+  return true;
+}
+
 bool RISCVDAGToDAGISel::selectNegImm(SDValue N, SDValue &Val) {
   if (!isa<ConstantSDNode>(N))
     return false;
