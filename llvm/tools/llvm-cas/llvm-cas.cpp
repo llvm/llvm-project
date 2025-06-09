@@ -232,7 +232,8 @@ int main(int Argc, char **Argv) {
     if (!UpstreamCAS)
       ExitOnErr(createStringError(inconvertibleErrorCode(),
                                   "missing '-upstream-cas'"));
-    return import(*CAS, *UpstreamCAS, Inputs);
+
+    return import(*UpstreamCAS, *CAS, Inputs);
   }
 
   if (Command == PutCacheKey || Command == GetCacheResult) {
@@ -632,32 +633,21 @@ int getCASIDForFile(ObjectStore &CAS, const CASID &ID,
   return 0;
 }
 
-static ObjectRef importNode(ObjectStore &CAS, ObjectStore &UpstreamCAS,
-                            const CASID &ID) {
-  ExitOnError ExitOnErr("llvm-cas: import: ");
-
-  std::optional<ObjectRef> PrimaryRef = CAS.getReference(ID);
-  if (PrimaryRef)
-    return *PrimaryRef; // object is present.
-
-  ObjectProxy UpstreamObj = ExitOnErr(UpstreamCAS.getProxy(ID));
-  SmallVector<ObjectRef> Refs;
-  ExitOnErr(UpstreamObj.forEachReference([&](ObjectRef UpstreamRef) -> Error {
-    ObjectRef Ref =
-        importNode(CAS, UpstreamCAS, UpstreamCAS.getID(UpstreamRef));
-    Refs.push_back(Ref);
-    return Error::success();
-  }));
-  return ExitOnErr(CAS.storeFromString(Refs, UpstreamObj.getData()));
-}
-
-static int import(ObjectStore &CAS, ObjectStore &UpstreamCAS,
+static int import(ObjectStore &FromCAS, ObjectStore &ToCAS,
                   ArrayRef<std::string> Objects) {
   ExitOnError ExitOnErr("llvm-cas: import: ");
 
   for (StringRef Object : Objects) {
-    CASID ID = ExitOnErr(CAS.parseID(Object));
-    importNode(CAS, UpstreamCAS, ID);
+    CASID ID = ExitOnErr(FromCAS.parseID(Object));
+    auto Ref = FromCAS.getReference(ID);
+    if (!Ref) {
+      ExitOnErr(createStringError(inconvertibleErrorCode(),
+                                  "input not found: " + ID.toString()));
+      return 1;
+    }
+
+    auto Imported = ExitOnErr(ToCAS.importObject(FromCAS, *Ref));
+    llvm::outs() << ToCAS.getID(Imported).toString() << "\n";
   }
   return 0;
 }

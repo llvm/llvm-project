@@ -309,6 +309,10 @@ public:
   /// Validate the whole node tree.
   Error validateTree(ObjectRef Ref);
 
+  /// Import object from another CAS. This will import the full tree from the
+  /// other CAS.
+  Expected<ObjectRef> importObject(ObjectStore &Upstream, ObjectRef Other);
+
   /// Print the ObjectStore internals for debugging purpose.
   virtual void print(raw_ostream &) const {}
   void dump() const;

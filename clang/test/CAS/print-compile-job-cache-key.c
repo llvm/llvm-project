@@ -68,5 +68,5 @@
 // RUN: cat %t/output-plugin.txt | sed \
 // RUN:   -e "s/^.*miss for '//" \
 // RUN:   -e "s/' .*$//" > %t/cache-key-plugin
-// RUN: clang-cas-test -print-compile-job-cache-key -cas %t/cas @%t/cache-key-plugin \
+// RUN: clang-cas-test -print-compile-job-cache-key -cas %t/cas-plugin @%t/cache-key-plugin \
 // RUN:   -fcas-plugin-path %llvmshlibdir/libCASPluginTest%pluginext | FileCheck %s

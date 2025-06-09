@@ -36,3 +36,7 @@ CHECK-ERROR: llvm-cas: get-cas-id: No such file or directory
 RUN: llvm-cas --cas  %t/cas --ls-node-refs @%t/cas.id 2>&1 | FileCheck %s --check-prefix=CHECK-NODE-REFS
 CHECK-NODE-REFS: llvmcas://
 CHECK-NODE-REFS: llvmcas://
+
+// Test exporting the entire tree.
+RUN: llvm-cas --cas %t/new-cas --fcas-plugin-path %llvmshlibdir/libCASPluginTest%pluginext --upstream-cas %t/cas --import @%t/cas.id > %t/plugin.id
+RUN: llvm-cas --cas %t/new-cas --fcas-plugin-path %llvmshlibdir/libCASPluginTest%pluginext --ls-tree-recursive @%t/plugin.id | FileCheck %s

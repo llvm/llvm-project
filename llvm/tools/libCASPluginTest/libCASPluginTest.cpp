@@ -11,17 +11,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-c/CAS/PluginAPI_functions.h"
-#include "llvm/CAS/BuiltinCASContext.h"
 #include "llvm/CAS/BuiltinObjectHasher.h"
+#include "llvm/CAS/CASID.h"
 #include "llvm/CAS/UnifiedOnDiskCache.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/SHA1.h"
 
 using namespace llvm;
 using namespace llvm::cas;
-using namespace llvm::cas::builtin;
 using namespace llvm::cas::ondisk;
 
 static char *copyNewMallocString(StringRef Str) {
@@ -124,6 +124,54 @@ bool llcas_cas_options_set_option(llcas_cas_options_t c_opts, const char *name,
 }
 
 namespace {
+
+using HasherT = SHA1;
+using HashType = decltype(HasherT::hash(std::declval<ArrayRef<uint8_t> &>()));
+
+class PluginCASContext : public CASContext {
+  void printIDImpl(raw_ostream &OS, const CASID &ID) const final {
+    PluginCASContext::printID(ID.getHash(), OS);
+  }
+
+public:
+  static StringRef getHashName() { return "SHA1"; }
+  StringRef getHashSchemaIdentifier() const final {
+    static const std::string ID =
+        ("llvm.cas.builtin.v2[" + getHashName() + "]").str();
+    return ID;
+  }
+
+  PluginCASContext() = default;
+
+  static Expected<HashType> parseID(StringRef Reference) {
+    if (!Reference.consume_front("llvmcas://"))
+      return createStringError(
+          std::make_error_code(std::errc::invalid_argument),
+          "invalid cas-id '" + Reference + "'");
+
+    if (Reference.size() != 2 * sizeof(HashType))
+      return createStringError(
+          std::make_error_code(std::errc::invalid_argument),
+          "wrong size for cas-id hash '" + Reference + "'");
+
+    std::string Binary;
+    if (!tryGetFromHex(Reference, Binary))
+      return createStringError(
+          std::make_error_code(std::errc::invalid_argument),
+          "invalid hash in cas-id '" + Reference + "'");
+
+    assert(Binary.size() == sizeof(HashType));
+    HashType Digest;
+    llvm::copy(Binary, Digest.data());
+    return Digest;
+  }
+
+  static void printID(ArrayRef<uint8_t> Digest, raw_ostream &OS) {
+    SmallString<64> Hash;
+    toHex(Digest, /*LowerCase=*/true, Hash);
+    OS << "llvmcas://" << Hash;
+  }
+};
 
 struct CASWrapper {
   std::string FirstPrefix;
@@ -308,7 +356,7 @@ llcas_cas_t llcas_cas_create(llcas_cas_options_t c_opts, char **error) {
   auto &Opts = *unwrap(c_opts);
   Expected<std::unique_ptr<UnifiedOnDiskCache>> DB = UnifiedOnDiskCache::open(
       Opts.OnDiskPath, /*SizeLimit=*/std::nullopt,
-      BuiltinCASContext::getHashName(), sizeof(HashType));
+      PluginCASContext::getHashName(), sizeof(HashType));
   if (!DB)
     return reportError<llcas_cas_t>(DB.takeError(), error);
 
@@ -316,7 +364,7 @@ llcas_cas_t llcas_cas_create(llcas_cas_options_t c_opts, char **error) {
   if (!Opts.UpstreamPath.empty()) {
     if (Error E = UnifiedOnDiskCache::open(
                       Opts.UpstreamPath, /*SizeLimit=*/std::nullopt,
-                      BuiltinCASContext::getHashName(), sizeof(HashType))
+                      PluginCASContext::getHashName(), sizeof(HashType))
                       .moveInto(UpstreamDB))
       return reportError<llcas_cas_t>(std::move(E), error);
   }
@@ -380,7 +428,7 @@ unsigned llcas_digest_parse(llcas_cas_t c_cas, const char *printed_digest,
   assert(Consumed);
   (void)Consumed;
 
-  Expected<HashType> Digest = BuiltinCASContext::parseID(PrintedDigest);
+  Expected<HashType> Digest = PluginCASContext::parseID(PrintedDigest);
   if (!Digest)
     return reportError(Digest.takeError(), error, 0);
   std::uninitialized_copy(Digest->begin(), Digest->end(), bytes);
@@ -394,7 +442,7 @@ bool llcas_digest_print(llcas_cas_t c_cas, llcas_digest_t c_digest,
   raw_svector_ostream OS(PrintDigest);
   // Include these for testing purposes.
   OS << Wrapper.FirstPrefix << Wrapper.SecondPrefix;
-  BuiltinCASContext::printID(ArrayRef(c_digest.data, c_digest.size), OS);
+  PluginCASContext::printID(ArrayRef(c_digest.data, c_digest.size), OS);
   *printed_id = copyNewMallocString(PrintDigest);
   return false;
 }
