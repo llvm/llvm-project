@@ -21,7 +21,6 @@
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaHLSL.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
 
@@ -2167,11 +2166,23 @@ static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
   }
 }
 
-static void DiagnoseNonConstructibleReason(Sema &SemaRef, SourceLocation Loc,
-                                           QualType T) {
-  SemaRef.Diag(Loc, diag::note_unsatisfied_trait)
-      << T << diag::TraitName::Constructible;
+static void DiagnoseNonConstructibleReason(
+    Sema &SemaRef, SourceLocation Loc,
+    const llvm::SmallVector<clang::QualType, 1> &Ts) {
+  bool CompleteTypes = true;
+  for (const auto &ArgTy : Ts) {
+    if (ArgTy->isVoidType() || ArgTy->isIncompleteArrayType())
+      continue;
+    if (ArgTy->isIncompleteType()) {
+      SemaRef.Diag(Loc, diag::err_incomplete_type_used_in_type_trait_expr)
+          << ArgTy;
+      CompleteTypes = false;
+    }
+  }
+  if (!CompleteTypes)
+    return;
 
+  QualType T = Ts[0];
   if (T->isFunctionType())
     SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
         << diag::TraitNotSatisfiedReason::FunctionType;
@@ -2183,8 +2194,36 @@ static void DiagnoseNonConstructibleReason(Sema &SemaRef, SourceLocation Loc,
   const CXXRecordDecl *D = T->getAsCXXRecordDecl();
   if (!D || D->isInvalidDecl() || !D->hasDefinition())
     return;
-
   SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
+
+  llvm::BumpPtrAllocator OpaqueExprAllocator;
+  SmallVector<Expr *, 2> ArgExprs;
+  ArgExprs.reserve(Ts.size() - 1);
+  for (unsigned I = 1, N = Ts.size(); I != N; ++I) {
+    QualType ArgTy = Ts[I];
+    if (ArgTy->isObjectType() || ArgTy->isFunctionType())
+      ArgTy = SemaRef.Context.getRValueReferenceType(ArgTy);
+    ArgExprs.push_back(
+        new (OpaqueExprAllocator.Allocate<OpaqueValueExpr>())
+            OpaqueValueExpr(Loc, ArgTy.getNonLValueExprType(SemaRef.Context),
+                            Expr::getValueKindForType(ArgTy)));
+  }
+
+  EnterExpressionEvaluationContext Unevaluated(
+      SemaRef, Sema::ExpressionEvaluationContext::Unevaluated);
+  Sema::SFINAETrap SFINAE(SemaRef, /*ForValidityCheck=*/true);
+  Sema::ContextRAII TUContext(SemaRef,
+                              SemaRef.Context.getTranslationUnitDecl());
+  InitializedEntity To(InitializedEntity::InitializeTemporary(T));
+  InitializationKind InitKind(InitializationKind::CreateDirect(Loc, Loc, Loc));
+  InitializationSequence Init(SemaRef, To, InitKind, ArgExprs);
+
+  if (Init.Diagnose(SemaRef, To, InitKind, ArgExprs)) {
+    auto ArgsRange = SourceRange(ArgExprs.front()->getBeginLoc(),
+                                 ArgExprs.back()->getEndLoc());
+
+    SemaRef.Diag(Loc, diag::err_ovl_no_viable_function_in_init) << T;
+  }
 }
 
 static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
@@ -2224,7 +2263,7 @@ void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
     DiagnoseNonTriviallyCopyableReason(*this, E->getBeginLoc(), Args[0]);
     break;
   case TT_IsConstructible:
-    DiagnoseNonConstructibleReason(*this, E->getBeginLoc(), Args[0]);
+    DiagnoseNonConstructibleReason(*this, E->getBeginLoc(), Args);
     break;
   default:
     break;

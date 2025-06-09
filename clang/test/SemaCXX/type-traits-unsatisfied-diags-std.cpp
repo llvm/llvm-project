@@ -132,11 +132,9 @@ static_assert(std::is_constructible<int, int>::value);
 
 static_assert(std::is_constructible<void>::value);
 // expected-error-re@-1 {{static assertion failed due to requirement 'std::{{.*}}is_constructible<void>::value'}} \
-// expected-note@-1 {{'void' is not constructible with provided types}} \
 // expected-note@-1 {{because it is a cv void type}}
 static_assert(std::is_constructible_v<void>);
 // expected-error@-1 {{static assertion failed due to requirement 'std::is_constructible_v<void>'}} \
-// expected-note@-1 {{'void' is not constructible with provided types}} \
 // expected-note@-1 {{because it is a cv void type}}
 
 namespace test_namespace {
@@ -161,11 +159,9 @@ namespace test_namespace {
 
     static_assert(is_constructible<void>::value);
     // expected-error-re@-1 {{static assertion failed due to requirement '{{.*}}is_constructible<void>::value'}} \
-    // expected-note@-1 {{'void' is not constructible with provided types}} \
     // expected-note@-1 {{because it is a cv void type}}
     static_assert(is_constructible_v<void>);
     // expected-error@-1 {{static assertion failed due to requirement 'is_constructible_v<void>'}} \
-    // expected-note@-1 {{'void' is not constructible with provided types}} \
     // expected-note@-1 {{because it is a cv void type}}
 }
 
@@ -231,7 +227,6 @@ void test() {
     // expected-error@-1 {{no matching function for call to 'f3'}} \
     // expected-note@#cand5 {{candidate template ignored: constraints not satisfied [with Args = <void>]}} \
     // expected-note-re@#cand5 {{because '{{.*}}is_constructible<void>::value' evaluated to false}} \
-    // expected-note@#cand5 {{'void' is not constructible with provided types}} \
     // expected-note@#cand5 {{because it is a cv void type}}
 
     g3<void>();
@@ -239,7 +234,6 @@ void test() {
     // expected-note@#cand6 {{candidate template ignored: constraints not satisfied [with T = void]}} \
     // expected-note@#cand6 {{because 'void' does not satisfy 'C3'}} \
     // expected-note@#concept6 {{because 'std::is_constructible_v<void>' evaluated to false}} \
-    // expected-note@#concept6 {{'void' is not constructible with provided types}} \
     // expected-note@#concept6 {{because it is a cv void type}}
 }
 }
