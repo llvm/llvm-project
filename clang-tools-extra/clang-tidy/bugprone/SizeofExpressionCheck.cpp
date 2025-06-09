@@ -73,7 +73,8 @@ SizeofExpressionCheck::SizeofExpressionCheck(StringRef Name,
       WarnOnSizeOfPointer(Options.get("WarnOnSizeOfPointer", false)),
       WarnOnOffsetDividedBySizeOf(
           Options.get("WarnOnOffsetDividedBySizeOf", true)),
-      WarnOnSizeOfInLoopTermination(Options.get("WarnOnSizeOfInLoopTermination", true)) {}
+      WarnOnSizeOfInLoopTermination(
+          Options.get("WarnOnSizeOfInLoopTermination", true)) {}
 
 void SizeofExpressionCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "WarnOnSizeOfConstant", WarnOnSizeOfConstant);
@@ -87,7 +88,8 @@ void SizeofExpressionCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "WarnOnSizeOfPointer", WarnOnSizeOfPointer);
   Options.store(Opts, "WarnOnOffsetDividedBySizeOf",
                 WarnOnOffsetDividedBySizeOf);
-  Options.store(Opts, "WarnOnSizeOfInLoopTermination", WarnOnSizeOfInLoopTermination);
+  Options.store(Opts, "WarnOnSizeOfInLoopTermination",
+                WarnOnSizeOfInLoopTermination);
 }
 
 void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
@@ -139,7 +141,7 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
 
   if (WarnOnSizeOfInLoopTermination) {
     Finder->addMatcher(
-        LoopExpr(has(binaryOperator(has(SizeOfExpr.bind("loop-expr"))))), this);
+        LoopExpr(has(binaryOperator(has(SizeOfExpr)))).bind("loop-expr"), this);
   }
 
   // Detect sizeof(kPtr) where kPtr is 'const char* kPtr = "abc"';
@@ -366,8 +368,18 @@ void SizeofExpressionCheck::check(const MatchFinder::MatchResult &Result) {
          "suspicious usage of 'sizeof(char*)'; do you mean 'strlen'?")
         << E->getSourceRange();
   } else if (const auto *E = Result.Nodes.getNodeAs<Stmt>("loop-expr")) {
-    diag(E->getBeginLoc(), "suspicious usage of 'sizeof' in the loop")
-        << E->getSourceRange();
+    auto *SizeofArgTy = Result.Nodes.getNodeAs<Type>("sizeof-arg-type");
+    if (const auto member = dyn_cast<MemberPointerType>(SizeofArgTy)) {
+      SizeofArgTy = member->getPointeeType().getTypePtr();
+    }
+
+    if (const auto type = dyn_cast<ArrayType>(SizeofArgTy)) {
+      CharUnits sSize = Ctx.getTypeSizeInChars(type->getElementType());
+      if (!sSize.isOne()) {
+        diag(E->getBeginLoc(), "suspicious usage of 'sizeof' in the loop")
+            << E->getSourceRange();
+      }
+    }
   } else if (const auto *E = Result.Nodes.getNodeAs<Expr>("sizeof-pointer")) {
     if (Result.Nodes.getNodeAs<Type>("struct-type")) {
       diag(E->getBeginLoc(),
