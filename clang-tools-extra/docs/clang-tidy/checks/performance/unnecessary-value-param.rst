@@ -58,10 +58,6 @@ Because the fix-it needs to change the signature of the function, it may break
 builds if the function is used in multiple translation units or some codes
 depends on function signatures.
 
-Note: This check does not suggest passing parameters by reference in coroutines
-because, after a coroutine suspend point, references could be dangling and no
-longer valid, so suggested changes may result in hard-to-find bugs and crashes.
-
 Options
 -------
 
@@ -78,3 +74,9 @@ Options
    default is empty. If a name in the list contains the sequence `::`, it is
    matched against the qualified type name (i.e. ``namespace::Type``),
    otherwise it is matched against only the type name (i.e. ``Type``).
+
+.. option:: IsAllowedInCoroutines
+
+   A boolean specifying whether the check should suggest passing parameters by
+   reference in coroutines. The default is `false`. Passing parameters by reference
+   in coroutines may not be safe.

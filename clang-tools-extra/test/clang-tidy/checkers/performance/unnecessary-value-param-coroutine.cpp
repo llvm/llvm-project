@@ -1,4 +1,8 @@
 // RUN: %check_clang_tidy -std=c++20-or-later %s performance-unnecessary-value-param %t -- -fix-errors
+// RUN: %check_clang_tidy -std=c++20-or-later %s performance-unnecessary-value-param %t -- \
+// RUN:   -config='{CheckOptions: {performance-unnecessary-value-param.IsAllowedInCoroutines: false}}' -fix-errors
+// RUN: not %check_clang_tidy -std=c++20-or-later %s performance-unnecessary-value-param %t -- \
+// RUN:   -config='{CheckOptions: {performance-unnecessary-value-param.IsAllowedInCoroutines: true}}' -fix-errors
 
 namespace std {
 

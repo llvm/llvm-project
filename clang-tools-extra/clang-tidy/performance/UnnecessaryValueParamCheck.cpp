@@ -50,7 +50,8 @@ UnnecessaryValueParamCheck::UnnecessaryValueParamCheck(
                                         utils::IncludeSorter::IS_LLVM),
                areDiagsSelfContained()),
       AllowedTypes(
-          utils::options::parseStringList(Options.get("AllowedTypes", ""))) {}
+          utils::options::parseStringList(Options.get("AllowedTypes", ""))),
+      IsAllowedInCoroutines(Options.get("IsAllowedInCoroutines", false)) {}
 
 void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
   const auto ExpensiveValueParamDecl = parmVarDecl(
@@ -65,7 +66,6 @@ void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
           TK_AsIs,
           functionDecl(hasBody(stmt()), isDefinition(), unless(isImplicit()),
                        unless(cxxMethodDecl(anyOf(isOverride(), isFinal()))),
-                       unless(hasBody(coroutineBodyStmt())),
                        has(typeLoc(forEach(ExpensiveValueParamDecl))),
                        decl().bind("functionDecl"))),
       this);
@@ -74,6 +74,10 @@ void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
 void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Param = Result.Nodes.getNodeAs<ParmVarDecl>("param");
   const auto *Function = Result.Nodes.getNodeAs<FunctionDecl>("functionDecl");
+  if (!IsAllowedInCoroutines) {
+    if (auto Body = Function->getBody(); Body && isa<CoroutineBodyStmt>(Body))
+      return;
+  }
 
   TraversalKindScope RAII(*Result.Context, TK_AsIs);
 
@@ -124,6 +128,7 @@ void UnnecessaryValueParamCheck::storeOptions(
   Options.store(Opts, "IncludeStyle", Inserter.getStyle());
   Options.store(Opts, "AllowedTypes",
                 utils::options::serializeStringList(AllowedTypes));
+  Options.store(Opts, "IsAllowedInCoroutines", IsAllowedInCoroutines);
 }
 
 void UnnecessaryValueParamCheck::onEndOfTranslationUnit() {
