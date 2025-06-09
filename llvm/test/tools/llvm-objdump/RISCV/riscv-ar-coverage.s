@@ -31,7 +31,7 @@
 .text
 
 # The core of the feature being added was address resolution for instruction 
-# sequences where an register is populated by immediate values via two
+# sequences where a register is populated by immediate values via two
 # separate instructions. First by an instruction that provides the upper bits
 # (auipc, lui ...) followed by another instruction for the lower bits (addi,
 # jalr, ld ...).
