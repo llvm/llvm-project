@@ -235,12 +235,8 @@ struct MoveOnlyIntComparable {
   friend auto operator<=>(MoveOnlyIntComparable const&, MoveOnlyIntComparable const&) = default;
 };
 
-#if TEST_STD_VER < 23
-static_assert(!check_three_way_comparable_with<MoveOnlyIntComparable, int>());
-#else
 // P2404
 static_assert(check_three_way_comparable_with<MoveOnlyIntComparable, int>());
-#endif // TEST_STD_VER < 23
 
 struct NonMovableIntComparable {
   NonMovableIntComparable(int) {}
