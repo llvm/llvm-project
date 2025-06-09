@@ -243,7 +243,7 @@ CGHLSLRuntime::getCreateHandleFromBindingIntrinsic() {
   case llvm::Triple::dxil:
     return std::pair(llvm::Intrinsic::dx_resource_handlefrombinding, true);
   case llvm::Triple::spirv:
-    return std::pair(llvm::Intrinsic::spv_resource_handlefrombinding, false);
+    return std::pair(llvm::Intrinsic::spv_resource_handlefrombinding, true);
   default:
     llvm_unreachable("Intrinsic resource_handlefrombinding not supported by "
                      "target architecture");
@@ -258,7 +258,7 @@ CGHLSLRuntime::getCreateHandleFromImplicitBindingIntrinsic() {
                      true);
   case llvm::Triple::spirv:
     return std::pair(llvm::Intrinsic::spv_resource_handlefromimplicitbinding,
-                     false);
+                     true);
   default:
     llvm_unreachable(
         "Intrinsic resource_handlefromimplicitbinding not supported by "

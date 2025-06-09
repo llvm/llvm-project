@@ -1,6 +1,8 @@
 ; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv-vulkan-library %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-vulkan-library %s -o - -filetype=obj | spirv-val %}
 
+@.str.b0 = private unnamed_addr constant [3 x i8] c"B0\00", align 1
+
 ; CHECK-DAG: [[float:%[0-9]+]] = OpTypeFloat 32
 ; CHECK-DAG: [[v2float:%[0-9]+]] = OpTypeVector [[float]] 2
 ; CHECK-DAG: [[v4float:%[0-9]+]] = OpTypeVector [[float]] 4
@@ -18,7 +20,7 @@
 define void @main_scalar() local_unnamed_addr #0 {
 entry:
 ; CHECK: [[H:%[0-9]+]] = OpLoad [[ImageType]] [[Var]]
-  %s_h.i = tail call target("spirv.Image", float, 5, 2, 0, 0, 2, 1) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_0t(i32 3, i32 5, i32 1, i32 0, i1 false)
+  %s_h.i = tail call target("spirv.Image", float, 5, 2, 0, 0, 2, 1) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_0t(i32 3, i32 5, i32 1, i32 0, i1 false, ptr nonnull @.str.b0)
 
 ; CHECK: [[R:%[0-9]+]] = OpImageRead [[v4float]] [[H]] [[one]]
 ; CHECK: [[V:%[0-9]+]] = OpCompositeExtract [[float]] [[R]] 0
@@ -57,7 +59,7 @@ bb_both:
 define void @main_vector2() local_unnamed_addr #0 {
 entry:
 ; CHECK: [[H:%[0-9]+]] = OpLoad [[ImageType]] [[Var]]
-  %s_h.i = tail call target("spirv.Image", float, 5, 2, 0, 0, 2, 1) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_0t(i32 3, i32 5, i32 1, i32 0, i1 false)
+  %s_h.i = tail call target("spirv.Image", float, 5, 2, 0, 0, 2, 1) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_0t(i32 3, i32 5, i32 1, i32 0, i1 false, ptr nonnull @.str.b0)
 
 ; CHECK: [[R:%[0-9]+]] = OpImageRead [[v4float]] [[H]] [[one]]
 ; CHECK: [[E0:%[0-9]+]] = OpCompositeExtract [[float]] [[R]] 0
@@ -100,7 +102,7 @@ bb_both:
 define void @main_vector4() local_unnamed_addr #0 {
 entry:
 ; CHECK: [[H:%[0-9]+]] = OpLoad [[ImageType]] [[Var]]
-  %s_h.i = tail call target("spirv.Image", float, 5, 2, 0, 0, 2, 1) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_0t(i32 3, i32 5, i32 1, i32 0, i1 false)
+  %s_h.i = tail call target("spirv.Image", float, 5, 2, 0, 0, 2, 1) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_0t(i32 3, i32 5, i32 1, i32 0, i1 false, ptr nonnull @.str.b0)
 
 ; CHECK: [[R:%[0-9]+]] = OpImageRead [[v4float]] [[H]] [[one]]
   %0 = tail call noundef nonnull align 4 dereferenceable(4) ptr @llvm.spv.resource.getpointer.p0.tspirv.Image_f32_5_2_0_0_2_0t(target("spirv.Image", float, 5, 2, 0, 0, 2, 1) %s_h.i, i32 1)
@@ -131,12 +133,6 @@ bb_both:
   store <4 x float> %4, ptr %5, align 4
   ret void
 }
-
-; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(none)
-declare ptr @llvm.spv.resource.getpointer.p0.tspirv.Image_f32_5_2_0_0_2_0t(target("spirv.Image", float, 5, 2, 0, 0, 2, 1), i32) #1
-
-; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(none)
-declare target("spirv.Image", float, 5, 2, 0, 0, 2, 1) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_0t(i32, i32, i32, i32, i1) #1
 
 attributes #0 = { mustprogress nofree noinline norecurse nosync nounwind willreturn memory(readwrite, inaccessiblemem: none) "frame-pointer"="all" "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 attributes #1 = { mustprogress nocallback nofree nosync nounwind willreturn memory(none) }
