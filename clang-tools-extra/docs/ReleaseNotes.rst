@@ -159,6 +159,10 @@ Changes in existing checks
   false positives on deleted constructors that cannot be used to construct
   objects, even if they have public or protected access.
 
+- Added an option to :doc:`bugprone-multi-level-implicit-pointer-conversion
+  <clang-tidy/checks/bugprone/multi-level-implicit-pointer-conversion>` to
+  choose whether to enable the check in C code or not.
+
 - Improved :doc:`bugprone-optional-value-conversion
   <clang-tidy/checks/bugprone/optional-value-conversion>` check to detect
   conversion in argument of ``std::make_optional``.
