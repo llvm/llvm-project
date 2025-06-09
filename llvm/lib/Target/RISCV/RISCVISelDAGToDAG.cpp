@@ -3307,6 +3307,14 @@ bool RISCVDAGToDAGISel::selectSHXADD_UWOp(SDValue N, unsigned ShAmt,
   return false;
 }
 
+bool RISCVDAGToDAGISel::orIsAdd(const SDNode *N) const {
+  if (N->getFlags().hasDisjoint())
+    return true;
+  KnownBits Known0 = CurDAG->computeKnownBits(N->getOperand(0), 0);
+  KnownBits Known1 = CurDAG->computeKnownBits(N->getOperand(1), 0);
+  return KnownBits::haveNoCommonBitsSet(Known0, Known1);
+}
+
 bool RISCVDAGToDAGISel::selectImm64IfCheaper(int64_t Imm, int64_t OrigImm,
                                              SDValue N, SDValue &Val) {
   int OrigCost = RISCVMatInt::getIntMatCost(APInt(64, OrigImm), 64, *Subtarget,
@@ -3327,9 +3335,18 @@ bool RISCVDAGToDAGISel::selectZExtImm32(SDValue N, SDValue &Val) {
   if ((Imm >> 31) != 1)
     return false;
 
-  if (any_of(N->users(),
-             [](const SDNode *U) { return U->getOpcode() != ISD::ADD; }))
-    return false;
+  for (const SDNode *U : N->users()) {
+    switch (U->getOpcode()) {
+    case ISD::ADD:
+      break;
+    case ISD::OR:
+      if (orIsAdd(U))
+        break;
+      return false;
+    default:
+      return false;
+    }
+  }
 
   return selectImm64IfCheaper(0xffffffff00000000 | Imm, Imm, N, Val);
 }
