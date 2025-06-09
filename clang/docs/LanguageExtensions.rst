@@ -6502,3 +6502,77 @@ qualifications.
 Note, Clang does not allow an ``_Atomic`` function type because
 of explicit constraints against atomically qualified (arrays and) function
 types.
+
+
+Underspecified Object Declarations in C
+=======================================
+
+C23 introduced the notion of `underspecified object declarations <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3006.htm>`_
+(note, the final standards text is different from WG14 N3006 due to changes
+during national body comment review). When an object is declared with the
+``constexpr`` storage class specifier or has a deduced type (with the ``auto``
+specifier), it is said to be "underspecified". Underspecified declarations have
+different requirements than non-underspecified declarations. In particular, the
+identifier being declared cannot be used in its initialization. e.g.,
+
+.. code-block:: c
+
+  auto x = x; // Invalid
+  constexpr int y = y; // Invalid
+
+The standard leaves it implementation-defined whether an underspecified
+declaration may introduce additional identifiers as part of the declaration.
+
+Clang allows additional identifiers to be declared in the following cases:
+
+* A compound literal may introduce a new type. e.g.,
+
+.. code-block:: c
+
+  auto x = (struct S { int x, y; }){ 1, 2 };      // Accepted by Clang
+  constexpr int i = (struct T { int x; }){ 1 }.x; // Accepted by Clang
+
+* The type specifier for a ``constexpr`` declaration may define a new type.
+  e.g.,
+
+.. code-block:: c
+
+  constexpr struct S { int x; } s = { 1 }; // Accepted by Clang
+
+* A function declarator may be declared with parameters, including parameters
+  which introduce a new type. e.g.,
+
+.. code-block:: c
+
+  constexpr int (*fp)(int x) = nullptr;              // Accepted by Clang
+  auto f = (void (*)(struct S { int x; } s))nullptr; // Accepted by Clang
+
+* The initializer may contain a GNU statement expression which defines new
+  types or objects. e.g.,
+
+.. code-block:: c
+
+  constexpr int i = ({                              // Accepted by Clang
+    constexpr int x = 12;
+    constexpr struct S { int x; } s = { x };
+    s.x;
+  });
+  auto x = ({ struct S { int x; } s = { 0 }; s; }); // Accepted by Clang
+
+Clang intentionally does not implement the changed scoping rules from C23
+for underspecified declarations. Doing so would significantly complicate the
+implementation in order to get reasonable diagnostic behavior and also means
+Clang fails to reject some code that should be rejected. e.g.,
+
+.. code-block:: c
+
+  // This should be rejected because 'x' is not in scope within the initializer
+  // of an underspecified declaration. Clang accepts because it treats the scope
+  // of the identifier as beginning immediately after the declarator, same as with
+  // a non-underspecified declaration.
+  constexpr int x = sizeof(x);
+
+  // Clang rejects this code with a diagnostic about using the variable within its
+  // own initializer rather than rejecting the code with an undeclared identifier
+  // diagnostic.
+  auto x = x;
