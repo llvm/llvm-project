@@ -11,8 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/TypeTraits.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
@@ -1343,12 +1345,21 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
     if (RD && RD->isAbstract())
       return false;
 
+    // LWG3819: For reference_meows_from_temporary traits, && is not added to
+    // the source object type.
+    // Otherwise, compute the result of add_rvalue_reference_t.
+    bool UseRawObjectType =
+        Kind == clang::BTT_ReferenceBindsToTemporary ||
+        Kind == clang::BTT_ReferenceConstructsFromTemporary ||
+        Kind == clang::BTT_ReferenceConvertsFromTemporary;
+
     llvm::BumpPtrAllocator OpaqueExprAllocator;
     SmallVector<Expr *, 2> ArgExprs;
     ArgExprs.reserve(Args.size() - 1);
     for (unsigned I = 1, N = Args.size(); I != N; ++I) {
       QualType ArgTy = Args[I]->getType();
-      if (ArgTy->isObjectType() || ArgTy->isFunctionType())
+      if ((ArgTy->isObjectType() && !UseRawObjectType) ||
+          ArgTy->isFunctionType())
         ArgTy = S.Context.getRValueReferenceType(ArgTy);
       ArgExprs.push_back(
           new (OpaqueExprAllocator.Allocate<OpaqueValueExpr>())
@@ -1384,6 +1395,10 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
         Kind == clang::BTT_ReferenceConstructsFromTemporary ||
         Kind == clang::BTT_ReferenceConvertsFromTemporary) {
       if (!T->isReferenceType())
+        return false;
+
+      // A function reference never binds to a temporary object.
+      if (T.getNonReferenceType()->isFunctionType())
         return false;
 
       if (!Init.isDirectReferenceBinding())
@@ -1457,6 +1472,9 @@ void DiagnoseBuiltinDeprecation(Sema &S, TypeTrait Kind, SourceLocation KWLoc) {
     break;
   case UTT_IsTriviallyRelocatable:
     Replacement = clang::UTT_IsCppTriviallyRelocatable;
+    break;
+  case BTT_ReferenceBindsToTemporary:
+    Replacement = clang::BTT_ReferenceConstructsFromTemporary;
     break;
   default:
     return;
@@ -1922,6 +1940,7 @@ static std::optional<TypeTrait> StdNameToTypeTrait(StringRef Name) {
   return llvm::StringSwitch<std::optional<TypeTrait>>(Name)
       .Case("is_trivially_relocatable",
             TypeTrait::UTT_IsCppTriviallyRelocatable)
+      .Case("is_trivially_copyable", TypeTrait::UTT_IsTriviallyCopyable)
       .Default(std::nullopt);
 }
 
@@ -1997,15 +2016,15 @@ static void DiagnoseNonTriviallyRelocatableReason(Sema &SemaRef,
           << B.getSourceRange();
     if (!SemaRef.IsCXXTriviallyRelocatableType(B.getType()))
       SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-          << diag::TraitNotSatisfiedReason::NRBase << B.getType()
+          << diag::TraitNotSatisfiedReason::NTRBase << B.getType()
           << B.getSourceRange();
   }
   for (const FieldDecl *Field : D->fields()) {
     if (!Field->getType()->isReferenceType() &&
         !SemaRef.IsCXXTriviallyRelocatableType(Field->getType()))
       SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-          << diag::TraitNotSatisfiedReason::NRField << Field << Field->getType()
-          << Field->getSourceRange();
+          << diag::TraitNotSatisfiedReason::NTRField << Field
+          << Field->getType() << Field->getSourceRange();
   }
   if (D->hasDeletedDestructor())
     SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
@@ -2033,7 +2052,7 @@ static void DiagnoseNonTriviallyRelocatableReason(Sema &SemaRef,
   }
 
   if (!D->hasSimpleMoveConstructor() && !D->hasSimpleCopyConstructor()) {
-    const auto *Decl = cast<CXXConstructorDecl>(
+    const auto *Decl = cast_or_null<CXXConstructorDecl>(
         LookupSpecialMemberFromXValue(SemaRef, D, /*Assign=*/false));
     if (Decl && Decl->isUserProvided())
       SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
@@ -2083,6 +2102,82 @@ static void DiagnoseNonTriviallyRelocatableReason(Sema &SemaRef,
   SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
 }
 
+static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
+                                               SourceLocation Loc,
+                                               const CXXRecordDecl *D) {
+  for (const CXXBaseSpecifier &B : D->bases()) {
+    assert(B.getType()->getAsCXXRecordDecl() && "invalid base?");
+    if (B.isVirtual())
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::VBase << B.getType()
+          << B.getSourceRange();
+    if (!B.getType().isTriviallyCopyableType(D->getASTContext())) {
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::NTCBase << B.getType()
+          << B.getSourceRange();
+    }
+  }
+  for (const FieldDecl *Field : D->fields()) {
+    if (!Field->getType().isTriviallyCopyableType(Field->getASTContext()))
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::NTCField << Field
+          << Field->getType() << Field->getSourceRange();
+  }
+  CXXDestructorDecl *Dtr = D->getDestructor();
+  if (D->hasDeletedDestructor() || (Dtr && !Dtr->isTrivial()))
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::DeletedDtr
+        << !D->hasDeletedDestructor() << D->getDestructor()->getSourceRange();
+
+  for (const CXXMethodDecl *Method : D->methods()) {
+    if (Method->isTrivial() || !Method->isUserProvided()) {
+      continue;
+    }
+    auto SpecialMemberKind =
+        SemaRef.getDefaultedFunctionKind(Method).asSpecialMember();
+    switch (SpecialMemberKind) {
+    case CXXSpecialMemberKind::CopyConstructor:
+    case CXXSpecialMemberKind::MoveConstructor:
+    case CXXSpecialMemberKind::CopyAssignment:
+    case CXXSpecialMemberKind::MoveAssignment: {
+      bool IsAssignment =
+          SpecialMemberKind == CXXSpecialMemberKind::CopyAssignment ||
+          SpecialMemberKind == CXXSpecialMemberKind::MoveAssignment;
+      bool IsMove =
+          SpecialMemberKind == CXXSpecialMemberKind::MoveConstructor ||
+          SpecialMemberKind == CXXSpecialMemberKind::MoveAssignment;
+
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << (IsAssignment ? diag::TraitNotSatisfiedReason::UserProvidedAssign
+                           : diag::TraitNotSatisfiedReason::UserProvidedCtr)
+          << IsMove << Method->getSourceRange();
+      break;
+    }
+    default:
+      break;
+    }
+  }
+}
+
+static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
+                                               SourceLocation Loc, QualType T) {
+  SemaRef.Diag(Loc, diag::note_unsatisfied_trait)
+      << T << diag::TraitName::TriviallyCopyable;
+
+  if (T->isReferenceType())
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::Ref;
+
+  const CXXRecordDecl *D = T->getAsCXXRecordDecl();
+  if (!D || D->isInvalidDecl())
+    return;
+
+  if (D->hasDefinition())
+    DiagnoseNonTriviallyCopyableReason(SemaRef, Loc, D);
+
+  SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
+}
+
 void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
   E = E->IgnoreParenImpCasts();
   if (E->containsErrors())
@@ -2096,6 +2191,9 @@ void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
   switch (Trait) {
   case UTT_IsCppTriviallyRelocatable:
     DiagnoseNonTriviallyRelocatableReason(*this, E->getBeginLoc(), Args[0]);
+    break;
+  case UTT_IsTriviallyCopyable:
+    DiagnoseNonTriviallyCopyableReason(*this, E->getBeginLoc(), Args[0]);
     break;
   default:
     break;

@@ -1595,34 +1595,6 @@ static lldb::SectionType GetSectionType(uint32_t flags,
   static ConstString g_sect_name_objc_classlist("__objc_classlist");
   static ConstString g_sect_name_cfstring("__cfstring");
 
-  static ConstString g_sect_name_dwarf_debug_abbrev("__debug_abbrev");
-  static ConstString g_sect_name_dwarf_debug_abbrev_dwo("__debug_abbrev.dwo");
-  static ConstString g_sect_name_dwarf_debug_addr("__debug_addr");
-  static ConstString g_sect_name_dwarf_debug_aranges("__debug_aranges");
-  static ConstString g_sect_name_dwarf_debug_cu_index("__debug_cu_index");
-  static ConstString g_sect_name_dwarf_debug_frame("__debug_frame");
-  static ConstString g_sect_name_dwarf_debug_info("__debug_info");
-  static ConstString g_sect_name_dwarf_debug_info_dwo("__debug_info.dwo");
-  static ConstString g_sect_name_dwarf_debug_line("__debug_line");
-  static ConstString g_sect_name_dwarf_debug_line_dwo("__debug_line.dwo");
-  static ConstString g_sect_name_dwarf_debug_line_str("__debug_line_str");
-  static ConstString g_sect_name_dwarf_debug_loc("__debug_loc");
-  static ConstString g_sect_name_dwarf_debug_loclists("__debug_loclists");
-  static ConstString g_sect_name_dwarf_debug_loclists_dwo("__debug_loclists.dwo");
-  static ConstString g_sect_name_dwarf_debug_macinfo("__debug_macinfo");
-  static ConstString g_sect_name_dwarf_debug_macro("__debug_macro");
-  static ConstString g_sect_name_dwarf_debug_macro_dwo("__debug_macro.dwo");
-  static ConstString g_sect_name_dwarf_debug_names("__debug_names");
-  static ConstString g_sect_name_dwarf_debug_pubnames("__debug_pubnames");
-  static ConstString g_sect_name_dwarf_debug_pubtypes("__debug_pubtypes");
-  static ConstString g_sect_name_dwarf_debug_ranges("__debug_ranges");
-  static ConstString g_sect_name_dwarf_debug_rnglists("__debug_rnglists");
-  static ConstString g_sect_name_dwarf_debug_str("__debug_str");
-  static ConstString g_sect_name_dwarf_debug_str_dwo("__debug_str.dwo");
-  static ConstString g_sect_name_dwarf_debug_str_offs("__debug_str_offs");
-  static ConstString g_sect_name_dwarf_debug_str_offs_dwo("__debug_str_offs.dwo");
-  static ConstString g_sect_name_dwarf_debug_tu_index("__debug_tu_index");
-  static ConstString g_sect_name_dwarf_debug_types("__debug_types");
   static ConstString g_sect_name_dwarf_apple_names("__apple_names");
   static ConstString g_sect_name_dwarf_apple_types("__apple_types");
   static ConstString g_sect_name_dwarf_apple_namespaces("__apple_namespac");
@@ -1637,62 +1609,10 @@ static lldb::SectionType GetSectionType(uint32_t flags,
   static ConstString g_sect_name_lldb_formatters("__lldbformatters");
   static ConstString g_sect_name_swift_ast("__swift_ast");
 
-  if (section_name == g_sect_name_dwarf_debug_abbrev)
-    return eSectionTypeDWARFDebugAbbrev;
-  if (section_name == g_sect_name_dwarf_debug_abbrev_dwo)
-    return eSectionTypeDWARFDebugAbbrevDwo;
-  if (section_name == g_sect_name_dwarf_debug_addr)
-    return eSectionTypeDWARFDebugAddr;
-  if (section_name == g_sect_name_dwarf_debug_aranges)
-    return eSectionTypeDWARFDebugAranges;
-  if (section_name == g_sect_name_dwarf_debug_cu_index)
-    return eSectionTypeDWARFDebugCuIndex;
-  if (section_name == g_sect_name_dwarf_debug_frame)
-    return eSectionTypeDWARFDebugFrame;
-  if (section_name == g_sect_name_dwarf_debug_info)
-    return eSectionTypeDWARFDebugInfo;
-  if (section_name == g_sect_name_dwarf_debug_info_dwo)
-    return eSectionTypeDWARFDebugInfoDwo;
-  if (section_name == g_sect_name_dwarf_debug_line)
-    return eSectionTypeDWARFDebugLine;
-  if (section_name == g_sect_name_dwarf_debug_line_dwo)
-    return eSectionTypeDWARFDebugLine; // Same as debug_line.
-  if (section_name == g_sect_name_dwarf_debug_line_str)
-    return eSectionTypeDWARFDebugLineStr;
-  if (section_name == g_sect_name_dwarf_debug_loc)
-    return eSectionTypeDWARFDebugLoc;
-  if (section_name == g_sect_name_dwarf_debug_loclists)
-    return eSectionTypeDWARFDebugLocLists;
-  if (section_name == g_sect_name_dwarf_debug_loclists_dwo)
-    return eSectionTypeDWARFDebugLocListsDwo;
-  if (section_name == g_sect_name_dwarf_debug_macinfo)
-    return eSectionTypeDWARFDebugMacInfo;
-  if (section_name == g_sect_name_dwarf_debug_macro)
-    return eSectionTypeDWARFDebugMacro;
-  if (section_name == g_sect_name_dwarf_debug_macro_dwo)
-    return eSectionTypeDWARFDebugMacInfo; // Same as debug_macro.
-  if (section_name == g_sect_name_dwarf_debug_names)
-    return eSectionTypeDWARFDebugNames;
-  if (section_name == g_sect_name_dwarf_debug_pubnames)
-    return eSectionTypeDWARFDebugPubNames;
-  if (section_name == g_sect_name_dwarf_debug_pubtypes)
-    return eSectionTypeDWARFDebugPubTypes;
-  if (section_name == g_sect_name_dwarf_debug_ranges)
-    return eSectionTypeDWARFDebugRanges;
-  if (section_name == g_sect_name_dwarf_debug_rnglists)
-    return eSectionTypeDWARFDebugRngLists;
-  if (section_name == g_sect_name_dwarf_debug_str)
-    return eSectionTypeDWARFDebugStr;
-  if (section_name == g_sect_name_dwarf_debug_str_dwo)
-    return eSectionTypeDWARFDebugStrDwo;
-  if (section_name == g_sect_name_dwarf_debug_str_offs)
-    return eSectionTypeDWARFDebugStrOffsets;
-  if (section_name == g_sect_name_dwarf_debug_str_offs_dwo)
-    return eSectionTypeDWARFDebugStrOffsetsDwo;
-  if (section_name == g_sect_name_dwarf_debug_tu_index)
-    return eSectionTypeDWARFDebugTuIndex;
-  if (section_name == g_sect_name_dwarf_debug_types)
-    return eSectionTypeDWARFDebugTypes;
+  llvm::StringRef stripped_name = section_name.GetStringRef();
+  if (stripped_name.consume_front("__debug_"))
+    return ObjectFile::GetDWARFSectionTypeFromName(stripped_name);
+
   if (section_name == g_sect_name_dwarf_apple_names)
     return eSectionTypeDWARFAppleNames;
   if (section_name == g_sect_name_dwarf_apple_types)

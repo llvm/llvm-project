@@ -25,6 +25,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/FMF.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
@@ -99,7 +100,7 @@ static Instruction *foldSelectBinOpIdentity(SelectInst &Sel,
   // transform. Bail out if we can not exclude that possibility.
   if (isa<FPMathOperator>(BO))
     if (!BO->hasNoSignedZeros() &&
-        !cannotBeNegativeZero(Y, 0,
+        !cannotBeNegativeZero(Y,
                               IC.getSimplifyQuery().getWithInstruction(&Sel)))
       return nullptr;
 
@@ -1311,7 +1312,11 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
 
       // If NewOp is a constant and OldOp is not replace iff NewOp doesn't
       // contain and undef elements.
-      if (match(NewOp, m_ImmConstant()) || NewOp == V) {
+      // Make sure that V is always simpler than TrueVal, otherwise we might
+      // end up in an infinite loop.
+      if (match(NewOp, m_ImmConstant()) ||
+          (isa<Instruction>(TrueVal) &&
+           is_contained(cast<Instruction>(TrueVal)->operands(), V))) {
         if (isGuaranteedNotToBeUndef(NewOp, SQ.AC, &Sel, &DT))
           return replaceOperand(Sel, Swapped ? 2 : 1, V);
         return nullptr;
@@ -1821,7 +1826,6 @@ static Instruction *foldSelectICmpEq(SelectInst &SI, ICmpInst *ICI,
 static Value *foldSelectWithConstOpToBinOp(ICmpInst *Cmp, Value *TrueVal,
                                            Value *FalseVal,
                                            IRBuilderBase &Builder) {
-  BinaryOperator *BOp;
   Constant *C1, *C2, *C3;
   Value *X;
   CmpPredicate Predicate;
@@ -1837,30 +1841,48 @@ static Value *foldSelectWithConstOpToBinOp(ICmpInst *Cmp, Value *TrueVal,
     Predicate = ICmpInst::getInversePredicate(Predicate);
   }
 
-  if (!match(TrueVal, m_BinOp(BOp)) || !match(FalseVal, m_Constant(C3)))
+  if (!match(FalseVal, m_Constant(C3)) || !TrueVal->hasOneUse())
     return nullptr;
 
-  unsigned Opcode = BOp->getOpcode();
+  bool IsIntrinsic;
+  unsigned Opcode;
+  if (BinaryOperator *BOp = dyn_cast<BinaryOperator>(TrueVal)) {
+    Opcode = BOp->getOpcode();
+    IsIntrinsic = false;
 
-  // This fold causes some regressions and is primarily intended for
-  // add and sub. So we early exit for div and rem to minimize the
-  // regressions.
-  if (Instruction::isIntDivRem(Opcode))
-    return nullptr;
+    // This fold causes some regressions and is primarily intended for
+    // add and sub. So we early exit for div and rem to minimize the
+    // regressions.
+    if (Instruction::isIntDivRem(Opcode))
+      return nullptr;
 
-  if (!match(BOp, m_OneUse(m_BinOp(m_Specific(X), m_Constant(C2)))))
+    if (!match(BOp, m_BinOp(m_Specific(X), m_Constant(C2))))
+      return nullptr;
+
+  } else if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(TrueVal)) {
+    if (!match(II, m_MaxOrMin(m_Specific(X), m_Constant(C2))))
+      return nullptr;
+    Opcode = II->getIntrinsicID();
+    IsIntrinsic = true;
+  } else {
     return nullptr;
+  }
 
   Value *RHS;
   SelectPatternFlavor SPF;
-  const DataLayout &DL = BOp->getDataLayout();
+  const DataLayout &DL = Cmp->getDataLayout();
   auto Flipped = getFlippedStrictnessPredicateAndConstant(Predicate, C1);
 
-  if (C3 == ConstantFoldBinaryOpOperands(Opcode, C1, C2, DL)) {
+  auto FoldBinaryOpOrIntrinsic = [&](Constant *LHS, Constant *RHS) {
+    return IsIntrinsic ? ConstantFoldBinaryIntrinsic(Opcode, LHS, RHS,
+                                                     LHS->getType(), nullptr)
+                       : ConstantFoldBinaryOpOperands(Opcode, LHS, RHS, DL);
+  };
+
+  if (C3 == FoldBinaryOpOrIntrinsic(C1, C2)) {
     SPF = getSelectPattern(Predicate).Flavor;
     RHS = C1;
-  } else if (Flipped && C3 == ConstantFoldBinaryOpOperands(
-                                  Opcode, Flipped->second, C2, DL)) {
+  } else if (Flipped && C3 == FoldBinaryOpOrIntrinsic(Flipped->second, C2)) {
     SPF = getSelectPattern(Flipped->first).Flavor;
     RHS = Flipped->second;
   } else {
@@ -1869,7 +1891,9 @@ static Value *foldSelectWithConstOpToBinOp(ICmpInst *Cmp, Value *TrueVal,
 
   Intrinsic::ID IntrinsicID = getMinMaxIntrinsic(SPF);
   Value *Intrinsic = Builder.CreateBinaryIntrinsic(IntrinsicID, X, RHS);
-  return Builder.CreateBinOp(BOp->getOpcode(), Intrinsic, C2);
+  return IsIntrinsic ? Builder.CreateBinaryIntrinsic(Opcode, Intrinsic, C2)
+                     : Builder.CreateBinOp(Instruction::BinaryOps(Opcode),
+                                           Intrinsic, C2);
 }
 
 /// Visit a SelectInst that has an ICmpInst as its first operand.
@@ -2799,9 +2823,8 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
     if (match(TrueVal, m_FSub(m_PosZeroFP(), m_Specific(X))) &&
         (cast<FPMathOperator>(CondVal)->hasNoNaNs() || SI.hasNoNaNs() ||
          (SI.hasOneUse() && canIgnoreSignBitOfNaN(*SI.use_begin())) ||
-         isKnownNeverNaN(X, /*Depth=*/0,
-                         IC.getSimplifyQuery().getWithInstruction(
-                             cast<Instruction>(CondVal))))) {
+         isKnownNeverNaN(X, IC.getSimplifyQuery().getWithInstruction(
+                                cast<Instruction>(CondVal))))) {
       if (!Swap && (Pred == FCmpInst::FCMP_OLE || Pred == FCmpInst::FCMP_ULE)) {
         Value *Fabs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, &SI);
         return IC.replaceInstUsesWith(SI, Fabs);
@@ -3756,8 +3779,7 @@ static Value *foldSelectBitTest(SelectInst &Sel, Value *CondVal, Value *TrueVal,
       assert(ICmpInst::isEquality(Res->Pred) && "Not equality test?");
       AndMask = Res->Mask;
       V = Res->X;
-      KnownBits Known =
-          computeKnownBits(V, /*Depth=*/0, SQ.getWithInstruction(&Sel));
+      KnownBits Known = computeKnownBits(V, SQ.getWithInstruction(&Sel));
       AndMask &= Known.getMaxValue();
       if (!AndMask.isPowerOf2())
         return nullptr;
@@ -3879,11 +3901,16 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       // (X ugt Y) ? X : Y -> (X ole Y) ? Y : X
       if (FCmp->hasOneUse() && FCmpInst::isUnordered(Pred)) {
         FCmpInst::Predicate InvPred = FCmp->getInversePredicate();
-        // FIXME: The FMF should propagate from the select, not the fcmp.
         Value *NewCond = Builder.CreateFCmpFMF(InvPred, Cmp0, Cmp1, FCmp,
                                                FCmp->getName() + ".inv");
+        // Propagate ninf/nnan from fcmp to select.
+        FastMathFlags FMF = SI.getFastMathFlags();
+        if (FCmp->hasNoNaNs())
+          FMF.setNoNaNs(true);
+        if (FCmp->hasNoInfs())
+          FMF.setNoInfs(true);
         Value *NewSel =
-            Builder.CreateSelectFMF(NewCond, FalseVal, TrueVal, FCmp);
+            Builder.CreateSelectFMF(NewCond, FalseVal, TrueVal, FMF);
         return replaceInstUsesWith(SI, NewSel);
       }
     }
@@ -4179,7 +4206,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   // the assumption cache, so make sure that is populated.
   if (!CondVal->getType()->isVectorTy() && !AC.assumptions().empty()) {
     KnownBits Known(1);
-    computeKnownBits(CondVal, Known, 0, &SI);
+    computeKnownBits(CondVal, Known, &SI);
     if (Known.One.isOne())
       return replaceInstUsesWith(SI, TrueVal);
     if (Known.Zero.isOne())
@@ -4334,7 +4361,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     if (!CC.AffectedValues.empty()) {
       if (!isa<Constant>(TrueVal) &&
           hasAffectedValue(TrueVal, CC.AffectedValues, /*Depth=*/0)) {
-        KnownBits Known = llvm::computeKnownBits(TrueVal, /*Depth=*/0, Q);
+        KnownBits Known = llvm::computeKnownBits(TrueVal, Q);
         if (Known.isConstant())
           return replaceOperand(SI, 1,
                                 ConstantInt::get(SelType, Known.getConstant()));
@@ -4343,7 +4370,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       CC.Invert = true;
       if (!isa<Constant>(FalseVal) &&
           hasAffectedValue(FalseVal, CC.AffectedValues, /*Depth=*/0)) {
-        KnownBits Known = llvm::computeKnownBits(FalseVal, /*Depth=*/0, Q);
+        KnownBits Known = llvm::computeKnownBits(FalseVal, Q);
         if (Known.isConstant())
           return replaceOperand(SI, 2,
                                 ConstantInt::get(SelType, Known.getConstant()));

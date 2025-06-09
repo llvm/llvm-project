@@ -24,13 +24,13 @@
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
 #include "Shared/EnvironmentVar.h"
-#include "Shared/OffloadError.h"
 #include "Shared/Requirements.h"
 #include "Shared/Utils.h"
 
 #include "GlobalHandler.h"
 #include "JIT.h"
 #include "MemoryManager.h"
+#include "OffloadError.h"
 #include "RPC.h"
 #include "omptarget.h"
 

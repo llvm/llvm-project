@@ -1344,6 +1344,8 @@ const MCExpr *MCAsmParser::applySpecifier(const MCExpr *E, uint32_t Spec) {
   // Recurse over the given expression, rebuilding it to apply the given variant
   // if there is exactly one symbol.
   switch (E->getKind()) {
+  case MCExpr::Specifier:
+    llvm_unreachable("cannot apply another specifier to MCSpecifierExpr");
   case MCExpr::Target:
   case MCExpr::Constant:
     return nullptr;
@@ -6334,6 +6336,11 @@ bool parseAssignmentExpression(StringRef Name, bool allow_redef,
     return Parser.TokError("missing expression");
   if (Parser.parseEOL())
     return true;
+  // Relocation specifiers are not permitted. For now, handle just
+  // MCSymbolRefExpr.
+  if (auto *S = dyn_cast<MCSymbolRefExpr>(Value); S && S->getSpecifier())
+    return Parser.Error(
+        EqualLoc, "relocation specifier not permitted in symbol equating");
 
   // Validate that the LHS is allowed to be a variable (either it has not been
   // used as a symbol, or it is an absolute symbol).

@@ -419,7 +419,8 @@ private:
     }
 
   public:
-    void init(Triple &TargetTriple, bool InstrumentWithCalls);
+    void init(Triple &TargetTriple, bool InstrumentWithCalls,
+              bool CompileKernel);
     Align getObjectAlignment() const { return Align(1ULL << Scale); }
     bool isInGlobal() const { return Kind == OffsetKind::kGlobal; }
     bool isInIfunc() const { return Kind == OffsetKind::kIfunc; }
@@ -642,7 +643,7 @@ void HWAddressSanitizer::initializeModule() {
   PointerTagShift = IsX86_64 ? 57 : 56;
   TagMaskByte = IsX86_64 ? 0x3F : 0xFF;
 
-  Mapping.init(TargetTriple, InstrumentWithCalls);
+  Mapping.init(TargetTriple, InstrumentWithCalls, CompileKernel);
 
   C = &(M.getContext());
   IRBuilder<> IRB(*C);
@@ -1874,7 +1875,8 @@ void HWAddressSanitizer::instrumentPersonalityFunctions() {
 }
 
 void HWAddressSanitizer::ShadowMapping::init(Triple &TargetTriple,
-                                             bool InstrumentWithCalls) {
+                                             bool InstrumentWithCalls,
+                                             bool CompileKernel) {
   // Start with defaults.
   Scale = kDefaultShadowScale;
   Kind = OffsetKind::kTls;
@@ -1885,7 +1887,7 @@ void HWAddressSanitizer::ShadowMapping::init(Triple &TargetTriple,
     // Fuchsia is always PIE, which means that the beginning of the address
     // space is always available.
     SetFixed(0);
-  } else if (ClEnableKhwasan || InstrumentWithCalls) {
+  } else if (CompileKernel || InstrumentWithCalls) {
     SetFixed(0);
     WithFrameRecord = false;
   }

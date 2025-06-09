@@ -636,14 +636,17 @@ SBTarget::ResolveSymbolContextForAddress(const SBAddress &addr,
                                          uint32_t resolve_scope) {
   LLDB_INSTRUMENT_VA(this, addr, resolve_scope);
 
-  SBSymbolContext sc;
+  SBSymbolContext sb_sc;
   SymbolContextItem scope = static_cast<SymbolContextItem>(resolve_scope);
   if (addr.IsValid()) {
-    if (TargetSP target_sp = GetSP())
+    if (TargetSP target_sp = GetSP()) {
+      lldb_private::SymbolContext &sc = sb_sc.ref();
+      sc.target_sp = target_sp;
       target_sp->GetImages().ResolveSymbolContextForAddress(addr.ref(), scope,
-                                                            sc.ref());
+                                                            sc);
+    }
   }
-  return sc;
+  return sb_sc;
 }
 
 size_t SBTarget::ReadMemory(const SBAddress addr, void *buf, size_t size,
