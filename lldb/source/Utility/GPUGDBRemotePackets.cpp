@@ -36,16 +36,13 @@ json::Value toJSON(const SymbolValue &data) {
 bool fromJSON(const llvm::json::Value &value, GPUBreakpointByName &data,
               llvm::json::Path path) {
   ObjectMapper o(value, path);
-  return o && 
-          o.mapOptional("shlib", data.shlib) &&
-          o.map("function_name", data.function_name);              
+  return o && o.mapOptional("shlib", data.shlib) &&
+         o.map("function_name", data.function_name);
 }
 
 llvm::json::Value toJSON(const GPUBreakpointByName &data) {
   return json::Value(
-    Object{{"shlib", data.shlib},
-           {"function_name", data.function_name}
-          });
+      Object{{"shlib", data.shlib}, {"function_name", data.function_name}});
 }
 
 ///-----------------------------------------------------------------------------
@@ -55,16 +52,14 @@ llvm::json::Value toJSON(const GPUBreakpointByName &data) {
 ///-----------------------------------------------------------------------------
 
 bool fromJSON(const llvm::json::Value &value, GPUBreakpointByAddress &data,
-              llvm::json::Path path){
+              llvm::json::Path path) {
   ObjectMapper o(value, path);
-  return o && o.map("load_address", data.load_address);              
+  return o && o.map("load_address", data.load_address);
 }
 
 llvm::json::Value toJSON(const GPUBreakpointByAddress &data) {
-  return json::Value(
-    Object{{"load_address", data.load_address}});
+  return json::Value(Object{{"load_address", data.load_address}});
 }
-
 
 //------------------------------------------------------------------------------
 // GPUBreakpointInfo
@@ -72,20 +67,19 @@ llvm::json::Value toJSON(const GPUBreakpointByAddress &data) {
 bool fromJSON(const llvm::json::Value &value, GPUBreakpointInfo &data,
               llvm::json::Path path) {
   ObjectMapper o(value, path);
-  return o && 
-         o.map("identifier", data.identifier) &&
+  return o && o.map("identifier", data.identifier) &&
          o.mapOptional("name_info", data.name_info) &&
          o.mapOptional("addr_info", data.addr_info) &&
          o.map("symbol_names", data.symbol_names);
 }
 
 llvm::json::Value toJSON(const GPUBreakpointInfo &data) {
-  return json::Value(
-    Object{{"identifier", data.identifier}, 
-           {"name_info", data.name_info},
-           {"addr_info", data.addr_info},
-           {"symbol_names", data.symbol_names},
-          });
+  return json::Value(Object{
+      {"identifier", data.identifier},
+      {"name_info", data.name_info},
+      {"addr_info", data.addr_info},
+      {"symbol_names", data.symbol_names},
+  });
 }
 
 //------------------------------------------------------------------------------
@@ -94,22 +88,20 @@ llvm::json::Value toJSON(const GPUBreakpointInfo &data) {
 bool fromJSON(const llvm::json::Value &value, GPUPluginConnectionInfo &data,
               llvm::json::Path path) {
   ObjectMapper o(value, path);
-  return o && 
-         o.mapOptional("exe_path", data.exe_path) &&
+  return o && o.mapOptional("exe_path", data.exe_path) &&
          o.mapOptional("platform_name", data.platform_name) &&
          o.mapOptional("triple", data.triple) &&
          o.map("connect_url", data.connect_url);
 }
 
 llvm::json::Value toJSON(const GPUPluginConnectionInfo &data) {
-  return json::Value(
-      Object{{"exe_path", data.exe_path}, 
-             {"platform_name", data.platform_name}, 
-             {"triple", data.triple},
-             {"connect_url", data.connect_url},
-            });
+  return json::Value(Object{
+      {"exe_path", data.exe_path},
+      {"platform_name", data.platform_name},
+      {"triple", data.triple},
+      {"connect_url", data.connect_url},
+  });
 }
-
 
 //------------------------------------------------------------------------------
 // GPUPluginBreakpointHitArgs
@@ -117,23 +109,22 @@ llvm::json::Value toJSON(const GPUPluginConnectionInfo &data) {
 bool fromJSON(const json::Value &value, GPUPluginBreakpointHitArgs &data,
               Path path) {
   ObjectMapper o(value, path);
-  return o && 
-         o.map("plugin_name", data.plugin_name) &&
+  return o && o.map("plugin_name", data.plugin_name) &&
          o.map("breakpoint", data.breakpoint) &&
          o.map("symbol_values", data.symbol_values);
 }
 
 json::Value toJSON(const GPUPluginBreakpointHitArgs &data) {
-  return json::Value(
-      Object{{"plugin_name", data.plugin_name}, 
-             {"breakpoint", data.breakpoint},
-             {"symbol_values", data.symbol_values},
-            });
+  return json::Value(Object{
+      {"plugin_name", data.plugin_name},
+      {"breakpoint", data.breakpoint},
+      {"symbol_values", data.symbol_values},
+  });
 }
 
-std::optional<uint64_t> 
-GPUPluginBreakpointHitArgs::GetSymbolValue(llvm::StringRef symbol_name) {
-  for (const auto &symbol: symbol_values)
+std::optional<uint64_t>
+GPUPluginBreakpointHitArgs::GetSymbolValue(llvm::StringRef symbol_name) const {
+  for (const auto &symbol : symbol_values)
     if (symbol_name == symbol.name)
       return symbol.value;
   return std::nullopt;
@@ -145,47 +136,42 @@ GPUPluginBreakpointHitArgs::GetSymbolValue(llvm::StringRef symbol_name) {
 bool fromJSON(const llvm::json::Value &value, GPUActions &data,
               llvm::json::Path path) {
   ObjectMapper o(value, path);
-  return o && 
-         o.map("plugin_name", data.plugin_name) &&
+  return o && o.map("plugin_name", data.plugin_name) &&
          o.map("breakpoints", data.breakpoints) &&
          o.mapOptional("connect_info", data.connect_info) &&
          o.map("load_libraries", data.load_libraries) &&
          o.map("resume_gpu_process", data.resume_gpu_process) &&
-         o.map("wait_for_gpu_process_to_resume", 
+         o.map("wait_for_gpu_process_to_resume",
                data.wait_for_gpu_process_to_resume);
 }
 
 llvm::json::Value toJSON(const GPUActions &data) {
-  return json::Value(
-    Object{{"plugin_name", data.plugin_name},
-           {"breakpoints", data.breakpoints},
-           {"connect_info", data.connect_info},
-           {"load_libraries", data.load_libraries},
-           {"resume_gpu_process", data.resume_gpu_process},
-           {"wait_for_gpu_process_to_resume", 
-            data.wait_for_gpu_process_to_resume},
-          });
+  return json::Value(Object{
+      {"plugin_name", data.plugin_name},
+      {"breakpoints", data.breakpoints},
+      {"connect_info", data.connect_info},
+      {"load_libraries", data.load_libraries},
+      {"resume_gpu_process", data.resume_gpu_process},
+      {"wait_for_gpu_process_to_resume", data.wait_for_gpu_process_to_resume},
+  });
 }
 
 //------------------------------------------------------------------------------
 // GPUPluginBreakpointHitResponse
 //------------------------------------------------------------------------------
 
-
-bool fromJSON(const llvm::json::Value &value, 
-              GPUPluginBreakpointHitResponse &data,
-              llvm::json::Path path) {
+bool fromJSON(const llvm::json::Value &value,
+              GPUPluginBreakpointHitResponse &data, llvm::json::Path path) {
   ObjectMapper o(value, path);
-  return o && 
-         o.map("disable_bp", data.disable_bp) &&
+  return o && o.map("disable_bp", data.disable_bp) &&
          o.map("actions", data.actions);
 }
 
 llvm::json::Value toJSON(const GPUPluginBreakpointHitResponse &data) {
-  return json::Value(
-    Object{{"disable_bp", data.disable_bp}, 
-           {"actions", data.actions},
-          });
+  return json::Value(Object{
+      {"disable_bp", data.disable_bp},
+      {"actions", data.actions},
+  });
 }
 
 //------------------------------------------------------------------------------
@@ -195,16 +181,13 @@ llvm::json::Value toJSON(const GPUPluginBreakpointHitResponse &data) {
 bool fromJSON(const llvm::json::Value &value, GPUSectionInfo &data,
               llvm::json::Path path) {
   ObjectMapper o(value, path);
-  return o && 
-         o.map("names", data.names) &&
+  return o && o.map("names", data.names) &&
          o.map("load_address", data.load_address);
 }
 
 llvm::json::Value toJSON(const GPUSectionInfo &data) {
   return json::Value(
-    Object{{"names", data.names}, 
-           {"load_address", data.load_address}
-          });
+      Object{{"names", data.names}, {"load_address", data.load_address}});
 }
 
 //------------------------------------------------------------------------------
@@ -212,12 +195,10 @@ llvm::json::Value toJSON(const GPUSectionInfo &data) {
 //------------------------------------------------------------------------------
 
 bool fromJSON(const llvm::json::Value &value, GPUDynamicLoaderLibraryInfo &data,
-  llvm::json::Path path) {
+              llvm::json::Path path) {
   ObjectMapper o(value, path);
-  return o && 
-         o.map("pathname", data.pathname) &&
-         o.mapOptional("uuid", data.uuid_str) &&
-         o.map("load", data.load) &&
+  return o && o.map("pathname", data.pathname) &&
+         o.mapOptional("uuid", data.uuid_str) && o.map("load", data.load) &&
          o.mapOptional("load_address", data.load_address) &&
          o.mapOptional("native_memory_address", data.native_memory_address) &&
          o.mapOptional("native_memory_size", data.native_memory_size) &&
@@ -227,17 +208,16 @@ bool fromJSON(const llvm::json::Value &value, GPUDynamicLoaderLibraryInfo &data,
 }
 
 llvm::json::Value toJSON(const GPUDynamicLoaderLibraryInfo &data) {
-return json::Value(
-Object{{"pathname", data.pathname}, 
-       {"uuid", data.uuid_str},
-       {"load", data.load},
-       {"load_address", data.load_address},
-       {"native_memory_address", data.native_memory_address},
-       {"native_memory_size", data.native_memory_size},
-       {"file_offset", data.file_offset},
-       {"file_size", data.file_size},
-       {"loaded_sections", data.loaded_sections}
-      });
+  return json::Value(
+      Object{{"pathname", data.pathname},
+             {"uuid", data.uuid_str},
+             {"load", data.load},
+             {"load_address", data.load_address},
+             {"native_memory_address", data.native_memory_address},
+             {"native_memory_size", data.native_memory_size},
+             {"file_offset", data.file_offset},
+             {"file_size", data.file_size},
+             {"loaded_sections", data.loaded_sections}});
 }
 
 //------------------------------------------------------------------------------
@@ -245,10 +225,9 @@ Object{{"pathname", data.pathname},
 //------------------------------------------------------------------------------
 
 bool fromJSON(const llvm::json::Value &value, GPUDynamicLoaderArgs &data,
-    llvm::json::Path path) {
+              llvm::json::Path path) {
   ObjectMapper o(value, path);
-  return o && 
-         o.map("full", data.full);
+  return o && o.map("full", data.full);
 }
 
 llvm::json::Value toJSON(const GPUDynamicLoaderArgs &data) {
@@ -261,8 +240,7 @@ llvm::json::Value toJSON(const GPUDynamicLoaderArgs &data) {
 bool fromJSON(const llvm::json::Value &value, GPUDynamicLoaderResponse &data,
               llvm::json::Path path) {
   ObjectMapper o(value, path);
-  return o && 
-         o.map("library_infos", data.library_infos);
+  return o && o.map("library_infos", data.library_infos);
 }
 
 llvm::json::Value toJSON(const GPUDynamicLoaderResponse &data) {
