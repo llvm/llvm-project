@@ -569,16 +569,10 @@ define i32 @test_sqrdmlsh_extract_i32(i32 %acc, i32 %mhs, <4 x i32> %rhs) {
 ; Using sqrdmlah intrinsics
 
 define <4 x i16> @test_vqrdmlah_laneq_s16(<4 x i16> %a, <4 x i16> %b, <8 x i16> %v) {
-; CHECK-SD-LABEL: test_vqrdmlah_laneq_s16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    sqrdmlah v0.4h, v1.4h, v2.h[7]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vqrdmlah_laneq_s16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v2.8h, v2.h[7]
-; CHECK-GI-NEXT:    sqrdmlah v0.4h, v1.4h, v2.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vqrdmlah_laneq_s16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sqrdmlah v0.4h, v1.4h, v2.h[7]
+; CHECK-NEXT:    ret
 entry:
   %lane = shufflevector <8 x i16> %v, <8 x i16> poison, <4 x i32> <i32 7, i32 7, i32 7, i32 7>
   %vqrdmlah_v3.i = tail call <4 x i16> @llvm.aarch64.neon.sqrdmlah.v4i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %lane) #4
@@ -586,16 +580,10 @@ entry:
 }
 
 define <2 x i32> @test_vqrdmlah_laneq_s32(<2 x i32> %a, <2 x i32> %b, <4 x i32> %v) {
-; CHECK-SD-LABEL: test_vqrdmlah_laneq_s32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    sqrdmlah v0.2s, v1.2s, v2.s[3]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vqrdmlah_laneq_s32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v2.4s, v2.s[3]
-; CHECK-GI-NEXT:    sqrdmlah v0.2s, v1.2s, v2.2s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vqrdmlah_laneq_s32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sqrdmlah v0.2s, v1.2s, v2.s[3]
+; CHECK-NEXT:    ret
 entry:
   %lane = shufflevector <4 x i32> %v, <4 x i32> poison, <2 x i32> <i32 3, i32 3>
   %vqrdmlah_v3.i = tail call <2 x i32> @llvm.aarch64.neon.sqrdmlah.v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %lane) #4
@@ -700,22 +688,13 @@ entry:
 }
 
 define i16 @test_vqrdmlahh_laneq_s16(i16 %a, i16 %b, <8 x i16> %c) {
-; CHECK-SD-LABEL: test_vqrdmlahh_laneq_s16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmov s1, w0
-; CHECK-SD-NEXT:    fmov s2, w1
-; CHECK-SD-NEXT:    sqrdmlah v1.4h, v2.4h, v0.h[7]
-; CHECK-SD-NEXT:    umov w0, v1.h[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vqrdmlahh_laneq_s16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v0.8h, v0.h[7]
-; CHECK-GI-NEXT:    fmov s1, w0
-; CHECK-GI-NEXT:    fmov s2, w1
-; CHECK-GI-NEXT:    sqrdmlah v1.4h, v2.4h, v0.4h
-; CHECK-GI-NEXT:    umov w0, v1.h[0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vqrdmlahh_laneq_s16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    fmov s2, w1
+; CHECK-NEXT:    sqrdmlah v1.4h, v2.4h, v0.h[7]
+; CHECK-NEXT:    umov w0, v1.h[0]
+; CHECK-NEXT:    ret
 entry:
   %0 = insertelement <4 x i16> undef, i16 %a, i64 0
   %1 = insertelement <4 x i16> undef, i16 %b, i64 0
@@ -740,16 +719,10 @@ entry:
 }
 
 define <4 x i16> @test_vqrdmlsh_laneq_s16(<4 x i16> %a, <4 x i16> %b, <8 x i16> %v) {
-; CHECK-SD-LABEL: test_vqrdmlsh_laneq_s16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    sqrdmlsh v0.4h, v1.4h, v2.h[7]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vqrdmlsh_laneq_s16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v2.8h, v2.h[7]
-; CHECK-GI-NEXT:    sqrdmlsh v0.4h, v1.4h, v2.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vqrdmlsh_laneq_s16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sqrdmlsh v0.4h, v1.4h, v2.h[7]
+; CHECK-NEXT:    ret
 entry:
   %lane = shufflevector <8 x i16> %v, <8 x i16> poison, <4 x i32> <i32 7, i32 7, i32 7, i32 7>
   %vqrdmlsh_v3.i = tail call <4 x i16> @llvm.aarch64.neon.sqrdmlsh.v4i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %lane) #4
@@ -757,16 +730,10 @@ entry:
 }
 
 define <2 x i32> @test_vqrdmlsh_laneq_s32(<2 x i32> %a, <2 x i32> %b, <4 x i32> %v) {
-; CHECK-SD-LABEL: test_vqrdmlsh_laneq_s32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    sqrdmlsh v0.2s, v1.2s, v2.s[3]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vqrdmlsh_laneq_s32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v2.4s, v2.s[3]
-; CHECK-GI-NEXT:    sqrdmlsh v0.2s, v1.2s, v2.2s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vqrdmlsh_laneq_s32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sqrdmlsh v0.2s, v1.2s, v2.s[3]
+; CHECK-NEXT:    ret
 entry:
   %lane = shufflevector <4 x i32> %v, <4 x i32> poison, <2 x i32> <i32 3, i32 3>
   %vqrdmlsh_v3.i = tail call <2 x i32> @llvm.aarch64.neon.sqrdmlsh.v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %lane) #4
@@ -871,22 +838,13 @@ entry:
 }
 
 define i16 @test_vqrdmlshh_laneq_s16(i16 %a, i16 %b, <8 x i16> %c) {
-; CHECK-SD-LABEL: test_vqrdmlshh_laneq_s16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmov s1, w0
-; CHECK-SD-NEXT:    fmov s2, w1
-; CHECK-SD-NEXT:    sqrdmlsh v1.4h, v2.4h, v0.h[7]
-; CHECK-SD-NEXT:    umov w0, v1.h[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vqrdmlshh_laneq_s16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v0.8h, v0.h[7]
-; CHECK-GI-NEXT:    fmov s1, w0
-; CHECK-GI-NEXT:    fmov s2, w1
-; CHECK-GI-NEXT:    sqrdmlsh v1.4h, v2.4h, v0.4h
-; CHECK-GI-NEXT:    umov w0, v1.h[0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vqrdmlshh_laneq_s16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    fmov s2, w1
+; CHECK-NEXT:    sqrdmlsh v1.4h, v2.4h, v0.h[7]
+; CHECK-NEXT:    umov w0, v1.h[0]
+; CHECK-NEXT:    ret
 entry:
   %0 = insertelement <4 x i16> undef, i16 %a, i64 0
   %1 = insertelement <4 x i16> undef, i16 %b, i64 0
