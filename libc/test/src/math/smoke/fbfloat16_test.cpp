@@ -12,7 +12,6 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-// TODO: change this to bfloat16
 using LlvmLibcFBfloat16Test = LIBC_NAMESPACE::testing::FPTest<bfloat16>;
 
 TEST_F(LlvmLibcFBfloat16Test, SpecialNumbers) {

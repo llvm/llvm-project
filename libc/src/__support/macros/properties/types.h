@@ -62,21 +62,10 @@ using float16 = _Float16;
 
 // -- bfloat16 support ---------------------------------------------------------
 
-// since we have our own generic type, we don't need to check against any
-// compiler versions
-// TODO: verify this
-#define LIBC_TYPES_HAS_BFLOAT16
-
-
-#ifdef LIBC_TYPES_HAS_BFLOAT16
-
 namespace LIBC_NAMESPACE_DECL {
     struct BFloat16;
 }
 
 using bfloat16 = LIBC_NAMESPACE::BFloat16;
-
-#endif // LIBC_TYPES_HAS_BFLOAT16
-
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_TYPES_H

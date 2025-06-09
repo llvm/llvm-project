@@ -135,7 +135,6 @@ public:
     mpfr_set_d(value, x, mpfr_rounding);
   }
 
-#ifdef LIBC_TYPES_HAS_BFLOAT16
   template <typename XType,
             cpp::enable_if_t<cpp::is_same_v<bfloat16, XType>, int> = 0>
   explicit MPFRNumber(XType x,
@@ -146,7 +145,6 @@ public:
     mpfr_init2(value, mpfr_precision);
     mpfr_set_flt(value, x.as_float(), mpfr_rounding);
   }
-#endif
 
   template <typename XType,
             cpp::enable_if_t<cpp::is_same_v<long double, XType>, int> = 0>
