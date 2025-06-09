@@ -8660,8 +8660,7 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
     if (LHSSafe && RHSSafe) {
       // Both operands are known non-NaN.
       NaNBehavior = SPNB_RETURNS_ANY;
-      // It is always safe to convert the comparison to an ordered one.
-      Ordered = true;
+      Ordered = CmpInst::isOrdered(Pred);
     } else if (CmpInst::isOrdered(Pred)) {
       // An ordered comparison will return false when given a NaN, so it
       // returns the RHS.
