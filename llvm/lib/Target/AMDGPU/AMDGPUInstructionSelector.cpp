@@ -4336,7 +4336,7 @@ enum class SrcStatus {
   HALF_START = IS_UPPER_HALF,
   HALF_END = IS_LOWER_HALF_NEG
 };
-
+// Test if the MI is truncating to half, such as `%reg0:n = G_TRUNC %reg1:2n`
 static bool isTruncHalf(const MachineInstr *MI,
                         const MachineRegisterInfo &MRI) {
   if (MI->getOpcode() != AMDGPU::G_TRUNC)
@@ -4347,6 +4347,8 @@ static bool isTruncHalf(const MachineInstr *MI,
   return DstSize * 2 == SrcSize;
 }
 
+// Test if the MI is logic shift right with half bits,
+// such as `%reg0:2n =G_LSHR %reg1:2n, CONST(n)`
 static bool isLshrHalf(const MachineInstr *MI, const MachineRegisterInfo &MRI) {
   if (MI->getOpcode() != AMDGPU::G_LSHR)
     return false;
@@ -4362,6 +4364,8 @@ static bool isLshrHalf(const MachineInstr *MI, const MachineRegisterInfo &MRI) {
   return false;
 }
 
+// Test if the MI is shift left with half bits,
+// such as `%reg0:2n =G_SHL %reg1:2n, CONST(n)`
 static bool isShlHalf(const MachineInstr *MI, const MachineRegisterInfo &MRI) {
   if (MI->getOpcode() != AMDGPU::G_SHL)
     return false;
@@ -4377,21 +4381,13 @@ static bool isShlHalf(const MachineInstr *MI, const MachineRegisterInfo &MRI) {
   return false;
 }
 
+// Test function, if the MI is `%reg0:n, %reg1:n = G_UNMERGE_VALUES %reg2:2n`
 static bool isUnmergeHalf(const MachineInstr *MI,
                           const MachineRegisterInfo &MRI) {
   if (MI->getOpcode() != AMDGPU::G_UNMERGE_VALUES)
     return false;
   return MI->getNumOperands() == 3 && MI->getOperand(0).isDef() &&
          MI->getOperand(1).isDef() && !MI->getOperand(2).isDef();
-}
-
-static std::optional<std::pair<Register, SrcStatus>>
-retRegStat(Register Reg, SrcStatus Stat) {
-  if (Stat != SrcStatus::INVALID && !(Reg.isPhysical())) {
-    return std::optional<std::pair<Register, SrcStatus>>({Reg, Stat});
-  }
-
-  return std::nullopt;
 }
 
 enum class TypeClass { VECTOR_OF_TWO, SCALAR, NONE_OF_LISTED };
@@ -4571,10 +4567,17 @@ calcNextStatus(std::pair<Register, SrcStatus> Curr,
   switch (Opc) {
   case AMDGPU::G_BITCAST:
   case AMDGPU::COPY:
-    return retRegStat(MI->getOperand(1).getReg(), Curr.second);
-  case AMDGPU::G_FNEG:
-    return retRegStat(MI->getOperand(1).getReg(),
-                      getNegStatus(Curr.first, Curr.second, MRI));
+    if (MI->getOperand(1).getReg().isPhysical())
+      return std::nullopt;
+    return std::optional<std::pair<Register, SrcStatus>>(
+        {MI->getOperand(1).getReg(), Curr.second});
+  case AMDGPU::G_FNEG: {
+    SrcStatus Stat = getNegStatus(Curr.first, Curr.second, MRI);
+    if (Stat == SrcStatus::INVALID)
+      return std::nullopt;
+    return std::optional<std::pair<Register, SrcStatus>>(
+        {MI->getOperand(1).getReg(), Stat});
+  }
   default:
     break;
   }
@@ -4583,11 +4586,11 @@ calcNextStatus(std::pair<Register, SrcStatus> Curr,
   switch (Curr.second) {
   case SrcStatus::IS_SAME:
     if (isTruncHalf(MI, MRI))
-      return retRegStat(MI->getOperand(1).getReg(), SrcStatus::IS_LOWER_HALF);
+      return std::optional<std::pair<Register, SrcStatus>>({MI->getOperand(1).getReg(), SrcStatus::IS_LOWER_HALF});
     else if (isUnmergeHalf(MI, MRI)) {
       if (Curr.first == MI->getOperand(0).getReg())
-        return retRegStat(MI->getOperand(2).getReg(), SrcStatus::IS_LOWER_HALF);
-      return retRegStat(MI->getOperand(2).getReg(), SrcStatus::IS_UPPER_HALF);
+        return std::optional<std::pair<Register, SrcStatus>>({MI->getOperand(2).getReg(), SrcStatus::IS_LOWER_HALF});
+      return std::optional<std::pair<Register, SrcStatus>>({MI->getOperand(2).getReg(), SrcStatus::IS_UPPER_HALF});
     }
     break;
   case SrcStatus::IS_HI_NEG:
@@ -4598,33 +4601,36 @@ calcNextStatus(std::pair<Register, SrcStatus> Curr,
       // Src = [SrcHi, SrcLo] = [-CurrHi, CurrLo]
       //     = [-OpLowerHi, OpLowerLo]
       //     = -OpLower
-      return retRegStat(MI->getOperand(1).getReg(),
-                        SrcStatus::IS_LOWER_HALF_NEG);
-    } else if (isUnmergeHalf(MI, MRI)) {
+      return std::optional<std::pair<Register, SrcStatus>>({MI->getOperand(1).getReg(),
+                        SrcStatus::IS_LOWER_HALF_NEG});
+    }
+    if (isUnmergeHalf(MI, MRI)) {
       if (Curr.first == MI->getOperand(0).getReg())
-        return retRegStat(MI->getOperand(2).getReg(),
-                          SrcStatus::IS_LOWER_HALF_NEG);
-      return retRegStat(MI->getOperand(2).getReg(),
-                        SrcStatus::IS_UPPER_HALF_NEG);
+        return std::optional<std::pair<Register, SrcStatus>>({MI->getOperand(2).getReg(),
+                          SrcStatus::IS_LOWER_HALF_NEG});
+      return std::optional<std::pair<Register, SrcStatus>>({MI->getOperand(2).getReg(),
+                        SrcStatus::IS_UPPER_HALF_NEG});
     }
     break;
   case SrcStatus::IS_UPPER_HALF:
     if (isShlHalf(MI, MRI))
-      return retRegStat(MI->getOperand(1).getReg(), SrcStatus::IS_LOWER_HALF);
+      return std::optional<std::pair<Register, SrcStatus>>(
+          {MI->getOperand(1).getReg(), SrcStatus::IS_LOWER_HALF});
     break;
   case SrcStatus::IS_LOWER_HALF:
     if (isLshrHalf(MI, MRI))
-      return retRegStat(MI->getOperand(1).getReg(), SrcStatus::IS_UPPER_HALF);
+      return std::optional<std::pair<Register, SrcStatus>>(
+          {MI->getOperand(1).getReg(), SrcStatus::IS_UPPER_HALF});
     break;
   case SrcStatus::IS_UPPER_HALF_NEG:
     if (isShlHalf(MI, MRI))
-      return retRegStat(MI->getOperand(1).getReg(),
-                        SrcStatus::IS_LOWER_HALF_NEG);
+      return std::optional<std::pair<Register, SrcStatus>>(
+          {MI->getOperand(1).getReg(), SrcStatus::IS_LOWER_HALF_NEG});
     break;
   case SrcStatus::IS_LOWER_HALF_NEG:
     if (isLshrHalf(MI, MRI))
-      return retRegStat(MI->getOperand(1).getReg(),
-                        SrcStatus::IS_UPPER_HALF_NEG);
+      return std::optional<std::pair<Register, SrcStatus>>(
+          {MI->getOperand(1).getReg(), SrcStatus::IS_UPPER_HALF_NEG});
     break;
   default:
     break;
