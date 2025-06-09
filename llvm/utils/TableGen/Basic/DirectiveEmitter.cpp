@@ -77,6 +77,19 @@ static std::string getIdentifierName(const Record *Rec, StringRef Prefix) {
   return Prefix.str() + BaseRecord(Rec).getFormattedName();
 }
 
+using RecordWithSpelling = std::pair<const Record *, Spelling::Value>;
+
+static std::vector<RecordWithSpelling>
+getSpellings(ArrayRef<const Record *> Records) {
+  std::vector<RecordWithSpelling> List;
+  for (const Record *R : Records) {
+    BaseRecord Rec(R);
+    llvm::transform(Rec.getSpellings(), std::back_inserter(List),
+                    [R](Spelling::Value V) { return std::make_pair(R, V); });
+  }
+  return List;
+}
+
 static void generateEnumExports(ArrayRef<const Record *> Records,
                                 raw_ostream &OS, StringRef Enum,
                                 StringRef Prefix) {
@@ -270,6 +283,7 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
     OS << "#include \"llvm/ADT/BitmaskEnum.h\"\n";
 
   OS << "#include \"llvm/ADT/StringRef.h\"\n";
+  OS << "#include \"llvm/Frontend/Directive/Spelling.h\"\n";
   OS << "#include \"llvm/Support/Compiler.h\"\n";
   OS << "#include <cstddef>\n"; // for size_t
   OS << "#include <utility>\n"; // for std::pair
@@ -284,13 +298,6 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
 
   if (DirLang.hasEnableBitmaskEnumInNamespace())
     OS << "\nLLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();\n";
-
-#define AS_STRING_HELPER_TO_GET_THE_ARGUMENT_MACRO_EXPANDED(x) #x
-#define AS_STRING(x) AS_STRING_HELPER_TO_GET_THE_ARGUMENT_MACRO_EXPANDED(x)
-  OS << "\n";
-  OS << AS_STRING(STRUCT_VERSION_RANGE) << ";\n";
-#undef AS_STRING
-#undef AS_STRING_HELPER_TO_GET_THE_ARGUMENT_MACRO_EXPANDED
 
   // Emit Directive associations
   std::vector<const Record *> Associations;
@@ -324,7 +331,7 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "\n";
   OS << "// Enumeration helper functions\n";
 
-  OS << "LLVM_ABI std::pair<Directive, VersionRange> get" << Lang
+  OS << "LLVM_ABI std::pair<Directive, directive::VersionRange> get" << Lang
      << "DirectiveKindAndVersions(StringRef Str);\n";
 
   OS << "inline Directive get" << Lang << "DirectiveKind(StringRef Str) {\n";
@@ -336,7 +343,7 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
      << "DirectiveName(Directive D, unsigned Ver = 0);\n";
   OS << "\n";
 
-  OS << "LLVM_ABI std::pair<Clause, VersionRange> get" << Lang
+  OS << "LLVM_ABI std::pair<Clause, directive::VersionRange> get" << Lang
      << "ClauseKindAndVersions(StringRef Str);\n";
   OS << "\n";
 
@@ -373,6 +380,20 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "#endif // LLVM_" << Lang << "_INC\n";
 }
 
+// Given a list of spellings (for a given clause/directive), order them
+// in a way that allows the use of binary search to locate a spelling
+// for a specified version.
+static std::vector<Spelling::Value>
+orderSpellings(ArrayRef<Spelling::Value> Spellings) {
+  std::vector<Spelling::Value> List(Spellings.begin(), Spellings.end());
+
+  llvm::stable_sort(List,
+                    [](const Spelling::Value &A, const Spelling::Value &B) {
+                      return A.Versions < B.Versions;
+                    });
+  return List;
+}
+
 // Generate function implementation for get<Enum>Name(StringRef Str)
 static void generateGetName(ArrayRef<const Record *> Records, raw_ostream &OS,
                             StringRef Enum, const DirectiveLanguage &DirLang,
@@ -381,14 +402,31 @@ static void generateGetName(ArrayRef<const Record *> Records, raw_ostream &OS,
   std::string Qual = getQualifier(DirLang);
   OS << "\n";
   OS << "llvm::StringRef " << Qual << "get" << Lang << Enum << "Name(" << Qual
-     << Enum << " Kind, unsigned) {\n";
+     << Enum << " Kind, unsigned Version) {\n";
   OS << "  switch (Kind) {\n";
   for (const Record *R : Records) {
-    OS << "    case " << getIdentifierName(R, Prefix) << ":\n";
-    // FIXME: This will need to recognize different spellings for different
-    // versions.
-    OS << "      return \"" << BaseRecord(R).getSpellingForIdentifier()
-       << "\";\n";
+    BaseRecord Rec(R);
+    std::string Ident = getIdentifierName(R, Prefix);
+    OS << "    case " << Ident << ":";
+    std::vector<Spelling::Value> Spellings(orderSpellings(Rec.getSpellings()));
+    assert(Spellings.size() != 0 && "No spellings for this item");
+    if (Spellings.size() == 1) {
+      OS << "\n";
+      OS << "      return \"" << Spellings.front().Name << "\";\n";
+    } else {
+      OS << " {\n";
+      std::string SpellingsName = Ident + "_spellings";
+      OS << "      static constexpr llvm::directive::Spelling " << SpellingsName
+         << "[] = {\n";
+      for (auto &S : Spellings) {
+        OS << "          {\"" << S.Name << "\", {" << S.Versions.Min << ", "
+           << S.Versions.Max << "}},\n";
+      }
+      OS << "      };\n";
+      OS << "      return llvm::directive::FindName(" << SpellingsName
+         << ", Version);\n";
+      OS << "    }\n";
+    }
   }
   OS << "  }\n"; // switch
   OS << "  llvm_unreachable(\"Invalid " << Lang << " " << Enum << " kind\");\n";
@@ -415,23 +453,28 @@ static void generateGetKind(ArrayRef<const Record *> Records, raw_ostream &OS,
   // std::pair<<Enum>, VersionRange>
   // get<DirLang><Enum>KindAndVersions(StringRef Str);
   OS << "\n";
-  OS << "std::pair<" << Qual << Enum << ", " << Qual << "VersionRange> " << Qual
-     << "get" << DirLang.getName() << Enum
+  OS << "std::pair<" << Qual << Enum << ", llvm::directive::VersionRange> "
+     << Qual << "get" << DirLang.getName() << Enum
      << "KindAndVersions(llvm::StringRef Str) {\n";
-  OS << "  VersionRange All{}; // Default-initialized to \"all-versions\"\n";
+  OS << "  directive::VersionRange All; // Default-initialized to \"all "
+        "versions\"\n";
   OS << "  return StringSwitch<std::pair<" << Enum << ", "
-     << "VersionRange>>(Str)\n";
+     << "directive::VersionRange>>(Str)\n";
+
+  directive::VersionRange All;
 
   for (const Record *R : Records) {
     BaseRecord Rec(R);
-    // FIXME: This will need to recognize different spellings for different
-    // versions.
-    StringRef Name = Rec.getSpellingForIdentifier();
-    if (ImplicitAsUnknown && R->getValueAsBit("isImplicit")) {
-      OS << "    .Case(\"" << Name << "\", {" << DefaultName << ", All})\n";
-    } else {
-      OS << "    .Case(\"" << Name << "\", {" << getIdentifierName(R, Prefix)
-         << ", All})\n";
+    std::string Ident = ImplicitAsUnknown && R->getValueAsBit("isImplicit")
+                            ? DefaultName
+                            : getIdentifierName(R, Prefix);
+
+    for (auto &[Name, Versions] : Rec.getSpellings()) {
+      OS << "    .Case(\"" << Name << "\", {" << Ident << ", ";
+      if (Versions.Min == All.Min && Versions.Max == All.Max)
+        OS << "All})\n";
+      else
+        OS << "{" << Versions.Min << ", " << Versions.Max << "}})\n";
     }
   }
   OS << "    .Default({" << DefaultName << ", All});\n";
@@ -1144,47 +1187,29 @@ static void generateFlangClauseParserKindMap(const DirectiveLanguage &DirLang,
      << " Parser clause\");\n";
 }
 
-using RecordWithText = std::pair<const Record *, StringRef>;
-
-static bool compareRecordText(const RecordWithText &A,
-                              const RecordWithText &B) {
-  return A.second > B.second;
-}
-
-static std::vector<RecordWithText>
-getSpellingTexts(ArrayRef<const Record *> Records) {
-  std::vector<RecordWithText> List;
-  for (const Record *R : Records) {
-    Clause C(R);
-    llvm::transform(
-        C.getSpellings(), std::back_inserter(List),
-        [R](Spelling::Value V) { return std::make_pair(R, V.first); });
-  }
-  return List;
-}
-
 // Generate the parser for the clauses.
 static void generateFlangClausesParser(const DirectiveLanguage &DirLang,
                                        raw_ostream &OS) {
   std::vector<const Record *> Clauses = DirLang.getClauses();
   // Sort clauses in the reverse alphabetical order with respect to their
   // names and aliases, so that longer names are tried before shorter ones.
-  std::vector<std::pair<const Record *, StringRef>> Names =
-      getSpellingTexts(Clauses);
-  llvm::sort(Names, compareRecordText);
+  std::vector<RecordWithSpelling> Names = getSpellings(Clauses);
+  llvm::sort(Names, [](const auto &A, const auto &B) {
+    return A.second.Name > B.second.Name;
+  });
   IfDefScope Scope("GEN_FLANG_CLAUSES_PARSER", OS);
   StringRef Base = DirLang.getFlangClauseBaseClass();
 
   unsigned LastIndex = Names.size() - 1;
   OS << "\n";
   OS << "TYPE_PARSER(\n";
-  for (auto [Index, RecTxt] : llvm::enumerate(Names)) {
-    auto [R, N] = RecTxt;
+  for (auto [Index, RecSp] : llvm::enumerate(Names)) {
+    auto [R, S] = RecSp;
     Clause C(R);
 
     StringRef FlangClass = C.getFlangClass();
-    OS << "  \"" << N << "\" >> construct<" << Base << ">(construct<" << Base
-       << "::" << C.getFormattedParserClassName() << ">(";
+    OS << "  \"" << S.Name << "\" >> construct<" << Base << ">(construct<"
+       << Base << "::" << C.getFormattedParserClassName() << ">(";
     if (FlangClass.empty()) {
       OS << "))";
       if (Index != LastIndex)
@@ -1337,6 +1362,7 @@ void emitDirectivesBasicImpl(const DirectiveLanguage &DirLang,
   StringRef CPrefix = DirLang.getClausePrefix();
 
   OS << "\n";
+  OS << "#include \"llvm/Frontend/Directive/Spelling.h\"\n";
   OS << "#include \"llvm/Support/ErrorHandling.h\"\n";
   OS << "#include <utility>\n";
 
