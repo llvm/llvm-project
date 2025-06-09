@@ -8646,6 +8646,7 @@ static void addExitUsersForFirstOrderRecurrences(
       // For VF vscale x 1, if vscale = 1, we are unable to extract the
       // penultimate value of the recurrence. Instead, we can extract the last
       // element directly from VPInstruction::FirstOrderRecurrenceSplice.
+      // TODO: Consider vscale_range info and UF.
       if (LoopVectorizationPlanner::getDecisionAndClampRange(IsScalableOne,
                                                              Range))
         return;
