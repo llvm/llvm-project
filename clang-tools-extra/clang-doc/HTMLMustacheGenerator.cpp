@@ -208,37 +208,110 @@ static json::Value extractValue(const TypedefInfo &I) {
 }
 
 static json::Value extractValue(const CommentInfo &I) {
-  assert((I.Kind == "BlockCommandComment" || I.Kind == "FullComment" ||
-          I.Kind == "ParagraphComment" || I.Kind == "TextComment") &&
-         "Unknown Comment type in CommentInfo.");
-
   Object Obj = Object();
-  json::Value Child = Object();
 
-  // TextComment has no children, so return it.
-  if (I.Kind == "TextComment") {
-    Obj.insert({"TextComment", I.Text});
-    return Obj;
-  }
+  json::Value ChildVal = Object();
+  Object &Child = *ChildVal.getAsObject();
 
-  // BlockCommandComment needs to generate a Command key.
-  if (I.Kind == "BlockCommandComment")
-    Child.getAsObject()->insert({"Command", I.Name});
-
-  // Use the same handling for everything else.
-  // Only valid for:
-  //  - BlockCommandComment
-  //  - FullComment
-  //  - ParagraphComment
   json::Value ChildArr = Array();
   auto &CARef = *ChildArr.getAsArray();
   CARef.reserve(I.Children.size());
   for (const auto &C : I.Children)
     CARef.emplace_back(extractValue(*C));
-  Child.getAsObject()->insert({"Children", ChildArr});
-  Obj.insert({I.Kind, Child});
 
-  return Obj;
+  switch (I.Kind) {
+  case CommentKind::CK_TextComment: {
+    Obj.insert({commentKindToString(I.Kind), I.Text});
+    return Obj;
+  }
+
+  case CommentKind::CK_BlockCommandComment: {
+    Child.insert({"Command", I.Name});
+    Child.insert({"Children", ChildArr});
+    Obj.insert({commentKindToString(I.Kind), ChildVal});
+    return Obj;
+  }
+
+  case CommentKind::CK_InlineCommandComment: {
+    json::Value ArgsArr = Array();
+    auto &ARef = *ArgsArr.getAsArray();
+    ARef.reserve(I.Args.size());
+    for (const auto &Arg : I.Args)
+      ARef.emplace_back(Arg);
+    Child.insert({"Command", I.Name});
+    Child.insert({"Args", ArgsArr});
+    Child.insert({"Children", ChildArr});
+    Obj.insert({commentKindToString(I.Kind), ChildVal});
+    return Obj;
+  }
+
+  case CommentKind::CK_ParamCommandComment:
+  case CommentKind::CK_TParamCommandComment: {
+    Child.insert({"ParamName", I.ParamName});
+    Child.insert({"Direction", I.Direction});
+    Child.insert({"Explicit", I.Explicit});
+    Child.insert({"Children", ChildArr});
+    Obj.insert({commentKindToString(I.Kind), ChildVal});
+    return Obj;
+  }
+
+  case CommentKind::CK_VerbatimBlockComment: {
+    Child.insert({"Text", I.Text});
+    if (!I.CloseName.empty())
+      Child.insert({"CloseName", I.CloseName});
+    Child.insert({"Children", ChildArr});
+    Obj.insert({commentKindToString(I.Kind), ChildVal});
+    return Obj;
+  }
+
+  case CommentKind::CK_VerbatimBlockLineComment:
+  case CommentKind::CK_VerbatimLineComment: {
+    Child.insert({"Text", I.Text});
+    Child.insert({"Children", ChildArr});
+    Obj.insert({commentKindToString(I.Kind), ChildVal});
+    return Obj;
+  }
+
+  case CommentKind::CK_HTMLStartTagComment: {
+    json::Value AttrKeysArray = json::Array();
+    json::Value AttrValuesArray = json::Array();
+    auto &KeyArr = *AttrKeysArray.getAsArray();
+    auto &ValArr = *AttrValuesArray.getAsArray();
+    KeyArr.reserve(I.AttrKeys.size());
+    ValArr.reserve(I.AttrValues.size());
+    for (const auto &K : I.AttrKeys)
+      KeyArr.emplace_back(K);
+    for (const auto &V : I.AttrValues)
+      ValArr.emplace_back(V);
+    Child.insert({"Name", I.Name});
+    Child.insert({"SelfClosing", I.SelfClosing});
+    Child.insert({"AttrKeys", AttrKeysArray});
+    Child.insert({"AttrValues", AttrValuesArray});
+    Child.insert({"Children", ChildArr});
+    Obj.insert({commentKindToString(I.Kind), ChildVal});
+    return Obj;
+  }
+
+  case CommentKind::CK_HTMLEndTagComment: {
+    Child.insert({"Name", I.Name});
+    Child.insert({"Children", ChildArr});
+    Obj.insert({commentKindToString(I.Kind), ChildVal});
+    return Obj;
+  }
+
+  case CommentKind::CK_FullComment:
+  case CommentKind::CK_ParagraphComment: {
+    Child.insert({"Children", ChildArr});
+    Obj.insert({commentKindToString(I.Kind), ChildVal});
+    return Obj;
+  }
+
+  case CommentKind::CK_Unknown: {
+    Obj.insert({commentKindToString(I.Kind), I.Text});
+    return Obj;
+  }
+  }
+  llvm_unreachable("Unknown comment kind encountered.");
 }
 
 static void maybeInsertLocation(std::optional<Location> Loc,
@@ -255,6 +328,7 @@ static void extractDescriptionFromInfo(ArrayRef<CommentInfo> Descriptions,
     return;
   json::Value DescArr = Array();
   json::Array &DescARef = *DescArr.getAsArray();
+  DescARef.reserve(Descriptions.size());
   for (const CommentInfo &Child : Descriptions)
     DescARef.emplace_back(extractValue(Child));
   EnumValObj.insert({"EnumValueComments", DescArr});
@@ -270,6 +344,7 @@ static json::Value extractValue(const FunctionInfo &I, StringRef ParentInfoDir,
 
   json::Value ParamArr = Array();
   json::Array &ParamARef = *ParamArr.getAsArray();
+  ParamARef.reserve(I.Params.size());
   for (const auto Val : enumerate(I.Params)) {
     json::Value V = Object();
     auto &VRef = *V.getAsObject();
@@ -297,6 +372,7 @@ static json::Value extractValue(const EnumInfo &I,
   Obj.insert({"ID", toHex(toStringRef(I.USR))});
   json::Value EnumArr = Array();
   json::Array &EnumARef = *EnumArr.getAsArray();
+  EnumARef.reserve(I.Members.size());
   for (const EnumValueInfo &M : I.Members) {
     json::Value EnumValue = Object();
     auto &EnumValObj = *EnumValue.getAsObject();
@@ -322,6 +398,7 @@ static void extractScopeChildren(const ScopeChildren &S, Object &Obj,
                                  const ClangDocContext &CDCtx) {
   json::Value NamespaceArr = Array();
   json::Array &NamespaceARef = *NamespaceArr.getAsArray();
+  NamespaceARef.reserve(S.Namespaces.size());
   for (const Reference &Child : S.Namespaces)
     NamespaceARef.emplace_back(extractValue(Child, ParentInfoDir));
 
@@ -330,6 +407,7 @@ static void extractScopeChildren(const ScopeChildren &S, Object &Obj,
 
   json::Value RecordArr = Array();
   json::Array &RecordARef = *RecordArr.getAsArray();
+  RecordARef.reserve(S.Records.size());
   for (const Reference &Child : S.Records)
     RecordARef.emplace_back(extractValue(Child, ParentInfoDir));
 
@@ -338,12 +416,15 @@ static void extractScopeChildren(const ScopeChildren &S, Object &Obj,
 
   json::Value FunctionArr = Array();
   json::Array &FunctionARef = *FunctionArr.getAsArray();
+  FunctionARef.reserve(S.Functions.size());
 
   json::Value PublicFunctionArr = Array();
   json::Array &PublicFunctionARef = *PublicFunctionArr.getAsArray();
+  PublicFunctionARef.reserve(S.Functions.size());
 
   json::Value ProtectedFunctionArr = Array();
   json::Array &ProtectedFunctionARef = *ProtectedFunctionArr.getAsArray();
+  ProtectedFunctionARef.reserve(S.Functions.size());
 
   for (const FunctionInfo &Child : S.Functions) {
     json::Value F = extractValue(Child, ParentInfoDir, CDCtx);
@@ -367,6 +448,7 @@ static void extractScopeChildren(const ScopeChildren &S, Object &Obj,
 
   json::Value EnumArr = Array();
   auto &EnumARef = *EnumArr.getAsArray();
+  EnumARef.reserve(S.Enums.size());
   for (const EnumInfo &Child : S.Enums)
     EnumARef.emplace_back(extractValue(Child, CDCtx));
 
@@ -375,6 +457,7 @@ static void extractScopeChildren(const ScopeChildren &S, Object &Obj,
 
   json::Value TypedefArr = Array();
   auto &TypedefARef = *TypedefArr.getAsArray();
+  TypedefARef.reserve(S.Typedefs.size());
   for (const TypedefInfo &Child : S.Typedefs)
     TypedefARef.emplace_back(extractValue(Child));
 
@@ -411,10 +494,13 @@ static json::Value extractValue(const RecordInfo &I,
   extractScopeChildren(I.Children, RecordValue, BasePath, CDCtx);
   json::Value PublicMembers = Array();
   json::Array &PubMemberRef = *PublicMembers.getAsArray();
+  PubMemberRef.reserve(I.Members.size());
   json::Value ProtectedMembers = Array();
   json::Array &ProtMemberRef = *ProtectedMembers.getAsArray();
+  ProtMemberRef.reserve(I.Members.size());
   json::Value PrivateMembers = Array();
   json::Array &PrivMemberRef = *PrivateMembers.getAsArray();
+  PrivMemberRef.reserve(I.Members.size());
   for (const MemberTypeInfo &Member : I.Members) {
     json::Value MemberValue = Object();
     auto &MVRef = *MemberValue.getAsObject();
@@ -446,20 +532,25 @@ static Error setupTemplateValue(const ClangDocContext &CDCtx, json::Value &V,
   auto InfoPath = I->getRelativeFilePath("");
   SmallString<128> RelativePath = computeRelativePath("", InfoPath);
   sys::path::native(RelativePath, sys::path::Style::posix);
+
+  auto *SSA = StylesheetArr.getAsArray();
+  SSA->reserve(CDCtx.UserStylesheets.size());
   for (const auto &FilePath : CDCtx.UserStylesheets) {
     SmallString<128> StylesheetPath = RelativePath;
     sys::path::append(StylesheetPath, sys::path::Style::posix,
                       sys::path::filename(FilePath));
-    StylesheetArr.getAsArray()->emplace_back(StylesheetPath);
+    SSA->emplace_back(StylesheetPath);
   }
   V.getAsObject()->insert({"Stylesheets", StylesheetArr});
 
   json::Value ScriptArr = Array();
+  auto *SCA = ScriptArr.getAsArray();
+  SCA->reserve(CDCtx.JsScripts.size());
   for (auto Script : CDCtx.JsScripts) {
     SmallString<128> JsPath = RelativePath;
     sys::path::append(JsPath, sys::path::Style::posix,
                       sys::path::filename(Script));
-    ScriptArr.getAsArray()->emplace_back(JsPath);
+    SCA->emplace_back(JsPath);
   }
   V.getAsObject()->insert({"Scripts", ScriptArr});
   return Error::success();
