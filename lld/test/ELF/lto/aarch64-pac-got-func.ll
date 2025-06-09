@@ -5,29 +5,29 @@
 ; RUN: llvm-readelf -r -x.got %t | FileCheck %s
 
 ; CHECK:      Relocation section '.rela.dyn' at offset 0x3d0 contains 8 entries:
-; CHECK-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
-; CHECK-NEXT: 00000000000206a0  0000000100000412 R_AARCH64_AUTH_GLOB_DAT 0000000000000000 func_undef + 0
-; CHECK-NEXT: 00000000000206a8  0000000200000412 R_AARCH64_AUTH_GLOB_DAT 0000000000000000 g1 + 0
-; CHECK-NEXT: 00000000000206b0  0000000300000412 R_AARCH64_AUTH_GLOB_DAT 0000000000000000 g2 + 0
-; CHECK-NEXT: 00000000000206b8  0000000400000412 R_AARCH64_AUTH_GLOB_DAT 0000000000000000 g3 + 0
-; CHECK-NEXT: 00000000000206c0  0000000500000412 R_AARCH64_AUTH_GLOB_DAT 0000000000000000 g4 + 0
-; CHECK-NEXT: 00000000000206c8  0000000600000412 R_AARCH64_AUTH_GLOB_DAT 0000000000000000 var_undef + 0
-; CHECK-NEXT: 0000000000020690  0000000700000412 R_AARCH64_AUTH_GLOB_DAT 0000000000010490 func + 0
-; CHECK-NEXT: 0000000000020698  0000000a00000412 R_AARCH64_AUTH_GLOB_DAT 00000000000306d0 var + 0
+; CHECK-NEXT:     Offset                                    Info             Type               Symbol's Value        Symbol's Name + Addend
+; CHECK-NEXT: {{(0{8})}}[[OFFSET1:([[:xdigit:]]{8})]]  0000000100000412 R_AARCH64_AUTH_GLOB_DAT 0000000000000000       func_undef + 0
+; CHECK-NEXT: {{([[:xdigit:]]{16})}}                   0000000200000412 R_AARCH64_AUTH_GLOB_DAT 0000000000000000       g1 + 0
+; CHECK-NEXT: {{(0{8})}}[[OFFSET2:([[:xdigit:]]{8})]]  0000000300000412 R_AARCH64_AUTH_GLOB_DAT 0000000000000000       g2 + 0
+; CHECK-NEXT: {{([[:xdigit:]]{16})}}                   0000000400000412 R_AARCH64_AUTH_GLOB_DAT 0000000000000000       g3 + 0
+; CHECK-NEXT: {{(0{8})}}[[OFFSET3:([[:xdigit:]]{8})]]  0000000500000412 R_AARCH64_AUTH_GLOB_DAT 0000000000000000       g4 + 0
+; CHECK-NEXT: {{([[:xdigit:]]{16})}}                   0000000600000412 R_AARCH64_AUTH_GLOB_DAT 0000000000000000       var_undef + 0
+; CHECK-NEXT: {{(0{8})}}[[OFFSET4:([[:xdigit:]]{8})]]  0000000700000412 R_AARCH64_AUTH_GLOB_DAT {{([[:xdigit:]]{16})}} func + 0
+; CHECK-NEXT: {{([[:xdigit:]]{16})}}                   0000000a00000412 R_AARCH64_AUTH_GLOB_DAT {{([[:xdigit:]]{16})}} var + 0
 
 ; CHECK:      Hex dump of section '.got':
-; CHECK-NEXT: 0x00020690 00000000 00000080 00000000 000000a0
-;;                                      ^^ func: 0b10000000 bit 63 address diversity = true, bits 61..60 key = IA
-;;                                                        ^^ var: 0b10100000 bit 63 address diversity = true, bits 61..60 key = DA
-; CHECK-NEXT: 0x000206a0 00000000 00000080 00000000 000000a0
-;;                                      ^^ func_undef: 0b10000000 bit 63 address diversity = true, bits 61..60 key = IA
-;;                                                        ^^ g1: 0b10100000 bit 63 address diversity = true, bits 61..60 key = DA
-; CHECK-NEXT: 0x000206b0 00000000 000000a0 00000000 000000a0
-;;                                      ^^ g2: 0b10100000 bit 63 address diversity = true, bits 61..60 key = DA
-;;                                                        ^^ g3: 0b10100000 bit 63 address diversity = true, bits 61..60 key = DA
-; CHECK-NEXT: 0x000206c0 00000000 000000a0 00000000 000000a0
-;;                                      ^^ g4: 0b10100000 bit 63 address diversity = true, bits 61..60 key = DA
-;;                                                        ^^ var_undef: 0b10100000 bit 63 address diversity = true, bits 61..60 key = DA
+; CHECK-NEXT: 0x[[OFFSET4]] 00000000 00000080 00000000 000000a0
+;;                                         ^^ func: 0b10000000 bit 63 address diversity = true, bits 61..60 key = IA
+;;                                                           ^^ var: 0b10100000 bit 63 address diversity = true, bits 61..60 key = DA
+; CHECK-NEXT: 0x[[OFFSET1]] 00000000 00000080 00000000 000000a0
+;;                                         ^^ func_undef: 0b10000000 bit 63 address diversity = true, bits 61..60 key = IA
+;;                                                           ^^ g1: 0b10100000 bit 63 address diversity = true, bits 61..60 key = DA
+; CHECK-NEXT: 0x[[OFFSET2]] 00000000 000000a0 00000000 000000a0
+;;                                         ^^ g2: 0b10100000 bit 63 address diversity = true, bits 61..60 key = DA
+;;                                                           ^^ g3: 0b10100000 bit 63 address diversity = true, bits 61..60 key = DA
+; CHECK-NEXT: 0x[[OFFSET3]] 00000000 000000a0 00000000 000000a0
+;;                                         ^^ g4: 0b10100000 bit 63 address diversity = true, bits 61..60 key = DA
+;;                                                           ^^ var_undef: 0b10100000 bit 63 address diversity = true, bits 61..60 key = DA
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-gnu"
