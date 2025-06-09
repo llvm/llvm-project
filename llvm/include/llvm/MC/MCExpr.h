@@ -10,6 +10,7 @@
 #define LLVM_MC_MCEXPR_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
 #include <cstdint>
 
@@ -37,6 +38,7 @@ public:
     Constant,  ///< Constant expressions.
     SymbolRef, ///< References to labels and assigned expressions.
     Unary,     ///< Unary expressions.
+    Specifier, ///< Expression with a relocation specifier.
     Target     ///< Target specific expression.
   };
 
@@ -61,8 +63,8 @@ protected:
            "Subclass data too large");
   }
 
-  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                 bool InSet) const;
+  LLVM_ABI bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
+                                          bool InSet) const;
 
   unsigned getSubclassData() const { return SubclassData; }
 
@@ -80,13 +82,9 @@ public:
   /// \name Utility Methods
   /// @{
 
-  void print(raw_ostream &OS, const MCAsmInfo *MAI,
-             int SurroundingPrec = 0) const;
-  void dump() const;
-
-  /// Returns whether the given symbol is used anywhere in the expression or
-  /// subexpressions.
-  bool isSymbolUsedInExpression(const MCSymbol *Sym) const;
+  LLVM_ABI void print(raw_ostream &OS, const MCAsmInfo *MAI,
+                      int SurroundingPrec = 0) const;
+  LLVM_ABI void dump() const;
 
   /// @}
   /// \name Expression Evaluation
@@ -96,14 +94,15 @@ public:
   ///
   /// \param Res - The absolute value, if evaluation succeeds.
   /// \return - True on success.
-  bool evaluateAsAbsolute(int64_t &Res) const;
-  bool evaluateAsAbsolute(int64_t &Res, const MCAssembler &Asm) const;
-  bool evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm) const;
+  LLVM_ABI bool evaluateAsAbsolute(int64_t &Res) const;
+  LLVM_ABI bool evaluateAsAbsolute(int64_t &Res, const MCAssembler &Asm) const;
+  LLVM_ABI bool evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm) const;
 
   /// Aggressive variant of evaluateAsRelocatable when relocations are
   /// unavailable (e.g. .fill). Expects callers to handle errors when true is
   /// returned.
-  bool evaluateKnownAbsolute(int64_t &Res, const MCAssembler &Asm) const;
+  LLVM_ABI bool evaluateKnownAbsolute(int64_t &Res,
+                                      const MCAssembler &Asm) const;
 
   /// Try to evaluate the expression to a relocatable value, i.e. an
   /// expression of the fixed form (a - b + constant).
@@ -111,25 +110,27 @@ public:
   /// \param Res - The relocatable value, if evaluation succeeds.
   /// \param Asm - The assembler object to use for evaluating values.
   /// \return - True on success.
-  bool evaluateAsRelocatable(MCValue &Res, const MCAssembler *Asm) const;
+  LLVM_ABI bool evaluateAsRelocatable(MCValue &Res,
+                                      const MCAssembler *Asm) const;
 
   /// Try to evaluate the expression to the form (a - b + constant) where
   /// neither a nor b are variables.
   ///
   /// This is a more aggressive variant of evaluateAsRelocatable. The intended
   /// use is for when relocations are not available, like the .size directive.
-  bool evaluateAsValue(MCValue &Res, const MCAssembler &Asm) const;
+  LLVM_ABI bool evaluateAsValue(MCValue &Res, const MCAssembler &Asm) const;
 
   /// Find the "associated section" for this expression, which is
   /// currently defined as the absolute section for constants, or
   /// otherwise the section associated with the first defined symbol in the
   /// expression.
-  MCFragment *findAssociatedFragment() const;
+  LLVM_ABI MCFragment *findAssociatedFragment() const;
 
   /// @}
 
-  static bool evaluateSymbolicAdd(const MCAssembler *, bool, const MCValue &,
-                                  const MCValue &, MCValue &);
+  LLVM_ABI static bool evaluateSymbolicAdd(const MCAssembler *, bool,
+                                           const MCValue &, const MCValue &,
+                                           MCValue &);
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const MCExpr &E) {
@@ -159,9 +160,9 @@ public:
   /// \name Construction
   /// @{
 
-  static const MCConstantExpr *create(int64_t Value, MCContext &Ctx,
-                                      bool PrintInHex = false,
-                                      unsigned SizeInBytes = 0);
+  LLVM_ABI static const MCConstantExpr *create(int64_t Value, MCContext &Ctx,
+                                               bool PrintInHex = false,
+                                               unsigned SizeInBytes = 0);
 
   /// @}
   /// \name Accessors
@@ -220,8 +221,10 @@ public:
     return MCSymbolRefExpr::create(Symbol, VK_None, Ctx, Loc);
   }
 
-  static const MCSymbolRefExpr *create(const MCSymbol *Symbol, VariantKind Kind,
-                                       MCContext &Ctx, SMLoc Loc = SMLoc());
+  LLVM_ABI static const MCSymbolRefExpr *create(const MCSymbol *Symbol,
+                                                VariantKind Kind,
+                                                MCContext &Ctx,
+                                                SMLoc Loc = SMLoc());
   static const MCSymbolRefExpr *create(const MCSymbol *Symbol, uint16_t Kind,
                                        MCContext &Ctx, SMLoc Loc = SMLoc()) {
     return MCSymbolRefExpr::create(Symbol, VariantKind(Kind), Ctx, Loc);
@@ -266,8 +269,8 @@ public:
   /// \name Construction
   /// @{
 
-  static const MCUnaryExpr *create(Opcode Op, const MCExpr *Expr,
-                                   MCContext &Ctx, SMLoc Loc = SMLoc());
+  LLVM_ABI static const MCUnaryExpr *
+  create(Opcode Op, const MCExpr *Expr, MCContext &Ctx, SMLoc Loc = SMLoc());
 
   static const MCUnaryExpr *createLNot(const MCExpr *Expr, MCContext &Ctx, SMLoc Loc = SMLoc()) {
     return create(LNot, Expr, Ctx, Loc);
@@ -343,9 +346,9 @@ public:
   /// \name Construction
   /// @{
 
-  static const MCBinaryExpr *create(Opcode Op, const MCExpr *LHS,
-                                    const MCExpr *RHS, MCContext &Ctx,
-                                    SMLoc Loc = SMLoc());
+  LLVM_ABI static const MCBinaryExpr *create(Opcode Op, const MCExpr *LHS,
+                                             const MCExpr *RHS, MCContext &Ctx,
+                                             SMLoc Loc = SMLoc());
 
   static const MCBinaryExpr *createAdd(const MCExpr *LHS, const MCExpr *RHS,
                                        MCContext &Ctx) {
@@ -469,7 +472,7 @@ public:
 ///
 /// NOTE: All subclasses are required to have trivial destructors because
 /// MCExprs are bump pointer allocated and not destructed.
-class MCTargetExpr : public MCExpr {
+class LLVM_ABI MCTargetExpr : public MCExpr {
   virtual void anchor();
 
 protected:
@@ -482,9 +485,6 @@ public:
                                          const MCAssembler *Asm) const = 0;
   // allow Target Expressions to be checked for equality
   virtual bool isEqualTo(const MCExpr *x) const { return false; }
-  virtual bool isSymbolUsedInExpression(const MCSymbol *Sym) const {
-    return false;
-  }
   // This should be set when assigned expressions are not valid ".set"
   // expressions, e.g. registers, and must be inlined.
   virtual bool inlineAssignedExpr() const { return false; }
@@ -493,6 +493,37 @@ public:
 
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;
+  }
+};
+
+/// Extension point for target-specific MCExpr subclasses with a relocation
+/// specifier, serving as a replacement for MCSymbolRefExpr::VariantKind.
+/// Limit this to top-level use, avoiding its inclusion as a subexpression.
+///
+/// NOTE: All subclasses are required to have trivial destructors because
+/// MCExprs are bump pointer allocated and not destructed.
+class LLVM_ABI MCSpecifierExpr : public MCExpr {
+protected:
+  using Spec = uint16_t;
+  const MCExpr *Expr;
+  // Target-specific relocation specifier code
+  const Spec specifier;
+
+protected:
+  explicit MCSpecifierExpr(const MCExpr *Expr, Spec S)
+      : MCExpr(Specifier, SMLoc()), Expr(Expr), specifier(S) {}
+  virtual ~MCSpecifierExpr() = default;
+
+public:
+  Spec getSpecifier() const { return specifier; }
+  const MCExpr *getSubExpr() const { return Expr; }
+
+  virtual void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const = 0;
+  virtual bool evaluateAsRelocatableImpl(MCValue &Res,
+                                         const MCAssembler *Asm) const;
+
+  static bool classof(const MCExpr *E) {
+    return E->getKind() == MCExpr::Specifier;
   }
 };
 

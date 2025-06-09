@@ -18,6 +18,7 @@
 #include "CGValue.h"
 #include "CodeGenModule.h"
 #include "EHScopeStack.h"
+#include "SanitizerHandler.h"
 #include "VarBypassDetector.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/CurrentSourceLocExprScope.h"
@@ -114,40 +115,6 @@ enum TypeEvaluationKind {
   TEK_Aggregate
 };
 // clang-format on
-
-#define LIST_SANITIZER_CHECKS                                                  \
-  SANITIZER_CHECK(AddOverflow, add_overflow, 0)                                \
-  SANITIZER_CHECK(BuiltinUnreachable, builtin_unreachable, 0)                  \
-  SANITIZER_CHECK(CFICheckFail, cfi_check_fail, 0)                             \
-  SANITIZER_CHECK(DivremOverflow, divrem_overflow, 0)                          \
-  SANITIZER_CHECK(DynamicTypeCacheMiss, dynamic_type_cache_miss, 0)            \
-  SANITIZER_CHECK(FloatCastOverflow, float_cast_overflow, 0)                   \
-  SANITIZER_CHECK(FunctionTypeMismatch, function_type_mismatch, 0)             \
-  SANITIZER_CHECK(ImplicitConversion, implicit_conversion, 0)                  \
-  SANITIZER_CHECK(InvalidBuiltin, invalid_builtin, 0)                          \
-  SANITIZER_CHECK(InvalidObjCCast, invalid_objc_cast, 0)                       \
-  SANITIZER_CHECK(LoadInvalidValue, load_invalid_value, 0)                     \
-  SANITIZER_CHECK(MissingReturn, missing_return, 0)                            \
-  SANITIZER_CHECK(MulOverflow, mul_overflow, 0)                                \
-  SANITIZER_CHECK(NegateOverflow, negate_overflow, 0)                          \
-  SANITIZER_CHECK(NullabilityArg, nullability_arg, 0)                          \
-  SANITIZER_CHECK(NullabilityReturn, nullability_return, 1)                    \
-  SANITIZER_CHECK(NonnullArg, nonnull_arg, 0)                                  \
-  SANITIZER_CHECK(NonnullReturn, nonnull_return, 1)                            \
-  SANITIZER_CHECK(OutOfBounds, out_of_bounds, 0)                               \
-  SANITIZER_CHECK(PointerOverflow, pointer_overflow, 0)                        \
-  SANITIZER_CHECK(ShiftOutOfBounds, shift_out_of_bounds, 0)                    \
-  SANITIZER_CHECK(SubOverflow, sub_overflow, 0)                                \
-  SANITIZER_CHECK(TypeMismatch, type_mismatch, 1)                              \
-  SANITIZER_CHECK(AlignmentAssumption, alignment_assumption, 0)                \
-  SANITIZER_CHECK(VLABoundNotPositive, vla_bound_not_positive, 0)              \
-  SANITIZER_CHECK(BoundsSafety, bounds_safety, 0)
-
-enum SanitizerHandler {
-#define SANITIZER_CHECK(Enum, Name, Version) Enum,
-  LIST_SANITIZER_CHECKS
-#undef SANITIZER_CHECK
-};
 
 /// Helper class with most of the code for saving a value for a
 /// conditional expression cleanup.
@@ -2584,9 +2551,12 @@ public:
                           const FunctionArgList &Args);
 
   /// EmitFunctionEpilog - Emit the target specific LLVM code to return the
-  /// given temporary.
+  /// given temporary. Specify the source location atom group (Key Instructions
+  /// debug info feature) for the `ret` using \p RetKeyInstructionsSourceAtom.
+  /// If it's 0, the `ret` will get added to a new source atom group.
   void EmitFunctionEpilog(const CGFunctionInfo &FI, bool EmitRetDbgLoc,
-                          SourceLocation EndLoc);
+                          SourceLocation EndLoc,
+                          uint64_t RetKeyInstructionsSourceAtom);
 
   /// Emit a test that checks if the return value \p RV is nonnull.
   void EmitReturnValueCheck(llvm::Value *RV);
@@ -3362,10 +3332,12 @@ public:
                            llvm::Value *Index, QualType IndexType,
                            QualType IndexedType, bool Accessed);
 
-  /// Returns debug info, with additional annotation if enabled by
-  /// CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo[CheckKindOrdinal].
+  /// Returns debug info, with additional annotation if
+  /// CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo[Ordinal] is enabled for
+  /// any of the ordinals.
   llvm::DILocation *
-  SanitizerAnnotateDebugInfo(SanitizerKind::SanitizerOrdinal CheckKindOrdinal);
+  SanitizerAnnotateDebugInfo(ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
+                             SanitizerHandler Handler);
 
   llvm::Value *GetCountedByFieldExprGEP(const Expr *Base, const FieldDecl *FD,
                                         const FieldDecl *CountDecl);
