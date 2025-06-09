@@ -9790,6 +9790,10 @@ static bool IsElementEquivalent(int MaskSize, SDValue Op, SDValue ExpectedOp,
       (int)ExpectedVT.getVectorNumElements() != MaskSize)
     return false;
 
+  // Exact match.
+  if (Idx == ExpectedIdx && Op == ExpectedOp)
+    return true;
+
   switch (Op.getOpcode()) {
   case ISD::BUILD_VECTOR:
     // If the values are build vectors, we can look through them to find
@@ -9837,8 +9841,7 @@ static bool IsElementEquivalent(int MaskSize, SDValue Op, SDValue ExpectedOp,
       SmallVector<int, 8> Mask;
       DecodeVPERMMask(MaskSize, Op.getConstantOperandVal(1), Mask);
       SDValue Src = Op.getOperand(0);
-      return (Mask[Idx] == Mask[ExpectedIdx]) ||
-             IsElementEquivalent(MaskSize, Src, Src, Mask[Idx],
+      return IsElementEquivalent(MaskSize, Src, Src, Mask[Idx],
                                  Mask[ExpectedIdx]);
     }
     break;
