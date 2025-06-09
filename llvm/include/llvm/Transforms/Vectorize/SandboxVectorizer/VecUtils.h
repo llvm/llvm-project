@@ -27,7 +27,7 @@ template <> struct DenseMapInfo<SmallVector<sandboxir::Value *>> {
     return SmallVector<sandboxir::Value *>({(sandboxir::Value *)-2});
   }
   static unsigned getHashValue(const SmallVector<sandboxir::Value *> &Vec) {
-    return hash_combine_range(Vec.begin(), Vec.end());
+    return hash_combine_range(Vec);
   }
   static bool isEqual(const SmallVector<sandboxir::Value *> &Vec1,
                       const SmallVector<sandboxir::Value *> &Vec2) {

@@ -17,6 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Frontend/Directive/Spelling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/TableGen/Record.h"
 #include <algorithm>
@@ -113,29 +114,19 @@ private:
   constexpr static int IntWidth = 8 * sizeof(int);
 };
 
-// Range of specification versions: [Min, Max]
-// Default value: all possible versions.
-// This is the same structure as the one emitted into the generated sources.
-#define STRUCT_VERSION_RANGE                                                   \
-  struct VersionRange {                                                        \
-    int Min = 1;                                                               \
-    int Max = 0x7fffffff;                                                      \
-  }
-
-STRUCT_VERSION_RANGE;
-
 class Spelling : public Versioned {
 public:
-  using Value = std::pair<StringRef, VersionRange>;
+  using Value = directive::Spelling;
 
   Spelling(const Record *Def) : Def(Def) {}
 
   StringRef getText() const { return Def->getValueAsString("spelling"); }
-  VersionRange getVersions() const {
-    return VersionRange{getMinVersion(Def), getMaxVersion(Def)};
+  llvm::directive::VersionRange getVersions() const {
+    return llvm::directive::VersionRange{getMinVersion(Def),
+                                         getMaxVersion(Def)};
   }
 
-  Value get() const { return std::make_pair(getText(), getVersions()); }
+  Value get() const { return Value{getText(), getVersions()}; }
 
 private:
   const Record *Def;
@@ -177,9 +168,9 @@ public:
     // are added.
     Spelling::Value Oldest{"not found", {/*Min=*/INT_MAX, 0}};
     for (auto V : getSpellings())
-      if (V.second.Min < Oldest.second.Min)
+      if (V.Versions.Min < Oldest.Versions.Min)
         Oldest = V;
-    return Oldest.first;
+    return Oldest.Name;
   }
 
   // Returns the name of the directive formatted for output. Whitespace are
