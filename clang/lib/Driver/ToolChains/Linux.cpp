@@ -203,7 +203,8 @@ static StringRef getOSLibDir(const llvm::Triple &Triple, const ArgList &Args) {
   if (Triple.getArch() == llvm::Triple::x86_64 && Triple.isX32())
     return "libx32";
 
-  if (Triple.getArch() == llvm::Triple::riscv32)
+  if (Triple.getArch() == llvm::Triple::riscv32 ||
+      Triple.getArch() == llvm::Triple::riscv32be)
     return "lib32";
 
   return Triple.isArch32Bit() ? "lib" : "lib64";
@@ -686,6 +687,18 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
     Loader = ("ld-linux-" + ArchName + "-" + ABIName + ".so.1").str();
     break;
   }
+  case llvm::Triple::riscv32be: {
+    StringRef ABIName = tools::riscv::getRISCVABI(Args, Triple);
+    LibDir = "lib";
+    Loader = ("ld-linux-riscv32be-" + ABIName + ".so.1").str();
+    break;
+  }
+  case llvm::Triple::riscv64be: {
+    StringRef ABIName = tools::riscv::getRISCVABI(Args, Triple);
+    LibDir = "lib";
+    Loader = ("ld-linux-riscv64be-" + ABIName + ".so.1").str();
+    break;
+  }
   case llvm::Triple::sparc:
   case llvm::Triple::sparcel:
     LibDir = "lib";
@@ -900,7 +913,8 @@ SanitizerMask Linux::getSupportedSanitizers() const {
                          getTriple().getArch() == llvm::Triple::armeb ||
                          getTriple().getArch() == llvm::Triple::thumbeb;
   const bool IsLoongArch64 = getTriple().getArch() == llvm::Triple::loongarch64;
-  const bool IsRISCV64 = getTriple().getArch() == llvm::Triple::riscv64;
+  const bool IsRISCV64 = (getTriple().getArch() == llvm::Triple::riscv64 ||
+                          getTriple().getArch() == llvm::Triple::riscv64be);
   const bool IsSystemZ = getTriple().getArch() == llvm::Triple::systemz;
   const bool IsHexagon = getTriple().getArch() == llvm::Triple::hexagon;
   const bool IsAndroid = getTriple().isAndroid();

@@ -672,7 +672,9 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
     break;
   }
   case llvm::Triple::riscv32:
-  case llvm::Triple::riscv64: {
+  case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be: {
     StringRef ABIName = riscv::getRISCVABI(Args, getToolChain().getTriple());
     CmdArgs.push_back("-mabi");
     CmdArgs.push_back(ABIName.data());
@@ -1732,16 +1734,20 @@ static void findRISCVBareMetalMultilibs(const Driver &D,
             .flag(Twine("-march=", Element.march).str())
             .flag(Twine("-mabi=", Element.mabi).str()));
   }
+
+  std::string EndiannessSuffix = TargetTriple.isLittleEndian() ? "" : "be";
   MultilibSet RISCVMultilibs =
       MultilibSetBuilder()
           .Either(Ms)
           .makeMultilibSet()
           .FilterOut(NonExistent)
-          .setFilePathsCallback([](const Multilib &M) {
+          .setFilePathsCallback([EndiannessSuffix](const Multilib &M) {
             return std::vector<std::string>(
                 {M.gccSuffix(),
-                 "/../../../../riscv64-unknown-elf/lib" + M.gccSuffix(),
-                 "/../../../../riscv32-unknown-elf/lib" + M.gccSuffix()});
+                 "/../../../../riscv64" + EndiannessSuffix +
+                     "-unknown-elf/lib" + M.gccSuffix(),
+                 "/../../../../riscv32" + EndiannessSuffix +
+                     "-unknown-elf/lib" + M.gccSuffix()});
           });
 
   Multilib::flags_list Flags;
@@ -1789,7 +1795,8 @@ static void findRISCVMultilibs(const Driver &D,
           .FilterOut(NonExistent);
 
   Multilib::flags_list Flags;
-  bool IsRV64 = TargetTriple.getArch() == llvm::Triple::riscv64;
+  bool IsRV64 = (TargetTriple.getArch() == llvm::Triple::riscv64 ||
+                 TargetTriple.getArch() == llvm::Triple::riscv64be);
   StringRef ABIName = tools::riscv::getRISCVABI(Args, TargetTriple);
 
   addMultilibFlag(!IsRV64, "-m32", Flags);
@@ -2429,6 +2436,15 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
   static const char *const RISCV64Triples[] = {"riscv64-unknown-linux-gnu",
                                                "riscv64-unknown-elf"};
 
+  static const char *const RISCV32beLibDirs[] = {"/lib32", "/lib"};
+  static const char *const RISCV32beTriples[] = {"riscv32be-unknown-linux-gnu",
+                                                 "riscv32be-linux-gnu",
+                                                 "riscv32be-unknown-elf"};
+  static const char *const RISCV64beLibDirs[] = {"/lib64", "/lib"};
+  static const char *const RISCV64beTriples[] = {"riscv64be-unknown-linux-gnu",
+                                                 "riscv64be-linux-gnu",
+                                                 "riscv64be-unknown-elf"};
+
   static const char *const SPARCv8LibDirs[] = {"/lib32", "/lib"};
   static const char *const SPARCv8Triples[] = {"sparc-linux-gnu",
                                                "sparcv8-linux-gnu"};
@@ -2720,6 +2736,18 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
     TripleAliases.append(begin(RISCV64Triples), end(RISCV64Triples));
     BiarchLibDirs.append(begin(RISCV32LibDirs), end(RISCV32LibDirs));
     BiarchTripleAliases.append(begin(RISCV32Triples), end(RISCV32Triples));
+    break;
+  case llvm::Triple::riscv32be:
+    LibDirs.append(begin(RISCV32beLibDirs), end(RISCV32beLibDirs));
+    TripleAliases.append(begin(RISCV32beTriples), end(RISCV32beTriples));
+    BiarchLibDirs.append(begin(RISCV64beLibDirs), end(RISCV64beLibDirs));
+    BiarchTripleAliases.append(begin(RISCV64beTriples), end(RISCV64beTriples));
+    break;
+  case llvm::Triple::riscv64be:
+    LibDirs.append(begin(RISCV64beLibDirs), end(RISCV64beLibDirs));
+    TripleAliases.append(begin(RISCV64beTriples), end(RISCV64beTriples));
+    BiarchLibDirs.append(begin(RISCV32beLibDirs), end(RISCV32beLibDirs));
+    BiarchTripleAliases.append(begin(RISCV32beTriples), end(RISCV32beTriples));
     break;
   case llvm::Triple::sparc:
   case llvm::Triple::sparcel:
@@ -3036,6 +3064,8 @@ Generic_GCC::getDefaultUnwindTableLevel(const ArgList &Args) const {
   case llvm::Triple::ppc64le:
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
     return UnwindTableLevel::Asynchronous;
