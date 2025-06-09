@@ -155,8 +155,7 @@ const MCExpr *MCResourceInfo::flattenedCycleMax(MCSymbol *RecSym,
       const MCSymbol &SymRef = SymExpr->getSymbol();
       if (SymRef.isVariable()) {
         const MCExpr *SymVal = SymRef.getVariableValue();
-        auto [_, IsSeen] = Seen.insert(SymVal);
-        if (IsSeen)
+        if (Seen.insert(SymVal).second)
           WorkList.push_back(SymVal);
       }
       break;
