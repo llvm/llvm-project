@@ -1275,14 +1275,6 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.nearest_integer_operations
 )
 
-add_object_library(
-  exp_utils
-  HDRS
-    exp_utils.h
-  SRCS
-    exp_utils.cpp
-)
-
 add_entrypoint_object(
   erff
   SRCS
@@ -3978,7 +3970,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.sqrt
     libc.src.__support.macros.optimization
-    libc.src.__support.macros.properties.types 
+    libc.src.__support.macros.properties.types
 )
 
 add_entrypoint_object(
@@ -4046,7 +4038,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.macros.optimization
-    libc.src.__support.macros.properties.types 
+    libc.src.__support.macros.properties.types
 )
 
 add_object_library(
@@ -4093,7 +4085,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.sqrt
     libc.src.__support.macros.optimization
-    libc.src.__support.macros.properties.types  
+    libc.src.__support.macros.properties.types
 )
 
 add_header_library(
@@ -4162,7 +4154,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.sqrt
     libc.src.__support.macros.optimization
-    libc.src.__support.macros.properties.types  
+    libc.src.__support.macros.properties.types
 )
 
 add_entrypoint_object(
@@ -4181,7 +4173,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.sqrt
     libc.src.__support.macros.optimization
-    libc.src.__support.macros.properties.types  
+    libc.src.__support.macros.properties.types
     libc.src.__support.macros.properties.cpu_features
 )
 
@@ -4201,7 +4193,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.sqrt
     libc.src.__support.macros.optimization
-    libc.src.__support.macros.properties.types  
+    libc.src.__support.macros.properties.types
 )
 
 add_header_library(
