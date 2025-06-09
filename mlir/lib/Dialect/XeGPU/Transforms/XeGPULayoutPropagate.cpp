@@ -30,6 +30,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/raw_ostream.h"
@@ -103,6 +104,7 @@ struct LayoutInfo {
 private:
   LaneLayout laneLayout;
   LaneData laneData;
+  xegpu::LayoutAttr layoutAttr;
 
 public:
   LayoutInfo() = default;
@@ -186,7 +188,7 @@ struct LayoutInfoLattice : public Lattice<LayoutInfo> {
 /// Helper Function to get the default layout for uniform values like constants.
 /// For 1D vector, lane_layout is [subgroupSize] and lane_data is [1].
 /// For 2D vector, lane_layout is [1, subgroupSize] and lane_data is [1, 1].
-static LayoutInfo getDefaultLayoutInfo(unsigned rank) {
+static LayoutInfo getDefaultSIMTLayoutInfo(unsigned rank) {
   assert((rank == 1 || rank == 2) && "Expected 1D or 2D vector.");
   if (rank == 1)
     return LayoutInfo(LaneLayout({xegpu::targetinfo::subgroupSize}),
@@ -196,7 +198,7 @@ static LayoutInfo getDefaultLayoutInfo(unsigned rank) {
 }
 
 /// Helper to get the default layout for a vector type.
-static LayoutInfo getDefaultLayoutInfo(VectorType vectorTy) {
+static LayoutInfo getDefaultSIMTLayoutInfo(VectorType vectorTy) {
   // Expecting a 1D or 2D vector.
   assert((vectorTy.getRank() == 1 || vectorTy.getRank() == 2) &&
          "Expected 1D or 2D vector.");
@@ -205,7 +207,7 @@ static LayoutInfo getDefaultLayoutInfo(VectorType vectorTy) {
          "Expected int or float element type.");
   // If the rank is 1, then return default layout for 1D vector.
   if (vectorTy.getRank() == 1)
-    return getDefaultLayoutInfo(1);
+    return getDefaultSIMTLayoutInfo(1);
   // Packing factor is determined by the element type bitwidth.
   int packingFactor = 1;
   unsigned bitwidth = vectorTy.getElementType().getIntOrFloatBitWidth();
@@ -221,8 +223,8 @@ static LayoutInfo getDefaultLayoutInfo(VectorType vectorTy) {
 /// `packedSizeInBitsForDefault`
 /// * For B operand, the data must be packed in minimum
 /// `packedSizeInBitsForDpasB`
-static LayoutInfo getLayoutInfoForDPASOperand(VectorType vectorTy,
-                                              unsigned operandNum) {
+static LayoutInfo getSIMTLayoutInfoForDPASOperand(VectorType vectorTy,
+                                                  unsigned operandNum) {
   Type elementTy = vectorTy.getElementType();
   assert(elementTy.isIntOrFloat() &&
          "Expected int or float type in DPAS operands");
@@ -237,7 +239,7 @@ static LayoutInfo getLayoutInfoForDPASOperand(VectorType vectorTy,
     return LayoutInfo(layout, data);
   }
   // Otherwise, return the default layout for the vector type.
-  return getDefaultLayoutInfo(vectorTy);
+  return getDefaultSIMTLayoutInfo(vectorTy);
 }
 
 //===----------------------------------------------------------------------===//
@@ -360,17 +362,18 @@ LogicalResult LayoutInfoPropagation::visitOperation(
       // All other ops.
       .Default([&](Operation *op) {
         for (const LayoutInfoLattice *r : results) {
-          for (LayoutInfoLattice *operand : operands) {
-            // Propagate the layout of the result to the operand.
-            if (r->getValue().isAssigned())
+          if (r->getValue().isAssigned()) {
+            for (LayoutInfoLattice *operand : operands) {
+              // Propagate the layout of the result to the operand.
               meet(operand, *r);
+            }
           }
         }
       });
   // Add a dependency from each result to program point after the operation.
-  for (const LayoutInfoLattice *r : results) {
+  for (const LayoutInfoLattice *r : results)
     addDependency(const_cast<LayoutInfoLattice *>(r), getProgramPointAfter(op));
-  }
+
   return success();
 }
 
@@ -380,7 +383,7 @@ void LayoutInfoPropagation::visitPrefetchNdOp(
   // Here we assign the default layout to the tensor descriptor operand of
   // prefetch.
   auto tdescTy = prefetch.getTensorDescType();
-  auto prefetchLayout = getDefaultLayoutInfo(
+  auto prefetchLayout = getDefaultSIMTLayoutInfo(
       VectorType::get(tdescTy.getShape(), tdescTy.getElementType()));
   // Propagate the layout to the source tensor descriptor.
   propagateIfChanged(operands[0], operands[0]->meet(prefetchLayout));
@@ -395,11 +398,13 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
   if (!resultLayout.isAssigned())
     return;
   // We only consider 2D -> 1D reductions at this point.
-  assert(resultLayout.getLayout().size() == 1 &&
-         "Expected 1D layout for reduction result.");
+  if (resultLayout.getLayout().size() != 1) {
+    reduction.emitWarning("Expected 1D layout for reduction result. ");
+    return;
+  }
   // Given that the result is 1D, the layout of the operand should be 2D with
   // default layout.
-  LayoutInfo operandLayout = getDefaultLayoutInfo(2);
+  LayoutInfo operandLayout = getDefaultSIMTLayoutInfo(2);
   propagateIfChanged(operands[0], operands[0]->meet(operandLayout));
   // Accumulator should have the same layout as the result.
   propagateIfChanged(operands[1], operands[1]->meet(resultLayout));
@@ -425,14 +430,15 @@ void LayoutInfoPropagation::visitDpasOp(
     ArrayRef<const LayoutInfoLattice *> results) {
   VectorType aTy = dpas.getLhsType();
   VectorType bTy = dpas.getRhsType();
-  propagateIfChanged(operands[0],
-                     operands[0]->meet(getLayoutInfoForDPASOperand(aTy, 0)));
-  propagateIfChanged(operands[1],
-                     operands[1]->meet(getLayoutInfoForDPASOperand(bTy, 1)));
+  propagateIfChanged(
+      operands[0], operands[0]->meet(getSIMTLayoutInfoForDPASOperand(aTy, 0)));
+  propagateIfChanged(
+      operands[1], operands[1]->meet(getSIMTLayoutInfoForDPASOperand(bTy, 1)));
   if (operands.size() > 2) {
     VectorType cTy = dpas.getAccType();
-    propagateIfChanged(operands[2],
-                       operands[2]->meet(getLayoutInfoForDPASOperand(cTy, 2)));
+    propagateIfChanged(
+        operands[2],
+        operands[2]->meet(getSIMTLayoutInfoForDPASOperand(cTy, 2)));
   }
 }
 
@@ -440,7 +446,7 @@ void LayoutInfoPropagation::visitDpasOp(
 void LayoutInfoPropagation::visitStoreNdOp(
     xegpu::StoreNdOp store, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
-  LayoutInfo storeLayout = getDefaultLayoutInfo(store.getValueType());
+  LayoutInfo storeLayout = getDefaultSIMTLayoutInfo(store.getValueType());
   // Both operands should have the same layout
   for (LayoutInfoLattice *operand : operands) {
     propagateIfChanged(operand, operand->meet(storeLayout));
@@ -539,7 +545,7 @@ void LayoutInfoPropagation::visitLoadGatherOp(
     tensorDescLayout = valueLayout.getTransposedLayout({1, 0});
   }
   // Mask operand should have 1D default layout.
-  LayoutInfo maskLayout = getDefaultLayoutInfo(1);
+  LayoutInfo maskLayout = getDefaultSIMTLayoutInfo(1);
   // Propagate the new layout to the tensor descriptor operand.
   propagateIfChanged(operands[0], operands[0]->meet(tensorDescLayout));
   // Propagate the new layout to the mask operand.
@@ -556,7 +562,7 @@ void LayoutInfoPropagation::visitCreateDescOp(
   if (!descLayout.isAssigned())
     return;
   // For offset operand propagate 1D default layout.
-  LayoutInfo layout = getDefaultLayoutInfo(1);
+  LayoutInfo layout = getDefaultSIMTLayoutInfo(1);
   propagateIfChanged(operands[1], operands[1]->meet(layout));
 }
 
@@ -575,7 +581,8 @@ void LayoutInfoPropagation::visitStoreScatterOp(
         "Expected the first dimension of 2D tensor descriptor to be equal to "
         "subgroup size.");
 
-  LayoutInfo valueLayout = getDefaultLayoutInfo(storeScatter.getValueType());
+  LayoutInfo valueLayout =
+      getDefaultSIMTLayoutInfo(storeScatter.getValueType());
   LayoutInfo storeScatterLayout = valueLayout;
   if (storeScatter.getTranspose()) {
     // StoreScatteOp allows transpose effect. However, at the stage of this
@@ -590,7 +597,7 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   // Propagate the tensor descriptor layout.
   propagateIfChanged(operands[1], operands[1]->meet(storeScatterLayout));
   // Use default 1D layout for mask operand.
-  LayoutInfo maskLayout = getDefaultLayoutInfo(1);
+  LayoutInfo maskLayout = getDefaultSIMTLayoutInfo(1);
   propagateIfChanged(operands[2], operands[2]->meet(maskLayout));
 }
 
