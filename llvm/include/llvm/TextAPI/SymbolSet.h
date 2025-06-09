@@ -9,6 +9,7 @@
 #ifndef LLVM_TEXTAPI_SYMBOLSET_H
 #define LLVM_TEXTAPI_SYMBOLSET_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringRef.h"
@@ -87,11 +88,11 @@ private:
   using SymbolsMapType = llvm::DenseMap<SymbolsMapKey, Symbol *>;
   SymbolsMapType Symbols;
 
-  Symbol *addGlobalImpl(EncodeKind, StringRef Name, SymbolFlags Flags);
+  LLVM_ABI Symbol *addGlobalImpl(EncodeKind, StringRef Name, SymbolFlags Flags);
 
 public:
   SymbolSet() = default;
-  Symbol *addGlobal(EncodeKind Kind, StringRef Name, SymbolFlags Flags,
+  LLVM_ABI Symbol *addGlobal(EncodeKind Kind, StringRef Name, SymbolFlags Flags,
                     const Target &Targ);
   size_t size() const { return Symbols.size(); }
 
@@ -107,7 +108,7 @@ public:
     return Global;
   }
 
-  const Symbol *
+  LLVM_ABI const Symbol *
   findSymbol(EncodeKind Kind, StringRef Name,
              ObjCIFSymbolKind ObjCIF = ObjCIFSymbolKind::None) const;
 
@@ -169,7 +170,7 @@ public:
         fn);
   }
 
-  bool operator==(const SymbolSet &O) const;
+  LLVM_ABI bool operator==(const SymbolSet &O) const;
 
   bool operator!=(const SymbolSet &O) const { return !(Symbols == O.Symbols); }
 

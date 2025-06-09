@@ -9,6 +9,7 @@
 #ifndef LLVM_TEXTAPI_TEXTAPIWRITER_H
 #define LLVM_TEXTAPI_TEXTAPIWRITER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TextAPI/InterfaceFile.h"
 
@@ -30,7 +31,7 @@ public:
   /// \param FileKind File format to write text file as. If not specified, it
   /// will read from File.
   /// \param Compact Whether to limit whitespace in text file.
-  static Error writeToStream(raw_ostream &OS, const InterfaceFile &File,
+  LLVM_ABI static Error writeToStream(raw_ostream &OS, const InterfaceFile &File,
                              const FileType FileKind = FileType::Invalid,
                              bool Compact = false);
 
