@@ -657,23 +657,14 @@ entry:
 }
 
 define i16 @test_vqrdmlahh_lane_s16(i16 %a, i16 %b, <4 x i16> %c) {
-; CHECK-SD-LABEL: test_vqrdmlahh_lane_s16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmov s1, w0
-; CHECK-SD-NEXT:    fmov s2, w1
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    sqrdmlah v1.4h, v2.4h, v0.h[3]
-; CHECK-SD-NEXT:    umov w0, v1.h[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vqrdmlahh_lane_s16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    rev64 v0.4h, v0.4h
-; CHECK-GI-NEXT:    fmov s1, w0
-; CHECK-GI-NEXT:    fmov s2, w1
-; CHECK-GI-NEXT:    sqrdmlah v1.4h, v2.4h, v0.4h
-; CHECK-GI-NEXT:    umov w0, v1.h[0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vqrdmlahh_lane_s16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    fmov s2, w1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    sqrdmlah v1.4h, v2.4h, v0.h[3]
+; CHECK-NEXT:    umov w0, v1.h[0]
+; CHECK-NEXT:    ret
 entry:
   %0 = insertelement <4 x i16> undef, i16 %a, i64 0
   %1 = insertelement <4 x i16> undef, i16 %b, i64 0
@@ -719,7 +710,7 @@ define i16 @test_vqrdmlahh_laneq_s16(i16 %a, i16 %b, <8 x i16> %c) {
 ;
 ; CHECK-GI-LABEL: test_vqrdmlahh_laneq_s16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #14
+; CHECK-GI-NEXT:    dup v0.8h, v0.h[7]
 ; CHECK-GI-NEXT:    fmov s1, w0
 ; CHECK-GI-NEXT:    fmov s2, w1
 ; CHECK-GI-NEXT:    sqrdmlah v1.4h, v2.4h, v0.4h
@@ -837,23 +828,14 @@ entry:
 }
 
 define i16 @test_vqrdmlshh_lane_s16(i16 %a, i16 %b, <4 x i16> %c) {
-; CHECK-SD-LABEL: test_vqrdmlshh_lane_s16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmov s1, w0
-; CHECK-SD-NEXT:    fmov s2, w1
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    sqrdmlsh v1.4h, v2.4h, v0.h[3]
-; CHECK-SD-NEXT:    umov w0, v1.h[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vqrdmlshh_lane_s16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    rev64 v0.4h, v0.4h
-; CHECK-GI-NEXT:    fmov s1, w0
-; CHECK-GI-NEXT:    fmov s2, w1
-; CHECK-GI-NEXT:    sqrdmlsh v1.4h, v2.4h, v0.4h
-; CHECK-GI-NEXT:    umov w0, v1.h[0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vqrdmlshh_lane_s16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    fmov s2, w1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    sqrdmlsh v1.4h, v2.4h, v0.h[3]
+; CHECK-NEXT:    umov w0, v1.h[0]
+; CHECK-NEXT:    ret
 entry:
   %0 = insertelement <4 x i16> undef, i16 %a, i64 0
   %1 = insertelement <4 x i16> undef, i16 %b, i64 0
@@ -899,7 +881,7 @@ define i16 @test_vqrdmlshh_laneq_s16(i16 %a, i16 %b, <8 x i16> %c) {
 ;
 ; CHECK-GI-LABEL: test_vqrdmlshh_laneq_s16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #14
+; CHECK-GI-NEXT:    dup v0.8h, v0.h[7]
 ; CHECK-GI-NEXT:    fmov s1, w0
 ; CHECK-GI-NEXT:    fmov s2, w1
 ; CHECK-GI-NEXT:    sqrdmlsh v1.4h, v2.4h, v0.4h
