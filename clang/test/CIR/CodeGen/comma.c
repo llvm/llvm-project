@@ -22,16 +22,16 @@ void comma(void) {
 // CIR:         %[[F:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["f"]
 // CIR:         %[[I:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i"]
 // CIR:         %[[TRUE:.*]] = cir.const #true
-// CIR:         cir.store %[[TRUE]], %[[B]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:         cir.store{{.*}} %[[TRUE]], %[[B]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR:         %[[CHAR_INI_INIT:.*]] = cir.const #cir.int<65> : !s32i
 // CIR:         %[[CHAR_VAL:.*]] = cir.cast(integral, %[[CHAR_INI_INIT]] : !s32i), !s8i
-// CIR:         cir.store %[[CHAR_VAL]], %[[C]] : !s8i, !cir.ptr<!s8i>
+// CIR:         cir.store{{.*}} %[[CHAR_VAL]], %[[C]] : !s8i, !cir.ptr<!s8i>
 // CIR:         %[[FLOAT_VAL:.*]] = cir.const #cir.fp<3.140000e+00> : !cir.float
-// CIR:         cir.store %[[FLOAT_VAL]], %[[F]] : !cir.float, !cir.ptr<!cir.float>
+// CIR:         cir.store{{.*}} %[[FLOAT_VAL]], %[[F]] : !cir.float, !cir.ptr<!cir.float>
 // CIR:         %[[INT_VAL:.*]] = cir.const #cir.int<42> : !s32i
-// CIR:         cir.store %[[INT_VAL]], %[[I]] : !s32i, !cir.ptr<!s32i>
+// CIR:         cir.store{{.*}} %[[INT_VAL]], %[[I]] : !s32i, !cir.ptr<!s32i>
 // CIR:         %[[HUNDRED:.*]] = cir.const #cir.int<100> : !s32i
-// CIR:         cir.store %[[HUNDRED]], %[[I]] : !s32i, !cir.ptr<!s32i>
+// CIR:         cir.store{{.*}} %[[HUNDRED]], %[[I]] : !s32i, !cir.ptr<!s32i>
 // CIR:         cir.return
 
 // LLVM-LABEL: define {{.*}}void @comma() {

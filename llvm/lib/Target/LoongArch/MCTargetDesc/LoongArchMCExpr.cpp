@@ -12,13 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoongArchMCExpr.h"
-#include "LoongArchAsmBackend.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
@@ -39,24 +36,6 @@ void LoongArchMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   Expr->print(OS, MAI);
   if (HasVariant)
     OS << ')';
-}
-
-bool LoongArchMCExpr::evaluateAsRelocatableImpl(
-    MCValue &Res,
-    const MCAssembler *Asm) const { // Explicitly drop the layout and assembler
-                                    // to prevent any symbolic folding in
-  // the expression handling.  This is required to preserve symbolic difference
-  // expressions to emit the paired relocations.
-  if (!getSubExpr()->evaluateAsRelocatable(Res, nullptr))
-    return false;
-
-  Res.setSpecifier(specifier);
-  // Custom fixup types are not valid with symbol difference expressions.
-  return !Res.getSubSym();
-}
-
-void LoongArchMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
-  Streamer.visitUsedExpr(*getSubExpr());
 }
 
 StringRef LoongArchMCExpr::getSpecifierName(uint16_t S) {

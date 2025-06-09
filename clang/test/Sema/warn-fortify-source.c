@@ -71,6 +71,14 @@ void call_strcpy_nowarn(void) {
   __builtin_strcpy(dst, src);
 }
 
+void call_stpcpy(void) {
+  const char *const src = "abcd";
+  char dst1[5];
+  char dst2[4];
+  __builtin_stpcpy(dst1, src);
+  __builtin_stpcpy(dst2, src); // expected-warning {{'stpcpy' will always overflow; destination buffer has size 4, but the source string has length 5 (including NUL byte)}}
+}
+
 void call_memmove(void) {
   char s1[10], s2[20];
   __builtin_memmove(s2, s1, 20);

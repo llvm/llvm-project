@@ -904,7 +904,7 @@ public:
   // Convert to a canonical path.
   std::string getCanonicalPath(llvm::StringRef path) const {
     std::string CanonicalPath(path);
-    std::replace(CanonicalPath.begin(), CanonicalPath.end(), '\\', '/');
+    llvm::replace(CanonicalPath, '\\', '/');
     return CanonicalPath;
   }
 

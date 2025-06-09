@@ -46,11 +46,7 @@ public:
                                     std::vector<SDValue> &OutOps) override;
 
   bool SelectAddrFrameIndex(SDValue Addr, SDValue &Base, SDValue &Offset);
-  bool SelectAddrRegImm(SDValue Addr, SDValue &Base, SDValue &Offset,
-                        bool IsRV32Zdinx = false);
-  bool SelectAddrRegImmRV32Zdinx(SDValue Addr, SDValue &Base, SDValue &Offset) {
-    return SelectAddrRegImm(Addr, Base, Offset, true);
-  }
+  bool SelectAddrRegImm(SDValue Addr, SDValue &Base, SDValue &Offset);
   bool SelectAddrRegImmLsb00000(SDValue Addr, SDValue &Base, SDValue &Offset);
 
   bool SelectAddrRegRegScale(SDValue Addr, unsigned MaxShiftAmount,
@@ -81,8 +77,10 @@ public:
 
   bool tryShrinkShlLogicImm(SDNode *Node);
   bool trySignedBitfieldExtract(SDNode *Node);
-  bool tryUnsignedBitfieldExtract(SDNode *Node, SDLoc DL, MVT VT, SDValue X,
-                                  unsigned Msb, unsigned Lsb);
+  bool tryUnsignedBitfieldExtract(SDNode *Node, const SDLoc &DL, MVT VT,
+                                  SDValue X, unsigned Msb, unsigned Lsb);
+  bool tryUnsignedBitfieldInsertInZero(SDNode *Node, const SDLoc &DL, MVT VT,
+                                       SDValue X, unsigned Msb, unsigned Lsb);
   bool tryIndexedLoad(SDNode *Node);
 
   bool selectShiftMask(SDValue N, unsigned ShiftWidth, SDValue &ShAmt);

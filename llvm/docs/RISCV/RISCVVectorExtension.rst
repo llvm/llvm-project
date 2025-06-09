@@ -260,7 +260,7 @@ VMV0 elimination
 
 Because masked instructions must have the mask register in ``v0``, a specific register class ``vmv0`` is used that contains only one register, ``v0``.
 
-However register coalescing may end up coleascing copies into ``vmv0``, resulting in instructions with multiple uses of ``vmv0`` that the register allocator can't allocate:
+However register coalescing may end up coalescing copies into ``vmv0``, resulting in instructions with multiple uses of ``vmv0`` that the register allocator can't allocate:
 
 .. code-block::
 

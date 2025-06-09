@@ -383,3 +383,12 @@ add_proxy_header_library(
     libc.include.llvm-libc-types.ENTRY
     libc.include.search
 )
+
+add_proxy_header_library(
+  ACTION
+  HDRS
+    ACTION.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.ACTION
+    libc.include.search
+)

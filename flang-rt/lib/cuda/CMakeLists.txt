@@ -14,6 +14,7 @@ add_flangrt_library(flang_rt.cuda STATIC SHARED
   kernel.cpp
   memmove-function.cpp
   memory.cpp
+  pointer.cpp
   registration.cpp
 
   TARGET_PROPERTIES

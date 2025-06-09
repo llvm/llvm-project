@@ -894,6 +894,7 @@ void ModFileWriter::PutEntity(llvm::raw_ostream &os, const Symbol &symbol) {
           [&](const ObjectEntityDetails &) { PutObjectEntity(os, symbol); },
           [&](const ProcEntityDetails &) { PutProcEntity(os, symbol); },
           [&](const TypeParamDetails &) { PutTypeParam(os, symbol); },
+          [&](const UserReductionDetails &) { PutUserReduction(os, symbol); },
           [&](const auto &) {
             common::die("PutEntity: unexpected details: %s",
                 DetailsToString(symbol.details()).c_str());
@@ -1041,6 +1042,28 @@ void ModFileWriter::PutTypeParam(llvm::raw_ostream &os, const Symbol &symbol) {
       symbol.attrs());
   PutInit(os, details.init());
   os << '\n';
+}
+
+void ModFileWriter::PutUserReduction(
+    llvm::raw_ostream &os, const Symbol &symbol) {
+  const auto &details{symbol.get<UserReductionDetails>()};
+  // The module content for a OpenMP Declare Reduction is the OpenMP
+  // declaration. There may be multiple declarations.
+  // Decls are pointers, so do not use a reference.
+  for (const auto decl : details.GetDeclList()) {
+    common::visit( //
+        common::visitors{//
+            [&](const parser::OpenMPDeclareReductionConstruct *d) {
+              Unparse(os, *d, context_.langOptions());
+            },
+            [&](const parser::OmpMetadirectiveDirective *m) {
+              Unparse(os, *m, context_.langOptions());
+            },
+            [&](const auto &) {
+              DIE("Unknown OpenMP DECLARE REDUCTION content");
+            }},
+        decl);
+  }
 }
 
 void PutInit(llvm::raw_ostream &os, const Symbol &symbol, const MaybeExpr &init,
