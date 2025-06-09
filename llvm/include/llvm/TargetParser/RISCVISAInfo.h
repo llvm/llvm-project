@@ -9,9 +9,9 @@
 #ifndef LLVM_SUPPORT_RISCVISAINFO_H
 #define LLVM_SUPPORT_RISCVISAINFO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/RISCVISAUtils.h"
 
@@ -52,7 +52,7 @@ public:
 
   /// Convert RISC-V ISA info to a feature vector.
   LLVM_ABI std::vector<std::string> toFeatures(bool AddAllExtensions = false,
-                                      bool IgnoreUnknown = true) const;
+                                               bool IgnoreUnknown = true) const;
 
   const RISCVISAUtils::OrderedExtensionMap &getExtensions() const {
     return Exts;
@@ -72,14 +72,15 @@ public:
   LLVM_ABI static bool isSupportedExtensionFeature(StringRef Ext);
   LLVM_ABI static bool isSupportedExtension(StringRef Ext);
   LLVM_ABI static bool isSupportedExtensionWithVersion(StringRef Ext);
-  LLVM_ABI static bool isSupportedExtension(StringRef Ext, unsigned MajorVersion,
-                                   unsigned MinorVersion);
+  LLVM_ABI static bool isSupportedExtension(StringRef Ext,
+                                            unsigned MajorVersion,
+                                            unsigned MinorVersion);
   LLVM_ABI static std::string getTargetFeatureForExtension(StringRef Ext);
 
   LLVM_ABI static void printSupportedExtensions(StringMap<StringRef> &DescMap);
-  LLVM_ABI static void printEnabledExtensions(bool IsRV64,
-                                     std::set<StringRef> &EnabledFeatureNames,
-                                     StringMap<StringRef> &DescMap);
+  LLVM_ABI static void
+  printEnabledExtensions(bool IsRV64, std::set<StringRef> &EnabledFeatureNames,
+                         StringMap<StringRef> &DescMap);
 
   /// Return the group id and bit position of __riscv_feature_bits.  Returns
   /// <-1, -1> if not supported.

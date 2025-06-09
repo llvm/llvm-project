@@ -14,8 +14,8 @@
 #ifndef LLVM_TARGETPARSER_RISCVTARGETPARSER_H
 #define LLVM_TARGETPARSER_RISCVTARGETPARSER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -45,13 +45,15 @@ static constexpr unsigned RVVBitsPerBlock = 64;
 static constexpr unsigned RVVBytesPerBlock = RVVBitsPerBlock / 8;
 
 LLVM_ABI void getFeaturesForCPU(StringRef CPU,
-                       SmallVectorImpl<std::string> &EnabledFeatures,
-                       bool NeedPlus = false);
+                                SmallVectorImpl<std::string> &EnabledFeatures,
+                                bool NeedPlus = false);
 LLVM_ABI bool parseCPU(StringRef CPU, bool IsRV64);
 LLVM_ABI bool parseTuneCPU(StringRef CPU, bool IsRV64);
 LLVM_ABI StringRef getMArchFromMcpu(StringRef CPU);
-LLVM_ABI void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64);
-LLVM_ABI void fillValidTuneCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64);
+LLVM_ABI void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values,
+                                   bool IsRV64);
+LLVM_ABI void fillValidTuneCPUArchList(SmallVectorImpl<StringRef> &Values,
+                                       bool IsRV64);
 LLVM_ABI bool hasFastScalarUnalignedAccess(StringRef CPU);
 LLVM_ABI bool hasFastVectorUnalignedAccess(StringRef CPU);
 LLVM_ABI bool hasValidCPUModel(StringRef CPU);
@@ -88,7 +90,7 @@ inline static bool isValidLMUL(unsigned LMUL, bool Fractional) {
 }
 
 LLVM_ABI unsigned encodeVTYPE(VLMUL VLMUL, unsigned SEW, bool TailAgnostic,
-                     bool MaskAgnostic);
+                              bool MaskAgnostic);
 
 LLVM_ABI unsigned encodeXSfmmVType(unsigned SEW, unsigned Widen, bool AltFmt);
 
@@ -153,7 +155,8 @@ LLVM_ABI void printVType(unsigned VType, raw_ostream &OS);
 
 LLVM_ABI unsigned getSEWLMULRatio(unsigned SEW, VLMUL VLMul);
 
-LLVM_ABI std::optional<VLMUL> getSameRatioLMUL(unsigned SEW, VLMUL VLMUL, unsigned EEW);
+LLVM_ABI std::optional<VLMUL> getSameRatioLMUL(unsigned SEW, VLMUL VLMUL,
+                                               unsigned EEW);
 } // namespace RISCVVType
 
 } // namespace llvm

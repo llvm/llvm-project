@@ -13,8 +13,8 @@
 #ifndef LLVM_TARGETPARSER_ARMTARGETPARSERCOMMON_H
 #define LLVM_TARGETPARSER_ARMTARGETPARSERCOMMON_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace ARM {
@@ -47,7 +47,7 @@ struct ParsedBranchProtection {
 };
 
 LLVM_ABI bool parseBranchProtection(StringRef Spec, ParsedBranchProtection &PBP,
-                           StringRef &Err, bool EnablePAuthLR = false);
+                                    StringRef &Err, bool EnablePAuthLR = false);
 
 } // namespace ARM
 } // namespace llvm

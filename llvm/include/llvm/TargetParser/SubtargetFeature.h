@@ -17,10 +17,10 @@
 #ifndef LLVM_TARGETPARSER_SUBTARGETFEATURE_H
 #define LLVM_TARGETPARSER_SUBTARGETFEATURE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include <array>
 #include <initializer_list>
@@ -196,7 +196,7 @@ public:
   LLVM_ABI void dump() const;
 
   /// Adds the default features for the specified target triple.
-  LLVM_ABI void getDefaultSubtargetFeatures(const Triple& Triple);
+  LLVM_ABI void getDefaultSubtargetFeatures(const Triple &Triple);
 
   /// Determine if a feature has a flag; '+' or '-'
   static bool hasFlag(StringRef Feature) {

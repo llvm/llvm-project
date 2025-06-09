@@ -14,12 +14,12 @@
 #ifndef LLVM_TARGETPARSER_AARCH64TARGETPARSER_H
 #define LLVM_TARGETPARSER_AARCH64TARGETPARSER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
@@ -203,14 +203,16 @@ struct ExtensionSet {
   // the form "<name>" to enable a feature or "no<name>" to disable it. This
   // will also enable or disable any features as required by the dependencies
   // between them.
-  LLVM_ABI bool parseModifier(StringRef Modifier, const bool AllowNoDashForm = false);
+  LLVM_ABI bool parseModifier(StringRef Modifier,
+                              const bool AllowNoDashForm = false);
 
   // Constructs a new ExtensionSet by toggling the corresponding bits for every
   // feature in the \p Features list without expanding their dependencies. Used
   // for reconstructing an ExtensionSet from the output of toLLVMFeatures().
   // Features that are not recognized are pushed back to \p NonExtensions.
-  LLVM_ABI void reconstructFromParsedFeatures(const std::vector<std::string> &Features,
-                                     std::vector<std::string> &NonExtensions);
+  LLVM_ABI void
+  reconstructFromParsedFeatures(const std::vector<std::string> &Features,
+                                std::vector<std::string> &NonExtensions);
 
   // Convert the set of enabled extension to an LLVM feature list, appending
   // them to Features.
@@ -242,9 +244,8 @@ struct Alias {
 
 LLVM_ABI const ExtensionInfo &getExtensionByID(ArchExtKind(ExtID));
 
-LLVM_ABI bool getExtensionFeatures(
-    const AArch64::ExtensionBitset &Extensions,
-    std::vector<StringRef> &Features);
+LLVM_ABI bool getExtensionFeatures(const AArch64::ExtensionBitset &Extensions,
+                                   std::vector<StringRef> &Features);
 
 LLVM_ABI StringRef getArchExtFeature(StringRef ArchExt);
 LLVM_ABI StringRef resolveCPUAlias(StringRef CPU);
@@ -256,7 +257,8 @@ LLVM_ABI const ArchInfo *getArchForCpu(StringRef CPU);
 LLVM_ABI const ArchInfo *parseArch(StringRef Arch);
 
 // Return the extension which has the given -target-feature name.
-LLVM_ABI std::optional<ExtensionInfo> targetFeatureToExtension(StringRef TargetFeature);
+LLVM_ABI std::optional<ExtensionInfo>
+targetFeatureToExtension(StringRef TargetFeature);
 
 // Parse a name as defined by the Extension class in tablegen.
 LLVM_ABI std::optional<ExtensionInfo> parseArchExtension(StringRef Extension);
@@ -285,7 +287,8 @@ LLVM_ABI uint64_t getCpuSupportsMask(ArrayRef<StringRef> Features);
 
 LLVM_ABI void PrintSupportedExtensions();
 
-LLVM_ABI void printEnabledExtensions(const std::set<StringRef> &EnabledFeatureNames);
+LLVM_ABI void
+printEnabledExtensions(const std::set<StringRef> &EnabledFeatureNames);
 
 } // namespace AArch64
 } // namespace llvm

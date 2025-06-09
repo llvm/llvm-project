@@ -183,13 +183,14 @@ LLVM_ABI StringRef getArchExtName(uint64_t ArchExtKind);
 LLVM_ABI StringRef getArchExtFeature(StringRef ArchExt);
 LLVM_ABI uint64_t getDefaultExtensions(StringRef CPU);
 LLVM_ABI bool getExtensionFeatures(uint64_t Extensions,
-                          std::vector<StringRef> &Features);
+                                   std::vector<StringRef> &Features);
 
 // Information by ID
 LLVM_ABI StringRef getFPUName(unsigned FPUKind);
 LLVM_ABI FPUVersion getFPUVersion(unsigned FPUKind);
 
-LLVM_ABI bool getFPUFeatures(CSKYFPUKind Kind, std::vector<StringRef> &Features);
+LLVM_ABI bool getFPUFeatures(CSKYFPUKind Kind,
+                             std::vector<StringRef> &Features);
 
 // Parser
 LLVM_ABI ArchKind parseArch(StringRef Arch);

@@ -14,10 +14,10 @@
 #ifndef LLVM_TARGETPARSER_ARMTARGETPARSER_H
 #define LLVM_TARGETPARSER_ARMTARGETPARSER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ARMBuildAttributes.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
 #include <vector>
 
@@ -230,9 +230,10 @@ LLVM_ABI NeonSupportLevel getFPUNeonSupportLevel(FPUKind FPUKind);
 LLVM_ABI FPURestriction getFPURestriction(FPUKind FPUKind);
 
 LLVM_ABI bool getFPUFeatures(FPUKind FPUKind, std::vector<StringRef> &Features);
-LLVM_ABI bool getHWDivFeatures(uint64_t HWDivKind, std::vector<StringRef> &Features);
+LLVM_ABI bool getHWDivFeatures(uint64_t HWDivKind,
+                               std::vector<StringRef> &Features);
 LLVM_ABI bool getExtensionFeatures(uint64_t Extensions,
-                          std::vector<StringRef> &Features);
+                                   std::vector<StringRef> &Features);
 
 LLVM_ABI StringRef getArchName(ArchKind AK);
 LLVM_ABI unsigned getArchAttr(ArchKind AK);
@@ -240,9 +241,10 @@ LLVM_ABI StringRef getCPUAttr(ArchKind AK);
 LLVM_ABI StringRef getSubArch(ArchKind AK);
 LLVM_ABI StringRef getArchExtName(uint64_t ArchExtKind);
 LLVM_ABI StringRef getArchExtFeature(StringRef ArchExt);
-LLVM_ABI bool appendArchExtFeatures(StringRef CPU, ARM::ArchKind AK, StringRef ArchExt,
-                           std::vector<StringRef> &Features,
-                           FPUKind &ArgFPUKind);
+LLVM_ABI bool appendArchExtFeatures(StringRef CPU, ARM::ArchKind AK,
+                                    StringRef ArchExt,
+                                    std::vector<StringRef> &Features,
+                                    FPUKind &ArgFPUKind);
 LLVM_ABI ArchKind convertV9toV8(ArchKind AK);
 
 // Information by Name
@@ -267,7 +269,8 @@ LLVM_ABI StringRef computeDefaultTargetABI(const Triple &TT, StringRef CPU);
 ///
 /// \param Arch the architecture name (e.g., "armv7s"). If it is an empty
 /// string then the triple's arch name is used.
-LLVM_ABI StringRef getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch = {});
+LLVM_ABI StringRef getARMCPUForArch(const llvm::Triple &Triple,
+                                    StringRef MArch = {});
 
 LLVM_ABI void PrintSupportedExtensions(StringMap<StringRef> DescMap);
 

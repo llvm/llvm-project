@@ -14,9 +14,9 @@
 #ifndef LLVM_TARGETPARSER_TARGETPARSER_H
 #define LLVM_TARGETPARSER_TARGETPARSER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -182,7 +182,7 @@ LLVM_ABI IsaVersion getIsaVersion(StringRef GPU);
 
 /// Fills Features map with default values for given target GPU
 LLVM_ABI void fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
-                          StringMap<bool> &Features);
+                                   StringMap<bool> &Features);
 
 /// Inserts wave size feature for given GPU into features map
 LLVM_ABI std::pair<FeatureError, StringRef>

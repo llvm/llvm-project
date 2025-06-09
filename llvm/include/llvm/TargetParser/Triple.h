@@ -9,8 +9,8 @@
 #ifndef LLVM_TARGETPARSER_TRIPLE_H
 #define LLVM_TARGETPARSER_TRIPLE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/VersionTuple.h"
 
 // Some system headers or GCC predefined macros conflict with identifiers in
@@ -350,9 +350,10 @@ public:
   Triple() = default;
 
   LLVM_ABI explicit Triple(const Twine &Str);
-  LLVM_ABI Triple(const Twine &ArchStr, const Twine &VendorStr, const Twine &OSStr);
-  LLVM_ABI Triple(const Twine &ArchStr, const Twine &VendorStr, const Twine &OSStr,
-         const Twine &EnvironmentStr);
+  LLVM_ABI Triple(const Twine &ArchStr, const Twine &VendorStr,
+                  const Twine &OSStr);
+  LLVM_ABI Triple(const Twine &ArchStr, const Twine &VendorStr,
+                  const Twine &OSStr, const Twine &EnvironmentStr);
 
   bool operator==(const Triple &Other) const {
     return Arch == Other.Arch && SubArch == Other.SubArch &&
@@ -382,8 +383,8 @@ public:
   /// reasonably be done).  In particular, it handles the common case in which
   /// otherwise valid components are in the wrong order. \p Form is used to
   /// specify the output canonical form.
-  LLVM_ABI static std::string normalize(StringRef Str,
-                               CanonicalForm Form = CanonicalForm::ANY);
+  LLVM_ABI static std::string
+  normalize(StringRef Str, CanonicalForm Form = CanonicalForm::ANY);
 
   /// Return the normalized form of this triple's string.
   std::string normalize(CanonicalForm Form = CanonicalForm::ANY) const {
@@ -546,7 +547,7 @@ public:
   /// Comparison function for checking OS X version compatibility, which handles
   /// supporting skewed version numbering schemes used by the "darwin" triples.
   LLVM_ABI bool isMacOSXVersionLT(unsigned Major, unsigned Minor = 0,
-                         unsigned Micro = 0) const;
+                                  unsigned Micro = 0) const;
 
   /// Is this a Mac OS X triple. For legacy reasons, we support both "darwin"
   /// and "osx" as OS X triples.
@@ -1269,7 +1270,8 @@ public:
   LLVM_ABI static StringRef getArchTypeName(ArchType Kind);
 
   /// Get the architecture name based on \p Kind and \p SubArch.
-  LLVM_ABI static StringRef getArchName(ArchType Kind, SubArchType SubArch = NoSubArch);
+  LLVM_ABI static StringRef getArchName(ArchType Kind,
+                                        SubArchType SubArch = NoSubArch);
 
   /// Get the "prefix" canonical name for the \p Kind architecture. This is the
   /// prefix used by the architecture specific builtins, and is suitable for
@@ -1288,7 +1290,8 @@ public:
   LLVM_ABI static StringRef getEnvironmentTypeName(EnvironmentType Kind);
 
   /// Get the name for the \p Object format.
-  LLVM_ABI static StringRef getObjectFormatTypeName(ObjectFormatType ObjectFormat);
+  LLVM_ABI static StringRef
+  getObjectFormatTypeName(ObjectFormatType ObjectFormat);
 
   /// @}
   /// @name Static helpers for converting alternate architecture names.
@@ -1300,12 +1303,13 @@ public:
   /// @}
 
   /// Returns a canonicalized OS version number for the specified OS.
-  LLVM_ABI static VersionTuple getCanonicalVersionForOS(OSType OSKind,
-                                               const VersionTuple &Version,
-                                               bool IsInValidRange);
+  LLVM_ABI static VersionTuple
+  getCanonicalVersionForOS(OSType OSKind, const VersionTuple &Version,
+                           bool IsInValidRange);
 
   /// Returns whether an OS version is invalid and would not map to an Apple OS.
-  LLVM_ABI static bool isValidVersionForOS(OSType OSKind, const VersionTuple &Version);
+  LLVM_ABI static bool isValidVersionForOS(OSType OSKind,
+                                           const VersionTuple &Version);
 };
 
 } // End llvm namespace
