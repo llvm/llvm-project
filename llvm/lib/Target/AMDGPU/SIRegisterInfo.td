@@ -1361,6 +1361,7 @@ class GSrcVGPROrZeroOp<RegisterClass regClass> : RegOrImmOperand<regClass, "OPER
   let PrintMethod = "printGSrcSimple";
 }
 
+def GSrcVGPROrZero_64 : GSrcVGPROrZeroOp<VReg_64_STAGING>;
 def GSrcVGPROrZero_128 : GSrcVGPROrZeroOp<VReg_128_STAGING>;
 def GSrcVGPROrZero_256 : GSrcVGPROrZeroOp<VReg_256_STAGING>;
 

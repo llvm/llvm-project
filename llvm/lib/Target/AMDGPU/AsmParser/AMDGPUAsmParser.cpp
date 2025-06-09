@@ -828,6 +828,10 @@ public:
     return isRegOrInlineNoMods(AMDGPU::VReg_128RegClassID, MVT::i32);
   }
 
+  bool isGSrcVGPROrZero_64() const {
+    return isRegOrInlineNoMods(AMDGPU::VReg_64RegClassID, MVT::i32);
+  }
+
   bool isGSrcVGPROrZero_128() const {
     return isRegOrInlineNoMods(AMDGPU::VReg_128RegClassID, MVT::i32);
   }
