@@ -736,12 +736,6 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
         "Global is external, but doesn't have external or weak linkage!", &GV);
 
   if (const GlobalObject *GO = dyn_cast<GlobalObject>(&GV)) {
-
-    if (MaybeAlign A = GO->getAlign()) {
-      Check(A->value() <= Value::MaximumAlignment,
-            "huge alignment values are unsupported", GO);
-    }
-
     if (const MDNode *Associated =
             GO->getMetadata(LLVMContext::MD_associated)) {
       Check(Associated->getNumOperands() == 1,
@@ -830,6 +824,11 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
 
 void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
   Type *GVType = GV.getValueType();
+
+  if (MaybeAlign A = GV.getAlign()) {
+    Check(A->value() <= Value::MaximumAlignment,
+          "huge alignment values are unsupported", &GV);
+  }
 
   if (GV.hasInitializer()) {
     Check(GV.getInitializer()->getType() == GVType,
@@ -2945,6 +2944,11 @@ void Verifier::visitFunction(const Function &F) {
 
   Check(!F.hasStructRetAttr() || F.getReturnType()->isVoidTy(),
         "Invalid struct return type!", &F);
+
+  if (MaybeAlign A = F.getAlign()) {
+    Check(A->value() <= Value::MaximumAlignment,
+          "huge alignment values are unsupported", &F);
+  }
 
   AttributeList Attrs = F.getAttributes();
 
