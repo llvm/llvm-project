@@ -2034,11 +2034,13 @@ class getInsVOP3P <RegisterOperand Src0RC, RegisterOperand Src1RC,
 class getInsVOP3OpSel <RegisterOperand Src0RC, RegisterOperand Src1RC,
                        RegisterOperand Src2RC, int NumSrcArgs,
                        bit HasClamp, bit HasOMod,
-                       Operand Src0Mod, Operand Src1Mod, Operand Src2Mod> {
+                       Operand Src0Mod, Operand Src1Mod, Operand Src2Mod,
+                       bit HasFP8ByteSel = 0, bit HasFP8DstByteSel = 0> {
   dag ret = getInsVOP3Base<Src0RC, Src1RC,
                     Src2RC, NumSrcArgs,
                     HasClamp, 1/*HasModifiers*/, 1/*HasSrc2Mods*/, HasOMod,
-                    Src0Mod, Src1Mod, Src2Mod, /*HasOpSel=*/1>.ret;
+                    Src0Mod, Src1Mod, Src2Mod, /*HasOpSel=*/1,
+                    HasFP8ByteSel, HasFP8DstByteSel>.ret;
 }
 
 class getInsDPPBase <RegisterOperand OldRC, RegisterOperand Src0RC, RegisterOperand Src1RC,
@@ -2244,7 +2246,8 @@ class getAsmVOP3OpSel <int NumSrcArgs,
                        bit HasOMod,
                        bit Src0HasMods,
                        bit Src1HasMods,
-                       bit Src2HasMods> {
+                       bit Src2HasMods,
+                       bit HasByteSel = 0> {
   string dst = "$vdst";
 
   string isrc0 = !if(!eq(NumSrcArgs, 1), "$src0", "$src0,");
@@ -2263,9 +2266,10 @@ class getAsmVOP3OpSel <int NumSrcArgs,
   string src1 = !if(Src1HasMods, fsrc1, isrc1);
   string src2 = !if(Src2HasMods, fsrc2, isrc2);
 
+  string bytesel = !if(HasByteSel, "$byte_sel", "");
   string clamp = !if(HasClamp, "$clamp", "");
   string omod = !if(HasOMod, "$omod", "");
-  string ret = dst#", "#src0#src1#src2#"$op_sel"#clamp#omod;
+  string ret = dst#", "#src0#src1#src2#"$op_sel"#bytesel#clamp#omod;
 }
 
 class getAsmDPP <bit HasDst, int NumSrcArgs, bit HasModifiers, ValueType DstVT = i32> {
@@ -2630,7 +2634,8 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
                                    Src0PackedMod, Src1PackedMod, Src2PackedMod>.ret;
   field dag InsVOP3OpSel = getInsVOP3OpSel<Src0RC64, Src1RC64, Src2RC64,
                                 NumSrcArgs, HasClamp, HasOMod,
-                                Src0Mod, Src1Mod, Src2Mod>.ret;
+                                Src0Mod, Src1Mod, Src2Mod,
+                                HasFP8ByteSel, HasFP8DstByteSel>.ret;
   field dag InsDPP = !if(HasExtDPP,
                          getInsDPP<DstRCDPP, Src0DPP, Src1DPP, Src2DPP, NumSrcArgs,
                                    HasModifiers, Src0ModDPP, Src1ModDPP, Src2ModDPP>.ret,
@@ -2680,7 +2685,8 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
                                               HasOMod,
                                               HasSrc0FloatMods,
                                               HasSrc1FloatMods,
-                                              HasSrc2FloatMods>.ret;
+                                              HasSrc2FloatMods,
+                                              HasFP8ByteSel>.ret;
   field string AsmVOP3DPP = getAsmVOP3DPP<AsmVOP3Base>.ret;
   field string AsmVOP3DPP16 = getAsmVOP3DPP16<AsmVOP3Base>.ret;
   field string AsmVOP3DPP8 = getAsmVOP3DPP8<AsmVOP3Base>.ret;
