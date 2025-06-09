@@ -43,6 +43,8 @@ namespace env {
 
 /// Return whether the environment requests temps be saved.
 bool shouldSaveTemps();
+bool shouldSaveLLVMTemps();
+std::optional<bool> shouldUseVFS();
 
 /// If the environment requests logs be redirected, return the string identifier
 /// of where to redirect. Otherwise return @p None.

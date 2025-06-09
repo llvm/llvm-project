@@ -553,6 +553,11 @@ SmallString<128> getFilePath(DataObject *Object, StringRef Dir) {
   return Path;
 }
 
+// TODO: Move inputFromFile and outputToFile within AMDGPUCompiler
+//
+// Currently, we only invoke these two methods in the context of AMDGPUCompiler.
+// Moreover, member functions that deal with file I/O should not worry whether
+// the underlying filesystem being used is virtual or real.
 amd_comgr_status_t inputFromFile(DataObject *Object, StringRef Path) {
   ProfilePoint Point("FileIO");
   auto BufOrError = MemoryBuffer::getFile(Path);
@@ -646,7 +651,7 @@ void logArgv(raw_ostream &OS, StringRef ProgramName,
 
 amd_comgr_status_t executeCommand(const Command &Job, raw_ostream &LogS,
                                   DiagnosticOptions &DiagOpts,
-                                  llvm::vfs::FileSystem &VFS) {
+                                  llvm::vfs::FileSystem &FS) {
   TextDiagnosticPrinter DiagClient(LogS, &DiagOpts);
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs);
   DiagnosticsEngine Diags(DiagID, &DiagOpts, &DiagClient, false);
@@ -672,9 +677,11 @@ amd_comgr_status_t executeCommand(const Command &Job, raw_ostream &LogS,
 
     std::unique_ptr<CompilerInstance> Clang(new CompilerInstance());
     Clang->setVerboseOutputStream(LogS);
+    Clang->setFileManager(new FileManager(Clang->getFileSystemOpts(), &FS));
     if (!Argv.back()) {
       Argv.pop_back();
     }
+
     if (!CompilerInvocation::CreateFromArgs(Clang->getInvocation(), Argv,
                                             Diags)) {
       return AMD_COMGR_STATUS_ERROR;
@@ -682,7 +689,7 @@ amd_comgr_status_t executeCommand(const Command &Job, raw_ostream &LogS,
     // Internally this call refers to the invocation created above, so at
     // this point the DiagnosticsEngine should accurately reflect all user
     // requested configuration from Argv.
-    Clang->createDiagnostics(VFS, &DiagClient, /* ShouldOwnClient */ false);
+    Clang->createDiagnostics(FS, &DiagClient, /* ShouldOwnClient */ false);
     if (!Clang->hasDiagnostics()) {
       return AMD_COMGR_STATUS_ERROR;
     }
@@ -755,12 +762,11 @@ AMDGPUCompiler::executeInProcessDriver(ArrayRef<const char *> Args) {
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs);
   DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagClient);
 
-  auto VFS = llvm::vfs::getRealFileSystem();
-  ProcessWarningOptions(Diags, *DiagOpts, *VFS, /*ReportDiags=*/false);
+  ProcessWarningOptions(Diags, *DiagOpts, *OverlayFS, /*ReportDiags=*/false);
 
   Driver TheDriver((Twine(env::getLLVMPath()) + "/bin/clang").str(),
                    llvm::sys::getDefaultTargetTriple(), Diags,
-                   "AMDGPU Code Object Manager", VFS);
+                   "AMDGPU Code Object Manager", OverlayFS);
   TheDriver.setCheckInputsExist(false);
 
   // Log arguments used to build compilation
@@ -782,7 +788,7 @@ AMDGPUCompiler::executeInProcessDriver(ArrayRef<const char *> Args) {
 
   auto Cache = CommandCache::get(LogS);
   for (auto &Job : C->getJobs()) {
-    ClangCommand C(Job, *DiagOpts, *VFS, executeCommand);
+    ClangCommand C(Job, *DiagOpts, *OverlayFS, executeCommand);
     if (Cache) {
       if (auto Status = Cache->execute(C, LogS)) {
         return Status;
@@ -1089,8 +1095,18 @@ amd_comgr_status_t AMDGPUCompiler::addDeviceLibraries() {
     for (auto DeviceLib : getDeviceLibraries()) {
       llvm::SmallString<128> DeviceLibPath = DeviceLibsDir;
       path::append(DeviceLibPath, std::get<0>(DeviceLib));
-      if (auto Status = outputToFile(std::get<1>(DeviceLib), DeviceLibPath)) {
-        return Status;
+      // TODO: We should abstract the logic of deciding whether to use the VFS
+      // or the real file system within inputFromFile and outputToFile.
+      if (UseVFS) {
+        if (!InMemoryFS->addFile(
+                DeviceLibPath, /* ModificationTime */ 0,
+                llvm::MemoryBuffer::getMemBuffer(std::get<1>(DeviceLib)))) {
+          return AMD_COMGR_STATUS_ERROR;
+        }
+      } else {
+        if (auto Status = outputToFile(std::get<1>(DeviceLib), DeviceLibPath)) {
+          return Status;
+        }
       }
     }
   }
@@ -1944,6 +1960,25 @@ AMDGPUCompiler::AMDGPUCompiler(DataAction *ActionInfo, DataSet *InSet,
     : ActionInfo(ActionInfo), InSet(InSet), OutSetT(DataSet::convert(OutSet)),
       LogS(LogS) {
   initializeCommandLineArgs(Args);
+
+  // Initialize OverlayFS with the real file system which helps redirect
+  // non-VFS reads and writes.
+  OverlayFS = new vfs::OverlayFileSystem(vfs::getRealFileSystem());
+
+  std::optional<bool> VFSStatus = env::shouldUseVFS();
+  if ((VFSStatus.has_value() && *VFSStatus) ||
+      (!VFSStatus.has_value() && ActionInfo->ShouldUseVFS)) {
+    if (env::shouldEmitVerboseLogs()) {
+      LogS << "    File System: VFS\n";
+    }
+    UseVFS = true;
+    InMemoryFS = new vfs::InMemoryFileSystem;
+    OverlayFS->pushOverlay(InMemoryFS);
+  } else {
+    if (env::shouldEmitVerboseLogs()) {
+      LogS << "    File System: Real\n";
+    }
+  }
 }
 
 AMDGPUCompiler::~AMDGPUCompiler() {

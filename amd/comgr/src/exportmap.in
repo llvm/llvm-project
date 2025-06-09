@@ -90,3 +90,7 @@ global: amd_comgr_action_info_set_bundle_entry_ids;
 @amd_comgr_NAME@_2.9 {
 global: amd_comgr_action_info_set_device_lib_linking;
 } @amd_comgr_NAME@_2.8;
+
+@amd_comgr_NAME@3.1 {
+global: amd_comgr_action_info_set_vfs;
+} @amd_comgr_NAME@_2.9;

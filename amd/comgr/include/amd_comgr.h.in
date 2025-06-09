@@ -234,6 +234,18 @@ extern "C" {
  */
 #define AMD_COMGR_VERSION_2_9
 
+/**
+ * The function was introduced or changed in version 3.0 of the interface
+ * and has the symbol version string of ``"@amd_comgr_NAME@_3.0"``.
+ */
+#define AMD_COMGR_VERSION_3_0
+
+/**
+ * The function was introduced or changed in version 3.1 of the interface
+ * and has the symbol version string of ``"@amd_comgr_NAME@_3.1"``.
+ */
+#define AMD_COMGR_VERSION_3_1
+
 /** @} */
 
 /**
@@ -1420,6 +1432,41 @@ amd_comgr_action_info_get_bundle_entry_id(
   size_t index,
   size_t *size,
   char *bundle_entry_id) AMD_COMGR_VERSION_2_8;
+
+/**
+ * @brief Set whether the specified action should use an 
+ * in-memory virtual file system (VFS).
+ *
+ * @warning Environment variable @p AMD_COMGR_SAVE_TEMPS may override options 
+ * set by this API and @p AMD_COMGR_USE_VFS. If @p AMD_COMGR_SAVE_TEMPS is set 
+ * to "1", all actions are performed using the real file system irrespective of 
+ * the value of @p should_use_vfs @p AMD_COMGR_USE_VFS;
+ *
+ * @warning Environment variable @p AMD_COMGR_USE_VFS may override options 
+ * set by this API. If @p AMD_COMGR_USE_VFS is set to "1", all actions 
+ * are performed using VFS. If @p AMD_COMGR_USE_VFS is set to "0", 
+ * none of the actions are performed using VFS.
+ *
+ * If @p AMD_COMGR_USE_VFS is unset, this API can be used to selectively
+ * turn VFS usage on/off for specified actions.
+ *
+ * @param[in] action_info A handle to the action info object to be
+ * updated.
+ *
+ * @param[in] should_use_vfs A boolean that directs the choice to
+ * use the VFS.
+ *
+ * @retval ::AMD_COMGR_STATUS_SUCCESS The function has
+ * been executed successfully.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT @p
+ * action_info is an invalid action info object.
+ *
+ */
+amd_comgr_status_t AMD_COMGR_API
+amd_comgr_action_info_set_vfs(
+  amd_comgr_action_info_t action_info,
+  bool should_use_vfs) AMD_COMGR_VERSION_3_1;
 
 /**
  * @brief Set the device library linking behavior of an action info object.

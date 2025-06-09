@@ -29,12 +29,18 @@ behaviors:
 Extensions (the same license used by LLVM).
 - Added Image Support to Comgr's handling of ISA metadata. Support for images
 can now be queried with Comgr's metadata APIs.
+- Added support for linking device library files through the use of a Virtual 
+File System (VFS).
 
 Bug Fixes
 ---------
 
 New APIs
 --------
+- amd\_comgr\_info\_set\_vfs\_() (v3.1)
+    - By setting this ActionInfo property, users can explicitly dictate if
+    device libraries should be linked using the real file system or a
+    Virtual File System (VFS).
 
 Deprecated APIs
 ---------------

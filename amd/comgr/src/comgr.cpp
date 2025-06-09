@@ -1188,6 +1188,22 @@ amd_comgr_status_t AMD_COMGR_API
 
 amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
+    amd_comgr_action_info_set_vfs
+    //
+    (amd_comgr_action_info_t ActionInfo, bool ShouldUseVFS) {
+  DataAction *ActionP = DataAction::convert(ActionInfo);
+
+  if (!ActionP) {
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  ActionP->ShouldUseVFS = ShouldUseVFS;
+
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
+amd_comgr_status_t AMD_COMGR_API
+    // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_action_info_set_device_lib_linking
     //
     (amd_comgr_action_info_t ActionInfo, bool ShouldLinkDeviceLibs) {

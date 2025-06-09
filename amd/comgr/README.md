@@ -145,7 +145,7 @@ By default, the cache is enabled.
   termination. The string format aligns with [Clang's ThinLTO cache pruning policy](https://clang.llvm.org/docs/ThinLTO.html#cache-pruning).
   The default policy is set as: "prune_interval=1h:prune_expiration=0h:cache_size=75%:cache_size_bytes=30g:cache_size_files=0".
 
-Comgr also supports some environment variables to aid in debugging. These
+Comgr supports some environment variables to aid in debugging. These
 include:
 
 * `AMD_COMGR_SAVE_TEMPS`: If this is set, and is not "0", Comgr does not delete
@@ -162,6 +162,20 @@ include:
   include additional Comgr-specific informational messages.
 * `AMD_COMGR_TIME_STATISTICS`: If this is set, and is not "0", logs will
   include additional Comgr-specific timing information for compilation actions.
+
+Comgr implements support for an in-memory, virtual filesystem (VFS) for storing
+temporaries generated during intermediate compilation steps. This is aimed at 
+improving performance by reducing on-disk file I/O. Currently, VFS is only supported 
+for the device library link step, but we aim to progressively add support for
+more actions.
+
+By default, VFS is turned on.
+
+* `AMD_COMGR_USE_VFS`: When set to "0", VFS support is turned off.
+* Users may use the API `amd_comgr_action_info_set_vfs` to disable VFS for individual actions
+  without having to modify system-wide environment variables.
+* If `AMD_COMGR_SAVE_TEMPS` is set and not "0", VFS support is turned off irrespective
+  of `AMD_COMGR_USE_VFS` or the use of `amd_comgr_action_info_set_vfs`.
 
 Versioning
 ----------
