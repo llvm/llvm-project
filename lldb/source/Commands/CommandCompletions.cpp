@@ -87,6 +87,8 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
       {lldb::eTypeCategoryNameCompletion,
        CommandCompletions::TypeCategoryNames},
       {lldb::eThreadIDCompletion, CommandCompletions::ThreadIDs},
+      {lldb::eProcessSaveCorePluginCompletion,
+       CommandCompletions::ProcessSaveCorePluginNames},
       {lldb::eTerminatorCompletion,
        nullptr} // This one has to be last in the list.
   };
@@ -735,6 +737,16 @@ void CommandCompletions::ProcessNames(CommandInterpreter &interpreter,
   platform_sp->FindProcesses(match_info, process_infos);
   for (const ProcessInstanceInfo &info : process_infos)
     request.TryCompleteCurrentArg(info.GetNameAsStringRef());
+}
+void CommandCompletions::ProcessSaveCorePluginNames(
+    CommandInterpreter &interpreter, CompletionRequest &request,
+    SearchFilter *searcher) {
+
+  const llvm::StringRef prefix = request.GetCursorArgumentPrefix();
+  for (llvm::StringRef name : PluginManager::GetSaveCorePluginNames()) {
+    if (name.starts_with_insensitive(prefix))
+      request.AddCompletion(name);
+  }
 }
 
 void CommandCompletions::TypeLanguages(CommandInterpreter &interpreter,
