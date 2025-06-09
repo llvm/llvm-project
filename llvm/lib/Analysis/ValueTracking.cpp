@@ -5604,19 +5604,20 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     // Look through extract element. If the index is non-constant or
     // out-of-range demand all elements, otherwise just the extracted element.
     const Value *Vec = Op->getOperand(0);
-    const Value *Idx = Op->getOperand(1);
-    auto *CIdx = dyn_cast<ConstantInt>(Idx);
 
+    APInt DemandedVecElts;
     if (auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType())) {
       unsigned NumElts = VecTy->getNumElements();
-      APInt DemandedVecElts = APInt::getAllOnes(NumElts);
+      DemandedVecElts = APInt::getAllOnes(NumElts);
+      auto *CIdx = dyn_cast<ConstantInt>(Op->getOperand(1));
       if (CIdx && CIdx->getValue().ult(NumElts))
         DemandedVecElts = APInt::getOneBitSet(NumElts, CIdx->getZExtValue());
-      return computeKnownFPClass(Vec, DemandedVecElts, InterestedClasses, Known,
-                                 Q, Depth + 1);
+    } else {
+      DemandedVecElts = APInt(1, 1);
     }
 
-    break;
+    return computeKnownFPClass(Vec, DemandedVecElts, InterestedClasses, Known,
+                               Q, Depth + 1);
   }
   case Instruction::InsertElement: {
     if (isa<ScalableVectorType>(Op->getType()))
@@ -7579,16 +7580,23 @@ static bool isGuaranteedNotToBeUndefOrPoison(
     if (isa<UndefValue>(C))
       return !includesUndef(Kind);
 
-    if (isa<ConstantInt>(C) || isa<GlobalVariable>(C) || isa<ConstantFP>(V) ||
+    if (isa<ConstantInt>(C) || isa<GlobalVariable>(C) || isa<ConstantFP>(C) ||
         isa<ConstantPointerNull>(C) || isa<Function>(C))
       return true;
 
-    if (C->getType()->isVectorTy() && !isa<ConstantExpr>(C)) {
-      if (includesUndef(Kind) && C->containsUndefElement())
-        return false;
-      if (includesPoison(Kind) && C->containsPoisonElement())
-        return false;
-      return !C->containsConstantExpression();
+    if (C->getType()->isVectorTy()) {
+      if (isa<ConstantExpr>(C)) {
+        // Scalable vectors can use a ConstantExpr to build a splat.
+        if (Constant *SplatC = C->getSplatValue())
+          if (isa<ConstantInt>(SplatC) || isa<ConstantFP>(SplatC))
+            return true;
+      } else {
+        if (includesUndef(Kind) && C->containsUndefElement())
+          return false;
+        if (includesPoison(Kind) && C->containsPoisonElement())
+          return false;
+        return !C->containsConstantExpression();
+      }
     }
   }
 

@@ -1200,3 +1200,57 @@ bool test_val_types() {
 }
 
 }
+
+namespace CWG2369_Regression {
+
+enum class KindEnum {
+  Unknown = 0,
+  Foo = 1,
+};
+
+template <typename T>
+concept KnownKind = T::kind() != KindEnum::Unknown;
+
+template <KnownKind T> struct KnownType;
+
+struct Type {
+  KindEnum kind() const;
+
+  static Type f(Type t);
+
+  template <KnownKind T> static KnownType<T> f(T t);
+
+  static void g() {
+    Type t;
+    f(t);
+  }
+};
+
+template <KnownKind T> struct KnownType {
+  static constexpr KindEnum kind() { return KindEnum::Foo; }
+};
+
+}
+
+namespace GH115838 {
+
+template<typename T> concept has_x = requires(T t) {{ t.x };};
+
+class Publ { public:    int x = 0; };
+class Priv { private:   int x = 0; };
+class Prot { protected: int x = 0; };
+class Same { protected: int x = 0; };
+
+template<typename T> class D;
+template<typename T> requires ( has_x<T>) class D<T>: public T { public: static constexpr bool has = 1; };
+template<typename T> requires (!has_x<T>) class D<T>: public T { public: static constexpr bool has = 0; };
+
+// "Same" is identical to "Prot" but queried before used.
+static_assert(!has_x<Same>,  "Protected should be invisible.");
+static_assert(!D<Same>::has, "Protected should be invisible.");
+
+static_assert( D<Publ>::has, "Public should be visible.");
+static_assert(!D<Priv>::has, "Private should be invisible.");
+static_assert(!D<Prot>::has, "Protected should be invisible.");
+
+}

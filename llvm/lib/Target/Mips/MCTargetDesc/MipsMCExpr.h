@@ -14,9 +14,10 @@
 
 namespace llvm {
 
-class MipsMCExpr : public MCTargetExpr {
+class MipsMCExpr : public MCSpecifierExpr {
 public:
-  enum Specifier {
+  using Specifier = Spec;
+  enum {
     MEK_None,
     MEK_CALL_HI16,
     MEK_CALL_LO16,
@@ -47,11 +48,8 @@ public:
   };
 
 private:
-  const MCExpr *Expr;
-  const Specifier specifier;
-
   explicit MipsMCExpr(const MCExpr *Expr, Specifier S)
-      : Expr(Expr), specifier(S) {}
+      : MCSpecifierExpr(Expr, S) {}
 
 public:
   static const MipsMCExpr *create(Specifier S, const MCExpr *Expr,
@@ -61,23 +59,9 @@ public:
   static const MipsMCExpr *createGpOff(Specifier S, const MCExpr *Expr,
                                        MCContext &Ctx);
 
-  Specifier getSpecifier() const { return specifier; }
-
-  /// Get the child of this expression.
-  const MCExpr *getSubExpr() const { return Expr; }
-
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
   bool evaluateAsRelocatableImpl(MCValue &Res,
                                  const MCAssembler *Asm) const override;
-  void visitUsedExpr(MCStreamer &Streamer) const override;
-
-  MCFragment *findAssociatedFragment() const override {
-    return getSubExpr()->findAssociatedFragment();
-  }
-
-  static bool classof(const MCExpr *E) {
-    return E->getKind() == MCExpr::Target;
-  }
 
   bool isGpOff(Specifier &S) const;
   bool isGpOff() const {
