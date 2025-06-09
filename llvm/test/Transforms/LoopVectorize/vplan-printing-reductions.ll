@@ -45,8 +45,8 @@ define float @print_reduction(i64 %n, ptr noalias %y) {
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RED_RESUME:%.+]]> = resume-phi vp<[[RED_RES]]>, ir<0.000000e+00>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RED_RESUME:%.+]]> = phi [ vp<[[RED_RES]]>, middle.block ], [ ir<0.000000e+00>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
@@ -112,8 +112,8 @@ define void @print_reduction_with_invariant_store(i64 %n, ptr noalias %y, ptr no
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RED_RESUME:%.+]]> = resume-phi vp<[[RED_RES]]>, ir<0.000000e+00>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RED_RESUME:%.+]]> = phi [ vp<[[RED_RES]]>, middle.block ], [ ir<0.000000e+00>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
@@ -186,8 +186,8 @@ define float @print_fmuladd_strict(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RED_RESUME:%.+]]> = resume-phi vp<[[RED_RES]]>, ir<0.000000e+00>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RED_RESUME:%.+]]> = phi [ vp<[[RED_RES]]>, middle.block ], [ ir<0.000000e+00>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
@@ -248,8 +248,8 @@ define i64 @find_last_iv(ptr %a, i64 %n, i64 %start) {
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT-SCALAR vp<%bc.resume.val> = resume-phi vp<{{.+}}>, ir<0>
-; CHECK-NEXT:   EMIT-SCALAR vp<%bc.merge.rdx> = resume-phi vp<[[RDX_RES]]>, ir<%start>
+; CHECK-NEXT:   EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<{{.+}}>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:   EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<[[RDX_RES]]>, middle.block ], [ ir<%start>, ir-bb<entry> ]
 ;
 entry:
   br label %loop
