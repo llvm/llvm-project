@@ -18430,8 +18430,8 @@ static SDValue foldReduceOperandViaVQDOT(SDValue InVec, const SDLoc &DL,
     }
   }
 
-  // reduce (zext a) <--> partial_reduce_umla 0, a, 1
-  // reduce (sext a) <--> partial_reduce_smla 0, a, 1
+  // zext a <--> partial_reduce_umla 0, a, 1
+  // sext a <--> partial_reduce_smla 0, a, 1
   if (InVec.getOpcode() == ISD::ZERO_EXTEND ||
       InVec.getOpcode() == ISD::SIGN_EXTEND) {
     SDValue A = InVec.getOperand(0);
