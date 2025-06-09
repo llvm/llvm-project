@@ -1725,6 +1725,8 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
     if (region_info.GetRange() == qXfer_region_info.GetRange()) {
       region_info.SetFlash(qXfer_region_info.GetFlash());
       region_info.SetBlocksize(qXfer_region_info.GetBlocksize());
+      region_info.SetReadable(qXfer_region_info.GetReadable());
+      region_info.SetWritable(qXfer_region_info.GetWritable());
     }
   }
   return error;
