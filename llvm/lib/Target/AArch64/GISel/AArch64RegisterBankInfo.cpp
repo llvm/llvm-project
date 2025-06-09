@@ -510,7 +510,7 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
   }
 }
 
-bool AArch64RegisterBankInfo::isPHIWithFPContraints(
+bool AArch64RegisterBankInfo::isPHIWithFPConstraints(
     const MachineInstr &MI, const MachineRegisterInfo &MRI,
     const TargetRegisterInfo &TRI, const unsigned Depth) const {
   if (!MI.isPHI() || Depth > MaxFPRSearchDepth)
@@ -520,7 +520,7 @@ bool AArch64RegisterBankInfo::isPHIWithFPContraints(
                 [&](const MachineInstr &UseMI) {
                   if (onlyUsesFP(UseMI, MRI, TRI, Depth + 1))
                     return true;
-                  return isPHIWithFPContraints(UseMI, MRI, TRI, Depth + 1);
+                  return isPHIWithFPConstraints(UseMI, MRI, TRI, Depth + 1);
                 });
 }
 
@@ -917,7 +917,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                  // Int->FP conversion operations are also captured in
                  // onlyDefinesFP().
 
-                 if (isPHIWithFPContraints(UseMI, MRI, TRI))
+                 if (isPHIWithFPConstraints(UseMI, MRI, TRI))
                    return true;
 
                  return onlyUsesFP(UseMI, MRI, TRI) ||
