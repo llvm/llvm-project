@@ -1,4 +1,4 @@
-//===- LayoutTest.cpp - unit tests related to memref layout --------------===//
+//===- LayoutTest.cpp - unit tests related to memref layout ---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,8 +19,8 @@ TEST(MemRefLayout, maxContigDim) {
   MLIRContext ctx;
   OpBuilder b(&ctx);
 
-  const auto _ = ShapedType::kDynamic;
-  const auto f32 = b.getF32Type();
+  const int64_t _ = ShapedType::kDynamic;
+  const FloatType f32 = b.getF32Type();
   auto strided = [&ctx](ArrayRef<int64_t> s) {
     return StridedLayoutAttr::get(&ctx, 0, s);
   };
@@ -102,8 +102,8 @@ TEST(MemRefLayout, contigTrailingDim) {
   MLIRContext ctx;
   OpBuilder b(&ctx);
 
-  const auto _ = ShapedType::kDynamic;
-  const auto f32 = b.getF32Type();
+  const int64_t _ = ShapedType::kDynamic;
+  const FloatType f32 = b.getF32Type();
   auto strided = [&ctx](ArrayRef<int64_t> s) {
     return StridedLayoutAttr::get(&ctx, 0, s);
   };
@@ -191,8 +191,8 @@ TEST(MemRefLayout, identityMaps) {
   MLIRContext ctx;
   OpBuilder b(&ctx);
 
-  const auto _ = ShapedType::kDynamic;
-  const auto f32 = b.getF32Type();
+  const int64_t _ = ShapedType::kDynamic;
+  const FloatType f32 = b.getF32Type();
 
   // memref<2x2x2xf32>
   auto m1 = MemRefType::get({2, 2, 2}, f32);
