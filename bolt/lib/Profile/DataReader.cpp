@@ -85,7 +85,6 @@ void FuncBranchData::appendFrom(const FuncBranchData &FBD, uint64_t Offset) {
   }
   llvm::stable_sort(Data);
   ExecutionCount += FBD.ExecutionCount;
-  ExternEntryCount += FBD.ExternEntryCount;
   for (auto I = FBD.EntryData.begin(), E = FBD.EntryData.end(); I != E; ++I) {
     assert(I->To.Name == FBD.Name);
     auto NewElmt = EntryData.insert(EntryData.end(), *I);
@@ -270,7 +269,6 @@ Error DataReader::preprocessProfile(BinaryContext &BC) {
     if (FuncBranchData *FuncData = getBranchDataForNames(Function.getNames())) {
       setBranchData(Function, FuncData);
       Function.ExecutionCount = FuncData->ExecutionCount;
-      Function.ExternEntryCount = FuncData->ExternEntryCount;
       FuncData->Used = true;
     }
   }
@@ -421,7 +419,6 @@ void DataReader::matchProfileData(BinaryFunction &BF) {
       if (fetchProfileForOtherEntryPoints(BF)) {
         BF.ProfileMatchRatio = evaluateProfileData(BF, *FBD);
         BF.ExecutionCount = FBD->ExecutionCount;
-        BF.ExternEntryCount = FBD->ExternEntryCount;
         BF.RawSampleCount = FBD->getNumExecutedBranches();
       }
       return;
@@ -452,7 +449,6 @@ void DataReader::matchProfileData(BinaryFunction &BF) {
     setBranchData(BF, NewBranchData);
     NewBranchData->Used = true;
     BF.ExecutionCount = NewBranchData->ExecutionCount;
-    BF.ExternEntryCount = NewBranchData->ExternEntryCount;
     BF.ProfileMatchRatio = 1.0f;
     break;
   }
@@ -1194,8 +1190,6 @@ std::error_code DataReader::parse() {
     if (BI.To.IsSymbol && BI.To.Offset == 0) {
       I = GetOrCreateFuncEntry(BI.To.Name);
       I->second.ExecutionCount += BI.Branches;
-      if (!BI.From.IsSymbol)
-        I->second.ExternEntryCount += BI.Branches;
     }
   }
 
