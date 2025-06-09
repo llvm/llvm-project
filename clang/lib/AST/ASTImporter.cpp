@@ -7644,8 +7644,8 @@ ExpectedStmt ASTNodeImporter::VisitVAArgExpr(VAArgExpr *E) {
 
   Error Err = Error::success();
   auto ToBuiltinLoc = importChecked(Err, E->getBuiltinLoc());
-  auto* ToSubExpr = importChecked(Err, E->getSubExpr());
-  auto* ToWrittenTypeInfo = importChecked(Err, E->getWrittenTypeInfo());
+  auto ToSubExpr = importChecked(Err, E->getSubExpr());
+  auto ToWrittenTypeInfo = importChecked(Err, E->getWrittenTypeInfo());
   auto ToRParenLoc = importChecked(Err, E->getRParenLoc());
   auto ToType = importChecked(Err, E->getType());
   if (Err)
