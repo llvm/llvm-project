@@ -226,6 +226,7 @@ struct S {
     virtual void i();
     virtual void j() &;
     virtual void k() &&;
+    virtual void l() &;
 };
 
 struct T : S {
@@ -241,6 +242,7 @@ struct T : S {
     virtual void i();
     virtual void j() &;
     virtual void k() &;
+    virtual void l() &&;
 };
 #endif
 }
