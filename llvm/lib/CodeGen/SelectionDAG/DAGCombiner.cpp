@@ -8127,6 +8127,59 @@ static SDValue visitORCommutative(SelectionDAG &DAG, SDValue N0, SDValue N1,
   return SDValue();
 }
 
+static SDValue foldMaskedMergeImpl(SDValue AndL0, SDValue AndR0, SDValue AndL1,
+                                   SDValue AndR1, const SDLoc &DL,
+                                   SelectionDAG &DAG) {
+  if (!isBitwiseNot(AndL0, true) || !AndL0->hasOneUse())
+    return SDValue();
+  SDValue NotOp = AndL0->getOperand(0);
+  if (NotOp == AndR1)
+    std::swap(AndR1, AndL1);
+  if (NotOp != AndL1)
+    return SDValue();
+
+  EVT VT = AndL1->getValueType(0);
+  SDValue Xor0 = DAG.getNode(ISD::XOR, DL, VT, AndR1, AndR0);
+  SDValue And = DAG.getNode(ISD::AND, DL, VT, Xor0, NotOp);
+  SDValue Xor1 = DAG.getNode(ISD::XOR, DL, VT, And, AndR0);
+  return Xor1;
+}
+
+/// Fold "masked merge" expressions like `(m & x) | (~m & y)` into the
+/// equivalent `((x ^ y) & m) ^ y)` pattern.
+/// This is typically a better representation for targets without a fused
+/// "and-not" operation.
+static SDValue foldMaskedMerge(SDNode *Node, SelectionDAG &DAG,
+                               const TargetLowering &TLI, const SDLoc &DL) {
+  // Note that masked-merge variants using XOR or ADD expressions are
+  // normalized to OR by InstCombine so we only check for OR.
+  assert(Node->getOpcode() == ISD::OR && "Must be called with ISD::OR node");
+  SDValue N0 = Node->getOperand(0);
+  if (N0->getOpcode() != ISD::AND || !N0->hasOneUse())
+    return SDValue();
+  SDValue N1 = Node->getOperand(1);
+  if (N1->getOpcode() != ISD::AND || !N1->hasOneUse())
+    return SDValue();
+
+  // If the target supports and-not, don't fold this.
+  if (TLI.hasAndNot(SDValue(Node, 0)))
+    return SDValue();
+
+  SDValue N00 = N0->getOperand(0);
+  SDValue N01 = N0->getOperand(1);
+  SDValue N10 = N1->getOperand(0);
+  SDValue N11 = N1->getOperand(1);
+  if (SDValue Result = foldMaskedMergeImpl(N00, N01, N10, N11, DL, DAG))
+    return Result;
+  if (SDValue Result = foldMaskedMergeImpl(N01, N00, N10, N11, DL, DAG))
+    return Result;
+  if (SDValue Result = foldMaskedMergeImpl(N10, N11, N00, N01, DL, DAG))
+    return Result;
+  if (SDValue Result = foldMaskedMergeImpl(N11, N10, N00, N01, DL, DAG))
+    return Result;
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitOR(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -8303,6 +8356,10 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
   // folding
   if (LegalOperations || VT.isVector())
     if (SDValue R = foldLogicTreeOfShifts(N, N0, N1, DAG))
+      return R;
+
+  if (VT.isScalarInteger() && VT != MVT::i1)
+    if (SDValue R = foldMaskedMerge(N, DAG, TLI, DL))
       return R;
 
   return SDValue();
@@ -16392,12 +16449,11 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
     return SDValue();
 
   bool AllowMultipleMaybePoisonOperands =
-      N0.getOpcode() == ISD::SELECT_CC ||
-      N0.getOpcode() == ISD::SETCC ||
+      N0.getOpcode() == ISD::SELECT_CC || N0.getOpcode() == ISD::SETCC ||
       N0.getOpcode() == ISD::BUILD_VECTOR ||
       N0.getOpcode() == ISD::BUILD_PAIR ||
       N0.getOpcode() == ISD::VECTOR_SHUFFLE ||
-      N0.getOpcode() == ISD::CONCAT_VECTORS;
+      N0.getOpcode() == ISD::CONCAT_VECTORS || N0.getOpcode() == ISD::FMUL;
 
   // Avoid turning a BUILD_VECTOR that can be recognized as "all zeros", "all
   // ones" or "constant" into something that depends on FrozenUndef. We can
@@ -16495,7 +16551,17 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
                              SVN->getMask());
   } else {
     // NOTE: this strips poison generating flags.
-    R = DAG.getNode(N0.getOpcode(), SDLoc(N0), N0->getVTList(), Ops);
+    // Folding freeze(op(x, ...)) -> op(freeze(x), ...) does not require nnan,
+    // ninf, nsz, or fast.
+    // However, contract, reassoc, afn, and arcp should be preserved,
+    // as these fast-math flags do not introduce poison values.
+    SDNodeFlags SrcFlags = N0->getFlags();
+    SDNodeFlags SafeFlags;
+    SafeFlags.setAllowContract(SrcFlags.hasAllowContract());
+    SafeFlags.setAllowReassociation(SrcFlags.hasAllowReassociation());
+    SafeFlags.setApproximateFuncs(SrcFlags.hasApproximateFuncs());
+    SafeFlags.setAllowReciprocal(SrcFlags.hasAllowReciprocal());
+    R = DAG.getNode(N0.getOpcode(), SDLoc(N0), N0->getVTList(), Ops, SafeFlags);
   }
   assert(DAG.isGuaranteedNotToBeUndefOrPoison(R, /*PoisonOnly*/ false) &&
          "Can't create node that may be undef/poison!");
@@ -29119,9 +29185,8 @@ SDValue DAGCombiner::buildSqrtEstimateImpl(SDValue Op, SDNodeFlags Flags,
       // The estimate is now completely wrong if the input was exactly 0.0 or
       // possibly a denormal. Force the answer to 0.0 or value provided by
       // target for those cases.
-      Est = DAG.getNode(
-          Test.getValueType().isVector() ? ISD::VSELECT : ISD::SELECT, DL, VT,
-          Test, TLI.getSqrtResultForDenormInput(Op, DAG), Est);
+      Est = DAG.getSelect(DL, VT, Test,
+                          TLI.getSqrtResultForDenormInput(Op, DAG), Est);
     }
     return Est;
   }
