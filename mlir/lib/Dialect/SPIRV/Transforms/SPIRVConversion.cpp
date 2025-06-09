@@ -1038,7 +1038,7 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
       // Since all newly created operations are in the beginning, reaching the
       // end of them means that any later `vector.insert_strided_slice` should
       // not be touched.
-      if (op->getBlock() == &entryBlock &&
+      if (op->getBlock() != &entryBlock ||
           static_cast<size_t>(std::distance(entryBlock.begin(),
                                             op->getIterator())) >= newOpCount)
         return;
