@@ -245,10 +245,12 @@ Type CooperativeMatrixType::getElementType() const {
 }
 
 uint32_t CooperativeMatrixType::getRows() const {
+  assert(getImpl()->shape[0] != ShapedType::kDynamic);
   return static_cast<uint32_t>(getImpl()->shape[0]);
 }
 
 uint32_t CooperativeMatrixType::getColumns() const {
+  assert(getImpl()->shape[1] != ShapedType::kDynamic);
   return static_cast<uint32_t>(getImpl()->shape[1]);
 }
 
