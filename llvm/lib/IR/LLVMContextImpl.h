@@ -355,13 +355,19 @@ template <> struct MDNodeKeyImpl<DILocation> {
   }
 
   unsigned getHashValue() const {
-    return hash_combine(Line, Column, Scope, InlinedAt, ImplicitCode
 #ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
-                        ,
-                        AtomGroup, (uint8_t)AtomRank);
-#else
-    );
+    // Hashing AtomGroup and AtomRank substantially impacts performance whether
+    // Key Instructions is enabled or not. We can't detect whether it's enabled
+    // here cheaply; avoiding hashing zero values is a good approximation. This
+    // affects Key Instruction builds too, but any potential costs incurred by
+    // messing with the hash distribution* appear to still be massively
+    // outweighed by the overall compile time savings by performing this check.
+    // * (hash_combine(x) != hash_combine(x, 0))
+    if (AtomGroup || AtomRank)
+      return hash_combine(Line, Column, Scope, InlinedAt, ImplicitCode,
+                          AtomGroup, (uint8_t)AtomRank);
 #endif
+    return hash_combine(Line, Column, Scope, InlinedAt, ImplicitCode);
   }
 };
 

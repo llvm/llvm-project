@@ -34,7 +34,8 @@ namespace android {
 class AndroidModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
-    CheckFactories.registerCheck<CloexecAccept4Check>("android-cloexec-accept4");
+    CheckFactories.registerCheck<CloexecAccept4Check>(
+        "android-cloexec-accept4");
     CheckFactories.registerCheck<CloexecAcceptCheck>("android-cloexec-accept");
     CheckFactories.registerCheck<CloexecCreatCheck>("android-cloexec-creat");
     CheckFactories.registerCheck<CloexecDupCheck>("android-cloexec-dup");

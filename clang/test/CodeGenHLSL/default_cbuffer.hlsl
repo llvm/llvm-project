@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -finclude-default-header -triple dxil-pc-shadermodel6.3-compute -fnative-half-type -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK,DXIL
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -finclude-default-header -triple spirv-pc-vulkan1.3-compute -fnative-half-type -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK,SPIRV
+// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-compute -fnative-half-type -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK,DXIL
+// RUN: %clang_cc1 -finclude-default-header -triple spirv-pc-vulkan1.3-compute -fnative-half-type -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK,SPIRV
 
 // DXIL: %"__cblayout_$Globals" = type <{ float, float, target("dx.Layout", %__cblayout_S, 4, 0) }>
 // SPIRV: %"__cblayout_$Globals" = type <{ float, float, target("spirv.Layout", %__cblayout_S, 4, 0) }>

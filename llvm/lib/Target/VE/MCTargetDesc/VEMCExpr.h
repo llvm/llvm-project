@@ -20,7 +20,7 @@
 namespace llvm {
 
 class StringRef;
-class VEMCExpr : public MCTargetExpr {
+class VEMCExpr : public MCSpecifierExpr {
 public:
   enum Specifier {
     VK_None,
@@ -43,50 +43,19 @@ public:
   };
 
 private:
-  const Specifier specifier;
-  const MCExpr *Expr;
-
-  explicit VEMCExpr(Specifier S, const MCExpr *Expr)
-      : specifier(S), Expr(Expr) {}
+  explicit VEMCExpr(const MCExpr *Expr, Specifier S)
+      : MCSpecifierExpr(Expr, S) {}
 
 public:
-  /// @name Construction
-  /// @{
-
   static const VEMCExpr *create(Specifier Kind, const MCExpr *Expr,
                                 MCContext &Ctx);
-  /// @}
-  /// @name Accessors
-  /// @{
 
-  /// getOpcode - Get the kind of this expression.
-  Specifier getSpecifier() const { return specifier; }
-
-  /// getSubExpr - Get the child of this expression.
-  const MCExpr *getSubExpr() const { return Expr; }
-
-  /// getFixupKind - Get the fixup kind of this expression.
-  VE::Fixups getFixupKind() const { return getFixupKind(specifier); }
-
-  /// @}
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
   bool evaluateAsRelocatableImpl(MCValue &Res,
                                  const MCAssembler *Asm) const override;
-  void visitUsedExpr(MCStreamer &Streamer) const override;
-  MCFragment *findAssociatedFragment() const override {
-    return getSubExpr()->findAssociatedFragment();
-  }
 
-  static bool classof(const MCExpr *E) {
-    return E->getKind() == MCExpr::Target;
-  }
-
-  static VE::Fixups getFixupKind(Specifier S);
+  static VE::Fixups getFixupKind(Spec S);
 };
-
-static inline VEMCExpr::Specifier getSpecifier(const MCSymbolRefExpr *SRE) {
-  return VEMCExpr::Specifier(SRE->getKind());
-}
 
 } // namespace llvm
 

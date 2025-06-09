@@ -451,11 +451,10 @@ define dso_local bfloat @atomicrmw_fsub_bfloat_aligned_monotonic(ptr %ptr, bfloa
 ; -O0-LABEL: atomicrmw_fsub_bfloat_aligned_monotonic:
 ; -O0:    add w8, w8, w9
 ; -O0:    add w8, w8, w9
-; -O0:    ldaxrh w9, [x11]
-; -O0:    cmp w9, w8, uxth
+; -O0:    ldaxrh w8, [x11]
+; -O0:    cmp w8, w9, uxth
 ; -O0:    stlxrh w10, w12, [x11]
-; -O0:    subs w8, w9, w8, uxth
-; -O0:    subs w8, w8, #1
+; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_fsub_bfloat_aligned_monotonic:
 ; -O1:    ldxrh w9, [x0]
@@ -470,11 +469,10 @@ define dso_local bfloat @atomicrmw_fsub_bfloat_aligned_acquire(ptr %ptr, bfloat 
 ; -O0-LABEL: atomicrmw_fsub_bfloat_aligned_acquire:
 ; -O0:    add w8, w8, w9
 ; -O0:    add w8, w8, w9
-; -O0:    ldaxrh w9, [x11]
-; -O0:    cmp w9, w8, uxth
+; -O0:    ldaxrh w8, [x11]
+; -O0:    cmp w8, w9, uxth
 ; -O0:    stlxrh w10, w12, [x11]
-; -O0:    subs w8, w9, w8, uxth
-; -O0:    subs w8, w8, #1
+; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_fsub_bfloat_aligned_acquire:
 ; -O1:    ldaxrh w9, [x0]
@@ -489,11 +487,10 @@ define dso_local bfloat @atomicrmw_fsub_bfloat_aligned_release(ptr %ptr, bfloat 
 ; -O0-LABEL: atomicrmw_fsub_bfloat_aligned_release:
 ; -O0:    add w8, w8, w9
 ; -O0:    add w8, w8, w9
-; -O0:    ldaxrh w9, [x11]
-; -O0:    cmp w9, w8, uxth
+; -O0:    ldaxrh w8, [x11]
+; -O0:    cmp w8, w9, uxth
 ; -O0:    stlxrh w10, w12, [x11]
-; -O0:    subs w8, w9, w8, uxth
-; -O0:    subs w8, w8, #1
+; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_fsub_bfloat_aligned_release:
 ; -O1:    ldxrh w9, [x0]
@@ -508,11 +505,10 @@ define dso_local bfloat @atomicrmw_fsub_bfloat_aligned_acq_rel(ptr %ptr, bfloat 
 ; -O0-LABEL: atomicrmw_fsub_bfloat_aligned_acq_rel:
 ; -O0:    add w8, w8, w9
 ; -O0:    add w8, w8, w9
-; -O0:    ldaxrh w9, [x11]
-; -O0:    cmp w9, w8, uxth
+; -O0:    ldaxrh w8, [x11]
+; -O0:    cmp w8, w9, uxth
 ; -O0:    stlxrh w10, w12, [x11]
-; -O0:    subs w8, w9, w8, uxth
-; -O0:    subs w8, w8, #1
+; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_fsub_bfloat_aligned_acq_rel:
 ; -O1:    ldaxrh w9, [x0]
@@ -527,11 +523,10 @@ define dso_local bfloat @atomicrmw_fsub_bfloat_aligned_seq_cst(ptr %ptr, bfloat 
 ; -O0-LABEL: atomicrmw_fsub_bfloat_aligned_seq_cst:
 ; -O0:    add w8, w8, w9
 ; -O0:    add w8, w8, w9
-; -O0:    ldaxrh w9, [x11]
-; -O0:    cmp w9, w8, uxth
+; -O0:    ldaxrh w8, [x11]
+; -O0:    cmp w8, w9, uxth
 ; -O0:    stlxrh w10, w12, [x11]
-; -O0:    subs w8, w9, w8, uxth
-; -O0:    subs w8, w8, #1
+; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_fsub_bfloat_aligned_seq_cst:
 ; -O1:    ldaxrh w9, [x0]

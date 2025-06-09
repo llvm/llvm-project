@@ -75,9 +75,6 @@ inline AddrAndBoundsInfo getDataOperandBaseAddr(fir::FirOpBuilder &builder,
 
   if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(
           fir::unwrapRefType(symAddr.getType()))) {
-    if (mlir::isa<fir::RecordType>(boxTy.getEleTy()))
-      TODO(loc, "derived type");
-
     // In case of a box reference, load it here to get the box value.
     // This is preferrable because then the same box value can then be used for
     // all address/dimension retrievals. For Fortran optional though, leave

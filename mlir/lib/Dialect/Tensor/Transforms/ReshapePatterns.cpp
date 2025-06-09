@@ -185,13 +185,11 @@ struct BubbleUpExpandThroughParallelCollapse
         ArrayRef<int64_t> collapsedStaticShapes = staticSourceSize.slice(
             collapseReassociation.front(), collapseReassociation.size());
         int64_t numCollapsedDynamic =
-            llvm::count_if(collapsedStaticShapes,
-                           [](int64_t d) { return ShapedType::isDynamic(d); });
+            llvm::count_if(collapsedStaticShapes, ShapedType::isDynamic);
         ArrayRef<int64_t> expandedStaticShapes = staticResultSize.slice(
             expandReassociation.front(), expandReassociation.size());
         int64_t numExpandedDynamic =
-            llvm::count_if(expandedStaticShapes,
-                           [](int64_t d) { return ShapedType::isDynamic(d); });
+            llvm::count_if(expandedStaticShapes, ShapedType::isDynamic);
         if (numCollapsedDynamic > 1 || numExpandedDynamic > 1 ||
             collapsedStaticShapes != expandedStaticShapes) {
           return failure();

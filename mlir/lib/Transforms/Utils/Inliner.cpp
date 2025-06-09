@@ -45,7 +45,7 @@ static void walkReferencedSymbolNodes(
 
   Operation *symbolTableOp = op->getParentOp();
   for (const SymbolTable::SymbolUse &use : *symbolUses) {
-    auto refIt = resolvedRefs.insert({use.getSymbolRef(), nullptr});
+    auto refIt = resolvedRefs.try_emplace(use.getSymbolRef());
     CallGraphNode *&node = refIt.first->second;
 
     // If this is the first instance of this reference, try to resolve a

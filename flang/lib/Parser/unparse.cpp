@@ -3368,4 +3368,12 @@ template void Unparse<Program>(llvm::raw_ostream &, const Program &,
 template void Unparse<Expr>(llvm::raw_ostream &, const Expr &,
     const common::LangOptions &, Encoding, bool, bool, preStatementType *,
     AnalyzedObjectsAsFortran *);
+
+template void Unparse<parser::OpenMPDeclareReductionConstruct>(
+    llvm::raw_ostream &, const parser::OpenMPDeclareReductionConstruct &,
+    const common::LangOptions &, Encoding, bool, bool, preStatementType *,
+    AnalyzedObjectsAsFortran *);
+template void Unparse<parser::OmpMetadirectiveDirective>(llvm::raw_ostream &,
+    const parser::OmpMetadirectiveDirective &, const common::LangOptions &,
+    Encoding, bool, bool, preStatementType *, AnalyzedObjectsAsFortran *);
 } // namespace Fortran::parser

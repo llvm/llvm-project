@@ -11,10 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "Address.h"
+#include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 #include "CIRGenValue.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/Value.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
@@ -22,6 +24,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
+#include <optional>
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -229,7 +232,7 @@ void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
 
 static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
                                       const VarDecl *vd) {
-  QualType T = e->getType();
+  QualType t = e->getType();
 
   // If it's thread_local, emit a call to its wrapper function instead.
   assert(!cir::MissingFeatures::opGlobalThreadLocal());
@@ -259,7 +262,7 @@ static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "emitGlobalVarDeclLValue: reference type");
   else
-    lv = cgf.makeAddrLValue(addr, T, AlignmentSource::Decl);
+    lv = cgf.makeAddrLValue(addr, t, AlignmentSource::Decl);
   assert(!cir::MissingFeatures::setObjCGCLValueClass());
   return lv;
 }
@@ -1259,10 +1262,28 @@ mlir::Value CIRGenFunction::emitOpOnBoolExpr(mlir::Location loc,
   //  cir.ternary(!x, t, f) -> cir.ternary(x, f, t)
   assert(!cir::MissingFeatures::shouldReverseUnaryCondOnBoolExpr());
 
-  if (isa<ConditionalOperator>(cond)) {
-    cgm.errorNYI(cond->getExprLoc(), "Ternary NYI");
-    assert(!cir::MissingFeatures::ternaryOp());
-    return createDummyValue(loc, cond->getType());
+  if (const ConditionalOperator *condOp = dyn_cast<ConditionalOperator>(cond)) {
+    Expr *trueExpr = condOp->getTrueExpr();
+    Expr *falseExpr = condOp->getFalseExpr();
+    mlir::Value condV = emitOpOnBoolExpr(loc, condOp->getCond());
+
+    mlir::Value ternaryOpRes =
+        builder
+            .create<cir::TernaryOp>(
+                loc, condV, /*thenBuilder=*/
+                [this, trueExpr](mlir::OpBuilder &b, mlir::Location loc) {
+                  mlir::Value lhs = emitScalarExpr(trueExpr);
+                  b.create<cir::YieldOp>(loc, lhs);
+                },
+                /*elseBuilder=*/
+                [this, falseExpr](mlir::OpBuilder &b, mlir::Location loc) {
+                  mlir::Value rhs = emitScalarExpr(falseExpr);
+                  b.create<cir::YieldOp>(loc, rhs);
+                })
+            .getResult();
+
+    return emitScalarConversion(ternaryOpRes, condOp->getType(),
+                                getContext().BoolTy, condOp->getExprLoc());
   }
 
   if (isa<CXXThrowExpr>(cond)) {
@@ -1394,13 +1415,138 @@ mlir::Value CIRGenFunction::createDummyValue(mlir::Location loc,
   return builder.createDummyValue(loc, t, alignment);
 }
 
-/// This creates an alloca and inserts it into the entry block if
-/// \p insertIntoFnEntryBlock is true, otherwise it inserts it at the current
-/// insertion point of the builder.
+//===----------------------------------------------------------------------===//
+// CIR builder helpers
+//===----------------------------------------------------------------------===//
+
+Address CIRGenFunction::createMemTemp(QualType ty, mlir::Location loc,
+                                      const Twine &name, Address *alloca,
+                                      mlir::OpBuilder::InsertPoint ip) {
+  // FIXME: Should we prefer the preferred type alignment here?
+  return createMemTemp(ty, getContext().getTypeAlignInChars(ty), loc, name,
+                       alloca, ip);
+}
+
+Address CIRGenFunction::createMemTemp(QualType ty, CharUnits align,
+                                      mlir::Location loc, const Twine &name,
+                                      Address *alloca,
+                                      mlir::OpBuilder::InsertPoint ip) {
+  Address result = createTempAlloca(convertTypeForMem(ty), align, loc, name,
+                                    /*ArraySize=*/nullptr, alloca, ip);
+  if (ty->isConstantMatrixType()) {
+    assert(!cir::MissingFeatures::matrixType());
+    cgm.errorNYI(loc, "temporary matrix value");
+  }
+  return result;
+}
+
+/// This creates a alloca and inserts it into the entry block of the
+/// current region.
+Address CIRGenFunction::createTempAllocaWithoutCast(
+    mlir::Type ty, CharUnits align, mlir::Location loc, const Twine &name,
+    mlir::Value arraySize, mlir::OpBuilder::InsertPoint ip) {
+  cir::AllocaOp alloca = ip.isSet()
+                             ? createTempAlloca(ty, loc, name, ip, arraySize)
+                             : createTempAlloca(ty, loc, name, arraySize);
+  alloca.setAlignmentAttr(cgm.getSize(align));
+  return Address(alloca, ty, align);
+}
+
+/// This creates a alloca and inserts it into the entry block. The alloca is
+/// casted to default address space if necessary.
 Address CIRGenFunction::createTempAlloca(mlir::Type ty, CharUnits align,
                                          mlir::Location loc, const Twine &name,
-                                         bool insertIntoFnEntryBlock) {
-  mlir::Value alloca =
-      emitAlloca(name.str(), ty, loc, align, insertIntoFnEntryBlock);
-  return Address(alloca, ty, align);
+                                         mlir::Value arraySize,
+                                         Address *allocaAddr,
+                                         mlir::OpBuilder::InsertPoint ip) {
+  Address alloca =
+      createTempAllocaWithoutCast(ty, align, loc, name, arraySize, ip);
+  if (allocaAddr)
+    *allocaAddr = alloca;
+  mlir::Value v = alloca.getPointer();
+  // Alloca always returns a pointer in alloca address space, which may
+  // be different from the type defined by the language. For example,
+  // in C++ the auto variables are in the default address space. Therefore
+  // cast alloca to the default address space when necessary.
+  assert(!cir::MissingFeatures::addressSpace());
+  return Address(v, ty, align);
+}
+
+/// This creates an alloca and inserts it into the entry block if \p ArraySize
+/// is nullptr, otherwise inserts it at the current insertion point of the
+/// builder.
+cir::AllocaOp CIRGenFunction::createTempAlloca(mlir::Type ty,
+                                               mlir::Location loc,
+                                               const Twine &name,
+                                               mlir::Value arraySize,
+                                               bool insertIntoFnEntryBlock) {
+  return cast<cir::AllocaOp>(emitAlloca(name.str(), ty, loc, CharUnits(),
+                                        insertIntoFnEntryBlock, arraySize)
+                                 .getDefiningOp());
+}
+
+/// This creates an alloca and inserts it into the provided insertion point
+cir::AllocaOp CIRGenFunction::createTempAlloca(mlir::Type ty,
+                                               mlir::Location loc,
+                                               const Twine &name,
+                                               mlir::OpBuilder::InsertPoint ip,
+                                               mlir::Value arraySize) {
+  assert(ip.isSet() && "Insertion point is not set");
+  return cast<cir::AllocaOp>(
+      emitAlloca(name.str(), ty, loc, CharUnits(), ip, arraySize)
+          .getDefiningOp());
+}
+
+/// Try to emit a reference to the given value without producing it as
+/// an l-value.  For many cases, this is just an optimization, but it avoids
+/// us needing to emit global copies of variables if they're named without
+/// triggering a formal use in a context where we can't emit a direct
+/// reference to them, for instance if a block or lambda or a member of a
+/// local class uses a const int variable or constexpr variable from an
+/// enclosing function.
+///
+/// For named members of enums, this is the only way they are emitted.
+CIRGenFunction::ConstantEmission
+CIRGenFunction::tryEmitAsConstant(DeclRefExpr *refExpr) {
+  ValueDecl *value = refExpr->getDecl();
+
+  // There is a lot more to do here, but for now only EnumConstantDecl is
+  // supported.
+  assert(!cir::MissingFeatures::tryEmitAsConstant());
+
+  // The value needs to be an enum constant or a constant variable.
+  if (!isa<EnumConstantDecl>(value))
+    return ConstantEmission();
+
+  Expr::EvalResult result;
+  if (!refExpr->EvaluateAsRValue(result, getContext()))
+    return ConstantEmission();
+
+  QualType resultType = refExpr->getType();
+
+  // As long as we're only handling EnumConstantDecl, there should be no
+  // side-effects.
+  assert(!result.HasSideEffects);
+
+  // Emit as a constant.
+  // FIXME(cir): have emitAbstract build a TypedAttr instead (this requires
+  // somewhat heavy refactoring...)
+  mlir::Attribute c = ConstantEmitter(*this).emitAbstract(
+      refExpr->getLocation(), result.Val, resultType);
+  mlir::TypedAttr cstToEmit = mlir::dyn_cast_if_present<mlir::TypedAttr>(c);
+  assert(cstToEmit && "expected a typed attribute");
+
+  assert(!cir::MissingFeatures::generateDebugInfo());
+
+  return ConstantEmission::forValue(cstToEmit);
+}
+
+mlir::Value CIRGenFunction::emitScalarConstant(
+    const CIRGenFunction::ConstantEmission &constant, Expr *e) {
+  assert(constant && "not a constant");
+  if (constant.isReference()) {
+    cgm.errorNYI(e->getSourceRange(), "emitScalarConstant: reference");
+    return {};
+  }
+  return builder.getConstant(getLoc(e->getSourceRange()), constant.getValue());
 }

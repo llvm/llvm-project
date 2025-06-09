@@ -835,8 +835,7 @@ struct LineLocation {
   LineLocation(uint32_t L, uint32_t D) : LineOffset(L), Column(D) {}
 
   bool operator<(const LineLocation &O) const {
-    return LineOffset < O.LineOffset ||
-           (LineOffset == O.LineOffset && Column < O.Column);
+    return std::tie(LineOffset, Column) < std::tie(O.LineOffset, O.Column);
   }
 
   bool operator==(const LineLocation &O) const {

@@ -11,10 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/Multilib.h"
-#include "../../lib/Driver/ToolChains/CommonArgs.h"
 #include "SimpleDiagnosticConsumer.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Version.h"
+#include "clang/Driver/CommonArgs.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"

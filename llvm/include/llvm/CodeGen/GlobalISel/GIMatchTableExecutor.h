@@ -161,6 +161,12 @@ enum {
   /// - Pred(2) - The predicate to test
   GIM_CheckImmOperandPredicate,
 
+  /// Check a leaf predicate on the specified instruction.
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - OpIdx(ULEB128) - Operand index
+  /// - Pred(2) - The predicate to test
+  GIM_CheckLeafOperandPredicate,
+
   /// Check a memory operation has the specified atomic ordering.
   /// - InsnID(ULEB128) - Instruction ID
   /// - Ordering(ULEB128) - The AtomicOrdering value
@@ -702,6 +708,12 @@ protected:
         "Subclasses must override this with a tablegen-erated function");
   }
   virtual bool testMIPredicate_MI(unsigned, const MachineInstr &,
+                                  const MatcherState &State) const {
+    llvm_unreachable(
+        "Subclasses must override this with a tablegen-erated function");
+  }
+
+  virtual bool testMOPredicate_MO(unsigned, const MachineOperand &,
                                   const MatcherState &State) const {
     llvm_unreachable(
         "Subclasses must override this with a tablegen-erated function");

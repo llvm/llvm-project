@@ -567,7 +567,7 @@ struct VPMatchContext : public SDPatternMatch::BasicMatchContext {
       return OpVal->getOpcode() == Opc;
 
     auto BaseOpc = ISD::getBaseOpcodeForVP(OpVal->getOpcode(), false);
-    return BaseOpc.has_value() && *BaseOpc == Opc;
+    return BaseOpc == Opc;
   }
 
   unsigned getNumOperands(SDValue N) const {

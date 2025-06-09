@@ -195,12 +195,6 @@ namespace llvm {
   /// implicit captures such as for external globals.
   LLVM_ABI void PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
                                      unsigned MaxUsesToExplore = 0);
-
-  /// Returns true if the pointer is to a function-local object that never
-  /// escapes from the function.
-  LLVM_ABI bool isNonEscapingLocalObject(
-      const Value *V,
-      SmallDenseMap<const Value *, bool, 8> *IsCapturedCache = nullptr);
 } // end namespace llvm
 
 #endif

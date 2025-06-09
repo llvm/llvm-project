@@ -32,6 +32,7 @@
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/MemProfData.inc"
 #include "llvm/ProfileData/MemProfReader.h"
+#include "llvm/ProfileData/MemProfSummaryBuilder.h"
 #include "llvm/ProfileData/MemProfYAML.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/Debug.h"
@@ -306,14 +307,20 @@ bool RawMemProfReader::hasFormat(const MemoryBuffer &Buffer) {
 }
 
 void RawMemProfReader::printYAML(raw_ostream &OS) {
+  MemProfSummaryBuilder MemProfSumBuilder;
   uint64_t NumAllocFunctions = 0, NumMibInfo = 0;
   for (const auto &KV : MemProfData.Records) {
+    MemProfSumBuilder.addRecord(KV.second);
     const size_t NumAllocSites = KV.second.AllocSites.size();
     if (NumAllocSites > 0) {
       NumAllocFunctions++;
       NumMibInfo += NumAllocSites;
     }
   }
+
+  // Print the summary first, as it is printed as YAML comments.
+  auto MemProfSum = MemProfSumBuilder.getSummary();
+  MemProfSum->printSummaryYaml(OS);
 
   OS << "MemprofProfile:\n";
   OS << "  Summary:\n";

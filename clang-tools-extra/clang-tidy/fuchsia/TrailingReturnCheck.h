@@ -13,8 +13,8 @@
 
 namespace clang::tidy::fuchsia {
 
-/// Functions that have trailing returns are disallowed, except for those 
-/// using decltype specifiers and lambda with otherwise unutterable 
+/// Functions that have trailing returns are disallowed, except for those
+/// using decltype specifiers and lambda with otherwise unutterable
 /// return types.
 ///
 /// For the user-facing documentation see:

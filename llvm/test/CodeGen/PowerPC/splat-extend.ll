@@ -9,7 +9,7 @@
 ; RUN:   -mcpu=pwr9 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
 ; RUN:   FileCheck %s
 
-define dso_local noundef <8 x i16> @v103s() local_unnamed_addr #0 {
+define dso_local noundef <8 x i16> @v103s() local_unnamed_addr {
 ; CHECK-LABEL: v103s:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxspltib v2, 103
@@ -19,7 +19,7 @@ entry:
   ret <8 x i16> splat (i16 103)
 }
 
-define dso_local noundef <2 x i64> @v103l() local_unnamed_addr #0 {
+define dso_local noundef <2 x i64> @v103l() local_unnamed_addr {
 ; CHECK-LABEL: v103l:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxspltib v2, 103
@@ -29,7 +29,7 @@ entry:
   ret <2 x i64> splat (i64 103)
 }
 
-define dso_local noundef <4 x i32> @v103i() local_unnamed_addr #0 {
+define dso_local noundef <4 x i32> @v103i() local_unnamed_addr {
 ; CHECK-LABEL: v103i:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxspltib v2, 103
@@ -39,7 +39,7 @@ entry:
   ret <4 x i32> splat (i32 103)
 }
 
-define dso_local noundef <2 x i64> @v11l() local_unnamed_addr #0 {
+define dso_local noundef <2 x i64> @v11l() local_unnamed_addr {
 ; CHECK-LABEL: v11l:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vspltisw v2, -11

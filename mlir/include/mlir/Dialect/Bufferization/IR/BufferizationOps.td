@@ -131,9 +131,8 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
       assert(!getCopy() && "no dim sizes specified when copying a tensor");
       assert(isDynamicDim(idx) && "expected dynamic size");
       ArrayRef<int64_t> shape = getType().getShape();
-      return std::count_if(
-          shape.begin(), shape.begin() + idx,
-          [&](int64_t size) { return ShapedType::isDynamic(size); });
+      return std::count_if(shape.begin(), shape.begin() + idx,
+                           ShapedType::isDynamic);
     }
 
     // Return the Value of the dynamic size of the tensor at dimension

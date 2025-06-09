@@ -14,9 +14,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "lanaimcexpr"
 
-const LanaiMCExpr *LanaiMCExpr::create(VariantKind Kind, const MCExpr *Expr,
+const LanaiMCExpr *LanaiMCExpr::create(Spec S, const MCExpr *Expr,
                                        MCContext &Ctx) {
-  return new (Ctx) LanaiMCExpr(Kind, Expr);
+  return new (Ctx) LanaiMCExpr(Expr, S);
 }
 
 void LanaiMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
@@ -40,16 +40,4 @@ void LanaiMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   const MCExpr *Expr = getSubExpr();
   Expr->print(OS, MAI);
   OS << ')';
-}
-
-void LanaiMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
-  Streamer.visitUsedExpr(*getSubExpr());
-}
-
-bool LanaiMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                            const MCAssembler *Asm) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
-    return false;
-  Res.setSpecifier(specifier);
-  return true;
 }

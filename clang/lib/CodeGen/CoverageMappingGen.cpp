@@ -12,6 +12,7 @@
 
 #include "CoverageMappingGen.h"
 #include "CodeGenFunction.h"
+#include "CodeGenPGO.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Lex/Lexer.h"

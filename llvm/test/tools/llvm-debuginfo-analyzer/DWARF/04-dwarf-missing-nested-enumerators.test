@@ -25,7 +25,7 @@
 ; references to the enumerators 'RED' and 'BLUE'. The DWARF generated
 ; by GCC, does include such references.
 
-; RUN: llvm-debuginfo-analyzer --attribute=level,format,producer,size \
+; RUN: llvm-debuginfo-analyzer --attribute=language,level,format,producer,size \
 ; RUN:                         --output-sort=name \
 ; RUN:                         --print=symbols,types \
 ; RUN:                         %p/Inputs/pr-46466-dwarf-clang.o \
@@ -37,6 +37,7 @@
 ; ONE-EMPTY:
 ; ONE-NEXT: [001]             {CompileUnit} 'pr-46466.cpp'
 ; ONE-NEXT: [002]               {Producer} 'clang version 15.0.0 {{.*}}'
+; ONE-NEXT: [002]               {Language} 'DW_LANG_C_plus_plus_14'
 ; ONE-NEXT: [002]     8         {Variable} extern 'S' -> 'Struct'
 ; ONE-NEXT: [002]     1         {Struct} 'Struct' [Size = 1]
 ; ONE-NEXT: [003]     5           {Member} public 'U' -> 'Union'
@@ -46,6 +47,7 @@
 ; ONE-EMPTY:
 ; ONE-NEXT: [001]             {CompileUnit} 'pr-46466.cpp'
 ; ONE-NEXT: [002]               {Producer} 'GNU C++14 10.3.0 {{.*}}'
+; ONE-NEXT: [002]               {Language} 'DW_LANG_C_plus_plus'
 ; ONE-NEXT: [002]     8         {Variable} extern 'S' -> 'Struct'
 ; ONE-NEXT: [002]     1         {Struct} 'Struct' [Size = 1]
 ; ONE-NEXT: [003]     5           {Member} public 'U' -> 'Union'

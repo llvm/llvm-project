@@ -95,16 +95,14 @@ void MultipleNewInOneExpressionCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       callExpr(
-          hasAnyArgument(
-              expr(HasNewExpr1).bind("arg1")),
+          hasAnyArgument(expr(HasNewExpr1).bind("arg1")),
           hasAnyArgument(
               expr(HasNewExpr2, unless(equalsBoundNode("arg1"))).bind("arg2")),
           hasAncestor(BadAllocCatchingTryBlock)),
       this);
   Finder->addMatcher(
       cxxConstructExpr(
-          hasAnyArgument(
-              expr(HasNewExpr1).bind("arg1")),
+          hasAnyArgument(expr(HasNewExpr1).bind("arg1")),
           hasAnyArgument(
               expr(HasNewExpr2, unless(equalsBoundNode("arg1"))).bind("arg2")),
           unless(isListInitialization()),

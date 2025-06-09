@@ -238,6 +238,12 @@
 #define LLVM_PREFETCH(addr, rw, locality)
 #endif
 
+#if __has_attribute(uninitialized)
+#define LLVM_ATTRIBUTE_UNINITIALIZED __attribute__((uninitialized))
+#else
+#define LLVM_ATTRIBUTE_UNINITIALIZED
+#endif
+
 #if __has_attribute(used)
 #define LLVM_ATTRIBUTE_USED __attribute__((__used__))
 #else

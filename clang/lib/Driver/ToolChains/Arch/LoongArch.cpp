@@ -8,8 +8,8 @@
 
 #include "LoongArch.h"
 #include "../Clang.h"
-#include "ToolChains/CommonArgs.h"
 #include "clang/Basic/DiagnosticDriver.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Options.h"
 #include "llvm/TargetParser/Host.h"

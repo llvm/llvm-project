@@ -468,6 +468,18 @@ bool isPtrConversion(const FunctionDecl *F) {
       FunctionName == "checked_objc_cast")
     return true;
 
+  auto ReturnType = F->getReturnType();
+  if (auto *Type = ReturnType.getTypePtrOrNull()) {
+    if (auto *AttrType = dyn_cast<AttributedType>(Type)) {
+      if (auto *Attr = AttrType->getAttr()) {
+        if (auto *AnnotateType = dyn_cast<AnnotateTypeAttr>(Attr)) {
+          if (AnnotateType->getAnnotation() == "webkit.pointerconversion")
+            return true;
+        }
+      }
+    }
+  }
+
   return false;
 }
 

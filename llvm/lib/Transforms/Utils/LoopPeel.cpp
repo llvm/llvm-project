@@ -1257,7 +1257,11 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
     // Now adjust users of the original exit values by replacing them with the
     // exit value from the peeled iteration and remove them.
     for (const auto &[P, E] : ExitValues) {
-      P->replaceAllUsesWith(isa<Constant>(E) ? E : &*VMap.lookup(E));
+      Instruction *ExitInst = dyn_cast<Instruction>(E);
+      if (ExitInst && L->contains(ExitInst))
+        P->replaceAllUsesWith(&*VMap[ExitInst]);
+      else
+        P->replaceAllUsesWith(E);
       P->eraseFromParent();
     }
     formLCSSA(*L, DT, LI, SE);

@@ -35,10 +35,10 @@ namespace tooling {
 /// including the contents of the modular headers and all their transitive
 /// includes.
 ///
-/// This allows existing tools based on PPCallbacks to retain their functionality
-/// when running with C++ modules enabled. This only works in the backwards
-/// compatible modules mode, i.e. when code can still be parsed in non-modular
-/// way.
+/// This allows existing tools based on PPCallbacks to retain their
+/// functionality when running with C++ modules enabled. This only works in the
+/// backwards compatible modules mode, i.e. when code can still be parsed in
+/// non-modular way.
 class ExpandModularHeadersPPCallbacks : public PPCallbacks {
 public:
   ExpandModularHeadersPPCallbacks(

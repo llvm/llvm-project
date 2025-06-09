@@ -94,7 +94,9 @@ void Ownership::combine(Ownership other) { *this = getCombined(other); }
 // DeallocationState
 //===----------------------------------------------------------------------===//
 
-DeallocationState::DeallocationState(Operation *op) : liveness(op) {}
+DeallocationState::DeallocationState(Operation *op,
+                                     SymbolTableCollection &symbolTables)
+    : symbolTable(symbolTables), liveness(op) {}
 
 void DeallocationState::updateOwnership(Value memref, Ownership ownership,
                                         Block *block) {

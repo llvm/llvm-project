@@ -1476,7 +1476,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   setMinFunctionAlignment(Align(4));
 
-  switch (Subtarget.getCPUDirective()) {
+  auto CPUDirective = Subtarget.getCPUDirective();
+  switch (CPUDirective) {
   default: break;
   case PPC::DIR_970:
   case PPC::DIR_A2:
@@ -1508,15 +1509,14 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   // The Freescale cores do better with aggressive inlining of memcpy and
   // friends. GCC uses same threshold of 128 bytes (= 32 word stores).
-  if (Subtarget.getCPUDirective() == PPC::DIR_E500mc ||
-      Subtarget.getCPUDirective() == PPC::DIR_E5500) {
+  if (CPUDirective == PPC::DIR_E500mc || CPUDirective == PPC::DIR_E5500) {
     MaxStoresPerMemset = 32;
     MaxStoresPerMemsetOptSize = 16;
     MaxStoresPerMemcpy = 32;
     MaxStoresPerMemcpyOptSize = 8;
     MaxStoresPerMemmove = 32;
     MaxStoresPerMemmoveOptSize = 8;
-  } else if (Subtarget.getCPUDirective() == PPC::DIR_A2) {
+  } else if (CPUDirective == PPC::DIR_A2) {
     // The A2 also benefits from (very) aggressive inlining of memcpy and
     // friends. The overhead of a the function call, even when warm, can be
     // over one hundred cycles.
@@ -1528,6 +1528,11 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     MaxLoadsPerMemcmp = 8;
     MaxLoadsPerMemcmpOptSize = 4;
   }
+
+  // Enable generation of STXVP instructions by default for mcpu=future.
+  if (CPUDirective == PPC::DIR_PWR_FUTURE &&
+      DisableAutoPairedVecSt.getNumOccurrences() == 0)
+    DisableAutoPairedVecSt = false;
 
   IsStrictFPEnabled = true;
 
@@ -9670,18 +9675,17 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   bool IsSplat64 = false;
   uint64_t SplatBits = 0;
   int32_t SextVal = 0;
-  if (BVNIsConstantSplat) {
+  if (BVNIsConstantSplat && SplatBitSize <= 64) {
+    SplatBits = APSplatBits.getZExtValue();
     if (SplatBitSize <= 32) {
-      SplatBits = APSplatBits.getZExtValue();
       SextVal = SignExtend32(SplatBits, SplatBitSize);
-    } else if (SplatBitSize == 64) {
-      int64_t Splat64Val = APSplatBits.getSExtValue();
-      SplatBits = (uint64_t)Splat64Val;
-      SextVal = (int32_t)SplatBits;
+    } else if (SplatBitSize == 64 && Subtarget.hasP8Altivec()) {
+      int64_t Splat64Val = static_cast<int64_t>(SplatBits);
       bool P9Vector = Subtarget.hasP9Vector();
       int32_t Hi = P9Vector ? 127 : 15;
       int32_t Lo = P9Vector ? -128 : -16;
       IsSplat64 = Splat64Val >= Lo && Splat64Val <= Hi;
+      SextVal = static_cast<int32_t>(SplatBits);
     }
   }
 
@@ -9807,6 +9811,8 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   // If the sign extended value is in the range [-16,15], use VSPLTI[bhw].
   // Use VSPLTIW/VUPKLSW for v2i64 in range [-16,15].
   if (SextVal >= -16 && SextVal <= 15) {
+    // SplatSize may be 1, 2, 4, or 8. Use size 4 instead of 8 for the splat to
+    // generate a splat word with extend for size 8.
     unsigned UseSize = SplatSize == 8 ? 4 : SplatSize;
     SDValue Res =
         getCanonicalConstSplat(SextVal, UseSize, Op.getValueType(), DAG, dl);
@@ -9821,15 +9827,19 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     SDValue C = DAG.getConstant((unsigned char)SextVal, dl, MVT::i32);
     SmallVector<SDValue, 16> Ops(16, C);
     SDValue BV = DAG.getBuildVector(MVT::v16i8, dl, Ops);
-    assert((SplatSize == 2 || SplatSize == 4 || SplatSize == 8) &&
-           "Unexpected type for vector constant.");
     unsigned IID;
-    if (SplatSize == 2) {
+    switch (SplatSize) {
+    default:
+      llvm_unreachable("Unexpected type for vector constant.");
+    case 2:
       IID = Intrinsic::ppc_altivec_vupklsb;
-    } else if (SplatSize == 4) {
+      break;
+    case 4:
       IID = Intrinsic::ppc_altivec_vextsb2w;
-    } else { // SplatSize == 8
+      break;
+    case 8:
       IID = Intrinsic::ppc_altivec_vextsb2d;
+      break;
     }
     SDValue Extend = BuildIntrinsicOp(IID, BV, DAG, dl);
     return DAG.getBitcast(Op->getValueType(0), Extend);

@@ -786,8 +786,8 @@ public:
       return InitialPreheader;
     }
     BranchInst *BI = It->first;
-    assert(std::find_if(++It, HoistableBranches.end(), HasBBAsSuccessor) ==
-               HoistableBranches.end() &&
+    assert(std::none_of(std::next(It), HoistableBranches.end(),
+                        HasBBAsSuccessor) &&
            "BB is expected to be the target of at most one branch");
 
     LLVMContext &C = BB->getContext();

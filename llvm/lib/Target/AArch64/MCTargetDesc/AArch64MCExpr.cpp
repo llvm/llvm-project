@@ -98,14 +98,6 @@ void AArch64MCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   Expr->print(OS, MAI);
 }
 
-void AArch64MCExpr::visitUsedExpr(MCStreamer &Streamer) const {
-  Streamer.visitUsedExpr(*getSubExpr());
-}
-
-MCFragment *AArch64MCExpr::findAssociatedFragment() const {
-  llvm_unreachable("FIXME: what goes here?");
-}
-
 bool AArch64MCExpr::evaluateAsRelocatableImpl(MCValue &Res,
                                               const MCAssembler *Asm) const {
   if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
@@ -135,12 +127,4 @@ void AArch64AuthMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   if (hasAddressDiversity())
     OS << ",addr";
   OS << ')';
-}
-
-void AArch64AuthMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
-  Streamer.visitUsedExpr(*getSubExpr());
-}
-
-MCFragment *AArch64AuthMCExpr::findAssociatedFragment() const {
-  llvm_unreachable("FIXME: what goes here?");
 }

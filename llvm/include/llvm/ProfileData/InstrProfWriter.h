@@ -22,6 +22,7 @@
 #include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/IndexedMemProfData.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/ProfileData/MemProfSummaryBuilder.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <memory>
@@ -83,6 +84,10 @@ private:
   bool MemprofGenerateRandomHotness;
 
   std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData;
+
+  // MemProf summary builder to which records are added as MemProf data is added
+  // to the writer.
+  memprof::MemProfSummaryBuilder MemProfSumBuilder;
 
 public:
   // For memprof testing, random hotness can be assigned to the contexts if

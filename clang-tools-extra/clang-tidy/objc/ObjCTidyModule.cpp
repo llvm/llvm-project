@@ -35,22 +35,19 @@ public:
         "objc-dealloc-in-category");
     CheckFactories.registerCheck<ForbiddenSubclassingCheck>(
         "objc-forbidden-subclassing");
-    CheckFactories.registerCheck<MissingHashCheck>(
-        "objc-missing-hash");
+    CheckFactories.registerCheck<MissingHashCheck>("objc-missing-hash");
     CheckFactories.registerCheck<NSDateFormatterCheck>("objc-nsdate-formatter");
     CheckFactories.registerCheck<NSInvocationArgumentLifetimeCheck>(
         "objc-nsinvocation-argument-lifetime");
     CheckFactories.registerCheck<PropertyDeclarationCheck>(
         "objc-property-declaration");
-    CheckFactories.registerCheck<SuperSelfCheck>(
-        "objc-super-self");
+    CheckFactories.registerCheck<SuperSelfCheck>("objc-super-self");
   }
 };
 
 // Register the ObjCTidyModule using this statically initialized variable.
-static ClangTidyModuleRegistry::Add<ObjCModule> X(
-    "objc-module",
-    "Adds Objective-C lint checks.");
+static ClangTidyModuleRegistry::Add<ObjCModule>
+    X("objc-module", "Adds Objective-C lint checks.");
 
 } // namespace objc
 

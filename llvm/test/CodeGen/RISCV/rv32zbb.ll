@@ -1590,8 +1590,8 @@ define i128 @sub_if_uge_i128(i128 %x, i128 %y) {
 ; CHECK-NEXT:    lw a7, 4(a2)
 ; CHECK-NEXT:    lw a6, 8(a2)
 ; CHECK-NEXT:    lw t0, 12(a2)
-; CHECK-NEXT:    lw a4, 12(a1)
 ; CHECK-NEXT:    lw a3, 4(a1)
+; CHECK-NEXT:    lw a4, 12(a1)
 ; CHECK-NEXT:    lw a5, 8(a1)
 ; CHECK-NEXT:    beq a4, t0, .LBB53_2
 ; CHECK-NEXT:  # %bb.1:

@@ -144,9 +144,9 @@ void Statusline::Redraw(bool update) {
   }
 
   StreamString stream;
-  if (auto *format = m_debugger.GetStatuslineFormat())
-    FormatEntity::Format(*format, stream, &symbol_ctx, &exe_ctx, nullptr,
-                         nullptr, false, false);
+  FormatEntity::Entry format = m_debugger.GetStatuslineFormat();
+  FormatEntity::Format(format, stream, &symbol_ctx, &exe_ctx, nullptr, nullptr,
+                       false, false);
 
-  Draw(std::string(stream.GetString()));
+  Draw(stream.GetString().str());
 }

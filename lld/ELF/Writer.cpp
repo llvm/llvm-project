@@ -1030,7 +1030,7 @@ findOrphanPos(Ctx &ctx, SmallVectorImpl<SectionCommand *>::iterator b,
   // This matches bfd's behavior and is convenient when the linker script fully
   // specifies the start of the file, but doesn't care about the end (the non
   // alloc sections for example).
-  if (std::find_if(i, e, isOutputSecWithInputSections) == e)
+  if (std::none_of(i, e, isOutputSecWithInputSections))
     return e;
 
   while (i != e && shouldSkip(*i))
