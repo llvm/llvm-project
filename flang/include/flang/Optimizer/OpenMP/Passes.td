@@ -23,7 +23,7 @@ def MapInfoFinalizationPass
   let dependentDialects = ["mlir::omp::OpenMPDialect"];
 
   let options = [Option<"deferDescMapping", "opt-defer-desc-mapping",
-                      "bool", /*default=*/"true",
+                      "bool", /*default=*/"false",
                       "Activates or deactivates deferred descriptor mapping, "
                       "which delays mapping of top-level descriptors to target "
                       "regions and target data regions">];
