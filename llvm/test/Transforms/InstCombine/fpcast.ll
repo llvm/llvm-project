@@ -32,7 +32,7 @@ define half @test3(float %a) {
 define half @test3_fast(float %a) {
 ; CHECK-LABEL: @test3_fast(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
-; CHECK-NEXT:    [[C:%.*]] = call ninf half @llvm.fabs.f16(half [[TMP1]])
+; CHECK-NEXT:    [[C:%.*]] = call fast half @llvm.fabs.f16(half [[TMP1]])
 ; CHECK-NEXT:    ret half [[C]]
 ;
   %b = call float @llvm.fabs.f32(float %a)

@@ -1917,10 +1917,9 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
       II->getOperandBundlesAsDefs(OpBundles);
       CallInst *NewCI =
           CallInst::Create(Overload, {InnerTrunc}, OpBundles, II->getName());
-      NewCI->copyFastMathFlags(II);
-      // A normal value may be converted to an infinity.
-      if (II->getIntrinsicID() == Intrinsic::fabs)
-        NewCI->setHasNoInfs(FPT.hasNoInfs());
+      // A normal value may be converted to an infinity. It means that we cannot
+      // propagate ninf from the intrinsic. So we propagate FMF from fptrunc.
+      NewCI->copyFastMathFlags(&FPT);
       return NewCI;
     }
     }
