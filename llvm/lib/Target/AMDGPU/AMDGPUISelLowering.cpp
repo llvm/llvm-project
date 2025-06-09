@@ -4097,7 +4097,7 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
   if (VT.getScalarType() != MVT::i64)
     return SDValue();
 
-  // i64 (shl x, C) -> (build_pair 0, (shl x, C -32))
+  // i64 (shl x, C) -> (build_pair 0, (shl x, C - 32))
 
   // On some subtargets, 64-bit shift is a quarter rate instruction. In the
   // common case, splitting this into a move and a 32-bit shift is faster and
@@ -4117,12 +4117,12 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
     ShiftAmt = DAG.getConstant(RHSVal - TargetScalarType.getSizeInBits(), SL,
                                TargetType);
   } else {
-    SDValue truncShiftAmt = DAG.getNode(ISD::TRUNCATE, SL, TargetType, RHS);
+    SDValue TruncShiftAmt = DAG.getNode(ISD::TRUNCATE, SL, TargetType, RHS);
     const SDValue ShiftMask =
         DAG.getConstant(TargetScalarType.getSizeInBits() - 1, SL, TargetType);
     // This AND instruction will clamp out of bounds shift values.
     // It will also be removed during later instruction selection.
-    ShiftAmt = DAG.getNode(ISD::AND, SL, TargetType, truncShiftAmt, ShiftMask);
+    ShiftAmt = DAG.getNode(ISD::AND, SL, TargetType, TruncShiftAmt, ShiftMask);
   }
 
   SDValue Lo = DAG.getNode(ISD::TRUNCATE, SL, TargetType, LHS);
@@ -4233,12 +4233,12 @@ SDValue AMDGPUTargetLowering::performSrlCombine(SDNode *N,
     ShiftAmt = DAG.getConstant(RHSVal - TargetScalarType.getSizeInBits(), SL,
                                TargetType);
   } else {
-    SDValue truncShiftAmt = DAG.getNode(ISD::TRUNCATE, SL, TargetType, RHS);
+    SDValue TruncShiftAmt = DAG.getNode(ISD::TRUNCATE, SL, TargetType, RHS);
     const SDValue ShiftMask =
         DAG.getConstant(TargetScalarType.getSizeInBits() - 1, SL, TargetType);
     // This AND instruction will clamp out of bounds shift values.
     // It will also be removed during later instruction selection.
-    ShiftAmt = DAG.getNode(ISD::AND, SL, TargetType, truncShiftAmt, ShiftMask);
+    ShiftAmt = DAG.getNode(ISD::AND, SL, TargetType, TruncShiftAmt, ShiftMask);
   }
 
   const SDValue Zero = DAG.getConstant(0, SL, TargetScalarType);
@@ -4253,10 +4253,9 @@ SDValue AMDGPUTargetLowering::performSrlCombine(SDNode *N,
     SmallVector<SDValue, 8> HiOps(NElts);
     SmallVector<SDValue, 16> HiAndLoOps;
 
-    DAG.ExtractVectorElements(SplitLHS, HiAndLoOps, 0, NElts * 2);
-    for (unsigned I = 0; I != NElts; ++I) {
+    DAG.ExtractVectorElements(SplitLHS, HiAndLoOps, /*Start=*/0, NElts * 2);
+    for (unsigned I = 0; I != NElts; ++I)
       HiOps[I] = HiAndLoOps[2 * I + 1];
-    }
     Hi = DAG.getNode(ISD::BUILD_VECTOR, LHSSL, TargetType, HiOps);
   } else {
     const SDValue One = DAG.getConstant(1, LHSSL, TargetScalarType);
