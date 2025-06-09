@@ -177,7 +177,7 @@ public:
     return true;
   }
 
-  bool equals(const MCTargetExpr &A, const MCTargetExpr &B,
+  bool equals(const MCSpecifierExpr &A, const MCSpecifierExpr &B,
               CompFuncTy Comp) const override {
     const auto &AArch64ExprA = cast<AArch64MCExpr>(A);
     const auto &AArch64ExprB = cast<AArch64MCExpr>(B);
