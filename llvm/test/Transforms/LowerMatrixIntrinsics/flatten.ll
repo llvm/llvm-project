@@ -43,7 +43,19 @@ entry:
 ; CHECK-NEXT: because we do not have a shape-aware lowering for its user:
 ; CHECK-NEXT: %{{.*}} = shufflevector <6 x double> %{{.*}}, <6 x double> poison, <2 x i32> <i32 4, i32 5>
 
-; CHECK: flattening a 4x3 matrix:
+; CHECK-LABEL: flattening a 4x3 matrix:
 ; CHECK-NEXT: %{{.*}} = call <12 x double> @llvm.matrix.multiply.v12f64.v8f64.v6f64(<8 x double> %{{.*}}, <6 x double> %{{.*}}, i32 4, i32 2, i32 3)
 ; CHECK-NEXT: because we do not have a shape-aware lowering for its user:
 ; CHECK-NEXT: %{{.*}} = shufflevector <12 x double> %{{.*}}, <12 x double> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+
+
+define void @redundant_transpose_of_shuffle(<4 x float> %m, ptr %dst) {
+entry:
+  %shuffle = shufflevector <4 x float> %m, <4 x float> zeroinitializer, <4 x i32> zeroinitializer
+  %t = tail call <4 x float> @llvm.matrix.transpose.v3f32(<4 x float> %shuffle, i32 1, i32 4)
+  store <4 x float> %t, ptr %dst, align 4
+  ret void
+}
+
+; CHECK-LABEL: splitting a 4x1 matrix with 1 shuffles beacuse we do not have a shape-aware lowering for its def:
+; CHECK-NEXT: %{{.*}} = shufflevector <4 x float> %{{.*}}, <4 x float> zeroinitializer, <4 x i32> zeroinitializer
