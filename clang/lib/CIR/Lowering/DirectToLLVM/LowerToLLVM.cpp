@@ -105,7 +105,7 @@ static mlir::Value emitFromMemory(mlir::ConversionPatternRewriter &rewriter,
                                   cir::LoadOp op, mlir::Value value) {
 
   // TODO(cir): Handle other types similarly to clang's codegen EmitFromMemory
-  if (auto boolTy = mlir::dyn_cast<cir::BoolType>(op.getResult().getType())) {
+  if (auto boolTy = mlir::dyn_cast<cir::BoolType>(op.getType())) {
     // Create a cast value from specified size in datalayout to i1
     assert(value.getType().isInteger(dataLayout.getTypeSizeInBits(boolTy)));
     return createIntCast(rewriter, value, rewriter.getI1Type());
@@ -456,7 +456,7 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
   }
   case cir::CastKind::integral: {
     mlir::Type srcType = castOp.getSrc().getType();
-    mlir::Type dstType = castOp.getResult().getType();
+    mlir::Type dstType = castOp.getType();
     mlir::Value llvmSrcVal = adaptor.getOperands().front();
     mlir::Type llvmDstType = getTypeConverter()->convertType(dstType);
     cir::IntType srcIntType =
@@ -471,11 +471,10 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
   }
   case cir::CastKind::floating: {
     mlir::Value llvmSrcVal = adaptor.getOperands().front();
-    mlir::Type llvmDstTy =
-        getTypeConverter()->convertType(castOp.getResult().getType());
+    mlir::Type llvmDstTy = getTypeConverter()->convertType(castOp.getType());
 
     mlir::Type srcTy = elementTypeIfVector(castOp.getSrc().getType());
-    mlir::Type dstTy = elementTypeIfVector(castOp.getResult().getType());
+    mlir::Type dstTy = elementTypeIfVector(castOp.getType());
 
     if (!mlir::isa<cir::CIRFPTypeInterface>(dstTy) ||
         !mlir::isa<cir::CIRFPTypeInterface>(srcTy))
@@ -563,8 +562,7 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
     mlir::Type dstTy = castOp.getType();
     mlir::Value llvmSrcVal = adaptor.getOperands().front();
     mlir::Type llvmDstTy = getTypeConverter()->convertType(dstTy);
-    if (mlir::cast<cir::IntType>(
-            elementTypeIfVector(castOp.getResult().getType()))
+    if (mlir::cast<cir::IntType>(elementTypeIfVector(castOp.getType()))
             .isSigned())
       rewriter.replaceOpWithNewOp<mlir::LLVM::FPToSIOp>(castOp, llvmDstTy,
                                                         llvmSrcVal);
@@ -673,6 +671,38 @@ mlir::LogicalResult CIRToLLVMPtrStrideOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMBaseClassAddrOpLowering::matchAndRewrite(
+    cir::BaseClassAddrOp baseClassOp, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  const mlir::Type resultType =
+      getTypeConverter()->convertType(baseClassOp.getType());
+  mlir::Value derivedAddr = adaptor.getDerivedAddr();
+  llvm::SmallVector<mlir::LLVM::GEPArg, 1> offset = {
+      adaptor.getOffset().getZExtValue()};
+  mlir::Type byteType = mlir::IntegerType::get(resultType.getContext(), 8,
+                                               mlir::IntegerType::Signless);
+  if (adaptor.getOffset().getZExtValue() == 0) {
+    rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(
+        baseClassOp, resultType, adaptor.getDerivedAddr());
+    return mlir::success();
+  }
+
+  if (baseClassOp.getAssumeNotNull()) {
+    rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
+        baseClassOp, resultType, byteType, derivedAddr, offset);
+  } else {
+    auto loc = baseClassOp.getLoc();
+    mlir::Value isNull = rewriter.create<mlir::LLVM::ICmpOp>(
+        loc, mlir::LLVM::ICmpPredicate::eq, derivedAddr,
+        rewriter.create<mlir::LLVM::ZeroOp>(loc, derivedAddr.getType()));
+    mlir::Value adjusted = rewriter.create<mlir::LLVM::GEPOp>(
+        loc, resultType, byteType, derivedAddr, offset);
+    rewriter.replaceOpWithNewOp<mlir::LLVM::SelectOp>(baseClassOp, isNull,
+                                                      derivedAddr, adjusted);
+  }
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMAllocaOpLowering::matchAndRewrite(
     cir::AllocaOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -681,8 +711,8 @@ mlir::LogicalResult CIRToLLVMAllocaOpLowering::matchAndRewrite(
       op.getLoc(), typeConverter->convertType(rewriter.getIndexType()), 1);
   mlir::Type elementTy =
       convertTypeForMemory(*getTypeConverter(), dataLayout, op.getAllocaType());
-  mlir::Type resultTy = convertTypeForMemory(*getTypeConverter(), dataLayout,
-                                             op.getResult().getType());
+  mlir::Type resultTy =
+      convertTypeForMemory(*getTypeConverter(), dataLayout, op.getType());
 
   assert(!cir::MissingFeatures::addressSpace());
   assert(!cir::MissingFeatures::opAllocaAnnotations());
@@ -754,8 +784,8 @@ mlir::LogicalResult CIRToLLVMCallOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
     cir::LoadOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  const mlir::Type llvmTy = convertTypeForMemory(
-      *getTypeConverter(), dataLayout, op.getResult().getType());
+  const mlir::Type llvmTy =
+      convertTypeForMemory(*getTypeConverter(), dataLayout, op.getType());
   assert(!cir::MissingFeatures::opLoadStoreMemOrder());
   std::optional<size_t> opAlign = op.getAlignment();
   unsigned alignment =
@@ -1752,6 +1782,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                                              dl);
   patterns.add<
       // clang-format off
+               CIRToLLVMBaseClassAddrOpLowering,
                CIRToLLVMBinOpLowering,
                CIRToLLVMBrCondOpLowering,
                CIRToLLVMBrOpLowering,
@@ -1772,6 +1803,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMVecExtractOpLowering,
                CIRToLLVMVecInsertOpLowering,
                CIRToLLVMVecCmpOpLowering,
+               CIRToLLVMVecShuffleOpLowering,
                CIRToLLVMVecShuffleDynamicOpLowering,
                CIRToLLVMVecTernaryOpLowering
       // clang-format on
@@ -1921,6 +1953,23 @@ mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
   // must be sign-extended to the correct result type.
   rewriter.replaceOpWithNewOp<mlir::LLVM::SExtOp>(
       op, typeConverter->convertType(op.getType()), bitResult);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMVecShuffleOpLowering::matchAndRewrite(
+    cir::VecShuffleOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  // LLVM::ShuffleVectorOp takes an ArrayRef of int for the list of indices.
+  // Convert the ClangIR ArrayAttr of IntAttr constants into a
+  // SmallVector<int>.
+  SmallVector<int, 8> indices;
+  std::transform(
+      op.getIndices().begin(), op.getIndices().end(),
+      std::back_inserter(indices), [](mlir::Attribute intAttr) {
+        return mlir::cast<cir::IntAttr>(intAttr).getValue().getSExtValue();
+      });
+  rewriter.replaceOpWithNewOp<mlir::LLVM::ShuffleVectorOp>(
+      op, adaptor.getVec1(), adaptor.getVec2(), indices);
   return mlir::success();
 }
 
