@@ -933,8 +933,8 @@ TEST(MetadataTest, ConvertDbgToDbgVariableRecord) {
 
   // The IR above will be autoupgraded to debug records: but this test is about
   // the conversion routines, so convert it back. This test will have value
-  // going forwards as we're likely to have a few corner cases where we want to
-  // use intrinsics.
+  // going forwards for the purpose of testing the conversion routine, which
+  // some compatibility tools (DXIL?) wish to use.
   M->convertFromNewDbgValues();
 
   // Find the first dbg.value,
