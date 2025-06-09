@@ -24,6 +24,7 @@
 #ifndef LLVM_PASSSUPPORT_H
 #define LLVM_PASSSUPPORT_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/PassInfo.h"
 #include "llvm/PassRegistry.h"
@@ -112,7 +113,7 @@ struct PassRegistrationListener {
 
   /// enumeratePasses - Iterate over the registered passes, calling the
   /// passEnumerate callback on each PassInfo object.
-  void enumeratePasses();
+  LLVM_ABI void enumeratePasses();
 
   /// passEnumerate - Callback function invoked when someone calls
   /// enumeratePasses on this PassRegistrationListener object.

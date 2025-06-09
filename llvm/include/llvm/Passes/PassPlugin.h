@@ -64,7 +64,7 @@ public:
   /// \returns Returns an error if either the library cannot be found or loaded,
   /// there is no public entry point, or the plugin implements the wrong API
   /// version.
-  static Expected<PassPlugin> Load(const std::string &Filename);
+  LLVM_ABI static Expected<PassPlugin> Load(const std::string &Filename);
 
   /// Get the filename of the loaded plugin.
   StringRef getFilename() const { return Filename; }
@@ -107,7 +107,7 @@ private:
 ///   };
 /// }
 /// ```
-extern "C" ::llvm::PassPluginLibraryInfo LLVM_ATTRIBUTE_WEAK
+extern "C" LLVM_ABI ::llvm::PassPluginLibraryInfo LLVM_ATTRIBUTE_WEAK
 llvmGetPassPluginInfo();
 
 #endif /* LLVM_PASSES_PASSPLUGIN_H */
