@@ -137,10 +137,6 @@ let TargetPrefix = "spv" in {
       : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_any_ty, llvm_i32_ty],
                               [IntrNoMem]>;
 
-  def int_spv_get_specialization_constant
-      : DefaultAttrsIntrinsic<[llvm_any_ty], [llvm_i32_ty, LLVMMatchType<0>],
-                              [IntrNoMem, IntrWillReturn]>;
-
   // Read a value from the image buffer. It does not translate directly to a
   // single OpImageRead because the result type is not necessarily a 4 element
   // vector.

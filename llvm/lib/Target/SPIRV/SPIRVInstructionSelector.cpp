@@ -296,22 +296,7 @@ private:
   bool selectImageWriteIntrinsic(MachineInstr &I) const;
   bool selectResourceGetPointer(Register &ResVReg, const SPIRVType *ResType,
                                 MachineInstr &I) const;
-  bool selectGetSpecializationConstant(Register &ResVReg,
-                                       const SPIRVType *ResType,
-                                       MachineInstr &I) const;
 
-  bool buildSpecConstant(llvm::MachineInstr &I, llvm::Register &ResVReg,
-                         llvm::SPIRVType *ResType,
-                         llvm::APInt &DefaultValue) const;
-
-  APInt getSpecConstantDefaultValue(llvm::MachineInstr &I) const;
-
-  bool buildBoolSpecConstant(Register &ResVReg, const SPIRVType *ResType,
-                             bool DefaultValue, MachineInstr &I) const;
-  bool buildIntegerSpecConstant(Register &ResVReg, const SPIRVType *ResType,
-                                uint32_t DefaultValue, MachineInstr &I) const;
-  bool buildIntegerSpecConstant(Register &ResVReg, const SPIRVType *ResType,
-                                uint64_t DefaultValue, MachineInstr &I) const;
   // Utilities
   std::pair<Register, bool>
   buildI32Constant(uint32_t Val, MachineInstr &I,
@@ -3207,9 +3192,6 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_resource_getpointer: {
     return selectResourceGetPointer(ResVReg, ResType, I);
   }
-  case Intrinsic::spv_get_specialization_constant: {
-    return selectGetSpecializationConstant(ResVReg, ResType, I);
-  }
   case Intrinsic::spv_discard: {
     return selectDiscard(ResVReg, ResType, I);
   }
@@ -3325,84 +3307,6 @@ bool SPIRVInstructionSelector::selectResourceGetPointer(
       .addUse(ZeroReg)
       .addUse(IndexReg)
       .constrainAllUses(TII, TRI, RBI);
-}
-
-bool SPIRVInstructionSelector::buildBoolSpecConstant(Register &ResVReg,
-                                                     const SPIRVType *ResType,
-                                                     bool DefaultValue,
-                                                     MachineInstr &I) const {
-  uint32_t Opc =
-      DefaultValue ? SPIRV::OpSpecConstantTrue : SPIRV::OpSpecConstantFalse;
-  return BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opc))
-      .addDef(ResVReg)
-      .addUse(GR.getSPIRVTypeID(ResType))
-      .constrainAllUses(TII, TRI, RBI);
-}
-
-bool SPIRVInstructionSelector::buildIntegerSpecConstant(
-    Register &ResVReg, const SPIRVType *ResType, uint32_t DefaultValue,
-    MachineInstr &I) const {
-  return BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                 TII.get(SPIRV::OpSpecConstant))
-      .addDef(ResVReg)
-      .addUse(GR.getSPIRVTypeID(ResType))
-      .addImm(DefaultValue)
-      .constrainAllUses(TII, TRI, RBI);
-}
-
-bool SPIRVInstructionSelector::buildIntegerSpecConstant(
-    Register &ResVReg, const SPIRVType *ResType, uint64_t DefaultValue,
-    MachineInstr &I) const {
-  return BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                 TII.get(SPIRV::OpSpecConstant))
-      .addDef(ResVReg)
-      .addUse(GR.getSPIRVTypeID(ResType))
-      .addImm(DefaultValue & 0xFFFFFFFF)
-      .addImm(DefaultValue >> 32)
-      .constrainAllUses(TII, TRI, RBI);
-}
-
-bool SPIRVInstructionSelector::selectGetSpecializationConstant(
-    Register &ResVReg, const SPIRVType *ResType, MachineInstr &I) const {
-  uint32_t Id = foldImm(I.getOperand(2), MRI);
-  bool R = false;
-  APInt DefaultValue = getSpecConstantDefaultValue(I);
-  if (ResType->getOpcode() == SPIRV::OpTypeBool) {
-    R = buildBoolSpecConstant(ResVReg, ResType, DefaultValue.getBoolValue(), I);
-  } else {
-    R = buildSpecConstant(I, ResVReg, ResType, DefaultValue);
-  }
-  if (!R) {
-    return false;
-  }
-  buildOpDecorate(ResVReg, I, TII, SPIRV::Decoration::SpecId, {Id});
-  return R;
-}
-
-bool SPIRVInstructionSelector::buildSpecConstant(
-    llvm::MachineInstr &I, llvm::Register &ResVReg, llvm::SPIRVType *ResType,
-    llvm::APInt &DefaultValue) const {
-  auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                     TII.get(SPIRV::OpSpecConstant))
-                 .addDef(ResVReg)
-                 .addUse(GR.getSPIRVTypeID(ResType));
-  addNumImm(DefaultValue, MIB);
-  return MIB.constrainAllUses(TII, TRI, RBI);
-}
-
-APInt SPIRVInstructionSelector::getSpecConstantDefaultValue(
-    llvm::MachineInstr &I) const {
-  APInt DefaultValue;
-  Register DefaultValueReg = I.getOperand(3).getReg();
-  auto *D = getDefInstrMaybeConstant(DefaultValueReg, MRI);
-  const auto &MO = D->getOperand(1);
-  if (MO.isCImm()) {
-    DefaultValue = MO.getCImm()->getValue();
-  } else {
-    assert(MO.isFPImm() && "");
-    DefaultValue = MO.getFPImm()->getValue().bitcastToAPInt();
-  }
-  return DefaultValue;
 }
 
 bool SPIRVInstructionSelector::extractSubvector(

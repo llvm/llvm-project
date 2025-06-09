@@ -28,30 +28,39 @@
 ; Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(readwrite, argmem: none, inaccessiblemem: none)
 define void @main() local_unnamed_addr #0 {
 entry:
-  %0 = tail call spir_func i1 @llvm.spv.get.specialization.constant.i1(i32 1, i1 true)
+  %0 = tail call spir_func i1 @_Z20__spirv_SpecConstantib(i32 1, i1 true)
   %storedv.i.i = zext i1 %0 to i32
   store i32 %storedv.i.i, ptr addrspace(10) @_ZL10bool_const, align 4, !tbaa !3
   %1 = tail call ptr @llvm.invariant.start.p10(i64 4, ptr addrspace(10) @_ZL10bool_const)
-  %2 = tail call spir_func i16 @llvm.spv.get.specialization.constant.i16(i32 2, i16 4)
+  %2 = tail call spir_func i16 @_Z20__spirv_SpecConstantis(i32 2, i16 4)
   store i16 %2, ptr addrspace(10) @_ZL11short_const, align 2, !tbaa !7
   %3 = tail call ptr @llvm.invariant.start.p10(i64 2, ptr addrspace(10) @_ZL11short_const)
-  %4 = tail call spir_func i32 @llvm.spv.get.specialization.constant.i32(i32 3, i32 5)
+  %4 = tail call spir_func i32 @_Z20__spirv_SpecConstantii(i32 3, i32 5)
   store i32 %4, ptr addrspace(10) @_ZL9int_const, align 4, !tbaa !9
   %5 = tail call ptr @llvm.invariant.start.p10(i64 4, ptr addrspace(10) @_ZL9int_const)
-  %6 = tail call spir_func i64 @llvm.spv.get.specialization.constant.i64(i32 4, i64 8)
+  %6 = tail call spir_func i64 @_Z20__spirv_SpecConstantix(i32 4, i64 8)
   store i64 %6, ptr addrspace(10) @_ZL10long_const, align 8, !tbaa !11
   %7 = tail call ptr @llvm.invariant.start.p10(i64 8, ptr addrspace(10) @_ZL10long_const)
-  %14 = tail call reassoc nnan ninf nsz arcp afn spir_func float @llvm.spv.get.specialization.constant.f32(i32 8, float 5.000000e+01)
+  %14 = tail call reassoc nnan ninf nsz arcp afn spir_func float @_Z20__spirv_SpecConstantif(i32 8, float 5.000000e+01)
   store float %14, ptr addrspace(10) @_ZL11float_const, align 4, !tbaa !13
   %15 = tail call ptr @llvm.invariant.start.p10(i64 4, ptr addrspace(10) @_ZL11float_const)
-  %16 = tail call reassoc nnan ninf nsz arcp afn spir_func double @llvm.spv.get.specialization.constant.f64(i32 9, double 1.000000e+02)
+  %16 = tail call reassoc nnan ninf nsz arcp afn spir_func double @_Z20__spirv_SpecConstantid(i32 9, double 1.000000e+02)
   store double %16, ptr addrspace(10) @_ZL12double_const, align 8, !tbaa !15
   %17 = tail call ptr @llvm.invariant.start.p10(i64 8, ptr addrspace(10) @_ZL12double_const)
-  %18 = tail call spir_func i32 @llvm.spv.get.specialization.constant.i32(i32 10, i32 30)
+  %18 = tail call spir_func i32 @_Z20__spirv_SpecConstantii(i32 10, i32 30)
   store i32 %18, ptr addrspace(10) @_ZL10enum_const, align 4, !tbaa !17
   %19 = tail call ptr @llvm.invariant.start.p10(i64 4, ptr addrspace(10) @_ZL10enum_const)
   ret void
 }
+
+
+declare i1 @_Z20__spirv_SpecConstantib(i32, i1)
+declare i8 @_Z20__spirv_SpecConstantia(i32, i8)
+declare i16 @_Z20__spirv_SpecConstantis(i32, i16)
+declare i32 @_Z20__spirv_SpecConstantii(i32, i32)
+declare i64 @_Z20__spirv_SpecConstantix(i32, i64)
+declare float @_Z20__spirv_SpecConstantif(i32, float)
+declare double @_Z20__spirv_SpecConstantid(i32, double)
 
 attributes #0 = { mustprogress nofree noinline norecurse nosync nounwind willreturn memory(readwrite, argmem: none, inaccessiblemem: none) "approx-func-fp-math"="true" "frame-pointer"="all" "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 attributes #1 = { mustprogress nocallback nofree nosync nounwind willreturn memory(none) }
