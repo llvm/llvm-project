@@ -435,6 +435,11 @@ LogicalResult GPUShuffleConversion::matchAndRewrite(
     return rewriter.notifyMatchFailure(
         shuffleOp, "shuffle width and target subgroup size mismatch");
 
+  // Ensure the offset is a signless/unsigned integer.
+  if (adaptor.getOffset().getType().isSignedInteger())
+    return rewriter.notifyMatchFailure(
+        shuffleOp, "shuffle offset must be a signless/unsigned integer");
+
   Location loc = shuffleOp.getLoc();
   auto scope = rewriter.getAttr<spirv::ScopeAttr>(spirv::Scope::Subgroup);
   Value result;
@@ -460,10 +465,10 @@ LogicalResult GPUShuffleConversion::matchAndRewrite(
         loc, scope, adaptor.getValue(), adaptor.getOffset());
 
     Value laneId = rewriter.create<gpu::LaneIdOp>(loc, widthAttr);
-    Value resultLandId =
+    Value resultLaneId =
         rewriter.create<arith::AddIOp>(loc, laneId, adaptor.getOffset());
     validVal = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult,
-                                              resultLandId, adaptor.getWidth());
+                                              resultLaneId, adaptor.getWidth());
     break;
   }
   case gpu::ShuffleMode::UP: {
@@ -471,11 +476,11 @@ LogicalResult GPUShuffleConversion::matchAndRewrite(
         loc, scope, adaptor.getValue(), adaptor.getOffset());
 
     Value laneId = rewriter.create<gpu::LaneIdOp>(loc, widthAttr);
-    Value resultLandId =
+    Value resultLaneId =
         rewriter.create<arith::SubIOp>(loc, laneId, adaptor.getOffset());
     auto i32Type = rewriter.getIntegerType(32);
     validVal = rewriter.create<arith::CmpIOp>(
-        loc, arith::CmpIPredicate::sge, resultLandId,
+        loc, arith::CmpIPredicate::sge, resultLaneId,
         rewriter.create<arith::ConstantOp>(
             loc, i32Type, rewriter.getIntegerAttr(i32Type, 0)));
     break;
