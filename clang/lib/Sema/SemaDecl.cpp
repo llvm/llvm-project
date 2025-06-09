@@ -21618,14 +21618,11 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
     CheckAlignasUnderalignment(Enum);
 }
 
-Decl *Sema::ActOnFileScopeAsmDecl(Expr *expr,
-                                  SourceLocation StartLoc,
+Decl *Sema::ActOnFileScopeAsmDecl(Expr *expr, SourceLocation StartLoc,
                                   SourceLocation EndLoc) {
-  StringLiteral *AsmString = cast<StringLiteral>(expr);
 
-  FileScopeAsmDecl *New = FileScopeAsmDecl::Create(Context, CurContext,
-                                                   AsmString, StartLoc,
-                                                   EndLoc);
+  FileScopeAsmDecl *New =
+      FileScopeAsmDecl::Create(Context, CurContext, expr, StartLoc, EndLoc);
   CurContext->addDecl(New);
   return New;
 }
