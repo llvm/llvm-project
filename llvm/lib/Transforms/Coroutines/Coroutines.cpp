@@ -191,7 +191,6 @@ static CoroSaveInst *createCoroSave(CoroBeginInst *CoroBegin,
 
 // Collect "interesting" coroutine intrinsics.
 void coro::Shape::analyze(Function &F,
-                          SmallVectorImpl<CoroFrameInst *> &CoroFrames,
                           SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves,
                           CoroPromiseInst *&CoroPromise) {
   clear();
@@ -214,9 +213,6 @@ void coro::Shape::analyze(Function &F,
         break;
       case Intrinsic::coro_align:
         CoroAligns.push_back(cast<CoroAlignInst>(II));
-        break;
-      case Intrinsic::coro_frame:
-        CoroFrames.push_back(cast<CoroFrameInst>(II));
         break;
       case Intrinsic::coro_save:
         // After optimizations, coro_suspends using this coro_save might have
@@ -351,19 +347,9 @@ void coro::Shape::analyze(Function &F,
 }
 
 // If for some reason, we were not able to find coro.begin, bailout.
-void coro::Shape::invalidateCoroutine(
-    Function &F, SmallVectorImpl<CoroFrameInst *> &CoroFrames) {
+void coro::Shape::invalidateCoroutine(Function &F) {
   assert(!CoroBegin);
   {
-    // Replace coro.frame which are supposed to be lowered to the result of
-    // coro.begin with poison.
-    auto *Poison = PoisonValue::get(PointerType::get(F.getContext(), 0));
-    for (CoroFrameInst *CF : CoroFrames) {
-      CF->replaceAllUsesWith(Poison);
-      CF->eraseFromParent();
-    }
-    CoroFrames.clear();
-
     // Replace all coro.suspend with poison and remove related coro.saves if
     // present.
     for (AnyCoroSuspendInst *CS : CoroSuspends) {
@@ -482,15 +468,7 @@ void coro::AnyRetconABI::init() {
 }
 
 void coro::Shape::cleanCoroutine(
-    SmallVectorImpl<CoroFrameInst *> &CoroFrames,
     SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves, CoroPromiseInst *PI) {
-  // The coro.frame intrinsic is always lowered to the result of coro.begin.
-  for (CoroFrameInst *CF : CoroFrames) {
-    CF->replaceAllUsesWith(CoroBegin);
-    CF->eraseFromParent();
-  }
-  CoroFrames.clear();
-
   // Remove orphaned coro.saves.
   for (CoroSaveInst *CoroSave : UnusedCoroSaves)
     CoroSave->eraseFromParent();
