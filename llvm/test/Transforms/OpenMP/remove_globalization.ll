@@ -162,22 +162,17 @@ define internal void @convert_and_move_alloca() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTH2S:%.*]] = alloca i8, i64 4, align 4
 ; CHECK-NEXT:    [[IV_PTR:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[UB_PTR:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[UB_PTR]] to ptr addrspace(5)
 ; CHECK-NEXT:    br label [[INITLOOP:%.*]]
 ; CHECK:       initloop:
-; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[IV_PTR]] to ptr addrspace(5)
-; CHECK-NEXT:    store i32 0, ptr addrspace(5) [[TMP1]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[IV_PTR]], align 4
 ; CHECK-NEXT:    br label [[LOOPBODY:%.*]]
 ; CHECK:       loopbody:
-; CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[IV_PTR]] to ptr addrspace(5)
-; CHECK-NEXT:    [[IV:%.*]] = load i32, ptr addrspace(5) [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[IV]], 10
-; CHECK-NEXT:    br i1 [[TMP3]], label [[EXIT:%.*]], label [[LOOPINC:%.*]]
+; CHECK-NEXT:    [[IV:%.*]] = load i32, ptr [[IV_PTR]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[IV]], 10
+; CHECK-NEXT:    br i1 [[TMP0]], label [[EXIT:%.*]], label [[LOOPINC:%.*]]
 ; CHECK:       loopinc:
 ; CHECK-NEXT:    [[INC:%.*]] = add i32 [[IV]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = addrspacecast ptr [[IV_PTR]] to ptr addrspace(5)
-; CHECK-NEXT:    store i32 [[INC]], ptr addrspace(5) [[TMP4]], align 4
+; CHECK-NEXT:    store i32 [[INC]], ptr [[IV_PTR]], align 4
 ; CHECK-NEXT:    br label [[LOOPBODY]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
