@@ -47,8 +47,8 @@ using namespace lldb_private;
 // GDBRemoteCommunicationServerPlatform constructor
 GDBRemoteCommunicationServerPlatform::GDBRemoteCommunicationServerPlatform(
     const Socket::SocketProtocol socket_protocol, uint16_t gdbserver_port)
-    : GDBRemoteCommunicationServerCommon(), m_socket_protocol(socket_protocol),
-      m_gdbserver_port(gdbserver_port) {
+    : GDBRemoteCommunicationServerCommon("gdb-server-platform"),
+      m_socket_protocol(socket_protocol), m_gdbserver_port(gdbserver_port) {
 
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_qC,

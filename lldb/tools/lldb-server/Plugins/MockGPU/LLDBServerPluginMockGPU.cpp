@@ -29,8 +29,8 @@ LLDBServerPluginMockGPU::LLDBServerPluginMockGPU(
   LLDBServerPlugin::GDBServer &native_process)
     : LLDBServerPlugin(native_process) {
   m_process_manager_up.reset(new ProcessMockGPU::Manager(m_main_loop));
-  m_gdb_server.reset(
-      new GDBRemoteCommunicationServerLLGS(m_main_loop, *m_process_manager_up));
+  m_gdb_server.reset(new GDBRemoteCommunicationServerLLGS(
+      m_main_loop, *m_process_manager_up, "mock-gpu.server"));
 
   Log *log = GetLog(GDBRLog::Plugin);
   LLDB_LOGF(log, "LLDBServerPluginMockGPU::LLDBServerPluginMockGPU() faking launch...");

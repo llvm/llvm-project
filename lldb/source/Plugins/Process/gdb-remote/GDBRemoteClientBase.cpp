@@ -32,7 +32,7 @@ static const seconds kWakeupInterval(5);
 GDBRemoteClientBase::ContinueDelegate::~ContinueDelegate() = default;
 
 GDBRemoteClientBase::GDBRemoteClientBase(const char *comm_name)
-    : GDBRemoteCommunication(), Broadcaster(nullptr, comm_name),
+    : GDBRemoteCommunication(comm_name), Broadcaster(nullptr, comm_name),
       m_async_count(0), m_is_running(false), m_should_stop(false) {}
 
 StateType GDBRemoteClientBase::SendContinuePacketAndWaitForResponse(
