@@ -206,7 +206,6 @@ struct BinaryFunctionProfile {
   uint32_t Id{0};
   llvm::yaml::Hex64 Hash{0};
   uint64_t ExecCount{0};
-  uint64_t ExternEntryCount{0};
   std::vector<BinaryBasicBlockProfile> Blocks;
   std::vector<InlineTreeNode> InlineTree;
   bool Used{false};
@@ -219,7 +218,6 @@ template <> struct MappingTraits<bolt::BinaryFunctionProfile> {
     YamlIO.mapRequired("fid", BFP.Id);
     YamlIO.mapRequired("hash", BFP.Hash);
     YamlIO.mapRequired("exec", BFP.ExecCount);
-    YamlIO.mapOptional("extern", BFP.ExternEntryCount, 0);
     YamlIO.mapRequired("nblocks", BFP.NumBasicBlocks);
     YamlIO.mapOptional("blocks", BFP.Blocks,
                        std::vector<bolt::BinaryBasicBlockProfile>());

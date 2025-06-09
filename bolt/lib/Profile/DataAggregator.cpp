@@ -827,8 +827,13 @@ bool DataAggregator::doTrace(const LBREntry &First, const LBREntry &Second,
                     << FromFunc->getPrintName() << ":"
                     << Twine::utohexstr(First.To) << " to "
                     << Twine::utohexstr(Second.From) << ".\n");
-  for (auto [From, To] : *FTs)
+  for (auto [From, To] : *FTs) {
+    if (BAT) {
+      From = BAT->translate(FromFunc->getAddress(), From, /*IsBranchSrc=*/true);
+      To = BAT->translate(FromFunc->getAddress(), To, /*IsBranchSrc=*/false);
+    }
     doIntraBranch(*ParentFunc, From, To, Count, false);
+  }
 
   return true;
 }
@@ -2284,7 +2289,6 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
       YamlBF.Id = BF->getFunctionNumber();
       YamlBF.Hash = BAT->getBFHash(FuncAddress);
       YamlBF.ExecCount = BF->getKnownExecutionCount();
-      YamlBF.ExternEntryCount = BF->getExternEntryCount();
       YamlBF.NumBasicBlocks = BAT->getNumBasicBlocks(FuncAddress);
       const BoltAddressTranslation::BBHashMapTy &BlockMap =
           BAT->getBBHashMap(FuncAddress);
