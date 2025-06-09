@@ -37,6 +37,7 @@
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/SemaSummarizer.h"
 #include "clang/Sema/SummaryConsumer.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
@@ -752,14 +753,18 @@ void CompilerInstance::createSummaryConsumer() {
   static llvm::raw_fd_ostream SummaryOS(SummaryFile, EC, llvm::sys::fs::CD_CreateAlways);
 
   if(!EC)
-    TheSummaryConsumer.reset(new JSONPrintingSummaryConsumer(SummaryOS));
+    TheSummaryConsumer.reset(new JSONPrintingSummaryConsumer(getSummaryManager(), SummaryOS));
+}
+
+void CompilerInstance::createSummaryManager() {
+  TheSummaryManager.reset(new SummaryManager());
 }
 
 void CompilerInstance::createSema(TranslationUnitKind TUKind,
                                   CodeCompleteConsumer *CompletionConsumer,
                                   SummaryConsumer *SummaryConsumer) {
   TheSema.reset(new Sema(getPreprocessor(), getASTContext(), getASTConsumer(),
-                         TUKind, CompletionConsumer, SummaryConsumer));
+                         TUKind, CompletionConsumer, hasSummaryManager() ? &getSummaryManager() : nullptr, SummaryConsumer));
 
   // Set up API notes.
   TheSema->APINotes.setSwiftVersion(getAPINotesOpts().SwiftVersion);

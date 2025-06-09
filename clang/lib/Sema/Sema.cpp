@@ -250,6 +250,7 @@ const uint64_t Sema::MaximumAlignment;
 
 Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
            TranslationUnitKind TUKind, CodeCompleteConsumer *CodeCompleter,
+           SummaryManager *SummaryManager,
            SummaryConsumer *SummaryConsumer)
     : SemaBase(*this), CollectStats(false), TUKind(TUKind),
       CurFPFeatures(pp.getLangOpts()), LangOpts(pp.getLangOpts()), PP(pp),
@@ -265,8 +266,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       BPFPtr(std::make_unique<SemaBPF>(*this)),
       CodeCompletionPtr(
           std::make_unique<SemaCodeCompletion>(*this, CodeCompleter)),
-      SummarizerPtr(SummaryConsumer ? std::make_unique<SemaSummarizer>(
-                                          *this, SummaryConsumer)
+      SummarizerPtr(SummaryManager ? std::make_unique<SemaSummarizer>(*this, *SummaryManager, SummaryConsumer)
                                     : nullptr),
       CUDAPtr(std::make_unique<SemaCUDA>(*this)),
       DirectXPtr(std::make_unique<SemaDirectX>(*this)),

@@ -16695,7 +16695,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
   if (FD && !FD->isDeleted())
     checkTypeSupport(FD->getType(), FD->getLocation(), FD);
 
-  if (FD && SummarizerPtr)
+  if (FD && SummarizerPtr && SummarizerPtr->TheSummaryConsumer)
     SummarizerPtr->SummarizeFunctionBody(FD);
 
   return dcl;

@@ -2,7 +2,10 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Index/USRGeneration.h"
 #include "clang/Sema/SummaryConsumer.h"
+#include "clang/Sema/SummaryAttribute.h"
 #include <set>
+#include <fstream>
+#include <sstream>
 
 namespace clang {
 namespace {
@@ -34,7 +37,7 @@ public:
   }
 };
 
-class NoWriteGlobalAttrManager : public SummaryAttributeManager {
+class NoWriteGlobalDescription : public SummaryAttributeDescription {
   class Callback : public ast_matchers::MatchFinder::MatchCallback {
   public:
     bool WriteGlobal = false;
@@ -50,8 +53,8 @@ class NoWriteGlobalAttrManager : public SummaryAttributeManager {
   };
 
 public:
-  NoWriteGlobalAttrManager()
-      : SummaryAttributeManager(NO_WRITE_GLOBAL, "no_write_global") {}
+  NoWriteGlobalDescription()
+      : SummaryAttributeDescription(NO_WRITE_GLOBAL, "no_write_global") {}
 
   bool predicate(const FunctionDecl *FD) override {
     using namespace ast_matchers;
@@ -78,13 +81,95 @@ void FunctionSummary::addCall(const clang::FunctionDecl *FD) {
   Calls.emplace(Call);
 }
 
+FunctionSummary::FunctionSummary(SmallVector<char> ID, std::set<SummaryAttribute> FunctionAttrs, std::set<SmallVector<char>> Calls) :
+  ID(std::move(ID)), FunctionAttrs(std::move(FunctionAttrs)), Calls(std::move(Calls)) {}
+
 FunctionSummary::FunctionSummary(const clang::FunctionDecl *FD) {
   index::generateUSRForDecl(FD, ID);
 }
 
-SemaSummarizer::SemaSummarizer(Sema &S, SummaryConsumer *SummaryConsumer)
-    : SemaBase(S), TheSummaryConsumer(SummaryConsumer) {
-  Attributes.emplace_back(std::make_unique<NoWriteGlobalAttrManager>());
+SummaryManager::SummaryManager() {
+  AttributeDescriptions.emplace_back(std::make_unique<NoWriteGlobalDescription>());
+
+  for(auto &&AttrDescr : AttributeDescriptions)
+    AttrToDescription[AttrDescr->getAttribute()] = AttrDescr.get();
+}
+
+FunctionSummary SummaryManager::SummarizeFunctionBody(const FunctionDecl *FD) {
+  auto Summary = std::make_unique<FunctionSummary>(FD);
+  CallCollector::CollectCalledFunctions(FD, *Summary);
+
+  for (auto &&AttrDesc : AttributeDescriptions) {
+    if (const auto &Attr = AttrDesc->infer(FD))
+      Summary->addAttribute(*Attr);
+  }
+
+  // FIXME: This is duplicated and hurts my eyes regardless
+  std::string key(Summary->getID().begin(), Summary->getID().size());
+  auto *SummaryPtr = FunctionSummaries.emplace_back(std::move(Summary)).get();
+  IDToSummary[key] = SummaryPtr;
+  return *SummaryPtr;
+}
+
+void SummaryManager::SerializeSummary(llvm::json::OStream &JOS, const FunctionSummary &Summary) const {
+  JOS.object([&]{
+    JOS.attribute("id", llvm::json::Value(Summary.getID()));
+    JOS.attributeObject("attrs", [&]{
+      JOS.attributeArray("function", [&]{
+        for(auto &&Attr : Summary.getFunctionAttrs()) {
+          JOS.value(llvm::json::Value(AttributeDescriptions[Attr]->serialize()));
+        }
+      });
+    });
+    JOS.attributeArray("calls", [&]{
+      for(auto &&Call : Summary.getCalls()) {
+        JOS.object([&]{
+          JOS.attribute("id", llvm::json::Value(Call));
+        });
+      }
+    });
+  });
+}
+
+void SummaryManager::ParseSummaryFromJSON(StringRef path) {
+  std::ifstream t(path.str());
+  std::stringstream buffer;
+  buffer << t.rdbuf();
+
+  auto JSON = llvm::json::parse(buffer.str());
+  if (!JSON)
+    return;
+
+  llvm::json::Array *Summaries = JSON->getAsArray();
+  for(auto it = Summaries->begin(); it != Summaries->end(); ++it) {
+    llvm::json::Object *Summary = it->getAsObject();
+
+    SmallString<128> ID(*Summary->getString("id"));
+    std::set<SummaryAttribute> FunctionAttrs;
+    llvm::json::Array *FunctionAttributes = Summary->getObject("attrs")->getArray("function");
+    for(auto attrIt = FunctionAttributes->begin(); attrIt != FunctionAttributes->end(); ++attrIt) {
+      for(auto &&AttrDesc : AttributeDescriptions) {
+        if(auto Attr = AttrDesc->parse(*attrIt->getAsString()))
+          FunctionAttrs.emplace(*Attr);
+      }
+    }
+
+    std::set<SmallVector<char>> Calls;
+    llvm::json::Array *CallEntries = Summary->getArray("calls");
+    for(auto callIt = CallEntries->begin(); callIt != CallEntries->end(); ++callIt) {
+      auto *Obj = callIt->getAsObject();
+      Calls.emplace(SmallString<128>(*Obj->getString("id")));
+    }
+    
+    std::string key = ID.str().str();
+    auto ParsedSummary = std::make_unique<FunctionSummary>(std::move(ID), std::move(FunctionAttrs), std::move(Calls));
+    auto *ParsedSummaryPtr = FunctionSummaries.emplace_back(std::move(ParsedSummary)).get();
+    IDToSummary[key] = ParsedSummaryPtr;
+  }
+}
+
+void SummaryManager::ReduceSummaries() {
+  // FIXME: implement
 }
 
 void SemaSummarizer::ActOnStartOfSourceFile() {
@@ -98,13 +183,7 @@ void SemaSummarizer::ActOnEndOfSourceFile() {
 }
 
 void SemaSummarizer::SummarizeFunctionBody(const FunctionDecl *FD) {
-  FunctionSummary Summary(FD);
-  CallCollector::CollectCalledFunctions(FD, Summary);
-
-  for (auto &&Attr : Attributes) {
-    if (const auto &InferredAttr = Attr->infer(FD))
-      Summary.addAttribute(*InferredAttr);
-  }
+  FunctionSummary Summary = TheSummaryManager->SummarizeFunctionBody(FD);
 
   if(TheSummaryConsumer)
     TheSummaryConsumer->ProcessFunctionSummary(Summary);

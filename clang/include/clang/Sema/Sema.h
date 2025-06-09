@@ -125,6 +125,7 @@ class CXXBasePath;
 class CXXBasePaths;
 class CXXFieldCollector;
 class CodeCompleteConsumer;
+class SummaryManager;
 class SummaryConsumer;
 enum class ComparisonCategoryType : unsigned char;
 class ConstraintSatisfaction;
@@ -886,6 +887,7 @@ public:
   Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
        TranslationUnitKind TUKind = TU_Complete,
        CodeCompleteConsumer *CompletionConsumer = nullptr,
+       SummaryManager *SummaryManager = nullptr,
        SummaryConsumer *SummaryConsumer = nullptr);
   ~Sema();
 

@@ -57,6 +57,7 @@ class Module;
 class ModuleCache;
 class Preprocessor;
 class Sema;
+class SummaryManager;
 class SourceManager;
 class TargetInfo;
 enum class DisableValidationForModuleKind;
@@ -124,6 +125,9 @@ class CompilerInstance : public ModuleLoader {
 
   /// The summary consumer.
   std::unique_ptr<SummaryConsumer> TheSummaryConsumer;
+  
+  /// The summary manager object.
+  std::unique_ptr<SummaryManager> TheSummaryManager;
 
   /// The semantic analysis object.
   std::unique_ptr<Sema> TheSema;
@@ -520,6 +524,15 @@ public:
   /// setASTContext - Replace the current AST context.
   void setASTContext(ASTContext *Value);
 
+  bool hasSummaryManager() {
+    return TheSummaryManager != nullptr;
+  }
+
+  SummaryManager &getSummaryManager() {
+    assert(TheSummaryManager && "Compiler instance has no summary manager!");
+    return *TheSummaryManager;
+  }
+
   /// Replace the current Sema; the compiler instance takes ownership
   /// of S.
   void setSema(Sema *S);
@@ -753,6 +766,7 @@ public:
       const CodeCompleteOptions &Opts, raw_ostream &OS);
 
   void createSummaryConsumer();
+  void createSummaryManager();
 
   /// Create the Sema object to be used for parsing.
   void createSema(TranslationUnitKind TUKind,

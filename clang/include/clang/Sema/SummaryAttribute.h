@@ -11,44 +11,25 @@ enum SummaryAttribute {
 
 class FunctionSummary;
 
-class SummaryAttributeManager {
-  inline static std::unordered_map<SummaryAttribute, std::string> AttrToStr;
-
+class SummaryAttributeDescription {
 protected:
   const SummaryAttribute Attr;
-  const char *Str;
+  std::string_view Serialzed;
 
 public:
-  SummaryAttributeManager(SummaryAttribute Attr, const char *Str)
-      : Attr(Attr), Str(Str) {
-    assert(AttrToStr.count(Attr) == 0 && "attribute already registered");
-    for (auto &&[attr, str] : AttrToStr)
-      assert(str != Str && "attribute representation is already used");
+  SummaryAttributeDescription(SummaryAttribute Attr, const char *Str) : Attr(Attr), Serialzed(Str) {}
+  virtual ~SummaryAttributeDescription() = default;
 
-    AttrToStr[Attr] = Str;
-  }
-  virtual ~SummaryAttributeManager() = default;
+  SummaryAttribute getAttribute() { return Attr; };
 
   virtual bool predicate(const FunctionDecl *FD) = 0;
+  std::optional<SummaryAttribute> infer(const FunctionDecl *FD);
 
   // FIXME: This should receive all the parsed summaries as well.
   virtual bool merge(FunctionSummary &Summary) = 0;
 
-  // FIXME: bad design
-  static std::string serialize(SummaryAttribute Attr) { return AttrToStr[Attr]; };
-  virtual std::optional<SummaryAttribute> parse(std::string_view Input) const {
-    if (Str == Input)
-      return Attr;
-
-    return std::nullopt;
-  };
-
-  std::optional<SummaryAttribute> infer(const FunctionDecl *FD) {
-    if (predicate(FD))
-      return Attr;
-
-    return std::nullopt;
-  };
+  virtual std::string serialize();
+  virtual std::optional<SummaryAttribute> parse(std::string_view input);
 };
 } // namespace clang
 

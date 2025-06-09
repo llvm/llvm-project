@@ -5,9 +5,14 @@
 #include "llvm/Support/JSON.h"
 namespace clang {
 class FunctionSummary;
+class SummaryManager;
 
 class SummaryConsumer {
+protected:
+    const SummaryManager *TheSummaryManager;
+
 public:
+    SummaryConsumer(const SummaryManager &SummaryManager) : TheSummaryManager(&SummaryManager) {}
     virtual ~SummaryConsumer() = default;
 
     virtual void ProcessStartOfSourceFile() {};
@@ -17,15 +22,15 @@ public:
 
 class PrintingSummaryConsumer : public SummaryConsumer {
 public:
-    PrintingSummaryConsumer(raw_ostream &OS)
-      : SummaryConsumer() {}
+    PrintingSummaryConsumer(const SummaryManager &SummaryManager, raw_ostream &OS)
+      : SummaryConsumer(SummaryManager) {}
 };
 
 class JSONPrintingSummaryConsumer : public PrintingSummaryConsumer {
     llvm::json::OStream JOS;
 
 public:
-    JSONPrintingSummaryConsumer(raw_ostream &OS) : PrintingSummaryConsumer(OS), JOS(OS, 2) {}
+    JSONPrintingSummaryConsumer(const SummaryManager &SummaryManager, raw_ostream &OS) : PrintingSummaryConsumer(SummaryManager, OS), JOS(OS, 2) {}
 
     void ProcessStartOfSourceFile() override { JOS.arrayBegin(); };
     void ProcessFunctionSummary(const FunctionSummary&) override;

@@ -35,6 +35,7 @@
 #include "clang/Parse/ParseAST.h"
 #include "clang/Sema/HLSLExternalSemaSource.h"
 #include "clang/Sema/MultiplexExternalSemaSource.h"
+#include "clang/Sema/SemaSummarizer.h"
 #include "clang/Serialization/ASTDeserializationListener.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
@@ -46,9 +47,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
-#include <fstream>
 #include <memory>
-#include <sstream>
 #include <system_error>
 using namespace clang;
 
@@ -894,6 +893,10 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     }
   }
 
+  if(!CI.hasSummaryManager()) {
+    CI.createSummaryManager();
+  }
+
   // Set up embedding for any specified files. Do this before we load any
   // source files, including the primary module map for the compilation.
   for (const auto &F : CI.getFrontendOpts().ModulesEmbedFiles) {
@@ -978,16 +981,11 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
       for (llvm::vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC),
                                          DirEnd;
            Dir != DirEnd && !EC; Dir.increment(EC)) {
-        if (llvm::sys::path::extension(Dir->path()) == ".json") {
-          std::ifstream t(Dir->path().str());
-          std::stringstream buffer;
-          buffer << t.rdbuf();
-
-          auto JSON = llvm::json::parse(buffer.str());
-          if (JSON)
-            JSON->dump();
-        }
+        if (llvm::sys::path::extension(Dir->path()) == ".json")
+          CI.getSummaryManager().ParseSummaryFromJSON(Dir->path());
       }
+
+      CI.getSummaryManager().ReduceSummaries();
     }
   }
 
@@ -1362,6 +1360,9 @@ void ASTFrontendAction::ExecuteAction() {
   if (CI.hasCodeCompletionConsumer())
     CompletionConsumer = &CI.getCodeCompletionConsumer();
 
+  if(!CI.hasSummaryManager()) {
+    CI.createSummaryManager();
+  }
   CI.createSummaryConsumer();
 
   // Use a code completion consumer?
