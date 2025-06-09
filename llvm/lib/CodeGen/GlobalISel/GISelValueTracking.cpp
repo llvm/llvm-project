@@ -715,9 +715,6 @@ static bool outputDenormalIsIEEEOrPosZero(const MachineFunction &MF, LLT Ty) {
 void GISelValueTracking::computeKnownFPClass(Register R, KnownFPClass &Known,
                                              FPClassTest InterestedClasses,
                                              unsigned Depth) {
-  if (!R.isVirtual())
-    return;
-  
   LLT Ty = MRI.getType(R);
   APInt DemandedElts =
       Ty.isFixedVector() ? APInt::getAllOnes(Ty.getNumElements()) : APInt(1, 1);
@@ -760,9 +757,6 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   }
 
   assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
-
-  if (!R.isVirtual())
-    return;
 
   MachineInstr &MI = *MRI.getVRegDef(R);
   unsigned Opcode = MI.getOpcode();
@@ -1052,7 +1046,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     //
     if ((Known.KnownFPClasses & fcZero) != fcNone &&
         !Known.isKnownNeverSubnormal()) {
-      DenormalMode Mode = MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType()));
+      DenormalMode Mode =
+          MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType()));
       if (Mode != DenormalMode::getIEEE())
         Known.KnownFPClasses |= fcZero;
     }
@@ -1344,19 +1339,19 @@ void GISelValueTracking::computeKnownFPClass(Register R,
           Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
 
         // (fadd x, 0.0) is guaranteed to return +0.0, not -0.0.
-        if ((KnownLHS.isKnownNeverLogicalNegZero(
-                 MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType()))) ||
-             KnownRHS.isKnownNeverLogicalNegZero(
-                 MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType())))) &&
+        if ((KnownLHS.isKnownNeverLogicalNegZero(MF->getDenormalMode(
+                 getFltSemanticForLLT(DstTy.getScalarType()))) ||
+             KnownRHS.isKnownNeverLogicalNegZero(MF->getDenormalMode(
+                 getFltSemanticForLLT(DstTy.getScalarType())))) &&
             // Make sure output negative denormal can't flush to -0
             outputDenormalIsIEEEOrPosZero(*MF, DstTy))
           Known.knownNot(fcNegZero);
       } else {
         // Only fsub -0, +0 can return -0
-        if ((KnownLHS.isKnownNeverLogicalNegZero(
-                 MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType()))) ||
-             KnownRHS.isKnownNeverLogicalPosZero(
-                 MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType())))) &&
+        if ((KnownLHS.isKnownNeverLogicalNegZero(MF->getDenormalMode(
+                 getFltSemanticForLLT(DstTy.getScalarType()))) ||
+             KnownRHS.isKnownNeverLogicalPosZero(MF->getDenormalMode(
+                 getFltSemanticForLLT(DstTy.getScalarType())))) &&
             // Make sure output negative denormal can't flush to -0
             outputDenormalIsIEEEOrPosZero(*MF, DstTy))
           Known.knownNot(fcNegZero);
@@ -1402,8 +1397,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     }
 
     if ((KnownRHS.isKnownNeverInfinity() ||
-         KnownLHS.isKnownNeverLogicalZero(
-             MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType())))) &&
+         KnownLHS.isKnownNeverLogicalZero(MF->getDenormalMode(
+             getFltSemanticForLLT(DstTy.getScalarType())))) &&
         (KnownLHS.isKnownNeverInfinity() ||
          KnownRHS.isKnownNeverLogicalZero(
              MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType())))))
@@ -1458,10 +1453,10 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
           (KnownLHS.isKnownNeverInfinity() ||
            KnownRHS.isKnownNeverInfinity()) &&
-          ((KnownLHS.isKnownNeverLogicalZero(
-               MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType())))) ||
-           (KnownRHS.isKnownNeverLogicalZero(
-               MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType())))))) {
+          ((KnownLHS.isKnownNeverLogicalZero(MF->getDenormalMode(
+               getFltSemanticForLLT(DstTy.getScalarType())))) ||
+           (KnownRHS.isKnownNeverLogicalZero(MF->getDenormalMode(
+               getFltSemanticForLLT(DstTy.getScalarType())))))) {
         Known.knownNot(fcNan);
       }
 
@@ -1474,8 +1469,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       // Inf REM x and x REM 0 produce NaN.
       if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
           KnownLHS.isKnownNeverInfinity() &&
-          KnownRHS.isKnownNeverLogicalZero(
-              MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType())))) {
+          KnownRHS.isKnownNeverLogicalZero(MF->getDenormalMode(
+              getFltSemanticForLLT(DstTy.getScalarType())))) {
         Known.knownNot(fcNan);
       }
 
@@ -1696,6 +1691,10 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   }
   case TargetOpcode::COPY: {
     Register Src = MI.getOperand(1).getReg();
+
+    if (!Src.isVirtual())
+      return;
+
     computeKnownFPClass(Src, DemandedElts, InterestedClasses, Known, Depth + 1);
     break;
   }
