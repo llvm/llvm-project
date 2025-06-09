@@ -4108,10 +4108,6 @@ TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
                 "Cannot compute the children of type %s without an execution "
                 "context.",
                 AsMangledName(type));
-    else
-      LLDB_LOGF(GetLog(LLDBLog::Types),
-                "Couldn't compute size of type %s without a process.",
-                AsMangledName(type));
 
     // Runtime failed, fallback to SwiftASTContext.
     if (UseSwiftASTContextFallback(__FUNCTION__, type)) {
