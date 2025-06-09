@@ -3550,24 +3550,26 @@ static void collectMapDataFromMapOperands(
               mapOp, mapOp.getMapperIdAttr()));
     else
       mapData.Mappers.push_back(nullptr);
-    mapData.IsAMapping.push_back(true);
+    bool hasMapDescriptor =
+        (mapData.Types.back() &
+         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DESCRIPTOR) ==
+        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DESCRIPTOR;
+    mapData.IsAMapping.push_back(!hasMapDescriptor);
     mapData.IsAMember.push_back(checkIsAMember(mapVars, mapOp));
   }
 
   auto findMapInfo = [&mapData](llvm::Value *val,
-                                llvm::OpenMPIRBuilder::DeviceInfoTy devInfoTy,
-                                size_t memberCount) {
+                                llvm::OpenMPIRBuilder::DeviceInfoTy devInfoTy) {
+    unsigned index = 0;
     bool found = false;
-    for (size_t index = 0; index < mapData.OriginalValue.size(); ++index) {
-      auto mapInfoOp = dyn_cast<omp::MapInfoOp>(mapData.MapClause[index]);
-      if (mapData.IsAMapping[index] && mapData.Pointers[index] == val &&
-          mapData.BasePointers[index] == val &&
-          memberCount == mapInfoOp.getMembers().size()) {
+    for (llvm::Value *basePtr : mapData.OriginalValue) {
+      if (basePtr == val && mapData.IsAMapping[index]) {
         found = true;
         mapData.Types[index] |=
             llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
         mapData.DevicePointers[index] = devInfoTy;
       }
+      index++;
     }
     return found;
   };
@@ -3582,7 +3584,7 @@ static void collectMapDataFromMapOperands(
       llvm::Value *origValue = moduleTranslation.lookupValue(offloadPtr);
 
       // Check if map info is already present for this entry.
-      if (!findMapInfo(origValue, devInfoTy, mapOp.getMembers().size())) {
+      if (!findMapInfo(origValue, devInfoTy)) {
         mapData.OriginalValue.push_back(origValue);
         mapData.Pointers.push_back(mapData.OriginalValue.back());
         mapData.IsDeclareTarget.push_back(false);
