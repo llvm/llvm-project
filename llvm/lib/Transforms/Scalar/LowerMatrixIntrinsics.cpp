@@ -2184,8 +2184,8 @@ public:
           Builder.SetInsertPoint(PHI);
           for (unsigned VI = 0, VE = PhiM.getNumVectors(); VI != VE; ++VI)
             PhiM.setVector(VI, Builder.CreatePHI(PhiM.getVectorTy(),
-                                                PHI->getNumIncomingValues(),
-                                                PHI->getName()));
+                                                 PHI->getNumIncomingValues(),
+                                                 PHI->getName()));
 
           Inst2ColumnMatrix[PHI] = PhiM;
         }
