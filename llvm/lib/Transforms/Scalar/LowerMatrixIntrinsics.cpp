@@ -1380,10 +1380,13 @@ public:
     Value *Op = nullptr;
     switch (Inst->getIntrinsicID()) {
     case Intrinsic::vector_reduce_fadd:
-    case Intrinsic::vector_reduce_fmul:
+    case Intrinsic::vector_reduce_fmul: {
+      FastMathFlags FMF = getFastMathFlags(Inst);
+      if (Inst->getType()->isFloatingPointTy() && !FMF.allowReassoc())
+        return false;
       Start = Inst->getOperand(0);
       Op = Inst->getOperand(1);
-      break;
+    } break;
     case Intrinsic::vector_reduce_fmax:
     case Intrinsic::vector_reduce_fmaximum:
     case Intrinsic::vector_reduce_fmin:
@@ -1411,10 +1414,6 @@ public:
     default:
       break;
     }
-
-    FastMathFlags FMF = getFastMathFlags(Inst);
-    if (Inst->getType()->isFloatingPointTy() && !FMF.allowReassoc())
-      return false;
 
     auto *I = Inst2ColumnMatrix.find(Op);
     if (I == Inst2ColumnMatrix.end())
