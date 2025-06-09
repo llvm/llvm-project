@@ -1528,7 +1528,7 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
             llvm::append_range(AdjustNeedDeviceAddr, Vars);
             break;
           default:
-            break;
+            llvm_unreachable("Unexpected 'adjust_args' clause modifier.");
           }
         }
         break;
