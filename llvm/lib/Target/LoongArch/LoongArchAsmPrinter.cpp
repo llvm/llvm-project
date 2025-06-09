@@ -24,6 +24,7 @@
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 
 using namespace llvm;
 
@@ -307,7 +308,7 @@ INITIALIZE_PASS(LoongArchAsmPrinter, "loongarch-asm-printer",
                 "LoongArch Assembly Printer", false, false)
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchAsmPrinter() {
   RegisterAsmPrinter<LoongArchAsmPrinter> X(getTheLoongArch32Target());
   RegisterAsmPrinter<LoongArchAsmPrinter> Y(getTheLoongArch64Target());
 }
