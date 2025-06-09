@@ -61,6 +61,28 @@
 // CHECK-NEXT:     "version": 1
 // CHECK-NEXT:   }
 // -----
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{
+  "uri":"test:///foo.mlir",
+  "languageId":"mlir",
+  "version":1,
+  "text":"unregistered.func.func ()"
+}}}
+// CHECK: "method": "textDocument/publishDiagnostics",
+// CHECK-NEXT: "params": {
+// CHECK-NEXT:     "diagnostics": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:         "category": "Parse Error",
+// Note: If the next lines need change, please update the corresponding logic
+// in MLIRServer.cpp to ensure the severity is still set as expected.
+// CHECK-NEXT:         "message": "Dialect `unregistered' not found for custom
+// CHECK:              "severity": 2,
+// CHECK-NEXT:         "source": "mlir"
+// CHECK-NEXT:       }
+// CHECK-NEXT:     ],
+// CHECK-NEXT:     "uri": "test:///foo.mlir",
+// CHECK-NEXT:     "version": 1
+// CHECK-NEXT:   }
+// -----
 {"jsonrpc":"2.0","id":3,"method":"shutdown"}
 // -----
 {"jsonrpc":"2.0","method":"exit"}

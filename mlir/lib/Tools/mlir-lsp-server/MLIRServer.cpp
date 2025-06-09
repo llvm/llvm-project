@@ -231,6 +231,17 @@ static lsp::Diagnostic getLspDiagnoticFromDiag(llvm::SourceMgr &sourceMgr,
   }
   lspDiag.message = diag.str();
 
+  // Downgrade errors related to unregistered dialects. We want to be able to
+  // provide the user with headsup about why the file didn't parse, but it is
+  // not an error in the same way invalid syntax or op that failed verification
+  // is. Chose to make it a warning rather than information as it could be due
+  // to typo (and so addressable by the user).
+  if (lspDiag.severity == lsp::DiagnosticSeverity::Error) {
+    StringRef msg(lspDiag.message);
+    if (msg.starts_with("Dialect `") && msg.contains("not found for custom op"))
+      lspDiag.severity = lsp::DiagnosticSeverity::Warning;
+  }
+
   // Attach any notes to the main diagnostic as related information.
   std::vector<lsp::DiagnosticRelatedInformation> relatedDiags;
   for (Diagnostic &note : diag.getNotes()) {
