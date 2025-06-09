@@ -36,16 +36,18 @@ void DynamicStaticInitializersCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-void DynamicStaticInitializersCheck::check(const MatchFinder::MatchResult &Result) {
+void DynamicStaticInitializersCheck::check(
+    const MatchFinder::MatchResult &Result) {
   const auto *Var = Result.Nodes.getNodeAs<VarDecl>("var");
   SourceLocation Loc = Var->getLocation();
-  if (!Loc.isValid() || !utils::isPresumedLocInHeaderFile(Loc, *Result.SourceManager,
-                                                          HeaderFileExtensions))
+  if (!Loc.isValid() || !utils::isPresumedLocInHeaderFile(
+                            Loc, *Result.SourceManager, HeaderFileExtensions))
     return;
   // If the initializer is a constant expression, then the compiler
   // doesn't have to dynamically initialize it.
-  diag(Loc, "static variable %0 may be dynamically initialized in this header file")
-    << Var;
+  diag(Loc,
+       "static variable %0 may be dynamically initialized in this header file")
+      << Var;
 }
 
 } // namespace clang::tidy::bugprone

@@ -67,8 +67,7 @@ class ParseHLSLRootSignatureTest : public ::testing::Test {
 protected:
   ParseHLSLRootSignatureTest()
       : FileMgr(FileMgrOpts), DiagID(new DiagnosticIDs()),
-        Consumer(new ExpectedDiagConsumer()),
-        Diags(DiagID, new DiagnosticOptions, Consumer),
+        Consumer(new ExpectedDiagConsumer()), Diags(DiagID, DiagOpts, Consumer),
         SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions) {
     // This is an arbitrarily chosen target triple to create the target info.
     TargetOpts->Triple = "dxil";
@@ -95,6 +94,7 @@ protected:
   FileSystemOptions FileMgrOpts;
   FileManager FileMgr;
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
+  DiagnosticOptions DiagOpts;
   ExpectedDiagConsumer *Consumer;
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
@@ -223,6 +223,163 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   ASSERT_TRUE(Consumer->isSatisfied());
 }
 
+TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
+  const llvm::StringLiteral Source = R"cc(
+    StaticSampler(s0),
+    StaticSampler(s0, maxAnisotropy = 3, space = 4,
+      visibility = SHADER_VISIBILITY_DOMAIN,
+      minLOD = 4.2f, mipLODBias = 0.23e+3,
+      addressW = TEXTURE_ADDRESS_CLAMP,
+      addressV = TEXTURE_ADDRESS_BORDER,
+      filter = FILTER_MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT,
+      maxLOD = 9000, addressU = TEXTURE_ADDRESS_MIRROR,
+      comparisonFunc = COMPARISON_NOT_EQUAL,
+      borderColor = STATIC_BORDER_COLOR_OPAQUE_BLACK_UINT
+    )
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
+
+  // Test no diagnostics produced
+  Consumer->setNoDiag();
+
+  ASSERT_FALSE(Parser.parse());
+
+  ASSERT_EQ(Elements.size(), 2u);
+
+  // Check default values are as expected
+  RootElement Elem = Elements[0];
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.ViewType, RegisterType::SReg);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.Number, 0u);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).Filter, SamplerFilter::Anisotropic);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressU, TextureAddressMode::Wrap);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressV, TextureAddressMode::Wrap);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressW, TextureAddressMode::Wrap);
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 0.f);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).MaxAnisotropy, 16u);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).CompFunc, ComparisonFunc::LessEqual);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).BorderColor,
+            StaticBorderColor::OpaqueWhite);
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MinLOD, 0.f);
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MaxLOD, 3.402823466e+38f);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).Space, 0u);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).Visibility, ShaderVisibility::All);
+
+  // Check values can be set as expected
+  Elem = Elements[1];
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.ViewType, RegisterType::SReg);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.Number, 0u);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).Filter,
+            SamplerFilter::MaximumMinPointMagLinearMipPoint);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressU, TextureAddressMode::Mirror);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressV, TextureAddressMode::Border);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressW, TextureAddressMode::Clamp);
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 230.f);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).MaxAnisotropy, 3u);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).CompFunc, ComparisonFunc::NotEqual);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).BorderColor,
+            StaticBorderColor::OpaqueBlackUint);
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MinLOD, 4.2f);
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MaxLOD, 9000.f);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).Space, 4u);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).Visibility, ShaderVisibility::Domain);
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, ValidParseFloatsTest) {
+  const llvm::StringLiteral Source = R"cc(
+    StaticSampler(s0, mipLODBias = 0),
+    StaticSampler(s0, mipLODBias = +1),
+    StaticSampler(s0, mipLODBias = -1),
+    StaticSampler(s0, mipLODBias = 42.),
+    StaticSampler(s0, mipLODBias = +4.2),
+    StaticSampler(s0, mipLODBias = -.42),
+    StaticSampler(s0, mipLODBias = .42e+3),
+    StaticSampler(s0, mipLODBias = 42E-12),
+    StaticSampler(s0, mipLODBias = 42.f),
+    StaticSampler(s0, mipLODBias = 4.2F),
+    StaticSampler(s0, mipLODBias = 42.e+10f),
+    StaticSampler(s0, mipLODBias = -2147483648),
+    StaticSampler(s0, mipLODBias = 2147483648),
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
+
+  // Test no diagnostics produced
+  Consumer->setNoDiag();
+
+  ASSERT_FALSE(Parser.parse());
+
+  RootElement Elem = Elements[0];
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 0.f);
+
+  Elem = Elements[1];
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 1.f);
+
+  Elem = Elements[2];
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, -1.f);
+
+  Elem = Elements[3];
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 42.f);
+
+  Elem = Elements[4];
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 4.2f);
+
+  Elem = Elements[5];
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, -.42f);
+
+  Elem = Elements[6];
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 420.f);
+
+  Elem = Elements[7];
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 0.000000000042f);
+
+  Elem = Elements[8];
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 42.f);
+
+  Elem = Elements[9];
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 4.2f);
+
+  Elem = Elements[10];
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 420000000000.f);
+
+  Elem = Elements[11];
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, -2147483648.f);
+
+  Elem = Elements[12];
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 2147483648.f);
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
 TEST_F(ParseHLSLRootSignatureTest, ValidSamplerFlagsTest) {
   // This test will checks we can set the valid enum for Sampler descriptor
   // range flags
@@ -344,6 +501,75 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootFlagsTest) {
   ASSERT_TRUE(Consumer->isSatisfied());
 }
 
+TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
+  const llvm::StringLiteral Source = R"cc(
+    CBV(b0),
+    SRV(space = 4, t42, visibility = SHADER_VISIBILITY_GEOMETRY,
+      flags = DATA_VOLATILE | DATA_STATIC | DATA_STATIC_WHILE_SET_AT_EXECUTE
+    ),
+    UAV(visibility = SHADER_VISIBILITY_HULL, u34893247),
+    CBV(b0, flags = 0),
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
+
+  // Test no diagnostics produced
+  Consumer->setNoDiag();
+
+  ASSERT_FALSE(Parser.parse());
+
+  ASSERT_EQ(Elements.size(), 4u);
+
+  RootElement Elem = Elements[0];
+  ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::CBuffer);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::BReg);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 0u);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 0u);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility, ShaderVisibility::All);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
+            RootDescriptorFlags::DataStaticWhileSetAtExecute);
+
+  Elem = Elements[1];
+  ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::SRV);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::TReg);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 42u);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 4u);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility,
+            ShaderVisibility::Geometry);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
+            RootDescriptorFlags::ValidFlags);
+
+  Elem = Elements[2];
+  ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::UAV);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::UReg);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 34893247u);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 0u);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility, ShaderVisibility::Hull);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
+            RootDescriptorFlags::DataVolatile);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
+            RootDescriptorFlags::DataVolatile);
+
+  Elem = Elements[3];
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::CBuffer);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::BReg);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 0u);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 0u);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility, ShaderVisibility::All);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags, RootDescriptorFlags::None);
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
 TEST_F(ParseHLSLRootSignatureTest, ValidTrailingCommaTest) {
   // This test will checks we can handling trailing commas ','
   const llvm::StringLiteral Source = R"cc(
@@ -440,6 +666,28 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidMissingDTParameterTest) {
     DescriptorTable(
       CBV()
     )
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
+
+  // Test correct diagnostic produced
+  Consumer->setExpected(diag::err_hlsl_rootsig_missing_param);
+  ASSERT_TRUE(Parser.parse());
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidMissingRDParameterTest) {
+  // This test will check that the parsing fails due a mandatory
+  // parameter (register) not being specified
+  const llvm::StringLiteral Source = R"cc(
+    SRV()
   )cc";
 
   TrivialModuleLoader ModLoader;
@@ -593,6 +841,112 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexOverflowedNumberTest) {
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_number_literal_overflow);
+  ASSERT_TRUE(Parser.parse());
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidParseOverflowedNegativeNumberTest) {
+  // This test will check that parsing fails due to a unsigned integer having
+  // too large of a magnitude to be interpreted as its negative
+  const llvm::StringLiteral Source = R"cc(
+    StaticSampler(s0, mipLODBias = -4294967295)
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
+
+  // Test correct diagnostic produced
+  Consumer->setExpected(diag::err_hlsl_number_literal_overflow);
+  ASSERT_TRUE(Parser.parse());
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidLexOverflowedFloatTest) {
+  // This test will check that the lexing fails due to a float overflow
+  const llvm::StringLiteral Source = R"cc(
+    StaticSampler(s0, mipLODBias = 3.402823467e+38F)
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
+
+  // Test correct diagnostic produced
+  Consumer->setExpected(diag::err_hlsl_number_literal_overflow);
+  ASSERT_TRUE(Parser.parse());
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidLexNegOverflowedFloatTest) {
+  // This test will check that the lexing fails due to negative float overflow
+  const llvm::StringLiteral Source = R"cc(
+    StaticSampler(s0, mipLODBias = -3.402823467e+38F)
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
+
+  // Test correct diagnostic produced
+  Consumer->setExpected(diag::err_hlsl_number_literal_overflow);
+  ASSERT_TRUE(Parser.parse());
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidLexOverflowedDoubleTest) {
+  // This test will check that the lexing fails due to an overflow of double
+  const llvm::StringLiteral Source = R"cc(
+    StaticSampler(s0, mipLODBias = 1.e+500)
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
+
+  // Test correct diagnostic produced
+  Consumer->setExpected(diag::err_hlsl_number_literal_overflow);
+  ASSERT_TRUE(Parser.parse());
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidLexUnderflowFloatTest) {
+  // This test will check that the lexing fails due to double underflow
+  const llvm::StringLiteral Source = R"cc(
+    StaticSampler(s0, mipLODBias = 10e-309)
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
+
+  // Test correct diagnostic produced
+  Consumer->setExpected(diag::err_hlsl_number_literal_underflow);
   ASSERT_TRUE(Parser.parse());
 
   ASSERT_TRUE(Consumer->isSatisfied());
