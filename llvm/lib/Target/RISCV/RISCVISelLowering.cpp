@@ -18494,7 +18494,6 @@ static SDValue foldReduceOperandViaVQDOT(SDValue InVec, const SDLoc &DL,
     return SDValue();
 
   MVT ResVT = getQDOTXResultType(OpVT.getSimpleVT());
-  // Use the partial_reduce_*mla path if possible
   if (A.getOpcode() == B.getOpcode()) {
     // TODO: handle ANY_EXTEND and zext nonneg here
     if (A.getOpcode() != ISD::SIGN_EXTEND && A.getOpcode() != ISD::ZERO_EXTEND)
@@ -18507,16 +18506,15 @@ static SDValue foldReduceOperandViaVQDOT(SDValue InVec, const SDLoc &DL,
         Opc, DL, ResVT,
         {DAG.getConstant(0, DL, ResVT), A.getOperand(0), B.getOperand(0)});
   }
-  // We don't yet have a partial_reduce_sumla node, so directly lower to the
-  // target node instead.
   if (B.getOpcode() != ISD::ZERO_EXTEND)
     std::swap(A, B);
   if (A.getOpcode() != ISD::SIGN_EXTEND || B.getOpcode() != ISD::ZERO_EXTEND)
     return SDValue();
 
-  A = DAG.getBitcast(ResVT, A.getOperand(0));
-  B = DAG.getBitcast(ResVT, B.getOperand(0));
-  return lowerVQDOT(RISCVISD::VQDOTSU_VL, A, B, DL, DAG, Subtarget);
+  unsigned Opc = ISD::PARTIAL_REDUCE_SUMLA;
+  return DAG.getNode(
+      Opc, DL, ResVT,
+      {DAG.getConstant(0, DL, ResVT), A.getOperand(0), B.getOperand(0)});
 }
 
 static SDValue performVECREDUCECombine(SDNode *N, SelectionDAG &DAG,
