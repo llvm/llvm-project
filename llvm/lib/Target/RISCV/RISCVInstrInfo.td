@@ -341,20 +341,32 @@ def simm12 : RISCVSImmLeafOp<12> {
 def simm12_no6 : ImmLeaf<XLenVT, [{
   return isInt<12>(Imm) && !isInt<6>(Imm) && isInt<12>(-Imm);}]>;
 
-// A 13-bit signed immediate where the least significant bit is zero.
-def bare_simm13_lsb0 : Operand<OtherVT> {
-  let ParserMatchClass = BareSImmNLsb0AsmOperand<13>;
-  let PrintMethod = "printBranchOperand";
-  let EncoderMethod = "getImmOpValueAsrN<1>";
-  let DecoderMethod = "decodeSImmOperandAndLslN<13, 1>";
+class BareSImm13Lsb0MaybeSym : Operand<OtherVT> {
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
       return isShiftedInt<12, 1>(Imm);
     return MCOp.isBareSymbolRef();
   }];
+}
+
+// A 13-bit signed immediate where the least significant bit is zero. The ImmLeaf
+// is needed so that the CompressInstEmitter can correctly add checks for the
+// compress patterns that involve instructions that use this operand. Similar to
+// bare_simm9_lsb0 in RISCVInstrInfoC.td.
+def bare_simm13_lsb0 : BareSImm13Lsb0MaybeSym,
+                       ImmLeaf<XLenVT, [{return isShiftedInt<12, 1>(Imm);}]> {
+  let ParserMatchClass = BareSImmNLsb0AsmOperand<13>;
+  let PrintMethod = "printBranchOperand";
+  let EncoderMethod = "getImmOpValueAsrN<1>";
+  let DecoderMethod = "decodeSImmOperandAndLslN<13, 1>";
   let OperandType = "OPERAND_PCREL";
 }
+
+// We need this (sort of) duplicate definition since adding ImmLeaf to
+// bare_simm13_lsb0 above makes it not sit well with codegen patterns where it
+// is used to match with a basic block (eg. BccPat<>).
+def bare_simm13_lsb0_bb : BareSImm13Lsb0MaybeSym;
 
 class UImm20OperandMaybeSym : RISCVUImmOp<20> {
   let MCOperandPredicate = [{
@@ -1660,10 +1672,10 @@ multiclass SelectCC_GPR_riirr<DAGOperand valty, DAGOperand imm> {
 // Match `riscv_brcc` and lower to the appropriate RISC-V branch instruction.
 multiclass BccPat<CondCode Cond, RVInstB Inst> {
   def : Pat<(riscv_brcc (XLenVT GPR:$rs1), GPR:$rs2, Cond, bb:$imm12),
-            (Inst GPR:$rs1, GPR:$rs2, bare_simm13_lsb0:$imm12)>;
+            (Inst GPR:$rs1, GPR:$rs2, bare_simm13_lsb0_bb:$imm12)>;
   // Explicitly select 0 to X0. The register coalescer doesn't always do it.
   def : Pat<(riscv_brcc (XLenVT GPR:$rs1), 0, Cond, bb:$imm12),
-            (Inst GPR:$rs1, (XLenVT X0), bare_simm13_lsb0:$imm12)>;
+            (Inst GPR:$rs1, (XLenVT X0), bare_simm13_lsb0_bb:$imm12)>;
 }
 
 class BrccCompressOpt<CondCode Cond, RVInstB Inst>
