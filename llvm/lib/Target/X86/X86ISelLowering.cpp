@@ -58059,20 +58059,30 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // If vectors of i1 are legal, turn (add (zext (vXi1 X)), Y) into
-  // (sub Y, (sext (vXi1 X))).
-  // FIXME: We have the (sub Y, (zext (vXi1 X))) -> (add (sext (vXi1 X)), Y) in
-  // generic DAG combine without a legal type check, but adding this there
-  // caused regressions.
   if (VT.isVector()) {
     SDValue X, Y;
     EVT BoolVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
                                   VT.getVectorElementCount());
+
+    // If vectors of i1 are legal, turn (add (zext (vXi1 X)), Y) into
+    // (sub Y, (sext (vXi1 X))).
+    // FIXME: We have the (sub Y, (zext (vXi1 X))) -> (add (sext (vXi1 X)), Y)
+    // in generic DAG combine without a legal type check, but adding this there
+    // caused regressions.
     if (DAG.getTargetLoweringInfo().isTypeLegal(BoolVT) &&
         sd_match(N, m_Add(m_ZExt(m_AllOf(m_SpecificVT(BoolVT), m_Value(X))),
                           m_Value(Y)))) {
       SDValue SExt = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, X);
       return DAG.getNode(ISD::SUB, DL, VT, Y, SExt);
+    }
+
+    // Fold (add X, (srl Y, 7)) -> (sub X, (icmp_sgt 0, Y)) to undo instcombine
+    // canonicalisation as we don't have good vXi8 shifts.
+    if (VT.getScalarType() == MVT::i8 &&
+        sd_match(N, m_Add(m_Value(X), m_Srl(m_Value(Y), m_SpecificInt(7))))) {
+      SDValue Cmp =
+          DAG.getSetCC(DL, BoolVT, DAG.getConstant(0, DL, VT), Y, ISD::SETGT);
+      return DAG.getNode(ISD::SUB, DL, VT, X, DAG.getSExtOrTrunc(Cmp, DL, VT));
     }
   }
 
