@@ -1787,9 +1787,6 @@ static bool isLifetimeEnd(Instruction *I) {
 static void sinkLifetimeStartMarkers(Function &F, coro::Shape &Shape,
                                      SuspendCrossingInfo &Checker,
                                      const DominatorTree &DT) {
-  if (F.hasOptNone())
-    return;
-
   // Collect all possible basic blocks which may dominate all uses of allocas.
   SmallPtrSet<BasicBlock *, 4> DomSet;
   DomSet.insert(&F.getEntryBlock());
@@ -1902,8 +1899,7 @@ static void riseLifetimeEndMarkers(Function &F, const coro::Shape &Shape) {
       else if (mayEscape(AI, U)) {
         Escape = true;
         break;
-      }
-      else
+      } else
         UserBBs.insert(I->getParent());
     }
 
