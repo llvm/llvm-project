@@ -21,6 +21,7 @@ config.enable_remote = not @LLDB_TEST_SHELL_DISABLE_REMOTE@
 config.libcxx_libs_dir = "@LIBCXX_LIBRARY_DIR@"
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
 config.python_executable = "@Python3_EXECUTABLE@"
+config.python_root_dir = "@Python3_ROOT_DIR@"
 config.swiftc = "@LLDB_SWIFTC@"
 config.swift_libs_dir = '@LLDB_SWIFT_LIBS@'
 config.lldb_enable_swift = @LLDB_ENABLE_SWIFT_SUPPORT@
