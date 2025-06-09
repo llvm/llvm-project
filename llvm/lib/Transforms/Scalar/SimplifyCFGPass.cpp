@@ -29,6 +29,7 @@
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -229,7 +230,7 @@ static bool tailMergeBlocksWithSimilarFunctionTerminators(Function &F,
 /// Call SimplifyCFG on all the blocks in the function,
 /// iterating until no more changes are made.
 static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
-                                   DomTreeUpdater *DTU,
+                                   DomTreeUpdater *DTU, UniformityInfo *UI,
                                    const SimplifyCFGOptions &Options) {
   bool Changed = false;
   bool LocalChange = true;
@@ -261,7 +262,7 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
         while (BBIt != F.end() && DTU->isBBPendingDeletion(&*BBIt))
           ++BBIt;
       }
-      if (simplifyCFG(&BB, TTI, DTU, Options, LoopHeaders)) {
+      if (simplifyCFG(&BB, TTI, DTU, UI, Options, LoopHeaders)) {
         LocalChange = true;
         ++NumSimpl;
       }
@@ -272,14 +273,15 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
 }
 
 static bool simplifyFunctionCFGImpl(Function &F, const TargetTransformInfo &TTI,
-                                    DominatorTree *DT,
+                                    DominatorTree *DT, UniformityInfo *UI,
                                     const SimplifyCFGOptions &Options) {
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
 
   bool EverChanged = removeUnreachableBlocks(F, DT ? &DTU : nullptr);
   EverChanged |=
       tailMergeBlocksWithSimilarFunctionTerminators(F, DT ? &DTU : nullptr);
-  EverChanged |= iterativelySimplifyCFG(F, TTI, DT ? &DTU : nullptr, Options);
+  EverChanged |=
+      iterativelySimplifyCFG(F, TTI, DT ? &DTU : nullptr, UI, Options);
 
   // If neither pass changed anything, we're done.
   if (!EverChanged) return false;
@@ -293,7 +295,8 @@ static bool simplifyFunctionCFGImpl(Function &F, const TargetTransformInfo &TTI,
     return true;
 
   do {
-    EverChanged = iterativelySimplifyCFG(F, TTI, DT ? &DTU : nullptr, Options);
+    EverChanged =
+        iterativelySimplifyCFG(F, TTI, DT ? &DTU : nullptr, UI, Options);
     EverChanged |= removeUnreachableBlocks(F, DT ? &DTU : nullptr);
   } while (EverChanged);
 
@@ -301,13 +304,13 @@ static bool simplifyFunctionCFGImpl(Function &F, const TargetTransformInfo &TTI,
 }
 
 static bool simplifyFunctionCFG(Function &F, const TargetTransformInfo &TTI,
-                                DominatorTree *DT,
+                                DominatorTree *DT, UniformityInfo *UI,
                                 const SimplifyCFGOptions &Options) {
   assert((!RequireAndPreserveDomTree ||
           (DT && DT->verify(DominatorTree::VerificationLevel::Full))) &&
          "Original domtree is invalid?");
 
-  bool Changed = simplifyFunctionCFGImpl(F, TTI, DT, Options);
+  bool Changed = simplifyFunctionCFGImpl(F, TTI, DT, UI, Options);
 
   assert((!RequireAndPreserveDomTree ||
           (DT && DT->verify(DominatorTree::VerificationLevel::Full))) &&
@@ -378,7 +381,8 @@ PreservedAnalyses SimplifyCFGPass::run(Function &F,
   DominatorTree *DT = nullptr;
   if (RequireAndPreserveDomTree)
     DT = &AM.getResult<DominatorTreeAnalysis>(F);
-  if (!simplifyFunctionCFG(F, TTI, DT, Options))
+  auto *UA = &AM.getResult<UniformityInfoAnalysis>(F);
+  if (!simplifyFunctionCFG(F, TTI, DT, UA, Options))
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
   if (RequireAndPreserveDomTree)
@@ -412,7 +416,8 @@ struct CFGSimplifyPass : public FunctionPass {
       DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 
     auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    return simplifyFunctionCFG(F, TTI, DT, Options);
+    auto &UI = getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
+    return simplifyFunctionCFG(F, TTI, DT, &UI, Options);
   }
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
@@ -422,6 +427,7 @@ struct CFGSimplifyPass : public FunctionPass {
     if (RequireAndPreserveDomTree)
       AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
+    AU.addRequired<UniformityInfoWrapperPass>();
   }
 };
 }
@@ -432,6 +438,7 @@ INITIALIZE_PASS_BEGIN(CFGSimplifyPass, "simplifycfg", "Simplify the CFG", false,
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_END(CFGSimplifyPass, "simplifycfg", "Simplify the CFG", false,
                     false)
 
