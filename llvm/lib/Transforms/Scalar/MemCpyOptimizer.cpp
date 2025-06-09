@@ -1460,7 +1460,8 @@ bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
     auto *CMemSetSize = dyn_cast<ConstantInt>(MemSetSize);
     if (!CMemSetSize)
       return false;
-    // A known memcpy size is required.
+
+    // A known memcpy size is also required.
     auto *CCopySize = dyn_cast<ConstantInt>(CopySize);
     if (!CCopySize)
       return false;
@@ -1480,9 +1481,9 @@ bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
   }
 
   IRBuilder<> Builder(MemCpy);
-  Value *MDest = MemCpy->getRawDest();
   Instruction *NewM =
-      Builder.CreateMemSet(MDest, MemSet->getOperand(1), CopySize, MDestAlign);
+      Builder.CreateMemSet(MemCpy->getRawDest(), MemSet->getOperand(1),
+                           CopySize, MemCpy->getDestAlign());
   auto *LastDef = cast<MemoryDef>(MSSA->getMemoryAccess(MemCpy));
   auto *NewAccess = MSSAU->createMemoryAccessAfter(NewM, nullptr, LastDef);
   MSSAU->insertDef(cast<MemoryDef>(NewAccess), /*RenameUses=*/true);
@@ -1703,7 +1704,7 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
     I->setMetadata(LLVMContext::MD_tbaa_struct, nullptr);
   }
 
-  LLVM_DEBUG(dbgs() << "Stack Move: Performed stack-move optimization\n");
+  LLVM_DEBUG(dbgs() << "Stack Move: Performed staack-move optimization\n");
   NumStackMove++;
   return true;
 }
