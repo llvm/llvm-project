@@ -250,7 +250,7 @@ namespace subobject {
 namespace lifetime {
   constexpr int &&id(int &&n) { return static_cast<int&&>(n); }
   constexpr int &&dead() { return id(0); } // expected-note {{temporary created here}}
-  constexpr int bad() { int &&n = dead(); n = 1; return n; } // expected-note {{assignment to temporary whose lifetime has ended}}
+  constexpr int bad() { int &&n = dead(); n = 1; return n; } // expected-note {{read of temporary whose lifetime has ended}}
   static_assert(bad(), ""); // expected-error {{constant expression}} expected-note {{in call}}
 }
 
@@ -1320,4 +1320,25 @@ constexpr bool different_in_loop(bool b = false) {
 constexpr bool check = different_in_loop();
   // expected-error@-1 {{}} expected-note@-1 {{in call}}
 
+}
+
+namespace GH48665 {
+constexpr bool foo(int *i) {
+    int &j = *i;
+    // expected-note@-1 {{read of dereferenced null pointer is not allowed in a constant expression}}
+    return true;
+}
+
+static_assert(foo(nullptr), ""); // expected-note {{in call to 'foo(nullptr)'}}
+// expected-error@-1 {{static assertion expression is not an integral constant expression}}
+
+int arr[3]; // expected-note 2{{declared here}}
+constexpr bool f() { // cxx14_20-error {{constexpr function never produces a constant expression}}
+  int &r  = arr[3]; // cxx14_20-note {{read of dereferenced one-past-the-end pointer is not allowed in a constant expression}} \
+                    // expected-warning {{array index 3 is past the end of the array}}\
+                    // expected-note {{initializer of 'arr' is unknown}}
+  return true;
+}
+static_assert(f(), ""); // expected-note {{in call to 'f()'}}
+// expected-error@-1 {{static assertion expression is not an integral constant expression}}
 }
