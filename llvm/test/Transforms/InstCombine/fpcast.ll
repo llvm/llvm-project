@@ -62,6 +62,17 @@ define half @test3_fabs_ninf(float %a) {
   ret half %c
 }
 
+define half @test3_fptrunc_ninf(float %a) {
+; CHECK-LABEL: @test3_fptrunc_ninf(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
+; CHECK-NEXT:    [[C:%.*]] = call ninf half @llvm.fabs.f16(half [[TMP1]])
+; CHECK-NEXT:    ret half [[C]]
+;
+  %b = call float @llvm.fabs.f32(float %a)
+  %c = fptrunc ninf float %b to half
+  ret half %c
+}
+
 define half @fneg_fptrunc(float %a) {
 ; CHECK-LABEL: @fneg_fptrunc(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
