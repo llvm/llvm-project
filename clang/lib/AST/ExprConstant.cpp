@@ -6836,7 +6836,7 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
       // and make sure we've initialized every step along it.
       auto IndirectFieldChain = IFD->chain();
       for (auto *C : IndirectFieldChain) {
-        FD = cast<FieldDecl>(C)->getCanonicalDecl();
+        FD = cast<FieldDecl>(C);
         CXXRecordDecl *CD = cast<CXXRecordDecl>(FD->getParent());
         // Switch the union field if it differs. This happens if we had
         // preceding zero-initialization, and we're now initializing a union
@@ -6844,7 +6844,8 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
         // FIXME: In this case, the values of the other subobjects are
         // specified, since zero-initialization sets all padding bits to zero.
         if (!Value->hasValue() ||
-            (Value->isUnion() && Value->getUnionField() != FD)) {
+            (Value->isUnion() &&
+             !declaresSameEntity(Value->getUnionField(), FD))) {
           if (CD->isUnion())
             *Value = APValue(FD);
           else
