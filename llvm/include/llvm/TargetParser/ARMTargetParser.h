@@ -249,7 +249,6 @@ LLVM_ABI ArchKind convertV9toV8(ArchKind AK);
 LLVM_ABI FPUKind getDefaultFPU(StringRef CPU, ArchKind AK);
 LLVM_ABI uint64_t getDefaultExtensions(StringRef CPU, ArchKind AK);
 LLVM_ABI StringRef getDefaultCPU(StringRef Arch);
-StringRef getCanonicalArchName(StringRef Arch);
 LLVM_ABI StringRef getFPUSynonym(StringRef FPU);
 
 // Parser
