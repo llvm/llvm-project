@@ -9803,6 +9803,8 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   // If the sign extended value is in the range [-16,15], use VSPLTI[bhw].
   // Use VSPLTIW/VUPKLSW for v2i64 in range [-16,15].
   if (SextVal >= -16 && SextVal <= 15) {
+    // SplatSize may be 1, 2, 4, or 8. Use size 4 instead of 8 for the splat to
+    // generate a splat word with extend for size 8.
     unsigned UseSize = SplatSize == 8 ? 4 : SplatSize;
     SDValue Res =
         getCanonicalConstSplat(SextVal, UseSize, Op.getValueType(), DAG, dl);
