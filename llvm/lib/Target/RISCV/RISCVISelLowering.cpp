@@ -18372,31 +18372,6 @@ static SDValue performBUILD_VECTORCombine(SDNode *N, SelectionDAG &DAG,
                      DAG.getBuildVector(VT, DL, RHSOps));
 }
 
-static SDValue lowerVQDOT(unsigned Opc, SDValue Op0, SDValue Op1,
-                          const SDLoc &DL, SelectionDAG &DAG,
-                          const RISCVSubtarget &Subtarget) {
-  assert(RISCVISD::VQDOT_VL == Opc || RISCVISD::VQDOTU_VL == Opc ||
-         RISCVISD::VQDOTSU_VL == Opc);
-  MVT VT = Op0.getSimpleValueType();
-  assert(VT == Op1.getSimpleValueType() &&
-         VT.getVectorElementType() == MVT::i32);
-
-  SDValue Passthru = DAG.getConstant(0, DL, VT);
-  MVT ContainerVT = VT;
-  if (VT.isFixedLengthVector()) {
-    ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
-    Passthru = convertToScalableVector(ContainerVT, Passthru, DAG, Subtarget);
-    Op0 = convertToScalableVector(ContainerVT, Op0, DAG, Subtarget);
-    Op1 = convertToScalableVector(ContainerVT, Op1, DAG, Subtarget);
-  }
-  auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
-  SDValue LocalAccum = DAG.getNode(Opc, DL, ContainerVT,
-                                   {Op0, Op1, Passthru, Mask, VL});
-  if (VT.isFixedLengthVector())
-    return convertFromScalableVector(VT, LocalAccum, DAG, Subtarget);
-  return LocalAccum;
-}
-
 static MVT getQDOTXResultType(MVT OpVT) {
   ElementCount OpEC = OpVT.getVectorElementCount();
   assert(OpEC.isKnownMultipleOf(4) && OpVT.getVectorElementType() == MVT::i8);
