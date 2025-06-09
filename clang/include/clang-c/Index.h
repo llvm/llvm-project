@@ -36,7 +36,7 @@
 #define CINDEX_VERSION_MAJOR 0
 #define CINDEX_VERSION_MINOR 64
 
-#define CINDEX_VERSION_ENCODE(major, minor) (((major)*10000) + ((minor)*1))
+#define CINDEX_VERSION_ENCODE(major, minor) (((major) * 10000) + ((minor) * 1))
 
 #define CINDEX_VERSION                                                         \
   CINDEX_VERSION_ENCODE(CINDEX_VERSION_MAJOR, CINDEX_VERSION_MINOR)
@@ -4494,6 +4494,98 @@ CINDEX_LINKAGE CXStringSet *clang_Cursor_getCXXManglings(CXCursor);
  * class interface or implementation at the cursor.
  */
 CINDEX_LINKAGE CXStringSet *clang_Cursor_getObjCManglings(CXCursor);
+
+/**
+ * @}
+ */
+
+/**
+ * \defgroup CINDEX_MODULE Inline Assembly introspection
+ *
+ * The functions in this group provide access to information about GCC-style
+ * inline assembly statements.
+ *
+ * @{
+ */
+
+/**
+ * Given a CXCursor_GCCAsmStmt cursor, return the assembly template string.
+ * As per LLVM IR Assembly Template language, template placeholders for
+ * inputs and outputs are either of the form $N where N is a decimal number
+ * as an index into the input-output specification,
+ * or ${N:M} where N is a decimal number also as an index into the
+ * input-output specification and M is the template argument modifier.
+ * The index N in both cases points into the the total inputs and outputs,
+ * or more specifically, into the list of outputs followed by the inputs,
+ * starting from index 0 as the first available template argument.
+ */
+
+CINDEX_LINKAGE CXString clang_Cursor_getGCCAssemblyTemplate(CXCursor);
+
+/**
+ * Given a CXCursor_GCCAsmStmt cursor, check if the assembly block has goto
+ * labels.
+ */
+
+CINDEX_LINKAGE unsigned clang_Cursor_isGCCAssemblyHasGoto(CXCursor);
+
+/**
+ * Given a CXCursor_GCCAsmStmt cursor, count the number of outputs
+ */
+
+CINDEX_LINKAGE unsigned clang_Cursor_getGCCAssemblyNumOutputs(CXCursor);
+
+/**
+ * Given a CXCursor_GCCAsmStmt cursor, count the number of inputs
+ */
+
+CINDEX_LINKAGE unsigned clang_Cursor_getGCCAssemblyNumInputs(CXCursor);
+
+/**
+ * Given a CXCursor_GCCAsmStmt cursor, get the constraint and expression cursor
+ * to the Index-th input.
+ */
+
+CINDEX_LINKAGE unsigned clang_Cursor_getGCCAssemblyInput(CXCursor Cursor,
+                                                         unsigned Index,
+                                                         CXString *Constraint,
+                                                         CXCursor *Expr);
+
+/**
+ * Given a CXCursor_GCCAsmStmt cursor, get the constraint and expression cursor
+ * to the Index-th output.
+ */
+
+CINDEX_LINKAGE unsigned clang_Cursor_getGCCAssemblyOutput(CXCursor Cursor,
+                                                          unsigned Index,
+                                                          CXString *Constraint,
+                                                          CXCursor *Expr);
+
+/**
+ * Given a CXCursor_GCCAsmStmt cursor, count the clobbers in it.
+ */
+
+CINDEX_LINKAGE unsigned clang_Cursor_getGCCAssemblyNumClobbers(CXCursor Cursor);
+
+/**
+ * Given a CXCursor_GCCAsmStmt cursor, get the Index-th clobber of it.
+ */
+
+CINDEX_LINKAGE CXString clang_Cursor_getGCCAssemblyClobber(CXCursor Cursor,
+                                                           unsigned Index);
+
+/**
+ * Given a CXCursor_GCCAsmStmt cursor, check if the inline assembly is simple.
+ */
+
+CINDEX_LINKAGE unsigned clang_Cursor_isGCCAssemblySimple(CXCursor Cursor);
+
+/**
+ * Given a CXCursor_GCCAsmStmt cursor, check if the inline assembly is
+ * `volatile`.
+ */
+
+CINDEX_LINKAGE unsigned clang_Cursor_isGCCAssemblyVolatile(CXCursor Cursor);
 
 /**
  * @}
