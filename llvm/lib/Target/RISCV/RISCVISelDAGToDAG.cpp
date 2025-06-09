@@ -674,12 +674,24 @@ bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
 bool RISCVDAGToDAGISel::tryUnsignedBitfieldExtract(SDNode *Node, SDLoc DL,
                                                    MVT VT, SDValue X,
                                                    unsigned Msb, unsigned Lsb) {
-  // Only supported with XTHeadBb/XAndesPerf at the moment.
-  if (!Subtarget->hasVendorXTHeadBb() && !Subtarget->hasVendorXAndesPerf())
+  bool IsXTheadBb = Subtarget->hasVendorXTHeadBb();
+  bool IsXAndesPerf = Subtarget->hasVendorXAndesPerf();
+  bool IsXqcibm = Subtarget->hasVendorXqcibm();
+
+  // Only supported with XTHeadBb/XAndesPerf/Xqcibm at the moment.
+  if (!IsXTheadBb && !IsXAndesPerf && !IsXqcibm)
     return false;
 
-  unsigned Opc =
-      Subtarget->hasVendorXTHeadBb() ? RISCV::TH_EXTU : RISCV::NDS_BFOZ;
+  if (IsXqcibm) {
+    // QC.EXTU X, width, shamt
+    // shamt is the same as Lsb
+    // width is the number of bits to extract from the Lsb
+    Msb = Msb - Lsb + 1;
+  }
+
+  unsigned Opc = IsXTheadBb     ? RISCV::TH_EXTU
+                 : IsXAndesPerf ? RISCV::NDS_BFOZ
+                                : RISCV::QC_EXTU;
 
   SDNode *Ube = CurDAG->getMachineNode(Opc, DL, VT, X,
                                        CurDAG->getTargetConstant(Msb, DL, VT),
