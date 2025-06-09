@@ -772,7 +772,7 @@ def SPIRV_GLLog2Op : SPIRV_GLUnaryArithmeticOp<"Log2", 30, SPIRV_Float16or32> {
 
   let description = [{
     Result is the base-2 logarithm of x, i.e., the value y which satisfies the
-    equation x = 2y. The resulting value is NaN if x < 0. Moreover:
+    equation x = 2**y. The resulting value is NaN if x < 0. Moreover:
 
     ```
     log(Inf) = Inf
