@@ -425,7 +425,8 @@ void CFIProgram::printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
   case OT_Expression:
     assert(Instr.Expression && "missing DWARFExpression object");
     OS << " ";
-    DWARFExpressionPrinter::print(&(*Instr.Expression), OS, DumpOpts, nullptr);
+    DWARFExpressionPrinter::print(&Instr.Expression.value(), OS, DumpOpts,
+                                  nullptr);
     break;
   }
 }
