@@ -1043,11 +1043,11 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
   const auto *fd = cast<FunctionDecl>(gd.getDecl());
 
   if (unsigned builtinID = fd->getBuiltinID()) {
-    std::string noBuiltinFD = ("no-builtin-" + fd->getName()).str();
-    std::string noBuiltins = "no-builtins";
+    if(fd->getAttr<AsmLabelAttr>()) {
+      cgm.errorNYI("AsmLabelAttr");
+    }
 
-    auto *a = fd->getAttr<AsmLabelAttr>();
-    StringRef ident = a ? a->getLabel() : fd->getName();
+    StringRef ident = fd->getName();
     std::string fdInlineName = (ident + ".inline").str();
 
     bool isPredefinedLibFunction =

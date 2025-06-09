@@ -1855,40 +1855,6 @@ def FuncOp : CIR_Op<"func", [
 }
 
 //===----------------------------------------------------------------------===//
-// LLVMIntrinsicCallOp
-//===----------------------------------------------------------------------===//
-
-def LLVMIntrinsicCallOp : CIR_Op<"llvm.intrinsic"> {
-  let summary = "Call to llvm intrinsic functions that is not defined in CIR";
-  let description = [{
-    The `cir.llvm.intrinsic` operation represents a call-like expression which has
-    a return type and arguments that map directly to an llvm intrinsic.
-    It only records its own name (`intrinsic_name`).
-  }];
-
-  let results = (outs Optional<CIR_AnyType>:$result);
-  let arguments = (ins
-                   StrAttr:$intrinsic_name, Variadic<CIR_AnyType>:$arg_ops);
-
-  let skipDefaultBuilders = 1;
-
-  let assemblyFormat = [{
-    $intrinsic_name $arg_ops `:` functional-type($arg_ops, $result) attr-dict
-  }];
-
-  let builders = [
-    OpBuilder<(ins "mlir::StringAttr":$intrinsic_name, "mlir::Type":$resType,
-              CArg<"mlir::ValueRange", "{}">:$operands), [{
-      $_state.addAttribute("intrinsic_name", intrinsic_name);
-      $_state.addOperands(operands);
-      if (resType)
-        $_state.addTypes(resType);
-    }]>,
-  ];
-
-}
-
-//===----------------------------------------------------------------------===//
 // CallOp
 //===----------------------------------------------------------------------===//
 

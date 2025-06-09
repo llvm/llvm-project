@@ -15,6 +15,7 @@
 
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
 
 namespace clang::CIRGen {
@@ -235,11 +236,28 @@ public:
 
   cir::ConstantOp getConstInt(mlir::Location loc, mlir::Type t, uint64_t c);
 
-  cir::ConstantOp getConstFP(mlir::Location loc, mlir::Type t,
-                             llvm::APFloat fpVal) {
-    assert((mlir::isa<cir::SingleType, cir::DoubleType>(t)) &&
-           "expected cir::SingleType or cir::DoubleType");
-    return create<cir::ConstantOp>(loc, getAttr<cir::FPAttr>(t, fpVal));
+  mlir::Type getFPType(llvm::fltSemantics const &sem) {
+    switch (llvm::APFloat::SemanticsToEnum(sem)) {
+    case llvm::APFloat::S_IEEEhalf:
+      return cir::FP16Type::get(getContext(), typeCache.FP16Ty);
+    case llvm::APFloat::S_BFloat:
+      return cir::BF16Type::get(getContext(), typeCache.BFloat16Ty);
+    case llvm::APFloat::S_IEEEsingle:
+      return cir::SingleType::get(getContext(), typeCache.FloatTy);
+    case llvm::APFloat::S_IEEEdouble:
+      return cir::DoubleType::get(getContext(), typeCache.DoubleTy);
+    case llvm::APFloat::S_IEEEquad:
+      return cir::FP128Type::get(getContext(), typeCache.FP128Ty);
+    case llvm::APFloat::S_x87DoubleExtended:
+      return cir::FP80Type::get(getContext(), typeCache.FP80Ty);
+    default:
+      llvm_unreachable("Unrecognized floating semantics");
+    }
+  }
+
+  cir::ConstantOp getConstFP(mlir::Location loc, llvm::APFloat fpVal) {
+    mlir::Type type = getFPType(fpVal.getSemantics());
+    return create<cir::ConstantOp>(loc, getAttr<cir::FPAttr>(type, fpVal));
   }
 
   bool isInt8Ty(mlir::Type i) {

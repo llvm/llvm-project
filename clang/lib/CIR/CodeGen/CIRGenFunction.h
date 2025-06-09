@@ -47,10 +47,6 @@ private:
   /// is where the next operations will be introduced.
   CIRGenBuilderTy &builder;
 
-  /// Largest vector width used in ths function. Will be used to create a
-  /// function attribute.
-  unsigned largestVectorWidth = 0;
-
 public:
   /// The GlobalDecl for the current function being compiled or the global
   /// variable currently being initialized.
@@ -915,9 +911,6 @@ public:
   void emitScalarInit(const clang::Expr *init, mlir::Location loc,
                       LValue lvalue, bool capturedByInit = false);
 
-  mlir::Value emitScalarOrConstFoldImmArg(unsigned iceArguments, unsigned idx,
-                                          const CallExpr *e);
-
   void emitStoreOfScalar(mlir::Value value, Address addr, bool isVolatile,
                          clang::QualType ty, bool isInit = false,
                          bool isNontemporal = false);
@@ -936,10 +929,6 @@ public:
   mlir::LogicalResult emitSwitchCase(const clang::SwitchCase &s,
                                      bool buildingTopLevelCase);
   mlir::LogicalResult emitSwitchStmt(const clang::SwitchStmt &s);
-
-  mlir::Value emitTargetBuiltinExpr(unsigned builtinID,
-                                    const clang::CallExpr *e,
-                                    ReturnValueSlot returnValue);
 
   /// Given a value and its clang type, returns the value casted to its memory
   /// representation.

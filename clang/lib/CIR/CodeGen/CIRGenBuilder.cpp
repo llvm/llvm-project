@@ -42,7 +42,7 @@ mlir::Value CIRGenBuilderTy::getArrayElement(mlir::Location arrayLocBegin,
 cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc,
                                              llvm::APSInt intVal) {
   bool isSigned = intVal.isSigned();
-  auto width = intVal.getBitWidth();
+  unsigned width = intVal.getBitWidth();
   cir::IntType t = isSigned ? getSIntNTy(width) : getUIntNTy(width);
   return getConstInt(loc, t,
                      isSigned ? intVal.getSExtValue() : intVal.getZExtValue());
@@ -50,7 +50,7 @@ cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc,
 
 cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc,
                                              llvm::APInt intVal) {
-  auto width = intVal.getBitWidth();
+  unsigned width = intVal.getBitWidth();
   cir::IntType t = getUIntNTy(width);
   return getConstInt(loc, t, intVal.getZExtValue());
 }

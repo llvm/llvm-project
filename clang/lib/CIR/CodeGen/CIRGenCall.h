@@ -46,7 +46,7 @@ class CIRGenCallee {
     Invalid,
     Builtin,
 
-    Last = Invalid,
+    Last = Builtin,
   };
 
   struct BuiltinInfoStorage {
@@ -162,21 +162,7 @@ public:
 
 /// Contains the address where the return value of a function can be stored, and
 /// whether the address is volatile or not.
-class ReturnValueSlot {
-  Address addr = Address::invalid();
-
-  // Return value slot flags
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned isVolatileFlag : 1;
-
-public:
-  ReturnValueSlot() = default;
-  ReturnValueSlot(Address addr, bool isVolatile)
-      : addr(addr), isVolatileFlag(isVolatile) {}
-  bool isNull() const { return !addr.isValid(); }
-  bool isVolatile() const { return isVolatileFlag; }
-  Address getAddress() const { return addr; }
-};
+class ReturnValueSlot {};
 
 } // namespace clang::CIRGen
 
