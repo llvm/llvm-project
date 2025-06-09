@@ -229,6 +229,19 @@ public:
   cir::IntType getUInt32Ty() { return typeCache.UInt32Ty; }
   cir::IntType getUInt64Ty() { return typeCache.UInt64Ty; }
 
+  cir::ConstantOp getConstInt(mlir::Location loc, llvm::APSInt intVal);
+
+  cir::ConstantOp getConstInt(mlir::Location loc, llvm::APInt intVal);
+
+  cir::ConstantOp getConstInt(mlir::Location loc, mlir::Type t, uint64_t c);
+
+  cir::ConstantOp getConstFP(mlir::Location loc, mlir::Type t,
+                             llvm::APFloat fpVal) {
+    assert((mlir::isa<cir::SingleType, cir::DoubleType>(t)) &&
+           "expected cir::SingleType or cir::DoubleType");
+    return create<cir::ConstantOp>(loc, getAttr<cir::FPAttr>(t, fpVal));
+  }
+
   bool isInt8Ty(mlir::Type i) {
     return i == typeCache.UInt8Ty || i == typeCache.SInt8Ty;
   }

@@ -39,6 +39,28 @@ mlir::Value CIRGenBuilderTy::getArrayElement(mlir::Location arrayLocBegin,
   return create<cir::PtrStrideOp>(arrayLocEnd, flatPtrTy, basePtr, idx);
 }
 
+cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc,
+                                             llvm::APSInt intVal) {
+  bool isSigned = intVal.isSigned();
+  auto width = intVal.getBitWidth();
+  cir::IntType t = isSigned ? getSIntNTy(width) : getUIntNTy(width);
+  return getConstInt(loc, t,
+                     isSigned ? intVal.getSExtValue() : intVal.getZExtValue());
+}
+
+cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc,
+                                             llvm::APInt intVal) {
+  auto width = intVal.getBitWidth();
+  cir::IntType t = getUIntNTy(width);
+  return getConstInt(loc, t, intVal.getZExtValue());
+}
+
+cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc, mlir::Type t,
+                                             uint64_t c) {
+  assert(mlir::isa<cir::IntType>(t) && "expected cir::IntType");
+  return create<cir::ConstantOp>(loc, cir::IntAttr::get(t, c));
+}
+
 // This can't be defined in Address.h because that file is included by
 // CIRGenBuilder.h
 Address Address::withElementType(CIRGenBuilderTy &builder,

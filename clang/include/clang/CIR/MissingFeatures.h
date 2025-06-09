@@ -225,6 +225,8 @@ struct MissingFeatures {
   static bool isMemcpyEquivalentSpecialMember() { return false; }
   static bool isTrivialCtorOrDtor() { return false; }
   static bool implicitConstructorArgs() { return false; }
+  static bool intrinsics() { return false; }
+  static bool attributeNoBuiltin() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
