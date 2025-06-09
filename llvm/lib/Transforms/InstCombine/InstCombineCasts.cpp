@@ -1918,6 +1918,9 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
       CallInst *NewCI =
           CallInst::Create(Overload, {InnerTrunc}, OpBundles, II->getName());
       NewCI->copyFastMathFlags(II);
+      // A normal value may be converted to an infinity.
+      if (II->getIntrinsicID() == Intrinsic::fabs)
+        NewCI->setHasNoInfs(FPT.hasNoInfs());
       return NewCI;
     }
     }
