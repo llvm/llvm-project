@@ -13,6 +13,7 @@
 #ifndef LLVM_TARGETPARSER_ARMTARGETPARSERCOMMON_H
 #define LLVM_TARGETPARSER_ARMTARGETPARSERCOMMON_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace llvm {
@@ -23,19 +24,19 @@ enum class ISAKind { INVALID = 0, ARM, THUMB, AARCH64 };
 enum class EndianKind { INVALID = 0, LITTLE, BIG };
 
 /// Converts e.g. "armv8" -> "armv8-a"
-StringRef getArchSynonym(StringRef Arch);
+LLVM_ABI StringRef getArchSynonym(StringRef Arch);
 
 /// MArch is expected to be of the form (arm|thumb)?(eb)?(v.+)?(eb)?, but
 /// (iwmmxt|xscale)(eb)? is also permitted. If the former, return
 /// "v.+", if the latter, return unmodified string, minus 'eb'.
 /// If invalid, return empty string.
-StringRef getCanonicalArchName(StringRef Arch);
+LLVM_ABI StringRef getCanonicalArchName(StringRef Arch);
 
 // ARM, Thumb, AArch64
-ISAKind parseArchISA(StringRef Arch);
+LLVM_ABI ISAKind parseArchISA(StringRef Arch);
 
 // Little/Big endian
-EndianKind parseArchEndian(StringRef Arch);
+LLVM_ABI EndianKind parseArchEndian(StringRef Arch);
 
 struct ParsedBranchProtection {
   StringRef Scope;
@@ -45,7 +46,7 @@ struct ParsedBranchProtection {
   bool GuardedControlStack;
 };
 
-bool parseBranchProtection(StringRef Spec, ParsedBranchProtection &PBP,
+LLVM_ABI bool parseBranchProtection(StringRef Spec, ParsedBranchProtection &PBP,
                            StringRef &Err, bool EnablePAuthLR = false);
 
 } // namespace ARM
