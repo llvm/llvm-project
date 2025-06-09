@@ -199,7 +199,6 @@ struct MissingFeatures {
   static bool msabi() { return false; }
   static bool typeChecks() { return false; }
   static bool lambdaFieldToName() { return false; }
-  static bool updateCompletedType() { return false; }
   static bool moduleNameHash() { return false; }
   static bool constantFoldSwitchStatement() { return false; }
   static bool cudaSupport() { return false; }
@@ -217,6 +216,7 @@ struct MissingFeatures {
   static bool peepholeProtection() { return false; }
   static bool instrumentation() { return false; }
   static bool cleanupAfterErrorDiags() { return false; }
+  static bool cxxRecordStaticMembers() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }

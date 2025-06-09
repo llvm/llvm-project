@@ -1290,7 +1290,7 @@ class CXXDefaultArgExpr final
     CXXDefaultArgExprBits.Loc = Loc;
     CXXDefaultArgExprBits.HasRewrittenInit = RewrittenExpr != nullptr;
     if (RewrittenExpr)
-      *getTrailingObjects<Expr *>() = RewrittenExpr;
+      *getTrailingObjects() = RewrittenExpr;
     setDependence(computeDependence(this));
   }
 
@@ -1323,7 +1323,7 @@ public:
   }
 
   Expr *getRewrittenExpr() {
-    return hasRewrittenInit() ? *getTrailingObjects<Expr *>() : nullptr;
+    return hasRewrittenInit() ? *getTrailingObjects() : nullptr;
   }
 
   const Expr *getRewrittenExpr() const {
@@ -1421,14 +1421,14 @@ public:
   /// any.
   const Expr *getRewrittenExpr() const {
     assert(hasRewrittenInit() && "expected a rewritten init expression");
-    return *getTrailingObjects<Expr *>();
+    return *getTrailingObjects();
   }
 
   /// Retrieve the initializing expression with evaluated immediate calls, if
   /// any.
   Expr *getRewrittenExpr() {
     assert(hasRewrittenInit() && "expected a rewritten init expression");
-    return *getTrailingObjects<Expr *>();
+    return *getTrailingObjects();
   }
 
   const DeclContext *getUsedContext() const { return UsedContext; }
@@ -1982,8 +1982,8 @@ class LambdaExpr final : public Expr,
   /// Construct an empty lambda expression.
   LambdaExpr(EmptyShell Empty, unsigned NumCaptures);
 
-  Stmt **getStoredStmts() { return getTrailingObjects<Stmt *>(); }
-  Stmt *const *getStoredStmts() const { return getTrailingObjects<Stmt *>(); }
+  Stmt **getStoredStmts() { return getTrailingObjects(); }
+  Stmt *const *getStoredStmts() const { return getTrailingObjects(); }
 
   void initBodyIfNeeded() const;
 
@@ -3621,7 +3621,7 @@ public:
                                   ArrayRef<CleanupObject> objects);
 
   ArrayRef<CleanupObject> getObjects() const {
-    return getTrailingObjects<CleanupObject>(getNumObjects());
+    return getTrailingObjects(getNumObjects());
   }
 
   unsigned getNumObjects() const { return ExprWithCleanupsBits.NumObjects; }
@@ -3742,14 +3742,14 @@ public:
   using arg_iterator = Expr **;
   using arg_range = llvm::iterator_range<arg_iterator>;
 
-  arg_iterator arg_begin() { return getTrailingObjects<Expr *>(); }
+  arg_iterator arg_begin() { return getTrailingObjects(); }
   arg_iterator arg_end() { return arg_begin() + getNumArgs(); }
   arg_range arguments() { return arg_range(arg_begin(), arg_end()); }
 
   using const_arg_iterator = const Expr* const *;
   using const_arg_range = llvm::iterator_range<const_arg_iterator>;
 
-  const_arg_iterator arg_begin() const { return getTrailingObjects<Expr *>(); }
+  const_arg_iterator arg_begin() const { return getTrailingObjects(); }
   const_arg_iterator arg_end() const { return arg_begin() + getNumArgs(); }
   const_arg_range arguments() const {
     return const_arg_range(arg_begin(), arg_end());
@@ -3858,10 +3858,6 @@ class CXXDependentScopeMemberExpr final
 
   unsigned numTrailingObjects(OverloadToken<TemplateArgumentLoc>) const {
     return getNumTemplateArgs();
-  }
-
-  unsigned numTrailingObjects(OverloadToken<NamedDecl *>) const {
-    return hasFirstQualifierFoundInScope();
   }
 
   CXXDependentScopeMemberExpr(const ASTContext &Ctx, Expr *Base,
@@ -4419,7 +4415,7 @@ class SizeOfPackExpr final
         Length(Length ? *Length : PartialArgs.size()), Pack(Pack) {
     assert((!Length || PartialArgs.empty()) &&
            "have partial args for non-dependent sizeof... expression");
-    auto *Args = getTrailingObjects<TemplateArgument>();
+    auto *Args = getTrailingObjects();
     llvm::uninitialized_copy(PartialArgs, Args);
     setDependence(Length ? ExprDependence::None
                          : ExprDependence::ValueInstantiation);
@@ -4472,8 +4468,7 @@ public:
   /// Get
   ArrayRef<TemplateArgument> getPartialArguments() const {
     assert(isPartiallySubstituted());
-    const auto *Args = getTrailingObjects<TemplateArgument>();
-    return llvm::ArrayRef(Args, Args + Length);
+    return getTrailingObjects(Length);
   }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return OperatorLoc; }
@@ -4517,8 +4512,7 @@ class PackIndexingExpr final
         SubExprs{PackIdExpr, IndexExpr} {
     PackIndexingExprBits.TransformedExpressions = SubstitutedExprs.size();
     PackIndexingExprBits.FullySubstituted = FullySubstituted;
-    auto *Exprs = getTrailingObjects<Expr *>();
-    llvm::uninitialized_copy(SubstitutedExprs, Exprs);
+    llvm::uninitialized_copy(SubstitutedExprs, getTrailingObjects());
 
     setDependence(computeDependence(this));
     if (!isInstantiationDependent())
@@ -4583,13 +4577,12 @@ public:
   Expr *getSelectedExpr() const {
     UnsignedOrNone Index = getSelectedIndex();
     assert(Index && "extracting the indexed expression of a dependant pack");
-    return getTrailingObjects<Expr *>()[*Index];
+    return getTrailingObjects()[*Index];
   }
 
   /// Return the trailing expressions, regardless of the expansion.
   ArrayRef<Expr *> getExpressions() const {
-    return {getTrailingObjects<Expr *>(),
-            PackIndexingExprBits.TransformedExpressions};
+    return getTrailingObjects(PackIndexingExprBits.TransformedExpressions);
   }
 
   static bool classof(const Stmt *T) {
@@ -4817,7 +4810,7 @@ public:
   /// Iterators over the parameters which the parameter pack expanded
   /// into.
   using iterator = ValueDecl *const *;
-  iterator begin() const { return getTrailingObjects<ValueDecl *>(); }
+  iterator begin() const { return getTrailingObjects(); }
   iterator end() const { return begin() + NumParameters; }
 
   /// Get the number of parameters in this parameter pack.
@@ -5099,7 +5092,7 @@ class CXXParenListInitExpr final
       : Expr(CXXParenListInitExprClass, T, getValueKindForType(T), OK_Ordinary),
         NumExprs(Args.size()), NumUserSpecifiedExprs(NumUserSpecifiedExprs),
         InitLoc(InitLoc), LParenLoc(LParenLoc), RParenLoc(RParenLoc) {
-    std::copy(Args.begin(), Args.end(), getTrailingObjects<Expr *>());
+    llvm::copy(Args, getTrailingObjects());
     assert(NumExprs >= NumUserSpecifiedExprs &&
            "number of user specified inits is greater than the number of "
            "passed inits");
@@ -5124,19 +5117,17 @@ public:
   void updateDependence() { setDependence(computeDependence(this)); }
 
   MutableArrayRef<Expr *> getInitExprs() {
-    return getTrailingObjects<Expr *>(NumExprs);
+    return getTrailingObjects(NumExprs);
   }
 
-  ArrayRef<Expr *> getInitExprs() const {
-    return getTrailingObjects<Expr *>(NumExprs);
-  }
+  ArrayRef<Expr *> getInitExprs() const { return getTrailingObjects(NumExprs); }
 
   ArrayRef<Expr *> getUserSpecifiedInitExprs() {
-    return getTrailingObjects<Expr *>(NumUserSpecifiedExprs);
+    return getTrailingObjects(NumUserSpecifiedExprs);
   }
 
   ArrayRef<Expr *> getUserSpecifiedInitExprs() const {
-    return getTrailingObjects<Expr *>(NumUserSpecifiedExprs);
+    return getTrailingObjects(NumUserSpecifiedExprs);
   }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return LParenLoc; }
@@ -5172,13 +5163,12 @@ public:
   }
 
   child_range children() {
-    Stmt **Begin = reinterpret_cast<Stmt **>(getTrailingObjects<Expr *>());
+    Stmt **Begin = reinterpret_cast<Stmt **>(getTrailingObjects());
     return child_range(Begin, Begin + NumExprs);
   }
 
   const_child_range children() const {
-    Stmt *const *Begin =
-        reinterpret_cast<Stmt *const *>(getTrailingObjects<Expr *>());
+    Stmt *const *Begin = reinterpret_cast<Stmt *const *>(getTrailingObjects());
     return const_child_range(Begin, Begin + NumExprs);
   }
 
