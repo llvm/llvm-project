@@ -545,7 +545,7 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
       // extractelt (shufflevector %v1, %v2, splat-mask) idx ->
       // extractelt %v1, splat-mask[0]
       auto mask = SVI->getShuffleMask();
-      if (mask[0] != -1 && all_equal(mask))
+      if (mask[0] != PoisonMaskElem && all_equal(mask))
         return ExtractElementInst::Create(SVI->getOperand(0),
                                           Builder.getInt64(mask[0]));
 
