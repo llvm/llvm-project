@@ -118,8 +118,8 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
   ],
   "Parents": [
     {
-      "Link": "F.json",
       "Name": "F",
+      "Path": "",
       "QualName": "",
       "USR": "0000000000000000000000000000000000000000"
     }
@@ -147,8 +147,8 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
   ],
   "Records": [
     {
-      "Link": "ChildStruct.json",
       "Name": "ChildStruct",
+      "Path": "path/to/A/r",
       "QualName": "path::to::A::r::ChildStruct",
       "USR": "0000000000000000000000000000000000000000"
     }
@@ -162,8 +162,8 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
   "USR": "0000000000000000000000000000000000000000",
   "VirtualParents": [
     {
-      "Link": "G.json",
       "Name": "G",
+      "Path": "path/to/G",
       "QualName": "path::to::G::G",
       "USR": "0000000000000000000000000000000000000000"
     }

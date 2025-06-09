@@ -42,38 +42,112 @@ static json::Object serializeLocation(const Location &Loc,
   return LocationObj;
 }
 
-static json::Value serializeComment(const CommentInfo &Comment) {
-  assert((Comment.Kind == "BlockCommandComment" ||
-          Comment.Kind == "FullComment" || Comment.Kind == "ParagraphComment" ||
-          Comment.Kind == "TextComment") &&
-         "Unknown Comment type in CommentInfo.");
-
+static json::Value serializeComment(const CommentInfo &I) {
+  // taken from PR #142273
   Object Obj = Object();
-  json::Value Child = Object();
 
-  // TextComment has no children, so return it.
-  if (Comment.Kind == "TextComment") {
-    Obj["TextComment"] = Comment.Text;
+  json::Value ChildVal = Object();
+  Object &Child = *ChildVal.getAsObject();
+
+  json::Value ChildArr = Array();
+  auto &CARef = *ChildArr.getAsArray();
+  CARef.reserve(I.Children.size());
+  for (const auto &C : I.Children)
+    CARef.emplace_back(serializeComment(*C));
+
+  switch (I.Kind) {
+  case CommentKind::CK_TextComment: {
+    Obj.insert({commentKindToString(I.Kind), I.Text});
     return Obj;
   }
 
-  // BlockCommandComment needs to generate a Command key.
-  if (Comment.Kind == "BlockCommandComment")
-    Child.getAsObject()->insert({"Command", Comment.Name});
+  case CommentKind::CK_BlockCommandComment: {
+    Child.insert({"Command", I.Name});
+    Child.insert({"Children", ChildArr});
+    Obj.insert({commentKindToString(I.Kind), ChildVal});
+    return Obj;
+  }
 
-  // Use the same handling for everything else.
-  // Only valid for:
-  //  - BlockCommandComment
-  //  - FullComment
-  //  - ParagraphComment
-  json::Value ChildArr = Array();
-  auto &CARef = *ChildArr.getAsArray();
-  CARef.reserve(Comment.Children.size());
-  for (const auto &C : Comment.Children)
-    CARef.emplace_back(serializeComment(*C));
-  Child.getAsObject()->insert({"Children", ChildArr});
-  Obj.insert({Comment.Kind, Child});
-  return Obj;
+  case CommentKind::CK_InlineCommandComment: {
+    json::Value ArgsArr = Array();
+    auto &ARef = *ArgsArr.getAsArray();
+    ARef.reserve(I.Args.size());
+    for (const auto &Arg : I.Args)
+      ARef.emplace_back(Arg);
+    Child.insert({"Command", I.Name});
+    Child.insert({"Args", ArgsArr});
+    Child.insert({"Children", ChildArr});
+    Obj.insert({commentKindToString(I.Kind), ChildVal});
+    return Obj;
+  }
+
+  case CommentKind::CK_ParamCommandComment:
+  case CommentKind::CK_TParamCommandComment: {
+    Child.insert({"ParamName", I.ParamName});
+    Child.insert({"Direction", I.Direction});
+    Child.insert({"Explicit", I.Explicit});
+    Child.insert({"Children", ChildArr});
+    Obj.insert({commentKindToString(I.Kind), ChildVal});
+    return Obj;
+  }
+
+  case CommentKind::CK_VerbatimBlockComment: {
+    Child.insert({"Text", I.Text});
+    if (!I.CloseName.empty())
+      Child.insert({"CloseName", I.CloseName});
+    Child.insert({"Children", ChildArr});
+    Obj.insert({commentKindToString(I.Kind), ChildVal});
+    return Obj;
+  }
+
+  case CommentKind::CK_VerbatimBlockLineComment:
+  case CommentKind::CK_VerbatimLineComment: {
+    Child.insert({"Text", I.Text});
+    Child.insert({"Children", ChildArr});
+    Obj.insert({commentKindToString(I.Kind), ChildVal});
+    return Obj;
+  }
+
+  case CommentKind::CK_HTMLStartTagComment: {
+    json::Value AttrKeysArray = json::Array();
+    json::Value AttrValuesArray = json::Array();
+    auto &KeyArr = *AttrKeysArray.getAsArray();
+    auto &ValArr = *AttrValuesArray.getAsArray();
+    KeyArr.reserve(I.AttrKeys.size());
+    ValArr.reserve(I.AttrValues.size());
+    for (const auto &K : I.AttrKeys)
+      KeyArr.emplace_back(K);
+    for (const auto &V : I.AttrValues)
+      ValArr.emplace_back(V);
+    Child.insert({"Name", I.Name});
+    Child.insert({"SelfClosing", I.SelfClosing});
+    Child.insert({"AttrKeys", AttrKeysArray});
+    Child.insert({"AttrValues", AttrValuesArray});
+    Child.insert({"Children", ChildArr});
+    Obj.insert({commentKindToString(I.Kind), ChildVal});
+    return Obj;
+  }
+
+  case CommentKind::CK_HTMLEndTagComment: {
+    Child.insert({"Name", I.Name});
+    Child.insert({"Children", ChildArr});
+    Obj.insert({commentKindToString(I.Kind), ChildVal});
+    return Obj;
+  }
+
+  case CommentKind::CK_FullComment:
+  case CommentKind::CK_ParagraphComment: {
+    Child.insert({"Children", ChildArr});
+    Obj.insert({commentKindToString(I.Kind), ChildVal});
+    return Obj;
+  }
+
+  case CommentKind::CK_Unknown: {
+    Obj.insert({commentKindToString(I.Kind), I.Text});
+    return Obj;
+  }
+  }
+  llvm_unreachable("Unknown comment kind encountered.");
 }
 
 static void serializeCommonAttributes(const Info &I, json::Object &Obj,
@@ -108,12 +182,8 @@ static void serializeCommonAttributes(const Info &I, json::Object &Obj,
   }
 }
 
-static void serializeReference(const Reference &Ref, Object &ReferenceObj,
-                               SmallString<64> CurrentDirectory) {
-  SmallString<64> Path = Ref.getRelativeFilePath(CurrentDirectory);
-  sys::path::append(Path, Ref.getFileBaseName() + ".json");
-  sys::path::native(Path, sys::path::Style::posix);
-  ReferenceObj["Link"] = Path;
+static void serializeReference(const Reference &Ref, Object &ReferenceObj) {
+  ReferenceObj["Path"] = Ref.Path;
   ReferenceObj["Name"] = Ref.Name;
   ReferenceObj["QualName"] = Ref.QualName;
   ReferenceObj["USR"] = toHex(toStringRef(Ref.USR));
@@ -127,8 +197,7 @@ static void serializeReference(const SmallVector<Reference, 4> &References,
   for (const auto &Reference : References) {
     json::Value ReferenceVal = Object();
     auto &ReferenceObj = *ReferenceVal.getAsObject();
-    auto BasePath = Reference.getRelativeFilePath("");
-    serializeReference(Reference, ReferenceObj, BasePath);
+    serializeReference(Reference, ReferenceObj);
     ReferencesArrayRef.push_back(ReferenceVal);
   }
   Obj[Key] = ReferencesArray;
@@ -172,8 +241,7 @@ static void serializeCommonChildren(const ScopeChildren &Children,
     for (const auto &Record : Children.Records) {
       json::Value RecordVal = Object();
       auto &RecordObj = *RecordVal.getAsObject();
-      SmallString<64> BasePath = Record.getRelativeFilePath("");
-      serializeReference(Record, RecordObj, BasePath);
+      serializeReference(Record, RecordObj);
       RecordsArrayRef.push_back(RecordVal);
     }
     Obj["Records"] = RecordsArray;

@@ -146,7 +146,6 @@ protected:
 // CHECK-NEXT:        "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:      },
 // CHECK:             "IsStatic": true,
-// CHECK:             "IsStatic": false,
 // CHECK:             "Name": "getConst",
 // CHECK:             "ReturnType": {
 // CHECK-NEXT:          "IsBuiltIn": false,
@@ -163,8 +162,8 @@ protected:
 // CHECK-NEXT:    ],
 // CHECK-NEXT:    "Records": [
 // CHECK-NEXT:      {
-// CHECK-NEXT:        "Link": "NestedClass.json",
 // CHECK-NEXT:        "Name": "NestedClass",
+// CHECK-NEXT:        "Path": "GlobalNamespace{{[\/]+}}MyClass",
 // CHECK-NEXT:        "QualName": "NestedClass",
 // CHECK-NEXT:        "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:      }
