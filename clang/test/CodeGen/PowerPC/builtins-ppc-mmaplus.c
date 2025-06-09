@@ -13,10 +13,10 @@
 // CHECK-NEXT:    ret void
 //
 void test_dmxvi8gerx4(unsigned char *vdmrp, unsigned char *vpp, vector unsigned char vc, unsigned char *resp) {
-  __dmr vdmr = *((__dmr *)vdmrp);
+  __dmr1024 vdmr = *((__dmr1024 *)vdmrp);
   __vector_pair vp = *((__vector_pair *)vpp);
   __builtin_mma_dmxvi8gerx4(&vdmr, vp, vc);
-  *((__dmr *)resp) = vdmr;
+  *((__dmr1024 *)resp) = vdmr;
 }
 
 // CHECK-LABEL: @test_pmdmxvi8gerx4(
@@ -27,10 +27,10 @@ void test_dmxvi8gerx4(unsigned char *vdmrp, unsigned char *vpp, vector unsigned 
 // CHECK-NEXT:    ret void
 //
 void test_pmdmxvi8gerx4(unsigned char *vdmrp, unsigned char *vpp, vector unsigned char vc, unsigned char *resp) {
-  __dmr vdmr = *((__dmr *)vdmrp);
+  __dmr1024 vdmr = *((__dmr1024 *)vdmrp);
   __vector_pair vp = *((__vector_pair *)vpp);
   __builtin_mma_pmdmxvi8gerx4(&vdmr, vp, vc, 0, 0, 0);
-  *((__dmr *)resp) = vdmr;
+  *((__dmr1024 *)resp) = vdmr;
 }
 
 // CHECK-LABEL: @test_dmxvi8gerx4pp(
@@ -42,10 +42,10 @@ void test_pmdmxvi8gerx4(unsigned char *vdmrp, unsigned char *vpp, vector unsigne
 // CHECK-NEXT:    ret void
 //
 void test_dmxvi8gerx4pp(unsigned char *vdmrp, unsigned char *vpp, vector unsigned char vc, unsigned char *resp) {
-  __dmr vdmr = *((__dmr *)vdmrp);
+  __dmr1024 vdmr = *((__dmr1024 *)vdmrp);
   __vector_pair vp = *((__vector_pair *)vpp);
   __builtin_mma_dmxvi8gerx4pp(&vdmr, vp, vc);
-  *((__dmr *)resp) = vdmr;
+  *((__dmr1024 *)resp) = vdmr;
 }
 
 // CHECK-LABEL: @test_pmdmxvi8gerx4pp(
@@ -57,10 +57,10 @@ void test_dmxvi8gerx4pp(unsigned char *vdmrp, unsigned char *vpp, vector unsigne
 // CHECK-NEXT:    ret void
 //
 void test_pmdmxvi8gerx4pp(unsigned char *vdmrp, unsigned char *vpp, vector unsigned char vc, unsigned char *resp) {
-  __dmr vdmr = *((__dmr *)vdmrp);
+  __dmr1024 vdmr = *((__dmr1024 *)vdmrp);
   __vector_pair vp = *((__vector_pair *)vpp);
   __builtin_mma_pmdmxvi8gerx4pp(&vdmr, vp, vc, 0, 0, 0);
-  *((__dmr *)resp) = vdmr;
+  *((__dmr1024 *)resp) = vdmr;
 }
 
 // CHECK-LABEL: @test_dmxvi8gerx4spp(
@@ -72,10 +72,10 @@ void test_pmdmxvi8gerx4pp(unsigned char *vdmrp, unsigned char *vpp, vector unsig
 // CHECK-NEXT:    ret void
 //
 void test_dmxvi8gerx4spp(unsigned char *vdmrp, unsigned char *vpp, vector unsigned char vc, unsigned char *resp) {
-  __dmr vdmr = *((__dmr *)vdmrp);
+  __dmr1024 vdmr = *((__dmr1024 *)vdmrp);
   __vector_pair vp = *((__vector_pair *)vpp);
   __builtin_mma_dmxvi8gerx4spp(&vdmr, vp, vc);
-  *((__dmr *)resp) = vdmr;
+  *((__dmr1024 *)resp) = vdmr;
 }
 
 // CHECK-LABEL: @test_pmdmxvi8gerx4spp(
@@ -87,8 +87,8 @@ void test_dmxvi8gerx4spp(unsigned char *vdmrp, unsigned char *vpp, vector unsign
 // CHECK-NEXT:    ret void
 //
 void test_pmdmxvi8gerx4spp(unsigned char *vdmrp, unsigned char *vpp, vector unsigned char vc, unsigned char *resp) {
-  __dmr vdmr = *((__dmr *)vdmrp);
+  __dmr1024 vdmr = *((__dmr1024 *)vdmrp);
   __vector_pair vp = *((__vector_pair *)vpp);
   __builtin_mma_pmdmxvi8gerx4spp(&vdmr, vp, vc, 0, 0, 0);
-  *((__dmr *)resp) = vdmr;
+  *((__dmr1024 *)resp) = vdmr;
 }

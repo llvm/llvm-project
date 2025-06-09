@@ -17,21 +17,21 @@
 // are correctly defined. We also added checks on a couple of other targets to
 // ensure the types are target-dependent.
 
-// CHECK: TypedefDecl {{.*}} implicit __dmr '__dmr'
-// CHECK: `-BuiltinType {{.*}} '__dmr'
+// CHECK: TypedefDecl {{.*}} implicit __dmr1024 '__dmr1024'
+// CHECK: `-BuiltinType {{.*}} '__dmr1024'
 // CHECK: TypedefDecl {{.*}} implicit __vector_quad '__vector_quad'
 // CHECK-NEXT: -BuiltinType {{.*}} '__vector_quad'
 // CHECK: TypedefDecl {{.*}} implicit __vector_pair '__vector_pair'
 // CHECK-NEXT: -BuiltinType {{.*}} '__vector_pair'
 
-// CHECK-X86_64-NOT: __dmr
+// CHECK-X86_64-NOT: __dmr1024
 // CHECK-X86_64-NOT: __vector_quad
 // CHECK-X86_64-NOT: __vector_pair
 
-// CHECK-ARM-NOT: __dmr
+// CHECK-ARM-NOT: __dmr1024
 // CHECK-ARM-NOT: __vector_quad
 // CHECK-ARM-NOT: __vector_pair
 
-// CHECK-RISCV64-NOT: __dmr
+// CHECK-RISCV64-NOT: __dmr1024
 // CHECK-RISCV64-NOT: __vector_quad
 // CHECK-RISCV64-NOT: __vector_pair

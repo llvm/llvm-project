@@ -24,7 +24,7 @@ typedef __vector_quad vq_t;
 // CHECK-NEXT:    store <1024 x i1> [[TMP1]], ptr [[ADD_PTR1]], align 128
 // CHECK-NEXT:    ret void
 //
-void test_dmr_copy(__dmr *ptr1, __dmr *ptr2) {
+void test_dmr_copy(__dmr1024 *ptr1, __dmr1024 *ptr2) {
   *(ptr2 + 1) = *(ptr1 + 2);
 }
 
@@ -47,8 +47,8 @@ void test_dmr_copy(__dmr *ptr1, __dmr *ptr2) {
 // CHECK-NEXT:    ret void
 //
 void test_dmr_typedef(int *inp, int *outp) {
-  __dmr *vdmrin = (__dmr *)inp;
-  __dmr *vdmrout = (__dmr *)outp;
+  __dmr1024 *vdmrin = (__dmr1024 *)inp;
+  __dmr1024 *vdmrout = (__dmr1024 *)outp;
   *vdmrout = *vdmrin;
 }
 
@@ -67,8 +67,8 @@ void test_dmr_typedef(int *inp, int *outp) {
 // CHECK-NEXT:    store <1024 x i1> [[TMP2]], ptr [[TMP3]], align 128
 // CHECK-NEXT:    ret void
 //
-void test_dmr_arg(__dmr *vdmr, int *ptr) {
-  __dmr *vdmrp = (__dmr *)ptr;
+void test_dmr_arg(__dmr1024 *vdmr, int *ptr) {
+  __dmr1024 *vdmrp = (__dmr1024 *)ptr;
   *vdmrp = *vdmr;
 }
 
@@ -87,8 +87,8 @@ void test_dmr_arg(__dmr *vdmr, int *ptr) {
 // CHECK-NEXT:    store <1024 x i1> [[TMP2]], ptr [[TMP3]], align 128
 // CHECK-NEXT:    ret void
 //
-void test_dmr_const_arg(const __dmr *const vdmr, int *ptr) {
-  __dmr *vdmrp = (__dmr *)ptr;
+void test_dmr_const_arg(const __dmr1024 *const vdmr, int *ptr) {
+  __dmr1024 *vdmrp = (__dmr1024 *)ptr;
   *vdmrp = *vdmr;
 }
 
@@ -108,8 +108,8 @@ void test_dmr_const_arg(const __dmr *const vdmr, int *ptr) {
 // CHECK-NEXT:    store <1024 x i1> [[TMP2]], ptr [[TMP3]], align 128
 // CHECK-NEXT:    ret void
 //
-void test_dmr_array_arg(__dmr vdmra[], int *ptr) {
-  __dmr *vdmrp = (__dmr *)ptr;
+void test_dmr_array_arg(__dmr1024 vdmra[], int *ptr) {
+  __dmr1024 *vdmrp = (__dmr1024 *)ptr;
   *vdmrp = vdmra[0];
 }
 
@@ -124,8 +124,8 @@ void test_dmr_array_arg(__dmr vdmra[], int *ptr) {
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds <1024 x i1>, ptr [[TMP1]], i64 2
 // CHECK-NEXT:    ret ptr [[ADD_PTR]]
 //
-__dmr *test_dmr_ret(int *ptr) {
-  __dmr *vdmrp = (__dmr *)ptr;
+__dmr1024 *test_dmr_ret(int *ptr) {
+  __dmr1024 *vdmrp = (__dmr1024 *)ptr;
   return vdmrp + 2;
 }
 
@@ -140,8 +140,8 @@ __dmr *test_dmr_ret(int *ptr) {
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds <1024 x i1>, ptr [[TMP1]], i64 2
 // CHECK-NEXT:    ret ptr [[ADD_PTR]]
 //
-const __dmr *test_dmr_ret_const(int *ptr) {
-  __dmr *vdmrp = (__dmr *)ptr;
+const __dmr1024 *test_dmr_ret_const(int *ptr) {
+  __dmr1024 *vdmrp = (__dmr1024 *)ptr;
   return vdmrp + 2;
 }
 
@@ -174,10 +174,10 @@ const __dmr *test_dmr_ret_const(int *ptr) {
 // CHECK-NEXT:    ret i32 [[ADD2]]
 //
 int test_dmr_sizeof_alignof(int *ptr) {
-  __dmr *vdmrp = (__dmr *)ptr;
-  __dmr vdmr = *vdmrp;
-  unsigned sizet = sizeof(__dmr);
-  unsigned alignt = __alignof__(__dmr);
+  __dmr1024 *vdmrp = (__dmr1024 *)ptr;
+  __dmr1024 vdmr = *vdmrp;
+  unsigned sizet = sizeof(__dmr1024);
+  unsigned alignt = __alignof__(__dmr1024);
    unsigned sizev = sizeof(vdmr);
   unsigned alignv = __alignof__(vdmr);
   return sizet + alignt + sizev + alignv;
