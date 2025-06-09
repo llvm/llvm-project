@@ -660,7 +660,7 @@ Sema::ActOnStartRootSignatureDecl(StringRef Signature) {
   std::string IdStr = "__hlsl_rootsig_decl_" + std::to_string(Hash);
   IdentifierInfo *DeclIdent = &(getASTContext().Idents.get(IdStr));
 
-  // Check if we have already found a decl of the same name
+  // Check if we have already found a decl of the same name.
   LookupResult R(*this, DeclIdent, SourceLocation(), Sema::LookupOrdinaryName);
   bool Found = LookupQualifiedName(R, this->CurContext);
   return {DeclIdent, Found};
@@ -669,7 +669,7 @@ Sema::ActOnStartRootSignatureDecl(StringRef Signature) {
 void Sema::ActOnFinishRootSignatureDecl(
     SourceLocation Loc, IdentifierInfo *DeclIdent,
     SmallVector<llvm::hlsl::rootsig::RootElement> &Elements) {
-  // Create the Root Signature
+
   auto *SignatureDecl = HLSLRootSignatureDecl::Create(
       getASTContext(), /*DeclContext=*/CurContext, Loc, DeclIdent, Elements);
 
