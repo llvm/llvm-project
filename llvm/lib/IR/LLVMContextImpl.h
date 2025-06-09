@@ -311,7 +311,7 @@ template <> struct MDNodeKeyImpl<MDTuple> : MDNodeOpsKey {
 /// DenseMapInfo for DILocation.
 template <> struct MDNodeKeyImpl<DILocation> {
   unsigned Line;
-  unsigned Column;
+  uint16_t Column;
   Metadata *Scope;
   Metadata *InlinedAt;
   bool ImplicitCode;
