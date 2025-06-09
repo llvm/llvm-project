@@ -1535,7 +1535,7 @@ LogicalResult cir::GetMemberOp::verify() {
 
 OpFoldResult cir::VecCreateOp::fold(FoldAdaptor adaptor) {
   auto elements = getElements();
-  if (std::any_of(elements.begin(), elements.end(), [](mlir::Value attr) {
+  if (llvm::any_of(elements, [](mlir::Value attr) {
         return !mlir::isa<cir::ConstantOp>(attr.getDefiningOp());
       }))
     return {};
