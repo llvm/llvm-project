@@ -34,6 +34,16 @@
 
 #if defined(HAVE_UNISTD_H)
 # include <unistd.h>
+#else
+#ifndef STDIN_FILENO
+#define STDIN_FILENO 0
+#endif
+#ifndef STDOUT_FILENO
+#define STDOUT_FILENO 1
+#endif
+#ifndef STDERR_FILENO
+#define STDERR_FILENO 2
+#endif
 #endif
 
 #if defined(__CYGWIN__)
@@ -894,10 +904,11 @@ void raw_fd_ostream::anchor() {}
 raw_fd_ostream &llvm::outs() {
   // Set buffer settings to model stdout behavior.
   std::error_code EC;
-#ifdef __MVS__
-  EC = enablezOSAutoConversion(STDOUT_FILENO);
+
+  // On z/OS we need to enable auto conversion
+  EC = enableAutoConversion(STDOUT_FILENO);
   assert(!EC);
-#endif
+
   static raw_fd_ostream S("-", EC, sys::fs::OF_None);
   assert(!EC);
   return S;
@@ -905,10 +916,11 @@ raw_fd_ostream &llvm::outs() {
 
 raw_fd_ostream &llvm::errs() {
   // Set standard error to be unbuffered.
-#ifdef __MVS__
-  std::error_code EC = enablezOSAutoConversion(STDERR_FILENO);
+
+  // On z/OS we need to enable auto conversion
+  std::error_code EC = enableAutoConversion(STDERR_FILENO);
   assert(!EC);
-#endif
+
   static raw_fd_ostream S(STDERR_FILENO, false, true);
   return S;
 }
