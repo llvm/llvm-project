@@ -18,8 +18,7 @@ namespace darwin {
 class DarwinModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
-    CheckFactories.registerCheck<AvoidSpinlockCheck>(
-        "darwin-avoid-spinlock");
+    CheckFactories.registerCheck<AvoidSpinlockCheck>("darwin-avoid-spinlock");
     CheckFactories.registerCheck<DispatchOnceNonstaticCheck>(
         "darwin-dispatch-once-nonstatic");
   }
