@@ -74,6 +74,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   switch (Opcode) {
   case Instruction::ExtractElement:
   case Instruction::Freeze:
+  case VPInstruction::ReductionStartVector:
     return inferScalarType(R->getOperand(0));
   case Instruction::Select: {
     Type *ResTy = inferScalarType(R->getOperand(1));
@@ -89,8 +90,6 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
                inferScalarType(R->getOperand(1)) &&
            "different types inferred for different operands");
     return IntegerType::get(Ctx, 1);
-  case VPInstruction::ReductionStartVector:
-    return inferScalarType(R->getOperand(0));
   case VPInstruction::ComputeAnyOfResult:
   case VPInstruction::ComputeFindLastIVResult:
   case VPInstruction::ComputeReductionResult: {
@@ -397,10 +396,10 @@ static unsigned getVFScaleFactor(VPRecipeBase *R) {
     return RR->getVFScaleFactor();
   if (auto *RR = dyn_cast<VPPartialReductionRecipe>(R))
     return RR->getVFScaleFactor();
-  if (auto *VPI = dyn_cast<VPInstruction>(R))
-    assert(
-        VPI->getOpcode() != VPInstruction::ReductionStartVector &&
-        "getting scaling factor of reduction-start-vector not implemented yet");
+  assert(
+      (!isa<VPInstruction>(R) || cast<VPInstruction>(R)->getOpcode() !=
+                                     VPInstruction::ReductionStartVector) &&
+      "getting scaling factor of reduction-start-vector not implemented yet");
   return 1;
 }
 
