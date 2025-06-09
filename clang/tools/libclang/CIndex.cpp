@@ -8649,6 +8649,118 @@ void clang_annotateTokens(CXTranslationUnit TU, CXToken *Tokens,
 }
 
 //===----------------------------------------------------------------------===//
+// Operations for querying information of a GCC inline assembly block under a
+// cursor.
+//===----------------------------------------------------------------------===//
+CXString clang_Cursor_getGCCAssemblyTemplate(CXCursor Cursor) {
+  if (!clang_isStatement(Cursor.kind))
+    return cxstring::createEmpty();
+  if (auto const *Stmt = dyn_cast_or_null<GCCAsmStmt>(getCursorStmt(Cursor))) {
+    auto const &C = getCursorContext(Cursor);
+    auto AsmTemplate = Stmt->generateAsmString(C);
+    return cxstring::createDup(AsmTemplate);
+  }
+  return cxstring::createEmpty();
+}
+
+unsigned clang_Cursor_isGCCAssemblyHasGoto(CXCursor Cursor) {
+  if (!clang_isStatement(Cursor.kind))
+    return 0;
+  if (auto const *Stmt = dyn_cast_or_null<GCCAsmStmt>(getCursorStmt(Cursor))) {
+    return Stmt->isAsmGoto();
+  }
+  return 0;
+}
+
+unsigned clang_Cursor_getGCCAssemblyNumOutputs(CXCursor Cursor) {
+  if (!clang_isStatement(Cursor.kind))
+    return 0;
+  if (auto const *Stmt = dyn_cast_or_null<GCCAsmStmt>(getCursorStmt(Cursor))) {
+    return Stmt->getNumOutputs();
+  }
+  return 0;
+}
+
+unsigned clang_Cursor_getGCCAssemblyNumInputs(CXCursor Cursor) {
+  if (!clang_isStatement(Cursor.kind))
+    return 0;
+  if (auto const *Stmt = dyn_cast_or_null<GCCAsmStmt>(getCursorStmt(Cursor))) {
+    return Stmt->getNumInputs();
+  }
+  return 0;
+}
+
+unsigned clang_Cursor_getGCCAssemblyInput(CXCursor Cursor, unsigned Index,
+                                          CXString *Constraint,
+                                          CXCursor *Expr) {
+  if (!clang_isStatement(Cursor.kind) || !Constraint || !Expr)
+    return 0;
+  if (auto const *Stmt = dyn_cast_or_null<GCCAsmStmt>(getCursorStmt(Cursor));
+      Stmt && Index < Stmt->getNumInputs()) {
+    auto Constraint_ = Stmt->getInputConstraint(Index);
+    auto const *Expr_ = Stmt->getInputExpr(Index);
+    *Constraint = cxstring::createDup(Constraint_);
+    *Expr = MakeCXCursor(Expr_, getCursorDecl(Cursor),
+                         cxcursor::getCursorTU(Cursor));
+    return 1;
+  }
+  return 0;
+}
+
+unsigned clang_Cursor_getGCCAssemblyOutput(CXCursor Cursor, unsigned Index,
+                                           CXString *Constraint,
+                                           CXCursor *Expr) {
+  if (!clang_isStatement(Cursor.kind) || !Constraint || !Expr)
+    return 0;
+  if (auto const *Stmt = dyn_cast_or_null<GCCAsmStmt>(getCursorStmt(Cursor));
+      Stmt && Index < Stmt->getNumOutputs()) {
+    auto Constraint_ = Stmt->getOutputConstraint(Index);
+    auto const *Expr_ = Stmt->getOutputExpr(Index);
+    *Constraint = cxstring::createDup(Constraint_);
+    *Expr = MakeCXCursor(Expr_, getCursorDecl(Cursor),
+                         cxcursor::getCursorTU(Cursor));
+    return 1;
+  }
+  return 0;
+}
+
+unsigned clang_Cursor_getGCCAssemblyNumClobbers(CXCursor Cursor) {
+  if (!clang_isStatement(Cursor.kind))
+    return 0;
+  if (auto const *Stmt = dyn_cast_or_null<GCCAsmStmt>(getCursorStmt(Cursor))) {
+    return Stmt->getNumClobbers();
+  }
+  return 0;
+}
+
+CXString clang_Cursor_getGCCAssemblyClobber(CXCursor Cursor, unsigned Index) {
+  if (!clang_isStatement(Cursor.kind))
+    return cxstring::createEmpty();
+  if (auto const *S = dyn_cast_or_null<GCCAsmStmt>(getCursorStmt(Cursor));
+      S && Index < S->getNumClobbers())
+    return cxstring::createDup(S->getClobber(Index));
+  return cxstring::createEmpty();
+}
+
+unsigned clang_Cursor_isGCCAssemblySimple(CXCursor Cursor) {
+  if (!clang_isStatement(Cursor.kind))
+    return 0;
+  if (auto const *Stmt = dyn_cast_or_null<GCCAsmStmt>(getCursorStmt(Cursor))) {
+    return Stmt->isSimple();
+  }
+  return 0;
+}
+
+unsigned clang_Cursor_isGCCAssemblyVolatile(CXCursor Cursor) {
+  if (!clang_isStatement(Cursor.kind))
+    return 0;
+  if (auto const *Stmt = dyn_cast_or_null<GCCAsmStmt>(getCursorStmt(Cursor))) {
+    return Stmt->isVolatile();
+  }
+  return 0;
+}
+
+//===----------------------------------------------------------------------===//
 // Operations for querying linkage of a cursor.
 //===----------------------------------------------------------------------===//
 
