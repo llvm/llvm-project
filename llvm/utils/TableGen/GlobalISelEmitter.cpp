@@ -2019,7 +2019,7 @@ const CodeGenRegisterClass *GlobalISelEmitter::inferSuperRegisterClass(
 
   // Use the information we found above to find a minimal register class which
   // supports the subregister and type we want.
-  return Target.getSuperRegForSubReg(Ty.getValueTypeByHwMode(), CGRegs, SubIdx,
+  return CGRegs.getSuperRegForSubReg(Ty.getValueTypeByHwMode(), SubIdx,
                                      /*MustBeAllocatable=*/true);
 }
 
