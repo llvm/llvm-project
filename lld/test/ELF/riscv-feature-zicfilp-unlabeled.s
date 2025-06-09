@@ -53,10 +53,25 @@
 # REPORT-WARN: warning: f2.o: -z zicfilp-unlabeled-report: file does not have GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED property
 # REPORT-ERROR: error: f3.o: -z zicfilp-unlabeled-report: file does not have GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED property
 
+## zicfilp-unlabeled-report-dynamic should report any dynamic objects that does
+## not have the ZICFILP-unlabeled property. This also ensures the inhertance
+## from zicfilp-unlabeled-report is working correctly.
+# RUN: ld.lld f1-s.o f3-s.o out.no.so out.force.so -z zicfilp-unlabeled-report=warning -z zicfilp=unlabeled 2>&1 | FileCheck --check-prefix=REPORT-WARN-DYNAMIC %s
+# RUN: ld.lld f1-s.o f3-s.o out.no.so out.force.so -z zicfilp-unlabeled-report=error -z zicfilp=unlabeled 2>&1 | FileCheck --check-prefix=REPORT-WARN-DYNAMIC %s
+# RUN: ld.lld f1-s.o f3-s.o out.no.so out.force.so -z zicfilp-unlabeled-report-dynamic=none -z zicfilp=unlabeled 2>&1 | count 0
+# RUN: ld.lld f1-s.o f3-s.o out.no.so out.force.so -z zicfilp-unlabeled-report-dynamic=warning -z zicfilp=unlabeled 2>&1 | FileCheck --check-prefix=REPORT-WARN-DYNAMIC %s
+# RUN: not ld.lld f1-s.o f3-s.o out.no.so out.force.so -z zicfilp-unlabeled-report-dynamic=error -z zicfilp=unlabeled 2>&1 | FileCheck --check-prefix=REPORT-ERROR-DYNAMIC %s
+# RUN: ld.lld f1-s.o f3-s.o out.force.so -z zicfilp-unlabeled-report-dynamic=error -z zicfilp=unlabeled 2>&1 | count 0
+# REPORT-WARN-DYNAMIC: warning: out.no.so: ZICFILP-unlabeled is enabled, but this shared library lacks the necessary property note. The dynamic loader might not enable ZICFILP-unlabeled or refuse to load the program unless all shared library dependencies have the ZICFILP-unlabeled marking.
+# REPORT-WARN-DYNAMIC-NOT: {{.}}
+# REPORT-ERROR-DYNAMIC: error: out.no.so: ZICFILP-unlabeled is enabled, but this shared library lacks the necessary property note. The dynamic loader might not enable ZICFILP-unlabeled or refuse to load the program unless all shared library dependencies have the ZICFILP-unlabeled marking.
+# REPORT-ERROR-DYNAMIC-NOT: error:
+
 ## An invalid -z zicfilp-unlabeled-report option should give an error
-# RUN: not ld.lld f2-s.o -z zicfilp=x -z zicfilp-unlabeled-report=x 2>&1 | FileCheck --check-prefix=INVALID %s
+# RUN: not ld.lld f2-s.o -z zicfilp=x -z zicfilp-unlabeled-report=x -z zicfilp-unlabeled-report-dynamic=x 2>&1 | FileCheck --check-prefix=INVALID %s
 # INVALID: error: unknown -z zicfilp= value: x
 # INVALID: error: unknown -z zicfilp-unlabeled-report= value: x
+# INVALID: error: unknown -z zicfilp-unlabeled-report-dynamic= value: x
 
 ## ZICFILP-unlabeled and ZICFILP-func-sig should conflict with each other
 # RUN: not ld.lld f1-c.o 2>&1 | FileCheck --check-prefix=CONFLICT %s

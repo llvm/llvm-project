@@ -425,11 +425,20 @@ static void checkOptions(Ctx &ctx) {
     if (ctx.arg.zZicfilpUnlabeledReport != ReportPolicy::None)
       ErrAlways(ctx) << "-z zicfilip-unlabeled-report is only supported on "
                         "RISC-V targets";
+    if (ctx.arg.zZicfilpUnlabeledReportDynamic != ReportPolicy::None)
+      ErrAlways(ctx) << "-z zicfilip-unlabeled-report-dynamic is only supported"
+                        " on RISC-V targets";
     if (ctx.arg.zZicfilpFuncSigReport != ReportPolicy::None)
       ErrAlways(ctx) << "-z zicfilip-func-sig-report is only supported on "
                         "RISC-V targets";
+    if (ctx.arg.zZicfilpFuncSigReportDynamic != ReportPolicy::None)
+      ErrAlways(ctx) << "-z zicfilip-func-sig-report-dynamic is only supported "
+                        "on RISC-V targets";
     if (ctx.arg.zZicfissReport != ReportPolicy::None)
       ErrAlways(ctx) << "-z zicfiss-report is only supported on RISC-V targets";
+    if (ctx.arg.zZicfissReportDynamic != ReportPolicy::None)
+      ErrAlways(ctx) << "-z zicfiss-report-dynamic is only supported on RISC-V "
+                        "targets";
     if (ctx.arg.zZicfilp != ZicfilpPolicy::Implicit)
       ErrAlways(ctx) << "-z zicfilp is only supported on RISC-V targets";
     if (ctx.arg.zZicfiss != ZicfissPolicy::Implicit)
@@ -1686,45 +1695,84 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       ErrAlways(ctx) << errPrefix << pat.takeError() << ": " << kv.first;
   }
 
-  auto reports = {
-      std::make_pair("bti-report", &ctx.arg.zBtiReport),
-      std::make_pair("cet-report", &ctx.arg.zCetReport),
-      std::make_pair("execute-only-report", &ctx.arg.zExecuteOnlyReport),
-      std::make_pair("gcs-report", &ctx.arg.zGcsReport),
-      std::make_pair("gcs-report-dynamic", &ctx.arg.zGcsReportDynamic),
-      std::make_pair("pauth-report", &ctx.arg.zPauthReport),
-      std::make_pair("zicfilp-unlabeled-report",
-                     &ctx.arg.zZicfilpUnlabeledReport),
-      std::make_pair("zicfilp-func-sig-report", &ctx.arg.zZicfilpFuncSigReport),
-      std::make_pair("zicfiss-report", &ctx.arg.zZicfissReport)};
   bool hasGcsReportDynamic = false;
+  bool hasZicfilpUnlabeledReportDynamic = false;
+  bool hasZicfilpFuncSigReportDynamic = false;
+  bool hasZicfissReportDynamic = false;
+  struct ReportOptDesc {
+    const char *const name;
+    ReportPolicy &policy;
+    bool *const seen;
+
+    ReportOptDesc(const char *const name, ReportPolicy &policy, bool *seen)
+        : name(name), policy(policy), seen(seen) {}
+  };
+  const ReportOptDesc reports[] = {
+      {"bti-report", ctx.arg.zBtiReport, nullptr},
+      {"cet-report", ctx.arg.zCetReport, nullptr},
+      {"execute-only-report", ctx.arg.zExecuteOnlyReport, nullptr},
+      {"gcs-report", ctx.arg.zGcsReport, nullptr},
+      {"gcs-report-dynamic", ctx.arg.zGcsReportDynamic, &hasGcsReportDynamic},
+      {"pauth-report", ctx.arg.zPauthReport, nullptr},
+      {"zicfilp-unlabeled-report", ctx.arg.zZicfilpUnlabeledReport, nullptr},
+      {"zicfilp-unlabeled-report-dynamic",
+       ctx.arg.zZicfilpUnlabeledReportDynamic,
+       &hasZicfilpUnlabeledReportDynamic},
+      {"zicfilp-func-sig-report", ctx.arg.zZicfilpFuncSigReport, nullptr},
+      {"zicfilp-func-sig-report-dynamic", ctx.arg.zZicfilpFuncSigReportDynamic,
+       &hasZicfilpFuncSigReportDynamic},
+      {"zicfiss-report", ctx.arg.zZicfissReport, nullptr},
+      {"zicfiss-report-dynamic", ctx.arg.zZicfissReportDynamic,
+       &hasZicfissReportDynamic}};
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
         StringRef(arg->getValue()).split('=');
-    for (auto reportArg : reports) {
-      if (option.first != reportArg.first)
+    for (const ReportOptDesc &desc : reports) {
+      if (option.first != desc.name)
         continue;
       arg->claim();
       if (option.second == "none")
-        *reportArg.second = ReportPolicy::None;
+        desc.policy = ReportPolicy::None;
       else if (option.second == "warning")
-        *reportArg.second = ReportPolicy::Warning;
+        desc.policy = ReportPolicy::Warning;
       else if (option.second == "error")
-        *reportArg.second = ReportPolicy::Error;
+        desc.policy = ReportPolicy::Error;
       else {
-        ErrAlways(ctx) << "unknown -z " << reportArg.first
+        ErrAlways(ctx) << "unknown -z " << desc.name
                        << "= value: " << option.second;
         continue;
       }
-      hasGcsReportDynamic |= option.first == "gcs-report-dynamic";
+      if (desc.seen)
+        *desc.seen = true;
     }
   }
 
-  // When -zgcs-report-dynamic is unspecified, it inherits -zgcs-report
-  // but is capped at warning to avoid needing to rebuild the shared library
-  // with GCS enabled.
-  if (!hasGcsReportDynamic && ctx.arg.zGcsReport != ReportPolicy::None)
-    ctx.arg.zGcsReportDynamic = ReportPolicy::Warning;
+  struct ReportDynamicOptDesc {
+    ReportPolicy &dynamicPolicy;
+    const ReportPolicy objectPolicy;
+    const bool seenDynamicPolicy;
+
+    ReportDynamicOptDesc(ReportPolicy &dynamicPolicy,
+                         const ReportPolicy objectPolicy,
+                         const bool seenDynamicPolicy)
+        : dynamicPolicy(dynamicPolicy), objectPolicy(objectPolicy),
+          seenDynamicPolicy(seenDynamicPolicy) {}
+  };
+  const ReportDynamicOptDesc reportDynamics[] = {
+      {ctx.arg.zGcsReportDynamic, ctx.arg.zGcsReport, hasGcsReportDynamic},
+      {ctx.arg.zZicfilpUnlabeledReportDynamic, ctx.arg.zZicfilpUnlabeledReport,
+       hasZicfilpUnlabeledReportDynamic},
+      {ctx.arg.zZicfilpFuncSigReportDynamic, ctx.arg.zZicfilpFuncSigReport,
+       hasZicfilpFuncSigReportDynamic},
+      {ctx.arg.zZicfissReportDynamic, ctx.arg.zZicfissReport,
+       hasZicfissReportDynamic}};
+  for (const ReportDynamicOptDesc &desc : reportDynamics) {
+    // When -z xxx-report-dynamic is unspecified, it inherits -z xxx-report
+    // but is capped at warning to avoid needing to rebuild the shared library
+    // with XXX enabled.
+    if (!desc.seenDynamicPolicy && desc.objectPolicy != ReportPolicy::None)
+      desc.dynamicPolicy = ReportPolicy::Warning;
+  }
 
   for (opt::Arg *arg : args.filtered(OPT_compress_sections)) {
     SmallVector<StringRef, 0> fields;
@@ -3066,13 +3114,15 @@ static void readSecurityNotes(Ctx &ctx) {
       ctx.arg.andFeatures &= ~GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS;
   }
 
-  // If we are utilising GCS at any stage, the sharedFiles should be checked to
-  // ensure they also support this feature. The gcs-report-dynamic option is
-  // used to indicate if the user wants information relating to this, and will
-  // be set depending on the user's input, or warning if gcs-report is set to
-  // either `warning` or `error`.
-  if (ctx.arg.andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_GCS)
-    for (SharedFile *f : ctx.sharedFiles)
+  // If we are utilising AArch64 GCS/RISC-V ZICFILP-unlabeled/RISC-V
+  // ZICFILP-func-sig/RISC-V ZICFISS at any stage, the sharedFiles should be
+  // checked to ensure they also support this feature. The -z xxx-report-dynamic
+  // option is used to indicate if the user wants information relating to this,
+  // and will be set depending on the user's input, or warning if -z xxx-report
+  // is set to either `warning` or `error`.
+  for (SharedFile *f : ctx.sharedFiles) {
+    if (ctx.arg.emachine == EM_AARCH64 &&
+        (ctx.arg.andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_GCS))
       reportUnless(ctx.arg.zGcsReportDynamic,
                    f->andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_GCS)
           << f
@@ -3081,6 +3131,44 @@ static void readSecurityNotes(Ctx &ctx) {
           << "dynamic loader might not enable GCS or refuse to load the "
              "program unless all shared library "
           << "dependencies have the GCS marking.";
+
+    if (ctx.arg.emachine == EM_RISCV) {
+      if (ctx.arg.andFeatures & GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED)
+        reportUnless(ctx.arg.zZicfilpUnlabeledReportDynamic,
+                     f->andFeatures &
+                         GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED)
+            << f << ": " << "ZICFILP-unlabeled"
+            << " is enabled, but this shared library lacks the necessary "
+               "property note. The dynamic loader might not enable "
+            << "ZICFILP-unlabeled"
+            << " or refuse to load the program unless all shared library "
+               "dependencies have the "
+            << "ZICFILP-unlabeled" << " marking.";
+
+      if (ctx.arg.andFeatures & GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG)
+        reportUnless(ctx.arg.zZicfilpFuncSigReportDynamic,
+                     f->andFeatures &
+                         GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG)
+            << f << ": " << "ZICFILP-func-sig"
+            << " is enabled, but this shared library lacks the necessary "
+               "property note. The dynamic loader might not enable "
+            << "ZICFILP-func-sig"
+            << " or refuse to load the program unless all shared library "
+               "dependencies have the "
+            << "ZICFILP-func-sig" << " marking.";
+
+      if (ctx.arg.andFeatures & GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS)
+        reportUnless(ctx.arg.zZicfissReportDynamic,
+                     f->andFeatures & GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS)
+            << f << ": " << "ZICFISS"
+            << " is enabled, but this shared library lacks the necessary "
+               "property note. The dynamic loader might not enable "
+            << "ZICFISS"
+            << " or refuse to load the program unless all shared library "
+               "dependencies have the "
+            << "ZICFISS" << " marking.";
+    }
+  }
 }
 
 static void initSectionsAndLocalSyms(ELFFileBase *file, bool ignoreComdats) {
