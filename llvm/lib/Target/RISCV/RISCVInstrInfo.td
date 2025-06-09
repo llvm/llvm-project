@@ -353,7 +353,7 @@ class BareSImm13Lsb0MaybeSym : Operand<OtherVT> {
 // A 13-bit signed immediate where the least significant bit is zero. The ImmLeaf
 // is needed so that the CompressInstEmitter can correctly add checks for the
 // compress patterns that involve instructions that use this operand. Similar to
-// bare_simm9_lsb0 in RISCVInstrINfoC.td.
+// bare_simm9_lsb0 in RISCVInstrInfoC.td.
 def bare_simm13_lsb0 : BareSImm13Lsb0MaybeSym,
                        ImmLeaf<XLenVT, [{return isShiftedInt<12, 1>(Imm);}]> {
   let ParserMatchClass = BareSImmNLsb0AsmOperand<13>;
@@ -366,7 +366,7 @@ def bare_simm13_lsb0 : BareSImm13Lsb0MaybeSym,
 // We need this (sort of) duplicate definition since adding ImmLeaf to
 // bare_simm13_lsb0 above makes it not sit well with codegen patterns where it
 // is used to match with a basic block (eg. BccPat<>).
-def bare_simm13_lsb0_bb: BareSImm13Lsb0MaybeSym;
+def bare_simm13_lsb0_bb : BareSImm13Lsb0MaybeSym;
 
 class UImm20OperandMaybeSym : RISCVUImmOp<20> {
   let MCOperandPredicate = [{
