@@ -7222,8 +7222,7 @@ static Value *getStartValueFromReductionResult(VPInstruction *RdxResult) {
 // epilog loop, fix the reduction's scalar PHI node by adding the incoming value
 // from the main vector loop.
 static void fixReductionScalarResumeWhenVectorizingEpilog(
-    VPRecipeBase *R, VPTransformState &State, BasicBlock *LoopMiddleBlock,
-    BasicBlock *BypassBlock) {
+    VPRecipeBase *R, VPTransformState &State, BasicBlock *BypassBlock) {
   auto *EpiRedResult = dyn_cast<VPInstruction>(R);
   if (!EpiRedResult ||
       (EpiRedResult->getOpcode() != VPInstruction::ComputeAnyOfResult &&
@@ -7398,10 +7397,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       // that case, fixReductionScalarResumeWhenVectorizingEpilog will be a
       // no-op.
       auto *MiddleVPBB = cast<VPBasicBlock>(ScalarPreds[0]);
-      for (VPRecipeBase &R : *MiddleVPBB) {
-        fixReductionScalarResumeWhenVectorizingEpilog(
-            &R, State, State.CFG.VPBB2IRBB[MiddleVPBB], BypassBlock);
-      }
+      for (VPRecipeBase &R : *MiddleVPBB)
+        fixReductionScalarResumeWhenVectorizingEpilog(&R, State, BypassBlock);
     }
   }
 
