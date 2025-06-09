@@ -255,6 +255,8 @@ public:
       break;
     case llvm::Triple::loongarch64:
     case llvm::Triple::riscv64:
+    case llvm::Triple::riscv32be:
+    case llvm::Triple::riscv64be:
       break;
     }
   }
@@ -513,6 +515,8 @@ public:
       break;
     case llvm::Triple::loongarch64:
     case llvm::Triple::riscv64:
+    case llvm::Triple::riscv32be:
+    case llvm::Triple::riscv64be:
       break;
     }
   }

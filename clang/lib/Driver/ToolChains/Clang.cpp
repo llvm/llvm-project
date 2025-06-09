@@ -1195,6 +1195,8 @@ static bool isSignedCharDefault(const llvm::Triple &Triple) {
   case llvm::Triple::ppc64le:
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
   case llvm::Triple::systemz:
   case llvm::Triple::xcore:
   case llvm::Triple::xtensa:
@@ -1593,6 +1595,8 @@ void Clang::RenderTargetOptions(const llvm::Triple &EffectiveTriple,
 
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
     AddRISCVTargetArgs(Args, CmdArgs);
     break;
 
@@ -5644,7 +5648,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     } else if (Name == "SLEEF" || Name == "ArmPL") {
       if (Triple.getArch() != llvm::Triple::aarch64 &&
           Triple.getArch() != llvm::Triple::aarch64_be &&
-          Triple.getArch() != llvm::Triple::riscv64)
+          Triple.getArch() != llvm::Triple::riscv64 &&
+          Triple.getArch() != llvm::Triple::riscv64be)
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << Name << Triple.getArchName();
     }
@@ -8718,6 +8723,8 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
 
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
     AddRISCVTargetArgs(Args, CmdArgs);
     break;
 
