@@ -547,7 +547,8 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
       if (isa<VectorType>(SVI->getType())) {
         auto mask = SVI->getShuffleMask();
         if (mask[0] != -1 && all_equal(mask))
-          return ExtractElementInst::Create(SVI->getOperand(0), Builder.getInt64(mask[0]));
+          return ExtractElementInst::Create(SVI->getOperand(0),
+                                            Builder.getInt64(mask[0]));
       }
 
       // If this is extracting an element from a shufflevector, figure out where
