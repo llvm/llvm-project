@@ -9432,6 +9432,8 @@ def err_cuda_host_shared : Error<
     "%select{__device__|__global__|__host__|__host__ __device__}0 functions">;
 def err_cuda_nonstatic_constdev: Error<"__constant__, __device__, and "
     "__managed__ are not allowed on non-static local variables">;
+def err_cuda_address_space_gpuvar: Error<"__constant__, __device__, and "
+    "__shared__ variables must use default address space">;
 def err_cuda_grid_constant_not_allowed : Error<
   "__grid_constant__ is only allowed on const-qualified kernel parameters">;
 def err_cuda_ovl_target : Error<
