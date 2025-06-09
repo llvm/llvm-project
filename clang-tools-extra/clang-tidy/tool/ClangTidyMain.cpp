@@ -337,8 +337,7 @@ Allow empty enabled checks. This suppresses
 the "no checks enabled" error when disabling
 all of the checks.
 )"),
-                                         cl::init(false),
-                                         cl::cat(ClangTidyCategory));
+                                   cl::init(false), cl::cat(ClangTidyCategory));
 
 namespace clang::tidy {
 
@@ -370,8 +369,8 @@ static void printStats(const ClangTidyStats &Stats) {
   }
 }
 
-static std::unique_ptr<ClangTidyOptionsProvider> createOptionsProvider(
-   llvm::IntrusiveRefCntPtr<vfs::FileSystem> FS) {
+static std::unique_ptr<ClangTidyOptionsProvider>
+createOptionsProvider(llvm::IntrusiveRefCntPtr<vfs::FileSystem> FS) {
   ClangTidyGlobalOptions GlobalOptions;
   if (std::error_code Err = parseLineFilter(LineFilter, GlobalOptions)) {
     llvm::errs() << "Invalid LineFilter: " << Err.message() << "\n\nUsage:\n";

@@ -19,6 +19,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/GlobalDecl.h"
+#include "clang/AST/RecordLayout.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
@@ -838,6 +839,11 @@ void CIRGenModule::maybeSetTrivialComdat(const Decl &d, mlir::Operation *op) {
   assert(!cir::MissingFeatures::opFuncSetComdat());
 }
 
+void CIRGenModule::updateCompletedType(const TagDecl *td) {
+  // Make sure that this type is translated.
+  genTypes.updateCompletedType(td);
+}
+
 // TODO(CIR): this could be a common method between LLVM codegen.
 static bool isVarDeclStrongDefinition(const ASTContext &astContext,
                                       CIRGenModule &cgm, const VarDecl *vd,
@@ -1135,18 +1141,29 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     emitGlobalOpenACCDecl(cast<OpenACCDeclareDecl>(decl));
     break;
   case Decl::Enum:
+  case Decl::Using:          // using X; [C++]
   case Decl::UsingDirective: // using namespace X; [C++]
   case Decl::Typedef:
   case Decl::TypeAlias: // using foo = bar; [C++11]
   case Decl::Record:
-  case Decl::CXXRecord:
     assert(!cir::MissingFeatures::generateDebugInfo());
+    break;
+
+  // No code generation needed.
+  case Decl::UsingShadow:
+  case Decl::Empty:
     break;
 
   // C++ Decls
   case Decl::LinkageSpec:
   case Decl::Namespace:
     emitDeclContext(Decl::castToDeclContext(decl));
+    break;
+
+  case Decl::ClassTemplateSpecialization:
+  case Decl::CXXRecord:
+    assert(!cir::MissingFeatures::generateDebugInfo());
+    assert(!cir::MissingFeatures::cxxRecordStaticMembers());
     break;
   }
 }
@@ -1665,6 +1682,33 @@ bool CIRGenModule::verifyModule() const {
   // check the structural properties of the IR and invoke any specific
   // verifiers we have on the CIR operations.
   return mlir::verify(theModule).succeeded();
+}
+
+// TODO(cir): this can be shared with LLVM codegen.
+CharUnits CIRGenModule::computeNonVirtualBaseClassOffset(
+    const CXXRecordDecl *derivedClass,
+    llvm::iterator_range<CastExpr::path_const_iterator> path) {
+  CharUnits offset = CharUnits::Zero();
+
+  const ASTContext &astContext = getASTContext();
+  const CXXRecordDecl *rd = derivedClass;
+
+  for (const CXXBaseSpecifier *base : path) {
+    assert(!base->isVirtual() && "Should not see virtual bases here!");
+
+    // Get the layout.
+    const ASTRecordLayout &layout = astContext.getASTRecordLayout(rd);
+
+    const auto *baseDecl = cast<CXXRecordDecl>(
+        base->getType()->castAs<clang::RecordType>()->getDecl());
+
+    // Add the offset.
+    offset += layout.getBaseClassOffset(baseDecl);
+
+    rd = baseDecl;
+  }
+
+  return offset;
 }
 
 DiagnosticBuilder CIRGenModule::errorNYI(SourceLocation loc,

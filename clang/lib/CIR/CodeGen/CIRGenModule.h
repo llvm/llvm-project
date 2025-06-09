@@ -141,6 +141,10 @@ public:
   getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty = {},
                      ForDefinition_t isForDefinition = NotForDefinition);
 
+  CharUnits computeNonVirtualBaseClassOffset(
+      const CXXRecordDecl *derivedClass,
+      llvm::iterator_range<CastExpr::path_const_iterator> path);
+
   /// Return a constant array for the given string.
   mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *e);
 
@@ -240,6 +244,9 @@ public:
   llvm::StringRef getMangledName(clang::GlobalDecl gd);
 
   void emitTentativeDefinition(const VarDecl *d);
+
+  // Make sure that this type is translated.
+  void updateCompletedType(const clang::TagDecl *td);
 
   bool supportsCOMDAT() const;
   void maybeSetTrivialComdat(const clang::Decl &d, mlir::Operation *op);

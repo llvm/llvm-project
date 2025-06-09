@@ -926,8 +926,11 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BUILD_VECTOR, MVT::v2bf16, Legal);
   }
 
-  if (Subtarget->hasCvtPkF16F32Inst())
-    setOperationAction(ISD::FP_ROUND, MVT::v2f16, Custom);
+  if (Subtarget->hasCvtPkF16F32Inst()) {
+    setOperationAction(ISD::FP_ROUND,
+                       {MVT::v2f16, MVT::v4f16, MVT::v8f16, MVT::v16f16},
+                       Custom);
+  }
 
   setTargetDAGCombine({ISD::ADD,
                        ISD::UADDO_CARRY,
@@ -6896,14 +6899,35 @@ SDValue SITargetLowering::getFPExtOrFPRound(SelectionDAG &DAG, SDValue Op,
                            DAG.getTargetConstant(0, DL, MVT::i32));
 }
 
+SDValue SITargetLowering::splitFP_ROUNDVectorOp(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  EVT DstVT = Op.getValueType();
+  unsigned NumElts = DstVT.getVectorNumElements();
+  assert(NumElts > 2 && isPowerOf2_32(NumElts));
+
+  auto [Lo, Hi] = DAG.SplitVectorOperand(Op.getNode(), 0);
+
+  SDLoc DL(Op);
+  unsigned Opc = Op.getOpcode();
+  SDValue Flags = Op.getOperand(1);
+  EVT HalfDstVT =
+      EVT::getVectorVT(*DAG.getContext(), DstVT.getScalarType(), NumElts / 2);
+  SDValue OpLo = DAG.getNode(Opc, DL, HalfDstVT, Lo, Flags);
+  SDValue OpHi = DAG.getNode(Opc, DL, HalfDstVT, Hi, Flags);
+
+  return DAG.getNode(ISD::CONCAT_VECTORS, DL, DstVT, OpLo, OpHi);
+}
+
 SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   SDValue Src = Op.getOperand(0);
   EVT SrcVT = Src.getValueType();
   EVT DstVT = Op.getValueType();
 
-  if (DstVT == MVT::v2f16) {
+  if (DstVT.isVector() && DstVT.getScalarType() == MVT::f16) {
     assert(Subtarget->hasCvtPkF16F32Inst() && "support v_cvt_pk_f16_f32");
-    return SrcVT == MVT::v2f32 ? Op : SDValue();
+    if (SrcVT.getScalarType() != MVT::f32)
+      return SDValue();
+    return SrcVT == MVT::v2f32 ? Op : splitFP_ROUNDVectorOp(Op, DAG);
   }
 
   if (SrcVT.getScalarType() != MVT::f64)
