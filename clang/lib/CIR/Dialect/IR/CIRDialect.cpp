@@ -1609,11 +1609,8 @@ OpFoldResult cir::VecShuffleOp::fold(FoldAdaptor adaptor) {
     }
 
     uint64_t idxValue = idxAttr.getUInt();
-    if (idxValue < vec1Size) {
-      elements.push_back(vec1Elts[idxValue]);
-    } else {
-      elements.push_back(vec2Elts[idxValue - vec1Size]);
-    }
+    elements.push_back(idxValue < vec1Size ? vec1Elts[idxValue]
+                                           : vec2Elts[idxValue - vec1Size]);
   }
 
   return cir::ConstVectorAttr::get(
