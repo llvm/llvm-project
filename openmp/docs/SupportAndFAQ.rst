@@ -92,7 +92,7 @@ For AMDGPU offload, please see :ref:`build_amdgpu_offload_capable_compiler`.
 
 Q: How to build an OpenMP Nvidia offload capable compiler?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-The Cuda SDK is required on the machine that will build and execute the
+The CUDA SDK is required on the machine that will build and execute the
 offloading application. Normally this is only required at runtime by dynamically
 opening the CUDA driver API. This can be disabled in the build by omitting
 ``cuda`` from the ``LIBOMPTARGET_DLOPEN_PLUGINS`` list which is present by
