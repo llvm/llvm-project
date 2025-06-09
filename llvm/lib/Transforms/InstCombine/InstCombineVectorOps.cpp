@@ -542,11 +542,13 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
         }
       }
     } else if (auto *SVI = dyn_cast<ShuffleVectorInst>(I)) {
-      // extractelt (shufflevector %v1, %v2, zeroinitializer) ->
-      // extractelt %v1, 0
-      if (isa<FixedVectorType>(SVI->getType()))
-        if (all_of(SVI->getShuffleMask(), [](int Elt) { return Elt == 0; }))
-          return ExtractElementInst::Create(SVI->getOperand(0), Builder.getInt64(0));
+      // extractelt (shufflevector %v1, %v2, splat-mask) idx ->
+      // extractelt %v1, splat-mask[0]
+      if (isa<VectorType>(SVI->getType())) {
+        auto mask = SVI->getShuffleMask();
+        if (mask[0] != -1 && all_equal(mask))
+          return ExtractElementInst::Create(SVI->getOperand(0), Builder.getInt64(mask[0]));
+      }
 
       // If this is extracting an element from a shufflevector, figure out where
       // it came from and extract from the appropriate input element instead.
