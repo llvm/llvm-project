@@ -49,13 +49,13 @@ $ ./bin/lldb a.out -o 'b /Break here/ -o run
 */
 // If the above code is run, you will be stopped at the breakpoint and the Mock
 // GPU target will be selected. Try doing a "reg read --all" to see the state
-// of the GPU registers. Then you can select the native process target with 
+// of the GPU registers. Then you can select the native process target with
 // "target select 0" and issue commands to the native process, and then select
 // the GPU target with "target select 1" and issue commands to the GPU target.
 
 namespace lldb_private {
-  
-  class TCPSocket;
+
+class TCPSocket;
 
 namespace lldb_server {
 
@@ -67,8 +67,8 @@ public:
   int GetEventFileDescriptorAtIndex(size_t idx) override;
   bool HandleEventFileDescriptorEvent(int fd) override;
   GPUActions GetInitializeActions() override;
-  std::optional<struct GPUActions> NativeProcessIsStopping() override;  
-  GPUPluginBreakpointHitResponse 
+  std::optional<struct GPUActions> NativeProcessIsStopping() override;
+  llvm::Expected<GPUPluginBreakpointHitResponse>
   BreakpointWasHit(GPUPluginBreakpointHitArgs &args) override;
 
 private:
