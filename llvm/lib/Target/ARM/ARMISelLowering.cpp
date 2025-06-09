@@ -763,10 +763,16 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i64, Custom);
     setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Custom);
 
-    if (!Subtarget->hasVFP2Base())
+    if (!Subtarget->hasVFP2Base()) {
       setAllExpand(MVT::f32);
-    if (!Subtarget->hasFP64())
+    } else {
+      setOperationAction(ISD::STRICT_FDIV, MVT::f32, Legal);
+    }
+    if (!Subtarget->hasFP64()) {
       setAllExpand(MVT::f64);
+    } else {
+      setOperationAction(ISD::STRICT_FDIV, MVT::f64, Legal);
+    }
   }
 
   if (Subtarget->hasFullFP16()) {
