@@ -7569,7 +7569,7 @@ ExpectedDecl ASTNodeImporter::VisitRequiresExprBodyDecl(RequiresExprBodyDecl* D)
     return To;
   To->setLexicalDeclContext(LexicalDC);
   LexicalDC->addDeclInternal(To);
-  return Importer.MapImported(D, To);
+  return To;
 }
 
 ExpectedStmt ASTNodeImporter::VisitConceptSpecializationExpr(ConceptSpecializationExpr* E) {
@@ -7610,7 +7610,7 @@ ExpectedDecl ASTNodeImporter::VisitConceptDecl(ConceptDecl* D) {
     return To;
   To->setLexicalDeclContext(LexicalDC);
   LexicalDC->addDeclInternal(To);
-  return Importer.MapImported(D, To);
+  return To;
 }
 
 ExpectedDecl ASTNodeImporter::VisitImplicitConceptSpecializationDecl(ImplicitConceptSpecializationDecl* D) {
@@ -7627,7 +7627,7 @@ ExpectedDecl ASTNodeImporter::VisitImplicitConceptSpecializationDecl(ImplicitCon
     return To;
   To->setLexicalDeclContext(LexicalDC);
   LexicalDC->addDeclInternal(To);
-  return Importer.MapImported(D, To);
+  return To;
 }
 
 ExpectedStmt ASTNodeImporter::VisitSourceLocExpr(SourceLocExpr *E) {
