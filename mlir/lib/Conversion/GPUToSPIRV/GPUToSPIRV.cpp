@@ -435,10 +435,8 @@ LogicalResult GPUShuffleConversion::matchAndRewrite(
     return rewriter.notifyMatchFailure(
         shuffleOp, "shuffle width and target subgroup size mismatch");
 
-  // Ensure the offset is a signless/unsigned integer.
-  if (adaptor.getOffset().getType().isSignedInteger())
-    return rewriter.notifyMatchFailure(
-        shuffleOp, "shuffle offset must be a signless/unsigned integer");
+  assert(!adaptor.getOffset().getType().isSignedInteger() &&
+         "shuffle offset must be a signless/unsigned integer");
 
   Location loc = shuffleOp.getLoc();
   auto scope = rewriter.getAttr<spirv::ScopeAttr>(spirv::Scope::Subgroup);
