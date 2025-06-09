@@ -133,7 +133,8 @@ SimpleExecutorDylibManager::resolveWrapper(const char *ArgData,
              rt::SPSSimpleExecutorDylibManagerResolveSignature>::
       handle(ArgData, ArgSize,
              [](ExecutorAddr Obj, RemoteSymbolLookupSet L) -> ResolveResult {
-               using TmpResult = MSVCPExpected<std::vector<ExecutorSymbolDef>>;
+               using TmpResult =
+                   MSVCPExpected<std::vector<std::optional<ExecutorSymbolDef>>>;
                std::promise<TmpResult> P;
                auto F = P.get_future();
                Obj.toPtr<ExecutorResolver *>()->resolveAsync(

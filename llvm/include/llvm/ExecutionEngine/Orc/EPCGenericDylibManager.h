@@ -52,25 +52,25 @@ public:
   LLVM_ABI Expected<tpctypes::DylibHandle> open(StringRef Path, uint64_t Mode);
 
   /// Looks up symbols within the given dylib.
-  Expected<std::vector<ExecutorSymbolDef>>
+  Expected<tpctypes::LookupResult>
   lookup(tpctypes::DylibHandle H, const SymbolLookupSet &Lookup) {
-    std::promise<MSVCPExpected<std::vector<ExecutorSymbolDef>>> RP;
+    std::promise<MSVCPExpected<tpctypes::LookupResult>> RP;
     auto RF = RP.get_future();
     lookupAsync(H, Lookup, [&RP](auto R) { RP.set_value(std::move(R)); });
     return RF.get();
   }
 
   /// Looks up symbols within the given dylib.
-  Expected<std::vector<ExecutorSymbolDef>>
+  Expected<tpctypes::LookupResult>
   lookup(tpctypes::DylibHandle H, const RemoteSymbolLookupSet &Lookup) {
-    std::promise<MSVCPExpected<std::vector<ExecutorSymbolDef>>> RP;
+    std::promise<MSVCPExpected<tpctypes::LookupResult>> RP;
     auto RF = RP.get_future();
     lookupAsync(H, Lookup, [&RP](auto R) { RP.set_value(std::move(R)); });
     return RF.get();
   }
 
   using SymbolLookupCompleteFn =
-      unique_function<void(Expected<std::vector<ExecutorSymbolDef>>)>;
+      unique_function<void(Expected<tpctypes::LookupResult>)>;
 
   /// Looks up symbols within the given dylib.
   LLVM_ABI void lookupAsync(tpctypes::DylibHandle H,

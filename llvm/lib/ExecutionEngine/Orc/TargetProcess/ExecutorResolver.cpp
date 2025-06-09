@@ -9,7 +9,7 @@ namespace llvm::orc {
 void DylibSymbolResolver::resolveAsync(
     const RemoteSymbolLookupSet &L,
     ExecutorResolver::YieldResolveResultFn &&OnResolve) {
-  std::vector<ExecutorSymbolDef> Result;
+  std::vector<std::optional<ExecutorSymbolDef>> Result;
   auto DL = sys::DynamicLibrary(Handle.toPtr<void *>());
 
   for (const auto &E : L) {
@@ -33,12 +33,11 @@ void DylibSymbolResolver::resolveAsync(
 
       void *Addr = DL.getAddressOfSymbol(DemangledSymName);
       if (!Addr && E.Required)
-        OnResolve(make_error<StringError>(Twine("Missing definition for ") +
-                                              DemangledSymName,
-                                          inconvertibleErrorCode()));
-
-      // FIXME: determine accurate JITSymbolFlags.
-      Result.push_back({ExecutorAddr::fromPtr(Addr), JITSymbolFlags::Exported});
+        Result.emplace_back();
+      else
+        // FIXME: determine accurate JITSymbolFlags.
+        Result.emplace_back(ExecutorSymbolDef(ExecutorAddr::fromPtr(Addr),
+                                              JITSymbolFlags::Exported));
     }
   }
 

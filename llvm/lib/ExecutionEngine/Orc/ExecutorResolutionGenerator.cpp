@@ -62,15 +62,16 @@ Error ExecutorResolutionGenerator::tryToGenerate(
         assert(Result->front().size() == LookupSymbols.size() &&
                "Result has incorrect number of elements");
 
-        const std::vector<ExecutorSymbolDef> &Syms = Result->front();
-        size_t SymIdx = 0;
+        // const tpctypes::LookupResult &Syms = Result->front();
+        // size_t SymIdx = 0;
+        auto Syms = Result->front().begin();
         SymbolNameSet MissingSymbols;
         SymbolMap NewSyms;
         for (auto &[Name, Flags] : LookupSymbols) {
-          auto Sym = Syms[SymIdx++];
-          if (Sym.getAddress())
-            NewSyms[Name] = Sym;
-          else if (LLVM_UNLIKELY(Flags == SymbolLookupFlags::RequiredSymbol))
+          const auto &Sym = *Syms++;
+          if (Sym && Sym->getAddress())
+            NewSyms[Name] = *Sym;
+          else if (LLVM_UNLIKELY(!Sym && Flags == SymbolLookupFlags::RequiredSymbol))
             MissingSymbols.insert(Name);
         }
 
