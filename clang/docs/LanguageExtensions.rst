@@ -1009,6 +1009,7 @@ to ``float``; see below for more information on this emulation.
   * 64-bit ARM (AArch64)
   * RISC-V
   * X86 (when SSE2 is available)
+  * LoongArch
 
 (For X86, SSE2 is available on 64-bit and all recent 32-bit processors.)
 

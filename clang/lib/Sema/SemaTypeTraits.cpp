@@ -2052,7 +2052,7 @@ static void DiagnoseNonTriviallyRelocatableReason(Sema &SemaRef,
   }
 
   if (!D->hasSimpleMoveConstructor() && !D->hasSimpleCopyConstructor()) {
-    const auto *Decl = cast<CXXConstructorDecl>(
+    const auto *Decl = cast_or_null<CXXConstructorDecl>(
         LookupSpecialMemberFromXValue(SemaRef, D, /*Assign=*/false));
     if (Decl && Decl->isUserProvided())
       SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
