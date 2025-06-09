@@ -21,15 +21,15 @@ Status SaveCoreOptions::SetPluginName(const char *name) {
     return error;
   }
 
-  if (!PluginManager::IsRegisteredObjectFilePluginName(name)) {
+  llvm::SmallVector<llvm::StringRef> plugin_names =
+      PluginManager::GetSaveCorePluginNames();
+  if (llvm::find(plugin_names, name) == plugin_names.end()) {
     StreamString stream;
     stream.Printf("plugin name '%s' is not a valid ObjectFile plugin name.",
                   name);
 
-    llvm::SmallVector<llvm::StringRef> plugin_names =
-        PluginManager::GetSaveCorePluginNames();
     if (!plugin_names.empty()) {
-      stream.PutCString(" Valid values are: ");
+      stream.PutCString(" Valid names are: ");
       std::string plugin_names_str = llvm::join(plugin_names, ", ");
       stream.PutCString(plugin_names_str);
       stream.PutChar('.');

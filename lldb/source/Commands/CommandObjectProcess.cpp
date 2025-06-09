@@ -1281,24 +1281,25 @@ public:
     ~CommandOptions() override = default;
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      if (m_opt_def.empty()) {
-        auto orig = llvm::ArrayRef(g_process_save_core_options);
-        m_opt_def.resize(orig.size());
-        llvm::copy(g_process_save_core_options, m_opt_def.data());
-        for (OptionDefinition &value : m_opt_def) {
-          llvm::StringRef opt_name = value.long_option;
-          if (opt_name != "plugin-name")
-            continue;
+      if (!m_opt_def.empty())
+        return llvm::ArrayRef(m_opt_def);
 
-          llvm::SmallVector<llvm::StringRef> plugin_names =
-              PluginManager::GetSaveCorePluginNames();
-          m_plugin_enums.resize(plugin_names.size());
-          for (auto [num, val] : llvm::zip(plugin_names, m_plugin_enums)) {
-            val.string_value = num.data();
-          }
-          value.enum_values = llvm::ArrayRef(m_plugin_enums);
-          break;
+      auto orig = llvm::ArrayRef(g_process_save_core_options);
+      m_opt_def.resize(orig.size());
+      llvm::copy(g_process_save_core_options, m_opt_def.data());
+      for (OptionDefinition &value : m_opt_def) {
+        llvm::StringRef opt_name = value.long_option;
+        if (opt_name != "plugin-name")
+          continue;
+
+        llvm::SmallVector<llvm::StringRef> plugin_names =
+            PluginManager::GetSaveCorePluginNames();
+        m_plugin_enums.resize(plugin_names.size());
+        for (auto [num, val] : llvm::zip(plugin_names, m_plugin_enums)) {
+          val.string_value = num.data();
         }
+        value.enum_values = llvm::ArrayRef(m_plugin_enums);
+        break;
       }
       return llvm::ArrayRef(m_opt_def);
     }

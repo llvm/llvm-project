@@ -199,7 +199,7 @@ static constexpr OptionEnumValueElement g_completion_type[] = {
     {lldb::eCustomCompletion, "custom", "Custom completion."},
     {lldb::eThreadIDCompletion, "thread-id", "Completes to a thread ID."},
     {lldb::eProcessSaveCorePluginCompletion, "plugin-name",
-     "Completes to a process save-core plugin"},
+     "Completes to an ObjectFile plugin that can save core files."},
 };
 
 llvm::StringRef RegisterNameHelpTextCallback();
@@ -316,7 +316,7 @@ static constexpr CommandObject::ArgumentTableEntry g_argument_table[] = {
     { lldb::eArgTypeModule, "module", lldb::CompletionType::eModuleCompletion, {}, { nullptr, false }, "The name of a module loaded into the current target." },
     { lldb::eArgTypeCPUName, "cpu-name", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "The name of a CPU." },
     { lldb::eArgTypeCPUFeatures, "cpu-features", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "The CPU feature string." },
-    { lldb::eArgTypeSaveCorePlugin, "plugin-name", lldb::CompletionType::eProcessSaveCorePluginCompletion, {}, { nullptr, false }, nullptr },
+    { lldb::eArgTypeSaveCorePlugin, "save-core-plugin-name", lldb::CompletionType::eProcessSaveCorePluginCompletion, {}, { nullptr, false }, nullptr },
     // clang-format on
 };
 

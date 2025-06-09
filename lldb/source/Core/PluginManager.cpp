@@ -792,18 +792,19 @@ Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
     }
   }
 
-  // report for one plugin if a name is specified.
-  if (error.Success() && !plugin_name.empty())
-    error = Status::FromErrorStringWithFormatv(
-        "\"{}\" plugin is not able to save a core for this process.",
+  // Check to see if any of the object file plugins tried and failed to save.
+  // if any failed resturn the error message.
+  if (error.Fail())
+    return error;
+
+  // Report only for the plugin that was specified.
+  if (!plugin_name.empty())
+    return Status::FromErrorStringWithFormatv(
+        "The \"{}\" plugin is not able to save a core for this process.",
         plugin_name);
 
-  // Check to see if any of the object file plugins tried and failed to save.
-  // If none ran, set the error message.
-  if (error.Success())
-    error = Status::FromErrorString(
-        "no ObjectFile plugins were able to save a core for this process");
-  return error;
+  return Status::FromErrorString(
+      "no ObjectFile plugins were able to save a core for this process");
 }
 
 llvm::SmallVector<llvm::StringRef> PluginManager::GetSaveCorePluginNames() {

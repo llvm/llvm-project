@@ -738,6 +738,7 @@ void CommandCompletions::ProcessNames(CommandInterpreter &interpreter,
   for (const ProcessInstanceInfo &info : process_infos)
     request.TryCompleteCurrentArg(info.GetNameAsStringRef());
 }
+
 void CommandCompletions::ProcessSaveCorePluginNames(
     CommandInterpreter &interpreter, CompletionRequest &request,
     SearchFilter *searcher) {
