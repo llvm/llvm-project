@@ -13,9 +13,15 @@
 #include "flang/Lower/Support/Utils.h"
 
 #include "flang/Common/indirection.h"
+#include "flang/Lower/AbstractConverter.h"
+#include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/IterationSpace.h"
 #include "flang/Lower/Support/PrivateReductionUtils.h"
+#include "flang/Optimizer/Builder/HLFIRTools.h"
+#include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Semantics/tools.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include <cstdint>
 #include <optional>
 #include <type_traits>

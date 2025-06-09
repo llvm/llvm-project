@@ -268,3 +268,14 @@ define i1 @test_fcmp_select_var_const_unordered(double %x, double %y) {
   %cmp2 = fcmp ugt double %sel, 0x3E80000000000000
   ret i1 %cmp2
 }
+
+define i1 @test_fcmp_ord_select_fcmp_oeq_var_const(double %x) {
+; CHECK-LABEL:    @test_fcmp_ord_select_fcmp_oeq_var_const(
+; CHECK-NEXT:     [[CMP1:%.*]] = fcmp oeq double [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:     ret i1 [[CMP1]]
+;
+  %cmp1 = fcmp ord double %x, 0.000000e+00
+  %sel = select i1 %cmp1, double %x, double 0.000000e+00
+  %cmp2 = fcmp oeq double %sel, 1.000000e+00
+  ret i1 %cmp2
+}

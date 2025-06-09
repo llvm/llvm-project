@@ -2136,6 +2136,51 @@ static void canonicalizeShuffleVectorByLane(const SDLoc &DL,
   }
 }
 
+/// Lower VECTOR_SHUFFLE as lane permute and then shuffle (if possible).
+/// Only for 256-bit vector.
+///
+/// For example:
+/// %2 = shufflevector <4 x i64> %0, <4 x i64> posion,
+///                    <4 x i64> <i32 0, i32 3, i32 2, i32 0>
+/// is lowerded to:
+///     (XVPERMI $xr2, $xr0, 78)
+///     (XVSHUF  $xr1, $xr2, $xr0)
+///     (XVORI   $xr0, $xr1, 0)
+static SDValue lowerVECTOR_SHUFFLEAsLanePermuteAndShuffle(const SDLoc &DL,
+                                                          ArrayRef<int> Mask,
+                                                          MVT VT, SDValue V1,
+                                                          SDValue V2,
+                                                          SelectionDAG &DAG) {
+  assert(VT.is256BitVector() && "Only for 256-bit vector shuffles!");
+  int Size = Mask.size();
+  int LaneSize = Size / 2;
+
+  bool LaneCrossing[2] = {false, false};
+  for (int i = 0; i < Size; ++i)
+    if (Mask[i] >= 0 && ((Mask[i] % Size) / LaneSize) != (i / LaneSize))
+      LaneCrossing[(Mask[i] % Size) / LaneSize] = true;
+
+  // Ensure that all lanes ared involved.
+  if (!LaneCrossing[0] && !LaneCrossing[1])
+    return SDValue();
+
+  SmallVector<int> InLaneMask;
+  InLaneMask.assign(Mask.begin(), Mask.end());
+  for (int i = 0; i < Size; ++i) {
+    int &M = InLaneMask[i];
+    if (M < 0)
+      continue;
+    if (((M % Size) / LaneSize) != (i / LaneSize))
+      M = (M % LaneSize) + ((i / LaneSize) * LaneSize) + Size;
+  }
+
+  SDValue Flipped = DAG.getBitcast(MVT::v4i64, V1);
+  Flipped = DAG.getVectorShuffle(MVT::v4i64, DL, Flipped,
+                                 DAG.getUNDEF(MVT::v4i64), {2, 3, 0, 1});
+  Flipped = DAG.getBitcast(VT, Flipped);
+  return DAG.getVectorShuffle(VT, DL, V1, Flipped, InLaneMask);
+}
+
 /// Dispatching routine to lower various 256-bit LoongArch vector shuffles.
 ///
 /// This routine breaks down the specific type of 256-bit shuffle and
@@ -2167,6 +2212,9 @@ static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
     if ((Result = lowerVECTOR_SHUFFLE_XVREPLVEI(DL, NewMask, VT, V1, V2, DAG)))
       return Result;
     if ((Result = lowerVECTOR_SHUFFLE_XVSHUF4I(DL, NewMask, VT, V1, V2, DAG)))
+      return Result;
+    if ((Result = lowerVECTOR_SHUFFLEAsLanePermuteAndShuffle(DL, NewMask, VT,
+                                                             V1, V2, DAG)))
       return Result;
 
     // TODO: This comment may be enabled in the future to better match the
@@ -7364,6 +7412,14 @@ getIntrinsicForMaskedAtomicRMWBinOp(unsigned GRLen,
       return Intrinsic::loongarch_masked_atomicrmw_sub_i32;
     case AtomicRMWInst::Nand:
       return Intrinsic::loongarch_masked_atomicrmw_nand_i32;
+    case AtomicRMWInst::UMax:
+      return Intrinsic::loongarch_masked_atomicrmw_umax_i32;
+    case AtomicRMWInst::UMin:
+      return Intrinsic::loongarch_masked_atomicrmw_umin_i32;
+    case AtomicRMWInst::Max:
+      return Intrinsic::loongarch_masked_atomicrmw_max_i32;
+    case AtomicRMWInst::Min:
+      return Intrinsic::loongarch_masked_atomicrmw_min_i32;
       // TODO: support other AtomicRMWInst.
     }
   }
@@ -7387,19 +7443,22 @@ LoongArchTargetLowering::shouldExpandAtomicCmpXchgInIR(
 Value *LoongArchTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
     IRBuilderBase &Builder, AtomicCmpXchgInst *CI, Value *AlignedAddr,
     Value *CmpVal, Value *NewVal, Value *Mask, AtomicOrdering Ord) const {
+  unsigned GRLen = Subtarget.getGRLen();
   AtomicOrdering FailOrd = CI->getFailureOrdering();
   Value *FailureOrdering =
       Builder.getIntN(Subtarget.getGRLen(), static_cast<uint64_t>(FailOrd));
-
-  // TODO: Support cmpxchg on LA32.
-  Intrinsic::ID CmpXchgIntrID = Intrinsic::loongarch_masked_cmpxchg_i64;
-  CmpVal = Builder.CreateSExt(CmpVal, Builder.getInt64Ty());
-  NewVal = Builder.CreateSExt(NewVal, Builder.getInt64Ty());
-  Mask = Builder.CreateSExt(Mask, Builder.getInt64Ty());
+  Intrinsic::ID CmpXchgIntrID = Intrinsic::loongarch_masked_cmpxchg_i32;
+  if (GRLen == 64) {
+    CmpXchgIntrID = Intrinsic::loongarch_masked_cmpxchg_i64;
+    CmpVal = Builder.CreateSExt(CmpVal, Builder.getInt64Ty());
+    NewVal = Builder.CreateSExt(NewVal, Builder.getInt64Ty());
+    Mask = Builder.CreateSExt(Mask, Builder.getInt64Ty());
+  }
   Type *Tys[] = {AlignedAddr->getType()};
   Value *Result = Builder.CreateIntrinsic(
       CmpXchgIntrID, Tys, {AlignedAddr, CmpVal, NewVal, Mask, FailureOrdering});
-  Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
+  if (GRLen == 64)
+    Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
   return Result;
 }
 
