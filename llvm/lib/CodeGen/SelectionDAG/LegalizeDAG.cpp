@@ -5296,6 +5296,11 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::SMAX:
   case ISD::UMIN:
   case ISD::UMAX:
+  case ISD::SUB:
+  case ISD::ADD:
+  case ISD::SHL:
+  case ISD::SRL:
+  case ISD::SRA:
   case ISD::AND:
   case ISD::OR:
   case ISD::XOR: {
