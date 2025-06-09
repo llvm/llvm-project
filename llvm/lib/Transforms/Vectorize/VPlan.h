@@ -2230,6 +2230,10 @@ public:
 
   /// Returns true, if the phi is part of an in-loop reduction.
   bool isInLoop() const { return IsInLoop; }
+
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    return isOrdered() || isInLoop();
+  }
 };
 
 /// A recipe for vectorizing a phi-node as a sequence of mask-based select

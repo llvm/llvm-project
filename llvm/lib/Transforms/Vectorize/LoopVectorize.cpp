@@ -7236,9 +7236,12 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
   const RecurrenceDescriptor &RdxDesc =
       EpiRedHeaderPhi->getRecurrenceDescriptor();
   Value *MainResumeValue;
-  if (auto *VPI = dyn_cast<VPInstruction>(EpiRedHeaderPhi->getStartValue()))
+  if (auto *VPI = dyn_cast<VPInstruction>(EpiRedHeaderPhi->getStartValue())) {
+    assert((VPI->getOpcode() == VPInstruction::Broadcast ||
+            VPI->getOpcode() == VPInstruction::ReductionStartVector) &&
+           "unexpected start recipe");
     MainResumeValue = VPI->getOperand(0)->getUnderlyingValue();
-  else
+  } else
     MainResumeValue = EpiRedHeaderPhi->getStartValue()->getUnderlyingValue();
   if (RecurrenceDescriptor::isAnyOfRecurrenceKind(
           RdxDesc.getRecurrenceKind())) {
@@ -9315,8 +9318,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       PhiR->setOperand(0, Plan->getOrAddLiveIn(RdxDesc.getSentinelValue()));
     }
     RecurKind RK = RdxDesc.getRecurrenceKind();
-    if (PhiR->isOrdered() || PhiR->isInLoop() ||
-        (!RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) &&
+    if ((!RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) &&
          !RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK) &&
          !RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))) {
       VPBuilder PHBuilder(Plan->getVectorPreheader());
@@ -9850,6 +9852,15 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
         Value *Cmp = Builder.CreateICmpEQ(ResumeV, ToFrozen[StartV]);
         ResumeV =
             Builder.CreateSelect(Cmp, RdxDesc.getSentinelValue(), ResumeV);
+      } else {
+        VPValue *StartVal = Plan.getOrAddLiveIn(ResumeV);
+        auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
+        if (auto *VPI = dyn_cast<VPInstruction>(PhiR->getStartValue())) {
+          assert(VPI->getOpcode() == VPInstruction::ReductionStartVector &&
+                 "unexpected start value");
+          VPI->setOperand(0, StartVal);
+          continue;
+        }
       }
     } else {
       // Retrieve the induction resume values for wide inductions from
@@ -9861,12 +9872,6 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
     }
     assert(ResumeV && "Must have a resume value");
     VPValue *StartVal = Plan.getOrAddLiveIn(ResumeV);
-    if (auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&R)) {
-      if (auto *VPI = dyn_cast<VPInstruction>(PhiR->getStartValue())) {
-        VPI->setOperand(0, StartVal);
-        continue;
-      }
-    }
     cast<VPHeaderPHIRecipe>(&R)->setStartValue(StartVal);
   }
 
