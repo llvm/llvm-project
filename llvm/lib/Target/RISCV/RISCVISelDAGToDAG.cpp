@@ -3307,6 +3307,19 @@ bool RISCVDAGToDAGISel::selectSHXADD_UWOp(SDValue N, unsigned ShAmt,
   return false;
 }
 
+bool RISCVDAGToDAGISel::selectImm64IfCheaper(int64_t Imm, int64_t OrigImm,
+                                             SDValue N, SDValue &Val) {
+  int OrigCost = RISCVMatInt::getIntMatCost(APInt(64, OrigImm), 64, *Subtarget,
+                                            /*CompressionCost=*/true);
+  int Cost = RISCVMatInt::getIntMatCost(APInt(64, Imm), 64, *Subtarget,
+                                        /*CompressionCost=*/true);
+  if (OrigCost <= Cost)
+    return false;
+
+  Val = selectImm(CurDAG, SDLoc(N), N->getSimpleValueType(0), Imm, *Subtarget);
+  return true;
+}
+
 bool RISCVDAGToDAGISel::selectZExtImm32(SDValue N, SDValue &Val) {
   if (!isa<ConstantSDNode>(N))
     return false;
@@ -3318,18 +3331,7 @@ bool RISCVDAGToDAGISel::selectZExtImm32(SDValue N, SDValue &Val) {
              [](const SDNode *U) { return U->getOpcode() != ISD::ADD; }))
     return false;
 
-  int64_t LeadingOnesImm = 0xffffffff00000000 | Imm;
-  int OrigImmCost = RISCVMatInt::getIntMatCost(APInt(64, Imm), 64, *Subtarget,
-                                               /*CompressionCost=*/true);
-  int LeadingOnesImmCost =
-      RISCVMatInt::getIntMatCost(APInt(64, LeadingOnesImm), 64, *Subtarget,
-                                 /*CompressionCost=*/true);
-  if (OrigImmCost <= LeadingOnesImmCost)
-    return false;
-
-  Val = selectImm(CurDAG, SDLoc(N), N->getSimpleValueType(0), LeadingOnesImm,
-                  *Subtarget);
-  return true;
+  return selectImm64IfCheaper(0xffffffff00000000 | Imm, Imm, N, Val);
 }
 
 bool RISCVDAGToDAGISel::selectNegImm(SDValue N, SDValue &Val) {
@@ -3355,15 +3357,7 @@ bool RISCVDAGToDAGISel::selectNegImm(SDValue N, SDValue &Val) {
     }
   }
 
-  int OrigImmCost = RISCVMatInt::getIntMatCost(APInt(64, Imm), 64, *Subtarget,
-                                               /*CompressionCost=*/true);
-  int NegImmCost = RISCVMatInt::getIntMatCost(APInt(64, -Imm), 64, *Subtarget,
-                                              /*CompressionCost=*/true);
-  if (OrigImmCost <= NegImmCost)
-    return false;
-
-  Val = selectImm(CurDAG, SDLoc(N), N->getSimpleValueType(0), -Imm, *Subtarget);
-  return true;
+  return selectImm64IfCheaper(-Imm, Imm, N, Val);
 }
 
 bool RISCVDAGToDAGISel::selectInvLogicImm(SDValue N, SDValue &Val) {
@@ -3398,19 +3392,15 @@ bool RISCVDAGToDAGISel::selectInvLogicImm(SDValue N, SDValue &Val) {
     }
   }
 
-  // For 64-bit constants, the instruction sequences get complex,
-  // so we select inverted only if it's cheaper.
-  if (!isInt<32>(Imm)) {
-    int OrigImmCost = RISCVMatInt::getIntMatCost(APInt(64, Imm), 64, *Subtarget,
-                                                 /*CompressionCost=*/true);
-    int NegImmCost = RISCVMatInt::getIntMatCost(APInt(64, ~Imm), 64, *Subtarget,
-                                                /*CompressionCost=*/true);
-    if (OrigImmCost <= NegImmCost)
-      return false;
+  if (isInt<32>(Imm)) {
+    Val =
+        selectImm(CurDAG, SDLoc(N), N->getSimpleValueType(0), ~Imm, *Subtarget);
+    return true;
   }
 
-  Val = selectImm(CurDAG, SDLoc(N), N->getSimpleValueType(0), ~Imm, *Subtarget);
-  return true;
+  // For 64-bit constants, the instruction sequences get complex,
+  // so we select inverted only if it's cheaper.
+  return selectImm64IfCheaper(~Imm, Imm, N, Val);
 }
 
 static bool vectorPseudoHasAllNBitUsers(SDNode *User, unsigned UserOpNo,
