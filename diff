@@ -1,0 +1,34 @@
+diff --git a/llvm/include/llvm/BinaryFormat/DXContainer.h b/llvm/include/llvm/BinaryFormat/DXContainer.h
+index 08949e39716d..725c405b77e5 100644
+--- a/llvm/include/llvm/BinaryFormat/DXContainer.h
++++ b/llvm/include/llvm/BinaryFormat/DXContainer.h
+@@ -164,7 +164,7 @@ enum class RootDescriptorFlag : uint32_t {
+ #include "DXContainerConstants.def"
+ };
+ 
+-#define DESCRIPTOR_RANGE_FLAG(Num, Val) Val = 1ull << Num,
++#define DESCRIPTOR_RANGE_FLAG(Num, Val) Val = Num,
+ enum class DescriptorRangeFlag : uint32_t {
+ #include "DXContainerConstants.def"
+ };
+diff --git a/llvm/include/llvm/BinaryFormat/DXContainerConstants.def b/llvm/include/llvm/BinaryFormat/DXContainerConstants.def
+index 501ef0c31cdd..c4895ee8ed65 100644
+--- a/llvm/include/llvm/BinaryFormat/DXContainerConstants.def
++++ b/llvm/include/llvm/BinaryFormat/DXContainerConstants.def
+@@ -90,11 +90,11 @@ ROOT_DESCRIPTOR_FLAG(3, DATA_STATIC)
+ #ifdef DESCRIPTOR_RANGE_FLAG
+ 
+ DESCRIPTOR_RANGE_FLAG(0, NONE)
+-DESCRIPTOR_RANGE_FLAG(1, DESCRIPTORS_VOLATILE)
+-DESCRIPTOR_RANGE_FLAG(2, DATA_VOLATILE)
+-DESCRIPTOR_RANGE_FLAG(3, DATA_STATIC_WHILE_SET_AT_EXECUTE)
+-DESCRIPTOR_RANGE_FLAG(4, DATA_STATIC)
+-DESCRIPTOR_RANGE_FLAG(16, DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS)
++DESCRIPTOR_RANGE_FLAG(0x1, DESCRIPTORS_VOLATILE)
++DESCRIPTOR_RANGE_FLAG(0x2, DATA_VOLATILE)
++DESCRIPTOR_RANGE_FLAG(0x4, DATA_STATIC_WHILE_SET_AT_EXECUTE)
++DESCRIPTOR_RANGE_FLAG(0x8, DATA_STATIC)
++DESCRIPTOR_RANGE_FLAG(0x10000, DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS)
+ #undef DESCRIPTOR_RANGE_FLAG
+ #endif // DESCRIPTOR_RANGE_FLAG
+ 
