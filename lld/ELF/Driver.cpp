@@ -3039,22 +3039,24 @@ static void readSecurityNotes(Ctx &ctx) {
   else if (ctx.arg.zGcs == GcsPolicy::Never)
     ctx.arg.andFeatures &= ~GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
 
-  // Force enable/disable Zicfilp.
-  if (ctx.arg.zZicfilp == ZicfilpPolicy::Unlabeled) {
-    ctx.arg.andFeatures |= GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED;
-    ctx.arg.andFeatures &= ~GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG;
-  } else if (ctx.arg.zZicfilp == ZicfilpPolicy::FuncSig) {
-    ctx.arg.andFeatures |= GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG;
-    ctx.arg.andFeatures &= ~GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED;
-  } else if (ctx.arg.zZicfilp == ZicfilpPolicy::Never)
-    ctx.arg.andFeatures &= ~(GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED |
-                             GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG);
+  if (ctx.arg.emachine == EM_RISCV) {
+    // Force enable/disable Zicfilp.
+    if (ctx.arg.zZicfilp == ZicfilpPolicy::Unlabeled) {
+      ctx.arg.andFeatures |= GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED;
+      ctx.arg.andFeatures &= ~GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG;
+    } else if (ctx.arg.zZicfilp == ZicfilpPolicy::FuncSig) {
+      ctx.arg.andFeatures |= GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG;
+      ctx.arg.andFeatures &= ~GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED;
+    } else if (ctx.arg.zZicfilp == ZicfilpPolicy::Never)
+      ctx.arg.andFeatures &= ~(GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED |
+                               GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG);
 
-  // Force enable/disable Zicfiss.
-  if (ctx.arg.zZicfiss == ZicfissPolicy::Always)
-    ctx.arg.andFeatures |= GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS;
-  else if (ctx.arg.zZicfiss == ZicfissPolicy::Never)
-    ctx.arg.andFeatures &= ~GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS;
+    // Force enable/disable Zicfiss.
+    if (ctx.arg.zZicfiss == ZicfissPolicy::Always)
+      ctx.arg.andFeatures |= GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS;
+    else if (ctx.arg.zZicfiss == ZicfissPolicy::Never)
+      ctx.arg.andFeatures &= ~GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS;
+  }
 
   // If we are utilising GCS at any stage, the sharedFiles should be checked to
   // ensure they also support this feature. The gcs-report-dynamic option is
