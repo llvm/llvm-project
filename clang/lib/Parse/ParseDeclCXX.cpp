@@ -29,6 +29,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCodeCompletion.h"
+#include "clang/Sema/SemaHLSL.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <optional>
 
@@ -4942,7 +4943,8 @@ void Parser::ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
 
   // Construct our identifier
   StringRef Signature = StrLiteral.value()->getString();
-  auto [DeclIdent, Found] = Actions.ActOnStartRootSignatureDecl(Signature);
+  auto [DeclIdent, Found] =
+      Actions.HLSL().ActOnStartRootSignatureDecl(Signature);
   // If we haven't found an already defined DeclIdent then parse the root
   // signature string and construct the in-memory elements
   if (!Found) {
@@ -4959,8 +4961,8 @@ void Parser::ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
     }
 
     // Construct the declaration.
-    Actions.ActOnFinishRootSignatureDecl(RootSignatureLoc, DeclIdent,
-                                         RootElements);
+    Actions.HLSL().ActOnFinishRootSignatureDecl(RootSignatureLoc, DeclIdent,
+                                                RootElements);
   }
 
   // Create the arg for the ParsedAttr
