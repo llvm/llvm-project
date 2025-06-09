@@ -53,6 +53,10 @@ public:
   iterator begin() { return S2LI.begin(); }
   iterator end() { return S2LI.end(); }
 
+  unsigned getStartIdx() const {
+    assert(StartIdx != -1);
+    return StartIdx;
+  }
   unsigned getNumIntervals() const { return (unsigned)S2LI.size(); }
 
   LiveInterval &getOrCreateInterval(int Slot, const TargetRegisterClass *RC);
