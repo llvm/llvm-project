@@ -544,10 +544,10 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
     } else if (auto *SVI = dyn_cast<ShuffleVectorInst>(I)) {
       // extractelt (shufflevector %v1, %v2, splat-mask) idx ->
       // extractelt %v1, splat-mask[0]
-      auto mask = SVI->getShuffleMask();
-      if (mask[0] != PoisonMaskElem && all_equal(mask))
+      auto Mask = SVI->getShuffleMask();
+      if (Mask[0] != PoisonMaskElem && all_equal(Mask))
         return ExtractElementInst::Create(SVI->getOperand(0),
-                                          Builder.getInt64(mask[0]));
+                                          Builder.getInt64(Mask[0]));
 
       // If this is extracting an element from a shufflevector, figure out where
       // it came from and extract from the appropriate input element instead.
