@@ -176,7 +176,10 @@ public:
     DeclListNode::Decls *Tail = erase_if([Decls](NamedDecl *ND) {
       if (ND->isFromASTFile())
         return true;
+      // FIXME: Can we get rid of this loop completely?
       return llvm::any_of(Decls, [ND](NamedDecl *D) {
+        // Only replace the local declaration if the external declaration has
+        // higher visiblities.
         return D->getModuleOwnershipKind() <= ND->getModuleOwnershipKind() &&
                D->declarationReplaces(ND, /*IsKnownNewer=*/false);
       });
