@@ -506,6 +506,9 @@ public:
 /// Extension point for target-specific MCExpr subclasses with a relocation
 /// specifier, serving as a replacement for MCSymbolRefExpr::VariantKind.
 /// Limit this to top-level use, avoiding its inclusion as a subexpression.
+///
+/// NOTE: All subclasses are required to have trivial destructors because
+/// MCExprs are bump pointer allocated and not destructed.
 class LLVM_ABI MCSpecifierExpr : public MCExpr {
 protected:
   using Spec = uint16_t;
@@ -516,7 +519,7 @@ protected:
 protected:
   explicit MCSpecifierExpr(const MCExpr *Expr, Spec S)
       : MCExpr(Specifier, SMLoc()), Expr(Expr), specifier(S) {}
-  virtual ~MCSpecifierExpr();
+  virtual ~MCSpecifierExpr() = default;
 
 public:
   Spec getSpecifier() const { return specifier; }

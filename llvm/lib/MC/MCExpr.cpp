@@ -767,8 +767,6 @@ MCFragment *MCExpr::findAssociatedFragment() const {
   llvm_unreachable("Invalid assembly expression kind!");
 }
 
-MCSpecifierExpr::~MCSpecifierExpr() {}
-
 bool MCSpecifierExpr::evaluateAsRelocatableImpl(MCValue &Res,
                                                 const MCAssembler *Asm) const {
   if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
