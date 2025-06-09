@@ -692,8 +692,10 @@ bool MipsDelaySlotFiller::searchRange(MachineBasicBlock &MBB, IterTy Begin,
     IterTy CurrI = I;
     ++I;
     LLVM_DEBUG(dbgs() << DEBUG_TYPE ": checking instruction: "; CurrI->dump());
-    // skip debug value
-    if (CurrI->isDebugInstr()) {
+    // Skip debug value.
+    // Instruction TargetOpcode::JUMP_TABLE_DEBUG_INFO is only used to note
+    // jump table debug info.
+    if (CurrI->isDebugInstr() || CurrI->isJumpTableDebugInfo()) {
       LLVM_DEBUG(dbgs() << DEBUG_TYPE ": ignoring debug instruction: ";
                  CurrI->dump());
       continue;

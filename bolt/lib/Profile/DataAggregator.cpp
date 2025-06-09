@@ -580,8 +580,10 @@ void DataAggregator::processProfile(BinaryContext &BC) {
     }
   }
 
-  for (auto &FuncBranches : NamesToBranches)
+  for (auto &FuncBranches : NamesToBranches) {
     llvm::stable_sort(FuncBranches.second.Data);
+    llvm::stable_sort(FuncBranches.second.EntryData);
+  }
 
   for (auto &MemEvents : NamesToMemEvents)
     llvm::stable_sort(MemEvents.second.Data);
@@ -715,9 +717,8 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
   return true;
 }
 
-bool DataAggregator::doBranch(const Trace &Trace, uint64_t Count,
+bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
                               uint64_t Mispreds) {
-  uint64_t From = Trace.Branch, To = Trace.From;
   // Returns whether \p Offset in \p Func contains a return instruction.
   auto checkReturn = [&](const BinaryFunction &Func, const uint64_t Offset) {
     auto isReturn = [&](auto MI) { return MI && BC->MIB->isReturn(*MI); };
@@ -803,8 +804,13 @@ bool DataAggregator::doTrace(const Trace &Trace, uint64_t Count) {
 
   LLVM_DEBUG(dbgs() << "Processing " << FTs->size() << " fallthroughs for "
                     << FromFunc->getPrintName() << ":" << Trace << '\n');
-  for (auto [From, To] : *FTs)
+  for (auto [From, To] : *FTs) {
+    if (BAT) {
+      From = BAT->translate(FromFunc->getAddress(), From, /*IsBranchSrc=*/true);
+      To = BAT->translate(FromFunc->getAddress(), To, /*IsBranchSrc=*/false);
+    }
     doIntraBranch(*ParentFunc, From, To, Count, false);
+  }
 
   return true;
 }
@@ -1187,7 +1193,7 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   // Storage for parsed fields.
   StringRef EventName;
   std::optional<Location> Addr[3];
-  int64_t Counters[2];
+  int64_t Counters[2] = {0};
 
   while (Type == INVALID || Type == EVENT_NAME) {
     while (checkAndConsumeFS()) {
@@ -1383,11 +1389,16 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
     // chronological order)
     if (NeedsSkylakeFix && NumEntry <= 2)
       continue;
-    TakenBranchInfo &Info = TraceMap[Trace{
-        LBR.From, LBR.To, NextLBR ? NextLBR->From : Trace::EXTERNAL}];
+    uint64_t TraceTo = Trace::EXTERNAL;
+    if (NextLBR) {
+      TraceTo = NextLBR->From;
+      ++NumTraces;
+    }
+    NextLBR = &LBR;
+
+    TakenBranchInfo &Info = TraceMap[Trace{LBR.From, LBR.To, TraceTo}];
     ++Info.TakenCount;
     Info.MispredCount += LBR.Mispred;
-    NextLBR = &LBR;
   }
   // Record LBR addresses not covered by fallthroughs (bottom-of-stack source
   // and top-of-stack target) as basic samples for heatmap.
@@ -1529,11 +1540,11 @@ void DataAggregator::processBranchEvents() {
                      TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
 
   for (const auto &[Trace, Info] : Traces) {
-    if (Trace.Branch != Trace::FT_ONLY &&
-        Trace.Branch != Trace::FT_EXTERNAL_ORIGIN)
-      doBranch(Trace, Info.TakenCount, Info.MispredCount);
     if (Trace.To)
       doTrace(Trace, Info.TakenCount);
+    if (Trace.Branch != Trace::FT_ONLY &&
+        Trace.Branch != Trace::FT_EXTERNAL_ORIGIN)
+      doBranch(Trace.Branch, Trace.From, Info.TakenCount, Info.MispredCount);
   }
   printBranchSamplesDiagnostics();
 }
@@ -2190,7 +2201,6 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
       YamlBF.Id = BF->getFunctionNumber();
       YamlBF.Hash = BAT->getBFHash(FuncAddress);
       YamlBF.ExecCount = BF->getKnownExecutionCount();
-      YamlBF.ExternEntryCount = BF->getExternEntryCount();
       YamlBF.NumBasicBlocks = BAT->getNumBasicBlocks(FuncAddress);
       const BoltAddressTranslation::BBHashMapTy &BlockMap =
           BAT->getBBHashMap(FuncAddress);

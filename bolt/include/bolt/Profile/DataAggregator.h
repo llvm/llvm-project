@@ -267,7 +267,7 @@ private:
                      uint64_t Mispreds);
 
   /// Register a \p Branch.
-  bool doBranch(const Trace &Trace, uint64_t Count, uint64_t Mispreds);
+  bool doBranch(uint64_t From, uint64_t To, uint64_t Count, uint64_t Mispreds);
 
   /// Register a trace between two LBR entries supplied in execution order.
   bool doTrace(const Trace &Trace, uint64_t Count);
