@@ -4586,11 +4586,14 @@ calcNextStatus(std::pair<Register, SrcStatus> Curr,
   switch (Curr.second) {
   case SrcStatus::IS_SAME:
     if (isTruncHalf(MI, MRI))
-      return std::optional<std::pair<Register, SrcStatus>>({MI->getOperand(1).getReg(), SrcStatus::IS_LOWER_HALF});
+      return std::optional<std::pair<Register, SrcStatus>>(
+          {MI->getOperand(1).getReg(), SrcStatus::IS_LOWER_HALF});
     else if (isUnmergeHalf(MI, MRI)) {
       if (Curr.first == MI->getOperand(0).getReg())
-        return std::optional<std::pair<Register, SrcStatus>>({MI->getOperand(2).getReg(), SrcStatus::IS_LOWER_HALF});
-      return std::optional<std::pair<Register, SrcStatus>>({MI->getOperand(2).getReg(), SrcStatus::IS_UPPER_HALF});
+        return std::optional<std::pair<Register, SrcStatus>>(
+            {MI->getOperand(2).getReg(), SrcStatus::IS_LOWER_HALF});
+      return std::optional<std::pair<Register, SrcStatus>>(
+          {MI->getOperand(2).getReg(), SrcStatus::IS_UPPER_HALF});
     }
     break;
   case SrcStatus::IS_HI_NEG:
@@ -4601,15 +4604,15 @@ calcNextStatus(std::pair<Register, SrcStatus> Curr,
       // Src = [SrcHi, SrcLo] = [-CurrHi, CurrLo]
       //     = [-OpLowerHi, OpLowerLo]
       //     = -OpLower
-      return std::optional<std::pair<Register, SrcStatus>>({MI->getOperand(1).getReg(),
-                        SrcStatus::IS_LOWER_HALF_NEG});
+      return std::optional<std::pair<Register, SrcStatus>>(
+          {MI->getOperand(1).getReg(), SrcStatus::IS_LOWER_HALF_NEG});
     }
     if (isUnmergeHalf(MI, MRI)) {
       if (Curr.first == MI->getOperand(0).getReg())
-        return std::optional<std::pair<Register, SrcStatus>>({MI->getOperand(2).getReg(),
-                          SrcStatus::IS_LOWER_HALF_NEG});
-      return std::optional<std::pair<Register, SrcStatus>>({MI->getOperand(2).getReg(),
-                        SrcStatus::IS_UPPER_HALF_NEG});
+        return std::optional<std::pair<Register, SrcStatus>>(
+            {MI->getOperand(2).getReg(), SrcStatus::IS_LOWER_HALF_NEG});
+      return std::optional<std::pair<Register, SrcStatus>>(
+          {MI->getOperand(2).getReg(), SrcStatus::IS_UPPER_HALF_NEG});
     }
     break;
   case SrcStatus::IS_UPPER_HALF:
