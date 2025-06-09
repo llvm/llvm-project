@@ -2637,8 +2637,8 @@ private:
   void ParseTypeQualifierListOpt(
       DeclSpec &DS, unsigned AttrReqs = AR_AllAttributesParsed,
       bool AtomicOrPtrauthAllowed = true, bool IdentifierRequired = false,
-      std::optional<llvm::function_ref<void()>> CodeCompletionHandler =
-      std::nullopt, // TO_UPSTREAM(BoundsSafety)
+      llvm::function_ref<void()> CodeCompletionHandler =
+      {}, // TO_UPSTREAM(BoundsSafety)
       LateParsedAttrList *LateAttrs = nullptr);
 
   /// ParseDirectDeclarator
