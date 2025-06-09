@@ -41,20 +41,21 @@ void structToStruct(struct AB *P) {
   Base &B1 = D1;
   D2 = (Derived *)&B1;
   D2 = dynamic_cast<Derived *>(&B1);
-  D2 = static_cast<Derived *>(&B1);
+  D2 = static_cast<Derived *>(&B1); // expected-warning {{static downcast from 'Base' to 'Derived'}}
 
   // True positives when casting from Base to Derived.
   Base B2;
   D2 = (Derived *)&B2;// expected-warning {{Casting data to a larger structure type and accessing a field can lead to memory access errors or data corruption}}
   D2 = dynamic_cast<Derived *>(&B2);// expected-warning {{Casting data to a larger structure type and accessing a field can lead to memory access errors or data corruption}}
-  D2 = static_cast<Derived *>(&B2);// expected-warning {{Casting data to a larger structure type and accessing a field can lead to memory access errors or data corruption}}
+  D2 = static_cast<Derived *>(&B2);// expected-warning {{Casting data to a larger structure type and accessing a field can lead to memory access errors or data corruption}} \
+                                   // expected-warning {{static downcast from 'Base' to 'Derived'}}
 
   // False negatives, cast from Base to Derived. With path sensitive analysis
   // these false negatives could be fixed.
   Base *B3 = &B2;
   D2 = (Derived *)B3;
   D2 = dynamic_cast<Derived *>(B3);
-  D2 = static_cast<Derived *>(B3);
+  D2 = static_cast<Derived *>(B3); // expected-warning {{static downcast from 'Base' to 'Derived'}}
 }
 
 void intToStruct(int *P) {

@@ -8241,6 +8241,9 @@ def err_bad_reinterpret_cast_reference : Error<
 def warn_undefined_reinterpret_cast : Warning<
   "reinterpret_cast from %0 to %1 has undefined behavior">,
   InGroup<UndefinedReinterpretCast>, DefaultIgnore;
+def warn_static_downcast : Warning<
+  "static downcast from %0 to %1 is potentially dangerous%select{|; did you mean 'dynamic_cast'?}2">,
+   InGroup<DiagGroup<"static-downcast">>;
 
 // These messages don't adhere to the pattern.
 // FIXME: Display the path somehow better.
