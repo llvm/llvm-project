@@ -71,7 +71,7 @@ int use_base() {
 
 // CIR: cir.func @_Z8use_basev
 // CIR:   %[[D_ADDR:.*]] = cir.alloca !rec_Derived, !cir.ptr<!rec_Derived>, ["d"]
-// CIR:   %[[BASE_ADDR:.*]] cir.base_class_addr(%[[D_ADDR]] : !cir.ptr<!rec_Derived> nonnull) [0] -> !cir.ptr<!rec_Base>
+// CIR:   %[[BASE_ADDR:.*]] cir.base_class_addr %[[D_ADDR]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
 // CIR:   %[[D_A_ADDR:.*]] = cir.get_member %2[0] {name = "a"} : !cir.ptr<!rec_Base> -> !cir.ptr<!s32i>
 // CIR:   %[[D_A:.*]] = cir.load align(4) %3 : !cir.ptr<!s32i>, !s32i
 
@@ -91,7 +91,7 @@ int use_base_via_pointer(Derived *d) {
 // CIR:   %[[D_ADDR:.*]] = cir.alloca !cir.ptr<!rec_Derived>, !cir.ptr<!cir.ptr<!rec_Derived>>, ["d", init]
 // CIR:   cir.store %[[ARG0]], %[[D_ADDR]]
 // CIR:   %[[D:.*]] = cir.load align(8) %[[D_ADDR]]
-// CIR:   %[[BASE_ADDR:.*]] = cir.base_class_addr(%[[D]] : !cir.ptr<!rec_Derived> nonnull) [0] -> !cir.ptr<!rec_Base>
+// CIR:   %[[BASE_ADDR:.*]] = cir.base_class_addr %[[D]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
 // CIR:   %[[D_A_ADDR:.*]] = cir.get_member %[[BASE_ADDR]][0] {name = "a"}
 // CIR:   %[[D_A:.*]] = cir.load align(4) %[[D_A_ADDR]]
 

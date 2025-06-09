@@ -2255,7 +2255,7 @@ def BaseClassAddrOp : CIR_Op<"base_class_addr"> {
     ```
     will generate
     ```mlir
-    %3 = cir.base_class_addr (%1 : !cir.ptr<!rec_Derived> nonnull) [0] -> !cir.ptr<!rec_Base>
+    %3 = cir.base_class_addr %1 : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
     ```
   }];
 
@@ -2268,10 +2268,9 @@ def BaseClassAddrOp : CIR_Op<"base_class_addr"> {
   let results = (outs Res<CIR_PointerType, "">:$base_addr);
 
   let assemblyFormat = [{
-    `(`
       $derived_addr `:` qualified(type($derived_addr))
       (`nonnull` $assume_not_null^)?
-    `)` `[` $offset `]` `->` qualified(type($base_addr)) attr-dict
+      ` ` `[` $offset `]` `->` qualified(type($base_addr)) attr-dict
   }];
 }
 
