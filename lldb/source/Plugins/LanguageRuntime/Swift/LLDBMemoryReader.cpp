@@ -600,6 +600,19 @@ LLDBMemoryReader::getFileAddressAndModuleForTaggedAddress(
   return {{file_address, module}};
 }
 
+std::optional<swift::reflection::RemoteAddress>
+LLDBMemoryReader::resolveRemoteAddress(
+    swift::reflection::RemoteAddress address) const {
+  std::optional<Address> lldb_address =
+      LLDBMemoryReader::resolveRemoteAddress(address.getAddressData());
+  if (!lldb_address)
+    return {};
+  lldb::addr_t addr = lldb_address->GetLoadAddress(&m_process.GetTarget());
+  if (addr != LLDB_INVALID_ADDRESS)
+    return swift::reflection::RemoteAddress(addr);
+  return {};
+}
+
 std::optional<Address>
 LLDBMemoryReader::resolveRemoteAddress(uint64_t address) const {
   Log *log(GetLog(LLDBLog::Types));

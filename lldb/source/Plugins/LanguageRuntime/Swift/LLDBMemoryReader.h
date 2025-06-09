@@ -50,6 +50,9 @@ public:
   resolvePointer(swift::remote::RemoteAddress address,
                  uint64_t readValue) override;
 
+  std::optional<swift::remote::RemoteAddress>
+  resolveRemoteAddress(swift::remote::RemoteAddress address) const override;
+
   bool readBytes(swift::remote::RemoteAddress address, uint8_t *dest,
                  uint64_t size) override;
 
