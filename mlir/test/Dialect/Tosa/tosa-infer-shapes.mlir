@@ -1115,6 +1115,18 @@ func.func @resize_fp_power_of_two_upscale_offsetted(%arg0: tensor<1x50x48x1xf32>
 
 // -----
 
+// CHECK-LABEL: @resize_negative_output_dim
+func.func @resize_negative_output_dim(%arg0: tensor<1x3x1x1xi8>) {
+  %scale = tosa.const_shape { values = dense<[1, 3, 1, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { values = dense<[6, 1]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { values = dense<[-15, 0]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  // expected-error@+1 {{calculated output height and width must be non-negative, got height = -5, width = 0}}
+  %0 = tosa.resize %arg0, %scale, %offset, %border {mode = "NEAREST_NEIGHBOR"} : (tensor<1x3x1x1xi8>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<*xi8>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @if_test_simple
 func.func @if_test_simple(%arg0 : tensor<f32>, %arg1 : tensor<f32>, %arg2 : tensor<i1>) -> () {
   %a = tosa.log %arg0 : (tensor<f32>) -> tensor<f32>

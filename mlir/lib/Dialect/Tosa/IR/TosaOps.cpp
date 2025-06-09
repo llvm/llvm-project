@@ -2533,16 +2533,26 @@ LogicalResult tosa::ResizeOp::inferReturnTypeComponents(
   }
 
   // Compute the output shape based on attributes: scale, offset, and border.
-  outputShape[1] =
+  const int64_t outputHeight =
       (((inputHeight - 1) * scaleInt[0] - offsetInt[0] + borderInt[0]) /
        scaleInt[1]) +
       1;
 
-  outputShape[2] =
+  const int64_t outputWidth =
       (((inputWidth - 1) * scaleInt[2] - offsetInt[1] + borderInt[1]) /
        scaleInt[3]) +
       1;
 
+  if (outputHeight < 0 || outputWidth < 0) {
+    return emitOptionalError(
+        location,
+        "calculated output height and width must be non-negative, "
+        "got height = ",
+        outputHeight, ", width = ", outputWidth);
+  }
+
+  outputShape[1] = outputHeight;
+  outputShape[2] = outputWidth;
   inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
   return success();
 }
