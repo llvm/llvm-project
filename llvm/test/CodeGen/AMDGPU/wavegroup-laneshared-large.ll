@@ -42,6 +42,7 @@ entry:
 ; KERNEL-NEXT:      - 1
 ; KERNEL-NEXT:    .sgpr_count:     34
 ; KERNEL-NEXT:    .sgpr_spill_count: 0
+; KERNEL-NEXT:    .spatial_cluster: false
 ; KERNEL-NEXT:    .symbol:         wavegroup_kernel.kd
 ; KERNEL-NEXT:    .uses_dynamic_stack: false
 ; KERNEL-NEXT:    .vgpr_count:     512

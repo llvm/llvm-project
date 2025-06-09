@@ -2433,6 +2433,12 @@ def AMDGPUWavegroupKernel : InheritableAttr {
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel function">;
 }
 
+def AMDGPUSpatialClusterKernel : InheritableAttr {
+  let Spellings = [Clang<"amdgpu_spatial_cluster_kernel", 0>];
+  let Documentation = [AMDGPUSpatialClusterKernelDocs];
+  let Subjects = SubjectList<[Function], ErrorDiag, "kernel function">;
+}
+
 def BPFPreserveAccessIndex : InheritableAttr,
                              TargetSpecificAttr<TargetBPF>  {
   let Spellings = [Clang<"preserve_access_index">];

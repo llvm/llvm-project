@@ -1434,6 +1434,8 @@ bool getWavegroupRankFunction(const Function &F);
 
 std::optional<std::array<uint32_t, 3>> getReqdWorkGroupSize(const Function &F);
 
+bool getSpatialClusterEnable(const Function &F);
+
 LLVM_READNONE
 constexpr bool isShader(CallingConv::ID CC) {
   switch (CC) {
