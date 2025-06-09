@@ -5993,12 +5993,19 @@ InstructionCost X86TTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     // This is an imperfect hack to prevent constant hoisting of
     // compares that might be trying to check if a 64-bit value fits in
     // 32-bits. The backend can optimize these cases using a right shift by 32.
-    // Ideally we would check the compare predicate here. There also other
-    // similar immediates the backend can use shifts for.
+    // There are other predicates and immediates the backend can use shifts for.
     if (Idx == 1 && ImmBitWidth == 64) {
       uint64_t ImmVal = Imm.getZExtValue();
       if (ImmVal == 0x100000000ULL || ImmVal == 0xffffffff)
         return TTI::TCC_Free;
+
+      if (auto *Cmp = dyn_cast_or_null<CmpInst>(Inst)) {
+        if (Cmp->isEquality()) {
+          KnownBits Known = computeKnownBits(Cmp->getOperand(0), DL);
+          if (Known.countMinTrailingZeros() >= 32)
+            return TTI::TCC_Free;
+        }
+      }
     }
     ImmIdx = 1;
     break;

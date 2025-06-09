@@ -1636,10 +1636,11 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
         CGM.getCodeGenOpts().StrictReturn ||
         !CGM.MayDropFunctionReturn(FD->getASTContext(), FD->getReturnType());
     if (SanOpts.has(SanitizerKind::Return)) {
-      SanitizerScope SanScope(this);
+      auto CheckOrdinal = SanitizerKind::SO_Return;
+      auto CheckHandler = SanitizerHandler::MissingReturn;
+      SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
       llvm::Value *IsFalse = Builder.getFalse();
-      EmitCheck(std::make_pair(IsFalse, SanitizerKind::SO_Return),
-                SanitizerHandler::MissingReturn,
+      EmitCheck(std::make_pair(IsFalse, CheckOrdinal), CheckHandler,
                 EmitCheckSourceLocation(FD->getLocation()), {});
     } else if (ShouldEmitUnreachable) {
       if (CGM.getCodeGenOpts().OptimizationLevel == 0)
@@ -2541,7 +2542,9 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
           //   expression [...] each time it is evaluated it shall have a value
           //   greater than zero.
           if (SanOpts.has(SanitizerKind::VLABound)) {
-            SanitizerScope SanScope(this);
+            auto CheckOrdinal = SanitizerKind::SO_VLABound;
+            auto CheckHandler = SanitizerHandler::VLABoundNotPositive;
+            SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
             llvm::Value *Zero = llvm::Constant::getNullValue(size->getType());
             clang::QualType SEType = sizeExpr->getType();
             llvm::Value *CheckCondition =
@@ -2551,9 +2554,8 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
             llvm::Constant *StaticArgs[] = {
                 EmitCheckSourceLocation(sizeExpr->getBeginLoc()),
                 EmitCheckTypeDescriptor(SEType)};
-            EmitCheck(
-                std::make_pair(CheckCondition, SanitizerKind::SO_VLABound),
-                SanitizerHandler::VLABoundNotPositive, StaticArgs, size);
+            EmitCheck(std::make_pair(CheckCondition, CheckOrdinal),
+                      CheckHandler, StaticArgs, size);
           }
 
           // Always zexting here would be wrong if it weren't
@@ -3196,7 +3198,9 @@ void CodeGenFunction::emitAlignmentAssumptionCheck(
   Assumption->removeFromParent();
 
   {
-    SanitizerScope SanScope(this);
+    auto CheckOrdinal = SanitizerKind::SO_Alignment;
+    auto CheckHandler = SanitizerHandler::AlignmentAssumption;
+    SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
 
     if (!OffsetValue)
       OffsetValue = Builder.getInt1(false); // no offset.
@@ -3205,8 +3209,8 @@ void CodeGenFunction::emitAlignmentAssumptionCheck(
                                     EmitCheckSourceLocation(SecondaryLoc),
                                     EmitCheckTypeDescriptor(Ty)};
     llvm::Value *DynamicData[] = {Ptr, Alignment, OffsetValue};
-    EmitCheck({std::make_pair(TheCheck, SanitizerKind::SO_Alignment)},
-              SanitizerHandler::AlignmentAssumption, StaticData, DynamicData);
+    EmitCheck({std::make_pair(TheCheck, CheckOrdinal)}, CheckHandler,
+              StaticData, DynamicData);
   }
 
   // We are now in the (new, empty) "cont" basic block.
