@@ -397,17 +397,6 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
           targetDiag(*Locs.begin(), diag::err_thread_unsupported);
   }
 
-  if (isa<ParmVarDecl>(D) && isa<RequiresExprBodyDecl>(D->getDeclContext()) &&
-      !isUnevaluatedContext()) {
-    // C++ [expr.prim.req.nested] p3
-    //   A local parameter shall only appear as an unevaluated operand
-    //   (Clause 8) within the constraint-expression.
-    Diag(Loc, diag::err_requires_expr_parameter_referenced_in_evaluated_context)
-        << D;
-    Diag(D->getLocation(), diag::note_entity_declared_at) << D;
-    return true;
-  }
-
   return false;
 }
 
@@ -6360,7 +6349,8 @@ static FunctionDecl *rewriteBuiltinFunctionDecl(Sema *Sema, ASTContext &Context,
       return nullptr;
     Expr *Arg = ArgRes.get();
     QualType ArgType = Arg->getType();
-    if (!ParamType->isPointerType() || ParamType.hasAddressSpace() ||
+    if (!ParamType->isPointerType() ||
+        ParamType->getPointeeType().hasAddressSpace() ||
         !ArgType->isPointerType() ||
         !ArgType->getPointeeType().hasAddressSpace() ||
         isPtrSizeAddressSpace(ArgType->getPointeeType().getAddressSpace())) {
@@ -6369,9 +6359,6 @@ static FunctionDecl *rewriteBuiltinFunctionDecl(Sema *Sema, ASTContext &Context,
     }
 
     QualType PointeeType = ParamType->getPointeeType();
-    if (PointeeType.hasAddressSpace())
-      continue;
-
     NeedsNewDecl = true;
     LangAS AS = ArgType->getPointeeType().getAddressSpace();
 
@@ -9184,8 +9171,14 @@ static AssignConvertType checkPointerTypesForAssignment(Sema &S,
       return AssignConvertType::IncompatibleFunctionPointer;
     return AssignConvertType::IncompatiblePointer;
   }
-  if (!S.getLangOpts().CPlusPlus && S.IsFunctionConversion(ltrans, rtrans))
-    return AssignConvertType::IncompatibleFunctionPointer;
+  bool DiscardingCFIUncheckedCallee, AddingCFIUncheckedCallee;
+  if (!S.getLangOpts().CPlusPlus &&
+      S.IsFunctionConversion(ltrans, rtrans, &DiscardingCFIUncheckedCallee,
+                             &AddingCFIUncheckedCallee)) {
+    // Allow conversions between CFIUncheckedCallee-ness.
+    if (!DiscardingCFIUncheckedCallee && !AddingCFIUncheckedCallee)
+      return AssignConvertType::IncompatibleFunctionPointer;
+  }
   if (IsInvalidCmseNSCallConversion(S, ltrans, rtrans))
     return AssignConvertType::IncompatibleFunctionPointer;
   if (S.IsInvalidSMECallConversion(rtrans, ltrans))
@@ -12641,9 +12634,17 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
       LangAS AddrSpaceR = RCanPointeeTy.getAddressSpace();
       CastKind Kind = AddrSpaceL != AddrSpaceR ? CK_AddressSpaceConversion
                                                : CK_BitCast;
+
+      const FunctionType *LFn = LCanPointeeTy->getAs<FunctionType>();
+      const FunctionType *RFn = RCanPointeeTy->getAs<FunctionType>();
+      bool LHSHasCFIUncheckedCallee = LFn && LFn->getCFIUncheckedCalleeAttr();
+      bool RHSHasCFIUncheckedCallee = RFn && RFn->getCFIUncheckedCalleeAttr();
+      bool ChangingCFIUncheckedCallee =
+          LHSHasCFIUncheckedCallee != RHSHasCFIUncheckedCallee;
+
       if (LHSIsNull && !RHSIsNull)
         LHS = ImpCastExprToType(LHS.get(), RHSType, Kind);
-      else
+      else if (!ChangingCFIUncheckedCallee)
         RHS = ImpCastExprToType(RHS.get(), LHSType, Kind);
     }
     return computeResultTy();

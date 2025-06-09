@@ -148,7 +148,7 @@ define i1 @test_urem_even(i27 %X) nounwind {
 ; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    slli a0, a0, 37
 ; RV64-NEXT:    srli a0, a0, 37
-; RV64-NEXT:    addiw a1, a2, -1755
+; RV64-NEXT:    addi a1, a2, -1755
 ; RV64-NEXT:    sltu a0, a0, a1
 ; RV64-NEXT:    ret
 ;
@@ -180,7 +180,7 @@ define i1 @test_urem_even(i27 %X) nounwind {
 ; RV64M-NEXT:    lui a1, 2341
 ; RV64M-NEXT:    slli a0, a0, 37
 ; RV64M-NEXT:    srli a0, a0, 37
-; RV64M-NEXT:    addiw a1, a1, -1755
+; RV64M-NEXT:    addi a1, a1, -1755
 ; RV64M-NEXT:    sltu a0, a0, a1
 ; RV64M-NEXT:    ret
 ;
@@ -212,7 +212,7 @@ define i1 @test_urem_even(i27 %X) nounwind {
 ; RV64MV-NEXT:    lui a1, 2341
 ; RV64MV-NEXT:    slli a0, a0, 37
 ; RV64MV-NEXT:    srli a0, a0, 37
-; RV64MV-NEXT:    addiw a1, a1, -1755
+; RV64MV-NEXT:    addi a1, a1, -1755
 ; RV64MV-NEXT:    sltu a0, a0, a1
 ; RV64MV-NEXT:    ret
   %urem = urem i27 %X, 14

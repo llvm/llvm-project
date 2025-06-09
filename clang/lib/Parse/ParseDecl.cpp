@@ -6110,8 +6110,7 @@ bool Parser::isConstructorDeclarator(bool IsUnqualified, bool DeductionGuide,
 
 void Parser::ParseTypeQualifierListOpt(
     DeclSpec &DS, unsigned AttrReqs, bool AtomicOrPtrauthAllowed,
-    bool IdentifierRequired,
-    std::optional<llvm::function_ref<void()>> CodeCompletionHandler) {
+    bool IdentifierRequired, llvm::function_ref<void()> CodeCompletionHandler) {
   if ((AttrReqs & AR_CXX11AttributesParsed) &&
       isAllowedCXX11AttributeSpecifier()) {
     ParsedAttributes Attrs(AttrFactory);
@@ -6131,7 +6130,7 @@ void Parser::ParseTypeQualifierListOpt(
     case tok::code_completion:
       cutOffParsing();
       if (CodeCompletionHandler)
-        (*CodeCompletionHandler)();
+        CodeCompletionHandler();
       else
         Actions.CodeCompletion().CodeCompleteTypeQualifiers(DS);
       return;
@@ -7222,9 +7221,9 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
       ParseTypeQualifierListOpt(
           DS, AR_NoAttributesParsed,
           /*AtomicOrPtrauthAllowed=*/false,
-          /*IdentifierRequired=*/false, llvm::function_ref<void()>([&]() {
+          /*IdentifierRequired=*/false, [&]() {
             Actions.CodeCompletion().CodeCompleteFunctionQualifiers(DS, D);
-          }));
+          });
       if (!DS.getSourceRange().getEnd().isInvalid()) {
         EndLoc = DS.getSourceRange().getEnd();
       }
