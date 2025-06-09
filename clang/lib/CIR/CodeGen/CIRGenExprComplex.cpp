@@ -15,7 +15,7 @@ public:
   explicit ComplexExprEmitter(CIRGenFunction &cgf)
       : cgf(cgf), builder(cgf.getBuilder()) {}
 
-  /// EmitStoreOfComplex - Store the specified real/imag parts into the
+  /// Store the specified real/imag parts into the
   /// specified value pointer.
   void emitStoreOfComplex(mlir::Location loc, mlir::Value val, LValue lv,
                           bool isInit);
