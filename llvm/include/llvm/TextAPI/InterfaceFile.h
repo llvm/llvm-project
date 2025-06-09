@@ -14,11 +14,11 @@
 #ifndef LLVM_TEXTAPI_INTERFACEFILE_H
 #define LLVM_TEXTAPI_INTERFACEFILE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TextAPI/ArchitectureSet.h"
 #include "llvm/TextAPI/FileTypes.h"
 #include "llvm/TextAPI/PackedVersion.h"
@@ -275,7 +275,8 @@ public:
   ///
   /// \param InstallName The name of the library to re-export.
   /// \param Target The target triple for which this applies.
-  LLVM_ABI void addReexportedLibrary(StringRef InstallName, const Target &Target);
+  LLVM_ABI void addReexportedLibrary(StringRef InstallName,
+                                     const Target &Target);
 
   /// Get the list of re-exported libraries.
   ///
@@ -399,7 +400,7 @@ public:
   /// \param Library Interface of reexported library.
   /// \param Overwrite Whether to overwrite preexisting inlined library.
   LLVM_ABI void inlineLibrary(std::shared_ptr<InterfaceFile> Library,
-                     bool Overwrite = false);
+                              bool Overwrite = false);
 
   /// Set InterfaceFile properties from pre-gathered binary attributes,
   /// if they are not set already.
@@ -407,7 +408,7 @@ public:
   /// \param BA Attributes typically represented in load commands.
   /// \param Targ MachO Target slice to add attributes to.
   LLVM_ABI void setFromBinaryAttrs(const RecordsSlice::BinaryAttrs &BA,
-                          const Target &Targ);
+                                   const Target &Targ);
 
   /// The equality is determined by attributes that impact linking
   /// compatibilities. Path, & FileKind are irrelevant since these by

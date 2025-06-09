@@ -9,13 +9,13 @@
 #ifndef LLVM_TEXTAPI_SYMBOLSET_H
 #define LLVM_TEXTAPI_SYMBOLSET_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TextAPI/Architecture.h"
 #include "llvm/TextAPI/ArchitectureSet.h"
 #include "llvm/TextAPI/Symbol.h"
@@ -93,7 +93,7 @@ private:
 public:
   SymbolSet() = default;
   LLVM_ABI Symbol *addGlobal(EncodeKind Kind, StringRef Name, SymbolFlags Flags,
-                    const Target &Targ);
+                             const Target &Targ);
   size_t size() const { return Symbols.size(); }
 
   template <typename RangeT, typename ElT = std::remove_reference_t<

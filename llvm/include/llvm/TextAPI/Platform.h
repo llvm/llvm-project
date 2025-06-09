@@ -12,9 +12,9 @@
 #ifndef LLVM_TEXTAPI_PLATFORM_H
 #define LLVM_TEXTAPI_PLATFORM_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/VersionTuple.h"
 
 namespace llvm {
@@ -29,7 +29,7 @@ LLVM_ABI PlatformSet mapToPlatformSet(ArrayRef<Triple> Targets);
 LLVM_ABI StringRef getPlatformName(PlatformType Platform);
 LLVM_ABI PlatformType getPlatformFromName(StringRef Name);
 LLVM_ABI std::string getOSAndEnvironmentName(PlatformType Platform,
-                                    std::string Version = "");
+                                             std::string Version = "");
 LLVM_ABI VersionTuple mapToSupportedOSVersion(const Triple &Triple);
 
 } // end namespace MachO.

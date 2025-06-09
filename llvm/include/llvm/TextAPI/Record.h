@@ -14,10 +14,10 @@
 #ifndef LLVM_TEXTAPI_RECORD_H
 #define LLVM_TEXTAPI_RECORD_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TextAPI/Symbol.h"
 #include <string>
 
@@ -209,7 +209,8 @@ public:
   }
 
   LLVM_ABI RecordLinkage getLinkageForSymbol(ObjCIFSymbolKind CurrType) const;
-  LLVM_ABI void updateLinkageForSymbols(ObjCIFSymbolKind SymType, RecordLinkage Link);
+  LLVM_ABI void updateLinkageForSymbols(ObjCIFSymbolKind SymType,
+                                        RecordLinkage Link);
 
   LLVM_ABI bool addObjCCategory(ObjCCategoryRecord *Record);
   LLVM_ABI std::vector<ObjCCategoryRecord *> getObjCCategories() const;

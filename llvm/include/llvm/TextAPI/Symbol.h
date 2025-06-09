@@ -9,9 +9,9 @@
 #ifndef LLVM_TEXTAPI_SYMBOL_H
 #define LLVM_TEXTAPI_SYMBOL_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TextAPI/ArchitectureSet.h"
 #include "llvm/TextAPI/Target.h"
@@ -153,7 +153,8 @@ public:
                             std::function<bool(const Target &)>>;
   using const_filtered_target_range =
       llvm::iterator_range<const_filtered_target_iterator>;
-  LLVM_ABI const_filtered_target_range targets(ArchitectureSet architectures) const;
+  LLVM_ABI const_filtered_target_range
+  targets(ArchitectureSet architectures) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump(raw_ostream &OS) const;

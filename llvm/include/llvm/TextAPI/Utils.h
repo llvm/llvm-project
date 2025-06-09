@@ -13,8 +13,8 @@
 #ifndef LLVM_TEXTAPI_UTILS_H
 #define LLVM_TEXTAPI_UTILS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -52,7 +52,8 @@ struct SymLink {
 ///
 /// \param Path Location of file.
 /// \param Extension File extension to update with.
-LLVM_ABI void replace_extension(SmallVectorImpl<char> &Path, const Twine &Extension);
+LLVM_ABI void replace_extension(SmallVectorImpl<char> &Path,
+                                const Twine &Extension);
 
 /// Determine whether to skip over symlink due to either too many symlink levels
 /// or is cyclic.
@@ -67,7 +68,7 @@ LLVM_ABI std::error_code shouldSkipSymLink(const Twine &Path, bool &Result);
 /// \param To What the symlink points to.
 /// \param RelativePath Path location to update what the symlink points to.
 LLVM_ABI std::error_code make_relative(StringRef From, StringRef To,
-                              SmallVectorImpl<char> &RelativePath);
+                                       SmallVectorImpl<char> &RelativePath);
 
 /// Determine if library is private by parsing file path.
 /// It does not touch the file system.
@@ -88,14 +89,15 @@ using AliasMap = std::map<AliasEntry, AliasEntry>;
 ///
 /// \param Buffer Data contents of file for the alias list.
 /// \return Lookup table of alias to their base symbol.
-LLVM_ABI Expected<AliasMap> parseAliasList(std::unique_ptr<llvm::MemoryBuffer> &Buffer);
+LLVM_ABI Expected<AliasMap>
+parseAliasList(std::unique_ptr<llvm::MemoryBuffer> &Buffer);
 
 /// Pickup active paths for a given platform.
 ///
 /// \param Paths File or search paths to pick up.
 /// \param Platform Platform to collect paths for.
 LLVM_ABI PathSeq getPathsForPlatform(const PathToPlatformSeq &Paths,
-                            PlatformType Platform);
+                                     PlatformType Platform);
 
 } // namespace llvm::MachO
 #endif // LLVM_TEXTAPI_UTILS_H

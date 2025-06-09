@@ -33,7 +33,8 @@ enum Architecture : uint8_t {
 };
 
 /// Convert a CPU Type and Subtype pair to an architecture slice.
-LLVM_ABI Architecture getArchitectureFromCpuType(uint32_t CPUType, uint32_t CPUSubType);
+LLVM_ABI Architecture getArchitectureFromCpuType(uint32_t CPUType,
+                                                 uint32_t CPUSubType);
 
 /// Convert a name to an architecture slice.
 LLVM_ABI Architecture getArchitectureFromName(StringRef Name);
@@ -42,7 +43,8 @@ LLVM_ABI Architecture getArchitectureFromName(StringRef Name);
 LLVM_ABI StringRef getArchitectureName(Architecture Arch);
 
 /// Convert an architecture slice to a CPU Type and Subtype pair.
-LLVM_ABI std::pair<uint32_t, uint32_t> getCPUTypeFromArchitecture(Architecture Arch);
+LLVM_ABI std::pair<uint32_t, uint32_t>
+getCPUTypeFromArchitecture(Architecture Arch);
 
 /// Convert a target to an architecture slice.
 LLVM_ABI Architecture mapToArchitecture(const llvm::Triple &Target);
