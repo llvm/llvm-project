@@ -163,17 +163,22 @@ define internal void @convert_and_move_alloca() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTH2S:%.*]] = alloca i8, i64 4, align 4
 ; CHECK-NEXT:    [[IV_PTR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[UB_PTR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[UB_PTR]] to ptr addrspace(5)
 ; CHECK-NEXT:    br label [[INITLOOP:%.*]]
 ; CHECK:       initloop:
-; CHECK-NEXT:    store i32 0, ptr [[IV_PTR]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[IV_PTR]] to ptr addrspace(5)
+; CHECK-NEXT:    store i32 0, ptr addrspace(5) [[TMP1]], align 4
 ; CHECK-NEXT:    br label [[LOOPBODY:%.*]]
 ; CHECK:       loopbody:
-; CHECK-NEXT:    [[IV:%.*]] = load i32, ptr [[IV_PTR]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[IV]], 10
-; CHECK-NEXT:    br i1 [[TMP0]], label [[EXIT:%.*]], label [[LOOPINC:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[IV_PTR]] to ptr addrspace(5)
+; CHECK-NEXT:    [[IV:%.*]] = load i32, ptr addrspace(5) [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[IV]], 10
+; CHECK-NEXT:    br i1 [[TMP3]], label [[EXIT:%.*]], label [[LOOPINC:%.*]]
 ; CHECK:       loopinc:
 ; CHECK-NEXT:    [[INC:%.*]] = add i32 [[IV]], 1
-; CHECK-NEXT:    store i32 [[INC]], ptr [[IV_PTR]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = addrspacecast ptr [[IV_PTR]] to ptr addrspace(5)
+; CHECK-NEXT:    store i32 [[INC]], ptr addrspace(5) [[TMP4]], align 4
 ; CHECK-NEXT:    br label [[LOOPBODY]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -183,17 +188,22 @@ define internal void @convert_and_move_alloca() {
 ; CHECK-DISABLED-NEXT:  entry:
 ; CHECK-DISABLED-NEXT:    [[DOTH2S:%.*]] = alloca i8, i64 4, align 4
 ; CHECK-DISABLED-NEXT:    [[IV_PTR:%.*]] = alloca i32, align 4
+; CHECK-DISABLED-NEXT:    [[UB_PTR:%.*]] = alloca i32, align 4
+; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[UB_PTR]] to ptr addrspace(5)
 ; CHECK-DISABLED-NEXT:    br label [[INITLOOP:%.*]]
 ; CHECK-DISABLED:       initloop:
-; CHECK-DISABLED-NEXT:    store i32 0, ptr [[IV_PTR]], align 4
+; CHECK-DISABLED-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[IV_PTR]] to ptr addrspace(5)
+; CHECK-DISABLED-NEXT:    store i32 0, ptr addrspace(5) [[TMP1]], align 4
 ; CHECK-DISABLED-NEXT:    br label [[LOOPBODY:%.*]]
 ; CHECK-DISABLED:       loopbody:
-; CHECK-DISABLED-NEXT:    [[IV:%.*]] = load i32, ptr [[IV_PTR]], align 4
-; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[IV]], 10
-; CHECK-DISABLED-NEXT:    br i1 [[TMP0]], label [[EXIT:%.*]], label [[LOOPINC:%.*]]
+; CHECK-DISABLED-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[IV_PTR]] to ptr addrspace(5)
+; CHECK-DISABLED-NEXT:    [[IV:%.*]] = load i32, ptr addrspace(5) [[TMP2]], align 4
+; CHECK-DISABLED-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[IV]], 10
+; CHECK-DISABLED-NEXT:    br i1 [[TMP3]], label [[EXIT:%.*]], label [[LOOPINC:%.*]]
 ; CHECK-DISABLED:       loopinc:
 ; CHECK-DISABLED-NEXT:    [[INC:%.*]] = add i32 [[IV]], 1
-; CHECK-DISABLED-NEXT:    store i32 [[INC]], ptr [[IV_PTR]], align 4
+; CHECK-DISABLED-NEXT:    [[TMP4:%.*]] = addrspacecast ptr [[IV_PTR]] to ptr addrspace(5)
+; CHECK-DISABLED-NEXT:    store i32 [[INC]], ptr addrspace(5) [[TMP4]], align 4
 ; CHECK-DISABLED-NEXT:    br label [[LOOPBODY]]
 ; CHECK-DISABLED:       exit:
 ; CHECK-DISABLED-NEXT:    ret void
@@ -268,7 +278,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK-DISABLED: attributes #[[ATTR6]] = { nounwind }
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C99, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: [[META2:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
-; CHECK: [[META1]] = !DIFile(filename: "remove_globalization.c", directory: {{.*}})
+; CHECK: [[META1]] = !DIFile(filename: "{{.*}}remove_globalization.c", directory: {{.*}})
 ; CHECK: [[META2]] = !{}
 ; CHECK: [[META3:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
 ; CHECK: [[META4:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
@@ -279,7 +289,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK: [[META9]] = !DISubroutineType(types: [[META2]])
 ;.
 ; CHECK-DISABLED: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C99, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: [[META2:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
-; CHECK-DISABLED: [[META1]] = !DIFile(filename: "remove_globalization.c", directory: {{.*}})
+; CHECK-DISABLED: [[META1]] = !DIFile(filename: "{{.*}}remove_globalization.c", directory: {{.*}})
 ; CHECK-DISABLED: [[META2]] = !{}
 ; CHECK-DISABLED: [[META3:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
 ; CHECK-DISABLED: [[META4:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
