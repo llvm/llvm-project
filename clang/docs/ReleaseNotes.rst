@@ -689,6 +689,7 @@ Bug Fixes in This Version
 - Fixed type mismatch error when 'builtin-elementwise-math' arguments have different qualifiers, this should be well-formed. (#GH141397)
 - Constant evaluation now correctly runs the destructor of a variable declared in
   the second clause of a C-style ``for`` loop. (#GH139818)
+- Fixed incorrect diagnostic location for missing ``:`` in case statements expanded from macros. (#GH143216)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

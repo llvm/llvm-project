@@ -229,3 +229,16 @@ void fn1() {
     }
 } // expected-error{{expected statement}}
 }
+
+namespace GH143216 {
+#define FOO 1 case 3: // expected-error {{expected ':' after 'case'}}
+
+int f(int x) {
+  switch (x) {
+  case FOO // expected-note {{expanded from macro 'FOO'}}
+    return 0;
+  default:
+    return 1;
+  }
+}
+}
