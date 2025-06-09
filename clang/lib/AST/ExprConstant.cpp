@@ -1529,7 +1529,7 @@ CallStackFrame::~CallStackFrame() {
 
 static bool isRead(AccessKinds AK) {
   return AK == AK_Read || AK == AK_ReadObjectRepresentation ||
-         AK == AK_IsWithinLifetime;
+         AK == AK_IsWithinLifetime || AK == AK_CheckReferenceInitialization;
 }
 
 static bool isModification(AccessKinds AK) {
@@ -1540,6 +1540,7 @@ static bool isModification(AccessKinds AK) {
   case AK_DynamicCast:
   case AK_TypeId:
   case AK_IsWithinLifetime:
+  case AK_CheckReferenceInitialization:
     return false;
   case AK_Assign:
   case AK_Increment:
@@ -1558,7 +1559,7 @@ static bool isAnyAccess(AccessKinds AK) {
 /// Is this an access per the C++ definition?
 static bool isFormalAccess(AccessKinds AK) {
   return isAnyAccess(AK) && AK != AK_Construct && AK != AK_Destroy &&
-         AK != AK_IsWithinLifetime;
+         AK != AK_IsWithinLifetime && AK != AK_CheckReferenceInitialization;
 }
 
 /// Is this kind of axcess valid on an indeterminate object value?
@@ -1571,6 +1572,7 @@ static bool isValidIndeterminateAccess(AccessKinds AK) {
     return false;
 
   case AK_IsWithinLifetime:
+  case AK_CheckReferenceInitialization:
   case AK_ReadObjectRepresentation:
   case AK_Assign:
   case AK_Construct:
@@ -4425,7 +4427,7 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
 
     // Unless we're looking at a local variable or argument in a constexpr call,
     // the variable we're reading must be const.
-    if (!Frame) {
+    if (!Frame && AK != clang::AK_CheckReferenceInitialization) {
       if (IsAccess && isa<ParmVarDecl>(VD)) {
         // Access of a parameter that's not associated with a frame isn't going
         // to work out, but we can leave it to evaluateVarDeclInit to provide a
@@ -4502,7 +4504,7 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
   } else {
     const Expr *Base = LVal.Base.dyn_cast<const Expr*>();
 
-    if (!Frame) {
+    if (!Frame && AK != clang::AK_CheckReferenceInitialization) {
       if (const MaterializeTemporaryExpr *MTE =
               dyn_cast_or_null<MaterializeTemporaryExpr>(Base)) {
         assert(MTE->getStorageDuration() == SD_Static &&
@@ -4556,7 +4558,7 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
         NoteLValueLocation(Info, LVal.Base);
         return CompleteObject();
       }
-    } else {
+    } else if (AK != clang::AK_CheckReferenceInitialization) {
       BaseVal = Frame->getTemporary(Base, LVal.Base.getVersion());
       assert(BaseVal && "missing value for temporary");
     }
@@ -5242,7 +5244,19 @@ static bool EvaluateVarDecl(EvalInfo &Info, const VarDecl *VD) {
   if (InitE->isValueDependent())
     return false;
 
-  if (!EvaluateInPlace(Val, Info, Result, InitE)) {
+  if (VD->getType()->isReferenceType() && InitE->isGLValue()) {
+    if (!EvaluateLValue(InitE, Result, Info))
+      return false;
+    CompleteObject Obj = findCompleteObject(
+        Info, InitE, AK_CheckReferenceInitialization, Result, InitE->getType());
+    if (Result.Designator.isOnePastTheEnd()) {
+      Info.FFDiag(InitE, diag::note_constexpr_access_past_end)
+          << AK_CheckReferenceInitialization;
+      return false;
+    }
+    Result.moveInto(Val);
+    return !!Obj;
+  } else if (!EvaluateInPlace(Val, Info, Result, InitE)) {
     // Wipe out any partially-computed value, to allow tracking that this
     // evaluation failed.
     Val = APValue();
