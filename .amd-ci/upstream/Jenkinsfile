@@ -44,6 +44,7 @@ properties(propsList)
 String linuxBasePath = '/usr/sbin:/usr/bin:/bin'
 String gitHubAppCredsId = 'Jenkins-AOCC'
 Boolean hasSourceChanges = true
+Integer successStat = 0
 
 Integer fullTimeoutH = 15
 
@@ -57,6 +58,10 @@ try {
             stage ('prepare') {
                 String gitTool = 'LinuxGit2.45'
                 String referenceRepo = env.JENKINS_REMOTE_GIT_CACHE ?: 'NoSuchReferenceRepo'
+                String gitPathEnv = (
+                    'PATH=/proj/csse_jenkins2/swtools/c/rhel7-gcc8.3.1/git-2.45.2-ilh23rcg/bin:' +
+                        linuxBasePath
+                )
                 cleanWs(
                     deleteDirs: true,
                     patterns: cleanExcludes
@@ -87,10 +92,7 @@ try {
                         gitToolName: gitTool
                     )
                 ]) {
-                    withEnv([
-                        'PATH=/proj/csse_jenkins2/swtools/c/rhel7-gcc8.3.1/git-2.45.2-ilh23rcg/bin:' +
-                            linuxBasePath
-                    ]) {
+                    withEnv([gitPathEnv]) {
                         sh(
                             label: 'clone-essentials',
                             script: (
@@ -132,16 +134,44 @@ try {
                         )
                     )
                     assert gitVars.GIT_COMMIT
-                    String dummyFile = env.BUILD_TAG + '_dummy.txt'
-                    Integer activeStat = sh(
-                        label: 'has-active-files',
-                        script: (
-                            'set +x; echo "# Dummy" > ' + dummyFile + ' && ' +
-                                'bash ../aocc-essentials/build_essentials/has_active_files.sh' + space +
-                                gitVars.GIT_COMMIT + space + dummyFile + ' && rm -f ' + dummyFile
-                        ),
-                        returnStatus: true
-                    )
+                    Integer activeStat
+                    withEnv([gitPathEnv]) {
+                        if (
+                            gitVars.GIT_PREVIOUS_SUCCESSFUL_COMMIT &&
+                                gitVars.GIT_PREVIOUS_SUCCESSFUL_COMMIT != gitVars.GIT_COMMIT
+                        ) {
+                            withCredentials([
+                                gitUsernamePassword(
+                                    credentialsId: gitHubAppCredsId,
+                                    gitToolName: gitTool
+                                )
+                            ]) {
+                                activeStat = sh(
+                                    label: 'has-file-changes',
+                                    script: (
+                                        'bash ../aocc-essentials/build_essentials/has_file_changes.sh' + space +
+                                            gitVars.GIT_COMMIT + space + gitVars.GIT_PREVIOUS_SUCCESSFUL_COMMIT
+                                    ),
+                                    returnStatus: true
+                                )
+                            }
+                        }
+                        if (activeStat == successStat) {
+                            String dummyFile = env.BUILD_TAG + '_dummy.txt'
+                            activeStat = sh(
+                                label: 'has-active-files',
+                                script: (
+                                    'set +x; echo "# Dummy" > ' + dummyFile + ' && ' +
+                                        'bash ../aocc-essentials/build_essentials/has_active_files.sh' + space +
+                                        gitVars.GIT_COMMIT + space + dummyFile + ' && rm -f ' + dummyFile
+                                ),
+                                returnStatus: true
+                            )
+                        }
+                    }
+                    if (activeStat != successStat && activeStat != 1) {
+                        error 'Unexpected exit checking file activity.'
+                    }
                     if (activeStat == 1) {
                         echo('Skipping build.')
                         hasSourceChanges = false
