@@ -601,7 +601,8 @@ public:
         // that embedInVector created.
         dbgs() << "matrix reshape from " << Found->second.shape() << " to "
                << SI << " using at least " << SplitVecs.size()
-               << " shuffles on behalf of:\n" << *Inst << '\n';
+               << " shuffles on behalf of:\n"
+               << *Inst << '\n';
         ReshapedMatrices++;
       } else if (!ShapeMap.contains(MatrixVal)) {
         dbgs() << "splitting a " << SI << " matrix with " << SplitVecs.size()
@@ -1431,7 +1432,8 @@ public:
         Flattened = Matrix.embedInVector(Builder);
         LLVM_DEBUG(
             if (Instruction *User = dyn_cast<Instruction>(U.getUser())) dbgs()
-                << "flattening a " << Matrix.shape() << " matrix:\n" << *Inst
+                << "flattening a " << Matrix.shape() << " matrix:\n"
+                << *Inst
                 << "\nbecause we do not have a shape-aware lowering for its "
                    "user:\n"
                 << *User << '\n';);
