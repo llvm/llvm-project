@@ -2270,7 +2270,9 @@ def VecTernaryOp : CIR_Op<"vec.ternary",
     `(` $cond `,` $lhs`,` $rhs `)` `:` qualified(type($cond)) `,`
     qualified(type($lhs)) attr-dict
   }];
+
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD
