@@ -148,7 +148,7 @@ std::vector<Diag> generateMissingIncludeDiagnostics(
     if (SymbolWithMissingInclude.Providers.front().kind() ==
         include_cleaner::Header::Kind::Physical) {
       for (auto &Filter : Angled ? QuotedHeaders : AngledHeaders) {
-        if (Filter(ResolvedPath)) {
+        if (Filter(HeaderRef)) {
           Angled = !Angled;
           break;
         }
