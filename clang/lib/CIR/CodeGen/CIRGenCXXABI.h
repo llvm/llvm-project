@@ -37,6 +37,10 @@ public:
 
   void setCXXABIThisValue(CIRGenFunction &cgf, mlir::Value thisPtr);
 
+  /// Emit a single constructor/destructor with the gien type from a C++
+  /// constructor Decl.
+  virtual void emitCXXStructor(clang::GlobalDecl gd) = 0;
+
 public:
   clang::ImplicitParamDecl *getThisDecl(CIRGenFunction &cgf) {
     return cgf.cxxabiThisDecl;
@@ -55,11 +59,28 @@ public:
     return md->getParent();
   }
 
+  /// Return whether the given global decl needs a VTT parameter.
+  virtual bool needsVTTParameter(clang::GlobalDecl gd) { return false; }
+
   /// Build a parameter variable suitable for 'this'.
   void buildThisParam(CIRGenFunction &cgf, FunctionArgList &params);
 
   /// Loads the incoming C++ this pointer as it was passed by the caller.
   mlir::Value loadIncomingCXXThis(CIRGenFunction &cgf);
+
+  /// Emit constructor variants required by this ABI.
+  virtual void emitCXXConstructors(const clang::CXXConstructorDecl *d) = 0;
+
+  /// Insert any ABI-specific implicit parameters into the parameter list for a
+  /// function. This generally involves extra data for constructors and
+  /// destructors.
+  ///
+  /// ABIs may also choose to override the return type, which has been
+  /// initialized with the type of 'this' if HasThisReturn(CGF.CurGD) is true or
+  /// the formal return type of the function otherwise.
+  virtual void addImplicitStructorParams(CIRGenFunction &cgf,
+                                         clang::QualType &resTy,
+                                         FunctionArgList &params) = 0;
 
   /// Returns true if the given constructor or destructor is one of the kinds
   /// that the ABI says returns 'this' (only applies when called non-virtually
