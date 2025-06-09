@@ -1728,7 +1728,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
 
   reg_ctx_sp->InvalidateIfNeeded(true);
 
-  auto iter = std::find(m_thread_ids.begin(), m_thread_ids.end(), tid);
+  auto iter = llvm::find(m_thread_ids, tid);
   if (iter != m_thread_ids.end())
     SetThreadPc(thread_sp, iter - m_thread_ids.begin());
 

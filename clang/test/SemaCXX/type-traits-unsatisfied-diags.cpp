@@ -145,6 +145,50 @@ static_assert(__builtin_is_cpp_trivially_relocatable(U2));
 
 }
 
+
+namespace GH143325 {
+struct Foo  { // expected-note {{previous definition is here}}
+  Foo(const Foo&);
+  ~Foo();
+};
+
+struct Foo { // expected-error {{redefinition of 'Foo'}}
+  Foo();
+  int;
+};
+struct Wrapper { // #GH143325-Wrapper
+  union {
+    Foo p;
+  } u;
+};
+
+static_assert(__builtin_is_cpp_trivially_relocatable(Wrapper));
+// expected-error@-1 {{static assertion failed due to requirement '__builtin_is_cpp_trivially_relocatable(GH143325::Wrapper)'}} \
+// expected-note@-1 {{'Wrapper' is not trivially relocatable}} \
+// expected-note@-1 {{because it has a non-trivially-relocatable member 'u' of type 'union}} \
+// expected-note@-1 {{because it has a deleted destructor}}
+// expected-note@#GH143325-Wrapper {{'Wrapper' defined here}}
+
+struct Polymorphic  {
+  virtual ~Polymorphic();
+};
+
+struct UnionOfPolymorphic { // #GH143325-UnionOfPolymorphic
+  union {
+    Polymorphic p;
+    int i;
+  } u;
+};
+
+static_assert(__builtin_is_cpp_trivially_relocatable(UnionOfPolymorphic));
+// expected-error@-1 {{static assertion failed due to requirement '__builtin_is_cpp_trivially_relocatable(GH143325::UnionOfPolymorphic)'}} \
+// expected-note@-1 {{'UnionOfPolymorphic' is not trivially relocatable}} \
+// expected-note@-1 {{because it has a non-trivially-relocatable member 'u' of type 'union}} \
+// expected-note@-1 {{because it has a deleted destructor}} \
+// expected-note@#GH143325-UnionOfPolymorphic {{'UnionOfPolymorphic' defined here}}
+
+}
+
 namespace trivially_copyable {
 struct B {
  virtual ~B();
