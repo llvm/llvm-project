@@ -514,6 +514,10 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   deleteTempFiles();
 
 heatmap:
+  // Sort parsed traces for faster processing.
+  if (!opts::BasicAggregation)
+    llvm::sort(Traces, llvm::less_first());
+
   if (!opts::HeatmapMode)
     return Error::success();
 
@@ -1283,7 +1287,7 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   }
 
   if (Type == BRANCH) {
-    Addr[2] = Location(Trace::EXTERNAL);
+    Addr[2] = Location(Trace::BR_ONLY);
   }
 
   Trace T{Addr[0]->Offset, Addr[1]->Offset, Addr[2]->Offset};
@@ -1291,7 +1295,7 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
 
   Traces.emplace_back(T, TI);
 
-  if (Addr[2]->Offset)
+  if (Addr[2]->Offset != Trace::BR_ONLY)
     NumTraces += Count;
   NumTotalSamples += Count;
 
@@ -1305,7 +1309,7 @@ bool DataAggregator::ignoreKernelInterrupt(LBREntry &LBR) const {
 
 std::error_code DataAggregator::printLBRHeatMap() {
   outs() << "PERF2BOLT: parse branch events...\n";
-  NamedRegionTimer T("parseBranch", "Parsing branch events", TimerGroupName,
+  NamedRegionTimer T("buildHeatmap", "Building heatmap", TimerGroupName,
                      TimerGroupDesc, opts::TimeAggregator);
 
   if (BC->IsLinuxKernel) {
@@ -1342,7 +1346,7 @@ std::error_code DataAggregator::printLBRHeatMap() {
   for (const auto &[PC, Hits] : BasicSamples)
     HM.registerAddress(PC, Hits);
   for (const auto &[Trace, Info] : Traces)
-    if (Trace.To)
+    if (Trace.To != Trace::BR_ONLY)
       HM.registerAddressRange(Trace.From, Trace.To, Info.TakenCount);
 
   if (HM.getNumInvalidRanges())
@@ -1540,7 +1544,7 @@ void DataAggregator::processBranchEvents() {
                      TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
 
   for (const auto &[Trace, Info] : Traces) {
-    if (Trace.To)
+    if (Trace.To != Trace::BR_ONLY)
       doTrace(Trace, Info.TakenCount);
     if (Trace.Branch != Trace::FT_ONLY &&
         Trace.Branch != Trace::FT_EXTERNAL_ORIGIN)
