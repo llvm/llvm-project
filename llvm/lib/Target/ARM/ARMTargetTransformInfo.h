@@ -54,7 +54,7 @@ namespace TPLoop {
 enum MemTransfer { ForceDisabled = 0, ForceEnabled, Allow };
 }
 
-class ARMTTIImpl : public BasicTTIImplBase<ARMTTIImpl> {
+class ARMTTIImpl final : public BasicTTIImplBase<ARMTTIImpl> {
   using BaseT = BasicTTIImplBase<ARMTTIImpl>;
   using TTI = TargetTransformInfo;
 

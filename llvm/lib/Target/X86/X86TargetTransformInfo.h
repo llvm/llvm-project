@@ -25,7 +25,7 @@ namespace llvm {
 
 class InstCombiner;
 
-class X86TTIImpl : public BasicTTIImplBase<X86TTIImpl> {
+class X86TTIImpl final : public BasicTTIImplBase<X86TTIImpl> {
   typedef BasicTTIImplBase<X86TTIImpl> BaseT;
   typedef TargetTransformInfo TTI;
   friend BaseT;
