@@ -30,8 +30,8 @@ TEST(LlvmLibcSysIoctlTest, InvalidCommandAndFIONREAD) {
   constexpr const char TEST_MSG[] = "ioctl test";
   constexpr int TEST_MSG_SIZE = sizeof(TEST_MSG) - 1;
   auto TEST_FILE = libc_make_test_file_path(TEST_FILE_NAME);
-  int new_test_file_fd =
-      LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+  int new_test_file_fd = LIBC_NAMESPACE::open(
+      TEST_FILE, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
   ASSERT_THAT(
       (int)LIBC_NAMESPACE::write(new_test_file_fd, TEST_MSG, TEST_MSG_SIZE),
       Succeeds(TEST_MSG_SIZE));
