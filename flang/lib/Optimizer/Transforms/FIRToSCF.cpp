@@ -95,45 +95,26 @@ struct IfConversion : public OpRewritePattern<fir::IfOp> {
     mlir::Location loc = ifOp.getLoc();
     mlir::detail::TypedValue<mlir::IntegerType> condition = ifOp.getCondition();
     ValueTypeRange<ResultRange> resultTypes = ifOp.getResultTypes();
-    bool hasResult = !resultTypes.empty();
-    auto scfIfOp = rewriter.create<scf::IfOp>(loc, resultTypes, condition,
-                                              !ifOp.getElseRegion().empty());
+    mlir::scf::IfOp scfIfOp = rewriter.create<scf::IfOp>(
+        loc, resultTypes, condition, !ifOp.getElseRegion().empty());
     // then region
-    assert(!ifOp.getThenRegion().empty() && "must have then region");
-    auto &firThenBlock = ifOp.getThenRegion().front();
-    auto &scfThenBlock = scfIfOp.getThenRegion().front();
-    auto &firThenOps = firThenBlock.getOperations();
-    mlir::Operation *firThenTerminator = firThenBlock.getTerminator();
-
-    rewriter.setInsertionPointToStart(&scfThenBlock);
-    // not splice terminator
-    scfThenBlock.getOperations().splice(scfThenBlock.begin(), firThenOps,
-                                        firThenOps.begin(),
-                                        std::prev(firThenOps.end()));
-    // create terminator scf.yield
-    if (hasResult) {
-      rewriter.setInsertionPointToEnd(&scfThenBlock);
-      mlir::OperandRange thenResults = firThenTerminator->getOperands();
-      rewriter.create<scf::YieldOp>(firThenTerminator->getLoc(), thenResults);
-    }
+    scfIfOp.getThenRegion().takeBody(ifOp.getThenRegion());
+    Block &scfthenBlock = scfIfOp.getThenRegion().front();
+    Operation *scfthenTerminator = scfthenBlock.getTerminator();
+    // fir.result->scf.yield
+    rewriter.setInsertionPointToEnd(&scfthenBlock);
+    rewriter.replaceOpWithNewOp<scf::YieldOp>(scfthenTerminator,
+                                              scfthenTerminator->getOperands());
 
     // else region
     if (!ifOp.getElseRegion().empty()) {
-      auto &firElseBlock = ifOp.getElseRegion().front();
-      auto &scfElseBlock = scfIfOp.getElseRegion().front();
-      auto &firElseOps = firElseBlock.getOperations();
-      mlir::Operation *firElseTerminator = firElseBlock.getTerminator();
+      scfIfOp.getElseRegion().takeBody(ifOp.getElseRegion());
+      mlir::Block &elseBlock = scfIfOp.getElseRegion().front();
+      mlir::Operation *elseTerminator = elseBlock.getTerminator();
 
-      rewriter.setInsertionPointToStart(&scfElseBlock);
-      scfElseBlock.getOperations().splice(scfElseBlock.begin(), firElseOps,
-                                          firElseOps.begin(),
-                                          std::prev(firElseOps.end()));
-
-      if (hasResult) {
-        rewriter.setInsertionPointToEnd(&scfElseBlock);
-        mlir::OperandRange elseResults = firElseTerminator->getOperands();
-        rewriter.create<scf::YieldOp>(firElseTerminator->getLoc(), elseResults);
-      }
+      rewriter.setInsertionPointToEnd(&elseBlock);
+      rewriter.replaceOpWithNewOp<scf::YieldOp>(elseTerminator,
+                                                elseTerminator->getOperands());
     }
 
     scfIfOp->setAttrs(ifOp->getAttrs());
