@@ -450,3 +450,82 @@ define i8 @umax_sgt(i8 %x) {
   %s = select i1 %cmp, i8 100, i8 %umax
   ret i8 %s
 }
+
+define i8 @add_sgt_nuw_nsw_safe(i8 %x) {
+; CHECK-LABEL: define i8 @add_sgt_nuw_nsw_safe(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[X]], i8 100)
+; CHECK-NEXT:    [[S:%.*]] = add nsw i8 [[TMP1]], 1
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %add = add nuw nsw i8 %x, 1
+  %cmp = icmp sgt i8 %x, 100
+  %s = select i1 %cmp, i8 101, i8 %add
+  ret i8 %s
+}
+
+define i8 @add_sgt_nuw_only(i8 %x) {
+; CHECK-LABEL: define i8 @add_sgt_nuw_only(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[X]], i8 100)
+; CHECK-NEXT:    [[S:%.*]] = add i8 [[TMP1]], 50
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %add = add nuw nsw i8 %x, 50
+  %cmp = icmp sgt i8 %x, 100
+  %s = select i1 %cmp, i8 150, i8 %add
+  ret i8 %s
+}
+
+define i8 @add_sgt_nsw_only(i8 %x) {
+; CHECK-LABEL: define i8 @add_sgt_nsw_only(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[X]], i8 100)
+; CHECK-NEXT:    [[S:%.*]] = add i8 [[TMP1]], -99
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %add = add nuw nsw i8 %x, -99
+  %cmp = icmp sgt i8 %x, 100
+  %s = select i1 %cmp, i8 1, i8 %add
+  ret i8 %s
+}
+
+
+define i8 @mul_ult_nuw_nsw_safe(i8 %x) {
+; CHECK-LABEL: define i8 @mul_ult_nuw_nsw_safe(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[X]], i8 10)
+; CHECK-NEXT:    [[S:%.*]] = mul i8 [[TMP1]], 3
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %mul = mul nuw nsw i8 %x, 3
+  %cmp = icmp ult i8 %x, 10
+  %s = select i1 %cmp, i8 30, i8 %mul
+  ret i8 %s
+}
+
+define i8 @mul_ult_nuw_only(i8 %x) {
+; CHECK-LABEL: define i8 @mul_ult_nuw_only(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[X]], i8 10)
+; CHECK-NEXT:    [[S:%.*]] = mul i8 [[TMP1]], 25
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %mul = mul nuw nsw i8 %x, 25
+  %cmp = icmp ult i8 %x, 10
+  %s = select i1 %cmp, i8 250, i8 %mul
+  ret i8 %s
+}
+
+define i8 @mul_ult_nsw_only(i8 %x) {
+; CHECK-LABEL: define i8 @mul_ult_nsw_only(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[X]], i8 40)
+; CHECK-NEXT:    [[S:%.*]] = mul i8 [[TMP1]], -2
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %mul = mul nuw nsw i8 %x, -2
+  %cmp = icmp ult i8 %x, 40
+  %s = select i1 %cmp, i8 -80, i8 %mul
+  ret i8 %s
+}
