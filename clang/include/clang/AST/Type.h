@@ -5356,10 +5356,6 @@ private:
     return getNumFunctionEffects();
   }
 
-  unsigned numTrailingObjects(OverloadToken<EffectConditionExpr>) const {
-    return getNumFunctionEffectConditions();
-  }
-
   /// Determine whether there are any argument types that
   /// contain an unexpanded parameter pack.
   static bool containsAnyUnexpandedParameterPack(const QualType *ArgArray,
@@ -5690,8 +5686,8 @@ public:
     if (hasExtraBitfields()) {
       const auto *Bitfields = getTrailingObjects<FunctionTypeExtraBitfields>();
       if (Bitfields->NumFunctionEffects > 0)
-        return {getTrailingObjects<FunctionEffect>(),
-                Bitfields->NumFunctionEffects};
+        return getTrailingObjects<FunctionEffect>(
+            Bitfields->NumFunctionEffects);
     }
     return {};
   }
@@ -5710,8 +5706,8 @@ public:
     if (hasExtraBitfields()) {
       const auto *Bitfields = getTrailingObjects<FunctionTypeExtraBitfields>();
       if (Bitfields->EffectsHaveConditions)
-        return {getTrailingObjects<EffectConditionExpr>(),
-                Bitfields->NumFunctionEffects};
+        return getTrailingObjects<EffectConditionExpr>(
+            Bitfields->NumFunctionEffects);
     }
     return {};
   }
@@ -5725,8 +5721,7 @@ public:
                                     ? Bitfields->NumFunctionEffects
                                     : 0;
         return FunctionEffectsRef(
-            {getTrailingObjects<FunctionEffect>(),
-             Bitfields->NumFunctionEffects},
+            getTrailingObjects<FunctionEffect>(Bitfields->NumFunctionEffects),
             {NumConds ? getTrailingObjects<EffectConditionExpr>() : nullptr,
              NumConds});
       }
@@ -5825,8 +5820,8 @@ class TypedefType final : public Type,
   friend class ASTContext; // ASTContext creates these.
   friend TrailingObjects;
 
-  TypedefType(TypeClass tc, const TypedefNameDecl *D, QualType underlying,
-              QualType can);
+  TypedefType(TypeClass tc, const TypedefNameDecl *D, QualType UnderlyingType,
+              bool HasTypeDifferentFromDecl);
 
 public:
   TypedefNameDecl *getDecl() const { return Decl; }
@@ -6067,8 +6062,6 @@ private:
 
   static TypeDependence computeDependence(QualType Pattern, Expr *IndexExpr,
                                           ArrayRef<QualType> Expansions = {});
-
-  unsigned numTrailingObjects(OverloadToken<QualType>) const { return Size; }
 };
 
 /// A unary type transform, which is a type constructed from another.
@@ -6495,8 +6488,7 @@ private:
     for (size_t I = 0; I < NumOperands; I++) {
       // Since Operands are stored as a trailing object, they have not been
       // initialized yet. Call the constructor manually.
-      auto *Operand =
-          new (&getTrailingObjects<SpirvOperand>()[I]) SpirvOperand();
+      auto *Operand = new (&getTrailingObjects()[I]) SpirvOperand();
       *Operand = Operands[I];
     }
   }
@@ -6506,7 +6498,7 @@ public:
   uint32_t getSize() const { return Size; }
   uint32_t getAlignment() const { return Alignment; }
   ArrayRef<SpirvOperand> getOperands() const {
-    return {getTrailingObjects<SpirvOperand>(), NumOperands};
+    return getTrailingObjects<SpirvOperand>(NumOperands);
   }
 
   bool isSugared() const { return false; }
@@ -6606,7 +6598,7 @@ public:
   /// parameter.
   QualType getReplacementType() const {
     return SubstTemplateTypeParmTypeBits.HasNonCanonicalUnderlyingType
-               ? *getTrailingObjects<QualType>()
+               ? *getTrailingObjects()
                : getCanonicalTypeInternal();
   }
 
@@ -7168,7 +7160,7 @@ class ElaboratedType final
     ElaboratedTypeBits.HasOwnedTagDecl = false;
     if (OwnedTagDecl) {
       ElaboratedTypeBits.HasOwnedTagDecl = true;
-      *getTrailingObjects<TagDecl *>() = OwnedTagDecl;
+      *getTrailingObjects() = OwnedTagDecl;
     }
   }
 
@@ -7188,8 +7180,7 @@ public:
   /// Return the (re)declaration of this type owned by this occurrence of this
   /// type, or nullptr if there is none.
   TagDecl *getOwnedTagDecl() const {
-    return ElaboratedTypeBits.HasOwnedTagDecl ? *getTrailingObjects<TagDecl *>()
-                                              : nullptr;
+    return ElaboratedTypeBits.HasOwnedTagDecl ? *getTrailingObjects() : nullptr;
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) {

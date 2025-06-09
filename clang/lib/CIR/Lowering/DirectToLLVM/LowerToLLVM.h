@@ -357,6 +357,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMVecShuffleOpLowering
+    : public mlir::OpConversionPattern<cir::VecShuffleOp> {
+public:
+  using mlir::OpConversionPattern<cir::VecShuffleOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::VecShuffleOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMVecShuffleDynamicOpLowering
     : public mlir::OpConversionPattern<cir::VecShuffleDynamicOp> {
 public:

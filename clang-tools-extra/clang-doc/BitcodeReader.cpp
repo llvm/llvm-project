@@ -315,9 +315,13 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
 
 static llvm::Error parseRecord(const Record &R, unsigned ID,
                                llvm::StringRef Blob, CommentInfo *I) {
+  llvm::SmallString<16> KindStr;
   switch (ID) {
   case COMMENT_KIND:
-    return decodeRecord(R, I->Kind, Blob);
+    if (llvm::Error Err = decodeRecord(R, KindStr, Blob))
+      return Err;
+    I->Kind = stringToCommentKind(KindStr);
+    return llvm::Error::success();
   case COMMENT_TEXT:
     return decodeRecord(R, I->Text, Blob);
   case COMMENT_NAME:

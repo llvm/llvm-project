@@ -1095,13 +1095,13 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
       OS << " __attribute__((pcs(\"aapcs-vfp\")))";
       break;
     case CC_AArch64VectorCall:
-      OS << "__attribute__((aarch64_vector_pcs))";
+      OS << " __attribute__((aarch64_vector_pcs))";
       break;
     case CC_AArch64SVEPCS:
-      OS << "__attribute__((aarch64_sve_pcs))";
+      OS << " __attribute__((aarch64_sve_pcs))";
       break;
     case CC_DeviceKernel:
-      OS << "__attribute__((device_kernel))";
+      OS << " __attribute__((device_kernel))";
       break;
     case CC_IntelOclBicc:
       OS << " __attribute__((intel_ocl_bicc))";
