@@ -169,3 +169,78 @@ subroutine implicit_dsa_test8
     end do
   !$omp end task
 end subroutine
+
+! Test variables defined in modules default to shared DSA
+!DEF: /implicit_dsa_test9_mod Module
+module implicit_dsa_test9_mod
+ !DEF: /implicit_dsa_test9_mod/tm3a PUBLIC (InDataStmt) ObjectEntity COMPLEX(4)
+  complex tm3a/(0,0)/
+ !DEF: /implicit_dsa_test9_mod/tm4a PUBLIC ObjectEntity COMPLEX(4)
+  complex tm4a
+contains
+ !DEF: /implicit_dsa_test9_mod/implict_dsa_test9 PUBLIC (Subroutine) Subprogram
+  subroutine implict_dsa_test9
+    !$omp task
+      !$omp task
+        !DEF: /implicit_dsa_test9_mod/implict_dsa_test9/OtherConstruct1/OtherConstruct1/tm3a (OmpShared) HostAssoc COMPLEX(4)
+        tm3a = (1, 2)
+        !DEF: /implicit_dsa_test9_mod/implict_dsa_test9/OtherConstruct1/OtherConstruct1/tm4a (OmpShared) HostAssoc COMPLEX(4)
+        tm4a = (3, 4)
+      !$omp end task
+    !$omp end task
+  !$omp taskwait
+  !REF: /implicit_dsa_test9_mod/tm3a
+  print *,tm3a
+  end subroutine
+end module
+
+! Test variables in data statement default to shared DSA
+!DEF: /implicit_dsa_test10 (Subroutine) Subprogram
+subroutine implicit_dsa_test10
+ !DEF: /implicit_dsa_test10/tm3a (Implicit, InDataStmt) ObjectEntity REAL(4)
+data tm3a /3/
+!$omp task
+  !$omp task
+ !DEF: /implicit_dsa_test10/OtherConstruct1/OtherConstruct1/tm3a (OmpShared) HostAssoc REAL(4)
+    tm3a = 5
+  !$omp end task
+!$omp end task
+!$omp taskwait
+ !REF: /implicit_dsa_test10/tm3a
+print *,tm3a
+end subroutine
+
+! Test variables with the SAVE attrtibute default to shared DSA
+!DEF: /implicit_dsa_test_11 (Subroutine) Subprogram
+subroutine implicit_dsa_test_11
+ !DEF: /implicit_dsa_test_11/tm3a SAVE ObjectEntity COMPLEX(4)
+complex, save :: tm3a
+!$omp task
+  !$omp task
+    !DEF: /implicit_dsa_test_11/OtherConstruct1/OtherConstruct1/tm3a (OmpShared) HostAssoc COMPLEX(4)
+    tm3a = (1, 2)
+  !$omp end task
+!$omp end task
+!$omp taskwait
+!REF: /implicit_dsa_test_11/tm3a
+print *,tm3a
+end subroutine
+
+! Test variables referenced in a common block default to shared DSA
+!DEF: /implicit_dsa_test_12 (Subroutine) Subprogram
+subroutine implicit_dsa_test_12
+ !DEF: /implicit_dsa_test_12/tm3a (InCommonBlock) ObjectEntity COMPLEX(4)
+complex tm3a
+ !DEF: /implicit_dsa_test_12/tcom CommonBlockDetails
+ !REF: /implicit_dsa_test_12/tm3a
+common /tcom/ tm3a
+!$omp task
+  !$omp task
+    !DEF: /implicit_dsa_test_12/OtherConstruct1/OtherConstruct1/tm3a (OmpShared) HostAssoc COMPLEX(4)
+    tm3a = (1, 2)
+  !$omp end task
+!$omp end task
+!$omp taskwait
+!REF: /implicit_dsa_test_12/tm3a
+print *,tm3a
+end subroutine
