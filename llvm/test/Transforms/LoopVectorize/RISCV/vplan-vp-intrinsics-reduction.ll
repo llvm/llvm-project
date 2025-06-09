@@ -145,8 +145,8 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-OUTLOOP-NEXT: No successors
 ; NO-VP-OUTLOOP-EMPTY:
 ; NO-VP-OUTLOOP-NEXT: scalar.ph:
-; NO-VP-OUTLOOP-NEXT:   EMIT-SCALAR vp<[[IV_RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
-; NO-VP-OUTLOOP-NEXT:   EMIT-SCALAR vp<[[RED_RESUME:%.+]]> = resume-phi vp<[[RDX]]>, ir<%start>
+; NO-VP-OUTLOOP-NEXT:   EMIT-SCALAR vp<[[IV_RESUME:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; NO-VP-OUTLOOP-NEXT:   EMIT-SCALAR vp<[[RED_RESUME:%.+]]> = phi [ vp<[[RDX]]>, middle.block ], [ ir<%start>, ir-bb<entry> ]
 ; NO-VP-OUTLOOP-NEXT: Successor(s): ir-bb<for.body>
 ; NO-VP-OUTLOOP-EMPTY:
 ; NO-VP-OUTLOOP-NEXT: ir-bb<for.body>:
@@ -193,8 +193,8 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-INLOOP-NEXT: No successors
 ; NO-VP-INLOOP-EMPTY:
 ; NO-VP-INLOOP-NEXT: scalar.ph:
-; NO-VP-INLOOP-NEXT:   EMIT-SCALAR vp<[[IV_RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
-; NO-VP-INLOOP-NEXT:   EMIT-SCALAR vp<[[RED_RESUME:%.+]]> = resume-phi vp<[[RDX]]>, ir<%start>
+; NO-VP-INLOOP-NEXT:   EMIT-SCALAR vp<[[IV_RESUME:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; NO-VP-INLOOP-NEXT:   EMIT-SCALAR vp<[[RED_RESUME:%.+]]> = phi [ vp<[[RDX]]>, middle.block ], [ ir<%start>, ir-bb<entry> ]
 ; NO-VP-INLOOP-NEXT: Successor(s): ir-bb<for.body>
 ; NO-VP-INLOOP-EMPTY:
 ; NO-VP-INLOOP-NEXT: ir-bb<for.body>:

@@ -1561,6 +1561,8 @@ struct __container_traits<forward_list<_Tp, _Allocator> > {
   // - If an exception is thrown by an insert() or emplace() function while inserting a single element, that
   // function has no effects.
   static _LIBCPP_CONSTEXPR const bool __emplacement_has_strong_exception_safety_guarantee = true;
+
+  static _LIBCPP_CONSTEXPR const bool __reservable = false;
 };
 
 _LIBCPP_END_NAMESPACE_STD
