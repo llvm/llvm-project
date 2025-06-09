@@ -1476,7 +1476,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   setMinFunctionAlignment(Align(4));
 
-  switch (Subtarget.getCPUDirective()) {
+  auto CPUDirective = Subtarget.getCPUDirective();
+  switch (CPUDirective) {
   default: break;
   case PPC::DIR_970:
   case PPC::DIR_A2:
@@ -1508,15 +1509,14 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   // The Freescale cores do better with aggressive inlining of memcpy and
   // friends. GCC uses same threshold of 128 bytes (= 32 word stores).
-  if (Subtarget.getCPUDirective() == PPC::DIR_E500mc ||
-      Subtarget.getCPUDirective() == PPC::DIR_E5500) {
+  if (CPUDirective == PPC::DIR_E500mc || CPUDirective == PPC::DIR_E5500) {
     MaxStoresPerMemset = 32;
     MaxStoresPerMemsetOptSize = 16;
     MaxStoresPerMemcpy = 32;
     MaxStoresPerMemcpyOptSize = 8;
     MaxStoresPerMemmove = 32;
     MaxStoresPerMemmoveOptSize = 8;
-  } else if (Subtarget.getCPUDirective() == PPC::DIR_A2) {
+  } else if (CPUDirective == PPC::DIR_A2) {
     // The A2 also benefits from (very) aggressive inlining of memcpy and
     // friends. The overhead of a the function call, even when warm, can be
     // over one hundred cycles.
@@ -1528,6 +1528,11 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     MaxLoadsPerMemcmp = 8;
     MaxLoadsPerMemcmpOptSize = 4;
   }
+
+  // Enable generation of STXVP instructions by default for mcpu=future.
+  if (CPUDirective == PPC::DIR_PWR_FUTURE &&
+      DisableAutoPairedVecSt.getNumOccurrences() == 0)
+    DisableAutoPairedVecSt = false;
 
   IsStrictFPEnabled = true;
 
