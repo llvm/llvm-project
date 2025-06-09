@@ -1384,6 +1384,15 @@ public:
       FastMathFlags FMF = getFastMathFlags(Inst);
       if (Inst->getType()->isFloatingPointTy() && !FMF.allowReassoc())
         return false;
+
+      if (match(Inst, m_Intrinsic<Intrinsic::vector_reduce_fadd>(
+                          m_Unless(m_AnyZeroFP()), m_Value())))
+        return false;
+
+      if (match(Inst, m_Intrinsic<Intrinsic::vector_reduce_fmul>(
+                          m_Unless(m_FPOne()), m_Value())))
+        return false;
+
       Start = Inst->getOperand(0);
       Op = Inst->getOperand(1);
     } break;
@@ -1400,19 +1409,6 @@ public:
       break;
     default:
       return false;
-    }
-
-    switch (Inst->getIntrinsicID()) {
-    case Intrinsic::vector_reduce_fadd: {
-      if (!match(Start, m_AnyZeroFP()))
-        return false;
-    } break;
-    case Intrinsic::vector_reduce_fmul: {
-      if (!match(Start, m_FPOne()))
-        return false;
-    } break;
-    default:
-      break;
     }
 
     auto *I = Inst2ColumnMatrix.find(Op);

@@ -143,8 +143,8 @@ define float @reduce_fmul_weirdstart(ptr %in, ptr %out) {
   ret float %reduce
 }
 
-define float @reduce_fmax_reassoc(ptr %in, ptr %out) {
-; CHECK-LABEL: @reduce_fmax_reassoc(
+define float @reduce_fmax(ptr %in, ptr %out) {
+; CHECK-LABEL: @reduce_fmax(
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load volatile <4 x float>, ptr [[IN:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr float, ptr [[IN]], i64 4
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load volatile <4 x float>, ptr [[VEC_GEP]], align 4
@@ -153,12 +153,12 @@ define float @reduce_fmax_reassoc(ptr %in, ptr %out) {
 ; CHECK-NEXT:    ret float [[REDUCE]]
 ;
   %inv = call <8 x float> @llvm.matrix.column.major.load(ptr %in, i64 4, i1 1, i32 4, i32 2)
-  %reduce = call reassoc float @llvm.vector.reduce.fmax(<8 x float> %inv)
+  %reduce = call float @llvm.vector.reduce.fmax(<8 x float> %inv)
   ret float %reduce
 }
 
-define float @reduce_fmaximum_reassoc(ptr %in, ptr %out) {
-; CHECK-LABEL: @reduce_fmaximum_reassoc(
+define float @reduce_fmaximum(ptr %in, ptr %out) {
+; CHECK-LABEL: @reduce_fmaximum(
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load volatile <4 x float>, ptr [[IN:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr float, ptr [[IN]], i64 4
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load volatile <4 x float>, ptr [[VEC_GEP]], align 4
@@ -167,12 +167,12 @@ define float @reduce_fmaximum_reassoc(ptr %in, ptr %out) {
 ; CHECK-NEXT:    ret float [[REDUCE]]
 ;
   %inv = call <8 x float> @llvm.matrix.column.major.load(ptr %in, i64 4, i1 1, i32 4, i32 2)
-  %reduce = call reassoc float @llvm.vector.reduce.fmaximum(<8 x float> %inv)
+  %reduce = call float @llvm.vector.reduce.fmaximum(<8 x float> %inv)
   ret float %reduce
 }
 
-define float @reduce_fmin_reassoc(ptr %in, ptr %out) {
-; CHECK-LABEL: @reduce_fmin_reassoc(
+define float @reduce_fmin(ptr %in, ptr %out) {
+; CHECK-LABEL: @reduce_fmin(
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load volatile <4 x float>, ptr [[IN:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr float, ptr [[IN]], i64 4
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load volatile <4 x float>, ptr [[VEC_GEP]], align 4
@@ -181,12 +181,12 @@ define float @reduce_fmin_reassoc(ptr %in, ptr %out) {
 ; CHECK-NEXT:    ret float [[REDUCE]]
 ;
   %inv = call <8 x float> @llvm.matrix.column.major.load(ptr %in, i64 4, i1 1, i32 4, i32 2)
-  %reduce = call reassoc float @llvm.vector.reduce.fmin(<8 x float> %inv)
+  %reduce = call float @llvm.vector.reduce.fmin(<8 x float> %inv)
   ret float %reduce
 }
 
-define float @reduce_fminimum_reassoc(ptr %in, ptr %out) {
-; CHECK-LABEL: @reduce_fminimum_reassoc(
+define float @reduce_fminimum(ptr %in, ptr %out) {
+; CHECK-LABEL: @reduce_fminimum(
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load volatile <4 x float>, ptr [[IN:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr float, ptr [[IN]], i64 4
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load volatile <4 x float>, ptr [[VEC_GEP]], align 4
@@ -195,6 +195,6 @@ define float @reduce_fminimum_reassoc(ptr %in, ptr %out) {
 ; CHECK-NEXT:    ret float [[REDUCE]]
 ;
   %inv = call <8 x float> @llvm.matrix.column.major.load(ptr %in, i64 4, i1 1, i32 4, i32 2)
-  %reduce = call reassoc float @llvm.vector.reduce.fminimum(<8 x float> %inv)
+  %reduce = call float @llvm.vector.reduce.fminimum(<8 x float> %inv)
   ret float %reduce
 }
