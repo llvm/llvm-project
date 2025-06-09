@@ -14,6 +14,7 @@
 #ifndef LLVM_TARGET_TARGETLOWERINGOBJECTFILE_H
 #define LLVM_TARGET_TARGETLOWERINGOBJECTFILE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCRegister.h"
 #include <cstdint>
@@ -43,7 +44,7 @@ class StringRef;
 class TargetMachine;
 class DSOLocalEquivalent;
 
-class TargetLoweringObjectFile : public MCObjectFileInfo {
+class LLVM_ABI TargetLoweringObjectFile : public MCObjectFileInfo {
   /// Name-mangler for global names.
   Mangler *Mang = nullptr;
 
