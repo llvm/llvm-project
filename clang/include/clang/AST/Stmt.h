@@ -2019,10 +2019,6 @@ class CaseStmt final
     return NumMandatoryStmtPtr + caseStmtIsGNURange();
   }
 
-  unsigned numTrailingObjects(OverloadToken<SourceLocation>) const {
-    return caseStmtIsGNURange();
-  }
-
   unsigned lhsOffset() const { return LhsOffset; }
   unsigned rhsOffset() const { return LhsOffset + caseStmtIsGNURange(); }
   unsigned subStmtOffset() const { return rhsOffset() + SubStmtOffsetFromRhs; }
@@ -2294,10 +2290,8 @@ class AttributedStmt final
     std::fill_n(getAttrArrayPtr(), NumAttrs, nullptr);
   }
 
-  const Attr *const *getAttrArrayPtr() const {
-    return getTrailingObjects<const Attr *>();
-  }
-  const Attr **getAttrArrayPtr() { return getTrailingObjects<const Attr *>(); }
+  const Attr *const *getAttrArrayPtr() const { return getTrailingObjects(); }
+  const Attr **getAttrArrayPtr() { return getTrailingObjects(); }
 
 public:
   static AttributedStmt *Create(const ASTContext &C, SourceLocation Loc,
@@ -2611,7 +2605,7 @@ class SwitchStmt final : public Stmt,
   SourceLocation LParenLoc;
   SourceLocation RParenLoc;
 
-  unsigned numTrailingObjects(OverloadToken<Stmt *>) const {
+  unsigned numTrailingStatements() const {
     return NumMandatoryStmtPtr + hasInitStorage() + hasVarStorage();
   }
 
@@ -2647,40 +2641,34 @@ public:
   bool hasVarStorage() const { return SwitchStmtBits.HasVar; }
 
   Expr *getCond() {
-    return reinterpret_cast<Expr *>(getTrailingObjects<Stmt *>()[condOffset()]);
+    return reinterpret_cast<Expr *>(getTrailingObjects()[condOffset()]);
   }
 
   const Expr *getCond() const {
-    return reinterpret_cast<Expr *>(getTrailingObjects<Stmt *>()[condOffset()]);
+    return reinterpret_cast<Expr *>(getTrailingObjects()[condOffset()]);
   }
 
   void setCond(Expr *Cond) {
-    getTrailingObjects<Stmt *>()[condOffset()] = reinterpret_cast<Stmt *>(Cond);
+    getTrailingObjects()[condOffset()] = reinterpret_cast<Stmt *>(Cond);
   }
 
-  Stmt *getBody() { return getTrailingObjects<Stmt *>()[bodyOffset()]; }
-  const Stmt *getBody() const {
-    return getTrailingObjects<Stmt *>()[bodyOffset()];
-  }
+  Stmt *getBody() { return getTrailingObjects()[bodyOffset()]; }
+  const Stmt *getBody() const { return getTrailingObjects()[bodyOffset()]; }
 
-  void setBody(Stmt *Body) {
-    getTrailingObjects<Stmt *>()[bodyOffset()] = Body;
-  }
+  void setBody(Stmt *Body) { getTrailingObjects()[bodyOffset()] = Body; }
 
   Stmt *getInit() {
-    return hasInitStorage() ? getTrailingObjects<Stmt *>()[initOffset()]
-                            : nullptr;
+    return hasInitStorage() ? getTrailingObjects()[initOffset()] : nullptr;
   }
 
   const Stmt *getInit() const {
-    return hasInitStorage() ? getTrailingObjects<Stmt *>()[initOffset()]
-                            : nullptr;
+    return hasInitStorage() ? getTrailingObjects()[initOffset()] : nullptr;
   }
 
   void setInit(Stmt *Init) {
     assert(hasInitStorage() &&
            "This switch statement has no storage for an init statement!");
-    getTrailingObjects<Stmt *>()[initOffset()] = Init;
+    getTrailingObjects()[initOffset()] = Init;
   }
 
   /// Retrieve the variable declared in this "switch" statement, if any.
@@ -2704,20 +2692,20 @@ public:
   /// If this SwitchStmt has a condition variable, return the faux DeclStmt
   /// associated with the creation of that condition variable.
   DeclStmt *getConditionVariableDeclStmt() {
-    return hasVarStorage() ? static_cast<DeclStmt *>(
-                                 getTrailingObjects<Stmt *>()[varOffset()])
-                           : nullptr;
+    return hasVarStorage()
+               ? static_cast<DeclStmt *>(getTrailingObjects()[varOffset()])
+               : nullptr;
   }
 
   const DeclStmt *getConditionVariableDeclStmt() const {
-    return hasVarStorage() ? static_cast<DeclStmt *>(
-                                 getTrailingObjects<Stmt *>()[varOffset()])
-                           : nullptr;
+    return hasVarStorage()
+               ? static_cast<DeclStmt *>(getTrailingObjects()[varOffset()])
+               : nullptr;
   }
 
   void setConditionVariableDeclStmt(DeclStmt *CondVar) {
     assert(hasVarStorage());
-    getTrailingObjects<Stmt *>()[varOffset()] = CondVar;
+    getTrailingObjects()[varOffset()] = CondVar;
   }
 
   SwitchCase *getSwitchCaseList() { return FirstCase; }
@@ -2761,15 +2749,13 @@ public:
 
   // Iterators
   child_range children() {
-    return child_range(getTrailingObjects<Stmt *>(),
-                       getTrailingObjects<Stmt *>() +
-                           numTrailingObjects(OverloadToken<Stmt *>()));
+    return child_range(getTrailingObjects(),
+                       getTrailingObjects() + numTrailingStatements());
   }
 
   const_child_range children() const {
-    return const_child_range(getTrailingObjects<Stmt *>(),
-                             getTrailingObjects<Stmt *>() +
-                                 numTrailingObjects(OverloadToken<Stmt *>()));
+    return const_child_range(getTrailingObjects(),
+                             getTrailingObjects() + numTrailingStatements());
   }
 
   static bool classof(const Stmt *T) {
@@ -2806,7 +2792,7 @@ class WhileStmt final : public Stmt,
   unsigned condOffset() const { return VarOffset + hasVarStorage(); }
   unsigned bodyOffset() const { return condOffset() + BodyOffsetFromCond; }
 
-  unsigned numTrailingObjects(OverloadToken<Stmt *>) const {
+  unsigned numTrailingStatements() const {
     return NumMandatoryStmtPtr + hasVarStorage();
   }
 
@@ -2832,25 +2818,21 @@ public:
   bool hasVarStorage() const { return WhileStmtBits.HasVar; }
 
   Expr *getCond() {
-    return reinterpret_cast<Expr *>(getTrailingObjects<Stmt *>()[condOffset()]);
+    return reinterpret_cast<Expr *>(getTrailingObjects()[condOffset()]);
   }
 
   const Expr *getCond() const {
-    return reinterpret_cast<Expr *>(getTrailingObjects<Stmt *>()[condOffset()]);
+    return reinterpret_cast<Expr *>(getTrailingObjects()[condOffset()]);
   }
 
   void setCond(Expr *Cond) {
-    getTrailingObjects<Stmt *>()[condOffset()] = reinterpret_cast<Stmt *>(Cond);
+    getTrailingObjects()[condOffset()] = reinterpret_cast<Stmt *>(Cond);
   }
 
-  Stmt *getBody() { return getTrailingObjects<Stmt *>()[bodyOffset()]; }
-  const Stmt *getBody() const {
-    return getTrailingObjects<Stmt *>()[bodyOffset()];
-  }
+  Stmt *getBody() { return getTrailingObjects()[bodyOffset()]; }
+  const Stmt *getBody() const { return getTrailingObjects()[bodyOffset()]; }
 
-  void setBody(Stmt *Body) {
-    getTrailingObjects<Stmt *>()[bodyOffset()] = Body;
-  }
+  void setBody(Stmt *Body) { getTrailingObjects()[bodyOffset()] = Body; }
 
   /// Retrieve the variable declared in this "while" statement, if any.
   ///
@@ -2872,20 +2854,20 @@ public:
   /// If this WhileStmt has a condition variable, return the faux DeclStmt
   /// associated with the creation of that condition variable.
   DeclStmt *getConditionVariableDeclStmt() {
-    return hasVarStorage() ? static_cast<DeclStmt *>(
-                                 getTrailingObjects<Stmt *>()[varOffset()])
-                           : nullptr;
+    return hasVarStorage()
+               ? static_cast<DeclStmt *>(getTrailingObjects()[varOffset()])
+               : nullptr;
   }
 
   const DeclStmt *getConditionVariableDeclStmt() const {
-    return hasVarStorage() ? static_cast<DeclStmt *>(
-                                 getTrailingObjects<Stmt *>()[varOffset()])
-                           : nullptr;
+    return hasVarStorage()
+               ? static_cast<DeclStmt *>(getTrailingObjects()[varOffset()])
+               : nullptr;
   }
 
   void setConditionVariableDeclStmt(DeclStmt *CondVar) {
     assert(hasVarStorage());
-    getTrailingObjects<Stmt *>()[varOffset()] = CondVar;
+    getTrailingObjects()[varOffset()] = CondVar;
   }
 
   SourceLocation getWhileLoc() const { return WhileStmtBits.WhileLoc; }
@@ -2907,15 +2889,13 @@ public:
 
   // Iterators
   child_range children() {
-    return child_range(getTrailingObjects<Stmt *>(),
-                       getTrailingObjects<Stmt *>() +
-                           numTrailingObjects(OverloadToken<Stmt *>()));
+    return child_range(getTrailingObjects(),
+                       getTrailingObjects() + numTrailingStatements());
   }
 
   const_child_range children() const {
-    return const_child_range(getTrailingObjects<Stmt *>(),
-                             getTrailingObjects<Stmt *>() +
-                                 numTrailingObjects(OverloadToken<Stmt *>()));
+    return const_child_range(getTrailingObjects(),
+                             getTrailingObjects() + numTrailingStatements());
   }
 };
 
@@ -3226,10 +3206,6 @@ class ReturnStmt final
   /// True if this ReturnStmt has storage for an NRVO candidate.
   bool hasNRVOCandidate() const { return ReturnStmtBits.HasNRVOCandidate; }
 
-  unsigned numTrailingObjects(OverloadToken<const VarDecl *>) const {
-    return hasNRVOCandidate();
-  }
-
   /// Build a return statement.
   ReturnStmt(SourceLocation RL, Expr *E, const VarDecl *NRVOCandidate);
 
@@ -3255,8 +3231,7 @@ public:
   /// The optimization itself can only be performed if the variable is
   /// also marked as an NRVO object.
   const VarDecl *getNRVOCandidate() const {
-    return hasNRVOCandidate() ? *getTrailingObjects<const VarDecl *>()
-                              : nullptr;
+    return hasNRVOCandidate() ? *getTrailingObjects() : nullptr;
   }
 
   /// Set the variable that might be used for the named return value
@@ -3265,7 +3240,7 @@ public:
   void setNRVOCandidate(const VarDecl *Var) {
     assert(hasNRVOCandidate() &&
            "This return statement has no storage for an NRVO candidate!");
-    *getTrailingObjects<const VarDecl *>() = Var;
+    *getTrailingObjects() = Var;
   }
 
   SourceLocation getReturnLoc() const { return ReturnStmtBits.RetLoc; }
