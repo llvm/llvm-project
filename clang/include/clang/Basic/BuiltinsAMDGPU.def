@@ -1212,5 +1212,6 @@ TARGET_BUILTIN(__builtin_amdgcn_load_mcast_b128, "vV4i*10V4i*Iii", "n", "gfx13-i
 TARGET_BUILTIN(__builtin_amdgcn_map_shared_rank, "v*11v*3i", "n", "gfx13-insts")
 TARGET_BUILTIN(__builtin_amdgcn_query_shared_rank, "ivC*11", "n", "gfx13-insts")
 
+TARGET_BUILTIN(__builtin_amdgcn_wavegroup_id_in_cluster, "i", "nc", "gfx13-insts")
 #undef BUILTIN
 #undef TARGET_BUILTIN

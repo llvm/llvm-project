@@ -9978,6 +9978,20 @@ SDValue SITargetLowering::lowerWaveIDInWavegroup(SelectionDAG &DAG,
       0};
 }
 
+SDValue SITargetLowering::lowerWavegroupIDInCluster(SelectionDAG &DAG,
+                                                    SDValue Op) const {
+  if (!Subtarget->hasWavegroups())
+    return {};
+  // WavegroupIDInCluster = WorkgroupIDinCluster * 4 + WavegroupID
+  SDValue WorkgroupIDinCluster =
+      lowerConstHwRegRead(DAG, Op, AMDGPU::Hwreg::ID_WAVE_GROUP_INFO, 4, 4);
+  SDValue WavegroupID = lowerWavegroupID(DAG, Op);
+  SDLoc SL(Op);
+  SDValue Mul = DAG.getNode(ISD::MUL, SL, MVT::i32, WorkgroupIDinCluster,
+                            DAG.getConstant(4, SL, MVT::i32));
+  return DAG.getNode(ISD::ADD, SL, MVT::i32, Mul, WavegroupID);
+}
+
 SDValue SITargetLowering::lowerConstHwRegRead(SelectionDAG &DAG, SDValue Op,
                                               AMDGPU::Hwreg::Id HwReg,
                                               unsigned LowBit,
@@ -10279,6 +10293,8 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return lowerWavegroupID(DAG, Op);
   case Intrinsic::amdgcn_wave_id_in_wavegroup:
     return lowerWaveIDInWavegroup(DAG, Op);
+  case Intrinsic::amdgcn_wavegroup_id_in_cluster:
+    return lowerWavegroupIDInCluster(DAG, Op);
   case Intrinsic::amdgcn_lds_kernel_id: {
     if (MFI->isEntryFunction())
       return getLDSKernelId(DAG, DL);

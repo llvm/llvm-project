@@ -1591,6 +1591,10 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
   llvm.amdgcn.map.shared.rank                      Construct a pointer in Distributed address space from a pointer in
                                                    Local address space and a workgroup ID within a cluster.
 
+  llvm.amdgcn.wavegroup.id.in.cluster              In a wavegroup-enabled and spatial-cluster-enabled dispatch, return the 0-based ID of the
+                                                   wavegroup within the spatial cluster. Otherwise the return value is undefined.
+                                                   The next neighbor has an id one greater, and the previous has one less.
+
   ==============================================   ==========================================================
 
 .. TODO::

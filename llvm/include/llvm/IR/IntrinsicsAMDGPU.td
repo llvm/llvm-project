@@ -3367,6 +3367,11 @@ def int_amdgcn_s_sema_wait :
     [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
   >;
 
+// i32 @llvm.amdgcn.wavegroup.id.in.cluster()
+def int_amdgcn_wavegroup_id_in_cluster :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
+  ClangBuiltin<"__builtin_amdgcn_wavegroup_id_in_cluster">;
+
 // ML Intrinsics
 //
 // Most ML intrinsics take aux_data argument, which maps to multiple fields
