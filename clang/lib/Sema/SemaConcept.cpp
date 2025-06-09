@@ -563,6 +563,10 @@ static bool calculateConstraintSatisfaction(
     ConstraintSatisfaction &Satisfaction,
     UnsignedOrNone PackSubstitutionIndex) {
 
+  Sema::ContextRAII CurContext(
+      S, Constraint.getConceptId()->getNamedConcept()->getDeclContext(),
+      /*NewThisContext=*/false);
+
   llvm::SmallVector<TemplateArgument> SubstitutedOuterMost;
   std::optional<MultiLevelTemplateArgumentList> SubstitutedArgs =
       SubstitutionInTemplateArguments(S, Constraint, Template, MLTAL,
