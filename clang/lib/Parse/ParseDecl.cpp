@@ -6362,7 +6362,7 @@ bool Parser::isConstructorDeclarator(bool IsUnqualified, bool DeductionGuide,
 void Parser::ParseTypeQualifierListOpt(
     DeclSpec &DS, unsigned AttrReqs, bool AtomicOrPtrauthAllowed,
     bool IdentifierRequired,
-    std::optional<llvm::function_ref<void()>> CodeCompletionHandler,
+    llvm::function_ref<void()> CodeCompletionHandler,
     // TO_UPSTREAM(BoundsSafety)
     LateParsedAttrList *LateAttrs) {
   if ((AttrReqs & AR_CXX11AttributesParsed) &&
@@ -6384,7 +6384,7 @@ void Parser::ParseTypeQualifierListOpt(
     case tok::code_completion:
       cutOffParsing();
       if (CodeCompletionHandler)
-        (*CodeCompletionHandler)();
+        CodeCompletionHandler();
       else
         Actions.CodeCompletion().CodeCompleteTypeQualifiers(DS);
       return;
@@ -6712,7 +6712,7 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
     // Upstream doesn't pass LateAttrsPtr
     ParseTypeQualifierListOpt(DS, Reqs, /*AtomicOrPtrauthAllowed=*/true,
                               !D.mayOmitIdentifier(),
-                              std::nullopt, LateAttrsPtr);
+                              {}, LateAttrsPtr);
     /* TO_UPSTREAM(BoundsSafety) OFF */
     D.ExtendWithDeclSpec(DS);
 
@@ -7558,9 +7558,9 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
       ParseTypeQualifierListOpt(
           DS, AR_NoAttributesParsed,
           /*AtomicOrPtrauthAllowed=*/false,
-          /*IdentifierRequired=*/false, llvm::function_ref<void()>([&]() {
+          /*IdentifierRequired=*/false, [&]() {
             Actions.CodeCompletion().CodeCompleteFunctionQualifiers(DS, D);
-          }));
+          });
       if (!DS.getSourceRange().getEnd().isInvalid()) {
         EndLoc = DS.getSourceRange().getEnd();
       }
@@ -8115,7 +8115,7 @@ void Parser::ParseBracketDeclarator(Declarator &D) {
       enableTypeAttrLateParsing(getLangOpts()) ? &LateAttrs : nullptr;
   ParseTypeQualifierListOpt(DS,
                             AR_CXX11AttributesParsed | AR_GNUAttributesParsed,
-                            true, false, std::nullopt, LateAttrsPtr);
+                            true, false, {}, LateAttrsPtr);
   /* TO_UPSTREAM(BoundsSafety) OFF */
 
   // If we haven't already read 'static', check to see if there is one after the
