@@ -2234,7 +2234,7 @@ public:
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
-    "Op must be an operand of the recipe");
+           "Op must be an operand of the recipe");
     return isOrdered() || isInLoop();
   }
 };
