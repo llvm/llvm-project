@@ -1,6 +1,9 @@
 add_subdirectory(Utils)
 
 add_mlir_library(MLIRTransforms
+  TTLOps.cpp
+  TTLPipeline.cpp
+  TTLToEmitC.cpp
   Canonicalizer.cpp
   CompositePass.cpp
   ControlFlowSink.cpp
