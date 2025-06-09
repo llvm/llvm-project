@@ -302,6 +302,14 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+/////////////////////////////////////////////////////////////////////
+// Check that the following cases are caugh in the generic format. //
+/////////////////////////////////////////////////////////////////////
+
+// Invalid due to param_operand_index occurences in options dict not being
+// one-to-one with the dynamic options provided as params:
+//   param_operand_index out of bounds w.r.t. the number of options provided via params.
+
 "builtin.module"() ({
   "transform.named_sequence"() <{function_type = (!transform.any_op) -> (), sym_name = "__transform_main"}> ({
   ^bb0(%arg0: !transform.any_op):
@@ -319,6 +327,11 @@ module attributes {transform.with_named_sequence} {
 }) {transform.with_named_sequence} : () -> ()
 
 // -----
+
+// Invalid due to param_operand_index occurences in options dict not being
+// one-to-one with the dynamic options provided as params:
+//   the first option-param is referred to twice and the second one not at all.
+// (The pretty-printed format supports this by passing in the same param twice.)
 
 "builtin.module"() ({
   "transform.named_sequence"() <{function_type = (!transform.any_op) -> (), sym_name = "__transform_main"}> ({
@@ -339,6 +352,10 @@ module attributes {transform.with_named_sequence} {
 }) {transform.with_named_sequence} : () -> ()
 
 // -----
+
+// Invalid due to param_operand_index occurences in options dict not being
+// one-to-one with the dynamic options provided as params:
+//   two option-params are provide though only the first one is referred to from the options-dict.
 
 "builtin.module"() ({
   "transform.named_sequence"() <{function_type = (!transform.any_op) -> (), sym_name = "__transform_main"}> ({
