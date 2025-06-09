@@ -786,13 +786,42 @@ llvm::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
   mlir::Value shape = hlfir::genShape(loc, builder, lhs);
   llvm::SmallVector<mlir::Value> extents =
       hlfir::getIndexExtents(loc, builder, shape);
-  hlfir::LoopNest loopNest =
-      hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true,
-                         flangomp::shouldUseWorkshareLowering(assign));
-  builder.setInsertionPointToStart(loopNest.body);
-  auto arrayElement =
-      hlfir::getElementAt(loc, builder, lhs, loopNest.oneBasedIndices);
-  builder.create<hlfir::AssignOp>(loc, rhs, arrayElement);
+
+  if (lhs.isSimplyContiguous() && extents.size() > 1) {
+    // Flatten the array to use a single assign loop, that can be better
+    // optimized.
+    mlir::Value n = extents[0];
+    for (size_t i = 1; i < extents.size(); ++i)
+      n = builder.create<mlir::arith::MulIOp>(loc, n, extents[i]);
+    extents = {n};
+    shape = builder.genShape(loc, extents);
+    mlir::Type flatArrayType =
+        fir::ReferenceType::get(fir::SequenceType::get(eleTy, 1));
+    mlir::Value flatArray = lhs.getBase();
+    if (mlir::isa<fir::BoxType>(lhs.getType()))
+      flatArray = builder.create<fir::BoxAddrOp>(loc, flatArray);
+    flatArray = builder.createConvert(loc, flatArrayType, flatArray);
+
+    hlfir::LoopNest loopNest =
+        hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true,
+                           flangomp::shouldUseWorkshareLowering(assign));
+    builder.setInsertionPointToStart(loopNest.body);
+
+    mlir::Value coor = builder.create<fir::ArrayCoorOp>(
+        loc, fir::ReferenceType::get(eleTy), flatArray, shape,
+        /*slice=*/mlir::Value{}, loopNest.oneBasedIndices,
+        /*typeparams=*/mlir::ValueRange{});
+    builder.create<fir::StoreOp>(loc, rhs, coor);
+  } else {
+    hlfir::LoopNest loopNest =
+        hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true,
+                           flangomp::shouldUseWorkshareLowering(assign));
+    builder.setInsertionPointToStart(loopNest.body);
+    auto arrayElement =
+        hlfir::getElementAt(loc, builder, lhs, loopNest.oneBasedIndices);
+    builder.create<hlfir::AssignOp>(loc, rhs, arrayElement);
+  }
+
   rewriter.eraseOp(assign);
   return mlir::success();
 }
