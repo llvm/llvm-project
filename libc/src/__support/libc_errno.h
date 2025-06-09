@@ -41,6 +41,10 @@
 // fullbuild mode, effectively the same as `LIBC_ERRNO_MODE_EXTERNAL`.
 // In this mode, the public C++ symbol `LIBC_NAMESPACE::libc_errno ` is still
 // exported and get redirected to the system `errno` inside its implementation.
+
+// TODO: Investigate deprecating LIBC_ERRNO_MODE_SYSTEM in favor of
+//       LIBC_ERRNO_MODE_SYSTEM_INLINE.
+//       https://github.com/llvm/llvm-project/issues/143454
 #define LIBC_ERRNO_MODE_SYSTEM 5
 // In this mode, the libc_errno is simply a macro resolved to `errno` from the
 // system header <errno.h>.  There is no need to link against the
