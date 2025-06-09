@@ -17,6 +17,8 @@ else()
   set(OPENMP_STANDALONE_BUILD FALSE)
 endif()
 
+option(OPENMP_INCLUDE_TESTS "Generate and build openmp tests." ${LLVM_INCLUDE_TESTS})
+
 # Must go below project(..)
 include(GNUInstallDirs)
 
@@ -104,7 +106,9 @@ include(config-ix)
 include(HandleOpenMPOptions)
 
 # Set up testing infrastructure.
-include(OpenMPTesting)
+if(OPENMP_INCLUDE_TESTS)
+  include(OpenMPTesting)
+endif()
 
 set(OPENMP_TEST_FLAGS "" CACHE STRING
   "Extra compiler flags to send to the test compiler.")
@@ -164,4 +168,6 @@ add_subdirectory(libompd)
 add_subdirectory(docs)
 
 # Now that we have seen all testsuites, create the check-openmp target.
-construct_check_openmp_target()
+if(OPENMP_INCLUDE_TESTS)
+  construct_check_openmp_target()
+endif()

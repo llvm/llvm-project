@@ -6,5 +6,7 @@ if(LIBOMP_OMPT_SUPPORT)
 
   install(FILES ompt-multiplex.h DESTINATION "${LIBOMP_HEADERS_INSTALL_PATH}")
 
-  add_subdirectory(tests)
+  if(OPENMP_INCLUDE_TESTS)
+    add_subdirectory(tests)
+  endif()
 endif()
