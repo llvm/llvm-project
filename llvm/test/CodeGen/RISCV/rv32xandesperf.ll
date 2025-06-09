@@ -159,8 +159,7 @@ define i32 @bfos_from_ashr_sexti16_i32(i16 %x) {
 define i32 @bfos_from_ashr_shl_with_msb_zero_insert_i32(i32 %x) {
 ; CHECK-LABEL: bfos_from_ashr_shl_with_msb_zero_insert_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a0, a0, 31
-; CHECK-NEXT:    srai a0, a0, 17
+; CHECK-NEXT:    nds.bfos a0, a0, 0, 14
 ; CHECK-NEXT:    ret
   %shl = shl i32 %x, 31
   %lshr = ashr i32 %shl, 17
@@ -172,8 +171,7 @@ define i32 @bfos_from_ashr_shl_with_msb_zero_insert_i32(i32 %x) {
 define i32 @bfos_from_ashr_shl_insert_i32(i32 %x) {
 ; CHECK-LABEL: bfos_from_ashr_shl_insert_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a0, a0, 29
-; CHECK-NEXT:    srai a0, a0, 11
+; CHECK-NEXT:    nds.bfos a0, a0, 18, 20
 ; CHECK-NEXT:    ret
   %shl = shl i32 %x, 29
   %lshr = ashr i32 %shl, 11
