@@ -4263,7 +4263,7 @@ static bool isNot(const MachineRegisterInfo &MRI, const MachineInstr &MI) {
   if (MI.getOpcode() != TargetOpcode::G_XOR)
     return false;
   auto ConstVal = getIConstantVRegSExtVal(MI.getOperand(2).getReg(), MRI);
-  return ConstVal && *ConstVal == -1;
+  return ConstVal == -1;
 }
 
 // Return the use branch instruction, otherwise null if the usage is invalid.
