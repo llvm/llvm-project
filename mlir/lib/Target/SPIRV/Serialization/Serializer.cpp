@@ -447,13 +447,13 @@ LogicalResult
 Serializer::processTypeImpl(Location loc, Type type, uint32_t &typeID,
                             SetVector<StringRef> &serializationCtx) {
 
-  // Map unisgned integer types to singless integer types
+  // Map unsigned integer types to singless integer types.
   // This is needed otherwise the generated spirv assembly will contain
   // twice a type declaration (like OpTypeInt 32 0) which is no permitted and
-  // such module could no pass validation. Indeed at MLIR level the two types
-  // are different and lookup in the cache below fails.
-  // Note: This convertion needs to happen here before the type is looked up in
-  // the cache
+  // such module fails validation. Indeed at MLIR level the two types are
+  // different and lookup in the cache below misses.
+  // Note: This conversion needs to happen here before the type is looked up in
+  // the cache.
   if (type.isUnsignedInteger()) {
     type = IntegerType::get(loc->getContext(), type.getIntOrFloatBitWidth(),
                             IntegerType::SignednessSemantics::Signless);

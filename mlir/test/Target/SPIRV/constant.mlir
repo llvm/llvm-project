@@ -1,6 +1,6 @@
 // RUN: mlir-translate -no-implicit-module -test-spirv-roundtrip %s | FileCheck %s
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Int64, Int16, Int8, Float64, Float16], []> {
   // CHECK-LABEL: @bool_const
   spirv.func @bool_const() -> () "None" {
     // CHECK: spirv.Constant true
@@ -277,4 +277,6 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     %signed_minus_one = spirv.Constant -1 : si16
     spirv.ReturnValue %signed_minus_one : si16
   }
-}
+
+  spirv.EntryPoint "GLCompute" @bool_const
+  }
