@@ -1432,13 +1432,13 @@ public:
       case Intrinsic::vector_reduce_fadd:
         return Builder.CreateFAdd(LHS, RHS);
       case Intrinsic::vector_reduce_fmax:
-        return Builder.CreateMaximum(LHS, RHS); // FIXME: is this correct re: nans?
+        return Builder.CreateMaximum(LHS, RHS);
       case Intrinsic::vector_reduce_fmaximum:
-        return Builder.CreateMaximumNum(LHS, RHS); // FIXME: is this correct re: nans?
+        return Builder.CreateMaximumNum(LHS, RHS);
       case Intrinsic::vector_reduce_fmin:
-        return Builder.CreateMinimum(LHS, RHS); // FIXME: is this correct re: nans?
+        return Builder.CreateMinimum(LHS, RHS);
       case Intrinsic::vector_reduce_fminimum:
-        return Builder.CreateMinimumNum(LHS, RHS); // FIXME: is this correct re: nans?
+        return Builder.CreateMinimumNum(LHS, RHS);
       case Intrinsic::vector_reduce_fmul:
         return Builder.CreateFMul(LHS, RHS);
       case Intrinsic::vector_reduce_mul:
