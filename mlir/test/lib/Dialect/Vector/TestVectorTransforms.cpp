@@ -289,6 +289,44 @@ struct TestVectorTransferUnrollingPatterns
       llvm::cl::init(false)};
 };
 
+struct TestVectorLoadStoreUnrollPatterns
+    : public PassWrapper<TestVectorLoadStoreUnrollPatterns,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestVectorLoadStoreUnrollPatterns)
+
+  StringRef getArgument() const final {
+    return "test-vector-load-store-unroll";
+  }
+  StringRef getDescription() const final {
+    return "Test unrolling patterns for vector.load and vector.store ops";
+  }
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<vector::VectorDialect, arith::ArithDialect>();
+  }
+
+  void runOnOperation() override {
+    MLIRContext *ctx = &getContext();
+    RewritePatternSet patterns(ctx);
+
+    // Unroll all vector.load and vector.store ops with rank > 1 to 1D vectors
+    vector::UnrollVectorOptions options;
+    options.setFilterConstraint([](Operation *op) {
+      if (auto loadOp = dyn_cast<vector::LoadOp>(op))
+        return success(loadOp.getType().getRank() > 1);
+      if (auto storeOp = dyn_cast<vector::StoreOp>(op))
+        return success(storeOp.getVectorType().getRank() > 1);
+      return failure();
+    });
+
+    vector::populateVectorUnrollPatterns(patterns, options);
+
+    // Apply the patterns
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+  }
+};
+
 struct TestScalarVectorTransferLoweringPatterns
     : public PassWrapper<TestScalarVectorTransferLoweringPatterns,
                          OperationPass<func::FuncOp>> {
@@ -1032,6 +1070,8 @@ void registerTestVectorLowerings() {
   PassRegistration<TestVectorUnrollingPatterns>();
 
   PassRegistration<TestVectorTransferUnrollingPatterns>();
+
+  PassRegistration<TestVectorLoadStoreUnrollPatterns>();
 
   PassRegistration<TestScalarVectorTransferLoweringPatterns>();
 
