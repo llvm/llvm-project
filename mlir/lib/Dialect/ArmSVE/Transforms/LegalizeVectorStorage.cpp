@@ -409,13 +409,13 @@ struct LegalizeTransferRead : public OpRewritePattern<vector::TransferReadOp> {
 
 void mlir::arm_sve::populateLegalizeVectorStoragePatterns(
     RewritePatternSet &patterns) {
-  patterns.add<RelaxScalableVectorAllocaAlignment,
-               LegalizeSVEMaskAllocation<memref::AllocaOp>,
-               LegalizeSVEMaskAllocation<memref::AllocOp>,
-               LegalizeSVEMaskTypeCastConversion,
-               LegalizeSVEMaskStoreConversion, LegalizeSVEMaskLoadConversion,
-               LegalizeTransferRead>(
-      patterns.getContext());
+  patterns
+      .add<RelaxScalableVectorAllocaAlignment,
+           LegalizeSVEMaskAllocation<memref::AllocaOp>,
+           LegalizeSVEMaskAllocation<memref::AllocOp>,
+           LegalizeSVEMaskTypeCastConversion, LegalizeSVEMaskStoreConversion,
+           LegalizeSVEMaskLoadConversion, LegalizeTransferRead>(
+          patterns.getContext());
 }
 
 namespace {
