@@ -7573,7 +7573,13 @@ ExpectedDecl ASTNodeImporter::VisitRequiresExprBodyDecl(RequiresExprBodyDecl* D)
   auto RequiresLoc = importChecked(Err, D->getLocation());
   if (Err)
     return std::move(Err);
-  return RequiresExprBodyDecl::Create(Importer.getToContext(), DC, RequiresLoc);
+
+  RequiresExprBodyDecl *To;
+  if (GetImportedOrCreateDecl(To, D, Importer.getToContext(), DC, RequiresLoc))
+    return To;
+  To->setLexicalDeclContext(LexicalDC);
+  LexicalDC->addDeclInternal(To);
+  return To;
 }
 
 ExpectedStmt ASTNodeImporter::VisitConceptSpecializationExpr(ConceptSpecializationExpr* E) {
@@ -7605,9 +7611,15 @@ ExpectedDecl ASTNodeImporter::VisitConceptDecl(ConceptDecl* D) {
   if (Err)
     return std::move(Err);
 
-  return ConceptDecl::Create(Importer.getToContext(), DC, LocationOrErr,
+  ConceptDecl *To;
+  if (GetImportedOrCreateDecl(To, D,
+    Importer.getToContext(), DC, LocationOrErr,
                              NameDeclOrErr, ToTemplateParameters,
-                             ConstraintExpr);
+                             ConstraintExpr))
+    return To;
+  To->setLexicalDeclContext(LexicalDC);
+  LexicalDC->addDeclInternal(To);
+  return To;
 }
 
 ExpectedDecl ASTNodeImporter::VisitImplicitConceptSpecializationDecl(ImplicitConceptSpecializationDecl* D) {
@@ -7620,8 +7632,13 @@ ExpectedDecl ASTNodeImporter::VisitImplicitConceptSpecializationDecl(ImplicitCon
   SmallVector<TemplateArgument,2> ToArgs(D->getTemplateArguments().size());
   if (Error Err = ImportTemplateArguments(D->getTemplateArguments(), ToArgs))
     return std::move(Err);
-  return ImplicitConceptSpecializationDecl::Create(Importer.getToContext(), DC,
-                                                   ToSL, ToArgs);
+
+  ImplicitConceptSpecializationDecl *To;
+  if (GetImportedOrCreateDecl(To, D, Importer.getToContext(), DC, ToSL, ToArgs))
+    return To;
+  To->setLexicalDeclContext(LexicalDC);
+  LexicalDC->addDeclInternal(To);
+  return To;
 }
 
 ExpectedStmt ASTNodeImporter::VisitSourceLocExpr(SourceLocExpr *E) {
