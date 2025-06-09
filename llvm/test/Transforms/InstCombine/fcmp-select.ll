@@ -292,3 +292,14 @@ define float @test_select_nnan_nsz_fcmp_olt(float %x) {
   %sel = select nnan nsz i1 %cmp, float %x, float -0.000000e+00
   ret float %sel
 }
+
+define float @test_select_nnan_nsz_fcmp_ult(float %x) {
+; CHECK-LABEL: @test_select_nnan_nsz_fcmp_ult(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[TMP1]], float [[X]], float -0.000000e+00
+; CHECK-NEXT:    ret float [[SEL1]]
+;
+  %cmp = fcmp ult float %x, 0.000000e+00
+  %sel = select nnan nsz i1 %cmp, float %x, float -0.000000e+00
+  ret float %sel
+}
