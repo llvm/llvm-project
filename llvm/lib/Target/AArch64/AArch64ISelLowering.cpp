@@ -3093,21 +3093,40 @@ static MachineInstr *stripAndAccumulateOffset(const MachineRegisterInfo &MRI,
   return nullptr;
 }
 
-static std::pair<Register, unsigned>
-detectBlendComponents(const MachineRegisterInfo &MRI, Register Reg) {
+void AArch64TargetLowering::fixupBlendComponents(
+    MachineInstr &MI, MachineBasicBlock *BB, MachineOperand &IntDiscOp,
+    MachineOperand &AddrDiscOp, const TargetRegisterClass *AddrDiscRC) const {
+  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+  MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  const DebugLoc &DL = MI.getDebugLoc();
+
+  Register AddrDisc = AddrDiscOp.getReg();
+  int64_t IntDisc = IntDiscOp.getImm();
+
+  assert(IntDisc == 0 && "Blend components are already expanded");
+
   int64_t Offset = 0;
-  MachineInstr *MaybeBlend = stripAndAccumulateOffset(MRI, Reg, Offset);
-  // This should be a plain copy, without adding any offset.
-  if (!MaybeBlend || Offset != 0)
-    return std::make_pair(Reg, 0);
+  MachineInstr *MaybeBlend = stripAndAccumulateOffset(MRI, AddrDisc, Offset);
 
-  // Detect blend(addr, imm) which is lowered as MOVK addr, #imm, 48.
-  if (MaybeBlend->getOpcode() != AArch64::MOVKXi ||
-      MaybeBlend->getOperand(3).getImm() != 48)
-    return std::make_pair(Reg, 0);
+  // Detect blend(addr, imm) which is lowered as MOVK addr, #imm, #48.
+  // The result of MOVK may be copied, but without adding any offset.
+  if (MaybeBlend && Offset == 0 && MaybeBlend->getOpcode() == AArch64::MOVKXi &&
+      MaybeBlend->getOperand(3).getImm() == 48) {
+    AddrDisc = MaybeBlend->getOperand(1).getReg();
+    IntDisc = MaybeBlend->getOperand(2).getImm();
+  }
 
-  return std::make_pair(MaybeBlend->getOperand(1).getReg(),
-                        MaybeBlend->getOperand(2).getImm());
+  if (AddrDisc == AArch64::NoRegister)
+    AddrDisc = AArch64::XZR;
+
+  if (AddrDisc != AArch64::XZR && MRI.getRegClass(AddrDisc) != AddrDiscRC) {
+    Register TmpReg = MRI.createVirtualRegister(AddrDiscRC);
+    BuildMI(*BB, MI, DL, TII->get(AArch64::COPY), TmpReg).addReg(AddrDisc);
+    AddrDisc = TmpReg;
+  }
+
+  AddrDiscOp.setReg(AddrDisc);
+  IntDiscOp.setImm(IntDisc);
 }
 
 MachineBasicBlock *
@@ -3139,26 +3158,17 @@ AArch64TargetLowering::tryRewritingPAC(MachineInstr &MI,
   const GlobalValue *GV = AddrOp.getGlobal();
   AddrOffset += AddrOp.getOffset();
 
-  // Analyze the discriminator operand.
-  Register OriginalDisc = isPACWithZeroDisc(MI.getOpcode())
-                              ? AArch64::XZR
-                              : MI.getOperand(2).getReg();
-  auto [AddrDisc, IntDisc] = detectBlendComponents(MRI, OriginalDisc);
+  Register DiscReg = isPACWithZeroDisc(MI.getOpcode())
+                         ? AArch64::XZR
+                         : MI.getOperand(2).getReg();
 
-  // MOVaddrPAC and LOADgotPAC pseudos are expanded so that they use X16/X17
-  // internally, thus their restrictions on the register class of $AddrDisc
-  // operand are stricter than those of MOVKXi and PAC* instructions.
-  if (AddrDisc != AArch64::XZR) {
-    Register TmpReg = MRI.createVirtualRegister(&AArch64::GPR64noipRegClass);
-    BuildMI(*BB, MI, DL, TII->get(AArch64::COPY), TmpReg).addReg(AddrDisc);
-    AddrDisc = TmpReg;
-  }
-
-  BuildMI(*BB, MI, DL, TII->get(NewOpcode))
-      .addGlobalAddress(GV, AddrOffset, TargetFlags)
-      .addImm(getKeyForPACOpcode(MI.getOpcode()))
-      .addReg(AddrDisc)
-      .addImm(IntDisc);
+  MachineInstr *NewMI = BuildMI(*BB, MI, DL, TII->get(NewOpcode))
+                            .addGlobalAddress(GV, AddrOffset, TargetFlags)
+                            .addImm(getKeyForPACOpcode(MI.getOpcode()))
+                            .addReg(DiscReg)
+                            .addImm(0);
+  fixupBlendComponents(*NewMI, BB, NewMI->getOperand(3), NewMI->getOperand(2),
+                       &AArch64::GPR64noipRegClass);
 
   BuildMI(*BB, MI, DL, TII->get(AArch64::COPY), MI.getOperand(0).getReg())
       .addReg(AArch64::X16);
