@@ -244,12 +244,11 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(*std::next(mo.begin(), 2) == V(3, 1));
   }
 
-
-  // Following code uses global vectors ca_allocs and ca_deallocs
-  // Using globals/statics at compile time is not possible, so we exit early.
-  #if TEST_STD_VER >= 26
+// Following code uses global vectors ca_allocs and ca_deallocs
+// Using globals/statics at compile time is not possible, so we exit early.
+#  if TEST_STD_VER >= 26
   return true;
-  #endif
+#  endif
 
   assert(balanced_allocs());
   {

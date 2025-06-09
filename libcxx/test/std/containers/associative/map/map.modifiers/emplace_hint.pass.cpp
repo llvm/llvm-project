@@ -24,9 +24,7 @@
 #include "min_allocator.h"
 
 TEST_CONSTEXPR_CXX26 bool test() {
-
-  if(!TEST_IS_CONSTANT_EVALUATED)
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     {
       typedef std::map<int, DefaultOnly> M;
       typedef M::iterator R;
@@ -85,8 +83,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(m.begin()->second == 3.5);
   }
 
-  if(!TEST_IS_CONSTANT_EVALUATED)
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     {
       typedef std::map<int, DefaultOnly, std::less<int>, min_allocator<std::pair<const int, DefaultOnly>>> M;
       typedef M::iterator R;
