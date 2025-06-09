@@ -629,6 +629,17 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   }
 }
 
+static std::string getVersionedTmpName(llvm::StringRef name, unsigned cnt) {
+  SmallString<256> buffer;
+  llvm::raw_svector_ostream out(buffer);
+  out << name << cnt;
+  return std::string(out.str());
+}
+
+std::string CIRGenFunction::getCounterAggTmpAsString() {
+  return getVersionedTmpName("agg.tmp", counterAggTmp++);
+}
+
 void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
                                             QualType ty) {
   // Ignore empty classes in C++.
