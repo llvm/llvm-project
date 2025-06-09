@@ -1517,12 +1517,19 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
         IsError = ParseOpenMPVarList(OMPD_declare_variant, OMPC_adjust_args,
                                      Vars, Data);
         if (!IsError) {
-          if (Data.ExtraModifier == OMPC_ADJUST_ARGS_nothing)
+          switch (Data.ExtraModifier) {
+          case OMPC_ADJUST_ARGS_nothing:
             llvm::append_range(AdjustNothing, Vars);
-          else if (Data.ExtraModifier == OMPC_ADJUST_ARGS_need_device_ptr)
+            break;
+          case OMPC_ADJUST_ARGS_need_device_ptr:
             llvm::append_range(AdjustNeedDevicePtr, Vars);
-          else if (Data.ExtraModifier == OMPC_ADJUST_ARGS_need_device_addr)
+            break;
+          case OMPC_ADJUST_ARGS_need_device_addr:
             llvm::append_range(AdjustNeedDeviceAddr, Vars);
+            break;
+          default:
+            break;
+          }
         }
         break;
       }

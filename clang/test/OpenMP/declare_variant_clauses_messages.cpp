@@ -196,12 +196,12 @@ void vararg_bar2(const char *fmt) { return; }
 // expected-error@+1 {{variant in '#pragma omp declare variant' with type 'void (float *, float *, int *, omp_interop_t)' (aka 'void (float *, float *, int *, void *)') is incompatible with type 'void (float *, float *, int *)'}}
 #pragma omp declare variant(foo_v4) match(construct={dispatch})
 
-// expected-error@+3 {{incorrect adjust_args type, expected 'need_device_ptr', 'need_device_addr', or 'nothing'}}
+// expected-error@+3 {{incorrect 'adjust_args' type, expected 'need_device_ptr', 'need_device_addr', or 'nothing'}}
 #pragma omp declare variant(foo_v1)                        \
    match(construct={dispatch}, device={arch(arm)})         \
    adjust_args(badaaop:AAA,BBB)
 
-// expected-error@+3 {{incorrect adjust_args type, expected 'need_device_ptr', 'need_device_addr', or 'nothing'}}
+// expected-error@+3 {{incorrect 'adjust_args' type, expected 'need_device_ptr', 'need_device_addr', or 'nothing'}}
 #pragma omp declare variant(foo_v1)                        \
    match(construct={dispatch}, device={arch(arm)})         \
    adjust_args(badaaop AAA,BBB)
