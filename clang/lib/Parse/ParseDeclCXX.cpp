@@ -4901,7 +4901,7 @@ void Parser::ParseMicrosoftUuidAttributeArgs(ParsedAttributes &Attrs) {
   }
 }
 
-void Parser::ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
+void Parser::ParseHLSLRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
   assert(Tok.is(tok::identifier) &&
          "Expected an identifier to denote which MS attribute to consider");
   IdentifierInfo *RootSignatureIdent = Tok.getIdentifierInfo();
@@ -5005,7 +5005,7 @@ void Parser::ParseMicrosoftAttributes(ParsedAttributes &Attrs) {
       if (Tok.getIdentifierInfo()->getName() == "uuid")
         ParseMicrosoftUuidAttributeArgs(Attrs);
       else if (Tok.getIdentifierInfo()->getName() == "RootSignature")
-        ParseMicrosoftRootSignatureAttributeArgs(Attrs);
+        ParseHLSLRootSignatureAttributeArgs(Attrs);
       else {
         IdentifierInfo *II = Tok.getIdentifierInfo();
         SourceLocation NameLoc = Tok.getLocation();
