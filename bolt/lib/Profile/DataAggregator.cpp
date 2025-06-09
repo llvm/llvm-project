@@ -580,8 +580,10 @@ void DataAggregator::processProfile(BinaryContext &BC) {
     }
   }
 
-  for (auto &FuncBranches : NamesToBranches)
+  for (auto &FuncBranches : NamesToBranches) {
     llvm::stable_sort(FuncBranches.second.Data);
+    llvm::stable_sort(FuncBranches.second.EntryData);
+  }
 
   for (auto &MemEvents : NamesToMemEvents)
     llvm::stable_sort(MemEvents.second.Data);
@@ -733,8 +735,10 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
   // corresponds to a return (if \p IsFrom) or a call continuation (otherwise).
   auto handleAddress = [&](uint64_t &Addr, bool IsFrom) {
     BinaryFunction *Func = getBinaryFunctionContainingAddress(Addr);
-    if (!Func)
+    if (!Func) {
+      Addr = 0;
       return std::pair{Func, false};
+    }
 
     Addr -= Func->getAddress();
 
@@ -972,7 +976,7 @@ bool DataAggregator::recordExit(BinaryFunction &BF, uint64_t From, bool Mispred,
   return true;
 }
 
-ErrorOr<LBREntry> DataAggregator::parseLBREntry() {
+ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
   LBREntry Res;
   ErrorOr<StringRef> FromStrRes = parseString('/');
   if (std::error_code EC = FromStrRes.getError())
@@ -1430,54 +1434,16 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
       const uint64_t TraceTo = NextLBR->From;
       const BinaryFunction *TraceBF =
           getBinaryFunctionContainingAddress(TraceFrom);
-      if (opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive) {
-        FTInfo &Info = FallthroughLBRs[Trace(TraceFrom, TraceTo)];
+      FTInfo &Info = FallthroughLBRs[Trace(TraceFrom, TraceTo)];
+      if (TraceBF && TraceBF->containsAddress(LBR.From))
         ++Info.InternCount;
-      } else if (TraceBF && TraceBF->containsAddress(TraceTo)) {
-        FTInfo &Info = FallthroughLBRs[Trace(TraceFrom, TraceTo)];
-        if (TraceBF->containsAddress(LBR.From))
-          ++Info.InternCount;
-        else
-          ++Info.ExternCount;
-      } else {
-        const BinaryFunction *ToFunc =
-            getBinaryFunctionContainingAddress(TraceTo);
-        if (TraceBF && ToFunc) {
-          LLVM_DEBUG({
-            dbgs() << "Invalid trace starting in " << TraceBF->getPrintName()
-                   << formatv(" @ {0:x}", TraceFrom - TraceBF->getAddress())
-                   << formatv(" and ending @ {0:x}\n", TraceTo);
-          });
-          ++NumInvalidTraces;
-        } else {
-          LLVM_DEBUG({
-            dbgs() << "Out of range trace starting in "
-                   << (TraceBF ? TraceBF->getPrintName() : "None")
-                   << formatv(" @ {0:x}",
-                              TraceFrom - (TraceBF ? TraceBF->getAddress() : 0))
-                   << " and ending in "
-                   << (ToFunc ? ToFunc->getPrintName() : "None")
-                   << formatv(" @ {0:x}\n",
-                              TraceTo - (ToFunc ? ToFunc->getAddress() : 0));
-          });
-          ++NumLongRangeTraces;
-        }
-      }
+      else
+        ++Info.ExternCount;
       ++NumTraces;
     }
     NextLBR = &LBR;
 
-    // Record branches outside binary functions for heatmap.
-    if (opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive) {
-      TakenBranchInfo &Info = BranchLBRs[Trace(LBR.From, LBR.To)];
-      ++Info.TakenCount;
-      continue;
-    }
-    uint64_t From = getBinaryFunctionContainingAddress(LBR.From) ? LBR.From : 0;
-    uint64_t To = getBinaryFunctionContainingAddress(LBR.To) ? LBR.To : 0;
-    if (!From && !To)
-      continue;
-    TakenBranchInfo &Info = BranchLBRs[Trace(From, To)];
+    TakenBranchInfo &Info = BranchLBRs[Trace(LBR.From, LBR.To)];
     ++Info.TakenCount;
     Info.MispredCount += LBR.Mispred;
   }
@@ -2398,16 +2364,10 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
 
 void DataAggregator::dump() const { DataReader::dump(); }
 
-void DataAggregator::dump(const LBREntry &LBR) const {
-  Diag << "From: " << Twine::utohexstr(LBR.From)
-       << " To: " << Twine::utohexstr(LBR.To) << " Mispred? " << LBR.Mispred
-       << "\n";
-}
-
 void DataAggregator::dump(const PerfBranchSample &Sample) const {
   Diag << "Sample LBR entries: " << Sample.LBR.size() << "\n";
   for (const LBREntry &LBR : Sample.LBR)
-    dump(LBR);
+    Diag << LBR << '\n';
 }
 
 void DataAggregator::dump(const PerfMemSample &Sample) const {

@@ -838,6 +838,11 @@ void CIRGenModule::maybeSetTrivialComdat(const Decl &d, mlir::Operation *op) {
   assert(!cir::MissingFeatures::opFuncSetComdat());
 }
 
+void CIRGenModule::updateCompletedType(const TagDecl *td) {
+  // Make sure that this type is translated.
+  genTypes.updateCompletedType(td);
+}
+
 // TODO(CIR): this could be a common method between LLVM codegen.
 static bool isVarDeclStrongDefinition(const ASTContext &astContext,
                                       CIRGenModule &cgm, const VarDecl *vd,
@@ -1135,18 +1140,29 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     emitGlobalOpenACCDecl(cast<OpenACCDeclareDecl>(decl));
     break;
   case Decl::Enum:
+  case Decl::Using:          // using X; [C++]
   case Decl::UsingDirective: // using namespace X; [C++]
   case Decl::Typedef:
   case Decl::TypeAlias: // using foo = bar; [C++11]
   case Decl::Record:
-  case Decl::CXXRecord:
     assert(!cir::MissingFeatures::generateDebugInfo());
+    break;
+
+  // No code generation needed.
+  case Decl::UsingShadow:
+  case Decl::Empty:
     break;
 
   // C++ Decls
   case Decl::LinkageSpec:
   case Decl::Namespace:
     emitDeclContext(Decl::castToDeclContext(decl));
+    break;
+
+  case Decl::ClassTemplateSpecialization:
+  case Decl::CXXRecord:
+    assert(!cir::MissingFeatures::generateDebugInfo());
+    assert(!cir::MissingFeatures::cxxRecordStaticMembers());
     break;
   }
 }

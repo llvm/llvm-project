@@ -2371,9 +2371,8 @@ static bool canApplyNoFPClass(const ABIArgInfo &AI, QualType ParamType,
 
   if (llvm::StructType *ST = dyn_cast<llvm::StructType>(IRTy)) {
     return !IsReturn && AI.getCanBeFlattened() &&
-           llvm::all_of(ST->elements(), [](llvm::Type *Ty) {
-             return llvm::AttributeFuncs::isNoFPClassCompatibleType(Ty);
-           });
+           llvm::all_of(ST->elements(),
+                        llvm::AttributeFuncs::isNoFPClassCompatibleType);
   }
 
   return false;
@@ -4184,7 +4183,7 @@ void CodeGenFunction::EmitReturnValueCheck(llvm::Value *RV) {
     Handler = SanitizerHandler::NullabilityReturn;
   }
 
-  SanitizerScope SanScope(this);
+  SanitizerDebugLocation SanScope(this, {CheckKind}, Handler);
 
   // Make sure the "return" source location is valid. If we're checking a
   // nullability annotation, make sure the preconditions for the check are met.
@@ -4569,7 +4568,7 @@ void CodeGenFunction::EmitNonNullArgCheck(RValue RV, QualType ArgType,
     Handler = SanitizerHandler::NullabilityArg;
   }
 
-  SanitizerScope SanScope(this);
+  SanitizerDebugLocation SanScope(this, {CheckKind}, Handler);
   llvm::Value *Cond = EmitNonNullRValueCheck(RV, ArgType);
   llvm::Constant *StaticData[] = {
       EmitCheckSourceLocation(ArgLoc),

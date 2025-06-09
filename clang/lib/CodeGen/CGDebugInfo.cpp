@@ -58,6 +58,13 @@
 using namespace clang;
 using namespace clang::CodeGen;
 
+// TODO: consider deprecating ClArrayBoundsPseudoFn; functionality is subsumed
+//       by -fsanitize-annotate-debug-info
+static llvm::cl::opt<bool> ClArrayBoundsPseudoFn(
+    "array-bounds-pseudofn", llvm::cl::Hidden, llvm::cl::Optional,
+    llvm::cl::desc("Emit debug info that places array-bounds instrumentation "
+                   "in an inline function called __ubsan_check_array_bounds."));
+
 static uint32_t getTypeAlignIfRequired(const Type *Ty, const ASTContext &Ctx) {
   auto TI = Ctx.getTypeInfo(Ty);
   if (TI.isAlignRequired())
@@ -1557,28 +1564,7 @@ llvm::DIType *CGDebugInfo::CreateType(const TemplateSpecializationType *Ty,
 
   SourceLocation Loc = AliasDecl->getLocation();
 
-  if (CGM.getCodeGenOpts().DebugTemplateAlias &&
-      // FIXME: This is a workaround for the issue
-      //        https://github.com/llvm/llvm-project/issues/89774
-      // The TemplateSpecializationType doesn't contain any instantiation
-      // information; dependent template arguments can't be resolved. For now,
-      // fall back to DW_TAG_typedefs for template aliases that are
-      // instantiation dependent, e.g.:
-      // ```
-      // template <int>
-      // using A = int;
-      //
-      // template<int I>
-      // struct S {
-      //   using AA = A<I>; // Instantiation dependent.
-      //   AA aa;
-      // };
-      //
-      // S<0> s;
-      // ```
-      // S::AA's underlying type A<I> is dependent on I so will be emitted as a
-      // DW_TAG_typedef.
-      !Ty->isInstantiationDependentType()) {
+  if (CGM.getCodeGenOpts().DebugTemplateAlias) {
     auto ArgVector = ::GetTemplateArgs(TD, Ty);
     TemplateArgs Args = {TD->getTemplateParameters(), ArgVector};
 
@@ -6411,4 +6397,79 @@ CodeGenFunction::LexicalScope::~LexicalScope() {
     ApplyDebugLocation DL(CGF, Range.getEnd());
     ForceCleanup();
   }
+}
+
+static std::string SanitizerHandlerToCheckLabel(SanitizerHandler Handler) {
+  std::string Label;
+  switch (Handler) {
+#define SANITIZER_CHECK(Enum, Name, Version)                                   \
+  case Enum:                                                                   \
+    Label = "__ubsan_check_" #Name;                                            \
+    break;
+
+    LIST_SANITIZER_CHECKS
+#undef SANITIZER_CHECK
+  };
+
+  // Label doesn't require sanitization
+  return Label;
+}
+
+static std::string
+SanitizerOrdinalToCheckLabel(SanitizerKind::SanitizerOrdinal Ordinal) {
+  std::string Label;
+  switch (Ordinal) {
+#define SANITIZER(NAME, ID)                                                    \
+  case SanitizerKind::SO_##ID:                                                 \
+    Label = "__ubsan_check_" NAME;                                             \
+    break;
+#include "clang/Basic/Sanitizers.def"
+  default:
+    llvm_unreachable("unexpected sanitizer kind");
+  }
+
+  // Sanitize label (convert hyphens to underscores; also futureproof against
+  // non-alpha)
+  for (unsigned int i = 0; i < Label.length(); i++)
+    if (!std::isalpha(Label[i]))
+      Label[i] = '_';
+
+  return Label;
+}
+
+llvm::DILocation *CodeGenFunction::SanitizerAnnotateDebugInfo(
+    ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
+    SanitizerHandler Handler) {
+  std::string Label;
+  if (Ordinals.size() == 1)
+    Label = SanitizerOrdinalToCheckLabel(Ordinals[0]);
+  else
+    Label = SanitizerHandlerToCheckLabel(Handler);
+
+  llvm::DILocation *CheckDI = Builder.getCurrentDebugLocation();
+
+  for (auto Ord : Ordinals) {
+    // TODO: deprecate ClArrayBoundsPseudoFn
+    if (((ClArrayBoundsPseudoFn && Ord == SanitizerKind::SO_ArrayBounds) ||
+         CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo.has(Ord)) &&
+        CheckDI) {
+      return getDebugInfo()->CreateSyntheticInlineAt(CheckDI, Label);
+    }
+  }
+
+  return CheckDI;
+}
+
+SanitizerDebugLocation::SanitizerDebugLocation(
+    CodeGenFunction *CGF, ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
+    SanitizerHandler Handler)
+    : CGF(CGF),
+      Apply(*CGF, CGF->SanitizerAnnotateDebugInfo(Ordinals, Handler)) {
+  assert(!CGF->IsSanitizerScope);
+  CGF->IsSanitizerScope = true;
+}
+
+SanitizerDebugLocation::~SanitizerDebugLocation() {
+  assert(CGF->IsSanitizerScope);
+  CGF->IsSanitizerScope = false;
 }
