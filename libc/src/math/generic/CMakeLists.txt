@@ -5066,6 +5066,20 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.generic.mul
 )
 
+# Bfloat16 Functions
+
+add_entrypoint_object(
+  fbfloat16
+  SRCS
+    fbfloat16.cpp
+  HDRS
+    ../fbfloat16.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.bfloat16
+)
+
 add_header_library(
   expxf16
   HDRS
