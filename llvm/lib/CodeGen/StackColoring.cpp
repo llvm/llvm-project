@@ -30,6 +30,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/LiveInterval.h"
+#include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -399,6 +400,8 @@ class StackColoring {
   MachineFrameInfo *MFI = nullptr;
   MachineFunction *MF = nullptr;
 
+  LiveStacks* LS = nullptr;
+
   struct SlotInfo {
     // All places in the current function where this Slot is live
     BitVector Liveness;
@@ -484,7 +487,7 @@ class StackColoring {
   unsigned NumIterations;
 
 public:
-  StackColoring(SlotIndexes *Indexes) : Indexes(Indexes) {}
+  StackColoring(SlotIndexes *Indexes, LiveStacks* LS) : LS(LS), Indexes(Indexes) {}
   bool run(MachineFunction &Func);
 
 private:
@@ -573,6 +576,7 @@ INITIALIZE_PASS_END(StackColoringLegacy, DEBUG_TYPE,
 
 void StackColoringLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<SlotIndexesWrapperPass>();
+  AU.addUsedIfAvailable<LiveStacksWrapperLegacy>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -743,6 +747,9 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
   InterestingSlots.resize(NumSlot);
   ConservativeSlots.clear();
   ConservativeSlots.resize(NumSlot);
+
+  if (LS)
+    MarkersFound += LS->getNumIntervals() * 2;
 
   // number of start and end lifetime ops for each slot
   SmallVector<int, 8> NumStartLifetimes(NumSlot, 0);
@@ -955,6 +962,113 @@ void StackColoring::calculateLiveIntervals(unsigned NumSlots) {
   int CurrIdx = 0;
 
   DefinitelyInUse.resize(NumSlots);
+  struct SplitSlotChanges {
+    const MachineInstr* AtMI;
+    unsigned BlockIdx : 31;
+    unsigned IsStart : 1;
+    unsigned Slot;
+  };
+  SmallVector<SplitSlotChanges> MidBlockSpillChanges;
+  unsigned SpillChangeCounter = 0;
+
+  if (LS && LS->getNumIntervals()) {
+    for (const MachineBasicBlock &MBB : *MF) {
+      BlockLifetimeInfo &MBBLiveness = BlockLiveness[MBB.getNumber()];
+      MBBLiveness.LiveIn.resize(NumSlots);
+      MBBLiveness.LiveOut.resize(NumSlots);
+    }
+    for (const MachineBasicBlock &MBB : *MF) {
+      unsigned Base = LS->getStartIdx();
+      BlockLifetimeInfo &MBBLiveness = BlockLiveness[MBB.getNumber()];
+      for (unsigned I = 0; I < LS->getNumIntervals(); I++) {
+        unsigned Slot = Base + I;
+        if (LS->getInterval(Slot).liveAt(Indexes->getMBBStartIdx(&MBB))) {
+          MBBLiveness.LiveIn[Slot] = true;
+          // Checking if the end of the block is in the live-range is not
+          // reliable
+          for (MachineBasicBlock *Pred : MBB.predecessors())
+            BlockLiveness[Pred->getNumber()].LiveOut[Slot] = true;
+        }
+      }
+    }
+    for (const MachineBasicBlock &MBB : *MF) {
+      unsigned SizeOnStart = MidBlockSpillChanges.size();
+      BlockLifetimeInfo &MBBLiveness = BlockLiveness[MBB.getNumber()];
+      BitVector IsStoredTo;
+      IsStoredTo.resize(NumSlots, false);
+      struct MIBlockIdx {
+        const MachineInstr* MI;
+        unsigned BlockIdx;
+      };
+      unsigned BlockIdx = 0;
+      SmallVector<MIBlockIdx> LastUse;
+      LastUse.resize(NumSlots, {nullptr, 0});
+      for (const MachineInstr &MI : MBB) {
+        if (MI.isDebugInstr())
+          continue;
+        for (MachineMemOperand* MMO : MI.memoperands()) {
+          auto *PSV = dyn_cast_if_present<FixedStackPseudoSourceValue>(
+              MMO->getPseudoValue());
+          if (!PSV)
+            continue;
+          unsigned Slot = PSV->getFrameIndex();
+          if (!LS->hasInterval(Slot))
+            continue;
+          // if (Slot == 17) {
+          //   dbgs() << "MI: " << MI;
+          //   dbgs() << "MBB: " << MBB.getName() << "\n";
+          //   dbgs() << "MBB range:" << Indexes->getMBBRange(&MBB).first << "-"
+          //          << Indexes->getMBBRange(&MBB).second << "\n";
+          //   dbgs() << "slot range: " << LS->getInterval(Slot) << "\n";
+          //   dbgs() << "\n";
+          // }
+          assert(MMO->isStore() != MMO->isLoad());
+          if (MMO->isStore()) {
+            if (!IsStoredTo[Slot]) {
+              MidBlockSpillChanges.push_back(
+                  {&MI, BlockIdx, /*IsStart=*/true, Slot});
+              IsStoredTo[Slot] = true;
+            }
+          } else
+            LastUse[Slot] = {&MI, BlockIdx};
+        }
+        BlockIdx++;
+      }
+
+      BitVector Liveness = MBBLiveness.LiveIn;
+      Liveness |= IsStoredTo;
+      Liveness &= MBBLiveness.LiveOut.flip();
+      for (unsigned Slot : Liveness.set_bits()) {
+        if (!LS->hasInterval(Slot))
+          continue;
+        if (LastUse[Slot].MI)
+          MidBlockSpillChanges.push_back({LastUse[Slot].MI,
+                                          LastUse[Slot].BlockIdx,
+                                          /*IsStart=*/false, Slot});
+      }
+
+      std::stable_sort(MidBlockSpillChanges.begin() + SizeOnStart,
+                       MidBlockSpillChanges.end(),
+                       [&](SplitSlotChanges Lhs, SplitSlotChanges Rhs) -> bool {
+                         if (Lhs.BlockIdx == Rhs.BlockIdx)
+                           assert(Lhs.Slot != Rhs.Slot);
+                         if (Lhs.BlockIdx != Rhs.BlockIdx)
+                           return Lhs.BlockIdx < Rhs.BlockIdx;
+                         // Avoid overlap of lifetime when the same instruction
+                         // starts some spill lifetime and ends others.
+                         return Rhs.IsStart;
+                       });
+    }
+  }
+  LLVM_DEBUG({
+    for (SplitSlotChanges C : MidBlockSpillChanges) {
+        dbgs() << "Idx=" << C.BlockIdx << " Slot=" << C.Slot
+               << " IsStart=" << C.IsStart << " MI=" << *C.AtMI;
+    }
+  });
+
+  // To avoid needing bounds checks
+  MidBlockSpillChanges.push_back({nullptr, 0, false, InvalidIdx});
 
   // For each block, find which slots are active within this block
   // and update the live intervals.
@@ -986,10 +1100,15 @@ void StackColoring::calculateLiveIntervals(unsigned NumSlots) {
     for (const MachineInstr &MI : MBB) {
       SmallVector<int, 4> slots;
       bool IsStart = false;
-      if (!isLifetimeStartOrEnd(MI, slots, IsStart))
+      bool AnyChange = isLifetimeStartOrEnd(MI, slots, IsStart);
+      AnyChange |= MidBlockSpillChanges[SpillChangeCounter].AtMI == &MI;
+      if (!AnyChange)
         continue;
       SlotIndex ThisIndex = Indexes->getInstructionIndex(MI);
-      for (auto Slot : slots) {
+      auto OnChange = [&](unsigned Slot, bool IsStart) {
+        // if (Slot == 3) {
+        //   outs() << "HERE\n";
+        // }
         if (IsStart) {
           StartedSinceInc = true;
           // If a slot is already definitely in use, we don't have to emit
@@ -1016,6 +1135,14 @@ void StackColoring::calculateLiveIntervals(unsigned NumSlots) {
           if (StartIdx[Slot] != -1)
             EndRangeFor(Slot);
         }
+      };
+      for (auto Slot : slots)
+        OnChange(Slot, IsStart);
+      for (; SpillChangeCounter < MidBlockSpillChanges.size() &&
+             MidBlockSpillChanges[SpillChangeCounter].AtMI == &MI;
+           SpillChangeCounter++) {
+        SplitSlotChanges Change = MidBlockSpillChanges[SpillChangeCounter];
+        OnChange(Change.Slot, Change.IsStart);
       }
     }
 
@@ -1035,6 +1162,9 @@ void StackColoring::calculateLiveIntervals(unsigned NumSlots) {
       Intervals[i]->addSegment(LiveInterval::Segment(Starts[i], EndIdx, VNI));
     }
   }
+  // Make sure we reached the end
+  assert(!MidBlockSpillChanges[SpillChangeCounter].AtMI);
+
   LivenessSize = CurrIdx;
   for (SlotInfo &Info : Slot2Info) {
     Info.Liveness.resize(CurrIdx);
@@ -1043,6 +1173,7 @@ void StackColoring::calculateLiveIntervals(unsigned NumSlots) {
     // SlotInfo::hasOverlap, which should have better cache locality
     std::sort(Info.StartLiveness.begin(), Info.StartLiveness.end());
 #ifndef NDEBUG
+    assert(Info.Liveness.any() == !Info.StartLiveness.empty());
     for (int Start : Info.StartLiveness)
       assert(Info.Liveness[Start]);
 #endif
@@ -1380,13 +1511,19 @@ bool StackColoringLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  StackColoring SC(&getAnalysis<SlotIndexesWrapperPass>().getSI());
+  LiveStacks* LS = nullptr;
+  LiveStacksWrapperLegacy* LSWL = getAnalysisIfAvailable<LiveStacksWrapperLegacy>();
+  if (LSWL)
+    LS = &LSWL->getLS();
+
+  StackColoring SC(&getAnalysis<SlotIndexesWrapperPass>().getSI(), LS);
   return SC.run(MF);
 }
 
 PreservedAnalyses StackColoringPass::run(MachineFunction &MF,
                                          MachineFunctionAnalysisManager &MFAM) {
-  StackColoring SC(&MFAM.getResult<SlotIndexesAnalysis>(MF));
+  StackColoring SC(&MFAM.getResult<SlotIndexesAnalysis>(MF),
+                   MFAM.getCachedResult<LiveStacksAnalysis>(MF));
   if (SC.run(MF))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
@@ -1400,6 +1537,8 @@ unsigned StackColoring::doMerging(unsigned NumSlots) {
   int64_t OrigPesSize = 0;
   for (unsigned Slot = 0; Slot < NumSlots; Slot++) {
     SlotInfo& Info = Slot2Info[Slot];
+    if (Info.StartLiveness.empty())
+      assert(!LS || !LS->hasInterval(Slot));
     if (!Info.StartLiveness.empty() &&
         DebugCounter::shouldExecute(ProcessSlot)) {
       FinalAlign = std::max(FinalAlign, Info.Align);
@@ -1595,6 +1734,9 @@ bool StackColoring::run(MachineFunction &Func) {
   Slot2Info.clear();
 
   unsigned NumSlots = MFI->getObjectIndexEnd();
+
+  // if (MF->getName() == "_ZL9transformPjS_Rm")
+  //   outs() << "HERE\n";
 
   // If there are no stack slots then there are no markers to remove.
   if (NumSlots < 2 || DisableColoring)

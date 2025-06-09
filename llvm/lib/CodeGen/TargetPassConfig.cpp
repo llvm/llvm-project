@@ -1498,13 +1498,13 @@ void TargetPassConfig::addOptimizedRegAlloc() {
   addPass(&MachineSchedulerID);
 
   if (addRegAssignAndRewriteOptimized()) {
-    // Perform stack slot coloring and post-ra machine LICM.
-    addPass(&StackSlotColoringID);
-
     if (MergedStackColoring) {
       // This pass merges large allocas. StackSlotColoring is a different pass
       // which merges spill slots.
       addPass(&StackColoringLegacyID);
+    } else {
+      // Perform stack slot coloring and post-ra machine LICM.
+      addPass(&StackSlotColoringID);
     }
 
     // Allow targets to expand pseudo instructions depending on the choice of
