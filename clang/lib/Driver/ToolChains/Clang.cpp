@@ -3351,7 +3351,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     CmdArgs.push_back(Args.MakeArgString("-fbfloat16-excess-precision=" +
                                          BFloat16ExcessPrecision));
 
-  StringRef Recip = ParseMRecipOption(D.getDiags(), Args);
+  StringRef Recip = parseMRecipOption(D.getDiags(), Args);
   if (!Recip.empty())
     CmdArgs.push_back(Args.MakeArgString("-mrecip=" + Recip));
 
@@ -7450,7 +7450,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   handleVectorizeLoopsArgs(Args, CmdArgs);
   handleVectorizeSLPArgs(Args, CmdArgs);
 
-  StringRef VecWidth = ParseMPreferVectorWidthOption(D.getDiags(), Args);
+  StringRef VecWidth = parseMPreferVectorWidthOption(D.getDiags(), Args);
   if (!VecWidth.empty())
     CmdArgs.push_back(Args.MakeArgString("-mprefer-vector-width=" + VecWidth));
 

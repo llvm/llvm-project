@@ -3170,7 +3170,7 @@ void tools::handleInterchangeLoopsArgs(const ArgList &Args,
 
 // Parse -mprefer-vector-width=. Return the Value string if well-formed.
 // Otherwise, return an empty string and issue a diagnosic message if needed.
-StringRef tools::ParseMPreferVectorWidthOption(clang::DiagnosticsEngine &Diags,
+StringRef tools::parseMPreferVectorWidthOption(clang::DiagnosticsEngine &Diags,
                                                const llvm::opt::ArgList &Args) {
   Arg *A = Args.getLastArg(clang::driver::options::OPT_mprefer_vector_width_EQ);
   if (!A)
@@ -3223,7 +3223,7 @@ static bool getRefinementStep(StringRef In, clang::DiagnosticsEngine &Diags,
 
 // Parse -mrecip. Return the Value string if well-formed.
 // Otherwise, return an empty string and issue a diagnosic message if needed.
-StringRef tools::ParseMRecipOption(clang::DiagnosticsEngine &Diags,
+StringRef tools::parseMRecipOption(clang::DiagnosticsEngine &Diags,
                                    const ArgList &Args) {
   StringRef DisabledPrefixIn = "!";
   StringRef DisabledPrefixOut = "!";
