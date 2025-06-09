@@ -19,6 +19,7 @@
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include <cstdint>
@@ -83,7 +84,7 @@ static MCDisassembler *createBPFDisassembler(const Target &T,
 }
 
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFDisassembler() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFDisassembler() {
   // Register the disassembler.
   TargetRegistry::RegisterMCDisassembler(getTheBPFTarget(),
                                          createBPFDisassembler);
