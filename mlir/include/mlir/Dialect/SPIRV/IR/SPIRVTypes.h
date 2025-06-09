@@ -428,13 +428,12 @@ public:
 
   CooperativeMatrixType cloneWith(std::optional<ArrayRef<int64_t>> shape,
                                   Type elementType) const {
-    if (shape == std::nullopt)
+    if (!shape)
       return get(elementType, getRows(), getColumns(), getScope(), getUse());
-    else {
-      assert(shape.value().size() == 2);
-      return get(elementType, shape.value()[0], shape.value()[1], getScope(),
-                 getUse());
-    }
+
+    assert(shape.value().size() == 2);
+    return get(elementType, shape.value()[0], shape.value()[1], getScope(),
+               getUse());
   }
 };
 
