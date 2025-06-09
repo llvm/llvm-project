@@ -4,6 +4,11 @@
 // RUN: %clang -cc1 -triple amdgcn-amd-amdhsa -o - -ffp-exception-behavior=strict -emit-llvm %s | FileCheck %s -check-prefixes=STRICT
 // RUN: %clang -cc1 -triple amdgcn-amd-amdhsa -o - -ffp-exception-behavior=maytrap -emit-llvm %s | FileCheck %s -check-prefixes=MAYTRAP
 // RUN: %clang -cc1 -triple amdgcn-amd-amdhsa -o - -fmath-errno -emit-llvm %s | FileCheck %s -check-prefixes=ERRNO
+// RUN: %clang -cc1 -triple spirv64-amd-amdhsa -o - -emit-llvm %s | FileCheck %s -check-prefixes=DEF-SPIRV
+// RUN: %clang -cc1 -triple spirv64-amd-amdhsa -o - -ffp-exception-behavior=ignore -emit-llvm %s | FileCheck %s -check-prefixes=IGNORE-SPIRV
+// RUN: %clang -cc1 -triple spirv64-amd-amdhsa -o - -ffp-exception-behavior=strict -emit-llvm %s | FileCheck %s -check-prefixes=STRICT-SPIRV
+// RUN: %clang -cc1 -triple spirv64-amd-amdhsa -o - -ffp-exception-behavior=maytrap -emit-llvm %s | FileCheck %s -check-prefixes=MAYTRAP-SPIRV
+// RUN: %clang -cc1 -triple spirv64-amd-amdhsa -o - -fmath-errno -emit-llvm %s | FileCheck %s -check-prefixes=ERRNO-SPIRV
 
 // DEFAULT-LABEL: define dso_local void @test_logbf(
 // DEFAULT-SAME: ) #[[ATTR0:[0-9]+]] {
@@ -77,6 +82,79 @@
 // ERRNO-NEXT:    [[CALL:%.*]] = call float @logbf(float noundef 0x40301999A0000000) #[[ATTR2:[0-9]+]]
 // ERRNO-NEXT:    store float [[CALL]], ptr [[D1_ASCAST]], align 4
 // ERRNO-NEXT:    ret void
+//
+// DEF-SPIRV-LABEL: define spir_func void @test_logbf(
+// DEF-SPIRV-SAME: ) addrspace(4) #[[ATTR0:[0-9]+]] {
+// DEF-SPIRV-NEXT:  [[ENTRY:.*:]]
+// DEF-SPIRV-NEXT:    [[D1:%.*]] = alloca float, align 4
+// DEF-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// DEF-SPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) { float, i32 } @llvm.frexp.f32.i32(float 0x40301999A0000000)
+// DEF-SPIRV-NEXT:    [[TMP1:%.*]] = extractvalue { float, i32 } [[TMP0]], 1
+// DEF-SPIRV-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
+// DEF-SPIRV-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to float
+// DEF-SPIRV-NEXT:    [[TMP4:%.*]] = call addrspace(4) float @llvm.fabs.f32(float 0x40301999A0000000)
+// DEF-SPIRV-NEXT:    [[TMP5:%.*]] = fcmp one float [[TMP4]], 0x7FF0000000000000
+// DEF-SPIRV-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], float [[TMP3]], float [[TMP4]]
+// DEF-SPIRV-NEXT:    [[TMP7:%.*]] = select i1 false, float 0xFFF0000000000000, float [[TMP6]]
+// DEF-SPIRV-NEXT:    store float [[TMP7]], ptr addrspace(4) [[D1_ASCAST]], align 4
+// DEF-SPIRV-NEXT:    ret void
+//
+// IGNORE-SPIRV-LABEL: define spir_func void @test_logbf(
+// IGNORE-SPIRV-SAME: ) addrspace(4) #[[ATTR0:[0-9]+]] {
+// IGNORE-SPIRV-NEXT:  [[ENTRY:.*:]]
+// IGNORE-SPIRV-NEXT:    [[D1:%.*]] = alloca float, align 4
+// IGNORE-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// IGNORE-SPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) { float, i32 } @llvm.frexp.f32.i32(float 0x40301999A0000000)
+// IGNORE-SPIRV-NEXT:    [[TMP1:%.*]] = extractvalue { float, i32 } [[TMP0]], 1
+// IGNORE-SPIRV-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
+// IGNORE-SPIRV-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to float
+// IGNORE-SPIRV-NEXT:    [[TMP4:%.*]] = call addrspace(4) float @llvm.fabs.f32(float 0x40301999A0000000)
+// IGNORE-SPIRV-NEXT:    [[TMP5:%.*]] = fcmp one float [[TMP4]], 0x7FF0000000000000
+// IGNORE-SPIRV-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], float [[TMP3]], float [[TMP4]]
+// IGNORE-SPIRV-NEXT:    [[TMP7:%.*]] = select i1 false, float 0xFFF0000000000000, float [[TMP6]]
+// IGNORE-SPIRV-NEXT:    store float [[TMP7]], ptr addrspace(4) [[D1_ASCAST]], align 4
+// IGNORE-SPIRV-NEXT:    ret void
+//
+// STRICT-SPIRV-LABEL: define spir_func void @test_logbf(
+// STRICT-SPIRV-SAME: ) addrspace(4) #[[ATTR0:[0-9]+]] {
+// STRICT-SPIRV-NEXT:  [[ENTRY:.*:]]
+// STRICT-SPIRV-NEXT:    [[D1:%.*]] = alloca float, align 4
+// STRICT-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// STRICT-SPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) { float, i32 } @llvm.frexp.f32.i32(float 0x40301999A0000000)
+// STRICT-SPIRV-NEXT:    [[TMP1:%.*]] = extractvalue { float, i32 } [[TMP0]], 1
+// STRICT-SPIRV-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
+// STRICT-SPIRV-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to float
+// STRICT-SPIRV-NEXT:    [[TMP4:%.*]] = call addrspace(4) float @llvm.fabs.f32(float 0x40301999A0000000)
+// STRICT-SPIRV-NEXT:    [[TMP5:%.*]] = fcmp one float [[TMP4]], 0x7FF0000000000000
+// STRICT-SPIRV-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], float [[TMP3]], float [[TMP4]]
+// STRICT-SPIRV-NEXT:    [[TMP7:%.*]] = select i1 false, float 0xFFF0000000000000, float [[TMP6]]
+// STRICT-SPIRV-NEXT:    store float [[TMP7]], ptr addrspace(4) [[D1_ASCAST]], align 4
+// STRICT-SPIRV-NEXT:    ret void
+//
+// MAYTRAP-SPIRV-LABEL: define spir_func void @test_logbf(
+// MAYTRAP-SPIRV-SAME: ) addrspace(4) #[[ATTR0:[0-9]+]] {
+// MAYTRAP-SPIRV-NEXT:  [[ENTRY:.*:]]
+// MAYTRAP-SPIRV-NEXT:    [[D1:%.*]] = alloca float, align 4
+// MAYTRAP-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// MAYTRAP-SPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) { float, i32 } @llvm.frexp.f32.i32(float 0x40301999A0000000)
+// MAYTRAP-SPIRV-NEXT:    [[TMP1:%.*]] = extractvalue { float, i32 } [[TMP0]], 1
+// MAYTRAP-SPIRV-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
+// MAYTRAP-SPIRV-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to float
+// MAYTRAP-SPIRV-NEXT:    [[TMP4:%.*]] = call addrspace(4) float @llvm.fabs.f32(float 0x40301999A0000000)
+// MAYTRAP-SPIRV-NEXT:    [[TMP5:%.*]] = fcmp one float [[TMP4]], 0x7FF0000000000000
+// MAYTRAP-SPIRV-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], float [[TMP3]], float [[TMP4]]
+// MAYTRAP-SPIRV-NEXT:    [[TMP7:%.*]] = select i1 false, float 0xFFF0000000000000, float [[TMP6]]
+// MAYTRAP-SPIRV-NEXT:    store float [[TMP7]], ptr addrspace(4) [[D1_ASCAST]], align 4
+// MAYTRAP-SPIRV-NEXT:    ret void
+//
+// ERRNO-SPIRV-LABEL: define spir_func void @test_logbf(
+// ERRNO-SPIRV-SAME: ) addrspace(4) #[[ATTR0:[0-9]+]] {
+// ERRNO-SPIRV-NEXT:  [[ENTRY:.*:]]
+// ERRNO-SPIRV-NEXT:    [[D1:%.*]] = alloca float, align 4
+// ERRNO-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// ERRNO-SPIRV-NEXT:    [[CALL:%.*]] = call spir_func addrspace(4) float @logbf(float noundef 0x40301999A0000000) #[[ATTR2:[0-9]+]]
+// ERRNO-SPIRV-NEXT:    store float [[CALL]], ptr addrspace(4) [[D1_ASCAST]], align 4
+// ERRNO-SPIRV-NEXT:    ret void
 //
 void test_logbf() {
   float D1 = __builtin_logbf(16.1f);
@@ -182,6 +260,107 @@ void test_logbf() {
 // ERRNO-NEXT:    store float [[CALL]], ptr [[D1_ASCAST]], align 4
 // ERRNO-NEXT:    ret void
 //
+// DEF-SPIRV-LABEL: define spir_func void @test_logbf_var(
+// DEF-SPIRV-SAME: float noundef [[A:%.*]]) addrspace(4) #[[ATTR0]] {
+// DEF-SPIRV-NEXT:  [[ENTRY:.*:]]
+// DEF-SPIRV-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
+// DEF-SPIRV-NEXT:    [[D1:%.*]] = alloca float, align 4
+// DEF-SPIRV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// DEF-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// DEF-SPIRV-NEXT:    store float [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// DEF-SPIRV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// DEF-SPIRV-NEXT:    [[TMP1:%.*]] = call addrspace(4) { float, i32 } @llvm.frexp.f32.i32(float [[TMP0]])
+// DEF-SPIRV-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 1
+// DEF-SPIRV-NEXT:    [[TMP3:%.*]] = add nsw i32 [[TMP2]], -1
+// DEF-SPIRV-NEXT:    [[TMP4:%.*]] = sitofp i32 [[TMP3]] to float
+// DEF-SPIRV-NEXT:    [[TMP5:%.*]] = load float, ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// DEF-SPIRV-NEXT:    [[TMP6:%.*]] = call addrspace(4) float @llvm.fabs.f32(float [[TMP5]])
+// DEF-SPIRV-NEXT:    [[TMP7:%.*]] = fcmp one float [[TMP6]], 0x7FF0000000000000
+// DEF-SPIRV-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], float [[TMP4]], float [[TMP6]]
+// DEF-SPIRV-NEXT:    [[TMP9:%.*]] = fcmp oeq float [[TMP0]], 0.000000e+00
+// DEF-SPIRV-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], float 0xFFF0000000000000, float [[TMP8]]
+// DEF-SPIRV-NEXT:    store float [[TMP10]], ptr addrspace(4) [[D1_ASCAST]], align 4
+// DEF-SPIRV-NEXT:    ret void
+//
+// IGNORE-SPIRV-LABEL: define spir_func void @test_logbf_var(
+// IGNORE-SPIRV-SAME: float noundef [[A:%.*]]) addrspace(4) #[[ATTR0]] {
+// IGNORE-SPIRV-NEXT:  [[ENTRY:.*:]]
+// IGNORE-SPIRV-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
+// IGNORE-SPIRV-NEXT:    [[D1:%.*]] = alloca float, align 4
+// IGNORE-SPIRV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// IGNORE-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// IGNORE-SPIRV-NEXT:    store float [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// IGNORE-SPIRV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// IGNORE-SPIRV-NEXT:    [[TMP1:%.*]] = call addrspace(4) { float, i32 } @llvm.frexp.f32.i32(float [[TMP0]])
+// IGNORE-SPIRV-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 1
+// IGNORE-SPIRV-NEXT:    [[TMP3:%.*]] = add nsw i32 [[TMP2]], -1
+// IGNORE-SPIRV-NEXT:    [[TMP4:%.*]] = sitofp i32 [[TMP3]] to float
+// IGNORE-SPIRV-NEXT:    [[TMP5:%.*]] = load float, ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// IGNORE-SPIRV-NEXT:    [[TMP6:%.*]] = call addrspace(4) float @llvm.fabs.f32(float [[TMP5]])
+// IGNORE-SPIRV-NEXT:    [[TMP7:%.*]] = fcmp one float [[TMP6]], 0x7FF0000000000000
+// IGNORE-SPIRV-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], float [[TMP4]], float [[TMP6]]
+// IGNORE-SPIRV-NEXT:    [[TMP9:%.*]] = fcmp oeq float [[TMP0]], 0.000000e+00
+// IGNORE-SPIRV-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], float 0xFFF0000000000000, float [[TMP8]]
+// IGNORE-SPIRV-NEXT:    store float [[TMP10]], ptr addrspace(4) [[D1_ASCAST]], align 4
+// IGNORE-SPIRV-NEXT:    ret void
+//
+// STRICT-SPIRV-LABEL: define spir_func void @test_logbf_var(
+// STRICT-SPIRV-SAME: float noundef [[A:%.*]]) addrspace(4) #[[ATTR0]] {
+// STRICT-SPIRV-NEXT:  [[ENTRY:.*:]]
+// STRICT-SPIRV-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
+// STRICT-SPIRV-NEXT:    [[D1:%.*]] = alloca float, align 4
+// STRICT-SPIRV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// STRICT-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// STRICT-SPIRV-NEXT:    store float [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// STRICT-SPIRV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// STRICT-SPIRV-NEXT:    [[TMP1:%.*]] = call addrspace(4) { float, i32 } @llvm.frexp.f32.i32(float [[TMP0]])
+// STRICT-SPIRV-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 1
+// STRICT-SPIRV-NEXT:    [[TMP3:%.*]] = add nsw i32 [[TMP2]], -1
+// STRICT-SPIRV-NEXT:    [[TMP4:%.*]] = sitofp i32 [[TMP3]] to float
+// STRICT-SPIRV-NEXT:    [[TMP5:%.*]] = load float, ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// STRICT-SPIRV-NEXT:    [[TMP6:%.*]] = call addrspace(4) float @llvm.fabs.f32(float [[TMP5]])
+// STRICT-SPIRV-NEXT:    [[TMP7:%.*]] = fcmp one float [[TMP6]], 0x7FF0000000000000
+// STRICT-SPIRV-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], float [[TMP4]], float [[TMP6]]
+// STRICT-SPIRV-NEXT:    [[TMP9:%.*]] = fcmp oeq float [[TMP0]], 0.000000e+00
+// STRICT-SPIRV-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], float 0xFFF0000000000000, float [[TMP8]]
+// STRICT-SPIRV-NEXT:    store float [[TMP10]], ptr addrspace(4) [[D1_ASCAST]], align 4
+// STRICT-SPIRV-NEXT:    ret void
+//
+// MAYTRAP-SPIRV-LABEL: define spir_func void @test_logbf_var(
+// MAYTRAP-SPIRV-SAME: float noundef [[A:%.*]]) addrspace(4) #[[ATTR0]] {
+// MAYTRAP-SPIRV-NEXT:  [[ENTRY:.*:]]
+// MAYTRAP-SPIRV-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
+// MAYTRAP-SPIRV-NEXT:    [[D1:%.*]] = alloca float, align 4
+// MAYTRAP-SPIRV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// MAYTRAP-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// MAYTRAP-SPIRV-NEXT:    store float [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// MAYTRAP-SPIRV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// MAYTRAP-SPIRV-NEXT:    [[TMP1:%.*]] = call addrspace(4) { float, i32 } @llvm.frexp.f32.i32(float [[TMP0]])
+// MAYTRAP-SPIRV-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 1
+// MAYTRAP-SPIRV-NEXT:    [[TMP3:%.*]] = add nsw i32 [[TMP2]], -1
+// MAYTRAP-SPIRV-NEXT:    [[TMP4:%.*]] = sitofp i32 [[TMP3]] to float
+// MAYTRAP-SPIRV-NEXT:    [[TMP5:%.*]] = load float, ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// MAYTRAP-SPIRV-NEXT:    [[TMP6:%.*]] = call addrspace(4) float @llvm.fabs.f32(float [[TMP5]])
+// MAYTRAP-SPIRV-NEXT:    [[TMP7:%.*]] = fcmp one float [[TMP6]], 0x7FF0000000000000
+// MAYTRAP-SPIRV-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], float [[TMP4]], float [[TMP6]]
+// MAYTRAP-SPIRV-NEXT:    [[TMP9:%.*]] = fcmp oeq float [[TMP0]], 0.000000e+00
+// MAYTRAP-SPIRV-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], float 0xFFF0000000000000, float [[TMP8]]
+// MAYTRAP-SPIRV-NEXT:    store float [[TMP10]], ptr addrspace(4) [[D1_ASCAST]], align 4
+// MAYTRAP-SPIRV-NEXT:    ret void
+//
+// ERRNO-SPIRV-LABEL: define spir_func void @test_logbf_var(
+// ERRNO-SPIRV-SAME: float noundef [[A:%.*]]) addrspace(4) #[[ATTR0]] {
+// ERRNO-SPIRV-NEXT:  [[ENTRY:.*:]]
+// ERRNO-SPIRV-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
+// ERRNO-SPIRV-NEXT:    [[D1:%.*]] = alloca float, align 4
+// ERRNO-SPIRV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// ERRNO-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// ERRNO-SPIRV-NEXT:    store float [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// ERRNO-SPIRV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// ERRNO-SPIRV-NEXT:    [[CALL:%.*]] = call spir_func addrspace(4) float @logbf(float noundef [[TMP0]]) #[[ATTR2]]
+// ERRNO-SPIRV-NEXT:    store float [[CALL]], ptr addrspace(4) [[D1_ASCAST]], align 4
+// ERRNO-SPIRV-NEXT:    ret void
+//
 void test_logbf_var(float a) {
   float D1 = __builtin_logbf(a);
 }
@@ -272,6 +451,79 @@ void test_logbf_var(float a) {
 // ERRNO-NEXT:    [[CALL:%.*]] = call double @logb(double noundef 1.510000e+01) #[[ATTR2]]
 // ERRNO-NEXT:    store double [[CALL]], ptr [[D1_ASCAST]], align 8
 // ERRNO-NEXT:    ret void
+//
+// DEF-SPIRV-LABEL: define spir_func void @test_logb(
+// DEF-SPIRV-SAME: ) addrspace(4) #[[ATTR0]] {
+// DEF-SPIRV-NEXT:  [[ENTRY:.*:]]
+// DEF-SPIRV-NEXT:    [[D1:%.*]] = alloca double, align 8
+// DEF-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// DEF-SPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) { double, i32 } @llvm.frexp.f64.i32(double 1.510000e+01)
+// DEF-SPIRV-NEXT:    [[TMP1:%.*]] = extractvalue { double, i32 } [[TMP0]], 1
+// DEF-SPIRV-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
+// DEF-SPIRV-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to double
+// DEF-SPIRV-NEXT:    [[TMP4:%.*]] = call addrspace(4) double @llvm.fabs.f64(double 1.510000e+01)
+// DEF-SPIRV-NEXT:    [[TMP5:%.*]] = fcmp one double [[TMP4]], 0x7FF0000000000000
+// DEF-SPIRV-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], double [[TMP3]], double [[TMP4]]
+// DEF-SPIRV-NEXT:    [[TMP7:%.*]] = select i1 false, double 0xFFF0000000000000, double [[TMP6]]
+// DEF-SPIRV-NEXT:    store double [[TMP7]], ptr addrspace(4) [[D1_ASCAST]], align 8
+// DEF-SPIRV-NEXT:    ret void
+//
+// IGNORE-SPIRV-LABEL: define spir_func void @test_logb(
+// IGNORE-SPIRV-SAME: ) addrspace(4) #[[ATTR0]] {
+// IGNORE-SPIRV-NEXT:  [[ENTRY:.*:]]
+// IGNORE-SPIRV-NEXT:    [[D1:%.*]] = alloca double, align 8
+// IGNORE-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// IGNORE-SPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) { double, i32 } @llvm.frexp.f64.i32(double 1.510000e+01)
+// IGNORE-SPIRV-NEXT:    [[TMP1:%.*]] = extractvalue { double, i32 } [[TMP0]], 1
+// IGNORE-SPIRV-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
+// IGNORE-SPIRV-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to double
+// IGNORE-SPIRV-NEXT:    [[TMP4:%.*]] = call addrspace(4) double @llvm.fabs.f64(double 1.510000e+01)
+// IGNORE-SPIRV-NEXT:    [[TMP5:%.*]] = fcmp one double [[TMP4]], 0x7FF0000000000000
+// IGNORE-SPIRV-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], double [[TMP3]], double [[TMP4]]
+// IGNORE-SPIRV-NEXT:    [[TMP7:%.*]] = select i1 false, double 0xFFF0000000000000, double [[TMP6]]
+// IGNORE-SPIRV-NEXT:    store double [[TMP7]], ptr addrspace(4) [[D1_ASCAST]], align 8
+// IGNORE-SPIRV-NEXT:    ret void
+//
+// STRICT-SPIRV-LABEL: define spir_func void @test_logb(
+// STRICT-SPIRV-SAME: ) addrspace(4) #[[ATTR0]] {
+// STRICT-SPIRV-NEXT:  [[ENTRY:.*:]]
+// STRICT-SPIRV-NEXT:    [[D1:%.*]] = alloca double, align 8
+// STRICT-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// STRICT-SPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) { double, i32 } @llvm.frexp.f64.i32(double 1.510000e+01)
+// STRICT-SPIRV-NEXT:    [[TMP1:%.*]] = extractvalue { double, i32 } [[TMP0]], 1
+// STRICT-SPIRV-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
+// STRICT-SPIRV-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to double
+// STRICT-SPIRV-NEXT:    [[TMP4:%.*]] = call addrspace(4) double @llvm.fabs.f64(double 1.510000e+01)
+// STRICT-SPIRV-NEXT:    [[TMP5:%.*]] = fcmp one double [[TMP4]], 0x7FF0000000000000
+// STRICT-SPIRV-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], double [[TMP3]], double [[TMP4]]
+// STRICT-SPIRV-NEXT:    [[TMP7:%.*]] = select i1 false, double 0xFFF0000000000000, double [[TMP6]]
+// STRICT-SPIRV-NEXT:    store double [[TMP7]], ptr addrspace(4) [[D1_ASCAST]], align 8
+// STRICT-SPIRV-NEXT:    ret void
+//
+// MAYTRAP-SPIRV-LABEL: define spir_func void @test_logb(
+// MAYTRAP-SPIRV-SAME: ) addrspace(4) #[[ATTR0]] {
+// MAYTRAP-SPIRV-NEXT:  [[ENTRY:.*:]]
+// MAYTRAP-SPIRV-NEXT:    [[D1:%.*]] = alloca double, align 8
+// MAYTRAP-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// MAYTRAP-SPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) { double, i32 } @llvm.frexp.f64.i32(double 1.510000e+01)
+// MAYTRAP-SPIRV-NEXT:    [[TMP1:%.*]] = extractvalue { double, i32 } [[TMP0]], 1
+// MAYTRAP-SPIRV-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
+// MAYTRAP-SPIRV-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to double
+// MAYTRAP-SPIRV-NEXT:    [[TMP4:%.*]] = call addrspace(4) double @llvm.fabs.f64(double 1.510000e+01)
+// MAYTRAP-SPIRV-NEXT:    [[TMP5:%.*]] = fcmp one double [[TMP4]], 0x7FF0000000000000
+// MAYTRAP-SPIRV-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], double [[TMP3]], double [[TMP4]]
+// MAYTRAP-SPIRV-NEXT:    [[TMP7:%.*]] = select i1 false, double 0xFFF0000000000000, double [[TMP6]]
+// MAYTRAP-SPIRV-NEXT:    store double [[TMP7]], ptr addrspace(4) [[D1_ASCAST]], align 8
+// MAYTRAP-SPIRV-NEXT:    ret void
+//
+// ERRNO-SPIRV-LABEL: define spir_func void @test_logb(
+// ERRNO-SPIRV-SAME: ) addrspace(4) #[[ATTR0]] {
+// ERRNO-SPIRV-NEXT:  [[ENTRY:.*:]]
+// ERRNO-SPIRV-NEXT:    [[D1:%.*]] = alloca double, align 8
+// ERRNO-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// ERRNO-SPIRV-NEXT:    [[CALL:%.*]] = call spir_func addrspace(4) double @logb(double noundef 1.510000e+01) #[[ATTR2]]
+// ERRNO-SPIRV-NEXT:    store double [[CALL]], ptr addrspace(4) [[D1_ASCAST]], align 8
+// ERRNO-SPIRV-NEXT:    ret void
 //
 void test_logb() {
   double D1 = __builtin_logb(15.1);
@@ -398,6 +650,107 @@ void test_logb() {
 // ERRNO-NEXT:    store double [[CALL]], ptr [[D1_ASCAST]], align 8
 // ERRNO-NEXT:    ret void
 //
+// DEF-SPIRV-LABEL: define spir_func void @test_logb_var(
+// DEF-SPIRV-SAME: double noundef [[A:%.*]]) addrspace(4) #[[ATTR0]] {
+// DEF-SPIRV-NEXT:  [[ENTRY:.*:]]
+// DEF-SPIRV-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
+// DEF-SPIRV-NEXT:    [[D1:%.*]] = alloca double, align 8
+// DEF-SPIRV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// DEF-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// DEF-SPIRV-NEXT:    store double [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// DEF-SPIRV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// DEF-SPIRV-NEXT:    [[TMP1:%.*]] = call addrspace(4) { double, i32 } @llvm.frexp.f64.i32(double [[TMP0]])
+// DEF-SPIRV-NEXT:    [[TMP2:%.*]] = extractvalue { double, i32 } [[TMP1]], 1
+// DEF-SPIRV-NEXT:    [[TMP3:%.*]] = add nsw i32 [[TMP2]], -1
+// DEF-SPIRV-NEXT:    [[TMP4:%.*]] = sitofp i32 [[TMP3]] to double
+// DEF-SPIRV-NEXT:    [[TMP5:%.*]] = load double, ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// DEF-SPIRV-NEXT:    [[TMP6:%.*]] = call addrspace(4) double @llvm.fabs.f64(double [[TMP5]])
+// DEF-SPIRV-NEXT:    [[TMP7:%.*]] = fcmp one double [[TMP6]], 0x7FF0000000000000
+// DEF-SPIRV-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], double [[TMP4]], double [[TMP6]]
+// DEF-SPIRV-NEXT:    [[TMP9:%.*]] = fcmp oeq double [[TMP0]], 0.000000e+00
+// DEF-SPIRV-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], double 0xFFF0000000000000, double [[TMP8]]
+// DEF-SPIRV-NEXT:    store double [[TMP10]], ptr addrspace(4) [[D1_ASCAST]], align 8
+// DEF-SPIRV-NEXT:    ret void
+//
+// IGNORE-SPIRV-LABEL: define spir_func void @test_logb_var(
+// IGNORE-SPIRV-SAME: double noundef [[A:%.*]]) addrspace(4) #[[ATTR0]] {
+// IGNORE-SPIRV-NEXT:  [[ENTRY:.*:]]
+// IGNORE-SPIRV-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
+// IGNORE-SPIRV-NEXT:    [[D1:%.*]] = alloca double, align 8
+// IGNORE-SPIRV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// IGNORE-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// IGNORE-SPIRV-NEXT:    store double [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// IGNORE-SPIRV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// IGNORE-SPIRV-NEXT:    [[TMP1:%.*]] = call addrspace(4) { double, i32 } @llvm.frexp.f64.i32(double [[TMP0]])
+// IGNORE-SPIRV-NEXT:    [[TMP2:%.*]] = extractvalue { double, i32 } [[TMP1]], 1
+// IGNORE-SPIRV-NEXT:    [[TMP3:%.*]] = add nsw i32 [[TMP2]], -1
+// IGNORE-SPIRV-NEXT:    [[TMP4:%.*]] = sitofp i32 [[TMP3]] to double
+// IGNORE-SPIRV-NEXT:    [[TMP5:%.*]] = load double, ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// IGNORE-SPIRV-NEXT:    [[TMP6:%.*]] = call addrspace(4) double @llvm.fabs.f64(double [[TMP5]])
+// IGNORE-SPIRV-NEXT:    [[TMP7:%.*]] = fcmp one double [[TMP6]], 0x7FF0000000000000
+// IGNORE-SPIRV-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], double [[TMP4]], double [[TMP6]]
+// IGNORE-SPIRV-NEXT:    [[TMP9:%.*]] = fcmp oeq double [[TMP0]], 0.000000e+00
+// IGNORE-SPIRV-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], double 0xFFF0000000000000, double [[TMP8]]
+// IGNORE-SPIRV-NEXT:    store double [[TMP10]], ptr addrspace(4) [[D1_ASCAST]], align 8
+// IGNORE-SPIRV-NEXT:    ret void
+//
+// STRICT-SPIRV-LABEL: define spir_func void @test_logb_var(
+// STRICT-SPIRV-SAME: double noundef [[A:%.*]]) addrspace(4) #[[ATTR0]] {
+// STRICT-SPIRV-NEXT:  [[ENTRY:.*:]]
+// STRICT-SPIRV-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
+// STRICT-SPIRV-NEXT:    [[D1:%.*]] = alloca double, align 8
+// STRICT-SPIRV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// STRICT-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// STRICT-SPIRV-NEXT:    store double [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// STRICT-SPIRV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// STRICT-SPIRV-NEXT:    [[TMP1:%.*]] = call addrspace(4) { double, i32 } @llvm.frexp.f64.i32(double [[TMP0]])
+// STRICT-SPIRV-NEXT:    [[TMP2:%.*]] = extractvalue { double, i32 } [[TMP1]], 1
+// STRICT-SPIRV-NEXT:    [[TMP3:%.*]] = add nsw i32 [[TMP2]], -1
+// STRICT-SPIRV-NEXT:    [[TMP4:%.*]] = sitofp i32 [[TMP3]] to double
+// STRICT-SPIRV-NEXT:    [[TMP5:%.*]] = load double, ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// STRICT-SPIRV-NEXT:    [[TMP6:%.*]] = call addrspace(4) double @llvm.fabs.f64(double [[TMP5]])
+// STRICT-SPIRV-NEXT:    [[TMP7:%.*]] = fcmp one double [[TMP6]], 0x7FF0000000000000
+// STRICT-SPIRV-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], double [[TMP4]], double [[TMP6]]
+// STRICT-SPIRV-NEXT:    [[TMP9:%.*]] = fcmp oeq double [[TMP0]], 0.000000e+00
+// STRICT-SPIRV-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], double 0xFFF0000000000000, double [[TMP8]]
+// STRICT-SPIRV-NEXT:    store double [[TMP10]], ptr addrspace(4) [[D1_ASCAST]], align 8
+// STRICT-SPIRV-NEXT:    ret void
+//
+// MAYTRAP-SPIRV-LABEL: define spir_func void @test_logb_var(
+// MAYTRAP-SPIRV-SAME: double noundef [[A:%.*]]) addrspace(4) #[[ATTR0]] {
+// MAYTRAP-SPIRV-NEXT:  [[ENTRY:.*:]]
+// MAYTRAP-SPIRV-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
+// MAYTRAP-SPIRV-NEXT:    [[D1:%.*]] = alloca double, align 8
+// MAYTRAP-SPIRV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// MAYTRAP-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// MAYTRAP-SPIRV-NEXT:    store double [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// MAYTRAP-SPIRV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// MAYTRAP-SPIRV-NEXT:    [[TMP1:%.*]] = call addrspace(4) { double, i32 } @llvm.frexp.f64.i32(double [[TMP0]])
+// MAYTRAP-SPIRV-NEXT:    [[TMP2:%.*]] = extractvalue { double, i32 } [[TMP1]], 1
+// MAYTRAP-SPIRV-NEXT:    [[TMP3:%.*]] = add nsw i32 [[TMP2]], -1
+// MAYTRAP-SPIRV-NEXT:    [[TMP4:%.*]] = sitofp i32 [[TMP3]] to double
+// MAYTRAP-SPIRV-NEXT:    [[TMP5:%.*]] = load double, ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// MAYTRAP-SPIRV-NEXT:    [[TMP6:%.*]] = call addrspace(4) double @llvm.fabs.f64(double [[TMP5]])
+// MAYTRAP-SPIRV-NEXT:    [[TMP7:%.*]] = fcmp one double [[TMP6]], 0x7FF0000000000000
+// MAYTRAP-SPIRV-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], double [[TMP4]], double [[TMP6]]
+// MAYTRAP-SPIRV-NEXT:    [[TMP9:%.*]] = fcmp oeq double [[TMP0]], 0.000000e+00
+// MAYTRAP-SPIRV-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], double 0xFFF0000000000000, double [[TMP8]]
+// MAYTRAP-SPIRV-NEXT:    store double [[TMP10]], ptr addrspace(4) [[D1_ASCAST]], align 8
+// MAYTRAP-SPIRV-NEXT:    ret void
+//
+// ERRNO-SPIRV-LABEL: define spir_func void @test_logb_var(
+// ERRNO-SPIRV-SAME: double noundef [[A:%.*]]) addrspace(4) #[[ATTR0]] {
+// ERRNO-SPIRV-NEXT:  [[ENTRY:.*:]]
+// ERRNO-SPIRV-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
+// ERRNO-SPIRV-NEXT:    [[D1:%.*]] = alloca double, align 8
+// ERRNO-SPIRV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// ERRNO-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// ERRNO-SPIRV-NEXT:    store double [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// ERRNO-SPIRV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// ERRNO-SPIRV-NEXT:    [[CALL:%.*]] = call spir_func addrspace(4) double @logb(double noundef [[TMP0]]) #[[ATTR2]]
+// ERRNO-SPIRV-NEXT:    store double [[CALL]], ptr addrspace(4) [[D1_ASCAST]], align 8
+// ERRNO-SPIRV-NEXT:    ret void
+//
 void test_logb_var(double a) {
   double D1 = __builtin_logb(a);
 }
@@ -454,6 +807,51 @@ void test_logb_var(double a) {
 // ERRNO-NEXT:    [[CALL:%.*]] = call float @scalbnf(float noundef 0x4030B33340000000, i32 noundef 10) #[[ATTR2]]
 // ERRNO-NEXT:    store float [[CALL]], ptr [[D1_ASCAST]], align 4
 // ERRNO-NEXT:    ret void
+//
+// DEF-SPIRV-LABEL: define spir_func void @test_scalbnf(
+// DEF-SPIRV-SAME: ) addrspace(4) #[[ATTR0]] {
+// DEF-SPIRV-NEXT:  [[ENTRY:.*:]]
+// DEF-SPIRV-NEXT:    [[D1:%.*]] = alloca float, align 4
+// DEF-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// DEF-SPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float 0x4030B33340000000, i32 10)
+// DEF-SPIRV-NEXT:    store float [[TMP0]], ptr addrspace(4) [[D1_ASCAST]], align 4
+// DEF-SPIRV-NEXT:    ret void
+//
+// IGNORE-SPIRV-LABEL: define spir_func void @test_scalbnf(
+// IGNORE-SPIRV-SAME: ) addrspace(4) #[[ATTR0]] {
+// IGNORE-SPIRV-NEXT:  [[ENTRY:.*:]]
+// IGNORE-SPIRV-NEXT:    [[D1:%.*]] = alloca float, align 4
+// IGNORE-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// IGNORE-SPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float 0x4030B33340000000, i32 10)
+// IGNORE-SPIRV-NEXT:    store float [[TMP0]], ptr addrspace(4) [[D1_ASCAST]], align 4
+// IGNORE-SPIRV-NEXT:    ret void
+//
+// STRICT-SPIRV-LABEL: define spir_func void @test_scalbnf(
+// STRICT-SPIRV-SAME: ) addrspace(4) #[[ATTR0]] {
+// STRICT-SPIRV-NEXT:  [[ENTRY:.*:]]
+// STRICT-SPIRV-NEXT:    [[D1:%.*]] = alloca float, align 4
+// STRICT-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// STRICT-SPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float 0x4030B33340000000, i32 10)
+// STRICT-SPIRV-NEXT:    store float [[TMP0]], ptr addrspace(4) [[D1_ASCAST]], align 4
+// STRICT-SPIRV-NEXT:    ret void
+//
+// MAYTRAP-SPIRV-LABEL: define spir_func void @test_scalbnf(
+// MAYTRAP-SPIRV-SAME: ) addrspace(4) #[[ATTR0]] {
+// MAYTRAP-SPIRV-NEXT:  [[ENTRY:.*:]]
+// MAYTRAP-SPIRV-NEXT:    [[D1:%.*]] = alloca float, align 4
+// MAYTRAP-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// MAYTRAP-SPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float 0x4030B33340000000, i32 10)
+// MAYTRAP-SPIRV-NEXT:    store float [[TMP0]], ptr addrspace(4) [[D1_ASCAST]], align 4
+// MAYTRAP-SPIRV-NEXT:    ret void
+//
+// ERRNO-SPIRV-LABEL: define spir_func void @test_scalbnf(
+// ERRNO-SPIRV-SAME: ) addrspace(4) #[[ATTR0]] {
+// ERRNO-SPIRV-NEXT:  [[ENTRY:.*:]]
+// ERRNO-SPIRV-NEXT:    [[D1:%.*]] = alloca float, align 4
+// ERRNO-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// ERRNO-SPIRV-NEXT:    [[CALL:%.*]] = call spir_func addrspace(4) float @scalbnf(float noundef 0x4030B33340000000, i32 noundef 10) #[[ATTR2]]
+// ERRNO-SPIRV-NEXT:    store float [[CALL]], ptr addrspace(4) [[D1_ASCAST]], align 4
+// ERRNO-SPIRV-NEXT:    ret void
 //
 void test_scalbnf() {
   float D1 = __builtin_scalbnf(16.7f, 10);
@@ -535,6 +933,71 @@ void test_scalbnf() {
 // ERRNO-NEXT:    store float [[CALL]], ptr [[D1_ASCAST]], align 4
 // ERRNO-NEXT:    ret void
 //
+// DEF-SPIRV-LABEL: define spir_func void @test_scalbnf_var1(
+// DEF-SPIRV-SAME: float noundef [[A:%.*]]) addrspace(4) #[[ATTR0]] {
+// DEF-SPIRV-NEXT:  [[ENTRY:.*:]]
+// DEF-SPIRV-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
+// DEF-SPIRV-NEXT:    [[D1:%.*]] = alloca float, align 4
+// DEF-SPIRV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// DEF-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// DEF-SPIRV-NEXT:    store float [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// DEF-SPIRV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// DEF-SPIRV-NEXT:    [[TMP1:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float [[TMP0]], i32 9)
+// DEF-SPIRV-NEXT:    store float [[TMP1]], ptr addrspace(4) [[D1_ASCAST]], align 4
+// DEF-SPIRV-NEXT:    ret void
+//
+// IGNORE-SPIRV-LABEL: define spir_func void @test_scalbnf_var1(
+// IGNORE-SPIRV-SAME: float noundef [[A:%.*]]) addrspace(4) #[[ATTR0]] {
+// IGNORE-SPIRV-NEXT:  [[ENTRY:.*:]]
+// IGNORE-SPIRV-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
+// IGNORE-SPIRV-NEXT:    [[D1:%.*]] = alloca float, align 4
+// IGNORE-SPIRV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// IGNORE-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// IGNORE-SPIRV-NEXT:    store float [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// IGNORE-SPIRV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// IGNORE-SPIRV-NEXT:    [[TMP1:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float [[TMP0]], i32 9)
+// IGNORE-SPIRV-NEXT:    store float [[TMP1]], ptr addrspace(4) [[D1_ASCAST]], align 4
+// IGNORE-SPIRV-NEXT:    ret void
+//
+// STRICT-SPIRV-LABEL: define spir_func void @test_scalbnf_var1(
+// STRICT-SPIRV-SAME: float noundef [[A:%.*]]) addrspace(4) #[[ATTR0]] {
+// STRICT-SPIRV-NEXT:  [[ENTRY:.*:]]
+// STRICT-SPIRV-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
+// STRICT-SPIRV-NEXT:    [[D1:%.*]] = alloca float, align 4
+// STRICT-SPIRV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// STRICT-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// STRICT-SPIRV-NEXT:    store float [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// STRICT-SPIRV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// STRICT-SPIRV-NEXT:    [[TMP1:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float [[TMP0]], i32 9)
+// STRICT-SPIRV-NEXT:    store float [[TMP1]], ptr addrspace(4) [[D1_ASCAST]], align 4
+// STRICT-SPIRV-NEXT:    ret void
+//
+// MAYTRAP-SPIRV-LABEL: define spir_func void @test_scalbnf_var1(
+// MAYTRAP-SPIRV-SAME: float noundef [[A:%.*]]) addrspace(4) #[[ATTR0]] {
+// MAYTRAP-SPIRV-NEXT:  [[ENTRY:.*:]]
+// MAYTRAP-SPIRV-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
+// MAYTRAP-SPIRV-NEXT:    [[D1:%.*]] = alloca float, align 4
+// MAYTRAP-SPIRV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// MAYTRAP-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// MAYTRAP-SPIRV-NEXT:    store float [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// MAYTRAP-SPIRV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// MAYTRAP-SPIRV-NEXT:    [[TMP1:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float [[TMP0]], i32 9)
+// MAYTRAP-SPIRV-NEXT:    store float [[TMP1]], ptr addrspace(4) [[D1_ASCAST]], align 4
+// MAYTRAP-SPIRV-NEXT:    ret void
+//
+// ERRNO-SPIRV-LABEL: define spir_func void @test_scalbnf_var1(
+// ERRNO-SPIRV-SAME: float noundef [[A:%.*]]) addrspace(4) #[[ATTR0]] {
+// ERRNO-SPIRV-NEXT:  [[ENTRY:.*:]]
+// ERRNO-SPIRV-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
+// ERRNO-SPIRV-NEXT:    [[D1:%.*]] = alloca float, align 4
+// ERRNO-SPIRV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// ERRNO-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// ERRNO-SPIRV-NEXT:    store float [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// ERRNO-SPIRV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// ERRNO-SPIRV-NEXT:    [[CALL:%.*]] = call spir_func addrspace(4) float @scalbnf(float noundef [[TMP0]], i32 noundef 9) #[[ATTR2]]
+// ERRNO-SPIRV-NEXT:    store float [[CALL]], ptr addrspace(4) [[D1_ASCAST]], align 4
+// ERRNO-SPIRV-NEXT:    ret void
+//
 void test_scalbnf_var1(float a) {
   float D1 = __builtin_scalbnf(a, 9);
 }
@@ -614,6 +1077,71 @@ void test_scalbnf_var1(float a) {
 // ERRNO-NEXT:    [[CALL:%.*]] = call float @scalbnf(float noundef 0x402E666660000000, i32 noundef [[TMP0]]) #[[ATTR2]]
 // ERRNO-NEXT:    store float [[CALL]], ptr [[D1_ASCAST]], align 4
 // ERRNO-NEXT:    ret void
+//
+// DEF-SPIRV-LABEL: define spir_func void @test_scalbnf_var2(
+// DEF-SPIRV-SAME: i32 noundef [[B:%.*]]) addrspace(4) #[[ATTR0]] {
+// DEF-SPIRV-NEXT:  [[ENTRY:.*:]]
+// DEF-SPIRV-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
+// DEF-SPIRV-NEXT:    [[D1:%.*]] = alloca float, align 4
+// DEF-SPIRV-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr [[B_ADDR]] to ptr addrspace(4)
+// DEF-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// DEF-SPIRV-NEXT:    store i32 [[B]], ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// DEF-SPIRV-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// DEF-SPIRV-NEXT:    [[TMP1:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float 0x402E666660000000, i32 [[TMP0]])
+// DEF-SPIRV-NEXT:    store float [[TMP1]], ptr addrspace(4) [[D1_ASCAST]], align 4
+// DEF-SPIRV-NEXT:    ret void
+//
+// IGNORE-SPIRV-LABEL: define spir_func void @test_scalbnf_var2(
+// IGNORE-SPIRV-SAME: i32 noundef [[B:%.*]]) addrspace(4) #[[ATTR0]] {
+// IGNORE-SPIRV-NEXT:  [[ENTRY:.*:]]
+// IGNORE-SPIRV-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
+// IGNORE-SPIRV-NEXT:    [[D1:%.*]] = alloca float, align 4
+// IGNORE-SPIRV-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr [[B_ADDR]] to ptr addrspace(4)
+// IGNORE-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// IGNORE-SPIRV-NEXT:    store i32 [[B]], ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// IGNORE-SPIRV-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// IGNORE-SPIRV-NEXT:    [[TMP1:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float 0x402E666660000000, i32 [[TMP0]])
+// IGNORE-SPIRV-NEXT:    store float [[TMP1]], ptr addrspace(4) [[D1_ASCAST]], align 4
+// IGNORE-SPIRV-NEXT:    ret void
+//
+// STRICT-SPIRV-LABEL: define spir_func void @test_scalbnf_var2(
+// STRICT-SPIRV-SAME: i32 noundef [[B:%.*]]) addrspace(4) #[[ATTR0]] {
+// STRICT-SPIRV-NEXT:  [[ENTRY:.*:]]
+// STRICT-SPIRV-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
+// STRICT-SPIRV-NEXT:    [[D1:%.*]] = alloca float, align 4
+// STRICT-SPIRV-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr [[B_ADDR]] to ptr addrspace(4)
+// STRICT-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// STRICT-SPIRV-NEXT:    store i32 [[B]], ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// STRICT-SPIRV-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// STRICT-SPIRV-NEXT:    [[TMP1:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float 0x402E666660000000, i32 [[TMP0]])
+// STRICT-SPIRV-NEXT:    store float [[TMP1]], ptr addrspace(4) [[D1_ASCAST]], align 4
+// STRICT-SPIRV-NEXT:    ret void
+//
+// MAYTRAP-SPIRV-LABEL: define spir_func void @test_scalbnf_var2(
+// MAYTRAP-SPIRV-SAME: i32 noundef [[B:%.*]]) addrspace(4) #[[ATTR0]] {
+// MAYTRAP-SPIRV-NEXT:  [[ENTRY:.*:]]
+// MAYTRAP-SPIRV-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
+// MAYTRAP-SPIRV-NEXT:    [[D1:%.*]] = alloca float, align 4
+// MAYTRAP-SPIRV-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr [[B_ADDR]] to ptr addrspace(4)
+// MAYTRAP-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// MAYTRAP-SPIRV-NEXT:    store i32 [[B]], ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// MAYTRAP-SPIRV-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// MAYTRAP-SPIRV-NEXT:    [[TMP1:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float 0x402E666660000000, i32 [[TMP0]])
+// MAYTRAP-SPIRV-NEXT:    store float [[TMP1]], ptr addrspace(4) [[D1_ASCAST]], align 4
+// MAYTRAP-SPIRV-NEXT:    ret void
+//
+// ERRNO-SPIRV-LABEL: define spir_func void @test_scalbnf_var2(
+// ERRNO-SPIRV-SAME: i32 noundef [[B:%.*]]) addrspace(4) #[[ATTR0]] {
+// ERRNO-SPIRV-NEXT:  [[ENTRY:.*:]]
+// ERRNO-SPIRV-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
+// ERRNO-SPIRV-NEXT:    [[D1:%.*]] = alloca float, align 4
+// ERRNO-SPIRV-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr [[B_ADDR]] to ptr addrspace(4)
+// ERRNO-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// ERRNO-SPIRV-NEXT:    store i32 [[B]], ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// ERRNO-SPIRV-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// ERRNO-SPIRV-NEXT:    [[CALL:%.*]] = call spir_func addrspace(4) float @scalbnf(float noundef 0x402E666660000000, i32 noundef [[TMP0]]) #[[ATTR2]]
+// ERRNO-SPIRV-NEXT:    store float [[CALL]], ptr addrspace(4) [[D1_ASCAST]], align 4
+// ERRNO-SPIRV-NEXT:    ret void
 //
 void test_scalbnf_var2(int b) {
   float D1 = __builtin_scalbnf(15.2f, b);
@@ -719,6 +1247,91 @@ void test_scalbnf_var2(int b) {
 // ERRNO-NEXT:    store float [[CALL]], ptr [[D1_ASCAST]], align 4
 // ERRNO-NEXT:    ret void
 //
+// DEF-SPIRV-LABEL: define spir_func void @test_scalbnf_var3(
+// DEF-SPIRV-SAME: float noundef [[A:%.*]], i32 noundef [[B:%.*]]) addrspace(4) #[[ATTR0]] {
+// DEF-SPIRV-NEXT:  [[ENTRY:.*:]]
+// DEF-SPIRV-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
+// DEF-SPIRV-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
+// DEF-SPIRV-NEXT:    [[D1:%.*]] = alloca float, align 4
+// DEF-SPIRV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// DEF-SPIRV-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr [[B_ADDR]] to ptr addrspace(4)
+// DEF-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// DEF-SPIRV-NEXT:    store float [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// DEF-SPIRV-NEXT:    store i32 [[B]], ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// DEF-SPIRV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// DEF-SPIRV-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// DEF-SPIRV-NEXT:    [[TMP2:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float [[TMP0]], i32 [[TMP1]])
+// DEF-SPIRV-NEXT:    store float [[TMP2]], ptr addrspace(4) [[D1_ASCAST]], align 4
+// DEF-SPIRV-NEXT:    ret void
+//
+// IGNORE-SPIRV-LABEL: define spir_func void @test_scalbnf_var3(
+// IGNORE-SPIRV-SAME: float noundef [[A:%.*]], i32 noundef [[B:%.*]]) addrspace(4) #[[ATTR0]] {
+// IGNORE-SPIRV-NEXT:  [[ENTRY:.*:]]
+// IGNORE-SPIRV-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
+// IGNORE-SPIRV-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
+// IGNORE-SPIRV-NEXT:    [[D1:%.*]] = alloca float, align 4
+// IGNORE-SPIRV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// IGNORE-SPIRV-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr [[B_ADDR]] to ptr addrspace(4)
+// IGNORE-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// IGNORE-SPIRV-NEXT:    store float [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// IGNORE-SPIRV-NEXT:    store i32 [[B]], ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// IGNORE-SPIRV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// IGNORE-SPIRV-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// IGNORE-SPIRV-NEXT:    [[TMP2:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float [[TMP0]], i32 [[TMP1]])
+// IGNORE-SPIRV-NEXT:    store float [[TMP2]], ptr addrspace(4) [[D1_ASCAST]], align 4
+// IGNORE-SPIRV-NEXT:    ret void
+//
+// STRICT-SPIRV-LABEL: define spir_func void @test_scalbnf_var3(
+// STRICT-SPIRV-SAME: float noundef [[A:%.*]], i32 noundef [[B:%.*]]) addrspace(4) #[[ATTR0]] {
+// STRICT-SPIRV-NEXT:  [[ENTRY:.*:]]
+// STRICT-SPIRV-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
+// STRICT-SPIRV-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
+// STRICT-SPIRV-NEXT:    [[D1:%.*]] = alloca float, align 4
+// STRICT-SPIRV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// STRICT-SPIRV-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr [[B_ADDR]] to ptr addrspace(4)
+// STRICT-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// STRICT-SPIRV-NEXT:    store float [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// STRICT-SPIRV-NEXT:    store i32 [[B]], ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// STRICT-SPIRV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// STRICT-SPIRV-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// STRICT-SPIRV-NEXT:    [[TMP2:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float [[TMP0]], i32 [[TMP1]])
+// STRICT-SPIRV-NEXT:    store float [[TMP2]], ptr addrspace(4) [[D1_ASCAST]], align 4
+// STRICT-SPIRV-NEXT:    ret void
+//
+// MAYTRAP-SPIRV-LABEL: define spir_func void @test_scalbnf_var3(
+// MAYTRAP-SPIRV-SAME: float noundef [[A:%.*]], i32 noundef [[B:%.*]]) addrspace(4) #[[ATTR0]] {
+// MAYTRAP-SPIRV-NEXT:  [[ENTRY:.*:]]
+// MAYTRAP-SPIRV-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
+// MAYTRAP-SPIRV-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
+// MAYTRAP-SPIRV-NEXT:    [[D1:%.*]] = alloca float, align 4
+// MAYTRAP-SPIRV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// MAYTRAP-SPIRV-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr [[B_ADDR]] to ptr addrspace(4)
+// MAYTRAP-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// MAYTRAP-SPIRV-NEXT:    store float [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// MAYTRAP-SPIRV-NEXT:    store i32 [[B]], ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// MAYTRAP-SPIRV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// MAYTRAP-SPIRV-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// MAYTRAP-SPIRV-NEXT:    [[TMP2:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float [[TMP0]], i32 [[TMP1]])
+// MAYTRAP-SPIRV-NEXT:    store float [[TMP2]], ptr addrspace(4) [[D1_ASCAST]], align 4
+// MAYTRAP-SPIRV-NEXT:    ret void
+//
+// ERRNO-SPIRV-LABEL: define spir_func void @test_scalbnf_var3(
+// ERRNO-SPIRV-SAME: float noundef [[A:%.*]], i32 noundef [[B:%.*]]) addrspace(4) #[[ATTR0]] {
+// ERRNO-SPIRV-NEXT:  [[ENTRY:.*:]]
+// ERRNO-SPIRV-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
+// ERRNO-SPIRV-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
+// ERRNO-SPIRV-NEXT:    [[D1:%.*]] = alloca float, align 4
+// ERRNO-SPIRV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// ERRNO-SPIRV-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr [[B_ADDR]] to ptr addrspace(4)
+// ERRNO-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// ERRNO-SPIRV-NEXT:    store float [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// ERRNO-SPIRV-NEXT:    store i32 [[B]], ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// ERRNO-SPIRV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
+// ERRNO-SPIRV-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// ERRNO-SPIRV-NEXT:    [[CALL:%.*]] = call spir_func addrspace(4) float @scalbnf(float noundef [[TMP0]], i32 noundef [[TMP1]]) #[[ATTR2]]
+// ERRNO-SPIRV-NEXT:    store float [[CALL]], ptr addrspace(4) [[D1_ASCAST]], align 4
+// ERRNO-SPIRV-NEXT:    ret void
+//
 void test_scalbnf_var3(float a, int b) {
   float D1 = __builtin_scalbnf(a, b);
 }
@@ -775,6 +1388,51 @@ void test_scalbnf_var3(float a, int b) {
 // ERRNO-NEXT:    [[CALL:%.*]] = call double @scalbn(double noundef 1.720000e+01, i32 noundef 10) #[[ATTR2]]
 // ERRNO-NEXT:    store double [[CALL]], ptr [[D1_ASCAST]], align 8
 // ERRNO-NEXT:    ret void
+//
+// DEF-SPIRV-LABEL: define spir_func void @test_scalbn(
+// DEF-SPIRV-SAME: ) addrspace(4) #[[ATTR0]] {
+// DEF-SPIRV-NEXT:  [[ENTRY:.*:]]
+// DEF-SPIRV-NEXT:    [[D1:%.*]] = alloca double, align 8
+// DEF-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// DEF-SPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) double @llvm.ldexp.f64.i32(double 1.720000e+01, i32 10)
+// DEF-SPIRV-NEXT:    store double [[TMP0]], ptr addrspace(4) [[D1_ASCAST]], align 8
+// DEF-SPIRV-NEXT:    ret void
+//
+// IGNORE-SPIRV-LABEL: define spir_func void @test_scalbn(
+// IGNORE-SPIRV-SAME: ) addrspace(4) #[[ATTR0]] {
+// IGNORE-SPIRV-NEXT:  [[ENTRY:.*:]]
+// IGNORE-SPIRV-NEXT:    [[D1:%.*]] = alloca double, align 8
+// IGNORE-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// IGNORE-SPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) double @llvm.ldexp.f64.i32(double 1.720000e+01, i32 10)
+// IGNORE-SPIRV-NEXT:    store double [[TMP0]], ptr addrspace(4) [[D1_ASCAST]], align 8
+// IGNORE-SPIRV-NEXT:    ret void
+//
+// STRICT-SPIRV-LABEL: define spir_func void @test_scalbn(
+// STRICT-SPIRV-SAME: ) addrspace(4) #[[ATTR0]] {
+// STRICT-SPIRV-NEXT:  [[ENTRY:.*:]]
+// STRICT-SPIRV-NEXT:    [[D1:%.*]] = alloca double, align 8
+// STRICT-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// STRICT-SPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) double @llvm.ldexp.f64.i32(double 1.720000e+01, i32 10)
+// STRICT-SPIRV-NEXT:    store double [[TMP0]], ptr addrspace(4) [[D1_ASCAST]], align 8
+// STRICT-SPIRV-NEXT:    ret void
+//
+// MAYTRAP-SPIRV-LABEL: define spir_func void @test_scalbn(
+// MAYTRAP-SPIRV-SAME: ) addrspace(4) #[[ATTR0]] {
+// MAYTRAP-SPIRV-NEXT:  [[ENTRY:.*:]]
+// MAYTRAP-SPIRV-NEXT:    [[D1:%.*]] = alloca double, align 8
+// MAYTRAP-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// MAYTRAP-SPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) double @llvm.ldexp.f64.i32(double 1.720000e+01, i32 10)
+// MAYTRAP-SPIRV-NEXT:    store double [[TMP0]], ptr addrspace(4) [[D1_ASCAST]], align 8
+// MAYTRAP-SPIRV-NEXT:    ret void
+//
+// ERRNO-SPIRV-LABEL: define spir_func void @test_scalbn(
+// ERRNO-SPIRV-SAME: ) addrspace(4) #[[ATTR0]] {
+// ERRNO-SPIRV-NEXT:  [[ENTRY:.*:]]
+// ERRNO-SPIRV-NEXT:    [[D1:%.*]] = alloca double, align 8
+// ERRNO-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// ERRNO-SPIRV-NEXT:    [[CALL:%.*]] = call spir_func addrspace(4) double @scalbn(double noundef 1.720000e+01, i32 noundef 10) #[[ATTR2]]
+// ERRNO-SPIRV-NEXT:    store double [[CALL]], ptr addrspace(4) [[D1_ASCAST]], align 8
+// ERRNO-SPIRV-NEXT:    ret void
 //
 void test_scalbn() {
   double D1 = __builtin_scalbn(17.2, 10);
@@ -856,6 +1514,71 @@ void test_scalbn() {
 // ERRNO-NEXT:    store double [[CALL]], ptr [[D1_ASCAST]], align 8
 // ERRNO-NEXT:    ret void
 //
+// DEF-SPIRV-LABEL: define spir_func void @test_scalbn_var1(
+// DEF-SPIRV-SAME: double noundef [[A:%.*]]) addrspace(4) #[[ATTR0]] {
+// DEF-SPIRV-NEXT:  [[ENTRY:.*:]]
+// DEF-SPIRV-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
+// DEF-SPIRV-NEXT:    [[D1:%.*]] = alloca double, align 8
+// DEF-SPIRV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// DEF-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// DEF-SPIRV-NEXT:    store double [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// DEF-SPIRV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// DEF-SPIRV-NEXT:    [[TMP1:%.*]] = call addrspace(4) double @llvm.ldexp.f64.i32(double [[TMP0]], i32 9)
+// DEF-SPIRV-NEXT:    store double [[TMP1]], ptr addrspace(4) [[D1_ASCAST]], align 8
+// DEF-SPIRV-NEXT:    ret void
+//
+// IGNORE-SPIRV-LABEL: define spir_func void @test_scalbn_var1(
+// IGNORE-SPIRV-SAME: double noundef [[A:%.*]]) addrspace(4) #[[ATTR0]] {
+// IGNORE-SPIRV-NEXT:  [[ENTRY:.*:]]
+// IGNORE-SPIRV-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
+// IGNORE-SPIRV-NEXT:    [[D1:%.*]] = alloca double, align 8
+// IGNORE-SPIRV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// IGNORE-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// IGNORE-SPIRV-NEXT:    store double [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// IGNORE-SPIRV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// IGNORE-SPIRV-NEXT:    [[TMP1:%.*]] = call addrspace(4) double @llvm.ldexp.f64.i32(double [[TMP0]], i32 9)
+// IGNORE-SPIRV-NEXT:    store double [[TMP1]], ptr addrspace(4) [[D1_ASCAST]], align 8
+// IGNORE-SPIRV-NEXT:    ret void
+//
+// STRICT-SPIRV-LABEL: define spir_func void @test_scalbn_var1(
+// STRICT-SPIRV-SAME: double noundef [[A:%.*]]) addrspace(4) #[[ATTR0]] {
+// STRICT-SPIRV-NEXT:  [[ENTRY:.*:]]
+// STRICT-SPIRV-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
+// STRICT-SPIRV-NEXT:    [[D1:%.*]] = alloca double, align 8
+// STRICT-SPIRV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// STRICT-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// STRICT-SPIRV-NEXT:    store double [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// STRICT-SPIRV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// STRICT-SPIRV-NEXT:    [[TMP1:%.*]] = call addrspace(4) double @llvm.ldexp.f64.i32(double [[TMP0]], i32 9)
+// STRICT-SPIRV-NEXT:    store double [[TMP1]], ptr addrspace(4) [[D1_ASCAST]], align 8
+// STRICT-SPIRV-NEXT:    ret void
+//
+// MAYTRAP-SPIRV-LABEL: define spir_func void @test_scalbn_var1(
+// MAYTRAP-SPIRV-SAME: double noundef [[A:%.*]]) addrspace(4) #[[ATTR0]] {
+// MAYTRAP-SPIRV-NEXT:  [[ENTRY:.*:]]
+// MAYTRAP-SPIRV-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
+// MAYTRAP-SPIRV-NEXT:    [[D1:%.*]] = alloca double, align 8
+// MAYTRAP-SPIRV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// MAYTRAP-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// MAYTRAP-SPIRV-NEXT:    store double [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// MAYTRAP-SPIRV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// MAYTRAP-SPIRV-NEXT:    [[TMP1:%.*]] = call addrspace(4) double @llvm.ldexp.f64.i32(double [[TMP0]], i32 9)
+// MAYTRAP-SPIRV-NEXT:    store double [[TMP1]], ptr addrspace(4) [[D1_ASCAST]], align 8
+// MAYTRAP-SPIRV-NEXT:    ret void
+//
+// ERRNO-SPIRV-LABEL: define spir_func void @test_scalbn_var1(
+// ERRNO-SPIRV-SAME: double noundef [[A:%.*]]) addrspace(4) #[[ATTR0]] {
+// ERRNO-SPIRV-NEXT:  [[ENTRY:.*:]]
+// ERRNO-SPIRV-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
+// ERRNO-SPIRV-NEXT:    [[D1:%.*]] = alloca double, align 8
+// ERRNO-SPIRV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// ERRNO-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// ERRNO-SPIRV-NEXT:    store double [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// ERRNO-SPIRV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// ERRNO-SPIRV-NEXT:    [[CALL:%.*]] = call spir_func addrspace(4) double @scalbn(double noundef [[TMP0]], i32 noundef 9) #[[ATTR2]]
+// ERRNO-SPIRV-NEXT:    store double [[CALL]], ptr addrspace(4) [[D1_ASCAST]], align 8
+// ERRNO-SPIRV-NEXT:    ret void
+//
 void test_scalbn_var1(double a) {
   double D1 = __builtin_scalbn(a, 9);
 }
@@ -935,6 +1658,71 @@ void test_scalbn_var1(double a) {
 // ERRNO-NEXT:    [[CALL:%.*]] = call double @scalbn(double noundef 1.540000e+01, i32 noundef [[TMP0]]) #[[ATTR2]]
 // ERRNO-NEXT:    store double [[CALL]], ptr [[D1_ASCAST]], align 8
 // ERRNO-NEXT:    ret void
+//
+// DEF-SPIRV-LABEL: define spir_func void @test_scalbn_var2(
+// DEF-SPIRV-SAME: i32 noundef [[B:%.*]]) addrspace(4) #[[ATTR0]] {
+// DEF-SPIRV-NEXT:  [[ENTRY:.*:]]
+// DEF-SPIRV-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
+// DEF-SPIRV-NEXT:    [[D1:%.*]] = alloca double, align 8
+// DEF-SPIRV-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr [[B_ADDR]] to ptr addrspace(4)
+// DEF-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// DEF-SPIRV-NEXT:    store i32 [[B]], ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// DEF-SPIRV-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// DEF-SPIRV-NEXT:    [[TMP1:%.*]] = call addrspace(4) double @llvm.ldexp.f64.i32(double 1.540000e+01, i32 [[TMP0]])
+// DEF-SPIRV-NEXT:    store double [[TMP1]], ptr addrspace(4) [[D1_ASCAST]], align 8
+// DEF-SPIRV-NEXT:    ret void
+//
+// IGNORE-SPIRV-LABEL: define spir_func void @test_scalbn_var2(
+// IGNORE-SPIRV-SAME: i32 noundef [[B:%.*]]) addrspace(4) #[[ATTR0]] {
+// IGNORE-SPIRV-NEXT:  [[ENTRY:.*:]]
+// IGNORE-SPIRV-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
+// IGNORE-SPIRV-NEXT:    [[D1:%.*]] = alloca double, align 8
+// IGNORE-SPIRV-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr [[B_ADDR]] to ptr addrspace(4)
+// IGNORE-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// IGNORE-SPIRV-NEXT:    store i32 [[B]], ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// IGNORE-SPIRV-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// IGNORE-SPIRV-NEXT:    [[TMP1:%.*]] = call addrspace(4) double @llvm.ldexp.f64.i32(double 1.540000e+01, i32 [[TMP0]])
+// IGNORE-SPIRV-NEXT:    store double [[TMP1]], ptr addrspace(4) [[D1_ASCAST]], align 8
+// IGNORE-SPIRV-NEXT:    ret void
+//
+// STRICT-SPIRV-LABEL: define spir_func void @test_scalbn_var2(
+// STRICT-SPIRV-SAME: i32 noundef [[B:%.*]]) addrspace(4) #[[ATTR0]] {
+// STRICT-SPIRV-NEXT:  [[ENTRY:.*:]]
+// STRICT-SPIRV-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
+// STRICT-SPIRV-NEXT:    [[D1:%.*]] = alloca double, align 8
+// STRICT-SPIRV-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr [[B_ADDR]] to ptr addrspace(4)
+// STRICT-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// STRICT-SPIRV-NEXT:    store i32 [[B]], ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// STRICT-SPIRV-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// STRICT-SPIRV-NEXT:    [[TMP1:%.*]] = call addrspace(4) double @llvm.ldexp.f64.i32(double 1.540000e+01, i32 [[TMP0]])
+// STRICT-SPIRV-NEXT:    store double [[TMP1]], ptr addrspace(4) [[D1_ASCAST]], align 8
+// STRICT-SPIRV-NEXT:    ret void
+//
+// MAYTRAP-SPIRV-LABEL: define spir_func void @test_scalbn_var2(
+// MAYTRAP-SPIRV-SAME: i32 noundef [[B:%.*]]) addrspace(4) #[[ATTR0]] {
+// MAYTRAP-SPIRV-NEXT:  [[ENTRY:.*:]]
+// MAYTRAP-SPIRV-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
+// MAYTRAP-SPIRV-NEXT:    [[D1:%.*]] = alloca double, align 8
+// MAYTRAP-SPIRV-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr [[B_ADDR]] to ptr addrspace(4)
+// MAYTRAP-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// MAYTRAP-SPIRV-NEXT:    store i32 [[B]], ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// MAYTRAP-SPIRV-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// MAYTRAP-SPIRV-NEXT:    [[TMP1:%.*]] = call addrspace(4) double @llvm.ldexp.f64.i32(double 1.540000e+01, i32 [[TMP0]])
+// MAYTRAP-SPIRV-NEXT:    store double [[TMP1]], ptr addrspace(4) [[D1_ASCAST]], align 8
+// MAYTRAP-SPIRV-NEXT:    ret void
+//
+// ERRNO-SPIRV-LABEL: define spir_func void @test_scalbn_var2(
+// ERRNO-SPIRV-SAME: i32 noundef [[B:%.*]]) addrspace(4) #[[ATTR0]] {
+// ERRNO-SPIRV-NEXT:  [[ENTRY:.*:]]
+// ERRNO-SPIRV-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
+// ERRNO-SPIRV-NEXT:    [[D1:%.*]] = alloca double, align 8
+// ERRNO-SPIRV-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr [[B_ADDR]] to ptr addrspace(4)
+// ERRNO-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// ERRNO-SPIRV-NEXT:    store i32 [[B]], ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// ERRNO-SPIRV-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// ERRNO-SPIRV-NEXT:    [[CALL:%.*]] = call spir_func addrspace(4) double @scalbn(double noundef 1.540000e+01, i32 noundef [[TMP0]]) #[[ATTR2]]
+// ERRNO-SPIRV-NEXT:    store double [[CALL]], ptr addrspace(4) [[D1_ASCAST]], align 8
+// ERRNO-SPIRV-NEXT:    ret void
 //
 void test_scalbn_var2(int b) {
   double D1 = __builtin_scalbn(15.4, b);
@@ -1039,6 +1827,91 @@ void test_scalbn_var2(int b) {
 // ERRNO-NEXT:    [[CALL:%.*]] = call double @scalbn(double noundef [[TMP0]], i32 noundef [[TMP1]]) #[[ATTR2]]
 // ERRNO-NEXT:    store double [[CALL]], ptr [[D1_ASCAST]], align 8
 // ERRNO-NEXT:    ret void
+//
+// DEF-SPIRV-LABEL: define spir_func void @test_scalbn_var3(
+// DEF-SPIRV-SAME: double noundef [[A:%.*]], i32 noundef [[B:%.*]]) addrspace(4) #[[ATTR0]] {
+// DEF-SPIRV-NEXT:  [[ENTRY:.*:]]
+// DEF-SPIRV-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
+// DEF-SPIRV-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
+// DEF-SPIRV-NEXT:    [[D1:%.*]] = alloca double, align 8
+// DEF-SPIRV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// DEF-SPIRV-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr [[B_ADDR]] to ptr addrspace(4)
+// DEF-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// DEF-SPIRV-NEXT:    store double [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// DEF-SPIRV-NEXT:    store i32 [[B]], ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// DEF-SPIRV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// DEF-SPIRV-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// DEF-SPIRV-NEXT:    [[TMP2:%.*]] = call addrspace(4) double @llvm.ldexp.f64.i32(double [[TMP0]], i32 [[TMP1]])
+// DEF-SPIRV-NEXT:    store double [[TMP2]], ptr addrspace(4) [[D1_ASCAST]], align 8
+// DEF-SPIRV-NEXT:    ret void
+//
+// IGNORE-SPIRV-LABEL: define spir_func void @test_scalbn_var3(
+// IGNORE-SPIRV-SAME: double noundef [[A:%.*]], i32 noundef [[B:%.*]]) addrspace(4) #[[ATTR0]] {
+// IGNORE-SPIRV-NEXT:  [[ENTRY:.*:]]
+// IGNORE-SPIRV-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
+// IGNORE-SPIRV-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
+// IGNORE-SPIRV-NEXT:    [[D1:%.*]] = alloca double, align 8
+// IGNORE-SPIRV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// IGNORE-SPIRV-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr [[B_ADDR]] to ptr addrspace(4)
+// IGNORE-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// IGNORE-SPIRV-NEXT:    store double [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// IGNORE-SPIRV-NEXT:    store i32 [[B]], ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// IGNORE-SPIRV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// IGNORE-SPIRV-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// IGNORE-SPIRV-NEXT:    [[TMP2:%.*]] = call addrspace(4) double @llvm.ldexp.f64.i32(double [[TMP0]], i32 [[TMP1]])
+// IGNORE-SPIRV-NEXT:    store double [[TMP2]], ptr addrspace(4) [[D1_ASCAST]], align 8
+// IGNORE-SPIRV-NEXT:    ret void
+//
+// STRICT-SPIRV-LABEL: define spir_func void @test_scalbn_var3(
+// STRICT-SPIRV-SAME: double noundef [[A:%.*]], i32 noundef [[B:%.*]]) addrspace(4) #[[ATTR0]] {
+// STRICT-SPIRV-NEXT:  [[ENTRY:.*:]]
+// STRICT-SPIRV-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
+// STRICT-SPIRV-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
+// STRICT-SPIRV-NEXT:    [[D1:%.*]] = alloca double, align 8
+// STRICT-SPIRV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// STRICT-SPIRV-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr [[B_ADDR]] to ptr addrspace(4)
+// STRICT-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// STRICT-SPIRV-NEXT:    store double [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// STRICT-SPIRV-NEXT:    store i32 [[B]], ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// STRICT-SPIRV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// STRICT-SPIRV-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// STRICT-SPIRV-NEXT:    [[TMP2:%.*]] = call addrspace(4) double @llvm.ldexp.f64.i32(double [[TMP0]], i32 [[TMP1]])
+// STRICT-SPIRV-NEXT:    store double [[TMP2]], ptr addrspace(4) [[D1_ASCAST]], align 8
+// STRICT-SPIRV-NEXT:    ret void
+//
+// MAYTRAP-SPIRV-LABEL: define spir_func void @test_scalbn_var3(
+// MAYTRAP-SPIRV-SAME: double noundef [[A:%.*]], i32 noundef [[B:%.*]]) addrspace(4) #[[ATTR0]] {
+// MAYTRAP-SPIRV-NEXT:  [[ENTRY:.*:]]
+// MAYTRAP-SPIRV-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
+// MAYTRAP-SPIRV-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
+// MAYTRAP-SPIRV-NEXT:    [[D1:%.*]] = alloca double, align 8
+// MAYTRAP-SPIRV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// MAYTRAP-SPIRV-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr [[B_ADDR]] to ptr addrspace(4)
+// MAYTRAP-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// MAYTRAP-SPIRV-NEXT:    store double [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// MAYTRAP-SPIRV-NEXT:    store i32 [[B]], ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// MAYTRAP-SPIRV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// MAYTRAP-SPIRV-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// MAYTRAP-SPIRV-NEXT:    [[TMP2:%.*]] = call addrspace(4) double @llvm.ldexp.f64.i32(double [[TMP0]], i32 [[TMP1]])
+// MAYTRAP-SPIRV-NEXT:    store double [[TMP2]], ptr addrspace(4) [[D1_ASCAST]], align 8
+// MAYTRAP-SPIRV-NEXT:    ret void
+//
+// ERRNO-SPIRV-LABEL: define spir_func void @test_scalbn_var3(
+// ERRNO-SPIRV-SAME: double noundef [[A:%.*]], i32 noundef [[B:%.*]]) addrspace(4) #[[ATTR0]] {
+// ERRNO-SPIRV-NEXT:  [[ENTRY:.*:]]
+// ERRNO-SPIRV-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
+// ERRNO-SPIRV-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
+// ERRNO-SPIRV-NEXT:    [[D1:%.*]] = alloca double, align 8
+// ERRNO-SPIRV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// ERRNO-SPIRV-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr [[B_ADDR]] to ptr addrspace(4)
+// ERRNO-SPIRV-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
+// ERRNO-SPIRV-NEXT:    store double [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// ERRNO-SPIRV-NEXT:    store i32 [[B]], ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// ERRNO-SPIRV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// ERRNO-SPIRV-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
+// ERRNO-SPIRV-NEXT:    [[CALL:%.*]] = call spir_func addrspace(4) double @scalbn(double noundef [[TMP0]], i32 noundef [[TMP1]]) #[[ATTR2]]
+// ERRNO-SPIRV-NEXT:    store double [[CALL]], ptr addrspace(4) [[D1_ASCAST]], align 8
+// ERRNO-SPIRV-NEXT:    ret void
 //
 void test_scalbn_var3(double a, int b) {
   double D1 = __builtin_scalbn(a, b);
