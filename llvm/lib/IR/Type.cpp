@@ -974,8 +974,9 @@ struct TargetTypeInfo {
   template <typename... ArgTys>
   TargetTypeInfo(Type *LayoutType, ArgTys... Properties)
       : LayoutType(LayoutType), Properties((0 | ... | Properties)) {
-    if (this->Properties & TargetExtType::CanBeVectorElement)
-      assert(LayoutType->isSized() && "Vector element type must be sized");
+    assert((!(this->Properties & TargetExtType::CanBeVectorElement) ||
+            LayoutType->isSized()) &&
+           "Vector element type must be sized");
   }
 };
 } // anonymous namespace
