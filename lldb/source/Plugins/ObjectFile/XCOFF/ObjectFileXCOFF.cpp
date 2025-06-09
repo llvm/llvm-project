@@ -49,9 +49,6 @@ using namespace lldb;
 using namespace lldb_private;
 
 LLDB_PLUGIN_DEFINE(ObjectFileXCOFF)
-
-char ObjectFileXCOFF::ID;
-
 // FIXME: target 64bit at this moment.
 
 // Static methods.
@@ -98,7 +95,6 @@ ObjectFile *ObjectFileXCOFF::CreateInstance(const lldb::ModuleSP &module_sp,
     return nullptr;
 
   if (!objfile_up->ParseHeader())
-    //FIXME objfile leak
     return nullptr;
 
   UGLY_FLAG_FOR_AIX = true;
@@ -111,16 +107,17 @@ bool ObjectFileXCOFF::CreateBinary() {
 
   Log *log = GetLog(LLDBLog::Object);
 
-  auto binary = llvm::object::ObjectFile::createObjectFile(
-      llvm::MemoryBufferRef(toStringRef(m_data.GetData()),
-                            m_file.GetFilename().GetStringRef()),
-      file_magic::xcoff_object_64);
+  auto memory_ref = llvm::MemoryBufferRef(toStringRef(m_data.GetData()),
+                                          m_file.GetFilename().GetStringRef());
+  llvm::file_magic magic = llvm::identify_magic(memory_ref.getBuffer());
+
+  auto binary = llvm::object::ObjectFile::createObjectFile(memory_ref, magic);
   if (!binary) {
     LLDB_LOG_ERROR(log, binary.takeError(),
                    "Failed to create binary for file ({1}): {0}", m_file);
     return false;
   }
-  // Make sure we only handle COFF format.
+  // Make sure we only handle XCOFF format.
   m_binary =
       llvm::unique_dyn_cast<llvm::object::XCOFFObjectFile>(std::move(*binary));
   if (!m_binary)
@@ -159,9 +156,9 @@ size_t ObjectFileXCOFF::GetModuleSpecifications(
 
 static uint32_t XCOFFHeaderSizeFromMagic(uint32_t magic) {
   switch (magic) {
-    // TODO: 32bit not supported.
-    // case XCOFF::XCOFF32:
-    //  return sizeof(struct llvm::object::XCOFFFileHeader32);
+  case XCOFF::XCOFF32:
+    return sizeof(struct llvm::object::XCOFFFileHeader32);
+    break;
   case XCOFF::XCOFF64:
     return sizeof(struct llvm::object::XCOFFFileHeader64);
     break;
@@ -185,137 +182,9 @@ bool ObjectFileXCOFF::MagicBytesMatch(DataBufferSP &data_sp,
 }
 
 bool ObjectFileXCOFF::ParseHeader() {
-  ModuleSP module_sp(GetModule());
-  if (module_sp) {
-    std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    m_sect_headers.clear();
-    lldb::offset_t offset = 0;
-
-    if (ParseXCOFFHeader(m_data, &offset, m_xcoff_header)) {
-      m_data.SetAddressByteSize(GetAddressByteSize());
-      if (m_xcoff_header.auxhdrsize > 0)
-        ParseXCOFFOptionalHeader(m_data, &offset);
-      ParseSectionHeaders(offset);
-    }
-    return true;
-  }
-
-  return false;
-}
-
-bool ObjectFileXCOFF::ParseXCOFFHeader(lldb_private::DataExtractor &data,
-                                       lldb::offset_t *offset_ptr,
-                                       xcoff_header_t &xcoff_header) {
-  //FIXME: data.ValidOffsetForDataOfSize
-  xcoff_header.magic = data.GetU16(offset_ptr);
-  xcoff_header.nsects = data.GetU16(offset_ptr);
-  xcoff_header.modtime = data.GetU32(offset_ptr);
-  xcoff_header.symoff = data.GetU64(offset_ptr);
-  xcoff_header.auxhdrsize = data.GetU16(offset_ptr);
-  xcoff_header.flags = data.GetU16(offset_ptr);
-  xcoff_header.nsyms = data.GetU32(offset_ptr);
-  return true;
-}
-
-bool ObjectFileXCOFF::ParseXCOFFOptionalHeader(lldb_private::DataExtractor &data,
-                                               lldb::offset_t *offset_ptr) {
-  lldb::offset_t init_offset = *offset_ptr;
-  //FIXME: data.ValidOffsetForDataOfSize
-  m_xcoff_aux_header.AuxMagic = data.GetU16(offset_ptr);
-  m_xcoff_aux_header.Version = data.GetU16(offset_ptr);
-  m_xcoff_aux_header.ReservedForDebugger = data.GetU32(offset_ptr);
-  m_xcoff_aux_header.TextStartAddr = data.GetU64(offset_ptr);
-  m_xcoff_aux_header.DataStartAddr = data.GetU64(offset_ptr);
-  m_xcoff_aux_header.TOCAnchorAddr = data.GetU64(offset_ptr);
-  m_xcoff_aux_header.SecNumOfEntryPoint = data.GetU16(offset_ptr);
-  m_xcoff_aux_header.SecNumOfText = data.GetU16(offset_ptr);
-  m_xcoff_aux_header.SecNumOfData = data.GetU16(offset_ptr);
-  m_xcoff_aux_header.SecNumOfTOC = data.GetU16(offset_ptr);
-  m_xcoff_aux_header.SecNumOfLoader = data.GetU16(offset_ptr);
-  m_xcoff_aux_header.SecNumOfBSS = data.GetU16(offset_ptr);
-  m_xcoff_aux_header.MaxAlignOfText = data.GetU16(offset_ptr);
-  m_xcoff_aux_header.MaxAlignOfData = data.GetU16(offset_ptr);
-  m_xcoff_aux_header.ModuleType = data.GetU16(offset_ptr);
-  m_xcoff_aux_header.CpuFlag = data.GetU8(offset_ptr);
-  m_xcoff_aux_header.CpuType = data.GetU8(offset_ptr);
-  m_xcoff_aux_header.TextPageSize = data.GetU8(offset_ptr);
-  m_xcoff_aux_header.DataPageSize = data.GetU8(offset_ptr);
-  m_xcoff_aux_header.StackPageSize = data.GetU8(offset_ptr);
-  m_xcoff_aux_header.FlagAndTDataAlignment = data.GetU8(offset_ptr);
-  m_xcoff_aux_header.TextSize = data.GetU64(offset_ptr);
-  m_xcoff_aux_header.InitDataSize = data.GetU64(offset_ptr);
-  m_xcoff_aux_header.BssDataSize = data.GetU64(offset_ptr);
-  m_xcoff_aux_header.EntryPointAddr = data.GetU64(offset_ptr);
-  m_xcoff_aux_header.MaxStackSize = data.GetU64(offset_ptr);
-  m_xcoff_aux_header.MaxDataSize = data.GetU64(offset_ptr);
-  m_xcoff_aux_header.SecNumOfTData = data.GetU16(offset_ptr);
-  m_xcoff_aux_header.SecNumOfTBSS = data.GetU16(offset_ptr);
-  m_xcoff_aux_header.XCOFF64Flag = data.GetU16(offset_ptr);
-  lldb::offset_t last_offset = *offset_ptr;
-  if ((last_offset - init_offset) < m_xcoff_header.auxhdrsize)
-    *offset_ptr += (m_xcoff_header.auxhdrsize - (last_offset - init_offset));
-  return true;
-}
-
-bool ObjectFileXCOFF::ParseSectionHeaders(
-    uint32_t section_header_data_offset) {
-  const uint32_t nsects = m_xcoff_header.nsects;
-  m_sect_headers.clear();
-
-  if (nsects > 0) {
-    const size_t section_header_byte_size = nsects * m_binary->getSectionHeaderSize();
-    lldb_private::DataExtractor section_header_data =
-        ReadImageData(section_header_data_offset, section_header_byte_size);
-
-    lldb::offset_t offset = 0;
-    //FIXME: section_header_data.ValidOffsetForDataOfSize
-    m_sect_headers.resize(nsects);
-
-    for (uint32_t idx = 0; idx < nsects; ++idx) {
-      const void *name_data = section_header_data.GetData(&offset, 8);
-      if (name_data) {
-        memcpy(m_sect_headers[idx].name, name_data, 8);
-        m_sect_headers[idx].phyaddr = section_header_data.GetU64(&offset);
-        m_sect_headers[idx].vmaddr = section_header_data.GetU64(&offset);
-        m_sect_headers[idx].size = section_header_data.GetU64(&offset);
-        m_sect_headers[idx].offset = section_header_data.GetU64(&offset);
-        m_sect_headers[idx].reloff = section_header_data.GetU64(&offset);
-        m_sect_headers[idx].lineoff = section_header_data.GetU64(&offset);
-        m_sect_headers[idx].nreloc = section_header_data.GetU32(&offset);
-        m_sect_headers[idx].nline = section_header_data.GetU32(&offset);
-        m_sect_headers[idx].flags = section_header_data.GetU32(&offset);
-        offset += 4;
-      } else {
-        offset += (m_binary->getSectionHeaderSize() - 8);
-      }
-    }
-  }
-
-  return !m_sect_headers.empty();
-}
-
-lldb_private::DataExtractor ObjectFileXCOFF::ReadImageData(uint32_t offset, size_t size) {
-  if (!size)
-    return {};
-
-  if (m_data.ValidOffsetForDataOfSize(offset, size))
-    return lldb_private::DataExtractor(m_data, offset, size);
-
-  assert(0);
-  ProcessSP process_sp(m_process_wp.lock());
-  lldb_private::DataExtractor data;
-  if (process_sp) {
-    auto data_up = std::make_unique<DataBufferHeap>(size, 0);
-    Status readmem_error;
-    size_t bytes_read =
-        process_sp->ReadMemory(offset, data_up->GetBytes(),
-                               data_up->GetByteSize(), readmem_error);
-    if (bytes_read == size) {
-      DataBufferSP buffer_sp(data_up.release());
-      data.SetData(buffer_sp, 0, buffer_sp->GetByteSize());
-    }
-  }
-  return data;
+  if (m_binary->is64Bit())
+    return m_binary->fileHeader64()->Magic == XCOFF::XCOFF64;
+  return m_binary->fileHeader32()->Magic == XCOFF::XCOFF32;
 }
 
 bool ObjectFileXCOFF::SetLoadAddress(Target &target, lldb::addr_t value,
@@ -397,10 +266,8 @@ ByteOrder ObjectFileXCOFF::GetByteOrder() const { return eByteOrderBig; }
 bool ObjectFileXCOFF::IsExecutable() const { return true; }
 
 uint32_t ObjectFileXCOFF::GetAddressByteSize() const {
-  if (m_xcoff_header.magic == XCOFF::XCOFF64)
+  if (m_binary->is64Bit())
     return 8;
-  else if (m_xcoff_header.magic == XCOFF::XCOFF32)
-    return 4;
   return 4;
 }
 
@@ -408,190 +275,147 @@ AddressClass ObjectFileXCOFF::GetAddressClass(addr_t file_addr) {
   return AddressClass::eUnknown;
 }
 
-lldb::SymbolType ObjectFileXCOFF::MapSymbolType(llvm::object::SymbolRef::Type sym_type) {
+lldb::SymbolType MapSymbolType(llvm::object::SymbolRef::Type sym_type) {
   if (sym_type == llvm::object::SymbolRef::ST_Function)
     return lldb::eSymbolTypeCode;
   else if (sym_type == llvm::object::SymbolRef::ST_Data)
     return lldb::eSymbolTypeData;
+  else if (sym_type == llvm::object::SymbolRef::ST_File)
+    return lldb::eSymbolTypeSourceFile;
   return lldb::eSymbolTypeInvalid;
 }
 
 void ObjectFileXCOFF::ParseSymtab(Symtab &lldb_symtab) {
-  SectionList *sect_list = GetSectionList();
-  const uint32_t num_syms = m_xcoff_header.nsyms;
-  uint32_t sidx = 0;
-  if (num_syms > 0 && m_xcoff_header.symoff > 0) {
-    const uint32_t symbol_size = XCOFF::SymbolTableEntrySize;
-    const size_t symbol_data_size = num_syms * symbol_size;
-    lldb_private::DataExtractor symtab_data =
-        ReadImageData(m_xcoff_header.symoff, symbol_data_size);
+  SectionList *sectionList = GetSectionList();
 
-    lldb::offset_t offset = 0;
-    std::string symbol_name;
-    Symbol *symbols = lldb_symtab.Resize(num_syms);
-    llvm::object::symbol_iterator SI = m_binary->symbol_begin();
-    for (uint32_t i = 0; i < num_syms; ++i, ++SI) {
-      xcoff_symbol_t symbol;
-      const uint32_t symbol_offset = offset;
-      symbol.value = symtab_data.GetU64(&offset);
-      symbol.offset = symtab_data.GetU32(&offset);
-      Expected<StringRef> symbol_name_or_err = m_binary->getStringTableEntry(symbol.offset);
-      if (!symbol_name_or_err) {
-        consumeError(symbol_name_or_err.takeError());
-        return;
-      }
-      StringRef symbol_name_str = symbol_name_or_err.get();
-      symbol_name.assign(symbol_name_str.data());
-      symbol.sect = symtab_data.GetU16(&offset);
-      symbol.type = symtab_data.GetU16(&offset);
-      symbol.storage = symtab_data.GetU8(&offset);
-      symbol.naux = symtab_data.GetU8(&offset);
-      // Allow C_HIDEXT TOC symbol, and check others.
-      if (symbol.storage == XCOFF::C_HIDEXT && strcmp(symbol_name.c_str(), "TOC") != 0) {
-        if (symbol.naux == 0)
-          continue;
-        if (symbol.naux > 1) {
-          i += symbol.naux;
-          offset += symbol.naux * symbol_size;
-          continue;
-        }
-        /* Allow XCOFF::C_HIDEXT with following SMC and AT:
-          StorageMappingClass: XMC_PR (0x0)
-          Auxiliary Type: AUX_CSECT (0xFB)
-        */
-        xcoff_sym_csect_aux_entry_t symbol_aux;
-        symbol_aux.section_or_len_low_byte = symtab_data.GetU32(&offset);
-        symbol_aux.parameter_hash_index = symtab_data.GetU32(&offset);
-        symbol_aux.type_check_sect_num = symtab_data.GetU16(&offset);
-        symbol_aux.symbol_alignment_and_type = symtab_data.GetU8(&offset);
-        symbol_aux.storage_mapping_class = symtab_data.GetU8(&offset);
-        symbol_aux.section_or_len_high_byte = symtab_data.GetU32(&offset);
-        symbol_aux.pad = symtab_data.GetU8(&offset);
-        symbol_aux.aux_type = symtab_data.GetU8(&offset);
-        offset -= symbol.naux * symbol_size;
-        if (symbol_aux.storage_mapping_class != XCOFF::XMC_PR || symbol_aux.aux_type != XCOFF::AUX_CSECT) {
-          i += symbol.naux;
-          offset += symbol.naux * symbol_size;
-          continue;
-        }
-      }
-      // Remove the dot prefix for demangle
-      if (symbol_name_str.size() > 1 && symbol_name_str.data()[0] == '.') {
-        symbols[sidx].GetMangled().SetValue(ConstString(symbol_name.c_str() + 1));
-      } else {
-        symbols[sidx].GetMangled().SetValue(ConstString(symbol_name.c_str()));
-      }
-      if ((int16_t)symbol.sect >= 1) {
-        Address symbol_addr(sect_list->GetSectionAtIndex((size_t)(symbol.sect - 1)),
-                            (symbol.value - sect_list->GetSectionAtIndex((size_t)(symbol.sect - 1))->GetFileAddress()));
-        symbols[sidx].GetAddressRef() = symbol_addr;
-
-        Expected<llvm::object::SymbolRef::Type> sym_type_or_err = SI->getType();
-        if (!sym_type_or_err) {
-          consumeError(sym_type_or_err.takeError());
-          return;
-        }
-        symbols[sidx].SetType(MapSymbolType(sym_type_or_err.get()));
-      }
-      ++sidx;
-
-      if (symbol.naux > 0) {
-        i += symbol.naux;
-        offset += symbol.naux * symbol_size;
-      }
+  for (const auto &symbol_ref : m_binary->symbols()) {
+    llvm::object::XCOFFSymbolRef xcoff_sym_ref(symbol_ref);
+    llvm::Expected<llvm::StringRef> name_or_err = xcoff_sym_ref.getName();
+    if (!name_or_err) {
+      consumeError(name_or_err.takeError());
+      continue;
     }
-    lldb_symtab.Resize(sidx);
+    llvm::StringRef symbolName = name_or_err.get();
+    // Remove the dot prefix for demangle
+    llvm::StringRef symbol_name =
+        symbolName.starts_with(".") ? symbolName.drop_front() : symbolName;
+    auto storageClass = xcoff_sym_ref.getStorageClass();
+    if (storageClass == XCOFF::C_HIDEXT && symbolName != "TOC") {
+      if (xcoff_sym_ref.getNumberOfAuxEntries() != 1)
+        continue;
+      auto aux_csect_or_err = xcoff_sym_ref.getXCOFFCsectAuxRef();
+      if (!aux_csect_or_err) {
+        consumeError(aux_csect_or_err.takeError());
+        continue;
+      }
+      const llvm::object::XCOFFCsectAuxRef csect_aux = aux_csect_or_err.get();
+      if (csect_aux.getStorageMappingClass() != XCOFF::XMC_PR ||
+          (m_binary->is64Bit() ? (csect_aux.getAuxType64() != XCOFF::AUX_CSECT)
+                               : false))
+        continue;
+    }
+
+    Symbol symbol;
+    symbol.GetMangled().SetValue(ConstString(symbol_name));
+
+    int16_t sectionNumber = xcoff_sym_ref.getSectionNumber();
+    size_t sectionIndex = static_cast<size_t>(sectionNumber - 1);
+    if (sectionNumber > 0 && sectionIndex < sectionList->GetSize()) {
+      lldb::SectionSP section_sp =
+          sectionList->GetSectionAtIndex(sectionNumber - 1);
+      if (!section_sp || section_sp->GetFileAddress() == LLDB_INVALID_ADDRESS)
+        continue;
+      lldb::addr_t file_addr = section_sp->GetFileAddress();
+      lldb::addr_t symbolValue = xcoff_sym_ref.getValue();
+      if (symbolValue < file_addr)
+        continue;
+      symbol.GetAddressRef() = Address(section_sp, symbolValue - file_addr);
+    }
+
+    Expected<llvm::object::SymbolRef::Type> sym_type_or_err =
+        symbol_ref.getType();
+    if (!sym_type_or_err) {
+        consumeError(sym_type_or_err.takeError());
+        continue;
+    }
+
+    symbol.SetType(MapSymbolType(sym_type_or_err.get()));
+
+    lldb_symtab.AddSymbol(symbol);
   }
 }
 
-bool ObjectFileXCOFF::IsStripped() {
-  return false;
-}
+bool ObjectFileXCOFF::IsStripped() { return false; }
 
 void ObjectFileXCOFF::CreateSections(SectionList &unified_section_list) {
+
   if (m_sections_up)
     return;
+
   m_sections_up = std::make_unique<SectionList>();
+  if (m_binary->is64Bit())
+    CreateSectionsWithBitness<XCOFF64>(unified_section_list);
+  else
+    CreateSectionsWithBitness<XCOFF32>(unified_section_list);
+}
+
+template <typename T>
+static auto GetSections(llvm::object::XCOFFObjectFile *binary) {
+  if constexpr (T::Is64Bit)
+    return binary->sections64();
+  else
+    return binary->sections32();
+}
+
+template <typename T>
+void ObjectFileXCOFF::CreateSectionsWithBitness(
+    SectionList &unified_section_list) {
   ModuleSP module_sp(GetModule());
-  if (module_sp) {
-    std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+  if (!module_sp)
+    return;
 
-    const uint32_t nsects = m_sect_headers.size();
-    ModuleSP module_sp(GetModule());
-    for (uint32_t idx = 0; idx < nsects; ++idx) {
-      llvm::StringRef sect_name = GetSectionName(m_sect_headers[idx]);
-      ConstString const_sect_name(sect_name);
-      SectionType section_type = GetSectionType(sect_name, m_sect_headers[idx]);
+  std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
 
-      SectionSP section_sp(new Section(
-          module_sp,       // Module to which this section belongs
-          this,            // Object file to which this section belongs
-          idx + 1,         // Section ID is the 1 based section index.
-          const_sect_name, // Name of this section
-          section_type,
-          m_sect_headers[idx].vmaddr, // File VM address == addresses as
-                                          // they are found in the object file
-          m_sect_headers[idx].size,     // VM size in bytes of this section
-          m_sect_headers[idx].offset, // Offset to the data for this section in the file
-          m_sect_headers[idx].size, // Size in bytes of this section as found in the file
-          0, // FIXME: alignment
-          m_sect_headers[idx].flags));      // Flags for this section
+  int idx = 0;
+  for (const typename T::SectionHeader &section :
+       GetSections<T>(m_binary.get())) {
 
-      // FIXME
-      uint32_t permissions = 0;
-      permissions |= ePermissionsReadable;
-      if (m_sect_headers[idx].flags & (XCOFF::STYP_DATA | XCOFF::STYP_BSS))
-        permissions |= ePermissionsWritable;
-      if (m_sect_headers[idx].flags & XCOFF::STYP_TEXT)
-        permissions |= ePermissionsExecutable;
-      section_sp->SetPermissions(permissions);
+    ConstString const_sect_name(section.Name);
 
-      m_sections_up->AddSection(section_sp);
-      unified_section_list.AddSection(section_sp);
+    SectionType section_type = lldb::eSectionTypeOther;
+    if (section.Flags & XCOFF::STYP_TEXT)
+      section_type = eSectionTypeCode;
+    else if (section.Flags & XCOFF::STYP_DATA)
+      section_type = eSectionTypeData;
+    else if (section.Flags & XCOFF::STYP_BSS)
+      section_type = eSectionTypeZeroFill;
+    else if (section.Flags & XCOFF::STYP_DWARF) {
+      section_type = llvm::StringSwitch<SectionType>(section.Name)
+                         .Case(".dwinfo", eSectionTypeDWARFDebugInfo)
+                         .Case(".dwline", eSectionTypeDWARFDebugLine)
+                         .Case(".dwabrev", eSectionTypeDWARFDebugAbbrev)
+                         .Case(".dwrnges", eSectionTypeDWARFDebugRanges)
+                         .Default(eSectionTypeInvalid);
     }
+
+    SectionSP section_sp(new Section(
+        module_sp, this, ++idx, const_sect_name, section_type,
+        section.VirtualAddress, section.SectionSize,
+        section.FileOffsetToRawData, section.SectionSize, 0, section.Flags));
+
+    uint32_t permissions = ePermissionsReadable;
+    if (section.Flags & (XCOFF::STYP_DATA | XCOFF::STYP_BSS))
+      permissions |= ePermissionsWritable;
+    if (section.Flags & XCOFF::STYP_TEXT)
+      permissions |= ePermissionsExecutable;
+
+    section_sp->SetPermissions(permissions);
+    m_sections_up->AddSection(section_sp);
+    unified_section_list.AddSection(section_sp);
   }
 }
 
-llvm::StringRef ObjectFileXCOFF::GetSectionName(const section_header_t &sect) {
-  llvm::StringRef hdr_name(sect.name, std::size(sect.name));
-  hdr_name = hdr_name.split('\0').first;
-  if (hdr_name.consume_front("/")) {
-    lldb::offset_t stroff;
-    if (!to_integer(hdr_name, stroff, 10))
-      return "";
-    lldb::offset_t string_file_offset =
-        m_xcoff_header.symoff + (m_xcoff_header.nsyms * static_cast<lldb::offset_t>(XCOFF::SymbolTableEntrySize)) + stroff;
-    if (const char *name = m_data.GetCStr(&string_file_offset))
-      return name;
-    return "";
-  }
-  return hdr_name;
-}
-
-SectionType ObjectFileXCOFF::GetSectionType(llvm::StringRef sect_name,
-                                             const section_header_t &sect) {
-  if (sect.flags & XCOFF::STYP_TEXT)
-    return eSectionTypeCode;
-  if (sect.flags & XCOFF::STYP_DATA)
-    return eSectionTypeData;
-  if (sect.flags & XCOFF::STYP_BSS)
-    return eSectionTypeZeroFill;
-  if (sect.flags & XCOFF::STYP_DWARF) {
-    SectionType section_type =
-      llvm::StringSwitch<SectionType>(sect_name)
-      .Case(".dwinfo", eSectionTypeDWARFDebugInfo)
-      .Case(".dwline", eSectionTypeDWARFDebugLine)
-      .Case(".dwabrev", eSectionTypeDWARFDebugAbbrev)
-      .Default(eSectionTypeInvalid);
-
-    if (section_type != eSectionTypeInvalid)
-      return section_type;
-  }
-  return eSectionTypeOther;
-}
-
-void ObjectFileXCOFF::Dump(Stream *s) {
-}
+void ObjectFileXCOFF::Dump(Stream *s) {}
 
 ArchSpec ObjectFileXCOFF::GetArchitecture() {
   ArchSpec arch_spec =
@@ -630,54 +454,6 @@ uint32_t ObjectFileXCOFF::ParseDependentModules() {
     consumeError(ImportFilesOrError.takeError());
     return 0;
   }
-
-#if 0
-  StringRef ImportFileTable = ImportFilesOrError.get();
-  const char *CurrentStr = ImportFileTable.data();
-  const char *TableEnd = ImportFileTable.end();
-  const char *Basename = nullptr;
-
-  for (size_t StrIndex = 0; CurrentStr < TableEnd;
-       ++StrIndex, CurrentStr += strlen(CurrentStr) + 1) {
-    if (StrIndex >= 3 && StrIndex % 3 == 1) {
-      // base_name
-      llvm::StringRef dll_name(CurrentStr);
-      Basename = CurrentStr;
-
-      // At this moment we only have the base name of the DLL. The full path can
-      // only be seen after the dynamic loading.  Our best guess is Try to get it
-      // with the help of the object file's directory.
-      llvm::SmallString<128> dll_fullpath;
-      FileSpec dll_specs(dll_name);
-      // FIXME: hack to get libc.a loaded
-      if (strcmp(CurrentStr, "libc.a") == 0) {
-        dll_specs.GetDirectory().SetString("/usr/lib");
-      } else {
-        dll_specs.GetDirectory().SetString(m_file.GetDirectory().GetCString());
-      }
-
-      if (!llvm::sys::fs::real_path(dll_specs.GetPath(), dll_fullpath))
-        //m_deps_filespec->EmplaceBack(dll_fullpath);
-        m_deps_filespec->EmplaceBack("/usr/lib/libc.a(shr_64.o)");
-      else {
-        // Known DLLs or DLL not found in the object file directory.
-        m_deps_filespec->EmplaceBack(dll_name);
-      }
-    } else if (StrIndex >= 3 && StrIndex % 3 == 2) {
-      // archive_member_name
-      if (strcmp(CurrentStr, "") == 0) {
-        continue;
-      }
-      assert(strcmp(Basename, "") != 0);
-      std::map<std::string, std::vector<std::string>>::iterator iter = m_deps_base_members.find(std::string(Basename));
-      if (iter == m_deps_base_members.end()) {
-        m_deps_base_members[std::string(Basename)] = std::vector<std::string>();
-        iter = m_deps_base_members.find(std::string(Basename));
-      }
-      iter->second.push_back(std::string(CurrentStr));
-    }
-  }
-#endif
   return m_deps_filespec->GetSize();
 }
 
@@ -703,7 +479,8 @@ lldb_private::Address ObjectFileXCOFF::GetEntryPointAddress() {
     return m_entry_point_address;
 
   SectionList *section_list = GetSectionList();
-  addr_t vm_addr = m_xcoff_aux_header.EntryPointAddr;
+  addr_t vm_addr = m_binary->is64Bit() ? m_binary->auxiliaryHeader64()->EntryPointAddr :
+                            m_binary->auxiliaryHeader32()->EntryPointAddr;
   SectionSP section_sp(
       section_list->FindSectionContainingFileAddress(vm_addr));
   if (section_sp) {
@@ -726,9 +503,13 @@ lldb_private::Address ObjectFileXCOFF::GetBaseAddress() {
 }
 
 ObjectFile::Type ObjectFileXCOFF::CalculateType() {
-  if (m_binary->fileHeader64()->Flags & XCOFF::F_EXEC)
+
+  const auto flags = m_binary->is64Bit() ? m_binary->fileHeader64()->Flags
+                                         : m_binary->fileHeader32()->Flags;
+
+  if (flags & XCOFF::F_EXEC)
     return eTypeExecutable;
-  else if (m_binary->fileHeader64()->Flags & XCOFF::F_SHROBJ)
+  else if (flags & XCOFF::F_SHROBJ)
     return eTypeSharedLibrary;
   return eTypeUnknown;
 }
@@ -758,23 +539,18 @@ ObjectFileXCOFF::MapFileDataWritable(const FileSpec &file, uint64_t Size,
 }
 
 ObjectFileXCOFF::ObjectFileXCOFF(const lldb::ModuleSP &module_sp,
-                             DataBufferSP data_sp, lldb::offset_t data_offset,
-                             const FileSpec *file, lldb::offset_t file_offset,
-                             lldb::offset_t length)
-    : ObjectFile(module_sp, file, file_offset, length, data_sp, data_offset),
-      m_xcoff_header(), m_sect_headers(), m_deps_filespec(), m_deps_base_members(),
-      m_entry_point_address() {
-  ::memset(&m_xcoff_header, 0, sizeof(m_xcoff_header));
+                                 DataBufferSP data_sp,
+                                 lldb::offset_t data_offset,
+                                 const FileSpec *file,
+                                 lldb::offset_t file_offset,
+                                 lldb::offset_t length)
+    : ObjectFile(module_sp, file, file_offset, length, data_sp, data_offset) {
   if (file)
     m_file = *file;
 }
 
 ObjectFileXCOFF::ObjectFileXCOFF(const lldb::ModuleSP &module_sp,
-                             DataBufferSP header_data_sp,
-                             const lldb::ProcessSP &process_sp,
-                             addr_t header_addr)
-    : ObjectFile(module_sp, process_sp, header_addr, header_data_sp),
-      m_xcoff_header(), m_sect_headers(), m_deps_filespec(), m_deps_base_members(),
-      m_entry_point_address() {
-  ::memset(&m_xcoff_header, 0, sizeof(m_xcoff_header));
-}
+                                 DataBufferSP header_data_sp,
+                                 const lldb::ProcessSP &process_sp,
+                                 addr_t header_addr)
+    : ObjectFile(module_sp, process_sp, header_addr, header_data_sp) {}
