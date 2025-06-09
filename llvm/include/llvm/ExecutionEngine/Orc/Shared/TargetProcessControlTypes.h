@@ -118,7 +118,7 @@ using DylibHandle = ExecutorAddr;
 ///  dylib in the target process.
 using ResolverHandle = ExecutorAddr;
 
-using LookupResult = std::vector<ExecutorSymbolDef>;
+using LookupResult = std::vector<std::optional<ExecutorSymbolDef>>;
 
 } // end namespace tpctypes
 
