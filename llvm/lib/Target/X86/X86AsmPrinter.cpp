@@ -198,14 +198,27 @@ void X86AsmPrinter::emitKCFITypeId(const MachineFunction &MF) {
     // Determine the function's arity (i.e., the number of arguments) at the ABI
     // level by counting the number of parameters that are passed
     // as registers, such as pointers and 64-bit (or smaller) integers. The
-    // Linux x86-64 ABI allows up to 6 parameters to be passed in GPRs.
+    // Linux x86-64 ABI allows up to 6 integer parameters to be passed in GPRs.
     // Additional parameters or parameters larger than 64 bits may be passed on
-    // the stack, in which case the arity is denoted as 7.
+    // the stack, in which case the arity is denoted as 7. Floating-point
+    // arguments passed in XMM0-XMM7 are not counted toward arity because
+    // floating-point values are not relevant to enforcing kCFI at this time.
     const unsigned ArityToRegMap[8] = {X86::EAX, X86::ECX, X86::EDX, X86::EBX,
                                        X86::ESP, X86::EBP, X86::ESI, X86::EDI};
-    int Arity = MF.getInfo<X86MachineFunctionInfo>()->getArgumentStackSize() > 0
-                    ? 7
-                    : MF.getRegInfo().liveins().size();
+    int Arity;
+    if (MF.getInfo<X86MachineFunctionInfo>()->getArgumentStackSize() > 0) {
+      Arity = 7;
+    } else {
+      Arity = 0;
+      for (const auto &LI : MF.getRegInfo().liveins()) {
+        auto Reg = LI.first;
+        if (X86::GR8RegClass.contains(Reg) || X86::GR16RegClass.contains(Reg) ||
+            X86::GR32RegClass.contains(Reg) ||
+            X86::GR64RegClass.contains(Reg)) {
+          ++Arity;
+        }
+      }
+    }
     DestReg = ArityToRegMap[Arity];
   }
 
