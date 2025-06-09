@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/fbfloat16.h"
+
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
@@ -14,7 +15,14 @@
 using LlvmLibcFBfloat16Test = LIBC_NAMESPACE::testing::FPTest<float>;
 
 TEST_F(LlvmLibcFBfloat16Test, SpecialNumbers) {
-  ASSERT_EQ(1, 2);
+
+  LIBC_NAMESPACE::bfloat16 x{0.0f};
+  ASSERT_EQ(0, static_cast<int>(x.bits));
+
+
+  LIBC_NAMESPACE::bfloat16 y{1.0f};
+  ASSERT_EQ(1, static_cast<int>(y.bits));
+
   // TODO: implement this!
   // x = some bfloat number
   // float y = x as float (using our ctor?)
