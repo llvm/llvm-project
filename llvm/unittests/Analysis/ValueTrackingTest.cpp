@@ -187,7 +187,7 @@ TEST_F(MatchSelectPatternTest, FastFMin) {
       "  %A = select i1 %1, float %a, float 5.0\n"
       "  ret float %A\n"
       "}\n");
-  expectPattern({SPF_FMINNUM, SPNB_RETURNS_ANY, false});
+  expectPattern({SPF_FMINNUM, SPNB_RETURNS_ANY, true});
 }
 
 TEST_F(MatchSelectPatternTest, FMinConstantZero) {
