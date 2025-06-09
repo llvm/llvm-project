@@ -1396,7 +1396,8 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
     // consider handling them here, but
     // TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex can also
     // handle them and without a Process.
-    if (!TypeSystemSwiftTypeRef::IsBuiltinType(m_type)) {
+    if (!TypeSystemSwiftTypeRef::IsBuiltinType(m_type) &&
+        !Flags(m_type.GetTypeInfo()).AnySet(eTypeIsMetatype)) {
       LLDB_LOG(GetLog(LLDBLog::Types),
                "{0}: unrecognized builtin type info or this is a Clang type "
                "without DWARF debug info",
