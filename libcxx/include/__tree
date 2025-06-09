@@ -83,6 +83,11 @@ class __tree_node;
 template <class _Key, class _Value>
 struct __value_type;
 
+enum class __tree_color : bool {
+  __red = false,
+  __black = true,
+};
+
 /*
 
 _NodePtr algorithms
@@ -108,7 +113,7 @@ __root, have a non-null __parent_ field.
 // Precondition:  __x != nullptr.
 template <class _NodePtr>
 inline _LIBCPP_HIDE_FROM_ABI bool __tree_is_left_child(_NodePtr __x) _NOEXCEPT {
-  return __x == __x->__parent_->__left_;
+  return __x == __x->__get_parent()->__left_;
 }
 
 // Determines if the subtree rooted at __x is a proper red black subtree.  If
@@ -116,6 +121,8 @@ inline _LIBCPP_HIDE_FROM_ABI bool __tree_is_left_child(_NodePtr __x) _NOEXCEPT {
 //    __x is an improper subtree, returns 0.
 template <class _NodePtr>
 unsigned __tree_sub_invariant(_NodePtr __x) {
+  using enum __tree_color;
+
   if (__x == nullptr)
     return 1;
   // parent consistency checked by caller
@@ -129,10 +136,10 @@ unsigned __tree_sub_invariant(_NodePtr __x) {
   if (__x->__left_ == __x->__right_ && __x->__left_ != nullptr)
     return 0;
   // If this is red, neither child can be red
-  if (!__x->__is_black_) {
-    if (__x->__left_ && !__x->__left_->__is_black_)
+  if (__x->__color_ == __red) {
+    if (__x->__left_ && __x->__left_->__color_ == __red)
       return 0;
-    if (__x->__right_ && !__x->__right_->__is_black_)
+    if (__x->__right_ && __x->__right_->__color_ == __red)
       return 0;
   }
   unsigned __h = std::__tree_sub_invariant(__x->__left_);
@@ -140,7 +147,7 @@ unsigned __tree_sub_invariant(_NodePtr __x) {
     return 0; // invalid left subtree
   if (__h != std::__tree_sub_invariant(__x->__right_))
     return 0;                    // invalid or different height right subtree
-  return __h + __x->__is_black_; // return black height of this node
+  return __h + (__x->__color_ == __black ? 1 : 0); // return black height of this node
 }
 
 // Determines if the red black tree rooted at __root is a proper red black tree.
@@ -156,7 +163,7 @@ _LIBCPP_HIDE_FROM_ABI bool __tree_invariant(_NodePtr __root) {
   if (!std::__tree_is_left_child(__root))
     return false;
   // root must be black
-  if (!__root->__is_black_)
+  if (__root->__color_ == __tree_color::__red)
     return false;
   // do normal node checks
   return std::__tree_sub_invariant(__root) != 0;
@@ -203,7 +210,7 @@ inline _LIBCPP_HIDE_FROM_ABI _EndNodePtr __tree_next_iter(_NodePtr __x) _NOEXCEP
     return static_cast<_EndNodePtr>(std::__tree_min(__x->__right_));
   while (!std::__tree_is_left_child(__x))
     __x = __x->__parent_unsafe();
-  return static_cast<_EndNodePtr>(__x->__parent_);
+  return static_cast<_EndNodePtr>(__x->__get_parent());
 }
 
 // Returns:  pointer to the previous in-order node before __x.
@@ -247,9 +254,9 @@ _LIBCPP_HIDE_FROM_ABI void __tree_left_rotate(_NodePtr __x) _NOEXCEPT {
   __x->__right_ = __y->__left_;
   if (__x->__right_ != nullptr)
     __x->__right_->__set_parent(__x);
-  __y->__parent_ = __x->__parent_;
+  __y->__set_parent(__x->__get_parent());
   if (std::__tree_is_left_child(__x))
-    __x->__parent_->__left_ = __y;
+    __x->__get_parent()->__left_ = __y;
   else
     __x->__parent_unsafe()->__right_ = __y;
   __y->__left_ = __x;
@@ -266,9 +273,9 @@ _LIBCPP_HIDE_FROM_ABI void __tree_right_rotate(_NodePtr __x) _NOEXCEPT {
   __x->__left_ = __y->__right_;
   if (__x->__left_ != nullptr)
     __x->__left_->__set_parent(__x);
-  __y->__parent_ = __x->__parent_;
+  __y->__set_parent(__x->__get_parent());
   if (std::__tree_is_left_child(__x))
-    __x->__parent_->__left_ = __y;
+    __x->__get_parent()->__left_ = __y;
   else
     __x->__parent_unsafe()->__right_ = __y;
   __y->__right_ = __x;
@@ -286,46 +293,47 @@ template <class _NodePtr>
 _LIBCPP_HIDE_FROM_ABI void __tree_balance_after_insert(_NodePtr __root, _NodePtr __x) _NOEXCEPT {
   _LIBCPP_ASSERT_INTERNAL(__root != nullptr, "Root of the tree shouldn't be null");
   _LIBCPP_ASSERT_INTERNAL(__x != nullptr, "Can't attach null node to a leaf");
-  __x->__is_black_ = __x == __root;
-  while (__x != __root && !__x->__parent_unsafe()->__is_black_) {
-    // __x->__parent_ != __root because __x->__parent_->__is_black == false
+  using enum __tree_color;
+  __x->__set_color(__x == __root ? __black : __red);
+  while (__x != __root && __x->__parent_unsafe()->__get_color() == __red) {
+    // __x->__parent_ != __root because __x->__parent_->__get_color() == __red
     if (std::__tree_is_left_child(__x->__parent_unsafe())) {
       _NodePtr __y = __x->__parent_unsafe()->__parent_unsafe()->__right_;
-      if (__y != nullptr && !__y->__is_black_) {
-        __x              = __x->__parent_unsafe();
-        __x->__is_black_ = true;
-        __x              = __x->__parent_unsafe();
-        __x->__is_black_ = __x == __root;
-        __y->__is_black_ = true;
+      if (__y != nullptr && __y->__get_color() == __red) {
+        __x = __x->__parent_unsafe();
+        __x->__set_color(__black);
+        __x = __x->__parent_unsafe();
+        __x->__set_color(__x == __root ? __black : __red);
+        __y->__set_color(__black);
       } else {
         if (!std::__tree_is_left_child(__x)) {
           __x = __x->__parent_unsafe();
           std::__tree_left_rotate(__x);
         }
-        __x              = __x->__parent_unsafe();
-        __x->__is_black_ = true;
-        __x              = __x->__parent_unsafe();
-        __x->__is_black_ = false;
+        __x = __x->__parent_unsafe();
+        __x->__set_color(__black);
+        __x = __x->__parent_unsafe();
+        __x->__set_color(__red);
         std::__tree_right_rotate(__x);
         break;
       }
     } else {
-      _NodePtr __y = __x->__parent_unsafe()->__parent_->__left_;
-      if (__y != nullptr && !__y->__is_black_) {
-        __x              = __x->__parent_unsafe();
-        __x->__is_black_ = true;
-        __x              = __x->__parent_unsafe();
-        __x->__is_black_ = __x == __root;
-        __y->__is_black_ = true;
+      _NodePtr __y = __x->__parent_unsafe()->__get_parent()->__left_;
+      if (__y != nullptr && __y->__get_color() == __red) {
+        __x = __x->__parent_unsafe();
+        __x->__set_color(__black);
+        __x = __x->__parent_unsafe();
+        __x->__set_color(__x == __root ? __black : __red);
+        __y->__set_color(__black);
       } else {
         if (std::__tree_is_left_child(__x)) {
           __x = __x->__parent_unsafe();
           std::__tree_right_rotate(__x);
         }
-        __x              = __x->__parent_unsafe();
-        __x->__is_black_ = true;
-        __x              = __x->__parent_unsafe();
-        __x->__is_black_ = false;
+        __x = __x->__parent_unsafe();
+        __x->__set_color(__black);
+        __x = __x->__parent_unsafe();
+        __x->__set_color(__red);
         std::__tree_left_rotate(__x);
         break;
       }
@@ -343,6 +351,9 @@ _LIBCPP_HIDE_FROM_ABI void __tree_remove(_NodePtr __root, _NodePtr __z) _NOEXCEP
   _LIBCPP_ASSERT_INTERNAL(__root != nullptr, "Root node should not be null");
   _LIBCPP_ASSERT_INTERNAL(__z != nullptr, "The node to remove should not be null");
   _LIBCPP_ASSERT_INTERNAL(std::__tree_invariant(__root), "The tree invariants should hold");
+
+  using enum __tree_color;
+
   // __z will be removed from the tree.  Client still needs to destruct/deallocate it
   // __y is either __z, or if __z has two children, __tree_next(__z).
   // __y will have at most one child.
@@ -354,9 +365,9 @@ _LIBCPP_HIDE_FROM_ABI void __tree_remove(_NodePtr __root, _NodePtr __z) _NOEXCEP
   _NodePtr __w = nullptr;
   // link __x to __y's parent, and find __w
   if (__x != nullptr)
-    __x->__parent_ = __y->__parent_;
+    __x->__set_parent(__y->__get_parent());
   if (std::__tree_is_left_child(__y)) {
-    __y->__parent_->__left_ = __x;
+    __y->__get_parent()->__left_ = __x;
     if (__y != __root)
       __w = __y->__parent_unsafe()->__right_;
     else
@@ -364,16 +375,16 @@ _LIBCPP_HIDE_FROM_ABI void __tree_remove(_NodePtr __root, _NodePtr __z) _NOEXCEP
   } else {
     __y->__parent_unsafe()->__right_ = __x;
     // __y can't be root if it is a right child
-    __w = __y->__parent_->__left_;
+    __w = __y->__get_parent()->__left_;
   }
-  bool __removed_black = __y->__is_black_;
+  bool __removed_black = __y->__get_color() == __black;
   // If we didn't remove __z, do so now by splicing in __y for __z,
   //    but copy __z's color.  This does not impact __x or __w.
   if (__y != __z) {
     // __z->__left_ != nulptr but __z->__right_ might == __x == nullptr
-    __y->__parent_ = __z->__parent_;
+    __y->__set_parent(__z->__get_parent());
     if (std::__tree_is_left_child(__z))
-      __y->__parent_->__left_ = __y;
+      __y->__get_parent()->__left_ = __y;
     else
       __y->__parent_unsafe()->__right_ = __y;
     __y->__left_ = __z->__left_;
@@ -381,7 +392,7 @@ _LIBCPP_HIDE_FROM_ABI void __tree_remove(_NodePtr __root, _NodePtr __z) _NOEXCEP
     __y->__right_ = __z->__right_;
     if (__y->__right_ != nullptr)
       __y->__right_->__set_parent(__y);
-    __y->__is_black_ = __z->__is_black_;
+    __y->__set_color(__z->__get_color());
     if (__root == __z)
       __root = __y;
   }
@@ -401,7 +412,7 @@ _LIBCPP_HIDE_FROM_ABI void __tree_remove(_NodePtr __root, _NodePtr __z) _NOEXCEP
     //   different black heights under left and right pointers.
     // if (__x == __root || __x != nullptr && !__x->__is_black_)
     if (__x != nullptr)
-      __x->__is_black_ = true;
+      __x->__set_color(__black);
     else {
       //  Else __x isn't root, and is "doubly black", even though it may
       //     be null.  __w can not be null here, else the parent would
@@ -411,9 +422,9 @@ _LIBCPP_HIDE_FROM_ABI void __tree_remove(_NodePtr __root, _NodePtr __z) _NOEXCEP
       while (true) {
         if (!std::__tree_is_left_child(__w)) // if x is left child
         {
-          if (!__w->__is_black_) {
-            __w->__is_black_                    = true;
-            __w->__parent_unsafe()->__is_black_ = false;
+          if (__w->__get_color() == __red) {
+            __w->__set_color(__black);
+            __w->__parent_unsafe()->__set_color(__red);
             std::__tree_left_rotate(__w->__parent_unsafe());
             // __x is still valid
             // reset __root only if necessary
@@ -423,40 +434,40 @@ _LIBCPP_HIDE_FROM_ABI void __tree_remove(_NodePtr __root, _NodePtr __z) _NOEXCEP
             __w = __w->__left_->__right_;
           }
           // __w->__is_black_ is now true, __w may have null children
-          if ((__w->__left_ == nullptr || __w->__left_->__is_black_) &&
-              (__w->__right_ == nullptr || __w->__right_->__is_black_)) {
-            __w->__is_black_ = false;
-            __x              = __w->__parent_unsafe();
+          if ((__w->__left_ == nullptr || __w->__left_->__get_color() == __black) &&
+              (__w->__right_ == nullptr || __w->__right_->__get_color() == __black)) {
+            __w->__set_color(__red);
+            __x = __w->__parent_unsafe();
             // __x can no longer be null
-            if (__x == __root || !__x->__is_black_) {
-              __x->__is_black_ = true;
+            if (__x == __root || __x->__get_color() == __red) {
+              __x->__set_color(__black);
               break;
             }
             // reset sibling, and it still can't be null
-            __w = std::__tree_is_left_child(__x) ? __x->__parent_unsafe()->__right_ : __x->__parent_->__left_;
+            __w = std::__tree_is_left_child(__x) ? __x->__parent_unsafe()->__right_ : __x->__get_parent()->__left_;
             // continue;
           } else // __w has a red child
           {
-            if (__w->__right_ == nullptr || __w->__right_->__is_black_) {
+            if (__w->__right_ == nullptr || __w->__right_->__get_color() == __black) {
               // __w left child is non-null and red
-              __w->__left_->__is_black_ = true;
-              __w->__is_black_          = false;
+              __w->__left_->__set_color(__black);
+              __w->__set_color(__red);
               std::__tree_right_rotate(__w);
               // __w is known not to be root, so root hasn't changed
               // reset sibling, and it still can't be null
               __w = __w->__parent_unsafe();
             }
             // __w has a right red child, left child may be null
-            __w->__is_black_                    = __w->__parent_unsafe()->__is_black_;
-            __w->__parent_unsafe()->__is_black_ = true;
-            __w->__right_->__is_black_          = true;
+            __w->__set_color(__w->__parent_unsafe()->__get_color());
+            __w->__parent_unsafe()->__set_color(__black);
+            __w->__right_->__set_color(__black);
             std::__tree_left_rotate(__w->__parent_unsafe());
             break;
           }
         } else {
-          if (!__w->__is_black_) {
-            __w->__is_black_                    = true;
-            __w->__parent_unsafe()->__is_black_ = false;
+          if (__w->__get_color() == __red) {
+            __w->__set_color(__black);
+            __w->__parent_unsafe()->__set_color(__red);
             std::__tree_right_rotate(__w->__parent_unsafe());
             // __x is still valid
             // reset __root only if necessary
@@ -466,33 +477,33 @@ _LIBCPP_HIDE_FROM_ABI void __tree_remove(_NodePtr __root, _NodePtr __z) _NOEXCEP
             __w = __w->__right_->__left_;
           }
           // __w->__is_black_ is now true, __w may have null children
-          if ((__w->__left_ == nullptr || __w->__left_->__is_black_) &&
-              (__w->__right_ == nullptr || __w->__right_->__is_black_)) {
-            __w->__is_black_ = false;
-            __x              = __w->__parent_unsafe();
+          if ((__w->__left_ == nullptr || __w->__left_->__get_color() == __black) &&
+              (__w->__right_ == nullptr || __w->__right_->__get_color() == __black)) {
+            __w->__set_color(__red);
+            __x = __w->__parent_unsafe();
             // __x can no longer be null
-            if (!__x->__is_black_ || __x == __root) {
-              __x->__is_black_ = true;
+            if (__x->__get_color() == __red || __x == __root) {
+              __x->__set_color(__black);
               break;
             }
             // reset sibling, and it still can't be null
-            __w = std::__tree_is_left_child(__x) ? __x->__parent_unsafe()->__right_ : __x->__parent_->__left_;
+            __w = std::__tree_is_left_child(__x) ? __x->__parent_unsafe()->__right_ : __x->__get_parent()->__left_;
             // continue;
           } else // __w has a red child
           {
-            if (__w->__left_ == nullptr || __w->__left_->__is_black_) {
+            if (__w->__left_ == nullptr || __w->__left_->__get_color() == __black) {
               // __w right child is non-null and red
-              __w->__right_->__is_black_ = true;
-              __w->__is_black_           = false;
+              __w->__right_->__set_color(__black);
+              __w->__set_color(__red);
               std::__tree_left_rotate(__w);
               // __w is known not to be root, so root hasn't changed
               // reset sibling, and it still can't be null
               __w = __w->__parent_unsafe();
             }
             // __w has a left red child, right child may be null
-            __w->__is_black_                    = __w->__parent_unsafe()->__is_black_;
-            __w->__parent_unsafe()->__is_black_ = true;
-            __w->__left_->__is_black_           = true;
+            __w->__set_color(__w->__parent_unsafe()->__get_color());
+            __w->__parent_unsafe()->__set_color(__black);
+            __w->__left_->__set_color(__black);
             std::__tree_right_rotate(__w->__parent_unsafe());
             break;
           }
@@ -565,12 +576,19 @@ public:
   using __end_node_pointer _LIBCPP_NODEBUG = __rebind_pointer_t<_VoidPtr, __tree_end_node<pointer> >;
 
   pointer __right_;
-  __end_node_pointer __parent_;
-  bool __is_black_;
 
+private:
+  __end_node_pointer __parent_;
+  __tree_color __color_;
+
+public:
   _LIBCPP_HIDE_FROM_ABI pointer __parent_unsafe() const { return static_cast<pointer>(__parent_); }
 
   _LIBCPP_HIDE_FROM_ABI void __set_parent(pointer __p) { __parent_ = static_cast<__end_node_pointer>(__p); }
+  _LIBCPP_HIDE_FROM_ABI void __set_parent(__end_node_pointer __p) { __parent_ = __p; }
+  _LIBCPP_HIDE_FROM_ABI __end_node_pointer __get_parent() const { return __parent_; }
+  _LIBCPP_HIDE_FROM_ABI __tree_color __get_color() const { return __color_; }
+  _LIBCPP_HIDE_FROM_ABI void __set_color(__tree_color __color) { __color_ = __color; }
 
   ~__tree_node_base()                                  = delete;
   __tree_node_base(__tree_node_base const&)            = delete;
@@ -1257,8 +1275,8 @@ private:
     _LIBCPP_HIDE_FROM_ABI ~_DetachedTreeCache() {
       __t_->destroy(__cache_elem_);
       if (__cache_root_) {
-        while (__cache_root_->__parent_ != nullptr)
-          __cache_root_ = static_cast<__node_pointer>(__cache_root_->__parent_);
+        while (__cache_root_->__get_parent() != nullptr)
+          __cache_root_ = static_cast<__node_pointer>(__cache_root_->__get_parent());
         __t_->destroy(__cache_root_);
       }
     }
@@ -1397,11 +1415,11 @@ __tree<_Tp, _Compare, _Allocator>::__tree(const value_compare& __comp, const all
 template <class _Tp, class _Compare, class _Allocator>
 typename __tree<_Tp, _Compare, _Allocator>::__node_pointer
 __tree<_Tp, _Compare, _Allocator>::_DetachedTreeCache::__detach_from_tree(__tree* __t) _NOEXCEPT {
-  __node_pointer __cache                = static_cast<__node_pointer>(__t->__begin_node_);
-  __t->__begin_node_                    = __t->__end_node();
-  __t->__end_node()->__left_->__parent_ = nullptr;
-  __t->__end_node()->__left_            = nullptr;
-  __t->__size_                          = 0;
+  __node_pointer __cache = static_cast<__node_pointer>(__t->__begin_node_);
+  __t->__begin_node_     = __t->__end_node();
+  __t->__end_node()->__left_->__set_parent(__parent_pointer(nullptr));
+  __t->__end_node()->__left_ = nullptr;
+  __t->__size_               = 0;
   // __cache->__left_ == nullptr
   if (__cache->__right_ != nullptr)
     __cache = static_cast<__node_pointer>(__cache->__right_);
@@ -1417,18 +1435,18 @@ __tree<_Tp, _Compare, _Allocator>::_DetachedTreeCache::__detach_from_tree(__tree
 template <class _Tp, class _Compare, class _Allocator>
 typename __tree<_Tp, _Compare, _Allocator>::__node_pointer
 __tree<_Tp, _Compare, _Allocator>::_DetachedTreeCache::__detach_next(__node_pointer __cache) _NOEXCEPT {
-  if (__cache->__parent_ == nullptr)
+  if (__cache->__get_parent() == nullptr)
     return nullptr;
   if (std::__tree_is_left_child(static_cast<__node_base_pointer>(__cache))) {
-    __cache->__parent_->__left_ = nullptr;
-    __cache                     = static_cast<__node_pointer>(__cache->__parent_);
+    __cache->__get_parent()->__left_ = nullptr;
+    __cache                     = static_cast<__node_pointer>(__cache->__get_parent());
     if (__cache->__right_ == nullptr)
       return __cache;
     return static_cast<__node_pointer>(std::__tree_leaf(__cache->__right_));
   }
   // __cache is right child
   __cache->__parent_unsafe()->__right_ = nullptr;
-  __cache                              = static_cast<__node_pointer>(__cache->__parent_);
+  __cache                              = static_cast<__node_pointer>(__cache->__get_parent());
   if (__cache->__left_ == nullptr)
     return __cache;
   return static_cast<__node_pointer>(std::__tree_leaf(__cache->__left_));
@@ -1522,10 +1540,10 @@ __tree<_Tp, _Compare, _Allocator>::__tree(__tree&& __t) _NOEXCEPT_(
   if (__size_ == 0)
     __begin_node_ = __end_node();
   else {
-    __end_node()->__left_->__parent_ = static_cast<__end_node_pointer>(__end_node());
-    __t.__begin_node_                = __t.__end_node();
-    __t.__end_node()->__left_        = nullptr;
-    __t.__size_                      = 0;
+    __end_node()->__left_->__set_parent(static_cast<__end_node_pointer>(__end_node()));
+    __t.__begin_node_         = __t.__end_node();
+    __t.__end_node()->__left_ = nullptr;
+    __t.__size_               = 0;
   }
 }
 
@@ -1536,13 +1554,13 @@ __tree<_Tp, _Compare, _Allocator>::__tree(__tree&& __t, const allocator_type& __
     if (__t.__size_ == 0)
       __begin_node_ = __end_node();
     else {
-      __begin_node_                    = __t.__begin_node_;
-      __end_node()->__left_            = __t.__end_node()->__left_;
-      __end_node()->__left_->__parent_ = static_cast<__end_node_pointer>(__end_node());
-      __size_                          = __t.__size_;
-      __t.__begin_node_                = __t.__end_node();
-      __t.__end_node()->__left_        = nullptr;
-      __t.__size_                      = 0;
+      __begin_node_         = __t.__begin_node_;
+      __end_node()->__left_ = __t.__end_node()->__left_;
+      __end_node()->__left_->__set_parent(static_cast<__end_node_pointer>(__end_node()));
+      __size_                   = __t.__size_;
+      __t.__begin_node_         = __t.__end_node();
+      __t.__end_node()->__left_ = nullptr;
+      __t.__size_               = 0;
     }
   } else {
     __begin_node_ = __end_node();
@@ -1561,10 +1579,10 @@ void __tree<_Tp, _Compare, _Allocator>::__move_assign(__tree& __t, true_type)
   if (__size_ == 0)
     __begin_node_ = __end_node();
   else {
-    __end_node()->__left_->__parent_ = static_cast<__end_node_pointer>(__end_node());
-    __t.__begin_node_                = __t.__end_node();
-    __t.__end_node()->__left_        = nullptr;
-    __t.__size_                      = 0;
+    __end_node()->__left_->__set_parent(static_cast<__end_node_pointer>(__end_node()));
+    __t.__begin_node_         = __t.__end_node();
+    __t.__end_node()->__left_ = nullptr;
+    __t.__size_               = 0;
   }
 }
 
@@ -1628,11 +1646,11 @@ void __tree<_Tp, _Compare, _Allocator>::swap(__tree& __t)
   if (__size_ == 0)
     __begin_node_ = __end_node();
   else
-    __end_node()->__left_->__parent_ = __end_node();
+    __end_node()->__left_->__set_parent(__end_node());
   if (__t.__size_ == 0)
     __t.__begin_node_ = __t.__end_node();
   else
-    __t.__end_node()->__left_->__parent_ = __t.__end_node();
+    __t.__end_node()->__left_->__set_parent(static_cast<__end_node_pointer>(__t.__end_node()));
 }
 
 template <class _Tp, class _Compare, class _Allocator>
@@ -1819,7 +1837,7 @@ void __tree<_Tp, _Compare, _Allocator>::__insert_node_at(
     __end_node_pointer __parent, __node_base_pointer& __child, __node_base_pointer __new_node) _NOEXCEPT {
   __new_node->__left_   = nullptr;
   __new_node->__right_  = nullptr;
-  __new_node->__parent_ = __parent;
+  __new_node->__set_parent(__parent);
   // __new_node->__is_black_ is initialized in __tree_balance_after_insert
   __child = __new_node;
   if (__begin_node_->__left_ != nullptr)
@@ -2247,7 +2265,7 @@ __tree<_Tp, _Compare, _Allocator>::remove(const_iterator __p) _NOEXCEPT {
     if (__np->__right_ != nullptr)
       __begin_node_ = static_cast<__end_node_pointer>(__np->__right_);
     else
-      __begin_node_ = static_cast<__end_node_pointer>(__np->__parent_);
+      __begin_node_ = static_cast<__end_node_pointer>(__np->__get_parent());
   }
   --__size_;
   std::__tree_remove(__end_node()->__left_, static_cast<__node_base_pointer>(__np));

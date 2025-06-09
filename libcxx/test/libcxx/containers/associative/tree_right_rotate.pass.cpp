@@ -25,6 +25,7 @@ struct Node {
 
   Node* __parent_unsafe() const { return __parent_; }
   void __set_parent(Node* x) { __parent_ = x; }
+  Node* __get_parent() { return __parent_; }
 
   Node() : __left_(), __right_(), __parent_() {}
 };
