@@ -2743,7 +2743,7 @@ declare i32 @llvm.amdgcn.readfirstlane(i32)
 
 @gv = constant i32 0
 
-define amdgpu_kernel void @readfirstlane_constant(i32 %arg, ptr %ptr) {
+define amdgpu_cs void @readfirstlane_constant(i32 %arg, ptr %ptr) {
 ; CHECK-LABEL: @readfirstlane_constant(
 ; CHECK-NEXT:    [[VAR:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[ARG:%.*]])
 ; CHECK-NEXT:    store volatile i32 [[VAR]], ptr [[PTR:%.*]], align 4
@@ -2829,7 +2829,7 @@ bb1:
 
 declare i32 @llvm.amdgcn.readlane(i32, i32)
 
-define amdgpu_kernel void @readlane_constant(i32 %arg, i32 %lane, ptr %ptr) {
+define amdgpu_cs void @readlane_constant(i32 %arg, i32 %lane, ptr %ptr) {
 ; CHECK-LABEL: @readlane_constant(
 ; CHECK-NEXT:    [[VAR:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG:%.*]], i32 7)
 ; CHECK-NEXT:    store volatile i32 [[VAR]], ptr [[PTR:%.*]], align 4
@@ -3041,14 +3041,12 @@ define amdgpu_kernel void @permlanex16_fetch_invalid_bound_ctrl(ptr addrspace(1)
 ; llvm.amdgcn.permlane64
 ; --------------------------------------------------------------------
 
-define amdgpu_kernel void @permlane64_uniform(ptr addrspace(1) %out, i32 %src0) {
+define amdgpu_kernel void @permlane64_uniform(ptr addrspace(1) %out, i32 %src) {
 ; CHECK-LABEL: @permlane64_uniform(
-; CHECK-NEXT:    [[SRC1:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[SRC0:%.*]])
-; CHECK-NEXT:    store i32 [[SRC1]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %src1 = call i32 @llvm.amdgcn.readfirstlane(i32 %src0)
-  %res = call i32 @llvm.amdgcn.permlane64(i32 %src1)
+  %res = call i32 @llvm.amdgcn.permlane64(i32 %src)
   store i32 %res, ptr addrspace(1) %out
   ret void
 }
