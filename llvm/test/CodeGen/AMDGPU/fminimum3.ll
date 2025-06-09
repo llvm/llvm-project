@@ -89,13 +89,13 @@ define amdgpu_ps i32 @s_fminimum3_f32(float inreg %a, float inreg %b, float inre
 ; GFX942-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX942-NEXT:    v_min_f32_e32 v1, s0, v0
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
-; GFX942-NEXT:    v_cmp_o_f32_e32 vcc, s0, v0
+; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, s0, v0
 ; GFX942-NEXT:    s_nop 1
-; GFX942-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GFX942-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
 ; GFX942-NEXT:    v_min_f32_e32 v1, s2, v0
-; GFX942-NEXT:    v_cmp_o_f32_e32 vcc, s2, v0
+; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, s2, v0
 ; GFX942-NEXT:    s_nop 1
-; GFX942-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GFX942-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX942-NEXT:    ; return to shader part epilog
@@ -1360,13 +1360,13 @@ define amdgpu_ps i32 @s_fminimum3_f16(half inreg %a, half inreg %b, half inreg %
 ; GFX942-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX942-NEXT:    v_min_f16_e32 v1, s0, v0
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 0x7e00
-; GFX942-NEXT:    v_cmp_o_f16_e32 vcc, s0, v0
+; GFX942-NEXT:    v_cmp_u_f16_e32 vcc, s0, v0
 ; GFX942-NEXT:    s_nop 1
-; GFX942-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GFX942-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
 ; GFX942-NEXT:    v_min_f16_e32 v1, s2, v0
-; GFX942-NEXT:    v_cmp_o_f16_e32 vcc, s2, v0
+; GFX942-NEXT:    v_cmp_u_f16_e32 vcc, s2, v0
 ; GFX942-NEXT:    s_nop 1
-; GFX942-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GFX942-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
 ; GFX942-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_readfirstlane_b32 s0, v0
@@ -3795,14 +3795,14 @@ define amdgpu_ps <2 x i32> @s_no_fminimum3_f32__multi_use(float inreg %a, float 
 ; GFX942-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX942-NEXT:    v_min_f32_e32 v1, s0, v0
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
-; GFX942-NEXT:    v_cmp_o_f32_e32 vcc, s0, v0
+; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, s0, v0
 ; GFX942-NEXT:    s_nop 1
-; GFX942-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GFX942-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
 ; GFX942-NEXT:    v_min_f32_e32 v1, s2, v0
-; GFX942-NEXT:    v_cmp_o_f32_e32 vcc, s2, v0
+; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, s2, v0
 ; GFX942-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX942-NEXT:    s_nop 0
-; GFX942-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
+; GFX942-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX942-NEXT:    ; return to shader part epilog
@@ -3899,14 +3899,14 @@ define amdgpu_ps <2 x i32> @s_no_fminimum3_f16__multi_use(half inreg %a, half in
 ; GFX942-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX942-NEXT:    v_min_f16_e32 v1, s0, v0
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 0x7e00
-; GFX942-NEXT:    v_cmp_o_f16_e32 vcc, s0, v0
+; GFX942-NEXT:    v_cmp_u_f16_e32 vcc, s0, v0
 ; GFX942-NEXT:    s_nop 1
-; GFX942-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GFX942-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
 ; GFX942-NEXT:    v_min_f16_e32 v1, s2, v0
-; GFX942-NEXT:    v_cmp_o_f16_e32 vcc, s2, v0
+; GFX942-NEXT:    v_cmp_u_f16_e32 vcc, s2, v0
 ; GFX942-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX942-NEXT:    s_nop 0
-; GFX942-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
+; GFX942-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
 ; GFX942-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX942-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX942-NEXT:    v_readfirstlane_b32 s1, v1

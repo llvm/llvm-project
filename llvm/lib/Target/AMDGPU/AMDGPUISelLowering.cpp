@@ -4733,8 +4733,7 @@ SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
   SDValue False = N->getOperand(2);
 
   int ShouldSwap = 0;
-  for (auto it = Cond->use_begin(); it != Cond->use_end(); it++) {
-    auto User = it->getUser();
+  for (auto *User : Cond->users()) {
 
     if (User->getOpcode() != ISD::SELECT) {
       ShouldSwap = 0;
@@ -4749,38 +4748,29 @@ SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
     if (isFnegOrFabs(Op1) || isFnegOrFabs(Op2))
       continue;
 
-    bool IsOp1Divergent = Op1->isDivergent();
-    bool IsOp2Divergent = Op2->isDivergent();
-
-    if (!IsOp1Divergent && IsOp2Divergent)
-      ShouldSwap++;
-    else if (IsOp1Divergent && !IsOp2Divergent)
-      ShouldSwap--;
+    ShouldSwap += Op2->isDivergent() - Op1->isDivergent();
   }
 
-  if (Cond->hasOneUse() || ShouldSwap > 0) {
+  if (ShouldSwap > 0) {
     SelectionDAG &DAG = DCI.DAG;
-    if (DAG.isConstantValueOfAnyType(True) &&
-        !DAG.isConstantValueOfAnyType(False)) {
-      // Swap cmp + select pair to move constant to false input.
-      // This will allow using VOPC cndmasks more often.
-      // select (setcc x, y), k, x -> select (setccinv x, y), x, k
+    // Swap cmp + select pair to move constant to false input.
+    // This will allow using VOPC cndmasks more often.
+    // select (setcc x, y), k, x -> select (setccinv x, y), x, k
 
-      SDLoc SL(N);
-      ISD::CondCode NewCC =
-          getSetCCInverse(cast<CondCodeSDNode>(CC)->get(), LHS.getValueType());
+    SDLoc SL(N);
+    ISD::CondCode NewCC =
+        getSetCCInverse(cast<CondCodeSDNode>(CC)->get(), LHS.getValueType());
 
-      SDValue NewCond = DAG.getSetCC(SL, Cond.getValueType(), LHS, RHS, NewCC);
-      return DAG.getNode(ISD::SELECT, SL, VT, NewCond, False, True);
-    }
+    SDValue NewCond = DAG.getSetCC(SL, Cond.getValueType(), LHS, RHS, NewCC);
+    return DAG.getNode(ISD::SELECT, SL, VT, NewCond, False, True);
+  }
 
-    if (VT == MVT::f32 && Subtarget->hasFminFmaxLegacy()) {
-      SDValue MinMax
-        = combineFMinMaxLegacy(SDLoc(N), VT, LHS, RHS, True, False, CC, DCI);
-      // Revisit this node so we can catch min3/max3/med3 patterns.
-      //DCI.AddToWorklist(MinMax.getNode());
-      return MinMax;
-    }
+  if (Cond->hasOneUse() && (VT == MVT::f32 && Subtarget->hasFminFmaxLegacy())) {
+    SDValue MinMax =
+        combineFMinMaxLegacy(SDLoc(N), VT, LHS, RHS, True, False, CC, DCI);
+    // Revisit this node so we can catch min3/max3/med3 patterns.
+    // DCI.AddToWorklist(MinMax.getNode());
+    return MinMax;
   }
 
   // There's no reason to not do this if the condition has other uses.
