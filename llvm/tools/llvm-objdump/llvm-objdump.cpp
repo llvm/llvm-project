@@ -1522,7 +1522,7 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
         uint64_t Target;
         bool BranchTargetKnown = MIA->evaluateBranch(Inst, Index, Size, Target);
         if (BranchTargetKnown && (Target >= Start && Target < End) &&
-            !Labels.count(Target)) {
+            !Targets.count(Target)) {
           // On PowerPC and AIX, a function call is encoded as a branch to 0.
           // On other PowerPC platforms (ELF), a function call is encoded as
           // a branch to self. Do not add a label for these cases.
