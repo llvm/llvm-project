@@ -19,11 +19,13 @@
 #include "test_macros.h"
 
 constexpr bool test() {
-  typedef std::chrono::system_clock Clock;
-  typedef std::chrono::milliseconds Duration;
+  using Clock    = std::chrono::system_clock;
+  using Duration = std::chrono::milliseconds;
   std::chrono::time_point<Clock, Duration> t{Duration{5}};
   std::chrono::time_point<Clock, Duration>& tref{++t};
-  return &tref == &t && tref.time_since_epoch() == Duration{6};
+  assert(&tref == &t);
+  assert(tref.time_since_epoch() == Duration{6});
+  return true;
 }
 
 int main(int, char**) {
