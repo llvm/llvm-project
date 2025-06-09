@@ -4756,9 +4756,6 @@ ExprResult Sema::CheckConceptTemplateId(
     EnterExpressionEvaluationContext EECtx{
       *this, ExpressionEvaluationContext::Unevaluated, CSD};
 
-    ContextRAII CurContext(*this, CSD->getDeclContext(),
-                         /*NewThisContext=*/false);
-
     Error = CheckConstraintSatisfaction(
         NamedConcept, AssociatedConstraint(NamedConcept->getConstraintExpr()),
         MLTAL,
