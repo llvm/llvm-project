@@ -1965,12 +1965,12 @@ mlir::LogicalResult CIRToLLVMVecSplatOpLowering::matchAndRewrite(
   // element in the vector. Start with an undef vector. Insert the value into
   // the first element. Then use a `shufflevector` with a mask of all 0 to
   // fill out the entire vector with that value.
-  const cir::VectorType vecTy = op.getType();
-  const mlir::Type llvmTy = typeConverter->convertType(vecTy);
-  const mlir::Location loc = op.getLoc();
-  const mlir::Value poison = rewriter.create<mlir::LLVM::PoisonOp>(loc, llvmTy);
+  cir::VectorType vecTy = op.getType();
+  mlir::Type llvmTy = typeConverter->convertType(vecTy);
+  mlir::Location loc = op.getLoc();
+  mlir::Value poison = rewriter.create<mlir::LLVM::PoisonOp>(loc, llvmTy);
 
-  const mlir::Value elementValue = adaptor.getValue();
+  mlir::Value elementValue = adaptor.getValue();
   if (mlir::isa<mlir::LLVM::PoisonOp>(elementValue.getDefiningOp())) {
     // If the splat value is poison, then we can just use poison value
     // for the entire vector.
@@ -1997,11 +1997,11 @@ mlir::LogicalResult CIRToLLVMVecSplatOpLowering::matchAndRewrite(
     }
   }
 
-  const mlir::Value indexValue =
+  mlir::Value indexValue =
       rewriter.create<mlir::LLVM::ConstantOp>(loc, rewriter.getI64Type(), 0);
-  const mlir::Value oneElement = rewriter.create<mlir::LLVM::InsertElementOp>(
+  mlir::Value oneElement = rewriter.create<mlir::LLVM::InsertElementOp>(
       loc, poison, elementValue, indexValue);
-  const SmallVector<int32_t> zeroValues(vecTy.getSize(), 0);
+  SmallVector<int32_t> zeroValues(vecTy.getSize(), 0);
   rewriter.replaceOpWithNewOp<mlir::LLVM::ShuffleVectorOp>(op, oneElement,
                                                            poison, zeroValues);
   return mlir::success();
