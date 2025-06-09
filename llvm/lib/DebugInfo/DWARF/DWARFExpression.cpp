@@ -499,7 +499,7 @@ static bool printCompactDWARFExpr(
       break;
     }
     case dwarf::DW_OP_LLVM_user: {
-      assert(Op.getSubCode() && *Op.getSubCode() == dwarf::DW_OP_LLVM_nop);
+      assert(Op.getSubCode() == dwarf::DW_OP_LLVM_nop);
       break;
     }
     default:
