@@ -49803,7 +49803,34 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
   EVT VT = N->getValueType(0);
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  unsigned int Opcode = N->getOpcode();
   SDLoc DL(N);
+
+  // If both operands of a 64-bit multiply are known to have their upper 48 bits
+  // zero, the result is guaranteed to fit in 32 bits. For example:
+  //   (i16::MAX * i16::MAX) = 32767 * 32767 = 1073676289
+  // which fits within a signed 32-bit integer (i32::MAX = 2,147,483,647).
+  // In such cases, we can safely perform the multiplication as a 32-bit signed
+  // `mul` followed by a zero-extension to i64.
+  if (VT == MVT::i64 && Subtarget.is64Bit()) {
+    APInt HiMask = APInt::getHighBitsSet(64, 48);
+    if (DAG.MaskedValueIsZero(Op0, HiMask) &&
+        DAG.MaskedValueIsZero(Op1, HiMask)) {
+      SDValue LHS = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Op0);
+      SDValue RHS = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Op1);
+      bool NSW = Op0->getFlags().hasNoSignedWrap();
+      bool NUW = Op0->getFlags().hasNoUnsignedWrap();
+      NSW = NSW & DAG.willNotOverflowMul(true, LHS, RHS);
+      NUW = NUW & DAG.willNotOverflowMul(false, LHS, RHS);
+      SDNodeFlags Flags;
+      Flags.setNoUnsignedWrap(NUW);
+      Flags.setNoSignedWrap(NSW);
+      SDValue Mul = DAG.getNode(Opcode, DL, MVT::i32, LHS, RHS, Flags);
+      return DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Mul);
+    }
+  }
 
   if (SDValue V = combineMulToPMADDWD(N, DL, DAG, Subtarget))
     return V;
@@ -58070,7 +58097,27 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
+  unsigned int Opcode = N->getOpcode();
   SDLoc DL(N);
+
+  // Use a 32-bit add+zext if upper 33 bits known zero.
+  if (VT == MVT::i64 && Subtarget.is64Bit()) {
+    APInt HiMask = APInt::getHighBitsSet(64, 33);
+    if (DAG.MaskedValueIsZero(Op0, HiMask) &&
+        DAG.MaskedValueIsZero(Op1, HiMask)) {
+      SDValue LHS = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Op0);
+      SDValue RHS = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Op1);
+      bool NSW = Op0->getFlags().hasNoSignedWrap();
+      bool NUW = Op0->getFlags().hasNoUnsignedWrap();
+      NSW = NSW & DAG.willNotOverflowAdd(true, LHS, RHS);
+      NUW = NUW & DAG.willNotOverflowAdd(false, LHS, RHS);
+      SDNodeFlags Flags;
+      Flags.setNoUnsignedWrap(NUW);
+      Flags.setNoSignedWrap(NSW);
+      SDValue Sum = DAG.getNode(Opcode, DL, MVT::i32, LHS, RHS, Flags);
+      return DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Sum);
+    }
+  }
 
   if (SDValue Select = pushAddIntoCmovOfConsts(N, DL, DAG, Subtarget))
     return Select;
@@ -58297,7 +58344,27 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
+  unsigned int Opcode = N->getOpcode();
   SDLoc DL(N);
+
+  // Use a 32-bit sub+zext if upper 33 bits known zero.
+  if (VT == MVT::i64 && Subtarget.is64Bit()) {
+    APInt HiMask = APInt::getHighBitsSet(64, 33);
+    if (DAG.MaskedValueIsZero(Op0, HiMask) &&
+        DAG.MaskedValueIsZero(Op1, HiMask)) {
+      SDValue LHS = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Op0);
+      SDValue RHS = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Op1);
+      bool NSW = Op0->getFlags().hasNoSignedWrap();
+      bool NUW = Op0->getFlags().hasNoUnsignedWrap();
+      NSW = NSW & DAG.willNotOverflowSub(true, LHS, RHS);
+      NUW = NUW & DAG.willNotOverflowSub(false, LHS, RHS);
+      SDNodeFlags Flags;
+      Flags.setNoUnsignedWrap(NUW);
+      Flags.setNoSignedWrap(NSW);
+      SDValue Sub = DAG.getNode(Opcode, DL, MVT::i32, LHS, RHS, Flags);
+      return DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Sub);
+    }
+  }
 
   auto IsNonOpaqueConstant = [&](SDValue Op) {
     return DAG.isConstantIntBuildVectorOrConstantInt(Op,
