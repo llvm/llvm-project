@@ -39,8 +39,8 @@ CheckValidProgramTranslation(llvm::StringRef fpo_program,
 
   std::string result;
   llvm::raw_string_ostream os(result);
-  llvm::DWARFExpression(extractor, /*AddressSize=*/4, llvm::dwarf::DWARF32)
-      .print(os, llvm::DIDumpOptions(), nullptr);
+  llvm::DWARFExpression E(extractor, /*AddressSize=*/4, llvm::dwarf::DWARF32);
+  llvm::DWARFExpressionPrinter::print(&E, os, llvm::DIDumpOptions(), nullptr);
 
   // actual check
   ASSERT_EQ(expected_dwarf_expression, result);
