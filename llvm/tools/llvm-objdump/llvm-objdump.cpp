@@ -2402,8 +2402,9 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                       break;
                     TargetSecAddr = It->first;
                   }
-                  TargetSectionSymbols.push_back(&AllSymbols[It->second]);
-                  if (!AllSymbols[It->second].empty())
+                  auto *SectionSymbols = &AllSymbols[It->second];
+                  TargetSectionSymbols.push_back(SectionSymbols);
+                  if (!SectionSymbols->empty())
                     FoundSymbols = true;
                 }
               } else {
