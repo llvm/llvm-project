@@ -1404,13 +1404,13 @@ static bool hasUndefContents(MemorySSA *MSSA, BatchAAResults &AA, Value *V,
   return false;
 }
 
-static bool inputFullyCoveredBySrc(MemorySSA *MSSA, MemCpyInst *MemCpy,
-                                   MemIntrinsic *MemSrc, BatchAAResults &BAA) {
-  // If the memcpy is larger than the previous, but the memory was undef prior
-  // to that, we can just ignore the tail. Technically we're only
-  // interested in the bytes from 0..MemSrcOffset and
-  // MemSrcLength+MemSrcOffset..CopySize here, but as we can't easily represent
-  // this location, we use the full 0..CopySize range.
+// If the memcpy is larger than the previous, but the memory was undef prior to
+// that, we can just ignore the tail. Technically we're only interested in the
+// bytes from 0..MemSrcOffset and MemSrcLength+MemSrcOffset..CopySize here, but
+// as we can't easily represent this location (hasUndefContents uses mustAlias
+// which cannot deal with offsets), we use the full 0..CopySize range.
+static bool overreadUndefContents(MemorySSA *MSSA, MemCpyInst *MemCpy,
+                                  MemIntrinsic *MemSrc, BatchAAResults &BAA) {
   Value *CopySize = MemCpy->getLength();
   MemoryLocation MemCpyLoc = MemoryLocation::getForSource(MemCpy);
   MemoryUseOrDef *MemSrcAccess = MSSA->getMemoryAccess(MemSrc);
@@ -1465,7 +1465,7 @@ bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
     if (!CCopySize)
       return false;
     if (CCopySize->getZExtValue() + MOffset > CMemSetSize->getZExtValue()) {
-      if (!inputFullyCoveredBySrc(MSSA, MemCpy, MemSet, BAA))
+      if (!overreadUndefContents(MSSA, MemCpy, MemSet, BAA))
         return false;
       // Clip the memcpy to the bounds of the memset
       if (MOffset == 0)
