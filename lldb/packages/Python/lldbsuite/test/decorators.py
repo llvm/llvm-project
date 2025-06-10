@@ -490,7 +490,6 @@ def apple_simulator_test(platform):
 
             sim_devices = json.loads(sim_devices_str)["devices"]
             for simulator in sim_devices:
-
                 if isinstance(simulator, dict):
                     runtime = simulator["name"]
                     devices = simulator["devices"]
