@@ -243,9 +243,9 @@ define i32 @foo2(i32 signext %a) {
 ; SHRINK-WRAP-PIC-NEXT:  # %bb.1:
 ; SHRINK-WRAP-PIC-NEXT:    addiu $sp, $sp, -8
 ; SHRINK-WRAP-PIC-NEXT:    sw $ra, 0($sp)
-; SHRINK-WRAP-PIC-NEXT:    lui $1, %hi(($BB1_4)-($BB1_2))
+; SHRINK-WRAP-PIC-NEXT:    lui $1, %hi($BB1_4-$BB1_2)
 ; SHRINK-WRAP-PIC-NEXT:    bal $BB1_2
-; SHRINK-WRAP-PIC-NEXT:    addiu $1, $1, %lo(($BB1_4)-($BB1_2))
+; SHRINK-WRAP-PIC-NEXT:    addiu $1, $1, %lo($BB1_4-$BB1_2)
 ; SHRINK-WRAP-PIC-NEXT:  $BB1_2:
 ; SHRINK-WRAP-PIC-NEXT:    addu $1, $ra, $1
 ; SHRINK-WRAP-PIC-NEXT:    lw $ra, 0($sp)
@@ -272,9 +272,9 @@ define i32 @foo2(i32 signext %a) {
 ; NO-SHRINK-WRAP-PIC-NEXT:  # %bb.1:
 ; NO-SHRINK-WRAP-PIC-NEXT:    addiu $sp, $sp, -8
 ; NO-SHRINK-WRAP-PIC-NEXT:    sw $ra, 0($sp)
-; NO-SHRINK-WRAP-PIC-NEXT:    lui $1, %hi(($BB1_4)-($BB1_2))
+; NO-SHRINK-WRAP-PIC-NEXT:    lui $1, %hi($BB1_4-$BB1_2)
 ; NO-SHRINK-WRAP-PIC-NEXT:    bal $BB1_2
-; NO-SHRINK-WRAP-PIC-NEXT:    addiu $1, $1, %lo(($BB1_4)-($BB1_2))
+; NO-SHRINK-WRAP-PIC-NEXT:    addiu $1, $1, %lo($BB1_4-$BB1_2)
 ; NO-SHRINK-WRAP-PIC-NEXT:  $BB1_2:
 ; NO-SHRINK-WRAP-PIC-NEXT:    addu $1, $ra, $1
 ; NO-SHRINK-WRAP-PIC-NEXT:    lw $ra, 0($sp)

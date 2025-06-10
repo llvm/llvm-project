@@ -15,6 +15,9 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCAsmMacro.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
 #include <cstdint>
 #include <string>
@@ -22,10 +25,8 @@
 
 namespace llvm {
 
-class MCAsmLexer;
 class MCAsmInfo;
 class MCAsmParserExtension;
-class MCContext;
 class MCExpr;
 class MCInstPrinter;
 class MCInstrInfo;
@@ -105,7 +106,7 @@ struct AsmFieldInfo {
 };
 
 /// Generic Sema callback for assembly parser.
-class MCAsmParserSemaCallback {
+class LLVM_ABI MCAsmParserSemaCallback {
 public:
   virtual ~MCAsmParserSemaCallback();
 
@@ -120,7 +121,7 @@ public:
 
 /// Generic assembler parser interface, for use by target specific
 /// assembly parsers.
-class MCAsmParser {
+class LLVM_ABI MCAsmParser {
 public:
   using DirectiveHandler = bool (*)(MCAsmParserExtension*, StringRef, SMLoc);
   using ExtensionDirectiveHandler =
@@ -136,8 +137,13 @@ private:
   MCTargetAsmParser *TargetParser = nullptr;
 
 protected: // Can only create subclasses.
-  MCAsmParser();
+  MCAsmParser(MCContext &, MCStreamer &, SourceMgr &, const MCAsmInfo &);
 
+  MCContext &Ctx;
+  MCStreamer &Out;
+  SourceMgr &SrcMgr;
+  const MCAsmInfo &MAI;
+  AsmLexer Lexer;
   SmallVector<MCPendingError, 0> PendingErrors;
 
   /// Flag tracking whether any errors have been encountered.
@@ -155,17 +161,11 @@ public:
 
   virtual void addAliasForDirective(StringRef Directive, StringRef Alias) = 0;
 
-  virtual SourceMgr &getSourceManager() = 0;
-
-  virtual MCAsmLexer &getLexer() = 0;
-  const MCAsmLexer &getLexer() const {
-    return const_cast<MCAsmParser*>(this)->getLexer();
-  }
-
-  virtual MCContext &getContext() = 0;
-
-  /// Return the output streamer for the assembler.
-  virtual MCStreamer &getStreamer() = 0;
+  MCContext &getContext() { return Ctx; }
+  MCStreamer &getStreamer() { return Out; }
+  SourceMgr &getSourceManager() { return SrcMgr; }
+  AsmLexer &getLexer() { return Lexer; }
+  const AsmLexer &getLexer() const { return Lexer; }
 
   MCTargetAsmParser &getTargetParser() const { return *TargetParser; }
   void setTargetParser(MCTargetAsmParser &P);
@@ -270,7 +270,7 @@ public:
 
   bool parseMany(function_ref<bool()> parseOne, bool hasComma = true);
 
-  bool parseIntToken(int64_t &V, const Twine &ErrMsg);
+  bool parseIntToken(int64_t &V, const Twine &ErrMsg = "expected integer");
 
   bool check(bool P, const Twine &Msg);
   bool check(bool P, SMLoc Loc, const Twine &Msg);
@@ -309,7 +309,7 @@ public:
   /// on error.
   /// \return - False on success.
   virtual bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
-                                AsmTypeInfo *TypeInfo) = 0;
+                                AsmTypeInfo *TypeInfo = nullptr) = 0;
 
   /// Parse an arbitrary expression, assuming that an initial '(' has
   /// already been consumed.
@@ -331,28 +331,21 @@ public:
   /// \return - False on success.
   virtual bool checkForValidSection() = 0;
 
-  /// Parse an arbitrary expression of a specified parenthesis depth,
-  /// assuming that the initial '(' characters have already been consumed.
-  ///
-  /// \param ParenDepth - Specifies how many trailing expressions outside the
-  /// current parentheses we have to parse.
-  /// \param Res - The value of the expression. The result is undefined
-  /// on error.
-  /// \return - False on success.
-  virtual bool parseParenExprOfDepth(unsigned ParenDepth, const MCExpr *&Res,
-                                     SMLoc &EndLoc) = 0;
-
   /// Parse a .gnu_attribute.
   bool parseGNUAttribute(SMLoc L, int64_t &Tag, int64_t &IntegerValue);
+
+  bool parseAtSpecifier(const MCExpr *&Res, SMLoc &EndLoc);
+  const MCExpr *applySpecifier(const MCExpr *E, uint32_t Variant);
 };
 
 /// Create an MCAsmParser instance for parsing assembly similar to gas syntax
-MCAsmParser *createMCAsmParser(SourceMgr &, MCContext &, MCStreamer &,
-                               const MCAsmInfo &, unsigned CB = 0);
+LLVM_ABI MCAsmParser *createMCAsmParser(SourceMgr &, MCContext &, MCStreamer &,
+                                        const MCAsmInfo &, unsigned CB = 0);
 
 /// Create an MCAsmParser instance for parsing Microsoft MASM-style assembly
-MCAsmParser *createMCMasmParser(SourceMgr &, MCContext &, MCStreamer &,
-                                const MCAsmInfo &, struct tm, unsigned CB = 0);
+LLVM_ABI MCAsmParser *createMCMasmParser(SourceMgr &, MCContext &, MCStreamer &,
+                                         const MCAsmInfo &, struct tm,
+                                         unsigned CB = 0);
 
 } // end namespace llvm
 

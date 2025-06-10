@@ -429,7 +429,6 @@ define amdgpu_kernel void @divergent_value(ptr addrspace(1) %out) {
 ; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1164DAGISEL-NEXT:    v_readlane_b32 s6, v0, s5
 ; GFX1164DAGISEL-NEXT:    s_bitset0_b64 s[2:3], s5
-; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164DAGISEL-NEXT:    s_min_u32 s4, s4, s6
 ; GFX1164DAGISEL-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX1164DAGISEL-NEXT:    s_cbranch_scc1 .LBB3_1
@@ -450,7 +449,6 @@ define amdgpu_kernel void @divergent_value(ptr addrspace(1) %out) {
 ; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1164GISEL-NEXT:    v_readlane_b32 s6, v0, s5
 ; GFX1164GISEL-NEXT:    s_bitset0_b64 s[2:3], s5
-; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164GISEL-NEXT:    s_min_u32 s4, s4, s6
 ; GFX1164GISEL-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX1164GISEL-NEXT:    s_cbranch_scc1 .LBB3_1
@@ -472,7 +470,6 @@ define amdgpu_kernel void @divergent_value(ptr addrspace(1) %out) {
 ; GFX1132DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1132DAGISEL-NEXT:    v_readlane_b32 s5, v0, s4
 ; GFX1132DAGISEL-NEXT:    s_bitset0_b32 s3, s4
-; GFX1132DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1132DAGISEL-NEXT:    s_min_u32 s2, s2, s5
 ; GFX1132DAGISEL-NEXT:    s_cmp_lg_u32 s3, 0
 ; GFX1132DAGISEL-NEXT:    s_cbranch_scc1 .LBB3_1
@@ -493,7 +490,6 @@ define amdgpu_kernel void @divergent_value(ptr addrspace(1) %out) {
 ; GFX1132GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1132GISEL-NEXT:    v_readlane_b32 s5, v0, s4
 ; GFX1132GISEL-NEXT:    s_bitset0_b32 s3, s4
-; GFX1132GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1132GISEL-NEXT:    s_min_u32 s2, s2, s5
 ; GFX1132GISEL-NEXT:    s_cmp_lg_u32 s3, 0
 ; GFX1132GISEL-NEXT:    s_cbranch_scc1 .LBB3_1
@@ -810,7 +806,7 @@ define amdgpu_kernel void @divergent_cfg(ptr addrspace(1) %out, i32 %in) {
 ; GFX1164DAGISEL-NEXT:    s_mov_b32 s6, -1
 ; GFX1164DAGISEL-NEXT:  .LBB4_4: ; =>This Inner Loop Header: Depth=1
 ; GFX1164DAGISEL-NEXT:    s_ctz_i32_b64 s7, s[2:3]
-; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1164DAGISEL-NEXT:    v_readlane_b32 s8, v0, s7
 ; GFX1164DAGISEL-NEXT:    s_bitset0_b64 s[2:3], s7
 ; GFX1164DAGISEL-NEXT:    s_min_u32 s6, s6, s8
@@ -848,7 +844,7 @@ define amdgpu_kernel void @divergent_cfg(ptr addrspace(1) %out, i32 %in) {
 ; GFX1164GISEL-NEXT:    s_mov_b32 s6, -1
 ; GFX1164GISEL-NEXT:  .LBB4_4: ; =>This Inner Loop Header: Depth=1
 ; GFX1164GISEL-NEXT:    s_ctz_i32_b64 s7, s[2:3]
-; GFX1164GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1164GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1164GISEL-NEXT:    v_readlane_b32 s8, v0, s7
 ; GFX1164GISEL-NEXT:    s_bitset0_b64 s[2:3], s7
 ; GFX1164GISEL-NEXT:    s_min_u32 s6, s6, s8
@@ -885,7 +881,7 @@ define amdgpu_kernel void @divergent_cfg(ptr addrspace(1) %out, i32 %in) {
 ; GFX1132DAGISEL-NEXT:    s_mov_b32 s1, -1
 ; GFX1132DAGISEL-NEXT:  .LBB4_4: ; =>This Inner Loop Header: Depth=1
 ; GFX1132DAGISEL-NEXT:    s_ctz_i32_b32 s3, s2
-; GFX1132DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1132DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1132DAGISEL-NEXT:    v_readlane_b32 s6, v0, s3
 ; GFX1132DAGISEL-NEXT:    s_bitset0_b32 s2, s3
 ; GFX1132DAGISEL-NEXT:    s_min_u32 s1, s1, s6
@@ -923,7 +919,7 @@ define amdgpu_kernel void @divergent_cfg(ptr addrspace(1) %out, i32 %in) {
 ; GFX1132GISEL-NEXT:    s_mov_b32 s0, -1
 ; GFX1132GISEL-NEXT:  .LBB4_4: ; =>This Inner Loop Header: Depth=1
 ; GFX1132GISEL-NEXT:    s_ctz_i32_b32 s3, s2
-; GFX1132GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1132GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1132GISEL-NEXT:    v_readlane_b32 s6, v0, s3
 ; GFX1132GISEL-NEXT:    s_bitset0_b32 s2, s3
 ; GFX1132GISEL-NEXT:    s_min_u32 s0, s0, s6

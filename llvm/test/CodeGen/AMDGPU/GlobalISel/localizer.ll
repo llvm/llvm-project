@@ -36,7 +36,6 @@ define amdgpu_kernel void @localize_constants(i1 %cond) {
 ; GFX9-NEXT:    s_mov_b32 s0, 0
 ; GFX9-NEXT:  .LBB0_2: ; %Flow
 ; GFX9-NEXT:    s_xor_b32 s0, s0, 1
-; GFX9-NEXT:    s_and_b32 s0, s0, 1
 ; GFX9-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX9-NEXT:    s_cbranch_scc1 .LBB0_4
 ; GFX9-NEXT:  ; %bb.3: ; %bb0
@@ -64,21 +63,21 @@ entry:
   br i1 %cond, label %bb0, label %bb1
 
 bb0:
-  store volatile i32 123, ptr addrspace(1) undef
-  store volatile i32 456, ptr addrspace(1) undef
-  store volatile i32 999, ptr addrspace(1) undef
-  store volatile i32 1000, ptr addrspace(1) undef
-  store volatile i32 455, ptr addrspace(1) undef
-  store volatile i32 23526, ptr addrspace(1) undef
+  store volatile i32 123, ptr addrspace(1) poison
+  store volatile i32 456, ptr addrspace(1) poison
+  store volatile i32 999, ptr addrspace(1) poison
+  store volatile i32 1000, ptr addrspace(1) poison
+  store volatile i32 455, ptr addrspace(1) poison
+  store volatile i32 23526, ptr addrspace(1) poison
   br label %bb2
 
 bb1:
-  store volatile i32 23526, ptr addrspace(1) undef
-  store volatile i32 455, ptr addrspace(1) undef
-  store volatile i32 1000, ptr addrspace(1) undef
-  store volatile i32 456, ptr addrspace(1) undef
-  store volatile i32 999, ptr addrspace(1) undef
-  store volatile i32 123, ptr addrspace(1) undef
+  store volatile i32 23526, ptr addrspace(1) poison
+  store volatile i32 455, ptr addrspace(1) poison
+  store volatile i32 1000, ptr addrspace(1) poison
+  store volatile i32 456, ptr addrspace(1) poison
+  store volatile i32 999, ptr addrspace(1) poison
+  store volatile i32 123, ptr addrspace(1) poison
   br label %bb2
 
 bb2:
@@ -87,10 +86,10 @@ bb2:
 
 ; FIXME: These aren't localized because thesee were legalized before
 ; the localizer, and are no longer G_GLOBAL_VALUE.
-@gv0 = addrspace(1) global i32 undef, align 4
-@gv1 = addrspace(1) global i32 undef, align 4
-@gv2 = addrspace(1) global i32 undef, align 4
-@gv3 = addrspace(1) global i32 undef, align 4
+@gv0 = addrspace(1) global i32 poison, align 4
+@gv1 = addrspace(1) global i32 poison, align 4
+@gv2 = addrspace(1) global i32 poison, align 4
+@gv3 = addrspace(1) global i32 poison, align 4
 
 define amdgpu_kernel void @localize_globals(i1 %cond) {
 ; GFX9-LABEL: localize_globals:
@@ -121,7 +120,6 @@ define amdgpu_kernel void @localize_globals(i1 %cond) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:  .LBB1_2: ; %Flow
 ; GFX9-NEXT:    s_xor_b32 s0, s0, 1
-; GFX9-NEXT:    s_and_b32 s0, s0, 1
 ; GFX9-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX9-NEXT:    s_cbranch_scc1 .LBB1_4
 ; GFX9-NEXT:  ; %bb.3: ; %bb0
@@ -159,10 +157,10 @@ bb2:
   ret void
 }
 
-@static.gv0 = internal addrspace(1) global i32 undef, align 4
-@static.gv1 = internal addrspace(1) global i32 undef, align 4
-@static.gv2 = internal addrspace(1) global i32 undef, align 4
-@static.gv3 = internal addrspace(1) global i32 undef, align 4
+@static.gv0 = internal addrspace(1) global i32 poison, align 4
+@static.gv1 = internal addrspace(1) global i32 poison, align 4
+@static.gv2 = internal addrspace(1) global i32 poison, align 4
+@static.gv3 = internal addrspace(1) global i32 poison, align 4
 
 define void @localize_internal_globals(i1 %cond) {
 ; GFX9-LABEL: localize_internal_globals:

@@ -314,6 +314,8 @@ public:
   mangleName(const Fortran::semantics::DerivedTypeSpec &) = 0;
   /// Unique a compiler generated name (add a containing scope specific prefix)
   virtual std::string mangleName(std::string &) = 0;
+  /// Unique a compiler generated name (add a provided scope specific prefix)
+  virtual std::string mangleName(std::string &, const semantics::Scope &) = 0;
   /// Return the field name for a derived type component inside a fir.record
   /// type.
   virtual std::string
@@ -345,6 +347,10 @@ public:
   /// in OpenMP code or return null.
   virtual Fortran::lower::SymbolBox
   lookupOneLevelUpSymbol(const Fortran::semantics::Symbol &sym) = 0;
+
+  /// Find the symbol in the inner-most level of the local map or return null.
+  virtual Fortran::lower::SymbolBox
+  shallowLookupSymbol(const Fortran::semantics::Symbol &sym) = 0;
 
   /// Return the mlir::SymbolTable associated to the ModuleOp.
   /// Look-ups are faster using it than using module.lookup<>,

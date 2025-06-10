@@ -6,12 +6,13 @@ The extension requires the `lldb-dap` (formerly `lldb-vscode`) binary.
 This binary is not packaged with the VS Code extension.
 
 There are multiple ways to obtain this binary:
-* Use the binary provided by your toolchain (for example `xcrun -f lldb-dap` on macOS) or contact your toolchain vendor to include it.
-* Download one of the relase packages from the [LLVM release page](https://github.com/llvm/llvm-project/releases/). The `LLVM-19.1.0-{operating_system}.tar.xz` packages contain a prebuilt `lldb-dap` binary.
-* Build it from source (see [LLDB's build instructions](https://lldb.llvm.org/resources/build.html)).
+
+- Use the binary provided by your toolchain (for example `xcrun -f lldb-dap` on macOS) or contact your toolchain vendor to include it.
+- Download one of the release packages from the [LLVM release page](https://github.com/llvm/llvm-project/releases/). The `LLVM-19.1.0-{operating_system}.tar.xz` packages contain a prebuilt `lldb-dap` binary.
+- Build it from source (see [LLDB's build instructions](https://lldb.llvm.org/resources/build.html)).
 
 By default, the VS Code extension will expect to find `lldb-dap` in your `PATH`.
-Alternatively, you can explictly specify the location of the `lldb-dap` binary using the `lldb-dap.executable-path` setting.
+Alternatively, you can explicitly specify the location of the `lldb-dap` binary using the `lldb-dap.executable-path` setting.
 
 ### Usage with other IDEs
 
@@ -37,7 +38,7 @@ adds `FOO=1` and `bar` to the environment:
   "program": "/tmp/a.out",
   "args": [ "one", "two", "three" ],
   "env": {
-    "FOO": "1"
+    "FOO": "1",
     "BAR": ""
   }
 }
@@ -144,7 +145,7 @@ instead of using the custom command `attachCommands`.
 ### Connect to a Debug Server on Another Machine
 
 This connects to a debug server running on another machine with hostname
-`hostnmame`. Which is debugging the program `/tmp/a.out` and listening on
+`hostname`. Which is debugging the program `/tmp/a.out` and listening on
 port `5678` of that other machine.
 
 ```javascript
@@ -162,7 +163,6 @@ to send an attach request to a debug server running on a different machine,
 instead of custom command `attachCommands`.
 The default hostname being used `localhost`.
 
-
 ```javascript
 {
   "name": "Local Debug Server",
@@ -173,6 +173,25 @@ The default hostname being used `localhost`.
   "gdb-remote-hostname": "hostname",
 }
 ```
+
+### Launching via `vscode://` URIs
+
+Debugging sessions can also be starting using special URIs.
+
+The `vscode://llvm-vs-code-extensions.lldb-dap/start?config={launch-config}`
+URI accepts a [URL-encoded](https://en.wikipedia.org/wiki/Percent-encoding)
+JSON launch config. The most frequently used arguments (`request`, `program`,
+`args`, `cwd`, `pid`, ...) can also specified directly, e.g.
+`vscode://llvm-vs-code-extensions.lldb-dap/start?request=attach&pid=1234`, or
+`vscode://llvm-vs-code-extensions.lldb-dap/start?program=ls&args=-a&args=/etc`.
+
+This is useful for integration with custom scripts to start debugging
+sessions. The URI might be printed to the terminal, potentially using
+[OSC-8 hyperlinks](https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda),
+or passed to `code --open-url` or `xdg-open`, although mileage may vary depending
+on your specific debugging setup. E.g., `code --open-url` will not work when using a
+SSH remote session. Furthermore, placeholders such as `${workspaceFolder}` are not
+supported within launch URLs.
 
 ### Configuration Settings Reference
 
@@ -193,7 +212,7 @@ specific key/value pairs:
 | **customThreadFormat**            | string      |     | Same as `customFrameFormat`, but for threads instead of stack frames.
 | **displayExtendedBacktrace**      | bool        |     | Enable language specific extended backtraces.
 | **enableAutoVariableSummaries**   | bool        |     | Enable auto generated summaries for variables when no summaries exist for a given type. This feature can cause performance delays in large projects when viewing variables.
-| **enableSyntheticChildDebugging** | bool        |     | If a variable is displayed using a synthetic children, also display the actual contents of the variable at the end under a [raw] entry. This is useful when creating sythetic child plug-ins as it lets you see the actual contents of the variable.
+| **enableSyntheticChildDebugging** | bool        |     | If a variable is displayed using a synthetic children, also display the actual contents of the variable at the end under a [raw] entry. This is useful when creating synthetic child plug-ins as it lets you see the actual contents of the variable.
 | **initCommands**                  | [string]    |     | LLDB commands executed upon debugger startup prior to creating the LLDB target.
 | **preRunCommands**                | [string]    |     | LLDB commands executed just before launching/attaching, after the LLDB target has been created.
 | **stopCommands**                  | [string]    |     | LLDB commands executed just after each stop.
@@ -202,8 +221,9 @@ specific key/value pairs:
 
 All commands and command outputs will be sent to the debugger console when they are executed.
 Commands can be prefixed with `?` or `!` to modify their behavior:
-* Commands prefixed with `?` are quiet on success, i.e. nothing is written to stdout if the command succeeds.
-* Prefixing a command with `!` enables error checking: If a command prefixed with `!` fails, subsequent commands will not be run. This is usefule if one of the commands depends on another, as it will stop the chain of commands.
+
+- Commands prefixed with `?` are quiet on success, i.e. nothing is written to stdout if the command succeeds.
+- Prefixing a command with `!` enables error checking: If a command prefixed with `!` fails, subsequent commands will not be run. This is useful if one of the commands depends on another, as it will stop the chain of commands.
 
 For JSON configurations of `"type": "launch"`, the JSON configuration can additionally
 contain the following key/value pairs:
@@ -224,9 +244,39 @@ the following `lldb-dap` specific key/value pairs:
 | Parameter                         | Type        | Req |         |
 |-----------------------------------|-------------|:---:|---------|
 | **program**                       | string      |     | Path to the executable to attach to. This value is optional but can help to resolve breakpoints prior the attaching to the program.
-| **pid**                           | number      |     | The process id of the process you wish to attach to. If **pid** is omitted, the debugger will attempt to attach to the program by finding a process whose file name matches the file name from **porgram**. Setting this value to `${command:pickMyProcess}` will allow interactive process selection in the IDE.
+| **pid**                           | number      |     | The process id of the process you wish to attach to. If **pid** is omitted, the debugger will attempt to attach to the program by finding a process whose file name matches the file name from **program**. Setting this value to `${command:pickMyProcess}` will allow interactive process selection in the IDE.
 | **waitFor**                       | boolean     |     | Wait for the process to launch.
 | **attachCommands**                | [string]    |     | LLDB commands that will be executed after **preRunCommands** which take place of the code that normally does the attach. The commands can create a new target and attach or launch it however desired. This allows custom launch and attach configurations. Core files can use `target create --core /path/to/core` to attach to core files.
+
+### Configuring `lldb-dap` defaults
+
+User settings can set the default value for the following supported
+`launch.json` configuration keys:
+
+| Parameter                         | Type     | Default |
+| --------------------------------- | -------- | :-----: |
+| **commandEscapePrefix**           | string   | ``"`"`` |
+| **customFrameFormat**             | string   |  `""`   |
+| **customThreadFormat**            | string   |  `""`   |
+| **detachOnError**                 | boolean  | `false` |
+| **disableASLR**                   | boolean  | `true`  |
+| **disableSTDIO**                  | boolean  | `false` |
+| **displayExtendedBacktrace**      | boolean  | `false` |
+| **enableAutoVariableSummaries**   | boolean  | `false` |
+| **enableSyntheticChildDebugging** | boolean  | `false` |
+| **timeout**                       | number   |  `30`   |
+| **targetTriple**                  | string   |  `""`   |
+| **platformName**                  | string   |  `""`   |
+| **initCommands**                  | [string] |  `[]`   |
+| **preRunCommands**                | [string] |  `[]`   |
+| **postRunCommands**               | [string] |  `[]`   |
+| **stopCommands**                  | [string] |  `[]`   |
+| **exitCommands**                  | [string] |  `[]`   |
+| **terminateCommands**             | [string] |  `[]`   |
+
+To adjust your settings, open the Settings editor via the 
+`File > Preferences > Settings` menu or press `Ctrl+`, on Windows/Linux and
+`Cmd+`, on Mac.
 
 ## Debug Console
 
@@ -275,13 +325,13 @@ Inspect or adjust the behavior of lldb-dap repl evaluation requests. The
 supported modes are `variable`, `command` and `auto`.
 
 - `variable` - Variable mode expressions are evaluated in the context of the
-   current frame.
+  current frame.
 - `command` - Command mode expressions are evaluated as lldb commands, as a
-   result, values printed by lldb are always stringified representations of the
-   expression output.
+  result, values printed by lldb are always stringified representations of the
+  expression output.
 - `auto` - Auto mode will attempt to infer if the expression represents an lldb
-   command or a variable expression. A heuristic is used to infer if the input
-   represents a variable or a command.
+  command or a variable expression. A heuristic is used to infer if the input
+  represents a variable or a command.
 
 In all three modes, you can use the `commandEscapePrefix` to ensure an expression
 is evaluated as a command.
@@ -311,7 +361,7 @@ For example you can use a launch configuration hook to trigger custom events lik
   "program": "exe",
   "stopCommands": [
     "lldb-dap send-event MyStopEvent",
-    "lldb-dap send-event MyStopEvent '{\"key\": 321}",
+    "lldb-dap send-event MyStopEvent '{\"key\": 321}"
   ]
 }
 ```
@@ -328,4 +378,4 @@ The source code is part of the [LLVM repository](https://github.com/llvm/llvm-pr
 We use Github's [issue tracker](https://github.com/llvm/llvm-project/issues?q=label%3Alldb-dap) and patches can be submitted via [pull requests](https://github.com/llvm/llvm-project/pulls?q=label%3Alldb-dap).
 Furthermore, there is a [LLDB category](https://discourse.llvm.org/c/subprojects/lldb/8) on the LLVM discourse forum.
 
-For instructions on how to get started with development on lldb-dap, see the "[Contributing to lldb-dap](https://lldb.llvm.org/resources/lldbdap.html)"
+For instructions on how to get started with development on lldb-dap, see the "[Contributing to lldb-dap](https://lldb.llvm.org/resources/lldbdap.html)" guide.

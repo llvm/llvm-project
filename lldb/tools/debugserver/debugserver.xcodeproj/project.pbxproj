@@ -36,7 +36,6 @@
 		26CE05BA115C363E0022F371 /* DNBLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26C637E00C71334A0024798E /* DNBLog.cpp */; };
 		26CE05BB115C363F0022F371 /* DNBRegisterInfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26C637E20C71334A0024798E /* DNBRegisterInfo.cpp */; };
 		26CE05BC115C36420022F371 /* PThreadEvent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26C637FE0C71334A0024798E /* PThreadEvent.cpp */; };
-		26CE05BD115C36430022F371 /* PThreadMutex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2672DBEE0EEF446700E92059 /* PThreadMutex.cpp */; };
 		26CE05BE115C36440022F371 /* SysSignal.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26C638010C71334A0024798E /* SysSignal.cpp */; };
 		26CE05BF115C364D0022F371 /* DNBArchImplX86_64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26CF99A21142EB7400011AAB /* DNBArchImplX86_64.cpp */; };
 		26CE05C3115C36580022F371 /* CFString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2695DD9B0D3EC160007E4CA2 /* CFString.cpp */; };
@@ -65,7 +64,6 @@
 		456F67591AD46CE9002850C2 /* DNBLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26C637E00C71334A0024798E /* DNBLog.cpp */; };
 		456F675A1AD46CE9002850C2 /* DNBRegisterInfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26C637E20C71334A0024798E /* DNBRegisterInfo.cpp */; };
 		456F675B1AD46CE9002850C2 /* PThreadEvent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26C637FE0C71334A0024798E /* PThreadEvent.cpp */; };
-		456F675C1AD46CE9002850C2 /* PThreadMutex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2672DBEE0EEF446700E92059 /* PThreadMutex.cpp */; };
 		456F675D1AD46CE9002850C2 /* SysSignal.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26C638010C71334A0024798E /* SysSignal.cpp */; };
 		456F675E1AD46CE9002850C2 /* DNBArchImplX86_64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26CF99A21142EB7400011AAB /* DNBArchImplX86_64.cpp */; };
 		456F67621AD46CE9002850C2 /* CFString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2695DD9B0D3EC160007E4CA2 /* CFString.cpp */; };
@@ -102,7 +100,6 @@
 		26593A060D4931CC001C9FE3 /* ChangeLog */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = ChangeLog; sourceTree = "<group>"; };
 		266B5ECF1460A68200E43F0A /* DNBArchImplARM64.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DNBArchImplARM64.cpp; sourceTree = "<group>"; };
 		266B5ED01460A68200E43F0A /* DNBArchImplARM64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DNBArchImplARM64.h; sourceTree = "<group>"; };
-		2672DBEE0EEF446700E92059 /* PThreadMutex.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PThreadMutex.cpp; sourceTree = "<group>"; };
 		2695DD910D3EBFF6007E4CA2 /* CFBundle.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CFBundle.cpp; sourceTree = "<group>"; };
 		2695DD920D3EBFF6007E4CA2 /* CFBundle.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CFBundle.h; sourceTree = "<group>"; };
 		2695DD9A0D3EC160007E4CA2 /* CFString.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CFString.h; sourceTree = "<group>"; };
@@ -151,7 +148,6 @@
 		26C637FD0C71334A0024798E /* PThreadCondition.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = PThreadCondition.h; sourceTree = "<group>"; };
 		26C637FE0C71334A0024798E /* PThreadEvent.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = PThreadEvent.cpp; sourceTree = "<group>"; };
 		26C637FF0C71334A0024798E /* PThreadEvent.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = PThreadEvent.h; sourceTree = "<group>"; };
-		26C638000C71334A0024798E /* PThreadMutex.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = PThreadMutex.h; sourceTree = "<group>"; };
 		26C638010C71334A0024798E /* SysSignal.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = SysSignal.cpp; sourceTree = "<group>"; };
 		26C638020C71334A0024798E /* SysSignal.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = SysSignal.h; sourceTree = "<group>"; };
 		26C638050C71334A0024798E /* TTYState.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = TTYState.cpp; sourceTree = "<group>"; };
@@ -284,8 +280,6 @@
 				26C637FD0C71334A0024798E /* PThreadCondition.h */,
 				26C637FF0C71334A0024798E /* PThreadEvent.h */,
 				26C637FE0C71334A0024798E /* PThreadEvent.cpp */,
-				26C638000C71334A0024798E /* PThreadMutex.h */,
-				2672DBEE0EEF446700E92059 /* PThreadMutex.cpp */,
 				233B4EA81D2DB96A00E98261 /* StringConvert.cpp */,
 				26C638020C71334A0024798E /* SysSignal.h */,
 				26C638010C71334A0024798E /* SysSignal.cpp */,
@@ -486,7 +480,6 @@
 				26CE05BA115C363E0022F371 /* DNBLog.cpp in Sources */,
 				26CE05BB115C363F0022F371 /* DNBRegisterInfo.cpp in Sources */,
 				26CE05BC115C36420022F371 /* PThreadEvent.cpp in Sources */,
-				26CE05BD115C36430022F371 /* PThreadMutex.cpp in Sources */,
 				26CE05BE115C36440022F371 /* SysSignal.cpp in Sources */,
 				26CE05BF115C364D0022F371 /* DNBArchImplX86_64.cpp in Sources */,
 				26CE05C5115C36590022F371 /* CFBundle.cpp in Sources */,
@@ -525,7 +518,6 @@
 				456F67591AD46CE9002850C2 /* DNBLog.cpp in Sources */,
 				456F675A1AD46CE9002850C2 /* DNBRegisterInfo.cpp in Sources */,
 				456F675B1AD46CE9002850C2 /* PThreadEvent.cpp in Sources */,
-				456F675C1AD46CE9002850C2 /* PThreadMutex.cpp in Sources */,
 				456F675D1AD46CE9002850C2 /* SysSignal.cpp in Sources */,
 				456F675E1AD46CE9002850C2 /* DNBArchImplX86_64.cpp in Sources */,
 				23043C9E1D35DBFA00FC25CA /* StringConvert.cpp in Sources */,

@@ -11,11 +11,13 @@
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
+#include "flang/Optimizer/Builder/Runtime/Allocatable.h"
 #include "flang/Optimizer/Builder/Runtime/Assign.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
+#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/DataLayout.h"
@@ -44,6 +46,17 @@ fir::FirOpBuilder::createFunction(mlir::Location loc, mlir::ModuleOp module,
                                   llvm::StringRef name, mlir::FunctionType ty,
                                   mlir::SymbolTable *symbolTable) {
   return fir::createFuncOp(loc, module, name, ty, /*attrs*/ {}, symbolTable);
+}
+
+mlir::func::FuncOp
+fir::FirOpBuilder::createRuntimeFunction(mlir::Location loc,
+                                         llvm::StringRef name,
+                                         mlir::FunctionType ty, bool isIO) {
+  mlir::func::FuncOp func = createFunction(loc, name, ty);
+  func->setAttr(fir::FIROpsDialect::getFirRuntimeAttrName(), getUnitAttr());
+  if (isIO)
+    func->setAttr("fir.io", getUnitAttr());
+  return func;
 }
 
 mlir::func::FuncOp
@@ -92,9 +105,9 @@ fir::FirOpBuilder::getNamedGlobal(mlir::ModuleOp modOp,
   return modOp.lookupSymbol<fir::GlobalOp>(name);
 }
 
-mlir::Type fir::FirOpBuilder::getRefType(mlir::Type eleTy) {
+mlir::Type fir::FirOpBuilder::getRefType(mlir::Type eleTy, bool isVolatile) {
   assert(!mlir::isa<fir::ReferenceType>(eleTy) && "cannot be a reference type");
-  return fir::ReferenceType::get(eleTy);
+  return fir::ReferenceType::get(eleTy, isVolatile);
 }
 
 mlir::Type fir::FirOpBuilder::getVarLenSeqTy(mlir::Type eleTy, unsigned rank) {
@@ -264,6 +277,12 @@ mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
     return recipeIface.getAllocaBlock(getRegion());
   }
 
+  if (auto cufKernelOp = getRegion().getParentOfType<cuf::KernelOp>())
+    return &cufKernelOp.getRegion().front();
+
+  if (auto doConcurentOp = getRegion().getParentOfType<fir::DoConcurrentOp>())
+    return doConcurentOp.getBody();
+
   return getEntryBlock();
 }
 
@@ -345,6 +364,46 @@ mlir::Value fir::FirOpBuilder::createHeapTemporary(
   assert(!mlir::isa<fir::ReferenceType>(type) && "cannot be a reference");
   return create<fir::AllocMemOp>(loc, type, /*unique_name=*/llvm::StringRef{},
                                  name, dynamicLength, dynamicShape, attrs);
+}
+
+std::pair<mlir::Value, bool> fir::FirOpBuilder::createAndDeclareTemp(
+    mlir::Location loc, mlir::Type baseType, mlir::Value shape,
+    llvm::ArrayRef<mlir::Value> extents, llvm::ArrayRef<mlir::Value> typeParams,
+    const std::function<decltype(FirOpBuilder::genTempDeclareOp)> &genDeclare,
+    mlir::Value polymorphicMold, bool useStack, llvm::StringRef tmpName) {
+  if (polymorphicMold) {
+    // Create *allocated* polymorphic temporary using the dynamic type
+    // of the mold and the provided shape/extents.
+    auto boxType = fir::ClassType::get(fir::HeapType::get(baseType));
+    mlir::Value boxAddress = fir::factory::getAndEstablishBoxStorage(
+        *this, loc, boxType, shape, typeParams, polymorphicMold);
+    fir::runtime::genAllocatableAllocate(*this, loc, boxAddress);
+    mlir::Value box = create<fir::LoadOp>(loc, boxAddress);
+    mlir::Value base =
+        genDeclare(*this, loc, box, tmpName, /*shape=*/mlir::Value{},
+                   typeParams, fir::FortranVariableFlagsAttr{});
+    return {base, /*isHeapAllocation=*/true};
+  }
+  mlir::Value allocmem;
+  if (useStack)
+    allocmem = createTemporary(loc, baseType, tmpName, extents, typeParams);
+  else
+    allocmem = createHeapTemporary(loc, baseType, tmpName, extents, typeParams);
+  mlir::Value base = genDeclare(*this, loc, allocmem, tmpName, shape,
+                                typeParams, fir::FortranVariableFlagsAttr{});
+  return {base, !useStack};
+}
+
+mlir::Value fir::FirOpBuilder::genTempDeclareOp(
+    fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value memref,
+    llvm::StringRef name, mlir::Value shape,
+    llvm::ArrayRef<mlir::Value> typeParams,
+    fir::FortranVariableFlagsAttr fortranAttrs) {
+  auto nameAttr = mlir::StringAttr::get(builder.getContext(), name);
+  return builder.create<fir::DeclareOp>(loc, memref.getType(), memref, shape,
+                                        typeParams,
+                                        /*dummy_scope=*/nullptr, nameAttr,
+                                        fortranAttrs, cuf::DataAttributeAttr{});
 }
 
 mlir::Value fir::FirOpBuilder::genStackSave(mlir::Location loc) {
@@ -495,6 +554,23 @@ mlir::Value fir::FirOpBuilder::convertWithSemantics(
   return createConvert(loc, toTy, val);
 }
 
+mlir::Value fir::FirOpBuilder::createVolatileCast(mlir::Location loc,
+                                                  bool isVolatile,
+                                                  mlir::Value val) {
+  mlir::Type volatileAdjustedType =
+      fir::updateTypeWithVolatility(val.getType(), isVolatile);
+  if (volatileAdjustedType == val.getType())
+    return val;
+  return create<fir::VolatileCastOp>(loc, volatileAdjustedType, val);
+}
+
+mlir::Value fir::FirOpBuilder::createConvertWithVolatileCast(mlir::Location loc,
+                                                             mlir::Type toTy,
+                                                             mlir::Value val) {
+  val = createVolatileCast(loc, fir::isa_volatile_type(toTy), val);
+  return createConvert(loc, toTy, val);
+}
+
 mlir::Value fir::factory::createConvert(mlir::OpBuilder &builder,
                                         mlir::Location loc, mlir::Type toTy,
                                         mlir::Value val) {
@@ -516,8 +592,9 @@ mlir::Value fir::FirOpBuilder::createConvert(mlir::Location loc,
 void fir::FirOpBuilder::createStoreWithConvert(mlir::Location loc,
                                                mlir::Value val,
                                                mlir::Value addr) {
-  mlir::Value cast =
-      createConvert(loc, fir::unwrapRefType(addr.getType()), val);
+  mlir::Type unwrapedRefType = fir::unwrapRefType(addr.getType());
+  val = createVolatileCast(loc, fir::isa_volatile_type(unwrapedRefType), val);
+  mlir::Value cast = createConvert(loc, unwrapedRefType, val);
   create<fir::StoreOp>(loc, cast, addr);
 }
 
@@ -657,19 +734,20 @@ mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc,
         << itemAddr.getType();
     llvm_unreachable("not a memory reference type");
   }
+  const bool isVolatile = fir::isa_volatile_type(itemAddr.getType());
   mlir::Type boxTy;
   mlir::Value tdesc;
   // Avoid to wrap a box/class with box/class.
   if (mlir::isa<fir::BaseBoxType>(elementType)) {
     boxTy = elementType;
   } else {
-    boxTy = fir::BoxType::get(elementType);
+    boxTy = fir::BoxType::get(elementType, isVolatile);
     if (isPolymorphic) {
       elementType = fir::updateTypeForUnlimitedPolymorphic(elementType);
       if (isAssumedType)
-        boxTy = fir::BoxType::get(elementType);
+        boxTy = fir::BoxType::get(elementType, isVolatile);
       else
-        boxTy = fir::ClassType::get(elementType);
+        boxTy = fir::ClassType::get(elementType, isVolatile);
     }
   }
 
@@ -1594,9 +1672,8 @@ fir::factory::getExtentFromTriplet(mlir::Value lb, mlir::Value ub,
 }
 
 mlir::Value fir::factory::genMaxWithZero(fir::FirOpBuilder &builder,
-                                         mlir::Location loc,
-                                         mlir::Value value) {
-  mlir::Value zero = builder.createIntegerConstant(loc, value.getType(), 0);
+                                         mlir::Location loc, mlir::Value value,
+                                         mlir::Value zero) {
   if (mlir::Operation *definingOp = value.getDefiningOp())
     if (auto cst = mlir::dyn_cast<mlir::arith::ConstantOp>(definingOp))
       if (auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(cst.getValue()))
@@ -1605,6 +1682,32 @@ mlir::Value fir::factory::genMaxWithZero(fir::FirOpBuilder &builder,
       loc, mlir::arith::CmpIPredicate::sgt, value, zero);
   return builder.create<mlir::arith::SelectOp>(loc, valueIsGreater, value,
                                                zero);
+}
+
+mlir::Value fir::factory::genMaxWithZero(fir::FirOpBuilder &builder,
+                                         mlir::Location loc,
+                                         mlir::Value value) {
+  mlir::Value zero = builder.createIntegerConstant(loc, value.getType(), 0);
+  return genMaxWithZero(builder, loc, value, zero);
+}
+
+mlir::Value fir::factory::computeExtent(fir::FirOpBuilder &builder,
+                                        mlir::Location loc, mlir::Value lb,
+                                        mlir::Value ub, mlir::Value zero,
+                                        mlir::Value one) {
+  mlir::Type type = lb.getType();
+  // Let the folder deal with the common `ub - <const> + 1` case.
+  auto diff = builder.create<mlir::arith::SubIOp>(loc, type, ub, lb);
+  auto rawExtent = builder.create<mlir::arith::AddIOp>(loc, type, diff, one);
+  return fir::factory::genMaxWithZero(builder, loc, rawExtent, zero);
+}
+mlir::Value fir::factory::computeExtent(fir::FirOpBuilder &builder,
+                                        mlir::Location loc, mlir::Value lb,
+                                        mlir::Value ub) {
+  mlir::Type type = lb.getType();
+  mlir::Value one = builder.createIntegerConstant(loc, type, 1);
+  mlir::Value zero = builder.createIntegerConstant(loc, type, 0);
+  return computeExtent(builder, loc, lb, ub, zero, one);
 }
 
 static std::pair<mlir::Value, mlir::Type>
@@ -1739,7 +1842,8 @@ void fir::factory::setInternalLinkage(mlir::func::FuncOp func) {
   func->setAttr("llvm.linkage", linkage);
 }
 
-uint64_t fir::factory::getAllocaAddressSpace(mlir::DataLayout *dataLayout) {
+uint64_t
+fir::factory::getAllocaAddressSpace(const mlir::DataLayout *dataLayout) {
   if (dataLayout)
     if (mlir::Attribute addrSpace = dataLayout->getAllocaMemorySpace())
       return mlir::cast<mlir::IntegerAttr>(addrSpace).getUInt();
@@ -1784,4 +1888,47 @@ llvm::SmallVector<mlir::Value> fir::factory::updateRuntimeExtentsForEmptyArrays(
         builder.create<mlir::arith::SelectOp>(loc, isEmpty, zero, extent));
   }
   return newExtents;
+}
+
+void fir::factory::genDimInfoFromBox(
+    fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value box,
+    llvm::SmallVectorImpl<mlir::Value> *lbounds,
+    llvm::SmallVectorImpl<mlir::Value> *extents,
+    llvm::SmallVectorImpl<mlir::Value> *strides) {
+  auto boxType = mlir::dyn_cast<fir::BaseBoxType>(box.getType());
+  assert(boxType && "must be a box");
+  if (!lbounds && !extents && !strides)
+    return;
+
+  unsigned rank = fir::getBoxRank(boxType);
+  assert(rank != 0 && "must be an array of known rank");
+  mlir::Type idxTy = builder.getIndexType();
+  for (unsigned i = 0; i < rank; ++i) {
+    mlir::Value dim = builder.createIntegerConstant(loc, idxTy, i);
+    auto dimInfo =
+        builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy, box, dim);
+    if (lbounds)
+      lbounds->push_back(dimInfo.getLowerBound());
+    if (extents)
+      extents->push_back(dimInfo.getExtent());
+    if (strides)
+      strides->push_back(dimInfo.getByteStride());
+  }
+}
+
+mlir::Value fir::factory::genLifetimeStart(mlir::OpBuilder &builder,
+                                           mlir::Location loc,
+                                           fir::AllocaOp alloc, int64_t size,
+                                           const mlir::DataLayout *dl) {
+  mlir::Type ptrTy = mlir::LLVM::LLVMPointerType::get(
+      alloc.getContext(), getAllocaAddressSpace(dl));
+  mlir::Value cast =
+      builder.create<fir::ConvertOp>(loc, ptrTy, alloc.getResult());
+  builder.create<mlir::LLVM::LifetimeStartOp>(loc, size, cast);
+  return cast;
+}
+
+void fir::factory::genLifetimeEnd(mlir::OpBuilder &builder, mlir::Location loc,
+                                  mlir::Value cast, int64_t size) {
+  builder.create<mlir::LLVM::LifetimeEndOp>(loc, size, cast);
 }

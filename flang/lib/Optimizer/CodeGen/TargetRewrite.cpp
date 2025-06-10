@@ -531,22 +531,53 @@ public:
       if (callOp.getClusterSizeZ())
         newCall.getClusterSizeZMutable().assign(callOp.getClusterSizeZ());
       newCallResults.append(newCall.result_begin(), newCall.result_end());
+      if (auto cudaProcAttr =
+              callOp->template getAttrOfType<cuf::ProcAttributeAttr>(
+                  cuf::getProcAttrName())) {
+        newCall->setAttr(cuf::getProcAttrName(), cudaProcAttr);
+      }
     } else if constexpr (std::is_same_v<std::decay_t<A>, fir::CallOp>) {
       fir::CallOp newCall;
       if (callOp.getCallee()) {
-        newCall =
-            rewriter->create<A>(loc, *callOp.getCallee(), newResTys, newOpers);
+        newCall = rewriter->create<fir::CallOp>(loc, *callOp.getCallee(),
+                                                newResTys, newOpers);
       } else {
-        // TODO: llvm dialect must be updated to propagate argument on
-        // attributes for indirect calls. See:
-        // https://discourse.llvm.org/t/should-llvm-callop-be-able-to-carry-argument-attributes-for-indirect-calls/75431
-        if (hasByValOrSRetArgs(newInTyAndAttrs))
-          TODO(loc,
-               "passing argument or result on the stack in indirect calls");
         newOpers[0].setType(mlir::FunctionType::get(
             callOp.getContext(),
             mlir::TypeRange{newInTypes}.drop_front(dropFront), newResTys));
-        newCall = rewriter->create<A>(loc, newResTys, newOpers);
+        newCall = rewriter->create<fir::CallOp>(loc, newResTys, newOpers);
+      }
+      newCall.setFastmathAttr(callOp.getFastmathAttr());
+      // Always set ABI argument attributes on call operations, even when
+      // direct, as required by
+      // https://llvm.org/docs/LangRef.html#parameter-attributes.
+      if (hasByValOrSRetArgs(newInTyAndAttrs)) {
+        llvm::SmallVector<mlir::Attribute> argAttrsArray;
+        for (const auto &arg :
+             llvm::ArrayRef<fir::CodeGenSpecifics::TypeAndAttr>(newInTyAndAttrs)
+                 .drop_front(dropFront)) {
+          mlir::NamedAttrList argAttrs;
+          const auto &attr = std::get<fir::CodeGenSpecifics::Attributes>(arg);
+          if (attr.isByVal()) {
+            mlir::Type elemType =
+                fir::dyn_cast_ptrOrBoxEleTy(std::get<mlir::Type>(arg));
+            argAttrs.set(mlir::LLVM::LLVMDialect::getByValAttrName(),
+                         mlir::TypeAttr::get(elemType));
+          } else if (attr.isSRet()) {
+            mlir::Type elemType =
+                fir::dyn_cast_ptrOrBoxEleTy(std::get<mlir::Type>(arg));
+            argAttrs.set(mlir::LLVM::LLVMDialect::getStructRetAttrName(),
+                         mlir::TypeAttr::get(elemType));
+          }
+          if (auto align = attr.getAlignment()) {
+            argAttrs.set(
+                mlir::LLVM::LLVMDialect::getAlignAttrName(),
+                rewriter->getIntegerAttr(rewriter->getIntegerType(32), align));
+          }
+          argAttrsArray.emplace_back(
+              argAttrs.getDictionary(rewriter->getContext()));
+        }
+        newCall.setArgAttrsAttr(rewriter->getArrayAttr(argAttrsArray));
       }
       LLVM_DEBUG(llvm::dbgs() << "replacing call with " << newCall << '\n');
       if (wrap)

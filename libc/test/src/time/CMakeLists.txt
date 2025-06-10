@@ -148,7 +148,7 @@ add_libc_unittest(
     libc.src.time.time_constants
 )
 
-add_libc_unittest(
+add_libc_test(
   mktime_test
   SUITE
     libc_time_unittests
@@ -177,6 +177,17 @@ add_libc_test(
     libc.src.time.nanosleep
     libc.src.errno.errno
     libc.hdr.types.struct_timespec
+)
+
+add_libc_test(
+  strftime_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    strftime_test.cpp
+  DEPENDS
+    libc.hdr.types.struct_tm
+    libc.src.time.strftime
 )
 
 add_libc_unittest(

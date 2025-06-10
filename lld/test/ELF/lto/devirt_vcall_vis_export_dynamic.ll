@@ -9,6 +9,10 @@
 ; RUN: ld.lld %t2.o -o %t3 -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=REMARK
 ; RUN: llvm-dis %t2.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
+;; --export-dynamic without .dynsym does not prevent devirtualization.
+; RUN: ld.lld %t2.o -o %t3 -save-temps --lto-whole-program-visibility \
+; RUN:   -mllvm -pass-remarks=. \
+; RUN:   --export-dynamic 2>&1 | FileCheck %s --check-prefix=REMARK
 
 ;; Hybrid WPD
 ;; Generate split module with summary for hybrid Thin/Regular LTO WPD.
@@ -33,19 +37,20 @@
 ; RUN: ld.lld -shared -soname=ta %ta.o -o %ta.so
 
 ;; Index based WPD
-; RUN: ld.lld %t2.o -o %t3 -save-temps --lto-whole-program-visibility \
+
+; RUN: ld.lld %t2.o %ta.so -o %t3 -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. \
 ; RUN:   --export-dynamic 2>&1 | FileCheck /dev/null --implicit-check-not single-impl --allow-empty
 ; RUN: llvm-dis %t2.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-NODEVIRT-IR
 
 ;; Hybrid WPD
-; RUN: ld.lld %t.o -o %t3 -save-temps --lto-whole-program-visibility \
+; RUN: ld.lld %t.o %ta.so -o %t3 -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. \
 ; RUN:   --export-dynamic 2>&1 | FileCheck /dev/null --implicit-check-not single-impl --allow-empty
 ; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-NODEVIRT-IR
 
 ;; Regular LTO WPD
-; RUN: ld.lld %t4.o -o %t3 -save-temps --lto-whole-program-visibility \
+; RUN: ld.lld %t4.o %ta.so -o %t3 -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. \
 ; RUN:   --export-dynamic 2>&1 | FileCheck /dev/null --implicit-check-not single-impl --allow-empty
 ; RUN: llvm-dis %t3.0.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-NODEVIRT-IR

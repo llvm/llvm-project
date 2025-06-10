@@ -1673,6 +1673,51 @@ define <8 x double> @shuffle_v8f64_01234589(<8 x double> %a, <8 x double> %b) {
   ret <8 x double> %shuffle
 }
 
+define <8 x double> @concat_shuffle_v8f64_v2f64_10325476(<2 x double> %a0, <2 x double> %a1, <2 x double> %a2, <2 x double> %a3) nounwind {
+; AVX512F-LABEL: concat_shuffle_v8f64_v2f64_10325476:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512F-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
+; AVX512F-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512F-NEXT:    vshufpd {{.*#+}} zmm0 = zmm0[1,0,3,2,5,4,7,6]
+; AVX512F-NEXT:    retq
+;
+; AVX512F-32-LABEL: concat_shuffle_v8f64_v2f64_10325476:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    subl $12, %esp
+; AVX512F-32-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
+; AVX512F-32-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512F-32-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512F-32-NEXT:    vinsertf128 $1, {{[0-9]+}}(%esp), %ymm2, %ymm1
+; AVX512F-32-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512F-32-NEXT:    vshufpd {{.*#+}} zmm0 = zmm0[1,0,3,2,5,4,7,6]
+; AVX512F-32-NEXT:    addl $12, %esp
+; AVX512F-32-NEXT:    retl
+  %s0 = shufflevector <2 x double> %a0, <2 x double> poison, <2 x i32> <i32 1, i32 0>
+  %s1 = shufflevector <2 x double> %a1, <2 x double> poison, <2 x i32> <i32 1, i32 0>
+  %s2 = shufflevector <2 x double> %a2, <2 x double> poison, <2 x i32> <i32 1, i32 0>
+  %s3 = shufflevector <2 x double> %a3, <2 x double> poison, <2 x i32> <i32 1, i32 0>
+  %lo = shufflevector <2 x double> %s0, <2 x double> %s1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %hi = shufflevector <2 x double> %s2, <2 x double> %s3, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %res = shufflevector <4 x double> %lo, <4 x double> %hi, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x double> %res
+}
+
+define <8 x double> @concat_shuffle_v8f64_v4f64_10325476(<4 x double> %a0, <4 x double> %a1) nounwind {
+; ALL-LABEL: concat_shuffle_v8f64_v4f64_10325476:
+; ALL:       # %bb.0:
+; ALL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; ALL-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; ALL-NEXT:    vshufpd {{.*#+}} zmm0 = zmm0[1,0,3,2,5,4,7,6]
+; ALL-NEXT:    ret{{[l|q]}}
+  %lo = shufflevector <4 x double> %a0, <4 x double> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  %hi = shufflevector <4 x double> %a1, <4 x double> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  %res = shufflevector <4 x double> %lo, <4 x double> %hi, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x double> %res
+}
+
 define <8 x i64> @shuffle_v8i64_89234567(<8 x i64> %a, <8 x i64> %b) {
 ; ALL-LABEL: shuffle_v8i64_89234567:
 ; ALL:       # %bb.0:

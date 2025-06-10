@@ -81,8 +81,8 @@ GCOVOptions GCOVOptions::getDefault() {
   Options.Atomic = AtomicCounter;
 
   if (DefaultGCOVVersion.size() != 4) {
-    llvm::report_fatal_error(Twine("Invalid -default-gcov-version: ") +
-                             DefaultGCOVVersion, /*GenCrashDiag=*/false);
+    reportFatalUsageError(Twine("Invalid -default-gcov-version: ") +
+                          DefaultGCOVVersion);
   }
   memcpy(Options.Version, DefaultGCOVVersion.c_str(), 4);
   return Options;
@@ -904,7 +904,7 @@ bool GCOVProfiler::emitProfileNotes(
         GlobalVariable *Counters = new GlobalVariable(
             *M, CounterTy, false, GlobalValue::InternalLinkage,
             Constant::getNullValue(CounterTy), "__llvm_gcov_ctr");
-        const llvm::Triple &Triple = llvm::Triple(M->getTargetTriple());
+        const llvm::Triple &Triple = M->getTargetTriple();
         if (Triple.getObjectFormat() == llvm::Triple::XCOFF)
           Counters->setSection("__llvm_gcov_ctr_section");
         CountersBySP.emplace_back(Counters, SP);
@@ -971,7 +971,7 @@ bool GCOVProfiler::emitProfileNotes(
     }
 
     if (EmitGCDA) {
-      const llvm::Triple &Triple = llvm::Triple(M->getTargetTriple());
+      const llvm::Triple &Triple = M->getTargetTriple();
       if (Triple.getObjectFormat() == llvm::Triple::XCOFF)
         emitModuleInitFunctionPtrs(CountersBySP);
       else
@@ -1053,7 +1053,7 @@ void GCOVProfiler::emitModuleInitFunctionPtrs(
   CovInitGV->setInitializer(ConstantStruct::get(STy, InitFuncPtrs));
   CovInitGV->setVisibility(GlobalValue::VisibilityTypes::DefaultVisibility);
   CovInitGV->setSection(getInstrProfSectionName(
-      IPSK_covinit, Triple(M->getTargetTriple()).getObjectFormat()));
+      IPSK_covinit, M->getTargetTriple().getObjectFormat()));
   CovInitGV->setAlignment(Align(INSTR_PROF_DATA_ALIGNMENT));
   CovInitGV->setConstant(true);
 }

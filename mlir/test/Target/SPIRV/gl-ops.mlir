@@ -32,6 +32,14 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     %14 = spirv.GL.Ldexp %arg0 : f32, %arg2 : i32 -> f32
     // CHECK: {{%.*}} = spirv.GL.FMix {{%.*}} : f32, {{%.*}} : f32, {{%.*}} : f32 -> f32
     %15 = spirv.GL.FMix %arg0 : f32, %arg1 : f32, %arg0 : f32 -> f32
+    // CHECK: {{%.*}} = spirv.GL.Fract {{%.*}} : f32
+    %16 = spirv.GL.Fract %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Asinh {{%.*}} : f32
+    %17 = spirv.GL.Asinh %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Acosh {{%.*}} : f32
+    %18 = spirv.GL.Acosh %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Atanh {{%.*}} : f32
+    %19 = spirv.GL.Atanh %arg0 : f32
     spirv.Return
   }
 

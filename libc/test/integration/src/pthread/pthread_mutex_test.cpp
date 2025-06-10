@@ -186,6 +186,10 @@ void multiple_waiters() {
   LIBC_NAMESPACE::pthread_mutex_destroy(&counter_lock);
 }
 
+// Test the initializer
+[[maybe_unused]]
+static pthread_mutex_t test_initializer = PTHREAD_MUTEX_INITIALIZER;
+
 TEST_MAIN() {
   relay_counter();
   wait_and_step();

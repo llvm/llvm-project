@@ -39,7 +39,8 @@ define amdgpu_ps void @v_add_u64(ptr addrspace(1) %out, i64 %a, i64 %b) {
 ; GCN-LABEL: v_add_u64:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
-; GCN-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, v3, v5, vcc_lo
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GCN-NEXT:    v_add_co_ci_u32_e64 v3, null, v3, v5, vcc_lo
 ; GCN-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GCN-NEXT:    s_endpgm
 entry:
@@ -85,7 +86,8 @@ define amdgpu_ps void @v_sub_u64(ptr addrspace(1) %out, i64 %a, i64 %b) {
 ; GCN-LABEL: v_sub_u64:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    v_sub_co_u32 v2, vcc_lo, v2, v4
-; GCN-NEXT:    v_sub_co_ci_u32_e32 v3, vcc_lo, v3, v5, vcc_lo
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GCN-NEXT:    v_sub_co_ci_u32_e64 v3, null, v3, v5, vcc_lo
 ; GCN-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GCN-NEXT:    s_endpgm
 entry:

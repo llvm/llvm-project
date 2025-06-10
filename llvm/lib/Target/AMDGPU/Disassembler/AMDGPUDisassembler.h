@@ -108,6 +108,8 @@ private:
 
   const MCExpr *createConstantSymbolExpr(StringRef Id, int64_t Val);
 
+  void decodeImmOperands(MCInst &MI, const MCInstrInfo &MCII) const;
+
 public:
   AMDGPUDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
                      MCInstrInfo const *MCII);
@@ -130,41 +132,11 @@ public:
 
   template <typename InsnType>
   DecodeStatus tryDecodeInst(const uint8_t *Table, MCInst &MI, InsnType Inst,
-                             uint64_t Address, raw_ostream &Comments) const {
-    assert(MI.getOpcode() == 0);
-    assert(MI.getNumOperands() == 0);
-    MCInst TmpInst;
-    HasLiteral = false;
-    const auto SavedBytes = Bytes;
-
-    SmallString<64> LocalComments;
-    raw_svector_ostream LocalCommentStream(LocalComments);
-    CommentStream = &LocalCommentStream;
-
-    DecodeStatus Res =
-        decodeInstruction(Table, TmpInst, Inst, Address, this, STI);
-
-    CommentStream = nullptr;
-
-    if (Res != Fail) {
-      MI = TmpInst;
-      Comments << LocalComments;
-      return MCDisassembler::Success;
-    }
-    Bytes = SavedBytes;
-    return MCDisassembler::Fail;
-  }
-
+                             uint64_t Address, raw_ostream &Comments) const;
   template <typename InsnType>
   DecodeStatus tryDecodeInst(const uint8_t *Table1, const uint8_t *Table2,
                              MCInst &MI, InsnType Inst, uint64_t Address,
-                             raw_ostream &Comments) const {
-    for (const uint8_t *T : {Table1, Table2}) {
-      if (DecodeStatus Res = tryDecodeInst(T, MI, Inst, Address, Comments))
-        return Res;
-    }
-    return MCDisassembler::Fail;
-  }
+                             raw_ostream &Comments) const;
 
   Expected<bool> onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
                                ArrayRef<uint8_t> Bytes,
@@ -202,7 +174,7 @@ public:
 
   void convertEXPInst(MCInst &MI) const;
   void convertVINTERPInst(MCInst &MI) const;
-  void convertFMAanyK(MCInst &MI, int ImmLitIdx) const;
+  void convertFMAanyK(MCInst &MI) const;
   void convertSDWAInst(MCInst &MI) const;
   void convertMAIInst(MCInst &MI) const;
   void convertDPP8Inst(MCInst &MI) const;
@@ -214,57 +186,26 @@ public:
   void convertMacDPPInst(MCInst &MI) const;
   void convertTrue16OpSel(MCInst &MI) const;
 
-  enum OpWidthTy {
-    OPW32,
-    OPW64,
-    OPW96,
-    OPW128,
-    OPW160,
-    OPW192,
-    OPW256,
-    OPW288,
-    OPW320,
-    OPW352,
-    OPW384,
-    OPW512,
-    OPW1024,
-    OPW16,
-    OPWV216,
-    OPWV232,
-    OPW_LAST_,
-    OPW_FIRST_ = OPW32
-  };
-
-  unsigned getVgprClassId(const OpWidthTy Width) const;
-  unsigned getAgprClassId(const OpWidthTy Width) const;
-  unsigned getSgprClassId(const OpWidthTy Width) const;
-  unsigned getTtmpClassId(const OpWidthTy Width) const;
+  unsigned getVgprClassId(unsigned Width) const;
+  unsigned getAgprClassId(unsigned Width) const;
+  unsigned getSgprClassId(unsigned Width) const;
+  unsigned getTtmpClassId(unsigned Width) const;
 
   static MCOperand decodeIntImmed(unsigned Imm);
-  static MCOperand decodeFPImmed(unsigned ImmWidth, unsigned Imm,
-                                 AMDGPU::OperandSemantics Sema);
 
   MCOperand decodeMandatoryLiteralConstant(unsigned Imm) const;
   MCOperand decodeLiteralConstant(bool ExtendFP64) const;
 
-  MCOperand decodeSrcOp(
-      const OpWidthTy Width, unsigned Val, bool MandatoryLiteral = false,
-      unsigned ImmWidth = 0,
-      AMDGPU::OperandSemantics Sema = AMDGPU::OperandSemantics::INT) const;
+  MCOperand decodeSrcOp(unsigned Width, unsigned Val) const;
 
-  MCOperand decodeNonVGPRSrcOp(
-      const OpWidthTy Width, unsigned Val, bool MandatoryLiteral = false,
-      unsigned ImmWidth = 0,
-      AMDGPU::OperandSemantics Sema = AMDGPU::OperandSemantics::INT) const;
+  MCOperand decodeNonVGPRSrcOp(unsigned Width, unsigned Val) const;
 
   MCOperand decodeVOPDDstYOp(MCInst &Inst, unsigned Val) const;
   MCOperand decodeSpecialReg32(unsigned Val) const;
   MCOperand decodeSpecialReg64(unsigned Val) const;
   MCOperand decodeSpecialReg96Plus(unsigned Val) const;
 
-  MCOperand decodeSDWASrc(const OpWidthTy Width, unsigned Val,
-                          unsigned ImmWidth,
-                          AMDGPU::OperandSemantics Sema) const;
+  MCOperand decodeSDWASrc(unsigned Width, unsigned Val) const;
   MCOperand decodeSDWASrc16(unsigned Val) const;
   MCOperand decodeSDWASrc32(unsigned Val) const;
   MCOperand decodeSDWAVopcDst(unsigned Val) const;

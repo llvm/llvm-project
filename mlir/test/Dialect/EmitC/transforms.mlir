@@ -129,3 +129,37 @@ func.func @single_result_requirement() -> (i32, i32) {
   %0:2 = emitc.call_opaque "foo" () : () -> (i32, i32)
   return %0#0, %0#1 : i32, i32
 }
+
+// CHECK-LABEL:   func.func @expression_with_load(
+// CHECK-SAME:                                    %[[VAL_0:.*]]: i32,
+// CHECK-SAME:                                    %[[VAL_1:.*]]: !emitc.ptr<i32>) -> i1 {
+// CHECK:           %[[VAL_2:.*]] = "emitc.constant"() <{value = 0 : i64}> : () -> i64
+// CHECK:           %[[VAL_3:.*]] = "emitc.variable"() <{value = #emitc.opaque<"42">}> : () -> !emitc.lvalue<i32>
+// CHECK:           %[[VAL_4:.*]] = emitc.expression : i32 {
+// CHECK:             %[[VAL_5:.*]] = load %[[VAL_3]] : <i32>
+// CHECK:             yield %[[VAL_5]] : i32
+// CHECK:           }
+// CHECK:           %[[VAL_6:.*]] = emitc.subscript %[[VAL_1]]{{\[}}%[[VAL_2]]] : (!emitc.ptr<i32>, i64) -> !emitc.lvalue<i32>
+// CHECK:           %[[VAL_7:.*]] = emitc.expression : i32 {
+// CHECK:             %[[VAL_8:.*]] = load %[[VAL_6]] : <i32>
+// CHECK:             yield %[[VAL_8]] : i32
+// CHECK:           }
+// CHECK:           %[[VAL_9:.*]] = emitc.expression : i1 {
+// CHECK:             %[[VAL_10:.*]] = add %[[VAL_4]], %[[VAL_7]] : (i32, i32) -> i32
+// CHECK:             %[[VAL_11:.*]] = cmp lt, %[[VAL_10]], %[[VAL_0]] : (i32, i32) -> i1
+// CHECK:             yield %[[VAL_11]] : i1
+// CHECK:           }
+// CHECK:           return %[[VAL_9]] : i1
+// CHECK:         }
+
+
+func.func @expression_with_load(%arg0: i32, %arg1: !emitc.ptr<i32>) -> i1 {
+  %c0 = "emitc.constant"() {value = 0 : i64} : () -> i64
+  %0 = "emitc.variable"() <{value = #emitc.opaque<"42">}> : () -> !emitc.lvalue<i32>
+  %a = emitc.load %0 : !emitc.lvalue<i32>
+  %ptr = emitc.subscript %arg1[%c0] : (!emitc.ptr<i32>, i64) -> !emitc.lvalue<i32>
+  %ptr_load = emitc.load %ptr : !emitc.lvalue<i32>
+  %b = emitc.add %a, %ptr_load : (i32, i32) -> i32
+  %c = emitc.cmp lt, %b, %arg0 :(i32, i32) -> i1
+  return %c : i1
+}

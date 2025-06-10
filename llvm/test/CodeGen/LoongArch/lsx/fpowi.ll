@@ -14,7 +14,8 @@ define <4 x float> @powi_v4f32(<4 x float> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 0
 ; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
 ; CHECK-NEXT:    move $a0, $fp
-; CHECK-NEXT:    bl %plt(__powisf2)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(__powisf2)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    movfr2gr.s $a0, $fa0
 ; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
 ; CHECK-NEXT:    vst $vr0, $sp, 16 # 16-byte Folded Spill
@@ -22,7 +23,8 @@ define <4 x float> @powi_v4f32(<4 x float> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 1
 ; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
 ; CHECK-NEXT:    move $a0, $fp
-; CHECK-NEXT:    bl %plt(__powisf2)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(__powisf2)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    movfr2gr.s $a0, $fa0
 ; CHECK-NEXT:    vld $vr0, $sp, 16 # 16-byte Folded Reload
 ; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 1
@@ -31,7 +33,8 @@ define <4 x float> @powi_v4f32(<4 x float> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 2
 ; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
 ; CHECK-NEXT:    move $a0, $fp
-; CHECK-NEXT:    bl %plt(__powisf2)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(__powisf2)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    movfr2gr.s $a0, $fa0
 ; CHECK-NEXT:    vld $vr0, $sp, 16 # 16-byte Folded Reload
 ; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 2
@@ -40,7 +43,8 @@ define <4 x float> @powi_v4f32(<4 x float> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 3
 ; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
 ; CHECK-NEXT:    move $a0, $fp
-; CHECK-NEXT:    bl %plt(__powisf2)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(__powisf2)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    movfr2gr.s $a0, $fa0
 ; CHECK-NEXT:    vld $vr0, $sp, 16 # 16-byte Folded Reload
 ; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 3
@@ -66,7 +70,8 @@ define <2 x double> @powi_v2f64(<2 x double> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 0
 ; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 killed $vr0
 ; CHECK-NEXT:    move $a0, $fp
-; CHECK-NEXT:    bl %plt(__powidf2)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(__powidf2)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    movfr2gr.d $a0, $fa0
 ; CHECK-NEXT:    vinsgr2vr.d $vr0, $a0, 0
 ; CHECK-NEXT:    vst $vr0, $sp, 16 # 16-byte Folded Spill
@@ -74,7 +79,8 @@ define <2 x double> @powi_v2f64(<2 x double> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 1
 ; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 killed $vr0
 ; CHECK-NEXT:    move $a0, $fp
-; CHECK-NEXT:    bl %plt(__powidf2)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(__powidf2)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    movfr2gr.d $a0, $fa0
 ; CHECK-NEXT:    vld $vr0, $sp, 16 # 16-byte Folded Reload
 ; CHECK-NEXT:    vinsgr2vr.d $vr0, $a0, 1

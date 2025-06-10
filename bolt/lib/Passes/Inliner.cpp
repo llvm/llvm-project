@@ -49,6 +49,12 @@ ForceInlineFunctions("force-inline",
   cl::Hidden,
   cl::cat(BoltOptCategory));
 
+static cl::list<std::string> SkipInlineFunctions(
+    "skip-inline", cl::CommaSeparated,
+    cl::desc("list of functions to never consider for inlining"),
+    cl::value_desc("func1,func2,func3,..."), cl::Hidden,
+    cl::cat(BoltOptCategory));
+
 static cl::opt<bool> InlineAll("inline-all", cl::desc("inline all functions"),
                                cl::cat(BoltOptCategory));
 
@@ -103,6 +109,12 @@ bool mustConsider(const llvm::bolt::BinaryFunction &Function) {
     if (Function.hasName(Name))
       return true;
   return false;
+}
+
+bool mustSkip(const llvm::bolt::BinaryFunction &Function) {
+  return llvm::any_of(opts::SkipInlineFunctions, [&](const std::string &Name) {
+    return Function.hasName(Name);
+  });
 }
 
 void syncOptions() {
@@ -223,7 +235,7 @@ InliningInfo getInliningInfo(const BinaryFunction &BF) {
 void Inliner::findInliningCandidates(BinaryContext &BC) {
   for (const auto &BFI : BC.getBinaryFunctions()) {
     const BinaryFunction &Function = BFI.second;
-    if (!shouldOptimize(Function))
+    if (!shouldOptimize(Function) || opts::mustSkip(Function))
       continue;
     const InliningInfo InlInfo = getInliningInfo(Function);
     if (InlInfo.Type != INL_NONE)

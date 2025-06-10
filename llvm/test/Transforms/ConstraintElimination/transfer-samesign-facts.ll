@@ -303,3 +303,64 @@ define i1 @ugt_assumed_positive_values(i8 %a, i8 %b) {
 
   ret i1 %result
 }
+
+define i1 @implied_condition_sgt_ugt(i8 %a, i8 %b)  {
+; CHECK-LABEL: @implied_condition_sgt_ugt(
+; CHECK-NEXT:    [[CMP_SGT:%.*]] = icmp sgt i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_SGT]], label [[GREATER:%.*]], label [[EXIT:%.*]]
+; CHECK:       greater:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp_sgt = icmp sgt i8 %a, %b
+  br i1 %cmp_sgt, label %greater, label %exit
+
+greater:
+  %cmp_ugt = icmp samesign ugt i8 %a, %b
+  ret i1 %cmp_ugt
+
+exit:
+  ret i1 false
+}
+
+define i1 @implied_condition_sle_ule(i8 %a) {
+; CHECK-LABEL: @implied_condition_sle_ule(
+; CHECK-NEXT:    [[CMP_SLE:%.*]] = icmp sle i8 [[A:%.*]], 42
+; CHECK-NEXT:    br i1 [[CMP_SLE]], label [[LESS_OR_EQUAL:%.*]], label [[EXIT:%.*]]
+; CHECK:       less_or_equal:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp_sle = icmp sle i8 %a, 42
+  br i1 %cmp_sle, label %less_or_equal, label %exit
+
+less_or_equal:
+  %cmp_ule = icmp samesign ule i8 %a, 42
+  ret i1 %cmp_ule
+
+exit:
+  ret i1 false
+}
+
+define i1 @implied_condition_cannot_simplify(i8 %a, i8 %b) {
+; CHECK-LABEL: @implied_condition_cannot_simplify(
+; CHECK-NEXT:    [[CMP_SGT:%.*]] = icmp ne i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_SGT]], label [[GREATER:%.*]], label [[EXIT:%.*]]
+; CHECK:       not_equal:
+; CHECK-NEXT:    [[CMP_UGT:%.*]] = icmp samesign ugt i8 [[A]], [[B]]
+; CHECK-NEXT:    ret i1 [[CMP_UGT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp_ne = icmp ne i8 %a, %b
+  br i1 %cmp_ne, label %not_equal, label %exit
+
+not_equal:
+  %cmp_ugt = icmp samesign ugt i8 %a, %b
+  ret i1 %cmp_ugt
+
+exit:
+  ret i1 false
+}

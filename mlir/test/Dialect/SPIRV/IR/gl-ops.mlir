@@ -255,6 +255,54 @@ func.func @coshvec(%arg0 : vector<3xf16>) -> () {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.GL.Asinh
+//===----------------------------------------------------------------------===//
+
+func.func @asinh(%arg0 : f32) -> () {
+  // CHECK: spirv.GL.Asinh {{%.*}} : f32
+  %2 = spirv.GL.Asinh %arg0 : f32
+  return
+}
+
+func.func @asinhvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.GL.Asinh {{%.*}} : vector<3xf16>
+  %2 = spirv.GL.Asinh %arg0 : vector<3xf16>
+  return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Acosh
+//===----------------------------------------------------------------------===//
+
+func.func @acosh(%arg0 : f32) -> () {
+  // CHECK: spirv.GL.Acosh {{%.*}} : f32
+  %2 = spirv.GL.Acosh %arg0 : f32
+  return
+}
+
+func.func @acoshvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.GL.Acosh {{%.*}} : vector<3xf16>
+  %2 = spirv.GL.Acosh %arg0 : vector<3xf16>
+  return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Atanh
+//===----------------------------------------------------------------------===//
+
+func.func @atanh(%arg0 : f32) -> () {
+  // CHECK: spirv.GL.Atanh {{%.*}} : f32
+  %2 = spirv.GL.Atanh %arg0 : f32
+  return
+}
+
+func.func @atanhvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.GL.Atanh {{%.*}} : vector<3xf16>
+  %2 = spirv.GL.Atanh %arg0 : vector<3xf16>
+  return
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.GL.Pow
 //===----------------------------------------------------------------------===//
 
@@ -661,5 +709,31 @@ func.func @reflect_vector(%arg0 : vector<3xf32>, %arg1 : vector<3xf32>) {
 func.func @reflect_invalid_type(%arg0 : i32, %arg1 : i32) {
   // expected-error @+1 {{'spirv.GL.Reflect' op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values}}
   %0 = spirv.GL.Reflect %arg0, %arg1 : i32
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Fract
+//===----------------------------------------------------------------------===//
+
+func.func @fract(%arg0 : f32) -> () {
+  // CHECK: spirv.GL.Fract {{%.*}} : f32
+  %0 = spirv.GL.Fract %arg0 : f32
+  return
+}
+
+func.func @fractvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.GL.Fract {{%.*}} : vector<3xf16>
+  %0 = spirv.GL.Fract %arg0 : vector<3xf16>
+  return
+}
+
+// -----
+
+func.func @fract_invalid_type(%arg0 : i32) {
+  // expected-error @+1 {{'spirv.GL.Fract' op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values}}
+  %0 = spirv.GL.Fract %arg0 : i32
   return
 }

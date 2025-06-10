@@ -145,6 +145,7 @@ class ROCDL_DimGetterFunctionOp<string mnemonic, string device_function,
 
 //===----------------------------------------------------------------------===//
 // Wave-level primitives
+//===----------------------------------------------------------------------===//
 
 class ROCDL_MbcntOp<string mnemonic> :
     ROCDL_IntrPure1Op<"mbcnt." # mnemonic>,
@@ -205,6 +206,7 @@ def ROCDL_ReadlaneOp : ROCDL_IntrOp<"readlane", [], [0], [AllTypesMatch<["res", 
 
 //===----------------------------------------------------------------------===//
 // Thread index and Block index
+//===----------------------------------------------------------------------===//
 
 def ROCDL_ThreadIdXOp : ROCDL_SpecialIdRegisterOp<"workitem.id.x">;
 def ROCDL_ThreadIdYOp : ROCDL_SpecialIdRegisterOp<"workitem.id.y">;
@@ -214,8 +216,11 @@ def ROCDL_BlockIdXOp : ROCDL_SpecialIdRegisterOp<"workgroup.id.x">;
 def ROCDL_BlockIdYOp : ROCDL_SpecialIdRegisterOp<"workgroup.id.y">;
 def ROCDL_BlockIdZOp : ROCDL_SpecialIdRegisterOp<"workgroup.id.z">;
 
+def ROCDL_WavefrontSizeOp : ROCDL_SpecialIdRegisterOp<"wavefrontsize">;
+
 //===----------------------------------------------------------------------===//
 // Thread range and Block range
+//===----------------------------------------------------------------------===//
 
 def ROCDL_BlockDimXOp : ROCDL_DimGetterFunctionOp<"workgroup.dim.x",
                                                "__ockl_get_local_size", 0>;
@@ -237,6 +242,7 @@ def ROCDL_GridDimZOp : ROCDL_DimGetterFunctionOp<"grid.dim.z",
 
 //===----------------------------------------------------------------------===//
 // Synchronization primitives
+//===----------------------------------------------------------------------===//
 
 // Emits the waintcnt instruction. The bitfield's semantics depend
 // on the target chipset
@@ -348,11 +354,11 @@ def ROCDL_mfma_f32_16x16x4bf16_1k : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x4bf16.1k">
 def ROCDL_mfma_f32_4x4x4bf16_1k : ROCDL_Mfma_IntrOp<"mfma.f32.4x4x4bf16.1k">;
 def ROCDL_mfma_f32_32x32x8bf16_1k : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x8bf16.1k">;
 def ROCDL_mfma_f32_16x16x16bf16_1k : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x16bf16.1k">;
-// Note: in gfx940, unlike in gfx90a, the f64 xdlops use the "blgp" argument as a
-// NEG bitfield. See IntrinsicsAMDGPU.td for more info.
+// Note: in gfx94x, unlike in gfx90a, the f64 xdlops use the "blgp" argument as
+// a NEG bitfield. See IntrinsicsAMDGPU.td for more info.
 def ROCDL_mfma_f64_16x16x4f64 : ROCDL_Mfma_IntrOp<"mfma.f64.16x16x4f64">;
 def ROCDL_mfma_f64_4x4x4f64 : ROCDL_Mfma_IntrOp<"mfma.f64.4x4x4f64">;
-// New in gfx940.
+// New in gfx94x.
 def ROCDL_mfma_i32_16x16x32_i8 : ROCDL_Mfma_IntrOp<"mfma.i32.16x16x32.i8">;
 def ROCDL_mfma_i32_32x32x16_i8 : ROCDL_Mfma_IntrOp<"mfma.i32.32x32x16.i8">;
 def ROCDL_mfma_f32_16x16x8_xf32 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x8.xf32">;
@@ -375,7 +381,7 @@ def ROCDL_mfma_f32_32x32x16_f16 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.f16">;
 def ROCDL_mfma_scale_f32_16x16x128_f8f6f4 : ROCDL_Mfma_OO_IntrOp<"mfma.scale.f32.16x16x128.f8f6f4", [0,1]>;
 def ROCDL_mfma_scale_f32_32x32x64_f8f6f4 : ROCDL_Mfma_OO_IntrOp<"mfma.scale.f32.32x32x64.f8f6f4", [0,1]>;
 
-// 2:4 Sparsity ops (GFX940)
+// 2:4 Sparsity ops (GFX94x)
 def ROCDL_smfmac_f32_16x16x32_f16 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x32.f16">;
 def ROCDL_smfmac_f32_32x32x16_f16 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x16.f16">;
 def ROCDL_smfmac_f32_16x16x32_bf16 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x32.bf16">;
@@ -410,8 +416,11 @@ def ROCDL_wmma_bf16_16x16x16_bf16 : ROCDL_Wmma_IntrOp<"wmma.bf16.16x16x16.bf16",
 def ROCDL_wmma_i32_16x16x16_iu8 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x16.iu8", [1]>;
 def ROCDL_wmma_i32_16x16x16_iu4 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x16.iu4", [1]>;
 // Available from gfx12
-def ROCDL_wmma_f32_16x16x16_fp8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.fp8_fp8", [1]>;
-def ROCDL_wmma_f32_16x16x16_bf8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.bf8_bf8", [1]>;
+def ROCDL_wmma_f32_16x16x16_fp8_fp8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.fp8_fp8", [1]>;
+def ROCDL_wmma_f32_16x16x16_fp8_bf8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.fp8_bf8", [1]>;
+def ROCDL_wmma_f32_16x16x16_bf8_bf8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.bf8_bf8", [1]>;
+def ROCDL_wmma_f32_16x16x16_bf8_fp8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.bf8_fp8", [1]>;
+def ROCDL_wmma_i32_16x16x32_iu4 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x32.iu4", [1]>;
 
 //===---------------------------------------------------------------------===//
 // LDS transpose intrinsics (available in GFX950)
@@ -420,9 +429,15 @@ def ROCDLGlobalBuffer : LLVM_PointerInAddressSpace<1>;
 def ROCDLBufferLDS : LLVM_PointerInAddressSpace<3>;
 
 class ROCDL_LDS_Read_Tr_IntrOp<string mnemonic> :
-  ROCDL_IntrOp<mnemonic, [1], [], [], 1>,
-  Arguments<(ins Arg<ROCDLBufferLDS, "", [MemRead]>:$ptr)>{
+  ROCDL_IntrOp<mnemonic, [1], [], [], 1, 0, 1> {
+  dag args = (ins Arg<ROCDLBufferLDS, "", [MemRead]>:$ptr);
+  let arguments = !con(args, aliasAttrs);
   let assemblyFormat = "$ptr attr-dict `:` type($ptr) `->` type($res)";
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getPtr()};
+    }
+  }];
 }
 
 def ROCDL_ds_read_tr4_b64 : ROCDL_LDS_Read_Tr_IntrOp<"ds.read.tr4.b64">;
@@ -431,16 +446,45 @@ def ROCDL_ds_read_tr6_b96 : ROCDL_LDS_Read_Tr_IntrOp<"ds.read.tr6.b96">;
 def ROCDL_ds_read_tr16_b64 : ROCDL_LDS_Read_Tr_IntrOp<"ds.read.tr16.b64">;
 
 //===---------------------------------------------------------------------===//
-// Global load to LDS intrinsic (available in GFX950)
+// Load to LDS intrinsic (available in GFX9 and GFX10)
+//===---------------------------------------------------------------------===//
+
+def ROCDL_LoadToLDSOp :
+  ROCDL_IntrOp<"load.to.lds", [], [0], [], 0, 0, 1, [2, 3, 4], ["size", "offset", "aux"]> {
+  dag args = (ins Arg<LLVM_AnyPointer, "", [MemRead]>:$globalPtr,
+                 Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
+                 I32Attr:$size,
+                 I32Attr:$offset,
+                 I32Attr:$aux);
+  let arguments = !con(args, aliasAttrs);
+  let assemblyFormat = [{
+    $globalPtr `,`  $ldsPtr `,` $size `,` $offset `,` $aux
+    attr-dict `:` type($globalPtr)
+  }];
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getGlobalPtr(), getLdsPtr()};
+    }
+  }];
+}
 
 def ROCDL_GlobalLoadLDSOp :
-  ROCDL_IntrOp<"global.load.lds", [], [], [], 0>,
-  Arguments<(ins Arg<ROCDLGlobalBuffer, "", [MemRead]>:$globalPtr,
+  ROCDL_IntrOp<"global.load.lds", [], [], [], 0, 0, 1, [2, 3, 4], ["size", "offset", "aux"]> {
+  dag args = (ins Arg<ROCDLGlobalBuffer, "", [MemRead]>:$globalPtr,
                  Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
-                 I32:$size,
-                 I32:$offset,
-                 I32:$aux)> {
-  let assemblyFormat = "operands attr-dict";
+                 I32Attr:$size,
+                 I32Attr:$offset,
+                 I32Attr:$aux);
+  let arguments = !con(args, aliasAttrs);
+  let assemblyFormat = [{
+    $globalPtr `,`  $ldsPtr `,` $size `,` $offset `,` $aux
+    attr-dict
+  }];
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getGlobalPtr(), getLdsPtr()};
+    }
+  }];
 }
 
 //===---------------------------------------------------------------------===//
@@ -451,12 +495,12 @@ def ROCDL_GlobalLoadLDSOp :
 def ROCDLBufferRsrc : LLVM_PointerInAddressSpace<8>;
 
 def ROCDL_MakeBufferRsrcOp :
-  ROCDL_IntrOp<"make.buffer.rsrc", [], [0], [Pure], 1>,
+  ROCDL_IntrOp<"make.buffer.rsrc", [0], [0], [Pure], 1>,
   Arguments<(ins LLVM_AnyPointer:$base,
                  I16:$stride,
                  I32:$numRecords,
                  I32:$flags)> {
-  let results = (outs ROCDLBufferRsrc:$res);
+  let results = (outs LLVM_AnyPointer:$res);
   let assemblyFormat = "operands attr-dict `:` type($base) `to` type($res)";
 }
 
@@ -470,7 +514,25 @@ def ROCDL_RawPtrBufferLoadOp :
   let assemblyFormat = "operands attr-dict `:` type($res)";
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
-      return {getRes()};
+      return {getRsrc()};
+    }
+  }];
+}
+
+def ROCDL_RawPtrBufferLoadLdsOp :
+  ROCDL_IntrOp<"raw.ptr.buffer.load.lds", [], [], [], 0, 0, 1> {
+  dag args = (ins Arg<ROCDLBufferRsrc, "", [MemRead]>:$rsrc,
+                  Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
+                  I32:$size,
+                  I32:$voffset,
+                  I32:$soffset,
+                  I32:$offset,
+                  I32:$aux);
+  let arguments = !con(args, aliasAttrs);
+  let assemblyFormat = "operands attr-dict";
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getRsrc(), getLdsPtr()};
     }
   }];
 }
@@ -631,6 +693,39 @@ def ROCDL_DPPUpdateOp : ROCDL_IntrOp<"update.dpp", [], [0],
   }];
 }
 
+// PermLaneX16 intrinsic operation
+def ROCDL_PermlaneX16Op : ROCDL_IntrOp<"permlanex16", [], [0],
+    [AllTypesMatch<["res", "old", "src0"]>, AllTypesMatch<["src1", "src2"]>], 1, 0, 0,
+    [4, 5], ["fi", "boundControl"]>,
+  Arguments<(ins LLVM_Type:$old, LLVM_Type:$src0, LLVM_Type:$src1, LLVM_Type:$src2,
+             I1Attr:$fi, I1Attr:$boundControl)> {
+  let results = (outs LLVM_Type:$res);
+  let assemblyFormat = [{
+    attr-dict $old `,` $src0 `,` $src1 `,` $src2 `,` $fi `,` $boundControl `:` type($src0) `,` type($src1)
+  }];
+  let description = [{
+    Performs a `permlanex16` operation with the given operands, applying the
+    permutation specified by $fi to the provided inputs.
+  }];
+}
+
+class ROCDL_ConcreteVector<Type elem, int length> :
+  FixedVectorOfLengthAndType<[length], [elem]>,
+  BuildableType<
+    "::mlir::VectorType::get({" # length # "} ,"
+      # elem.builderCall # ")">;
+
+def ROCDL_V2I16Type : ROCDL_ConcreteVector<I16, 2>;
+def ROCDL_V2F16Type : ROCDL_ConcreteVector<F16, 2>;
+def ROCDL_V2BF16Type : ROCDL_ConcreteVector<BF16, 2>;
+def ROCDL_V2F32Type : ROCDL_ConcreteVector<F32, 2>;
+def ROCDL_V6I32Type : ROCDL_ConcreteVector<I32, 6>;
+def ROCDL_V8I32Type : ROCDL_ConcreteVector<I32, 8>;
+def ROCDL_V16F32Type : ROCDL_ConcreteVector<F32, 16>;
+def ROCDL_V32F16Type : ROCDL_ConcreteVector<F16, 32>;
+def ROCDL_V32BF16Type : ROCDL_ConcreteVector<BF16, 32>;
+def ROCDL_V32F32Type : ROCDL_ConcreteVector<F32, 32>;
+
 //===---------------------------------------------------------------------===//
 // 16-bit float intrinsics
 //===---------------------------------------------------------------------===//
@@ -647,98 +742,11 @@ def ROCDL_CvtPkRtz:
 }
 
 //===---------------------------------------------------------------------===//
-// 32-bit float intrinsics
-//===---------------------------------------------------------------------===//
-def ROCDL_CvtScalePkF32Fp8 :
-    ROCDL_IntrOp<"cvt.scalef32.pk.f32.fp8", [], [], [Pure], 1>,
-    Arguments<(ins I32:$src, F32: $scale, I1:$wordSel)> {
-  let summary = "Scale and convert packed fp8 to packed f32";
-  let description = [{
-    Scale `src` by the exponent in `scale` then convert to packed fp32.
-    Store the result in low/high word based on $wordSel, preserving the other word.
-  }];
-  let assemblyFormat = [{
-    attr-dict $src `[` $wordSel `]` `,` $scale `:` type($res)
-  }];
-}
-def ROCDL_CvtScalePkF32Bf8 :
-    ROCDL_IntrOp<"cvt.scalef32.pk.f32.bf8", [], [], [Pure], 1>,
-    Arguments<(ins I32:$src, F32: $scale, I1:$wordSel)> {
-  let summary = "Scale and convert packed bf8 to packed f32";
-  let description = [{
-    Scale `src` by the exponent in `scale` then convert to packed fp32.
-    Store the result in low/high word based on $wordSel, preserving the other word.
-  }];
-  let assemblyFormat = [{
-    attr-dict $src `[` $wordSel `]` `,` $scale `:` type($res)
-  }];
-}
-//===---------------------------------------------------------------------===//
-// 8-bit float scale intrinsics
-//===---------------------------------------------------------------------===//
-def ROCDL_V2I16Type : FixedVectorOfLengthAndType<[2], [I16]>,
-                        BuildableType<"::mlir::VectorType::get("
-                          "{2},$_builder.getI16Type())">;
-
-def ROCDL_CvtScaleF32PkFp8F32:
-    ROCDL_IntrOp<"cvt.scalef32.pk.fp8.f32", [], [], [Pure], 1>,
-    Arguments<(ins ROCDL_V2I16Type:$old, F32:$srcA, F32:$srcB, F32:$scale, I1:$wordSel)> {
-  let summary = "Scale and convert two f32's to packed fp8";
-  let description = [{
-    Scale `srcA` and `srcB` by the exponent in `scale` then convert to packed fp8
-    and store into the low/high word of `old`, preserving the other word.
-  }];
-  let assemblyFormat = [{
-    attr-dict $srcA `,` $srcB `,` $scale `->` $old `[` $wordSel `]` `:` type($res)
-  }];
-}
-    
-def ROCDL_CvtScaleF32PkBf8F32:
-    ROCDL_IntrOp<"cvt.scalef32.pk.bf8.f32", [], [], [Pure], 1>,
-    Arguments<(ins ROCDL_V2I16Type:$old, F32:$srcA, F32:$srcB, F32: $scale, I1:$wordSel)> {
-  let summary = "Scale and convert two f32's to packed bf8";
-  let description = [{
-    Scale `srcA` and `srcB` by the exponent in `scale` then convert to packed bf8
-    and store into the low/high word of `old`, preserving the other word.
-  }];
-  let assemblyFormat = [{
-    attr-dict $srcA `,` $srcB `,` $scale `->` $old `[` $wordSel `]` `:` type($res)
-  }];
-}
-
-def ROCDL_CvtScaleF32SrFp8F32:
-    ROCDL_IntrOp<"cvt.scalef32.sr.fp8.f32", [], [], [Pure], 1>,
-    Arguments<(ins I32:$old, F32:$src, I32:$seed, F32: $scale, I32:$byteSel)> {
-    let summary = "Scale and convert f32 to fp8 using stochastic rounding";
-    let description = [{
-       Scale `src` by the exponent in `scale` then convert to fp8 with stochastic rounding
-       using seed data in `seed`. store into the `byteSel`th byte of `old`, preserving the others.
-    }];
-  let assemblyFormat = [{
-    attr-dict $src `,` $seed `,` $scale `->` $old `[` $byteSel `]` `:` type($res)
-  }];
-}
-
-
-def ROCDL_CvtScaleF32SrBf8F32:
-    ROCDL_IntrOp<"cvt.scalef32.sr.bf8.f32", [], [], [Pure], 1>,
-    Arguments<(ins I32:$old, F32:$src, I32:$seed, F32: $scale, I32:$byteSel)> {
-    let summary = "Scale and convert f32 to bf8 using stochastic rounding";
-    let description = [{
-       Scale `src` by the exponent in `scale` then convert to bf8 with stochastic rounding
-       using seed data in `seed`. store into the `byteSel`th byte of `old`, preserving the others.
-    }];
-  let assemblyFormat = [{
-    attr-dict $src `,` $seed `,` $scale `->` $old `[` $byteSel `]` `:` type($res)
-  }];
-}
-
-//===---------------------------------------------------------------------===//
 // 8-bit float intrinsics
 //===---------------------------------------------------------------------===//
 def ROCDL_CvtF32Bf8Op :
-    ROCDL_IntrOp<"cvt.f32.bf8", [], [], [Pure], 1>,
-    Arguments<(ins I32:$srcA, I32:$byteSel)> {
+    ROCDL_ConcreteNonMemIntrOp<"cvt.f32.bf8", [Pure], 1, [1], ["byteSel"]>,
+    Arguments<(ins I32:$srcA, I32Attr:$byteSel)> {
   let summary = "Convert bf8 to f32";
   let description = [{
     Convert 8-bit bf8 value from the `byteSel`th bit of `srcA` to fp32.
@@ -748,23 +756,9 @@ def ROCDL_CvtF32Bf8Op :
   }];
 }
 
-def ROCDL_CvtScaleF32Bf8Op :
-    ROCDL_IntrOp<"cvt.scalef32.f32.bf8", [], [], [Pure], 1>,
-    Arguments<(ins I32:$src, F32: $scale, I32:$byteSel)> {
-  let summary = "Scale and convert bf8 to f32";
-  let description = [{
-    Scale `src` by the exponent in `scale` then convert 8-bit bf8 value 
-    from the `byteSel`th bit of `src` to fp32.
-  }];
-  let assemblyFormat = [{
-    attr-dict $src `[` $byteSel `]` `,` $scale `:` type($res)
-  }];
-}
-
-
 def ROCDL_CvtF32Fp8Op :
-    ROCDL_IntrOp<"cvt.f32.fp8", [], [], [Pure], 1>,
-    Arguments<(ins I32:$srcA, I32:$byteSel)> {
+    ROCDL_ConcreteNonMemIntrOp<"cvt.f32.fp8", [Pure], 1, [1], ["byteSel"]>,
+    Arguments<(ins I32:$srcA, I32Attr:$byteSel)> {
   let summary = "Convert fp8 to f32";
   let description = [{
     Convert 8-bit fp8 value from the `byteSel`th bit of `srcA` to fp32.
@@ -774,25 +768,33 @@ def ROCDL_CvtF32Fp8Op :
   }];
 }
 
-
-def ROCDL_CvtScaleF32Fp8Op :
-    ROCDL_IntrOp<"cvt.scalef32.f32.fp8", [], [], [Pure], 1>,
-    Arguments<(ins I32:$src, F32: $scale, I32:$byteSel)> {
-  let summary = "Scale and convert fp8 to f32";
+def ROCDL_CvtPkF32Fp8Op :
+    ROCDL_ConcreteNonMemIntrOp<"cvt.pk.f32.fp8", [Pure], 1, [1], ["wordSel"]>,
+    Arguments<(ins I32:$src, I1Attr:$wordSel)> {
+  let summary = "Convert packed fp8 to packed f32";
   let description = [{
-    Scale `src` by the exponent in `scale` then convert 8-bit fp8 value
-    from the `byteSel`th bit of `src` to fp32.
-
+    Convert `src` based on $wordSel to packed fp32.
   }];
   let assemblyFormat = [{
-    attr-dict $src `[` $byteSel `]` `,` $scale `:` type($res)
+    attr-dict $src `[` $wordSel `]` `:` type($res)
   }];
 }
 
+def ROCDL_CvtPkF32Bf8Op :
+    ROCDL_ConcreteNonMemIntrOp<"cvt.pk.f32.bf8", [Pure], 1, [1], ["wordSel"]>,
+    Arguments<(ins I32:$src, I1Attr:$wordSel)> {
+  let summary = "Convert packed bf8 to packed f32";
+  let description = [{
+    Convert `src` based on $wordSel to packed fp32,
+  }];
+  let assemblyFormat = [{
+    attr-dict $src `[` $wordSel `]` `:` type($res)
+  }];
+}
 
 def ROCDL_CvtPkBf8F32Op :
-    ROCDL_IntrOp<"cvt.pk.bf8.f32", [], [], [Pure], 1>,
-    Arguments<(ins F32:$srcA, F32:$srcB, I32:$old, I1:$wordSel)> {
+    ROCDL_ConcreteNonMemIntrOp<"cvt.pk.bf8.f32", [Pure], 1, [3], ["wordSel"]>,
+    Arguments<(ins F32:$srcA, F32:$srcB, I32:$old, I1Attr:$wordSel)> {
   let summary = "Convert two f32's to bf8";
   let description = [{
     Convert `srcA` and `srcB` to bf8 and store into the low/high word of
@@ -804,8 +806,8 @@ def ROCDL_CvtPkBf8F32Op :
 }
 
 def ROCDL_CvtPkFp8F32Op :
-    ROCDL_IntrOp<"cvt.pk.fp8.f32", [], [], [Pure], 1>,
-    Arguments<(ins F32:$srcA, F32:$srcB, I32:$old, I1:$wordSel)> {
+    ROCDL_ConcreteNonMemIntrOp<"cvt.pk.fp8.f32", [Pure], 1, [3], ["wordSel"]>,
+    Arguments<(ins F32:$srcA, F32:$srcB, I32:$old, I1Attr:$wordSel)> {
   let summary = "Convert two f32's to fp8";
   let description = [{
     Convert `srcA` and `srcB` to fp8 and store into the low/high word of
@@ -817,8 +819,8 @@ def ROCDL_CvtPkFp8F32Op :
 }
 
 def ROCDL_CvtSrBf8F32Op :
-    ROCDL_IntrOp<"cvt.sr.bf8.f32", [], [], [Pure], 1>,
-    Arguments<(ins F32:$srcA, I32:$srcB, I32:$old, I32:$byteSel)> {
+    ROCDL_ConcreteNonMemIntrOp<"cvt.sr.bf8.f32", [Pure], 1, [3], ["byteSel"]>,
+    Arguments<(ins F32:$srcA, I32:$srcB, I32:$old, I32Attr:$byteSel)> {
   let summary = "Convert f32 to bf8, stochiastic rounding";
   let description = [{
     Convert `srcA` to bf8, adding the rounding factor from `srcB`,
@@ -830,8 +832,8 @@ def ROCDL_CvtSrBf8F32Op :
 }
 
 def ROCDL_CvtSrFp8F32Op :
-    ROCDL_IntrOp<"cvt.sr.fp8.f32", [], [], [Pure], 1>,
-    Arguments<(ins F32:$srcA, I32:$srcB, I32:$old, I32:$byteSel)> {
+    ROCDL_ConcreteNonMemIntrOp<"cvt.sr.fp8.f32", [Pure], 1, [3], ["byteSel"]>,
+    Arguments<(ins F32:$srcA, I32:$srcB, I32:$old, I32Attr:$byteSel)> {
   let summary = "Convert f32 to fp8, stochiastic rounding";
   let description = [{
     Convert `srcA` to fp8, adding the rounding factor from `srcB`,
@@ -839,6 +841,335 @@ def ROCDL_CvtSrFp8F32Op :
   }];
   let assemblyFormat = [{
     attr-dict $srcA `,` $srcB `->` $old `[` $byteSel `]` `:` type($res)
+  }];
+}
+
+//===---------------------------------------------------------------------===//
+// Scaled float conversion intrinsics
+//
+// These are using some tablegen trickery to avoid repetitive documentation
+//===---------------------------------------------------------------------===//
+
+// Pair used so we can iterate over types..
+class ScaleArgInfo<TypeConstraint argTyVal, string typeName> {
+  TypeConstraint type = argTyVal;
+  string name = !tolower(typeName);
+  string nameForOp = typeName;
+}
+
+//===---------------------------------------------------------------------===//
+// Scaled 32x6-bit float float conversion intrinsics
+//===---------------------------------------------------------------------===//
+foreach smallT = [
+   // MLIR f6E2M3FN
+  ScaleArgInfo<ROCDL_V6I32Type, "Fp6">,
+   // MLIR f8E3M2FN
+  ScaleArgInfo<ROCDL_V6I32Type, "Bf6">
+] in {
+  foreach largeT = [
+    ScaleArgInfo<ROCDL_V32F16Type, "F16">,
+    ScaleArgInfo<ROCDL_V32BF16Type, "Bf16">,
+    ScaleArgInfo<ROCDL_V32F32Type, "F32">,
+  ] in {
+    // Note: rouding down f32 values has a special case where
+    // we have to use 2 16xf32 arguments.
+    if !ne(largeT.name, "f32") then {
+      def ROCDL_CvtScaleF32Pk32 # smallT.nameForOp # largeT.nameForOp # Op :
+          ROCDL_ConcreteNonMemIntrOp<"cvt.scalef32.pk32." # smallT.name # "." # largeT.name,
+            [Pure], 1>,
+          Arguments<(ins largeT.type:$src, F32:$scale)> {
+        let results = (outs smallT.type:$res);
+        let summary = "Scale and convert packed "
+          # largeT.name # " to packed " # smallT.name;
+        let description = [{
+          Convert 32 packed }] # largeT.name # [{ values to packed }]
+          # smallT.name # [{, dividing by the exponent part of `scale`
+          before doing so.
+        }];
+        let assemblyFormat = [{
+          attr-dict $src `,` $scale `:` type($res)
+        }];
+      }
+    } // if
+
+    def ROCDL_CvtScaleF32SrPk32 # smallT.nameForOp # largeT.nameForOp # Op :
+        ROCDL_ConcreteNonMemIntrOp<"cvt.scalef32.sr.pk32." # smallT.name # "." # largeT.name,
+          [Pure], 1>,
+        Arguments<(ins largeT.type:$src, I32:$seed, F32:$scale)> {
+      let results = (outs smallT.type:$res);
+      let summary = "Scale and convert packed "
+        # largeT.name # " to packed " # smallT.name
+        # " with stochiastic rounding";
+      let description = [{
+        Convert 32 packed }] # largeT.name # [{ values to packed }]
+        # smallT.name # [{, dividing by the exponent part of `scale`
+        before doing so and applying random rounding derived from
+        `seed`.
+      }];
+      let assemblyFormat = [{
+        attr-dict $src `,` $seed `,` $scale `:` type($res)
+      }];
+    }
+
+    def ROCDL_CvtScaleF32Pk32 # largeT.nameForOp # smallT.nameForOp # Op :
+        ROCDL_ConcreteNonMemIntrOp<"cvt.scalef32.pk32." # largeT.name # "." # smallT.name,
+          [Pure], 1>,
+        Arguments<(ins smallT.type:$src, F32:$scale)> {
+      let results = (outs largeT.type:$res);
+      let summary = "Scale and convert packed "
+        # smallT.name # " to packed " # largeT.name;
+      let description = [{
+        Convert 32 packed }] # smallT.name # [{ values to packed }]
+        # largeT.name # [{, multiplying by the exponent part of `scale`
+        before doing so.
+      }];
+      let assemblyFormat = [{
+        attr-dict $src `,` $scale `:` type($res)
+      }];
+    }
+  } // foreach largeT
+
+  def ROCDL_CvtScaleF322xPk16 # smallT.nameForOp # F32Op :
+      ROCDL_ConcreteNonMemIntrOp<"cvt.scalef32.2xpk16." # smallT.name # ".f32",
+        [Pure], 1>,
+      Arguments<(ins ROCDL_V16F32Type:$src0, ROCDL_V16F32Type:$src1, F32:$scale)> {
+    let results = (outs smallT.type:$res);
+    let summary = "Scale and convert two vector<16xf32> to 32 packed " # smallT.name;
+    let description = [{
+      Convert 32 single-precision float values, packed into two length-16
+      vectors that will be logically concanenated, to packed }]
+      # smallT.name # [{, dividing by the exponent part of `scale`
+      before doing so.
+    }];
+   let assemblyFormat = [{
+      attr-dict $src0 `,` $src1 `,` $scale `:` type($res)
+    }];
+  }
+} // forach smallT
+
+//===---------------------------------------------------------------------===//
+// Scaled conversions to/from fp8/bf8 (f8E4M3FN / f8E5M2)
+//===---------------------------------------------------------------------===//
+foreach smallTOp = ["Fp8", "Bf8"] in {
+  defvar smallT = !tolower(smallTOp);
+
+  def ROCDL_CvtScaleF32F16 # smallTOp # Op :
+      ROCDL_ConcreteNonMemIntrOp<"cvt.scalef32.f16." # smallT,
+      [Pure], 1, [3, 4], ["srcSelIndex", "dstLoHiSel"]>,
+    Arguments<(ins ROCDL_V2F16Type:$oldVdst, I32:$src, F32:$scale, I32Attr:$srcSelIndex, I1Attr:$dstLoHiSel)> {
+    let results = (outs ROCDL_V2F16Type:$res);
+    let summary = "Scaled convert " # smallT # " from packed vector to f16, updating tied result";
+    let description = [{
+      Convert a }] # smallT # [{ byte from `src`, selected by
+      `srcSelIndex`, to f16 while multiplying it by the expontent of `scale`,
+      and place it into the `dstLoHiSel`th bit
+      of `oldVdst` preserving the other element of that vector in
+      the return value.
+
+      The bytes are stored as an `i32` and not a `<4 x i8>`.
+    }];
+    let assemblyFormat = [{
+      attr-dict $src `[` $srcSelIndex `]` `,` $scale `->` $oldVdst `[` $dstLoHiSel `]` `:` type($res)
+    }];
+  }
+
+  def ROCDL_CvtScaleF32F32 # smallTOp # Op :
+      ROCDL_ConcreteNonMemIntrOp<"cvt.scalef32.f32." # smallT,
+      [Pure], 1, [2], ["srcSelIndex"]>,
+    Arguments<(ins I32:$src, F32:$scale, I32Attr:$srcSelIndex)> {
+    let results = (outs F32:$res);
+    let summary = "Scaled convert " # smallT # " from packed vector to f32";
+    let description = [{
+      Convert a }] # smallT # [{ byte from `src`, selected by
+      `srcSelIndex`, to f32, multiplying it by the exponent of `scale`.
+
+      The bytes are stored in an `i32`, not a `<4 x i8>`.
+    }];
+    let assemblyFormat = [{
+      attr-dict $src `[` $srcSelIndex `]` `,` $scale `:` type($res)
+    }];
+  }
+
+  def ROCDL_CvtScaleF32Pk # smallTOp # F32Op :
+      ROCDL_ConcreteNonMemIntrOp<"cvt.scalef32.pk." # smallT # ".f32",
+      [Pure], 1, [4], ["dstLoHiSel"]>,
+    Arguments<(ins ROCDL_V2I16Type:$oldVdst, F32:$src0, F32:$src1, F32:$scale, I1Attr:$dstLoHiSel)> {
+    let results = (outs ROCDL_V2I16Type:$res);
+    let summary = "Scaled convert two f32 to two " # smallT # ", updating packed vector";
+    let description = [{
+      Convert two f32 values in `src0` and `src1` to two }] # smallT # [{ bytes,
+      dividing by the exponent in `scale`. The bytes are packed into
+      a 16-bit value which is inserted into `oldVdst` at the `dstLoHiSel`
+      position, with the entire updated vector being returned.
+    }];
+    let assemblyFormat = [{
+      attr-dict  $src0 `,` $src1 `,` $scale `->` $oldVdst `[` $dstLoHiSel `]` `:` type($res)
+    }];
+  }
+
+  foreach largeT = [
+    ScaleArgInfo<ROCDL_V2F16Type, "F16">,
+    ScaleArgInfo<ROCDL_V2BF16Type, "Bf16">,
+  ] in {
+    def ROCDL_CvtScaleF32Pk # smallTOp # largeT.nameForOp # Op :
+          ROCDL_ConcreteNonMemIntrOp<"cvt.scalef32.pk." # smallT # "." # largeT.name,
+          [Pure], 1, [3], ["dstLoHiSel"]>,
+        Arguments<(ins ROCDL_V2I16Type:$oldVdst, largeT.type:$src0, F32:$scale, I1Attr:$dstLoHiSel)> {
+      let results = (outs ROCDL_V2I16Type:$res);
+      let summary = "Scaled convert two " # largeT.name # "to two " # smallT # ", updating packed vector";
+      let description = [{
+        Convert two }] # largeT.name # [{ values in `src0` to two }]
+        # smallT # [{ bytes, dividing by the exponent in `scale`. The bytes are
+        packed into a 16-bit value which is inserted into `oldVdst` at the
+        `dstLoHiSel` position, with the entire updated vector being returned.
+      }];
+      let assemblyFormat = [{
+        attr-dict $src0 `,` $scale `->` $oldVdst `[` $dstLoHiSel `]` `:` type($res)
+      }];
+    }
+  } // foreach largeT
+
+  foreach largeT = [
+    ScaleArgInfo<ROCDL_V2F16Type, "F16">,
+    ScaleArgInfo<ROCDL_V2BF16Type, "Bf16">,
+    ScaleArgInfo<ROCDL_V2F32Type, "F32">
+  ] in {
+    def ROCDL_CvtScaleF32Pk # largeT.nameForOp # smallTOp # Op :
+          ROCDL_ConcreteNonMemIntrOp<"cvt.scalef32.pk." # largeT.name # "." # smallT,
+          [Pure], 1, [2], ["srcLoHiSel"]>,
+        Arguments<(ins I32:$src, F32:$scale, I1Attr:$srcLoHiSel)> {
+      let results = (outs largeT.type:$res);
+      let summary = "Scaled convert two " # smallT # "to two " # largeT.name #;
+      let description = [{
+        Convert two packed }] # smallT # [{ values in `src0` to two }]
+        # largeT.name # [{ values, multiplying by the exponent in `scale`.
+        The two values to be converted are selected from the low or high half
+        of `src` (a packed vector represented as an `i32`)
+        on the basis of `srcLoHiSel`.
+      }];
+      let assemblyFormat = [{
+        attr-dict $src `[` $srcLoHiSel `]` `,` $scale `:` type($res)
+      }];
+    }
+  } // foreach largeT
+
+  foreach largeT = [
+    ScaleArgInfo<F32, "F32">,
+    ScaleArgInfo<F16, "F16">,
+    ScaleArgInfo<BF16, "BF16">
+  ] in {
+    def ROCDL_CvtScaleF32Sr # smallTOp # largeT.nameForOp # Op :
+          ROCDL_ConcreteNonMemIntrOp<"cvt.scalef32.sr." # smallT # "." # largeT.name,
+          [Pure], 1, [4], ["dstSelIndex"]>,
+        Arguments<(ins I32:$oldVdst, largeT.type:$src0, I32:$seed, F32:$scale, I32Attr:$dstSelIndex)> {
+      let results = (outs I32:$res);
+      let summary = "Scaled convert " # largeT.name # "to " # smallT # " with stochiastic rounding, updating packed vector";
+      let description = [{
+        Convert a }] # largeT.name # [{ value in `src0` to a }]
+        # smallT # [{ bytes, dividing by the exponent in `scale` and using `seed`
+        for stochiastic rounding. Place the resulting byte in the
+        `dstSelIndex`th bit of `oldVdst` and return the entire packed vector,
+        which is stored as an `i32`.
+      }];
+      let assemblyFormat = [{
+        attr-dict $src0 `,` $seed `,` $scale `->` $oldVdst `[` $dstSelIndex `]` `:` type($res)
+      }];
+    }
+  } // foreach largeT
+} // foreach smallTOp
+
+//===---------------------------------------------------------------------===//
+// Scaled conversions to/from fp4 (f4E2M1FN)
+//===---------------------------------------------------------------------===//
+
+foreach largeT = [
+  ScaleArgInfo<ROCDL_V2F16Type, "F16">,
+  ScaleArgInfo<ROCDL_V2BF16Type, "Bf16">,
+  ScaleArgInfo<ROCDL_V2F32Type, "F32">,
+] in {
+  // Note: rouding down f32 values has a special case where
+  // we have to use 2 float arguments.
+  if !ne(largeT.name, "f32") then {
+    def ROCDL_CvtScaleF32PkFp4 # largeT.nameForOp # Op :
+        ROCDL_ConcreteNonMemIntrOp<"cvt.scalef32.pk.fp4." # largeT.name,
+          [Pure], 1, [3], ["dstSelIndex"]>,
+        Arguments<(ins I32:$oldVdst, largeT.type:$src, F32:$scale, I32Attr:$dstSelIndex)> {
+      let results = (outs I32:$res);
+      let summary = "Scale and convert two "
+        # largeT.name # " to packed fp4, updating tied vector";
+      let description = [{
+        Convert two packed }] # largeT.name # [{ values to packed
+        fp4, dividing by the exponent part of `scale`
+        before doing so.
+
+        The two scaled values are packed  into a byte.
+        That byte is used to update the `dstSelIndex`th
+        byte of `oldVdst`, which is returned in its entirity.
+      }];
+      let assemblyFormat = [{
+        attr-dict $src `,` $scale `->` $oldVdst `[` $dstSelIndex `]` `:` type($res)
+      }];
+    }
+  } // if
+
+  def ROCDL_CvtScaleF32SrPkFp4 # largeT.nameForOp # Op :
+      ROCDL_ConcreteNonMemIntrOp<"cvt.scalef32.sr.pk.fp4." # largeT.name,
+        [Pure], 1, [4], ["dstSelIndex"]>,
+      Arguments<(ins I32:$oldVdst, largeT.type:$src, I32:$seed, F32:$scale, I32Attr:$dstSelIndex)> {
+    let results = (outs I32:$res);
+    let summary = "Scale and convert two "
+      # largeT.name # " to packed fp4 with stochiastic rounding, updating tied vector";
+    let description = [{
+      Convert two packed }] # largeT.name # [{ values to packed
+      fp4, dividing by the exponent part of `scale`
+      before doing so and using `seed` as the random seed for
+      stochiastic rounding.
+
+      The two scaled values are packed (little-endian)
+      into a byte. That byte is used to update the `dstSelIndex`th
+      byte of `oldVdst`, which is returned in its entirity.
+    }];
+    let assemblyFormat = [{
+      attr-dict $src `,` $seed `,` $scale `->` $oldVdst `[` $dstSelIndex `]` `:` type($res)
+    }];
+  }
+
+  def ROCDL_CvtScaleF32Pk # largeT.nameForOp # Fp4Op :
+      ROCDL_ConcreteNonMemIntrOp<"cvt.scalef32.pk." # largeT.name # ".fp4",
+        [Pure], 1, [2], ["srcSelIndex"]>,
+      Arguments<(ins I32:$src, F32:$scale, I32Attr:$srcSelIndex)> {
+    let results = (outs largeT.type:$res);
+    let summary = "Scale and convert two packed fp4 to packed " # largeT.name;
+    let description = [{
+      Convert two packed fp4 (f4E2M1) values  stored as one byte of a 32-bit integer
+      to packed }] # largeT.name # [{, multiplying by the exponent part of `scale`
+      before doing so.
+
+      The byte to convert is chosen by `srcSelIndex`.
+    }];
+    let assemblyFormat = [{
+      attr-dict $src `[` $srcSelIndex `]` `,` $scale `:` type($res)
+    }];
+  }
+} // foreach largeT
+
+def ROCDL_CvtScaleF32PkFp4F32Op :
+    ROCDL_ConcreteNonMemIntrOp<"cvt.scalef32.pk.fp4.f32",
+      [Pure], 1, [4], ["dstSelIndex"]>,
+    Arguments<(ins I32:$oldVdst, F32:$src0, F32:$src1, F32:$scale, I32Attr:$dstSelIndex)> {
+  let results = (outs I32:$res);
+  let summary = "Scale and convert two f32 values to two packed fp4, updating tied vector";
+  let description = [{
+    Convert two single-precision float values, passed in `src0` and `src1`
+    into two fp4 values, dividing them by the expontent part of `scale`
+    before doing so.
+
+    The two scaled values are packed  into a byte.
+    That byte is used to update the `dstSelIndex`th
+    byte of `oldVdst`, which is returned in its entirity.
+  }];
+ let assemblyFormat = [{
+    attr-dict $src0 `,` $src1 `,` $scale `->` $oldVdst `[` $dstSelIndex `]` `:` type($res)
   }];
 }
 
@@ -875,7 +1206,7 @@ def ROCDL_TargetAttr :
     StringRefParameter<"Target chip features.", "\"\"">:$features,
     // Also update the default builder below and rocdl-attach-target in
     // Dialect/GPU/Transforms/Passes.td .
-    StringRefParameter<"ABI version.", "\"500\"">:$abi,
+    StringRefParameter<"ABI version.", "\"600\"">:$abi,
     OptionalParameter<"DictionaryAttr", "Target specific flags.">:$flags,
     OptionalParameter<"ArrayAttr", "Files to link to the LLVM module.">:$link
   );
@@ -887,7 +1218,7 @@ def ROCDL_TargetAttr :
                      CArg<"StringRef", "\"amdgcn-amd-amdhsa\"">:$triple,
                      CArg<"StringRef", "\"gfx900\"">:$chip,
                      CArg<"StringRef", "\"\"">:$features,
-                     CArg<"StringRef", "\"500\"">:$abiVersion,
+                     CArg<"StringRef", "\"600\"">:$abiVersion,
                      CArg<"DictionaryAttr", "nullptr">:$targetFlags,
                      CArg<"ArrayAttr", "nullptr">:$linkFiles), [{
       return Base::get($_ctxt, optLevel, triple, chip, features, abiVersion,

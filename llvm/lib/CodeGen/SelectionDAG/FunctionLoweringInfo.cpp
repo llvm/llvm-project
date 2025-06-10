@@ -295,7 +295,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
         continue;
 
       DebugLoc DL = PN.getDebugLoc();
-      unsigned PHIReg = ValueMap[&PN];
+      Register PHIReg = ValueMap[&PN];
       assert(PHIReg && "PHI node does not have an assigned virtual register!");
 
       SmallVector<EVT, 4> ValueVTs;
@@ -343,9 +343,9 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     for (auto &KV : EHInfo.UnwindDestToSrcs) {
       const auto *Dest = cast<const BasicBlock *>(KV.first);
       MachineBasicBlock *DestMBB = getMBB(Dest);
-      UnwindDestToSrcs[DestMBB] = SmallPtrSet<BBOrMBB, 4>();
+      auto &Srcs = UnwindDestToSrcs[DestMBB];
       for (const auto P : KV.second)
-        UnwindDestToSrcs[DestMBB].insert(getMBB(cast<const BasicBlock *>(P)));
+        Srcs.insert(getMBB(cast<const BasicBlock *>(P)));
     }
     EHInfo.UnwindDestToSrcs = std::move(UnwindDestToSrcs);
   }
@@ -578,7 +578,7 @@ FunctionLoweringInfo::getValueFromVirtualReg(Register Vreg) {
       ValueVTs.clear();
       ComputeValueVTs(*TLI, Fn->getDataLayout(),
                       P.first->getType(), ValueVTs);
-      unsigned Reg = P.second;
+      Register Reg = P.second;
       for (EVT VT : ValueVTs) {
         unsigned NumRegisters = TLI->getNumRegisters(Fn->getContext(), VT);
         for (unsigned i = 0, e = NumRegisters; i != e; ++i)

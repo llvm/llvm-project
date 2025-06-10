@@ -608,14 +608,14 @@ define half @ldexp_f16(half %arg0, i32 %arg1) {
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; WIN32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movl %eax, (%esp)
-; WIN32-NEXT:    calll ___gnu_h2f_ieee
+; WIN32-NEXT:    calll ___extendhfsf2
 ; WIN32-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    fstpl (%esp)
 ; WIN32-NEXT:    calll _ldexp
 ; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    fstps (%esp)
-; WIN32-NEXT:    calll ___gnu_f2h_ieee
+; WIN32-NEXT:    calll ___truncsfhf2
 ; WIN32-NEXT:    addl $16, %esp
 ; WIN32-NEXT:    popl %esi
 ; WIN32-NEXT:    retl

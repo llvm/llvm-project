@@ -891,20 +891,7 @@ auto GetShapeHelper::operator()(const ArrayRef &arrayRef) const -> Result {
 }
 
 auto GetShapeHelper::operator()(const CoarrayRef &coarrayRef) const -> Result {
-  NamedEntity base{coarrayRef.GetBase()};
-  if (coarrayRef.subscript().empty()) {
-    return (*this)(base);
-  } else {
-    Shape shape;
-    int dimension{0};
-    for (const Subscript &ss : coarrayRef.subscript()) {
-      if (ss.Rank() > 0) {
-        shape.emplace_back(GetExtent(ss, base, dimension));
-      }
-      ++dimension;
-    }
-    return shape;
-  }
+  return (*this)(coarrayRef.base());
 }
 
 auto GetShapeHelper::operator()(const Substring &substring) const -> Result {
@@ -1086,8 +1073,8 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
         }
       }
     } else if (intrinsic->name == "spread") {
-      // SHAPE(SPREAD(ARRAY,DIM,NCOPIES)) = SHAPE(ARRAY) with NCOPIES inserted
-      // at position DIM.
+      // SHAPE(SPREAD(ARRAY,DIM,NCOPIES)) = SHAPE(ARRAY) with MAX(0,NCOPIES)
+      // inserted at position DIM.
       if (call.arguments().size() == 3) {
         auto arrayShape{
             (*this)(UnwrapExpr<Expr<SomeType>>(call.arguments().at(0)))};
@@ -1099,7 +1086,8 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
             if (*dim >= 1 &&
                 static_cast<std::size_t>(*dim) <= arrayShape->size() + 1) {
               arrayShape->emplace(arrayShape->begin() + *dim - 1,
-                  ConvertToType<ExtentType>(common::Clone(*nCopies)));
+                  Extremum<SubscriptInteger>{Ordering::Greater, ExtentExpr{0},
+                      ConvertToType<ExtentType>(common::Clone(*nCopies))});
               return std::move(*arrayShape);
             }
           }
@@ -1173,8 +1161,10 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
       if (call.arguments().size() >= 2) {
         return (*this)(call.arguments()[1]); // MASK=
       }
-    } else if (intrinsic->characteristics.value().attrs.test(characteristics::
-                       Procedure::Attr::NullPointer)) { // NULL(MOLD=)
+    } else if (intrinsic->characteristics.value().attrs.test(
+                   characteristics::Procedure::Attr::NullPointer) ||
+        intrinsic->characteristics.value().attrs.test(
+            characteristics::Procedure::Attr::NullAllocatable)) { // NULL(MOLD=)
       return (*this)(call.arguments());
     } else {
       // TODO: shapes of other non-elemental intrinsic results

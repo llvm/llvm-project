@@ -26,6 +26,7 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/Compiler.h"
 using namespace llvm;
 
 InsertPosition::InsertPosition(Instruction *InsertBefore)
@@ -48,7 +49,7 @@ Instruction::Instruction(Type *ty, unsigned it, AllocInfo AllocInfo,
 Instruction::~Instruction() {
   assert(!getParent() && "Instruction still linked in the program!");
 
-  // Replace any extant metadata uses of this instruction with undef to
+  // Replace any extant metadata uses of this instruction with poison to
   // preserve debug info accuracy. Some alternatives include:
   // - Treat Instruction like any other Value, and point its extant metadata
   //   uses to an empty ValueAsMetadata node. This makes extant dbg.value uses
@@ -58,7 +59,7 @@ Instruction::~Instruction() {
   //   correct. OTOH results in wasted work in some common cases (e.g. when all
   //   instructions in a BasicBlock are deleted).
   if (isUsedByMetadata())
-    ValueAsMetadata::handleRAUW(this, UndefValue::get(getType()));
+    ValueAsMetadata::handleRAUW(this, PoisonValue::get(getType()));
 
   // Explicitly remove DIAssignID metadata to clear up ID -> Instruction(s)
   // mapping in LLVMContext.
@@ -129,8 +130,6 @@ BasicBlock::iterator Instruction::insertInto(BasicBlock *ParentBB,
   return getIterator();
 }
 
-extern cl::opt<bool> UseNewDbgInfoFormat;
-
 void Instruction::insertBefore(BasicBlock &BB,
                                InstListType::iterator InsertPos) {
   assert(!DebugMarker);
@@ -190,15 +189,22 @@ void Instruction::moveBeforePreserving(BasicBlock::iterator MovePos) {
 
 void Instruction::moveAfter(Instruction *MovePos) {
   auto NextIt = std::next(MovePos->getIterator());
-  // We want this instruction to be moved to before NextIt in the instruction
+  // We want this instruction to be moved to after NextIt in the instruction
   // list, but before NextIt's debug value range.
   NextIt.setHeadBit(true);
   moveBeforeImpl(*MovePos->getParent(), NextIt, false);
 }
 
+void Instruction::moveAfter(InstListType::iterator MovePos) {
+  // We want this instruction to be moved to after NextIt in the instruction
+  // list, but before NextIt's debug value range.
+  MovePos.setHeadBit(true);
+  moveBeforeImpl(*MovePos->getParent(), MovePos, false);
+}
+
 void Instruction::moveAfterPreserving(Instruction *MovePos) {
   auto NextIt = std::next(MovePos->getIterator());
-  // We want this instruction and its debug range to be moved to before NextIt
+  // We want this instruction and its debug range to be moved to after NextIt
   // in the instruction list, but before NextIt's debug value range.
   NextIt.setHeadBit(true);
   moveBeforeImpl(*MovePos->getParent(), NextIt, true);
@@ -373,7 +379,7 @@ std::optional<BasicBlock::iterator> Instruction::getInsertionPointAfterDef() {
 }
 
 bool Instruction::isOnlyUserOfAnyOperand() {
-  return any_of(operands(), [](Value *V) { return V->hasOneUser(); });
+  return any_of(operands(), [](const Value *V) { return V->hasOneUser(); });
 }
 
 void Instruction::setHasNoUnsignedWrap(bool b) {
@@ -490,7 +496,7 @@ bool Instruction::hasNonDebugLocLoopMetadata() const {
   // the first item because it is a self-reference.
   for (const MDOperand &Op : llvm::drop_begin(LoopMD->operands())) {
     // check for debug location type by attempting a cast.
-    if (!dyn_cast<DILocation>(Op)) {
+    if (!isa<DILocation>(Op)) {
       return true;
     }
   }
@@ -532,8 +538,8 @@ void Instruction::dropUBImplyingAttrsAndUnknownMetadata(
   if (!CB)
     return;
   // For call instructions, we also need to drop parameter and return attributes
-  // that are can cause UB if the call is moved to a location where the
-  // attribute is not valid.
+  // that can cause UB if the call is moved to a location where the attribute is
+  // not valid.
   AttributeList AL = CB->getAttributes();
   if (AL.isEmpty())
     return;
@@ -552,6 +558,20 @@ void Instruction::dropUBImplyingAttrsAndMetadata() {
   unsigned KnownIDs[] = {LLVMContext::MD_annotation, LLVMContext::MD_range,
                          LLVMContext::MD_nonnull, LLVMContext::MD_align};
   dropUBImplyingAttrsAndUnknownMetadata(KnownIDs);
+}
+
+bool Instruction::hasUBImplyingAttrs() const {
+  auto *CB = dyn_cast<CallBase>(this);
+  if (!CB)
+    return false;
+  // For call instructions, we also need to check parameter and return
+  // attributes that can cause UB.
+  for (unsigned ArgNo = 0; ArgNo < CB->arg_size(); ArgNo++)
+    if (CB->isPassingUndefUB(ArgNo))
+      return true;
+  return CB->hasRetAttr(Attribute::NoUndef) ||
+         CB->hasRetAttr(Attribute::Dereferenceable) ||
+         CB->hasRetAttr(Attribute::DereferenceableOrNull);
 }
 
 bool Instruction::isExact() const {
@@ -1233,10 +1253,7 @@ Instruction::getNextNonDebugInstruction(bool SkipPseudoOp) const {
 const Instruction *
 Instruction::getPrevNonDebugInstruction(bool SkipPseudoOp) const {
   for (const Instruction *I = getPrevNode(); I; I = I->getPrevNode())
-    if (!isa<DbgInfoIntrinsic>(I) &&
-        !(SkipPseudoOp && isa<PseudoProbeInst>(I)) &&
-        !(isa<IntrinsicInst>(I) &&
-          cast<IntrinsicInst>(I)->getIntrinsicID() == Intrinsic::fake_use))
+    if (!isa<DbgInfoIntrinsic>(I) && !(SkipPseudoOp && isa<PseudoProbeInst>(I)))
       return I;
   return nullptr;
 }

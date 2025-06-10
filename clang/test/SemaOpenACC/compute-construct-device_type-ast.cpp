@@ -19,50 +19,50 @@ void NormalUses() {
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl{{.*}} SomeVar 'bool'
 
-#pragma acc parallel device_type(SomeS) dtype(SomeImpl)
+#pragma acc parallel device_type(default) dtype(nvidia)
   while(true){}
   // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
-  // CHECK-NEXT: device_type(SomeS)
-  // CHECK-NEXT: dtype(SomeImpl)
+  // CHECK-NEXT: device_type(default)
+  // CHECK-NEXT: dtype(nvidia)
   // CHECK-NEXT: WhileStmt
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: CompoundStmt
-#pragma acc parallel device_type(SomeVar) dtype(int)
+#pragma acc parallel device_type(radeon) dtype(host)
   while(true){}
   // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
-  // CHECK-NEXT: device_type(SomeVar)
-  // CHECK-NEXT: dtype(int)
+  // CHECK-NEXT: device_type(radeon)
+  // CHECK-NEXT: dtype(host)
   // CHECK-NEXT: WhileStmt
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: CompoundStmt
-#pragma acc parallel device_type(private) dtype(struct)
+#pragma acc parallel device_type(multicore) dtype(default)
   while(true){}
   // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
-  // CHECK-NEXT: device_type(private)
-  // CHECK-NEXT: dtype(struct)
+  // CHECK-NEXT: device_type(multicore)
+  // CHECK-NEXT: dtype(default)
   // CHECK-NEXT: WhileStmt
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: CompoundStmt
-#pragma acc parallel device_type(private) dtype(class)
+#pragma acc parallel device_type(nvidia) dtype(acc_device_nvidia)
   while(true){}
   // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
-  // CHECK-NEXT: device_type(private)
-  // CHECK-NEXT: dtype(class)
+  // CHECK-NEXT: device_type(nvidia)
+  // CHECK-NEXT: dtype(acc_device_nvidia)
   // CHECK-NEXT: WhileStmt
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: CompoundStmt
-#pragma acc parallel device_type(float) dtype(*)
+#pragma acc parallel device_type(radeon) dtype(*)
   while(true){}
   // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
-  // CHECK-NEXT: device_type(float)
+  // CHECK-NEXT: device_type(radeon)
   // CHECK-NEXT: dtype(*)
   // CHECK-NEXT: WhileStmt
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: CompoundStmt
-#pragma acc parallel device_type(float, int) dtype(*)
+#pragma acc parallel device_type(host, multicore) dtype(*)
   while(true){}
   // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
-  // CHECK-NEXT: device_type(float, int)
+  // CHECK-NEXT: device_type(host, multicore)
   // CHECK-NEXT: dtype(*)
   // CHECK-NEXT: WhileStmt
   // CHECK-NEXT: CXXBoolLiteralExpr
@@ -75,11 +75,11 @@ void TemplUses() {
   // CHECK-NEXT: TemplateTypeParmDecl{{.*}}T
   // CHECK-NEXT: FunctionDecl{{.*}}TemplUses
   // CHECK-NEXT: CompoundStmt
-#pragma acc parallel device_type(T) dtype(T)
+#pragma acc parallel device_type(host) dtype(multicore)
   while(true){}
   // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
-  // CHECK-NEXT: device_type(T)
-  // CHECK-NEXT: dtype(T)
+  // CHECK-NEXT: device_type(host)
+  // CHECK-NEXT: dtype(multicore)
   // CHECK-NEXT: WhileStmt
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: CompoundStmt
@@ -92,8 +92,8 @@ void TemplUses() {
   // CHECK-NEXT: CompoundStmt
 
   // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
-  // CHECK-NEXT: device_type(T)
-  // CHECK-NEXT: dtype(T)
+  // CHECK-NEXT: device_type(host)
+  // CHECK-NEXT: dtype(multicore)
   // CHECK-NEXT: WhileStmt
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: CompoundStmt

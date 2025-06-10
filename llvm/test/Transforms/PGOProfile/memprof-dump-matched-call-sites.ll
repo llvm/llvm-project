@@ -42,16 +42,19 @@ HeapProfileRecords:
   - GUID:            main
     AllocSites:      []
     CallSites:
-      - - { Function: main, LineOffset: 1, Column: 3, IsInlineFrame: false }
+      - Frames:
+        - { Function: main, LineOffset: 1, Column: 3, IsInlineFrame: false }
   - GUID:            _ZL2f1v
     AllocSites:      []
     CallSites:
-      - - { Function: _ZL2f2v, LineOffset: 0, Column: 28, IsInlineFrame: true }
+      - Frames:
+        - { Function: _ZL2f2v, LineOffset: 0, Column: 28, IsInlineFrame: true }
         - { Function: _ZL2f1v, LineOffset: 0, Column: 54, IsInlineFrame: false }
   - GUID:            _ZL2f2v
     AllocSites:      []
     CallSites:
-      - - { Function: _ZL2f2v, LineOffset: 0, Column: 28, IsInlineFrame: true }
+      - Frames:
+        - { Function: _ZL2f2v, LineOffset: 0, Column: 28, IsInlineFrame: true }
         - { Function: _ZL2f1v, LineOffset: 0, Column: 54, IsInlineFrame: false }
   - GUID:            _Z2f3v
     AllocSites:
@@ -68,7 +71,7 @@ HeapProfileRecords:
     CallSites:       []
 ...
 ;--- memprof-dump-matched-call-site.ll
-; CHECK: MemProf notcold context with id 3894143216621363392 has total profiled size 4 is matched
+; CHECK: MemProf notcold context with id 3894143216621363392 has total profiled size 4 is matched with 1 frames
 ; CHECK: MemProf callsite match for inline call stack 4745611964195289084 10616861955219347331
 ; CHECK: MemProf callsite match for inline call stack 5401059281181789382
 

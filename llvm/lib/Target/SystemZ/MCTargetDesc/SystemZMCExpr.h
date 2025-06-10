@@ -15,51 +15,41 @@
 
 namespace llvm {
 
-class SystemZMCExpr : public MCTargetExpr {
+class SystemZMCExpr : public MCSpecifierExpr {
 public:
-// HLASM docs for address constants:
-// https://www.ibm.com/docs/en/hla-and-tf/1.6?topic=value-address-constants
-  enum VariantKind {
-    VK_SystemZ_None,
-    VK_SystemZ_RCon,            // Address of ADA of symbol.
-    VK_SystemZ_VCon,            // Address of external function symbol.
+  using Specifier = Spec;
+  enum {
+    VK_None,
+
+    VK_DTPOFF = MCSymbolRefExpr::FirstTargetSpecifier,
+    VK_GOT,
+    VK_GOTENT,
+    VK_INDNTPOFF,
+    VK_NTPOFF,
+    VK_PLT,
+    VK_TLSGD,
+    VK_TLSLD,
+    VK_TLSLDM,
+
+    // HLASM docs for address constants:
+    // https://www.ibm.com/docs/en/hla-and-tf/1.6?topic=value-address-constants
+    VK_SystemZ_RCon, // Address of ADA of symbol.
+    VK_SystemZ_VCon, // Address of external function symbol.
   };
 
 private:
-  const VariantKind Kind;
-  const MCExpr *Expr;
-
-  explicit SystemZMCExpr(VariantKind Kind, const MCExpr *Expr)
-      : Kind(Kind), Expr(Expr) {}
+  explicit SystemZMCExpr(const MCExpr *Expr, Spec S)
+      : MCSpecifierExpr(Expr, S) {}
 
 public:
-  static const SystemZMCExpr *create(VariantKind Kind, const MCExpr *Expr,
+  static const SystemZMCExpr *create(Spec Kind, const MCExpr *Expr,
                                      MCContext &Ctx);
-
-  /// getOpcode - Get the kind of this expression.
-  VariantKind getKind() const { return Kind; }
-
-  /// getSubExpr - Get the child of this expression.
-  const MCExpr *getSubExpr() const { return Expr; }
 
   StringRef getVariantKindName() const;
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                 const MCFixup *Fixup) const override;
-  void visitUsedExpr(MCStreamer &Streamer) const override {
-    Streamer.visitUsedExpr(*getSubExpr());
-  }
-  MCFragment *findAssociatedFragment() const override {
-    return getSubExpr()->findAssociatedFragment();
-  }
-
-  // There are no TLS SystemZMCExprs at the moment.
-  void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override {}
-
-  static bool classof(const MCExpr *E) {
-    return E->getKind() == MCExpr::Target;
-  }
+  bool evaluateAsRelocatableImpl(MCValue &Res,
+                                 const MCAssembler *Asm) const override;
 };
 } // end namespace llvm
 

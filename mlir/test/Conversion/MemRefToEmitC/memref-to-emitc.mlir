@@ -1,4 +1,5 @@
 // RUN: mlir-opt -convert-memref-to-emitc %s -split-input-file | FileCheck %s
+// RUN: mlir-opt -convert-to-emitc="filter-dialects=memref" %s -split-input-file | FileCheck %s
 
 // CHECK-LABEL: alloca()
 func.func @alloca() {

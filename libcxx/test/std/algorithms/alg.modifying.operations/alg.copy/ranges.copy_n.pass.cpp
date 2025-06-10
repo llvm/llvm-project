@@ -40,7 +40,7 @@ static_assert(!HasCopyNIt<int*, int*, SentinelForNotWeaklyEqualityComparableWith
 
 static_assert(std::is_same_v<std::ranges::copy_result<int, long>, std::ranges::in_out_result<int, long>>);
 
-template <class In, class Out, class Sent = In>
+template <class In, class Out>
 constexpr void test_iterators() {
   { // simple test
     std::array in{1, 2, 3, 4};
@@ -59,26 +59,6 @@ constexpr void test_iterators() {
     assert(base(ret.in) == in.data());
     assert(base(ret.out) == out.data());
   }
-}
-
-template <class Out>
-constexpr void test_in_iterators() {
-  test_iterators<cpp20_input_iterator<int*>, Out, sentinel_wrapper<cpp20_input_iterator<int*>>>();
-  test_iterators<forward_iterator<int*>, Out>();
-  test_iterators<bidirectional_iterator<int*>, Out>();
-  test_iterators<random_access_iterator<int*>, Out>();
-  test_iterators<contiguous_iterator<int*>, Out>();
-}
-
-template <class Out>
-constexpr void test_proxy_in_iterators() {
-  test_iterators<ProxyIterator<cpp20_input_iterator<int*>>,
-                 Out,
-                 sentinel_wrapper<ProxyIterator<cpp20_input_iterator<int*>>>>();
-  test_iterators<ProxyIterator<forward_iterator<int*>>, Out>();
-  test_iterators<ProxyIterator<bidirectional_iterator<int*>>, Out>();
-  test_iterators<ProxyIterator<random_access_iterator<int*>>, Out>();
-  test_iterators<ProxyIterator<contiguous_iterator<int*>>, Out>();
 }
 
 #if TEST_STD_VER >= 23
@@ -104,17 +84,12 @@ constexpr bool test_vector_bool(std::size_t N) {
 #endif
 
 constexpr bool test() {
-  test_in_iterators<cpp20_input_iterator<int*>>();
-  test_in_iterators<forward_iterator<int*>>();
-  test_in_iterators<bidirectional_iterator<int*>>();
-  test_in_iterators<random_access_iterator<int*>>();
-  test_in_iterators<contiguous_iterator<int*>>();
-
-  test_proxy_in_iterators<ProxyIterator<cpp20_input_iterator<int*>>>();
-  test_proxy_in_iterators<ProxyIterator<forward_iterator<int*>>>();
-  test_proxy_in_iterators<ProxyIterator<bidirectional_iterator<int*>>>();
-  test_proxy_in_iterators<ProxyIterator<random_access_iterator<int*>>>();
-  test_proxy_in_iterators<ProxyIterator<contiguous_iterator<int*>>>();
+  types::for_each(types::cpp20_input_iterator_list<int*>{}, []<class Out>() {
+    types::for_each(types::cpp20_input_iterator_list<int*>{}, []<class In>() {
+      test_iterators<In, Out>();
+      test_iterators<ProxyIterator<In>, ProxyIterator<Out>>();
+    });
+  });
 
   { // check that every element is copied exactly once
     struct CopyOnce {

@@ -9,6 +9,31 @@ declare double @llvm.fabs.f64(double)
 declare fp128 @llvm.fabs.f128(fp128)
 
 ; Compare with 0, extract sign bit
+define i32 @f0(half %x) {
+; CHECK-LABEL: f0
+; CHECK:       lgdr %r0, %f0
+; CHECK-NEXT:  srlg %r0, %r0, 48
+; CHECK-NEXT:  lhr %r0, %r0
+; CHECK-NEXT:  chi %r0, 0
+; CHECK-NEXT:  ipm %r0
+; CHECK-NEXT:  risbg %r13, %r0, 63, 191, 36
+; CHECK-NEXT:     # kill: def $f0h killed $f0h killed $f0d
+; CHECK-NEXT:  brasl %r14, __extendhfsf2@PLT
+; CHECK-NEXT:  ltebr %f0, %f0
+; CHECK-NEXT:  ipm %r0
+; CHECK-NEXT:  rosbg %r13, %r0, 63, 63, 35
+; CHECK-NEXT:  lr %r2, %r13
+; CHECK-NEXT:  lmg %r13, %r15, 264(%r15)
+; CHECK-NEXT:  br %r14
+  %cast = bitcast half %x to i16
+  %sign = icmp slt i16 %cast, 0
+  %fcmp = fcmp ugt half %x, 0.0
+  %res = or i1 %sign, %fcmp
+  %xres = zext i1 %res to i32
+  ret i32 %xres
+}
+
+; Compare with 0, extract sign bit
 define i32 @f1(float %x) {
 ; CHECK-LABEL: f1
 ; CHECK: tceb %f0, 2047

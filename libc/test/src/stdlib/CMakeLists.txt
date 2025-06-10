@@ -222,6 +222,27 @@ add_libc_test(
 )
 
 add_libc_test(
+  a64l_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    a64l_test.cpp
+  DEPENDS
+    libc.src.stdlib.a64l
+)
+
+add_libc_test(
+  l64a_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    l64a_test.cpp
+  DEPENDS
+    libc.src.stdlib.l64a
+    libc.src.__support.CPP.limits
+)
+
+add_libc_test(
   abs_test
   SUITE
     libc-stdlib-tests
@@ -345,6 +366,17 @@ add_libc_test(
   DEPENDS
     libc.src.stdlib.rand
     libc.src.stdlib.srand
+)
+
+add_libc_test(
+  memalignment_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    memalignment_test.cpp
+  DEPENDS
+    libc.include.stdlib
+    libc.src.stdlib.memalignment
 )
 
 if(LLVM_LIBC_FULL_BUILD)

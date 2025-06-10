@@ -106,7 +106,7 @@ def extract_result_types(comment):
 
 
 def strip_doxygen(comment):
-    """Returns the given comment without \-escaped words."""
+    """Returns the given comment without -escaped words."""
     # If there is only a doxygen keyword in the line, delete the whole line.
     comment = re.sub(r"^\\[^\s]+\n", r"", comment, flags=re.M)
 
@@ -241,7 +241,7 @@ def act_on_decl(declaration, comment, allowed_types):
 
         # Parse the various matcher definition macros.
         m = re.match(
-            """.*AST_TYPE(LOC)?_TRAVERSE_MATCHER(?:_DECL)?\(
+            r""".*AST_TYPE(LOC)?_TRAVERSE_MATCHER(?:_DECL)?\(
                        \s*([^\s,]+\s*),
                        \s*(?:[^\s,]+\s*),
                        \s*AST_POLYMORPHIC_SUPPORTED_TYPES\(([^)]*)\)
@@ -615,5 +615,5 @@ reference = re.sub(
     flags=re.S,
 )
 
-with open("../LibASTMatchersReference.html", "w", newline="\n") as output:
+with open(HTML_FILE, "w", newline="\n") as output:
     output.write(reference)

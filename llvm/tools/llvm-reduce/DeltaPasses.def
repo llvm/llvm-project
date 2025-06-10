@@ -1,0 +1,75 @@
+//===--- DeltaPasses.def - Delta Pass Definitions --------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+
+#ifndef DELTA_PASS_IR
+#define DELTA_PASS_IR(NAME, FUNC, DESC)
+#endif
+DELTA_PASS_IR("strip-debug-info", stripDebugInfoDeltaPass, "Stripping Debug Info")
+DELTA_PASS_IR("functions", reduceFunctionsDeltaPass, "Reducing Functions")
+DELTA_PASS_IR("function-bodies", reduceFunctionBodiesDeltaPass, "Reducing Function Bodies")
+DELTA_PASS_IR("special-globals", reduceSpecialGlobalsDeltaPass, "Reducing Special Globals")
+DELTA_PASS_IR("aliases", reduceAliasesDeltaPass, "Reducing Aliases")
+DELTA_PASS_IR("ifuncs", reduceIFuncsDeltaPass, "Reducing Ifuncs")
+DELTA_PASS_IR("simplify-conditionals-true", reduceConditionalsTrueDeltaPass, "Reducing conditional branches to true")
+DELTA_PASS_IR("simplify-conditionals-false",
+            reduceConditionalsFalseDeltaPass, "Reducing conditional branches to false")
+DELTA_PASS_IR("invokes", reduceInvokesDeltaPass, "Reducing Invokes")
+DELTA_PASS_IR("unreachable-basic-blocks",
+            reduceUnreachableBasicBlocksDeltaPass, "Removing Unreachable Basic Blocks")
+DELTA_PASS_IR("basic-blocks", reduceBasicBlocksDeltaPass, "Reducing Basic Blocks")
+DELTA_PASS_IR("simplify-cfg", reduceUsingSimplifyCFGDeltaPass, "Reducing using SimplifyCFG")
+DELTA_PASS_IR("function-data", reduceFunctionDataDeltaPass, "Reducing Function Data")
+DELTA_PASS_IR("global-values", reduceGlobalValuesDeltaPass, "Reducing GlobalValues")
+DELTA_PASS_IR("global-objects", reduceGlobalObjectsDeltaPass, "Reducing GlobalObjects")
+DELTA_PASS_IR("global-initializers", reduceGlobalsInitializersDeltaPass, "Reducing GV Initializers")
+DELTA_PASS_IR("global-variables", reduceGlobalsDeltaPass, "Reducing GlobalVariables")
+DELTA_PASS_IR("di-metadata", reduceDIMetadataDeltaPass, "Reducing DIMetadata")
+DELTA_PASS_IR("dbg-records", reduceDbgRecordDeltaPass, "Reducing DbgRecords")
+DELTA_PASS_IR("distinct-metadata", reduceDistinctMetadataDeltaPass, "Reducing Distinct Metadata")
+DELTA_PASS_IR("metadata", reduceMetadataDeltaPass,"Reducing Metadata")
+DELTA_PASS_IR("named-metadata", reduceNamedMetadataDeltaPass, "Reducing Named Metadata")
+DELTA_PASS_IR("arguments", reduceArgumentsDeltaPass, "Reducing Arguments")
+DELTA_PASS_IR("instructions", reduceInstructionsDeltaPass, "Reducing Instructions")
+DELTA_PASS_IR("simplify-instructions", simplifyInstructionsDeltaPass, "Simplifying Instructions")
+DELTA_PASS_IR("ir-passes", runIRPassesDeltaPass, "Running passes")
+DELTA_PASS_IR("operands-zero", reduceOperandsZeroDeltaPass, "Reducing Operands to zero")
+DELTA_PASS_IR("operands-one", reduceOperandsOneDeltaPass, "Reducing Operands to one")
+DELTA_PASS_IR("operands-nan", reduceOperandsNaNDeltaPass, "Reducing Operands to NaN")
+DELTA_PASS_IR("operands-poison", reduceOperandsPoisonDeltaPass, "Reducing Operands to poison")
+DELTA_PASS_IR("operands-to-args", reduceOperandsToArgsDeltaPass, "Converting operands to function arguments")
+DELTA_PASS_IR("operands-skip", reduceOperandsSkipDeltaPass, "Reducing operands by skipping over instructions")
+DELTA_PASS_IR("operand-bundles", reduceOperandBundesDeltaPass, "Reducing Operand Bundles")
+DELTA_PASS_IR("attributes", reduceAttributesDeltaPass, "Reducing Attributes")
+DELTA_PASS_IR("target-features-attr", reduceTargetFeaturesAttrDeltaPass, "Reducing target-features")
+DELTA_PASS_IR("module-data", reduceModuleDataDeltaPass, "Reducing Module Data")
+DELTA_PASS_IR("opcodes", reduceOpcodesDeltaPass, "Reducing Opcodes")
+
+DELTA_PASS_IR("arguments-to-return", reduceArgumentsToReturnDeltaPass,
+              "Converting arguments to function return value")
+DELTA_PASS_IR("instructions-to-return", reduceInstructionsToReturnDeltaPass,
+              "Early return of instructions")
+DELTA_PASS_IR("volatile", reduceVolatileInstructionsDeltaPass, "Reducing Volatile Instructions")
+DELTA_PASS_IR("atomic-ordering", reduceAtomicOrderingDeltaPass, "Reducing Atomic Ordering")
+DELTA_PASS_IR("syncscopes", reduceAtomicSyncScopesDeltaPass, "Reducing Atomic Sync Scopes")
+DELTA_PASS_IR("instruction-flags", reduceInstructionFlagsDeltaPass, "Reducing Instruction Flags")
+
+
+#ifndef DELTA_PASS_MIR
+#define DELTA_PASS_MIR(NAME, FUNC, DESC)
+#endif
+DELTA_PASS_MIR("instructions", reduceInstructionsMIRDeltaPass, "Reducing Instructions")
+DELTA_PASS_MIR("ir-instruction-references",
+            reduceIRInstructionReferencesDeltaPass, "Reducing IR references from instructions")
+DELTA_PASS_MIR("ir-block-references", reduceIRBlockReferencesDeltaPass, "Reducing IR references from blocks")
+DELTA_PASS_MIR("ir-function-references", reduceIRFunctionReferencesDeltaPass, "Reducing IR references from functions")
+DELTA_PASS_MIR("instruction-flags", reduceInstructionFlagsMIRDeltaPass, "Reducing Instruction Flags")
+DELTA_PASS_MIR("register-uses", reduceRegisterUsesMIRDeltaPass, "Reducing register uses")
+DELTA_PASS_MIR("register-defs", reduceRegisterDefsMIRDeltaPass, "Reducing register defs")
+DELTA_PASS_MIR("register-hints", reduceVirtualRegisterHintsDeltaPass, "Reducing virtual register hints from functions")
+DELTA_PASS_MIR("register-masks", reduceRegisterMasksMIRDeltaPass, "Reducing register masks")

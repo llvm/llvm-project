@@ -5,11 +5,11 @@
 // but that it remains the same between different test runs.
 
 // CHECK:      [[K_FAKE_USE:%[a-zA-Z0-9\.]+]] = load i32, ptr %k.addr
-// CHECK-NEXT: call void (...) @llvm.fake.use(i32 [[K_FAKE_USE]]) #2
+// CHECK-NEXT: call void (...) @llvm.fake.use(i32 [[K_FAKE_USE]])
 // CHECK-NEXT: [[J_FAKE_USE:%[a-zA-Z0-9\.]+]] = load i32, ptr %j.addr
-// CHECK-NEXT: call void (...) @llvm.fake.use(i32 [[J_FAKE_USE]]) #2
+// CHECK-NEXT: call void (...) @llvm.fake.use(i32 [[J_FAKE_USE]])
 // CHECK-NEXT: [[I_FAKE_USE:%[a-zA-Z0-9\.]+]] = load i32, ptr %i.addr
-// CHECK-NEXT: call void (...) @llvm.fake.use(i32 [[I_FAKE_USE]]) #2
+// CHECK-NEXT: call void (...) @llvm.fake.use(i32 [[I_FAKE_USE]])
 
 void bar();
 void foo(int i, int j, int k)

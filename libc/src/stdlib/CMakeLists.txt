@@ -185,6 +185,28 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  a64l
+  SRCS
+    a64l.cpp
+  HDRS
+    a64l.h
+  DEPENDS
+    libc.src.__support.ctype_utils
+    libc.hdr.types.size_t
+)
+
+add_entrypoint_object(
+  l64a
+  SRCS
+    l64a.cpp
+  HDRS
+    l64a.h
+  DEPENDS
+    libc.src.__support.ctype_utils
+    libc.hdr.types.size_t
+)
+
+add_entrypoint_object(
   abs
   SRCS
     abs.cpp
@@ -321,6 +343,17 @@ add_entrypoint_object(
     srand.h
   DEPENDS
     .rand_util
+)
+
+add_entrypoint_object(
+  memalignment
+  SRCS
+    memalignment.cpp
+  HDRS
+    memalignment.h
+  DEPENDS
+    libc.src.__support.common
+    libc.hdr.types.size_t
 )
 
 if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
