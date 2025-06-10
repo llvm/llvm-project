@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 %s -triple amdgcn-unknown-unknown -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL -finclude-default-header %s
-// expected-no-diagnostics
 // RUN: %clang_cc1 %s -triple amdgcn-unknown-unknown -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL -finclude-default-header -fdeclare-opencl-builtins %s
 // expected-no-diagnostics
 
