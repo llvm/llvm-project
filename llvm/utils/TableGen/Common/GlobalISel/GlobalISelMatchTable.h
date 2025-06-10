@@ -824,6 +824,7 @@ public:
     IPM_OneUse,
     IPM_GenericPredicate,
     IPM_MIFlags,
+    OPM_LeafPredicate,
     OPM_SameOperand,
     OPM_ComplexPattern,
     OPM_IntrinsicID,
@@ -1249,6 +1250,26 @@ public:
 
   static bool classof(const PredicateMatcher *P) {
     return P->getKind() == IPM_ImmPredicate;
+  }
+
+  void emitPredicateOpcodes(MatchTable &Table,
+                            RuleMatcher &Rule) const override;
+};
+
+/// Generates code to check that this operand is a register whose value meets
+/// the predicate.
+class OperandLeafPredicateMatcher : public OperandPredicateMatcher {
+protected:
+  TreePredicateFn Predicate;
+
+public:
+  OperandLeafPredicateMatcher(unsigned InsnVarID, unsigned OpIdx,
+                              const TreePredicateFn &Predicate)
+      : OperandPredicateMatcher(OPM_LeafPredicate, InsnVarID, OpIdx),
+        Predicate(Predicate) {}
+
+  static bool classof(const PredicateMatcher *P) {
+    return P->getKind() == OPM_LeafPredicate;
   }
 
   void emitPredicateOpcodes(MatchTable &Table,

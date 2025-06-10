@@ -775,7 +775,7 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
 }
 
 bool DataAggregator::doTrace(const Trace &Trace, uint64_t Count) {
-  const uint64_t Branch = Trace.Branch, From = Trace.From, To = Trace.To;
+  const uint64_t From = Trace.From, To = Trace.To;
   BinaryFunction *FromFunc = getBinaryFunctionContainingAddress(From);
   BinaryFunction *ToFunc = getBinaryFunctionContainingAddress(To);
   if (!FromFunc || !ToFunc) {
@@ -1545,11 +1545,11 @@ void DataAggregator::processBranchEvents() {
                      TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
 
   for (const auto &[Trace, Info] : Traces) {
-    if (Trace.To != Trace::BR_ONLY)
-      doTrace(Trace, Info.TakenCount);
     if (Trace.Branch != Trace::FT_ONLY &&
         Trace.Branch != Trace::FT_EXTERNAL_ORIGIN)
       doBranch(Trace.Branch, Trace.From, Info.TakenCount, Info.MispredCount);
+    if (Trace.To != Trace::BR_ONLY)
+      doTrace(Trace, Info.TakenCount);
   }
   printBranchSamplesDiagnostics();
 }
