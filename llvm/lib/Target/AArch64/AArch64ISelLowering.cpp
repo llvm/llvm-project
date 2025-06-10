@@ -1464,6 +1464,16 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setPartialReduceMLAAction(MLAOps, MVT::v4i32, MVT::v16i8, Legal);
       setPartialReduceMLAAction(MLAOps, MVT::v2i32, MVT::v8i8, Legal);
       setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v16i8, Custom);
+
+      if (Subtarget->hasMatMulInt8()) {
+        setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v4i32,
+                                  MVT::v16i8, Legal);
+        setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v2i64,
+                                  MVT::v16i8, Custom);
+
+        setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v2i32,
+                                  MVT::v8i8, Legal);
+      }
     }
 
   } else /* !isNeonAvailable */ {
@@ -1894,6 +1904,13 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setPartialReduceMLAAction(MLAOps, MVT::nxv4i32, MVT::nxv16i8, Legal);
 
     setPartialReduceMLAAction(MLAOps, MVT::nxv2i64, MVT::nxv16i8, Custom);
+
+    if (Subtarget->hasMatMulInt8()) {
+      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::nxv4i32,
+                                MVT::nxv16i8, Legal);
+      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::nxv2i64,
+                                MVT::nxv16i8, Custom);
+    }
 
     // Wide add types
     if (Subtarget->hasSVE2() || Subtarget->hasSME()) {
@@ -5367,7 +5384,7 @@ static unsigned selectUmullSmull(SDValue &N0, SDValue &N1, SelectionDAG &DAG,
       return AArch64ISD::UMULL;
   } else if (VT == MVT::v2i64 && DAG.MaskedValueIsZero(N0, Mask) &&
              DAG.MaskedValueIsZero(N1, Mask)) {
-    // For v2i64 we look more aggresively at both operands being zero, to avoid
+    // For v2i64 we look more aggressively at both operands being zero, to avoid
     // scalarization.
     return AArch64ISD::UMULL;
   }
@@ -5844,7 +5861,7 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     } else if (Ty.isVector() && Ty.isInteger() && isTypeLegal(Ty)) {
       return DAG.getNode(ISD::ABS, dl, Ty, Op.getOperand(1));
     } else {
-      report_fatal_error("Unexpected type for AArch64 NEON intrinic");
+      report_fatal_error("Unexpected type for AArch64 NEON intrinsic");
     }
   }
   case Intrinsic::aarch64_neon_pmull64: {
@@ -5870,19 +5887,19 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       // If the operand is an higher half itself, rewrite it to
       // extract_high_v2i64; this way aarch64_neon_pmull64 could
       // re-use the dag-combiner function with aarch64_neon_{pmull,smull,umull}.
-      if (NLane && *NLane == 1)
+      if (NLane == 1)
         return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v1i64,
                            N.getOperand(0), DAG.getConstant(1, dl, MVT::i64));
 
       // Operand N is not a higher half but the other operand is.
-      if (OtherLane && *OtherLane == 1) {
+      if (OtherLane == 1) {
         // If this operand is a lower half, rewrite it to
         // extract_high_v2i64(duplane(<2 x Ty>, 0)). This saves a roundtrip to
         // align lanes of two operands. A roundtrip sequence (to move from lane
         // 1 to lane 0) is like this:
         //   mov x8, v0.d[1]
         //   fmov d0, x8
-        if (NLane && *NLane == 0)
+        if (NLane == 0)
           return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v1i64,
                              DAG.getNode(AArch64ISD::DUPLANE64, dl, MVT::v2i64,
                                          N.getOperand(0),
@@ -7516,6 +7533,7 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerVECTOR_HISTOGRAM(Op, DAG);
   case ISD::PARTIAL_REDUCE_SMLA:
   case ISD::PARTIAL_REDUCE_UMLA:
+  case ISD::PARTIAL_REDUCE_SUMLA:
     return LowerPARTIAL_REDUCE_MLA(Op, DAG);
   }
 }
@@ -8630,9 +8648,9 @@ static bool checkZExtBool(SDValue Arg, const SelectionDAG &DAG) {
   if (SizeInBits < 8)
     return false;
 
-  APInt RequredZero(SizeInBits, 0xFE);
+  APInt RequiredZero(SizeInBits, 0xFE);
   KnownBits Bits = DAG.computeKnownBits(Arg, 4);
-  bool ZExtBool = (Bits.Zero & RequredZero) == RequredZero;
+  bool ZExtBool = (Bits.Zero & RequiredZero) == RequiredZero;
   return ZExtBool;
 }
 
@@ -13536,7 +13554,7 @@ static SDValue GeneratePerfectShuffle(unsigned ID, SDValue V1,
         OpLHS = DAG.getBitcast(MVT::v2f32, OpLHS);
       } else {
         assert(VT.getScalarSizeInBits() == 32 &&
-               "Expected 16 or 32 bit shuffle elemements");
+               "Expected 16 or 32 bit shuffle elements");
         Input = DAG.getBitcast(MVT::v2f64, Input);
         OpLHS = DAG.getBitcast(MVT::v2f64, OpLHS);
       }
@@ -13941,7 +13959,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
       unsigned NewEltCount = VT.getSizeInBits() / LaneSize;
       MVT NewVecTy = MVT::getVectorVT(NewEltTy, NewEltCount);
       V1 = DAG.getBitcast(NewVecTy, V1);
-      // Constuct the DUP instruction
+      // Construct the DUP instruction
       V1 = constructDup(V1, Lane, dl, NewVecTy, Opcode, DAG);
       // Cast back to the original type
       return DAG.getBitcast(VT, V1);
@@ -16900,12 +16918,12 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(
 }
 
 bool AArch64TargetLowering::hasPairedLoad(EVT LoadedType,
-                                          Align &RequiredAligment) const {
+                                          Align &RequiredAlignment) const {
   if (!LoadedType.isSimple() ||
       (!LoadedType.isInteger() && !LoadedType.isFloatingPoint()))
     return false;
   // Cyclone supports unaligned accesses.
-  RequiredAligment = Align(1);
+  RequiredAlignment = Align(1);
   unsigned NumBits = LoadedType.getSizeInBits();
   return NumBits == 32 || NumBits == 64;
 }
@@ -18028,7 +18046,7 @@ static SDValue performVecReduceAddCombineWithUADDLP(SDNode *N,
       EXT1->getOperand(0)->getValueType(0) != MVT::v16i8)
     return SDValue();
 
-  // Pattern is dectected. Let's convert it to sequence of nodes.
+  // Pattern is detected. Let's convert it to sequence of nodes.
   SDLoc DL(N);
 
   // First, create the node pattern of UABD/SABD.
@@ -18246,10 +18264,10 @@ static SDValue performVecReduceAddCombine(SDNode *N, SelectionDAG &DAG,
                                 DAG.getConstant(I * 16, DL, MVT::i64));
   SDValue Dot =
       DAG.getNode(DotOpcode, DL, Zeros.getValueType(), Zeros, Vec8Op0, Vec8Op1);
-  SDValue VecReudceAdd8 =
+  SDValue VecReduceAdd8 =
       DAG.getNode(ISD::VECREDUCE_ADD, DL, N->getValueType(0), Dot);
   return DAG.getNode(ISD::ADD, DL, N->getValueType(0), VecReduceAdd16,
-                     VecReudceAdd8);
+                     VecReduceAdd8);
 }
 
 // Given an (integer) vecreduce, we know the order of the inputs does not
@@ -21474,7 +21492,7 @@ static SDValue tryCombineShiftImm(unsigned IID, SDNode *N, SelectionDAG &DAG) {
   case Intrinsic::aarch64_neon_ushl:
     // For positive shift amounts we can use SHL, as ushl/sshl perform a regular
     // left shift for positive shift amounts. For negative shifts we can use a
-    // VASHR/VLSHR as appropiate.
+    // VASHR/VLSHR as appropriate.
     if (ShiftAmount < 0) {
       Opcode = IID == Intrinsic::aarch64_neon_sshl ? AArch64ISD::VASHR
                                                    : AArch64ISD::VLSHR;
@@ -22880,7 +22898,7 @@ static SDValue splitStores(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 }
 
 static SDValue performSpliceCombine(SDNode *N, SelectionDAG &DAG) {
-  assert(N->getOpcode() == AArch64ISD::SPLICE && "Unexepected Opcode!");
+  assert(N->getOpcode() == AArch64ISD::SPLICE && "Unexpected Opcode!");
 
   // splice(pg, op1, undef) -> op1
   if (N->getOperand(2).isUndef())
@@ -23616,10 +23634,10 @@ static SDValue performLOADCombine(SDNode *N,
                   LD->getMemOperand()->getFlags(), LD->getAAInfo());
   SDValue UndefVector = DAG.getUNDEF(NewVT);
   SDValue InsertIdx = DAG.getVectorIdxConstant(0, DL);
-  SDValue ExtendedReminingLoad =
+  SDValue ExtendedRemainingLoad =
       DAG.getNode(ISD::INSERT_SUBVECTOR, DL, NewVT,
                   {UndefVector, RemainingLoad, InsertIdx});
-  LoadOps.push_back(ExtendedReminingLoad);
+  LoadOps.push_back(ExtendedRemainingLoad);
   LoadOpsChain.push_back(SDValue(cast<SDNode>(RemainingLoad), 1));
   EVT ConcatVT =
       EVT::getVectorVT(*DAG.getContext(), MemVT.getScalarType(),

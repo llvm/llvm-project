@@ -270,6 +270,17 @@ void handleVectorizeLoopsArgs(const llvm::opt::ArgList &Args,
 /// Enable -fslp-vectorize based on the optimization level selected.
 void handleVectorizeSLPArgs(const llvm::opt::ArgList &Args,
                             llvm::opt::ArgStringList &CmdArgs);
+
+// Parse -mprefer-vector-width=. Return the Value string if well-formed.
+// Otherwise, return an empty string and issue a diagnosic message if needed.
+StringRef parseMPreferVectorWidthOption(clang::DiagnosticsEngine &Diags,
+                                        const llvm::opt::ArgList &Args);
+
+// Parse -mrecip. Return the Value string if well-formed.
+// Otherwise, return an empty string and issue a diagnosic message if needed.
+StringRef parseMRecipOption(clang::DiagnosticsEngine &Diags,
+                            const llvm::opt::ArgList &Args);
+
 } // end namespace tools
 } // end namespace driver
 } // end namespace clang

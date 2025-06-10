@@ -1688,16 +1688,16 @@ define void @interleave_24i32_in(ptr %p, ptr %q1, ptr %q2, ptr %q3) nounwind {
 ; AVX1-NEXT:    vmovups (%rsi), %xmm2
 ; AVX1-NEXT:    vmovups 16(%rsi), %xmm3
 ; AVX1-NEXT:    vshufps {{.*#+}} xmm4 = xmm3[3,3],xmm1[3,3]
-; AVX1-NEXT:    vunpckhpd {{.*#+}} xmm3 = xmm3[1],xmm1[1]
-; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[1,1],xmm3[0,2]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[1,1,2,2]
+; AVX1-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0,1],xmm3[2],xmm1[3]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm1, %ymm1
 ; AVX1-NEXT:    vbroadcastf128 {{.*#+}} ymm3 = mem[0,1,0,1]
 ; AVX1-NEXT:    vshufpd {{.*#+}} ymm3 = ymm3[0,0,3,3]
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0],ymm3[1],ymm1[2,3],ymm3[4],ymm1[5,6],ymm3[7]
-; AVX1-NEXT:    vunpckhpd {{.*#+}} xmm3 = xmm2[1],xmm0[1]
-; AVX1-NEXT:    vshufps {{.*#+}} xmm3 = xmm0[1,1],xmm3[0,2]
-; AVX1-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm2[0]
-; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,0],xmm2[2,1]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm3 = xmm0[1,1,2,2]
+; AVX1-NEXT:    vblendps {{.*#+}} xmm3 = xmm3[0,1],xmm2[2],xmm3[3]
+; AVX1-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1,2,2]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
 ; AVX1-NEXT:    vbroadcastsd (%rcx), %ymm2
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm2[2],ymm0[3,4],ymm2[5],ymm0[6,7]
@@ -1808,16 +1808,16 @@ define void @interleave_24i32_in(ptr %p, ptr %q1, ptr %q2, ptr %q3) nounwind {
 ; XOP-NEXT:    vmovups (%rsi), %xmm3
 ; XOP-NEXT:    vmovups 16(%rsi), %xmm4
 ; XOP-NEXT:    vshufps {{.*#+}} xmm5 = xmm4[3,3],xmm2[3,3]
-; XOP-NEXT:    vunpckhpd {{.*#+}} xmm4 = xmm4[1],xmm2[1]
-; XOP-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[1,1],xmm4[0,2]
+; XOP-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[1,1,2,2]
+; XOP-NEXT:    vblendps {{.*#+}} xmm2 = xmm2[0,1],xmm4[2],xmm2[3]
 ; XOP-NEXT:    vinsertf128 $1, %xmm5, %ymm2, %ymm2
 ; XOP-NEXT:    vbroadcastf128 {{.*#+}} ymm4 = mem[0,1,0,1]
 ; XOP-NEXT:    vshufpd {{.*#+}} ymm4 = ymm4[0,0,3,3]
 ; XOP-NEXT:    vblendps {{.*#+}} ymm2 = ymm2[0],ymm4[1],ymm2[2,3],ymm4[4],ymm2[5,6],ymm4[7]
-; XOP-NEXT:    vunpckhpd {{.*#+}} xmm4 = xmm3[1],xmm1[1]
-; XOP-NEXT:    vshufps {{.*#+}} xmm4 = xmm1[1,1],xmm4[0,2]
-; XOP-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm1[0],xmm3[0]
-; XOP-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[2,0],xmm3[2,1]
+; XOP-NEXT:    vshufps {{.*#+}} xmm4 = xmm1[1,1,2,2]
+; XOP-NEXT:    vblendps {{.*#+}} xmm4 = xmm4[0,1],xmm3[2],xmm4[3]
+; XOP-NEXT:    vunpcklps {{.*#+}} xmm1 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
+; XOP-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,1,2,2]
 ; XOP-NEXT:    vinsertf128 $1, %xmm4, %ymm1, %ymm1
 ; XOP-NEXT:    vbroadcastsd (%rcx), %ymm3
 ; XOP-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1],ymm3[2],ymm1[3,4],ymm3[5],ymm1[6,7]

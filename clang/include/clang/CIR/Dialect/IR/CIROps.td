@@ -17,6 +17,7 @@
 include "clang/CIR/Dialect/IR/CIRDialect.td"
 include "clang/CIR/Dialect/IR/CIRTypes.td"
 include "clang/CIR/Dialect/IR/CIRAttrs.td"
+include "clang/CIR/Dialect/IR/CIRAttrConstraints.td"
 
 include "clang/CIR/Interfaces/CIROpInterfaces.td"
 include "clang/CIR/Interfaces/CIRLoopOpInterface.td"
@@ -2156,6 +2157,52 @@ def VecCmpOp : CIR_Op<"vec.cmp", [Pure, SameTypeOperands]> {
 }
 
 //===----------------------------------------------------------------------===//
+// VecShuffleOp
+//===----------------------------------------------------------------------===//
+
+// TODO: Create an interface that both VecShuffleOp and VecShuffleDynamicOp
+// implement.  This could be useful for passes that don't care how the vector
+// shuffle was specified.
+
+def VecShuffleOp : CIR_Op<"vec.shuffle",
+                   [Pure, AllTypesMatch<["vec1", "vec2"]>]> {
+  let summary = "Combine two vectors using indices passed as constant integers";
+  let description = [{
+    The `cir.vec.shuffle` operation implements the documented form of Clang's
+    `__builtin_shufflevector`, where the indices of the shuffled result are
+    integer constants.
+
+    The two input vectors, which must have the same type, are concatenated.
+    Each of the integer constant arguments is interpreted as an index into that
+    concatenated vector, with a value of -1 meaning that the result value
+    doesn't matter. The result vector, which must have the same element type as
+    the input vectors and the same number of elements as the list of integer
+    constant indices, is constructed by taking the elements at the given
+    indices from the concatenated vector. The size of the result vector does
+    not have to match the size of the individual input vectors or of the
+    concatenated vector.
+
+    ```mlir
+    %new_vec = cir.vec.shuffle(%vec_1, %vec_2 : !cir.vector<2 x !s32i>)
+        [#cir.int<3> : !s64i, #cir.int<1> : !s64i] : !cir.vector<2 x !s32i>
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_VectorType:$vec1,
+    CIR_VectorType:$vec2,
+    CIR_IntArrayAttr:$indices
+  );
+
+  let results = (outs CIR_VectorType:$result);
+  let assemblyFormat = [{
+    `(` $vec1 `,` $vec2 `:` qualified(type($vec1)) `)` $indices `:`
+     qualified(type($result)) attr-dict
+  }];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // VecShuffleDynamicOp
 //===----------------------------------------------------------------------===//
 
@@ -2223,7 +2270,52 @@ def VecTernaryOp : CIR_Op<"vec.ternary",
     `(` $cond `,` $lhs`,` $rhs `)` `:` qualified(type($cond)) `,`
     qualified(type($lhs)) attr-dict
   }];
+
   let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// BaseClassAddrOp
+//===----------------------------------------------------------------------===//
+
+def BaseClassAddrOp : CIR_Op<"base_class_addr"> {
+  let summary = "Get the base class address for a class/struct";
+  let description = [{
+    The `cir.base_class_addr` operaration gets the address of a particular
+    non-virtual base class given a derived class pointer. The offset in bytes
+    of the base class must be passed in, since it is easier for the front end
+    to calculate that than the MLIR passes. The operation contains a flag for
+    whether or not the operand may be nullptr. That depends on the context and
+    cannot be known by the operation, and that information affects how the
+    operation is lowered.
+
+    Example:
+    ```c++
+    struct Base { };
+    struct Derived : Base { };
+    Derived d;
+    Base& b = d;
+    ```
+    will generate
+    ```mlir
+    %3 = cir.base_class_addr %1 : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
+    ```
+  }];
+
+  // The validity of the relationship of derived and base cannot yet be
+  // verified, currently not worth adding a verifier.
+  let arguments = (ins
+    Arg<CIR_PointerType, "derived class pointer", [MemRead]>:$derived_addr,
+    IndexAttr:$offset, UnitAttr:$assume_not_null);
+
+  let results = (outs Res<CIR_PointerType, "">:$base_addr);
+
+  let assemblyFormat = [{
+      $derived_addr `:` qualified(type($derived_addr))
+      (`nonnull` $assume_not_null^)?
+      ` ` `[` $offset `]` `->` qualified(type($base_addr)) attr-dict
+  }];
 }
 
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD
