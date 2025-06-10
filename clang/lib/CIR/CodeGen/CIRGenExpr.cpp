@@ -1393,6 +1393,57 @@ RValue CIRGenFunction::emitCXXMemberCallExpr(const CXXMemberCallExpr *ce,
       ce, md, returnValue, hasQualifier, qualifier, isArrow, base);
 }
 
+void CIRGenFunction::emitCXXConstructExpr(const CXXConstructExpr *e,
+                                          AggValueSlot dest) {
+  assert(!dest.isIgnored() && "Must have a destination!");
+  const CXXConstructorDecl *cd = e->getConstructor();
+
+  // If we require zero initialization before (or instead of) calling the
+  // constructor, as can be the case with a non-user-provided default
+  // constructor, emit the zero initialization now, unless destination is
+  // already zeroed.
+  if (e->requiresZeroInitialization() && !dest.isZeroed()) {
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitCXXConstructExpr: requires initialization");
+    return;
+  }
+
+  // If this is a call to a trivial default constructor:
+  // In LLVM: do nothing.
+  // In CIR: emit as a regular call, other later passes should lower the
+  // ctor call into trivial initialization.
+
+  // Elide the constructor if we're constructing from a temporary
+  if (getLangOpts().ElideConstructors && e->isElidable()) {
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitCXXConstructExpr: elidable constructor");
+    return;
+  }
+
+  if (getContext().getAsArrayType(e->getType())) {
+    cgm.errorNYI(e->getSourceRange(), "emitCXXConstructExpr: array type");
+    return;
+  }
+
+  clang::CXXCtorType type = Ctor_Complete;
+  bool forVirtualBase = false;
+  bool delegating = false;
+
+  switch (e->getConstructionKind()) {
+  case CXXConstructionKind::Complete:
+    type = Ctor_Complete;
+    break;
+  case CXXConstructionKind::Delegating:
+  case CXXConstructionKind::VirtualBase:
+  case CXXConstructionKind::NonVirtualBase:
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitCXXConstructExpr: other construction kind");
+    return;
+  }
+
+  emitCXXConstructorCall(cd, type, forVirtualBase, delegating, dest, e);
+}
+
 RValue CIRGenFunction::emitReferenceBindingToExpr(const Expr *e) {
   // Emit the expression as an lvalue.
   LValue lv = emitLValue(e);

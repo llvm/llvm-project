@@ -166,10 +166,29 @@ public:
   mlir::Location getLoc(clang::SourceLocation cLoc);
   mlir::Location getLoc(clang::SourceRange cRange);
 
+  /// Return the best known alignment for an unknown pointer to a
+  /// particular class.
+  clang::CharUnits getClassPointerAlignment(const clang::CXXRecordDecl *rd);
+
   /// FIXME: this could likely be a common helper and not necessarily related
   /// with codegen.
   clang::CharUnits getNaturalTypeAlignment(clang::QualType t,
                                            LValueBaseInfo *baseInfo);
+
+  cir::FuncOp
+  getAddrOfCXXStructor(clang::GlobalDecl gd,
+                       const CIRGenFunctionInfo *fnInfo = nullptr,
+                       cir::FuncType fnType = nullptr, bool dontDefer = false,
+                       ForDefinition_t isForDefinition = NotForDefinition) {
+    return getAddrAndTypeOfCXXStructor(gd, fnInfo, fnType, dontDefer,
+                                       isForDefinition)
+        .second;
+  }
+
+  std::pair<cir::FuncType, cir::FuncOp> getAddrAndTypeOfCXXStructor(
+      clang::GlobalDecl gd, const CIRGenFunctionInfo *fnInfo = nullptr,
+      cir::FuncType fnType = nullptr, bool dontDefer = false,
+      ForDefinition_t isForDefinition = NotForDefinition);
 
   /// This contains all the decls which have definitions but which are deferred
   /// for emission and therefore should only be output if they are actually

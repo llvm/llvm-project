@@ -744,6 +744,19 @@ public:
 
   mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);
 
+  void emitCXXConstructExpr(const clang::CXXConstructExpr *e,
+                            AggValueSlot dest);
+
+  void emitCXXConstructorCall(const clang::CXXConstructorDecl *d,
+                              clang::CXXCtorType type, bool forVirtualBase,
+                              bool delegating, AggValueSlot thisAVS,
+                              const clang::CXXConstructExpr *e);
+
+  void emitCXXConstructorCall(const clang::CXXConstructorDecl *d,
+                              clang::CXXCtorType type, bool forVirtualBase,
+                              bool delegating, Address thisAddr,
+                              CallArgList &args, clang::SourceLocation loc);
+
   mlir::LogicalResult emitCXXForRangeStmt(const CXXForRangeStmt &s,
                                           llvm::ArrayRef<const Attr *> attrs);
 
