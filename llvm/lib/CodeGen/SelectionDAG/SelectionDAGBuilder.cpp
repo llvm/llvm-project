@@ -97,7 +97,6 @@
 #include "llvm/Support/InstructionCost.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetIntrinsicInfo.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
@@ -319,13 +318,14 @@ getCopyFromParts(SelectionDAG &DAG, const SDLoc &DL, const SDValue *Parts,
 static void diagnosePossiblyInvalidConstraint(LLVMContext &Ctx, const Value *V,
                                               const Twine &ErrMsg) {
   const Instruction *I = dyn_cast_or_null<Instruction>(V);
-  if (!V)
+  if (!I)
     return Ctx.emitError(ErrMsg);
 
-  const char *AsmError = ", possible invalid constraint for vector type";
   if (const CallInst *CI = dyn_cast<CallInst>(I))
-    if (CI->isInlineAsm())
-      return Ctx.emitError(I, ErrMsg + AsmError);
+    if (CI->isInlineAsm()) {
+      return Ctx.diagnose(DiagnosticInfoInlineAsm(
+          *CI, ErrMsg + ", possible invalid constraint for vector type"));
+    }
 
   return Ctx.emitError(I, ErrMsg);
 }
@@ -908,8 +908,7 @@ SDValue RegsForValue::getCopyFromRegs(SelectionDAG &DAG,
 
       // If the source register was virtual and if we know something about it,
       // add an assert node.
-      if (!Register::isVirtualRegister(Regs[Part + i]) ||
-          !RegisterVT.isInteger())
+      if (!Regs[Part + i].isVirtual() || !RegisterVT.isInteger())
         continue;
 
       const FunctionLoweringInfo::LiveOutInfo *LOI =
@@ -1023,7 +1022,7 @@ void RegsForValue::AddInlineAsmOperands(InlineAsm::Kind Code, bool HasMatching,
   InlineAsm::Flag Flag(Code, Regs.size());
   if (HasMatching)
     Flag.setMatchingOp(MatchingIdx);
-  else if (!Regs.empty() && Register::isVirtualRegister(Regs.front())) {
+  else if (!Regs.empty() && Regs.front().isVirtual()) {
     // Put the register class of the virtual registers in the flag word.  That
     // way, later passes can recompute register class constraints for inline
     // assembly as well as normal instructions.
@@ -1061,7 +1060,7 @@ void RegsForValue::AddInlineAsmOperands(InlineAsm::Kind Code, bool HasMatching,
                                            RegisterVT);
     for (unsigned i = 0; i != NumRegs; ++i) {
       assert(Reg < Regs.size() && "Mismatch in # registers expected");
-      unsigned TheReg = Regs[Reg++];
+      Register TheReg = Regs[Reg++];
       Ops.push_back(DAG.getRegister(TheReg, RegisterVT));
     }
   }
@@ -1081,10 +1080,10 @@ RegsForValue::getRegsAndSizes() const {
   return OutVec;
 }
 
-void SelectionDAGBuilder::init(GCFunctionInfo *gfi, AliasAnalysis *aa,
+void SelectionDAGBuilder::init(GCFunctionInfo *gfi, BatchAAResults *aa,
                                AssumptionCache *ac,
                                const TargetLibraryInfo *li) {
-  AA = aa;
+  BatchAA = aa;
   AC = ac;
   GFI = gfi;
   LibInfo = li;
@@ -1385,12 +1384,12 @@ static bool handleDanglingVariadicDebugInfo(SelectionDAG &DAG,
                                             DebugLoc DL, unsigned Order,
                                             SmallVectorImpl<Value *> &Values,
                                             DIExpression *Expression) {
-  // For variadic dbg_values we will now insert an undef.
+  // For variadic dbg_values we will now insert poison.
   // FIXME: We can potentially recover these!
   SmallVector<SDDbgOperand, 2> Locs;
   for (const Value *V : Values) {
-    auto *Undef = UndefValue::get(V->getType());
-    Locs.push_back(SDDbgOperand::fromConst(Undef));
+    auto *Poison = PoisonValue::get(V->getType());
+    Locs.push_back(SDDbgOperand::fromConst(Poison));
   }
   SDDbgValue *SDV = DAG.getDbgValueList(Variable, Expression, Locs, {},
                                         /*IsIndirect=*/false, DL, Order,
@@ -1409,9 +1408,9 @@ void SelectionDAGBuilder::addDanglingDebugInfo(SmallVectorImpl<Value *> &Values,
     return;
   }
   // TODO: Dangling debug info will eventually either be resolved or produce
-  // an Undef DBG_VALUE. However in the resolution case, a gap may appear
+  // a poison DBG_VALUE. However in the resolution case, a gap may appear
   // between the original dbg.value location and its resolved DBG_VALUE,
-  // which we should ideally fill with an extra Undef DBG_VALUE.
+  // which we should ideally fill with an extra poison DBG_VALUE.
   assert(Values.size() == 1);
   DanglingDebugInfoMap[Values[0]].emplace_back(Var, Expr, DL, Order);
 }
@@ -1489,9 +1488,9 @@ void SelectionDAGBuilder::resolveDanglingDebugInfo(const Value *V,
     } else {
       LLVM_DEBUG(dbgs() << "Dropping debug info for " << printDDI(V, DDI)
                         << "\n");
-      auto Undef = UndefValue::get(V->getType());
+      auto Poison = PoisonValue::get(V->getType());
       auto SDV =
-          DAG.getConstantDbgValue(Variable, Expr, Undef, DL, DbgSDNodeOrder);
+          DAG.getConstantDbgValue(Variable, Expr, Poison, DL, DbgSDNodeOrder);
       DAG.AddDbgValue(SDV, false);
     }
   }
@@ -1554,11 +1553,11 @@ void SelectionDAGBuilder::salvageUnresolvedDbgValue(const Value *V,
   }
 
   // This was the final opportunity to salvage this debug information, and it
-  // couldn't be done. Place an undef DBG_VALUE at this location to terminate
+  // couldn't be done. Place a poison DBG_VALUE at this location to terminate
   // any earlier variable location.
   assert(OrigV && "V shouldn't be null");
-  auto *Undef = UndefValue::get(OrigV->getType());
-  auto *SDV = DAG.getConstantDbgValue(Var, Expr, Undef, DL, SDNodeOrder);
+  auto *Poison = PoisonValue::get(OrigV->getType());
+  auto *SDV = DAG.getConstantDbgValue(Var, Expr, Poison, DL, SDNodeOrder);
   DAG.AddDbgValue(SDV, false);
   LLVM_DEBUG(dbgs() << "Dropping debug value info for:\n  "
                     << printDDI(OrigV, DDI) << "\n");
@@ -1660,7 +1659,7 @@ bool SelectionDAGBuilder::handleDebugValue(ArrayRef<const Value *> Values,
     // an associated VReg, we can refer to that instead.
     auto VMI = FuncInfo.ValueMap.find(V);
     if (VMI != FuncInfo.ValueMap.end()) {
-      unsigned Reg = VMI->second;
+      Register Reg = VMI->second;
       // If this is a PHI node, it may be split up into several MI PHI nodes
       // (in FunctionLoweringInfo::set).
       RegsForValue RFV(V->getContext(), TLI, DAG.getDataLayout(), Reg,
@@ -1818,7 +1817,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
       return DAG.getConstantFP(*CFP, getCurSDLoc(), VT);
 
     if (isa<UndefValue>(C) && !V->getType()->isAggregateType())
-      return DAG.getUNDEF(VT);
+      return isa<PoisonValue>(C) ? DAG.getPOISON(VT) : DAG.getUNDEF(VT);
 
     if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(C)) {
       visit(CE->getOpcode(), *CE);
@@ -1845,7 +1844,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
     if (const ConstantDataSequential *CDS =
           dyn_cast<ConstantDataSequential>(C)) {
       SmallVector<SDValue, 4> Ops;
-      for (unsigned i = 0, e = CDS->getNumElements(); i != e; ++i) {
+      for (uint64_t i = 0, e = CDS->getNumElements(); i != e; ++i) {
         SDNode *Val = getValue(CDS->getElementAsConstant(i)).getNode();
         // Add each leaf value from the operand to the Constants list
         // to form a flattened list of all the values.
@@ -1855,7 +1854,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
 
       if (isa<ArrayType>(CDS->getType()))
         return DAG.getMergeValues(Ops, getCurSDLoc());
-      return NodeMap[V] = DAG.getBuildVector(VT, getCurSDLoc(), Ops);
+      return DAG.getBuildVector(VT, getCurSDLoc(), Ops);
     }
 
     if (C->getType()->isStructTy() || C->getType()->isArrayTy()) {
@@ -1896,6 +1895,17 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
                          DAG.getConstant(0, getCurSDLoc(), MVT::nxv16i1));
     }
 
+    if (VT.isRISCVVectorTuple()) {
+      assert(C->isNullValue() && "Can only zero this target type!");
+      return DAG.getNode(
+          ISD::BITCAST, getCurSDLoc(), VT,
+          DAG.getNode(
+              ISD::SPLAT_VECTOR, getCurSDLoc(),
+              EVT::getVectorVT(*DAG.getContext(), MVT::i8,
+                               VT.getSizeInBits().getKnownMinValue() / 8, true),
+              DAG.getConstant(0, getCurSDLoc(), MVT::getIntegerVT(8))));
+    }
+
     VectorType *VecTy = cast<VectorType>(V->getType());
 
     // Now that we know the number and type of the elements, get that number of
@@ -1906,7 +1916,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
       for (unsigned i = 0; i != NumElements; ++i)
         Ops.push_back(getValue(CV->getOperand(i)));
 
-      return NodeMap[V] = DAG.getBuildVector(VT, getCurSDLoc(), Ops);
+      return DAG.getBuildVector(VT, getCurSDLoc(), Ops);
     }
 
     if (isa<ConstantAggregateZero>(C)) {
@@ -1919,7 +1929,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
       else
         Op = DAG.getConstant(0, getCurSDLoc(), EltVT);
 
-      return NodeMap[V] = DAG.getSplat(VT, getCurSDLoc(), Op);
+      return DAG.getSplat(VT, getCurSDLoc(), Op);
     }
 
     llvm_unreachable("Unknown vector constant");
@@ -1960,7 +1970,11 @@ void SelectionDAGBuilder::visitCatchPad(const CatchPadInst &I) {
   bool IsCoreCLR = Pers == EHPersonality::CoreCLR;
   bool IsSEH = isAsynchronousEHPersonality(Pers);
   MachineBasicBlock *CatchPadMBB = FuncInfo.MBB;
-  if (!IsSEH)
+  if (IsSEH) {
+    // For SEH, EHCont Guard needs to know that this catchpad is a target.
+    CatchPadMBB->setIsEHContTarget(true);
+    DAG.getMachineFunction().setHasEHContTarget(true);
+  } else
     CatchPadMBB->setIsEHScopeEntry();
   // In MSVC C++ and CoreCLR, catchblocks are funclets and need prologues.
   if (IsMSVCCXX || IsCoreCLR)
@@ -1971,8 +1985,6 @@ void SelectionDAGBuilder::visitCatchRet(const CatchReturnInst &I) {
   // Update machine-CFG edge.
   MachineBasicBlock *TargetMBB = FuncInfo.getMBB(I.getSuccessor());
   FuncInfo.MBB->addSuccessor(TargetMBB);
-  TargetMBB->setIsEHCatchretTarget(true);
-  DAG.getMachineFunction().setHasEHCatchret(true);
 
   auto Pers = classifyEHPersonality(FuncInfo.Fn->getPersonalityFn());
   bool IsSEH = isAsynchronousEHPersonality(Pers);
@@ -1985,6 +1997,10 @@ void SelectionDAGBuilder::visitCatchRet(const CatchReturnInst &I) {
                               getControlRoot(), DAG.getBasicBlock(TargetMBB)));
     return;
   }
+
+  // For non-SEH, EHCont Guard needs to know that this catchret is a target.
+  TargetMBB->setIsEHContTarget(true);
+  DAG.getMachineFunction().setHasEHContTarget(true);
 
   // Figure out the funclet membership for the catchret's successor.
   // This will be used by the FuncletLayout pass to determine how to order the
@@ -2018,58 +2034,6 @@ void SelectionDAGBuilder::visitCleanupPad(const CleanupPadInst &CPI) {
   }
 }
 
-// In wasm EH, even though a catchpad may not catch an exception if a tag does
-// not match, it is OK to add only the first unwind destination catchpad to the
-// successors, because there will be at least one invoke instruction within the
-// catch scope that points to the next unwind destination, if one exists, so
-// CFGSort cannot mess up with BB sorting order.
-// (All catchpads with 'catch (type)' clauses have a 'llvm.rethrow' intrinsic
-// call within them, and catchpads only consisting of 'catch (...)' have a
-// '__cxa_end_catch' call within them, both of which generate invokes in case
-// the next unwind destination exists, i.e., the next unwind destination is not
-// the caller.)
-//
-// Having at most one EH pad successor is also simpler and helps later
-// transformations.
-//
-// For example,
-// current:
-//   invoke void @foo to ... unwind label %catch.dispatch
-// catch.dispatch:
-//   %0 = catchswitch within ... [label %catch.start] unwind label %next
-// catch.start:
-//   ...
-//   ... in this BB or some other child BB dominated by this BB there will be an
-//   invoke that points to 'next' BB as an unwind destination
-//
-// next: ; We don't need to add this to 'current' BB's successor
-//   ...
-static void findWasmUnwindDestinations(
-    FunctionLoweringInfo &FuncInfo, const BasicBlock *EHPadBB,
-    BranchProbability Prob,
-    SmallVectorImpl<std::pair<MachineBasicBlock *, BranchProbability>>
-        &UnwindDests) {
-  while (EHPadBB) {
-    const Instruction *Pad = EHPadBB->getFirstNonPHI();
-    if (isa<CleanupPadInst>(Pad)) {
-      // Stop on cleanup pads.
-      UnwindDests.emplace_back(FuncInfo.getMBB(EHPadBB), Prob);
-      UnwindDests.back().first->setIsEHScopeEntry();
-      break;
-    } else if (const auto *CatchSwitch = dyn_cast<CatchSwitchInst>(Pad)) {
-      // Add the catchpad handlers to the possible destinations. We don't
-      // continue to the unwind destination of the catchswitch for wasm.
-      for (const BasicBlock *CatchPadBB : CatchSwitch->handlers()) {
-        UnwindDests.emplace_back(FuncInfo.getMBB(CatchPadBB), Prob);
-        UnwindDests.back().first->setIsEHScopeEntry();
-      }
-      break;
-    } else {
-      continue;
-    }
-  }
-}
-
 /// When an invoke or a cleanupret unwinds to the next EH pad, there are
 /// many places it could ultimately go. In the IR, we have a single unwind
 /// destination, but in the machine CFG, we enumerate all the possible blocks.
@@ -2090,15 +2054,8 @@ static void findUnwindDestinations(
   bool IsWasmCXX = Personality == EHPersonality::Wasm_CXX;
   bool IsSEH = isAsynchronousEHPersonality(Personality);
 
-  if (IsWasmCXX) {
-    findWasmUnwindDestinations(FuncInfo, EHPadBB, Prob, UnwindDests);
-    assert(UnwindDests.size() <= 1 &&
-           "There should be at most one unwind destination for wasm");
-    return;
-  }
-
   while (EHPadBB) {
-    const Instruction *Pad = EHPadBB->getFirstNonPHI();
+    BasicBlock::const_iterator Pad = EHPadBB->getFirstNonPHIIt();
     BasicBlock *NewEHPadBB = nullptr;
     if (isa<LandingPadInst>(Pad)) {
       // Stop on landingpads. They are not funclets.
@@ -2106,10 +2063,13 @@ static void findUnwindDestinations(
       break;
     } else if (isa<CleanupPadInst>(Pad)) {
       // Stop on cleanup pads. Cleanups are always funclet entries for all known
-      // personalities.
+      // personalities except Wasm. And in Wasm this becomes a catch_all(_ref),
+      // which always catches an exception.
       UnwindDests.emplace_back(FuncInfo.getMBB(EHPadBB), Prob);
       UnwindDests.back().first->setIsEHScopeEntry();
-      UnwindDests.back().first->setIsEHFuncletEntry();
+      // In Wasm, EH scopes are not funclets
+      if (!IsWasmCXX)
+        UnwindDests.back().first->setIsEHFuncletEntry();
       break;
     } else if (const auto *CatchSwitch = dyn_cast<CatchSwitchInst>(Pad)) {
       // Add the catchpad handlers to the possible destinations.
@@ -2182,19 +2142,13 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
 
   if (!FuncInfo.CanLowerReturn) {
     Register DemoteReg = FuncInfo.DemoteRegister;
-    const Function *F = I.getParent()->getParent();
 
     // Emit a store of the return value through the virtual register.
     // Leave Outs empty so that LowerReturn won't try to load return
     // registers the usual way.
-    SmallVector<EVT, 1> PtrValueVTs;
-    ComputeValueVTs(TLI, DL,
-                    PointerType::get(F->getContext(),
-                                     DAG.getDataLayout().getAllocaAddrSpace()),
-                    PtrValueVTs);
-
+    MVT PtrValueVT = TLI.getPointerTy(DL, DL.getAllocaAddrSpace());
     SDValue RetPtr =
-        DAG.getCopyFromReg(Chain, getCurSDLoc(), DemoteReg, PtrValueVTs[0]);
+        DAG.getCopyFromReg(Chain, getCurSDLoc(), DemoteReg, PtrValueVT);
     SDValue RetOp = getValue(I.getOperand(0));
 
     SmallVector<EVT, 4> ValueVTs, MemVTs;
@@ -3064,8 +3018,7 @@ static SDValue getLoadStackGuard(SelectionDAG &DAG, const SDLoc &DL,
     auto Flags = MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant |
                  MachineMemOperand::MODereferenceable;
     MachineMemOperand *MemRef = MF.getMachineMemOperand(
-        MPInfo, Flags, LocationSize::precise(PtrTy.getSizeInBits() / 8),
-        DAG.getEVTAlign(PtrTy));
+        MPInfo, Flags, PtrTy.getSizeInBits() / 8, DAG.getEVTAlign(PtrTy));
     DAG.setNodeMemRefs(Node, {MemRef});
   }
   if (PtrTy != PtrMemTy)
@@ -3208,8 +3161,8 @@ void SelectionDAGBuilder::visitBitTestHeader(BitTestBlock &B,
   if (!TLI.isTypeLegal(VT)) {
     UsePtrType = true;
   } else {
-    for (unsigned i = 0, e = B.Cases.size(); i != e; ++i)
-      if (!isUIntN(VT.getSizeInBits(), B.Cases[i].Mask)) {
+    for (const BitTestCase &Case : B.Cases)
+      if (!isUIntN(VT.getSizeInBits(), Case.Mask)) {
         // Switch table case range are encoded into series of masks.
         // Just use pointer type, it's guaranteed to fit.
         UsePtrType = true;
@@ -3322,12 +3275,13 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
 
   // Deopt and ptrauth bundles are lowered in helper functions, and we don't
   // have to do anything here to lower funclet bundles.
-  assert(!I.hasOperandBundlesOtherThan(
-             {LLVMContext::OB_deopt, LLVMContext::OB_gc_transition,
-              LLVMContext::OB_gc_live, LLVMContext::OB_funclet,
-              LLVMContext::OB_cfguardtarget, LLVMContext::OB_ptrauth,
-              LLVMContext::OB_clang_arc_attachedcall}) &&
-         "Cannot lower invokes with arbitrary operand bundles yet!");
+  if (I.hasOperandBundlesOtherThan(
+          {LLVMContext::OB_deopt, LLVMContext::OB_gc_transition,
+           LLVMContext::OB_gc_live, LLVMContext::OB_funclet,
+           LLVMContext::OB_cfguardtarget, LLVMContext::OB_ptrauth,
+           LLVMContext::OB_clang_arc_attachedcall}))
+    reportFatalUsageError(
+        "cannot lower invokes with arbitrary operand bundles!");
 
   const Value *Callee(I.getCalledOperand());
   const Function *Fn = dyn_cast<Function>(Callee);
@@ -3355,16 +3309,28 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
     case Intrinsic::experimental_gc_statepoint:
       LowerStatepoint(cast<GCStatepointInst>(I), EHPadBB);
       break;
-    case Intrinsic::wasm_rethrow: {
-      // This is usually done in visitTargetIntrinsic, but this intrinsic is
-      // special because it can be invoked, so we manually lower it to a DAG
-      // node here.
-      SmallVector<SDValue, 8> Ops;
-      Ops.push_back(getControlRoot()); // inchain for the terminator node
+    // wasm_throw, wasm_rethrow: This is usually done in visitTargetIntrinsic,
+    // but these intrinsics are special because they can be invoked, so we
+    // manually lower it to a DAG node here.
+    case Intrinsic::wasm_throw: {
       const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-      Ops.push_back(
+      std::array<SDValue, 4> Ops = {
+          getControlRoot(), // inchain for the terminator node
+          DAG.getTargetConstant(Intrinsic::wasm_throw, getCurSDLoc(),
+                                TLI.getPointerTy(DAG.getDataLayout())),
+          getValue(I.getArgOperand(0)), // tag
+          getValue(I.getArgOperand(1))  // thrown value
+      };
+      SDVTList VTs = DAG.getVTList(ArrayRef<EVT>({MVT::Other})); // outchain
+      DAG.setRoot(DAG.getNode(ISD::INTRINSIC_VOID, getCurSDLoc(), VTs, Ops));
+      break;
+    }
+    case Intrinsic::wasm_rethrow: {
+      const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+      std::array<SDValue, 2> Ops = {
+          getControlRoot(), // inchain for the terminator node
           DAG.getTargetConstant(Intrinsic::wasm_rethrow, getCurSDLoc(),
-                                TLI.getPointerTy(DAG.getDataLayout())));
+                                TLI.getPointerTy(DAG.getDataLayout()))};
       SDVTList VTs = DAG.getVTList(ArrayRef<EVT>({MVT::Other})); // outchain
       DAG.setRoot(DAG.getNode(ISD::INTRINSIC_VOID, getCurSDLoc(), VTs, Ops));
       break;
@@ -3415,9 +3381,10 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
 
   // Deopt bundles are lowered in LowerCallSiteWithDeoptBundle, and we don't
   // have to do anything here to lower funclet bundles.
-  assert(!I.hasOperandBundlesOtherThan(
-             {LLVMContext::OB_deopt, LLVMContext::OB_funclet}) &&
-         "Cannot lower callbrs with arbitrary operand bundles yet!");
+  if (I.hasOperandBundlesOtherThan(
+          {LLVMContext::OB_deopt, LLVMContext::OB_funclet}))
+    reportFatalUsageError(
+        "cannot lower callbrs with arbitrary operand bundles!");
 
   assert(I.isInlineAsm() && "Only know how to handle inlineasm callbr");
   visitInlineAsm(I);
@@ -3434,7 +3401,11 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
     BasicBlock *Dest = I.getIndirectDest(i);
     MachineBasicBlock *Target = FuncInfo.getMBB(Dest);
     Target->setIsInlineAsmBrIndirectTarget();
-    Target->setMachineBlockAddressTaken();
+    // If we introduce a type of asm goto statement that is permitted to use an
+    // indirect call instruction to jump to its labels, then we should add a
+    // call to Target->setMachineBlockAddressTaken() here, to mark the target
+    // block as requiring a BTI.
+
     Target->setLabelMustBeEmitted();
     // Don't add duplicate machine successors.
     if (Dests.insert(Dest).second)
@@ -3535,18 +3506,9 @@ void SelectionDAGBuilder::visitIndirectBr(const IndirectBrInst &I) {
 }
 
 void SelectionDAGBuilder::visitUnreachable(const UnreachableInst &I) {
-  if (!DAG.getTarget().Options.TrapUnreachable)
+  if (!I.shouldLowerToTrap(DAG.getTarget().Options.TrapUnreachable,
+                           DAG.getTarget().Options.NoTrapAfterNoreturn))
     return;
-
-  // We may be able to ignore unreachable behind a noreturn call.
-  if (const CallInst *Call = dyn_cast_or_null<CallInst>(I.getPrevNode());
-      Call && Call->doesNotReturn()) {
-    if (DAG.getTarget().Options.NoTrapAfterNoreturn)
-      return;
-    // Do not emit an additional trap instruction.
-    if (Call->isNonContinuableTrap())
-      return;
-  }
 
   DAG.setRoot(DAG.getNode(ISD::TRAP, getCurSDLoc(), MVT::Other, DAG.getRoot()));
 }
@@ -4328,8 +4290,8 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
             (int64_t(Offset) >= 0 && NW.hasNoUnsignedSignedWrap()))
           Flags |= SDNodeFlags::NoUnsignedWrap;
 
-        N = DAG.getNode(ISD::ADD, dl, N.getValueType(), N,
-                        DAG.getConstant(Offset, dl, N.getValueType()), Flags);
+        N = DAG.getMemBasePlusOffset(
+            N, DAG.getConstant(Offset, dl, N.getValueType()), dl, Flags);
       }
     } else {
       // IdxSize is the width of the arithmetic according to IR semantics.
@@ -4373,7 +4335,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
 
         OffsVal = DAG.getSExtOrTrunc(OffsVal, dl, N.getValueType());
 
-        N = DAG.getNode(ISD::ADD, dl, N.getValueType(), N, OffsVal, Flags);
+        N = DAG.getMemBasePlusOffset(N, OffsVal, dl, Flags);
         continue;
       }
 
@@ -4433,7 +4395,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
       SDNodeFlags AddFlags;
       AddFlags.setNoUnsignedWrap(NW.hasNoUnsignedWrap());
 
-      N = DAG.getNode(ISD::ADD, dl, N.getValueType(), N, IdxN, AddFlags);
+      N = DAG.getMemBasePlusOffset(N, IdxN, dl, AddFlags);
     }
   }
 
@@ -4512,23 +4474,13 @@ void SelectionDAGBuilder::visitAlloca(const AllocaInst &I) {
 }
 
 static const MDNode *getRangeMetadata(const Instruction &I) {
-  // If !noundef is not present, then !range violation results in a poison
-  // value rather than immediate undefined behavior. In theory, transferring
-  // these annotations to SDAG is fine, but in practice there are key SDAG
-  // transforms that are known not to be poison-safe, such as folding logical
-  // and/or to bitwise and/or. For now, only transfer !range if !noundef is
-  // also present.
-  if (!I.hasMetadata(LLVMContext::MD_noundef))
-    return nullptr;
   return I.getMetadata(LLVMContext::MD_range);
 }
 
 static std::optional<ConstantRange> getRange(const Instruction &I) {
-  if (const auto *CB = dyn_cast<CallBase>(&I)) {
-    // see comment in getRangeMetadata about this check
-    if (CB->hasRetAttr(Attribute::NoUndef))
-      return CB->getRange();
-  }
+  if (const auto *CB = dyn_cast<CallBase>(&I))
+    if (std::optional<ConstantRange> CR = CB->getRange())
+      return CR;
   if (const MDNode *Range = getRangeMetadata(I))
     return getConstantRangeFromMetadata(*Range);
   return std::nullopt;
@@ -4578,8 +4530,8 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
     Root = getRoot();
   else if (NumValues > MaxParallelChains)
     Root = getMemoryRoot();
-  else if (AA &&
-           AA->pointsToConstantMemory(MemoryLocation(
+  else if (BatchAA &&
+           BatchAA->pointsToConstantMemory(MemoryLocation(
                SV,
                LocationSize::precise(DAG.getDataLayout().getTypeStoreSize(Ty)),
                AAInfo))) {
@@ -4681,8 +4633,8 @@ void SelectionDAGBuilder::visitLoadFromSwiftError(const LoadInst &I) {
   const Value *SV = I.getOperand(0);
   Type *Ty = I.getType();
   assert(
-      (!AA ||
-       !AA->pointsToConstantMemory(MemoryLocation(
+      (!BatchAA ||
+       !BatchAA->pointsToConstantMemory(MemoryLocation(
            SV, LocationSize::precise(DAG.getDataLayout().getTypeStoreSize(Ty)),
            I.getAAMetadata()))) &&
       "load_from_swift_error should not be constant memory");
@@ -4824,8 +4776,8 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
   const auto &TTI =
       TLI.getTargetMachine().getTargetTransformInfo(*I.getFunction());
   SDValue StoreNode =
-      !IsCompressing &&
-              TTI.hasConditionalLoadStoreForType(I.getArgOperand(0)->getType())
+      !IsCompressing && TTI.hasConditionalLoadStoreForType(
+                            I.getArgOperand(0)->getType(), /*IsStore=*/true)
           ? TLI.visitMaskedStore(DAG, sdl, getMemoryRoot(), MMO, Ptr, Src0,
                                  Mask)
           : DAG.getMaskedStore(getMemoryRoot(), sdl, Src0, Ptr, Offset, Mask,
@@ -4991,7 +4943,7 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
 
   // Do not serialize masked loads of constant memory with anything.
   MemoryLocation ML = MemoryLocation::getAfter(PtrOperand, AAInfo);
-  bool AddToChain = !AA || !AA->pointsToConstantMemory(ML);
+  bool AddToChain = !BatchAA || !BatchAA->pointsToConstantMemory(ML);
 
   SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
 
@@ -5010,8 +4962,8 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   // variables.
   SDValue Load;
   SDValue Res;
-  if (!IsExpanding &&
-      TTI.hasConditionalLoadStoreForType(Src0Operand->getType()))
+  if (!IsExpanding && TTI.hasConditionalLoadStoreForType(Src0Operand->getType(),
+                                                         /*IsStore=*/false))
     Res = TLI.visitMaskedLoad(DAG, sdl, InChain, MMO, Load, Ptr, Src0, Mask);
   else
     Res = Load =
@@ -5089,9 +5041,9 @@ void SelectionDAGBuilder::visitAtomicCmpXchg(const AtomicCmpXchgInst &I) {
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo(I.getPointerOperand()), Flags,
-      LocationSize::precise(MemVT.getStoreSize()), DAG.getEVTAlign(MemVT),
-      AAMDNodes(), nullptr, SSID, SuccessOrdering, FailureOrdering);
+      MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
+      DAG.getEVTAlign(MemVT), AAMDNodes(), nullptr, SSID, SuccessOrdering,
+      FailureOrdering);
 
   SDValue L = DAG.getAtomicCmpSwap(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS,
                                    dl, MemVT, VTs, InChain,
@@ -5125,6 +5077,12 @@ void SelectionDAGBuilder::visitAtomicRMW(const AtomicRMWInst &I) {
   case AtomicRMWInst::FSub: NT = ISD::ATOMIC_LOAD_FSUB; break;
   case AtomicRMWInst::FMax: NT = ISD::ATOMIC_LOAD_FMAX; break;
   case AtomicRMWInst::FMin: NT = ISD::ATOMIC_LOAD_FMIN; break;
+  case AtomicRMWInst::FMaximum:
+    NT = ISD::ATOMIC_LOAD_FMAXIMUM;
+    break;
+  case AtomicRMWInst::FMinimum:
+    NT = ISD::ATOMIC_LOAD_FMINIMUM;
+    break;
   case AtomicRMWInst::UIncWrap:
     NT = ISD::ATOMIC_LOAD_UINC_WRAP;
     break;
@@ -5149,9 +5107,8 @@ void SelectionDAGBuilder::visitAtomicRMW(const AtomicRMWInst &I) {
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo(I.getPointerOperand()), Flags,
-      LocationSize::precise(MemVT.getStoreSize()), DAG.getEVTAlign(MemVT),
-      AAMDNodes(), nullptr, SSID, Ordering);
+      MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
+      DAG.getEVTAlign(MemVT), AAMDNodes(), nullptr, SSID, Ordering);
 
   SDValue L =
     DAG.getAtomic(NT, dl, MemVT, InChain,
@@ -5195,16 +5152,16 @@ void SelectionDAGBuilder::visitAtomicLoad(const LoadInst &I) {
 
   auto Flags = TLI.getLoadMemOperandFlags(I, DAG.getDataLayout(), AC, LibInfo);
 
+  const MDNode *Ranges = getRangeMetadata(I);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(I.getPointerOperand()), Flags,
-      LocationSize::precise(MemVT.getStoreSize()), I.getAlign(), AAMDNodes(),
-      nullptr, SSID, Order);
+      MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
+      I.getAlign(), AAMDNodes(), Ranges, SSID, Order);
 
   InChain = TLI.prepareVolatileOrAtomicLoad(InChain, dl, DAG);
 
   SDValue Ptr = getValue(I.getPointerOperand());
-  SDValue L = DAG.getAtomic(ISD::ATOMIC_LOAD, dl, MemVT, MemVT, InChain,
-                            Ptr, MMO);
+  SDValue L =
+      DAG.getAtomicLoad(ISD::NON_EXTLOAD, dl, MemVT, MemVT, InChain, Ptr, MMO);
 
   SDValue OutChain = L.getValue(1);
   if (MemVT != VT)
@@ -5234,9 +5191,8 @@ void SelectionDAGBuilder::visitAtomicStore(const StoreInst &I) {
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo(I.getPointerOperand()), Flags,
-      LocationSize::precise(MemVT.getStoreSize()), I.getAlign(), AAMDNodes(),
-      nullptr, SSID, Ordering);
+      MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
+      I.getAlign(), AAMDNodes(), nullptr, SSID, Ordering);
 
   SDValue Val = getValue(I.getValueOperand());
   if (Val.getValueType() != MemVT)
@@ -5345,9 +5301,16 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
       MPI = MachinePointerInfo(Info.ptrVal, Info.offset);
     else if (Info.fallbackAddressSpace)
       MPI = MachinePointerInfo(*Info.fallbackAddressSpace);
-    Result = DAG.getMemIntrinsicNode(Info.opc, getCurSDLoc(), VTs, Ops,
-                                     Info.memVT, MPI, Info.align, Info.flags,
-                                     Info.size, I.getAAMetadata());
+    EVT MemVT = Info.memVT;
+    LocationSize Size = LocationSize::precise(Info.size);
+    if (Size.hasValue() && !Size.getValue())
+      Size = LocationSize::precise(MemVT.getStoreSize());
+    Align Alignment = Info.align.value_or(DAG.getEVTAlign(MemVT));
+    MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+        MPI, Info.flags, Size, Alignment, I.getAAMetadata(), /*Ranges=*/nullptr,
+        Info.ssid, Info.order, Info.failureOrder);
+    Result =
+        DAG.getMemIntrinsicNode(Info.opc, getCurSDLoc(), VTs, Ops, MemVT, MMO);
   } else if (!HasChain) {
     Result = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, getCurSDLoc(), VTs, Ops);
   } else if (!I.getType()->isVoidTy()) {
@@ -6175,10 +6138,10 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
             Expr, Offset, RegFragmentSizeInBits);
         Offset += RegAndSize.second;
         // If a valid fragment expression cannot be created, the variable's
-        // correct value cannot be determined and so it is set as Undef.
+        // correct value cannot be determined and so it is set as poison.
         if (!FragmentExpr) {
           SDDbgValue *SDV = DAG.getConstantDbgValue(
-              Variable, Expr, UndefValue::get(V->getType()), DL, SDNodeOrder);
+              Variable, Expr, PoisonValue::get(V->getType()), DL, SDNodeOrder);
           DAG.AddDbgValue(SDV, false);
           continue;
         }
@@ -6274,15 +6237,6 @@ static unsigned FixedPointIntrinsicToOpcode(unsigned Intrinsic) {
   default:
     llvm_unreachable("Unhandled fixed point intrinsic");
   }
-}
-
-void SelectionDAGBuilder::lowerCallToExternalSymbol(const CallInst &I,
-                                           const char *FunctionName) {
-  assert(FunctionName && "FunctionName must not be nullptr");
-  SDValue Callee = DAG.getExternalSymbol(
-      FunctionName,
-      DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout()));
-  LowerCallTo(I, Callee, I.isTailCall(), I.isMustTailCall());
 }
 
 /// Given a @llvm.call.preallocated.setup, return the corresponding
@@ -6420,42 +6374,25 @@ void SelectionDAGBuilder::visitVectorExtractLastActive(const CallInst &I,
   assert(Intrinsic == Intrinsic::experimental_vector_extract_last_active &&
          "Tried lowering invalid vector extract last");
   SDLoc sdl = getCurSDLoc();
+  const DataLayout &Layout = DAG.getDataLayout();
   SDValue Data = getValue(I.getOperand(0));
   SDValue Mask = getValue(I.getOperand(1));
-  SDValue PassThru = getValue(I.getOperand(2));
 
-  EVT DataVT = Data.getValueType();
-  EVT ScalarVT = PassThru.getValueType();
-  EVT BoolVT = Mask.getValueType().getScalarType();
-
-  // Find a suitable type for a stepvector.
-  ConstantRange VScaleRange(1, /*isFullSet=*/true); // Dummy value.
-  if (DataVT.isScalableVector())
-    VScaleRange = getVScaleRange(I.getCaller(), 64);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  unsigned EltWidth = TLI.getBitWidthForCttzElements(
-      I.getType(), DataVT.getVectorElementCount(), /*ZeroIsPoison=*/true,
-      &VScaleRange);
-  MVT StepVT = MVT::getIntegerVT(EltWidth);
-  EVT StepVecVT = DataVT.changeVectorElementType(StepVT);
+  EVT ResVT = TLI.getValueType(Layout, I.getType());
 
-  // Zero out lanes with inactive elements, then find the highest remaining
-  // value from the stepvector.
-  SDValue Zeroes = DAG.getConstant(0, sdl, StepVecVT);
-  SDValue StepVec = DAG.getStepVector(sdl, StepVecVT);
-  SDValue ActiveElts = DAG.getSelect(sdl, StepVecVT, Mask, StepVec, Zeroes);
-  SDValue HighestIdx =
-      DAG.getNode(ISD::VECREDUCE_UMAX, sdl, StepVT, ActiveElts);
+  EVT ExtVT = TLI.getVectorIdxTy(Layout);
+  SDValue Idx = DAG.getNode(ISD::VECTOR_FIND_LAST_ACTIVE, sdl, ExtVT, Mask);
+  SDValue Result = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, sdl, ResVT, Data, Idx);
 
-  // Extract the corresponding lane from the data vector
-  EVT ExtVT = TLI.getVectorIdxTy(DAG.getDataLayout());
-  SDValue Idx = DAG.getZExtOrTrunc(HighestIdx, sdl, ExtVT);
-  SDValue Extract =
-      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, sdl, ScalarVT, Data, Idx);
+  Value *Default = I.getOperand(2);
+  if (!isa<PoisonValue>(Default) && !isa<UndefValue>(Default)) {
+    SDValue PassThru = getValue(Default);
+    EVT BoolVT = Mask.getValueType().getScalarType();
+    SDValue AnyActive = DAG.getNode(ISD::VECREDUCE_OR, sdl, BoolVT, Mask);
+    Result = DAG.getSelect(sdl, ResVT, AnyActive, Result, PassThru);
+  }
 
-  // If all mask lanes were inactive, choose the passthru value instead.
-  SDValue AnyActive = DAG.getNode(ISD::VECREDUCE_OR, sdl, BoolVT, Mask);
-  SDValue Result = DAG.getSelect(sdl, ScalarVT, AnyActive, Extract, PassThru);
   setValue(&I, Result);
 }
 
@@ -6527,33 +6464,14 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                             RegName, getValue(RegValue)));
     return;
   }
-  case Intrinsic::memcpy: {
-    const auto &MCI = cast<MemCpyInst>(I);
-    SDValue Op1 = getValue(I.getArgOperand(0));
-    SDValue Op2 = getValue(I.getArgOperand(1));
-    SDValue Op3 = getValue(I.getArgOperand(2));
-    // @llvm.memcpy defines 0 and 1 to both mean no alignment.
-    Align DstAlign = MCI.getDestAlign().valueOrOne();
-    Align SrcAlign = MCI.getSourceAlign().valueOrOne();
-    Align Alignment = std::min(DstAlign, SrcAlign);
-    bool isVol = MCI.isVolatile();
-    // FIXME: Support passing different dest/src alignments to the memcpy DAG
-    // node.
-    SDValue Root = isVol ? getRoot() : getMemoryRoot();
-    SDValue MC = DAG.getMemcpy(Root, sdl, Op1, Op2, Op3, Alignment, isVol,
-                               /* AlwaysInline */ false, &I, std::nullopt,
-                               MachinePointerInfo(I.getArgOperand(0)),
-                               MachinePointerInfo(I.getArgOperand(1)),
-                               I.getAAMetadata(), AA);
-    updateDAGForMaybeTailCall(MC);
-    return;
-  }
+  case Intrinsic::memcpy:
   case Intrinsic::memcpy_inline: {
-    const auto &MCI = cast<MemCpyInlineInst>(I);
+    const auto &MCI = cast<MemCpyInst>(I);
     SDValue Dst = getValue(I.getArgOperand(0));
     SDValue Src = getValue(I.getArgOperand(1));
     SDValue Size = getValue(I.getArgOperand(2));
-    assert(isa<ConstantSDNode>(Size) && "memcpy_inline needs constant size");
+    assert((!MCI.isForceInlined() || isa<ConstantSDNode>(Size)) &&
+           "memcpy_inline needs constant size");
     // @llvm.memcpy.inline defines 0 and 1 to both mean no alignment.
     Align DstAlign = MCI.getDestAlign().valueOrOne();
     Align SrcAlign = MCI.getSourceAlign().valueOrOne();
@@ -6561,43 +6479,30 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     bool isVol = MCI.isVolatile();
     // FIXME: Support passing different dest/src alignments to the memcpy DAG
     // node.
-    SDValue MC = DAG.getMemcpy(getRoot(), sdl, Dst, Src, Size, Alignment, isVol,
-                               /* AlwaysInline */ true, &I, std::nullopt,
+    SDValue Root = isVol ? getRoot() : getMemoryRoot();
+    SDValue MC = DAG.getMemcpy(Root, sdl, Dst, Src, Size, Alignment, isVol,
+                               MCI.isForceInlined(), &I, std::nullopt,
                                MachinePointerInfo(I.getArgOperand(0)),
                                MachinePointerInfo(I.getArgOperand(1)),
-                               I.getAAMetadata(), AA);
+                               I.getAAMetadata(), BatchAA);
     updateDAGForMaybeTailCall(MC);
     return;
   }
-  case Intrinsic::memset: {
-    const auto &MSI = cast<MemSetInst>(I);
-    SDValue Op1 = getValue(I.getArgOperand(0));
-    SDValue Op2 = getValue(I.getArgOperand(1));
-    SDValue Op3 = getValue(I.getArgOperand(2));
-    // @llvm.memset defines 0 and 1 to both mean no alignment.
-    Align Alignment = MSI.getDestAlign().valueOrOne();
-    bool isVol = MSI.isVolatile();
-    SDValue Root = isVol ? getRoot() : getMemoryRoot();
-    SDValue MS = DAG.getMemset(
-        Root, sdl, Op1, Op2, Op3, Alignment, isVol, /* AlwaysInline */ false,
-        &I, MachinePointerInfo(I.getArgOperand(0)), I.getAAMetadata());
-    updateDAGForMaybeTailCall(MS);
-    return;
-  }
+  case Intrinsic::memset:
   case Intrinsic::memset_inline: {
-    const auto &MSII = cast<MemSetInlineInst>(I);
+    const auto &MSII = cast<MemSetInst>(I);
     SDValue Dst = getValue(I.getArgOperand(0));
     SDValue Value = getValue(I.getArgOperand(1));
     SDValue Size = getValue(I.getArgOperand(2));
-    assert(isa<ConstantSDNode>(Size) && "memset_inline needs constant size");
+    assert((!MSII.isForceInlined() || isa<ConstantSDNode>(Size)) &&
+           "memset_inline needs constant size");
     // @llvm.memset defines 0 and 1 to both mean no alignment.
     Align DstAlign = MSII.getDestAlign().valueOrOne();
     bool isVol = MSII.isVolatile();
     SDValue Root = isVol ? getRoot() : getMemoryRoot();
-    SDValue MC = DAG.getMemset(Root, sdl, Dst, Value, Size, DstAlign, isVol,
-                               /* AlwaysInline */ true, &I,
-                               MachinePointerInfo(I.getArgOperand(0)),
-                               I.getAAMetadata());
+    SDValue MC = DAG.getMemset(
+        Root, sdl, Dst, Value, Size, DstAlign, isVol, MSII.isForceInlined(),
+        &I, MachinePointerInfo(I.getArgOperand(0)), I.getAAMetadata());
     updateDAGForMaybeTailCall(MC);
     return;
   }
@@ -6618,12 +6523,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                                 /* OverrideTailCall */ std::nullopt,
                                 MachinePointerInfo(I.getArgOperand(0)),
                                 MachinePointerInfo(I.getArgOperand(1)),
-                                I.getAAMetadata(), AA);
+                                I.getAAMetadata(), BatchAA);
     updateDAGForMaybeTailCall(MM);
     return;
   }
   case Intrinsic::memcpy_element_unordered_atomic: {
-    const AtomicMemCpyInst &MI = cast<AtomicMemCpyInst>(I);
+    auto &MI = cast<AnyMemCpyInst>(I);
     SDValue Dst = getValue(MI.getRawDest());
     SDValue Src = getValue(MI.getRawSource());
     SDValue Length = getValue(MI.getLength());
@@ -6639,7 +6544,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::memmove_element_unordered_atomic: {
-    auto &MI = cast<AtomicMemMoveInst>(I);
+    auto &MI = cast<AnyMemMoveInst>(I);
     SDValue Dst = getValue(MI.getRawDest());
     SDValue Src = getValue(MI.getRawSource());
     SDValue Length = getValue(MI.getLength());
@@ -6655,7 +6560,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::memset_element_unordered_atomic: {
-    auto &MI = cast<AtomicMemSetInst>(I);
+    auto &MI = cast<AnyMemSetInst>(I);
     SDValue Dst = getValue(MI.getRawDest());
     SDValue Val = getValue(MI.getValue());
     SDValue Length = getValue(MI.getLength());
@@ -6987,7 +6892,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              getValue(I.getArgOperand(0)),
                              getValue(I.getArgOperand(1)), Flags));
     return;
+  case Intrinsic::modf:
   case Intrinsic::sincos:
+  case Intrinsic::sincospi:
   case Intrinsic::frexp: {
     unsigned Opcode;
     switch (Intrinsic) {
@@ -6995,6 +6902,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       llvm_unreachable("unexpected intrinsic");
     case Intrinsic::sincos:
       Opcode = ISD::FSINCOS;
+      break;
+    case Intrinsic::sincospi:
+      Opcode = ISD::FSINCOSPI;
+      break;
+    case Intrinsic::modf:
+      Opcode = ISD::FMODF;
       break;
     case Intrinsic::frexp:
       Opcode = ISD::FFREXP;
@@ -7469,6 +7382,11 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::strip_invariant_group:
     // Drop the intrinsic, but forward the value
     setValue(&I, getValue(I.getOperand(0)));
+    return;
+
+  case Intrinsic::type_test:
+  case Intrinsic::public_type_test:
+    setValue(&I, getValue(ConstantInt::getTrue(I.getType())));
     return;
 
   case Intrinsic::assume:
@@ -7998,10 +7916,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::amdgcn_cs_chain: {
-    assert(I.arg_size() == 5 && "Additional args not supported yet");
-    assert(cast<ConstantInt>(I.getOperand(4))->isZero() &&
-           "Non-zero flags not supported yet");
-
     // At this point we don't care if it's amdgpu_cs_chain or
     // amdgpu_cs_chain_preserve.
     CallingConv::ID CC = CallingConv::AMDGPU_CS_Chain;
@@ -8028,6 +7942,15 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     assert(!Args[1].IsInReg && "VGPR args should not be marked inreg");
     Args[2].IsInReg = true; // EXEC should be inreg
 
+    // Forward the flags and any additional arguments.
+    for (unsigned Idx = 4; Idx < I.arg_size(); ++Idx) {
+      TargetLowering::ArgListEntry Arg;
+      Arg.Node = getValue(I.getOperand(Idx));
+      Arg.Ty = I.getOperand(Idx)->getType();
+      Arg.setAttributes(&I, Idx);
+      Args.push_back(Arg);
+    }
+
     TargetLowering::CallLoweringInfo CLI(DAG);
     CLI.setDebugLoc(getCurSDLoc())
         .setChain(getRoot())
@@ -8051,17 +7974,26 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
 
     // On arm64_32, pointers are 32 bits when stored in memory, but
     // zero-extended to 64 bits when in registers.  Thus the mask is 32 bits to
-    // match the index type, but the pointer is 64 bits, so the the mask must be
+    // match the index type, but the pointer is 64 bits, so the mask must be
     // zero-extended up to 64 bits to match the pointer.
     EVT PtrVT =
         TLI.getValueType(DAG.getDataLayout(), I.getOperand(0)->getType());
     EVT MemVT =
         TLI.getMemValueType(DAG.getDataLayout(), I.getOperand(0)->getType());
     assert(PtrVT == Ptr.getValueType());
-    assert(MemVT == Mask.getValueType());
-    if (MemVT != PtrVT)
+    if (Mask.getValueType().getFixedSizeInBits() < MemVT.getFixedSizeInBits()) {
+      // For AMDGPU buffer descriptors the mask is 48 bits, but the pointer is
+      // 128-bit, so we have to pad the mask with ones for unused bits.
+      auto HighOnes = DAG.getNode(
+          ISD::SHL, sdl, PtrVT, DAG.getAllOnesConstant(sdl, PtrVT),
+          DAG.getShiftAmountConstant(Mask.getValueType().getFixedSizeInBits(),
+                                     PtrVT, sdl));
+      Mask = DAG.getNode(ISD::OR, sdl, PtrVT,
+                         DAG.getZExtOrTrunc(Mask, sdl, PtrVT), HighOnes);
+    } else if (Mask.getValueType() != PtrVT)
       Mask = DAG.getPtrExtOrTrunc(Mask, sdl, PtrVT);
 
+    assert(Mask.getValueType() == PtrVT);
     setValue(&I, DAG.getNode(ISD::AND, sdl, PtrVT, Ptr, Mask));
     return;
   }
@@ -8072,14 +8004,15 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::get_active_lane_mask: {
     EVT CCVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
     SDValue Index = getValue(I.getOperand(0));
+    SDValue TripCount = getValue(I.getOperand(1));
     EVT ElementVT = Index.getValueType();
 
     if (!TLI.shouldExpandGetActiveLaneMask(CCVT, ElementVT)) {
-      visitTargetIntrinsic(I, Intrinsic);
+      setValue(&I, DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, sdl, CCVT, Index,
+                               TripCount));
       return;
     }
 
-    SDValue TripCount = getValue(I.getOperand(1));
     EVT VecTy = EVT::getVectorVT(*DAG.getContext(), ElementVT,
                                  CCVT.getVectorElementCount());
 
@@ -8128,15 +8061,15 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::experimental_vector_partial_reduce_add: {
-
     if (!TLI.shouldExpandPartialReductionIntrinsic(cast<IntrinsicInst>(&I))) {
       visitTargetIntrinsic(I, Intrinsic);
       return;
     }
-
-    setValue(&I, DAG.getPartialReduceAdd(sdl, EVT::getEVT(I.getType()),
-                                         getValue(I.getOperand(0)),
-                                         getValue(I.getOperand(1))));
+    SDValue Acc = getValue(I.getOperand(0));
+    SDValue Input = getValue(I.getOperand(1));
+    setValue(&I,
+             DAG.getNode(ISD::PARTIAL_REDUCE_UMLA, sdl, Acc.getValueType(), Acc,
+                         Input, DAG.getConstant(1, sdl, Input.getValueType())));
     return;
   }
   case Intrinsic::experimental_cttz_elts: {
@@ -8261,10 +8194,46 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     visitCallBrLandingPad(I);
     return;
   case Intrinsic::vector_interleave2:
-    visitVectorInterleave(I);
+    visitVectorInterleave(I, 2);
+    return;
+  case Intrinsic::vector_interleave3:
+    visitVectorInterleave(I, 3);
+    return;
+  case Intrinsic::vector_interleave4:
+    visitVectorInterleave(I, 4);
+    return;
+  case Intrinsic::vector_interleave5:
+    visitVectorInterleave(I, 5);
+    return;
+  case Intrinsic::vector_interleave6:
+    visitVectorInterleave(I, 6);
+    return;
+  case Intrinsic::vector_interleave7:
+    visitVectorInterleave(I, 7);
+    return;
+  case Intrinsic::vector_interleave8:
+    visitVectorInterleave(I, 8);
     return;
   case Intrinsic::vector_deinterleave2:
-    visitVectorDeinterleave(I);
+    visitVectorDeinterleave(I, 2);
+    return;
+  case Intrinsic::vector_deinterleave3:
+    visitVectorDeinterleave(I, 3);
+    return;
+  case Intrinsic::vector_deinterleave4:
+    visitVectorDeinterleave(I, 4);
+    return;
+  case Intrinsic::vector_deinterleave5:
+    visitVectorDeinterleave(I, 5);
+    return;
+  case Intrinsic::vector_deinterleave6:
+    visitVectorDeinterleave(I, 6);
+    return;
+  case Intrinsic::vector_deinterleave7:
+    visitVectorDeinterleave(I, 7);
+    return;
+  case Intrinsic::vector_deinterleave8:
+    visitVectorDeinterleave(I, 8);
     return;
   case Intrinsic::experimental_vector_compress:
     setValue(&I, DAG.getNode(ISD::VECTOR_COMPRESS, sdl,
@@ -8445,7 +8414,7 @@ void SelectionDAGBuilder::visitVPLoad(
   if (!Alignment)
     Alignment = DAG.getEVTAlign(VT);
   MemoryLocation ML = MemoryLocation::getAfter(PtrOperand, AAInfo);
-  bool AddToChain = !AA || !AA->pointsToConstantMemory(ML);
+  bool AddToChain = !BatchAA || !BatchAA->pointsToConstantMemory(ML);
   SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MachineMemOperand::MOLoad,
@@ -8574,7 +8543,7 @@ void SelectionDAGBuilder::visitVPStridedLoad(
   AAMDNodes AAInfo = VPIntrin.getAAMetadata();
   const MDNode *Ranges = getRangeMetadata(VPIntrin);
   MemoryLocation ML = MemoryLocation::getAfter(PtrOperand, AAInfo);
-  bool AddToChain = !AA || !AA->pointsToConstantMemory(ML);
+  bool AddToChain = !BatchAA || !BatchAA->pointsToConstantMemory(ML);
   SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
   unsigned AS = PtrOperand->getType()->getPointerAddressSpace();
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
@@ -9015,10 +8984,6 @@ static SDValue getMemCmpLoad(const Value *PtrVal, MVT LoadVT,
         Type::getIntNTy(PtrVal->getContext(), LoadVT.getScalarSizeInBits());
     if (LoadVT.isVector())
       LoadTy = FixedVectorType::get(LoadTy, LoadVT.getVectorNumElements());
-
-    LoadInput = ConstantExpr::getBitCast(const_cast<Constant *>(LoadInput),
-                                         PointerType::getUnqual(LoadTy));
-
     if (const Constant *LoadCst =
             ConstantFoldLoadFromConstPtr(const_cast<Constant *>(LoadInput),
                                          LoadTy, Builder.DAG.getDataLayout()))
@@ -9031,7 +8996,7 @@ static SDValue getMemCmpLoad(const Value *PtrVal, MVT LoadVT,
   bool ConstantMemory = false;
 
   // Do not serialize (non-volatile) loads of constant memory with anything.
-  if (Builder.AA && Builder.AA->pointsToConstantMemory(PtrVal)) {
+  if (Builder.BatchAA && Builder.BatchAA->pointsToConstantMemory(PtrVal)) {
     Root = Builder.DAG.getEntryNode();
     ConstantMemory = true;
   } else {
@@ -9209,8 +9174,7 @@ bool SelectionDAGBuilder::visitMemPCpyCall(const CallInst &I) {
   Size = DAG.getSExtOrTrunc(Size, sdl, Dst.getValueType());
 
   // Adjust return pointer to point just past the last dst byte.
-  SDValue DstPlusSize = DAG.getNode(ISD::ADD, sdl, Dst.getValueType(),
-                                    Dst, Size);
+  SDValue DstPlusSize = DAG.getMemBasePlusOffset(Dst, Size, sdl);
   setValue(&I, DstPlusSize);
   return true;
 }
@@ -9356,13 +9320,8 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
 
   if (Function *F = I.getCalledFunction()) {
     if (F->isDeclaration()) {
-      // Is this an LLVM intrinsic or a target-specific intrinsic?
-      unsigned IID = F->getIntrinsicID();
-      if (!IID)
-        if (const TargetIntrinsicInfo *II = TM.getIntrinsicInfo())
-          IID = II->getIntrinsicID(F);
-
-      if (IID) {
+      // Is this an LLVM intrinsic?
+      if (unsigned IID = F->getIntrinsicID()) {
         visitIntrinsicCall(I, IID);
         return;
       }
@@ -9597,12 +9556,12 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
   // Deopt bundles are lowered in LowerCallSiteWithDeoptBundle, and we don't
   // have to do anything here to lower funclet bundles.
   // CFGuardTarget bundles are lowered in LowerCallTo.
-  assert(!I.hasOperandBundlesOtherThan(
-             {LLVMContext::OB_deopt, LLVMContext::OB_funclet,
-              LLVMContext::OB_cfguardtarget, LLVMContext::OB_preallocated,
-              LLVMContext::OB_clang_arc_attachedcall, LLVMContext::OB_kcfi,
-              LLVMContext::OB_convergencectrl}) &&
-         "Cannot lower calls with arbitrary operand bundles!");
+  if (I.hasOperandBundlesOtherThan(
+          {LLVMContext::OB_deopt, LLVMContext::OB_funclet,
+           LLVMContext::OB_cfguardtarget, LLVMContext::OB_preallocated,
+           LLVMContext::OB_clang_arc_attachedcall, LLVMContext::OB_kcfi,
+           LLVMContext::OB_convergencectrl}))
+    reportFatalUsageError("cannot lower calls with arbitrary operand bundles!");
 
   SDValue Callee = getValue(I.getCalledOperand());
 
@@ -10093,7 +10052,7 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
   std::vector<SDValue> AsmNodeOperands;
   AsmNodeOperands.push_back(SDValue());  // reserve space for input chain
   AsmNodeOperands.push_back(DAG.getTargetExternalSymbol(
-      IA->getAsmString().c_str(), TLI.getProgramPointerTy(DAG.getDataLayout())));
+      IA->getAsmString().data(), TLI.getProgramPointerTy(DAG.getDataLayout())));
 
   // If we have a !srcloc metadata node associated with it, we want to attach
   // this to the ultimately generated inline asm machineinstr.  To do this, we
@@ -10130,9 +10089,8 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
     auto DetectWriteToReservedRegister = [&]() {
       const MachineFunction &MF = DAG.getMachineFunction();
       const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
-      for (unsigned Reg : OpInfo.AssignedRegs.Regs) {
-        if (Register::isPhysicalRegister(Reg) &&
-            TRI.isInlineAsmReadOnlyReg(MF, Reg)) {
+      for (Register Reg : OpInfo.AssignedRegs.Regs) {
+        if (Reg.isPhysical() && TRI.isInlineAsmReadOnlyReg(MF, Reg)) {
           const char *RegName = TRI.getName(Reg);
           emitInlineAsmError(Call, "write to reserved register '" +
                                        Twine(RegName) + "'");
@@ -10497,7 +10455,7 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
 void SelectionDAGBuilder::emitInlineAsmError(const CallBase &Call,
                                              const Twine &Message) {
   LLVMContext &Ctx = *DAG.getContext();
-  Ctx.emitError(&Call, Message);
+  Ctx.diagnose(DiagnosticInfoInlineAsm(Call, Message));
 
   // Make sure we leave the DAG in a valid state
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -10972,7 +10930,6 @@ std::pair<SDValue, SDValue>
 TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
   // Handle the incoming return values from the call.
   CLI.Ins.clear();
-  Type *OrigRetTy = CLI.RetTy;
   SmallVector<EVT, 4> RetTys;
   SmallVector<TypeSize, 4> Offsets;
   auto &DL = CLI.DAG.getDataLayout();
@@ -11002,7 +10959,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
 
   bool CanLowerReturn =
       this->CanLowerReturn(CLI.CallConv, CLI.DAG.getMachineFunction(),
-                           CLI.IsVarArg, Outs, CLI.RetTy->getContext());
+                           CLI.IsVarArg, Outs, CLI.RetTy->getContext(), CLI.RetTy);
 
   SDValue DemoteStackSlot;
   int DemoteStackIdx = -100;
@@ -11015,8 +10972,8 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     MachineFunction &MF = CLI.DAG.getMachineFunction();
     DemoteStackIdx =
         MF.getFrameInfo().CreateStackObject(TySize, Alignment, false);
-    Type *StackSlotPtrType = PointerType::get(CLI.RetTy,
-                                              DL.getAllocaAddrSpace());
+    Type *StackSlotPtrType =
+        PointerType::get(CLI.RetTy->getContext(), DL.getAllocaAddrSpace());
 
     DemoteStackSlot = CLI.DAG.getFrameIndex(DemoteStackIdx, getFrameIndexTy(DL));
     ArgListEntry Entry;
@@ -11185,7 +11142,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
         if (auto MA = Args[i].Alignment)
           MemAlign = *MA;
         else
-          MemAlign = Align(getByValTypeAlignment(Args[i].IndirectType, DL));
+          MemAlign = getByValTypeAlignment(Args[i].IndirectType, DL);
       } else if (auto MA = Args[i].Alignment) {
         MemAlign = *MA;
       } else {
@@ -11297,13 +11254,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
   if (!CanLowerReturn) {
     // The instruction result is the result of loading from the
     // hidden sret parameter.
-    SmallVector<EVT, 1> PVTs;
-    Type *PtrRetTy =
-        PointerType::get(OrigRetTy->getContext(), DL.getAllocaAddrSpace());
-
-    ComputeValueVTs(*this, DL, PtrRetTy, PVTs);
-    assert(PVTs.size() == 1 && "Pointers should fit in one register");
-    EVT PtrVT = PVTs[0];
+    MVT PtrVT = getPointerTy(DL, DL.getAllocaAddrSpace());
 
     unsigned NumValues = RetTys.size();
     ReturnValues.resize(NumValues);
@@ -11314,10 +11265,9 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     MachineFunction &MF = CLI.DAG.getMachineFunction();
     Align HiddenSRetAlign = MF.getFrameInfo().getObjectAlign(DemoteStackIdx);
     for (unsigned i = 0; i < NumValues; ++i) {
-      SDValue Add =
-          CLI.DAG.getNode(ISD::ADD, CLI.DL, PtrVT, DemoteStackSlot,
-                          CLI.DAG.getConstant(Offsets[i], CLI.DL, PtrVT),
-                          SDNodeFlags::NoUnsignedWrap);
+      SDValue Add = CLI.DAG.getMemBasePlusOffset(
+          DemoteStackSlot, CLI.DAG.getConstant(Offsets[i], CLI.DL, PtrVT),
+          CLI.DL, SDNodeFlags::NoUnsignedWrap);
       SDValue L = CLI.DAG.getLoad(
           RetTys[i], CLI.DL, CLI.Chain, Add,
           MachinePointerInfo::getFixedStack(CLI.DAG.getMachineFunction(),
@@ -11395,13 +11345,13 @@ SDValue TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
 }
 
 void SelectionDAGBuilder::CopyValueToVirtualRegister(const Value *V,
-                                                     unsigned Reg,
+                                                     Register Reg,
                                                      ISD::NodeType ExtendType) {
   SDValue Op = getNonRegisterValue(V);
   assert((Op.getOpcode() != ISD::CopyFromReg ||
           cast<RegisterSDNode>(Op.getOperand(1))->getReg() != Reg) &&
          "Copy from a reg to the same reg!");
-  assert(!Register::isPhysicalRegister(Reg) && "Is a physreg");
+  assert(!Reg.isPhysical() && "Is a physreg");
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   // If this is an InlineAsm we have to match the registers required, not the
@@ -11623,18 +11573,12 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
 
   if (!FuncInfo->CanLowerReturn) {
     // Put in an sret pointer parameter before all the other parameters.
-    SmallVector<EVT, 1> ValueVTs;
-    ComputeValueVTs(*TLI, DAG.getDataLayout(),
-                    PointerType::get(F.getContext(),
-                                     DAG.getDataLayout().getAllocaAddrSpace()),
-                    ValueVTs);
+    MVT ValueVT = TLI->getPointerTy(DL, DL.getAllocaAddrSpace());
 
-    // NOTE: Assuming that a pointer will never break down to more than one VT
-    // or one register.
     ISD::ArgFlagsTy Flags;
     Flags.setSRet();
-    MVT RegisterVT = TLI->getRegisterType(*DAG.getContext(), ValueVTs[0]);
-    ISD::InputArg RetArg(Flags, RegisterVT, ValueVTs[0], true,
+    MVT RegisterVT = TLI->getRegisterType(*DAG.getContext(), ValueVT);
+    ISD::InputArg RetArg(Flags, RegisterVT, ValueVT, true,
                          ISD::InputArg::NoArgIndex, 0);
     Ins.push_back(RetArg);
   }
@@ -11742,7 +11686,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         else if ((ParamAlign = Arg.getParamAlign()))
           MemAlign = *ParamAlign;
         else
-          MemAlign = Align(TLI->getByValTypeAlignment(ArgMemTy, DL));
+          MemAlign = TLI->getByValTypeAlignment(ArgMemTy, DL);
         if (Flags.isByRef())
           Flags.setByRefSize(MemSize);
         else
@@ -11817,12 +11761,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
   if (!FuncInfo->CanLowerReturn) {
     // Create a virtual register for the sret pointer, and put in a copy
     // from the sret argument into it.
-    SmallVector<EVT, 1> ValueVTs;
-    ComputeValueVTs(*TLI, DAG.getDataLayout(),
-                    PointerType::get(F.getContext(),
-                                     DAG.getDataLayout().getAllocaAddrSpace()),
-                    ValueVTs);
-    MVT VT = ValueVTs[0].getSimpleVT();
+    MVT VT = TLI->getPointerTy(DL, DL.getAllocaAddrSpace());
     MVT RegVT = TLI->getRegisterType(*CurDAG->getContext(), VT);
     std::optional<ISD::NodeType> AssertOp;
     SDValue ArgValue =
@@ -11898,9 +11837,18 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         else if (Arg.hasAttribute(Attribute::ZExt))
           AssertOp = ISD::AssertZext;
 
-        ArgValues.push_back(getCopyFromParts(DAG, dl, &InVals[i], NumParts,
-                                             PartVT, VT, nullptr, NewRoot,
-                                             F.getCallingConv(), AssertOp));
+        SDValue OutVal =
+            getCopyFromParts(DAG, dl, &InVals[i], NumParts, PartVT, VT, nullptr,
+                             NewRoot, F.getCallingConv(), AssertOp);
+
+        FPClassTest NoFPClass = Arg.getNoFPClass();
+        if (NoFPClass != fcNone) {
+          SDValue SDNoFPClass = DAG.getTargetConstant(
+              static_cast<uint64_t>(NoFPClass), dl, MVT::i32);
+          OutVal = DAG.getNode(ISD::AssertNoFPClass, dl, OutVal.getValueType(),
+                               OutVal, SDNoFPClass);
+        }
+        ArgValues.push_back(OutVal);
       }
 
       i += NumParts;
@@ -12026,13 +11974,13 @@ SelectionDAGBuilder::HandlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB) {
       if (PN.getType()->isEmptyTy())
         continue;
 
-      unsigned Reg;
+      Register Reg;
       const Value *PHIOp = PN.getIncomingValueForBlock(LLVMBB);
 
       if (const auto *C = dyn_cast<Constant>(PHIOp)) {
-        unsigned &RegOut = ConstantsOut[C];
-        if (RegOut == 0) {
-          RegOut = FuncInfo.CreateRegs(C);
+        Register &RegOut = ConstantsOut[C];
+        if (!RegOut) {
+          RegOut = FuncInfo.CreateRegs(&PN);
           // We need to zero/sign extend ConstantInt phi operands to match
           // assumptions in FunctionLoweringInfo::ComputePHILiveOutRegInfo.
           ISD::NodeType ExtendType = ISD::ANY_EXTEND;
@@ -12051,7 +11999,7 @@ SelectionDAGBuilder::HandlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB) {
           assert(isa<AllocaInst>(PHIOp) &&
                  FuncInfo.StaticAllocaMap.count(cast<AllocaInst>(PHIOp)) &&
                  "Didn't codegen value into a register!??");
-          Reg = FuncInfo.CreateRegs(PHIOp);
+          Reg = FuncInfo.CreateRegs(&PN);
           CopyValueToVirtualRegister(PHIOp, Reg);
         }
       }
@@ -12063,8 +12011,7 @@ SelectionDAGBuilder::HandlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB) {
       for (EVT VT : ValueVTs) {
         const unsigned NumRegisters = TLI.getNumRegisters(*DAG.getContext(), VT);
         for (unsigned i = 0; i != NumRegisters; ++i)
-          FuncInfo.PHINodesToUpdate.push_back(
-              std::make_pair(&*MBBI++, Reg + i));
+          FuncInfo.PHINodesToUpdate.emplace_back(&*MBBI++, Reg + i);
         Reg += NumRegisters;
       }
     }
@@ -12597,26 +12544,31 @@ void SelectionDAGBuilder::visitVectorReverse(const CallInst &I) {
   setValue(&I, DAG.getVectorShuffle(VT, DL, V, DAG.getUNDEF(VT), Mask));
 }
 
-void SelectionDAGBuilder::visitVectorDeinterleave(const CallInst &I) {
+void SelectionDAGBuilder::visitVectorDeinterleave(const CallInst &I,
+                                                  unsigned Factor) {
   auto DL = getCurSDLoc();
   SDValue InVec = getValue(I.getOperand(0));
-  EVT OutVT =
-      InVec.getValueType().getHalfNumVectorElementsVT(*DAG.getContext());
 
+  SmallVector<EVT, 4> ValueVTs;
+  ComputeValueVTs(DAG.getTargetLoweringInfo(), DAG.getDataLayout(), I.getType(),
+                  ValueVTs);
+
+  EVT OutVT = ValueVTs[0];
   unsigned OutNumElts = OutVT.getVectorMinNumElements();
 
-  // ISD Node needs the input vectors split into two equal parts
-  SDValue Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, OutVT, InVec,
-                           DAG.getVectorIdxConstant(0, DL));
-  SDValue Hi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, OutVT, InVec,
-                           DAG.getVectorIdxConstant(OutNumElts, DL));
+  SmallVector<SDValue, 4> SubVecs(Factor);
+  for (unsigned i = 0; i != Factor; ++i) {
+    assert(ValueVTs[i] == OutVT && "Expected VTs to be the same");
+    SubVecs[i] = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, OutVT, InVec,
+                             DAG.getVectorIdxConstant(OutNumElts * i, DL));
+  }
 
-  // Use VECTOR_SHUFFLE for fixed-length vectors to benefit from existing
-  // legalisation and combines.
-  if (OutVT.isFixedLengthVector()) {
-    SDValue Even = DAG.getVectorShuffle(OutVT, DL, Lo, Hi,
+  // Use VECTOR_SHUFFLE for fixed-length vectors with factor of 2 to benefit
+  // from existing legalisation and combines.
+  if (OutVT.isFixedLengthVector() && Factor == 2) {
+    SDValue Even = DAG.getVectorShuffle(OutVT, DL, SubVecs[0], SubVecs[1],
                                         createStrideMask(0, 2, OutNumElts));
-    SDValue Odd = DAG.getVectorShuffle(OutVT, DL, Lo, Hi,
+    SDValue Odd = DAG.getVectorShuffle(OutVT, DL, SubVecs[0], SubVecs[1],
                                        createStrideMask(1, 2, OutNumElts));
     SDValue Res = DAG.getMergeValues({Even, Odd}, getCurSDLoc());
     setValue(&I, Res);
@@ -12624,32 +12576,43 @@ void SelectionDAGBuilder::visitVectorDeinterleave(const CallInst &I) {
   }
 
   SDValue Res = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL,
-                            DAG.getVTList(OutVT, OutVT), Lo, Hi);
+                            DAG.getVTList(ValueVTs), SubVecs);
   setValue(&I, Res);
 }
 
-void SelectionDAGBuilder::visitVectorInterleave(const CallInst &I) {
+void SelectionDAGBuilder::visitVectorInterleave(const CallInst &I,
+                                                unsigned Factor) {
   auto DL = getCurSDLoc();
-  EVT InVT = getValue(I.getOperand(0)).getValueType();
-  SDValue InVec0 = getValue(I.getOperand(0));
-  SDValue InVec1 = getValue(I.getOperand(1));
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT InVT = getValue(I.getOperand(0)).getValueType();
   EVT OutVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
 
-  // Use VECTOR_SHUFFLE for fixed-length vectors to benefit from existing
-  // legalisation and combines.
-  if (OutVT.isFixedLengthVector()) {
+  SmallVector<SDValue, 8> InVecs(Factor);
+  for (unsigned i = 0; i < Factor; ++i) {
+    InVecs[i] = getValue(I.getOperand(i));
+    assert(InVecs[i].getValueType() == InVecs[0].getValueType() &&
+           "Expected VTs to be the same");
+  }
+
+  // Use VECTOR_SHUFFLE for fixed-length vectors with factor of 2 to benefit
+  // from existing legalisation and combines.
+  if (OutVT.isFixedLengthVector() && Factor == 2) {
     unsigned NumElts = InVT.getVectorMinNumElements();
-    SDValue V = DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, InVec0, InVec1);
+    SDValue V = DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, InVecs);
     setValue(&I, DAG.getVectorShuffle(OutVT, DL, V, DAG.getUNDEF(OutVT),
                                       createInterleaveMask(NumElts, 2)));
     return;
   }
 
-  SDValue Res = DAG.getNode(ISD::VECTOR_INTERLEAVE, DL,
-                            DAG.getVTList(InVT, InVT), InVec0, InVec1);
-  Res = DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, Res.getValue(0),
-                    Res.getValue(1));
+  SmallVector<EVT, 8> ValueVTs(Factor, InVT);
+  SDValue Res =
+      DAG.getNode(ISD::VECTOR_INTERLEAVE, DL, DAG.getVTList(ValueVTs), InVecs);
+
+  SmallVector<SDValue, 8> Results(Factor);
+  for (unsigned i = 0; i < Factor; ++i)
+    Results[i] = Res.getValue(i);
+
+  Res = DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, Results);
   setValue(&I, Res);
 }
 
@@ -12755,7 +12718,7 @@ void SelectionDAGBuilder::visitCallBrLandingPad(const CallInst &I) {
   const TargetRegisterInfo *TRI = DAG.getSubtarget().getRegisterInfo();
   MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
 
-  unsigned InitialDef = FuncInfo.ValueMap[CBR];
+  Register InitialDef = FuncInfo.ValueMap[CBR];
   SDValue Chain = DAG.getRoot();
 
   // Re-parse the asm constraints string.
@@ -12780,7 +12743,7 @@ void SelectionDAGBuilder::visitCallBrLandingPad(const CallInst &I) {
       // the OpInfo.ConstraintVT is legal on the target or not.
       for (Register &Reg : OpInfo.AssignedRegs.Regs) {
         Register OriginalDef = FollowCopyChain(MRI, InitialDef++);
-        if (Register::isPhysicalRegister(OriginalDef))
+        if (OriginalDef.isPhysical())
           FuncInfo.MBB->addLiveIn(OriginalDef);
         // Update the assigned registers to use the original defs.
         Reg = OriginalDef;

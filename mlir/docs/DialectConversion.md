@@ -179,13 +179,13 @@ updated/remapped operands of an operation, such as when the types of results
 defined by an operation have changed. The general Rewrite Patterns can no longer
 be used in these situations, as the types of the operands of the operation being
 matched will not correspond with those expected by the user. This pattern
-provides, as an additional argument to the `matchAndRewrite` and `rewrite`
-methods, the list of operands that the operation should use after conversion. If
-an operand was the result of a non-converted operation, for example if it was
-already legal, the original operand is used. This means that the operands
-provided always have a 1-1 non-null correspondence with the operands on the
-operation. The original operands of the operation are still intact and may be
-inspected as normal. These patterns also utilize a special `PatternRewriter`,
+provides, as an additional argument to the `matchAndRewrite` method, the list
+of operands that the operation should use after conversion. If an operand was
+the result of a non-converted operation, for example if it was already legal,
+the original operand is used. This means that the operands provided always have
+a 1-1 non-null correspondence with the operands on the operation. The original
+operands of the operation are still intact and may be inspected as normal.
+These patterns also utilize a special `PatternRewriter`,
 `ConversionPatternRewriter`, that provides special hooks for use with the
 conversion infrastructure.
 
@@ -241,19 +241,6 @@ list of values with specific types. An important distinction from a
 cannot. These materializations are used by the conversion framework to ensure
 type safety during the conversion process. There are several types of
 materializations depending on the situation.
-
-*   Argument Materialization
-
-    -   An argument materialization is used when converting the type of a block
-        argument during a [signature conversion](#region-signature-conversion).
-        The new block argument types are specified in a `SignatureConversion`
-        object. An original block argument can be converted into multiple
-        block arguments, which is not supported everywhere in the dialect
-        conversion. (E.g., adaptors support only a single replacement value for
-        each original value.) Therefore, an argument materialization is used to
-        convert potentially multiple new block arguments back into a single SSA
-        value. An argument materialization is also used when replacing an op
-        result with multiple values.
 
 *   Source Materialization
 
@@ -344,17 +331,6 @@ class TypeConverter {
   /// persist after the conversion has finished.
 
   /// This method registers a materialization that will be called when
-  /// converting (potentially multiple) block arguments that were the result of
-  /// a signature conversion of a single block argument, to a single SSA value
-  /// with the old argument type.
-  template <typename FnT,
-            typename T = typename llvm::function_traits<FnT>::template arg_t<1>>
-  void addArgumentMaterialization(FnT &&callback) {
-    argumentMaterializations.emplace_back(
-        wrapMaterialization<T>(std::forward<FnT>(callback)));
-  }
-
-  /// This method registers a materialization that will be called when
   /// converting a replacement value back to its original source type.
   /// This is used when some uses of the original value persist beyond the main
   /// conversion.
@@ -362,7 +338,7 @@ class TypeConverter {
             typename T = typename llvm::function_traits<FnT>::template arg_t<1>>
   void addSourceMaterialization(FnT &&callback) {
     sourceMaterializations.emplace_back(
-        wrapMaterialization<T>(std::forward<FnT>(callback)));
+        wrapSourceMaterialization<T>(std::forward<FnT>(callback)));
   }
 
   /// This method registers a materialization that will be called when
@@ -386,7 +362,7 @@ class TypeConverter {
             typename T = typename llvm::function_traits<FnT>::template arg_t<1>>
   void addTargetMaterialization(FnT &&callback) {
     targetMaterializations.emplace_back(
-        wrapMaterialization<T>(std::forward<FnT>(callback)));
+        wrapTargetMaterialization<T>(std::forward<FnT>(callback)));
   }
 };
 ```
@@ -406,12 +382,11 @@ done explicitly via a conversion pattern.
 To convert the types of block arguments within a Region, a custom hook on the
 `ConversionPatternRewriter` must be invoked; `convertRegionTypes`. This hook
 uses a provided type converter to apply type conversions to all blocks of a
-given region. As noted above, the conversions performed by this method use the
-argument materialization hook on the `TypeConverter`. This hook also takes an
-optional `TypeConverter::SignatureConversion` parameter that applies a custom
-conversion to the entry block of the region. The types of the entry block
-arguments are often tied semantically to the operation, e.g.,
-`func::FuncOp`, `AffineForOp`, etc.
+given region. This hook also takes an optional
+`TypeConverter::SignatureConversion` parameter that applies a custom conversion
+to the entry block of the region. The types of the entry block arguments are
+often tied semantically to the operation, e.g., `func::FuncOp`, `AffineForOp`,
+etc.
 
 To convert the signature of just one given block, the
 `applySignatureConversion` hook can be used.

@@ -52,185 +52,6 @@ modified_dirs=$(echo "$MODIFIED_FILES" | cut -d'/' -f1 | sort -u)
 echo "Directories modified:" >&2
 echo "$modified_dirs" >&2
 
-function compute-projects-to-test() {
-  isForWindows=$1
-  shift
-  projects=${@}
-  for project in ${projects}; do
-    echo "${project}"
-    case ${project} in
-    lld)
-      for p in bolt cross-project-tests; do
-        echo $p
-      done
-    ;;
-    llvm)
-      for p in bolt clang clang-tools-extra lld lldb mlir polly; do
-        echo $p
-      done
-      # Flang is not stable in Windows CI at the moment
-      if [[ $isForWindows == 0 ]]; then
-        echo flang
-      fi
-    ;;
-    clang)
-      # lldb is temporarily removed to alleviate Linux pre-commit CI waiting times
-      for p in clang-tools-extra compiler-rt cross-project-tests; do
-        echo $p
-      done
-    ;;
-    clang-tools-extra)
-      echo libc
-    ;;
-    mlir)
-      # Flang is not stable in Windows CI at the moment
-      if [[ $isForWindows == 0 ]]; then
-        echo flang
-      fi
-    ;;
-    *)
-      # Nothing to do
-    ;;
-    esac
-  done
-}
-
-function compute-runtimes-to-test() {
-  projects=${@}
-  for project in ${projects}; do
-    case ${project} in
-    clang)
-      for p in libcxx libcxxabi libunwind; do
-        echo $p
-      done
-    ;;
-    *)
-      # Nothing to do
-    ;;
-    esac
-  done
-}
-
-function add-dependencies() {
-  projects=${@}
-  for project in ${projects}; do
-    echo "${project}"
-    case ${project} in
-    bolt)
-      for p in clang lld llvm; do
-        echo $p
-      done
-    ;;
-    cross-project-tests)
-      for p in lld clang; do
-        echo $p
-      done
-    ;;
-    clang-tools-extra)
-      for p in llvm clang; do
-        echo $p
-      done
-    ;;
-    compiler-rt|libc|openmp)
-      echo clang lld
-    ;;
-    flang|lldb|libclc)
-      for p in llvm clang; do
-        echo $p
-      done
-    ;;
-    lld|mlir|polly)
-      echo llvm
-    ;;
-    *)
-      # Nothing to do
-    ;;
-    esac
-  done
-}
-
-function exclude-linux() {
-  projects=${@}
-  for project in ${projects}; do
-    case ${project} in
-    cross-project-tests) ;; # tests failing
-    openmp)              ;; # https://github.com/google/llvm-premerge-checks/issues/410
-    *)
-      echo "${project}"
-    ;;
-    esac
-  done
-}
-
-function exclude-windows() {
-  projects=${@}
-  for project in ${projects}; do
-    case ${project} in
-    cross-project-tests) ;; # tests failing
-    compiler-rt)         ;; # tests taking too long
-    openmp)              ;; # TODO: having trouble with the Perl installation
-    libc)                ;; # no Windows support
-    lldb)                ;; # custom environment requirements (https://github.com/llvm/llvm-project/pull/94208#issuecomment-2146256857)
-    bolt)                ;; # tests are not supported yet
-    *)
-      echo "${project}"
-    ;;
-    esac
-  done
-}
-
-# Prints only projects that are both present in $modified_dirs and the passed
-# list.
-function keep-modified-projects() {
-  projects=${@}
-  for project in ${projects}; do
-    if echo "$modified_dirs" | grep -q -E "^${project}$"; then
-      echo "${project}"
-    fi
-  done
-}
-
-function check-targets() {
-  # Do not use "check-all" here because if there is "check-all" plus a
-  # project specific target like "check-clang", that project's tests
-  # will be run twice.
-  projects=${@}
-  for project in ${projects}; do
-    case ${project} in
-    clang-tools-extra)
-      echo "check-clang-tools"
-    ;;
-    compiler-rt)
-      echo "check-compiler-rt"
-    ;;
-    cross-project-tests)
-      echo "check-cross-project"
-    ;;
-    libcxx)
-      echo "check-cxx"
-    ;;
-    libcxxabi)
-      echo "check-cxxabi"
-    ;;
-    libunwind)
-      echo "check-unwind"
-    ;;
-    lldb)
-      echo "check-lldb"
-    ;;
-    pstl)
-      # Currently we do not run pstl tests in CI.
-    ;;
-    libclc)
-      # Currently there is no testing for libclc.
-    ;;
-    *)
-      echo "check-${project}"
-    ;;
-    esac
-  done
-}
-
 # Project specific pipelines.
 
 # If libc++ or one of the runtimes directories changed.
@@ -250,20 +71,16 @@ fi
 # needs while letting them run on the infrastructure provided by LLVM.
 
 # Figure out which projects need to be built on each platform
-all_projects="bolt clang clang-tools-extra compiler-rt cross-project-tests flang libc libclc lld lldb llvm mlir openmp polly pstl"
-modified_projects="$(keep-modified-projects ${all_projects})"
+source <(git diff --name-only origin/${BUILDKITE_PULL_REQUEST_BASE_BRANCH}...HEAD | python3 .ci/compute_projects.py Linux)
+linux_projects=${projects_to_build}
+linux_check_targets=${project_check_targets}
+linux_runtimes=${runtimes_to_build}
+linux_runtime_check_targets=${runtimes_check_targets}
 
-linux_projects_to_test=$(exclude-linux $(compute-projects-to-test 0 ${modified_projects}))
-linux_check_targets=$(check-targets ${linux_projects_to_test} | sort | uniq)
-linux_projects=$(add-dependencies ${linux_projects_to_test} | sort | uniq)
+source <(git diff --name-only origin/${BUILDKITE_PULL_REQUEST_BASE_BRANCH}...HEAD | python3 .ci/compute_projects.py Windows)
+windows_projects=${projects_to_build}
+windows_check_targets=${project_check_targets}
 
-linux_runtimes_to_test=$(compute-runtimes-to-test ${linux_projects_to_test})
-linux_runtime_check_targets=$(check-targets ${linux_runtimes_to_test} | sort | uniq)
-linux_runtimes=$(echo ${linux_runtimes_to_test} | sort | uniq)
-
-windows_projects_to_test=$(exclude-windows $(compute-projects-to-test 1 ${modified_projects}))
-windows_check_targets=$(check-targets ${windows_projects_to_test} | sort | uniq)
-windows_projects=$(add-dependencies ${windows_projects_to_test} | sort | uniq)
 
 # Generate the appropriate pipeline
 if [[ "${linux_projects}" != "" ]]; then
@@ -305,9 +122,8 @@ if [[ "${windows_projects}" != "" ]]; then
         limit: 2
   timeout_in_minutes: 150
   env:
-    CC: 'cl'
-    CXX: 'cl'
-    LD: 'link'
+    MAX_PARALLEL_COMPILE_JOBS: '16'
+    MAX_PARALLEL_LINK_JOBS: '4'
   commands:
   - 'C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64'
   - 'bash .ci/monolithic-windows.sh "$(echo ${windows_projects} | tr ' ' ';')" "$(echo ${windows_check_targets})"'

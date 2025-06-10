@@ -13,9 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
-#include "clang/AST/ExprCXX.h"
 #include "clang/Analysis/FlowSensitive/ASTOps.h"
-#include "clang/Analysis/FlowSensitive/DebugSupport.h"
 #include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/Logger.h"
 #include "clang/Analysis/FlowSensitive/SimplifyConstraints.h"
@@ -86,7 +84,7 @@ StorageLocation &DataflowAnalysisContext::createStorageLocation(QualType Type) {
 // Can't use `StringSet` as the return type as it doesn't support `operator==`.
 template <typename T>
 static llvm::DenseSet<llvm::StringRef> getKeys(const llvm::StringMap<T> &Map) {
-  return llvm::DenseSet<llvm::StringRef>(Map.keys().begin(), Map.keys().end());
+  return llvm::DenseSet<llvm::StringRef>(llvm::from_range, Map.keys());
 }
 
 RecordStorageLocation &DataflowAnalysisContext::createRecordStorageLocation(
@@ -160,8 +158,9 @@ Atom
 DataflowAnalysisContext::joinFlowConditions(Atom FirstToken,
                                             Atom SecondToken) {
   Atom Token = arena().makeFlowConditionToken();
-  FlowConditionDeps[Token].insert(FirstToken);
-  FlowConditionDeps[Token].insert(SecondToken);
+  auto &TokenDeps = FlowConditionDeps[Token];
+  TokenDeps.insert(FirstToken);
+  TokenDeps.insert(SecondToken);
   addFlowConditionConstraint(Token,
                              arena().makeOr(arena().makeAtomRef(FirstToken),
                                             arena().makeAtomRef(SecondToken)));

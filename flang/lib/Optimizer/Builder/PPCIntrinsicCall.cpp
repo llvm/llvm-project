@@ -1579,7 +1579,7 @@ PPCIntrinsicLibrary::genVecConvert(mlir::Type resultType,
 
       return callOp.getResult(0);
     } else if (width == 64) {
-      auto fTy{mlir::FloatType::getF64(context)};
+      auto fTy{mlir::Float64Type::get(context)};
       auto ty{mlir::VectorType::get(2, fTy)};
 
       // vec_vtf(arg1, arg2) = fmul(1.0 / (1 << arg2), llvm.sitofp(arg1))
@@ -1639,7 +1639,7 @@ PPCIntrinsicLibrary::genVecConvert(mlir::Type resultType,
       newArgs[0] =
           builder.create<fir::CallOp>(loc, funcOp, newArgs).getResult(0);
       auto fvf32Ty{newArgs[0].getType()};
-      auto f32type{mlir::FloatType::getF32(context)};
+      auto f32type{mlir::Float32Type::get(context)};
       auto mvf32Ty{mlir::VectorType::get(4, f32type)};
       newArgs[0] = builder.createConvert(loc, mvf32Ty, newArgs[0]);
 
@@ -1949,7 +1949,7 @@ PPCIntrinsicLibrary::genVecLdCallGrp(mlir::Type resultType,
     fname = isBEVecElemOrderOnLE() ? "llvm.ppc.vsx.lxvd2x.be"
                                    : "llvm.ppc.vsx.lxvd2x";
     // llvm.ppc.altivec.lxvd2x* returns <2 x double>
-    intrinResTy = mlir::VectorType::get(2, mlir::FloatType::getF64(context));
+    intrinResTy = mlir::VectorType::get(2, mlir::Float64Type::get(context));
   } break;
   case VecOp::Xlw4:
     fname = isBEVecElemOrderOnLE() ? "llvm.ppc.vsx.lxvw4x.be"
@@ -2092,7 +2092,7 @@ PPCIntrinsicLibrary::genVecPerm(mlir::Type resultType,
   auto mlirTy{vecTyInfo.toMlirVectorType(context)};
 
   auto vi32Ty{mlir::VectorType::get(4, mlir::IntegerType::get(context, 32))};
-  auto vf64Ty{mlir::VectorType::get(2, mlir::FloatType::getF64(context))};
+  auto vf64Ty{mlir::VectorType::get(2, mlir::Float64Type::get(context))};
 
   auto mArg0{builder.createConvert(loc, mlirTy, argBases[0])};
   auto mArg1{builder.createConvert(loc, mlirTy, argBases[1])};

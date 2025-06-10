@@ -17,14 +17,7 @@
 #include "SPIRV.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
-#include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
-#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DebugInfoMetadata.h"
-#include "llvm/IR/IntrinsicsSPIRV.h"
-#include "llvm/Target/TargetIntrinsicInfo.h"
 #include <stack>
 
 #define DEBUG_TYPE "spirv-postlegalizer"
@@ -35,31 +28,20 @@ namespace {
 class SPIRVPostLegalizer : public MachineFunctionPass {
 public:
   static char ID;
-  SPIRVPostLegalizer() : MachineFunctionPass(ID) {
-    initializeSPIRVPostLegalizerPass(*PassRegistry::getPassRegistry());
-  }
+  SPIRVPostLegalizer() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 } // namespace
 
-// Defined in SPIRVLegalizerInfo.cpp.
-extern bool isTypeFoldingSupported(unsigned Opcode);
-
 namespace llvm {
 //  Defined in SPIRVPreLegalizer.cpp.
-extern Register insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpirvTy,
-                                  SPIRVGlobalRegistry *GR,
-                                  MachineIRBuilder &MIB,
-                                  MachineRegisterInfo &MRI);
+extern void insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpirvTy,
+                              SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
+                              MachineRegisterInfo &MRI);
 extern void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
-                         MachineRegisterInfo &MRI, SPIRVGlobalRegistry *GR);
+                         MachineRegisterInfo &MRI, SPIRVGlobalRegistry *GR,
+                         SPIRVType *KnownResType);
 } // namespace llvm
-
-static bool isMetaInstrGET(unsigned Opcode) {
-  return Opcode == SPIRV::GET_ID || Opcode == SPIRV::GET_fID ||
-         Opcode == SPIRV::GET_pID || Opcode == SPIRV::GET_vID ||
-         Opcode == SPIRV::GET_vfID || Opcode == SPIRV::GET_vpID;
-}
 
 static bool mayBeInserted(unsigned Opcode) {
   switch (Opcode) {
@@ -111,29 +93,27 @@ static void processNewInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         // registers, we must decorate them as if they were introduced in a
         // non-automatic way
         Register ResVReg = I.getOperand(0).getReg();
-        SPIRVType *ResVType = GR->getSPIRVTypeForVReg(ResVReg);
         // Check if the register defined by the instruction is newly generated
         // or already processed
-        if (!ResVType) {
-          // Set type of the defined register
-          ResVType = GR->getSPIRVTypeForVReg(I.getOperand(1).getReg());
-          // Check if we have type defined for operands of the new instruction
-          if (!ResVType)
-            continue;
-          // Set type & class
+        // Check if we have type defined for operands of the new instruction
+        bool IsKnownReg = MRI.getRegClassOrNull(ResVReg);
+        SPIRVType *ResVType = GR->getSPIRVTypeForVReg(
+            IsKnownReg ? ResVReg : I.getOperand(1).getReg());
+        if (!ResVType)
+          continue;
+        // Set type & class
+        if (!IsKnownReg)
           setRegClassType(ResVReg, ResVType, GR, &MRI, *GR->CurMF, true);
-        }
         // If this is a simple operation that is to be reduced by TableGen
         // definition we must apply some of pre-legalizer rules here
         if (isTypeFoldingSupported(Opcode)) {
-          // Check if the instruction newly generated or already processed
-          MachineInstr *NextMI = I.getNextNode();
-          if (NextMI && isMetaInstrGET(NextMI->getOpcode()))
-            continue;
-          // Restore usual instructions pattern for the newly inserted
-          // instruction
+          processInstr(I, MIB, MRI, GR, GR->getSPIRVTypeForVReg(ResVReg));
+          if (IsKnownReg && MRI.hasOneUse(ResVReg)) {
+            MachineInstr &UseMI = *MRI.use_instr_begin(ResVReg);
+            if (UseMI.getOpcode() == SPIRV::ASSIGN_TYPE)
+              continue;
+          }
           insertAssignInstr(ResVReg, nullptr, ResVType, GR, MIB, MRI);
-          processInstr(I, MIB, MRI, GR);
         }
       }
     }

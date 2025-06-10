@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=mips -mcpu=mips32r6 -o /dev/null
+; RUN: llc < %s -mtriple=mips -mcpu=mips32r6 -o /dev/null
 
 ; Test that this file is compiled in a reasonable time period. Without the
 ; optimization level check in findBetterNeighbors, this test demonstrates

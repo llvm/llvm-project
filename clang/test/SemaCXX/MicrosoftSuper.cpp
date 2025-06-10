@@ -108,8 +108,8 @@ struct DerivedFromDependentBase : BaseTemplate<T> {
   typename __super::XXX a;
   typedef typename __super::XXX b;
 
-  __super::XXX c;         // expected-warning {{implicit 'typename' is a C++20 extension}}
-  typedef __super::XXX d; // expected-warning {{implicit 'typename' is a C++20 extension}}
+  __super::XXX c;         // expected-warning {{missing 'typename'}}
+  typedef __super::XXX d; // expected-warning {{missing 'typename'}}
 
   void foo() {
     typename __super::XXX e;
@@ -127,8 +127,8 @@ struct DerivedFromTemplateParameter : T {
   typename __super::XXX a;
   typedef typename __super::XXX b;
 
-  __super::XXX c;         // expected-warning {{implicit 'typename' is a C++20 extension}}
-  typedef __super::XXX d; // expected-warning {{implicit 'typename' is a C++20 extension}}
+  __super::XXX c;         // expected-warning {{missing 'typename'}}
+  typedef __super::XXX d; // expected-warning {{missing 'typename'}}
 
   void foo() {
     typename __super::XXX e;

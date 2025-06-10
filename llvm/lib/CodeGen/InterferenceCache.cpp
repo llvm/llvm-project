@@ -78,7 +78,7 @@ InterferenceCache::Entry *InterferenceCache::get(MCRegister PhysReg) {
       continue;
     }
     Entries[E].reset(PhysReg, LIUArray, TRI, MF);
-    PhysRegEntries[PhysReg] = E;
+    PhysRegEntries[PhysReg.id()] = E;
     return &Entries[E];
   }
   llvm_unreachable("Ran out of interference cache entries.");

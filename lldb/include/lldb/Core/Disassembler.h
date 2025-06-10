@@ -428,7 +428,7 @@ public:
   static lldb::DisassemblerSP
   DisassembleRange(const ArchSpec &arch, const char *plugin_name,
                    const char *flavor, const char *cpu, const char *features,
-                   Target &target, const AddressRange &disasm_range,
+                   Target &target, llvm::ArrayRef<AddressRange> disasm_ranges,
                    bool force_live_memory = false);
 
   static lldb::DisassemblerSP
@@ -460,7 +460,11 @@ public:
 
   size_t ParseInstructions(Target &target, Address address, Limit limit,
                            Stream *error_strm_ptr,
-                           bool force_live_memory = false);
+                           bool force_live_memory = false) {
+    m_instruction_list.Clear();
+    return AppendInstructions(target, address, limit, error_strm_ptr,
+                              force_live_memory);
+  }
 
   virtual size_t DecodeInstructions(const Address &base_addr,
                                     const DataExtractor &data,
@@ -480,6 +484,9 @@ public:
                                       const char *flavor) = 0;
 
 protected:
+  size_t AppendInstructions(Target &target, Address address, Limit limit,
+                            Stream *error_strm_ptr, bool force_live_memory);
+
   // SourceLine and SourceLinesToDisplay structures are only used in the mixed
   // source and assembly display methods internal to this class.
 

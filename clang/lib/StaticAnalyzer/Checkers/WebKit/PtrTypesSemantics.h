@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PointerUnion.h"
 #include <optional>
 
@@ -21,8 +22,11 @@ class CXXRecordDecl;
 class Decl;
 class FunctionDecl;
 class QualType;
+class RecordType;
 class Stmt;
+class TranslationUnitDecl;
 class Type;
+class TypedefDecl;
 
 // Ref-countability of a type is implicitly defined by Ref<T> and RefPtr<T>
 // implementation. It can be modeled as: type T having public methods ref() and
@@ -51,6 +55,13 @@ bool isRefCounted(const clang::CXXRecordDecl *Class);
 /// \returns true if \p Class is a CheckedPtr / CheckedRef, false if not.
 bool isCheckedPtr(const clang::CXXRecordDecl *Class);
 
+/// \returns true if \p Class is a RetainPtr, false if not.
+bool isRetainPtr(const clang::CXXRecordDecl *Class);
+
+/// \returns true if \p Class is a smart pointer (RefPtr, WeakPtr, etc...),
+/// false if not.
+bool isSmartPtr(const clang::CXXRecordDecl *Class);
+
 /// \returns true if \p Class is ref-countable AND not ref-counted, false if
 /// not, std::nullopt if inconclusive.
 std::optional<bool> isUncounted(const clang::QualType T);
@@ -58,6 +69,26 @@ std::optional<bool> isUncounted(const clang::QualType T);
 /// \returns true if \p Class is CheckedPtr capable AND not checked, false if
 /// not, std::nullopt if inconclusive.
 std::optional<bool> isUnchecked(const clang::QualType T);
+
+/// An inter-procedural analysis facility that detects CF types with the
+/// underlying pointer type.
+class RetainTypeChecker {
+  llvm::DenseSet<const RecordType *> CFPointees;
+  llvm::DenseSet<const Type *> RecordlessTypes;
+  bool IsARCEnabled{false};
+  bool DefaultSynthProperties{true};
+
+public:
+  void visitTranslationUnitDecl(const TranslationUnitDecl *);
+  void visitTypedef(const TypedefDecl *);
+  bool isUnretained(const QualType, bool ignoreARC = false);
+  bool isARCEnabled() const { return IsARCEnabled; }
+  bool defaultSynthProperties() const { return DefaultSynthProperties; }
+};
+
+/// \returns true if \p Class is NS or CF objects AND not retained, false if
+/// not, std::nullopt if inconclusive.
+std::optional<bool> isUnretained(const clang::QualType T, bool IsARCEnabled);
 
 /// \returns true if \p Class is ref-countable AND not ref-counted, false if
 /// not, std::nullopt if inconclusive.
@@ -77,11 +108,14 @@ std::optional<bool> isUncheckedPtr(const clang::QualType T);
 
 /// \returns true if \p T is either a raw pointer or reference to an uncounted
 /// or unchecked class, false if not, std::nullopt if inconclusive.
-std::optional<bool> isUnsafePtr(const QualType T);
+std::optional<bool> isUnsafePtr(const QualType T, bool IsArcEnabled);
 
 /// \returns true if \p T is a RefPtr, Ref, CheckedPtr, CheckedRef, or its
 /// variant, false if not.
-bool isSafePtrType(const clang::QualType T);
+bool isRefOrCheckedPtrType(const clang::QualType T);
+
+/// \returns true if \p T is a RetainPtr, false if not.
+bool isRetainPtrType(const clang::QualType T);
 
 /// \returns true if \p T is a RefPtr, Ref, CheckedPtr, CheckedRef, or
 /// unique_ptr, false if not.
@@ -105,12 +139,21 @@ bool isRefType(const std::string &Name);
 /// \returns true if \p Name is CheckedRef or CheckedPtr, false if not.
 bool isCheckedPtr(const std::string &Name);
 
+/// \returns true if \p Name is RetainPtr or its variant, false if not.
+bool isRetainPtr(const std::string &Name);
+
+/// \returns true if \p Name is a smart pointer type name, false if not.
+bool isSmartPtrClass(const std::string &Name);
+
 /// \returns true if \p M is getter of a ref-counted class, false if not.
 std::optional<bool> isGetterOfSafePtr(const clang::CXXMethodDecl *Method);
 
 /// \returns true if \p F is a conversion between ref-countable or ref-counted
 /// pointer types.
 bool isPtrConversion(const FunctionDecl *F);
+
+/// \returns true if \p F is a builtin function which is considered trivial.
+bool isTrivialBuiltinFunction(const FunctionDecl *F);
 
 /// \returns true if \p F is a static singleton function.
 bool isSingleton(const FunctionDecl *F);

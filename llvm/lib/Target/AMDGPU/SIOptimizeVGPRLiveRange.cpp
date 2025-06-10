@@ -155,6 +155,7 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
     AU.addRequired<LiveVariablesWrapperPass>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachineLoopInfoWrapperPass>();
@@ -165,13 +166,11 @@ public:
   }
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::IsSSA);
+    return MachineFunctionProperties().setIsSSA();
   }
 
   MachineFunctionProperties getClearedProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoPHIs);
+    return MachineFunctionProperties().setNoPHIs();
   }
 };
 

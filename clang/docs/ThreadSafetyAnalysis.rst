@@ -187,10 +187,13 @@ REQUIRES(...), REQUIRES_SHARED(...)
 
 *Previously*: ``EXCLUSIVE_LOCKS_REQUIRED``, ``SHARED_LOCKS_REQUIRED``
 
-``REQUIRES`` is an attribute on functions or methods, which
+``REQUIRES`` is an attribute on functions, methods or function parameters of
+reference to :ref:`scoped_capability`-annotated type, which
 declares that the calling thread must have exclusive access to the given
 capabilities.  More than one capability may be specified.  The capabilities
 must be held on entry to the function, *and must still be held on exit*.
+Additionally, if the attribute is on a function parameter, it declares that
+the scoped capability manages the specified capabilities in the given order.
 
 ``REQUIRES_SHARED`` is similar, but requires only shared access.
 
@@ -211,6 +214,20 @@ must be held on entry to the function, *and must still be held on exit*.
     mu1.Unlock();
   }
 
+  void require(MutexLocker& scope REQUIRES(mu1)) {
+    scope.Unlock();
+    a = 0; // Warning!  Requires mu1.
+    scope.Lock();
+  }
+
+  void testParameter() {
+    MutexLocker scope(&mu1), scope2(&mu2);
+    require(scope2); // Warning! Mutex managed by 'scope2' is 'mu2' instead of 'mu1'
+    require(scope); // OK.
+    scope.Unlock();
+    require(scope); // Warning!  Requires mu1.
+  }
+
 
 ACQUIRE(...), ACQUIRE_SHARED(...), RELEASE(...), RELEASE_SHARED(...), RELEASE_GENERIC(...)
 ------------------------------------------------------------------------------------------
@@ -218,10 +235,13 @@ ACQUIRE(...), ACQUIRE_SHARED(...), RELEASE(...), RELEASE_SHARED(...), RELEASE_GE
 *Previously*: ``EXCLUSIVE_LOCK_FUNCTION``, ``SHARED_LOCK_FUNCTION``,
 ``UNLOCK_FUNCTION``
 
-``ACQUIRE`` and ``ACQUIRE_SHARED`` are attributes on functions or methods
-declaring that the function acquires a capability, but does not release it.
+``ACQUIRE`` and ``ACQUIRE_SHARED`` are attributes on functions, methods
+or function parameters of reference to :ref:`scoped_capability`-annotated type,
+which declare that the function acquires a capability, but does not release it.
 The given capability must not be held on entry, and will be held on exit
 (exclusively for ``ACQUIRE``, shared for ``ACQUIRE_SHARED``).
+Additionally, if the attribute is on a function parameter, it declares that
+the scoped capability manages the specified capabilities in the given order.
 
 ``RELEASE``, ``RELEASE_SHARED``, and ``RELEASE_GENERIC`` declare that the
 function releases the given capability.  The capability must be held on entry
@@ -247,6 +267,14 @@ shared for ``RELEASE_GENERIC``), and will no longer be held on exit.
     myObject.doSomething();
     cleanupAndUnlock();
     myObject.doSomething();  // Warning, mu is not locked.
+  }
+
+  void release(MutexLocker& scope RELEASE(mu)) {
+  }                          // Warning!  Need to unlock mu.
+
+  void testParameter() {
+    MutexLocker scope(&mu);
+    release(scope);
   }
 
 If no argument is passed to ``ACQUIRE`` or ``RELEASE``, then the argument is
@@ -283,10 +311,13 @@ EXCLUDES(...)
 
 *Previously*: ``LOCKS_EXCLUDED``
 
-``EXCLUDES`` is an attribute on functions or methods, which declares that
+``EXCLUDES`` is an attribute on functions, methods or function parameters
+of reference to :ref:`scoped_capability`-annotated type, which declares that
 the caller must *not* hold the given capabilities.  This annotation is
 used to prevent deadlock.  Many mutex implementations are not re-entrant, so
 deadlock can occur if the function acquires the mutex a second time.
+Additionally, if the attribute is on a function parameter, it declares that
+the scoped capability manages the specified capabilities in the given order.
 
 .. code-block:: c++
 
@@ -303,6 +334,16 @@ deadlock can occur if the function acquires the mutex a second time.
     mu.Lock();
     clear();     // Warning!  Caller cannot hold 'mu'.
     mu.Unlock();
+  }
+
+  void exclude(MutexLocker& scope LOCKS_EXCLUDED(mu)) {
+    scope.Unlock(); // Warning! mu is not locked.
+    scope.Lock();
+  } // Warning! mu still held at the end of function.
+
+  void testParameter() {
+    MutexLocker scope(&mu);
+    exclude(scope); // Warning, mu is held.
   }
 
 Unlike ``REQUIRES``, ``EXCLUDES`` is optional.  The analysis will not issue a
@@ -393,6 +434,22 @@ class can be used as a capability.  The string argument specifies the kind of
 capability in error messages, e.g. ``"mutex"``.  See the ``Container`` example
 given above, or the ``Mutex`` class in :ref:`mutexheader`.
 
+REENTRANT_CAPABILITY
+--------------------
+
+``REENTRANT_CAPABILITY`` is an attribute on capability classes, denoting that
+they are reentrant. Marking a capability as reentrant means that acquiring the
+same capability multiple times is safe. Acquiring the same capability with
+different access privileges (exclusive vs. shared) again is not considered
+reentrant by the analysis.
+
+Note: In many cases this attribute is only required where a capability is
+acquired reentrant within the same function, such as via macros or other
+helpers. Otherwise, best practice is to avoid explicitly acquiring a capability
+multiple times within the same function, and letting the analysis produce
+warnings on double-acquisition attempts.
+
+.. _scoped_capability:
 
 SCOPED_CAPABILITY
 -----------------
@@ -473,8 +530,12 @@ Warning flags
   + ``-Wthread-safety-analysis``: The core analysis.
   + ``-Wthread-safety-precise``: Requires that mutex expressions match precisely.
        This warning can be disabled for code which has a lot of aliases.
-  + ``-Wthread-safety-reference``: Checks when guarded members are passed by reference.
+  + ``-Wthread-safety-reference``: Checks when guarded members are passed or
+    returned by reference.
 
+* ``-Wthread-safety-pointer``: Checks when passing or returning pointers to
+  guarded variables, or pointers to guarded data, as function argument or
+  return value respectively.
 
 :ref:`negative` are an experimental feature, which are enabled with:
 
@@ -799,6 +860,9 @@ implementation.
 
   #define CAPABILITY(x) \
     THREAD_ANNOTATION_ATTRIBUTE__(capability(x))
+
+  #define REENTRANT_CAPABILITY \
+    THREAD_ANNOTATION_ATTRIBUTE__(reentrant_capability)
 
   #define SCOPED_CAPABILITY \
     THREAD_ANNOTATION_ATTRIBUTE__(scoped_lockable)

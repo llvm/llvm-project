@@ -5,18 +5,11 @@
 ; RUN: llc -mtriple=aarch64 -mattr=+fullfp16 -global-isel -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-GI,CHECK-GI-FP16
 
 define float @mul_HalfS(<2 x float> %bin.rdx)  {
-; CHECK-SD-LABEL: mul_HalfS:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    fmul s0, s0, v0.s[1]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: mul_HalfS:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NEXT:    fmul s0, s0, s1
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: mul_HalfS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    fmul s0, s0, v0.s[1]
+; CHECK-NEXT:    ret
   %r = call fast float @llvm.vector.reduce.fmul.f32.v2f32(float 1.0, <2 x float> %bin.rdx)
   ret float %r
 }
@@ -26,19 +19,15 @@ define half @mul_HalfH(<4 x half> %bin.rdx)  {
 ; CHECK-SD-NOFP16:       // %bb.0:
 ; CHECK-SD-NOFP16-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NOFP16-NEXT:    mov h1, v0.h[1]
-; CHECK-SD-NOFP16-NEXT:    fcvt s2, h0
-; CHECK-SD-NOFP16-NEXT:    fcvt s1, h1
-; CHECK-SD-NOFP16-NEXT:    fmul s1, s2, s1
-; CHECK-SD-NOFP16-NEXT:    mov h2, v0.h[2]
-; CHECK-SD-NOFP16-NEXT:    mov h0, v0.h[3]
-; CHECK-SD-NOFP16-NEXT:    fcvt h1, s1
-; CHECK-SD-NOFP16-NEXT:    fcvt s2, h2
+; CHECK-SD-NOFP16-NEXT:    mov h2, v0.h[3]
+; CHECK-SD-NOFP16-NEXT:    mov h3, v0.h[2]
 ; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-SD-NOFP16-NEXT:    fcvt s1, h1
-; CHECK-SD-NOFP16-NEXT:    fmul s1, s1, s2
-; CHECK-SD-NOFP16-NEXT:    fcvt h1, s1
-; CHECK-SD-NOFP16-NEXT:    fcvt s1, h1
-; CHECK-SD-NOFP16-NEXT:    fmul s0, s1, s0
+; CHECK-SD-NOFP16-NEXT:    fcvt s3, h3
+; CHECK-SD-NOFP16-NEXT:    fcvt s2, h2
+; CHECK-SD-NOFP16-NEXT:    fmul s0, s0, s1
+; CHECK-SD-NOFP16-NEXT:    fmul s1, s3, s2
+; CHECK-SD-NOFP16-NEXT:    fmul s0, s0, s1
 ; CHECK-SD-NOFP16-NEXT:    fcvt h0, s0
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
@@ -55,20 +44,17 @@ define half @mul_HalfH(<4 x half> %bin.rdx)  {
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-GI-NOFP16-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NOFP16-NEXT:    fmul v0.2s, v0.2s, v1.2s
-; CHECK-GI-NOFP16-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NOFP16-NEXT:    fmul s0, s0, s1
+; CHECK-GI-NOFP16-NEXT:    fmul s0, s0, v0.s[1]
 ; CHECK-GI-NOFP16-NEXT:    fcvt h0, s0
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: mul_HalfH:
 ; CHECK-GI-FP16:       // %bb.0:
 ; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-FP16-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-FP16-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-FP16-NEXT:    mov h3, v0.h[3]
-; CHECK-GI-FP16-NEXT:    fmul h0, h0, h1
-; CHECK-GI-FP16-NEXT:    fmul h1, h2, h3
-; CHECK-GI-FP16-NEXT:    fmul h0, h0, h1
+; CHECK-GI-FP16-NEXT:    mov h1, v0.h[3]
+; CHECK-GI-FP16-NEXT:    fmul h2, h0, v0.h[1]
+; CHECK-GI-FP16-NEXT:    fmul h0, h1, v0.h[2]
+; CHECK-GI-FP16-NEXT:    fmul h0, h2, h0
 ; CHECK-GI-FP16-NEXT:    ret
   %r = call fast half @llvm.vector.reduce.fmul.f16.v4f16(half 1.0, <4 x half> %bin.rdx)
   ret half %r
@@ -78,39 +64,27 @@ define half @mul_HalfH(<4 x half> %bin.rdx)  {
 define half @mul_H(<8 x half> %bin.rdx)  {
 ; CHECK-SD-NOFP16-LABEL: mul_H:
 ; CHECK-SD-NOFP16:       // %bb.0:
-; CHECK-SD-NOFP16-NEXT:    mov h1, v0.h[1]
-; CHECK-SD-NOFP16-NEXT:    fcvt s2, h0
-; CHECK-SD-NOFP16-NEXT:    fcvt s1, h1
-; CHECK-SD-NOFP16-NEXT:    fmul s1, s2, s1
-; CHECK-SD-NOFP16-NEXT:    mov h2, v0.h[2]
-; CHECK-SD-NOFP16-NEXT:    fcvt h1, s1
-; CHECK-SD-NOFP16-NEXT:    fcvt s2, h2
-; CHECK-SD-NOFP16-NEXT:    fcvt s1, h1
-; CHECK-SD-NOFP16-NEXT:    fmul s1, s1, s2
-; CHECK-SD-NOFP16-NEXT:    mov h2, v0.h[3]
-; CHECK-SD-NOFP16-NEXT:    fcvt h1, s1
-; CHECK-SD-NOFP16-NEXT:    fcvt s2, h2
-; CHECK-SD-NOFP16-NEXT:    fcvt s1, h1
-; CHECK-SD-NOFP16-NEXT:    fmul s1, s1, s2
-; CHECK-SD-NOFP16-NEXT:    mov h2, v0.h[4]
-; CHECK-SD-NOFP16-NEXT:    fcvt h1, s1
-; CHECK-SD-NOFP16-NEXT:    fcvt s2, h2
-; CHECK-SD-NOFP16-NEXT:    fcvt s1, h1
-; CHECK-SD-NOFP16-NEXT:    fmul s1, s1, s2
-; CHECK-SD-NOFP16-NEXT:    mov h2, v0.h[5]
-; CHECK-SD-NOFP16-NEXT:    fcvt h1, s1
-; CHECK-SD-NOFP16-NEXT:    fcvt s2, h2
-; CHECK-SD-NOFP16-NEXT:    fcvt s1, h1
-; CHECK-SD-NOFP16-NEXT:    fmul s1, s1, s2
-; CHECK-SD-NOFP16-NEXT:    mov h2, v0.h[6]
+; CHECK-SD-NOFP16-NEXT:    mov h1, v0.h[2]
+; CHECK-SD-NOFP16-NEXT:    mov h2, v0.h[1]
+; CHECK-SD-NOFP16-NEXT:    mov h3, v0.h[5]
+; CHECK-SD-NOFP16-NEXT:    mov h4, v0.h[4]
+; CHECK-SD-NOFP16-NEXT:    mov h5, v0.h[3]
+; CHECK-SD-NOFP16-NEXT:    mov h6, v0.h[6]
+; CHECK-SD-NOFP16-NEXT:    fcvt s7, h0
 ; CHECK-SD-NOFP16-NEXT:    mov h0, v0.h[7]
-; CHECK-SD-NOFP16-NEXT:    fcvt h1, s1
 ; CHECK-SD-NOFP16-NEXT:    fcvt s2, h2
+; CHECK-SD-NOFP16-NEXT:    fcvt s1, h1
+; CHECK-SD-NOFP16-NEXT:    fcvt s3, h3
+; CHECK-SD-NOFP16-NEXT:    fcvt s5, h5
+; CHECK-SD-NOFP16-NEXT:    fcvt s4, h4
 ; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-SD-NOFP16-NEXT:    fcvt s1, h1
+; CHECK-SD-NOFP16-NEXT:    fmul s2, s7, s2
+; CHECK-SD-NOFP16-NEXT:    fmul s1, s1, s5
+; CHECK-SD-NOFP16-NEXT:    fmul s3, s4, s3
+; CHECK-SD-NOFP16-NEXT:    fcvt s4, h6
+; CHECK-SD-NOFP16-NEXT:    fmul s1, s2, s1
+; CHECK-SD-NOFP16-NEXT:    fmul s2, s3, s4
 ; CHECK-SD-NOFP16-NEXT:    fmul s1, s1, s2
-; CHECK-SD-NOFP16-NEXT:    fcvt h1, s1
-; CHECK-SD-NOFP16-NEXT:    fcvt s1, h1
 ; CHECK-SD-NOFP16-NEXT:    fmul s0, s1, s0
 ; CHECK-SD-NOFP16-NEXT:    fcvt h0, s0
 ; CHECK-SD-NOFP16-NEXT:    ret
@@ -131,8 +105,7 @@ define half @mul_H(<8 x half> %bin.rdx)  {
 ; CHECK-GI-NOFP16-NEXT:    fmul v0.4s, v1.4s, v0.4s
 ; CHECK-GI-NOFP16-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NOFP16-NEXT:    fmul v0.2s, v0.2s, v1.2s
-; CHECK-GI-NOFP16-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NOFP16-NEXT:    fmul s0, s0, s1
+; CHECK-GI-NOFP16-NEXT:    fmul s0, s0, v0.s[1]
 ; CHECK-GI-NOFP16-NEXT:    fcvt h0, s0
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
@@ -140,12 +113,10 @@ define half @mul_H(<8 x half> %bin.rdx)  {
 ; CHECK-GI-FP16:       // %bb.0:
 ; CHECK-GI-FP16-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-FP16-NEXT:    fmul v0.4h, v0.4h, v1.4h
-; CHECK-GI-FP16-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-FP16-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-FP16-NEXT:    mov h3, v0.h[3]
-; CHECK-GI-FP16-NEXT:    fmul h0, h0, h1
-; CHECK-GI-FP16-NEXT:    fmul h1, h2, h3
-; CHECK-GI-FP16-NEXT:    fmul h0, h0, h1
+; CHECK-GI-FP16-NEXT:    mov h1, v0.h[3]
+; CHECK-GI-FP16-NEXT:    fmul h2, h0, v0.h[1]
+; CHECK-GI-FP16-NEXT:    fmul h0, h1, v0.h[2]
+; CHECK-GI-FP16-NEXT:    fmul h0, h2, h0
 ; CHECK-GI-FP16-NEXT:    ret
   %r = call fast half @llvm.vector.reduce.fmul.f16.v8f16(half 1.0, <8 x half> %bin.rdx)
   ret half %r
@@ -163,8 +134,7 @@ define float @mul_S(<4 x float> %bin.rdx)  {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    fmul v0.2s, v0.2s, v1.2s
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NEXT:    fmul s0, s0, s1
+; CHECK-GI-NEXT:    fmul s0, s0, v0.s[1]
 ; CHECK-GI-NEXT:    ret
   %r = call fast float @llvm.vector.reduce.fmul.f32.v4f32(float 1.0, <4 x float> %bin.rdx)
   ret float %r
@@ -191,38 +161,26 @@ define half @mul_2H(<16 x half> %bin.rdx)  {
 ; CHECK-SD-NOFP16-NEXT:    fcvtn v1.4h, v2.4s
 ; CHECK-SD-NOFP16-NEXT:    fcvtn2 v1.8h, v0.4s
 ; CHECK-SD-NOFP16-NEXT:    mov h0, v1.h[1]
-; CHECK-SD-NOFP16-NEXT:    fcvt s2, h1
-; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-SD-NOFP16-NEXT:    fmul s0, s2, s0
 ; CHECK-SD-NOFP16-NEXT:    mov h2, v1.h[2]
-; CHECK-SD-NOFP16-NEXT:    fcvt h0, s0
-; CHECK-SD-NOFP16-NEXT:    fcvt s2, h2
-; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-SD-NOFP16-NEXT:    fmul s0, s0, s2
-; CHECK-SD-NOFP16-NEXT:    mov h2, v1.h[3]
-; CHECK-SD-NOFP16-NEXT:    fcvt h0, s0
-; CHECK-SD-NOFP16-NEXT:    fcvt s2, h2
-; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-SD-NOFP16-NEXT:    fmul s0, s0, s2
-; CHECK-SD-NOFP16-NEXT:    mov h2, v1.h[4]
-; CHECK-SD-NOFP16-NEXT:    fcvt h0, s0
-; CHECK-SD-NOFP16-NEXT:    fcvt s2, h2
-; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-SD-NOFP16-NEXT:    fmul s0, s0, s2
-; CHECK-SD-NOFP16-NEXT:    mov h2, v1.h[5]
-; CHECK-SD-NOFP16-NEXT:    fcvt h0, s0
-; CHECK-SD-NOFP16-NEXT:    fcvt s2, h2
-; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-SD-NOFP16-NEXT:    fmul s0, s0, s2
-; CHECK-SD-NOFP16-NEXT:    mov h2, v1.h[6]
+; CHECK-SD-NOFP16-NEXT:    mov h3, v1.h[3]
+; CHECK-SD-NOFP16-NEXT:    mov h4, v1.h[4]
+; CHECK-SD-NOFP16-NEXT:    mov h5, v1.h[5]
+; CHECK-SD-NOFP16-NEXT:    fcvt s6, h1
+; CHECK-SD-NOFP16-NEXT:    mov h7, v1.h[6]
 ; CHECK-SD-NOFP16-NEXT:    mov h1, v1.h[7]
-; CHECK-SD-NOFP16-NEXT:    fcvt h0, s0
+; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-SD-NOFP16-NEXT:    fcvt s2, h2
+; CHECK-SD-NOFP16-NEXT:    fcvt s3, h3
+; CHECK-SD-NOFP16-NEXT:    fcvt s4, h4
+; CHECK-SD-NOFP16-NEXT:    fcvt s5, h5
 ; CHECK-SD-NOFP16-NEXT:    fcvt s1, h1
-; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
+; CHECK-SD-NOFP16-NEXT:    fmul s0, s6, s0
+; CHECK-SD-NOFP16-NEXT:    fmul s2, s2, s3
+; CHECK-SD-NOFP16-NEXT:    fmul s3, s4, s5
+; CHECK-SD-NOFP16-NEXT:    fcvt s4, h7
 ; CHECK-SD-NOFP16-NEXT:    fmul s0, s0, s2
-; CHECK-SD-NOFP16-NEXT:    fcvt h0, s0
-; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
+; CHECK-SD-NOFP16-NEXT:    fmul s2, s3, s4
+; CHECK-SD-NOFP16-NEXT:    fmul s0, s0, s2
 ; CHECK-SD-NOFP16-NEXT:    fmul s0, s0, s1
 ; CHECK-SD-NOFP16-NEXT:    fcvt h0, s0
 ; CHECK-SD-NOFP16-NEXT:    ret
@@ -248,8 +206,7 @@ define half @mul_2H(<16 x half> %bin.rdx)  {
 ; CHECK-GI-NOFP16-NEXT:    fmul v0.4s, v0.4s, v1.4s
 ; CHECK-GI-NOFP16-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NOFP16-NEXT:    fmul v0.2s, v0.2s, v1.2s
-; CHECK-GI-NOFP16-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NOFP16-NEXT:    fmul s0, s0, s1
+; CHECK-GI-NOFP16-NEXT:    fmul s0, s0, v0.s[1]
 ; CHECK-GI-NOFP16-NEXT:    fcvt h0, s0
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
@@ -258,12 +215,10 @@ define half @mul_2H(<16 x half> %bin.rdx)  {
 ; CHECK-GI-FP16-NEXT:    fmul v0.8h, v0.8h, v1.8h
 ; CHECK-GI-FP16-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-FP16-NEXT:    fmul v0.4h, v0.4h, v1.4h
-; CHECK-GI-FP16-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-FP16-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-FP16-NEXT:    mov h3, v0.h[3]
-; CHECK-GI-FP16-NEXT:    fmul h0, h0, h1
-; CHECK-GI-FP16-NEXT:    fmul h1, h2, h3
-; CHECK-GI-FP16-NEXT:    fmul h0, h0, h1
+; CHECK-GI-FP16-NEXT:    mov h1, v0.h[3]
+; CHECK-GI-FP16-NEXT:    fmul h2, h0, v0.h[1]
+; CHECK-GI-FP16-NEXT:    fmul h0, h1, v0.h[2]
+; CHECK-GI-FP16-NEXT:    fmul h0, h2, h0
 ; CHECK-GI-FP16-NEXT:    ret
   %r = call fast half @llvm.vector.reduce.fmul.f16.v16f16(half 1.0, <16 x half> %bin.rdx)
   ret half %r
@@ -283,8 +238,7 @@ define float @mul_2S(<8 x float> %bin.rdx)  {
 ; CHECK-GI-NEXT:    fmul v0.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    fmul v0.2s, v0.2s, v1.2s
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NEXT:    fmul s0, s0, s1
+; CHECK-GI-NEXT:    fmul s0, s0, v0.s[1]
 ; CHECK-GI-NEXT:    ret
   %r = call fast float @llvm.vector.reduce.fmul.f32.v8f32(float 1.0, <8 x float> %bin.rdx)
   ret float %r
@@ -317,9 +271,8 @@ define float @mul_S_init_42(<4 x float> %bin.rdx)  {
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    mov w8, #1109917696 // =0x42280000
 ; CHECK-GI-NEXT:    fmul v0.2s, v0.2s, v1.2s
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    fmul s0, s0, v0.s[1]
 ; CHECK-GI-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NEXT:    ret
   %r = call fast float @llvm.vector.reduce.fmul.f32.v4f32(float 42.0, <4 x float> %bin.rdx)
@@ -339,38 +292,26 @@ define half @fmul_reduct_reassoc_v8f16(<8 x half> %a, <8 x half> %b) {
 ; CHECK-SD-NOFP16-NEXT:    fcvtn v1.4h, v2.4s
 ; CHECK-SD-NOFP16-NEXT:    fcvtn2 v1.8h, v0.4s
 ; CHECK-SD-NOFP16-NEXT:    mov h0, v1.h[1]
-; CHECK-SD-NOFP16-NEXT:    fcvt s2, h1
-; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-SD-NOFP16-NEXT:    fmul s0, s2, s0
 ; CHECK-SD-NOFP16-NEXT:    mov h2, v1.h[2]
-; CHECK-SD-NOFP16-NEXT:    fcvt h0, s0
-; CHECK-SD-NOFP16-NEXT:    fcvt s2, h2
-; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-SD-NOFP16-NEXT:    fmul s0, s0, s2
-; CHECK-SD-NOFP16-NEXT:    mov h2, v1.h[3]
-; CHECK-SD-NOFP16-NEXT:    fcvt h0, s0
-; CHECK-SD-NOFP16-NEXT:    fcvt s2, h2
-; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-SD-NOFP16-NEXT:    fmul s0, s0, s2
-; CHECK-SD-NOFP16-NEXT:    mov h2, v1.h[4]
-; CHECK-SD-NOFP16-NEXT:    fcvt h0, s0
-; CHECK-SD-NOFP16-NEXT:    fcvt s2, h2
-; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-SD-NOFP16-NEXT:    fmul s0, s0, s2
-; CHECK-SD-NOFP16-NEXT:    mov h2, v1.h[5]
-; CHECK-SD-NOFP16-NEXT:    fcvt h0, s0
-; CHECK-SD-NOFP16-NEXT:    fcvt s2, h2
-; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-SD-NOFP16-NEXT:    fmul s0, s0, s2
-; CHECK-SD-NOFP16-NEXT:    mov h2, v1.h[6]
+; CHECK-SD-NOFP16-NEXT:    mov h3, v1.h[3]
+; CHECK-SD-NOFP16-NEXT:    mov h4, v1.h[4]
+; CHECK-SD-NOFP16-NEXT:    mov h5, v1.h[5]
+; CHECK-SD-NOFP16-NEXT:    fcvt s6, h1
+; CHECK-SD-NOFP16-NEXT:    mov h7, v1.h[6]
 ; CHECK-SD-NOFP16-NEXT:    mov h1, v1.h[7]
-; CHECK-SD-NOFP16-NEXT:    fcvt h0, s0
+; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-SD-NOFP16-NEXT:    fcvt s2, h2
+; CHECK-SD-NOFP16-NEXT:    fcvt s3, h3
+; CHECK-SD-NOFP16-NEXT:    fcvt s4, h4
+; CHECK-SD-NOFP16-NEXT:    fcvt s5, h5
 ; CHECK-SD-NOFP16-NEXT:    fcvt s1, h1
-; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
+; CHECK-SD-NOFP16-NEXT:    fmul s0, s6, s0
+; CHECK-SD-NOFP16-NEXT:    fmul s2, s2, s3
+; CHECK-SD-NOFP16-NEXT:    fmul s3, s4, s5
+; CHECK-SD-NOFP16-NEXT:    fcvt s4, h7
 ; CHECK-SD-NOFP16-NEXT:    fmul s0, s0, s2
-; CHECK-SD-NOFP16-NEXT:    fcvt h0, s0
-; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
+; CHECK-SD-NOFP16-NEXT:    fmul s2, s3, s4
+; CHECK-SD-NOFP16-NEXT:    fmul s0, s0, s2
 ; CHECK-SD-NOFP16-NEXT:    fmul s0, s0, s1
 ; CHECK-SD-NOFP16-NEXT:    fcvt h0, s0
 ; CHECK-SD-NOFP16-NEXT:    ret
@@ -397,10 +338,8 @@ define half @fmul_reduct_reassoc_v8f16(<8 x half> %a, <8 x half> %b) {
 ; CHECK-GI-NOFP16-NEXT:    mov d3, v1.d[1]
 ; CHECK-GI-NOFP16-NEXT:    fmul v0.2s, v0.2s, v2.2s
 ; CHECK-GI-NOFP16-NEXT:    fmul v1.2s, v1.2s, v3.2s
-; CHECK-GI-NOFP16-NEXT:    mov s2, v0.s[1]
-; CHECK-GI-NOFP16-NEXT:    mov s3, v1.s[1]
-; CHECK-GI-NOFP16-NEXT:    fmul s0, s0, s2
-; CHECK-GI-NOFP16-NEXT:    fmul s1, s1, s3
+; CHECK-GI-NOFP16-NEXT:    fmul s0, s0, v0.s[1]
+; CHECK-GI-NOFP16-NEXT:    fmul s1, s1, v1.s[1]
 ; CHECK-GI-NOFP16-NEXT:    fcvt h0, s0
 ; CHECK-GI-NOFP16-NEXT:    fcvt h1, s1
 ; CHECK-GI-NOFP16-NEXT:    fcvt s0, h0
@@ -415,18 +354,14 @@ define half @fmul_reduct_reassoc_v8f16(<8 x half> %a, <8 x half> %b) {
 ; CHECK-GI-FP16-NEXT:    mov d3, v1.d[1]
 ; CHECK-GI-FP16-NEXT:    fmul v0.4h, v0.4h, v2.4h
 ; CHECK-GI-FP16-NEXT:    fmul v1.4h, v1.4h, v3.4h
-; CHECK-GI-FP16-NEXT:    mov h2, v0.h[1]
-; CHECK-GI-FP16-NEXT:    mov h3, v0.h[2]
-; CHECK-GI-FP16-NEXT:    mov h4, v0.h[3]
-; CHECK-GI-FP16-NEXT:    mov h5, v1.h[1]
-; CHECK-GI-FP16-NEXT:    mov h6, v1.h[2]
-; CHECK-GI-FP16-NEXT:    mov h7, v1.h[3]
-; CHECK-GI-FP16-NEXT:    fmul h0, h0, h2
-; CHECK-GI-FP16-NEXT:    fmul h2, h3, h4
-; CHECK-GI-FP16-NEXT:    fmul h1, h1, h5
-; CHECK-GI-FP16-NEXT:    fmul h3, h6, h7
-; CHECK-GI-FP16-NEXT:    fmul h0, h0, h2
-; CHECK-GI-FP16-NEXT:    fmul h1, h1, h3
+; CHECK-GI-FP16-NEXT:    mov h2, v0.h[3]
+; CHECK-GI-FP16-NEXT:    mov h3, v1.h[3]
+; CHECK-GI-FP16-NEXT:    fmul h4, h0, v0.h[1]
+; CHECK-GI-FP16-NEXT:    fmul h0, h2, v0.h[2]
+; CHECK-GI-FP16-NEXT:    fmul h2, h1, v1.h[1]
+; CHECK-GI-FP16-NEXT:    fmul h1, h3, v1.h[2]
+; CHECK-GI-FP16-NEXT:    fmul h0, h4, h0
+; CHECK-GI-FP16-NEXT:    fmul h1, h2, h1
 ; CHECK-GI-FP16-NEXT:    fmul h0, h0, h1
 ; CHECK-GI-FP16-NEXT:    ret
   %r1 = call fast half @llvm.vector.reduce.fmul.f16.v8f16(half 1.0, <8 x half> %a)
@@ -454,10 +389,8 @@ define float @fmul_reduct_reassoc_v8f32(<8 x float> %a, <8 x float> %b) {
 ; CHECK-GI-NEXT:    mov d3, v1.d[1]
 ; CHECK-GI-NEXT:    fmul v0.2s, v0.2s, v2.2s
 ; CHECK-GI-NEXT:    fmul v1.2s, v1.2s, v3.2s
-; CHECK-GI-NEXT:    mov s2, v0.s[1]
-; CHECK-GI-NEXT:    mov s3, v1.s[1]
-; CHECK-GI-NEXT:    fmul s0, s0, s2
-; CHECK-GI-NEXT:    fmul s1, s1, s3
+; CHECK-GI-NEXT:    fmul s0, s0, v0.s[1]
+; CHECK-GI-NEXT:    fmul s1, s1, v1.s[1]
 ; CHECK-GI-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NEXT:    ret
   %r1 = call fast float @llvm.vector.reduce.fmul.f32.v8f32(float 1.0, <8 x float> %a)
@@ -481,10 +414,8 @@ define float @fmul_reduct_reassoc_v4f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-GI-NEXT:    mov d3, v1.d[1]
 ; CHECK-GI-NEXT:    fmul v0.2s, v0.2s, v2.2s
 ; CHECK-GI-NEXT:    fmul v1.2s, v1.2s, v3.2s
-; CHECK-GI-NEXT:    mov s2, v0.s[1]
-; CHECK-GI-NEXT:    mov s3, v1.s[1]
-; CHECK-GI-NEXT:    fmul s0, s0, s2
-; CHECK-GI-NEXT:    fmul s1, s1, s3
+; CHECK-GI-NEXT:    fmul s0, s0, v0.s[1]
+; CHECK-GI-NEXT:    fmul s1, s1, v1.s[1]
 ; CHECK-GI-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NEXT:    ret
   %r1 = call fast float @llvm.vector.reduce.fmul.f32.v4f32(float 1.0, <4 x float> %a)
@@ -511,12 +442,10 @@ define float @fmul_reduct_reassoc_v4f32_init(float %i, <4 x float> %a, <4 x floa
 ; CHECK-GI-NEXT:    mov d3, v1.d[1]
 ; CHECK-GI-NEXT:    fmul v1.2s, v1.2s, v3.2s
 ; CHECK-GI-NEXT:    mov d3, v2.d[1]
-; CHECK-GI-NEXT:    mov s4, v1.s[1]
+; CHECK-GI-NEXT:    fmul s1, s1, v1.s[1]
 ; CHECK-GI-NEXT:    fmul v2.2s, v2.2s, v3.2s
-; CHECK-GI-NEXT:    fmul s1, s1, s4
-; CHECK-GI-NEXT:    mov s3, v2.s[1]
 ; CHECK-GI-NEXT:    fmul s0, s0, s1
-; CHECK-GI-NEXT:    fmul s1, s2, s3
+; CHECK-GI-NEXT:    fmul s1, s2, v2.s[1]
 ; CHECK-GI-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NEXT:    ret
   %r1 = call fast float @llvm.vector.reduce.fmul.f32.v4f32(float %i, <4 x float> %a)
@@ -542,10 +471,8 @@ define float @fmul_reduct_reassoc_v4v8f32(<4 x float> %a, <8 x float> %b) {
 ; CHECK-GI-NEXT:    mov d3, v1.d[1]
 ; CHECK-GI-NEXT:    fmul v0.2s, v0.2s, v2.2s
 ; CHECK-GI-NEXT:    fmul v1.2s, v1.2s, v3.2s
-; CHECK-GI-NEXT:    mov s2, v0.s[1]
-; CHECK-GI-NEXT:    mov s3, v1.s[1]
-; CHECK-GI-NEXT:    fmul s0, s0, s2
-; CHECK-GI-NEXT:    fmul s1, s1, s3
+; CHECK-GI-NEXT:    fmul s0, s0, v0.s[1]
+; CHECK-GI-NEXT:    fmul s1, s1, v1.s[1]
 ; CHECK-GI-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NEXT:    ret
   %r1 = call fast float @llvm.vector.reduce.fmul.f32.v4f32(float 1.0, <4 x float> %a)
@@ -596,10 +523,8 @@ define float @fmul_reduct_reassoc_v4f32_extrause(<4 x float> %a, <4 x float> %b)
 ; CHECK-GI-NEXT:    mov d3, v1.d[1]
 ; CHECK-GI-NEXT:    fmul v0.2s, v0.2s, v2.2s
 ; CHECK-GI-NEXT:    fmul v1.2s, v1.2s, v3.2s
-; CHECK-GI-NEXT:    mov s2, v0.s[1]
-; CHECK-GI-NEXT:    mov s3, v1.s[1]
-; CHECK-GI-NEXT:    fmul s0, s0, s2
-; CHECK-GI-NEXT:    fmul s1, s1, s3
+; CHECK-GI-NEXT:    fmul s0, s0, v0.s[1]
+; CHECK-GI-NEXT:    fmul s1, s1, v1.s[1]
 ; CHECK-GI-NEXT:    fmul s1, s0, s1
 ; CHECK-GI-NEXT:    fmul s0, s1, s0
 ; CHECK-GI-NEXT:    ret

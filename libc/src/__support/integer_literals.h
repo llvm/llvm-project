@@ -13,12 +13,13 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_INTEGER_LITERALS_H
 #define LLVM_LIBC_SRC___SUPPORT_INTEGER_LITERALS_H
 
-#include "src/__support/CPP/limits.h"        // CHAR_BIT
+#include "src/__support/CPP/limits.h" // CHAR_BIT
+#include "src/__support/ctype_utils.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
-#include "src/__support/uint128.h"           // UInt128
-#include <stddef.h>                          // size_t
-#include <stdint.h>                          // uintxx_t
+#include "src/__support/uint128.h" // UInt128
+#include <stddef.h>                // size_t
+#include <stdint.h>                // uintxx_t
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -46,7 +47,7 @@ LIBC_INLINE constexpr T accumulate(int base, const uint8_t *digits,
                                    size_t size) {
   T value{};
   for (; size; ++digits, --size) {
-    value *= base;
+    value *= static_cast<unsigned int>(base);
     value += *digits;
   }
   return value;
@@ -75,26 +76,13 @@ template <typename T, int base> struct DigitBuffer {
       push(*str);
   }
 
-  // Returns the digit for a particular character.
-  // Returns INVALID_DIGIT if the character is invalid.
-  LIBC_INLINE static constexpr uint8_t get_digit_value(const char c) {
-    const auto to_lower = [](char c) { return c | 32; };
-    const auto is_digit = [](char c) { return c >= '0' && c <= '9'; };
-    const auto is_alpha = [](char c) {
-      return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z');
-    };
-    if (is_digit(c))
-      return static_cast<uint8_t>(c - '0');
-    if (base > 10 && is_alpha(c))
-      return static_cast<uint8_t>(to_lower(c) - 'a' + 10);
-    return INVALID_DIGIT;
-  }
-
   // Adds a single character to this buffer.
   LIBC_INLINE constexpr void push(char c) {
     if (c == '\'')
       return; // ' is valid but not taken into account.
-    const uint8_t value = get_digit_value(c);
+    const int b36_val = internal::b36_char_to_int(c);
+    const uint8_t value = static_cast<uint8_t>(
+        b36_val < base && (b36_val != 0 || c == '0') ? b36_val : INVALID_DIGIT);
     if (value == INVALID_DIGIT || size >= MAX_DIGITS) {
       // During constant evaluation `__builtin_unreachable` will halt the
       // compiler as it is not executable. This is preferable over `assert` that

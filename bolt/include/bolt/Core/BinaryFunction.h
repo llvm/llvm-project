@@ -142,8 +142,8 @@ public:
   /// Types of profile the function can use. Could be a combination.
   enum {
     PF_NONE = 0,     /// No profile.
-    PF_LBR = 1,      /// Profile is based on last branch records.
-    PF_SAMPLE = 2,   /// Non-LBR sample-based profile.
+    PF_BRANCH = 1,   /// Profile is based on branches or branch stacks.
+    PF_BASIC = 2,    /// Non-branch IP sample-based profile.
     PF_MEMEVENT = 4, /// Profile has mem events.
   };
 
@@ -343,9 +343,6 @@ private:
   /// True if the function uses ORC format for stack unwinding.
   bool HasORC{false};
 
-  /// True if the original entry point was patched.
-  bool IsPatched{false};
-
   /// True if the function contains explicit or implicit indirect branch to its
   /// split fragments, e.g., split jump table, landing pad in split fragment
   bool HasIndirectTargetToSplitFragment{false};
@@ -359,6 +356,17 @@ private:
 
   /// True if another function body was merged into this one.
   bool HasFunctionsFoldedInto{false};
+
+  /// True if the function is used for patching code at a fixed address.
+  bool IsPatch{false};
+
+  /// True if the original entry point of the function may get called, but the
+  /// original body cannot be executed and needs to be patched with code that
+  /// redirects execution to the new function body.
+  bool NeedsPatch{false};
+
+  /// True if the function should not have an associated symbol table entry.
+  bool IsAnonymous{false};
 
   /// Name for the section this function code should reside in.
   std::string CodeSectionName;
@@ -384,7 +392,7 @@ private:
   float ProfileMatchRatio{0.0f};
 
   /// Raw branch count for this function in the profile.
-  uint64_t RawBranchCount{0};
+  uint64_t RawSampleCount{0};
 
   /// Dynamically executed function bytes, used for density computation.
   uint64_t SampleCountInBytes{0};
@@ -427,6 +435,9 @@ private:
 
   /// Function order for streaming into the destination binary.
   uint32_t Index{-1U};
+
+  /// Function is referenced by a non-control flow instruction.
+  bool HasAddressTaken{false};
 
   /// Get basic block index assuming it belongs to this function.
   unsigned getIndex(const BinaryBasicBlock *BB) const {
@@ -793,6 +804,19 @@ public:
     return iterator_range<const_cfi_iterator>(cie_begin(), cie_end());
   }
 
+  /// Iterate over instructions (only if CFG is unavailable or not built yet).
+  iterator_range<InstrMapType::iterator> instrs() {
+    assert(!hasCFG() && "Iterate over basic blocks instead");
+    return make_range(Instructions.begin(), Instructions.end());
+  }
+  iterator_range<InstrMapType::const_iterator> instrs() const {
+    assert(!hasCFG() && "Iterate over basic blocks instead");
+    return make_range(Instructions.begin(), Instructions.end());
+  }
+
+  /// Returns whether there are any labels at Offset.
+  bool hasLabelAt(unsigned Offset) const { return Labels.count(Offset) != 0; }
+
   /// Iterate over all jump tables associated with this function.
   iterator_range<std::map<uint64_t, JumpTable *>::const_iterator>
   jumpTables() const {
@@ -822,6 +846,14 @@ public:
     return nullptr;
   }
 
+  /// Return true if function is referenced in a non-control flow instruction.
+  /// This flag is set when the code and relocation analyses are being
+  /// performed, which occurs when safe ICF (Identical Code Folding) is enabled.
+  bool hasAddressTaken() const { return HasAddressTaken; }
+
+  /// Set whether function is referenced in a non-control flow instruction.
+  void setHasAddressTaken(bool AddressTaken) { HasAddressTaken = AddressTaken; }
+
   /// Returns the raw binary encoding of this function.
   ErrorOr<ArrayRef<uint8_t>> getData() const;
 
@@ -848,7 +880,7 @@ public:
   /// Returns if BinaryDominatorTree has been constructed for this function.
   bool hasDomTree() const { return BDT != nullptr; }
 
-  BinaryDominatorTree &getDomTree() { return *BDT.get(); }
+  BinaryDominatorTree &getDomTree() { return *BDT; }
 
   /// Constructs DomTree for this function.
   void constructDomTree();
@@ -856,7 +888,7 @@ public:
   /// Returns if loop detection has been run for this function.
   bool hasLoopInfo() const { return BLI != nullptr; }
 
-  const BinaryLoopInfo &getLoopInfo() { return *BLI.get(); }
+  const BinaryLoopInfo &getLoopInfo() { return *BLI; }
 
   bool isLoopFree() {
     if (!hasLoopInfo())
@@ -1160,6 +1192,11 @@ public:
     return getSecondaryEntryPointSymbol(BB.getLabel());
   }
 
+  /// Remove a label from the secondary entry point map.
+  void removeSymbolFromSecondaryEntryPointMap(const MCSymbol *Label) {
+    SecondaryEntryPoints.erase(Label);
+  }
+
   /// Return true if the basic block is an entry point into the function
   /// (either primary or secondary).
   bool isEntryPoint(const BinaryBasicBlock &BB) const {
@@ -1252,7 +1289,7 @@ public:
   /// Register relocation type \p RelType at a given \p Address in the function
   /// against \p Symbol.
   /// Assert if the \p Address is not inside this function.
-  void addRelocation(uint64_t Address, MCSymbol *Symbol, uint64_t RelType,
+  void addRelocation(uint64_t Address, MCSymbol *Symbol, uint32_t RelType,
                      uint64_t Addend, uint64_t Value);
 
   /// Return the name of the section this function originated from.
@@ -1350,6 +1387,15 @@ public:
   /// Return true if other functions were folded into this one.
   bool hasFunctionsFoldedInto() const { return HasFunctionsFoldedInto; }
 
+  /// Return true if this function is used for patching existing code.
+  bool isPatch() const { return IsPatch; }
+
+  /// Return true if the function requires a patch.
+  bool needsPatch() const { return NeedsPatch; }
+
+  /// Return true if the function should not have associated symbol table entry.
+  bool isAnonymous() const { return IsAnonymous; }
+
   /// If this function was folded, return the function it was folded into.
   BinaryFunction *getFoldedIntoFunction() const { return FoldedIntoFunction; }
 
@@ -1364,9 +1410,6 @@ public:
 
   /// Return true if the function uses ORC format for stack unwinding.
   bool hasORC() const { return HasORC; }
-
-  /// Return true if the original entry point was patched.
-  bool isPatched() const { return IsPatched; }
 
   const JumpTable *getJumpTable(const MCInst &Inst) const {
     const uint64_t Address = BC.MIB->getJumpTable(Inst);
@@ -1718,8 +1761,6 @@ public:
   /// Mark function that should not be emitted.
   void setIgnored();
 
-  void setIsPatched(bool V) { IsPatched = V; }
-
   void setHasIndirectTargetToSplitFragment(bool V) {
     HasIndirectTargetToSplitFragment = V;
   }
@@ -1730,6 +1771,21 @@ public:
 
   /// Indicate that another function body was merged with this function.
   void setHasFunctionsFoldedInto() { HasFunctionsFoldedInto = true; }
+
+  /// Indicate that this function is a patch.
+  void setIsPatch(bool V) {
+    assert(isInjected() && "Only injected functions can be used as patches");
+    IsPatch = V;
+  }
+
+  /// Mark the function for patching.
+  void setNeedsPatch(bool V) { NeedsPatch = V; }
+
+  /// Indicate if the function should have a name in the symbol table.
+  void setAnonymous(bool V) {
+    assert(isInjected() && "Only injected functions could be anonymous");
+    IsAnonymous = V;
+  }
 
   void setHasSDTMarker(bool V) { HasSDTMarker = V; }
 
@@ -1850,11 +1906,11 @@ public:
 
   /// Return the raw profile information about the number of branch
   /// executions corresponding to this function.
-  uint64_t getRawBranchCount() const { return RawBranchCount; }
+  uint64_t getRawSampleCount() const { return RawSampleCount; }
 
   /// Set the profile data about the number of branch executions corresponding
   /// to this function.
-  void setRawBranchCount(uint64_t Count) { RawBranchCount = Count; }
+  void setRawSampleCount(uint64_t Count) { RawSampleCount = Count; }
 
   /// Return the number of dynamically executed bytes, from raw perf data.
   uint64_t getSampleCountInBytes() const { return SampleCountInBytes; }
@@ -2049,6 +2105,11 @@ public:
     return Islands ? Islands->getAlignment() : 1;
   }
 
+  /// If there is a constant island in the range [StartOffset, EndOffset),
+  /// return its address.
+  std::optional<uint64_t> getIslandInRange(uint64_t StartOffset,
+                                           uint64_t EndOffset) const;
+
   uint64_t
   estimateConstantIslandSize(const BinaryFunction *OnBehalfOf = nullptr) const {
     if (!Islands)
@@ -2094,6 +2155,10 @@ public:
     return Islands && !Islands->DataOffsets.empty();
   }
 
+  bool isStartOfConstantIsland(uint64_t Offset) const {
+    return hasConstantIsland() && Islands->DataOffsets.count(Offset);
+  }
+
   /// Return true iff the symbol could be seen inside this function otherwise
   /// it is probably another function.
   bool isSymbolValidInScope(const SymbolRef &Symbol, uint64_t SymbolSize) const;
@@ -2134,6 +2199,9 @@ public:
   // Check for linker veneers, which lack relocations and need manual
   // adjustments.
   void handleAArch64IndirectCall(MCInst &Instruction, const uint64_t Offset);
+
+  /// Analyze instruction to identify a function reference.
+  void analyzeInstructionForFuncReference(const MCInst &Inst);
 
   /// Scan function for references to other functions. In relocation mode,
   /// add relocations for external references. In non-relocation mode, detect
@@ -2280,6 +2348,7 @@ public:
       releaseCFG();
       CurrentState = State::Emitted;
     }
+    clearList(Relocations);
   }
 
   /// Process LSDA information for the function.

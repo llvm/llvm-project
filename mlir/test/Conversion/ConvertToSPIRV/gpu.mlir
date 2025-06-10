@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-to-spirv -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -test-convert-to-spirv -split-input-file %s | FileCheck %s
 
 module attributes {
   gpu.container_module,

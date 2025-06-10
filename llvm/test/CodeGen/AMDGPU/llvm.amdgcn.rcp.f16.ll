@@ -1,10 +1,14 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global,+real-true16 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX11-TRUE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global,-real-true16 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX11-FAKE16 %s
 
 declare half @llvm.amdgcn.rcp.f16(half %a)
 
 ; GCN-LABEL: {{^}}rcp_f16
 ; GCN: buffer_load_ushort v[[A_F16:[0-9]+]]
 ; VI:  v_rcp_f16_e32 v[[R_F16:[0-9]+]], v[[A_F16]]
+; GFX11-TRUE16:  v_rcp_f16_e32 v[[A_F16:[0-9]+]].l, v[[A_F16]].l
+; GFX11-FAKE16:  v_rcp_f16_e32 v[[A_F16:[0-9]+]], v[[A_F16]]
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @rcp_f16(

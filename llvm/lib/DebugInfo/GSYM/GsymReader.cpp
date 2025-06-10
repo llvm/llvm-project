@@ -334,12 +334,50 @@ GsymReader::getFunctionInfoAtIndex(uint64_t Idx) const {
     return ExpectedData.takeError();
 }
 
-llvm::Expected<LookupResult> GsymReader::lookup(uint64_t Addr) const {
+llvm::Expected<LookupResult>
+GsymReader::lookup(uint64_t Addr,
+                   std::optional<DataExtractor> *MergedFunctionsData) const {
   uint64_t FuncStartAddr = 0;
   if (auto ExpectedData = getFunctionInfoDataForAddress(Addr, FuncStartAddr))
-    return FunctionInfo::lookup(*ExpectedData, *this, FuncStartAddr, Addr);
+    return FunctionInfo::lookup(*ExpectedData, *this, FuncStartAddr, Addr,
+                                MergedFunctionsData);
   else
     return ExpectedData.takeError();
+}
+
+llvm::Expected<std::vector<LookupResult>>
+GsymReader::lookupAll(uint64_t Addr) const {
+  std::vector<LookupResult> Results;
+  std::optional<DataExtractor> MergedFunctionsData;
+
+  // First perform a lookup to get the primary function info result.
+  auto MainResult = lookup(Addr, &MergedFunctionsData);
+  if (!MainResult)
+    return MainResult.takeError();
+
+  // Add the main result as the first entry.
+  Results.push_back(std::move(*MainResult));
+
+  // Now process any merged functions data that was found during the lookup.
+  if (MergedFunctionsData) {
+    // Get data extractors for each merged function.
+    auto ExpectedMergedFuncExtractors =
+        MergedFunctionsInfo::getFuncsDataExtractors(*MergedFunctionsData);
+    if (!ExpectedMergedFuncExtractors)
+      return ExpectedMergedFuncExtractors.takeError();
+
+    // Process each merged function data.
+    for (DataExtractor &MergedData : *ExpectedMergedFuncExtractors) {
+      if (auto FI = FunctionInfo::lookup(MergedData, *this,
+                                         MainResult->FuncRange.start(), Addr)) {
+        Results.push_back(std::move(*FI));
+      } else {
+        return FI.takeError();
+      }
+    }
+  }
+
+  return Results;
 }
 
 void GsymReader::dump(raw_ostream &OS) {
@@ -406,13 +444,13 @@ void GsymReader::dump(raw_ostream &OS, const FunctionInfo &FI,
   if (FI.Inline)
     dump(OS, *FI.Inline, Indent);
 
+  if (FI.CallSites)
+    dump(OS, *FI.CallSites, Indent);
+
   if (FI.MergedFunctions) {
     assert(Indent == 0 && "MergedFunctionsInfo should only exist at top level");
     dump(OS, *FI.MergedFunctions);
   }
-
-  if (FI.CallSites)
-    dump(OS, *FI.CallSites);
 }
 
 void GsymReader::dump(raw_ostream &OS, const MergedFunctionsInfo &MFI) {
@@ -454,10 +492,13 @@ void GsymReader::dump(raw_ostream &OS, const CallSiteInfo &CSI) {
   }
 }
 
-void GsymReader::dump(raw_ostream &OS, const CallSiteInfoCollection &CSIC) {
+void GsymReader::dump(raw_ostream &OS, const CallSiteInfoCollection &CSIC,
+                      uint32_t Indent) {
+  OS.indent(Indent);
   OS << "CallSites (by relative return offset):\n";
   for (const auto &CS : CSIC.CallSites) {
-    OS.indent(2);
+    OS.indent(Indent);
+    OS << "  ";
     dump(OS, CS);
     OS << "\n";
   }

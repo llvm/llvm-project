@@ -43,7 +43,7 @@ class LLVM_LIBRARY_VISIBILITY NVPTXDAGToDAGISel : public SelectionDAGISel {
   // If true, generate mul.wide from sext and mul
   bool doMulWide;
 
-  int getDivF32Level() const;
+  NVPTX::DivPrecisionLevel getDivF32Level(const SDNode *N) const;
   bool usePrecSqrtF32() const;
   bool useF32FTZ() const;
   bool allowFMA() const;
@@ -83,12 +83,12 @@ private:
   bool tryStoreParam(SDNode *N);
   bool tryFence(SDNode *N);
   void SelectAddrSpaceCast(SDNode *N);
-  bool tryTextureIntrinsic(SDNode *N);
-  bool trySurfaceIntrinsic(SDNode *N);
   bool tryBFE(SDNode *N);
+  bool tryBF16ArithToFMA(SDNode *N);
   bool tryConstantFP(SDNode *N);
   bool SelectSETP_F16X2(SDNode *N);
   bool SelectSETP_BF16X2(SDNode *N);
+  bool tryUNPACK_VECTOR(SDNode *N);
   bool tryEXTRACT_VECTOR_ELEMENT(SDNode *N);
   void SelectV2I64toI128(SDNode *N);
   void SelectI128toV2I64(SDNode *N);
@@ -97,26 +97,14 @@ private:
   void SelectCpAsyncBulkTensorPrefetchCommon(SDNode *N, bool IsIm2Col = false);
   void SelectCpAsyncBulkTensorReduceCommon(SDNode *N, unsigned RedOp,
                                            bool IsIm2Col = false);
+  void SelectTcgen05Ld(SDNode *N, bool hasOffset = false);
+  void SelectTcgen05St(SDNode *N, bool hasOffset = false);
 
   inline SDValue getI32Imm(unsigned Imm, const SDLoc &DL) {
     return CurDAG->getTargetConstant(Imm, DL, MVT::i32);
   }
 
-  // Match direct address complex pattern.
-  bool SelectDirectAddr(SDValue N, SDValue &Address);
-
-  bool SelectADDRri_imp(SDNode *OpNode, SDValue Addr, SDValue &Base,
-                        SDValue &Offset, MVT mvt);
-  bool SelectADDRri(SDNode *OpNode, SDValue Addr, SDValue &Base,
-                    SDValue &Offset);
-  bool SelectADDRri64(SDNode *OpNode, SDValue Addr, SDValue &Base,
-                      SDValue &Offset);
-  bool SelectADDRsi_imp(SDNode *OpNode, SDValue Addr, SDValue &Base,
-                        SDValue &Offset, MVT mvt);
-  bool SelectADDRsi(SDNode *OpNode, SDValue Addr, SDValue &Base,
-                    SDValue &Offset);
-  bool SelectADDRsi64(SDNode *OpNode, SDValue Addr, SDValue &Base,
-                      SDValue &Offset);
+  bool SelectADDR(SDValue Addr, SDValue &Base, SDValue &Offset);
 
   bool ChkMemSDNodeAddressSpace(SDNode *N, unsigned int spN) const;
 

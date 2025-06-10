@@ -66,7 +66,6 @@ namespace LLVM {
   }
 
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMVoidType, "llvm.void");
-DEFINE_TRIVIAL_LLVM_TYPE(LLVMPPCFP128Type, "llvm.ppc_fp128");
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMTokenType, "llvm.token");
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMLabelType, "llvm.label");
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMMetadataType, "llvm.metadata");
@@ -112,10 +111,6 @@ bool isCompatibleFloatingPointType(Type type);
 /// dialect pointers and LLVM dialect scalable vector types.
 bool isCompatibleVectorType(Type type);
 
-/// Returns the element type of any vector type compatible with the LLVM
-/// dialect.
-Type getVectorElementType(Type type);
-
 /// Returns the element count of any LLVM-compatible vector type.
 llvm::ElementCount getVectorNumElements(Type type);
 
@@ -130,14 +125,6 @@ Type getVectorType(Type elementType, unsigned numElements,
 /// Creates an LLVM dialect-compatible vector type with the given element type
 /// and length.
 Type getVectorType(Type elementType, const llvm::ElementCount &numElements);
-
-/// Creates an LLVM dialect-compatible type with the given element type and
-/// length.
-Type getFixedVectorType(Type elementType, unsigned numElements);
-
-/// Creates an LLVM dialect-compatible type with the given element type and
-/// length.
-Type getScalableVectorType(Type elementType, unsigned numElements);
 
 /// Returns the size of the given primitive LLVM dialect-compatible type
 /// (including vectors) in bits, for example, the size of i16 is 16 and

@@ -49,7 +49,7 @@
 
 ## GOT offset of the LDM TLS module ID is at 0x1002210
 # LE-NEXT: lgrl    %r2, 0x1002210
-# LE-NEXT: brcl    0,
+# LE-NEXT: jgnop
 # LE-NEXT: la      %r2, 0(%r2,%r7)
 
 ## TP offset for a is at 0x1002218

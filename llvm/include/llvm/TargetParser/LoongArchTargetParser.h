@@ -63,6 +63,9 @@ enum FeatureKind : uint32_t {
 
   // Assume div.w[u] and mod.w[u] can handle inputs that are not sign-extended.
   FK_DIV32 = 1 << 13,
+
+  // sc.q is available.
+  FK_SCQ = 1 << 14,
 };
 
 struct FeatureInfo {
@@ -82,6 +85,7 @@ struct ArchInfo {
 };
 
 bool isValidArchName(StringRef Arch);
+bool isValidFeatureName(StringRef Feature);
 bool getArchFeatures(StringRef Arch, std::vector<StringRef> &Features);
 bool isValidCPUName(StringRef TuneCPU);
 void fillValidCPUList(SmallVectorImpl<StringRef> &Values);

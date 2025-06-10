@@ -123,7 +123,7 @@ public:
 
   static elf_sxword RelocAddend64(const ELFRelocation &rel);
 
-  bool IsRela() { return (reloc.is<ELFRela *>()); }
+  bool IsRela() { return (llvm::isa<ELFRela *>(reloc)); }
 
 private:
   typedef llvm::PointerUnion<ELFRel *, ELFRela *> RelocUnion;
@@ -144,74 +144,74 @@ ELFRelocation::ELFRelocation(unsigned type) {
 }
 
 ELFRelocation::~ELFRelocation() {
-  if (reloc.is<ELFRel *>())
-    delete reloc.get<ELFRel *>();
+  if (auto *elfrel = llvm::dyn_cast<ELFRel *>(reloc))
+    delete elfrel;
   else
-    delete reloc.get<ELFRela *>();
+    delete llvm::cast<ELFRela *>(reloc);
 }
 
 bool ELFRelocation::Parse(const lldb_private::DataExtractor &data,
                           lldb::offset_t *offset) {
-  if (reloc.is<ELFRel *>())
-    return reloc.get<ELFRel *>()->Parse(data, offset);
+  if (auto *elfrel = llvm::dyn_cast<ELFRel *>(reloc))
+    return elfrel->Parse(data, offset);
   else
-    return reloc.get<ELFRela *>()->Parse(data, offset);
+    return llvm::cast<ELFRela *>(reloc)->Parse(data, offset);
 }
 
 unsigned ELFRelocation::RelocType32(const ELFRelocation &rel) {
-  if (rel.reloc.is<ELFRel *>())
-    return ELFRel::RelocType32(*rel.reloc.get<ELFRel *>());
+  if (auto *elfrel = llvm::dyn_cast<ELFRel *>(rel.reloc))
+    return ELFRel::RelocType32(*elfrel);
   else
-    return ELFRela::RelocType32(*rel.reloc.get<ELFRela *>());
+    return ELFRela::RelocType32(*llvm::cast<ELFRela *>(rel.reloc));
 }
 
 unsigned ELFRelocation::RelocType64(const ELFRelocation &rel) {
-  if (rel.reloc.is<ELFRel *>())
-    return ELFRel::RelocType64(*rel.reloc.get<ELFRel *>());
+  if (auto *elfrel = llvm::dyn_cast<ELFRel *>(rel.reloc))
+    return ELFRel::RelocType64(*elfrel);
   else
-    return ELFRela::RelocType64(*rel.reloc.get<ELFRela *>());
+    return ELFRela::RelocType64(*llvm::cast<ELFRela *>(rel.reloc));
 }
 
 unsigned ELFRelocation::RelocSymbol32(const ELFRelocation &rel) {
-  if (rel.reloc.is<ELFRel *>())
-    return ELFRel::RelocSymbol32(*rel.reloc.get<ELFRel *>());
+  if (auto *elfrel = llvm::dyn_cast<ELFRel *>(rel.reloc))
+    return ELFRel::RelocSymbol32(*elfrel);
   else
-    return ELFRela::RelocSymbol32(*rel.reloc.get<ELFRela *>());
+    return ELFRela::RelocSymbol32(*llvm::cast<ELFRela *>(rel.reloc));
 }
 
 unsigned ELFRelocation::RelocSymbol64(const ELFRelocation &rel) {
-  if (rel.reloc.is<ELFRel *>())
-    return ELFRel::RelocSymbol64(*rel.reloc.get<ELFRel *>());
+  if (auto *elfrel = llvm::dyn_cast<ELFRel *>(rel.reloc))
+    return ELFRel::RelocSymbol64(*elfrel);
   else
-    return ELFRela::RelocSymbol64(*rel.reloc.get<ELFRela *>());
+    return ELFRela::RelocSymbol64(*llvm::cast<ELFRela *>(rel.reloc));
 }
 
 elf_addr ELFRelocation::RelocOffset32(const ELFRelocation &rel) {
-  if (rel.reloc.is<ELFRel *>())
-    return rel.reloc.get<ELFRel *>()->r_offset;
+  if (auto *elfrel = llvm::dyn_cast<ELFRel *>(rel.reloc))
+    return elfrel->r_offset;
   else
-    return rel.reloc.get<ELFRela *>()->r_offset;
+    return llvm::cast<ELFRela *>(rel.reloc)->r_offset;
 }
 
 elf_addr ELFRelocation::RelocOffset64(const ELFRelocation &rel) {
-  if (rel.reloc.is<ELFRel *>())
-    return rel.reloc.get<ELFRel *>()->r_offset;
+  if (auto *elfrel = llvm::dyn_cast<ELFRel *>(rel.reloc))
+    return elfrel->r_offset;
   else
-    return rel.reloc.get<ELFRela *>()->r_offset;
+    return llvm::cast<ELFRela *>(rel.reloc)->r_offset;
 }
 
 elf_sxword ELFRelocation::RelocAddend32(const ELFRelocation &rel) {
-  if (rel.reloc.is<ELFRel *>())
+  if (llvm::isa<ELFRel *>(rel.reloc))
     return 0;
   else
-    return rel.reloc.get<ELFRela *>()->r_addend;
+    return llvm::cast<ELFRela *>(rel.reloc)->r_addend;
 }
 
 elf_sxword  ELFRelocation::RelocAddend64(const ELFRelocation &rel) {
-  if (rel.reloc.is<ELFRel *>())
+  if (llvm::isa<ELFRel *>(rel.reloc))
     return 0;
   else
-    return rel.reloc.get<ELFRela *>()->r_addend;
+    return llvm::cast<ELFRela *>(rel.reloc)->r_addend;
 }
 
 static user_id_t SegmentID(size_t PHdrIndex) {
@@ -762,8 +762,7 @@ bool ObjectFileELF::SetLoadAddress(Target &target, lldb::addr_t value,
           if (GetAddressByteSize() == 4)
             load_addr &= 0xFFFFFFFF;
 
-          if (target.GetSectionLoadList().SetSectionLoadAddress(section_sp,
-                                                                load_addr))
+          if (target.SetSectionLoadAddress(section_sp, load_addr))
             ++num_loaded_sections;
         }
       }
@@ -1654,39 +1653,9 @@ lldb::user_id_t ObjectFileELF::GetSectionIndexByName(const char *name) {
 }
 
 static SectionType GetSectionTypeFromName(llvm::StringRef Name) {
-  if (Name.consume_front(".debug_")) {
-    return llvm::StringSwitch<SectionType>(Name)
-        .Case("abbrev", eSectionTypeDWARFDebugAbbrev)
-        .Case("abbrev.dwo", eSectionTypeDWARFDebugAbbrevDwo)
-        .Case("addr", eSectionTypeDWARFDebugAddr)
-        .Case("aranges", eSectionTypeDWARFDebugAranges)
-        .Case("cu_index", eSectionTypeDWARFDebugCuIndex)
-        .Case("frame", eSectionTypeDWARFDebugFrame)
-        .Case("info", eSectionTypeDWARFDebugInfo)
-        .Case("info.dwo", eSectionTypeDWARFDebugInfoDwo)
-        .Cases("line", "line.dwo", eSectionTypeDWARFDebugLine)
-        .Cases("line_str", "line_str.dwo", eSectionTypeDWARFDebugLineStr)
-        .Case("loc", eSectionTypeDWARFDebugLoc)
-        .Case("loc.dwo", eSectionTypeDWARFDebugLocDwo)
-        .Case("loclists", eSectionTypeDWARFDebugLocLists)
-        .Case("loclists.dwo", eSectionTypeDWARFDebugLocListsDwo)
-        .Case("macinfo", eSectionTypeDWARFDebugMacInfo)
-        .Cases("macro", "macro.dwo", eSectionTypeDWARFDebugMacro)
-        .Case("names", eSectionTypeDWARFDebugNames)
-        .Case("pubnames", eSectionTypeDWARFDebugPubNames)
-        .Case("pubtypes", eSectionTypeDWARFDebugPubTypes)
-        .Case("ranges", eSectionTypeDWARFDebugRanges)
-        .Case("rnglists", eSectionTypeDWARFDebugRngLists)
-        .Case("rnglists.dwo", eSectionTypeDWARFDebugRngListsDwo)
-        .Case("str", eSectionTypeDWARFDebugStr)
-        .Case("str.dwo", eSectionTypeDWARFDebugStrDwo)
-        .Case("str_offsets", eSectionTypeDWARFDebugStrOffsets)
-        .Case("str_offsets.dwo", eSectionTypeDWARFDebugStrOffsetsDwo)
-        .Case("tu_index", eSectionTypeDWARFDebugTuIndex)
-        .Case("types", eSectionTypeDWARFDebugTypes)
-        .Case("types.dwo", eSectionTypeDWARFDebugTypesDwo)
-        .Default(eSectionTypeOther);
-  }
+  if (Name.consume_front(".debug_"))
+    return ObjectFile::GetDWARFSectionTypeFromName(Name);
+
   return llvm::StringSwitch<SectionType>(Name)
       .Case(".ARM.exidx", eSectionTypeARMexidx)
       .Case(".ARM.extab", eSectionTypeARMextab)
@@ -1696,6 +1665,8 @@ static SectionType GetSectionTypeFromName(llvm::StringRef Name) {
       .Case(".gnu_debugaltlink", eSectionTypeDWARFGNUDebugAltLink)
       .Case(".gosymtab", eSectionTypeGoSymtab)
       .Case(".text", eSectionTypeCode)
+      .Case(".lldbsummaries", lldb::eSectionTypeLLDBTypeSummaries)
+      .Case(".lldbformatters", lldb::eSectionTypeLLDBFormatters)
       .Case(".swift_ast", eSectionTypeSwiftModules)
       .Default(eSectionTypeOther);
 }

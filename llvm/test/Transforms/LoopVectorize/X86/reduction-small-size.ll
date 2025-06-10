@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -passes=loop-vectorize,dce,instcombine -mcpu=core-axv2 -force-vector-interleave=1 -debug-only=loop-vectorize -S < %s 2>&1  | FileCheck %s
+; RUN: opt -passes=loop-vectorize,dce,instcombine -mcpu=core-axv2 -force-vector-interleave=1 -debug-only=loop-vectorize -S %s 2>&1  | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -32,24 +32,24 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK: Cost of 1 for VF 2: induction instruction   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
 ; CHECK: Cost of 1 for VF 2: exit condition instruction   %exitcond = icmp eq i32 %lftr.wideiv, %n
 ; CHECK: Cost of 0 for VF 2: exit condition instruction   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
-; CHECK: Cost of 0 for VF 2: EMIT vp<%3> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK: Cost of 1 for VF 2: WIDEN-REDUCTION-PHI ir<%sum.013> = phi ir<0>, vp<%8>
-; CHECK: Cost of 0 for VF 2: vp<%4> = SCALAR-STEPS vp<%3>, ir<1>
-; CHECK: Cost of 0 for VF 2: CLONE ir<%arrayidx> = getelementptr inbounds ir<%a>, vp<%4>
-; CHECK: Cost of 0 for VF 2: vp<%5> = vector-pointer ir<%arrayidx>
-; CHECK: Cost of 1 for VF 2: WIDEN ir<%0> = load vp<%5>
-; CHECK: Cost of 0 for VF 2: WIDEN-CAST ir<%conv> = zext  ir<%0> to i32
-; CHECK: Cost of 0 for VF 2: CLONE ir<%arrayidx2> = getelementptr inbounds ir<%b>, vp<%4>
-; CHECK: Cost of 0 for VF 2: vp<%6> = vector-pointer ir<%arrayidx2>
-; CHECK: Cost of 1 for VF 2: WIDEN ir<%1> = load vp<%6>
-; CHECK: Cost of 0 for VF 2: WIDEN-CAST ir<%conv3> = zext  ir<%1> to i32
+; CHECK: Cost of 0 for VF 2: EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK: Cost of 1 for VF 2: WIDEN-REDUCTION-PHI ir<%sum.013> = phi vp<{{.+}}>, vp<[[EXT:%.+]]>
+; CHECK: Cost of 0 for VF 2: vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK: Cost of 0 for VF 2: CLONE ir<%arrayidx> = getelementptr inbounds ir<%a>, vp<[[STEPS]]>
+; CHECK: Cost of 0 for VF 2: vp<[[VECP1:%.+]]> = vector-pointer ir<%arrayidx>
+; CHECK: Cost of 1 for VF 2: WIDEN ir<%0> = load vp<[[VECP1]]>
+; CHECK: Cost of 0 for VF 2: WIDEN-CAST ir<%conv> = zext ir<%0> to i32
+; CHECK: Cost of 0 for VF 2: CLONE ir<%arrayidx2> = getelementptr inbounds ir<%b>, vp<[[STEPS]]>
+; CHECK: Cost of 0 for VF 2: vp<[[VECP2:%.+]]> = vector-pointer ir<%arrayidx2>
+; CHECK: Cost of 1 for VF 2: WIDEN ir<%1> = load vp<[[VECP2]]>
+; CHECK: Cost of 0 for VF 2: WIDEN-CAST ir<%conv3> = zext ir<%1> to i32
 ; CHECK: Cost of 0 for VF 2: WIDEN ir<%conv4> = and ir<%sum.013>, ir<255>
 ; CHECK: Cost of 1 for VF 2: WIDEN ir<%add> = add ir<%conv>, ir<%conv4>
 ; CHECK: Cost of 1 for VF 2: WIDEN ir<%add5> = add ir<%add>, ir<%conv3>
-; CHECK: Cost of 0 for VF 2: WIDEN-CAST vp<%7> = trunc  ir<%add5> to i8
-; CHECK: Cost of 0 for VF 2: WIDEN-CAST vp<%8> = zext  vp<%7> to i32
-; CHECK: Cost of 0 for VF 2: EMIT vp<%index.next> = add nuw vp<%3>, vp<%0>
-; CHECK: Cost of 0 for VF 2: EMIT branch-on-count vp<%index.next>, vp<%1>
+; CHECK: Cost of 0 for VF 2: WIDEN-CAST vp<[[TRUNC:%.+]]> = trunc ir<%add5> to i8
+; CHECK: Cost of 0 for VF 2: WIDEN-CAST vp<[[EXT]]> = zext vp<[[TRUNC]]> to i32
+; CHECK: Cost of 0 for VF 2: EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<{{.+}}>
+; CHECK: Cost of 0 for VF 2: EMIT branch-on-count vp<%index.next>, vp<{{.+}}>
 ;
 define i8 @reduction_i8(ptr nocapture readonly %a, ptr nocapture readonly %b, i32 %n) {
 entry:

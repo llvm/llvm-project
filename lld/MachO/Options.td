@@ -82,8 +82,12 @@ def print_dylib_search: Flag<["--"], "print-dylib-search">,
     HelpText<"Print which paths lld searched when trying to find dylibs">,
     Group<grp_lld>;
 def icf_eq: Joined<["--"], "icf=">,
-    HelpText<"Set level for identical code folding (default: none)">,
-    MetaVarName<"[none,safe,all]">,
+    HelpText<"Set level for identical code folding (default: none). Possible values:\n"
+            "  none        - Disable ICF\n"
+            "  safe        - Only folds non-address significant functions (as described by `__addrsig` section)\n"
+            "  safe_thunks - Like safe, but replaces address-significant functions with thunks\n"
+            "  all         - Fold all identical functions">,
+    MetaVarName<"[none,safe,safe_thunks,all]">,
     Group<grp_lld>;
 def keep_icf_stabs: Joined<["--"], "keep-icf-stabs">,
     HelpText<"Generate STABS entries for symbols folded by ICF. These entries can then be used by dsymutil to discover the address range where folded symbols are located.">,
@@ -96,6 +100,9 @@ def lto_CGO: Joined<["--"], "lto-CGO">,
     HelpText<"Set codegen optimization level for LTO (default: 2)">,
     MetaVarName<"<cgopt-level>">,
     Group<grp_lld>;
+def disable_verify : Flag<["--"], "disable_verify">,
+                     HelpText<"Do not verify LLVM modules during LTO">,
+                     Group<grp_lld>;
 def thinlto_cache_policy_eq: Joined<["--"], "thinlto-cache-policy=">,
     HelpText<"Pruning policy for the ThinLTO cache">,
     Group<grp_lld>;
@@ -126,19 +133,36 @@ def no_call_graph_profile_sort : Flag<["--"], "no-call-graph-profile-sort">,
 def print_symbol_order_eq: Joined<["--"], "print-symbol-order=">,
     HelpText<"Print a symbol order specified by --call-graph-profile-sort into the specified file">,
     Group<grp_lld>;
+def irpgo_profile: Separate<["--"], "irpgo-profile">, Group<grp_lld>;
+def irpgo_profile_eq: Joined<["--"], "irpgo-profile=">,
+    Alias<!cast<Separate>(irpgo_profile)>, MetaVarName<"<profile>">,
+    HelpText<"Read the IRPGO <profile> for use with --bp-startup-sort and other profile-guided optimizations">,
+    Group<grp_lld>;
+def bp_startup_sort: Joined<["--"], "bp-startup-sort=">,
+    MetaVarName<"[none,function]">,
+    HelpText<"Order sections based on profile data to improve startup time">,
+    Group<grp_lld>;
+def bp_compression_sort_startup_functions: Flag<["--"], "bp-compression-sort-startup-functions">,
+    HelpText<"Order startup functions to improve compressed size in addition to startup time">,
+    Group<grp_lld>;
+def no_bp_compression_sort_startup_functions: Flag<["--"], "no-bp-compression-sort-startup-functions">,
+    HelpText<"Do not order startup function for compression">, Group<grp_lld>;
+def bp_compression_sort: Joined<["--"], "bp-compression-sort=">,
+    MetaVarName<"[none,function,data,both]">,
+    HelpText<"Order sections to improve compressed size">, Group<grp_lld>;
 def irpgo_profile_sort: Separate<["--"], "irpgo-profile-sort">, Group<grp_lld>;
 def irpgo_profile_sort_eq: Joined<["--"], "irpgo-profile-sort=">,
     Alias<!cast<Separate>(irpgo_profile_sort)>, MetaVarName<"<profile>">,
-    HelpText<"Read the IRPGO profile at <profile> to order sections to improve startup time">,
+    HelpText<"Deprecated. Please use --irpgo-profile and --bp-startup-sort=function">,
     Group<grp_lld>;
 def compression_sort_startup_functions: Flag<["--"], "compression-sort-startup-functions">,
-    HelpText<"Order startup functions to improve compressed size in addition to startup time">,
-    Group<grp_lld>;
+    Alias<!cast<Flag>(bp_compression_sort_startup_functions)>, HelpText<"Deprecated. Please use --bp-compression-sort-startup-functions">, Group<grp_lld>;
 def no_compression_sort_startup_functions: Flag<["--"], "no-compression-sort-startup-functions">,
-    HelpText<"Do not order startup function for compression">, Group<grp_lld>;
+    Alias<!cast<Flag>(no_bp_compression_sort_startup_functions)>, HelpText<"Deprecated. Please use --no-bp-compression-sort-startup-functions">, Group<grp_lld>;
 def compression_sort: Joined<["--"], "compression-sort=">,
     MetaVarName<"[none,function,data,both]">,
-    HelpText<"Order sections to improve compressed size">, Group<grp_lld>;
+    Alias<!cast<Joined>(bp_compression_sort)>,
+    HelpText<"Deprecated. Please use --bp-compression-sort=">, Group<grp_lld>;
 def verbose_bp_section_orderer: Flag<["--"], "verbose-bp-section-orderer">,
     HelpText<"Print information on how many sections were ordered by balanced partitioning and a measure of the expected number of page faults">,
     Group<grp_lld>;
@@ -368,6 +392,9 @@ def grp_opts : OptionGroup<"opts">, HelpText<"OPTIMIZATIONS">;
 
 def dead_strip : Flag<["-"], "dead_strip">,
     HelpText<"Remove unreachable functions and data">,
+    Group<grp_opts>;
+def interposable : Flag<["-"], "interposable">,
+    HelpText<"Indirects access to all exported symbols in an image">,
     Group<grp_opts>;
 def order_file : Separate<["-"], "order_file">,
     MetaVarName<"<file>">,
@@ -850,10 +877,6 @@ def root_safe : Flag<["-"], "root_safe">,
     Group<grp_rare>;
 def setuid_safe : Flag<["-"], "setuid_safe">,
     HelpText<"Set the MH_SETUID_SAFE bit in the mach-o header">,
-    Flags<[HelpHidden]>,
-    Group<grp_rare>;
-def interposable : Flag<["-"], "interposable">,
-    HelpText<"Indirects access to all to exported symbols in a dylib">,
     Flags<[HelpHidden]>,
     Group<grp_rare>;
 def multi_module : Flag<["-"], "multi_module">,
@@ -1455,3 +1478,8 @@ def no_warn_duplicate_libraries : Flag<["-"], "no_warn_duplicate_libraries">,
     HelpText<"Do not warn if the input contains duplicate library options.">,
     Flags<[HelpHidden]>,
     Group<grp_ignored_silently>;
+
+// Add this with the other flags in the rare options group
+def no_deduplicate_symbol_strings : Flag<["-"], "no-deduplicate-symbol-strings">,
+    HelpText<"Do not deduplicate strings in the symbol string table. Might result in larger binaries but slightly faster link times.">,
+    Group<grp_rare>;

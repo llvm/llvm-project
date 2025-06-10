@@ -1,7 +1,7 @@
 // RUN: llvm-mc --triple=amdgcn --mcpu=gfx600 -show-encoding %s | FileCheck %s -check-prefix=GFX6
 // RUN: llvm-mc --triple=amdgcn --mcpu=gfx700 -show-encoding %s | FileCheck %s -check-prefix=GFX7
 // RUN: llvm-mc --triple=amdgcn --mcpu=gfx904 -show-encoding %s | FileCheck %s -check-prefix=GFX9
-// RUN: llvm-mc --triple=amdgcn --mcpu=gfx940 -show-encoding %s | FileCheck %s -check-prefix=GFX9
+// RUN: llvm-mc --triple=amdgcn --mcpu=gfx942 -show-encoding %s | FileCheck %s -check-prefix=GFX9
 // RUN: llvm-mc --triple=amdgcn --mcpu=gfx1010 -show-encoding %s | FileCheck %s -check-prefix=GFX10
 // RUN: llvm-mc --triple=amdgcn --mcpu=gfx1030 -show-encoding %s | FileCheck %s -check-prefix=GFX10
 // RUN: llvm-mc --triple=amdgcn --mcpu=gfx1100 -show-encoding %s | FileCheck %s -check-prefix=GFX11

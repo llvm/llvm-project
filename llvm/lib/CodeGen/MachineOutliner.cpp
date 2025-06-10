@@ -962,10 +962,10 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
     computeAndPublishHashSequence(MF, OF.Candidates.size());
 
   // Set normal properties for a late MachineFunction.
-  MF.getProperties().reset(MachineFunctionProperties::Property::IsSSA);
-  MF.getProperties().set(MachineFunctionProperties::Property::NoPHIs);
-  MF.getProperties().set(MachineFunctionProperties::Property::NoVRegs);
-  MF.getProperties().set(MachineFunctionProperties::Property::TracksLiveness);
+  MF.getProperties().resetIsSSA();
+  MF.getProperties().setNoPHIs();
+  MF.getProperties().setNoVRegs();
+  MF.getProperties().setTracksLiveness();
   MF.getRegInfo().freezeReservedRegs();
 
   // Compute live-in set for outlined fn
@@ -1111,8 +1111,7 @@ bool MachineOutliner::outline(
       // anything we outline doesn't break liveness assumptions. The outlined
       // functions themselves currently don't track liveness, but we should
       // make sure that the ranges we yank things out of aren't wrong.
-      if (MBB.getParent()->getProperties().hasProperty(
-              MachineFunctionProperties::Property::TracksLiveness)) {
+      if (MBB.getParent()->getProperties().hasTracksLiveness()) {
         // The following code is to add implicit def operands to the call
         // instruction. It also updates call site information for moved
         // code.
@@ -1149,8 +1148,8 @@ bool MachineOutliner::outline(
               InstrUseRegs.insert(MOP.getReg());
             }
           }
-          if (MI->isCandidateForCallSiteEntry())
-            MI->getMF()->eraseCallSiteInfo(MI);
+          if (MI->isCandidateForAdditionalCallInfo())
+            MI->getMF()->eraseAdditionalCallInfo(MI);
         }
 
         for (const Register &I : DefRegs)
@@ -1182,7 +1181,7 @@ bool MachineOutliner::outline(
     }
   }
 
-  LLVM_DEBUG(dbgs() << "OutlinedSomething = " << OutlinedSomething << "\n";);
+  LLVM_DEBUG(dbgs() << "OutlinedSomething = " << OutlinedSomething << "\n");
   return OutlinedSomething;
 }
 
@@ -1375,6 +1374,9 @@ void MachineOutliner::emitOutlinedHashTree(Module &M) {
 }
 
 bool MachineOutliner::runOnModule(Module &M) {
+  if (skipModule(M))
+    return false;
+
   // Check if there's anything in the module. If it's empty, then there's
   // nothing to outline.
   if (M.empty())

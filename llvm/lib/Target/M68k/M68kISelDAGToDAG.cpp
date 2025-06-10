@@ -15,8 +15,8 @@
 
 #include "M68kMachineFunction.h"
 #include "M68kRegisterInfo.h"
+#include "M68kSelectionDAGInfo.h"
 #include "M68kTargetMachine.h"
-
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -708,6 +708,20 @@ bool M68kDAGToDAGISel::SelectARIPD(SDNode *Parent, SDValue N, SDValue &Base) {
   return false;
 }
 
+[[maybe_unused]] static bool allowARIDWithDisp(SDNode *Parent) {
+  if (!Parent)
+    return false;
+  switch (Parent->getOpcode()) {
+  case ISD::LOAD:
+  case ISD::STORE:
+  case ISD::ATOMIC_LOAD:
+  case ISD::ATOMIC_STORE:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool M68kDAGToDAGISel::SelectARID(SDNode *Parent, SDValue N, SDValue &Disp,
                                   SDValue &Base) {
   LLVM_DEBUG(dbgs() << "Selecting AddrType::ARID: ");
@@ -740,7 +754,8 @@ bool M68kDAGToDAGISel::SelectARID(SDNode *Parent, SDValue N, SDValue &Disp,
   Base = AM.BaseReg;
 
   if (getSymbolicDisplacement(AM, SDLoc(N), Disp)) {
-    assert(!AM.Disp && "Should not be any displacement");
+    assert((!AM.Disp || allowARIDWithDisp(Parent)) &&
+           "Should not be any displacement");
     LLVM_DEBUG(dbgs() << "SUCCESS, matched Symbol\n");
     return true;
   }
@@ -780,6 +795,7 @@ static bool AllowARIIWithZeroDisp(SDNode *Parent) {
   case ISD::STORE:
   case ISD::ATOMIC_LOAD:
   case ISD::ATOMIC_STORE:
+  case ISD::ATOMIC_CMP_SWAP:
     return true;
   default:
     return false;

@@ -14,8 +14,10 @@
 // CHECK-NEXT: core.BitwiseShift
 // CHECK-NEXT: core.CallAndMessageModeling
 // CHECK-NEXT: core.CallAndMessage
+// CHECK-NEXT: core.DereferenceModeling
 // CHECK-NEXT: core.DivideZero
 // CHECK-NEXT: core.DynamicTypePropagation
+// CHECK-NEXT: core.FixedAddressDereference
 // CHECK-NEXT: core.NonNullParamChecker
 // CHECK-NEXT: core.NonnilStringConstants
 // CHECK-NEXT: core.NullDereference
@@ -23,6 +25,7 @@
 // CHECK-NEXT: core.StackAddressEscape
 // CHECK-NEXT: core.UndefinedBinaryOperatorResult
 // CHECK-NEXT: core.VLASize
+// CHECK-NEXT: core.builtin.AssumeModeling
 // CHECK-NEXT: core.builtin.BuiltinFunctions
 // CHECK-NEXT: core.builtin.NoReturnFunctions
 // CHECK-NEXT: core.uninitialized.ArraySubscript

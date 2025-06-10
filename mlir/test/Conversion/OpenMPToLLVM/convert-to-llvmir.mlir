@@ -507,28 +507,22 @@ llvm.func @_QPtarget_map_with_bounds(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: 
 
 // -----
 
-// CHECK: omp.private {type = private} @x.privatizer : !llvm.struct<{{.*}}> alloc {
-omp.private {type = private} @x.privatizer : memref<?xf32> alloc {
-// CHECK: ^bb0(%arg0: !llvm.struct<{{.*}}>):
-^bb0(%arg0: memref<?xf32>):
+// CHECK: omp.private {type = private} @x.privatizer : !llvm.struct<{{.*}}> init {
+omp.private {type = private} @x.privatizer : memref<?xf32> init {
+// CHECK: ^bb0(%arg0: !llvm.struct<{{.*}}>, %arg1: !llvm.struct<{{.*}}>):
+^bb0(%arg0: memref<?xf32>, %arg1: memref<?xf32>):
   // CHECK: omp.yield(%arg0 : !llvm.struct<{{.*}}>)
   omp.yield(%arg0 : memref<?xf32>)
 }
 
 // -----
 
-// CHECK: omp.private {type = firstprivate} @y.privatizer : i64 alloc {
-omp.private {type = firstprivate} @y.privatizer : index alloc {
-// CHECK: ^bb0(%arg0: i64):
-^bb0(%arg0: index):
-  // CHECK: omp.yield(%arg0 : i64)
-  omp.yield(%arg0 : index)
-// CHECK: } copy {
-} copy {
-// CHECK: ^bb0(%arg0: i64, %arg1: i64):
-^bb0(%arg0: index, %arg1: index):
-  // CHECK: omp.yield(%arg0 : i64)
-  omp.yield(%arg0 : index)
+// CHECK: omp.private {type = firstprivate} @y.privatizer : i64 copy {
+omp.private {type = firstprivate} @y.privatizer : index copy {
+// CHECK: ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  // CHECK: omp.yield(%arg0 : !llvm.ptr)
+  omp.yield(%arg0 : !llvm.ptr)
 }
 
 // -----
@@ -606,4 +600,17 @@ func.func @omp_taskloop(%arg0: index, %arg1 : memref<i32>) {
     omp.terminator
   }
   return
+}
+
+// -----
+
+// CHECK-LABEL: omp.declare_mapper @my_mapper : !llvm.struct<"_QFdeclare_mapperTmy_type", (i32)> {
+omp.declare_mapper @my_mapper : !llvm.struct<"_QFdeclare_mapperTmy_type", (i32)> {
+^bb0(%arg0: !llvm.ptr):
+  %0 = llvm.mlir.constant(0 : i32) : i32
+  %1 = llvm.getelementptr %arg0[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"_QFdeclare_mapperTmy_type", (i32)>
+  %2 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "var%data"}
+  %3 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<"_QFdeclare_mapperTmy_type", (i32)>) map_clauses(tofrom) capture(ByRef) members(%2 : [0] : !llvm.ptr) -> !llvm.ptr {name = "var", partial_map = true}
+  // CHECK: omp.declare_mapper.info map_entries(%{{.*}}, %{{.*}} : !llvm.ptr, !llvm.ptr)
+  omp.declare_mapper.info map_entries(%3, %2 : !llvm.ptr, !llvm.ptr)
 }

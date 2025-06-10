@@ -64,9 +64,6 @@ func.func @remap_call_1_to_1(%arg0: i64) {
 // Contents of the old block are moved to the new block.
 // CHECK-NEXT: notifyOperationInserted: test.return, was linked, exact position unknown
 
-// The new block arguments are used in "test.return".
-// CHECK-NEXT: notifyOperationModified: test.return
-
 // The old block is erased.
 // CHECK-NEXT: notifyBlockErased
 
@@ -124,10 +121,10 @@ func.func @no_remap_nested() {
   // CHECK-NEXT: "foo.region"
   // expected-remark@+1 {{op 'foo.region' is not legalizable}}
   "foo.region"() ({
-    // CHECK-NEXT: ^bb0(%{{.*}}: i64, %{{.*}}: i16, %{{.*}}: i64):
-    ^bb0(%i0: i64, %unused: i16, %i1: i64):
-      // CHECK-NEXT: "test.valid"{{.*}} : (i64, i64)
-      "test.invalid"(%i0, %i1) : (i64, i64) -> ()
+    // CHECK-NEXT: ^bb0(%{{.*}}: f64, %{{.*}}: i16, %{{.*}}: f64):
+    ^bb0(%i0: f64, %unused: i16, %i1: f64):
+      // CHECK-NEXT: "test.valid"{{.*}} : (f64, f64)
+      "test.invalid"(%i0, %i1) : (f64, f64) -> ()
   }) : () -> ()
   // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return
@@ -390,8 +387,8 @@ func.func @caller() {
   // CHECK: %[[call:.*]]:2 = call @callee() : () -> (f16, f16)
   %0:2 = func.call @callee() : () -> (f32, i24)
 
-  // CHECK: %[[cast1:.*]] = "test.cast"() : () -> i24
-  // CHECK: %[[cast0:.*]] = "test.cast"(%[[call]]#0, %[[call]]#1) : (f16, f16) -> f32
+  // CHECK-DAG: %[[cast1:.*]] = "test.cast"() : () -> i24
+  // CHECK-DAG: %[[cast0:.*]] = "test.cast"(%[[call]]#0, %[[call]]#1) : (f16, f16) -> f32
   // CHECK: "test.some_user"(%[[cast0]], %[[cast1]]) : (f32, i24) -> ()
   // expected-remark @below{{'test.some_user' is not legalizable}}
   "test.some_user"(%0#0, %0#1) : (f32, i24) -> ()
@@ -450,7 +447,7 @@ func.func @fold_legalization() -> i32 {
 // -----
 
 // CHECK-LABEL: func @convert_detached_signature()
-//       CHECK:   "test.legal_op_with_region"() ({
+//       CHECK:   "test.legal_op"() ({
 //       CHECK:   ^bb0(%arg0: f64):
 //       CHECK:     "test.return"() : () -> ()
 //       CHECK:   }) : () -> ()
@@ -475,11 +472,49 @@ func.func @circular_mapping() {
 
 // -----
 
-func.func @test_1_to_n_block_signature_conversion() {
-  "test.duplicate_block_args"() ({
+// CHECK-LABEL: func @test_duplicate_block_arg()
+//       CHECK:   test.convert_block_args  is_legal duplicate {
+//       CHECK:   ^{{.*}}(%[[arg0:.*]]: i64, %[[arg1:.*]]: i64):
+//       CHECK:     "test.valid"(%[[arg0]], %[[arg1]])
+//       CHECK:   }
+func.func @test_duplicate_block_arg() {
+  test.convert_block_args duplicate {
   ^bb0(%arg0: i64):
     "test.repetitive_1_to_n_consumer"(%arg0) : (i64) -> ()
-  }) {} : () -> ()
+  } : () -> ()
   "test.return"() : () -> ()
 }
 
+// -----
+
+// CHECK-LABEL: func @test_remap_block_arg()
+//       CHECK:      %[[repl:.*]] = "test.legal_op"() : () -> i32
+//       CHECK:      test.convert_block_args %[[repl]]  is_legal replace_with_operand {
+//       CHECK-NEXT:   "test.valid"(%[[repl]], %[[repl]])
+//       CHECK:      }
+func.func @test_remap_block_arg() {
+  %0 = "test.legal_op"() : () -> (i32)
+  test.convert_block_args %0 replace_with_operand {
+  ^bb0(%arg0: i32):
+    "test.repetitive_1_to_n_consumer"(%arg0) : (i32) -> ()
+  } : (i32) -> ()
+  "test.return"() : () -> ()
+}
+
+// -----
+
+// CHECK: notifyOperationInserted: test.step_1
+// CHECK: notifyOperationReplaced: test.multiple_1_to_n_replacement
+// CHECK: notifyOperationErased: test.multiple_1_to_n_replacement
+// CHECK: notifyOperationInserted: test.legal_op
+// CHECK: notifyOperationReplaced: test.step_1
+// CHECK: notifyOperationErased: test.step_1
+
+// CHECK-LABEL: func @test_multiple_1_to_n_replacement()
+//       CHECK:   %[[legal_op:.*]]:4 = "test.legal_op"() : () -> (f16, f16, f16, f16)
+//       CHECK:   %[[cast:.*]] = "test.cast"(%[[legal_op]]#0, %[[legal_op]]#1, %[[legal_op]]#2, %[[legal_op]]#3) : (f16, f16, f16, f16) -> f16
+//       CHECK:   "test.valid"(%[[cast]]) : (f16) -> ()
+func.func @test_multiple_1_to_n_replacement() {
+  %0 = "test.multiple_1_to_n_replacement"() : () -> (f16)
+  "test.invalid"(%0) : (f16) -> ()
+}

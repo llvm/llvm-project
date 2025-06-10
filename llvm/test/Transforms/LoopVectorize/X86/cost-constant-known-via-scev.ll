@@ -64,7 +64,7 @@ define i64 @second_lshr_operand_zero_via_scev() {
 ; CHECK-LABEL: define i64 @second_lshr_operand_zero_via_scev() {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[EXT_0:%.*]] = sext i8 0 to i32
-; CHECK-NEXT:    br i1 true, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -90,14 +90,14 @@ define i64 @second_lshr_operand_zero_via_scev() {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[STEP_ADD]], splat (i64 2)
 ; CHECK-NEXT:    [[VEC_IND_NEXT3]] = add <2 x i32> [[STEP_ADD4]], splat (i32 2)
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = or <2 x i64> [[TMP11]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> [[BIN_RDX]])
 ; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1000, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP13]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOPS:.*]]
 ; CHECK:       [[LOOPS]]:
@@ -111,7 +111,7 @@ define i64 @second_lshr_operand_zero_via_scev() {
 ; CHECK-NEXT:    [[RED_NEXT_V:%.*]] = select i1 [[C]], i64 [[AND]], i64 [[CONV_1]]
 ; CHECK-NEXT:    [[RED_NEXT]] = or i64 [[RED_NEXT_V]], [[RED]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 0
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOPS]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[RED_NEXT]], %[[LOOPS]] ], [ [[TMP13]], %[[MIDDLE_BLOCK]] ]
@@ -132,7 +132,7 @@ loops:
   %red.next.v = select i1 %c, i64 %and, i64 %conv.1
   %red.next = or i64 %red.next.v, %red
   %iv.next = add i64 %iv, 1
-  %ec = icmp eq i64 %iv.next, 0
+  %ec = icmp eq i64 %iv.next, 1000
   br i1 %ec, label %exit, label %loops
 
 exit:

@@ -21,7 +21,7 @@
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
-#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -48,13 +48,12 @@ protected:
   const RegisterBankInfo &RBI;
   const TargetRegisterInfo &TRI;
   const SIInstrInfo &TII;
-  // TODO: Make CombinerHelper methods const.
-  mutable CombinerHelper Helper;
+  const CombinerHelper Helper;
 
 public:
   AMDGPURegBankCombinerImpl(
       MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-      GISelKnownBits &KB, GISelCSEInfo *CSEInfo,
+      GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
       const AMDGPURegBankCombinerImplRuleConfig &RuleConfig,
       const GCNSubtarget &STI, MachineDominatorTree *MDT,
       const LegalizerInfo *LI);
@@ -88,6 +87,8 @@ public:
   void applyMed3(MachineInstr &MI, Med3MatchInfo &MatchInfo) const;
   void applyClamp(MachineInstr &MI, Register &Reg) const;
 
+  void applyCanonicalizeZextShiftAmt(MachineInstr &MI, MachineInstr &Ext) const;
+
 private:
   SIModeRegisterDefaults getMode() const;
   bool getIEEE() const;
@@ -111,13 +112,13 @@ private:
 
 AMDGPURegBankCombinerImpl::AMDGPURegBankCombinerImpl(
     MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-    GISelKnownBits &KB, GISelCSEInfo *CSEInfo,
+    GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
     const AMDGPURegBankCombinerImplRuleConfig &RuleConfig,
     const GCNSubtarget &STI, MachineDominatorTree *MDT, const LegalizerInfo *LI)
-    : Combiner(MF, CInfo, TPC, &KB, CSEInfo), RuleConfig(RuleConfig), STI(STI),
+    : Combiner(MF, CInfo, TPC, &VT, CSEInfo), RuleConfig(RuleConfig), STI(STI),
       RBI(*STI.getRegBankInfo()), TRI(*STI.getRegisterInfo()),
       TII(*STI.getInstrInfo()),
-      Helper(Observer, B, /*IsPreLegalize*/ false, &KB, MDT, LI),
+      Helper(Observer, B, /*IsPreLegalize*/ false, &VT, MDT, LI),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
 #include "AMDGPUGenRegBankGICombiner.inc"
 #undef GET_GICOMBINER_CONSTRUCTOR_INITS
@@ -363,6 +364,34 @@ void AMDGPURegBankCombinerImpl::applyMed3(MachineInstr &MI,
   MI.eraseFromParent();
 }
 
+void AMDGPURegBankCombinerImpl::applyCanonicalizeZextShiftAmt(
+    MachineInstr &MI, MachineInstr &Ext) const {
+  unsigned ShOpc = MI.getOpcode();
+  assert(ShOpc == AMDGPU::G_SHL || ShOpc == AMDGPU::G_LSHR ||
+         ShOpc == AMDGPU::G_ASHR);
+  assert(Ext.getOpcode() == AMDGPU::G_ZEXT);
+
+  Register AmtReg = Ext.getOperand(1).getReg();
+  Register ShDst = MI.getOperand(0).getReg();
+  Register ShSrc = MI.getOperand(1).getReg();
+
+  LLT ExtAmtTy = MRI.getType(Ext.getOperand(0).getReg());
+  LLT AmtTy = MRI.getType(AmtReg);
+
+  auto &RB = *MRI.getRegBank(AmtReg);
+
+  auto NewExt = B.buildAnyExt(ExtAmtTy, AmtReg);
+  auto Mask = B.buildConstant(
+      ExtAmtTy, maskTrailingOnes<uint64_t>(AmtTy.getScalarSizeInBits()));
+  auto And = B.buildAnd(ExtAmtTy, NewExt, Mask);
+  B.buildInstr(ShOpc, {ShDst}, {ShSrc, And});
+
+  MRI.setRegBank(NewExt.getReg(0), RB);
+  MRI.setRegBank(Mask.getReg(0), RB);
+  MRI.setRegBank(And.getReg(0), RB);
+  MI.eraseFromParent();
+}
+
 SIModeRegisterDefaults AMDGPURegBankCombinerImpl::getMode() const {
   return MF.getInfo<SIMachineFunctionInfo>()->getMode();
 }
@@ -417,8 +446,8 @@ void AMDGPURegBankCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
-  AU.addRequired<GISelKnownBitsAnalysis>();
-  AU.addPreserved<GISelKnownBitsAnalysis>();
+  AU.addRequired<GISelValueTrackingAnalysisLegacy>();
+  AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   if (!IsOptNone) {
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
@@ -428,15 +457,12 @@ void AMDGPURegBankCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
 
 AMDGPURegBankCombiner::AMDGPURegBankCombiner(bool IsOptNone)
     : MachineFunctionPass(ID), IsOptNone(IsOptNone) {
-  initializeAMDGPURegBankCombinerPass(*PassRegistry::getPassRegistry());
-
   if (!RuleConfig.parseCommandLineOption())
     report_fatal_error("Invalid rule identifier");
 }
 
 bool AMDGPURegBankCombiner::runOnMachineFunction(MachineFunction &MF) {
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
   auto *TPC = &getAnalysis<TargetPassConfig>();
   const Function &F = MF.getFunction();
@@ -444,7 +470,8 @@ bool AMDGPURegBankCombiner::runOnMachineFunction(MachineFunction &MF) {
       MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !skipFunction(F);
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
+  GISelValueTracking *VT =
+      &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
 
   const auto *LI = ST.getLegalizerInfo();
   MachineDominatorTree *MDT =
@@ -459,7 +486,7 @@ bool AMDGPURegBankCombiner::runOnMachineFunction(MachineFunction &MF) {
   // RegBankSelect seems not to leave dead instructions, so a full DCE pass is
   // unnecessary.
   CInfo.EnableFullDCE = false;
-  AMDGPURegBankCombinerImpl Impl(MF, CInfo, TPC, *KB, /*CSEInfo*/ nullptr,
+  AMDGPURegBankCombinerImpl Impl(MF, CInfo, TPC, *VT, /*CSEInfo*/ nullptr,
                                  RuleConfig, ST, MDT, LI);
   return Impl.combineMachineInstrs();
 }
@@ -469,13 +496,11 @@ INITIALIZE_PASS_BEGIN(AMDGPURegBankCombiner, DEBUG_TYPE,
                       "Combine AMDGPU machine instrs after regbankselect",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_DEPENDENCY(GISelKnownBitsAnalysis)
+INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_END(AMDGPURegBankCombiner, DEBUG_TYPE,
                     "Combine AMDGPU machine instrs after regbankselect", false,
                     false)
 
-namespace llvm {
-FunctionPass *createAMDGPURegBankCombiner(bool IsOptNone) {
+FunctionPass *llvm::createAMDGPURegBankCombiner(bool IsOptNone) {
   return new AMDGPURegBankCombiner(IsOptNone);
 }
-} // end namespace llvm

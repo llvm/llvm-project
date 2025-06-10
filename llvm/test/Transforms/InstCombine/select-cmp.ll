@@ -23,6 +23,18 @@ define i1 @icmp_ne_common_op00(i1 %c, i6 %x, i6 %y, i6 %z) {
   ret i1 %r
 }
 
+define i1 @icmp_ne_samesign_common(i1 %c, i6 %x, i6 %y, i6 %z) {
+; CHECK-LABEL: @icmp_ne_samesign_common(
+; CHECK-NEXT:    [[R_V:%.*]] = select i1 [[C:%.*]], i6 [[Y:%.*]], i6 [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i6 [[X:%.*]], [[R_V]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cmp1 = icmp samesign ne i6 %x, %y
+  %cmp2 = icmp ne i6 %x, %z
+  %r = select i1 %c, i1 %cmp1, i1 %cmp2
+  ret i1 %r
+}
+
 define i1 @icmp_ne_common_op01(i1 %c, i3 %x, i3 %y, i3 %z) {
 ; CHECK-LABEL: @icmp_ne_common_op01(
 ; CHECK-NEXT:    [[R_V:%.*]] = select i1 [[C:%.*]], i3 [[Y:%.*]], i3 [[Z:%.*]]
@@ -67,6 +79,18 @@ define i1 @icmp_eq_common_op00(i1 %c, i5 %x, i5 %y, i5 %z) {
 ;
   %cmp1 = icmp eq i5 %x, %y
   %cmp2 = icmp eq i5 %x, %z
+  %r = select i1 %c, i1 %cmp1, i1 %cmp2
+  ret i1 %r
+}
+
+define i1 @icmp_eq_samesign_common(i1 %c, i5 %x, i5 %y, i5 %z) {
+; CHECK-LABEL: @icmp_eq_samesign_common(
+; CHECK-NEXT:    [[R_V:%.*]] = select i1 [[C:%.*]], i5 [[Y:%.*]], i5 [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i5 [[X:%.*]], [[R_V]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cmp1 = icmp eq i5 %x, %y
+  %cmp2 = icmp samesign eq i5 %x, %z
   %r = select i1 %c, i1 %cmp1, i1 %cmp2
   ret i1 %r
 }
@@ -134,6 +158,18 @@ define i1 @icmp_slt_common(i1 %c, i6 %x, i6 %y, i6 %z) {
   ret i1 %r
 }
 
+define i1 @icmp_slt_samesign_common(i1 %c, i6 %x, i6 %y, i6 %z) {
+; CHECK-LABEL: @icmp_slt_samesign_common(
+; CHECK-NEXT:    [[R_V:%.*]] = select i1 [[C:%.*]], i6 [[Y:%.*]], i6 [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i6 [[X:%.*]], [[R_V]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cmp1 = icmp samesign ult i6 %x, %y
+  %cmp2 = icmp slt i6 %x, %z
+  %r = select i1 %c, i1 %cmp1, i1 %cmp2
+  ret i1 %r
+}
+
 define i1 @icmp_sgt_common(i1 %c, i6 %x, i6 %y, i6 %z) {
 ; CHECK-LABEL: @icmp_sgt_common(
 ; CHECK-NEXT:    [[R_V:%.*]] = select i1 [[C:%.*]], i6 [[Y:%.*]], i6 [[Z:%.*]]
@@ -141,6 +177,18 @@ define i1 @icmp_sgt_common(i1 %c, i6 %x, i6 %y, i6 %z) {
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp1 = icmp sgt i6 %x, %y
+  %cmp2 = icmp sgt i6 %x, %z
+  %r = select i1 %c, i1 %cmp1, i1 %cmp2
+  ret i1 %r
+}
+
+define i1 @icmp_sgt_samesign_common(i1 %c, i6 %x, i6 %y, i6 %z) {
+; CHECK-LABEL: @icmp_sgt_samesign_common(
+; CHECK-NEXT:    [[R_V:%.*]] = select i1 [[C:%.*]], i6 [[Y:%.*]], i6 [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i6 [[X:%.*]], [[R_V]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cmp1 = icmp samesign ugt i6 %x, %y
   %cmp2 = icmp sgt i6 %x, %z
   %r = select i1 %c, i1 %cmp1, i1 %cmp2
   ret i1 %r
@@ -158,6 +206,18 @@ define i1 @icmp_sle_common(i1 %c, i6 %x, i6 %y, i6 %z) {
   ret i1 %r
 }
 
+define i1 @icmp_sle_samesign_common(i1 %c, i6 %x, i6 %y, i6 %z) {
+; CHECK-LABEL: @icmp_sle_samesign_common(
+; CHECK-NEXT:    [[R_V:%.*]] = select i1 [[C:%.*]], i6 [[Y:%.*]], i6 [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sge i6 [[X:%.*]], [[R_V]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cmp1 = icmp sle i6 %y, %x
+  %cmp2 = icmp samesign ule i6 %z, %x
+  %r = select i1 %c, i1 %cmp1, i1 %cmp2
+  ret i1 %r
+}
+
 define i1 @icmp_sge_common(i1 %c, i6 %x, i6 %y, i6 %z) {
 ; CHECK-LABEL: @icmp_sge_common(
 ; CHECK-NEXT:    [[R_V:%.*]] = select i1 [[C:%.*]], i6 [[Y:%.*]], i6 [[Z:%.*]]
@@ -166,6 +226,18 @@ define i1 @icmp_sge_common(i1 %c, i6 %x, i6 %y, i6 %z) {
 ;
   %cmp1 = icmp sge i6 %y, %x
   %cmp2 = icmp sge i6 %z, %x
+  %r = select i1 %c, i1 %cmp1, i1 %cmp2
+  ret i1 %r
+}
+
+define i1 @icmp_sge_samesign_common(i1 %c, i6 %x, i6 %y, i6 %z) {
+; CHECK-LABEL: @icmp_sge_samesign_common(
+; CHECK-NEXT:    [[R_V:%.*]] = select i1 [[C:%.*]], i6 [[Y:%.*]], i6 [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sle i6 [[X:%.*]], [[R_V]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cmp1 = icmp sge i6 %y, %x
+  %cmp2 = icmp samesign uge i6 %z, %x
   %r = select i1 %c, i1 %cmp1, i1 %cmp2
   ret i1 %r
 }
@@ -182,6 +254,18 @@ define i1 @icmp_slt_sgt_common(i1 %c, i6 %x, i6 %y, i6 %z) {
   ret i1 %r
 }
 
+define i1 @icmp_slt_sgt_samesign_common(i1 %c, i6 %x, i6 %y, i6 %z) {
+; CHECK-LABEL: @icmp_slt_sgt_samesign_common(
+; CHECK-NEXT:    [[R_V:%.*]] = select i1 [[C:%.*]], i6 [[Y:%.*]], i6 [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i6 [[X:%.*]], [[R_V]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cmp1 = icmp samesign ult i6 %x, %y
+  %cmp2 = icmp sgt i6 %z, %x
+  %r = select i1 %c, i1 %cmp1, i1 %cmp2
+  ret i1 %r
+}
+
 define i1 @icmp_sle_sge_common(i1 %c, i6 %x, i6 %y, i6 %z) {
 ; CHECK-LABEL: @icmp_sle_sge_common(
 ; CHECK-NEXT:    [[R_V:%.*]] = select i1 [[C:%.*]], i6 [[Y:%.*]], i6 [[Z:%.*]]
@@ -190,6 +274,18 @@ define i1 @icmp_sle_sge_common(i1 %c, i6 %x, i6 %y, i6 %z) {
 ;
   %cmp1 = icmp sle i6 %y, %x
   %cmp2 = icmp sge i6 %x, %z
+  %r = select i1 %c, i1 %cmp1, i1 %cmp2
+  ret i1 %r
+}
+
+define i1 @icmp_sle_sge_samesign_common(i1 %c, i6 %x, i6 %y, i6 %z) {
+; CHECK-LABEL: @icmp_sle_sge_samesign_common(
+; CHECK-NEXT:    [[R_V:%.*]] = select i1 [[C:%.*]], i6 [[Y:%.*]], i6 [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sge i6 [[X:%.*]], [[R_V]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cmp1 = icmp sle i6 %y, %x
+  %cmp2 = icmp samesign uge i6 %x, %z
   %r = select i1 %c, i1 %cmp1, i1 %cmp2
   ret i1 %r
 }
@@ -698,6 +794,18 @@ define i1 @sel_icmp_cmp_and_no_simplify_comm(i1 %c, i32 %a1, i32 %a2, i8 %b) {
   %sel = select i1 %c, i8 %b, i8 %v
   %cmp = icmp sle i8 %sel, 0
   ret i1 %cmp
+}
+
+define i1 @icmp_lt_slt(i1 %c, i32 %arg) {
+; CHECK-LABEL: @icmp_lt_slt(
+; CHECK-NEXT:    [[SELECT_V:%.*]] = select i1 [[C:%.*]], i32 131072, i32 0
+; CHECK-NEXT:    [[SELECT:%.*]] = icmp slt i32 [[ARG:%.*]], [[SELECT_V]]
+; CHECK-NEXT:    ret i1 [[SELECT]]
+;
+  %cmp1 = icmp samesign ult i32 %arg, 131072
+  %cmp2 = icmp slt i32 %arg, 0
+  %select = select i1 %c, i1 %cmp1, i1 %cmp2
+  ret i1 %select
 }
 
 declare void @use(i1)

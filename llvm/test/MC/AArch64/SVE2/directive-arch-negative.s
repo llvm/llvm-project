@@ -29,10 +29,16 @@ rax1 z0.d, z0.d, z0.d
 // CHECK: error: instruction requires: sve2-sha3
 // CHECK-NEXT: rax1 z0.d, z0.d, z0.d
 
-.arch armv9-a+sve2-bitperm
-.arch armv9-a+nosve2-bitperm
+.arch armv9-a+ssve-bitperm
+.arch armv9-a+nossve-bitperm
 bgrp z21.s, z10.s, z21.s
-// CHECK: error: instruction requires: sve2-bitperm
+// CHECK: error: instruction requires: sve-bitperm
+// CHECK-NEXT: bgrp z21.s, z10.s, z21.s
+
+.arch armv9-a+sve2+sve-bitperm
+.arch armv9-a+sve2+nosve-bitperm
+bgrp z21.s, z10.s, z21.s
+// CHECK: error: instruction requires: sve-bitperm
 // CHECK-NEXT: bgrp z21.s, z10.s, z21.s
 
 .arch armv9-a+f8f16mm

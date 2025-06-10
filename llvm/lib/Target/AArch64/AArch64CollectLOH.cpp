@@ -132,8 +132,7 @@ struct AArch64CollectLOH : public MachineFunctionPass {
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
   StringRef getPassName() const override { return AARCH64_COLLECT_LOH_NAME; }
@@ -233,7 +232,7 @@ static bool isCandidateLoad(const MachineInstr &MI) {
   }
 }
 
-/// Check whether the given instruction can load a litteral.
+/// Check whether the given instruction can load a literal.
 static bool supportLoadFromLiteral(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
@@ -248,10 +247,10 @@ static bool supportLoadFromLiteral(const MachineInstr &MI) {
   }
 }
 
-/// Number of GPR registers traked by mapRegToGPRIndex()
+/// Number of GPR registers tracked by mapRegToGPRIndex()
 static const unsigned N_GPR_REGS = 31;
 /// Map register number to index from 0-30.
-static int mapRegToGPRIndex(MCPhysReg Reg) {
+static int mapRegToGPRIndex(MCRegister Reg) {
   static_assert(AArch64::X28 - AArch64::X0 + 3 == N_GPR_REGS, "Number of GPRs");
   static_assert(AArch64::W30 - AArch64::W0 + 1 == N_GPR_REGS, "Number of GPRs");
   if (AArch64::X0 <= Reg && Reg <= AArch64::X28)
@@ -272,9 +271,12 @@ static int mapRegToGPRIndex(MCPhysReg Reg) {
 /// datastructure for each tracked general purpose register.
 struct LOHInfo {
   MCLOHType Type : 8;           ///< "Best" type of LOH possible.
-  bool IsCandidate : 1;         ///< Possible LOH candidate.
-  bool OneUser : 1;             ///< Found exactly one user (yet).
-  bool MultiUsers : 1;          ///< Found multiple users.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsCandidate : 1;     ///< Possible LOH candidate.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned OneUser : 1;         ///< Found exactly one user (yet).
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned MultiUsers : 1;      ///< Found multiple users.
   const MachineInstr *MI0;      ///< First instruction involved in the LOH.
   const MachineInstr *MI1;      ///< Second instruction involved in the LOH
                                 ///  (if any).

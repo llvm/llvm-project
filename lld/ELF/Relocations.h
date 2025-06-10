@@ -22,6 +22,7 @@ class Symbol;
 class InputSection;
 class InputSectionBase;
 class OutputSection;
+class RelocationBaseSection;
 class SectionBase;
 
 // Represents a relocation type, such as R_X86_64_PC32 or R_ARM_THM_CALL.
@@ -89,42 +90,47 @@ enum RelExpr {
   //
   // Even though RelExpr is intended to be a target-neutral representation
   // of a relocation type, there are some relocations whose semantics are
-  // unique to a target. Such relocation are marked with R_<TARGET_NAME>.
-  R_AARCH64_GOT_PAGE_PC,
-  R_AARCH64_GOT_PAGE,
-  R_AARCH64_PAGE_PC,
-  R_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC,
-  R_AARCH64_TLSDESC_PAGE,
-  R_AARCH64_AUTH,
-  R_ARM_PCA,
-  R_ARM_SBREL,
-  R_MIPS_GOTREL,
-  R_MIPS_GOT_GP,
-  R_MIPS_GOT_GP_PC,
-  R_MIPS_GOT_LOCAL_PAGE,
-  R_MIPS_GOT_OFF,
-  R_MIPS_GOT_OFF32,
-  R_MIPS_TLSGD,
-  R_MIPS_TLSLD,
-  R_PPC32_PLTREL,
-  R_PPC64_CALL,
-  R_PPC64_CALL_PLT,
-  R_PPC64_RELAX_TOC,
-  R_PPC64_TOCBASE,
-  R_PPC64_RELAX_GOT_PC,
-  R_RISCV_ADD,
-  R_RISCV_LEB128,
-  R_RISCV_PC_INDIRECT,
+  // unique to a target. Such relocation are marked with RE_<TARGET_NAME>.
+  RE_AARCH64_GOT_PAGE_PC,
+  RE_AARCH64_AUTH_GOT_PAGE_PC,
+  RE_AARCH64_GOT_PAGE,
+  RE_AARCH64_AUTH_GOT,
+  RE_AARCH64_AUTH_GOT_PC,
+  RE_AARCH64_PAGE_PC,
+  RE_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC,
+  RE_AARCH64_TLSDESC_PAGE,
+  RE_AARCH64_AUTH_TLSDESC_PAGE,
+  RE_AARCH64_AUTH_TLSDESC,
+  RE_AARCH64_AUTH,
+  RE_ARM_PCA,
+  RE_ARM_SBREL,
+  RE_MIPS_GOTREL,
+  RE_MIPS_GOT_GP,
+  RE_MIPS_GOT_GP_PC,
+  RE_MIPS_GOT_LOCAL_PAGE,
+  RE_MIPS_GOT_OFF,
+  RE_MIPS_GOT_OFF32,
+  RE_MIPS_TLSGD,
+  RE_MIPS_TLSLD,
+  RE_PPC32_PLTREL,
+  RE_PPC64_CALL,
+  RE_PPC64_CALL_PLT,
+  RE_PPC64_RELAX_TOC,
+  RE_PPC64_TOCBASE,
+  RE_PPC64_RELAX_GOT_PC,
+  RE_RISCV_ADD,
+  RE_RISCV_LEB128,
+  RE_RISCV_PC_INDIRECT,
   // Same as R_PC but with page-aligned semantics.
-  R_LOONGARCH_PAGE_PC,
+  RE_LOONGARCH_PAGE_PC,
   // Same as R_PLT_PC but with page-aligned semantics.
-  R_LOONGARCH_PLT_PAGE_PC,
+  RE_LOONGARCH_PLT_PAGE_PC,
   // In addition to having page-aligned semantics, LoongArch GOT relocs are
   // also reused for TLS, making the semantics differ from other architectures.
-  R_LOONGARCH_GOT,
-  R_LOONGARCH_GOT_PAGE_PC,
-  R_LOONGARCH_TLSGD_PAGE_PC,
-  R_LOONGARCH_TLSDESC_PAGE_PC,
+  RE_LOONGARCH_GOT,
+  RE_LOONGARCH_GOT_PAGE_PC,
+  RE_LOONGARCH_TLSGD_PAGE_PC,
+  RE_LOONGARCH_TLSDESC_PAGE_PC,
 };
 
 // Architecture-neutral representation of relocation.
@@ -355,6 +361,8 @@ sortRels(Relocs<llvm::object::Elf_Crel_Impl<is64>> rels,
          SmallVector<llvm::object::Elf_Crel_Impl<is64>, 0> &storage) {
   return {};
 }
+
+RelocationBaseSection &getIRelativeSection(Ctx &ctx);
 
 // Returns true if Expr refers a GOT entry. Note that this function returns
 // false for TLS variables even though they need GOT, because TLS variables uses

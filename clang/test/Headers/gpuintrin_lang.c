@@ -46,29 +46,29 @@ __device__ int foo() { return __gpu_thread_id_x(); }
 // HIP-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // HIP-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // HIP-NEXT:    [[RETVAL_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL_I]] to ptr
-// HIP-NEXT:    [[TMP0:%.*]] = call noundef {{.*}}i32 @llvm.amdgcn.workitem.id.x()
+// HIP-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 // HIP-NEXT:    ret i32 [[TMP0]]
 //
 // OPENCL-LABEL: define dso_local i32 @foo(
 // OPENCL-SAME: ) #[[ATTR0:[0-9]+]] {
 // OPENCL-NEXT:  [[ENTRY:.*:]]
-// OPENCL-NEXT:    [[TMP0:%.*]] = call noundef {{.*}}i32 @llvm.amdgcn.workitem.id.x()
+// OPENCL-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 // OPENCL-NEXT:    ret i32 [[TMP0]]
 //
 // OPENMP-LABEL: define hidden i32 @foo(
 // OPENMP-SAME: ) #[[ATTR0:[0-9]+]] {
 // OPENMP-NEXT:  [[ENTRY:.*:]]
-// OPENMP-NEXT:    [[TMP0:%.*]] = call noundef {{.*}}i32 @llvm.amdgcn.workitem.id.x()
+// OPENMP-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 // OPENMP-NEXT:    ret i32 [[TMP0]]
 //
 // C89-LABEL: define dso_local i32 @foo(
-// C89-SAME: ) #[[ATTR2:[0-9]+]] {
+// C89-SAME: ) #[[ATTR0:[0-9]+]] {
 // C89-NEXT:  [[ENTRY:.*:]]
 // C89-NEXT:    [[RETVAL_I:%.*]] = alloca i32, align 4, addrspace(5)
 // C89-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // C89-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // C89-NEXT:    [[RETVAL_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL_I]] to ptr
-// C89-NEXT:    [[TMP0:%.*]] = call noundef {{.*}}i32 @llvm.amdgcn.workitem.id.x()
+// C89-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 // C89-NEXT:    ret i32 [[TMP0]]
 //
 int foo() { return __gpu_thread_id_x(); }

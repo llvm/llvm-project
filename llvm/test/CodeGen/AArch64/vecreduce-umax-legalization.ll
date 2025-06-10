@@ -57,16 +57,11 @@ define i24 @test_v1i24(<1 x i24> %a) nounwind {
 }
 
 define i32 @test_v1i32(<1 x i32> %a) nounwind {
-; CHECK-SD-LABEL: test_v1i32:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    fmov w0, s0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_v1i32:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov w0, s0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_v1i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
   %b = call i32 @llvm.vector.reduce.umax.v1i32(<1 x i32> %a)
   ret i32 %b
 }
@@ -280,12 +275,11 @@ define i128 @test_v2i128(<2 x i128> %a) nounwind {
 ;
 ; CHECK-GI-LABEL: test_v2i128:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    cmp x1, x3
-; CHECK-GI-NEXT:    cset w8, hi
 ; CHECK-GI-NEXT:    cmp x0, x2
-; CHECK-GI-NEXT:    cset w9, hi
+; CHECK-GI-NEXT:    cset w8, hi
 ; CHECK-GI-NEXT:    cmp x1, x3
-; CHECK-GI-NEXT:    csel w8, w9, w8, eq
+; CHECK-GI-NEXT:    cset w9, hi
+; CHECK-GI-NEXT:    csel w8, w8, w9, eq
 ; CHECK-GI-NEXT:    tst w8, #0x1
 ; CHECK-GI-NEXT:    csel x0, x0, x2, ne
 ; CHECK-GI-NEXT:    csel x1, x1, x3, ne

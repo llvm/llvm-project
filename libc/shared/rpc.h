@@ -20,12 +20,6 @@
 
 #include "rpc_util.h"
 
-#include <stdint.h>
-
-#ifndef RPC_INLINE
-#define RPC_INLINE inline
-#endif
-
 namespace rpc {
 
 /// Use scoped atomic variants if they are available for the target.
@@ -44,9 +38,9 @@ namespace rpc {
 
 /// Generic codes that can be used whem implementing the server.
 enum Status {
-  SUCCESS = 0x0,
-  ERROR = 0x1000,
-  UNHANDLED_OPCODE = 0x1001,
+  RPC_SUCCESS = 0x0,
+  RPC_ERROR = 0x1000,
+  RPC_UNHANDLED_OPCODE = 0x1001,
 };
 
 /// A fixed size channel used to communicate between the RPC client and server.
@@ -78,12 +72,12 @@ constexpr static uint64_t MAX_PORT_COUNT = 4096;
 ///   - The server will always start with a 'recv' operation.
 ///   - Every 'send' or 'recv' call is mirrored by the other process.
 template <bool Invert> struct Process {
-  RPC_INLINE Process() = default;
-  RPC_INLINE Process(const Process &) = delete;
-  RPC_INLINE Process &operator=(const Process &) = delete;
-  RPC_INLINE Process(Process &&) = default;
-  RPC_INLINE Process &operator=(Process &&) = default;
-  RPC_INLINE ~Process() = default;
+  RPC_ATTRS Process() = default;
+  RPC_ATTRS Process(const Process &) = delete;
+  RPC_ATTRS Process &operator=(const Process &) = delete;
+  RPC_ATTRS Process(Process &&) = default;
+  RPC_ATTRS Process &operator=(Process &&) = default;
+  RPC_ATTRS ~Process() = default;
 
   const uint32_t port_count = 0;
   const uint32_t *const inbox = nullptr;
@@ -94,7 +88,7 @@ template <bool Invert> struct Process {
   static constexpr uint64_t NUM_BITS_IN_WORD = sizeof(uint32_t) * 8;
   uint32_t lock[MAX_PORT_COUNT / NUM_BITS_IN_WORD] = {0};
 
-  RPC_INLINE Process(uint32_t port_count, void *buffer)
+  RPC_ATTRS Process(uint32_t port_count, void *buffer)
       : port_count(port_count), inbox(reinterpret_cast<uint32_t *>(
                                     advance(buffer, inbox_offset(port_count)))),
         outbox(reinterpret_cast<uint32_t *>(
@@ -113,20 +107,20 @@ template <bool Invert> struct Process {
   ///   Header header[port_count];
   ///   Buffer packet[port_count][lane_size];
   /// };
-  RPC_INLINE static constexpr uint64_t allocation_size(uint32_t port_count,
-                                                       uint32_t lane_size) {
+  RPC_ATTRS static constexpr uint64_t allocation_size(uint32_t port_count,
+                                                      uint32_t lane_size) {
     return buffer_offset(port_count) + buffer_bytes(port_count, lane_size);
   }
 
   /// Retrieve the inbox state from memory shared between processes.
-  RPC_INLINE uint32_t load_inbox(uint64_t lane_mask, uint32_t index) const {
+  RPC_ATTRS uint32_t load_inbox(uint64_t lane_mask, uint32_t index) const {
     return rpc::broadcast_value(
         lane_mask, __scoped_atomic_load_n(&inbox[index], __ATOMIC_RELAXED,
                                           __MEMORY_SCOPE_SYSTEM));
   }
 
   /// Retrieve the outbox state from memory shared between processes.
-  RPC_INLINE uint32_t load_outbox(uint64_t lane_mask, uint32_t index) const {
+  RPC_ATTRS uint32_t load_outbox(uint64_t lane_mask, uint32_t index) const {
     return rpc::broadcast_value(
         lane_mask, __scoped_atomic_load_n(&outbox[index], __ATOMIC_RELAXED,
                                           __MEMORY_SCOPE_SYSTEM));
@@ -136,7 +130,7 @@ template <bool Invert> struct Process {
   /// Equivalent to loading outbox followed by store of the inverted value
   /// The outbox is write only by this warp and tracking the value locally is
   /// cheaper than calling load_outbox to get the value to store.
-  RPC_INLINE uint32_t invert_outbox(uint32_t index, uint32_t current_outbox) {
+  RPC_ATTRS uint32_t invert_outbox(uint32_t index, uint32_t current_outbox) {
     uint32_t inverted_outbox = !current_outbox;
     __scoped_atomic_thread_fence(__ATOMIC_RELEASE, __MEMORY_SCOPE_SYSTEM);
     __scoped_atomic_store_n(&outbox[index], inverted_outbox, __ATOMIC_RELAXED,
@@ -146,8 +140,8 @@ template <bool Invert> struct Process {
 
   // Given the current outbox and inbox values, wait until the inbox changes
   // to indicate that this thread owns the buffer element.
-  RPC_INLINE void wait_for_ownership(uint64_t lane_mask, uint32_t index,
-                                     uint32_t outbox, uint32_t in) {
+  RPC_ATTRS void wait_for_ownership(uint64_t lane_mask, uint32_t index,
+                                    uint32_t outbox, uint32_t in) {
     while (buffer_unavailable(in, outbox)) {
       sleep_briefly();
       in = load_inbox(lane_mask, index);
@@ -158,14 +152,14 @@ template <bool Invert> struct Process {
   /// The packet is a linearly allocated array of buffers used to communicate
   /// with the other process. This function returns the appropriate slot in this
   /// array such that the process can operate on an entire warp or wavefront.
-  RPC_INLINE Buffer *get_packet(uint32_t index, uint32_t lane_size) {
+  RPC_ATTRS Buffer *get_packet(uint32_t index, uint32_t lane_size) {
     return &packet[index * lane_size];
   }
 
   /// Determines if this process needs to wait for ownership of the buffer. We
   /// invert the condition on one of the processes to indicate that if one
   /// process owns the buffer then the other does not.
-  RPC_INLINE static bool buffer_unavailable(uint32_t in, uint32_t out) {
+  RPC_ATTRS static bool buffer_unavailable(uint32_t in, uint32_t out) {
     bool cond = in != out;
     return Invert ? !cond : cond;
   }
@@ -174,7 +168,7 @@ template <bool Invert> struct Process {
   /// lane_mask is a bitmap of the threads in the warp that would hold the
   /// single lock on success, e.g. the result of rpc::get_lane_mask()
   /// The lock is held when the n-th bit of the lock bitfield is set.
-  RPC_INLINE bool try_lock(uint64_t lane_mask, uint32_t index) {
+  RPC_ATTRS bool try_lock(uint64_t lane_mask, uint32_t index) {
     // On amdgpu, test and set to the nth lock bit and a sync_lane would suffice
     // On volta, need to handle differences between the threads running and
     // the threads that were detected in the previous call to get_lane_mask()
@@ -214,7 +208,7 @@ template <bool Invert> struct Process {
 
   /// Unlock the lock at index. We need a lane sync to keep this function
   /// convergent, otherwise the compiler will sink the store and deadlock.
-  RPC_INLINE void unlock(uint64_t lane_mask, uint32_t index) {
+  RPC_ATTRS void unlock(uint64_t lane_mask, uint32_t index) {
     // Do not move any writes past the unlock.
     __scoped_atomic_thread_fence(__ATOMIC_RELEASE, __MEMORY_SCOPE_DEVICE);
 
@@ -227,40 +221,40 @@ template <bool Invert> struct Process {
   }
 
   /// Number of bytes to allocate for an inbox or outbox.
-  RPC_INLINE static constexpr uint64_t mailbox_bytes(uint32_t port_count) {
+  RPC_ATTRS static constexpr uint64_t mailbox_bytes(uint32_t port_count) {
     return port_count * sizeof(uint32_t);
   }
 
   /// Number of bytes to allocate for the buffer containing the packets.
-  RPC_INLINE static constexpr uint64_t buffer_bytes(uint32_t port_count,
-                                                    uint32_t lane_size) {
+  RPC_ATTRS static constexpr uint64_t buffer_bytes(uint32_t port_count,
+                                                   uint32_t lane_size) {
     return port_count * lane_size * sizeof(Buffer);
   }
 
   /// Offset of the inbox in memory. This is the same as the outbox if inverted.
-  RPC_INLINE static constexpr uint64_t inbox_offset(uint32_t port_count) {
+  RPC_ATTRS static constexpr uint64_t inbox_offset(uint32_t port_count) {
     return Invert ? mailbox_bytes(port_count) : 0;
   }
 
   /// Offset of the outbox in memory. This is the same as the inbox if inverted.
-  RPC_INLINE static constexpr uint64_t outbox_offset(uint32_t port_count) {
+  RPC_ATTRS static constexpr uint64_t outbox_offset(uint32_t port_count) {
     return Invert ? 0 : mailbox_bytes(port_count);
   }
 
   /// Offset of the buffer containing the packets after the inbox and outbox.
-  RPC_INLINE static constexpr uint64_t header_offset(uint32_t port_count) {
+  RPC_ATTRS static constexpr uint64_t header_offset(uint32_t port_count) {
     return align_up(2 * mailbox_bytes(port_count), alignof(Header));
   }
 
   /// Offset of the buffer containing the packets after the inbox and outbox.
-  RPC_INLINE static constexpr uint64_t buffer_offset(uint32_t port_count) {
+  RPC_ATTRS static constexpr uint64_t buffer_offset(uint32_t port_count) {
     return align_up(header_offset(port_count) + port_count * sizeof(Header),
                     alignof(Buffer));
   }
 
   /// Conditionally set the n-th bit in the atomic bitfield.
-  RPC_INLINE static constexpr uint32_t set_nth(uint32_t *bits, uint32_t index,
-                                               bool cond) {
+  RPC_ATTRS static constexpr uint32_t set_nth(uint32_t *bits, uint32_t index,
+                                              bool cond) {
     uint32_t slot = index / NUM_BITS_IN_WORD;
     uint32_t bit = index % NUM_BITS_IN_WORD;
     return __scoped_atomic_fetch_or(&bits[slot],
@@ -270,8 +264,8 @@ template <bool Invert> struct Process {
   }
 
   /// Conditionally clear the n-th bit in the atomic bitfield.
-  RPC_INLINE static constexpr uint32_t clear_nth(uint32_t *bits, uint32_t index,
-                                                 bool cond) {
+  RPC_ATTRS static constexpr uint32_t clear_nth(uint32_t *bits, uint32_t index,
+                                                bool cond) {
     uint32_t slot = index / NUM_BITS_IN_WORD;
     uint32_t bit = index % NUM_BITS_IN_WORD;
     return __scoped_atomic_fetch_and(&bits[slot],
@@ -281,10 +275,10 @@ template <bool Invert> struct Process {
   }
 };
 
-/// Invokes a function accross every active buffer across the total lane size.
+/// Invokes a function across every active buffer across the total lane size.
 template <typename F>
-RPC_INLINE static void invoke_rpc(F &&fn, uint32_t lane_size,
-                                  uint64_t lane_mask, Buffer *slot) {
+RPC_ATTRS static void invoke_rpc(F &&fn, uint32_t lane_size, uint64_t lane_mask,
+                                 Buffer *slot) {
   if constexpr (is_process_gpu()) {
     fn(&slot[rpc::get_lane_id()], rpc::get_lane_id());
   } else {
@@ -298,40 +292,37 @@ RPC_INLINE static void invoke_rpc(F &&fn, uint32_t lane_size,
 /// processes. A port is conceptually an index into the memory provided by the
 /// underlying process that is guarded by a lock bit.
 template <bool T> struct Port {
-  RPC_INLINE Port(Process<T> &process, uint64_t lane_mask, uint32_t lane_size,
-                  uint32_t index, uint32_t out)
+  RPC_ATTRS Port(Process<T> &process, uint64_t lane_mask, uint32_t lane_size,
+                 uint32_t index, uint32_t out)
       : process(process), lane_mask(lane_mask), lane_size(lane_size),
         index(index), out(out), receive(false), owns_buffer(true) {}
-  RPC_INLINE ~Port() = default;
+  RPC_ATTRS ~Port() = default;
 
 private:
-  RPC_INLINE Port(const Port &) = delete;
-  RPC_INLINE Port &operator=(const Port &) = delete;
-  RPC_INLINE Port(Port &&) = default;
-  RPC_INLINE Port &operator=(Port &&) = default;
+  RPC_ATTRS Port(const Port &) = delete;
+  RPC_ATTRS Port &operator=(const Port &) = delete;
+  RPC_ATTRS Port(Port &&) = default;
+  RPC_ATTRS Port &operator=(Port &&) = default;
 
   friend struct Client;
   friend struct Server;
   friend class rpc::optional<Port<T>>;
 
 public:
-  template <typename U> RPC_INLINE void recv(U use);
-  template <typename F> RPC_INLINE void send(F fill);
-  template <typename F, typename U>
-  RPC_INLINE void send_and_recv(F fill, U use);
-  template <typename W> RPC_INLINE void recv_and_send(W work);
-  RPC_INLINE void send_n(const void *const *src, uint64_t *size);
-  RPC_INLINE void send_n(const void *src, uint64_t size);
+  template <typename U> RPC_ATTRS void recv(U use);
+  template <typename F> RPC_ATTRS void send(F fill);
+  template <typename F, typename U> RPC_ATTRS void send_and_recv(F fill, U use);
+  template <typename W> RPC_ATTRS void recv_and_send(W work);
+  RPC_ATTRS void send_n(const void *const *src, uint64_t *size);
+  RPC_ATTRS void send_n(const void *src, uint64_t size);
   template <typename A>
-  RPC_INLINE void recv_n(void **dst, uint64_t *size, A &&alloc);
+  RPC_ATTRS void recv_n(void **dst, uint64_t *size, A &&alloc);
 
-  RPC_INLINE uint32_t get_opcode() const {
-    return process.header[index].opcode;
-  }
+  RPC_ATTRS uint32_t get_opcode() const { return process.header[index].opcode; }
 
-  RPC_INLINE uint32_t get_index() const { return index; }
+  RPC_ATTRS uint32_t get_index() const { return index; }
 
-  RPC_INLINE void close() {
+  RPC_ATTRS void close() {
     // Wait for all lanes to finish using the port.
     rpc::sync_lane(lane_mask);
 
@@ -354,16 +345,16 @@ private:
 
 /// The RPC client used to make requests to the server.
 struct Client {
-  RPC_INLINE Client() = default;
-  RPC_INLINE Client(const Client &) = delete;
-  RPC_INLINE Client &operator=(const Client &) = delete;
-  RPC_INLINE ~Client() = default;
+  RPC_ATTRS Client() = default;
+  RPC_ATTRS Client(const Client &) = delete;
+  RPC_ATTRS Client &operator=(const Client &) = delete;
+  RPC_ATTRS ~Client() = default;
 
-  RPC_INLINE Client(uint32_t port_count, void *buffer)
+  RPC_ATTRS Client(uint32_t port_count, void *buffer)
       : process(port_count, buffer) {}
 
   using Port = rpc::Port<false>;
-  template <uint32_t opcode> RPC_INLINE Port open();
+  template <uint32_t opcode> RPC_ATTRS Port open();
 
 private:
   Process<false> process;
@@ -371,21 +362,21 @@ private:
 
 /// The RPC server used to respond to the client.
 struct Server {
-  RPC_INLINE Server() = default;
-  RPC_INLINE Server(const Server &) = delete;
-  RPC_INLINE Server &operator=(const Server &) = delete;
-  RPC_INLINE ~Server() = default;
+  RPC_ATTRS Server() = default;
+  RPC_ATTRS Server(const Server &) = delete;
+  RPC_ATTRS Server &operator=(const Server &) = delete;
+  RPC_ATTRS ~Server() = default;
 
-  RPC_INLINE Server(uint32_t port_count, void *buffer)
+  RPC_ATTRS Server(uint32_t port_count, void *buffer)
       : process(port_count, buffer) {}
 
   using Port = rpc::Port<true>;
-  RPC_INLINE rpc::optional<Port> try_open(uint32_t lane_size,
-                                          uint32_t start = 0);
-  RPC_INLINE Port open(uint32_t lane_size);
+  RPC_ATTRS rpc::optional<Port> try_open(uint32_t lane_size,
+                                         uint32_t start = 0);
+  RPC_ATTRS Port open(uint32_t lane_size);
 
-  RPC_INLINE static uint64_t allocation_size(uint32_t lane_size,
-                                             uint32_t port_count) {
+  RPC_ATTRS static constexpr uint64_t allocation_size(uint32_t lane_size,
+                                                      uint32_t port_count) {
     return Process<true>::allocation_size(port_count, lane_size);
   }
 
@@ -394,7 +385,7 @@ private:
 };
 
 /// Applies \p fill to the shared buffer and initiates a send operation.
-template <bool T> template <typename F> RPC_INLINE void Port<T>::send(F fill) {
+template <bool T> template <typename F> RPC_ATTRS void Port<T>::send(F fill) {
   uint32_t in = owns_buffer ? out ^ T : process.load_inbox(lane_mask, index);
 
   // We need to wait until we own the buffer before sending.
@@ -409,7 +400,7 @@ template <bool T> template <typename F> RPC_INLINE void Port<T>::send(F fill) {
 }
 
 /// Applies \p use to the shared buffer and acknowledges the send.
-template <bool T> template <typename U> RPC_INLINE void Port<T>::recv(U use) {
+template <bool T> template <typename U> RPC_ATTRS void Port<T>::recv(U use) {
   // We only exchange ownership of the buffer during a receive if we are waiting
   // for a previous receive to finish.
   if (receive) {
@@ -432,7 +423,7 @@ template <bool T> template <typename U> RPC_INLINE void Port<T>::recv(U use) {
 /// Combines a send and receive into a single function.
 template <bool T>
 template <typename F, typename U>
-RPC_INLINE void Port<T>::send_and_recv(F fill, U use) {
+RPC_ATTRS void Port<T>::send_and_recv(F fill, U use) {
   send(fill);
   recv(use);
 }
@@ -442,7 +433,7 @@ RPC_INLINE void Port<T>::send_and_recv(F fill, U use) {
 /// the copy back.
 template <bool T>
 template <typename W>
-RPC_INLINE void Port<T>::recv_and_send(W work) {
+RPC_ATTRS void Port<T>::recv_and_send(W work) {
   recv(work);
   send([](Buffer *, uint32_t) { /* no-op */ });
 }
@@ -450,7 +441,7 @@ RPC_INLINE void Port<T>::recv_and_send(W work) {
 /// Helper routine to simplify the interface when sending from the GPU using
 /// thread private pointers to the underlying value.
 template <bool T>
-RPC_INLINE void Port<T>::send_n(const void *src, uint64_t size) {
+RPC_ATTRS void Port<T>::send_n(const void *src, uint64_t size) {
   const void **src_ptr = &src;
   uint64_t *size_ptr = &size;
   send_n(src_ptr, size_ptr);
@@ -459,7 +450,7 @@ RPC_INLINE void Port<T>::send_n(const void *src, uint64_t size) {
 /// Sends an arbitrarily sized data buffer \p src across the shared channel in
 /// multiples of the packet length.
 template <bool T>
-RPC_INLINE void Port<T>::send_n(const void *const *src, uint64_t *size) {
+RPC_ATTRS void Port<T>::send_n(const void *const *src, uint64_t *size) {
   uint64_t num_sends = 0;
   send([&](Buffer *buffer, uint32_t id) {
     reinterpret_cast<uint64_t *>(buffer->data)[0] = lane_value(size, id);
@@ -490,7 +481,7 @@ RPC_INLINE void Port<T>::send_n(const void *const *src, uint64_t *size) {
 /// size of the data so that we can initialize the size of the \p dst buffer.
 template <bool T>
 template <typename A>
-RPC_INLINE void Port<T>::recv_n(void **dst, uint64_t *size, A &&alloc) {
+RPC_ATTRS void Port<T>::recv_n(void **dst, uint64_t *size, A &&alloc) {
   uint64_t num_recvs = 0;
   recv([&](Buffer *buffer, uint32_t id) {
     lane_value(size, id) = reinterpret_cast<uint64_t *>(buffer->data)[0];
@@ -524,7 +515,7 @@ RPC_INLINE void Port<T>::recv_n(void **dst, uint64_t *size, A &&alloc) {
 /// port. Each port instance uses an associated \p opcode to tell the server
 /// what to do. The Client interface provides the appropriate lane size to the
 /// port using the platform's returned value.
-template <uint32_t opcode> RPC_INLINE Client::Port Client::open() {
+template <uint32_t opcode> RPC_ATTRS Client::Port Client::open() {
   // Repeatedly perform a naive linear scan for a port that can be opened to
   // send data.
   for (uint32_t index = 0;; ++index) {
@@ -558,7 +549,7 @@ template <uint32_t opcode> RPC_INLINE Client::Port Client::open() {
 
 /// Attempts to open a port to use as the server. The server can only open a
 /// port if it has a pending receive operation
-RPC_INLINE rpc::optional<typename Server::Port>
+RPC_ATTRS rpc::optional<typename Server::Port>
 Server::try_open(uint32_t lane_size, uint32_t start) {
   // Perform a naive linear scan for a port that has a pending request.
   for (uint32_t index = start; index < process.port_count; ++index) {
@@ -588,7 +579,7 @@ Server::try_open(uint32_t lane_size, uint32_t start) {
   return rpc::nullopt;
 }
 
-RPC_INLINE Server::Port Server::open(uint32_t lane_size) {
+RPC_ATTRS Server::Port Server::open(uint32_t lane_size) {
   for (;;) {
     if (rpc::optional<Server::Port> p = try_open(lane_size))
       return rpc::move(p.value());
@@ -596,6 +587,7 @@ RPC_INLINE Server::Port Server::open(uint32_t lane_size) {
   }
 }
 
+#undef RPC_ATTRS
 #if !__has_builtin(__scoped_atomic_load_n)
 #undef __scoped_atomic_load_n
 #undef __scoped_atomic_store_n

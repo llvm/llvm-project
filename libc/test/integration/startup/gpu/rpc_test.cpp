@@ -14,7 +14,7 @@
 using namespace LIBC_NAMESPACE;
 
 static void test_add_simple() {
-  uint32_t num_additions =
+  uint64_t num_additions =
       10 + 10 * gpu::get_thread_id() + 10 * gpu::get_block_id();
   uint64_t cnt = 0;
   for (uint32_t i = 0; i < num_additions; ++i) {
@@ -35,7 +35,7 @@ static void test_add_simple() {
 // Test to ensure that the RPC mechanism doesn't hang on divergence.
 static void test_noop(uint8_t data) {
   LIBC_NAMESPACE::rpc::Client::Port port =
-      LIBC_NAMESPACE::rpc::client.open<RPC_NOOP>();
+      LIBC_NAMESPACE::rpc::client.open<LIBC_NOOP>();
   port.send([=](LIBC_NAMESPACE::rpc::Buffer *buffer, uint32_t) {
     buffer->data[0] = data;
   });

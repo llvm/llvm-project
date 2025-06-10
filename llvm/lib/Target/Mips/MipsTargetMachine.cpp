@@ -60,6 +60,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTarget() {
 
   PassRegistry *PR = PassRegistry::getPassRegistry();
   initializeGlobalISel(*PR);
+  initializeMipsAsmPrinterPass(*PR);
   initializeMipsDelaySlotFillerPass(*PR);
   initializeMipsBranchExpansionPass(*PR);
   initializeMicroMipsSizeReducePass(*PR);
@@ -70,6 +71,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTarget() {
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
+  if (TT.isOSBinFormatCOFF())
+    return std::make_unique<TargetLoweringObjectFileCOFF>();
   return std::make_unique<MipsTargetObjectFile>();
 }
 
@@ -231,6 +234,7 @@ public:
     // can break this requirement, so disable it when long branch pass is
     // enabled.
     EnableTailMerge = !getMipsSubtarget().enableLongBranchPass();
+    EnableLoopTermFold = true;
   }
 
   MipsTargetMachine &getMipsTargetMachine() const {
@@ -295,7 +299,7 @@ MipsTargetMachine::getTargetTransformInfo(const Function &F) const {
   }
 
   LLVM_DEBUG(errs() << "Target Transform Info Pass Added\n");
-  return TargetTransformInfo(MipsTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<MipsTTIImpl>(this, F));
 }
 
 MachineFunctionInfo *MipsTargetMachine::createMachineFunctionInfo(

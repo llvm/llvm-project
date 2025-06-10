@@ -13,11 +13,8 @@
 #error "This file is intended for AMDGPU targets or offloading to AMDGPU"
 #endif
 
-#include <stdint.h>
-
-#if !defined(__cplusplus)
-_Pragma("push_macro(\"bool\")");
-#define bool _Bool
+#ifndef __GPUINTRIN_H
+#error "Never use <amdgpuintrin.h> directly; include <gpuintrin.h> instead"
 #endif
 
 _Pragma("omp begin declare target device_type(nohost)");
@@ -115,15 +112,6 @@ __gpu_read_first_lane_u32(uint64_t __lane_mask, uint32_t __x) {
   return __builtin_amdgcn_readfirstlane(__x);
 }
 
-// Copies the value from the first active thread in the wavefront to the rest.
-_DEFAULT_FN_ATTRS __inline__ uint64_t
-__gpu_read_first_lane_u64(uint64_t __lane_mask, uint64_t __x) {
-  uint32_t __hi = (uint32_t)(__x >> 32ull);
-  uint32_t __lo = (uint32_t)(__x & 0xFFFFFFFF);
-  return ((uint64_t)__builtin_amdgcn_readfirstlane(__hi) << 32ull) |
-         ((uint64_t)__builtin_amdgcn_readfirstlane(__lo));
-}
-
 // Returns a bitmask of threads in the current lane for which \p x is true.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t __gpu_ballot(uint64_t __lane_mask,
                                                           bool __x) {
@@ -145,29 +133,46 @@ _DEFAULT_FN_ATTRS static __inline__ void __gpu_sync_lane(uint64_t __lane_mask) {
 
 // Shuffles the the lanes inside the wavefront according to the given index.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t
-__gpu_shuffle_idx_u32(uint64_t __lane_mask, uint32_t __idx, uint32_t __x) {
-  return __builtin_amdgcn_ds_bpermute(__idx << 2, __x);
+__gpu_shuffle_idx_u32(uint64_t __lane_mask, uint32_t __idx, uint32_t __x,
+                      uint32_t __width) {
+  uint32_t __lane = __idx + (__gpu_lane_id() & ~(__width - 1));
+  return __builtin_amdgcn_ds_bpermute(__lane << 2, __x);
 }
 
-// Shuffles the the lanes inside the wavefront according to the given index.
+// Returns a bitmask marking all lanes that have the same value of __x.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
-__gpu_shuffle_idx_u64(uint64_t __lane_mask, uint32_t __idx, uint64_t __x) {
-  uint32_t __hi = (uint32_t)(__x >> 32ull);
-  uint32_t __lo = (uint32_t)(__x & 0xFFFFFFFF);
-  return ((uint64_t)__builtin_amdgcn_ds_bpermute(__idx << 2, __hi) << 32ull) |
-         ((uint64_t)__builtin_amdgcn_ds_bpermute(__idx << 2, __lo));
+__gpu_match_any_u32(uint64_t __lane_mask, uint32_t __x) {
+  return __gpu_match_any_u32_impl(__lane_mask, __x);
 }
 
-// Returns true if the flat pointer points to CUDA 'shared' memory.
+// Returns a bitmask marking all lanes that have the same value of __x.
+_DEFAULT_FN_ATTRS static __inline__ uint64_t
+__gpu_match_any_u64(uint64_t __lane_mask, uint64_t __x) {
+  return __gpu_match_any_u64_impl(__lane_mask, __x);
+}
+
+// Returns the current lane mask if every lane contains __x.
+_DEFAULT_FN_ATTRS static __inline__ uint64_t
+__gpu_match_all_u32(uint64_t __lane_mask, uint32_t __x) {
+  return __gpu_match_all_u32_impl(__lane_mask, __x);
+}
+
+// Returns the current lane mask if every lane contains __x.
+_DEFAULT_FN_ATTRS static __inline__ uint64_t
+__gpu_match_all_u64(uint64_t __lane_mask, uint64_t __x) {
+  return __gpu_match_all_u64_impl(__lane_mask, __x);
+}
+
+// Returns true if the flat pointer points to AMDGPU 'shared' memory.
 _DEFAULT_FN_ATTRS static __inline__ bool __gpu_is_ptr_local(void *ptr) {
-  return __builtin_amdgcn_is_shared((void __attribute__((address_space(0))) *)((
+  return __builtin_amdgcn_is_shared((void [[clang::address_space(0)]] *)((
       void [[clang::opencl_generic]] *)ptr));
 }
 
-// Returns true if the flat pointer points to CUDA 'local' memory.
+// Returns true if the flat pointer points to AMDGPU 'private' memory.
 _DEFAULT_FN_ATTRS static __inline__ bool __gpu_is_ptr_private(void *ptr) {
-  return __builtin_amdgcn_is_private((void __attribute__((
-      address_space(0))) *)((void [[clang::opencl_generic]] *)ptr));
+  return __builtin_amdgcn_is_private((void [[clang::address_space(0)]] *)((
+      void [[clang::opencl_generic]] *)ptr));
 }
 
 // Terminates execution of the associated wavefront.
@@ -182,9 +187,5 @@ _DEFAULT_FN_ATTRS static __inline__ void __gpu_thread_suspend(void) {
 
 _Pragma("omp end declare variant");
 _Pragma("omp end declare target");
-
-#if !defined(__cplusplus)
-_Pragma("pop_macro(\"bool\")");
-#endif
 
 #endif // __AMDGPUINTRIN_H

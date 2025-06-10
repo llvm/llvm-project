@@ -31,7 +31,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/bit.h"
 
-
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
@@ -267,21 +266,21 @@ bool lldb_private::formatters::NSIndexSetSummaryProvider(
     if (class_name == "NSIndexSet" || class_name == "NSMutableIndexSet") {
       // Foundation version 2000 added a bitmask if the index set fit in 64 bits
       // and a Tagged Pointer version if the bitmask is small enough to fit in
-      // the tagged pointer payload.  
+      // the tagged pointer payload.
       // It also changed the layout (but not the size) of the set descriptor.
 
       // First check whether this is a tagged pointer.  The bitmask will be in
       // the payload of the tagged pointer.
       uint64_t payload;
-      if (runtime->GetFoundationVersion() >= 2000  
-          && descriptor->GetTaggedPointerInfo(nullptr, nullptr, &payload)) {
+      if (runtime->GetFoundationVersion() >= 2000 &&
+          descriptor->GetTaggedPointerInfo(nullptr, nullptr, &payload)) {
         count = llvm::popcount(payload);
         break;
       }
       // The first 32 bits describe the index set in all cases:
       Status error;
       uint32_t mode = process_sp->ReadUnsignedIntegerFromMemory(
-            valobj_addr + ptr_size, 4, 0, error);
+          valobj_addr + ptr_size, 4, 0, error);
       if (error.Fail())
         return false;
       // Now check if the index is held in a bitmask in the object:
@@ -292,7 +291,7 @@ bool lldb_private::formatters::NSIndexSetSummaryProvider(
         if ((mode & 2) == 2) {
           // The bitfield is a 64 bit uint at the beginning of the data var.
           uint64_t bitfield = process_sp->ReadUnsignedIntegerFromMemory(
-            valobj_addr + 2 * ptr_size, 8, 0, error);
+              valobj_addr + 2 * ptr_size, 8, 0, error);
           if (error.Fail())
             return false;
           count = llvm::popcount(bitfield);
@@ -309,7 +308,7 @@ bool lldb_private::formatters::NSIndexSetSummaryProvider(
           count = 0;
           break;
         }
-      
+
         if ((mode & 2) == 2)
           mode = 1; // this means the set only has one range
         else
@@ -1050,8 +1049,9 @@ public:
 
   bool MightHaveChildren() override { return false; }
 
-  size_t GetIndexOfChildWithName(ConstString name) override {
-    return UINT32_MAX;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
   }
 };
 
@@ -1227,7 +1227,7 @@ bool lldb_private::formatters::ObjCSELSummaryProvider(
 time_t lldb_private::formatters::GetOSXEpoch() {
   static time_t epoch = 0;
   if (!epoch) {
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(_AIX)
     tzset();
     tm tm_epoch;
     tm_epoch.tm_sec = 0;

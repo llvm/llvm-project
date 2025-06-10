@@ -31,6 +31,7 @@
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
@@ -817,7 +818,7 @@ public:
             return std::make_pair(ret, osi);
           }
         case 'x':
-          if (!str.compare("0")) {
+          if (str == "0") {
             is_hex = true;
             str.push_back(*osi);
           } else {
@@ -1787,9 +1788,9 @@ const char *DisassemblerLLVMC::SymbolLookup(uint64_t value, uint64_t *type_ptr,
           module_sp->ResolveFileAddress(value, value_so_addr);
           module_sp->ResolveFileAddress(pc, pc_so_addr);
         }
-      } else if (target && !target->GetSectionLoadList().IsEmpty()) {
-        target->GetSectionLoadList().ResolveLoadAddress(value, value_so_addr);
-        target->GetSectionLoadList().ResolveLoadAddress(pc, pc_so_addr);
+      } else if (target && target->HasLoadedSections()) {
+        target->ResolveLoadAddress(value, value_so_addr);
+        target->ResolveLoadAddress(pc, pc_so_addr);
       }
 
       SymbolContext sym_ctx;
@@ -1806,10 +1807,13 @@ const char *DisassemblerLLVMC::SymbolLookup(uint64_t value, uint64_t *type_ptr,
         bool format_omitting_current_func_name = false;
         if (sym_ctx.symbol || sym_ctx.function) {
           AddressRange range;
-          if (sym_ctx.GetAddressRange(resolve_scope, 0, false, range) &&
-              range.GetBaseAddress().IsValid() &&
-              range.ContainsLoadAddress(value_so_addr, target)) {
-            format_omitting_current_func_name = true;
+          for (uint32_t idx = 0;
+               sym_ctx.GetAddressRange(resolve_scope, idx, false, range);
+               ++idx) {
+            if (range.ContainsLoadAddress(value_so_addr, target)) {
+              format_omitting_current_func_name = true;
+              break;
+            }
           }
         }
 

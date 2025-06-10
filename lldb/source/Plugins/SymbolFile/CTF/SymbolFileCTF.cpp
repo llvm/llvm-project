@@ -437,14 +437,11 @@ SymbolFileCTF::CreateArray(const CTFArray &ctf_array) {
         llvm::formatv("Could not find array element type: {0}", ctf_array.type),
         llvm::inconvertibleErrorCode());
 
-  std::optional<uint64_t> element_size = element_type->GetByteSize(nullptr);
-  if (!element_size)
-    return llvm::make_error<llvm::StringError>(
-        llvm::formatv("could not get element size of type: {0}",
-                      ctf_array.type),
-        llvm::inconvertibleErrorCode());
+  auto element_size_or_err = element_type->GetByteSize(nullptr);
+  if (!element_size_or_err)
+    return element_size_or_err.takeError();
 
-  uint64_t size = ctf_array.nelems * *element_size;
+  uint64_t size = ctf_array.nelems * *element_size_or_err;
 
   CompilerType compiler_type = m_ast->CreateArrayType(
       element_type->GetFullCompilerType(), ctf_array.nelems,
@@ -492,8 +489,8 @@ SymbolFileCTF::CreateFunction(const CTFFunction &ctf_function) {
         llvm::inconvertibleErrorCode());
 
   CompilerType func_type = m_ast->CreateFunctionType(
-      ret_type->GetFullCompilerType(), arg_types.data(), arg_types.size(),
-      ctf_function.variadic, 0, clang::CallingConv::CC_C);
+      ret_type->GetFullCompilerType(), arg_types, ctf_function.variadic, 0,
+      clang::CallingConv::CC_C);
 
   Declaration decl;
   return MakeType(ctf_function.uid, ConstString(ctf_function.name), 0, nullptr,
@@ -544,7 +541,8 @@ bool SymbolFileCTF::CompleteType(CompilerType &compiler_type) {
   for (const CTFRecord::Field &field : ctf_record->fields) {
     Type *field_type = ResolveTypeUID(field.type);
     assert(field_type && "field must be complete");
-    const uint32_t field_size = field_type->GetByteSize(nullptr).value_or(0);
+    const uint32_t field_size =
+        llvm::expectedToOptional(field_type->GetByteSize(nullptr)).value_or(0);
     TypeSystemClang::AddFieldToRecordType(compiler_type, field.name,
                                           field_type->GetFullCompilerType(),
                                           eAccessPublic, field_size);
@@ -816,8 +814,7 @@ size_t SymbolFileCTF::ParseFunctions(CompileUnit &cu) {
       // Create function type.
       CompilerType func_type = m_ast->CreateFunctionType(
           ret_type ? ret_type->GetFullCompilerType() : CompilerType(),
-          arg_types.data(), arg_types.size(), is_variadic, 0,
-          clang::CallingConv::CC_C);
+          arg_types, is_variadic, 0, clang::CallingConv::CC_C);
       lldb::user_id_t function_type_uid = m_types.size() + 1;
       TypeSP type_sp =
           MakeType(function_type_uid, symbol->GetName(), 0, nullptr,
@@ -829,7 +826,7 @@ size_t SymbolFileCTF::ParseFunctions(CompileUnit &cu) {
       lldb::user_id_t func_uid = m_functions.size();
       FunctionSP function_sp = std::make_shared<Function>(
           &cu, func_uid, function_type_uid, symbol->GetMangled(), type_sp.get(),
-          AddressRanges{func_range});
+          symbol->GetAddress(), AddressRanges{func_range});
       m_functions.emplace_back(function_sp);
       cu.AddFunction(function_sp);
     }
@@ -946,8 +943,10 @@ uint32_t SymbolFileCTF::ResolveSymbolContext(const Address &so_addr,
   // Resolve functions.
   if (resolve_scope & eSymbolContextFunction) {
     for (FunctionSP function_sp : m_functions) {
-      if (function_sp->GetAddressRange().ContainsFileAddress(
-              so_addr.GetFileAddress())) {
+      if (llvm::any_of(
+              function_sp->GetAddressRanges(), [&](const AddressRange range) {
+                return range.ContainsFileAddress(so_addr.GetFileAddress());
+              })) {
         sc.function = function_sp.get();
         resolved_flags |= eSymbolContextFunction;
         break;

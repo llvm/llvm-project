@@ -287,8 +287,8 @@ def t_addrmode_sp : MemOperand,
 
 // Inspects parent to determine whether an or instruction can be implemented as
 // an add (i.e. whether we know overflow won't occur in the add).
-def AddLikeOrOp : ComplexPattern<i32, 1, "SelectAddLikeOr", [],
-                                 [SDNPWantParent]>;
+let WantsParent = true in
+def AddLikeOrOp : ComplexPattern<i32, 1, "SelectAddLikeOr">;
 
 // Pattern to exclude immediates from matching
 def non_imm32 : PatLeaf<(i32 GPR), [{ return !isa<ConstantSDNode>(N); }]>;
@@ -1697,17 +1697,17 @@ def : T1Pat<(sextloadi16 t_addrmode_is2:$addr),
 def : T1Pat<(sextloadi16 t_addrmode_rr:$addr),
             (tASRri (tLSLri (tLDRHr t_addrmode_rr:$addr), 16), 16)>;
 
-def : T1Pat<(atomic_load_8 t_addrmode_is1:$src),
+def : T1Pat<(atomic_load_azext_8 t_addrmode_is1:$src),
              (tLDRBi t_addrmode_is1:$src)>;
-def : T1Pat<(atomic_load_8 t_addrmode_rr:$src),
+def : T1Pat<(atomic_load_azext_8 t_addrmode_rr:$src),
              (tLDRBr t_addrmode_rr:$src)>;
-def : T1Pat<(atomic_load_16 t_addrmode_is2:$src),
+def : T1Pat<(atomic_load_azext_16 t_addrmode_is2:$src),
              (tLDRHi t_addrmode_is2:$src)>;
-def : T1Pat<(atomic_load_16 t_addrmode_rr:$src),
+def : T1Pat<(atomic_load_azext_16 t_addrmode_rr:$src),
              (tLDRHr t_addrmode_rr:$src)>;
-def : T1Pat<(atomic_load_32 t_addrmode_is4:$src),
+def : T1Pat<(atomic_load_nonext_32 t_addrmode_is4:$src),
              (tLDRi t_addrmode_is4:$src)>;
-def : T1Pat<(atomic_load_32 t_addrmode_rr:$src),
+def : T1Pat<(atomic_load_nonext_32 t_addrmode_rr:$src),
              (tLDRr t_addrmode_rr:$src)>;
 def : T1Pat<(atomic_store_8 tGPR:$val, t_addrmode_is1:$ptr),
              (tSTRBi tGPR:$val, t_addrmode_is1:$ptr)>;

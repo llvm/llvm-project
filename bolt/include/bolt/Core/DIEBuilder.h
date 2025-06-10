@@ -137,7 +137,7 @@ private:
   std::unordered_map<std::string, uint32_t> NameToIndexMap;
 
   /// Returns current state of the DIEBuilder
-  State &getState() { return *BuilderState.get(); }
+  State &getState() { return *BuilderState; }
 
   /// Resolve the reference in DIE, if target is not loaded into IR,
   /// pre-allocate it. \p RefCU will be updated to the Unit specific by \p
@@ -162,7 +162,7 @@ private:
 
   /// Clone an attribute in reference format.
   void cloneDieOffsetReferenceAttribute(
-      DIE &Die, const DWARFUnit &U, const DWARFDie &InputDIE,
+      DIE &Die, DWARFUnit &U, const DWARFDie &InputDIE,
       const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec, uint64_t Ref);
 
   /// Clone an attribute in block format.

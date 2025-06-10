@@ -1,4 +1,4 @@
-# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64 -run-pass none -o - %s | FileCheck %s
 # This test ensures that the MIR parser parses the 'killed' register flags
 # correctly.
 

@@ -49,7 +49,6 @@
 // CHECK-EXE: {{ld(\.exe)?}}"
 // CHECK-EXE-SAME: "--eh-frame-hdr"
 // CHECK-EXE-SAME: "--hash-style=sysv"
-// CHECK-EXE-SAME: "--build-id=uuid"
 // CHECK-EXE-SAME: "--unresolved-symbols=report-all"
 // CHECK-EXE-SAME: "-z" "now"
 // CHECK-EXE-SAME: "-z" "start-stop-visibility=hidden"
@@ -63,9 +62,22 @@
 // CHECK-NO-EXE: {{ld(\.exe)?}}"
 // CHECK-NO-EXE-NOT: "--eh-frame-hdr"
 // CHECK-NO-EXE-NOT: "--hash-style
-// CHECK-NO-EXE-NOT: "--build-id
 // CHECK-NO-EXE-NOT: "--unresolved-symbols
 // CHECK-NO-EXE-NOT: "-z"
+
+// Test that --build-id is supplied to the linker for non-static executables
+// and -shared.
+
+// RUN: %clang --target=x86_64-sie-ps5 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-BUILD-ID %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -shared -### 2>&1 | FileCheck --check-prefixes=CHECK-BUILD-ID %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -static -### 2>&1 | FileCheck --check-prefixes=CHECK-NO-BUILD-ID %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -r -### 2>&1 | FileCheck --check-prefixes=CHECK-NO-BUILD-ID %s
+
+// CHECK-BUILD-ID: {{ld(\.exe)?}}"
+// CHECK-BUILD-ID-SAME: "--build-id=uuid"
+
+// CHECK-NO-BUILD-ID: {{ld(\.exe)?}}"
+// CHECK-NO-BUILD-ID-NOT: "--build-id
 
 // Test that an appropriate linker script is supplied by the driver, but can
 // be overridden with -T.
@@ -172,29 +184,28 @@
 // CHECK-SYSROOT: {{ld(\.exe)?}}"
 // CHECK-SYSROOT-SAME: "--sysroot=mysdk"
 
-// Test that "." is always added to library search paths. This is long-standing
-// behavior, unique to PlayStation toolchains.
-
-// RUN: %clang --target=x64_64-sie-ps5 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-LDOT %s
-
-// CHECK-LDOT: {{ld(\.exe)?}}"
-// CHECK-LDOT-SAME: "-L."
-
-// Test that <sdk-root>/target/lib is added to library search paths, if it
-// exists and no --sysroot is specified. Also confirm that CRT objects are
-// found there.
+// Test implicit library search paths are supplied to the linker, after any
+// search paths specified by the user. <sdk-root>/target/lib is implicitly
+// added if it exists. CRT objects are found there. "." is always implicitly
+// added to library search paths. This is long-standing behavior, unique to
+// PlayStation toolchains.
 
 // RUN: rm -rf %t.dir && mkdir %t.dir
-// RUN: env SCE_PROSPERO_SDK_DIR=%t.dir %clang --target=x64_64-sie-ps5 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-NO-TARGETLIB %s
-// RUN: env SCE_PROSPERO_SDK_DIR=%t.dir %clang --target=x64_64-sie-ps5 %s -### --sysroot=%t.dir 2>&1 | FileCheck --check-prefixes=CHECK-NO-TARGETLIB %s
+// RUN: env SCE_PROSPERO_SDK_DIR=%t.dir %clang --target=x64_64-sie-ps5 %s -### -Luser 2>&1 | FileCheck --check-prefixes=CHECK-NO-TARGETLIB %s
+// RUN: %clang --target=x64_64-sie-ps5 %s -### -Luser --sysroot=%t.dir 2>&1 | FileCheck --check-prefixes=CHECK-NO-TARGETLIB %s
 
 // CHECK-NO-TARGETLIB: {{ld(\.exe)?}}"
+// CHECK-NO-TARGETLIB-SAME: "-Luser"
 // CHECK-NO-TARGETLIB-NOT: "-L{{.*[/\\]}}target/lib"
+// CHECK-NO-TARGETLIB-SAME: "-L."
 
-// RUN: mkdir -p %t.dir/target/lib
-// RUN: touch %t.dir/target/lib/crti.o
-// RUN: env SCE_PROSPERO_SDK_DIR=%t.dir %clang --target=x64_64-sie-ps5 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-TARGETLIB %s
+// RUN: mkdir -p %t.dir/myroot/target/lib
+// RUN: touch %t.dir/myroot/target/lib/crti.o
+// RUN: env SCE_PROSPERO_SDK_DIR=%t.dir/myroot %clang --target=x64_64-sie-ps5 %s -### -Luser 2>&1 | FileCheck --check-prefixes=CHECK-TARGETLIB %s
+// RUN: %clang --target=x64_64-sie-ps5 %s -### -Luser --sysroot=%t.dir/myroot 2>&1 | FileCheck --check-prefixes=CHECK-TARGETLIB %s
 
 // CHECK-TARGETLIB: {{ld(\.exe)?}}"
-// CHECK-TARGETLIB-SAME: "-L{{.*[/\\]}}target/lib"
-// CHECK-TARGETLIB-SAME: "{{.*[/\\]}}target{{/|\\\\}}lib{{/|\\\\}}crti.o"
+// CHECK-TARGETLIB-SAME: "-Luser"
+// CHECK-TARGETLIB-SAME: "-L{{.*}}myroot{{/|\\\\}}target{{/|\\\\}}lib"
+// CHECK-TARGETLIB-SAME: "-L."
+// CHECK-TARGETLIB-SAME: "{{.*}}myroot{{/|\\\\}}target{{/|\\\\}}lib{{/|\\\\}}crti.o"

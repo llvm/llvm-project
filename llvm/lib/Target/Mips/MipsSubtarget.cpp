@@ -16,6 +16,7 @@
 #include "MipsLegalizerInfo.h"
 #include "MipsRegisterBankInfo.h"
 #include "MipsRegisterInfo.h"
+#include "MipsSelectionDAGInfo.h"
 #include "MipsTargetMachine.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
@@ -78,13 +79,14 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
       HasMips3_32(false), HasMips3_32r2(false), HasMips4_32(false),
       HasMips4_32r2(false), HasMips5_32r2(false), InMips16Mode(false),
       InMips16HardFloat(Mips16HardFloat), InMicroMipsMode(false), HasDSP(false),
-      HasDSPR2(false), HasDSPR3(false), AllowMixed16_32(Mixed16_32 || Mips_Os16),
-      Os16(Mips_Os16), HasMSA(false), UseTCCInDIV(false), HasSym32(false),
-      HasEVA(false), DisableMadd4(false), HasMT(false), HasCRC(false),
-      HasVirt(false), HasGINV(false), UseIndirectJumpsHazard(false), StrictAlign(false),
+      HasDSPR2(false), HasDSPR3(false),
+      AllowMixed16_32(Mixed16_32 || Mips_Os16), Os16(Mips_Os16), HasMSA(false),
+      UseTCCInDIV(false), HasSym32(false), HasEVA(false), DisableMadd4(false),
+      HasMT(false), HasCRC(false), HasVirt(false), HasGINV(false),
+      UseIndirectJumpsHazard(false), StrictAlign(false),
       StackAlignOverride(StackAlignOverride), TM(TM), TargetTriple(TT),
-      TSInfo(), InstrInfo(MipsInstrInfo::create(
-                    initializeSubtargetDependencies(CPU, FS, TM))),
+      InstrInfo(
+          MipsInstrInfo::create(initializeSubtargetDependencies(CPU, FS, TM))),
       FrameLowering(MipsFrameLowering::create(*this)),
       TLInfo(MipsTargetLowering::create(TM, *this)) {
 
@@ -211,6 +213,8 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
     GINVWarningPrinted = true;
   }
 
+  TSInfo = std::make_unique<MipsSelectionDAGInfo>();
+
   CallLoweringInfo.reset(new MipsCallLowering(*getTargetLowering()));
   Legalizer.reset(new MipsLegalizerInfo(*this));
 
@@ -218,6 +222,8 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
   RegBankInfo.reset(RBI);
   InstSelector.reset(createMipsInstructionSelector(TM, *this, *RBI));
 }
+
+MipsSubtarget::~MipsSubtarget() = default;
 
 bool MipsSubtarget::isPositionIndependent() const {
   return TM.isPositionIndependent();
@@ -259,8 +265,8 @@ MipsSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
   }
 
   if ((isABI_N32() || isABI_N64()) && !isGP64bit())
-    report_fatal_error("64-bit code requested on a subtarget that doesn't "
-                       "support it!");
+    reportFatalUsageError("64-bit code requested on a subtarget that doesn't "
+                          "support it!");
 
   return *this;
 }
@@ -279,6 +285,10 @@ bool MipsSubtarget::isABI_N64() const { return getABI().IsN64(); }
 bool MipsSubtarget::isABI_N32() const { return getABI().IsN32(); }
 bool MipsSubtarget::isABI_O32() const { return getABI().IsO32(); }
 const MipsABIInfo &MipsSubtarget::getABI() const { return TM.getABI(); }
+
+const SelectionDAGTargetInfo *MipsSubtarget::getSelectionDAGInfo() const {
+  return TSInfo.get();
+}
 
 const CallLowering *MipsSubtarget::getCallLowering() const {
   return CallLoweringInfo.get();

@@ -115,6 +115,14 @@ std::string TCPSocket::GetRemoteConnectionURI() const {
   return "";
 }
 
+std::vector<std::string> TCPSocket::GetListeningConnectionURI() const {
+  std::vector<std::string> URIs;
+  for (const auto &[fd, addr] : m_listen_sockets)
+    URIs.emplace_back(llvm::formatv("connection://[{0}]:{1}",
+                                    addr.GetIPAddress(), addr.GetPort()));
+  return URIs;
+}
+
 Status TCPSocket::CreateSocket(int domain) {
   Status error;
   if (IsValid())
@@ -161,7 +169,8 @@ Status TCPSocket::Connect(llvm::StringRef name) {
     return error;
   }
 
-  error = Status::FromErrorString("Failed to connect port");
+  error = Status::FromErrorStringWithFormatv(
+      "Failed to connect to {0}:{1}", host_port->hostname, host_port->port);
   return error;
 }
 
@@ -208,11 +217,11 @@ Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
     }
 
     if (host_port->port == 0) {
-      socklen_t sa_len = address.GetLength();
-      if (getsockname(fd, &address.sockaddr(), &sa_len) == 0)
-        host_port->port = address.GetPort();
+      socklen_t sa_len = listen_address.GetLength();
+      if (getsockname(fd, &listen_address.sockaddr(), &sa_len) == 0)
+        host_port->port = listen_address.GetPort();
     }
-    m_listen_sockets[fd] = address;
+    m_listen_sockets[fd] = listen_address;
   }
 
   if (m_listen_sockets.empty()) {

@@ -59,14 +59,12 @@ public:
     CheckFactories.registerCheck<NoNamespaceCheck>("abseil-no-namespace");
     CheckFactories.registerCheck<RedundantStrcatCallsCheck>(
         "abseil-redundant-strcat-calls");
-    CheckFactories.registerCheck<StrCatAppendCheck>(
-        "abseil-str-cat-append");
+    CheckFactories.registerCheck<StrCatAppendCheck>("abseil-str-cat-append");
     CheckFactories.registerCheck<StringFindStartswithCheck>(
         "abseil-string-find-startswith");
     CheckFactories.registerCheck<StringFindStrContainsCheck>(
         "abseil-string-find-str-contains");
-    CheckFactories.registerCheck<TimeComparisonCheck>(
-        "abseil-time-comparison");
+    CheckFactories.registerCheck<TimeComparisonCheck>("abseil-time-comparison");
     CheckFactories.registerCheck<TimeSubtractionCheck>(
         "abseil-time-subtraction");
     CheckFactories.registerCheck<UpgradeDurationConversionsCheck>(

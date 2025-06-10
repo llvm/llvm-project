@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/GSYM/CallSiteInfo.h"
-#include "llvm/ADT/CachedHashString.h"
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
 #include "llvm/DebugInfo/GSYM/GsymCreator.h"
@@ -16,9 +15,7 @@
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
-#include <fstream>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 using namespace llvm;
@@ -151,7 +148,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(FunctionYAML)
 
 Error CallSiteInfoLoader::loadYAML(StringRef YAMLFile) {
   // Step 1: Read YAML file
-  auto BufferOrError = MemoryBuffer::getFile(YAMLFile);
+  auto BufferOrError = MemoryBuffer::getFile(YAMLFile, /*IsText=*/true);
   if (!BufferOrError)
     return errorCodeToError(BufferOrError.getError());
 
@@ -181,7 +178,7 @@ StringMap<FunctionInfo *> CallSiteInfoLoader::buildFunctionMap() {
   StringMap<FunctionInfo *> FuncMap;
   for (auto &Func : Funcs) {
     FuncMap.try_emplace(GCreator.getString(Func.Name), &Func);
-    if (auto MFuncs = Func.MergedFunctions)
+    if (auto &MFuncs = Func.MergedFunctions)
       for (auto &MFunc : MFuncs->MergedFunctions)
         FuncMap.try_emplace(GCreator.getString(MFunc.Name), &MFunc);
   }

@@ -130,7 +130,7 @@ def testInvalidNesting():
         try:
             pm = PassManager.parse("func.func(normalize-memrefs)")
         except ValueError as e:
-            # CHECK: ValueError exception: Can't add pass 'NormalizeMemRefs' restricted to 'builtin.module' on a PassManager intended to run on 'func.func', did you intend to nest?
+            # CHECK: ValueError exception: Can't add pass 'NormalizeMemRefsPass' restricted to 'builtin.module' on a PassManager intended to run on 'func.func', did you intend to nest?
             log("ValueError exception:", e)
         else:
             log("Exception not produced")
@@ -339,6 +339,27 @@ def testPrintIrBeforeAndAfterAll():
         # CHECK:     return
         # CHECK:   }
         # CHECK: }
+        pm.run(module)
+
+
+# CHECK-LABEL: TEST: testPrintIrLargeLimitElements
+@run
+def testPrintIrLargeLimitElements():
+    with Context() as ctx:
+        module = ModuleOp.parse(
+            """
+          module {
+            func.func @main() -> tensor<3xi64> {
+              %0 = arith.constant dense<[1, 2, 3]> : tensor<3xi64>
+              return %0 : tensor<3xi64>
+            }
+          }
+        """
+        )
+        pm = PassManager.parse("builtin.module(canonicalize)")
+        ctx.enable_multithreading(False)
+        pm.enable_ir_printing(large_elements_limit=2)
+        # CHECK:     %[[CST:.*]] = arith.constant dense_resource<__elided__> : tensor<3xi64>
         pm.run(module)
 
 

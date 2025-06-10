@@ -567,7 +567,7 @@ public:
     while (!VerificationQueue.empty()) {
       const Decl *D = VerificationQueue.back();
       if (FuncAnalysisPtr AP = DeclAnalysis.lookup(D)) {
-        if (auto *Pending = AP.dyn_cast<PendingFunctionAnalysis *>()) {
+        if (auto *Pending = dyn_cast<PendingFunctionAnalysis *>(AP)) {
           // All children have been traversed; finish analysis.
           finishPendingAnalysis(D, Pending);
         }
@@ -990,7 +990,7 @@ private:
         followDestructor(dyn_cast<CXXRecordDecl>(Dtor->getParent()), Dtor);
 
       if (auto *FD = dyn_cast<FunctionDecl>(CurrentCaller.CDecl)) {
-        TrailingRequiresClause = FD->getTrailingRequiresClause();
+        TrailingRequiresClause = FD->getTrailingRequiresClause().ConstraintExpr;
 
         // Note that FD->getType->getAs<FunctionProtoType>() can yield a
         // noexcept Expr which has been boiled down to a constant expression.

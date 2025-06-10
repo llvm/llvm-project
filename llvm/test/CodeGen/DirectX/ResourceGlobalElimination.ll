@@ -19,29 +19,31 @@
 ; CHECK-LABEL define void @main()
 define void @main() local_unnamed_addr #0 {
 entry:
-  ; DXOP: %In_h.i1 = call %dx.types.Handle @dx.op.createHandle
-  ; DXOP: %Out_h.i2 = call %dx.types.Handle @dx.op.createHandle
-  %In_h.i = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0) @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4f32_1_0_0t(i32 0, i32 0, i32 1, i32 0, i1 false)
+  ; DXOP: [[In_h_i:%.*]] = call %dx.types.Handle @dx.op.createHandle
+  ; DXOP: [[Out_h_i:%.*]] = call %dx.types.Handle @dx.op.createHandle
+  %In_h.i = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v4f32_1_0_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
   store target("dx.TypedBuffer", <4 x float>, 1, 0, 0) %In_h.i, ptr @In, align 4
-  %Out_h.i = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0) @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4f32_1_0_0t(i32 4, i32 1, i32 1, i32 0, i1 false)
+  %Out_h.i = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v4f32_1_0_0t(i32 4, i32 1, i32 1, i32 0, i1 false, ptr null)
   store target("dx.TypedBuffer", <4 x float>, 1, 0, 0) %Out_h.i, ptr @Out, align 4
   ; CSE: call i32 @llvm.dx.flattened.thread.id.in.group()
   %0 = call i32 @llvm.dx.flattened.thread.id.in.group()
   ; CHECK-NOT: load {{.*}} ptr @In
   %1 = load target("dx.TypedBuffer", <4 x float>, 1, 0, 0), ptr @In, align 4
-  ; CSE: call noundef <4 x float> @llvm.dx.typedBufferLoad.v4f32.tdx.TypedBuffer_v4f32_1_0_0t
-  %2 = call noundef <4 x float> @llvm.dx.typedBufferLoad.v4f32.tdx.TypedBuffer_v4f32_1_0_0t(target("dx.TypedBuffer", <4 x float>, 1, 0, 0) %1, i32 %0)
+  ; CSE: call noundef { <4 x float>, i1 } @llvm.dx.resource.load.typedbuffer.v4f32.tdx.TypedBuffer_v4f32_1_0_0t
+  %load = call noundef {<4 x float>, i1} @llvm.dx.resource.load.typedbuffer.v4f32.tdx.TypedBuffer_v4f32_1_0_0t(target("dx.TypedBuffer", <4 x float>, 1, 0, 0) %1, i32 %0)
+  %2 = extractvalue {<4 x float>, i1} %load, 0
   ; CHECK-NOT: load {{.*}} ptr @In
   %3 = load target("dx.TypedBuffer", <4 x float>, 1, 0, 0), ptr @In, align 4
-  %4 = call noundef <4 x float> @llvm.dx.typedBufferLoad.v4f32.tdx.TypedBuffer_v4f32_1_0_0t(target("dx.TypedBuffer", <4 x float>, 1, 0, 0) %3, i32 %0)
+  %load2 = call noundef {<4 x float>, i1} @llvm.dx.resource.load.typedbuffer.v4f32.tdx.TypedBuffer_v4f32_1_0_0t(target("dx.TypedBuffer", <4 x float>, 1, 0, 0) %3, i32 %0)
+  %4 = extractvalue {<4 x float>, i1} %load2, 0
   %add.i = fadd <4 x float> %2, %4
-  call void @llvm.dx.typedBufferStore.tdx.TypedBuffer_v4f32_1_0_0t.v4f32(target("dx.TypedBuffer", <4 x float>, 1, 0, 0) %Out_h.i, i32 %0, <4 x float> %add.i)
+  call void @llvm.dx.resource.store.typedbuffer.tdx.TypedBuffer_v4f32_1_0_0t.v4f32(target("dx.TypedBuffer", <4 x float>, 1, 0, 0) %Out_h.i, i32 %0, <4 x float> %add.i)
   ; CHECK: ret void
   ret void
 }
 
-; CSE-DAG: declare <4 x float> @llvm.dx.typedBufferLoad.v4f32.tdx.TypedBuffer_v4f32_1_0_0t(target("dx.TypedBuffer", <4 x float>, 1, 0, 0), i32) [[ROAttr:#[0-9]+]]
-; CSE-DAG: declare void @llvm.dx.typedBufferStore.tdx.TypedBuffer_v4f32_1_0_0t.v4f32(target("dx.TypedBuffer", <4 x float>, 1, 0, 0), i32, <4 x float>) [[WOAttr:#[0-9]+]]
+; CSE-DAG: declare { <4 x float>, i1 } @llvm.dx.resource.load.typedbuffer.v4f32.tdx.TypedBuffer_v4f32_1_0_0t(target("dx.TypedBuffer", <4 x float>, 1, 0, 0), i32) [[ROAttr:#[0-9]+]]
+; CSE-DAG: declare void @llvm.dx.resource.store.typedbuffer.tdx.TypedBuffer_v4f32_1_0_0t.v4f32(target("dx.TypedBuffer", <4 x float>, 1, 0, 0), i32, <4 x float>) [[WOAttr:#[0-9]+]]
 
 attributes #0 = { convergent noinline norecurse "frame-pointer"="all" "hlsl.numthreads"="8,1,1" "hlsl.shader"="compute" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 

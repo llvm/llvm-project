@@ -1424,11 +1424,9 @@ define <32 x i8> @constant_shift_v32i8_pairs(<32 x i8> %a) nounwind {
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [512,16384,4096,1024,32768,16384,8192,4096]
 ; AVX1-NEXT:    vpmulhuw %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,1,63,63,15,15,3,3,127,127,63,63,31,31,15,15]
-; AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpmulhuw %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpand %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: constant_shift_v32i8_pairs:
@@ -1487,11 +1485,9 @@ define <32 x i8> @constant_shift_v32i8_pairs(<32 x i8> %a) nounwind {
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X86-AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [512,16384,4096,1024,32768,16384,8192,4096]
 ; X86-AVX1-NEXT:    vpmulhuw %xmm2, %xmm1, %xmm1
-; X86-AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,1,63,63,15,15,3,3,127,127,63,63,31,31,15,15]
-; X86-AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
 ; X86-AVX1-NEXT:    vpmulhuw %xmm2, %xmm0, %xmm0
-; X86-AVX1-NEXT:    vpand %xmm3, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X86-AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-AVX1-NEXT:    retl
 ;
 ; X86-AVX2-LABEL: constant_shift_v32i8_pairs:
@@ -1508,11 +1504,10 @@ define <32 x i8> @constant_shift_v32i8_quads(<32 x i8> %a) nounwind {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [8192,8192,16384,16384,32768,32768,u,u]
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5],xmm0[6,7]
-; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [512,512,1024,1024,2048,2048,4096,4096]
-; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: constant_shift_v32i8_quads:
@@ -1553,11 +1548,10 @@ define <32 x i8> @constant_shift_v32i8_quads(<32 x i8> %a) nounwind {
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm1 # [8192,8192,16384,16384,32768,32768,u,u]
 ; X86-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5],xmm0[6,7]
-; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; X86-AVX1-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0 # [512,512,1024,1024,2048,2048,4096,4096]
-; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X86-AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-AVX1-NEXT:    retl
 ;
 ; X86-AVX2-LABEL: constant_shift_v32i8_quads:
@@ -1865,13 +1859,11 @@ define <16 x i16> @splatconstant_shift_v16i16(<16 x i16> %a) nounwind {
 define <32 x i8> @splatconstant_shift_v32i8(<32 x i8> %a) nounwind {
 ; AVX1-LABEL: splatconstant_shift_v32i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vpsrlw $3, %xmm1, %xmm1
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31]
-; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpsrlw $3, %xmm0, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpsrlw $3, %xmm0, %xmm0
-; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: splatconstant_shift_v32i8:
@@ -1909,13 +1901,11 @@ define <32 x i8> @splatconstant_shift_v32i8(<32 x i8> %a) nounwind {
 ;
 ; X86-AVX1-LABEL: splatconstant_shift_v32i8:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X86-AVX1-NEXT:    vpsrlw $3, %xmm1, %xmm1
-; X86-AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31]
-; X86-AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; X86-AVX1-NEXT:    vpsrlw $3, %xmm0, %xmm1
+; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; X86-AVX1-NEXT:    vpsrlw $3, %xmm0, %xmm0
-; X86-AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; X86-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X86-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X86-AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-AVX1-NEXT:    retl
 ;
 ; X86-AVX2-LABEL: splatconstant_shift_v32i8:

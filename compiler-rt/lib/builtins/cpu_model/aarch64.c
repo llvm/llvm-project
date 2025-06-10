@@ -14,7 +14,8 @@
 
 #include "aarch64.h"
 
-#if !defined(__aarch64__) && !defined(__arm64__) && !defined(_M_ARM64)
+#if !defined(__aarch64__) && !defined(__arm64__) && !defined(_M_ARM64) &&      \
+    !defined(__arm64ec__) && !defined(_M_ARM64EC)
 #error This file is intended only for aarch64-based targets
 #endif
 
@@ -80,6 +81,8 @@ struct {
 #include "aarch64/fmv/getauxval.inc"
 #elif defined(_WIN32)
 #include "aarch64/fmv/windows.inc"
+#elif defined(ENABLE_BAREMETAL_AARCH64_FMV)
+#include "aarch64/fmv/baremetal.inc"
 #else
 #include "aarch64/fmv/unimplemented.inc"
 #endif

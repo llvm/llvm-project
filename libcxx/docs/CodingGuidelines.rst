@@ -36,7 +36,7 @@ Function overloading also applies to operators. Using ``&user_object`` may call 
       ...
     }
 
-This is mostly enforced by the clang-tidy checks ``libcpp-robust-against-adl`` and ``libcpp-qualify-declval``.
+This is mostly enforced by the clang-tidy check ``libcpp-robust-against-adl``.
 
 Avoid including public headers
 ==============================
@@ -79,9 +79,9 @@ and then check for ``#if _LIBCPP_SOMETHING_ENABLED`` instead of
 
 and then checking for ``#ifdef _LIBCPP_SOMETHING_ENABLED``.
 
-This makes it significantly easier to catch missing includes, since Clang and GCC will warn when using and undefined
-marco inside an ``#if`` statement when using ``-Wundef``. Some macros in libc++ don't use this style yet, so this only
-applies when introducing a new macro.
+This makes it significantly easier to catch missing includes: Clang and GCC with ``-Wundef`` enabled will warn
+when using an undefined macro inside an ``#if`` statement. Some macros in libc++ don't use this style yet,
+so this guideline only applies when introducing a new macro.
 
 This is partially enforced by the clang-tidy check ``libcpp-internal-ftms``.
 
@@ -107,9 +107,9 @@ This is enforced by the clang-tidy check ``libcpp-uglify-attributes``.
 Use C++11 extensions in C++03 code if they simplify the code
 ============================================================
 
-libc++ only supports Clang in C++98/03 mode. Clang provides many C++11 features in C++03, making it possible to write a
-lot of code in a simpler way than if we were restricted to C++03 features. Some use of extensions is even mandatory,
-since libc++ supports move semantics in C++03.
+libc++ supports the C++98/03 mode only with the Clang compiler. Clang provides many C++11 features
+in C++03, making it possible to write a lot of code in a simpler way than if we were restricted to C++03 features.
+Some use of extensions is even mandatory, since libc++ supports move semantics in C++03.
 
 Use ``using`` aliases instead of ``typedef``
 ============================================
@@ -124,8 +124,8 @@ Write SFINAE with ``requires`` clauses in C++20-only code
 subsume other concepts. This means that overloads based on traits can be written without negating more general cases.
 They also show intent better.
 
-Write ``enable_if`` as ``enable_if_t<conditon, int> = 0``
-=========================================================
+Write ``enable_if`` as ``enable_if_t<condition, int> = 0``
+==========================================================
 
 The form ``enable_if_t<condition, int> = 0`` is the only one that works in every language mode and for overload sets
 using the same template arguments otherwise. If the code must work in C++11 or C++03, the libc++-internal alias
@@ -168,3 +168,30 @@ have a recommended practice where to put them, so libc++ applies it whenever it 
 Applications of ``[[nodiscard]]`` are code like any other code, so we aim to test them on public interfaces. This can be
 done with a ``.verify.cpp`` test. Many examples are available. Just look for tests with the suffix
 ``.nodiscard.verify.cpp``.
+
+Don't use public API names for symbols on the ABI boundary
+==========================================================
+
+Most functions in libc++ are defined in headers either as templates or as ``inline`` functions. However, we sometimes
+need or want to define functions in the built library. Symbols that are declared in the headers and defined in the
+built library become part of the ABI of libc++, which must be preserved for backwards compatibility. This means that
+we can't easily remove or rename such symbols except in special cases.
+
+When adding a symbol to the built library, make sure not to use a public name directly. Instead, define a
+``_LIBCPP_HIDE_FROM_ABI`` function in the headers with the public name and have it call a private function in the built
+library. This approach makes it easier to make changes to libc++ like move something from the built library to the
+headers (which is sometimes required for ``constexpr`` support).
+
+When defining a function at the ABI boundary, it can also be useful to consider which attributes (like ``[[gnu::pure]]``
+and ``[[clang::noescape]]``) can be added to the function to improve the compiler's ability to optimize.
+
+Library-internal type aliases should be annotated with ``_LIBCPP_NODEBUG``
+==========================================================================
+
+Libc++ has lots of internal type aliases. Accumulated, these can result in significant amounts of debug information that
+users generally don't care about, since users don't try to debug standard library facilities in most cases. For that
+reason, all library-internal type aliases that aren't function-local should be annotated with ``_LIBCPP_NODEBUG`` to
+prevent compilers from generating said debug information. Aliases inside type traits (i.e. aliases named ``type``)
+should be annotated for the same reason.
+
+This is enforced by the clang-tidy check ``libcpp-nodebug-on-aliases``.

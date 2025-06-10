@@ -63,7 +63,7 @@ public:
   /// that instance will be returned. Otherwise a new one will be created. Only
   /// one instance with a given NumBits value is ever created.
   /// Get or create an IntegerType instance.
-  static IntegerType *get(LLVMContext &C, unsigned NumBits);
+  LLVM_ABI static IntegerType *get(LLVMContext &C, unsigned NumBits);
 
   /// Returns type twice as wide the input type.
   IntegerType *getExtendedType() const {
@@ -88,7 +88,7 @@ public:
   /// For example, this is 0xFF for an 8 bit integer, 0xFFFF for i16, etc.
   /// @returns a bit mask with ones set for all the bits of this type.
   /// Get a bit mask for this type.
-  APInt getMask() const;
+  LLVM_ABI APInt getMask() const;
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const Type *T) {
@@ -110,17 +110,17 @@ public:
   FunctionType &operator=(const FunctionType &) = delete;
 
   /// This static method is the primary way of constructing a FunctionType.
-  static FunctionType *get(Type *Result,
-                           ArrayRef<Type*> Params, bool isVarArg);
+  LLVM_ABI static FunctionType *get(Type *Result, ArrayRef<Type *> Params,
+                                    bool isVarArg);
 
   /// Create a FunctionType taking no parameters.
-  static FunctionType *get(Type *Result, bool isVarArg);
+  LLVM_ABI static FunctionType *get(Type *Result, bool isVarArg);
 
   /// Return true if the specified type is valid as a return type.
-  static bool isValidReturnType(Type *RetTy);
+  LLVM_ABI static bool isValidReturnType(Type *RetTy);
 
   /// Return true if the specified type is valid as an argument type.
-  static bool isValidArgumentType(Type *ArgTy);
+  LLVM_ABI static bool isValidArgumentType(Type *ArgTy);
 
   bool isVarArg() const { return getSubclassData()!=0; }
   Type *getReturnType() const { return ContainedTys[0]; }
@@ -243,15 +243,17 @@ public:
   StructType &operator=(const StructType &) = delete;
 
   /// This creates an identified struct.
-  static StructType *create(LLVMContext &Context, StringRef Name);
-  static StructType *create(LLVMContext &Context);
+  LLVM_ABI static StructType *create(LLVMContext &Context, StringRef Name);
+  LLVM_ABI static StructType *create(LLVMContext &Context);
 
-  static StructType *create(ArrayRef<Type *> Elements, StringRef Name,
-                            bool isPacked = false);
-  static StructType *create(ArrayRef<Type *> Elements);
-  static StructType *create(LLVMContext &Context, ArrayRef<Type *> Elements,
-                            StringRef Name, bool isPacked = false);
-  static StructType *create(LLVMContext &Context, ArrayRef<Type *> Elements);
+  LLVM_ABI static StructType *create(ArrayRef<Type *> Elements, StringRef Name,
+                                     bool isPacked = false);
+  LLVM_ABI static StructType *create(ArrayRef<Type *> Elements);
+  LLVM_ABI static StructType *create(LLVMContext &Context,
+                                     ArrayRef<Type *> Elements, StringRef Name,
+                                     bool isPacked = false);
+  LLVM_ABI static StructType *create(LLVMContext &Context,
+                                     ArrayRef<Type *> Elements);
   template <class... Tys>
   static std::enable_if_t<are_base_of<Type, Tys...>::value, StructType *>
   create(StringRef Name, Type *elt1, Tys *... elts) {
@@ -260,11 +262,11 @@ public:
   }
 
   /// This static method is the primary way to create a literal StructType.
-  static StructType *get(LLVMContext &Context, ArrayRef<Type*> Elements,
-                         bool isPacked = false);
+  LLVM_ABI static StructType *
+  get(LLVMContext &Context, ArrayRef<Type *> Elements, bool isPacked = false);
 
   /// Create an empty structure type.
-  static StructType *get(LLVMContext &Context, bool isPacked = false);
+  LLVM_ABI static StructType *get(LLVMContext &Context, bool isPacked = false);
 
   /// This static method is a convenience method for creating structure types by
   /// specifying the elements as arguments. Note that this method always returns
@@ -279,7 +281,7 @@ public:
 
   /// Return the type with the specified name, or null if there is none by that
   /// name.
-  static StructType *getTypeByName(LLVMContext &C, StringRef Name);
+  LLVM_ABI static StructType *getTypeByName(LLVMContext &C, StringRef Name);
 
   bool isPacked() const { return (getSubclassData() & SCDB_Packed) != 0; }
 
@@ -292,21 +294,21 @@ public:
   bool isOpaque() const { return (getSubclassData() & SCDB_HasBody) == 0; }
 
   /// isSized - Return true if this is a sized type.
-  bool isSized(SmallPtrSetImpl<Type *> *Visited = nullptr) const;
+  LLVM_ABI bool isSized(SmallPtrSetImpl<Type *> *Visited = nullptr) const;
 
   /// Returns true if this struct contains a scalable vector.
-  bool isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const;
+  LLVM_ABI bool isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const;
   using Type::isScalableTy;
 
   /// Return true if this type is or contains a target extension type that
   /// disallows being used as a global.
-  bool
+  LLVM_ABI bool
   containsNonGlobalTargetExtType(SmallPtrSetImpl<const Type *> &Visited) const;
   using Type::containsNonGlobalTargetExtType;
 
   /// Return true if this type is or contains a target extension type that
   /// disallows being used as a local.
-  bool
+  LLVM_ABI bool
   containsNonLocalTargetExtType(SmallPtrSetImpl<const Type *> &Visited) const;
   using Type::containsNonLocalTargetExtType;
 
@@ -316,11 +318,11 @@ public:
   /// when calling this function.
   /// {{<vscale x 2 x i32>, <vscale x 4 x i64>},
   ///  {<vscale x 2 x i32>, <vscale x 4 x i64>}}
-  bool containsHomogeneousScalableVectorTypes() const;
+  LLVM_ABI bool containsHomogeneousScalableVectorTypes() const;
 
   /// Return true if this struct is non-empty and all element types are the
   /// same.
-  bool containsHomogeneousTypes() const;
+  LLVM_ABI bool containsHomogeneousTypes() const;
 
   /// Return true if this is a named struct that has a non-empty name.
   bool hasName() const { return SymbolTableEntry != nullptr; }
@@ -328,26 +330,27 @@ public:
   /// Return the name for this struct type if it has an identity.
   /// This may return an empty string for an unnamed struct type.  Do not call
   /// this on an literal type.
-  StringRef getName() const;
+  LLVM_ABI StringRef getName() const;
 
   /// Change the name of this type to the specified name, or to a name with a
   /// suffix if there is a collision. Do not call this on an literal type.
-  void setName(StringRef Name);
+  LLVM_ABI void setName(StringRef Name);
 
   /// Specify a body for an opaque identified type, which must not make the type
   /// recursive.
-  void setBody(ArrayRef<Type*> Elements, bool isPacked = false);
+  LLVM_ABI void setBody(ArrayRef<Type *> Elements, bool isPacked = false);
 
   /// Specify a body for an opaque identified type or return an error if it
   /// would make the type recursive.
-  Error setBodyOrError(ArrayRef<Type *> Elements, bool isPacked = false);
+  LLVM_ABI Error setBodyOrError(ArrayRef<Type *> Elements,
+                                bool isPacked = false);
 
   /// Return an error if the body for an opaque identified type would make it
   /// recursive.
-  Error checkBody(ArrayRef<Type *> Elements);
+  LLVM_ABI Error checkBody(ArrayRef<Type *> Elements);
 
   /// Return true if the specified type is valid as a element type.
-  static bool isValidElementType(Type *ElemTy);
+  LLVM_ABI static bool isValidElementType(Type *ElemTy);
 
   // Iterator access to the elements.
   using element_iterator = Type::subtype_iterator;
@@ -359,7 +362,7 @@ public:
   }
 
   /// Return true if this is layout identical to the specified struct.
-  bool isLayoutIdentical(StructType *Other) const;
+  LLVM_ABI bool isLayoutIdentical(StructType *Other) const;
 
   /// Random access to the elements
   unsigned getNumElements() const { return NumContainedTys; }
@@ -368,9 +371,9 @@ public:
     return ContainedTys[N];
   }
   /// Given an index value into the type, return the type of the element.
-  Type *getTypeAtIndex(const Value *V) const;
+  LLVM_ABI Type *getTypeAtIndex(const Value *V) const;
   Type *getTypeAtIndex(unsigned N) const { return getElementType(N); }
-  bool indexValid(const Value *V) const;
+  LLVM_ABI bool indexValid(const Value *V) const;
   bool indexValid(unsigned Idx) const { return Idx < getNumElements(); }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
@@ -408,10 +411,10 @@ public:
   Type *getElementType() const { return ContainedType; }
 
   /// This static method is the primary way to construct an ArrayType
-  static ArrayType *get(Type *ElementType, uint64_t NumElements);
+  LLVM_ABI static ArrayType *get(Type *ElementType, uint64_t NumElements);
 
   /// Return true if the specified type is valid as a element type.
-  static bool isValidElementType(Type *ElemTy);
+  LLVM_ABI static bool isValidElementType(Type *ElemTy);
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const Type *T) {
@@ -451,7 +454,7 @@ protected:
   ///   vscale is a runtime-constant integer greater than 0.
   const unsigned ElementQuantity;
 
-  VectorType(Type *ElType, unsigned EQ, Type::TypeID TID);
+  LLVM_ABI VectorType(Type *ElType, unsigned EQ, Type::TypeID TID);
 
 public:
   VectorType(const VectorType &) = delete;
@@ -460,7 +463,7 @@ public:
   Type *getElementType() const { return ContainedType; }
 
   /// This static method is the primary way to construct an VectorType.
-  static VectorType *get(Type *ElementType, ElementCount EC);
+  LLVM_ABI static VectorType *get(Type *ElementType, ElementCount EC);
 
   static VectorType *get(Type *ElementType, unsigned NumElements,
                          bool Scalable) {
@@ -536,6 +539,15 @@ public:
                            EltCnt.divideCoefficientBy(2));
   }
 
+  static VectorType *getOneNthElementsVectorType(VectorType *VTy,
+                                                 unsigned Denominator) {
+    auto EltCnt = VTy->getElementCount();
+    assert(EltCnt.isKnownMultipleOf(Denominator) &&
+           "Cannot take one-nth of a vector");
+    return VectorType::get(VTy->getScalarType(),
+                           EltCnt.divideCoefficientBy(Denominator));
+  }
+
   /// This static method returns a VectorType with twice as many elements as the
   /// input type and the same element type.
   static VectorType *getDoubleElementsVectorType(VectorType *VTy) {
@@ -545,8 +557,25 @@ public:
     return VectorType::get(VTy->getElementType(), EltCnt * 2);
   }
 
+  /// This static method attempts to construct a VectorType with the same
+  /// size-in-bits as SizeTy but with an element type that matches the scalar
+  /// type of EltTy. The VectorType is returned on success, nullptr otherwise.
+  static VectorType *getWithSizeAndScalar(VectorType *SizeTy, Type *EltTy) {
+    if (SizeTy->getScalarType() == EltTy->getScalarType())
+      return SizeTy;
+
+    unsigned EltSize = EltTy->getScalarSizeInBits();
+    if (!SizeTy->getPrimitiveSizeInBits().isKnownMultipleOf(EltSize))
+      return nullptr;
+
+    ElementCount EC = SizeTy->getElementCount()
+                          .multiplyCoefficientBy(SizeTy->getScalarSizeInBits())
+                          .divideCoefficientBy(EltSize);
+    return VectorType::get(EltTy->getScalarType(), EC);
+  }
+
   /// Return true if the specified type is valid as a element type.
-  static bool isValidElementType(Type *ElemTy);
+  LLVM_ABI static bool isValidElementType(Type *ElemTy);
 
   /// Return an ElementCount instance to represent the (possibly scalable)
   /// number of elements in the vector.
@@ -566,7 +595,7 @@ protected:
       : VectorType(ElTy, NumElts, FixedVectorTyID) {}
 
 public:
-  static FixedVectorType *get(Type *ElementType, unsigned NumElts);
+  LLVM_ABI static FixedVectorType *get(Type *ElementType, unsigned NumElts);
 
   static FixedVectorType *get(Type *ElementType, const FixedVectorType *FVTy) {
     return get(ElementType, FVTy->getNumElements());
@@ -613,7 +642,8 @@ protected:
       : VectorType(ElTy, MinNumElts, ScalableVectorTyID) {}
 
 public:
-  static ScalableVectorType *get(Type *ElementType, unsigned MinNumElts);
+  LLVM_ABI static ScalableVectorType *get(Type *ElementType,
+                                          unsigned MinNumElts);
 
   static ScalableVectorType *get(Type *ElementType,
                                  const ScalableVectorType *SVTy) {
@@ -676,15 +706,22 @@ public:
 
   /// This constructs a pointer to an object of the specified type in a numbered
   /// address space.
-  static PointerType *get(Type *ElementType, unsigned AddressSpace);
+  [[deprecated("PointerType::get with pointee type is pending removal. Use "
+               "Context overload.")]]
+  LLVM_ABI static PointerType *get(Type *ElementType, unsigned AddressSpace);
   /// This constructs an opaque pointer to an object in a numbered address
   /// space.
-  static PointerType *get(LLVMContext &C, unsigned AddressSpace);
+  LLVM_ABI static PointerType *get(LLVMContext &C, unsigned AddressSpace);
 
   /// This constructs a pointer to an object of the specified type in the
   /// default address space (address space zero).
+  [[deprecated("PointerType::getUnqual with pointee type is pending removal. "
+               "Use Context overload.")]]
   static PointerType *getUnqual(Type *ElementType) {
-    return PointerType::get(ElementType, 0);
+    assert(ElementType && "Can't get a pointer to <null> type!");
+    assert(isValidElementType(ElementType) &&
+           "Invalid type for pointer element!");
+    return PointerType::getUnqual(ElementType->getContext());
   }
 
   /// This constructs an opaque pointer to an object in the
@@ -694,10 +731,10 @@ public:
   }
 
   /// Return true if the specified type is valid as a element type.
-  static bool isValidElementType(Type *ElemTy);
+  LLVM_ABI static bool isValidElementType(Type *ElemTy);
 
   /// Return true if we can load or store from a pointer to this type.
-  static bool isLoadableOrStorableType(Type *ElemTy);
+  LLVM_ABI static bool isLoadableOrStorableType(Type *ElemTy);
 
   /// Return the address space of the Pointer type.
   inline unsigned getAddressSpace() const { return getSubclassData(); }
@@ -755,22 +792,21 @@ public:
 
   /// Return a target extension type having the specified name and optional
   /// type and integer parameters.
-  static TargetExtType *get(LLVMContext &Context, StringRef Name,
-                            ArrayRef<Type *> Types = {},
-                            ArrayRef<unsigned> Ints = {});
+  LLVM_ABI static TargetExtType *get(LLVMContext &Context, StringRef Name,
+                                     ArrayRef<Type *> Types = {},
+                                     ArrayRef<unsigned> Ints = {});
 
   /// Return a target extension type having the specified name and optional
   /// type and integer parameters, or an appropriate Error if it fails the
   /// parameters check.
-  static Expected<TargetExtType *> getOrError(LLVMContext &Context,
-                                              StringRef Name,
-                                              ArrayRef<Type *> Types = {},
-                                              ArrayRef<unsigned> Ints = {});
+  LLVM_ABI static Expected<TargetExtType *>
+  getOrError(LLVMContext &Context, StringRef Name, ArrayRef<Type *> Types = {},
+             ArrayRef<unsigned> Ints = {});
 
   /// Check that a newly created target extension type has the expected number
   /// of type parameters and integer parameters, returning the type itself if OK
   /// or an appropriate Error if not.
-  static Expected<TargetExtType *> checkParams(TargetExtType *TTy);
+  LLVM_ABI static Expected<TargetExtType *> checkParams(TargetExtType *TTy);
 
   /// Return the name for this target extension type. Two distinct target
   /// extension types may have the same name if their type or integer parameters
@@ -809,16 +845,18 @@ public:
     /// This type may be allocated on the stack, either as the allocated type
     /// of an alloca instruction or as a byval function parameter.
     CanBeLocal = 1U << 2,
+    // This type may be used as an element in a vector.
+    CanBeVectorElement = 1U << 3,
   };
 
   /// Returns true if the target extension type contains the given property.
-  bool hasProperty(Property Prop) const;
+  LLVM_ABI bool hasProperty(Property Prop) const;
 
   /// Returns an underlying layout type for the target extension type. This
   /// type can be used to query size and alignment information, if it is
   /// appropriate (although note that the layout type may also be void). It is
   /// not legal to bitcast between this type and the layout type, however.
-  Type *getLayoutType() const;
+  LLVM_ABI Type *getLayoutType() const;
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const Type *T) { return T->getTypeID() == TargetExtTyID; }

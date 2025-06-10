@@ -134,7 +134,8 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
   unsigned ArgNo = 0, NewArgNo = 0;
   for (Function::arg_iterator I = F->arg_begin(), E = F->arg_end(); I != E;
        ++I, ++ArgNo) {
-    if (!ArgsToPromote.count(&*I)) {
+    auto It = ArgsToPromote.find(&*I);
+    if (It == ArgsToPromote.end()) {
       // Unchanged argument
       Params.push_back(I->getType());
       ArgAttrVec.push_back(PAL.getParamAttrs(ArgNo));
@@ -150,7 +151,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
 
       NewArgIndices.push_back((unsigned)-1);
     } else {
-      const auto &ArgParts = ArgsToPromote.find(&*I)->second;
+      const auto &ArgParts = It->second;
       for (const auto &Pair : ArgParts) {
         Params.push_back(Pair.second.Ty);
         ArgAttrVec.push_back(AttributeSet());
@@ -235,13 +236,13 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
     ArgNo = 0;
     for (Function::arg_iterator I = F->arg_begin(), E = F->arg_end(); I != E;
          ++I, ++AI, ++ArgNo) {
-      if (!ArgsToPromote.count(&*I)) {
+      auto ArgIt = ArgsToPromote.find(&*I);
+      if (ArgIt == ArgsToPromote.end()) {
         Args.push_back(*AI); // Unmodified argument
         ArgAttrVec.push_back(CallPAL.getParamAttrs(ArgNo));
       } else if (!I->use_empty()) {
         Value *V = *AI;
-        const auto &ArgParts = ArgsToPromote.find(&*I)->second;
-        for (const auto &Pair : ArgParts) {
+        for (const auto &Pair : ArgIt->second) {
           LoadInst *LI = IRB.CreateAlignedLoad(
               Pair.second.Ty,
               createByteGEP(IRB, DL, V, Pair.second.Ty, Pair.first),
@@ -259,14 +260,13 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
             // all promoted loads.
             if (LI->hasMetadata(LLVMContext::MD_noundef))
               LI->copyMetadata(*Pair.second.MustExecInstr,
-                               {LLVMContext::MD_range, LLVMContext::MD_nonnull,
-                                LLVMContext::MD_align});
+                               Metadata::PoisonGeneratingIDs);
           }
           Args.push_back(LI);
           ArgAttrVec.push_back(AttributeSet());
         }
       } else {
-        assert(ArgsToPromote.count(&*I) && I->use_empty());
+        assert(I->use_empty());
         DeadArgs.emplace_back(AI->get());
       }
     }
@@ -382,9 +382,8 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
     // Cleanup the code from the dead instructions: GEPs and BitCasts in between
     // the original argument and its users: loads and stores. Retarget every
     // user to the new created alloca.
-    SmallVector<Value *, 16> Worklist;
+    SmallVector<Value *, 16> Worklist(Arg.users());
     SmallVector<Instruction *, 16> DeadInsts;
-    append_range(Worklist, Arg.users());
     while (!Worklist.empty()) {
       Value *V = Worklist.pop_back_val();
       if (isa<GetElementPtrInst>(V)) {

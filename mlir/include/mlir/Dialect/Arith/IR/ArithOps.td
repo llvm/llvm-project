@@ -51,8 +51,8 @@ class Arith_BinaryOp<string mnemonic, list<Trait> traits = []> :
 class Arith_IntBinaryOp<string mnemonic, list<Trait> traits = []> :
     Arith_BinaryOp<mnemonic, traits #
       [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]>,
-    Arguments<(ins SignlessIntegerLike:$lhs, SignlessIntegerLike:$rhs)>,
-    Results<(outs SignlessIntegerLike:$result)>;
+    Arguments<(ins SignlessIntegerOrIndexLike:$lhs, SignlessIntegerOrIndexLike:$rhs)>,
+    Results<(outs SignlessIntegerOrIndexLike:$result)>;
 
 // Base class for integer binary operations without undefined behavior.
 class Arith_TotalIntBinaryOp<string mnemonic, list<Trait> traits = []> :
@@ -61,35 +61,26 @@ class Arith_TotalIntBinaryOp<string mnemonic, list<Trait> traits = []> :
 // Base class for floating point unary operations.
 class Arith_FloatUnaryOp<string mnemonic, list<Trait> traits = []> :
     Arith_UnaryOp<mnemonic,
-      !listconcat([DeclareOpInterfaceMethods<ArithFastMathInterface>,
-                   DeclareOpInterfaceMethods<ArithDenormalModeInterface>],
+      !listconcat([DeclareOpInterfaceMethods<ArithFastMathInterface>],
                   traits)>,
     Arguments<(ins FloatLike:$operand,
       DefaultValuedAttr<
-        Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath,
-      DefaultValuedAttr<
-        Arith_DenormalModeAttr, "::mlir::arith::DenormalMode::ieee">:$denormal)>,
+        Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath)>,
     Results<(outs FloatLike:$result)> {
   let assemblyFormat = [{ $operand (`fastmath` `` $fastmath^)?
-                          (`denormal` `` $denormal^)?
                           attr-dict `:` type($result) }];
 }
 
 // Base class for floating point binary operations.
 class Arith_FloatBinaryOp<string mnemonic, list<Trait> traits = []> :
     Arith_BinaryOp<mnemonic,
-      !listconcat([Pure, 
-                   DeclareOpInterfaceMethods<ArithFastMathInterface>,
-                   DeclareOpInterfaceMethods<ArithDenormalModeInterface>],
+      !listconcat([Pure, DeclareOpInterfaceMethods<ArithFastMathInterface>],
                   traits)>,
     Arguments<(ins FloatLike:$lhs, FloatLike:$rhs,
       DefaultValuedAttr<
-        Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath,
-      DefaultValuedAttr<
-        Arith_DenormalModeAttr, "::mlir::arith::DenormalMode::ieee">:$denormal)>,
+        Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath)>,
     Results<(outs FloatLike:$result)> {
-  let assemblyFormat = [{ $lhs `,` $rhs (`fastmath` `` $fastmath^)? 
-                          (`denormal` `` $denormal^)?
+  let assemblyFormat = [{ $lhs `,` $rhs (`fastmath` `` $fastmath^)?
                           attr-dict `:` type($result) }];
 }
 
@@ -153,22 +144,15 @@ class Arith_CompareOp<string mnemonic, list<Trait> traits = []> :
   let assemblyFormat = "$predicate `,` $lhs `,` $rhs attr-dict `:` type($lhs)";
 }
 
-// Just like `Arith_CompareOp` but also admits 0-D vectors. Introduced
-// temporarily to allow gradual transition to 0-D vectors.
-class Arith_CompareOpOfAnyRank<string mnemonic, list<Trait> traits = []> :
-    Arith_CompareOp<mnemonic, traits> {
-  let results = (outs BoolLikeOfAnyRank:$result);
-}
-
 class Arith_IntBinaryOpWithOverflowFlags<string mnemonic, list<Trait> traits = []> :
     Arith_BinaryOp<mnemonic, traits #
       [Pure, DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
        DeclareOpInterfaceMethods<ArithIntegerOverflowFlagsInterface>]>,
-    Arguments<(ins SignlessIntegerLike:$lhs, SignlessIntegerLike:$rhs,
+    Arguments<(ins SignlessIntegerOrIndexLike:$lhs, SignlessIntegerOrIndexLike:$rhs,
       DefaultValuedAttr<
         Arith_IntegerOverflowAttr,
         "::mlir::arith::IntegerOverflowFlags::none">:$overflowFlags)>,
-    Results<(outs SignlessIntegerLike:$result)> {
+    Results<(outs SignlessIntegerOrIndexLike:$result)> {
 
   let assemblyFormat = [{ $lhs `,` $rhs (`overflow` `` $overflowFlags^)?
                           attr-dict `:` type($result) }];
@@ -207,7 +191,7 @@ def Arith_ConstantOp : Op<Arith_Dialect, "constant",
   // However, it is necessary to allow arith.constant to return vectors/tensors
   // of strings and signed/unsigned integers (for now) as an artefact of
   // splitting the Standard dialect.
-  let results = (outs /*SignlessIntegerOrFloatLike*/AnyType:$result);
+  let results = (outs /*SignlessIntegerOrIndexOrFloatLike*/AnyType:$result);
 
   let extraClassDeclaration = [{
     /// Whether the constant op can be constructed with a particular value and
@@ -297,8 +281,8 @@ def Arith_AddUIExtendedOp : Arith_Op<"addui_extended", [Pure, Commutative,
     ```
   }];
 
-  let arguments = (ins SignlessIntegerLike:$lhs, SignlessIntegerLike:$rhs);
-  let results = (outs SignlessIntegerLike:$sum, BoolLike:$overflow);
+  let arguments = (ins SignlessIntegerOrIndexLike:$lhs, SignlessIntegerOrIndexLike:$rhs);
+  let results = (outs SignlessIntegerOrIndexLike:$sum, BoolLike:$overflow);
   let assemblyFormat = [{
     $lhs `,` $rhs attr-dict `:` type($sum) `,` type($overflow)
   }];
@@ -438,8 +422,8 @@ def Arith_MulSIExtendedOp : Arith_Op<"mulsi_extended", [Pure, Commutative,
     ```
   }];
 
-  let arguments = (ins SignlessIntegerLike:$lhs, SignlessIntegerLike:$rhs);
-  let results = (outs SignlessIntegerLike:$low, SignlessIntegerLike:$high);
+  let arguments = (ins SignlessIntegerOrIndexLike:$lhs, SignlessIntegerOrIndexLike:$rhs);
+  let results = (outs SignlessIntegerOrIndexLike:$low, SignlessIntegerOrIndexLike:$high);
 
   let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs)";
 
@@ -481,8 +465,8 @@ def Arith_MulUIExtendedOp : Arith_Op<"mului_extended", [Pure, Commutative,
     ```
   }];
 
-  let arguments = (ins SignlessIntegerLike:$lhs, SignlessIntegerLike:$rhs);
-  let results = (outs SignlessIntegerLike:$low, SignlessIntegerLike:$high);
+  let arguments = (ins SignlessIntegerOrIndexLike:$lhs, SignlessIntegerOrIndexLike:$rhs);
+  let results = (outs SignlessIntegerOrIndexLike:$low, SignlessIntegerOrIndexLike:$high);
 
   let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs)";
 
@@ -1094,6 +1078,7 @@ def Arith_MinUIOp : Arith_TotalIntBinaryOp<"minui", [Commutative]> {
   let hasFolder = 1;
 }
 
+
 //===----------------------------------------------------------------------===//
 // MulFOp
 //===----------------------------------------------------------------------===//
@@ -1119,6 +1104,8 @@ def Arith_MulFOp : Arith_FloatBinaryOp<"mulf", [Commutative]> {
     %x = arith.mulf %y, %z : tensor<4x?xbf16>
     ```
 
+    TODO: In the distant future, this will accept optional attributes for fast
+    math, contraction, rounding mode, and other controls.
   }];
   let hasFolder = 1;
   let hasCanonicalizer = 1;
@@ -1229,6 +1216,58 @@ def Arith_ExtFOp : Arith_FToFCastOp<"extf", [DeclareOpInterfaceMethods<ArithFast
 }
 
 //===----------------------------------------------------------------------===//
+// Scaling ExtFOp
+//===----------------------------------------------------------------------===//
+def Arith_ScalingExtFOp
+    : Arith_Op<
+          "scaling_extf", [Pure, SameInputOutputTensorDims,
+                           DeclareOpInterfaceMethods<ArithFastMathInterface>,
+                           DeclareOpInterfaceMethods<CastOpInterface>]>,
+      Arguments<(ins FloatLike:$in, FloatLike:$scale,
+          OptionalAttr<Arith_FastMathAttr>:$fastmath)>,
+      Results<(outs FloatLike:$out)> {
+  let summary = "Upcasts input floats using provided scales values following "
+                "OCP MXFP Spec";
+  let description = [{
+  This operation upcasts input floating-point values using provided scale 
+  values. It expects both scales and the input operand to be of the same shape, 
+  making the operation elementwise. Scales are usually calculated per block 
+  following the OCP MXFP spec as described in https://arxiv.org/abs/2310.10537.
+
+  If scales are calculated per block where blockSize != 1, then scales may 
+  require broadcasting to make this operation elementwise. For example, let's 
+  say the input is of shape `<dim1 x dim2 x ... dimN>`. Given blockSize != 1 and 
+  assuming quantization happens on the last axis, the input can be reshaped to 
+  `<dim1 x dim2 x ... (dimN/blockSize) x blockSize>`. Scales will be calculated 
+  per block on the last axis. Therefore, scales will be of shape 
+  `<dim1 x dim2 x ... (dimN/blockSize) x 1>`. Scales could also be of some other 
+  shape as long as it is broadcast compatible with the input, e.g., 
+  `<1 x 1 x ... (dimN/blockSize) x 1>`.
+
+  In this example, before calling into `arith.scaling_extf`, scales must be 
+  broadcasted to `<dim1 x dim2 x dim3 ... (dimN/blockSize) x blockSize>`. Note 
+  that there could be multiple quantization axes. Internally, 
+  `arith.scaling_extf` would perform the following:
+ 
+    ```
+    resultTy = get_type(result) 
+    scaleTy  = get_type(scale)
+    inputTy = get_type(input)
+    scale.exponent = arith.truncf(scale) : scaleTy to f8E8M0
+    scale.extf = arith.extf(scale.exponent) : f8E8M0 to resultTy
+    input.extf = arith.extf(input) : inputTy to resultTy
+    result = arith.mulf(scale.extf, input.extf)
+    ```
+    It propagates NaN values. Therefore, if either scale or the input element 
+    contains NaN, then the output element value will also be a NaN.
+  }];
+  let hasVerifier = 1;
+  let assemblyFormat =
+      [{ $in `,` $scale (`fastmath` `` $fastmath^)? attr-dict `:` 
+      type($in) `,` type($scale) `to` type($out)}];
+}
+
+//===----------------------------------------------------------------------===//
 // TruncIOp
 //===----------------------------------------------------------------------===//
 
@@ -1286,10 +1325,68 @@ def Arith_TruncFOp :
   ];
 
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
   let hasVerifier = 1;
   let assemblyFormat = [{ $in ($roundingmode^)?
                           (`fastmath` `` $fastmath^)?
                           attr-dict `:` type($in) `to` type($out) }];
+}
+
+//===----------------------------------------------------------------------===//
+// Scaling TruncFOp
+//===----------------------------------------------------------------------===//
+
+def Arith_ScalingTruncFOp
+    : Arith_Op<"scaling_truncf",
+               [Pure, SameInputOutputTensorDims,
+                DeclareOpInterfaceMethods<ArithRoundingModeInterface>,
+                DeclareOpInterfaceMethods<ArithFastMathInterface>,
+                DeclareOpInterfaceMethods<CastOpInterface>]>,
+      Arguments<(ins FloatLike:$in, FloatLike:$scale,
+          OptionalAttr<Arith_RoundingModeAttr>:$roundingmode,
+          OptionalAttr<Arith_FastMathAttr>:$fastmath)>,
+      Results<(outs FloatLike:$out)> {
+  let summary = "Downcasts input floating point values using provided scales "
+                "values following OCP MXFP Spec";
+  let description = [{
+    This operation downcasts input using the provided scale values. It expects 
+    both scales and the input operand to be of the same shape and, therefore, 
+    makes the operation elementwise. Scales are usually calculated per block 
+    following the OCP MXFP spec as described in https://arxiv.org/abs/2310.10537.
+    Users are required to normalize and clamp the scales as necessary before calling
+    passing them to this operation.  OCP MXFP spec also does the flushing of denorms
+    on the input operand, which should be handled during lowering by passing appropriate 
+    fastMath flag to this operation. 
+
+    If scales are calculated per block where blockSize != 1, scales may require 
+    broadcasting to make this operation elementwise. For example, let's say the 
+    input is of shape `<dim1 x dim2 x ... dimN>`. Given blockSize != 1 and 
+    assuming quantization happens on the last axis, the input can be reshaped to 
+    `<dim1 x dim2 x ... (dimN/blockSize) x blockSize>`. Scales will be calculated 
+    per block on the last axis. Therefore, scales will be of shape 
+    `<dim1 x dim2 x ... (dimN/blockSize) x 1>`. Scales could also be of some other 
+    shape as long as it is broadcast compatible with the input, e.g., 
+    `<1 x 1 x ... (dimN/blockSize) x 1>`.
+
+    In this example, before calling into `arith.scaling_truncf`, scales must be 
+    broadcasted to `<dim1 x dim2 x dim3 ... (dimN/blockSize) x blockSize>`. Note 
+    that there could be multiple quantization axes. Internally, 
+    `arith.scaling_truncf` would perform the following:
+
+    ```
+    scaleTy = get_type(scale)
+    inputTy = get_type(input)
+    resultTy = get_type(result)
+    scale.exponent = arith.truncf(scale) : scaleTy to f8E8M0
+    scale.extf = arith.extf(scale.exponent) : f8E8M0 to inputTy
+    result = arith.divf(input, scale.extf)
+    result.cast = arith.truncf(result, resultTy)
+    ```
+  }];
+  let hasVerifier = 1;
+  let assemblyFormat =
+      [{ $in `,` $scale ($roundingmode^)? (`fastmath` `` $fastmath^)? attr-dict `:` 
+      type($in) `,` type($scale) `to` type($out)}];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1356,7 +1453,7 @@ def Arith_FPToSIOp : Arith_FToICastOp<"fptosi"> {
 
 // Index cast can convert between memrefs of signless integers and indices too.
 def IndexCastTypeConstraint : TypeConstraint<Or<[
-        SignlessIntegerLike.predicate,
+        SignlessIntegerOrIndexLike.predicate,
         MemRefOf<[AnySignlessInteger, Index]>.predicate]>,
     "signless-integer-like or memref of signless-integer">;
 
@@ -1398,11 +1495,10 @@ def Arith_IndexCastUIOp
 // BitcastOp
 //===----------------------------------------------------------------------===//
 
-// Bitcast can convert between memrefs of signless integers, indices, and
-// floats too.
+// Bitcast can convert between memrefs of signless integers and floats.
 def BitcastTypeConstraint : TypeConstraint<Or<[
         SignlessIntegerOrFloatLike.predicate,
-        MemRefOf<[AnySignlessInteger, Index, AnyFloat]>.predicate]>,
+        MemRefOf<[AnySignlessInteger, AnyFloat]>.predicate]>,
     "signless-integer-or-float-like or memref of signless-integer or float">;
 
 def Arith_BitcastOp : Arith_CastOp<"bitcast", BitcastTypeConstraint,
@@ -1433,9 +1529,9 @@ def Arith_BitcastOp : Arith_CastOp<"bitcast", BitcastTypeConstraint,
 // CmpIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_CmpIOp
-  : Arith_CompareOpOfAnyRank<"cmpi",
-                             [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]> {
+def Arith_CmpIOp : Arith_CompareOp<"cmpi",
+    [DeclareOpInterfaceMethods<InferIntRangeInterface,
+                               ["inferResultRanges"]>]> {
   let summary = "integer comparison operation";
   let description = [{
     The `cmpi` operation is a generic comparison for integer-like types. Its two
@@ -1502,12 +1598,8 @@ def Arith_CmpIOp
   }];
 
   let arguments = (ins Arith_CmpIPredicateAttr:$predicate,
-                       SignlessIntegerLikeOfAnyRank:$lhs,
-                       SignlessIntegerLikeOfAnyRank:$rhs);
-
-  let extraClassDeclaration = [{
-    static arith::CmpIPredicate getPredicateByName(StringRef name);
-  }];
+                       SignlessIntegerOrIndexLike:$lhs,
+                       SignlessIntegerOrIndexLike:$rhs);
 
   let hasFolder = 1;
   let hasCanonicalizer = 1;
@@ -1551,19 +1643,6 @@ def Arith_CmpFOp : Arith_CompareOp<"cmpf",
                        FloatLike:$rhs,
                        DefaultValuedAttr<
                          Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath);
-
-  let extraClassDeclaration = [{
-    static arith::CmpFPredicate getPredicateByName(StringRef name);
-  }];
-
-  let builders = [
-    OpBuilder<(ins "::mlir::arith::CmpFPredicateAttr":$predicate,
-                   "Value":$lhs, "Value":$rhs), [{
-      build($_builder, $_state, predicate, lhs, rhs,
-          mlir::arith::FastMathFlagsAttr::get($_builder.getContext(),
-              mlir::arith::FastMathFlags::none));
-    }]>
-  ];
 
   let hasFolder = 1;
   let hasCanonicalizer = 1;

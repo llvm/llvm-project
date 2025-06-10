@@ -64,7 +64,7 @@ LanaiMCInstLower::GetConstantPoolIndexSymbol(const MachineOperand &MO) const {
 
 MCOperand LanaiMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
                                                MCSymbol *Sym) const {
-  LanaiMCExpr::VariantKind Kind;
+  LanaiMCExpr::Spec Kind;
 
   switch (MO.getTargetFlags()) {
   case LanaiII::MO_NO_FLAG:
@@ -80,8 +80,7 @@ MCOperand LanaiMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
     llvm_unreachable("Unknown target flag on GV operand");
   }
 
-  const MCExpr *Expr =
-      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, Ctx);
+  const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Ctx);
   if (!MO.isJTI() && MO.getOffset())
     Expr = MCBinaryExpr::createAdd(
         Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);

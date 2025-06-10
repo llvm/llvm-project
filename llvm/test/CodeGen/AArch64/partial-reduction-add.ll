@@ -18,7 +18,7 @@ define <4 x i32> @partial_reduce_add_fixed_half(<4 x i32> %accumulator, <8 x i32
 ; CHECK-LABEL: partial_reduce_add_fixed_half:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    add v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    ret
 entry:
   %partial.reduce = call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v4i32.v8i32(<4 x i32> %accumulator, <8 x i32> %0)
@@ -39,7 +39,7 @@ define <vscale x 4 x i32> @partial_reduce_add_half(<vscale x 4 x i32> %accumulat
 ; CHECK-LABEL: partial_reduce_add_half:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    add z0.s, z0.s, z1.s
-; CHECK-NEXT:    add z0.s, z2.s, z0.s
+; CHECK-NEXT:    add z0.s, z0.s, z2.s
 ; CHECK-NEXT:    ret
 entry:
   %partial.reduce = call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv8i32(<vscale x 4 x i32> %accumulator, <vscale x 8 x i32> %0)
@@ -49,10 +49,10 @@ entry:
 define <vscale x 4 x i32> @partial_reduce_add_quart(<vscale x 4 x i32> %accumulator, <vscale x 16 x i32> %0) #0 {
 ; CHECK-LABEL: partial_reduce_add_quart:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    add z0.s, z0.s, z1.s
 ; CHECK-NEXT:    add z2.s, z2.s, z3.s
-; CHECK-NEXT:    add z0.s, z4.s, z0.s
-; CHECK-NEXT:    add z0.s, z2.s, z0.s
+; CHECK-NEXT:    add z0.s, z0.s, z1.s
+; CHECK-NEXT:    add z0.s, z0.s, z2.s
+; CHECK-NEXT:    add z0.s, z0.s, z4.s
 ; CHECK-NEXT:    ret
 entry:
   %partial.reduce = call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv16i32(<vscale x 4 x i32> %accumulator, <vscale x 16 x i32> %0)
@@ -63,9 +63,9 @@ define <vscale x 8 x i32> @partial_reduce_add_half_8(<vscale x 8 x i32> %accumul
 ; CHECK-LABEL: partial_reduce_add_half_8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    add z0.s, z0.s, z2.s
-; CHECK-NEXT:    add z1.s, z1.s, z3.s
-; CHECK-NEXT:    add z0.s, z4.s, z0.s
-; CHECK-NEXT:    add z1.s, z5.s, z1.s
+; CHECK-NEXT:    add z1.s, z1.s, z4.s
+; CHECK-NEXT:    add z0.s, z0.s, z3.s
+; CHECK-NEXT:    add z1.s, z1.s, z5.s
 ; CHECK-NEXT:    ret
 entry:
   %partial.reduce = call <vscale x 8 x i32> @llvm.experimental.vector.partial.reduce.add.nxv8i32.nxv8i32.nxv16i32(<vscale x 8 x i32> %accumulator, <vscale x 16 x i32> %0)

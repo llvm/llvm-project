@@ -28,6 +28,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstddef>
@@ -110,8 +111,8 @@ public:
   /// the nullptr version is easy to call from a debugger.
   ///
   /// @{
-  void dump() const;
-  void dump(const Module *M) const;
+  LLVM_ABI void dump() const;
+  LLVM_ABI void dump(const Module *M) const;
   /// @}
 
   /// Print.
@@ -121,10 +122,10 @@ public:
   /// If \c M is provided, metadata nodes will be numbered canonically;
   /// otherwise, pointer addresses are substituted.
   /// @{
-  void print(raw_ostream &OS, const Module *M = nullptr,
-             bool IsForDebug = false) const;
-  void print(raw_ostream &OS, ModuleSlotTracker &MST, const Module *M = nullptr,
-             bool IsForDebug = false) const;
+  LLVM_ABI void print(raw_ostream &OS, const Module *M = nullptr,
+                      bool IsForDebug = false) const;
+  LLVM_ABI void print(raw_ostream &OS, ModuleSlotTracker &MST,
+                      const Module *M = nullptr, bool IsForDebug = false) const;
   /// @}
 
   /// Print as operand.
@@ -134,10 +135,15 @@ public:
   /// If \c M is provided, metadata nodes will be numbered canonically;
   /// otherwise, pointer addresses are substituted.
   /// @{
-  void printAsOperand(raw_ostream &OS, const Module *M = nullptr) const;
-  void printAsOperand(raw_ostream &OS, ModuleSlotTracker &MST,
-                      const Module *M = nullptr) const;
+  LLVM_ABI void printAsOperand(raw_ostream &OS,
+                               const Module *M = nullptr) const;
+  LLVM_ABI void printAsOperand(raw_ostream &OS, ModuleSlotTracker &MST,
+                               const Module *M = nullptr) const;
   /// @}
+
+  /// Metadata IDs that may generate poison.
+  constexpr static const unsigned PoisonGeneratingIDs[] = {
+      LLVMContext::MD_range, LLVMContext::MD_nonnull, LLVMContext::MD_align};
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).
@@ -185,10 +191,11 @@ class MetadataAsValue : public Value {
   void dropUse() { MD = nullptr; }
 
 public:
-  ~MetadataAsValue();
+  LLVM_ABI ~MetadataAsValue();
 
-  static MetadataAsValue *get(LLVMContext &Context, Metadata *MD);
-  static MetadataAsValue *getIfExists(LLVMContext &Context, Metadata *MD);
+  LLVM_ABI static MetadataAsValue *get(LLVMContext &Context, Metadata *MD);
+  LLVM_ABI static MetadataAsValue *getIfExists(LLVMContext &Context,
+                                               Metadata *MD);
 
   Metadata *getMetadata() const { return MD; }
 
@@ -220,15 +227,15 @@ protected:
   ArrayRef<Metadata *> getDebugValues() const { return DebugValues; }
 
 public:
-  DbgVariableRecord *getUser();
-  const DbgVariableRecord *getUser() const;
+  LLVM_ABI DbgVariableRecord *getUser();
+  LLVM_ABI const DbgVariableRecord *getUser() const;
   /// To be called by ReplaceableMetadataImpl::replaceAllUsesWith, where `Old`
   /// is a pointer to one of the pointers in `DebugValues` (so should be type
   /// Metadata**), and `NewDebugValue` is the new Metadata* that is replacing
   /// *Old.
   /// For manually replacing elements of DebugValues,
   /// `resetDebugValue(Idx, NewDebugValue)` should be used instead.
-  void handleChangedValue(void *Old, Metadata *NewDebugValue);
+  LLVM_ABI void handleChangedValue(void *Old, Metadata *NewDebugValue);
   DebugValueUser() = default;
   explicit DebugValueUser(std::array<Metadata *, 3> DebugValues)
       : DebugValues(DebugValues) {
@@ -285,13 +292,13 @@ public:
   }
 
 private:
-  void trackDebugValue(size_t Idx);
-  void trackDebugValues();
+  LLVM_ABI void trackDebugValue(size_t Idx);
+  LLVM_ABI void trackDebugValues();
 
-  void untrackDebugValue(size_t Idx);
-  void untrackDebugValues();
+  LLVM_ABI void untrackDebugValue(size_t Idx);
+  LLVM_ABI void untrackDebugValues();
 
-  void retrackDebugValues(DebugValueUser &X);
+  LLVM_ABI void retrackDebugValues(DebugValueUser &X);
 };
 
 /// API for tracking metadata references through RAUW and deletion.
@@ -347,7 +354,7 @@ public:
   ///
   /// Stops \c *MD from tracking \c MD.
   static void untrack(Metadata *&MD) { untrack(&MD, *MD); }
-  static void untrack(void *Ref, Metadata &MD);
+  LLVM_ABI static void untrack(void *Ref, Metadata &MD);
 
   /// Move tracking from one reference to another.
   ///
@@ -360,10 +367,10 @@ public:
   static bool retrack(Metadata *&MD, Metadata *&New) {
     return retrack(&MD, *MD, &New);
   }
-  static bool retrack(void *Ref, Metadata &MD, void *New);
+  LLVM_ABI static bool retrack(void *Ref, Metadata &MD, void *New);
 
   /// Check whether metadata is replaceable.
-  static bool isReplaceable(const Metadata &MD);
+  LLVM_ABI static bool isReplaceable(const Metadata &MD);
 
   using OwnerTy = PointerUnion<MetadataAsValue *, Metadata *, DebugValueUser *>;
 
@@ -371,7 +378,7 @@ private:
   /// Track a reference to metadata for an owner.
   ///
   /// Generalized version of tracking.
-  static bool track(void *Ref, Metadata &MD, OwnerTy Owner);
+  LLVM_ABI static bool track(void *Ref, Metadata &MD, OwnerTy Owner);
 };
 
 /// Shared implementation of use-lists for replaceable metadata.
@@ -402,20 +409,20 @@ public:
   /// Replace all uses of this with MD.
   ///
   /// Replace all uses of this with \c MD, which is allowed to be null.
-  void replaceAllUsesWith(Metadata *MD);
-   /// Replace all uses of the constant with Undef in debug info metadata
-  static void SalvageDebugInfo(const Constant &C); 
+  LLVM_ABI void replaceAllUsesWith(Metadata *MD);
+  /// Replace all uses of the constant with Undef in debug info metadata
+  LLVM_ABI static void SalvageDebugInfo(const Constant &C);
   /// Returns the list of all DIArgList users of this.
-  SmallVector<Metadata *> getAllArgListUsers();
+  LLVM_ABI SmallVector<Metadata *> getAllArgListUsers();
   /// Returns the list of all DbgVariableRecord users of this.
-  SmallVector<DbgVariableRecord *> getAllDbgVariableRecordUsers();
+  LLVM_ABI SmallVector<DbgVariableRecord *> getAllDbgVariableRecordUsers();
 
   /// Resolve all uses of this.
   ///
   /// Resolve all uses of this, turning off RAUW permanently.  If \c
   /// ResolveUsers, call \a MDNode::resolve() on any users whose last operand
   /// is resolved.
-  void resolveAllUses(bool ResolveUsers = true);
+  LLVM_ABI void resolveAllUses(bool ResolveUsers = true);
 
   unsigned getNumUses() const { return UseMap.size(); }
 
@@ -467,7 +474,7 @@ protected:
   ~ValueAsMetadata() = default;
 
 public:
-  static ValueAsMetadata *get(Value *V);
+  LLVM_ABI static ValueAsMetadata *get(Value *V);
 
   static ConstantAsMetadata *getConstant(Value *C) {
     return cast<ConstantAsMetadata>(get(C));
@@ -477,7 +484,7 @@ public:
     return cast<LocalAsMetadata>(get(Local));
   }
 
-  static ValueAsMetadata *getIfExists(Value *V);
+  LLVM_ABI static ValueAsMetadata *getIfExists(Value *V);
 
   static ConstantAsMetadata *getConstantIfExists(Value *C) {
     return cast_or_null<ConstantAsMetadata>(getIfExists(C));
@@ -498,8 +505,8 @@ public:
     return ReplaceableMetadataImpl::getAllDbgVariableRecordUsers();
   }
 
-  static void handleDeletion(Value *V);
-  static void handleRAUW(Value *From, Value *To);
+  LLVM_ABI static void handleDeletion(Value *V);
+  LLVM_ABI static void handleRAUW(Value *From, Value *To);
 
 protected:
   /// Handle collisions after \a Value::replaceAllUsesWith().
@@ -615,23 +622,16 @@ public:
 namespace mdconst {
 
 namespace detail {
+template <typename U, typename V>
+using check_has_dereference = decltype(static_cast<V>(*std::declval<U &>()));
 
-template <class T> T &make();
-template <class T, class Result> struct HasDereference {
-  using Yes = char[1];
-  using No = char[2];
-  template <size_t N> struct SFINAE {};
+template <typename U, typename V>
+static constexpr bool HasDereference =
+    is_detected<check_has_dereference, U, V>::value;
 
-  template <class U, class V>
-  static Yes &hasDereference(SFINAE<sizeof(static_cast<V>(*make<U>()))> * = 0);
-  template <class U, class V> static No &hasDereference(...);
-
-  static const bool value =
-      sizeof(hasDereference<T, Result>(nullptr)) == sizeof(Yes);
-};
 template <class V, class M> struct IsValidPointer {
   static const bool value = std::is_base_of<Constant, V>::value &&
-                            HasDereference<M, const Metadata &>::value;
+                            HasDereference<M, const Metadata &>;
 };
 template <class V, class M> struct IsValidReference {
   static const bool value = std::is_base_of<Constant, V>::value &&
@@ -729,12 +729,12 @@ public:
   MDString &operator=(MDString &&) = delete;
   MDString &operator=(const MDString &) = delete;
 
-  static MDString *get(LLVMContext &Context, StringRef Str);
+  LLVM_ABI static MDString *get(LLVMContext &Context, StringRef Str);
   static MDString *get(LLVMContext &Context, const char *Str) {
     return get(Context, Str ? StringRef(Str) : StringRef());
   }
 
-  StringRef getString() const;
+  LLVM_ABI StringRef getString() const;
 
   unsigned getLength() const { return (unsigned)getString().size(); }
 
@@ -786,14 +786,14 @@ struct AAMDNodes {
   MDNode *NoAlias = nullptr;
 
   // Shift tbaa Metadata node to start off bytes later
-  static MDNode *shiftTBAA(MDNode *M, size_t off);
+  LLVM_ABI static MDNode *shiftTBAA(MDNode *M, size_t off);
 
   // Shift tbaa.struct Metadata node to start off bytes later
-  static MDNode *shiftTBAAStruct(MDNode *M, size_t off);
+  LLVM_ABI static MDNode *shiftTBAAStruct(MDNode *M, size_t off);
 
   // Extend tbaa Metadata node to apply to a series of bytes of length len.
   // A size of -1 denotes an unknown size.
-  static MDNode *extendToTBAA(MDNode *TBAA, ssize_t len);
+  LLVM_ABI static MDNode *extendToTBAA(MDNode *TBAA, ssize_t len);
 
   /// Given two sets of AAMDNodes that apply to the same pointer,
   /// give the best AAMDNodes that are compatible with both (i.e. a set of
@@ -838,22 +838,22 @@ struct AAMDNodes {
 
   /// Given two sets of AAMDNodes applying to potentially different locations,
   /// determine the best AAMDNodes that apply to both.
-  AAMDNodes merge(const AAMDNodes &Other) const;
+  LLVM_ABI AAMDNodes merge(const AAMDNodes &Other) const;
 
   /// Determine the best AAMDNodes after concatenating two different locations
   /// together. Different from `merge`, where different locations should
   /// overlap each other, `concat` puts non-overlapping locations together.
-  AAMDNodes concat(const AAMDNodes &Other) const;
+  LLVM_ABI AAMDNodes concat(const AAMDNodes &Other) const;
 
   /// Create a new AAMDNode for accessing \p AccessSize bytes of this AAMDNode.
   /// If this AAMDNode has !tbaa.struct and \p AccessSize matches the size of
   /// the field at offset 0, get the TBAA tag describing the accessed field.
   /// If such an AAMDNode already embeds !tbaa, the existing one is retrieved.
   /// Finally, !tbaa.struct is zeroed out.
-  AAMDNodes adjustForAccess(unsigned AccessSize);
-  AAMDNodes adjustForAccess(size_t Offset, Type *AccessTy,
-                            const DataLayout &DL);
-  AAMDNodes adjustForAccess(size_t Offset, unsigned AccessSize);
+  LLVM_ABI AAMDNodes adjustForAccess(unsigned AccessSize);
+  LLVM_ABI AAMDNodes adjustForAccess(size_t Offset, Type *AccessTy,
+                                     const DataLayout &DL);
+  LLVM_ABI AAMDNodes adjustForAccess(size_t Offset, unsigned AccessSize);
 };
 
 // Specialize DenseMapInfo for AAMDNodes.
@@ -1079,8 +1079,8 @@ class MDNode : public Metadata {
   /// Explicity set alignment because bitfields by default have an
   /// alignment of 1 on z/OS.
   struct alignas(alignof(size_t)) Header {
-    bool IsResizable : 1;
-    bool IsLarge : 1;
+    size_t IsResizable : 1;
+    size_t IsLarge : 1;
     size_t SmallSize : 4;
     size_t SmallNumOps : 4;
     size_t : sizeof(size_t) * CHAR_BIT - 10;
@@ -1131,7 +1131,7 @@ class MDNode : public Metadata {
              sizeof(LargeStorageVector);
     }
 
-    void *getSmallPtr();
+    LLVM_ABI void *getSmallPtr();
 
     LargeStorageVector &getLarge() {
       assert(IsLarge);
@@ -1143,12 +1143,12 @@ class MDNode : public Metadata {
       return *reinterpret_cast<const LargeStorageVector *>(getLargePtr());
     }
 
-    void resizeSmall(size_t NumOps);
-    void resizeSmallToLarge(size_t NumOps);
-    void resize(size_t NumOps);
+    LLVM_ABI void resizeSmall(size_t NumOps);
+    LLVM_ABI void resizeSmallToLarge(size_t NumOps);
+    LLVM_ABI void resize(size_t NumOps);
 
-    explicit Header(size_t NumOps, StorageType Storage);
-    ~Header();
+    LLVM_ABI explicit Header(size_t NumOps, StorageType Storage);
+    LLVM_ABI ~Header();
 
     MutableArrayRef<MDOperand> operands() {
       if (IsLarge)
@@ -1180,12 +1180,12 @@ class MDNode : public Metadata {
   ContextAndReplaceableUses Context;
 
 protected:
-  MDNode(LLVMContext &Context, unsigned ID, StorageType Storage,
-         ArrayRef<Metadata *> Ops1, ArrayRef<Metadata *> Ops2 = {});
+  LLVM_ABI MDNode(LLVMContext &Context, unsigned ID, StorageType Storage,
+                  ArrayRef<Metadata *> Ops1, ArrayRef<Metadata *> Ops2 = {});
   ~MDNode() = default;
 
-  void *operator new(size_t Size, size_t NumOps, StorageType Storage);
-  void operator delete(void *Mem);
+  LLVM_ABI void *operator new(size_t Size, size_t NumOps, StorageType Storage);
+  LLVM_ABI void operator delete(void *Mem);
 
   /// Required by std, but never called.
   void operator delete(void *, unsigned) {
@@ -1197,7 +1197,7 @@ protected:
     llvm_unreachable("Constructor throws?");
   }
 
-  void dropAllReferences();
+  LLVM_ABI void dropAllReferences();
 
   MDOperand *mutable_begin() { return getHeader().operands().begin(); }
   MDOperand *mutable_end() { return getHeader().operands().end(); }
@@ -1222,18 +1222,18 @@ public:
                                          ArrayRef<Metadata *> MDs);
 
   /// Create a (temporary) clone of this.
-  TempMDNode clone() const;
+  LLVM_ABI TempMDNode clone() const;
 
   /// Deallocate a node created by getTemporary.
   ///
   /// Calls \c replaceAllUsesWith(nullptr) before deleting, so any remaining
   /// references will be reset.
-  static void deleteTemporary(MDNode *N);
+  LLVM_ABI static void deleteTemporary(MDNode *N);
 
   LLVMContext &getContext() const { return Context.getContext(); }
 
   /// Replace a specific operand.
-  void replaceOperandWith(unsigned I, Metadata *New);
+  LLVM_ABI void replaceOperandWith(unsigned I, Metadata *New);
 
   /// Check if node is fully resolved.
   ///
@@ -1275,10 +1275,10 @@ public:
   /// resolved.
   ///
   /// \pre No operands (or operands' operands, etc.) have \a isTemporary().
-  void resolveCycles();
+  LLVM_ABI void resolveCycles();
 
   /// Resolve a unique, unresolved node.
-  void resolve();
+  LLVM_ABI void resolve();
 
   /// Replace a temporary node with a permanent one.
   ///
@@ -1319,9 +1319,9 @@ public:
   /// If \c M is provided, metadata nodes will be numbered canonically;
   /// otherwise, pointer addresses are substituted.
   /// @{
-  void printTree(raw_ostream &OS, const Module *M = nullptr) const;
-  void printTree(raw_ostream &OS, ModuleSlotTracker &MST,
-                 const Module *M = nullptr) const;
+  LLVM_ABI void printTree(raw_ostream &OS, const Module *M = nullptr) const;
+  LLVM_ABI void printTree(raw_ostream &OS, ModuleSlotTracker &MST,
+                          const Module *M = nullptr) const;
   /// @}
 
   /// User-friendly dump in tree shape.
@@ -1333,25 +1333,25 @@ public:
   /// the nullptr version is easy to call from a debugger.
   ///
   /// @{
-  void dumpTree() const;
-  void dumpTree(const Module *M) const;
+  LLVM_ABI void dumpTree() const;
+  LLVM_ABI void dumpTree(const Module *M) const;
   /// @}
 
 private:
-  MDNode *replaceWithPermanentImpl();
-  MDNode *replaceWithUniquedImpl();
-  MDNode *replaceWithDistinctImpl();
+  LLVM_ABI MDNode *replaceWithPermanentImpl();
+  LLVM_ABI MDNode *replaceWithUniquedImpl();
+  LLVM_ABI MDNode *replaceWithDistinctImpl();
 
 protected:
   /// Set an operand.
   ///
   /// Sets the operand directly, without worrying about uniquing.
-  void setOperand(unsigned I, Metadata *New);
+  LLVM_ABI void setOperand(unsigned I, Metadata *New);
 
   unsigned getNumUnresolved() const { return getHeader().NumUnresolved; }
 
   void setNumUnresolved(unsigned N) { getHeader().NumUnresolved = N; }
-  void storeDistinctInContext();
+  LLVM_ABI void storeDistinctInContext();
   template <class T, class StoreT>
   static T *storeImpl(T *N, StorageType Storage, StoreT &Store);
   template <class T> static T *storeImpl(T *N, StorageType Storage);
@@ -1448,22 +1448,25 @@ public:
   }
 
   /// Check whether MDNode is a vtable access.
-  bool isTBAAVtableAccess() const;
+  LLVM_ABI bool isTBAAVtableAccess() const;
 
   /// Methods for metadata merging.
-  static MDNode *concatenate(MDNode *A, MDNode *B);
-  static MDNode *intersect(MDNode *A, MDNode *B);
-  static MDNode *getMostGenericTBAA(MDNode *A, MDNode *B);
-  static MDNode *getMostGenericFPMath(MDNode *A, MDNode *B);
-  static MDNode *getMostGenericRange(MDNode *A, MDNode *B);
-  static MDNode *getMostGenericNoaliasAddrspace(MDNode *A, MDNode *B);
-  static MDNode *getMostGenericAliasScope(MDNode *A, MDNode *B);
-  static MDNode *getMostGenericAlignmentOrDereferenceable(MDNode *A, MDNode *B);
+  LLVM_ABI static MDNode *concatenate(MDNode *A, MDNode *B);
+  LLVM_ABI static MDNode *intersect(MDNode *A, MDNode *B);
+  LLVM_ABI static MDNode *getMostGenericTBAA(MDNode *A, MDNode *B);
+  LLVM_ABI static MDNode *getMostGenericFPMath(MDNode *A, MDNode *B);
+  LLVM_ABI static MDNode *getMostGenericRange(MDNode *A, MDNode *B);
+  LLVM_ABI static MDNode *getMostGenericNoaliasAddrspace(MDNode *A, MDNode *B);
+  LLVM_ABI static MDNode *getMostGenericAliasScope(MDNode *A, MDNode *B);
+  LLVM_ABI static MDNode *getMostGenericAlignmentOrDereferenceable(MDNode *A,
+                                                                   MDNode *B);
   /// Merge !prof metadata from two instructions.
   /// Currently only implemented with direct callsites with branch weights.
-  static MDNode *getMergedProfMetadata(MDNode *A, MDNode *B,
-                                       const Instruction *AInstr,
-                                       const Instruction *BInstr);
+  LLVM_ABI static MDNode *getMergedProfMetadata(MDNode *A, MDNode *B,
+                                                const Instruction *AInstr,
+                                                const Instruction *BInstr);
+  LLVM_ABI static MDNode *getMergedMemProfMetadata(MDNode *A, MDNode *B);
+  LLVM_ABI static MDNode *getMergedCallsiteMetadata(MDNode *A, MDNode *B);
 };
 
 /// Tuple of metadata.
@@ -1485,8 +1488,10 @@ class MDTuple : public MDNode {
   void setHash(unsigned Hash) { SubclassData32 = Hash; }
   void recalculateHash();
 
-  static MDTuple *getImpl(LLVMContext &Context, ArrayRef<Metadata *> MDs,
-                          StorageType Storage, bool ShouldCreate = true);
+  LLVM_ABI static MDTuple *getImpl(LLVMContext &Context,
+                                   ArrayRef<Metadata *> MDs,
+                                   StorageType Storage,
+                                   bool ShouldCreate = true);
 
   TempMDTuple cloneImpl() const {
     ArrayRef<MDOperand> Operands = operands();
@@ -1787,29 +1792,29 @@ class NamedMDNode : public ilist_node<NamedMDNode> {
 
 public:
   NamedMDNode(const NamedMDNode &) = delete;
-  ~NamedMDNode();
+  LLVM_ABI ~NamedMDNode();
 
   /// Drop all references and remove the node from parent module.
-  void eraseFromParent();
+  LLVM_ABI void eraseFromParent();
 
   /// Remove all uses and clear node vector.
   void dropAllReferences() { clearOperands(); }
   /// Drop all references to this node's operands.
-  void clearOperands();
+  LLVM_ABI void clearOperands();
 
   /// Get the module that holds this named metadata collection.
   inline Module *getParent() { return Parent; }
   inline const Module *getParent() const { return Parent; }
 
-  MDNode *getOperand(unsigned i) const;
-  unsigned getNumOperands() const;
-  void addOperand(MDNode *M);
-  void setOperand(unsigned I, MDNode *New);
-  StringRef getName() const;
-  void print(raw_ostream &ROS, bool IsForDebug = false) const;
-  void print(raw_ostream &ROS, ModuleSlotTracker &MST,
-             bool IsForDebug = false) const;
-  void dump() const;
+  LLVM_ABI MDNode *getOperand(unsigned i) const;
+  LLVM_ABI unsigned getNumOperands() const;
+  LLVM_ABI void addOperand(MDNode *M);
+  LLVM_ABI void setOperand(unsigned I, MDNode *New);
+  LLVM_ABI StringRef getName() const;
+  LLVM_ABI void print(raw_ostream &ROS, bool IsForDebug = false) const;
+  LLVM_ABI void print(raw_ostream &ROS, ModuleSlotTracker &MST,
+                      bool IsForDebug = false) const;
+  LLVM_ABI void dump() const;
 
   // ---------------------------------------------------------------------------
   // Operand Iterator interface...

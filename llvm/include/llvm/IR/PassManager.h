@@ -28,9 +28,9 @@
 /// polymorphism as outlined in the "Value Semantics and Concept-based
 /// Polymorphism" talk (or its abbreviated sibling "Inheritance Is The Base
 /// Class of Evil") by Sean Parent:
-/// * http://github.com/sean-parent/sean-parent.github.com/wiki/Papers-and-Presentations
+/// * https://sean-parent.stlab.cc/papers-and-presentations
 /// * http://www.youtube.com/watch?v=_BpMYeUFXv8
-/// * http://channel9.msdn.com/Events/GoingNative/2013/Inheritance-Is-The-Base-Class-of-Evil
+/// * https://learn.microsoft.com/en-us/shows/goingnative-2013/inheritance-base-class-of-evil
 ///
 //===----------------------------------------------------------------------===//
 
@@ -43,6 +43,7 @@
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/PassManagerInternal.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/TypeName.h"
 #include <cassert>
 #include <cstring>
@@ -229,18 +230,19 @@ template <typename IRUnitT>
 void printIRUnitNameForStackTrace(raw_ostream &OS, const IRUnitT &IR);
 
 template <>
-void printIRUnitNameForStackTrace<Module>(raw_ostream &OS, const Module &IR);
+LLVM_ABI void printIRUnitNameForStackTrace<Module>(raw_ostream &OS,
+                                                   const Module &IR);
 
-extern template class PassManager<Module>;
+extern template class LLVM_TEMPLATE_ABI PassManager<Module>;
 
 /// Convenience typedef for a pass manager over modules.
 using ModulePassManager = PassManager<Module>;
 
 template <>
-void printIRUnitNameForStackTrace<Function>(raw_ostream &OS,
-                                            const Function &IR);
+LLVM_ABI void printIRUnitNameForStackTrace<Function>(raw_ostream &OS,
+                                                     const Function &IR);
 
-extern template class PassManager<Function>;
+extern template class LLVM_TEMPLATE_ABI PassManager<Function>;
 
 /// Convenience typedef for a pass manager over functions.
 using FunctionPassManager = PassManager<Function>;
@@ -535,12 +537,12 @@ private:
   AnalysisResultMapT AnalysisResults;
 };
 
-extern template class AnalysisManager<Module>;
+extern template class LLVM_TEMPLATE_ABI AnalysisManager<Module>;
 
 /// Convenience typedef for the Module analysis manager.
 using ModuleAnalysisManager = AnalysisManager<Module>;
 
-extern template class AnalysisManager<Function>;
+extern template class LLVM_TEMPLATE_ABI AnalysisManager<Function>;
 
 /// Convenience typedef for the Function analysis manager.
 using FunctionAnalysisManager = AnalysisManager<Function>;
@@ -562,7 +564,7 @@ using FunctionAnalysisManager = AnalysisManager<Function>;
 /// Note that the proxy's result is a move-only RAII object.  The validity of
 /// the analyses in the inner analysis manager is tied to its lifetime.
 template <typename AnalysisManagerT, typename IRUnitT, typename... ExtraArgTs>
-class InnerAnalysisManagerProxy
+class LLVM_TEMPLATE_ABI InnerAnalysisManagerProxy
     : public AnalysisInfoMixin<
           InnerAnalysisManagerProxy<AnalysisManagerT, IRUnitT>> {
 public:
@@ -650,7 +652,7 @@ using FunctionAnalysisManagerModuleProxy =
 /// Specialization of the invalidate method for the \c
 /// FunctionAnalysisManagerModuleProxy's result.
 template <>
-bool FunctionAnalysisManagerModuleProxy::Result::invalidate(
+LLVM_ABI bool FunctionAnalysisManagerModuleProxy::Result::invalidate(
     Module &M, const PreservedAnalyses &PA,
     ModuleAnalysisManager::Invalidator &Inv);
 
@@ -795,8 +797,8 @@ template <typename AnalysisManagerT, typename IRUnitT, typename... ExtraArgTs>
 AnalysisKey
     OuterAnalysisManagerProxy<AnalysisManagerT, IRUnitT, ExtraArgTs...>::Key;
 
-extern template class OuterAnalysisManagerProxy<ModuleAnalysisManager,
-                                                Function>;
+extern template class LLVM_TEMPLATE_ABI
+    OuterAnalysisManagerProxy<ModuleAnalysisManager, Function>;
 /// Provide the \c ModuleAnalysisManager to \c Function proxy.
 using ModuleAnalysisManagerFunctionProxy =
     OuterAnalysisManagerProxy<ModuleAnalysisManager, Function>;
@@ -834,9 +836,10 @@ public:
       : Pass(std::move(Pass)), EagerlyInvalidate(EagerlyInvalidate) {}
 
   /// Runs the function pass across every function in the module.
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 
   static bool isRequired() { return true; }
 

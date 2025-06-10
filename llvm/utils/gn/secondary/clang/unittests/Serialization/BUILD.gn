@@ -16,6 +16,7 @@ unittest("SerializationTests") {
   sources = [
     "ForceCheckFileInputTest.cpp",
     "InMemoryModuleCacheTest.cpp",
+    "LoadSpecLazilyTest.cpp",
     "ModuleCacheTest.cpp",
     "NoCommentsTest.cpp",
     "PreambleInNamedModulesTest.cpp",

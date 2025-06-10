@@ -4,21 +4,89 @@
 ;; Avoid failures on big-endian systems that can't read the profile properly
 ; REQUIRES: x86_64-linux
 
-;; TODO: Use text profile inputs once that is available for memprof.
-;; This test uses the same raw profile used for memprof.ll, see instructions
-;; in that file for updating.
+;; Generate the profile and the IR.
+; RUN: split-file %s %t
 
 ;; Generate indexed profile
-; RUN: llvm-profdata merge %S/Inputs/memprof.memprofraw --profiled-binary %S/Inputs/memprof.exe -o %t.memprofdata
+; RUN: llvm-profdata merge %t/memprof_match_hot_cold_new_calls.yaml -o %t.memprofdata
 
 ;; By default we should not match profile on to manually hinted operator
 ;; new calls, because we don't currently override the manual hints anyway.
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -S 2>&1 | FileCheck %s --implicit-check-not !memprof --implicit-check-not !callsite
+; RUN: opt < %t/memprof_match_hot_cold_new_calls.ll -passes='memprof-use<profile-filename=%t.memprofdata>' -S 2>&1 | FileCheck %s --implicit-check-not !memprof --implicit-check-not !callsite
 
 ;; Check that we match profiles onto these manually hinted new calls
 ;; under the -memprof-match-hot-cold-new=true option.
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -S -memprof-match-hot-cold-new=true 2>&1 | FileCheck %s --check-prefixes=MEMPROF
+; RUN: opt < %t/memprof_match_hot_cold_new_calls.ll -passes='memprof-use<profile-filename=%t.memprofdata>' -S -memprof-match-hot-cold-new=true 2>&1 | FileCheck %s --check-prefixes=MEMPROF
 
+;--- memprof_match_hot_cold_new_calls.yaml
+---
+HeapProfileRecords:
+  - GUID:            _Z3foov
+    AllocSites:
+      - Callstack:
+          - { Function: _Z3foov, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: main, LineOffset: 6, Column: 13, IsInlineFrame: false }
+        MemInfoBlock:
+          AllocCount:      1
+          TotalSize:       10
+          TotalLifetime:   0
+          TotalLifetimeAccessDensity: 20000
+      - Callstack:
+          - { Function: _Z3foov, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: main, LineOffset: 7, Column: 13, IsInlineFrame: false }
+        MemInfoBlock:
+          AllocCount:      1
+          TotalSize:       10
+          TotalLifetime:   200000
+          TotalLifetimeAccessDensity: 0
+      - Callstack:
+          - { Function: _Z3foov, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: _Z4foo2v, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: _Z3barv, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: main, LineOffset: 8, Column: 13, IsInlineFrame: false }
+        MemInfoBlock:
+          AllocCount:      1
+          TotalSize:       10
+          TotalLifetime:   200000
+          TotalLifetimeAccessDensity: 0
+      - Callstack:
+          - { Function: _Z3foov, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: _Z4foo2v, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: _Z3bazv, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: main, LineOffset: 9, Column: 13, IsInlineFrame: false }
+        MemInfoBlock:
+          AllocCount:      1
+          TotalSize:       10
+          TotalLifetime:   200000
+          TotalLifetimeAccessDensity: 0
+      - Callstack:
+          - { Function: _Z3foov, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: _Z7recursej, LineOffset: 2, Column: 12, IsInlineFrame: false }
+          - { Function: _Z7recursej, LineOffset: 3, Column: 10, IsInlineFrame: false }
+          - { Function: _Z7recursej, LineOffset: 3, Column: 10, IsInlineFrame: false }
+          - { Function: _Z7recursej, LineOffset: 3, Column: 10, IsInlineFrame: false }
+          - { Function: main, LineOffset: 31, Column: 15, IsInlineFrame: false }
+        MemInfoBlock:
+          AllocCount:      1
+          TotalSize:       10
+          TotalLifetime:   200000
+          TotalLifetimeAccessDensity: 0
+      - Callstack:
+          - { Function: _Z3foov, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: _Z7recursej, LineOffset: 2, Column: 12, IsInlineFrame: false }
+          - { Function: _Z7recursej, LineOffset: 3, Column: 10, IsInlineFrame: false }
+          - { Function: _Z7recursej, LineOffset: 3, Column: 10, IsInlineFrame: false }
+          - { Function: _Z7recursej, LineOffset: 3, Column: 10, IsInlineFrame: false }
+          - { Function: _Z7recursej, LineOffset: 3, Column: 10, IsInlineFrame: false }
+          - { Function: main, LineOffset: 31, Column: 15, IsInlineFrame: false }
+        MemInfoBlock:
+          AllocCount:      1
+          TotalSize:       10
+          TotalLifetime:   0
+          TotalLifetimeAccessDensity: 20000
+    CallSites:       []
+...
+;--- memprof_match_hot_cold_new_calls.ll
 ; ModuleID = 'memprof_match_hot_cold_new_calls.cc'
 source_filename = "memprof_match_hot_cold_new_calls.cc"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -37,7 +105,7 @@ entry:
 
 declare noundef ptr @_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t(i64 noundef, i64 noundef, ptr noundef nonnull align 1 dereferenceable(1), i8 noundef zeroext)
 
-; MEMPROF: ![[M1]] = !{![[MIB1:[0-9]+]], ![[MIB2:[0-9]+]], ![[MIB3:[0-9]+]], ![[MIB4:[0-9]+]], ![[MIB5:[0-9]+]]}
+; MEMPROF: ![[M1]] = !{![[MIB1:[0-9]+]], ![[MIB2:[0-9]+]], ![[MIB3:[0-9]+]], ![[MIB4:[0-9]+]]}
 ; MEMPROF: ![[MIB1]] = !{![[STACK1:[0-9]+]], !"cold"}
 ; MEMPROF: ![[STACK1]] = !{i64 2732490490862098848, i64 748269490701775343}
 ; MEMPROF: ![[MIB2]] = !{![[STACK2:[0-9]+]], !"cold"}
@@ -46,8 +114,6 @@ declare noundef ptr @_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t(i64 nounde
 ; MEMPROF: ![[STACK3]] = !{i64 2732490490862098848, i64 2104812325165620841, i64 6281715513834610934, i64 6281715513834610934, i64 6281715513834610934, i64 6281715513834610934}
 ; MEMPROF: ![[MIB4]] = !{![[STACK4:[0-9]+]], !"cold"}
 ; MEMPROF: ![[STACK4]] = !{i64 2732490490862098848, i64 8467819354083268568}
-; MEMPROF: ![[MIB5]] = !{![[STACK5:[0-9]+]], !"notcold"}
-; MEMPROF: ![[STACK5]] = !{i64 2732490490862098848, i64 8690657650969109624}
 ; MEMPROF: ![[C1]] = !{i64 2732490490862098848}
 
 !llvm.dbg.cu = !{!0}

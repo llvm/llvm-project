@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_60 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_60 | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_60 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_60 | %ptxas -arch=sm_60 - %}
 
 %struct.Large = type { [16 x double] }
 
@@ -10,7 +10,7 @@
 ; CHECK: .param .u64 .ptr .shared .align 8  func_align_param_3
 ; CHECK: .param .u64 .ptr .const  .align 16 func_align_param_4
 ; CHECK: .param .u64 .ptr .local  .align 32 func_align_param_5
-define void @func_align(ptr nocapture readonly align 1 %input,
+define ptx_kernel void @func_align(ptr nocapture readonly align 1 %input,
                         ptr nocapture align 2 %out,
                         ptr addrspace(1) align 4 %global,
                         ptr addrspace(3) align 8 %shared,
@@ -27,7 +27,7 @@ entry:
 ; CHECK: .param .u64 .ptr .shared .align 1 func_noalign_param_3
 ; CHECK: .param .u64 .ptr .const  .align 1 func_noalign_param_4
 ; CHECK: .param .u64 .ptr .local  .align 1 func_noalign_param_5
-define void @func_noalign(ptr nocapture readonly %input,
+define ptx_kernel void @func_noalign(ptr nocapture readonly %input,
                           ptr nocapture %out,
                           ptr addrspace(1) %global,
                           ptr addrspace(3) %shared,
@@ -36,7 +36,3 @@ define void @func_noalign(ptr nocapture readonly %input,
 entry:
   ret void
 }
-
-!nvvm.annotations = !{!0, !1}
-!0 = !{ptr @func_align, !"kernel", i32 1}
-!1 = !{ptr @func_noalign, !"kernel", i32 1}

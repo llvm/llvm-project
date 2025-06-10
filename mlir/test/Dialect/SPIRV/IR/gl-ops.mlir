@@ -255,6 +255,54 @@ func.func @coshvec(%arg0 : vector<3xf16>) -> () {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.GL.Asinh
+//===----------------------------------------------------------------------===//
+
+func.func @asinh(%arg0 : f32) -> () {
+  // CHECK: spirv.GL.Asinh {{%.*}} : f32
+  %2 = spirv.GL.Asinh %arg0 : f32
+  return
+}
+
+func.func @asinhvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.GL.Asinh {{%.*}} : vector<3xf16>
+  %2 = spirv.GL.Asinh %arg0 : vector<3xf16>
+  return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Acosh
+//===----------------------------------------------------------------------===//
+
+func.func @acosh(%arg0 : f32) -> () {
+  // CHECK: spirv.GL.Acosh {{%.*}} : f32
+  %2 = spirv.GL.Acosh %arg0 : f32
+  return
+}
+
+func.func @acoshvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.GL.Acosh {{%.*}} : vector<3xf16>
+  %2 = spirv.GL.Acosh %arg0 : vector<3xf16>
+  return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Atanh
+//===----------------------------------------------------------------------===//
+
+func.func @atanh(%arg0 : f32) -> () {
+  // CHECK: spirv.GL.Atanh {{%.*}} : f32
+  %2 = spirv.GL.Atanh %arg0 : f32
+  return
+}
+
+func.func @atanhvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.GL.Atanh {{%.*}} : vector<3xf16>
+  %2 = spirv.GL.Atanh %arg0 : vector<3xf16>
+  return
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.GL.Pow
 //===----------------------------------------------------------------------===//
 
@@ -539,5 +587,205 @@ func.func @findumsb_vector(%arg0 : vector<3xi32>) -> () {
 func.func @findumsb(%arg0 : i64) -> () {
   // expected-error @+1 {{operand #0 must be Int32 or vector of Int32}}
   %2 = spirv.GL.FindUMsb %arg0 : i64
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Distance 
+//===----------------------------------------------------------------------===//
+
+func.func @distance_scalar(%arg0 : f32, %arg1 : f32) {
+  // CHECK: spirv.GL.Distance {{%.*}}, {{%.*}} : f32, f32 -> f32
+  %0 = spirv.GL.Distance %arg0, %arg1 : f32, f32 -> f32
+  return
+}
+
+func.func @distance_vector(%arg0 : vector<3xf32>, %arg1 : vector<3xf32>) {
+  // CHECK: spirv.GL.Distance {{%.*}}, {{%.*}} : vector<3xf32>, vector<3xf32> -> f32
+  %0 = spirv.GL.Distance %arg0, %arg1 : vector<3xf32>, vector<3xf32> -> f32
+  return
+}
+
+// -----
+
+func.func @distance_invalid_type(%arg0 : i32, %arg1 : i32) {
+  // expected-error @+1 {{'spirv.GL.Distance' op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values of length 2/3/4/8/16}}
+  %0 = spirv.GL.Distance %arg0, %arg1 : i32, i32 -> f32
+  return
+}
+
+// -----
+
+func.func @distance_arg_mismatch(%arg0 : vector<3xf32>, %arg1 : vector<4xf32>) {
+  // expected-error @+1 {{'spirv.GL.Distance' op failed to verify that all of {p0, p1} have same type}}
+  %0 = spirv.GL.Distance %arg0, %arg1 : vector<3xf32>, vector<4xf32> -> f32
+  return
+}
+
+// -----
+
+func.func @distance_invalid_vector_size(%arg0 : vector<5xf32>, %arg1 : vector<5xf32>) {
+  // expected-error @+1 {{'spirv.GL.Distance' op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values of length 2/3/4/8/16}}
+  %0 = spirv.GL.Distance %arg0, %arg1 : vector<5xf32>, vector<5xf32> -> f32
+  return
+}
+
+// -----
+
+func.func @distance_invalid_result(%arg0 : f32, %arg1 : f32) {
+  // expected-error @+1 {{'spirv.GL.Distance' op result #0 must be 16/32/64-bit float}}
+  %0 = spirv.GL.Distance %arg0, %arg1 : f32, f32 -> i32
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Cross
+//===----------------------------------------------------------------------===//
+
+func.func @cross(%arg0 : vector<3xf32>, %arg1 : vector<3xf32>) {
+  %2 = spirv.GL.Cross %arg0, %arg1 : vector<3xf32>
+  // CHECK: %{{.+}} = spirv.GL.Cross %{{.+}}, %{{.+}} : vector<3xf32>
+  return
+}
+
+// -----
+
+func.func @cross_invalid_type(%arg0 : vector<3xi32>, %arg1 : vector<3xi32>) {
+  // expected-error @+1 {{'spirv.GL.Cross' op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values of length 2/3/4/8/16, but got 'vector<3xi32>'}}
+  %0 = spirv.GL.Cross %arg0, %arg1 : vector<3xi32>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Normalize
+//===----------------------------------------------------------------------===//
+
+func.func @normalize_scalar(%arg0 : f32) {
+  %2 = spirv.GL.Normalize %arg0 : f32
+  // CHECK: %{{.+}} = spirv.GL.Normalize %{{.+}} : f32
+  return
+}
+
+func.func @normalize_vector(%arg0 : vector<3xf32>) {
+  %2 = spirv.GL.Normalize %arg0 : vector<3xf32>
+  // CHECK: %{{.+}} = spirv.GL.Normalize %{{.+}} : vector<3xf32>
+  return
+}
+
+// -----
+
+func.func @normalize_invalid_type(%arg0 : i32) {
+  // expected-error @+1 {{'spirv.GL.Normalize' op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values}}
+  %0 = spirv.GL.Normalize %arg0 : i32
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Reflect
+//===----------------------------------------------------------------------===//
+
+func.func @reflect_scalar(%arg0 : f32, %arg1 : f32) {
+  %2 = spirv.GL.Reflect %arg0, %arg1 : f32
+  // CHECK: %{{.+}} = spirv.GL.Reflect %{{.+}}, %{{.+}} : f32
+  return
+}
+
+func.func @reflect_vector(%arg0 : vector<3xf32>, %arg1 : vector<3xf32>) {
+  %2 = spirv.GL.Reflect %arg0, %arg1 : vector<3xf32>
+  // CHECK: %{{.+}} = spirv.GL.Reflect %{{.+}}, %{{.+}} : vector<3xf32>
+  return
+}
+
+// -----
+
+func.func @reflect_invalid_type(%arg0 : i32, %arg1 : i32) {
+  // expected-error @+1 {{'spirv.GL.Reflect' op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values}}
+  %0 = spirv.GL.Reflect %arg0, %arg1 : i32
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Fract
+//===----------------------------------------------------------------------===//
+
+func.func @fract(%arg0 : f32) -> () {
+  // CHECK: spirv.GL.Fract {{%.*}} : f32
+  %0 = spirv.GL.Fract %arg0 : f32
+  return
+}
+
+func.func @fractvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.GL.Fract {{%.*}} : vector<3xf16>
+  %0 = spirv.GL.Fract %arg0 : vector<3xf16>
+  return
+}
+
+// -----
+
+func.func @fract_invalid_type(%arg0 : i32) {
+  // expected-error @+1 {{'spirv.GL.Fract' op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values}}
+  %0 = spirv.GL.Fract %arg0 : i32
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Log2
+//===----------------------------------------------------------------------===//
+
+func.func @log2(%arg0 : f32) -> () {
+  // CHECK: spirv.GL.Log2 {{%.*}} : f32
+  %0 = spirv.GL.Log2 %arg0 : f32
+  return
+}
+
+func.func @log2vec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.GL.Log2 {{%.*}} : vector<3xf16>
+  %0 = spirv.GL.Log2 %arg0 : vector<3xf16>
+  return
+}
+
+// -----
+
+func.func @log2_invalid_type(%arg0 : i32) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32-bit float or vector of 16/32-bit float values}}
+  %0 = spirv.GL.Log2 %arg0 : i32
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Tanh
+//===----------------------------------------------------------------------===//
+
+func.func @tanh(%arg0 : f32) -> () {
+  // CHECK: spirv.GL.Tanh {{%.*}} : f32
+  %0 = spirv.GL.Tanh %arg0 : f32
+  return
+}
+
+func.func @tanhvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.GL.Tanh {{%.*}} : vector<3xf16>
+  %0 = spirv.GL.Tanh %arg0 : vector<3xf16>
+  return
+}
+
+// -----
+
+func.func @tanh_invalid_type(%arg0 : i32) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32-bit float or vector of 16/32-bit float values}}
+  %0 = spirv.GL.Tanh %arg0 : i32
   return
 }

@@ -13,6 +13,7 @@
 // template <class InputIterator>
 //   void insert(InputIterator first, InputIterator last);
 
+#include <algorithm>
 #include <flat_map>
 #include <cassert>
 #include <functional>
@@ -75,6 +76,7 @@ void test() {
   M expected2{{0, 1}, {1, 1}, {2, 1}, {3, 1}, {4, 1}};
   assert(m == expected2);
 }
+
 int main(int, char**) {
   test<std::vector<int>, std::vector<double>>();
   test<std::deque<int>, std::vector<double>>();
@@ -85,5 +87,12 @@ int main(int, char**) {
     auto insert_func = [](auto& m, const auto& newValues) { m.insert(newValues.begin(), newValues.end()); };
     test_insert_range_exception_guarantee(insert_func);
   }
+  {
+    std::flat_map<int, int, std::less<int>, SillyReserveVector<int>, SillyReserveVector<int>> m{{1, 1}, {2, 2}};
+    std::vector<std::pair<int, int>> v{{3, 3}, {4, 4}};
+    m.insert(v.begin(), v.end());
+    assert(std::ranges::equal(m, std::vector<std::pair<int, int>>{{1, 1}, {2, 2}, {3, 3}, {4, 4}}));
+  }
+
   return 0;
 }

@@ -11,20 +11,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
-
-#include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
-#include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
-#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMPass.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVM.h"
+#include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
-#include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
-#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
@@ -236,6 +232,103 @@ struct GPULaneIdOpToNVVM : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
   }
 };
 
+/// Lowering of cf.assert into a conditional __assertfail.
+struct AssertOpToAssertfailLowering
+    : public ConvertOpToLLVMPattern<cf::AssertOp> {
+  using ConvertOpToLLVMPattern<cf::AssertOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(cf::AssertOp assertOp, cf::AssertOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    MLIRContext *ctx = rewriter.getContext();
+    Location loc = assertOp.getLoc();
+    Type i8Type = typeConverter->convertType(rewriter.getIntegerType(8));
+    Type i32Type = typeConverter->convertType(rewriter.getIntegerType(32));
+    Type i64Type = typeConverter->convertType(rewriter.getIntegerType(64));
+    Type ptrType = LLVM::LLVMPointerType::get(ctx);
+    Type voidType = LLVM::LLVMVoidType::get(ctx);
+
+    // Find or create __assertfail function declaration.
+    auto moduleOp = assertOp->getParentOfType<gpu::GPUModuleOp>();
+    auto assertfailType = LLVM::LLVMFunctionType::get(
+        voidType, {ptrType, ptrType, i32Type, ptrType, i64Type});
+    LLVM::LLVMFuncOp assertfailDecl = getOrDefineFunction(
+        moduleOp, loc, rewriter, "__assertfail", assertfailType);
+    assertfailDecl.setPassthroughAttr(
+        ArrayAttr::get(ctx, StringAttr::get(ctx, "noreturn")));
+
+    // Split blocks and insert conditional branch.
+    // ^before:
+    //   ...
+    //   cf.cond_br %condition, ^after, ^assert
+    // ^assert:
+    //   cf.assert
+    //   cf.br ^after
+    // ^after:
+    //   ...
+    Block *beforeBlock = assertOp->getBlock();
+    Block *assertBlock =
+        rewriter.splitBlock(beforeBlock, assertOp->getIterator());
+    Block *afterBlock =
+        rewriter.splitBlock(assertBlock, ++assertOp->getIterator());
+    rewriter.setInsertionPointToEnd(beforeBlock);
+    rewriter.create<cf::CondBranchOp>(loc, adaptor.getArg(), afterBlock,
+                                      assertBlock);
+    rewriter.setInsertionPointToEnd(assertBlock);
+    rewriter.create<cf::BranchOp>(loc, afterBlock);
+
+    // Continue cf.assert lowering.
+    rewriter.setInsertionPoint(assertOp);
+
+    // Populate file name, file number and function name from the location of
+    // the AssertOp.
+    StringRef fileName = "(unknown)";
+    StringRef funcName = "(unknown)";
+    int32_t fileLine = 0;
+    while (auto callSiteLoc = dyn_cast<CallSiteLoc>(loc))
+      loc = callSiteLoc.getCallee();
+    if (auto fileLineColLoc = dyn_cast<FileLineColRange>(loc)) {
+      fileName = fileLineColLoc.getFilename().strref();
+      fileLine = fileLineColLoc.getStartLine();
+    } else if (auto nameLoc = dyn_cast<NameLoc>(loc)) {
+      funcName = nameLoc.getName().strref();
+      if (auto fileLineColLoc =
+              dyn_cast<FileLineColRange>(nameLoc.getChildLoc())) {
+        fileName = fileLineColLoc.getFilename().strref();
+        fileLine = fileLineColLoc.getStartLine();
+      }
+    }
+
+    // Create constants.
+    auto getGlobal = [&](LLVM::GlobalOp global) {
+      // Get a pointer to the format string's first element.
+      Value globalPtr = rewriter.create<LLVM::AddressOfOp>(
+          loc, LLVM::LLVMPointerType::get(ctx, global.getAddrSpace()),
+          global.getSymNameAttr());
+      Value start =
+          rewriter.create<LLVM::GEPOp>(loc, ptrType, global.getGlobalType(),
+                                       globalPtr, ArrayRef<LLVM::GEPArg>{0, 0});
+      return start;
+    };
+    Value assertMessage = getGlobal(getOrCreateStringConstant(
+        rewriter, loc, moduleOp, i8Type, "assert_message_", assertOp.getMsg()));
+    Value assertFile = getGlobal(getOrCreateStringConstant(
+        rewriter, loc, moduleOp, i8Type, "assert_file_", fileName));
+    Value assertFunc = getGlobal(getOrCreateStringConstant(
+        rewriter, loc, moduleOp, i8Type, "assert_func_", funcName));
+    Value assertLine =
+        rewriter.create<LLVM::ConstantOp>(loc, i32Type, fileLine);
+    Value c1 = rewriter.create<LLVM::ConstantOp>(loc, i64Type, 1);
+
+    // Insert function call to __assertfail.
+    SmallVector<Value> arguments{assertMessage, assertFile, assertLine,
+                                 assertFunc, c1};
+    rewriter.replaceOpWithNewOp<LLVM::CallOp>(assertOp, assertfailDecl,
+                                              arguments);
+    return success();
+  }
+};
+
 /// Import the GPU Ops to NVVM Patterns.
 #include "GPUToNVVM.cpp.inc"
 
@@ -244,9 +337,14 @@ struct GPULaneIdOpToNVVM : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
 ///
 /// This pass only handles device code and is not meant to be run on GPU host
 /// code.
-struct LowerGpuOpsToNVVMOpsPass
+struct LowerGpuOpsToNVVMOpsPass final
     : public impl::ConvertGpuOpsToNVVMOpsBase<LowerGpuOpsToNVVMOpsPass> {
   using Base::Base;
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    Base::getDependentDialects(registry);
+    registerConvertToLLVMDependentDialectLoading(registry);
+  }
 
   void runOnOperation() override {
     gpu::GPUModuleOp m = getOperation();
@@ -271,24 +369,51 @@ struct LowerGpuOpsToNVVMOpsPass
     {
       RewritePatternSet patterns(m.getContext());
       populateGpuRewritePatterns(patterns);
-      if (failed(applyPatternsAndFoldGreedily(m, std::move(patterns))))
+      if (failed(applyPatternsGreedily(m, std::move(patterns))))
         return signalPassFailure();
     }
 
     LLVMTypeConverter converter(m.getContext(), options);
     configureGpuToNVVMTypeConverter(converter);
     RewritePatternSet llvmPatterns(m.getContext());
+    LLVMConversionTarget target(getContext());
 
-    arith::populateArithToLLVMConversionPatterns(converter, llvmPatterns);
-    cf::populateControlFlowToLLVMConversionPatterns(converter, llvmPatterns);
-    populateFuncToLLVMConversionPatterns(converter, llvmPatterns);
-    populateFinalizeMemRefToLLVMConversionPatterns(converter, llvmPatterns);
-    populateGpuToNVVMConversionPatterns(converter, llvmPatterns);
+    // Set higher benefit, so patterns will run before generic LLVM lowering.
+    populateGpuToNVVMConversionPatterns(converter, llvmPatterns,
+                                        /*benefit=*/10);
+
+    llvm::SmallDenseSet<StringRef> allowedDialectsSet(allowedDialects.begin(),
+                                                      allowedDialects.end());
+    for (Dialect *dialect : getContext().getLoadedDialects()) {
+      // Skip math patterns as nvvm needs custom math lowering.
+      if (isa<math::MathDialect>(dialect))
+        continue;
+
+      bool allowed = allowedDialectsSet.contains(dialect->getNamespace());
+      // Empty `allowedDialectsSet` means all dialects are allowed.
+      if (!allowedDialectsSet.empty() && !allowed)
+        continue;
+
+      auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+      if (!iface) {
+        // Error out if dialect was explicily specified but doesn't implement
+        // conversion interface.
+        if (allowed) {
+          m.emitError()
+              << "dialect does not implement ConvertToLLVMPatternInterface: "
+              << dialect->getNamespace();
+          return signalPassFailure();
+        }
+        continue;
+      }
+
+      iface->populateConvertToLLVMConversionPatterns(target, converter,
+                                                     llvmPatterns);
+    }
+
     populateGpuWMMAToNVVMConversionPatterns(converter, llvmPatterns);
-    populateVectorToLLVMConversionPatterns(converter, llvmPatterns);
     if (this->hasRedux)
       populateGpuSubgroupReduceOpLoweringPattern(converter, llvmPatterns);
-    LLVMConversionTarget target(getContext());
     configureGpuToNVVMConversionLegality(target);
     if (failed(applyPartialConversion(m, target, std::move(llvmPatterns))))
       signalPassFailure();
@@ -299,6 +424,7 @@ struct LowerGpuOpsToNVVMOpsPass
 
 void mlir::configureGpuToNVVMConversionLegality(ConversionTarget &target) {
   target.addIllegalOp<func::FuncOp>();
+  target.addIllegalOp<cf::AssertOp>();
   target.addLegalDialect<::mlir::LLVM::LLVMDialect>();
   target.addLegalDialect<::mlir::NVVM::NVVMDialect>();
   target.addIllegalDialect<gpu::GPUDialect>();
@@ -340,59 +466,175 @@ void mlir::configureGpuToNVVMTypeConverter(LLVMTypeConverter &converter) {
 
 template <typename OpTy>
 static void populateOpPatterns(const LLVMTypeConverter &converter,
-                               RewritePatternSet &patterns, StringRef f32Func,
+                               RewritePatternSet &patterns,
+                               PatternBenefit benefit, StringRef f32Func,
                                StringRef f64Func, StringRef f32ApproxFunc = "",
                                StringRef f16Func = "") {
-  patterns.add<ScalarizeVectorOpLowering<OpTy>>(converter);
+  patterns.add<ScalarizeVectorOpLowering<OpTy>>(converter, benefit);
   patterns.add<OpToFuncCallLowering<OpTy>>(converter, f32Func, f64Func,
-                                           f32ApproxFunc, f16Func);
+                                           f32ApproxFunc, f16Func,
+                                           /*i32Func=*/"", benefit);
+}
+
+template <typename OpTy>
+static void populateIntOpPatterns(const LLVMTypeConverter &converter,
+                                  RewritePatternSet &patterns,
+                                  PatternBenefit benefit, StringRef i32Func) {
+  patterns.add<ScalarizeVectorOpLowering<OpTy>>(converter, benefit);
+  patterns.add<OpToFuncCallLowering<OpTy>>(converter, "", "", "", "", i32Func,
+                                           benefit);
+}
+
+template <typename OpTy>
+static void populateFloatIntOpPatterns(const LLVMTypeConverter &converter,
+                                       RewritePatternSet &patterns,
+                                       PatternBenefit benefit,
+                                       StringRef f32Func, StringRef f64Func) {
+  patterns.add<ScalarizeVectorOpLowering<OpTy>>(converter, benefit);
+  patterns.add<OpToFuncCallLowering<OpTy>>(converter, f32Func, f64Func, "", "",
+                                           /*i32Func=*/"", benefit);
 }
 
 void mlir::populateGpuSubgroupReduceOpLoweringPattern(
-    const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
-  patterns.add<GPUSubgroupReduceOpLowering>(converter);
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    PatternBenefit benefit) {
+  patterns.add<GPUSubgroupReduceOpLowering>(converter, benefit);
+}
+
+void mlir::populateLibDeviceConversionPatterns(
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    PatternBenefit benefit) {
+  populateOpPatterns<arith::RemFOp>(converter, patterns, benefit, "__nv_fmodf",
+                                    "__nv_fmod");
+  populateOpPatterns<arith::MaxNumFOp>(converter, patterns, benefit,
+                                       "__nv_fmaxf", "__nv_fmax");
+  populateOpPatterns<arith::MinNumFOp>(converter, patterns, benefit,
+                                       "__nv_fminf", "__nv_fmin");
+
+  populateIntOpPatterns<math::AbsIOp>(converter, patterns, benefit, "__nv_abs");
+  populateOpPatterns<math::AbsFOp>(converter, patterns, benefit, "__nv_fabsf",
+                                   "__nv_fabs");
+  populateOpPatterns<math::AcosOp>(converter, patterns, benefit, "__nv_acosf",
+                                   "__nv_acos");
+  populateOpPatterns<math::AcoshOp>(converter, patterns, benefit, "__nv_acoshf",
+                                    "__nv_acosh");
+  populateOpPatterns<math::AsinOp>(converter, patterns, benefit, "__nv_asinf",
+                                   "__nv_asin");
+  populateOpPatterns<math::AsinhOp>(converter, patterns, benefit, "__nv_asinhf",
+                                    "__nv_asinh");
+  populateOpPatterns<math::AtanOp>(converter, patterns, benefit, "__nv_atanf",
+                                   "__nv_atan");
+  populateOpPatterns<math::Atan2Op>(converter, patterns, benefit, "__nv_atan2f",
+                                    "__nv_atan2");
+  populateOpPatterns<math::AtanhOp>(converter, patterns, benefit, "__nv_atanhf",
+                                    "__nv_atanh");
+  populateOpPatterns<math::CbrtOp>(converter, patterns, benefit, "__nv_cbrtf",
+                                   "__nv_cbrt");
+  populateOpPatterns<math::CeilOp>(converter, patterns, benefit, "__nv_ceilf",
+                                   "__nv_ceil");
+  populateOpPatterns<math::CopySignOp>(converter, patterns, benefit,
+                                       "__nv_copysignf", "__nv_copysign");
+  populateOpPatterns<math::CosOp>(converter, patterns, benefit, "__nv_cosf",
+                                  "__nv_cos", "__nv_fast_cosf");
+  populateOpPatterns<math::CoshOp>(converter, patterns, benefit, "__nv_coshf",
+                                   "__nv_cosh");
+  populateOpPatterns<math::ErfOp>(converter, patterns, benefit, "__nv_erff",
+                                  "__nv_erf");
+  populateOpPatterns<math::ErfcOp>(converter, patterns, benefit, "__nv_erfcf",
+                                   "__nv_erfc");
+  populateOpPatterns<math::ExpOp>(converter, patterns, benefit, "__nv_expf",
+                                  "__nv_exp", "__nv_fast_expf");
+  populateOpPatterns<math::Exp2Op>(converter, patterns, benefit, "__nv_exp2f",
+                                   "__nv_exp2");
+  populateOpPatterns<math::ExpM1Op>(converter, patterns, benefit, "__nv_expm1f",
+                                    "__nv_expm1");
+  populateOpPatterns<math::FloorOp>(converter, patterns, benefit, "__nv_floorf",
+                                    "__nv_floor");
+  populateOpPatterns<math::FmaOp>(converter, patterns, benefit, "__nv_fmaf",
+                                  "__nv_fma");
+  // Note: libdevice uses a different name for 32-bit finite checking
+  populateOpPatterns<math::IsFiniteOp>(converter, patterns, benefit,
+                                       "__nv_finitef", "__nv_isfinited");
+  populateOpPatterns<math::IsInfOp>(converter, patterns, benefit, "__nv_isinff",
+                                    "__nv_isinfd");
+  populateOpPatterns<math::IsNaNOp>(converter, patterns, benefit, "__nv_isnanf",
+                                    "__nv_isnand");
+  populateOpPatterns<math::LogOp>(converter, patterns, benefit, "__nv_logf",
+                                  "__nv_log", "__nv_fast_logf");
+  populateOpPatterns<math::Log10Op>(converter, patterns, benefit, "__nv_log10f",
+                                    "__nv_log10", "__nv_fast_log10f");
+  populateOpPatterns<math::Log1pOp>(converter, patterns, benefit, "__nv_log1pf",
+                                    "__nv_log1p");
+  populateOpPatterns<math::Log2Op>(converter, patterns, benefit, "__nv_log2f",
+                                   "__nv_log2", "__nv_fast_log2f");
+  populateOpPatterns<math::PowFOp>(converter, patterns, benefit, "__nv_powf",
+                                   "__nv_pow", "__nv_fast_powf");
+  populateFloatIntOpPatterns<math::FPowIOp>(converter, patterns, benefit,
+                                            "__nv_powif", "__nv_powi");
+  populateOpPatterns<math::RoundOp>(converter, patterns, benefit, "__nv_roundf",
+                                    "__nv_round");
+  populateOpPatterns<math::RoundEvenOp>(converter, patterns, benefit,
+                                        "__nv_rintf", "__nv_rint");
+  populateOpPatterns<math::RsqrtOp>(converter, patterns, benefit, "__nv_rsqrtf",
+                                    "__nv_rsqrt");
+  populateOpPatterns<math::SinOp>(converter, patterns, benefit, "__nv_sinf",
+                                  "__nv_sin", "__nv_fast_sinf");
+  populateOpPatterns<math::SinhOp>(converter, patterns, benefit, "__nv_sinhf",
+                                   "__nv_sinh");
+  populateOpPatterns<math::SqrtOp>(converter, patterns, benefit, "__nv_sqrtf",
+                                   "__nv_sqrt");
+  populateOpPatterns<math::TanOp>(converter, patterns, benefit, "__nv_tanf",
+                                  "__nv_tan", "__nv_fast_tanf");
+  populateOpPatterns<math::TanhOp>(converter, patterns, benefit, "__nv_tanhf",
+                                   "__nv_tanh");
 }
 
 void mlir::populateGpuToNVVMConversionPatterns(
-    const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    PatternBenefit benefit) {
   using gpu::index_lowering::IndexKind;
   using gpu::index_lowering::IntrType;
+
+  // TODO: Pass benefit to generated patterns.
   populateWithGenerated(patterns);
-  patterns.add<GPUPrintfOpToVPrintfLowering>(converter);
+
+  patterns.add<GPUPrintfOpToVPrintfLowering, AssertOpToAssertfailLowering>(
+      converter, benefit);
   patterns.add<
       gpu::index_lowering::OpLowering<gpu::ThreadIdOp, NVVM::ThreadIdXOp,
                                       NVVM::ThreadIdYOp, NVVM::ThreadIdZOp>>(
-      converter, IndexKind::Block, IntrType::Id);
+      converter, IndexKind::Block, IntrType::Id, benefit);
   patterns.add<
       gpu::index_lowering::OpLowering<gpu::BlockDimOp, NVVM::BlockDimXOp,
                                       NVVM::BlockDimYOp, NVVM::BlockDimZOp>>(
-      converter, IndexKind::Block, IntrType::Dim);
+      converter, IndexKind::Block, IntrType::Dim, benefit);
   patterns.add<
       gpu::index_lowering::OpLowering<gpu::ClusterIdOp, NVVM::ClusterIdXOp,
                                       NVVM::ClusterIdYOp, NVVM::ClusterIdZOp>>(
-      converter, IndexKind::Other, IntrType::Id);
+      converter, IndexKind::Other, IntrType::Id, benefit);
   patterns.add<gpu::index_lowering::OpLowering<
       gpu::ClusterDimOp, NVVM::ClusterDimXOp, NVVM::ClusterDimYOp,
-      NVVM::ClusterDimZOp>>(converter, IndexKind::Other, IntrType::Dim);
+      NVVM::ClusterDimZOp>>(converter, IndexKind::Other, IntrType::Dim,
+                            benefit);
   patterns.add<gpu::index_lowering::OpLowering<
       gpu::ClusterBlockIdOp, NVVM::BlockInClusterIdXOp,
       NVVM::BlockInClusterIdYOp, NVVM::BlockInClusterIdZOp>>(
-      converter, IndexKind::Other, IntrType::Id);
+      converter, IndexKind::Other, IntrType::Id, benefit);
   patterns.add<gpu::index_lowering::OpLowering<
       gpu::ClusterDimBlocksOp, NVVM::ClusterDimBlocksXOp,
       NVVM::ClusterDimBlocksYOp, NVVM::ClusterDimBlocksZOp>>(
-      converter, IndexKind::Other, IntrType::Dim);
+      converter, IndexKind::Other, IntrType::Dim, benefit);
   patterns.add<gpu::index_lowering::OpLowering<
       gpu::BlockIdOp, NVVM::BlockIdXOp, NVVM::BlockIdYOp, NVVM::BlockIdZOp>>(
-      converter, IndexKind::Grid, IntrType::Id);
+      converter, IndexKind::Grid, IntrType::Id, benefit);
   patterns.add<gpu::index_lowering::OpLowering<
       gpu::GridDimOp, NVVM::GridDimXOp, NVVM::GridDimYOp, NVVM::GridDimZOp>>(
-      converter, IndexKind::Grid, IntrType::Dim);
+      converter, IndexKind::Grid, IntrType::Dim, benefit);
   patterns.add<GPULaneIdOpToNVVM, GPUShuffleOpLowering, GPUReturnOpLowering>(
-      converter);
+      converter, benefit);
 
   patterns.add<GPUDynamicSharedMemoryOpLowering>(
-      converter, NVVM::kSharedMemoryAlignmentBit);
+      converter, NVVM::kSharedMemoryAlignmentBit, benefit);
 
   // Explicitly drop memory space when lowering private memory
   // attributions since NVVM models it as `alloca`s in the default
@@ -406,72 +648,10 @@ void mlir::populateGpuToNVVMConversionPatterns(
           StringAttr::get(&converter.getContext(),
                           NVVM::NVVMDialect::getKernelFuncAttrName()),
           StringAttr::get(&converter.getContext(),
-                          NVVM::NVVMDialect::getMaxntidAttrName())});
+                          NVVM::NVVMDialect::getMaxntidAttrName())},
+      benefit);
 
-  populateOpPatterns<arith::RemFOp>(converter, patterns, "__nv_fmodf",
-                                    "__nv_fmod");
-  populateOpPatterns<math::AbsFOp>(converter, patterns, "__nv_fabsf",
-                                   "__nv_fabs");
-  populateOpPatterns<math::AcosOp>(converter, patterns, "__nv_acosf",
-                                   "__nv_acos");
-  populateOpPatterns<math::AcoshOp>(converter, patterns, "__nv_acoshf",
-                                    "__nv_acosh");
-  populateOpPatterns<math::AsinOp>(converter, patterns, "__nv_asinf",
-                                   "__nv_asin");
-  populateOpPatterns<math::AsinhOp>(converter, patterns, "__nv_asinhf",
-                                    "__nv_asinh");
-  populateOpPatterns<math::AtanOp>(converter, patterns, "__nv_atanf",
-                                   "__nv_atan");
-  populateOpPatterns<math::Atan2Op>(converter, patterns, "__nv_atan2f",
-                                    "__nv_atan2");
-  populateOpPatterns<math::AtanhOp>(converter, patterns, "__nv_atanhf",
-                                    "__nv_atanh");
-  populateOpPatterns<math::CbrtOp>(converter, patterns, "__nv_cbrtf",
-                                   "__nv_cbrt");
-  populateOpPatterns<math::CeilOp>(converter, patterns, "__nv_ceilf",
-                                   "__nv_ceil");
-  populateOpPatterns<math::CopySignOp>(converter, patterns, "__nv_copysignf",
-                                       "__nv_copysign");
-  populateOpPatterns<math::CosOp>(converter, patterns, "__nv_cosf", "__nv_cos",
-                                  "__nv_fast_cosf");
-  populateOpPatterns<math::CoshOp>(converter, patterns, "__nv_coshf",
-                                   "__nv_cosh");
-  populateOpPatterns<math::ErfOp>(converter, patterns, "__nv_erff", "__nv_erf");
-  populateOpPatterns<math::ExpOp>(converter, patterns, "__nv_expf", "__nv_exp",
-                                  "__nv_fast_expf");
-  populateOpPatterns<math::Exp2Op>(converter, patterns, "__nv_exp2f",
-                                   "__nv_exp2");
-  populateOpPatterns<math::ExpM1Op>(converter, patterns, "__nv_expm1f",
-                                    "__nv_expm1");
-  populateOpPatterns<math::FloorOp>(converter, patterns, "__nv_floorf",
-                                    "__nv_floor");
-  populateOpPatterns<math::FmaOp>(converter, patterns, "__nv_fmaf", "__nv_fma");
-  populateOpPatterns<math::LogOp>(converter, patterns, "__nv_logf", "__nv_log",
-                                  "__nv_fast_logf");
-  populateOpPatterns<math::Log10Op>(converter, patterns, "__nv_log10f",
-                                    "__nv_log10", "__nv_fast_log10f");
-  populateOpPatterns<math::Log1pOp>(converter, patterns, "__nv_log1pf",
-                                    "__nv_log1p");
-  populateOpPatterns<math::Log2Op>(converter, patterns, "__nv_log2f",
-                                   "__nv_log2", "__nv_fast_log2f");
-  populateOpPatterns<math::PowFOp>(converter, patterns, "__nv_powf", "__nv_pow",
-                                   "__nv_fast_powf");
-  populateOpPatterns<math::RoundOp>(converter, patterns, "__nv_roundf",
-                                    "__nv_round");
-  populateOpPatterns<math::RoundEvenOp>(converter, patterns, "__nv_rintf",
-                                        "__nv_rint");
-  populateOpPatterns<math::RsqrtOp>(converter, patterns, "__nv_rsqrtf",
-                                    "__nv_rsqrt");
-  populateOpPatterns<math::SinOp>(converter, patterns, "__nv_sinf", "__nv_sin",
-                                  "__nv_fast_sinf");
-  populateOpPatterns<math::SinhOp>(converter, patterns, "__nv_sinhf",
-                                   "__nv_sinh");
-  populateOpPatterns<math::SqrtOp>(converter, patterns, "__nv_sqrtf",
-                                   "__nv_sqrt");
-  populateOpPatterns<math::TanOp>(converter, patterns, "__nv_tanf", "__nv_tan",
-                                  "__nv_fast_tanf");
-  populateOpPatterns<math::TanhOp>(converter, patterns, "__nv_tanhf",
-                                   "__nv_tanh");
+  populateLibDeviceConversionPatterns(converter, patterns, benefit);
 }
 
 //===----------------------------------------------------------------------===//

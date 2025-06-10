@@ -149,6 +149,11 @@ MVEMaxSupportedInterleaveFactor("mve-max-interleave-factor", cl::Hidden,
   cl::desc("Maximum interleave factor for MVE VLDn to generate."),
   cl::init(2));
 
+cl::opt<unsigned> ArmMaxBaseUpdatesToCheck(
+    "arm-max-base-updates-to-check", cl::Hidden,
+    cl::desc("Maximum number of base-updates to check generating postindex."),
+    cl::init(64));
+
 /// Value type used for "flags" operands / results (either CPSR or FPSCR_NZCV).
 constexpr MVT FlagsVT = MVT::i32;
 
@@ -506,10 +511,11 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   if (!Subtarget->isTargetDarwin() && !Subtarget->isTargetIOS() &&
       !Subtarget->isTargetWatchOS() && !Subtarget->isTargetDriverKit()) {
     bool IsHFTarget = TM.Options.FloatABIType == FloatABI::Hard;
-    for (int LCID = 0; LCID < RTLIB::UNKNOWN_LIBCALL; ++LCID)
-      setLibcallCallingConv(static_cast<RTLIB::Libcall>(LCID),
-                            IsHFTarget ? CallingConv::ARM_AAPCS_VFP
-                                       : CallingConv::ARM_AAPCS);
+
+    for (RTLIB::Libcall LC : RTLIB::libcalls()) {
+      setLibcallCallingConv(LC, IsHFTarget ? CallingConv::ARM_AAPCS_VFP
+                                           : CallingConv::ARM_AAPCS);
+    }
   }
 
   if (Subtarget->isTargetMachO()) {
@@ -607,7 +613,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
       { RTLIB::OLE_F64, "__aeabi_dcmple", CallingConv::ARM_AAPCS, ISD::SETNE },
       { RTLIB::OGE_F64, "__aeabi_dcmpge", CallingConv::ARM_AAPCS, ISD::SETNE },
       { RTLIB::OGT_F64, "__aeabi_dcmpgt", CallingConv::ARM_AAPCS, ISD::SETNE },
-      { RTLIB::UO_F64,  "__aeabi_dcmpun", CallingConv::ARM_AAPCS, ISD::SETNE },
+      { RTLIB::UO_F64,  "__aeabi_dcmpun", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
 
       // Single-precision floating-point arithmetic helper functions
       // RTABI chapter 4.1.2, Table 4
@@ -624,7 +630,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
       { RTLIB::OLE_F32, "__aeabi_fcmple", CallingConv::ARM_AAPCS, ISD::SETNE },
       { RTLIB::OGE_F32, "__aeabi_fcmpge", CallingConv::ARM_AAPCS, ISD::SETNE },
       { RTLIB::OGT_F32, "__aeabi_fcmpgt", CallingConv::ARM_AAPCS, ISD::SETNE },
-      { RTLIB::UO_F32,  "__aeabi_fcmpun", CallingConv::ARM_AAPCS, ISD::SETNE },
+      { RTLIB::UO_F32,  "__aeabi_fcmpun", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
 
       // Floating-point to integer conversions.
       // RTABI chapter 4.1.2, Table 6
@@ -687,20 +693,17 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
         const RTLIB::Libcall Op;
         const char *const Name;
         const CallingConv::ID CC;
-        const ISD::CondCode Cond;
       } MemOpsLibraryCalls[] = {
-        // Memory operations
-        // RTABI chapter 4.3.4
-        { RTLIB::MEMCPY,  "__aeabi_memcpy",  CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-        { RTLIB::MEMMOVE, "__aeabi_memmove", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-        { RTLIB::MEMSET,  "__aeabi_memset",  CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
+          // Memory operations
+          // RTABI chapter 4.3.4
+          {RTLIB::MEMCPY, "__aeabi_memcpy", CallingConv::ARM_AAPCS},
+          {RTLIB::MEMMOVE, "__aeabi_memmove", CallingConv::ARM_AAPCS},
+          {RTLIB::MEMSET, "__aeabi_memset", CallingConv::ARM_AAPCS},
       };
 
       for (const auto &LC : MemOpsLibraryCalls) {
         setLibcallName(LC.Op, LC.Name);
         setLibcallCallingConv(LC.Op, LC.CC);
-        if (LC.Cond != ISD::SETCC_INVALID)
-          setCmpLibcallCC(LC.Op, LC.Cond);
       }
     }
   }
@@ -767,6 +770,9 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
       setLibcallName(LC.Op, LC.Name);
       setLibcallCallingConv(LC.Op, LC.CC);
     }
+  } else if (!Subtarget->isTargetMachO()) {
+    setLibcallName(RTLIB::FPROUND_F32_F16, "__gnu_f2h_ieee");
+    setLibcallName(RTLIB::FPEXT_F16_F32, "__gnu_h2f_ieee");
   }
 
   if (Subtarget->isThumb1Only())
@@ -804,6 +810,11 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setAllExpand(MVT::bf16);
     if (!Subtarget->hasFullFP16())
       setOperationAction(ISD::BITCAST, MVT::bf16, Custom);
+  } else {
+    setOperationAction(ISD::BF16_TO_FP, MVT::f32, Expand);
+    setOperationAction(ISD::BF16_TO_FP, MVT::f64, Expand);
+    setOperationAction(ISD::FP_TO_BF16, MVT::f32, Custom);
+    setOperationAction(ISD::FP_TO_BF16, MVT::f64, Custom);
   }
 
   for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
@@ -888,10 +899,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FEXP, MVT::v2f64, Expand);
     setOperationAction(ISD::FEXP2, MVT::v2f64, Expand);
     setOperationAction(ISD::FEXP10, MVT::v2f64, Expand);
-    // FIXME: Create unittest for FCEIL, FTRUNC, FRINT, FNEARBYINT, FFLOOR.
     setOperationAction(ISD::FCEIL, MVT::v2f64, Expand);
     setOperationAction(ISD::FTRUNC, MVT::v2f64, Expand);
     setOperationAction(ISD::FRINT, MVT::v2f64, Expand);
+    setOperationAction(ISD::FROUNDEVEN, MVT::v2f64, Expand);
     setOperationAction(ISD::FNEARBYINT, MVT::v2f64, Expand);
     setOperationAction(ISD::FFLOOR, MVT::v2f64, Expand);
     setOperationAction(ISD::FMA, MVT::v2f64, Expand);
@@ -914,6 +925,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FCEIL, MVT::v4f32, Expand);
     setOperationAction(ISD::FTRUNC, MVT::v4f32, Expand);
     setOperationAction(ISD::FRINT, MVT::v4f32, Expand);
+    setOperationAction(ISD::FROUNDEVEN, MVT::v4f32, Expand);
     setOperationAction(ISD::FNEARBYINT, MVT::v4f32, Expand);
     setOperationAction(ISD::FFLOOR, MVT::v4f32, Expand);
 
@@ -932,8 +944,15 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FCEIL, MVT::v2f32, Expand);
     setOperationAction(ISD::FTRUNC, MVT::v2f32, Expand);
     setOperationAction(ISD::FRINT, MVT::v2f32, Expand);
+    setOperationAction(ISD::FROUNDEVEN, MVT::v2f32, Expand);
     setOperationAction(ISD::FNEARBYINT, MVT::v2f32, Expand);
     setOperationAction(ISD::FFLOOR, MVT::v2f32, Expand);
+
+    for (ISD::NodeType Op : {ISD::FFLOOR, ISD::FNEARBYINT, ISD::FCEIL,
+                              ISD::FRINT, ISD::FTRUNC, ISD::FROUNDEVEN}) {
+      setOperationAction(Op, MVT::v4f16, Expand);
+      setOperationAction(Op, MVT::v8f16, Expand);
+    }
 
     // Neon does not support some operations on v1i64 and v2i64 types.
     setOperationAction(ISD::MUL, MVT::v1i64, Expand);
@@ -1074,6 +1093,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FCEIL,      MVT::f64, Expand);
     setOperationAction(ISD::FTRUNC,     MVT::f64, Expand);
     setOperationAction(ISD::FRINT,      MVT::f64, Expand);
+    setOperationAction(ISD::FROUNDEVEN, MVT::f64, Expand);
     setOperationAction(ISD::FNEARBYINT, MVT::f64, Expand);
     setOperationAction(ISD::FFLOOR,     MVT::f64, Expand);
     setOperationAction(ISD::SINT_TO_FP, MVT::i32, Custom);
@@ -1110,12 +1130,15 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   for (MVT VT : MVT::fp_valuetypes()) {
     setLoadExtAction(ISD::EXTLOAD, VT, MVT::f32, Expand);
     setLoadExtAction(ISD::EXTLOAD, VT, MVT::f16, Expand);
+    setLoadExtAction(ISD::EXTLOAD, VT, MVT::bf16, Expand);
   }
 
   // ... or truncating stores
   setTruncStoreAction(MVT::f64, MVT::f32, Expand);
   setTruncStoreAction(MVT::f32, MVT::f16, Expand);
   setTruncStoreAction(MVT::f64, MVT::f16, Expand);
+  setTruncStoreAction(MVT::f32, MVT::bf16, Expand);
+  setTruncStoreAction(MVT::f64, MVT::bf16, Expand);
 
   // ARM does not have i1 sign extending load.
   for (MVT VT : MVT::integer_valuetypes())
@@ -1205,7 +1228,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ROTR, VT, Expand);
   }
   setOperationAction(ISD::CTTZ,  MVT::i32, Custom);
+  // TODO: These two should be set to LibCall, but this currently breaks
+  //   the Linux kernel build. See #101786.
   setOperationAction(ISD::CTPOP, MVT::i32, Expand);
+  setOperationAction(ISD::CTPOP, MVT::i64, Expand);
   if (!Subtarget->hasV5TOps() || Subtarget->isThumb1Only()) {
     setOperationAction(ISD::CTLZ, MVT::i32, Expand);
     setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, LibCall);
@@ -1248,50 +1274,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SREM, MVT::i64, Custom);
     setOperationAction(ISD::UREM, MVT::i64, Custom);
     HasStandaloneRem = false;
-
-    if (Subtarget->isTargetWindows()) {
-      const struct {
-        const RTLIB::Libcall Op;
-        const char * const Name;
-        const CallingConv::ID CC;
-      } LibraryCalls[] = {
-        { RTLIB::SDIVREM_I8, "__rt_sdiv", CallingConv::ARM_AAPCS },
-        { RTLIB::SDIVREM_I16, "__rt_sdiv", CallingConv::ARM_AAPCS },
-        { RTLIB::SDIVREM_I32, "__rt_sdiv", CallingConv::ARM_AAPCS },
-        { RTLIB::SDIVREM_I64, "__rt_sdiv64", CallingConv::ARM_AAPCS },
-
-        { RTLIB::UDIVREM_I8, "__rt_udiv", CallingConv::ARM_AAPCS },
-        { RTLIB::UDIVREM_I16, "__rt_udiv", CallingConv::ARM_AAPCS },
-        { RTLIB::UDIVREM_I32, "__rt_udiv", CallingConv::ARM_AAPCS },
-        { RTLIB::UDIVREM_I64, "__rt_udiv64", CallingConv::ARM_AAPCS },
-      };
-
-      for (const auto &LC : LibraryCalls) {
-        setLibcallName(LC.Op, LC.Name);
-        setLibcallCallingConv(LC.Op, LC.CC);
-      }
-    } else {
-      const struct {
-        const RTLIB::Libcall Op;
-        const char * const Name;
-        const CallingConv::ID CC;
-      } LibraryCalls[] = {
-        { RTLIB::SDIVREM_I8, "__aeabi_idivmod", CallingConv::ARM_AAPCS },
-        { RTLIB::SDIVREM_I16, "__aeabi_idivmod", CallingConv::ARM_AAPCS },
-        { RTLIB::SDIVREM_I32, "__aeabi_idivmod", CallingConv::ARM_AAPCS },
-        { RTLIB::SDIVREM_I64, "__aeabi_ldivmod", CallingConv::ARM_AAPCS },
-
-        { RTLIB::UDIVREM_I8, "__aeabi_uidivmod", CallingConv::ARM_AAPCS },
-        { RTLIB::UDIVREM_I16, "__aeabi_uidivmod", CallingConv::ARM_AAPCS },
-        { RTLIB::UDIVREM_I32, "__aeabi_uidivmod", CallingConv::ARM_AAPCS },
-        { RTLIB::UDIVREM_I64, "__aeabi_uldivmod", CallingConv::ARM_AAPCS },
-      };
-
-      for (const auto &LC : LibraryCalls) {
-        setLibcallName(LC.Op, LC.Name);
-        setLibcallCallingConv(LC.Op, LC.CC);
-      }
-    }
 
     setOperationAction(ISD::SDIVREM, MVT::i32, Custom);
     setOperationAction(ISD::UDIVREM, MVT::i32, Custom);
@@ -1515,6 +1497,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FTRUNC, MVT::f32, Legal);
     setOperationAction(ISD::FNEARBYINT, MVT::f32, Legal);
     setOperationAction(ISD::FRINT, MVT::f32, Legal);
+    setOperationAction(ISD::FROUNDEVEN, MVT::f32, Legal);
     setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
     setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
     if (Subtarget->hasNEON()) {
@@ -1531,6 +1514,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FTRUNC, MVT::f64, Legal);
       setOperationAction(ISD::FNEARBYINT, MVT::f64, Legal);
       setOperationAction(ISD::FRINT, MVT::f64, Legal);
+      setOperationAction(ISD::FROUNDEVEN, MVT::f64, Legal);
       setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
       setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
     }
@@ -2720,8 +2704,9 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
       SDValue ByValSrc;
       bool NeedsStackCopy;
-      if (ByValTemporaries.contains(realArgIdx)) {
-        ByValSrc = ByValTemporaries[realArgIdx];
+      if (auto It = ByValTemporaries.find(realArgIdx);
+          It != ByValTemporaries.end()) {
+        ByValSrc = It->second;
         NeedsStackCopy = true;
       } else {
         ByValSrc = Arg;
@@ -2921,18 +2906,17 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     assert(!isARMFunc && !isDirect &&
            "Cannot handle call to ARM function or direct call");
     if (NumBytes > 0) {
-      DiagnosticInfoUnsupported Diag(DAG.getMachineFunction().getFunction(),
-                                     "call to non-secure function would "
-                                     "require passing arguments on stack",
-                                     dl.getDebugLoc());
-      DAG.getContext()->diagnose(Diag);
+      DAG.getContext()->diagnose(
+          DiagnosticInfoUnsupported(DAG.getMachineFunction().getFunction(),
+                                    "call to non-secure function would require "
+                                    "passing arguments on stack",
+                                    dl.getDebugLoc()));
     }
     if (isStructRet) {
-      DiagnosticInfoUnsupported Diag(
+      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
           DAG.getMachineFunction().getFunction(),
           "call to non-secure function would return value through pointer",
-          dl.getDebugLoc());
-      DAG.getContext()->diagnose(Diag);
+          dl.getDebugLoc()));
     }
   }
 
@@ -3122,9 +3106,8 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
   // Sometimes, no register matches all of these conditions, so we can't do a
   // tail-call.
   if (!isa<GlobalAddressSDNode>(Callee.getNode()) || isIndirect) {
-    SmallSet<MCPhysReg, 5> AddressRegisters;
-    for (Register R : {ARM::R0, ARM::R1, ARM::R2, ARM::R3})
-      AddressRegisters.insert(R);
+    SmallSet<MCPhysReg, 5> AddressRegisters = {ARM::R0, ARM::R1, ARM::R2,
+                                               ARM::R3};
     if (!(Subtarget->isThumb1Only() ||
           MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress(true)))
       AddressRegisters.insert(ARM::R12);
@@ -3233,7 +3216,7 @@ bool
 ARMTargetLowering::CanLowerReturn(CallingConv::ID CallConv,
                                   MachineFunction &MF, bool isVarArg,
                                   const SmallVectorImpl<ISD::OutputArg> &Outs,
-                                  LLVMContext &Context) const {
+                                  LLVMContext &Context, const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, isVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, CCAssignFnForReturn(CallConv, isVarArg));
@@ -3301,11 +3284,10 @@ ARMTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   if (AFI->isCmseNSEntryFunction() && MF.getFunction().hasStructRetAttr()) {
     // Note: using an empty SDLoc(), as the first line of the function is a
     // better place to report than the last line.
-    DiagnosticInfoUnsupported Diag(
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
         DAG.getMachineFunction().getFunction(),
         "secure entry function would return value through pointer",
-        SDLoc().getDebugLoc());
-    DAG.getContext()->diagnose(Diag);
+        SDLoc().getDebugLoc()));
   }
 
   // Copy the result values into the output registers.
@@ -3456,7 +3438,7 @@ bool ARMTargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
     return false;
 
   SDValue TCChain = Chain;
-  SDNode *Copy = *N->use_begin();
+  SDNode *Copy = *N->user_begin();
   if (Copy->getOpcode() == ISD::CopyToReg) {
     // If the copy has a glue operand, we conservatively assume it isn't safe to
     // perform a tail call.
@@ -3467,7 +3449,7 @@ bool ARMTargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
     SDNode *VMov = Copy;
     // f64 returned in a pair of GPRs.
     SmallPtrSet<SDNode*, 2> Copies;
-    for (SDNode *U : VMov->uses()) {
+    for (SDNode *U : VMov->users()) {
       if (U->getOpcode() != ISD::CopyToReg)
         return false;
       Copies.insert(U);
@@ -3475,7 +3457,7 @@ bool ARMTargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
     if (Copies.size() > 2)
       return false;
 
-    for (SDNode *U : VMov->uses()) {
+    for (SDNode *U : VMov->users()) {
       SDValue UseChain = U->getOperand(0);
       if (Copies.count(UseChain.getNode()))
         // Second CopyToReg
@@ -3494,7 +3476,7 @@ bool ARMTargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
     // f32 returned in a single GPR.
     if (!Copy->hasOneUse())
       return false;
-    Copy = *Copy->use_begin();
+    Copy = *Copy->user_begin();
     if (Copy->getOpcode() != ISD::CopyToReg || !Copy->hasNUsesOfValue(1, 0))
       return false;
     // If the copy has a glue operand, we conservatively assume it isn't safe to
@@ -3507,7 +3489,7 @@ bool ARMTargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
   }
 
   bool HasRet = false;
-  for (const SDNode *U : Copy->uses()) {
+  for (const SDNode *U : Copy->users()) {
     if (U->getOpcode() != ARMISD::RET_GLUE &&
         U->getOpcode() != ARMISD::INTRET_GLUE)
       return false;
@@ -4751,6 +4733,25 @@ SDValue ARMTargetLowering::LowerFormalArguments(
                 VA.getLocMemOffset(), Flags.getByValSize());
             InVals.push_back(DAG.getFrameIndex(FrameIndex, PtrVT));
             CCInfo.nextInRegsParam();
+          } else if (VA.needsCustom() && (VA.getValVT() == MVT::f16 ||
+                                          VA.getValVT() == MVT::bf16)) {
+            // f16 and bf16 values are passed in the least-significant half of
+            // a 4 byte stack slot. This is done as-if the extension was done
+            // in a 32-bit register, so the actual bytes used for the value
+            // differ between little and big endian.
+            assert(VA.getLocVT().getSizeInBits() == 32);
+            unsigned FIOffset = VA.getLocMemOffset();
+            int FI = MFI.CreateFixedObject(VA.getLocVT().getSizeInBits() / 8,
+                                           FIOffset, true);
+
+            SDValue Addr = DAG.getFrameIndex(FI, PtrVT);
+            if (DAG.getDataLayout().isBigEndian())
+              Addr = DAG.getObjectPtrOffset(dl, Addr, TypeSize::getFixed(2));
+
+            InVals.push_back(DAG.getLoad(VA.getValVT(), dl, Chain, Addr,
+                                         MachinePointerInfo::getFixedStack(
+                                             DAG.getMachineFunction(), FI)));
+
           } else {
             unsigned FIOffset = VA.getLocMemOffset();
             int FI = MFI.CreateFixedObject(VA.getLocVT().getSizeInBits()/8,
@@ -4772,10 +4773,9 @@ SDValue ARMTargetLowering::LowerFormalArguments(
     VarArgStyleRegisters(CCInfo, DAG, dl, Chain, CCInfo.getStackSize(),
                          TotalArgRegsSaveSize);
     if (AFI->isCmseNSEntryFunction()) {
-      DiagnosticInfoUnsupported Diag(
+      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
           DAG.getMachineFunction().getFunction(),
-          "secure entry function must not be variadic", dl.getDebugLoc());
-      DAG.getContext()->diagnose(Diag);
+          "secure entry function must not be variadic", dl.getDebugLoc()));
     }
   }
 
@@ -4793,10 +4793,9 @@ SDValue ARMTargetLowering::LowerFormalArguments(
   AFI->setArgumentStackSize(StackArgSize);
 
   if (CCInfo.getStackSize() > 0 && AFI->isCmseNSEntryFunction()) {
-    DiagnosticInfoUnsupported Diag(
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
         DAG.getMachineFunction().getFunction(),
-        "secure entry function requires arguments on stack", dl.getDebugLoc());
-    DAG.getContext()->diagnose(Diag);
+        "secure entry function requires arguments on stack", dl.getDebugLoc()));
   }
 
   return Chain;
@@ -6301,10 +6300,13 @@ SDValue ARMTargetLowering::ExpandBITCAST(SDNode *N, SelectionDAG &DAG,
                      DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), MVT::i32, Op));
 
   if ((DstVT == MVT::i16 || DstVT == MVT::i32) &&
-      (SrcVT == MVT::f16 || SrcVT == MVT::bf16))
+      (SrcVT == MVT::f16 || SrcVT == MVT::bf16)) {
+    if (Subtarget->hasFullFP16() && !Subtarget->hasBF16())
+      Op = DAG.getBitcast(MVT::f16, Op);
     return DAG.getNode(
         ISD::TRUNCATE, SDLoc(N), DstVT,
         MoveFromHPR(SDLoc(N), DAG, MVT::i32, SrcVT.getSimpleVT(), Op));
+  }
 
   if (!(SrcVT == MVT::i64 || DstVT == MVT::i64))
     return SDValue();
@@ -7958,7 +7960,7 @@ SDValue ARMTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     // generate a vdup of the constant.
     if (ST->hasMVEIntegerOps() && VT.getScalarSizeInBits() == SplatBitSize &&
         (SplatBitSize == 8 || SplatBitSize == 16 || SplatBitSize == 32) &&
-        all_of(BVN->uses(),
+        all_of(BVN->users(),
                [BVN](const SDNode *U) { return IsQRMVEInstruction(U, BVN); })) {
       EVT DupVT = SplatBitSize == 32   ? MVT::v4i32
                   : SplatBitSize == 16 ? MVT::v8i16
@@ -8356,9 +8358,10 @@ SDValue ARMTargetLowering::ReconstructShuffle(SDValue Op,
   }
 
   // Final check before we try to actually produce a shuffle.
-  LLVM_DEBUG(for (auto Src
-                  : Sources)
-                 assert(Src.ShuffleVec.getValueType() == ShuffleVT););
+  LLVM_DEBUG({
+    for (auto Src : Sources)
+      assert(Src.ShuffleVec.getValueType() == ShuffleVT);
+  });
 
   // The stars all align, our next step is to produce the mask for the shuffle.
   SmallVector<int, 8> Mask(ShuffleVT.getVectorNumElements(), -1);
@@ -8467,7 +8470,7 @@ bool ARMTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
 
   unsigned EltSize = VT.getScalarSizeInBits();
   if (EltSize >= 32 ||
-      ShuffleVectorSDNode::isSplatMask(&M[0], VT) ||
+      ShuffleVectorSDNode::isSplatMask(M) ||
       ShuffleVectorInst::isIdentityMask(M, M.size()) ||
       isVREVMask(M, VT, 64) ||
       isVREVMask(M, VT, 32) ||
@@ -10582,9 +10585,19 @@ SDValue ARMTargetLowering::LowerSPONENTRY(SDValue Op, SelectionDAG &DAG) const {
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
 
   EVT VT = getPointerTy(DAG.getDataLayout());
-  SDLoc DL(Op);
   int FI = MFI.CreateFixedObject(4, 0, false);
   return DAG.getFrameIndex(FI, VT);
+}
+
+SDValue ARMTargetLowering::LowerFP_TO_BF16(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  MakeLibCallOptions CallOptions;
+  MVT SVT = Op.getOperand(0).getSimpleValueType();
+  RTLIB::Libcall LC = RTLIB::getFPROUND(SVT, MVT::bf16);
+  SDValue Res =
+      makeLibCall(DAG, LC, MVT::f32, Op.getOperand(0), CallOptions, DL).first;
+  return DAG.getBitcast(MVT::i32, Res);
 }
 
 SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
@@ -10712,6 +10725,8 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::STRICT_FSETCCS: return LowerFSETCC(Op, DAG);
   case ISD::SPONENTRY:
     return LowerSPONENTRY(Op, DAG);
+  case ISD::FP_TO_BF16:
+    return LowerFP_TO_BF16(Op, DAG);
   case ARMISD::WIN__DBZCHK: return SDValue();
   }
 }
@@ -10992,7 +11007,7 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
     SmallVectorImpl<MachineBasicBlock*> &MBBList = CallSiteNumToLPad[I];
     for (MachineBasicBlock *MBB : MBBList) {
       LPadList.push_back(MBB);
-      InvokeBBs.insert(MBB->pred_begin(), MBB->pred_end());
+      InvokeBBs.insert_range(MBB->predecessors());
     }
   }
 
@@ -11313,12 +11328,12 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
            II = BB->rbegin(), IE = BB->rend(); II != IE; ++II) {
       if (!II->isCall()) continue;
 
-      DenseMap<unsigned, bool> DefRegs;
+      DenseSet<unsigned> DefRegs;
       for (MachineInstr::mop_iterator
              OI = II->operands_begin(), OE = II->operands_end();
            OI != OE; ++OI) {
         if (!OI->isReg()) continue;
-        DefRegs[OI->getReg()] = true;
+        DefRegs.insert(OI->getReg());
       }
 
       MachineInstrBuilder MIB(*MF, &*II);
@@ -11333,7 +11348,7 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
           continue;
         if (!Subtarget->isThumb() && !ARM::GPRRegClass.contains(Reg))
           continue;
-        if (!DefRegs[Reg])
+        if (!DefRegs.contains(Reg))
           MIB.addReg(Reg, RegState::ImplicitDefine | RegState::Dead);
       }
 
@@ -12103,7 +12118,7 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                   OpDestReg, OpSizeReg, TotalIterationsReg, IsMemcpy);
 
     // Required to avoid conflict with the MachineVerifier during testing.
-    Properties.reset(MachineFunctionProperties::Property::NoPHIs);
+    Properties.resetNoPHIs();
 
     // Connect the blocks
     TpEntry->addSuccessor(TpLoopBody);
@@ -12398,7 +12413,6 @@ static void attachMEMCPYScratchRegs(const ARMSubtarget *Subtarget,
                                     MachineInstr &MI, const SDNode *Node) {
   bool isThumb1 = Subtarget->isThumb1Only();
 
-  DebugLoc DL = MI.getDebugLoc();
   MachineFunction *MF = MI.getParent()->getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
   MachineInstrBuilder MIB(*MF, MI);
@@ -13826,6 +13840,14 @@ ARMTargetLowering::isDesirableToCommuteWithShift(const SDNode *N,
           N->getOpcode() == ISD::SRL) &&
          "Expected shift op");
 
+  SDValue ShiftLHS = N->getOperand(0);
+  if (!ShiftLHS->hasOneUse())
+    return false;
+
+  if (ShiftLHS.getOpcode() == ISD::SIGN_EXTEND &&
+      !ShiftLHS.getOperand(0)->hasOneUse())
+    return false;
+
   if (Level == BeforeLegalizeTypes)
     return true;
 
@@ -13900,9 +13922,11 @@ bool ARMTargetLowering::shouldFoldConstantShiftPairToMask(
   return false;
 }
 
-bool ARMTargetLowering::shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
-                                                             EVT VT) const {
-  return Subtarget->hasMVEIntegerOps() && isTypeLegal(VT);
+bool ARMTargetLowering::shouldFoldSelectWithIdentityConstant(
+    unsigned BinOpcode, EVT VT, unsigned SelectOpcode, SDValue X,
+    SDValue Y) const {
+  return Subtarget->hasMVEIntegerOps() && isTypeLegal(VT) &&
+         SelectOpcode == ISD::VSELECT;
 }
 
 bool ARMTargetLowering::preferIncOfAddToSubOfNot(EVT VT) const {
@@ -13961,7 +13985,7 @@ static SDValue PerformSHLSimplify(SDNode *N,
     return SDValue();
 
   // Check that all the users could perform the shl themselves.
-  for (auto *U : N->uses()) {
+  for (auto *U : N->users()) {
     switch(U->getOpcode()) {
     default:
       return SDValue();
@@ -15347,7 +15371,7 @@ PerformARMBUILD_VECTORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   assert(EltVT == MVT::f32 && "Unexpected type!");
 
   // Check 1.2.
-  SDNode *Use = *N->use_begin();
+  SDNode *Use = *N->user_begin();
   if (Use->getOpcode() != ISD::BITCAST ||
       Use->getValueType(0).isFloatingPoint())
     return SDValue();
@@ -15552,9 +15576,8 @@ PerformExtractEltToVMOVRRD(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
       !isa<ConstantSDNode>(Ext.getOperand(1)) ||
       Ext.getConstantOperandVal(1) % 2 != 0)
     return SDValue();
-  if (Ext->use_size() == 1 &&
-      (Ext->use_begin()->getOpcode() == ISD::SINT_TO_FP ||
-       Ext->use_begin()->getOpcode() == ISD::UINT_TO_FP))
+  if (Ext->hasOneUse() && (Ext->user_begin()->getOpcode() == ISD::SINT_TO_FP ||
+                           Ext->user_begin()->getOpcode() == ISD::UINT_TO_FP))
     return SDValue();
 
   SDValue Op0 = Ext.getOperand(0);
@@ -15565,24 +15588,24 @@ PerformExtractEltToVMOVRRD(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     return SDValue();
 
   // Find another extract, of Lane + 1
-  auto OtherIt = find_if(Op0->uses(), [&](SDNode *V) {
+  auto OtherIt = find_if(Op0->users(), [&](SDNode *V) {
     return V->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
            isa<ConstantSDNode>(V->getOperand(1)) &&
            V->getConstantOperandVal(1) == Lane + 1 &&
            V->getOperand(0).getResNo() == ResNo;
   });
-  if (OtherIt == Op0->uses().end())
+  if (OtherIt == Op0->users().end())
     return SDValue();
 
   // For float extracts, we need to be converting to a i32 for both vector
   // lanes.
   SDValue OtherExt(*OtherIt, 0);
   if (OtherExt.getValueType() != MVT::i32) {
-    if (OtherExt->use_size() != 1 ||
-        OtherExt->use_begin()->getOpcode() != ISD::BITCAST ||
-        OtherExt->use_begin()->getValueType(0) != MVT::i32)
+    if (!OtherExt->hasOneUse() ||
+        OtherExt->user_begin()->getOpcode() != ISD::BITCAST ||
+        OtherExt->user_begin()->getValueType(0) != MVT::i32)
       return SDValue();
-    OtherExt = SDValue(*OtherExt->use_begin(), 0);
+    OtherExt = SDValue(*OtherExt->user_begin(), 0);
   }
 
   // Convert the type to a f64 and extract with a VMOVRRD.
@@ -15810,6 +15833,22 @@ struct BaseUpdateUser {
   unsigned ConstInc;
 };
 
+static bool isValidBaseUpdate(SDNode *N, SDNode *User) {
+  // Check that the add is independent of the load/store.
+  // Otherwise, folding it would create a cycle. Search through Addr
+  // as well, since the User may not be a direct user of Addr and
+  // only share a base pointer.
+  SmallPtrSet<const SDNode *, 32> Visited;
+  SmallVector<const SDNode *, 16> Worklist;
+  Worklist.push_back(N);
+  Worklist.push_back(User);
+  const unsigned MaxSteps = 1024;
+  if (SDNode::hasPredecessorHelper(N, Visited, Worklist, MaxSteps) ||
+      SDNode::hasPredecessorHelper(User, Visited, Worklist, MaxSteps))
+    return false;
+  return true;
+}
+
 static bool TryCombineBaseUpdate(struct BaseUpdateTarget &Target,
                                  struct BaseUpdateUser &User,
                                  bool SimpleConstIncOnly,
@@ -16011,6 +16050,9 @@ static bool TryCombineBaseUpdate(struct BaseUpdateTarget &Target,
   if (SimpleConstIncOnly && User.ConstInc != NumBytes)
     return false;
 
+  if (!isValidBaseUpdate(N, User.N))
+    return false;
+
   // OK, we found an ADD we can fold into the base update.
   // Now, create a _UPD node, taking care of not breaking alignment.
 
@@ -16159,21 +16201,6 @@ static bool findPointerConstIncrement(SDNode *N, SDValue *Ptr, SDValue *CInc) {
   }
 }
 
-static bool isValidBaseUpdate(SDNode *N, SDNode *User) {
-  // Check that the add is independent of the load/store.
-  // Otherwise, folding it would create a cycle. Search through Addr
-  // as well, since the User may not be a direct user of Addr and
-  // only share a base pointer.
-  SmallPtrSet<const SDNode *, 32> Visited;
-  SmallVector<const SDNode *, 16> Worklist;
-  Worklist.push_back(N);
-  Worklist.push_back(User);
-  if (SDNode::hasPredecessorHelper(N, Visited, Worklist) ||
-      SDNode::hasPredecessorHelper(User, Visited, Worklist))
-    return false;
-  return true;
-}
-
 /// CombineBaseUpdate - Target-specific DAG combine function for VLDDUP,
 /// NEON load/store intrinsics, and generic vector load/stores, to merge
 /// base address updates.
@@ -16187,24 +16214,29 @@ static SDValue CombineBaseUpdate(SDNode *N,
   const unsigned AddrOpIdx = ((isIntrinsic || isStore) ? 2 : 1);
   BaseUpdateTarget Target = {N, isIntrinsic, isStore, AddrOpIdx};
 
+  // Limit the number of possible base-updates we look at to prevent degenerate
+  // cases.
+  unsigned MaxBaseUpdates = ArmMaxBaseUpdatesToCheck;
+
   SDValue Addr = N->getOperand(AddrOpIdx);
 
   SmallVector<BaseUpdateUser, 8> BaseUpdates;
 
   // Search for a use of the address operand that is an increment.
-  for (SDNode::use_iterator UI = Addr.getNode()->use_begin(),
-         UE = Addr.getNode()->use_end(); UI != UE; ++UI) {
-    SDNode *User = *UI;
-    if (UI.getUse().getResNo() != Addr.getResNo() ||
-        User->getNumOperands() != 2)
+  for (SDUse &Use : Addr->uses()) {
+    SDNode *User = Use.getUser();
+    if (Use.getResNo() != Addr.getResNo() || User->getNumOperands() != 2)
       continue;
 
-    SDValue Inc = User->getOperand(UI.getOperandNo() == 1 ? 0 : 1);
+    SDValue Inc = User->getOperand(Use.getOperandNo() == 1 ? 0 : 1);
     unsigned ConstInc =
         getPointerConstIncrement(User->getOpcode(), Addr, Inc, DCI.DAG);
 
-    if (ConstInc || User->getOpcode() == ISD::ADD)
+    if (ConstInc || User->getOpcode() == ISD::ADD) {
       BaseUpdates.push_back({User, Inc, ConstInc});
+      if (BaseUpdates.size() >= MaxBaseUpdates)
+        break;
+    }
   }
 
   // If the address is a constant pointer increment itself, find
@@ -16214,15 +16246,14 @@ static SDValue CombineBaseUpdate(SDNode *N,
   if (findPointerConstIncrement(Addr.getNode(), &Base, &CInc)) {
     unsigned Offset =
         getPointerConstIncrement(Addr->getOpcode(), Base, CInc, DCI.DAG);
-    for (SDNode::use_iterator UI = Base->use_begin(), UE = Base->use_end();
-         UI != UE; ++UI) {
+    for (SDUse &Use : Base->uses()) {
 
-      SDNode *User = *UI;
-      if (UI.getUse().getResNo() != Base.getResNo() || User == Addr.getNode() ||
+      SDNode *User = Use.getUser();
+      if (Use.getResNo() != Base.getResNo() || User == Addr.getNode() ||
           User->getNumOperands() != 2)
         continue;
 
-      SDValue UserInc = User->getOperand(UI.getOperandNo() == 0 ? 1 : 0);
+      SDValue UserInc = User->getOperand(Use.getOperandNo() == 0 ? 1 : 0);
       unsigned UserOffset =
           getPointerConstIncrement(User->getOpcode(), Base, UserInc, DCI.DAG);
 
@@ -16232,35 +16263,27 @@ static SDValue CombineBaseUpdate(SDNode *N,
       unsigned NewConstInc = UserOffset - Offset;
       SDValue NewInc = DCI.DAG.getConstant(NewConstInc, SDLoc(N), MVT::i32);
       BaseUpdates.push_back({User, NewInc, NewConstInc});
+      if (BaseUpdates.size() >= MaxBaseUpdates)
+        break;
     }
   }
 
   // Try to fold the load/store with an update that matches memory
   // access size. This should work well for sequential loads.
-  //
-  // Filter out invalid updates as well.
   unsigned NumValidUpd = BaseUpdates.size();
-  for (unsigned I = 0; I < NumValidUpd;) {
+  for (unsigned I = 0; I < NumValidUpd; I++) {
     BaseUpdateUser &User = BaseUpdates[I];
-    if (!isValidBaseUpdate(N, User.N)) {
-      --NumValidUpd;
-      std::swap(BaseUpdates[I], BaseUpdates[NumValidUpd]);
-      continue;
-    }
-
     if (TryCombineBaseUpdate(Target, User, /*SimpleConstIncOnly=*/true, DCI))
       return SDValue();
-    ++I;
   }
-  BaseUpdates.resize(NumValidUpd);
 
   // Try to fold with other users. Non-constant updates are considered
   // first, and constant updates are sorted to not break a sequence of
   // strided accesses (if there is any).
-  std::stable_sort(BaseUpdates.begin(), BaseUpdates.end(),
-                   [](const BaseUpdateUser &LHS, const BaseUpdateUser &RHS) {
-                     return LHS.ConstInc < RHS.ConstInc;
-                   });
+  llvm::stable_sort(BaseUpdates,
+                    [](const BaseUpdateUser &LHS, const BaseUpdateUser &RHS) {
+                      return LHS.ConstInc < RHS.ConstInc;
+                    });
   for (BaseUpdateUser &User : BaseUpdates) {
     if (TryCombineBaseUpdate(Target, User, /*SimpleConstIncOnly=*/false, DCI))
       return SDValue();
@@ -16295,12 +16318,9 @@ static SDValue PerformMVEVLDCombine(SDNode *N,
     return SDValue();
 
   // Search for a use of the address operand that is an increment.
-  for (SDNode::use_iterator UI = Addr.getNode()->use_begin(),
-                            UE = Addr.getNode()->use_end();
-       UI != UE; ++UI) {
-    SDNode *User = *UI;
-    if (User->getOpcode() != ISD::ADD ||
-        UI.getUse().getResNo() != Addr.getResNo())
+  for (SDUse &Use : Addr->uses()) {
+    SDNode *User = Use.getUser();
+    if (User->getOpcode() != ISD::ADD || Use.getResNo() != Addr.getResNo())
       continue;
 
     // Check that the add is independent of the load/store.  Otherwise, folding
@@ -16311,8 +16331,9 @@ static SDValue PerformMVEVLDCombine(SDNode *N,
     Visited.insert(Addr.getNode());
     Worklist.push_back(N);
     Worklist.push_back(User);
-    if (SDNode::hasPredecessorHelper(N, Visited, Worklist) ||
-        SDNode::hasPredecessorHelper(User, Visited, Worklist))
+    const unsigned MaxSteps = 1024;
+    if (SDNode::hasPredecessorHelper(N, Visited, Worklist, MaxSteps) ||
+        SDNode::hasPredecessorHelper(User, Visited, Worklist, MaxSteps))
       continue;
 
     // Find the new opcode for the updating load/store.
@@ -16430,12 +16451,11 @@ static bool CombineVLDDUP(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   // First check that all the vldN-lane uses are VDUPLANEs and that the lane
   // numbers match the load.
   unsigned VLDLaneNo = VLD->getConstantOperandVal(NumVecs + 3);
-  for (SDNode::use_iterator UI = VLD->use_begin(), UE = VLD->use_end();
-       UI != UE; ++UI) {
+  for (SDUse &Use : VLD->uses()) {
     // Ignore uses of the chain result.
-    if (UI.getUse().getResNo() == NumVecs)
+    if (Use.getResNo() == NumVecs)
       continue;
-    SDNode *User = *UI;
+    SDNode *User = Use.getUser();
     if (User->getOpcode() != ARMISD::VDUPLANE ||
         VLDLaneNo != User->getConstantOperandVal(1))
       return false;
@@ -16455,14 +16475,12 @@ static bool CombineVLDDUP(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
                                            VLDMemInt->getMemOperand());
 
   // Update the uses.
-  for (SDNode::use_iterator UI = VLD->use_begin(), UE = VLD->use_end();
-       UI != UE; ++UI) {
-    unsigned ResNo = UI.getUse().getResNo();
+  for (SDUse &Use : VLD->uses()) {
+    unsigned ResNo = Use.getResNo();
     // Ignore uses of the chain result.
     if (ResNo == NumVecs)
       continue;
-    SDNode *User = *UI;
-    DCI.CombineTo(User, SDValue(VLDDup.getNode(), ResNo));
+    DCI.CombineTo(Use.getUser(), SDValue(VLDDup.getNode(), ResNo));
   }
 
   // Now the vldN-lane intrinsic is dead except for its chain result.
@@ -16717,7 +16735,7 @@ static SDValue PerformSplittingToNarrowingStores(StoreSDNode *St,
   // Details about the old store
   SDValue Ch = St->getChain();
   SDValue BasePtr = St->getBasePtr();
-  Align Alignment = St->getOriginalAlign();
+  Align Alignment = St->getBaseAlign();
   MachineMemOperand::Flags MMOFlags = St->getMemOperand()->getFlags();
   AAMDNodes AAInfo = St->getAAInfo();
 
@@ -16768,7 +16786,7 @@ static SDValue PerformSplittingMVETruncToNarrowingStores(StoreSDNode *St,
   // Details about the old store
   SDValue Ch = St->getChain();
   SDValue BasePtr = St->getBasePtr();
-  Align Alignment = St->getOriginalAlign();
+  Align Alignment = St->getBaseAlign();
   MachineMemOperand::Flags MMOFlags = St->getMemOperand()->getFlags();
   AAMDNodes AAInfo = St->getAAInfo();
 
@@ -16816,7 +16834,7 @@ static SDValue PerformExtractFpToIntStores(StoreSDNode *St, SelectionDAG &DAG) {
   // Create a new integer store to replace the existing floating point version.
   SDValue Ch = St->getChain();
   SDValue BasePtr = St->getBasePtr();
-  Align Alignment = St->getOriginalAlign();
+  Align Alignment = St->getBaseAlign();
   MachineMemOperand::Flags MMOFlags = St->getMemOperand()->getFlags();
   AAMDNodes AAInfo = St->getAAInfo();
   EVT NewToVT = EVT::getIntegerVT(C, VT.getSizeInBits());
@@ -16867,7 +16885,7 @@ static SDValue PerformSTORECombine(SDNode *N,
     SDValue BasePtr = St->getBasePtr();
     SDValue NewST1 = DAG.getStore(
         St->getChain(), DL, StVal.getNode()->getOperand(isBigEndian ? 1 : 0),
-        BasePtr, St->getPointerInfo(), St->getOriginalAlign(),
+        BasePtr, St->getPointerInfo(), St->getBaseAlign(),
         St->getMemOperand()->getFlags());
 
     SDValue OffsetPtr = DAG.getNode(ISD::ADD, DL, MVT::i32, BasePtr,
@@ -16875,8 +16893,7 @@ static SDValue PerformSTORECombine(SDNode *N,
     return DAG.getStore(NewST1.getValue(0), DL,
                         StVal.getNode()->getOperand(isBigEndian ? 0 : 1),
                         OffsetPtr, St->getPointerInfo().getWithOffset(4),
-                        St->getOriginalAlign(),
-                        St->getMemOperand()->getFlags());
+                        St->getBaseAlign(), St->getMemOperand()->getFlags());
   }
 
   if (StVal.getValueType() == MVT::i64 &&
@@ -17858,7 +17875,7 @@ static SDValue PerformSplittingToWideningLoad(SDNode *N, SelectionDAG &DAG) {
   // Details about the old load
   SDValue Ch = LD->getChain();
   SDValue BasePtr = LD->getBasePtr();
-  Align Alignment = LD->getOriginalAlign();
+  Align Alignment = LD->getBaseAlign();
   MachineMemOperand::Flags MMOFlags = LD->getMemOperand()->getFlags();
   AAMDNodes AAInfo = LD->getAAInfo();
 
@@ -18317,9 +18334,9 @@ static SDValue PerformHWLoopCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   SDValue Elements = Int.getOperand(2);
   unsigned IntOp = Int->getConstantOperandVal(1);
-  assert((N->hasOneUse() && N->use_begin()->getOpcode() == ISD::BR)
-          && "expected single br user");
-  SDNode *Br = *N->use_begin();
+  assert((N->hasOneUse() && N->user_begin()->getOpcode() == ISD::BR) &&
+         "expected single br user");
+  SDNode *Br = *N->user_begin();
   SDValue OtherTarget = Br->getOperand(1);
 
   // Update the unconditional branch to branch to the given Dest.
@@ -18764,7 +18781,7 @@ static SDValue PerformSplittingMVEEXTToWideningLoad(SDNode *N,
   // Details about the old load
   SDValue Ch = LD->getChain();
   SDValue BasePtr = LD->getBasePtr();
-  Align Alignment = LD->getOriginalAlign();
+  Align Alignment = LD->getBaseAlign();
   MachineMemOperand::Flags MMOFlags = LD->getMemOperand()->getFlags();
   AAMDNodes AAInfo = LD->getAAInfo();
 
@@ -19321,10 +19338,10 @@ bool ARMTargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
   // If there's more than one user instruction, the loadext is desirable no
   // matter what.  There can be two uses by the same instruction.
   if (ExtVal->use_empty() ||
-      !ExtVal->use_begin()->isOnlyUserOf(ExtVal.getNode()))
+      !ExtVal->user_begin()->isOnlyUserOf(ExtVal.getNode()))
     return true;
 
-  SDNode *U = *ExtVal->use_begin();
+  SDNode *U = *ExtVal->user_begin();
   if ((U->getOpcode() == ISD::ADD || U->getOpcode() == ISD::SUB ||
        U->getOpcode() == ISD::SHL || U->getOpcode() == ARMISD::VSHLIMM))
     return false;
@@ -19636,13 +19653,13 @@ bool ARMTargetLowering::isLegalICmpImmediate(int64_t Imm) const {
 /// immediate into a register.
 bool ARMTargetLowering::isLegalAddImmediate(int64_t Imm) const {
   // Same encoding for add/sub, just flip the sign.
-  int64_t AbsImm = std::abs(Imm);
+  uint64_t AbsImm = AbsoluteValue(Imm);
   if (!Subtarget->isThumb())
     return ARM_AM::getSOImmVal(AbsImm) != -1;
   if (Subtarget->isThumb2())
     return ARM_AM::getT2SOImmVal(AbsImm) != -1;
   // Thumb1 only has 8-bit unsigned immediate.
-  return AbsImm >= 0 && AbsImm <= 255;
+  return AbsImm <= 255;
 }
 
 // Return false to prevent folding
@@ -20221,9 +20238,9 @@ bool ARMTargetLowering::ExpandInlineAsm(CallInst *CI) const {
     SplitString(AsmStr, AsmPieces, " \t,");
 
     // rev $0, $1
-    if (AsmPieces.size() == 3 &&
-        AsmPieces[0] == "rev" && AsmPieces[1] == "$0" && AsmPieces[2] == "$1" &&
-        IA->getConstraintString().compare(0, 4, "=l,l") == 0) {
+    if (AsmPieces.size() == 3 && AsmPieces[0] == "rev" &&
+        AsmPieces[1] == "$0" && AsmPieces[2] == "$1" &&
+        IA->getConstraintString().starts_with("=l,l")) {
       IntegerType *Ty = dyn_cast<IntegerType>(CI->getType());
       if (Ty && Ty->getBitWidth() == 32)
         return IntrinsicLowering::LowerToByteSwap(CI);
@@ -20744,9 +20761,9 @@ ARMTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const 
     Chain = SP.getValue(1);
     SP = DAG.getNode(ISD::SUB, DL, MVT::i32, SP, Size);
     if (Align)
-      SP =
-          DAG.getNode(ISD::AND, DL, MVT::i32, SP.getValue(0),
-                      DAG.getConstant(-(uint64_t)Align->value(), DL, MVT::i32));
+      SP = DAG.getNode(
+          ISD::AND, DL, MVT::i32, SP.getValue(0),
+          DAG.getSignedConstant(-(uint64_t)Align->value(), DL, MVT::i32));
     Chain = DAG.getCopyToReg(Chain, DL, ARM::SP, SP);
     SDValue Ops[2] = { SP, Chain };
     return DAG.getMergeValues(Ops, DL);
@@ -21158,7 +21175,7 @@ Instruction *ARMTargetLowering::makeDMB(IRBuilderBase &Builder,
       Value* args[6] = {Builder.getInt32(15), Builder.getInt32(0),
                         Builder.getInt32(0), Builder.getInt32(7),
                         Builder.getInt32(10), Builder.getInt32(5)};
-      return Builder.CreateIntrinsic(Intrinsic::arm_mcr, {}, args);
+      return Builder.CreateIntrinsic(Intrinsic::arm_mcr, args);
     } else {
       // Instead of using barriers, atomic accesses on these subtargets use
       // libcalls.
@@ -21168,7 +21185,7 @@ Instruction *ARMTargetLowering::makeDMB(IRBuilderBase &Builder,
     // Only a full system barrier exists in the M-class architectures.
     Domain = Subtarget->isMClass() ? ARM_MB::SY : Domain;
     Constant *CDomain = Builder.getInt32(Domain);
-    return Builder.CreateIntrinsic(Intrinsic::arm_dmb, {}, CDomain);
+    return Builder.CreateIntrinsic(Intrinsic::arm_dmb, CDomain);
   }
 }
 
@@ -21423,7 +21440,7 @@ Value *ARMTargetLowering::emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy,
         IsAcquire ? Intrinsic::arm_ldaexd : Intrinsic::arm_ldrexd;
 
     Value *LoHi =
-        Builder.CreateIntrinsic(Int, {}, Addr, /*FMFSource=*/nullptr, "lohi");
+        Builder.CreateIntrinsic(Int, Addr, /*FMFSource=*/nullptr, "lohi");
 
     Value *Lo = Builder.CreateExtractValue(LoHi, 0, "lo");
     Value *Hi = Builder.CreateExtractValue(LoHi, 1, "hi");
@@ -21448,7 +21465,7 @@ void ARMTargetLowering::emitAtomicCmpXchgNoStoreLLBalance(
     IRBuilderBase &Builder) const {
   if (!Subtarget->hasV7Ops())
     return;
-  Builder.CreateIntrinsic(Intrinsic::arm_clrex, {}, {});
+  Builder.CreateIntrinsic(Intrinsic::arm_clrex, {});
 }
 
 Value *ARMTargetLowering::emitStoreConditional(IRBuilderBase &Builder,
@@ -21469,7 +21486,7 @@ Value *ARMTargetLowering::emitStoreConditional(IRBuilderBase &Builder,
     Value *Hi = Builder.CreateTrunc(Builder.CreateLShr(Val, 32), Int32Ty, "hi");
     if (!Subtarget->isLittle())
       std::swap(Lo, Hi);
-    return Builder.CreateIntrinsic(Int, {}, {Lo, Hi, Addr});
+    return Builder.CreateIntrinsic(Int, {Lo, Hi, Addr});
   }
 
   Intrinsic::ID Int = IsRelease ? Intrinsic::arm_stlex : Intrinsic::arm_strex;

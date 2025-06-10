@@ -27,11 +27,11 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
-#include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Strings.h"
+#include "llvm/ADT/DenseMapInfoVariant.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Object/ELF.h"
 #include "llvm/Support/TimeProfiler.h"
+#include <variant>
 #include <vector>
 
 using namespace llvm;
@@ -42,16 +42,29 @@ using namespace lld;
 using namespace lld::elf;
 
 namespace {
-template <class ELFT> class MarkLive {
+using SecOffset = std::pair<InputSectionBase *, unsigned>;
+
+// Something that can have an independent reason for being live.
+using LiveItem = std::variant<InputSectionBase *, Symbol *, SecOffset>;
+
+// The most proximate reason that something is live.
+struct LiveReason {
+  std::optional<LiveItem> item;
+  StringRef desc;
+};
+
+template <class ELFT, bool TrackWhyLive> class MarkLive {
 public:
   MarkLive(Ctx &ctx, unsigned partition) : ctx(ctx), partition(partition) {}
 
   void run();
   void moveToMain();
+  void printWhyLive(Symbol *s) const;
 
 private:
-  void enqueue(InputSectionBase *sec, uint64_t offset);
-  void markSymbol(Symbol *sym);
+  void enqueue(InputSectionBase *sec, uint64_t offset, Symbol *sym,
+               LiveReason reason);
+  void markSymbol(Symbol *sym, StringRef reason);
   void mark();
 
   template <class RelTy>
@@ -70,6 +83,12 @@ private:
   // There are normally few input sections whose names are valid C
   // identifiers, so we just store a SmallVector instead of a multimap.
   DenseMap<StringRef, SmallVector<InputSectionBase *, 0>> cNamedSections;
+
+  // The most proximate reason that something is live. This forms a DAG between
+  // LiveItems. Acyclicality is maintained by only admitting the first
+  // discovered reason for each LiveItem; this captures the acyclic region of
+  // the liveness graph around the GC roots.
+  DenseMap<LiveItem, LiveReason> whyLive;
 };
 } // namespace
 
@@ -93,13 +112,17 @@ static uint64_t getAddend(Ctx &, InputSectionBase &sec,
   return rel.r_addend;
 }
 
-template <class ELFT>
+template <class ELFT, bool TrackWhyLive>
 template <class RelTy>
-void MarkLive<ELFT>::resolveReloc(InputSectionBase &sec, RelTy &rel,
-                                  bool fromFDE) {
+void MarkLive<ELFT, TrackWhyLive>::resolveReloc(InputSectionBase &sec,
+                                                RelTy &rel, bool fromFDE) {
   // If a symbol is referenced in a live section, it is used.
   Symbol &sym = sec.file->getRelocTargetSym(rel);
   sym.used = true;
+
+  LiveReason reason;
+  if (TrackWhyLive)
+    reason = {SecOffset(&sec, rel.r_offset), "referenced by"};
 
   if (auto *d = dyn_cast<Defined>(&sym)) {
     auto *relSec = dyn_cast_or_null<InputSectionBase>(d->section);
@@ -119,17 +142,33 @@ void MarkLive<ELFT>::resolveReloc(InputSectionBase &sec, RelTy &rel,
     // group/SHF_LINK_ORDER rules (b) if the associated text section should be
     // discarded, marking the LSDA will unnecessarily retain the text section.
     if (!(fromFDE && ((relSec->flags & (SHF_EXECINSTR | SHF_LINK_ORDER)) ||
-                      relSec->nextInSectionGroup)))
-      enqueue(relSec, offset);
+                      relSec->nextInSectionGroup))) {
+      Symbol *canonicalSym = d;
+      if (TrackWhyLive && d->isSection()) {
+        // This is expensive, so ideally this would be deferred until it's known
+        // whether this reference contributes to a printed whyLive chain, but
+        // that determination cannot be made without knowing the enclosing
+        // symbol.
+        if (Symbol *s = relSec->getEnclosingSymbol(offset))
+          canonicalSym = s;
+        else
+          canonicalSym = nullptr;
+      }
+      enqueue(relSec, offset, canonicalSym, reason);
+    }
     return;
   }
 
-  if (auto *ss = dyn_cast<SharedSymbol>(&sym))
-    if (!ss->isWeak())
+  if (auto *ss = dyn_cast<SharedSymbol>(&sym)) {
+    if (!ss->isWeak()) {
       cast<SharedFile>(ss->file)->isNeeded = true;
+      if (TrackWhyLive)
+        whyLive.try_emplace(&sym, reason);
+    }
+  }
 
   for (InputSectionBase *sec : cNamedSections.lookup(sym.getName()))
-    enqueue(sec, 0);
+    enqueue(sec, /*offset=*/0, /*sym=*/nullptr, reason);
 }
 
 // The .eh_frame section is an unfortunate special case.
@@ -146,10 +185,10 @@ void MarkLive<ELFT>::resolveReloc(InputSectionBase &sec, RelTy &rel,
 // A possible improvement would be to fully process .eh_frame in the middle of
 // the gc pass. With that we would be able to also gc some sections holding
 // LSDAs and personality functions if we found that they were unused.
-template <class ELFT>
+template <class ELFT, bool TrackWhyLive>
 template <class RelTy>
-void MarkLive<ELFT>::scanEhFrameSection(EhInputSection &eh,
-                                        ArrayRef<RelTy> rels) {
+void MarkLive<ELFT, TrackWhyLive>::scanEhFrameSection(EhInputSection &eh,
+                                                      ArrayRef<RelTy> rels) {
   for (const EhSectionPiece &cie : eh.cies)
     if (cie.firstRelocation != unsigned(-1))
       resolveReloc(eh, rels[cie.firstRelocation], false);
@@ -186,8 +225,10 @@ static bool isReserved(InputSectionBase *sec) {
   }
 }
 
-template <class ELFT>
-void MarkLive<ELFT>::enqueue(InputSectionBase *sec, uint64_t offset) {
+template <class ELFT, bool TrackWhyLive>
+void MarkLive<ELFT, TrackWhyLive>::enqueue(InputSectionBase *sec,
+                                           uint64_t offset, Symbol *sym,
+                                           LiveReason reason) {
   // Usually, a whole section is marked as live or dead, but in mergeable
   // (splittable) sections, each piece of data has independent liveness bit.
   // So we explicitly tell it which offset is in use.
@@ -201,28 +242,101 @@ void MarkLive<ELFT>::enqueue(InputSectionBase *sec, uint64_t offset) {
     return;
   sec->partition = sec->partition ? 1 : partition;
 
+  if (TrackWhyLive) {
+    if (sym) {
+      // If a specific symbol is referenced, that keeps it live. The symbol then
+      // keeps its section live.
+      whyLive.try_emplace(sym, reason);
+      whyLive.try_emplace(sec, LiveReason{sym, "contained live symbol"});
+    } else {
+      // Otherwise, the reference generically keeps the section live.
+      whyLive.try_emplace(sec, reason);
+    }
+  }
+
   // Add input section to the queue.
   if (InputSection *s = dyn_cast<InputSection>(sec))
     queue.push_back(s);
 }
 
-template <class ELFT> void MarkLive<ELFT>::markSymbol(Symbol *sym) {
+// Print the stack of reasons that the given symbol is live.
+template <class ELFT, bool TrackWhyLive>
+void MarkLive<ELFT, TrackWhyLive>::printWhyLive(Symbol *s) const {
+  // Skip dead symbols. A symbol is dead if it belongs to a dead section.
+  if (auto *d = dyn_cast<Defined>(s)) {
+    auto *sec = dyn_cast_or_null<InputSectionBase>(d->section);
+    if (sec && !sec->isLive())
+      return;
+  }
+
+  auto msg = Msg(ctx);
+
+  const auto printSymbol = [&](Symbol *s) {
+    msg << s->file << ":(" << s << ')';
+  };
+
+  msg << "live symbol: ";
+  printSymbol(s);
+
+  LiveItem cur = s;
+  while (true) {
+    auto it = whyLive.find(cur);
+    LiveReason reason;
+    // If there is a specific reason this item is live...
+    if (it != whyLive.end()) {
+      reason = it->second;
+    } else {
+      // This item is live, but it has no tracked reason. It must be an
+      // unreferenced symbol in a live section or a symbol with no section.
+      InputSectionBase *sec = nullptr;
+      if (auto *d = dyn_cast<Defined>(std::get<Symbol *>(cur)))
+        sec = dyn_cast_or_null<InputSectionBase>(d->section);
+      reason = sec ? LiveReason{sec, "in live section"}
+                   : LiveReason{std::nullopt, "no section"};
+    }
+
+    if (!reason.item) {
+      msg << " (" << reason.desc << ')';
+      break;
+    }
+
+    msg << "\n>>> " << reason.desc << ": ";
+    // The reason may not yet have been resolved to a symbol; do so now.
+    if (std::holds_alternative<SecOffset>(*reason.item)) {
+      const auto &so = std::get<SecOffset>(*reason.item);
+      InputSectionBase *sec = so.first;
+      Defined *sym = sec->getEnclosingSymbol(so.second);
+      cur = sym ? LiveItem(sym) : LiveItem(sec);
+    } else {
+      cur = *reason.item;
+    }
+
+    if (std::holds_alternative<Symbol *>(cur))
+      printSymbol(std::get<Symbol *>(cur));
+    else
+      msg << std::get<InputSectionBase *>(cur);
+  }
+}
+
+template <class ELFT, bool TrackWhyLive>
+void MarkLive<ELFT, TrackWhyLive>::markSymbol(Symbol *sym, StringRef reason) {
   if (auto *d = dyn_cast_or_null<Defined>(sym))
     if (auto *isec = dyn_cast_or_null<InputSectionBase>(d->section))
-      enqueue(isec, d->value);
+      enqueue(isec, d->value, sym, {std::nullopt, reason});
 }
 
 // This is the main function of the garbage collector.
 // Starting from GC-root sections, this function visits all reachable
 // sections to set their "Live" bits.
-template <class ELFT> void MarkLive<ELFT>::run() {
+template <class ELFT, bool TrackWhyLive>
+void MarkLive<ELFT, TrackWhyLive>::run() {
   // Add GC root symbols.
 
   // Preserve externally-visible symbols if the symbols defined by this
   // file can interpose other ELF file's symbols at runtime.
   for (Symbol *sym : ctx.symtab->getSymbols())
-    if (sym->includeInDynsym(ctx) && sym->partition == partition)
-      markSymbol(sym);
+    if (sym->isExported && sym->partition == partition)
+      markSymbol(sym, "externally visible symbol; may interpose");
 
   // If this isn't the main partition, that's all that we need to preserve.
   if (partition != 1) {
@@ -230,16 +344,16 @@ template <class ELFT> void MarkLive<ELFT>::run() {
     return;
   }
 
-  markSymbol(ctx.symtab->find(ctx.arg.entry));
-  markSymbol(ctx.symtab->find(ctx.arg.init));
-  markSymbol(ctx.symtab->find(ctx.arg.fini));
+  markSymbol(ctx.symtab->find(ctx.arg.entry), "entry point");
+  markSymbol(ctx.symtab->find(ctx.arg.init), "initializer function");
+  markSymbol(ctx.symtab->find(ctx.arg.fini), "finalizer function");
   for (StringRef s : ctx.arg.undefined)
-    markSymbol(ctx.symtab->find(s));
+    markSymbol(ctx.symtab->find(s), "undefined command line flag");
   for (StringRef s : ctx.script->referencedSymbols)
-    markSymbol(ctx.symtab->find(s));
+    markSymbol(ctx.symtab->find(s), "referenced by linker script");
   for (auto [symName, _] : ctx.symtab->cmseSymMap) {
-    markSymbol(ctx.symtab->cmseSymMap[symName].sym);
-    markSymbol(ctx.symtab->cmseSymMap[symName].acleSeSym);
+    markSymbol(ctx.symtab->cmseSymMap[symName].sym, "ARM CMSE symbol");
+    markSymbol(ctx.symtab->cmseSymMap[symName].acleSeSym, "ARM CMSE symbol");
   }
 
   // Mark .eh_frame sections as live because there are usually no relocations
@@ -256,7 +370,7 @@ template <class ELFT> void MarkLive<ELFT>::run() {
   }
   for (InputSectionBase *sec : ctx.inputSections) {
     if (sec->flags & SHF_GNU_RETAIN) {
-      enqueue(sec, 0);
+      enqueue(sec, /*offset=*/0, /*sym=*/nullptr, {std::nullopt, "retained"});
       continue;
     }
     if (sec->flags & SHF_LINK_ORDER)
@@ -294,8 +408,11 @@ template <class ELFT> void MarkLive<ELFT>::run() {
 
     // Preserve special sections and those which are specified in linker
     // script KEEP command.
-    if (isReserved(sec) || ctx.script->shouldKeep(sec)) {
-      enqueue(sec, 0);
+    if (isReserved(sec)) {
+      enqueue(sec, /*offset=*/0, /*sym=*/nullptr, {std::nullopt, "reserved"});
+    } else if (ctx.script->shouldKeep(sec)) {
+      enqueue(sec, /*offset=*/0, /*sym=*/nullptr,
+              {std::nullopt, "KEEP in linker script"});
     } else if ((!ctx.arg.zStartStopGC || sec->name.starts_with("__libc_")) &&
                isValidCIdentifier(sec->name)) {
       // As a workaround for glibc libc.a before 2.34
@@ -307,9 +424,26 @@ template <class ELFT> void MarkLive<ELFT>::run() {
   }
 
   mark();
+
+  if (TrackWhyLive) {
+    const auto handleSym = [&](Symbol *sym) {
+      if (llvm::any_of(ctx.arg.whyLive, [sym](const llvm::GlobPattern &pat) {
+            return pat.match(sym->getName());
+          }))
+        printWhyLive(sym);
+    };
+
+    for (Symbol *sym : ctx.symtab->getSymbols())
+      handleSym(sym);
+    for (ELFFileBase *file : ctx.objectFiles)
+      for (Symbol *sym : file->getSymbols())
+        if (sym->isLocal())
+          handleSym(sym);
+  }
 }
 
-template <class ELFT> void MarkLive<ELFT>::mark() {
+template <class ELFT, bool TrackWhyLive>
+void MarkLive<ELFT, TrackWhyLive>::mark() {
   // Mark all reachable sections.
   while (!queue.empty()) {
     InputSectionBase &sec = *queue.pop_back_val();
@@ -323,11 +457,13 @@ template <class ELFT> void MarkLive<ELFT>::mark() {
       resolveReloc(sec, rel, false);
 
     for (InputSectionBase *isec : sec.dependentSections)
-      enqueue(isec, 0);
+      enqueue(isec, /*offset=*/0, /*sym=*/nullptr,
+              {&sec, "depended on by section"});
 
     // Mark the next group member.
     if (sec.nextInSectionGroup)
-      enqueue(sec.nextInSectionGroup, 0);
+      enqueue(sec.nextInSectionGroup, /*offset=*/0, /*sym=*/nullptr,
+              {&sec, "in section group with"});
   }
 }
 
@@ -340,20 +476,21 @@ template <class ELFT> void MarkLive<ELFT>::mark() {
 // We also need to move sections whose names are C identifiers that are referred
 // to from __start_/__stop_ symbols because there will only be one set of
 // symbols for the whole program.
-template <class ELFT> void MarkLive<ELFT>::moveToMain() {
+template <class ELFT, bool TrackWhyLive>
+void MarkLive<ELFT, TrackWhyLive>::moveToMain() {
   for (ELFFileBase *file : ctx.objectFiles)
     for (Symbol *s : file->getSymbols())
       if (auto *d = dyn_cast<Defined>(s))
         if ((d->type == STT_GNU_IFUNC || d->type == STT_TLS) && d->section &&
             d->section->isLive())
-          markSymbol(s);
+          markSymbol(s, /*reason=*/{});
 
   for (InputSectionBase *sec : ctx.inputSections) {
     if (!sec->isLive() || !isValidCIdentifier(sec->name))
       continue;
     if (ctx.symtab->find(("__start_" + sec->name).str()) ||
         ctx.symtab->find(("__stop_" + sec->name).str()))
-      enqueue(sec, 0);
+      enqueue(sec, /*offset=*/0, /*sym=*/nullptr, /*reason=*/{});
   }
 
   mark();
@@ -379,13 +516,16 @@ template <class ELFT> void elf::markLive(Ctx &ctx) {
 
   // Follow the graph to mark all live sections.
   for (unsigned i = 1, e = ctx.partitions.size(); i <= e; ++i)
-    MarkLive<ELFT>(ctx, i).run();
+    if (ctx.arg.whyLive.empty())
+      MarkLive<ELFT, false>(ctx, i).run();
+    else
+      MarkLive<ELFT, true>(ctx, i).run();
 
   // If we have multiple partitions, some sections need to live in the main
   // partition even if they were allocated to a loadable partition. Move them
   // there now.
   if (ctx.partitions.size() != 1)
-    MarkLive<ELFT>(ctx, 1).moveToMain();
+    MarkLive<ELFT, false>(ctx, 1).moveToMain();
 
   // Report garbage-collected sections.
   if (ctx.arg.printGcSections)

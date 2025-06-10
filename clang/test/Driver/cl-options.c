@@ -185,30 +185,30 @@
 
 // RUN: %clang_cl /Os --target=i686-pc-windows-msvc -### -- %s 2>&1 | FileCheck -check-prefix=Os %s
 // RUN: %clang_cl /Os --target=x86_64-pc-windows-msvc -### -- %s 2>&1 | FileCheck -check-prefix=Os %s
-// Os: -mframe-pointer=none
 // Os: -Os
+// Os: -mframe-pointer=none
 
 // RUN: %clang_cl /Ot --target=i686-pc-windows-msvc -### -- %s 2>&1 | FileCheck -check-prefix=Ot %s
 // RUN: %clang_cl /Ot --target=x86_64-pc-windows-msvc -### -- %s 2>&1 | FileCheck -check-prefix=Ot %s
-// Ot: -mframe-pointer=none
 // Ot: -O3
+// Ot: -mframe-pointer=none
 
 // RUN: %clang_cl /Ox --target=i686-pc-windows-msvc -### -- %s 2>&1 | FileCheck -check-prefix=Ox %s
 // RUN: %clang_cl /Ox --target=x86_64-pc-windows-msvc -### -- %s 2>&1 | FileCheck -check-prefix=Ox %s
-// Ox: -mframe-pointer=none
 // Ox: -O3
+// Ox: -mframe-pointer=none
 
 // RUN: %clang_cl --target=i686-pc-win32 /O2sy- -### -- %s 2>&1 | FileCheck -check-prefix=PR24003 %s
-// PR24003: -mframe-pointer=all
 // PR24003: -Os
+// PR24003: -mframe-pointer=all
 
 // RUN: %clang_cl --target=i686-pc-win32 -Werror -Wno-msvc-not-found /Oy- /O2 -### -- %s 2>&1 | FileCheck -check-prefix=Oy_2 %s
-// Oy_2: -mframe-pointer=all
 // Oy_2: -O3
+// Oy_2: -mframe-pointer=all
 
 // RUN: %clang_cl --target=aarch64-pc-windows-msvc -Werror -Wno-msvc-not-found /Oy- /O2 -### -- %s 2>&1 | FileCheck -check-prefix=Oy_aarch64 %s
-// Oy_aarch64: -mframe-pointer=non-leaf
 // Oy_aarch64: -O3
+// Oy_aarch64: -mframe-pointer=non-leaf
 
 // RUN: %clang_cl --target=i686-pc-win32 -Werror -Wno-msvc-not-found /O2 /O2 -### -- %s 2>&1 | FileCheck -check-prefix=O2O2 %s
 // O2O2: "-O3"
@@ -437,7 +437,9 @@
 // RUN:     /d1import_no_registry \
 // RUN:     /d1nodatetime \
 // RUN:     /d2FH4 \
+// RUN:     /d2TrimInlines \
 // RUN:     /docname \
+// RUN:     /dynamicdeopt \
 // RUN:     /experimental:external \
 // RUN:     /experimental:module \
 // RUN:     /experimental:preprocessor \
@@ -680,6 +682,7 @@
 // RUN:     -fcoverage-mapping \
 // RUN:     -fno-coverage-mapping \
 // RUN:     -fdiagnostics-color \
+// RUN:     -fdiagnostics-color=auto \
 // RUN:     -fno-diagnostics-color \
 // RUN:     -fdebug-compilation-dir . \
 // RUN:     -fdebug-compilation-dir=. \
@@ -737,8 +740,15 @@
 // RUN:     -fno-modules-search-all \
 // RUN:     -fimplicit-modules \
 // RUN:     -fno-implicit-modules \
+// RUN:     -fstrict-overflow \
+// RUN:     -fno-strict-overflow \
 // RUN:     -ftrivial-auto-var-init=zero \
+// RUN:     -fwrapv \
+// RUN:     -fno-wrapv \
+// RUN:     -fwrapv-pointer \
+// RUN:     -fno-wrapv-pointer \
 // RUN:     --version \
+// RUN:     --warning-suppression-mappings=foo \
 // RUN:     -Werror /Zs -- %s 2>&1
 
 // Accept clang options under the /clang: flag.
@@ -809,5 +819,12 @@
 
 // RUN: %clang_cl -vctoolsdir "" /arm64EC /c -target x86_64-pc-windows-msvc  -### -- %s 2>&1 | FileCheck --check-prefix=ARM64EC_OVERRIDE %s
 // ARM64EC_OVERRIDE: warning: /arm64EC has been overridden by specified target: x86_64-pc-windows-msvc; option ignored
+
+// RUN: %clang_cl /d2epilogunwind /c -### -- %s 2>&1 | FileCheck %s --check-prefix=EPILOGUNWIND
+// EPILOGUNWIND: -fwinx64-eh-unwindv2
+
+// RUN: %clang_cl /funcoverride:override_me1 /funcoverride:override_me2 /c -### -- %s 2>&1 | FileCheck %s --check-prefix=FUNCOVERRIDE
+// FUNCOVERRIDE: -loader-replaceable-function=override_me1
+// FUNCOVERRIDE-SAME: -loader-replaceable-function=override_me2
 
 void f(void) { }

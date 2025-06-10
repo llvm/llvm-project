@@ -1,7 +1,5 @@
 ; RUN: opt %s -S -passes=verify 2>&1 \
 ; RUN: | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators %s -S -passes=verify 2>&1 \
-; RUN: | FileCheck %s
 
 ;; Check that badly formed assignment tracking metadata is caught either
 ;; while parsing or by the verifier.

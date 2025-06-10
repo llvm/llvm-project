@@ -24,12 +24,15 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
+#include "mlir/Analysis/Liveness.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
+#include <unordered_set>
 
 namespace hlfir {
 #define GEN_PASS_DEF_LOWERHLFIRORDEREDASSIGNMENTS
@@ -224,6 +227,10 @@ private:
   /// Save a value for subsequent runs.
   void generateSaveEntity(hlfir::SaveEntity savedEntity,
                           bool willUseSavedEntityInSameRun);
+  /// Save a variable address instead of its value.
+  void saveNonVectorSubscriptedAddress(hlfir::SaveEntity savedEntity);
+  /// Save a LHS variable address instead of its value, handling the cases
+  /// where the LHS is vector subscripted.
   void saveLeftHandSide(hlfir::SaveEntity savedEntity,
                         hlfir::RegionAssignOp regionAssignOp);
 
@@ -258,6 +265,19 @@ private:
     assert(inserted.second && "temp must have been emplaced");
     return &inserted.first->second;
   }
+
+  /// Given a top-level hlfir.where, look for hlfir.exactly_once operations
+  /// inside it and see if any of the values live into hlfir.exactly_once
+  /// do not dominate hlfir.where. This may happen due to CSE reusing
+  /// results of operations from the region parent to hlfir.exactly_once.
+  /// Since we are going to clone the body of hlfir.exactly_once before
+  /// the top-level hlfir.where, such def-use will cause problems.
+  /// There are options how to resolve this in a different way,
+  /// e.g. making hlfir.exactly_once IsolatedFromAbove or making
+  /// it a region of hlfir.where and wiring the result(s) through
+  /// the block arguments. For the time being, this canonicalization
+  /// tries to undo the effects of CSE.
+  void canonicalizeExactlyOnceInsideWhere(hlfir::WhereOp whereOp);
 
   fir::FirOpBuilder &builder;
 
@@ -444,7 +464,16 @@ convertToMoldType(mlir::Location loc, fir::FirOpBuilder &builder,
 
 void OrderedAssignmentRewriter::pre(hlfir::RegionAssignOp regionAssignOp) {
   mlir::Location loc = regionAssignOp.getLoc();
-  std::optional<hlfir::LoopNest> elementalLoopNest;
+  if (regionAssignOp.isPointerAssignment()) {
+    auto [lhsValue, oldLhsYield] =
+        generateYieldedEntity(regionAssignOp.getLhsRegion());
+    auto [rhsValue, oldRhsYield] =
+        generateYieldedEntity(regionAssignOp.getRhsRegion());
+    builder.createStoreWithConvert(loc, rhsValue, lhsValue);
+    generateCleanupIfAny(oldLhsYield);
+    generateCleanupIfAny(oldRhsYield);
+    return;
+  }
   auto [rhsValue, oldRhsYield] =
       generateYieldedEntity(regionAssignOp.getRhsRegion());
   hlfir::Entity rhsEntity{rhsValue};
@@ -510,6 +539,10 @@ void OrderedAssignmentRewriter::generateMaskIfOp(mlir::Value cdt) {
 void OrderedAssignmentRewriter::pre(hlfir::WhereOp whereOp) {
   mlir::Location loc = whereOp.getLoc();
   if (!whereLoopNest) {
+    // Make sure liveness information is valid for the inner hlfir.exactly_once
+    // operations, and their bodies can be cloned before the top-level
+    // hlfir.where.
+    canonicalizeExactlyOnceInsideWhere(whereOp);
     // This is the top-level WHERE. Start a loop nest iterating on the shape of
     // the where mask.
     if (auto maybeSaved = getIfSaved(whereOp.getMaskRegion())) {
@@ -660,10 +693,7 @@ OrderedAssignmentRewriter::generateYieldedEntity(
     return castIfNeeded(loc, builder, {maskedValue, std::nullopt}, castToType);
   }
 
-  assert(region.hasOneBlock() && "region must contain one block");
   auto oldYield = getYield(region);
-  mlir::Block::OpListType &ops = region.back().getOperations();
-
   // Inside Forall, scalars that do not depend on forall indices can be hoisted
   // here because their evaluation is required to only call pure procedures, and
   // if they depend on a variable previously assigned to in a forall assignment,
@@ -674,24 +704,24 @@ OrderedAssignmentRewriter::generateYieldedEntity(
   bool hoistComputation = false;
   if (fir::isa_trivial(oldYield.getEntity().getType()) &&
       !constructStack.empty()) {
-    hoistComputation = true;
-    for (mlir::Operation &op : ops)
-      if (llvm::any_of(op.getOperands(), [](mlir::Value value) {
-            return isForallIndex(value);
-          })) {
-        hoistComputation = false;
-        break;
-      }
+    mlir::WalkResult walkResult =
+        region.walk([&](mlir::Operation *op) -> mlir::WalkResult {
+          if (llvm::any_of(op->getOperands(), [](mlir::Value value) {
+                return isForallIndex(value);
+              }))
+            return mlir::WalkResult::interrupt();
+          return mlir::WalkResult::advance();
+        });
+    hoistComputation = !walkResult.wasInterrupted();
   }
   auto insertionPoint = builder.saveInsertionPoint();
   if (hoistComputation)
     builder.setInsertionPoint(constructStack[0]);
 
   // Clone all operations except the final hlfir.yield.
-  assert(!ops.empty() && "yield block cannot be empty");
-  auto end = ops.end();
-  for (auto opIt = ops.begin(); std::next(opIt) != end; ++opIt)
-    (void)builder.clone(*opIt, mapper);
+  assert(region.hasOneBlock() && "region must contain one block");
+  for (auto &op : region.back().without_terminator())
+    (void)builder.clone(op, mapper);
   // Get the value for the yielded entity, it may be the result of an operation
   // that was cloned, or it may be the same as the previous value if the yield
   // operand was created before the ordered assignment tree.
@@ -1078,6 +1108,12 @@ getAssignIfLeftHandSideRegion(mlir::Region &region) {
   return nullptr;
 }
 
+static bool isPointerAssignmentRHS(mlir::Region &region) {
+  auto assign = mlir::dyn_cast<hlfir::RegionAssignOp>(region.getParentOp());
+  return assign && assign.isPointerAssignment() &&
+         (&assign.getRhsRegion() == &region);
+}
+
 bool OrderedAssignmentRewriter::currentLoopNestIterationNumberCanBeComputed(
     llvm::SmallVectorImpl<fir::DoLoopOp> &loopNest) {
   if (constructStack.empty())
@@ -1141,6 +1177,11 @@ void OrderedAssignmentRewriter::generateSaveEntity(
     assert(!willUseSavedEntityInSameRun &&
            "lhs cannot be used in the loop nest where it is saved");
     return saveLeftHandSide(savedEntity, regionAssignOp);
+  }
+  if (isPointerAssignmentRHS(region)) {
+    assert(!willUseSavedEntityInSameRun &&
+           "rhs cannot be used in the loop nest where it is saved");
+    return saveNonVectorSubscriptedAddress(savedEntity);
   }
 
   mlir::Location loc = region.getParentOp()->getLoc();
@@ -1233,14 +1274,58 @@ static bool rhsIsArray(hlfir::RegionAssignOp regionAssignOp) {
   return yieldOp && hlfir::Entity{yieldOp.getEntity()}.isArray();
 }
 
+static bool isVectorSubscripted(mlir::Region &region) {
+  return llvm::isa<hlfir::ElementalAddrOp>(region.back().back());
+}
+
+void OrderedAssignmentRewriter::saveNonVectorSubscriptedAddress(
+    hlfir::SaveEntity savedEntity) {
+  mlir::Region &region = *savedEntity.yieldRegion;
+  mlir::Location loc = region.getParentOp()->getLoc();
+  assert(!isVectorSubscripted(region) &&
+         "expected variable without vector subscripts");
+  ValueAndCleanUp varAndCleanup = generateYieldedEntity(region);
+  hlfir::Entity var{varAndCleanup.first};
+  fir::factory::TemporaryStorage *temp = nullptr;
+  // If the address dominates the constructs, its SSA value can simply be
+  // tracked and there is no need to save the address in memory.  Otherwise,
+  // the addresses are stored at each iteration in memory with a descriptor
+  // stack.
+  if (constructStack.empty() ||
+      dominanceInfo.properlyDominates(var, constructStack[0]))
+    doBeforeLoopNest(
+        [&] { temp = insertSavedEntity(region, fir::factory::SSARegister{}); });
+  else
+    doBeforeLoopNest([&] {
+      if (var.isMutableBox() || var.isProcedure() || var.isProcedurePointer())
+        // Store single C pointer to entity.
+        temp = insertSavedEntity(
+            region, fir::factory::AnyAddressStack{loc, builder, var.getType()});
+      else
+        // Store the base address and dynamic shape/length/type information
+        // as descriptor.
+        temp = insertSavedEntity(region, fir::factory::AnyVariableStack{
+                                             loc, builder, var.getType()});
+    });
+  temp->pushValue(loc, builder, var);
+  generateCleanupIfAny(varAndCleanup.second);
+}
+
 void OrderedAssignmentRewriter::saveLeftHandSide(
     hlfir::SaveEntity savedEntity, hlfir::RegionAssignOp regionAssignOp) {
   mlir::Region &region = *savedEntity.yieldRegion;
+  if (!isVectorSubscripted(region)) {
+    saveNonVectorSubscriptedAddress(savedEntity);
+    return;
+  }
+  // Save vector subscripted LHS address.
   mlir::Location loc = region.getParentOp()->getLoc();
   LhsValueAndCleanUp loweredLhs = generateYieldedLHS(loc, region);
-  fir::factory::TemporaryStorage *temp = nullptr;
+  // loweredLhs.vectorSubscriptLoopNest is empty inside a WHERE because the
+  // WHERE loops are already indexing the vector subscripted designator.
   if (loweredLhs.vectorSubscriptLoopNest)
     constructStack.push_back(loweredLhs.vectorSubscriptLoopNest->outerOp);
+  fir::factory::TemporaryStorage *temp = nullptr;
   if (loweredLhs.vectorSubscriptLoopNest && !rhsIsArray(regionAssignOp)) {
     // Vector subscripted entity for which the shape must also be saved on top
     // of the element addresses (e.g. the shape may change in each forall
@@ -1267,22 +1352,15 @@ void OrderedAssignmentRewriter::saveLeftHandSide(
     vectorTmp.pushShape(loc, builder, shape);
     builder.restoreInsertionPoint(insertionPoint);
   } else {
-    // Otherwise, only save the LHS address.
-    // If the LHS address dominates the constructs, its SSA value can
-    // simply be tracked and there is no need to save the address in memory.
-    // Otherwise, the addresses are stored at each iteration in memory with
-    // a descriptor stack.
-    if (constructStack.empty() ||
-        dominanceInfo.properlyDominates(loweredLhs.lhs, constructStack[0]))
-      doBeforeLoopNest([&] {
-        temp = insertSavedEntity(region, fir::factory::SSARegister{});
-      });
-    else
-      doBeforeLoopNest([&] {
-        temp = insertSavedEntity(
-            region, fir::factory::AnyVariableStack{loc, builder,
-                                                   loweredLhs.lhs.getType()});
-      });
+    // Only saving the scalar elements addresses. These addresses computation
+    // depend on the inner loop indices generated for the vector subscripts
+    // (no need to wast time checking dominance) and can only be save in a
+    // variable stack so far.
+    doBeforeLoopNest([&] {
+      temp = insertSavedEntity(
+          region, fir::factory::AnyVariableStack{loc, builder,
+                                                 loweredLhs.lhs.getType()});
+    });
   }
   temp->pushValue(loc, builder, loweredLhs.lhs);
   generateCleanupIfAny(loweredLhs.elementalCleanup);
@@ -1290,6 +1368,106 @@ void OrderedAssignmentRewriter::saveLeftHandSide(
     constructStack.pop_back();
     builder.setInsertionPointAfter(loweredLhs.vectorSubscriptLoopNest->outerOp);
   }
+}
+
+void OrderedAssignmentRewriter::canonicalizeExactlyOnceInsideWhere(
+    hlfir::WhereOp whereOp) {
+  auto getDefinition = [](mlir::Value v) {
+    mlir::Operation *op = v.getDefiningOp();
+    bool isValid = true;
+    if (!op) {
+      LLVM_DEBUG(
+          llvm::dbgs()
+          << "Value live into hlfir.exactly_once has no defining operation: "
+          << v << "\n");
+      isValid = false;
+    }
+    if (op->getNumRegions() != 0) {
+      LLVM_DEBUG(
+          llvm::dbgs()
+          << "Cannot pull an operation with regions into hlfir.exactly_once"
+          << *op << "\n");
+      isValid = false;
+    }
+    auto effects = mlir::getEffectsRecursively(op);
+    if (!effects || !effects->empty()) {
+      LLVM_DEBUG(llvm::dbgs() << "Side effects on operation with result live "
+                                 "into hlfir.exactly_once"
+                              << *op << "\n");
+      isValid = false;
+    }
+    assert(isValid && "invalid live-in");
+    (void)isValid;
+    return op;
+  };
+  mlir::Liveness liveness(whereOp.getOperation());
+  whereOp->walk([&](hlfir::ExactlyOnceOp op) {
+    std::unordered_set<mlir::Operation *> liveInSet;
+    LLVM_DEBUG(llvm::dbgs() << "Canonicalizing:\n" << op << "\n");
+    auto &liveIns = liveness.getLiveIn(&op.getBody().front());
+    if (liveIns.empty())
+      return;
+    // Note that the liveIns set is not ordered.
+    for (mlir::Value liveIn : liveIns) {
+      if (!dominanceInfo.properlyDominates(liveIn, whereOp)) {
+        LLVM_DEBUG(llvm::dbgs()
+                   << "Does not dominate top-level where: " << liveIn << "\n");
+        liveInSet.insert(getDefinition(liveIn));
+      }
+    }
+
+    // Populate the set of operations that we need to pull into
+    // hlfir.exactly_once, so that the only live-ins left are the ones
+    // that dominate whereOp.
+    std::unordered_set<mlir::Operation *> cloneSet(liveInSet);
+    llvm::SmallVector<mlir::Operation *> workList(cloneSet.begin(),
+                                                  cloneSet.end());
+    while (!workList.empty()) {
+      mlir::Operation *current = workList.pop_back_val();
+      for (mlir::Value operand : current->getOperands()) {
+        if (dominanceInfo.properlyDominates(operand, whereOp))
+          continue;
+        mlir::Operation *def = getDefinition(operand);
+        if (cloneSet.count(def))
+          continue;
+        cloneSet.insert(def);
+        workList.push_back(def);
+      }
+    }
+
+    // Sort the operations by dominance. This preserves their order
+    // after the cloning, and also guarantees stable IR generation.
+    llvm::SmallVector<mlir::Operation *> cloneList(cloneSet.begin(),
+                                                   cloneSet.end());
+    llvm::sort(cloneList, [&](mlir::Operation *L, mlir::Operation *R) {
+      return dominanceInfo.properlyDominates(L, R);
+    });
+
+    // Clone the operations.
+    mlir::IRMapping mapper;
+    mlir::Operation::CloneOptions options;
+    options.cloneOperands();
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToStart(&op.getBody().front());
+
+    for (auto *toClone : cloneList) {
+      LLVM_DEBUG(llvm::dbgs() << "Cloning: " << *toClone << "\n");
+      builder.insert(toClone->clone(mapper, options));
+    }
+    for (mlir::Operation *oldOps : liveInSet)
+      for (mlir::Value oldVal : oldOps->getResults()) {
+        mlir::Value newVal = mapper.lookup(oldVal);
+        if (!newVal) {
+          LLVM_DEBUG(llvm::dbgs() << "No clone found for: " << oldVal << "\n");
+          assert(false && "missing clone");
+        }
+        mlir::replaceAllUsesInRegionWith(oldVal, newVal, op.getBody());
+      }
+
+    LLVM_DEBUG(llvm::dbgs() << "Finished canonicalization\n");
+    if (!liveInSet.empty())
+      LLVM_DEBUG(llvm::dbgs() << op << "\n");
+  });
 }
 
 /// Lower an ordered assignment tree to fir.do_loop and hlfir.assign given

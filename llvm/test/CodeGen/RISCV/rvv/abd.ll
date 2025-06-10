@@ -103,15 +103,21 @@ define <vscale x 4 x i32> @sabd_s_promoted_ops(<vscale x 4 x i16> %a, <vscale x 
   ret <vscale x 4 x i32> %abs
 }
 
-; FIXME: Crashes legalization if enabled
-;; define <vscale x 2 x i64> @sabd_d(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
-;;   %a.sext = sext <vscale x 2 x i64> %a to <vscale x 2 x i128>
-;;   %b.sext = sext <vscale x 2 x i64> %b to <vscale x 2 x i128>
-;;   %sub = sub <vscale x 2 x i128> %a.sext, %b.sext
-;;   %abs = call <vscale x 2 x i128> @llvm.abs.nxv2i128(<vscale x 2 x i128> %sub, i1 true)
-;;   %trunc = trunc <vscale x 2 x i128> %abs to <vscale x 2 x i64>
-;;   ret <vscale x 2 x i64> %trunc
-;; }
+define <vscale x 2 x i64> @sabd_d(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: sabd_d:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vmin.vv v12, v8, v10
+; CHECK-NEXT:    vmax.vv v8, v8, v10
+; CHECK-NEXT:    vsub.vv v8, v8, v12
+; CHECK-NEXT:    ret
+  %a.sext = sext <vscale x 2 x i64> %a to <vscale x 2 x i128>
+  %b.sext = sext <vscale x 2 x i64> %b to <vscale x 2 x i128>
+  %sub = sub <vscale x 2 x i128> %a.sext, %b.sext
+  %abs = call <vscale x 2 x i128> @llvm.abs.nxv2i128(<vscale x 2 x i128> %sub, i1 true)
+  %trunc = trunc <vscale x 2 x i128> %abs to <vscale x 2 x i64>
+  ret <vscale x 2 x i64> %trunc
+}
 
 define <vscale x 2 x i64> @sabd_d_promoted_ops(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b) {
 ; CHECK-LABEL: sabd_d_promoted_ops:
@@ -231,15 +237,21 @@ define <vscale x 4 x i32> @uabd_s_promoted_ops(<vscale x 4 x i16> %a, <vscale x 
   ret <vscale x 4 x i32> %abs
 }
 
-; FIXME: Crashes legalization if enabled
-;; define <vscale x 2 x i64> @uabd_d(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
-;;   %a.zext = zext <vscale x 2 x i64> %a to <vscale x 2 x i128>
-;;   %b.zext = zext <vscale x 2 x i64> %b to <vscale x 2 x i128>
-;;   %sub = sub <vscale x 2 x i128> %a.zext, %b.zext
-;;   %abs = call <vscale x 2 x i128> @llvm.abs.nxv2i128(<vscale x 2 x i128> %sub, i1 true)
-;;   %trunc = trunc <vscale x 2 x i128> %abs to <vscale x 2 x i64>
-;;   ret <vscale x 2 x i64> %trunc
-;; }
+define <vscale x 2 x i64> @uabd_d(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: uabd_d:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vminu.vv v12, v8, v10
+; CHECK-NEXT:    vmaxu.vv v8, v8, v10
+; CHECK-NEXT:    vsub.vv v8, v8, v12
+; CHECK-NEXT:    ret
+  %a.zext = zext <vscale x 2 x i64> %a to <vscale x 2 x i128>
+  %b.zext = zext <vscale x 2 x i64> %b to <vscale x 2 x i128>
+  %sub = sub <vscale x 2 x i128> %a.zext, %b.zext
+  %abs = call <vscale x 2 x i128> @llvm.abs.nxv2i128(<vscale x 2 x i128> %sub, i1 true)
+  %trunc = trunc <vscale x 2 x i128> %abs to <vscale x 2 x i64>
+  ret <vscale x 2 x i64> %trunc
+}
 
 define <vscale x 2 x i64> @uabd_d_promoted_ops(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b) {
 ; CHECK-LABEL: uabd_d_promoted_ops:

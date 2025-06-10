@@ -25,7 +25,6 @@
 
 #include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
-#include "lld/Common/Driver.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Memory.h"
@@ -43,7 +42,6 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TarWriter.h"
@@ -52,8 +50,6 @@
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TextAPI/Architecture.h"
 #include "llvm/TextAPI/PackedVersion.h"
-
-#include <algorithm>
 
 using namespace llvm;
 using namespace llvm::MachO;
@@ -314,8 +310,6 @@ static InputFile *addFile(StringRef path, LoadType loadType,
       std::unique_ptr<object::Archive> archive = CHECK(
           object::Archive::create(mbref), path + ": failed to parse archive");
 
-      if (!archive->isEmpty() && !archive->hasSymbolTable())
-        error(path + ": archive has no index; run ranlib to add one");
       file = make<ArchiveFile>(std::move(archive), isForceHidden);
 
       if (tar && file->getArchive().isThin())
@@ -362,9 +356,11 @@ static InputFile *addFile(StringRef path, LoadType loadType,
                 ": Archive::children failed: " + toString(std::move(e)));
       }
     } else if (isCommandLineLoad && config->forceLoadObjC) {
-      for (const object::Archive::Symbol &sym : file->getArchive().symbols())
-        if (sym.getName().starts_with(objc::symbol_names::klass))
-          file->fetch(sym);
+      if (file->getArchive().hasSymbolTable()) {
+        for (const object::Archive::Symbol &sym : file->getArchive().symbols())
+          if (sym.getName().starts_with(objc::symbol_names::klass))
+            file->fetch(sym);
+      }
 
       // TODO: no need to look for ObjC sections for a given archive member if
       // we already found that it contains an ObjC symbol.
@@ -394,7 +390,6 @@ static InputFile *addFile(StringRef path, LoadType loadType,
                 ": Archive::children failed: " + toString(std::move(e)));
       }
     }
-
     file->addLazySymbols();
     loadedArchives[path] = ArchiveFileInfo{file, isCommandLineLoad};
     newFile = file;
@@ -616,8 +611,7 @@ static bool compileBitcodeFiles() {
         lto->add(*bitcodeFile);
 
   std::vector<ObjFile *> compiled = lto->compile();
-  for (ObjFile *file : compiled)
-    inputFiles.insert(file);
+  inputFiles.insert_range(compiled);
 
   return !compiled.empty();
 }
@@ -1676,6 +1670,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   // Must be set before any InputSections and Symbols are created.
   config->deadStrip = args.hasArg(OPT_dead_strip);
+  config->interposable = args.hasArg(OPT_interposable);
 
   config->systemLibraryRoots = getSystemLibraryRoots(args);
   if (const char *path = getReproduceOption(args)) {
@@ -1806,6 +1801,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->keepICFStabs = args.hasArg(OPT_keep_icf_stabs);
   config->dedupStrings =
       args.hasFlag(OPT_deduplicate_strings, OPT_no_deduplicate_strings, true);
+  config->dedupSymbolStrings = !args.hasArg(OPT_no_deduplicate_symbol_strings);
   config->deadStripDuplicates = args.hasArg(OPT_dead_strip_duplicates);
   config->warnDylibInstallName = args.hasFlag(
       OPT_warn_dylib_install_name, OPT_no_warn_dylib_install_name, false);
@@ -1831,6 +1827,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       args.hasFlag(OPT_warn_thin_archive_missing_members,
                    OPT_no_warn_thin_archive_missing_members, true);
   config->generateUuid = !args.hasArg(OPT_no_uuid);
+  config->disableVerify = args.hasArg(OPT_disable_verify);
 
   auto IncompatWithCGSort = [&](StringRef firstArgStr) {
     // Throw an error only if --call-graph-profile-sort is explicitly specified
@@ -1838,26 +1835,47 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       if (const Arg *arg = args.getLastArgNoClaim(OPT_call_graph_profile_sort))
         error(firstArgStr + " is incompatible with " + arg->getSpelling());
   };
+  if (args.hasArg(OPT_irpgo_profile_sort) ||
+      args.hasArg(OPT_irpgo_profile_sort_eq))
+    warn("--irpgo-profile-sort is deprecated. Please use "
+         "--bp-startup-sort=function");
+  if (const Arg *arg = args.getLastArg(OPT_irpgo_profile))
+    config->irpgoProfilePath = arg->getValue();
+
   if (const Arg *arg = args.getLastArg(OPT_irpgo_profile_sort)) {
-    config->irpgoProfileSortProfilePath = arg->getValue();
+    config->irpgoProfilePath = arg->getValue();
+    config->bpStartupFunctionSort = true;
     IncompatWithCGSort(arg->getSpelling());
   }
-  config->compressionSortStartupFunctions =
-      args.hasFlag(OPT_compression_sort_startup_functions,
-                   OPT_no_compression_sort_startup_functions, false);
-  if (config->irpgoProfileSortProfilePath.empty() &&
-      config->compressionSortStartupFunctions)
-    error("--compression-sort-startup-functions must be used with "
-          "--irpgo-profile-sort");
-  if (const Arg *arg = args.getLastArg(OPT_compression_sort)) {
+  config->bpCompressionSortStartupFunctions =
+      args.hasFlag(OPT_bp_compression_sort_startup_functions,
+                   OPT_no_bp_compression_sort_startup_functions, false);
+  if (const Arg *arg = args.getLastArg(OPT_bp_startup_sort)) {
+    StringRef startupSortStr = arg->getValue();
+    if (startupSortStr == "function") {
+      config->bpStartupFunctionSort = true;
+    } else if (startupSortStr != "none") {
+      error("unknown value `" + startupSortStr + "` for " + arg->getSpelling());
+    }
+    if (startupSortStr != "none")
+      IncompatWithCGSort(arg->getSpelling());
+  }
+  if (!config->bpStartupFunctionSort &&
+      config->bpCompressionSortStartupFunctions)
+    error("--bp-compression-sort-startup-functions must be used with "
+          "--bp-startup-sort=function");
+  if (config->irpgoProfilePath.empty() && config->bpStartupFunctionSort)
+    error("--bp-startup-sort=function must be used with "
+          "--irpgo-profile");
+  if (const Arg *arg = args.getLastArg(OPT_bp_compression_sort)) {
     StringRef compressionSortStr = arg->getValue();
     if (compressionSortStr == "function") {
-      config->functionOrderForCompression = true;
+      config->bpFunctionOrderForCompression = true;
     } else if (compressionSortStr == "data") {
-      config->dataOrderForCompression = true;
+      config->bpDataOrderForCompression = true;
     } else if (compressionSortStr == "both") {
-      config->functionOrderForCompression = true;
-      config->dataOrderForCompression = true;
+      config->bpFunctionOrderForCompression = true;
+      config->bpDataOrderForCompression = true;
     } else if (compressionSortStr != "none") {
       error("unknown value `" + compressionSortStr + "` for " +
             arg->getSpelling());
@@ -1865,7 +1883,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     if (compressionSortStr != "none")
       IncompatWithCGSort(arg->getSpelling());
   }
-  config->verboseBpSectionOrderer = args.hasArg(OPT_verbose_bp_section_orderer);
+  config->bpVerboseSectionOrderer = args.hasArg(OPT_verbose_bp_section_orderer);
 
   for (const Arg *arg : args.filtered(OPT_alias)) {
     config->aliasedSymbols.push_back(

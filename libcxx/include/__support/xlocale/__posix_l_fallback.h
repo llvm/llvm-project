@@ -38,6 +38,8 @@ inline _LIBCPP_HIDE_FROM_ABI int toupper_l(int __c, locale_t) { return ::toupper
 inline _LIBCPP_HIDE_FROM_ABI int tolower_l(int __c, locale_t) { return ::tolower(__c); }
 
 #if _LIBCPP_HAS_WIDE_CHARACTERS
+inline _LIBCPP_HIDE_FROM_ABI int iswctype_l(wint_t __c, wctype_t __type, locale_t) { return ::iswctype(__c, __type); }
+
 inline _LIBCPP_HIDE_FROM_ABI int iswalpha_l(wint_t __c, locale_t) { return ::iswalpha(__c); }
 
 inline _LIBCPP_HIDE_FROM_ABI int iswblank_l(wint_t __c, locale_t) { return ::iswblank(__c); }
