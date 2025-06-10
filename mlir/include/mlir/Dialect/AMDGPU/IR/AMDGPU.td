@@ -194,7 +194,7 @@ def AMDGPU_PackedScaledTruncOp
     packed vectors of float values.
   }];
   let assemblyFormat = [{
-    attr-dict $source `into` ($existing^):(`undef`)? `[` `index` $index `]`
+    attr-dict $source `into` ($existing^):(`undef`)? `[` $index `]`
     `,` $scale
     `:` type($source) `to` type($res) (`into` type($existing)^)?
   }];

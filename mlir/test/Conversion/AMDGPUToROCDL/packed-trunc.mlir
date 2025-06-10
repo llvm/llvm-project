@@ -11,7 +11,7 @@
 // CHECK:       [[CAST:%.+]] = builtin.unrealized_conversion_cast [[BITCAST]] : vector<4xi8> to vector<4xf8E4M3FN>
 // CHECK:       return [[CAST]] : vector<4xf8E4M3FN>
 func.func @packed_scaled_trunc_f8e4m3_f32(%v: vector<2xf32>, %scale: f32) -> vector<4xf8E4M3FN> {
-  %ret = amdgpu.packed_scaled_trunc %v into undef[index 0], %scale : vector<2xf32> to vector<4xf8E4M3FN>
+  %ret = amdgpu.packed_scaled_trunc %v into undef[0], %scale : vector<2xf32> to vector<4xf8E4M3FN>
   func.return %ret : vector<4xf8E4M3FN>
 }
 
@@ -27,7 +27,7 @@ func.func @packed_scaled_trunc_f8e4m3_f32(%v: vector<2xf32>, %scale: f32) -> vec
 // CHECK:       [[CAST:%.+]] = builtin.unrealized_conversion_cast [[BITCAST]] : vector<4xi8> to vector<4xf8E4M3FN>
 // CHECK:       return [[CAST]] : vector<4xf8E4M3FN>
 func.func @packed_scaled_trunc_into_f8e4m3_f32(%v: vector<2xf32>, %existing: vector<4xf8E4M3FN>, %scale: f32) -> vector<4xf8E4M3FN> {
-  %ret = amdgpu.packed_scaled_trunc %v into %existing[index 0], %scale : vector<2xf32> to vector<4xf8E4M3FN> into vector<4xf8E4M3FN>
+  %ret = amdgpu.packed_scaled_trunc %v into %existing[0], %scale : vector<2xf32> to vector<4xf8E4M3FN> into vector<4xf8E4M3FN>
   func.return %ret : vector<4xf8E4M3FN>
 }
 
@@ -38,7 +38,7 @@ func.func @packed_scaled_trunc_into_f8e4m3_f32(%v: vector<2xf32>, %existing: vec
 // CHECK:       [[CAST:%.+]] = builtin.unrealized_conversion_cast [[BITCAST]] : vector<4xi8> to vector<4xf8E4M3FN>
 // CHECK:       return [[CAST]] : vector<4xf8E4M3FN>
 func.func @packed_scaled_trunc_f8e4m3_f16(%v: vector<2xf16>, %scale: f32) -> vector<4xf8E4M3FN> {
-  %ret = amdgpu.packed_scaled_trunc %v into undef[index 0], %scale : vector<2xf16> to vector<4xf8E4M3FN>
+  %ret = amdgpu.packed_scaled_trunc %v into undef[0], %scale : vector<2xf16> to vector<4xf8E4M3FN>
   func.return %ret : vector<4xf8E4M3FN>
 }
 
@@ -50,7 +50,7 @@ func.func @packed_scaled_trunc_f8e4m3_f16(%v: vector<2xf16>, %scale: f32) -> vec
 // CHECK:       [[CAST:%.+]] = builtin.unrealized_conversion_cast [[BITCAST]] : vector<4xi8> to vector<4xf8E4M3FN>
 // CHECK:       return [[CAST]] : vector<4xf8E4M3FN>
 func.func @packed_scaled_trunc_into_f8e4m3_f16(%v: vector<2xf16>, %existing: vector<4xf8E4M3FN>, %scale: f32) -> vector<4xf8E4M3FN> {
-  %ret = amdgpu.packed_scaled_trunc %v into %existing[index 0], %scale : vector<2xf16> to vector<4xf8E4M3FN> into vector<4xf8E4M3FN>
+  %ret = amdgpu.packed_scaled_trunc %v into %existing[0], %scale : vector<2xf16> to vector<4xf8E4M3FN> into vector<4xf8E4M3FN>
   func.return %ret : vector<4xf8E4M3FN>
 }
 
@@ -61,7 +61,7 @@ func.func @packed_scaled_trunc_into_f8e4m3_f16(%v: vector<2xf16>, %existing: vec
 // CHECK:       [[CAST:%.+]] = builtin.unrealized_conversion_cast [[BITCAST]] : vector<4xi8> to vector<4xf8E4M3FN>
 // CHECK:       return [[CAST]] : vector<4xf8E4M3FN>
 func.func @packed_scaled_trunc_f8e4m3_bf16(%v: vector<2xbf16>, %scale: f32) -> vector<4xf8E4M3FN> {
-  %ret = amdgpu.packed_scaled_trunc %v into undef[index 0], %scale : vector<2xbf16> to vector<4xf8E4M3FN>
+  %ret = amdgpu.packed_scaled_trunc %v into undef[0], %scale : vector<2xbf16> to vector<4xf8E4M3FN>
   func.return %ret : vector<4xf8E4M3FN>
 }
 
@@ -73,7 +73,7 @@ func.func @packed_scaled_trunc_f8e4m3_bf16(%v: vector<2xbf16>, %scale: f32) -> v
 // CHECK:       [[CAST:%.+]] = builtin.unrealized_conversion_cast [[BITCAST]] : vector<4xi8> to vector<4xf8E4M3FN>
 // CHECK:       return [[CAST]] : vector<4xf8E4M3FN>
 func.func @packed_scaled_trunc_into_f8e4m3_bf16(%v: vector<2xbf16>, %existing: vector<4xf8E4M3FN>, %scale: f32) -> vector<4xf8E4M3FN> {
-  %ret = amdgpu.packed_scaled_trunc %v into %existing[index 0], %scale : vector<2xbf16> to vector<4xf8E4M3FN> into vector<4xf8E4M3FN>
+  %ret = amdgpu.packed_scaled_trunc %v into %existing[0], %scale : vector<2xbf16> to vector<4xf8E4M3FN> into vector<4xf8E4M3FN>
   func.return %ret : vector<4xf8E4M3FN>
 }
 
@@ -88,7 +88,7 @@ func.func @packed_scaled_trunc_into_f8e4m3_bf16(%v: vector<2xbf16>, %existing: v
 // CHECK:       [[CAST:%.+]] = builtin.unrealized_conversion_cast [[BITCAST]] : vector<4xi8> to vector<4xf8E5M2>
 // CHECK:       return [[CAST]] : vector<4xf8E5M2>
 func.func @packed_scaled_trunc_f8e5m2_f32(%v: vector<2xf32>, %scale: f32) -> vector<4xf8E5M2> {
-  %ret = amdgpu.packed_scaled_trunc %v into undef[index 0], %scale : vector<2xf32> to vector<4xf8E5M2>
+  %ret = amdgpu.packed_scaled_trunc %v into undef[0], %scale : vector<2xf32> to vector<4xf8E5M2>
   func.return %ret : vector<4xf8E5M2>
 }
 
@@ -104,7 +104,7 @@ func.func @packed_scaled_trunc_f8e5m2_f32(%v: vector<2xf32>, %scale: f32) -> vec
 // CHECK:       [[CAST:%.+]] = builtin.unrealized_conversion_cast [[BITCAST]] : vector<4xi8> to vector<4xf8E5M2>
 // CHECK:       return [[CAST]] : vector<4xf8E5M2>
 func.func @packed_scaled_trunc_into_f8e5m2_f32(%v: vector<2xf32>, %existing: vector<4xf8E5M2>, %scale: f32) -> vector<4xf8E5M2> {
-  %ret = amdgpu.packed_scaled_trunc %v into %existing[index 0], %scale : vector<2xf32> to vector<4xf8E5M2> into vector<4xf8E5M2>
+  %ret = amdgpu.packed_scaled_trunc %v into %existing[0], %scale : vector<2xf32> to vector<4xf8E5M2> into vector<4xf8E5M2>
   func.return %ret : vector<4xf8E5M2>
 }
 
@@ -115,7 +115,7 @@ func.func @packed_scaled_trunc_into_f8e5m2_f32(%v: vector<2xf32>, %existing: vec
 // CHECK:       [[CAST:%.+]] = builtin.unrealized_conversion_cast [[BITCAST]] : vector<4xi8> to vector<4xf8E5M2>
 // CHECK:       return [[CAST]] : vector<4xf8E5M2>
 func.func @packed_scaled_trunc_f8e5m2_f16(%v: vector<2xf16>, %scale: f32) -> vector<4xf8E5M2> {
-  %ret = amdgpu.packed_scaled_trunc %v into undef[index 0], %scale : vector<2xf16> to vector<4xf8E5M2>
+  %ret = amdgpu.packed_scaled_trunc %v into undef[0], %scale : vector<2xf16> to vector<4xf8E5M2>
   func.return %ret : vector<4xf8E5M2>
 }
 
@@ -127,7 +127,7 @@ func.func @packed_scaled_trunc_f8e5m2_f16(%v: vector<2xf16>, %scale: f32) -> vec
 // CHECK:       [[CAST:%.+]] = builtin.unrealized_conversion_cast [[BITCAST]] : vector<4xi8> to vector<4xf8E5M2>
 // CHECK:       return [[CAST]] : vector<4xf8E5M2>
 func.func @packed_scaled_trunc_into_f8e5m2_f16(%v: vector<2xf16>, %existing: vector<4xf8E5M2>, %scale: f32) -> vector<4xf8E5M2> {
-  %ret = amdgpu.packed_scaled_trunc %v into %existing[index 0], %scale : vector<2xf16> to vector<4xf8E5M2> into vector<4xf8E5M2>
+  %ret = amdgpu.packed_scaled_trunc %v into %existing[0], %scale : vector<2xf16> to vector<4xf8E5M2> into vector<4xf8E5M2>
   func.return %ret : vector<4xf8E5M2>
 }
 
@@ -138,7 +138,7 @@ func.func @packed_scaled_trunc_into_f8e5m2_f16(%v: vector<2xf16>, %existing: vec
 // CHECK:       [[CAST:%.+]] = builtin.unrealized_conversion_cast [[BITCAST]] : vector<4xi8> to vector<4xf8E5M2>
 // CHECK:       return [[CAST]] : vector<4xf8E5M2>
 func.func @packed_scaled_trunc_f8e5m2_bf16(%v: vector<2xbf16>, %scale: f32) -> vector<4xf8E5M2> {
-  %ret = amdgpu.packed_scaled_trunc %v into undef[index 0], %scale : vector<2xbf16> to vector<4xf8E5M2>
+  %ret = amdgpu.packed_scaled_trunc %v into undef[0], %scale : vector<2xbf16> to vector<4xf8E5M2>
   func.return %ret : vector<4xf8E5M2>
 }
 
@@ -150,7 +150,7 @@ func.func @packed_scaled_trunc_f8e5m2_bf16(%v: vector<2xbf16>, %scale: f32) -> v
 // CHECK:       [[CAST:%.+]] = builtin.unrealized_conversion_cast [[BITCAST]] : vector<4xi8> to vector<4xf8E5M2>
 // CHECK:       return [[CAST]] : vector<4xf8E5M2>
 func.func @packed_scaled_trunc_into_f8e5m2_bf16(%v: vector<2xbf16>, %existing: vector<4xf8E5M2>, %scale: f32) -> vector<4xf8E5M2> {
-  %ret = amdgpu.packed_scaled_trunc %v into %existing[index 0], %scale : vector<2xbf16> to vector<4xf8E5M2> into vector<4xf8E5M2>
+  %ret = amdgpu.packed_scaled_trunc %v into %existing[0], %scale : vector<2xbf16> to vector<4xf8E5M2> into vector<4xf8E5M2>
   func.return %ret : vector<4xf8E5M2>
 }
 
@@ -165,7 +165,7 @@ func.func @packed_scaled_trunc_into_f8e5m2_bf16(%v: vector<2xbf16>, %existing: v
 // CHECK:       [[CAST:%.+]] = builtin.unrealized_conversion_cast [[BITCAST]] : vector<8xi4> to vector<8xf4E2M1FN>
 // CHECK:       return [[CAST]] : vector<8xf4E2M1FN>
 func.func @packed_scaled_trunc_f4e2m1_f32(%v: vector<2xf32>, %scale: f32) -> vector<8xf4E2M1FN> {
-  %ret = amdgpu.packed_scaled_trunc %v into undef[index 0], %scale : vector<2xf32> to vector<8xf4E2M1FN>
+  %ret = amdgpu.packed_scaled_trunc %v into undef[0], %scale : vector<2xf32> to vector<8xf4E2M1FN>
   func.return %ret : vector<8xf4E2M1FN>
 }
 
@@ -181,7 +181,7 @@ func.func @packed_scaled_trunc_f4e2m1_f32(%v: vector<2xf32>, %scale: f32) -> vec
 // CHECK:       [[CAST:%.+]] = builtin.unrealized_conversion_cast [[BITCAST]] : vector<8xi4> to vector<8xf4E2M1FN>
 // CHECK:       return [[CAST]] : vector<8xf4E2M1FN>
 func.func @packed_scaled_trunc_into_f4e2m1_f32(%v: vector<2xf32>, %existing: vector<8xf4E2M1FN>, %scale: f32) -> vector<8xf4E2M1FN> {
-  %ret = amdgpu.packed_scaled_trunc %v into %existing[index 0], %scale : vector<2xf32> to vector<8xf4E2M1FN> into vector<8xf4E2M1FN>
+  %ret = amdgpu.packed_scaled_trunc %v into %existing[0], %scale : vector<2xf32> to vector<8xf4E2M1FN> into vector<8xf4E2M1FN>
   func.return %ret : vector<8xf4E2M1FN>
 }
 
@@ -192,7 +192,7 @@ func.func @packed_scaled_trunc_into_f4e2m1_f32(%v: vector<2xf32>, %existing: vec
 // CHECK:       [[CAST:%.+]] = builtin.unrealized_conversion_cast [[BITCAST]] : vector<8xi4> to vector<8xf4E2M1FN>
 // CHECK:       return [[CAST]] : vector<8xf4E2M1FN>
 func.func @packed_scaled_trunc_f4e2m1_f16(%v: vector<2xf16>, %scale: f32) -> vector<8xf4E2M1FN> {
-  %ret = amdgpu.packed_scaled_trunc %v into undef[index 0], %scale : vector<2xf16> to vector<8xf4E2M1FN>
+  %ret = amdgpu.packed_scaled_trunc %v into undef[0], %scale : vector<2xf16> to vector<8xf4E2M1FN>
   func.return %ret : vector<8xf4E2M1FN>
 }
 
@@ -204,7 +204,7 @@ func.func @packed_scaled_trunc_f4e2m1_f16(%v: vector<2xf16>, %scale: f32) -> vec
 // CHECK:       [[CAST:%.+]] = builtin.unrealized_conversion_cast [[BITCAST]] : vector<8xi4> to vector<8xf4E2M1FN>
 // CHECK:       return [[CAST]] : vector<8xf4E2M1FN>
 func.func @packed_scaled_trunc_into_f4e2m1_f16(%v: vector<2xf16>, %existing: vector<8xf4E2M1FN>, %scale: f32) -> vector<8xf4E2M1FN> {
-  %ret = amdgpu.packed_scaled_trunc %v into %existing[index 0], %scale : vector<2xf16> to vector<8xf4E2M1FN> into vector<8xf4E2M1FN>
+  %ret = amdgpu.packed_scaled_trunc %v into %existing[0], %scale : vector<2xf16> to vector<8xf4E2M1FN> into vector<8xf4E2M1FN>
   func.return %ret : vector<8xf4E2M1FN>
 }
 
@@ -215,7 +215,7 @@ func.func @packed_scaled_trunc_into_f4e2m1_f16(%v: vector<2xf16>, %existing: vec
 // CHECK:       [[CAST:%.+]] = builtin.unrealized_conversion_cast [[BITCAST]] : vector<8xi4> to vector<8xf4E2M1FN>
 // CHECK:       return [[CAST]] : vector<8xf4E2M1FN>
 func.func @packed_scaled_trunc_f4e2m1_bf16(%v: vector<2xbf16>, %scale: f32) -> vector<8xf4E2M1FN> {
-  %ret = amdgpu.packed_scaled_trunc %v into undef[index 0], %scale : vector<2xbf16> to vector<8xf4E2M1FN>
+  %ret = amdgpu.packed_scaled_trunc %v into undef[0], %scale : vector<2xbf16> to vector<8xf4E2M1FN>
   func.return %ret : vector<8xf4E2M1FN>
 }
 
@@ -227,6 +227,6 @@ func.func @packed_scaled_trunc_f4e2m1_bf16(%v: vector<2xbf16>, %scale: f32) -> v
 // CHECK:       [[CAST:%.+]] = builtin.unrealized_conversion_cast [[BITCAST]] : vector<8xi4> to vector<8xf4E2M1FN>
 // CHECK:       return [[CAST]] : vector<8xf4E2M1FN>
 func.func @packed_scaled_trunc_into_f4e2m1_bf16(%v: vector<2xbf16>, %existing: vector<8xf4E2M1FN>, %scale: f32) -> vector<8xf4E2M1FN> {
-  %ret = amdgpu.packed_scaled_trunc %v into %existing[index 0], %scale : vector<2xbf16> to vector<8xf4E2M1FN> into vector<8xf4E2M1FN>
+  %ret = amdgpu.packed_scaled_trunc %v into %existing[0], %scale : vector<2xbf16> to vector<8xf4E2M1FN> into vector<8xf4E2M1FN>
   func.return %ret : vector<8xf4E2M1FN>
 }
