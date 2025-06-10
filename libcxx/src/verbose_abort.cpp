@@ -30,6 +30,9 @@ _LIBCPP_WEAK void __libcpp_verbose_abort(char const* format, ...) noexcept {
     va_list list;
     va_start(list, format);
     std::vfprintf(stderr, format, list);
+    // Callers of `__libcpp_verbose_abort` do not include a newline but when
+    // writing the message to stderr we need to include one.
+    std::fputc('\n', stderr);
     va_end(list);
   }
 

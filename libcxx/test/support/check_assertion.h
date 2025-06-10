@@ -340,7 +340,7 @@ void std::__libcpp_verbose_abort(char const* format, ...) noexcept {
 
   std::fprintf(stderr, "%s\n", Marker);
   std::vfprintf(stderr, format, args);
-  std::fprintf(stderr, "%s", Marker);
+  std::fprintf(stderr, "\n%s", Marker);
 
   va_end(args);
 
