@@ -5790,7 +5790,8 @@ static BasicBlock::iterator findInsertPos(Value *Addr, Instruction *MemoryInst,
   // instruction after it.
   if (SunkAddr) {
     if (Instruction *AddrInst = dyn_cast<Instruction>(SunkAddr))
-      return std::next(AddrInst->getIterator());
+      return AddrInst->isTerminator() ? MemoryInst->getIterator()
+                                      : std::next(AddrInst->getIterator());
   }
 
   // Find the first user of Addr in current BB.
