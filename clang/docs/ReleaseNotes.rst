@@ -157,6 +157,8 @@ Resolutions to C++ Defect Reports
   `constraint-expression <https://cplusplus.github.io/CWG/issues/2517.html>`_.
 - Implemented `CWG3005 Function parameters should never be name-independent <https://wg21.link/CWG3005>`_.
 
+- Implemented `CWG2496 ref-qualifiers and virtual overriding <https://wg21.link/CWG2496>`_.
+
 C Language Changes
 ------------------
 
