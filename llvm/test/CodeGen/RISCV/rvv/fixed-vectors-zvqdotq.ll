@@ -232,13 +232,13 @@ define i32 @reduce_of_sext(<16 x i8> %a) {
 ;
 ; DOT-LABEL: reduce_of_sext:
 ; DOT:       # %bb.0: # %entry
+; DOT-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; DOT-NEXT:    vmv.v.i v9, 1
 ; DOT-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; DOT-NEXT:    vmv.v.i v9, 0
-; DOT-NEXT:    lui a0, 4112
-; DOT-NEXT:    addi a0, a0, 257
-; DOT-NEXT:    vqdot.vx v9, v8, a0
+; DOT-NEXT:    vmv.v.i v10, 0
+; DOT-NEXT:    vqdot.vv v10, v8, v9
 ; DOT-NEXT:    vmv.s.x v8, zero
-; DOT-NEXT:    vredsum.vs v8, v9, v8
+; DOT-NEXT:    vredsum.vs v8, v10, v8
 ; DOT-NEXT:    vmv.x.s a0, v8
 ; DOT-NEXT:    ret
 entry:
@@ -259,13 +259,13 @@ define i32 @reduce_of_zext(<16 x i8> %a) {
 ;
 ; DOT-LABEL: reduce_of_zext:
 ; DOT:       # %bb.0: # %entry
+; DOT-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; DOT-NEXT:    vmv.v.i v9, 1
 ; DOT-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; DOT-NEXT:    vmv.v.i v9, 0
-; DOT-NEXT:    lui a0, 4112
-; DOT-NEXT:    addi a0, a0, 257
-; DOT-NEXT:    vqdotu.vx v9, v8, a0
+; DOT-NEXT:    vmv.v.i v10, 0
+; DOT-NEXT:    vqdotu.vv v10, v8, v9
 ; DOT-NEXT:    vmv.s.x v8, zero
-; DOT-NEXT:    vredsum.vs v8, v9, v8
+; DOT-NEXT:    vredsum.vs v8, v10, v8
 ; DOT-NEXT:    vmv.x.s a0, v8
 ; DOT-NEXT:    ret
 entry:

@@ -991,7 +991,7 @@ bool AArch64DAGToDAGISel::SelectArithExtendedRegister(SDValue N, SDValue &Reg,
 }
 
 /// SelectArithUXTXRegister - Select a "UXTX register" operand. This
-/// operand is refered by the instructions have SP operand
+/// operand is referred by the instructions have SP operand
 bool AArch64DAGToDAGISel::SelectArithUXTXRegister(SDValue N, SDValue &Reg,
                                                   SDValue &Shift) {
   unsigned ShiftVal = 0;
@@ -2841,7 +2841,7 @@ static bool isBitfieldDstMask(uint64_t DstMask, const APInt &BitsToBeInserted,
 // After #1, x useful bits are 0x7, then the useful bits of x, live through
 // y.
 // After #2, the useful bits of x are 0x4.
-// However, if x is used on an unpredicatable instruction, then all its bits
+// However, if x is used on an unpredictable instruction, then all its bits
 // are useful.
 // E.g.
 // 1. y = x & 0x7
@@ -3611,7 +3611,7 @@ static bool tryBitfieldInsertOpFromOr(SDNode *N, const APInt &UsefulBits,
       DstLSB = 0;
       Width = ImmS - ImmR + 1;
       // FIXME: This constraint is to catch bitfield insertion we may
-      // want to widen the pattern if we want to grab general bitfied
+      // want to widen the pattern if we want to grab general bitfield
       // move case
       if (Width <= 0)
         continue;
@@ -3999,7 +3999,7 @@ static int getIntOperandFromRegisterString(StringRef RegString) {
 
 // Lower the read_register intrinsic to an MRS instruction node if the special
 // register string argument is either of the form detailed in the ALCE (the
-// form described in getIntOperandsFromRegsterString) or is a named register
+// form described in getIntOperandsFromRegisterString) or is a named register
 // known by the MRS SysReg mapper.
 bool AArch64DAGToDAGISel::tryReadRegister(SDNode *N) {
   const auto *MD = cast<MDNodeSDNode>(N->getOperand(1));
@@ -4060,7 +4060,7 @@ bool AArch64DAGToDAGISel::tryReadRegister(SDNode *N) {
 
 // Lower the write_register intrinsic to an MSR instruction node if the special
 // register string argument is either of the form detailed in the ALCE (the
-// form described in getIntOperandsFromRegsterString) or is a named register
+// form described in getIntOperandsFromRegisterString) or is a named register
 // known by the MSR SysReg mapper.
 bool AArch64DAGToDAGISel::tryWriteRegister(SDNode *N) {
   const auto *MD = cast<MDNodeSDNode>(N->getOperand(1));
@@ -7278,7 +7278,7 @@ static EVT getPackedVectorTypeFromPredicateType(LLVMContext &Ctx, EVT PredVT,
 }
 
 /// Return the EVT of the data associated to a memory operation in \p
-/// Root. If such EVT cannot be retrived, it returns an invalid EVT.
+/// Root. If such EVT cannot be retrieved, it returns an invalid EVT.
 static EVT getMemVTFromNode(LLVMContext &Ctx, SDNode *Root) {
   if (auto *MemIntr = dyn_cast<MemIntrinsicSDNode>(Root))
     return MemIntr->getMemoryVT();

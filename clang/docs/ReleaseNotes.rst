@@ -157,6 +157,8 @@ Resolutions to C++ Defect Reports
   `constraint-expression <https://cplusplus.github.io/CWG/issues/2517.html>`_.
 - Implemented `CWG3005 Function parameters should never be name-independent <https://wg21.link/CWG3005>`_.
 
+- Implemented `CWG2496 ref-qualifiers and virtual overriding <https://wg21.link/CWG2496>`_.
+
 C Language Changes
 ------------------
 
@@ -336,6 +338,8 @@ New Compiler Flags
 - New option ``-ftime-report-json`` added which outputs the same timing data as ``-ftime-report`` but formatted as JSON.
 
 - New option ``-Wnrvo`` added and disabled by default to warn about missed NRVO opportunities.
+
+- New option ``-ignore-pch`` added to disable precompiled headers. It overrides ``-emit-pch`` and ``-include-pch``. (#GH142409, `PCHDocs <https://clang.llvm.org/docs/UsersManual.html#ignoring-a-pch-file>`_).
 
 Deprecated Compiler Flags
 -------------------------
