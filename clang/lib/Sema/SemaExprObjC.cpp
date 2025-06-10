@@ -5163,8 +5163,9 @@ ExprResult SemaObjC::ActOnObjCAvailabilityCheckExpr(
         AtLoc, RParen, Context.BoolTy, Spec.getDomainName(), Context);
   }
 
-  auto FindSpecVersion = [&](StringRef Platform)
-      -> std::optional<ObjCAvailabilityCheckExpr::VersionAsWritten> {
+  auto FindSpecVersion =
+      [&](StringRef Platform,
+          const llvm::Triple::OSType &OS) -> std::optional<ObjCAvailabilityCheckExpr::VersionAsWritten> {
     auto Spec = llvm::find_if(AvailSpecs, [&](const AvailabilitySpec &Spec) {
       return Spec.getPlatform() == Platform;
     });
@@ -5177,18 +5178,14 @@ ExprResult SemaObjC::ActOnObjCAvailabilityCheckExpr(
     }
     if (Spec == AvailSpecs.end())
       return std::nullopt;
-    if (Platform == "macos") {
-      return ObjCAvailabilityCheckExpr::VersionAsWritten{
-          llvm::Triple::getCanonicalVersionForOS(llvm::Triple::MacOSX,
-                                                 Spec->getVersion()),
-          Spec->getVersion()};
-    }
-    return ObjCAvailabilityCheckExpr::VersionAsWritten{Spec->getVersion(),
-                                                       Spec->getVersion()};
+    return ObjCAvailabilityCheckExpr::VersionAsWritten{llvm::Triple::getCanonicalVersionForOS(
+        OS, Spec->getVersion(),
+        llvm::Triple::isValidVersionForOS(OS, Spec->getVersion())), Spec->getVersion()};
   };
 
   auto MaybeVersion =
-      FindSpecVersion(Context.getTargetInfo().getPlatformName());
+      FindSpecVersion(Context.getTargetInfo().getPlatformName(),
+       Context.getTargetInfo().getTriple().getOS());
   ObjCAvailabilityCheckExpr::VersionAsWritten Version;
   if (MaybeVersion)
     Version = *MaybeVersion;
