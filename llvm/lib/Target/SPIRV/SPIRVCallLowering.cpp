@@ -280,6 +280,8 @@ getExecutionModel(const SPIRVSubtarget &STI, const Function &F) {
     const auto value = attribute.getValueAsString();
     if (value == "compute")
       return SPIRV::ExecutionModel::GLCompute;
+    if (value == "vertex")
+      return SPIRV::ExecutionModel::Vertex;
 
     report_fatal_error(
         "This HLSL entry point is not supported by this backend.");
@@ -302,6 +304,8 @@ getExecutionModel(const SPIRVSubtarget &STI, const Function &F) {
   const auto value = attribute.getValueAsString();
   if (value == "compute")
     return SPIRV::ExecutionModel::GLCompute;
+  if (value == "vertex")
+    return SPIRV::ExecutionModel::Vertex;
 
   report_fatal_error("This HLSL entry point is not supported by this backend.");
 }
