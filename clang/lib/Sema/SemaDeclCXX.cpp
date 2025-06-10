@@ -7159,9 +7159,9 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
     // "effectively constexpr" for better compatibility.
     // See https://github.com/llvm/llvm-project/issues/102293 for more info.
     if (isa<CXXDestructorDecl>(M)) {
-      llvm::DenseSet<QualType> Visited;
+      llvm::SmallDenseSet<QualType> Visited;
       auto Check = [&Visited](QualType T, auto &&Check) -> bool {
-        if (!Visited.insert(T).second)
+        if (!Visited.insert(T.getCanonicalType().getUnqualifiedType()).second)
           return false;
         const CXXRecordDecl *RD =
             T->getBaseElementTypeUnsafe()->getAsCXXRecordDecl();
