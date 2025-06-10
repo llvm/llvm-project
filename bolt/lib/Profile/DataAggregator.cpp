@@ -1286,17 +1286,15 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     Addr[0] = Location(Type == FT ? Trace::FT_ONLY : Trace::FT_EXTERNAL_ORIGIN);
   }
 
-  if (Type == BRANCH) {
+  if (Type == BRANCH)
     Addr[2] = Location(Trace::BR_ONLY);
-  }
+  else
+    NumTraces += Count;
 
   Trace T{Addr[0]->Offset, Addr[1]->Offset, Addr[2]->Offset};
   TakenBranchInfo TI{(uint64_t)Count, (uint64_t)Mispreds};
-
   Traces.emplace_back(T, TI);
 
-  if (Addr[2]->Offset != Trace::BR_ONLY)
-    NumTraces += Count;
   NumTotalSamples += Count;
 
   return std::error_code();
@@ -1393,7 +1391,7 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
     // chronological order)
     if (NeedsSkylakeFix && NumEntry <= 2)
       continue;
-    uint64_t TraceTo = Trace::EXTERNAL;
+    uint64_t TraceTo = Trace::BR_ONLY;
     if (NextLBR) {
       TraceTo = NextLBR->From;
       ++NumTraces;
