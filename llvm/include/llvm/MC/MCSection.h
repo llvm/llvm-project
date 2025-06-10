@@ -17,6 +17,7 @@
 #include "llvm/MC/MCFragment.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <utility>
 
@@ -33,7 +34,7 @@ class Triple;
 
 /// Instances of this class represent a uniqued identifier for a section in the
 /// current translation unit.  The MCContext class uniques and creates these.
-class MCSection {
+class LLVM_ABI MCSection {
 public:
   friend MCAssembler;
   friend MCObjectStreamer;
@@ -98,8 +99,6 @@ private:
 
   /// Whether this section has had instructions emitted into it.
   bool HasInstructions : 1;
-
-  bool HasLayout : 1;
 
   bool IsRegistered : 1;
 
@@ -170,9 +169,6 @@ public:
 
   bool hasInstructions() const { return HasInstructions; }
   void setHasInstructions(bool Value) { HasInstructions = Value; }
-
-  bool hasLayout() const { return HasLayout; }
-  void setHasLayout(bool Value) { HasLayout = Value; }
 
   bool isRegistered() const { return IsRegistered; }
   void setIsRegistered(bool Value) { IsRegistered = Value; }

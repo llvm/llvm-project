@@ -1015,13 +1015,11 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
           .Default([](auto *) { return false; }))
     return;
 
-  // Fold PredPHI constant -> constant.
+  // Fold PredPHI LiveIn -> LiveIn.
   if (auto *PredPHI = dyn_cast<VPPredInstPHIRecipe>(&R)) {
     VPValue *Op = PredPHI->getOperand(0);
-    if (!Op->isLiveIn() || !Op->getLiveInIRValue())
-      return;
-    if (auto *C = dyn_cast<Constant>(Op->getLiveInIRValue()))
-      PredPHI->replaceAllUsesWith(Plan->getOrAddLiveIn(C));
+    if (Op->isLiveIn())
+      PredPHI->replaceAllUsesWith(Op);
   }
 
   VPValue *A;
@@ -1154,6 +1152,16 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
       Steps->replaceAllUsesWith(Steps->getOperand(0));
       return;
     }
+  }
+  // Simplify redundant ReductionStartVector recipes after unrolling.
+  VPValue *StartV;
+  if (match(Def, m_VPInstruction<VPInstruction::ReductionStartVector>(
+                     m_VPValue(StartV), m_VPValue(), m_VPValue()))) {
+    Def->replaceUsesWithIf(StartV, [](const VPUser &U, unsigned Idx) {
+      auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&U);
+      return PhiR && PhiR->isInLoop();
+    });
+    return;
   }
 }
 
@@ -2601,14 +2609,10 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      if (isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe>(&R)) {
-        auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
-        StringRef Name =
-            isa<VPCanonicalIVPHIRecipe>(PhiR) ? "index" : "evl.based.iv";
-        VPBuilder Builder(PhiR);
-        auto *ScalarR = Builder.createScalarPhi(
+      if (auto *PhiR = dyn_cast<VPEVLBasedIVPHIRecipe>(&R)) {
+        auto *ScalarR = VPBuilder(PhiR).createScalarPhi(
             {PhiR->getStartValue(), PhiR->getBackedgeValue()},
-            PhiR->getDebugLoc(), Name);
+            PhiR->getDebugLoc(), "evl.based.iv");
         PhiR->replaceAllUsesWith(ScalarR);
         ToRemove.push_back(PhiR);
         continue;
