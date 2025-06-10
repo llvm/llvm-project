@@ -1292,7 +1292,7 @@ public:
         if (opt_name != "plugin-name")
           continue;
 
-        llvm::SmallVector<llvm::StringRef> plugin_names =
+        std::vector<llvm::StringRef> plugin_names =
             PluginManager::GetSaveCorePluginNames();
         m_plugin_enums.resize(plugin_names.size());
         for (auto [num, val] : llvm::zip(plugin_names, m_plugin_enums)) {

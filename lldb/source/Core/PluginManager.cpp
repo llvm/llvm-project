@@ -807,8 +807,8 @@ Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
       "no ObjectFile plugins were able to save a core for this process");
 }
 
-llvm::SmallVector<llvm::StringRef> PluginManager::GetSaveCorePluginNames() {
-  llvm::SmallVector<llvm::StringRef> plugin_names;
+std::vector<llvm::StringRef> PluginManager::GetSaveCorePluginNames() {
+  std::vector<llvm::StringRef> plugin_names;
   auto instances = GetObjectFileInstances().GetSnapshot();
   for (auto &instance : instances) {
     if (instance.save_core)
