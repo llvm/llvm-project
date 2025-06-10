@@ -1516,6 +1516,9 @@ bool Module::MatchesModuleSpec(const ModuleSpec &module_ref) {
   if (!FileSpec::Match(platform_file_spec, GetPlatformFileSpec()))
     return false;
 
+  if (m_object_offset != module_ref.GetObjectOffset())
+    return false;
+
   const ArchSpec &arch = module_ref.GetArchitecture();
   if (arch.IsValid()) {
     if (!m_arch.IsCompatibleMatch(arch))
