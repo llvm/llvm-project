@@ -47804,6 +47804,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
        Cond.getOpcode() == ISD::STRICT_FSETCCS) &&
       VT.isFloatingPoint() && VT != MVT::f80 && VT != MVT::f128 &&
       !isSoftF16(VT, Subtarget) && (TLI.isTypeLegal(VT) || VT == MVT::v2f32) &&
+      ((VT != MVT::v8f16 && VT != MVT::v16f16) || Subtarget.hasVLX()) &&
       (Subtarget.hasSSE2() ||
        (Subtarget.hasSSE1() && VT.getScalarType() == MVT::f32))) {
     bool IsStrict = Cond->isStrictFPOpcode();
