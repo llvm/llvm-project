@@ -8509,7 +8509,6 @@ SDValue RISCVTargetLowering::lowerPARTIAL_REDUCE_MLA(SDValue Op,
   // Currently, only the vqdot and vqdotu case (from zvqdotq) should be legal.
   // TODO: There are many other sub-cases we could potentially lower, are
   // any of them worthwhile?  Ex: via vredsum, vwredsum, vwwmaccu, etc..
-  // TODO: PARTIAL_REDUCE_*MLA can't represent a vqdotsu currently.
   SDLoc DL(Op);
   MVT VT = Op.getSimpleValueType();
   SDValue Accum = Op.getOperand(0);
