@@ -6526,7 +6526,7 @@ bool InstCombinerImpl::OptimizeOverflowCheck(Instruction::BinaryOps BinaryOp,
 ///
 /// \param I Compare instruction.
 /// \param Val Result of add/mul instruction.  It is one of the arguments of
-///               the compare instruction.  Must be of integer type.
+///            the compare instruction.  Must be of integer type.
 /// \param OtherVal The other argument of compare instruction.
 /// \returns Instruction which must replace the compare instruction, NULL if no
 ///          replacement required.
