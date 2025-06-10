@@ -29,7 +29,7 @@ int foo() {
 }
 
 template <typename Name, typename Func>
-[[clang::sycl_external]] void kernel_single_task(const Func &kernelFunc) {
+[[clang::sycl_kernel_entry_point(Name)]] void kernel_single_task(const Func &kernelFunc) {
   kernelFunc();
 }
 

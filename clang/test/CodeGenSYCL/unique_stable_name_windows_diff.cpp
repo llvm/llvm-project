@@ -59,7 +59,7 @@ int main() {
   // CHECK: private unnamed_addr [[$ADDRSPACE]]constant [17 x i8] c"_ZTSZ4mainEUliE_\00"
   // CHECK: private unnamed_addr [[$ADDRSPACE]]constant [17 x i8] c"_ZTSZ4mainEUldE_\00"
 
-  // On Windows, ensure that we haven't broken the 'lambda numbering' for thex
+  // On Windows, ensure that we haven't broken the 'lambda numbering' for the
   // lambda itself.
   // WIN: define internal void @"??R<lambda_1
   // WIN: define internal void @"??R<lambda_2

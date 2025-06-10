@@ -480,25 +480,23 @@ def SYCLExternalDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "sycl_external";
   let Content = [{
-The ``sycl_external`` attribute (or the ``SYCL_EXTERNAL`` macro) can only be applied to
-functions, and indicates that the function must be treated as a device function and
-must be emitted even if it has no direct uses from other device functions.
-All ``sycl_external`` function callees implicitly inherit this attribute.
+The ``sycl_external`` attribute can only be applied to external functions, and
+indicates that the function must be treated as a device function and must be
+emitted even if it has no direct uses from other device functions.
 
 The following examples demonstrate the use of this attribute:
 
 .. code-block:: c++
-#include <sycl/sycl.hpp>
 
-SYCL_EXTERNAL void Foo();
+[[clang::sycl_external]] void Foo();
 
-SYCL_EXTERNAL void Bar() { /* ... */ }
+[[clang::sycl_external]] void Bar() { /* ... */ }
 
-SYCL_EXTERNAL extern void Baz();
+[[clang::sycl_external]] extern void Baz();
 
-[[nodiscard]] SYCL_EXTERNAL void Important();
+[[nodiscard]] [[clang::sycl_external]] void Important();
 
-SYCL_EXTERNAL [[nodiscard]] void AlsoImportant();
+[[clang::sycl_external]] [[nodiscard]] void AlsoImportant();
 
   }];
 }
