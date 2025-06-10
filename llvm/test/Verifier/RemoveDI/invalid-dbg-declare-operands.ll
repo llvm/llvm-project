@@ -15,35 +15,14 @@ target triple = "x86_64-unknown-linux-gnu"
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 ; Function Attrs: alwaysinline nounwind sspstrong
-define i32 @_Z3foov() #0 !dbg !7 {
+define i32 @_Z3foov() !dbg !7 {
 entry:
-  %arr = alloca [10 x i32], align 16, !dbg !10
   %sum = alloca i32, align 4, !dbg !11
   call void @llvm.dbg.declare(metadata ptr %sum,  metadata !26), !dbg !11
-  store i32 5, ptr %arr, align 4, !dbg !12
-  store i32 4, ptr %sum, align 4, !dbg !13
-  %0 = load i32, ptr %sum, align 4, !dbg !14
-  ret i32 %0, !dbg !15
+  ret i32 0, !dbg !15
 }
 
-; Function Attrs: nounwind sspstrong
-define i32 @main() #1 !dbg !16 {
-entry:
-  %retval = alloca i32, align 4, !dbg !17
-  %i = alloca i32, align 4, !dbg !18
-  store i32 0, ptr %retval, align 4, !dbg !19
-  call void @_Z3barv(), !dbg !20
-  %call = call i32 @_Z3foov(), !dbg !21
-  store i32 %call, ptr %i, align 4, !dbg !22
-  %0 = load i32, ptr %i, align 4, !dbg !23
-  ret i32 %0, !dbg !24
-}
-
-declare void @_Z3barv() #2
-
-attributes #0 = { alwaysinline nounwind sspstrong "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind sspstrong "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+declare void @_Z3barv()
 
 !llvm.module.flags = !{!0, !1}
 !llvm.ident = !{!2}
@@ -60,21 +39,8 @@ attributes #2 = { "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-f
 !7 = distinct !DISubprogram(name: "_Z3foov", linkageName: "_Z3foov", scope: null, file: !4, line: 1, type: !8, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !3, retainedNodes: !9)
 !8 = !DISubroutineType(types: !9)
 !9 = !{}
-!10 = !DILocation(line: 1, column: 1, scope: !7)
 !11 = !DILocation(line: 2, column: 1, scope: !7)
-!12 = !DILocation(line: 3, column: 1, scope: !7)
-!13 = !DILocation(line: 4, column: 1, scope: !7)
-!14 = !DILocation(line: 5, column: 1, scope: !7)
 !15 = !DILocation(line: 6, column: 1, scope: !7)
-!16 = distinct !DISubprogram(name: "main", linkageName: "main", scope: null, file: !4, line: 7, type: !8, scopeLine: 7, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !3, retainedNodes: !9)
-!17 = !DILocation(line: 7, column: 1, scope: !16)
-!18 = !DILocation(line: 8, column: 1, scope: !16)
-!19 = !DILocation(line: 9, column: 1, scope: !16)
-!20 = !DILocation(line: 10, column: 1, scope: !16)
-!21 = !DILocation(line: 11, column: 1, scope: !16)
-!22 = !DILocation(line: 12, column: 1, scope: !16)
-!23 = !DILocation(line: 13, column: 1, scope: !16)
-!24 = !DILocation(line: 14, column: 1, scope: !16)
 !25 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !26 = !DILocalVariable(name: "b", scope: !7, file: !4, line: 1234, type: !25)
 

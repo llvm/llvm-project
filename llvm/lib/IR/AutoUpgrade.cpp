@@ -4399,9 +4399,9 @@ template <typename MDType>
 static MDType *unwrapMAVOp(CallBase *CI, unsigned Op) {
   if (Op < CI->arg_size()) {
     if (MetadataAsValue *MAV = dyn_cast<MetadataAsValue>(CI->getArgOperand(Op)))
-      // Use a reinterpret cast rather than a safe default-to-null cast: the
-      // autoupgrade process happens before the verifier, and thus there might
-      // be some nonsense metadata in there.
+      // Use reinterpret_cast rather than dyn_cast because the autoupgrade
+      // process happens before the verifier, meaning we may see unexpected
+      // operands here.
       return reinterpret_cast<MDType*>(MAV->getMetadata());
   }
   return nullptr;

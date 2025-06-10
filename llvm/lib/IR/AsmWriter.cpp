@@ -4876,11 +4876,10 @@ void AssemblyWriter::printDbgVariableRecord(const DbgVariableRecord &DVR) {
   }
 
   auto PrintOrNull = [&](Metadata *M) {
-    if (!M) {
+    if (!M)
       Out << "(null)";
-    } else {
+    else
       WriteAsOperandInternal(Out, M, WriterCtx, true);
-    }
   };
 
   Out << "(";
