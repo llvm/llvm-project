@@ -22,6 +22,7 @@ extern void llvm::omp::target::ompt::connectLibrary();
 
 static std::mutex PluginMtx;
 static uint32_t RefCount = 0;
+std::atomic<bool> RTLAlive{false};
 
 void initRuntime() {
   std::scoped_lock<decltype(PluginMtx)> Lock(PluginMtx);
@@ -41,6 +42,9 @@ void initRuntime() {
 
     PM->init();
     PM->registerDelayedLibraries();
+
+    // RTL initialization is complete
+    RTLAlive = true;
   }
 }
 
@@ -50,6 +54,8 @@ void deinitRuntime() {
 
   if (RefCount == 1) {
     DP("Deinit offload library!\n");
+    // RTL deinitialization has started
+    RTLAlive = false;
     PM->deinit();
     delete PM;
     PM = nullptr;
