@@ -99,12 +99,12 @@ struct IfConversion : public OpRewritePattern<fir::IfOp> {
         loc, resultTypes, condition, !ifOp.getElseRegion().empty());
     // then region
     scfIfOp.getThenRegion().takeBody(ifOp.getThenRegion());
-    Block &scfthenBlock = scfIfOp.getThenRegion().front();
-    Operation *scfthenTerminator = scfthenBlock.getTerminator();
+    Block &scfThenBlock = scfIfOp.getThenRegion().front();
+    Operation *scfThenTerminator = scfThenBlock.getTerminator();
     // fir.result->scf.yield
-    rewriter.setInsertionPointToEnd(&scfthenBlock);
-    rewriter.replaceOpWithNewOp<scf::YieldOp>(scfthenTerminator,
-                                              scfthenTerminator->getOperands());
+    rewriter.setInsertionPointToEnd(&scfThenBlock);
+    rewriter.replaceOpWithNewOp<scf::YieldOp>(scfThenTerminator,
+                                              scfThenTerminator->getOperands());
 
     // else region
     if (!ifOp.getElseRegion().empty()) {
