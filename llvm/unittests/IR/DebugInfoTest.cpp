@@ -27,8 +27,6 @@
 
 using namespace llvm;
 
-LLVM_ABI extern cl::opt<bool> UseNewDbgInfoFormat;
-
 static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
   SMDiagnostic Err;
   std::unique_ptr<Module> Mod = parseAssemblyString(IR, Err, C);
@@ -241,8 +239,6 @@ TEST(DbgVariableIntrinsic, EmptyMDIsKillLocation) {
 // Duplicate of above test, but in DbgVariableRecord representation.
 TEST(MetadataTest, DeleteInstUsedByDbgVariableRecord) {
   LLVMContext C;
-  bool OldDbgValueMode = UseNewDbgInfoFormat;
-  UseNewDbgInfoFormat = true;
 
   std::unique_ptr<Module> M = parseIR(C, R"(
     define i16 @f(i16 %a) !dbg !6 {
@@ -285,23 +281,19 @@ TEST(MetadataTest, DeleteInstUsedByDbgVariableRecord) {
   EXPECT_EQ(DVRs[1]->getNumVariableLocationOps(), 2u);
   EXPECT_TRUE(isa<UndefValue>(DVRs[1]->getVariableLocationOp(1)));
   EXPECT_TRUE(DVRs[1]->isKillLocation());
-  UseNewDbgInfoFormat = OldDbgValueMode;
 }
 
 // Ensure that the order of dbg.value intrinsics returned by findDbgValues, and
 // their corresponding DbgVariableRecord representation, are consistent.
 TEST(MetadataTest, OrderingOfDbgVariableRecords) {
-  bool OldDbgValueMode = UseNewDbgInfoFormat;
-  UseNewDbgInfoFormat = false;
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"(
     define i16 @f(i16 %a) !dbg !6 {
       %b = add i16 %a, 1, !dbg !11
-      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()), !dbg !11
-      call void @llvm.dbg.value(metadata i16 %b, metadata !12, metadata !DIExpression()), !dbg !11
+        #dbg_value(i16 %b, !9, !DIExpression(), !11)
+        #dbg_value(i16 %b, !12, !DIExpression(), !11)
       ret i16 0, !dbg !11
     }
-    declare void @llvm.dbg.value(metadata, metadata, metadata) #0
     attributes #0 = { nounwind readnone speculatable willreturn }
 
     !llvm.dbg.cu = !{!0}
@@ -324,33 +316,20 @@ TEST(MetadataTest, OrderingOfDbgVariableRecords) {
 
   SmallVector<DbgValueInst *, 2> DVIs;
   SmallVector<DbgVariableRecord *, 2> DVRs;
-  findDbgValues(DVIs, &I, &DVRs);
-  ASSERT_EQ(DVIs.size(), 2u);
-  ASSERT_EQ(DVRs.size(), 0u);
 
-  // The correct order of dbg.values is given by their use-list, which becomes
-  // the reverse order of creation. Thus the dbg.values should come out as
-  // "bar" and then "foo".
-  DILocalVariable *Var0 = DVIs[0]->getVariable();
-  EXPECT_TRUE(Var0->getName() == "bar");
-  DILocalVariable *Var1 = DVIs[1]->getVariable();
-  EXPECT_TRUE(Var1->getName() == "foo");
-
-  // Now try again, but in DbgVariableRecord form.
-  DVIs.clear();
-
-  M->convertToNewDbgValues();
   findDbgValues(DVIs, &I, &DVRs);
   ASSERT_EQ(DVIs.size(), 0u);
   ASSERT_EQ(DVRs.size(), 2u);
 
-  Var0 = DVRs[0]->getVariable();
+  // The correct order of dbg.values is given by their use-list, which becomes
+  // the reverse order of creation. Thus the dbg.values should come out as
+  // "bar" and then "foo".
+  const DILocalVariable *Var0 = DVRs[0]->getVariable();
   EXPECT_TRUE(Var0->getName() == "bar");
-  Var1 = DVRs[1]->getVariable();
+  const DILocalVariable *Var1 = DVRs[1]->getVariable();
   EXPECT_TRUE(Var1->getName() == "foo");
 
   M->convertFromNewDbgValues();
-  UseNewDbgInfoFormat = OldDbgValueMode;
 }
 
 TEST(DIBuilder, CreateFile) {
@@ -923,8 +902,6 @@ TEST(AssignmentTrackingTest, InstrMethods) {
 // dbg.values that have been converted to a non-instruction format.
 TEST(MetadataTest, ConvertDbgToDbgVariableRecord) {
   LLVMContext C;
-  bool OldDbgValueMode = UseNewDbgInfoFormat;
-  UseNewDbgInfoFormat = false;
   std::unique_ptr<Module> M = parseIR(C, R"(
     define i16 @f(i16 %a) !dbg !6 {
       call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
@@ -953,6 +930,12 @@ TEST(MetadataTest, ConvertDbgToDbgVariableRecord) {
     !10 = !DIBasicType(name: "ty16", size: 16, encoding: DW_ATE_unsigned)
     !11 = !DILocation(line: 1, column: 1, scope: !6)
 )");
+
+  // The IR above will be autoupgraded to debug records: but this test is about
+  // the conversion routines, so convert it back. This test will have value
+  // going forwards for the purpose of testing the conversion routine, which
+  // some compatibility tools (DXIL?) wish to use.
+  M->convertFromNewDbgValues();
 
   // Find the first dbg.value,
   Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHIIt();
@@ -1099,14 +1082,10 @@ TEST(MetadataTest, ConvertDbgToDbgVariableRecord) {
   // The record of those trailing DbgVariableRecords would dangle and cause an
   // assertion failure if it lived until the end of the LLVMContext.
   ExitBlock->deleteTrailingDbgRecords();
-  UseNewDbgInfoFormat = OldDbgValueMode;
 }
 
 TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
   LLVMContext C;
-
-  bool OldDbgValueMode = UseNewDbgInfoFormat;
-  UseNewDbgInfoFormat = false;
 
   std::unique_ptr<Module> M = parseIR(C, R"(
     define i16 @f(i16 %a) !dbg !6 {
@@ -1137,13 +1116,13 @@ TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
     !11 = !DILocation(line: 1, column: 1, scope: !6)
 )");
 
-  // For the purpose of this test, set and un-set the command line option
-  // corresponding to UseNewDbgInfoFormat, but only after parsing, to ensure
-  // that the IR starts off in the old format.
-  UseNewDbgInfoFormat = true;
+  // This test exists to check we can convert back and forth between old and new
+  // debug info formats (dbg.value intrinsics versus #dbg_value records).
+  // We're ripping out support for debug intrinsics, but the conversions will
+  // live on in bitcode autoupgrade and possibly DXIL autodowngrade. Thus, this
+  // test is still valuable. Begin by starting in the intrinsic format:
+  M->convertFromNewDbgValues();
 
-  // Check that the conversion routines and utilities between dbg.value
-  // debug-info format and DbgVariableRecords works.
   Function *F = M->getFunction("f");
   BasicBlock *BB1 = &F->getEntryBlock();
   // First instruction should be a dbg.value.
@@ -1245,8 +1224,6 @@ TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
   EXPECT_EQ(DVI1->getExpression(), Expr1);
   EXPECT_EQ(DVI2->getVariable(), DLV2);
   EXPECT_EQ(DVI2->getExpression(), Expr2);
-
-  UseNewDbgInfoFormat = OldDbgValueMode;
 }
 
 // Test that the hashing function for DISubprograms representing methods produce

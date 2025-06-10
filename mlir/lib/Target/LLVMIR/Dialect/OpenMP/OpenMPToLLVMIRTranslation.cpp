@@ -432,6 +432,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       })
       .Case([&](omp::WsloopOp op) {
         checkAllocate(op, result);
+        checkLinear(op, result);
         checkOrder(op, result);
         checkReduction(op, result);
       })
@@ -5737,7 +5738,13 @@ convertHostOrTargetOperation(Operation *op, llvm::IRBuilderBase &builder,
             llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
                 ompBuilder->createBarrier(builder.saveIP(),
                                           llvm::omp::OMPD_barrier);
-            return handleError(afterIP, *op);
+            LogicalResult res = handleError(afterIP, *op);
+            if (res.succeeded()) {
+              // If the barrier generated a cancellation check, the insertion
+              // point might now need to be changed to a new continuation block
+              builder.restoreIP(*afterIP);
+            }
+            return res;
           })
           .Case([&](omp::TaskyieldOp op) {
             if (failed(checkImplementationStatus(*op)))

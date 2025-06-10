@@ -2159,6 +2159,10 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     assert(InitStyle == CXXNewInitializationStyle::Parens &&
            "paren init for non-call init");
     Exprs = MultiExprArg(List->getExprs(), List->getNumExprs());
+  } else if (auto *List = dyn_cast_or_null<CXXParenListInitExpr>(Initializer)) {
+    assert(InitStyle == CXXNewInitializationStyle::Parens &&
+           "paren init for non-call init");
+    Exprs = List->getInitExprs();
   }
 
   // C++11 [expr.new]p15:
