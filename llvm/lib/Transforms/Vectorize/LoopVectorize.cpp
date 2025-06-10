@@ -611,9 +611,6 @@ protected:
   /// Middle Block between the vector and the scalar.
   BasicBlock *LoopMiddleBlock = nullptr;
 
-  /// A list of all bypass blocks. The first block is the entry of the loop.
-  SmallVector<BasicBlock *, 4> LoopBypassBlocks;
-
   /// Trip count of the original loop.
   Value *TripCount = nullptr;
 
@@ -2445,7 +2442,6 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
   if (hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator()))
     setBranchWeights(BI, MinItersBypassWeights, /*IsExpected=*/false);
   ReplaceInstWithInst(TCCheckBlock->getTerminator(), &BI);
-  LoopBypassBlocks.push_back(TCCheckBlock);
 
   assert(cast<VPIRBasicBlock>(Plan.getEntry())->getIRBasicBlock() ==
              TCCheckBlock &&
@@ -2461,9 +2457,6 @@ BasicBlock *InnerLoopVectorizer::emitSCEVChecks(BasicBlock *Bypass) {
   assert((!Cost->OptForSize ||
           Cost->Hints->getForce() == LoopVectorizeHints::FK_Enabled) &&
          "Cannot SCEV check stride or overflow when optimizing for size");
-  assert(!LoopBypassBlocks.empty() &&
-         "Should already be a bypass block due to iteration count check");
-  LoopBypassBlocks.push_back(SCEVCheckBlock);
   AddedSafetyChecks = true;
 
   introduceCheckBlockInVPlan(SCEVCheckBlock);
@@ -2499,7 +2492,6 @@ BasicBlock *InnerLoopVectorizer::emitMemRuntimeChecks(BasicBlock *Bypass) {
     });
   }
 
-  LoopBypassBlocks.push_back(MemCheckBlock);
 
   AddedSafetyChecks = true;
 
@@ -7557,8 +7549,6 @@ EpilogueVectorizerMainLoop::emitIterationCountCheck(BasicBlock *Bypass,
                                    nullptr, "vector.ph");
 
   if (ForEpilogue) {
-    LoopBypassBlocks.push_back(TCCheckBlock);
-
     // Save the trip count so we don't have to regenerate it in the
     // vec.epilog.iter.check. This is safe to do because the trip count
     // generated here dominates the vector epilog iter check.
@@ -7619,13 +7609,6 @@ EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton() {
 
   DT->changeImmediateDominator(LoopScalarPreHeader,
                                EPI.EpilogueIterationCountCheck);
-  // Keep track of bypass blocks, as they feed start values to the induction and
-  // reduction phis in the scalar loop preheader.
-  if (EPI.SCEVSafetyCheck)
-    LoopBypassBlocks.push_back(EPI.SCEVSafetyCheck);
-  if (EPI.MemSafetyCheck)
-    LoopBypassBlocks.push_back(EPI.MemSafetyCheck);
-  LoopBypassBlocks.push_back(EPI.EpilogueIterationCountCheck);
 
   // The vec.epilog.iter.check block may contain Phi nodes from inductions or
   // reductions which merge control-flow from the latch block and the middle
@@ -7696,7 +7679,6 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
     setBranchWeights(BI, Weights, /*IsExpected=*/false);
   }
   ReplaceInstWithInst(Insert->getTerminator(), &BI);
-  LoopBypassBlocks.push_back(Insert);
 
   // A new entry block has been created for the epilogue VPlan. Hook it in, as
   // otherwise we would try to modify the entry to the main vector loop.
