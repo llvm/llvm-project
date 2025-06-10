@@ -484,6 +484,22 @@ The ``sycl_external`` attribute (or the ``SYCL_EXTERNAL`` macro) can only be app
 functions, and indicates that the function must be treated as a device function and
 must be emitted even if it has no direct uses from other device functions.
 All ``sycl_external`` function callees implicitly inherit this attribute.
+
+The following examples demonstrate the use of this attribute:
+
+.. code-block:: c++
+#include <sycl/sycl.hpp>
+
+SYCL_EXTERNAL void Foo();
+
+SYCL_EXTERNAL void Bar() { /* ... */ }
+
+SYCL_EXTERNAL extern void Baz();
+
+[[nodiscard]] SYCL_EXTERNAL void Important();
+
+SYCL_EXTERNAL [[nodiscard]] void AlsoImportant();
+
   }];
 }
 
