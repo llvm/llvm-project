@@ -374,6 +374,9 @@ static bool shouldPeelLastIteration(Loop &L, CmpPredicate Pred,
                                    L.getLoopPredecessor()->getTerminator()))
     return false;
 
+  auto Guards = ScalarEvolution::LoopGuards::collect(&L, SE);
+  BTC = SE.applyLoopGuards(BTC, Guards);
+  RightSCEV = SE.applyLoopGuards(RightSCEV, Guards);
   const SCEV *ValAtLastIter = LeftAR->evaluateAtIteration(BTC, SE);
   const SCEV *ValAtSecondToLastIter = LeftAR->evaluateAtIteration(
       SE.getMinusSCEV(BTC, SE.getOne(BTC->getType())), SE);

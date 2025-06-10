@@ -691,6 +691,11 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return EmitRuntimeCall(
         Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID));
   }
+  case Builtin::BI__builtin_hlsl_wave_get_lane_count: {
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveGetLaneCountIntrinsic();
+    return EmitRuntimeCall(
+        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID));
+  }
   case Builtin::BI__builtin_hlsl_wave_read_lane_at: {
     // Due to the use of variadic arguments we must explicitly retreive them and
     // create our function type.

@@ -1490,7 +1490,7 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
   // If the function is a class member, its signature includes the
   // cv-qualifiers (if any) and ref-qualifier (if any) on the function itself.
   auto DiagnoseInconsistentRefQualifiers = [&]() {
-    if (SemaRef.LangOpts.CPlusPlus23)
+    if (SemaRef.LangOpts.CPlusPlus23 && !UseOverrideRules)
       return false;
     if (OldMethod->getRefQualifier() == NewMethod->getRefQualifier())
       return false;
@@ -16981,6 +16981,9 @@ ExprResult Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
   }
 
   if (UnresolvedLookupExpr *ULE = dyn_cast<UnresolvedLookupExpr>(E)) {
+    if (Found.getAccess() == AS_none) {
+      CheckUnresolvedLookupAccess(ULE, Found);
+    }
     // FIXME: avoid copy.
     TemplateArgumentListInfo TemplateArgsBuffer, *TemplateArgs = nullptr;
     if (ULE->hasExplicitTemplateArgs()) {

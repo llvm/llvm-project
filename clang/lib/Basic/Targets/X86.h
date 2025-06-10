@@ -647,6 +647,7 @@ public:
   CygwinX86_32TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : X86_32TargetInfo(Triple, Opts) {
     this->WCharType = TargetInfo::UnsignedShort;
+    this->WIntType = TargetInfo::UnsignedInt;
     DoubleAlign = LongLongAlign = 64;
     resetDataLayout("e-m:x-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-"
                     "i128:128-f80:32-n8:16:32-a:0:32-S32",
@@ -982,6 +983,7 @@ public:
   CygwinX86_64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : X86_64TargetInfo(Triple, Opts) {
     this->WCharType = TargetInfo::UnsignedShort;
+    this->WIntType = TargetInfo::UnsignedInt;
   }
 
   void getTargetDefines(const LangOptions &Opts,

@@ -222,12 +222,11 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     // Collect the known bits that are shared by every demanded vector element.
     Known.Zero.setAllBits();
     Known.One.setAllBits();
-    for (unsigned I = 0, E = MI.getNumOperands() - 1; I < E; ++I) {
+    for (const auto &[I, MO] : enumerate(drop_begin(MI.operands()))) {
       if (!DemandedElts[I])
         continue;
 
-      computeKnownBitsImpl(MI.getOperand(I + 1).getReg(), Known2, APInt(1, 1),
-                           Depth + 1);
+      computeKnownBitsImpl(MO.getReg(), Known2, APInt(1, 1), Depth + 1);
 
       // Known bits are the values that are shared by every demanded element.
       Known = Known.intersectWith(Known2);
@@ -683,14 +682,12 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known.One.setAllBits();
     unsigned NumSubVectorElts =
         MRI.getType(MI.getOperand(1).getReg()).getNumElements();
-    unsigned NumSubVectors = MI.getNumOperands() - 1;
 
-    for (unsigned I = 0; I != NumSubVectors; ++I) {
+    for (const auto &[I, MO] : enumerate(drop_begin(MI.operands()))) {
       APInt DemandedSub =
           DemandedElts.extractBits(NumSubVectorElts, I * NumSubVectorElts);
       if (!!DemandedSub) {
-        computeKnownBitsImpl(MI.getOperand(I + 1).getReg(), Known2, DemandedSub,
-                             Depth + 1);
+        computeKnownBitsImpl(MO.getReg(), Known2, DemandedSub, Depth + 1);
 
         Known = Known.intersectWith(Known2);
       }
@@ -1944,12 +1941,12 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     // Collect the known bits that are shared by every demanded vector element.
     FirstAnswer = TyBits;
     APInt SingleDemandedElt(1, 1);
-    for (unsigned I = 0, E = MI.getNumOperands() - 1; I < E; ++I) {
+    for (const auto &[I, MO] : enumerate(drop_begin(MI.operands()))) {
       if (!DemandedElts[I])
         continue;
 
-      unsigned Tmp2 = computeNumSignBits(MI.getOperand(I + 1).getReg(),
-                                         SingleDemandedElt, Depth + 1);
+      unsigned Tmp2 =
+          computeNumSignBits(MO.getReg(), SingleDemandedElt, Depth + 1);
       FirstAnswer = std::min(FirstAnswer, Tmp2);
 
       // If we don't know any bits, early out.
@@ -1966,14 +1963,12 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     // elts of the input vectors. Early out if the result is already 1.
     unsigned NumSubVectorElts =
         MRI.getType(MI.getOperand(1).getReg()).getNumElements();
-    unsigned NumSubVectors = MI.getNumOperands() - 1;
-    for (unsigned I = 0; I < NumSubVectors; ++I) {
+    for (const auto &[I, MO] : enumerate(drop_begin(MI.operands()))) {
       APInt DemandedSub =
           DemandedElts.extractBits(NumSubVectorElts, I * NumSubVectorElts);
       if (!DemandedSub)
         continue;
-      unsigned Tmp2 = computeNumSignBits(MI.getOperand(I + 1).getReg(),
-                                         DemandedSub, Depth + 1);
+      unsigned Tmp2 = computeNumSignBits(MO.getReg(), DemandedSub, Depth + 1);
 
       FirstAnswer = std::min(FirstAnswer, Tmp2);
 
