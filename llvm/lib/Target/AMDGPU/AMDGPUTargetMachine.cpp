@@ -816,6 +816,11 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         PM.addPass(AMDGPUExpandFeaturePredicatesPass(*this));
       });
 
+  PB.registerFullLinkTimeOptimizationEarlyEPCallback(
+      [this](ModulePassManager &PM, OptimizationLevel) {
+        PM.addPass(AMDGPUExpandFeaturePredicatesPass(*this));
+      });
+
   PB.registerScalarOptimizerLateEPCallback(
       [this](FunctionPassManager &FPM, OptimizationLevel Level) {
         if (Level == OptimizationLevel::O0)
