@@ -29221,6 +29221,9 @@ AArch64TargetLowering::LowerVECTOR_DEINTERLEAVE(SDValue Op,
       IntID = Intrinsic::aarch64_sve_uzp_x2;
       break;
     case 4:
+      if (Subtarget->getMinSVEVectorSizeInBits() < 256 &&
+          OpVT.getScalarSizeInBits() == 64)
+        return SDValue();
       IntID = Intrinsic::aarch64_sve_uzp_x4;
       break;
     }
@@ -29259,6 +29262,9 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
       IntID = Intrinsic::aarch64_sve_zip_x2;
       break;
     case 4:
+      if (Subtarget->getMinSVEVectorSizeInBits() < 256 &&
+          OpVT.getScalarSizeInBits() == 64)
+        return SDValue();
       IntID = Intrinsic::aarch64_sve_zip_x4;
       break;
     }
