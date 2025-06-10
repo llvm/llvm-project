@@ -738,53 +738,7 @@ void TextDiagnostic::printDiagnosticMessage(raw_ostream &OS,
 }
 
 void TextDiagnostic::emitFilename(StringRef Filename, const SourceManager &SM) {
-  auto File = SM.getFileManager().getOptionalFileRef(Filename);
-
-  // Try to simplify paths that contain '..' in any case since paths to
-  // standard library headers especially tend to get quite long otherwise.
-  // Only do that for local filesystems though to avoid slowing down
-  // compilation too much.
-  auto AlwaysSimplify = [&] {
-    return File->getName().contains("..") &&
-           llvm::sys::fs::is_local(File->getName());
-  };
-
-  if (File && (DiagOpts.AbsolutePath || AlwaysSimplify())) {
-    SmallString<128> &CacheEntry = SimplifiedFileNameCache[Filename];
-    if (CacheEntry.empty()) {
-      // We want to print a simplified absolute path, i. e. without "dots".
-      //
-      // The hardest part here are the paths like "<part1>/<link>/../<part2>".
-      // On Unix-like systems, we cannot just collapse "<link>/..", because
-      // paths are resolved sequentially, and, thereby, the path
-      // "<part1>/<part2>" may point to a different location. That is why
-      // we use FileManager::getCanonicalName(), which expands all indirections
-      // with llvm::sys::fs::real_path() and caches the result.
-      //
-      // On the other hand, it would be better to preserve as much of the
-      // original path as possible, because that helps a user to recognize it.
-      // real_path() expands all links, which sometimes too much. Luckily,
-      // on Windows we can just use llvm::sys::path::remove_dots(), because,
-      // on that system, both aforementioned paths point to the same place.
-#ifdef _WIN32
-      CacheEntry = File->getName();
-      llvm::sys::fs::make_absolute(CacheEntry);
-      llvm::sys::path::native(CacheEntry);
-      llvm::sys::path::remove_dots(CacheEntry, /* remove_dot_dot */ true);
-#else
-      CacheEntry = SM.getFileManager().getCanonicalName(*File);
-#endif
-
-      // In some cases, the resolved path may actually end up being longer (e.g.
-      // if it was originally a relative path), so just retain whichever one
-      // ends up being shorter.
-      if (!DiagOpts.AbsolutePath && CacheEntry.size() > Filename.size())
-        CacheEntry = Filename;
-    }
-    Filename = CacheEntry;
-  }
-
-  OS << Filename;
+  OS << SM.getNameForDiagnostic(Filename);
 }
 
 /// Print out the file/line/column information and include trace.

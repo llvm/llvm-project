@@ -2403,3 +2403,58 @@ SourceManagerForFile::SourceManagerForFile(StringRef FileName,
   assert(ID.isValid());
   SourceMgr->setMainFileID(ID);
 }
+
+StringRef SourceManager::getNameForDiagnostic(StringRef Filename) const {
+  OptionalFileEntryRef File = getFileManager().getOptionalFileRef(Filename);
+  if (!File)
+    return Filename;
+
+  // Try to simplify paths that contain '..' in any case since paths to
+  // standard library headers especially tend to get quite long otherwise.
+  // Only do that for local filesystems though to avoid slowing down
+  // compilation too much.
+  bool Absolute = Diag.getDiagnosticOptions().AbsolutePath;
+  bool AlwaysSimplify = File->getName().contains("..") &&
+                        llvm::sys::fs::is_local(File->getName());
+  if (!Absolute && !AlwaysSimplify)
+    return Filename;
+
+  // This may involve computing canonical names, so cache the result.
+  StringRef &CacheEntry = DiagNames[Filename];
+  if (!CacheEntry.empty())
+    return CacheEntry;
+
+  // We want to print a simplified absolute path, i. e. without "dots".
+  //
+  // The hardest part here are the paths like "<part1>/<link>/../<part2>".
+  // On Unix-like systems, we cannot just collapse "<link>/..", because
+  // paths are resolved sequentially, and, thereby, the path
+  // "<part1>/<part2>" may point to a different location. That is why
+  // we use FileManager::getCanonicalName(), which expands all indirections
+  // with llvm::sys::fs::real_path() and caches the result.
+  //
+  // On the other hand, it would be better to preserve as much of the
+  // original path as possible, because that helps a user to recognize it.
+  // real_path() expands all links, which sometimes too much. Luckily,
+  // on Windows we can just use llvm::sys::path::remove_dots(), because,
+  // on that system, both aforementioned paths point to the same place.
+  SmallString<256> TempBuf;
+#ifdef _WIN32
+  TempBuf = File->getName();
+  llvm::sys::fs::make_absolute(TempBuf);
+  llvm::sys::path::native(TempBuf);
+  llvm::sys::path::remove_dots(TempBuf, /* remove_dot_dot */ true);
+#else
+  TempBuf = getFileManager().getCanonicalName(*File);
+#endif
+
+  // In some cases, the resolved path may actually end up being longer (e.g.
+  // if it was originally a relative path), so just retain whichever one
+  // ends up being shorter.
+  if (!Absolute && TempBuf.size() > Filename.size())
+    CacheEntry = Filename;
+  else
+    CacheEntry = TempBuf.str().copy(DiagNameAlloc);
+
+  return CacheEntry;
+}

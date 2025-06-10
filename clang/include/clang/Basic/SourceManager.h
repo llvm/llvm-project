@@ -820,6 +820,12 @@ class SourceManager : public RefCountedBase<SourceManager> {
 
   mutable std::unique_ptr<SrcMgr::SLocEntry> FakeSLocEntryForRecovery;
 
+  /// Cache for filenames used in diagnostics. See 'getNameForDiagnostic()'.
+  mutable llvm::StringMap<StringRef> DiagNames;
+
+  /// Allocator for absolute/short names.
+  mutable llvm::BumpPtrAllocator DiagNameAlloc;
+
   /// Lazily computed map of macro argument chunks to their expanded
   /// source location.
   using MacroArgsMap = std::map<unsigned, SourceLocation>;
@@ -1846,6 +1852,9 @@ public:
 
   /// \return Location of the top-level macro caller.
   SourceLocation getTopMacroCallerLoc(SourceLocation Loc) const;
+
+  /// Retrieve the name of a file suitable for diagnostics.
+  StringRef getNameForDiagnostic(StringRef Filename) const;
 
 private:
   friend class ASTReader;
