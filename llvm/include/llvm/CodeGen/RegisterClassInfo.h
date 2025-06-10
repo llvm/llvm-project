@@ -88,7 +88,8 @@ class RegisterClassInfo {
 public:
   LLVM_ABI RegisterClassInfo();
 
-  /// runOnFunction - Prepare to answer questions about MF. This must be called
+  /// runOnFunction - Prepare to answer questions about MF. Rev indicates to
+  /// use reversed raw order when compute register order. This must be called
   /// before any other methods are used.
   LLVM_ABI void runOnMachineFunction(const MachineFunction &MF,
                                      bool Rev = false);
