@@ -15,7 +15,7 @@
 #include <assert.h>
 
 namespace {
-constexpr unsigned TIMEOUT_MS = 100000;
+constexpr unsigned TIMEOUT_MS = 10000;
 } // Anonymous namespace
 
 namespace LIBC_NAMESPACE_DECL {
