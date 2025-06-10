@@ -1546,9 +1546,9 @@ Align llvm::tryEnforceAlignment(Value *V, Align PrefAlign,
     return PrefAlign;
   }
 
-  if (auto *GO = dyn_cast<GlobalObject>(V)) {
+  if (auto *GV = dyn_cast<GlobalVariable>(V)) {
     // TODO: as above, this shouldn't be necessary.
-    Align CurrentAlign = GO->getPointerAlignment(DL);
+    Align CurrentAlign = GV->getPointerAlignment(DL);
     if (PrefAlign <= CurrentAlign)
       return CurrentAlign;
 
@@ -1556,16 +1556,16 @@ Align llvm::tryEnforceAlignment(Value *V, Align PrefAlign,
     // of the global.  If the memory we set aside for the global may not be the
     // memory used by the final program then it is impossible for us to reliably
     // enforce the preferred alignment.
-    if (!GO->canIncreaseAlignment())
+    if (!GV->canIncreaseAlignment())
       return CurrentAlign;
 
-    if (GO->isThreadLocal()) {
-      unsigned MaxTLSAlign = GO->getParent()->getMaxTLSAlignment() / CHAR_BIT;
+    if (GV->isThreadLocal()) {
+      unsigned MaxTLSAlign = GV->getParent()->getMaxTLSAlignment() / CHAR_BIT;
       if (MaxTLSAlign && PrefAlign > Align(MaxTLSAlign))
         PrefAlign = Align(MaxTLSAlign);
     }
 
-    GO->setAlignment(PrefAlign);
+    GV->setAlignment(PrefAlign);
     return PrefAlign;
   }
 
