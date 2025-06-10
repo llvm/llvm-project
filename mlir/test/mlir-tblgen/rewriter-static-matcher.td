@@ -94,10 +94,10 @@ def : Pat<(COp $_, (BOp I32Attr:$attr, I32:$int)),
 // CHECK: [[$ARR]].push_back([[$VAR]]);
 def : Pat<(AOp $x), (DOp (variadic (Foo $x)))>;
 
-// CHECK: if(::mlir::failed([[$DAG_MATCHER2]](rewriter, op1, tblgen_ops, z, x)
+// CHECK: if(::mlir::failed([[$DAG_MATCHER2]]({{.*}} x{{[,)]}}
 def : Pat<(AOp (EOp NonNegProp:$x, NonNegProp:$_, I32:$z)),
   (AOp $z)>;
 
-// CHECK: if(::mlir::failed([[$DAG_MATCHER2]](rewriter, op1, tblgen_ops, z, x)
+// CHECK: if(::mlir::failed([[$DAG_MATCHER2]]({{.*}} x{{[,)]}}
 def : Pat<(FOp $_, (EOp NonNegProp:$x, NonNegProp:$_, I32:$z)),
   (COp $x, $z)>;

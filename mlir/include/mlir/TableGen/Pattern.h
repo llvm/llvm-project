@@ -99,7 +99,8 @@ public:
   // Returns this DAG leaf as a constraint. Asserts if fails.
   Constraint getAsConstraint() const;
 
-  // Returns this DAG leaf as a property constraint. Asserts if fails.
+  // Returns this DAG leaf as a property constraint. Asserts if fails. This
+  // allows access to the interface type.
   PropConstraint getAsPropConstraint() const;
 
   // Returns this DAG leaf as a property definition. Asserts if fails.
@@ -301,9 +302,8 @@ public:
     //
     // * Properties not associated with an operation (ex. as arguments to
     //   native code) have their corresponding PropConstraint stored in the
-    //   `dag` field,
-    //  and set `operandIndexOrNumValues` to -1 to indicate they aren't part of
-    //  an operation.
+    //   `dag` field. (They'll and set `operandIndexOrNumValues` to -1 to
+    //   indicate they aren't part of an operation.)
     //
     // * If a symbol is defined in a `variadic` DAG, `dag` specifies the DAG
     //   of the parent operation, `operandIndexOrNumValues` specifies the

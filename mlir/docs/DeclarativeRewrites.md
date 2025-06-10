@@ -433,7 +433,8 @@ $in2)`, then this will be translated into C++ call `someFn($in1, $in2, $in0)`.
 In the case of properties, the placeholder will be bound to a value of the _interface_
 type of the property. Passing in a `StringProp` as an argument to a `NativeCodeCall`
 will pass a `StringRef` (as if the getter of the matched operation were called)
-and not a `std::string`.
+and not a `std::string`. See `mlir/include/mlir/IR/Properties.td` for details
+on interface vs. storage type.
 
 Positional range placeholders will be substituted by multiple `dag` object
 parameters at the `NativeCodeCall` use site. For example, if we define
