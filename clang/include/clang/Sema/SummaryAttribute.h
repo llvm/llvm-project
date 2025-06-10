@@ -25,8 +25,7 @@ public:
   virtual bool predicate(const FunctionDecl *FD) = 0;
   std::optional<SummaryAttribute> infer(const FunctionDecl *FD);
 
-  // FIXME: This should receive all the parsed summaries as well.
-  virtual bool merge(FunctionSummary &Summary) = 0;
+  virtual bool merge(const FunctionSummary &Summary) const = 0;
 
   virtual std::string serialize();
   virtual std::optional<SummaryAttribute> parse(std::string_view input);

@@ -71,7 +71,9 @@ public:
     return !CB.WriteGlobal;
   };
 
-  bool merge(FunctionSummary &Summary) override { return true; };
+  bool merge(const FunctionSummary &Summary) const override {
+    return Summary.getFunctionAttrs().count(Attr);
+  };
 };
 } // namespace
 
@@ -169,7 +171,43 @@ void SummaryManager::ParseSummaryFromJSON(StringRef path) {
 }
 
 void SummaryManager::ReduceSummaries() {
-  // FIXME: implement
+  bool changed = true;
+  while (changed) {
+    changed = false;
+
+    for (auto &&Function : FunctionSummaries) {
+      for (auto &&call : Function->getCalls()) {
+        // FIXME: This is duplicated and hurts my eyes regardless
+        std::string key(call.begin(), call.size());
+
+        // If we don't have a summary about a called function, we forget
+        // everything about the current one as well.
+        if (!IDToSummary.count(key)) {
+          changed = true;
+          Function->clearAttributes();
+          break;
+        }
+
+        const FunctionSummary *callSummary = IDToSummary.at(key);
+
+        std::set<SummaryAttribute> reducedAttrs;
+        for (auto &&attr : Function->getFunctionAttrs()) {
+          // FIXME: handle union style attributes...
+          if (AttrToDescription[attr]->merge(*callSummary))
+            reducedAttrs.emplace(attr);
+        }
+
+        if (reducedAttrs != Function->getFunctionAttrs()) {
+          Function->clearAttributes();
+
+          for (auto &&attr : reducedAttrs)
+            Function->addAttribute(attr);
+
+          changed = true;
+        }
+      }
+    }
+  }
 }
 
 void SemaSummarizer::ActOnStartOfSourceFile() {

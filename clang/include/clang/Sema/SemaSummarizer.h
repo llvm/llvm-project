@@ -20,6 +20,7 @@ public:
   const std::set<SummaryAttribute> &getFunctionAttrs() const { return FunctionAttrs; }
   const std::set<SmallVector<char>> &getCalls() const { return Calls; }
 
+  void clearAttributes() { FunctionAttrs.clear(); }
   void addAttribute(SummaryAttribute Attr) { FunctionAttrs.emplace(Attr); }
   bool hasAttribute(SummaryAttribute Attr) const { return FunctionAttrs.count(Attr); }
 
@@ -42,6 +43,11 @@ public:
   void ParseSummaryFromJSON(StringRef path);
 
   void ReduceSummaries();
+
+  // FIXME: debug only, remove later
+  const std::vector<std::unique_ptr<FunctionSummary>> &getSummaries() {
+    return FunctionSummaries;
+  }
 };
 
 // FIXME: Is this class needed?
