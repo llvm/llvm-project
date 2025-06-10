@@ -1038,9 +1038,10 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
                                  ? Instruction::SExt
                                  : Instruction::ZExt;
         VPSingleDefRecipe *VPC;
-        if (vputils::isSingleScalar(R.getVPSingleValue()))
+        if (vputils::isSingleScalar(Def))
           VPC = new VPInstructionWithType(Instruction::CastOps(ExtOpcode), {A},
-                                          TruncTy, {}, {});
+                                          TruncTy, {}, {},
+                                          /*IsSingleScalar=*/true);
         else
           VPC = new VPWidenCastRecipe(Instruction::CastOps(ExtOpcode), A,
                                       TruncTy);

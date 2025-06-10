@@ -8130,9 +8130,10 @@ VPRecipeBuilder::handleReplication(Instruction *I, ArrayRef<VPValue *> Operands,
           (Range.Start.isScalable() && isa<IntrinsicInst>(I))) &&
          "Should not predicate a uniform recipe");
   if (IsUniform && Instruction::isCast(I->getOpcode())) {
+    assert(!IsPredicated && "IsUniform implies unpredicated");
     auto *Recipe = new VPInstructionWithType(
         I->getOpcode(), Operands, I->getType(), VPIRFlags(*I), I->getDebugLoc(),
-        /*IsSingleScalar=*/true, I->getName());
+        IsUniform, I->getName());
     Recipe->setUnderlyingValue(I);
     return Recipe;
   }
