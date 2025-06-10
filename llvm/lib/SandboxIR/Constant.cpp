@@ -282,20 +282,11 @@ PoisonValue *PoisonValue::getElementValue(unsigned Idx) const {
       cast<llvm::PoisonValue>(Val)->getElementValue(Idx)));
 }
 
-void GlobalObject::setAlignment(MaybeAlign Align) {
+void GlobalVariable::setAlignment(MaybeAlign Align) {
   Ctx.getTracker()
-      .emplaceIfTracking<
-          GenericSetter<&GlobalObject::getAlign, &GlobalObject::setAlignment>>(
-          this);
-  cast<llvm::GlobalObject>(Val)->setAlignment(Align);
-}
-
-void GlobalObject::setGlobalObjectSubClassData(unsigned V) {
-  Ctx.getTracker()
-      .emplaceIfTracking<
-          GenericSetter<&GlobalObject::getGlobalObjectSubClassData,
-                        &GlobalObject::setGlobalObjectSubClassData>>(this);
-  cast<llvm::GlobalObject>(Val)->setGlobalObjectSubClassData(V);
+      .emplaceIfTracking<GenericSetter<&GlobalVariable::getAlign,
+                                       &GlobalVariable::setAlignment>>(this);
+  cast<llvm::GlobalVariable>(Val)->setAlignment(Align);
 }
 
 void GlobalObject::setSection(StringRef S) {
