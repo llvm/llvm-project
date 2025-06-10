@@ -22,6 +22,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -41,6 +42,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -52,6 +54,10 @@ using namespace llvm;
 using namespace PatternMatch;
 
 #define DEBUG_TYPE "lower-matrix-intrinsics"
+
+STATISTIC(FlattenedMatrices, "Number of matrix flattenings");
+STATISTIC(ReshapedMatrices, "Number of matrix reshapes");
+STATISTIC(SplitMatrices, "Number of matrix splits");
 
 static cl::opt<bool>
     FuseMatrix("fuse-matrix", cl::init(true), cl::Hidden,
@@ -222,7 +228,16 @@ struct ShapeInfo {
 
   /// Returns the transposed shape.
   ShapeInfo t() const { return ShapeInfo(NumColumns, NumRows); }
+
+  friend raw_ostream &operator<<(raw_ostream &OS, ShapeInfo SI);
+
+  LLVM_DUMP_METHOD void dump() const { dbgs() << *this << '\n'; }
 };
+
+raw_ostream &operator<<(raw_ostream &OS, ShapeInfo SI) {
+  return OS << SI.NumRows << 'x' << SI.NumColumns;
+}
+
 } // namespace
 
 static bool isUniformShape(Value *V) {
@@ -232,6 +247,15 @@ static bool isUniformShape(Value *V) {
 
   if (I->isBinaryOp())
     return true;
+
+  if (auto *II = dyn_cast<IntrinsicInst>(V))
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::abs:
+    case Intrinsic::fabs:
+      return true;
+    default:
+      return false;
+    }
 
   switch (I->getOpcode()) {
   case Instruction::PHI:
@@ -486,6 +510,8 @@ class LowerMatrixIntrinsics {
       return getNumColumns();
     }
 
+    ShapeInfo shape() const { return {getNumRows(), getNumColumns()}; }
+
     /// Extract a vector of \p NumElts starting at index (\p I, \p J). If the
     /// matrix is column-major, the result vector is extracted from a column
     /// vector, otherwise from a row vector.
@@ -602,6 +628,28 @@ public:
       SplitVecs.push_back(V);
     }
 
+    LLVM_DEBUG(if (Instruction *Inst = dyn_cast<Instruction>(MatrixVal)) {
+      if (Found != Inst2ColumnMatrix.end()) {
+        // FIXME: re: "at least": SplitVecs.size() doesn't count the shuffles
+        // that embedInVector created.
+        dbgs() << "matrix reshape from " << Found->second.shape() << " to "
+               << SI << " using at least " << SplitVecs.size()
+               << " shuffles on behalf of:\n"
+               << *Inst << '\n';
+        ReshapedMatrices++;
+      } else if (!ShapeMap.contains(MatrixVal)) {
+        dbgs() << "splitting a " << SI << " matrix with " << SplitVecs.size()
+               << " shuffles beacuse we do not have a shape-aware lowering for "
+                  "its def:\n"
+               << *Inst << '\n';
+        SplitMatrices++;
+      } else {
+        // The ShapeMap has it, so it's a case where we're being lowered
+        // before the def, and we expect that InstCombine will clean things up
+        // afterward.
+      }
+    });
+
     return {SplitVecs};
   }
 
@@ -651,7 +699,7 @@ public:
       case Intrinsic::matrix_column_major_store:
         return true;
       default:
-        return false;
+        return isUniformShape(II);
       }
     return isUniformShape(V) || isa<StoreInst>(V) || isa<LoadInst>(V);
   }
@@ -1089,21 +1137,25 @@ public:
 
       IRBuilder<> Builder(Inst);
 
-      if (CallInst *CInst = dyn_cast<CallInst>(Inst))
-        Changed |= VisitCallInst(CInst);
+      const ShapeInfo &SI = ShapeMap.at(Inst);
 
       Value *Op1;
       Value *Op2;
       if (auto *BinOp = dyn_cast<BinaryOperator>(Inst))
-        Changed |= VisitBinaryOperator(BinOp);
-      if (auto *UnOp = dyn_cast<UnaryOperator>(Inst))
-        Changed |= VisitUnaryOperator(UnOp);
-      if (match(Inst, m_Load(m_Value(Op1))))
-        Changed |= VisitLoad(cast<LoadInst>(Inst), Op1, Builder);
+        VisitBinaryOperator(BinOp, SI);
+      else if (auto *UnOp = dyn_cast<UnaryOperator>(Inst))
+        VisitUnaryOperator(UnOp, SI);
+      else if (IntrinsicInst *Intr = dyn_cast<IntrinsicInst>(Inst))
+        VisitIntrinsicInst(Intr, SI);
+      else if (match(Inst, m_Load(m_Value(Op1))))
+        VisitLoad(cast<LoadInst>(Inst), SI, Op1, Builder);
       else if (match(Inst, m_Store(m_Value(Op1), m_Value(Op2))))
-        Changed |= VisitStore(cast<StoreInst>(Inst), Op1, Op2, Builder);
+        VisitStore(cast<StoreInst>(Inst), SI, Op1, Op2, Builder);
       else if (auto *PHI = dyn_cast<PHINode>(Inst))
-        Changed |= VisitPHI(PHI);
+        VisitPHI(PHI, SI);
+      else
+        continue;
+      Changed = true;
     }
 
     if (ORE) {
@@ -1141,28 +1193,53 @@ public:
     return Changed;
   }
 
-  /// Replace intrinsic calls
-  bool VisitCallInst(CallInst *Inst) {
-    if (!Inst->getCalledFunction() || !Inst->getCalledFunction()->isIntrinsic())
-      return false;
-
-    switch (Inst->getCalledFunction()->getIntrinsicID()) {
+  /// Replace intrinsic calls.
+  void VisitIntrinsicInst(IntrinsicInst *Inst, const ShapeInfo &Shape) {
+    switch (Inst->getIntrinsicID()) {
     case Intrinsic::matrix_multiply:
       LowerMultiply(Inst);
-      break;
+      return;
     case Intrinsic::matrix_transpose:
       LowerTranspose(Inst);
-      break;
+      return;
     case Intrinsic::matrix_column_major_load:
       LowerColumnMajorLoad(Inst);
-      break;
+      return;
     case Intrinsic::matrix_column_major_store:
       LowerColumnMajorStore(Inst);
-      break;
-    default:
-      return false;
+      return;
+    case Intrinsic::abs:
+    case Intrinsic::fabs: {
+      IRBuilder<> Builder(Inst);
+      MatrixTy Result;
+      MatrixTy M = getMatrix(Inst->getOperand(0), Shape, Builder);
+      Builder.setFastMathFlags(getFastMathFlags(Inst));
+
+      for (auto &Vector : M.vectors()) {
+        switch (Inst->getIntrinsicID()) {
+        case Intrinsic::abs:
+          Result.addVector(Builder.CreateBinaryIntrinsic(Intrinsic::abs, Vector,
+                                                         Inst->getOperand(1)));
+          continue;
+        case Intrinsic::fabs:
+          Result.addVector(
+              Builder.CreateUnaryIntrinsic(Inst->getIntrinsicID(), Vector));
+          continue;
+        default:
+          llvm_unreachable("unexpected intrinsic");
+        }
+      }
+
+      finalizeLowering(Inst,
+                       Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
+                                               Result.getNumVectors()),
+                       Builder);
+      return;
     }
-    return true;
+    default:
+      llvm_unreachable(
+          "only intrinsics supporting shape info should be seen here");
+    }
   }
 
   /// Compute the alignment for a column/row \p Idx with \p Stride between them.
@@ -1384,11 +1461,21 @@ public:
     ToRemove.push_back(Inst);
     Value *Flattened = nullptr;
     for (Use &U : llvm::make_early_inc_range(Inst->uses())) {
-      if (!ShapeMap.contains(U.getUser())) {
-        if (!Flattened)
-          Flattened = Matrix.embedInVector(Builder);
-        U.set(Flattened);
+      if (ShapeMap.contains(U.getUser()))
+        continue;
+
+      if (!Flattened) {
+        Flattened = Matrix.embedInVector(Builder);
+        LLVM_DEBUG(
+            if (Instruction *User = dyn_cast<Instruction>(U.getUser())) dbgs()
+                << "flattening a " << Matrix.shape() << " matrix:\n"
+                << *Inst
+                << "\nbecause we do not have a shape-aware lowering for its "
+                   "user:\n"
+                << *User << '\n';);
+        FlattenedMatrices++;
       }
+      U.set(Flattened);
     }
   }
 
@@ -2140,35 +2227,20 @@ public:
         Builder);
   }
 
-  /// Lower load instructions, if shape information is available.
-  bool VisitLoad(LoadInst *Inst, Value *Ptr, IRBuilder<> &Builder) {
-    auto I = ShapeMap.find(Inst);
-    assert(I != ShapeMap.end() &&
-           "must only visit instructions with shape info");
-    LowerLoad(Inst, Ptr, Inst->getAlign(),
-              Builder.getInt64(I->second.getStride()), Inst->isVolatile(),
-              I->second);
-    return true;
+  /// Lower load instructions.
+  void VisitLoad(LoadInst *Inst, const ShapeInfo &SI, Value *Ptr,
+                 IRBuilder<> &Builder) {
+    LowerLoad(Inst, Ptr, Inst->getAlign(), Builder.getInt64(SI.getStride()),
+              Inst->isVolatile(), SI);
   }
 
-  bool VisitStore(StoreInst *Inst, Value *StoredVal, Value *Ptr,
-                  IRBuilder<> &Builder) {
-    auto I = ShapeMap.find(StoredVal);
-    assert(I != ShapeMap.end() &&
-           "must only visit instructions with shape info");
+  void VisitStore(StoreInst *Inst, const ShapeInfo &SI, Value *StoredVal,
+                  Value *Ptr, IRBuilder<> &Builder) {
     LowerStore(Inst, StoredVal, Ptr, Inst->getAlign(),
-               Builder.getInt64(I->second.getStride()), Inst->isVolatile(),
-               I->second);
-    return true;
+               Builder.getInt64(SI.getStride()), Inst->isVolatile(), SI);
   }
 
-  bool VisitPHI(PHINode *Inst) {
-    auto I = ShapeMap.find(Inst);
-    assert(I != ShapeMap.end() &&
-           "must only visit instructions with shape info");
-
-    const ShapeInfo &SI = I->second;
-
+  void VisitPHI(PHINode *Inst, const ShapeInfo &SI) {
     IRBuilder<> Builder(Inst);
 
     // Shim this->getMatrix to insert split phi's as needed.
@@ -2219,31 +2291,25 @@ public:
     // place for those is at the end of the initial block of PHIs.
     Builder.SetInsertPoint(*Inst->getInsertionPointAfterDef());
     finalizeLowering(Inst, PhiM, Builder);
-    return true;
   }
 
-  /// Lower binary operators, if shape information is available.
-  bool VisitBinaryOperator(BinaryOperator *Inst) {
-    auto I = ShapeMap.find(Inst);
-    assert(I != ShapeMap.end() &&
-           "must only visit instructions with shape info");
-
+  /// Lower binary operators.
+  void VisitBinaryOperator(BinaryOperator *Inst, const ShapeInfo &SI) {
     Value *Lhs = Inst->getOperand(0);
     Value *Rhs = Inst->getOperand(1);
 
     IRBuilder<> Builder(Inst);
-    ShapeInfo &Shape = I->second;
 
     MatrixTy Result;
-    MatrixTy A = getMatrix(Lhs, Shape, Builder);
-    MatrixTy B = getMatrix(Rhs, Shape, Builder);
+    MatrixTy A = getMatrix(Lhs, SI, Builder);
+    MatrixTy B = getMatrix(Rhs, SI, Builder);
     assert(A.isColumnMajor() == B.isColumnMajor() &&
            Result.isColumnMajor() == A.isColumnMajor() &&
            "operands must agree on matrix layout");
 
     Builder.setFastMathFlags(getFastMathFlags(Inst));
 
-    for (unsigned I = 0; I < Shape.getNumVectors(); ++I)
+    for (unsigned I = 0; I < SI.getNumVectors(); ++I)
       Result.addVector(Builder.CreateBinOp(Inst->getOpcode(), A.getVector(I),
                                            B.getVector(I)));
 
@@ -2251,22 +2317,16 @@ public:
                      Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
                                              Result.getNumVectors()),
                      Builder);
-    return true;
   }
 
-  /// Lower unary operators, if shape information is available.
-  bool VisitUnaryOperator(UnaryOperator *Inst) {
-    auto I = ShapeMap.find(Inst);
-    assert(I != ShapeMap.end() &&
-           "must only visit instructions with shape info");
-
+  /// Lower unary operators.
+  void VisitUnaryOperator(UnaryOperator *Inst, const ShapeInfo &SI) {
     Value *Op = Inst->getOperand(0);
 
     IRBuilder<> Builder(Inst);
-    ShapeInfo &Shape = I->second;
 
     MatrixTy Result;
-    MatrixTy M = getMatrix(Op, Shape, Builder);
+    MatrixTy M = getMatrix(Op, SI, Builder);
 
     Builder.setFastMathFlags(getFastMathFlags(Inst));
 
@@ -2280,14 +2340,13 @@ public:
       }
     };
 
-    for (unsigned I = 0; I < Shape.getNumVectors(); ++I)
+    for (unsigned I = 0; I < SI.getNumVectors(); ++I)
       Result.addVector(BuildVectorOp(M.getVector(I)));
 
     finalizeLowering(Inst,
                      Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
                                              Result.getNumVectors()),
                      Builder);
-    return true;
   }
 
   /// Helper to linearize a matrix expression tree into a string. Currently

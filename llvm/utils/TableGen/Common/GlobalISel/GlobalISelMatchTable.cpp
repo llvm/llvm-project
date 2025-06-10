@@ -33,6 +33,8 @@ Error failUnsupported(const Twine &Reason) {
 std::string getEnumNameForPredicate(const TreePredicateFn &Predicate) {
   if (Predicate.hasGISelPredicateCode())
     return "GICXXPred_MI_" + Predicate.getFnName();
+  if (Predicate.hasGISelLeafPredicateCode())
+    return "GICXXPred_MO_" + Predicate.getFnName();
   return "GICXXPred_" + Predicate.getImmTypeIdentifier().str() + "_" +
          Predicate.getFnName();
 }
@@ -1319,6 +1321,19 @@ void IntrinsicIDOperandMatcher::emitPredicateOpcodes(MatchTable &Table,
 void OperandImmPredicateMatcher::emitPredicateOpcodes(MatchTable &Table,
                                                       RuleMatcher &Rule) const {
   Table << MatchTable::Opcode("GIM_CheckImmOperandPredicate")
+        << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
+        << MatchTable::Comment("MO") << MatchTable::ULEB128Value(OpIdx)
+        << MatchTable::Comment("Predicate")
+        << MatchTable::NamedValue(2, getEnumNameForPredicate(Predicate))
+        << MatchTable::LineBreak;
+}
+
+//===- OperandLeafPredicateMatcher
+//-----------------------------------------===//
+
+void OperandLeafPredicateMatcher::emitPredicateOpcodes(
+    MatchTable &Table, RuleMatcher &Rule) const {
+  Table << MatchTable::Opcode("GIM_CheckLeafOperandPredicate")
         << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
         << MatchTable::Comment("MO") << MatchTable::ULEB128Value(OpIdx)
         << MatchTable::Comment("Predicate")

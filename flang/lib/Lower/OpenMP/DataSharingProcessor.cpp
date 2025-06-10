@@ -12,10 +12,10 @@
 
 #include "DataSharingProcessor.h"
 
-#include "PrivateReductionUtils.h"
 #include "Utils.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/PFTBuilder.h"
+#include "flang/Lower/Support/PrivateReductionUtils.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
@@ -388,19 +388,43 @@ getSource(const semantics::SemanticsContext &semaCtx,
   return source;
 }
 
+bool DataSharingProcessor::isOpenMPPrivatizingConstruct(
+    const parser::OpenMPConstruct &omp) {
+  return common::visit(
+      [](auto &&s) {
+        using BareS = llvm::remove_cvref_t<decltype(s)>;
+        return std::is_same_v<BareS, parser::OpenMPBlockConstruct> ||
+               std::is_same_v<BareS, parser::OpenMPLoopConstruct> ||
+               std::is_same_v<BareS, parser::OpenMPSectionsConstruct>;
+      },
+      omp.u);
+}
+
+bool DataSharingProcessor::isOpenMPPrivatizingEvaluation(
+    const pft::Evaluation &eval) const {
+  return eval.visit([](auto &&s) {
+    using BareS = llvm::remove_cvref_t<decltype(s)>;
+    if constexpr (std::is_same_v<BareS, parser::OpenMPConstruct>) {
+      return isOpenMPPrivatizingConstruct(s);
+    } else {
+      return false;
+    }
+  });
+}
+
 void DataSharingProcessor::collectSymbolsInNestedRegions(
     lower::pft::Evaluation &eval, semantics::Symbol::Flag flag,
     llvm::SetVector<const semantics::Symbol *> &symbolsInNestedRegions) {
-  for (lower::pft::Evaluation &nestedEval : eval.getNestedEvaluations()) {
-    if (nestedEval.hasNestedEvaluations()) {
-      if (nestedEval.isConstruct())
-        // Recursively look for OpenMP constructs within `nestedEval`'s region
-        collectSymbolsInNestedRegions(nestedEval, flag, symbolsInNestedRegions);
-      else {
-        converter.collectSymbolSet(nestedEval, symbolsInNestedRegions, flag,
-                                   /*collectSymbols=*/true,
-                                   /*collectHostAssociatedSymbols=*/false);
-      }
+  if (!eval.hasNestedEvaluations())
+    return;
+  for (pft::Evaluation &nestedEval : eval.getNestedEvaluations()) {
+    if (isOpenMPPrivatizingEvaluation(nestedEval)) {
+      converter.collectSymbolSet(nestedEval, symbolsInNestedRegions, flag,
+                                 /*collectSymbols=*/true,
+                                 /*collectHostAssociatedSymbols=*/false);
+    } else {
+      // Recursively look for OpenMP constructs within `nestedEval`'s region
+      collectSymbolsInNestedRegions(nestedEval, flag, symbolsInNestedRegions);
     }
   }
 }
@@ -537,38 +561,10 @@ void DataSharingProcessor::privatizeSymbol(
     return;
   }
 
-  auto initGen = [&](mlir::omp::PrivateClauseOp result, mlir::Type argType) {
-    lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(*symToPrivatize);
-    assert(hsb && "Host symbol box not found");
-    hlfir::Entity entity{hsb.getAddr()};
-    bool cannotHaveNonDefaultLowerBounds =
-        !entity.mayHaveNonDefaultLowerBounds();
-
-    mlir::Region &initRegion = result.getInitRegion();
-    mlir::Location symLoc = hsb.getAddr().getLoc();
-    mlir::Block *initBlock = firOpBuilder.createBlock(
-        &initRegion, /*insertPt=*/{}, {argType, argType}, {symLoc, symLoc});
-
-    bool emitCopyRegion =
-        symToPrivatize->test(semantics::Symbol::Flag::OmpFirstPrivate);
-
-    populateByRefInitAndCleanupRegions(
-        converter, symLoc, argType, /*scalarInitValue=*/nullptr, initBlock,
-        result.getInitPrivateArg(), result.getInitMoldArg(),
-        result.getDeallocRegion(),
-        emitCopyRegion ? omp::DeclOperationKind::FirstPrivate
-                       : omp::DeclOperationKind::Private,
-        symToPrivatize, cannotHaveNonDefaultLowerBounds);
-    // TODO: currently there are false positives from dead uses of the mold
-    // arg
-    if (result.initReadsFromMold())
-      mightHaveReadHostSym.insert(symToPrivatize);
-  };
-
   Fortran::lower::privatizeSymbol<mlir::omp::PrivateClauseOp,
                                   mlir::omp::PrivateClauseOps>(
-      converter, firOpBuilder, symTable, initGen, allPrivatizedSymbols,
-      symToPrivatize, clauseOps);
+      converter, firOpBuilder, symTable, allPrivatizedSymbols,
+      mightHaveReadHostSym, symToPrivatize, clauseOps);
 }
 } // namespace omp
 } // namespace lower
