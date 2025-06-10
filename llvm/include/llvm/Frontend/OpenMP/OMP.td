@@ -246,6 +246,7 @@ def OMPC_Inclusive : Clause<[Spelling<"inclusive">]> {
   let flangClass = "OmpObjectList";
 }
 def OMPC_Indirect : Clause<[Spelling<"indirect">]> {
+  let flangClass = "OmpIndirectClause";
 }
 def OMPC_Init : Clause<[Spelling<"init">]> {
   let clangClass = "OMPInitClause";
