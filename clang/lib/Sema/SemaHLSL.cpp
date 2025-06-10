@@ -765,8 +765,8 @@ void SemaHLSL::CheckSemanticAnnotation(
     DiagnoseAttrStageMismatch(AnnotationAttr, ST, {llvm::Triple::Compute});
     break;
   case attr::HLSLSV_Position:
-    // TODO: allow use on other shader types & output once the overall semantic
-    // logic is implemented.
+    // TODO(#143523): allow use on other shader types & output once the overall
+    // semantic logic is implemented.
     if (ST == llvm::Triple::Pixel)
       return;
     DiagnoseAttrStageMismatch(AnnotationAttr, ST, {llvm::Triple::Pixel});
