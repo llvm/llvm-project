@@ -21,8 +21,8 @@ Target &llvm::getTheRISCV64Target() {
   return TheRISCV64Target;
 }
 
-extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY
-void LLVMInitializeRISCVTargetInfo() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeRISCVTargetInfo() {
   RegisterTarget<Triple::riscv32, /*HasJIT=*/true> X(
       getTheRISCV32Target(), "riscv32", "32-bit RISC-V", "RISCV");
   RegisterTarget<Triple::riscv64, /*HasJIT=*/true> Y(

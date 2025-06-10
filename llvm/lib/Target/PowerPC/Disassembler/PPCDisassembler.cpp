@@ -51,7 +51,8 @@ static MCDisassembler *createPPCLEDisassembler(const Target &T,
   return new PPCDisassembler(STI, Ctx, /*IsLittleEndian=*/true);
 }
 
-extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCDisassembler() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializePowerPCDisassembler() {
   // Register the disassembler for each target.
   TargetRegistry::RegisterMCDisassembler(getThePPC32Target(),
                                          createPPCDisassembler);

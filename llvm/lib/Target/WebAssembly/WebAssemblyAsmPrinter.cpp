@@ -760,7 +760,8 @@ INITIALIZE_PASS(WebAssemblyAsmPrinter, "webassembly-asm-printer",
                 "WebAssembly Assmebly Printer", false, false)
 
 // Force static initialization.
-extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeWebAssemblyAsmPrinter() {
   RegisterAsmPrinter<WebAssemblyAsmPrinter> X(getTheWebAssemblyTarget32());
   RegisterAsmPrinter<WebAssemblyAsmPrinter> Y(getTheWebAssemblyTarget64());
 }

@@ -1785,8 +1785,8 @@ bool PPCAsmParser::parseGNUAttribute(SMLoc L) {
 }
 
 /// Force static initialization.
-extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY
-void LLVMInitializePowerPCAsmParser() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializePowerPCAsmParser() {
   RegisterMCAsmParser<PPCAsmParser> A(getThePPC32Target());
   RegisterMCAsmParser<PPCAsmParser> B(getThePPC32LETarget());
   RegisterMCAsmParser<PPCAsmParser> C(getThePPC64Target());

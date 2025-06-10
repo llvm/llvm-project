@@ -240,8 +240,8 @@ static MCInstrAnalysis *createSystemZMCInstrAnalysis(const MCInstrInfo *Info) {
   return new MCInstrAnalysis(Info);
 }
 
-extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY
-void LLVMInitializeSystemZTargetMC() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeSystemZTargetMC() {
   // Register the MCAsmInfo.
   TargetRegistry::RegisterMCAsmInfo(getTheSystemZTarget(),
                                     createSystemZMCAsmInfo);
