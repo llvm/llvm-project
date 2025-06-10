@@ -1916,8 +1916,7 @@ static inline unsigned clampMinimumLength(const unsigned Value) {
   return Value < 2 ? DefaultMinimumLength : Value;
 }
 
-// FIXME: Maybe unneeded, getNameForDiagnostic() is expected to change to
-// return
+// FIXME: Maybe unneeded, getNameForDiagnostic() is expected to change to return
 // a crafted location when the node itself is unnamed. (See D84658, D85033.)
 /// Returns the diagnostic-friendly name of the node, or empty string.
 static SmallString<64> getName(const NamedDecl *ND) {
