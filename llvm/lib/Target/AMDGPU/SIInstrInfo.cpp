@@ -7745,7 +7745,7 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
                                                     : &AMDGPU::VGPR_32RegClass);
     auto NewInstr = BuildMI(*MBB, Inst, DL, get(NewOpcode), NewDst)
                         .addImm(0) // src0_modifiers
-                        .add(Inst.getOperand(1))
+                        .add(Inst.getOperand(2))
                         .addImm(0)  // clamp
                         .addImm(0); // omod
     if (ST.useRealTrue16Insts())

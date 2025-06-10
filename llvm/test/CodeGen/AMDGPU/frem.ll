@@ -626,14 +626,13 @@ define amdgpu_kernel void @fast_frem_f16(ptr addrspace(1) %out, ptr addrspace(1)
 ; GFX1200-TRUE16-NEXT:    s_clause 0x1
 ; GFX1200-TRUE16-NEXT:    global_load_d16_b16 v0, v2, s[2:3]
 ; GFX1200-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v2, s[4:5] offset:8
-; GFX1200-TRUE16-NEXT:    v_rcp_f16_e32 v1.l, 0
-; GFX1200-TRUE16-NEXT:    s_wait_loadcnt 0x1
+; GFX1200-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX1200-TRUE16-NEXT:    v_rcp_f16_e32 v1.l, v0.h
 ; GFX1200-TRUE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-TRUE16-NEXT:    v_mul_f16_e32 v1.l, v0.l, v1.l
 ; GFX1200-TRUE16-NEXT:    v_trunc_f16_e32 v1.l, v1.l
-; GFX1200-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1200-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-TRUE16-NEXT:    v_xor_b32_e32 v1, 0x8000, v1
-; GFX1200-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX1200-TRUE16-NEXT:    v_fmac_f16_e32 v0.l, v1.l, v0.h
 ; GFX1200-TRUE16-NEXT:    global_store_b16 v2, v0, s[0:1]
 ; GFX1200-TRUE16-NEXT:    s_endpgm
@@ -648,14 +647,13 @@ define amdgpu_kernel void @fast_frem_f16(ptr addrspace(1) %out, ptr addrspace(1)
 ; GFX1200-FAKE16-NEXT:    s_clause 0x1
 ; GFX1200-FAKE16-NEXT:    global_load_u16 v1, v0, s[2:3]
 ; GFX1200-FAKE16-NEXT:    global_load_u16 v2, v0, s[4:5] offset:8
-; GFX1200-FAKE16-NEXT:    v_rcp_f16_e32 v3, 0
-; GFX1200-FAKE16-NEXT:    s_wait_loadcnt 0x1
+; GFX1200-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX1200-FAKE16-NEXT:    v_rcp_f16_e32 v3, v2
 ; GFX1200-FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-FAKE16-NEXT:    v_mul_f16_e32 v3, v1, v3
 ; GFX1200-FAKE16-NEXT:    v_trunc_f16_e32 v3, v3
-; GFX1200-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1200-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-FAKE16-NEXT:    v_xor_b32_e32 v3, 0x8000, v3
-; GFX1200-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX1200-FAKE16-NEXT:    v_fmac_f16_e32 v1, v3, v2
 ; GFX1200-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX1200-FAKE16-NEXT:    s_endpgm
@@ -876,14 +874,13 @@ define amdgpu_kernel void @unsafe_frem_f16(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1200-TRUE16-NEXT:    s_clause 0x1
 ; GFX1200-TRUE16-NEXT:    global_load_d16_b16 v0, v2, s[2:3]
 ; GFX1200-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v2, s[4:5] offset:8
-; GFX1200-TRUE16-NEXT:    v_rcp_f16_e32 v1.l, 0
-; GFX1200-TRUE16-NEXT:    s_wait_loadcnt 0x1
+; GFX1200-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX1200-TRUE16-NEXT:    v_rcp_f16_e32 v1.l, v0.h
 ; GFX1200-TRUE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-TRUE16-NEXT:    v_mul_f16_e32 v1.l, v0.l, v1.l
 ; GFX1200-TRUE16-NEXT:    v_trunc_f16_e32 v1.l, v1.l
-; GFX1200-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1200-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-TRUE16-NEXT:    v_xor_b32_e32 v1, 0x8000, v1
-; GFX1200-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX1200-TRUE16-NEXT:    v_fmac_f16_e32 v0.l, v1.l, v0.h
 ; GFX1200-TRUE16-NEXT:    global_store_b16 v2, v0, s[0:1]
 ; GFX1200-TRUE16-NEXT:    s_endpgm
@@ -898,14 +895,13 @@ define amdgpu_kernel void @unsafe_frem_f16(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1200-FAKE16-NEXT:    s_clause 0x1
 ; GFX1200-FAKE16-NEXT:    global_load_u16 v1, v0, s[2:3]
 ; GFX1200-FAKE16-NEXT:    global_load_u16 v2, v0, s[4:5] offset:8
-; GFX1200-FAKE16-NEXT:    v_rcp_f16_e32 v3, 0
-; GFX1200-FAKE16-NEXT:    s_wait_loadcnt 0x1
+; GFX1200-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX1200-FAKE16-NEXT:    v_rcp_f16_e32 v3, v2
 ; GFX1200-FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-FAKE16-NEXT:    v_mul_f16_e32 v3, v1, v3
 ; GFX1200-FAKE16-NEXT:    v_trunc_f16_e32 v3, v3
-; GFX1200-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1200-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-FAKE16-NEXT:    v_xor_b32_e32 v3, 0x8000, v3
-; GFX1200-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX1200-FAKE16-NEXT:    v_fmac_f16_e32 v1, v3, v2
 ; GFX1200-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX1200-FAKE16-NEXT:    s_endpgm

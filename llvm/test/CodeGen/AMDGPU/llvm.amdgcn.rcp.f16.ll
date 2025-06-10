@@ -65,21 +65,37 @@ define amdgpu_kernel void @rcp_f16(
 ; GFX12-TRUE16-LABEL: rcp_f16:
 ; GFX12-TRUE16:       ; %bb.0: ; %entry
 ; GFX12-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX12-TRUE16-NEXT:    v_rcp_f16_e32 v0.l, 0
+; GFX12-TRUE16-NEXT:    s_mov_b32 s6, -1
+; GFX12-TRUE16-NEXT:    s_mov_b32 s7, 0x31016000
+; GFX12-TRUE16-NEXT:    s_mov_b32 s10, s6
+; GFX12-TRUE16-NEXT:    s_mov_b32 s11, s7
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
-; GFX12-TRUE16-NEXT:    s_mov_b32 s2, -1
-; GFX12-TRUE16-NEXT:    buffer_store_b16 v0, off, s[0:3], null
+; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s2
+; GFX12-TRUE16-NEXT:    s_mov_b32 s9, s3
+; GFX12-TRUE16-NEXT:    s_mov_b32 s4, s0
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v0, off, s[8:11], null
+; GFX12-TRUE16-NEXT:    s_mov_b32 s5, s1
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-TRUE16-NEXT:    v_rcp_f16_e32 v0.l, v0.l
+; GFX12-TRUE16-NEXT:    buffer_store_b16 v0, off, s[4:7], null
 ; GFX12-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX12-FAKE16-LABEL: rcp_f16:
 ; GFX12-FAKE16:       ; %bb.0: ; %entry
 ; GFX12-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX12-FAKE16-NEXT:    v_rcp_f16_e32 v0, 0
+; GFX12-FAKE16-NEXT:    s_mov_b32 s6, -1
+; GFX12-FAKE16-NEXT:    s_mov_b32 s7, 0x31016000
+; GFX12-FAKE16-NEXT:    s_mov_b32 s10, s6
+; GFX12-FAKE16-NEXT:    s_mov_b32 s11, s7
 ; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-FAKE16-NEXT:    s_mov_b32 s3, 0x31016000
-; GFX12-FAKE16-NEXT:    s_mov_b32 s2, -1
-; GFX12-FAKE16-NEXT:    buffer_store_b16 v0, off, s[0:3], null
+; GFX12-FAKE16-NEXT:    s_mov_b32 s8, s2
+; GFX12-FAKE16-NEXT:    s_mov_b32 s9, s3
+; GFX12-FAKE16-NEXT:    s_mov_b32 s4, s0
+; GFX12-FAKE16-NEXT:    buffer_load_u16 v0, off, s[8:11], null
+; GFX12-FAKE16-NEXT:    s_mov_b32 s5, s1
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-FAKE16-NEXT:    v_rcp_f16_e32 v0, v0
+; GFX12-FAKE16-NEXT:    buffer_store_b16 v0, off, s[4:7], null
 ; GFX12-FAKE16-NEXT:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a) {
