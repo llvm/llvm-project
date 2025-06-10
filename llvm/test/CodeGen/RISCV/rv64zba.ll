@@ -4260,10 +4260,11 @@ define i64 @add_u32simm32_zextw(i64 %x) nounwind {
 ;
 ; RV64XANDESPERF-LABEL: add_u32simm32_zextw:
 ; RV64XANDESPERF:       # %bb.0: # %entry
+; RV64XANDESPERF-NEXT:    li a1, -2
+; RV64XANDESPERF-NEXT:    nds.lea.b.ze a0, a0, a1
 ; RV64XANDESPERF-NEXT:    li a1, 1
 ; RV64XANDESPERF-NEXT:    slli a1, a1, 32
 ; RV64XANDESPERF-NEXT:    addi a1, a1, -2
-; RV64XANDESPERF-NEXT:    add a0, a0, a1
 ; RV64XANDESPERF-NEXT:    addi a1, a1, 1
 ; RV64XANDESPERF-NEXT:    and a0, a0, a1
 ; RV64XANDESPERF-NEXT:    ret
@@ -4413,12 +4414,24 @@ define ptr @udiv1280_gep(ptr %p, i16 zeroext %i) {
 }
 
 define i64 @adduw_m1(i64 %x) {
-; CHECK-LABEL: adduw_m1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, -1
-; CHECK-NEXT:    srli a1, a1, 32
-; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: adduw_m1:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, -1
+; RV64I-NEXT:    srli a1, a1, 32
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: adduw_m1:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    li a1, -1
+; RV64ZBA-NEXT:    add.uw a0, a1, a0
+; RV64ZBA-NEXT:    ret
+;
+; RV64XANDESPERF-LABEL: adduw_m1:
+; RV64XANDESPERF:       # %bb.0:
+; RV64XANDESPERF-NEXT:    li a1, -1
+; RV64XANDESPERF-NEXT:    nds.lea.b.ze a0, a0, a1
+; RV64XANDESPERF-NEXT:    ret
   %a = add i64 %x, 4294967295
   ret i64 %a
 }
@@ -4435,28 +4448,37 @@ define i64 @adduw_m3(i64 %x) {
 ; RV64ZBA-LABEL: adduw_m3:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    li a1, -3
-; RV64ZBA-NEXT:    zext.w a1, a1
-; RV64ZBA-NEXT:    add a0, a0, a1
+; RV64ZBA-NEXT:    add.uw a0, a1, a0
 ; RV64ZBA-NEXT:    ret
 ;
 ; RV64XANDESPERF-LABEL: adduw_m3:
 ; RV64XANDESPERF:       # %bb.0:
-; RV64XANDESPERF-NEXT:    li a1, 1
-; RV64XANDESPERF-NEXT:    slli a1, a1, 32
-; RV64XANDESPERF-NEXT:    addi a1, a1, -3
-; RV64XANDESPERF-NEXT:    add a0, a0, a1
+; RV64XANDESPERF-NEXT:    li a1, -3
+; RV64XANDESPERF-NEXT:    nds.lea.b.ze a0, a0, a1
 ; RV64XANDESPERF-NEXT:    ret
   %a = add i64 %x, 4294967293
   ret i64 %a
 }
 
 define i64 @adduw_3shl30(i64 %x) {
-; CHECK-LABEL: adduw_3shl30:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 3
-; CHECK-NEXT:    slli a1, a1, 30
-; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: adduw_3shl30:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 3
+; RV64I-NEXT:    slli a1, a1, 30
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: adduw_3shl30:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    lui a1, 786432
+; RV64ZBA-NEXT:    add.uw a0, a1, a0
+; RV64ZBA-NEXT:    ret
+;
+; RV64XANDESPERF-LABEL: adduw_3shl30:
+; RV64XANDESPERF:       # %bb.0:
+; RV64XANDESPERF-NEXT:    lui a1, 786432
+; RV64XANDESPERF-NEXT:    nds.lea.b.ze a0, a0, a1
+; RV64XANDESPERF-NEXT:    ret
   %a = add i64 %x, 3221225472
   ret i64 %a
 }
@@ -4475,19 +4497,16 @@ define i64 @adduw_m3_multiuse(i64 %x, i64 %y) {
 ; RV64ZBA-LABEL: adduw_m3_multiuse:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    li a2, -3
-; RV64ZBA-NEXT:    zext.w a2, a2
-; RV64ZBA-NEXT:    add a0, a0, a2
-; RV64ZBA-NEXT:    add a1, a1, a2
+; RV64ZBA-NEXT:    add.uw a0, a2, a0
+; RV64ZBA-NEXT:    add.uw a1, a2, a1
 ; RV64ZBA-NEXT:    or a0, a0, a1
 ; RV64ZBA-NEXT:    ret
 ;
 ; RV64XANDESPERF-LABEL: adduw_m3_multiuse:
 ; RV64XANDESPERF:       # %bb.0:
-; RV64XANDESPERF-NEXT:    li a2, 1
-; RV64XANDESPERF-NEXT:    slli a2, a2, 32
-; RV64XANDESPERF-NEXT:    addi a2, a2, -3
-; RV64XANDESPERF-NEXT:    add a0, a0, a2
-; RV64XANDESPERF-NEXT:    add a1, a1, a2
+; RV64XANDESPERF-NEXT:    li a2, -3
+; RV64XANDESPERF-NEXT:    nds.lea.b.ze a0, a0, a2
+; RV64XANDESPERF-NEXT:    nds.lea.b.ze a1, a1, a2
 ; RV64XANDESPERF-NEXT:    or a0, a0, a1
 ; RV64XANDESPERF-NEXT:    ret
   %a = add i64 %x, 4294967293
@@ -4532,13 +4551,27 @@ define i64 @add_or_m3(i64 %x) {
 }
 
 define i64 @append_32ones(i64 %x) {
-; CHECK-LABEL: append_32ones:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a0, a0, 32
-; CHECK-NEXT:    li a1, -1
-; CHECK-NEXT:    srli a1, a1, 32
-; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: append_32ones:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    li a1, -1
+; RV64I-NEXT:    srli a1, a1, 32
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: append_32ones:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slli a0, a0, 32
+; RV64ZBA-NEXT:    li a1, -1
+; RV64ZBA-NEXT:    add.uw a0, a1, a0
+; RV64ZBA-NEXT:    ret
+;
+; RV64XANDESPERF-LABEL: append_32ones:
+; RV64XANDESPERF:       # %bb.0:
+; RV64XANDESPERF-NEXT:    slli a0, a0, 32
+; RV64XANDESPERF-NEXT:    li a1, -1
+; RV64XANDESPERF-NEXT:    nds.lea.b.ze a0, a0, a1
+; RV64XANDESPERF-NEXT:    ret
   %s = shl i64 %x, 32
   %o = or i64 %s, 4294967295
   ret i64 %o
