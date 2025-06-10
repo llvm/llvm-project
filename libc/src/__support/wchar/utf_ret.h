@@ -1,6 +1,5 @@
 
-template <typename T>
-struct utf_ret {
-    T out;
-    int error;
+template <typename T> struct utf_ret {
+  T out;
+  int error;
 };
