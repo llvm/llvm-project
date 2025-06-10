@@ -2051,10 +2051,10 @@ instCombineSVECntElts(InstCombiner &IC, IntrinsicInst &II, unsigned NumElts) {
   const auto Pattern = cast<ConstantInt>(II.getArgOperand(0))->getZExtValue();
 
   if (Pattern == AArch64SVEPredPattern::all) {
-    Constant *StepVal = ConstantInt::get(II.getType(), NumElts);
-    auto *VScale = IC.Builder.CreateVScale(StepVal);
-    VScale->takeName(&II);
-    return IC.replaceInstUsesWith(II, VScale);
+    Value *Cnt = IC.Builder.CreateElementCount(
+        II.getType(), ElementCount::getScalable(NumElts));
+    Cnt->takeName(&II);
+    return IC.replaceInstUsesWith(II, Cnt);
   }
 
   unsigned MinNumElts = getNumElementsFromSVEPredPattern(Pattern);
