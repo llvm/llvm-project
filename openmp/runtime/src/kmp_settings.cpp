@@ -1501,7 +1501,6 @@ static void __kmp_stg_print_disp_buffers(kmp_str_buf_t *buffer,
   __kmp_stg_print_int(buffer, name, __kmp_dispatch_num_buffers);
 } // __kmp_stg_print_disp_buffers
 
-#if KMP_NESTED_HOT_TEAMS
 // -----------------------------------------------------------------------------
 // KMP_HOT_TEAMS_MAX_LEVEL, KMP_HOT_TEAMS_MODE
 
@@ -1534,8 +1533,6 @@ static void __kmp_stg_print_hot_teams_mode(kmp_str_buf_t *buffer,
                                            char const *name, void *data) {
   __kmp_stg_print_int(buffer, name, __kmp_hot_teams_mode);
 } // __kmp_stg_print_hot_teams_mode
-
-#endif // KMP_NESTED_HOT_TEAMS
 
 // -----------------------------------------------------------------------------
 // KMP_HANDLE_SIGNALS
@@ -5569,12 +5566,10 @@ static kmp_setting_t __kmp_stg_table[] = {
      __kmp_stg_print_wait_policy, NULL, 0, 0},
     {"KMP_DISP_NUM_BUFFERS", __kmp_stg_parse_disp_buffers,
      __kmp_stg_print_disp_buffers, NULL, 0, 0},
-#if KMP_NESTED_HOT_TEAMS
     {"KMP_HOT_TEAMS_MAX_LEVEL", __kmp_stg_parse_hot_teams_level,
      __kmp_stg_print_hot_teams_level, NULL, 0, 0},
     {"KMP_HOT_TEAMS_MODE", __kmp_stg_parse_hot_teams_mode,
      __kmp_stg_print_hot_teams_mode, NULL, 0, 0},
-#endif // KMP_NESTED_HOT_TEAMS
 
 #if KMP_HANDLE_SIGNALS
     {"KMP_HANDLE_SIGNALS", __kmp_stg_parse_handle_signals,
@@ -5758,7 +5753,8 @@ static kmp_setting_t __kmp_stg_table[] = {
 #if OMPX_TASKGRAPH
     {"KMP_MAX_TDGS", __kmp_stg_parse_max_tdgs, __kmp_std_print_max_tdgs, NULL,
      0, 0},
-    {"KMP_TDG_DOT", __kmp_stg_parse_tdg_dot, __kmp_stg_print_tdg_dot, NULL, 0, 0},
+    {"KMP_TDG_DOT", __kmp_stg_parse_tdg_dot, __kmp_stg_print_tdg_dot, NULL, 0,
+     0},
 #endif
 
 #if OMPT_SUPPORT
