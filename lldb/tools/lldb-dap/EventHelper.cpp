@@ -11,6 +11,8 @@
 #include "DAPError.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
+#include "Protocol/ProtocolEvents.h"
+#include "Protocol/ProtocolTypes.h"
 #include "lldb/API/SBFileSpec.h"
 #include "llvm/Support/Error.h"
 
@@ -34,6 +36,22 @@ static void SendThreadExitedEvent(DAP &dap, lldb::tid_t tid) {
   body.try_emplace("threadId", (int64_t)tid);
   event.try_emplace("body", std::move(body));
   dap.SendJSON(llvm::json::Value(std::move(event)));
+}
+
+void SendTargetBasedCapabilities(DAP &dap) {
+  if (!dap.target.IsValid())
+    return;
+
+  protocol::CapabilitiesEventBody body;
+
+  // We only support restarting launch requests not attach requests.
+  if (dap.last_launch_request)
+    body.capabilities.supportedFeatures.insert(
+        protocol::eAdapterFeatureRestartRequest);
+
+  // Only notify the client if supportedFeatures changed.
+  if (!body.capabilities.supportedFeatures.empty())
+    dap.Send(protocol::Event{"capabilities", body});
 }
 
 // "ProcessEvent": {
