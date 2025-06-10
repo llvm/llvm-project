@@ -1827,9 +1827,8 @@ void OmpStructureChecker::Leave(const parser::OmpDeclareTargetWithClause &x) {
       context_.Warn(common::UsageWarning::OpenMPUsage, toClause->source,
           "The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead."_warn_en_US);
     }
-    if (indirectClause && version < 51) {
-      context_.Say(x.source,
-          "The usage of INDIRECT clause on DECLARE TARGET directive is only supported on OpenMP Version 5.1 or greater"_err_en_US);
+    if (indirectClause) {
+      CheckAllowedClause(llvm::omp::Clause::OMPC_indirect);
     }
   }
 }

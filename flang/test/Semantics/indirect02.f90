@@ -14,7 +14,7 @@ module functions
 
 contains
   function func1() result(i)
-    !CHECK-50: The usage of INDIRECT clause on DECLARE TARGET directive is only supported on OpenMP Version 5.1 or greater
+    !CHECK-50: INDIRECT clause is not allowed on directive DECLARE TARGET in OpenMP v5.0, try -fopenmp-version=51
     !CHECK-52: not yet implemented: Unhandled clause INDIRECT in DECLARE TARGET construct
     !$omp declare target enter(func1) indirect(.true.)
     character(1) :: i

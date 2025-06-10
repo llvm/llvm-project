@@ -243,7 +243,6 @@ private:
   void CheckSymbolNames(
       const parser::CharBlock &source, const parser::OmpObjectList &objList);
   void CheckIntentInPointer(SymbolSourceMap &, const llvm::omp::Clause);
-  void MakeScalarLogicalTrue(const parser::OmpClause *clause);
   void CheckProcedurePointer(SymbolSourceMap &, const llvm::omp::Clause);
   void CheckCrayPointee(const parser::OmpObjectList &objectList,
       llvm::StringRef clause, bool suggestToUseCrayPointer = true);
