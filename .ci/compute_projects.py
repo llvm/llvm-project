@@ -135,13 +135,11 @@ def _add_dependencies(projects: Set[str], runtimes: Set[str]) -> Set[str]:
     while current_projects_count != len(projects_with_dependents):
         current_projects_count = len(projects_with_dependents)
         for project in list(projects_with_dependents):
-            if project not in PROJECT_DEPENDENCIES:
-                continue
-            projects_with_dependents.update(PROJECT_DEPENDENCIES[project])
+            if project in PROJECT_DEPENDENCIES:
+                projects_with_dependents.update(PROJECT_DEPENDENCIES[project])
     for runtime in runtimes:
-        if runtime not in PROJECT_DEPENDENCIES:
-            continue
-        projects_with_dependents.update(PROJECT_DEPENDENCIES[runtime])
+        if runtime in PROJECT_DEPENDENCIES:
+            projects_with_dependents.update(PROJECT_DEPENDENCIES[runtime])
     return projects_with_dependents
 
 
@@ -187,18 +185,16 @@ def _compute_projects_to_build(
 def _compute_project_check_targets(projects_to_test: Set[str]) -> Set[str]:
     check_targets = set()
     for project_to_test in projects_to_test:
-        if project_to_test not in PROJECT_CHECK_TARGETS:
-            continue
-        check_targets.add(PROJECT_CHECK_TARGETS[project_to_test])
+        if project_to_test in PROJECT_CHECK_TARGETS:
+            check_targets.add(PROJECT_CHECK_TARGETS[project_to_test])
     return check_targets
 
 
 def _compute_runtimes_to_test(modified_projects: Set[str], platform: str) -> Set[str]:
     runtimes_to_test = set()
     for modified_project in modified_projects:
-        if modified_project not in DEPENDENT_RUNTIMES_TO_TEST:
-            continue
-        runtimes_to_test.update(DEPENDENT_RUNTIMES_TO_TEST[modified_project])
+        if modified_project in DEPENDENT_RUNTIMES_TO_TEST:
+            runtimes_to_test.update(DEPENDENT_RUNTIMES_TO_TEST[modified_project])
     return _exclude_projects(runtimes_to_test, platform)
 
 
@@ -207,11 +203,10 @@ def _compute_runtimes_to_test_needs_reconfig(
 ) -> Set[str]:
     runtimes_to_test = set()
     for modified_project in modified_projects:
-        if modified_project not in DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG:
-            continue
-        runtimes_to_test.update(
-            DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG[modified_project]
-        )
+        if modified_project in DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG:
+            runtimes_to_test.update(
+                DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG[modified_project]
+            )
     return _exclude_projects(runtimes_to_test, platform)
 
 
