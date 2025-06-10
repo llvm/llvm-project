@@ -144,7 +144,7 @@ private:
 
   static_assert(0 < __m, "mersenne_twister_engine invalid parameters");
   static_assert(__m <= __n, "mersenne_twister_engine invalid parameters");
-  static _LIBCPP_CONSTEXPR const result_type _Dt = numeric_limits<result_type>::digits;
+  static const result_type _Dt = numeric_limits<result_type>::digits;
   static_assert(__w <= _Dt, "mersenne_twister_engine invalid parameters");
   static_assert(2 <= __w, "mersenne_twister_engine invalid parameters");
   static_assert(__r <= __w, "mersenne_twister_engine invalid parameters");
@@ -154,9 +154,8 @@ private:
   static_assert(__l <= __w, "mersenne_twister_engine invalid parameters");
 
 public:
-  static _LIBCPP_CONSTEXPR const result_type _Min = 0;
-  static _LIBCPP_CONSTEXPR const result_type _Max =
-      __w == _Dt ? result_type(~0) : (result_type(1) << __w) - result_type(1);
+  static const result_type _Min = 0;
+  static const result_type _Max = __w == _Dt ? result_type(~0) : (result_type(1) << __w) - result_type(1);
   static_assert(_Min < _Max, "mersenne_twister_engine invalid parameters");
   static_assert(__a <= _Max, "mersenne_twister_engine invalid parameters");
   static_assert(__b <= _Max, "mersenne_twister_engine invalid parameters");
@@ -165,30 +164,25 @@ public:
   static_assert(__f <= _Max, "mersenne_twister_engine invalid parameters");
 
   // engine characteristics
-  static _LIBCPP_CONSTEXPR const size_t word_size                      = __w;
-  static _LIBCPP_CONSTEXPR const size_t state_size                     = __n;
-  static _LIBCPP_CONSTEXPR const size_t shift_size                     = __m;
-  static _LIBCPP_CONSTEXPR const size_t mask_bits                      = __r;
-  static _LIBCPP_CONSTEXPR const result_type xor_mask                  = __a;
-  static _LIBCPP_CONSTEXPR const size_t tempering_u                    = __u;
-  static _LIBCPP_CONSTEXPR const result_type tempering_d               = __d;
-  static _LIBCPP_CONSTEXPR const size_t tempering_s                    = __s;
-  static _LIBCPP_CONSTEXPR const result_type tempering_b               = __b;
-  static _LIBCPP_CONSTEXPR const size_t tempering_t                    = __t;
-  static _LIBCPP_CONSTEXPR const result_type tempering_c               = __c;
-  static _LIBCPP_CONSTEXPR const size_t tempering_l                    = __l;
-  static _LIBCPP_CONSTEXPR const result_type initialization_multiplier = __f;
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type min() { return _Min; }
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type max() { return _Max; }
-  static _LIBCPP_CONSTEXPR const result_type default_seed = 5489u;
+  static const size_t word_size                      = __w;
+  static const size_t state_size                     = __n;
+  static const size_t shift_size                     = __m;
+  static const size_t mask_bits                      = __r;
+  static const result_type xor_mask                  = __a;
+  static const size_t tempering_u                    = __u;
+  static const result_type tempering_d               = __d;
+  static const size_t tempering_s                    = __s;
+  static const result_type tempering_b               = __b;
+  static const size_t tempering_t                    = __t;
+  static const result_type tempering_c               = __c;
+  static const size_t tempering_l                    = __l;
+  static const result_type initialization_multiplier = __f;
+  _LIBCPP_HIDE_FROM_ABI static result_type min() { return _Min; }
+  _LIBCPP_HIDE_FROM_ABI static result_type max() { return _Max; }
+  static const result_type default_seed = 5489u;
 
   // constructors and seeding functions
-#ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI mersenne_twister_engine() : mersenne_twister_engine(default_seed) {}
-  _LIBCPP_HIDE_FROM_ABI explicit mersenne_twister_engine(result_type __sd) { seed(__sd); }
-#else
   _LIBCPP_HIDE_FROM_ABI explicit mersenne_twister_engine(result_type __sd = default_seed) { seed(__sd); }
-#endif
   template <class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, mersenne_twister_engine>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit mersenne_twister_engine(_Sseq& __q) {
     seed(__q);
@@ -323,7 +317,7 @@ template <class _UIntType,
           _UIntType __c,
           size_t __l,
           _UIntType __f>
-_LIBCPP_CONSTEXPR const size_t
+const size_t
     mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::word_size;
 
 template <class _UIntType,
@@ -340,7 +334,7 @@ template <class _UIntType,
           _UIntType __c,
           size_t __l,
           _UIntType __f>
-_LIBCPP_CONSTEXPR const size_t
+const size_t
     mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::state_size;
 
 template <class _UIntType,
@@ -357,7 +351,7 @@ template <class _UIntType,
           _UIntType __c,
           size_t __l,
           _UIntType __f>
-_LIBCPP_CONSTEXPR const size_t
+const size_t
     mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::shift_size;
 
 template <class _UIntType,
@@ -374,7 +368,7 @@ template <class _UIntType,
           _UIntType __c,
           size_t __l,
           _UIntType __f>
-_LIBCPP_CONSTEXPR const size_t
+const size_t
     mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::mask_bits;
 
 template <class _UIntType,
@@ -391,22 +385,9 @@ template <class _UIntType,
           _UIntType __c,
           size_t __l,
           _UIntType __f>
-_LIBCPP_CONSTEXPR const typename mersenne_twister_engine<
-    _UIntType,
-    __w,
-    __n,
-    __m,
-    __r,
-    __a,
-    __u,
-    __d,
-    __s,
-    __b,
-    __t,
-    __c,
-    __l,
-    __f>::result_type
-    mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::xor_mask;
+const typename mersenne_twister_engine< _UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::
+    result_type
+        mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::xor_mask;
 
 template <class _UIntType,
           size_t __w,
@@ -422,7 +403,7 @@ template <class _UIntType,
           _UIntType __c,
           size_t __l,
           _UIntType __f>
-_LIBCPP_CONSTEXPR const size_t
+const size_t
     mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::tempering_u;
 
 template <class _UIntType,
@@ -439,22 +420,9 @@ template <class _UIntType,
           _UIntType __c,
           size_t __l,
           _UIntType __f>
-_LIBCPP_CONSTEXPR const typename mersenne_twister_engine<
-    _UIntType,
-    __w,
-    __n,
-    __m,
-    __r,
-    __a,
-    __u,
-    __d,
-    __s,
-    __b,
-    __t,
-    __c,
-    __l,
-    __f>::result_type
-    mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::tempering_d;
+const typename mersenne_twister_engine< _UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::
+    result_type mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::
+        tempering_d;
 
 template <class _UIntType,
           size_t __w,
@@ -470,7 +438,7 @@ template <class _UIntType,
           _UIntType __c,
           size_t __l,
           _UIntType __f>
-_LIBCPP_CONSTEXPR const size_t
+const size_t
     mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::tempering_s;
 
 template <class _UIntType,
@@ -487,22 +455,9 @@ template <class _UIntType,
           _UIntType __c,
           size_t __l,
           _UIntType __f>
-_LIBCPP_CONSTEXPR const typename mersenne_twister_engine<
-    _UIntType,
-    __w,
-    __n,
-    __m,
-    __r,
-    __a,
-    __u,
-    __d,
-    __s,
-    __b,
-    __t,
-    __c,
-    __l,
-    __f>::result_type
-    mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::tempering_b;
+const typename mersenne_twister_engine< _UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::
+    result_type mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::
+        tempering_b;
 
 template <class _UIntType,
           size_t __w,
@@ -518,7 +473,7 @@ template <class _UIntType,
           _UIntType __c,
           size_t __l,
           _UIntType __f>
-_LIBCPP_CONSTEXPR const size_t
+const size_t
     mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::tempering_t;
 
 template <class _UIntType,
@@ -535,22 +490,9 @@ template <class _UIntType,
           _UIntType __c,
           size_t __l,
           _UIntType __f>
-_LIBCPP_CONSTEXPR const typename mersenne_twister_engine<
-    _UIntType,
-    __w,
-    __n,
-    __m,
-    __r,
-    __a,
-    __u,
-    __d,
-    __s,
-    __b,
-    __t,
-    __c,
-    __l,
-    __f>::result_type
-    mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::tempering_c;
+const typename mersenne_twister_engine< _UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::
+    result_type mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::
+        tempering_c;
 
 template <class _UIntType,
           size_t __w,
@@ -566,7 +508,7 @@ template <class _UIntType,
           _UIntType __c,
           size_t __l,
           _UIntType __f>
-_LIBCPP_CONSTEXPR const size_t
+const size_t
     mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::tempering_l;
 
 template <class _UIntType,
@@ -583,22 +525,8 @@ template <class _UIntType,
           _UIntType __c,
           size_t __l,
           _UIntType __f>
-_LIBCPP_CONSTEXPR const typename mersenne_twister_engine<
-    _UIntType,
-    __w,
-    __n,
-    __m,
-    __r,
-    __a,
-    __u,
-    __d,
-    __s,
-    __b,
-    __t,
-    __c,
-    __l,
-    __f>::result_type
-    mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::
+const typename mersenne_twister_engine< _UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::
+    result_type mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::
         initialization_multiplier;
 
 template <class _UIntType,
@@ -615,22 +543,9 @@ template <class _UIntType,
           _UIntType __c,
           size_t __l,
           _UIntType __f>
-_LIBCPP_CONSTEXPR const typename mersenne_twister_engine<
-    _UIntType,
-    __w,
-    __n,
-    __m,
-    __r,
-    __a,
-    __u,
-    __d,
-    __s,
-    __b,
-    __t,
-    __c,
-    __l,
-    __f>::result_type
-    mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::default_seed;
+const typename mersenne_twister_engine< _UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::
+    result_type mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::
+        default_seed;
 
 template <class _UIntType,
           size_t __w,

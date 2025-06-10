@@ -56,7 +56,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -77,11 +76,11 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionNormalization.h"
+#include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -128,6 +127,7 @@
 #include <utility>
 
 using namespace llvm;
+using namespace SCEVPatternMatch;
 
 #define DEBUG_TYPE "loop-reduce"
 
@@ -412,8 +412,7 @@ public:
 
 void
 RegUseTracker::countRegister(const SCEV *Reg, size_t LUIdx) {
-  std::pair<RegUsesTy::iterator, bool> Pair =
-    RegUsesMap.insert(std::make_pair(Reg, RegSortData()));
+  std::pair<RegUsesTy::iterator, bool> Pair = RegUsesMap.try_emplace(Reg);
   RegSortData &RSD = Pair.first->second;
   if (Pair.second)
     RegSequence.push_back(Reg);
@@ -556,16 +555,18 @@ static void DoInitialMatch(const SCEV *S, Loop *L,
   }
 
   // Look at addrec operands.
-  if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(S))
-    if (!AR->getStart()->isZero() && AR->isAffine()) {
-      DoInitialMatch(AR->getStart(), L, Good, Bad, SE);
-      DoInitialMatch(SE.getAddRecExpr(SE.getConstant(AR->getType(), 0),
-                                      AR->getStepRecurrence(SE),
-                                      // FIXME: AR->getNoWrapFlags()
-                                      AR->getLoop(), SCEV::FlagAnyWrap),
-                     L, Good, Bad, SE);
-      return;
-    }
+  const SCEV *Start, *Step;
+  const Loop *ARLoop;
+  if (match(S,
+            m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step), m_Loop(ARLoop))) &&
+      !Start->isZero()) {
+    DoInitialMatch(Start, L, Good, Bad, SE);
+    DoInitialMatch(SE.getAddRecExpr(SE.getConstant(S->getType(), 0), Step,
+                                    // FIXME: AR->getNoWrapFlags()
+                                    ARLoop, SCEV::FlagAnyWrap),
+                   L, Good, Bad, SE);
+    return;
+  }
 
   // Handle a multiplication by -1 (negation) if it didn't fold.
   if (const SCEVMulExpr *Mul = dyn_cast<SCEVMulExpr>(S))
@@ -1275,38 +1276,13 @@ struct LSRFixup {
   void dump() const;
 };
 
-/// A DenseMapInfo implementation for holding DenseMaps and DenseSets of sorted
-/// SmallVectors of const SCEV*.
-struct UniquifierDenseMapInfo {
-  static SmallVector<const SCEV *, 4> getEmptyKey() {
-    SmallVector<const SCEV *, 4>  V;
-    V.push_back(reinterpret_cast<const SCEV *>(-1));
-    return V;
-  }
-
-  static SmallVector<const SCEV *, 4> getTombstoneKey() {
-    SmallVector<const SCEV *, 4> V;
-    V.push_back(reinterpret_cast<const SCEV *>(-2));
-    return V;
-  }
-
-  static unsigned getHashValue(const SmallVector<const SCEV *, 4> &V) {
-    return static_cast<unsigned>(hash_combine_range(V));
-  }
-
-  static bool isEqual(const SmallVector<const SCEV *, 4> &LHS,
-                      const SmallVector<const SCEV *, 4> &RHS) {
-    return LHS == RHS;
-  }
-};
-
 /// This class holds the state that LSR keeps for each use in IVUsers, as well
 /// as uses invented by LSR itself. It includes information about what kinds of
 /// things can be folded into the user, information about the user itself, and
 /// information about how the use may be satisfied.  TODO: Represent multiple
 /// users of the same expression in common?
 class LSRUse {
-  DenseSet<SmallVector<const SCEV *, 4>, UniquifierDenseMapInfo> Uniquifier;
+  DenseSet<SmallVector<const SCEV *, 4>> Uniquifier;
 
 public:
   /// An enum for a kind of use, indicating what types of scaled and immediate
@@ -1436,22 +1412,16 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
     unsigned LoopCost = 1;
     if (TTI->isIndexedLoadLegal(TTI->MIM_PostInc, AR->getType()) ||
         TTI->isIndexedStoreLegal(TTI->MIM_PostInc, AR->getType())) {
-
-      // If the step size matches the base offset, we could use pre-indexed
-      // addressing.
-      if (AMK == TTI::AMK_PreIndexed && F.BaseOffset.isFixed()) {
-        if (auto *Step = dyn_cast<SCEVConstant>(AR->getStepRecurrence(*SE)))
-          if (Step->getAPInt() == F.BaseOffset.getFixedValue())
-            LoopCost = 0;
-      } else if (AMK == TTI::AMK_PostIndexed) {
-        const SCEV *LoopStep = AR->getStepRecurrence(*SE);
-        if (isa<SCEVConstant>(LoopStep)) {
-          const SCEV *LoopStart = AR->getStart();
-          if (!isa<SCEVConstant>(LoopStart) &&
-              SE->isLoopInvariant(LoopStart, L))
-            LoopCost = 0;
-        }
-      }
+      const SCEV *Start;
+      const SCEVConstant *Step;
+      if (match(AR, m_scev_AffineAddRec(m_SCEV(Start), m_SCEVConstant(Step))))
+        // If the step size matches the base offset, we could use pre-indexed
+        // addressing.
+        if ((AMK == TTI::AMK_PreIndexed && F.BaseOffset.isFixed() &&
+             Step->getAPInt() == F.BaseOffset.getFixedValue()) ||
+            (AMK == TTI::AMK_PostIndexed && !isa<SCEVConstant>(Start) &&
+             SE->isLoopInvariant(Start, L)))
+          LoopCost = 0;
     }
     C.AddRecCost += LoopCost;
 
@@ -2544,13 +2514,11 @@ ICmpInst *LSRInstance::OptimizeMax(ICmpInst *Cond, IVStrideUse* &CondUse) {
   // Check the relevant induction variable for conformance to
   // the pattern.
   const SCEV *IV = SE.getSCEV(Cond->getOperand(0));
-  const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(IV);
-  if (!AR || !AR->isAffine() ||
-      AR->getStart() != One ||
-      AR->getStepRecurrence(SE) != One)
+  if (!match(IV,
+             m_scev_AffineAddRec(m_scev_SpecificInt(1), m_scev_SpecificInt(1))))
     return Cond;
 
-  assert(AR->getLoop() == L &&
+  assert(cast<SCEVAddRecExpr>(IV)->getLoop() == L &&
          "Loop condition operand is an addrec in a different loop!");
 
   // Check the right operand of the select, and remember it, as it will
@@ -2820,7 +2788,7 @@ std::pair<size_t, Immediate> LSRInstance::getUse(const SCEV *&Expr,
   }
 
   std::pair<UseMapTy::iterator, bool> P =
-    UseMap.insert(std::make_pair(LSRUse::SCEVUseKindPair(Expr, Kind), 0));
+      UseMap.try_emplace(LSRUse::SCEVUseKindPair(Expr, Kind));
   if (!P.second) {
     // A use already existed with this base.
     size_t LUIdx = P.first->second;
@@ -3345,7 +3313,7 @@ void LSRInstance::CollectChains() {
 void LSRInstance::FinalizeChain(IVChain &Chain) {
   assert(!Chain.Incs.empty() && "empty IV chains are not allowed");
   LLVM_DEBUG(dbgs() << "Final Chain: " << *Chain.Incs[0].UserInst << "\n");
-  
+
   for (const IVInc &Inc : Chain) {
     LLVM_DEBUG(dbgs() << "        Inc: " << *Inc.UserInst << "\n");
     auto UseI = find(Inc.UserInst->operands(), Inc.IVOperand);
@@ -3848,26 +3816,27 @@ static const SCEV *CollectSubexprs(const SCEV *S, const SCEVConstant *C,
         Ops.push_back(C ? SE.getMulExpr(C, Remainder) : Remainder);
     }
     return nullptr;
-  } else if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(S)) {
+  }
+  const SCEV *Start, *Step;
+  if (match(S, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step)))) {
     // Split a non-zero base out of an addrec.
-    if (AR->getStart()->isZero() || !AR->isAffine())
+    if (Start->isZero())
       return S;
 
-    const SCEV *Remainder = CollectSubexprs(AR->getStart(),
-                                            C, Ops, L, SE, Depth+1);
+    const SCEV *Remainder = CollectSubexprs(Start, C, Ops, L, SE, Depth + 1);
     // Split the non-zero AddRec unless it is part of a nested recurrence that
     // does not pertain to this loop.
-    if (Remainder && (AR->getLoop() == L || !isa<SCEVAddRecExpr>(Remainder))) {
+    if (Remainder && (cast<SCEVAddRecExpr>(S)->getLoop() == L ||
+                      !isa<SCEVAddRecExpr>(Remainder))) {
       Ops.push_back(C ? SE.getMulExpr(C, Remainder) : Remainder);
       Remainder = nullptr;
     }
-    if (Remainder != AR->getStart()) {
+    if (Remainder != Start) {
       if (!Remainder)
-        Remainder = SE.getConstant(AR->getType(), 0);
-      return SE.getAddRecExpr(Remainder,
-                              AR->getStepRecurrence(SE),
-                              AR->getLoop(),
-                              //FIXME: AR->getNoWrapFlags(SCEV::FlagNW)
+        Remainder = SE.getConstant(S->getType(), 0);
+      return SE.getAddRecExpr(Remainder, Step,
+                              cast<SCEVAddRecExpr>(S)->getLoop(),
+                              // FIXME: AR->getNoWrapFlags(SCEV::FlagNW)
                               SCEV::FlagAnyWrap);
     }
   } else if (const SCEVMulExpr *Mul = dyn_cast<SCEVMulExpr>(S)) {
@@ -3895,17 +3864,13 @@ static bool mayUsePostIncMode(const TargetTransformInfo &TTI,
   if (LU.Kind != LSRUse::Address ||
       !LU.AccessTy.getType()->isIntOrIntVectorTy())
     return false;
-  const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(S);
-  if (!AR)
-    return false;
-  const SCEV *LoopStep = AR->getStepRecurrence(SE);
-  if (!isa<SCEVConstant>(LoopStep))
+  const SCEV *Start;
+  if (!match(S, m_scev_AffineAddRec(m_SCEV(Start), m_SCEVConstant())))
     return false;
   // Check if a post-indexed load/store can be used.
-  if (TTI.isIndexedLoadLegal(TTI.MIM_PostInc, AR->getType()) ||
-      TTI.isIndexedStoreLegal(TTI.MIM_PostInc, AR->getType())) {
-    const SCEV *LoopStart = AR->getStart();
-    if (!isa<SCEVConstant>(LoopStart) && SE.isLoopInvariant(LoopStart, L))
+  if (TTI.isIndexedLoadLegal(TTI.MIM_PostInc, S->getType()) ||
+      TTI.isIndexedStoreLegal(TTI.MIM_PostInc, S->getType())) {
+    if (!isa<SCEVConstant>(Start) && SE.isLoopInvariant(Start, L))
       return true;
   }
   return false;
@@ -3946,10 +3911,8 @@ void LSRInstance::GenerateReassociationsImpl(LSRUse &LU, unsigned LUIdx,
       continue;
 
     // Collect all operands except *J.
-    SmallVector<const SCEV *, 8> InnerAddOps(
-        ((const SmallVector<const SCEV *, 8> &)AddOps).begin(), J);
-    InnerAddOps.append(std::next(J),
-                       ((const SmallVector<const SCEV *, 8> &)AddOps).end());
+    SmallVector<const SCEV *, 8> InnerAddOps(std::as_const(AddOps).begin(), J);
+    InnerAddOps.append(std::next(J), std::as_const(AddOps).end());
 
     // Don't leave just a constant behind in a register if the constant could
     // be folded into an immediate field.
@@ -4166,18 +4129,15 @@ void LSRInstance::GenerateConstantOffsetsImpl(
   // base pointer for each iteration of the loop, resulting in no extra add/sub
   // instructions for pointer updating.
   if (AMK == TTI::AMK_PreIndexed && LU.Kind == LSRUse::Address) {
-    if (auto *GAR = dyn_cast<SCEVAddRecExpr>(G)) {
-      if (auto *StepRec =
-          dyn_cast<SCEVConstant>(GAR->getStepRecurrence(SE))) {
-        const APInt &StepInt = StepRec->getAPInt();
-        int64_t Step = StepInt.isNegative() ?
-          StepInt.getSExtValue() : StepInt.getZExtValue();
+    const APInt *StepInt;
+    if (match(G, m_scev_AffineAddRec(m_SCEV(), m_scev_APInt(StepInt)))) {
+      int64_t Step = StepInt->isNegative() ? StepInt->getSExtValue()
+                                           : StepInt->getZExtValue();
 
-        for (Immediate Offset : Worklist) {
-          if (Offset.isFixed()) {
-            Offset = Immediate::getFixed(Offset.getFixedValue() - Step);
-            GenerateOffset(G, Offset);
-          }
+      for (Immediate Offset : Worklist) {
+        if (Offset.isFixed()) {
+          Offset = Immediate::getFixed(Offset.getFixedValue() - Step);
+          GenerateOffset(G, Offset);
         }
       }
     }
@@ -4517,7 +4477,7 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
   for (const SCEV *Use : RegUses) {
     const SCEV *Reg = Use; // Make a copy for ExtractImmediate to modify.
     Immediate Imm = ExtractImmediate(Reg, SE);
-    auto Pair = Map.insert(std::make_pair(Reg, ImmMapTy()));
+    auto Pair = Map.try_emplace(Reg);
     if (Pair.second)
       Sequence.push_back(Reg);
     Pair.first->second.insert(std::make_pair(Imm, Use));
@@ -4756,8 +4716,7 @@ void LSRInstance::FilterOutUndesirableDedicatedRegisters() {
 
   // Collect the best formula for each unique set of shared registers. This
   // is reset for each use.
-  using BestFormulaeTy =
-      DenseMap<SmallVector<const SCEV *, 4>, size_t, UniquifierDenseMapInfo>;
+  using BestFormulaeTy = DenseMap<SmallVector<const SCEV *, 4>, size_t>;
 
   BestFormulaeTy BestFormulae;
 
@@ -5921,7 +5880,7 @@ void LSRInstance::RewriteForPHI(PHINode *PN, const LSRUse &LU,
       }
 
       std::pair<DenseMap<BasicBlock *, Value *>::iterator, bool> Pair =
-        Inserted.insert(std::make_pair(BB, static_cast<Value *>(nullptr)));
+          Inserted.try_emplace(BB);
       if (!Pair.second)
         PN->setIncomingValue(i, Pair.first->second);
       else {
@@ -6649,7 +6608,7 @@ struct SCEVDbgValueBuilder {
       if (Op.getOp() != dwarf::DW_OP_LLVM_arg) {
         Op.appendToVector(DestExpr);
         continue;
-      } 
+      }
 
       DestExpr.push_back(dwarf::DW_OP_LLVM_arg);
       // `DW_OP_LLVM_arg n` represents the nth LocationOp in this SCEV,

@@ -157,7 +157,7 @@ Token Lexer::lexToken() {
         skipComment();
         continue;
       }
-      return emitError(tokStart, "unexpected character");
+      return formToken(Token::slash, tokStart);
 
     case '@':
       return lexAtIdentifier(tokStart);

@@ -16,6 +16,7 @@
 #include "MCTargetDesc/SparcMCTargetDesc.h"
 #include "SparcMachineFunctionInfo.h"
 #include "SparcRegisterInfo.h"
+#include "SparcSelectionDAGInfo.h"
 #include "SparcTargetMachine.h"
 #include "SparcTargetObjectFile.h"
 #include "llvm/ADT/StringExtras.h"
@@ -2034,47 +2035,6 @@ bool SparcTargetLowering::useSoftFloat() const {
   return Subtarget->useSoftFloat();
 }
 
-const char *SparcTargetLowering::getTargetNodeName(unsigned Opcode) const {
-  switch ((SPISD::NodeType)Opcode) {
-  case SPISD::FIRST_NUMBER:    break;
-  case SPISD::CMPICC:          return "SPISD::CMPICC";
-  case SPISD::CMPFCC:          return "SPISD::CMPFCC";
-  case SPISD::CMPFCC_V9:
-    return "SPISD::CMPFCC_V9";
-  case SPISD::BRICC:           return "SPISD::BRICC";
-  case SPISD::BPICC:
-    return "SPISD::BPICC";
-  case SPISD::BPXCC:
-    return "SPISD::BPXCC";
-  case SPISD::BRFCC:           return "SPISD::BRFCC";
-  case SPISD::BRFCC_V9:
-    return "SPISD::BRFCC_V9";
-  case SPISD::BR_REG:
-    return "SPISD::BR_REG";
-  case SPISD::SELECT_ICC:      return "SPISD::SELECT_ICC";
-  case SPISD::SELECT_XCC:      return "SPISD::SELECT_XCC";
-  case SPISD::SELECT_FCC:      return "SPISD::SELECT_FCC";
-  case SPISD::SELECT_REG:
-    return "SPISD::SELECT_REG";
-  case SPISD::Hi:              return "SPISD::Hi";
-  case SPISD::Lo:              return "SPISD::Lo";
-  case SPISD::FTOI:            return "SPISD::FTOI";
-  case SPISD::ITOF:            return "SPISD::ITOF";
-  case SPISD::FTOX:            return "SPISD::FTOX";
-  case SPISD::XTOF:            return "SPISD::XTOF";
-  case SPISD::CALL:            return "SPISD::CALL";
-  case SPISD::RET_GLUE:        return "SPISD::RET_GLUE";
-  case SPISD::GLOBAL_BASE_REG: return "SPISD::GLOBAL_BASE_REG";
-  case SPISD::FLUSHW:          return "SPISD::FLUSHW";
-  case SPISD::TLS_ADD:         return "SPISD::TLS_ADD";
-  case SPISD::TLS_LD:          return "SPISD::TLS_LD";
-  case SPISD::TLS_CALL:        return "SPISD::TLS_CALL";
-  case SPISD::TAIL_CALL:       return "SPISD::TAIL_CALL";
-  case SPISD::LOAD_GDOP:       return "SPISD::LOAD_GDOP";
-  }
-  return nullptr;
-}
-
 EVT SparcTargetLowering::getSetCCResultType(const DataLayout &, LLVMContext &,
                                             EVT VT) const {
   if (!VT.isVector())
@@ -2992,7 +2952,7 @@ static SDValue LowerF128Load(SDValue Op, SelectionDAG &DAG)
   LoadSDNode *LdNode = cast<LoadSDNode>(Op.getNode());
   assert(LdNode->getOffset().isUndef() && "Unexpected node type");
 
-  Align Alignment = commonAlignment(LdNode->getOriginalAlign(), 8);
+  Align Alignment = commonAlignment(LdNode->getBaseAlign(), 8);
 
   SDValue Hi64 =
       DAG.getLoad(MVT::f64, dl, LdNode->getChain(), LdNode->getBasePtr(),
@@ -3058,7 +3018,7 @@ static SDValue LowerF128Store(SDValue Op, SelectionDAG &DAG) {
                                     StNode->getValue(),
                                     SubRegOdd);
 
-  Align Alignment = commonAlignment(StNode->getOriginalAlign(), 8);
+  Align Alignment = commonAlignment(StNode->getBaseAlign(), 8);
 
   SDValue OutChains[2];
   OutChains[0] =
@@ -3090,8 +3050,7 @@ static SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG)
     SDValue Val = DAG.getNode(ISD::BITCAST, dl, MVT::v2i32, St->getValue());
     SDValue Chain = DAG.getStore(
         St->getChain(), dl, Val, St->getBasePtr(), St->getPointerInfo(),
-        St->getOriginalAlign(), St->getMemOperand()->getFlags(),
-        St->getAAInfo());
+        St->getBaseAlign(), St->getMemOperand()->getFlags(), St->getAAInfo());
     return Chain;
   }
 
@@ -3577,9 +3536,8 @@ void SparcTargetLowering::ReplaceNodeResults(SDNode *N,
     SDLoc dl(N);
     SDValue LoadRes = DAG.getExtLoad(
         Ld->getExtensionType(), dl, MVT::v2i32, Ld->getChain(),
-        Ld->getBasePtr(), Ld->getPointerInfo(), MVT::v2i32,
-        Ld->getOriginalAlign(), Ld->getMemOperand()->getFlags(),
-        Ld->getAAInfo());
+        Ld->getBasePtr(), Ld->getPointerInfo(), MVT::v2i32, Ld->getBaseAlign(),
+        Ld->getMemOperand()->getFlags(), Ld->getAAInfo());
 
     SDValue Res = DAG.getNode(ISD::BITCAST, dl, MVT::i64, LoadRes);
     Results.push_back(Res);
@@ -3596,10 +3554,22 @@ bool SparcTargetLowering::useLoadStackGuardNode(const Module &M) const {
   return true;
 }
 
+bool SparcTargetLowering::isFNegFree(EVT VT) const {
+  if (Subtarget->isVIS3())
+    return VT == MVT::f32 || VT == MVT::f64;
+  return false;
+}
+
 bool SparcTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
                                        bool ForCodeSize) const {
-  return Subtarget->isVIS() && (VT == MVT::f32 || VT == MVT::f64) &&
-         Imm.isZero();
+  if (VT != MVT::f32 && VT != MVT::f64)
+    return false;
+  if (Subtarget->isVIS() && Imm.isZero())
+    return true;
+  if (Subtarget->isVIS3())
+    return Imm.isExactlyValue(+0.5) || Imm.isExactlyValue(-0.5) ||
+           Imm.getExactLog2Abs() == -1;
+  return false;
 }
 
 bool SparcTargetLowering::isCtlzFast() const { return Subtarget->isVIS3(); }

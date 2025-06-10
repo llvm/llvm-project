@@ -13,7 +13,6 @@
 
 #include "SPIRV.h"
 #include "SPIRVBuiltins.h"
-#include "SPIRVMetadata.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
@@ -673,10 +672,16 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
       } else if (HandleType->getTargetExtName() == "spirv.VulkanBuffer") {
         // This call is supposed to index into an array
         Ty = HandleType->getTypeParameter(0);
-        assert(Ty->isArrayTy() &&
-               "spv_resource_getpointer indexes into an array, so the type of "
-               "the buffer should be an array.");
-        Ty = Ty->getArrayElementType();
+        if (Ty->isArrayTy())
+          Ty = Ty->getArrayElementType();
+        else {
+          TargetExtType *BufferTy = cast<TargetExtType>(Ty);
+          assert(BufferTy->getTargetExtName() == "spirv.Layout");
+          Ty = BufferTy->getTypeParameter(0);
+          assert(Ty && Ty->isStructTy());
+          uint32_t Index = cast<ConstantInt>(II->getOperand(1))->getZExtValue();
+          Ty = cast<StructType>(Ty)->getElementType(Index);
+        }
       } else {
         llvm_unreachable("Unknown handle type for spv_resource_getpointer.");
       }
@@ -1081,15 +1086,19 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
       return;
     Value *Op0 = Ref->getOperand(0);
     Value *Op1 = Ref->getOperand(1);
-    Type *ElemTy0 = GR->findDeducedElementType(Op0);
+    bool Incomplete0 = isTodoType(Op0);
+    bool Incomplete1 = isTodoType(Op1);
     Type *ElemTy1 = GR->findDeducedElementType(Op1);
+    Type *ElemTy0 = (Incomplete0 && !Incomplete1 && ElemTy1)
+                        ? nullptr
+                        : GR->findDeducedElementType(Op0);
     if (ElemTy0) {
       KnownElemTy = ElemTy0;
-      Incomplete = isTodoType(Op0);
+      Incomplete = Incomplete0;
       Ops.push_back(std::make_pair(Op1, 1));
     } else if (ElemTy1) {
       KnownElemTy = ElemTy1;
-      Incomplete = isTodoType(Op1);
+      Incomplete = Incomplete1;
       Ops.push_back(std::make_pair(Op0, 0));
     }
   } else if (CallInst *CI = dyn_cast<CallInst>(I)) {
@@ -1108,8 +1117,6 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
   IRBuilder<> B(Ctx);
   for (auto &OpIt : Ops) {
     Value *Op = OpIt.first;
-    if (Op->use_empty())
-      continue;
     if (AskOps && !AskOps->contains(Op))
       continue;
     Type *AskTy = nullptr;
@@ -1124,7 +1131,8 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
       continue;
     Value *OpTyVal = getNormalizedPoisonValue(KnownElemTy);
     Type *OpTy = Op->getType();
-    if (!Ty || AskTy || isUntypedPointerTy(Ty) || isTodoType(Op)) {
+    if (Op->hasUseList() &&
+        (!Ty || AskTy || isUntypedPointerTy(Ty) || isTodoType(Op))) {
       Type *PrevElemTy = GR->findDeducedElementType(Op);
       GR->addDeducedElementType(Op, normalizeType(KnownElemTy));
       // check if KnownElemTy is complete
@@ -1474,34 +1482,36 @@ void SPIRVEmitIntrinsics::replacePointerOperandWithPtrCast(
   // Do not emit new spv_ptrcast if equivalent one already exists or when
   // spv_assign_ptr_type already targets this pointer with the same element
   // type.
-  for (auto User : Pointer->users()) {
-    auto *II = dyn_cast<IntrinsicInst>(User);
-    if (!II ||
-        (II->getIntrinsicID() != Intrinsic::spv_assign_ptr_type &&
-         II->getIntrinsicID() != Intrinsic::spv_ptrcast) ||
-        II->getOperand(0) != Pointer)
-      continue;
+  if (Pointer->hasUseList()) {
+    for (auto User : Pointer->users()) {
+      auto *II = dyn_cast<IntrinsicInst>(User);
+      if (!II ||
+          (II->getIntrinsicID() != Intrinsic::spv_assign_ptr_type &&
+           II->getIntrinsicID() != Intrinsic::spv_ptrcast) ||
+          II->getOperand(0) != Pointer)
+        continue;
 
-    // There is some spv_ptrcast/spv_assign_ptr_type already targeting this
-    // pointer.
-    FirstPtrCastOrAssignPtrType = false;
-    if (II->getOperand(1) != VMD ||
-        dyn_cast<ConstantInt>(II->getOperand(2))->getSExtValue() !=
-            AddressSpace)
-      continue;
+      // There is some spv_ptrcast/spv_assign_ptr_type already targeting this
+      // pointer.
+      FirstPtrCastOrAssignPtrType = false;
+      if (II->getOperand(1) != VMD ||
+          dyn_cast<ConstantInt>(II->getOperand(2))->getSExtValue() !=
+              AddressSpace)
+        continue;
 
-    // The spv_ptrcast/spv_assign_ptr_type targeting this pointer is of the same
-    // element type and address space.
-    if (II->getIntrinsicID() != Intrinsic::spv_ptrcast)
+      // The spv_ptrcast/spv_assign_ptr_type targeting this pointer is of the
+      // same element type and address space.
+      if (II->getIntrinsicID() != Intrinsic::spv_ptrcast)
+        return;
+
+      // This must be a spv_ptrcast, do not emit new if this one has the same BB
+      // as I. Otherwise, search for other spv_ptrcast/spv_assign_ptr_type.
+      if (II->getParent() != I->getParent())
+        continue;
+
+      I->setOperand(OperandToReplace, II);
       return;
-
-    // This must be a spv_ptrcast, do not emit new if this one has the same BB
-    // as I. Otherwise, search for other spv_ptrcast/spv_assign_ptr_type.
-    if (II->getParent() != I->getParent())
-      continue;
-
-    I->setOperand(OperandToReplace, II);
-    return;
+    }
   }
 
   if (isa<Instruction>(Pointer) || isa<Argument>(Pointer)) {
@@ -1951,10 +1961,16 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
           GR->buildAssignPtr(B, ElemTy ? ElemTy : deduceElementType(Op, true),
                              Op);
         } else {
+          Value *OpTyVal = Op;
+          if (OpTy->isTargetExtTy()) {
+            // We need to do this in order to be consistent with how target ext
+            // types are handled in `processInstrAfterVisit`
+            OpTyVal = getNormalizedPoisonValue(OpTy);
+          }
           CallInst *AssignCI =
               buildIntrWithMD(Intrinsic::spv_assign_type, {OpTy},
-                              getNormalizedPoisonValue(OpTy), Op, {}, B);
-          GR->addAssignPtrTypeInstr(Op, AssignCI);
+                              getNormalizedPoisonValue(OpTy), OpTyVal, {}, B);
+          GR->addAssignPtrTypeInstr(OpTyVal, AssignCI);
         }
       }
     }
@@ -2065,22 +2081,14 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
       BPrepared = true;
     }
     Type *OpTy = Op->getType();
-    Value *OpTyVal = Op;
-    if (OpTy->isTargetExtTy())
-      OpTyVal = getNormalizedPoisonValue(OpTy);
     Type *OpElemTy = GR->findDeducedElementType(Op);
     Value *NewOp = Op;
     if (OpTy->isTargetExtTy()) {
+      // Since this value is replaced by poison, we need to do the same in
+      // `insertAssignTypeIntrs`.
+      Value *OpTyVal = getNormalizedPoisonValue(OpTy);
       NewOp = buildIntrWithMD(Intrinsic::spv_track_constant,
                               {OpTy, OpTyVal->getType()}, Op, OpTyVal, {}, B);
-      if (isPointerTy(OpTy)) {
-        if (OpElemTy) {
-          GR->buildAssignPtr(B, OpElemTy, NewOp);
-        } else {
-          insertTodoType(NewOp);
-          GR->buildAssignPtr(B, OpTy, NewOp);
-        }
-      }
     }
     if (!IsConstComposite && isPointerTy(OpTy) && OpElemTy != nullptr &&
         OpElemTy != IntegerType::getInt8Ty(I->getContext())) {
@@ -2490,10 +2498,13 @@ bool SPIRVEmitIntrinsics::postprocessTypes(Module &M) {
         }
       }
     }
-    for (User *U : Op->users()) {
-      Instruction *Inst = dyn_cast<Instruction>(U);
-      if (Inst && !isa<IntrinsicInst>(Inst))
-        ToProcess[Inst].insert(Op);
+
+    if (Op->hasUseList()) {
+      for (User *U : Op->users()) {
+        Instruction *Inst = dyn_cast<Instruction>(U);
+        if (Inst && !isa<IntrinsicInst>(Inst))
+          ToProcess[Inst].insert(Op);
+      }
     }
   }
   if (TodoTypeSz == 0)

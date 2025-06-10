@@ -895,7 +895,7 @@ public:
   /// with a vtable when the vtable is emitted. Sema is final and not
   /// polymorphic, but the debug info size savings are so significant that it is
   /// worth adding a vtable just to take advantage of this optimization.
-  virtual void anchor();
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
   const LangOptions &getLangOpts() const { return LangOpts; }
   OpenCLOptions &getOpenCLOptions() { return OpenCLFeatures; }
@@ -971,6 +971,13 @@ public:
 
   /// Calls \c Lexer::getLocForEndOfToken()
   SourceLocation getLocForEndOfToken(SourceLocation Loc, unsigned Offset = 0);
+
+  /// Calls \c Lexer::findNextToken() to find the next token, and if the
+  /// locations of both ends of the token can be resolved it return that
+  /// range; Otherwise it returns an invalid SourceRange.
+  SourceRange getRangeForNextToken(
+      SourceLocation Loc, bool IncludeMacros, bool IncludeComments,
+      std::optional<tok::TokenKind> ExpectedToken = std::nullopt);
 
   /// Retrieve the module loader associated with the preprocessor.
   ModuleLoader &getModuleLoader() const;
@@ -2604,8 +2611,8 @@ public:
   /// Check for comparisons of floating-point values using == and !=. Issue a
   /// warning if the comparison is not likely to do what the programmer
   /// intended.
-  void CheckFloatComparison(SourceLocation Loc, Expr *LHS, Expr *RHS,
-                            BinaryOperatorKind Opcode);
+  void CheckFloatComparison(SourceLocation Loc, const Expr *LHS,
+                            const Expr *RHS, BinaryOperatorKind Opcode);
 
   /// Register a magic integral constant to be used as a type tag.
   void RegisterTypeTagForDatatype(const IdentifierInfo *ArgumentKind,
@@ -2644,6 +2651,16 @@ public:
   /// we do not want to diagnose such misaligned access (e.g. in conversions to
   /// void*).
   void DiscardMisalignedMemberAddress(const Type *T, Expr *E);
+
+  /// Returns true if `From` is a function or pointer to a function with the
+  /// `cfi_unchecked_callee` attribute but `To` is a function or pointer to
+  /// function without this attribute.
+  bool DiscardingCFIUncheckedCallee(QualType From, QualType To) const;
+
+  /// Returns true if `From` is a function or pointer to a function without the
+  /// `cfi_unchecked_callee` attribute but `To` is a function or pointer to
+  /// function with this attribute.
+  bool AddingCFIUncheckedCallee(QualType From, QualType To) const;
 
   /// This function calls Action when it determines that E designates a
   /// misaligned member due to the packed attribute. This is used to emit
@@ -3013,7 +3030,8 @@ private:
   // Warn on anti-patterns as the 'size' argument to strncat.
   // The correct size argument should look like following:
   //   strncat(dst, src, sizeof(dst) - strlen(dest) - 1);
-  void CheckStrncatArguments(const CallExpr *Call, IdentifierInfo *FnName);
+  void CheckStrncatArguments(const CallExpr *Call,
+                             const IdentifierInfo *FnName);
 
   /// Alerts the user that they are attempting to free a non-malloc'd object.
   void CheckFreeArguments(const CallExpr *E);
@@ -4316,12 +4334,17 @@ public:
                                        SourceLocation FinalLoc,
                                        bool IsFinalSpelledSealed,
                                        bool IsAbstract,
+                                       SourceLocation TriviallyRelocatable,
+                                       SourceLocation Replaceable,
                                        SourceLocation LBraceLoc);
 
   /// ActOnTagFinishDefinition - Invoked once we have finished parsing
   /// the definition of a tag (enumeration, class, struct, or union).
   void ActOnTagFinishDefinition(Scope *S, Decl *TagDecl,
                                 SourceRange BraceRange);
+
+  ASTContext::CXXRecordDeclRelocationInfo
+  CheckCXX2CRelocatableAndReplaceable(const clang::CXXRecordDecl *D);
 
   void ActOnTagFinishSkippedDefinition(SkippedDefinitionContext Context);
 
@@ -5027,6 +5050,8 @@ public:
   /// used to build a declaration, complain about any decl attributes
   /// which might be lying around on it.
   void checkUnusedDeclAttributes(Declarator &D);
+
+  void DiagnoseUnknownAttribute(const ParsedAttr &AL);
 
   /// DeclClonePragmaWeak - clone existing decl (maybe definition),
   /// \#pragma weak needs a non-definition decl and source may not have one.
@@ -5903,6 +5928,11 @@ public:
   /// with expression \E
   void DiagnoseStaticAssertDetails(const Expr *E);
 
+  /// If E represents a built-in type trait, or a known standard type trait,
+  /// try to print more information about why the type type-trait failed.
+  /// This assumes we already evaluated the expression to a false boolean value.
+  void DiagnoseTypeTraitDetails(const Expr *E);
+
   /// Handle a friend type declaration.  This works in tandem with
   /// ActOnTag.
   ///
@@ -6476,6 +6506,8 @@ private:
   void setupImplicitSpecialMemberType(CXXMethodDecl *SpecialMem,
                                       QualType ResultTy,
                                       ArrayRef<QualType> Args);
+  // Helper for ActOnFields to check for all function pointer members.
+  bool EntirelyFunctionPointers(const RecordDecl *Record);
 
   // A cache representing if we've fully checked the various comparison category
   // types stored in ASTContext. The bit-index corresponds to the integer value
@@ -6752,6 +6784,9 @@ public:
     /// example, in a for-range initializer).
     bool InLifetimeExtendingContext = false;
 
+    /// Whether evaluating an expression for a switch case label.
+    bool IsCaseExpr = false;
+
     /// Whether we should rebuild CXXDefaultArgExpr and CXXDefaultInitExpr.
     bool RebuildDefaultArgOrDefaultInit = false;
 
@@ -6818,8 +6853,9 @@ public:
 
     bool isDiscardedStatementContext() const {
       return Context == ExpressionEvaluationContext::DiscardedStatement ||
-             (Context ==
-                  ExpressionEvaluationContext::ImmediateFunctionContext &&
+             ((Context ==
+                   ExpressionEvaluationContext::ImmediateFunctionContext ||
+               isPotentiallyEvaluated()) &&
               InDiscardedStatement);
     }
   };
@@ -6908,6 +6944,10 @@ public:
       ExpressionEvaluationContext NewContext, Decl *LambdaContextDecl = nullptr,
       ExpressionEvaluationContextRecord::ExpressionKind Type =
           ExpressionEvaluationContextRecord::EK_Other);
+
+  void PushExpressionEvaluationContextForFunction(
+      ExpressionEvaluationContext NewContext, FunctionDecl *FD);
+
   enum ReuseLambdaContextDecl_t { ReuseLambdaContextDecl };
   void PushExpressionEvaluationContext(
       ExpressionEvaluationContext NewContext, ReuseLambdaContextDecl_t,
@@ -8635,6 +8675,19 @@ public:
                                                ExprResult &LHS, ExprResult &RHS,
                                                SourceLocation QuestionLoc);
 
+  //// Determines if a type is trivially relocatable
+  /// according to the C++26 rules.
+  // FIXME: This is in Sema because it requires
+  // overload resolution, can we move to ASTContext?
+  bool IsCXXTriviallyRelocatableType(QualType T);
+  bool IsCXXTriviallyRelocatableType(const CXXRecordDecl &RD);
+
+  //// Determines if a type is replaceable
+  /// according to the C++26 rules.
+  // FIXME: This is in Sema because it requires
+  // overload resolution, can we move to ASTContext?
+  bool IsCXXReplaceableType(QualType T);
+
   /// Check the operands of ?: under C++ semantics.
   ///
   /// See C++ [expr.cond]. Note that LHS is never null, even for the GNU x ?: y
@@ -9099,6 +9152,7 @@ public:
   /// Diagnose if an explicit lambda capture is unused. Returns true if a
   /// diagnostic is emitted.
   bool DiagnoseUnusedLambdaCapture(SourceRange CaptureRange,
+                                   SourceRange FixItRange,
                                    const sema::Capture &From);
 
   /// Build a FieldDecl suitable to hold the given capture.
@@ -10219,10 +10273,21 @@ public:
                                  bool CStyle, bool &ObjCLifetimeConversion);
 
   /// Determine whether the conversion from FromType to ToType is a valid
-  /// conversion that strips "noexcept" or "noreturn" off the nested function
-  /// type.
+  /// conversion that strips "noexcept" or "noreturn" or "cfi_unchecked_callee"
+  /// off the nested function type. This also checks if "cfi_unchecked_callee"
+  /// was added to the function type. If "cfi_unchecked_callee" is added and
+  /// `AddingCFIUncheckedCallee` is provided, it will be set to true. The same
+  /// thing applies for `DiscardingCFIUncheckedCallee` if the attribute is
+  /// discarded.
   bool IsFunctionConversion(QualType FromType, QualType ToType,
-                            QualType &ResultTy);
+                            bool *DiscardingCFIUncheckedCallee = nullptr,
+                            bool *AddingCFIUncheckedCallee = nullptr) const;
+
+  /// Same as `IsFunctionConversion`, but if this would return true, it sets
+  /// `ResultTy` to `ToType`.
+  bool TryFunctionConversion(QualType FromType, QualType ToType,
+                             QualType &ResultTy) const;
+
   bool DiagnoseMultipleUserDefinedConversion(Expr *From, QualType ToType);
   void DiagnoseUseOfDeletedFunction(SourceLocation Loc, SourceRange Range,
                                     DeclarationName Name,
@@ -10465,13 +10530,34 @@ public:
       OverloadCandidateParamOrder PO = {},
       bool AggregateCandidateDeduction = false);
 
+  struct CheckNonDependentConversionsFlag {
+    /// Do not consider any user-defined conversions when constructing the
+    /// initializing sequence.
+    bool SuppressUserConversions;
+
+    /// Before constructing the initializing sequence, we check whether the
+    /// parameter type and argument type contain any user defined conversions.
+    /// If so, do not initialize them. This effectively bypasses some undesired
+    /// instantiation before checking constaints, which might otherwise result
+    /// in non-SFINAE errors e.g. recursive constraints.
+    bool OnlyInitializeNonUserDefinedConversions;
+
+    CheckNonDependentConversionsFlag(
+        bool SuppressUserConversions,
+        bool OnlyInitializeNonUserDefinedConversions)
+        : SuppressUserConversions(SuppressUserConversions),
+          OnlyInitializeNonUserDefinedConversions(
+              OnlyInitializeNonUserDefinedConversions) {}
+  };
+
   /// Check that implicit conversion sequences can be formed for each argument
   /// whose corresponding parameter has a non-dependent type, per DR1391's
   /// [temp.deduct.call]p10.
   bool CheckNonDependentConversions(
       FunctionTemplateDecl *FunctionTemplate, ArrayRef<QualType> ParamTypes,
       ArrayRef<Expr *> Args, OverloadCandidateSet &CandidateSet,
-      ConversionSequenceList &Conversions, bool SuppressUserConversions,
+      ConversionSequenceList &Conversions,
+      CheckNonDependentConversionsFlag UserConversionFlag,
       CXXRecordDecl *ActingContext = nullptr, QualType ObjectType = QualType(),
       Expr::Classification ObjectClassification = {},
       OverloadCandidateParamOrder PO = {});
@@ -11129,6 +11215,8 @@ public:
   /// handlers and creates a try statement from them.
   StmtResult ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
                               ArrayRef<Stmt *> Handlers);
+
+  void DiagnoseExceptionUse(SourceLocation Loc, bool IsTry);
 
   StmtResult ActOnSEHTryBlock(bool IsCXXTry, // try (true) or __try (false) ?
                               SourceLocation TryLoc, Stmt *TryBlock,
@@ -12336,16 +12424,19 @@ public:
     bool PrevLastDiagnosticIgnored;
 
   public:
-    explicit SFINAETrap(Sema &SemaRef, bool AccessCheckingSFINAE = false)
+    /// \param ForValidityCheck If true, discard all diagnostics (from the
+    /// immediate context) instead of adding them to the currently active
+    /// \ref TemplateDeductionInfo (as returned by \ref isSFINAEContext).
+    explicit SFINAETrap(Sema &SemaRef, bool ForValidityCheck = false)
         : SemaRef(SemaRef), PrevSFINAEErrors(SemaRef.NumSFINAEErrors),
           PrevInNonInstantiationSFINAEContext(
               SemaRef.InNonInstantiationSFINAEContext),
           PrevAccessCheckingSFINAE(SemaRef.AccessCheckingSFINAE),
           PrevLastDiagnosticIgnored(
               SemaRef.getDiagnostics().isLastDiagnosticIgnored()) {
-      if (!SemaRef.isSFINAEContext())
+      if (ForValidityCheck || !SemaRef.isSFINAEContext())
         SemaRef.InNonInstantiationSFINAEContext = true;
-      SemaRef.AccessCheckingSFINAE = AccessCheckingSFINAE;
+      SemaRef.AccessCheckingSFINAE = ForValidityCheck;
     }
 
     ~SFINAETrap() {
@@ -12375,7 +12466,7 @@ public:
 
   public:
     explicit TentativeAnalysisScope(Sema &SemaRef)
-        : SemaRef(SemaRef), Trap(SemaRef, true),
+        : SemaRef(SemaRef), Trap(SemaRef, /*ForValidityCheck=*/true),
           PrevDisableTypoCorrection(SemaRef.DisableTypoCorrection) {
       SemaRef.DisableTypoCorrection = true;
     }
@@ -12510,6 +12601,11 @@ public:
   ///
   /// \param OriginalCallArgs If non-NULL, the original call arguments against
   /// which the deduced argument types should be compared.
+  /// \param CheckNonDependent Callback before substituting into the declaration
+  /// with the deduced template arguments.
+  /// \param OnlyInitializeNonUserDefinedConversions is used as a workaround for
+  /// some breakages introduced by CWG2369, where non-user-defined conversions
+  /// are checked first before the constraints.
   TemplateDeductionResult FinishTemplateArgumentDeduction(
       FunctionTemplateDecl *FunctionTemplate,
       SmallVectorImpl<DeducedTemplateArgument> &Deduced,
@@ -12517,7 +12613,10 @@ public:
       sema::TemplateDeductionInfo &Info,
       SmallVectorImpl<OriginalCallArg> const *OriginalCallArgs,
       bool PartialOverloading, bool PartialOrdering,
-      llvm::function_ref<bool()> CheckNonDependent = [] { return false; });
+      llvm::function_ref<bool(bool)> CheckNonDependent =
+          [](bool /*OnlyInitializeNonUserDefinedConversions*/) {
+            return false;
+          });
 
   /// Perform template argument deduction from a function call
   /// (C++ [temp.deduct.call]).
@@ -12552,7 +12651,8 @@ public:
       bool PartialOverloading, bool AggregateDeductionCandidate,
       bool PartialOrdering, QualType ObjectType,
       Expr::Classification ObjectClassification,
-      llvm::function_ref<bool(ArrayRef<QualType>)> CheckNonDependent);
+      bool ForOverloadSetAddressResolution,
+      llvm::function_ref<bool(ArrayRef<QualType>, bool)> CheckNonDependent);
 
   /// Deduce template arguments when taking the address of a function
   /// template (C++ [temp.deduct.funcaddr]) or matching a specialization to
@@ -13028,6 +13128,9 @@ public:
     /// Was the enclosing context a non-instantiation SFINAE context?
     bool SavedInNonInstantiationSFINAEContext;
 
+    /// Whether we're substituting into constraints.
+    bool InConstraintSubstitution;
+
     /// The point of instantiation or synthesis within the source code.
     SourceLocation PointOfInstantiation;
 
@@ -13077,9 +13180,9 @@ public:
 
     CodeSynthesisContext()
         : Kind(TemplateInstantiation),
-          SavedInNonInstantiationSFINAEContext(false), Entity(nullptr),
-          Template(nullptr), TemplateArgs(nullptr), NumTemplateArgs(0),
-          DeductionInfo(nullptr) {}
+          SavedInNonInstantiationSFINAEContext(false),
+          InConstraintSubstitution(false), Entity(nullptr), Template(nullptr),
+          TemplateArgs(nullptr), NumTemplateArgs(0), DeductionInfo(nullptr) {}
 
     /// Determines whether this template is an actual instantiation
     /// that should be counted toward the maximum instantiation depth.
@@ -13323,9 +13426,22 @@ public:
   ///
   /// \param SkipForSpecialization when specified, any template specializations
   /// in a traversal would be ignored.
+  ///
   /// \param ForDefaultArgumentSubstitution indicates we should continue looking
   /// when encountering a specialized member function template, rather than
   /// returning immediately.
+  void getTemplateInstantiationArgs(
+      MultiLevelTemplateArgumentList &Result, const NamedDecl *D,
+      const DeclContext *DC = nullptr, bool Final = false,
+      std::optional<ArrayRef<TemplateArgument>> Innermost = std::nullopt,
+      bool RelativeToPrimary = false, const FunctionDecl *Pattern = nullptr,
+      bool ForConstraintInstantiation = false,
+      bool SkipForSpecialization = false,
+      bool ForDefaultArgumentSubstitution = false);
+
+  /// This creates a new \p MultiLevelTemplateArgumentList and invokes the other
+  /// overload with it as the first parameter. Prefer this overload in most
+  /// situations.
   MultiLevelTemplateArgumentList getTemplateInstantiationArgs(
       const NamedDecl *D, const DeclContext *DC = nullptr, bool Final = false,
       std::optional<ArrayRef<TemplateArgument>> Innermost = std::nullopt,
@@ -13346,23 +13462,11 @@ public:
         : S(S), SavedContext(S, DC) {
       auto *FD = dyn_cast<FunctionDecl>(DC);
       S.PushFunctionScope();
-      S.PushExpressionEvaluationContext(
-          (FD && FD->isImmediateFunction())
-              ? ExpressionEvaluationContext::ImmediateFunctionContext
-              : ExpressionEvaluationContext::PotentiallyEvaluated);
-      if (FD) {
-        auto &Current = S.currentEvaluationContext();
-        const auto &Parent = S.parentEvaluationContext();
-
+      S.PushExpressionEvaluationContextForFunction(
+          ExpressionEvaluationContext::PotentiallyEvaluated, FD);
+      if (FD)
         FD->setWillHaveBody(true);
-        Current.InImmediateFunctionContext =
-            FD->isImmediateFunction() ||
-            (isLambdaMethod(FD) && (Parent.isConstantEvaluated() ||
-                                    Parent.isImmediateFunctionContext()));
-
-        Current.InImmediateEscalatingFunctionContext =
-            S.getLangOpts().CPlusPlus20 && FD->isImmediateEscalating();
-      } else
+      else
         assert(isa<ObjCMethodDecl>(DC));
     }
 
@@ -13610,7 +13714,7 @@ public:
   ExprResult
   SubstConstraintExpr(Expr *E,
                       const MultiLevelTemplateArgumentList &TemplateArgs);
-  // Unlike the above, this does not evaluates constraints.
+  // Unlike the above, this does not evaluate constraints.
   ExprResult SubstConstraintExprWithoutSatisfaction(
       Expr *E, const MultiLevelTemplateArgumentList &TemplateArgs);
 
@@ -13758,6 +13862,12 @@ public:
   /// Determine whether we are currently performing template instantiation.
   bool inTemplateInstantiation() const {
     return CodeSynthesisContexts.size() > NonInstantiationEntries;
+  }
+
+  /// Determine whether we are currently performing constraint substitution.
+  bool inConstraintSubstitution() const {
+    return !CodeSynthesisContexts.empty() &&
+           CodeSynthesisContexts.back().InConstraintSubstitution;
   }
 
   using EntityPrinter = llvm::function_ref<void(llvm::raw_ostream &)>;
@@ -13922,7 +14032,7 @@ public:
                               Decl *D)
         : TmplAttr(A), Scope(S), NewDecl(D) {}
   };
-  typedef SmallVector<LateInstantiatedAttribute, 16> LateInstantiatedAttrVec;
+  typedef SmallVector<LateInstantiatedAttribute, 1> LateInstantiatedAttrVec;
 
   void InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
                         const Decl *Pattern, Decl *Inst,
@@ -14606,8 +14716,8 @@ public:
   bool SatisfactionStackContains(const NamedDecl *D,
                                  const llvm::FoldingSetNodeID &ID) const {
     const NamedDecl *Can = cast<NamedDecl>(D->getCanonicalDecl());
-    return llvm::find(SatisfactionStack, SatisfactionStackEntryTy{Can, ID}) !=
-           SatisfactionStack.end();
+    return llvm::is_contained(SatisfactionStack,
+                              SatisfactionStackEntryTy{Can, ID});
   }
 
   using SatisfactionStackEntryTy =
@@ -14752,10 +14862,10 @@ public:
       const MultiLevelTemplateArgumentList &TemplateArgs,
       SourceRange TemplateIDRange);
 
-  bool CheckInstantiatedFunctionTemplateConstraints(
-      SourceLocation PointOfInstantiation, FunctionDecl *Decl,
-      ArrayRef<TemplateArgument> TemplateArgs,
-      ConstraintSatisfaction &Satisfaction);
+  bool CheckFunctionTemplateConstraints(SourceLocation PointOfInstantiation,
+                                        FunctionDecl *Decl,
+                                        ArrayRef<TemplateArgument> TemplateArgs,
+                                        ConstraintSatisfaction &Satisfaction);
 
   /// \brief Emit diagnostics explaining why a constraint expression was deemed
   /// unsatisfied.

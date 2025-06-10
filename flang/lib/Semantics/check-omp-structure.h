@@ -98,6 +98,8 @@ public:
   void Enter(const parser::OmpEndSectionsDirective &);
   void Leave(const parser::OmpEndSectionsDirective &);
 
+  void Enter(const parser::OmpDeclareVariantDirective &);
+  void Leave(const parser::OmpDeclareVariantDirective &);
   void Enter(const parser::OpenMPDeclareSimdConstruct &);
   void Leave(const parser::OpenMPDeclareSimdConstruct &);
   void Enter(const parser::OpenMPDeclarativeAllocate &);
@@ -172,6 +174,7 @@ private:
   bool IsExtendedListItem(const Symbol &sym);
   bool IsCommonBlock(const Symbol &sym);
   std::optional<bool> IsContiguous(const parser::OmpObject &object);
+  void CheckVariableListItem(const SymbolSourceMap &symbols);
   void CheckMultipleOccurrence(semantics::UnorderedSymbolSet &listVars,
       const std::list<parser::Name> &nameList, const parser::CharBlock &item,
       const std::string &clauseName);
@@ -231,7 +234,9 @@ private:
       const common::Indirection<parser::ArrayElement> &, const parser::Name &);
   void CheckDoacross(const parser::OmpDoacross &doa);
   bool IsDataRefTypeParamInquiry(const parser::DataRef *dataRef);
-  void CheckIsVarPartOfAnotherVar(const parser::CharBlock &source,
+  void CheckVarIsNotPartOfAnotherVar(const parser::CharBlock &source,
+      const parser::OmpObject &obj, llvm::StringRef clause = "");
+  void CheckVarIsNotPartOfAnotherVar(const parser::CharBlock &source,
       const parser::OmpObjectList &objList, llvm::StringRef clause = "");
   void CheckThreadprivateOrDeclareTargetVar(
       const parser::OmpObjectList &objList);

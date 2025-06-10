@@ -212,7 +212,7 @@ static Value genTensorToMemref(PatternRewriter &rewriter, Location loc,
   auto tensorType = llvm::cast<ShapedType>(tensor.getType());
   auto memrefType =
       MemRefType::get(tensorType.getShape(), tensorType.getElementType());
-  return rewriter.create<bufferization::ToMemrefOp>(loc, memrefType, tensor);
+  return rewriter.create<bufferization::ToBufferOp>(loc, memrefType, tensor);
 }
 
 /// Prepares the outlined arguments, passing scalars and buffers in. Here we

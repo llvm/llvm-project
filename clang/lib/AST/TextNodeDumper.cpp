@@ -24,6 +24,7 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TypeTraits.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Frontend/HLSL/HLSLRootSignatureUtils.h"
 
 #include <algorithm>
 #include <utility>
@@ -1114,7 +1115,7 @@ const char *TextNodeDumper::getCommandName(unsigned CommandID) {
 }
 
 void TextNodeDumper::printFPOptions(FPOptionsOverride FPO) {
-#define OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                    \
+#define FP_OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                 \
   if (FPO.has##NAME##Override())                                               \
     OS << " " #NAME "=" << FPO.get##NAME##Override();
 #include "clang/Basic/FPOptions.def"
@@ -3035,6 +3036,12 @@ void TextNodeDumper::VisitHLSLBufferDecl(const HLSLBufferDecl *D) {
   else
     OS << " tbuffer";
   dumpName(D);
+}
+
+void TextNodeDumper::VisitHLSLRootSignatureDecl(
+    const HLSLRootSignatureDecl *D) {
+  dumpName(D);
+  llvm::hlsl::rootsig::dumpRootElements(OS, D->getRootElements());
 }
 
 void TextNodeDumper::VisitHLSLOutArgExpr(const HLSLOutArgExpr *E) {

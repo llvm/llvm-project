@@ -14,6 +14,7 @@
 #include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
+#include "CIRGenRecordLayout.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -365,12 +366,33 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &d) {
   // initialization of memory to all NULLs.
   if (!d.hasLocalStorage()) {
     QualType ty = cgm.getASTContext().getBaseElementType(d.getType());
-    if (ty->isRecordType())
-      if (d.getInit() && isa<CXXConstructExpr>(d.getInit())) {
-        cgm.errorNYI(d.getInit()->getBeginLoc(),
-                     "tryEmitPrivateForVarInit CXXConstructExpr");
-        return {};
+    if (ty->isRecordType()) {
+      if (const auto *e = dyn_cast_or_null<CXXConstructExpr>(d.getInit())) {
+        const CXXConstructorDecl *cd = e->getConstructor();
+        // FIXME: we should probably model this more closely to C++ than
+        // just emitting a global with zero init (mimic what we do for trivial
+        // assignments and whatnots). Since this is for globals shouldn't
+        // be a problem for the near future.
+        if (cd->isTrivial() && cd->isDefaultConstructor()) {
+          const auto *cxxrd =
+              cast<CXXRecordDecl>(ty->getAs<RecordType>()->getDecl());
+          if (cxxrd->getNumBases() != 0) {
+            // There may not be anything additional to do here, but this will
+            // force us to pause and test this path when it is supported.
+            cgm.errorNYI("tryEmitPrivateForVarInit: cxx record with bases");
+            return {};
+          }
+          if (!cgm.getTypes().isZeroInitializable(cxxrd)) {
+            // To handle this case, we really need to go through
+            // emitNullConstant, but we need an attribute, not a value
+            cgm.errorNYI(
+                "tryEmitPrivateForVarInit: non-zero-initializable cxx record");
+            return {};
+          }
+          return cir::ZeroAttr::get(cgm.convertType(d.getType()));
+        }
       }
+    }
   }
   inConstantContext = d.hasConstantInitialization();
 
@@ -555,12 +577,33 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
   case APValue::Union:
     cgm.errorNYI("ConstExprEmitter::tryEmitPrivate struct or union");
     return {};
-  case APValue::FixedPoint:
   case APValue::ComplexInt:
-  case APValue::ComplexFloat:
+  case APValue::ComplexFloat: {
+    mlir::Type desiredType = cgm.convertType(destType);
+    cir::ComplexType complexType =
+        mlir::dyn_cast<cir::ComplexType>(desiredType);
+
+    mlir::Type complexElemTy = complexType.getElementType();
+    if (isa<cir::IntType>(complexElemTy)) {
+      llvm::APSInt real = value.getComplexIntReal();
+      llvm::APSInt imag = value.getComplexIntImag();
+      return builder.getAttr<cir::ConstComplexAttr>(
+          complexType, builder.getAttr<cir::IntAttr>(complexElemTy, real),
+          builder.getAttr<cir::IntAttr>(complexElemTy, imag));
+    }
+
+    assert(isa<cir::CIRFPTypeInterface>(complexElemTy) &&
+           "expected floating-point type");
+    llvm::APFloat real = value.getComplexFloatReal();
+    llvm::APFloat imag = value.getComplexFloatImag();
+    return builder.getAttr<cir::ConstComplexAttr>(
+        complexType, builder.getAttr<cir::FPAttr>(complexElemTy, real),
+        builder.getAttr<cir::FPAttr>(complexElemTy, imag));
+  }
+  case APValue::FixedPoint:
   case APValue::AddrLabelDiff:
-    cgm.errorNYI("ConstExprEmitter::tryEmitPrivate fixed point, complex int, "
-                 "complex float, addr label diff");
+    cgm.errorNYI(
+        "ConstExprEmitter::tryEmitPrivate fixed point, addr label diff");
     return {};
   }
   llvm_unreachable("Unknown APValue kind");

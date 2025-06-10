@@ -29,9 +29,9 @@ define void @interleave(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; IF-EVL-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 4
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 2
+; IF-EVL-NEXT:    [[TMP10:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-; IF-EVL-NEXT:    [[TMP10:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; IF-EVL-NEXT:    [[TMP12:%.*]] = mul <vscale x 4 x i64> [[TMP10]], splat (i64 1)
 ; IF-EVL-NEXT:    [[INDUCTION:%.*]] = add <vscale x 4 x i64> zeroinitializer, [[TMP12]]
 ; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP8]], i64 0

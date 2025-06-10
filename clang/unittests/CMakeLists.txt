@@ -105,7 +105,9 @@ add_subdirectory(Index)
 add_subdirectory(InstallAPI)
 add_subdirectory(Serialization)
 add_subdirectory(Support)
-
+if (CLANG_ENABLE_CIR)
+  add_subdirectory(CIR)
+endif()
 
 # If we're doing a single merged clang unit test binary, add that target after
 # all the previous subdirectories have been processed.

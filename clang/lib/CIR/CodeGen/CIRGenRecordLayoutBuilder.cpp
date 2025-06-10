@@ -40,15 +40,18 @@ struct CIRRecordLowering final {
   // member type that ensures correct rounding.
   struct MemberInfo final {
     CharUnits offset;
-    enum class InfoKind { Field } kind;
+    enum class InfoKind { Field, Base } kind;
     mlir::Type data;
     union {
       const FieldDecl *fieldDecl;
-      // CXXRecordDecl will be used here when base types are supported.
+      const CXXRecordDecl *cxxRecordDecl;
     };
     MemberInfo(CharUnits offset, InfoKind kind, mlir::Type data,
                const FieldDecl *fieldDecl = nullptr)
-        : offset(offset), kind(kind), data(data), fieldDecl(fieldDecl) {};
+        : offset{offset}, kind{kind}, data{data}, fieldDecl{fieldDecl} {}
+    MemberInfo(CharUnits offset, InfoKind kind, mlir::Type data,
+               const CXXRecordDecl *rd)
+        : offset{offset}, kind{kind}, data{data}, cxxRecordDecl{rd} {}
     // MemberInfos are sorted so we define a < operator.
     bool operator<(const MemberInfo &other) const {
       return offset < other.offset;
@@ -71,11 +74,15 @@ struct CIRRecordLowering final {
   /// Inserts padding everywhere it's needed.
   void insertPadding();
 
+  void accumulateBases(const CXXRecordDecl *cxxRecordDecl);
+  void accumulateVPtrs();
   void accumulateFields();
 
   CharUnits bitsToCharUnits(uint64_t bitOffset) {
     return astContext.toCharUnitsFromBits(bitOffset);
   }
+
+  void calculateZeroInit();
 
   CharUnits getSize(mlir::Type Ty) {
     return CharUnits::fromQuantity(dataLayout.layout.getTypeSize(Ty));
@@ -86,6 +93,9 @@ struct CIRRecordLowering final {
 
   bool isZeroInitializable(const FieldDecl *fd) {
     return cirGenTypes.isZeroInitializable(fd->getType());
+  }
+  bool isZeroInitializable(const RecordDecl *rd) {
+    return cirGenTypes.isZeroInitializable(rd);
   }
 
   /// Wraps cir::IntType with some implicit arguments.
@@ -108,6 +118,11 @@ struct CIRRecordLowering final {
     return numberOfChars == CharUnits::One()
                ? type
                : cir::ArrayType::get(type, numberOfChars.getQuantity());
+  }
+
+  // Gets the CIR BaseSubobject type from a CXXRecordDecl.
+  mlir::Type getStorageType(const CXXRecordDecl *RD) {
+    return cirGenTypes.getCIRGenRecordLayout(RD).getBaseSubobjectCIRType();
   }
 
   mlir::Type getStorageType(const FieldDecl *fieldDecl) {
@@ -143,6 +158,7 @@ struct CIRRecordLowering final {
   // Output fields, consumed by CIRGenTypes::computeRecordLayout
   llvm::SmallVector<mlir::Type, 16> fieldTypes;
   llvm::DenseMap<const FieldDecl *, unsigned> fieldIdxMap;
+  llvm::DenseMap<const CXXRecordDecl *, unsigned> nonVirtualBases;
   cir::CIRDataLayout dataLayout;
 
   LLVM_PREFERRED_TYPE(bool)
@@ -177,17 +193,21 @@ void CIRRecordLowering::lower() {
     return;
   }
 
-  if (isa<CXXRecordDecl>(recordDecl)) {
-    cirGenTypes.getCGModule().errorNYI(recordDecl->getSourceRange(),
-                                       "lower: class");
-    return;
-  }
-
-  assert(!cir::MissingFeatures::cxxSupport());
-
+  assert(!cir::MissingFeatures::recordLayoutVirtualBases());
   CharUnits size = astRecordLayout.getSize();
 
   accumulateFields();
+
+  if (const auto *cxxRecordDecl = dyn_cast<CXXRecordDecl>(recordDecl)) {
+    accumulateVPtrs();
+    accumulateBases(cxxRecordDecl);
+    if (members.empty()) {
+      appendPaddingBytes(size);
+      assert(!cir::MissingFeatures::bitfields());
+      return;
+    }
+    assert(!cir::MissingFeatures::recordLayoutVirtualBases());
+  }
 
   llvm::stable_sort(members);
   // TODO: implement clipTailPadding once bitfields are implemented
@@ -199,6 +219,7 @@ void CIRRecordLowering::lower() {
   insertPadding();
   members.pop_back();
 
+  calculateZeroInit();
   fillOutputFields();
 }
 
@@ -212,8 +233,10 @@ void CIRRecordLowering::fillOutputFields() {
             fieldTypes.size() - 1;
       // A field without storage must be a bitfield.
       assert(!cir::MissingFeatures::bitfields());
+    } else if (member.kind == MemberInfo::InfoKind::Base) {
+      nonVirtualBases[member.cxxRecordDecl] = fieldTypes.size() - 1;
     }
-    assert(!cir::MissingFeatures::cxxSupport());
+    assert(!cir::MissingFeatures::recordLayoutVirtualBases());
   }
 }
 
@@ -233,6 +256,24 @@ void CIRRecordLowering::accumulateFields() {
       assert(!cir::MissingFeatures::zeroSizeRecordMembers());
       ++field;
     }
+  }
+}
+
+void CIRRecordLowering::calculateZeroInit() {
+  for (const MemberInfo &member : members) {
+    if (member.kind == MemberInfo::InfoKind::Field) {
+      if (!member.fieldDecl || isZeroInitializable(member.fieldDecl))
+        continue;
+      zeroInitializable = zeroInitializableAsBase = false;
+      return;
+    } else if (member.kind == MemberInfo::InfoKind::Base) {
+      if (isZeroInitializable(member.cxxRecordDecl))
+        continue;
+      zeroInitializable = false;
+      if (member.kind == MemberInfo::InfoKind::Base)
+        zeroInitializableAsBase = false;
+    }
+    assert(!cir::MissingFeatures::recordLayoutVirtualBases());
   }
 }
 
@@ -293,9 +334,33 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
   lowering.lower();
 
   // If we're in C++, compute the base subobject type.
+  cir::RecordType baseTy;
   if (llvm::isa<CXXRecordDecl>(rd) && !rd->isUnion() &&
       !rd->hasAttr<FinalAttr>()) {
-    cgm.errorNYI(rd->getSourceRange(), "computeRecordLayout: CXXRecordDecl");
+    baseTy = *ty;
+    if (lowering.astRecordLayout.getNonVirtualSize() !=
+        lowering.astRecordLayout.getSize()) {
+      CIRRecordLowering baseLowering(*this, rd, /*Packed=*/lowering.packed);
+      baseLowering.lower();
+      std::string baseIdentifier = getRecordTypeName(rd, ".base");
+      baseTy =
+          builder.getCompleteRecordTy(baseLowering.fieldTypes, baseIdentifier,
+                                      baseLowering.packed, baseLowering.padded);
+      // TODO(cir): add something like addRecordTypeName
+
+      // BaseTy and Ty must agree on their packedness for getCIRFieldNo to work
+      // on both of them with the same index.
+      assert(lowering.packed == baseLowering.packed &&
+             "Non-virtual and complete types must agree on packedness");
+    }
+  }
+
+  if (llvm::isa<CXXRecordDecl>(rd) && !rd->isUnion() &&
+      !rd->hasAttr<FinalAttr>()) {
+    if (lowering.astRecordLayout.getNonVirtualSize() !=
+        lowering.astRecordLayout.getSize()) {
+      cgm.errorNYI(rd->getSourceRange(), "computeRecordLayout: CXXRecordDecl");
+    }
   }
 
   // Fill in the record *after* computing the base type.  Filling in the body
@@ -304,9 +369,14 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
   assert(!cir::MissingFeatures::astRecordDeclAttr());
   ty->complete(lowering.fieldTypes, lowering.packed, lowering.padded);
 
-  auto rl = std::make_unique<CIRGenRecordLayout>(ty ? *ty : cir::RecordType());
+  auto rl = std::make_unique<CIRGenRecordLayout>(
+      ty ? *ty : cir::RecordType{}, baseTy ? baseTy : cir::RecordType{},
+      (bool)lowering.zeroInitializable, (bool)lowering.zeroInitializableAsBase);
 
   assert(!cir::MissingFeatures::recordZeroInit());
+
+  rl->nonVirtualBases.swap(lowering.nonVirtualBases);
+
   assert(!cir::MissingFeatures::cxxSupport());
   assert(!cir::MissingFeatures::bitfields());
 
@@ -385,4 +455,39 @@ void CIRRecordLowering::lowerUnion() {
   // Set packed if we need it.
   if (layoutSize % getAlignment(storageType))
     packed = true;
+}
+
+void CIRRecordLowering::accumulateBases(const CXXRecordDecl *cxxRecordDecl) {
+  // If we've got a primary virtual base, we need to add it with the bases.
+  if (astRecordLayout.isPrimaryBaseVirtual()) {
+    cirGenTypes.getCGModule().errorNYI(recordDecl->getSourceRange(),
+                                       "accumulateBases: primary virtual base");
+  }
+
+  // Accumulate the non-virtual bases.
+  for ([[maybe_unused]] const auto &base : cxxRecordDecl->bases()) {
+    if (base.isVirtual()) {
+      cirGenTypes.getCGModule().errorNYI(recordDecl->getSourceRange(),
+                                         "accumulateBases: virtual base");
+      continue;
+    }
+    // Bases can be zero-sized even if not technically empty if they
+    // contain only a trailing array member.
+    const CXXRecordDecl *baseDecl = base.getType()->getAsCXXRecordDecl();
+    if (!baseDecl->isEmpty() &&
+        !astContext.getASTRecordLayout(baseDecl).getNonVirtualSize().isZero()) {
+      members.push_back(MemberInfo(astRecordLayout.getBaseClassOffset(baseDecl),
+                                   MemberInfo::InfoKind::Base,
+                                   getStorageType(baseDecl), baseDecl));
+    }
+  }
+}
+
+void CIRRecordLowering::accumulateVPtrs() {
+  if (astRecordLayout.hasOwnVFPtr())
+    cirGenTypes.getCGModule().errorNYI(recordDecl->getSourceRange(),
+                                       "accumulateVPtrs: hasOwnVFPtr");
+  if (astRecordLayout.hasOwnVBPtr())
+    cirGenTypes.getCGModule().errorNYI(recordDecl->getSourceRange(),
+                                       "accumulateVPtrs: hasOwnVBPtr");
 }

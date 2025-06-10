@@ -53,8 +53,8 @@ protected:
     Relocation::Arch = ObjFile->makeTriple().getArch();
     BC = cantFail(BinaryContext::createBinaryContext(
         ObjFile->makeTriple(), std::make_shared<orc::SymbolStringPool>(),
-        ObjFile->getFileName(), nullptr, true,
-        DWARFContext::create(*ObjFile.get()), {llvm::outs(), llvm::errs()}));
+        ObjFile->getFileName(), nullptr, true, DWARFContext::create(*ObjFile),
+        {llvm::outs(), llvm::errs()}));
     ASSERT_FALSE(!BC);
   }
 
@@ -160,36 +160,6 @@ TEST_P(BinaryContextTester, FlushPendingRelocJUMP26) {
       << "Wrong backward branch value\n";
   EXPECT_FALSE(memcmp(Func2Call, &Vect[12], 4))
       << "Wrong forward branch value\n";
-}
-
-TEST_P(BinaryContextTester,
-       FlushOptionalOutOfRangePendingRelocCALL26_ForcePatchOff) {
-  if (GetParam() != Triple::aarch64)
-    GTEST_SKIP();
-
-  // Tests that flushPendingRelocations exits if any pending relocation is out
-  // of range and PatchEntries hasn't run. Pending relocations are added by
-  // scanExternalRefs, so this ensures that either all scanExternalRefs
-  // relocations were flushed or PatchEntries ran.
-
-  BinarySection &BS = BC->registerOrUpdateSection(
-      ".text", ELF::SHT_PROGBITS, ELF::SHF_EXECINSTR | ELF::SHF_ALLOC);
-  // Create symbol 'Func0x4'
-  MCSymbol *RelSymbol = BC->getOrCreateGlobalSymbol(4, "Func");
-  ASSERT_TRUE(RelSymbol);
-  Relocation Reloc{8, RelSymbol, ELF::R_AARCH64_CALL26, 0, 0};
-  Reloc.setOptional();
-  BS.addPendingRelocation(Reloc);
-
-  SmallVector<char> Vect;
-  raw_svector_ostream OS(Vect);
-
-  // Resolve relocation symbol to a high value so encoding will be out of range.
-  EXPECT_EXIT(BS.flushPendingRelocations(
-                  OS, [&](const MCSymbol *S) { return 0x800000F; }),
-              ::testing::ExitedWithCode(1),
-              "BOLT-ERROR: cannot encode relocation for symbol Func0x4 as it is"
-              " out-of-range. To proceed must use -force-patch");
 }
 
 TEST_P(BinaryContextTester,

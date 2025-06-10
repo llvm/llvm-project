@@ -16,7 +16,7 @@ end
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 2 : index
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_4:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_5:.*]] = fir.address_of(@_QFE.b.t.e) : !fir.ref<!fir.array<2x1x!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>>>
+! CHECK:           %[[VAL_5:.*]] = fir.address_of(@_QFE.b.t.e) : !fir.ref<!fir.array<2x1x!fir.type<{{.+}}>>>
 ! CHECK:           %[[VAL_6:.*]] = fir.shape_shift %[[VAL_3]], %[[VAL_2]], %[[VAL_3]], %[[VAL_1]] : (index, index, index, index) -> !fir.shapeshift<2>
 ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_5]](%[[VAL_6]]) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFE.b.t.e"} :
 ! CHECK:           %[[VAL_8:.*]] = fir.address_of(@_QFE.n.e) : !fir.ref<!fir.char<1>>

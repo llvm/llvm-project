@@ -390,6 +390,13 @@ ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     return success();
   }
 
+  if (key == LLVMDialect::getModuleFlagKeyProfileSummaryName()) {
+    if (!isa<ModuleFlagProfileSummaryAttr>(value))
+      return emitError() << "'ProfileSummary' key expects a "
+                            "'#llvm.profile_summary' attribute";
+    return success();
+  }
+
   if (isa<IntegerAttr, StringAttr>(value))
     return success();
 

@@ -73,6 +73,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LockstepReverseIterator.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -1129,13 +1130,17 @@ static void cloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
 
     Instruction *NewBonusInst = BonusInst.clone();
 
-    if (!isa<DbgInfoIntrinsic>(BonusInst) &&
-        PTI->getDebugLoc() != NewBonusInst->getDebugLoc()) {
-      // Unless the instruction has the same !dbg location as the original
-      // branch, drop it. When we fold the bonus instructions we want to make
-      // sure we reset their debug locations in order to avoid stepping on
-      // dead code caused by folding dead branches.
-      NewBonusInst->setDebugLoc(DebugLoc());
+    if (!isa<DbgInfoIntrinsic>(BonusInst)) {
+      if (!NewBonusInst->getDebugLoc().isSameSourceLocation(
+              PTI->getDebugLoc())) {
+        // Unless the instruction has the same !dbg location as the original
+        // branch, drop it. When we fold the bonus instructions we want to make
+        // sure we reset their debug locations in order to avoid stepping on
+        // dead code caused by folding dead branches.
+        NewBonusInst->setDebugLoc(DebugLoc());
+      } else if (const DebugLoc &DL = NewBonusInst->getDebugLoc()) {
+        mapAtomInstance(DL, VMap);
+      }
     }
 
     RemapInstruction(NewBonusInst, VMap,
@@ -1180,6 +1185,19 @@ static void cloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
       assert(PN->getIncomingBlock(U) == PredBlock &&
              "Not in block-closed SSA form?");
       U.set(NewBonusInst);
+    }
+  }
+
+  // Key Instructions: We may have propagated atom info into the pred. If the
+  // pred's terminator already has atom info do nothing as merging would drop
+  // one atom group anyway. If it doesn't, propagte the remapped atom group
+  // from BB's terminator.
+  if (auto &PredDL = PTI->getDebugLoc()) {
+    auto &DL = BB->getTerminator()->getDebugLoc();
+    if (!PredDL->getAtomGroup() && DL && DL->getAtomGroup() &&
+        PredDL.isSameSourceLocation(DL)) {
+      PTI->setDebugLoc(DL);
+      RemapSourceAtom(PTI, VMap);
     }
   }
 }
@@ -2190,14 +2208,6 @@ static bool canSinkInstructions(
     if (!I->isSameOperationAs(I0, Instruction::CompareUsingIntersectedAttrs))
       return false;
 
-    // swifterror pointers can only be used by a load or store; sinking a load
-    // or store would require introducing a select for the pointer operand,
-    // which isn't allowed for swifterror pointers.
-    if (isa<StoreInst>(I) && I->getOperand(1)->isSwiftError())
-      return false;
-    if (isa<LoadInst>(I) && I->getOperand(0)->isSwiftError())
-      return false;
-
     // Treat MMRAs conservatively. This pass can be quite aggressive and
     // could drop a lot of MMRAs otherwise.
     if (MMRAMetadata(*I) != I0MMRA)
@@ -3057,7 +3067,9 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
         Value *Obj = getUnderlyingObject(StorePtr);
         bool ExplicitlyDereferenceableOnly;
         if (isWritableObject(Obj, ExplicitlyDereferenceableOnly) &&
-            !PointerMayBeCaptured(Obj, /*ReturnCaptures=*/false) &&
+            capturesNothing(
+                PointerMayBeCaptured(Obj, /*ReturnCaptures=*/false,
+                                     CaptureComponents::Provenance)) &&
             (!ExplicitlyDereferenceableOnly ||
              isDereferenceablePointer(StorePtr, StoreTy,
                                       LI->getDataLayout()))) {
@@ -3572,7 +3584,7 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
     // instructions into EdgeBB.  We know that there will be no uses of the
     // cloned instructions outside of EdgeBB.
     BasicBlock::iterator InsertPt = EdgeBB->getFirstInsertionPt();
-    DenseMap<Value *, Value *> TranslateMap; // Track translated values.
+    ValueToValueMapTy TranslateMap; // Track translated values.
     TranslateMap[Cond] = CB;
 
     // RemoveDIs: track instructions that we optimise away while folding, so
@@ -3592,11 +3604,11 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
         N->setName(BBI->getName() + ".c");
 
       // Update operands due to translation.
-      for (Use &Op : N->operands()) {
-        DenseMap<Value *, Value *>::iterator PI = TranslateMap.find(Op);
-        if (PI != TranslateMap.end())
-          Op = PI->second;
-      }
+      // Key Instructions: Remap all the atom groups.
+      if (const DebugLoc &DL = BBI->getDebugLoc())
+        mapAtomInstance(DL, TranslateMap);
+      RemapInstruction(N, TranslateMap,
+                       RF_IgnoreMissingLocals | RF_NoModuleLevelChanges);
 
       // Check for trivial simplification.
       if (Value *V = simplifyInstruction(N, {DL, nullptr, nullptr, AC})) {
@@ -5842,13 +5854,13 @@ static bool eliminateDeadSwitchCases(SwitchInst *SI, DomTreeUpdater *DTU,
                                      AssumptionCache *AC,
                                      const DataLayout &DL) {
   Value *Cond = SI->getCondition();
-  KnownBits Known = computeKnownBits(Cond, DL, 0, AC, SI);
+  KnownBits Known = computeKnownBits(Cond, DL, AC, SI);
 
   // We can also eliminate cases by determining that their values are outside of
   // the limited range of the condition based on how many significant (non-sign)
   // bits are in the condition value.
   unsigned MaxSignificantBitsInCond =
-      ComputeMaxSignificantBits(Cond, DL, 0, AC, SI);
+      ComputeMaxSignificantBits(Cond, DL, AC, SI);
 
   // Gather dead cases.
   SmallVector<ConstantInt *, 8> DeadCases;
@@ -7062,8 +7074,8 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
     APInt One(TableSizePowOf2, 1);
     // Build bitmask; fill in a 1 bit for every case.
     const ResultListTy &ResultList = ResultLists[PHIs[0]];
-    for (size_t I = 0, E = ResultList.size(); I != E; ++I) {
-      uint64_t Idx = (ResultList[I].first->getValue() - TableIndexOffset->getValue())
+    for (const auto &Result : ResultList) {
+      uint64_t Idx = (Result.first->getValue() - TableIndexOffset->getValue())
                          .getLimitedValue();
       MaskInt |= One << Idx;
     }
@@ -7545,8 +7557,7 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
     if (Seen.insert(BB).second) {
       // Keep track of which PHIs we need as keys in PhiPredIVs below.
       for (BasicBlock *Succ : BI->successors())
-        for (PHINode &Phi : Succ->phis())
-          Phis.insert(&Phi);
+        Phis.insert_range(llvm::make_pointer_range(Succ->phis()));
       // Add the successor only if not previously visited.
       Cases.emplace_back(SwitchSuccWrapper{BB, &PhiPredIVs});
     }
@@ -8097,6 +8108,7 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
 
 /// Check if passing a value to an instruction will cause undefined behavior.
 static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValueMayBeModified) {
+  assert(V->getType() == I->getType() && "Mismatched types");
   Constant *C = dyn_cast<Constant>(V);
   if (!C)
     return false;
@@ -8154,6 +8166,10 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
     // Look through GEPs. A load from a GEP derived from NULL is still undefined
     if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(User))
       if (GEP->getPointerOperand() == I) {
+        // The type of GEP may differ from the type of base pointer.
+        // Bail out on vector GEPs, as they are not handled by other checks.
+        if (GEP->getType()->isVectorTy())
+          return false;
         // The current base address is null, there are four cases to consider:
         // getelementptr (TY, null, 0)                 -> null
         // getelementptr (TY, null, not zero)          -> may be modified
@@ -8212,8 +8228,8 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
       if (CB->isArgOperand(&Use)) {
         unsigned ArgIdx = CB->getArgOperandNo(&Use);
         // Passing null to a nonnnull+noundef argument is undefined.
-        if (C->isNullValue() && CB->isPassingUndefUB(ArgIdx) &&
-            CB->paramHasAttr(ArgIdx, Attribute::NonNull))
+        if (isa<ConstantPointerNull>(C) &&
+            CB->paramHasNonNullAttr(ArgIdx, /*AllowUndefOrPoison=*/false))
           return !PtrValueMayBeModified;
         // Passing undef to a noundef argument is undefined.
         if (isa<UndefValue>(C) && CB->isPassingUndefUB(ArgIdx))

@@ -855,10 +855,10 @@ public:
   }
 
   /// Return a string representation of the access's reduction type.
-  const std::string getReductionOperatorStr() const;
+  std::string getReductionOperatorStr() const;
 
   /// Return a string representation of the reduction type @p RT.
-  static const std::string getReductionOperatorStr(ReductionType RT);
+  static std::string getReductionOperatorStr(ReductionType RT);
 
   /// Return the element type of the accessed array wrt. this access.
   Type *getElementType() const { return ElementType; }
