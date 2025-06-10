@@ -116,7 +116,8 @@ class IRBuilderBase {
   /// created instructions, excluding !dbg metadata, which is stored in the
   /// StoredDL field.
   SmallVector<std::pair<unsigned, MDNode *>, 2> MetadataToCopy;
-  /// The DebugLoc that will be applied to instructions inserted by this builder.
+  /// The DebugLoc that will be applied to instructions inserted by this
+  /// builder.
   DebugLoc StoredDL;
 
   /// Add or update the an entry (Kind, MD) to MetadataToCopy, if \p MD is not
