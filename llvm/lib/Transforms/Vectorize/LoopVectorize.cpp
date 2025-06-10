@@ -7285,6 +7285,7 @@ static void addBranchWeigthToMiddleTerminator(VPlan &Plan, ElementCount VF,
   VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
   auto *MiddleTerm =
       dyn_cast_or_null<VPInstruction>(MiddleVPBB->getTerminator());
+  // Only add branch metadata if there is a (conditional) terminator.
   if (!MiddleTerm)
     return;
 
