@@ -357,9 +357,9 @@ bool llvm::canPeelLastIteration(const Loop &L, ScalarEvolution &SE) {
                m_scev_AffineAddRec(m_SCEV(), m_scev_One(), m_SpecificLoop(&L)));
 }
 
-/// Returns true if the last iteration can be peeled off and the condition (Pred
-/// LeftAR, RightSCEV) is known at the last iteration and the inverse condition
-/// is known at the second-to-last.
+/// Returns true if the last iteration can be peeled off because the known
+/// monotonic condition (Pred LeftAR, RightSCEV) changes value on the last
+/// iteration.
 static bool shouldPeelLastIteration(Loop &L, CmpPredicate Pred,
                                     const SCEVAddRecExpr *LeftAR,
                                     const SCEV *RightSCEV, ScalarEvolution &SE,
@@ -378,9 +378,11 @@ static bool shouldPeelLastIteration(Loop &L, CmpPredicate Pred,
   const SCEV *ValAtSecondToLastIter = LeftAR->evaluateAtIteration(
       SE.getMinusSCEV(BTC, SE.getOne(BTC->getType())), SE);
 
-  return SE.isKnownPredicate(ICmpInst::getInversePredicate(Pred), ValAtLastIter,
-                             RightSCEV) &&
-         SE.isKnownPredicate(Pred, ValAtSecondToLastIter, RightSCEV);
+  CmpPredicate InvPred = ICmpInst::getInversePredicate(Pred);
+  return (SE.isKnownPredicate(InvPred, ValAtLastIter, RightSCEV) &&
+          SE.isKnownPredicate(Pred, ValAtSecondToLastIter, RightSCEV)) ||
+         (SE.isKnownPredicate(Pred, ValAtLastIter, RightSCEV) &&
+          SE.isKnownPredicate(InvPred, ValAtSecondToLastIter, RightSCEV));
 }
 
 // Return the number of iterations to peel off from the beginning and end of the
