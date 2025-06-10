@@ -16,6 +16,7 @@
 #include "CIRGenCall.h"
 #include "CIRGenValue.h"
 #include "mlir/IR/Location.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/CIR/MissingFeatures.h"
 
@@ -627,6 +628,27 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
   // Builder.CreateMemSet(DestPtr, Builder.getInt8(0), SizeVal, false);
   const mlir::Value zeroValue = builder.getNullValue(convertType(ty), loc);
   builder.createStore(loc, zeroValue, destPtr);
+}
+
+// TODO(cir): should be shared with LLVM codegen.
+bool CIRGenFunction::shouldNullCheckClassCastValue(const CastExpr *ce) {
+  const Expr *e = ce->getSubExpr();
+
+  if (ce->getCastKind() == CK_UncheckedDerivedToBase)
+    return false;
+
+  if (isa<CXXThisExpr>(e->IgnoreParens())) {
+    // We always assume that 'this' is never null.
+    return false;
+  }
+
+  if (const ImplicitCastExpr *ice = dyn_cast<ImplicitCastExpr>(ce)) {
+    // And that glvalue casts are never null.
+    if (ice->isGLValue())
+      return false;
+  }
+
+  return true;
 }
 
 } // namespace clang::CIRGen
