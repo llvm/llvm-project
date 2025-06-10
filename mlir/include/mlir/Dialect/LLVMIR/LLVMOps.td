@@ -1893,6 +1893,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<FramePointerKindAttr>:$frame_pointer,
     OptionalAttr<StrAttr>:$target_cpu,
     OptionalAttr<StrAttr>:$tune_cpu,
+    OptionalAttr<StrAttr>:$reciprocal_estimates,
     OptionalAttr<StrAttr>:$prefer_vector_width,
     OptionalAttr<LLVM_TargetFeaturesAttr>:$target_features,
     OptionalAttr<BoolAttr>:$unsafe_fp_math,

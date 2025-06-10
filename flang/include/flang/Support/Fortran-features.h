@@ -11,8 +11,7 @@
 
 #include "Fortran.h"
 #include "flang/Common/enum-set.h"
-#include "flang/Common/idioms.h"
-#include <optional>
+#include <string_view>
 #include <vector>
 
 namespace Fortran::common {
@@ -83,9 +82,6 @@ ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 using UsageWarnings = EnumSet<UsageWarning, UsageWarning_enumSize>;
 
-std::optional<LanguageFeature> FindLanguageFeature(const char *);
-std::optional<UsageWarning> FindUsageWarning(const char *);
-
 class LanguageFeatureControl {
 public:
   LanguageFeatureControl();
@@ -98,8 +94,10 @@ public:
   void EnableWarning(UsageWarning w, bool yes = true) {
     warnUsage_.set(w, yes);
   }
-  void WarnOnAllNonstandard(bool yes = true) { warnAllLanguage_ = yes; }
-  void WarnOnAllUsage(bool yes = true) { warnAllUsage_ = yes; }
+  void WarnOnAllNonstandard(bool yes = true);
+  bool IsWarnOnAllNonstandard() const { return warnAllLanguage_; }
+  void WarnOnAllUsage(bool yes = true);
+  bool IsWarnOnAllUsage() const { return warnAllUsage_; }
   void DisableAllNonstandardWarnings() {
     warnAllLanguage_ = false;
     warnLanguage_.clear();
@@ -108,26 +106,59 @@ public:
     warnAllUsage_ = false;
     warnUsage_.clear();
   }
-
+  void DisableAllWarnings() {
+    disableAllWarnings_ = true;
+    DisableAllNonstandardWarnings();
+    DisableAllUsageWarnings();
+  }
+  bool AreWarningsDisabled() const { return disableAllWarnings_; }
   bool IsEnabled(LanguageFeature f) const { return !disable_.test(f); }
-  bool ShouldWarn(LanguageFeature f) const {
-    return (warnAllLanguage_ && f != LanguageFeature::OpenMP &&
-               f != LanguageFeature::OpenACC && f != LanguageFeature::CUDA) ||
-        warnLanguage_.test(f);
+  bool ShouldWarn(LanguageFeature f) const { return warnLanguage_.test(f); }
+  bool ShouldWarn(UsageWarning w) const { return warnUsage_.test(w); }
+  // Cli options
+  // Take a string from the Cli and apply it to the LanguageFeatureControl.
+  // Return true if the option was recognized (and hence applied).
+  bool ApplyCliOption(std::string input);
+  // The add and replace functions are not currently used but are provided
+  // to allow a flexible many-to-one mapping from Cli spellings to enum values.
+  // Taking a string by value because the functions own this string after the
+  // call.
+  void AddAlternativeCliSpelling(LanguageFeature f, std::string input) {
+    cliOptions_.insert({input, {f}});
   }
-  bool ShouldWarn(UsageWarning w) const {
-    return warnAllUsage_ || warnUsage_.test(w);
+  void AddAlternativeCliSpelling(UsageWarning w, std::string input) {
+    cliOptions_.insert({input, {w}});
   }
+  void ReplaceCliCanonicalSpelling(LanguageFeature f, std::string input);
+  void ReplaceCliCanonicalSpelling(UsageWarning w, std::string input);
+  std::string_view getDefaultCliSpelling(LanguageFeature f) const {
+    return languageFeatureCliCanonicalSpelling_[EnumToInt(f)];
+  };
+  std::string_view getDefaultCliSpelling(UsageWarning w) const {
+    return usageWarningCliCanonicalSpelling_[EnumToInt(w)];
+  };
   // Return all spellings of operators names, depending on features enabled
   std::vector<const char *> GetNames(LogicalOperator) const;
   std::vector<const char *> GetNames(RelationalOperator) const;
 
 private:
+  // Map from Cli syntax of language features and usage warnings to their enum
+  // values.
+  std::unordered_map<std::string, std::variant<LanguageFeature, UsageWarning>>
+      cliOptions_;
+  // These two arrays map the enum values to their cannonical Cli spellings.
+  // Since each of the CanonicalSpelling is a string in the domain of the map
+  // above we just use a view of the string instead of another copy.
+  std::array<std::string_view, LanguageFeature_enumSize>
+      languageFeatureCliCanonicalSpelling_;
+  std::array<std::string_view, UsageWarning_enumSize>
+      usageWarningCliCanonicalSpelling_;
   LanguageFeatures disable_;
   LanguageFeatures warnLanguage_;
   bool warnAllLanguage_{false};
   UsageWarnings warnUsage_;
   bool warnAllUsage_{false};
+  bool disableAllWarnings_{false};
 };
 } // namespace Fortran::common
 #endif // FORTRAN_SUPPORT_FORTRAN_FEATURES_H_

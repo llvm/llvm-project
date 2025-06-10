@@ -227,29 +227,17 @@ static DenseMap<CachedHashStringRef, DylibFile *> loadedDylibs;
 
 DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
                             bool isBundleLoader, bool explicitlyLinked) {
-  CachedHashStringRef path(mbref.getBufferIdentifier());
+  // Frameworks can be found from different symlink paths, so resolve
+  // symlinks before looking up in the dylib cache.
+  SmallString<128> realPath;
+  std::error_code err = fs::real_path(mbref.getBufferIdentifier(), realPath);
+  CachedHashStringRef path(!err ? uniqueSaver().save(StringRef(realPath))
+                                : mbref.getBufferIdentifier());
   DylibFile *&file = loadedDylibs[path];
   if (file) {
     if (explicitlyLinked)
       file->setExplicitlyLinked();
     return file;
-  }
-
-  // Frameworks can be found from different symlink paths, so resolve
-  // symlinks and look up in the dylib cache.
-  DylibFile *&realfile = file;
-  SmallString<128> realPath;
-  std::error_code err = fs::real_path(mbref.getBufferIdentifier(), realPath);
-  if (!err) {
-    CachedHashStringRef resolvedPath(uniqueSaver().save(StringRef(realPath)));
-    realfile = loadedDylibs[resolvedPath];
-    if (realfile) {
-      if (explicitlyLinked)
-        realfile->setExplicitlyLinked();
-
-      file = realfile;
-      return realfile;
-    }
   }
 
   DylibFile *newFile;
@@ -263,7 +251,6 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
     }
     file =
         make<DylibFile>(**result, umbrella, isBundleLoader, explicitlyLinked);
-    realfile = file;
 
     // parseReexports() can recursively call loadDylib(). That's fine since
     // we wrote the DylibFile we just loaded to the loadDylib cache via the
@@ -279,7 +266,6 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
            magic == file_magic::macho_executable ||
            magic == file_magic::macho_bundle);
     file = make<DylibFile>(mbref, umbrella, isBundleLoader, explicitlyLinked);
-    realfile = file;
 
     // parseLoadCommands() can also recursively call loadDylib(). See comment
     // in previous block for why this means we must copy `file` here.

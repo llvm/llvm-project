@@ -22,6 +22,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
@@ -54,6 +55,12 @@ using namespace llvm;
 using namespace PatternMatch;
 
 #define DEBUG_TYPE "lower-matrix-intrinsics"
+
+STATISTIC(FlattenedMatrices, "Number of matrix flattenings");
+#ifndef NDEBUG
+STATISTIC(ReshapedMatrices, "Number of matrix reshapes");
+STATISTIC(SplitMatrices, "Number of matrix splits");
+#endif
 
 static cl::opt<bool>
     FuseMatrix("fuse-matrix", cl::init(true), cl::Hidden,
@@ -224,7 +231,16 @@ struct ShapeInfo {
 
   /// Returns the transposed shape.
   ShapeInfo t() const { return ShapeInfo(NumColumns, NumRows); }
+
+  friend raw_ostream &operator<<(raw_ostream &OS, ShapeInfo SI);
+
+  LLVM_DUMP_METHOD void dump() const { dbgs() << *this << '\n'; }
 };
+
+raw_ostream &operator<<(raw_ostream &OS, ShapeInfo SI) {
+  return OS << SI.NumRows << 'x' << SI.NumColumns;
+}
+
 } // namespace
 
 static bool isUniformShape(Value *V) {
@@ -473,6 +489,8 @@ class LowerMatrixIntrinsics {
       return getNumColumns();
     }
 
+    ShapeInfo shape() const { return {getNumRows(), getNumColumns()}; }
+
     /// Extract a vector of \p NumElts starting at index (\p I, \p J). If the
     /// matrix is column-major, the result vector is extracted from a column
     /// vector, otherwise from a row vector.
@@ -584,6 +602,28 @@ public:
           "split");
       SplitVecs.push_back(V);
     }
+
+    LLVM_DEBUG(if (Instruction *Inst = dyn_cast<Instruction>(MatrixVal)) {
+      if (Found != Inst2ColumnMatrix.end()) {
+        // FIXME: re: "at least": SplitVecs.size() doesn't count the shuffles
+        // that embedInVector created.
+        dbgs() << "matrix reshape from " << Found->second.shape() << " to "
+               << SI << " using at least " << SplitVecs.size()
+               << " shuffles on behalf of:\n"
+               << *Inst << '\n';
+        ReshapedMatrices++;
+      } else if (!ShapeMap.contains(MatrixVal)) {
+        dbgs() << "splitting a " << SI << " matrix with " << SplitVecs.size()
+               << " shuffles beacuse we do not have a shape-aware lowering for "
+                  "its def:\n"
+               << *Inst << '\n';
+        SplitMatrices++;
+      } else {
+        // The ShapeMap has it, so it's a case where we're being lowered
+        // before the def, and we expect that InstCombine will clean things up
+        // afterward.
+      }
+    });
 
     return {SplitVecs};
   }
@@ -1522,8 +1562,17 @@ public:
         if (tryLowerIntrinsic(Intr))
           continue;
 
-      if (!Flattened)
+      if (!Flattened) {
         Flattened = Matrix.embedInVector(Builder);
+        LLVM_DEBUG(
+            if (Instruction *User = dyn_cast<Instruction>(U.getUser())) dbgs()
+                << "flattening a " << Matrix.shape() << " matrix:\n"
+                << *Inst
+                << "\nbecause we do not have a shape-aware lowering for its "
+                   "user:\n"
+                << *User << '\n';);
+        FlattenedMatrices++;
+      }
       U.set(Flattened);
     }
   }

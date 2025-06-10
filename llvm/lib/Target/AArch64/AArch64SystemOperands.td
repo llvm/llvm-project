@@ -941,7 +941,7 @@ defm : TLBI<"RVAE3OS",      0b110, 0b1000, 0b0101, 0b001>;
 defm : TLBI<"RVALE3OS",     0b110, 0b1000, 0b0101, 0b101>;
 } //FeatureTLB_RMI
 
-// Armv9-A Realm Management Extention TLBI Instructions
+// Armv9-A Realm Management Extension TLBI Instructions
 let Requires = ["AArch64::FeatureRME"] in {
 defm : TLBI<"RPAOS",        0b110, 0b1000, 0b0100, 0b011>;
 defm : TLBI<"RPALOS",       0b110, 0b1000, 0b0100, 0b111>;
@@ -1696,7 +1696,7 @@ def : RWSysReg<"PRLAR_EL2",        0b11, 0b100, 0b0110, 0b1000, 0b001>;
 
 foreach n = 1-15 in {
 foreach x = 1-2 in {
-//Direct acces to Protection Region Base Address Register for n th MPU region
+//Direct access to Protection Region Base Address Register for n th MPU region
   def : RWSysReg<!strconcat("PRBAR"#n, "_EL"#x),
     0b11, 0b000, 0b0110, 0b1000, 0b000>{
     let Encoding{5-2} = n;

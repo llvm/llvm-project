@@ -1580,8 +1580,42 @@ OpFoldResult cir::VecExtractOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
-// VecShuffle
+// VecShuffleOp
 //===----------------------------------------------------------------------===//
+
+OpFoldResult cir::VecShuffleOp::fold(FoldAdaptor adaptor) {
+  auto vec1Attr =
+      mlir::dyn_cast_if_present<cir::ConstVectorAttr>(adaptor.getVec1());
+  auto vec2Attr =
+      mlir::dyn_cast_if_present<cir::ConstVectorAttr>(adaptor.getVec2());
+  if (!vec1Attr || !vec2Attr)
+    return {};
+
+  mlir::Type vec1ElemTy =
+      mlir::cast<cir::VectorType>(vec1Attr.getType()).getElementType();
+
+  mlir::ArrayAttr vec1Elts = vec1Attr.getElts();
+  mlir::ArrayAttr vec2Elts = vec2Attr.getElts();
+  mlir::ArrayAttr indicesElts = adaptor.getIndices();
+
+  SmallVector<mlir::Attribute, 16> elements;
+  elements.reserve(indicesElts.size());
+
+  uint64_t vec1Size = vec1Elts.size();
+  for (const auto &idxAttr : indicesElts.getAsRange<cir::IntAttr>()) {
+    if (idxAttr.getSInt() == -1) {
+      elements.push_back(cir::UndefAttr::get(vec1ElemTy));
+      continue;
+    }
+
+    uint64_t idxValue = idxAttr.getUInt();
+    elements.push_back(idxValue < vec1Size ? vec1Elts[idxValue]
+                                           : vec2Elts[idxValue - vec1Size]);
+  }
+
+  return cir::ConstVectorAttr::get(
+      getType(), mlir::ArrayAttr::get(getContext(), elements));
+}
 
 LogicalResult cir::VecShuffleOp::verify() {
   // The number of elements in the indices array must match the number of
@@ -1613,7 +1647,6 @@ OpFoldResult cir::VecShuffleDynamicOp::fold(FoldAdaptor adaptor) {
       mlir::isa_and_nonnull<cir::ConstVectorAttr>(indices)) {
     auto vecAttr = mlir::cast<cir::ConstVectorAttr>(vec);
     auto indicesAttr = mlir::cast<cir::ConstVectorAttr>(indices);
-    auto vecTy = mlir::cast<cir::VectorType>(vecAttr.getType());
 
     mlir::ArrayAttr vecElts = vecAttr.getElts();
     mlir::ArrayAttr indicesElts = indicesAttr.getElts();
@@ -1631,7 +1664,7 @@ OpFoldResult cir::VecShuffleDynamicOp::fold(FoldAdaptor adaptor) {
     }
 
     return cir::ConstVectorAttr::get(
-        vecTy, mlir::ArrayAttr::get(getContext(), elements));
+        getType(), mlir::ArrayAttr::get(getContext(), elements));
   }
 
   return {};

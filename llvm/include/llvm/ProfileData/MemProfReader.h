@@ -25,6 +25,7 @@
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/MemProfData.inc"
 #include "llvm/ProfileData/MemProfRadixTree.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -106,7 +107,7 @@ using CallStackMap = llvm::DenseMap<uint64_t, llvm::SmallVector<uint64_t>>;
 
 // Specializes the MemProfReader class to populate the contents from raw binary
 // memprof profiles from instrumentation based profiling.
-class RawMemProfReader final : public MemProfReader {
+class LLVM_ABI RawMemProfReader final : public MemProfReader {
 public:
   RawMemProfReader(const RawMemProfReader &) = delete;
   RawMemProfReader &operator=(const RawMemProfReader &) = delete;
@@ -217,18 +218,19 @@ public:
 
   // Return true if the \p DataBuffer starts with "---" indicating it is a YAML
   // file.
-  static bool hasFormat(const MemoryBuffer &DataBuffer);
+  LLVM_ABI static bool hasFormat(const MemoryBuffer &DataBuffer);
   // Wrapper around hasFormat above, reading the file instead of the memory
   // buffer.
-  static bool hasFormat(const StringRef Path);
+  LLVM_ABI static bool hasFormat(const StringRef Path);
 
   // Create a YAMLMemProfReader after sanity checking the contents of the file
   // at \p Path or the \p Buffer.
-  static Expected<std::unique_ptr<YAMLMemProfReader>> create(const Twine &Path);
-  static Expected<std::unique_ptr<YAMLMemProfReader>>
+  LLVM_ABI static Expected<std::unique_ptr<YAMLMemProfReader>>
+  create(const Twine &Path);
+  LLVM_ABI static Expected<std::unique_ptr<YAMLMemProfReader>>
   create(std::unique_ptr<MemoryBuffer> Buffer);
 
-  void parse(StringRef YAMLData);
+  LLVM_ABI void parse(StringRef YAMLData);
 
   std::unique_ptr<memprof::DataAccessProfData> takeDataAccessProfData() {
     return std::move(DataAccessProfileData);

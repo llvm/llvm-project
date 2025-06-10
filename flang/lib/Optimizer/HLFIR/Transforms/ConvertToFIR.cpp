@@ -356,7 +356,7 @@ public:
         // is used for accessing the bounds etc. Using the HLFIR box,
         // that holds the same base_addr at this point, makes
         // the representation a little bit more clear.
-        if (hlfirBase.getType() == firBase.getType())
+        if (hlfirBase.getType() == declareOp.getOriginalBase().getType())
           firBase = hlfirBase;
       } else {
         // Need to conditionally rebox/embox the optional: the input fir.box

@@ -151,6 +151,11 @@ struct MissingFeatures {
   static bool cxxabiAppleARM64CXXABI() { return false; }
   static bool cxxabiStructorImplicitParam() { return false; }
 
+  // Address class
+  static bool addressOffset() { return false; }
+  static bool addressIsKnownNonNull() { return false; }
+  static bool addressPointerAuthInfo() { return false; }
+
   // Misc
   static bool cirgenABIInfo() { return false; }
   static bool abiArgInfo() { return false; }

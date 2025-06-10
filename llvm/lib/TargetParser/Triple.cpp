@@ -1446,9 +1446,12 @@ bool Triple::getMacOSXVersion(VersionTuple &Version) const {
     }
     if (Version.getMajor() <= 19) {
       Version = VersionTuple(10, Version.getMajor() - 4);
-    } else {
-      // darwin20+ corresponds to macOS 11+.
+    } else if (Version.getMajor() < 25) {
+      // darwin20-24 corresponds to macOS 11-15.
       Version = VersionTuple(11 + Version.getMajor() - 20);
+    } else {
+      // darwin25 corresponds with macOS26+.
+      Version = VersionTuple(Version.getMajor() + 1);
     }
     break;
   case MacOSX:
@@ -1492,14 +1495,33 @@ VersionTuple Triple::getiOSVersion() const {
     // Default to 5.0 (or 7.0 for arm64).
     if (Version.getMajor() == 0)
       return (getArch() == aarch64) ? VersionTuple(7) : VersionTuple(5);
-    return Version;
+    if (Version.getMajor() == 19)
+      // tvOS 19 corresponds to ios26.
+      return VersionTuple(26);
+    return getCanonicalVersionForOS(OSType::IOS, Version,
+                                    isValidVersionForOS(OSType::IOS, Version));
   }
   case XROS: {
-    // xrOS 1 is aligned with iOS 17.
     VersionTuple Version = getOSVersion();
-    return Version.withMajorReplaced(Version.getMajor() + 16);
+    // xrOS 1 is aligned with iOS 17.
+    if (Version.getMajor() < 3)
+      return Version.withMajorReplaced(Version.getMajor() + 16);
+    // visionOS 3 corresponds to ios 26+.
+    if (Version.getMajor() == 3)
+      return VersionTuple(26);
+    return getCanonicalVersionForOS(OSType::XROS, Version,
+                                    isValidVersionForOS(OSType::XROS, Version));
   }
-  case WatchOS:
+  case WatchOS: {
+    VersionTuple Version = getOSVersion();
+    // watchOS 12 corresponds to ios 26.
+    if (Version.getMajor() == 12)
+      return VersionTuple(26);
+    return getCanonicalVersionForOS(
+        OSType::WatchOS, Version,
+        isValidVersionForOS(OSType::WatchOS, Version));
+  }
+  case BridgeOS:
     llvm_unreachable("conflicting triple info");
   case DriverKit:
     llvm_unreachable("DriverKit doesn't have an iOS version");
@@ -2116,12 +2138,12 @@ bool Triple::isMacOSXVersionLT(unsigned Major, unsigned Minor,
     return isOSVersionLT(Major, Minor, Micro);
 
   // Otherwise, compare to the "Darwin" number.
-  if (Major == 10) {
+  if (Major == 10)
     return isOSVersionLT(Minor + 4, Micro, 0);
-  } else {
-    assert(Major >= 11 && "Unexpected major version");
+  assert(Major >= 11 && "Unexpected major version");
+  if (Major < 25)
     return isOSVersionLT(Major - 11 + 20, Minor, Micro);
-  }
+  return isOSVersionLT(Major + 1, Minor, Micro);
 }
 
 VersionTuple Triple::getMinimumSupportedOSVersion() const {
@@ -2149,7 +2171,10 @@ VersionTuple Triple::getMinimumSupportedOSVersion() const {
     // ARM64 simulators are supported for watchOS 7+.
     if (isSimulatorEnvironment())
       return VersionTuple(7, 0, 0);
-    break;
+    // ARM64/ARM64e slices are supported starting from watchOS 26.
+    // ARM64_32 is older though.
+    assert(getArch() != Triple::aarch64_32);
+    return VersionTuple(26, 0, 0);
   case Triple::DriverKit:
     return VersionTuple(20, 0, 0);
   default:
@@ -2159,16 +2184,85 @@ VersionTuple Triple::getMinimumSupportedOSVersion() const {
 }
 
 VersionTuple Triple::getCanonicalVersionForOS(OSType OSKind,
-                                              const VersionTuple &Version) {
+                                              const VersionTuple &Version,
+                                              bool IsInValidRange) {
+  const unsigned MacOSRangeBump = 10;
+  const unsigned IOSRangeBump = 7;
+  const unsigned XROSRangeBump = 23;
+  const unsigned WatchOSRangeBump = 14;
   switch (OSKind) {
-  case MacOSX:
+  case MacOSX: {
     // macOS 10.16 is canonicalized to macOS 11.
     if (Version == VersionTuple(10, 16))
       return VersionTuple(11, 0);
-    [[fallthrough]];
+    // macOS 16 is canonicalized to macOS 26.
+    if (Version == VersionTuple(16, 0))
+      return VersionTuple(26, 0);
+    if (!IsInValidRange)
+      return Version.withMajorReplaced(Version.getMajor() + MacOSRangeBump);
+    break;
+  }
+  case IOS:
+  case TvOS: {
+    // Both iOS & tvOS 19.0 canonicalize to 26.
+    if (Version == VersionTuple(19, 0))
+      return VersionTuple(26, 0);
+    if (!IsInValidRange)
+      return Version.withMajorReplaced(Version.getMajor() + IOSRangeBump);
+    break;
+  }
+  case XROS: {
+    // visionOS3 is canonicalized to 26.
+    if (Version == VersionTuple(3, 0))
+      return VersionTuple(26, 0);
+    if (!IsInValidRange)
+      return Version.withMajorReplaced(Version.getMajor() + XROSRangeBump);
+    break;
+  }
+  case WatchOS: {
+    // watchOS 12 is canonicalized to 26.
+    if (Version == VersionTuple(12, 0))
+      return VersionTuple(26, 0);
+    if (!IsInValidRange)
+      return Version.withMajorReplaced(Version.getMajor() + WatchOSRangeBump);
+    break;
+  }
   default:
     return Version;
   }
+
+  return Version;
+}
+
+bool Triple::isValidVersionForOS(OSType OSKind, const VersionTuple &Version) {
+  /// This constant is used to capture gaps in versioning.
+  const VersionTuple CommonVersion(26);
+  auto IsValid = [&](const VersionTuple &StartingVersion) {
+    return !((Version > StartingVersion) && (Version < CommonVersion));
+  };
+  switch (OSKind) {
+  case WatchOS: {
+    const VersionTuple StartingWatchOS(12);
+    return IsValid(StartingWatchOS);
+  }
+  case IOS:
+  case TvOS: {
+    const VersionTuple StartingIOS(19);
+    return IsValid(StartingIOS);
+  }
+  case MacOSX: {
+    const VersionTuple StartingMacOS(16);
+    return IsValid(StartingMacOS);
+  }
+  case XROS: {
+    const VersionTuple StartingXROS(3);
+    return IsValid(StartingXROS);
+  }
+  default:
+    return true;
+  }
+
+  llvm_unreachable("unexpected or invalid os version");
 }
 
 // HLSL triple environment orders are relied on in the front end

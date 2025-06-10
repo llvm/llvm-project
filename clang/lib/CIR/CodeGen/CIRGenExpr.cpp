@@ -98,9 +98,14 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
 
     case CK_UncheckedDerivedToBase:
     case CK_DerivedToBase: {
-      cgm.errorNYI(expr->getSourceRange(),
-                   "emitPointerWithAlignment: derived-to-base cast");
-      return Address::invalid();
+      assert(!cir::MissingFeatures::opTBAA());
+      assert(!cir::MissingFeatures::addressIsKnownNonNull());
+      Address addr = emitPointerWithAlignment(ce->getSubExpr(), baseInfo);
+      const CXXRecordDecl *derived =
+          ce->getSubExpr()->getType()->getPointeeCXXRecordDecl();
+      return getAddressOfBaseClass(addr, derived, ce->path(),
+                                   shouldNullCheckClassCastValue(ce),
+                                   ce->getExprLoc());
     }
 
     case CK_AnyPointerToBlockPointerCast:
@@ -824,8 +829,6 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_NonAtomicToAtomic:
   case CK_AtomicToNonAtomic:
   case CK_Dynamic:
-  case CK_UncheckedDerivedToBase:
-  case CK_DerivedToBase:
   case CK_ToUnion:
   case CK_BaseToDerived:
   case CK_LValueBitCast:
@@ -862,6 +865,27 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
       }
     }
     return lv;
+  }
+
+  case CK_UncheckedDerivedToBase:
+  case CK_DerivedToBase: {
+    const auto *derivedClassTy =
+        e->getSubExpr()->getType()->castAs<clang::RecordType>();
+    auto *derivedClassDecl = cast<CXXRecordDecl>(derivedClassTy->getDecl());
+
+    LValue lv = emitLValue(e->getSubExpr());
+    Address thisAddr = lv.getAddress();
+
+    // Perform the derived-to-base conversion
+    Address baseAddr =
+        getAddressOfBaseClass(thisAddr, derivedClassDecl, e->path(),
+                              /*NullCheckValue=*/false, e->getExprLoc());
+
+    // TODO: Support accesses to members of base classes in TBAA. For now, we
+    // conservatively pretend that the complete object is of the base class
+    // type.
+    assert(!cir::MissingFeatures::opTBAA());
+    return makeAddrLValue(baseAddr, e->getType(), lv.getBaseInfo());
   }
 
   case CK_ZeroToOCLOpaqueType:

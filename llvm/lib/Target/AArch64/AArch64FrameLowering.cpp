@@ -399,7 +399,7 @@ static const unsigned DefaultSafeSPDisplacement = 255;
 /// size limit beyond which some of these instructions will require a scratch
 /// register during their expansion later.
 static unsigned estimateRSStackSizeLimit(MachineFunction &MF) {
-  // FIXME: For now, just conservatively guestimate based on unscaled indexing
+  // FIXME: For now, just conservatively guesstimate based on unscaled indexing
   // range. We'll end up allocating an unnecessary spill slot a lot, but
   // realistically that's not a big deal at this stage of the game.
   for (MachineBasicBlock &MBB : MF) {
@@ -647,7 +647,7 @@ void AArch64FrameLowering::emitCalleeSavedSVELocations(
       continue;
 
     // Not all unwinders may know about SVE registers, so assume the lowest
-    // common demoninator.
+    // common denominator.
     assert(!Info.isSpilledToReg() && "Spilling to registers not implemented");
     MCRegister Reg = Info.getReg();
     if (!static_cast<const AArch64RegisterInfo &>(TRI).regNeedsCFI(Reg, Reg))
@@ -801,7 +801,7 @@ void AArch64FrameLowering::allocateStackSpace(
         .addImm(InitialOffset.getFixed())
         .addImm(InitialOffset.getScalable());
     // The fixed allocation may leave unprobed bytes at the top of the
-    // stack. If we have subsequent alocation (e.g. if we have variable-sized
+    // stack. If we have subsequent allocation (e.g. if we have variable-sized
     // objects), we need to issue an extra probe, so these allocations start in
     // a known state.
     if (FollowupAllocs) {
@@ -2054,7 +2054,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
       HasWinCFI = true;
       // alloc_l can hold at most 256MB, so assume that NumBytes doesn't
       // exceed this amount.  We need to move at most 2^24 - 1 into x15.
-      // This is at most two instructions, MOVZ follwed by MOVK.
+      // This is at most two instructions, MOVZ followed by MOVK.
       // TODO: Fix to use multiple stack alloc unwind codes for stacks
       // exceeding 256MB in size.
       if (NumBytes >= (1 << 28))
@@ -2400,7 +2400,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
           MachineInstr::FrameDestroy, PrologueSaveSize);
     } else {
       // If not, make sure to emit an add after the last ldp.
-      // We're doing this by transfering the size to be restored from the
+      // We're doing this by transferring the size to be restored from the
       // adjustment *before* the CSR pops to the adjustment *after* the CSR
       // pops.
       AfterCSRPopSize += PrologueSaveSize;
@@ -2949,7 +2949,7 @@ static bool invalidateWindowsRegisterPairing(unsigned Reg1, unsigned Reg2,
                                              const TargetRegisterInfo *TRI) {
   // If we are generating register pairs for a Windows function that requires
   // EH support, then pair consecutive registers only.  There are no unwind
-  // opcodes for saves/restores of non-consectuve register pairs.
+  // opcodes for saves/restores of non-consecutive register pairs.
   // The unwind opcodes are save_regp, save_regp_x, save_fregp, save_frepg_x,
   // save_lrpair.
   // https://docs.microsoft.com/en-us/cpp/build/arm64-exception-handling
@@ -3187,7 +3187,7 @@ static void computeCalleeSaveRegisterPairs(
         RPI.isPaired()) // RPI.FrameIdx must be the lower index of the pair
       RPI.FrameIdx = CSI[i + RegInc].getFrameIdx();
 
-    // Realign the scalable offset if necesary.  This is relevant when
+    // Realign the scalable offset if necessary.  This is relevant when
     // spilling predicates on Windows.
     if (RPI.isScalable() && ScalableByteOffset % Scale != 0) {
       ScalableByteOffset = alignTo(ScalableByteOffset, Scale);
@@ -5022,7 +5022,7 @@ MachineBasicBlock::iterator tryMergeAdjacentSTG(MachineBasicBlock::iterator II,
   }
 
   // Find contiguous runs of tagged memory and emit shorter instruction
-  // sequencies for them when possible.
+  // sequences for them when possible.
   TagStoreEdit TSE(MBB, FirstZeroData);
   std::optional<int64_t> EndOffset;
   for (auto &Instr : Instrs) {
@@ -5591,7 +5591,7 @@ void AArch64FrameLowering::emitRemarks(
           unsigned RegTy = StackAccess::AccessType::GPR;
           if (MFI.getStackID(FrameIdx) == TargetStackID::ScalableVector) {
             // SPILL_PPR_TO_ZPR_SLOT_PSEUDO and FILL_PPR_FROM_ZPR_SLOT_PSEUDO
-            // spill/fill the predicate as a data vector (so are an FPR acess).
+            // spill/fill the predicate as a data vector (so are an FPR access).
             if (MI.getOpcode() != AArch64::SPILL_PPR_TO_ZPR_SLOT_PSEUDO &&
                 MI.getOpcode() != AArch64::FILL_PPR_FROM_ZPR_SLOT_PSEUDO &&
                 AArch64::PPRRegClass.contains(MI.getOperand(0).getReg())) {
