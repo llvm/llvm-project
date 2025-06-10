@@ -279,8 +279,8 @@ define void @addrspace3(ptr addrspace(3) %in.ptr, i64 %in.idx1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IN_IDX1_NNEG:%.*]] = and i64 [[IN_IDX1]], 9223372036854775807
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = trunc i64 [[IN_IDX1_NNEG]] to i32
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i128, ptr addrspace(3) [[IN_PTR]], i32 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP0]], i64 1024
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i128, ptr addrspace(3) [[IN_PTR]], i32 [[IDXPROM]]
+; CHECK-NEXT:    [[IDX11:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[TMP0]], i32 1024
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -296,8 +296,8 @@ define void @addrspace7(ptr addrspace(7) %in.ptr, i64 %in.idx1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IN_IDX1_NNEG:%.*]] = and i64 [[IN_IDX1]], 9223372036854775807
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = trunc i64 [[IN_IDX1_NNEG]] to i32
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i128, ptr addrspace(7) [[IN_PTR]], i32 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr addrspace(7) [[TMP0]], i64 1024
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i128, ptr addrspace(7) [[IN_PTR]], i32 [[IDXPROM]]
+; CHECK-NEXT:    [[IDX11:%.*]] = getelementptr inbounds i8, ptr addrspace(7) [[TMP0]], i32 1024
 ; CHECK-NEXT:    ret void
 ;
 entry:
