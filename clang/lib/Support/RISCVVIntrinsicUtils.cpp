@@ -978,11 +978,12 @@ RVVIntrinsic::RVVIntrinsic(
     bool HasMaskedOffOperand, bool HasVL, PolicyScheme Scheme,
     bool SupportOverloading, bool HasBuiltinAlias, StringRef ManualCodegen,
     const RVVTypes &OutInTypes, const std::vector<int64_t> &NewIntrinsicTypes,
-    unsigned NF, Policy NewPolicyAttrs, bool HasFRMRoundModeOp)
+    unsigned NF, Policy NewPolicyAttrs, bool HasFRMRoundModeOp, unsigned TWiden)
     : IRName(IRName), IsMasked(IsMasked),
       HasMaskedOffOperand(HasMaskedOffOperand), HasVL(HasVL), Scheme(Scheme),
       SupportOverloading(SupportOverloading), HasBuiltinAlias(HasBuiltinAlias),
-      ManualCodegen(ManualCodegen.str()), NF(NF), PolicyAttrs(NewPolicyAttrs) {
+      ManualCodegen(ManualCodegen.str()), NF(NF), PolicyAttrs(NewPolicyAttrs),
+      TWiden(TWiden) {
 
   // Init BuiltinName, Name and OverloadedName
   BuiltinName = NewName.str();
@@ -1233,6 +1234,12 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, enum RVVRequire Require) {
     STRINGIFY(RVV_REQ_Zvfbfwma)
     STRINGIFY(RVV_REQ_Zvfbfmin)
     STRINGIFY(RVV_REQ_Zvfh)
+    STRINGIFY(RVV_REQ_Xsfmmbase)
+    STRINGIFY(RVV_REQ_Xsfmm32a8f)
+    STRINGIFY(RVV_REQ_Xsfmm32a16f)
+    STRINGIFY(RVV_REQ_Xsfmm32a32f)
+    STRINGIFY(RVV_REQ_Xsfmm64a64f)
+    STRINGIFY(RVV_REQ_Xsfmm32a8i)
     STRINGIFY(RVV_REQ_Experimental)
   default:
     llvm_unreachable("Unsupported RVVRequire!");
