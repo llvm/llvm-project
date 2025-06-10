@@ -135,6 +135,9 @@ class CommandLineCompletionTestCase(TestBase):
                 "process " + subcommand + " mach-o-core",
             )
 
+    def test_process_save_core(self):
+        self.complete_from_to("process save-core --plugin-name ", ["minidump"])
+
     def completions_contain_str(self, input, needle):
         interp = self.dbg.GetCommandInterpreter()
         match_strings = lldb.SBStringList()
