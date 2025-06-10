@@ -323,21 +323,18 @@ namespace test4 {
     // expected-warning@-2 {{access declarations are deprecated; use using declarations instead}}
 #else
     // expected-error@-4 {{ISO C++11 does not allow access declarations; use using declarations instead}}
-    // expected-error@-5 {{using declaration refers to its own class}}
 #endif
+    // expected-error@-6 {{using declaration refers to its own class}}
 
     Subclass::foo; // legal in C++03
 #if __cplusplus <= 199711L
     // expected-warning@-2 {{access declarations are deprecated; use using declarations instead}}
 #else
     // expected-error@-4 {{ISO C++11 does not allow access declarations; use using declarations instead}}
-    // expected-error@-5 {{using declaration refers into 'Subclass', which is not a base class of 'C'}}
 #endif
+    // expected-error@-6 {{using declaration refers into 'Subclass', which is not a base class of 'C'}}
 
     int bar();
-#if __cplusplus <= 199711L
-    //expected-note@-2 {{target of using declaration}}
-#endif
     C::bar;
 #if __cplusplus <= 199711L
     // expected-warning@-2 {{access declarations are deprecated; use using declarations instead}}
