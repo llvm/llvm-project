@@ -855,6 +855,12 @@ Serializer::prepareDenseElementsConstant(Location loc, Type constType,
   // Type, and all components of the matrix are initialized to that value."
   // (https://github.khronos.org/SPIRV-Registry/extensions/KHR/SPV_KHR_cooperative_matrix.html)
   if (isa<spirv::CooperativeMatrixType>(constType)) {
+    if (!valueAttr.isSplat()) {
+      emitError(
+          loc,
+          "cannot serialize a non-splat value for a cooperative matrix type");
+      return 0;
+    }
     // numberOfConstituents is 1, so we only need one more elements in the
     // SmallVector, so the total is 3 (1 + 2).
     operands.reserve(3);
