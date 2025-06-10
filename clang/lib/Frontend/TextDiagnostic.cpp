@@ -738,12 +738,20 @@ void TextDiagnostic::printDiagnosticMessage(raw_ostream &OS,
 }
 
 void TextDiagnostic::emitFilename(StringRef Filename, const SourceManager &SM) {
-#ifdef _WIN32
-  SmallString<4096> TmpFilename;
-#endif
-  if (DiagOpts.AbsolutePath) {
-    auto File = SM.getFileManager().getOptionalFileRef(Filename);
-    if (File) {
+  auto File = SM.getFileManager().getOptionalFileRef(Filename);
+
+  // Try to simplify paths that contain '..' in any case since paths to
+  // standard library headers especially tend to get quite long otherwise.
+  // Only do that for local filesystems though to avoid slowing down
+  // compilation too much.
+  auto AlwaysSimplify = [&] {
+    return File->getName().contains("..") &&
+           llvm::sys::fs::is_local(File->getName());
+  };
+
+  if (File && (DiagOpts.AbsolutePath || AlwaysSimplify())) {
+    SmallString<128> &CacheEntry = SimplifiedFileNameCache[Filename];
+    if (CacheEntry.empty()) {
       // We want to print a simplified absolute path, i. e. without "dots".
       //
       // The hardest part here are the paths like "<part1>/<link>/../<part2>".
@@ -759,15 +767,15 @@ void TextDiagnostic::emitFilename(StringRef Filename, const SourceManager &SM) {
       // on Windows we can just use llvm::sys::path::remove_dots(), because,
       // on that system, both aforementioned paths point to the same place.
 #ifdef _WIN32
-      TmpFilename = File->getName();
-      llvm::sys::fs::make_absolute(TmpFilename);
-      llvm::sys::path::native(TmpFilename);
-      llvm::sys::path::remove_dots(TmpFilename, /* remove_dot_dot */ true);
-      Filename = StringRef(TmpFilename.data(), TmpFilename.size());
+      CacheEntry = File->getName();
+      llvm::sys::fs::make_absolute(CacheEntry);
+      llvm::sys::path::native(CacheEntry);
+      llvm::sys::path::remove_dots(CacheEntry, /* remove_dot_dot */ true);
 #else
-      Filename = SM.getFileManager().getCanonicalName(*File);
+      CacheEntry = SM.getFileManager().getCanonicalName(*File);
 #endif
     }
+    Filename = CacheEntry;
   }
 
   OS << Filename;
