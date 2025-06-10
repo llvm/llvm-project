@@ -459,12 +459,14 @@ static VPReplicateRecipe *cloneForLane(VPlan &Plan, VPBuilder &Builder,
       continue;
     }
     if (Lane.getKind() == VPLane::Kind::ScalableLast) {
-      NewOps.push_back(Builder.createNaryOp(VPInstruction::ExtractLastElement, {Op}));
+      NewOps.push_back(
+          Builder.createNaryOp(VPInstruction::ExtractLastElement, {Op}));
       continue;
     }
     // Look through buildvector to avoid unnecessary extracts.
     if (match(Op, m_BuildVector())) {
-      NewOps.push_back(cast<VPInstruction>(Op)->getOperand(Lane.getKnownLane()));
+      NewOps.push_back(
+          cast<VPInstruction>(Op)->getOperand(Lane.getKnownLane()));
       continue;
     }
     VPValue *Idx =

@@ -493,10 +493,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
   }
   case Instruction::ExtractElement: {
     assert(State.VF.isVector() && "Only extract elements from vectors");
-    unsigned IdxToExtract = cast<ConstantInt>(getOperand(1)->getLiveInIRValue())
-                                ->getZExtValue();
-    return State.get(getOperand(0),
-                     VPLane(IdxToExtract));
+    unsigned IdxToExtract =
+        cast<ConstantInt>(getOperand(1)->getLiveInIRValue())->getZExtValue();
+    return State.get(getOperand(0), VPLane(IdxToExtract));
   }
   case Instruction::Freeze: {
     Value *Op = State.get(getOperand(0), vputils::onlyFirstLaneUsed(this));
@@ -611,11 +610,11 @@ Value *VPInstruction::generate(VPTransformState &State) {
     auto *StructTy =
         cast<StructType>(State.TypeAnalysis.inferScalarType(getOperand(0)));
     auto NumOfElements = ElementCount::getFixed(getNumOperands());
-    Value *Res = PoisonValue::get(
-        toVectorizedTy(StructTy, NumOfElements));
-    assert(NumOfElements.getKnownMinValue() == StructTy->getNumElements() && "number of operands must match number of elements in StructTy");
+    Value *Res = PoisonValue::get(toVectorizedTy(StructTy, NumOfElements));
+    assert(NumOfElements.getKnownMinValue() == StructTy->getNumElements() &&
+           "number of operands must match number of elements in StructTy");
     for (const auto &[Idx, Op] : enumerate(operands())) {
-      for (unsigned I = 0 ; I != NumOfElements .getKnownMinValue(); I++) {
+      for (unsigned I = 0; I != NumOfElements.getKnownMinValue(); I++) {
         Value *ScalarValue = Builder.CreateExtractValue(State.get(Op, true), I);
         Value *VectorValue = Builder.CreateExtractValue(Res, I);
         VectorValue =
@@ -628,8 +627,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
   case VPInstruction::BuildVector: {
     auto *ScalarTy = State.TypeAnalysis.inferScalarType(getOperand(0));
     auto NumOfElements = ElementCount::getFixed(getNumOperands());
-    Value *Res = PoisonValue::get(
-        toVectorizedTy(ScalarTy, NumOfElements));
+    Value *Res = PoisonValue::get(toVectorizedTy(ScalarTy, NumOfElements));
     for (const auto &[Idx, Op] : enumerate(operands()))
       Res = State.Builder.CreateInsertElement(Res, State.get(Op, true),
                                               State.Builder.getInt32(Idx));
@@ -2800,7 +2798,8 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
   Instruction *UI = getUnderlyingInstr();
 
   if (!State.Lane) {
-    assert(IsSingleScalar && "VPReplicateRecipes outside replicate regions must be unrolled");
+    assert(IsSingleScalar &&
+           "VPReplicateRecipes outside replicate regions must be unrolled");
     scalarizeInstruction(UI, this, VPLane(0), State);
     return;
   }

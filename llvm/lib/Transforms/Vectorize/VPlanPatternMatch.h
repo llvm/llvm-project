@@ -276,8 +276,7 @@ using UnaryVPInstruction_match =
     UnaryRecipe_match<Op0_t, Opcode, VPInstruction>;
 
 template <unsigned Opcode>
-using ZeroOpVPInstruction_match =
-    ZeroOpRecipe_match<Opcode, VPInstruction>;
+using ZeroOpVPInstruction_match = ZeroOpRecipe_match<Opcode, VPInstruction>;
 
 template <typename Op0_t, unsigned Opcode>
 using AllUnaryRecipe_match =
@@ -310,8 +309,7 @@ using AllBinaryRecipe_match =
     BinaryRecipe_match<Op0_t, Op1_t, Opcode, Commutative, VPWidenRecipe,
                        VPReplicateRecipe, VPWidenCastRecipe, VPInstruction>;
 
-inline ZeroOpVPInstruction_match<VPInstruction::BuildVector>
-m_BuildVector() {
+inline ZeroOpVPInstruction_match<VPInstruction::BuildVector> m_BuildVector() {
   return ZeroOpVPInstruction_match<VPInstruction::BuildVector>();
 }
 
