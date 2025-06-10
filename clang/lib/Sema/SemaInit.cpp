@@ -260,6 +260,11 @@ static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
              diag::ext_initializer_string_for_char_array_too_long)
           << Str->getSourceRange();
     else if (StrLength - 1 == ArrayLen) {
+      // If the string literal is null-terminated explicitly, e.g., `char a[4] =
+      // "ABC\0"`, there should be no warn:
+      if (const auto *SL = dyn_cast<StringLiteral>(Str->IgnoreParens()))
+        if (SL->isOrdinary() && SL->getBytes().back() == 0)
+          return;
       // If the entity being initialized has the nonstring attribute, then
       // silence the "missing nonstring" diagnostic. If there's no entity,
       // check whether we're initializing an array of arrays; if so, walk the
