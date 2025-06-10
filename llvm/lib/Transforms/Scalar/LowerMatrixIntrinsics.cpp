@@ -1197,7 +1197,7 @@ public:
       }
 
       return Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
-                                               Result.getNumVectors());
+                                     Result.getNumVectors());
     }
     default:
       break;
