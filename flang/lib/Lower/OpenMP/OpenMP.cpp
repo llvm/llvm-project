@@ -2179,6 +2179,39 @@ static void genUnrollOp(Fortran::lower::AbstractConverter &converter,
   // Apply unrolling to it
   auto cli = canonLoop.getCli();
   mlir::omp::UnrollHeuristicOp::create(firOpBuilder, loc, cli);
+
+static mlir::omp::LoopOp
+genTiledLoopOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
+          semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
+          mlir::Location loc, const ConstructQueue &queue,
+          ConstructQueue::const_iterator item) {
+  mlir::omp::LoopOperands loopClauseOps;
+  llvm::SmallVector<const semantics::Symbol *> loopReductionSyms;
+  genLoopClauses(converter, semaCtx, item->clauses, loc, loopClauseOps,
+                 loopReductionSyms);
+
+  DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
+                           /*shouldCollectPreDeterminedSymbols=*/true,
+                           /*useDelayedPrivatization=*/true, symTable);
+  dsp.processStep1(&loopClauseOps);
+
+  mlir::omp::LoopNestOperands loopNestClauseOps;
+  llvm::SmallVector<const semantics::Symbol *> iv;
+  genLoopNestClauses(converter, semaCtx, eval, item->clauses, loc,
+                     loopNestClauseOps, iv);
+
+  EntryBlockArgs loopArgs;
+  loopArgs.priv.syms = dsp.getDelayedPrivSymbols();
+  loopArgs.priv.vars = loopClauseOps.privateVars;
+  loopArgs.reduction.syms = loopReductionSyms;
+  loopArgs.reduction.vars = loopClauseOps.reductionVars;
+
+  auto loopOp =
+      genWrapperOp<mlir::omp::LoopOp>(converter, loc, loopClauseOps, loopArgs);
+  genLoopNestOp(converter, symTable, semaCtx, eval, loc, queue, item,
+                loopNestClauseOps, iv, {{loopOp, loopArgs}},
+                llvm::omp::Directive::OMPD_loop, dsp);
+  return loopOp;
 }
 
 static mlir::omp::MaskedOp
@@ -3410,13 +3443,10 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
     newOp = genTeamsOp(converter, symTable, stmtCtx, semaCtx, eval, loc, queue,
                        item);
     break;
-  case llvm::omp::Directive::OMPD_tile: {
-    unsigned version = semaCtx.langOptions().OpenMPVersion;
-    if (!semaCtx.langOptions().OpenMPSimd)
-      TODO(loc, "Unhandled loop directive (" +
-                    llvm::omp::getOpenMPDirectiveName(dir, version) + ")");
+  case llvm::omp::Directive::OMPD_tile:
+    newOp =
+      genTiledLoopOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
-  }
   case llvm::omp::Directive::OMPD_unroll:
     genUnrollOp(converter, symTable, stmtCtx, semaCtx, eval, loc, queue, item);
     break;
