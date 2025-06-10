@@ -2224,9 +2224,8 @@ public:
     auto *NewVTy = VectorType::get(OrigVTy->getElementType(),
                                    ElementCount::getFixed(M.getStride()));
 
-    for (unsigned I = 0; I < Shape.getNumVectors(); ++I)
-      Result.addVector(
-          Builder.CreateCast(Inst->getOpcode(), M.getVector(I), NewVTy));
+    for (auto &Vector : M.vectors())
+      Result.addVector(Builder.CreateCast(Inst->getOpcode(), Vector, NewVTy));
 
     finalizeLowering(Inst,
                      Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
