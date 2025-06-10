@@ -207,3 +207,18 @@ entry:
   %s = select <8 x i1> %c, <8 x half> splat (half 0xH3C00), <8 x half> %x
   ret <8 x half> %s
 }
+
+define <4 x half> @select2(<4 x i32> %0, <4 x half> %1) {
+; CHECK-LABEL: select2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovq {{.*#+}} xmm2 = [9.6E+1,9.7E+1,9.8E+1,9.9E+1,0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm0
+; CHECK-NEXT:    retq
+entry:
+  %2 = icmp eq <4 x i32> %0, zeroinitializer
+  %3 = select <4 x i1> %2, <4 x half> %1, <4 x half> <half 0xH5600, half 0xH5610, half 0xH5620, half 0xH5630>
+  ret <4 x half> %3
+}
