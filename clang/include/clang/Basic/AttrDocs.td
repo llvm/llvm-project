@@ -9427,3 +9427,28 @@ diagnostics with code like:
   __attribute__((nonstring)) char NotAStr[3] = "foo"; // Not diagnosed
   }];
 }
+
+def ModularFormatDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``modular_format`` attribute can be applied to a function that bears the
+``format`` attribute to indicate that the implementation is modular on the
+format string argument. When the format argument for a given call is constant,
+the compiler may redirect the call to the symbol given as the first argument to
+the attribute (the modular implementation function).
+
+The second argument is a implementation name, and the remaining arguments are
+aspects of the format string for the compiler to report. If the compiler does
+not understand a aspect, it must summarily report that the format string has
+that aspect.
+
+The compiler reports an aspect by issing a relocation for the symbol
+`<impl_name>_<aspect>``. This arranges for code and data needed to support the
+aspect of the implementation to be brought into the link to satisfy weak
+references in the modular implemenation function.
+
+The following aspects are currently supported:
+
+- ``float``: The call has a floating point argument
+  }];
+}
