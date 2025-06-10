@@ -3038,8 +3038,8 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
   // First create the loads to the guard/stack slot for the comparison.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   auto &DL = DAG.getDataLayout();
-  EVT PtrTy = TLI.getPointerTy(DL);
-  EVT PtrMemTy = TLI.getPointerMemTy(DL);
+  EVT PtrTy = TLI.getFrameIndexTy(DL);
+  EVT PtrMemTy = TLI.getPointerMemTy(DL, DL.getAllocaAddrSpace());
 
   MachineFrameInfo &MFI = ParentBB->getParent()->getFrameInfo();
   int FI = MFI.getStackProtectorIndex();
