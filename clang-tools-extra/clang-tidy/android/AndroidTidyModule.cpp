@@ -67,6 +67,6 @@ static ClangTidyModuleRegistry::Add<AndroidModule>
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the AndroidModule.
-volatile int AndroidModuleAnchorSource = 0;
+volatile int AndroidModuleAnchorSource = 0; // NOLINT(misc-use-internal-linkage)
 
 } // namespace clang::tidy
