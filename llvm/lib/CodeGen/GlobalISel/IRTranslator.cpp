@@ -3058,7 +3058,11 @@ bool IRTranslator::translateCallBr(const User &U,
     for (BasicBlock *Dest : I.getIndirectDests()) {
       MachineBasicBlock *Target = &getMBB(*Dest);
       Target->setIsInlineAsmBrIndirectTarget();
-      Target->setMachineBlockAddressTaken();
+      // If we introduce a type of asm goto statement that is permitted to use
+      // an indirect call instruction to jump to its labels, then we should add
+      // a call to Target->setMachineBlockAddressTaken() here, to mark the
+      // target block as requiring a BTI.
+
       Target->setLabelMustBeEmitted();
       // Don't add duplicate machine successors.
       if (Dests.insert(Dest).second)
