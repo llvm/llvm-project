@@ -87,13 +87,9 @@ entry:
 define private amdgpu_kernel void @compute(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) "amdgpu-wavegroup-enable" "amdgpu-wavegroup-rank-function" {
 ; CHECK-LABEL: compute:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_sema_wait 1
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; CHECK-NEXT:    v_dual_mov_b32 v1, v0 :: v_dual_mov_b32 v2, v0
-; CHECK-NEXT:    v_mov_b32_e32 v3, v0
-; CHECK-NEXT:    v_convolve_f16_fp8_fp8 g1[28:31], v[0:3], g1[0:8], g1[16:18], g1[20:22], g1[24:26] aux_data:42 clamp idxs:0x111101
+; CHECK-NEXT:    v_convolve_f16_fp8_fp8 g1[28:31], 0, g1[0:8], g1[16:18], g1[20:22], g1[24:26] aux_data:42 clamp idxs:0x111101
 ; CHECK-NEXT:    s_sema_signal 33
 ; CHECK-NEXT:    s_endpgm
 entry:
@@ -157,7 +153,7 @@ define amdgpu_kernel void @main(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf,
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_set_pc_i64 s[2:3]
 ; CHECK-NEXT:  .LBB3_4: ; %entry
-; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, 4
+; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, 0
 ; CHECK-NEXT:    s_cmp_eq_u32 s0, 2
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB3_6
 ; CHECK-NEXT:  ; %bb.5:
@@ -176,7 +172,7 @@ entry:
 }
 ; RANK:         .set main.private_seg_size, max(0, 0+max(.Linput.private_seg_size, .Lcompute.private_seg_size, .Loutput.private_seg_size))
 ; RANK:         .set main.num_vgpr_rank_sum, 0+.Linput.num_vgpr+.Lcompute.num_vgpr+.Loutput.num_vgpr
-; RANK: ; NumVGPRsForWavesPerEU: 55
+; RANK: ; NumVGPRsForWavesPerEU: 51
 
 ; Function Attrs: convergent mustprogress nocallback nofree nosync nounwind willreturn memory(none)
 declare <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half>, <9 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, i32 immarg, i1 immarg) #1

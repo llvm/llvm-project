@@ -527,6 +527,8 @@ MetadataStreamerMsgPackV4::getHSAKernelProps(const MachineFunction &MF,
     DelayedExprs->assignDocNode(Kern[".laneshared_segment_fixed_size"],
                                 msgpack::Type::UInt,
                                 ProgramInfo.LaneSharedSegmentSize);
+    Kern[".spatial_cluster"] =
+        AMDGPU::getSpatialClusterEnable(MF.getFunction());
   }
 
 #endif /* LLPC_BUILD_NPI */

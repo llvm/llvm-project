@@ -150,6 +150,19 @@ static Function *findUseFunction(User *U) {
 }
 
 bool AMDGPUAssignLaneShared::runOnModule(Module &M) {
+  // Validate spatial cluster kernels.
+  for (auto& F : M.functions()) {
+    if (getSpatialClusterEnable(F)) {
+      if (!getWavegroupEnable(F))
+        report_fatal_error("Spatial cluster kernel is not wavegroup kernel");
+      AMDGPU::ClusterDimsAttr ClusterDims = AMDGPU::ClusterDimsAttr::get(F);
+      if (!ClusterDims.isFixedDims())
+        report_fatal_error("Spatial cluster kernel has non fixed cluster dims");
+      auto& Dims = ClusterDims.getDims();
+      if (Dims[1] != 1 || Dims[2] != 1)
+        report_fatal_error("Spatial cluster kernel is not 1D");
+    }
+  }
   // Collect all lane-shared global variables.
   SmallVector<GlobalVariable *> LaneSharedGlobals;
   for (auto &GV : M.globals()) {

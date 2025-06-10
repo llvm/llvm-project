@@ -3309,6 +3309,21 @@ be divisible by 128.
   }];
 }
 
+def AMDGPUSpatialClusterKernelDocs : Documentation {
+  let Category = DocCatAMDGPUAttributes;
+  let Content = [{
+This attribute marks a kernel as using spatial cluster launch.
+
+Clang supports the
+``__attribute__((amdgpu_spatial_cluster_kernel()))`` attribute for the AMDGPU target
+when compiling for a GFX13 offload target. This attribute may be attached to HIP wavegroup kernel
+function definitions to enable spatial kernel launches.
+
+The cluster dims must be 1 dimensional. That is, the number of workgroups per spatial cluster in the Y
+and Z dimensions must be 1.
+  }];
+}
+
 #endif /* LLPC_BUILD_NPI */
 def DocCatCallingConvs : DocumentationCategory<"Calling Conventions"> {
   let Content = [{

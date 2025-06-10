@@ -2297,7 +2297,8 @@ class getGSrcVGPRForVT<ValueType VT>{
 }
 
 class getGSrcVGPROrZeroForVT<ValueType VT>{
-  RegisterOperand ret = !cond(!eq(VT.Size, 128) : GSrcVGPROrZero_128,
+  RegisterOperand ret = !cond(!eq(VT.Size, 64) : GSrcVGPROrZero_64,
+                              !eq(VT.Size, 128) : GSrcVGPROrZero_128,
                               !eq(VT.Size, 256) : GSrcVGPROrZero_256);
 }
 

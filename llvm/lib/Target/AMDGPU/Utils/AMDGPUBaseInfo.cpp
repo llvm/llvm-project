@@ -2607,6 +2607,10 @@ bool getHasDepthExport(const Function &F) {
 bool getWavegroupEnable(const Function &F) {
   return F.hasFnAttribute("amdgpu-wavegroup-enable");
 }
+  
+bool getSpatialClusterEnable(const Function &F) {
+  return F.hasFnAttribute("amdgpu-spatial-cluster");
+}
 
 bool getWavegroupRankFunction(const Function &F) {
   return F.hasFnAttribute("amdgpu-wavegroup-rank-function");

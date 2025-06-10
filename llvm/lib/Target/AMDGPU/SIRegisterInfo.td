@@ -1573,8 +1573,17 @@ defm AV_1024 : AVRegClass<32, VReg_1024.RegTypes, (add VGPR_1024), (add AGPR_102
 //  Register operands
 //===----------------------------------------------------------------------===//
 
+#ifdef LLPC_BUILD_NPI
+class RegImmMatcher<string name, string predicate, string diagnosticString>
+    : AsmOperandClass {
+#else /* LLPC_BUILD_NPI */
 class RegImmMatcher<string name> : AsmOperandClass {
+#endif /* LLPC_BUILD_NPI */
   let Name = name;
+#ifdef LLPC_BUILD_NPI
+  let PredicateMethod = predicate;
+  let DiagnosticString = diagnosticString;
+#endif /* LLPC_BUILD_NPI */
   let RenderMethod = "addRegOrImmOperands";
 }
 
@@ -1582,10 +1591,12 @@ class RegOrImmOperand <RegisterClass RegClass, string OperandTypeName>
   : RegisterOperand<RegClass> {
     let OperandNamespace = "AMDGPU";
     let OperandType = OperandTypeName;
-    let ParserMatchClass = RegImmMatcher<NAME>;
+#ifdef LLPC_BUILD_NPI
+    string PredicateMethod = "is"#NAME;
+    string DiagnosticString = "";
+    let ParserMatchClass = RegImmMatcher<NAME, PredicateMethod, DiagnosticString>;
 }
 
-#ifdef LLPC_BUILD_NPI
 def RsrcReg256Op : RegisterOperand<RsrcReg256> {
   let DecoderMethod = "decodeRsrcReg256";
   let EncoderMethod = "getMachineOpValueRsrcRegOp";
@@ -1598,9 +1609,11 @@ def RsrcReg128Op : RegisterOperand<RsrcReg128> {
 
 // V_LOAD/STORE_IDX indexing operand
 def VGPR_IDX_IDX_OP : RegisterOperand<VGPR_IDX_IDX_OP_RC> {
+#else /* LLPC_BUILD_NPI */
+    let ParserMatchClass = RegImmMatcher<NAME>;
+#endif /* LLPC_BUILD_NPI */
 }
 
-#endif /* LLPC_BUILD_NPI */
 //===----------------------------------------------------------------------===//
 #ifdef LLPC_BUILD_NPI
 //  GVGPR Operands
@@ -1635,11 +1648,14 @@ def GSrcVGPR_288 : GSrcVGPROp<VReg_288_STAGING>;
 def GSrcVGPR_576 : GSrcVGPROp<VReg_576_STAGING>;
 
 class GSrcVGPROrZeroOp<RegisterClass regClass> : RegOrImmOperand<regClass, "OPERAND_REG_INLINE_C_INT32"> {
+  let PredicateMethod = "isGSrcVGPROrZero<AMDGPU::VReg_" # regClass.Size # "RegClassID>";
+  let DiagnosticString = "operand must be a " # regClass.Size # "-bit VGPR or 0";
   let EncoderMethod = "encodeGSrcVGPROrZero";
   let DecoderMethod = "decodeGSrcVGPROrZero<" # regClass.Size # ">";
   let PrintMethod = "printGSrcSimple";
 }
 
+def GSrcVGPROrZero_64 : GSrcVGPROrZeroOp<VReg_64_STAGING>;
 def GSrcVGPROrZero_128 : GSrcVGPROrZeroOp<VReg_128_STAGING>;
 def GSrcVGPROrZero_256 : GSrcVGPROrZeroOp<VReg_256_STAGING>;
 

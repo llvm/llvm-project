@@ -254,6 +254,10 @@ def VOPM_PERMUTE_I32_I32_I32_I32 : VOP3M_Permute_Profile<[i32, i32, i32, i32]>;
 
 class Conv_Profile<list<ValueType> ArgTy, int Shape, int Filter, int Iterations> : VOPMProfile<ArgTy, 1, 1, 0, 1> {
   let Outs64 = (outs DstRC64:$vdst);
+
+  // Accumulator operands support inline 0.
+  let Src0RC64 = getGSrcVGPROrZeroForVT<ArgTy[1]>.ret;
+
   let Ins64 = !if(!eq(Filter,FilterType.3X3), (ins Src0RC64:$src0, Src1RC64:$src1, Src2RC64:$src2, Src2RC64:$src3, Src2RC64:$src4, AuxData:$aux_data, Clamp0:$clamp, Idxs0:$idxs, SUPR0:$supr),
                                               (ins Src0RC64:$src0, Src1RC64:$src1, Src2RC64:$src2, Src2RC64:$src3, Src2RC64:$src4, Src2RC64:$src5, AuxData:$aux_data, Clamp0:$clamp, Idxs0:$idxs, SUPR0:$supr));
 

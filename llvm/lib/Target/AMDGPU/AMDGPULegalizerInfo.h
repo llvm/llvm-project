@@ -243,6 +243,8 @@ public:
 #if LLPC_BUILD_NPI
   bool legalizeWavegroupID(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeWaveIDInWavegroup(MachineInstr &MI, MachineIRBuilder &B) const;
+  bool legalizeWavegroupIdInCluster(MachineInstr &MI,
+                                    MachineIRBuilder &B) const;
   bool legalizeConstHwRegRead(MachineInstr &MI, MachineIRBuilder &B,
                               AMDGPU::Hwreg::Id HwReg, unsigned LowBit,
                               unsigned Width) const;

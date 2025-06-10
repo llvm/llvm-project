@@ -70,6 +70,7 @@ public:
   void handleAMDGPUFlatWorkGroupSizeAttr(Decl *D, const ParsedAttr &AL);
 #if LLPC_BUILD_NPI
   void handleAMDGPUWavegroupKernelAttr(Decl *D, const ParsedAttr &AL);
+  void handleAMDGPUSpatialClusterKernelAttr(Decl *D, const ParsedAttr &AL);
 #endif /* LLPC_BUILD_NPI */
 };
 } // namespace clang

@@ -360,181 +360,281 @@ v_wmma_i32_16x16_iu8 v[908:915], v[900:903], 0, 0 signed_a signed_b clamp
 // GFX13-ERR-NEXT:{{^}}                                             ^
 
 v_wmma_f32_16x16_fp8_fp8 v[904:911], v[900:901], v[902:903], 1 clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 256-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_f32_16x16_fp8_fp8 v[904:911], v[900:901], v[902:903], 1 clamp
 // GFX13-ERR-NEXT:{{^}}                                                             ^
 
 v_wmma_f16_16x16_fp8_fp8 v[904:907], v[900:901], v[902:903], 1 clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 128-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_f16_16x16_fp8_fp8 v[904:907], v[900:901], v[902:903], 1 clamp
 // GFX13-ERR-NEXT:{{^}}                                                             ^
 
 v_wmma_f32_16x16_fp8_bf8 v[904:911], v[900:901], v[902:903], 1 clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 256-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_f32_16x16_fp8_bf8 v[904:911], v[900:901], v[902:903], 1 clamp
 // GFX13-ERR-NEXT:{{^}}                                                             ^
 
 v_wmma_f16_16x16_fp8_bf8 v[904:907], v[900:901], v[902:903], 1 clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 128-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_f16_16x16_fp8_bf8 v[904:907], v[900:901], v[902:903], 1 clamp
 // GFX13-ERR-NEXT:{{^}}                                                             ^
 
 v_wmma_f32_16x16_bf8_fp8 v[904:911], v[900:901], v[902:903], 1 clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 256-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_f32_16x16_bf8_fp8 v[904:911], v[900:901], v[902:903], 1 clamp
 // GFX13-ERR-NEXT:{{^}}                                                             ^
 
 v_wmma_f16_16x16_bf8_fp8 v[904:907], v[900:901], v[902:903], 1 clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 128-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_f16_16x16_bf8_fp8 v[904:907], v[900:901], v[902:903], 1 clamp
 // GFX13-ERR-NEXT:{{^}}                                                             ^
 
 v_wmma_f32_16x16_bf8_bf8 v[904:911], v[900:901], v[902:903], 1 clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 256-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_f32_16x16_bf8_bf8 v[904:911], v[900:901], v[902:903], 1 clamp
 // GFX13-ERR-NEXT:{{^}}                                                             ^
 
 v_wmma_f16_16x16_bf8_bf8 v[904:907], v[900:901], v[902:903], 1 clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 128-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_f16_16x16_bf8_bf8 v[904:907], v[900:901], v[902:903], 1 clamp
 // GFX13-ERR-NEXT:{{^}}                                                             ^
 
 v_wmma_f32_16x16_f16 v[908:915], v[900:903], v[904:907], 1 clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 256-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_f32_16x16_f16 v[908:915], v[900:903], v[904:907], 1 clamp
 // GFX13-ERR-NEXT:{{^}}                                                         ^
 
 v_wmma_f16_16x16_f16 v[908:911], v[900:903], v[904:907], 1 clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 128-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_f16_16x16_f16 v[908:911], v[900:903], v[904:907], 1 clamp
 // GFX13-ERR-NEXT:{{^}}                                                         ^
 
 v_wmma_f32_16x16_bf16 v[908:915], v[900:903], v[904:907], 1 clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 256-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_f32_16x16_bf16 v[908:915], v[900:903], v[904:907], 1 clamp
 // GFX13-ERR-NEXT:{{^}}                                                          ^
 
 v_wmma_bf16_16x16_bf16 v[908:911], v[900:903], v[904:907], 1 clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 128-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_bf16_16x16_bf16 v[908:911], v[900:903], v[904:907], 1 clamp
 // GFX13-ERR-NEXT:{{^}}                                                           ^
 
 v_wmma_f32_16x16_fp8_fp8 v[908:915], v[900:903], v[904:907], 1 clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 256-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_f32_16x16_fp8_fp8 v[908:915], v[900:903], v[904:907], 1 clamp
 // GFX13-ERR-NEXT:{{^}}                                                             ^
 
 v_wmma_f16_16x16_fp8_fp8 v[908:911], v[900:903], v[904:907], 1 clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 128-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_f16_16x16_fp8_fp8 v[908:911], v[900:903], v[904:907], 1 clamp
 // GFX13-ERR-NEXT:{{^}}                                                             ^
 
 v_wmma_f32_16x16_fp8_bf8 v[908:915], v[900:903], v[904:907], 1 clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 256-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_f32_16x16_fp8_bf8 v[908:915], v[900:903], v[904:907], 1 clamp
 // GFX13-ERR-NEXT:{{^}}                                                             ^
 
 v_wmma_f16_16x16_fp8_bf8 v[908:911], v[900:903], v[904:907], 1 clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 128-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_f16_16x16_fp8_bf8 v[908:911], v[900:903], v[904:907], 1 clamp
 // GFX13-ERR-NEXT:{{^}}                                                             ^
 
 v_wmma_f32_16x16_bf8_fp8 v[908:915], v[900:903], v[904:907], 1 clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 256-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_f32_16x16_bf8_fp8 v[908:915], v[900:903], v[904:907], 1 clamp
 // GFX13-ERR-NEXT:{{^}}                                                             ^
 
 v_wmma_f16_16x16_bf8_fp8 v[908:911], v[900:903], v[904:907], 1 clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 128-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_f16_16x16_bf8_fp8 v[908:911], v[900:903], v[904:907], 1 clamp
 // GFX13-ERR-NEXT:{{^}}                                                             ^
 
 v_wmma_f32_16x16_bf8_bf8 v[908:915], v[900:903], v[904:907], 1 clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 256-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_f32_16x16_bf8_bf8 v[908:915], v[900:903], v[904:907], 1 clamp
 // GFX13-ERR-NEXT:{{^}}                                                             ^
 
 v_wmma_f16_16x16_bf8_bf8 v[908:911], v[900:903], v[904:907], 1 clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 128-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_f16_16x16_bf8_bf8 v[908:911], v[900:903], v[904:907], 1 clamp
 // GFX13-ERR-NEXT:{{^}}                                                             ^
 
 v_wmma_f32_16x16_iu8 v[904:911], v[900:901], v[902:903], 1 signed_a signed_b clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 256-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_f32_16x16_iu8 v[904:911], v[900:901], v[902:903], 1 signed_a signed_b clamp
 // GFX13-ERR-NEXT:{{^}}                                                         ^
 
 v_wmma_f32i32_16x16_iu8 v[904:911], v[900:901], v[902:903], 1 signed_a signed_b clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 256-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_f32i32_16x16_iu8 v[904:911], v[900:901], v[902:903], 1 signed_a signed_b clamp
 // GFX13-ERR-NEXT:{{^}}                                                            ^
 
 v_wmma_i32_16x16_iu8 v[904:911], v[900:901], v[902:903], 1 signed_a signed_b clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 256-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_i32_16x16_iu8 v[904:911], v[900:901], v[902:903], 1 signed_a signed_b clamp
 // GFX13-ERR-NEXT:{{^}}                                                         ^
 
 v_wmma_f32_16x16_iu4 v[902:909], v900, v901, 1 signed_a signed_b clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 256-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_f32_16x16_iu4 v[902:909], v900, v901, 1 signed_a signed_b clamp
 // GFX13-ERR-NEXT:{{^}}                                             ^
 
 v_wmma_f32i32_16x16_iu4 v[902:909], v900, v901, 1 signed_a signed_b clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 256-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_f32i32_16x16_iu4 v[902:909], v900, v901, 1 signed_a signed_b clamp
 // GFX13-ERR-NEXT:{{^}}                                                ^
 
 v_wmma_i32_16x16_iu4 v[902:909], v900, v901, 1 signed_a signed_b clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 256-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_i32_16x16_iu4 v[902:909], v900, v901, 1 signed_a signed_b clamp
 // GFX13-ERR-NEXT:{{^}}                                             ^
 
 v_wmma_f32_16x16_iu8 v[908:915], v[900:903], v[904:907], 1 signed_a signed_b clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 256-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_f32_16x16_iu8 v[908:915], v[900:903], v[904:907], 1 signed_a signed_b clamp
 // GFX13-ERR-NEXT:{{^}}                                                         ^
 
 v_wmma_f32i32_16x16_iu8 v[908:915], v[900:903], v[904:907], 1 signed_a signed_b clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 256-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_f32i32_16x16_iu8 v[908:915], v[900:903], v[904:907], 1 signed_a signed_b clamp
 // GFX13-ERR-NEXT:{{^}}                                                            ^
 
 v_wmma_i32_16x16_iu8 v[908:915], v[900:903], v[904:907], 1 signed_a signed_b clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 256-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_i32_16x16_iu8 v[908:915], v[900:903], v[904:907], 1 signed_a signed_b clamp
 // GFX13-ERR-NEXT:{{^}}                                                         ^
 
 v_wmma_f32_16x16_iu4 v[904:911], v[900:901], v[902:903], 1 signed_a signed_b clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 256-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_f32_16x16_iu4 v[904:911], v[900:901], v[902:903], 1 signed_a signed_b clamp
 // GFX13-ERR-NEXT:{{^}}                                                         ^
 
 v_wmma_f32i32_16x16_iu4 v[904:911], v[900:901], v[902:903], 1 signed_a signed_b clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 256-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_f32i32_16x16_iu4 v[904:911], v[900:901], v[902:903], 1 signed_a signed_b clamp
 // GFX13-ERR-NEXT:{{^}}                                                            ^
 
 v_wmma_i32_16x16_iu4 v[904:911], v[900:901], v[902:903], 1 signed_a signed_b clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 256-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_i32_16x16_iu4 v[904:911], v[900:901], v[902:903], 1 signed_a signed_b clamp
 // GFX13-ERR-NEXT:{{^}}                                                         ^
 
 v_wmma_f32_16x16_iu4 v[908:915], v[900:903], v[904:907], 1 signed_a signed_b clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 256-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_f32_16x16_iu4 v[908:915], v[900:903], v[904:907], 1 signed_a signed_b clamp
 // GFX13-ERR-NEXT:{{^}}                                                         ^
 
 v_wmma_f32i32_16x16_iu4 v[908:915], v[900:903], v[904:907], 1 signed_a signed_b clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 256-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_f32i32_16x16_iu4 v[908:915], v[900:903], v[904:907], 1 signed_a signed_b clamp
 // GFX13-ERR-NEXT:{{^}}                                                            ^
 
 v_wmma_i32_16x16_iu4 v[908:915], v[900:903], v[904:907], 1 signed_a signed_b clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 256-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_i32_16x16_iu4 v[908:915], v[900:903], v[904:907], 1 signed_a signed_b clamp
 // GFX13-ERR-NEXT:{{^}}                                                         ^
 
 v_wmma_f32_16x16_f8f6f4 v[916:923], v[900:907], v[908:915], 1, v924, v925 aux_data:1152 clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only zero is supported as immediate operand
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 256-bit VGPR or 0
 // GFX13-ERR-NEXT:{{^}}v_wmma_f32_16x16_f8f6f4 v[916:923], v[900:907], v[908:915], 1, v924, v925 aux_data:1152 clamp
 // GFX13-ERR-NEXT:{{^}}                                                            ^
+
+v_convolve_bf16_bf16 v[902:905], 1, v906, v[908:909], v[910:911] aux_data:512 clamp
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 128-bit VGPR or 0
+// GFX13-ERR-NEXT:{{^}}v_convolve_bf16_bf16 v[902:905], 1, v906, v[908:909], v[910:911] aux_data:512 clamp
+// GFX13-ERR-NEXT:{{^}}                                 ^
+
+v_convolve_f16_bf8_bf8 v[902:905], 1, v906, v[908:909], v[910:911] aux_data:512 clamp
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 128-bit VGPR or 0
+// GFX13-ERR-NEXT:{{^}}v_convolve_f16_bf8_bf8 v[902:905], 1, v906, v[908:909], v[910:911] aux_data:512 clamp
+// GFX13-ERR-NEXT:{{^}}                                   ^
+
+v_convolve_f16_bf8_fp8 v[902:905], 1, v906, v[908:909], v[910:911] aux_data:512 clamp
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 128-bit VGPR or 0
+// GFX13-ERR-NEXT:{{^}}v_convolve_f16_bf8_fp8 v[902:905], 1, v906, v[908:909], v[910:911] aux_data:512 clamp
+// GFX13-ERR-NEXT:{{^}}                                   ^
+
+v_convolve_f16_f16 v[902:905], 1, v906, v[908:909], v[910:911] aux_data:512 clamp
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 128-bit VGPR or 0
+// GFX13-ERR-NEXT:{{^}}v_convolve_f16_f16 v[902:905], 1, v906, v[908:909], v[910:911] aux_data:512 clamp
+// GFX13-ERR-NEXT:{{^}}                               ^
+
+v_convolve_f16_fp8_bf8 v[902:905], 1, v906, v[908:909], v[910:911] aux_data:512 clamp
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 128-bit VGPR or 0
+// GFX13-ERR-NEXT:{{^}}v_convolve_f16_fp8_bf8 v[902:905], 1, v906, v[908:909], v[910:911] aux_data:512 clamp
+// GFX13-ERR-NEXT:{{^}}                                   ^
+
+v_convolve_f16_fp8_fp8 v[902:905], 1, v906, v[908:909], v[910:911] aux_data:512 clamp
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 128-bit VGPR or 0
+// GFX13-ERR-NEXT:{{^}}v_convolve_f16_fp8_fp8 v[902:905], 1, v906, v[908:909], v[910:911] aux_data:512 clamp
+// GFX13-ERR-NEXT:{{^}}                                   ^
+
+v_convolve_f16_iu4 v[902:905], 1, v906, v[908:909], v[910:911] aux_data:512 clamp
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 128-bit VGPR or 0
+// GFX13-ERR-NEXT:{{^}}v_convolve_f16_iu4 v[902:905], 1, v906, v[908:909], v[910:911] aux_data:512 clamp
+// GFX13-ERR-NEXT:{{^}}                               ^
+
+v_convolve_f16_iu8 v[902:905], 1, v906, v[908:909], v[910:911] aux_data:512 clamp
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 128-bit VGPR or 0
+// GFX13-ERR-NEXT:{{^}}v_convolve_f16_iu8 v[902:905], 1, v906, v[908:909], v[910:911] aux_data:512 clamp
+// GFX13-ERR-NEXT:{{^}}                               ^
+
+v_convolve_f32_bf16 v[902:905], 1, v[906:909], v910, v911 aux_data:512 clamp
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 128-bit VGPR or 0
+// GFX13-ERR-NEXT:{{^}}v_convolve_f32_bf16 v[902:905], 1, v[906:909], v910, v911 aux_data:512 clamp
+// GFX13-ERR-NEXT:{{^}}                                ^
+
+v_convolve_f32_bf8_bf8 v[902:905], 1, v[906:909], v910, v911 aux_data:512 clamp
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 128-bit VGPR or 0
+// GFX13-ERR-NEXT:{{^}}v_convolve_f32_bf8_bf8 v[902:905], 1, v[906:909], v910, v911 aux_data:512 clamp
+// GFX13-ERR-NEXT:{{^}}                                   ^
+
+v_convolve_f32_bf8_fp8 v[902:905], 1, v[906:909], v910, v911 aux_data:512 clamp
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 128-bit VGPR or 0
+// GFX13-ERR-NEXT:{{^}}v_convolve_f32_bf8_fp8 v[902:905], 1, v[906:909], v910, v911 aux_data:512 clamp
+// GFX13-ERR-NEXT:{{^}}                                   ^
+
+v_convolve_f32_f16 v[902:905], 1, v[906:909], v910, v911 aux_data:512 clamp
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 128-bit VGPR or 0
+// GFX13-ERR-NEXT:{{^}}v_convolve_f32_f16 v[902:905], 1, v[906:909], v910, v911 aux_data:512 clamp
+// GFX13-ERR-NEXT:{{^}}                               ^
+
+v_convolve_f32_fp8_bf8 v[902:905], 1, v[906:909], v910, v911 aux_data:512 clamp
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 128-bit VGPR or 0
+// GFX13-ERR-NEXT:{{^}}v_convolve_f32_fp8_bf8 v[902:905], 1, v[906:909], v910, v911 aux_data:512 clamp
+// GFX13-ERR-NEXT:{{^}}                                   ^
+
+v_convolve_f32_fp8_fp8 v[902:905], 1, v[906:909], v910, v911 aux_data:512 clamp
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 128-bit VGPR or 0
+// GFX13-ERR-NEXT:{{^}}v_convolve_f32_fp8_fp8 v[902:905], 1, v[906:909], v910, v911 aux_data:512 clamp
+// GFX13-ERR-NEXT:{{^}}                                   ^
+
+v_convolve_f32i32_iu4 v[902:905], 1, v[906:909], v910, v911 aux_data:512 clamp
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 128-bit VGPR or 0
+// GFX13-ERR-NEXT:{{^}}v_convolve_f32i32_iu4 v[902:905], 1, v[906:909], v910, v911 aux_data:512 clamp
+// GFX13-ERR-NEXT:{{^}}                                  ^
+
+v_convolve_f32i32_iu8 v[902:905], 1, v[906:909], v910, v911 aux_data:512 clamp
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 128-bit VGPR or 0
+// GFX13-ERR-NEXT:{{^}}v_convolve_f32i32_iu8 v[902:905], 1, v[906:909], v910, v911 aux_data:512 clamp
+// GFX13-ERR-NEXT:{{^}}                                  ^
+
+v_convolve_f32_iu4 v[902:905], 1, v[906:909], v910, v911 aux_data:512 clamp
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 128-bit VGPR or 0
+// GFX13-ERR-NEXT:{{^}}v_convolve_f32_iu4 v[902:905], 1, v[906:909], v910, v911 aux_data:512 clamp
+// GFX13-ERR-NEXT:{{^}}                               ^
+
+v_convolve_f32_iu8 v[902:905], 1, v[906:909], v910, v911 aux_data:512 clamp
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 128-bit VGPR or 0
+// GFX13-ERR-NEXT:{{^}}v_convolve_f32_iu8 v[902:905], 1, v[906:909], v910, v911 aux_data:512 clamp
+// GFX13-ERR-NEXT:{{^}}                               ^
+
+v_convolve_i32_iu4 v[902:905], 1, v[906:909], v910, v911 aux_data:512 clamp
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 128-bit VGPR or 0
+// GFX13-ERR-NEXT:{{^}}v_convolve_i32_iu4 v[902:905], 1, v[906:909], v910, v911 aux_data:512 clamp
+// GFX13-ERR-NEXT:{{^}}                               ^
+
+v_convolve_i32_iu8 v[902:905], 1, v[906:909], v910, v911 aux_data:512 clamp
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operand must be a 128-bit VGPR or 0
+// GFX13-ERR-NEXT:{{^}}v_convolve_i32_iu8 v[902:905], 1, v[906:909], v910, v911 aux_data:512 clamp
+// GFX13-ERR-NEXT:{{^}}                               ^

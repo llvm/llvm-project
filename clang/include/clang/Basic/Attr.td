@@ -2438,6 +2438,12 @@ def AMDGPUWavegroupKernel : InheritableAttr {
   ];
   let Documentation = [AMDGPUWavegroupKernelDocs];
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel function">;
+}
+
+def AMDGPUSpatialClusterKernel : InheritableAttr {
+  let Spellings = [Clang<"amdgpu_spatial_cluster_kernel", 0>];
+  let Documentation = [AMDGPUSpatialClusterKernelDocs];
+  let Subjects = SubjectList<[Function], ErrorDiag, "kernel function">;
 #endif /* LLPC_BUILD_NPI */
 }
 

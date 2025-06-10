@@ -663,8 +663,8 @@ TARGET_BUILTIN(__builtin_amdgcn_bitop3_b16, "ssssIUi", "nc", "bitop3-insts")
 
 TARGET_BUILTIN(__builtin_amdgcn_cvt_sr_bf16_f32, "V2yV2yfUiIb", "nc", "f32-to-f16bf16-cvt-sr-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_sr_f16_f32, "V2hV2hfUiIb", "nc", "f32-to-f16bf16-cvt-sr-insts")
-#if LLPC_BUILD_NPI
 
+#if LLPC_BUILD_NPI
 //===----------------------------------------------------------------------===//
 // GFX1250+ only builtins.
 //===----------------------------------------------------------------------===//
@@ -1218,7 +1218,8 @@ TARGET_BUILTIN(__builtin_amdgcn_load_mcast_b128, "vV4i*10V4i*Iii", "n", "gfx13-i
 
 TARGET_BUILTIN(__builtin_amdgcn_map_shared_rank, "v*11v*3i", "n", "gfx13-insts")
 TARGET_BUILTIN(__builtin_amdgcn_query_shared_rank, "ivC*11", "n", "gfx13-insts")
-#endif /* LLPC_BUILD_NPI */
 
+TARGET_BUILTIN(__builtin_amdgcn_wavegroup_id_in_cluster, "i", "nc", "gfx13-insts")
+#endif /* LLPC_BUILD_NPI */
 #undef BUILTIN
 #undef TARGET_BUILTIN

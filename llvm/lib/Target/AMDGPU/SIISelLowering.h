@@ -103,6 +103,7 @@ private:
 #if LLPC_BUILD_NPI
   SDValue lowerWavegroupID(SelectionDAG &DAG, SDValue Op) const;
   SDValue lowerWaveIDInWavegroup(SelectionDAG &DAG, SDValue Op) const;
+  SDValue lowerWavegroupIDInCluster(SelectionDAG &DAG, SDValue Op) const;
   SDValue lowerConstHwRegRead(SelectionDAG &DAG, SDValue Op,
                               AMDGPU::Hwreg::Id HwReg, unsigned LowBit,
                               unsigned Width) const;
