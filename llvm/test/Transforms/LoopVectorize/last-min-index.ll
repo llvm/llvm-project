@@ -7,7 +7,7 @@
 ; The function minlst primarily takes two indices (i.e. range), scans backwards in the range
 ; and returns the firstIV of the minimum value.
 
-define fastcc i32 @minlst(i32 %first_index, i32 %last_index, ptr %array) {
+define i32 @minlst(i32 %first_index, i32 %last_index, ptr %array) {
 ; CHECK-REV-MIN-LABEL: define fastcc i32 @minlst(
 ; CHECK-REV-MIN-SAME: i32 [[FIRST_INDEX:%.*]], i32 [[LAST_INDEX:%.*]], ptr [[ARRAY:%.*]]) {
 ; CHECK-REV-MIN-NEXT:  [[ENTRY:.*]]:
@@ -46,7 +46,7 @@ define fastcc i32 @minlst(i32 %first_index, i32 %last_index, ptr %array) {
 ; CHECK-REV-MIN-NEXT:    [[LAST_INDEX_RET:%.*]] = phi i32 [ [[LAST_INDEX]], %[[ENTRY]] ], [ [[SELECT_LCSSA]], %[[DOT_CRIT_EDGE_LOOPEXIT]] ]
 ; CHECK-REV-MIN-NEXT:    ret i32 [[LAST_INDEX_RET]]
 ;
-; CHECK-REV-MIN-VW1-IL4-LABEL: define fastcc i32 @minlst(
+; CHECK-REV-MIN-VW1-IL4-LABEL: define i32 @minlst(
 ; CHECK-REV-MIN-VW1-IL4-SAME: i32 [[FIRST_INDEX:%.*]], i32 [[LAST_INDEX:%.*]], ptr [[ARRAY:%.*]]) {
 ; CHECK-REV-MIN-VW1-IL4-NEXT:  [[ENTRY:.*]]:
 ; CHECK-REV-MIN-VW1-IL4-NEXT:    [[FIRST_INDEX_SEXT:%.*]] = sext i32 [[FIRST_INDEX]] to i64
@@ -84,7 +84,7 @@ define fastcc i32 @minlst(i32 %first_index, i32 %last_index, ptr %array) {
 ; CHECK-REV-MIN-VW1-IL4-NEXT:    [[LAST_INDEX_RET:%.*]] = phi i32 [ [[LAST_INDEX]], %[[ENTRY]] ], [ [[SELECT_LCSSA]], %[[DOT_CRIT_EDGE_LOOPEXIT]] ]
 ; CHECK-REV-MIN-VW1-IL4-NEXT:    ret i32 [[LAST_INDEX_RET]]
 ;
-; CHECK-REV-MIN-VW4-IL1-LABEL: define fastcc i32 @minlst(
+; CHECK-REV-MIN-VW4-IL1-LABEL: define i32 @minlst(
 ; CHECK-REV-MIN-VW4-IL1-SAME: i32 [[FIRST_INDEX:%.*]], i32 [[LAST_INDEX:%.*]], ptr [[ARRAY:%.*]]) {
 ; CHECK-REV-MIN-VW4-IL1-NEXT:  [[ENTRY:.*]]:
 ; CHECK-REV-MIN-VW4-IL1-NEXT:    [[FIRST_INDEX_SEXT:%.*]] = sext i32 [[FIRST_INDEX]] to i64
@@ -122,7 +122,7 @@ define fastcc i32 @minlst(i32 %first_index, i32 %last_index, ptr %array) {
 ; CHECK-REV-MIN-VW4-IL1-NEXT:    [[LAST_INDEX_RET:%.*]] = phi i32 [ [[LAST_INDEX]], %[[ENTRY]] ], [ [[SELECT_LCSSA]], %[[DOT_CRIT_EDGE_LOOPEXIT]] ]
 ; CHECK-REV-MIN-VW4-IL1-NEXT:    ret i32 [[LAST_INDEX_RET]]
 ;
-; CHECK-REV-MIN-VW4-IL2-LABEL: define fastcc i32 @minlst(
+; CHECK-REV-MIN-VW4-IL2-LABEL: define i32 @minlst(
 ; CHECK-REV-MIN-VW4-IL2-SAME: i32 [[FIRST_INDEX:%.*]], i32 [[LAST_INDEX:%.*]], ptr [[ARRAY:%.*]]) {
 ; CHECK-REV-MIN-VW4-IL2-NEXT:  [[ENTRY:.*]]:
 ; CHECK-REV-MIN-VW4-IL2-NEXT:    [[FIRST_INDEX_SEXT:%.*]] = sext i32 [[FIRST_INDEX]] to i64
@@ -190,13 +190,9 @@ loop:                                           ; preds = %loop.preheader, %loop
   %select = select i1 %cmp, i32 %iv.next.trunc, i32 %index
   %dec = add nsw i64 %dec_iv, -1
   %loop_cond = icmp sgt i64 %dec_iv, 1
-  br i1 %loop_cond, label %loop, label %._crit_edge.loopexit
+  br i1 %loop_cond, label %loop, label %._crit_edge
 
-._crit_edge.loopexit:                             ; preds = %loop
-  %select.lcssa = phi i32 [ %select, %loop ]
-  br label %._crit_edge
-
-._crit_edge:                                      ; preds = %._crit_edge.loopexit, %0
-  %last_index_ret = phi i32 [ %last_index, %entry ], [ %select.lcssa, %._crit_edge.loopexit ]
+._crit_edge:                                      ; preds = %loop, %entry
+  %last_index_ret = phi i32 [ %select, %loop ], [ %last_index, %entry ]
   ret i32 %last_index_ret
 }
