@@ -337,8 +337,8 @@ def IIT_V6 : IIT_Vec<6, 60>;
 def IIT_V10 : IIT_Vec<10, 61>;
 def IIT_V9  : IIT_Vec<9, 62>;
 def IIT_V7  : IIT_Vec<7, 63>;
-def IIT_V2048: IIT_Vec<2048, 64>;
-def IIT_V4096: IIT_Vec<4096, 65>;
+def IIT_V2048  : IIT_Vec<2048, 64>;
+def IIT_V4096  : IIT_Vec<4096, 65>;
 }
 
 defvar IIT_all_FixedTypes = !filter(iit, IIT_all,
@@ -578,6 +578,7 @@ def llvm_v64i32_ty     : LLVMType<v64i32>;    //   64 x i32
 def llvm_v128i32_ty    : LLVMType<v128i32>;   //  128 x i32
 def llvm_v256i32_ty    : LLVMType<v256i32>;   //  256 x i32
 def llvm_v2048i32_ty   : LLVMType<v2048i32>;  // 2048 x i32
+def llvm_v4096i32_ty   : LLVMType<v4096i32>;  // 4096 x i32
 
 def llvm_v1i64_ty      : LLVMType<v1i64>;    //  1 x i64
 def llvm_v2i64_ty      : LLVMType<v2i64>;    //  2 x i64
