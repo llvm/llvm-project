@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Address.h"
+#include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 #include "CIRGenValue.h"
@@ -97,9 +98,14 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
 
     case CK_UncheckedDerivedToBase:
     case CK_DerivedToBase: {
-      cgm.errorNYI(expr->getSourceRange(),
-                   "emitPointerWithAlignment: derived-to-base cast");
-      return Address::invalid();
+      assert(!cir::MissingFeatures::opTBAA());
+      assert(!cir::MissingFeatures::addressIsKnownNonNull());
+      Address addr = emitPointerWithAlignment(ce->getSubExpr(), baseInfo);
+      const CXXRecordDecl *derived =
+          ce->getSubExpr()->getType()->getPointeeCXXRecordDecl();
+      return getAddressOfBaseClass(addr, derived, ce->path(),
+                                   shouldNullCheckClassCastValue(ce),
+                                   ce->getExprLoc());
     }
 
     case CK_AnyPointerToBlockPointerCast:
@@ -823,8 +829,6 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_NonAtomicToAtomic:
   case CK_AtomicToNonAtomic:
   case CK_Dynamic:
-  case CK_UncheckedDerivedToBase:
-  case CK_DerivedToBase:
   case CK_ToUnion:
   case CK_BaseToDerived:
   case CK_LValueBitCast:
@@ -861,6 +865,27 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
       }
     }
     return lv;
+  }
+
+  case CK_UncheckedDerivedToBase:
+  case CK_DerivedToBase: {
+    const auto *derivedClassTy =
+        e->getSubExpr()->getType()->castAs<clang::RecordType>();
+    auto *derivedClassDecl = cast<CXXRecordDecl>(derivedClassTy->getDecl());
+
+    LValue lv = emitLValue(e->getSubExpr());
+    Address thisAddr = lv.getAddress();
+
+    // Perform the derived-to-base conversion
+    Address baseAddr =
+        getAddressOfBaseClass(thisAddr, derivedClassDecl, e->path(),
+                              /*NullCheckValue=*/false, e->getExprLoc());
+
+    // TODO: Support accesses to members of base classes in TBAA. For now, we
+    // conservatively pretend that the complete object is of the base class
+    // type.
+    assert(!cir::MissingFeatures::opTBAA());
+    return makeAddrLValue(baseAddr, e->getType(), lv.getBaseInfo());
   }
 
   case CK_ZeroToOCLOpaqueType:
@@ -1494,4 +1519,58 @@ cir::AllocaOp CIRGenFunction::createTempAlloca(mlir::Type ty,
   return cast<cir::AllocaOp>(
       emitAlloca(name.str(), ty, loc, CharUnits(), ip, arraySize)
           .getDefiningOp());
+}
+
+/// Try to emit a reference to the given value without producing it as
+/// an l-value.  For many cases, this is just an optimization, but it avoids
+/// us needing to emit global copies of variables if they're named without
+/// triggering a formal use in a context where we can't emit a direct
+/// reference to them, for instance if a block or lambda or a member of a
+/// local class uses a const int variable or constexpr variable from an
+/// enclosing function.
+///
+/// For named members of enums, this is the only way they are emitted.
+CIRGenFunction::ConstantEmission
+CIRGenFunction::tryEmitAsConstant(DeclRefExpr *refExpr) {
+  ValueDecl *value = refExpr->getDecl();
+
+  // There is a lot more to do here, but for now only EnumConstantDecl is
+  // supported.
+  assert(!cir::MissingFeatures::tryEmitAsConstant());
+
+  // The value needs to be an enum constant or a constant variable.
+  if (!isa<EnumConstantDecl>(value))
+    return ConstantEmission();
+
+  Expr::EvalResult result;
+  if (!refExpr->EvaluateAsRValue(result, getContext()))
+    return ConstantEmission();
+
+  QualType resultType = refExpr->getType();
+
+  // As long as we're only handling EnumConstantDecl, there should be no
+  // side-effects.
+  assert(!result.HasSideEffects);
+
+  // Emit as a constant.
+  // FIXME(cir): have emitAbstract build a TypedAttr instead (this requires
+  // somewhat heavy refactoring...)
+  mlir::Attribute c = ConstantEmitter(*this).emitAbstract(
+      refExpr->getLocation(), result.Val, resultType);
+  mlir::TypedAttr cstToEmit = mlir::dyn_cast_if_present<mlir::TypedAttr>(c);
+  assert(cstToEmit && "expected a typed attribute");
+
+  assert(!cir::MissingFeatures::generateDebugInfo());
+
+  return ConstantEmission::forValue(cstToEmit);
+}
+
+mlir::Value CIRGenFunction::emitScalarConstant(
+    const CIRGenFunction::ConstantEmission &constant, Expr *e) {
+  assert(constant && "not a constant");
+  if (constant.isReference()) {
+    cgm.errorNYI(e->getSourceRange(), "emitScalarConstant: reference");
+    return {};
+  }
+  return builder.getConstant(getLoc(e->getSourceRange()), constant.getValue());
 }

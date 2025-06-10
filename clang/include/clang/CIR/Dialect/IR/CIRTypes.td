@@ -162,6 +162,56 @@ def CIR_LongDouble : CIR_FloatType<"LongDouble", "long_double"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ComplexType
+//===----------------------------------------------------------------------===//
+
+def CIR_ComplexType : CIR_Type<"Complex", "complex",
+    [DeclareTypeInterfaceMethods<DataLayoutTypeInterface>]> {
+
+  let summary = "CIR complex type";
+  let description = [{
+    CIR type that represents a C complex number. `cir.complex` models the C type
+    `T _Complex`.
+
+    `cir.complex` type is not directly mapped to `std::complex`.
+
+    The type models complex values, per C99 6.2.5p11. It supports the C99
+    complex float types as well as the GCC integer complex extensions.
+
+    The parameter `elementType` gives the type of the real and imaginary part of
+    the complex number. `elementType` must be either a CIR integer type or a CIR
+    floating-point type.
+
+    ```mlir
+    !cir.complex<!s32i>
+    !cir.complex<!cir.float>
+    ```
+  }];
+
+  let parameters = (ins CIR_AnyIntOrFloatType:$elementType);
+
+  let builders = [
+    TypeBuilderWithInferredContext<(ins "mlir::Type":$elementType), [{
+      return $_get(elementType.getContext(), elementType);
+    }]>,
+  ];
+
+  let assemblyFormat = [{
+    `<` $elementType `>`
+  }];
+
+  let extraClassDeclaration = [{
+    bool isFloatingPointComplex() const {
+      return isAnyFloatingPointType(getElementType());
+    }
+
+    bool isIntegerComplex() const {
+      return mlir::isa<cir::IntType>(getElementType());
+    }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // PointerType
 //===----------------------------------------------------------------------===//
 

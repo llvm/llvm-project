@@ -2183,6 +2183,9 @@ ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(
 
   updateStackNodes();
 
+  if (ExportToDot)
+    exportToDot("poststackupdate");
+
   handleCallsitesWithMultipleTargets();
 
   markBackedges();
@@ -2284,6 +2287,9 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
     exportToDot("prestackupdate");
 
   updateStackNodes();
+
+  if (ExportToDot)
+    exportToDot("poststackupdate");
 
   handleCallsitesWithMultipleTargets();
 
