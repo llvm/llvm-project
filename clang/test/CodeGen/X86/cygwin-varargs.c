@@ -1,8 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-windows-gnu -emit-llvm < %s | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-pc-cygwin -emit-llvm < %s | FileCheck %s
 
-// copy ms_abi block only from ../ms_abi.c
-
 struct foo {
   int x;
   float y;
