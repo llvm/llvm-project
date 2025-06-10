@@ -282,6 +282,8 @@ getExecutionModel(const SPIRVSubtarget &STI, const Function &F) {
       return SPIRV::ExecutionModel::GLCompute;
     if (value == "vertex")
       return SPIRV::ExecutionModel::Vertex;
+    if (value == "pixel")
+      return SPIRV::ExecutionModel::Fragment;
 
     report_fatal_error(
         "This HLSL entry point is not supported by this backend.");
