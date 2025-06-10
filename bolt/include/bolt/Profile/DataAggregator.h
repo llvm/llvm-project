@@ -109,6 +109,7 @@ private:
     static constexpr const uint64_t BR_ONLY = -1ULL;
     static constexpr const uint64_t FT_ONLY = -1ULL;
     static constexpr const uint64_t FT_EXTERNAL_ORIGIN = -2ULL;
+    static constexpr const uint64_t BR_EXTERNAL_RETURN = -3ULL;
 
     uint64_t Branch;
     uint64_t From;
@@ -388,7 +389,7 @@ private:
   /// File format syntax:
   /// E <event>
   /// S <start> <count>
-  /// T <start> <end> <ft_end> <count>
+  /// [TR] <start> <end> <ft_end> <count>
   /// B <start> <end> <count> <mispred_count>
   /// [Ff] <start> <end> <count>
   ///
@@ -403,6 +404,7 @@ private:
   ///       jump to the block
   /// T - an aggregated trace: branch from <start> to <end> with a fall-through
   ///       to <ft_end>
+  /// R - an aggregated trace originating at a return
   ///
   /// <id> - build id of the object containing the address. We can skip it for
   /// the main binary and use "X" for an unknown object. This will save some
@@ -531,6 +533,9 @@ inline raw_ostream &operator<<(raw_ostream &OS,
   switch (T.Branch) {
   case DataAggregator::Trace::FT_ONLY:
   case DataAggregator::Trace::FT_EXTERNAL_ORIGIN:
+    break;
+  case DataAggregator::Trace::BR_EXTERNAL_RETURN:
+    OS << "0 -> ";
     break;
   default:
     OS << Twine::utohexstr(T.Branch) << " -> ";
