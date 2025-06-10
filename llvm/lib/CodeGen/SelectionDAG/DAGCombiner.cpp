@@ -2686,7 +2686,7 @@ SDValue DAGCombiner::visitPTRADD(SDNode *N) {
     return N0;
 
   // fold (ptradd 0, x) -> x
-  if (isNullConstant(N0))
+  if (isNullConstant(N0) && PtrVT == IntVT)
     return N1;
 
   if (N0.getOpcode() != ISD::PTRADD ||
