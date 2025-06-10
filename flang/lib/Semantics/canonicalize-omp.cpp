@@ -149,27 +149,32 @@ private:
       // Ignore compiler directives.
       if (GetConstructIf<parser::CompilerDirective>(*nextIt))
         continue;
-
       // Keep track of the loops to handle the end loop directives
       std::stack<parser::OpenMPLoopConstruct *> loops;
       loops.push(&x);
-      while (auto *innerConstruct{
+      if (auto *innerConstruct{
           GetConstructIf<parser::OpenMPConstruct>(*nextIt)}) {
         if (auto *innerOmpLoop{
                 std::get_if<parser::OpenMPLoopConstruct>(&innerConstruct->u)}) {
-          std::get<
-              std::optional<common::Indirection<parser::OpenMPLoopConstruct>>>(
-              loops.top()->t) = std::move(*innerOmpLoop);
-          // Retrieveing the address so that DoConstruct or inner loop can be
-          // set later.
-          loops.push(&(std::get<std::optional<
-                           common::Indirection<parser::OpenMPLoopConstruct>>>(
-              loops.top()->t)
-                           .value()
-                           .value()));
-          nextIt = block.erase(nextIt);
+          auto &innerBeginDir{
+              std::get<parser::OmpBeginLoopDirective>(innerOmpLoop->t)};
+          auto &innerDir{std::get<parser::OmpLoopDirective>(innerBeginDir.t)};
+          if (innerDir.v == llvm::omp::Directive::OMPD_tile) {
+            std::get<std::optional<
+                common::Indirection<parser::OpenMPLoopConstruct>>>(
+                loops.top()->t) = std::move(*innerOmpLoop);
+            // Retrieveing the address so that DoConstruct or inner loop can be
+            // set later.
+            loops.push(&(std::get<std::optional<
+                             common::Indirection<parser::OpenMPLoopConstruct>>>(
+                loops.top()->t)
+                             .value()
+                             .value()));
+            nextIt = block.erase(nextIt);
+          }
         }
       }
+
       if (auto *doCons{GetConstructIf<parser::DoConstruct>(*nextIt)}) {
         if (doCons->GetLoopControl()) {
           // move DoConstruct
@@ -185,6 +190,9 @@ private:
                   loops.top()->t) = std::move(*endDir);
               nextIt = block.erase(nextIt);
               loops.pop();
+            } else {
+              // If there is a mismatch bail out.
+              break;
             }
           }
         } else {
