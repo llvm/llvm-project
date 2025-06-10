@@ -129,6 +129,16 @@ static inline constexpr T round_up(const T x) {
   return (x + N) & ~(N - 1);
 }
 
+// Sleep for a few hundred nanoseconds to allow other threads to progress.
+static inline void sleep_extensively() {
+#if defined(LIBC_TARGET_ARCH_IS_NVPTX)
+  if (__nvvm_reflect("__CUDA_ARCH") >= 700)
+    LIBC_INLINE_ASM("nanosleep.u32 750;" :: : "memory");
+#elif defined(LIBC_TARGET_ARCH_IS_AMDGPU)
+  __builtin_amdgcn_s_sleep(32);
+#endif
+}
+
 } // namespace impl
 
 /// A slab allocator used to hand out identically sized slabs of memory.
@@ -313,6 +323,10 @@ private:
       // another thread resurrected the counter and we quit, or a parallel read
       // helped us invalidating it. For the latter, claim that flag and return.
       if (counter.fetch_sub(n, cpp::MemoryOrder::RELAXED) == n) {
+        // Yield this thread here to maximize the chance that this CAS fails and
+        // we re-use the slab instead of deallocating it.
+        impl::sleep_extensively();
+
         uint64_t expected = 0;
         if (counter.compare_exchange_strong(expected, INVALID,
                                             cpp::MemoryOrder::RELAXED,
