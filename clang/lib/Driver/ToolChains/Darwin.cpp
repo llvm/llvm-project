@@ -1642,14 +1642,16 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
     CmdArgs.push_back("-lSystem");
 
   // Select the dynamic runtime library and the target specific static library.
-  if (isTargetIOSBased()) {
-    // If we are compiling as iOS / simulator, don't attempt to link libgcc_s.1,
-    // it never went into the SDK.
-    // Linking against libgcc_s.1 isn't needed for iOS 5.0+
-    if (isIPhoneOSVersionLT(5, 0) && !isTargetIOSSimulator() &&
-        getTriple().getArch() != llvm::Triple::aarch64)
-      CmdArgs.push_back("-lgcc_s.1");
-  }
+  // Some old Darwin versions put builtins, libunwind, and some other stuff in
+  // libgcc_s.1.dylib. MacOS X 10.6 and iOS 5 moved those functions to
+  // libSystem, and made libgcc_s.1.dylib a stub. We never link libgcc_s when
+  // building for aarch64 or iOS simulator, since libgcc_s was made obsolete
+  // before either existed.
+  if (getTriple().getArch() != llvm::Triple::aarch64 &&
+      ((isTargetIOSBased() && isIPhoneOSVersionLT(5, 0) &&
+        !isTargetIOSSimulator()) ||
+       (isTargetMacOSBased() && isMacosxVersionLT(10, 6))))
+    CmdArgs.push_back("-lgcc_s.1");
   AddLinkRuntimeLib(Args, CmdArgs, "builtins");
 }
 
