@@ -233,6 +233,7 @@
 #include "llvm/ProfileData/GCOV.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/ProfileData/SymbolRemappingReader.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Discriminator.h"
 #include "llvm/Support/ErrorOr.h"
@@ -274,18 +275,18 @@ public:
 
   /// Create a remapper from the given remapping file. The remapper will
   /// be used for profile read in by Reader.
-  static ErrorOr<std::unique_ptr<SampleProfileReaderItaniumRemapper>>
+  LLVM_ABI static ErrorOr<std::unique_ptr<SampleProfileReaderItaniumRemapper>>
   create(StringRef Filename, vfs::FileSystem &FS, SampleProfileReader &Reader,
          LLVMContext &C);
 
   /// Create a remapper from the given Buffer. The remapper will
   /// be used for profile read in by Reader.
-  static ErrorOr<std::unique_ptr<SampleProfileReaderItaniumRemapper>>
+  LLVM_ABI static ErrorOr<std::unique_ptr<SampleProfileReaderItaniumRemapper>>
   create(std::unique_ptr<MemoryBuffer> &B, SampleProfileReader &Reader,
          LLVMContext &C);
 
   /// Apply remappings to the profile read by Reader.
-  void applyRemapping(LLVMContext &Ctx);
+  LLVM_ABI void applyRemapping(LLVMContext &Ctx);
 
   bool hasApplied() { return RemappingApplied; }
 
@@ -300,7 +301,7 @@ public:
 
   /// Return the equivalent name in the profile for \p FunctionName if
   /// it exists.
-  std::optional<StringRef> lookUpNameInProfile(StringRef FunctionName);
+  LLVM_ABI std::optional<StringRef> lookUpNameInProfile(StringRef FunctionName);
 
 private:
   // The buffer holding the content read from remapping file.
@@ -396,7 +397,8 @@ public:
   virtual std::error_code readImpl() = 0;
 
   /// Print the profile for \p FunctionSamples on stream \p OS.
-  void dumpFunctionProfile(const FunctionSamples &FS, raw_ostream &OS = dbgs());
+  LLVM_ABI void dumpFunctionProfile(const FunctionSamples &FS,
+                                    raw_ostream &OS = dbgs());
 
   /// Collect functions with definitions in Module M. For reader which
   /// support loading function profiles on demand, return true when the
@@ -405,10 +407,10 @@ public:
   virtual bool collectFuncsFromModule() { return false; }
 
   /// Print all the profiles on stream \p OS.
-  void dump(raw_ostream &OS = dbgs());
+  LLVM_ABI void dump(raw_ostream &OS = dbgs());
 
   /// Print all the profiles on stream \p OS in the JSON format.
-  void dumpJson(raw_ostream &OS = dbgs());
+  LLVM_ABI void dumpJson(raw_ostream &OS = dbgs());
 
   /// Return the samples collected for function \p F.
   FunctionSamples *getSamplesFor(const Function &F) {
@@ -457,7 +459,7 @@ public:
   /// Create a sample profile reader appropriate to the file format.
   /// Create a remapper underlying if RemapFilename is not empty.
   /// Parameter P specifies the FSDiscriminatorPass.
-  static ErrorOr<std::unique_ptr<SampleProfileReader>>
+  LLVM_ABI static ErrorOr<std::unique_ptr<SampleProfileReader>>
   create(StringRef Filename, LLVMContext &C, vfs::FileSystem &FS,
          FSDiscriminatorPass P = FSDiscriminatorPass::Base,
          StringRef RemapFilename = "");
@@ -465,7 +467,7 @@ public:
   /// Create a sample profile reader from the supplied memory buffer.
   /// Create a remapper underlying if RemapFilename is not empty.
   /// Parameter P specifies the FSDiscriminatorPass.
-  static ErrorOr<std::unique_ptr<SampleProfileReader>>
+  LLVM_ABI static ErrorOr<std::unique_ptr<SampleProfileReader>>
   create(std::unique_ptr<MemoryBuffer> &B, LLVMContext &C, vfs::FileSystem &FS,
          FSDiscriminatorPass P = FSDiscriminatorPass::Base,
          StringRef RemapFilename = "");
@@ -545,7 +547,7 @@ protected:
   }
 
   /// Compute summary for this profile.
-  void computeSummary();
+  LLVM_ABI void computeSummary();
 
   /// Read sample profiles for the given functions and write them to the given
   /// profile map. Currently it's only used for extended binary format to load
@@ -609,7 +611,7 @@ protected:
   bool SkipFlatProf = false;
 };
 
-class SampleProfileReaderText : public SampleProfileReader {
+class LLVM_ABI SampleProfileReaderText : public SampleProfileReader {
 public:
   SampleProfileReaderText(std::unique_ptr<MemoryBuffer> B, LLVMContext &C)
       : SampleProfileReader(std::move(B), C, SPF_Text) {}
@@ -632,7 +634,7 @@ private:
   std::list<SampleContextFrameVector> CSNameTable;
 };
 
-class SampleProfileReaderBinary : public SampleProfileReader {
+class LLVM_ABI SampleProfileReaderBinary : public SampleProfileReader {
 public:
   SampleProfileReaderBinary(std::unique_ptr<MemoryBuffer> B, LLVMContext &C,
                             SampleProfileFormat Format = SPF_None)
@@ -731,7 +733,7 @@ private:
   virtual std::error_code verifySPMagic(uint64_t Magic) = 0;
 };
 
-class SampleProfileReaderRawBinary : public SampleProfileReaderBinary {
+class LLVM_ABI SampleProfileReaderRawBinary : public SampleProfileReaderBinary {
 private:
   std::error_code verifySPMagic(uint64_t Magic) override;
 
@@ -763,7 +765,8 @@ public:
 /// commonly used sections of a profile in extensible binary format. It is
 /// possible to define other types of profile inherited from
 /// SampleProfileReaderExtBinaryBase/SampleProfileWriterExtBinaryBase.
-class SampleProfileReaderExtBinaryBase : public SampleProfileReaderBinary {
+class LLVM_ABI SampleProfileReaderExtBinaryBase
+    : public SampleProfileReaderBinary {
 private:
   std::error_code decompressSection(const uint8_t *SecStart,
                                     const uint64_t SecSize,
@@ -846,7 +849,8 @@ private:
                        SampleProfileMap &Profiles) override;
 };
 
-class SampleProfileReaderExtBinary : public SampleProfileReaderExtBinaryBase {
+class LLVM_ABI SampleProfileReaderExtBinary
+    : public SampleProfileReaderExtBinaryBase {
 private:
   std::error_code verifySPMagic(uint64_t Magic) override;
   std::error_code readCustomSection(const SecHdrTableEntry &Entry) override {
@@ -879,7 +883,7 @@ enum HistType {
   HIST_TYPE_INDIR_CALL_TOPN
 };
 
-class SampleProfileReaderGCC : public SampleProfileReader {
+class LLVM_ABI SampleProfileReaderGCC : public SampleProfileReader {
 public:
   SampleProfileReaderGCC(std::unique_ptr<MemoryBuffer> B, LLVMContext &C)
       : SampleProfileReader(std::move(B), C, SPF_GCC),
