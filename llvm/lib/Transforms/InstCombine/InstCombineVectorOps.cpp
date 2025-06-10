@@ -542,34 +542,40 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
         }
       }
     } else if (auto *SVI = dyn_cast<ShuffleVectorInst>(I)) {
-      // extractelt (shufflevector %v1, %v2, splat-mask) idx ->
-      // extractelt %v1, splat-mask[0]
-      auto Mask = SVI->getShuffleMask();
-      if (Mask[0] != PoisonMaskElem && all_equal(Mask))
-        return ExtractElementInst::Create(SVI->getOperand(0),
-                                          Builder.getInt64(Mask[0]));
+      int SplatIndex = getSplatIndex(SVI->getShuffleMask());
+      // We know such a splat must be reading from the first operand, even
+      // in the case of scalable vectors (vscale is always > 0).
+      if (SplatIndex == 0)
+        return ExtractElementInst::Create(SVI->getOperand(0), Builder.getInt64(0));
+      // Restrict the non-zero index case to fixed-length vectors
+      if (isa<FixedVectorType>(SVI->getType())) {
 
-      // If this is extracting an element from a shufflevector, figure out where
-      // it came from and extract from the appropriate input element instead.
-      // Restrict the following transformation to fixed-length vector.
-      if (isa<FixedVectorType>(SVI->getType()) && isa<ConstantInt>(Index)) {
-        int SrcIdx =
-            SVI->getMaskValue(cast<ConstantInt>(Index)->getZExtValue());
-        Value *Src;
-        unsigned LHSWidth = cast<FixedVectorType>(SVI->getOperand(0)->getType())
-                                ->getNumElements();
+        // getSplatIndex doesn't distinguish between the all-poison splat and
+        // a non-splat mask. However, if Index is -1, we still want to propagate
+        // that poison value.
+        int SrcIdx = -2;
+        if (SplatIndex != PoisonMaskElem)
+          SrcIdx = SplatIndex;
+        else if (ConstantInt* CI = dyn_cast<ConstantInt>(Index))
+          SrcIdx = SVI->getMaskValue(CI->getZExtValue());
 
-        if (SrcIdx < 0)
-          return replaceInstUsesWith(EI, PoisonValue::get(EI.getType()));
-        if (SrcIdx < (int)LHSWidth)
-          Src = SVI->getOperand(0);
-        else {
-          SrcIdx -= LHSWidth;
-          Src = SVI->getOperand(1);
+        if (SrcIdx != -2) {
+          Value *Src;
+          unsigned LHSWidth = cast<FixedVectorType>(SVI->getOperand(0)->getType())
+            ->getNumElements();
+
+          if (SrcIdx < 0)
+            return replaceInstUsesWith(EI, PoisonValue::get(EI.getType()));
+          if (SrcIdx < (int)LHSWidth)
+            Src = SVI->getOperand(0);
+          else {
+            SrcIdx -= LHSWidth;
+            Src = SVI->getOperand(1);
+          }
+          Type *Int64Ty = Type::getInt64Ty(EI.getContext());
+          return ExtractElementInst::Create(
+              Src, ConstantInt::get(Int64Ty, SrcIdx, false));
         }
-        Type *Int64Ty = Type::getInt64Ty(EI.getContext());
-        return ExtractElementInst::Create(
-            Src, ConstantInt::get(Int64Ty, SrcIdx, false));
       }
     } else if (auto *CI = dyn_cast<CastInst>(I)) {
       // Canonicalize extractelement(cast) -> cast(extractelement).
