@@ -1289,7 +1289,7 @@ LogicalResult ScaledExtPackedOpLowering::matchAndRewrite(
   // Extend to a packedVectorType
   if (!sourceVecType ||
       sourceVecType.getNumElements() < packedVecType.getNumElements()) {
-    Value longVec = rewriter.create<LLVM::UndefOp>(loc, packedVecType);
+    Value longVec = rewriter.create<LLVM::ZeroOp>(loc, packedVecType);
     if (!sourceVecType) {
       longVec = rewriter.create<LLVM::InsertElementOp>(
           loc, longVec, source, createI32Constant(rewriter, loc, 0));
@@ -1362,7 +1362,7 @@ LogicalResult PackedScaledTruncOpLowering::matchAndRewrite(
   if (existing)
     existing = rewriter.create<LLVM::BitcastOp>(loc, intResultType, existing);
   else
-    existing = rewriter.create<LLVM::UndefOp>(loc, intResultType);
+    existing = rewriter.create<LLVM::ZeroOp>(loc, intResultType);
 
   Value sourceA, sourceB;
   if (sourceElemType.isF32()) {
