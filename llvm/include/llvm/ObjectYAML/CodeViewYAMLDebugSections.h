@@ -14,6 +14,7 @@
 #ifndef LLVM_OBJECTYAML_CODEVIEWYAMLDEBUGSECTIONS_H
 #define LLVM_OBJECTYAML_CODEVIEWYAMLDEBUGSECTIONS_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
@@ -108,22 +109,22 @@ struct InlineeInfo {
 };
 
 struct YAMLDebugSubsection {
-  static Expected<YAMLDebugSubsection>
+  LLVM_ABI static Expected<YAMLDebugSubsection>
   fromCodeViewSubection(const codeview::StringsAndChecksumsRef &SC,
                         const codeview::DebugSubsectionRecord &SS);
 
   std::shared_ptr<detail::YAMLSubsectionBase> Subsection;
 };
 
-Expected<std::vector<std::shared_ptr<codeview::DebugSubsection>>>
+LLVM_ABI Expected<std::vector<std::shared_ptr<codeview::DebugSubsection>>>
 toCodeViewSubsectionList(BumpPtrAllocator &Allocator,
                          ArrayRef<YAMLDebugSubsection> Subsections,
                          const codeview::StringsAndChecksums &SC);
 
-std::vector<YAMLDebugSubsection>
+LLVM_ABI std::vector<YAMLDebugSubsection>
 fromDebugS(ArrayRef<uint8_t> Data, const codeview::StringsAndChecksumsRef &SC);
 
-void initializeStringsAndChecksums(ArrayRef<YAMLDebugSubsection> Sections,
+LLVM_ABI void initializeStringsAndChecksums(ArrayRef<YAMLDebugSubsection> Sections,
                                    codeview::StringsAndChecksums &SC);
 
 } // end namespace CodeViewYAML
