@@ -1,4 +1,5 @@
 // RUN: mlir-translate -no-implicit-module -test-spirv-roundtrip %s | FileCheck %s
+// RUN: %if spirv-tools %{ mlir-translate -no-implicit-module -serialize-spirv %s | spirv-val %}
 
 spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Int64, Int16, Int8, Float64, Float16], []> {
   // CHECK-LABEL: @bool_const
