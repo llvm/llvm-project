@@ -358,6 +358,6 @@ static ClangTidyModuleRegistry::Add<cert::CERTModule>
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the CERTModule.
-volatile int CERTModuleAnchorSource = 0;
+volatile int CERTModuleAnchorSource = 0; // NOLINT(misc-use-internal-linkage)
 
 } // namespace clang::tidy
