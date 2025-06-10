@@ -1420,28 +1420,28 @@ void CIRGenFunction::emitCXXConstructExpr(const CXXConstructExpr *e,
     return;
   }
 
-  if (const ArrayType *arrayType = getContext().getAsArrayType(e->getType())) {
+  if (getContext().getAsArrayType(e->getType())) {
     cgm.errorNYI(e->getSourceRange(), "emitCXXConstructExpr: array type");
     return;
-  } else {
-    clang::CXXCtorType type = Ctor_Complete;
-    bool forVirtualBase = false;
-    bool delegating = false;
-
-    switch (e->getConstructionKind()) {
-    case CXXConstructionKind::Complete:
-      type = Ctor_Complete;
-      break;
-    case CXXConstructionKind::Delegating:
-    case CXXConstructionKind::VirtualBase:
-    case CXXConstructionKind::NonVirtualBase:
-      cgm.errorNYI(e->getSourceRange(),
-                   "emitCXXConstructExpr: other construction kind");
-      return;
-    }
-
-    emitCXXConstructorCall(cd, type, forVirtualBase, delegating, dest, e);
   }
+
+  clang::CXXCtorType type = Ctor_Complete;
+  bool forVirtualBase = false;
+  bool delegating = false;
+
+  switch (e->getConstructionKind()) {
+  case CXXConstructionKind::Complete:
+    type = Ctor_Complete;
+    break;
+  case CXXConstructionKind::Delegating:
+  case CXXConstructionKind::VirtualBase:
+  case CXXConstructionKind::NonVirtualBase:
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitCXXConstructExpr: other construction kind");
+    return;
+  }
+
+  emitCXXConstructorCall(cd, type, forVirtualBase, delegating, dest, e);
 }
 
 RValue CIRGenFunction::emitReferenceBindingToExpr(const Expr *e) {
