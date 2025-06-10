@@ -140,7 +140,7 @@ define void @test_scalar_cost_single_store_loop_invariant_cond(ptr %dst, i1 %c) 
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 24
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[DST]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i64 [ 96, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
@@ -156,7 +156,7 @@ define void @test_scalar_cost_single_store_loop_invariant_cond(ptr %dst, i1 %c) 
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 4
 ; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr i8, ptr [[DST]], i64 [[IV_NEXT]]
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i64 [[IV]], 116
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[EXIT:%.*]], label [[LOOP_HEADER]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

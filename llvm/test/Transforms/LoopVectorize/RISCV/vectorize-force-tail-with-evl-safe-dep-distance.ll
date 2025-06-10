@@ -116,9 +116,9 @@ define void @test_may_clobber1(ptr %p) {
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 200
 ; IF-EVL-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; IF-EVL-NEXT:    br label [[EXIT:%.*]]
 ; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 200, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; IF-EVL-NEXT:    br label [[LOOP:%.*]]
 ; IF-EVL:       loop:
 ; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -151,9 +151,9 @@ define void @test_may_clobber1(ptr %p) {
 ; NO-VP-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 200
 ; NO-VP-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; NO-VP:       middle.block:
-; NO-VP-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; NO-VP-NEXT:    br label [[EXIT:%.*]]
 ; NO-VP:       scalar.ph:
-; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 200, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; NO-VP-NEXT:    br label [[LOOP:%.*]]
 ; NO-VP:       loop:
 ; NO-VP-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -256,9 +256,9 @@ define void @test_may_clobber3(ptr %p) {
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 200
 ; IF-EVL-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; IF-EVL-NEXT:    br label [[EXIT:%.*]]
 ; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 200, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; IF-EVL-NEXT:    br label [[LOOP:%.*]]
 ; IF-EVL:       loop:
 ; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -291,9 +291,9 @@ define void @test_may_clobber3(ptr %p) {
 ; NO-VP-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 200
 ; NO-VP-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; NO-VP:       middle.block:
-; NO-VP-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; NO-VP-NEXT:    br label [[EXIT:%.*]]
 ; NO-VP:       scalar.ph:
-; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 200, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; NO-VP-NEXT:    br label [[LOOP:%.*]]
 ; NO-VP:       loop:
 ; NO-VP-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]

@@ -31,9 +31,9 @@ define void @always_vectorize(ptr %p, i32 %x) {
 ; DEFAULT-NEXT:    store <4 x i32> [[TMP3]], ptr [[TMP5]], align 4
 ; DEFAULT-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
-; DEFAULT-NEXT:    br i1 true, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
+; DEFAULT-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; DEFAULT:       [[SCALAR_PH]]:
-; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; DEFAULT-NEXT:    br label %[[FOR_BODY:.*]]
 ; DEFAULT:       [[FOR_BODY]]:
 ; DEFAULT-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
@@ -63,9 +63,9 @@ define void @always_vectorize(ptr %p, i32 %x) {
 ; OPTSIZE-NEXT:    store <4 x i32> [[TMP3]], ptr [[TMP5]], align 4
 ; OPTSIZE-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; OPTSIZE:       [[MIDDLE_BLOCK]]:
-; OPTSIZE-NEXT:    br i1 true, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
+; OPTSIZE-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; OPTSIZE:       [[SCALAR_PH]]:
-; OPTSIZE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; OPTSIZE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; OPTSIZE-NEXT:    br label %[[FOR_BODY:.*]]
 ; OPTSIZE:       [[FOR_BODY]]:
 ; OPTSIZE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
@@ -95,9 +95,9 @@ define void @always_vectorize(ptr %p, i32 %x) {
 ; MINSIZE-NEXT:    store <4 x i32> [[TMP2]], ptr [[TMP3]], align 4
 ; MINSIZE-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; MINSIZE:       [[MIDDLE_BLOCK]]:
-; MINSIZE-NEXT:    br i1 true, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
+; MINSIZE-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; MINSIZE:       [[SCALAR_PH]]:
-; MINSIZE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; MINSIZE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; MINSIZE-NEXT:    br label %[[FOR_BODY:.*]]
 ; MINSIZE:       [[FOR_BODY]]:
 ; MINSIZE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
@@ -786,9 +786,9 @@ define void @dont_vectorize_with_minsize() {
 ; DEFAULT-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
 ; DEFAULT-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
-; DEFAULT-NEXT:    br i1 true, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
+; DEFAULT-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; DEFAULT:       [[SCALAR_PH]]:
-; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 64, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; DEFAULT-NEXT:    br label %[[FOR_BODY:.*]]
 ; DEFAULT:       [[FOR_BODY]]:
 ; DEFAULT-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
@@ -833,9 +833,9 @@ define void @dont_vectorize_with_minsize() {
 ; OPTSIZE-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
 ; OPTSIZE-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; OPTSIZE:       [[MIDDLE_BLOCK]]:
-; OPTSIZE-NEXT:    br i1 true, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
+; OPTSIZE-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; OPTSIZE:       [[SCALAR_PH]]:
-; OPTSIZE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 64, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; OPTSIZE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; OPTSIZE-NEXT:    br label %[[FOR_BODY:.*]]
 ; OPTSIZE:       [[FOR_BODY]]:
 ; OPTSIZE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
@@ -880,9 +880,9 @@ define void @dont_vectorize_with_minsize() {
 ; MINSIZE-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
 ; MINSIZE-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; MINSIZE:       [[MIDDLE_BLOCK]]:
-; MINSIZE-NEXT:    br i1 true, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
+; MINSIZE-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; MINSIZE:       [[SCALAR_PH]]:
-; MINSIZE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 64, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; MINSIZE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; MINSIZE-NEXT:    br label %[[FOR_BODY:.*]]
 ; MINSIZE:       [[FOR_BODY]]:
 ; MINSIZE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
@@ -965,9 +965,9 @@ define void @vectorization_forced_minsize_reduce_width() {
 ; DEFAULT-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
 ; DEFAULT-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
-; DEFAULT-NEXT:    br i1 true, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
+; DEFAULT-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; DEFAULT:       [[SCALAR_PH]]:
-; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 64, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; DEFAULT-NEXT:    br label %[[FOR_BODY:.*]]
 ; DEFAULT:       [[FOR_BODY]]:
 ; DEFAULT-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
@@ -1012,9 +1012,9 @@ define void @vectorization_forced_minsize_reduce_width() {
 ; OPTSIZE-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
 ; OPTSIZE-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; OPTSIZE:       [[MIDDLE_BLOCK]]:
-; OPTSIZE-NEXT:    br i1 true, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
+; OPTSIZE-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; OPTSIZE:       [[SCALAR_PH]]:
-; OPTSIZE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 64, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; OPTSIZE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; OPTSIZE-NEXT:    br label %[[FOR_BODY:.*]]
 ; OPTSIZE:       [[FOR_BODY]]:
 ; OPTSIZE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
@@ -1059,9 +1059,9 @@ define void @vectorization_forced_minsize_reduce_width() {
 ; MINSIZE-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
 ; MINSIZE-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; MINSIZE:       [[MIDDLE_BLOCK]]:
-; MINSIZE-NEXT:    br i1 true, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
+; MINSIZE-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; MINSIZE:       [[SCALAR_PH]]:
-; MINSIZE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 64, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; MINSIZE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; MINSIZE-NEXT:    br label %[[FOR_BODY:.*]]
 ; MINSIZE:       [[FOR_BODY]]:
 ; MINSIZE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
