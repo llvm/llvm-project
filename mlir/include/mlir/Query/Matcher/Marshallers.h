@@ -182,7 +182,7 @@ public:
       const VariantValue &value = arg.value;
       if (!value.isMatcher()) {
         addError(error, arg.range, ErrorType::RegistryWrongArgType,
-                 {llvm::Twine(i + 1), llvm::Twine("Matcher: "),
+                 {llvm::Twine(i + 1), llvm::Twine("matcher: "),
                   llvm::Twine(value.getTypeAsString())});
         return VariantMatcher();
       }

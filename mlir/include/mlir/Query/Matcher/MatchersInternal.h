@@ -8,9 +8,9 @@
 //
 // Implements the base layer of the matcher framework.
 //
-// Matchers are methods that return a Matcher which provide a method
-// `match(...)` method. The method's parameters define the context of the match.
-// Support includes simple (unary) matchers as well as matcher combinators.
+// Matchers are methods that return a Matcher which provides a
+// `match(...)` method whose parameters define the context of the match.
+// Support includes simple (unary) matchers as well as matcher combinators
 // (anyOf, allOf, etc.)
 //
 // This file contains the wrapper classes needed to construct matchers for
