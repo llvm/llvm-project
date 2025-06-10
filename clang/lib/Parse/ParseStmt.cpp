@@ -833,22 +833,15 @@ StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
           << FixItHint::CreateReplacement(ColonLoc, ":");
     } else {
       SourceLocation ExpectedLoc = PP.getLocForEndOfToken(PrevTokLocation);
-      SourceLocation ExprLoc =
-          LHS.get() ? LHS.get()->getExprLoc() : SourceLocation();
-
-      if (ExpectedLoc.isInvalid() && ExprLoc.isMacroID()) {
-        ExpectedLoc = PP.getSourceManager().getSpellingLoc(ExprLoc);
+      if (ExpectedLoc.isInvalid() && LHS.get()) {
+        ExpectedLoc =
+            PP.getSourceManager().getSpellingLoc(LHS.get()->getExprLoc());
       }
 
       Diag(ExpectedLoc, diag::err_expected_after)
           << "'case'" << tok::colon
-          << FixItHint::CreateInsertion(ExpectedLoc, ":");
-
-      if (ExprLoc.isMacroID()) {
-        Diag(ExprLoc, diag::note_macro_expansion)
-            << Lexer::getImmediateMacroNameForDiagnostics(
-                   ExprLoc, PP.getSourceManager(), getLangOpts());
-      }
+          << FixItHint::CreateInsertion(ExpectedLoc,
+                                        tok::getTokenName(tok::colon));
 
       ColonLoc = ExpectedLoc;
     }

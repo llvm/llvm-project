@@ -235,7 +235,7 @@ namespace GH143216 {
 
 int f(int x) {
   switch (x) {
-  case FOO // expected-note {{expanded from macro 'FOO'}}
+  case FOO
     return 0;
   default:
     return 1;

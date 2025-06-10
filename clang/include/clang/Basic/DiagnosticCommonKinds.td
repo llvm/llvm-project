@@ -83,7 +83,6 @@ let CategoryName = "Parse Issue" in {
 def err_expected : Error<"expected %0">;
 def err_expected_either : Error<"expected %0 or %1">;
 def err_expected_after : Error<"expected %1 after %0">;
-def note_macro_expansion : Note<"expanded from macro '%0'">;
 
 def err_param_redefinition : Error<"redefinition of parameter %0">;
 def warn_method_param_redefinition : Warning<"redefinition of method parameter %0">;
