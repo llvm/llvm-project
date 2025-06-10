@@ -2077,10 +2077,10 @@ public:
 
   OptimizationRemarkEmitter *getORE() { return ORE; }
 
-  static SmallVector<Value*, 8> setIdentityInstr(ArrayRef<Value *> VL) {
+  static SmallVector<Value *, 8> setIdentityInstr(ArrayRef<Value *> VL) {
     SmallVector<Value *, 8> New_VL(VL.begin(), VL.end());
-   if (VL.size() <= 2)
-     return New_VL;
+    if (VL.size() <= 2)
+      return New_VL;
     auto It = find_if(VL, IsaPred<Instruction>);
     if (It == VL.end())
       return New_VL;
@@ -2096,20 +2096,22 @@ public:
       }
     Instruction *MainOp = cast<Instruction>(*It);
     auto ValidOperands = count_if(VL, IsaPred<Instruction, PoisonValue>);
-    if (ValidOperands != (int) VL.size()-1)
+    if (ValidOperands != (int)VL.size() - 1)
       return New_VL;
     auto DifferentOperand = find_if_not(VL, IsaPred<Instruction, PoisonValue>);
     if (DifferentOperand == VL.end())
       return New_VL;
-    assert(!isa<Instruction>(*DifferentOperand) && !isa<PoisonValue>(*DifferentOperand) &&
-    "Expected different operand to be not an instruction");
+    assert(!isa<Instruction>(*DifferentOperand) &&
+           !isa<PoisonValue>(*DifferentOperand) &&
+           "Expected different operand to be not an instruction");
     auto FoundIdentityInstrIt = IdentityInstrsMp.find(*DifferentOperand);
     if (FoundIdentityInstrIt != IdentityInstrsMp.end()) {
       auto OperandIndex = std::distance(VL.begin(), DifferentOperand);
       New_VL[OperandIndex] = FoundIdentityInstrIt->second;
       return New_VL;
     }
-    auto *Identity = ConstantExpr::getIdentity(MainOp, MainOp->getType(), true /*AllowRHSConstant*/);
+    auto *Identity = ConstantExpr::getIdentity(MainOp, MainOp->getType(),
+                                               true /*AllowRHSConstant*/);
     if (!Identity)
       return New_VL;
     auto *NewInstr = MainOp->clone();
@@ -2120,8 +2122,8 @@ public:
     auto OperandIndex = std::distance(VL.begin(), DifferentOperand);
     New_VL[OperandIndex] = NewInstr;
     assert(find_if_not(New_VL, IsaPred<Instruction, PoisonValue>) ==
-      New_VL.end() &&
-          "Expected all operands to be instructions");
+               New_VL.end() &&
+           "Expected all operands to be instructions");
     IdentityInstrsMp.try_emplace(*DifferentOperand, NewInstr);
     return New_VL;
   }
@@ -4136,7 +4138,7 @@ private:
         "Reshuffling scalars not yet supported for nodes with padding");
     Last->ReuseShuffleIndices.append(ReuseShuffleIndices.begin(),
                                      ReuseShuffleIndices.end());
-    SmallVector<Value*, 8> NewVL =BoUpSLP::setIdentityInstr(VL);
+    SmallVector<Value *, 8> NewVL = BoUpSLP::setIdentityInstr(VL);
     if (ReorderIndices.empty()) {
       Last->Scalars.assign(NewVL.begin(), NewVL.end());
       if (S)
