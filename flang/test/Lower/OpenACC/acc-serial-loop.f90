@@ -68,7 +68,7 @@ subroutine acc_serial_loop
 ! CHECK:      acc.serial {
 ! CHECK:        acc.loop private{{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } attributes {{{.*}}seq = [#acc.device_type<none>]}
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
@@ -80,7 +80,7 @@ subroutine acc_serial_loop
 ! CHECK:      acc.serial combined(loop) {
 ! CHECK:        acc.loop combined(serial) private{{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } attributes {{{.*}}seq = [#acc.device_type<none>]}
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
@@ -562,7 +562,7 @@ subroutine acc_serial_loop
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK-NOT:            fir.do_loop
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {collapse = [2], collapseDeviceType = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true, true>}
+! CHECK-NEXT:   } attributes {collapse = [2], collapseDeviceType = [#acc.device_type<none>]{{.*}}}
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
@@ -578,9 +578,9 @@ subroutine acc_serial_loop
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:            acc.loop {{.*}} {
 ! CHECK:              acc.yield
-! CHECK-NEXT:     }{{$}}
+! CHECK-NEXT:     } attributes {{{.*}}seq = [#acc.device_type<none>]}
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } attributes {{{.*}}seq = [#acc.device_type<none>]}
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
