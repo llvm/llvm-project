@@ -384,7 +384,8 @@ static Value *buildVectorInput(IRBuilder<> &B, Function *F, llvm::Type *Ty) {
   return B.CreateCall(F, {B.getInt32(0)});
 }
 
-static void addBuiltinDecoration(llvm::GlobalVariable *GV, unsigned BuiltIn) {
+static void addSPIRVBuiltinDecoration(llvm::GlobalVariable *GV,
+                                      unsigned BuiltIn) {
   LLVMContext &Ctx = GV->getContext();
   IRBuilder<> B(GV->getContext());
   MDNode *Operands = MDNode::get(
@@ -403,7 +404,7 @@ static llvm::Value *createSPIRVBuiltinLoad(IRBuilder<> &B, llvm::Module &M,
       /* Initializer= */ nullptr, Name, /* insertBefore= */ nullptr,
       llvm::GlobalVariable::GeneralDynamicTLSModel,
       /* AddressSpace */ 7, /* isExternallyInitialized= */ true);
-  addBuiltinDecoration(GV, BuiltInID);
+  addSPIRVBuiltinDecoration(GV, BuiltInID);
   return B.CreateLoad(Ty, GV);
 }
 
@@ -657,7 +658,7 @@ void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
 void CGHLSLRuntime::handleGlobalVarDefinition(const VarDecl *VD,
                                               llvm::GlobalVariable *GV) {
   if (auto Attr = VD->getAttr<HLSLVkExtBuiltinInputAttr>())
-    addBuiltinDecoration(GV, Attr->getBuiltIn());
+    addSPIRVBuiltinDecoration(GV, Attr->getBuiltIn());
 }
 
 llvm::Instruction *CGHLSLRuntime::getConvergenceToken(BasicBlock &BB) {
