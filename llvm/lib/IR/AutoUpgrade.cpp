@@ -4399,10 +4399,11 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
 /// types later.
 static MDNode *unwrapMAVOp(CallBase *CI, unsigned Op) {
   if (Op < CI->arg_size()) {
-    if (MetadataAsValue *MAV = dyn_cast<MetadataAsValue>(CI->getArgOperand(Op))) {
+    if (MetadataAsValue *MAV =
+            dyn_cast<MetadataAsValue>(CI->getArgOperand(Op))) {
       Metadata *MD = MAV->getMetadata();
       if (isa<MDNode>(MD))
-        return reinterpret_cast<MDNode*>(MD);
+        return reinterpret_cast<MDNode *>(MD);
     }
   }
   return nullptr;
@@ -4428,19 +4429,19 @@ static MDNode *getDebugLocSafe(const Instruction *I) {
 static void upgradeDbgIntrinsicToDbgRecord(StringRef Name, CallBase *CI) {
   DbgRecord *DR = nullptr;
   if (Name == "label") {
-    DR = DbgLabelRecord::createUnresolvedDbgLabelRecord(unwrapMAVOp(CI, 0), CI->getDebugLoc());
+    DR = DbgLabelRecord::createUnresolvedDbgLabelRecord(unwrapMAVOp(CI, 0),
+                                                        CI->getDebugLoc());
   } else if (Name == "assign") {
     DR = DbgVariableRecord::createUnresolvedDbgVariableRecord(
-        DbgVariableRecord::LocationType::Assign,
-        unwrapMAVMetadataOp(CI, 0), unwrapMAVOp(CI, 1),
-        unwrapMAVOp(CI, 2), unwrapMAVOp(CI, 3),
-        unwrapMAVMetadataOp(CI, 4), /*The address is a Value ref, it will be stored as a Metadata */ unwrapMAVOp(CI, 5),
-        getDebugLocSafe(CI));
+        DbgVariableRecord::LocationType::Assign, unwrapMAVMetadataOp(CI, 0),
+        unwrapMAVOp(CI, 1), unwrapMAVOp(CI, 2), unwrapMAVOp(CI, 3),
+        unwrapMAVMetadataOp(CI, 4),
+        /*The address is a Value ref, it will be stored as a Metadata */
+        unwrapMAVOp(CI, 5), getDebugLocSafe(CI));
   } else if (Name == "declare") {
     DR = DbgVariableRecord::createUnresolvedDbgVariableRecord(
-        DbgVariableRecord::LocationType::Declare,
-        unwrapMAVMetadataOp(CI, 0), unwrapMAVOp(CI, 1),
-        unwrapMAVOp(CI, 2), nullptr, nullptr, nullptr,
+        DbgVariableRecord::LocationType::Declare, unwrapMAVMetadataOp(CI, 0),
+        unwrapMAVOp(CI, 1), unwrapMAVOp(CI, 2), nullptr, nullptr, nullptr,
         getDebugLocSafe(CI));
   } else if (Name == "addr") {
     // Upgrade dbg.addr to dbg.value with DW_OP_deref.
@@ -4451,10 +4452,9 @@ static void upgradeDbgIntrinsicToDbgRecord(StringRef Name, CallBase *CI) {
       ExprNode = DIExpression::append(Expr, dwarf::DW_OP_deref);
     }
     DR = DbgVariableRecord::createUnresolvedDbgVariableRecord(
-        DbgVariableRecord::LocationType::Value,
-        unwrapMAVMetadataOp(CI, 0),
-       unwrapMAVOp(CI, 1), ExprNode, nullptr, nullptr, nullptr,
-       getDebugLocSafe(CI));
+        DbgVariableRecord::LocationType::Value, unwrapMAVMetadataOp(CI, 0),
+        unwrapMAVOp(CI, 1), ExprNode, nullptr, nullptr, nullptr,
+        getDebugLocSafe(CI));
   } else if (Name == "value") {
     // An old version of dbg.value had an extra offset argument.
     unsigned VarOp = 1;
@@ -4468,9 +4468,9 @@ static void upgradeDbgIntrinsicToDbgRecord(StringRef Name, CallBase *CI) {
       ExprOp = 3;
     }
     DR = DbgVariableRecord::createUnresolvedDbgVariableRecord(
-        DbgVariableRecord::LocationType::Value,
-        unwrapMAVMetadataOp(CI, 0), unwrapMAVOp(CI, VarOp),
-        unwrapMAVOp(CI, ExprOp), nullptr, nullptr, nullptr, getDebugLocSafe(CI));
+        DbgVariableRecord::LocationType::Value, unwrapMAVMetadataOp(CI, 0),
+        unwrapMAVOp(CI, VarOp), unwrapMAVOp(CI, ExprOp), nullptr, nullptr,
+        nullptr, getDebugLocSafe(CI));
   }
   assert(DR && "Unhandled intrinsic kind in upgrade to DbgRecord");
   CI->getParent()->insertDbgRecordBefore(DR, CI->getIterator());

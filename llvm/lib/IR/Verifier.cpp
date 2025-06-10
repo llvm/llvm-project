@@ -6725,7 +6725,8 @@ void Verifier::visit(DbgVariableRecord &DVR) {
       // Allow integers here to support inttoptr salvage.
       Type *Ty = VAM->getValue()->getType();
       CheckDI(Ty->isPointerTy() || Ty->isIntegerTy(),
-              "location of #dbg_declare must be a pointer or int", &DVR, MD, BB, F);
+              "location of #dbg_declare must be a pointer or int", &DVR, MD, BB,
+              F);
     }
   } else if (auto *AL = dyn_cast<DIArgList>(MD)) {
     visitDIArgList(*AL, F);
@@ -6736,12 +6737,14 @@ void Verifier::visit(DbgVariableRecord &DVR) {
   visitMDNode(*DVR.getRawVariable(), AreDebugLocsAllowed::No);
 
   CheckDI(isa_and_nonnull<DIExpression>(DVR.getRawExpression()),
-          "invalid #dbg record expression", &DVR, DVR.getRawExpression(), BB, F);
+          "invalid #dbg record expression", &DVR, DVR.getRawExpression(), BB,
+          F);
   visitMDNode(*DVR.getExpression(), AreDebugLocsAllowed::No);
 
   if (DVR.isDbgAssign()) {
     CheckDI(isa_and_nonnull<DIAssignID>(DVR.getRawAssignID()),
-            "invalid #dbg_assign DIAssignID", &DVR, DVR.getRawAssignID(), BB, F);
+            "invalid #dbg_assign DIAssignID", &DVR, DVR.getRawAssignID(), BB,
+            F);
     visitMDNode(*cast<DIAssignID>(DVR.getRawAssignID()),
                 AreDebugLocsAllowed::No);
 
@@ -6769,8 +6772,8 @@ void Verifier::visit(DbgVariableRecord &DVR) {
 
   // This check is redundant with one in visitLocalVariable().
   DILocalVariable *Var = DVR.getVariable();
-  CheckDI(isType(Var->getRawType()), "invalid type ref", Var,
-          Var->getRawType(), BB, F);
+  CheckDI(isType(Var->getRawType()), "invalid type ref", Var, Var->getRawType(),
+          BB, F);
 
   auto *DLNode = DVR.getDebugLoc().getAsMDNode();
   CheckDI(isa_and_nonnull<DILocation>(DLNode), "invalid #dbg record DILocation",
