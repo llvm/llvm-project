@@ -71,13 +71,12 @@ struct TestXeGPUUnrollingPatterns
             }
           }
 
-          if (isa<xegpu::CreateDescOp, xegpu::UpdateOffsetOp,
-                  xegpu::PrefetchOp, xegpu::LoadGatherOp, xegpu::StoreScatterOp>(op)) {
+          if (isa<xegpu::CreateDescOp, xegpu::UpdateOffsetOp, xegpu::PrefetchOp,
+                  xegpu::LoadGatherOp, xegpu::StoreScatterOp>(op)) {
             xegpu::TensorDescType tdescTy;
             if (auto createOp = dyn_cast<xegpu::CreateDescOp>(op)) {
               tdescTy = createOp.getType();
-            } else if (auto updateOp =
-                           dyn_cast<xegpu::UpdateOffsetOp>(op)) {
+            } else if (auto updateOp = dyn_cast<xegpu::UpdateOffsetOp>(op)) {
               tdescTy = updateOp.getTensorDescType();
             } else if (auto prefetchOp = dyn_cast<xegpu::PrefetchOp>(op)) {
               tdescTy = prefetchOp.getTensorDescType();
