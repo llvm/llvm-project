@@ -1149,10 +1149,10 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
   }
 
   // If the comparison is a comparison between two i1's, simplify it.
-  if (C1->getType()->isIntegerTy(1)) {
+  if (C1->getType()->isIntOrIntVectorTy(1)) {
     switch (Predicate) {
     case ICmpInst::ICMP_EQ:
-      if (isa<ConstantInt>(C2))
+      if (isa<ConstantExpr>(C1))
         return ConstantExpr::getXor(C1, ConstantExpr::getNot(C2));
       return ConstantExpr::getXor(ConstantExpr::getNot(C1), C2);
     case ICmpInst::ICMP_NE:

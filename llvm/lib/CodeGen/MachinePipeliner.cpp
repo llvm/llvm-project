@@ -33,7 +33,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PriorityQueue.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
@@ -264,6 +263,82 @@ struct SUnitWithMemInfo {
 
 private:
   bool getUnderlyingObjects();
+};
+
+/// Add loop-carried chain dependencies. This class handles the same type of
+/// dependencies added by `ScheduleDAGInstrs::buildSchedGraph`, but takes into
+/// account dependencies across iterations.
+class LoopCarriedOrderDepsTracker {
+  // Type of instruction that is relevant to order-dependencies
+  enum class InstrTag {
+    Barrier = 0,      ///< A barrier event instruction.
+    LoadOrStore = 1,  ///< An instruction that may load or store memory, but is
+                      ///< not a barrier event.
+    FPExceptions = 2, ///< An instruction that does not match above, but may
+                      ///< raise floatin-point exceptions.
+  };
+
+  struct TaggedSUnit : PointerIntPair<SUnit *, 2> {
+    TaggedSUnit(SUnit *SU, InstrTag Tag)
+        : PointerIntPair<SUnit *, 2>(SU, unsigned(Tag)) {}
+
+    InstrTag getTag() const { return InstrTag(getInt()); }
+  };
+
+  /// Holds loads and stores with memory related information.
+  struct LoadStoreChunk {
+    SmallVector<SUnitWithMemInfo, 4> Loads;
+    SmallVector<SUnitWithMemInfo, 4> Stores;
+
+    void append(SUnit *SU);
+  };
+
+  SwingSchedulerDAG *DAG;
+  BatchAAResults *BAA;
+  std::vector<SUnit> &SUnits;
+
+  /// The size of SUnits, for convenience.
+  const unsigned N;
+
+  /// Loop-carried Edges.
+  std::vector<BitVector> LoopCarried;
+
+  /// Instructions related to chain dependencies. They are one of the
+  /// following:
+  ///
+  ///  1. Barrier event.
+  ///  2. Load, but neither a barrier event, invariant load, nor may load trap
+  ///     value.
+  ///  3. Store, but not a barrier event.
+  ///  4. None of them, but may raise floating-point exceptions.
+  ///
+  /// This is used when analyzing loop-carried dependencies that access global
+  /// barrier instructions.
+  std::vector<TaggedSUnit> TaggedSUnits;
+
+  const TargetInstrInfo *TII = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
+
+public:
+  LoopCarriedOrderDepsTracker(SwingSchedulerDAG *SSD, BatchAAResults *BAA,
+                              const TargetInstrInfo *TII,
+                              const TargetRegisterInfo *TRI);
+
+  /// The main function to compute loop-carried order-dependencies.
+  void computeDependencies();
+
+  const BitVector &getLoopCarried(unsigned Idx) const {
+    return LoopCarried[Idx];
+  }
+
+private:
+  /// Tags to \p SU if the instruction may affect the order-dependencies.
+  std::optional<InstrTag> getInstrTag(SUnit *SU) const;
+
+  void addLoopCarriedDepenenciesForChunks(const LoadStoreChunk &From,
+                                          const LoadStoreChunk &To);
+
+  void computeDependenciesAux();
 };
 
 } // end anonymous namespace
@@ -593,13 +668,19 @@ void SwingSchedulerDAG::setMAX_II() {
 /// scheduling part of the Swing Modulo Scheduling algorithm.
 void SwingSchedulerDAG::schedule() {
   buildSchedGraph(AA);
-  addLoopCarriedDependences();
+  const LoopCarriedEdges LCE = addLoopCarriedDependences();
   updatePhiDependences();
   Topo.InitDAGTopologicalSorting();
   changeDependences();
   postProcessDAG();
   DDG = std::make_unique<SwingSchedulerDDG>(SUnits, &EntrySU, &ExitSU);
-  LLVM_DEBUG(dump());
+  LLVM_DEBUG({
+    dump();
+    dbgs() << "===== Loop Carried Edges Begin =====\n";
+    for (SUnit &SU : SUnits)
+      LCE.dump(&SU, TRI, &MRI);
+    dbgs() << "===== Loop Carried Edges End =====\n";
+  });
 
   NodeSetType NodeSets;
   findCircuits(NodeSets);
@@ -832,15 +913,6 @@ static bool isSuccOrder(SUnit *SUa, SUnit *SUb) {
   return false;
 }
 
-/// Return true if the instruction causes a chain between memory
-/// references before and after it.
-static bool isDependenceBarrier(MachineInstr &MI) {
-  return MI.isCall() || MI.mayRaiseFPException() ||
-         MI.hasUnmodeledSideEffects() ||
-         (MI.hasOrderedMemoryRef() &&
-          (!MI.mayLoad() || !MI.isDereferenceableInvariantLoad()));
-}
-
 SUnitWithMemInfo::SUnitWithMemInfo(SUnit *SU) : SU(SU) {
   if (!getUnderlyingObjects())
     return;
@@ -884,92 +956,168 @@ bool SUnitWithMemInfo::getUnderlyingObjects() {
   return true;
 }
 
+/// Returns true if there is a loop-carried order dependency from \p Src to \p
+/// Dst.
+static bool hasLoopCarriedMemDep(const SUnitWithMemInfo &Src,
+                                 const SUnitWithMemInfo &Dst,
+                                 BatchAAResults &BAA,
+                                 const TargetInstrInfo *TII,
+                                 const TargetRegisterInfo *TRI) {
+  if (Src.isTriviallyDisjoint(Dst))
+    return false;
+  if (isSuccOrder(Src.SU, Dst.SU))
+    return false;
+
+  MachineInstr &SrcMI = *Src.SU->getInstr();
+  MachineInstr &DstMI = *Dst.SU->getInstr();
+  // First, perform the cheaper check that compares the base register.
+  // If they are the same and the load offset is less than the store
+  // offset, then mark the dependence as loop carried potentially.
+  const MachineOperand *BaseOp1, *BaseOp2;
+  int64_t Offset1, Offset2;
+  bool Offset1IsScalable, Offset2IsScalable;
+  if (TII->getMemOperandWithOffset(SrcMI, BaseOp1, Offset1, Offset1IsScalable,
+                                   TRI) &&
+      TII->getMemOperandWithOffset(DstMI, BaseOp2, Offset2, Offset2IsScalable,
+                                   TRI)) {
+    if (BaseOp1->isIdenticalTo(*BaseOp2) &&
+        Offset1IsScalable == Offset2IsScalable && (int)Offset1 < (int)Offset2) {
+      assert(TII->areMemAccessesTriviallyDisjoint(SrcMI, DstMI) &&
+             "What happened to the chain edge?");
+      return true;
+    }
+  }
+
+  // Second, the more expensive check that uses alias analysis on the
+  // base registers. If they alias, and the load offset is less than
+  // the store offset, the mark the dependence as loop carried.
+  if (Src.isUnknown() || Dst.isUnknown())
+    return true;
+  if (Src.MemOpValue == Dst.MemOpValue && Src.MemOpOffset <= Dst.MemOpOffset)
+    return true;
+
+  if (BAA.isNoAlias(
+          MemoryLocation::getBeforeOrAfter(Src.MemOpValue, Src.AATags),
+          MemoryLocation::getBeforeOrAfter(Dst.MemOpValue, Dst.AATags)))
+    return false;
+
+  // AliasAnalysis sometimes gives up on following the underlying
+  // object. In such a case, separate checks for underlying objects may
+  // prove that there are no aliases between two accesses.
+  for (const Value *SrcObj : Src.UnderlyingObjs)
+    for (const Value *DstObj : Dst.UnderlyingObjs)
+      if (!BAA.isNoAlias(MemoryLocation::getBeforeOrAfter(SrcObj, Src.AATags),
+                         MemoryLocation::getBeforeOrAfter(DstObj, Dst.AATags)))
+        return true;
+
+  return false;
+}
+
+void LoopCarriedOrderDepsTracker::LoadStoreChunk::append(SUnit *SU) {
+  const MachineInstr *MI = SU->getInstr();
+  if (!MI->mayLoadOrStore())
+    return;
+  (MI->mayStore() ? Stores : Loads).emplace_back(SU);
+}
+
+LoopCarriedOrderDepsTracker::LoopCarriedOrderDepsTracker(
+    SwingSchedulerDAG *SSD, BatchAAResults *BAA, const TargetInstrInfo *TII,
+    const TargetRegisterInfo *TRI)
+    : DAG(SSD), BAA(BAA), SUnits(DAG->SUnits), N(SUnits.size()),
+      LoopCarried(N, BitVector(N)), TII(TII), TRI(TRI) {}
+
+void LoopCarriedOrderDepsTracker::computeDependencies() {
+  // Traverse all instructions and extract only what we are targetting.
+  for (auto &SU : SUnits) {
+    auto Tagged = getInstrTag(&SU);
+
+    // This instruction has no loop-carried order-dependencies.
+    if (!Tagged)
+      continue;
+    TaggedSUnits.emplace_back(&SU, *Tagged);
+  }
+
+  computeDependenciesAux();
+}
+
+std::optional<LoopCarriedOrderDepsTracker::InstrTag>
+LoopCarriedOrderDepsTracker::getInstrTag(SUnit *SU) const {
+  MachineInstr *MI = SU->getInstr();
+  if (TII->isGlobalMemoryObject(MI))
+    return InstrTag::Barrier;
+
+  if (MI->mayStore() ||
+      (MI->mayLoad() && !MI->isDereferenceableInvariantLoad()))
+    return InstrTag::LoadOrStore;
+
+  if (MI->mayRaiseFPException())
+    return InstrTag::FPExceptions;
+
+  return std::nullopt;
+}
+
+void LoopCarriedOrderDepsTracker::addLoopCarriedDepenenciesForChunks(
+    const LoadStoreChunk &From, const LoadStoreChunk &To) {
+  // Add dependencies for load-to-store (WAR) from top to bottom.
+  for (const SUnitWithMemInfo &Src : From.Loads)
+    for (const SUnitWithMemInfo &Dst : To.Stores)
+      if (Src.SU->NodeNum < Dst.SU->NodeNum &&
+          hasLoopCarriedMemDep(Src, Dst, *BAA, TII, TRI))
+        LoopCarried[Src.SU->NodeNum].set(Dst.SU->NodeNum);
+
+  // TODO: The following dependencies are missed.
+  //
+  // - Dependencies for load-to-store from bottom to top.
+  // - Dependencies for store-to-load (RAW).
+  // - Dependencies for store-to-store (WAW).
+}
+
+void LoopCarriedOrderDepsTracker::computeDependenciesAux() {
+  SmallVector<LoadStoreChunk, 2> Chunks(1);
+  for (const auto &TSU : TaggedSUnits) {
+    InstrTag Tag = TSU.getTag();
+    SUnit *SU = TSU.getPointer();
+    switch (Tag) {
+    case InstrTag::Barrier:
+      Chunks.emplace_back();
+      break;
+    case InstrTag::LoadOrStore:
+      Chunks.back().append(SU);
+      break;
+    case InstrTag::FPExceptions:
+      // TODO: Handle this properly.
+      break;
+    }
+  }
+
+  // Add dependencies between memory operations. If there are one or more
+  // barrier events between two memory instructions, we don't add a
+  // loop-carried dependence for them.
+  for (const LoadStoreChunk &Chunk : Chunks)
+    addLoopCarriedDepenenciesForChunks(Chunk, Chunk);
+
+  // TODO: If there are multiple barrier instructions, dependencies from the
+  // last barrier instruction (or load/store below it) to the first barrier
+  // instruction (or load/store above it).
+}
+
 /// Add a chain edge between a load and store if the store can be an
 /// alias of the load on a subsequent iteration, i.e., a loop carried
 /// dependence. This code is very similar to the code in ScheduleDAGInstrs
 /// but that code doesn't create loop carried dependences.
-void SwingSchedulerDAG::addLoopCarriedDependences() {
-  SmallVector<SUnitWithMemInfo, 4> PendingLoads;
-  for (auto &SU : SUnits) {
-    MachineInstr &MI = *SU.getInstr();
-    if (isDependenceBarrier(MI))
-      PendingLoads.clear();
-    else if (MI.mayLoad()) {
-      PendingLoads.emplace_back(&SU);
-    } else if (MI.mayStore()) {
-      SUnitWithMemInfo Store(&SU);
-      for (const SUnitWithMemInfo &Load : PendingLoads) {
-        if (Load.isTriviallyDisjoint(Store))
-          continue;
-        if (isSuccOrder(Load.SU, Store.SU))
-          continue;
-        MachineInstr &LdMI = *Load.SU->getInstr();
-        // First, perform the cheaper check that compares the base register.
-        // If they are the same and the load offset is less than the store
-        // offset, then mark the dependence as loop carried potentially.
-        const MachineOperand *BaseOp1, *BaseOp2;
-        int64_t Offset1, Offset2;
-        bool Offset1IsScalable, Offset2IsScalable;
-        if (TII->getMemOperandWithOffset(LdMI, BaseOp1, Offset1,
-                                         Offset1IsScalable, TRI) &&
-            TII->getMemOperandWithOffset(MI, BaseOp2, Offset2,
-                                         Offset2IsScalable, TRI)) {
-          if (BaseOp1->isIdenticalTo(*BaseOp2) &&
-              Offset1IsScalable == Offset2IsScalable &&
-              (int)Offset1 < (int)Offset2) {
-            assert(TII->areMemAccessesTriviallyDisjoint(LdMI, MI) &&
-                   "What happened to the chain edge?");
-            SDep Dep(Load.SU, SDep::Barrier);
-            Dep.setLatency(1);
-            SU.addPred(Dep);
-            continue;
-          }
-        }
-        // Second, the more expensive check that uses alias analysis on the
-        // base registers. If they alias, and the load offset is less than
-        // the store offset, the mark the dependence as loop carried.
-        if (Load.isUnknown() || Store.isUnknown()) {
-          SDep Dep(Load.SU, SDep::Barrier);
-          Dep.setLatency(1);
-          SU.addPred(Dep);
-          continue;
-        }
-        if (Load.MemOpValue == Store.MemOpValue &&
-            Load.MemOpOffset <= Store.MemOpOffset) {
-          SDep Dep(Load.SU, SDep::Barrier);
-          Dep.setLatency(1);
-          SU.addPred(Dep);
-          continue;
-        }
+/// TODO: Also compute output-dependencies.
+LoopCarriedEdges SwingSchedulerDAG::addLoopCarriedDependences() {
+  LoopCarriedEdges LCE;
 
-        bool IsNoAlias = [&] {
-          if (BAA.isNoAlias(MemoryLocation::getBeforeOrAfter(Load.MemOpValue,
-                                                             Load.AATags),
-                            MemoryLocation::getBeforeOrAfter(Store.MemOpValue,
-                                                             Store.AATags)))
-            return true;
+  // Add loop-carried order-dependencies
+  LoopCarriedOrderDepsTracker LCODTracker(this, &BAA, TII, TRI);
+  LCODTracker.computeDependencies();
+  for (unsigned I = 0; I != SUnits.size(); I++)
+    for (const int Succ : LCODTracker.getLoopCarried(I).set_bits())
+      LCE.OrderDeps[&SUnits[I]].insert(&SUnits[Succ]);
 
-          // AliasAnalysis sometimes gives up on following the underlying
-          // object. In such a case, separate checks for underlying objects may
-          // prove that there are no aliases between two accesses.
-          for (const Value *LoadObj : Load.UnderlyingObjs)
-            for (const Value *StoreObj : Store.UnderlyingObjs)
-              if (!BAA.isNoAlias(
-                      MemoryLocation::getBeforeOrAfter(LoadObj, Load.AATags),
-                      MemoryLocation::getBeforeOrAfter(StoreObj, Store.AATags)))
-                return false;
-
-          return true;
-        }();
-
-        if (!IsNoAlias) {
-          SDep Dep(Load.SU, SDep::Barrier);
-          Dep.setLatency(1);
-          SU.addPred(Dep);
-        }
-      }
-    }
-  }
+  LCE.modifySUnits(SUnits);
+  return LCE;
 }
 
 /// Update the phi dependences to the DAG because ScheduleDAGInstrs no longer
@@ -4008,4 +4156,38 @@ SwingSchedulerDDG::getInEdges(const SUnit *SU) const {
 const SwingSchedulerDDG::EdgesType &
 SwingSchedulerDDG::getOutEdges(const SUnit *SU) const {
   return getEdges(SU).Succs;
+}
+
+void LoopCarriedEdges::modifySUnits(std::vector<SUnit> &SUnits) {
+  // Currently this function simply adds all dependencies represented by this
+  // object. After we properly handle missed dependencies, the logic here will
+  // be more complex, as currently missed edges should not be added to the DAG.
+  for (SUnit &SU : SUnits) {
+    SUnit *Src = &SU;
+    if (auto *OrderDep = getOrderDepOrNull(Src)) {
+      SDep Dep(Src, SDep::Barrier);
+      Dep.setLatency(1);
+      for (SUnit *Dst : *OrderDep)
+        Dst->addPred(Dep);
+    }
+  }
+}
+
+void LoopCarriedEdges::dump(SUnit *SU, const TargetRegisterInfo *TRI,
+                            const MachineRegisterInfo *MRI) const {
+  const auto *Order = getOrderDepOrNull(SU);
+
+  if (!Order)
+    return;
+
+  const auto DumpSU = [](const SUnit *SU) {
+    std::ostringstream OSS;
+    OSS << "SU(" << SU->NodeNum << ")";
+    return OSS.str();
+  };
+
+  dbgs() << "  Loop carried edges from " << DumpSU(SU) << "\n"
+         << "    Order\n";
+  for (SUnit *Dst : *Order)
+    dbgs() << "      " << DumpSU(Dst) << "\n";
 }

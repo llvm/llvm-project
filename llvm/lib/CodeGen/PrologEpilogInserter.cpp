@@ -30,7 +30,6 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -659,8 +658,7 @@ void PEIImpl::spillCalleeSavedRegs(MachineFunction &MF) {
   // pipeline is set up without giving the passes a chance to look at the
   // TargetMachine.
   // FIXME: Find a way to express this in getRequiredProperties.
-  assert(MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::NoVRegs));
+  assert(MF.getProperties().hasNoVRegs());
 
   const Function &F = MF.getFunction();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
