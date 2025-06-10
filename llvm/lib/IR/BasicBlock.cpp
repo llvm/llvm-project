@@ -339,7 +339,7 @@ const Instruction *BasicBlock::getFirstMayFaultInst() const {
   if (InstList.empty())
     return nullptr;
   for (const Instruction &I : *this)
-    if (isa<LoadInst>(I) || isa<StoreInst>(I) || isa<CallBase>(I))
+    if (isa<LoadInst, StoreInst, CallBase>(I))
       return &I;
   return nullptr;
 }
@@ -377,7 +377,7 @@ BasicBlock::const_iterator BasicBlock::getFirstNonPHIIt() const {
 BasicBlock::const_iterator
 BasicBlock::getFirstNonPHIOrDbg(bool SkipPseudoOp) const {
   for (const Instruction &I : *this) {
-    if (isa<PHINode>(I) || isa<DbgInfoIntrinsic>(I))
+    if (isa<PHINode, DbgInfoIntrinsic>(I))
       continue;
 
     if (SkipPseudoOp && isa<PseudoProbeInst>(I))
@@ -395,7 +395,7 @@ BasicBlock::getFirstNonPHIOrDbg(bool SkipPseudoOp) const {
 BasicBlock::const_iterator
 BasicBlock::getFirstNonPHIOrDbgOrLifetime(bool SkipPseudoOp) const {
   for (const Instruction &I : *this) {
-    if (isa<PHINode>(I) || isa<DbgInfoIntrinsic>(I))
+    if (isa<PHINode, DbgInfoIntrinsic>(I))
       continue;
 
     if (I.isLifetimeStartOrEnd())
@@ -438,8 +438,7 @@ BasicBlock::const_iterator BasicBlock::getFirstNonPHIOrDbgOrAlloca() const {
   if (isEntryBlock()) {
     const_iterator End = end();
     while (InsertPt != End &&
-           (isa<AllocaInst>(*InsertPt) || isa<DbgInfoIntrinsic>(*InsertPt) ||
-            isa<PseudoProbeInst>(*InsertPt))) {
+           isa<AllocaInst, DbgInfoIntrinsic, PseudoProbeInst>(*InsertPt)) {
       if (const AllocaInst *AI = dyn_cast<AllocaInst>(&*InsertPt)) {
         if (!AI->isStaticAlloca())
           break;

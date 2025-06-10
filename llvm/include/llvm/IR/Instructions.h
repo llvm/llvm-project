@@ -5072,8 +5072,7 @@ inline Value *getPointerOperand(Value *V) {
 
 /// A helper function that returns the alignment of load or store instruction.
 inline Align getLoadStoreAlignment(const Value *I) {
-  assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
-         "Expected Load or Store instruction");
+  assert((isa<LoadInst, StoreInst>(I)) && "Expected Load or Store instruction");
   if (auto *LI = dyn_cast<LoadInst>(I))
     return LI->getAlign();
   return cast<StoreInst>(I)->getAlign();
@@ -5081,8 +5080,7 @@ inline Align getLoadStoreAlignment(const Value *I) {
 
 /// A helper function that set the alignment of load or store instruction.
 inline void setLoadStoreAlignment(Value *I, Align NewAlign) {
-  assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
-         "Expected Load or Store instruction");
+  assert((isa<LoadInst, StoreInst>(I)) && "Expected Load or Store instruction");
   if (auto *LI = dyn_cast<LoadInst>(I))
     LI->setAlignment(NewAlign);
   else
@@ -5092,8 +5090,7 @@ inline void setLoadStoreAlignment(Value *I, Align NewAlign) {
 /// A helper function that returns the address space of the pointer operand of
 /// load or store instruction.
 inline unsigned getLoadStoreAddressSpace(const Value *I) {
-  assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
-         "Expected Load or Store instruction");
+  assert((isa<LoadInst, StoreInst>(I)) && "Expected Load or Store instruction");
   if (auto *LI = dyn_cast<LoadInst>(I))
     return LI->getPointerAddressSpace();
   return cast<StoreInst>(I)->getPointerAddressSpace();
@@ -5101,8 +5098,7 @@ inline unsigned getLoadStoreAddressSpace(const Value *I) {
 
 /// A helper function that returns the type of a load or store instruction.
 inline Type *getLoadStoreType(const Value *I) {
-  assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
-         "Expected Load or Store instruction");
+  assert((isa<LoadInst, StoreInst>(I)) && "Expected Load or Store instruction");
   if (auto *LI = dyn_cast<LoadInst>(I))
     return LI->getType();
   return cast<StoreInst>(I)->getValueOperand()->getType();

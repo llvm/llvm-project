@@ -206,7 +206,7 @@ DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key,
 
   // Only include names that correspond to user variables.  FIXME: We should use
   // debug info if available to get the name of the user variable.
-  if (isa<llvm::Argument>(V) || isa<GlobalValue>(V))
+  if (isa<llvm::Argument, GlobalValue>(V))
     Val = std::string(GlobalValue::dropLLVMManglingEscape(V->getName()));
   else if (isa<Constant>(V)) {
     raw_string_ostream OS(Val);

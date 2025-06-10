@@ -149,7 +149,7 @@ bool DominatorTree::dominates(const Value *DefV,
                               const Instruction *User) const {
   const Instruction *Def = dyn_cast<Instruction>(DefV);
   if (!Def) {
-    assert((isa<Argument>(DefV) || isa<Constant>(DefV)) &&
+    assert((isa<Argument, Constant>(DefV)) &&
            "Should be called with an instruction, argument or constant");
     return true; // Arguments and constants dominate everything.
   }
@@ -173,7 +173,7 @@ bool DominatorTree::dominates(const Value *DefV,
   // dominates every instruction in UseBB.
   // A PHI is dominated only if the instruction dominates every possible use in
   // the UseBB.
-  if (isa<InvokeInst>(Def) || isa<CallBrInst>(Def) || isa<PHINode>(User))
+  if (isa<InvokeInst, CallBrInst>(Def) || isa<PHINode>(User))
     return dominates(Def, UseBB);
 
   if (DefBB != UseBB)
@@ -281,7 +281,7 @@ bool DominatorTree::dominates(const BasicBlockEdge &BBE, const Use &U) const {
 bool DominatorTree::dominates(const Value *DefV, const Use &U) const {
   const Instruction *Def = dyn_cast<Instruction>(DefV);
   if (!Def) {
-    assert((isa<Argument>(DefV) || isa<Constant>(DefV)) &&
+    assert((isa<Argument, Constant>(DefV)) &&
            "Should be called with an instruction, argument or constant");
     return true; // Arguments and constants dominate everything.
   }
