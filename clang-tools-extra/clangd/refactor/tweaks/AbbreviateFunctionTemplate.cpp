@@ -5,16 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "FindTarget.h"
-#include "SourceCode.h"
 #include "XRefs.h"
 #include "refactor/Tweak.h"
 #include "support/Logger.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/ExprConcepts.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
 #include <numeric>
 
