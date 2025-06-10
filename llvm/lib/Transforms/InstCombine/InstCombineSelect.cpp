@@ -1907,7 +1907,7 @@ Value *InstCombinerImpl::foldSelectWithConstOpToBinOp(ICmpInst *Cmp,
           willNotOverflow(BinOpc, RHS, C2, *BinOpInst, /*IsSigned=*/true))
         BinOpInst->setHasNoSignedWrap();
       if (OldBinOp->hasNoUnsignedWrap() &&
-          willNotOverflow(BinOpc, RHS, C2, *BinOpInst, /*IsSigned*/ false))
+          willNotOverflow(BinOpc, RHS, C2, *BinOpInst, /*IsSigned=*/false))
         BinOpInst->setHasNoUnsignedWrap();
     }
   }
