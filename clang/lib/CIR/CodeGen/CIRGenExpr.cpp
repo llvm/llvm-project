@@ -1637,7 +1637,6 @@ cir::AllocaOp CIRGenFunction::createTempAlloca(mlir::Type ty,
           .getDefiningOp());
 }
 
-
 /// Try to emit a reference to the given value without producing it as
 /// an l-value.  For many cases, this is just an optimization, but it avoids
 /// us needing to emit global copies of variables if they're named without
