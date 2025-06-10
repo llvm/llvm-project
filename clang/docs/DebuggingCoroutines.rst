@@ -360,7 +360,7 @@ type of a task is a template argument. For simplicity's sake, we hard-coded the
 ``int`` type in this example.
 
 Stack traces of in-flight coroutines
------------------------------------
+------------------------------------
 
 Let's assume you have the following program and set a breakpoint inside the
 ``write_output`` function. There are multiple call paths through which this
@@ -466,7 +466,7 @@ One such solution is to store the list of in-flight coroutines in a collection:
   };
 
 With this in place, it is possible to inspect ``inflight_coroutines`` from the
-debugger, and rely on LLDB's pretty-printer for ``std::coroutine_handle``s to
+debugger, and rely on LLDB's ``std::coroutine_handle`` pretty-printer to
 inspect the coroutines.
 
 This technique will track *all* coroutines, also the ones which are currently
@@ -542,7 +542,7 @@ hence might have to set breakpoints in the ramp function and its ``.noalloc``
 variant.
 
 Artificial ``__promise`` and ``__coro_frame`` variables
----------------------------------------------------
+-------------------------------------------------------
 
 Inside all coroutine functions, clang / LLVM synthesize a ``__promise`` and
 ``__coro_frame`` variable. These variables are used to store the coroutine's
@@ -632,7 +632,7 @@ the resume function, devirtualization would hence fail for all coroutines that
 have reached their final suspension point.
 
 Interpreting the coroutine frame in optimized builds
----------------------------------------------------
+----------------------------------------------------
 
 The ``__coro_frame`` variable usually refers to the coroutine frame of an
 *in-flight* coroutine. This means, the coroutine is currently executing.
