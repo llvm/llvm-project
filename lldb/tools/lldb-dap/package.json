@@ -1,7 +1,7 @@
 {
   "name": "lldb-dap",
   "displayName": "LLDB DAP",
-  "version": "0.2.13",
+  "version": "0.2.15",
   "publisher": "llvm-vs-code-extensions",
   "homepage": "https://lldb.llvm.org",
   "description": "Debugging with LLDB in Visual Studio Code",
@@ -30,9 +30,10 @@
   "devDependencies": {
     "@types/node": "^18.19.41",
     "@types/vscode": "1.75.0",
+    "@vscode/debugprotocol": "^1.68.0",
     "@vscode/vsce": "^3.2.2",
-    "prettier-plugin-curly": "^0.3.1",
     "prettier": "^3.4.2",
+    "prettier-plugin-curly": "^0.3.1",
     "typescript": "^5.7.3"
   },
   "activationEvents": [
@@ -243,7 +244,30 @@
         }
       }
     ],
+    "commands": [
+      {
+        "command": "lldb-dap.modules.copyProperty",
+        "title": "Copy Value"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "lldb-dap.modules.copyProperty",
+          "when": "false"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "lldb-dap.modules.copyProperty",
+          "when": "view == lldb-dap.modules && viewItem == property"
+        }
+      ]
+    },
     "breakpoints": [
+      {
+        "language": "lldb.disassembly"
+      },
       {
         "language": "ada"
       },
@@ -760,6 +784,16 @@
           }
         ]
       }
-    ]
+    ],
+    "views": {
+      "debug": [
+        {
+          "id": "lldb-dap.modules",
+          "name": "Modules",
+          "when": "inDebugMode && debugType == 'lldb-dap' && lldb-dap.showModules",
+          "icon": "$(symbol-module)"
+        }
+      ]
+    }
   }
 }

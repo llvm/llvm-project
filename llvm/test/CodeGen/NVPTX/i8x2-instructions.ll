@@ -17,7 +17,7 @@ define i16 @test_bitcast_2xi8_i16(<2 x i8> %a) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_bitcast_2xi8_i16_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_bitcast_2xi8_i16_param_0];
 ; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; CHECK-NEXT:    shl.b16 %rs3, %rs2, 8;
 ; CHECK-NEXT:    and.b16 %rs4, %rs1, 255;
@@ -36,7 +36,7 @@ define <2 x i8> @test_bitcast_i16_2xi8(i16 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %rs1, [test_bitcast_i16_2xi8_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs1, [test_bitcast_i16_2xi8_param_0];
 ; CHECK-NEXT:    shr.u16 %rs2, %rs1, 8;
 ; CHECK-NEXT:    mov.b32 %r1, {%rs1, %rs2};
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;

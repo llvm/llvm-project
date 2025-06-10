@@ -347,6 +347,7 @@ def Vector_MultiDimReductionOp :
 
 def Vector_BroadcastOp :
   Vector_Op<"broadcast", [Pure,
+     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
      DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>]>,
@@ -1273,7 +1274,7 @@ def Vector_TransferReadOp :
       AttrSizedOperandSegments,
       DestinationStyleOpInterface
     ]>,
-    Arguments<(ins AnyShaped:$source,
+    Arguments<(ins AnyShaped:$base,
                    Variadic<Index>:$indices,
                    AffineMapAttr:$permutation_map,
                    AnyType:$padding,
@@ -1522,7 +1523,7 @@ def Vector_TransferWriteOp :
       DestinationStyleOpInterface
   ]>,
     Arguments<(ins AnyVectorOfAnyRank:$valueToStore,
-                   AnyShaped:$source,
+                   AnyShaped:$base,
                    Variadic<Index>:$indices,
                    AffineMapAttr:$permutation_map,
                    Optional<VectorOfNonZeroRankOf<[I1]>>:$mask,
@@ -1663,7 +1664,7 @@ def Vector_TransferWriteOp :
     ///  ops of other dialects.
     Value getValue() { return getVector(); }
 
-    MutableOperandRange getDpsInitsMutable() { return getSourceMutable(); }
+    MutableOperandRange getDpsInitsMutable() { return getBaseMutable(); }
   }];
 
   let hasFolder = 1;
@@ -2482,8 +2483,13 @@ def Vector_MaskOp : Vector_Op<"mask", [
     masked. Values used within the region are captured from above. Only one
     *maskable* operation can be masked with a `vector.mask` operation at a time.
     An operation is *maskable* if it implements the `MaskableOpInterface`. The
-    terminator yields all results of the maskable operation to the result of
-    this operation.
+    terminator yields all results from the maskable operation to the result of
+    this operation. No other values are allowed to be yielded.
+
+    An empty `vector.mask` operation is currently legal to enable optimizations
+    across the `vector.mask` region. However, this might change in the future
+    once vector transformations gain better support for `vector.mask`.
+    TODO: Consider making empty `vector.mask` illegal.
 
     The vector mask argument holds a bit for each vector lane and determines
     which vector lanes should execute the maskable operation and which ones

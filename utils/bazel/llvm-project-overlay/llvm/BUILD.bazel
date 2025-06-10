@@ -378,6 +378,7 @@ cc_library(
     hdrs = glob(["include/llvm/TableGen/*.h"]),
     copts = llvm_copts,
     deps = [
+        ":FrontendDirective",
         ":Support",
         ":config",
     ],
@@ -608,6 +609,7 @@ cc_library(
         ":DebugInfo",
         ":DebugInfoBTF",
         ":DebugInfoDWARF",
+        ":DebugInfoGSYM",
         ":DebugInfoPDB",
         ":Demangle",
         ":Object",
@@ -959,7 +961,10 @@ cc_library(
         "include/llvm/Analysis/WithCache.h",
     ] + [":llvm_intrinsics_headers"],
     copts = llvm_copts,
-    textual_hdrs = glob(["include/llvm/IR/*.def"]),
+    textual_hdrs = glob([
+        "include/llvm/IR/*.def",
+        "lib/IR/*.def",
+    ]),
     deps = [
         ":BinaryFormat",
         ":Demangle",
@@ -1535,6 +1540,7 @@ cc_library(
         ":Core",
         ":Support",
         ":Target",
+        ":TargetParser",
         ":TransformUtils",
         ":config",
     ],
@@ -1625,6 +1631,7 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":Analysis",
+        ":Support",
         ":TargetParser",
     ],
 )
@@ -1725,6 +1732,7 @@ cc_library(
         ":Core",
         ":Demangle",
         ":FrontendAtomic",
+        ":FrontendDirective",
         ":FrontendOffloading",
         ":MC",
         ":Scalar",
@@ -1761,6 +1769,13 @@ gentbl_filegroup(
 )
 
 cc_library(
+    name = "FrontendDirective",
+    srcs = glob(["lib/Frontend/Directive/*.cpp"]),
+    hdrs = glob(["include/llvm/Frontend/Directive/*.h"]),
+    deps = [":Support"],
+)
+
+cc_library(
     name = "FrontendOpenACC",
     srcs = glob([
         "lib/Frontend/OpenACC/*.cpp",
@@ -1772,6 +1787,7 @@ cc_library(
     deps = [
         ":Analysis",
         ":Core",
+        ":FrontendDirective",
         ":Support",
         ":TransformUtils",
     ],
@@ -2106,10 +2122,10 @@ llvm_target_lib_list = [lib for lib in [
                 "-combiners=AArch64PostLegalizerLowering",
             ],
             "lib/Target/AArch64/AArch64GenCallingConv.inc": ["-gen-callingconv"],
+            "lib/Target/AArch64/AArch64GenSDNodeInfo.inc": ["-gen-sd-node-info"],
             "lib/Target/AArch64/AArch64GenSubtargetInfo.inc": ["-gen-subtarget"],
             "lib/Target/AArch64/AArch64GenDisassemblerTables.inc": [
                 "-gen-disassembler",
-                "--large-decoder-table",
             ],
             "lib/Target/AArch64/AArch64GenSystemOperands.inc": ["-gen-searchable-tables"],
             "lib/Target/AArch64/AArch64GenExegesis.inc": ["-gen-exegesis"],
@@ -2170,6 +2186,7 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/AVR/AVRGenMCCodeEmitter.inc": ["-gen-emitter"],
             "lib/Target/AVR/AVRGenInstrInfo.inc": ["-gen-instr-info"],
             "lib/Target/AVR/AVRGenRegisterInfo.inc": ["-gen-register-info"],
+            "lib/Target/AVR/AVRGenSDNodeInfo.inc": ["-gen-sd-node-info"],
             "lib/Target/AVR/AVRGenSubtargetInfo.inc": ["-gen-subtarget"],
         },
     },
@@ -2270,9 +2287,10 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/MSP430/MSP430GenCallingConv.inc": ["-gen-callingconv"],
             "lib/Target/MSP430/MSP430GenDAGISel.inc": ["-gen-dag-isel"],
             "lib/Target/MSP430/MSP430GenDisassemblerTables.inc": ["-gen-disassembler"],
-            "lib/Target/MSP430/MSP430GenMCCodeEmitter.inc": ["-gen-emitter"],
             "lib/Target/MSP430/MSP430GenInstrInfo.inc": ["-gen-instr-info"],
+            "lib/Target/MSP430/MSP430GenMCCodeEmitter.inc": ["-gen-emitter"],
             "lib/Target/MSP430/MSP430GenRegisterInfo.inc": ["-gen-register-info"],
+            "lib/Target/MSP430/MSP430GenSDNodeInfo.inc": ["-gen-sd-node-info"],
             "lib/Target/MSP430/MSP430GenSubtargetInfo.inc": ["-gen-subtarget"],
         },
     },
@@ -2324,6 +2342,7 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/RISCV/RISCVGenSubtargetInfo.inc": ["-gen-subtarget"],
             "lib/Target/RISCV/RISCVGenSearchableTables.inc": ["-gen-searchable-tables"],
             "lib/Target/RISCV/RISCVGenExegesis.inc": ["-gen-exegesis"],
+            "lib/Target/RISCV/RISCVGenSDNodeInfo.inc": ["-gen-sd-node-info"],
         },
         "tbl_deps": [
             ":riscv_isel_target_gen",
@@ -5155,6 +5174,13 @@ cc_library(
         ":Support",
         "//third-party/unittest:gmock",
     ],
+)
+
+cc_library(
+    name = "TestingDemangle",
+    testonly = True,
+    copts = llvm_copts,
+    textual_hdrs = glob(["include/llvm/Testing/Demangle/*.inc"]),
 )
 
 cc_library(

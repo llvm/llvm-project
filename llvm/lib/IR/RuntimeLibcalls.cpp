@@ -7,9 +7,79 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/RuntimeLibcalls.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 using namespace RTLIB;
+
+static cl::opt<bool>
+    HexagonEnableFastMathRuntimeCalls("hexagon-fast-math", cl::Hidden,
+                                      cl::desc("Enable Fast Math processing"));
+
+static void setAArch64LibcallNames(RuntimeLibcallsInfo &Info,
+                                   const Triple &TT) {
+  if (TT.isWindowsArm64EC()) {
+    // FIXME: are there calls we need to exclude from this?
+#define HANDLE_LIBCALL(code, name)                                             \
+  {                                                                            \
+    const char *libcallName = Info.getLibcallName(RTLIB::code);                \
+    if (libcallName && libcallName[0] != '#')                                  \
+      Info.setLibcallName(RTLIB::code, "#" #name);                             \
+  }
+#include "llvm/IR/RuntimeLibcalls.def"
+#undef HANDLE_LIBCALL
+  }
+}
+
+static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT) {
+  // Register based DivRem for AEABI (RTABI 4.2)
+  if (TT.isTargetAEABI() || TT.isAndroid() || TT.isTargetGNUAEABI() ||
+      TT.isTargetMuslAEABI() || TT.isOSWindows()) {
+    if (TT.isOSWindows()) {
+      const struct {
+        const RTLIB::Libcall Op;
+        const char *const Name;
+        const CallingConv::ID CC;
+      } LibraryCalls[] = {
+          {RTLIB::SDIVREM_I8, "__rt_sdiv", CallingConv::ARM_AAPCS},
+          {RTLIB::SDIVREM_I16, "__rt_sdiv", CallingConv::ARM_AAPCS},
+          {RTLIB::SDIVREM_I32, "__rt_sdiv", CallingConv::ARM_AAPCS},
+          {RTLIB::SDIVREM_I64, "__rt_sdiv64", CallingConv::ARM_AAPCS},
+
+          {RTLIB::UDIVREM_I8, "__rt_udiv", CallingConv::ARM_AAPCS},
+          {RTLIB::UDIVREM_I16, "__rt_udiv", CallingConv::ARM_AAPCS},
+          {RTLIB::UDIVREM_I32, "__rt_udiv", CallingConv::ARM_AAPCS},
+          {RTLIB::UDIVREM_I64, "__rt_udiv64", CallingConv::ARM_AAPCS},
+      };
+
+      for (const auto &LC : LibraryCalls) {
+        Info.setLibcallName(LC.Op, LC.Name);
+        Info.setLibcallCallingConv(LC.Op, LC.CC);
+      }
+    } else {
+      const struct {
+        const RTLIB::Libcall Op;
+        const char *const Name;
+        const CallingConv::ID CC;
+      } LibraryCalls[] = {
+          {RTLIB::SDIVREM_I8, "__aeabi_idivmod", CallingConv::ARM_AAPCS},
+          {RTLIB::SDIVREM_I16, "__aeabi_idivmod", CallingConv::ARM_AAPCS},
+          {RTLIB::SDIVREM_I32, "__aeabi_idivmod", CallingConv::ARM_AAPCS},
+          {RTLIB::SDIVREM_I64, "__aeabi_ldivmod", CallingConv::ARM_AAPCS},
+
+          {RTLIB::UDIVREM_I8, "__aeabi_uidivmod", CallingConv::ARM_AAPCS},
+          {RTLIB::UDIVREM_I16, "__aeabi_uidivmod", CallingConv::ARM_AAPCS},
+          {RTLIB::UDIVREM_I32, "__aeabi_uidivmod", CallingConv::ARM_AAPCS},
+          {RTLIB::UDIVREM_I64, "__aeabi_uldivmod", CallingConv::ARM_AAPCS},
+      };
+
+      for (const auto &LC : LibraryCalls) {
+        Info.setLibcallName(LC.Op, LC.Name);
+        Info.setLibcallCallingConv(LC.Op, LC.CC);
+      }
+    }
+  }
+}
 
 /// Set default libcall names. If a target wants to opt-out of a libcall it
 /// should be placed here.
@@ -25,8 +95,8 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
   for (int LC = 0; LC < RTLIB::UNKNOWN_LIBCALL; ++LC)
     setLibcallCallingConv((RTLIB::Libcall)LC, CallingConv::C);
 
-  // Use the f128 variants of math functions on x86_64
-  if (TT.getArch() == Triple::ArchType::x86_64 && TT.isGNUEnvironment()) {
+  // Use the f128 variants of math functions on x86
+  if (TT.isX86() && TT.isGNUEnvironment()) {
     setLibcallName(RTLIB::REM_F128, "fmodf128");
     setLibcallName(RTLIB::FMA_F128, "fmaf128");
     setLibcallName(RTLIB::SQRT_F128, "sqrtf128");
@@ -65,12 +135,17 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::COPYSIGN_F128, "copysignf128");
     setLibcallName(RTLIB::FMIN_F128, "fminf128");
     setLibcallName(RTLIB::FMAX_F128, "fmaxf128");
+    setLibcallName(RTLIB::FMINIMUM_F128, "fminimumf128");
+    setLibcallName(RTLIB::FMAXIMUM_F128, "fmaximumf128");
+    setLibcallName(RTLIB::FMINIMUM_NUM_F128, "fminimum_numf128");
+    setLibcallName(RTLIB::FMAXIMUM_NUM_F128, "fmaximum_numf128");
     setLibcallName(RTLIB::LROUND_F128, "lroundf128");
     setLibcallName(RTLIB::LLROUND_F128, "llroundf128");
     setLibcallName(RTLIB::LRINT_F128, "lrintf128");
     setLibcallName(RTLIB::LLRINT_F128, "llrintf128");
     setLibcallName(RTLIB::LDEXP_F128, "ldexpf128");
     setLibcallName(RTLIB::FREXP_F128, "frexpf128");
+    setLibcallName(RTLIB::MODF_F128, "modff128");
   }
 
   // For IEEE quad-precision libcall names, PPC uses "kf" instead of "tf".
@@ -104,6 +179,40 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::OLE_F128, "__lekf2");
     setLibcallName(RTLIB::OGT_F128, "__gtkf2");
     setLibcallName(RTLIB::UO_F128, "__unordkf2");
+
+    setLibcallName(RTLIB::LOG_F128, "logf128");
+    setLibcallName(RTLIB::LOG2_F128, "log2f128");
+    setLibcallName(RTLIB::LOG10_F128, "log10f128");
+    setLibcallName(RTLIB::EXP_F128, "expf128");
+    setLibcallName(RTLIB::EXP2_F128, "exp2f128");
+    setLibcallName(RTLIB::SIN_F128, "sinf128");
+    setLibcallName(RTLIB::COS_F128, "cosf128");
+    setLibcallName(RTLIB::SINCOS_F128, "sincosf128");
+    setLibcallName(RTLIB::POW_F128, "powf128");
+    setLibcallName(RTLIB::FMIN_F128, "fminf128");
+    setLibcallName(RTLIB::FMAX_F128, "fmaxf128");
+    setLibcallName(RTLIB::REM_F128, "fmodf128");
+    setLibcallName(RTLIB::SQRT_F128, "sqrtf128");
+    setLibcallName(RTLIB::CEIL_F128, "ceilf128");
+    setLibcallName(RTLIB::FLOOR_F128, "floorf128");
+    setLibcallName(RTLIB::TRUNC_F128, "truncf128");
+    setLibcallName(RTLIB::ROUND_F128, "roundf128");
+    setLibcallName(RTLIB::LROUND_F128, "lroundf128");
+    setLibcallName(RTLIB::LLROUND_F128, "llroundf128");
+    setLibcallName(RTLIB::RINT_F128, "rintf128");
+    setLibcallName(RTLIB::LRINT_F128, "lrintf128");
+    setLibcallName(RTLIB::LLRINT_F128, "llrintf128");
+    setLibcallName(RTLIB::NEARBYINT_F128, "nearbyintf128");
+    setLibcallName(RTLIB::FMA_F128, "fmaf128");
+    setLibcallName(RTLIB::FREXP_F128, "frexpf128");
+
+    if (TT.isOSAIX()) {
+      bool isPPC64 = TT.isPPC64();
+      setLibcallName(RTLIB::MEMCPY, isPPC64 ? "___memmove64" : "___memmove");
+      setLibcallName(RTLIB::MEMMOVE, isPPC64 ? "___memmove64" : "___memmove");
+      setLibcallName(RTLIB::MEMSET, isPPC64 ? "___memset64" : "___memset");
+      setLibcallName(RTLIB::BZERO, isPPC64 ? "___bzero64" : "___bzero");
+    }
   }
 
   // A few names are different on particular architectures or environments.
@@ -203,19 +312,12 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::FREXP_PPCF128, nullptr);
   }
 
-  // Disable most libcalls on AMDGPU.
-  if (TT.isAMDGPU()) {
-    for (int I = 0; I < RTLIB::UNKNOWN_LIBCALL; ++I) {
-      if (I < RTLIB::ATOMIC_LOAD || I > RTLIB::ATOMIC_FETCH_NAND_16)
-        setLibcallName(static_cast<RTLIB::Libcall>(I), nullptr);
+  // Disable most libcalls on AMDGPU and NVPTX.
+  if (TT.isAMDGPU() || TT.isNVPTX()) {
+    for (RTLIB::Libcall LC : RTLIB::libcalls()) {
+      if (LC < RTLIB::ATOMIC_LOAD || LC > RTLIB::ATOMIC_FETCH_NAND_16)
+        setLibcallName(LC, nullptr);
     }
-  }
-
-  // Disable most libcalls on NVPTX.
-  if (TT.isNVPTX()) {
-    for (int I = 0; I < RTLIB::UNKNOWN_LIBCALL; ++I)
-      if (I < RTLIB::ATOMIC_LOAD || I > RTLIB::ATOMIC_FETCH_NAND_16)
-        setLibcallName(static_cast<RTLIB::Libcall>(I), nullptr);
   }
 
   if (TT.isOSMSVCRT()) {
@@ -224,7 +326,31 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::POWI_F64, nullptr);
   }
 
-  if (TT.getArch() == Triple::ArchType::avr) {
+  // Setup Windows compiler runtime calls.
+  if (TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment()) {
+    static const struct {
+      const RTLIB::Libcall Op;
+      const char *const Name;
+      const CallingConv::ID CC;
+    } LibraryCalls[] = {
+        {RTLIB::SDIV_I64, "_alldiv", CallingConv::X86_StdCall},
+        {RTLIB::UDIV_I64, "_aulldiv", CallingConv::X86_StdCall},
+        {RTLIB::SREM_I64, "_allrem", CallingConv::X86_StdCall},
+        {RTLIB::UREM_I64, "_aullrem", CallingConv::X86_StdCall},
+        {RTLIB::MUL_I64, "_allmul", CallingConv::X86_StdCall},
+    };
+
+    for (const auto &LC : LibraryCalls) {
+      setLibcallName(LC.Op, LC.Name);
+      setLibcallCallingConv(LC.Op, LC.CC);
+    }
+  }
+
+  if (TT.getArch() == Triple::ArchType::aarch64)
+    setAArch64LibcallNames(*this, TT);
+  else if (TT.isARM() || TT.isThumb())
+    setARMLibcallNames(*this, TT);
+  else if (TT.getArch() == Triple::ArchType::avr) {
     // Division rtlib functions (not supported), use divmod functions instead
     setLibcallName(RTLIB::SDIV_I8, nullptr);
     setLibcallName(RTLIB::SDIV_I16, nullptr);
@@ -240,6 +366,24 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::UREM_I8, nullptr);
     setLibcallName(RTLIB::UREM_I16, nullptr);
     setLibcallName(RTLIB::UREM_I32, nullptr);
+
+    // Division and modulus rtlib functions
+    setLibcallName(RTLIB::SDIVREM_I8, "__divmodqi4");
+    setLibcallName(RTLIB::SDIVREM_I16, "__divmodhi4");
+    setLibcallName(RTLIB::SDIVREM_I32, "__divmodsi4");
+    setLibcallName(RTLIB::UDIVREM_I8, "__udivmodqi4");
+    setLibcallName(RTLIB::UDIVREM_I16, "__udivmodhi4");
+    setLibcallName(RTLIB::UDIVREM_I32, "__udivmodsi4");
+
+    // Several of the runtime library functions use a special calling conv
+    setLibcallCallingConv(RTLIB::SDIVREM_I8, CallingConv::AVR_BUILTIN);
+    setLibcallCallingConv(RTLIB::SDIVREM_I16, CallingConv::AVR_BUILTIN);
+    setLibcallCallingConv(RTLIB::UDIVREM_I8, CallingConv::AVR_BUILTIN);
+    setLibcallCallingConv(RTLIB::UDIVREM_I16, CallingConv::AVR_BUILTIN);
+
+    // Trigonometric rtlib functions
+    setLibcallName(RTLIB::SIN_F32, "sin");
+    setLibcallName(RTLIB::COS_F32, "cos");
   }
 
   if (!TT.isWasm()) {
@@ -252,5 +396,56 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
       setLibcallName(RTLIB::MULO_I64, nullptr);
     }
     setLibcallName(RTLIB::MULO_I128, nullptr);
+  }
+
+  if (TT.isSystemZ() && TT.isOSzOS()) {
+    struct RTLibCallMapping {
+      RTLIB::Libcall Code;
+      const char *Name;
+    };
+    static RTLibCallMapping RTLibCallCommon[] = {
+#define HANDLE_LIBCALL(code, name) {RTLIB::code, name},
+#include "ZOSLibcallNames.def"
+    };
+    for (auto &E : RTLibCallCommon)
+      setLibcallName(E.Code, E.Name);
+  }
+
+  if (TT.getArch() == Triple::ArchType::hexagon) {
+    setLibcallName(RTLIB::SDIV_I32, "__hexagon_divsi3");
+    setLibcallName(RTLIB::SDIV_I64, "__hexagon_divdi3");
+    setLibcallName(RTLIB::UDIV_I32, "__hexagon_udivsi3");
+    setLibcallName(RTLIB::UDIV_I64, "__hexagon_udivdi3");
+    setLibcallName(RTLIB::SREM_I32, "__hexagon_modsi3");
+    setLibcallName(RTLIB::SREM_I64, "__hexagon_moddi3");
+    setLibcallName(RTLIB::UREM_I32, "__hexagon_umodsi3");
+    setLibcallName(RTLIB::UREM_I64, "__hexagon_umoddi3");
+
+    const bool FastMath = HexagonEnableFastMathRuntimeCalls;
+    // This is the only fast library function for sqrtd.
+    if (FastMath)
+      setLibcallName(RTLIB::SQRT_F64, "__hexagon_fast2_sqrtdf2");
+
+    // Prefix is: nothing  for "slow-math",
+    //            "fast2_" for V5+ fast-math double-precision
+    // (actually, keep fast-math and fast-math2 separate for now)
+    if (FastMath) {
+      setLibcallName(RTLIB::ADD_F64, "__hexagon_fast_adddf3");
+      setLibcallName(RTLIB::SUB_F64, "__hexagon_fast_subdf3");
+      setLibcallName(RTLIB::MUL_F64, "__hexagon_fast_muldf3");
+      setLibcallName(RTLIB::DIV_F64, "__hexagon_fast_divdf3");
+      setLibcallName(RTLIB::DIV_F32, "__hexagon_fast_divsf3");
+    } else {
+      setLibcallName(RTLIB::ADD_F64, "__hexagon_adddf3");
+      setLibcallName(RTLIB::SUB_F64, "__hexagon_subdf3");
+      setLibcallName(RTLIB::MUL_F64, "__hexagon_muldf3");
+      setLibcallName(RTLIB::DIV_F64, "__hexagon_divdf3");
+      setLibcallName(RTLIB::DIV_F32, "__hexagon_divsf3");
+    }
+
+    if (FastMath)
+      setLibcallName(RTLIB::SQRT_F32, "__hexagon_fast2_sqrtf");
+    else
+      setLibcallName(RTLIB::SQRT_F32, "__hexagon_sqrtf");
   }
 }

@@ -16,7 +16,6 @@
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Object/OffloadBundle.h"
-#include "llvm/Support/Alignment.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -84,28 +83,26 @@ void llvm::dumpOffloadBundleFatBinary(const ObjectFile &O, StringRef ArchName) {
   }
 
   SmallVector<llvm::object::OffloadBundleFatBin> FoundBundles;
-  SmallVector<llvm::object::OffloadBundleEntry> FoundEntries;
 
   if (Error Err = llvm::object::extractOffloadBundleFatBinary(O, FoundBundles))
     reportError(O.getFileName(), "while extracting offload FatBin bundles: " +
                                      toString(std::move(Err)));
 
   for (const auto &[BundleNum, Bundle] : llvm::enumerate(FoundBundles)) {
-    if (!ArchName.empty())
-      FoundEntries = Bundle.entryIDContains(ArchName);
-    else
-      FoundEntries = Bundle.getEntries();
+    for (OffloadBundleEntry &Entry : Bundle.getEntries()) {
+      if (!ArchName.empty() && !Entry.ID.contains(ArchName))
+        continue;
 
-    for (OffloadBundleEntry &Entry : FoundEntries) {
-      // create file name for this object file:  <source-filename>:<Bundle
+      // create file name for this object file:  <source-filename>.<Bundle
       // Number>.<EntryID>
-      std::string str = Bundle.getFileName().str() + ":" + itostr(BundleNum) +
+      std::string str = Bundle.getFileName().str() + "." + itostr(BundleNum) +
                         "." + Entry.ID.str();
       if (Error Err = object::extractCodeObject(O, Entry.Offset, Entry.Size,
                                                 StringRef(str)))
         reportError(O.getFileName(),
                     "while extracting offload Bundle Entries: " +
                         toString(std::move(Err)));
+      outs() << "Extracting offload bundle: " << str << "\n";
     }
   }
 }

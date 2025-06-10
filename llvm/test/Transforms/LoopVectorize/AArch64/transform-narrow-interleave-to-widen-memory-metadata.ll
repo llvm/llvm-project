@@ -17,11 +17,11 @@ define void @load_store_interleave_group_with_metadata(ptr noalias %data) {
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP0]]
-; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8, !tbaa [[TBAA0:![0-9]+]]
-; VF2-NEXT:    store <2 x i64> [[WIDE_LOAD]], ptr [[TMP1]], align 8, !tbaa [[TBAA4:![0-9]+]]
+; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
+; VF2-NEXT:    store <2 x i64> [[WIDE_LOAD]], ptr [[TMP1]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
-; VF2-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; VF2-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
 ; VF2-NEXT:    br i1 true, [[EXIT:label %.*]], label %[[SCALAR_PH]]
 ; VF2:       [[SCALAR_PH]]:
@@ -55,15 +55,9 @@ exit:
 !5 = !{ i64 0, i64 2 }
 
 ;.
-; VF2: [[TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0, i64 0}
-; VF2: [[META1]] = !{!"A", [[META2:![0-9]+]]}
-; VF2: [[META2]] = !{!"omnipotent char", [[META3:![0-9]+]], i64 0}
-; VF2: [[META3]] = !{!"Simple C/C++ TBAA"}
-; VF2: [[TBAA4]] = !{[[META5:![0-9]+]], [[META5]], i64 0, i64 0}
-; VF2: [[META5]] = !{!"B", [[META2]]}
-; VF2: [[LOOP6]] = distinct !{[[LOOP6]], [[META7:![0-9]+]], [[META8:![0-9]+]]}
-; VF2: [[META7]] = !{!"llvm.loop.isvectorized", i32 1}
-; VF2: [[META8]] = !{!"llvm.loop.unroll.runtime.disable"}
+; VF2: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; VF2: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; VF2: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
 ;.
 ; VF4: [[TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
 ; VF4: [[META1]] = !{!"omnipotent char", [[META2:![0-9]+]], i64 0}

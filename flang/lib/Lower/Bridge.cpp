@@ -58,9 +58,11 @@
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Runtime/iostat-consts.h"
+#include "flang/Semantics/openmp-dsa.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/Flags.h"
 #include "flang/Support/Version.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -398,37 +400,39 @@ public:
     //   they are available before lowering any function that may use them.
     bool hasMainProgram = false;
     const Fortran::semantics::Symbol *globalOmpRequiresSymbol = nullptr;
-    for (Fortran::lower::pft::Program::Units &u : pft.getUnits()) {
-      Fortran::common::visit(
-          Fortran::common::visitors{
-              [&](Fortran::lower::pft::FunctionLikeUnit &f) {
-                if (f.isMainProgram())
-                  hasMainProgram = true;
-                declareFunction(f);
-                if (!globalOmpRequiresSymbol)
-                  globalOmpRequiresSymbol = f.getScope().symbol();
-              },
-              [&](Fortran::lower::pft::ModuleLikeUnit &m) {
-                lowerModuleDeclScope(m);
-                for (Fortran::lower::pft::ContainedUnit &unit :
-                     m.containedUnitList)
-                  if (auto *f =
-                          std::get_if<Fortran::lower::pft::FunctionLikeUnit>(
-                              &unit))
-                    declareFunction(*f);
-              },
-              [&](Fortran::lower::pft::BlockDataUnit &b) {
-                if (!globalOmpRequiresSymbol)
-                  globalOmpRequiresSymbol = b.symTab.symbol();
-              },
-              [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {},
-              [&](Fortran::lower::pft::OpenACCDirectiveUnit &d) {},
-          },
-          u);
-    }
+    createBuilderOutsideOfFuncOpAndDo([&]() {
+      for (Fortran::lower::pft::Program::Units &u : pft.getUnits()) {
+        Fortran::common::visit(
+            Fortran::common::visitors{
+                [&](Fortran::lower::pft::FunctionLikeUnit &f) {
+                  if (f.isMainProgram())
+                    hasMainProgram = true;
+                  declareFunction(f);
+                  if (!globalOmpRequiresSymbol)
+                    globalOmpRequiresSymbol = f.getScope().symbol();
+                },
+                [&](Fortran::lower::pft::ModuleLikeUnit &m) {
+                  lowerModuleDeclScope(m);
+                  for (Fortran::lower::pft::ContainedUnit &unit :
+                       m.containedUnitList)
+                    if (auto *f =
+                            std::get_if<Fortran::lower::pft::FunctionLikeUnit>(
+                                &unit))
+                      declareFunction(*f);
+                },
+                [&](Fortran::lower::pft::BlockDataUnit &b) {
+                  if (!globalOmpRequiresSymbol)
+                    globalOmpRequiresSymbol = b.symTab.symbol();
+                },
+                [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {},
+                [&](Fortran::lower::pft::OpenACCDirectiveUnit &d) {},
+            },
+            u);
+      }
+    });
 
     // Create definitions of intrinsic module constants.
-    createGlobalOutsideOfFunctionLowering(
+    createBuilderOutsideOfFuncOpAndDo(
         [&]() { createIntrinsicModuleDefinitions(pft); });
 
     // Primary translation pass.
@@ -439,14 +443,7 @@ public:
               [&](Fortran::lower::pft::ModuleLikeUnit &m) { lowerMod(m); },
               [&](Fortran::lower::pft::BlockDataUnit &b) {},
               [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {},
-              [&](Fortran::lower::pft::OpenACCDirectiveUnit &d) {
-                builder = new fir::FirOpBuilder(
-                    bridge.getModule(), bridge.getKindMap(), &mlirSymbolTable);
-                Fortran::lower::genOpenACCRoutineConstruct(
-                    *this, bridge.getSemanticsContext(), bridge.getModule(),
-                    d.routine, accRoutineInfos);
-                builder = nullptr;
-              },
+              [&](Fortran::lower::pft::OpenACCDirectiveUnit &d) {},
           },
           u);
     }
@@ -454,24 +451,24 @@ public:
     // Once all the code has been translated, create global runtime type info
     // data structures for the derived types that have been processed, as well
     // as fir.type_info operations for the dispatch tables.
-    createGlobalOutsideOfFunctionLowering(
+    createBuilderOutsideOfFuncOpAndDo(
         [&]() { typeInfoConverter.createTypeInfo(*this); });
 
     // Generate the `main` entry point if necessary
     if (hasMainProgram)
-      createGlobalOutsideOfFunctionLowering([&]() {
+      createBuilderOutsideOfFuncOpAndDo([&]() {
         fir::runtime::genMain(*builder, toLocation(),
                               bridge.getEnvironmentDefaults(),
                               getFoldingContext().languageFeatures().IsEnabled(
                                   Fortran::common::LanguageFeature::CUDA));
       });
 
-    finalizeOpenACCLowering();
     finalizeOpenMPLowering(globalOmpRequiresSymbol);
   }
 
   /// Declare a function.
   void declareFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
+    CHECK(builder && "declareFunction called with uninitialized builder");
     setCurrentPosition(funit.getStartingSourceLoc());
     for (int entryIndex = 0, last = funit.entryPointList.size();
          entryIndex < last; ++entryIndex) {
@@ -1036,7 +1033,10 @@ public:
     return bridge.getSemanticsContext().FindScope(currentPosition);
   }
 
-  fir::FirOpBuilder &getFirOpBuilder() override final { return *builder; }
+  fir::FirOpBuilder &getFirOpBuilder() override final {
+    CHECK(builder && "builder is not set before calling getFirOpBuilder");
+    return *builder;
+  }
 
   mlir::ModuleOp getModuleOp() override final { return bridge.getModule(); }
 
@@ -1144,6 +1144,14 @@ public:
     return name;
   }
 
+  /// Find the symbol in the inner-most level of the local map or return null.
+  Fortran::lower::SymbolBox
+  shallowLookupSymbol(const Fortran::semantics::Symbol &sym) override {
+    if (Fortran::lower::SymbolBox v = localSymbols.shallowLookupSymbol(sym))
+      return v;
+    return {};
+  }
+
 private:
   FirConverter() = delete;
   FirConverter(const FirConverter &) = delete;
@@ -1214,14 +1222,6 @@ private:
       return {};
     }
     if (Fortran::lower::SymbolBox v = symMap->lookupSymbol(sym))
-      return v;
-    return {};
-  }
-
-  /// Find the symbol in the inner-most level of the local map or return null.
-  Fortran::lower::SymbolBox
-  shallowLookupSymbol(const Fortran::semantics::Symbol &sym) {
-    if (Fortran::lower::SymbolBox v = localSymbols.shallowLookupSymbol(sym))
       return v;
     return {};
   }
@@ -1387,7 +1387,8 @@ private:
     if (isUnordered || sym.has<Fortran::semantics::HostAssocDetails>() ||
         sym.has<Fortran::semantics::UseDetails>()) {
       if (!shallowLookupSymbol(sym) &&
-          !sym.test(Fortran::semantics::Symbol::Flag::OmpShared)) {
+          !GetSymbolDSA(sym).test(
+              Fortran::semantics::Symbol::Flag::OmpShared)) {
         // Do concurrent loop variables are not mapped yet since they are local
         // to the Do concurrent scope (same for OpenMP loops).
         mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
@@ -2029,19 +2030,47 @@ private:
   void handleLocalitySpecs(const IncrementLoopInfo &info) {
     Fortran::semantics::SemanticsContext &semanticsContext =
         bridge.getSemanticsContext();
-    for (const Fortran::semantics::Symbol *sym : info.localSymList)
-      createHostAssociateVarClone(*sym, /*skipDefaultInit=*/false);
-    for (const Fortran::semantics::Symbol *sym : info.localInitSymList) {
-      createHostAssociateVarClone(*sym, /*skipDefaultInit=*/true);
+    fir::LocalitySpecifierOperands privateClauseOps;
+    auto doConcurrentLoopOp =
+        mlir::dyn_cast_if_present<fir::DoConcurrentLoopOp>(info.loopOp);
+    // TODO Promote to using `enableDelayedPrivatization` (which is enabled by
+    // default unlike the staging flag) once the implementation of this is more
+    // complete.
+    bool useDelayedPriv =
+        enableDelayedPrivatizationStaging && doConcurrentLoopOp;
+    llvm::SetVector<const Fortran::semantics::Symbol *> allPrivatizedSymbols;
+    llvm::SmallSet<const Fortran::semantics::Symbol *, 16> mightHaveReadHostSym;
+
+    for (const Fortran::semantics::Symbol *symToPrivatize : info.localSymList) {
+      if (useDelayedPriv) {
+        Fortran::lower::privatizeSymbol<fir::LocalitySpecifierOp>(
+            *this, this->getFirOpBuilder(), localSymbols, allPrivatizedSymbols,
+            mightHaveReadHostSym, symToPrivatize, &privateClauseOps);
+        continue;
+      }
+
+      createHostAssociateVarClone(*symToPrivatize, /*skipDefaultInit=*/false);
+    }
+
+    for (const Fortran::semantics::Symbol *symToPrivatize :
+         info.localInitSymList) {
+      if (useDelayedPriv) {
+        Fortran::lower::privatizeSymbol<fir::LocalitySpecifierOp>(
+            *this, this->getFirOpBuilder(), localSymbols, allPrivatizedSymbols,
+            mightHaveReadHostSym, symToPrivatize, &privateClauseOps);
+        continue;
+      }
+
+      createHostAssociateVarClone(*symToPrivatize, /*skipDefaultInit=*/true);
       const auto *hostDetails =
-          sym->detailsIf<Fortran::semantics::HostAssocDetails>();
+          symToPrivatize->detailsIf<Fortran::semantics::HostAssocDetails>();
       assert(hostDetails && "missing locality spec host symbol");
       const Fortran::semantics::Symbol *hostSym = &hostDetails->symbol();
       Fortran::evaluate::ExpressionAnalyzer ea{semanticsContext};
       Fortran::evaluate::Assignment assign{
-          ea.Designate(Fortran::evaluate::DataRef{*sym}).value(),
+          ea.Designate(Fortran::evaluate::DataRef{*symToPrivatize}).value(),
           ea.Designate(Fortran::evaluate::DataRef{*hostSym}).value()};
-      if (Fortran::semantics::IsPointer(*sym))
+      if (Fortran::semantics::IsPointer(*symToPrivatize))
         assign.u = Fortran::evaluate::Assignment::BoundsSpec{};
       genAssignment(assign);
     }
@@ -2050,6 +2079,24 @@ private:
           sym->detailsIf<Fortran::semantics::HostAssocDetails>();
       copySymbolBinding(hostDetails->symbol(), *sym);
     }
+
+    if (useDelayedPriv) {
+      doConcurrentLoopOp.getLocalVarsMutable().assign(
+          privateClauseOps.privateVars);
+      doConcurrentLoopOp.setLocalSymsAttr(
+          builder->getArrayAttr(privateClauseOps.privateSyms));
+
+      for (auto [sym, privateVar] : llvm::zip_equal(
+               allPrivatizedSymbols, privateClauseOps.privateVars)) {
+        auto arg = doConcurrentLoopOp.getRegion().begin()->addArgument(
+            privateVar.getType(), doConcurrentLoopOp.getLoc());
+        bindSymbol(*sym, hlfir::translateToExtendedValue(
+                             privateVar.getLoc(), *builder, hlfir::Entity{arg},
+                             /*contiguousHint=*/true)
+                             .first);
+      }
+    }
+
     // Note that allocatable, types with ultimate components, and type
     // requiring finalization are forbidden in LOCAL/LOCAL_INIT (F2023 C1130),
     // so no clean-up needs to be generated for these entities.
@@ -3063,8 +3110,7 @@ private:
 
   void genFIR(const Fortran::parser::OpenACCDeclarativeConstruct &accDecl) {
     genOpenACCDeclarativeConstruct(*this, bridge.getSemanticsContext(),
-                                   bridge.openAccCtx(), accDecl,
-                                   accRoutineInfos);
+                                   bridge.openAccCtx(), accDecl);
     for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
       genFIR(e);
   }
@@ -3845,6 +3891,10 @@ private:
     bool hasLocalScope = false;
     llvm::SmallVector<const Fortran::semantics::Scope *> typeCaseScopes;
 
+    const auto selectorIsVolatile = [&selector]() {
+      return fir::isa_volatile_type(fir::getBase(selector).getType());
+    };
+
     const auto &typeCaseList =
         std::get<std::list<Fortran::parser::SelectTypeConstruct::TypeCase>>(
             selectTypeConstruct.t);
@@ -3998,7 +4048,8 @@ private:
             addrTy = fir::HeapType::get(addrTy);
           if (std::holds_alternative<Fortran::parser::IntrinsicTypeSpec>(
                   typeSpec->u)) {
-            mlir::Type refTy = fir::ReferenceType::get(addrTy);
+            mlir::Type refTy =
+                fir::ReferenceType::get(addrTy, selectorIsVolatile());
             if (isPointer || isAllocatable)
               refTy = addrTy;
             exactValue = builder->create<fir::BoxAddrOp>(
@@ -4007,7 +4058,8 @@ private:
                 typeSpec->declTypeSpec->AsIntrinsic();
             if (isArray) {
               mlir::Value exact = builder->create<fir::ConvertOp>(
-                  loc, fir::BoxType::get(addrTy), fir::getBase(selector));
+                  loc, fir::BoxType::get(addrTy, selectorIsVolatile()),
+                  fir::getBase(selector));
               addAssocEntitySymbol(selectorBox->clone(exact));
             } else if (intrinsic->category() ==
                        Fortran::common::TypeCategory::Character) {
@@ -4022,7 +4074,8 @@ private:
           } else if (std::holds_alternative<Fortran::parser::DerivedTypeSpec>(
                          typeSpec->u)) {
             exactValue = builder->create<fir::ConvertOp>(
-                loc, fir::BoxType::get(addrTy), fir::getBase(selector));
+                loc, fir::BoxType::get(addrTy, selectorIsVolatile()),
+                fir::getBase(selector));
             addAssocEntitySymbol(selectorBox->clone(exactValue));
           }
         } else if (std::holds_alternative<Fortran::parser::DerivedTypeSpec>(
@@ -4040,7 +4093,8 @@ private:
             addrTy = fir::PointerType::get(addrTy);
           if (isAllocatable)
             addrTy = fir::HeapType::get(addrTy);
-          mlir::Type classTy = fir::ClassType::get(addrTy);
+          mlir::Type classTy =
+              fir::ClassType::get(addrTy, selectorIsVolatile());
           if (classTy == baseTy) {
             addAssocEntitySymbol(selector);
           } else {
@@ -4781,7 +4835,14 @@ private:
               nbDeviceResidentObject <= 1 &&
               "Only one reference to the device resident object is supported");
           auto addr = getSymbolAddress(sym);
-          hlfir::Entity entity{addr};
+          mlir::Value baseValue;
+          if (auto declareOp =
+                  llvm::dyn_cast<hlfir::DeclareOp>(addr.getDefiningOp()))
+            baseValue = declareOp.getBase();
+          else
+            baseValue = addr;
+
+          hlfir::Entity entity{baseValue};
           auto [temp, cleanup] =
               hlfir::createTempFromMold(loc, builder, entity);
           auto needCleanup = fir::getIntIfConstant(cleanup);
@@ -5661,6 +5722,10 @@ private:
     LLVM_DEBUG(llvm::dbgs() << "\n[bridge - startNewFunction]";
                if (auto *sym = scope.symbol()) llvm::dbgs() << " " << *sym;
                llvm::dbgs() << "\n");
+    // Setting the builder is not necessary here, because callee
+    // always looks up the FuncOp from the module. If there was a function that
+    // was not declared yet, this call to callee will cause an assertion
+    // failure.
     Fortran::lower::CalleeInterface callee(funit, *this);
     mlir::func::FuncOp func = callee.addEntryBlockAndMapArguments();
     builder =
@@ -5930,8 +5995,9 @@ private:
   /// Helper to generate GlobalOps when the builder is not positioned in any
   /// region block. This is required because the FirOpBuilder assumes it is
   /// always positioned inside a region block when creating globals, the easiest
-  /// way comply is to create a dummy function and to throw it afterwards.
-  void createGlobalOutsideOfFunctionLowering(
+  /// way to comply is to create a dummy function and to throw it away
+  /// afterwards.
+  void createBuilderOutsideOfFuncOpAndDo(
       const std::function<void()> &createGlobals) {
     // FIXME: get rid of the bogus function context and instantiate the
     // globals directly into the module.
@@ -5943,6 +6009,7 @@ private:
         mlir::FunctionType::get(context, std::nullopt, std::nullopt),
         symbolTable);
     func.addEntryBlock();
+    CHECK(!builder && "Expected builder to be uninitialized");
     builder = new fir::FirOpBuilder(func, bridge.getKindMap(), symbolTable);
     assert(builder && "FirOpBuilder did not instantiate");
     builder->setFastMathFlags(bridge.getLoweringOptions().getMathOptions());
@@ -5958,7 +6025,7 @@ private:
 
   /// Instantiate the data from a BLOCK DATA unit.
   void lowerBlockData(Fortran::lower::pft::BlockDataUnit &bdunit) {
-    createGlobalOutsideOfFunctionLowering([&]() {
+    createBuilderOutsideOfFuncOpAndDo([&]() {
       Fortran::lower::AggregateStoreMap fakeMap;
       for (const auto &[_, sym] : bdunit.symTab) {
         if (sym->has<Fortran::semantics::ObjectEntityDetails>()) {
@@ -5972,7 +6039,7 @@ private:
   /// Create fir::Global for all the common blocks that appear in the program.
   void
   lowerCommonBlocks(const Fortran::semantics::CommonBlockList &commonBlocks) {
-    createGlobalOutsideOfFunctionLowering(
+    createBuilderOutsideOfFuncOpAndDo(
         [&]() { Fortran::lower::defineCommonBlocks(*this, commonBlocks); });
   }
 
@@ -6042,36 +6109,34 @@ private:
   /// declarative construct.
   void lowerModuleDeclScope(Fortran::lower::pft::ModuleLikeUnit &mod) {
     setCurrentPosition(mod.getStartingSourceLoc());
-    createGlobalOutsideOfFunctionLowering([&]() {
-      auto &scopeVariableListMap =
-          Fortran::lower::pft::getScopeVariableListMap(mod);
-      for (const auto &var : Fortran::lower::pft::getScopeVariableList(
-               mod.getScope(), scopeVariableListMap)) {
+    auto &scopeVariableListMap =
+        Fortran::lower::pft::getScopeVariableListMap(mod);
+    for (const auto &var : Fortran::lower::pft::getScopeVariableList(
+             mod.getScope(), scopeVariableListMap)) {
 
-        // Only define the variables owned by this module.
-        const Fortran::semantics::Scope *owningScope = var.getOwningScope();
-        if (owningScope && mod.getScope() != *owningScope)
+      // Only define the variables owned by this module.
+      const Fortran::semantics::Scope *owningScope = var.getOwningScope();
+      if (owningScope && mod.getScope() != *owningScope)
+        continue;
+
+      // Very special case: The value of numeric_storage_size depends on
+      // compilation options and therefore its value is not yet known when
+      // building the builtins runtime. Instead, the parameter is folding a
+      // __numeric_storage_size() expression which is loaded into the user
+      // program. For the iso_fortran_env object file, omit the symbol as it
+      // is never used.
+      if (var.hasSymbol()) {
+        const Fortran::semantics::Symbol &sym = var.getSymbol();
+        const Fortran::semantics::Scope &owner = sym.owner();
+        if (sym.name() == "numeric_storage_size" && owner.IsModule() &&
+            DEREF(owner.symbol()).name() == "iso_fortran_env")
           continue;
-
-        // Very special case: The value of numeric_storage_size depends on
-        // compilation options and therefore its value is not yet known when
-        // building the builtins runtime. Instead, the parameter is folding a
-        // __numeric_storage_size() expression which is loaded into the user
-        // program. For the iso_fortran_env object file, omit the symbol as it
-        // is never used.
-        if (var.hasSymbol()) {
-          const Fortran::semantics::Symbol &sym = var.getSymbol();
-          const Fortran::semantics::Scope &owner = sym.owner();
-          if (sym.name() == "numeric_storage_size" && owner.IsModule() &&
-              DEREF(owner.symbol()).name() == "iso_fortran_env")
-            continue;
-        }
-
-        Fortran::lower::defineModuleVariable(*this, var);
       }
+
+      Fortran::lower::defineModuleVariable(*this, var);
+    }
       for (auto &eval : mod.evaluationList)
         genFIR(eval);
-    });
   }
 
   /// Lower functions contained in a module.
@@ -6372,13 +6437,6 @@ private:
         expr.u);
   }
 
-  /// Performing OpenACC lowering action that were deferred to the end of
-  /// lowering.
-  void finalizeOpenACCLowering() {
-    Fortran::lower::finalizeOpenACCRoutineAttachment(getModuleOp(),
-                                                     accRoutineInfos);
-  }
-
   /// Performing OpenMP lowering actions that were deferred to the end of
   /// lowering.
   void finalizeOpenMPLowering(
@@ -6469,9 +6527,6 @@ private:
 
   /// A counter for uniquing names in `literalNamesMap`.
   std::uint64_t uniqueLitId = 0;
-
-  /// Deferred OpenACC routine attachment.
-  Fortran::lower::AccRoutineInfoMappingList accRoutineInfos;
 
   /// Whether an OpenMP target region or declare target function/subroutine
   /// intended for device offloading has been detected

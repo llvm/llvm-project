@@ -116,11 +116,14 @@ private:
   bool IsIfPredicateTrue(const TokenSequence &expr, std::size_t first,
       std::size_t exprTokens, Prescanner &);
   void LineDirective(const TokenSequence &, std::size_t, Prescanner &);
+  TokenSequence TokenizeMacroBody(const std::string &);
 
   AllSources &allSources_;
   std::list<std::string> names_;
   std::unordered_map<CharBlock, Definition> definitions_;
   std::stack<CanDeadElseAppear> ifStack_;
+
+  unsigned int counterVal_{0};
 };
 } // namespace Fortran::parser
 #endif // FORTRAN_PARSER_PREPROCESSOR_H_

@@ -661,6 +661,8 @@ static bool fnegFoldsIntoOpcode(unsigned Opc) {
   case ISD::FMAXNUM_IEEE:
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
   case ISD::SELECT:
   case ISD::FSIN:
   case ISD::FTRUNC:
@@ -1040,6 +1042,10 @@ bool AMDGPUTargetLowering::isNarrowingProfitable(SDNode *N, EVT SrcVT,
   case ISD::MUL:
   case ISD::SETCC:
   case ISD::SELECT:
+  case ISD::SMIN:
+  case ISD::SMAX:
+  case ISD::UMIN:
+  case ISD::UMAX:
     if (Subtarget->has16BitInsts() &&
         (!DestVT.isVector() || !Subtarget->hasVOP3PInsts())) {
       // Don't narrow back down to i16 if promoted to i32 already.
@@ -1383,13 +1389,12 @@ SDValue AMDGPUTargetLowering::lowerUnhandledCall(CallLoweringInfo &CLI,
   else if (const GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee))
     FuncName = G->getGlobal()->getName();
 
-  DiagnosticInfoUnsupported NoCalls(
-    Fn, Reason + FuncName, CLI.DL.getDebugLoc());
-  DAG.getContext()->diagnose(NoCalls);
+  DAG.getContext()->diagnose(
+      DiagnosticInfoUnsupported(Fn, Reason + FuncName, CLI.DL.getDebugLoc()));
 
   if (!CLI.IsTailCall) {
     for (ISD::InputArg &Arg : CLI.Ins)
-      InVals.push_back(DAG.getUNDEF(Arg.VT));
+      InVals.push_back(DAG.getPOISON(Arg.VT));
   }
 
   return DAG.getEntryNode();
@@ -1404,9 +1409,8 @@ SDValue AMDGPUTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
                                                       SelectionDAG &DAG) const {
   const Function &Fn = DAG.getMachineFunction().getFunction();
 
-  DiagnosticInfoUnsupported NoDynamicAlloca(Fn, "unsupported dynamic alloca",
-                                            SDLoc(Op).getDebugLoc());
-  DAG.getContext()->diagnose(NoDynamicAlloca);
+  DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+      Fn, "unsupported dynamic alloca", SDLoc(Op).getDebugLoc()));
   auto Ops = {DAG.getConstant(0, SDLoc(), Op.getValueType()), Op.getOperand(0)};
   return DAG.getMergeValues(Ops, SDLoc());
 }
@@ -1521,10 +1525,9 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
         !AMDGPU::isNamedBarrier(*cast<GlobalVariable>(GV))) {
       SDLoc DL(Op);
       const Function &Fn = DAG.getMachineFunction().getFunction();
-      DiagnosticInfoUnsupported BadLDSDecl(
-        Fn, "local memory global used by non-kernel function",
-        DL.getDebugLoc(), DS_Warning);
-      DAG.getContext()->diagnose(BadLDSDecl);
+      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+          Fn, "local memory global used by non-kernel function",
+          DL.getDebugLoc(), DS_Warning));
 
       // We currently don't have a way to correctly allocate LDS objects that
       // aren't directly associated with a kernel. We do force inlining of
@@ -1535,7 +1538,7 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
       SDValue OutputChain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
                                         Trap, DAG.getRoot());
       DAG.setRoot(OutputChain);
-      return DAG.getUNDEF(Op.getValueType());
+      return DAG.getPOISON(Op.getValueType());
     }
 
     // XXX: What does the value of G->getOffset() mean?
@@ -1857,7 +1860,7 @@ SDValue AMDGPUTargetLowering::SplitVectorLoad(const SDValue Op,
     // This is the case that the vector is power of two so was evenly split.
     Join = DAG.getNode(ISD::CONCAT_VECTORS, SL, VT, LoLoad, HiLoad);
   } else {
-    Join = DAG.getNode(ISD::INSERT_SUBVECTOR, SL, VT, DAG.getUNDEF(VT), LoLoad,
+    Join = DAG.getNode(ISD::INSERT_SUBVECTOR, SL, VT, DAG.getPOISON(VT), LoLoad,
                        DAG.getVectorIdxConstant(0, SL));
     Join = DAG.getNode(
         HiVT.isVector() ? ISD::INSERT_SUBVECTOR : ISD::INSERT_VECTOR_ELT, SL,
@@ -4159,22 +4162,17 @@ SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
   SDLoc SL(N);
   unsigned RHSVal = RHS->getZExtValue();
 
-  // (sra i64:x, 32) -> build_pair x, (sra hi_32(x), 31)
-  if (RHSVal == 32) {
+  // For C >= 32
+  // (sra i64:x, C) -> build_pair (sra hi_32(x), C - 32), (sra hi_32(x), 31)
+  if (RHSVal >= 32) {
     SDValue Hi = getHiHalf64(N->getOperand(0), DAG);
-    SDValue NewShift = DAG.getNode(ISD::SRA, SL, MVT::i32, Hi,
-                                   DAG.getConstant(31, SL, MVT::i32));
+    Hi = DAG.getFreeze(Hi);
+    SDValue HiShift = DAG.getNode(ISD::SRA, SL, MVT::i32, Hi,
+                                  DAG.getConstant(31, SL, MVT::i32));
+    SDValue LoShift = DAG.getNode(ISD::SRA, SL, MVT::i32, Hi,
+                                  DAG.getConstant(RHSVal - 32, SL, MVT::i32));
 
-    SDValue BuildVec = DAG.getBuildVector(MVT::v2i32, SL, {Hi, NewShift});
-    return DAG.getNode(ISD::BITCAST, SL, MVT::i64, BuildVec);
-  }
-
-  // (sra i64:x, 63) -> build_pair (sra hi_32(x), 31), (sra hi_32(x), 31)
-  if (RHSVal == 63) {
-    SDValue Hi = getHiHalf64(N->getOperand(0), DAG);
-    SDValue NewShift = DAG.getNode(ISD::SRA, SL, MVT::i32, Hi,
-                                   DAG.getConstant(31, SL, MVT::i32));
-    SDValue BuildVec = DAG.getBuildVector(MVT::v2i32, SL, {NewShift, NewShift});
+    SDValue BuildVec = DAG.getBuildVector(MVT::v2i32, SL, {LoShift, HiShift});
     return DAG.getNode(ISD::BITCAST, SL, MVT::i64, BuildVec);
   }
 
@@ -4807,10 +4805,14 @@ static unsigned inverseMinMax(unsigned Opc) {
     return ISD::FMINIMUM;
   case ISD::FMINIMUM:
     return ISD::FMAXIMUM;
+  case ISD::FMAXIMUMNUM:
+    return ISD::FMINIMUMNUM;
+  case ISD::FMINIMUMNUM:
+    return ISD::FMAXIMUMNUM;
   case AMDGPUISD::FMAX_LEGACY:
     return AMDGPUISD::FMIN_LEGACY;
   case AMDGPUISD::FMIN_LEGACY:
-    return  AMDGPUISD::FMAX_LEGACY;
+    return AMDGPUISD::FMAX_LEGACY;
   default:
     llvm_unreachable("invalid min/max opcode");
   }
@@ -4932,6 +4934,8 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
   case ISD::FMINNUM_IEEE:
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
   case AMDGPUISD::FMAX_LEGACY:
   case AMDGPUISD::FMIN_LEGACY: {
     // fneg (fmaxnum x, y) -> fminnum (fneg x), (fneg y)
