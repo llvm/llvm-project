@@ -1904,7 +1904,7 @@ Value *InstCombinerImpl::foldSelectWithConstOpToBinOp(ICmpInst *Cmp,
         BinOpc == Instruction::Mul) {
       Instruction *OldBinOp = cast<BinaryOperator>(TrueVal);
       if (OldBinOp->hasNoSignedWrap() &&
-          willNotOverflow(BinOpc, RHS, C2, *BinOpInst, /*IsSigned*/ true))
+          willNotOverflow(BinOpc, RHS, C2, *BinOpInst, /*IsSigned=*/true))
         BinOpInst->setHasNoSignedWrap();
       if (OldBinOp->hasNoUnsignedWrap() &&
           willNotOverflow(BinOpc, RHS, C2, *BinOpInst, /*IsSigned*/ false))
