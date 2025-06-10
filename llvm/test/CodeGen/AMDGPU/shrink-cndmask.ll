@@ -40,9 +40,8 @@ define amdgpu_cs void @test_i32_sle(i32 %a, i32 %p, i32 %q, ptr addrspace(1) %ou
 define amdgpu_cs void @test_i32_sgt(i32 %a, i32 %p, i32 %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_i32_sgt:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 2, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v2, 0, vcc_lo
+; GCN-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 1, v0
+; GCN-NEXT:    v_dual_cndmask_b32 v0, 0, v1 :: v_dual_cndmask_b32 v1, 0, v2
 ; GCN-NEXT:    global_store_b64 v[3:4], v[0:1], off
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -58,9 +57,8 @@ define amdgpu_cs void @test_i32_sgt(i32 %a, i32 %p, i32 %q, ptr addrspace(1) %ou
 define amdgpu_cs void @test_i32_slt(i32 %a, i32 %p, i32 %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_i32_slt:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 2, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v2, 0, vcc_lo
+; GCN-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 3, v0
+; GCN-NEXT:    v_dual_cndmask_b32 v0, 0, v1 :: v_dual_cndmask_b32 v1, 0, v2
 ; GCN-NEXT:    global_store_b64 v[3:4], v[0:1], off
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -113,11 +111,9 @@ define amdgpu_cs void @test_i64_sle(i64 %a, i64 %p, i64 %q, ptr addrspace(1) %ou
 define amdgpu_cs void @test_i64_sgt(i64 %a, i64 %p, i64 %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_i64_sgt:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_gt_i64_e32 vcc_lo, 2, v[0:1]
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v3, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v3, v5, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v2, v4, 0, vcc_lo
+; GCN-NEXT:    v_cmp_lt_i64_e32 vcc_lo, 1, v[0:1]
+; GCN-NEXT:    v_dual_cndmask_b32 v1, 0, v3 :: v_dual_cndmask_b32 v0, 0, v2
+; GCN-NEXT:    v_dual_cndmask_b32 v3, 0, v5 :: v_dual_cndmask_b32 v2, 0, v4
 ; GCN-NEXT:    global_store_b128 v[6:7], v[0:3], off
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -133,11 +129,9 @@ define amdgpu_cs void @test_i64_sgt(i64 %a, i64 %p, i64 %q, ptr addrspace(1) %ou
 define amdgpu_cs void @test_i64_slt(i64 %a, i64 %p, i64 %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_i64_slt:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_lt_i64_e32 vcc_lo, 2, v[0:1]
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v3, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v3, v5, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v2, v4, 0, vcc_lo
+; GCN-NEXT:    v_cmp_gt_i64_e32 vcc_lo, 3, v[0:1]
+; GCN-NEXT:    v_dual_cndmask_b32 v1, 0, v3 :: v_dual_cndmask_b32 v0, 0, v2
+; GCN-NEXT:    v_dual_cndmask_b32 v3, 0, v5 :: v_dual_cndmask_b32 v2, 0, v4
 ; GCN-NEXT:    global_store_b128 v[6:7], v[0:3], off
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -154,9 +148,8 @@ define amdgpu_cs void @test_i64_slt(i64 %a, i64 %p, i64 %q, ptr addrspace(1) %ou
 define amdgpu_cs void @test_u32_eq(i32 %a, i32 %p, i32 %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_u32_eq:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v2, 0, vcc_lo
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 1, v0
+; GCN-NEXT:    v_dual_cndmask_b32 v0, 0, v1 :: v_dual_cndmask_b32 v1, 0, v2
 ; GCN-NEXT:    global_store_b64 v[3:4], v[0:1], off
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -190,11 +183,10 @@ define amdgpu_cs void @test_negative_case(i32 %a, i32 %p, i32 %q, ptr addrspace(
 define amdgpu_cs void @test_mixed(i32 %a, i32 %p, i32 %q, i32 %r, i32 %s, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_mixed:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc_lo, -1, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v2, v3, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v3, v4, 0, vcc_lo
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc_lo, -1, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc_lo
+; GCN-NEXT:    v_cndmask_b32_e64 v1, v2, 0, vcc_lo
+; GCN-NEXT:    v_dual_cndmask_b32 v2, 0, v3 :: v_dual_cndmask_b32 v3, 0, v4
 ; GCN-NEXT:    global_store_b128 v[5:6], v[0:3], off
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -235,9 +227,8 @@ define amdgpu_cs void @test_sgpr(i32 %a, i32 %p, i32 inreg %q, i32 inreg %r, ptr
 define amdgpu_cs void @test_u32_ne(i32 %a, i32 %p, i32 %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_u32_ne:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 1, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v2, 0, vcc_lo
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
+; GCN-NEXT:    v_dual_cndmask_b32 v0, 0, v1 :: v_dual_cndmask_b32 v1, 0, v2
 ; GCN-NEXT:    global_store_b64 v[3:4], v[0:1], off
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -287,9 +278,8 @@ define amdgpu_cs void @test_u32_ule(i32 %a, i32 %p, i32 %q, ptr addrspace(1) %ou
 define amdgpu_cs void @test_u32_ugt(i32 %a, i32 %p, i32 %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_u32_ugt:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 2, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v2, 0, vcc_lo
+; GCN-NEXT:    v_cmp_lt_u32_e32 vcc_lo, 1, v0
+; GCN-NEXT:    v_dual_cndmask_b32 v0, 0, v1 :: v_dual_cndmask_b32 v1, 0, v2
 ; GCN-NEXT:    global_store_b64 v[3:4], v[0:1], off
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -305,9 +295,8 @@ define amdgpu_cs void @test_u32_ugt(i32 %a, i32 %p, i32 %q, ptr addrspace(1) %ou
 define amdgpu_cs void @test_u32_ult(i32 %a, i32 %p, i32 %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_u32_ult:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_lt_u32_e32 vcc_lo, 2, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v2, 0, vcc_lo
+; GCN-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 3, v0
+; GCN-NEXT:    v_dual_cndmask_b32 v0, 0, v1 :: v_dual_cndmask_b32 v1, 0, v2
 ; GCN-NEXT:    global_store_b64 v[3:4], v[0:1], off
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -324,11 +313,9 @@ define amdgpu_cs void @test_u32_ult(i32 %a, i32 %p, i32 %q, ptr addrspace(1) %ou
 define amdgpu_cs void @test_u64_eq(i64 %a, i64 %p, i64 %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_u64_eq:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_eq_u64_e32 vcc_lo, 1, v[0:1]
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v3, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v3, v5, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v2, v4, 0, vcc_lo
+; GCN-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 1, v[0:1]
+; GCN-NEXT:    v_dual_cndmask_b32 v1, 0, v3 :: v_dual_cndmask_b32 v0, 0, v2
+; GCN-NEXT:    v_dual_cndmask_b32 v3, 0, v5 :: v_dual_cndmask_b32 v2, 0, v4
 ; GCN-NEXT:    global_store_b128 v[6:7], v[0:3], off
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -344,11 +331,9 @@ define amdgpu_cs void @test_u64_eq(i64 %a, i64 %p, i64 %q, ptr addrspace(1) %out
 define amdgpu_cs void @test_u64_ne(i64 %a, i64 %p, i64 %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_u64_ne:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 1, v[0:1]
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v3, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v3, v5, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v2, v4, 0, vcc_lo
+; GCN-NEXT:    v_cmp_eq_u64_e32 vcc_lo, 1, v[0:1]
+; GCN-NEXT:    v_dual_cndmask_b32 v1, 0, v3 :: v_dual_cndmask_b32 v0, 0, v2
+; GCN-NEXT:    v_dual_cndmask_b32 v3, 0, v5 :: v_dual_cndmask_b32 v2, 0, v4
 ; GCN-NEXT:    global_store_b128 v[6:7], v[0:3], off
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -400,11 +385,9 @@ define amdgpu_cs void @test_u64_ule(i64 %a, i64 %p, i64 %q, ptr addrspace(1) %ou
 define amdgpu_cs void @test_u64_ugt(i64 %a, i64 %p, i64 %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_u64_ugt:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_gt_u64_e32 vcc_lo, 2, v[0:1]
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v3, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v3, v5, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v2, v4, 0, vcc_lo
+; GCN-NEXT:    v_cmp_lt_u64_e32 vcc_lo, 1, v[0:1]
+; GCN-NEXT:    v_dual_cndmask_b32 v1, 0, v3 :: v_dual_cndmask_b32 v0, 0, v2
+; GCN-NEXT:    v_dual_cndmask_b32 v3, 0, v5 :: v_dual_cndmask_b32 v2, 0, v4
 ; GCN-NEXT:    global_store_b128 v[6:7], v[0:3], off
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -420,11 +403,9 @@ define amdgpu_cs void @test_u64_ugt(i64 %a, i64 %p, i64 %q, ptr addrspace(1) %ou
 define amdgpu_cs void @test_u64_ult(i64 %a, i64 %p, i64 %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_u64_ult:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_lt_u64_e32 vcc_lo, 2, v[0:1]
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v3, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v3, v5, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v2, v4, 0, vcc_lo
+; GCN-NEXT:    v_cmp_gt_u64_e32 vcc_lo, 3, v[0:1]
+; GCN-NEXT:    v_dual_cndmask_b32 v1, 0, v3 :: v_dual_cndmask_b32 v0, 0, v2
+; GCN-NEXT:    v_dual_cndmask_b32 v3, 0, v5 :: v_dual_cndmask_b32 v2, 0, v4
 ; GCN-NEXT:    global_store_b128 v[6:7], v[0:3], off
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -441,9 +422,8 @@ define amdgpu_cs void @test_u64_ult(i64 %a, i64 %p, i64 %q, ptr addrspace(1) %ou
 define amdgpu_cs void @test_f32_oeq(float %a, float %p, float %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_f32_oeq:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_eq_f32_e32 vcc_lo, 2.0, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v2, 0, vcc_lo
+; GCN-NEXT:    v_cmp_neq_f32_e32 vcc_lo, 2.0, v0
+; GCN-NEXT:    v_dual_cndmask_b32 v0, 0, v1 :: v_dual_cndmask_b32 v1, 0, v2
 ; GCN-NEXT:    global_store_b64 v[3:4], v[0:1], off
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -479,9 +459,8 @@ define amdgpu_cs void @test_f32_negative_modifiers(float %a, float %p, float %q,
 define amdgpu_cs void @test_f32_one(float %a, float %p, float %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_f32_one:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_lg_f32_e32 vcc_lo, 2.0, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v2, 0, vcc_lo
+; GCN-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 2.0, v0
+; GCN-NEXT:    v_dual_cndmask_b32 v0, 0, v1 :: v_dual_cndmask_b32 v1, 0, v2
 ; GCN-NEXT:    global_store_b64 v[3:4], v[0:1], off
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -497,9 +476,8 @@ define amdgpu_cs void @test_f32_one(float %a, float %p, float %q, ptr addrspace(
 define amdgpu_cs void @test_f32_ord(float %a, float %p, float %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_f32_ord:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v2, 0, vcc_lo
+; GCN-NEXT:    v_cmp_u_f32_e32 vcc_lo, v0, v0
+; GCN-NEXT:    v_dual_cndmask_b32 v0, 0, v1 :: v_dual_cndmask_b32 v1, 0, v2
 ; GCN-NEXT:    global_store_b64 v[3:4], v[0:1], off
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -515,9 +493,8 @@ define amdgpu_cs void @test_f32_ord(float %a, float %p, float %q, ptr addrspace(
 define amdgpu_cs void @test_f32_uno(float %a, float %p, float %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_f32_uno:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_u_f32_e32 vcc_lo, v0, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v2, 0, vcc_lo
+; GCN-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
+; GCN-NEXT:    v_dual_cndmask_b32 v0, 0, v1 :: v_dual_cndmask_b32 v1, 0, v2
 ; GCN-NEXT:    global_store_b64 v[3:4], v[0:1], off
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -533,9 +510,8 @@ define amdgpu_cs void @test_f32_uno(float %a, float %p, float %q, ptr addrspace(
 define amdgpu_cs void @test_f32_oge(float %a, float %p, float %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_f32_oge:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 2.0, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v2, 0, vcc_lo
+; GCN-NEXT:    v_cmp_nge_f32_e32 vcc_lo, 2.0, v0
+; GCN-NEXT:    v_dual_cndmask_b32 v0, 0, v1 :: v_dual_cndmask_b32 v1, 0, v2
 ; GCN-NEXT:    global_store_b64 v[3:4], v[0:1], off
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -551,9 +527,8 @@ define amdgpu_cs void @test_f32_oge(float %a, float %p, float %q, ptr addrspace(
 define amdgpu_cs void @test_f32_ole(float %a, float %p, float %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_f32_ole:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_le_f32_e32 vcc_lo, 2.0, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v2, 0, vcc_lo
+; GCN-NEXT:    v_cmp_nle_f32_e32 vcc_lo, 2.0, v0
+; GCN-NEXT:    v_dual_cndmask_b32 v0, 0, v1 :: v_dual_cndmask_b32 v1, 0, v2
 ; GCN-NEXT:    global_store_b64 v[3:4], v[0:1], off
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -569,9 +544,8 @@ define amdgpu_cs void @test_f32_ole(float %a, float %p, float %q, ptr addrspace(
 define amdgpu_cs void @test_f32_ogt(float %a, float %p, float %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_f32_ogt:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 2.0, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v2, 0, vcc_lo
+; GCN-NEXT:    v_cmp_ngt_f32_e32 vcc_lo, 2.0, v0
+; GCN-NEXT:    v_dual_cndmask_b32 v0, 0, v1 :: v_dual_cndmask_b32 v1, 0, v2
 ; GCN-NEXT:    global_store_b64 v[3:4], v[0:1], off
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -587,9 +561,8 @@ define amdgpu_cs void @test_f32_ogt(float %a, float %p, float %q, ptr addrspace(
 define amdgpu_cs void @test_f32_olt(float %a, float %p, float %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_f32_olt:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 2.0, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v2, 0, vcc_lo
+; GCN-NEXT:    v_cmp_nlt_f32_e32 vcc_lo, 2.0, v0
+; GCN-NEXT:    v_dual_cndmask_b32 v0, 0, v1 :: v_dual_cndmask_b32 v1, 0, v2
 ; GCN-NEXT:    global_store_b64 v[3:4], v[0:1], off
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -606,11 +579,9 @@ define amdgpu_cs void @test_f32_olt(float %a, float %p, float %q, ptr addrspace(
 define amdgpu_cs void @test_f64_oeq(double %a, double %p, double %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_f64_oeq:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_eq_f64_e32 vcc_lo, 2.0, v[0:1]
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v3, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v3, v5, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v2, v4, 0, vcc_lo
+; GCN-NEXT:    v_cmp_neq_f64_e32 vcc_lo, 2.0, v[0:1]
+; GCN-NEXT:    v_dual_cndmask_b32 v1, 0, v3 :: v_dual_cndmask_b32 v0, 0, v2
+; GCN-NEXT:    v_dual_cndmask_b32 v3, 0, v5 :: v_dual_cndmask_b32 v2, 0, v4
 ; GCN-NEXT:    global_store_b128 v[6:7], v[0:3], off
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -626,11 +597,9 @@ define amdgpu_cs void @test_f64_oeq(double %a, double %p, double %q, ptr addrspa
 define amdgpu_cs void @test_f64_one(double %a, double %p, double %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_f64_one:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_lg_f64_e32 vcc_lo, 2.0, v[0:1]
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v3, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v3, v5, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v2, v4, 0, vcc_lo
+; GCN-NEXT:    v_cmp_nlg_f64_e32 vcc_lo, 2.0, v[0:1]
+; GCN-NEXT:    v_dual_cndmask_b32 v1, 0, v3 :: v_dual_cndmask_b32 v0, 0, v2
+; GCN-NEXT:    v_dual_cndmask_b32 v3, 0, v5 :: v_dual_cndmask_b32 v2, 0, v4
 ; GCN-NEXT:    global_store_b128 v[6:7], v[0:3], off
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -646,11 +615,9 @@ define amdgpu_cs void @test_f64_one(double %a, double %p, double %q, ptr addrspa
 define amdgpu_cs void @test_f64_oge(double %a, double %p, double %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_f64_oge:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_ge_f64_e32 vcc_lo, 2.0, v[0:1]
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v3, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v3, v5, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v2, v4, 0, vcc_lo
+; GCN-NEXT:    v_cmp_nge_f64_e32 vcc_lo, 2.0, v[0:1]
+; GCN-NEXT:    v_dual_cndmask_b32 v1, 0, v3 :: v_dual_cndmask_b32 v0, 0, v2
+; GCN-NEXT:    v_dual_cndmask_b32 v3, 0, v5 :: v_dual_cndmask_b32 v2, 0, v4
 ; GCN-NEXT:    global_store_b128 v[6:7], v[0:3], off
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -666,11 +633,9 @@ define amdgpu_cs void @test_f64_oge(double %a, double %p, double %q, ptr addrspa
 define amdgpu_cs void @test_f64_ole(double %a, double %p, double %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_f64_ole:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_le_f64_e32 vcc_lo, 2.0, v[0:1]
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v3, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v3, v5, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v2, v4, 0, vcc_lo
+; GCN-NEXT:    v_cmp_nle_f64_e32 vcc_lo, 2.0, v[0:1]
+; GCN-NEXT:    v_dual_cndmask_b32 v1, 0, v3 :: v_dual_cndmask_b32 v0, 0, v2
+; GCN-NEXT:    v_dual_cndmask_b32 v3, 0, v5 :: v_dual_cndmask_b32 v2, 0, v4
 ; GCN-NEXT:    global_store_b128 v[6:7], v[0:3], off
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -686,11 +651,9 @@ define amdgpu_cs void @test_f64_ole(double %a, double %p, double %q, ptr addrspa
 define amdgpu_cs void @test_f64_ogt(double %a, double %p, double %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_f64_ogt:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_gt_f64_e32 vcc_lo, 2.0, v[0:1]
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v3, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v3, v5, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v2, v4, 0, vcc_lo
+; GCN-NEXT:    v_cmp_ngt_f64_e32 vcc_lo, 2.0, v[0:1]
+; GCN-NEXT:    v_dual_cndmask_b32 v1, 0, v3 :: v_dual_cndmask_b32 v0, 0, v2
+; GCN-NEXT:    v_dual_cndmask_b32 v3, 0, v5 :: v_dual_cndmask_b32 v2, 0, v4
 ; GCN-NEXT:    global_store_b128 v[6:7], v[0:3], off
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -706,11 +669,9 @@ define amdgpu_cs void @test_f64_ogt(double %a, double %p, double %q, ptr addrspa
 define amdgpu_cs void @test_f64_olt(double %a, double %p, double %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_f64_olt:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_lt_f64_e32 vcc_lo, 2.0, v[0:1]
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v3, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v3, v5, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v2, v4, 0, vcc_lo
+; GCN-NEXT:    v_cmp_nlt_f64_e32 vcc_lo, 2.0, v[0:1]
+; GCN-NEXT:    v_dual_cndmask_b32 v1, 0, v3 :: v_dual_cndmask_b32 v0, 0, v2
+; GCN-NEXT:    v_dual_cndmask_b32 v3, 0, v5 :: v_dual_cndmask_b32 v2, 0, v4
 ; GCN-NEXT:    global_store_b128 v[6:7], v[0:3], off
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -726,11 +687,9 @@ define amdgpu_cs void @test_f64_olt(double %a, double %p, double %q, ptr addrspa
 define amdgpu_cs void @test_f64_ord(double %a, double %p, double %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_f64_ord:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_o_f64_e32 vcc_lo, v[0:1], v[0:1]
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v3, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v3, v5, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v2, v4, 0, vcc_lo
+; GCN-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[0:1], v[0:1]
+; GCN-NEXT:    v_dual_cndmask_b32 v1, 0, v3 :: v_dual_cndmask_b32 v0, 0, v2
+; GCN-NEXT:    v_dual_cndmask_b32 v3, 0, v5 :: v_dual_cndmask_b32 v2, 0, v4
 ; GCN-NEXT:    global_store_b128 v[6:7], v[0:3], off
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -746,11 +705,9 @@ define amdgpu_cs void @test_f64_ord(double %a, double %p, double %q, ptr addrspa
 define amdgpu_cs void @test_f64_uno(double %a, double %p, double %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_f64_uno:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[0:1], v[0:1]
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v3, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v3, v5, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v2, v4, 0, vcc_lo
+; GCN-NEXT:    v_cmp_o_f64_e32 vcc_lo, v[0:1], v[0:1]
+; GCN-NEXT:    v_dual_cndmask_b32 v1, 0, v3 :: v_dual_cndmask_b32 v0, 0, v2
+; GCN-NEXT:    v_dual_cndmask_b32 v3, 0, v5 :: v_dual_cndmask_b32 v2, 0, v4
 ; GCN-NEXT:    global_store_b128 v[6:7], v[0:3], off
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -760,5 +717,25 @@ define amdgpu_cs void @test_f64_uno(double %a, double %p, double %q, ptr addrspa
   %ret0 = insertelement <2 x double> poison, double %val1, i32 0
   %ret1 = insertelement <2 x double> %ret0, double %val2, i32 1
   store <2 x double> %ret1, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_cs void @additional_test(i32 %a, i32 %p, i32 %q, i32 %r, ptr addrspace(1) %out) {
+; GCN-LABEL: additional_test:
+; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v0
+; GCN-NEXT:    v_dual_cndmask_b32 v8, 1, v1 :: v_dual_cndmask_b32 v7, 3, v3
+; GCN-NEXT:    v_cndmask_b32_e64 v6, v2, 2, vcc_lo
+; GCN-NEXT:    global_store_b96 v[4:5], v[6:8], off
+; GCN-NEXT:    s_endpgm
+.entry:
+  %vcc = icmp eq i32 %a, 2
+  %val1 = select i1 %vcc, i32 %p, i32 1
+  %val2 = select i1 %vcc, i32 2, i32 %q
+  %val3 = select i1 %vcc, i32 %r, i32 3
+  %ret0 = insertelement <3 x i32> poison, i32 %val2, i32 0
+  %ret1 = insertelement <3 x i32> %ret0, i32 %val3, i32 1
+  %ret2 = insertelement <3 x i32> %ret1, i32 %val1, i32 2
+  store <3 x i32> %ret2, ptr addrspace(1) %out
   ret void
 }
