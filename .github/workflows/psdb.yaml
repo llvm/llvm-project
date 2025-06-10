@@ -20,5 +20,4 @@ jobs:
     with:
       job_name: 'llvm-psdb'
       is_psdb: true
-      library_branch: 'hongzhao/llvm_branches'
     secrets: inherit
