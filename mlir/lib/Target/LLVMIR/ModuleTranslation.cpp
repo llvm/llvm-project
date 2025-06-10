@@ -67,8 +67,6 @@ using namespace mlir;
 using namespace mlir::LLVM;
 using namespace mlir::LLVM::detail;
 
-extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
-
 #include "mlir/Dialect/LLVMIR/LLVMConversionEnumsToLLVM.inc"
 
 namespace {
@@ -2328,7 +2326,7 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   // Once we've finished constructing elements in the module, we should convert
   // it to use the debug info format desired by LLVM.
   // See https://llvm.org/docs/RemoveDIsDebugInfo.html
-  translator.llvmModule->setIsNewDbgInfoFormat(UseNewDbgInfoFormat);
+  translator.llvmModule->setIsNewDbgInfoFormat(true);
 
   // Add the necessary debug info module flags, if they were not encoded in MLIR
   // beforehand.
