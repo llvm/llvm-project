@@ -840,6 +840,8 @@ Bug Fixes to C++ Support
 - Fixed a pack substitution bug in deducing class template partial specializations. (#GH53609)
 - Fixed a crash when constant evaluating some explicit object member assignment operators. (#GH142835)
 - Fixed an access checking bug when substituting into concepts (#GH115838)
+- Correctly rejects invalid member using-declaration whose nested name specifier
+  refers to its own class in C++98 mode.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
