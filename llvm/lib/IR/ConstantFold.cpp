@@ -463,6 +463,8 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
     Constant *Elt =
         ConstantExpr::getExtractElement(V1, ConstantInt::get(Ty, 0));
 
+    // For scalable vectors, make sure this doesn't fold back into a
+    // shufflevector.
     if (!MaskEltCount.isScalable() || Elt->isNullValue() || isa<UndefValue>(Elt))
       return ConstantVector::getSplat(MaskEltCount, Elt);
   }
