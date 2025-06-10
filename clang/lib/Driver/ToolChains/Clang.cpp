@@ -5354,7 +5354,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
       CmdArgs.push_back("-emit-module-interface");
     else if (JA.getType() == types::TY_HeaderUnit)
       CmdArgs.push_back("-emit-header-unit");
-    else if (!Args.hasArg(options::OPT_ignore_pch))
+    else
       CmdArgs.push_back("-emit-pch");
   } else if (isa<VerifyPCHJobAction>(JA)) {
     CmdArgs.push_back("-verify-pch");
@@ -5411,8 +5411,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
     } else if (JA.getType() == types::TY_PP_Asm) {
       CmdArgs.push_back("-S");
     } else if (JA.getType() == types::TY_AST) {
-      if (!Args.hasArg(options::OPT_ignore_pch))
-        CmdArgs.push_back("-emit-pch");
+      CmdArgs.push_back("-emit-pch");
     } else if (JA.getType() == types::TY_ModuleFile) {
       CmdArgs.push_back("-module-file-info");
     } else if (JA.getType() == types::TY_RewrittenObjC) {
