@@ -435,8 +435,7 @@ llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
     if (getArch() == llvm::Triple::spirv)
       return createSPIRVBuiltinLoad(B, CGM.getModule(), Ty, "sv_position",
                                     /* BuiltIn::Position */ 0);
-    llvm_unreachable(
-        "Shader signature for semantics not implemented for DXIL.");
+    llvm_unreachable("SV_Position semantic not implemented for this target.");
   }
   assert(false && "Unhandled parameter attribute");
   return nullptr;
