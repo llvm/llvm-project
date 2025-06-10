@@ -83,7 +83,6 @@ struct MissingFeatures {
   static bool opFuncSetComdat() { return false; }
 
   // CallOp handling
-  static bool opCallBuiltinFunc() { return false; }
   static bool opCallPseudoDtor() { return false; }
   static bool opCallAggregateArgs() { return false; }
   static bool opCallPaddingArgs() { return false; }

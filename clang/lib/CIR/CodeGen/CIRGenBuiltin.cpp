@@ -43,8 +43,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
       // type. We feel it should be Ok to use expression type because it is
       // hard to imagine a builtin function evaluates to a value that
       // over/underflows its own defined type.
-      mlir::Type resTy = convertType(e->getType());
-      return RValue::get(builder.getConstFP(getLoc(e->getExprLoc()), resTy,
+      mlir::Type type = convertType(e->getType());
+      return RValue::get(builder.getConstFP(getLoc(e->getExprLoc()), type,
                                             result.Val.getFloat()));
     }
   }

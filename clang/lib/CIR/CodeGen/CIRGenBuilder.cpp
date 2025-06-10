@@ -50,9 +50,7 @@ cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc,
 
 cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc,
                                              llvm::APInt intVal) {
-  unsigned width = intVal.getBitWidth();
-  cir::IntType t = getUIntNTy(width);
-  return getConstInt(loc, t, intVal.getZExtValue());
+  return getConstInt(loc, llvm::APSInt(intVal));
 }
 
 cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc, mlir::Type t,

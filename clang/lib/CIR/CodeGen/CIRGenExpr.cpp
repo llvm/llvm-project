@@ -1043,7 +1043,7 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
   const auto *fd = cast<FunctionDecl>(gd.getDecl());
 
   if (unsigned builtinID = fd->getBuiltinID()) {
-    if(fd->getAttr<AsmLabelAttr>()) {
+    if (fd->getAttr<AsmLabelAttr>()) {
       cgm.errorNYI("AsmLabelAttr");
     }
 
