@@ -20,22 +20,24 @@ namespace clang::tidy::modernize {
 
 namespace {
 
-RewriteRuleWith<std::string> makeFunctionToDirectCheckImpl(
-    bool CheckMakePair, bool CheckMakeOptional, bool CheckMakeTuple) {
+RewriteRuleWith<std::string>
+makeFunctionToDirectCheckImpl(bool CheckMakePair, bool CheckMakeOptional,
+                              bool CheckMakeTuple) {
   std::vector<RewriteRuleWith<std::string>> Rules;
 
   // Helper to create a rule for a specific make_* function
   auto createRule = [](StringRef MakeFunction, StringRef DirectType) {
     auto WarningMessage = cat("use class template argument deduction (CTAD) "
-                              "instead of ", MakeFunction);
+                              "instead of ",
+                              MakeFunction);
 
     return makeRule(
         callExpr(callee(functionDecl(hasName(MakeFunction))),
-                 unless(hasParent(implicitCastExpr(
-                     hasImplicitDestinationType(qualType(hasCanonicalType(
-                         qualType(asString("void")))))))))
+                 unless(hasParent(implicitCastExpr(hasImplicitDestinationType(
+                     qualType(hasCanonicalType(qualType(asString("void")))))))))
             .bind("make_call"),
-        changeTo(node("make_call"), cat(DirectType, "(", callArgs("make_call"), ")")),
+        changeTo(node("make_call"),
+                 cat(DirectType, "(", callArgs("make_call"), ")")),
         WarningMessage);
   };
 
@@ -62,7 +64,8 @@ MakeFunctionToDirectCheck::MakeFunctionToDirectCheck(StringRef Name,
       CheckMakePair(Options.get("CheckMakePair", true)),
       CheckMakeOptional(Options.get("CheckMakeOptional", true)),
       CheckMakeTuple(Options.get("CheckMakeTuple", true)) {
-  setRule(makeFunctionToDirectCheckImpl(CheckMakePair, CheckMakeOptional, CheckMakeTuple));
+  setRule(makeFunctionToDirectCheckImpl(CheckMakePair, CheckMakeOptional,
+                                        CheckMakeTuple));
 }
 
 void MakeFunctionToDirectCheck::storeOptions(

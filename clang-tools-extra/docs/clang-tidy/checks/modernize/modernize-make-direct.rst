@@ -1,7 +1,7 @@
 .. title:: clang-tidy - modernize-make-direct
 
 modernize-make-direct
-====================
+=====================
 
 Replaces ``std::make_*`` function calls with direct constructor calls using class template
 argument deduction (CTAD).
