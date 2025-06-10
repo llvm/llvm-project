@@ -774,6 +774,12 @@ void TextDiagnostic::emitFilename(StringRef Filename, const SourceManager &SM) {
 #else
       CacheEntry = SM.getFileManager().getCanonicalName(*File);
 #endif
+
+      // In some cases, the resolved path may actually end up being longer (e.g.
+      // if it was originally a relative path), so just retain whichever one
+      // ends up being shorter.
+      if (!DiagOpts.AbsolutePath && CacheEntry.size() > Filename.size())
+        CacheEntry = Filename;
     }
     Filename = CacheEntry;
   }
