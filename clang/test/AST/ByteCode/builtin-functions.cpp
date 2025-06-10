@@ -208,7 +208,7 @@ namespace nan {
 
   constexpr double NaN3 = __builtin_nan("foo"); // both-error {{must be initialized by a constant expression}}
   constexpr float NaN4 = __builtin_nanf("");
-  //constexpr long double NaN5 = __builtin_nanf128("");
+  constexpr long double NaN5 = __builtin_nanf128("");
 
   /// FIXME: This should be accepted by the current interpreter as well.
   constexpr char f[] = {'0', 'x', 'A', 'E', '\0'};
@@ -655,8 +655,6 @@ void test_noexcept(int *i) {
 } // end namespace test_launder
 
 
-/// FIXME: The commented out tests here use a IntAP value and fail.
-/// This currently means we will leak the IntAP value since nothing cleans it up.
 namespace clz {
   char clz1[__builtin_clz(1) == BITSIZE(int) - 1 ? 1 : -1];
   char clz2[__builtin_clz(7) == BITSIZE(int) - 3 ? 1 : -1];
@@ -709,7 +707,7 @@ namespace clz {
   char clz48[__builtin_clzg(1ULL << (BITSIZE(long long) - 1)) == 0 ? 1 : -1];
   char clz49[__builtin_clzg(1ULL << (BITSIZE(long long) - 1), 42) == 0 ? 1 : -1];
 #ifdef __SIZEOF_INT128__
-  // int clz50 = __builtin_clzg((unsigned __int128)0);
+  int clz50 = __builtin_clzg((unsigned __int128)0);
   char clz51[__builtin_clzg((unsigned __int128)0, 42) == 42 ? 1 : -1];
   char clz52[__builtin_clzg((unsigned __int128)0x1) == BITSIZE(__int128) - 1 ? 1 : -1];
   char clz53[__builtin_clzg((unsigned __int128)0x1, 42) == BITSIZE(__int128) - 1 ? 1 : -1];
@@ -717,7 +715,7 @@ namespace clz {
   char clz55[__builtin_clzg((unsigned __int128)0xf, 42) == BITSIZE(__int128) - 4 ? 1 : -1];
 #endif
 #ifndef __AVR__
-  // int clz58 = __builtin_clzg((unsigned _BitInt(128))0);
+  int clz58 = __builtin_clzg((unsigned _BitInt(128))0);
   char clz59[__builtin_clzg((unsigned _BitInt(128))0, 42) == 42 ? 1 : -1];
   char clz60[__builtin_clzg((unsigned _BitInt(128))0x1) == BITSIZE(_BitInt(128)) - 1 ? 1 : -1];
   char clz61[__builtin_clzg((unsigned _BitInt(128))0x1, 42) == BITSIZE(_BitInt(128)) - 1 ? 1 : -1];
@@ -775,7 +773,7 @@ namespace ctz {
   char ctz46[__builtin_ctzg(1ULL << (BITSIZE(long long) - 1)) == BITSIZE(long long) - 1 ? 1 : -1];
   char ctz47[__builtin_ctzg(1ULL << (BITSIZE(long long) - 1), 42) == BITSIZE(long long) - 1 ? 1 : -1];
 #ifdef __SIZEOF_INT128__
-  // int ctz48 = __builtin_ctzg((unsigned __int128)0);
+  int ctz48 = __builtin_ctzg((unsigned __int128)0);
   char ctz49[__builtin_ctzg((unsigned __int128)0, 42) == 42 ? 1 : -1];
   char ctz50[__builtin_ctzg((unsigned __int128)0x1) == 0 ? 1 : -1];
   char ctz51[__builtin_ctzg((unsigned __int128)0x1, 42) == 0 ? 1 : -1];
@@ -785,7 +783,7 @@ namespace ctz {
   char ctz55[__builtin_ctzg((unsigned __int128)1 << (BITSIZE(__int128) - 1), 42) == BITSIZE(__int128) - 1 ? 1 : -1];
 #endif
 #ifndef __AVR__
-  // int ctz56 = __builtin_ctzg((unsigned _BitInt(128))0);
+  int ctz56 = __builtin_ctzg((unsigned _BitInt(128))0);
   char ctz57[__builtin_ctzg((unsigned _BitInt(128))0, 42) == 42 ? 1 : -1];
   char ctz58[__builtin_ctzg((unsigned _BitInt(128))0x1) == 0 ? 1 : -1];
   char ctz59[__builtin_ctzg((unsigned _BitInt(128))0x1, 42) == 0 ? 1 : -1];
