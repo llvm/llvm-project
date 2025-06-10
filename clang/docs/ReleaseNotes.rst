@@ -157,6 +157,8 @@ Resolutions to C++ Defect Reports
   `constraint-expression <https://cplusplus.github.io/CWG/issues/2517.html>`_.
 - Implemented `CWG3005 Function parameters should never be name-independent <https://wg21.link/CWG3005>`_.
 
+- Implemented `CWG2496 ref-qualifiers and virtual overriding <https://wg21.link/CWG2496>`_.
+
 C Language Changes
 ------------------
 
@@ -289,6 +291,8 @@ C23 Feature Support
   directive. Fixes #GH126940.
 - Fixed a crash when a declaration of a ``constexpr`` variable with an invalid
   type. Fixes #GH140887
+- Documented `WG14 N3006 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3006.htm>`_
+  which clarified how Clang is handling underspecified object declarations.
 
 C11 Feature Support
 ^^^^^^^^^^^^^^^^^^^
