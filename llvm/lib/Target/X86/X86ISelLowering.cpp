@@ -59304,23 +59304,17 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
   // We can always convert per-lane vXf64 shuffles into VSHUFPD.
   if (!IsSplat &&
       (VT == MVT::v4f64 || (VT == MVT::v8f64 && Subtarget.useAVX512Regs())) &&
-      all_of(Ops, [](SDValue Op) {
-        return Op.hasOneUse() && (Op.getOpcode() == X86ISD::MOVDDUP ||
-                                  Op.getOpcode() == X86ISD::SHUFP ||
-                                  Op.getOpcode() == X86ISD::VPERMILPI ||
-                                  Op.getOpcode() == X86ISD::BLENDI ||
-                                  Op.getOpcode() == X86ISD::UNPCKL ||
-                                  Op.getOpcode() == X86ISD::UNPCKH);
-      })) {
+      all_of(Ops, [](SDValue Op) { return Op.hasOneUse(); })) {
     // Collect the individual per-lane v2f64/v4f64 shuffles.
     MVT OpVT = Ops[0].getSimpleValueType();
     unsigned NumOpElts = OpVT.getVectorNumElements();
     SmallVector<SmallVector<SDValue, 2>, 4> SrcOps(NumOps);
     SmallVector<SmallVector<int, 8>, 4> SrcMasks(NumOps);
     if (all_of(seq<int>(NumOps), [&](int I) {
-          return getTargetShuffleMask(Ops[I], /*AllowSentinelZero=*/false,
-                                      SrcOps[I], SrcMasks[I]) &&
+          return getTargetShuffleInputs(Ops[I], SrcOps[I], SrcMasks[I], DAG,
+                                        Depth + 1) &&
                  !is128BitLaneCrossingShuffleMask(OpVT, SrcMasks[I]) &&
+                 none_of(SrcMasks[I], isUndefOrZero) &&
                  SrcMasks[I].size() == NumOpElts &&
                  all_of(SrcOps[I], [&OpVT](SDValue V) {
                    return V.getValueType() == OpVT;
