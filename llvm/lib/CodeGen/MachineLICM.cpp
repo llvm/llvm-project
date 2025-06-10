@@ -559,17 +559,14 @@ void MachineLICMImpl::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
       if (!MO.isDead())
         // Non-dead implicit def? This cannot be hoisted.
         RuledOut = true;
-      // No need to check if a dead implicit def is also defined by
-      // another instruction.
-      continue;
+    } else {
+      // FIXME: For now, avoid instructions with multiple defs, unless
+      // it's a dead implicit def.
+      if (Def)
+        RuledOut = true;
+      else
+        Def = Reg;
     }
-
-    // FIXME: For now, avoid instructions with multiple defs, unless
-    // it's a dead implicit def.
-    if (Def)
-      RuledOut = true;
-    else
-      Def = Reg;
 
     // If we have already seen another instruction that defines the same
     // register, then this is not safe.  Two defs is indicated by setting a
