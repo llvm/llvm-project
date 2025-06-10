@@ -1140,21 +1140,20 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
-  // Look through Extract(Last|Penultimate)Element (BuildVector ....).
-  if (match(&R,
-            m_VPInstruction<VPInstruction::ExtractLastElement>(m_VPValue(A))) ||
-      match(&R, m_VPInstruction<VPInstruction::ExtractPenultimateElement>(
-                    m_VPValue(A)))) {
-    unsigned Offset = cast<VPInstruction>(&R)->getOpcode() ==
-                              VPInstruction::ExtractLastElement
-                          ? 1
-                          : 2;
-    auto *BV = dyn_cast<VPInstruction>(A);
-    if (BV && BV->getOpcode() == VPInstruction::BuildVector) {
-      Def->replaceAllUsesWith(BV->getOperand(BV->getNumOperands() - Offset));
-      return;
-    }
+  // Look through ExtractLastElement (BuildVector ....).
+  if (match(&R, m_VPInstruction<VPInstruction::ExtractLastElement>(
+            m_BuildVector()))) {
+    auto *BuildVector = cast<VPInstruction>(R.getOperand(0));
+    Def->replaceAllUsesWith(BuildVector->getOperand(BuildVector->getNumOperands() - 1));
+    return;
   }
+  // Look through ExtractPenultimateElement (BuildVector ....).
+  if (match(&R, m_VPInstruction<VPInstruction::ExtractPenultimateElement>(
+            m_BuildVector()))) {
+    auto *BuildVector = cast<VPInstruction>(R.getOperand(0));
+    Def->replaceAllUsesWith(BuildVector->getOperand(BuildVector->getNumOperands() - 2));
+    return;
+}
 
   // Some simplifications can only be applied after unrolling. Perform them
   // below.

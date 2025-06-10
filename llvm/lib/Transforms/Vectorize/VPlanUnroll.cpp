@@ -447,7 +447,7 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF, LLVMContext &Ctx) {
   VPlanTransforms::removeDeadRecipes(Plan);
 }
 
-/// Create a single-scalar clone of RepR for lane \p Lane.
+/// Create a single-scalar clone of \p RepR for lane \p Lane.
 static VPReplicateRecipe *cloneForLane(VPlan &Plan, VPBuilder &Builder,
                                        Type *IdxTy, VPReplicateRecipe *RepR,
                                        VPLane Lane) {
@@ -458,20 +458,18 @@ static VPReplicateRecipe *cloneForLane(VPlan &Plan, VPBuilder &Builder,
       NewOps.push_back(Op);
       continue;
     }
-    VPValue *Ext;
     if (Lane.getKind() == VPLane::Kind::ScalableLast) {
-      Ext = Builder.createNaryOp(VPInstruction::ExtractLastElement, {Op});
-    } else {
-      // Look through buildvector to avoid unnecessary extracts.
-      auto *BV = dyn_cast<VPInstruction>(Op);
-      if (BV && BV->getOpcode() == VPInstruction::BuildVector) {
-        NewOps.push_back(BV->getOperand(Lane.getKnownLane()));
-        continue;
-      }
-      VPValue *Idx =
-          Plan.getOrAddLiveIn(ConstantInt::get(IdxTy, Lane.getKnownLane()));
-      Ext = Builder.createNaryOp(Instruction::ExtractElement, {Op, Idx});
+      NewOps.push_back(Builder.createNaryOp(VPInstruction::ExtractLastElement, {Op}));
+      continue;
     }
+    // Look through buildvector to avoid unnecessary extracts.
+    if (match(Op, m_BuildVector())) {
+      NewOps.push_back(cast<VPInstruction>(Op)->getOperand(Lane.getKnownLane()));
+      continue;
+    }
+    VPValue *Idx =
+        Plan.getOrAddLiveIn(ConstantInt::get(IdxTy, Lane.getKnownLane()));
+    VPValue *Ext = Builder.createNaryOp(Instruction::ExtractElement, {Op, Idx});
     NewOps.push_back(Ext);
   }
 
@@ -482,7 +480,7 @@ static VPReplicateRecipe *cloneForLane(VPlan &Plan, VPBuilder &Builder,
   return New;
 }
 
-void VPlanTransforms::unrollByVF(VPlan &Plan, ElementCount VF) {
+void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
   Type *IdxTy = IntegerType::get(
       Plan.getScalarHeader()->getIRBasicBlock()->getContext(), 32);
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
@@ -494,7 +492,7 @@ void VPlanTransforms::unrollByVF(VPlan &Plan, ElementCount VF) {
 
       VPBuilder Builder(RepR);
       SmallVector<VPValue *> LaneDefs;
-      // Stores to invariant addresses only need to store the last lane.
+      // Stores to invariant addresses need to store the last lane only.
       if (isa<StoreInst>(RepR->getUnderlyingInstr()) &&
           vputils::isSingleScalar(RepR->getOperand(1))) {
         cloneForLane(Plan, Builder, IdxTy, RepR, VPLane::getLastLaneForVF(VF));

@@ -221,6 +221,9 @@ struct Recipe_match {
     if ((!matchRecipeAndOpcode<RecipeTys>(R) && ...))
       return false;
 
+    auto *VPI = dyn_cast<VPInstruction>(R);
+    if (VPI && VPI->getOpcode() == VPInstruction::BuildVector)
+      return true;
     assert(R->getNumOperands() == std::tuple_size<Ops_t>::value &&
            "recipe with matched opcode does not have the expected number of "
            "operands");
@@ -260,6 +263,10 @@ private:
   }
 };
 
+template <unsigned Opcode, typename... RecipeTys>
+using ZeroOpRecipe_match =
+    Recipe_match<std::tuple<>, Opcode, false, RecipeTys...>;
+
 template <typename Op0_t, unsigned Opcode, typename... RecipeTys>
 using UnaryRecipe_match =
     Recipe_match<std::tuple<Op0_t>, Opcode, false, RecipeTys...>;
@@ -267,6 +274,10 @@ using UnaryRecipe_match =
 template <typename Op0_t, unsigned Opcode>
 using UnaryVPInstruction_match =
     UnaryRecipe_match<Op0_t, Opcode, VPInstruction>;
+
+template <unsigned Opcode>
+using ZeroOpVPInstruction_match =
+    ZeroOpRecipe_match<Opcode, VPInstruction>;
 
 template <typename Op0_t, unsigned Opcode>
 using AllUnaryRecipe_match =
@@ -298,6 +309,11 @@ template <typename Op0_t, typename Op1_t, unsigned Opcode,
 using AllBinaryRecipe_match =
     BinaryRecipe_match<Op0_t, Op1_t, Opcode, Commutative, VPWidenRecipe,
                        VPReplicateRecipe, VPWidenCastRecipe, VPInstruction>;
+
+inline ZeroOpVPInstruction_match<VPInstruction::BuildVector>
+m_BuildVector() {
+  return ZeroOpVPInstruction_match<VPInstruction::BuildVector>();
+}
 
 template <unsigned Opcode, typename Op0_t>
 inline UnaryVPInstruction_match<Op0_t, Opcode>
