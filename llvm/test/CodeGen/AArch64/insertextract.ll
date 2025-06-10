@@ -630,7 +630,7 @@ define <8 x i8> @insert_v8i8_c(<8 x i8> %a, i8 %b, i32 %c) {
 ; CHECK-GI-NEXT:    mov w8, #1 // =0x1
 ; CHECK-GI-NEXT:    str d0, [sp, #8]
 ; CHECK-GI-NEXT:    and x9, x9, #0x7
-; CHECK-GI-NEXT:    mul x8, x9, x8
+; CHECK-GI-NEXT:    umull x8, w9, w8
 ; CHECK-GI-NEXT:    add x9, sp, #8
 ; CHECK-GI-NEXT:    strb w0, [x9, x8]
 ; CHECK-GI-NEXT:    ldr d0, [sp, #8]
@@ -682,7 +682,7 @@ define <16 x i8> @insert_v16i8_c(<16 x i8> %a, i8 %b, i32 %c) {
 ; CHECK-GI-NEXT:    mov w8, #1 // =0x1
 ; CHECK-GI-NEXT:    str q0, [sp]
 ; CHECK-GI-NEXT:    and x9, x9, #0xf
-; CHECK-GI-NEXT:    mul x8, x9, x8
+; CHECK-GI-NEXT:    umull x8, w9, w8
 ; CHECK-GI-NEXT:    mov x9, sp
 ; CHECK-GI-NEXT:    strb w0, [x9, x8]
 ; CHECK-GI-NEXT:    ldr q0, [sp], #16
@@ -1478,16 +1478,11 @@ entry:
 }
 
 define float @extract_v2f32_0(<2 x float> %a, i32 %c) {
-; CHECK-SD-LABEL: extract_v2f32_0:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: extract_v2f32_0:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 killed $d0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: extract_v2f32_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-NEXT:    ret
 entry:
   %d = extractelement <2 x float> %a, i32 0
   ret float %d
@@ -1686,16 +1681,11 @@ entry:
 }
 
 define half @extract_v4f16_0(<4 x half> %a, i32 %c) {
-; CHECK-SD-LABEL: extract_v4f16_0:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    // kill: def $h0 killed $h0 killed $q0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: extract_v4f16_0:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $h0 killed $h0 killed $d0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: extract_v4f16_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
+; CHECK-NEXT:    ret
 entry:
   %d = extractelement <4 x half> %a, i32 0
   ret half %d
@@ -2159,16 +2149,11 @@ entry:
 }
 
 define i32 @extract_v2i32_0(<2 x i32> %a, i32 %c) {
-; CHECK-SD-LABEL: extract_v2i32_0:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    fmov w0, s0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: extract_v2i32_0:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fmov w0, s0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: extract_v2i32_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
 entry:
   %d = extractelement <2 x i32> %a, i32 0
   ret i32 %d

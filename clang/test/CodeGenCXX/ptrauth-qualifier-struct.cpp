@@ -99,7 +99,7 @@ void testMoveAssignment(SA a) {
   t = static_cast<SA &&>(a);
 }
 
-// CHECK: define {{.*}}void @_Z19testCopyConstructor2SI(i
+// CHECK: define {{.*}}void @_Z19testCopyConstructor2SI(
 // CHECK: call void @llvm.memcpy.p0.p0.i64(
 
 void testCopyConstructor(SI a) {
