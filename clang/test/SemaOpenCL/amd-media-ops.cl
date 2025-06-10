@@ -54,25 +54,25 @@
     TEST_3ARG_BUILTIN_WITH_TYPES(builtin, ret ## 8, type_a ## 8, type_b ## 8, type_c ## 8) \
     TEST_3ARG_BUILTIN_WITH_TYPES(builtin, ret ## 16, type_a ## 16, type_b ## 16, type_c ## 16)
 
-TEST_3ARG_BUILTIN(amd_bitalign, uint, uint) // fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}}
-TEST_3ARG_BUILTIN(amd_bytealign, uint, uint) // fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}}
-TEST_3ARG_BUILTIN(amd_lerp, uint, uint) // fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}}
+TEST_3ARG_BUILTIN(amd_bitalign, uint, uint)
+TEST_3ARG_BUILTIN(amd_bytealign, uint, uint)
+TEST_3ARG_BUILTIN(amd_lerp, uint, uint)
 
 uint test_amd_pack(float4 a) {
-    return amd_pack(a); // fdecalre-error{{use of undeclared identifier}}
+    return amd_pack(a);
 }
 
 uint test_amd_sad4(uint4 a, uint4 b, uint c) {
-    return amd_sad4(a, b, c); // fdecalre-error{{use of undeclared identifier}}
+    return amd_sad4(a, b, c);
 }
 
-TEST_3ARG_BUILTIN(amd_sadhi, uint, uint) // fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}}
-TEST_3ARG_BUILTIN(amd_sad, uint, uint) // fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}}
+TEST_3ARG_BUILTIN(amd_sadhi, uint, uint)
+TEST_3ARG_BUILTIN(amd_sad, uint, uint)
 
-TEST_1ARG_BUILTIN(amd_unpack0, float, uint) // fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}}
-TEST_1ARG_BUILTIN(amd_unpack1, float, uint) // fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}}
-TEST_1ARG_BUILTIN(amd_unpack2, float, uint) // fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}}
-TEST_1ARG_BUILTIN(amd_unpack3, float, uint) // fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}}
+TEST_1ARG_BUILTIN(amd_unpack0, float, uint)
+TEST_1ARG_BUILTIN(amd_unpack1, float, uint)
+TEST_1ARG_BUILTIN(amd_unpack2, float, uint)
+TEST_1ARG_BUILTIN(amd_unpack3, float, uint)
 
 TEST_3ARG_WITH_TYPES_BUILTIN(amd_bfe, int, int, uint, uint) // fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}}
 TEST_3ARG_BUILTIN(amd_bfe, uint, uint) // fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}} fdecalre-error{{use of undeclared identifier}}
