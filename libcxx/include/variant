@@ -1318,7 +1318,11 @@ public:
 #    endif
 
 private:
-  __variant_detail::__impl<_Types...> __impl_;
+#    ifdef _LIBCPP_ABI_VARIANT_NO_UNIQUE_ADDRESS_OPTIMIZATION
+  _LIBCPP_NO_UNIQUE_ADDRESS
+#    endif // _LIBCPP_ABI_VARIANT_NO_UNIQUE_ADDRESS_OPTIMIZATION
+  __variant_detail::__impl<_Types...>
+      __impl_;
 
   friend struct __variant_detail::__access::__variant;
   friend struct __variant_detail::__visitation::__variant;
