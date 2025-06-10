@@ -872,7 +872,7 @@ void VPInstruction::execute(VPTransformState &State) {
                                     isVectorToScalar() || isSingleScalar());
   bool GeneratesPerAllLanes = doesGeneratePerAllLanes();
   if (GeneratesPerAllLanes) {
-    for (unsigned Lane = 0, NumLanes = State.VF.getKnownMinValue();
+    for (unsigned Lane = 0, NumLanes = State.VF.getFixedValue();
          Lane != NumLanes; ++Lane) {
       Value *GeneratedValue = generatePerLane(State, VPLane(Lane));
       assert(GeneratedValue && "generatePerLane must produce a value");
@@ -2792,8 +2792,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
   }
 
   // Generate scalar instances for all VF lanes.
-  assert(!State.VF.isScalable() && "Can't scalarize a scalable vector");
-  const unsigned EndLane = State.VF.getKnownMinValue();
+  const unsigned EndLane = State.VF.getFixedValue();
   for (unsigned Lane = 0; Lane < EndLane; ++Lane)
     scalarizeInstruction(UI, this, VPLane(Lane), State);
 }
@@ -2846,7 +2845,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
                UI->getOpcode(), ResultTy, CostKind,
                {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
                Op2Info, Operands, UI, &Ctx.TLI) *
-           (isSingleScalar() ? 1 : VF.getKnownMinValue());
+           (isSingleScalar() ? 1 : VF.getFixedValue());
   }
   }
 
@@ -3399,7 +3398,7 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
     Value *ResBlockInMask = State.get(BlockInMask);
     Value *ShuffledMask = State.Builder.CreateShuffleVector(
         ResBlockInMask,
-        createReplicatedMask(InterleaveFactor, State.VF.getKnownMinValue()),
+        createReplicatedMask(InterleaveFactor, State.VF.getFixedValue()),
         "interleaved.mask");
     return MaskForGaps ? State.Builder.CreateBinOp(Instruction::And,
                                                    ShuffledMask, MaskForGaps)
@@ -3411,8 +3410,8 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
   if (isa<LoadInst>(Instr)) {
     Value *MaskForGaps = nullptr;
     if (NeedsMaskForGaps) {
-      MaskForGaps = createBitMaskForGaps(State.Builder,
-                                         State.VF.getKnownMinValue(), *Group);
+      MaskForGaps =
+          createBitMaskForGaps(State.Builder, State.VF.getFixedValue(), *Group);
       assert(MaskForGaps && "Mask for Gaps is required but it is null");
     }
 
@@ -3475,13 +3474,12 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
         continue;
 
       auto StrideMask =
-          createStrideMask(I, InterleaveFactor, State.VF.getKnownMinValue());
+          createStrideMask(I, InterleaveFactor, State.VF.getFixedValue());
       Value *StridedVec =
           State.Builder.CreateShuffleVector(NewLoad, StrideMask, "strided.vec");
 
       // If this member has different type, cast the result type.
       if (Member->getType() != ScalarTy) {
-        assert(!State.VF.isScalable() && "VF is assumed to be non scalable.");
         VectorType *OtherVTy = VectorType::get(Member->getType(), State.VF);
         StridedVec =
             createBitOrPointerCast(State.Builder, StridedVec, OtherVTy, DL);
@@ -3817,7 +3815,7 @@ VPFirstOrderRecurrencePHIRecipe::computeCost(ElementCount VF,
   if (VF.isScalar())
     return Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
 
-  if (VF.isScalable() && VF.getKnownMinValue() == 1)
+  if (VF == ElementCount::getScalable(1))
     return InstructionCost::getInvalid();
 
   return 0;
