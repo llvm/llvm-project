@@ -1028,6 +1028,9 @@ private:
   /// \returns true if the diagnostic was emitted, false if it was suppressed.
   bool ProcessDiag(const DiagnosticBuilder &DiagBuilder);
 
+  /// Forward a diagnostic to the DiagnosticConsumer.
+  void Report(Level DiagLevel, const Diagnostic &Info);
+
   /// @name Diagnostic Emission
   /// @{
 protected:
@@ -1046,9 +1049,6 @@ protected:
   bool EmitDiagnostic(const DiagnosticBuilder &DB, bool Force = false);
 
   /// @}
-
-private:
-  void Report(Level DiagLevel, const Diagnostic &Info);
 };
 
 /// RAII class that determines when any errors have occurred
