@@ -314,22 +314,28 @@ itself) to enable additional hardening checks. This is done by passing these
 macros as ``-DLIBCXX_ABI_DEFINES="_LIBCPP_ABI_FOO;_LIBCPP_ABI_BAR;etc"`` at
 CMake configuration time. The available options are:
 
-- ``_LIBCPP_ABI_BOUNDED_ITERATORS`` -- changes the iterator type of select
-  containers (see below) to a bounded iterator that keeps track of whether it's
-  within the bounds of the original container and asserts valid bounds on every
-  dereference.
+- ``_LIBCPP_ABI_BOUNDED_ITERATORS`` -- historical equivalent to defining both
+  ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING_VIEW`` and ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_SPAN``.
 
-  ABI impact: changes the iterator type of the relevant containers.
+- ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING_VIEW`` -- changes the iterator type of
+  ``basic_string_view`` to a bounded iterator that keeps track of whether it's within
+  the bounds of the original container and asserts it on every dereference and
+  when performing iterator arithmetic.
 
-  Supported containers:
+  ABI impact: changes the iterator type of ``basic_string_view`` and its
+  specializations, such as ``string_view`` and ``wstring_view``.
 
-  - ``span``;
-  - ``string_view``.
+- ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_SPAN`` -- changes the iterator type of ``span``
+  to a bounded iterator that keeps track of whether it's within the bounds of the
+  original container and asserts it on every dereference and when performing iterator
+  arithmetic.
+
+  ABI impact: changes the iterator type of ``span``.
 
 - ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING`` -- changes the iterator type of
   ``basic_string`` to a bounded iterator that keeps track of whether it's within
   the bounds of the original container and asserts it on every dereference and
-  when performing iterator arithmetics.
+  when performing iterator arithmetic.
 
   ABI impact: changes the iterator type of ``basic_string`` and its
   specializations, such as ``string`` and ``wstring``.
@@ -337,7 +343,7 @@ CMake configuration time. The available options are:
 - ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR`` -- changes the iterator type of
   ``vector`` to a bounded iterator that keeps track of whether it's within the
   bounds of the original container and asserts it on every dereference and when
-  performing iterator arithmetics. Note: this doesn't yet affect
+  performing iterator arithmetic. Note: this doesn't yet affect
   ``vector<bool>``.
 
   ABI impact: changes the iterator type of ``vector`` (except ``vector<bool>``).

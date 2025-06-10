@@ -76,6 +76,10 @@ Improvements and New Features
 - The ``bitset::to_string`` function has been optimized, resulting in a performance improvement of up to 8.3x for bitsets
   with uniformly distributed zeros and ones, and up to 13.5x and 16.1x for sparse and dense bitsets, respectively.
 
+- The ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING_VIEW`` and ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_SPAN`` macros were added.
+  These macros control bounded iterators in ``string_view`` and ``span`` respectively. This was previously controled by
+  the single macro ``_LIBCPP_ABI_BOUNDED_ITERATORS``.
+
 Deprecations and Removals
 -------------------------
 
