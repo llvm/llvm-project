@@ -92,7 +92,7 @@ public:
 
   /// Return true if this argument has the byval, inalloca, or preallocated
   /// attribute. These attributes represent arguments being passed by value,
-  /// with an associated copy between the caller and callee.
+  /// with an associated copy between the caller and callee
   LLVM_ABI bool hasPassPointeeByValueCopyAttr() const;
 
   /// If this argument satisfies has hasPassPointeeByValueAttr, return the
