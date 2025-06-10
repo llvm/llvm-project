@@ -8,7 +8,7 @@
 # RUN:     | FileCheck %s
 #
 # FIXME: Enable this test on Windows/arm64 once that backend is available.
-# UNSUPPORTED: target=aarch64-pc-windows-{{.*}}
+# UNSUPPORTED: target=aarch64-{{.*}}-windows-{{.*}}
 #
 # On MinGW targets, when compiling the main() function, it gets
 # an implicitly generated call to __main(), which is missing in
