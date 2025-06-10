@@ -3998,16 +3998,15 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
     if (!Vec)
       return nullptr;
 
-    auto VecTy = cast<VectorType>(Vec->getType());
+    auto *VecTy = cast<VectorType>(Vec->getType());
     unsigned NumElements = VecTy->getElementCount().getKnownMinValue() / 2;
-
-    SmallVector<Constant *, 4> Res0(NumElements), Res1(NumElements);
     if (isa<ConstantAggregateZero>(Vec)) {
       auto *HalfVecTy = VectorType::getHalfElementsVectorType(VecTy);
       return ConstantStruct::get(StTy, ConstantAggregateZero::get(HalfVecTy),
                                  ConstantAggregateZero::get(HalfVecTy));
     }
     if (isa<FixedVectorType>(Vec->getType())) {
+      SmallVector<Constant *, 4> Res0(NumElements), Res1(NumElements);
       for (unsigned I = 0; I < NumElements; ++I) {
         Constant *Elt0 = Vec->getAggregateElement(2 * I);
         Constant *Elt1 = Vec->getAggregateElement(2 * I + 1);
