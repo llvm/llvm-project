@@ -180,7 +180,7 @@ generator and its internal state.
 To do so, we can simply look into the ``gen.hdl`` variable. LLDB comes with a
 pretty printer for ``std::coroutine_handle`` which will show us the internal
 state of the coroutine. For GDB, you will have to use the ``show-coro-frame``
-command provided by the :ref:`GDB Debugger Script`.
+command provided by the :ref:`gdb-script`.
 
 .. image:: ./coro-generator-suspended.png
 
@@ -360,7 +360,7 @@ type of a task is a template argument. For simplicity's sake, we hard-coded the
 ``int`` type in this example.
 
 Stack traces of in-flight coroutines
------------------------------------
+------------------------------------
 
 Let's assume you have the following program and set a breakpoint inside the
 ``write_output`` function. There are multiple call paths through which this
@@ -407,7 +407,7 @@ When using LLDB's CLI, the command ``p --ptr-depth 4 __promise`` might also be
 useful to automatically dereference all the pointers up to the given depth.
 
 To get a flat representation of that call stack, we can use a debugger script,
-such as the one shown in the :ref:`LLDB Debugger Script` section. With that
+such as the one shown in the :ref:`lldb-script` section. With that
 script, we can run ``coro bt`` to get the following stack trace:
 
 .. code-block::
@@ -466,13 +466,13 @@ One such solution is to store the list of in-flight coroutines in a collection:
   };
 
 With this in place, it is possible to inspect ``inflight_coroutines`` from the
-debugger, and rely on LLDB's pretty-printer for ``std::coroutine_handle``s to
+debugger, and rely on LLDB's ``std::coroutine_handle`` pretty-printer to
 inspect the coroutines.
 
 This technique will track *all* coroutines, also the ones which are currently
 awaiting another coroutine, though. To identify just the "roots" of our
 in-flight coroutines, we can use the ``coro in-flight inflight_coroutines``
-command provided by the :ref:`LLDB Debugger Script`.
+command provided by the :ref:`lldb-script`.
 
 Please note that the above is expensive from a runtime performance perspective,
 and requires locking to prevent data races. As such, it is not recommended to
@@ -542,7 +542,7 @@ hence might have to set breakpoints in the ramp function and its ``.noalloc``
 variant.
 
 Artificial ``__promise`` and ``__coro_frame`` variables
----------------------------------------------------
+-------------------------------------------------------
 
 Inside all coroutine functions, clang / LLVM synthesize a ``__promise`` and
 ``__coro_frame`` variable. These variables are used to store the coroutine's
@@ -586,7 +586,8 @@ The promise is guaranteed to be at a 16 byte offset from the coroutine frame.
 If we have a coroutine handle at address 0x416eb0, we can hence reinterpret-cast
 the promise as follows:
 
-.. code-block::
+.. code-block:: text
+
   print (task::promise_type)*(0x416eb0+16)
 
 Devirtualization of coroutine handles
@@ -621,7 +622,7 @@ assuming we have a ``std::coroutine_handle`` is at address 0x418eb0:
   $2 = {__resume_fn = 0x4019e0 <coro_task(int)>, __destroy_fn = 0x402000 <coro_task(int)>, __promise = {...}, ...}
 
 In practice, one would use the ``show-coro-frame`` command provided by the
-:ref:`GDB Debugger Script`.
+:ref:`gdb-script`.
 
 LLDB comes with devirtualization support out of the box, as part of the
 pretty-printer for ``std::coroutine_handle``. Internally, this pretty-printer
@@ -632,7 +633,7 @@ the resume function, devirtualization would hence fail for all coroutines that
 have reached their final suspension point.
 
 Interpreting the coroutine frame in optimized builds
----------------------------------------------------
+----------------------------------------------------
 
 The ``__coro_frame`` variable usually refers to the coroutine frame of an
 *in-flight* coroutine. This means, the coroutine is currently executing.
@@ -704,6 +705,8 @@ source.
 
 Resources
 =========
+
+.. _lldb-script:
 
 LLDB Debugger Script
 --------------------
@@ -956,11 +959,13 @@ Note that this script requires LLDB 21.0 or newer.
   if __name__ == '__main__':
       print("This script should be loaded from LLDB using `command script import <filename>`")
 
+.. _gdb-script:
 
 GDB Debugger Script
 -------------------
 
 For GDB, the following script provides a couple of useful commands:
+
 * ``async-bt`` to print the stack trace of a coroutine
 * ``show-coro-frame`` to print the coroutine frame, similar to
   LLDB's builtin pretty-printer for coroutine frames
