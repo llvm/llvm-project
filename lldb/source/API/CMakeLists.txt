@@ -125,6 +125,8 @@ add_lldb_library(liblldb SHARED ${option_framework}
   ${lldb_python_wrapper}
   ${lldb_lua_wrapper}
 
+  ADDITIONAL_HEADER_DIRS
+    ${LLDB_INCLUDE_DIR}/lldb/API
   DEPENDS
     lldb-sbapi-dwarf-enums
 
