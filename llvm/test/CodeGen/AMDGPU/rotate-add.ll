@@ -44,15 +44,19 @@ define i32 @test_rotl_var(i32 %x, i32 %y) {
 ; SI-LABEL: test_rotl_var:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_lshlrev_b32_e32 v2, v1, v0
 ; SI-NEXT:    v_sub_i32_e32 v1, vcc, 32, v1
-; SI-NEXT:    v_alignbit_b32 v0, v0, v0, v1
+; SI-NEXT:    v_lshrrev_b32_e32 v0, v1, v0
+; SI-NEXT:    v_add_i32_e32 v0, vcc, v2, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: test_rotl_var:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_lshlrev_b32_e32 v2, v1, v0
 ; VI-NEXT:    v_sub_u32_e32 v1, vcc, 32, v1
-; VI-NEXT:    v_alignbit_b32 v0, v0, v0, v1
+; VI-NEXT:    v_lshrrev_b32_e32 v0, v1, v0
+; VI-NEXT:    v_add_u32_e32 v0, vcc, v2, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %shl = shl i32 %x, %y
   %sub = sub i32 32, %y
@@ -65,13 +69,19 @@ define i32 @test_rotr_var(i32 %x, i32 %y) {
 ; SI-LABEL: test_rotr_var:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_alignbit_b32 v0, v0, v0, v1
+; SI-NEXT:    v_lshrrev_b32_e32 v2, v1, v0
+; SI-NEXT:    v_sub_i32_e32 v1, vcc, 32, v1
+; SI-NEXT:    v_lshlrev_b32_e32 v0, v1, v0
+; SI-NEXT:    v_add_i32_e32 v0, vcc, v2, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: test_rotr_var:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_alignbit_b32 v0, v0, v0, v1
+; VI-NEXT:    v_lshrrev_b32_e32 v2, v1, v0
+; VI-NEXT:    v_sub_u32_e32 v1, vcc, 32, v1
+; VI-NEXT:    v_lshlrev_b32_e32 v0, v1, v0
+; VI-NEXT:    v_add_u32_e32 v0, vcc, v2, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %shr = lshr i32 %x, %y
   %sub = sub i32 32, %y
@@ -164,13 +174,21 @@ define i32 @test_fshr_special_case(i32 %x0, i32 %x1, i32 %y) {
 ; SI-LABEL: test_fshr_special_case:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_alignbit_b32 v0, v0, v1, v2
+; SI-NEXT:    v_lshrrev_b32_e32 v1, v2, v1
+; SI-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
+; SI-NEXT:    v_xor_b32_e32 v2, 31, v2
+; SI-NEXT:    v_lshlrev_b32_e32 v0, v2, v0
+; SI-NEXT:    v_add_i32_e32 v0, vcc, v1, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: test_fshr_special_case:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_alignbit_b32 v0, v0, v1, v2
+; VI-NEXT:    v_lshrrev_b32_e32 v1, v2, v1
+; VI-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
+; VI-NEXT:    v_xor_b32_e32 v2, 31, v2
+; VI-NEXT:    v_lshlrev_b32_e32 v0, v2, v0
+; VI-NEXT:    v_add_u32_e32 v0, vcc, v1, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %shl = lshr i32 %x1, %y
   %srli = shl i32 %x0, 1
@@ -259,11 +277,13 @@ define i64 @test_rotl_mul_with_mask_special_case(i64 %i) {
 ; SI-LABEL: test_rotl_mul_with_mask_special_case:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_lshlrev_b32_e32 v2, 7, v0
 ; SI-NEXT:    v_mul_lo_u32 v1, v1, 9
-; SI-NEXT:    v_mul_hi_u32 v2, v0, 9
-; SI-NEXT:    v_add_i32_e32 v1, vcc, v2, v1
-; SI-NEXT:    v_alignbit_b32 v0, v0, v1, 25
-; SI-NEXT:    v_and_b32_e32 v0, 0xff, v0
+; SI-NEXT:    v_mul_hi_u32 v0, v0, 9
+; SI-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
+; SI-NEXT:    v_and_b32_e32 v1, 0x80, v2
+; SI-NEXT:    v_lshrrev_b32_e32 v0, 25, v0
+; SI-NEXT:    v_or_b32_e32 v0, v1, v0
 ; SI-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -272,9 +292,11 @@ define i64 @test_rotl_mul_with_mask_special_case(i64 %i) {
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mul_lo_u32 v1, v1, 9
 ; VI-NEXT:    v_mul_hi_u32 v2, v0, 9
+; VI-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
+; VI-NEXT:    v_and_b32_e32 v0, 0x80, v0
 ; VI-NEXT:    v_add_u32_e32 v1, vcc, v2, v1
-; VI-NEXT:    v_alignbit_b32 v0, v0, v1, 25
-; VI-NEXT:    v_and_b32_e32 v0, 0xff, v0
+; VI-NEXT:    v_lshrrev_b32_e32 v1, 25, v1
+; VI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; VI-NEXT:    v_mov_b32_e32 v1, 0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %lhs_mul = mul i64 %i, 1152
@@ -289,16 +311,16 @@ define i32 @test_fshl_with_mask_special_case(i32 %x) {
 ; SI-LABEL: test_fshl_with_mask_special_case:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_or_b32_e32 v1, 1, v0
-; SI-NEXT:    v_alignbit_b32 v0, v1, v0, 27
+; SI-NEXT:    v_alignbit_b32 v0, v0, v0, 27
+; SI-NEXT:    v_or_b32_e32 v0, 32, v0
 ; SI-NEXT:    v_and_b32_e32 v0, 0xffffffe1, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: test_fshl_with_mask_special_case:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_or_b32_e32 v1, 1, v0
-; VI-NEXT:    v_alignbit_b32 v0, v1, v0, 27
+; VI-NEXT:    v_alignbit_b32 v0, v0, v0, 27
+; VI-NEXT:    v_or_b32_e32 v0, 32, v0
 ; VI-NEXT:    v_and_b32_e32 v0, 0xffffffe1, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %or1 = or i32 %x, 1
