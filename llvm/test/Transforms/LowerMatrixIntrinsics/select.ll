@@ -72,12 +72,12 @@ define void @select_2x2_vcond_shape1(ptr %cond, ptr %lhs, ptr %rhs, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x float>, ptr [[LHS:%.*]], align 16
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr float, ptr [[LHS]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x float>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x i1>, ptr [[RHS:%.*]], align 1
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr i1, ptr [[RHS]], i64 2
-; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x i1>, ptr [[VEC_GEP3]], align 1
+; CHECK-NEXT:    [[CONDV:%.*]] = load <4 x i1>, ptr [[COND:%.*]], align 1
 ; CHECK-NEXT:    [[COL_LOAD5:%.*]] = load <2 x float>, ptr [[RHS1:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP6:%.*]] = getelementptr float, ptr [[RHS1]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD7:%.*]] = load <2 x float>, ptr [[VEC_GEP6]], align 4
+; CHECK-NEXT:    [[COL_LOAD2:%.*]] = shufflevector <4 x i1> [[CONDV]], <4 x i1> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[COL_LOAD4:%.*]] = shufflevector <4 x i1> [[CONDV]], <4 x i1> poison, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP1:%.*]] = select <2 x i1> [[COL_LOAD2]], <2 x float> [[COL_LOAD]], <2 x float> [[COL_LOAD5]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[COL_LOAD4]], <2 x float> [[COL_LOAD1]], <2 x float> [[COL_LOAD7]]
 ; CHECK-NEXT:    store <2 x float> [[TMP1]], ptr [[OUT:%.*]], align 16

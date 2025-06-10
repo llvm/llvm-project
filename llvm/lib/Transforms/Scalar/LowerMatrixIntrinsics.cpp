@@ -270,19 +270,11 @@ computeShapeInfoForInst(Instruction *I,
       return OpShape->second;
   }
 
-  if (auto *Select = dyn_cast<SelectInst>(I)) {
-    Type *CondTy = Select->getCondition()->getType();
-    for (Use &Op : CondTy->isVectorTy() ? Select->operands()
-                                        : drop_begin(Select->operands())) {
-      auto OpShape = ShapeMap.find(Op);
-      if (OpShape != ShapeMap.end())
-        return OpShape->second;
-    }
-  }
-
-  if (isUniformShape(I)) {
+  if (isUniformShape(I) || isa<SelectInst>(I)) {
+    auto Ops = I->operands();
+    auto ShapedOps = isa<SelectInst>(I) ? drop_begin(Ops) : Ops;
     // Find the first operand that has a known shape and use that.
-    for (auto &Op : I->operands()) {
+    for (auto &Op : ShapedOps) {
       auto OpShape = ShapeMap.find(Op.get());
       if (OpShape != ShapeMap.end())
         return OpShape->second;
@@ -719,18 +711,12 @@ public:
       } else if (isa<StoreInst>(V)) {
         // Nothing to do.  We forward-propagated to this so we would just
         // backward propagate to an instruction with an already known shape.
-      } else if (auto *Select = dyn_cast<SelectInst>(V)) {
-        ShapeInfo Shape = ShapeMap[V];
-        Type *CondTy = Select->getCondition()->getType();
-        for (Use &Op : CondTy->isVectorTy() ? Select->operands()
-                                            : drop_begin(Select->operands())) {
-          if (setShapeInfo(Op, Shape))
-            pushInstruction(Select, WorkList);
-        }
-      } else if (isUniformShape(V)) {
+      } else if (isUniformShape(V) || isa<SelectInst>(V)) {
+        auto Ops = cast<Instruction>(V)->operands();
+        auto ShapedOps = isa<SelectInst>(V) ? drop_begin(Ops) : Ops;
         // Propagate to all operands.
         ShapeInfo Shape = ShapeMap[V];
-        for (Use &U : cast<Instruction>(V)->operands()) {
+        for (Use &U : ShapedOps) {
           if (setShapeInfo(U.get(), Shape))
             pushInstruction(U.get(), WorkList);
         }
