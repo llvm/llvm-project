@@ -1003,18 +1003,7 @@ class VOP3_BITOP3_Profile<VOPProfile pfl, VOP3Features f> : VOP3_Profile<pfl, f>
   let HasClamp = 0;
   let HasOMod = 0;
   let HasModifiers = 0;
-
-  let Ins64 = !con(getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
-                            0 /* HasIntClamp */, HasModifiers, HasSrc2Mods,
-                            HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret,
-                   (ins bitop3_0:$bitop3));
-
-  let InsVOP3OpSel = !con(getInsVOP3Base<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs, 0, 1, 1, 0,
-                                         Src0Mod, Src1Mod, Src2Mod, 0>.ret,
-                          (ins bitop3_0:$bitop3, op_sel0:$op_sel));
-
-  let Asm64 = "$vdst, $src0, $src1, $src2$bitop3";
-  let AsmVOP3OpSel = !subst("$op_sel", "$bitop3$op_sel", getAsmVOP3OpSel<3, 0, 0, 0, 0, 0>.ret);
+  let HasBitOp3 = 1;
 }
 
 class VOP3_CVT_SCALE_F1632_FP8BF8_Profile<ValueType DstTy> : VOP3_Profile<VOPProfile<[DstTy, i32, f32, untyped]>,
