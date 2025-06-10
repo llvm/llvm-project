@@ -1612,7 +1612,7 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
   uint64_t vecSize = lhsVecElhs.size();
 
   SmallVector<mlir::Attribute, 16> elements(vecSize);
-  bool isIntAttr = vecSize ? mlir::isa<cir::IntAttr>(lhsVecElhs[0]) : false;
+  bool isIntAttr = vecSize && mlir::isa<cir::IntAttr>(lhsVecElhs[0]);
   for (uint64_t i = 0; i < vecSize; i++) {
     mlir::Attribute lhsAttr = lhsVecElhs[i];
     mlir::Attribute rhsAttr = rhsVecElhs[i];
