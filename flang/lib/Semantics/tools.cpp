@@ -1788,4 +1788,18 @@ bool HadUseError(
   }
 }
 
+bool CheckForSymbolMatch(const SomeExpr *lhs, const SomeExpr *rhs) {
+  if (lhs && rhs) {
+    if (SymbolVector lhsSymbols{evaluate::GetSymbolVector(*lhs)};
+        !lhsSymbols.empty()) {
+      const Symbol &first{*lhsSymbols.front()};
+      for (const Symbol &symbol : evaluate::GetSymbolVector(*rhs)) {
+        if (first == symbol) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
 } // namespace Fortran::semantics
