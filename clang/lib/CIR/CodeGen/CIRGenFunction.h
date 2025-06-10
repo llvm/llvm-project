@@ -374,6 +374,41 @@ public:
   /// that we can just remove the code.
   bool containsLabel(const clang::Stmt *s, bool ignoreCaseStmts = false);
 
+  class ConstantEmission {
+    // Cannot use mlir::TypedAttr directly here because of bit availability.
+    llvm::PointerIntPair<mlir::Attribute, 1, bool> valueAndIsReference;
+    ConstantEmission(mlir::TypedAttr c, bool isReference)
+        : valueAndIsReference(c, isReference) {}
+
+  public:
+    ConstantEmission() {}
+    static ConstantEmission forReference(mlir::TypedAttr c) {
+      return ConstantEmission(c, true);
+    }
+    static ConstantEmission forValue(mlir::TypedAttr c) {
+      return ConstantEmission(c, false);
+    }
+
+    explicit operator bool() const {
+      return valueAndIsReference.getOpaqueValue() != nullptr;
+    }
+
+    bool isReference() const { return valueAndIsReference.getInt(); }
+    LValue getReferenceLValue(CIRGenFunction &cgf, Expr *refExpr) const {
+      assert(isReference());
+      cgf.cgm.errorNYI(refExpr->getSourceRange(),
+                       "ConstantEmission::getReferenceLValue");
+      return {};
+    }
+
+    mlir::TypedAttr getValue() const {
+      assert(!isReference());
+      return mlir::cast<mlir::TypedAttr>(valueAndIsReference.getPointer());
+    }
+  };
+
+  ConstantEmission tryEmitAsConstant(DeclRefExpr *refExpr);
+
   struct AutoVarEmission {
     const clang::VarDecl *Variable;
     /// The address of the alloca for languages with explicit address space
@@ -430,6 +465,8 @@ public:
     // TODO: Add symbol table support
   }
 
+  bool shouldNullCheckClassCastValue(const CastExpr *ce);
+
   LValue makeNaturalAlignPointeeAddrLValue(mlir::Value v, clang::QualType t);
 
   /// Construct an address with the natural alignment of T. If a pointer to T
@@ -444,6 +481,11 @@ public:
       alignment = cgm.getNaturalTypeAlignment(t, baseInfo);
     return Address(ptr, convertTypeForMem(t), alignment);
   }
+
+  Address getAddressOfBaseClass(
+      Address value, const CXXRecordDecl *derived,
+      llvm::iterator_range<CastExpr::path_const_iterator> path,
+      bool nullCheckValue, SourceLocation loc);
 
   LValue makeAddrLValue(Address addr, QualType ty,
                         AlignmentSource source = AlignmentSource::Type) {
@@ -839,6 +881,8 @@ public:
   RValue emitReferenceBindingToExpr(const Expr *e);
 
   mlir::LogicalResult emitReturnStmt(const clang::ReturnStmt &s);
+
+  mlir::Value emitScalarConstant(const ConstantEmission &constant, Expr *e);
 
   /// Emit a conversion from the specified type to the specified destination
   /// type, both of which are CIR scalar types.
