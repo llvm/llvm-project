@@ -601,8 +601,16 @@ bool RISCVDAGToDAGISel::tryShrinkShlLogicImm(SDNode *Node) {
 }
 
 bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
-  // Only supported with XTHeadBb/XAndesPerf at the moment.
-  if (!Subtarget->hasVendorXTHeadBb() && !Subtarget->hasVendorXAndesPerf())
+  unsigned Opc;
+
+  if (Subtarget->hasVendorXTHeadBb())
+    Opc = RISCV::TH_EXT;
+  else if (Subtarget->hasVendorXAndesPerf())
+    Opc = RISCV::NDS_BFOS;
+  else if (Subtarget->hasVendorXqcibm())
+    Opc = RISCV::QC_EXT;
+  else
+    // Only supported with XTHeadBb/XAndesPerf/Xqcibm at the moment.
     return false;
 
   auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
@@ -615,8 +623,12 @@ bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
 
   auto BitfieldExtract = [&](SDValue N0, unsigned Msb, unsigned Lsb,
                              const SDLoc &DL, MVT VT) {
-    unsigned Opc =
-        Subtarget->hasVendorXTHeadBb() ? RISCV::TH_EXT : RISCV::NDS_BFOS;
+    if (Opc == RISCV::QC_EXT) {
+      // QC.EXT X, width, shamt
+      // shamt is the same as Lsb
+      // width is the number of bits to extract from the Lsb
+      Msb = Msb - Lsb + 1;
+    }
     return CurDAG->getMachineNode(Opc, DL, VT, N0.getOperand(0),
                                   CurDAG->getTargetConstant(Msb, DL, VT),
                                   CurDAG->getTargetConstant(Lsb, DL, VT));
@@ -627,7 +639,7 @@ bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
   const unsigned RightShAmt = N1C->getZExtValue();
 
   // Transform (sra (shl X, C1) C2) with C1 < C2
-  //        -> (TH.EXT X, msb, lsb)
+  //        -> (SignedBitfieldExtract X, msb, lsb)
   if (N0.getOpcode() == ISD::SHL) {
     auto *N01C = dyn_cast<ConstantSDNode>(N0->getOperand(1));
     if (!N01C)
@@ -643,13 +655,13 @@ bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
     const unsigned Msb = MsbPlusOne - 1;
     const unsigned Lsb = RightShAmt - LeftShAmt;
 
-    SDNode *TH_EXT = BitfieldExtract(N0, Msb, Lsb, DL, VT);
-    ReplaceNode(Node, TH_EXT);
+    SDNode *Sbe = BitfieldExtract(N0, Msb, Lsb, DL, VT);
+    ReplaceNode(Node, Sbe);
     return true;
   }
 
   // Transform (sra (sext_inreg X, _), C) ->
-  //           (TH.EXT X, msb, lsb)
+  //           (SignedBitfieldExtract X, msb, lsb)
   if (N0.getOpcode() == ISD::SIGN_EXTEND_INREG) {
     unsigned ExtSize =
         cast<VTSDNode>(N0.getOperand(1))->getVT().getSizeInBits();
@@ -663,8 +675,8 @@ bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
     // the X[Msb] bit and sign-extend it.
     const unsigned Lsb = RightShAmt > Msb ? Msb : RightShAmt;
 
-    SDNode *TH_EXT = BitfieldExtract(N0, Msb, Lsb, DL, VT);
-    ReplaceNode(Node, TH_EXT);
+    SDNode *Sbe = BitfieldExtract(N0, Msb, Lsb, DL, VT);
+    ReplaceNode(Node, Sbe);
     return true;
   }
 
