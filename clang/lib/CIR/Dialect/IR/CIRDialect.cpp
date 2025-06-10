@@ -1594,14 +1594,12 @@ OpFoldResult cir::VecExtractOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
-  mlir::Attribute lhs = adaptor.getLhs();
-  mlir::Attribute rhs = adaptor.getRhs();
-  if (!mlir::isa_and_nonnull<cir::ConstVectorAttr>(lhs) ||
-      !mlir::isa_and_nonnull<cir::ConstVectorAttr>(rhs))
+  auto lhsVecAttr =
+      mlir::dyn_cast_if_present<cir::ConstVectorAttr>(adaptor.getLhs());
+  auto rhsVecAttr =
+      mlir::dyn_cast_if_present<cir::ConstVectorAttr>(adaptor.getRhs());
+  if (!lhsVecAttr || !rhsVecAttr)
     return {};
-
-  auto lhsVecAttr = mlir::cast<cir::ConstVectorAttr>(lhs);
-  auto rhsVecAttr = mlir::cast<cir::ConstVectorAttr>(rhs);
 
   mlir::Type inputElemTy =
       mlir::cast<cir::VectorType>(lhsVecAttr.getType()).getElementType();
@@ -1613,17 +1611,15 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
   mlir::ArrayAttr rhsVecElhs = rhsVecAttr.getElts();
   uint64_t vecSize = lhsVecElhs.size();
 
-  auto resultVecTy = mlir::cast<cir::VectorType>(getType());
-
   SmallVector<mlir::Attribute, 16> elements(vecSize);
+  bool isIntAttr = vecSize ? mlir::isa<cir::IntAttr>(lhsVecElhs[0]) : false;
   for (uint64_t i = 0; i < vecSize; i++) {
     mlir::Attribute lhsAttr = lhsVecElhs[i];
     mlir::Attribute rhsAttr = rhsVecElhs[i];
-
     int cmpResult = 0;
     switch (opKind) {
     case cir::CmpOpKind::lt: {
-      if (mlir::isa<cir::IntAttr>(lhsAttr)) {
+      if (isIntAttr) {
         cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() <
                     mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
       } else {
@@ -1633,7 +1629,7 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
       break;
     }
     case cir::CmpOpKind::le: {
-      if (mlir::isa<cir::IntAttr>(lhsAttr)) {
+      if (isIntAttr) {
         cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() <=
                     mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
       } else {
@@ -1643,7 +1639,7 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
       break;
     }
     case cir::CmpOpKind::gt: {
-      if (mlir::isa<cir::IntAttr>(lhsAttr)) {
+      if (isIntAttr) {
         cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() >
                     mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
       } else {
@@ -1653,7 +1649,7 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
       break;
     }
     case cir::CmpOpKind::ge: {
-      if (mlir::isa<cir::IntAttr>(lhsAttr)) {
+      if (isIntAttr) {
         cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() >=
                     mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
       } else {
@@ -1663,7 +1659,7 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
       break;
     }
     case cir::CmpOpKind::eq: {
-      if (mlir::isa<cir::IntAttr>(lhsAttr)) {
+      if (isIntAttr) {
         cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() ==
                     mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
       } else {
@@ -1673,7 +1669,7 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
       break;
     }
     case cir::CmpOpKind::ne: {
-      if (mlir::isa<cir::IntAttr>(lhsAttr)) {
+      if (isIntAttr) {
         cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() !=
                     mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
       } else {
@@ -1684,7 +1680,7 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
     }
     }
 
-    elements[i] = cir::IntAttr::get(resultVecTy.getElementType(), cmpResult);
+    elements[i] = cir::IntAttr::get(getType().getElementType(), cmpResult);
   }
 
   return cir::ConstVectorAttr::get(
