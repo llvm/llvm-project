@@ -50,7 +50,7 @@ multiclass RVVVCIXBuiltinSet<list<string> range, string prototype,
                              string suffix = "Uv"> {
   foreach r = range in
     let RequiredFeatures = !if(!and(UseGPR, !eq(r, "l")),
-                               ["Xsfvcp", "RV64"], ["Xsfvcp"]) in
+                               ["xsfvcp", "64bit"], ["xsfvcp"]) in
       defm : VCIXBuiltinSet<NAME, NAME, suffix, prototype, r, intrinsic_types>;
 }
 
@@ -126,7 +126,7 @@ multiclass RVVVFNRCLIPBuiltinSet<string suffix, string prototype, string type_ra
 }
 
 let UnMaskedPolicyScheme = HasPolicyOperand in
-  let RequiredFeatures = ["Xsfvqmaccdod"] in {
+  let RequiredFeatures = ["xsfvqmaccdod"] in {
     defm sf_vqmaccu_2x8x2 : RVVVQMACCDODBuiltinSet<[["", "v", "vv(FixedSEW:8)SUv(FixedSEW:8)Uv"]]>;
     defm sf_vqmacc_2x8x2 : RVVVQMACCDODBuiltinSet<[["", "v", "vv(FixedSEW:8)Sv(FixedSEW:8)v"]]>;
     defm sf_vqmaccus_2x8x2 : RVVVQMACCDODBuiltinSet<[["", "v", "vv(FixedSEW:8)SUv(FixedSEW:8)v"]]>;
@@ -134,7 +134,7 @@ let UnMaskedPolicyScheme = HasPolicyOperand in
   }
 
 let UnMaskedPolicyScheme = HasPolicyOperand in
-  let RequiredFeatures = ["Xsfvqmaccqoq"] in {
+  let RequiredFeatures = ["xsfvqmaccqoq"] in {
     defm sf_vqmaccu_4x8x4 : RVVVQMACCQOQBuiltinSet<[["", "w", "ww(FixedSEW:8)SUv(FixedSEW:8)Uv"]]>;
     defm sf_vqmacc_4x8x4 : RVVVQMACCQOQBuiltinSet<[["", "w", "ww(FixedSEW:8)Sv(FixedSEW:8)v"]]>;
     defm sf_vqmaccus_4x8x4 : RVVVQMACCQOQBuiltinSet<[["", "w", "ww(FixedSEW:8)SUv(FixedSEW:8)v"]]>;
@@ -142,10 +142,10 @@ let UnMaskedPolicyScheme = HasPolicyOperand in
   }
 
 let UnMaskedPolicyScheme = HasPolicyOperand in
-  let RequiredFeatures = ["Xsfvfwmaccqqq"] in
+  let RequiredFeatures = ["xsfvfwmaccqqq"] in
     defm sf_vfwmacc_4x4x4 : RVVVFWMACCBuiltinSet<[["", "Fw", "FwFwSvv"]]>;
 
-let UnMaskedPolicyScheme = HasPassthruOperand, RequiredFeatures = ["Xsfvfnrclipxfqf"] in {
+let UnMaskedPolicyScheme = HasPassthruOperand, RequiredFeatures = ["xsfvfnrclipxfqf"] in {
 let ManualCodegen = [{
   {
     // LLVM intrinsic
