@@ -1664,8 +1664,9 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPBlockConstruct &x) {
     // TODO others
     break;
   }
-  if (beginDir.v == llvm::omp::Directive::OMPD_master ||
-      beginDir.v == llvm::omp::Directive::OMPD_parallel_master)
+  if ((beginDir.v == llvm::omp::Directive::OMPD_master ||
+          beginDir.v == llvm::omp::Directive::OMPD_parallel_master) &&
+      context_.langOptions().OpenMPVersion >= 52)
     IssueNonConformanceWarning(beginDir.v, beginDir.source);
   ClearDataSharingAttributeObjects();
   ClearPrivateDataSharingAttributeObjects();
@@ -1784,11 +1785,12 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   default:
     break;
   }
-  if (beginDir.v == llvm::omp::OMPD_master_taskloop ||
-      beginDir.v == llvm::omp::OMPD_master_taskloop_simd ||
-      beginDir.v == llvm::omp::OMPD_parallel_master_taskloop ||
-      beginDir.v == llvm::omp::OMPD_parallel_master_taskloop_simd ||
-      beginDir.v == llvm::omp::Directive::OMPD_target_loop)
+  if ((beginDir.v == llvm::omp::OMPD_master_taskloop ||
+          beginDir.v == llvm::omp::OMPD_master_taskloop_simd ||
+          beginDir.v == llvm::omp::OMPD_parallel_master_taskloop ||
+          beginDir.v == llvm::omp::OMPD_parallel_master_taskloop_simd ||
+          beginDir.v == llvm::omp::Directive::OMPD_target_loop) &&
+      context_.langOptions().OpenMPVersion >= 52)
     IssueNonConformanceWarning(beginDir.v, beginDir.source);
   ClearDataSharingAttributeObjects();
   SetContextAssociatedLoopLevel(GetAssociatedLoopLevelFromClauses(clauseList));
@@ -2073,7 +2075,10 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPDispatchConstruct &x) {
 }
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPExecutableAllocate &x) {
-  IssueNonConformanceWarning(llvm::omp::Directive::OMPD_allocate, x.source);
+  if (context_.langOptions().OpenMPVersion >= 52) {
+    IssueNonConformanceWarning(llvm::omp::Directive::OMPD_allocate, x.source);
+  }
+
   PushContext(x.source, llvm::omp::Directive::OMPD_allocate);
   const auto &list{std::get<std::optional<parser::OmpObjectList>>(x.t)};
   if (list) {
