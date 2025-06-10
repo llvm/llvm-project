@@ -9641,14 +9641,20 @@ AArch64InstrInfo::getOutlinableRanges(MachineBasicBlock &MBB,
   return Ranges;
 }
 
+size_t
+AArch64InstrInfo::clearLOHs(const SmallPtrSetImpl<MachineInstr *> &MIs) const {
+  if (MIs.empty())
+    return 0;
+  auto *MI = *MIs.begin();
+  auto *FuncInfo = MI->getMF()->getInfo<AArch64FunctionInfo>();
+  return FuncInfo->clearLOHs(MIs);
+}
+
 outliner::InstrType
 AArch64InstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
                                        MachineBasicBlock::iterator &MIT,
                                        unsigned Flags) const {
   MachineInstr &MI = *MIT;
-  MachineBasicBlock *MBB = MI.getParent();
-  MachineFunction *MF = MBB->getParent();
-  AArch64FunctionInfo *FuncInfo = MF->getInfo<AArch64FunctionInfo>();
 
   // Don't outline anything used for return address signing. The outlined
   // function will get signed later if needed
@@ -9675,10 +9681,6 @@ AArch64InstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
   case AArch64::PAUTH_EPILOGUE:
     return outliner::InstrType::Illegal;
   }
-
-  // Don't outline LOHs.
-  if (FuncInfo->getLOHRelated().count(&MI))
-    return outliner::InstrType::Illegal;
 
   // We can only outline these if we will tail call the outlined function, or
   // fix up the CFI offsets. Currently, CFI instructions are outlined only if

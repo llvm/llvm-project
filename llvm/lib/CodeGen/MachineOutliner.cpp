@@ -104,6 +104,7 @@ STATISTIC(StableHashAttempts,
           "Count of hashing attempts made for outlined functions");
 STATISTIC(StableHashDropped,
           "Count of unsuccessful hashing attempts for outlined functions");
+STATISTIC(NumRemovedLOHs, "Total number of Linker Optimization Hints removed");
 
 // Set to true if the user wants the outliner to run on linkonceodr linkage
 // functions. This is false by default because the linker can dedupe linkonceodr
@@ -1074,6 +1075,23 @@ bool MachineOutliner::outline(
     LLVM_DEBUG(dbgs() << "OUTLINE: Expected benefit (" << OF->getBenefit()
                       << " B) > threshold (" << OutlinerBenefitThreshold
                       << " B)\n");
+
+    // Remove all Linker Optimization Hints from the candidates since we did not
+    // check if the set of hints are the same for each of them.
+    // TODO: The intersection of the LOHs from all candidates should be legal in
+    // the outlined function.
+    SmallPtrSet<MachineInstr *, 2> MIs;
+    std::optional<size_t> MinRemovedLOHs;
+    for (Candidate &C : OF->Candidates) {
+      const TargetInstrInfo &TII = *C.getMF()->getSubtarget().getInstrInfo();
+      for (MachineInstr &MI : C)
+        MIs.insert(&MI);
+      size_t NumRemoved = TII.clearLOHs(MIs);
+      MIs.clear();
+      MinRemovedLOHs =
+          std::min(MinRemovedLOHs.value_or(NumRemoved), NumRemoved);
+    }
+    NumRemovedLOHs += MinRemovedLOHs.value_or(0);
 
     // It's beneficial. Create the function and outline its sequence's
     // occurrences.
