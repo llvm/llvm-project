@@ -1447,8 +1447,6 @@ namespace {
     unsigned NumPlacementArgs : 30;
     LLVM_PREFERRED_TYPE(AlignedAllocationMode)
     unsigned PassAlignmentToPlacementDelete : 1;
-    LLVM_PREFERRED_TYPE(TypeAwareAllocationMode)
-    unsigned PassTypeToPlacementDelete : 1;
     const FunctionDecl *OperatorDelete;
     RValueTy TypeIdentity;
     ValueTy Ptr;
