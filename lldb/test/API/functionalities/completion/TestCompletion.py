@@ -136,7 +136,7 @@ class CommandLineCompletionTestCase(TestBase):
             )
 
     def test_process_save_core(self):
-        self.complete_from_to("process save-core --plugin-name ", ["minidump"])
+        self.complete_from_to("process save-core --plugin-name=", ["minidump"])
 
     def completions_contain_str(self, input, needle):
         interp = self.dbg.GetCommandInterpreter()
