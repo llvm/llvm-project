@@ -17,6 +17,7 @@
 #include "lldb/Utility/UnimplementedError.h"
 #include "llvm/Support/Error.h"
 
+#include <cinttypes>
 #include <iostream>
 
 using namespace lldb;
@@ -349,8 +350,9 @@ bool ProcessAMDGPU::handleWaveStop(amd_dbgapi_event_id_t eventId) {
     }
 
     LLDB_LOGF(GetLog(GDBRLog::Plugin),
-              "Wave stopped due to breakpoint at: 0x%llx with wave id: %llu "
-              "event id: %llu",
+              "Wave stopped due to breakpoint at: 0x%" PRIx64
+              " with wave id: %" PRIu64 " "
+              "event id: %" PRIu64,
               pc, wave_id.handle, eventId.handle);
     return true;
   } else {
@@ -383,14 +385,14 @@ static const char *event_kind_str(amd_dbgapi_event_kind_t kind) {
   case AMD_DBGAPI_EVENT_KIND_QUEUE_ERROR:
     return "QUEUE_ERROR";
   }
-  assert(!"unhandled amd_dbgapi_event_kind_t value");
+  assert(false && "unhandled amd_dbgapi_event_kind_t value");
 }
 
 bool ProcessAMDGPU::handleDebugEvent(amd_dbgapi_event_id_t eventId,
                                      amd_dbgapi_event_kind_t eventKind) {
-  LLDB_LOGF(GetLog(GDBRLog::Plugin), "handleDebugEvent(%llu, %s)",
+  LLDB_LOGF(GetLog(GDBRLog::Plugin), "handleDebugEvent(%" PRIu64 ", %s)",
             eventId.handle, event_kind_str(eventKind));
-  bool result;
+  bool result = false;
   if (eventKind == AMD_DBGAPI_EVENT_KIND_NONE)
     return result;
 
@@ -412,10 +414,6 @@ bool ProcessAMDGPU::handleDebugEvent(amd_dbgapi_event_id_t eventId,
       break;
     case AMD_DBGAPI_RUNTIME_STATE_UNLOADED:
       LLDB_LOGF(GetLog(GDBRLog::Plugin), "Runtime unloaded");
-      break;
-    default:
-      LLDB_LOGF(GetLog(GDBRLog::Plugin), "Unknown runtime state: %d",
-                runtimeState);
       break;
     }
   }
@@ -490,8 +488,9 @@ bool ProcessAMDGPU::handleDebugEvent(amd_dbgapi_event_id_t eventId,
       if (status != AMD_DBGAPI_STATUS_SUCCESS)
         continue;
 
-      LLDB_LOGF(GetLog(GDBRLog::Plugin), "Code object %zu: %s at address %llu",
-                i, uri_bytes, l_addr);
+      LLDB_LOGF(GetLog(GDBRLog::Plugin),
+                "Code object %zu: %s at address %" PRIu64, i, uri_bytes,
+                l_addr);
 
       if (m_gpu_modules.find(l_addr) == m_gpu_modules.end()) {
         GPUModule mod = parseCodeObjectUrl(uri_bytes, l_addr);
