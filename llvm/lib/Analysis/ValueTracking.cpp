@@ -9576,15 +9576,48 @@ static void setLimitsForBinOp(const BinaryOperator &BO, APInt &Lower,
   unsigned Width = Lower.getBitWidth();
   const APInt *C;
   switch (BO.getOpcode()) {
-  case Instruction::Add:
-    if (match(BO.getOperand(1), m_APInt(C)) && !C->isZero()) {
+  case Instruction::Sub:
+    if (match(BO.getOperand(0), m_APInt(C))) {
       bool HasNSW = IIQ.hasNoSignedWrap(&BO);
       bool HasNUW = IIQ.hasNoUnsignedWrap(&BO);
 
       // If the caller expects a signed compare, then try to use a signed range.
       // Otherwise if both no-wraps are set, use the unsigned range because it
       // is never larger than the signed range. Example:
-      // "add nuw nsw i8 X, -2" is unsigned [254,255] vs. signed [-128, 125].
+      // "sub nuw nsw i8 -2, x" is unsigned [0, 254] vs. signed [-128, 126].
+      // "sub nuw nsw i8 2, x" is unsigned [0, 2] vs. signed [-125, 127].
+      if (PreferSignedRange && HasNSW && HasNUW)
+        HasNUW = false;
+
+      if (HasNUW) {
+        // 'sub nuw c, x' produces [0, C].
+        Upper = *C + 1;
+      } else if (HasNSW) {
+        if (C->isNegative()) {
+          // 'sub nsw -C, x' produces [SINT_MIN, SINT_MAX - (C - 1)].
+          // Because to be negative, C must be - 1, and the highest result is
+          // INT_MIN, so -INT_MIN - 1 is INT_MAX, so it is SINT_MAX - (C - 1),
+          // or SINT_MAX - C + 1
+          Lower = APInt::getSignedMinValue(Width);
+          Upper = APInt::getSignedMaxValue(Width) + *C + 2;
+        } else {
+          // Note that sub 0, INT_MIN is not NSW. It techically is a signed wrap
+          // 'sub nsw C, x' produces [SINT_MIN + 1 + C, SINT_MAX].
+          Lower = APInt::getSignedMinValue(Width) + *C + 1;
+          Upper = APInt::getSignedMaxValue(Width) + 1;
+        }
+      }
+    }
+    break;
+  case Instruction::Add:
+    if (match(BO.getOperand(1), m_APInt(C)) && !C->isZero()) {
+      bool HasNSW = IIQ.hasNoSignedWrap(&BO);
+      bool HasNUW = IIQ.hasNoUnsignedWrap(&BO);
+
+      // If the caller expects a signed compare, then try to use a signed
+      // range. Otherwise if both no-wraps are set, use the unsigned range
+      // because it is never larger than the signed range. Example: "add nuw
+      // nsw i8 X, -2" is unsigned [254,255] vs. signed [-128, 125].
       if (PreferSignedRange && HasNSW && HasNUW)
         HasNUW = false;
 
