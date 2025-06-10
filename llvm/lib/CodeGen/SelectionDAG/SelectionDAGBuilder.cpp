@@ -3148,7 +3148,7 @@ void SelectionDAGBuilder::visitSPDescriptorFailure(
     // First create the loads to the guard/stack slot for the comparison.
     auto &DL = DAG.getDataLayout();
     EVT PtrTy = TLI.getFrameIndexTy(DL);
-    EVT PtrMemTy = TLI.getPointerMemTy(DL);
+    EVT PtrMemTy = TLI.getPointerMemTy(DL, DL.getAllocaAddrSpace());
 
     MachineFrameInfo &MFI = ParentBB->getParent()->getFrameInfo();
     int FI = MFI.getStackProtectorIndex();
