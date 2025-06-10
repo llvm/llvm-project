@@ -334,6 +334,24 @@ static bool shouldBeInlined(ExpressionOp expressionOp) {
   return !user->hasTrait<OpTrait::emitc::CExpression>();
 }
 
+/// Determine whether constant \p constantOp should be emitted inline, i.e.
+/// as part of its user. This function Only inline constant with one use.
+static bool shouldBeInlined(ConstantOp constantOp) {
+  // Do not inline expressions with multiple uses.
+  Value result = constantOp.getResult();
+  if (!result.hasOneUse())
+    return false;
+
+  Operation *user = *result.getUsers().begin();
+
+  // Do not inline expressions used by operations with deferred emission, since
+  // their translation requires the materialization of variables.
+  if (hasDeferredEmission(user))
+    return false;
+
+  return true;
+}
+
 static LogicalResult printConstantOp(CppEmitter &emitter, Operation *operation,
                                      Attribute value) {
   OpResult result = operation->getResult(0);
@@ -368,6 +386,9 @@ static LogicalResult printConstantOp(CppEmitter &emitter, Operation *operation,
 
 static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::ConstantOp constantOp) {
+  if (shouldBeInlined(constantOp))
+    return success();
+
   Operation *operation = constantOp.getOperation();
   Attribute value = constantOp.getValue();
 
@@ -1454,6 +1475,11 @@ LogicalResult CppEmitter::emitOperand(Value value) {
   if (expressionOp && shouldBeInlined(expressionOp))
     return emitExpression(expressionOp);
 
+  auto constantOp = dyn_cast_if_present<ConstantOp>(value.getDefiningOp());
+  if (constantOp && shouldBeInlined(constantOp)) {
+    return emitAttribute(constantOp.getLoc(), constantOp.getValue());
+  }
+
   os << getOrCreateName(value);
   return success();
 }
@@ -1650,7 +1676,9 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
 
   if (getEmittedExpression() ||
       (isa<emitc::ExpressionOp>(op) &&
-       shouldBeInlined(cast<emitc::ExpressionOp>(op))))
+       shouldBeInlined(cast<emitc::ExpressionOp>(op))) ||
+      (isa<emitc::ConstantOp>(op) &&
+       shouldBeInlined(cast<emitc::ConstantOp>(op))))
     return success();
 
   // Never emit a semicolon for some operations, especially if endening with

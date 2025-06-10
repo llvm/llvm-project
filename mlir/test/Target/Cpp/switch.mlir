@@ -2,32 +2,30 @@
 // RUN: mlir-translate -mlir-to-cpp -declare-variables-at-top %s | FileCheck --match-full-lines %s -check-prefix=CPP-DECLTOP
 
 // CPP-DEFAULT-LABEL: void emitc_switch_ptrdiff_t() {
-// CPP-DEFAULT:         ptrdiff_t v1 = 1;
-// CPP-DEFAULT:         switch (v1) {
+// CPP-DEFAULT:         switch (1) {
 // CPP-DEFAULT:         case 2: {
-// CPP-DEFAULT:           int32_t v2 = func_b();
+// CPP-DEFAULT:           int32_t v1 = func_b();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         case 5: {
-// CPP-DEFAULT:           int32_t v3 = func_a();
+// CPP-DEFAULT:           int32_t v2 = func_a();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         default: {
-// CPP-DEFAULT:           float v4 = 4.200000000e+01f;
-// CPP-DEFAULT:           func2(v4);
+// CPP-DEFAULT:           func2(4.200000000e+01f);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         return;
 // CPP-DEFAULT:       }
 
+
 // CPP-DECLTOP-LABEL: void emitc_switch_ptrdiff_t() {
 // CPP-DECLTOP:         ptrdiff_t v1;
 // CPP-DECLTOP:         float v2;
 // CPP-DECLTOP:         int32_t v3;
 // CPP-DECLTOP:         int32_t v4;
-// CPP-DECLTOP:         v1 = 1;
-// CPP-DECLTOP:         switch (v1) {
+// CPP-DECLTOP:         switch (1) {
 // CPP-DECLTOP:         case 2: {
 // CPP-DECLTOP:           v3 = func_b();
 // CPP-DECLTOP:           break;
@@ -37,8 +35,7 @@
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         default: {
-// CPP-DECLTOP:           v2 = 4.200000000e+01f;
-// CPP-DECLTOP:           func2(v2);
+// CPP-DECLTOP:           func2(4.200000000e+01f);
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         }
@@ -63,20 +60,17 @@ func.func @emitc_switch_ptrdiff_t() {
   return
 }
 
-// CPP-DEFAULT-LABEL: void emitc_switch_ssize_t() {
-// CPP-DEFAULT:         ssize_t v1 = 1;
-// CPP-DEFAULT:         switch (v1) {
+// CPP-DEFAULT:         switch (1) {
 // CPP-DEFAULT:         case 2: {
-// CPP-DEFAULT:           int32_t v2 = func_b();
+// CPP-DEFAULT:           int32_t v1 = func_b();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         case 5: {
-// CPP-DEFAULT:           int32_t v3 = func_a();
+// CPP-DEFAULT:           int32_t v2 = func_a();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         default: {
-// CPP-DEFAULT:           float v4 = 4.200000000e+01f;
-// CPP-DEFAULT:           func2(v4);
+// CPP-DEFAULT:           func2(4.200000000e+01f);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         }
@@ -88,8 +82,7 @@ func.func @emitc_switch_ptrdiff_t() {
 // CPP-DECLTOP:         float v2;
 // CPP-DECLTOP:         int32_t v3;
 // CPP-DECLTOP:         int32_t v4;
-// CPP-DECLTOP:         v1 = 1;
-// CPP-DECLTOP:         switch (v1) {
+// CPP-DECLTOP:         switch (1) {
 // CPP-DECLTOP:         case 2: {
 // CPP-DECLTOP:           v3 = func_b();
 // CPP-DECLTOP:           break;
@@ -99,8 +92,7 @@ func.func @emitc_switch_ptrdiff_t() {
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         default: {
-// CPP-DECLTOP:           v2 = 4.200000000e+01f;
-// CPP-DECLTOP:           func2(v2);
+// CPP-DECLTOP:           func2(4.200000000e+01f);
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         }
@@ -126,20 +118,18 @@ func.func @emitc_switch_ssize_t() {
   return
 }
 
-// CPP-DEFAULT-LABEL: void emitc_switch_size_t() {
-// CPP-DEFAULT:         size_t v1 = 1;
-// CPP-DEFAULT:         switch (v1) {
+// CPP-DEFAULT:       void emitc_switch_size_t() {
+// CPP-DEFAULT:         switch (1) {
 // CPP-DEFAULT:         case 2: {
-// CPP-DEFAULT:           int32_t v2 = func_b();
+// CPP-DEFAULT:           int32_t v1 = func_b();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         case 5: {
-// CPP-DEFAULT:           int32_t v3 = func_a();
+// CPP-DEFAULT:           int32_t v2 = func_a();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         default: {
-// CPP-DEFAULT:           float v4 = 4.200000000e+01f;
-// CPP-DEFAULT:           func2(v4);
+// CPP-DEFAULT:           func2(4.200000000e+01f);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         }
@@ -151,8 +141,7 @@ func.func @emitc_switch_ssize_t() {
 // CPP-DECLTOP:         float v2;
 // CPP-DECLTOP:         int32_t v3;
 // CPP-DECLTOP:         int32_t v4;
-// CPP-DECLTOP:         v1 = 1;
-// CPP-DECLTOP:         switch (v1) {
+// CPP-DECLTOP:         switch (1) {
 // CPP-DECLTOP:         case 2: {
 // CPP-DECLTOP:           v3 = func_b();
 // CPP-DECLTOP:           break;
@@ -162,8 +151,7 @@ func.func @emitc_switch_ssize_t() {
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         default: {
-// CPP-DECLTOP:           v2 = 4.200000000e+01f;
-// CPP-DECLTOP:           func2(v2);
+// CPP-DECLTOP:           func2(4.200000000e+01f);
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         }
@@ -189,20 +177,18 @@ func.func @emitc_switch_size_t() {
   return
 }
 
-// CPP-DEFAULT-LABEL: void emitc_switch_index() {
-// CPP-DEFAULT:         size_t v1 = 1;
-// CPP-DEFAULT:         switch (v1) {
+// CPP-DEFAULT:       void emitc_switch_index() {
+// CPP-DEFAULT:         switch (1) {
 // CPP-DEFAULT:         case 2: {
-// CPP-DEFAULT:           int32_t v2 = func_b();
+// CPP-DEFAULT:           int32_t v1 = func_b();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         case 5: {
-// CPP-DEFAULT:           int32_t v3 = func_a();
+// CPP-DEFAULT:           int32_t v2 = func_a();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         default: {
-// CPP-DEFAULT:           float v4 = 4.200000000e+01f;
-// CPP-DEFAULT:           func2(v4);
+// CPP-DEFAULT:           func2(4.200000000e+01f);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         }
@@ -214,8 +200,7 @@ func.func @emitc_switch_size_t() {
 // CPP-DECLTOP:         float v2;
 // CPP-DECLTOP:         int32_t v3;
 // CPP-DECLTOP:         int32_t v4;
-// CPP-DECLTOP:         v1 = 1;
-// CPP-DECLTOP:         switch (v1) {
+// CPP-DECLTOP:         switch (1) {
 // CPP-DECLTOP:         case 2: {
 // CPP-DECLTOP:           v3 = func_b();
 // CPP-DECLTOP:           break;
@@ -225,8 +210,7 @@ func.func @emitc_switch_size_t() {
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         default: {
-// CPP-DECLTOP:           v2 = 4.200000000e+01f;
-// CPP-DECLTOP:           func2(v2);
+// CPP-DECLTOP:           func2(4.200000000e+01f);
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         }
@@ -252,20 +236,18 @@ func.func @emitc_switch_index() {
   return
 }
 
-// CPP-DEFAULT-LABEL: void emitc_switch_opaque() {
-// CPP-DEFAULT:         size_t v1 = 1;
-// CPP-DEFAULT:         switch (v1) {
+// CPP-DEFAULT:       void emitc_switch_opaque() {
+// CPP-DEFAULT:         switch (1) {
 // CPP-DEFAULT:         case 2: {
-// CPP-DEFAULT:           int32_t v2 = func_b();
+// CPP-DEFAULT:           int32_t v1 = func_b();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         case 5: {
-// CPP-DEFAULT:           int32_t v3 = func_a();
+// CPP-DEFAULT:           int32_t v2 = func_a();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         default: {
-// CPP-DEFAULT:           float v4 = 4.200000000e+01f;
-// CPP-DEFAULT:           func2(v4);
+// CPP-DEFAULT:           func2(4.200000000e+01f);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         }
@@ -277,8 +259,7 @@ func.func @emitc_switch_index() {
 // CPP-DECLTOP:         float v2;
 // CPP-DECLTOP:         int32_t v3;
 // CPP-DECLTOP:         int32_t v4;
-// CPP-DECLTOP:         v1 = 1;
-// CPP-DECLTOP:         switch (v1) {
+// CPP-DECLTOP:         switch (1) {
 // CPP-DECLTOP:         case 2: {
 // CPP-DECLTOP:           v3 = func_b();
 // CPP-DECLTOP:           break;
@@ -288,8 +269,7 @@ func.func @emitc_switch_index() {
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         default: {
-// CPP-DECLTOP:           v2 = 4.200000000e+01f;
-// CPP-DECLTOP:           func2(v2);
+// CPP-DECLTOP:           func2(4.200000000e+01f);
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         }
@@ -316,20 +296,18 @@ func.func @emitc_switch_opaque() {
   return
 }
 
-// CPP-DEFAULT-LABEL: void emitc_switch_i1() {
-// CPP-DEFAULT:         bool v1 = true;
-// CPP-DEFAULT:         switch (v1) {
+// CPP-DEFAULT:       void emitc_switch_i1() {
+// CPP-DEFAULT:         switch (true) {
 // CPP-DEFAULT:         case 2: {
-// CPP-DEFAULT:           int32_t v2 = func_b();
+// CPP-DEFAULT:           int32_t v1 = func_b();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         case 5: {
-// CPP-DEFAULT:           int32_t v3 = func_a();
+// CPP-DEFAULT:           int32_t v2 = func_a();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         default: {
-// CPP-DEFAULT:           float v4 = 4.200000000e+01f;
-// CPP-DEFAULT:           func2(v4);
+// CPP-DEFAULT:           func2(4.200000000e+01f);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         }
@@ -341,8 +319,7 @@ func.func @emitc_switch_opaque() {
 // CPP-DECLTOP:         float v2;
 // CPP-DECLTOP:         int32_t v3;
 // CPP-DECLTOP:         int32_t v4;
-// CPP-DECLTOP:         v1 = true;
-// CPP-DECLTOP:         switch (v1) {
+// CPP-DECLTOP:         switch (true) {
 // CPP-DECLTOP:         case 2: {
 // CPP-DECLTOP:           v3 = func_b();
 // CPP-DECLTOP:           break;
@@ -352,8 +329,7 @@ func.func @emitc_switch_opaque() {
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         default: {
-// CPP-DECLTOP:           v2 = 4.200000000e+01f;
-// CPP-DECLTOP:           func2(v2);
+// CPP-DECLTOP:           func2(4.200000000e+01f);
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         }
@@ -379,20 +355,18 @@ func.func @emitc_switch_i1() {
   return
 }
 
-// CPP-DEFAULT-LABEL: void emitc_switch_i8() {
-// CPP-DEFAULT:         int8_t v1 = 1;
-// CPP-DEFAULT:         switch (v1) {
+// CPP-DEFAULT:       void emitc_switch_i8() {
+// CPP-DEFAULT:         switch (1) {
 // CPP-DEFAULT:         case 2: {
-// CPP-DEFAULT:           int32_t v2 = func_b();
+// CPP-DEFAULT:           int32_t v1 = func_b();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         case 5: {
-// CPP-DEFAULT:           int32_t v3 = func_a();
+// CPP-DEFAULT:           int32_t v2 = func_a();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         default: {
-// CPP-DEFAULT:           float v4 = 4.200000000e+01f;
-// CPP-DEFAULT:           func2(v4);
+// CPP-DEFAULT:           func2(4.200000000e+01f);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         }
@@ -404,8 +378,7 @@ func.func @emitc_switch_i1() {
 // CPP-DECLTOP:         float v2;
 // CPP-DECLTOP:         int32_t v3;
 // CPP-DECLTOP:         int32_t v4;
-// CPP-DECLTOP:         v1 = 1;
-// CPP-DECLTOP:         switch (v1) {
+// CPP-DECLTOP:         switch (1) {
 // CPP-DECLTOP:         case 2: {
 // CPP-DECLTOP:           v3 = func_b();
 // CPP-DECLTOP:           break;
@@ -415,8 +388,7 @@ func.func @emitc_switch_i1() {
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         default: {
-// CPP-DECLTOP:           v2 = 4.200000000e+01f;
-// CPP-DECLTOP:           func2(v2);
+// CPP-DECLTOP:           func2(4.200000000e+01f);
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         }
@@ -442,20 +414,18 @@ func.func @emitc_switch_i8() {
   return
 }
 
-// CPP-DEFAULT-LABEL: void emitc_switch_ui8() {
-// CPP-DEFAULT:         uint8_t v1 = 1;
-// CPP-DEFAULT:         switch (v1) {
+// CPP-DEFAULT:       void emitc_switch_ui8() {
+// CPP-DEFAULT:         switch (1) {
 // CPP-DEFAULT:         case 2: {
-// CPP-DEFAULT:           int32_t v2 = func_b();
+// CPP-DEFAULT:           int32_t v1 = func_b();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         case 5: {
-// CPP-DEFAULT:           int32_t v3 = func_a();
+// CPP-DEFAULT:           int32_t v2 = func_a();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         default: {
-// CPP-DEFAULT:           float v4 = 4.200000000e+01f;
-// CPP-DEFAULT:           func2(v4);
+// CPP-DEFAULT:           func2(4.200000000e+01f);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         }
@@ -467,8 +437,7 @@ func.func @emitc_switch_i8() {
 // CPP-DECLTOP:         float v2;
 // CPP-DECLTOP:         int32_t v3;
 // CPP-DECLTOP:         int32_t v4;
-// CPP-DECLTOP:         v1 = 1;
-// CPP-DECLTOP:         switch (v1) {
+// CPP-DECLTOP:         switch (1) {
 // CPP-DECLTOP:         case 2: {
 // CPP-DECLTOP:           v3 = func_b();
 // CPP-DECLTOP:           break;
@@ -478,8 +447,7 @@ func.func @emitc_switch_i8() {
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         default: {
-// CPP-DECLTOP:           v2 = 4.200000000e+01f;
-// CPP-DECLTOP:           func2(v2);
+// CPP-DECLTOP:           func2(4.200000000e+01f);
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         }
@@ -505,20 +473,18 @@ func.func @emitc_switch_ui8() {
   return
 }
 
-// CPP-DEFAULT-LABEL: void emitc_switch_i16() {
-// CPP-DEFAULT:         int16_t v1 = 1;
-// CPP-DEFAULT:         switch (v1) {
+// CPP-DEFAULT:       void emitc_switch_i16() {
+// CPP-DEFAULT:         switch (1) {
 // CPP-DEFAULT:         case 2: {
-// CPP-DEFAULT:           int32_t v2 = func_b();
+// CPP-DEFAULT:           int32_t v1 = func_b();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         case 5: {
-// CPP-DEFAULT:           int32_t v3 = func_a();
+// CPP-DEFAULT:           int32_t v2 = func_a();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         default: {
-// CPP-DEFAULT:           float v4 = 4.200000000e+01f;
-// CPP-DEFAULT:           func2(v4);
+// CPP-DEFAULT:           func2(4.200000000e+01f);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         }
@@ -530,8 +496,7 @@ func.func @emitc_switch_ui8() {
 // CPP-DECLTOP:         float v2;
 // CPP-DECLTOP:         int32_t v3;
 // CPP-DECLTOP:         int32_t v4;
-// CPP-DECLTOP:         v1 = 1;
-// CPP-DECLTOP:         switch (v1) {
+// CPP-DECLTOP:         switch (1) {
 // CPP-DECLTOP:         case 2: {
 // CPP-DECLTOP:           v3 = func_b();
 // CPP-DECLTOP:           break;
@@ -541,8 +506,7 @@ func.func @emitc_switch_ui8() {
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         default: {
-// CPP-DECLTOP:           v2 = 4.200000000e+01f;
-// CPP-DECLTOP:           func2(v2);
+// CPP-DECLTOP:           func2(4.200000000e+01f);
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         }
@@ -569,19 +533,17 @@ func.func @emitc_switch_i16() {
 }
 
 // CPP-DEFAULT-LABEL: void emitc_switch_ui16() {
-// CPP-DEFAULT:         uint16_t v1 = 1;
-// CPP-DEFAULT:         switch (v1) {
+// CPP-DEFAULT:         switch (1) {
 // CPP-DEFAULT:         case 2: {
-// CPP-DEFAULT:           int32_t v2 = func_b();
+// CPP-DEFAULT:           int32_t v1 = func_b();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         case 5: {
-// CPP-DEFAULT:           int32_t v3 = func_a();
+// CPP-DEFAULT:           int32_t v2 = func_a();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         default: {
-// CPP-DEFAULT:           float v4 = 4.200000000e+01f;
-// CPP-DEFAULT:           func2(v4);
+// CPP-DEFAULT:           func2(4.200000000e+01f);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         }
@@ -593,8 +555,7 @@ func.func @emitc_switch_i16() {
 // CPP-DECLTOP:         float v2;
 // CPP-DECLTOP:         int32_t v3;
 // CPP-DECLTOP:         int32_t v4;
-// CPP-DECLTOP:         v1 = 1;
-// CPP-DECLTOP:         switch (v1) {
+// CPP-DECLTOP:         switch (1) {
 // CPP-DECLTOP:         case 2: {
 // CPP-DECLTOP:           v3 = func_b();
 // CPP-DECLTOP:           break;
@@ -604,8 +565,7 @@ func.func @emitc_switch_i16() {
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         default: {
-// CPP-DECLTOP:           v2 = 4.200000000e+01f;
-// CPP-DECLTOP:           func2(v2);
+// CPP-DECLTOP:           func2(4.200000000e+01f);
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         }
@@ -632,19 +592,17 @@ func.func @emitc_switch_ui16() {
 }
 
 // CPP-DEFAULT-LABEL: void emitc_switch_i32() {
-// CPP-DEFAULT:         int32_t v1 = 1;
-// CPP-DEFAULT:         switch (v1) {
+// CPP-DEFAULT:         switch (1) {
 // CPP-DEFAULT:         case 2: {
-// CPP-DEFAULT:           int32_t v2 = func_b();
+// CPP-DEFAULT:           int32_t v1 = func_b();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         case 5: {
-// CPP-DEFAULT:           int32_t v3 = func_a();
+// CPP-DEFAULT:           int32_t v2 = func_a();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         default: {
-// CPP-DEFAULT:           float v4 = 4.200000000e+01f;
-// CPP-DEFAULT:           func2(v4);
+// CPP-DEFAULT:           func2(4.200000000e+01f);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         }
@@ -656,8 +614,7 @@ func.func @emitc_switch_ui16() {
 // CPP-DECLTOP:         float v2;
 // CPP-DECLTOP:         int32_t v3;
 // CPP-DECLTOP:         int32_t v4;
-// CPP-DECLTOP:         v1 = 1;
-// CPP-DECLTOP:         switch (v1) {
+// CPP-DECLTOP:         switch (1) {
 // CPP-DECLTOP:         case 2: {
 // CPP-DECLTOP:           v3 = func_b();
 // CPP-DECLTOP:           break;
@@ -667,8 +624,7 @@ func.func @emitc_switch_ui16() {
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         default: {
-// CPP-DECLTOP:           v2 = 4.200000000e+01f;
-// CPP-DECLTOP:           func2(v2);
+// CPP-DECLTOP:           func2(4.200000000e+01f);
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         }
@@ -695,19 +651,17 @@ func.func @emitc_switch_i32() {
 }
 
 // CPP-DEFAULT-LABEL: void emitc_switch_ui32() {
-// CPP-DEFAULT:         uint32_t v1 = 1;
-// CPP-DEFAULT:         switch (v1) {
+// CPP-DEFAULT:         switch (1) {
 // CPP-DEFAULT:         case 2: {
-// CPP-DEFAULT:           int32_t v2 = func_b();
+// CPP-DEFAULT:           int32_t v1 = func_b();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         case 5: {
-// CPP-DEFAULT:           int32_t v3 = func_a();
+// CPP-DEFAULT:           int32_t v2 = func_a();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         default: {
-// CPP-DEFAULT:           float v4 = 4.200000000e+01f;
-// CPP-DEFAULT:           func2(v4);
+// CPP-DEFAULT:           func2(4.200000000e+01f);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         }
@@ -719,8 +673,7 @@ func.func @emitc_switch_i32() {
 // CPP-DECLTOP:         float v2;
 // CPP-DECLTOP:         int32_t v3;
 // CPP-DECLTOP:         int32_t v4;
-// CPP-DECLTOP:         v1 = 1;
-// CPP-DECLTOP:         switch (v1) {
+// CPP-DECLTOP:         switch (1) {
 // CPP-DECLTOP:         case 2: {
 // CPP-DECLTOP:           v3 = func_b();
 // CPP-DECLTOP:           break;
@@ -730,8 +683,7 @@ func.func @emitc_switch_i32() {
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         default: {
-// CPP-DECLTOP:           v2 = 4.200000000e+01f;
-// CPP-DECLTOP:           func2(v2);
+// CPP-DECLTOP:           func2(4.200000000e+01f);
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         }
@@ -758,19 +710,17 @@ func.func @emitc_switch_ui32() {
 }
 
 // CPP-DEFAULT-LABEL: void emitc_switch_i64() {
-// CPP-DEFAULT:         int64_t v1 = 1;
-// CPP-DEFAULT:         switch (v1) {
+// CPP-DEFAULT:         switch (1) {
 // CPP-DEFAULT:         case 2: {
-// CPP-DEFAULT:           int32_t v2 = func_b();
+// CPP-DEFAULT:           int32_t v1 = func_b();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         case 5: {
-// CPP-DEFAULT:           int32_t v3 = func_a();
+// CPP-DEFAULT:           int32_t v2 = func_a();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         default: {
-// CPP-DEFAULT:           float v4 = 4.200000000e+01f;
-// CPP-DEFAULT:           func2(v4);
+// CPP-DEFAULT:           func2(4.200000000e+01f);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         }
@@ -782,8 +732,7 @@ func.func @emitc_switch_ui32() {
 // CPP-DECLTOP:         float v2;
 // CPP-DECLTOP:         int32_t v3;
 // CPP-DECLTOP:         int32_t v4;
-// CPP-DECLTOP:         v1 = 1;
-// CPP-DECLTOP:         switch (v1) {
+// CPP-DECLTOP:         switch (1) {
 // CPP-DECLTOP:         case 2: {
 // CPP-DECLTOP:           v3 = func_b();
 // CPP-DECLTOP:           break;
@@ -793,8 +742,7 @@ func.func @emitc_switch_ui32() {
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         default: {
-// CPP-DECLTOP:           v2 = 4.200000000e+01f;
-// CPP-DECLTOP:           func2(v2);
+// CPP-DECLTOP:           func2(4.200000000e+01f);
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         }
@@ -821,19 +769,17 @@ func.func @emitc_switch_i64() {
 }
 
 // CPP-DEFAULT-LABEL: void emitc_switch_ui64() {
-// CPP-DEFAULT:         uint64_t v1 = 1;
-// CPP-DEFAULT:         switch (v1) {
+// CPP-DEFAULT:         switch (1) {
 // CPP-DEFAULT:         case 2: {
-// CPP-DEFAULT:           int32_t v2 = func_b();
+// CPP-DEFAULT:           int32_t v1 = func_b();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         case 5: {
-// CPP-DEFAULT:           int32_t v3 = func_a();
+// CPP-DEFAULT:           int32_t v2 = func_a();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         default: {
-// CPP-DEFAULT:           float v4 = 4.200000000e+01f;
-// CPP-DEFAULT:           func2(v4);
+// CPP-DEFAULT:           func2(4.200000000e+01f);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         }
@@ -845,8 +791,7 @@ func.func @emitc_switch_i64() {
 // CPP-DECLTOP:         float v2;
 // CPP-DECLTOP:         int32_t v3;
 // CPP-DECLTOP:         int32_t v4;
-// CPP-DECLTOP:         v1 = 1;
-// CPP-DECLTOP:         switch (v1) {
+// CPP-DECLTOP:         switch (1) {
 // CPP-DECLTOP:         case 2: {
 // CPP-DECLTOP:           v3 = func_b();
 // CPP-DECLTOP:           break;
@@ -856,8 +801,7 @@ func.func @emitc_switch_i64() {
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         default: {
-// CPP-DECLTOP:           v2 = 4.200000000e+01f;
-// CPP-DECLTOP:           func2(v2);
+// CPP-DECLTOP:           func2(4.200000000e+01f);
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         }
@@ -884,8 +828,7 @@ func.func @emitc_switch_ui64() {
 }
 
 // CPP-DEFAULT-LABEL: void emitc_switch_expression() {
-// CPP-DEFAULT:         int64_t v1 = 42;
-// CPP-DEFAULT:         switch (-v1) {
+// CPP-DEFAULT:         switch (-42) {
 // CPP-DEFAULT:         default: {
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
@@ -895,8 +838,7 @@ func.func @emitc_switch_ui64() {
 
 // CPP-DECLTOP-LABEL: void emitc_switch_expression() {
 // CPP-DECLTOP:         int64_t v1;
-// CPP-DECLTOP:         v1 = 42;
-// CPP-DECLTOP:         switch (-v1) {
+// CPP-DECLTOP:         switch (-42) {
 // CPP-DECLTOP:         default: {
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }

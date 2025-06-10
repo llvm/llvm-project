@@ -63,18 +63,13 @@ func.func @test_for_yield() {
   return
 }
 // CPP-DEFAULT: void test_for_yield() {
-// CPP-DEFAULT-NEXT: size_t [[START:[^ ]*]] = 0;
-// CPP-DEFAULT-NEXT: size_t [[STOP:[^ ]*]] = 10;
-// CPP-DEFAULT-NEXT: size_t [[STEP:[^ ]*]] = 1;
-// CPP-DEFAULT-NEXT: int32_t [[S0:[^ ]*]] = 0;
-// CPP-DEFAULT-NEXT: float [[P0:[^ ]*]] = 1.000000000e+00f;
 // CPP-DEFAULT-NEXT: int32_t [[SE:[^ ]*]];
 // CPP-DEFAULT-NEXT: float [[PE:[^ ]*]];
 // CPP-DEFAULT-NEXT: int32_t [[SI:[^ ]*]];
 // CPP-DEFAULT-NEXT: float [[PI:[^ ]*]];
-// CPP-DEFAULT-NEXT: [[SI:[^ ]*]] = [[S0]];
-// CPP-DEFAULT-NEXT: [[PI:[^ ]*]] = [[P0]];
-// CPP-DEFAULT-NEXT: for (size_t [[ITER:[^ ]*]] = [[START]]; [[ITER]] < [[STOP]]; [[ITER]] += [[STEP]]) {
+// CPP-DEFAULT-NEXT: [[SI:[^ ]*]] = 0;
+// CPP-DEFAULT-NEXT: [[PI:[^ ]*]] = 1.000000000e+00f;
+// CPP-DEFAULT-NEXT: for (size_t [[ITER:[^ ]*]] = 0; [[ITER]] < 10; [[ITER]] += 1) {
 // CPP-DEFAULT-NEXT: int32_t [[SI_LOAD:[^ ]*]] = [[SI]];
 // CPP-DEFAULT-NEXT: int32_t [[SN:[^ ]*]] = add([[SI_LOAD]], [[ITER]]);
 // CPP-DEFAULT-NEXT: float [[PI_LOAD:[^ ]*]] = [[PI]];
@@ -104,18 +99,13 @@ func.func @test_for_yield() {
 // CPP-DECLTOP-NEXT: float [[PN:[^ ]*]];
 // CPP-DECLTOP-NEXT: int32_t [[SI_LOAD2:[^ ]*]];
 // CPP-DECLTOP-NEXT: float [[PI_LOAD2:[^ ]*]];
-// CPP-DECLTOP-NEXT: [[START]] = 0;
-// CPP-DECLTOP-NEXT: [[STOP]] = 10;
-// CPP-DECLTOP-NEXT: [[STEP]] = 1;
-// CPP-DECLTOP-NEXT: [[S0]] = 0;
-// CPP-DECLTOP-NEXT: [[P0]] = 1.000000000e+00f;
 // CPP-DECLTOP-NEXT: ;
 // CPP-DECLTOP-NEXT: ;
 // CPP-DECLTOP-NEXT: ;
 // CPP-DECLTOP-NEXT: ;
-// CPP-DECLTOP-NEXT: [[SI]] = [[S0]];
-// CPP-DECLTOP-NEXT: [[PI]] = [[P0]];
-// CPP-DECLTOP-NEXT: for (size_t [[ITER:[^ ]*]] = [[START]]; [[ITER]] < [[STOP]]; [[ITER]] += [[STEP]]) {
+// CPP-DECLTOP-NEXT: [[SI]] = 0;
+// CPP-DECLTOP-NEXT: [[PI]] = 1.000000000e+00f;
+// CPP-DECLTOP-NEXT: for (size_t [[ITER:[^ ]*]] = 0; [[ITER]] < 10; [[ITER]] += 1) {
 // CPP-DECLTOP-NEXT: [[SI_LOAD]] = [[SI]];
 // CPP-DECLTOP-NEXT: [[SN]] = add([[SI_LOAD]], [[ITER]]);
 // CPP-DECLTOP-NEXT: [[PI_LOAD]] = [[PI]];
