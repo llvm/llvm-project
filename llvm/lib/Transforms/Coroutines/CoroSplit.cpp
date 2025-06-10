@@ -912,7 +912,7 @@ void coro::BaseCloner::create() {
     assert(SP != OrigF.getSubprogram() && SP->isDistinct());
     updateScopeLine(ActiveSuspend, *SP);
 
-    // Update the linkage name and the functaion name to reflect the modified
+    // Update the linkage name and the function name to reflect the modified
     // name.
     MDString *NewLinkageName = MDString::get(Context, NewF->getName());
     SP->replaceLinkageName(NewLinkageName);
