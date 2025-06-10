@@ -652,19 +652,23 @@ LLVM_DUMP_METHOD void StackColoring::dumpIntervals() const {
 
 LLVM_DUMP_METHOD void StackColoring::SlotInfo::dump(const StackColoring* State) const {
   unsigned Slot = InvalidIdx;
-  if (State)
+  if (State) {
     Slot = this - State->Slot2Info.data();
+    dbgs() << "fi#" << Slot;
+  } else
   dbgs() << "SlotInfo"; 
-  if (State)
-    dbgs() << "(" << Slot << ")";
-  dbgs()<< ": ";
-  dbgs() << '\n';
-  if (State)
-    if (State->MFI->getObjectAllocation(Slot)) {
-      State->MFI->getObjectAllocation(Slot)->print(dbgs());
-      dbgs() << '\n';
+  dbgs() << ":";
+  if (Offset != InvalidIdx)
+    dbgs() << " offset=" << Offset;
+  if (State) {
+    if (State->MFI->getObjectAllocation(Slot))
+      dbgs() << " \"" << State->MFI->getObjectAllocation(Slot)->getName() << "\"";
+    if (State->MFI->isSpillSlotObjectIndex(Slot))
+      dbgs() << " spill";
     }
-  dbgs() << "Size=" << Size << " Align=" << Align.value() << '\n';
+  dbgs() << " size=" << Size << " align=" << Align.value() << '\n';
+  if (IndexBasedLiveRange)
+    dbgs() << "Index: " << *IndexBasedLiveRange << "\n";
   dumpBV("LIVENESS   ", Liveness);
   BitVector Start;
   Start.resize(Liveness.size());
@@ -1607,7 +1611,7 @@ unsigned StackColoring::doMerging(unsigned NumSlots) {
   LatestStatus.resize(LivenessSize, Status{});
   SmallVector<Status> OlderStatus;
 
-  auto FindOffset = [&](SlotInfo &Info, unsigned Pt) {
+  auto FindStatus = [&](SlotInfo &Info, unsigned Pt) -> Status& {
     Status *Last = &LatestStatus[Pt];
 
     // The slots in the linked-list are always kept in ascending order, so the
@@ -1617,9 +1621,9 @@ unsigned StackColoring::doMerging(unsigned NumSlots) {
     while (LLVM_UNLIKELY(Last->Slot != InvalidIdx &&
                          !HasOverlapCached(Info, Slot2Info[Last->Slot])))
       Last = &OlderStatus[Last->Prev];
-    return Last->Offset;
+    return *Last;
   };
-  auto UpdateOffset = [&](SlotInfo &Info, unsigned Pt, unsigned Offset) {
+  auto UpdateStatus = [&](SlotInfo &Info, unsigned Pt, unsigned Offset) {
     Status* Last = &LatestStatus[Pt];
     unsigned Idx = OlderStatus.size();
     OlderStatus.push_back(*Last);
@@ -1656,16 +1660,25 @@ unsigned StackColoring::doMerging(unsigned NumSlots) {
     Candidates.push_back(SlotStack.pop_back_val());
   }
 
+  LLVM_DEBUG(dbgs() << "\nStarting Placement:\n");
   unsigned WorseCaseOffset = 0;
   while (!Candidates.empty()) {
     unsigned BestIdx = InvalidIdx;
     unsigned BestOffset = InvalidIdx;
 
+    LLVM_DEBUG(dbgs() << "top=" << WorseCaseOffset << " choosing: ");
     for (unsigned K = 0; K < Candidates.size(); K++) {
       SlotInfo &Info = Slot2Info[Candidates[K]];
       unsigned Offset = 0;
+      unsigned PrevSlot = InvalidIdx;
+      (void)PrevSlot; // Only use in LLVM_DEBUG
+
       for (unsigned Pt : Info.Liveness.set_bits()) {
-        Offset = std::max(Offset, FindOffset(Info, Pt));
+        Status S = FindStatus(Info, Pt);
+        if (S.Offset > Offset) {
+          PrevSlot = S.Slot;
+          Offset = S.Offset;
+        }
 
         // If Offset == WorseCaseOffset, this is always a valid, options. so no
         // more checking needed
@@ -1677,7 +1690,10 @@ unsigned StackColoring::doMerging(unsigned NumSlots) {
 
       Offset = alignTo(Offset, Info.Align);
 
-      LLVM_DEBUG(dbgs() << "choice: SlotInfo(" << Candidates[K] << ") at " << Offset << "\n");
+      LLVM_DEBUG(dbgs() << "fi#" << Candidates[K] << "@" << Offset << "->";
+                 if (PrevSlot == InvalidIdx) dbgs() << "bottom";
+                 else dbgs() << "fi#" << PrevSlot; dbgs() << ", ";);
+
       bool IsBetter = [&] {
         if (BestOffset != Offset)
           return BestOffset > Offset;
@@ -1699,15 +1715,15 @@ unsigned StackColoring::doMerging(unsigned NumSlots) {
       }
     }
     SlotInfo &Info = Slot2Info[Candidates[BestIdx]];
-
-    LLVM_DEBUG(Info.dump(this));
-    LLVM_DEBUG(dbgs() << "Placing SlotInfo(" << Candidates[BestIdx] << ") at "
-                      << BestOffset << "\n");
-
     Info.Offset = BestOffset;
     WorseCaseOffset = std::max(WorseCaseOffset, BestOffset + Info.Size);
+
+    LLVM_DEBUG(dbgs() << "\n");
+    LLVM_DEBUG(dbgs() << "Placing: ");
+    LLVM_DEBUG(Info.dump(this));
+
     for (unsigned Pt : Info.Liveness.set_bits())
-      UpdateOffset(Info, Pt, BestOffset + Info.Size);
+      UpdateStatus(Info, Pt, BestOffset + Info.Size);
 #ifdef EXPENSIVE_CHECKS
     // Validate the order of offsets in the linked-list
     for (Status &S : LatestStatus) {
@@ -1786,13 +1802,9 @@ bool StackColoring::run(MachineFunction &Func) {
   unsigned TotalSize = 0;
   LLVM_DEBUG(dbgs() << "Found " << NumMarkers << " markers and " << NumSlots
                     << " slots\n");
-  LLVM_DEBUG(dbgs() << "Slot structure:\n");
 
-  for (int i=0; i < MFI->getObjectIndexEnd(); ++i) {
-    LLVM_DEBUG(dbgs() << "Slot #" << i << " - " << MFI->getObjectSize(i)
-                      << " bytes.\n");
+  for (int i=0; i < MFI->getObjectIndexEnd(); ++i)
     TotalSize += MFI->getObjectSize(i);
-  }
 
   LLVM_DEBUG(dbgs() << "Total Stack size: " << TotalSize << " bytes\n\n");
 
