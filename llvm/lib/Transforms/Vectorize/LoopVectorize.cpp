@@ -957,8 +957,12 @@ public:
   }
 
   /// \return True if maximizing vector bandwidth is enabled by the target or
-  /// user options.
+  /// user options, for the given register kind.
   bool useMaxBandwidth(TargetTransformInfo::RegisterKind RegKind);
+
+  /// \return True if maximizing vector bandwidth is enabled by the target or
+  /// user options, for the given vector factor.
+  bool useMaxBandwidth(ElementCount VF);
 
   /// \return The size (in bits) of the smallest and widest types in the code
   /// that needs to be vectorized. We ignore values that remain scalar such as
@@ -3922,6 +3926,12 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   return FixedScalableVFPair::getNone();
 }
 
+bool LoopVectorizationCostModel::useMaxBandwidth(ElementCount VF) {
+  return useMaxBandwidth(VF.isScalable()
+                             ? TargetTransformInfo::RGK_ScalableVector
+                             : TargetTransformInfo::RGK_FixedWidthVector);
+}
+
 bool LoopVectorizationCostModel::useMaxBandwidth(
     TargetTransformInfo::RegisterKind RegKind) {
   return MaximizeBandwidth || (MaximizeBandwidth.getNumOccurrences() == 0 &&
@@ -4364,10 +4374,7 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
 
       /// Don't consider the VF if it exceeds the number of registers for the
       /// target.
-      if (CM.useMaxBandwidth(VF.isScalable()
-                                 ? TargetTransformInfo::RGK_ScalableVector
-                                 : TargetTransformInfo::RGK_FixedWidthVector) &&
-          RUs[I].exceedsMaxNumRegs(TTI))
+      if (CM.useMaxBandwidth(VF) && RUs[I].exceedsMaxNumRegs(TTI))
         continue;
 
       InstructionCost C = CM.expectedCost(VF);
@@ -7143,10 +7150,7 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
       InstructionCost Cost = cost(*P, VF);
       VectorizationFactor CurrentFactor(VF, Cost, ScalarCost);
 
-      if (CM.useMaxBandwidth(VF.isScalable()
-                                 ? TargetTransformInfo::RGK_ScalableVector
-                                 : TargetTransformInfo::RGK_FixedWidthVector) &&
-          RUs[I].exceedsMaxNumRegs(TTI)) {
+      if (CM.useMaxBandwidth(VF) && RUs[I].exceedsMaxNumRegs(TTI)) {
         LLVM_DEBUG(dbgs() << "LV(REG): Not considering vector loop of width "
                           << VF << " because it uses too many registers\n");
         continue;
