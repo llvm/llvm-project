@@ -69,23 +69,6 @@ void RestartRequestHandler::operator()(
     dap.SendJSON(llvm::json::Value(std::move(response)));
     return;
   }
-  // Check if we were in a "launch" session or an "attach" session.
-  //
-  // Restarting is not well defined when we started the session by attaching to
-  // an existing process, because we don't know how the process was started, so
-  // we don't support it.
-  //
-  // Note that when using runInTerminal we're technically attached, but it's an
-  // implementation detail. The adapter *did* launch the process in response to
-  // a "launch" command, so we can still stop it and re-run it. This is why we
-  // don't just check `dap.is_attach`.
-  if (!dap.last_launch_request) {
-    response["success"] = llvm::json::Value(false);
-    EmplaceSafeString(response, "message",
-                      "Restarting an \"attach\" session is not supported.");
-    dap.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
 
   const llvm::json::Object *arguments = request.getObject("arguments");
   if (arguments) {
