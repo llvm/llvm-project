@@ -182,6 +182,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasBasicF()) {
     setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand);
     setTruncStoreAction(MVT::f32, MVT::f16, Expand);
+    setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::bf16, Expand);
+    setTruncStoreAction(MVT::f32, MVT::bf16, Expand);
     setCondCodeAction(FPCCToExpand, MVT::f32, Expand);
 
     setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
@@ -203,6 +205,9 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
                        Subtarget.isSoftFPABI() ? LibCall : Custom);
     setOperationAction(ISD::FP_TO_FP16, MVT::f32,
                        Subtarget.isSoftFPABI() ? LibCall : Custom);
+    setOperationAction(ISD::BF16_TO_FP, MVT::f32, Custom);
+    setOperationAction(ISD::FP_TO_BF16, MVT::f32,
+                       Subtarget.isSoftFPABI() ? LibCall : Custom);
 
     if (Subtarget.is64Bit())
       setOperationAction(ISD::FRINT, MVT::f32, Legal);
@@ -221,6 +226,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasBasicD()) {
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Expand);
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
+    setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::bf16, Expand);
+    setTruncStoreAction(MVT::f64, MVT::bf16, Expand);
     setTruncStoreAction(MVT::f64, MVT::f16, Expand);
     setTruncStoreAction(MVT::f64, MVT::f32, Expand);
     setCondCodeAction(FPCCToExpand, MVT::f64, Expand);
@@ -242,6 +249,9 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FREM, MVT::f64, Expand);
     setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
     setOperationAction(ISD::FP_TO_FP16, MVT::f64,
+                       Subtarget.isSoftFPABI() ? LibCall : Custom);
+    setOperationAction(ISD::BF16_TO_FP, MVT::f64, Custom);
+    setOperationAction(ISD::FP_TO_BF16, MVT::f64,
                        Subtarget.isSoftFPABI() ? LibCall : Custom);
 
     if (Subtarget.is64Bit())
@@ -499,6 +509,10 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerFP_TO_FP16(Op, DAG);
   case ISD::FP16_TO_FP:
     return lowerFP16_TO_FP(Op, DAG);
+  case ISD::FP_TO_BF16:
+    return lowerFP_TO_BF16(Op, DAG);
+  case ISD::BF16_TO_FP:
+    return lowerBF16_TO_FP(Op, DAG);
   }
   return SDValue();
 }
@@ -2330,6 +2344,36 @@ SDValue LoongArchTargetLowering::lowerFP16_TO_FP(SDValue Op,
   SDValue Res;
   std::tie(Res, Chain) = makeLibCall(DAG, RTLIB::FPEXT_F16_F32, MVT::f32, Arg,
                                      CallOptions, DL, Chain);
+  return Res;
+}
+
+SDValue LoongArchTargetLowering::lowerFP_TO_BF16(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  assert(Subtarget.hasBasicF() && "Unexpected custom legalization");
+  SDLoc DL(Op);
+  MakeLibCallOptions CallOptions;
+  RTLIB::Libcall LC =
+      RTLIB::getFPROUND(Op.getOperand(0).getValueType(), MVT::bf16);
+  SDValue Res =
+      makeLibCall(DAG, LC, MVT::f32, Op.getOperand(0), CallOptions, DL).first;
+  if (Subtarget.is64Bit())
+    return DAG.getNode(LoongArchISD::MOVFR2GR_S_LA64, DL, MVT::i64, Res);
+  return DAG.getBitcast(MVT::i32, Res);
+}
+
+SDValue LoongArchTargetLowering::lowerBF16_TO_FP(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  assert(Subtarget.hasBasicF() && "Unexpected custom legalization");
+  MVT VT = Op.getSimpleValueType();
+  SDLoc DL(Op);
+  Op = DAG.getNode(
+      ISD::SHL, DL, Op.getOperand(0).getValueType(), Op.getOperand(0),
+      DAG.getShiftAmountConstant(16, Op.getOperand(0).getValueType(), DL));
+  SDValue Res = Subtarget.is64Bit() ? DAG.getNode(LoongArchISD::MOVGR2FR_W_LA64,
+                                                  DL, MVT::f32, Op)
+                                    : DAG.getBitcast(MVT::f32, Op);
+  if (VT != MVT::f32)
+    return DAG.getNode(ISD::FP_EXTEND, DL, VT, Res);
   return Res;
 }
 
@@ -7993,8 +8037,9 @@ bool LoongArchTargetLowering::splitValueIntoRegisterParts(
   bool IsABIRegCopy = CC.has_value();
   EVT ValueVT = Val.getValueType();
 
-  if (IsABIRegCopy && ValueVT == MVT::f16 && PartVT == MVT::f32) {
-    // Cast the f16 to i16, extend to i32, pad with ones to make a float
+  if (IsABIRegCopy && (ValueVT == MVT::f16 || ValueVT == MVT::bf16) &&
+      PartVT == MVT::f32) {
+    // Cast the [b]f16 to i16, extend to i32, pad with ones to make a float
     // nan, and cast to f32.
     Val = DAG.getNode(ISD::BITCAST, DL, MVT::i16, Val);
     Val = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Val);
@@ -8013,10 +8058,11 @@ SDValue LoongArchTargetLowering::joinRegisterPartsIntoValue(
     MVT PartVT, EVT ValueVT, std::optional<CallingConv::ID> CC) const {
   bool IsABIRegCopy = CC.has_value();
 
-  if (IsABIRegCopy && ValueVT == MVT::f16 && PartVT == MVT::f32) {
+  if (IsABIRegCopy && (ValueVT == MVT::f16 || ValueVT == MVT::bf16) &&
+      PartVT == MVT::f32) {
     SDValue Val = Parts[0];
 
-    // Cast the f32 to i32, truncate to i16, and cast back to f16.
+    // Cast the f32 to i32, truncate to i16, and cast back to [b]f16.
     Val = DAG.getNode(ISD::BITCAST, DL, MVT::i32, Val);
     Val = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Val);
     Val = DAG.getNode(ISD::BITCAST, DL, ValueVT, Val);
