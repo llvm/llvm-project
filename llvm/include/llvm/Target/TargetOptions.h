@@ -14,9 +14,9 @@
 #ifndef LLVM_TARGET_TARGETOPTIONS_H
 #define LLVM_TARGET_TARGETOPTIONS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/Support/Compiler.h"
 
 #include <memory>
 

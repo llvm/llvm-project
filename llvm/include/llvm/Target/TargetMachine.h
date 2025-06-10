@@ -13,13 +13,13 @@
 #ifndef LLVM_TARGET_TARGETMACHINE_H
 #define LLVM_TARGET_TARGETMACHINE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/PGOOptions.h"
 #include "llvm/Target/CGPassBuilderOption.h"

@@ -88,8 +88,7 @@ static MCTargetStreamer *createMCAsmTargetStreamer(MCStreamer &S,
   return new AVRTargetAsmStreamer(S);
 }
 
-extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY
-void LLVMInitializeAVRTargetMC() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRTargetMC() {
   // Register the MC asm info.
   RegisterMCAsmInfo<AVRMCAsmInfo> X(getTheAVRTarget());
 

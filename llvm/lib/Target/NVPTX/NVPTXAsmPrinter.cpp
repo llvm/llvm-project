@@ -1948,7 +1948,8 @@ INITIALIZE_PASS(NVPTXAsmPrinter, "nvptx-asm-printer", "NVPTX Assembly Printer",
                 false, false)
 
 // Force static initialization.
-extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeNVPTXAsmPrinter() {
   RegisterAsmPrinter<NVPTXAsmPrinter> X(getTheNVPTXTarget32());
   RegisterAsmPrinter<NVPTXAsmPrinter> Y(getTheNVPTXTarget64());
 }

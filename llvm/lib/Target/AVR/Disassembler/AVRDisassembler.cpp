@@ -52,7 +52,8 @@ static MCDisassembler *createAVRDisassembler(const Target &T,
   return new AVRDisassembler(STI, Ctx);
 }
 
-extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRDisassembler() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeAVRDisassembler() {
   // Register the disassembler.
   TargetRegistry::RegisterMCDisassembler(getTheAVRTarget(),
                                          createAVRDisassembler);

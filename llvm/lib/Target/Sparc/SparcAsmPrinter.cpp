@@ -507,7 +507,8 @@ INITIALIZE_PASS(SparcAsmPrinter, "sparc-asm-printer", "Sparc Assembly Printer",
                 false, false)
 
 // Force static initialization.
-extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSparcAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeSparcAsmPrinter() {
   RegisterAsmPrinter<SparcAsmPrinter> X(getTheSparcTarget());
   RegisterAsmPrinter<SparcAsmPrinter> Y(getTheSparcV9Target());
   RegisterAsmPrinter<SparcAsmPrinter> Z(getTheSparcelTarget());

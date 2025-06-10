@@ -243,6 +243,7 @@ INITIALIZE_PASS(LanaiAsmPrinter, "lanai-asm-printer", "Lanai Assembly Printer",
                 false, false)
 
 // Force static initialization.
-extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLanaiAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeLanaiAsmPrinter() {
   RegisterAsmPrinter<LanaiAsmPrinter> X(getTheLanaiTarget());
 }

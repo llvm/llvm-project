@@ -2457,7 +2457,8 @@ INITIALIZE_PASS(ARMAsmPrinter, "arm-asm-printer", "ARM Assembly Printer", false,
 //===----------------------------------------------------------------------===//
 
 // Force static initialization.
-extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeARMAsmPrinter() {
   RegisterAsmPrinter<ARMAsmPrinter> X(getTheARMLETarget());
   RegisterAsmPrinter<ARMAsmPrinter> Y(getTheARMBETarget());
   RegisterAsmPrinter<ARMAsmPrinter> A(getTheThumbLETarget());

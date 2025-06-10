@@ -175,7 +175,8 @@ static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
 }
 
-extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonTarget() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeHexagonTarget() {
   // Register the target.
   RegisterTargetMachine<HexagonTargetMachine> X(getTheHexagonTarget());
 

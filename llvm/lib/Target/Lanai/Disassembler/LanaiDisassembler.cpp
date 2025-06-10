@@ -36,7 +36,8 @@ static MCDisassembler *createLanaiDisassembler(const Target & /*T*/,
   return new LanaiDisassembler(STI, Ctx);
 }
 
-extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLanaiDisassembler() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeLanaiDisassembler() {
   // Register the disassembler
   TargetRegistry::RegisterMCDisassembler(getTheLanaiTarget(),
                                          createLanaiDisassembler);

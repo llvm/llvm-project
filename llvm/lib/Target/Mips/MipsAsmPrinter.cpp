@@ -1300,7 +1300,8 @@ INITIALIZE_PASS(MipsAsmPrinter, "mips-asm-printer", "Mips Assembly Printer",
                 false, false)
 
 // Force static initialization.
-extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeMipsAsmPrinter() {
   RegisterAsmPrinter<MipsAsmPrinter> X(getTheMipsTarget());
   RegisterAsmPrinter<MipsAsmPrinter> Y(getTheMipselTarget());
   RegisterAsmPrinter<MipsAsmPrinter> A(getTheMips64Target());
