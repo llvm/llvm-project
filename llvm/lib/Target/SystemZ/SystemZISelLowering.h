@@ -671,6 +671,7 @@ public:
   }
 
   unsigned getStackProbeSize(const MachineFunction &MF) const;
+  bool hasAndNot(SDValue Y) const override;
 
 private:
   const SystemZSubtarget &Subtarget;

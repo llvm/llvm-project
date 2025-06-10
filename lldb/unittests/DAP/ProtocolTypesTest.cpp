@@ -7,12 +7,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "Protocol/ProtocolTypes.h"
+#include "Protocol/ProtocolRequests.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Testing/Support/Error.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+using namespace llvm;
 using namespace lldb;
 using namespace lldb_dap;
 using namespace lldb_dap::protocol;
+using llvm::json::parse;
+using llvm::json::Value;
+
+/// Returns a pretty printed json string of a `llvm::json::Value`.
+static std::string pp(const json::Value &E) {
+  return formatv("{0:2}", E).str();
+}
 
 template <typename T> static llvm::Expected<T> roundtrip(const T &input) {
   llvm::json::Value value = toJSON(input);
@@ -529,4 +541,128 @@ TEST(ProtocolTypesTest, ChecksumAlgorithm) {
   ChecksumAlgorithm deserialized_invalid;
   llvm::json::Path::Root root;
   EXPECT_FALSE(fromJSON(invalid_value, deserialized_invalid, root));
+}
+
+TEST(ProtocolTypesTest, DisassembledInstructionPresentationHint) {
+  // Test all PresentationHint values.
+  std::vector<
+      std::pair<DisassembledInstruction::PresentationHint, llvm::StringRef>>
+      test_cases = {{DisassembledInstruction::
+                         eDisassembledInstructionPresentationHintNormal,
+                     "normal"},
+                    {DisassembledInstruction::
+                         eDisassembledInstructionPresentationHintInvalid,
+                     "invalid"}};
+
+  for (const auto &test_case : test_cases) {
+    // Serialize the PresentationHint to JSON.
+    llvm::json::Value serialized = toJSON(test_case.first);
+    ASSERT_EQ(serialized.kind(), llvm::json::Value::Kind::String);
+    EXPECT_EQ(serialized.getAsString(), test_case.second);
+
+    // Deserialize the JSON back to PresentationHint.
+    DisassembledInstruction::PresentationHint deserialized;
+    llvm::json::Path::Root root;
+    ASSERT_TRUE(fromJSON(serialized, deserialized, root))
+        << llvm::toString(root.getError());
+    EXPECT_EQ(deserialized, test_case.first);
+  }
+
+  // Test invalid value.
+  llvm::json::Value invalid_value = "invalid_hint";
+  DisassembledInstruction::PresentationHint deserialized_invalid;
+  llvm::json::Path::Root root;
+  EXPECT_FALSE(fromJSON(invalid_value, deserialized_invalid, root));
+}
+
+TEST(ProtocolTypesTest, DisassembledInstruction) {
+  DisassembledInstruction instruction;
+  instruction.address = 0x12345678;
+  instruction.instructionBytes = "0F 1F 00";
+  instruction.instruction = "mov eax, ebx";
+  instruction.symbol = "main";
+  instruction.location = Source{"test.cpp", "/path/to/test.cpp", 123,
+                                Source::eSourcePresentationHintNormal};
+  instruction.line = 10;
+  instruction.column = 5;
+  instruction.endLine = 15;
+  instruction.endColumn = 10;
+  instruction.presentationHint =
+      DisassembledInstruction::eDisassembledInstructionPresentationHintNormal;
+
+  StringLiteral json = R"({
+  "address": "0x12345678",
+  "column": 5,
+  "endColumn": 10,
+  "endLine": 15,
+  "instruction": "mov eax, ebx",
+  "instructionBytes": "0F 1F 00",
+  "line": 10,
+  "location": {
+    "name": "test.cpp",
+    "path": "/path/to/test.cpp",
+    "presentationHint": "normal",
+    "sourceReference": 123
+  },
+  "presentationHint": "normal",
+  "symbol": "main"
+})";
+
+  // Validate toJSON
+  EXPECT_EQ(json, pp(instruction));
+
+  // Validate fromJSON
+  EXPECT_THAT_EXPECTED(parse<DisassembledInstruction>(json),
+                       HasValue(Value(instruction)));
+  // Validate parsing errors
+  EXPECT_THAT_EXPECTED(
+      parse<DisassembledInstruction>(R"({"address":1})",
+                                     "disassemblyInstruction"),
+      FailedWithMessage("expected string at disassemblyInstruction.address"));
+  EXPECT_THAT_EXPECTED(parse<DisassembledInstruction>(R"({"address":"-1"})",
+                                                      "disassemblyInstruction"),
+                       FailedWithMessage("expected string encoded uint64_t at "
+                                         "disassemblyInstruction.address"));
+  EXPECT_THAT_EXPECTED(parse<DisassembledInstruction>(
+                           R"({"address":"0xfffffffffffffffffffffffffff"})",
+                           "disassemblyInstruction"),
+                       FailedWithMessage("expected string encoded uint64_t at "
+                                         "disassemblyInstruction.address"));
+}
+
+TEST(ProtocolTypesTest, Thread) {
+  const Thread thread{1, "thr1"};
+  const StringRef json = R"({
+  "id": 1,
+  "name": "thr1"
+})";
+  // Validate toJSON
+  EXPECT_EQ(json, pp(thread));
+  // Validate fromJSON
+  EXPECT_THAT_EXPECTED(parse<Thread>(json), HasValue(Value(thread)));
+  // Validate parsing errors
+  EXPECT_THAT_EXPECTED(parse<Thread>(R"({"id":1})", "thread"),
+                       FailedWithMessage("missing value at thread.name"));
+  EXPECT_THAT_EXPECTED(parse<Thread>(R"({"id":"one"})", "thread"),
+                       FailedWithMessage("expected uint64_t at thread.id"));
+  EXPECT_THAT_EXPECTED(parse<Thread>(R"({"id":1,"name":false})", "thread"),
+                       FailedWithMessage("expected string at thread.name"));
+}
+
+TEST(ProtocolTypesTest, ThreadResponseBody) {
+  const ThreadsResponseBody body{{{1, "thr1"}, {2, "thr2"}}};
+  const StringRef json = R"({
+  "threads": [
+    {
+      "id": 1,
+      "name": "thr1"
+    },
+    {
+      "id": 2,
+      "name": "thr2"
+    }
+  ]
+})";
+  // Validate toJSON
+  EXPECT_EQ(json, pp(body));
 }

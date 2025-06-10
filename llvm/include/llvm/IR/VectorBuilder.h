@@ -15,6 +15,7 @@
 #ifndef LLVM_IR_VECTORBUILDER_H
 #define LLVM_IR_VECTORBUILDER_H
 
+#include "llvm/Support/Compiler.h"
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/InstrTypes.h>
 #include <llvm/IR/Instruction.h>
@@ -50,7 +51,7 @@ private:
   Value &requestMask();
   Value &requestEVL();
 
-  void handleError(const char *ErrorMsg) const;
+  LLVM_ABI void handleError(const char *ErrorMsg) const;
   template <typename RetType>
   RetType returnWithError(const char *ErrorMsg) const {
     handleError(ErrorMsg);
@@ -69,11 +70,11 @@ public:
         ExplicitVectorLength(nullptr),
         StaticVectorLength(ElementCount::getFixed(0)) {}
 
-  Module &getModule() const;
+  LLVM_ABI Module &getModule() const;
   LLVMContext &getContext() const { return Builder.getContext(); }
 
   // All-true mask for the currently configured explicit vector length.
-  Value *getAllTrueMask();
+  LLVM_ABI Value *getAllTrueMask();
 
   VectorBuilder &setMask(Value *NewMask) {
     Mask = NewMask;
@@ -100,18 +101,18 @@ public:
   // \p Opcode      The functional instruction opcode of the emitted intrinsic.
   // \p ReturnTy    The return type of the operation.
   // \p VecOpArray  The operand list.
-  Value *createVectorInstruction(unsigned Opcode, Type *ReturnTy,
-                                 ArrayRef<Value *> VecOpArray,
-                                 const Twine &Name = Twine());
+  LLVM_ABI Value *createVectorInstruction(unsigned Opcode, Type *ReturnTy,
+                                          ArrayRef<Value *> VecOpArray,
+                                          const Twine &Name = Twine());
 
   /// Emit a VP reduction intrinsic call for recurrence kind.
   /// \param RdxID       The intrinsic ID of llvm.vector.reduce.*
   /// \param ValTy       The type of operand which the reduction operation is
   ///                    performed.
   /// \param VecOpArray  The operand list.
-  Value *createSimpleReduction(Intrinsic::ID RdxID, Type *ValTy,
-                               ArrayRef<Value *> VecOpArray,
-                               const Twine &Name = Twine());
+  LLVM_ABI Value *createSimpleReduction(Intrinsic::ID RdxID, Type *ValTy,
+                                        ArrayRef<Value *> VecOpArray,
+                                        const Twine &Name = Twine());
 };
 
 } // namespace llvm

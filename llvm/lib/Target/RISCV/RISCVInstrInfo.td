@@ -341,20 +341,32 @@ def simm12 : RISCVSImmLeafOp<12> {
 def simm12_no6 : ImmLeaf<XLenVT, [{
   return isInt<12>(Imm) && !isInt<6>(Imm) && isInt<12>(-Imm);}]>;
 
-// A 13-bit signed immediate where the least significant bit is zero.
-def bare_simm13_lsb0 : Operand<OtherVT> {
-  let ParserMatchClass = BareSImmNLsb0AsmOperand<13>;
-  let PrintMethod = "printBranchOperand";
-  let EncoderMethod = "getImmOpValueAsrN<1>";
-  let DecoderMethod = "decodeSImmOperandAndLslN<13, 1>";
+class BareSImm13Lsb0MaybeSym : Operand<OtherVT> {
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
       return isShiftedInt<12, 1>(Imm);
     return MCOp.isBareSymbolRef();
   }];
+}
+
+// A 13-bit signed immediate where the least significant bit is zero. The ImmLeaf
+// is needed so that the CompressInstEmitter can correctly add checks for the
+// compress patterns that involve instructions that use this operand. Similar to
+// bare_simm9_lsb0 in RISCVInstrInfoC.td.
+def bare_simm13_lsb0 : BareSImm13Lsb0MaybeSym,
+                       ImmLeaf<XLenVT, [{return isShiftedInt<12, 1>(Imm);}]> {
+  let ParserMatchClass = BareSImmNLsb0AsmOperand<13>;
+  let PrintMethod = "printBranchOperand";
+  let EncoderMethod = "getImmOpValueAsrN<1>";
+  let DecoderMethod = "decodeSImmOperandAndLslN<13, 1>";
   let OperandType = "OPERAND_PCREL";
 }
+
+// We need this (sort of) duplicate definition since adding ImmLeaf to
+// bare_simm13_lsb0 above makes it not sit well with codegen patterns where it
+// is used to match with a basic block (eg. BccPat<>).
+def bare_simm13_lsb0_bb : BareSImm13Lsb0MaybeSym;
 
 class UImm20OperandMaybeSym : RISCVUImmOp<20> {
   let MCOperandPredicate = [{
@@ -379,7 +391,8 @@ def Simm21Lsb0JALAsmOperand : BareSImmNLsb0AsmOperand<21> {
 }
 
 // A 21-bit signed immediate where the least significant bit is zero.
-def simm21_lsb0_jal : Operand<OtherVT> {
+def simm21_lsb0_jal : Operand<OtherVT>,
+                      ImmLeaf<XLenVT, [{return isShiftedInt<20, 1>(Imm);}]>  {
   let ParserMatchClass = Simm21Lsb0JALAsmOperand;
   let PrintMethod = "printBranchOperand";
   let EncoderMethod = "getImmOpValueAsrN<1>";
@@ -1518,17 +1531,18 @@ def GIAddrRegImm :
 
 /// Stack probing
 
-let hasSideEffects = 1, mayLoad = 1, mayStore = 1, isCodeGenOnly = 1 in {
+let hasSideEffects = 1, mayLoad = 1, mayStore = 1, isCodeGenOnly = 1,
+    Defs = [X2], Uses = [X2] in {
 // Probed stack allocation of a constant size, used in function prologues when
 // stack-clash protection is enabled.
-def PROBED_STACKALLOC : Pseudo<(outs GPR:$sp),
+def PROBED_STACKALLOC : Pseudo<(outs),
                                (ins GPR:$target),
                                []>,
                                Sched<[]>;
-def PROBED_STACKALLOC_RVV : Pseudo<(outs GPR:$sp),
-                               (ins GPR:$target),
-                               []>,
-                               Sched<[]>;
+def PROBED_STACKALLOC_RVV : Pseudo<(outs),
+                                   (ins GPR:$target),
+                                   []>,
+                                   Sched<[]>;
 let usesCustomInserter = 1 in
 def PROBED_STACKALLOC_DYN : Pseudo<(outs),
                                (ins GPR:$target),
@@ -1645,15 +1659,23 @@ let Predicates = [HasStdExtC, OptForMinSize] in {
   def : SelectCompressOpt<SETNE>;
 }
 
+multiclass SelectCC_GPR_riirr<DAGOperand valty, DAGOperand imm> {
+  let usesCustomInserter = 1 in
+  def Select_# valty #_Using_ # NAME
+      : Pseudo<(outs valty:$dst),
+               (ins valty:$lhs, imm:$imm, cond_code:$cc,
+                valty:$truev, valty:$falsev), []>;
+}
+
 /// Branches and jumps
 
 // Match `riscv_brcc` and lower to the appropriate RISC-V branch instruction.
 multiclass BccPat<CondCode Cond, RVInstB Inst> {
   def : Pat<(riscv_brcc (XLenVT GPR:$rs1), GPR:$rs2, Cond, bb:$imm12),
-            (Inst GPR:$rs1, GPR:$rs2, bare_simm13_lsb0:$imm12)>;
+            (Inst GPR:$rs1, GPR:$rs2, bare_simm13_lsb0_bb:$imm12)>;
   // Explicitly select 0 to X0. The register coalescer doesn't always do it.
   def : Pat<(riscv_brcc (XLenVT GPR:$rs1), 0, Cond, bb:$imm12),
-            (Inst GPR:$rs1, (XLenVT X0), bare_simm13_lsb0:$imm12)>;
+            (Inst GPR:$rs1, (XLenVT X0), bare_simm13_lsb0_bb:$imm12)>;
 }
 
 class BrccCompressOpt<CondCode Cond, RVInstB Inst>
@@ -2258,6 +2280,7 @@ include "RISCVInstrInfoSFB.td"
 include "RISCVInstrInfoXVentana.td"
 include "RISCVInstrInfoXTHead.td"
 include "RISCVInstrInfoXSf.td"
+include "RISCVInstrInfoXSfmm.td"
 include "RISCVInstrInfoXCV.td"
 include "RISCVInstrInfoXwch.td"
 include "RISCVInstrInfoXqci.td"

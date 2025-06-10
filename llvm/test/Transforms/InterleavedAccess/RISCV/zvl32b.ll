@@ -16,7 +16,7 @@ define {<16 x i32>, <16 x i32>} @load_factor2_large(ptr %ptr) {
 ; ZVL32B-NEXT:    ret { <16 x i32>, <16 x i32> } [[RES1]]
 ;
 ; ZVL128B-LABEL: @load_factor2_large(
-; ZVL128B-NEXT:    [[TMP1:%.*]] = call { <16 x i32>, <16 x i32> } @llvm.riscv.seg2.load.mask.v16i32.i32(ptr [[PTR:%.*]], <16 x i1> splat (i1 true), i32 16)
+; ZVL128B-NEXT:    [[TMP1:%.*]] = call { <16 x i32>, <16 x i32> } @llvm.riscv.seg2.load.mask.v16i32.p0.i32(ptr [[PTR:%.*]], <16 x i1> splat (i1 true), i32 16)
 ; ZVL128B-NEXT:    [[TMP2:%.*]] = extractvalue { <16 x i32>, <16 x i32> } [[TMP1]], 1
 ; ZVL128B-NEXT:    [[TMP3:%.*]] = extractvalue { <16 x i32>, <16 x i32> } [[TMP1]], 0
 ; ZVL128B-NEXT:    [[RES0:%.*]] = insertvalue { <16 x i32>, <16 x i32> } undef, <16 x i32> [[TMP3]], 0
