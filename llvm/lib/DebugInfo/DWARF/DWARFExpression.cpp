@@ -277,10 +277,23 @@ bool DWARFExpression::Operation::extract(DataExtractor Data,
   return true;
 }
 
-static void prettyPrintBaseTypeRef(DWARFUnit *U, raw_ostream &OS,
-                                   DIDumpOptions DumpOpts,
-                                   ArrayRef<uint64_t> Operands,
-                                   unsigned Operand) {
+std::optional<unsigned> DWARFExpression::Operation::getSubCode() const {
+  if (!Desc.Op.size() || Desc.Op[0] != Operation::SizeSubOpLEB)
+    return std::nullopt;
+  return Operands[0];
+}
+
+bool DWARFExpression::operator==(const DWARFExpression &RHS) const {
+  if (AddressSize != RHS.AddressSize || Format != RHS.Format)
+    return false;
+  return Data.getData() == RHS.Data.getData();
+}
+
+void DWARFExpressionPrinter::prettyPrintBaseTypeRef(DWARFUnit *U,
+                                                    raw_ostream &OS,
+                                                    DIDumpOptions DumpOpts,
+                                                    ArrayRef<uint64_t> Operands,
+                                                    unsigned Operand) {
   assert(Operand < Operands.size() && "operand out of bounds");
   if (!U) {
     OS << format(" <base_type ref: 0x%" PRIx64 ">", Operands[Operand]);
@@ -299,10 +312,9 @@ static void prettyPrintBaseTypeRef(DWARFUnit *U, raw_ostream &OS,
   }
 }
 
-bool DWARFExpression::prettyPrintRegisterOp(DWARFUnit *U, raw_ostream &OS,
-                                            DIDumpOptions DumpOpts,
-                                            uint8_t Opcode,
-                                            ArrayRef<uint64_t> Operands) {
+bool DWARFExpressionPrinter::prettyPrintRegisterOp(
+    DWARFUnit *U, raw_ostream &OS, DIDumpOptions DumpOpts, uint8_t Opcode,
+    ArrayRef<uint64_t> Operands) {
   if (!DumpOpts.GetNameForDWARFReg)
     return false;
 
@@ -343,24 +355,20 @@ bool DWARFExpression::prettyPrintRegisterOp(DWARFUnit *U, raw_ostream &OS,
   return false;
 }
 
-std::optional<unsigned> DWARFExpression::Operation::getSubCode() const {
-  if (!Desc.Op.size() || Desc.Op[0] != Operation::SizeSubOpLEB)
-    return std::nullopt;
-  return Operands[0];
-}
-
-bool DWARFExpression::Operation::print(raw_ostream &OS, DIDumpOptions DumpOpts,
-                                       const DWARFExpression *Expr,
-                                       DWARFUnit *U) const {
-  if (Error) {
+bool DWARFExpressionPrinter::printOp(const DWARFExpression::Operation *Op,
+                                     raw_ostream &OS, DIDumpOptions DumpOpts,
+                                     const DWARFExpression *Expr,
+                                     DWARFUnit *U) {
+  if (Op->Error) {
     OS << "<decoding error>";
     return false;
   }
 
-  StringRef Name = OperationEncodingString(Opcode);
+  StringRef Name = OperationEncodingString(Op->Opcode);
   assert(!Name.empty() && "DW_OP has no name!");
   OS << Name;
 
+#if 0//<<<<<<< HEAD
   std::optional<unsigned> SubOpcode = getSubCode();
   if (SubOpcode) {
     StringRef SubName = SubOperationEncodingString(Opcode, *SubOpcode);
@@ -377,63 +385,80 @@ bool DWARFExpression::Operation::print(raw_ostream &OS, DIDumpOptions DumpOpts,
       (SubOpcode && (*SubOpcode == DW_OP_LLVM_USER_call_frame_entry_reg ||
                      *SubOpcode == DW_OP_LLVM_USER_aspace_bregx)))
     if (prettyPrintRegisterOp(U, OS, DumpOpts, Opcode, Operands))
+#else//=======
+  if ((Op->Opcode >= DW_OP_breg0 && Op->Opcode <= DW_OP_breg31) ||
+      (Op->Opcode >= DW_OP_reg0 && Op->Opcode <= DW_OP_reg31) ||
+      Op->Opcode == DW_OP_bregx || Op->Opcode == DW_OP_regx ||
+      Op->Opcode == DW_OP_regval_type)
+    if (prettyPrintRegisterOp(U, OS, DumpOpts, Op->Opcode, Op->Operands))
+#endif//>>>>>>> 68bb005ae021cbfaef8fe9fa8b3efcdf0e13e2b3
       return true;
 
-  for (unsigned Operand = 0; Operand < Desc.Op.size(); ++Operand) {
-    unsigned Size = Desc.Op[Operand];
-    unsigned Signed = Size & Operation::SignBit;
+  for (unsigned Operand = 0; Operand < Op->Desc.Op.size(); ++Operand) {
+    unsigned Size = Op->Desc.Op[Operand];
+    unsigned Signed = Size & DWARFExpression::Operation::SignBit;
 
+#if 0//<<<<<<< HEAD
     if (Size == Operation::SizeSubOpLEB) {
       assert(Operand == 0);
       assert(SubOpcode);
     } else if (Size == Operation::BaseTypeRef && U) {
+#else//=======
+    if (Size == DWARFExpression::Operation::SizeSubOpLEB) {
+      StringRef SubName =
+          SubOperationEncodingString(Op->Opcode, Op->Operands[Operand]);
+      assert(!SubName.empty() && "DW_OP SubOp has no name!");
+      OS << " " << SubName;
+    } else if (Size == DWARFExpression::Operation::BaseTypeRef && U) {
+#endif//>>>>>>> 68bb005ae021cbfaef8fe9fa8b3efcdf0e13e2b3
       // For DW_OP_convert the operand may be 0 to indicate that conversion to
       // the generic type should be done. The same holds for DW_OP_reinterpret,
       // which is currently not supported.
-      if (Opcode == DW_OP_convert && Operands[Operand] == 0)
+      if (Op->Opcode == DW_OP_convert && Op->Operands[Operand] == 0)
         OS << " 0x0";
       else
-        prettyPrintBaseTypeRef(U, OS, DumpOpts, Operands, Operand);
-    } else if (Size == Operation::WasmLocationArg) {
+        prettyPrintBaseTypeRef(U, OS, DumpOpts, Op->Operands, Operand);
+    } else if (Size == DWARFExpression::Operation::WasmLocationArg) {
       assert(Operand == 1);
-      switch (Operands[0]) {
+      switch (Op->Operands[0]) {
       case 0:
       case 1:
       case 2:
       case 3: // global as uint32
       case 4:
-        OS << format(" 0x%" PRIx64, Operands[Operand]);
+        OS << format(" 0x%" PRIx64, Op->Operands[Operand]);
         break;
       default: assert(false);
       }
-    } else if (Size == Operation::SizeBlock) {
-      uint64_t Offset = Operands[Operand];
-      for (unsigned i = 0; i < Operands[Operand - 1]; ++i)
+    } else if (Size == DWARFExpression::Operation::SizeBlock) {
+      uint64_t Offset = Op->Operands[Operand];
+      for (unsigned i = 0; i < Op->Operands[Operand - 1]; ++i)
         OS << format(" 0x%02x", Expr->Data.getU8(&Offset));
     } else {
       if (Signed)
-        OS << format(" %+" PRId64, (int64_t)Operands[Operand]);
-      else if (Opcode != DW_OP_entry_value &&
-               Opcode != DW_OP_GNU_entry_value)
-        OS << format(" 0x%" PRIx64, Operands[Operand]);
+        OS << format(" %+" PRId64, (int64_t)Op->Operands[Operand]);
+      else if (Op->Opcode != DW_OP_entry_value &&
+               Op->Opcode != DW_OP_GNU_entry_value)
+        OS << format(" 0x%" PRIx64, Op->Operands[Operand]);
     }
   }
   return true;
 }
 
-void DWARFExpression::print(raw_ostream &OS, DIDumpOptions DumpOpts,
-                            DWARFUnit *U, bool IsEH) const {
+void DWARFExpressionPrinter::print(const DWARFExpression *E, raw_ostream &OS,
+                                   DIDumpOptions DumpOpts, DWARFUnit *U,
+                                   bool IsEH) {
   uint32_t EntryValExprSize = 0;
   uint64_t EntryValStartOffset = 0;
-  if (Data.getData().empty())
+  if (E->Data.getData().empty())
     OS << "<empty>";
 
-  for (auto &Op : *this) {
+  for (auto &Op : *E) {
     DumpOpts.IsEH = IsEH;
-    if (!Op.print(OS, DumpOpts, this, U)) {
+    if (!printOp(&Op, OS, DumpOpts, E, U)) {
       uint64_t FailOffset = Op.getEndOffset();
-      while (FailOffset < Data.getData().size())
-        OS << format(" %02x", Data.getU8(&FailOffset));
+      while (FailOffset < E->Data.getData().size())
+        OS << format(" %02x", E->Data.getU8(&FailOffset));
       return;
     }
 
@@ -451,37 +476,9 @@ void DWARFExpression::print(raw_ostream &OS, DIDumpOptions DumpOpts,
         OS << ")";
     }
 
-    if (Op.getEndOffset() < Data.getData().size())
+    if (Op.getEndOffset() < E->Data.getData().size())
       OS << ", ";
   }
-}
-
-bool DWARFExpression::Operation::verify(const Operation &Op, DWARFUnit *U) {
-  for (unsigned Operand = 0; Operand < Op.Desc.Op.size(); ++Operand) {
-    unsigned Size = Op.Desc.Op[Operand];
-
-    if (Size == Operation::BaseTypeRef) {
-      // For DW_OP_convert the operand may be 0 to indicate that conversion to
-      // the generic type should be done, so don't look up a base type in that
-      // case. The same holds for DW_OP_reinterpret, which is currently not
-      // supported.
-      if (Op.Opcode == DW_OP_convert && Op.Operands[Operand] == 0)
-        continue;
-      auto Die = U->getDIEForOffset(U->getOffset() + Op.Operands[Operand]);
-      if (!Die || Die.getTag() != dwarf::DW_TAG_base_type)
-        return false;
-    }
-  }
-
-  return true;
-}
-
-bool DWARFExpression::verify(DWARFUnit *U) {
-  for (auto &Op : *this)
-    if (!Operation::verify(Op, U))
-      return false;
-
-  return true;
 }
 
 /// A user-facing string representation of a DWARF expression. This might be an
@@ -606,16 +603,10 @@ static bool printCompactDWARFExpr(
   return true;
 }
 
-bool DWARFExpression::printCompact(
-    raw_ostream &OS,
+bool DWARFExpressionPrinter::printCompact(
+    const DWARFExpression *E, raw_ostream &OS,
     std::function<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg) {
-  return printCompactDWARFExpr(OS, begin(), end(), GetNameForDWARFReg);
-}
-
-bool DWARFExpression::operator==(const DWARFExpression &RHS) const {
-  if (AddressSize != RHS.AddressSize || Format != RHS.Format)
-    return false;
-  return Data.getData() == RHS.Data.getData();
+  return printCompactDWARFExpr(OS, E->begin(), E->end(), GetNameForDWARFReg);
 }
 
 } // namespace llvm
