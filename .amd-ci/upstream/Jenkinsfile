@@ -134,7 +134,7 @@ try {
                         )
                     )
                     assert gitVars.GIT_COMMIT
-                    Integer activeStat
+                    Integer activeStat = successStat
                     withEnv([gitPathEnv]) {
                         if (
                             gitVars.GIT_PREVIOUS_SUCCESSFUL_COMMIT &&
