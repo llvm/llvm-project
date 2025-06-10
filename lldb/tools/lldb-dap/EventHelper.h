@@ -17,6 +17,9 @@ struct DAP;
 
 enum LaunchMethod { Launch, Attach, AttachForSuspendedLaunch };
 
+/// Update capabilities based on the configured target.
+void SendTargetBasedCapabilities(DAP &dap);
+
 void SendProcessEvent(DAP &dap, LaunchMethod launch_method);
 
 llvm::Error SendThreadStoppedEvent(DAP &dap, bool on_entry = false);
