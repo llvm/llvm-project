@@ -49,7 +49,8 @@ DEPENDENTS_TO_TEST = {
     },
     "lld": {"bolt", "cross-project-tests"},
     # TODO(issues/132795): LLDB should be enabled on clang changes.
-    "clang": {"clang-tools-extra", "cross-project-tests"},
+    "clang": {"clang-tools-extra", "compiler-rt", "cross-project-tests"},
+    "clang-tools-extra": {"libc"},
     "mlir": {"flang"},
     # Test everything if ci scripts are changed.
     # FIXME: Figure out what is missing and add here.
@@ -63,15 +64,7 @@ DEPENDENT_RUNTIMES_TO_BUILD = {"lldb": {"libcxx", "libcxxabi", "libunwind"}}
 
 # This mapping describes runtimes that should be tested when the key project is
 # touched.
-DEPENDENT_RUNTIMES_TO_TEST = {
-    "clang": {"compiler-rt"},
-    "clang-tools-extra": {"libc"},
-}
-DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG = {
-    "llvm": {"libcxx", "libcxxabi", "libunwind"},
-    "clang": {"libcxx", "libcxxabi", "libunwind"},
-    ".ci": {"libcxx", "libcxxabi", "libunwind"},
-}
+DEPENDENT_RUNTIMES_TO_TEST = {"clang": {"libcxx", "libcxxabi", "libunwind"}}
 
 EXCLUDE_LINUX = {
     "cross-project-tests",  # TODO(issues/132796): Tests are failing.
@@ -100,6 +93,9 @@ EXCLUDE_MAC = {
     "cross-project-tests",
     "flang",
     "libc",
+    "libcxx",
+    "libcxxabi",
+    "libunwind",
     "lldb",
     "openmp",
     "polly",
@@ -126,10 +122,10 @@ PROJECT_CHECK_TARGETS = {
     "polly": "check-polly",
 }
 
-RUNTIMES = {"libcxx", "libcxxabi", "libunwind", "compiler-rt", "libc"}
+RUNTIMES = {"libcxx", "libcxxabi", "libunwind"}
 
 
-def _add_dependencies(projects: Set[str], runtimes: Set[str]) -> Set[str]:
+def _add_dependencies(projects: Set[str]) -> Set[str]:
     projects_with_dependents = set(projects)
     current_projects_count = 0
     while current_projects_count != len(projects_with_dependents):
@@ -138,23 +134,7 @@ def _add_dependencies(projects: Set[str], runtimes: Set[str]) -> Set[str]:
             if project not in PROJECT_DEPENDENCIES:
                 continue
             projects_with_dependents.update(PROJECT_DEPENDENCIES[project])
-    for runtime in runtimes:
-        if runtime not in PROJECT_DEPENDENCIES:
-            continue
-        projects_with_dependents.update(PROJECT_DEPENDENCIES[runtime])
     return projects_with_dependents
-
-
-def _exclude_projects(current_projects: Set[str], platform: str) -> Set[str]:
-    if platform == "Linux":
-        to_exclude = EXCLUDE_LINUX
-    elif platform == "Windows":
-        to_exclude = EXCLUDE_WINDOWS
-    elif platform == "Darwin":
-        to_exclude = EXCLUDE_MAC
-    else:
-        raise ValueError(f"Unexpected platform: {platform}")
-    return current_projects.difference(to_exclude)
 
 
 def _compute_projects_to_test(modified_projects: Set[str], platform: str) -> Set[str]:
@@ -174,14 +154,25 @@ def _compute_projects_to_test(modified_projects: Set[str], platform: str) -> Set
             ):
                 continue
             projects_to_test.add(dependent_project)
-    projects_to_test = _exclude_projects(projects_to_test, platform)
+    if platform == "Linux":
+        for to_exclude in EXCLUDE_LINUX:
+            if to_exclude in projects_to_test:
+                projects_to_test.remove(to_exclude)
+    elif platform == "Windows":
+        for to_exclude in EXCLUDE_WINDOWS:
+            if to_exclude in projects_to_test:
+                projects_to_test.remove(to_exclude)
+    elif platform == "Darwin":
+        for to_exclude in EXCLUDE_MAC:
+            if to_exclude in projects_to_test:
+                projects_to_test.remove(to_exclude)
+    else:
+        raise ValueError("Unexpected platform.")
     return projects_to_test
 
 
-def _compute_projects_to_build(
-    projects_to_test: Set[str], runtimes: Set[str]
-) -> Set[str]:
-    return _add_dependencies(projects_to_test, runtimes)
+def _compute_projects_to_build(projects_to_test: Set[str]) -> Set[str]:
+    return _add_dependencies(projects_to_test)
 
 
 def _compute_project_check_targets(projects_to_test: Set[str]) -> Set[str]:
@@ -193,36 +184,24 @@ def _compute_project_check_targets(projects_to_test: Set[str]) -> Set[str]:
     return check_targets
 
 
-def _compute_runtimes_to_test(modified_projects: Set[str], platform: str) -> Set[str]:
+def _compute_runtimes_to_test(projects_to_test: Set[str]) -> Set[str]:
     runtimes_to_test = set()
-    for modified_project in modified_projects:
-        if modified_project not in DEPENDENT_RUNTIMES_TO_TEST:
+    for project_to_test in projects_to_test:
+        if project_to_test in DEPENDENT_RUNTIMES_TO_TEST:
+            runtimes_to_test.update(DEPENDENT_RUNTIMES_TO_TEST[project_to_test])
+        if project_to_test in DEPENDENT_RUNTIMES_TO_BUILD:
+            runtimes_to_test.update(DEPENDENT_RUNTIMES_TO_BUILD[project_to_test])
+    return runtimes_to_test
+
+
+def _compute_runtime_check_targets(projects_to_test: Set[str]) -> Set[str]:
+    check_targets = set()
+    for project_to_test in projects_to_test:
+        if project_to_test not in DEPENDENT_RUNTIMES_TO_TEST:
             continue
-        runtimes_to_test.update(DEPENDENT_RUNTIMES_TO_TEST[modified_project])
-    return _exclude_projects(runtimes_to_test, platform)
-
-
-def _compute_runtimes_to_test_needs_reconfig(
-    modified_projects: Set[str], platform: str
-) -> Set[str]:
-    runtimes_to_test = set()
-    for modified_project in modified_projects:
-        if modified_project not in DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG:
-            continue
-        runtimes_to_test.update(
-            DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG[modified_project]
-        )
-    return _exclude_projects(runtimes_to_test, platform)
-
-
-def _compute_runtimes_to_build(
-    runtimes_to_test: Set[str], modified_projects: Set[str], platform: str
-) -> Set[str]:
-    runtimes_to_build = set(runtimes_to_test)
-    for modified_project in modified_projects:
-        if modified_project in DEPENDENT_RUNTIMES_TO_BUILD:
-            runtimes_to_build.update(DEPENDENT_RUNTIMES_TO_BUILD[modified_project])
-    return _exclude_projects(runtimes_to_build, platform)
+        for runtime_to_test in DEPENDENT_RUNTIMES_TO_TEST[project_to_test]:
+            check_targets.add(PROJECT_CHECK_TARGETS[runtime_to_test])
+    return check_targets
 
 
 def _get_modified_projects(modified_files: list[str]) -> Set[str]:
@@ -246,19 +225,10 @@ def _get_modified_projects(modified_files: list[str]) -> Set[str]:
 def get_env_variables(modified_files: list[str], platform: str) -> Set[str]:
     modified_projects = _get_modified_projects(modified_files)
     projects_to_test = _compute_projects_to_test(modified_projects, platform)
-    runtimes_to_test = _compute_runtimes_to_test(modified_projects, platform)
-    runtimes_to_test_needs_reconfig = _compute_runtimes_to_test_needs_reconfig(
-        modified_projects, platform
-    )
-    runtimes_to_build = _compute_runtimes_to_build(
-        runtimes_to_test | runtimes_to_test_needs_reconfig, modified_projects, platform
-    )
-    projects_to_build = _compute_projects_to_build(projects_to_test, runtimes_to_build)
+    projects_to_build = _compute_projects_to_build(projects_to_test)
     projects_check_targets = _compute_project_check_targets(projects_to_test)
-    runtimes_check_targets = _compute_project_check_targets(runtimes_to_test)
-    runtimes_check_targets_needs_reconfig = _compute_project_check_targets(
-        runtimes_to_test_needs_reconfig
-    )
+    runtimes_to_build = _compute_runtimes_to_test(projects_to_test)
+    runtimes_check_targets = _compute_runtime_check_targets(projects_to_test)
     # We use a semicolon to separate the projects/runtimes as they get passed
     # to the CMake invocation and thus we need to use the CMake list separator
     # (;). We use spaces to separate the check targets as they end up getting
@@ -268,9 +238,6 @@ def get_env_variables(modified_files: list[str], platform: str) -> Set[str]:
         "project_check_targets": " ".join(sorted(projects_check_targets)),
         "runtimes_to_build": ";".join(sorted(runtimes_to_build)),
         "runtimes_check_targets": " ".join(sorted(runtimes_check_targets)),
-        "runtimes_check_targets_needs_reconfig": " ".join(
-            sorted(runtimes_check_targets_needs_reconfig)
-        ),
     }
 
 

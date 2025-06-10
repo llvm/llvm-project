@@ -56,12 +56,11 @@ jobs:
           echo "Running project checks targets: ${project_check_targets}"
           echo "Building runtimes: ${runtimes_to_build}"
           echo "Running runtimes checks targets: ${runtimes_check_targets}"
-          echo "Running runtimes checks requiring reconfiguring targets: ${runtimes_check_targets_needs_reconfig}"
 
           export CC=/opt/llvm/bin/clang
           export CXX=/opt/llvm/bin/clang++
 
-          ./.ci/monolithic-linux.sh "${projects_to_build}" "${project_check_targets}" "${runtimes_to_build}" "${runtimes_check_targets}" "${runtimes_check_targets_needs_reconfig}"
+          ./.ci/monolithic-linux.sh "${projects_to_build}" "${project_check_targets}" "${runtimes_to_build}" "${runtimes_check_targets}"
       - name: Upload Artifacts
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
