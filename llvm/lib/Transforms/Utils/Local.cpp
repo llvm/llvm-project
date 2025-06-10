@@ -88,8 +88,6 @@
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
-extern cl::opt<bool> UseNewDbgInfoFormat;
-
 #define DEBUG_TYPE "local"
 
 STATISTIC(NumRemoved, "Number of unreachable basic blocks removed");
@@ -1548,9 +1546,9 @@ Align llvm::tryEnforceAlignment(Value *V, Align PrefAlign,
     return PrefAlign;
   }
 
-  if (auto *GO = dyn_cast<GlobalObject>(V)) {
+  if (auto *GV = dyn_cast<GlobalVariable>(V)) {
     // TODO: as above, this shouldn't be necessary.
-    Align CurrentAlign = GO->getPointerAlignment(DL);
+    Align CurrentAlign = GV->getPointerAlignment(DL);
     if (PrefAlign <= CurrentAlign)
       return CurrentAlign;
 
@@ -1558,16 +1556,16 @@ Align llvm::tryEnforceAlignment(Value *V, Align PrefAlign,
     // of the global.  If the memory we set aside for the global may not be the
     // memory used by the final program then it is impossible for us to reliably
     // enforce the preferred alignment.
-    if (!GO->canIncreaseAlignment())
+    if (!GV->canIncreaseAlignment())
       return CurrentAlign;
 
-    if (GO->isThreadLocal()) {
-      unsigned MaxTLSAlign = GO->getParent()->getMaxTLSAlignment() / CHAR_BIT;
+    if (GV->isThreadLocal()) {
+      unsigned MaxTLSAlign = GV->getParent()->getMaxTLSAlignment() / CHAR_BIT;
       if (MaxTLSAlign && PrefAlign > Align(MaxTLSAlign))
         PrefAlign = Align(MaxTLSAlign);
     }
 
-    GO->setAlignment(PrefAlign);
+    GV->setAlignment(PrefAlign);
     return PrefAlign;
   }
 
@@ -1691,16 +1689,10 @@ static void insertDbgValueOrDbgVariableRecord(DIBuilder &Builder, Value *DV,
                                               DIExpression *DIExpr,
                                               const DebugLoc &NewLoc,
                                               BasicBlock::iterator Instr) {
-  if (!UseNewDbgInfoFormat) {
-    Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc, Instr);
-  } else {
-    // RemoveDIs: if we're using the new debug-info format, allocate a
-    // DbgVariableRecord directly instead of a dbg.value intrinsic.
-    ValueAsMetadata *DVAM = ValueAsMetadata::get(DV);
-    DbgVariableRecord *DV =
-        new DbgVariableRecord(DVAM, DIVar, DIExpr, NewLoc.get());
-    Instr->getParent()->insertDbgRecordBefore(DV, Instr);
-  }
+  ValueAsMetadata *DVAM = ValueAsMetadata::get(DV);
+  DbgVariableRecord *DVRec =
+      new DbgVariableRecord(DVAM, DIVar, DIExpr, NewLoc.get());
+  Instr->getParent()->insertDbgRecordBefore(DVRec, Instr);
 }
 
 static void insertDbgValueOrDbgVariableRecordAfter(
@@ -1838,7 +1830,6 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR,
   // then we want to insert a dbg.value for the corresponding fragment.
   LLVM_DEBUG(dbgs() << "Failed to convert dbg.declare to dbg.value: " << *DVR
                     << '\n');
-  assert(UseNewDbgInfoFormat);
 
   // For now, when there is a store to parts of the variable (but we do not
   // know which part) we insert an dbg.value intrinsic to indicate that we
@@ -1919,7 +1910,6 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR, LoadInst *LI,
   // future if multi-location support is added to the IR, it might be
   // preferable to keep tracking both the loaded value and the original
   // address in case the alloca can not be elided.
-  assert(UseNewDbgInfoFormat);
 
   // Create a DbgVariableRecord directly and insert.
   ValueAsMetadata *LIVAM = ValueAsMetadata::get(LI);

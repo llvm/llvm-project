@@ -167,6 +167,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:    const auto &Operands = State.RecordedOperands; 
 // CHECK-NEXT:    Register Reg = MO.getReg();
 // CHECK-NEXT:    (void)Operands; 
+// CHECK-NEXT:    (void)Reg;
 // CHECK-NEXT:    switch (PredicateID) {
 // CHECK-NEXT:    case GICXXPred_MO_Predicate_leaf: {
 // CHECK-NEXT:       return true;
