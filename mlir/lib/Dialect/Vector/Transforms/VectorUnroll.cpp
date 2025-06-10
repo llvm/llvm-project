@@ -54,10 +54,10 @@ static SmallVector<Value> sliceTransferIndices(ArrayRef<int64_t> elementOffsets,
   return slicedIndices;
 }
 
-// compute the new indices for vector.load/store by adding offsets to
-// originalIndices.
+// Compute the new indices for vector.load/store by adding `offsets` to
+// `originalIndices`.
 // It assumes m <= n (m = offsets.size(), n = originalIndices.size())
-// Last m of originalIndices will be updated.
+// Last m of `originalIndices` will be updated.
 static SmallVector<Value> computeIndices(PatternRewriter &rewriter,
                                          Location loc,
                                          ArrayRef<Value> originalIndices,
@@ -658,6 +658,20 @@ private:
   vector::UnrollVectorOptions options;
 };
 
+// clang-format off
+// This pattern unrolls the vector load into multiple 1D vector loads by
+// extracting slices from the base memory and inserting them into the result
+// vector using vector.insert_strided_slice.
+// Following,
+//   vector.load %base[%indices] : memref<4x4xf32>, vector<4x4xf32>
+// is converted to :
+//   %cst = arith.constant dense<0.0> : vector<4x4xf32>
+//   %slice_0 = vector.load %base[%indices] : memref<4x4xf32>, vector<4xf32>
+//   %result_0 = vector.insert_strided_slice %slice_0, %cst {offsets = [0, 0], strides = [1]} : vector<4xf32> into vector<4x4xf32>
+//   %slice_1 = vector.load %base[%indices + 1] : memref<4x4xf32>, vector<4xf32>
+//   %result_1 = vector.insert_strided_slice %slice_1, %result_0 {offsets = [1, 0], strides = [1]} : vector<4xf32> into vector<4x4xf32>
+//   ...
+// clang-format on
 struct UnrollLoadPattern : public OpRewritePattern<vector::LoadOp> {
   UnrollLoadPattern(MLIRContext *context,
                     const vector::UnrollVectorOptions &options,
@@ -707,6 +721,17 @@ private:
   vector::UnrollVectorOptions options;
 };
 
+// This pattern unrolls the vector store into multiple 1D vector stores by
+// extracting slices from the source vector and storing them into the
+// destination.
+// Following,
+//   vector.store %source, %base[%indices] : vector<4x4xf32>
+// is converted to :
+//   %slice_0 = vector.extract %source[0] : vector<4xf32>
+//   vector.store %slice_0, %base[%indices] : vector<4xf32>
+//   %slice_1 = vector.extract %source[1] : vector<4xf32>
+//   vector.store %slice_1, %base[%indices + 1] : vector<4xf32>
+//   ...
 struct UnrollStorePattern : public OpRewritePattern<vector::StoreOp> {
   UnrollStorePattern(MLIRContext *context,
                      const vector::UnrollVectorOptions &options,
