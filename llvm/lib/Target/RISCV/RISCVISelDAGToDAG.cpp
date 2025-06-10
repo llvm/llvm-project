@@ -696,8 +696,8 @@ bool RISCVDAGToDAGISel::trySignedBitfieldInsertInSign(SDNode *Node) {
   if (!N0.hasOneUse())
     return false;
 
-  auto BitfieldInsert = [&](SDValue N0, unsigned Msb, unsigned Lsb, SDLoc DL,
-                            MVT VT) {
+  auto BitfieldInsert = [&](SDValue N0, unsigned Msb, unsigned Lsb,
+                            const SDLoc &DL, MVT VT) {
     unsigned Opc = RISCV::NDS_BFOS;
     // If the Lsb is equal to the Msb, then the Lsb should be 0.
     if (Lsb == Msb)
