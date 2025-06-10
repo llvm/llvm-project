@@ -69,7 +69,8 @@ static Operation *extractFunction(std::vector<Operation *> &ops,
   // Clone operations and build function body
   std::vector<Operation *> clonedOps;
   std::vector<Value> clonedVals;
-  // TODO: Handle extraction of operations containing block arguments.
+  // TODO: Handle extraction of operations with compute payloads defined via
+  // regions.
   for (Operation *slicedOp : slice) {
     Operation *clonedOp =
         clonedOps.emplace_back(builder.clone(*slicedOp, mapper));

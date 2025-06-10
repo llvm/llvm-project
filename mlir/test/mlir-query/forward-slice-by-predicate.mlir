@@ -1,4 +1,4 @@
-// RUN: mlir-query %s -c "m getUsersByPredicate(anyOf(hasOpName(\"memref.alloc\"),isConstantOp()),hasOpName(\"affine.load\"),true)" | FileCheck %s
+// RUN: mlir-query %s -c "m getUsersByPredicate(anyOf(hasOpName(\"memref.alloc\"),isConstantOp()),anyOf(hasOpName(\"affine.load\"), hasOpName(\"memref.dealloc\")),true)" | FileCheck %s
 
 func.func @slice_depth1_loop_nest_with_offsets() {
   %0 = memref.alloc() : memref<100xf32>
