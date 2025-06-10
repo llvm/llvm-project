@@ -4499,7 +4499,7 @@ let Predicates = [HasNonStreamingSVE2p2_or_SME2p2] in {
   // SVE2 EXPAND
   defm EXPAND_ZPZ : sve2_int_perm_expand<"expand">;
   // SVE COMPACT - byte and halfword
-  defm COMPACT_ZPZ : sve_int_perm_compact_bh<"compact">;
+  defm COMPACT_ZPZ : sve_int_perm_compact_bh<"compact", int_aarch64_sve_compact>;
 }
 
 //===----------------------------------------------------------------------===//
