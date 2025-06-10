@@ -8559,7 +8559,7 @@ static void addExitUsersForFirstOrderRecurrences(
   VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
 
   auto IsScalableOne = [](ElementCount VF) -> bool {
-    return VF.isScalable() && VF.getKnownMinValue() == 1;
+    return VF == ElementCount::getScalable(1);
   };
 
   for (auto &HeaderPhi : VectorRegion->getEntryBasicBlock()->phis()) {
