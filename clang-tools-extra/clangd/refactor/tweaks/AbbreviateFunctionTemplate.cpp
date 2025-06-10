@@ -29,14 +29,14 @@ class AbbreviateFunctionTemplate : public Tweak {
 public:
   const char *id() const final;
 
-  auto prepare(const Selection &Inputs) -> bool override;
-  auto apply(const Selection &Inputs) -> Expected<Effect> override;
+  bool prepare(const Selection &Inputs) override;
+  Expected<Effect> apply(const Selection &Inputs) override;
 
-  auto title() const -> std::string override {
+  std::string title() const override {
     return llvm::formatv("Abbreviate function template");
   }
 
-  auto kind() const -> llvm::StringLiteral override {
+  llvm::StringLiteral kind() const override {
     return CodeAction::REFACTOR_KIND;
   }
 
@@ -53,21 +53,21 @@ private:
 
   llvm::SmallVector<TemplateParameterInfo> TemplateParameterInfoList;
 
-  auto traverseFunctionParameters(size_t NumberOfTemplateParameters) -> bool;
+  bool traverseFunctionParameters(size_t NumberOfTemplateParameters);
 
-  auto generateFunctionParameterReplacements(const ASTContext &Context)
-      -> llvm::Expected<tooling::Replacements>;
+  llvm::Expected<tooling::Replacements>
+  generateFunctionParameterReplacements(const ASTContext &Context);
 
-  auto generateFunctionParameterReplacement(
+  llvm::Expected<tooling::Replacement> generateFunctionParameterReplacement(
       const TemplateParameterInfo &TemplateParameterInfo,
-      const ASTContext &Context) -> llvm::Expected<tooling::Replacement>;
+      const ASTContext &Context);
 
-  auto generateTemplateDeclarationReplacement(const ASTContext &Context)
-      -> llvm::Expected<tooling::Replacement>;
+  llvm::Expected<tooling::Replacement>
+  generateTemplateDeclarationReplacement(const ASTContext &Context);
 
-  static auto deconstructType(QualType Type)
-      -> std::tuple<QualType, llvm::SmallVector<tok::TokenKind>,
-                    llvm::SmallVector<tok::TokenKind>>;
+  static std::tuple<QualType, llvm::SmallVector<tok::TokenKind>,
+                    llvm::SmallVector<tok::TokenKind>>
+  deconstructType(QualType Type);
 };
 
 REGISTER_TWEAK(AbbreviateFunctionTemplate)
@@ -76,7 +76,7 @@ const char *AbbreviateFunctionTemplate::AutoKeywordSpelling =
     getKeywordSpelling(tok::kw_auto);
 
 template <typename T>
-auto findDeclaration(const SelectionTree::Node &Root) -> const T * {
+const T *findDeclaration(const SelectionTree::Node &Root) {
   for (const auto *Node = &Root; Node; Node = Node->Parent) {
     if (const T *Result = dyn_cast_or_null<T>(Node->ASTNode.get<Decl>()))
       return Result;
@@ -85,7 +85,7 @@ auto findDeclaration(const SelectionTree::Node &Root) -> const T * {
   return nullptr;
 }
 
-auto getSpellingForQualifier(tok::TokenKind const &Qualifier) -> const char * {
+const char *getSpellingForQualifier(tok::TokenKind const &Qualifier) {
   if (const auto *Spelling = getKeywordSpelling(Qualifier))
     return Spelling;
 
@@ -154,8 +154,8 @@ bool AbbreviateFunctionTemplate::prepare(const Selection &Inputs) {
   return traverseFunctionParameters(NumberOfTemplateParameters);
 }
 
-auto AbbreviateFunctionTemplate::apply(const Selection &Inputs)
-    -> Expected<Tweak::Effect> {
+Expected<Tweak::Effect>
+AbbreviateFunctionTemplate::apply(const Selection &Inputs) {
   auto &Context = Inputs.AST->getASTContext();
   auto FunctionParameterReplacements =
       generateFunctionParameterReplacements(Context);
@@ -176,8 +176,8 @@ auto AbbreviateFunctionTemplate::apply(const Selection &Inputs)
   return Effect::mainFileEdit(Context.getSourceManager(), Replacements);
 }
 
-auto AbbreviateFunctionTemplate::traverseFunctionParameters(
-    size_t NumberOfTemplateParameters) -> bool {
+bool AbbreviateFunctionTemplate::traverseFunctionParameters(
+    size_t NumberOfTemplateParameters) {
   auto CurrentTemplateParameterBeingChecked = 0u;
   auto FunctionParameters =
       FunctionTemplateDeclaration->getAsFunction()->parameters();
@@ -210,8 +210,9 @@ auto AbbreviateFunctionTemplate::traverseFunctionParameters(
   return CurrentTemplateParameterBeingChecked == NumberOfTemplateParameters;
 }
 
-auto AbbreviateFunctionTemplate::generateFunctionParameterReplacements(
-    const ASTContext &Context) -> llvm::Expected<tooling::Replacements> {
+llvm::Expected<tooling::Replacements>
+AbbreviateFunctionTemplate::generateFunctionParameterReplacements(
+    const ASTContext &Context) {
   tooling::Replacements Replacements;
   for (const auto &TemplateParameterInfo : TemplateParameterInfoList) {
     auto FunctionParameterReplacement =
@@ -227,9 +228,10 @@ auto AbbreviateFunctionTemplate::generateFunctionParameterReplacements(
   return Replacements;
 }
 
-auto AbbreviateFunctionTemplate::generateFunctionParameterReplacement(
+llvm::Expected<tooling::Replacement>
+AbbreviateFunctionTemplate::generateFunctionParameterReplacement(
     const TemplateParameterInfo &TemplateParameterInfo,
-    const ASTContext &Context) -> llvm::Expected<tooling::Replacement> {
+    const ASTContext &Context) {
   auto &SourceManager = Context.getSourceManager();
 
   const auto *Function = FunctionTemplateDeclaration->getAsFunction();
@@ -282,8 +284,9 @@ auto AbbreviateFunctionTemplate::generateFunctionParameterReplacement(
       FunctionTypeReplacementText);
 }
 
-auto AbbreviateFunctionTemplate::generateTemplateDeclarationReplacement(
-    const ASTContext &Context) -> llvm::Expected<tooling::Replacement> {
+llvm::Expected<tooling::Replacement>
+AbbreviateFunctionTemplate::generateTemplateDeclarationReplacement(
+    const ASTContext &Context) {
   auto &SourceManager = Context.getSourceManager();
   auto *TemplateParameters =
       FunctionTemplateDeclaration->getTemplateParameters();
@@ -299,9 +302,9 @@ auto AbbreviateFunctionTemplate::generateTemplateDeclarationReplacement(
   return tooling::Replacement(SourceManager, CharRange, "");
 }
 
-auto AbbreviateFunctionTemplate::deconstructType(QualType Type)
-    -> std::tuple<QualType, llvm::SmallVector<tok::TokenKind>,
-                  llvm::SmallVector<tok::TokenKind>> {
+std::tuple<QualType, llvm::SmallVector<tok::TokenKind>,
+           llvm::SmallVector<tok::TokenKind>>
+AbbreviateFunctionTemplate::deconstructType(QualType Type) {
   llvm::SmallVector<tok::TokenKind> ParameterTypeQualifiers{};
   llvm::SmallVector<tok::TokenKind> ParameterQualifiers{};
 
