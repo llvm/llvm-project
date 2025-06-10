@@ -15,6 +15,7 @@
 #include "lldb/Host/posix/ConnectionFileDescriptorPosix.h"
 #include "llvm/Support/Error.h"
 
+#include <cinttypes>
 #include <sys/ptrace.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -35,8 +36,8 @@ static amd_dbgapi_status_t amd_dbgapi_client_process_get_info_callback(
   lldb::pid_t pid = debugger->GetNativeProcess()->GetID();
   LLDB_LOGF(GetLog(GDBRLog::Plugin),
             "amd_dbgapi_client_process_get_info_callback callback, with query "
-            "%d, pid %d",
-            query, pid);
+            "%d, pid %lu",
+            query, (unsigned long)pid);
   switch (query) {
   case AMD_DBGAPI_CLIENT_PROCESS_INFO_OS_PID: {
     if (value_size != sizeof(amd_dbgapi_os_process_id_t))
@@ -56,7 +57,7 @@ static amd_dbgapi_status_t amd_dbgapi_insert_breakpoint_callback(
     amd_dbgapi_global_address_t address,
     amd_dbgapi_breakpoint_id_t breakpoint_id) {
   LLDB_LOGF(GetLog(GDBRLog::Plugin),
-            "insert_breakpoint callback at address: 0x%llx", address);
+            "insert_breakpoint callback at address: 0x%" PRIx64, address);
   LLDBServerPluginAMDGPU *debugger =
       reinterpret_cast<LLDBServerPluginAMDGPU *>(client_process_id);
   debugger->GetNativeProcess()->Halt();
@@ -74,7 +75,7 @@ static amd_dbgapi_status_t amd_dbgapi_insert_breakpoint_callback(
 static amd_dbgapi_status_t amd_dbgapi_remove_breakpoint_callback(
     amd_dbgapi_client_process_id_t client_process_id,
     amd_dbgapi_breakpoint_id_t breakpoint_id) {
-  LLDB_LOGF(GetLog(GDBRLog::Plugin), "remove_breakpoint callback for %llu",
+  LLDB_LOGF(GetLog(GDBRLog::Plugin), "remove_breakpoint callback for %" PRIu64,
             breakpoint_id.handle);
   return AMD_DBGAPI_STATUS_SUCCESS;
 }
@@ -93,24 +94,24 @@ static amd_dbgapi_status_t amd_dbgapi_xfer_global_memory_callback(
 static void amd_dbgapi_log_message_callback(amd_dbgapi_log_level_t level,
                                             const char *message) {
   LLDB_LOGF(GetLog(GDBRLog::Plugin), "ROCdbgapi [%d]: %s", level, message);
-};
+}
 
 static amd_dbgapi_callbacks_t s_dbgapi_callbacks = {
-    .allocate_memory = malloc,
-    .deallocate_memory = free,
-    .client_process_get_info = amd_dbgapi_client_process_get_info_callback,
-    .insert_breakpoint = amd_dbgapi_insert_breakpoint_callback,
-    .remove_breakpoint = amd_dbgapi_remove_breakpoint_callback,
-    .xfer_global_memory = amd_dbgapi_xfer_global_memory_callback,
-    .log_message = amd_dbgapi_log_message_callback,
+    malloc,
+    free,
+    amd_dbgapi_client_process_get_info_callback,
+    amd_dbgapi_insert_breakpoint_callback,
+    amd_dbgapi_remove_breakpoint_callback,
+    amd_dbgapi_xfer_global_memory_callback,
+    amd_dbgapi_log_message_callback,
 };
 
 LLDBServerPluginAMDGPU::LLDBServerPluginAMDGPU(
     LLDBServerPlugin::GDBServer &native_process, MainLoop &main_loop)
     : LLDBServerPlugin(native_process, main_loop) {
   m_process_manager_up.reset(new ProcessManagerAMDGPU(main_loop));
-  m_gdb_server.reset(
-      new GDBRemoteCommunicationServerLLGS(m_main_loop, *m_process_manager_up));
+  m_gdb_server.reset(new GDBRemoteCommunicationServerLLGS(
+      m_main_loop, *m_process_manager_up, "amd-gpu.server"));
 }
 
 LLDBServerPluginAMDGPU::~LLDBServerPluginAMDGPU() { CloseFDs(); }
@@ -415,7 +416,7 @@ std::optional<GPUActions> LLDBServerPluginAMDGPU::NativeProcessIsStopping() {
 bool LLDBServerPluginAMDGPU::HandleGPUInternalBreakpointHit(
     const GPUInternalBreakpoinInfo &bp, bool &has_new_libraries) {
   LLDB_LOGF(GetLog(GDBRLog::Plugin),
-            "Hit GPU loader breakpoint at address: 0x%llx", bp.addr);
+            "Hit GPU loader breakpoint at address: 0x%" PRIx64, bp.addr);
   has_new_libraries = false;
   amd_dbgapi_breakpoint_id_t breakpoint_id{bp.breakpoind_id};
   amd_dbgapi_breakpoint_action_t action;
@@ -557,7 +558,7 @@ bool LLDBServerPluginAMDGPU::CreateGPUBreakpoint(uint64_t addr) {
   return SetGPUBreakpoint(addr, bp_instruction, bp_size);
 }
 
-GPUPluginBreakpointHitResponse
+llvm::Expected<GPUPluginBreakpointHitResponse>
 LLDBServerPluginAMDGPU::BreakpointWasHit(GPUPluginBreakpointHitArgs &args) {
   Log *log = GetLog(GDBRLog::Plugin);
   std::string json_string;

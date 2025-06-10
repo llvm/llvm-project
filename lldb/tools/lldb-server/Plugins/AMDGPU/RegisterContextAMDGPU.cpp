@@ -33,6 +33,7 @@ static std::vector<RegisterSet> g_reg_sets;
 /// are accessed by the LLDB register numbers, which are defined above.
 static std::vector<RegisterInfo> g_reg_infos;
 size_t g_register_buffer_size = 0;
+static uint32_t s_gpu_pc_reg_num = 0;
 static std::unordered_map<uint32_t, amd_dbgapi_register_id_t>
     g_lldb_num_to_amd_reg_id;
 
@@ -263,6 +264,7 @@ bool RegisterContextAMDGPU::InitRegisterInfos() {
     // Check if this is the PC register
     if (reg_id.handle == pc_register_id.handle) {
       reg_info.kinds[eRegisterKindGeneric] = LLDB_REGNUM_GENERIC_PC;
+      s_gpu_pc_reg_num = i;
     }
 
     // Add this register indices belong to its register classes
@@ -508,10 +510,10 @@ std::vector<uint32_t>
 RegisterContextAMDGPU::GetExpeditedRegisters(ExpeditedRegs expType) const {
   static std::vector<uint32_t> g_expedited_regs;
   if (g_expedited_regs.empty()) {
-    // TODO: is this the correct way to do this?
-    // g_expedited_regs.push_back(LLDB_REGNUM_GENERIC_PC);
-    // g_expedited_regs.push_back(LLDB_SP);
-    // g_expedited_regs.push_back(LLDB_FP);
+    // We can't expedite all registers because that would cause jThreadsInfo to
+    // fetch registers from all stopped waves eagarly which would be too slow
+    // and unnecessary. 
+    g_expedited_regs.push_back(s_gpu_pc_reg_num);
   }
   return g_expedited_regs;
 }
