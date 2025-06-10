@@ -942,3 +942,56 @@ define i64 @multiple_geps_two_chains_gep_base(ptr %base, i64 %base.idx, i64 %idx
   %d = sub i64 %i2, %i1
   ret i64 %d
 }
+
+define i64 @multiple_geps_inbounds(ptr %base, i64 %idx, i64 %idx2) {
+; CHECK-LABEL: @multiple_geps_inbounds(
+; CHECK-NEXT:    [[D:%.*]] = add i64 [[IDX:%.*]], [[IDX2:%.*]]
+; CHECK-NEXT:    ret i64 [[D]]
+;
+  %p2 = getelementptr inbounds i8, ptr %base, i64 %idx
+  %p3 = getelementptr inbounds i8, ptr %p2, i64 %idx2
+  %i1 = ptrtoint ptr %base to i64
+  %i2 = ptrtoint ptr %p3 to i64
+  %d = sub i64 %i2, %i1
+  ret i64 %d
+}
+
+define i64 @multiple_geps_nusw(ptr %base, i64 %idx, i64 %idx2) {
+; CHECK-LABEL: @multiple_geps_nusw(
+; CHECK-NEXT:    [[D:%.*]] = add i64 [[IDX:%.*]], [[IDX2:%.*]]
+; CHECK-NEXT:    ret i64 [[D]]
+;
+  %p2 = getelementptr nusw i8, ptr %base, i64 %idx
+  %p3 = getelementptr nusw i8, ptr %p2, i64 %idx2
+  %i1 = ptrtoint ptr %base to i64
+  %i2 = ptrtoint ptr %p3 to i64
+  %d = sub i64 %i2, %i1
+  ret i64 %d
+}
+
+define i64 @multiple_geps_nuw(ptr %base, i64 %idx, i64 %idx2) {
+; CHECK-LABEL: @multiple_geps_nuw(
+; CHECK-NEXT:    [[D:%.*]] = add i64 [[IDX:%.*]], [[IDX2:%.*]]
+; CHECK-NEXT:    ret i64 [[D]]
+;
+  %p2 = getelementptr nuw i8, ptr %base, i64 %idx
+  %p3 = getelementptr nuw i8, ptr %p2, i64 %idx2
+  %i1 = ptrtoint ptr %base to i64
+  %i2 = ptrtoint ptr %p3 to i64
+  %d = sub i64 %i2, %i1
+  ret i64 %d
+}
+
+
+define i64 @multiple_geps_inbounds_nuw(ptr %base, i64 %idx, i64 %idx2) {
+; CHECK-LABEL: @multiple_geps_inbounds_nuw(
+; CHECK-NEXT:    [[D:%.*]] = add i64 [[IDX:%.*]], [[IDX2:%.*]]
+; CHECK-NEXT:    ret i64 [[D]]
+;
+  %p2 = getelementptr inbounds nuw i8, ptr %base, i64 %idx
+  %p3 = getelementptr inbounds nuw i8, ptr %p2, i64 %idx2
+  %i1 = ptrtoint ptr %base to i64
+  %i2 = ptrtoint ptr %p3 to i64
+  %d = sub i64 %i2, %i1
+  ret i64 %d
+}
