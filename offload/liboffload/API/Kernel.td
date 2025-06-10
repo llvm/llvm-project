@@ -25,7 +25,7 @@ def : Function {
 }
 
 def : Function {
-    let name = "olKernelMaxGroupSize";
+    let name = "olGetKernelMaxGroupSize";
     let desc = "Get the maximum block size needed to achieve maximum occupancy.";
     let details = [];
     let params = [

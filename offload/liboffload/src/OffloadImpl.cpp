@@ -488,9 +488,9 @@ Error olGetKernel_impl(ol_program_handle_t Program, const char *KernelName,
   return Error::success();
 }
 
-Error olKernelMaxGroupSize_impl(ol_kernel_handle_t Kernel,
-                                ol_device_handle_t Device,
-                                size_t DynamicMemSize, size_t *GroupSize) {
+Error olGetKernelMaxGroupSize_impl(ol_kernel_handle_t Kernel,
+                                   ol_device_handle_t Device,
+                                   size_t DynamicMemSize, size_t *GroupSize) {
   auto *KernelImpl = getPluginKernel(Kernel);
 
   auto Res = KernelImpl->maxGroupSize(*Device->Device, DynamicMemSize);
