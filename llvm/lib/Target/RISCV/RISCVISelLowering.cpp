@@ -18372,31 +18372,6 @@ static SDValue performBUILD_VECTORCombine(SDNode *N, SelectionDAG &DAG,
                      DAG.getBuildVector(VT, DL, RHSOps));
 }
 
-static SDValue lowerVQDOT(unsigned Opc, SDValue Op0, SDValue Op1,
-                          const SDLoc &DL, SelectionDAG &DAG,
-                          const RISCVSubtarget &Subtarget) {
-  assert(RISCVISD::VQDOT_VL == Opc || RISCVISD::VQDOTU_VL == Opc ||
-         RISCVISD::VQDOTSU_VL == Opc);
-  MVT VT = Op0.getSimpleValueType();
-  assert(VT == Op1.getSimpleValueType() &&
-         VT.getVectorElementType() == MVT::i32);
-
-  SDValue Passthru = DAG.getConstant(0, DL, VT);
-  MVT ContainerVT = VT;
-  if (VT.isFixedLengthVector()) {
-    ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
-    Passthru = convertToScalableVector(ContainerVT, Passthru, DAG, Subtarget);
-    Op0 = convertToScalableVector(ContainerVT, Op0, DAG, Subtarget);
-    Op1 = convertToScalableVector(ContainerVT, Op1, DAG, Subtarget);
-  }
-  auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
-  SDValue LocalAccum = DAG.getNode(Opc, DL, ContainerVT,
-                                   {Op0, Op1, Passthru, Mask, VL});
-  if (VT.isFixedLengthVector())
-    return convertFromScalableVector(VT, LocalAccum, DAG, Subtarget);
-  return LocalAccum;
-}
-
 static MVT getQDOTXResultType(MVT OpVT) {
   ElementCount OpEC = OpVT.getVectorElementCount();
   assert(OpEC.isKnownMultipleOf(4) && OpVT.getVectorElementType() == MVT::i8);
@@ -18455,61 +18430,62 @@ static SDValue foldReduceOperandViaVQDOT(SDValue InVec, const SDLoc &DL,
     }
   }
 
-  // reduce (zext a) <--> reduce (mul zext a. zext 1)
-  // reduce (sext a) <--> reduce (mul sext a. sext 1)
+  // zext a <--> partial_reduce_umla 0, a, 1
+  // sext a <--> partial_reduce_smla 0, a, 1
   if (InVec.getOpcode() == ISD::ZERO_EXTEND ||
       InVec.getOpcode() == ISD::SIGN_EXTEND) {
     SDValue A = InVec.getOperand(0);
-    if (A.getValueType().getVectorElementType() != MVT::i8 ||
-        !TLI.isTypeLegal(A.getValueType()))
+    EVT OpVT = A.getValueType();
+    if (OpVT.getVectorElementType() != MVT::i8 || !TLI.isTypeLegal(OpVT))
       return SDValue();
 
     MVT ResVT = getQDOTXResultType(A.getSimpleValueType());
-    A = DAG.getBitcast(ResVT, A);
-    SDValue B = DAG.getConstant(0x01010101, DL, ResVT);
-
+    SDValue B = DAG.getConstant(0x1, DL, OpVT);
     bool IsSigned = InVec.getOpcode() == ISD::SIGN_EXTEND;
-    unsigned Opc = IsSigned ? RISCVISD::VQDOT_VL : RISCVISD::VQDOTU_VL;
-    return lowerVQDOT(Opc, A, B, DL, DAG, Subtarget);
+    unsigned Opc =
+        IsSigned ? ISD::PARTIAL_REDUCE_SMLA : ISD::PARTIAL_REDUCE_UMLA;
+    return DAG.getNode(Opc, DL, ResVT, {DAG.getConstant(0, DL, ResVT), A, B});
   }
 
-  // mul (sext, sext) -> vqdot
-  // mul (zext, zext) -> vqdotu
-  // mul (sext, zext) -> vqdotsu
-  // mul (zext, sext) -> vqdotsu (swapped)
-  // TODO: Improve .vx handling - we end up with a sub-vector insert
-  // which confuses the splat pattern matching.  Also, match vqdotus.vx
+  // mul (sext a, sext b) -> partial_reduce_smla 0, a, b
+  // mul (zext a, zext b) -> partial_reduce_umla 0, a, b
+  // mul (sext a, zext b) -> partial_reduce_ssmla 0, a, b
+  // mul (zext a, sext b) -> partial_reduce_smla 0, b, a (swapped)
   if (InVec.getOpcode() != ISD::MUL)
     return SDValue();
 
   SDValue A = InVec.getOperand(0);
   SDValue B = InVec.getOperand(1);
-  unsigned Opc = 0;
-  if (A.getOpcode() == B.getOpcode()) {
-    if (A.getOpcode() == ISD::SIGN_EXTEND)
-      Opc = RISCVISD::VQDOT_VL;
-    else if (A.getOpcode() == ISD::ZERO_EXTEND)
-      Opc = RISCVISD::VQDOTU_VL;
-    else
-      return SDValue();
-  } else {
-    if (B.getOpcode() != ISD::ZERO_EXTEND)
-      std::swap(A, B);
-    if (A.getOpcode() != ISD::SIGN_EXTEND || B.getOpcode() != ISD::ZERO_EXTEND)
-      return SDValue();
-    Opc = RISCVISD::VQDOTSU_VL;
-  }
-  assert(Opc);
 
-  if (A.getOperand(0).getValueType().getVectorElementType() != MVT::i8 ||
-      A.getOperand(0).getValueType() != B.getOperand(0).getValueType() ||
+  if (!ISD::isExtOpcode(A.getOpcode()))
+    return SDValue();
+
+  EVT OpVT = A.getOperand(0).getValueType();
+  if (OpVT.getVectorElementType() != MVT::i8 ||
+      OpVT != B.getOperand(0).getValueType() ||
       !TLI.isTypeLegal(A.getValueType()))
     return SDValue();
 
-  MVT ResVT = getQDOTXResultType(A.getOperand(0).getSimpleValueType());
-  A = DAG.getBitcast(ResVT, A.getOperand(0));
-  B = DAG.getBitcast(ResVT, B.getOperand(0));
-  return lowerVQDOT(Opc, A, B, DL, DAG, Subtarget);
+  unsigned Opc;
+  if (A.getOpcode() == ISD::SIGN_EXTEND && B.getOpcode() == ISD::SIGN_EXTEND)
+    Opc = ISD::PARTIAL_REDUCE_SMLA;
+  else if (A.getOpcode() == ISD::ZERO_EXTEND &&
+           B.getOpcode() == ISD::ZERO_EXTEND)
+    Opc = ISD::PARTIAL_REDUCE_UMLA;
+  else if (A.getOpcode() == ISD::SIGN_EXTEND &&
+           B.getOpcode() == ISD::ZERO_EXTEND)
+    Opc = ISD::PARTIAL_REDUCE_SUMLA;
+  else if (A.getOpcode() == ISD::ZERO_EXTEND &&
+           B.getOpcode() == ISD::SIGN_EXTEND) {
+    Opc = ISD::PARTIAL_REDUCE_SUMLA;
+    std::swap(A, B);
+  } else
+    return SDValue();
+
+  MVT ResVT = getQDOTXResultType(OpVT.getSimpleVT());
+  return DAG.getNode(
+      Opc, DL, ResVT,
+      {DAG.getConstant(0, DL, ResVT), A.getOperand(0), B.getOperand(0)});
 }
 
 static SDValue performVECREDUCECombine(SDNode *N, SelectionDAG &DAG,
