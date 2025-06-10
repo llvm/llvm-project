@@ -316,14 +316,22 @@ static cl::opt<bool> ClEagerChecks(
 
 static cl::opt<bool> ClDumpStrictInstructions(
     "msan-dump-strict-instructions",
-    cl::desc("print out instructions with default strict semantics"),
+    cl::desc("print out instructions with default strict semantics i.e.,"
+             "check that all the inputs are fully initialized, and mark "
+             "the output as fully initialized. These semantics are applied "
+             "to instructions that could not be handled explicitly nor "
+             "heuristically."),
     cl::Hidden, cl::init(false));
 
-static cl::opt<bool> ClDumpStrictIntrinsics(
-    "msan-dump-strict-intrinsics",
-    cl::desc("Prints 'unknown' intrinsics that were handled heuristically. "
-             "Use -msan-dump-strict-instructions to print intrinsics that "
-             "could not be handled exactly nor heuristically."),
+// Currently, all the heuristically handled instructions are specifically
+// IntrinsicInst. However, we use the broader "HeuristicInstructions" name
+// to parallel 'msan-dump-strict-instructions', and to keep the door open to
+// handling non-intrinsic instructions heuristically.
+static cl::opt<bool> ClDumpHeuristicInstructions(
+    "msan-dump-heuristic-instructions",
+    cl::desc("Prints 'unknown' instructions that were handled heuristically. "
+             "Use -msan-dump-strict-instructions to print instructions that "
+             "could not be handled explicitly nor heuristically."),
     cl::Hidden, cl::init(false));
 
 static cl::opt<int> ClInstrumentationWithCallThreshold(
@@ -3197,10 +3205,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   bool handleUnknownIntrinsic(IntrinsicInst &I) {
     if (handleUnknownIntrinsicUnlogged(I)) {
-      if (ClDumpStrictIntrinsics)
+      if (ClDumpHeuristicInstructions)
         dumpInst(I);
 
-      LLVM_DEBUG(dbgs() << "UNKNOWN INTRINSIC HANDLED HEURISTICALLY: " << I
+      LLVM_DEBUG(dbgs() << "UNKNOWN INSTRUCTION HANDLED HEURISTICALLY: " << I
                         << "\n");
       return true;
     } else
@@ -4159,6 +4167,23 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, PtrSrcOrigin);
   }
 
+  // Instrument AVX permutation intrinsic.
+  // We apply the same permutation (argument index 1) to the shadow.
+  void handleAVXVpermilvar(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Value *Shadow = getShadow(&I, 0);
+    insertShadowCheck(I.getArgOperand(1), &I);
+
+    // Shadows are integer-ish types but some intrinsics require a
+    // different (e.g., floating-point) type.
+    Shadow = IRB.CreateBitCast(Shadow, I.getArgOperand(0)->getType());
+    CallInst *CI = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
+                                       {Shadow, I.getArgOperand(1)});
+
+    setShadow(&I, IRB.CreateBitCast(CI, getShadowTy(&I)));
+    setOriginForNaryOp(I);
+  }
+
   // Instrument BMI / BMI2 intrinsics.
   // All of these intrinsics are Z = I(X, Y)
   // where the types of all operands and the result match, and are either i32 or
@@ -5101,6 +5126,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       [[maybe_unused]] bool Success =
           maybeHandleSimpleNomemIntrinsic(I, /*trailingFlags=*/1);
       assert(Success);
+      break;
+    }
+
+    case Intrinsic::x86_avx_vpermilvar_pd:
+    case Intrinsic::x86_avx_vpermilvar_pd_256:
+    case Intrinsic::x86_avx512_vpermilvar_pd_512:
+    case Intrinsic::x86_avx_vpermilvar_ps:
+    case Intrinsic::x86_avx_vpermilvar_ps_256:
+    case Intrinsic::x86_avx512_vpermilvar_ps_512: {
+      handleAVXVpermilvar(I);
       break;
     }
 

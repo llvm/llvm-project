@@ -4204,13 +4204,15 @@ def ftrigraphs : Flag<["-"], "ftrigraphs">, Group<f_Group>,
 def fno_trigraphs : Flag<["-"], "fno-trigraphs">, Group<f_Group>,
   HelpText<"Do not process trigraph sequences">,
   Visibility<[ClangOption, CC1Option]>;
-defm unique_source_file_names: BoolOption<"f", "unique-source-file-names",
-  CodeGenOpts<"UniqueSourceFileNames">, DefaultFalse,
-  PosFlag<SetTrue, [], [CC1Option], "Allow">,
-  NegFlag<SetFalse, [], [], "Do not allow">,
-  BothFlags<[], [ClangOption], " the compiler to assume that each translation unit has a unique "
-                               "source file name at link time">>,
-  Group<f_clang_Group>;
+def funique_source_file_names: Flag<["-"], "funique-source-file-names">, Group<f_Group>,
+  HelpText<"Allow the compiler to assume that each translation unit has a unique "                       
+           "source file identifier (see -funique-source-file-identifier) at link time">;
+def fno_unique_source_file_names: Flag<["-"], "fno-unique-source-file-names">;
+def unique_source_file_identifier_EQ: Joined<["-"], "funique-source-file-identifier=">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Specify the source file identifier for -funique-source-file-names; "
+           "uses the source file path if not specified">,
+  MarshallingInfoString<CodeGenOpts<"UniqueSourceFileIdentifier">>;
 def funsigned_bitfields : Flag<["-"], "funsigned-bitfields">, Group<f_Group>;
 def funsigned_char : Flag<["-"], "funsigned-char">, Group<f_Group>;
 def fno_unsigned_char : Flag<["-"], "fno-unsigned-char">;
@@ -5472,9 +5474,10 @@ def mno_implicit_float : Flag<["-"], "mno-implicit-float">, Group<m_Group>,
   HelpText<"Don't generate implicit floating point or vector instructions">;
 def mimplicit_float : Flag<["-"], "mimplicit-float">, Group<m_Group>;
 def mrecip : Flag<["-"], "mrecip">, Group<m_Group>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Equivalent to '-mrecip=all'">;
 def mrecip_EQ : CommaJoined<["-"], "mrecip=">, Group<m_Group>,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Control use of approximate reciprocal and reciprocal square root instructions followed by <n> iterations of "
            "Newton-Raphson refinement. "
            "<value> = ( ['!'] ['vec-'] ('rcp'|'sqrt') [('h'|'s'|'d')] [':'<n>] ) | 'all' | 'default' | 'none'">,
@@ -5897,7 +5900,7 @@ def resource_dir : Separate<["-"], "resource-dir">,
   HelpText<"The directory which holds the compiler resource files">,
   MarshallingInfoString<HeaderSearchOpts<"ResourceDir">>;
 def resource_dir_EQ : Joined<["-"], "resource-dir=">, Flags<[NoXarchOption]>,
-  Visibility<[ClangOption, CC1Option, CLOption, DXCOption, FlangOption]>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   Alias<resource_dir>;
 def rpath : Separate<["-"], "rpath">, Flags<[LinkerInput]>, Group<Link_Group>,
   Visibility<[ClangOption, FlangOption]>;

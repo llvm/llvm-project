@@ -153,7 +153,11 @@ Resolutions to C++ Defect Reports
 - Bumped the ``__cpp_constexpr`` feature-test macro to ``202002L`` in C++20 mode as indicated in
   `P2493R0 <https://wg21.link/P2493R0>`_.
 
+- Implemented `CWG2517 Useless restriction on use of parameter in `
+  `constraint-expression <https://cplusplus.github.io/CWG/issues/2517.html>`_.
 - Implemented `CWG3005 Function parameters should never be name-independent <https://wg21.link/CWG3005>`_.
+
+- Implemented `CWG2496 ref-qualifiers and virtual overriding <https://wg21.link/CWG2496>`_.
 
 C Language Changes
 ------------------
@@ -287,6 +291,8 @@ C23 Feature Support
   directive. Fixes #GH126940.
 - Fixed a crash when a declaration of a ``constexpr`` variable with an invalid
   type. Fixes #GH140887
+- Documented `WG14 N3006 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3006.htm>`_
+  which clarified how Clang is handling underspecified object declarations.
 
 C11 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -685,6 +691,8 @@ Bug Fixes in This Version
 - Fixed an assertion failure in serialization of constexpr structs containing unions. (#GH140130)
 - Fixed duplicate entries in TableGen that caused the wrong attribute to be selected. (GH#140701)
 - Fixed type mismatch error when 'builtin-elementwise-math' arguments have different qualifiers, this should be well-formed. (#GH141397)
+- Constant evaluation now correctly runs the destructor of a variable declared in
+  the second clause of a C-style ``for`` loop. (#GH139818)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -830,12 +838,17 @@ Bug Fixes to C++ Support
 - Clang modules now allow a module and its user to differ on TrivialAutoVarInit*
 - Fixed an access checking bug when initializing non-aggregates in default arguments (#GH62444), (#GH83608)
 - Fixed a pack substitution bug in deducing class template partial specializations. (#GH53609)
+- Fixed a crash when constant evaluating some explicit object member assignment operators. (#GH142835)
+- Fixed an access checking bug when substituting into concepts (#GH115838)
+- Fix a bug where private access specifier of overloaded function not respected. (#GH107629)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed type checking when a statement expression ends in an l-value of atomic type. (#GH106576)
 - Fixed uninitialized use check in a lambda within CXXOperatorCallExpr. (#GH129198)
 - Fixed a malformed printout of ``CXXParenListInitExpr`` in certain contexts.
+- Fixed a malformed printout of certain calling convention function attributes. (#GH143160)
+- Fixed dependency calculation for TypedefTypes (#GH89774)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -846,7 +859,7 @@ Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Fixed crash when ``-print-stats`` is enabled in compiling IR files. (#GH131608)
-- Fix code completion crash involving PCH serialzied templates. (#GH139019)
+- Fix code completion crash involving PCH serialized templates. (#GH139019)
 
 OpenACC Specific Changes
 ------------------------
@@ -1049,7 +1062,7 @@ Sanitizers
 ----------
 
 - ``-fsanitize=vptr`` is no longer a part of ``-fsanitize=undefined``.
-- Sanitizer ignorelists now support the syntax ``src:*=sanitize``, 
+- Sanitizer ignorelists now support the syntax ``src:*=sanitize``,
   ``type:*=sanitize``, ``fun:*=sanitize``, ``global:*=sanitize``,
   and ``mainfile:*=sanitize``.
 
