@@ -1263,7 +1263,7 @@ LogicalResult ScaledExtPackedOpLowering::matchAndRewrite(
   Location loc = op.getLoc();
   if (chipset != kGfx950)
     return rewriter.notifyMatchFailure(
-        loc, "Scaled fp8 conversion instructions are not available on target "
+        loc, "Scaled fp conversion instructions are not available on target "
              "architecture and their emulation is not implemented");
   Type i32 = getTypeConverter()->convertType(rewriter.getI32Type());
 
@@ -1344,7 +1344,7 @@ LogicalResult PackedScaledTruncOpLowering::matchAndRewrite(
   Location loc = op.getLoc();
   if (chipset != kGfx950)
     return rewriter.notifyMatchFailure(
-        loc, "Scaled fp8 conversion instructions are not available on target "
+        loc, "Scaled fp conversion instructions are not available on target "
              "architecture and their emulation is not implemented");
   Type v2i16 = getTypeConverter()->convertType(
       VectorType::get(2, rewriter.getI16Type()));
