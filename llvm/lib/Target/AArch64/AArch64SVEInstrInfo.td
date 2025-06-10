@@ -4099,7 +4099,7 @@ let Predicates = [HasSVEBitPerm, HasNonStreamingSVE2_or_SSVE_BitPerm] in {
   defm BGRP_ZZZ : sve2_misc_bitwise<0b1110, "bgrp", int_aarch64_sve_bgrp_x>;
 }
 
-let Predicates = [HasSVEAES2, HasNonStreamingSVE2p1_or_SSVE_AES] in {
+let Predicates = [HasSVEAES2, HasNonStreamingSVE2_or_SSVE_AES] in {
   // SVE_AES2 multi-vector instructions (x2)
   def AESE_2ZZI_B    : sve_crypto_binary_multi2<0b000, "aese">;
   def AESD_2ZZI_B    : sve_crypto_binary_multi2<0b010, "aesd">;
