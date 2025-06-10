@@ -1,13 +1,17 @@
+async/clc_prefetch.cl
 common/clc_degrees.cl
 common/clc_radians.cl
 common/clc_sign.cl
 common/clc_smoothstep.cl
+common/clc_step.cl
 geometric/clc_cross.cl
 geometric/clc_distance.cl
 geometric/clc_dot.cl
 geometric/clc_fast_distance.cl
 geometric/clc_fast_length.cl
+geometric/clc_fast_normalize.cl
 geometric/clc_length.cl
+geometric/clc_normalize.cl
 integer/clc_abs.cl
 integer/clc_abs_diff.cl
 integer/clc_add_sat.cl
@@ -41,6 +45,8 @@ math/clc_cos.cl
 math/clc_cosh.cl
 math/clc_cospi.cl
 math/clc_ep_log.cl
+math/clc_erf.cl
+math/clc_erfc.cl
 math/clc_exp.cl
 math/clc_exp10.cl
 math/clc_exp2.cl
@@ -144,3 +150,5 @@ relational/clc_signbit.cl
 shared/clc_clamp.cl
 shared/clc_max.cl
 shared/clc_min.cl
+shared/clc_vload.cl
+shared/clc_vstore.cl

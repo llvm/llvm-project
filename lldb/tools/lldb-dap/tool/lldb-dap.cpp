@@ -542,7 +542,7 @@ int main(int argc, char *argv[]) {
   lldb::IOObjectSP output = std::make_shared<NativeFile>(
       stdout_fd, File::eOpenOptionWriteOnly, NativeFile::Unowned);
 
-  constexpr llvm::StringLiteral client_name = "stdin/stdout";
+  constexpr llvm::StringLiteral client_name = "stdio";
   Transport transport(client_name, log.get(), input, output);
   DAP dap(log.get(), default_repl_mode, pre_init_commands, transport);
 

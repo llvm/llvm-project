@@ -1167,7 +1167,7 @@ struct SVEIntrinsicInfo {
   }
 
   // NOTE: Whilst not limited to only inactive lanes, the common use case is:
-  // inactiveLanesAreZerod =
+  // inactiveLanesAreZeroed =
   //     resultIsZeroInitialized() && inactiveLanesAreUnused()
   bool resultIsZeroInitialized() const { return ResultIsZeroInitialized; }
 
@@ -3958,7 +3958,7 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     scalarization of the division operation.
     2. Constant divisors, either negative in whole or partially, don't result in
     significantly different codegen as compared to positive constant divisors.
-    So, we don't consider negative divisors seperately.
+    So, we don't consider negative divisors separately.
     3. If the codegen is significantly different with SVE, it has been indicated
     using comments at appropriate places.
 
@@ -3980,7 +3980,7 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
 
     other sdiv/srem cases:
     -------------------------------------------------------------------------
-    commom codegen            | + srem     | + sdiv     | pow-of-2  | Type
+    common codegen            | + srem     | + sdiv     | pow-of-2  | Type
     -------------------------------------------------------------------------
     smulh + asr + add + add   | -          | -          | N         | i64
     smull + lsr + add + add   | -          | -          | N         | i32
@@ -5072,8 +5072,7 @@ bool AArch64TTIImpl::isLegalToVectorizeReduction(
   case RecurKind::FMin:
   case RecurKind::FMax:
   case RecurKind::FMulAdd:
-  case RecurKind::IAnyOf:
-  case RecurKind::FAnyOf:
+  case RecurKind::AnyOf:
     return true;
   default:
     return false;
@@ -5479,11 +5478,13 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
     VectorType *NTp =
         VectorType::get(Tp->getScalarType(), LT.second.getVectorElementCount());
     InstructionCost Cost;
+    std::map<std::tuple<unsigned, unsigned, SmallVector<int>>, InstructionCost>
+        PreviousCosts;
     for (unsigned N = 0; N < NumVecs; N++) {
       SmallVector<int> NMask;
       // Split the existing mask into chunks of size LTNumElts. Track the source
       // sub-vectors to ensure the result has at most 2 inputs.
-      unsigned Source1, Source2;
+      unsigned Source1 = 0, Source2 = 0;
       unsigned NumSources = 0;
       for (unsigned E = 0; E < LTNumElts; E++) {
         int MaskElt = (N * LTNumElts + E < TpNumElts) ? Mask[N * LTNumElts + E]
@@ -5515,15 +5516,26 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
         else
           NMask.push_back(MaskElt % LTNumElts);
       }
+      // Check if we have already generated this sub-shuffle, which means we
+      // will have already generated the output. For example a <16 x i32> splat
+      // will be the same sub-splat 4 times, which only needs to be generated
+      // once and reused.
+      auto Result =
+          PreviousCosts.insert({std::make_tuple(Source1, Source2, NMask), 0});
+      // Check if it was already in the map (already costed).
+      if (!Result.second)
+        continue;
       // If the sub-mask has at most 2 input sub-vectors then re-cost it using
       // getShuffleCost. If not then cost it using the worst case as the number
       // of element moves into a new vector.
-      if (NumSources <= 2)
-        Cost += getShuffleCost(NumSources <= 1 ? TTI::SK_PermuteSingleSrc
+      InstructionCost NCost =
+          NumSources <= 2
+              ? getShuffleCost(NumSources <= 1 ? TTI::SK_PermuteSingleSrc
                                                : TTI::SK_PermuteTwoSrc,
-                               NTp, NMask, CostKind, 0, nullptr, Args, CxtI);
-      else
-        Cost += LTNumElts;
+                               NTp, NMask, CostKind, 0, nullptr, Args, CxtI)
+              : LTNumElts;
+      Result.first->second = NCost;
+      Cost += NCost;
     }
     return Cost;
   }
@@ -5909,7 +5921,7 @@ static bool areExtractShuffleVectors(Value *Op1, Value *Op2,
       !match(Op2, m_Shuffle(m_Value(S2Op1), m_Undef(), m_Mask(M2))))
     return false;
 
-  // If we allow splats, set S1Op1/S2Op1 to nullptr for the relavant arg so that
+  // If we allow splats, set S1Op1/S2Op1 to nullptr for the relevant arg so that
   // it is not checked as an extract below.
   if (AllowSplat && isSplatShuffle(Op1))
     S1Op1 = nullptr;

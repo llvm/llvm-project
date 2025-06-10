@@ -1954,6 +1954,10 @@ For example:
     The first three options are mutually exclusive, and the remaining options
     describe more details of how the function behaves. The remaining options
     are invalid for "free"-type functions.
+``"alloc-variant-zeroed"="FUNCTION"``
+    This attribute indicates that another function is equivalent to an allocator function,
+    but returns zeroed memory. The function must have "zeroed" allocation behavior,
+    the same ``alloc-family``, and take exactly the same arguments.
 ``allocsize(<EltSizeParam>[, <NumEltsParam>])``
     This attribute indicates that the annotated function will always return at
     least a given number of bytes (or null). Its arguments are zero-indexed
@@ -3413,11 +3417,11 @@ memory before the call, the call may capture two components of the pointer:
     whether only the fact that the address is/isn't null is captured.
   * The provenance of the pointer, which is the ability to perform memory
     accesses through the pointer, in the sense of the :ref:`pointer aliasing
-    rules <pointeraliasing>`. We further distinguish whether only read acceses
+    rules <pointeraliasing>`. We further distinguish whether only read accesses
     are allowed, or both reads and writes.
 
 For example, the following function captures the address of ``%a``, because
-it is compared to a pointer, leaking information about the identitiy of the
+it is compared to a pointer, leaking information about the identity of the
 pointer:
 
 .. code-block:: llvm
@@ -3472,7 +3476,7 @@ through the return value only:
 However, we always consider direct inspection of the pointer address
 (e.g. using ``ptrtoint``) to be location-independent. The following example
 is *not* considered a return-only capture, even though the ``ptrtoint``
-ultimately only contribues to the return value:
+ultimately only contributes to the return value:
 
 .. code-block:: llvm
 
@@ -3573,7 +3577,8 @@ can read and/or modify state which is not accessible via a regular load
 or store in this module. Volatile operations may use addresses which do
 not point to memory (like MMIO registers). This means the compiler may
 not use a volatile operation to prove a non-volatile access to that
-address has defined behavior.
+address has defined behavior. This includes addresses typically forbidden,
+such as the pointer with bit-value 0.
 
 The allowed side-effects for volatile accesses are limited.  If a
 non-volatile store to a given address would be legal, a volatile
@@ -4292,7 +4297,10 @@ The semantics of non-zero address spaces are target-specific. Memory
 access through a non-dereferenceable pointer is undefined behavior in
 any address space. Pointers with the bit-value 0 are only assumed to
 be non-dereferenceable in address space 0, unless the function is
-marked with the ``null_pointer_is_valid`` attribute.
+marked with the ``null_pointer_is_valid`` attribute. However, *volatile*
+access to any non-dereferenceable address may have defined behavior
+(according to the target), and in this case the attribute is not needed
+even for address 0.
 
 If an object can be proven accessible through a pointer with a
 different address space, the access may be modified to use that
@@ -4430,7 +4438,8 @@ the type size is smaller than the type's store size.
       < vscale x <# elements> x <elementtype> > ; Scalable vector
 
 The number of elements is a constant integer value larger than 0;
-elementtype may be any integer, floating-point or pointer type. Vectors
+elementtype may be any integer, floating-point, pointer type, or a sized  
+target extension type that has the ``CanBeVectorElement`` property. Vectors
 of size zero are not allowed. For scalable vectors, the total number of
 elements is a constant multiple (called vscale) of the specified number
 of elements; vscale is a positive integer that is unknown at compile time
@@ -5610,6 +5619,8 @@ LoongArch:
 - ``m``: A memory operand whose address is formed by a base register and
   offset that is suitable for use in instructions with the same addressing
   mode as st.w and ld.w.
+- ``q``: A general-purpose register except for $r0 and $r1 (for the csrxchg
+  instruction).
 - ``I``: A signed 12-bit constant (for arithmetic instructions).
 - ``J``: An immediate integer zero.
 - ``K``: An unsigned 12-bit constant (for logic instructions).
@@ -9590,6 +9601,14 @@ may not be equal to the address provided for the same block to this
 instruction's ``indirect labels`` operand. The assembly code may only transfer
 control to addresses provided via this instruction's ``indirect labels``.
 
+On target architectures that implement branch target enforcement by requiring
+indirect (register-controlled) branch instructions to jump only to locations
+marked by a special instruction (such as AArch64 ``bti``), the called code is
+expected not to use such an indirect branch to transfer control to the
+locations in ``indirect labels``. Therefore, including a label in the
+``indirect labels`` of a ``callbr`` does not require the compiler to put a
+``bti`` or equivalent instruction at the label.
+
 Arguments:
 """"""""""
 
@@ -12428,12 +12447,15 @@ Semantics:
 """"""""""
 
 The '``ptrtoint``' instruction converts ``value`` to integer type
-``ty2`` by interpreting the pointer value as an integer and either
-truncating or zero extending that value to the size of the integer type.
+``ty2`` by interpreting the all pointer representation bits as an integer
+(equivalent to a ``bitcast``) and either truncating or zero extending that value
+to the size of the integer type.
 If ``value`` is smaller than ``ty2`` then a zero extension is done. If
 ``value`` is larger than ``ty2`` then a truncation is done. If they are
 the same size, then nothing is done (*no-op cast*) other than a type
 change.
+The ``ptrtoint`` always :ref:`captures address and provenance <pointercapture>`
+of the pointer argument.
 
 Example:
 """"""""
@@ -12488,6 +12510,9 @@ of the integer ``value``. If ``value`` is larger than the size of a
 pointer then a truncation is done. If ``value`` is smaller than the size
 of a pointer then a zero extension is done. If they are the same size,
 nothing is done (*no-op cast*).
+The behavior is equivalent to a ``bitcast``, however, the resulting value is not
+guaranteed to be dereferenceable (e.g. if the result type is a
+:ref:`non-integral pointers <nointptrtype>`).
 
 Example:
 """"""""
@@ -17035,12 +17060,12 @@ and IEEE-754-2008: the result of ``minnum(-0.0, +0.0)`` may be either -0.0 or +0
 
 Some architectures, such as ARMv8 (FMINNM), LoongArch (fmin), MIPSr6 (min.fmt), PowerPC/VSX (xsmindp),
 have instructions that match these semantics exactly; thus it is quite simple for these architectures.
-Some architectures have similiar ones while they are not exact equivalent. Such as x86 implements ``MINPS``,
+Some architectures have similar ones while they are not exact equivalent. Such as x86 implements ``MINPS``,
 which implements the semantics of C code ``a<b?a:b``: NUM vs qNaN always return qNaN. ``MINPS`` can be used
 if ``nsz`` and ``nnan`` are given.
 
 For existing libc implementations, the behaviors of fmin may be quite different on sNaN and signed zero behaviors,
-even in the same release of a single libm implemention.
+even in the same release of a single libm implementation.
 
 .. _i_maxnum:
 
@@ -17095,12 +17120,12 @@ and IEEE-754-2008: the result of maxnum(-0.0, +0.0) may be either -0.0 or +0.0.
 
 Some architectures, such as ARMv8 (FMAXNM), LoongArch (fmax), MIPSr6 (max.fmt), PowerPC/VSX (xsmaxdp),
 have instructions that match these semantics exactly; thus it is quite simple for these architectures.
-Some architectures have similiar ones while they are not exact equivalent. Such as x86 implements ``MAXPS``,
+Some architectures have similar ones while they are not exact equivalent. Such as x86 implements ``MAXPS``,
 which implements the semantics of C code ``a>b?a:b``: NUM vs qNaN always return qNaN. ``MAXPS`` can be used
 if ``nsz`` and ``nnan`` are given.
 
 For existing libc implementations, the behaviors of fmin may be quite different on sNaN and signed zero behaviors,
-even in the same release of a single libm implemention.
+even in the same release of a single libm implementation.
 
 .. _i_minimum:
 
@@ -20197,7 +20222,7 @@ Arguments:
 
 The argument to this intrinsic must be a vector.
 
-'``llvm.vector.deinterleave2/3/5/7``' Intrinsic
+'``llvm.vector.deinterleave2/3/4/5/6/7/8``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -20215,8 +20240,8 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-The '``llvm.vector.deinterleave2/3/5/7``' intrinsics deinterleave adjacent lanes
-into 2, 3, 5, and 7 separate vectors, respectively, and return them as the
+The '``llvm.vector.deinterleave2/3/4/5/6/7/8``' intrinsics deinterleave adjacent lanes
+into 2 through to 8 separate vectors, respectively, and return them as the
 result.
 
 This intrinsic works for both fixed and scalable vectors. While this intrinsic
@@ -20238,7 +20263,7 @@ Arguments:
 The argument is a vector whose type corresponds to the logical concatenation of
 the aggregated result types.
 
-'``llvm.vector.interleave2/3/5/7``' Intrinsic
+'``llvm.vector.interleave2/3/4/5/6/7/8``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -20256,7 +20281,7 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-The '``llvm.vector.interleave2/3/5/7``' intrinsic constructs a vector
+The '``llvm.vector.interleave2/3/4/5/6/7/8``' intrinsic constructs a vector
 by interleaving all the input vectors.
 
 This intrinsic works for both fixed and scalable vectors. While this intrinsic

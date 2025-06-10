@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "UseUncaughtExceptionsCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 
@@ -40,10 +39,10 @@ void UseUncaughtExceptionsCheck::registerMatchers(MatchFinder *Finder) {
                      this);
   // CallExpr in initialisation list: warning, fix-it with avoiding narrowing
   // conversions.
-  Finder->addMatcher(callExpr(DirectCallToUncaughtException,
-                              hasAncestor(initListExpr()))
-                         .bind("init_call_expr"),
-                     this);
+  Finder->addMatcher(
+      callExpr(DirectCallToUncaughtException, hasAncestor(initListExpr()))
+          .bind("init_call_expr"),
+      this);
 }
 
 void UseUncaughtExceptionsCheck::check(const MatchFinder::MatchResult &Result) {

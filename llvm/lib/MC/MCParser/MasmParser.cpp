@@ -22,7 +22,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCContext.h"
@@ -33,12 +32,10 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCParser/AsmCond.h"
 #include "llvm/MC/MCParser/AsmLexer.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -1489,12 +1486,12 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
     // If this is an absolute variable reference, substitute it now to preserve
     // semantics in the face of reassignment.
     if (Sym->isVariable()) {
-      auto V = Sym->getVariableValue(/*SetUsed=*/false);
+      auto V = Sym->getVariableValue();
       bool DoInline = isa<MCConstantExpr>(V);
       if (auto TV = dyn_cast<MCTargetExpr>(V))
         DoInline = TV->inlineAssignedExpr();
       if (DoInline) {
-        Res = Sym->getVariableValue(/*SetUsed=*/false);
+        Res = Sym->getVariableValue();
         return false;
       }
     }
@@ -3015,9 +3012,9 @@ bool MasmParser::parseDirectiveEquate(StringRef IDVal, StringRef Name,
   MCSymbol *Sym = getContext().getOrCreateSymbol(Var.Name);
 
   const MCConstantExpr *PrevValue =
-      Sym->isVariable() ? dyn_cast_or_null<MCConstantExpr>(
-                              Sym->getVariableValue(/*SetUsed=*/false))
-                        : nullptr;
+      Sym->isVariable()
+          ? dyn_cast_or_null<MCConstantExpr>(Sym->getVariableValue())
+          : nullptr;
   if (Var.IsText || !PrevValue || PrevValue->getValue() != Value) {
     switch (Var.Redefinable) {
     case Variable::NOT_REDEFINABLE:
