@@ -1,7 +1,6 @@
 ; RUN: llvm-as -disable-output <%s 2>&1 | FileCheck %s
 ; CHECK: invalid #dbg record variable
 ; CHECK-NEXT: #dbg_declare({{.*}})
-; CHECK-NEXT: !""
 ; CHECK: warning: ignoring invalid debug info
 
 define void @foo(i32 %a) {

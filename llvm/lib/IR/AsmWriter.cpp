@@ -1213,14 +1213,14 @@ void SlotTracker::processDbgRecordMetadata(const DbgRecord &DR) {
     // DILocalVariable, DILocation, and DIAssignID fields, as the Value and
     // Expression fields should only be printed inline and so do not use a slot.
     // Note: The above doesn't apply for empty-metadata operands.
-    if (auto *Empty = dyn_cast<MDNode>(DVR->getRawLocation()))
+    if (auto *Empty = dyn_cast_if_present<MDNode>(DVR->getRawLocation()))
       CreateMetadataSlot(Empty);
     if (DVR->getRawVariable())
       CreateMetadataSlot(DVR->getRawVariable());
     if (DVR->isDbgAssign()) {
       if (auto *AssignID = DVR->getRawAssignID())
         CreateMetadataSlot(cast<MDNode>(AssignID));
-      if (auto *Empty = dyn_cast<MDNode>(DVR->getRawAddress()))
+      if (auto *Empty = dyn_cast_if_present<MDNode>(DVR->getRawAddress()))
         CreateMetadataSlot(Empty);
     }
   } else if (const DbgLabelRecord *DLR = dyn_cast<const DbgLabelRecord>(&DR)) {
