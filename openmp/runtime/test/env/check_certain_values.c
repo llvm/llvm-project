@@ -14,7 +14,7 @@
 int a = 0;
 
 int test() {
-  #pragma omp parallel reduction(+:a)
+#pragma omp parallel reduction(+ : a)
   {
     a += omp_get_thread_num();
   }
