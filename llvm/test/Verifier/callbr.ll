@@ -153,7 +153,7 @@ cont:
 }
 
 ; CHECK-NEXT: Callbr currently only supports asm-goto and selected intrinsics
-declare i32 @llvm.amdgcn.workitem.id.x() 
+declare i32 @llvm.amdgcn.workitem.id.x()
 define void @test_callbr_intrinsic_unsupported() {
   callbr i32 @llvm.amdgcn.workitem.id.x() to label %cont []
 cont:
