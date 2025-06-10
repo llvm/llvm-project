@@ -8,10 +8,10 @@ declare i32 @callee(i32 noundef, i32 noundef, i32 noundef, i32 noundef)
 define void @t1(i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d) #0 {
 ; CHECK-LABEL: t1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    sh2add a2, a0, a2
-; CHECK-NEXT:    sh2add a1, a0, a1
-; CHECK-NEXT:    addi a1, a1, 45
-; CHECK-NEXT:    addi a2, a2, 45
+; CHECK-NEXT:    slli a4, a0, 2
+; CHECK-NEXT:    addi a4, a4, 45
+; CHECK-NEXT:    add a1, a4, a1
+; CHECK-NEXT:    add a2, a4, a2
 ; CHECK-NEXT:    sh2add a3, a0, a3
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:    tail callee
@@ -133,12 +133,11 @@ entry:
 define void @t8(i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d) #0 {
 ; CHECK-LABEL: t8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    sh3add a2, a0, a2
-; CHECK-NEXT:    sh3add a1, a0, a1
 ; CHECK-NEXT:    lui a4, 1
 ; CHECK-NEXT:    addi a4, a4, 1307
-; CHECK-NEXT:    add a1, a1, a4
-; CHECK-NEXT:    add a2, a2, a4
+; CHECK-NEXT:    sh3add a4, a0, a4
+; CHECK-NEXT:    add a1, a4, a1
+; CHECK-NEXT:    add a2, a4, a2
 ; CHECK-NEXT:    sh3add a3, a0, a3
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:    tail callee
@@ -155,10 +154,10 @@ entry:
 define void @t9(i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d) #0 {
 ; CHECK-LABEL: t9:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    sh2add a2, a0, a2
-; CHECK-NEXT:    sh2add a1, a0, a1
-; CHECK-NEXT:    addi a1, a1, -42
-; CHECK-NEXT:    addi a2, a2, -42
+; CHECK-NEXT:    slli a4, a0, 2
+; CHECK-NEXT:    addi a4, a4, -42
+; CHECK-NEXT:    add a1, a4, a1
+; CHECK-NEXT:    add a2, a4, a2
 ; CHECK-NEXT:    sh2add a3, a0, a3
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:    tail callee
