@@ -160,7 +160,7 @@ public:
                                    cast<LoadOrStoreT>(I1), SE);
     };
     // Find the first element after I in mem. Then insert I before it.
-    insertAt(std::upper_bound(begin(), end(), I, Cmp), I);
+    insertAt(llvm::upper_bound(*this, I, Cmp), I);
   }
 };
 

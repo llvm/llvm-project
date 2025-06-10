@@ -26,7 +26,6 @@
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
@@ -47,10 +46,10 @@ static cl::opt<bool> WidenLoads(
   cl::init(false));
 
 static cl::opt<bool> Widen16BitOps(
-  "amdgpu-codegenprepare-widen-16-bit-ops",
-  cl::desc("Widen uniform 16-bit instructions to 32-bit in AMDGPUCodeGenPrepare"),
-  cl::ReallyHidden,
-  cl::init(true));
+    "amdgpu-codegenprepare-widen-16-bit-ops",
+    cl::desc(
+        "Widen uniform 16-bit instructions to 32-bit in AMDGPUCodeGenPrepare"),
+    cl::ReallyHidden, cl::init(false));
 
 static cl::opt<bool>
     BreakLargePHIs("amdgpu-codegenprepare-break-large-phis",
@@ -181,7 +180,7 @@ public:
   /// Wrapper to pass all the arguments to computeKnownFPClass
   KnownFPClass computeKnownFPClass(const Value *V, FPClassTest Interested,
                                    const Instruction *CtxI) const {
-    return llvm::computeKnownFPClass(V, DL, Interested, 0, TLI, AC, CtxI, DT);
+    return llvm::computeKnownFPClass(V, DL, Interested, TLI, AC, CtxI, DT);
   }
 
   bool canIgnoreDenormalInput(const Value *V, const Instruction *CtxI) const {
@@ -328,7 +327,7 @@ public:
 
   bool visitIntrinsicInst(IntrinsicInst &I);
   bool visitBitreverseIntrinsicInst(IntrinsicInst &I);
-  bool visitMinNum(IntrinsicInst &I);
+  bool visitFMinLike(IntrinsicInst &I);
   bool visitSqrt(IntrinsicInst &I);
   bool run();
 };
@@ -597,11 +596,11 @@ bool AMDGPUCodeGenPrepareImpl::promoteUniformBitreverseToI32(
 }
 
 unsigned AMDGPUCodeGenPrepareImpl::numBitsUnsigned(Value *Op) const {
-  return computeKnownBits(Op, DL, 0, AC).countMaxActiveBits();
+  return computeKnownBits(Op, DL, AC).countMaxActiveBits();
 }
 
 unsigned AMDGPUCodeGenPrepareImpl::numBitsSigned(Value *Op) const {
-  return ComputeMaxSignificantBits(Op, DL, 0, AC);
+  return ComputeMaxSignificantBits(Op, DL, AC);
 }
 
 static void extractValues(IRBuilder<> &Builder,
@@ -1199,13 +1198,13 @@ unsigned AMDGPUCodeGenPrepareImpl::getDivNumBits(BinaryOperator &I, Value *Num,
          Den->getType()->getScalarSizeInBits());
   unsigned SSBits = Num->getType()->getScalarSizeInBits();
   if (IsSigned) {
-    unsigned RHSSignBits = ComputeNumSignBits(Den, DL, 0, AC, &I);
+    unsigned RHSSignBits = ComputeNumSignBits(Den, DL, AC, &I);
     // A sign bit needs to be reserved for shrinking.
     unsigned DivBits = SSBits - RHSSignBits + 1;
     if (DivBits > MaxDivBits)
       return SSBits;
 
-    unsigned LHSSignBits = ComputeNumSignBits(Num, DL, 0, AC, &I);
+    unsigned LHSSignBits = ComputeNumSignBits(Num, DL, AC, &I);
 
     unsigned SignBits = std::min(LHSSignBits, RHSSignBits);
     DivBits = SSBits - SignBits + 1;
@@ -1214,7 +1213,7 @@ unsigned AMDGPUCodeGenPrepareImpl::getDivNumBits(BinaryOperator &I, Value *Num,
 
   // All bits are used for unsigned division for Num or Den in range
   // (SignedMax, UnsignedMax].
-  KnownBits Known = computeKnownBits(Den, DL, 0, AC, &I);
+  KnownBits Known = computeKnownBits(Den, DL, AC, &I);
   if (Known.isNegative() || !Known.isNonNegative())
     return SSBits;
   unsigned RHSSignBits = Known.countMinLeadingZeros();
@@ -1222,7 +1221,7 @@ unsigned AMDGPUCodeGenPrepareImpl::getDivNumBits(BinaryOperator &I, Value *Num,
   if (DivBits > MaxDivBits)
     return SSBits;
 
-  Known = computeKnownBits(Num, DL, 0, AC, &I);
+  Known = computeKnownBits(Num, DL, AC, &I);
   if (Known.isNegative() || !Known.isNonNegative())
     return SSBits;
   unsigned LHSSignBits = Known.countMinLeadingZeros();
@@ -1359,7 +1358,7 @@ bool AMDGPUCodeGenPrepareImpl::divHasSpecialOptimization(BinaryOperator &I,
     // If there's no wider mulhi, there's only a better expansion for powers of
     // two.
     // TODO: Should really know for each vector element.
-    if (isKnownToBeAPowerOfTwo(C, DL, true, 0, AC, &I, DT))
+    if (isKnownToBeAPowerOfTwo(C, DL, true, AC, &I, DT))
       return true;
 
     return false;
@@ -1369,8 +1368,7 @@ bool AMDGPUCodeGenPrepareImpl::divHasSpecialOptimization(BinaryOperator &I,
     // fold (udiv x, (shl c, y)) -> x >>u (log2(c)+y) iff c is power of 2
     if (BinOpDen->getOpcode() == Instruction::Shl &&
         isa<Constant>(BinOpDen->getOperand(0)) &&
-        isKnownToBeAPowerOfTwo(BinOpDen->getOperand(0), DL, true, 0, AC, &I,
-                               DT)) {
+        isKnownToBeAPowerOfTwo(BinOpDen->getOperand(0), DL, true, AC, &I, DT)) {
       return true;
     }
   }
@@ -1685,7 +1683,10 @@ bool AMDGPUCodeGenPrepareImpl::visitBinaryOperator(BinaryOperator &I) {
             // return the new value. Just insert a scalar copy and defer
             // expanding it.
             NewElt = Builder.CreateBinOp(Opc, NumEltN, DenEltN);
-            Div64ToExpand.push_back(cast<BinaryOperator>(NewElt));
+            // CreateBinOp does constant folding. If the operands are constant,
+            // it will return a Constant instead of a BinaryOperator.
+            if (auto *NewEltBO = dyn_cast<BinaryOperator>(NewElt))
+              Div64ToExpand.push_back(NewEltBO);
           }
         }
 
@@ -2198,7 +2199,9 @@ bool AMDGPUCodeGenPrepareImpl::visitIntrinsicInst(IntrinsicInst &I) {
   case Intrinsic::bitreverse:
     return visitBitreverseIntrinsicInst(I);
   case Intrinsic::minnum:
-    return visitMinNum(I);
+  case Intrinsic::minimumnum:
+  case Intrinsic::minimum:
+    return visitFMinLike(I);
   case Intrinsic::sqrt:
     return visitSqrt(I);
   default:
@@ -2217,7 +2220,9 @@ bool AMDGPUCodeGenPrepareImpl::visitBitreverseIntrinsicInst(IntrinsicInst &I) {
 }
 
 /// Match non-nan fract pattern.
-///   minnum(fsub(x, floor(x)), nextafter(1.0, -1.0)
+///   minnum(fsub(x, floor(x)), nextafter(1.0, -1.0))
+///   minimumnum(fsub(x, floor(x)), nextafter(1.0, -1.0))
+///   minimum(fsub(x, floor(x)), nextafter(1.0, -1.0))
 ///
 /// If fract is a useful instruction for the subtarget. Does not account for the
 /// nan handling; the instruction has a nan check on the input value.
@@ -2225,7 +2230,12 @@ Value *AMDGPUCodeGenPrepareImpl::matchFractPat(IntrinsicInst &I) {
   if (ST.hasFractBug())
     return nullptr;
 
-  if (I.getIntrinsicID() != Intrinsic::minnum)
+  Intrinsic::ID IID = I.getIntrinsicID();
+
+  // The value is only used in contexts where we know the input isn't a nan, so
+  // any of the fmin variants are fine.
+  if (IID != Intrinsic::minnum && IID != Intrinsic::minimum &&
+      IID != Intrinsic::minimumnum)
     return nullptr;
 
   Type *Ty = I.getType();
@@ -2271,15 +2281,14 @@ Value *AMDGPUCodeGenPrepareImpl::applyFractPat(IRBuilder<> &Builder,
   return insertValues(Builder, FractArg->getType(), ResultVals);
 }
 
-bool AMDGPUCodeGenPrepareImpl::visitMinNum(IntrinsicInst &I) {
+bool AMDGPUCodeGenPrepareImpl::visitFMinLike(IntrinsicInst &I) {
   Value *FractArg = matchFractPat(I);
   if (!FractArg)
     return false;
 
   // Match pattern for fract intrinsic in contexts where the nan check has been
   // optimized out (and hope the knowledge the source can't be nan wasn't lost).
-  if (!I.hasNoNaNs() &&
-      !isKnownNeverNaN(FractArg, /*Depth=*/0, SimplifyQuery(DL, TLI)))
+  if (!I.hasNoNaNs() && !isKnownNeverNaN(FractArg, SimplifyQuery(DL, TLI)))
     return false;
 
   IRBuilder<> Builder(&I);

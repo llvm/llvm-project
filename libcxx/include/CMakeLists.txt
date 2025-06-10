@@ -25,6 +25,7 @@ set(files
   __algorithm/find_segment_if.h
   __algorithm/for_each.h
   __algorithm/for_each_n.h
+  __algorithm/for_each_n_segment.h
   __algorithm/for_each_segment.h
   __algorithm/generate.h
   __algorithm/generate_n.h
@@ -1704,6 +1705,11 @@ add_dependencies(cxx-headers generate-cxx-headers)
 # which interpose on the default include dir be included instead of the default ones.
 target_include_directories(cxx-headers INTERFACE ${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}
                                                  ${LIBCXX_GENERATED_INCLUDE_DIR})
+
+# Make sure to map the generated include directory back to libc++'s actual source directory when generating
+# debug information. Otherwise, the debug information will refer to generated headers which are created during
+# the build and generally not persistent.
+target_add_compile_flags_if_supported(cxx-headers INTERFACE "-fdebug-prefix-map=${LIBCXX_GENERATED_INCLUDE_DIR}=${LIBCXX_SOURCE_DIR}/include")
 
 if (LIBCXX_INSTALL_HEADERS)
   foreach(file ${files})

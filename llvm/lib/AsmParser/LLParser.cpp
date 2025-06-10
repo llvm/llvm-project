@@ -44,6 +44,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ModRef.h"
@@ -62,8 +63,6 @@ static cl::opt<bool> AllowIncompleteIR(
     cl::desc(
         "Allow incomplete IR on a best effort basis (references to unknown "
         "metadata will be dropped)"));
-
-extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
 
 static std::string getTypeString(Type *T) {
   std::string Result;
@@ -442,7 +441,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   UpgradeNVVMAnnotations(*M);
   UpgradeSectionAttributes(*M);
 
-  M->setIsNewDbgInfoFormat(UseNewDbgInfoFormat);
+  M->setIsNewDbgInfoFormat(true);
 
   if (!Slots)
     return false;
@@ -4275,7 +4274,6 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   case lltok::kw_bitcast:
   case lltok::kw_addrspacecast:
   case lltok::kw_inttoptr:
-  // ptrtoaddr not supported in constant exprs (yet?).
   case lltok::kw_ptrtoint: {
     unsigned Opc = Lex.getUIntVal();
     Type *DestTy = nullptr;
@@ -7238,7 +7236,6 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
   case lltok::kw_fptoui:
   case lltok::kw_fptosi:
   case lltok::kw_inttoptr:
-  case lltok::kw_ptrtoaddr:
   case lltok::kw_ptrtoint:
     return parseCast(Inst, PFS, KeywordVal);
   case lltok::kw_fptrunc:
@@ -7470,8 +7467,8 @@ bool LLParser::parseSwitch(Instruction *&Inst, PerFunctionState &PFS) {
   Lex.Lex();  // Eat the ']'.
 
   SwitchInst *SI = SwitchInst::Create(Cond, DefaultBB, Table.size());
-  for (unsigned i = 0, e = Table.size(); i != e; ++i)
-    SI->addCase(Table[i].first, Table[i].second);
+  for (const auto &[OnVal, Dest] : Table)
+    SI->addCase(OnVal, Dest);
   Inst = SI;
   return false;
 }
@@ -8166,8 +8163,8 @@ int LLParser::parsePHI(Instruction *&Inst, PerFunctionState &PFS) {
   }
 
   PHINode *PN = PHINode::Create(Ty, PHIVals.size());
-  for (unsigned i = 0, e = PHIVals.size(); i != e; ++i)
-    PN->addIncoming(PHIVals[i].first, PHIVals[i].second);
+  for (const auto &[Val, BB] : PHIVals)
+    PN->addIncoming(Val, BB);
   Inst = PN;
   return AteExtraComma ? InstExtraComma : InstNormal;
 }

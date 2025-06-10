@@ -81,6 +81,15 @@ static Expected<int> getSocketFD(StringRef SocketPath) {
                                          "Create socket failed");
   }
 
+#ifdef __CYGWIN__
+  // On Cygwin, UNIX sockets involve a handshake between connect and accept
+  // to enable SO_PEERCRED/getpeereid handling.  This necessitates accept being
+  // called before connect can return, but at least the tests in
+  // llvm/unittests/Support/raw_socket_stream_test do both on the same thread
+  // (first connect and then accept), resulting in a deadlock.  This call turns
+  // off the handshake (and SO_PEERCRED/getpeereid support).
+  setsockopt(Socket, SOL_SOCKET, SO_PEERCRED, NULL, 0);
+#endif
   struct sockaddr_un Addr = setSocketAddr(SocketPath);
   if (::connect(Socket, (struct sockaddr *)&Addr, sizeof(Addr)) == -1)
     return llvm::make_error<StringError>(getLastSocketErrorCode(),
@@ -147,6 +156,15 @@ Expected<ListeningSocket> ListeningSocket::createUnix(StringRef SocketPath,
     return llvm::make_error<StringError>(getLastSocketErrorCode(),
                                          "socket create failed");
 
+#ifdef __CYGWIN__
+  // On Cygwin, UNIX sockets involve a handshake between connect and accept
+  // to enable SO_PEERCRED/getpeereid handling.  This necessitates accept being
+  // called before connect can return, but at least the tests in
+  // llvm/unittests/Support/raw_socket_stream_test do both on the same thread
+  // (first connect and then accept), resulting in a deadlock.  This call turns
+  // off the handshake (and SO_PEERCRED/getpeereid support).
+  setsockopt(Socket, SOL_SOCKET, SO_PEERCRED, NULL, 0);
+#endif
   struct sockaddr_un Addr = setSocketAddr(SocketPath);
   if (::bind(Socket, (struct sockaddr *)&Addr, sizeof(Addr)) == -1) {
     // Grab error code from call to ::bind before calling ::close

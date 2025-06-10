@@ -115,7 +115,7 @@ static void reportTranslationError(MachineFunction &MF,
                                    const TargetPassConfig &TPC,
                                    OptimizationRemarkEmitter &ORE,
                                    OptimizationRemarkMissed &R) {
-  MF.getProperties().set(MachineFunctionProperties::Property::FailedISel);
+  MF.getProperties().setFailedISel();
 
   // Print the function name explicitly if we don't have a debug location (which
   // makes the diagnostic less useful) or if we're going to emit a raw error.
@@ -1583,20 +1583,6 @@ bool IRTranslator::translateCast(unsigned Opcode, const User &U,
   return true;
 }
 
-bool IRTranslator::translatePtrToAddr(const User &U,
-                                      MachineIRBuilder &MIRBuilder) {
-  Register Op = getOrCreateVReg(*U.getOperand(0));
-  Type *PtrTy = U.getOperand(0)->getType();
-  LLT AddrTy = getLLTForType(*DL->getAddressType(PtrTy), *DL);
-  auto IntPtrTy = getLLTForType(*DL->getIntPtrType(PtrTy), *DL);
-  auto PtrToInt = MIRBuilder.buildPtrToInt(IntPtrTy, Op);
-  auto Addr = PtrToInt;
-  if (AddrTy != IntPtrTy)
-    Addr = MIRBuilder.buildTrunc(AddrTy, PtrToInt.getReg(0));
-  MIRBuilder.buildZExtOrTrunc(getOrCreateVReg(U), Addr.getReg(0));
-  return true;
-}
-
 bool IRTranslator::translateGetElementPtr(const User &U,
                                           MachineIRBuilder &MIRBuilder) {
   Value &Op0 = *U.getOperand(0);
@@ -2861,8 +2847,9 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
       MPI = MachinePointerInfo(Info.ptrVal, Info.offset);
     else if (Info.fallbackAddressSpace)
       MPI = MachinePointerInfo(*Info.fallbackAddressSpace);
-    MIB.addMemOperand(
-        MF->getMachineMemOperand(MPI, Info.flags, MemTy, Alignment, CI.getAAMetadata()));
+    MIB.addMemOperand(MF->getMachineMemOperand(
+        MPI, Info.flags, MemTy, Alignment, CI.getAAMetadata(),
+        /*Ranges=*/nullptr, Info.ssid, Info.order, Info.failureOrder));
   }
 
   if (CI.isConvergent()) {

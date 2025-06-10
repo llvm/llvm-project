@@ -1835,7 +1835,6 @@ int TargetLoweringBase::InstructionOpcodeToISD(unsigned Opcode) const {
   case SIToFP:         return ISD::SINT_TO_FP;
   case FPTrunc:        return ISD::FP_ROUND;
   case FPExt:          return ISD::FP_EXTEND;
-  case PtrToAddr:      return ISD::BITCAST;
   case PtrToInt:       return ISD::BITCAST;
   case IntToPtr:       return ISD::BITCAST;
   case BitCast:        return ISD::BITCAST;
@@ -1976,10 +1975,9 @@ Value *TargetLoweringBase::getIRStackGuard(IRBuilderBase &IRB) const {
   if (getTargetMachine().getTargetTriple().isOSOpenBSD()) {
     Module &M = *IRB.GetInsertBlock()->getParent()->getParent();
     PointerType *PtrTy = PointerType::getUnqual(M.getContext());
-    Constant *C = M.getOrInsertGlobal("__guard_local", PtrTy);
-    if (GlobalVariable *G = dyn_cast_or_null<GlobalVariable>(C))
-      G->setVisibility(GlobalValue::HiddenVisibility);
-    return C;
+    GlobalVariable *G = M.getOrInsertGlobal("__guard_local", PtrTy);
+    G->setVisibility(GlobalValue::HiddenVisibility);
+    return G;
   }
   return nullptr;
 }
