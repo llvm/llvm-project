@@ -221,7 +221,7 @@ bool X86FixupInstTuningPass::processInstruction(
   auto ProcessUNPCKPS = [&](unsigned NewOpc) -> bool {
     return ProcessUNPCKToIntDomain(NewOpc);
   };
-  
+
   auto ProcessBLENDToMOV = [&](unsigned MovOpc) -> bool {
     if (MI.getOperand(NumOperands - 1).getImm() != 1)
       return false;
