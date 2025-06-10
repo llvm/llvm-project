@@ -1666,11 +1666,9 @@ class VOP3_Profile_Base<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VO
   let HasOpSel = !if(Features.HasOpSel, 1, P.HasOpSel);
   let IsMAI    = !if(Features.IsMAI,    1, P.IsMAI);
   let IsPacked = !if(Features.IsPacked, 1, P.IsPacked);
-#ifdef LLPC_BUILD_NPI
   let HasFP8SrcByteSel = P.HasFP8SrcByteSel;
   let HasFP8DstByteSel = P.HasFP8DstByteSel;
   let HasOMod = P.HasOMod;
-#endif /* LLPC_BUILD_NPI */
 
   let HasModifiers =
       !if (Features.IsMAI, 0,
@@ -1687,11 +1685,9 @@ class VOP3_Profile_True16<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : 
   let HasOpSel = !if(Features.HasOpSel, 1, P.HasOpSel);
   let IsMAI    = !if(Features.IsMAI,    1, P.IsMAI);
   let IsPacked = !if(Features.IsPacked, 1, P.IsPacked);
-#ifdef LLPC_BUILD_NPI
   let HasFP8SrcByteSel = P.HasFP8SrcByteSel;
   let HasFP8DstByteSel = P.HasFP8DstByteSel;
   let HasOMod = P.HasOMod;
-#endif /* LLPC_BUILD_NPI */
 
   let HasModifiers =
       !if (Features.IsMAI, 0,
@@ -1704,11 +1700,9 @@ class VOP3_Profile_Fake16<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : 
   let HasOpSel = !if(Features.HasOpSel, 1, P.HasOpSel);
   let IsMAI    = !if(Features.IsMAI,    1, P.IsMAI);
   let IsPacked = !if(Features.IsPacked, 1, P.IsPacked);
-#ifdef LLPC_BUILD_NPI
   let HasFP8SrcByteSel = P.HasFP8SrcByteSel;
   let HasFP8DstByteSel = P.HasFP8DstByteSel;
   let HasOMod = P.HasOMod;
-#endif /* LLPC_BUILD_NPI */
 
   let HasModifiers =
       !if (Features.IsMAI, 0,

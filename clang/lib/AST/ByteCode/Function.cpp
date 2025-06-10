@@ -23,7 +23,7 @@ Function::Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
       ParamTypes(std::move(ParamTypes)), Params(std::move(Params)),
       ParamOffsets(std::move(ParamOffsets)), IsValid(false),
       IsFullyCompiled(false), HasThisPointer(HasThisPointer), HasRVO(HasRVO),
-      Defined(false) {
+      HasBody(false), Defined(false) {
   if (const auto *F = dyn_cast<const FunctionDecl *>(Source)) {
     Variadic = F->isVariadic();
     Immediate = F->isImmediateFunction();

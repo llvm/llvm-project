@@ -462,6 +462,8 @@ static bool isTriviallyUniform(const Use &U) {
   Value *V = U.get();
   if (isa<Constant>(V))
     return true;
+  if (const auto *A = dyn_cast<Argument>(V))
+    return AMDGPU::isArgPassedInSGPR(A);
   if (const auto *II = dyn_cast<IntrinsicInst>(V)) {
     if (!AMDGPU::isIntrinsicAlwaysUniform(II->getIntrinsicID()))
       return false;

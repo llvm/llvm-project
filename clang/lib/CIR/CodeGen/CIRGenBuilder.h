@@ -309,6 +309,18 @@ public:
     return create<cir::BinOp>(loc, cir::BinOpKind::Div, lhs, rhs);
   }
 
+  Address createBaseClassAddr(mlir::Location loc, Address addr,
+                              mlir::Type destType, unsigned offset,
+                              bool assumeNotNull) {
+    if (destType == addr.getElementType())
+      return addr;
+
+    auto ptrTy = getPointerTo(destType);
+    auto baseAddr = create<cir::BaseClassAddrOp>(
+        loc, ptrTy, addr.getPointer(), mlir::APInt(64, offset), assumeNotNull);
+    return Address(baseAddr, destType, addr.getAlignment());
+  }
+
   cir::LoadOp createLoad(mlir::Location loc, Address addr,
                          bool isVolatile = false) {
     mlir::IntegerAttr align = getAlignmentAttr(addr.getAlignment());

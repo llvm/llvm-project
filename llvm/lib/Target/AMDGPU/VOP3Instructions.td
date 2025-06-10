@@ -105,15 +105,15 @@ def DIV_FIXUP_F32_PROF : VOP3_Profile<VOP_F32_F32_F32_F32> {
   let HasExtVOP3DPP = 0;
 #ifdef LLPC_BUILD_NPI
   let HasExt64BitDPP = 1;
-}
-def VOP_I64_I64_I64_DPP : VOP3_Profile<VOP_I64_I64_I64>;
-def VOP_I32_I32_I64_DPP : VOP3_Profile<VOPProfile<[i64, i32, i32, i64]>> {
-  let HasClamp = 1;
 #else /* LLPC_BUILD_NPI */
   let HasExtDPP = 0;
 #endif /* LLPC_BUILD_NPI */
 }
 #ifdef LLPC_BUILD_NPI
+def VOP_I64_I64_I64_DPP : VOP3_Profile<VOP_I64_I64_I64>;
+def VOP_I32_I32_I64_DPP : VOP3_Profile<VOPProfile<[i64, i32, i32, i64]>> {
+  let HasClamp = 1;
+}
 } // End HasExt64BitDPP = 1;
 #endif /* LLPC_BUILD_NPI */
 
@@ -1295,25 +1295,12 @@ class VOP3_BITOP3_Profile<VOPProfile pfl, VOP3Features f> : VOP3_Profile<pfl, f>
   let HasModifiers = 0;
 #ifdef LLPC_BUILD_NPI
   let HasVOPD3Src2 = 0;
-#endif /* LLPC_BUILD_NPI */
 
-  let Ins64 = !con(getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
-                            0 /* HasIntClamp */, HasModifiers, HasSrc2Mods,
-                            HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret,
-                   (ins bitop3_0:$bitop3));
-
-#ifdef LLPC_BUILD_NPI
   field dag InsVOP3DPPBase = getInsVOP3Base<Src0VOP3DPP, Src1VOP3DPP,
                   Src2VOP3DPP, NumSrcArgs, HasClamp,
                   HasOpSel /* Modifiers */, HasOpSel /* HasSrc2Mods */, HasOMod,
                   Src0ModVOP3DPP, Src1ModVOP3DPP, Src2ModVOP3DPP, 0 /* HasOpSel */>.ret;
 
-#endif /* LLPC_BUILD_NPI */
-  let InsVOP3OpSel = !con(getInsVOP3Base<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs, 0, 1, 1, 0,
-                                         Src0Mod, Src1Mod, Src2Mod, 0>.ret,
-                          (ins bitop3_0:$bitop3, op_sel0:$op_sel));
-
-#ifdef LLPC_BUILD_NPI
   let InsVOP3DPP =
       !con(getInsVOP3DPPBase<InsVOP3DPPBase, DstRCVOP3DPP, 3, 1>.ret,
            (ins bitop3_0:$bitop3), !if(HasOpSel, (ins op_sel0:$op_sel), (ins)),
@@ -1328,15 +1315,12 @@ class VOP3_BITOP3_Profile<VOPProfile pfl, VOP3Features f> : VOP3_Profile<pfl, f>
 
   let InsVOPD3Y = (ins Src0VOPD3:$src0Y, Src1VOPD3:$vsrc1Y, bitop3_0:$bitop3);
 
-#endif /* LLPC_BUILD_NPI */
-  let Asm64 = "$vdst, $src0, $src1, $src2$bitop3";
-  let AsmVOP3OpSel = !subst("$op_sel", "$bitop3$op_sel", getAsmVOP3OpSel<3, 0, 0, 0, 0, 0>.ret);
-#ifdef LLPC_BUILD_NPI
   let AsmVOP3DPP16 = getAsmVOP3DPP16<!if(HasOpSel, AsmVOP3OpSel, Asm64)>.ret;
   let AsmVOP3DPP = getAsmVOP3DPP<!if(HasOpSel, AsmVOP3OpSel, Asm64)>.ret;
   let AsmVOP3DPP8 = getAsmVOP3DPP8<!if(HasOpSel, AsmVOP3OpSel, Asm64)>.ret;
   let AsmVOPD3Y = getAsmVOPDPart<NumSrcArgs, "Y", HasVOPD3Src2, HasModifiers>.ret # "$bitop3";
 #endif /* LLPC_BUILD_NPI */
+  let HasBitOp3 = 1;
 }
 
 class VOP3_CVT_SCALE_F1632_FP8BF8_Profile<ValueType DstTy> : VOP3_Profile<VOPProfile<[DstTy, i32, f32, untyped]>,
@@ -1377,9 +1361,7 @@ class VOP3_CVT_SCALE_FP4FP8BF8_F32_TiedInput_Profile<VOPProfile P> : VOP3_Profil
 
 class VOP3_CVT_SCALE_FP4_F32_TiedInput_Profile<VOPProfile P> : VOP3_CVT_SCALE_FP4FP8BF8_F32_TiedInput_Profile<P> {
   let HasFP8DstByteSel = 1;
-#ifdef LLPC_BUILD_NPI
   let HasFP8ByteSel = 0; // It works as a dst-bytesel, but does not have byte_sel operand.
-#endif /* LLPC_BUILD_NPI */
 }
 
 class VOP3_CVT_SCALE_SR_F8BF8_F16BF16F32_TiedInput_Profile<VOPProfile P> : VOP3_CVT_SCALE_FP4FP8BF8_F32_TiedInput_Profile<P> {
@@ -1388,9 +1370,7 @@ class VOP3_CVT_SCALE_SR_F8BF8_F16BF16F32_TiedInput_Profile<VOPProfile P> : VOP3_
                           FP32InputMods:$src2_modifiers, Src2RC64:$src2,
                           VGPR_32:$vdst_in, op_sel0:$op_sel);
   let HasFP8DstByteSel = 1;
-#ifdef LLPC_BUILD_NPI
   let HasFP8ByteSel = 0; // It works as a dst-bytesel, but does not have byte_sel operand.
-#endif /* LLPC_BUILD_NPI */
 }
 
 
@@ -1662,16 +1642,16 @@ let SubtargetPredicate = isGFX10Plus in {
   def : ThreeOp_i32_Pats<xor, xor, V_XOR3_B32_e64>;
 
 #ifdef LLPC_BUILD_NPI
-  let Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in", IsInvalidSingleUseConsumer = 1, IsInvalidSingleUseProducer = 1 in {
+  let Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in", IsInvalidSingleUseConsumer = 1, IsInvalidSingleUseProducer = 1, isConvergent = 1 in {
 #else /* LLPC_BUILD_NPI */
-  let Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in" in {
+  let Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in", isConvergent = 1 in {
 #endif /* LLPC_BUILD_NPI */
     defm V_PERMLANE16_B32 : VOP3Inst<"v_permlane16_b32", VOP3_PERMLANE_Profile>;
     defm V_PERMLANEX16_B32 : VOP3Inst<"v_permlanex16_b32", VOP3_PERMLANE_Profile>;
 #ifdef LLPC_BUILD_NPI
-  } // End $vdst = $vdst_in, DisableEncoding $vdst_in, IsInvalidSingleUseConsumer = 1, IsInvalidSingleUseProducer = 1
+  } // End $vdst = $vdst_in, DisableEncoding $vdst_in, IsInvalidSingleUseConsumer = 1, IsInvalidSingleUseProducer = 1, isConvergent = 1
 #else /* LLPC_BUILD_NPI */
-  } // End $vdst = $vdst_in, DisableEncoding $vdst_in
+  } // End $vdst = $vdst_in, DisableEncoding $vdst_in, isConvergent = 1
 #endif /* LLPC_BUILD_NPI */
 
   foreach vt = Reg32Types.types in {
@@ -2447,15 +2427,15 @@ multiclass VOP3be_Real_gfx11_gfx12_not_gfx1250_gfx13<bits<10> op, string opName,
   VOP3be_Real<GFX11Gen, op, opName, asmName>,
   VOP3be_Real<GFX12Not12_50Gen, op, opName, asmName>,
   VOP3be_Real<GFX13Gen, op, opName, asmName>;
-
-multiclass VOP3be_Realtriple_gfx1250<bits<10> op> :
-  VOP3be_Realtriple<GFX1250Gen, op>;
 #else /* LLPC_BUILD_NPI */
 multiclass VOP3_Real_No_Suffix_gfx11_gfx12<bits<10> op> :
   VOP3_Real_No_Suffix<GFX11Gen, op>, VOP3_Real_No_Suffix<GFX12Gen, op>;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
+multiclass VOP3be_Realtriple_gfx1250<bits<10> op> :
+  VOP3be_Realtriple<GFX1250Gen, op>;
+
 multiclass VOP3_Real_No_Suffix_gfx11_gfx12_gfx13<bits<10> op> :
   VOP3_Real_No_Suffix<GFX11Gen, op>, VOP3_Real_No_Suffix<GFX12Gen, op>,
   VOP3_Real_No_Suffix<GFX13Gen, op>;
