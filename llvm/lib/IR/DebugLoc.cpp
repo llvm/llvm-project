@@ -10,7 +10,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DebugInfo.h"
 
-#if ENABLE_DEBUGLOC_ORIGIN_TRACKING
+#if LLVM_ENABLE_DEBUGLOC_ORIGIN_TRACKING
 #include "llvm/Support/Signals.h"
 
 namespace llvm {

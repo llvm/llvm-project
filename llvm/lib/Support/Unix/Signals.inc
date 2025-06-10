@@ -507,7 +507,7 @@ static int dl_iterate_phdr_cb(dl_phdr_info *info, size_t size, void *arg) {
   return 0;
 }
 
-#if ENABLE_DEBUGLOC_ORIGIN_TRACKING
+#if LLVM_ENABLE_DEBUGLOC_ORIGIN_TRACKING
 #if !defined(HAVE_BACKTRACE)
 #error DebugLoc origin-tracking currently requires `backtrace()`.
 #endif

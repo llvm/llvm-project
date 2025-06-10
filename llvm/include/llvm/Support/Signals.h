@@ -24,7 +24,7 @@ namespace llvm {
 class StringRef;
 class raw_ostream;
 
-#if ENABLE_DEBUGLOC_ORIGIN_TRACKING
+#if LLVM_ENABLE_DEBUGLOC_ORIGIN_TRACKING
 // Typedefs that are convenient but only used by the stack-trace-collection code
 // added if DebugLoc origin-tracking is enabled.
 template <typename T, typename Enable> struct DenseMapInfo;
@@ -75,7 +75,7 @@ LLVM_ABI void DisableSystemDialogsOnCrash();
 ///        specified, the entire frame is printed.
 LLVM_ABI void PrintStackTrace(raw_ostream &OS, int Depth = 0);
 
-#if ENABLE_DEBUGLOC_ORIGIN_TRACKING
+#if LLVM_ENABLE_DEBUGLOC_ORIGIN_TRACKING
 #ifdef NDEBUG
 #error DebugLoc origin-tracking should not be enabled in Release builds.
 #endif

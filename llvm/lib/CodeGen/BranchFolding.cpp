@@ -934,7 +934,7 @@ bool BranchFolder::TryTailMergeBlocks(MachineBasicBlock *SuccBB,
 
   // Sort by hash value so that blocks with identical end sequences sort
   // together.
-#if ENABLE_DEBUGLOC_ORIGIN_TRACKING
+#if LLVM_ENABLE_DEBUGLOC_ORIGIN_TRACKING
   // If origin-tracking is enabled then MergePotentialElt is no longer a POD
   // type, so we need std::sort instead.
   std::sort(MergePotentials.begin(), MergePotentials.end());

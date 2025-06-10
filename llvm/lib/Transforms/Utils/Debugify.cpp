@@ -31,7 +31,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
 #include <optional>
-#if ENABLE_DEBUGLOC_ORIGIN_TRACKING
+#if LLVM_ENABLE_DEBUGLOC_ORIGIN_TRACKING
 // We need the Signals header to operate on stacktraces if we're using DebugLoc
 // origin-tracking.
 #include "llvm/Support/Signals.h"
@@ -67,7 +67,7 @@ cl::opt<Level> DebugifyLevel(
 
 raw_ostream &dbg() { return Quiet ? nulls() : errs(); }
 
-#if ENABLE_DEBUGLOC_ORIGIN_TRACKING
+#if LLVM_ENABLE_DEBUGLOC_ORIGIN_TRACKING
 // These maps refer to addresses in this instance of LLVM, so we can reuse them
 // everywhere - therefore, we store them at file scope.
 static DenseMap<void *, std::string> SymbolizedAddrs;
@@ -108,7 +108,7 @@ void collectStackAddresses(Instruction &I) {
 }
 #else
 void collectStackAddresses(Instruction &I) {}
-#endif // ENABLE_DEBUGLOC_ORIGIN_TRACKING
+#endif // LLVM_ENABLE_DEBUGLOC_ORIGIN_TRACKING
 
 uint64_t getAllocSizeInBits(Module &M, Type *Ty) {
   return Ty->isSized() ? M.getDataLayout().getTypeAllocSizeInBits(Ty) : 0;
@@ -511,7 +511,7 @@ static bool checkInstructions(const DebugInstMap &DILocsBefore,
       Bugs.push_back(llvm::json::Object({
         {"metadata", "DILocation"}, {"fn-name", FnName.str()},
             {"bb-name", BBName.str()}, {"instr", InstName}, {"action", Action},
-#if ENABLE_DEBUGLOC_ORIGIN_TRACKING
+#if LLVM_ENABLE_DEBUGLOC_ORIGIN_TRACKING
             {"origin", symbolizeStackTrace(Instr)},
 #endif
       }));
