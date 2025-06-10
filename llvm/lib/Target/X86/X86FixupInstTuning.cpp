@@ -225,9 +225,7 @@ bool X86FixupInstTuningPass::processInstruction(
   auto ProcessBLENDToMOV = [&](unsigned MovOpc) -> bool {
     if (MI.getOperand(NumOperands - 1).getImm() != 1)
       return false;
-
     bool Force = MF.getFunction().hasOptSize();
-
     if (!Force && !NewOpcPreferable(MovOpc))
       return false;
     MI.setDesc(TII->get(MovOpc));
