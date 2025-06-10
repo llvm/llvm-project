@@ -182,6 +182,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasBasicF()) {
     setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand);
     setTruncStoreAction(MVT::f32, MVT::f16, Expand);
+    setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::bf16, Expand);
+    setTruncStoreAction(MVT::f32, MVT::bf16, Expand);
     setCondCodeAction(FPCCToExpand, MVT::f32, Expand);
 
     setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
@@ -203,6 +205,9 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
                        Subtarget.isSoftFPABI() ? LibCall : Custom);
     setOperationAction(ISD::FP_TO_FP16, MVT::f32,
                        Subtarget.isSoftFPABI() ? LibCall : Custom);
+    setOperationAction(ISD::BF16_TO_FP, MVT::f32, Custom);
+    setOperationAction(ISD::FP_TO_BF16, MVT::f32,
+                       Subtarget.isSoftFPABI() ? LibCall : Custom);
 
     if (Subtarget.is64Bit())
       setOperationAction(ISD::FRINT, MVT::f32, Legal);
@@ -221,6 +226,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasBasicD()) {
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Expand);
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
+    setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::bf16, Expand);
+    setTruncStoreAction(MVT::f64, MVT::bf16, Expand);
     setTruncStoreAction(MVT::f64, MVT::f16, Expand);
     setTruncStoreAction(MVT::f64, MVT::f32, Expand);
     setCondCodeAction(FPCCToExpand, MVT::f64, Expand);
@@ -242,6 +249,9 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FREM, MVT::f64, Expand);
     setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
     setOperationAction(ISD::FP_TO_FP16, MVT::f64,
+                       Subtarget.isSoftFPABI() ? LibCall : Custom);
+    setOperationAction(ISD::BF16_TO_FP, MVT::f64, Custom);
+    setOperationAction(ISD::FP_TO_BF16, MVT::f64,
                        Subtarget.isSoftFPABI() ? LibCall : Custom);
 
     if (Subtarget.is64Bit())
@@ -499,6 +509,10 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerFP_TO_FP16(Op, DAG);
   case ISD::FP16_TO_FP:
     return lowerFP16_TO_FP(Op, DAG);
+  case ISD::FP_TO_BF16:
+    return lowerFP_TO_BF16(Op, DAG);
+  case ISD::BF16_TO_FP:
+    return lowerBF16_TO_FP(Op, DAG);
   }
   return SDValue();
 }
@@ -2136,6 +2150,51 @@ static void canonicalizeShuffleVectorByLane(const SDLoc &DL,
   }
 }
 
+/// Lower VECTOR_SHUFFLE as lane permute and then shuffle (if possible).
+/// Only for 256-bit vector.
+///
+/// For example:
+/// %2 = shufflevector <4 x i64> %0, <4 x i64> posion,
+///                    <4 x i64> <i32 0, i32 3, i32 2, i32 0>
+/// is lowerded to:
+///     (XVPERMI $xr2, $xr0, 78)
+///     (XVSHUF  $xr1, $xr2, $xr0)
+///     (XVORI   $xr0, $xr1, 0)
+static SDValue lowerVECTOR_SHUFFLEAsLanePermuteAndShuffle(const SDLoc &DL,
+                                                          ArrayRef<int> Mask,
+                                                          MVT VT, SDValue V1,
+                                                          SDValue V2,
+                                                          SelectionDAG &DAG) {
+  assert(VT.is256BitVector() && "Only for 256-bit vector shuffles!");
+  int Size = Mask.size();
+  int LaneSize = Size / 2;
+
+  bool LaneCrossing[2] = {false, false};
+  for (int i = 0; i < Size; ++i)
+    if (Mask[i] >= 0 && ((Mask[i] % Size) / LaneSize) != (i / LaneSize))
+      LaneCrossing[(Mask[i] % Size) / LaneSize] = true;
+
+  // Ensure that all lanes ared involved.
+  if (!LaneCrossing[0] && !LaneCrossing[1])
+    return SDValue();
+
+  SmallVector<int> InLaneMask;
+  InLaneMask.assign(Mask.begin(), Mask.end());
+  for (int i = 0; i < Size; ++i) {
+    int &M = InLaneMask[i];
+    if (M < 0)
+      continue;
+    if (((M % Size) / LaneSize) != (i / LaneSize))
+      M = (M % LaneSize) + ((i / LaneSize) * LaneSize) + Size;
+  }
+
+  SDValue Flipped = DAG.getBitcast(MVT::v4i64, V1);
+  Flipped = DAG.getVectorShuffle(MVT::v4i64, DL, Flipped,
+                                 DAG.getUNDEF(MVT::v4i64), {2, 3, 0, 1});
+  Flipped = DAG.getBitcast(VT, Flipped);
+  return DAG.getVectorShuffle(VT, DL, V1, Flipped, InLaneMask);
+}
+
 /// Dispatching routine to lower various 256-bit LoongArch vector shuffles.
 ///
 /// This routine breaks down the specific type of 256-bit shuffle and
@@ -2167,6 +2226,9 @@ static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
     if ((Result = lowerVECTOR_SHUFFLE_XVREPLVEI(DL, NewMask, VT, V1, V2, DAG)))
       return Result;
     if ((Result = lowerVECTOR_SHUFFLE_XVSHUF4I(DL, NewMask, VT, V1, V2, DAG)))
+      return Result;
+    if ((Result = lowerVECTOR_SHUFFLEAsLanePermuteAndShuffle(DL, NewMask, VT,
+                                                             V1, V2, DAG)))
       return Result;
 
     // TODO: This comment may be enabled in the future to better match the
@@ -2282,6 +2344,36 @@ SDValue LoongArchTargetLowering::lowerFP16_TO_FP(SDValue Op,
   SDValue Res;
   std::tie(Res, Chain) = makeLibCall(DAG, RTLIB::FPEXT_F16_F32, MVT::f32, Arg,
                                      CallOptions, DL, Chain);
+  return Res;
+}
+
+SDValue LoongArchTargetLowering::lowerFP_TO_BF16(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  assert(Subtarget.hasBasicF() && "Unexpected custom legalization");
+  SDLoc DL(Op);
+  MakeLibCallOptions CallOptions;
+  RTLIB::Libcall LC =
+      RTLIB::getFPROUND(Op.getOperand(0).getValueType(), MVT::bf16);
+  SDValue Res =
+      makeLibCall(DAG, LC, MVT::f32, Op.getOperand(0), CallOptions, DL).first;
+  if (Subtarget.is64Bit())
+    return DAG.getNode(LoongArchISD::MOVFR2GR_S_LA64, DL, MVT::i64, Res);
+  return DAG.getBitcast(MVT::i32, Res);
+}
+
+SDValue LoongArchTargetLowering::lowerBF16_TO_FP(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  assert(Subtarget.hasBasicF() && "Unexpected custom legalization");
+  MVT VT = Op.getSimpleValueType();
+  SDLoc DL(Op);
+  Op = DAG.getNode(
+      ISD::SHL, DL, Op.getOperand(0).getValueType(), Op.getOperand(0),
+      DAG.getShiftAmountConstant(16, Op.getOperand(0).getValueType(), DL));
+  SDValue Res = Subtarget.is64Bit() ? DAG.getNode(LoongArchISD::MOVGR2FR_W_LA64,
+                                                  DL, MVT::f32, Op)
+                                    : DAG.getBitcast(MVT::f32, Op);
+  if (VT != MVT::f32)
+    return DAG.getNode(ISD::FP_EXTEND, DL, VT, Res);
   return Res;
 }
 
@@ -4331,6 +4423,62 @@ static SDValue performSRLCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Helper to peek through bitops/trunc/setcc to determine size of source vector.
+// Allows BITCASTCombine to determine what size vector generated a <X x i1>.
+static bool checkBitcastSrcVectorSize(SDValue Src, unsigned Size,
+                                      unsigned Depth) {
+  // Limit recursion.
+  if (Depth >= SelectionDAG::MaxRecursionDepth)
+    return false;
+  switch (Src.getOpcode()) {
+  case ISD::SETCC:
+  case ISD::TRUNCATE:
+    return Src.getOperand(0).getValueSizeInBits() == Size;
+  case ISD::FREEZE:
+    return checkBitcastSrcVectorSize(Src.getOperand(0), Size, Depth + 1);
+  case ISD::AND:
+  case ISD::XOR:
+  case ISD::OR:
+    return checkBitcastSrcVectorSize(Src.getOperand(0), Size, Depth + 1) &&
+           checkBitcastSrcVectorSize(Src.getOperand(1), Size, Depth + 1);
+  case ISD::SELECT:
+  case ISD::VSELECT:
+    return Src.getOperand(0).getScalarValueSizeInBits() == 1 &&
+           checkBitcastSrcVectorSize(Src.getOperand(1), Size, Depth + 1) &&
+           checkBitcastSrcVectorSize(Src.getOperand(2), Size, Depth + 1);
+  case ISD::BUILD_VECTOR:
+    return ISD::isBuildVectorAllZeros(Src.getNode()) ||
+           ISD::isBuildVectorAllOnes(Src.getNode());
+  }
+  return false;
+}
+
+// Helper to push sign extension of vXi1 SETCC result through bitops.
+static SDValue signExtendBitcastSrcVector(SelectionDAG &DAG, EVT SExtVT,
+                                          SDValue Src, const SDLoc &DL) {
+  switch (Src.getOpcode()) {
+  case ISD::SETCC:
+  case ISD::FREEZE:
+  case ISD::TRUNCATE:
+  case ISD::BUILD_VECTOR:
+    return DAG.getNode(ISD::SIGN_EXTEND, DL, SExtVT, Src);
+  case ISD::AND:
+  case ISD::XOR:
+  case ISD::OR:
+    return DAG.getNode(
+        Src.getOpcode(), DL, SExtVT,
+        signExtendBitcastSrcVector(DAG, SExtVT, Src.getOperand(0), DL),
+        signExtendBitcastSrcVector(DAG, SExtVT, Src.getOperand(1), DL));
+  case ISD::SELECT:
+  case ISD::VSELECT:
+    return DAG.getSelect(
+        DL, SExtVT, Src.getOperand(0),
+        signExtendBitcastSrcVector(DAG, SExtVT, Src.getOperand(1), DL),
+        signExtendBitcastSrcVector(DAG, SExtVT, Src.getOperand(2), DL));
+  }
+  llvm_unreachable("Unexpected node type for vXi1 sign extension");
+}
+
 static SDValue performBITCASTCombine(SDNode *N, SelectionDAG &DAG,
                                      TargetLowering::DAGCombinerInfo &DCI,
                                      const LoongArchSubtarget &Subtarget) {
@@ -4401,10 +4549,56 @@ static SDValue performBITCASTCombine(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  if (Opc == ISD::DELETED_NODE)
-    return SDValue();
+  // Generate vXi1 using [X]VMSKLTZ
+  if (Opc == ISD::DELETED_NODE) {
+    MVT SExtVT;
+    bool UseLASX = false;
+    bool PropagateSExt = false;
+    switch (SrcVT.getSimpleVT().SimpleTy) {
+    default:
+      return SDValue();
+    case MVT::v2i1:
+      SExtVT = MVT::v2i64;
+      break;
+    case MVT::v4i1:
+      SExtVT = MVT::v4i32;
+      if (Subtarget.hasExtLASX() && checkBitcastSrcVectorSize(Src, 256, 0)) {
+        SExtVT = MVT::v4i64;
+        UseLASX = true;
+        PropagateSExt = true;
+      }
+      break;
+    case MVT::v8i1:
+      SExtVT = MVT::v8i16;
+      if (Subtarget.hasExtLASX() && checkBitcastSrcVectorSize(Src, 256, 0)) {
+        SExtVT = MVT::v8i32;
+        UseLASX = true;
+        PropagateSExt = true;
+      }
+      break;
+    case MVT::v16i1:
+      SExtVT = MVT::v16i8;
+      if (Subtarget.hasExtLASX() && checkBitcastSrcVectorSize(Src, 256, 0)) {
+        SExtVT = MVT::v16i16;
+        UseLASX = true;
+        PropagateSExt = true;
+      }
+      break;
+    case MVT::v32i1:
+      SExtVT = MVT::v32i8;
+      UseLASX = true;
+      break;
+    };
+    if (UseLASX && !Subtarget.has32S() && !Subtarget.hasExtLASX())
+      return SDValue();
+    Src = PropagateSExt ? signExtendBitcastSrcVector(DAG, SExtVT, Src, DL)
+                        : DAG.getNode(ISD::SIGN_EXTEND, DL, SExtVT, Src);
+    Opc = UseLASX ? LoongArchISD::XVMSKLTZ : LoongArchISD::VMSKLTZ;
+  } else {
+    Src = Src.getOperand(0);
+  }
 
-  SDValue V = DAG.getNode(Opc, DL, MVT::i64, Src.getOperand(0));
+  SDValue V = DAG.getNode(Opc, DL, MVT::i64, Src);
   EVT T = EVT::getIntegerVT(*DAG.getContext(), SrcVT.getVectorNumElements());
   V = DAG.getZExtOrTrunc(V, DL, T);
   return DAG.getBitcast(VT, V);
@@ -7364,6 +7558,14 @@ getIntrinsicForMaskedAtomicRMWBinOp(unsigned GRLen,
       return Intrinsic::loongarch_masked_atomicrmw_sub_i32;
     case AtomicRMWInst::Nand:
       return Intrinsic::loongarch_masked_atomicrmw_nand_i32;
+    case AtomicRMWInst::UMax:
+      return Intrinsic::loongarch_masked_atomicrmw_umax_i32;
+    case AtomicRMWInst::UMin:
+      return Intrinsic::loongarch_masked_atomicrmw_umin_i32;
+    case AtomicRMWInst::Max:
+      return Intrinsic::loongarch_masked_atomicrmw_max_i32;
+    case AtomicRMWInst::Min:
+      return Intrinsic::loongarch_masked_atomicrmw_min_i32;
       // TODO: support other AtomicRMWInst.
     }
   }
@@ -7387,19 +7589,22 @@ LoongArchTargetLowering::shouldExpandAtomicCmpXchgInIR(
 Value *LoongArchTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
     IRBuilderBase &Builder, AtomicCmpXchgInst *CI, Value *AlignedAddr,
     Value *CmpVal, Value *NewVal, Value *Mask, AtomicOrdering Ord) const {
+  unsigned GRLen = Subtarget.getGRLen();
   AtomicOrdering FailOrd = CI->getFailureOrdering();
   Value *FailureOrdering =
       Builder.getIntN(Subtarget.getGRLen(), static_cast<uint64_t>(FailOrd));
-
-  // TODO: Support cmpxchg on LA32.
-  Intrinsic::ID CmpXchgIntrID = Intrinsic::loongarch_masked_cmpxchg_i64;
-  CmpVal = Builder.CreateSExt(CmpVal, Builder.getInt64Ty());
-  NewVal = Builder.CreateSExt(NewVal, Builder.getInt64Ty());
-  Mask = Builder.CreateSExt(Mask, Builder.getInt64Ty());
+  Intrinsic::ID CmpXchgIntrID = Intrinsic::loongarch_masked_cmpxchg_i32;
+  if (GRLen == 64) {
+    CmpXchgIntrID = Intrinsic::loongarch_masked_cmpxchg_i64;
+    CmpVal = Builder.CreateSExt(CmpVal, Builder.getInt64Ty());
+    NewVal = Builder.CreateSExt(NewVal, Builder.getInt64Ty());
+    Mask = Builder.CreateSExt(Mask, Builder.getInt64Ty());
+  }
   Type *Tys[] = {AlignedAddr->getType()};
   Value *Result = Builder.CreateIntrinsic(
       CmpXchgIntrID, Tys, {AlignedAddr, CmpVal, NewVal, Mask, FailureOrdering});
-  Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
+  if (GRLen == 64)
+    Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
   return Result;
 }
 
@@ -7934,8 +8139,9 @@ bool LoongArchTargetLowering::splitValueIntoRegisterParts(
   bool IsABIRegCopy = CC.has_value();
   EVT ValueVT = Val.getValueType();
 
-  if (IsABIRegCopy && ValueVT == MVT::f16 && PartVT == MVT::f32) {
-    // Cast the f16 to i16, extend to i32, pad with ones to make a float
+  if (IsABIRegCopy && (ValueVT == MVT::f16 || ValueVT == MVT::bf16) &&
+      PartVT == MVT::f32) {
+    // Cast the [b]f16 to i16, extend to i32, pad with ones to make a float
     // nan, and cast to f32.
     Val = DAG.getNode(ISD::BITCAST, DL, MVT::i16, Val);
     Val = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Val);
@@ -7954,10 +8160,11 @@ SDValue LoongArchTargetLowering::joinRegisterPartsIntoValue(
     MVT PartVT, EVT ValueVT, std::optional<CallingConv::ID> CC) const {
   bool IsABIRegCopy = CC.has_value();
 
-  if (IsABIRegCopy && ValueVT == MVT::f16 && PartVT == MVT::f32) {
+  if (IsABIRegCopy && (ValueVT == MVT::f16 || ValueVT == MVT::bf16) &&
+      PartVT == MVT::f32) {
     SDValue Val = Parts[0];
 
-    // Cast the f32 to i32, truncate to i16, and cast back to f16.
+    // Cast the f32 to i32, truncate to i16, and cast back to [b]f16.
     Val = DAG.getNode(ISD::BITCAST, DL, MVT::i32, Val);
     Val = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Val);
     Val = DAG.getNode(ISD::BITCAST, DL, ValueVT, Val);
