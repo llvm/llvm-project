@@ -706,9 +706,8 @@ bool DiagnosticsEngine::ProcessDiag(const DiagnosticBuilder &DiagBuilder) {
   // If a fatal error has already been emitted, silence all subsequent
   // diagnostics.
   if (FatalErrorOccurred) {
-    if (DiagLevel >= Error && Client->IncludeInDiagnosticCounts()) {
+    if (DiagLevel >= Error && Client->IncludeInDiagnosticCounts())
       ++NumErrors;
-    }
 
     return false;
   }
@@ -727,9 +726,8 @@ bool DiagnosticsEngine::ProcessDiag(const DiagnosticBuilder &DiagBuilder) {
       UncompilableErrorOccurred = true;
 
     ErrorOccurred = true;
-    if (Client->IncludeInDiagnosticCounts()) {
+    if (Client->IncludeInDiagnosticCounts())
       ++NumErrors;
-    }
 
     // If we've emitted a lot of errors, emit a fatal error instead of it to
     // stop a flood of bogus errors.
