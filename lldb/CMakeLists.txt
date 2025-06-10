@@ -63,6 +63,8 @@ if (LLDB_ENABLE_SWIFT_SUPPORT)
   endif()
 endif()
 
+set(LLDB_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
 # Define the LLDB_CONFIGURATION_xxx matching the build type.
 if(uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
   add_definitions(-DLLDB_CONFIGURATION_DEBUG)

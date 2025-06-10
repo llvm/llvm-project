@@ -58,6 +58,8 @@ add_lldb_library(lldbSymbol ${PLUGIN_DEPENDENCY_ARG}
   ${SWIFT_SOURCES}
   ## END SWIFT
 
+  ADDITIONAL_HEADER_DIRS
+    ${LLDB_INCLUDE_DIR}/lldb/Symbol
   LINK_COMPONENTS
     Support
   LINK_LIBS

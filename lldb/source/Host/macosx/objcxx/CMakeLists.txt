@@ -22,6 +22,8 @@ add_lldb_library(lldbHostMacOSXObjCXX ${PLUGIN_DEPENDENCY_ARG}
   ${SWIFT_SOURCES}
   ## END SWIFT
 
+  ADDITIONAL_HEADER_DIRS
+    ${LLDB_INCLUDE_DIR}/lldb/Host/macosx/objcxx
   LINK_COMPONENTS
     Support
     TargetParser

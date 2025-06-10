@@ -24,6 +24,8 @@ add_lldb_library(lldbExpression ${PLUGIN_DEPENDENCY_ARG}
   UserExpression.cpp
   UtilityFunction.cpp
 
+  ADDITIONAL_HEADER_DIRS
+    ${LLDB_INCLUDE_DIR}/lldb/Expression
   DEPENDS
   intrinsics_gen
 
