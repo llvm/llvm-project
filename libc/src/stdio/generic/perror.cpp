@@ -15,18 +15,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-namespace {
-
-// TODO: this is copied from `puts`, it should be moved to a shared utility.
-//  Simple helper to unlock the file once destroyed.
-struct ScopedLock {
-  ScopedLock(LIBC_NAMESPACE::File *stream) : stream(stream) { stream->lock(); }
-  ~ScopedLock() { stream->unlock(); }
-
-private:
-  LIBC_NAMESPACE::File *stream;
-};
-
 int write_out(cpp::string_view str_view, File *f) {
   if (str_view.size() > 0) {
     auto result = f->write_unlocked(str_view.data(), str_view.size());
@@ -36,21 +24,12 @@ int write_out(cpp::string_view str_view, File *f) {
   return 0;
 }
 
-} // namespace
-
-// TODO: this seems like there should be some sort of queue system to
-// deduplicate this code.
-LLVM_LIBC_FUNCTION(void, perror, (const char *str)) {
-  const char empty_str[1] = {'\0'};
-  if (str == nullptr)
-    str = empty_str;
-  cpp::string_view str_view(str);
-
-  auto err_str = get_error_string(libc_errno);
-
-  // We need to lock the stream to ensure the newline is always appended.
-  ScopedLock lock(LIBC_NAMESPACE::stderr);
+// separate function so that we can return early on error but still get the
+// unlock. This function sets errno and should not be called elsewhere.
+void write_sequence(cpp::string_view str_view, cpp::string_view err_str) {
   int write_err;
+  // TODO: this seems like there should be some sort of queue system to
+  // deduplicate this code.
 
   // FORMAT:
   // if str != nullptr and doesn't start with a null byte:
@@ -82,6 +61,20 @@ LLVM_LIBC_FUNCTION(void, perror, (const char *str)) {
     libc_errno = write_err;
     return;
   }
+}
+
+LLVM_LIBC_FUNCTION(void, perror, (const char *str)) {
+  const char empty_str[1] = {'\0'};
+  if (str == nullptr)
+    str = empty_str;
+  cpp::string_view str_view(str);
+
+  cpp::string_view err_str = get_error_string(libc_errno);
+
+  // We need to lock the stream to ensure the newline is always appended.
+  LIBC_NAMESPACE::stderr->lock();
+  write_sequence(str_view, err_str);
+  LIBC_NAMESPACE::stderr->unlock();
 }
 
 } // namespace LIBC_NAMESPACE_DECL
