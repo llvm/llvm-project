@@ -613,8 +613,8 @@ bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
   if (!N0.hasOneUse())
     return false;
 
-  auto BitfieldExtract = [&](SDValue N0, unsigned Msb, unsigned Lsb, SDLoc DL,
-                             MVT VT) {
+  auto BitfieldExtract = [&](SDValue N0, unsigned Msb, unsigned Lsb,
+                             const SDLoc &DL, MVT VT) {
     unsigned Opc =
         Subtarget->hasVendorXTHeadBb() ? RISCV::TH_EXT : RISCV::NDS_BFOS;
     return CurDAG->getMachineNode(Opc, DL, VT, N0.getOperand(0),
@@ -671,9 +671,10 @@ bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
   return false;
 }
 
-bool RISCVDAGToDAGISel::tryUnsignedBitfieldExtract(SDNode *Node, SDLoc DL,
-                                                   MVT VT, SDValue X,
-                                                   unsigned Msb, unsigned Lsb) {
+bool RISCVDAGToDAGISel::tryUnsignedBitfieldExtract(SDNode *Node,
+                                                   const SDLoc &DL, MVT VT,
+                                                   SDValue X, unsigned Msb,
+                                                   unsigned Lsb) {
   unsigned Opc;
 
   if (Subtarget->hasVendorXTHeadBb()) {
@@ -698,9 +699,9 @@ bool RISCVDAGToDAGISel::tryUnsignedBitfieldExtract(SDNode *Node, SDLoc DL,
   return true;
 }
 
-bool RISCVDAGToDAGISel::tryUnsignedBitfieldInsertInZero(SDNode *Node, SDLoc DL,
-                                                        MVT VT, SDValue X,
-                                                        unsigned Msb,
+bool RISCVDAGToDAGISel::tryUnsignedBitfieldInsertInZero(SDNode *Node,
+                                                        const SDLoc &DL, MVT VT,
+                                                        SDValue X, unsigned Msb,
                                                         unsigned Lsb) {
   // Only supported with XAndesPerf at the moment.
   if (!Subtarget->hasVendorXAndesPerf())
