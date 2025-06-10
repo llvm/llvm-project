@@ -1033,10 +1033,9 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
               *actualDataAttr == common::CUDADataAttr::Managed)) {
         actualDataAttr = common::CUDADataAttr::Device;
       }
-      // For device procedures, treat non-VALUE arguments without explicit CUDA
-      // attributes as device data
-      if (!actualDataAttr &&
-          !dummy.attrs.test(characteristics::DummyDataObject::Attr::Value) &&
+      // For device procedures, treat actual arguments with VALUE attribute as
+      // device data
+      if (!actualDataAttr && actualLastSymbol && IsValue(*actualLastSymbol) &&
           (*procedure.cudaSubprogramAttrs ==
               common::CUDASubprogramAttrs::Device)) {
         actualDataAttr = common::CUDADataAttr::Device;
