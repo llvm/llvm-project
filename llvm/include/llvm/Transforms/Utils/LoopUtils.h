@@ -535,12 +535,12 @@ void appendReversedLoopsToWorklist(RangeT &&,
                                    SmallPriorityWorklist<Loop *, 4> &);
 
 extern template LLVM_TEMPLATE_ABI void
-llvm::appendLoopsToWorklist<ArrayRef<Loop *> &>(
+appendLoopsToWorklist<ArrayRef<Loop *> &>(
     ArrayRef<Loop *> &Loops, SmallPriorityWorklist<Loop *, 4> &Worklist);
 
 extern template LLVM_TEMPLATE_ABI void
-llvm::appendLoopsToWorklist<Loop &>(Loop &L,
-                                    SmallPriorityWorklist<Loop *, 4> &Worklist);
+appendLoopsToWorklist<Loop &>(Loop &L,
+                              SmallPriorityWorklist<Loop *, 4> &Worklist);
 
 /// Utility that implements appending of loops onto a worklist given LoopInfo.
 /// Calls the templated utility taking a Range of loops, handing it the Loops
