@@ -1159,7 +1159,7 @@ bool SemaHLSL::diagnosePositionType(QualType T, const ParsedAttr &AL) {
 
   if (!T->hasFloatingRepresentation() || (VT && VT->getNumElements() > 4)) {
     Diag(AL.getLoc(), diag::err_hlsl_attr_invalid_type)
-        << AL << "float/float1/float2/float3";
+        << AL << "float/float1/float2/float3/float4";
     return false;
   }
 
