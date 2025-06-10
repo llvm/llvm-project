@@ -1865,8 +1865,7 @@ void ShuffleVectorInst::getShuffleMask(const Constant *Mask,
     assert((isa<ConstantAggregateZero>(Mask) || isa<UndefValue>(Mask)) &&
            "Scalable vector shuffle mask must be undef or zeroinitializer");
     int MaskVal = isa<UndefValue>(Mask) ? -1 : 0;
-    for (unsigned I = 0; I < EC.getKnownMinValue(); ++I)
-      Result.emplace_back(MaskVal);
+    Result.append(EC.getKnownMinValue(), MaskVal);
     return;
   }
 
