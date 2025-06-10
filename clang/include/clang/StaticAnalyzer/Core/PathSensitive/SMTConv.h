@@ -577,16 +577,16 @@ public:
     // Get the bit size and round up to next power of 2, max char size
     if (Ty.isNull()) {
       unsigned CharTypeSize = Ctx.getTypeSize(Ctx.CharTy);
-      unsigned pow2DestWidth =
+      unsigned Pow2DestWidth =
           std::max(llvm::bit_ceil(Int.getBitWidth()), CharTypeSize);
-      Ty = Ctx.getIntTypeForBitwidth(pow2DestWidth, Int.isSigned());
+      Ty = Ctx.getIntTypeForBitwidth(Pow2DestWidth, Int.isSigned());
     }
     return Ty;
   }
 
-  static inline bool IsPower2(unsigned bits) {
-    return bits > 0 && (bits & (bits - 1)) == 0;
-  }
+  // static inline bool IsPower2(unsigned bits) {
+  //   return bits > 0 && (bits & (bits - 1)) == 0;
+  // }
 
   // Get the QualTy for the input APSInt, and fix it if it has a bitwidth of 1.
   static inline std::pair<llvm::APSInt, QualType>
@@ -601,8 +601,8 @@ public:
     if (APSIntBitwidth == 1 && Ty.isNull()) {
       NewInt = Int.extend(Ctx.getTypeSize(Ctx.BoolTy));
       Ty = getAPSIntType(Ctx, NewInt);
-    } else if (!IsPower2(APSIntBitwidth) && !getAPSIntType(Ctx, Int).isNull()) {
-      Ty = getAPSIntType(Ctx, Int);
+    } else if (!llvm::isPowerOf2_32(APSIntBitwidth) &&
+               !getAPSIntType(Ctx, Int).isNull()) {
       NewInt = Int.extend(Ctx.getTypeSize(Ty));
     } else
       NewInt = Int;
