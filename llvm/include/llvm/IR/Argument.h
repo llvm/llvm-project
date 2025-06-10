@@ -90,9 +90,9 @@ public:
   /// Return true if this argument has the swifterror attribute.
   LLVM_ABI bool hasSwiftErrorAttr() const;
 
-  /// Return true if this argument has the byval, inalloca, preallocated or
-  /// dead_on_return attribute. These attributes represent arguments being
-  /// passed by value, with an associated copy between the caller and callee.
+  /// Return true if this argument has the byval, inalloca, or preallocated
+  /// attribute. These attributes represent arguments being passed by value,
+  /// with an associated copy between the caller and callee.
   LLVM_ABI bool hasPassPointeeByValueCopyAttr() const;
 
   /// If this argument satisfies has hasPassPointeeByValueAttr, return the
