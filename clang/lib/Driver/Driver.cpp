@@ -1603,6 +1603,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
 
         // Set specific Vulkan version. Default to vulkan1.3.
         auto TargetInfo = ValidTargets.find("vulkan1.3");
+        assert(TargetInfo != ValidTargets.end());
         if (const Arg *A = Args.getLastArg(options::OPT_fspv_target_env_EQ)) {
           TargetInfo = ValidTargets.find(A->getValue());
           if (TargetInfo == ValidTargets.end()) {
