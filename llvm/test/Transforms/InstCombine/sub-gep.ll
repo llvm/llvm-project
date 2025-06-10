@@ -945,7 +945,7 @@ define i64 @multiple_geps_two_chains_gep_base(ptr %base, i64 %base.idx, i64 %idx
 
 define i64 @multiple_geps_inbounds(ptr %base, i64 %idx, i64 %idx2) {
 ; CHECK-LABEL: @multiple_geps_inbounds(
-; CHECK-NEXT:    [[D:%.*]] = add i64 [[IDX:%.*]], [[IDX2:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = add nsw i64 [[IDX:%.*]], [[IDX2:%.*]]
 ; CHECK-NEXT:    ret i64 [[D]]
 ;
   %p2 = getelementptr inbounds i8, ptr %base, i64 %idx
@@ -971,7 +971,7 @@ define i64 @multiple_geps_nusw(ptr %base, i64 %idx, i64 %idx2) {
 
 define i64 @multiple_geps_nuw(ptr %base, i64 %idx, i64 %idx2) {
 ; CHECK-LABEL: @multiple_geps_nuw(
-; CHECK-NEXT:    [[D:%.*]] = add i64 [[IDX:%.*]], [[IDX2:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = add nuw i64 [[IDX:%.*]], [[IDX2:%.*]]
 ; CHECK-NEXT:    ret i64 [[D]]
 ;
   %p2 = getelementptr nuw i8, ptr %base, i64 %idx
@@ -985,7 +985,7 @@ define i64 @multiple_geps_nuw(ptr %base, i64 %idx, i64 %idx2) {
 
 define i64 @multiple_geps_inbounds_nuw(ptr %base, i64 %idx, i64 %idx2) {
 ; CHECK-LABEL: @multiple_geps_inbounds_nuw(
-; CHECK-NEXT:    [[D:%.*]] = add i64 [[IDX:%.*]], [[IDX2:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = add nuw nsw i64 [[IDX:%.*]], [[IDX2:%.*]]
 ; CHECK-NEXT:    ret i64 [[D]]
 ;
   %p2 = getelementptr inbounds nuw i8, ptr %base, i64 %idx
