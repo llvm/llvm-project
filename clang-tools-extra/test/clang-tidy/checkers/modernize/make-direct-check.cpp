@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-make-direct %t
+// RUN: %check_clang_tidy -std=c++17 %s modernize-make-direct %t
 
 namespace std {
 template<typename T>
@@ -40,6 +40,16 @@ template<typename T, typename U>
 pair<T,U> make_pair(T&& t, U&& u) { 
  return pair<T,U>(t, u); 
 }
+
+template<typename... T>
+struct tuple {
+ tuple(const T&... args) {}
+};
+
+template<typename... T>
+tuple<T...> make_tuple(T&&... t) {
+ return tuple<T...>(t...);
+}
 }
 
 struct Widget {
@@ -48,19 +58,19 @@ struct Widget {
 
 
 void basic_tests() {
- auto o1 = std::make_optional<int>(42);
- // CHECK-MESSAGES: warning: use class template argument deduction (CTAD) instead of make_optional [modernize-make-direct]
- // CHECK-FIXES: auto o1 = std::optional(42);
+  auto o1 = std::make_optional<int>(42);
+  // CHECK-MESSAGES: warning: use class template argument deduction (CTAD) instead of std::make_optional [modernize-make-direct]
+  // CHECK-FIXES: auto o1 = std::optional(42);
 
+  // make_unique and make_shared are not transformed by this check
   auto u1 = std::make_unique<Widget>(1);
- // CHECK-MESSAGES: warning: use class template argument deduction (CTAD) instead of make_unique [modernize-make-direct]
- // CHECK-FIXES: auto u1 = std::unique_ptr(new Widget(1));
-
- auto s1 = std::make_shared<Widget>(2);
-  // CHECK-MESSAGES: warning: use class template argument deduction (CTAD) instead of make_shared
-  // CHECK-FIXES: auto s1 = std::shared_ptr(new Widget(2));
+  auto s1 = std::make_shared<Widget>(2);
 
   auto p1 = std::make_pair(1, "test");
-  // CHECK-MESSAGES: warning: use class template argument deduction (CTAD) instead of make_pair
+  // CHECK-MESSAGES: warning: use class template argument deduction (CTAD) instead of std::make_pair [modernize-make-direct]
   // CHECK-FIXES: auto p1 = std::pair(1, "test");
+
+  auto t1 = std::make_tuple(1, 2.0, "hi");
+  // CHECK-MESSAGES: warning: use class template argument deduction (CTAD) instead of std::make_tuple [modernize-make-direct]
+  // CHECK-FIXES: auto t1 = std::tuple(1, 2.0, "hi");
 }

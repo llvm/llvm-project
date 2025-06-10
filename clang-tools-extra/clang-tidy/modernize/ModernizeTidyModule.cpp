@@ -127,7 +127,7 @@ public:
         "modernize-use-uncaught-exceptions");
     CheckFactories.registerCheck<UseUsingCheck>("modernize-use-using");
     CheckFactories.registerCheck<MakeFunctionToDirectCheck>(
-    "modernize-make-direct");
+        "modernize-make-direct");
   }
 };
 
