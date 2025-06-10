@@ -1458,6 +1458,19 @@ will be processed from the PCH file. Otherwise, Clang will report an error.
   ``test.h`` since ``test.h`` was included directly in the source file and not
   specified on the command line using ``-include-pch``.
 
+Ignoring a PCH File
+^^^^^^^^^^^^^^^^^^^
+
+To ignore PCH options, a `-ignore-pch` option is passed to ``clang``:
+
+.. code-block:: console
+
+  $ clang -x c-header test.h -Xclang -ignore-pch -o test.h.pch
+  $ clang -include-pch test.h.pch -Xclang -ignore-pch test.c -o test
+
+This option disables precompiled headers, overrides -emit-pch and -include-pch.
+test.h.pch is not generated and not used as a prefix header.
+
 Relocatable PCH Files
 ^^^^^^^^^^^^^^^^^^^^^
 
