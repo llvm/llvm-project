@@ -1,10 +1,13 @@
-// RUN: mlir-opt -finalize-memref-to-llvm %s -split-input-file | FileCheck %s
+// RUN: mlir-opt -finalize-memref-to-llvm %s -split-input-file | FileCheck --check-prefixes=ALL,CHECK %s
 // RUN: mlir-opt -finalize-memref-to-llvm='index-bitwidth=32' %s -split-input-file | FileCheck --check-prefix=CHECK32 %s
 
 // Same below, but using the `ConvertToLLVMPatternInterface` entry point
 // and the generic `convert-to-llvm` pass. This produces slightly different IR
 // because the conversion target is set up differently.
-// RUN: mlir-opt --convert-to-llvm="filter-dialects=memref" --split-input-file %s | FileCheck --check-prefix=CHECK-INTERFACE %s
+// RUN: mlir-opt --convert-to-llvm="filter-dialects=memref" --split-input-file %s | FileCheck --check-prefixes=ALL,CHECK-INTERFACE %s
+
+// TODO: In some (all?) cases, CHECK and CHECK-INTERFACE outputs are identical.
+// Use a common prefix instead (e.g. ALL).
 
 // CHECK-LABEL: func @view(
 // CHECK: %[[ARG0F:.*]]: index, %[[ARG1F:.*]]: index, %[[ARG2F:.*]]: index
@@ -132,6 +135,28 @@ func.func @view_empty_memref(%offset: index, %mem: memref<0xi8>) {
 
 // -----
 
+// ALL-LABEL:   func.func @view_memref_as_rank0(
+// ALL-SAME:      %[[OFFSET:.*]]: index,
+// ALL-SAME:      %[[MEM:.*]]: memref<2xi8>) {
+func.func @view_memref_as_rank0(%offset: index, %mem: memref<2xi8>) {
+
+  // ALL:  builtin.unrealized_conversion_cast %[[OFFSET]] : index to i64
+  // ALL:  builtin.unrealized_conversion_cast %[[MEM]] : memref<2xi8> to !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+  // ALL:  llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64)>
+  // ALL:  llvm.extractvalue %{{.*}}[0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+  // ALL:  llvm.insertvalue %{{.*}}, %{{.*}}[0] : !llvm.struct<(ptr, ptr, i64)>
+  // ALL:  llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+  // ALL:  llvm.getelementptr %{{.*}}[%{{.*}}] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+  // ALL:  llvm.insertvalue %{{.*}}, %{{.*}}[1] : !llvm.struct<(ptr, ptr, i64)>
+  // ALL:  llvm.mlir.constant(0 : index) : i64
+  // ALL:  llvm.insertvalue %{{.*}}, %{{.*}}[2] : !llvm.struct<(ptr, ptr, i64)>
+  %memref_view_bf16 = memref.view %mem[%offset][] : memref<2xi8> to memref<bf16>
+
+  return
+}
+
+// -----
+
 // Subviews needs to be expanded outside of the memref-to-llvm pass.
 // CHECK-LABEL: func @subview(
 // CHECK:         %[[MEMREF:.*]]: memref<{{.*}}>,
@@ -164,7 +189,7 @@ func.func @assume_alignment(%0 : memref<4x4xf16>) {
   // CHECK-NEXT: %[[ALIGN:.*]] = llvm.mlir.constant(16 : index) : i64
   // CHECK-NEXT: llvm.intr.assume %[[TRUE]] ["align"(%[[PTR]], %[[ALIGN]] : !llvm.ptr, i64)] : i1
   // CHECK-INTERFACE: llvm.intr.assume
-  memref.assume_alignment %0, 16 : memref<4x4xf16>
+  %1 = memref.assume_alignment %0, 16 : memref<4x4xf16>
   return
 }
 
@@ -180,7 +205,7 @@ func.func @assume_alignment_w_offset(%0 : memref<4x4xf16, strided<[?, ?], offset
   // CHECK-DAG: %[[ALIGN:.*]] = llvm.mlir.constant(16 : index) : i64
   // CHECK-NEXT: llvm.intr.assume %[[TRUE]] ["align"(%[[BUFF_ADDR]], %[[ALIGN]] : !llvm.ptr, i64)] : i1
   // CHECK-INTERFACE: llvm.intr.assume
-  memref.assume_alignment %0, 16 : memref<4x4xf16, strided<[?, ?], offset: ?>>
+  %1 = memref.assume_alignment %0, 16 : memref<4x4xf16, strided<[?, ?], offset: ?>>
   return
 }
 // -----

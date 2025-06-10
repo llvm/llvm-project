@@ -2108,7 +2108,7 @@ ParseError validateQualifierOrder(FormatStyle *Style) {
 std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
                                    FormatStyle *Style, bool AllowUnknownOptions,
                                    llvm::SourceMgr::DiagHandlerTy DiagHandler,
-                                   void *DiagHandlerCtxt) {
+                                   void *DiagHandlerCtxt, bool IsDotHFile) {
   assert(Style);
   FormatStyle::LanguageKind Language = Style->Language;
   assert(Language != FormatStyle::LK_None);
@@ -2154,6 +2154,10 @@ std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
     if (Lang == Language ||
         // For backward compatibility.
         (Lang == FormatStyle::LK_Cpp && Language == FormatStyle::LK_C)) {
+      LanguageFound = true;
+    } else if (IsDotHFile && Language == FormatStyle::LK_Cpp &&
+               (Lang == FormatStyle::LK_C || Lang == FormatStyle::LK_ObjC)) {
+      Language = Lang;
       LanguageFound = true;
     }
   }
@@ -4177,13 +4181,15 @@ const char *DefaultFallbackStyle = "LLVM";
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
 loadAndParseConfigFile(StringRef ConfigFile, llvm::vfs::FileSystem *FS,
                        FormatStyle *Style, bool AllowUnknownOptions,
-                       llvm::SourceMgr::DiagHandlerTy DiagHandler) {
+                       llvm::SourceMgr::DiagHandlerTy DiagHandler,
+                       bool IsDotHFile) {
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
       FS->getBufferForFile(ConfigFile.str());
   if (auto EC = Text.getError())
     return EC;
   if (auto EC = parseConfiguration(*Text.get(), Style, AllowUnknownOptions,
-                                   DiagHandler)) {
+                                   DiagHandler, /*DiagHandlerCtx=*/nullptr,
+                                   IsDotHFile)) {
     return EC;
   }
   return Text;
@@ -4221,13 +4227,15 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
     FS = llvm::vfs::getRealFileSystem().get();
   assert(FS);
 
+  const bool IsDotHFile = FileName.ends_with(".h");
+
   // User provided clang-format file using -style=file:path/to/format/file.
   if (!Style.InheritsParentConfig &&
       StyleName.starts_with_insensitive("file:")) {
     auto ConfigFile = StyleName.substr(5);
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
         loadAndParseConfigFile(ConfigFile, FS, &Style, AllowUnknownOptions,
-                               DiagHandler);
+                               DiagHandler, IsDotHFile);
     if (auto EC = Text.getError()) {
       return make_string_error("Error reading " + ConfigFile + ": " +
                                EC.message());
@@ -4303,7 +4311,7 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
 
       llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
           loadAndParseConfigFile(ConfigFile, FS, &Style, AllowUnknownOptions,
-                                 DiagHandler);
+                                 DiagHandler, IsDotHFile);
       if (auto EC = Text.getError()) {
         if (EC != ParseError::Unsuitable) {
           return make_string_error("Error reading " + ConfigFile + ": " +

@@ -23,6 +23,7 @@
 #include "clang/Basic/AllDiagnostics.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/OptionUtils.h"
@@ -308,6 +309,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
 
   for (auto *a : args.filtered(clang::driver::options::OPT_fpass_plugin_EQ))
     opts.LLVMPassPlugins.push_back(a->getValue());
+
+  opts.PreferVectorWidth =
+      clang::driver::tools::ParseMPreferVectorWidthOption(diags, args);
 
   // -fembed-offload-object option
   for (auto *a :
@@ -1641,6 +1645,10 @@ void CompilerInvocation::setDefaultPredefinitions() {
     if (targetTriple.isOSAIX() && targetTriple.isArch64Bit()) {
       fortranOptions.predefinitions.emplace_back("__64BIT__", "1");
     }
+    break;
+  case llvm::Triple::ArchType::aarch64:
+    fortranOptions.predefinitions.emplace_back("__aarch64__", "1");
+    fortranOptions.predefinitions.emplace_back("__aarch64", "1");
     break;
   }
 }

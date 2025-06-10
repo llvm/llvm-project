@@ -169,6 +169,16 @@ class TypeConstraint<Pred predicate, string summary = "",
 class AttrConstraint<Pred predicate, string summary = ""> :
     Constraint<predicate, summary>;
 
+// Subclass for constraints on a property.
+class PropConstraint<Pred predicate, string summary = "", string interfaceTypeParam = ""> :
+    Constraint<predicate, summary> {
+  // The name of the C++ type of $_self, which will be the interface type of the
+  // property being constrained, or "" if it is to be inferred from context.
+  // Note, that leaving the interface type unspecified prevents the constraint from
+  // being uniqued.
+  code interfaceType = interfaceTypeParam;
+}
+
 // Subclass for constraints on a region.
 class RegionConstraint<Pred predicate, string summary = ""> :
     Constraint<predicate, summary>;
@@ -183,10 +193,15 @@ class SuccessorConstraint<Pred predicate, string summary = ""> :
 //   * Constraints on an op's operand/result definition
 //   * Further constraints to match an op's operand/result in source pattern
 //
-// * Use Attr (a subclass for AttrConstraint) for
-//   * Constraints on an op's attribute definition
+// * Use Attr (a subclass of AttrConstraint) for
+//   * Constraints on an op's attribute definitions
 // * Use AttrConstraint to specify
-//   * Further constraints to match an op's attribute in source pattern
+//   * Further constraints to match an op's attribute in rewrite source patterns.
+//
+// * Use Prop (a subclass of PropConstraint) for
+//   * Defining an op's properties or constraining them
+// * Use Prop constraint to specify
+//   * Further constraints to match an op's property in rewrite source patterns.
 //
 // * Use uncategorized constraint to specify
 //   * Multi-entity constraints in rewrite rules

@@ -5,7 +5,8 @@ write_cmake_config("config") {
   input = "config.h.cmake"
   output = "$target_gen_dir/config.h"
   values = [
-    "CLANG_DOC_TEST_ASSET_DIR=",
+    "CLANG_DOC_TEST_ASSET_DIR=" +
+      rebase_path("//clang-tools-extra/clang-doc/assets"),
   ]
 }
 

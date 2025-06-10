@@ -2093,7 +2093,11 @@ public:
     Walk(x.v, ",");
   }
   void Unparse(const OmpMapperSpecifier &x) {
-    Walk(std::get<std::optional<Name>>(x.t), ":");
+    const auto &mapperName{std::get<std::string>(x.t)};
+    if (mapperName.find("omp.default.mapper") == std::string::npos) {
+      Walk(mapperName);
+      Put(":");
+    }
     Walk(std::get<TypeSpec>(x.t));
     Put("::");
     Walk(std::get<Name>(x.t));
@@ -2796,8 +2800,9 @@ public:
     BeginOpenMP();
     Word("!$OMP DECLARE MAPPER (");
     const auto &spec{std::get<OmpMapperSpecifier>(z.t)};
-    if (auto mapname{std::get<std::optional<Name>>(spec.t)}) {
-      Walk(mapname);
+    const auto &mapperName{std::get<std::string>(spec.t)};
+    if (mapperName.find("omp.default.mapper") == std::string::npos) {
+      Walk(mapperName);
       Put(":");
     }
     Walk(std::get<TypeSpec>(spec.t));
@@ -3363,4 +3368,12 @@ template void Unparse<Program>(llvm::raw_ostream &, const Program &,
 template void Unparse<Expr>(llvm::raw_ostream &, const Expr &,
     const common::LangOptions &, Encoding, bool, bool, preStatementType *,
     AnalyzedObjectsAsFortran *);
+
+template void Unparse<parser::OpenMPDeclareReductionConstruct>(
+    llvm::raw_ostream &, const parser::OpenMPDeclareReductionConstruct &,
+    const common::LangOptions &, Encoding, bool, bool, preStatementType *,
+    AnalyzedObjectsAsFortran *);
+template void Unparse<parser::OmpMetadirectiveDirective>(llvm::raw_ostream &,
+    const parser::OmpMetadirectiveDirective &, const common::LangOptions &,
+    Encoding, bool, bool, preStatementType *, AnalyzedObjectsAsFortran *);
 } // namespace Fortran::parser
