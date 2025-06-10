@@ -88,6 +88,7 @@
 // RUN:   -Xarch_host \
 // RUN:   -Xassembler \
 // RUN:   -Xclang \
+// RUN:   -Xclangas \
 // RUN:   -Xcuda-fatbinary \
 // RUN:   -Xcuda-ptxas \
 // RUN:   -Xflang \
@@ -103,8 +104,7 @@
 // RUN:   -Zlinker-input \
 // RUN:   --CLASSPATH \
 // RUN:   --CLASSPATH= \
-// RUN:   -- \
-// RUN:   -### - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_0 %s
+// RUN:   -- - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_0 %s
 
 // CHECK_CC1AS_0: {{(unknown argument).*}}-A
 // CHECK_CC1AS_0: {{(unknown argument).*}}-A-
@@ -189,6 +189,7 @@
 // CHECK_CC1AS_0: {{(unknown argument).*}}-Xarch_host
 // CHECK_CC1AS_0: {{(unknown argument).*}}-Xassembler
 // CHECK_CC1AS_0: {{(unknown argument).*}}-Xclang
+// CHECK_CC1AS_0: {{(unknown argument).*}}-Xclangas
 // CHECK_CC1AS_0: {{(unknown argument).*}}-Xcuda-fatbinary
 // CHECK_CC1AS_0: {{(unknown argument).*}}-Xcuda-ptxas
 // CHECK_CC1AS_0: {{(unknown argument).*}}-Xflang
@@ -205,9 +206,9 @@
 // CHECK_CC1AS_0: {{(unknown argument).*}}--CLASSPATH
 // CHECK_CC1AS_0: {{(unknown argument).*}}--CLASSPATH=
 // CHECK_CC1AS_0: {{(unknown argument).*}}--
-// CHECK_CC1AS_0: {{(unknown argument).*}}-###
 
 // RUN: not %clang -cc1as  \
+// RUN:   -### \
 // RUN:   -AI \
 // RUN:   -Brepro \
 // RUN:   -Brepro- \
@@ -306,9 +307,9 @@
 // RUN:   -U \
 // RUN:   -V \
 // RUN:   -W0 \
-// RUN:   -W1 \
-// RUN:   -W2 - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_1 %s
+// RUN:   -W1 - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_1 %s
 
+// CHECK_CC1AS_1: {{(unknown argument).*}}-###
 // CHECK_CC1AS_1: {{(unknown argument).*}}-AI
 // CHECK_CC1AS_1: {{(unknown argument).*}}-Brepro
 // CHECK_CC1AS_1: {{(unknown argument).*}}-Brepro-
@@ -408,9 +409,9 @@
 // CHECK_CC1AS_1: {{(unknown argument).*}}-V
 // CHECK_CC1AS_1: {{(unknown argument).*}}-W0
 // CHECK_CC1AS_1: {{(unknown argument).*}}-W1
-// CHECK_CC1AS_1: {{(unknown argument).*}}-W2
 
 // RUN: not %clang -cc1as  \
+// RUN:   -W2 \
 // RUN:   -W3 \
 // RUN:   -W4 \
 // RUN:   -WL \
@@ -486,11 +487,13 @@
 // RUN:   -d2 \
 // RUN:   -d2FastFail \
 // RUN:   -d2Zi+ \
+// RUN:   -d2epilogunwind \
 // RUN:   -diagnostics:caret \
 // RUN:   -diagnostics:classic \
 // RUN:   -diagnostics:column \
 // RUN:   -diasdkdir \
 // RUN:   -doc \
+// RUN:   -dynamicdeopt \
 // RUN:   -errorReport \
 // RUN:   -execution-charset: \
 // RUN:   -experimental: \
@@ -507,11 +510,9 @@
 // RUN:   -fno-sanitize-address-vcasan-lib \
 // RUN:   -fp:contract \
 // RUN:   -fp:except \
-// RUN:   -fp:except- \
-// RUN:   -fp:fast \
-// RUN:   -fp:precise \
-// RUN:   -fp:strict - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_2 %s
+// RUN:   -fp:except- - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_2 %s
 
+// CHECK_CC1AS_2: {{(unknown argument).*}}-W2
 // CHECK_CC1AS_2: {{(unknown argument).*}}-W3
 // CHECK_CC1AS_2: {{(unknown argument).*}}-W4
 // CHECK_CC1AS_2: {{(unknown argument).*}}-WL
@@ -587,11 +588,13 @@
 // CHECK_CC1AS_2: {{(unknown argument).*}}-d2
 // CHECK_CC1AS_2: {{(unknown argument).*}}-d2FastFail
 // CHECK_CC1AS_2: {{(unknown argument).*}}-d2Zi+
+// CHECK_CC1AS_2: {{(unknown argument).*}}-d2epilogunwind
 // CHECK_CC1AS_2: {{(unknown argument).*}}-diagnostics:caret
 // CHECK_CC1AS_2: {{(unknown argument).*}}-diagnostics:classic
 // CHECK_CC1AS_2: {{(unknown argument).*}}-diagnostics:column
 // CHECK_CC1AS_2: {{(unknown argument).*}}-diasdkdir
 // CHECK_CC1AS_2: {{(unknown argument).*}}-doc
+// CHECK_CC1AS_2: {{(unknown argument).*}}-dynamicdeopt
 // CHECK_CC1AS_2: {{(unknown argument).*}}-errorReport
 // CHECK_CC1AS_2: {{(unknown argument).*}}-execution-charset:
 // CHECK_CC1AS_2: {{(unknown argument).*}}-experimental:
@@ -609,13 +612,14 @@
 // CHECK_CC1AS_2: {{(unknown argument).*}}-fp:contract
 // CHECK_CC1AS_2: {{(unknown argument).*}}-fp:except
 // CHECK_CC1AS_2: {{(unknown argument).*}}-fp:except-
-// CHECK_CC1AS_2: {{(unknown argument).*}}-fp:fast
-// CHECK_CC1AS_2: {{(unknown argument).*}}-fp:precise
-// CHECK_CC1AS_2: {{(unknown argument).*}}-fp:strict
 
 // RUN: not %clang -cc1as  \
+// RUN:   -fp:fast \
+// RUN:   -fp:precise \
+// RUN:   -fp:strict \
 // RUN:   -fsanitize=address \
 // RUN:   -fsanitize-address-use-after-return \
+// RUN:   -funcoverride: \
 // RUN:   -guard: \
 // RUN:   -headerUnit \
 // RUN:   -headerUnit:angle \
@@ -709,14 +713,14 @@
 // RUN:   --include-with-prefix-after= \
 // RUN:   --include-with-prefix-before \
 // RUN:   --include-with-prefix-before= \
-// RUN:   --language \
-// RUN:   --language= \
-// RUN:   --library-directory \
-// RUN:   --library-directory= \
-// RUN:   --mhwdiv - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_3 %s
+// RUN:   --language - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_3 %s
 
+// CHECK_CC1AS_3: {{(unknown argument).*}}-fp:fast
+// CHECK_CC1AS_3: {{(unknown argument).*}}-fp:precise
+// CHECK_CC1AS_3: {{(unknown argument).*}}-fp:strict
 // CHECK_CC1AS_3: {{(unknown argument).*}}-fsanitize=address
 // CHECK_CC1AS_3: {{(unknown argument).*}}-fsanitize-address-use-after-return
+// CHECK_CC1AS_3: {{(unknown argument).*}}-funcoverride:
 // CHECK_CC1AS_3: {{(unknown argument).*}}-guard:
 // CHECK_CC1AS_3: {{(unknown argument).*}}-headerUnit
 // CHECK_CC1AS_3: {{(unknown argument).*}}-headerUnit:angle
@@ -811,12 +815,12 @@
 // CHECK_CC1AS_3: {{(unknown argument).*}}--include-with-prefix-before
 // CHECK_CC1AS_3: {{(unknown argument).*}}--include-with-prefix-before=
 // CHECK_CC1AS_3: {{(unknown argument).*}}--language
-// CHECK_CC1AS_3: {{(unknown argument).*}}--language=
-// CHECK_CC1AS_3: {{(unknown argument).*}}--library-directory
-// CHECK_CC1AS_3: {{(unknown argument).*}}--library-directory=
-// CHECK_CC1AS_3: {{(unknown argument).*}}--mhwdiv
 
 // RUN: not %clang -cc1as  \
+// RUN:   --language= \
+// RUN:   --library-directory \
+// RUN:   --library-directory= \
+// RUN:   --mhwdiv \
 // RUN:   --mhwdiv= \
 // RUN:   --no-line-commands \
 // RUN:   --no-standard-includes \
@@ -906,18 +910,18 @@
 // RUN:   -fno-aligned-new \
 // RUN:   -fsched-interblock \
 // RUN:   -fcuda-rdc \
-// RUN:   -fno-cuda-rdc \
 // RUN:   -ftemplate-depth- \
+// RUN:   -fno-cuda-rdc \
 // RUN:   -ftree-vectorize \
 // RUN:   -fno-tree-vectorize \
 // RUN:   -ftree-slp-vectorize \
 // RUN:   -fno-tree-slp-vectorize \
-// RUN:   -fterminated-vtables \
-// RUN:   --hip-device-lib-path= \
-// RUN:   -grecord-gcc-switches \
-// RUN:   -gno-record-gcc-switches \
-// RUN:   -miphoneos-version-min= - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_4 %s
+// RUN:   -fterminated-vtables - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_4 %s
 
+// CHECK_CC1AS_4: {{(unknown argument).*}}--language=
+// CHECK_CC1AS_4: {{(unknown argument).*}}--library-directory
+// CHECK_CC1AS_4: {{(unknown argument).*}}--library-directory=
+// CHECK_CC1AS_4: {{(unknown argument).*}}--mhwdiv
 // CHECK_CC1AS_4: {{(unknown argument).*}}--mhwdiv=
 // CHECK_CC1AS_4: {{(unknown argument).*}}--no-line-commands
 // CHECK_CC1AS_4: {{(unknown argument).*}}--no-standard-includes
@@ -1007,19 +1011,19 @@
 // CHECK_CC1AS_4: {{(unknown argument).*}}-fno-aligned-new
 // CHECK_CC1AS_4: {{(unknown argument).*}}-fsched-interblock
 // CHECK_CC1AS_4: {{(unknown argument).*}}-fcuda-rdc
-// CHECK_CC1AS_4: {{(unknown argument).*}}-fno-cuda-rdc
 // CHECK_CC1AS_4: {{(unknown argument).*}}-ftemplate-depth-
+// CHECK_CC1AS_4: {{(unknown argument).*}}-fno-cuda-rdc
 // CHECK_CC1AS_4: {{(unknown argument).*}}-ftree-vectorize
 // CHECK_CC1AS_4: {{(unknown argument).*}}-fno-tree-vectorize
 // CHECK_CC1AS_4: {{(unknown argument).*}}-ftree-slp-vectorize
 // CHECK_CC1AS_4: {{(unknown argument).*}}-fno-tree-slp-vectorize
 // CHECK_CC1AS_4: {{(unknown argument).*}}-fterminated-vtables
-// CHECK_CC1AS_4: {{(unknown argument).*}}--hip-device-lib-path=
-// CHECK_CC1AS_4: {{(unknown argument).*}}-grecord-gcc-switches
-// CHECK_CC1AS_4: {{(unknown argument).*}}-gno-record-gcc-switches
-// CHECK_CC1AS_4: {{(unknown argument).*}}-miphoneos-version-min=
 
 // RUN: not %clang -cc1as  \
+// RUN:   --hip-device-lib-path= \
+// RUN:   -grecord-gcc-switches \
+// RUN:   -gno-record-gcc-switches \
+// RUN:   -miphoneos-version-min= \
 // RUN:   -miphonesimulator-version-min= \
 // RUN:   -mllvm= \
 // RUN:   -mmacosx-version-min= \
@@ -1070,9 +1074,10 @@
 // RUN:   -fdiagnostics-color \
 // RUN:   -fno-diagnostics-color \
 // RUN:   -frecord-gcc-switches \
-// RUN:   -fno-record-gcc-switches \
 // RUN:   -fno-slp-vectorize-aggressive \
+// RUN:   -fno-record-gcc-switches \
 // RUN:   -Xclang= \
+// RUN:   -Xclangas= \
 // RUN:   -Xparser \
 // RUN:   -Xcompiler \
 // RUN:   -fexpensive-optimizations \
@@ -1114,13 +1119,12 @@
 // RUN:   -bundle_loader \
 // RUN:   -c \
 // RUN:   -c-isystem \
-// RUN:   -canonical-prefixes \
-// RUN:   -ccc- \
-// RUN:   -ccc-gcc-name \
-// RUN:   -ccc-install-dir \
-// RUN:   -ccc-print-bindings \
-// RUN:   -ccc-print-phases - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_5 %s
+// RUN:   -canonical-prefixes - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_5 %s
 
+// CHECK_CC1AS_5: {{(unknown argument).*}}--hip-device-lib-path=
+// CHECK_CC1AS_5: {{(unknown argument).*}}-grecord-gcc-switches
+// CHECK_CC1AS_5: {{(unknown argument).*}}-gno-record-gcc-switches
+// CHECK_CC1AS_5: {{(unknown argument).*}}-miphoneos-version-min=
 // CHECK_CC1AS_5: {{(unknown argument).*}}-miphonesimulator-version-min=
 // CHECK_CC1AS_5: {{(unknown argument).*}}-mllvm=
 // CHECK_CC1AS_5: {{(unknown argument).*}}-mmacosx-version-min=
@@ -1171,9 +1175,10 @@
 // CHECK_CC1AS_5: {{(unknown argument).*}}-fdiagnostics-color
 // CHECK_CC1AS_5: {{(unknown argument).*}}-fno-diagnostics-color
 // CHECK_CC1AS_5: {{(unknown argument).*}}-frecord-gcc-switches
-// CHECK_CC1AS_5: {{(unknown argument).*}}-fno-record-gcc-switches
 // CHECK_CC1AS_5: {{(unknown argument).*}}-fno-slp-vectorize-aggressive
+// CHECK_CC1AS_5: {{(unknown argument).*}}-fno-record-gcc-switches
 // CHECK_CC1AS_5: {{(unknown argument).*}}-Xclang=
+// CHECK_CC1AS_5: {{(unknown argument).*}}-Xclangas=
 // CHECK_CC1AS_5: {{(unknown argument).*}}-Xparser
 // CHECK_CC1AS_5: {{(unknown argument).*}}-Xcompiler
 // CHECK_CC1AS_5: {{(unknown argument).*}}-fexpensive-optimizations
@@ -1216,13 +1221,13 @@
 // CHECK_CC1AS_5: {{(unknown argument).*}}-c
 // CHECK_CC1AS_5: {{(unknown argument).*}}-c-isystem
 // CHECK_CC1AS_5: {{(unknown argument).*}}-canonical-prefixes
-// CHECK_CC1AS_5: {{(unknown argument).*}}-ccc-
-// CHECK_CC1AS_5: {{(unknown argument).*}}-ccc-gcc-name
-// CHECK_CC1AS_5: {{(unknown argument).*}}-ccc-install-dir
-// CHECK_CC1AS_5: {{(unknown argument).*}}-ccc-print-bindings
-// CHECK_CC1AS_5: {{(unknown argument).*}}-ccc-print-phases
 
 // RUN: not %clang -cc1as  \
+// RUN:   -ccc- \
+// RUN:   -ccc-gcc-name \
+// RUN:   -ccc-install-dir \
+// RUN:   -ccc-print-bindings \
+// RUN:   -ccc-print-phases \
 // RUN:   -cfguard \
 // RUN:   -cfguard-no-checks \
 // RUN:   -chain-include \
@@ -1306,6 +1311,7 @@
 // RUN:   -dsym-dir \
 // RUN:   -dump-coverage-mapping \
 // RUN:   -dump-deserialized-decls \
+// RUN:   -dump-minimization-hints= \
 // RUN:   -dump-raw-tokens \
 // RUN:   -dump-tokens \
 // RUN:   -dumpdir \
@@ -1316,14 +1322,13 @@
 // RUN:   -dwarf-ext-refs \
 // RUN:   -Fc \
 // RUN:   -Fo \
-// RUN:   -Vd \
-// RUN:   --E \
-// RUN:   -HV \
-// RUN:   -hlsl-no-stdinc \
-// RUN:   --dxv-path= \
-// RUN:   -validator-version \
-// RUN:   -dylib_file - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_6 %s
+// RUN:   -Vd - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_6 %s
 
+// CHECK_CC1AS_6: {{(unknown argument).*}}-ccc-
+// CHECK_CC1AS_6: {{(unknown argument).*}}-ccc-gcc-name
+// CHECK_CC1AS_6: {{(unknown argument).*}}-ccc-install-dir
+// CHECK_CC1AS_6: {{(unknown argument).*}}-ccc-print-bindings
+// CHECK_CC1AS_6: {{(unknown argument).*}}-ccc-print-phases
 // CHECK_CC1AS_6: {{(unknown argument).*}}-cfguard
 // CHECK_CC1AS_6: {{(unknown argument).*}}-cfguard-no-checks
 // CHECK_CC1AS_6: {{(unknown argument).*}}-chain-include
@@ -1407,6 +1412,7 @@
 // CHECK_CC1AS_6: {{(unknown argument).*}}-dsym-dir
 // CHECK_CC1AS_6: {{(unknown argument).*}}-dump-coverage-mapping
 // CHECK_CC1AS_6: {{(unknown argument).*}}-dump-deserialized-decls
+// CHECK_CC1AS_6: {{(unknown argument).*}}-dump-minimization-hints=
 // CHECK_CC1AS_6: {{(unknown argument).*}}-dump-raw-tokens
 // CHECK_CC1AS_6: {{(unknown argument).*}}-dump-tokens
 // CHECK_CC1AS_6: {{(unknown argument).*}}-dumpdir
@@ -1418,14 +1424,14 @@
 // CHECK_CC1AS_6: {{(unknown argument).*}}-Fc
 // CHECK_CC1AS_6: {{(unknown argument).*}}-Fo
 // CHECK_CC1AS_6: {{(unknown argument).*}}-Vd
-// CHECK_CC1AS_6: {{(unknown argument).*}}--E
-// CHECK_CC1AS_6: {{(unknown argument).*}}-HV
-// CHECK_CC1AS_6: {{(unknown argument).*}}-hlsl-no-stdinc
-// CHECK_CC1AS_6: {{(unknown argument).*}}--dxv-path=
-// CHECK_CC1AS_6: {{(unknown argument).*}}-validator-version
-// CHECK_CC1AS_6: {{(unknown argument).*}}-dylib_file
 
 // RUN: not %clang -cc1as  \
+// RUN:   --E \
+// RUN:   -HV \
+// RUN:   -hlsl-no-stdinc \
+// RUN:   --dxv-path= \
+// RUN:   -validator-version \
+// RUN:   -dylib_file \
 // RUN:   -dylinker \
 // RUN:   -dylinker_install_name \
 // RUN:   -dynamic \
@@ -1519,14 +1525,14 @@
 // RUN:   -fassume-unique-vtables \
 // RUN:   -fassumptions \
 // RUN:   -fast \
-// RUN:   -fastcp \
-// RUN:   -fastf \
-// RUN:   -fasync-exceptions \
-// RUN:   -fasynchronous-unwind-tables \
-// RUN:   -fatomic-fine-grained-memory \
-// RUN:   -fatomic-ignore-denormal-mode \
-// RUN:   -fatomic-remote-memory - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_7 %s
+// RUN:   -fastcp - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_7 %s
 
+// CHECK_CC1AS_7: {{(unknown argument).*}}--E
+// CHECK_CC1AS_7: {{(unknown argument).*}}-HV
+// CHECK_CC1AS_7: {{(unknown argument).*}}-hlsl-no-stdinc
+// CHECK_CC1AS_7: {{(unknown argument).*}}--dxv-path=
+// CHECK_CC1AS_7: {{(unknown argument).*}}-validator-version
+// CHECK_CC1AS_7: {{(unknown argument).*}}-dylib_file
 // CHECK_CC1AS_7: {{(unknown argument).*}}-dylinker
 // CHECK_CC1AS_7: {{(unknown argument).*}}-dylinker_install_name
 // CHECK_CC1AS_7: {{(unknown argument).*}}-dynamic
@@ -1621,14 +1627,14 @@
 // CHECK_CC1AS_7: {{(unknown argument).*}}-fassumptions
 // CHECK_CC1AS_7: {{(unknown argument).*}}-fast
 // CHECK_CC1AS_7: {{(unknown argument).*}}-fastcp
-// CHECK_CC1AS_7: {{(unknown argument).*}}-fastf
-// CHECK_CC1AS_7: {{(unknown argument).*}}-fasync-exceptions
-// CHECK_CC1AS_7: {{(unknown argument).*}}-fasynchronous-unwind-tables
-// CHECK_CC1AS_7: {{(unknown argument).*}}-fatomic-fine-grained-memory
-// CHECK_CC1AS_7: {{(unknown argument).*}}-fatomic-ignore-denormal-mode
-// CHECK_CC1AS_7: {{(unknown argument).*}}-fatomic-remote-memory
 
 // RUN: not %clang -cc1as  \
+// RUN:   -fastf \
+// RUN:   -fasync-exceptions \
+// RUN:   -fasynchronous-unwind-tables \
+// RUN:   -fatomic-fine-grained-memory \
+// RUN:   -fatomic-ignore-denormal-mode \
+// RUN:   -fatomic-remote-memory \
 // RUN:   -fauto-import \
 // RUN:   -fauto-profile= \
 // RUN:   -fauto-profile-accurate \
@@ -1722,14 +1728,14 @@
 // RUN:   -fcxx-modules \
 // RUN:   -fd-lines-as-code \
 // RUN:   -fd-lines-as-comments \
-// RUN:   -fdata-sections \
-// RUN:   -fdebug-default-version= \
-// RUN:   -fdebug-dump-all \
-// RUN:   -fdebug-dump-parse-tree \
-// RUN:   -fdebug-dump-parse-tree-no-sema \
-// RUN:   -fdebug-dump-parsing-log \
-// RUN:   -fdebug-dump-pft - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_8 %s
+// RUN:   -fdata-sections - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_8 %s
 
+// CHECK_CC1AS_8: {{(unknown argument).*}}-fastf
+// CHECK_CC1AS_8: {{(unknown argument).*}}-fasync-exceptions
+// CHECK_CC1AS_8: {{(unknown argument).*}}-fasynchronous-unwind-tables
+// CHECK_CC1AS_8: {{(unknown argument).*}}-fatomic-fine-grained-memory
+// CHECK_CC1AS_8: {{(unknown argument).*}}-fatomic-ignore-denormal-mode
+// CHECK_CC1AS_8: {{(unknown argument).*}}-fatomic-remote-memory
 // CHECK_CC1AS_8: {{(unknown argument).*}}-fauto-import
 // CHECK_CC1AS_8: {{(unknown argument).*}}-fauto-profile=
 // CHECK_CC1AS_8: {{(unknown argument).*}}-fauto-profile-accurate
@@ -1824,14 +1830,14 @@
 // CHECK_CC1AS_8: {{(unknown argument).*}}-fd-lines-as-code
 // CHECK_CC1AS_8: {{(unknown argument).*}}-fd-lines-as-comments
 // CHECK_CC1AS_8: {{(unknown argument).*}}-fdata-sections
-// CHECK_CC1AS_8: {{(unknown argument).*}}-fdebug-default-version=
-// CHECK_CC1AS_8: {{(unknown argument).*}}-fdebug-dump-all
-// CHECK_CC1AS_8: {{(unknown argument).*}}-fdebug-dump-parse-tree
-// CHECK_CC1AS_8: {{(unknown argument).*}}-fdebug-dump-parse-tree-no-sema
-// CHECK_CC1AS_8: {{(unknown argument).*}}-fdebug-dump-parsing-log
-// CHECK_CC1AS_8: {{(unknown argument).*}}-fdebug-dump-pft
 
 // RUN: not %clang -cc1as  \
+// RUN:   -fdebug-default-version= \
+// RUN:   -fdebug-dump-all \
+// RUN:   -fdebug-dump-parse-tree \
+// RUN:   -fdebug-dump-parse-tree-no-sema \
+// RUN:   -fdebug-dump-parsing-log \
+// RUN:   -fdebug-dump-pft \
 // RUN:   -fdebug-dump-provenance \
 // RUN:   -fdebug-dump-symbols \
 // RUN:   -fdebug-info-for-profiling \
@@ -1894,6 +1900,7 @@
 // RUN:   -fdisable-real-10 \
 // RUN:   -fdisable-real-3 \
 // RUN:   -fdiscard-value-names \
+// RUN:   -fdo-concurrent-to-openmp= \
 // RUN:   -fdollar-ok \
 // RUN:   -fdollars-in-identifiers \
 // RUN:   -fdouble-square-bracket-attributes \
@@ -1924,15 +1931,14 @@
 // RUN:   -ferror-limit= \
 // RUN:   -fescaping-block-tail-calls \
 // RUN:   -fexceptions \
-// RUN:   -fexcess-precision= \
-// RUN:   -fexec-charset= \
-// RUN:   -fexperimental-assignment-tracking= \
-// RUN:   -fexperimental-isel \
-// RUN:   -fexperimental-late-parse-attributes \
-// RUN:   -fexperimental-library \
-// RUN:   -fexperimental-max-bitint-width= \
-// RUN:   -fexperimental-new-constant-interpreter - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_9 %s
+// RUN:   -fexcess-precision= - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_9 %s
 
+// CHECK_CC1AS_9: {{(unknown argument).*}}-fdebug-default-version=
+// CHECK_CC1AS_9: {{(unknown argument).*}}-fdebug-dump-all
+// CHECK_CC1AS_9: {{(unknown argument).*}}-fdebug-dump-parse-tree
+// CHECK_CC1AS_9: {{(unknown argument).*}}-fdebug-dump-parse-tree-no-sema
+// CHECK_CC1AS_9: {{(unknown argument).*}}-fdebug-dump-parsing-log
+// CHECK_CC1AS_9: {{(unknown argument).*}}-fdebug-dump-pft
 // CHECK_CC1AS_9: {{(unknown argument).*}}-fdebug-dump-provenance
 // CHECK_CC1AS_9: {{(unknown argument).*}}-fdebug-dump-symbols
 // CHECK_CC1AS_9: {{(unknown argument).*}}-fdebug-info-for-profiling
@@ -1995,6 +2001,7 @@
 // CHECK_CC1AS_9: {{(unknown argument).*}}-fdisable-real-10
 // CHECK_CC1AS_9: {{(unknown argument).*}}-fdisable-real-3
 // CHECK_CC1AS_9: {{(unknown argument).*}}-fdiscard-value-names
+// CHECK_CC1AS_9: {{(unknown argument).*}}-fdo-concurrent-to-openmp=
 // CHECK_CC1AS_9: {{(unknown argument).*}}-fdollar-ok
 // CHECK_CC1AS_9: {{(unknown argument).*}}-fdollars-in-identifiers
 // CHECK_CC1AS_9: {{(unknown argument).*}}-fdouble-square-bracket-attributes
@@ -2026,15 +2033,15 @@
 // CHECK_CC1AS_9: {{(unknown argument).*}}-fescaping-block-tail-calls
 // CHECK_CC1AS_9: {{(unknown argument).*}}-fexceptions
 // CHECK_CC1AS_9: {{(unknown argument).*}}-fexcess-precision=
-// CHECK_CC1AS_9: {{(unknown argument).*}}-fexec-charset=
-// CHECK_CC1AS_9: {{(unknown argument).*}}-fexperimental-assignment-tracking=
-// CHECK_CC1AS_9: {{(unknown argument).*}}-fexperimental-isel
-// CHECK_CC1AS_9: {{(unknown argument).*}}-fexperimental-late-parse-attributes
-// CHECK_CC1AS_9: {{(unknown argument).*}}-fexperimental-library
-// CHECK_CC1AS_9: {{(unknown argument).*}}-fexperimental-max-bitint-width=
-// CHECK_CC1AS_9: {{(unknown argument).*}}-fexperimental-new-constant-interpreter
 
 // RUN: not %clang -cc1as  \
+// RUN:   -fexec-charset= \
+// RUN:   -fexperimental-assignment-tracking= \
+// RUN:   -fexperimental-isel \
+// RUN:   -fexperimental-late-parse-attributes \
+// RUN:   -fexperimental-library \
+// RUN:   -fexperimental-max-bitint-width= \
+// RUN:   -fexperimental-new-constant-interpreter \
 // RUN:   -fexperimental-omit-vtable-rtti \
 // RUN:   -fexperimental-relative-c++-abi-vtables \
 // RUN:   -fexperimental-sanitize-metadata= \
@@ -2127,15 +2134,15 @@
 // RUN:   -ffixed-x23 \
 // RUN:   -ffixed-x24 \
 // RUN:   -ffixed-x25 \
-// RUN:   -ffixed-x26 \
-// RUN:   -ffixed-x27 \
-// RUN:   -ffixed-x28 \
-// RUN:   -ffixed-x29 \
-// RUN:   -ffixed-x3 \
-// RUN:   -ffixed-x30 \
-// RUN:   -ffixed-x31 \
-// RUN:   -ffixed-x4 - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_10 %s
+// RUN:   -ffixed-x26 - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_10 %s
 
+// CHECK_CC1AS_10: {{(unknown argument).*}}-fexec-charset=
+// CHECK_CC1AS_10: {{(unknown argument).*}}-fexperimental-assignment-tracking=
+// CHECK_CC1AS_10: {{(unknown argument).*}}-fexperimental-isel
+// CHECK_CC1AS_10: {{(unknown argument).*}}-fexperimental-late-parse-attributes
+// CHECK_CC1AS_10: {{(unknown argument).*}}-fexperimental-library
+// CHECK_CC1AS_10: {{(unknown argument).*}}-fexperimental-max-bitint-width=
+// CHECK_CC1AS_10: {{(unknown argument).*}}-fexperimental-new-constant-interpreter
 // CHECK_CC1AS_10: {{(unknown argument).*}}-fexperimental-omit-vtable-rtti
 // CHECK_CC1AS_10: {{(unknown argument).*}}-fexperimental-relative-c++-abi-vtables
 // CHECK_CC1AS_10: {{(unknown argument).*}}-fexperimental-sanitize-metadata=
@@ -2229,15 +2236,15 @@
 // CHECK_CC1AS_10: {{(unknown argument).*}}-ffixed-x24
 // CHECK_CC1AS_10: {{(unknown argument).*}}-ffixed-x25
 // CHECK_CC1AS_10: {{(unknown argument).*}}-ffixed-x26
-// CHECK_CC1AS_10: {{(unknown argument).*}}-ffixed-x27
-// CHECK_CC1AS_10: {{(unknown argument).*}}-ffixed-x28
-// CHECK_CC1AS_10: {{(unknown argument).*}}-ffixed-x29
-// CHECK_CC1AS_10: {{(unknown argument).*}}-ffixed-x3
-// CHECK_CC1AS_10: {{(unknown argument).*}}-ffixed-x30
-// CHECK_CC1AS_10: {{(unknown argument).*}}-ffixed-x31
-// CHECK_CC1AS_10: {{(unknown argument).*}}-ffixed-x4
 
 // RUN: not %clang -cc1as  \
+// RUN:   -ffixed-x27 \
+// RUN:   -ffixed-x28 \
+// RUN:   -ffixed-x29 \
+// RUN:   -ffixed-x3 \
+// RUN:   -ffixed-x30 \
+// RUN:   -ffixed-x31 \
+// RUN:   -ffixed-x4 \
 // RUN:   -ffixed-x5 \
 // RUN:   -ffixed-x6 \
 // RUN:   -ffixed-x7 \
@@ -2330,15 +2337,15 @@
 // RUN:   -fintegrated-cc1 \
 // RUN:   -fintegrated-objemitter \
 // RUN:   -fintrinsic-modules-path \
-// RUN:   -fipa-cp \
-// RUN:   -fivopts \
-// RUN:   -fix-only-warnings \
-// RUN:   -fix-what-you-can \
-// RUN:   -fixit \
-// RUN:   -fixit= \
-// RUN:   -fixit-recompile \
-// RUN:   -fixit-to-temporary - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_11 %s
+// RUN:   -fipa-cp - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_11 %s
 
+// CHECK_CC1AS_11: {{(unknown argument).*}}-ffixed-x27
+// CHECK_CC1AS_11: {{(unknown argument).*}}-ffixed-x28
+// CHECK_CC1AS_11: {{(unknown argument).*}}-ffixed-x29
+// CHECK_CC1AS_11: {{(unknown argument).*}}-ffixed-x3
+// CHECK_CC1AS_11: {{(unknown argument).*}}-ffixed-x30
+// CHECK_CC1AS_11: {{(unknown argument).*}}-ffixed-x31
+// CHECK_CC1AS_11: {{(unknown argument).*}}-ffixed-x4
 // CHECK_CC1AS_11: {{(unknown argument).*}}-ffixed-x5
 // CHECK_CC1AS_11: {{(unknown argument).*}}-ffixed-x6
 // CHECK_CC1AS_11: {{(unknown argument).*}}-ffixed-x7
@@ -2432,15 +2439,15 @@
 // CHECK_CC1AS_11: {{(unknown argument).*}}-fintegrated-objemitter
 // CHECK_CC1AS_11: {{(unknown argument).*}}-fintrinsic-modules-path
 // CHECK_CC1AS_11: {{(unknown argument).*}}-fipa-cp
-// CHECK_CC1AS_11: {{(unknown argument).*}}-fivopts
-// CHECK_CC1AS_11: {{(unknown argument).*}}-fix-only-warnings
-// CHECK_CC1AS_11: {{(unknown argument).*}}-fix-what-you-can
-// CHECK_CC1AS_11: {{(unknown argument).*}}-fixit
-// CHECK_CC1AS_11: {{(unknown argument).*}}-fixit=
-// CHECK_CC1AS_11: {{(unknown argument).*}}-fixit-recompile
-// CHECK_CC1AS_11: {{(unknown argument).*}}-fixit-to-temporary
 
 // RUN: not %clang -cc1as  \
+// RUN:   -fivopts \
+// RUN:   -fix-only-warnings \
+// RUN:   -fix-what-you-can \
+// RUN:   -fixit \
+// RUN:   -fixit= \
+// RUN:   -fixit-recompile \
+// RUN:   -fixit-to-temporary \
 // RUN:   -fjmc \
 // RUN:   -fjump-tables \
 // RUN:   -fkeep-persistent-storage-variables \
@@ -2462,7 +2469,7 @@
 // RUN:   -flto=auto \
 // RUN:   -flto=jobserver \
 // RUN:   -flto-jobs= \
-// RUN:   --flto-partitions= \
+// RUN:   -flto-partitions= \
 // RUN:   -flto-unit \
 // RUN:   -flto-visibility-public-std \
 // RUN:   -fmacro-backtrace-limit= \
@@ -2510,6 +2517,7 @@
 // RUN:   -fmodules-disable-diagnostic-validation \
 // RUN:   -fmodules-embed-all-files \
 // RUN:   -fmodules-embed-file= \
+// RUN:   -fmodules-force-validate-user-headers \
 // RUN:   -fmodules-hash-content \
 // RUN:   -fmodules-ignore-macro= \
 // RUN:   -fmodules-local-submodule-visibility \
@@ -2532,16 +2540,15 @@
 // RUN:   -fms-extensions \
 // RUN:   -fms-hotpatch \
 // RUN:   -fms-kernel \
-// RUN:   -fms-memptr-rep= \
-// RUN:   -fms-omit-default-lib \
-// RUN:   -fms-runtime-lib= \
-// RUN:   -fms-tls-guards \
-// RUN:   -fms-volatile \
-// RUN:   -fmsc-version= \
-// RUN:   -fmudflap \
-// RUN:   -fmudflapth \
-// RUN:   -fmultilib-flag= - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_12 %s
+// RUN:   -fms-memptr-rep= - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_12 %s
 
+// CHECK_CC1AS_12: {{(unknown argument).*}}-fivopts
+// CHECK_CC1AS_12: {{(unknown argument).*}}-fix-only-warnings
+// CHECK_CC1AS_12: {{(unknown argument).*}}-fix-what-you-can
+// CHECK_CC1AS_12: {{(unknown argument).*}}-fixit
+// CHECK_CC1AS_12: {{(unknown argument).*}}-fixit=
+// CHECK_CC1AS_12: {{(unknown argument).*}}-fixit-recompile
+// CHECK_CC1AS_12: {{(unknown argument).*}}-fixit-to-temporary
 // CHECK_CC1AS_12: {{(unknown argument).*}}-fjmc
 // CHECK_CC1AS_12: {{(unknown argument).*}}-fjump-tables
 // CHECK_CC1AS_12: {{(unknown argument).*}}-fkeep-persistent-storage-variables
@@ -2563,7 +2570,7 @@
 // CHECK_CC1AS_12: {{(unknown argument).*}}-flto=auto
 // CHECK_CC1AS_12: {{(unknown argument).*}}-flto=jobserver
 // CHECK_CC1AS_12: {{(unknown argument).*}}-flto-jobs=
-// CHECK_CC1AS_12: {{(unknown argument).*}}--flto-partitions=
+// CHECK_CC1AS_12: {{(unknown argument).*}}-flto-partitions=
 // CHECK_CC1AS_12: {{(unknown argument).*}}-flto-unit
 // CHECK_CC1AS_12: {{(unknown argument).*}}-flto-visibility-public-std
 // CHECK_CC1AS_12: {{(unknown argument).*}}-fmacro-backtrace-limit=
@@ -2611,6 +2618,7 @@
 // CHECK_CC1AS_12: {{(unknown argument).*}}-fmodules-disable-diagnostic-validation
 // CHECK_CC1AS_12: {{(unknown argument).*}}-fmodules-embed-all-files
 // CHECK_CC1AS_12: {{(unknown argument).*}}-fmodules-embed-file=
+// CHECK_CC1AS_12: {{(unknown argument).*}}-fmodules-force-validate-user-headers
 // CHECK_CC1AS_12: {{(unknown argument).*}}-fmodules-hash-content
 // CHECK_CC1AS_12: {{(unknown argument).*}}-fmodules-ignore-macro=
 // CHECK_CC1AS_12: {{(unknown argument).*}}-fmodules-local-submodule-visibility
@@ -2634,16 +2642,16 @@
 // CHECK_CC1AS_12: {{(unknown argument).*}}-fms-hotpatch
 // CHECK_CC1AS_12: {{(unknown argument).*}}-fms-kernel
 // CHECK_CC1AS_12: {{(unknown argument).*}}-fms-memptr-rep=
-// CHECK_CC1AS_12: {{(unknown argument).*}}-fms-omit-default-lib
-// CHECK_CC1AS_12: {{(unknown argument).*}}-fms-runtime-lib=
-// CHECK_CC1AS_12: {{(unknown argument).*}}-fms-tls-guards
-// CHECK_CC1AS_12: {{(unknown argument).*}}-fms-volatile
-// CHECK_CC1AS_12: {{(unknown argument).*}}-fmsc-version=
-// CHECK_CC1AS_12: {{(unknown argument).*}}-fmudflap
-// CHECK_CC1AS_12: {{(unknown argument).*}}-fmudflapth
-// CHECK_CC1AS_12: {{(unknown argument).*}}-fmultilib-flag=
 
 // RUN: not %clang -cc1as  \
+// RUN:   -fms-omit-default-lib \
+// RUN:   -fms-runtime-lib= \
+// RUN:   -fms-tls-guards \
+// RUN:   -fms-volatile \
+// RUN:   -fmsc-version= \
+// RUN:   -fmudflap \
+// RUN:   -fmudflapth \
+// RUN:   -fmultilib-flag= \
 // RUN:   -fnative-half-arguments-and-returns \
 // RUN:   -fnative-half-type \
 // RUN:   -fnested-functions \
@@ -2735,16 +2743,16 @@
 // RUN:   -fno-debug-pass-manager \
 // RUN:   -fno-debug-ranges-base-address \
 // RUN:   -fno-debug-types-section \
-// RUN:   -fno-declspec \
-// RUN:   -fno-default-inline \
-// RUN:   -fno-define-target-os-macros \
-// RUN:   -fno-delayed-template-parsing \
-// RUN:   -fno-delete-null-pointer-checks \
-// RUN:   -fno-deprecated-macro \
-// RUN:   -fno-devirtualize \
-// RUN:   -fno-devirtualize-speculatively \
-// RUN:   -fno-diagnostics-fixit-info - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_13 %s
+// RUN:   -fno-declspec - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_13 %s
 
+// CHECK_CC1AS_13: {{(unknown argument).*}}-fms-omit-default-lib
+// CHECK_CC1AS_13: {{(unknown argument).*}}-fms-runtime-lib=
+// CHECK_CC1AS_13: {{(unknown argument).*}}-fms-tls-guards
+// CHECK_CC1AS_13: {{(unknown argument).*}}-fms-volatile
+// CHECK_CC1AS_13: {{(unknown argument).*}}-fmsc-version=
+// CHECK_CC1AS_13: {{(unknown argument).*}}-fmudflap
+// CHECK_CC1AS_13: {{(unknown argument).*}}-fmudflapth
+// CHECK_CC1AS_13: {{(unknown argument).*}}-fmultilib-flag=
 // CHECK_CC1AS_13: {{(unknown argument).*}}-fnative-half-arguments-and-returns
 // CHECK_CC1AS_13: {{(unknown argument).*}}-fnative-half-type
 // CHECK_CC1AS_13: {{(unknown argument).*}}-fnested-functions
@@ -2837,16 +2845,16 @@
 // CHECK_CC1AS_13: {{(unknown argument).*}}-fno-debug-ranges-base-address
 // CHECK_CC1AS_13: {{(unknown argument).*}}-fno-debug-types-section
 // CHECK_CC1AS_13: {{(unknown argument).*}}-fno-declspec
-// CHECK_CC1AS_13: {{(unknown argument).*}}-fno-default-inline
-// CHECK_CC1AS_13: {{(unknown argument).*}}-fno-define-target-os-macros
-// CHECK_CC1AS_13: {{(unknown argument).*}}-fno-delayed-template-parsing
-// CHECK_CC1AS_13: {{(unknown argument).*}}-fno-delete-null-pointer-checks
-// CHECK_CC1AS_13: {{(unknown argument).*}}-fno-deprecated-macro
-// CHECK_CC1AS_13: {{(unknown argument).*}}-fno-devirtualize
-// CHECK_CC1AS_13: {{(unknown argument).*}}-fno-devirtualize-speculatively
-// CHECK_CC1AS_13: {{(unknown argument).*}}-fno-diagnostics-fixit-info
 
 // RUN: not %clang -cc1as  \
+// RUN:   -fno-default-inline \
+// RUN:   -fno-define-target-os-macros \
+// RUN:   -fno-delayed-template-parsing \
+// RUN:   -fno-delete-null-pointer-checks \
+// RUN:   -fno-deprecated-macro \
+// RUN:   -fno-devirtualize \
+// RUN:   -fno-devirtualize-speculatively \
+// RUN:   -fno-diagnostics-fixit-info \
 // RUN:   -fno-diagnostics-show-hotness \
 // RUN:   -fno-diagnostics-show-line-numbers \
 // RUN:   -fno-diagnostics-show-note-include-stack \
@@ -2938,16 +2946,16 @@
 // RUN:   -fno-integrated-as \
 // RUN:   -fno-integrated-cc1 \
 // RUN:   -fno-integrated-objemitter \
-// RUN:   -fno-ipa-cp \
-// RUN:   -fno-ivopts \
-// RUN:   -fno-jmc \
-// RUN:   -fno-jump-tables \
-// RUN:   -fno-keep-persistent-storage-variables \
-// RUN:   -fno-keep-static-consts \
-// RUN:   -fno-keep-system-includes \
-// RUN:   -fno-knr-functions \
-// RUN:   -fno-lax-vector-conversions - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_14 %s
+// RUN:   -fno-ipa-cp - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_14 %s
 
+// CHECK_CC1AS_14: {{(unknown argument).*}}-fno-default-inline
+// CHECK_CC1AS_14: {{(unknown argument).*}}-fno-define-target-os-macros
+// CHECK_CC1AS_14: {{(unknown argument).*}}-fno-delayed-template-parsing
+// CHECK_CC1AS_14: {{(unknown argument).*}}-fno-delete-null-pointer-checks
+// CHECK_CC1AS_14: {{(unknown argument).*}}-fno-deprecated-macro
+// CHECK_CC1AS_14: {{(unknown argument).*}}-fno-devirtualize
+// CHECK_CC1AS_14: {{(unknown argument).*}}-fno-devirtualize-speculatively
+// CHECK_CC1AS_14: {{(unknown argument).*}}-fno-diagnostics-fixit-info
 // CHECK_CC1AS_14: {{(unknown argument).*}}-fno-diagnostics-show-hotness
 // CHECK_CC1AS_14: {{(unknown argument).*}}-fno-diagnostics-show-line-numbers
 // CHECK_CC1AS_14: {{(unknown argument).*}}-fno-diagnostics-show-note-include-stack
@@ -3040,16 +3048,16 @@
 // CHECK_CC1AS_14: {{(unknown argument).*}}-fno-integrated-cc1
 // CHECK_CC1AS_14: {{(unknown argument).*}}-fno-integrated-objemitter
 // CHECK_CC1AS_14: {{(unknown argument).*}}-fno-ipa-cp
-// CHECK_CC1AS_14: {{(unknown argument).*}}-fno-ivopts
-// CHECK_CC1AS_14: {{(unknown argument).*}}-fno-jmc
-// CHECK_CC1AS_14: {{(unknown argument).*}}-fno-jump-tables
-// CHECK_CC1AS_14: {{(unknown argument).*}}-fno-keep-persistent-storage-variables
-// CHECK_CC1AS_14: {{(unknown argument).*}}-fno-keep-static-consts
-// CHECK_CC1AS_14: {{(unknown argument).*}}-fno-keep-system-includes
-// CHECK_CC1AS_14: {{(unknown argument).*}}-fno-knr-functions
-// CHECK_CC1AS_14: {{(unknown argument).*}}-fno-lax-vector-conversions
 
 // RUN: not %clang -cc1as  \
+// RUN:   -fno-ivopts \
+// RUN:   -fno-jmc \
+// RUN:   -fno-jump-tables \
+// RUN:   -fno-keep-persistent-storage-variables \
+// RUN:   -fno-keep-static-consts \
+// RUN:   -fno-keep-system-includes \
+// RUN:   -fno-knr-functions \
+// RUN:   -fno-lax-vector-conversions \
 // RUN:   -fno-limit-debug-info \
 // RUN:   -fno-logical-abbreviations \
 // RUN:   -fno-loop-interchange \
@@ -3072,6 +3080,7 @@
 // RUN:   -fno-modules-check-relocated \
 // RUN:   -fno-modules-decluse \
 // RUN:   -fno-modules-error-recovery \
+// RUN:   -fno-modules-force-validate-user-headers \
 // RUN:   -fno-modules-global-index \
 // RUN:   -fno-modules-prune-non-affecting-module-map-files \
 // RUN:   -fno-modules-search-all \
@@ -3140,17 +3149,16 @@
 // RUN:   -fno-printf \
 // RUN:   -fno-profile \
 // RUN:   -fno-profile-arcs \
-// RUN:   -fno-profile-correction \
-// RUN:   -fno-profile-generate \
-// RUN:   -fno-profile-generate-sampling \
-// RUN:   -fno-profile-instr-generate \
-// RUN:   -fno-profile-instr-use \
-// RUN:   -fno-profile-reusedist \
-// RUN:   -fno-profile-sample-accurate \
-// RUN:   -fno-profile-sample-use \
-// RUN:   -fno-profile-use \
-// RUN:   -fno-profile-values - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_15 %s
+// RUN:   -fno-profile-correction - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_15 %s
 
+// CHECK_CC1AS_15: {{(unknown argument).*}}-fno-ivopts
+// CHECK_CC1AS_15: {{(unknown argument).*}}-fno-jmc
+// CHECK_CC1AS_15: {{(unknown argument).*}}-fno-jump-tables
+// CHECK_CC1AS_15: {{(unknown argument).*}}-fno-keep-persistent-storage-variables
+// CHECK_CC1AS_15: {{(unknown argument).*}}-fno-keep-static-consts
+// CHECK_CC1AS_15: {{(unknown argument).*}}-fno-keep-system-includes
+// CHECK_CC1AS_15: {{(unknown argument).*}}-fno-knr-functions
+// CHECK_CC1AS_15: {{(unknown argument).*}}-fno-lax-vector-conversions
 // CHECK_CC1AS_15: {{(unknown argument).*}}-fno-limit-debug-info
 // CHECK_CC1AS_15: {{(unknown argument).*}}-fno-logical-abbreviations
 // CHECK_CC1AS_15: {{(unknown argument).*}}-fno-loop-interchange
@@ -3173,6 +3181,7 @@
 // CHECK_CC1AS_15: {{(unknown argument).*}}-fno-modules-check-relocated
 // CHECK_CC1AS_15: {{(unknown argument).*}}-fno-modules-decluse
 // CHECK_CC1AS_15: {{(unknown argument).*}}-fno-modules-error-recovery
+// CHECK_CC1AS_15: {{(unknown argument).*}}-fno-modules-force-validate-user-headers
 // CHECK_CC1AS_15: {{(unknown argument).*}}-fno-modules-global-index
 // CHECK_CC1AS_15: {{(unknown argument).*}}-fno-modules-prune-non-affecting-module-map-files
 // CHECK_CC1AS_15: {{(unknown argument).*}}-fno-modules-search-all
@@ -3242,17 +3251,17 @@
 // CHECK_CC1AS_15: {{(unknown argument).*}}-fno-profile
 // CHECK_CC1AS_15: {{(unknown argument).*}}-fno-profile-arcs
 // CHECK_CC1AS_15: {{(unknown argument).*}}-fno-profile-correction
-// CHECK_CC1AS_15: {{(unknown argument).*}}-fno-profile-generate
-// CHECK_CC1AS_15: {{(unknown argument).*}}-fno-profile-generate-sampling
-// CHECK_CC1AS_15: {{(unknown argument).*}}-fno-profile-instr-generate
-// CHECK_CC1AS_15: {{(unknown argument).*}}-fno-profile-instr-use
-// CHECK_CC1AS_15: {{(unknown argument).*}}-fno-profile-reusedist
-// CHECK_CC1AS_15: {{(unknown argument).*}}-fno-profile-sample-accurate
-// CHECK_CC1AS_15: {{(unknown argument).*}}-fno-profile-sample-use
-// CHECK_CC1AS_15: {{(unknown argument).*}}-fno-profile-use
-// CHECK_CC1AS_15: {{(unknown argument).*}}-fno-profile-values
 
 // RUN: not %clang -cc1as  \
+// RUN:   -fno-profile-generate \
+// RUN:   -fno-profile-generate-sampling \
+// RUN:   -fno-profile-instr-generate \
+// RUN:   -fno-profile-instr-use \
+// RUN:   -fno-profile-reusedist \
+// RUN:   -fno-profile-sample-accurate \
+// RUN:   -fno-profile-sample-use \
+// RUN:   -fno-profile-use \
+// RUN:   -fno-profile-values \
 // RUN:   -fno-protect-parens \
 // RUN:   -fno-pseudo-probe-for-profiling \
 // RUN:   -fno-ptrauth-auth-traps \
@@ -3287,7 +3296,6 @@
 // RUN:   -fno-rename-registers \
 // RUN:   -fno-reorder-blocks \
 // RUN:   -fno-repack-arrays \
-// RUN:   -fno-retain-subst-template-type-parm-type-ast-nodes \
 // RUN:   -fno-rewrite-imports \
 // RUN:   -fno-rewrite-includes \
 // RUN:   -fno-ripa \
@@ -3305,6 +3313,8 @@
 // RUN:   -fno-sanitize-address-poison-custom-array-cookie \
 // RUN:   -fno-sanitize-address-use-after-scope \
 // RUN:   -fno-sanitize-address-use-odr-indicator \
+// RUN:   -fno-sanitize-annotate-debug-info \
+// RUN:   -fno-sanitize-annotate-debug-info= \
 // RUN:   -fno-sanitize-cfi-canonical-jump-tables \
 // RUN:   -fno-sanitize-cfi-cross-dso \
 // RUN:   -fno-sanitize-coverage= \
@@ -3342,18 +3352,17 @@
 // RUN:   -fno-show-source-location \
 // RUN:   -fno-sign-zero \
 // RUN:   -fno-signaling-math \
-// RUN:   -fno-signaling-nans \
-// RUN:   -fno-signed-char \
-// RUN:   -fno-signed-wchar \
-// RUN:   -fno-signed-zeros \
-// RUN:   -fno-single-precision-constant \
-// RUN:   -fno-sized-deallocation \
-// RUN:   -fno-skip-odr-check-in-gmf \
-// RUN:   -fno-slp-vectorize \
-// RUN:   -fno-spec-constr-count \
-// RUN:   -fno-spell-checking \
-// RUN:   -fno-split-dwarf-inlining - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_16 %s
+// RUN:   -fno-signaling-nans - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_16 %s
 
+// CHECK_CC1AS_16: {{(unknown argument).*}}-fno-profile-generate
+// CHECK_CC1AS_16: {{(unknown argument).*}}-fno-profile-generate-sampling
+// CHECK_CC1AS_16: {{(unknown argument).*}}-fno-profile-instr-generate
+// CHECK_CC1AS_16: {{(unknown argument).*}}-fno-profile-instr-use
+// CHECK_CC1AS_16: {{(unknown argument).*}}-fno-profile-reusedist
+// CHECK_CC1AS_16: {{(unknown argument).*}}-fno-profile-sample-accurate
+// CHECK_CC1AS_16: {{(unknown argument).*}}-fno-profile-sample-use
+// CHECK_CC1AS_16: {{(unknown argument).*}}-fno-profile-use
+// CHECK_CC1AS_16: {{(unknown argument).*}}-fno-profile-values
 // CHECK_CC1AS_16: {{(unknown argument).*}}-fno-protect-parens
 // CHECK_CC1AS_16: {{(unknown argument).*}}-fno-pseudo-probe-for-profiling
 // CHECK_CC1AS_16: {{(unknown argument).*}}-fno-ptrauth-auth-traps
@@ -3388,7 +3397,6 @@
 // CHECK_CC1AS_16: {{(unknown argument).*}}-fno-rename-registers
 // CHECK_CC1AS_16: {{(unknown argument).*}}-fno-reorder-blocks
 // CHECK_CC1AS_16: {{(unknown argument).*}}-fno-repack-arrays
-// CHECK_CC1AS_16: {{(unknown argument).*}}-fno-retain-subst-template-type-parm-type-ast-nodes
 // CHECK_CC1AS_16: {{(unknown argument).*}}-fno-rewrite-imports
 // CHECK_CC1AS_16: {{(unknown argument).*}}-fno-rewrite-includes
 // CHECK_CC1AS_16: {{(unknown argument).*}}-fno-ripa
@@ -3406,6 +3414,8 @@
 // CHECK_CC1AS_16: {{(unknown argument).*}}-fno-sanitize-address-poison-custom-array-cookie
 // CHECK_CC1AS_16: {{(unknown argument).*}}-fno-sanitize-address-use-after-scope
 // CHECK_CC1AS_16: {{(unknown argument).*}}-fno-sanitize-address-use-odr-indicator
+// CHECK_CC1AS_16: {{(unknown argument).*}}-fno-sanitize-annotate-debug-info
+// CHECK_CC1AS_16: {{(unknown argument).*}}-fno-sanitize-annotate-debug-info=
 // CHECK_CC1AS_16: {{(unknown argument).*}}-fno-sanitize-cfi-canonical-jump-tables
 // CHECK_CC1AS_16: {{(unknown argument).*}}-fno-sanitize-cfi-cross-dso
 // CHECK_CC1AS_16: {{(unknown argument).*}}-fno-sanitize-coverage=
@@ -3444,18 +3454,18 @@
 // CHECK_CC1AS_16: {{(unknown argument).*}}-fno-sign-zero
 // CHECK_CC1AS_16: {{(unknown argument).*}}-fno-signaling-math
 // CHECK_CC1AS_16: {{(unknown argument).*}}-fno-signaling-nans
-// CHECK_CC1AS_16: {{(unknown argument).*}}-fno-signed-char
-// CHECK_CC1AS_16: {{(unknown argument).*}}-fno-signed-wchar
-// CHECK_CC1AS_16: {{(unknown argument).*}}-fno-signed-zeros
-// CHECK_CC1AS_16: {{(unknown argument).*}}-fno-single-precision-constant
-// CHECK_CC1AS_16: {{(unknown argument).*}}-fno-sized-deallocation
-// CHECK_CC1AS_16: {{(unknown argument).*}}-fno-skip-odr-check-in-gmf
-// CHECK_CC1AS_16: {{(unknown argument).*}}-fno-slp-vectorize
-// CHECK_CC1AS_16: {{(unknown argument).*}}-fno-spec-constr-count
-// CHECK_CC1AS_16: {{(unknown argument).*}}-fno-spell-checking
-// CHECK_CC1AS_16: {{(unknown argument).*}}-fno-split-dwarf-inlining
 
 // RUN: not %clang -cc1as  \
+// RUN:   -fno-signed-char \
+// RUN:   -fno-signed-wchar \
+// RUN:   -fno-signed-zeros \
+// RUN:   -fno-single-precision-constant \
+// RUN:   -fno-sized-deallocation \
+// RUN:   -fno-skip-odr-check-in-gmf \
+// RUN:   -fno-slp-vectorize \
+// RUN:   -fno-spec-constr-count \
+// RUN:   -fno-spell-checking \
+// RUN:   -fno-split-dwarf-inlining \
 // RUN:   -fno-split-lto-unit \
 // RUN:   -fno-split-machine-functions \
 // RUN:   -fno-split-stack \
@@ -3463,6 +3473,7 @@
 // RUN:   -fno-stack-check \
 // RUN:   -fno-stack-clash-protection \
 // RUN:   -fno-stack-protector \
+// RUN:   -fno-stack-repack-arrays \
 // RUN:   -fno-stack-size-section \
 // RUN:   -fno-standalone-debug \
 // RUN:   -fno-strength-reduce \
@@ -3491,6 +3502,7 @@
 // RUN:   -fno-unique-basic-block-section-names \
 // RUN:   -fno-unique-internal-linkage-names \
 // RUN:   -fno-unique-section-names \
+// RUN:   -fno-unique-source-file-names \
 // RUN:   -fno-unroll-all-loops \
 // RUN:   -fno-unroll-loops \
 // RUN:   -fno-unsafe-loop-optimizations \
@@ -3519,6 +3531,7 @@
 // RUN:   -fno-whole-file \
 // RUN:   -fno-whole-program \
 // RUN:   -fno-whole-program-vtables \
+// RUN:   -fno-winx64-eh-unwindv2 \
 // RUN:   -fno-working-directory \
 // RUN:   -fno-wrapv \
 // RUN:   -fno-wrapv-pointer \
@@ -3542,21 +3555,18 @@
 // RUN:   -fobjc-arc-cxxlib= \
 // RUN:   -fobjc-arc-exceptions \
 // RUN:   -fobjc-atdefs \
-// RUN:   -fobjc-avoid-heapify-local-blocks \
-// RUN:   -fobjc-call-cxx-cdtors \
-// RUN:   -fobjc-convert-messages-to-runtime-calls \
-// RUN:   -fobjc-disable-direct-methods-for-testing \
-// RUN:   -fobjc-dispatch-method= \
-// RUN:   -fobjc-encode-cxx-class-template-spec \
-// RUN:   -fobjc-exceptions \
-// RUN:   -fobjc-gc \
-// RUN:   -fobjc-gc-only \
-// RUN:   -fobjc-infer-related-result-type \
-// RUN:   -fobjc-legacy-dispatch \
-// RUN:   -fobjc-link-runtime \
-// RUN:   -fobjc-new-property \
-// RUN:   -fobjc-nonfragile-abi - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_17 %s
+// RUN:   -fobjc-avoid-heapify-local-blocks - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_17 %s
 
+// CHECK_CC1AS_17: {{(unknown argument).*}}-fno-signed-char
+// CHECK_CC1AS_17: {{(unknown argument).*}}-fno-signed-wchar
+// CHECK_CC1AS_17: {{(unknown argument).*}}-fno-signed-zeros
+// CHECK_CC1AS_17: {{(unknown argument).*}}-fno-single-precision-constant
+// CHECK_CC1AS_17: {{(unknown argument).*}}-fno-sized-deallocation
+// CHECK_CC1AS_17: {{(unknown argument).*}}-fno-skip-odr-check-in-gmf
+// CHECK_CC1AS_17: {{(unknown argument).*}}-fno-slp-vectorize
+// CHECK_CC1AS_17: {{(unknown argument).*}}-fno-spec-constr-count
+// CHECK_CC1AS_17: {{(unknown argument).*}}-fno-spell-checking
+// CHECK_CC1AS_17: {{(unknown argument).*}}-fno-split-dwarf-inlining
 // CHECK_CC1AS_17: {{(unknown argument).*}}-fno-split-lto-unit
 // CHECK_CC1AS_17: {{(unknown argument).*}}-fno-split-machine-functions
 // CHECK_CC1AS_17: {{(unknown argument).*}}-fno-split-stack
@@ -3564,6 +3574,7 @@
 // CHECK_CC1AS_17: {{(unknown argument).*}}-fno-stack-check
 // CHECK_CC1AS_17: {{(unknown argument).*}}-fno-stack-clash-protection
 // CHECK_CC1AS_17: {{(unknown argument).*}}-fno-stack-protector
+// CHECK_CC1AS_17: {{(unknown argument).*}}-fno-stack-repack-arrays
 // CHECK_CC1AS_17: {{(unknown argument).*}}-fno-stack-size-section
 // CHECK_CC1AS_17: {{(unknown argument).*}}-fno-standalone-debug
 // CHECK_CC1AS_17: {{(unknown argument).*}}-fno-strength-reduce
@@ -3592,6 +3603,7 @@
 // CHECK_CC1AS_17: {{(unknown argument).*}}-fno-unique-basic-block-section-names
 // CHECK_CC1AS_17: {{(unknown argument).*}}-fno-unique-internal-linkage-names
 // CHECK_CC1AS_17: {{(unknown argument).*}}-fno-unique-section-names
+// CHECK_CC1AS_17: {{(unknown argument).*}}-fno-unique-source-file-names
 // CHECK_CC1AS_17: {{(unknown argument).*}}-fno-unroll-all-loops
 // CHECK_CC1AS_17: {{(unknown argument).*}}-fno-unroll-loops
 // CHECK_CC1AS_17: {{(unknown argument).*}}-fno-unsafe-loop-optimizations
@@ -3620,6 +3632,7 @@
 // CHECK_CC1AS_17: {{(unknown argument).*}}-fno-whole-file
 // CHECK_CC1AS_17: {{(unknown argument).*}}-fno-whole-program
 // CHECK_CC1AS_17: {{(unknown argument).*}}-fno-whole-program-vtables
+// CHECK_CC1AS_17: {{(unknown argument).*}}-fno-winx64-eh-unwindv2
 // CHECK_CC1AS_17: {{(unknown argument).*}}-fno-working-directory
 // CHECK_CC1AS_17: {{(unknown argument).*}}-fno-wrapv
 // CHECK_CC1AS_17: {{(unknown argument).*}}-fno-wrapv-pointer
@@ -3644,21 +3657,21 @@
 // CHECK_CC1AS_17: {{(unknown argument).*}}-fobjc-arc-exceptions
 // CHECK_CC1AS_17: {{(unknown argument).*}}-fobjc-atdefs
 // CHECK_CC1AS_17: {{(unknown argument).*}}-fobjc-avoid-heapify-local-blocks
-// CHECK_CC1AS_17: {{(unknown argument).*}}-fobjc-call-cxx-cdtors
-// CHECK_CC1AS_17: {{(unknown argument).*}}-fobjc-convert-messages-to-runtime-calls
-// CHECK_CC1AS_17: {{(unknown argument).*}}-fobjc-disable-direct-methods-for-testing
-// CHECK_CC1AS_17: {{(unknown argument).*}}-fobjc-dispatch-method=
-// CHECK_CC1AS_17: {{(unknown argument).*}}-fobjc-encode-cxx-class-template-spec
-// CHECK_CC1AS_17: {{(unknown argument).*}}-fobjc-exceptions
-// CHECK_CC1AS_17: {{(unknown argument).*}}-fobjc-gc
-// CHECK_CC1AS_17: {{(unknown argument).*}}-fobjc-gc-only
-// CHECK_CC1AS_17: {{(unknown argument).*}}-fobjc-infer-related-result-type
-// CHECK_CC1AS_17: {{(unknown argument).*}}-fobjc-legacy-dispatch
-// CHECK_CC1AS_17: {{(unknown argument).*}}-fobjc-link-runtime
-// CHECK_CC1AS_17: {{(unknown argument).*}}-fobjc-new-property
-// CHECK_CC1AS_17: {{(unknown argument).*}}-fobjc-nonfragile-abi
 
 // RUN: not %clang -cc1as  \
+// RUN:   -fobjc-call-cxx-cdtors \
+// RUN:   -fobjc-convert-messages-to-runtime-calls \
+// RUN:   -fobjc-disable-direct-methods-for-testing \
+// RUN:   -fobjc-dispatch-method= \
+// RUN:   -fobjc-encode-cxx-class-template-spec \
+// RUN:   -fobjc-exceptions \
+// RUN:   -fobjc-gc \
+// RUN:   -fobjc-gc-only \
+// RUN:   -fobjc-infer-related-result-type \
+// RUN:   -fobjc-legacy-dispatch \
+// RUN:   -fobjc-link-runtime \
+// RUN:   -fobjc-new-property \
+// RUN:   -fobjc-nonfragile-abi \
 // RUN:   -fobjc-nonfragile-abi-version= \
 // RUN:   -fobjc-runtime= \
 // RUN:   -fobjc-runtime-has-weak \
@@ -3720,6 +3733,7 @@
 // RUN:   -fpass-plugin= \
 // RUN:   -fpatchable-function-entry= \
 // RUN:   -fpatchable-function-entry-offset= \
+// RUN:   -fpatchable-function-entry-section= \
 // RUN:   -fpcc-struct-return \
 // RUN:   -fpch-codegen \
 // RUN:   -fpch-debuginfo \
@@ -3744,22 +3758,21 @@
 // RUN:   -fproc-stat-report \
 // RUN:   -fproc-stat-report= \
 // RUN:   -fprofile \
-// RUN:   -fprofile-arcs \
-// RUN:   -fprofile-continuous \
-// RUN:   -fprofile-correction \
-// RUN:   -fprofile-dir= \
-// RUN:   -fprofile-exclude-files= \
-// RUN:   -fprofile-filter-files= \
-// RUN:   -fprofile-function-groups= \
-// RUN:   -fprofile-generate \
-// RUN:   -fprofile-generate= \
-// RUN:   -fprofile-generate-cold-function-coverage \
-// RUN:   -fprofile-generate-cold-function-coverage= \
-// RUN:   -fprofile-generate-sampling \
-// RUN:   -fprofile-instr-generate \
-// RUN:   -fprofile-instr-generate= \
-// RUN:   -fprofile-instr-use - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_18 %s
+// RUN:   -fprofile-arcs - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_18 %s
 
+// CHECK_CC1AS_18: {{(unknown argument).*}}-fobjc-call-cxx-cdtors
+// CHECK_CC1AS_18: {{(unknown argument).*}}-fobjc-convert-messages-to-runtime-calls
+// CHECK_CC1AS_18: {{(unknown argument).*}}-fobjc-disable-direct-methods-for-testing
+// CHECK_CC1AS_18: {{(unknown argument).*}}-fobjc-dispatch-method=
+// CHECK_CC1AS_18: {{(unknown argument).*}}-fobjc-encode-cxx-class-template-spec
+// CHECK_CC1AS_18: {{(unknown argument).*}}-fobjc-exceptions
+// CHECK_CC1AS_18: {{(unknown argument).*}}-fobjc-gc
+// CHECK_CC1AS_18: {{(unknown argument).*}}-fobjc-gc-only
+// CHECK_CC1AS_18: {{(unknown argument).*}}-fobjc-infer-related-result-type
+// CHECK_CC1AS_18: {{(unknown argument).*}}-fobjc-legacy-dispatch
+// CHECK_CC1AS_18: {{(unknown argument).*}}-fobjc-link-runtime
+// CHECK_CC1AS_18: {{(unknown argument).*}}-fobjc-new-property
+// CHECK_CC1AS_18: {{(unknown argument).*}}-fobjc-nonfragile-abi
 // CHECK_CC1AS_18: {{(unknown argument).*}}-fobjc-nonfragile-abi-version=
 // CHECK_CC1AS_18: {{(unknown argument).*}}-fobjc-runtime=
 // CHECK_CC1AS_18: {{(unknown argument).*}}-fobjc-runtime-has-weak
@@ -3821,6 +3834,7 @@
 // CHECK_CC1AS_18: {{(unknown argument).*}}-fpass-plugin=
 // CHECK_CC1AS_18: {{(unknown argument).*}}-fpatchable-function-entry=
 // CHECK_CC1AS_18: {{(unknown argument).*}}-fpatchable-function-entry-offset=
+// CHECK_CC1AS_18: {{(unknown argument).*}}-fpatchable-function-entry-section=
 // CHECK_CC1AS_18: {{(unknown argument).*}}-fpcc-struct-return
 // CHECK_CC1AS_18: {{(unknown argument).*}}-fpch-codegen
 // CHECK_CC1AS_18: {{(unknown argument).*}}-fpch-debuginfo
@@ -3846,22 +3860,22 @@
 // CHECK_CC1AS_18: {{(unknown argument).*}}-fproc-stat-report=
 // CHECK_CC1AS_18: {{(unknown argument).*}}-fprofile
 // CHECK_CC1AS_18: {{(unknown argument).*}}-fprofile-arcs
-// CHECK_CC1AS_18: {{(unknown argument).*}}-fprofile-continuous
-// CHECK_CC1AS_18: {{(unknown argument).*}}-fprofile-correction
-// CHECK_CC1AS_18: {{(unknown argument).*}}-fprofile-dir=
-// CHECK_CC1AS_18: {{(unknown argument).*}}-fprofile-exclude-files=
-// CHECK_CC1AS_18: {{(unknown argument).*}}-fprofile-filter-files=
-// CHECK_CC1AS_18: {{(unknown argument).*}}-fprofile-function-groups=
-// CHECK_CC1AS_18: {{(unknown argument).*}}-fprofile-generate
-// CHECK_CC1AS_18: {{(unknown argument).*}}-fprofile-generate=
-// CHECK_CC1AS_18: {{(unknown argument).*}}-fprofile-generate-cold-function-coverage
-// CHECK_CC1AS_18: {{(unknown argument).*}}-fprofile-generate-cold-function-coverage=
-// CHECK_CC1AS_18: {{(unknown argument).*}}-fprofile-generate-sampling
-// CHECK_CC1AS_18: {{(unknown argument).*}}-fprofile-instr-generate
-// CHECK_CC1AS_18: {{(unknown argument).*}}-fprofile-instr-generate=
-// CHECK_CC1AS_18: {{(unknown argument).*}}-fprofile-instr-use
 
 // RUN: not %clang -cc1as  \
+// RUN:   -fprofile-continuous \
+// RUN:   -fprofile-correction \
+// RUN:   -fprofile-dir= \
+// RUN:   -fprofile-exclude-files= \
+// RUN:   -fprofile-filter-files= \
+// RUN:   -fprofile-function-groups= \
+// RUN:   -fprofile-generate \
+// RUN:   -fprofile-generate= \
+// RUN:   -fprofile-generate-cold-function-coverage \
+// RUN:   -fprofile-generate-cold-function-coverage= \
+// RUN:   -fprofile-generate-sampling \
+// RUN:   -fprofile-instr-generate \
+// RUN:   -fprofile-instr-generate= \
+// RUN:   -fprofile-instr-use \
 // RUN:   -fprofile-instr-use= \
 // RUN:   -fprofile-instrument= \
 // RUN:   -fprofile-instrument-path= \
@@ -3915,8 +3929,8 @@
 // RUN:   -frename-registers \
 // RUN:   -freorder-blocks \
 // RUN:   -frepack-arrays \
+// RUN:   -frepack-arrays-contiguity= \
 // RUN:   -fretain-comments-from-system-headers \
-// RUN:   -fretain-subst-template-type-parm-type-ast-nodes \
 // RUN:   -frewrite-imports \
 // RUN:   -frewrite-includes \
 // RUN:   -fripa \
@@ -3936,6 +3950,8 @@
 // RUN:   -fsanitize-address-poison-custom-array-cookie \
 // RUN:   -fsanitize-address-use-after-scope \
 // RUN:   -fsanitize-address-use-odr-indicator \
+// RUN:   -fsanitize-annotate-debug-info \
+// RUN:   -fsanitize-annotate-debug-info= \
 // RUN:   -fsanitize-cfi-canonical-jump-tables \
 // RUN:   -fsanitize-cfi-cross-dso \
 // RUN:   -fsanitize-cfi-icall-generalize-pointers \
@@ -3945,24 +3961,22 @@
 // RUN:   -fsanitize-coverage-allowlist= \
 // RUN:   -fsanitize-coverage-control-flow \
 // RUN:   -fsanitize-coverage-ignorelist= \
-// RUN:   -fsanitize-coverage-indirect-calls \
-// RUN:   -fsanitize-coverage-inline-8bit-counters \
-// RUN:   -fsanitize-coverage-inline-bool-flag \
-// RUN:   -fsanitize-coverage-no-prune \
-// RUN:   -fsanitize-coverage-pc-table \
-// RUN:   -fsanitize-coverage-stack-depth \
-// RUN:   -fsanitize-coverage-trace-bb \
-// RUN:   -fsanitize-coverage-trace-cmp \
-// RUN:   -fsanitize-coverage-trace-div \
-// RUN:   -fsanitize-coverage-trace-gep \
-// RUN:   -fsanitize-coverage-trace-loads \
-// RUN:   -fsanitize-coverage-trace-pc \
-// RUN:   -fsanitize-coverage-trace-pc-guard \
-// RUN:   -fsanitize-coverage-trace-stores \
-// RUN:   -fsanitize-coverage-type= \
-// RUN:   -fsanitize-hwaddress-abi= \
-// RUN:   -fsanitize-hwaddress-experimental-aliasing - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_19 %s
+// RUN:   -fsanitize-coverage-indirect-calls - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_19 %s
 
+// CHECK_CC1AS_19: {{(unknown argument).*}}-fprofile-continuous
+// CHECK_CC1AS_19: {{(unknown argument).*}}-fprofile-correction
+// CHECK_CC1AS_19: {{(unknown argument).*}}-fprofile-dir=
+// CHECK_CC1AS_19: {{(unknown argument).*}}-fprofile-exclude-files=
+// CHECK_CC1AS_19: {{(unknown argument).*}}-fprofile-filter-files=
+// CHECK_CC1AS_19: {{(unknown argument).*}}-fprofile-function-groups=
+// CHECK_CC1AS_19: {{(unknown argument).*}}-fprofile-generate
+// CHECK_CC1AS_19: {{(unknown argument).*}}-fprofile-generate=
+// CHECK_CC1AS_19: {{(unknown argument).*}}-fprofile-generate-cold-function-coverage
+// CHECK_CC1AS_19: {{(unknown argument).*}}-fprofile-generate-cold-function-coverage=
+// CHECK_CC1AS_19: {{(unknown argument).*}}-fprofile-generate-sampling
+// CHECK_CC1AS_19: {{(unknown argument).*}}-fprofile-instr-generate
+// CHECK_CC1AS_19: {{(unknown argument).*}}-fprofile-instr-generate=
+// CHECK_CC1AS_19: {{(unknown argument).*}}-fprofile-instr-use
 // CHECK_CC1AS_19: {{(unknown argument).*}}-fprofile-instr-use=
 // CHECK_CC1AS_19: {{(unknown argument).*}}-fprofile-instrument=
 // CHECK_CC1AS_19: {{(unknown argument).*}}-fprofile-instrument-path=
@@ -4016,8 +4030,8 @@
 // CHECK_CC1AS_19: {{(unknown argument).*}}-frename-registers
 // CHECK_CC1AS_19: {{(unknown argument).*}}-freorder-blocks
 // CHECK_CC1AS_19: {{(unknown argument).*}}-frepack-arrays
+// CHECK_CC1AS_19: {{(unknown argument).*}}-frepack-arrays-contiguity=
 // CHECK_CC1AS_19: {{(unknown argument).*}}-fretain-comments-from-system-headers
-// CHECK_CC1AS_19: {{(unknown argument).*}}-fretain-subst-template-type-parm-type-ast-nodes
 // CHECK_CC1AS_19: {{(unknown argument).*}}-frewrite-imports
 // CHECK_CC1AS_19: {{(unknown argument).*}}-frewrite-includes
 // CHECK_CC1AS_19: {{(unknown argument).*}}-fripa
@@ -4037,6 +4051,8 @@
 // CHECK_CC1AS_19: {{(unknown argument).*}}-fsanitize-address-poison-custom-array-cookie
 // CHECK_CC1AS_19: {{(unknown argument).*}}-fsanitize-address-use-after-scope
 // CHECK_CC1AS_19: {{(unknown argument).*}}-fsanitize-address-use-odr-indicator
+// CHECK_CC1AS_19: {{(unknown argument).*}}-fsanitize-annotate-debug-info
+// CHECK_CC1AS_19: {{(unknown argument).*}}-fsanitize-annotate-debug-info=
 // CHECK_CC1AS_19: {{(unknown argument).*}}-fsanitize-cfi-canonical-jump-tables
 // CHECK_CC1AS_19: {{(unknown argument).*}}-fsanitize-cfi-cross-dso
 // CHECK_CC1AS_19: {{(unknown argument).*}}-fsanitize-cfi-icall-generalize-pointers
@@ -4047,24 +4063,25 @@
 // CHECK_CC1AS_19: {{(unknown argument).*}}-fsanitize-coverage-control-flow
 // CHECK_CC1AS_19: {{(unknown argument).*}}-fsanitize-coverage-ignorelist=
 // CHECK_CC1AS_19: {{(unknown argument).*}}-fsanitize-coverage-indirect-calls
-// CHECK_CC1AS_19: {{(unknown argument).*}}-fsanitize-coverage-inline-8bit-counters
-// CHECK_CC1AS_19: {{(unknown argument).*}}-fsanitize-coverage-inline-bool-flag
-// CHECK_CC1AS_19: {{(unknown argument).*}}-fsanitize-coverage-no-prune
-// CHECK_CC1AS_19: {{(unknown argument).*}}-fsanitize-coverage-pc-table
-// CHECK_CC1AS_19: {{(unknown argument).*}}-fsanitize-coverage-stack-depth
-// CHECK_CC1AS_19: {{(unknown argument).*}}-fsanitize-coverage-trace-bb
-// CHECK_CC1AS_19: {{(unknown argument).*}}-fsanitize-coverage-trace-cmp
-// CHECK_CC1AS_19: {{(unknown argument).*}}-fsanitize-coverage-trace-div
-// CHECK_CC1AS_19: {{(unknown argument).*}}-fsanitize-coverage-trace-gep
-// CHECK_CC1AS_19: {{(unknown argument).*}}-fsanitize-coverage-trace-loads
-// CHECK_CC1AS_19: {{(unknown argument).*}}-fsanitize-coverage-trace-pc
-// CHECK_CC1AS_19: {{(unknown argument).*}}-fsanitize-coverage-trace-pc-guard
-// CHECK_CC1AS_19: {{(unknown argument).*}}-fsanitize-coverage-trace-stores
-// CHECK_CC1AS_19: {{(unknown argument).*}}-fsanitize-coverage-type=
-// CHECK_CC1AS_19: {{(unknown argument).*}}-fsanitize-hwaddress-abi=
-// CHECK_CC1AS_19: {{(unknown argument).*}}-fsanitize-hwaddress-experimental-aliasing
 
 // RUN: not %clang -cc1as  \
+// RUN:   -fsanitize-coverage-inline-8bit-counters \
+// RUN:   -fsanitize-coverage-inline-bool-flag \
+// RUN:   -fsanitize-coverage-no-prune \
+// RUN:   -fsanitize-coverage-pc-table \
+// RUN:   -fsanitize-coverage-stack-depth \
+// RUN:   -fsanitize-coverage-stack-depth-callback-min= \
+// RUN:   -fsanitize-coverage-trace-bb \
+// RUN:   -fsanitize-coverage-trace-cmp \
+// RUN:   -fsanitize-coverage-trace-div \
+// RUN:   -fsanitize-coverage-trace-gep \
+// RUN:   -fsanitize-coverage-trace-loads \
+// RUN:   -fsanitize-coverage-trace-pc \
+// RUN:   -fsanitize-coverage-trace-pc-guard \
+// RUN:   -fsanitize-coverage-trace-stores \
+// RUN:   -fsanitize-coverage-type= \
+// RUN:   -fsanitize-hwaddress-abi= \
+// RUN:   -fsanitize-hwaddress-experimental-aliasing \
 // RUN:   -fsanitize-ignorelist= \
 // RUN:   -fsanitize-kcfi-arity \
 // RUN:   -fsanitize-link-c++-runtime \
@@ -4126,6 +4143,7 @@
 // RUN:   -fsplit-lto-unit \
 // RUN:   -fsplit-machine-functions \
 // RUN:   -fsplit-stack \
+// RUN:   -fspv-extension= \
 // RUN:   -fspv-target-env= \
 // RUN:   -fstack-arrays \
 // RUN:   -fstack-check \
@@ -4133,6 +4151,7 @@
 // RUN:   -fstack-protector \
 // RUN:   -fstack-protector-all \
 // RUN:   -fstack-protector-strong \
+// RUN:   -fstack-repack-arrays \
 // RUN:   -fstack-size-section \
 // RUN:   -fstack-usage \
 // RUN:   -fstandalone-debug \
@@ -4145,27 +4164,25 @@
 // RUN:   -fstrict-return \
 // RUN:   -fstrict-vtable-pointers \
 // RUN:   -fstruct-path-tbaa \
-// RUN:   -fsycl \
-// RUN:   -fsycl-device-only \
-// RUN:   -fsycl-host-only \
-// RUN:   -fsycl-is-device \
-// RUN:   -fsycl-is-host \
-// RUN:   -fsymbol-partition= \
-// RUN:   -fsyntax-only \
-// RUN:   -fsystem-module \
-// RUN:   -ftabstop \
-// RUN:   -ftabstop= \
-// RUN:   -ftemplate-backtrace-limit= \
-// RUN:   -ftemplate-depth= \
-// RUN:   -ftemporal-profile \
-// RUN:   -ftest-coverage \
-// RUN:   -ftest-module-file-extension= \
-// RUN:   -fthin-link-bitcode= \
-// RUN:   -fthinlto-index= \
-// RUN:   -fthreadsafe-statics \
-// RUN:   -ftime-report \
-// RUN:   -ftime-report= - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_20 %s
+// RUN:   -fsycl - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_20 %s
 
+// CHECK_CC1AS_20: {{(unknown argument).*}}-fsanitize-coverage-inline-8bit-counters
+// CHECK_CC1AS_20: {{(unknown argument).*}}-fsanitize-coverage-inline-bool-flag
+// CHECK_CC1AS_20: {{(unknown argument).*}}-fsanitize-coverage-no-prune
+// CHECK_CC1AS_20: {{(unknown argument).*}}-fsanitize-coverage-pc-table
+// CHECK_CC1AS_20: {{(unknown argument).*}}-fsanitize-coverage-stack-depth
+// CHECK_CC1AS_20: {{(unknown argument).*}}-fsanitize-coverage-stack-depth-callback-min=
+// CHECK_CC1AS_20: {{(unknown argument).*}}-fsanitize-coverage-trace-bb
+// CHECK_CC1AS_20: {{(unknown argument).*}}-fsanitize-coverage-trace-cmp
+// CHECK_CC1AS_20: {{(unknown argument).*}}-fsanitize-coverage-trace-div
+// CHECK_CC1AS_20: {{(unknown argument).*}}-fsanitize-coverage-trace-gep
+// CHECK_CC1AS_20: {{(unknown argument).*}}-fsanitize-coverage-trace-loads
+// CHECK_CC1AS_20: {{(unknown argument).*}}-fsanitize-coverage-trace-pc
+// CHECK_CC1AS_20: {{(unknown argument).*}}-fsanitize-coverage-trace-pc-guard
+// CHECK_CC1AS_20: {{(unknown argument).*}}-fsanitize-coverage-trace-stores
+// CHECK_CC1AS_20: {{(unknown argument).*}}-fsanitize-coverage-type=
+// CHECK_CC1AS_20: {{(unknown argument).*}}-fsanitize-hwaddress-abi=
+// CHECK_CC1AS_20: {{(unknown argument).*}}-fsanitize-hwaddress-experimental-aliasing
 // CHECK_CC1AS_20: {{(unknown argument).*}}-fsanitize-ignorelist=
 // CHECK_CC1AS_20: {{(unknown argument).*}}-fsanitize-kcfi-arity
 // CHECK_CC1AS_20: {{(unknown argument).*}}-fsanitize-link-c++-runtime
@@ -4227,6 +4244,7 @@
 // CHECK_CC1AS_20: {{(unknown argument).*}}-fsplit-lto-unit
 // CHECK_CC1AS_20: {{(unknown argument).*}}-fsplit-machine-functions
 // CHECK_CC1AS_20: {{(unknown argument).*}}-fsplit-stack
+// CHECK_CC1AS_20: {{(unknown argument).*}}-fspv-extension=
 // CHECK_CC1AS_20: {{(unknown argument).*}}-fspv-target-env=
 // CHECK_CC1AS_20: {{(unknown argument).*}}-fstack-arrays
 // CHECK_CC1AS_20: {{(unknown argument).*}}-fstack-check
@@ -4234,6 +4252,7 @@
 // CHECK_CC1AS_20: {{(unknown argument).*}}-fstack-protector
 // CHECK_CC1AS_20: {{(unknown argument).*}}-fstack-protector-all
 // CHECK_CC1AS_20: {{(unknown argument).*}}-fstack-protector-strong
+// CHECK_CC1AS_20: {{(unknown argument).*}}-fstack-repack-arrays
 // CHECK_CC1AS_20: {{(unknown argument).*}}-fstack-size-section
 // CHECK_CC1AS_20: {{(unknown argument).*}}-fstack-usage
 // CHECK_CC1AS_20: {{(unknown argument).*}}-fstandalone-debug
@@ -4247,27 +4266,28 @@
 // CHECK_CC1AS_20: {{(unknown argument).*}}-fstrict-vtable-pointers
 // CHECK_CC1AS_20: {{(unknown argument).*}}-fstruct-path-tbaa
 // CHECK_CC1AS_20: {{(unknown argument).*}}-fsycl
-// CHECK_CC1AS_20: {{(unknown argument).*}}-fsycl-device-only
-// CHECK_CC1AS_20: {{(unknown argument).*}}-fsycl-host-only
-// CHECK_CC1AS_20: {{(unknown argument).*}}-fsycl-is-device
-// CHECK_CC1AS_20: {{(unknown argument).*}}-fsycl-is-host
-// CHECK_CC1AS_20: {{(unknown argument).*}}-fsymbol-partition=
-// CHECK_CC1AS_20: {{(unknown argument).*}}-fsyntax-only
-// CHECK_CC1AS_20: {{(unknown argument).*}}-fsystem-module
-// CHECK_CC1AS_20: {{(unknown argument).*}}-ftabstop
-// CHECK_CC1AS_20: {{(unknown argument).*}}-ftabstop=
-// CHECK_CC1AS_20: {{(unknown argument).*}}-ftemplate-backtrace-limit=
-// CHECK_CC1AS_20: {{(unknown argument).*}}-ftemplate-depth=
-// CHECK_CC1AS_20: {{(unknown argument).*}}-ftemporal-profile
-// CHECK_CC1AS_20: {{(unknown argument).*}}-ftest-coverage
-// CHECK_CC1AS_20: {{(unknown argument).*}}-ftest-module-file-extension=
-// CHECK_CC1AS_20: {{(unknown argument).*}}-fthin-link-bitcode=
-// CHECK_CC1AS_20: {{(unknown argument).*}}-fthinlto-index=
-// CHECK_CC1AS_20: {{(unknown argument).*}}-fthreadsafe-statics
-// CHECK_CC1AS_20: {{(unknown argument).*}}-ftime-report
-// CHECK_CC1AS_20: {{(unknown argument).*}}-ftime-report=
 
 // RUN: not %clang -cc1as  \
+// RUN:   -fsycl-device-only \
+// RUN:   -fsycl-host-only \
+// RUN:   -fsycl-is-device \
+// RUN:   -fsycl-is-host \
+// RUN:   -fsymbol-partition= \
+// RUN:   -fsyntax-only \
+// RUN:   -fsystem-module \
+// RUN:   -ftabstop \
+// RUN:   -ftabstop= \
+// RUN:   -ftemplate-backtrace-limit= \
+// RUN:   -ftemplate-depth= \
+// RUN:   -ftemporal-profile \
+// RUN:   -ftest-coverage \
+// RUN:   -ftest-module-file-extension= \
+// RUN:   -fthin-link-bitcode= \
+// RUN:   -fthinlto-index= \
+// RUN:   -fthreadsafe-statics \
+// RUN:   -ftime-report \
+// RUN:   -ftime-report= \
+// RUN:   -ftime-report-json \
 // RUN:   -ftime-trace \
 // RUN:   -ftime-trace= \
 // RUN:   -ftime-trace-granularity= \
@@ -4296,6 +4316,7 @@
 // RUN:   -funique-basic-block-section-names \
 // RUN:   -funique-internal-linkage-names \
 // RUN:   -funique-section-names \
+// RUN:   -funique-source-file-names \
 // RUN:   -funknown-anytype \
 // RUN:   -funroll-all-loops \
 // RUN:   -funroll-loops \
@@ -4343,32 +4364,31 @@
 // RUN:   -fwhole-file \
 // RUN:   -fwhole-program \
 // RUN:   -fwhole-program-vtables \
+// RUN:   -fwinx64-eh-unwindv2 \
 // RUN:   -fwrapv \
 // RUN:   -fwrapv-pointer \
-// RUN:   -fwritable-strings \
-// RUN:   -fxl-pragma-pack \
-// RUN:   -fxor-operator \
-// RUN:   -fxray-always-emit-customevents \
-// RUN:   -fxray-always-emit-typedevents \
-// RUN:   -fxray-always-instrument= \
-// RUN:   -fxray-attr-list= \
-// RUN:   -fxray-function-groups= \
-// RUN:   -fxray-function-index \
-// RUN:   -fxray-ignore-loops \
-// RUN:   -fxray-instruction-threshold= \
-// RUN:   -fxray-instrument \
-// RUN:   -fxray-instrumentation-bundle= \
-// RUN:   -fxray-link-deps \
-// RUN:   -fxray-modes= \
-// RUN:   -fxray-never-instrument= \
-// RUN:   -fxray-selected-function-group= \
-// RUN:   -fxray-shared \
-// RUN:   -fzero-call-used-regs= \
-// RUN:   -fzero-initialized-in-bss \
-// RUN:   -fzos-extensions \
-// RUN:   -fzvector \
-// RUN:   -g0 - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_21 %s
+// RUN:   -fwritable-strings - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_21 %s
 
+// CHECK_CC1AS_21: {{(unknown argument).*}}-fsycl-device-only
+// CHECK_CC1AS_21: {{(unknown argument).*}}-fsycl-host-only
+// CHECK_CC1AS_21: {{(unknown argument).*}}-fsycl-is-device
+// CHECK_CC1AS_21: {{(unknown argument).*}}-fsycl-is-host
+// CHECK_CC1AS_21: {{(unknown argument).*}}-fsymbol-partition=
+// CHECK_CC1AS_21: {{(unknown argument).*}}-fsyntax-only
+// CHECK_CC1AS_21: {{(unknown argument).*}}-fsystem-module
+// CHECK_CC1AS_21: {{(unknown argument).*}}-ftabstop
+// CHECK_CC1AS_21: {{(unknown argument).*}}-ftabstop=
+// CHECK_CC1AS_21: {{(unknown argument).*}}-ftemplate-backtrace-limit=
+// CHECK_CC1AS_21: {{(unknown argument).*}}-ftemplate-depth=
+// CHECK_CC1AS_21: {{(unknown argument).*}}-ftemporal-profile
+// CHECK_CC1AS_21: {{(unknown argument).*}}-ftest-coverage
+// CHECK_CC1AS_21: {{(unknown argument).*}}-ftest-module-file-extension=
+// CHECK_CC1AS_21: {{(unknown argument).*}}-fthin-link-bitcode=
+// CHECK_CC1AS_21: {{(unknown argument).*}}-fthinlto-index=
+// CHECK_CC1AS_21: {{(unknown argument).*}}-fthreadsafe-statics
+// CHECK_CC1AS_21: {{(unknown argument).*}}-ftime-report
+// CHECK_CC1AS_21: {{(unknown argument).*}}-ftime-report=
+// CHECK_CC1AS_21: {{(unknown argument).*}}-ftime-report-json
 // CHECK_CC1AS_21: {{(unknown argument).*}}-ftime-trace
 // CHECK_CC1AS_21: {{(unknown argument).*}}-ftime-trace=
 // CHECK_CC1AS_21: {{(unknown argument).*}}-ftime-trace-granularity=
@@ -4397,6 +4417,7 @@
 // CHECK_CC1AS_21: {{(unknown argument).*}}-funique-basic-block-section-names
 // CHECK_CC1AS_21: {{(unknown argument).*}}-funique-internal-linkage-names
 // CHECK_CC1AS_21: {{(unknown argument).*}}-funique-section-names
+// CHECK_CC1AS_21: {{(unknown argument).*}}-funique-source-file-names
 // CHECK_CC1AS_21: {{(unknown argument).*}}-funknown-anytype
 // CHECK_CC1AS_21: {{(unknown argument).*}}-funroll-all-loops
 // CHECK_CC1AS_21: {{(unknown argument).*}}-funroll-loops
@@ -4444,33 +4465,34 @@
 // CHECK_CC1AS_21: {{(unknown argument).*}}-fwhole-file
 // CHECK_CC1AS_21: {{(unknown argument).*}}-fwhole-program
 // CHECK_CC1AS_21: {{(unknown argument).*}}-fwhole-program-vtables
+// CHECK_CC1AS_21: {{(unknown argument).*}}-fwinx64-eh-unwindv2
 // CHECK_CC1AS_21: {{(unknown argument).*}}-fwrapv
 // CHECK_CC1AS_21: {{(unknown argument).*}}-fwrapv-pointer
 // CHECK_CC1AS_21: {{(unknown argument).*}}-fwritable-strings
-// CHECK_CC1AS_21: {{(unknown argument).*}}-fxl-pragma-pack
-// CHECK_CC1AS_21: {{(unknown argument).*}}-fxor-operator
-// CHECK_CC1AS_21: {{(unknown argument).*}}-fxray-always-emit-customevents
-// CHECK_CC1AS_21: {{(unknown argument).*}}-fxray-always-emit-typedevents
-// CHECK_CC1AS_21: {{(unknown argument).*}}-fxray-always-instrument=
-// CHECK_CC1AS_21: {{(unknown argument).*}}-fxray-attr-list=
-// CHECK_CC1AS_21: {{(unknown argument).*}}-fxray-function-groups=
-// CHECK_CC1AS_21: {{(unknown argument).*}}-fxray-function-index
-// CHECK_CC1AS_21: {{(unknown argument).*}}-fxray-ignore-loops
-// CHECK_CC1AS_21: {{(unknown argument).*}}-fxray-instruction-threshold=
-// CHECK_CC1AS_21: {{(unknown argument).*}}-fxray-instrument
-// CHECK_CC1AS_21: {{(unknown argument).*}}-fxray-instrumentation-bundle=
-// CHECK_CC1AS_21: {{(unknown argument).*}}-fxray-link-deps
-// CHECK_CC1AS_21: {{(unknown argument).*}}-fxray-modes=
-// CHECK_CC1AS_21: {{(unknown argument).*}}-fxray-never-instrument=
-// CHECK_CC1AS_21: {{(unknown argument).*}}-fxray-selected-function-group=
-// CHECK_CC1AS_21: {{(unknown argument).*}}-fxray-shared
-// CHECK_CC1AS_21: {{(unknown argument).*}}-fzero-call-used-regs=
-// CHECK_CC1AS_21: {{(unknown argument).*}}-fzero-initialized-in-bss
-// CHECK_CC1AS_21: {{(unknown argument).*}}-fzos-extensions
-// CHECK_CC1AS_21: {{(unknown argument).*}}-fzvector
-// CHECK_CC1AS_21: {{(unknown argument).*}}-g0
 
 // RUN: not %clang -cc1as  \
+// RUN:   -fxl-pragma-pack \
+// RUN:   -fxor-operator \
+// RUN:   -fxray-always-emit-customevents \
+// RUN:   -fxray-always-emit-typedevents \
+// RUN:   -fxray-always-instrument= \
+// RUN:   -fxray-attr-list= \
+// RUN:   -fxray-function-groups= \
+// RUN:   -fxray-function-index \
+// RUN:   -fxray-ignore-loops \
+// RUN:   -fxray-instruction-threshold= \
+// RUN:   -fxray-instrument \
+// RUN:   -fxray-instrumentation-bundle= \
+// RUN:   -fxray-link-deps \
+// RUN:   -fxray-modes= \
+// RUN:   -fxray-never-instrument= \
+// RUN:   -fxray-selected-function-group= \
+// RUN:   -fxray-shared \
+// RUN:   -fzero-call-used-regs= \
+// RUN:   -fzero-initialized-in-bss \
+// RUN:   -fzos-extensions \
+// RUN:   -fzvector \
+// RUN:   -g0 \
 // RUN:   -g1 \
 // RUN:   -g2 \
 // RUN:   -g3 \
@@ -4501,6 +4523,7 @@
 // RUN:   -ggdb3 \
 // RUN:   -ggnu-pubnames \
 // RUN:   -ginline-line-tables \
+// RUN:   -gkey-instructions \
 // RUN:   -gline-directives-only \
 // RUN:   -gline-tables-only \
 // RUN:   -glldb \
@@ -4512,6 +4535,7 @@
 // RUN:   -gno-embed-source \
 // RUN:   -gno-gnu-pubnames \
 // RUN:   -gno-inline-line-tables \
+// RUN:   -gno-key-instructions \
 // RUN:   -gno-modules \
 // RUN:   -gno-omit-unreferenced-methods \
 // RUN:   -gno-pubnames \
@@ -4546,32 +4570,30 @@
 // RUN:   -header-include-file \
 // RUN:   -header-include-filtering= \
 // RUN:   -header-include-format= \
-// RUN:   -headerpad_max_install_names \
-// RUN:   --hip-device-lib= \
-// RUN:   --hip-link \
-// RUN:   --hip-path= \
-// RUN:   --hip-version= \
-// RUN:   --hipspv-pass-plugin= \
-// RUN:   --hipstdpar \
-// RUN:   --hipstdpar-interpose-alloc \
-// RUN:   --hipstdpar-path= \
-// RUN:   --hipstdpar-prim-path= \
-// RUN:   --hipstdpar-thrust-path= \
-// RUN:   -hlsl-entry \
-// RUN:   -iapinotes-modules \
-// RUN:   -ibuiltininc \
-// RUN:   -idirafter \
-// RUN:   -iframework \
-// RUN:   -iframeworkwithsysroot \
-// RUN:   -imacros \
-// RUN:   -image_base \
-// RUN:   -import-call-optimization \
-// RUN:   -imultilib \
-// RUN:   -include \
-// RUN:   -include-pch \
-// RUN:   -init \
-// RUN:   -init-only - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_22 %s
+// RUN:   -headerpad_max_install_names - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_22 %s
 
+// CHECK_CC1AS_22: {{(unknown argument).*}}-fxl-pragma-pack
+// CHECK_CC1AS_22: {{(unknown argument).*}}-fxor-operator
+// CHECK_CC1AS_22: {{(unknown argument).*}}-fxray-always-emit-customevents
+// CHECK_CC1AS_22: {{(unknown argument).*}}-fxray-always-emit-typedevents
+// CHECK_CC1AS_22: {{(unknown argument).*}}-fxray-always-instrument=
+// CHECK_CC1AS_22: {{(unknown argument).*}}-fxray-attr-list=
+// CHECK_CC1AS_22: {{(unknown argument).*}}-fxray-function-groups=
+// CHECK_CC1AS_22: {{(unknown argument).*}}-fxray-function-index
+// CHECK_CC1AS_22: {{(unknown argument).*}}-fxray-ignore-loops
+// CHECK_CC1AS_22: {{(unknown argument).*}}-fxray-instruction-threshold=
+// CHECK_CC1AS_22: {{(unknown argument).*}}-fxray-instrument
+// CHECK_CC1AS_22: {{(unknown argument).*}}-fxray-instrumentation-bundle=
+// CHECK_CC1AS_22: {{(unknown argument).*}}-fxray-link-deps
+// CHECK_CC1AS_22: {{(unknown argument).*}}-fxray-modes=
+// CHECK_CC1AS_22: {{(unknown argument).*}}-fxray-never-instrument=
+// CHECK_CC1AS_22: {{(unknown argument).*}}-fxray-selected-function-group=
+// CHECK_CC1AS_22: {{(unknown argument).*}}-fxray-shared
+// CHECK_CC1AS_22: {{(unknown argument).*}}-fzero-call-used-regs=
+// CHECK_CC1AS_22: {{(unknown argument).*}}-fzero-initialized-in-bss
+// CHECK_CC1AS_22: {{(unknown argument).*}}-fzos-extensions
+// CHECK_CC1AS_22: {{(unknown argument).*}}-fzvector
+// CHECK_CC1AS_22: {{(unknown argument).*}}-g0
 // CHECK_CC1AS_22: {{(unknown argument).*}}-g1
 // CHECK_CC1AS_22: {{(unknown argument).*}}-g2
 // CHECK_CC1AS_22: {{(unknown argument).*}}-g3
@@ -4602,6 +4624,7 @@
 // CHECK_CC1AS_22: {{(unknown argument).*}}-ggdb3
 // CHECK_CC1AS_22: {{(unknown argument).*}}-ggnu-pubnames
 // CHECK_CC1AS_22: {{(unknown argument).*}}-ginline-line-tables
+// CHECK_CC1AS_22: {{(unknown argument).*}}-gkey-instructions
 // CHECK_CC1AS_22: {{(unknown argument).*}}-gline-directives-only
 // CHECK_CC1AS_22: {{(unknown argument).*}}-gline-tables-only
 // CHECK_CC1AS_22: {{(unknown argument).*}}-glldb
@@ -4613,6 +4636,7 @@
 // CHECK_CC1AS_22: {{(unknown argument).*}}-gno-embed-source
 // CHECK_CC1AS_22: {{(unknown argument).*}}-gno-gnu-pubnames
 // CHECK_CC1AS_22: {{(unknown argument).*}}-gno-inline-line-tables
+// CHECK_CC1AS_22: {{(unknown argument).*}}-gno-key-instructions
 // CHECK_CC1AS_22: {{(unknown argument).*}}-gno-modules
 // CHECK_CC1AS_22: {{(unknown argument).*}}-gno-omit-unreferenced-methods
 // CHECK_CC1AS_22: {{(unknown argument).*}}-gno-pubnames
@@ -4648,36 +4672,37 @@
 // CHECK_CC1AS_22: {{(unknown argument).*}}-header-include-filtering=
 // CHECK_CC1AS_22: {{(unknown argument).*}}-header-include-format=
 // CHECK_CC1AS_22: {{(unknown argument).*}}-headerpad_max_install_names
-// CHECK_CC1AS_22: {{(unknown argument).*}}--hip-device-lib=
-// CHECK_CC1AS_22: {{(unknown argument).*}}--hip-link
-// CHECK_CC1AS_22: {{(unknown argument).*}}--hip-path=
-// CHECK_CC1AS_22: {{(unknown argument).*}}--hip-version=
-// CHECK_CC1AS_22: {{(unknown argument).*}}--hipspv-pass-plugin=
-// CHECK_CC1AS_22: {{(unknown argument).*}}--hipstdpar
-// CHECK_CC1AS_22: {{(unknown argument).*}}--hipstdpar-interpose-alloc
-// CHECK_CC1AS_22: {{(unknown argument).*}}--hipstdpar-path=
-// CHECK_CC1AS_22: {{(unknown argument).*}}--hipstdpar-prim-path=
-// CHECK_CC1AS_22: {{(unknown argument).*}}--hipstdpar-thrust-path=
-// CHECK_CC1AS_22: {{(unknown argument).*}}-hlsl-entry
-// CHECK_CC1AS_22: {{(unknown argument).*}}-iapinotes-modules
-// CHECK_CC1AS_22: {{(unknown argument).*}}-ibuiltininc
-// CHECK_CC1AS_22: {{(unknown argument).*}}-idirafter
-// CHECK_CC1AS_22: {{(unknown argument).*}}-iframework
-// CHECK_CC1AS_22: {{(unknown argument).*}}-iframeworkwithsysroot
-// CHECK_CC1AS_22: {{(unknown argument).*}}-imacros
-// CHECK_CC1AS_22: {{(unknown argument).*}}-image_base
-// CHECK_CC1AS_22: {{(unknown argument).*}}-import-call-optimization
-// CHECK_CC1AS_22: {{(unknown argument).*}}-imultilib
-// CHECK_CC1AS_22: {{(unknown argument).*}}-include
-// CHECK_CC1AS_22: {{(unknown argument).*}}-include-pch
-// CHECK_CC1AS_22: {{(unknown argument).*}}-init
-// CHECK_CC1AS_22: {{(unknown argument).*}}-init-only
 
 // RUN: not %clang -cc1as  \
+// RUN:   --hip-device-lib= \
+// RUN:   --hip-link \
+// RUN:   --hip-path= \
+// RUN:   --hip-version= \
+// RUN:   --hipspv-pass-plugin= \
+// RUN:   --hipstdpar \
+// RUN:   --hipstdpar-interpose-alloc \
+// RUN:   --hipstdpar-path= \
+// RUN:   --hipstdpar-prim-path= \
+// RUN:   --hipstdpar-thrust-path= \
+// RUN:   -hlsl-entry \
+// RUN:   -iapinotes-modules \
+// RUN:   -ibuiltininc \
+// RUN:   -idirafter \
+// RUN:   -iframework \
+// RUN:   -iframeworkwithsysroot \
+// RUN:   -imacros \
+// RUN:   -image_base \
+// RUN:   -import-call-optimization \
+// RUN:   -imultilib \
+// RUN:   -include \
+// RUN:   -include-pch \
+// RUN:   -init \
+// RUN:   -init-only \
 // RUN:   -inline-asm= \
 // RUN:   -install_name \
 // RUN:   -interface-stub-version= \
 // RUN:   -internal-externc-isystem \
+// RUN:   -internal-iframework \
 // RUN:   -internal-isystem \
 // RUN:   -iprefix \
 // RUN:   -iquote \
@@ -4748,37 +4773,37 @@
 // RUN:   -mamx-tile \
 // RUN:   -mamx-transpose \
 // RUN:   -mannotate-tablejump \
-// RUN:   -mappletvos-version-min= \
-// RUN:   -mappletvsimulator-version-min= \
-// RUN:   -mapx-features= \
-// RUN:   -mapx-inline-asm-use-gpr32 \
-// RUN:   -mapxf \
-// RUN:   -march= \
-// RUN:   -marm \
-// RUN:   -marm64x \
-// RUN:   -masm= \
-// RUN:   -matomics \
-// RUN:   -mavx \
-// RUN:   -mavx10.1 \
-// RUN:   -mavx10.1-256 \
-// RUN:   -mavx10.1-512 \
-// RUN:   -mavx10.2 \
-// RUN:   -mavx10.2-256 \
-// RUN:   -mavx10.2-512 \
-// RUN:   -mavx2 \
-// RUN:   -mavx512bf16 \
-// RUN:   -mavx512bitalg \
-// RUN:   -mavx512bw \
-// RUN:   -mavx512cd \
-// RUN:   -mavx512dq \
-// RUN:   -mavx512f \
-// RUN:   -mavx512fp16 \
-// RUN:   -mavx512ifma - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_23 %s
+// RUN:   -mappletvos-version-min= - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_23 %s
 
+// CHECK_CC1AS_23: {{(unknown argument).*}}--hip-device-lib=
+// CHECK_CC1AS_23: {{(unknown argument).*}}--hip-link
+// CHECK_CC1AS_23: {{(unknown argument).*}}--hip-path=
+// CHECK_CC1AS_23: {{(unknown argument).*}}--hip-version=
+// CHECK_CC1AS_23: {{(unknown argument).*}}--hipspv-pass-plugin=
+// CHECK_CC1AS_23: {{(unknown argument).*}}--hipstdpar
+// CHECK_CC1AS_23: {{(unknown argument).*}}--hipstdpar-interpose-alloc
+// CHECK_CC1AS_23: {{(unknown argument).*}}--hipstdpar-path=
+// CHECK_CC1AS_23: {{(unknown argument).*}}--hipstdpar-prim-path=
+// CHECK_CC1AS_23: {{(unknown argument).*}}--hipstdpar-thrust-path=
+// CHECK_CC1AS_23: {{(unknown argument).*}}-hlsl-entry
+// CHECK_CC1AS_23: {{(unknown argument).*}}-iapinotes-modules
+// CHECK_CC1AS_23: {{(unknown argument).*}}-ibuiltininc
+// CHECK_CC1AS_23: {{(unknown argument).*}}-idirafter
+// CHECK_CC1AS_23: {{(unknown argument).*}}-iframework
+// CHECK_CC1AS_23: {{(unknown argument).*}}-iframeworkwithsysroot
+// CHECK_CC1AS_23: {{(unknown argument).*}}-imacros
+// CHECK_CC1AS_23: {{(unknown argument).*}}-image_base
+// CHECK_CC1AS_23: {{(unknown argument).*}}-import-call-optimization
+// CHECK_CC1AS_23: {{(unknown argument).*}}-imultilib
+// CHECK_CC1AS_23: {{(unknown argument).*}}-include
+// CHECK_CC1AS_23: {{(unknown argument).*}}-include-pch
+// CHECK_CC1AS_23: {{(unknown argument).*}}-init
+// CHECK_CC1AS_23: {{(unknown argument).*}}-init-only
 // CHECK_CC1AS_23: {{(unknown argument).*}}-inline-asm=
 // CHECK_CC1AS_23: {{(unknown argument).*}}-install_name
 // CHECK_CC1AS_23: {{(unknown argument).*}}-interface-stub-version=
 // CHECK_CC1AS_23: {{(unknown argument).*}}-internal-externc-isystem
+// CHECK_CC1AS_23: {{(unknown argument).*}}-internal-iframework
 // CHECK_CC1AS_23: {{(unknown argument).*}}-internal-isystem
 // CHECK_CC1AS_23: {{(unknown argument).*}}-iprefix
 // CHECK_CC1AS_23: {{(unknown argument).*}}-iquote
@@ -4850,33 +4875,33 @@
 // CHECK_CC1AS_23: {{(unknown argument).*}}-mamx-transpose
 // CHECK_CC1AS_23: {{(unknown argument).*}}-mannotate-tablejump
 // CHECK_CC1AS_23: {{(unknown argument).*}}-mappletvos-version-min=
-// CHECK_CC1AS_23: {{(unknown argument).*}}-mappletvsimulator-version-min=
-// CHECK_CC1AS_23: {{(unknown argument).*}}-mapx-features=
-// CHECK_CC1AS_23: {{(unknown argument).*}}-mapx-inline-asm-use-gpr32
-// CHECK_CC1AS_23: {{(unknown argument).*}}-mapxf
-// CHECK_CC1AS_23: {{(unknown argument).*}}-march=
-// CHECK_CC1AS_23: {{(unknown argument).*}}-marm
-// CHECK_CC1AS_23: {{(unknown argument).*}}-marm64x
-// CHECK_CC1AS_23: {{(unknown argument).*}}-masm=
-// CHECK_CC1AS_23: {{(unknown argument).*}}-matomics
-// CHECK_CC1AS_23: {{(unknown argument).*}}-mavx
-// CHECK_CC1AS_23: {{(unknown argument).*}}-mavx10.1
-// CHECK_CC1AS_23: {{(unknown argument).*}}-mavx10.1-256
-// CHECK_CC1AS_23: {{(unknown argument).*}}-mavx10.1-512
-// CHECK_CC1AS_23: {{(unknown argument).*}}-mavx10.2
-// CHECK_CC1AS_23: {{(unknown argument).*}}-mavx10.2-256
-// CHECK_CC1AS_23: {{(unknown argument).*}}-mavx10.2-512
-// CHECK_CC1AS_23: {{(unknown argument).*}}-mavx2
-// CHECK_CC1AS_23: {{(unknown argument).*}}-mavx512bf16
-// CHECK_CC1AS_23: {{(unknown argument).*}}-mavx512bitalg
-// CHECK_CC1AS_23: {{(unknown argument).*}}-mavx512bw
-// CHECK_CC1AS_23: {{(unknown argument).*}}-mavx512cd
-// CHECK_CC1AS_23: {{(unknown argument).*}}-mavx512dq
-// CHECK_CC1AS_23: {{(unknown argument).*}}-mavx512f
-// CHECK_CC1AS_23: {{(unknown argument).*}}-mavx512fp16
-// CHECK_CC1AS_23: {{(unknown argument).*}}-mavx512ifma
 
 // RUN: not %clang -cc1as  \
+// RUN:   -mappletvsimulator-version-min= \
+// RUN:   -mapx-features= \
+// RUN:   -mapx-inline-asm-use-gpr32 \
+// RUN:   -mapxf \
+// RUN:   -march= \
+// RUN:   -marm \
+// RUN:   -marm64x \
+// RUN:   -masm= \
+// RUN:   -matomics \
+// RUN:   -mavx \
+// RUN:   -mavx10.1 \
+// RUN:   -mavx10.1-256 \
+// RUN:   -mavx10.1-512 \
+// RUN:   -mavx10.2 \
+// RUN:   -mavx10.2-256 \
+// RUN:   -mavx10.2-512 \
+// RUN:   -mavx2 \
+// RUN:   -mavx512bf16 \
+// RUN:   -mavx512bitalg \
+// RUN:   -mavx512bw \
+// RUN:   -mavx512cd \
+// RUN:   -mavx512dq \
+// RUN:   -mavx512f \
+// RUN:   -mavx512fp16 \
+// RUN:   -mavx512ifma \
 // RUN:   -mavx512vbmi \
 // RUN:   -mavx512vbmi2 \
 // RUN:   -mavx512vl \
@@ -4951,33 +4976,33 @@
 // RUN:   -mf16c \
 // RUN:   -mfancy-math-387 \
 // RUN:   -mfentry \
-// RUN:   -mfix4300 \
-// RUN:   -mfix-and-continue \
-// RUN:   -mfix-cmse-cve-2021-35465 \
-// RUN:   -mfix-cortex-a53-835769 \
-// RUN:   -mfix-cortex-a57-aes-1742098 \
-// RUN:   -mfix-cortex-a72-aes-1655431 \
-// RUN:   -mfix-gr712rc \
-// RUN:   -mfix-ut700 \
-// RUN:   -mfloat128 \
-// RUN:   -mfloat-abi \
-// RUN:   -mfloat-abi= \
-// RUN:   -mfma \
-// RUN:   -mfma4 \
-// RUN:   -mfp16 \
-// RUN:   -mfp32 \
-// RUN:   -mfp64 \
-// RUN:   -mfpmath \
-// RUN:   -mfpmath= \
-// RUN:   -mfprnd \
-// RUN:   -mfpu \
-// RUN:   -mfpu= \
-// RUN:   -mfpxx \
-// RUN:   -mframe-chain= \
-// RUN:   -mframe-pointer= \
-// RUN:   -mfrecipe \
-// RUN:   -mfsgsbase - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_24 %s
+// RUN:   -mfix4300 - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_24 %s
 
+// CHECK_CC1AS_24: {{(unknown argument).*}}-mappletvsimulator-version-min=
+// CHECK_CC1AS_24: {{(unknown argument).*}}-mapx-features=
+// CHECK_CC1AS_24: {{(unknown argument).*}}-mapx-inline-asm-use-gpr32
+// CHECK_CC1AS_24: {{(unknown argument).*}}-mapxf
+// CHECK_CC1AS_24: {{(unknown argument).*}}-march=
+// CHECK_CC1AS_24: {{(unknown argument).*}}-marm
+// CHECK_CC1AS_24: {{(unknown argument).*}}-marm64x
+// CHECK_CC1AS_24: {{(unknown argument).*}}-masm=
+// CHECK_CC1AS_24: {{(unknown argument).*}}-matomics
+// CHECK_CC1AS_24: {{(unknown argument).*}}-mavx
+// CHECK_CC1AS_24: {{(unknown argument).*}}-mavx10.1
+// CHECK_CC1AS_24: {{(unknown argument).*}}-mavx10.1-256
+// CHECK_CC1AS_24: {{(unknown argument).*}}-mavx10.1-512
+// CHECK_CC1AS_24: {{(unknown argument).*}}-mavx10.2
+// CHECK_CC1AS_24: {{(unknown argument).*}}-mavx10.2-256
+// CHECK_CC1AS_24: {{(unknown argument).*}}-mavx10.2-512
+// CHECK_CC1AS_24: {{(unknown argument).*}}-mavx2
+// CHECK_CC1AS_24: {{(unknown argument).*}}-mavx512bf16
+// CHECK_CC1AS_24: {{(unknown argument).*}}-mavx512bitalg
+// CHECK_CC1AS_24: {{(unknown argument).*}}-mavx512bw
+// CHECK_CC1AS_24: {{(unknown argument).*}}-mavx512cd
+// CHECK_CC1AS_24: {{(unknown argument).*}}-mavx512dq
+// CHECK_CC1AS_24: {{(unknown argument).*}}-mavx512f
+// CHECK_CC1AS_24: {{(unknown argument).*}}-mavx512fp16
+// CHECK_CC1AS_24: {{(unknown argument).*}}-mavx512ifma
 // CHECK_CC1AS_24: {{(unknown argument).*}}-mavx512vbmi
 // CHECK_CC1AS_24: {{(unknown argument).*}}-mavx512vbmi2
 // CHECK_CC1AS_24: {{(unknown argument).*}}-mavx512vl
@@ -5053,33 +5078,33 @@
 // CHECK_CC1AS_24: {{(unknown argument).*}}-mfancy-math-387
 // CHECK_CC1AS_24: {{(unknown argument).*}}-mfentry
 // CHECK_CC1AS_24: {{(unknown argument).*}}-mfix4300
-// CHECK_CC1AS_24: {{(unknown argument).*}}-mfix-and-continue
-// CHECK_CC1AS_24: {{(unknown argument).*}}-mfix-cmse-cve-2021-35465
-// CHECK_CC1AS_24: {{(unknown argument).*}}-mfix-cortex-a53-835769
-// CHECK_CC1AS_24: {{(unknown argument).*}}-mfix-cortex-a57-aes-1742098
-// CHECK_CC1AS_24: {{(unknown argument).*}}-mfix-cortex-a72-aes-1655431
-// CHECK_CC1AS_24: {{(unknown argument).*}}-mfix-gr712rc
-// CHECK_CC1AS_24: {{(unknown argument).*}}-mfix-ut700
-// CHECK_CC1AS_24: {{(unknown argument).*}}-mfloat128
-// CHECK_CC1AS_24: {{(unknown argument).*}}-mfloat-abi
-// CHECK_CC1AS_24: {{(unknown argument).*}}-mfloat-abi=
-// CHECK_CC1AS_24: {{(unknown argument).*}}-mfma
-// CHECK_CC1AS_24: {{(unknown argument).*}}-mfma4
-// CHECK_CC1AS_24: {{(unknown argument).*}}-mfp16
-// CHECK_CC1AS_24: {{(unknown argument).*}}-mfp32
-// CHECK_CC1AS_24: {{(unknown argument).*}}-mfp64
-// CHECK_CC1AS_24: {{(unknown argument).*}}-mfpmath
-// CHECK_CC1AS_24: {{(unknown argument).*}}-mfpmath=
-// CHECK_CC1AS_24: {{(unknown argument).*}}-mfprnd
-// CHECK_CC1AS_24: {{(unknown argument).*}}-mfpu
-// CHECK_CC1AS_24: {{(unknown argument).*}}-mfpu=
-// CHECK_CC1AS_24: {{(unknown argument).*}}-mfpxx
-// CHECK_CC1AS_24: {{(unknown argument).*}}-mframe-chain=
-// CHECK_CC1AS_24: {{(unknown argument).*}}-mframe-pointer=
-// CHECK_CC1AS_24: {{(unknown argument).*}}-mfrecipe
-// CHECK_CC1AS_24: {{(unknown argument).*}}-mfsgsbase
 
 // RUN: not %clang -cc1as  \
+// RUN:   -mfix-and-continue \
+// RUN:   -mfix-cmse-cve-2021-35465 \
+// RUN:   -mfix-cortex-a53-835769 \
+// RUN:   -mfix-cortex-a57-aes-1742098 \
+// RUN:   -mfix-cortex-a72-aes-1655431 \
+// RUN:   -mfix-gr712rc \
+// RUN:   -mfix-ut700 \
+// RUN:   -mfloat128 \
+// RUN:   -mfloat-abi \
+// RUN:   -mfloat-abi= \
+// RUN:   -mfma \
+// RUN:   -mfma4 \
+// RUN:   -mfp16 \
+// RUN:   -mfp32 \
+// RUN:   -mfp64 \
+// RUN:   -mfpmath \
+// RUN:   -mfpmath= \
+// RUN:   -mfprnd \
+// RUN:   -mfpu \
+// RUN:   -mfpu= \
+// RUN:   -mfpxx \
+// RUN:   -mframe-chain= \
+// RUN:   -mframe-pointer= \
+// RUN:   -mfrecipe \
+// RUN:   -mfsgsbase \
 // RUN:   -mfsmuld \
 // RUN:   -mfunction-return= \
 // RUN:   -mfxsr \
@@ -5154,33 +5179,33 @@
 // RUN:   -mlong-double-128 \
 // RUN:   -mlong-double-64 \
 // RUN:   -mlong-double-80 \
-// RUN:   -mlongcall \
-// RUN:   -mlr-for-calls-only \
-// RUN:   -mlsx \
-// RUN:   -mlvi-cfi \
-// RUN:   -mlvi-hardening \
-// RUN:   -mlwp \
-// RUN:   -mlzcnt \
-// RUN:   -mmacos-version-min= \
-// RUN:   -mmadd4 \
-// RUN:   -mmark-bti-property \
-// RUN:   -mmcu= \
-// RUN:   -mmemops \
-// RUN:   -mmfcrf \
-// RUN:   -mmfocrf \
-// RUN:   -mmicromips \
-// RUN:   -mmlir \
-// RUN:   -mmma \
-// RUN:   -mmmx \
-// RUN:   -mmovbe \
-// RUN:   -mmovdir64b \
-// RUN:   -mmovdiri \
-// RUN:   -mmovrs \
-// RUN:   -mmpx \
-// RUN:   -mms-bitfields \
-// RUN:   -mmt \
-// RUN:   -mmultimemory - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_25 %s
+// RUN:   -mlongcall - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_25 %s
 
+// CHECK_CC1AS_25: {{(unknown argument).*}}-mfix-and-continue
+// CHECK_CC1AS_25: {{(unknown argument).*}}-mfix-cmse-cve-2021-35465
+// CHECK_CC1AS_25: {{(unknown argument).*}}-mfix-cortex-a53-835769
+// CHECK_CC1AS_25: {{(unknown argument).*}}-mfix-cortex-a57-aes-1742098
+// CHECK_CC1AS_25: {{(unknown argument).*}}-mfix-cortex-a72-aes-1655431
+// CHECK_CC1AS_25: {{(unknown argument).*}}-mfix-gr712rc
+// CHECK_CC1AS_25: {{(unknown argument).*}}-mfix-ut700
+// CHECK_CC1AS_25: {{(unknown argument).*}}-mfloat128
+// CHECK_CC1AS_25: {{(unknown argument).*}}-mfloat-abi
+// CHECK_CC1AS_25: {{(unknown argument).*}}-mfloat-abi=
+// CHECK_CC1AS_25: {{(unknown argument).*}}-mfma
+// CHECK_CC1AS_25: {{(unknown argument).*}}-mfma4
+// CHECK_CC1AS_25: {{(unknown argument).*}}-mfp16
+// CHECK_CC1AS_25: {{(unknown argument).*}}-mfp32
+// CHECK_CC1AS_25: {{(unknown argument).*}}-mfp64
+// CHECK_CC1AS_25: {{(unknown argument).*}}-mfpmath
+// CHECK_CC1AS_25: {{(unknown argument).*}}-mfpmath=
+// CHECK_CC1AS_25: {{(unknown argument).*}}-mfprnd
+// CHECK_CC1AS_25: {{(unknown argument).*}}-mfpu
+// CHECK_CC1AS_25: {{(unknown argument).*}}-mfpu=
+// CHECK_CC1AS_25: {{(unknown argument).*}}-mfpxx
+// CHECK_CC1AS_25: {{(unknown argument).*}}-mframe-chain=
+// CHECK_CC1AS_25: {{(unknown argument).*}}-mframe-pointer=
+// CHECK_CC1AS_25: {{(unknown argument).*}}-mfrecipe
+// CHECK_CC1AS_25: {{(unknown argument).*}}-mfsgsbase
 // CHECK_CC1AS_25: {{(unknown argument).*}}-mfsmuld
 // CHECK_CC1AS_25: {{(unknown argument).*}}-mfunction-return=
 // CHECK_CC1AS_25: {{(unknown argument).*}}-mfxsr
@@ -5256,33 +5281,33 @@
 // CHECK_CC1AS_25: {{(unknown argument).*}}-mlong-double-64
 // CHECK_CC1AS_25: {{(unknown argument).*}}-mlong-double-80
 // CHECK_CC1AS_25: {{(unknown argument).*}}-mlongcall
-// CHECK_CC1AS_25: {{(unknown argument).*}}-mlr-for-calls-only
-// CHECK_CC1AS_25: {{(unknown argument).*}}-mlsx
-// CHECK_CC1AS_25: {{(unknown argument).*}}-mlvi-cfi
-// CHECK_CC1AS_25: {{(unknown argument).*}}-mlvi-hardening
-// CHECK_CC1AS_25: {{(unknown argument).*}}-mlwp
-// CHECK_CC1AS_25: {{(unknown argument).*}}-mlzcnt
-// CHECK_CC1AS_25: {{(unknown argument).*}}-mmacos-version-min=
-// CHECK_CC1AS_25: {{(unknown argument).*}}-mmadd4
-// CHECK_CC1AS_25: {{(unknown argument).*}}-mmark-bti-property
-// CHECK_CC1AS_25: {{(unknown argument).*}}-mmcu=
-// CHECK_CC1AS_25: {{(unknown argument).*}}-mmemops
-// CHECK_CC1AS_25: {{(unknown argument).*}}-mmfcrf
-// CHECK_CC1AS_25: {{(unknown argument).*}}-mmfocrf
-// CHECK_CC1AS_25: {{(unknown argument).*}}-mmicromips
-// CHECK_CC1AS_25: {{(unknown argument).*}}-mmlir
-// CHECK_CC1AS_25: {{(unknown argument).*}}-mmma
-// CHECK_CC1AS_25: {{(unknown argument).*}}-mmmx
-// CHECK_CC1AS_25: {{(unknown argument).*}}-mmovbe
-// CHECK_CC1AS_25: {{(unknown argument).*}}-mmovdir64b
-// CHECK_CC1AS_25: {{(unknown argument).*}}-mmovdiri
-// CHECK_CC1AS_25: {{(unknown argument).*}}-mmovrs
-// CHECK_CC1AS_25: {{(unknown argument).*}}-mmpx
-// CHECK_CC1AS_25: {{(unknown argument).*}}-mms-bitfields
-// CHECK_CC1AS_25: {{(unknown argument).*}}-mmt
-// CHECK_CC1AS_25: {{(unknown argument).*}}-mmultimemory
 
 // RUN: not %clang -cc1as  \
+// RUN:   -mlr-for-calls-only \
+// RUN:   -mlsx \
+// RUN:   -mlvi-cfi \
+// RUN:   -mlvi-hardening \
+// RUN:   -mlwp \
+// RUN:   -mlzcnt \
+// RUN:   -mmacos-version-min= \
+// RUN:   -mmadd4 \
+// RUN:   -mmark-bti-property \
+// RUN:   -mmcu= \
+// RUN:   -mmemops \
+// RUN:   -mmfcrf \
+// RUN:   -mmfocrf \
+// RUN:   -mmicromips \
+// RUN:   -mmlir \
+// RUN:   -mmma \
+// RUN:   -mmmx \
+// RUN:   -mmovbe \
+// RUN:   -mmovdir64b \
+// RUN:   -mmovdiri \
+// RUN:   -mmovrs \
+// RUN:   -mmpx \
+// RUN:   -mms-bitfields \
+// RUN:   -mmt \
+// RUN:   -mmultimemory \
 // RUN:   -mmultivalue \
 // RUN:   -mmutable-globals \
 // RUN:   -mmwaitx \
@@ -5357,33 +5382,33 @@
 // RUN:   -mno-crc32 \
 // RUN:   -mno-cumode \
 // RUN:   -mno-cx16 \
-// RUN:   -mno-daz-ftz \
-// RUN:   -mno-default-build-attributes \
-// RUN:   -mno-div32 \
-// RUN:   -mno-dsp \
-// RUN:   -mno-dspr2 \
-// RUN:   -mno-embedded-data \
-// RUN:   -mno-enqcmd \
-// RUN:   -mno-evex512 \
-// RUN:   -mno-exception-handling \
-// RUN:   -mno-execute-only \
-// RUN:   -mno-extended-const \
-// RUN:   -mno-extern-sdata \
-// RUN:   -mno-f16c \
-// RUN:   -mno-fix-cmse-cve-2021-35465 \
-// RUN:   -mno-fix-cortex-a53-835769 \
-// RUN:   -mno-fix-cortex-a57-aes-1742098 \
-// RUN:   -mno-fix-cortex-a72-aes-1655431 \
-// RUN:   -mno-float128 \
-// RUN:   -mno-fma \
-// RUN:   -mno-fma4 \
-// RUN:   -mno-fmv \
-// RUN:   -mno-fp16 \
-// RUN:   -mno-fp-ret-in-387 \
-// RUN:   -mno-fprnd \
-// RUN:   -mno-fpu \
-// RUN:   -mno-frecipe - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_26 %s
+// RUN:   -mno-daz-ftz - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_26 %s
 
+// CHECK_CC1AS_26: {{(unknown argument).*}}-mlr-for-calls-only
+// CHECK_CC1AS_26: {{(unknown argument).*}}-mlsx
+// CHECK_CC1AS_26: {{(unknown argument).*}}-mlvi-cfi
+// CHECK_CC1AS_26: {{(unknown argument).*}}-mlvi-hardening
+// CHECK_CC1AS_26: {{(unknown argument).*}}-mlwp
+// CHECK_CC1AS_26: {{(unknown argument).*}}-mlzcnt
+// CHECK_CC1AS_26: {{(unknown argument).*}}-mmacos-version-min=
+// CHECK_CC1AS_26: {{(unknown argument).*}}-mmadd4
+// CHECK_CC1AS_26: {{(unknown argument).*}}-mmark-bti-property
+// CHECK_CC1AS_26: {{(unknown argument).*}}-mmcu=
+// CHECK_CC1AS_26: {{(unknown argument).*}}-mmemops
+// CHECK_CC1AS_26: {{(unknown argument).*}}-mmfcrf
+// CHECK_CC1AS_26: {{(unknown argument).*}}-mmfocrf
+// CHECK_CC1AS_26: {{(unknown argument).*}}-mmicromips
+// CHECK_CC1AS_26: {{(unknown argument).*}}-mmlir
+// CHECK_CC1AS_26: {{(unknown argument).*}}-mmma
+// CHECK_CC1AS_26: {{(unknown argument).*}}-mmmx
+// CHECK_CC1AS_26: {{(unknown argument).*}}-mmovbe
+// CHECK_CC1AS_26: {{(unknown argument).*}}-mmovdir64b
+// CHECK_CC1AS_26: {{(unknown argument).*}}-mmovdiri
+// CHECK_CC1AS_26: {{(unknown argument).*}}-mmovrs
+// CHECK_CC1AS_26: {{(unknown argument).*}}-mmpx
+// CHECK_CC1AS_26: {{(unknown argument).*}}-mms-bitfields
+// CHECK_CC1AS_26: {{(unknown argument).*}}-mmt
+// CHECK_CC1AS_26: {{(unknown argument).*}}-mmultimemory
 // CHECK_CC1AS_26: {{(unknown argument).*}}-mmultivalue
 // CHECK_CC1AS_26: {{(unknown argument).*}}-mmutable-globals
 // CHECK_CC1AS_26: {{(unknown argument).*}}-mmwaitx
@@ -5459,33 +5484,33 @@
 // CHECK_CC1AS_26: {{(unknown argument).*}}-mno-cumode
 // CHECK_CC1AS_26: {{(unknown argument).*}}-mno-cx16
 // CHECK_CC1AS_26: {{(unknown argument).*}}-mno-daz-ftz
-// CHECK_CC1AS_26: {{(unknown argument).*}}-mno-default-build-attributes
-// CHECK_CC1AS_26: {{(unknown argument).*}}-mno-div32
-// CHECK_CC1AS_26: {{(unknown argument).*}}-mno-dsp
-// CHECK_CC1AS_26: {{(unknown argument).*}}-mno-dspr2
-// CHECK_CC1AS_26: {{(unknown argument).*}}-mno-embedded-data
-// CHECK_CC1AS_26: {{(unknown argument).*}}-mno-enqcmd
-// CHECK_CC1AS_26: {{(unknown argument).*}}-mno-evex512
-// CHECK_CC1AS_26: {{(unknown argument).*}}-mno-exception-handling
-// CHECK_CC1AS_26: {{(unknown argument).*}}-mno-execute-only
-// CHECK_CC1AS_26: {{(unknown argument).*}}-mno-extended-const
-// CHECK_CC1AS_26: {{(unknown argument).*}}-mno-extern-sdata
-// CHECK_CC1AS_26: {{(unknown argument).*}}-mno-f16c
-// CHECK_CC1AS_26: {{(unknown argument).*}}-mno-fix-cmse-cve-2021-35465
-// CHECK_CC1AS_26: {{(unknown argument).*}}-mno-fix-cortex-a53-835769
-// CHECK_CC1AS_26: {{(unknown argument).*}}-mno-fix-cortex-a57-aes-1742098
-// CHECK_CC1AS_26: {{(unknown argument).*}}-mno-fix-cortex-a72-aes-1655431
-// CHECK_CC1AS_26: {{(unknown argument).*}}-mno-float128
-// CHECK_CC1AS_26: {{(unknown argument).*}}-mno-fma
-// CHECK_CC1AS_26: {{(unknown argument).*}}-mno-fma4
-// CHECK_CC1AS_26: {{(unknown argument).*}}-mno-fmv
-// CHECK_CC1AS_26: {{(unknown argument).*}}-mno-fp16
-// CHECK_CC1AS_26: {{(unknown argument).*}}-mno-fp-ret-in-387
-// CHECK_CC1AS_26: {{(unknown argument).*}}-mno-fprnd
-// CHECK_CC1AS_26: {{(unknown argument).*}}-mno-fpu
-// CHECK_CC1AS_26: {{(unknown argument).*}}-mno-frecipe
 
 // RUN: not %clang -cc1as  \
+// RUN:   -mno-default-build-attributes \
+// RUN:   -mno-div32 \
+// RUN:   -mno-dsp \
+// RUN:   -mno-dspr2 \
+// RUN:   -mno-embedded-data \
+// RUN:   -mno-enqcmd \
+// RUN:   -mno-evex512 \
+// RUN:   -mno-exception-handling \
+// RUN:   -mno-execute-only \
+// RUN:   -mno-extended-const \
+// RUN:   -mno-extern-sdata \
+// RUN:   -mno-f16c \
+// RUN:   -mno-fix-cmse-cve-2021-35465 \
+// RUN:   -mno-fix-cortex-a53-835769 \
+// RUN:   -mno-fix-cortex-a57-aes-1742098 \
+// RUN:   -mno-fix-cortex-a72-aes-1655431 \
+// RUN:   -mno-float128 \
+// RUN:   -mno-fma \
+// RUN:   -mno-fma4 \
+// RUN:   -mno-fmv \
+// RUN:   -mno-fp16 \
+// RUN:   -mno-fp-ret-in-387 \
+// RUN:   -mno-fprnd \
+// RUN:   -mno-fpu \
+// RUN:   -mno-frecipe \
 // RUN:   -mno-fsgsbase \
 // RUN:   -mno-fsmuld \
 // RUN:   -mno-fxsr \
@@ -5560,33 +5585,33 @@
 // RUN:   -mno-pku \
 // RUN:   -mno-popc \
 // RUN:   -mno-popcnt \
-// RUN:   -mno-popcntd \
-// RUN:   -mno-power10-vector \
-// RUN:   -mno-power8-vector \
-// RUN:   -mno-power9-vector \
-// RUN:   -mno-prefetchi \
-// RUN:   -mno-prefixed \
-// RUN:   -mno-prfchw \
-// RUN:   -mno-ptwrite \
-// RUN:   -mno-pure-code \
-// RUN:   -mno-raoint \
-// RUN:   -mno-rdpid \
-// RUN:   -mno-rdpru \
-// RUN:   -mno-rdrnd \
-// RUN:   -mno-rdseed \
-// RUN:   -mno-red-zone \
-// RUN:   -mno-reference-types \
-// RUN:   -mno-regnames \
-// RUN:   -mno-relax \
-// RUN:   -mno-relax-all \
-// RUN:   -mno-relax-pic-calls \
-// RUN:   -mno-relaxed-simd \
-// RUN:   -mno-restrict-it \
-// RUN:   -mno-retpoline \
-// RUN:   -mno-retpoline-external-thunk \
-// RUN:   -mno-rtd \
-// RUN:   -mno-rtm - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_27 %s
+// RUN:   -mno-popcntd - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_27 %s
 
+// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-default-build-attributes
+// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-div32
+// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-dsp
+// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-dspr2
+// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-embedded-data
+// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-enqcmd
+// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-evex512
+// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-exception-handling
+// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-execute-only
+// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-extended-const
+// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-extern-sdata
+// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-f16c
+// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-fix-cmse-cve-2021-35465
+// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-fix-cortex-a53-835769
+// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-fix-cortex-a57-aes-1742098
+// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-fix-cortex-a72-aes-1655431
+// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-float128
+// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-fma
+// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-fma4
+// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-fmv
+// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-fp16
+// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-fp-ret-in-387
+// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-fprnd
+// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-fpu
+// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-frecipe
 // CHECK_CC1AS_27: {{(unknown argument).*}}-mno-fsgsbase
 // CHECK_CC1AS_27: {{(unknown argument).*}}-mno-fsmuld
 // CHECK_CC1AS_27: {{(unknown argument).*}}-mno-fxsr
@@ -5662,33 +5687,33 @@
 // CHECK_CC1AS_27: {{(unknown argument).*}}-mno-popc
 // CHECK_CC1AS_27: {{(unknown argument).*}}-mno-popcnt
 // CHECK_CC1AS_27: {{(unknown argument).*}}-mno-popcntd
-// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-power10-vector
-// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-power8-vector
-// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-power9-vector
-// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-prefetchi
-// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-prefixed
-// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-prfchw
-// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-ptwrite
-// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-pure-code
-// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-raoint
-// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-rdpid
-// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-rdpru
-// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-rdrnd
-// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-rdseed
-// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-red-zone
-// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-reference-types
-// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-regnames
-// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-relax
-// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-relax-all
-// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-relax-pic-calls
-// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-relaxed-simd
-// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-restrict-it
-// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-retpoline
-// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-retpoline-external-thunk
-// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-rtd
-// CHECK_CC1AS_27: {{(unknown argument).*}}-mno-rtm
 
 // RUN: not %clang -cc1as  \
+// RUN:   -mno-power10-vector \
+// RUN:   -mno-power8-vector \
+// RUN:   -mno-power9-vector \
+// RUN:   -mno-prefetchi \
+// RUN:   -mno-prefixed \
+// RUN:   -mno-prfchw \
+// RUN:   -mno-ptwrite \
+// RUN:   -mno-pure-code \
+// RUN:   -mno-raoint \
+// RUN:   -mno-rdpid \
+// RUN:   -mno-rdpru \
+// RUN:   -mno-rdrnd \
+// RUN:   -mno-rdseed \
+// RUN:   -mno-red-zone \
+// RUN:   -mno-reference-types \
+// RUN:   -mno-regnames \
+// RUN:   -mno-relax \
+// RUN:   -mno-relax-all \
+// RUN:   -mno-relax-pic-calls \
+// RUN:   -mno-relaxed-simd \
+// RUN:   -mno-restrict-it \
+// RUN:   -mno-retpoline \
+// RUN:   -mno-retpoline-external-thunk \
+// RUN:   -mno-rtd \
+// RUN:   -mno-rtm \
 // RUN:   -mno-sahf \
 // RUN:   -mno-save-restore \
 // RUN:   -mno-scalar-strict-align \
@@ -5763,33 +5788,33 @@
 // RUN:   -mno-direct-move \
 // RUN:   -mnontrapping-fptoint \
 // RUN:   -mnop-mcount \
-// RUN:   -mno-paired-vector-memops \
-// RUN:   -mno-crypto \
-// RUN:   -mnvj \
-// RUN:   -mnvs \
-// RUN:   -modd-spreg \
-// RUN:   -module-dependency-dir \
-// RUN:   -module-dir \
-// RUN:   -module-file-deps \
-// RUN:   -module-file-info \
-// RUN:   -module-suffix \
-// RUN:   -fmodules-reduced-bmi \
-// RUN:   -momit-leaf-frame-pointer \
-// RUN:   -moslib= \
-// RUN:   -moutline \
-// RUN:   -moutline-atomics \
-// RUN:   -mpacked-stack \
-// RUN:   -mpackets \
-// RUN:   -mpad-max-prefix-size= \
-// RUN:   -mpaired-vector-memops \
-// RUN:   -mpascal-strings \
-// RUN:   -mpclmul \
-// RUN:   -mpconfig \
-// RUN:   -mpcrel \
-// RUN:   -mpic-data-is-text-relative \
-// RUN:   -mpku \
-// RUN:   -mpopc - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_28 %s
+// RUN:   -mno-paired-vector-memops - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_28 %s
 
+// CHECK_CC1AS_28: {{(unknown argument).*}}-mno-power10-vector
+// CHECK_CC1AS_28: {{(unknown argument).*}}-mno-power8-vector
+// CHECK_CC1AS_28: {{(unknown argument).*}}-mno-power9-vector
+// CHECK_CC1AS_28: {{(unknown argument).*}}-mno-prefetchi
+// CHECK_CC1AS_28: {{(unknown argument).*}}-mno-prefixed
+// CHECK_CC1AS_28: {{(unknown argument).*}}-mno-prfchw
+// CHECK_CC1AS_28: {{(unknown argument).*}}-mno-ptwrite
+// CHECK_CC1AS_28: {{(unknown argument).*}}-mno-pure-code
+// CHECK_CC1AS_28: {{(unknown argument).*}}-mno-raoint
+// CHECK_CC1AS_28: {{(unknown argument).*}}-mno-rdpid
+// CHECK_CC1AS_28: {{(unknown argument).*}}-mno-rdpru
+// CHECK_CC1AS_28: {{(unknown argument).*}}-mno-rdrnd
+// CHECK_CC1AS_28: {{(unknown argument).*}}-mno-rdseed
+// CHECK_CC1AS_28: {{(unknown argument).*}}-mno-red-zone
+// CHECK_CC1AS_28: {{(unknown argument).*}}-mno-reference-types
+// CHECK_CC1AS_28: {{(unknown argument).*}}-mno-regnames
+// CHECK_CC1AS_28: {{(unknown argument).*}}-mno-relax
+// CHECK_CC1AS_28: {{(unknown argument).*}}-mno-relax-all
+// CHECK_CC1AS_28: {{(unknown argument).*}}-mno-relax-pic-calls
+// CHECK_CC1AS_28: {{(unknown argument).*}}-mno-relaxed-simd
+// CHECK_CC1AS_28: {{(unknown argument).*}}-mno-restrict-it
+// CHECK_CC1AS_28: {{(unknown argument).*}}-mno-retpoline
+// CHECK_CC1AS_28: {{(unknown argument).*}}-mno-retpoline-external-thunk
+// CHECK_CC1AS_28: {{(unknown argument).*}}-mno-rtd
+// CHECK_CC1AS_28: {{(unknown argument).*}}-mno-rtm
 // CHECK_CC1AS_28: {{(unknown argument).*}}-mno-sahf
 // CHECK_CC1AS_28: {{(unknown argument).*}}-mno-save-restore
 // CHECK_CC1AS_28: {{(unknown argument).*}}-mno-scalar-strict-align
@@ -5865,33 +5890,33 @@
 // CHECK_CC1AS_28: {{(unknown argument).*}}-mnontrapping-fptoint
 // CHECK_CC1AS_28: {{(unknown argument).*}}-mnop-mcount
 // CHECK_CC1AS_28: {{(unknown argument).*}}-mno-paired-vector-memops
-// CHECK_CC1AS_28: {{(unknown argument).*}}-mno-crypto
-// CHECK_CC1AS_28: {{(unknown argument).*}}-mnvj
-// CHECK_CC1AS_28: {{(unknown argument).*}}-mnvs
-// CHECK_CC1AS_28: {{(unknown argument).*}}-modd-spreg
-// CHECK_CC1AS_28: {{(unknown argument).*}}-module-dependency-dir
-// CHECK_CC1AS_28: {{(unknown argument).*}}-module-dir
-// CHECK_CC1AS_28: {{(unknown argument).*}}-module-file-deps
-// CHECK_CC1AS_28: {{(unknown argument).*}}-module-file-info
-// CHECK_CC1AS_28: {{(unknown argument).*}}-module-suffix
-// CHECK_CC1AS_28: {{(unknown argument).*}}-fmodules-reduced-bmi
-// CHECK_CC1AS_28: {{(unknown argument).*}}-momit-leaf-frame-pointer
-// CHECK_CC1AS_28: {{(unknown argument).*}}-moslib=
-// CHECK_CC1AS_28: {{(unknown argument).*}}-moutline
-// CHECK_CC1AS_28: {{(unknown argument).*}}-moutline-atomics
-// CHECK_CC1AS_28: {{(unknown argument).*}}-mpacked-stack
-// CHECK_CC1AS_28: {{(unknown argument).*}}-mpackets
-// CHECK_CC1AS_28: {{(unknown argument).*}}-mpad-max-prefix-size=
-// CHECK_CC1AS_28: {{(unknown argument).*}}-mpaired-vector-memops
-// CHECK_CC1AS_28: {{(unknown argument).*}}-mpascal-strings
-// CHECK_CC1AS_28: {{(unknown argument).*}}-mpclmul
-// CHECK_CC1AS_28: {{(unknown argument).*}}-mpconfig
-// CHECK_CC1AS_28: {{(unknown argument).*}}-mpcrel
-// CHECK_CC1AS_28: {{(unknown argument).*}}-mpic-data-is-text-relative
-// CHECK_CC1AS_28: {{(unknown argument).*}}-mpku
-// CHECK_CC1AS_28: {{(unknown argument).*}}-mpopc
 
 // RUN: not %clang -cc1as  \
+// RUN:   -mno-crypto \
+// RUN:   -mnvj \
+// RUN:   -mnvs \
+// RUN:   -modd-spreg \
+// RUN:   -module-dependency-dir \
+// RUN:   -module-dir \
+// RUN:   -module-file-deps \
+// RUN:   -module-file-info \
+// RUN:   -module-suffix \
+// RUN:   -fmodules-reduced-bmi \
+// RUN:   -momit-leaf-frame-pointer \
+// RUN:   -moslib= \
+// RUN:   -moutline \
+// RUN:   -moutline-atomics \
+// RUN:   -mpacked-stack \
+// RUN:   -mpackets \
+// RUN:   -mpad-max-prefix-size= \
+// RUN:   -mpaired-vector-memops \
+// RUN:   -mpascal-strings \
+// RUN:   -mpclmul \
+// RUN:   -mpconfig \
+// RUN:   -mpcrel \
+// RUN:   -mpic-data-is-text-relative \
+// RUN:   -mpku \
+// RUN:   -mpopc \
 // RUN:   -mpopcnt \
 // RUN:   -mpopcntd \
 // RUN:   -mpower10-vector \
@@ -5966,33 +5991,33 @@
 // RUN:   -msse4.1 \
 // RUN:   -msse4.2 \
 // RUN:   -msse4a \
-// RUN:   -mssse3 \
-// RUN:   -mstack-alignment= \
-// RUN:   -mstack-arg-probe \
-// RUN:   -mstack-probe-size= \
-// RUN:   -mstack-protector-guard= \
-// RUN:   -mstack-protector-guard-offset= \
-// RUN:   -mstack-protector-guard-reg= \
-// RUN:   -mstack-protector-guard-symbol= \
-// RUN:   -mstackrealign \
-// RUN:   -mstrict-align \
-// RUN:   -msve-vector-bits= \
-// RUN:   -msvr4-struct-return \
-// RUN:   -mtail-call \
-// RUN:   -mtargetos= \
-// RUN:   -mtbm \
-// RUN:   -mtgsplit \
-// RUN:   -mthread-model \
-// RUN:   -mthreads \
-// RUN:   -mthumb \
-// RUN:   -mtls-dialect= \
-// RUN:   -mtls-direct-seg-refs \
-// RUN:   -mtls-size= \
-// RUN:   -mtocdata \
-// RUN:   -mtocdata= \
-// RUN:   -mtp \
-// RUN:   -mtp= - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_29 %s
+// RUN:   -mssse3 - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_29 %s
 
+// CHECK_CC1AS_29: {{(unknown argument).*}}-mno-crypto
+// CHECK_CC1AS_29: {{(unknown argument).*}}-mnvj
+// CHECK_CC1AS_29: {{(unknown argument).*}}-mnvs
+// CHECK_CC1AS_29: {{(unknown argument).*}}-modd-spreg
+// CHECK_CC1AS_29: {{(unknown argument).*}}-module-dependency-dir
+// CHECK_CC1AS_29: {{(unknown argument).*}}-module-dir
+// CHECK_CC1AS_29: {{(unknown argument).*}}-module-file-deps
+// CHECK_CC1AS_29: {{(unknown argument).*}}-module-file-info
+// CHECK_CC1AS_29: {{(unknown argument).*}}-module-suffix
+// CHECK_CC1AS_29: {{(unknown argument).*}}-fmodules-reduced-bmi
+// CHECK_CC1AS_29: {{(unknown argument).*}}-momit-leaf-frame-pointer
+// CHECK_CC1AS_29: {{(unknown argument).*}}-moslib=
+// CHECK_CC1AS_29: {{(unknown argument).*}}-moutline
+// CHECK_CC1AS_29: {{(unknown argument).*}}-moutline-atomics
+// CHECK_CC1AS_29: {{(unknown argument).*}}-mpacked-stack
+// CHECK_CC1AS_29: {{(unknown argument).*}}-mpackets
+// CHECK_CC1AS_29: {{(unknown argument).*}}-mpad-max-prefix-size=
+// CHECK_CC1AS_29: {{(unknown argument).*}}-mpaired-vector-memops
+// CHECK_CC1AS_29: {{(unknown argument).*}}-mpascal-strings
+// CHECK_CC1AS_29: {{(unknown argument).*}}-mpclmul
+// CHECK_CC1AS_29: {{(unknown argument).*}}-mpconfig
+// CHECK_CC1AS_29: {{(unknown argument).*}}-mpcrel
+// CHECK_CC1AS_29: {{(unknown argument).*}}-mpic-data-is-text-relative
+// CHECK_CC1AS_29: {{(unknown argument).*}}-mpku
+// CHECK_CC1AS_29: {{(unknown argument).*}}-mpopc
 // CHECK_CC1AS_29: {{(unknown argument).*}}-mpopcnt
 // CHECK_CC1AS_29: {{(unknown argument).*}}-mpopcntd
 // CHECK_CC1AS_29: {{(unknown argument).*}}-mpower10-vector
@@ -6068,33 +6093,33 @@
 // CHECK_CC1AS_29: {{(unknown argument).*}}-msse4.2
 // CHECK_CC1AS_29: {{(unknown argument).*}}-msse4a
 // CHECK_CC1AS_29: {{(unknown argument).*}}-mssse3
-// CHECK_CC1AS_29: {{(unknown argument).*}}-mstack-alignment=
-// CHECK_CC1AS_29: {{(unknown argument).*}}-mstack-arg-probe
-// CHECK_CC1AS_29: {{(unknown argument).*}}-mstack-probe-size=
-// CHECK_CC1AS_29: {{(unknown argument).*}}-mstack-protector-guard=
-// CHECK_CC1AS_29: {{(unknown argument).*}}-mstack-protector-guard-offset=
-// CHECK_CC1AS_29: {{(unknown argument).*}}-mstack-protector-guard-reg=
-// CHECK_CC1AS_29: {{(unknown argument).*}}-mstack-protector-guard-symbol=
-// CHECK_CC1AS_29: {{(unknown argument).*}}-mstackrealign
-// CHECK_CC1AS_29: {{(unknown argument).*}}-mstrict-align
-// CHECK_CC1AS_29: {{(unknown argument).*}}-msve-vector-bits=
-// CHECK_CC1AS_29: {{(unknown argument).*}}-msvr4-struct-return
-// CHECK_CC1AS_29: {{(unknown argument).*}}-mtail-call
-// CHECK_CC1AS_29: {{(unknown argument).*}}-mtargetos=
-// CHECK_CC1AS_29: {{(unknown argument).*}}-mtbm
-// CHECK_CC1AS_29: {{(unknown argument).*}}-mtgsplit
-// CHECK_CC1AS_29: {{(unknown argument).*}}-mthread-model
-// CHECK_CC1AS_29: {{(unknown argument).*}}-mthreads
-// CHECK_CC1AS_29: {{(unknown argument).*}}-mthumb
-// CHECK_CC1AS_29: {{(unknown argument).*}}-mtls-dialect=
-// CHECK_CC1AS_29: {{(unknown argument).*}}-mtls-direct-seg-refs
-// CHECK_CC1AS_29: {{(unknown argument).*}}-mtls-size=
-// CHECK_CC1AS_29: {{(unknown argument).*}}-mtocdata
-// CHECK_CC1AS_29: {{(unknown argument).*}}-mtocdata=
-// CHECK_CC1AS_29: {{(unknown argument).*}}-mtp
-// CHECK_CC1AS_29: {{(unknown argument).*}}-mtp=
 
 // RUN: not %clang -cc1as  \
+// RUN:   -mstack-alignment= \
+// RUN:   -mstack-arg-probe \
+// RUN:   -mstack-probe-size= \
+// RUN:   -mstack-protector-guard= \
+// RUN:   -mstack-protector-guard-offset= \
+// RUN:   -mstack-protector-guard-reg= \
+// RUN:   -mstack-protector-guard-symbol= \
+// RUN:   -mstackrealign \
+// RUN:   -mstrict-align \
+// RUN:   -msve-vector-bits= \
+// RUN:   -msvr4-struct-return \
+// RUN:   -mtail-call \
+// RUN:   -mtargetos= \
+// RUN:   -mtbm \
+// RUN:   -mtgsplit \
+// RUN:   -mthread-model \
+// RUN:   -mthreads \
+// RUN:   -mthumb \
+// RUN:   -mtls-dialect= \
+// RUN:   -mtls-direct-seg-refs \
+// RUN:   -mtls-size= \
+// RUN:   -mtocdata \
+// RUN:   -mtocdata= \
+// RUN:   -mtp \
+// RUN:   -mtp= \
 // RUN:   -mtsxldtrk \
 // RUN:   -mtune= \
 // RUN:   -mtvos-simulator-version-min= \
@@ -6169,33 +6194,33 @@
 // RUN:   -no_dead_strip_inits_and_terms \
 // RUN:   -no-canonical-prefixes \
 // RUN:   -no-clear-ast-before-backend \
-// RUN:   -no-code-completion-globals \
-// RUN:   -no-code-completion-ns-level-decls \
-// RUN:   -no-cpp-precomp \
-// RUN:   --no-cuda-gpu-arch= \
-// RUN:   --no-cuda-include-ptx= \
-// RUN:   --no-cuda-noopt-device-debug \
-// RUN:   --no-cuda-version-check \
-// RUN:   -fno-c++-static-destructors \
-// RUN:   --no-default-config \
-// RUN:   -no-emit-llvm-uselists \
-// RUN:   -no-enable-noundef-analysis \
-// RUN:   --no-gpu-bundle-output \
-// RUN:   -no-hip-rt \
-// RUN:   -no-implicit-float \
-// RUN:   -no-integrated-cpp \
-// RUN:   --no-offload-add-rpath \
-// RUN:   --no-offload-arch= \
-// RUN:   --no-offload-compress \
-// RUN:   --no-offload-new-driver \
-// RUN:   --no-offloadlib \
-// RUN:   -no-pedantic \
-// RUN:   -no-pie \
-// RUN:   -no-pointer-tbaa \
-// RUN:   -no-pthread \
-// RUN:   -no-round-trip-args \
-// RUN:   -no-struct-path-tbaa - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_30 %s
+// RUN:   -no-code-completion-globals - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_30 %s
 
+// CHECK_CC1AS_30: {{(unknown argument).*}}-mstack-alignment=
+// CHECK_CC1AS_30: {{(unknown argument).*}}-mstack-arg-probe
+// CHECK_CC1AS_30: {{(unknown argument).*}}-mstack-probe-size=
+// CHECK_CC1AS_30: {{(unknown argument).*}}-mstack-protector-guard=
+// CHECK_CC1AS_30: {{(unknown argument).*}}-mstack-protector-guard-offset=
+// CHECK_CC1AS_30: {{(unknown argument).*}}-mstack-protector-guard-reg=
+// CHECK_CC1AS_30: {{(unknown argument).*}}-mstack-protector-guard-symbol=
+// CHECK_CC1AS_30: {{(unknown argument).*}}-mstackrealign
+// CHECK_CC1AS_30: {{(unknown argument).*}}-mstrict-align
+// CHECK_CC1AS_30: {{(unknown argument).*}}-msve-vector-bits=
+// CHECK_CC1AS_30: {{(unknown argument).*}}-msvr4-struct-return
+// CHECK_CC1AS_30: {{(unknown argument).*}}-mtail-call
+// CHECK_CC1AS_30: {{(unknown argument).*}}-mtargetos=
+// CHECK_CC1AS_30: {{(unknown argument).*}}-mtbm
+// CHECK_CC1AS_30: {{(unknown argument).*}}-mtgsplit
+// CHECK_CC1AS_30: {{(unknown argument).*}}-mthread-model
+// CHECK_CC1AS_30: {{(unknown argument).*}}-mthreads
+// CHECK_CC1AS_30: {{(unknown argument).*}}-mthumb
+// CHECK_CC1AS_30: {{(unknown argument).*}}-mtls-dialect=
+// CHECK_CC1AS_30: {{(unknown argument).*}}-mtls-direct-seg-refs
+// CHECK_CC1AS_30: {{(unknown argument).*}}-mtls-size=
+// CHECK_CC1AS_30: {{(unknown argument).*}}-mtocdata
+// CHECK_CC1AS_30: {{(unknown argument).*}}-mtocdata=
+// CHECK_CC1AS_30: {{(unknown argument).*}}-mtp
+// CHECK_CC1AS_30: {{(unknown argument).*}}-mtp=
 // CHECK_CC1AS_30: {{(unknown argument).*}}-mtsxldtrk
 // CHECK_CC1AS_30: {{(unknown argument).*}}-mtune=
 // CHECK_CC1AS_30: {{(unknown argument).*}}-mtvos-simulator-version-min=
@@ -6271,33 +6296,34 @@
 // CHECK_CC1AS_30: {{(unknown argument).*}}-no-canonical-prefixes
 // CHECK_CC1AS_30: {{(unknown argument).*}}-no-clear-ast-before-backend
 // CHECK_CC1AS_30: {{(unknown argument).*}}-no-code-completion-globals
-// CHECK_CC1AS_30: {{(unknown argument).*}}-no-code-completion-ns-level-decls
-// CHECK_CC1AS_30: {{(unknown argument).*}}-no-cpp-precomp
-// CHECK_CC1AS_30: {{(unknown argument).*}}--no-cuda-gpu-arch=
-// CHECK_CC1AS_30: {{(unknown argument).*}}--no-cuda-include-ptx=
-// CHECK_CC1AS_30: {{(unknown argument).*}}--no-cuda-noopt-device-debug
-// CHECK_CC1AS_30: {{(unknown argument).*}}--no-cuda-version-check
-// CHECK_CC1AS_30: {{(unknown argument).*}}-fno-c++-static-destructors
-// CHECK_CC1AS_30: {{(unknown argument).*}}--no-default-config
-// CHECK_CC1AS_30: {{(unknown argument).*}}-no-emit-llvm-uselists
-// CHECK_CC1AS_30: {{(unknown argument).*}}-no-enable-noundef-analysis
-// CHECK_CC1AS_30: {{(unknown argument).*}}--no-gpu-bundle-output
-// CHECK_CC1AS_30: {{(unknown argument).*}}-no-hip-rt
-// CHECK_CC1AS_30: {{(unknown argument).*}}-no-implicit-float
-// CHECK_CC1AS_30: {{(unknown argument).*}}-no-integrated-cpp
-// CHECK_CC1AS_30: {{(unknown argument).*}}--no-offload-add-rpath
-// CHECK_CC1AS_30: {{(unknown argument).*}}--no-offload-arch=
-// CHECK_CC1AS_30: {{(unknown argument).*}}--no-offload-compress
-// CHECK_CC1AS_30: {{(unknown argument).*}}--no-offload-new-driver
-// CHECK_CC1AS_30: {{(unknown argument).*}}--no-offloadlib
-// CHECK_CC1AS_30: {{(unknown argument).*}}-no-pedantic
-// CHECK_CC1AS_30: {{(unknown argument).*}}-no-pie
-// CHECK_CC1AS_30: {{(unknown argument).*}}-no-pointer-tbaa
-// CHECK_CC1AS_30: {{(unknown argument).*}}-no-pthread
-// CHECK_CC1AS_30: {{(unknown argument).*}}-no-round-trip-args
-// CHECK_CC1AS_30: {{(unknown argument).*}}-no-struct-path-tbaa
 
 // RUN: not %clang -cc1as  \
+// RUN:   -no-code-completion-ns-level-decls \
+// RUN:   -no-cpp-precomp \
+// RUN:   --no-cuda-gpu-arch= \
+// RUN:   --no-cuda-include-ptx= \
+// RUN:   --no-cuda-noopt-device-debug \
+// RUN:   --no-cuda-version-check \
+// RUN:   -fno-c++-static-destructors \
+// RUN:   --no-default-config \
+// RUN:   -no-disable-free \
+// RUN:   -no-emit-llvm-uselists \
+// RUN:   -no-enable-noundef-analysis \
+// RUN:   --no-gpu-bundle-output \
+// RUN:   -no-hip-rt \
+// RUN:   -no-implicit-float \
+// RUN:   -no-integrated-cpp \
+// RUN:   --no-offload-add-rpath \
+// RUN:   --no-offload-arch= \
+// RUN:   --no-offload-compress \
+// RUN:   --no-offload-new-driver \
+// RUN:   --no-offloadlib \
+// RUN:   -no-pedantic \
+// RUN:   -no-pie \
+// RUN:   -no-pointer-tbaa \
+// RUN:   -no-pthread \
+// RUN:   -no-round-trip-args \
+// RUN:   -no-struct-path-tbaa \
 // RUN:   --no-system-header-prefix= \
 // RUN:   --no-wasm-opt \
 // RUN:   -nobuiltininc \
@@ -6371,34 +6397,34 @@
 // RUN:   --product-name= \
 // RUN:   -pthread \
 // RUN:   -pthreads \
-// RUN:   --ptxas-path= \
-// RUN:   -r \
-// RUN:   -rdynamic \
-// RUN:   -read_only_relocs \
-// RUN:   -reexport_framework \
-// RUN:   -reexport-l \
-// RUN:   -reexport_library \
-// RUN:   -regcall4 \
-// RUN:   -relaxed-aliasing \
-// RUN:   -relocatable-pch \
-// RUN:   -remap \
-// RUN:   -remap-file \
-// RUN:   -resource-dir \
-// RUN:   -resource-dir= \
-// RUN:   -rewrite-legacy-objc \
-// RUN:   -rewrite-macros \
-// RUN:   -rewrite-objc \
-// RUN:   -rewrite-test \
-// RUN:   --rocm-device-lib-path= \
-// RUN:   --rocm-path= \
-// RUN:   -round-trip-args \
-// RUN:   -rpath \
-// RUN:   --rsp-quoting= \
-// RUN:   -rtlib= \
-// RUN:   -s \
-// RUN:   -fsanitize-address-destructor= \
-// RUN:   -fsanitize-address-use-after-return= - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_31 %s
+// RUN:   --ptxas-path= - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_31 %s
 
+// CHECK_CC1AS_31: {{(unknown argument).*}}-no-code-completion-ns-level-decls
+// CHECK_CC1AS_31: {{(unknown argument).*}}-no-cpp-precomp
+// CHECK_CC1AS_31: {{(unknown argument).*}}--no-cuda-gpu-arch=
+// CHECK_CC1AS_31: {{(unknown argument).*}}--no-cuda-include-ptx=
+// CHECK_CC1AS_31: {{(unknown argument).*}}--no-cuda-noopt-device-debug
+// CHECK_CC1AS_31: {{(unknown argument).*}}--no-cuda-version-check
+// CHECK_CC1AS_31: {{(unknown argument).*}}-fno-c++-static-destructors
+// CHECK_CC1AS_31: {{(unknown argument).*}}--no-default-config
+// CHECK_CC1AS_31: {{(unknown argument).*}}-no-disable-free
+// CHECK_CC1AS_31: {{(unknown argument).*}}-no-emit-llvm-uselists
+// CHECK_CC1AS_31: {{(unknown argument).*}}-no-enable-noundef-analysis
+// CHECK_CC1AS_31: {{(unknown argument).*}}--no-gpu-bundle-output
+// CHECK_CC1AS_31: {{(unknown argument).*}}-no-hip-rt
+// CHECK_CC1AS_31: {{(unknown argument).*}}-no-implicit-float
+// CHECK_CC1AS_31: {{(unknown argument).*}}-no-integrated-cpp
+// CHECK_CC1AS_31: {{(unknown argument).*}}--no-offload-add-rpath
+// CHECK_CC1AS_31: {{(unknown argument).*}}--no-offload-arch=
+// CHECK_CC1AS_31: {{(unknown argument).*}}--no-offload-compress
+// CHECK_CC1AS_31: {{(unknown argument).*}}--no-offload-new-driver
+// CHECK_CC1AS_31: {{(unknown argument).*}}--no-offloadlib
+// CHECK_CC1AS_31: {{(unknown argument).*}}-no-pedantic
+// CHECK_CC1AS_31: {{(unknown argument).*}}-no-pie
+// CHECK_CC1AS_31: {{(unknown argument).*}}-no-pointer-tbaa
+// CHECK_CC1AS_31: {{(unknown argument).*}}-no-pthread
+// CHECK_CC1AS_31: {{(unknown argument).*}}-no-round-trip-args
+// CHECK_CC1AS_31: {{(unknown argument).*}}-no-struct-path-tbaa
 // CHECK_CC1AS_31: {{(unknown argument).*}}--no-system-header-prefix=
 // CHECK_CC1AS_31: {{(unknown argument).*}}--no-wasm-opt
 // CHECK_CC1AS_31: {{(unknown argument).*}}-nobuiltininc
@@ -6473,34 +6499,36 @@
 // CHECK_CC1AS_31: {{(unknown argument).*}}-pthread
 // CHECK_CC1AS_31: {{(unknown argument).*}}-pthreads
 // CHECK_CC1AS_31: {{(unknown argument).*}}--ptxas-path=
-// CHECK_CC1AS_31: {{(unknown argument).*}}-r
-// CHECK_CC1AS_31: {{(unknown argument).*}}-rdynamic
-// CHECK_CC1AS_31: {{(unknown argument).*}}-read_only_relocs
-// CHECK_CC1AS_31: {{(unknown argument).*}}-reexport_framework
-// CHECK_CC1AS_31: {{(unknown argument).*}}-reexport-l
-// CHECK_CC1AS_31: {{(unknown argument).*}}-reexport_library
-// CHECK_CC1AS_31: {{(unknown argument).*}}-regcall4
-// CHECK_CC1AS_31: {{(unknown argument).*}}-relaxed-aliasing
-// CHECK_CC1AS_31: {{(unknown argument).*}}-relocatable-pch
-// CHECK_CC1AS_31: {{(unknown argument).*}}-remap
-// CHECK_CC1AS_31: {{(unknown argument).*}}-remap-file
-// CHECK_CC1AS_31: {{(unknown argument).*}}-resource-dir
-// CHECK_CC1AS_31: {{(unknown argument).*}}-resource-dir=
-// CHECK_CC1AS_31: {{(unknown argument).*}}-rewrite-legacy-objc
-// CHECK_CC1AS_31: {{(unknown argument).*}}-rewrite-macros
-// CHECK_CC1AS_31: {{(unknown argument).*}}-rewrite-objc
-// CHECK_CC1AS_31: {{(unknown argument).*}}-rewrite-test
-// CHECK_CC1AS_31: {{(unknown argument).*}}--rocm-device-lib-path=
-// CHECK_CC1AS_31: {{(unknown argument).*}}--rocm-path=
-// CHECK_CC1AS_31: {{(unknown argument).*}}-round-trip-args
-// CHECK_CC1AS_31: {{(unknown argument).*}}-rpath
-// CHECK_CC1AS_31: {{(unknown argument).*}}--rsp-quoting=
-// CHECK_CC1AS_31: {{(unknown argument).*}}-rtlib=
-// CHECK_CC1AS_31: {{(unknown argument).*}}-s
-// CHECK_CC1AS_31: {{(unknown argument).*}}-fsanitize-address-destructor=
-// CHECK_CC1AS_31: {{(unknown argument).*}}-fsanitize-address-use-after-return=
 
 // RUN: not %clang -cc1as  \
+// RUN:   -r \
+// RUN:   -rdynamic \
+// RUN:   -read_only_relocs \
+// RUN:   -reexport_framework \
+// RUN:   -reexport-l \
+// RUN:   -reexport_library \
+// RUN:   -regcall4 \
+// RUN:   -relaxed-aliasing \
+// RUN:   -relocatable-pch \
+// RUN:   -remap \
+// RUN:   -remap-file \
+// RUN:   -loader-replaceable-function= \
+// RUN:   -res-may-alias \
+// RUN:   -resource-dir \
+// RUN:   -resource-dir= \
+// RUN:   -rewrite-legacy-objc \
+// RUN:   -rewrite-macros \
+// RUN:   -rewrite-objc \
+// RUN:   -rewrite-test \
+// RUN:   --rocm-device-lib-path= \
+// RUN:   --rocm-path= \
+// RUN:   -round-trip-args \
+// RUN:   -rpath \
+// RUN:   --rsp-quoting= \
+// RUN:   -rtlib= \
+// RUN:   -s \
+// RUN:   -fsanitize-address-destructor= \
+// RUN:   -fsanitize-address-use-after-return= \
 // RUN:   -save-stats \
 // RUN:   -save-stats= \
 // RUN:   -save-temps \
@@ -6521,6 +6549,7 @@
 // RUN:   -segs_read_write_addr \
 // RUN:   -setup-static-analyzer \
 // RUN:   -shared \
+// RUN:   -shared-libflangrt \
 // RUN:   -shared-libgcc \
 // RUN:   -shared-libsan \
 // RUN:   --show-includes \
@@ -6539,6 +6568,7 @@
 // RUN:   -static \
 // RUN:   -static-define \
 // RUN:   -static-libclosure \
+// RUN:   -static-libflangrt \
 // RUN:   -static-libgcc \
 // RUN:   -static-libgfortran \
 // RUN:   -static-libsan \
@@ -6570,38 +6600,36 @@
 // RUN:   -traditional \
 // RUN:   -traditional-cpp \
 // RUN:   -trigraphs \
-// RUN:   -trim-egraph \
-// RUN:   -triple= \
-// RUN:   -twolevel_namespace \
-// RUN:   -twolevel_namespace_hints \
-// RUN:   -u \
-// RUN:   -umbrella \
-// RUN:   -undef \
-// RUN:   -undefined \
-// RUN:   -unexported_symbols_list \
-// RUN:   -Wextra \
-// RUN:   -Waliasing \
-// RUN:   -Wampersand \
-// RUN:   -Warray-bounds \
-// RUN:   -Wc-binding-type \
-// RUN:   -Wcharacter-truncation \
-// RUN:   -Wconversion \
-// RUN:   -Wdo-subscript \
-// RUN:   -Wfunction-elimination \
-// RUN:   -Wimplicit-interface \
-// RUN:   -Wimplicit-procedure \
-// RUN:   -Wintrinsic-shadow \
-// RUN:   -Wuse-without-only \
-// RUN:   -Wintrinsics-std \
-// RUN:   -Wline-truncation \
-// RUN:   -Wno-align-commons \
-// RUN:   -Wno-overwrite-recursive \
-// RUN:   -Wno-tabs \
-// RUN:   -Wreal-q-constant \
-// RUN:   -Wsurprising \
-// RUN:   -Wunderflow \
-// RUN:   -Wunused-parameter - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_32 %s
+// RUN:   -trim-egraph - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_32 %s
 
+// CHECK_CC1AS_32: {{(unknown argument).*}}-r
+// CHECK_CC1AS_32: {{(unknown argument).*}}-rdynamic
+// CHECK_CC1AS_32: {{(unknown argument).*}}-read_only_relocs
+// CHECK_CC1AS_32: {{(unknown argument).*}}-reexport_framework
+// CHECK_CC1AS_32: {{(unknown argument).*}}-reexport-l
+// CHECK_CC1AS_32: {{(unknown argument).*}}-reexport_library
+// CHECK_CC1AS_32: {{(unknown argument).*}}-regcall4
+// CHECK_CC1AS_32: {{(unknown argument).*}}-relaxed-aliasing
+// CHECK_CC1AS_32: {{(unknown argument).*}}-relocatable-pch
+// CHECK_CC1AS_32: {{(unknown argument).*}}-remap
+// CHECK_CC1AS_32: {{(unknown argument).*}}-remap-file
+// CHECK_CC1AS_32: {{(unknown argument).*}}-loader-replaceable-function=
+// CHECK_CC1AS_32: {{(unknown argument).*}}-res-may-alias
+// CHECK_CC1AS_32: {{(unknown argument).*}}-resource-dir
+// CHECK_CC1AS_32: {{(unknown argument).*}}-resource-dir=
+// CHECK_CC1AS_32: {{(unknown argument).*}}-rewrite-legacy-objc
+// CHECK_CC1AS_32: {{(unknown argument).*}}-rewrite-macros
+// CHECK_CC1AS_32: {{(unknown argument).*}}-rewrite-objc
+// CHECK_CC1AS_32: {{(unknown argument).*}}-rewrite-test
+// CHECK_CC1AS_32: {{(unknown argument).*}}--rocm-device-lib-path=
+// CHECK_CC1AS_32: {{(unknown argument).*}}--rocm-path=
+// CHECK_CC1AS_32: {{(unknown argument).*}}-round-trip-args
+// CHECK_CC1AS_32: {{(unknown argument).*}}-rpath
+// CHECK_CC1AS_32: {{(unknown argument).*}}--rsp-quoting=
+// CHECK_CC1AS_32: {{(unknown argument).*}}-rtlib=
+// CHECK_CC1AS_32: {{(unknown argument).*}}-s
+// CHECK_CC1AS_32: {{(unknown argument).*}}-fsanitize-address-destructor=
+// CHECK_CC1AS_32: {{(unknown argument).*}}-fsanitize-address-use-after-return=
 // CHECK_CC1AS_32: {{(unknown argument).*}}-save-stats
 // CHECK_CC1AS_32: {{(unknown argument).*}}-save-stats=
 // CHECK_CC1AS_32: {{(unknown argument).*}}-save-temps
@@ -6622,6 +6650,7 @@
 // CHECK_CC1AS_32: {{(unknown argument).*}}-segs_read_write_addr
 // CHECK_CC1AS_32: {{(unknown argument).*}}-setup-static-analyzer
 // CHECK_CC1AS_32: {{(unknown argument).*}}-shared
+// CHECK_CC1AS_32: {{(unknown argument).*}}-shared-libflangrt
 // CHECK_CC1AS_32: {{(unknown argument).*}}-shared-libgcc
 // CHECK_CC1AS_32: {{(unknown argument).*}}-shared-libsan
 // CHECK_CC1AS_32: {{(unknown argument).*}}--show-includes
@@ -6640,6 +6669,7 @@
 // CHECK_CC1AS_32: {{(unknown argument).*}}-static
 // CHECK_CC1AS_32: {{(unknown argument).*}}-static-define
 // CHECK_CC1AS_32: {{(unknown argument).*}}-static-libclosure
+// CHECK_CC1AS_32: {{(unknown argument).*}}-static-libflangrt
 // CHECK_CC1AS_32: {{(unknown argument).*}}-static-libgcc
 // CHECK_CC1AS_32: {{(unknown argument).*}}-static-libgfortran
 // CHECK_CC1AS_32: {{(unknown argument).*}}-static-libsan
@@ -6672,38 +6702,39 @@
 // CHECK_CC1AS_32: {{(unknown argument).*}}-traditional-cpp
 // CHECK_CC1AS_32: {{(unknown argument).*}}-trigraphs
 // CHECK_CC1AS_32: {{(unknown argument).*}}-trim-egraph
-// CHECK_CC1AS_32: {{(unknown argument).*}}-triple=
-// CHECK_CC1AS_32: {{(unknown argument).*}}-twolevel_namespace
-// CHECK_CC1AS_32: {{(unknown argument).*}}-twolevel_namespace_hints
-// CHECK_CC1AS_32: {{(unknown argument).*}}-u
-// CHECK_CC1AS_32: {{(unknown argument).*}}-umbrella
-// CHECK_CC1AS_32: {{(unknown argument).*}}-undef
-// CHECK_CC1AS_32: {{(unknown argument).*}}-undefined
-// CHECK_CC1AS_32: {{(unknown argument).*}}-unexported_symbols_list
-// CHECK_CC1AS_32: {{(unknown argument).*}}-Wextra
-// CHECK_CC1AS_32: {{(unknown argument).*}}-Waliasing
-// CHECK_CC1AS_32: {{(unknown argument).*}}-Wampersand
-// CHECK_CC1AS_32: {{(unknown argument).*}}-Warray-bounds
-// CHECK_CC1AS_32: {{(unknown argument).*}}-Wc-binding-type
-// CHECK_CC1AS_32: {{(unknown argument).*}}-Wcharacter-truncation
-// CHECK_CC1AS_32: {{(unknown argument).*}}-Wconversion
-// CHECK_CC1AS_32: {{(unknown argument).*}}-Wdo-subscript
-// CHECK_CC1AS_32: {{(unknown argument).*}}-Wfunction-elimination
-// CHECK_CC1AS_32: {{(unknown argument).*}}-Wimplicit-interface
-// CHECK_CC1AS_32: {{(unknown argument).*}}-Wimplicit-procedure
-// CHECK_CC1AS_32: {{(unknown argument).*}}-Wintrinsic-shadow
-// CHECK_CC1AS_32: {{(unknown argument).*}}-Wuse-without-only
-// CHECK_CC1AS_32: {{(unknown argument).*}}-Wintrinsics-std
-// CHECK_CC1AS_32: {{(unknown argument).*}}-Wline-truncation
-// CHECK_CC1AS_32: {{(unknown argument).*}}-Wno-align-commons
-// CHECK_CC1AS_32: {{(unknown argument).*}}-Wno-overwrite-recursive
-// CHECK_CC1AS_32: {{(unknown argument).*}}-Wno-tabs
-// CHECK_CC1AS_32: {{(unknown argument).*}}-Wreal-q-constant
-// CHECK_CC1AS_32: {{(unknown argument).*}}-Wsurprising
-// CHECK_CC1AS_32: {{(unknown argument).*}}-Wunderflow
-// CHECK_CC1AS_32: {{(unknown argument).*}}-Wunused-parameter
 
 // RUN: not %clang -cc1as  \
+// RUN:   -triple= \
+// RUN:   -twolevel_namespace \
+// RUN:   -twolevel_namespace_hints \
+// RUN:   -u \
+// RUN:   -umbrella \
+// RUN:   -undef \
+// RUN:   -undefined \
+// RUN:   -unexported_symbols_list \
+// RUN:   -funique-source-file-identifier= \
+// RUN:   -Wextra \
+// RUN:   -Waliasing \
+// RUN:   -Wampersand \
+// RUN:   -Warray-bounds \
+// RUN:   -Wc-binding-type \
+// RUN:   -Wcharacter-truncation \
+// RUN:   -Wconversion \
+// RUN:   -Wdo-subscript \
+// RUN:   -Wfunction-elimination \
+// RUN:   -Wimplicit-interface \
+// RUN:   -Wimplicit-procedure \
+// RUN:   -Wintrinsic-shadow \
+// RUN:   -Wuse-without-only \
+// RUN:   -Wintrinsics-std \
+// RUN:   -Wline-truncation \
+// RUN:   -Wno-align-commons \
+// RUN:   -Wno-overwrite-recursive \
+// RUN:   -Wno-tabs \
+// RUN:   -Wreal-q-constant \
+// RUN:   -Wsurprising \
+// RUN:   -Wunderflow \
+// RUN:   -Wunused-parameter \
 // RUN:   -Wrealloc-lhs \
 // RUN:   -Wrealloc-lhs-all \
 // RUN:   -Wfrontend-loop-interchange \
@@ -6736,6 +6767,37 @@
 // RUN:   -y \
 // RUN:   -z - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_33 %s
 
+// CHECK_CC1AS_33: {{(unknown argument).*}}-triple=
+// CHECK_CC1AS_33: {{(unknown argument).*}}-twolevel_namespace
+// CHECK_CC1AS_33: {{(unknown argument).*}}-twolevel_namespace_hints
+// CHECK_CC1AS_33: {{(unknown argument).*}}-u
+// CHECK_CC1AS_33: {{(unknown argument).*}}-umbrella
+// CHECK_CC1AS_33: {{(unknown argument).*}}-undef
+// CHECK_CC1AS_33: {{(unknown argument).*}}-undefined
+// CHECK_CC1AS_33: {{(unknown argument).*}}-unexported_symbols_list
+// CHECK_CC1AS_33: {{(unknown argument).*}}-funique-source-file-identifier=
+// CHECK_CC1AS_33: {{(unknown argument).*}}-Wextra
+// CHECK_CC1AS_33: {{(unknown argument).*}}-Waliasing
+// CHECK_CC1AS_33: {{(unknown argument).*}}-Wampersand
+// CHECK_CC1AS_33: {{(unknown argument).*}}-Warray-bounds
+// CHECK_CC1AS_33: {{(unknown argument).*}}-Wc-binding-type
+// CHECK_CC1AS_33: {{(unknown argument).*}}-Wcharacter-truncation
+// CHECK_CC1AS_33: {{(unknown argument).*}}-Wconversion
+// CHECK_CC1AS_33: {{(unknown argument).*}}-Wdo-subscript
+// CHECK_CC1AS_33: {{(unknown argument).*}}-Wfunction-elimination
+// CHECK_CC1AS_33: {{(unknown argument).*}}-Wimplicit-interface
+// CHECK_CC1AS_33: {{(unknown argument).*}}-Wimplicit-procedure
+// CHECK_CC1AS_33: {{(unknown argument).*}}-Wintrinsic-shadow
+// CHECK_CC1AS_33: {{(unknown argument).*}}-Wuse-without-only
+// CHECK_CC1AS_33: {{(unknown argument).*}}-Wintrinsics-std
+// CHECK_CC1AS_33: {{(unknown argument).*}}-Wline-truncation
+// CHECK_CC1AS_33: {{(unknown argument).*}}-Wno-align-commons
+// CHECK_CC1AS_33: {{(unknown argument).*}}-Wno-overwrite-recursive
+// CHECK_CC1AS_33: {{(unknown argument).*}}-Wno-tabs
+// CHECK_CC1AS_33: {{(unknown argument).*}}-Wreal-q-constant
+// CHECK_CC1AS_33: {{(unknown argument).*}}-Wsurprising
+// CHECK_CC1AS_33: {{(unknown argument).*}}-Wunderflow
+// CHECK_CC1AS_33: {{(unknown argument).*}}-Wunused-parameter
 // CHECK_CC1AS_33: {{(unknown argument).*}}-Wrealloc-lhs
 // CHECK_CC1AS_33: {{(unknown argument).*}}-Wrealloc-lhs-all
 // CHECK_CC1AS_33: {{(unknown argument).*}}-Wfrontend-loop-interchange
@@ -6797,6 +6859,7 @@
 // RUN:   -Xarch_host \
 // RUN:   -Xassembler \
 // RUN:   -Xclang \
+// RUN:   -Xclangas \
 // RUN:   -Xcuda-fatbinary \
 // RUN:   -Xcuda-ptxas \
 // RUN:   -Xflang \
@@ -6867,8 +6930,7 @@
 // RUN:   -Qfast_transcendentals \
 // RUN:   -Qimprecise_fwaits \
 // RUN:   -Qpar \
-// RUN:   -Qpar-report \
-// RUN:   -Qsafe_fp_loads -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_0 %s
+// RUN:   -Qpar-report -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_0 %s
 
 // CHECK_CC1_0: {{(unknown argument).*}}-A
 // CHECK_CC1_0: {{(unknown argument).*}}-A-
@@ -6898,6 +6960,7 @@
 // CHECK_CC1_0: {{(unknown argument).*}}-Xarch_host
 // CHECK_CC1_0: {{(unknown argument).*}}-Xassembler
 // CHECK_CC1_0: {{(unknown argument).*}}-Xclang
+// CHECK_CC1_0: {{(unknown argument).*}}-Xclangas
 // CHECK_CC1_0: {{(unknown argument).*}}-Xcuda-fatbinary
 // CHECK_CC1_0: {{(unknown argument).*}}-Xcuda-ptxas
 // CHECK_CC1_0: {{(unknown argument).*}}-Xflang
@@ -6969,9 +7032,9 @@
 // CHECK_CC1_0: {{(unknown argument).*}}-Qimprecise_fwaits
 // CHECK_CC1_0: {{(unknown argument).*}}-Qpar
 // CHECK_CC1_0: {{(unknown argument).*}}-Qpar-report
-// CHECK_CC1_0: {{(unknown argument).*}}-Qsafe_fp_loads
 
 // RUN: not %clang -cc1  \
+// RUN:   -Qsafe_fp_loads \
 // RUN:   -Qspectre \
 // RUN:   -Qspectre-load \
 // RUN:   -Qspectre-load-cf \
@@ -7050,11 +7113,13 @@
 // RUN:   -d2 \
 // RUN:   -d2FastFail \
 // RUN:   -d2Zi+ \
+// RUN:   -d2epilogunwind \
 // RUN:   -diagnostics:caret \
 // RUN:   -diagnostics:classic \
 // RUN:   -diagnostics:column \
 // RUN:   -diasdkdir \
 // RUN:   -doc \
+// RUN:   -dynamicdeopt \
 // RUN:   -errorReport \
 // RUN:   -execution-charset: \
 // RUN:   -experimental: \
@@ -7068,11 +7133,9 @@
 // RUN:   -external:W4 \
 // RUN:   -external:env: \
 // RUN:   -favor \
-// RUN:   -fno-sanitize-address-vcasan-lib \
-// RUN:   -fp:contract \
-// RUN:   -fp:except \
-// RUN:   -fp:except- -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_1 %s
+// RUN:   -fno-sanitize-address-vcasan-lib -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_1 %s
 
+// CHECK_CC1_1: {{(unknown argument).*}}-Qsafe_fp_loads
 // CHECK_CC1_1: {{(unknown argument).*}}-Qspectre
 // CHECK_CC1_1: {{(unknown argument).*}}-Qspectre-load
 // CHECK_CC1_1: {{(unknown argument).*}}-Qspectre-load-cf
@@ -7151,11 +7214,13 @@
 // CHECK_CC1_1: {{(unknown argument).*}}-d2
 // CHECK_CC1_1: {{(unknown argument).*}}-d2FastFail
 // CHECK_CC1_1: {{(unknown argument).*}}-d2Zi+
+// CHECK_CC1_1: {{(unknown argument).*}}-d2epilogunwind
 // CHECK_CC1_1: {{(unknown argument).*}}-diagnostics:caret
 // CHECK_CC1_1: {{(unknown argument).*}}-diagnostics:classic
 // CHECK_CC1_1: {{(unknown argument).*}}-diagnostics:column
 // CHECK_CC1_1: {{(unknown argument).*}}-diasdkdir
 // CHECK_CC1_1: {{(unknown argument).*}}-doc
+// CHECK_CC1_1: {{(unknown argument).*}}-dynamicdeopt
 // CHECK_CC1_1: {{(unknown argument).*}}-errorReport
 // CHECK_CC1_1: {{(unknown argument).*}}-execution-charset:
 // CHECK_CC1_1: {{(unknown argument).*}}-experimental:
@@ -7170,15 +7235,16 @@
 // CHECK_CC1_1: {{(unknown argument).*}}-external:env:
 // CHECK_CC1_1: {{(unknown argument).*}}-favor
 // CHECK_CC1_1: {{(unknown argument).*}}-fno-sanitize-address-vcasan-lib
-// CHECK_CC1_1: {{(unknown argument).*}}-fp:contract
-// CHECK_CC1_1: {{(unknown argument).*}}-fp:except
-// CHECK_CC1_1: {{(unknown argument).*}}-fp:except-
 
 // RUN: not %clang -cc1  \
+// RUN:   -fp:contract \
+// RUN:   -fp:except \
+// RUN:   -fp:except- \
 // RUN:   -fp:fast \
 // RUN:   -fp:precise \
 // RUN:   -fp:strict \
 // RUN:   -fsanitize-address-use-after-return \
+// RUN:   -funcoverride: \
 // RUN:   -guard: \
 // RUN:   -headerUnit \
 // RUN:   -headerUnit:angle \
@@ -7270,16 +7336,16 @@
 // RUN:   --precompile \
 // RUN:   --prefix \
 // RUN:   --prefix= \
-// RUN:   --preprocess \
-// RUN:   --print-diagnostic-categories \
-// RUN:   --print-file-name \
-// RUN:   --print-missing-file-dependencies \
-// RUN:   --print-prog-name -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_2 %s
+// RUN:   --preprocess -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_2 %s
 
+// CHECK_CC1_2: {{(unknown argument).*}}-fp:contract
+// CHECK_CC1_2: {{(unknown argument).*}}-fp:except
+// CHECK_CC1_2: {{(unknown argument).*}}-fp:except-
 // CHECK_CC1_2: {{(unknown argument).*}}-fp:fast
 // CHECK_CC1_2: {{(unknown argument).*}}-fp:precise
 // CHECK_CC1_2: {{(unknown argument).*}}-fp:strict
 // CHECK_CC1_2: {{(unknown argument).*}}-fsanitize-address-use-after-return
+// CHECK_CC1_2: {{(unknown argument).*}}-funcoverride:
 // CHECK_CC1_2: {{(unknown argument).*}}-guard:
 // CHECK_CC1_2: {{(unknown argument).*}}-headerUnit
 // CHECK_CC1_2: {{(unknown argument).*}}-headerUnit:angle
@@ -7372,12 +7438,12 @@
 // CHECK_CC1_2: {{(unknown argument).*}}--prefix
 // CHECK_CC1_2: {{(unknown argument).*}}--prefix=
 // CHECK_CC1_2: {{(unknown argument).*}}--preprocess
-// CHECK_CC1_2: {{(unknown argument).*}}--print-diagnostic-categories
-// CHECK_CC1_2: {{(unknown argument).*}}--print-file-name
-// CHECK_CC1_2: {{(unknown argument).*}}--print-missing-file-dependencies
-// CHECK_CC1_2: {{(unknown argument).*}}--print-prog-name
 
 // RUN: not %clang -cc1  \
+// RUN:   --print-diagnostic-categories \
+// RUN:   --print-file-name \
+// RUN:   --print-missing-file-dependencies \
+// RUN:   --print-prog-name \
 // RUN:   --profile \
 // RUN:   --resource \
 // RUN:   --resource= \
@@ -7408,8 +7474,8 @@
 // RUN:   -fno-aligned-new \
 // RUN:   -fsched-interblock \
 // RUN:   -fcuda-rdc \
-// RUN:   -fno-cuda-rdc \
 // RUN:   -ftemplate-depth- \
+// RUN:   -fno-cuda-rdc \
 // RUN:   -ftree-vectorize \
 // RUN:   -fno-tree-vectorize \
 // RUN:   -ftree-slp-vectorize \
@@ -7445,9 +7511,10 @@
 // RUN:   -fdiagnostics-color \
 // RUN:   -fno-diagnostics-color \
 // RUN:   -frecord-gcc-switches \
-// RUN:   -fno-record-gcc-switches \
 // RUN:   -fno-slp-vectorize-aggressive \
+// RUN:   -fno-record-gcc-switches \
 // RUN:   -Xclang= \
+// RUN:   -Xclangas= \
 // RUN:   -Xparser \
 // RUN:   -Xcompiler \
 // RUN:   -fexpensive-optimizations \
@@ -7472,13 +7539,12 @@
 // RUN:   -c \
 // RUN:   -canonical-prefixes \
 // RUN:   -ccc- \
-// RUN:   -ccc-gcc-name \
-// RUN:   -ccc-install-dir \
-// RUN:   -ccc-print-bindings \
-// RUN:   -ccc-print-phases \
-// RUN:   -cl-denorms-are-zero \
-// RUN:   -cl-no-stdinc -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_3 %s
+// RUN:   -ccc-gcc-name -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_3 %s
 
+// CHECK_CC1_3: {{(unknown argument).*}}--print-diagnostic-categories
+// CHECK_CC1_3: {{(unknown argument).*}}--print-file-name
+// CHECK_CC1_3: {{(unknown argument).*}}--print-missing-file-dependencies
+// CHECK_CC1_3: {{(unknown argument).*}}--print-prog-name
 // CHECK_CC1_3: {{(unknown argument).*}}--profile
 // CHECK_CC1_3: {{(unknown argument).*}}--resource
 // CHECK_CC1_3: {{(unknown argument).*}}--resource=
@@ -7509,8 +7575,8 @@
 // CHECK_CC1_3: {{(unknown argument).*}}-fno-aligned-new
 // CHECK_CC1_3: {{(unknown argument).*}}-fsched-interblock
 // CHECK_CC1_3: {{(unknown argument).*}}-fcuda-rdc
-// CHECK_CC1_3: {{(unknown argument).*}}-fno-cuda-rdc
 // CHECK_CC1_3: {{(unknown argument).*}}-ftemplate-depth-
+// CHECK_CC1_3: {{(unknown argument).*}}-fno-cuda-rdc
 // CHECK_CC1_3: {{(unknown argument).*}}-ftree-vectorize
 // CHECK_CC1_3: {{(unknown argument).*}}-fno-tree-vectorize
 // CHECK_CC1_3: {{(unknown argument).*}}-ftree-slp-vectorize
@@ -7546,9 +7612,10 @@
 // CHECK_CC1_3: {{(unknown argument).*}}-fdiagnostics-color
 // CHECK_CC1_3: {{(unknown argument).*}}-fno-diagnostics-color
 // CHECK_CC1_3: {{(unknown argument).*}}-frecord-gcc-switches
-// CHECK_CC1_3: {{(unknown argument).*}}-fno-record-gcc-switches
 // CHECK_CC1_3: {{(unknown argument).*}}-fno-slp-vectorize-aggressive
+// CHECK_CC1_3: {{(unknown argument).*}}-fno-record-gcc-switches
 // CHECK_CC1_3: {{(unknown argument).*}}-Xclang=
+// CHECK_CC1_3: {{(unknown argument).*}}-Xclangas=
 // CHECK_CC1_3: {{(unknown argument).*}}-Xparser
 // CHECK_CC1_3: {{(unknown argument).*}}-Xcompiler
 // CHECK_CC1_3: {{(unknown argument).*}}-fexpensive-optimizations
@@ -7574,13 +7641,13 @@
 // CHECK_CC1_3: {{(unknown argument).*}}-canonical-prefixes
 // CHECK_CC1_3: {{(unknown argument).*}}-ccc-
 // CHECK_CC1_3: {{(unknown argument).*}}-ccc-gcc-name
-// CHECK_CC1_3: {{(unknown argument).*}}-ccc-install-dir
-// CHECK_CC1_3: {{(unknown argument).*}}-ccc-print-bindings
-// CHECK_CC1_3: {{(unknown argument).*}}-ccc-print-phases
-// CHECK_CC1_3: {{(unknown argument).*}}-cl-denorms-are-zero
-// CHECK_CC1_3: {{(unknown argument).*}}-cl-no-stdinc
 
 // RUN: not %clang -cc1  \
+// RUN:   -ccc-install-dir \
+// RUN:   -ccc-print-bindings \
+// RUN:   -ccc-print-phases \
+// RUN:   -cl-denorms-are-zero \
+// RUN:   -cl-no-stdinc \
 // RUN:   -client_name \
 // RUN:   -combine \
 // RUN:   -compatibility_version \
@@ -7675,13 +7742,13 @@
 // RUN:   -fbounds-check \
 // RUN:   -fbracket-depth= \
 // RUN:   -fbranch-count-reg \
-// RUN:   -fbuild-session-file= \
-// RUN:   -fbuiltin \
-// RUN:   -fbuiltin-module-map \
-// RUN:   -fcall-saved-x10 \
-// RUN:   -fcall-saved-x11 \
-// RUN:   -fcall-saved-x12 -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_4 %s
+// RUN:   -fbuild-session-file= -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_4 %s
 
+// CHECK_CC1_4: {{(unknown argument).*}}-ccc-install-dir
+// CHECK_CC1_4: {{(unknown argument).*}}-ccc-print-bindings
+// CHECK_CC1_4: {{(unknown argument).*}}-ccc-print-phases
+// CHECK_CC1_4: {{(unknown argument).*}}-cl-denorms-are-zero
+// CHECK_CC1_4: {{(unknown argument).*}}-cl-no-stdinc
 // CHECK_CC1_4: {{(unknown argument).*}}-client_name
 // CHECK_CC1_4: {{(unknown argument).*}}-combine
 // CHECK_CC1_4: {{(unknown argument).*}}-compatibility_version
@@ -7777,13 +7844,13 @@
 // CHECK_CC1_4: {{(unknown argument).*}}-fbracket-depth=
 // CHECK_CC1_4: {{(unknown argument).*}}-fbranch-count-reg
 // CHECK_CC1_4: {{(unknown argument).*}}-fbuild-session-file=
-// CHECK_CC1_4: {{(unknown argument).*}}-fbuiltin
-// CHECK_CC1_4: {{(unknown argument).*}}-fbuiltin-module-map
-// CHECK_CC1_4: {{(unknown argument).*}}-fcall-saved-x10
-// CHECK_CC1_4: {{(unknown argument).*}}-fcall-saved-x11
-// CHECK_CC1_4: {{(unknown argument).*}}-fcall-saved-x12
 
 // RUN: not %clang -cc1  \
+// RUN:   -fbuiltin \
+// RUN:   -fbuiltin-module-map \
+// RUN:   -fcall-saved-x10 \
+// RUN:   -fcall-saved-x11 \
+// RUN:   -fcall-saved-x12 \
 // RUN:   -fcall-saved-x13 \
 // RUN:   -fcall-saved-x14 \
 // RUN:   -fcall-saved-x15 \
@@ -7854,6 +7921,7 @@
 // RUN:   -fdisable-real-10 \
 // RUN:   -fdisable-real-3 \
 // RUN:   -fdiscard-value-names \
+// RUN:   -fdo-concurrent-to-openmp= \
 // RUN:   -fdollar-ok \
 // RUN:   -fdouble-square-bracket-attributes \
 // RUN:   -fdriver-only \
@@ -7877,14 +7945,13 @@
 // RUN:   -fextdirs= \
 // RUN:   -fexternal-blas \
 // RUN:   -ff2c \
-// RUN:   -ffile-compilation-dir= \
-// RUN:   -ffile-prefix-map= \
-// RUN:   -finline-limit \
-// RUN:   -ffixed-a0 \
-// RUN:   -ffixed-a1 \
-// RUN:   -ffixed-a2 \
-// RUN:   -ffixed-a3 -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_5 %s
+// RUN:   -ffile-compilation-dir= -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_5 %s
 
+// CHECK_CC1_5: {{(unknown argument).*}}-fbuiltin
+// CHECK_CC1_5: {{(unknown argument).*}}-fbuiltin-module-map
+// CHECK_CC1_5: {{(unknown argument).*}}-fcall-saved-x10
+// CHECK_CC1_5: {{(unknown argument).*}}-fcall-saved-x11
+// CHECK_CC1_5: {{(unknown argument).*}}-fcall-saved-x12
 // CHECK_CC1_5: {{(unknown argument).*}}-fcall-saved-x13
 // CHECK_CC1_5: {{(unknown argument).*}}-fcall-saved-x14
 // CHECK_CC1_5: {{(unknown argument).*}}-fcall-saved-x15
@@ -7955,6 +8022,7 @@
 // CHECK_CC1_5: {{(unknown argument).*}}-fdisable-real-10
 // CHECK_CC1_5: {{(unknown argument).*}}-fdisable-real-3
 // CHECK_CC1_5: {{(unknown argument).*}}-fdiscard-value-names
+// CHECK_CC1_5: {{(unknown argument).*}}-fdo-concurrent-to-openmp=
 // CHECK_CC1_5: {{(unknown argument).*}}-fdollar-ok
 // CHECK_CC1_5: {{(unknown argument).*}}-fdouble-square-bracket-attributes
 // CHECK_CC1_5: {{(unknown argument).*}}-fdriver-only
@@ -7979,14 +8047,14 @@
 // CHECK_CC1_5: {{(unknown argument).*}}-fexternal-blas
 // CHECK_CC1_5: {{(unknown argument).*}}-ff2c
 // CHECK_CC1_5: {{(unknown argument).*}}-ffile-compilation-dir=
-// CHECK_CC1_5: {{(unknown argument).*}}-ffile-prefix-map=
-// CHECK_CC1_5: {{(unknown argument).*}}-finline-limit
-// CHECK_CC1_5: {{(unknown argument).*}}-ffixed-a0
-// CHECK_CC1_5: {{(unknown argument).*}}-ffixed-a1
-// CHECK_CC1_5: {{(unknown argument).*}}-ffixed-a2
-// CHECK_CC1_5: {{(unknown argument).*}}-ffixed-a3
 
 // RUN: not %clang -cc1  \
+// RUN:   -ffile-prefix-map= \
+// RUN:   -finline-limit \
+// RUN:   -ffixed-a0 \
+// RUN:   -ffixed-a1 \
+// RUN:   -ffixed-a2 \
+// RUN:   -ffixed-a3 \
 // RUN:   -ffixed-a4 \
 // RUN:   -ffixed-a5 \
 // RUN:   -ffixed-a6 \
@@ -8080,14 +8148,14 @@
 // RUN:   -fgnu \
 // RUN:   -fgnu-inline-asm \
 // RUN:   -fgnu-runtime \
-// RUN:   -fgpu-flush-denormals-to-zero \
-// RUN:   -fgpu-inline-threshold= \
-// RUN:   -fgpu-sanitize \
-// RUN:   -fheinous-gnu-extensions \
-// RUN:   -fhermetic-module-files \
-// RUN:   -fhip-dump-offload-linker-script \
-// RUN:   -fhip-emit-relocatable -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_6 %s
+// RUN:   -fgpu-flush-denormals-to-zero -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_6 %s
 
+// CHECK_CC1_6: {{(unknown argument).*}}-ffile-prefix-map=
+// CHECK_CC1_6: {{(unknown argument).*}}-finline-limit
+// CHECK_CC1_6: {{(unknown argument).*}}-ffixed-a0
+// CHECK_CC1_6: {{(unknown argument).*}}-ffixed-a1
+// CHECK_CC1_6: {{(unknown argument).*}}-ffixed-a2
+// CHECK_CC1_6: {{(unknown argument).*}}-ffixed-a3
 // CHECK_CC1_6: {{(unknown argument).*}}-ffixed-a4
 // CHECK_CC1_6: {{(unknown argument).*}}-ffixed-a5
 // CHECK_CC1_6: {{(unknown argument).*}}-ffixed-a6
@@ -8182,14 +8250,14 @@
 // CHECK_CC1_6: {{(unknown argument).*}}-fgnu-inline-asm
 // CHECK_CC1_6: {{(unknown argument).*}}-fgnu-runtime
 // CHECK_CC1_6: {{(unknown argument).*}}-fgpu-flush-denormals-to-zero
-// CHECK_CC1_6: {{(unknown argument).*}}-fgpu-inline-threshold=
-// CHECK_CC1_6: {{(unknown argument).*}}-fgpu-sanitize
-// CHECK_CC1_6: {{(unknown argument).*}}-fheinous-gnu-extensions
-// CHECK_CC1_6: {{(unknown argument).*}}-fhermetic-module-files
-// CHECK_CC1_6: {{(unknown argument).*}}-fhip-dump-offload-linker-script
-// CHECK_CC1_6: {{(unknown argument).*}}-fhip-emit-relocatable
 
 // RUN: not %clang -cc1  \
+// RUN:   -fgpu-inline-threshold= \
+// RUN:   -fgpu-sanitize \
+// RUN:   -fheinous-gnu-extensions \
+// RUN:   -fhermetic-module-files \
+// RUN:   -fhip-dump-offload-linker-script \
+// RUN:   -fhip-emit-relocatable \
 // RUN:   -fhip-fp32-correctly-rounded-divide-sqrt \
 // RUN:   -fhonor-infinities \
 // RUN:   -fhonor-nans \
@@ -8228,7 +8296,7 @@
 // RUN:   -flimited-precision= \
 // RUN:   -flogical-abbreviations \
 // RUN:   -fversion-loops-for-stride \
-// RUN:   --flto-partitions= \
+// RUN:   -flto-partitions= \
 // RUN:   -fmax-array-constructor= \
 // RUN:   -fmax-errors= \
 // RUN:   -fmax-identifier-length \
@@ -8240,6 +8308,7 @@
 // RUN:   -fmodule-header= \
 // RUN:   -fmodule-maps \
 // RUN:   -fmodule-private \
+// RUN:   -fmodules-force-validate-user-headers \
 // RUN:   -fmodules-validate-input-files-content \
 // RUN:   -fmodulo-sched \
 // RUN:   -fmodulo-sched-allow-regmoves \
@@ -8282,15 +8351,14 @@
 // RUN:   -fno-atomic-remote-memory \
 // RUN:   -fno-auto-profile \
 // RUN:   -fno-auto-profile-accurate \
-// RUN:   -fno-automatic \
-// RUN:   -fno-backslash \
-// RUN:   -fno-backtrace \
-// RUN:   -fno-basic-block-address-map \
-// RUN:   -fno-blocks \
-// RUN:   -fno-borland-extensions \
-// RUN:   -fno-bounds-check \
-// RUN:   -fno-branch-count-reg -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_7 %s
+// RUN:   -fno-automatic -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_7 %s
 
+// CHECK_CC1_7: {{(unknown argument).*}}-fgpu-inline-threshold=
+// CHECK_CC1_7: {{(unknown argument).*}}-fgpu-sanitize
+// CHECK_CC1_7: {{(unknown argument).*}}-fheinous-gnu-extensions
+// CHECK_CC1_7: {{(unknown argument).*}}-fhermetic-module-files
+// CHECK_CC1_7: {{(unknown argument).*}}-fhip-dump-offload-linker-script
+// CHECK_CC1_7: {{(unknown argument).*}}-fhip-emit-relocatable
 // CHECK_CC1_7: {{(unknown argument).*}}-fhip-fp32-correctly-rounded-divide-sqrt
 // CHECK_CC1_7: {{(unknown argument).*}}-fhonor-infinities
 // CHECK_CC1_7: {{(unknown argument).*}}-fhonor-nans
@@ -8329,7 +8397,7 @@
 // CHECK_CC1_7: {{(unknown argument).*}}-flimited-precision=
 // CHECK_CC1_7: {{(unknown argument).*}}-flogical-abbreviations
 // CHECK_CC1_7: {{(unknown argument).*}}-fversion-loops-for-stride
-// CHECK_CC1_7: {{(unknown argument).*}}--flto-partitions=
+// CHECK_CC1_7: {{(unknown argument).*}}-flto-partitions=
 // CHECK_CC1_7: {{(unknown argument).*}}-fmax-array-constructor=
 // CHECK_CC1_7: {{(unknown argument).*}}-fmax-errors=
 // CHECK_CC1_7: {{(unknown argument).*}}-fmax-identifier-length
@@ -8341,6 +8409,7 @@
 // CHECK_CC1_7: {{(unknown argument).*}}-fmodule-header=
 // CHECK_CC1_7: {{(unknown argument).*}}-fmodule-maps
 // CHECK_CC1_7: {{(unknown argument).*}}-fmodule-private
+// CHECK_CC1_7: {{(unknown argument).*}}-fmodules-force-validate-user-headers
 // CHECK_CC1_7: {{(unknown argument).*}}-fmodules-validate-input-files-content
 // CHECK_CC1_7: {{(unknown argument).*}}-fmodulo-sched
 // CHECK_CC1_7: {{(unknown argument).*}}-fmodulo-sched-allow-regmoves
@@ -8384,15 +8453,15 @@
 // CHECK_CC1_7: {{(unknown argument).*}}-fno-auto-profile
 // CHECK_CC1_7: {{(unknown argument).*}}-fno-auto-profile-accurate
 // CHECK_CC1_7: {{(unknown argument).*}}-fno-automatic
-// CHECK_CC1_7: {{(unknown argument).*}}-fno-backslash
-// CHECK_CC1_7: {{(unknown argument).*}}-fno-backtrace
-// CHECK_CC1_7: {{(unknown argument).*}}-fno-basic-block-address-map
-// CHECK_CC1_7: {{(unknown argument).*}}-fno-blocks
-// CHECK_CC1_7: {{(unknown argument).*}}-fno-borland-extensions
-// CHECK_CC1_7: {{(unknown argument).*}}-fno-bounds-check
-// CHECK_CC1_7: {{(unknown argument).*}}-fno-branch-count-reg
 
 // RUN: not %clang -cc1  \
+// RUN:   -fno-backslash \
+// RUN:   -fno-backtrace \
+// RUN:   -fno-basic-block-address-map \
+// RUN:   -fno-blocks \
+// RUN:   -fno-borland-extensions \
+// RUN:   -fno-bounds-check \
+// RUN:   -fno-branch-count-reg \
 // RUN:   -fno-caller-saves \
 // RUN:   -fno-check-array-temporaries \
 // RUN:   -fno-color-diagnostics \
@@ -8485,15 +8554,15 @@
 // RUN:   -fno-lax-vector-conversions \
 // RUN:   -fno-limit-debug-info \
 // RUN:   -fno-logical-abbreviations \
-// RUN:   -fno-version-loops-for-stride \
-// RUN:   -fno-math-errno \
-// RUN:   -fno-max-identifier-length \
-// RUN:   -fno-max-type-align \
-// RUN:   -fno-coverage-mcdc \
-// RUN:   -fno-memory-profile \
-// RUN:   -fno-merge-all-constants \
-// RUN:   -fno-merge-constants -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_8 %s
+// RUN:   -fno-version-loops-for-stride -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_8 %s
 
+// CHECK_CC1_8: {{(unknown argument).*}}-fno-backslash
+// CHECK_CC1_8: {{(unknown argument).*}}-fno-backtrace
+// CHECK_CC1_8: {{(unknown argument).*}}-fno-basic-block-address-map
+// CHECK_CC1_8: {{(unknown argument).*}}-fno-blocks
+// CHECK_CC1_8: {{(unknown argument).*}}-fno-borland-extensions
+// CHECK_CC1_8: {{(unknown argument).*}}-fno-bounds-check
+// CHECK_CC1_8: {{(unknown argument).*}}-fno-branch-count-reg
 // CHECK_CC1_8: {{(unknown argument).*}}-fno-caller-saves
 // CHECK_CC1_8: {{(unknown argument).*}}-fno-check-array-temporaries
 // CHECK_CC1_8: {{(unknown argument).*}}-fno-color-diagnostics
@@ -8587,15 +8656,15 @@
 // CHECK_CC1_8: {{(unknown argument).*}}-fno-limit-debug-info
 // CHECK_CC1_8: {{(unknown argument).*}}-fno-logical-abbreviations
 // CHECK_CC1_8: {{(unknown argument).*}}-fno-version-loops-for-stride
-// CHECK_CC1_8: {{(unknown argument).*}}-fno-math-errno
-// CHECK_CC1_8: {{(unknown argument).*}}-fno-max-identifier-length
-// CHECK_CC1_8: {{(unknown argument).*}}-fno-max-type-align
-// CHECK_CC1_8: {{(unknown argument).*}}-fno-coverage-mcdc
-// CHECK_CC1_8: {{(unknown argument).*}}-fno-memory-profile
-// CHECK_CC1_8: {{(unknown argument).*}}-fno-merge-all-constants
-// CHECK_CC1_8: {{(unknown argument).*}}-fno-merge-constants
 
 // RUN: not %clang -cc1  \
+// RUN:   -fno-math-errno \
+// RUN:   -fno-max-identifier-length \
+// RUN:   -fno-max-type-align \
+// RUN:   -fno-coverage-mcdc \
+// RUN:   -fno-memory-profile \
+// RUN:   -fno-merge-all-constants \
+// RUN:   -fno-merge-constants \
 // RUN:   -fno-minimize-whitespace \
 // RUN:   -fno-module-file-deps \
 // RUN:   -fno-module-maps \
@@ -8680,7 +8749,6 @@
 // RUN:   -fno-rename-registers \
 // RUN:   -fno-reorder-blocks \
 // RUN:   -fno-repack-arrays \
-// RUN:   -fno-retain-subst-template-type-parm-type-ast-nodes \
 // RUN:   -fno-rewrite-imports \
 // RUN:   -fno-rewrite-includes \
 // RUN:   -fno-ripa \
@@ -8689,14 +8757,15 @@
 // RUN:   -fno-safe-buffer-usage-suggestions \
 // RUN:   -fno-save-main-program \
 // RUN:   -fno-save-optimization-record \
-// RUN:   -fno-schedule-insns \
-// RUN:   -fno-schedule-insns2 \
-// RUN:   -fno-second-underscore \
-// RUN:   -fno-see \
-// RUN:   -fno-semantic-interposition \
-// RUN:   -fno-separate-named-sections \
-// RUN:   -fno-short-enums -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_9 %s
+// RUN:   -fno-schedule-insns -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_9 %s
 
+// CHECK_CC1_9: {{(unknown argument).*}}-fno-math-errno
+// CHECK_CC1_9: {{(unknown argument).*}}-fno-max-identifier-length
+// CHECK_CC1_9: {{(unknown argument).*}}-fno-max-type-align
+// CHECK_CC1_9: {{(unknown argument).*}}-fno-coverage-mcdc
+// CHECK_CC1_9: {{(unknown argument).*}}-fno-memory-profile
+// CHECK_CC1_9: {{(unknown argument).*}}-fno-merge-all-constants
+// CHECK_CC1_9: {{(unknown argument).*}}-fno-merge-constants
 // CHECK_CC1_9: {{(unknown argument).*}}-fno-minimize-whitespace
 // CHECK_CC1_9: {{(unknown argument).*}}-fno-module-file-deps
 // CHECK_CC1_9: {{(unknown argument).*}}-fno-module-maps
@@ -8781,7 +8850,6 @@
 // CHECK_CC1_9: {{(unknown argument).*}}-fno-rename-registers
 // CHECK_CC1_9: {{(unknown argument).*}}-fno-reorder-blocks
 // CHECK_CC1_9: {{(unknown argument).*}}-fno-repack-arrays
-// CHECK_CC1_9: {{(unknown argument).*}}-fno-retain-subst-template-type-parm-type-ast-nodes
 // CHECK_CC1_9: {{(unknown argument).*}}-fno-rewrite-imports
 // CHECK_CC1_9: {{(unknown argument).*}}-fno-rewrite-includes
 // CHECK_CC1_9: {{(unknown argument).*}}-fno-ripa
@@ -8791,14 +8859,14 @@
 // CHECK_CC1_9: {{(unknown argument).*}}-fno-save-main-program
 // CHECK_CC1_9: {{(unknown argument).*}}-fno-save-optimization-record
 // CHECK_CC1_9: {{(unknown argument).*}}-fno-schedule-insns
-// CHECK_CC1_9: {{(unknown argument).*}}-fno-schedule-insns2
-// CHECK_CC1_9: {{(unknown argument).*}}-fno-second-underscore
-// CHECK_CC1_9: {{(unknown argument).*}}-fno-see
-// CHECK_CC1_9: {{(unknown argument).*}}-fno-semantic-interposition
-// CHECK_CC1_9: {{(unknown argument).*}}-fno-separate-named-sections
-// CHECK_CC1_9: {{(unknown argument).*}}-fno-short-enums
 
 // RUN: not %clang -cc1  \
+// RUN:   -fno-schedule-insns2 \
+// RUN:   -fno-second-underscore \
+// RUN:   -fno-see \
+// RUN:   -fno-semantic-interposition \
+// RUN:   -fno-separate-named-sections \
+// RUN:   -fno-short-enums \
 // RUN:   -fno-short-wchar \
 // RUN:   -fno-sign-zero \
 // RUN:   -fno-signaling-math \
@@ -8814,6 +8882,7 @@
 // RUN:   -fno-stack-check \
 // RUN:   -fno-stack-clash-protection \
 // RUN:   -fno-stack-protector \
+// RUN:   -fno-stack-repack-arrays \
 // RUN:   -fno-stack-size-section \
 // RUN:   -fno-standalone-debug \
 // RUN:   -fno-strength-reduce \
@@ -8835,6 +8904,7 @@
 // RUN:   -fno-underscoring \
 // RUN:   -fno-unique-basic-block-section-names \
 // RUN:   -fno-unique-internal-linkage-names \
+// RUN:   -fno-unique-source-file-names \
 // RUN:   -fno-unroll-all-loops \
 // RUN:   -fno-unsafe-loop-optimizations \
 // RUN:   -fno-unsafe-math-optimizations \
@@ -8856,6 +8926,7 @@
 // RUN:   -fno-whole-file \
 // RUN:   -fno-whole-program \
 // RUN:   -fno-whole-program-vtables \
+// RUN:   -fno-winx64-eh-unwindv2 \
 // RUN:   -fno-working-directory \
 // RUN:   -fno-wrapv \
 // RUN:   -fno-wrapv-pointer \
@@ -8889,17 +8960,14 @@
 // RUN:   -foperator-names \
 // RUN:   -foptimization-record-file= \
 // RUN:   -foptimization-record-passes= \
-// RUN:   -foptimize-sibling-calls \
-// RUN:   -force_cpusubtype_ALL \
-// RUN:   -force_flat_namespace \
-// RUN:   -force_load \
-// RUN:   -fforce-addr \
-// RUN:   -foutput-class-dir= \
-// RUN:   -fpack-derived \
-// RUN:   -fpack-struct \
-// RUN:   -fpch-preprocess \
-// RUN:   -fpch-validate-input-files-content -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_10 %s
+// RUN:   -foptimize-sibling-calls -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_10 %s
 
+// CHECK_CC1_10: {{(unknown argument).*}}-fno-schedule-insns2
+// CHECK_CC1_10: {{(unknown argument).*}}-fno-second-underscore
+// CHECK_CC1_10: {{(unknown argument).*}}-fno-see
+// CHECK_CC1_10: {{(unknown argument).*}}-fno-semantic-interposition
+// CHECK_CC1_10: {{(unknown argument).*}}-fno-separate-named-sections
+// CHECK_CC1_10: {{(unknown argument).*}}-fno-short-enums
 // CHECK_CC1_10: {{(unknown argument).*}}-fno-short-wchar
 // CHECK_CC1_10: {{(unknown argument).*}}-fno-sign-zero
 // CHECK_CC1_10: {{(unknown argument).*}}-fno-signaling-math
@@ -8915,6 +8983,7 @@
 // CHECK_CC1_10: {{(unknown argument).*}}-fno-stack-check
 // CHECK_CC1_10: {{(unknown argument).*}}-fno-stack-clash-protection
 // CHECK_CC1_10: {{(unknown argument).*}}-fno-stack-protector
+// CHECK_CC1_10: {{(unknown argument).*}}-fno-stack-repack-arrays
 // CHECK_CC1_10: {{(unknown argument).*}}-fno-stack-size-section
 // CHECK_CC1_10: {{(unknown argument).*}}-fno-standalone-debug
 // CHECK_CC1_10: {{(unknown argument).*}}-fno-strength-reduce
@@ -8936,6 +9005,7 @@
 // CHECK_CC1_10: {{(unknown argument).*}}-fno-underscoring
 // CHECK_CC1_10: {{(unknown argument).*}}-fno-unique-basic-block-section-names
 // CHECK_CC1_10: {{(unknown argument).*}}-fno-unique-internal-linkage-names
+// CHECK_CC1_10: {{(unknown argument).*}}-fno-unique-source-file-names
 // CHECK_CC1_10: {{(unknown argument).*}}-fno-unroll-all-loops
 // CHECK_CC1_10: {{(unknown argument).*}}-fno-unsafe-loop-optimizations
 // CHECK_CC1_10: {{(unknown argument).*}}-fno-unsafe-math-optimizations
@@ -8957,6 +9027,7 @@
 // CHECK_CC1_10: {{(unknown argument).*}}-fno-whole-file
 // CHECK_CC1_10: {{(unknown argument).*}}-fno-whole-program
 // CHECK_CC1_10: {{(unknown argument).*}}-fno-whole-program-vtables
+// CHECK_CC1_10: {{(unknown argument).*}}-fno-winx64-eh-unwindv2
 // CHECK_CC1_10: {{(unknown argument).*}}-fno-working-directory
 // CHECK_CC1_10: {{(unknown argument).*}}-fno-wrapv
 // CHECK_CC1_10: {{(unknown argument).*}}-fno-wrapv-pointer
@@ -8991,17 +9062,17 @@
 // CHECK_CC1_10: {{(unknown argument).*}}-foptimization-record-file=
 // CHECK_CC1_10: {{(unknown argument).*}}-foptimization-record-passes=
 // CHECK_CC1_10: {{(unknown argument).*}}-foptimize-sibling-calls
-// CHECK_CC1_10: {{(unknown argument).*}}-force_cpusubtype_ALL
-// CHECK_CC1_10: {{(unknown argument).*}}-force_flat_namespace
-// CHECK_CC1_10: {{(unknown argument).*}}-force_load
-// CHECK_CC1_10: {{(unknown argument).*}}-fforce-addr
-// CHECK_CC1_10: {{(unknown argument).*}}-foutput-class-dir=
-// CHECK_CC1_10: {{(unknown argument).*}}-fpack-derived
-// CHECK_CC1_10: {{(unknown argument).*}}-fpack-struct
-// CHECK_CC1_10: {{(unknown argument).*}}-fpch-preprocess
-// CHECK_CC1_10: {{(unknown argument).*}}-fpch-validate-input-files-content
 
 // RUN: not %clang -cc1  \
+// RUN:   -force_cpusubtype_ALL \
+// RUN:   -force_flat_namespace \
+// RUN:   -force_load \
+// RUN:   -fforce-addr \
+// RUN:   -foutput-class-dir= \
+// RUN:   -fpack-derived \
+// RUN:   -fpack-struct \
+// RUN:   -fpch-preprocess \
+// RUN:   -fpch-validate-input-files-content \
 // RUN:   -fpeel-loops \
 // RUN:   -fpermissive \
 // RUN:   -fpic \
@@ -9051,6 +9122,7 @@
 // RUN:   -frename-registers \
 // RUN:   -freorder-blocks \
 // RUN:   -frepack-arrays \
+// RUN:   -frepack-arrays-contiguity= \
 // RUN:   -fripa \
 // RUN:   -frtlib-add-rpath \
 // RUN:   -frtlib-defaultlib \
@@ -9077,32 +9149,31 @@
 // RUN:   -fslp-vectorize \
 // RUN:   -fspec-constr-count \
 // RUN:   -fspell-checking \
+// RUN:   -fspv-extension= \
 // RUN:   -fspv-target-env= \
 // RUN:   -fstack-arrays \
 // RUN:   -fstack-check \
 // RUN:   -fstack-protector \
 // RUN:   -fstack-protector-all \
 // RUN:   -fstack-protector-strong \
+// RUN:   -fstack-repack-arrays \
 // RUN:   -fstack-usage \
 // RUN:   -fstandalone-debug \
 // RUN:   -fstrength-reduce \
 // RUN:   -fstrict-aliasing \
 // RUN:   -fstrict-float-cast-overflow \
 // RUN:   -fstrict-overflow \
-// RUN:   -fstrict-return \
-// RUN:   -fstruct-path-tbaa \
-// RUN:   -fsycl \
-// RUN:   -fsycl-device-only \
-// RUN:   -fsycl-host-only \
-// RUN:   -ftabstop= \
-// RUN:   -ftemporal-profile \
-// RUN:   -ftest-coverage \
-// RUN:   -fthreadsafe-statics \
-// RUN:   -ftime-trace \
-// RUN:   -ftls-model \
-// RUN:   -ftracer \
-// RUN:   -ftrapping-math -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_11 %s
+// RUN:   -fstrict-return -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_11 %s
 
+// CHECK_CC1_11: {{(unknown argument).*}}-force_cpusubtype_ALL
+// CHECK_CC1_11: {{(unknown argument).*}}-force_flat_namespace
+// CHECK_CC1_11: {{(unknown argument).*}}-force_load
+// CHECK_CC1_11: {{(unknown argument).*}}-fforce-addr
+// CHECK_CC1_11: {{(unknown argument).*}}-foutput-class-dir=
+// CHECK_CC1_11: {{(unknown argument).*}}-fpack-derived
+// CHECK_CC1_11: {{(unknown argument).*}}-fpack-struct
+// CHECK_CC1_11: {{(unknown argument).*}}-fpch-preprocess
+// CHECK_CC1_11: {{(unknown argument).*}}-fpch-validate-input-files-content
 // CHECK_CC1_11: {{(unknown argument).*}}-fpeel-loops
 // CHECK_CC1_11: {{(unknown argument).*}}-fpermissive
 // CHECK_CC1_11: {{(unknown argument).*}}-fpic
@@ -9152,6 +9223,7 @@
 // CHECK_CC1_11: {{(unknown argument).*}}-frename-registers
 // CHECK_CC1_11: {{(unknown argument).*}}-freorder-blocks
 // CHECK_CC1_11: {{(unknown argument).*}}-frepack-arrays
+// CHECK_CC1_11: {{(unknown argument).*}}-frepack-arrays-contiguity=
 // CHECK_CC1_11: {{(unknown argument).*}}-fripa
 // CHECK_CC1_11: {{(unknown argument).*}}-frtlib-add-rpath
 // CHECK_CC1_11: {{(unknown argument).*}}-frtlib-defaultlib
@@ -9178,12 +9250,14 @@
 // CHECK_CC1_11: {{(unknown argument).*}}-fslp-vectorize
 // CHECK_CC1_11: {{(unknown argument).*}}-fspec-constr-count
 // CHECK_CC1_11: {{(unknown argument).*}}-fspell-checking
+// CHECK_CC1_11: {{(unknown argument).*}}-fspv-extension=
 // CHECK_CC1_11: {{(unknown argument).*}}-fspv-target-env=
 // CHECK_CC1_11: {{(unknown argument).*}}-fstack-arrays
 // CHECK_CC1_11: {{(unknown argument).*}}-fstack-check
 // CHECK_CC1_11: {{(unknown argument).*}}-fstack-protector
 // CHECK_CC1_11: {{(unknown argument).*}}-fstack-protector-all
 // CHECK_CC1_11: {{(unknown argument).*}}-fstack-protector-strong
+// CHECK_CC1_11: {{(unknown argument).*}}-fstack-repack-arrays
 // CHECK_CC1_11: {{(unknown argument).*}}-fstack-usage
 // CHECK_CC1_11: {{(unknown argument).*}}-fstandalone-debug
 // CHECK_CC1_11: {{(unknown argument).*}}-fstrength-reduce
@@ -9191,20 +9265,20 @@
 // CHECK_CC1_11: {{(unknown argument).*}}-fstrict-float-cast-overflow
 // CHECK_CC1_11: {{(unknown argument).*}}-fstrict-overflow
 // CHECK_CC1_11: {{(unknown argument).*}}-fstrict-return
-// CHECK_CC1_11: {{(unknown argument).*}}-fstruct-path-tbaa
-// CHECK_CC1_11: {{(unknown argument).*}}-fsycl
-// CHECK_CC1_11: {{(unknown argument).*}}-fsycl-device-only
-// CHECK_CC1_11: {{(unknown argument).*}}-fsycl-host-only
-// CHECK_CC1_11: {{(unknown argument).*}}-ftabstop=
-// CHECK_CC1_11: {{(unknown argument).*}}-ftemporal-profile
-// CHECK_CC1_11: {{(unknown argument).*}}-ftest-coverage
-// CHECK_CC1_11: {{(unknown argument).*}}-fthreadsafe-statics
-// CHECK_CC1_11: {{(unknown argument).*}}-ftime-trace
-// CHECK_CC1_11: {{(unknown argument).*}}-ftls-model
-// CHECK_CC1_11: {{(unknown argument).*}}-ftracer
-// CHECK_CC1_11: {{(unknown argument).*}}-ftrapping-math
 
 // RUN: not %clang -cc1  \
+// RUN:   -fstruct-path-tbaa \
+// RUN:   -fsycl \
+// RUN:   -fsycl-device-only \
+// RUN:   -fsycl-host-only \
+// RUN:   -ftabstop= \
+// RUN:   -ftemporal-profile \
+// RUN:   -ftest-coverage \
+// RUN:   -fthreadsafe-statics \
+// RUN:   -ftime-trace \
+// RUN:   -ftls-model \
+// RUN:   -ftracer \
+// RUN:   -ftrapping-math \
 // RUN:   -ftrapv-handler= \
 // RUN:   -ftree-dce \
 // RUN:   -ftree-salias \
@@ -9213,6 +9287,7 @@
 // RUN:   -ftree-vrp \
 // RUN:   -funderscoring \
 // RUN:   -funique-section-names \
+// RUN:   -funique-source-file-names \
 // RUN:   -funroll-all-loops \
 // RUN:   -funsafe-loop-optimizations \
 // RUN:   -funsigned \
@@ -9291,21 +9366,20 @@
 // RUN:   -gsimple-template-names \
 // RUN:   -gsplit-dwarf \
 // RUN:   -gsplit-dwarf= \
-// RUN:   -gstabs \
-// RUN:   -gtoggle \
-// RUN:   -gused \
-// RUN:   -gvms \
-// RUN:   -gxcoff \
-// RUN:   -gz \
-// RUN:   -gz= \
-// RUN:   -headerpad_max_install_names \
-// RUN:   --hip-device-lib= \
-// RUN:   --hip-link \
-// RUN:   --hip-path= \
-// RUN:   --hip-version= \
-// RUN:   --hipspv-pass-plugin= \
-// RUN:   --hipstdpar-path= -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_12 %s
+// RUN:   -gstabs -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_12 %s
 
+// CHECK_CC1_12: {{(unknown argument).*}}-fstruct-path-tbaa
+// CHECK_CC1_12: {{(unknown argument).*}}-fsycl
+// CHECK_CC1_12: {{(unknown argument).*}}-fsycl-device-only
+// CHECK_CC1_12: {{(unknown argument).*}}-fsycl-host-only
+// CHECK_CC1_12: {{(unknown argument).*}}-ftabstop=
+// CHECK_CC1_12: {{(unknown argument).*}}-ftemporal-profile
+// CHECK_CC1_12: {{(unknown argument).*}}-ftest-coverage
+// CHECK_CC1_12: {{(unknown argument).*}}-fthreadsafe-statics
+// CHECK_CC1_12: {{(unknown argument).*}}-ftime-trace
+// CHECK_CC1_12: {{(unknown argument).*}}-ftls-model
+// CHECK_CC1_12: {{(unknown argument).*}}-ftracer
+// CHECK_CC1_12: {{(unknown argument).*}}-ftrapping-math
 // CHECK_CC1_12: {{(unknown argument).*}}-ftrapv-handler=
 // CHECK_CC1_12: {{(unknown argument).*}}-ftree-dce
 // CHECK_CC1_12: {{(unknown argument).*}}-ftree-salias
@@ -9314,6 +9388,7 @@
 // CHECK_CC1_12: {{(unknown argument).*}}-ftree-vrp
 // CHECK_CC1_12: {{(unknown argument).*}}-funderscoring
 // CHECK_CC1_12: {{(unknown argument).*}}-funique-section-names
+// CHECK_CC1_12: {{(unknown argument).*}}-funique-source-file-names
 // CHECK_CC1_12: {{(unknown argument).*}}-funroll-all-loops
 // CHECK_CC1_12: {{(unknown argument).*}}-funsafe-loop-optimizations
 // CHECK_CC1_12: {{(unknown argument).*}}-funsigned
@@ -9393,21 +9468,21 @@
 // CHECK_CC1_12: {{(unknown argument).*}}-gsplit-dwarf
 // CHECK_CC1_12: {{(unknown argument).*}}-gsplit-dwarf=
 // CHECK_CC1_12: {{(unknown argument).*}}-gstabs
-// CHECK_CC1_12: {{(unknown argument).*}}-gtoggle
-// CHECK_CC1_12: {{(unknown argument).*}}-gused
-// CHECK_CC1_12: {{(unknown argument).*}}-gvms
-// CHECK_CC1_12: {{(unknown argument).*}}-gxcoff
-// CHECK_CC1_12: {{(unknown argument).*}}-gz
-// CHECK_CC1_12: {{(unknown argument).*}}-gz=
-// CHECK_CC1_12: {{(unknown argument).*}}-headerpad_max_install_names
-// CHECK_CC1_12: {{(unknown argument).*}}--hip-device-lib=
-// CHECK_CC1_12: {{(unknown argument).*}}--hip-link
-// CHECK_CC1_12: {{(unknown argument).*}}--hip-path=
-// CHECK_CC1_12: {{(unknown argument).*}}--hip-version=
-// CHECK_CC1_12: {{(unknown argument).*}}--hipspv-pass-plugin=
-// CHECK_CC1_12: {{(unknown argument).*}}--hipstdpar-path=
 
 // RUN: not %clang -cc1  \
+// RUN:   -gtoggle \
+// RUN:   -gused \
+// RUN:   -gvms \
+// RUN:   -gxcoff \
+// RUN:   -gz \
+// RUN:   -gz= \
+// RUN:   -headerpad_max_install_names \
+// RUN:   --hip-device-lib= \
+// RUN:   --hip-link \
+// RUN:   --hip-path= \
+// RUN:   --hip-version= \
+// RUN:   --hipspv-pass-plugin= \
+// RUN:   --hipstdpar-path= \
 // RUN:   --hipstdpar-prim-path= \
 // RUN:   --hipstdpar-thrust-path= \
 // RUN:   -ibuiltininc \
@@ -9494,21 +9569,21 @@
 // RUN:   -mavx512ifma \
 // RUN:   -mavx512vbmi \
 // RUN:   -mavx512vbmi2 \
-// RUN:   -mavx512vl \
-// RUN:   -mavx512vnni \
-// RUN:   -mavx512vp2intersect \
-// RUN:   -mavx512vpopcntdq \
-// RUN:   -mavxifma \
-// RUN:   -mavxneconvert \
-// RUN:   -mavxvnni \
-// RUN:   -mavxvnniint16 \
-// RUN:   -mavxvnniint8 \
-// RUN:   -mbig-endian \
-// RUN:   -mbmi \
-// RUN:   -mbmi2 \
-// RUN:   -mbranch-likely \
-// RUN:   -mbranch-protection= -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_13 %s
+// RUN:   -mavx512vl -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_13 %s
 
+// CHECK_CC1_13: {{(unknown argument).*}}-gtoggle
+// CHECK_CC1_13: {{(unknown argument).*}}-gused
+// CHECK_CC1_13: {{(unknown argument).*}}-gvms
+// CHECK_CC1_13: {{(unknown argument).*}}-gxcoff
+// CHECK_CC1_13: {{(unknown argument).*}}-gz
+// CHECK_CC1_13: {{(unknown argument).*}}-gz=
+// CHECK_CC1_13: {{(unknown argument).*}}-headerpad_max_install_names
+// CHECK_CC1_13: {{(unknown argument).*}}--hip-device-lib=
+// CHECK_CC1_13: {{(unknown argument).*}}--hip-link
+// CHECK_CC1_13: {{(unknown argument).*}}--hip-path=
+// CHECK_CC1_13: {{(unknown argument).*}}--hip-version=
+// CHECK_CC1_13: {{(unknown argument).*}}--hipspv-pass-plugin=
+// CHECK_CC1_13: {{(unknown argument).*}}--hipstdpar-path=
 // CHECK_CC1_13: {{(unknown argument).*}}--hipstdpar-prim-path=
 // CHECK_CC1_13: {{(unknown argument).*}}--hipstdpar-thrust-path=
 // CHECK_CC1_13: {{(unknown argument).*}}-ibuiltininc
@@ -9596,21 +9671,21 @@
 // CHECK_CC1_13: {{(unknown argument).*}}-mavx512vbmi
 // CHECK_CC1_13: {{(unknown argument).*}}-mavx512vbmi2
 // CHECK_CC1_13: {{(unknown argument).*}}-mavx512vl
-// CHECK_CC1_13: {{(unknown argument).*}}-mavx512vnni
-// CHECK_CC1_13: {{(unknown argument).*}}-mavx512vp2intersect
-// CHECK_CC1_13: {{(unknown argument).*}}-mavx512vpopcntdq
-// CHECK_CC1_13: {{(unknown argument).*}}-mavxifma
-// CHECK_CC1_13: {{(unknown argument).*}}-mavxneconvert
-// CHECK_CC1_13: {{(unknown argument).*}}-mavxvnni
-// CHECK_CC1_13: {{(unknown argument).*}}-mavxvnniint16
-// CHECK_CC1_13: {{(unknown argument).*}}-mavxvnniint8
-// CHECK_CC1_13: {{(unknown argument).*}}-mbig-endian
-// CHECK_CC1_13: {{(unknown argument).*}}-mbmi
-// CHECK_CC1_13: {{(unknown argument).*}}-mbmi2
-// CHECK_CC1_13: {{(unknown argument).*}}-mbranch-likely
-// CHECK_CC1_13: {{(unknown argument).*}}-mbranch-protection=
 
 // RUN: not %clang -cc1  \
+// RUN:   -mavx512vnni \
+// RUN:   -mavx512vp2intersect \
+// RUN:   -mavx512vpopcntdq \
+// RUN:   -mavxifma \
+// RUN:   -mavxneconvert \
+// RUN:   -mavxvnni \
+// RUN:   -mavxvnniint16 \
+// RUN:   -mavxvnniint8 \
+// RUN:   -mbig-endian \
+// RUN:   -mbmi \
+// RUN:   -mbmi2 \
+// RUN:   -mbranch-likely \
+// RUN:   -mbranch-protection= \
 // RUN:   -mbranches-within-32B-boundaries \
 // RUN:   -mbulk-memory \
 // RUN:   -mbulk-memory-opt \
@@ -9697,21 +9772,21 @@
 // RUN:   -mhtm \
 // RUN:   -mhwdiv= \
 // RUN:   -mhwmult= \
-// RUN:   -miamcu \
-// RUN:   -mieee-fp \
-// RUN:   -mieee-rnd-near \
-// RUN:   -mimplicit-float \
-// RUN:   -mimplicit-it= \
-// RUN:   -mindirect-jump= \
-// RUN:   -minline-all-stringops \
-// RUN:   -minvariant-function-descriptors \
-// RUN:   -minvpcid \
-// RUN:   -mios-simulator-version-min= \
-// RUN:   -mios-version-min= \
-// RUN:   -mips1 \
-// RUN:   -mips16 \
-// RUN:   -mips2 -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_14 %s
+// RUN:   -miamcu -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_14 %s
 
+// CHECK_CC1_14: {{(unknown argument).*}}-mavx512vnni
+// CHECK_CC1_14: {{(unknown argument).*}}-mavx512vp2intersect
+// CHECK_CC1_14: {{(unknown argument).*}}-mavx512vpopcntdq
+// CHECK_CC1_14: {{(unknown argument).*}}-mavxifma
+// CHECK_CC1_14: {{(unknown argument).*}}-mavxneconvert
+// CHECK_CC1_14: {{(unknown argument).*}}-mavxvnni
+// CHECK_CC1_14: {{(unknown argument).*}}-mavxvnniint16
+// CHECK_CC1_14: {{(unknown argument).*}}-mavxvnniint8
+// CHECK_CC1_14: {{(unknown argument).*}}-mbig-endian
+// CHECK_CC1_14: {{(unknown argument).*}}-mbmi
+// CHECK_CC1_14: {{(unknown argument).*}}-mbmi2
+// CHECK_CC1_14: {{(unknown argument).*}}-mbranch-likely
+// CHECK_CC1_14: {{(unknown argument).*}}-mbranch-protection=
 // CHECK_CC1_14: {{(unknown argument).*}}-mbranches-within-32B-boundaries
 // CHECK_CC1_14: {{(unknown argument).*}}-mbulk-memory
 // CHECK_CC1_14: {{(unknown argument).*}}-mbulk-memory-opt
@@ -9799,21 +9874,21 @@
 // CHECK_CC1_14: {{(unknown argument).*}}-mhwdiv=
 // CHECK_CC1_14: {{(unknown argument).*}}-mhwmult=
 // CHECK_CC1_14: {{(unknown argument).*}}-miamcu
-// CHECK_CC1_14: {{(unknown argument).*}}-mieee-fp
-// CHECK_CC1_14: {{(unknown argument).*}}-mieee-rnd-near
-// CHECK_CC1_14: {{(unknown argument).*}}-mimplicit-float
-// CHECK_CC1_14: {{(unknown argument).*}}-mimplicit-it=
-// CHECK_CC1_14: {{(unknown argument).*}}-mindirect-jump=
-// CHECK_CC1_14: {{(unknown argument).*}}-minline-all-stringops
-// CHECK_CC1_14: {{(unknown argument).*}}-minvariant-function-descriptors
-// CHECK_CC1_14: {{(unknown argument).*}}-minvpcid
-// CHECK_CC1_14: {{(unknown argument).*}}-mios-simulator-version-min=
-// CHECK_CC1_14: {{(unknown argument).*}}-mios-version-min=
-// CHECK_CC1_14: {{(unknown argument).*}}-mips1
-// CHECK_CC1_14: {{(unknown argument).*}}-mips16
-// CHECK_CC1_14: {{(unknown argument).*}}-mips2
 
 // RUN: not %clang -cc1  \
+// RUN:   -mieee-fp \
+// RUN:   -mieee-rnd-near \
+// RUN:   -mimplicit-float \
+// RUN:   -mimplicit-it= \
+// RUN:   -mindirect-jump= \
+// RUN:   -minline-all-stringops \
+// RUN:   -minvariant-function-descriptors \
+// RUN:   -minvpcid \
+// RUN:   -mios-simulator-version-min= \
+// RUN:   -mios-version-min= \
+// RUN:   -mips1 \
+// RUN:   -mips16 \
+// RUN:   -mips2 \
 // RUN:   -mips3 \
 // RUN:   -mips32 \
 // RUN:   -mips32r2 \
@@ -9900,21 +9975,21 @@
 // RUN:   -mno-avx512cd \
 // RUN:   -mno-avx512dq \
 // RUN:   -mno-avx512f \
-// RUN:   -mno-avx512fp16 \
-// RUN:   -mno-avx512ifma \
-// RUN:   -mno-avx512vbmi \
-// RUN:   -mno-avx512vbmi2 \
-// RUN:   -mno-avx512vl \
-// RUN:   -mno-avx512vnni \
-// RUN:   -mno-avx512vp2intersect \
-// RUN:   -mno-avx512vpopcntdq \
-// RUN:   -mno-avxifma \
-// RUN:   -mno-avxneconvert \
-// RUN:   -mno-avxvnni \
-// RUN:   -mno-avxvnniint16 \
-// RUN:   -mno-avxvnniint8 \
-// RUN:   -mno-bmi -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_15 %s
+// RUN:   -mno-avx512fp16 -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_15 %s
 
+// CHECK_CC1_15: {{(unknown argument).*}}-mieee-fp
+// CHECK_CC1_15: {{(unknown argument).*}}-mieee-rnd-near
+// CHECK_CC1_15: {{(unknown argument).*}}-mimplicit-float
+// CHECK_CC1_15: {{(unknown argument).*}}-mimplicit-it=
+// CHECK_CC1_15: {{(unknown argument).*}}-mindirect-jump=
+// CHECK_CC1_15: {{(unknown argument).*}}-minline-all-stringops
+// CHECK_CC1_15: {{(unknown argument).*}}-minvariant-function-descriptors
+// CHECK_CC1_15: {{(unknown argument).*}}-minvpcid
+// CHECK_CC1_15: {{(unknown argument).*}}-mios-simulator-version-min=
+// CHECK_CC1_15: {{(unknown argument).*}}-mios-version-min=
+// CHECK_CC1_15: {{(unknown argument).*}}-mips1
+// CHECK_CC1_15: {{(unknown argument).*}}-mips16
+// CHECK_CC1_15: {{(unknown argument).*}}-mips2
 // CHECK_CC1_15: {{(unknown argument).*}}-mips3
 // CHECK_CC1_15: {{(unknown argument).*}}-mips32
 // CHECK_CC1_15: {{(unknown argument).*}}-mips32r2
@@ -10002,21 +10077,21 @@
 // CHECK_CC1_15: {{(unknown argument).*}}-mno-avx512dq
 // CHECK_CC1_15: {{(unknown argument).*}}-mno-avx512f
 // CHECK_CC1_15: {{(unknown argument).*}}-mno-avx512fp16
-// CHECK_CC1_15: {{(unknown argument).*}}-mno-avx512ifma
-// CHECK_CC1_15: {{(unknown argument).*}}-mno-avx512vbmi
-// CHECK_CC1_15: {{(unknown argument).*}}-mno-avx512vbmi2
-// CHECK_CC1_15: {{(unknown argument).*}}-mno-avx512vl
-// CHECK_CC1_15: {{(unknown argument).*}}-mno-avx512vnni
-// CHECK_CC1_15: {{(unknown argument).*}}-mno-avx512vp2intersect
-// CHECK_CC1_15: {{(unknown argument).*}}-mno-avx512vpopcntdq
-// CHECK_CC1_15: {{(unknown argument).*}}-mno-avxifma
-// CHECK_CC1_15: {{(unknown argument).*}}-mno-avxneconvert
-// CHECK_CC1_15: {{(unknown argument).*}}-mno-avxvnni
-// CHECK_CC1_15: {{(unknown argument).*}}-mno-avxvnniint16
-// CHECK_CC1_15: {{(unknown argument).*}}-mno-avxvnniint8
-// CHECK_CC1_15: {{(unknown argument).*}}-mno-bmi
 
 // RUN: not %clang -cc1  \
+// RUN:   -mno-avx512ifma \
+// RUN:   -mno-avx512vbmi \
+// RUN:   -mno-avx512vbmi2 \
+// RUN:   -mno-avx512vl \
+// RUN:   -mno-avx512vnni \
+// RUN:   -mno-avx512vp2intersect \
+// RUN:   -mno-avx512vpopcntdq \
+// RUN:   -mno-avxifma \
+// RUN:   -mno-avxneconvert \
+// RUN:   -mno-avxvnni \
+// RUN:   -mno-avxvnniint16 \
+// RUN:   -mno-avxvnniint8 \
+// RUN:   -mno-bmi \
 // RUN:   -mno-bmi2 \
 // RUN:   -mno-branch-likely \
 // RUN:   -mno-bti-at-return-twice \
@@ -10103,21 +10178,21 @@
 // RUN:   -mno-mmx \
 // RUN:   -mno-movbe \
 // RUN:   -mno-movdir64b \
-// RUN:   -mno-movdiri \
-// RUN:   -mno-movrs \
-// RUN:   -mno-movt \
-// RUN:   -mno-mpx \
-// RUN:   -mno-ms-bitfields \
-// RUN:   -mno-msa \
-// RUN:   -mno-mt \
-// RUN:   -mno-multimemory \
-// RUN:   -mno-multivalue \
-// RUN:   -mno-mutable-globals \
-// RUN:   -mno-mwaitx \
-// RUN:   -mno-neg-immediates \
-// RUN:   -mno-nontrapping-fptoint \
-// RUN:   -mno-odd-spreg -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_16 %s
+// RUN:   -mno-movdiri -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_16 %s
 
+// CHECK_CC1_16: {{(unknown argument).*}}-mno-avx512ifma
+// CHECK_CC1_16: {{(unknown argument).*}}-mno-avx512vbmi
+// CHECK_CC1_16: {{(unknown argument).*}}-mno-avx512vbmi2
+// CHECK_CC1_16: {{(unknown argument).*}}-mno-avx512vl
+// CHECK_CC1_16: {{(unknown argument).*}}-mno-avx512vnni
+// CHECK_CC1_16: {{(unknown argument).*}}-mno-avx512vp2intersect
+// CHECK_CC1_16: {{(unknown argument).*}}-mno-avx512vpopcntdq
+// CHECK_CC1_16: {{(unknown argument).*}}-mno-avxifma
+// CHECK_CC1_16: {{(unknown argument).*}}-mno-avxneconvert
+// CHECK_CC1_16: {{(unknown argument).*}}-mno-avxvnni
+// CHECK_CC1_16: {{(unknown argument).*}}-mno-avxvnniint16
+// CHECK_CC1_16: {{(unknown argument).*}}-mno-avxvnniint8
+// CHECK_CC1_16: {{(unknown argument).*}}-mno-bmi
 // CHECK_CC1_16: {{(unknown argument).*}}-mno-bmi2
 // CHECK_CC1_16: {{(unknown argument).*}}-mno-branch-likely
 // CHECK_CC1_16: {{(unknown argument).*}}-mno-bti-at-return-twice
@@ -10205,21 +10280,21 @@
 // CHECK_CC1_16: {{(unknown argument).*}}-mno-movbe
 // CHECK_CC1_16: {{(unknown argument).*}}-mno-movdir64b
 // CHECK_CC1_16: {{(unknown argument).*}}-mno-movdiri
-// CHECK_CC1_16: {{(unknown argument).*}}-mno-movrs
-// CHECK_CC1_16: {{(unknown argument).*}}-mno-movt
-// CHECK_CC1_16: {{(unknown argument).*}}-mno-mpx
-// CHECK_CC1_16: {{(unknown argument).*}}-mno-ms-bitfields
-// CHECK_CC1_16: {{(unknown argument).*}}-mno-msa
-// CHECK_CC1_16: {{(unknown argument).*}}-mno-mt
-// CHECK_CC1_16: {{(unknown argument).*}}-mno-multimemory
-// CHECK_CC1_16: {{(unknown argument).*}}-mno-multivalue
-// CHECK_CC1_16: {{(unknown argument).*}}-mno-mutable-globals
-// CHECK_CC1_16: {{(unknown argument).*}}-mno-mwaitx
-// CHECK_CC1_16: {{(unknown argument).*}}-mno-neg-immediates
-// CHECK_CC1_16: {{(unknown argument).*}}-mno-nontrapping-fptoint
-// CHECK_CC1_16: {{(unknown argument).*}}-mno-odd-spreg
 
 // RUN: not %clang -cc1  \
+// RUN:   -mno-movrs \
+// RUN:   -mno-movt \
+// RUN:   -mno-mpx \
+// RUN:   -mno-ms-bitfields \
+// RUN:   -mno-msa \
+// RUN:   -mno-mt \
+// RUN:   -mno-multimemory \
+// RUN:   -mno-multivalue \
+// RUN:   -mno-mutable-globals \
+// RUN:   -mno-mwaitx \
+// RUN:   -mno-neg-immediates \
+// RUN:   -mno-nontrapping-fptoint \
+// RUN:   -mno-odd-spreg \
 // RUN:   -mno-omit-leaf-frame-pointer \
 // RUN:   -mno-pascal-strings \
 // RUN:   -mno-pclmul \
@@ -10306,21 +10381,21 @@
 // RUN:   -mno-vx \
 // RUN:   -mno-vzeroupper \
 // RUN:   -mno-waitpkg \
-// RUN:   -mno-warn-nonportable-cfstrings \
-// RUN:   -mno-wavefrontsize64 \
-// RUN:   -mno-wbnoinvd \
-// RUN:   -mno-wide-arithmetic \
-// RUN:   -mno-widekl \
-// RUN:   -mno-x87 \
-// RUN:   -mno-xcoff-roptr \
-// RUN:   -mno-xgot \
-// RUN:   -mno-xop \
-// RUN:   -mno-xsave \
-// RUN:   -mno-xsavec \
-// RUN:   -mno-xsaveopt \
-// RUN:   -mno-xsaves \
-// RUN:   -mno-zvector -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_17 %s
+// RUN:   -mno-warn-nonportable-cfstrings -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_17 %s
 
+// CHECK_CC1_17: {{(unknown argument).*}}-mno-movrs
+// CHECK_CC1_17: {{(unknown argument).*}}-mno-movt
+// CHECK_CC1_17: {{(unknown argument).*}}-mno-mpx
+// CHECK_CC1_17: {{(unknown argument).*}}-mno-ms-bitfields
+// CHECK_CC1_17: {{(unknown argument).*}}-mno-msa
+// CHECK_CC1_17: {{(unknown argument).*}}-mno-mt
+// CHECK_CC1_17: {{(unknown argument).*}}-mno-multimemory
+// CHECK_CC1_17: {{(unknown argument).*}}-mno-multivalue
+// CHECK_CC1_17: {{(unknown argument).*}}-mno-mutable-globals
+// CHECK_CC1_17: {{(unknown argument).*}}-mno-mwaitx
+// CHECK_CC1_17: {{(unknown argument).*}}-mno-neg-immediates
+// CHECK_CC1_17: {{(unknown argument).*}}-mno-nontrapping-fptoint
+// CHECK_CC1_17: {{(unknown argument).*}}-mno-odd-spreg
 // CHECK_CC1_17: {{(unknown argument).*}}-mno-omit-leaf-frame-pointer
 // CHECK_CC1_17: {{(unknown argument).*}}-mno-pascal-strings
 // CHECK_CC1_17: {{(unknown argument).*}}-mno-pclmul
@@ -10408,21 +10483,21 @@
 // CHECK_CC1_17: {{(unknown argument).*}}-mno-vzeroupper
 // CHECK_CC1_17: {{(unknown argument).*}}-mno-waitpkg
 // CHECK_CC1_17: {{(unknown argument).*}}-mno-warn-nonportable-cfstrings
-// CHECK_CC1_17: {{(unknown argument).*}}-mno-wavefrontsize64
-// CHECK_CC1_17: {{(unknown argument).*}}-mno-wbnoinvd
-// CHECK_CC1_17: {{(unknown argument).*}}-mno-wide-arithmetic
-// CHECK_CC1_17: {{(unknown argument).*}}-mno-widekl
-// CHECK_CC1_17: {{(unknown argument).*}}-mno-x87
-// CHECK_CC1_17: {{(unknown argument).*}}-mno-xcoff-roptr
-// CHECK_CC1_17: {{(unknown argument).*}}-mno-xgot
-// CHECK_CC1_17: {{(unknown argument).*}}-mno-xop
-// CHECK_CC1_17: {{(unknown argument).*}}-mno-xsave
-// CHECK_CC1_17: {{(unknown argument).*}}-mno-xsavec
-// CHECK_CC1_17: {{(unknown argument).*}}-mno-xsaveopt
-// CHECK_CC1_17: {{(unknown argument).*}}-mno-xsaves
-// CHECK_CC1_17: {{(unknown argument).*}}-mno-zvector
 
 // RUN: not %clang -cc1  \
+// RUN:   -mno-wavefrontsize64 \
+// RUN:   -mno-wbnoinvd \
+// RUN:   -mno-wide-arithmetic \
+// RUN:   -mno-widekl \
+// RUN:   -mno-x87 \
+// RUN:   -mno-xcoff-roptr \
+// RUN:   -mno-xgot \
+// RUN:   -mno-xop \
+// RUN:   -mno-xsave \
+// RUN:   -mno-xsavec \
+// RUN:   -mno-xsaveopt \
+// RUN:   -mno-xsaves \
+// RUN:   -mno-zvector \
 // RUN:   -mnocrc \
 // RUN:   -mno-direct-move \
 // RUN:   -mnontrapping-fptoint \
@@ -10459,7 +10534,6 @@
 // RUN:   -mrdpru \
 // RUN:   -mrdrnd \
 // RUN:   -mrdseed \
-// RUN:   -mrecip \
 // RUN:   -mred-zone \
 // RUN:   -mreference-types \
 // RUN:   -mregparm= \
@@ -10510,20 +10584,21 @@
 // RUN:   -mtgsplit \
 // RUN:   -mthreads \
 // RUN:   -mthumb \
-// RUN:   -mtls-dialect= \
-// RUN:   -mtls-direct-seg-refs \
-// RUN:   -mtp= \
-// RUN:   -mtsxldtrk \
-// RUN:   -mtune= \
-// RUN:   -mtvos-simulator-version-min= \
-// RUN:   -mtvos-version-min= \
-// RUN:   -muclibc \
-// RUN:   -muintr \
-// RUN:   -multi_module \
-// RUN:   -multi-lib-config= \
-// RUN:   -multiply_defined \
-// RUN:   -multiply_defined_unused -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_18 %s
+// RUN:   -mtls-dialect= -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_18 %s
 
+// CHECK_CC1_18: {{(unknown argument).*}}-mno-wavefrontsize64
+// CHECK_CC1_18: {{(unknown argument).*}}-mno-wbnoinvd
+// CHECK_CC1_18: {{(unknown argument).*}}-mno-wide-arithmetic
+// CHECK_CC1_18: {{(unknown argument).*}}-mno-widekl
+// CHECK_CC1_18: {{(unknown argument).*}}-mno-x87
+// CHECK_CC1_18: {{(unknown argument).*}}-mno-xcoff-roptr
+// CHECK_CC1_18: {{(unknown argument).*}}-mno-xgot
+// CHECK_CC1_18: {{(unknown argument).*}}-mno-xop
+// CHECK_CC1_18: {{(unknown argument).*}}-mno-xsave
+// CHECK_CC1_18: {{(unknown argument).*}}-mno-xsavec
+// CHECK_CC1_18: {{(unknown argument).*}}-mno-xsaveopt
+// CHECK_CC1_18: {{(unknown argument).*}}-mno-xsaves
+// CHECK_CC1_18: {{(unknown argument).*}}-mno-zvector
 // CHECK_CC1_18: {{(unknown argument).*}}-mnocrc
 // CHECK_CC1_18: {{(unknown argument).*}}-mno-direct-move
 // CHECK_CC1_18: {{(unknown argument).*}}-mnontrapping-fptoint
@@ -10560,7 +10635,6 @@
 // CHECK_CC1_18: {{(unknown argument).*}}-mrdpru
 // CHECK_CC1_18: {{(unknown argument).*}}-mrdrnd
 // CHECK_CC1_18: {{(unknown argument).*}}-mrdseed
-// CHECK_CC1_18: {{(unknown argument).*}}-mrecip
 // CHECK_CC1_18: {{(unknown argument).*}}-mred-zone
 // CHECK_CC1_18: {{(unknown argument).*}}-mreference-types
 // CHECK_CC1_18: {{(unknown argument).*}}-mregparm=
@@ -10612,20 +10686,20 @@
 // CHECK_CC1_18: {{(unknown argument).*}}-mthreads
 // CHECK_CC1_18: {{(unknown argument).*}}-mthumb
 // CHECK_CC1_18: {{(unknown argument).*}}-mtls-dialect=
-// CHECK_CC1_18: {{(unknown argument).*}}-mtls-direct-seg-refs
-// CHECK_CC1_18: {{(unknown argument).*}}-mtp=
-// CHECK_CC1_18: {{(unknown argument).*}}-mtsxldtrk
-// CHECK_CC1_18: {{(unknown argument).*}}-mtune=
-// CHECK_CC1_18: {{(unknown argument).*}}-mtvos-simulator-version-min=
-// CHECK_CC1_18: {{(unknown argument).*}}-mtvos-version-min=
-// CHECK_CC1_18: {{(unknown argument).*}}-muclibc
-// CHECK_CC1_18: {{(unknown argument).*}}-muintr
-// CHECK_CC1_18: {{(unknown argument).*}}-multi_module
-// CHECK_CC1_18: {{(unknown argument).*}}-multi-lib-config=
-// CHECK_CC1_18: {{(unknown argument).*}}-multiply_defined
-// CHECK_CC1_18: {{(unknown argument).*}}-multiply_defined_unused
 
 // RUN: not %clang -cc1  \
+// RUN:   -mtls-direct-seg-refs \
+// RUN:   -mtp= \
+// RUN:   -mtsxldtrk \
+// RUN:   -mtune= \
+// RUN:   -mtvos-simulator-version-min= \
+// RUN:   -mtvos-version-min= \
+// RUN:   -muclibc \
+// RUN:   -muintr \
+// RUN:   -multi_module \
+// RUN:   -multi-lib-config= \
+// RUN:   -multiply_defined \
+// RUN:   -multiply_defined_unused \
 // RUN:   -munaligned-access \
 // RUN:   -munaligned-symbols \
 // RUN:   -municode \
@@ -10713,20 +10787,20 @@
 // RUN:   -noprofilelib \
 // RUN:   -noseglinkedit \
 // RUN:   -nostartfiles \
-// RUN:   -nostdinc \
-// RUN:   -nostdlib \
-// RUN:   -nostdlibinc \
-// RUN:   -nostdlib++ \
-// RUN:   --nvptx-arch-tool= \
-// RUN:   -fexperimental-openacc-macro-override= \
-// RUN:   -p \
-// RUN:   -pagezero_size \
-// RUN:   -pass-exit-codes \
-// RUN:   -pie \
-// RUN:   -pipe \
-// RUN:   -prebind \
-// RUN:   -prebind_all_twolevel_modules -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_19 %s
+// RUN:   -nostdinc -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_19 %s
 
+// CHECK_CC1_19: {{(unknown argument).*}}-mtls-direct-seg-refs
+// CHECK_CC1_19: {{(unknown argument).*}}-mtp=
+// CHECK_CC1_19: {{(unknown argument).*}}-mtsxldtrk
+// CHECK_CC1_19: {{(unknown argument).*}}-mtune=
+// CHECK_CC1_19: {{(unknown argument).*}}-mtvos-simulator-version-min=
+// CHECK_CC1_19: {{(unknown argument).*}}-mtvos-version-min=
+// CHECK_CC1_19: {{(unknown argument).*}}-muclibc
+// CHECK_CC1_19: {{(unknown argument).*}}-muintr
+// CHECK_CC1_19: {{(unknown argument).*}}-multi_module
+// CHECK_CC1_19: {{(unknown argument).*}}-multi-lib-config=
+// CHECK_CC1_19: {{(unknown argument).*}}-multiply_defined
+// CHECK_CC1_19: {{(unknown argument).*}}-multiply_defined_unused
 // CHECK_CC1_19: {{(unknown argument).*}}-munaligned-access
 // CHECK_CC1_19: {{(unknown argument).*}}-munaligned-symbols
 // CHECK_CC1_19: {{(unknown argument).*}}-municode
@@ -10815,20 +10889,20 @@
 // CHECK_CC1_19: {{(unknown argument).*}}-noseglinkedit
 // CHECK_CC1_19: {{(unknown argument).*}}-nostartfiles
 // CHECK_CC1_19: {{(unknown argument).*}}-nostdinc
-// CHECK_CC1_19: {{(unknown argument).*}}-nostdlib
-// CHECK_CC1_19: {{(unknown argument).*}}-nostdlibinc
-// CHECK_CC1_19: {{(unknown argument).*}}-nostdlib++
-// CHECK_CC1_19: {{(unknown argument).*}}--nvptx-arch-tool=
-// CHECK_CC1_19: {{(unknown argument).*}}-fexperimental-openacc-macro-override=
-// CHECK_CC1_19: {{(unknown argument).*}}-p
-// CHECK_CC1_19: {{(unknown argument).*}}-pagezero_size
-// CHECK_CC1_19: {{(unknown argument).*}}-pass-exit-codes
-// CHECK_CC1_19: {{(unknown argument).*}}-pie
-// CHECK_CC1_19: {{(unknown argument).*}}-pipe
-// CHECK_CC1_19: {{(unknown argument).*}}-prebind
-// CHECK_CC1_19: {{(unknown argument).*}}-prebind_all_twolevel_modules
 
 // RUN: not %clang -cc1  \
+// RUN:   -nostdlib \
+// RUN:   -nostdlibinc \
+// RUN:   -nostdlib++ \
+// RUN:   --nvptx-arch-tool= \
+// RUN:   -fexperimental-openacc-macro-override= \
+// RUN:   -p \
+// RUN:   -pagezero_size \
+// RUN:   -pass-exit-codes \
+// RUN:   -pie \
+// RUN:   -pipe \
+// RUN:   -prebind \
+// RUN:   -prebind_all_twolevel_modules \
 // RUN:   -preload \
 // RUN:   -print-diagnostic-options \
 // RUN:   -print-effective-triple \
@@ -10882,6 +10956,7 @@
 // RUN:   -segs_read_only_addr \
 // RUN:   -segs_read_write_addr \
 // RUN:   -shared \
+// RUN:   -shared-libflangrt \
 // RUN:   -shared-libgcc \
 // RUN:   -shared-libsan \
 // RUN:   -show-encoding \
@@ -10893,6 +10968,7 @@
 // RUN:   --start-no-unused-arguments \
 // RUN:   -startfiles \
 // RUN:   -static \
+// RUN:   -static-libflangrt \
 // RUN:   -static-libgcc \
 // RUN:   -static-libgfortran \
 // RUN:   -static-libsan \
@@ -10914,22 +10990,20 @@
 // RUN:   -traditional \
 // RUN:   -trigraphs \
 // RUN:   -twolevel_namespace \
-// RUN:   -twolevel_namespace_hints \
-// RUN:   -u \
-// RUN:   -umbrella \
-// RUN:   -undefined \
-// RUN:   -unexported_symbols_list \
-// RUN:   --verify-debug-info \
-// RUN:   -via-file-asm \
-// RUN:   --wasm-opt \
-// RUN:   -weak_framework \
-// RUN:   -weak_library \
-// RUN:   -weak_reference_mismatches \
-// RUN:   -weak-l \
-// RUN:   -whatsloaded \
-// RUN:   -why_load \
-// RUN:   -whyload -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_20 %s
+// RUN:   -twolevel_namespace_hints -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_20 %s
 
+// CHECK_CC1_20: {{(unknown argument).*}}-nostdlib
+// CHECK_CC1_20: {{(unknown argument).*}}-nostdlibinc
+// CHECK_CC1_20: {{(unknown argument).*}}-nostdlib++
+// CHECK_CC1_20: {{(unknown argument).*}}--nvptx-arch-tool=
+// CHECK_CC1_20: {{(unknown argument).*}}-fexperimental-openacc-macro-override=
+// CHECK_CC1_20: {{(unknown argument).*}}-p
+// CHECK_CC1_20: {{(unknown argument).*}}-pagezero_size
+// CHECK_CC1_20: {{(unknown argument).*}}-pass-exit-codes
+// CHECK_CC1_20: {{(unknown argument).*}}-pie
+// CHECK_CC1_20: {{(unknown argument).*}}-pipe
+// CHECK_CC1_20: {{(unknown argument).*}}-prebind
+// CHECK_CC1_20: {{(unknown argument).*}}-prebind_all_twolevel_modules
 // CHECK_CC1_20: {{(unknown argument).*}}-preload
 // CHECK_CC1_20: {{(unknown argument).*}}-print-diagnostic-options
 // CHECK_CC1_20: {{(unknown argument).*}}-print-effective-triple
@@ -10983,6 +11057,7 @@
 // CHECK_CC1_20: {{(unknown argument).*}}-segs_read_only_addr
 // CHECK_CC1_20: {{(unknown argument).*}}-segs_read_write_addr
 // CHECK_CC1_20: {{(unknown argument).*}}-shared
+// CHECK_CC1_20: {{(unknown argument).*}}-shared-libflangrt
 // CHECK_CC1_20: {{(unknown argument).*}}-shared-libgcc
 // CHECK_CC1_20: {{(unknown argument).*}}-shared-libsan
 // CHECK_CC1_20: {{(unknown argument).*}}-show-encoding
@@ -10994,6 +11069,7 @@
 // CHECK_CC1_20: {{(unknown argument).*}}--start-no-unused-arguments
 // CHECK_CC1_20: {{(unknown argument).*}}-startfiles
 // CHECK_CC1_20: {{(unknown argument).*}}-static
+// CHECK_CC1_20: {{(unknown argument).*}}-static-libflangrt
 // CHECK_CC1_20: {{(unknown argument).*}}-static-libgcc
 // CHECK_CC1_20: {{(unknown argument).*}}-static-libgfortran
 // CHECK_CC1_20: {{(unknown argument).*}}-static-libsan
@@ -11016,25 +11092,39 @@
 // CHECK_CC1_20: {{(unknown argument).*}}-trigraphs
 // CHECK_CC1_20: {{(unknown argument).*}}-twolevel_namespace
 // CHECK_CC1_20: {{(unknown argument).*}}-twolevel_namespace_hints
-// CHECK_CC1_20: {{(unknown argument).*}}-u
-// CHECK_CC1_20: {{(unknown argument).*}}-umbrella
-// CHECK_CC1_20: {{(unknown argument).*}}-undefined
-// CHECK_CC1_20: {{(unknown argument).*}}-unexported_symbols_list
-// CHECK_CC1_20: {{(unknown argument).*}}--verify-debug-info
-// CHECK_CC1_20: {{(unknown argument).*}}-via-file-asm
-// CHECK_CC1_20: {{(unknown argument).*}}--wasm-opt
-// CHECK_CC1_20: {{(unknown argument).*}}-weak_framework
-// CHECK_CC1_20: {{(unknown argument).*}}-weak_library
-// CHECK_CC1_20: {{(unknown argument).*}}-weak_reference_mismatches
-// CHECK_CC1_20: {{(unknown argument).*}}-weak-l
-// CHECK_CC1_20: {{(unknown argument).*}}-whatsloaded
-// CHECK_CC1_20: {{(unknown argument).*}}-why_load
-// CHECK_CC1_20: {{(unknown argument).*}}-whyload
 
 // RUN: not %clang -cc1  \
+// RUN:   -u \
+// RUN:   -umbrella \
+// RUN:   -undefined \
+// RUN:   -unexported_symbols_list \
+// RUN:   --verify-debug-info \
+// RUN:   -via-file-asm \
+// RUN:   --wasm-opt \
+// RUN:   -weak_framework \
+// RUN:   -weak_library \
+// RUN:   -weak_reference_mismatches \
+// RUN:   -weak-l \
+// RUN:   -whatsloaded \
+// RUN:   -why_load \
+// RUN:   -whyload \
 // RUN:   -y \
 // RUN:   -z -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_21 %s
 
+// CHECK_CC1_21: {{(unknown argument).*}}-u
+// CHECK_CC1_21: {{(unknown argument).*}}-umbrella
+// CHECK_CC1_21: {{(unknown argument).*}}-undefined
+// CHECK_CC1_21: {{(unknown argument).*}}-unexported_symbols_list
+// CHECK_CC1_21: {{(unknown argument).*}}--verify-debug-info
+// CHECK_CC1_21: {{(unknown argument).*}}-via-file-asm
+// CHECK_CC1_21: {{(unknown argument).*}}--wasm-opt
+// CHECK_CC1_21: {{(unknown argument).*}}-weak_framework
+// CHECK_CC1_21: {{(unknown argument).*}}-weak_library
+// CHECK_CC1_21: {{(unknown argument).*}}-weak_reference_mismatches
+// CHECK_CC1_21: {{(unknown argument).*}}-weak-l
+// CHECK_CC1_21: {{(unknown argument).*}}-whatsloaded
+// CHECK_CC1_21: {{(unknown argument).*}}-why_load
+// CHECK_CC1_21: {{(unknown argument).*}}-whyload
 // CHECK_CC1_21: {{(unknown argument).*}}-y
 // CHECK_CC1_21: {{(unknown argument).*}}-z
 
@@ -11453,8 +11543,8 @@
 // RUN:   -static-libasan \
 // RUN:   -fslp-vectorize-aggressive \
 // RUN:   -frecord-gcc-switches \
-// RUN:   -fno-record-gcc-switches \
 // RUN:   -fno-slp-vectorize-aggressive \
+// RUN:   -fno-record-gcc-switches \
 // RUN:   -Xparser \
 // RUN:   -Xcompiler \
 // RUN:   -fexpensive-optimizations \
@@ -11554,8 +11644,8 @@
 // CHECK_CL_2: {{(unknown argument ignored in clang-cl).*}}-static-libasan
 // CHECK_CL_2: {{(unknown argument ignored in clang-cl).*}}-fslp-vectorize-aggressive
 // CHECK_CL_2: {{(unknown argument ignored in clang-cl).*}}-frecord-gcc-switches
-// CHECK_CL_2: {{(unknown argument ignored in clang-cl).*}}-fno-record-gcc-switches
 // CHECK_CL_2: {{(unknown argument ignored in clang-cl).*}}-fno-slp-vectorize-aggressive
+// CHECK_CL_2: {{(unknown argument ignored in clang-cl).*}}-fno-record-gcc-switches
 // CHECK_CL_2: {{(unknown argument ignored in clang-cl).*}}-Xparser
 // CHECK_CL_2: {{(unknown argument ignored in clang-cl).*}}-Xcompiler
 // CHECK_CL_2: {{(unknown argument ignored in clang-cl).*}}-fexpensive-optimizations
@@ -11676,6 +11766,7 @@
 // RUN:   -dsym-dir \
 // RUN:   -dump-coverage-mapping \
 // RUN:   -dump-deserialized-decls \
+// RUN:   -dump-minimization-hints= \
 // RUN:   -dump-raw-tokens \
 // RUN:   -dump-tokens \
 // RUN:   -dumpdir \
@@ -11746,8 +11837,7 @@
 // RUN:   -falign-functions= \
 // RUN:   -falign-jumps \
 // RUN:   -falign-jumps= \
-// RUN:   -falign-labels \
-// RUN:   -falign-labels= -### /c /WX -Werror 2>&1 | FileCheck -check-prefix=CHECK_CL_3 %s
+// RUN:   -falign-labels -### /c /WX -Werror 2>&1 | FileCheck -check-prefix=CHECK_CL_3 %s
 
 // CHECK_CL_3: {{(unknown argument ignored in clang-cl).*}}-darwin-target-variant-sdk-version=
 // CHECK_CL_3: {{(unknown argument ignored in clang-cl).*}}-darwin-target-variant-triple
@@ -11777,6 +11867,7 @@
 // CHECK_CL_3: {{(unknown argument ignored in clang-cl).*}}-dsym-dir
 // CHECK_CL_3: {{(unknown argument ignored in clang-cl).*}}-dump-coverage-mapping
 // CHECK_CL_3: {{(unknown argument ignored in clang-cl).*}}-dump-deserialized-decls
+// CHECK_CL_3: {{(unknown argument ignored in clang-cl).*}}-dump-minimization-hints=
 // CHECK_CL_3: {{(unknown argument ignored in clang-cl).*}}-dump-raw-tokens
 // CHECK_CL_3: {{(unknown argument ignored in clang-cl).*}}-dump-tokens
 // CHECK_CL_3: {{(unknown argument ignored in clang-cl).*}}-dumpdir
@@ -11848,9 +11939,9 @@
 // CHECK_CL_3: {{(unknown argument ignored in clang-cl).*}}-falign-jumps
 // CHECK_CL_3: {{(unknown argument ignored in clang-cl).*}}-falign-jumps=
 // CHECK_CL_3: {{(unknown argument ignored in clang-cl).*}}-falign-labels
-// CHECK_CL_3: {{(unknown argument ignored in clang-cl).*}}-falign-labels=
 
 // RUN: not %clang_cl  \
+// RUN:   -falign-labels= \
 // RUN:   -falign-loops \
 // RUN:   -falign-loops= \
 // RUN:   -faligned-allocation \
@@ -11949,9 +12040,9 @@
 // RUN:   -fcuda-is-device \
 // RUN:   -fcx-fortran-rules \
 // RUN:   -fcx-limited-range \
-// RUN:   -fc++-abi= \
-// RUN:   -fcxx-exceptions -### /c /WX -Werror 2>&1 | FileCheck -check-prefix=CHECK_CL_4 %s
+// RUN:   -fc++-abi= -### /c /WX -Werror 2>&1 | FileCheck -check-prefix=CHECK_CL_4 %s
 
+// CHECK_CL_4: {{(unknown argument ignored in clang-cl).*}}-falign-labels=
 // CHECK_CL_4: {{(unknown argument ignored in clang-cl).*}}-falign-loops
 // CHECK_CL_4: {{(unknown argument ignored in clang-cl).*}}-falign-loops=
 // CHECK_CL_4: {{(unknown argument ignored in clang-cl).*}}-faligned-allocation
@@ -12051,9 +12142,9 @@
 // CHECK_CL_4: {{(unknown argument ignored in clang-cl).*}}-fcx-fortran-rules
 // CHECK_CL_4: {{(unknown argument ignored in clang-cl).*}}-fcx-limited-range
 // CHECK_CL_4: {{(unknown argument ignored in clang-cl).*}}-fc++-abi=
-// CHECK_CL_4: {{(unknown argument ignored in clang-cl).*}}-fcxx-exceptions
 
 // RUN: not %clang_cl  \
+// RUN:   -fcxx-exceptions \
 // RUN:   -fcxx-modules \
 // RUN:   -fd-lines-as-code \
 // RUN:   -fd-lines-as-comments \
@@ -12121,6 +12212,7 @@
 // RUN:   -fdisable-real-10 \
 // RUN:   -fdisable-real-3 \
 // RUN:   -fdiscard-value-names \
+// RUN:   -fdo-concurrent-to-openmp= \
 // RUN:   -fdollar-ok \
 // RUN:   -fdollars-in-identifiers \
 // RUN:   -fdouble-square-bracket-attributes \
@@ -12151,10 +12243,9 @@
 // RUN:   -ferror-limit \
 // RUN:   -fescaping-block-tail-calls \
 // RUN:   -fexceptions \
-// RUN:   -fexec-charset= \
-// RUN:   -fexperimental-assignment-tracking= \
-// RUN:   -fexperimental-isel -### /c /WX -Werror 2>&1 | FileCheck -check-prefix=CHECK_CL_5 %s
+// RUN:   -fexec-charset= -### /c /WX -Werror 2>&1 | FileCheck -check-prefix=CHECK_CL_5 %s
 
+// CHECK_CL_5: {{(unknown argument ignored in clang-cl).*}}-fcxx-exceptions
 // CHECK_CL_5: {{(unknown argument ignored in clang-cl).*}}-fcxx-modules
 // CHECK_CL_5: {{(unknown argument ignored in clang-cl).*}}-fd-lines-as-code
 // CHECK_CL_5: {{(unknown argument ignored in clang-cl).*}}-fd-lines-as-comments
@@ -12222,6 +12313,7 @@
 // CHECK_CL_5: {{(unknown argument ignored in clang-cl).*}}-fdisable-real-10
 // CHECK_CL_5: {{(unknown argument ignored in clang-cl).*}}-fdisable-real-3
 // CHECK_CL_5: {{(unknown argument ignored in clang-cl).*}}-fdiscard-value-names
+// CHECK_CL_5: {{(unknown argument ignored in clang-cl).*}}-fdo-concurrent-to-openmp=
 // CHECK_CL_5: {{(unknown argument ignored in clang-cl).*}}-fdollar-ok
 // CHECK_CL_5: {{(unknown argument ignored in clang-cl).*}}-fdollars-in-identifiers
 // CHECK_CL_5: {{(unknown argument ignored in clang-cl).*}}-fdouble-square-bracket-attributes
@@ -12253,10 +12345,10 @@
 // CHECK_CL_5: {{(unknown argument ignored in clang-cl).*}}-fescaping-block-tail-calls
 // CHECK_CL_5: {{(unknown argument ignored in clang-cl).*}}-fexceptions
 // CHECK_CL_5: {{(unknown argument ignored in clang-cl).*}}-fexec-charset=
-// CHECK_CL_5: {{(unknown argument ignored in clang-cl).*}}-fexperimental-assignment-tracking=
-// CHECK_CL_5: {{(unknown argument ignored in clang-cl).*}}-fexperimental-isel
 
 // RUN: not %clang_cl  \
+// RUN:   -fexperimental-assignment-tracking= \
+// RUN:   -fexperimental-isel \
 // RUN:   -fexperimental-late-parse-attributes \
 // RUN:   -fexperimental-max-bitint-width= \
 // RUN:   -fexperimental-new-constant-interpreter \
@@ -12354,10 +12446,10 @@
 // RUN:   -fipa-cp \
 // RUN:   -fivopts \
 // RUN:   -fix-only-warnings \
-// RUN:   -fix-what-you-can \
-// RUN:   -fixit \
-// RUN:   -fixit= -### /c /WX -Werror 2>&1 | FileCheck -check-prefix=CHECK_CL_6 %s
+// RUN:   -fix-what-you-can -### /c /WX -Werror 2>&1 | FileCheck -check-prefix=CHECK_CL_6 %s
 
+// CHECK_CL_6: {{(unknown argument ignored in clang-cl).*}}-fexperimental-assignment-tracking=
+// CHECK_CL_6: {{(unknown argument ignored in clang-cl).*}}-fexperimental-isel
 // CHECK_CL_6: {{(unknown argument ignored in clang-cl).*}}-fexperimental-late-parse-attributes
 // CHECK_CL_6: {{(unknown argument ignored in clang-cl).*}}-fexperimental-max-bitint-width=
 // CHECK_CL_6: {{(unknown argument ignored in clang-cl).*}}-fexperimental-new-constant-interpreter
@@ -12456,10 +12548,10 @@
 // CHECK_CL_6: {{(unknown argument ignored in clang-cl).*}}-fivopts
 // CHECK_CL_6: {{(unknown argument ignored in clang-cl).*}}-fix-only-warnings
 // CHECK_CL_6: {{(unknown argument ignored in clang-cl).*}}-fix-what-you-can
-// CHECK_CL_6: {{(unknown argument ignored in clang-cl).*}}-fixit
-// CHECK_CL_6: {{(unknown argument ignored in clang-cl).*}}-fixit=
 
 // RUN: not %clang_cl  \
+// RUN:   -fixit \
+// RUN:   -fixit= \
 // RUN:   -fixit-recompile \
 // RUN:   -fixit-to-temporary \
 // RUN:   -fjmc \
@@ -12478,6 +12570,7 @@
 // RUN:   -floop-interchange \
 // RUN:   -fversion-loops-for-stride \
 // RUN:   -flto-jobs= \
+// RUN:   -flto-partitions= \
 // RUN:   -flto-unit \
 // RUN:   -flto-visibility-public-std \
 // RUN:   -fmacro-prefix-map= \
@@ -12509,6 +12602,7 @@
 // RUN:   -fmodules-debuginfo \
 // RUN:   -fmodules-disable-diagnostic-validation \
 // RUN:   -fmodules-embed-file= \
+// RUN:   -fmodules-force-validate-user-headers \
 // RUN:   -fmodules-hash-content \
 // RUN:   -fmodules-local-submodule-visibility \
 // RUN:   -fmodules-prune-after= \
@@ -12555,12 +12649,10 @@
 // RUN:   -fno-unit-at-a-time \
 // RUN:   -fno-apinotes \
 // RUN:   -fno-apinotes-modules \
-// RUN:   -fno-apple-pragma-pack \
-// RUN:   -fno-application-extension \
-// RUN:   -fno-approx-func \
-// RUN:   -fno-asm \
-// RUN:   -fno-asm-blocks -### /c /WX -Werror 2>&1 | FileCheck -check-prefix=CHECK_CL_7 %s
+// RUN:   -fno-apple-pragma-pack -### /c /WX -Werror 2>&1 | FileCheck -check-prefix=CHECK_CL_7 %s
 
+// CHECK_CL_7: {{(unknown argument ignored in clang-cl).*}}-fixit
+// CHECK_CL_7: {{(unknown argument ignored in clang-cl).*}}-fixit=
 // CHECK_CL_7: {{(unknown argument ignored in clang-cl).*}}-fixit-recompile
 // CHECK_CL_7: {{(unknown argument ignored in clang-cl).*}}-fixit-to-temporary
 // CHECK_CL_7: {{(unknown argument ignored in clang-cl).*}}-fjmc
@@ -12579,6 +12671,7 @@
 // CHECK_CL_7: {{(unknown argument ignored in clang-cl).*}}-floop-interchange
 // CHECK_CL_7: {{(unknown argument ignored in clang-cl).*}}-fversion-loops-for-stride
 // CHECK_CL_7: {{(unknown argument ignored in clang-cl).*}}-flto-jobs=
+// CHECK_CL_7: {{(unknown argument ignored in clang-cl).*}}-flto-partitions=
 // CHECK_CL_7: {{(unknown argument ignored in clang-cl).*}}-flto-unit
 // CHECK_CL_7: {{(unknown argument ignored in clang-cl).*}}-flto-visibility-public-std
 // CHECK_CL_7: {{(unknown argument ignored in clang-cl).*}}-fmacro-prefix-map=
@@ -12610,6 +12703,7 @@
 // CHECK_CL_7: {{(unknown argument ignored in clang-cl).*}}-fmodules-debuginfo
 // CHECK_CL_7: {{(unknown argument ignored in clang-cl).*}}-fmodules-disable-diagnostic-validation
 // CHECK_CL_7: {{(unknown argument ignored in clang-cl).*}}-fmodules-embed-file=
+// CHECK_CL_7: {{(unknown argument ignored in clang-cl).*}}-fmodules-force-validate-user-headers
 // CHECK_CL_7: {{(unknown argument ignored in clang-cl).*}}-fmodules-hash-content
 // CHECK_CL_7: {{(unknown argument ignored in clang-cl).*}}-fmodules-local-submodule-visibility
 // CHECK_CL_7: {{(unknown argument ignored in clang-cl).*}}-fmodules-prune-after=
@@ -12657,12 +12751,12 @@
 // CHECK_CL_7: {{(unknown argument ignored in clang-cl).*}}-fno-apinotes
 // CHECK_CL_7: {{(unknown argument ignored in clang-cl).*}}-fno-apinotes-modules
 // CHECK_CL_7: {{(unknown argument ignored in clang-cl).*}}-fno-apple-pragma-pack
-// CHECK_CL_7: {{(unknown argument ignored in clang-cl).*}}-fno-application-extension
-// CHECK_CL_7: {{(unknown argument ignored in clang-cl).*}}-fno-approx-func
-// CHECK_CL_7: {{(unknown argument ignored in clang-cl).*}}-fno-asm
-// CHECK_CL_7: {{(unknown argument ignored in clang-cl).*}}-fno-asm-blocks
 
 // RUN: not %clang_cl  \
+// RUN:   -fno-application-extension \
+// RUN:   -fno-approx-func \
+// RUN:   -fno-asm \
+// RUN:   -fno-asm-blocks \
 // RUN:   -fno-associative-math \
 // RUN:   -fno-assume-nothrow-exception-dtor \
 // RUN:   -fno-assume-sane-operator-new \
@@ -12758,12 +12852,12 @@
 // RUN:   -fno-finite-math-only \
 // RUN:   -fno-inline-limit \
 // RUN:   -fno-fixed-point \
-// RUN:   -fno-float-store \
-// RUN:   -fno-for-scope \
-// RUN:   -fno-force-dwarf-frame \
-// RUN:   -fno-force-enable-int128 \
-// RUN:   -fno-friend-injection -### /c /WX -Werror 2>&1 | FileCheck -check-prefix=CHECK_CL_8 %s
+// RUN:   -fno-float-store -### /c /WX -Werror 2>&1 | FileCheck -check-prefix=CHECK_CL_8 %s
 
+// CHECK_CL_8: {{(unknown argument ignored in clang-cl).*}}-fno-application-extension
+// CHECK_CL_8: {{(unknown argument ignored in clang-cl).*}}-fno-approx-func
+// CHECK_CL_8: {{(unknown argument ignored in clang-cl).*}}-fno-asm
+// CHECK_CL_8: {{(unknown argument ignored in clang-cl).*}}-fno-asm-blocks
 // CHECK_CL_8: {{(unknown argument ignored in clang-cl).*}}-fno-associative-math
 // CHECK_CL_8: {{(unknown argument ignored in clang-cl).*}}-fno-assume-nothrow-exception-dtor
 // CHECK_CL_8: {{(unknown argument ignored in clang-cl).*}}-fno-assume-sane-operator-new
@@ -12860,12 +12954,12 @@
 // CHECK_CL_8: {{(unknown argument ignored in clang-cl).*}}-fno-inline-limit
 // CHECK_CL_8: {{(unknown argument ignored in clang-cl).*}}-fno-fixed-point
 // CHECK_CL_8: {{(unknown argument ignored in clang-cl).*}}-fno-float-store
-// CHECK_CL_8: {{(unknown argument ignored in clang-cl).*}}-fno-for-scope
-// CHECK_CL_8: {{(unknown argument ignored in clang-cl).*}}-fno-force-dwarf-frame
-// CHECK_CL_8: {{(unknown argument ignored in clang-cl).*}}-fno-force-enable-int128
-// CHECK_CL_8: {{(unknown argument ignored in clang-cl).*}}-fno-friend-injection
 
 // RUN: not %clang_cl  \
+// RUN:   -fno-for-scope \
+// RUN:   -fno-force-dwarf-frame \
+// RUN:   -fno-force-enable-int128 \
+// RUN:   -fno-friend-injection \
 // RUN:   -fno-frontend-optimize \
 // RUN:   -fno-function-attribute-list \
 // RUN:   -fno-function-sections \
@@ -12920,6 +13014,7 @@
 // RUN:   -fno-modulemap-allow-subdirectory-search \
 // RUN:   -fno-modules-check-relocated \
 // RUN:   -fno-modules-error-recovery \
+// RUN:   -fno-modules-force-validate-user-headers \
 // RUN:   -fno-modules-global-index \
 // RUN:   -fno-modules-prune-non-affecting-module-map-files \
 // RUN:   -fno-modules-share-filemanager \
@@ -12960,13 +13055,12 @@
 // RUN:   -fno-operator-names \
 // RUN:   -fno-optimize-sibling-calls \
 // RUN:   -fno-pack-derived \
-// RUN:   -fno-pack-struct \
-// RUN:   -fno-padding-on-unsigned-fixed-point \
-// RUN:   -fno-pascal-strings \
-// RUN:   -fno-pch-codegen \
-// RUN:   -fno-pch-debuginfo \
-// RUN:   -fno-pch-timestamp -### /c /WX -Werror 2>&1 | FileCheck -check-prefix=CHECK_CL_9 %s
+// RUN:   -fno-pack-struct -### /c /WX -Werror 2>&1 | FileCheck -check-prefix=CHECK_CL_9 %s
 
+// CHECK_CL_9: {{(unknown argument ignored in clang-cl).*}}-fno-for-scope
+// CHECK_CL_9: {{(unknown argument ignored in clang-cl).*}}-fno-force-dwarf-frame
+// CHECK_CL_9: {{(unknown argument ignored in clang-cl).*}}-fno-force-enable-int128
+// CHECK_CL_9: {{(unknown argument ignored in clang-cl).*}}-fno-friend-injection
 // CHECK_CL_9: {{(unknown argument ignored in clang-cl).*}}-fno-frontend-optimize
 // CHECK_CL_9: {{(unknown argument ignored in clang-cl).*}}-fno-function-attribute-list
 // CHECK_CL_9: {{(unknown argument ignored in clang-cl).*}}-fno-function-sections
@@ -13021,6 +13115,7 @@
 // CHECK_CL_9: {{(unknown argument ignored in clang-cl).*}}-fno-modulemap-allow-subdirectory-search
 // CHECK_CL_9: {{(unknown argument ignored in clang-cl).*}}-fno-modules-check-relocated
 // CHECK_CL_9: {{(unknown argument ignored in clang-cl).*}}-fno-modules-error-recovery
+// CHECK_CL_9: {{(unknown argument ignored in clang-cl).*}}-fno-modules-force-validate-user-headers
 // CHECK_CL_9: {{(unknown argument ignored in clang-cl).*}}-fno-modules-global-index
 // CHECK_CL_9: {{(unknown argument ignored in clang-cl).*}}-fno-modules-prune-non-affecting-module-map-files
 // CHECK_CL_9: {{(unknown argument ignored in clang-cl).*}}-fno-modules-share-filemanager
@@ -13062,13 +13157,13 @@
 // CHECK_CL_9: {{(unknown argument ignored in clang-cl).*}}-fno-optimize-sibling-calls
 // CHECK_CL_9: {{(unknown argument ignored in clang-cl).*}}-fno-pack-derived
 // CHECK_CL_9: {{(unknown argument ignored in clang-cl).*}}-fno-pack-struct
-// CHECK_CL_9: {{(unknown argument ignored in clang-cl).*}}-fno-padding-on-unsigned-fixed-point
-// CHECK_CL_9: {{(unknown argument ignored in clang-cl).*}}-fno-pascal-strings
-// CHECK_CL_9: {{(unknown argument ignored in clang-cl).*}}-fno-pch-codegen
-// CHECK_CL_9: {{(unknown argument ignored in clang-cl).*}}-fno-pch-debuginfo
-// CHECK_CL_9: {{(unknown argument ignored in clang-cl).*}}-fno-pch-timestamp
 
 // RUN: not %clang_cl  \
+// RUN:   -fno-padding-on-unsigned-fixed-point \
+// RUN:   -fno-pascal-strings \
+// RUN:   -fno-pch-codegen \
+// RUN:   -fno-pch-debuginfo \
+// RUN:   -fno-pch-timestamp \
 // RUN:   -fno_pch-validate-input-files-content \
 // RUN:   -fno-peel-loops \
 // RUN:   -fno-permissive \
@@ -13123,7 +13218,6 @@
 // RUN:   -fno-rename-registers \
 // RUN:   -fno-reorder-blocks \
 // RUN:   -fno-repack-arrays \
-// RUN:   -fno-retain-subst-template-type-parm-type-ast-nodes \
 // RUN:   -fno-rewrite-imports \
 // RUN:   -fno-rewrite-includes \
 // RUN:   -fno-ripa \
@@ -13164,12 +13258,13 @@
 // RUN:   -fno-stack-arrays \
 // RUN:   -fno-stack-check \
 // RUN:   -fno-stack-clash-protection \
-// RUN:   -fno-stack-protector \
-// RUN:   -fno-stack-size-section \
-// RUN:   -fno-strength-reduce \
-// RUN:   -fno-strict-enums \
-// RUN:   -fno-strict-float-cast-overflow -### /c /WX -Werror 2>&1 | FileCheck -check-prefix=CHECK_CL_10 %s
+// RUN:   -fno-stack-protector -### /c /WX -Werror 2>&1 | FileCheck -check-prefix=CHECK_CL_10 %s
 
+// CHECK_CL_10: {{(unknown argument ignored in clang-cl).*}}-fno-padding-on-unsigned-fixed-point
+// CHECK_CL_10: {{(unknown argument ignored in clang-cl).*}}-fno-pascal-strings
+// CHECK_CL_10: {{(unknown argument ignored in clang-cl).*}}-fno-pch-codegen
+// CHECK_CL_10: {{(unknown argument ignored in clang-cl).*}}-fno-pch-debuginfo
+// CHECK_CL_10: {{(unknown argument ignored in clang-cl).*}}-fno-pch-timestamp
 // CHECK_CL_10: {{(unknown argument ignored in clang-cl).*}}-fno_pch-validate-input-files-content
 // CHECK_CL_10: {{(unknown argument ignored in clang-cl).*}}-fno-peel-loops
 // CHECK_CL_10: {{(unknown argument ignored in clang-cl).*}}-fno-permissive
@@ -13224,7 +13319,6 @@
 // CHECK_CL_10: {{(unknown argument ignored in clang-cl).*}}-fno-rename-registers
 // CHECK_CL_10: {{(unknown argument ignored in clang-cl).*}}-fno-reorder-blocks
 // CHECK_CL_10: {{(unknown argument ignored in clang-cl).*}}-fno-repack-arrays
-// CHECK_CL_10: {{(unknown argument ignored in clang-cl).*}}-fno-retain-subst-template-type-parm-type-ast-nodes
 // CHECK_CL_10: {{(unknown argument ignored in clang-cl).*}}-fno-rewrite-imports
 // CHECK_CL_10: {{(unknown argument ignored in clang-cl).*}}-fno-rewrite-includes
 // CHECK_CL_10: {{(unknown argument ignored in clang-cl).*}}-fno-ripa
@@ -13266,12 +13360,13 @@
 // CHECK_CL_10: {{(unknown argument ignored in clang-cl).*}}-fno-stack-check
 // CHECK_CL_10: {{(unknown argument ignored in clang-cl).*}}-fno-stack-clash-protection
 // CHECK_CL_10: {{(unknown argument ignored in clang-cl).*}}-fno-stack-protector
-// CHECK_CL_10: {{(unknown argument ignored in clang-cl).*}}-fno-stack-size-section
-// CHECK_CL_10: {{(unknown argument ignored in clang-cl).*}}-fno-strength-reduce
-// CHECK_CL_10: {{(unknown argument ignored in clang-cl).*}}-fno-strict-enums
-// CHECK_CL_10: {{(unknown argument ignored in clang-cl).*}}-fno-strict-float-cast-overflow
 
 // RUN: not %clang_cl  \
+// RUN:   -fno-stack-repack-arrays \
+// RUN:   -fno-stack-size-section \
+// RUN:   -fno-strength-reduce \
+// RUN:   -fno-strict-enums \
+// RUN:   -fno-strict-float-cast-overflow \
 // RUN:   -fno-strict-return \
 // RUN:   -fno-strict-vtable-pointers \
 // RUN:   -fno-struct-path-tbaa \
@@ -13291,6 +13386,7 @@
 // RUN:   -fno-unique-basic-block-section-names \
 // RUN:   -fno-unique-internal-linkage-names \
 // RUN:   -fno-unique-section-names \
+// RUN:   -fno-unique-source-file-names \
 // RUN:   -fno-unroll-all-loops \
 // RUN:   -fno-unroll-loops \
 // RUN:   -fno-unsafe-loop-optimizations \
@@ -13317,6 +13413,7 @@
 // RUN:   -fno-web \
 // RUN:   -fno-whole-file \
 // RUN:   -fno-whole-program \
+// RUN:   -fno-winx64-eh-unwindv2 \
 // RUN:   -fno-working-directory \
 // RUN:   -fno-xl-pragma-pack \
 // RUN:   -fno-xor-operator \
@@ -13364,15 +13461,13 @@
 // RUN:   -fopenmp= \
 // RUN:   -fopenmp-assume-no-nested-parallelism \
 // RUN:   -fopenmp-assume-no-thread-state \
-// RUN:   -fopenmp-assume-teams-oversubscription \
-// RUN:   -fopenmp-assume-threads-oversubscription \
-// RUN:   -fopenmp-cuda-blocks-per-sm= \
-// RUN:   -fopenmp-cuda-mode \
-// RUN:   -fopenmp-cuda-number-of-sm= \
-// RUN:   -fopenmp-cuda-teams-reduction-recs-num= \
-// RUN:   -fopenmp-enable-irbuilder \
-// RUN:   -fopenmp-extensions -### /c /WX -Werror 2>&1 | FileCheck -check-prefix=CHECK_CL_11 %s
+// RUN:   -fopenmp-assume-teams-oversubscription -### /c /WX -Werror 2>&1 | FileCheck -check-prefix=CHECK_CL_11 %s
 
+// CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fno-stack-repack-arrays
+// CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fno-stack-size-section
+// CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fno-strength-reduce
+// CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fno-strict-enums
+// CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fno-strict-float-cast-overflow
 // CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fno-strict-return
 // CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fno-strict-vtable-pointers
 // CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fno-struct-path-tbaa
@@ -13392,6 +13487,7 @@
 // CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fno-unique-basic-block-section-names
 // CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fno-unique-internal-linkage-names
 // CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fno-unique-section-names
+// CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fno-unique-source-file-names
 // CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fno-unroll-all-loops
 // CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fno-unroll-loops
 // CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fno-unsafe-loop-optimizations
@@ -13418,6 +13514,7 @@
 // CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fno-web
 // CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fno-whole-file
 // CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fno-whole-program
+// CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fno-winx64-eh-unwindv2
 // CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fno-working-directory
 // CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fno-xl-pragma-pack
 // CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fno-xor-operator
@@ -13466,15 +13563,15 @@
 // CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fopenmp-assume-no-nested-parallelism
 // CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fopenmp-assume-no-thread-state
 // CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fopenmp-assume-teams-oversubscription
-// CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fopenmp-assume-threads-oversubscription
-// CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fopenmp-cuda-blocks-per-sm=
-// CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fopenmp-cuda-mode
-// CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fopenmp-cuda-number-of-sm=
-// CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fopenmp-cuda-teams-reduction-recs-num=
-// CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fopenmp-enable-irbuilder
-// CHECK_CL_11: {{(unknown argument ignored in clang-cl).*}}-fopenmp-extensions
 
 // RUN: not %clang_cl  \
+// RUN:   -fopenmp-assume-threads-oversubscription \
+// RUN:   -fopenmp-cuda-blocks-per-sm= \
+// RUN:   -fopenmp-cuda-mode \
+// RUN:   -fopenmp-cuda-number-of-sm= \
+// RUN:   -fopenmp-cuda-teams-reduction-recs-num= \
+// RUN:   -fopenmp-enable-irbuilder \
+// RUN:   -fopenmp-extensions \
 // RUN:   -fopenmp-force-usm \
 // RUN:   -fopenmp-host-ir-file-path \
 // RUN:   -fopenmp-is-target-device \
@@ -13510,6 +13607,7 @@
 // RUN:   -fpass-plugin= \
 // RUN:   -fpatchable-function-entry= \
 // RUN:   -fpatchable-function-entry-offset= \
+// RUN:   -fpatchable-function-entry-section= \
 // RUN:   -fpcc-struct-return \
 // RUN:   -fpch-codegen \
 // RUN:   -fpch-debuginfo \
@@ -13566,16 +13664,15 @@
 // RUN:   -fraw-string-literals \
 // RUN:   -freal-4-real-10 \
 // RUN:   -freal-4-real-16 \
-// RUN:   -freal-4-real-8 \
-// RUN:   -freal-8-real-10 \
-// RUN:   -freal-8-real-16 \
-// RUN:   -freal-8-real-4 \
-// RUN:   -frealloc-lhs \
-// RUN:   -freciprocal-math \
-// RUN:   -frecord-command-line \
-// RUN:   -frecord-marker= \
-// RUN:   -frecovery-ast -### /c /WX -Werror 2>&1 | FileCheck -check-prefix=CHECK_CL_12 %s
+// RUN:   -freal-4-real-8 -### /c /WX -Werror 2>&1 | FileCheck -check-prefix=CHECK_CL_12 %s
 
+// CHECK_CL_12: {{(unknown argument ignored in clang-cl).*}}-fopenmp-assume-threads-oversubscription
+// CHECK_CL_12: {{(unknown argument ignored in clang-cl).*}}-fopenmp-cuda-blocks-per-sm=
+// CHECK_CL_12: {{(unknown argument ignored in clang-cl).*}}-fopenmp-cuda-mode
+// CHECK_CL_12: {{(unknown argument ignored in clang-cl).*}}-fopenmp-cuda-number-of-sm=
+// CHECK_CL_12: {{(unknown argument ignored in clang-cl).*}}-fopenmp-cuda-teams-reduction-recs-num=
+// CHECK_CL_12: {{(unknown argument ignored in clang-cl).*}}-fopenmp-enable-irbuilder
+// CHECK_CL_12: {{(unknown argument ignored in clang-cl).*}}-fopenmp-extensions
 // CHECK_CL_12: {{(unknown argument ignored in clang-cl).*}}-fopenmp-force-usm
 // CHECK_CL_12: {{(unknown argument ignored in clang-cl).*}}-fopenmp-host-ir-file-path
 // CHECK_CL_12: {{(unknown argument ignored in clang-cl).*}}-fopenmp-is-target-device
@@ -13611,6 +13708,7 @@
 // CHECK_CL_12: {{(unknown argument ignored in clang-cl).*}}-fpass-plugin=
 // CHECK_CL_12: {{(unknown argument ignored in clang-cl).*}}-fpatchable-function-entry=
 // CHECK_CL_12: {{(unknown argument ignored in clang-cl).*}}-fpatchable-function-entry-offset=
+// CHECK_CL_12: {{(unknown argument ignored in clang-cl).*}}-fpatchable-function-entry-section=
 // CHECK_CL_12: {{(unknown argument ignored in clang-cl).*}}-fpcc-struct-return
 // CHECK_CL_12: {{(unknown argument ignored in clang-cl).*}}-fpch-codegen
 // CHECK_CL_12: {{(unknown argument ignored in clang-cl).*}}-fpch-debuginfo
@@ -13668,16 +13766,16 @@
 // CHECK_CL_12: {{(unknown argument ignored in clang-cl).*}}-freal-4-real-10
 // CHECK_CL_12: {{(unknown argument ignored in clang-cl).*}}-freal-4-real-16
 // CHECK_CL_12: {{(unknown argument ignored in clang-cl).*}}-freal-4-real-8
-// CHECK_CL_12: {{(unknown argument ignored in clang-cl).*}}-freal-8-real-10
-// CHECK_CL_12: {{(unknown argument ignored in clang-cl).*}}-freal-8-real-16
-// CHECK_CL_12: {{(unknown argument ignored in clang-cl).*}}-freal-8-real-4
-// CHECK_CL_12: {{(unknown argument ignored in clang-cl).*}}-frealloc-lhs
-// CHECK_CL_12: {{(unknown argument ignored in clang-cl).*}}-freciprocal-math
-// CHECK_CL_12: {{(unknown argument ignored in clang-cl).*}}-frecord-command-line
-// CHECK_CL_12: {{(unknown argument ignored in clang-cl).*}}-frecord-marker=
-// CHECK_CL_12: {{(unknown argument ignored in clang-cl).*}}-frecovery-ast
 
 // RUN: not %clang_cl  \
+// RUN:   -freal-8-real-10 \
+// RUN:   -freal-8-real-16 \
+// RUN:   -freal-8-real-4 \
+// RUN:   -frealloc-lhs \
+// RUN:   -freciprocal-math \
+// RUN:   -frecord-command-line \
+// RUN:   -frecord-marker= \
+// RUN:   -frecovery-ast \
 // RUN:   -frecovery-ast-type \
 // RUN:   -frecursive \
 // RUN:   -freg-struct-return \
@@ -13686,8 +13784,8 @@
 // RUN:   -frename-registers \
 // RUN:   -freorder-blocks \
 // RUN:   -frepack-arrays \
+// RUN:   -frepack-arrays-contiguity= \
 // RUN:   -fretain-comments-from-system-headers \
-// RUN:   -fretain-subst-template-type-parm-type-ast-nodes \
 // RUN:   -frewrite-imports \
 // RUN:   -frewrite-includes \
 // RUN:   -fripa \
@@ -13750,6 +13848,7 @@
 // RUN:   -fsplit-dwarf-inlining \
 // RUN:   -fsplit-machine-functions \
 // RUN:   -fsplit-stack \
+// RUN:   -fspv-extension= \
 // RUN:   -fspv-target-env= \
 // RUN:   -fstack-arrays \
 // RUN:   -fstack-check \
@@ -13757,6 +13856,7 @@
 // RUN:   -fstack-protector \
 // RUN:   -fstack-protector-all \
 // RUN:   -fstack-protector-strong \
+// RUN:   -fstack-repack-arrays \
 // RUN:   -fstack-size-section \
 // RUN:   -fstack-usage \
 // RUN:   -fstrength-reduce \
@@ -13767,18 +13867,16 @@
 // RUN:   -fstrict-vtable-pointers \
 // RUN:   -fstruct-path-tbaa \
 // RUN:   -fsycl-is-device \
-// RUN:   -fsycl-is-host \
-// RUN:   -fsymbol-partition= \
-// RUN:   -ftabstop \
-// RUN:   -ftabstop= \
-// RUN:   -ftemplate-backtrace-limit= \
-// RUN:   -ftemplate-depth= \
-// RUN:   -ftest-coverage \
-// RUN:   -ftest-module-file-extension= \
-// RUN:   -fthreadsafe-statics \
-// RUN:   -ftime-report \
-// RUN:   -ftime-report= -### /c /WX -Werror 2>&1 | FileCheck -check-prefix=CHECK_CL_13 %s
+// RUN:   -fsycl-is-host -### /c /WX -Werror 2>&1 | FileCheck -check-prefix=CHECK_CL_13 %s
 
+// CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-freal-8-real-10
+// CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-freal-8-real-16
+// CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-freal-8-real-4
+// CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-frealloc-lhs
+// CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-freciprocal-math
+// CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-frecord-command-line
+// CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-frecord-marker=
+// CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-frecovery-ast
 // CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-frecovery-ast-type
 // CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-frecursive
 // CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-freg-struct-return
@@ -13787,8 +13885,8 @@
 // CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-frename-registers
 // CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-freorder-blocks
 // CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-frepack-arrays
+// CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-frepack-arrays-contiguity=
 // CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-fretain-comments-from-system-headers
-// CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-fretain-subst-template-type-parm-type-ast-nodes
 // CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-frewrite-imports
 // CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-frewrite-includes
 // CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-fripa
@@ -13851,6 +13949,7 @@
 // CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-fsplit-dwarf-inlining
 // CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-fsplit-machine-functions
 // CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-fsplit-stack
+// CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-fspv-extension=
 // CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-fspv-target-env=
 // CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-fstack-arrays
 // CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-fstack-check
@@ -13858,6 +13957,7 @@
 // CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-fstack-protector
 // CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-fstack-protector-all
 // CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-fstack-protector-strong
+// CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-fstack-repack-arrays
 // CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-fstack-size-section
 // CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-fstack-usage
 // CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-fstrength-reduce
@@ -13869,18 +13969,19 @@
 // CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-fstruct-path-tbaa
 // CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-fsycl-is-device
 // CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-fsycl-is-host
-// CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-fsymbol-partition=
-// CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-ftabstop
-// CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-ftabstop=
-// CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-ftemplate-backtrace-limit=
-// CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-ftemplate-depth=
-// CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-ftest-coverage
-// CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-ftest-module-file-extension=
-// CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-fthreadsafe-statics
-// CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-ftime-report
-// CHECK_CL_13: {{(unknown argument ignored in clang-cl).*}}-ftime-report=
 
 // RUN: not %clang_cl  \
+// RUN:   -fsymbol-partition= \
+// RUN:   -ftabstop \
+// RUN:   -ftabstop= \
+// RUN:   -ftemplate-backtrace-limit= \
+// RUN:   -ftemplate-depth= \
+// RUN:   -ftest-coverage \
+// RUN:   -ftest-module-file-extension= \
+// RUN:   -fthreadsafe-statics \
+// RUN:   -ftime-report \
+// RUN:   -ftime-report= \
+// RUN:   -ftime-report-json \
 // RUN:   -ftls-model \
 // RUN:   -ftls-model= \
 // RUN:   -ftracer \
@@ -13902,6 +14003,7 @@
 // RUN:   -funique-basic-block-section-names \
 // RUN:   -funique-internal-linkage-names \
 // RUN:   -funique-section-names \
+// RUN:   -funique-source-file-names \
 // RUN:   -funknown-anytype \
 // RUN:   -funroll-all-loops \
 // RUN:   -funroll-loops \
@@ -13945,6 +14047,7 @@
 // RUN:   -fweb \
 // RUN:   -fwhole-file \
 // RUN:   -fwhole-program \
+// RUN:   -fwinx64-eh-unwindv2 \
 // RUN:   -fwritable-strings \
 // RUN:   -fxl-pragma-pack \
 // RUN:   -fxor-operator \
@@ -13967,21 +14070,19 @@
 // RUN:   -fzero-initialized-in-bss \
 // RUN:   -fzos-extensions \
 // RUN:   -fzvector \
-// RUN:   -g0 \
-// RUN:   -g1 \
-// RUN:   -g2 \
-// RUN:   -g3 \
-// RUN:   --gcc-install-dir= \
-// RUN:   --gcc-toolchain= \
-// RUN:   --gcc-triple= \
-// RUN:   -gcoff \
-// RUN:   -gdbx \
-// RUN:   -gdwarf32 \
-// RUN:   -gdwarf64 \
-// RUN:   -gdwarf-2 \
-// RUN:   -gdwarf-3 \
-// RUN:   -gdwarf-4 -### /c /WX -Werror 2>&1 | FileCheck -check-prefix=CHECK_CL_14 %s
+// RUN:   -g0 -### /c /WX -Werror 2>&1 | FileCheck -check-prefix=CHECK_CL_14 %s
 
+// CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-fsymbol-partition=
+// CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-ftabstop
+// CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-ftabstop=
+// CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-ftemplate-backtrace-limit=
+// CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-ftemplate-depth=
+// CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-ftest-coverage
+// CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-ftest-module-file-extension=
+// CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-fthreadsafe-statics
+// CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-ftime-report
+// CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-ftime-report=
+// CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-ftime-report-json
 // CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-ftls-model
 // CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-ftls-model=
 // CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-ftracer
@@ -14003,6 +14104,7 @@
 // CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-funique-basic-block-section-names
 // CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-funique-internal-linkage-names
 // CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-funique-section-names
+// CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-funique-source-file-names
 // CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-funknown-anytype
 // CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-funroll-all-loops
 // CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-funroll-loops
@@ -14046,6 +14148,7 @@
 // CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-fweb
 // CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-fwhole-file
 // CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-fwhole-program
+// CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-fwinx64-eh-unwindv2
 // CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-fwritable-strings
 // CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-fxl-pragma-pack
 // CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-fxor-operator
@@ -14069,21 +14172,21 @@
 // CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-fzos-extensions
 // CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-fzvector
 // CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-g0
-// CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-g1
-// CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-g2
-// CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-g3
-// CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}--gcc-install-dir=
-// CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}--gcc-toolchain=
-// CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}--gcc-triple=
-// CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-gcoff
-// CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-gdbx
-// CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-gdwarf32
-// CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-gdwarf64
-// CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-gdwarf-2
-// CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-gdwarf-3
-// CHECK_CL_14: {{(unknown argument ignored in clang-cl).*}}-gdwarf-4
 
 // RUN: not %clang_cl  \
+// RUN:   -g1 \
+// RUN:   -g2 \
+// RUN:   -g3 \
+// RUN:   --gcc-install-dir= \
+// RUN:   --gcc-toolchain= \
+// RUN:   --gcc-triple= \
+// RUN:   -gcoff \
+// RUN:   -gdbx \
+// RUN:   -gdwarf32 \
+// RUN:   -gdwarf64 \
+// RUN:   -gdwarf-2 \
+// RUN:   -gdwarf-3 \
+// RUN:   -gdwarf-4 \
 // RUN:   -gdwarf-5 \
 // RUN:   -gdwarf-aranges \
 // RUN:   -gembed-source \
@@ -14140,6 +14243,7 @@
 // RUN:   -install_name \
 // RUN:   -interface-stub-version= \
 // RUN:   -internal-externc-isystem \
+// RUN:   -internal-iframework \
 // RUN:   -internal-isystem \
 // RUN:   -iprefix \
 // RUN:   -iquote \
@@ -14167,24 +14271,23 @@
 // RUN:   -main-file-name \
 // RUN:   -mappletvos-version-min= \
 // RUN:   -mappletvsimulator-version-min= \
-// RUN:   -mapxf \
 // RUN:   -marm \
 // RUN:   -massembler-fatal-warnings \
-// RUN:   -massembler-no-warn \
-// RUN:   -mavx10.1 \
-// RUN:   -mavx10.2 \
-// RUN:   -mbranch-protection-pauth-lr \
-// RUN:   -mbranch-target-enforce \
-// RUN:   -mdebug-pass \
-// RUN:   -menable-no-infs \
-// RUN:   -menable-no-nans \
-// RUN:   -metal \
-// RUN:   -mfloat-abi \
-// RUN:   -mfpmath \
-// RUN:   -mframe-pointer= \
-// RUN:   -mguarded-control-stack \
-// RUN:   -no-finalize-removal -### /c /WX -Werror 2>&1 | FileCheck -check-prefix=CHECK_CL_15 %s
+// RUN:   -massembler-no-warn -### /c /WX -Werror 2>&1 | FileCheck -check-prefix=CHECK_CL_15 %s
 
+// CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-g1
+// CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-g2
+// CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-g3
+// CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}--gcc-install-dir=
+// CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}--gcc-toolchain=
+// CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}--gcc-triple=
+// CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-gcoff
+// CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-gdbx
+// CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-gdwarf32
+// CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-gdwarf64
+// CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-gdwarf-2
+// CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-gdwarf-3
+// CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-gdwarf-4
 // CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-gdwarf-5
 // CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-gdwarf-aranges
 // CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-gembed-source
@@ -14241,6 +14344,7 @@
 // CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-install_name
 // CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-interface-stub-version=
 // CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-internal-externc-isystem
+// CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-internal-iframework
 // CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-internal-isystem
 // CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-iprefix
 // CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-iquote
@@ -14268,25 +14372,22 @@
 // CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-main-file-name
 // CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-mappletvos-version-min=
 // CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-mappletvsimulator-version-min=
-// CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-mapxf
 // CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-marm
 // CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-massembler-fatal-warnings
 // CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-massembler-no-warn
-// CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-mavx10.1
-// CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-mavx10.2
-// CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-mbranch-protection-pauth-lr
-// CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-mbranch-target-enforce
-// CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-mdebug-pass
-// CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-menable-no-infs
-// CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-menable-no-nans
-// CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-metal
-// CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-mfloat-abi
-// CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-mfpmath
-// CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-mframe-pointer=
-// CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-mguarded-control-stack
-// CHECK_CL_15: {{(unknown argument ignored in clang-cl).*}}-no-finalize-removal
 
 // RUN: not %clang_cl  \
+// RUN:   -mbranch-protection-pauth-lr \
+// RUN:   -mbranch-target-enforce \
+// RUN:   -mdebug-pass \
+// RUN:   -menable-no-infs \
+// RUN:   -menable-no-nans \
+// RUN:   -metal \
+// RUN:   -mfloat-abi \
+// RUN:   -mfpmath \
+// RUN:   -mframe-pointer= \
+// RUN:   -mguarded-control-stack \
+// RUN:   -no-finalize-removal \
 // RUN:   -no-ns-alloc-error \
 // RUN:   -mlimit-float-precision \
 // RUN:   -mlink-bitcode-file \
@@ -14298,8 +14399,6 @@
 // RUN:   -mno-3dnow \
 // RUN:   -mno-3dnowa \
 // RUN:   -mno-80387 \
-// RUN:   -mno-apxf \
-// RUN:   -mno-avx10.1 \
 // RUN:   -mno-avx10.1-512 \
 // RUN:   -mnoexecstack \
 // RUN:   -mno-fmv \
@@ -14356,6 +14455,7 @@
 // RUN:   -no-code-completion-ns-level-decls \
 // RUN:   -no-cpp-precomp \
 // RUN:   -fno-c++-static-destructors \
+// RUN:   -no-disable-free \
 // RUN:   -no-emit-llvm-uselists \
 // RUN:   -no-enable-noundef-analysis \
 // RUN:   -no-implicit-float \
@@ -14376,18 +14476,19 @@
 // RUN:   -nogpuinc \
 // RUN:   -nogpulibc \
 // RUN:   -nohipwrapperinc \
-// RUN:   -nolibc \
-// RUN:   -nomultidefs \
-// RUN:   -nopie \
-// RUN:   -noprebind \
-// RUN:   -noprofilelib \
-// RUN:   -noseglinkedit \
-// RUN:   -nostartfiles \
-// RUN:   -nostdinc++ \
-// RUN:   -nostdlib \
-// RUN:   -nostdlibinc \
-// RUN:   -nostdlib++ -### /c /WX -Werror 2>&1 | FileCheck -check-prefix=CHECK_CL_16 %s
+// RUN:   -nolibc -### /c /WX -Werror 2>&1 | FileCheck -check-prefix=CHECK_CL_16 %s
 
+// CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-mbranch-protection-pauth-lr
+// CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-mbranch-target-enforce
+// CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-mdebug-pass
+// CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-menable-no-infs
+// CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-menable-no-nans
+// CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-metal
+// CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-mfloat-abi
+// CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-mfpmath
+// CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-mframe-pointer=
+// CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-mguarded-control-stack
+// CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-no-finalize-removal
 // CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-no-ns-alloc-error
 // CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-mlimit-float-precision
 // CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-mlink-bitcode-file
@@ -14399,8 +14500,6 @@
 // CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-mno-3dnow
 // CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-mno-3dnowa
 // CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-mno-80387
-// CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-mno-apxf
-// CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-mno-avx10.1
 // CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-mno-avx10.1-512
 // CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-mnoexecstack
 // CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-mno-fmv
@@ -14457,6 +14556,7 @@
 // CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-no-code-completion-ns-level-decls
 // CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-no-cpp-precomp
 // CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-fno-c++-static-destructors
+// CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-no-disable-free
 // CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-no-emit-llvm-uselists
 // CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-no-enable-noundef-analysis
 // CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-no-implicit-float
@@ -14478,18 +14578,18 @@
 // CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-nogpulibc
 // CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-nohipwrapperinc
 // CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-nolibc
-// CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-nomultidefs
-// CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-nopie
-// CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-noprebind
-// CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-noprofilelib
-// CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-noseglinkedit
-// CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-nostartfiles
-// CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-nostdinc++
-// CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-nostdlib
-// CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-nostdlibinc
-// CHECK_CL_16: {{(unknown argument ignored in clang-cl).*}}-nostdlib++
 
 // RUN: not %clang_cl  \
+// RUN:   -nomultidefs \
+// RUN:   -nopie \
+// RUN:   -noprebind \
+// RUN:   -noprofilelib \
+// RUN:   -noseglinkedit \
+// RUN:   -nostartfiles \
+// RUN:   -nostdinc++ \
+// RUN:   -nostdlib \
+// RUN:   -nostdlibinc \
+// RUN:   -nostdlib++ \
 // RUN:   -nostdsysteminc \
 // RUN:   -fexperimental-openacc-macro-override \
 // RUN:   -fexperimental-openacc-macro-override= \
@@ -14536,6 +14636,8 @@
 // RUN:   -relocatable-pch \
 // RUN:   -remap \
 // RUN:   -remap-file \
+// RUN:   -loader-replaceable-function= \
+// RUN:   -res-may-alias \
 // RUN:   -rewrite-legacy-objc \
 // RUN:   -rewrite-macros \
 // RUN:   -rewrite-objc \
@@ -14563,6 +14665,7 @@
 // RUN:   -segs_read_write_addr \
 // RUN:   -setup-static-analyzer \
 // RUN:   -shared \
+// RUN:   -shared-libflangrt \
 // RUN:   -shared-libgcc \
 // RUN:   -shared-libsan \
 // RUN:   -show-encoding \
@@ -14576,21 +14679,18 @@
 // RUN:   -spirv \
 // RUN:   -split-dwarf-file \
 // RUN:   -split-dwarf-output \
-// RUN:   -stack-protector \
-// RUN:   -stack-protector-buffer-size \
-// RUN:   -stack-usage-file \
-// RUN:   -startfiles \
-// RUN:   -static \
-// RUN:   -static-define \
-// RUN:   -static-libclosure \
-// RUN:   -static-libgcc \
-// RUN:   -static-libgfortran \
-// RUN:   -static-libsan \
-// RUN:   -static-libstdc++ \
-// RUN:   -static-openmp \
-// RUN:   -static-pie \
-// RUN:   -stats-file= -### /c /WX -Werror 2>&1 | FileCheck -check-prefix=CHECK_CL_17 %s
+// RUN:   -stack-protector -### /c /WX -Werror 2>&1 | FileCheck -check-prefix=CHECK_CL_17 %s
 
+// CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-nomultidefs
+// CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-nopie
+// CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-noprebind
+// CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-noprofilelib
+// CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-noseglinkedit
+// CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-nostartfiles
+// CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-nostdinc++
+// CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-nostdlib
+// CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-nostdlibinc
+// CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-nostdlib++
 // CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-nostdsysteminc
 // CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-fexperimental-openacc-macro-override
 // CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-fexperimental-openacc-macro-override=
@@ -14637,6 +14737,8 @@
 // CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-relocatable-pch
 // CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-remap
 // CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-remap-file
+// CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-loader-replaceable-function=
+// CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-res-may-alias
 // CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-rewrite-legacy-objc
 // CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-rewrite-macros
 // CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-rewrite-objc
@@ -14664,6 +14766,7 @@
 // CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-segs_read_write_addr
 // CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-setup-static-analyzer
 // CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-shared
+// CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-shared-libflangrt
 // CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-shared-libgcc
 // CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-shared-libsan
 // CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-show-encoding
@@ -14678,21 +14781,22 @@
 // CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-split-dwarf-file
 // CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-split-dwarf-output
 // CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-stack-protector
-// CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-stack-protector-buffer-size
-// CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-stack-usage-file
-// CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-startfiles
-// CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-static
-// CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-static-define
-// CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-static-libclosure
-// CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-static-libgcc
-// CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-static-libgfortran
-// CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-static-libsan
-// CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-static-libstdc++
-// CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-static-openmp
-// CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-static-pie
-// CHECK_CL_17: {{(unknown argument ignored in clang-cl).*}}-stats-file=
 
 // RUN: not %clang_cl  \
+// RUN:   -stack-protector-buffer-size \
+// RUN:   -stack-usage-file \
+// RUN:   -startfiles \
+// RUN:   -static \
+// RUN:   -static-define \
+// RUN:   -static-libclosure \
+// RUN:   -static-libflangrt \
+// RUN:   -static-libgcc \
+// RUN:   -static-libgfortran \
+// RUN:   -static-libsan \
+// RUN:   -static-libstdc++ \
+// RUN:   -static-openmp \
+// RUN:   -static-pie \
+// RUN:   -stats-file= \
 // RUN:   -stats-file-append \
 // RUN:   -std= \
 // RUN:   -std-default= \
@@ -14727,6 +14831,7 @@
 // RUN:   -undef \
 // RUN:   -undefined \
 // RUN:   -unexported_symbols_list \
+// RUN:   -funique-source-file-identifier= \
 // RUN:   -unwindlib= \
 // RUN:   -vectorize-loops \
 // RUN:   -vectorize-slp \
@@ -14740,6 +14845,20 @@
 // RUN:   -y \
 // RUN:   -z -### /c /WX -Werror 2>&1 | FileCheck -check-prefix=CHECK_CL_18 %s
 
+// CHECK_CL_18: {{(unknown argument ignored in clang-cl).*}}-stack-protector-buffer-size
+// CHECK_CL_18: {{(unknown argument ignored in clang-cl).*}}-stack-usage-file
+// CHECK_CL_18: {{(unknown argument ignored in clang-cl).*}}-startfiles
+// CHECK_CL_18: {{(unknown argument ignored in clang-cl).*}}-static
+// CHECK_CL_18: {{(unknown argument ignored in clang-cl).*}}-static-define
+// CHECK_CL_18: {{(unknown argument ignored in clang-cl).*}}-static-libclosure
+// CHECK_CL_18: {{(unknown argument ignored in clang-cl).*}}-static-libflangrt
+// CHECK_CL_18: {{(unknown argument ignored in clang-cl).*}}-static-libgcc
+// CHECK_CL_18: {{(unknown argument ignored in clang-cl).*}}-static-libgfortran
+// CHECK_CL_18: {{(unknown argument ignored in clang-cl).*}}-static-libsan
+// CHECK_CL_18: {{(unknown argument ignored in clang-cl).*}}-static-libstdc++
+// CHECK_CL_18: {{(unknown argument ignored in clang-cl).*}}-static-openmp
+// CHECK_CL_18: {{(unknown argument ignored in clang-cl).*}}-static-pie
+// CHECK_CL_18: {{(unknown argument ignored in clang-cl).*}}-stats-file=
 // CHECK_CL_18: {{(unknown argument ignored in clang-cl).*}}-stats-file-append
 // CHECK_CL_18: {{(unknown argument ignored in clang-cl).*}}-std=
 // CHECK_CL_18: {{(unknown argument ignored in clang-cl).*}}-std-default=
@@ -14774,6 +14893,7 @@
 // CHECK_CL_18: {{(unknown argument ignored in clang-cl).*}}-undef
 // CHECK_CL_18: {{(unknown argument ignored in clang-cl).*}}-undefined
 // CHECK_CL_18: {{(unknown argument ignored in clang-cl).*}}-unexported_symbols_list
+// CHECK_CL_18: {{(unknown argument ignored in clang-cl).*}}-funique-source-file-identifier=
 // CHECK_CL_18: {{(unknown argument ignored in clang-cl).*}}-unwindlib=
 // CHECK_CL_18: {{(unknown argument ignored in clang-cl).*}}-vectorize-loops
 // CHECK_CL_18: {{(unknown argument ignored in clang-cl).*}}-vectorize-slp
@@ -15203,11 +15323,13 @@
 // RUN:   -d2 \
 // RUN:   -d2FastFail \
 // RUN:   -d2Zi+ \
+// RUN:   -d2epilogunwind \
 // RUN:   -diagnostics:caret \
 // RUN:   -diagnostics:classic \
 // RUN:   -diagnostics:column \
 // RUN:   -diasdkdir \
 // RUN:   -doc \
+// RUN:   -dynamicdeopt \
 // RUN:   -errorReport \
 // RUN:   -execution-charset: \
 // RUN:   -experimental: \
@@ -15230,6 +15352,7 @@
 // RUN:   -fp:strict \
 // RUN:   -fsanitize=address \
 // RUN:   -fsanitize-address-use-after-return \
+// RUN:   -funcoverride: \
 // RUN:   -guard: \
 // RUN:   -headerUnit \
 // RUN:   -headerUnit:angle \
@@ -15290,10 +15413,7 @@
 // RUN:   --bootclasspath= \
 // RUN:   --classpath \
 // RUN:   --classpath= \
-// RUN:   --comments \
-// RUN:   --comments-in-macros \
-// RUN:   --compile \
-// RUN:   --constant-cfstrings -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_2 %s
+// RUN:   --comments -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_2 %s
 
 // CHECK_DXC_2: {{(unknown argument).*}}-clang:
 // CHECK_DXC_2: {{(unknown argument).*}}-clr
@@ -15304,11 +15424,13 @@
 // CHECK_DXC_2: {{(unknown argument).*}}-d2
 // CHECK_DXC_2: {{(unknown argument).*}}-d2FastFail
 // CHECK_DXC_2: {{(unknown argument).*}}-d2Zi+
+// CHECK_DXC_2: {{(unknown argument).*}}-d2epilogunwind
 // CHECK_DXC_2: {{(unknown argument).*}}-diagnostics:caret
 // CHECK_DXC_2: {{(unknown argument).*}}-diagnostics:classic
 // CHECK_DXC_2: {{(unknown argument).*}}-diagnostics:column
 // CHECK_DXC_2: {{(unknown argument).*}}-diasdkdir
 // CHECK_DXC_2: {{(unknown argument).*}}-doc
+// CHECK_DXC_2: {{(unknown argument).*}}-dynamicdeopt
 // CHECK_DXC_2: {{(unknown argument).*}}-errorReport
 // CHECK_DXC_2: {{(unknown argument).*}}-execution-charset:
 // CHECK_DXC_2: {{(unknown argument).*}}-experimental:
@@ -15331,6 +15453,7 @@
 // CHECK_DXC_2: {{(unknown argument).*}}-fp:strict
 // CHECK_DXC_2: {{(unknown argument).*}}-fsanitize=address
 // CHECK_DXC_2: {{(unknown argument).*}}-fsanitize-address-use-after-return
+// CHECK_DXC_2: {{(unknown argument).*}}-funcoverride:
 // CHECK_DXC_2: {{(unknown argument).*}}-guard:
 // CHECK_DXC_2: {{(unknown argument).*}}-headerUnit
 // CHECK_DXC_2: {{(unknown argument).*}}-headerUnit:angle
@@ -15392,11 +15515,11 @@
 // CHECK_DXC_2: {{(unknown argument).*}}--classpath
 // CHECK_DXC_2: {{(unknown argument).*}}--classpath=
 // CHECK_DXC_2: {{(unknown argument).*}}--comments
-// CHECK_DXC_2: {{(unknown argument).*}}--comments-in-macros
-// CHECK_DXC_2: {{(unknown argument).*}}--compile
-// CHECK_DXC_2: {{(unknown argument).*}}--constant-cfstrings
 
 // RUN: not %clang_dxc  \
+// RUN:   --comments-in-macros \
+// RUN:   --compile \
+// RUN:   --constant-cfstrings \
 // RUN:   --debug \
 // RUN:   --debug= \
 // RUN:   --define-macro \
@@ -15493,11 +15616,11 @@
 // RUN:   -analyzer-checker= \
 // RUN:   -analyzer-checker-help \
 // RUN:   -analyzer-checker-help-alpha \
-// RUN:   -analyzer-checker-help-developer \
-// RUN:   -analyzer-checker-option-help \
-// RUN:   -analyzer-checker-option-help-alpha \
-// RUN:   -analyzer-checker-option-help-developer -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_3 %s
+// RUN:   -analyzer-checker-help-developer -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_3 %s
 
+// CHECK_DXC_3: {{(unknown argument).*}}--comments-in-macros
+// CHECK_DXC_3: {{(unknown argument).*}}--compile
+// CHECK_DXC_3: {{(unknown argument).*}}--constant-cfstrings
 // CHECK_DXC_3: {{(unknown argument).*}}--debug
 // CHECK_DXC_3: {{(unknown argument).*}}--debug=
 // CHECK_DXC_3: {{(unknown argument).*}}--define-macro
@@ -15595,11 +15718,11 @@
 // CHECK_DXC_3: {{(unknown argument).*}}-analyzer-checker-help
 // CHECK_DXC_3: {{(unknown argument).*}}-analyzer-checker-help-alpha
 // CHECK_DXC_3: {{(unknown argument).*}}-analyzer-checker-help-developer
-// CHECK_DXC_3: {{(unknown argument).*}}-analyzer-checker-option-help
-// CHECK_DXC_3: {{(unknown argument).*}}-analyzer-checker-option-help-alpha
-// CHECK_DXC_3: {{(unknown argument).*}}-analyzer-checker-option-help-developer
 
 // RUN: not %clang_dxc  \
+// RUN:   -analyzer-checker-option-help \
+// RUN:   -analyzer-checker-option-help-alpha \
+// RUN:   -analyzer-checker-option-help-developer \
 // RUN:   -analyzer-config \
 // RUN:   -analyzer-config-compatibility-mode \
 // RUN:   -analyzer-config-compatibility-mode= \
@@ -15633,8 +15756,8 @@
 // RUN:   -fno-aligned-new \
 // RUN:   -fsched-interblock \
 // RUN:   -fcuda-rdc \
-// RUN:   -fno-cuda-rdc \
 // RUN:   -ftemplate-depth- \
+// RUN:   -fno-cuda-rdc \
 // RUN:   -ftree-vectorize \
 // RUN:   -fno-tree-vectorize \
 // RUN:   -ftree-slp-vectorize \
@@ -15673,8 +15796,8 @@
 // RUN:   -static-libasan \
 // RUN:   -fslp-vectorize-aggressive \
 // RUN:   -frecord-gcc-switches \
-// RUN:   -fno-record-gcc-switches \
 // RUN:   -fno-slp-vectorize-aggressive \
+// RUN:   -fno-record-gcc-switches \
 // RUN:   -Xparser \
 // RUN:   -Xcompiler \
 // RUN:   -fexpensive-optimizations \
@@ -15696,11 +15819,11 @@
 // RUN:   -as-secure-log-file \
 // RUN:   -ast-dump \
 // RUN:   -ast-dump= \
-// RUN:   -ast-dump-all \
-// RUN:   -ast-dump-all= \
-// RUN:   -ast-dump-decl-types \
-// RUN:   -ast-dump-filter -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_4 %s
+// RUN:   -ast-dump-all -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_4 %s
 
+// CHECK_DXC_4: {{(unknown argument).*}}-analyzer-checker-option-help
+// CHECK_DXC_4: {{(unknown argument).*}}-analyzer-checker-option-help-alpha
+// CHECK_DXC_4: {{(unknown argument).*}}-analyzer-checker-option-help-developer
 // CHECK_DXC_4: {{(unknown argument).*}}-analyzer-config
 // CHECK_DXC_4: {{(unknown argument).*}}-analyzer-config-compatibility-mode
 // CHECK_DXC_4: {{(unknown argument).*}}-analyzer-config-compatibility-mode=
@@ -15734,8 +15857,8 @@
 // CHECK_DXC_4: {{(unknown argument).*}}-fno-aligned-new
 // CHECK_DXC_4: {{(unknown argument).*}}-fsched-interblock
 // CHECK_DXC_4: {{(unknown argument).*}}-fcuda-rdc
-// CHECK_DXC_4: {{(unknown argument).*}}-fno-cuda-rdc
 // CHECK_DXC_4: {{(unknown argument).*}}-ftemplate-depth-
+// CHECK_DXC_4: {{(unknown argument).*}}-fno-cuda-rdc
 // CHECK_DXC_4: {{(unknown argument).*}}-ftree-vectorize
 // CHECK_DXC_4: {{(unknown argument).*}}-fno-tree-vectorize
 // CHECK_DXC_4: {{(unknown argument).*}}-ftree-slp-vectorize
@@ -15774,8 +15897,8 @@
 // CHECK_DXC_4: {{(unknown argument).*}}-static-libasan
 // CHECK_DXC_4: {{(unknown argument).*}}-fslp-vectorize-aggressive
 // CHECK_DXC_4: {{(unknown argument).*}}-frecord-gcc-switches
-// CHECK_DXC_4: {{(unknown argument).*}}-fno-record-gcc-switches
 // CHECK_DXC_4: {{(unknown argument).*}}-fno-slp-vectorize-aggressive
+// CHECK_DXC_4: {{(unknown argument).*}}-fno-record-gcc-switches
 // CHECK_DXC_4: {{(unknown argument).*}}-Xparser
 // CHECK_DXC_4: {{(unknown argument).*}}-Xcompiler
 // CHECK_DXC_4: {{(unknown argument).*}}-fexpensive-optimizations
@@ -15798,11 +15921,11 @@
 // CHECK_DXC_4: {{(unknown argument).*}}-ast-dump
 // CHECK_DXC_4: {{(unknown argument).*}}-ast-dump=
 // CHECK_DXC_4: {{(unknown argument).*}}-ast-dump-all
-// CHECK_DXC_4: {{(unknown argument).*}}-ast-dump-all=
-// CHECK_DXC_4: {{(unknown argument).*}}-ast-dump-decl-types
-// CHECK_DXC_4: {{(unknown argument).*}}-ast-dump-filter
 
 // RUN: not %clang_dxc  \
+// RUN:   -ast-dump-all= \
+// RUN:   -ast-dump-decl-types \
+// RUN:   -ast-dump-filter \
 // RUN:   -ast-dump-filter= \
 // RUN:   -ast-dump-lookups \
 // RUN:   -ast-list \
@@ -15899,11 +16022,11 @@
 // RUN:   -diagnostic-log-file \
 // RUN:   -serialize-diagnostic-file \
 // RUN:   -disable-O0-optnone \
-// RUN:   -disable-free \
-// RUN:   -disable-lifetime-markers \
-// RUN:   -disable-llvm-optzns \
-// RUN:   -disable-llvm-passes -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_5 %s
+// RUN:   -disable-free -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_5 %s
 
+// CHECK_DXC_5: {{(unknown argument).*}}-ast-dump-all=
+// CHECK_DXC_5: {{(unknown argument).*}}-ast-dump-decl-types
+// CHECK_DXC_5: {{(unknown argument).*}}-ast-dump-filter
 // CHECK_DXC_5: {{(unknown argument).*}}-ast-dump-filter=
 // CHECK_DXC_5: {{(unknown argument).*}}-ast-dump-lookups
 // CHECK_DXC_5: {{(unknown argument).*}}-ast-list
@@ -16001,11 +16124,11 @@
 // CHECK_DXC_5: {{(unknown argument).*}}-serialize-diagnostic-file
 // CHECK_DXC_5: {{(unknown argument).*}}-disable-O0-optnone
 // CHECK_DXC_5: {{(unknown argument).*}}-disable-free
-// CHECK_DXC_5: {{(unknown argument).*}}-disable-lifetime-markers
-// CHECK_DXC_5: {{(unknown argument).*}}-disable-llvm-optzns
-// CHECK_DXC_5: {{(unknown argument).*}}-disable-llvm-passes
 
 // RUN: not %clang_dxc  \
+// RUN:   -disable-lifetime-markers \
+// RUN:   -disable-llvm-optzns \
+// RUN:   -disable-llvm-passes \
 // RUN:   -disable-llvm-verifier \
 // RUN:   -disable-objc-default-synthesize-properties \
 // RUN:   -disable-pragma-debug-crash \
@@ -16014,6 +16137,7 @@
 // RUN:   -dsym-dir \
 // RUN:   -dump-coverage-mapping \
 // RUN:   -dump-deserialized-decls \
+// RUN:   -dump-minimization-hints= \
 // RUN:   -dump-raw-tokens \
 // RUN:   -dump-tokens \
 // RUN:   -dumpdir \
@@ -16101,12 +16225,11 @@
 // RUN:   -fapinotes-modules \
 // RUN:   -fapinotes-swift-version= \
 // RUN:   -fapple-kext \
-// RUN:   -fapple-link-rtlib \
-// RUN:   -fapple-pragma-pack \
-// RUN:   -fapplication-extension \
-// RUN:   -fapply-global-visibility-to-externs \
-// RUN:   -fapprox-func -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_6 %s
+// RUN:   -fapple-link-rtlib -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_6 %s
 
+// CHECK_DXC_6: {{(unknown argument).*}}-disable-lifetime-markers
+// CHECK_DXC_6: {{(unknown argument).*}}-disable-llvm-optzns
+// CHECK_DXC_6: {{(unknown argument).*}}-disable-llvm-passes
 // CHECK_DXC_6: {{(unknown argument).*}}-disable-llvm-verifier
 // CHECK_DXC_6: {{(unknown argument).*}}-disable-objc-default-synthesize-properties
 // CHECK_DXC_6: {{(unknown argument).*}}-disable-pragma-debug-crash
@@ -16115,6 +16238,7 @@
 // CHECK_DXC_6: {{(unknown argument).*}}-dsym-dir
 // CHECK_DXC_6: {{(unknown argument).*}}-dump-coverage-mapping
 // CHECK_DXC_6: {{(unknown argument).*}}-dump-deserialized-decls
+// CHECK_DXC_6: {{(unknown argument).*}}-dump-minimization-hints=
 // CHECK_DXC_6: {{(unknown argument).*}}-dump-raw-tokens
 // CHECK_DXC_6: {{(unknown argument).*}}-dump-tokens
 // CHECK_DXC_6: {{(unknown argument).*}}-dumpdir
@@ -16203,12 +16327,12 @@
 // CHECK_DXC_6: {{(unknown argument).*}}-fapinotes-swift-version=
 // CHECK_DXC_6: {{(unknown argument).*}}-fapple-kext
 // CHECK_DXC_6: {{(unknown argument).*}}-fapple-link-rtlib
-// CHECK_DXC_6: {{(unknown argument).*}}-fapple-pragma-pack
-// CHECK_DXC_6: {{(unknown argument).*}}-fapplication-extension
-// CHECK_DXC_6: {{(unknown argument).*}}-fapply-global-visibility-to-externs
-// CHECK_DXC_6: {{(unknown argument).*}}-fapprox-func
 
 // RUN: not %clang_dxc  \
+// RUN:   -fapple-pragma-pack \
+// RUN:   -fapplication-extension \
+// RUN:   -fapply-global-visibility-to-externs \
+// RUN:   -fapprox-func \
 // RUN:   -fasm \
 // RUN:   -fasm-blocks \
 // RUN:   -fassociative-math \
@@ -16304,12 +16428,12 @@
 // RUN:   -fcuda-flush-denormals-to-zero \
 // RUN:   -fcuda-include-gpubinary \
 // RUN:   -fcuda-is-device \
-// RUN:   -fcuda-short-ptr \
-// RUN:   -fcx-fortran-rules \
-// RUN:   -fcx-limited-range \
-// RUN:   -fc++-abi= \
-// RUN:   -fcxx-exceptions -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_7 %s
+// RUN:   -fcuda-short-ptr -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_7 %s
 
+// CHECK_DXC_7: {{(unknown argument).*}}-fapple-pragma-pack
+// CHECK_DXC_7: {{(unknown argument).*}}-fapplication-extension
+// CHECK_DXC_7: {{(unknown argument).*}}-fapply-global-visibility-to-externs
+// CHECK_DXC_7: {{(unknown argument).*}}-fapprox-func
 // CHECK_DXC_7: {{(unknown argument).*}}-fasm
 // CHECK_DXC_7: {{(unknown argument).*}}-fasm-blocks
 // CHECK_DXC_7: {{(unknown argument).*}}-fassociative-math
@@ -16406,12 +16530,12 @@
 // CHECK_DXC_7: {{(unknown argument).*}}-fcuda-include-gpubinary
 // CHECK_DXC_7: {{(unknown argument).*}}-fcuda-is-device
 // CHECK_DXC_7: {{(unknown argument).*}}-fcuda-short-ptr
-// CHECK_DXC_7: {{(unknown argument).*}}-fcx-fortran-rules
-// CHECK_DXC_7: {{(unknown argument).*}}-fcx-limited-range
-// CHECK_DXC_7: {{(unknown argument).*}}-fc++-abi=
-// CHECK_DXC_7: {{(unknown argument).*}}-fcxx-exceptions
 
 // RUN: not %clang_dxc  \
+// RUN:   -fcx-fortran-rules \
+// RUN:   -fcx-limited-range \
+// RUN:   -fc++-abi= \
+// RUN:   -fcxx-exceptions \
 // RUN:   -fcxx-modules \
 // RUN:   -fd-lines-as-code \
 // RUN:   -fd-lines-as-comments \
@@ -16480,6 +16604,7 @@
 // RUN:   -fdisable-module-hash \
 // RUN:   -fdisable-real-10 \
 // RUN:   -fdisable-real-3 \
+// RUN:   -fdo-concurrent-to-openmp= \
 // RUN:   -fdollar-ok \
 // RUN:   -fdollars-in-identifiers \
 // RUN:   -fdouble-square-bracket-attributes \
@@ -16506,13 +16631,12 @@
 // RUN:   -femit-dwarf-unwind= \
 // RUN:   -femulated-tls \
 // RUN:   -fenable-matrix \
-// RUN:   -fencode-extended-block-signature \
-// RUN:   -fencoding= \
-// RUN:   -ferror-limit \
-// RUN:   -fescaping-block-tail-calls \
-// RUN:   -fexceptions \
-// RUN:   -fexcess-precision= -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_8 %s
+// RUN:   -fencode-extended-block-signature -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_8 %s
 
+// CHECK_DXC_8: {{(unknown argument).*}}-fcx-fortran-rules
+// CHECK_DXC_8: {{(unknown argument).*}}-fcx-limited-range
+// CHECK_DXC_8: {{(unknown argument).*}}-fc++-abi=
+// CHECK_DXC_8: {{(unknown argument).*}}-fcxx-exceptions
 // CHECK_DXC_8: {{(unknown argument).*}}-fcxx-modules
 // CHECK_DXC_8: {{(unknown argument).*}}-fd-lines-as-code
 // CHECK_DXC_8: {{(unknown argument).*}}-fd-lines-as-comments
@@ -16581,6 +16705,7 @@
 // CHECK_DXC_8: {{(unknown argument).*}}-fdisable-module-hash
 // CHECK_DXC_8: {{(unknown argument).*}}-fdisable-real-10
 // CHECK_DXC_8: {{(unknown argument).*}}-fdisable-real-3
+// CHECK_DXC_8: {{(unknown argument).*}}-fdo-concurrent-to-openmp=
 // CHECK_DXC_8: {{(unknown argument).*}}-fdollar-ok
 // CHECK_DXC_8: {{(unknown argument).*}}-fdollars-in-identifiers
 // CHECK_DXC_8: {{(unknown argument).*}}-fdouble-square-bracket-attributes
@@ -16608,13 +16733,13 @@
 // CHECK_DXC_8: {{(unknown argument).*}}-femulated-tls
 // CHECK_DXC_8: {{(unknown argument).*}}-fenable-matrix
 // CHECK_DXC_8: {{(unknown argument).*}}-fencode-extended-block-signature
-// CHECK_DXC_8: {{(unknown argument).*}}-fencoding=
-// CHECK_DXC_8: {{(unknown argument).*}}-ferror-limit
-// CHECK_DXC_8: {{(unknown argument).*}}-fescaping-block-tail-calls
-// CHECK_DXC_8: {{(unknown argument).*}}-fexceptions
-// CHECK_DXC_8: {{(unknown argument).*}}-fexcess-precision=
 
 // RUN: not %clang_dxc  \
+// RUN:   -fencoding= \
+// RUN:   -ferror-limit \
+// RUN:   -fescaping-block-tail-calls \
+// RUN:   -fexceptions \
+// RUN:   -fexcess-precision= \
 // RUN:   -fexec-charset= \
 // RUN:   -fexperimental-assignment-tracking= \
 // RUN:   -fexperimental-isel \
@@ -16709,13 +16834,13 @@
 // RUN:   -ffixed-x2 \
 // RUN:   -ffixed-x20 \
 // RUN:   -ffixed-x21 \
-// RUN:   -ffixed-x22 \
-// RUN:   -ffixed-x23 \
-// RUN:   -ffixed-x24 \
-// RUN:   -ffixed-x25 \
-// RUN:   -ffixed-x26 \
-// RUN:   -ffixed-x27 -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_9 %s
+// RUN:   -ffixed-x22 -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_9 %s
 
+// CHECK_DXC_9: {{(unknown argument).*}}-fencoding=
+// CHECK_DXC_9: {{(unknown argument).*}}-ferror-limit
+// CHECK_DXC_9: {{(unknown argument).*}}-fescaping-block-tail-calls
+// CHECK_DXC_9: {{(unknown argument).*}}-fexceptions
+// CHECK_DXC_9: {{(unknown argument).*}}-fexcess-precision=
 // CHECK_DXC_9: {{(unknown argument).*}}-fexec-charset=
 // CHECK_DXC_9: {{(unknown argument).*}}-fexperimental-assignment-tracking=
 // CHECK_DXC_9: {{(unknown argument).*}}-fexperimental-isel
@@ -16811,13 +16936,13 @@
 // CHECK_DXC_9: {{(unknown argument).*}}-ffixed-x20
 // CHECK_DXC_9: {{(unknown argument).*}}-ffixed-x21
 // CHECK_DXC_9: {{(unknown argument).*}}-ffixed-x22
-// CHECK_DXC_9: {{(unknown argument).*}}-ffixed-x23
-// CHECK_DXC_9: {{(unknown argument).*}}-ffixed-x24
-// CHECK_DXC_9: {{(unknown argument).*}}-ffixed-x25
-// CHECK_DXC_9: {{(unknown argument).*}}-ffixed-x26
-// CHECK_DXC_9: {{(unknown argument).*}}-ffixed-x27
 
 // RUN: not %clang_dxc  \
+// RUN:   -ffixed-x23 \
+// RUN:   -ffixed-x24 \
+// RUN:   -ffixed-x25 \
+// RUN:   -ffixed-x26 \
+// RUN:   -ffixed-x27 \
 // RUN:   -ffixed-x28 \
 // RUN:   -ffixed-x29 \
 // RUN:   -ffixed-x3 \
@@ -16912,13 +17037,13 @@
 // RUN:   -finstrument-function-entry-bare \
 // RUN:   -finstrument-functions \
 // RUN:   -finstrument-functions-after-inlining \
-// RUN:   -finteger-4-integer-8 \
-// RUN:   -fintegrated-as \
-// RUN:   -fintegrated-objemitter \
-// RUN:   -fintrinsic-modules-path \
-// RUN:   -fipa-cp \
-// RUN:   -fivopts -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_10 %s
+// RUN:   -finteger-4-integer-8 -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_10 %s
 
+// CHECK_DXC_10: {{(unknown argument).*}}-ffixed-x23
+// CHECK_DXC_10: {{(unknown argument).*}}-ffixed-x24
+// CHECK_DXC_10: {{(unknown argument).*}}-ffixed-x25
+// CHECK_DXC_10: {{(unknown argument).*}}-ffixed-x26
+// CHECK_DXC_10: {{(unknown argument).*}}-ffixed-x27
 // CHECK_DXC_10: {{(unknown argument).*}}-ffixed-x28
 // CHECK_DXC_10: {{(unknown argument).*}}-ffixed-x29
 // CHECK_DXC_10: {{(unknown argument).*}}-ffixed-x3
@@ -17014,13 +17139,13 @@
 // CHECK_DXC_10: {{(unknown argument).*}}-finstrument-functions
 // CHECK_DXC_10: {{(unknown argument).*}}-finstrument-functions-after-inlining
 // CHECK_DXC_10: {{(unknown argument).*}}-finteger-4-integer-8
-// CHECK_DXC_10: {{(unknown argument).*}}-fintegrated-as
-// CHECK_DXC_10: {{(unknown argument).*}}-fintegrated-objemitter
-// CHECK_DXC_10: {{(unknown argument).*}}-fintrinsic-modules-path
-// CHECK_DXC_10: {{(unknown argument).*}}-fipa-cp
-// CHECK_DXC_10: {{(unknown argument).*}}-fivopts
 
 // RUN: not %clang_dxc  \
+// RUN:   -fintegrated-as \
+// RUN:   -fintegrated-objemitter \
+// RUN:   -fintrinsic-modules-path \
+// RUN:   -fipa-cp \
+// RUN:   -fivopts \
 // RUN:   -fix-only-warnings \
 // RUN:   -fix-what-you-can \
 // RUN:   -fixit \
@@ -17047,7 +17172,7 @@
 // RUN:   -flto=auto \
 // RUN:   -flto=jobserver \
 // RUN:   -flto-jobs= \
-// RUN:   --flto-partitions= \
+// RUN:   -flto-partitions= \
 // RUN:   -flto-unit \
 // RUN:   -flto-visibility-public-std \
 // RUN:   -fmacro-backtrace-limit= \
@@ -17095,6 +17220,7 @@
 // RUN:   -fmodules-disable-diagnostic-validation \
 // RUN:   -fmodules-embed-all-files \
 // RUN:   -fmodules-embed-file= \
+// RUN:   -fmodules-force-validate-user-headers \
 // RUN:   -fmodules-hash-content \
 // RUN:   -fmodules-ignore-macro= \
 // RUN:   -fmodules-local-submodule-visibility \
@@ -17114,14 +17240,13 @@
 // RUN:   -fms-compatibility \
 // RUN:   -fms-compatibility-version= \
 // RUN:   -fms-define-stdc \
-// RUN:   -fms-extensions \
-// RUN:   -fms-hotpatch \
-// RUN:   -fms-kernel \
-// RUN:   -fms-memptr-rep= \
-// RUN:   -fms-omit-default-lib \
-// RUN:   -fms-runtime-lib= \
-// RUN:   -fms-tls-guards -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_11 %s
+// RUN:   -fms-extensions -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_11 %s
 
+// CHECK_DXC_11: {{(unknown argument).*}}-fintegrated-as
+// CHECK_DXC_11: {{(unknown argument).*}}-fintegrated-objemitter
+// CHECK_DXC_11: {{(unknown argument).*}}-fintrinsic-modules-path
+// CHECK_DXC_11: {{(unknown argument).*}}-fipa-cp
+// CHECK_DXC_11: {{(unknown argument).*}}-fivopts
 // CHECK_DXC_11: {{(unknown argument).*}}-fix-only-warnings
 // CHECK_DXC_11: {{(unknown argument).*}}-fix-what-you-can
 // CHECK_DXC_11: {{(unknown argument).*}}-fixit
@@ -17148,7 +17273,7 @@
 // CHECK_DXC_11: {{(unknown argument).*}}-flto=auto
 // CHECK_DXC_11: {{(unknown argument).*}}-flto=jobserver
 // CHECK_DXC_11: {{(unknown argument).*}}-flto-jobs=
-// CHECK_DXC_11: {{(unknown argument).*}}--flto-partitions=
+// CHECK_DXC_11: {{(unknown argument).*}}-flto-partitions=
 // CHECK_DXC_11: {{(unknown argument).*}}-flto-unit
 // CHECK_DXC_11: {{(unknown argument).*}}-flto-visibility-public-std
 // CHECK_DXC_11: {{(unknown argument).*}}-fmacro-backtrace-limit=
@@ -17196,6 +17321,7 @@
 // CHECK_DXC_11: {{(unknown argument).*}}-fmodules-disable-diagnostic-validation
 // CHECK_DXC_11: {{(unknown argument).*}}-fmodules-embed-all-files
 // CHECK_DXC_11: {{(unknown argument).*}}-fmodules-embed-file=
+// CHECK_DXC_11: {{(unknown argument).*}}-fmodules-force-validate-user-headers
 // CHECK_DXC_11: {{(unknown argument).*}}-fmodules-hash-content
 // CHECK_DXC_11: {{(unknown argument).*}}-fmodules-ignore-macro=
 // CHECK_DXC_11: {{(unknown argument).*}}-fmodules-local-submodule-visibility
@@ -17216,14 +17342,14 @@
 // CHECK_DXC_11: {{(unknown argument).*}}-fms-compatibility-version=
 // CHECK_DXC_11: {{(unknown argument).*}}-fms-define-stdc
 // CHECK_DXC_11: {{(unknown argument).*}}-fms-extensions
-// CHECK_DXC_11: {{(unknown argument).*}}-fms-hotpatch
-// CHECK_DXC_11: {{(unknown argument).*}}-fms-kernel
-// CHECK_DXC_11: {{(unknown argument).*}}-fms-memptr-rep=
-// CHECK_DXC_11: {{(unknown argument).*}}-fms-omit-default-lib
-// CHECK_DXC_11: {{(unknown argument).*}}-fms-runtime-lib=
-// CHECK_DXC_11: {{(unknown argument).*}}-fms-tls-guards
 
 // RUN: not %clang_dxc  \
+// RUN:   -fms-hotpatch \
+// RUN:   -fms-kernel \
+// RUN:   -fms-memptr-rep= \
+// RUN:   -fms-omit-default-lib \
+// RUN:   -fms-runtime-lib= \
+// RUN:   -fms-tls-guards \
 // RUN:   -fms-volatile \
 // RUN:   -fmsc-version= \
 // RUN:   -fmudflap \
@@ -17317,14 +17443,14 @@
 // RUN:   -fno-debug-types-section \
 // RUN:   -fno-declspec \
 // RUN:   -fno-default-inline \
-// RUN:   -fno-define-target-os-macros \
-// RUN:   -fno-delayed-template-parsing \
-// RUN:   -fno-delete-null-pointer-checks \
-// RUN:   -fno-deprecated-macro \
-// RUN:   -fno-devirtualize \
-// RUN:   -fno-devirtualize-speculatively \
-// RUN:   -fno-diagnostics-fixit-info -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_12 %s
+// RUN:   -fno-define-target-os-macros -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_12 %s
 
+// CHECK_DXC_12: {{(unknown argument).*}}-fms-hotpatch
+// CHECK_DXC_12: {{(unknown argument).*}}-fms-kernel
+// CHECK_DXC_12: {{(unknown argument).*}}-fms-memptr-rep=
+// CHECK_DXC_12: {{(unknown argument).*}}-fms-omit-default-lib
+// CHECK_DXC_12: {{(unknown argument).*}}-fms-runtime-lib=
+// CHECK_DXC_12: {{(unknown argument).*}}-fms-tls-guards
 // CHECK_DXC_12: {{(unknown argument).*}}-fms-volatile
 // CHECK_DXC_12: {{(unknown argument).*}}-fmsc-version=
 // CHECK_DXC_12: {{(unknown argument).*}}-fmudflap
@@ -17419,14 +17545,14 @@
 // CHECK_DXC_12: {{(unknown argument).*}}-fno-declspec
 // CHECK_DXC_12: {{(unknown argument).*}}-fno-default-inline
 // CHECK_DXC_12: {{(unknown argument).*}}-fno-define-target-os-macros
-// CHECK_DXC_12: {{(unknown argument).*}}-fno-delayed-template-parsing
-// CHECK_DXC_12: {{(unknown argument).*}}-fno-delete-null-pointer-checks
-// CHECK_DXC_12: {{(unknown argument).*}}-fno-deprecated-macro
-// CHECK_DXC_12: {{(unknown argument).*}}-fno-devirtualize
-// CHECK_DXC_12: {{(unknown argument).*}}-fno-devirtualize-speculatively
-// CHECK_DXC_12: {{(unknown argument).*}}-fno-diagnostics-fixit-info
 
 // RUN: not %clang_dxc  \
+// RUN:   -fno-delayed-template-parsing \
+// RUN:   -fno-delete-null-pointer-checks \
+// RUN:   -fno-deprecated-macro \
+// RUN:   -fno-devirtualize \
+// RUN:   -fno-devirtualize-speculatively \
+// RUN:   -fno-diagnostics-fixit-info \
 // RUN:   -fno-diagnostics-show-hotness \
 // RUN:   -fno-diagnostics-show-line-numbers \
 // RUN:   -fno-diagnostics-show-note-include-stack \
@@ -17520,14 +17646,14 @@
 // RUN:   -fno-ivopts \
 // RUN:   -fno-jmc \
 // RUN:   -fno-jump-tables \
-// RUN:   -fno-keep-persistent-storage-variables \
-// RUN:   -fno-keep-static-consts \
-// RUN:   -fno-keep-system-includes \
-// RUN:   -fno-knr-functions \
-// RUN:   -fno-lax-vector-conversions \
-// RUN:   -fno-logical-abbreviations \
-// RUN:   -fno-loop-interchange -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_13 %s
+// RUN:   -fno-keep-persistent-storage-variables -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_13 %s
 
+// CHECK_DXC_13: {{(unknown argument).*}}-fno-delayed-template-parsing
+// CHECK_DXC_13: {{(unknown argument).*}}-fno-delete-null-pointer-checks
+// CHECK_DXC_13: {{(unknown argument).*}}-fno-deprecated-macro
+// CHECK_DXC_13: {{(unknown argument).*}}-fno-devirtualize
+// CHECK_DXC_13: {{(unknown argument).*}}-fno-devirtualize-speculatively
+// CHECK_DXC_13: {{(unknown argument).*}}-fno-diagnostics-fixit-info
 // CHECK_DXC_13: {{(unknown argument).*}}-fno-diagnostics-show-hotness
 // CHECK_DXC_13: {{(unknown argument).*}}-fno-diagnostics-show-line-numbers
 // CHECK_DXC_13: {{(unknown argument).*}}-fno-diagnostics-show-note-include-stack
@@ -17622,14 +17748,14 @@
 // CHECK_DXC_13: {{(unknown argument).*}}-fno-jmc
 // CHECK_DXC_13: {{(unknown argument).*}}-fno-jump-tables
 // CHECK_DXC_13: {{(unknown argument).*}}-fno-keep-persistent-storage-variables
-// CHECK_DXC_13: {{(unknown argument).*}}-fno-keep-static-consts
-// CHECK_DXC_13: {{(unknown argument).*}}-fno-keep-system-includes
-// CHECK_DXC_13: {{(unknown argument).*}}-fno-knr-functions
-// CHECK_DXC_13: {{(unknown argument).*}}-fno-lax-vector-conversions
-// CHECK_DXC_13: {{(unknown argument).*}}-fno-logical-abbreviations
-// CHECK_DXC_13: {{(unknown argument).*}}-fno-loop-interchange
 
 // RUN: not %clang_dxc  \
+// RUN:   -fno-keep-static-consts \
+// RUN:   -fno-keep-system-includes \
+// RUN:   -fno-knr-functions \
+// RUN:   -fno-lax-vector-conversions \
+// RUN:   -fno-logical-abbreviations \
+// RUN:   -fno-loop-interchange \
 // RUN:   -fno-version-loops-for-stride \
 // RUN:   -fno-lto-unit \
 // RUN:   -fno-math-builtin \
@@ -17649,6 +17775,7 @@
 // RUN:   -fno-modules-check-relocated \
 // RUN:   -fno-modules-decluse \
 // RUN:   -fno-modules-error-recovery \
+// RUN:   -fno-modules-force-validate-user-headers \
 // RUN:   -fno-modules-global-index \
 // RUN:   -fno-modules-prune-non-affecting-module-map-files \
 // RUN:   -fno-modules-search-all \
@@ -17722,15 +17849,14 @@
 // RUN:   -fno-profile-generate-sampling \
 // RUN:   -fno-profile-instr-generate \
 // RUN:   -fno-profile-instr-use \
-// RUN:   -fno-profile-reusedist \
-// RUN:   -fno-profile-sample-accurate \
-// RUN:   -fno-profile-sample-use \
-// RUN:   -fno-profile-use \
-// RUN:   -fno-profile-values \
-// RUN:   -fno-protect-parens \
-// RUN:   -fno-pseudo-probe-for-profiling \
-// RUN:   -fno-ptrauth-auth-traps -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_14 %s
+// RUN:   -fno-profile-reusedist -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_14 %s
 
+// CHECK_DXC_14: {{(unknown argument).*}}-fno-keep-static-consts
+// CHECK_DXC_14: {{(unknown argument).*}}-fno-keep-system-includes
+// CHECK_DXC_14: {{(unknown argument).*}}-fno-knr-functions
+// CHECK_DXC_14: {{(unknown argument).*}}-fno-lax-vector-conversions
+// CHECK_DXC_14: {{(unknown argument).*}}-fno-logical-abbreviations
+// CHECK_DXC_14: {{(unknown argument).*}}-fno-loop-interchange
 // CHECK_DXC_14: {{(unknown argument).*}}-fno-version-loops-for-stride
 // CHECK_DXC_14: {{(unknown argument).*}}-fno-lto-unit
 // CHECK_DXC_14: {{(unknown argument).*}}-fno-math-builtin
@@ -17750,6 +17876,7 @@
 // CHECK_DXC_14: {{(unknown argument).*}}-fno-modules-check-relocated
 // CHECK_DXC_14: {{(unknown argument).*}}-fno-modules-decluse
 // CHECK_DXC_14: {{(unknown argument).*}}-fno-modules-error-recovery
+// CHECK_DXC_14: {{(unknown argument).*}}-fno-modules-force-validate-user-headers
 // CHECK_DXC_14: {{(unknown argument).*}}-fno-modules-global-index
 // CHECK_DXC_14: {{(unknown argument).*}}-fno-modules-prune-non-affecting-module-map-files
 // CHECK_DXC_14: {{(unknown argument).*}}-fno-modules-search-all
@@ -17824,15 +17951,15 @@
 // CHECK_DXC_14: {{(unknown argument).*}}-fno-profile-instr-generate
 // CHECK_DXC_14: {{(unknown argument).*}}-fno-profile-instr-use
 // CHECK_DXC_14: {{(unknown argument).*}}-fno-profile-reusedist
-// CHECK_DXC_14: {{(unknown argument).*}}-fno-profile-sample-accurate
-// CHECK_DXC_14: {{(unknown argument).*}}-fno-profile-sample-use
-// CHECK_DXC_14: {{(unknown argument).*}}-fno-profile-use
-// CHECK_DXC_14: {{(unknown argument).*}}-fno-profile-values
-// CHECK_DXC_14: {{(unknown argument).*}}-fno-protect-parens
-// CHECK_DXC_14: {{(unknown argument).*}}-fno-pseudo-probe-for-profiling
-// CHECK_DXC_14: {{(unknown argument).*}}-fno-ptrauth-auth-traps
 
 // RUN: not %clang_dxc  \
+// RUN:   -fno-profile-sample-accurate \
+// RUN:   -fno-profile-sample-use \
+// RUN:   -fno-profile-use \
+// RUN:   -fno-profile-values \
+// RUN:   -fno-protect-parens \
+// RUN:   -fno-pseudo-probe-for-profiling \
+// RUN:   -fno-ptrauth-auth-traps \
 // RUN:   -fno-ptrauth-calls \
 // RUN:   -fno-ptrauth-elf-got \
 // RUN:   -fno-ptrauth-function-pointer-type-discrimination \
@@ -17864,7 +17991,6 @@
 // RUN:   -fno-rename-registers \
 // RUN:   -fno-reorder-blocks \
 // RUN:   -fno-repack-arrays \
-// RUN:   -fno-retain-subst-template-type-parm-type-ast-nodes \
 // RUN:   -fno-rewrite-imports \
 // RUN:   -fno-rewrite-includes \
 // RUN:   -fno-ripa \
@@ -17882,6 +18008,8 @@
 // RUN:   -fno-sanitize-address-poison-custom-array-cookie \
 // RUN:   -fno-sanitize-address-use-after-scope \
 // RUN:   -fno-sanitize-address-use-odr-indicator \
+// RUN:   -fno-sanitize-annotate-debug-info \
+// RUN:   -fno-sanitize-annotate-debug-info= \
 // RUN:   -fno-sanitize-cfi-canonical-jump-tables \
 // RUN:   -fno-sanitize-cfi-cross-dso \
 // RUN:   -fno-sanitize-coverage= \
@@ -17924,16 +18052,15 @@
 // RUN:   -fno-signed-wchar \
 // RUN:   -fno-signed-zeros \
 // RUN:   -fno-single-precision-constant \
-// RUN:   -fno-sized-deallocation \
-// RUN:   -fno-skip-odr-check-in-gmf \
-// RUN:   -fno-slp-vectorize \
-// RUN:   -fno-spec-constr-count \
-// RUN:   -fno-spell-checking \
-// RUN:   -fno-split-dwarf-inlining \
-// RUN:   -fno-split-lto-unit \
-// RUN:   -fno-split-machine-functions \
-// RUN:   -fno-split-stack -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_15 %s
+// RUN:   -fno-sized-deallocation -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_15 %s
 
+// CHECK_DXC_15: {{(unknown argument).*}}-fno-profile-sample-accurate
+// CHECK_DXC_15: {{(unknown argument).*}}-fno-profile-sample-use
+// CHECK_DXC_15: {{(unknown argument).*}}-fno-profile-use
+// CHECK_DXC_15: {{(unknown argument).*}}-fno-profile-values
+// CHECK_DXC_15: {{(unknown argument).*}}-fno-protect-parens
+// CHECK_DXC_15: {{(unknown argument).*}}-fno-pseudo-probe-for-profiling
+// CHECK_DXC_15: {{(unknown argument).*}}-fno-ptrauth-auth-traps
 // CHECK_DXC_15: {{(unknown argument).*}}-fno-ptrauth-calls
 // CHECK_DXC_15: {{(unknown argument).*}}-fno-ptrauth-elf-got
 // CHECK_DXC_15: {{(unknown argument).*}}-fno-ptrauth-function-pointer-type-discrimination
@@ -17965,7 +18092,6 @@
 // CHECK_DXC_15: {{(unknown argument).*}}-fno-rename-registers
 // CHECK_DXC_15: {{(unknown argument).*}}-fno-reorder-blocks
 // CHECK_DXC_15: {{(unknown argument).*}}-fno-repack-arrays
-// CHECK_DXC_15: {{(unknown argument).*}}-fno-retain-subst-template-type-parm-type-ast-nodes
 // CHECK_DXC_15: {{(unknown argument).*}}-fno-rewrite-imports
 // CHECK_DXC_15: {{(unknown argument).*}}-fno-rewrite-includes
 // CHECK_DXC_15: {{(unknown argument).*}}-fno-ripa
@@ -17983,6 +18109,8 @@
 // CHECK_DXC_15: {{(unknown argument).*}}-fno-sanitize-address-poison-custom-array-cookie
 // CHECK_DXC_15: {{(unknown argument).*}}-fno-sanitize-address-use-after-scope
 // CHECK_DXC_15: {{(unknown argument).*}}-fno-sanitize-address-use-odr-indicator
+// CHECK_DXC_15: {{(unknown argument).*}}-fno-sanitize-annotate-debug-info
+// CHECK_DXC_15: {{(unknown argument).*}}-fno-sanitize-annotate-debug-info=
 // CHECK_DXC_15: {{(unknown argument).*}}-fno-sanitize-cfi-canonical-jump-tables
 // CHECK_DXC_15: {{(unknown argument).*}}-fno-sanitize-cfi-cross-dso
 // CHECK_DXC_15: {{(unknown argument).*}}-fno-sanitize-coverage=
@@ -18026,20 +18154,21 @@
 // CHECK_DXC_15: {{(unknown argument).*}}-fno-signed-zeros
 // CHECK_DXC_15: {{(unknown argument).*}}-fno-single-precision-constant
 // CHECK_DXC_15: {{(unknown argument).*}}-fno-sized-deallocation
-// CHECK_DXC_15: {{(unknown argument).*}}-fno-skip-odr-check-in-gmf
-// CHECK_DXC_15: {{(unknown argument).*}}-fno-slp-vectorize
-// CHECK_DXC_15: {{(unknown argument).*}}-fno-spec-constr-count
-// CHECK_DXC_15: {{(unknown argument).*}}-fno-spell-checking
-// CHECK_DXC_15: {{(unknown argument).*}}-fno-split-dwarf-inlining
-// CHECK_DXC_15: {{(unknown argument).*}}-fno-split-lto-unit
-// CHECK_DXC_15: {{(unknown argument).*}}-fno-split-machine-functions
-// CHECK_DXC_15: {{(unknown argument).*}}-fno-split-stack
 
 // RUN: not %clang_dxc  \
+// RUN:   -fno-skip-odr-check-in-gmf \
+// RUN:   -fno-slp-vectorize \
+// RUN:   -fno-spec-constr-count \
+// RUN:   -fno-spell-checking \
+// RUN:   -fno-split-dwarf-inlining \
+// RUN:   -fno-split-lto-unit \
+// RUN:   -fno-split-machine-functions \
+// RUN:   -fno-split-stack \
 // RUN:   -fno-stack-arrays \
 // RUN:   -fno-stack-check \
 // RUN:   -fno-stack-clash-protection \
 // RUN:   -fno-stack-protector \
+// RUN:   -fno-stack-repack-arrays \
 // RUN:   -fno-stack-size-section \
 // RUN:   -fno-strength-reduce \
 // RUN:   -fno-strict-enums \
@@ -18065,6 +18194,7 @@
 // RUN:   -fno-unique-basic-block-section-names \
 // RUN:   -fno-unique-internal-linkage-names \
 // RUN:   -fno-unique-section-names \
+// RUN:   -fno-unique-source-file-names \
 // RUN:   -fno-unroll-all-loops \
 // RUN:   -fno-unroll-loops \
 // RUN:   -fno-unsafe-loop-optimizations \
@@ -18093,6 +18223,7 @@
 // RUN:   -fno-whole-file \
 // RUN:   -fno-whole-program \
 // RUN:   -fno-whole-program-vtables \
+// RUN:   -fno-winx64-eh-unwindv2 \
 // RUN:   -fno-working-directory \
 // RUN:   -fno-wrapv \
 // RUN:   -fno-wrapv-pointer \
@@ -18124,23 +18255,21 @@
 // RUN:   -fobjc-encode-cxx-class-template-spec \
 // RUN:   -fobjc-exceptions \
 // RUN:   -fobjc-gc \
-// RUN:   -fobjc-gc-only \
-// RUN:   -fobjc-infer-related-result-type \
-// RUN:   -fobjc-legacy-dispatch \
-// RUN:   -fobjc-link-runtime \
-// RUN:   -fobjc-new-property \
-// RUN:   -fobjc-nonfragile-abi \
-// RUN:   -fobjc-nonfragile-abi-version= \
-// RUN:   -fobjc-runtime= \
-// RUN:   -fobjc-runtime-has-weak \
-// RUN:   -fobjc-sender-dependent-dispatch \
-// RUN:   -fobjc-subscripting-legacy-runtime \
-// RUN:   -fobjc-weak -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_16 %s
+// RUN:   -fobjc-gc-only -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_16 %s
 
+// CHECK_DXC_16: {{(unknown argument).*}}-fno-skip-odr-check-in-gmf
+// CHECK_DXC_16: {{(unknown argument).*}}-fno-slp-vectorize
+// CHECK_DXC_16: {{(unknown argument).*}}-fno-spec-constr-count
+// CHECK_DXC_16: {{(unknown argument).*}}-fno-spell-checking
+// CHECK_DXC_16: {{(unknown argument).*}}-fno-split-dwarf-inlining
+// CHECK_DXC_16: {{(unknown argument).*}}-fno-split-lto-unit
+// CHECK_DXC_16: {{(unknown argument).*}}-fno-split-machine-functions
+// CHECK_DXC_16: {{(unknown argument).*}}-fno-split-stack
 // CHECK_DXC_16: {{(unknown argument).*}}-fno-stack-arrays
 // CHECK_DXC_16: {{(unknown argument).*}}-fno-stack-check
 // CHECK_DXC_16: {{(unknown argument).*}}-fno-stack-clash-protection
 // CHECK_DXC_16: {{(unknown argument).*}}-fno-stack-protector
+// CHECK_DXC_16: {{(unknown argument).*}}-fno-stack-repack-arrays
 // CHECK_DXC_16: {{(unknown argument).*}}-fno-stack-size-section
 // CHECK_DXC_16: {{(unknown argument).*}}-fno-strength-reduce
 // CHECK_DXC_16: {{(unknown argument).*}}-fno-strict-enums
@@ -18166,6 +18295,7 @@
 // CHECK_DXC_16: {{(unknown argument).*}}-fno-unique-basic-block-section-names
 // CHECK_DXC_16: {{(unknown argument).*}}-fno-unique-internal-linkage-names
 // CHECK_DXC_16: {{(unknown argument).*}}-fno-unique-section-names
+// CHECK_DXC_16: {{(unknown argument).*}}-fno-unique-source-file-names
 // CHECK_DXC_16: {{(unknown argument).*}}-fno-unroll-all-loops
 // CHECK_DXC_16: {{(unknown argument).*}}-fno-unroll-loops
 // CHECK_DXC_16: {{(unknown argument).*}}-fno-unsafe-loop-optimizations
@@ -18194,6 +18324,7 @@
 // CHECK_DXC_16: {{(unknown argument).*}}-fno-whole-file
 // CHECK_DXC_16: {{(unknown argument).*}}-fno-whole-program
 // CHECK_DXC_16: {{(unknown argument).*}}-fno-whole-program-vtables
+// CHECK_DXC_16: {{(unknown argument).*}}-fno-winx64-eh-unwindv2
 // CHECK_DXC_16: {{(unknown argument).*}}-fno-working-directory
 // CHECK_DXC_16: {{(unknown argument).*}}-fno-wrapv
 // CHECK_DXC_16: {{(unknown argument).*}}-fno-wrapv-pointer
@@ -18226,19 +18357,19 @@
 // CHECK_DXC_16: {{(unknown argument).*}}-fobjc-exceptions
 // CHECK_DXC_16: {{(unknown argument).*}}-fobjc-gc
 // CHECK_DXC_16: {{(unknown argument).*}}-fobjc-gc-only
-// CHECK_DXC_16: {{(unknown argument).*}}-fobjc-infer-related-result-type
-// CHECK_DXC_16: {{(unknown argument).*}}-fobjc-legacy-dispatch
-// CHECK_DXC_16: {{(unknown argument).*}}-fobjc-link-runtime
-// CHECK_DXC_16: {{(unknown argument).*}}-fobjc-new-property
-// CHECK_DXC_16: {{(unknown argument).*}}-fobjc-nonfragile-abi
-// CHECK_DXC_16: {{(unknown argument).*}}-fobjc-nonfragile-abi-version=
-// CHECK_DXC_16: {{(unknown argument).*}}-fobjc-runtime=
-// CHECK_DXC_16: {{(unknown argument).*}}-fobjc-runtime-has-weak
-// CHECK_DXC_16: {{(unknown argument).*}}-fobjc-sender-dependent-dispatch
-// CHECK_DXC_16: {{(unknown argument).*}}-fobjc-subscripting-legacy-runtime
-// CHECK_DXC_16: {{(unknown argument).*}}-fobjc-weak
 
 // RUN: not %clang_dxc  \
+// RUN:   -fobjc-infer-related-result-type \
+// RUN:   -fobjc-legacy-dispatch \
+// RUN:   -fobjc-link-runtime \
+// RUN:   -fobjc-new-property \
+// RUN:   -fobjc-nonfragile-abi \
+// RUN:   -fobjc-nonfragile-abi-version= \
+// RUN:   -fobjc-runtime= \
+// RUN:   -fobjc-runtime-has-weak \
+// RUN:   -fobjc-sender-dependent-dispatch \
+// RUN:   -fobjc-subscripting-legacy-runtime \
+// RUN:   -fobjc-weak \
 // RUN:   -foffload-implicit-host-device-templates \
 // RUN:   -foffload-lto \
 // RUN:   -foffload-lto= \
@@ -18294,6 +18425,7 @@
 // RUN:   -fpass-plugin= \
 // RUN:   -fpatchable-function-entry= \
 // RUN:   -fpatchable-function-entry-offset= \
+// RUN:   -fpatchable-function-entry-section= \
 // RUN:   -fpcc-struct-return \
 // RUN:   -fpch-codegen \
 // RUN:   -fpch-debuginfo \
@@ -18326,20 +18458,19 @@
 // RUN:   -fprofile-filter-files= \
 // RUN:   -fprofile-function-groups= \
 // RUN:   -fprofile-generate \
-// RUN:   -fprofile-generate= \
-// RUN:   -fprofile-generate-cold-function-coverage \
-// RUN:   -fprofile-generate-cold-function-coverage= \
-// RUN:   -fprofile-generate-sampling \
-// RUN:   -fprofile-instr-generate \
-// RUN:   -fprofile-instr-generate= \
-// RUN:   -fprofile-instr-use \
-// RUN:   -fprofile-instr-use= \
-// RUN:   -fprofile-instrument= \
-// RUN:   -fprofile-instrument-path= \
-// RUN:   -fprofile-instrument-use-path= \
-// RUN:   -fprofile-list= \
-// RUN:   -fprofile-remapping-file= -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_17 %s
+// RUN:   -fprofile-generate= -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_17 %s
 
+// CHECK_DXC_17: {{(unknown argument).*}}-fobjc-infer-related-result-type
+// CHECK_DXC_17: {{(unknown argument).*}}-fobjc-legacy-dispatch
+// CHECK_DXC_17: {{(unknown argument).*}}-fobjc-link-runtime
+// CHECK_DXC_17: {{(unknown argument).*}}-fobjc-new-property
+// CHECK_DXC_17: {{(unknown argument).*}}-fobjc-nonfragile-abi
+// CHECK_DXC_17: {{(unknown argument).*}}-fobjc-nonfragile-abi-version=
+// CHECK_DXC_17: {{(unknown argument).*}}-fobjc-runtime=
+// CHECK_DXC_17: {{(unknown argument).*}}-fobjc-runtime-has-weak
+// CHECK_DXC_17: {{(unknown argument).*}}-fobjc-sender-dependent-dispatch
+// CHECK_DXC_17: {{(unknown argument).*}}-fobjc-subscripting-legacy-runtime
+// CHECK_DXC_17: {{(unknown argument).*}}-fobjc-weak
 // CHECK_DXC_17: {{(unknown argument).*}}-foffload-implicit-host-device-templates
 // CHECK_DXC_17: {{(unknown argument).*}}-foffload-lto
 // CHECK_DXC_17: {{(unknown argument).*}}-foffload-lto=
@@ -18395,6 +18526,7 @@
 // CHECK_DXC_17: {{(unknown argument).*}}-fpass-plugin=
 // CHECK_DXC_17: {{(unknown argument).*}}-fpatchable-function-entry=
 // CHECK_DXC_17: {{(unknown argument).*}}-fpatchable-function-entry-offset=
+// CHECK_DXC_17: {{(unknown argument).*}}-fpatchable-function-entry-section=
 // CHECK_DXC_17: {{(unknown argument).*}}-fpcc-struct-return
 // CHECK_DXC_17: {{(unknown argument).*}}-fpch-codegen
 // CHECK_DXC_17: {{(unknown argument).*}}-fpch-debuginfo
@@ -18428,20 +18560,20 @@
 // CHECK_DXC_17: {{(unknown argument).*}}-fprofile-function-groups=
 // CHECK_DXC_17: {{(unknown argument).*}}-fprofile-generate
 // CHECK_DXC_17: {{(unknown argument).*}}-fprofile-generate=
-// CHECK_DXC_17: {{(unknown argument).*}}-fprofile-generate-cold-function-coverage
-// CHECK_DXC_17: {{(unknown argument).*}}-fprofile-generate-cold-function-coverage=
-// CHECK_DXC_17: {{(unknown argument).*}}-fprofile-generate-sampling
-// CHECK_DXC_17: {{(unknown argument).*}}-fprofile-instr-generate
-// CHECK_DXC_17: {{(unknown argument).*}}-fprofile-instr-generate=
-// CHECK_DXC_17: {{(unknown argument).*}}-fprofile-instr-use
-// CHECK_DXC_17: {{(unknown argument).*}}-fprofile-instr-use=
-// CHECK_DXC_17: {{(unknown argument).*}}-fprofile-instrument=
-// CHECK_DXC_17: {{(unknown argument).*}}-fprofile-instrument-path=
-// CHECK_DXC_17: {{(unknown argument).*}}-fprofile-instrument-use-path=
-// CHECK_DXC_17: {{(unknown argument).*}}-fprofile-list=
-// CHECK_DXC_17: {{(unknown argument).*}}-fprofile-remapping-file=
 
 // RUN: not %clang_dxc  \
+// RUN:   -fprofile-generate-cold-function-coverage \
+// RUN:   -fprofile-generate-cold-function-coverage= \
+// RUN:   -fprofile-generate-sampling \
+// RUN:   -fprofile-instr-generate \
+// RUN:   -fprofile-instr-generate= \
+// RUN:   -fprofile-instr-use \
+// RUN:   -fprofile-instr-use= \
+// RUN:   -fprofile-instrument= \
+// RUN:   -fprofile-instrument-path= \
+// RUN:   -fprofile-instrument-use-path= \
+// RUN:   -fprofile-list= \
+// RUN:   -fprofile-remapping-file= \
 // RUN:   -fprofile-reusedist \
 // RUN:   -fprofile-sample-accurate \
 // RUN:   -fprofile-sample-use= \
@@ -18489,8 +18621,8 @@
 // RUN:   -frename-registers \
 // RUN:   -freorder-blocks \
 // RUN:   -frepack-arrays \
+// RUN:   -frepack-arrays-contiguity= \
 // RUN:   -fretain-comments-from-system-headers \
-// RUN:   -fretain-subst-template-type-parm-type-ast-nodes \
 // RUN:   -frewrite-imports \
 // RUN:   -frewrite-includes \
 // RUN:   -fripa \
@@ -18510,6 +18642,8 @@
 // RUN:   -fsanitize-address-poison-custom-array-cookie \
 // RUN:   -fsanitize-address-use-after-scope \
 // RUN:   -fsanitize-address-use-odr-indicator \
+// RUN:   -fsanitize-annotate-debug-info \
+// RUN:   -fsanitize-annotate-debug-info= \
 // RUN:   -fsanitize-cfi-canonical-jump-tables \
 // RUN:   -fsanitize-cfi-cross-dso \
 // RUN:   -fsanitize-cfi-icall-generalize-pointers \
@@ -18525,24 +18659,22 @@
 // RUN:   -fsanitize-coverage-no-prune \
 // RUN:   -fsanitize-coverage-pc-table \
 // RUN:   -fsanitize-coverage-stack-depth \
+// RUN:   -fsanitize-coverage-stack-depth-callback-min= \
 // RUN:   -fsanitize-coverage-trace-bb \
-// RUN:   -fsanitize-coverage-trace-cmp \
-// RUN:   -fsanitize-coverage-trace-div \
-// RUN:   -fsanitize-coverage-trace-gep \
-// RUN:   -fsanitize-coverage-trace-loads \
-// RUN:   -fsanitize-coverage-trace-pc \
-// RUN:   -fsanitize-coverage-trace-pc-guard \
-// RUN:   -fsanitize-coverage-trace-stores \
-// RUN:   -fsanitize-coverage-type= \
-// RUN:   -fsanitize-hwaddress-abi= \
-// RUN:   -fsanitize-hwaddress-experimental-aliasing \
-// RUN:   -fsanitize-ignorelist= \
-// RUN:   -fsanitize-kcfi-arity \
-// RUN:   -fsanitize-link-c++-runtime \
-// RUN:   -fsanitize-link-runtime \
-// RUN:   -fsanitize-memory-param-retval \
-// RUN:   -fsanitize-memory-track-origins -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_18 %s
+// RUN:   -fsanitize-coverage-trace-cmp -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_18 %s
 
+// CHECK_DXC_18: {{(unknown argument).*}}-fprofile-generate-cold-function-coverage
+// CHECK_DXC_18: {{(unknown argument).*}}-fprofile-generate-cold-function-coverage=
+// CHECK_DXC_18: {{(unknown argument).*}}-fprofile-generate-sampling
+// CHECK_DXC_18: {{(unknown argument).*}}-fprofile-instr-generate
+// CHECK_DXC_18: {{(unknown argument).*}}-fprofile-instr-generate=
+// CHECK_DXC_18: {{(unknown argument).*}}-fprofile-instr-use
+// CHECK_DXC_18: {{(unknown argument).*}}-fprofile-instr-use=
+// CHECK_DXC_18: {{(unknown argument).*}}-fprofile-instrument=
+// CHECK_DXC_18: {{(unknown argument).*}}-fprofile-instrument-path=
+// CHECK_DXC_18: {{(unknown argument).*}}-fprofile-instrument-use-path=
+// CHECK_DXC_18: {{(unknown argument).*}}-fprofile-list=
+// CHECK_DXC_18: {{(unknown argument).*}}-fprofile-remapping-file=
 // CHECK_DXC_18: {{(unknown argument).*}}-fprofile-reusedist
 // CHECK_DXC_18: {{(unknown argument).*}}-fprofile-sample-accurate
 // CHECK_DXC_18: {{(unknown argument).*}}-fprofile-sample-use=
@@ -18590,8 +18722,8 @@
 // CHECK_DXC_18: {{(unknown argument).*}}-frename-registers
 // CHECK_DXC_18: {{(unknown argument).*}}-freorder-blocks
 // CHECK_DXC_18: {{(unknown argument).*}}-frepack-arrays
+// CHECK_DXC_18: {{(unknown argument).*}}-frepack-arrays-contiguity=
 // CHECK_DXC_18: {{(unknown argument).*}}-fretain-comments-from-system-headers
-// CHECK_DXC_18: {{(unknown argument).*}}-fretain-subst-template-type-parm-type-ast-nodes
 // CHECK_DXC_18: {{(unknown argument).*}}-frewrite-imports
 // CHECK_DXC_18: {{(unknown argument).*}}-frewrite-includes
 // CHECK_DXC_18: {{(unknown argument).*}}-fripa
@@ -18611,6 +18743,8 @@
 // CHECK_DXC_18: {{(unknown argument).*}}-fsanitize-address-poison-custom-array-cookie
 // CHECK_DXC_18: {{(unknown argument).*}}-fsanitize-address-use-after-scope
 // CHECK_DXC_18: {{(unknown argument).*}}-fsanitize-address-use-odr-indicator
+// CHECK_DXC_18: {{(unknown argument).*}}-fsanitize-annotate-debug-info
+// CHECK_DXC_18: {{(unknown argument).*}}-fsanitize-annotate-debug-info=
 // CHECK_DXC_18: {{(unknown argument).*}}-fsanitize-cfi-canonical-jump-tables
 // CHECK_DXC_18: {{(unknown argument).*}}-fsanitize-cfi-cross-dso
 // CHECK_DXC_18: {{(unknown argument).*}}-fsanitize-cfi-icall-generalize-pointers
@@ -18626,25 +18760,26 @@
 // CHECK_DXC_18: {{(unknown argument).*}}-fsanitize-coverage-no-prune
 // CHECK_DXC_18: {{(unknown argument).*}}-fsanitize-coverage-pc-table
 // CHECK_DXC_18: {{(unknown argument).*}}-fsanitize-coverage-stack-depth
+// CHECK_DXC_18: {{(unknown argument).*}}-fsanitize-coverage-stack-depth-callback-min=
 // CHECK_DXC_18: {{(unknown argument).*}}-fsanitize-coverage-trace-bb
 // CHECK_DXC_18: {{(unknown argument).*}}-fsanitize-coverage-trace-cmp
-// CHECK_DXC_18: {{(unknown argument).*}}-fsanitize-coverage-trace-div
-// CHECK_DXC_18: {{(unknown argument).*}}-fsanitize-coverage-trace-gep
-// CHECK_DXC_18: {{(unknown argument).*}}-fsanitize-coverage-trace-loads
-// CHECK_DXC_18: {{(unknown argument).*}}-fsanitize-coverage-trace-pc
-// CHECK_DXC_18: {{(unknown argument).*}}-fsanitize-coverage-trace-pc-guard
-// CHECK_DXC_18: {{(unknown argument).*}}-fsanitize-coverage-trace-stores
-// CHECK_DXC_18: {{(unknown argument).*}}-fsanitize-coverage-type=
-// CHECK_DXC_18: {{(unknown argument).*}}-fsanitize-hwaddress-abi=
-// CHECK_DXC_18: {{(unknown argument).*}}-fsanitize-hwaddress-experimental-aliasing
-// CHECK_DXC_18: {{(unknown argument).*}}-fsanitize-ignorelist=
-// CHECK_DXC_18: {{(unknown argument).*}}-fsanitize-kcfi-arity
-// CHECK_DXC_18: {{(unknown argument).*}}-fsanitize-link-c++-runtime
-// CHECK_DXC_18: {{(unknown argument).*}}-fsanitize-link-runtime
-// CHECK_DXC_18: {{(unknown argument).*}}-fsanitize-memory-param-retval
-// CHECK_DXC_18: {{(unknown argument).*}}-fsanitize-memory-track-origins
 
 // RUN: not %clang_dxc  \
+// RUN:   -fsanitize-coverage-trace-div \
+// RUN:   -fsanitize-coverage-trace-gep \
+// RUN:   -fsanitize-coverage-trace-loads \
+// RUN:   -fsanitize-coverage-trace-pc \
+// RUN:   -fsanitize-coverage-trace-pc-guard \
+// RUN:   -fsanitize-coverage-trace-stores \
+// RUN:   -fsanitize-coverage-type= \
+// RUN:   -fsanitize-hwaddress-abi= \
+// RUN:   -fsanitize-hwaddress-experimental-aliasing \
+// RUN:   -fsanitize-ignorelist= \
+// RUN:   -fsanitize-kcfi-arity \
+// RUN:   -fsanitize-link-c++-runtime \
+// RUN:   -fsanitize-link-runtime \
+// RUN:   -fsanitize-memory-param-retval \
+// RUN:   -fsanitize-memory-track-origins \
 // RUN:   -fsanitize-memory-track-origins= \
 // RUN:   -fsanitize-memory-use-after-dtor \
 // RUN:   -fsanitize-memtag-mode= \
@@ -18706,6 +18841,7 @@
 // RUN:   -fstack-protector \
 // RUN:   -fstack-protector-all \
 // RUN:   -fstack-protector-strong \
+// RUN:   -fstack-repack-arrays \
 // RUN:   -fstack-size-section \
 // RUN:   -fstack-usage \
 // RUN:   -fstrength-reduce \
@@ -18728,24 +18864,23 @@
 // RUN:   -ftabstop= \
 // RUN:   -ftemplate-backtrace-limit= \
 // RUN:   -ftemplate-depth= \
-// RUN:   -ftemporal-profile \
-// RUN:   -ftest-coverage \
-// RUN:   -ftest-module-file-extension= \
-// RUN:   -fthin-link-bitcode= \
-// RUN:   -fthinlto-index= \
-// RUN:   -fthreadsafe-statics \
-// RUN:   -ftime-report \
-// RUN:   -ftime-report= \
-// RUN:   -ftls-model \
-// RUN:   -ftls-model= \
-// RUN:   -ftracer \
-// RUN:   -ftrap-function= \
-// RUN:   -ftrapping-math \
-// RUN:   -ftrapv \
-// RUN:   -ftrapv-handler \
-// RUN:   -ftrapv-handler= \
-// RUN:   -ftree-dce -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_19 %s
+// RUN:   -ftemporal-profile -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_19 %s
 
+// CHECK_DXC_19: {{(unknown argument).*}}-fsanitize-coverage-trace-div
+// CHECK_DXC_19: {{(unknown argument).*}}-fsanitize-coverage-trace-gep
+// CHECK_DXC_19: {{(unknown argument).*}}-fsanitize-coverage-trace-loads
+// CHECK_DXC_19: {{(unknown argument).*}}-fsanitize-coverage-trace-pc
+// CHECK_DXC_19: {{(unknown argument).*}}-fsanitize-coverage-trace-pc-guard
+// CHECK_DXC_19: {{(unknown argument).*}}-fsanitize-coverage-trace-stores
+// CHECK_DXC_19: {{(unknown argument).*}}-fsanitize-coverage-type=
+// CHECK_DXC_19: {{(unknown argument).*}}-fsanitize-hwaddress-abi=
+// CHECK_DXC_19: {{(unknown argument).*}}-fsanitize-hwaddress-experimental-aliasing
+// CHECK_DXC_19: {{(unknown argument).*}}-fsanitize-ignorelist=
+// CHECK_DXC_19: {{(unknown argument).*}}-fsanitize-kcfi-arity
+// CHECK_DXC_19: {{(unknown argument).*}}-fsanitize-link-c++-runtime
+// CHECK_DXC_19: {{(unknown argument).*}}-fsanitize-link-runtime
+// CHECK_DXC_19: {{(unknown argument).*}}-fsanitize-memory-param-retval
+// CHECK_DXC_19: {{(unknown argument).*}}-fsanitize-memory-track-origins
 // CHECK_DXC_19: {{(unknown argument).*}}-fsanitize-memory-track-origins=
 // CHECK_DXC_19: {{(unknown argument).*}}-fsanitize-memory-use-after-dtor
 // CHECK_DXC_19: {{(unknown argument).*}}-fsanitize-memtag-mode=
@@ -18807,6 +18942,7 @@
 // CHECK_DXC_19: {{(unknown argument).*}}-fstack-protector
 // CHECK_DXC_19: {{(unknown argument).*}}-fstack-protector-all
 // CHECK_DXC_19: {{(unknown argument).*}}-fstack-protector-strong
+// CHECK_DXC_19: {{(unknown argument).*}}-fstack-repack-arrays
 // CHECK_DXC_19: {{(unknown argument).*}}-fstack-size-section
 // CHECK_DXC_19: {{(unknown argument).*}}-fstack-usage
 // CHECK_DXC_19: {{(unknown argument).*}}-fstrength-reduce
@@ -18830,24 +18966,25 @@
 // CHECK_DXC_19: {{(unknown argument).*}}-ftemplate-backtrace-limit=
 // CHECK_DXC_19: {{(unknown argument).*}}-ftemplate-depth=
 // CHECK_DXC_19: {{(unknown argument).*}}-ftemporal-profile
-// CHECK_DXC_19: {{(unknown argument).*}}-ftest-coverage
-// CHECK_DXC_19: {{(unknown argument).*}}-ftest-module-file-extension=
-// CHECK_DXC_19: {{(unknown argument).*}}-fthin-link-bitcode=
-// CHECK_DXC_19: {{(unknown argument).*}}-fthinlto-index=
-// CHECK_DXC_19: {{(unknown argument).*}}-fthreadsafe-statics
-// CHECK_DXC_19: {{(unknown argument).*}}-ftime-report
-// CHECK_DXC_19: {{(unknown argument).*}}-ftime-report=
-// CHECK_DXC_19: {{(unknown argument).*}}-ftls-model
-// CHECK_DXC_19: {{(unknown argument).*}}-ftls-model=
-// CHECK_DXC_19: {{(unknown argument).*}}-ftracer
-// CHECK_DXC_19: {{(unknown argument).*}}-ftrap-function=
-// CHECK_DXC_19: {{(unknown argument).*}}-ftrapping-math
-// CHECK_DXC_19: {{(unknown argument).*}}-ftrapv
-// CHECK_DXC_19: {{(unknown argument).*}}-ftrapv-handler
-// CHECK_DXC_19: {{(unknown argument).*}}-ftrapv-handler=
-// CHECK_DXC_19: {{(unknown argument).*}}-ftree-dce
 
 // RUN: not %clang_dxc  \
+// RUN:   -ftest-coverage \
+// RUN:   -ftest-module-file-extension= \
+// RUN:   -fthin-link-bitcode= \
+// RUN:   -fthinlto-index= \
+// RUN:   -fthreadsafe-statics \
+// RUN:   -ftime-report \
+// RUN:   -ftime-report= \
+// RUN:   -ftime-report-json \
+// RUN:   -ftls-model \
+// RUN:   -ftls-model= \
+// RUN:   -ftracer \
+// RUN:   -ftrap-function= \
+// RUN:   -ftrapping-math \
+// RUN:   -ftrapv \
+// RUN:   -ftrapv-handler \
+// RUN:   -ftrapv-handler= \
+// RUN:   -ftree-dce \
 // RUN:   -ftree-salias \
 // RUN:   -ftree-ter \
 // RUN:   -ftree-vectorizer-verbose \
@@ -18860,6 +18997,7 @@
 // RUN:   -funique-basic-block-section-names \
 // RUN:   -funique-internal-linkage-names \
 // RUN:   -funique-section-names \
+// RUN:   -funique-source-file-names \
 // RUN:   -funknown-anytype \
 // RUN:   -funroll-all-loops \
 // RUN:   -funroll-loops \
@@ -18907,6 +19045,7 @@
 // RUN:   -fwhole-file \
 // RUN:   -fwhole-program \
 // RUN:   -fwhole-program-vtables \
+// RUN:   -fwinx64-eh-unwindv2 \
 // RUN:   -fwrapv \
 // RUN:   -fwrapv-pointer \
 // RUN:   -fwritable-strings \
@@ -18928,27 +19067,25 @@
 // RUN:   -fxray-selected-function-group= \
 // RUN:   -fxray-shared \
 // RUN:   -fzero-call-used-regs= \
-// RUN:   -fzero-initialized-in-bss \
-// RUN:   -fzos-extensions \
-// RUN:   -fzvector \
-// RUN:   -g0 \
-// RUN:   -g1 \
-// RUN:   -g2 \
-// RUN:   -g3 \
-// RUN:   --gcc-install-dir= \
-// RUN:   --gcc-toolchain= \
-// RUN:   --gcc-triple= \
-// RUN:   -gcoff \
-// RUN:   -gdbx \
-// RUN:   -gdwarf32 \
-// RUN:   -gdwarf64 \
-// RUN:   -gdwarf-2 \
-// RUN:   -gdwarf-3 \
-// RUN:   -gdwarf-4 \
-// RUN:   -gdwarf-5 \
-// RUN:   -gdwarf-aranges \
-// RUN:   -gembed-source -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_20 %s
+// RUN:   -fzero-initialized-in-bss -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_20 %s
 
+// CHECK_DXC_20: {{(unknown argument).*}}-ftest-coverage
+// CHECK_DXC_20: {{(unknown argument).*}}-ftest-module-file-extension=
+// CHECK_DXC_20: {{(unknown argument).*}}-fthin-link-bitcode=
+// CHECK_DXC_20: {{(unknown argument).*}}-fthinlto-index=
+// CHECK_DXC_20: {{(unknown argument).*}}-fthreadsafe-statics
+// CHECK_DXC_20: {{(unknown argument).*}}-ftime-report
+// CHECK_DXC_20: {{(unknown argument).*}}-ftime-report=
+// CHECK_DXC_20: {{(unknown argument).*}}-ftime-report-json
+// CHECK_DXC_20: {{(unknown argument).*}}-ftls-model
+// CHECK_DXC_20: {{(unknown argument).*}}-ftls-model=
+// CHECK_DXC_20: {{(unknown argument).*}}-ftracer
+// CHECK_DXC_20: {{(unknown argument).*}}-ftrap-function=
+// CHECK_DXC_20: {{(unknown argument).*}}-ftrapping-math
+// CHECK_DXC_20: {{(unknown argument).*}}-ftrapv
+// CHECK_DXC_20: {{(unknown argument).*}}-ftrapv-handler
+// CHECK_DXC_20: {{(unknown argument).*}}-ftrapv-handler=
+// CHECK_DXC_20: {{(unknown argument).*}}-ftree-dce
 // CHECK_DXC_20: {{(unknown argument).*}}-ftree-salias
 // CHECK_DXC_20: {{(unknown argument).*}}-ftree-ter
 // CHECK_DXC_20: {{(unknown argument).*}}-ftree-vectorizer-verbose
@@ -18961,6 +19098,7 @@
 // CHECK_DXC_20: {{(unknown argument).*}}-funique-basic-block-section-names
 // CHECK_DXC_20: {{(unknown argument).*}}-funique-internal-linkage-names
 // CHECK_DXC_20: {{(unknown argument).*}}-funique-section-names
+// CHECK_DXC_20: {{(unknown argument).*}}-funique-source-file-names
 // CHECK_DXC_20: {{(unknown argument).*}}-funknown-anytype
 // CHECK_DXC_20: {{(unknown argument).*}}-funroll-all-loops
 // CHECK_DXC_20: {{(unknown argument).*}}-funroll-loops
@@ -19008,6 +19146,7 @@
 // CHECK_DXC_20: {{(unknown argument).*}}-fwhole-file
 // CHECK_DXC_20: {{(unknown argument).*}}-fwhole-program
 // CHECK_DXC_20: {{(unknown argument).*}}-fwhole-program-vtables
+// CHECK_DXC_20: {{(unknown argument).*}}-fwinx64-eh-unwindv2
 // CHECK_DXC_20: {{(unknown argument).*}}-fwrapv
 // CHECK_DXC_20: {{(unknown argument).*}}-fwrapv-pointer
 // CHECK_DXC_20: {{(unknown argument).*}}-fwritable-strings
@@ -19030,27 +19169,27 @@
 // CHECK_DXC_20: {{(unknown argument).*}}-fxray-shared
 // CHECK_DXC_20: {{(unknown argument).*}}-fzero-call-used-regs=
 // CHECK_DXC_20: {{(unknown argument).*}}-fzero-initialized-in-bss
-// CHECK_DXC_20: {{(unknown argument).*}}-fzos-extensions
-// CHECK_DXC_20: {{(unknown argument).*}}-fzvector
-// CHECK_DXC_20: {{(unknown argument).*}}-g0
-// CHECK_DXC_20: {{(unknown argument).*}}-g1
-// CHECK_DXC_20: {{(unknown argument).*}}-g2
-// CHECK_DXC_20: {{(unknown argument).*}}-g3
-// CHECK_DXC_20: {{(unknown argument).*}}--gcc-install-dir=
-// CHECK_DXC_20: {{(unknown argument).*}}--gcc-toolchain=
-// CHECK_DXC_20: {{(unknown argument).*}}--gcc-triple=
-// CHECK_DXC_20: {{(unknown argument).*}}-gcoff
-// CHECK_DXC_20: {{(unknown argument).*}}-gdbx
-// CHECK_DXC_20: {{(unknown argument).*}}-gdwarf32
-// CHECK_DXC_20: {{(unknown argument).*}}-gdwarf64
-// CHECK_DXC_20: {{(unknown argument).*}}-gdwarf-2
-// CHECK_DXC_20: {{(unknown argument).*}}-gdwarf-3
-// CHECK_DXC_20: {{(unknown argument).*}}-gdwarf-4
-// CHECK_DXC_20: {{(unknown argument).*}}-gdwarf-5
-// CHECK_DXC_20: {{(unknown argument).*}}-gdwarf-aranges
-// CHECK_DXC_20: {{(unknown argument).*}}-gembed-source
 
 // RUN: not %clang_dxc  \
+// RUN:   -fzos-extensions \
+// RUN:   -fzvector \
+// RUN:   -g0 \
+// RUN:   -g1 \
+// RUN:   -g2 \
+// RUN:   -g3 \
+// RUN:   --gcc-install-dir= \
+// RUN:   --gcc-toolchain= \
+// RUN:   --gcc-triple= \
+// RUN:   -gcoff \
+// RUN:   -gdbx \
+// RUN:   -gdwarf32 \
+// RUN:   -gdwarf64 \
+// RUN:   -gdwarf-2 \
+// RUN:   -gdwarf-3 \
+// RUN:   -gdwarf-4 \
+// RUN:   -gdwarf-5 \
+// RUN:   -gdwarf-aranges \
+// RUN:   -gembed-source \
 // RUN:   -gfull \
 // RUN:   -ggdb \
 // RUN:   -ggdb0 \
@@ -19058,11 +19197,13 @@
 // RUN:   -ggdb2 \
 // RUN:   -ggdb3 \
 // RUN:   -ggnu-pubnames \
+// RUN:   -gkey-instructions \
 // RUN:   -glldb \
 // RUN:   -gmlt \
 // RUN:   -gmodules \
 // RUN:   -gno-embed-source \
 // RUN:   -gno-gnu-pubnames \
+// RUN:   -gno-key-instructions \
 // RUN:   -gno-modules \
 // RUN:   -gno-pubnames \
 // RUN:   -gno-record-command-line \
@@ -19118,6 +19259,7 @@
 // RUN:   -install_name \
 // RUN:   -interface-stub-version= \
 // RUN:   -internal-externc-isystem \
+// RUN:   -internal-iframework \
 // RUN:   -internal-isystem \
 // RUN:   -iprefix \
 // RUN:   -iquote \
@@ -19128,30 +19270,27 @@
 // RUN:   -iwithprefix \
 // RUN:   -iwithprefixbefore \
 // RUN:   -iwithsysroot \
-// RUN:   -keep_private_externs \
-// RUN:   -l \
-// RUN:   -lazy_framework \
-// RUN:   -lazy_library \
-// RUN:   --ld-path= \
-// RUN:   --libomptarget-amdgcn-bc-path= \
-// RUN:   --libomptarget-amdgpu-bc-path= \
-// RUN:   --libomptarget-nvptx-bc-path= \
-// RUN:   --libomptarget-spirv-bc-path= \
-// RUN:   --linker-option= \
-// RUN:   -llvm-verify-each \
-// RUN:   -load \
-// RUN:   -m3dnow \
-// RUN:   -m3dnowa \
-// RUN:   -m68000 \
-// RUN:   -m68010 \
-// RUN:   -m68020 \
-// RUN:   -m68030 \
-// RUN:   -m68040 \
-// RUN:   -m68060 \
-// RUN:   -m68881 \
-// RUN:   -m80387 \
-// RUN:   -mseses -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_21 %s
+// RUN:   -keep_private_externs -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_21 %s
 
+// CHECK_DXC_21: {{(unknown argument).*}}-fzos-extensions
+// CHECK_DXC_21: {{(unknown argument).*}}-fzvector
+// CHECK_DXC_21: {{(unknown argument).*}}-g0
+// CHECK_DXC_21: {{(unknown argument).*}}-g1
+// CHECK_DXC_21: {{(unknown argument).*}}-g2
+// CHECK_DXC_21: {{(unknown argument).*}}-g3
+// CHECK_DXC_21: {{(unknown argument).*}}--gcc-install-dir=
+// CHECK_DXC_21: {{(unknown argument).*}}--gcc-toolchain=
+// CHECK_DXC_21: {{(unknown argument).*}}--gcc-triple=
+// CHECK_DXC_21: {{(unknown argument).*}}-gcoff
+// CHECK_DXC_21: {{(unknown argument).*}}-gdbx
+// CHECK_DXC_21: {{(unknown argument).*}}-gdwarf32
+// CHECK_DXC_21: {{(unknown argument).*}}-gdwarf64
+// CHECK_DXC_21: {{(unknown argument).*}}-gdwarf-2
+// CHECK_DXC_21: {{(unknown argument).*}}-gdwarf-3
+// CHECK_DXC_21: {{(unknown argument).*}}-gdwarf-4
+// CHECK_DXC_21: {{(unknown argument).*}}-gdwarf-5
+// CHECK_DXC_21: {{(unknown argument).*}}-gdwarf-aranges
+// CHECK_DXC_21: {{(unknown argument).*}}-gembed-source
 // CHECK_DXC_21: {{(unknown argument).*}}-gfull
 // CHECK_DXC_21: {{(unknown argument).*}}-ggdb
 // CHECK_DXC_21: {{(unknown argument).*}}-ggdb0
@@ -19159,11 +19298,13 @@
 // CHECK_DXC_21: {{(unknown argument).*}}-ggdb2
 // CHECK_DXC_21: {{(unknown argument).*}}-ggdb3
 // CHECK_DXC_21: {{(unknown argument).*}}-ggnu-pubnames
+// CHECK_DXC_21: {{(unknown argument).*}}-gkey-instructions
 // CHECK_DXC_21: {{(unknown argument).*}}-glldb
 // CHECK_DXC_21: {{(unknown argument).*}}-gmlt
 // CHECK_DXC_21: {{(unknown argument).*}}-gmodules
 // CHECK_DXC_21: {{(unknown argument).*}}-gno-embed-source
 // CHECK_DXC_21: {{(unknown argument).*}}-gno-gnu-pubnames
+// CHECK_DXC_21: {{(unknown argument).*}}-gno-key-instructions
 // CHECK_DXC_21: {{(unknown argument).*}}-gno-modules
 // CHECK_DXC_21: {{(unknown argument).*}}-gno-pubnames
 // CHECK_DXC_21: {{(unknown argument).*}}-gno-record-command-line
@@ -19219,6 +19360,7 @@
 // CHECK_DXC_21: {{(unknown argument).*}}-install_name
 // CHECK_DXC_21: {{(unknown argument).*}}-interface-stub-version=
 // CHECK_DXC_21: {{(unknown argument).*}}-internal-externc-isystem
+// CHECK_DXC_21: {{(unknown argument).*}}-internal-iframework
 // CHECK_DXC_21: {{(unknown argument).*}}-internal-isystem
 // CHECK_DXC_21: {{(unknown argument).*}}-iprefix
 // CHECK_DXC_21: {{(unknown argument).*}}-iquote
@@ -19230,30 +19372,30 @@
 // CHECK_DXC_21: {{(unknown argument).*}}-iwithprefixbefore
 // CHECK_DXC_21: {{(unknown argument).*}}-iwithsysroot
 // CHECK_DXC_21: {{(unknown argument).*}}-keep_private_externs
-// CHECK_DXC_21: {{(unknown argument).*}}-l
-// CHECK_DXC_21: {{(unknown argument).*}}-lazy_framework
-// CHECK_DXC_21: {{(unknown argument).*}}-lazy_library
-// CHECK_DXC_21: {{(unknown argument).*}}--ld-path=
-// CHECK_DXC_21: {{(unknown argument).*}}--libomptarget-amdgcn-bc-path=
-// CHECK_DXC_21: {{(unknown argument).*}}--libomptarget-amdgpu-bc-path=
-// CHECK_DXC_21: {{(unknown argument).*}}--libomptarget-nvptx-bc-path=
-// CHECK_DXC_21: {{(unknown argument).*}}--libomptarget-spirv-bc-path=
-// CHECK_DXC_21: {{(unknown argument).*}}--linker-option=
-// CHECK_DXC_21: {{(unknown argument).*}}-llvm-verify-each
-// CHECK_DXC_21: {{(unknown argument).*}}-load
-// CHECK_DXC_21: {{(unknown argument).*}}-m3dnow
-// CHECK_DXC_21: {{(unknown argument).*}}-m3dnowa
-// CHECK_DXC_21: {{(unknown argument).*}}-m68000
-// CHECK_DXC_21: {{(unknown argument).*}}-m68010
-// CHECK_DXC_21: {{(unknown argument).*}}-m68020
-// CHECK_DXC_21: {{(unknown argument).*}}-m68030
-// CHECK_DXC_21: {{(unknown argument).*}}-m68040
-// CHECK_DXC_21: {{(unknown argument).*}}-m68060
-// CHECK_DXC_21: {{(unknown argument).*}}-m68881
-// CHECK_DXC_21: {{(unknown argument).*}}-m80387
-// CHECK_DXC_21: {{(unknown argument).*}}-mseses
 
 // RUN: not %clang_dxc  \
+// RUN:   -l \
+// RUN:   -lazy_framework \
+// RUN:   -lazy_library \
+// RUN:   --ld-path= \
+// RUN:   --libomptarget-amdgcn-bc-path= \
+// RUN:   --libomptarget-amdgpu-bc-path= \
+// RUN:   --libomptarget-nvptx-bc-path= \
+// RUN:   --libomptarget-spirv-bc-path= \
+// RUN:   --linker-option= \
+// RUN:   -llvm-verify-each \
+// RUN:   -load \
+// RUN:   -m3dnow \
+// RUN:   -m3dnowa \
+// RUN:   -m68000 \
+// RUN:   -m68010 \
+// RUN:   -m68020 \
+// RUN:   -m68030 \
+// RUN:   -m68040 \
+// RUN:   -m68060 \
+// RUN:   -m68881 \
+// RUN:   -m80387 \
+// RUN:   -mseses \
 // RUN:   -mabi= \
 // RUN:   -mabi=ieeelongdouble \
 // RUN:   -mabi=quadword-atomics \
@@ -19331,30 +19473,30 @@
 // RUN:   -mbig-endian \
 // RUN:   -mbmi \
 // RUN:   -mbmi2 \
-// RUN:   -mbranch-likely \
-// RUN:   -mbranch-protection= \
-// RUN:   -mbranch-protection-pauth-lr \
-// RUN:   -mbranch-target-enforce \
-// RUN:   -mbranches-within-32B-boundaries \
-// RUN:   -mbulk-memory \
-// RUN:   -mbulk-memory-opt \
-// RUN:   -mcabac \
-// RUN:   -mcall-indirect-overlong \
-// RUN:   -mcf-branch-label-scheme= \
-// RUN:   -mcheck-zero-division \
-// RUN:   -mcldemote \
-// RUN:   -mclflushopt \
-// RUN:   -mclwb \
-// RUN:   -mclzero \
-// RUN:   -mcmodel= \
-// RUN:   -mcmpb \
-// RUN:   -mcmpccxadd \
-// RUN:   -mcmse \
-// RUN:   -mcode-object-version= \
-// RUN:   -mcompact-branches= \
-// RUN:   -mconsole \
-// RUN:   -mconstant-cfstrings -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_22 %s
+// RUN:   -mbranch-likely -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_22 %s
 
+// CHECK_DXC_22: {{(unknown argument).*}}-l
+// CHECK_DXC_22: {{(unknown argument).*}}-lazy_framework
+// CHECK_DXC_22: {{(unknown argument).*}}-lazy_library
+// CHECK_DXC_22: {{(unknown argument).*}}--ld-path=
+// CHECK_DXC_22: {{(unknown argument).*}}--libomptarget-amdgcn-bc-path=
+// CHECK_DXC_22: {{(unknown argument).*}}--libomptarget-amdgpu-bc-path=
+// CHECK_DXC_22: {{(unknown argument).*}}--libomptarget-nvptx-bc-path=
+// CHECK_DXC_22: {{(unknown argument).*}}--libomptarget-spirv-bc-path=
+// CHECK_DXC_22: {{(unknown argument).*}}--linker-option=
+// CHECK_DXC_22: {{(unknown argument).*}}-llvm-verify-each
+// CHECK_DXC_22: {{(unknown argument).*}}-load
+// CHECK_DXC_22: {{(unknown argument).*}}-m3dnow
+// CHECK_DXC_22: {{(unknown argument).*}}-m3dnowa
+// CHECK_DXC_22: {{(unknown argument).*}}-m68000
+// CHECK_DXC_22: {{(unknown argument).*}}-m68010
+// CHECK_DXC_22: {{(unknown argument).*}}-m68020
+// CHECK_DXC_22: {{(unknown argument).*}}-m68030
+// CHECK_DXC_22: {{(unknown argument).*}}-m68040
+// CHECK_DXC_22: {{(unknown argument).*}}-m68060
+// CHECK_DXC_22: {{(unknown argument).*}}-m68881
+// CHECK_DXC_22: {{(unknown argument).*}}-m80387
+// CHECK_DXC_22: {{(unknown argument).*}}-mseses
 // CHECK_DXC_22: {{(unknown argument).*}}-mabi=
 // CHECK_DXC_22: {{(unknown argument).*}}-mabi=ieeelongdouble
 // CHECK_DXC_22: {{(unknown argument).*}}-mabi=quadword-atomics
@@ -19433,30 +19575,30 @@
 // CHECK_DXC_22: {{(unknown argument).*}}-mbmi
 // CHECK_DXC_22: {{(unknown argument).*}}-mbmi2
 // CHECK_DXC_22: {{(unknown argument).*}}-mbranch-likely
-// CHECK_DXC_22: {{(unknown argument).*}}-mbranch-protection=
-// CHECK_DXC_22: {{(unknown argument).*}}-mbranch-protection-pauth-lr
-// CHECK_DXC_22: {{(unknown argument).*}}-mbranch-target-enforce
-// CHECK_DXC_22: {{(unknown argument).*}}-mbranches-within-32B-boundaries
-// CHECK_DXC_22: {{(unknown argument).*}}-mbulk-memory
-// CHECK_DXC_22: {{(unknown argument).*}}-mbulk-memory-opt
-// CHECK_DXC_22: {{(unknown argument).*}}-mcabac
-// CHECK_DXC_22: {{(unknown argument).*}}-mcall-indirect-overlong
-// CHECK_DXC_22: {{(unknown argument).*}}-mcf-branch-label-scheme=
-// CHECK_DXC_22: {{(unknown argument).*}}-mcheck-zero-division
-// CHECK_DXC_22: {{(unknown argument).*}}-mcldemote
-// CHECK_DXC_22: {{(unknown argument).*}}-mclflushopt
-// CHECK_DXC_22: {{(unknown argument).*}}-mclwb
-// CHECK_DXC_22: {{(unknown argument).*}}-mclzero
-// CHECK_DXC_22: {{(unknown argument).*}}-mcmodel=
-// CHECK_DXC_22: {{(unknown argument).*}}-mcmpb
-// CHECK_DXC_22: {{(unknown argument).*}}-mcmpccxadd
-// CHECK_DXC_22: {{(unknown argument).*}}-mcmse
-// CHECK_DXC_22: {{(unknown argument).*}}-mcode-object-version=
-// CHECK_DXC_22: {{(unknown argument).*}}-mcompact-branches=
-// CHECK_DXC_22: {{(unknown argument).*}}-mconsole
-// CHECK_DXC_22: {{(unknown argument).*}}-mconstant-cfstrings
 
 // RUN: not %clang_dxc  \
+// RUN:   -mbranch-protection= \
+// RUN:   -mbranch-protection-pauth-lr \
+// RUN:   -mbranch-target-enforce \
+// RUN:   -mbranches-within-32B-boundaries \
+// RUN:   -mbulk-memory \
+// RUN:   -mbulk-memory-opt \
+// RUN:   -mcabac \
+// RUN:   -mcall-indirect-overlong \
+// RUN:   -mcf-branch-label-scheme= \
+// RUN:   -mcheck-zero-division \
+// RUN:   -mcldemote \
+// RUN:   -mclflushopt \
+// RUN:   -mclwb \
+// RUN:   -mclzero \
+// RUN:   -mcmodel= \
+// RUN:   -mcmpb \
+// RUN:   -mcmpccxadd \
+// RUN:   -mcmse \
+// RUN:   -mcode-object-version= \
+// RUN:   -mcompact-branches= \
+// RUN:   -mconsole \
+// RUN:   -mconstant-cfstrings \
 // RUN:   -mconstructor-aliases \
 // RUN:   -mcpu= \
 // RUN:   -mcrbits \
@@ -19534,30 +19676,30 @@
 // RUN:   -mharden-sls= \
 // RUN:   -mhvx \
 // RUN:   -mhvx= \
-// RUN:   -mhvx-ieee-fp \
-// RUN:   -mhvx-length= \
-// RUN:   -mhvx-qfloat \
-// RUN:   -mhreset \
-// RUN:   -mhtm \
-// RUN:   -mhwdiv= \
-// RUN:   -mhwmult= \
-// RUN:   -miamcu \
-// RUN:   -mieee-fp \
-// RUN:   -mieee-rnd-near \
-// RUN:   -mignore-xcoff-visibility \
-// RUN:   -no-finalize-removal \
-// RUN:   -no-ns-alloc-error \
-// RUN:   -mimplicit-float \
-// RUN:   -mimplicit-it= \
-// RUN:   -mincremental-linker-compatible \
-// RUN:   -mindirect-branch-cs-prefix \
-// RUN:   -mindirect-jump= \
-// RUN:   -minline-all-stringops \
-// RUN:   -minvariant-function-descriptors \
-// RUN:   -minvpcid \
-// RUN:   -mios-simulator-version-min= \
-// RUN:   -mios-version-min= -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_23 %s
+// RUN:   -mhvx-ieee-fp -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_23 %s
 
+// CHECK_DXC_23: {{(unknown argument).*}}-mbranch-protection=
+// CHECK_DXC_23: {{(unknown argument).*}}-mbranch-protection-pauth-lr
+// CHECK_DXC_23: {{(unknown argument).*}}-mbranch-target-enforce
+// CHECK_DXC_23: {{(unknown argument).*}}-mbranches-within-32B-boundaries
+// CHECK_DXC_23: {{(unknown argument).*}}-mbulk-memory
+// CHECK_DXC_23: {{(unknown argument).*}}-mbulk-memory-opt
+// CHECK_DXC_23: {{(unknown argument).*}}-mcabac
+// CHECK_DXC_23: {{(unknown argument).*}}-mcall-indirect-overlong
+// CHECK_DXC_23: {{(unknown argument).*}}-mcf-branch-label-scheme=
+// CHECK_DXC_23: {{(unknown argument).*}}-mcheck-zero-division
+// CHECK_DXC_23: {{(unknown argument).*}}-mcldemote
+// CHECK_DXC_23: {{(unknown argument).*}}-mclflushopt
+// CHECK_DXC_23: {{(unknown argument).*}}-mclwb
+// CHECK_DXC_23: {{(unknown argument).*}}-mclzero
+// CHECK_DXC_23: {{(unknown argument).*}}-mcmodel=
+// CHECK_DXC_23: {{(unknown argument).*}}-mcmpb
+// CHECK_DXC_23: {{(unknown argument).*}}-mcmpccxadd
+// CHECK_DXC_23: {{(unknown argument).*}}-mcmse
+// CHECK_DXC_23: {{(unknown argument).*}}-mcode-object-version=
+// CHECK_DXC_23: {{(unknown argument).*}}-mcompact-branches=
+// CHECK_DXC_23: {{(unknown argument).*}}-mconsole
+// CHECK_DXC_23: {{(unknown argument).*}}-mconstant-cfstrings
 // CHECK_DXC_23: {{(unknown argument).*}}-mconstructor-aliases
 // CHECK_DXC_23: {{(unknown argument).*}}-mcpu=
 // CHECK_DXC_23: {{(unknown argument).*}}-mcrbits
@@ -19636,30 +19778,30 @@
 // CHECK_DXC_23: {{(unknown argument).*}}-mhvx
 // CHECK_DXC_23: {{(unknown argument).*}}-mhvx=
 // CHECK_DXC_23: {{(unknown argument).*}}-mhvx-ieee-fp
-// CHECK_DXC_23: {{(unknown argument).*}}-mhvx-length=
-// CHECK_DXC_23: {{(unknown argument).*}}-mhvx-qfloat
-// CHECK_DXC_23: {{(unknown argument).*}}-mhreset
-// CHECK_DXC_23: {{(unknown argument).*}}-mhtm
-// CHECK_DXC_23: {{(unknown argument).*}}-mhwdiv=
-// CHECK_DXC_23: {{(unknown argument).*}}-mhwmult=
-// CHECK_DXC_23: {{(unknown argument).*}}-miamcu
-// CHECK_DXC_23: {{(unknown argument).*}}-mieee-fp
-// CHECK_DXC_23: {{(unknown argument).*}}-mieee-rnd-near
-// CHECK_DXC_23: {{(unknown argument).*}}-mignore-xcoff-visibility
-// CHECK_DXC_23: {{(unknown argument).*}}-no-finalize-removal
-// CHECK_DXC_23: {{(unknown argument).*}}-no-ns-alloc-error
-// CHECK_DXC_23: {{(unknown argument).*}}-mimplicit-float
-// CHECK_DXC_23: {{(unknown argument).*}}-mimplicit-it=
-// CHECK_DXC_23: {{(unknown argument).*}}-mincremental-linker-compatible
-// CHECK_DXC_23: {{(unknown argument).*}}-mindirect-branch-cs-prefix
-// CHECK_DXC_23: {{(unknown argument).*}}-mindirect-jump=
-// CHECK_DXC_23: {{(unknown argument).*}}-minline-all-stringops
-// CHECK_DXC_23: {{(unknown argument).*}}-minvariant-function-descriptors
-// CHECK_DXC_23: {{(unknown argument).*}}-minvpcid
-// CHECK_DXC_23: {{(unknown argument).*}}-mios-simulator-version-min=
-// CHECK_DXC_23: {{(unknown argument).*}}-mios-version-min=
 
 // RUN: not %clang_dxc  \
+// RUN:   -mhvx-length= \
+// RUN:   -mhvx-qfloat \
+// RUN:   -mhreset \
+// RUN:   -mhtm \
+// RUN:   -mhwdiv= \
+// RUN:   -mhwmult= \
+// RUN:   -miamcu \
+// RUN:   -mieee-fp \
+// RUN:   -mieee-rnd-near \
+// RUN:   -mignore-xcoff-visibility \
+// RUN:   -no-finalize-removal \
+// RUN:   -no-ns-alloc-error \
+// RUN:   -mimplicit-float \
+// RUN:   -mimplicit-it= \
+// RUN:   -mincremental-linker-compatible \
+// RUN:   -mindirect-branch-cs-prefix \
+// RUN:   -mindirect-jump= \
+// RUN:   -minline-all-stringops \
+// RUN:   -minvariant-function-descriptors \
+// RUN:   -minvpcid \
+// RUN:   -mios-simulator-version-min= \
+// RUN:   -mios-version-min= \
 // RUN:   -mips1 \
 // RUN:   -mips16 \
 // RUN:   -mips2 \
@@ -19737,30 +19879,30 @@
 // RUN:   -mno-altivec \
 // RUN:   -mno-amdgpu-ieee \
 // RUN:   -mno-amdgpu-precise-memory-op \
-// RUN:   -mno-amx-avx512 \
-// RUN:   -mno-amx-bf16 \
-// RUN:   -mno-amx-complex \
-// RUN:   -mno-amx-fp16 \
-// RUN:   -mno-amx-fp8 \
-// RUN:   -mno-amx-int8 \
-// RUN:   -mno-amx-movrs \
-// RUN:   -mno-amx-tf32 \
-// RUN:   -mno-amx-tile \
-// RUN:   -mno-amx-transpose \
-// RUN:   -mno-annotate-tablejump \
-// RUN:   -mno-apx-features= \
-// RUN:   -mno-apxf \
-// RUN:   -mno-atomics \
-// RUN:   -mno-avx \
-// RUN:   -mno-avx10.1 \
-// RUN:   -mno-avx10.1-256 \
-// RUN:   -mno-avx10.1-512 \
-// RUN:   -mno-avx10.2 \
-// RUN:   -mno-avx2 \
-// RUN:   -mno-avx512bf16 \
-// RUN:   -mno-avx512bitalg \
-// RUN:   -mno-avx512bw -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_24 %s
+// RUN:   -mno-amx-avx512 -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_24 %s
 
+// CHECK_DXC_24: {{(unknown argument).*}}-mhvx-length=
+// CHECK_DXC_24: {{(unknown argument).*}}-mhvx-qfloat
+// CHECK_DXC_24: {{(unknown argument).*}}-mhreset
+// CHECK_DXC_24: {{(unknown argument).*}}-mhtm
+// CHECK_DXC_24: {{(unknown argument).*}}-mhwdiv=
+// CHECK_DXC_24: {{(unknown argument).*}}-mhwmult=
+// CHECK_DXC_24: {{(unknown argument).*}}-miamcu
+// CHECK_DXC_24: {{(unknown argument).*}}-mieee-fp
+// CHECK_DXC_24: {{(unknown argument).*}}-mieee-rnd-near
+// CHECK_DXC_24: {{(unknown argument).*}}-mignore-xcoff-visibility
+// CHECK_DXC_24: {{(unknown argument).*}}-no-finalize-removal
+// CHECK_DXC_24: {{(unknown argument).*}}-no-ns-alloc-error
+// CHECK_DXC_24: {{(unknown argument).*}}-mimplicit-float
+// CHECK_DXC_24: {{(unknown argument).*}}-mimplicit-it=
+// CHECK_DXC_24: {{(unknown argument).*}}-mincremental-linker-compatible
+// CHECK_DXC_24: {{(unknown argument).*}}-mindirect-branch-cs-prefix
+// CHECK_DXC_24: {{(unknown argument).*}}-mindirect-jump=
+// CHECK_DXC_24: {{(unknown argument).*}}-minline-all-stringops
+// CHECK_DXC_24: {{(unknown argument).*}}-minvariant-function-descriptors
+// CHECK_DXC_24: {{(unknown argument).*}}-minvpcid
+// CHECK_DXC_24: {{(unknown argument).*}}-mios-simulator-version-min=
+// CHECK_DXC_24: {{(unknown argument).*}}-mios-version-min=
 // CHECK_DXC_24: {{(unknown argument).*}}-mips1
 // CHECK_DXC_24: {{(unknown argument).*}}-mips16
 // CHECK_DXC_24: {{(unknown argument).*}}-mips2
@@ -19839,30 +19981,30 @@
 // CHECK_DXC_24: {{(unknown argument).*}}-mno-amdgpu-ieee
 // CHECK_DXC_24: {{(unknown argument).*}}-mno-amdgpu-precise-memory-op
 // CHECK_DXC_24: {{(unknown argument).*}}-mno-amx-avx512
-// CHECK_DXC_24: {{(unknown argument).*}}-mno-amx-bf16
-// CHECK_DXC_24: {{(unknown argument).*}}-mno-amx-complex
-// CHECK_DXC_24: {{(unknown argument).*}}-mno-amx-fp16
-// CHECK_DXC_24: {{(unknown argument).*}}-mno-amx-fp8
-// CHECK_DXC_24: {{(unknown argument).*}}-mno-amx-int8
-// CHECK_DXC_24: {{(unknown argument).*}}-mno-amx-movrs
-// CHECK_DXC_24: {{(unknown argument).*}}-mno-amx-tf32
-// CHECK_DXC_24: {{(unknown argument).*}}-mno-amx-tile
-// CHECK_DXC_24: {{(unknown argument).*}}-mno-amx-transpose
-// CHECK_DXC_24: {{(unknown argument).*}}-mno-annotate-tablejump
-// CHECK_DXC_24: {{(unknown argument).*}}-mno-apx-features=
-// CHECK_DXC_24: {{(unknown argument).*}}-mno-apxf
-// CHECK_DXC_24: {{(unknown argument).*}}-mno-atomics
-// CHECK_DXC_24: {{(unknown argument).*}}-mno-avx
-// CHECK_DXC_24: {{(unknown argument).*}}-mno-avx10.1
-// CHECK_DXC_24: {{(unknown argument).*}}-mno-avx10.1-256
-// CHECK_DXC_24: {{(unknown argument).*}}-mno-avx10.1-512
-// CHECK_DXC_24: {{(unknown argument).*}}-mno-avx10.2
-// CHECK_DXC_24: {{(unknown argument).*}}-mno-avx2
-// CHECK_DXC_24: {{(unknown argument).*}}-mno-avx512bf16
-// CHECK_DXC_24: {{(unknown argument).*}}-mno-avx512bitalg
-// CHECK_DXC_24: {{(unknown argument).*}}-mno-avx512bw
 
 // RUN: not %clang_dxc  \
+// RUN:   -mno-amx-bf16 \
+// RUN:   -mno-amx-complex \
+// RUN:   -mno-amx-fp16 \
+// RUN:   -mno-amx-fp8 \
+// RUN:   -mno-amx-int8 \
+// RUN:   -mno-amx-movrs \
+// RUN:   -mno-amx-tf32 \
+// RUN:   -mno-amx-tile \
+// RUN:   -mno-amx-transpose \
+// RUN:   -mno-annotate-tablejump \
+// RUN:   -mno-apx-features= \
+// RUN:   -mno-apxf \
+// RUN:   -mno-atomics \
+// RUN:   -mno-avx \
+// RUN:   -mno-avx10.1 \
+// RUN:   -mno-avx10.1-256 \
+// RUN:   -mno-avx10.1-512 \
+// RUN:   -mno-avx10.2 \
+// RUN:   -mno-avx2 \
+// RUN:   -mno-avx512bf16 \
+// RUN:   -mno-avx512bitalg \
+// RUN:   -mno-avx512bw \
 // RUN:   -mno-avx512cd \
 // RUN:   -mno-avx512dq \
 // RUN:   -mno-avx512f \
@@ -19940,30 +20082,30 @@
 // RUN:   -mno-hvx-ieee-fp \
 // RUN:   -mno-hvx-qfloat \
 // RUN:   -mno-hreset \
-// RUN:   -mno-htm \
-// RUN:   -mno-iamcu \
-// RUN:   -mno-implicit-float \
-// RUN:   -mno-incremental-linker-compatible \
-// RUN:   -mno-inline-all-stringops \
-// RUN:   -mno-invariant-function-descriptors \
-// RUN:   -mno-invpcid \
-// RUN:   -mno-isel \
-// RUN:   -mno-kl \
-// RUN:   -mno-lam-bh \
-// RUN:   -mno-lamcas \
-// RUN:   -mno-lasx \
-// RUN:   -mno-ld-seq-sa \
-// RUN:   -mno-ldc1-sdc1 \
-// RUN:   -mno-link-builtin-bitcode-postopt \
-// RUN:   -mno-local-sdata \
-// RUN:   -mno-long-calls \
-// RUN:   -mno-longcall \
-// RUN:   -mno-lsx \
-// RUN:   -mno-lvi-cfi \
-// RUN:   -mno-lvi-hardening \
-// RUN:   -mno-lwp \
-// RUN:   -mno-lzcnt -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_25 %s
+// RUN:   -mno-htm -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_25 %s
 
+// CHECK_DXC_25: {{(unknown argument).*}}-mno-amx-bf16
+// CHECK_DXC_25: {{(unknown argument).*}}-mno-amx-complex
+// CHECK_DXC_25: {{(unknown argument).*}}-mno-amx-fp16
+// CHECK_DXC_25: {{(unknown argument).*}}-mno-amx-fp8
+// CHECK_DXC_25: {{(unknown argument).*}}-mno-amx-int8
+// CHECK_DXC_25: {{(unknown argument).*}}-mno-amx-movrs
+// CHECK_DXC_25: {{(unknown argument).*}}-mno-amx-tf32
+// CHECK_DXC_25: {{(unknown argument).*}}-mno-amx-tile
+// CHECK_DXC_25: {{(unknown argument).*}}-mno-amx-transpose
+// CHECK_DXC_25: {{(unknown argument).*}}-mno-annotate-tablejump
+// CHECK_DXC_25: {{(unknown argument).*}}-mno-apx-features=
+// CHECK_DXC_25: {{(unknown argument).*}}-mno-apxf
+// CHECK_DXC_25: {{(unknown argument).*}}-mno-atomics
+// CHECK_DXC_25: {{(unknown argument).*}}-mno-avx
+// CHECK_DXC_25: {{(unknown argument).*}}-mno-avx10.1
+// CHECK_DXC_25: {{(unknown argument).*}}-mno-avx10.1-256
+// CHECK_DXC_25: {{(unknown argument).*}}-mno-avx10.1-512
+// CHECK_DXC_25: {{(unknown argument).*}}-mno-avx10.2
+// CHECK_DXC_25: {{(unknown argument).*}}-mno-avx2
+// CHECK_DXC_25: {{(unknown argument).*}}-mno-avx512bf16
+// CHECK_DXC_25: {{(unknown argument).*}}-mno-avx512bitalg
+// CHECK_DXC_25: {{(unknown argument).*}}-mno-avx512bw
 // CHECK_DXC_25: {{(unknown argument).*}}-mno-avx512cd
 // CHECK_DXC_25: {{(unknown argument).*}}-mno-avx512dq
 // CHECK_DXC_25: {{(unknown argument).*}}-mno-avx512f
@@ -20042,30 +20184,30 @@
 // CHECK_DXC_25: {{(unknown argument).*}}-mno-hvx-qfloat
 // CHECK_DXC_25: {{(unknown argument).*}}-mno-hreset
 // CHECK_DXC_25: {{(unknown argument).*}}-mno-htm
-// CHECK_DXC_25: {{(unknown argument).*}}-mno-iamcu
-// CHECK_DXC_25: {{(unknown argument).*}}-mno-implicit-float
-// CHECK_DXC_25: {{(unknown argument).*}}-mno-incremental-linker-compatible
-// CHECK_DXC_25: {{(unknown argument).*}}-mno-inline-all-stringops
-// CHECK_DXC_25: {{(unknown argument).*}}-mno-invariant-function-descriptors
-// CHECK_DXC_25: {{(unknown argument).*}}-mno-invpcid
-// CHECK_DXC_25: {{(unknown argument).*}}-mno-isel
-// CHECK_DXC_25: {{(unknown argument).*}}-mno-kl
-// CHECK_DXC_25: {{(unknown argument).*}}-mno-lam-bh
-// CHECK_DXC_25: {{(unknown argument).*}}-mno-lamcas
-// CHECK_DXC_25: {{(unknown argument).*}}-mno-lasx
-// CHECK_DXC_25: {{(unknown argument).*}}-mno-ld-seq-sa
-// CHECK_DXC_25: {{(unknown argument).*}}-mno-ldc1-sdc1
-// CHECK_DXC_25: {{(unknown argument).*}}-mno-link-builtin-bitcode-postopt
-// CHECK_DXC_25: {{(unknown argument).*}}-mno-local-sdata
-// CHECK_DXC_25: {{(unknown argument).*}}-mno-long-calls
-// CHECK_DXC_25: {{(unknown argument).*}}-mno-longcall
-// CHECK_DXC_25: {{(unknown argument).*}}-mno-lsx
-// CHECK_DXC_25: {{(unknown argument).*}}-mno-lvi-cfi
-// CHECK_DXC_25: {{(unknown argument).*}}-mno-lvi-hardening
-// CHECK_DXC_25: {{(unknown argument).*}}-mno-lwp
-// CHECK_DXC_25: {{(unknown argument).*}}-mno-lzcnt
 
 // RUN: not %clang_dxc  \
+// RUN:   -mno-iamcu \
+// RUN:   -mno-implicit-float \
+// RUN:   -mno-incremental-linker-compatible \
+// RUN:   -mno-inline-all-stringops \
+// RUN:   -mno-invariant-function-descriptors \
+// RUN:   -mno-invpcid \
+// RUN:   -mno-isel \
+// RUN:   -mno-kl \
+// RUN:   -mno-lam-bh \
+// RUN:   -mno-lamcas \
+// RUN:   -mno-lasx \
+// RUN:   -mno-ld-seq-sa \
+// RUN:   -mno-ldc1-sdc1 \
+// RUN:   -mno-link-builtin-bitcode-postopt \
+// RUN:   -mno-local-sdata \
+// RUN:   -mno-long-calls \
+// RUN:   -mno-longcall \
+// RUN:   -mno-lsx \
+// RUN:   -mno-lvi-cfi \
+// RUN:   -mno-lvi-hardening \
+// RUN:   -mno-lwp \
+// RUN:   -mno-lzcnt \
 // RUN:   -mno-madd4 \
 // RUN:   -mno-memops \
 // RUN:   -mno-mfcrf \
@@ -20143,30 +20285,30 @@
 // RUN:   -mno-sha512 \
 // RUN:   -mno-shstk \
 // RUN:   -mno-sign-ext \
-// RUN:   -mno-simd128 \
-// RUN:   -mno-skip-rax-setup \
-// RUN:   -mno-sm3 \
-// RUN:   -mno-sm4 \
-// RUN:   -mno-soft-float \
-// RUN:   -mno-spe \
-// RUN:   -mno-speculative-load-hardening \
-// RUN:   -mno-sse \
-// RUN:   -mno-sse2 \
-// RUN:   -mno-sse3 \
-// RUN:   -mno-sse4 \
-// RUN:   -mno-sse4.1 \
-// RUN:   -mno-sse4.2 \
-// RUN:   -mno-sse4a \
-// RUN:   -mno-ssse3 \
-// RUN:   -mno-stack-arg-probe \
-// RUN:   -mno-stackrealign \
-// RUN:   -mno-strict-align \
-// RUN:   -mno-tail-call \
-// RUN:   -mno-tbm \
-// RUN:   -mno-tgsplit \
-// RUN:   -mno-thumb \
-// RUN:   -mno-tls-direct-seg-refs -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_26 %s
+// RUN:   -mno-simd128 -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_26 %s
 
+// CHECK_DXC_26: {{(unknown argument).*}}-mno-iamcu
+// CHECK_DXC_26: {{(unknown argument).*}}-mno-implicit-float
+// CHECK_DXC_26: {{(unknown argument).*}}-mno-incremental-linker-compatible
+// CHECK_DXC_26: {{(unknown argument).*}}-mno-inline-all-stringops
+// CHECK_DXC_26: {{(unknown argument).*}}-mno-invariant-function-descriptors
+// CHECK_DXC_26: {{(unknown argument).*}}-mno-invpcid
+// CHECK_DXC_26: {{(unknown argument).*}}-mno-isel
+// CHECK_DXC_26: {{(unknown argument).*}}-mno-kl
+// CHECK_DXC_26: {{(unknown argument).*}}-mno-lam-bh
+// CHECK_DXC_26: {{(unknown argument).*}}-mno-lamcas
+// CHECK_DXC_26: {{(unknown argument).*}}-mno-lasx
+// CHECK_DXC_26: {{(unknown argument).*}}-mno-ld-seq-sa
+// CHECK_DXC_26: {{(unknown argument).*}}-mno-ldc1-sdc1
+// CHECK_DXC_26: {{(unknown argument).*}}-mno-link-builtin-bitcode-postopt
+// CHECK_DXC_26: {{(unknown argument).*}}-mno-local-sdata
+// CHECK_DXC_26: {{(unknown argument).*}}-mno-long-calls
+// CHECK_DXC_26: {{(unknown argument).*}}-mno-longcall
+// CHECK_DXC_26: {{(unknown argument).*}}-mno-lsx
+// CHECK_DXC_26: {{(unknown argument).*}}-mno-lvi-cfi
+// CHECK_DXC_26: {{(unknown argument).*}}-mno-lvi-hardening
+// CHECK_DXC_26: {{(unknown argument).*}}-mno-lwp
+// CHECK_DXC_26: {{(unknown argument).*}}-mno-lzcnt
 // CHECK_DXC_26: {{(unknown argument).*}}-mno-madd4
 // CHECK_DXC_26: {{(unknown argument).*}}-mno-memops
 // CHECK_DXC_26: {{(unknown argument).*}}-mno-mfcrf
@@ -20245,30 +20387,30 @@
 // CHECK_DXC_26: {{(unknown argument).*}}-mno-shstk
 // CHECK_DXC_26: {{(unknown argument).*}}-mno-sign-ext
 // CHECK_DXC_26: {{(unknown argument).*}}-mno-simd128
-// CHECK_DXC_26: {{(unknown argument).*}}-mno-skip-rax-setup
-// CHECK_DXC_26: {{(unknown argument).*}}-mno-sm3
-// CHECK_DXC_26: {{(unknown argument).*}}-mno-sm4
-// CHECK_DXC_26: {{(unknown argument).*}}-mno-soft-float
-// CHECK_DXC_26: {{(unknown argument).*}}-mno-spe
-// CHECK_DXC_26: {{(unknown argument).*}}-mno-speculative-load-hardening
-// CHECK_DXC_26: {{(unknown argument).*}}-mno-sse
-// CHECK_DXC_26: {{(unknown argument).*}}-mno-sse2
-// CHECK_DXC_26: {{(unknown argument).*}}-mno-sse3
-// CHECK_DXC_26: {{(unknown argument).*}}-mno-sse4
-// CHECK_DXC_26: {{(unknown argument).*}}-mno-sse4.1
-// CHECK_DXC_26: {{(unknown argument).*}}-mno-sse4.2
-// CHECK_DXC_26: {{(unknown argument).*}}-mno-sse4a
-// CHECK_DXC_26: {{(unknown argument).*}}-mno-ssse3
-// CHECK_DXC_26: {{(unknown argument).*}}-mno-stack-arg-probe
-// CHECK_DXC_26: {{(unknown argument).*}}-mno-stackrealign
-// CHECK_DXC_26: {{(unknown argument).*}}-mno-strict-align
-// CHECK_DXC_26: {{(unknown argument).*}}-mno-tail-call
-// CHECK_DXC_26: {{(unknown argument).*}}-mno-tbm
-// CHECK_DXC_26: {{(unknown argument).*}}-mno-tgsplit
-// CHECK_DXC_26: {{(unknown argument).*}}-mno-thumb
-// CHECK_DXC_26: {{(unknown argument).*}}-mno-tls-direct-seg-refs
 
 // RUN: not %clang_dxc  \
+// RUN:   -mno-skip-rax-setup \
+// RUN:   -mno-sm3 \
+// RUN:   -mno-sm4 \
+// RUN:   -mno-soft-float \
+// RUN:   -mno-spe \
+// RUN:   -mno-speculative-load-hardening \
+// RUN:   -mno-sse \
+// RUN:   -mno-sse2 \
+// RUN:   -mno-sse3 \
+// RUN:   -mno-sse4 \
+// RUN:   -mno-sse4.1 \
+// RUN:   -mno-sse4.2 \
+// RUN:   -mno-sse4a \
+// RUN:   -mno-ssse3 \
+// RUN:   -mno-stack-arg-probe \
+// RUN:   -mno-stackrealign \
+// RUN:   -mno-strict-align \
+// RUN:   -mno-tail-call \
+// RUN:   -mno-tbm \
+// RUN:   -mno-tgsplit \
+// RUN:   -mno-thumb \
+// RUN:   -mno-tls-direct-seg-refs \
 // RUN:   -mno-tocdata \
 // RUN:   -mno-tocdata= \
 // RUN:   -mno-tsxldtrk \
@@ -20346,30 +20488,30 @@
 // RUN:   -mprefixed \
 // RUN:   -mprfchw \
 // RUN:   -mprintf-kind= \
-// RUN:   -mprivileged \
-// RUN:   -mptwrite \
-// RUN:   -mpure-code \
-// RUN:   -mqdsp6-compat \
-// RUN:   -mraoint \
-// RUN:   -mrdpid \
-// RUN:   -mrdpru \
-// RUN:   -mrdrnd \
-// RUN:   -mrdseed \
-// RUN:   -mreassociate \
-// RUN:   -mrecip \
-// RUN:   -mrecip= \
-// RUN:   -mrecord-mcount \
-// RUN:   -mred-zone \
-// RUN:   -mreference-types \
-// RUN:   -mregnames \
-// RUN:   -mregparm \
-// RUN:   -mregparm= \
-// RUN:   -mrelax \
-// RUN:   -mrelax-all \
-// RUN:   -mrelax-pic-calls \
-// RUN:   -mrelax-relocations=no \
-// RUN:   -mrelaxed-simd -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_27 %s
+// RUN:   -mprivileged -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_27 %s
 
+// CHECK_DXC_27: {{(unknown argument).*}}-mno-skip-rax-setup
+// CHECK_DXC_27: {{(unknown argument).*}}-mno-sm3
+// CHECK_DXC_27: {{(unknown argument).*}}-mno-sm4
+// CHECK_DXC_27: {{(unknown argument).*}}-mno-soft-float
+// CHECK_DXC_27: {{(unknown argument).*}}-mno-spe
+// CHECK_DXC_27: {{(unknown argument).*}}-mno-speculative-load-hardening
+// CHECK_DXC_27: {{(unknown argument).*}}-mno-sse
+// CHECK_DXC_27: {{(unknown argument).*}}-mno-sse2
+// CHECK_DXC_27: {{(unknown argument).*}}-mno-sse3
+// CHECK_DXC_27: {{(unknown argument).*}}-mno-sse4
+// CHECK_DXC_27: {{(unknown argument).*}}-mno-sse4.1
+// CHECK_DXC_27: {{(unknown argument).*}}-mno-sse4.2
+// CHECK_DXC_27: {{(unknown argument).*}}-mno-sse4a
+// CHECK_DXC_27: {{(unknown argument).*}}-mno-ssse3
+// CHECK_DXC_27: {{(unknown argument).*}}-mno-stack-arg-probe
+// CHECK_DXC_27: {{(unknown argument).*}}-mno-stackrealign
+// CHECK_DXC_27: {{(unknown argument).*}}-mno-strict-align
+// CHECK_DXC_27: {{(unknown argument).*}}-mno-tail-call
+// CHECK_DXC_27: {{(unknown argument).*}}-mno-tbm
+// CHECK_DXC_27: {{(unknown argument).*}}-mno-tgsplit
+// CHECK_DXC_27: {{(unknown argument).*}}-mno-thumb
+// CHECK_DXC_27: {{(unknown argument).*}}-mno-tls-direct-seg-refs
 // CHECK_DXC_27: {{(unknown argument).*}}-mno-tocdata
 // CHECK_DXC_27: {{(unknown argument).*}}-mno-tocdata=
 // CHECK_DXC_27: {{(unknown argument).*}}-mno-tsxldtrk
@@ -20448,30 +20590,30 @@
 // CHECK_DXC_27: {{(unknown argument).*}}-mprfchw
 // CHECK_DXC_27: {{(unknown argument).*}}-mprintf-kind=
 // CHECK_DXC_27: {{(unknown argument).*}}-mprivileged
-// CHECK_DXC_27: {{(unknown argument).*}}-mptwrite
-// CHECK_DXC_27: {{(unknown argument).*}}-mpure-code
-// CHECK_DXC_27: {{(unknown argument).*}}-mqdsp6-compat
-// CHECK_DXC_27: {{(unknown argument).*}}-mraoint
-// CHECK_DXC_27: {{(unknown argument).*}}-mrdpid
-// CHECK_DXC_27: {{(unknown argument).*}}-mrdpru
-// CHECK_DXC_27: {{(unknown argument).*}}-mrdrnd
-// CHECK_DXC_27: {{(unknown argument).*}}-mrdseed
-// CHECK_DXC_27: {{(unknown argument).*}}-mreassociate
-// CHECK_DXC_27: {{(unknown argument).*}}-mrecip
-// CHECK_DXC_27: {{(unknown argument).*}}-mrecip=
-// CHECK_DXC_27: {{(unknown argument).*}}-mrecord-mcount
-// CHECK_DXC_27: {{(unknown argument).*}}-mred-zone
-// CHECK_DXC_27: {{(unknown argument).*}}-mreference-types
-// CHECK_DXC_27: {{(unknown argument).*}}-mregnames
-// CHECK_DXC_27: {{(unknown argument).*}}-mregparm
-// CHECK_DXC_27: {{(unknown argument).*}}-mregparm=
-// CHECK_DXC_27: {{(unknown argument).*}}-mrelax
-// CHECK_DXC_27: {{(unknown argument).*}}-mrelax-all
-// CHECK_DXC_27: {{(unknown argument).*}}-mrelax-pic-calls
-// CHECK_DXC_27: {{(unknown argument).*}}-mrelax-relocations=no
-// CHECK_DXC_27: {{(unknown argument).*}}-mrelaxed-simd
 
 // RUN: not %clang_dxc  \
+// RUN:   -mptwrite \
+// RUN:   -mpure-code \
+// RUN:   -mqdsp6-compat \
+// RUN:   -mraoint \
+// RUN:   -mrdpid \
+// RUN:   -mrdpru \
+// RUN:   -mrdrnd \
+// RUN:   -mrdseed \
+// RUN:   -mreassociate \
+// RUN:   -mrecip \
+// RUN:   -mrecip= \
+// RUN:   -mrecord-mcount \
+// RUN:   -mred-zone \
+// RUN:   -mreference-types \
+// RUN:   -mregnames \
+// RUN:   -mregparm \
+// RUN:   -mregparm= \
+// RUN:   -mrelax \
+// RUN:   -mrelax-all \
+// RUN:   -mrelax-pic-calls \
+// RUN:   -mrelax-relocations=no \
+// RUN:   -mrelaxed-simd \
 // RUN:   -mrelocation-model \
 // RUN:   -mrestrict-it \
 // RUN:   -mretpoline \
@@ -20549,30 +20691,30 @@
 // RUN:   -mtvos-version-min= \
 // RUN:   -muclibc \
 // RUN:   -muintr \
-// RUN:   -multi_module \
-// RUN:   -multi-lib-config= \
-// RUN:   -multiply_defined \
-// RUN:   -multiply_defined_unused \
-// RUN:   -munaligned-access \
-// RUN:   -munaligned-symbols \
-// RUN:   -municode \
-// RUN:   -munsafe-fp-atomics \
-// RUN:   -musermsr \
-// RUN:   -mv5 \
-// RUN:   -mv55 \
-// RUN:   -mv60 \
-// RUN:   -mv62 \
-// RUN:   -mv65 \
-// RUN:   -mv66 \
-// RUN:   -mv67 \
-// RUN:   -mv67t \
-// RUN:   -mv68 \
-// RUN:   -mv69 \
-// RUN:   -mv71 \
-// RUN:   -mv71t \
-// RUN:   -mv73 \
-// RUN:   -mv75 -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_28 %s
+// RUN:   -multi_module -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_28 %s
 
+// CHECK_DXC_28: {{(unknown argument).*}}-mptwrite
+// CHECK_DXC_28: {{(unknown argument).*}}-mpure-code
+// CHECK_DXC_28: {{(unknown argument).*}}-mqdsp6-compat
+// CHECK_DXC_28: {{(unknown argument).*}}-mraoint
+// CHECK_DXC_28: {{(unknown argument).*}}-mrdpid
+// CHECK_DXC_28: {{(unknown argument).*}}-mrdpru
+// CHECK_DXC_28: {{(unknown argument).*}}-mrdrnd
+// CHECK_DXC_28: {{(unknown argument).*}}-mrdseed
+// CHECK_DXC_28: {{(unknown argument).*}}-mreassociate
+// CHECK_DXC_28: {{(unknown argument).*}}-mrecip
+// CHECK_DXC_28: {{(unknown argument).*}}-mrecip=
+// CHECK_DXC_28: {{(unknown argument).*}}-mrecord-mcount
+// CHECK_DXC_28: {{(unknown argument).*}}-mred-zone
+// CHECK_DXC_28: {{(unknown argument).*}}-mreference-types
+// CHECK_DXC_28: {{(unknown argument).*}}-mregnames
+// CHECK_DXC_28: {{(unknown argument).*}}-mregparm
+// CHECK_DXC_28: {{(unknown argument).*}}-mregparm=
+// CHECK_DXC_28: {{(unknown argument).*}}-mrelax
+// CHECK_DXC_28: {{(unknown argument).*}}-mrelax-all
+// CHECK_DXC_28: {{(unknown argument).*}}-mrelax-pic-calls
+// CHECK_DXC_28: {{(unknown argument).*}}-mrelax-relocations=no
+// CHECK_DXC_28: {{(unknown argument).*}}-mrelaxed-simd
 // CHECK_DXC_28: {{(unknown argument).*}}-mrelocation-model
 // CHECK_DXC_28: {{(unknown argument).*}}-mrestrict-it
 // CHECK_DXC_28: {{(unknown argument).*}}-mretpoline
@@ -20651,30 +20793,30 @@
 // CHECK_DXC_28: {{(unknown argument).*}}-muclibc
 // CHECK_DXC_28: {{(unknown argument).*}}-muintr
 // CHECK_DXC_28: {{(unknown argument).*}}-multi_module
-// CHECK_DXC_28: {{(unknown argument).*}}-multi-lib-config=
-// CHECK_DXC_28: {{(unknown argument).*}}-multiply_defined
-// CHECK_DXC_28: {{(unknown argument).*}}-multiply_defined_unused
-// CHECK_DXC_28: {{(unknown argument).*}}-munaligned-access
-// CHECK_DXC_28: {{(unknown argument).*}}-munaligned-symbols
-// CHECK_DXC_28: {{(unknown argument).*}}-municode
-// CHECK_DXC_28: {{(unknown argument).*}}-munsafe-fp-atomics
-// CHECK_DXC_28: {{(unknown argument).*}}-musermsr
-// CHECK_DXC_28: {{(unknown argument).*}}-mv5
-// CHECK_DXC_28: {{(unknown argument).*}}-mv55
-// CHECK_DXC_28: {{(unknown argument).*}}-mv60
-// CHECK_DXC_28: {{(unknown argument).*}}-mv62
-// CHECK_DXC_28: {{(unknown argument).*}}-mv65
-// CHECK_DXC_28: {{(unknown argument).*}}-mv66
-// CHECK_DXC_28: {{(unknown argument).*}}-mv67
-// CHECK_DXC_28: {{(unknown argument).*}}-mv67t
-// CHECK_DXC_28: {{(unknown argument).*}}-mv68
-// CHECK_DXC_28: {{(unknown argument).*}}-mv69
-// CHECK_DXC_28: {{(unknown argument).*}}-mv71
-// CHECK_DXC_28: {{(unknown argument).*}}-mv71t
-// CHECK_DXC_28: {{(unknown argument).*}}-mv73
-// CHECK_DXC_28: {{(unknown argument).*}}-mv75
 
 // RUN: not %clang_dxc  \
+// RUN:   -multi-lib-config= \
+// RUN:   -multiply_defined \
+// RUN:   -multiply_defined_unused \
+// RUN:   -munaligned-access \
+// RUN:   -munaligned-symbols \
+// RUN:   -municode \
+// RUN:   -munsafe-fp-atomics \
+// RUN:   -musermsr \
+// RUN:   -mv5 \
+// RUN:   -mv55 \
+// RUN:   -mv60 \
+// RUN:   -mv62 \
+// RUN:   -mv65 \
+// RUN:   -mv66 \
+// RUN:   -mv67 \
+// RUN:   -mv67t \
+// RUN:   -mv68 \
+// RUN:   -mv69 \
+// RUN:   -mv71 \
+// RUN:   -mv71t \
+// RUN:   -mv73 \
+// RUN:   -mv75 \
 // RUN:   -mv79 \
 // RUN:   -mv8plus \
 // RUN:   -mvaes \
@@ -20727,6 +20869,7 @@
 // RUN:   --no-cuda-noopt-device-debug \
 // RUN:   --no-cuda-version-check \
 // RUN:   -fno-c++-static-destructors \
+// RUN:   -no-disable-free \
 // RUN:   -no-emit-llvm-uselists \
 // RUN:   -no-enable-noundef-analysis \
 // RUN:   --no-gpu-bundle-output \
@@ -20751,31 +20894,30 @@
 // RUN:   -nodriverkitlib \
 // RUN:   -nofixprebinding \
 // RUN:   -nogpuinc \
-// RUN:   -nogpulibc \
-// RUN:   -nohipwrapperinc \
-// RUN:   -nolibc \
-// RUN:   -nomultidefs \
-// RUN:   -nopie \
-// RUN:   -noprebind \
-// RUN:   -noprofilelib \
-// RUN:   -noseglinkedit \
-// RUN:   -nostartfiles \
-// RUN:   -nostdinc++ \
-// RUN:   -nostdlib \
-// RUN:   -nostdlibinc \
-// RUN:   -nostdlib++ \
-// RUN:   -nostdsysteminc \
-// RUN:   --nvptx-arch-tool= \
-// RUN:   -o \
-// RUN:   -objc-isystem \
-// RUN:   -objcxx-isystem \
-// RUN:   -object \
-// RUN:   --offload= \
-// RUN:   --offload-add-rpath \
-// RUN:   --offload-arch= \
-// RUN:   --offload-compress \
-// RUN:   --offload-compression-level= -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_29 %s
+// RUN:   -nogpulibc -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_29 %s
 
+// CHECK_DXC_29: {{(unknown argument).*}}-multi-lib-config=
+// CHECK_DXC_29: {{(unknown argument).*}}-multiply_defined
+// CHECK_DXC_29: {{(unknown argument).*}}-multiply_defined_unused
+// CHECK_DXC_29: {{(unknown argument).*}}-munaligned-access
+// CHECK_DXC_29: {{(unknown argument).*}}-munaligned-symbols
+// CHECK_DXC_29: {{(unknown argument).*}}-municode
+// CHECK_DXC_29: {{(unknown argument).*}}-munsafe-fp-atomics
+// CHECK_DXC_29: {{(unknown argument).*}}-musermsr
+// CHECK_DXC_29: {{(unknown argument).*}}-mv5
+// CHECK_DXC_29: {{(unknown argument).*}}-mv55
+// CHECK_DXC_29: {{(unknown argument).*}}-mv60
+// CHECK_DXC_29: {{(unknown argument).*}}-mv62
+// CHECK_DXC_29: {{(unknown argument).*}}-mv65
+// CHECK_DXC_29: {{(unknown argument).*}}-mv66
+// CHECK_DXC_29: {{(unknown argument).*}}-mv67
+// CHECK_DXC_29: {{(unknown argument).*}}-mv67t
+// CHECK_DXC_29: {{(unknown argument).*}}-mv68
+// CHECK_DXC_29: {{(unknown argument).*}}-mv69
+// CHECK_DXC_29: {{(unknown argument).*}}-mv71
+// CHECK_DXC_29: {{(unknown argument).*}}-mv71t
+// CHECK_DXC_29: {{(unknown argument).*}}-mv73
+// CHECK_DXC_29: {{(unknown argument).*}}-mv75
 // CHECK_DXC_29: {{(unknown argument).*}}-mv79
 // CHECK_DXC_29: {{(unknown argument).*}}-mv8plus
 // CHECK_DXC_29: {{(unknown argument).*}}-mvaes
@@ -20828,6 +20970,7 @@
 // CHECK_DXC_29: {{(unknown argument).*}}--no-cuda-noopt-device-debug
 // CHECK_DXC_29: {{(unknown argument).*}}--no-cuda-version-check
 // CHECK_DXC_29: {{(unknown argument).*}}-fno-c++-static-destructors
+// CHECK_DXC_29: {{(unknown argument).*}}-no-disable-free
 // CHECK_DXC_29: {{(unknown argument).*}}-no-emit-llvm-uselists
 // CHECK_DXC_29: {{(unknown argument).*}}-no-enable-noundef-analysis
 // CHECK_DXC_29: {{(unknown argument).*}}--no-gpu-bundle-output
@@ -20853,34 +20996,35 @@
 // CHECK_DXC_29: {{(unknown argument).*}}-nofixprebinding
 // CHECK_DXC_29: {{(unknown argument).*}}-nogpuinc
 // CHECK_DXC_29: {{(unknown argument).*}}-nogpulibc
-// CHECK_DXC_29: {{(unknown argument).*}}-nohipwrapperinc
-// CHECK_DXC_29: {{(unknown argument).*}}-nolibc
-// CHECK_DXC_29: {{(unknown argument).*}}-nomultidefs
-// CHECK_DXC_29: {{(unknown argument).*}}-nopie
-// CHECK_DXC_29: {{(unknown argument).*}}-noprebind
-// CHECK_DXC_29: {{(unknown argument).*}}-noprofilelib
-// CHECK_DXC_29: {{(unknown argument).*}}-noseglinkedit
-// CHECK_DXC_29: {{(unknown argument).*}}-nostartfiles
-// CHECK_DXC_29: {{(unknown argument).*}}-nostdinc++
-// CHECK_DXC_29: {{(unknown argument).*}}-nostdlib
-// CHECK_DXC_29: {{(unknown argument).*}}-nostdlibinc
-// CHECK_DXC_29: {{(unknown argument).*}}-nostdlib++
-// CHECK_DXC_29: {{(unknown argument).*}}-nostdsysteminc
-// CHECK_DXC_29: {{(unknown argument).*}}--nvptx-arch-tool=
-// CHECK_DXC_29: {{(unknown argument).*}}-o
-// CHECK_DXC_29: {{(unknown argument).*}}-objc-isystem
-// CHECK_DXC_29: {{(unknown argument).*}}-objcxx-isystem
-// CHECK_DXC_29: {{(unknown argument).*}}-object
-// CHECK_DXC_29: {{(unknown argument).*}}--offload=
-// CHECK_DXC_29: {{(unknown argument).*}}--offload-add-rpath
-// CHECK_DXC_29: {{(unknown argument).*}}--offload-arch=
-// CHECK_DXC_29: {{(unknown argument).*}}--offload-compress
-// CHECK_DXC_29: {{(unknown argument).*}}--offload-compression-level=
 
 // RUN: not %clang_dxc  \
+// RUN:   -nohipwrapperinc \
+// RUN:   -nolibc \
+// RUN:   -nomultidefs \
+// RUN:   -nopie \
+// RUN:   -noprebind \
+// RUN:   -noprofilelib \
+// RUN:   -noseglinkedit \
+// RUN:   -nostartfiles \
+// RUN:   -nostdinc++ \
+// RUN:   -nostdlib \
+// RUN:   -nostdlibinc \
+// RUN:   -nostdlib++ \
+// RUN:   -nostdsysteminc \
+// RUN:   --nvptx-arch-tool= \
+// RUN:   -o \
+// RUN:   -objc-isystem \
+// RUN:   -objcxx-isystem \
+// RUN:   -object \
+// RUN:   --offload= \
+// RUN:   --offload-add-rpath \
+// RUN:   --offload-arch= \
+// RUN:   --offload-compress \
+// RUN:   --offload-compression-level= \
 // RUN:   --offload-device-only \
 // RUN:   --offload-host-device \
 // RUN:   --offload-host-only \
+// RUN:   --offload-jobs= \
 // RUN:   --offload-link \
 // RUN:   --offload-new-driver \
 // RUN:   --offloadlib \
@@ -20950,38 +21094,38 @@
 // RUN:   -relocatable-pch \
 // RUN:   -remap \
 // RUN:   -remap-file \
+// RUN:   -loader-replaceable-function= \
 // RUN:   -rewrite-legacy-objc \
 // RUN:   -rewrite-macros \
-// RUN:   -rewrite-objc \
-// RUN:   -rewrite-test \
-// RUN:   --rocm-device-lib-path= \
-// RUN:   --rocm-path= \
-// RUN:   -round-trip-args \
-// RUN:   -rpath \
-// RUN:   -rtlib= \
-// RUN:   -s \
-// RUN:   -fsanitize-address-destructor= \
-// RUN:   -fsanitize-address-use-after-return= \
-// RUN:   -save-stats \
-// RUN:   -save-stats= \
-// RUN:   -save-temps \
-// RUN:   -save-temps= \
-// RUN:   -sectalign \
-// RUN:   -sectcreate \
-// RUN:   -sectobjectsymbols \
-// RUN:   -sectorder \
-// RUN:   -seg1addr \
-// RUN:   -seg_addr_table \
-// RUN:   -seg_addr_table_filename \
-// RUN:   -segaddr \
-// RUN:   -segcreate \
-// RUN:   -seglinkedit \
-// RUN:   -segprot \
-// RUN:   -segs_read_ -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_30 %s
+// RUN:   -rewrite-objc -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_30 %s
 
+// CHECK_DXC_30: {{(unknown argument).*}}-nohipwrapperinc
+// CHECK_DXC_30: {{(unknown argument).*}}-nolibc
+// CHECK_DXC_30: {{(unknown argument).*}}-nomultidefs
+// CHECK_DXC_30: {{(unknown argument).*}}-nopie
+// CHECK_DXC_30: {{(unknown argument).*}}-noprebind
+// CHECK_DXC_30: {{(unknown argument).*}}-noprofilelib
+// CHECK_DXC_30: {{(unknown argument).*}}-noseglinkedit
+// CHECK_DXC_30: {{(unknown argument).*}}-nostartfiles
+// CHECK_DXC_30: {{(unknown argument).*}}-nostdinc++
+// CHECK_DXC_30: {{(unknown argument).*}}-nostdlib
+// CHECK_DXC_30: {{(unknown argument).*}}-nostdlibinc
+// CHECK_DXC_30: {{(unknown argument).*}}-nostdlib++
+// CHECK_DXC_30: {{(unknown argument).*}}-nostdsysteminc
+// CHECK_DXC_30: {{(unknown argument).*}}--nvptx-arch-tool=
+// CHECK_DXC_30: {{(unknown argument).*}}-o
+// CHECK_DXC_30: {{(unknown argument).*}}-objc-isystem
+// CHECK_DXC_30: {{(unknown argument).*}}-objcxx-isystem
+// CHECK_DXC_30: {{(unknown argument).*}}-object
+// CHECK_DXC_30: {{(unknown argument).*}}--offload=
+// CHECK_DXC_30: {{(unknown argument).*}}--offload-add-rpath
+// CHECK_DXC_30: {{(unknown argument).*}}--offload-arch=
+// CHECK_DXC_30: {{(unknown argument).*}}--offload-compress
+// CHECK_DXC_30: {{(unknown argument).*}}--offload-compression-level=
 // CHECK_DXC_30: {{(unknown argument).*}}--offload-device-only
 // CHECK_DXC_30: {{(unknown argument).*}}--offload-host-device
 // CHECK_DXC_30: {{(unknown argument).*}}--offload-host-only
+// CHECK_DXC_30: {{(unknown argument).*}}--offload-jobs=
 // CHECK_DXC_30: {{(unknown argument).*}}--offload-link
 // CHECK_DXC_30: {{(unknown argument).*}}--offload-new-driver
 // CHECK_DXC_30: {{(unknown argument).*}}--offloadlib
@@ -21051,40 +21195,42 @@
 // CHECK_DXC_30: {{(unknown argument).*}}-relocatable-pch
 // CHECK_DXC_30: {{(unknown argument).*}}-remap
 // CHECK_DXC_30: {{(unknown argument).*}}-remap-file
+// CHECK_DXC_30: {{(unknown argument).*}}-loader-replaceable-function=
 // CHECK_DXC_30: {{(unknown argument).*}}-rewrite-legacy-objc
 // CHECK_DXC_30: {{(unknown argument).*}}-rewrite-macros
 // CHECK_DXC_30: {{(unknown argument).*}}-rewrite-objc
-// CHECK_DXC_30: {{(unknown argument).*}}-rewrite-test
-// CHECK_DXC_30: {{(unknown argument).*}}--rocm-device-lib-path=
-// CHECK_DXC_30: {{(unknown argument).*}}--rocm-path=
-// CHECK_DXC_30: {{(unknown argument).*}}-round-trip-args
-// CHECK_DXC_30: {{(unknown argument).*}}-rpath
-// CHECK_DXC_30: {{(unknown argument).*}}-rtlib=
-// CHECK_DXC_30: {{(unknown argument).*}}-s
-// CHECK_DXC_30: {{(unknown argument).*}}-fsanitize-address-destructor=
-// CHECK_DXC_30: {{(unknown argument).*}}-fsanitize-address-use-after-return=
-// CHECK_DXC_30: {{(unknown argument).*}}-save-stats
-// CHECK_DXC_30: {{(unknown argument).*}}-save-stats=
-// CHECK_DXC_30: {{(unknown argument).*}}-save-temps
-// CHECK_DXC_30: {{(unknown argument).*}}-save-temps=
-// CHECK_DXC_30: {{(unknown argument).*}}-sectalign
-// CHECK_DXC_30: {{(unknown argument).*}}-sectcreate
-// CHECK_DXC_30: {{(unknown argument).*}}-sectobjectsymbols
-// CHECK_DXC_30: {{(unknown argument).*}}-sectorder
-// CHECK_DXC_30: {{(unknown argument).*}}-seg1addr
-// CHECK_DXC_30: {{(unknown argument).*}}-seg_addr_table
-// CHECK_DXC_30: {{(unknown argument).*}}-seg_addr_table_filename
-// CHECK_DXC_30: {{(unknown argument).*}}-segaddr
-// CHECK_DXC_30: {{(unknown argument).*}}-segcreate
-// CHECK_DXC_30: {{(unknown argument).*}}-seglinkedit
-// CHECK_DXC_30: {{(unknown argument).*}}-segprot
-// CHECK_DXC_30: {{(unknown argument).*}}-segs_read_
 
 // RUN: not %clang_dxc  \
+// RUN:   -rewrite-test \
+// RUN:   --rocm-device-lib-path= \
+// RUN:   --rocm-path= \
+// RUN:   -round-trip-args \
+// RUN:   -rpath \
+// RUN:   -rtlib= \
+// RUN:   -s \
+// RUN:   -fsanitize-address-destructor= \
+// RUN:   -fsanitize-address-use-after-return= \
+// RUN:   -save-stats \
+// RUN:   -save-stats= \
+// RUN:   -save-temps \
+// RUN:   -save-temps= \
+// RUN:   -sectalign \
+// RUN:   -sectcreate \
+// RUN:   -sectobjectsymbols \
+// RUN:   -sectorder \
+// RUN:   -seg1addr \
+// RUN:   -seg_addr_table \
+// RUN:   -seg_addr_table_filename \
+// RUN:   -segaddr \
+// RUN:   -segcreate \
+// RUN:   -seglinkedit \
+// RUN:   -segprot \
+// RUN:   -segs_read_ \
 // RUN:   -segs_read_only_addr \
 // RUN:   -segs_read_write_addr \
 // RUN:   -setup-static-analyzer \
 // RUN:   -shared \
+// RUN:   -shared-libflangrt \
 // RUN:   -shared-libgcc \
 // RUN:   -shared-libsan \
 // RUN:   -show-encoding \
@@ -21104,6 +21250,7 @@
 // RUN:   -static \
 // RUN:   -static-define \
 // RUN:   -static-libclosure \
+// RUN:   -static-libflangrt \
 // RUN:   -static-libgcc \
 // RUN:   -static-libgfortran \
 // RUN:   -static-libsan \
@@ -21147,35 +21294,44 @@
 // RUN:   -undef \
 // RUN:   -undefined \
 // RUN:   -unexported_symbols_list \
+// RUN:   -funique-source-file-identifier= \
 // RUN:   -unwindlib= \
 // RUN:   -vectorize-loops \
 // RUN:   -vectorize-slp \
 // RUN:   -verify \
 // RUN:   -verify= \
-// RUN:   --verify-debug-info \
-// RUN:   -verify-ignore-unexpected \
-// RUN:   -verify-ignore-unexpected= \
-// RUN:   -verify-pch \
-// RUN:   -vtordisp-mode= \
-// RUN:   --warning-suppression-mappings= \
-// RUN:   --wasm-opt \
-// RUN:   -weak_framework \
-// RUN:   -weak_library \
-// RUN:   -weak_reference_mismatches \
-// RUN:   -weak-l \
-// RUN:   -whatsloaded \
-// RUN:   -why_load \
-// RUN:   -whyload \
-// RUN:   -working-directory \
-// RUN:   -working-directory= \
-// RUN:   -x \
-// RUN:   -y \
-// RUN:   -z -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_31 %s
+// RUN:   --verify-debug-info -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_31 %s
 
+// CHECK_DXC_31: {{(unknown argument).*}}-rewrite-test
+// CHECK_DXC_31: {{(unknown argument).*}}--rocm-device-lib-path=
+// CHECK_DXC_31: {{(unknown argument).*}}--rocm-path=
+// CHECK_DXC_31: {{(unknown argument).*}}-round-trip-args
+// CHECK_DXC_31: {{(unknown argument).*}}-rpath
+// CHECK_DXC_31: {{(unknown argument).*}}-rtlib=
+// CHECK_DXC_31: {{(unknown argument).*}}-s
+// CHECK_DXC_31: {{(unknown argument).*}}-fsanitize-address-destructor=
+// CHECK_DXC_31: {{(unknown argument).*}}-fsanitize-address-use-after-return=
+// CHECK_DXC_31: {{(unknown argument).*}}-save-stats
+// CHECK_DXC_31: {{(unknown argument).*}}-save-stats=
+// CHECK_DXC_31: {{(unknown argument).*}}-save-temps
+// CHECK_DXC_31: {{(unknown argument).*}}-save-temps=
+// CHECK_DXC_31: {{(unknown argument).*}}-sectalign
+// CHECK_DXC_31: {{(unknown argument).*}}-sectcreate
+// CHECK_DXC_31: {{(unknown argument).*}}-sectobjectsymbols
+// CHECK_DXC_31: {{(unknown argument).*}}-sectorder
+// CHECK_DXC_31: {{(unknown argument).*}}-seg1addr
+// CHECK_DXC_31: {{(unknown argument).*}}-seg_addr_table
+// CHECK_DXC_31: {{(unknown argument).*}}-seg_addr_table_filename
+// CHECK_DXC_31: {{(unknown argument).*}}-segaddr
+// CHECK_DXC_31: {{(unknown argument).*}}-segcreate
+// CHECK_DXC_31: {{(unknown argument).*}}-seglinkedit
+// CHECK_DXC_31: {{(unknown argument).*}}-segprot
+// CHECK_DXC_31: {{(unknown argument).*}}-segs_read_
 // CHECK_DXC_31: {{(unknown argument).*}}-segs_read_only_addr
 // CHECK_DXC_31: {{(unknown argument).*}}-segs_read_write_addr
 // CHECK_DXC_31: {{(unknown argument).*}}-setup-static-analyzer
 // CHECK_DXC_31: {{(unknown argument).*}}-shared
+// CHECK_DXC_31: {{(unknown argument).*}}-shared-libflangrt
 // CHECK_DXC_31: {{(unknown argument).*}}-shared-libgcc
 // CHECK_DXC_31: {{(unknown argument).*}}-shared-libsan
 // CHECK_DXC_31: {{(unknown argument).*}}-show-encoding
@@ -21195,6 +21351,7 @@
 // CHECK_DXC_31: {{(unknown argument).*}}-static
 // CHECK_DXC_31: {{(unknown argument).*}}-static-define
 // CHECK_DXC_31: {{(unknown argument).*}}-static-libclosure
+// CHECK_DXC_31: {{(unknown argument).*}}-static-libflangrt
 // CHECK_DXC_31: {{(unknown argument).*}}-static-libgcc
 // CHECK_DXC_31: {{(unknown argument).*}}-static-libgfortran
 // CHECK_DXC_31: {{(unknown argument).*}}-static-libsan
@@ -21238,30 +21395,52 @@
 // CHECK_DXC_31: {{(unknown argument).*}}-undef
 // CHECK_DXC_31: {{(unknown argument).*}}-undefined
 // CHECK_DXC_31: {{(unknown argument).*}}-unexported_symbols_list
+// CHECK_DXC_31: {{(unknown argument).*}}-funique-source-file-identifier=
 // CHECK_DXC_31: {{(unknown argument).*}}-unwindlib=
 // CHECK_DXC_31: {{(unknown argument).*}}-vectorize-loops
 // CHECK_DXC_31: {{(unknown argument).*}}-vectorize-slp
 // CHECK_DXC_31: {{(unknown argument).*}}-verify
 // CHECK_DXC_31: {{(unknown argument).*}}-verify=
 // CHECK_DXC_31: {{(unknown argument).*}}--verify-debug-info
-// CHECK_DXC_31: {{(unknown argument).*}}-verify-ignore-unexpected
-// CHECK_DXC_31: {{(unknown argument).*}}-verify-ignore-unexpected=
-// CHECK_DXC_31: {{(unknown argument).*}}-verify-pch
-// CHECK_DXC_31: {{(unknown argument).*}}-vtordisp-mode=
-// CHECK_DXC_31: {{(unknown argument).*}}--warning-suppression-mappings=
-// CHECK_DXC_31: {{(unknown argument).*}}--wasm-opt
-// CHECK_DXC_31: {{(unknown argument).*}}-weak_framework
-// CHECK_DXC_31: {{(unknown argument).*}}-weak_library
-// CHECK_DXC_31: {{(unknown argument).*}}-weak_reference_mismatches
-// CHECK_DXC_31: {{(unknown argument).*}}-weak-l
-// CHECK_DXC_31: {{(unknown argument).*}}-whatsloaded
-// CHECK_DXC_31: {{(unknown argument).*}}-why_load
-// CHECK_DXC_31: {{(unknown argument).*}}-whyload
-// CHECK_DXC_31: {{(unknown argument).*}}-working-directory
-// CHECK_DXC_31: {{(unknown argument).*}}-working-directory=
-// CHECK_DXC_31: {{(unknown argument).*}}-x
-// CHECK_DXC_31: {{(unknown argument).*}}-y
-// CHECK_DXC_31: {{(unknown argument).*}}-z
+
+// RUN: not %clang_dxc  \
+// RUN:   -verify-ignore-unexpected \
+// RUN:   -verify-ignore-unexpected= \
+// RUN:   -verify-pch \
+// RUN:   -vtordisp-mode= \
+// RUN:   --warning-suppression-mappings= \
+// RUN:   --wasm-opt \
+// RUN:   -weak_framework \
+// RUN:   -weak_library \
+// RUN:   -weak_reference_mismatches \
+// RUN:   -weak-l \
+// RUN:   -whatsloaded \
+// RUN:   -why_load \
+// RUN:   -whyload \
+// RUN:   -working-directory \
+// RUN:   -working-directory= \
+// RUN:   -x \
+// RUN:   -y \
+// RUN:   -z -### /T lib_6_7 2>&1 | FileCheck -check-prefix=CHECK_DXC_32 %s
+
+// CHECK_DXC_32: {{(unknown argument).*}}-verify-ignore-unexpected
+// CHECK_DXC_32: {{(unknown argument).*}}-verify-ignore-unexpected=
+// CHECK_DXC_32: {{(unknown argument).*}}-verify-pch
+// CHECK_DXC_32: {{(unknown argument).*}}-vtordisp-mode=
+// CHECK_DXC_32: {{(unknown argument).*}}--warning-suppression-mappings=
+// CHECK_DXC_32: {{(unknown argument).*}}--wasm-opt
+// CHECK_DXC_32: {{(unknown argument).*}}-weak_framework
+// CHECK_DXC_32: {{(unknown argument).*}}-weak_library
+// CHECK_DXC_32: {{(unknown argument).*}}-weak_reference_mismatches
+// CHECK_DXC_32: {{(unknown argument).*}}-weak-l
+// CHECK_DXC_32: {{(unknown argument).*}}-whatsloaded
+// CHECK_DXC_32: {{(unknown argument).*}}-why_load
+// CHECK_DXC_32: {{(unknown argument).*}}-whyload
+// CHECK_DXC_32: {{(unknown argument).*}}-working-directory
+// CHECK_DXC_32: {{(unknown argument).*}}-working-directory=
+// CHECK_DXC_32: {{(unknown argument).*}}-x
+// CHECK_DXC_32: {{(unknown argument).*}}-y
+// CHECK_DXC_32: {{(unknown argument).*}}-z
 
 // RUN: not %clang  \
 // RUN:   -Eonly \
@@ -21470,6 +21649,7 @@
 // RUN:   -fp:precise \
 // RUN:   -fp:strict \
 // RUN:   -fsanitize-address-use-after-return \
+// RUN:   -funcoverride: \
 // RUN:   -guard: \
 // RUN:   -headerUnit \
 // RUN:   -headerUnit:angle \
@@ -21565,12 +21745,12 @@
 // RUN:   -ast-dump-decl-types \
 // RUN:   -ast-dump-filter \
 // RUN:   -ast-dump-filter= \
-// RUN:   -ast-dump-lookups \
-// RUN:   -ast-list -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CLANG_1 %s
+// RUN:   -ast-dump-lookups -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CLANG_1 %s
 
 // CHECK_CLANG_1: {{(unknown argument).*}}-fp:precise
 // CHECK_CLANG_1: {{(unknown argument).*}}-fp:strict
 // CHECK_CLANG_1: {{(unknown argument).*}}-fsanitize-address-use-after-return
+// CHECK_CLANG_1: {{(unknown argument).*}}-funcoverride:
 // CHECK_CLANG_1: {{(unknown argument).*}}-guard:
 // CHECK_CLANG_1: {{(unknown argument).*}}-headerUnit
 // CHECK_CLANG_1: {{(unknown argument).*}}-headerUnit:angle
@@ -21667,9 +21847,9 @@
 // CHECK_CLANG_1: {{(unknown argument).*}}-ast-dump-filter
 // CHECK_CLANG_1: {{(unknown argument).*}}-ast-dump-filter=
 // CHECK_CLANG_1: {{(unknown argument).*}}-ast-dump-lookups
-// CHECK_CLANG_1: {{(unknown argument).*}}-ast-list
 
 // RUN: not %clang  \
+// RUN:   -ast-list \
 // RUN:   -ast-merge \
 // RUN:   -ast-print \
 // RUN:   -ast-view \
@@ -21768,9 +21948,9 @@
 // RUN:   -fdefault-double-8 \
 // RUN:   -fdefault-integer-8 \
 // RUN:   -fdefault-real-8 \
-// RUN:   -fdenormal-fp-math-f32= \
-// RUN:   -fdeprecated-macro -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CLANG_2 %s
+// RUN:   -fdenormal-fp-math-f32= -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CLANG_2 %s
 
+// CHECK_CLANG_2: {{(unknown argument).*}}-ast-list
 // CHECK_CLANG_2: {{(unknown argument).*}}-ast-merge
 // CHECK_CLANG_2: {{(unknown argument).*}}-ast-print
 // CHECK_CLANG_2: {{(unknown argument).*}}-ast-view
@@ -21870,9 +22050,9 @@
 // CHECK_CLANG_2: {{(unknown argument).*}}-fdefault-integer-8
 // CHECK_CLANG_2: {{(unknown argument).*}}-fdefault-real-8
 // CHECK_CLANG_2: {{(unknown argument).*}}-fdenormal-fp-math-f32=
-// CHECK_CLANG_2: {{(unknown argument).*}}-fdeprecated-macro
 
 // RUN: not %clang  \
+// RUN:   -fdeprecated-macro \
 // RUN:   -fdiagnostics-format \
 // RUN:   -fdiagnostics-show-category \
 // RUN:   -fdisable-integer-16 \
@@ -21880,6 +22060,7 @@
 // RUN:   -fdisable-module-hash \
 // RUN:   -fdisable-real-10 \
 // RUN:   -fdisable-real-3 \
+// RUN:   -fdo-concurrent-to-openmp= \
 // RUN:   -fdump-record-layouts \
 // RUN:   -fdump-record-layouts-canonical \
 // RUN:   -fdump-record-layouts-complete \
@@ -21970,10 +22151,9 @@
 // RUN:   -fno-padding-on-unsigned-fixed-point \
 // RUN:   -fno-pch-timestamp \
 // RUN:   -fno-ppc-native-vector-element-order \
-// RUN:   -fno-realloc-lhs \
-// RUN:   -fno-recovery-ast \
-// RUN:   -fno-recovery-ast-type -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CLANG_3 %s
+// RUN:   -fno-realloc-lhs -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CLANG_3 %s
 
+// CHECK_CLANG_3: {{(unknown argument).*}}-fdeprecated-macro
 // CHECK_CLANG_3: {{(unknown argument).*}}-fdiagnostics-format
 // CHECK_CLANG_3: {{(unknown argument).*}}-fdiagnostics-show-category
 // CHECK_CLANG_3: {{(unknown argument).*}}-fdisable-integer-16
@@ -21981,6 +22161,7 @@
 // CHECK_CLANG_3: {{(unknown argument).*}}-fdisable-module-hash
 // CHECK_CLANG_3: {{(unknown argument).*}}-fdisable-real-10
 // CHECK_CLANG_3: {{(unknown argument).*}}-fdisable-real-3
+// CHECK_CLANG_3: {{(unknown argument).*}}-fdo-concurrent-to-openmp=
 // CHECK_CLANG_3: {{(unknown argument).*}}-fdump-record-layouts
 // CHECK_CLANG_3: {{(unknown argument).*}}-fdump-record-layouts-canonical
 // CHECK_CLANG_3: {{(unknown argument).*}}-fdump-record-layouts-complete
@@ -22072,15 +22253,16 @@
 // CHECK_CLANG_3: {{(unknown argument).*}}-fno-pch-timestamp
 // CHECK_CLANG_3: {{(unknown argument).*}}-fno-ppc-native-vector-element-order
 // CHECK_CLANG_3: {{(unknown argument).*}}-fno-realloc-lhs
-// CHECK_CLANG_3: {{(unknown argument).*}}-fno-recovery-ast
-// CHECK_CLANG_3: {{(unknown argument).*}}-fno-recovery-ast-type
 
 // RUN: not %clang  \
+// RUN:   -fno-recovery-ast \
+// RUN:   -fno-recovery-ast-type \
 // RUN:   -fno-reformat \
-// RUN:   -fno-retain-subst-template-type-parm-type-ast-nodes \
+// RUN:   -fno-repack-arrays \
 // RUN:   -fno-save-main-program \
 // RUN:   -fno-signed-wchar \
 // RUN:   -fno-stack-arrays \
+// RUN:   -fno-stack-repack-arrays \
 // RUN:   -fno-underscoring \
 // RUN:   -fno-unsigned \
 // RUN:   -fno-use-ctor-homing \
@@ -22099,6 +22281,7 @@
 // RUN:   -fpadding-on-unsigned-fixed-point \
 // RUN:   -fpass-by-value-is-noalias \
 // RUN:   -fpatchable-function-entry-offset= \
+// RUN:   -fpatchable-function-entry-section= \
 // RUN:   -fppc-native-vector-element-order \
 // RUN:   -fpreprocess-include-lines \
 // RUN:   -fprofile-instrument= \
@@ -22107,7 +22290,8 @@
 // RUN:   -frealloc-lhs \
 // RUN:   -frecovery-ast \
 // RUN:   -frecovery-ast-type \
-// RUN:   -fretain-subst-template-type-parm-type-ast-nodes \
+// RUN:   -frepack-arrays \
+// RUN:   -frepack-arrays-contiguity= \
 // RUN:   -fsanitize-coverage-8bit-counters \
 // RUN:   -fsanitize-coverage-control-flow \
 // RUN:   -fsanitize-coverage-indirect-calls \
@@ -22128,6 +22312,7 @@
 // RUN:   -fsave-main-program \
 // RUN:   -fsigned-wchar \
 // RUN:   -fstack-arrays \
+// RUN:   -fstack-repack-arrays \
 // RUN:   -fsycl-is-device \
 // RUN:   -fsycl-is-host \
 // RUN:   -ftabstop \
@@ -22153,6 +22338,7 @@
 // RUN:   -import-call-optimization \
 // RUN:   -init-only \
 // RUN:   -internal-externc-isystem \
+// RUN:   -internal-iframework \
 // RUN:   -internal-isystem \
 // RUN:   -main-file-name \
 // RUN:   -massembler-fatal-warnings \
@@ -22168,20 +22354,16 @@
 // RUN:   -mframe-pointer= \
 // RUN:   -mguarded-control-stack \
 // RUN:   -no-finalize-removal \
-// RUN:   -no-ns-alloc-error \
-// RUN:   -mlimit-float-precision \
-// RUN:   -mlink-bitcode-file \
-// RUN:   -mlink-builtin-bitcode \
-// RUN:   -mmapsyms=implicit \
-// RUN:   -mnoexecstack \
-// RUN:   -mno-type-check \
-// RUN:   -module-dir -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CLANG_4 %s
+// RUN:   -no-ns-alloc-error -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CLANG_4 %s
 
+// CHECK_CLANG_4: {{(unknown argument).*}}-fno-recovery-ast
+// CHECK_CLANG_4: {{(unknown argument).*}}-fno-recovery-ast-type
 // CHECK_CLANG_4: {{(unknown argument).*}}-fno-reformat
-// CHECK_CLANG_4: {{(unknown argument).*}}-fno-retain-subst-template-type-parm-type-ast-nodes
+// CHECK_CLANG_4: {{(unknown argument).*}}-fno-repack-arrays
 // CHECK_CLANG_4: {{(unknown argument).*}}-fno-save-main-program
 // CHECK_CLANG_4: {{(unknown argument).*}}-fno-signed-wchar
 // CHECK_CLANG_4: {{(unknown argument).*}}-fno-stack-arrays
+// CHECK_CLANG_4: {{(unknown argument).*}}-fno-stack-repack-arrays
 // CHECK_CLANG_4: {{(unknown argument).*}}-fno-underscoring
 // CHECK_CLANG_4: {{(unknown argument).*}}-fno-unsigned
 // CHECK_CLANG_4: {{(unknown argument).*}}-fno-use-ctor-homing
@@ -22200,6 +22382,7 @@
 // CHECK_CLANG_4: {{(unknown argument).*}}-fpadding-on-unsigned-fixed-point
 // CHECK_CLANG_4: {{(unknown argument).*}}-fpass-by-value-is-noalias
 // CHECK_CLANG_4: {{(unknown argument).*}}-fpatchable-function-entry-offset=
+// CHECK_CLANG_4: {{(unknown argument).*}}-fpatchable-function-entry-section=
 // CHECK_CLANG_4: {{(unknown argument).*}}-fppc-native-vector-element-order
 // CHECK_CLANG_4: {{(unknown argument).*}}-fpreprocess-include-lines
 // CHECK_CLANG_4: {{(unknown argument).*}}-fprofile-instrument=
@@ -22208,7 +22391,8 @@
 // CHECK_CLANG_4: {{(unknown argument).*}}-frealloc-lhs
 // CHECK_CLANG_4: {{(unknown argument).*}}-frecovery-ast
 // CHECK_CLANG_4: {{(unknown argument).*}}-frecovery-ast-type
-// CHECK_CLANG_4: {{(unknown argument).*}}-fretain-subst-template-type-parm-type-ast-nodes
+// CHECK_CLANG_4: {{(unknown argument).*}}-frepack-arrays
+// CHECK_CLANG_4: {{(unknown argument).*}}-frepack-arrays-contiguity=
 // CHECK_CLANG_4: {{(unknown argument).*}}-fsanitize-coverage-8bit-counters
 // CHECK_CLANG_4: {{(unknown argument).*}}-fsanitize-coverage-control-flow
 // CHECK_CLANG_4: {{(unknown argument).*}}-fsanitize-coverage-indirect-calls
@@ -22229,6 +22413,7 @@
 // CHECK_CLANG_4: {{(unknown argument).*}}-fsave-main-program
 // CHECK_CLANG_4: {{(unknown argument).*}}-fsigned-wchar
 // CHECK_CLANG_4: {{(unknown argument).*}}-fstack-arrays
+// CHECK_CLANG_4: {{(unknown argument).*}}-fstack-repack-arrays
 // CHECK_CLANG_4: {{(unknown argument).*}}-fsycl-is-device
 // CHECK_CLANG_4: {{(unknown argument).*}}-fsycl-is-host
 // CHECK_CLANG_4: {{(unknown argument).*}}-ftabstop
@@ -22254,6 +22439,7 @@
 // CHECK_CLANG_4: {{(unknown argument).*}}-import-call-optimization
 // CHECK_CLANG_4: {{(unknown argument).*}}-init-only
 // CHECK_CLANG_4: {{(unknown argument).*}}-internal-externc-isystem
+// CHECK_CLANG_4: {{(unknown argument).*}}-internal-iframework
 // CHECK_CLANG_4: {{(unknown argument).*}}-internal-isystem
 // CHECK_CLANG_4: {{(unknown argument).*}}-main-file-name
 // CHECK_CLANG_4: {{(unknown argument).*}}-massembler-fatal-warnings
@@ -22270,15 +22456,15 @@
 // CHECK_CLANG_4: {{(unknown argument).*}}-mguarded-control-stack
 // CHECK_CLANG_4: {{(unknown argument).*}}-no-finalize-removal
 // CHECK_CLANG_4: {{(unknown argument).*}}-no-ns-alloc-error
-// CHECK_CLANG_4: {{(unknown argument).*}}-mlimit-float-precision
-// CHECK_CLANG_4: {{(unknown argument).*}}-mlink-bitcode-file
-// CHECK_CLANG_4: {{(unknown argument).*}}-mlink-builtin-bitcode
-// CHECK_CLANG_4: {{(unknown argument).*}}-mmapsyms=implicit
-// CHECK_CLANG_4: {{(unknown argument).*}}-mnoexecstack
-// CHECK_CLANG_4: {{(unknown argument).*}}-mno-type-check
-// CHECK_CLANG_4: {{(unknown argument).*}}-module-dir
 
 // RUN: not %clang  \
+// RUN:   -mlimit-float-precision \
+// RUN:   -mlink-bitcode-file \
+// RUN:   -mlink-builtin-bitcode \
+// RUN:   -mmapsyms=implicit \
+// RUN:   -mnoexecstack \
+// RUN:   -mno-type-check \
+// RUN:   -module-dir \
 // RUN:   -module-file-deps \
 // RUN:   -module-suffix \
 // RUN:   -mreassociate \
@@ -22296,6 +22482,7 @@
 // RUN:   -no-clear-ast-before-backend \
 // RUN:   -no-code-completion-globals \
 // RUN:   -no-code-completion-ns-level-decls \
+// RUN:   -no-disable-free \
 // RUN:   -no-emit-llvm-uselists \
 // RUN:   -no-enable-noundef-analysis \
 // RUN:   -no-implicit-float \
@@ -22323,6 +22510,7 @@
 // RUN:   -rewrite-test \
 // RUN:   -round-trip-args \
 // RUN:   -setup-static-analyzer \
+// RUN:   -shared-libflangrt \
 // RUN:   -show-encoding \
 // RUN:   --show-includes \
 // RUN:   -show-inst \
@@ -22335,6 +22523,7 @@
 // RUN:   -stack-protector-buffer-size \
 // RUN:   -stack-usage-file \
 // RUN:   -static-define \
+// RUN:   -static-libflangrt \
 // RUN:   -stats-file= \
 // RUN:   -stats-file-append \
 // RUN:   -sys-header-deps \
@@ -22357,6 +22546,13 @@
 // RUN:   -verify-ignore-unexpected= \
 // RUN:   -vtordisp-mode= -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CLANG_5 %s
 
+// CHECK_CLANG_5: {{(unknown argument).*}}-mlimit-float-precision
+// CHECK_CLANG_5: {{(unknown argument).*}}-mlink-bitcode-file
+// CHECK_CLANG_5: {{(unknown argument).*}}-mlink-builtin-bitcode
+// CHECK_CLANG_5: {{(unknown argument).*}}-mmapsyms=implicit
+// CHECK_CLANG_5: {{(unknown argument).*}}-mnoexecstack
+// CHECK_CLANG_5: {{(unknown argument).*}}-mno-type-check
+// CHECK_CLANG_5: {{(unknown argument).*}}-module-dir
 // CHECK_CLANG_5: {{(unknown argument).*}}-module-file-deps
 // CHECK_CLANG_5: {{(unknown argument).*}}-module-suffix
 // CHECK_CLANG_5: {{(unknown argument).*}}-mreassociate
@@ -22374,6 +22570,7 @@
 // CHECK_CLANG_5: {{(unknown argument).*}}-no-clear-ast-before-backend
 // CHECK_CLANG_5: {{(unknown argument).*}}-no-code-completion-globals
 // CHECK_CLANG_5: {{(unknown argument).*}}-no-code-completion-ns-level-decls
+// CHECK_CLANG_5: {{(unknown argument).*}}-no-disable-free
 // CHECK_CLANG_5: {{(unknown argument).*}}-no-emit-llvm-uselists
 // CHECK_CLANG_5: {{(unknown argument).*}}-no-enable-noundef-analysis
 // CHECK_CLANG_5: {{(unknown argument).*}}-no-implicit-float
@@ -22401,6 +22598,7 @@
 // CHECK_CLANG_5: {{(unknown argument).*}}-rewrite-test
 // CHECK_CLANG_5: {{(unknown argument).*}}-round-trip-args
 // CHECK_CLANG_5: {{(unknown argument).*}}-setup-static-analyzer
+// CHECK_CLANG_5: {{(unknown argument).*}}-shared-libflangrt
 // CHECK_CLANG_5: {{(unknown argument).*}}-show-encoding
 // CHECK_CLANG_5: {{(unknown argument).*}}--show-includes
 // CHECK_CLANG_5: {{(unknown argument).*}}-show-inst
@@ -22413,6 +22611,7 @@
 // CHECK_CLANG_5: {{(unknown argument).*}}-stack-protector-buffer-size
 // CHECK_CLANG_5: {{(unknown argument).*}}-stack-usage-file
 // CHECK_CLANG_5: {{(unknown argument).*}}-static-define
+// CHECK_CLANG_5: {{(unknown argument).*}}-static-libflangrt
 // CHECK_CLANG_5: {{(unknown argument).*}}-stats-file=
 // CHECK_CLANG_5: {{(unknown argument).*}}-stats-file-append
 // CHECK_CLANG_5: {{(unknown argument).*}}-sys-header-deps
