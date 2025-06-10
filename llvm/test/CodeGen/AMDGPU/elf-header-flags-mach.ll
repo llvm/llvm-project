@@ -87,6 +87,7 @@
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx1300 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1300 %s
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx1301 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1301 %s
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx1302 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1302 %s
+; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx130E < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX130E %s
 
 ; RUN: llc -filetype=obj --amdhsa-code-object-version=6 -mtriple=amdgcn -mcpu=gfx9-generic < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX9_GENERIC %s
 ; RUN: llc -filetype=obj --amdhsa-code-object-version=6 -mtriple=amdgcn -mcpu=gfx9-4-generic < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX9_4_GENERIC %s
@@ -177,7 +178,7 @@
 ; GFX1302:       EF_AMDGPU_MACH_AMDGCN_GFX1302 (0x57)
 
 ; GFX115E:       EF_AMDGPU_MACH_AMDGCN_GFX115E (0xF0)
-; GFX130E:       EF_AMDGPU_MACH_AMDGCN_GFX1302 (0xF2)
+; GFX130E:       EF_AMDGPU_MACH_AMDGCN_GFX130E (0xF2)
 ; GFX120E:       EF_AMDGPU_MACH_AMDGCN_GFX120E (0xF3)
 ; GFX120F:       EF_AMDGPU_MACH_AMDGCN_GFX120F (0xF4)
 ; GFX115F:       EF_AMDGPU_MACH_AMDGCN_GFX115F (0xF7)
