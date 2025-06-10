@@ -9561,7 +9561,8 @@ void ResolveNamesVisitor::CreateGeneric(const parser::GenericSpec &x) {
 static void SetImplicitCUDADevice(bool inDeviceSubprogram, Symbol &symbol) {
   if (inDeviceSubprogram && symbol.has<ObjectEntityDetails>()) {
     auto *object{symbol.detailsIf<ObjectEntityDetails>()};
-    if (!object->cudaDataAttr() && !IsFunctionResult(symbol)) {
+    if (!object->cudaDataAttr() && !IsValue(symbol) &&
+        !IsFunctionResult(symbol)) {
       // Implicitly set device attribute if none is set in device context.
       object->set_cudaDataAttr(common::CUDADataAttr::Device);
     }

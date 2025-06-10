@@ -1033,6 +1033,11 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
               *actualDataAttr == common::CUDADataAttr::Managed)) {
         actualDataAttr = common::CUDADataAttr::Device;
       }
+      if (!actualDataAttr &&
+          (*procedure.cudaSubprogramAttrs ==
+              common::CUDASubprogramAttrs::Device)) {
+        actualDataAttr = common::CUDADataAttr::Device;
+      }
     }
     if (dummyDataAttr == common::CUDADataAttr::Device &&
         (dummyIsAssumedShape || dummyIsAssumedRank) &&
