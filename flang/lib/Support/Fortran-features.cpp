@@ -37,7 +37,7 @@ static std::vector<std::string_view> SplitCamelCase(std::string_view x) {
 
 // Namespace for helper functions for parsing Cli options used instead of static
 // so that there can be unit tests for this function.
-namespace featuresHelpers {
+namespace details {
 std::string CamelCaseToLowerCaseHyphenated(std::string_view x) {
   std::vector<std::string_view> words{SplitCamelCase(x)};
   std::string result{};
@@ -49,16 +49,14 @@ std::string CamelCaseToLowerCaseHyphenated(std::string_view x) {
   }
   return result;
 }
-} // namespace featuresHelpers
+} // namespace details
 
 LanguageFeatureControl::LanguageFeatureControl() {
-
   // Initialize the bidirectional maps with the default spellings.
   cliOptions_.reserve(LanguageFeature_enumSize + UsageWarning_enumSize);
   ForEachLanguageFeature([&](auto feature) {
     std::string_view name{Fortran::common::EnumToString(feature)};
-    std::string cliOption{
-        featuresHelpers::CamelCaseToLowerCaseHyphenated(name)};
+    std::string cliOption{details::CamelCaseToLowerCaseHyphenated(name)};
     cliOptions_.insert({cliOption, {feature}});
     languageFeatureCliCanonicalSpelling_[EnumToInt(feature)] =
         std::string_view{cliOption};
@@ -66,8 +64,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
 
   ForEachUsageWarning([&](auto warning) {
     std::string_view name{Fortran::common::EnumToString(warning)};
-    std::string cliOption{
-        featuresHelpers::CamelCaseToLowerCaseHyphenated(name)};
+    std::string cliOption{details::CamelCaseToLowerCaseHyphenated(name)};
     cliOptions_.insert({cliOption, {warning}});
     usageWarningCliCanonicalSpelling_[EnumToInt(warning)] =
         std::string_view{cliOption};
@@ -155,7 +152,6 @@ LanguageFeatureControl::LanguageFeatureControl() {
 }
 
 // Take a string from the Cli and apply it to the LanguageFeatureControl.
-// Return true if the option was applied recognized.
 bool LanguageFeatureControl::ApplyCliOption(std::string input) {
   bool negated{false};
   if (input.size() > 3 && input.substr(0, 3) == "no-") {
@@ -177,7 +173,7 @@ bool LanguageFeatureControl::ApplyCliOption(std::string input) {
 
 void LanguageFeatureControl::ReplaceCliCanonicalSpelling(
     LanguageFeature f, std::string input) {
-  std::string_view old{languageFeatureCliCanonicalSpelling_[EnumToInt(f)]};
+  std::string_view &old{languageFeatureCliCanonicalSpelling_[EnumToInt(f)]};
   cliOptions_.erase(std::string{old});
   languageFeatureCliCanonicalSpelling_[EnumToInt(f)] = input;
   cliOptions_.insert({input, {f}});
@@ -185,7 +181,7 @@ void LanguageFeatureControl::ReplaceCliCanonicalSpelling(
 
 void LanguageFeatureControl::ReplaceCliCanonicalSpelling(
     UsageWarning w, std::string input) {
-  std::string_view old{usageWarningCliCanonicalSpelling_[EnumToInt(w)]};
+  std::string_view &old{usageWarningCliCanonicalSpelling_[EnumToInt(w)]};
   cliOptions_.erase(std::string{old});
   usageWarningCliCanonicalSpelling_[EnumToInt(w)] = input;
   cliOptions_.insert({input, {w}});

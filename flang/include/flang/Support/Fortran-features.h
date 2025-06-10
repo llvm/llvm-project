@@ -116,7 +116,13 @@ public:
   bool ShouldWarn(LanguageFeature f) const { return warnLanguage_.test(f); }
   bool ShouldWarn(UsageWarning w) const { return warnUsage_.test(w); }
   // Cli options
+  // Take a string from the Cli and apply it to the LanguageFeatureControl.
+  // Return true if the option was recognized (and hence applied).
   bool ApplyCliOption(std::string input);
+  // The add and replace functions are not currently used but are provided
+  // to allow a flexible many-to-one mapping from Cli spellings to enum values.
+  // Taking a string by value because the functions own this string after the
+  // call.
   void AddAlternativeCliSpelling(LanguageFeature f, std::string input) {
     cliOptions_.insert({input, {f}});
   }
@@ -141,6 +147,8 @@ private:
   std::unordered_map<std::string, std::variant<LanguageFeature, UsageWarning>>
       cliOptions_;
   // These two arrays map the enum values to their cannonical Cli spellings.
+  // Since each of the CanonicalSpelling is a string in the domain of the map
+  // above we just use a view of the string instead of another copy.
   std::array<std::string_view, LanguageFeature_enumSize>
       languageFeatureCliCanonicalSpelling_;
   std::array<std::string_view, UsageWarning_enumSize>

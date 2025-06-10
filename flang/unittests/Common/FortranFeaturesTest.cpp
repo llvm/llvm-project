@@ -9,7 +9,7 @@
 #include "gtest/gtest.h"
 #include "flang/Support/Fortran-features.h"
 
-namespace Fortran::common::featuresHelpers {
+namespace Fortran::common::details {
 
 std::string CamelCaseToLowerCaseHyphenated(std::string_view x);
 
@@ -558,4 +558,4 @@ TEST(FortranFeaturesTest, CamelCaseToLowerCaseHyphenated) {
       "non-volatile-pointer-to-volatile");
 }
 
-} // namespace Fortran::common::featuresHelpers
+} // namespace Fortran::common::details
