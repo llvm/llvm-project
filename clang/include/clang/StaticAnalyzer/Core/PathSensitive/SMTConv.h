@@ -584,10 +584,6 @@ public:
     return Ty;
   }
 
-  // static inline bool IsPower2(unsigned bits) {
-  //   return bits > 0 && (bits & (bits - 1)) == 0;
-  // }
-
   // Get the QualTy for the input APSInt, and fix it if it has a bitwidth of 1.
   static inline std::pair<llvm::APSInt, QualType>
   fixAPSInt(ASTContext &Ctx, const llvm::APSInt &Int) {
@@ -601,8 +597,7 @@ public:
     if (APSIntBitwidth == 1 && Ty.isNull()) {
       NewInt = Int.extend(Ctx.getTypeSize(Ctx.BoolTy));
       Ty = getAPSIntType(Ctx, NewInt);
-    } else if (!llvm::isPowerOf2_32(APSIntBitwidth) &&
-               !getAPSIntType(Ctx, Int).isNull()) {
+    } else if (!llvm::isPowerOf2_32(APSIntBitwidth) && !Ty.isNull()) {
       NewInt = Int.extend(Ctx.getTypeSize(Ty));
     } else
       NewInt = Int;
