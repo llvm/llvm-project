@@ -4302,7 +4302,8 @@ struct OmpHoldsClause {
 
 // Ref: [5.2: 209]
 struct OmpIndirectClause {
-  WRAPPER_CLASS_BOILERPLATE(OmpIndirectClause, std::optional<ScalarLogicalExpr>);
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpIndirectClause, std::optional<ScalarLogicalExpr>);
 };
 
 // Ref: [5.2:72-73], in 4.5-5.1 it's scattered over individual directives

@@ -997,7 +997,7 @@ TYPE_PARSER( //
                 parenthesized(Parser<OmpIfClause>{}))) ||
     "INBRANCH" >> construct<OmpClause>(construct<OmpClause::Inbranch>()) ||
     "INDIRECT" >> construct<OmpClause>(construct<OmpClause::Indirect>(
-        maybe(parenthesized(scalarLogicalExpr)))) ||
+                      maybe(parenthesized(scalarLogicalExpr)))) ||
     "INIT" >> construct<OmpClause>(construct<OmpClause::Init>(
                   parenthesized(Parser<OmpInitClause>{}))) ||
     "INCLUSIVE" >> construct<OmpClause>(construct<OmpClause::Inclusive>(
