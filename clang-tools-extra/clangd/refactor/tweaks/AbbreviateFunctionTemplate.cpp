@@ -10,6 +10,7 @@
 #include "support/Logger.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Tooling/Core/Replacement.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include <numeric>
@@ -46,11 +47,11 @@ private:
   struct TemplateParameterInfo {
     const TypeConstraint *Constraint;
     unsigned int FunctionParameterIndex;
-    std::vector<tok::TokenKind> FunctionParameterQualifiers;
-    std::vector<tok::TokenKind> FunctionParameterTypeQualifiers;
+    llvm::SmallVector<tok::TokenKind> FunctionParameterQualifiers;
+    llvm::SmallVector<tok::TokenKind> FunctionParameterTypeQualifiers;
   };
 
-  std::vector<TemplateParameterInfo> TemplateParameterInfoList;
+  llvm::SmallVector<TemplateParameterInfo> TemplateParameterInfoList;
 
   auto traverseFunctionParameters(size_t NumberOfTemplateParameters) -> bool;
 
@@ -65,8 +66,8 @@ private:
       -> llvm::Expected<tooling::Replacement>;
 
   static auto deconstructType(QualType Type)
-      -> std::tuple<QualType, std::vector<tok::TokenKind>,
-                    std::vector<tok::TokenKind>>;
+      -> std::tuple<QualType, llvm::SmallVector<tok::TokenKind>,
+                    llvm::SmallVector<tok::TokenKind>>;
 };
 
 REGISTER_TWEAK(AbbreviateFunctionTemplate)
@@ -110,7 +111,7 @@ bool AbbreviateFunctionTemplate::prepare(const Selection &Inputs) {
 
   auto NumberOfTemplateParameters = TemplateParameters->size();
   TemplateParameterInfoList =
-      std::vector<TemplateParameterInfo>(NumberOfTemplateParameters);
+      llvm::SmallVector<TemplateParameterInfo>(NumberOfTemplateParameters);
 
   // Check how many times each template parameter is referenced.
   // Depending on the number of references it can be checked
@@ -236,7 +237,7 @@ auto AbbreviateFunctionTemplate::generateFunctionParameterReplacement(
       Function->getParamDecl(TemplateParameterInfo.FunctionParameterIndex);
   auto ParameterName = Parameter->getDeclName().getAsString();
 
-  std::vector<std::string> ParameterTokens{};
+  llvm::SmallVector<std::string> ParameterTokens{};
 
   if (const auto *TypeConstraint = TemplateParameterInfo.Constraint) {
     auto *ConceptReference = TypeConstraint->getConceptReference();
@@ -299,10 +300,10 @@ auto AbbreviateFunctionTemplate::generateTemplateDeclarationReplacement(
 }
 
 auto AbbreviateFunctionTemplate::deconstructType(QualType Type)
-    -> std::tuple<QualType, std::vector<tok::TokenKind>,
-                  std::vector<tok::TokenKind>> {
-  std::vector<tok::TokenKind> ParameterTypeQualifiers{};
-  std::vector<tok::TokenKind> ParameterQualifiers{};
+    -> std::tuple<QualType, llvm::SmallVector<tok::TokenKind>,
+                  llvm::SmallVector<tok::TokenKind>> {
+  llvm::SmallVector<tok::TokenKind> ParameterTypeQualifiers{};
+  llvm::SmallVector<tok::TokenKind> ParameterQualifiers{};
 
   if (Type->isIncompleteArrayType()) {
     ParameterQualifiers.push_back(tok::l_square);
