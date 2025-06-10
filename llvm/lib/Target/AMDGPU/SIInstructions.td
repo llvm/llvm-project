@@ -2672,6 +2672,12 @@ def : AMDGPUPat <
                $src1), sub1)
 >;
 
+// rotr pattern
+def : AMDGPUPat <
+  (UniformBinFrag<rotr> i32:$src0, (i32 (ImmSub i32:$src1, i32:$src1_inv))),
+  (S_OR_B32 (S_LSHR_B32 i32:$src0, i32:$src1), (S_LSHL_B32 i32:$src0, i32:$src1_inv))
+>;
+
 let True16Predicate = NotHasTrue16BitInsts in {
 let SubtargetPredicate = isNotGFX9Plus in {
 def : ROTRPattern <V_ALIGNBIT_B32_e64>;

@@ -6660,6 +6660,31 @@ AMDGPUInstructionSelector::selectSMRDBufferSgprImm(MachineOperand &Root) const {
            [=](MachineInstrBuilder &MIB) { MIB.addImm(*EncodedOffset); }}};
 }
 
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectImmSub(MachineOperand &Root) const {
+
+  MachineInstr *MI = Root.getParent();
+  MachineBasicBlock *MBB = MI->getParent();
+  Register SrcInv = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+
+  // Handle constant operands
+  std::optional<uint64_t> Val = getConstantZext32Val(Root.getReg(), *MRI);
+
+  if (!Val) {
+    BuildMI(*MBB, MI, MI->getDebugLoc(), TII.get(AMDGPU::S_SUB_U32), SrcInv)
+        .addImm(32)
+        .add(Root);
+  } else {
+    BuildMI(*MBB, MI, MI->getDebugLoc(), TII.get(AMDGPU::S_MOV_B32), SrcInv)
+        .addImm(32 - *Val);
+  }
+
+  return {{
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(Root.getReg()); },
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(SrcInv); },
+  }};
+}
+
 std::pair<Register, unsigned>
 AMDGPUInstructionSelector::selectVOP3PMadMixModsImpl(MachineOperand &Root,
                                                      bool &Matched) const {
