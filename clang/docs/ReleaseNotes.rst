@@ -561,6 +561,20 @@ Improvements to Clang's diagnostics
 Improvements to Clang's time-trace
 ----------------------------------
 
+Improvements to clang-tidy
+--------------------------
+
+New checks
+^^^^^^^^^^
+
+Changes in existing checks
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+-Improved :doc: `bugprone-sizeof-expression`
+ <clang-tidy/checks/bugprone/bugprone-sizeof-expression>` check.
+
+ Introduced WarnOnSizeOfInLoopTermination sub-class to detect misuses of sizeof expression
+ in loop conditions.
+
 Improvements to Coverage Mapping
 --------------------------------
 
