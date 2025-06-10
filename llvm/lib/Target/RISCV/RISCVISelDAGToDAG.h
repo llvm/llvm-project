@@ -118,9 +118,11 @@ public:
     return selectSHXADD_UWOp(N, ShAmt, Val);
   }
 
+  bool selectZExtImm32(SDValue N, SDValue &Val);
   bool selectNegImm(SDValue N, SDValue &Val);
   bool selectInvLogicImm(SDValue N, SDValue &Val);
 
+  bool orIsAdd(const SDNode *Node) const;
   bool hasAllNBitUsers(SDNode *Node, unsigned Bits,
                        const unsigned Depth = 0) const;
   bool hasAllBUsers(SDNode *Node) const { return hasAllNBitUsers(Node, 8); }
@@ -199,6 +201,8 @@ private:
   bool doPeepholeMergeVVMFold();
   bool doPeepholeNoRegPassThru();
   bool performCombineVMergeAndVOps(SDNode *N);
+  bool selectImm64IfCheaper(int64_t Imm, int64_t OrigImm, SDValue N,
+                            SDValue &Val);
 };
 
 class RISCVDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
