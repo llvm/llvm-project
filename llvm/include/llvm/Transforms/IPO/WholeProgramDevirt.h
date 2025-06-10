@@ -113,7 +113,7 @@ struct TypeMemberInfo {
   uint64_t Offset;
 
   bool operator<(const TypeMemberInfo &other) const {
-    return Bits < other.Bits || (Bits == other.Bits && Offset < other.Offset);
+    return std::tie(Bits, Offset) < std::tie(other.Bits, other.Offset);
   }
 };
 
