@@ -751,6 +751,15 @@ static SplitResult isolateOp(Operation *splitBeforeOp, bool splitAfter,
   return SplitResult{preTargetOp, isolatedTargetOp, postTargetOp};
 }
 
+static mlir::LLVM::ConstantOp
+genI32Constant(mlir::Location loc, mlir::RewriterBase &rewriter, int value) {
+  mlir::Type i32Ty = rewriter.getI32Type();
+  mlir::IntegerAttr attr = rewriter.getI32IntegerAttr(value);
+  return rewriter.create<mlir::LLVM::ConstantOp>(loc, i32Ty, attr);
+}
+
+static Type getOmpDeviceType(MLIRContext *c) { return IntegerType::get(c, 32); }
+
 static void moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter) {
   OpBuilder::InsertionGuard guard(rewriter);
   Block *targetBlock = &targetOp.getRegion().front();
@@ -776,14 +785,66 @@ static void moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter) {
     if (isRuntimeCall(op))
       runtimeCall = cast<fir::CallOp>(op);
 
-    if (allocOp || freeOp || runtimeCall)
-        continue;
-    opsToMove.push_back(op);
+    if (allocOp || freeOp || runtimeCall) {
+      Value device = targetOp.getDevice();
+      if (!device) {
+        device = genI32Constant(it->getLoc(), rewriter, 0);
+      }
+      if (allocOp) {
+        auto tmpAllocOp = rewriter.create<fir::OmpTargetAllocMemOp>(
+            allocOp.getLoc(), allocOp.getType(), device,
+            allocOp.getInTypeAttr(), allocOp.getUniqNameAttr(),
+            allocOp.getBindcNameAttr(), allocOp.getTypeparams(),
+            allocOp.getShape());
+        auto newAllocOp = cast<fir::OmpTargetAllocMemOp>(
+            rewriter.clone(*tmpAllocOp.getOperation(), mapping));
+        mapping.map(allocOp.getResult(), newAllocOp.getResult());
+        rewriter.eraseOp(tmpAllocOp);
+      } else if (freeOp) {
+        auto tmpFreeOp = rewriter.create<fir::OmpTargetFreeMemOp>(
+            freeOp.getLoc(), device, freeOp.getHeapref());
+        rewriter.clone(*tmpFreeOp.getOperation(), mapping);
+        rewriter.eraseOp(tmpFreeOp);
+      } else if (runtimeCall) {
+        auto module = runtimeCall->getParentOfType<ModuleOp>();
+        auto callee = cast<func::FuncOp>(
+            module.lookupSymbol(runtimeCall.getCalleeAttr()));
+        std::string newCalleeName = (callee.getName()).str();
+        mlir::OpBuilder moduleBuilder(module.getBodyRegion());
+        func::FuncOp newCallee =
+            cast_or_null<func::FuncOp>(module.lookupSymbol(newCalleeName));
+        if (!newCallee) {
+          SmallVector<Type> argTypes(callee.getFunctionType().getInputs());
+          argTypes.push_back(getOmpDeviceType(rewriter.getContext()));
+          newCallee = moduleBuilder.create<func::FuncOp>(
+              callee->getLoc(), newCalleeName,
+              FunctionType::get(rewriter.getContext(), argTypes,
+                                callee.getFunctionType().getResults()));
+          if (callee.getArgAttrs())
+            newCallee.setArgAttrsAttr(*callee.getArgAttrs());
+          if (callee.getResAttrs())
+            newCallee.setResAttrsAttr(*callee.getResAttrs());
+          newCallee.setSymVisibility(callee.getSymVisibility());
+          newCallee->setDiscardableAttrs(
+              callee->getDiscardableAttrDictionary());
+        }
+        SmallVector<Value> operands = runtimeCall.getOperands();
+        operands.push_back(device);
+        auto tmpCall = rewriter.create<fir::CallOp>(
+            runtimeCall.getLoc(), runtimeCall.getResultTypes(),
+            SymbolRefAttr::get(newCallee), operands, nullptr, nullptr, nullptr,
+            runtimeCall.getFastmathAttr());
+        Operation *newCall = rewriter.clone(*tmpCall, mapping);
+        mapping.map(&*it, newCall);
+        rewriter.eraseOp(tmpCall);
+      }
+    } else {
+      Operation *clonedOp = rewriter.clone(*op, mapping);
+      for (unsigned i = 0; i < op->getNumResults(); ++i) {
+        mapping.map(op->getResult(i), clonedOp->getResult(i));
+      }
+    }
   }
-  // Move ops before targetOp and erase from region
-  for (Operation *op : opsToMove)
-    rewriter.clone(*op, mapping);
-  
   rewriter.eraseOp(targetOp);
 }
 
@@ -791,7 +852,7 @@ void fissionTarget(omp::TargetOp targetOp, RewriterBase &rewriter) {
   auto tuple = getNestedOpToIsolate(targetOp);
   if (!tuple) {
     LLVM_DEBUG(llvm::dbgs() << " No op to isolate\n");
-    //moveToHost(targetOp, rewriter);
+    moveToHost(targetOp, rewriter);
     return;
   }
 
@@ -801,13 +862,13 @@ void fissionTarget(omp::TargetOp targetOp, RewriterBase &rewriter) {
 
   if (splitBefore && splitAfter) {
     auto res = isolateOp(toIsolate, splitAfter, rewriter);
-    //moveToHost(res.preTargetOp, rewriter);
+    moveToHost(res.preTargetOp, rewriter);
     fissionTarget(res.postTargetOp, rewriter);
     return;
   }
   if (splitBefore) {
     auto res = isolateOp(toIsolate, splitAfter, rewriter);
-    //moveToHost(res.preTargetOp, rewriter);
+    moveToHost(res.preTargetOp, rewriter);
     return;
   }
   if (splitAfter) {
