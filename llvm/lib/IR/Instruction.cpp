@@ -1361,9 +1361,6 @@ void Instruction::swapProfMetadata() {
 
 void Instruction::copyMetadata(const Instruction &SrcInst,
                                ArrayRef<unsigned> WL) {
-  if (WL.empty() || is_contained(WL, LLVMContext::MD_dbg))
-    setDebugLoc(SrcInst.getDebugLoc());
-
   if (!SrcInst.hasMetadata())
     return;
 
@@ -1377,6 +1374,8 @@ void Instruction::copyMetadata(const Instruction &SrcInst,
     if (WL.empty() || WLS.count(MD.first))
       setMetadata(MD.first, MD.second);
   }
+  if (WL.empty() || WLS.count(LLVMContext::MD_dbg))
+    setDebugLoc(SrcInst.getDebugLoc());
 }
 
 Instruction *Instruction::clone() const {

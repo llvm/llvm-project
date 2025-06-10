@@ -84,7 +84,7 @@ namespace llvm {
     DILocAndCoverageTracking()
         : TrackingMDNodeRef(nullptr), DbgLocOrigin(true),
           Kind(DebugLocKind::Normal) {}
-    // Valid or nullptr MDNode*, normal DebugLocKind
+    // Valid or nullptr MDNode*, no annotative DebugLocKind.
     DILocAndCoverageTracking(const MDNode *Loc)
         : TrackingMDNodeRef(const_cast<MDNode *>(Loc)), DbgLocOrigin(!Loc),
           Kind(DebugLocKind::Normal) {}
