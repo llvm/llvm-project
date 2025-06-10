@@ -694,6 +694,13 @@ void PEIImpl::spillCalleeSavedRegs(MachineFunction &MF) {
   }
 }
 
+static inline void UpdateOffset(MachineFrameInfo &MFI, int FrameIdx,
+                                int64_t Offset) {
+  LLVM_DEBUG(dbgs() << "alloc FI(" << FrameIdx << ") at SP[" << Offset
+                    << "]\n");
+  MFI.setObjectOffset(FrameIdx, Offset); // Set the computed offset
+}
+
 /// AdjustStackOffset - Helper function used to adjust the stack frame offset.
 static inline void AdjustStackOffset(MachineFrameInfo &MFI, int FrameIdx,
                                      bool StackGrowsDown, int64_t &Offset,
@@ -712,13 +719,9 @@ static inline void AdjustStackOffset(MachineFrameInfo &MFI, int FrameIdx,
   Offset = alignTo(Offset, Alignment);
 
   if (StackGrowsDown) {
-    LLVM_DEBUG(dbgs() << "alloc FI(" << FrameIdx << ") at SP[" << -Offset
-                      << "]\n");
-    MFI.setObjectOffset(FrameIdx, -Offset); // Set the computed offset
+    UpdateOffset(MFI, FrameIdx, -Offset);
   } else {
-    LLVM_DEBUG(dbgs() << "alloc FI(" << FrameIdx << ") at SP[" << Offset
-                      << "]\n");
-    MFI.setObjectOffset(FrameIdx, Offset);
+    UpdateOffset(MFI, FrameIdx, Offset);
     Offset += MFI.getObjectSize(FrameIdx);
   }
 }
@@ -1044,6 +1047,7 @@ void PEIImpl::calculateFrameObjectOffsets(MachineFunction &MF) {
   }
 
   SmallVector<int, 8> ObjectsToAllocate;
+  SmallVector<int, 8> UpdateOffsetAfterAllocate;
 
   // Then prepare to assign frame offsets to stack objects that are not used to
   // spill callee saved registers.
@@ -1063,6 +1067,11 @@ void PEIImpl::calculateFrameObjectOffsets(MachineFunction &MF) {
     // Only allocate objects on the default stack.
     if (MFI.getStackID(i) != TargetStackID::Default)
       continue;
+
+    if (MFI.getUnderlyingSlot(i) > MachineFrameInfo::IsUnderlyingSlot) {
+      UpdateOffsetAfterAllocate.push_back(i);
+      continue;
+    }
 
     // Add the objects that we need to allocate to our working set.
     ObjectsToAllocate.push_back(i);
@@ -1102,6 +1111,14 @@ void PEIImpl::calculateFrameObjectOffsets(MachineFunction &MF) {
     RS->getScavengingFrameIndices(SFIs);
     for (int SFI : SFIs)
       AdjustStackOffset(MFI, SFI, StackGrowsDown, Offset, MaxAlign);
+  }
+
+  for (int FrameIdx : UpdateOffsetAfterAllocate) {
+    int UnderlyingSlot = MFI.getUnderlyingSlot(FrameIdx);
+    int64_t ObjOffset =
+        MFI.getObjectOffset(UnderlyingSlot) + MFI.getObjectOffset(FrameIdx);
+    UpdateOffset(MFI, FrameIdx, ObjOffset);
+    MFI.setUnderlyingSlot(FrameIdx, MachineFrameInfo::NoUnderlyingSlot);
   }
 
   if (!TFI.targetHandlesStackFrameRounding()) {
