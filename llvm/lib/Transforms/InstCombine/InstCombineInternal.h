@@ -204,8 +204,8 @@ public:
                                    const Instruction *CtxI = nullptr,
                                    unsigned Depth = 0) const {
     return llvm::computeKnownFPClass(
-        Val, FMF, Interested, Depth,
-        getSimplifyQuery().getWithInstruction(CtxI));
+        Val, FMF, Interested, getSimplifyQuery().getWithInstruction(CtxI),
+        Depth);
   }
 
   KnownFPClass computeKnownFPClass(Value *Val,
@@ -213,7 +213,7 @@ public:
                                    const Instruction *CtxI = nullptr,
                                    unsigned Depth = 0) const {
     return llvm::computeKnownFPClass(
-        Val, Interested, Depth, getSimplifyQuery().getWithInstruction(CtxI));
+        Val, Interested, getSimplifyQuery().getWithInstruction(CtxI), Depth);
   }
 
   /// Check if fmul \p MulVal, +0.0 will yield +0.0 (or signed zero is
@@ -558,20 +558,22 @@ public:
   /// Attempts to replace I with a simpler value based on the demanded
   /// bits.
   Value *SimplifyDemandedUseBits(Instruction *I, const APInt &DemandedMask,
-                                 KnownBits &Known, unsigned Depth,
-                                 const SimplifyQuery &Q);
+                                 KnownBits &Known, const SimplifyQuery &Q,
+                                 unsigned Depth = 0);
   using InstCombiner::SimplifyDemandedBits;
   bool SimplifyDemandedBits(Instruction *I, unsigned Op,
                             const APInt &DemandedMask, KnownBits &Known,
-                            unsigned Depth, const SimplifyQuery &Q) override;
+                            const SimplifyQuery &Q,
+                            unsigned Depth = 0) override;
 
   /// Helper routine of SimplifyDemandedUseBits. It computes KnownZero/KnownOne
   /// bits. It also tries to handle simplifications that can be done based on
   /// DemandedMask, but without modifying the Instruction.
   Value *SimplifyMultipleUseDemandedBits(Instruction *I,
                                          const APInt &DemandedMask,
-                                         KnownBits &Known, unsigned Depth,
-                                         const SimplifyQuery &Q);
+                                         KnownBits &Known,
+                                         const SimplifyQuery &Q,
+                                         unsigned Depth = 0);
 
   /// Helper routine of SimplifyDemandedUseBits. It tries to simplify demanded
   /// bit for "r1 = shr x, c1; r2 = shl r1, c2" instruction sequence.
@@ -591,8 +593,8 @@ public:
   /// Attempts to replace V with a simpler value based on the demanded
   /// floating-point classes
   Value *SimplifyDemandedUseFPClass(Value *V, FPClassTest DemandedMask,
-                                    KnownFPClass &Known, unsigned Depth,
-                                    Instruction *CxtI);
+                                    KnownFPClass &Known, Instruction *CxtI,
+                                    unsigned Depth = 0);
   bool SimplifyDemandedFPClass(Instruction *I, unsigned Op,
                                FPClassTest DemandedMask, KnownFPClass &Known,
                                unsigned Depth = 0);

@@ -676,9 +676,9 @@ static void instantiateDependentAMDGPUMaxNumWorkGroupsAttr(
 // This doesn't take any template parameters, but we have a custom action that
 // needs to happen when the kernel itself is instantiated. We need to run the
 // ItaniumMangler to mark the names required to name this kernel.
-static void instantiateDependentSYCLKernelAttr(
+static void instantiateDependentDeviceKernelAttr(
     Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
-    const SYCLKernelAttr &Attr, Decl *New) {
+    const DeviceKernelAttr &Attr, Decl *New) {
   New->addAttr(Attr.clone(S.getASTContext()));
 }
 
@@ -920,8 +920,8 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
       continue;
     }
 
-    if (auto *A = dyn_cast<SYCLKernelAttr>(TmplAttr)) {
-      instantiateDependentSYCLKernelAttr(*this, TemplateArgs, *A, New);
+    if (auto *A = dyn_cast<DeviceKernelAttr>(TmplAttr)) {
+      instantiateDependentDeviceKernelAttr(*this, TemplateArgs, *A, New);
       continue;
     }
 
@@ -2394,7 +2394,7 @@ Decl *TemplateDeclInstantiator::VisitVarTemplateDecl(VarTemplateDecl *D) {
     // Queue up any out-of-line partial specializations of this member
     // variable template; the client will force their instantiation once
     // the enclosing class has been instantiated.
-    SmallVector<VarTemplatePartialSpecializationDecl *, 4> PartialSpecs;
+    SmallVector<VarTemplatePartialSpecializationDecl *, 1> PartialSpecs;
     D->getPartialSpecializations(PartialSpecs);
     for (unsigned I = 0, N = PartialSpecs.size(); I != N; ++I)
       if (PartialSpecs[I]->getFirstDecl()->isOutOfLine())

@@ -16,6 +16,8 @@
 #ifndef LLVM_IR_ASSEMBLYANNOTATIONWRITER_H
 #define LLVM_IR_ASSEMBLYANNOTATIONWRITER_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 class Function;
@@ -24,7 +26,7 @@ class Instruction;
 class Value;
 class formatted_raw_ostream;
 
-class AssemblyAnnotationWriter {
+class LLVM_ABI AssemblyAnnotationWriter {
 public:
   virtual ~AssemblyAnnotationWriter();
 

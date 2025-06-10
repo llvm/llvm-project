@@ -1153,6 +1153,16 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
       return;
     }
   }
+  // Simplify redundant ReductionStartVector recipes after unrolling.
+  VPValue *StartV;
+  if (match(Def, m_VPInstruction<VPInstruction::ReductionStartVector>(
+                     m_VPValue(StartV), m_VPValue(), m_VPValue()))) {
+    Def->replaceUsesWithIf(StartV, [](const VPUser &U, unsigned Idx) {
+      auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&U);
+      return PhiR && PhiR->isInLoop();
+    });
+    return;
+  }
 }
 
 void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy) {
@@ -2599,14 +2609,10 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      if (isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe>(&R)) {
-        auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
-        StringRef Name =
-            isa<VPCanonicalIVPHIRecipe>(PhiR) ? "index" : "evl.based.iv";
-        VPBuilder Builder(PhiR);
-        auto *ScalarR = Builder.createScalarPhi(
+      if (auto *PhiR = dyn_cast<VPEVLBasedIVPHIRecipe>(&R)) {
+        auto *ScalarR = VPBuilder(PhiR).createScalarPhi(
             {PhiR->getStartValue(), PhiR->getBackedgeValue()},
-            PhiR->getDebugLoc(), Name);
+            PhiR->getDebugLoc(), "evl.based.iv");
         PhiR->replaceAllUsesWith(ScalarR);
         ToRemove.push_back(PhiR);
         continue;
