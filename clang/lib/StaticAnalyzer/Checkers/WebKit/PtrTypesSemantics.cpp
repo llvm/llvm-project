@@ -236,7 +236,6 @@ std::optional<bool> isUnchecked(const QualType T) {
 void RetainTypeChecker::visitTranslationUnitDecl(
     const TranslationUnitDecl *TUD) {
   IsARCEnabled = TUD->getLangOpts().ObjCAutoRefCount;
-  DefaultSynthProperties = TUD->getLangOpts().ObjCDefaultSynthProperties;
 }
 
 void RetainTypeChecker::visitTypedef(const TypedefDecl *TD) {
