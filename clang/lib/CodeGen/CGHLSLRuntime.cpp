@@ -387,9 +387,10 @@ static Value *buildVectorInput(IRBuilder<> &B, Function *F, llvm::Type *Ty) {
 static void addBuiltinDecoration(llvm::GlobalVariable *GV, unsigned BuiltIn) {
   LLVMContext &Ctx = GV->getContext();
   IRBuilder<> B(GV->getContext());
-  MDNode *Operands =
-      MDNode::get(Ctx, {ConstantAsMetadata::get(B.getInt32(11)),
-                        ConstantAsMetadata::get(B.getInt32(BuiltIn))});
+  MDNode *Operands = MDNode::get(
+      Ctx,
+      {ConstantAsMetadata::get(B.getInt32(/* Spirv::Decoration::BuiltIn */ 11)),
+       ConstantAsMetadata::get(B.getInt32(BuiltIn))});
   MDNode *Decoration = MDNode::get(Ctx, {Operands});
   GV->addMetadata("spirv.Decorations", *Decoration);
 }
