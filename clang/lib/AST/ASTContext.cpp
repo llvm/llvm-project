@@ -5216,7 +5216,7 @@ QualType ASTContext::getTypedefType(const TypedefNameDecl *Decl,
     if (Underlying.isNull())
       Underlying = Decl->getUnderlyingType();
     auto *NewType = new (*this, alignof(TypedefType)) TypedefType(
-        Type::Typedef, Decl, QualType(), getCanonicalType(Underlying));
+        Type::Typedef, Decl, Underlying, /*HasTypeDifferentFromDecl=*/false);
     Decl->TypeForDecl = NewType;
     Types.push_back(NewType);
     return QualType(NewType, 0);
@@ -5238,7 +5238,7 @@ QualType ASTContext::getTypedefType(const TypedefNameDecl *Decl,
   void *Mem = Allocate(TypedefType::totalSizeToAlloc<QualType>(true),
                        alignof(TypedefType));
   auto *NewType = new (Mem) TypedefType(Type::Typedef, Decl, Underlying,
-                                        getCanonicalType(Underlying));
+                                        /*HasTypeDifferentFromDecl=*/true);
   TypedefTypes.InsertNode(NewType, InsertPos);
   Types.push_back(NewType);
   return QualType(NewType, 0);
