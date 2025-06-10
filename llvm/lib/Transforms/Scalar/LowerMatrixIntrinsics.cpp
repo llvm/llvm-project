@@ -55,8 +55,10 @@ using namespace PatternMatch;
 #define DEBUG_TYPE "lower-matrix-intrinsics"
 
 STATISTIC(FlattenedMatrices, "Number of matrix flattenings");
+#ifndef NDEBUG
 STATISTIC(ReshapedMatrices, "Number of matrix reshapes");
 STATISTIC(SplitMatrices, "Number of matrix splits");
+#endif
 
 static cl::opt<bool>
     FuseMatrix("fuse-matrix", cl::init(true), cl::Hidden,
