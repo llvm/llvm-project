@@ -73,9 +73,9 @@ void spirv::encodeStringLiteralInto(SmallVectorImpl<uint32_t> &binary,
   size_t encodingSize = literal.size() / 4 + 1;
   size_t sizeOfDataToCopy = literal.size();
   if (encodingSize >= kMaxLiteralWordCount) {
-    // Reserve one word for the null termination
+    // Reserve one word for the null termination.
     encodingSize = kMaxLiteralWordCount - 1;
-    // Do not override the last word (null termination) when copying
+    // Do not override the last word (null termination) when copying.
     sizeOfDataToCopy = (encodingSize - 1) * 4;
     LLVM_DEBUG(llvm::dbgs()
                << "Truncating string literal to max size ("
