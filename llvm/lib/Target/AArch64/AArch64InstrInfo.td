@@ -1711,6 +1711,11 @@ multiclass SIMDSUDOTIndex {
 
 defm SUDOTlane : SIMDSUDOTIndex;
 
+def : Pat<(v2i32 (partial_reduce_sumla v2i32:$Acc, v8i8:$LHS, v8i8:$RHS)),
+              (USDOTv8i8 $Acc, $RHS, $LHS)>;
+def : Pat<(v4i32 (partial_reduce_sumla v4i32:$Acc, v16i8:$LHS, v16i8:$RHS)),
+              (USDOTv16i8 $Acc, $RHS, $LHS)>;
+
 }
 
 // ARMv8.2-A FP16 Fused Multiply-Add Long
