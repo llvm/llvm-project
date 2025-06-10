@@ -735,12 +735,6 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
         "Global is external, but doesn't have external or weak linkage!", &GV);
 
   if (const GlobalObject *GO = dyn_cast<GlobalObject>(&GV)) {
-
-    if (MaybeAlign A = GO->getAlign()) {
-      Check(A->value() <= Value::MaximumAlignment,
-            "huge alignment values are unsupported", GO);
-    }
-
     if (const MDNode *Associated =
             GO->getMetadata(LLVMContext::MD_associated)) {
       Check(Associated->getNumOperands() == 1,
@@ -829,6 +823,11 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
 
 void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
   Type *GVType = GV.getValueType();
+
+  if (MaybeAlign A = GV.getAlign()) {
+    Check(A->value() <= Value::MaximumAlignment,
+          "huge alignment values are unsupported", &GV);
+  }
 
   if (GV.hasInitializer()) {
     Check(GV.getInitializer()->getType() == GVType,
@@ -1343,6 +1342,7 @@ void Verifier::visitDICompositeType(const DICompositeType &N) {
               N.getTag() == dwarf::DW_TAG_enumeration_type ||
               N.getTag() == dwarf::DW_TAG_class_type ||
               N.getTag() == dwarf::DW_TAG_variant_part ||
+              N.getTag() == dwarf::DW_TAG_variant ||
               N.getTag() == dwarf::DW_TAG_namelist,
           "invalid tag", &N);
 
@@ -1986,8 +1986,12 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
           V);
 
   if (Attrs.hasAttribute(Attribute::ImmArg)) {
-    Check(Attrs.getNumAttributes() == 1,
-          "Attribute 'immarg' is incompatible with other attributes", V);
+    unsigned AttrCount =
+        Attrs.getNumAttributes() - Attrs.hasAttribute(Attribute::Range);
+    Check(AttrCount == 1,
+          "Attribute 'immarg' is incompatible with other attributes except the "
+          "'range' attribute",
+          V);
   }
 
   // Check for mutually incompatible attributes.  Only inreg is compatible with
@@ -2375,6 +2379,31 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     AllocFnKind ZeroedUninit = AllocFnKind::Uninitialized | AllocFnKind::Zeroed;
     if ((K & ZeroedUninit) == ZeroedUninit)
       CheckFailed("'allockind()' can't be both zeroed and uninitialized");
+  }
+
+  if (Attribute A = Attrs.getFnAttr("alloc-variant-zeroed"); A.isValid()) {
+    StringRef S = A.getValueAsString();
+    Check(!S.empty(), "'alloc-variant-zeroed' must not be empty");
+    Function *Variant = M.getFunction(S);
+    if (Variant) {
+      Attribute Family = Attrs.getFnAttr("alloc-family");
+      Attribute VariantFamily = Variant->getFnAttribute("alloc-family");
+      if (Family.isValid())
+        Check(VariantFamily.isValid() &&
+                  VariantFamily.getValueAsString() == Family.getValueAsString(),
+              "'alloc-variant-zeroed' must name a function belonging to the "
+              "same 'alloc-family'");
+
+      Check(Variant->hasFnAttribute(Attribute::AllocKind) &&
+                (Variant->getFnAttribute(Attribute::AllocKind).getAllocKind() &
+                 AllocFnKind::Zeroed) != AllocFnKind::Unknown,
+            "'alloc-variant-zeroed' must name a function with "
+            "'allockind(\"zeroed\")'");
+
+      Check(FT == Variant->getFunctionType(),
+            "'alloc-variant-zeroed' must name a function with the same "
+            "signature");
+    }
   }
 
   if (Attrs.hasFnAttr(Attribute::VScaleRange)) {
@@ -2838,6 +2867,11 @@ void Verifier::visitFunction(const Function &F) {
 
   Check(!F.hasStructRetAttr() || F.getReturnType()->isVoidTy(),
         "Invalid struct return type!", &F);
+
+  if (MaybeAlign A = F.getAlign()) {
+    Check(A->value() <= Value::MaximumAlignment,
+          "huge alignment values are unsupported", &F);
+  }
 
   AttributeList Attrs = F.getAttributes();
 
@@ -3679,6 +3713,20 @@ void Verifier::visitCallBase(CallBase &Call) {
       Value *ArgVal = Call.getArgOperand(i);
       Check(isa<ConstantInt>(ArgVal) || isa<ConstantFP>(ArgVal),
             "immarg operand has non-immediate parameter", ArgVal, Call);
+
+      // If the imm-arg is an integer and also has a range attached,
+      // check if the given value is within the range.
+      if (Call.paramHasAttr(i, Attribute::Range)) {
+        if (auto *CI = dyn_cast<ConstantInt>(ArgVal)) {
+          const ConstantRange &CR =
+              Call.getParamAttr(i, Attribute::Range).getValueAsConstantRange();
+          Check(CR.contains(CI->getValue()),
+                "immarg value " + Twine(CI->getValue().getSExtValue()) +
+                    " out of range [" + Twine(CR.getLower().getSExtValue()) +
+                    ", " + Twine(CR.getUpper().getSExtValue()) + ")",
+                Call);
+        }
+      }
     }
 
     if (Call.paramHasAttr(i, Attribute::Preallocated)) {
@@ -5617,7 +5665,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::memcpy_element_unordered_atomic:
   case Intrinsic::memmove_element_unordered_atomic:
   case Intrinsic::memset_element_unordered_atomic: {
-    const auto *AMI = cast<AtomicMemIntrinsic>(&Call);
+    const auto *AMI = cast<AnyMemIntrinsic>(&Call);
 
     ConstantInt *ElementSizeCI =
         cast<ConstantInt>(AMI->getRawElementSizeInBytes());
@@ -5632,7 +5680,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     };
     Check(IsValidAlignment(AMI->getDestAlign()),
           "incorrect alignment of the destination argument", Call);
-    if (const auto *AMT = dyn_cast<AtomicMemTransferInst>(AMI)) {
+    if (const auto *AMT = dyn_cast<AnyMemTransferInst>(AMI)) {
       Check(IsValidAlignment(AMT->getSourceAlign()),
             "incorrect alignment of the source argument", Call);
     }
@@ -6417,7 +6465,12 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "SGPR arguments must have the `inreg` attribute", &Call);
     Check(!Call.paramHasAttr(3, Attribute::InReg),
           "VGPR arguments must not have the `inreg` attribute", &Call);
-    Check(isa_and_present<UnreachableInst>(Call.getNextNode()),
+
+    auto *Next = Call.getNextNonDebugInstruction();
+    bool IsAMDUnreachable = Next && isa<IntrinsicInst>(Next) &&
+                            cast<IntrinsicInst>(Next)->getIntrinsicID() ==
+                                Intrinsic::amdgcn_unreachable;
+    Check(Next && (isa<UnreachableInst>(Next) || IsAMDUnreachable),
           "llvm.amdgcn.cs.chain must be followed by unreachable", &Call);
     break;
   }
@@ -6547,6 +6600,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           &Call);
     break;
   }
+  case Intrinsic::thread_pointer: {
+    Check(Call.getType()->getPointerAddressSpace() ==
+              DL.getDefaultGlobalsAddressSpace(),
+          "llvm.thread.pointer intrinsic return type must be for the globals "
+          "address space",
+          &Call);
+    break;
+  }
   case Intrinsic::threadlocal_address: {
     const Value &Arg0 = *Call.getArgOperand(0);
     Check(isa<GlobalValue>(Arg0),
@@ -6583,7 +6644,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       for (BasicBlock *ColorFirstBB : CV)
         if (auto It = ColorFirstBB->getFirstNonPHIIt();
             It != ColorFirstBB->end())
-          if (dyn_cast_or_null<FuncletPadInst>(&*It))
+          if (isa_and_nonnull<FuncletPadInst>(&*It))
             InEHFunclet = true;
 
       // Check for funclet operand bundle
@@ -7282,11 +7343,13 @@ void Verifier::verifyAttachedCallBundle(const CallBase &Call,
 
   if (IID) {
     Check((IID == Intrinsic::objc_retainAutoreleasedReturnValue ||
+           IID == Intrinsic::objc_claimAutoreleasedReturnValue ||
            IID == Intrinsic::objc_unsafeClaimAutoreleasedReturnValue),
           "invalid function argument", Call);
   } else {
     StringRef FnName = Fn->getName();
     Check((FnName == "objc_retainAutoreleasedReturnValue" ||
+           FnName == "objc_claimAutoreleasedReturnValue" ||
            FnName == "objc_unsafeClaimAutoreleasedReturnValue"),
           "invalid function argument", Call);
   }

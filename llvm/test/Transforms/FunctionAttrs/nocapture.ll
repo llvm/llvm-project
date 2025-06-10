@@ -1234,7 +1234,7 @@ define void @dont_increase_existing_captures_scc2(ptr %p) {
 define void @addr_only_scc(ptr %p) {
 ; FNATTRS: Function Attrs: nofree nosync nounwind memory(write, argmem: read, inaccessiblemem: none)
 ; FNATTRS-LABEL: define void @addr_only_scc
-; FNATTRS-SAME: (ptr captures(address_is_null) [[P:%.*]]) #[[ATTR20:[0-9]+]] {
+; FNATTRS-SAME: (ptr readonly captures(address_is_null) [[P:%.*]]) #[[ATTR20:[0-9]+]] {
 ; FNATTRS-NEXT:    [[V:%.*]] = load i8, ptr [[P]], align 1
 ; FNATTRS-NEXT:    store i8 [[V]], ptr @g, align 1
 ; FNATTRS-NEXT:    call void @addr_only_scc2(ptr [[P]])
@@ -1257,7 +1257,7 @@ define void @addr_only_scc(ptr %p) {
 define void @addr_only_scc2(ptr %p) {
 ; FNATTRS: Function Attrs: nofree nosync nounwind memory(write, argmem: read, inaccessiblemem: none)
 ; FNATTRS-LABEL: define void @addr_only_scc2
-; FNATTRS-SAME: (ptr captures(address_is_null) [[P:%.*]]) #[[ATTR20]] {
+; FNATTRS-SAME: (ptr readonly captures(address_is_null) [[P:%.*]]) #[[ATTR20]] {
 ; FNATTRS-NEXT:    [[CMP:%.*]] = icmp ne ptr [[P]], null
 ; FNATTRS-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[EXIT:%.*]]
 ; FNATTRS:       if:

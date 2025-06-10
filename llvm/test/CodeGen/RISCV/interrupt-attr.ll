@@ -1442,33 +1442,17 @@ define void @foo_with_call() #1 {
 ;
 ; CHECK-RV64E-FD-LABEL: foo_with_call:
 ; CHECK-RV64E-FD:       # %bb.0:
-; CHECK-RV64E-FD-NEXT:    addi sp, sp, -464
-; CHECK-RV64E-FD-NEXT:    sd ra, 456(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd t0, 448(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd t1, 440(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd t2, 432(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a0, 424(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a1, 416(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a2, 408(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a3, 400(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a4, 392(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a5, 384(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a6, 376(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a7, 368(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s2, 360(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s3, 352(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s4, 344(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s5, 336(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s6, 328(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s7, 320(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s8, 312(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s9, 304(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s10, 296(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s11, 288(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd t3, 280(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd t4, 272(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd t5, 264(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd t6, 256(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    addi sp, sp, -336
+; CHECK-RV64E-FD-NEXT:    sd ra, 328(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd t0, 320(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd t1, 312(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd t2, 304(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a0, 296(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a1, 288(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a2, 280(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a3, 272(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a4, 264(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a5, 256(sp) # 8-byte Folded Spill
 ; CHECK-RV64E-FD-NEXT:    fsd ft0, 248(sp) # 8-byte Folded Spill
 ; CHECK-RV64E-FD-NEXT:    fsd ft1, 240(sp) # 8-byte Folded Spill
 ; CHECK-RV64E-FD-NEXT:    fsd ft2, 232(sp) # 8-byte Folded Spill
@@ -1502,32 +1486,16 @@ define void @foo_with_call() #1 {
 ; CHECK-RV64E-FD-NEXT:    fsd ft10, 8(sp) # 8-byte Folded Spill
 ; CHECK-RV64E-FD-NEXT:    fsd ft11, 0(sp) # 8-byte Folded Spill
 ; CHECK-RV64E-FD-NEXT:    call otherfoo
-; CHECK-RV64E-FD-NEXT:    ld ra, 456(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld t0, 448(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld t1, 440(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld t2, 432(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a0, 424(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a1, 416(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a2, 408(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a3, 400(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a4, 392(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a5, 384(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a6, 376(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a7, 368(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s2, 360(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s3, 352(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s4, 344(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s5, 336(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s6, 328(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s7, 320(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s8, 312(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s9, 304(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s10, 296(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s11, 288(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld t3, 280(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld t4, 272(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld t5, 264(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld t6, 256(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld ra, 328(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld t0, 320(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld t1, 312(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld t2, 304(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a0, 296(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a1, 288(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a2, 280(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a3, 272(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a4, 264(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a5, 256(sp) # 8-byte Folded Reload
 ; CHECK-RV64E-FD-NEXT:    fld ft0, 248(sp) # 8-byte Folded Reload
 ; CHECK-RV64E-FD-NEXT:    fld ft1, 240(sp) # 8-byte Folded Reload
 ; CHECK-RV64E-FD-NEXT:    fld ft2, 232(sp) # 8-byte Folded Reload
@@ -1560,7 +1528,7 @@ define void @foo_with_call() #1 {
 ; CHECK-RV64E-FD-NEXT:    fld ft9, 16(sp) # 8-byte Folded Reload
 ; CHECK-RV64E-FD-NEXT:    fld ft10, 8(sp) # 8-byte Folded Reload
 ; CHECK-RV64E-FD-NEXT:    fld ft11, 0(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    addi sp, sp, 464
+; CHECK-RV64E-FD-NEXT:    addi sp, sp, 336
 ; CHECK-RV64E-FD-NEXT:    mret
   %call = call i32 @otherfoo()
   ret void
@@ -2993,34 +2961,18 @@ define void @foo_fp_with_call() #2 {
 ;
 ; CHECK-RV64E-FD-LABEL: foo_fp_with_call:
 ; CHECK-RV64E-FD:       # %bb.0:
-; CHECK-RV64E-FD-NEXT:    addi sp, sp, -472
-; CHECK-RV64E-FD-NEXT:    sd ra, 464(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd t0, 456(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd t1, 448(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd t2, 440(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s0, 432(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a0, 424(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a1, 416(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a2, 408(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a3, 400(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a4, 392(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a5, 384(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a6, 376(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a7, 368(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s2, 360(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s3, 352(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s4, 344(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s5, 336(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s6, 328(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s7, 320(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s8, 312(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s9, 304(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s10, 296(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s11, 288(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd t3, 280(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd t4, 272(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd t5, 264(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd t6, 256(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    addi sp, sp, -344
+; CHECK-RV64E-FD-NEXT:    sd ra, 336(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd t0, 328(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd t1, 320(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd t2, 312(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd s0, 304(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a0, 296(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a1, 288(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a2, 280(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a3, 272(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a4, 264(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a5, 256(sp) # 8-byte Folded Spill
 ; CHECK-RV64E-FD-NEXT:    fsd ft0, 248(sp) # 8-byte Folded Spill
 ; CHECK-RV64E-FD-NEXT:    fsd ft1, 240(sp) # 8-byte Folded Spill
 ; CHECK-RV64E-FD-NEXT:    fsd ft2, 232(sp) # 8-byte Folded Spill
@@ -3053,35 +3005,19 @@ define void @foo_fp_with_call() #2 {
 ; CHECK-RV64E-FD-NEXT:    fsd ft9, 16(sp) # 8-byte Folded Spill
 ; CHECK-RV64E-FD-NEXT:    fsd ft10, 8(sp) # 8-byte Folded Spill
 ; CHECK-RV64E-FD-NEXT:    fsd ft11, 0(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    addi s0, sp, 472
+; CHECK-RV64E-FD-NEXT:    addi s0, sp, 344
 ; CHECK-RV64E-FD-NEXT:    call otherfoo
-; CHECK-RV64E-FD-NEXT:    ld ra, 464(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld t0, 456(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld t1, 448(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld t2, 440(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s0, 432(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a0, 424(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a1, 416(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a2, 408(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a3, 400(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a4, 392(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a5, 384(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a6, 376(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a7, 368(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s2, 360(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s3, 352(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s4, 344(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s5, 336(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s6, 328(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s7, 320(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s8, 312(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s9, 304(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s10, 296(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s11, 288(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld t3, 280(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld t4, 272(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld t5, 264(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld t6, 256(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld ra, 336(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld t0, 328(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld t1, 320(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld t2, 312(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld s0, 304(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a0, 296(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a1, 288(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a2, 280(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a3, 272(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a4, 264(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a5, 256(sp) # 8-byte Folded Reload
 ; CHECK-RV64E-FD-NEXT:    fld ft0, 248(sp) # 8-byte Folded Reload
 ; CHECK-RV64E-FD-NEXT:    fld ft1, 240(sp) # 8-byte Folded Reload
 ; CHECK-RV64E-FD-NEXT:    fld ft2, 232(sp) # 8-byte Folded Reload
@@ -3114,7 +3050,7 @@ define void @foo_fp_with_call() #2 {
 ; CHECK-RV64E-FD-NEXT:    fld ft9, 16(sp) # 8-byte Folded Reload
 ; CHECK-RV64E-FD-NEXT:    fld ft10, 8(sp) # 8-byte Folded Reload
 ; CHECK-RV64E-FD-NEXT:    fld ft11, 0(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    addi sp, sp, 472
+; CHECK-RV64E-FD-NEXT:    addi sp, sp, 344
 ; CHECK-RV64E-FD-NEXT:    mret
   %call = call i32 @otherfoo()
   ret void

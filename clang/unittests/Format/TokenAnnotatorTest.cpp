@@ -411,6 +411,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   ASSERT_EQ(Tokens.size(), 27u) << Tokens;
   EXPECT_TOKEN(Tokens[16], tok::star, TT_BinaryOperator);
   EXPECT_TOKEN(Tokens[22], tok::star, TT_BinaryOperator);
+
+  Tokens = annotate("NSError *__autoreleasing *foo;",
+                    getLLVMStyle(FormatStyle::LK_ObjC));
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::star, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
@@ -754,6 +760,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsNonTemplateAngleBrackets) {
   ASSERT_EQ(Tokens.size(), 27u) << Tokens;
   EXPECT_TOKEN(Tokens[7], tok::less, TT_BinaryOperator);
   EXPECT_TOKEN(Tokens[20], tok::greater, TT_BinaryOperator);
+
+  Tokens = annotate("bool foo = a < b && (c * d) > e;");
+  ASSERT_EQ(Tokens.size(), 16u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::less, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[6], tok::ampamp, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[9], tok::star, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[12], tok::greater, TT_BinaryOperator);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsTemplateTemplateParameters) {
@@ -1440,6 +1453,15 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
   ASSERT_EQ(Tokens.size(), 17u) << Tokens;
   EXPECT_TOKEN(Tokens[4], tok::ampamp, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[5], tok::kw_requires, TT_RequiresClause);
+
+  Tokens = annotate("auto foo() -> auto *\n"
+                    "  requires(not bar)\n"
+                    "{\n"
+                    "  return baz;\n"
+                    "}");
+  ASSERT_EQ(Tokens.size(), 18u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::kw_requires, TT_RequiresClause);
+  EXPECT_TOKEN(Tokens[12], tok::l_brace, TT_FunctionLBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsRequiresExpressions) {
@@ -2243,6 +2265,18 @@ TEST_F(TokenAnnotatorTest, UnderstandsFunctionDeclarationNames) {
   ASSERT_EQ(Tokens.size(), 6u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::identifier, TT_FunctionDeclarationName);
   EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_FunctionDeclarationLParen);
+
+  Tokens = annotate("#define FUNC(foo, bar, baz) \\\n"
+                    "  auto foo##bar##baz() -> Type {}");
+  ASSERT_EQ(Tokens.size(), 23u) << Tokens;
+  EXPECT_TOKEN(Tokens[11], tok::identifier, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[16], tok::l_paren, TT_FunctionDeclarationLParen);
+  EXPECT_TOKEN(Tokens[18], tok::arrow, TT_TrailingReturnArrow);
+
+  Tokens = annotate("void __stdcall f();");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::identifier, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_FunctionDeclarationLParen);
 
   Tokens = annotate("int iso_time(time_t);");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
@@ -3106,6 +3140,19 @@ TEST_F(TokenAnnotatorTest, CSharpNullableTypes) {
   ASSERT_EQ(Tokens.size(), 4u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::question, TT_CSharpNullable);
 
+  Tokens = annotate("{\n"
+                    "  int? a;\n"
+                    "  if (b is int?)\n"
+                    "    f();\n"
+                    "  var foo = A<Foo?>();\n"
+                    "}",
+                    Style);
+  ASSERT_EQ(Tokens.size(), 29u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::question, TT_CSharpNullable);
+  EXPECT_TOKEN(Tokens[10], tok::question, TT_CSharpNullable);
+  EXPECT_TOKEN(Tokens[20], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[22], tok::question, TT_CSharpNullable);
+
   Tokens = annotate("cond? id : id2", Style);
   ASSERT_EQ(Tokens.size(), 6u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::question, TT_ConditionalExpr);
@@ -3766,6 +3813,17 @@ TEST_F(TokenAnnotatorTest, SwitchExpression) {
   EXPECT_TOKEN(Tokens[20], tok::arrow, TT_CaseLabelArrow);
 }
 
+TEST_F(TokenAnnotatorTest, JavaRecord) {
+  auto Tokens = annotate("public record MyRecord() {}",
+                         getLLVMStyle(FormatStyle::LK_Java));
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::identifier, TT_ClassHeadName);
+  // Not TT_FunctionDeclarationLParen.
+  EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[5], tok::l_brace, TT_RecordLBrace);
+  EXPECT_TOKEN(Tokens[6], tok::r_brace, TT_RecordRBrace);
+}
+
 TEST_F(TokenAnnotatorTest, CppAltOperatorKeywords) {
   auto Tokens = annotate("a = b and c;");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
@@ -4031,6 +4089,34 @@ TEST_F(TokenAnnotatorTest, UserDefinedLiteral) {
   auto Tokens = annotate("auto dollars = 2_$;");
   ASSERT_EQ(Tokens.size(), 6u) << Tokens;
   EXPECT_EQ(Tokens[3]->TokenText, "2_$");
+}
+
+TEST_F(TokenAnnotatorTest, EnumColonInTypedef) {
+  auto Tokens = annotate("typedef enum : int {} foo;");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::colon, TT_Unknown); // Not TT_InheritanceColon.
+}
+
+TEST_F(TokenAnnotatorTest, BitFieldColon) {
+  auto Tokens = annotate("class C {\n"
+                         "  int f : SIZE;\n"
+                         "};");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::colon, TT_BitFieldColon);
+}
+
+TEST_F(TokenAnnotatorTest, JsonCodeInRawString) {
+  auto Tokens = annotate("{\n"
+                         "  \"foo\": \"bar\",\n"
+                         "  \"str\": \"test\"\n"
+                         "}",
+                         getLLVMStyle(FormatStyle::LK_Json));
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_brace, TT_DictLiteral);
+  EXPECT_TOKEN(Tokens[1], tok::string_literal, TT_SelectorName);
+  EXPECT_TOKEN(Tokens[2], tok::colon, TT_DictLiteral);
+  EXPECT_TOKEN(Tokens[5], tok::string_literal, TT_SelectorName);
+  EXPECT_TOKEN(Tokens[6], tok::colon, TT_DictLiteral);
 }
 
 } // namespace

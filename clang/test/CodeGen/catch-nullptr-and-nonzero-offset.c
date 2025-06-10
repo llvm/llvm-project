@@ -32,6 +32,7 @@
 // CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_1500:.*]] = {{.*}}, i32 1500, i32 15 } }
 // CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_1600:.*]] = {{.*}}, i32 1600, i32 15 } }
 // CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_1700:.*]] = {{.*}}, i32 1700, i32 15 } }
+// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_1800:.*]] = {{.*}}, i32 1800, i32 20 } }
 
 #ifdef __cplusplus
 extern "C" {
@@ -429,6 +430,26 @@ char *void_ptr(void *base, unsigned long offset) {
   // CHECK-NEXT:                        ret ptr %[[ADD_PTR]]
 #line 1700
   return base + offset;
+}
+
+char *constant_null_add(unsigned long offset) {
+  // CHECK: define{{.*}} ptr @constant_null_add(i64 noundef %[[OFFSET:.*]])
+  // CHECK-NEXT:                      [[ENTRY:.*]]:
+  // CHECK-NEXT:                        %[[OFFSET_ADDR:.*]] = alloca i64, align 8
+  // CHECK-NEXT:                        store i64 %[[OFFSET]], ptr %[[OFFSET_ADDR]], align 8
+  // CHECK-NEXT:                        %[[OFFSET_RELOADED:.*]] = load i64, ptr %[[OFFSET_ADDR]], align 8
+  // CHECK-NEXT:                        %[[ADD_PTR:.*]] = inttoptr i64 %[[OFFSET_RELOADED]] to ptr
+  // CHECK-SANITIZE-NEXT:               %[[IS_NULL:.*]] = icmp eq i64 %[[OFFSET_RELOADED]], 0, !nosanitize
+  // CHECK-SANITIZE-NEXT:               br i1 %[[IS_NULL]], label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
+  // CHECK-SANITIZE:                  [[HANDLER_POINTER_OVERFLOW]]:
+  // CHECK-SANITIZE-NORECOVER-NEXT:     call void @__ubsan_handle_pointer_overflow_abort(ptr @[[LINE_1800]], i64 0, i64 %[[OFFSET_RELOADED]])
+  // CHECK-SANITIZE-RECOVER-NEXT:       call void @__ubsan_handle_pointer_overflow(ptr @[[LINE_1800]], i64 0, i64 %[[OFFSET_RELOADED]])
+  // CHECK-SANITIZE-TRAP-NEXT:          call void @llvm.ubsantrap(i8 19){{.*}}, !nosanitize
+  // CHECK-SANITIZE-UNREACHABLE-NEXT:   unreachable, !nosanitize
+  // CHECK-SANITIZE:                  [[CONT]]:
+  // CHECK-NEXT:                        ret ptr %[[ADD_PTR]]
+#line 1800
+  return (char *)0 + offset;
 }
 
 #ifdef __cplusplus

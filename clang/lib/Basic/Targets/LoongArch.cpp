@@ -14,7 +14,6 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/LoongArchTargetParser.h"
 
 using namespace clang;
@@ -138,6 +137,11 @@ bool LoongArchTargetInfo::validateAsmConstraint(
   case 'l':
     // A signed 16-bit constant.
     Info.setRequiresImmediate(-32768, 32767);
+    return true;
+  case 'q':
+    // A general-purpose register except for $r0 and $r1 (for the csrxchg
+    // instruction)
+    Info.setAllowsRegister();
     return true;
   case 'I':
     // A signed 12-bit constant (for arithmetic instructions).
@@ -388,6 +392,73 @@ bool LoongArchTargetInfo::handleTargetFeatures(
   return true;
 }
 
+enum class AttrFeatureKind { Arch, Tune, NoFeature, Feature };
+
+static std::pair<AttrFeatureKind, llvm::StringRef>
+getAttrFeatureTypeAndValue(llvm::StringRef AttrFeature) {
+  if (auto Split = AttrFeature.split("="); !Split.second.empty()) {
+    if (Split.first.trim() == "arch")
+      return {AttrFeatureKind::Arch, Split.second.trim()};
+    if (Split.first.trim() == "tune")
+      return {AttrFeatureKind::Tune, Split.second.trim()};
+  }
+  if (AttrFeature.starts_with("no-"))
+    return {AttrFeatureKind::NoFeature, AttrFeature.drop_front(3)};
+  return {AttrFeatureKind::Feature, AttrFeature};
+}
+
+ParsedTargetAttr
+LoongArchTargetInfo::parseTargetAttr(StringRef Features) const {
+  ParsedTargetAttr Ret;
+  if (Features == "default")
+    return Ret;
+  SmallVector<StringRef, 1> AttrFeatures;
+  Features.split(AttrFeatures, ",");
+
+  for (auto &Feature : AttrFeatures) {
+    auto [Kind, Value] = getAttrFeatureTypeAndValue(Feature.trim());
+
+    switch (Kind) {
+    case AttrFeatureKind::Arch: {
+      if (llvm::LoongArch::isValidArchName(Value) || Value == "la64v1.0" ||
+          Value == "la64v1.1") {
+        std::vector<llvm::StringRef> ArchFeatures;
+        if (llvm::LoongArch::getArchFeatures(Value, ArchFeatures)) {
+          Ret.Features.insert(Ret.Features.end(), ArchFeatures.begin(),
+                              ArchFeatures.end());
+        }
+
+        if (!Ret.CPU.empty())
+          Ret.Duplicate = "arch=";
+        else if (Value == "la64v1.0" || Value == "la64v1.1")
+          Ret.CPU = "loongarch64";
+        else
+          Ret.CPU = Value;
+      } else {
+        Ret.Features.push_back("!arch=" + Value.str());
+      }
+      break;
+    }
+
+    case AttrFeatureKind::Tune:
+      if (!Ret.Tune.empty())
+        Ret.Duplicate = "tune=";
+      else
+        Ret.Tune = Value;
+      break;
+
+    case AttrFeatureKind::NoFeature:
+      Ret.Features.push_back("-" + Value.str());
+      break;
+
+    case AttrFeatureKind::Feature:
+      Ret.Features.push_back("+" + Value.str());
+      break;
+    }
+  }
+  return Ret;
+}
+
 bool LoongArchTargetInfo::isValidCPUName(StringRef Name) const {
   return llvm::LoongArch::isValidCPUName(Name);
 }
@@ -395,4 +466,8 @@ bool LoongArchTargetInfo::isValidCPUName(StringRef Name) const {
 void LoongArchTargetInfo::fillValidCPUList(
     SmallVectorImpl<StringRef> &Values) const {
   llvm::LoongArch::fillValidCPUList(Values);
+}
+
+bool LoongArchTargetInfo::isValidFeatureName(StringRef Name) const {
+  return llvm::LoongArch::isValidFeatureName(Name);
 }

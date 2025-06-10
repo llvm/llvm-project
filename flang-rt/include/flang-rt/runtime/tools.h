@@ -511,10 +511,13 @@ inline RT_API_ATTRS const char *FindCharacter(
 // Copy payload data from one allocated descriptor to another.
 // Assumes element counts and element sizes match, and that both
 // descriptors are allocated.
+template <typename P = char, int RANK = -1>
 RT_API_ATTRS void ShallowCopyDiscontiguousToDiscontiguous(
     const Descriptor &to, const Descriptor &from);
+template <typename P = char, int RANK = -1>
 RT_API_ATTRS void ShallowCopyDiscontiguousToContiguous(
     const Descriptor &to, const Descriptor &from);
+template <typename P = char, int RANK = -1>
 RT_API_ATTRS void ShallowCopyContiguousToDiscontiguous(
     const Descriptor &to, const Descriptor &from);
 RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from,
