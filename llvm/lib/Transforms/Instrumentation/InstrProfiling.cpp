@@ -48,6 +48,7 @@
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
@@ -77,7 +78,7 @@ cl::opt<bool> DebugInfoCorrelate(
              "-profile-correlate=debug-info)"),
     cl::init(false));
 
-cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate(
+LLVM_ABI cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate(
     "profile-correlate",
     cl::desc("Use debug info or binary file to correlate profiles."),
     cl::init(InstrProfCorrelator::NONE),
