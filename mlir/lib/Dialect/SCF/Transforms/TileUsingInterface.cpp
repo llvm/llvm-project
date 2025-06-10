@@ -1061,9 +1061,12 @@ mlir::scf::tileUsingSCF(RewriterBase &rewriter, TilingInterface op,
   if (loops.empty()) {
     // If loops are empty, the tiled op is used as the replacement for the
     // untiled op.
-    return scf::SCFTilingResult{tilingResult->tiledOps, initTensors, loops,
+    return scf::SCFTilingResult{tilingResult->tiledOps,
+                                initTensors,
+                                loops,
                                 tilingResult->tiledValues,
-                                tilingResult->generatedSlices};
+                                tilingResult->generatedSlices,
+                                {}};
   }
 
   auto loopResults = llvm::map_to_vector(loops.front()->getResults(),
@@ -1072,8 +1075,9 @@ mlir::scf::tileUsingSCF(RewriterBase &rewriter, TilingInterface op,
   // For the full reduction case, there is nothing more to do.
   if (options.reductionStrategy ==
       scf::SCFTilingOptions::ReductionTilingStrategy::FullReduction) {
-    return scf::SCFTilingResult{tilingResult->tiledOps, initTensors, loops,
-                                loopResults, tilingResult->generatedSlices};
+    return scf::SCFTilingResult{
+        tilingResult->tiledOps,        initTensors, loops, loopResults,
+        tilingResult->generatedSlices, {}};
   }
 
   // The results of the loop needs to be merged.
