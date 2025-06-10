@@ -251,6 +251,18 @@ class TestComputeProjects(unittest.TestCase):
         self.assertEqual(env_variables["runtimes_check_targets"], "")
         self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
 
+    def test_clang_tools_extra(self):
+        env_variables = compute_projects.get_env_variables(
+            ["clang-tools-extra/CMakeLists.txt"], "Linux"
+        )
+        self.assertEqual(
+            env_variables["projects_to_build"], "clang;clang-tools-extra;lld;llvm"
+        )
+        self.assertEqual(env_variables["project_check_targets"], "check-clang-tools")
+        self.assertEqual(env_variables["runtimes_to_build"], "libc")
+        self.assertEqual(env_variables["runtimes_check_targets"], "check-libc")
+        self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
+
 
 if __name__ == "__main__":
     unittest.main()
