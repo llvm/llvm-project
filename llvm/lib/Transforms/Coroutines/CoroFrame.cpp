@@ -41,8 +41,6 @@
 
 using namespace llvm;
 
-extern cl::opt<bool> UseNewDbgInfoFormat;
-
 #define DEBUG_TYPE "coro-frame"
 
 namespace {
@@ -842,18 +840,12 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
       DILocation::get(DIS->getContext(), LineNum, /*Column=*/1, DIS);
   assert(FrameDIVar->isValidLocationForIntrinsic(DILoc));
 
-  if (UseNewDbgInfoFormat) {
-    DbgVariableRecord *NewDVR =
-        new DbgVariableRecord(ValueAsMetadata::get(Shape.FramePtr), FrameDIVar,
-                              DBuilder.createExpression(), DILoc,
-                              DbgVariableRecord::LocationType::Declare);
-    BasicBlock::iterator It = Shape.getInsertPtAfterFramePtr();
-    It->getParent()->insertDbgRecordBefore(NewDVR, It);
-  } else {
-    DBuilder.insertDeclare(Shape.FramePtr, FrameDIVar,
-                           DBuilder.createExpression(), DILoc,
-                           Shape.getInsertPtAfterFramePtr());
-  }
+  DbgVariableRecord *NewDVR =
+      new DbgVariableRecord(ValueAsMetadata::get(Shape.FramePtr), FrameDIVar,
+                            DBuilder.createExpression(), DILoc,
+                            DbgVariableRecord::LocationType::Declare);
+  BasicBlock::iterator It = Shape.getInsertPtAfterFramePtr();
+  It->getParent()->insertDbgRecordBefore(NewDVR, It);
 }
 
 // Build a struct that will keep state for an active coroutine.
@@ -1136,19 +1128,12 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
           // This dbg.declare is preserved for all coro-split function
           // fragments. It will be unreachable in the main function, and
           // processed by coro::salvageDebugInfo() by the Cloner.
-          if (UseNewDbgInfoFormat) {
-            DbgVariableRecord *NewDVR = new DbgVariableRecord(
-                ValueAsMetadata::get(CurrentReload), DDI->getVariable(),
-                DDI->getExpression(), DDI->getDebugLoc(),
-                DbgVariableRecord::LocationType::Declare);
-            Builder.GetInsertPoint()->getParent()->insertDbgRecordBefore(
-                NewDVR, Builder.GetInsertPoint());
-          } else {
-            DIBuilder(*CurrentBlock->getParent()->getParent(), AllowUnresolved)
-                .insertDeclare(CurrentReload, DDI->getVariable(),
-                               DDI->getExpression(), DDI->getDebugLoc(),
-                               Builder.GetInsertPoint());
-          }
+          DbgVariableRecord *NewDVR = new DbgVariableRecord(
+              ValueAsMetadata::get(CurrentReload), DDI->getVariable(),
+              DDI->getExpression(), DDI->getDebugLoc(),
+              DbgVariableRecord::LocationType::Declare);
+          Builder.GetInsertPoint()->getParent()->insertDbgRecordBefore(
+              NewDVR, Builder.GetInsertPoint());
           // This dbg.declare is for the main function entry point.  It
           // will be deleted in all coro-split functions.
           coro::salvageDebugInfo(ArgToAllocaMap, *DDI, false /*UseEntryValue*/);
