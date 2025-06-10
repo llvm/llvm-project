@@ -1507,7 +1507,12 @@ void VPSlotTracker::assignName(const VPValue *V) {
 
   // Use the name of the underlying Value, wrapped in "ir<>", and versioned by
   // appending ".Number" to the name if there are multiple uses.
-  std::string Name = getName(V);
+  std::string Name;
+  if (UV) {
+    Name = getName(UV);
+  } else {
+    Name = VPI->getName();
+  }
   assert(!Name.empty() && "Name cannot be empty.");
   StringRef Prefix = UV ? "ir<" : "vp<%";
   std::string BaseName = (Twine(Prefix) + Name + Twine(">")).str();
@@ -1552,31 +1557,27 @@ void VPSlotTracker::assignNames(const VPBasicBlock *VPBB) {
       assignName(Def);
 }
 
-std::string VPSlotTracker::getName(const VPValue *V) {
-  auto *UV = V->getUnderlyingValue();
-  auto *VPI = dyn_cast_or_null<VPInstruction>(V->getDefiningRecipe());
-  if (!UV)
-    return VPI->getName().str();
-
+std::string VPSlotTracker::getName(const Value *V) {
   std::string Name;
   raw_string_ostream S(Name);
-  if (MST) {
-    UV->printAsOperand(S, false, *MST);
-  } else if (isa<Instruction>(UV) && !UV->hasName()) {
+  if (V->hasName() || !isa<Instruction>(V)) {
+    V->printAsOperand(S, false);
+    return Name;
+  }
+
+  if (!MST) {
     // Lazily create the ModuleSlotTracker when we first hit an unnamed
     // instruction
-    auto *IUV = cast<Instruction>(UV);
+    auto *I = cast<Instruction>(V);
     // This check is required to support unit tests with incomplete IR.
-    if (IUV->getParent()) {
-      MST = std::make_unique<ModuleSlotTracker>(IUV->getModule());
-      MST->incorporateFunction(*IUV->getFunction());
+    if (I->getParent()) {
+      MST = std::make_unique<ModuleSlotTracker>(I->getModule());
+      MST->incorporateFunction(*I->getFunction());
     } else {
       MST = std::make_unique<ModuleSlotTracker>(nullptr);
     }
-    UV->printAsOperand(S, false, *MST);
-  } else {
-    UV->printAsOperand(S, false);
   }
+  V->printAsOperand(S, false, *MST);
   return Name;
 }
 
