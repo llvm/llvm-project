@@ -50,12 +50,15 @@ TEST_P(ABIAArch64TestFixture, AugmentRegisterInfo) {
   ASSERT_TRUE(abi_sp);
   using Register = DynamicRegisterInfo::Register;
 
-  Register pc{ConstString("pc"), ConstString(), ConstString("GPR")};
+  Register pc;
+  pc.name = ConstString("pc");
+  pc.alt_name = ConstString();
+  pc.set_name = ConstString("GPR");
   std::vector<Register> regs{pc};
 
   abi_sp->AugmentRegisterInfo(regs);
 
-  ASSERT_EQ(regs.size(), 1);
+  ASSERT_EQ(regs.size(), 1U);
   Register new_pc = regs[0];
   EXPECT_EQ(new_pc.name, pc.name);
   EXPECT_EQ(new_pc.set_name, pc.set_name);
