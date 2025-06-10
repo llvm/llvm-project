@@ -4007,7 +4007,6 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
       if (VT.isScalarInteger() && VT.getSizeInBits() <= 64) {
         if (Op2Info.isPowerOf2() || Op2Info.isNegatedPowerOf2()) {
           // Neg can be folded into the asr instruction.
-          // FIXME: Is the throughput cost of asr + neg the same as just asr?
           return ISD == ISD::SDIV ? (3 * AddCost + AsrCost)
                                   : (3 * AsrCost + AddCost);
         } else {
@@ -4021,18 +4020,18 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
           // e.g. %1 = sdiv <vscale x 4 x i32> %a, splat (i32 8)
 
           // One more for the negation in SDIV
-          InstructionCost cost =
+          InstructionCost Cost =
               (Op2Info.isNegatedPowerOf2() && ISD == ISD::SDIV) ? AsrCost : 0;
           if (Ty->isScalableTy() && ST->hasSVE())
-            cost += 2 * AsrCost;
+            Cost += 2 * AsrCost;
           else {
-            cost +=
+            Cost +=
                 UsraCost +
                 (ISD == ISD::SDIV
                      ? (LT.second.getScalarType() == MVT::i64 ? 1 : 2) * AsrCost
                      : 2 * AddCost);
           }
-          return cost;
+          return Cost;
         } else if (LT.second == MVT::v2i64) {
           return VT.getVectorNumElements() *
                  getArithmeticInstrCost(Opcode, Ty->getScalarType(), CostKind,
