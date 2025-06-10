@@ -899,6 +899,11 @@ TreePredicateFn::TreePredicateFn(TreePattern *N) : PatFragRec(N) {
   assert(
       (!hasPredCode() || !hasImmCode()) &&
       ".td file corrupt: can't have a node predicate *and* an imm predicate");
+
+  if (hasGISelPredicateCode() && hasGISelLeafPredicateCode())
+    PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                    ".td file corrupt: can't have GISelPredicateCode *and* "
+                    "GISelLeafPredicateCode");
 }
 
 bool TreePredicateFn::hasPredCode() const {
@@ -1293,8 +1298,20 @@ bool TreePredicateFn::hasGISelPredicateCode() const {
 }
 
 std::string TreePredicateFn::getGISelPredicateCode() const {
-  return std::string(
-      PatFragRec->getRecord()->getValueAsString("GISelPredicateCode"));
+  return PatFragRec->getRecord()->getValueAsString("GISelPredicateCode").str();
+}
+
+bool TreePredicateFn::hasGISelLeafPredicateCode() const {
+  return PatFragRec->getRecord()
+      ->getValueAsOptionalString("GISelLeafPredicateCode")
+      .has_value();
+}
+
+std::string TreePredicateFn::getGISelLeafPredicateCode() const {
+  return PatFragRec->getRecord()
+      ->getValueAsOptionalString("GISelLeafPredicateCode")
+      .value_or(StringRef())
+      .str();
 }
 
 StringRef TreePredicateFn::getImmType() const {
