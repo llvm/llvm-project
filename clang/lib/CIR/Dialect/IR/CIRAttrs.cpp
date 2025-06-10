@@ -64,8 +64,7 @@ void CIRDialect::printAttribute(Attribute attr, DialectAsmPrinter &os) const {
 static ParseResult parseConstPtr(AsmParser &parser, mlir::IntegerAttr &value) {
 
   if (parser.parseOptionalKeyword("null").succeeded()) {
-    value = mlir::IntegerAttr::get(
-        mlir::IntegerType::get(parser.getContext(), 64), 0);
+    value = parser.getBuilder().getI64IntegerAttr(0);
     return success();
   }
 
@@ -138,17 +137,13 @@ void IntAttr::print(AsmPrinter &printer) const {
 
 LogicalResult IntAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                               Type type, APInt value) {
-  if (!mlir::isa<IntType>(type)) {
-    emitError() << "expected 'simple.int' type";
-    return failure();
-  }
+  if (!mlir::isa<IntType>(type))
+    return emitError() << "expected 'simple.int' type";
 
   auto intType = mlir::cast<IntType>(type);
-  if (value.getBitWidth() != intType.getWidth()) {
-    emitError() << "type and value bitwidth mismatch: " << intType.getWidth()
-                << " != " << value.getBitWidth();
-    return failure();
-  }
+  if (value.getBitWidth() != intType.getWidth())
+    return emitError() << "type and value bitwidth mismatch: "
+                       << intType.getWidth() << " != " << value.getBitWidth();
 
   return success();
 }
@@ -182,10 +177,28 @@ FPAttr FPAttr::getZero(Type type) {
 LogicalResult FPAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                              CIRFPTypeInterface fpType, APFloat value) {
   if (APFloat::SemanticsToEnum(fpType.getFloatSemantics()) !=
-      APFloat::SemanticsToEnum(value.getSemantics())) {
-    emitError() << "floating-point semantics mismatch";
-    return failure();
-  }
+      APFloat::SemanticsToEnum(value.getSemantics()))
+    return emitError() << "floating-point semantics mismatch";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ConstComplexAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+ConstComplexAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                         cir::ComplexType type, mlir::TypedAttr real,
+                         mlir::TypedAttr imag) {
+  mlir::Type elemType = type.getElementType();
+  if (real.getType() != elemType)
+    return emitError()
+           << "type of the real part does not match the complex type";
+
+  if (imag.getType() != elemType)
+    return emitError()
+           << "type of the imaginary part does not match the complex type";
 
   return success();
 }
@@ -195,10 +208,10 @@ LogicalResult FPAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 //===----------------------------------------------------------------------===//
 
 LogicalResult
-ConstArrayAttr::verify(function_ref<::mlir::InFlightDiagnostic()> emitError,
-                       Type type, Attribute elts, int trailingZerosNum) {
+ConstArrayAttr::verify(function_ref<InFlightDiagnostic()> emitError, Type type,
+                       Attribute elts, int trailingZerosNum) {
 
-  if (!(mlir::isa<ArrayAttr>(elts) || mlir::isa<StringAttr>(elts)))
+  if (!(mlir::isa<ArrayAttr, StringAttr>(elts)))
     return emitError() << "constant array expects ArrayAttr or StringAttr";
 
   if (auto strAttr = mlir::dyn_cast<StringAttr>(elts)) {
@@ -206,11 +219,10 @@ ConstArrayAttr::verify(function_ref<::mlir::InFlightDiagnostic()> emitError,
     const auto intTy = mlir::dyn_cast<IntType>(arrayTy.getElementType());
 
     // TODO: add CIR type for char.
-    if (!intTy || intTy.getWidth() != 8) {
-      emitError() << "constant array element for string literals expects "
-                     "!cir.int<u, 8> element type";
-      return failure();
-    }
+    if (!intTy || intTy.getWidth() != 8)
+      return emitError()
+             << "constant array element for string literals expects "
+                "!cir.int<u, 8> element type";
     return success();
   }
 
@@ -303,22 +315,20 @@ void ConstArrayAttr::print(AsmPrinter &printer) const {
 // CIR ConstVectorAttr
 //===----------------------------------------------------------------------===//
 
-LogicalResult cir::ConstVectorAttr::verify(
-    function_ref<::mlir::InFlightDiagnostic()> emitError, Type type,
-    ArrayAttr elts) {
+LogicalResult
+cir::ConstVectorAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                             Type type, ArrayAttr elts) {
 
-  if (!mlir::isa<cir::VectorType>(type)) {
+  if (!mlir::isa<cir::VectorType>(type))
     return emitError() << "type of cir::ConstVectorAttr is not a "
                           "cir::VectorType: "
                        << type;
-  }
 
   const auto vecType = mlir::cast<cir::VectorType>(type);
 
-  if (vecType.getSize() != elts.size()) {
+  if (vecType.getSize() != elts.size())
     return emitError()
            << "number of constant elements should match vector size";
-  }
 
   // Check if the types of the elements match
   LogicalResult elementTypeCheck = success();

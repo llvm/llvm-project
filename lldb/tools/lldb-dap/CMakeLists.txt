@@ -8,6 +8,7 @@ add_public_tablegen_target(LLDBDAPOptionsTableGen)
 add_lldb_library(lldbDAP
   Breakpoint.cpp
   BreakpointBase.cpp
+  CommandPlugins.cpp
   DAP.cpp
   DAPError.cpp
   DAPLog.cpp
@@ -20,9 +21,11 @@ add_lldb_library(lldbDAP
   LLDBUtils.cpp
   OutputRedirector.cpp
   ProgressEvent.cpp
+  ProtocolUtils.cpp
   RunInTerminal.cpp
   SourceBreakpoint.cpp
   Transport.cpp
+  Variables.cpp
   Watchpoint.cpp
 
   Handler/ResponseHandler.cpp
@@ -67,13 +70,12 @@ add_lldb_library(lldbDAP
   Protocol/ProtocolTypes.cpp
   Protocol/ProtocolRequests.cpp
 
-  LINK_LIBS
-    liblldb
-    lldbHost
-
   LINK_COMPONENTS
     Option
     Support
+  LINK_LIBS
+    liblldb
+    lldbHost
   )
 
 target_include_directories(lldbDAP
@@ -83,19 +85,6 @@ if(LLDB_DAP_WELCOME_MESSAGE)
   target_compile_definitions(lldbDAP
     PRIVATE
     -DLLDB_DAP_WELCOME_MESSAGE=\"${LLDB_DAP_WELCOME_MESSAGE}\")
-endif()
-
-if(LLDB_BUILD_FRAMEWORK)
-  # In the build-tree, we know the exact path to the framework directory.
-  # The installed framework can be in different locations.
-  lldb_setup_rpaths(lldb-dap
-    BUILD_RPATH
-      "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}"
-    INSTALL_RPATH
-      "@loader_path/../../../SharedFrameworks"
-      "@loader_path/../../System/Library/PrivateFrameworks"
-      "@loader_path/../../Library/PrivateFrameworks"
-  )
 endif()
 
 add_subdirectory(tool)

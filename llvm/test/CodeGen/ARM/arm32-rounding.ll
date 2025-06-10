@@ -104,6 +104,22 @@ entry:
   ret double %call
 }
 
+; CHECK-LABEL: test13
+; CHECK: vrintn.f32
+define float @test13(float %a) {
+entry:
+  %round = call float @llvm.roundeven.f32(float %a)
+  ret float %round
+}
+
+; CHECK-LABEL: test14
+; CHECK: vrintn.f64
+define double @test14(double %a) {
+entry:
+  %round = call double @llvm.roundeven.f64(double %a)
+  ret double %round
+}
+
 declare float @floorf(float) nounwind readnone
 declare double @floor(double) nounwind readnone
 declare float @ceilf(float) nounwind readnone
@@ -116,3 +132,5 @@ declare float @nearbyintf(float) nounwind readnone
 declare double @nearbyint(double) nounwind readnone
 declare float @rintf(float) nounwind readnone
 declare double @rint(double) nounwind readnone
+declare float @llvm.roundeven.f32(float)
+declare double @llvm.roundeven.f64(double)

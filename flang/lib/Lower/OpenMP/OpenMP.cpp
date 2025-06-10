@@ -34,6 +34,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/Flags.h"
 #include "flang/Support/OpenMP-utils.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -217,27 +218,8 @@ static void bindEntryBlockArgs(lower::AbstractConverter &converter,
   assert(args.isValid() && "invalid args");
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
-  auto bindSingleMapLike = [&converter,
-                            &firOpBuilder](const semantics::Symbol &sym,
-                                           const mlir::BlockArgument &arg) {
-    // Clones the `bounds` placing them inside the entry block and returns
-    // them.
-    auto cloneBound = [&](mlir::Value bound) {
-      if (mlir::isMemoryEffectFree(bound.getDefiningOp())) {
-        mlir::Operation *clonedOp = firOpBuilder.clone(*bound.getDefiningOp());
-        return clonedOp->getResult(0);
-      }
-      TODO(converter.getCurrentLocation(),
-           "target map-like clause operand unsupported bound type");
-    };
-
-    auto cloneBounds = [cloneBound](llvm::ArrayRef<mlir::Value> bounds) {
-      llvm::SmallVector<mlir::Value> clonedBounds;
-      llvm::transform(bounds, std::back_inserter(clonedBounds),
-                      [&](mlir::Value bound) { return cloneBound(bound); });
-      return clonedBounds;
-    };
-
+  auto bindSingleMapLike = [&converter](const semantics::Symbol &sym,
+                                        const mlir::BlockArgument &arg) {
     fir::ExtendedValue extVal = converter.getSymbolExtendedValue(sym);
     auto refType = mlir::dyn_cast<fir::ReferenceType>(arg.getType());
     if (refType && fir::isa_builtin_cptr_type(refType.getElementType())) {
@@ -245,31 +227,27 @@ static void bindEntryBlockArgs(lower::AbstractConverter &converter,
     } else {
       extVal.match(
           [&](const fir::BoxValue &v) {
-            converter.bindSymbol(sym,
-                                 fir::BoxValue(arg, cloneBounds(v.getLBounds()),
-                                               v.getExplicitParameters(),
-                                               v.getExplicitExtents()));
+            converter.bindSymbol(sym, fir::BoxValue(arg, v.getLBounds(),
+                                                    v.getExplicitParameters(),
+                                                    v.getExplicitExtents()));
           },
           [&](const fir::MutableBoxValue &v) {
             converter.bindSymbol(
-                sym, fir::MutableBoxValue(arg, cloneBounds(v.getLBounds()),
+                sym, fir::MutableBoxValue(arg, v.getLBounds(),
                                           v.getMutableProperties()));
           },
           [&](const fir::ArrayBoxValue &v) {
-            converter.bindSymbol(
-                sym, fir::ArrayBoxValue(arg, cloneBounds(v.getExtents()),
-                                        cloneBounds(v.getLBounds()),
-                                        v.getSourceBox()));
+            converter.bindSymbol(sym, fir::ArrayBoxValue(arg, v.getExtents(),
+                                                         v.getLBounds(),
+                                                         v.getSourceBox()));
           },
           [&](const fir::CharArrayBoxValue &v) {
-            converter.bindSymbol(
-                sym, fir::CharArrayBoxValue(arg, cloneBound(v.getLen()),
-                                            cloneBounds(v.getExtents()),
-                                            cloneBounds(v.getLBounds())));
+            converter.bindSymbol(sym, fir::CharArrayBoxValue(arg, v.getLen(),
+                                                             v.getExtents(),
+                                                             v.getLBounds()));
           },
           [&](const fir::CharBoxValue &v) {
-            converter.bindSymbol(
-                sym, fir::CharBoxValue(arg, cloneBound(v.getLen())));
+            converter.bindSymbol(sym, fir::CharBoxValue(arg, v.getLen()));
           },
           [&](const fir::UnboxedValue &v) { converter.bindSymbol(sym, arg); },
           [&](const auto &) {
@@ -981,14 +959,14 @@ static void genLoopVars(
 }
 
 static clause::Defaultmap::ImplicitBehavior
-getDefaultmapIfPresent(DefaultMapsTy &defaultMaps, mlir::Type varType) {
+getDefaultmapIfPresent(const DefaultMapsTy &defaultMaps, mlir::Type varType) {
   using DefMap = clause::Defaultmap;
 
   if (defaultMaps.empty())
     return DefMap::ImplicitBehavior::Default;
 
   if (llvm::is_contained(defaultMaps, DefMap::VariableCategory::All))
-    return defaultMaps[DefMap::VariableCategory::All];
+    return defaultMaps.at(DefMap::VariableCategory::All);
 
   // NOTE: Unsure if complex and/or vector falls into a scalar type
   // or aggregate, but the current default implicit behaviour is to
@@ -997,19 +975,19 @@ getDefaultmapIfPresent(DefaultMapsTy &defaultMaps, mlir::Type varType) {
   if ((fir::isa_trivial(varType) || fir::isa_char(varType) ||
        fir::isa_builtin_cptr_type(varType)) &&
       llvm::is_contained(defaultMaps, DefMap::VariableCategory::Scalar))
-    return defaultMaps[DefMap::VariableCategory::Scalar];
+    return defaultMaps.at(DefMap::VariableCategory::Scalar);
 
   if (fir::isPointerType(varType) &&
       llvm::is_contained(defaultMaps, DefMap::VariableCategory::Pointer))
-    return defaultMaps[DefMap::VariableCategory::Pointer];
+    return defaultMaps.at(DefMap::VariableCategory::Pointer);
 
   if (fir::isAllocatableType(varType) &&
       llvm::is_contained(defaultMaps, DefMap::VariableCategory::Allocatable))
-    return defaultMaps[DefMap::VariableCategory::Allocatable];
+    return defaultMaps.at(DefMap::VariableCategory::Allocatable);
 
   if (fir::isa_aggregate(varType) &&
       llvm::is_contained(defaultMaps, DefMap::VariableCategory::Aggregate))
-    return defaultMaps[DefMap::VariableCategory::Aggregate];
+    return defaultMaps.at(DefMap::VariableCategory::Aggregate);
 
   return DefMap::ImplicitBehavior::Default;
 }
@@ -1018,7 +996,7 @@ static std::pair<llvm::omp::OpenMPOffloadMappingFlags,
                  mlir::omp::VariableCaptureKind>
 getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
                           lower::AbstractConverter &converter,
-                          DefaultMapsTy &defaultMaps, mlir::Type varType,
+                          const DefaultMapsTy &defaultMaps, mlir::Type varType,
                           mlir::Location loc, const semantics::Symbol &sym) {
   using DefMap = clause::Defaultmap;
   // Check if a value of type `type` can be passed to the kernel by value.
@@ -1487,14 +1465,13 @@ static void genBodyOfTargetOp(
   while (!valuesDefinedAbove.empty()) {
     for (mlir::Value val : valuesDefinedAbove) {
       mlir::Operation *valOp = val.getDefiningOp();
-      assert(valOp != nullptr);
 
       // NOTE: We skip BoxDimsOp's as the lesser of two evils is to map the
       // indices separately, as the alternative is to eventually map the Box,
       // which comes with a fairly large overhead comparatively. We could be
       // more robust about this and check using a BackwardsSlice to see if we
       // run the risk of mapping a box.
-      if (mlir::isMemoryEffectFree(valOp) &&
+      if (valOp && mlir::isMemoryEffectFree(valOp) &&
           !mlir::isa<fir::BoxDimsOp>(valOp)) {
         mlir::Operation *clonedOp = valOp->clone();
         entryBlock->push_front(clonedOp);
@@ -1507,7 +1484,13 @@ static void genBodyOfTargetOp(
         valOp->replaceUsesWithIf(clonedOp, replace);
       } else {
         auto savedIP = firOpBuilder.getInsertionPoint();
-        firOpBuilder.setInsertionPointAfter(valOp);
+
+        if (valOp)
+          firOpBuilder.setInsertionPointAfter(valOp);
+        else
+          // This means val is a block argument
+          firOpBuilder.setInsertionPoint(targetOp);
+
         auto copyVal =
             firOpBuilder.createTemporary(val.getLoc(), val.getType());
         firOpBuilder.createStoreWithConvert(copyVal.getLoc(), val, copyVal);
@@ -1981,13 +1964,13 @@ static void genWsloopClauses(
     llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSyms) {
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processNowait(clauseOps);
+  cp.processLinear(clauseOps);
   cp.processOrder(clauseOps);
   cp.processOrdered(clauseOps);
   cp.processReduction(loc, clauseOps, reductionSyms);
   cp.processSchedule(stmtCtx, clauseOps);
 
-  cp.processTODO<clause::Allocate, clause::Linear>(
-      loc, llvm::omp::Directive::OMPD_do);
+  cp.processTODO<clause::Allocate>(loc, llvm::omp::Directive::OMPD_do);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2440,8 +2423,10 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       mlir::FlatSymbolRefAttr mapperId;
       if (sym.GetType()->category() == semantics::DeclTypeSpec::TypeDerived) {
         auto &typeSpec = sym.GetType()->derivedTypeSpec();
-        std::string mapperIdName = typeSpec.name().ToString() + ".default";
-        mapperIdName = converter.mangleName(mapperIdName, *typeSpec.GetScope());
+        std::string mapperIdName =
+            typeSpec.name().ToString() + llvm::omp::OmpDefaultMapperName;
+        if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName))
+          mapperIdName = converter.mangleName(mapperIdName, sym->owner());
         if (converter.getModuleOp().lookupSymbol(mapperIdName))
           mapperId = mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
                                                   mapperIdName);
@@ -2816,7 +2801,8 @@ static void genAtomicUpdateStatement(
     const parser::Expr &assignmentStmtExpr,
     const parser::OmpAtomicClauseList *leftHandClauseList,
     const parser::OmpAtomicClauseList *rightHandClauseList, mlir::Location loc,
-    mlir::Operation *atomicCaptureOp = nullptr) {
+    mlir::Operation *atomicCaptureOp = nullptr,
+    lower::StatementContext *atomicCaptureStmtCtx = nullptr) {
   // Generate `atomic.update` operation for atomic assignment statements
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Location currentLocation = converter.getCurrentLocation();
@@ -2890,15 +2876,24 @@ static void genAtomicUpdateStatement(
       },
       assignmentStmtExpr.u);
   lower::StatementContext nonAtomicStmtCtx;
+  lower::StatementContext *stmtCtxPtr = &nonAtomicStmtCtx;
   if (!nonAtomicSubExprs.empty()) {
     // Generate non atomic part before all the atomic operations.
     auto insertionPoint = firOpBuilder.saveInsertionPoint();
-    if (atomicCaptureOp)
+    if (atomicCaptureOp) {
+      assert(atomicCaptureStmtCtx && "must specify statement context");
       firOpBuilder.setInsertionPoint(atomicCaptureOp);
+      // Any clean-ups associated with the expression lowering
+      // must also be generated outside of the atomic update operation
+      // and after the atomic capture operation.
+      // The atomicCaptureStmtCtx will be finalized at the end
+      // of the atomic capture operation generation.
+      stmtCtxPtr = atomicCaptureStmtCtx;
+    }
     mlir::Value nonAtomicVal;
     for (auto *nonAtomicSubExpr : nonAtomicSubExprs) {
       nonAtomicVal = fir::getBase(converter.genExprValue(
-          currentLocation, *nonAtomicSubExpr, nonAtomicStmtCtx));
+          currentLocation, *nonAtomicSubExpr, *stmtCtxPtr));
       exprValueOverrides.try_emplace(nonAtomicSubExpr, nonAtomicVal);
     }
     if (atomicCaptureOp)
@@ -3206,7 +3201,8 @@ static void genAtomicCapture(lower::AbstractConverter &converter,
   mlir::Block &block = atomicCaptureOp->getRegion(0).back();
   firOpBuilder.setInsertionPointToStart(&block);
   if (semantics::checkForSingleVariableOnRHS(stmt1)) {
-    if (semantics::checkForSymbolMatch(stmt2)) {
+    if (semantics::checkForSymbolMatch(semantics::GetExpr(stmt2Var),
+                                       semantics::GetExpr(stmt2Expr))) {
       // Atomic capture construct is of the form [capture-stmt, update-stmt]
       const semantics::SomeExpr &fromExpr = *semantics::GetExpr(stmt1Expr);
       mlir::Type elementType = converter.genType(fromExpr);
@@ -3238,7 +3234,7 @@ static void genAtomicCapture(lower::AbstractConverter &converter,
       genAtomicUpdateStatement(
           converter, stmt2LHSArg, stmt2VarType, stmt2Var, stmt2Expr,
           /*leftHandClauseList=*/nullptr,
-          /*rightHandClauseList=*/nullptr, loc, atomicCaptureOp);
+          /*rightHandClauseList=*/nullptr, loc, atomicCaptureOp, &stmtCtx);
     } else {
       // Atomic capture construct is of the form [capture-stmt, write-stmt]
       firOpBuilder.setInsertionPoint(atomicCaptureOp);
@@ -3284,7 +3280,7 @@ static void genAtomicCapture(lower::AbstractConverter &converter,
     genAtomicUpdateStatement(
         converter, stmt1LHSArg, stmt1VarType, stmt1Var, stmt1Expr,
         /*leftHandClauseList=*/nullptr,
-        /*rightHandClauseList=*/nullptr, loc, atomicCaptureOp);
+        /*rightHandClauseList=*/nullptr, loc, atomicCaptureOp, &stmtCtx);
 
     if (stmt1VarType != stmt2VarType) {
       mlir::Value alloca;
@@ -3316,7 +3312,9 @@ static void genAtomicCapture(lower::AbstractConverter &converter,
   }
   firOpBuilder.setInsertionPointToEnd(&block);
   firOpBuilder.create<mlir::omp::TerminatorOp>(loc);
-  firOpBuilder.setInsertionPointToStart(&block);
+  // The clean-ups associated with the statements inside the capture
+  // construct must be generated after the AtomicCaptureOp.
+  firOpBuilder.setInsertionPointAfter(atomicCaptureOp);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4011,24 +4009,16 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   lower::StatementContext stmtCtx;
   const auto &spec =
       std::get<parser::OmpMapperSpecifier>(declareMapperConstruct.t);
-  const auto &mapperName{std::get<std::optional<parser::Name>>(spec.t)};
+  const auto &mapperName{std::get<std::string>(spec.t)};
   const auto &varType{std::get<parser::TypeSpec>(spec.t)};
   const auto &varName{std::get<parser::Name>(spec.t)};
   assert(varType.declTypeSpec->category() ==
              semantics::DeclTypeSpec::Category::TypeDerived &&
          "Expected derived type");
 
-  std::string mapperNameStr;
-  if (mapperName.has_value()) {
-    mapperNameStr = mapperName->ToString();
-    mapperNameStr =
-        converter.mangleName(mapperNameStr, mapperName->symbol->owner());
-  } else {
-    mapperNameStr =
-        varType.declTypeSpec->derivedTypeSpec().name().ToString() + ".default";
-    mapperNameStr = converter.mangleName(
-        mapperNameStr, *varType.declTypeSpec->derivedTypeSpec().GetScope());
-  }
+  std::string mapperNameStr = mapperName;
+  if (auto *sym = converter.getCurrentScope().FindSymbol(mapperNameStr))
+    mapperNameStr = converter.mangleName(mapperNameStr, sym->owner());
 
   // Save current insertion point before moving to the module scope to create
   // the DeclareMapperOp

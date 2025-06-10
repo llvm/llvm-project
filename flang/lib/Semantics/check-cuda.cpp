@@ -321,6 +321,9 @@ private:
                 Check(std::get<parser::Block>(c.t));
               }
             },
+            [&](const common::Indirection<parser::CompilerDirective> &x) {
+              // TODO(CUDA): Check for unsupported compiler directive here.
+            },
             [&](const auto &x) {
               if (auto source{parser::GetSource(x)}) {
                 context_.Say(*source,

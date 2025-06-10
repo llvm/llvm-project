@@ -19,7 +19,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Arg1, class _Arg2, class _Result>
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX11 binary_function {
+struct _LIBCPP_TEMPLATE_VIS binary_function {
   typedef _Arg1 first_argument_type;
   typedef _Arg2 second_argument_type;
   typedef _Result result_type;
@@ -27,9 +27,9 @@ struct _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX11 binary_function {
 
 template <class _Arg1, class _Arg2, class _Result>
 struct __binary_function_keep_layout_base {
-  using first_argument_type _LIBCPP_DEPRECATED_IN_CXX17  = _Arg1;
-  using second_argument_type _LIBCPP_DEPRECATED_IN_CXX17 = _Arg2;
-  using result_type _LIBCPP_DEPRECATED_IN_CXX17          = _Result;
+  using first_argument_type  = _Arg1;
+  using second_argument_type = _Arg2;
+  using result_type          = _Result;
 };
 
 _LIBCPP_DIAGNOSTIC_PUSH

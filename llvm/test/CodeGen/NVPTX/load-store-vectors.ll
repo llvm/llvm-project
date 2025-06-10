@@ -371,15 +371,15 @@ define void @generic_2xi64(ptr %a) {
 define void @generic_2xfloat(ptr %a) {
 ; CHECK-LABEL: generic_2xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [generic_2xfloat_param_0];
-; CHECK-NEXT:    ld.v2.b32 {%f1, %f2}, [%rd1];
-; CHECK-NEXT:    add.rn.f32 %f3, %f2, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f4, %f1, 0f3F800000;
-; CHECK-NEXT:    st.v2.b32 [%rd1], {%f4, %f3};
+; CHECK-NEXT:    ld.v2.b32 {%r1, %r2}, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %r3, %r2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r4, %r1, 0f3F800000;
+; CHECK-NEXT:    st.v2.b32 [%rd1], {%r4, %r3};
 ; CHECK-NEXT:    ret;
   %a.load = load <2 x float>, ptr %a
   %a.add = fadd <2 x float> %a.load, <float 1., float 1.>
@@ -390,17 +390,17 @@ define void @generic_2xfloat(ptr %a) {
 define void @generic_4xfloat(ptr %a) {
 ; CHECK-LABEL: generic_4xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<9>;
+; CHECK-NEXT:    .reg .b32 %r<9>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [generic_4xfloat_param_0];
-; CHECK-NEXT:    ld.v4.b32 {%f1, %f2, %f3, %f4}, [%rd1];
-; CHECK-NEXT:    add.rn.f32 %f5, %f4, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f6, %f3, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f7, %f2, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f8, %f1, 0f3F800000;
-; CHECK-NEXT:    st.v4.b32 [%rd1], {%f8, %f7, %f6, %f5};
+; CHECK-NEXT:    ld.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %r5, %r4, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r6, %r3, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r7, %r2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r8, %r1, 0f3F800000;
+; CHECK-NEXT:    st.v4.b32 [%rd1], {%r8, %r7, %r6, %r5};
 ; CHECK-NEXT:    ret;
   %a.load = load <4 x float>, ptr %a
   %a.add = fadd <4 x float> %a.load, <float 1., float 1., float 1., float 1.>
@@ -411,15 +411,14 @@ define void @generic_4xfloat(ptr %a) {
 define void @generic_2xdouble(ptr %a) {
 ; CHECK-LABEL: generic_2xdouble(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .b64 %fd<5>;
+; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [generic_2xdouble_param_0];
-; CHECK-NEXT:    ld.v2.b64 {%fd1, %fd2}, [%rd1];
-; CHECK-NEXT:    add.rn.f64 %fd3, %fd2, 0d3FF0000000000000;
-; CHECK-NEXT:    add.rn.f64 %fd4, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.v2.b64 [%rd1], {%fd4, %fd3};
+; CHECK-NEXT:    ld.v2.b64 {%rd2, %rd3}, [%rd1];
+; CHECK-NEXT:    add.rn.f64 %rd4, %rd3, 0d3FF0000000000000;
+; CHECK-NEXT:    add.rn.f64 %rd5, %rd2, 0d3FF0000000000000;
+; CHECK-NEXT:    st.v2.b64 [%rd1], {%rd5, %rd4};
 ; CHECK-NEXT:    ret;
   %a.load = load <2 x double>, ptr %a
   %a.add = fadd <2 x double> %a.load, <double 1., double 1.>
@@ -792,15 +791,15 @@ define void @generic_volatile_2xi64(ptr %a) {
 define void @generic_volatile_2xfloat(ptr %a) {
 ; CHECK-LABEL: generic_volatile_2xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [generic_volatile_2xfloat_param_0];
-; CHECK-NEXT:    ld.volatile.v2.b32 {%f1, %f2}, [%rd1];
-; CHECK-NEXT:    add.rn.f32 %f3, %f2, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f4, %f1, 0f3F800000;
-; CHECK-NEXT:    st.volatile.v2.b32 [%rd1], {%f4, %f3};
+; CHECK-NEXT:    ld.volatile.v2.b32 {%r1, %r2}, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %r3, %r2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r4, %r1, 0f3F800000;
+; CHECK-NEXT:    st.volatile.v2.b32 [%rd1], {%r4, %r3};
 ; CHECK-NEXT:    ret;
   %a.load = load volatile <2 x float>, ptr %a
   %a.add = fadd <2 x float> %a.load, <float 1., float 1.>
@@ -811,17 +810,17 @@ define void @generic_volatile_2xfloat(ptr %a) {
 define void @generic_volatile_4xfloat(ptr %a) {
 ; CHECK-LABEL: generic_volatile_4xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<9>;
+; CHECK-NEXT:    .reg .b32 %r<9>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [generic_volatile_4xfloat_param_0];
-; CHECK-NEXT:    ld.volatile.v4.b32 {%f1, %f2, %f3, %f4}, [%rd1];
-; CHECK-NEXT:    add.rn.f32 %f5, %f4, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f6, %f3, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f7, %f2, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f8, %f1, 0f3F800000;
-; CHECK-NEXT:    st.volatile.v4.b32 [%rd1], {%f8, %f7, %f6, %f5};
+; CHECK-NEXT:    ld.volatile.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %r5, %r4, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r6, %r3, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r7, %r2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r8, %r1, 0f3F800000;
+; CHECK-NEXT:    st.volatile.v4.b32 [%rd1], {%r8, %r7, %r6, %r5};
 ; CHECK-NEXT:    ret;
   %a.load = load volatile <4 x float>, ptr %a
   %a.add = fadd <4 x float> %a.load, <float 1., float 1., float 1., float 1.>
@@ -832,15 +831,14 @@ define void @generic_volatile_4xfloat(ptr %a) {
 define void @generic_volatile_2xdouble(ptr %a) {
 ; CHECK-LABEL: generic_volatile_2xdouble(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .b64 %fd<5>;
+; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [generic_volatile_2xdouble_param_0];
-; CHECK-NEXT:    ld.volatile.v2.b64 {%fd1, %fd2}, [%rd1];
-; CHECK-NEXT:    add.rn.f64 %fd3, %fd2, 0d3FF0000000000000;
-; CHECK-NEXT:    add.rn.f64 %fd4, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.volatile.v2.b64 [%rd1], {%fd4, %fd3};
+; CHECK-NEXT:    ld.volatile.v2.b64 {%rd2, %rd3}, [%rd1];
+; CHECK-NEXT:    add.rn.f64 %rd4, %rd3, 0d3FF0000000000000;
+; CHECK-NEXT:    add.rn.f64 %rd5, %rd2, 0d3FF0000000000000;
+; CHECK-NEXT:    st.volatile.v2.b64 [%rd1], {%rd5, %rd4};
 ; CHECK-NEXT:    ret;
   %a.load = load volatile <2 x double>, ptr %a
   %a.add = fadd <2 x double> %a.load, <double 1., double 1.>
@@ -1196,15 +1194,15 @@ define void @global_2xi64(ptr addrspace(1) %a) {
 define void @global_2xfloat(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_2xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [global_2xfloat_param_0];
-; CHECK-NEXT:    ld.global.v2.b32 {%f1, %f2}, [%rd1];
-; CHECK-NEXT:    add.rn.f32 %f3, %f2, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f4, %f1, 0f3F800000;
-; CHECK-NEXT:    st.global.v2.b32 [%rd1], {%f4, %f3};
+; CHECK-NEXT:    ld.global.v2.b32 {%r1, %r2}, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %r3, %r2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r4, %r1, 0f3F800000;
+; CHECK-NEXT:    st.global.v2.b32 [%rd1], {%r4, %r3};
 ; CHECK-NEXT:    ret;
   %a.load = load <2 x float>, ptr addrspace(1) %a
   %a.add = fadd <2 x float> %a.load, <float 1., float 1.>
@@ -1215,17 +1213,17 @@ define void @global_2xfloat(ptr addrspace(1) %a) {
 define void @global_4xfloat(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_4xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<9>;
+; CHECK-NEXT:    .reg .b32 %r<9>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [global_4xfloat_param_0];
-; CHECK-NEXT:    ld.global.v4.b32 {%f1, %f2, %f3, %f4}, [%rd1];
-; CHECK-NEXT:    add.rn.f32 %f5, %f4, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f6, %f3, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f7, %f2, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f8, %f1, 0f3F800000;
-; CHECK-NEXT:    st.global.v4.b32 [%rd1], {%f8, %f7, %f6, %f5};
+; CHECK-NEXT:    ld.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %r5, %r4, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r6, %r3, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r7, %r2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r8, %r1, 0f3F800000;
+; CHECK-NEXT:    st.global.v4.b32 [%rd1], {%r8, %r7, %r6, %r5};
 ; CHECK-NEXT:    ret;
   %a.load = load <4 x float>, ptr addrspace(1) %a
   %a.add = fadd <4 x float> %a.load, <float 1., float 1., float 1., float 1.>
@@ -1236,15 +1234,14 @@ define void @global_4xfloat(ptr addrspace(1) %a) {
 define void @global_2xdouble(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_2xdouble(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .b64 %fd<5>;
+; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [global_2xdouble_param_0];
-; CHECK-NEXT:    ld.global.v2.b64 {%fd1, %fd2}, [%rd1];
-; CHECK-NEXT:    add.rn.f64 %fd3, %fd2, 0d3FF0000000000000;
-; CHECK-NEXT:    add.rn.f64 %fd4, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.global.v2.b64 [%rd1], {%fd4, %fd3};
+; CHECK-NEXT:    ld.global.v2.b64 {%rd2, %rd3}, [%rd1];
+; CHECK-NEXT:    add.rn.f64 %rd4, %rd3, 0d3FF0000000000000;
+; CHECK-NEXT:    add.rn.f64 %rd5, %rd2, 0d3FF0000000000000;
+; CHECK-NEXT:    st.global.v2.b64 [%rd1], {%rd5, %rd4};
 ; CHECK-NEXT:    ret;
   %a.load = load <2 x double>, ptr addrspace(1) %a
   %a.add = fadd <2 x double> %a.load, <double 1., double 1.>
@@ -1598,15 +1595,15 @@ define void @global_volatile_2xi64(ptr addrspace(1) %a) {
 define void @global_volatile_2xfloat(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_volatile_2xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [global_volatile_2xfloat_param_0];
-; CHECK-NEXT:    ld.volatile.global.v2.b32 {%f1, %f2}, [%rd1];
-; CHECK-NEXT:    add.rn.f32 %f3, %f2, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f4, %f1, 0f3F800000;
-; CHECK-NEXT:    st.volatile.global.v2.b32 [%rd1], {%f4, %f3};
+; CHECK-NEXT:    ld.volatile.global.v2.b32 {%r1, %r2}, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %r3, %r2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r4, %r1, 0f3F800000;
+; CHECK-NEXT:    st.volatile.global.v2.b32 [%rd1], {%r4, %r3};
 ; CHECK-NEXT:    ret;
   %a.load = load volatile <2 x float>, ptr addrspace(1) %a
   %a.add = fadd <2 x float> %a.load, <float 1., float 1.>
@@ -1617,17 +1614,17 @@ define void @global_volatile_2xfloat(ptr addrspace(1) %a) {
 define void @global_volatile_4xfloat(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_volatile_4xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<9>;
+; CHECK-NEXT:    .reg .b32 %r<9>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [global_volatile_4xfloat_param_0];
-; CHECK-NEXT:    ld.volatile.global.v4.b32 {%f1, %f2, %f3, %f4}, [%rd1];
-; CHECK-NEXT:    add.rn.f32 %f5, %f4, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f6, %f3, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f7, %f2, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f8, %f1, 0f3F800000;
-; CHECK-NEXT:    st.volatile.global.v4.b32 [%rd1], {%f8, %f7, %f6, %f5};
+; CHECK-NEXT:    ld.volatile.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %r5, %r4, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r6, %r3, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r7, %r2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r8, %r1, 0f3F800000;
+; CHECK-NEXT:    st.volatile.global.v4.b32 [%rd1], {%r8, %r7, %r6, %r5};
 ; CHECK-NEXT:    ret;
   %a.load = load volatile <4 x float>, ptr addrspace(1) %a
   %a.add = fadd <4 x float> %a.load, <float 1., float 1., float 1., float 1.>
@@ -1638,15 +1635,14 @@ define void @global_volatile_4xfloat(ptr addrspace(1) %a) {
 define void @global_volatile_2xdouble(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_volatile_2xdouble(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .b64 %fd<5>;
+; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [global_volatile_2xdouble_param_0];
-; CHECK-NEXT:    ld.volatile.global.v2.b64 {%fd1, %fd2}, [%rd1];
-; CHECK-NEXT:    add.rn.f64 %fd3, %fd2, 0d3FF0000000000000;
-; CHECK-NEXT:    add.rn.f64 %fd4, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.volatile.global.v2.b64 [%rd1], {%fd4, %fd3};
+; CHECK-NEXT:    ld.volatile.global.v2.b64 {%rd2, %rd3}, [%rd1];
+; CHECK-NEXT:    add.rn.f64 %rd4, %rd3, 0d3FF0000000000000;
+; CHECK-NEXT:    add.rn.f64 %rd5, %rd2, 0d3FF0000000000000;
+; CHECK-NEXT:    st.volatile.global.v2.b64 [%rd1], {%rd5, %rd4};
 ; CHECK-NEXT:    ret;
   %a.load = load volatile <2 x double>, ptr addrspace(1) %a
   %a.add = fadd <2 x double> %a.load, <double 1., double 1.>
@@ -2002,15 +1998,15 @@ define void @shared_2xi64(ptr addrspace(3) %a) {
 define void @shared_2xfloat(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_2xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [shared_2xfloat_param_0];
-; CHECK-NEXT:    ld.shared.v2.b32 {%f1, %f2}, [%rd1];
-; CHECK-NEXT:    add.rn.f32 %f3, %f2, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f4, %f1, 0f3F800000;
-; CHECK-NEXT:    st.shared.v2.b32 [%rd1], {%f4, %f3};
+; CHECK-NEXT:    ld.shared.v2.b32 {%r1, %r2}, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %r3, %r2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r4, %r1, 0f3F800000;
+; CHECK-NEXT:    st.shared.v2.b32 [%rd1], {%r4, %r3};
 ; CHECK-NEXT:    ret;
   %a.load = load <2 x float>, ptr addrspace(3) %a
   %a.add = fadd <2 x float> %a.load, <float 1., float 1.>
@@ -2021,17 +2017,17 @@ define void @shared_2xfloat(ptr addrspace(3) %a) {
 define void @shared_4xfloat(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_4xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<9>;
+; CHECK-NEXT:    .reg .b32 %r<9>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [shared_4xfloat_param_0];
-; CHECK-NEXT:    ld.shared.v4.b32 {%f1, %f2, %f3, %f4}, [%rd1];
-; CHECK-NEXT:    add.rn.f32 %f5, %f4, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f6, %f3, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f7, %f2, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f8, %f1, 0f3F800000;
-; CHECK-NEXT:    st.shared.v4.b32 [%rd1], {%f8, %f7, %f6, %f5};
+; CHECK-NEXT:    ld.shared.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %r5, %r4, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r6, %r3, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r7, %r2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r8, %r1, 0f3F800000;
+; CHECK-NEXT:    st.shared.v4.b32 [%rd1], {%r8, %r7, %r6, %r5};
 ; CHECK-NEXT:    ret;
   %a.load = load <4 x float>, ptr addrspace(3) %a
   %a.add = fadd <4 x float> %a.load, <float 1., float 1., float 1., float 1.>
@@ -2042,15 +2038,14 @@ define void @shared_4xfloat(ptr addrspace(3) %a) {
 define void @shared_2xdouble(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_2xdouble(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .b64 %fd<5>;
+; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [shared_2xdouble_param_0];
-; CHECK-NEXT:    ld.shared.v2.b64 {%fd1, %fd2}, [%rd1];
-; CHECK-NEXT:    add.rn.f64 %fd3, %fd2, 0d3FF0000000000000;
-; CHECK-NEXT:    add.rn.f64 %fd4, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.shared.v2.b64 [%rd1], {%fd4, %fd3};
+; CHECK-NEXT:    ld.shared.v2.b64 {%rd2, %rd3}, [%rd1];
+; CHECK-NEXT:    add.rn.f64 %rd4, %rd3, 0d3FF0000000000000;
+; CHECK-NEXT:    add.rn.f64 %rd5, %rd2, 0d3FF0000000000000;
+; CHECK-NEXT:    st.shared.v2.b64 [%rd1], {%rd5, %rd4};
 ; CHECK-NEXT:    ret;
   %a.load = load <2 x double>, ptr addrspace(3) %a
   %a.add = fadd <2 x double> %a.load, <double 1., double 1.>
@@ -2404,15 +2399,15 @@ define void @shared_volatile_2xi64(ptr addrspace(3) %a) {
 define void @shared_volatile_2xfloat(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_volatile_2xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [shared_volatile_2xfloat_param_0];
-; CHECK-NEXT:    ld.volatile.shared.v2.b32 {%f1, %f2}, [%rd1];
-; CHECK-NEXT:    add.rn.f32 %f3, %f2, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f4, %f1, 0f3F800000;
-; CHECK-NEXT:    st.volatile.shared.v2.b32 [%rd1], {%f4, %f3};
+; CHECK-NEXT:    ld.volatile.shared.v2.b32 {%r1, %r2}, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %r3, %r2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r4, %r1, 0f3F800000;
+; CHECK-NEXT:    st.volatile.shared.v2.b32 [%rd1], {%r4, %r3};
 ; CHECK-NEXT:    ret;
   %a.load = load volatile <2 x float>, ptr addrspace(3) %a
   %a.add = fadd <2 x float> %a.load, <float 1., float 1.>
@@ -2423,17 +2418,17 @@ define void @shared_volatile_2xfloat(ptr addrspace(3) %a) {
 define void @shared_volatile_4xfloat(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_volatile_4xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<9>;
+; CHECK-NEXT:    .reg .b32 %r<9>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [shared_volatile_4xfloat_param_0];
-; CHECK-NEXT:    ld.volatile.shared.v4.b32 {%f1, %f2, %f3, %f4}, [%rd1];
-; CHECK-NEXT:    add.rn.f32 %f5, %f4, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f6, %f3, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f7, %f2, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f8, %f1, 0f3F800000;
-; CHECK-NEXT:    st.volatile.shared.v4.b32 [%rd1], {%f8, %f7, %f6, %f5};
+; CHECK-NEXT:    ld.volatile.shared.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %r5, %r4, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r6, %r3, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r7, %r2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r8, %r1, 0f3F800000;
+; CHECK-NEXT:    st.volatile.shared.v4.b32 [%rd1], {%r8, %r7, %r6, %r5};
 ; CHECK-NEXT:    ret;
   %a.load = load volatile <4 x float>, ptr addrspace(3) %a
   %a.add = fadd <4 x float> %a.load, <float 1., float 1., float 1., float 1.>
@@ -2444,15 +2439,14 @@ define void @shared_volatile_4xfloat(ptr addrspace(3) %a) {
 define void @shared_volatile_2xdouble(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_volatile_2xdouble(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .b64 %fd<5>;
+; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [shared_volatile_2xdouble_param_0];
-; CHECK-NEXT:    ld.volatile.shared.v2.b64 {%fd1, %fd2}, [%rd1];
-; CHECK-NEXT:    add.rn.f64 %fd3, %fd2, 0d3FF0000000000000;
-; CHECK-NEXT:    add.rn.f64 %fd4, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.volatile.shared.v2.b64 [%rd1], {%fd4, %fd3};
+; CHECK-NEXT:    ld.volatile.shared.v2.b64 {%rd2, %rd3}, [%rd1];
+; CHECK-NEXT:    add.rn.f64 %rd4, %rd3, 0d3FF0000000000000;
+; CHECK-NEXT:    add.rn.f64 %rd5, %rd2, 0d3FF0000000000000;
+; CHECK-NEXT:    st.volatile.shared.v2.b64 [%rd1], {%rd5, %rd4};
 ; CHECK-NEXT:    ret;
   %a.load = load volatile <2 x double>, ptr addrspace(3) %a
   %a.add = fadd <2 x double> %a.load, <double 1., double 1.>
@@ -2808,15 +2802,15 @@ define void @local_2xi64(ptr addrspace(5) %a) {
 define void @local_2xfloat(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_2xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [local_2xfloat_param_0];
-; CHECK-NEXT:    ld.local.v2.b32 {%f1, %f2}, [%rd1];
-; CHECK-NEXT:    add.rn.f32 %f3, %f2, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f4, %f1, 0f3F800000;
-; CHECK-NEXT:    st.local.v2.b32 [%rd1], {%f4, %f3};
+; CHECK-NEXT:    ld.local.v2.b32 {%r1, %r2}, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %r3, %r2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r4, %r1, 0f3F800000;
+; CHECK-NEXT:    st.local.v2.b32 [%rd1], {%r4, %r3};
 ; CHECK-NEXT:    ret;
   %a.load = load <2 x float>, ptr addrspace(5) %a
   %a.add = fadd <2 x float> %a.load, <float 1., float 1.>
@@ -2827,17 +2821,17 @@ define void @local_2xfloat(ptr addrspace(5) %a) {
 define void @local_4xfloat(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_4xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<9>;
+; CHECK-NEXT:    .reg .b32 %r<9>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [local_4xfloat_param_0];
-; CHECK-NEXT:    ld.local.v4.b32 {%f1, %f2, %f3, %f4}, [%rd1];
-; CHECK-NEXT:    add.rn.f32 %f5, %f4, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f6, %f3, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f7, %f2, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f8, %f1, 0f3F800000;
-; CHECK-NEXT:    st.local.v4.b32 [%rd1], {%f8, %f7, %f6, %f5};
+; CHECK-NEXT:    ld.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %r5, %r4, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r6, %r3, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r7, %r2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r8, %r1, 0f3F800000;
+; CHECK-NEXT:    st.local.v4.b32 [%rd1], {%r8, %r7, %r6, %r5};
 ; CHECK-NEXT:    ret;
   %a.load = load <4 x float>, ptr addrspace(5) %a
   %a.add = fadd <4 x float> %a.load, <float 1., float 1., float 1., float 1.>
@@ -2848,15 +2842,14 @@ define void @local_4xfloat(ptr addrspace(5) %a) {
 define void @local_2xdouble(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_2xdouble(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .b64 %fd<5>;
+; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [local_2xdouble_param_0];
-; CHECK-NEXT:    ld.local.v2.b64 {%fd1, %fd2}, [%rd1];
-; CHECK-NEXT:    add.rn.f64 %fd3, %fd2, 0d3FF0000000000000;
-; CHECK-NEXT:    add.rn.f64 %fd4, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.local.v2.b64 [%rd1], {%fd4, %fd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%rd1];
+; CHECK-NEXT:    add.rn.f64 %rd4, %rd3, 0d3FF0000000000000;
+; CHECK-NEXT:    add.rn.f64 %rd5, %rd2, 0d3FF0000000000000;
+; CHECK-NEXT:    st.local.v2.b64 [%rd1], {%rd5, %rd4};
 ; CHECK-NEXT:    ret;
   %a.load = load <2 x double>, ptr addrspace(5) %a
   %a.add = fadd <2 x double> %a.load, <double 1., double 1.>
@@ -3210,15 +3203,15 @@ define void @local_volatile_2xi64(ptr addrspace(5) %a) {
 define void @local_volatile_2xfloat(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_volatile_2xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [local_volatile_2xfloat_param_0];
-; CHECK-NEXT:    ld.local.v2.b32 {%f1, %f2}, [%rd1];
-; CHECK-NEXT:    add.rn.f32 %f3, %f2, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f4, %f1, 0f3F800000;
-; CHECK-NEXT:    st.local.v2.b32 [%rd1], {%f4, %f3};
+; CHECK-NEXT:    ld.local.v2.b32 {%r1, %r2}, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %r3, %r2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r4, %r1, 0f3F800000;
+; CHECK-NEXT:    st.local.v2.b32 [%rd1], {%r4, %r3};
 ; CHECK-NEXT:    ret;
   %a.load = load volatile <2 x float>, ptr addrspace(5) %a
   %a.add = fadd <2 x float> %a.load, <float 1., float 1.>
@@ -3229,17 +3222,17 @@ define void @local_volatile_2xfloat(ptr addrspace(5) %a) {
 define void @local_volatile_4xfloat(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_volatile_4xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<9>;
+; CHECK-NEXT:    .reg .b32 %r<9>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [local_volatile_4xfloat_param_0];
-; CHECK-NEXT:    ld.local.v4.b32 {%f1, %f2, %f3, %f4}, [%rd1];
-; CHECK-NEXT:    add.rn.f32 %f5, %f4, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f6, %f3, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f7, %f2, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f8, %f1, 0f3F800000;
-; CHECK-NEXT:    st.local.v4.b32 [%rd1], {%f8, %f7, %f6, %f5};
+; CHECK-NEXT:    ld.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %r5, %r4, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r6, %r3, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r7, %r2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %r8, %r1, 0f3F800000;
+; CHECK-NEXT:    st.local.v4.b32 [%rd1], {%r8, %r7, %r6, %r5};
 ; CHECK-NEXT:    ret;
   %a.load = load volatile <4 x float>, ptr addrspace(5) %a
   %a.add = fadd <4 x float> %a.load, <float 1., float 1., float 1., float 1.>
@@ -3250,15 +3243,14 @@ define void @local_volatile_4xfloat(ptr addrspace(5) %a) {
 define void @local_volatile_2xdouble(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_volatile_2xdouble(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .b64 %fd<5>;
+; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [local_volatile_2xdouble_param_0];
-; CHECK-NEXT:    ld.local.v2.b64 {%fd1, %fd2}, [%rd1];
-; CHECK-NEXT:    add.rn.f64 %fd3, %fd2, 0d3FF0000000000000;
-; CHECK-NEXT:    add.rn.f64 %fd4, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.local.v2.b64 [%rd1], {%fd4, %fd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%rd1];
+; CHECK-NEXT:    add.rn.f64 %rd4, %rd3, 0d3FF0000000000000;
+; CHECK-NEXT:    add.rn.f64 %rd5, %rd2, 0d3FF0000000000000;
+; CHECK-NEXT:    st.local.v2.b64 [%rd1], {%rd5, %rd4};
 ; CHECK-NEXT:    ret;
   %a.load = load volatile <2 x double>, ptr addrspace(5) %a
   %a.add = fadd <2 x double> %a.load, <double 1., double 1.>

@@ -18,6 +18,7 @@
 #ifndef LLVM_SUPPORT_INSTRUCTIONCOST_H
 #define LLVM_SUPPORT_INSTRUCTIONCOST_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include <limits>
 #include <tuple>
@@ -234,7 +235,7 @@ public:
     return *this >= RHS2;
   }
 
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 
   template <class Function>
   auto map(const Function &F) const -> InstructionCost {

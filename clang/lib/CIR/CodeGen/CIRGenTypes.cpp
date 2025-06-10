@@ -1,5 +1,6 @@
 #include "CIRGenTypes.h"
 
+#include "CIRGenFunctionInfo.h"
 #include "CIRGenModule.h"
 
 #include "clang/AST/ASTContext.h"
@@ -14,7 +15,7 @@ using namespace clang::CIRGen;
 
 CIRGenTypes::CIRGenTypes(CIRGenModule &genModule)
     : cgm(genModule), astContext(genModule.getASTContext()),
-      builder(cgm.getBuilder()),
+      builder(cgm.getBuilder()), theCXXABI(cgm.getCXXABI()),
       theABIInfo(cgm.getTargetCIRGenInfo().getABIInfo()) {}
 
 CIRGenTypes::~CIRGenTypes() {
@@ -73,21 +74,19 @@ mlir::Type CIRGenTypes::convertFunctionTypeInternal(QualType qft) {
     return cir::FuncType::get(SmallVector<mlir::Type, 1>{}, cgm.VoidTy);
   }
 
-  // TODO(CIR): This is a stub of what the final code will be.  See the
-  // implementation of this function and the implementation of class
-  // CIRGenFunction in the ClangIR incubator project.
-
+  const CIRGenFunctionInfo *fi;
   if (const auto *fpt = dyn_cast<FunctionProtoType>(ft)) {
-    SmallVector<mlir::Type> mlirParamTypes;
-    for (unsigned i = 0; i < fpt->getNumParams(); ++i) {
-      mlirParamTypes.push_back(convertType(fpt->getParamType(i)));
-    }
-    return cir::FuncType::get(
-        mlirParamTypes, convertType(fpt->getReturnType().getUnqualifiedType()),
-        fpt->isVariadic());
+    fi = &arrangeFreeFunctionType(
+        CanQual<FunctionProtoType>::CreateUnsafe(QualType(fpt, 0)));
+  } else {
+    const FunctionNoProtoType *fnpt = cast<FunctionNoProtoType>(ft);
+    fi = &arrangeFreeFunctionType(
+        CanQual<FunctionNoProtoType>::CreateUnsafe(QualType(fnpt, 0)));
   }
-  cgm.errorNYI(SourceLocation(), "non-prototype function type", qft);
-  return cir::FuncType::get(SmallVector<mlir::Type, 1>{}, cgm.VoidTy);
+
+  mlir::Type resultType = getFunctionType(*fi);
+
+  return resultType;
 }
 
 // This is CIR's version of CodeGenTypes::addRecordTypeName. It isn't shareable
@@ -153,11 +152,13 @@ isSafeToConvert(const RecordDecl *rd, CIRGenTypes &cgt,
   // out, don't do it.  This includes virtual base classes which get laid out
   // when a class is translated, even though they aren't embedded by-value into
   // the class.
-  if (isa<CXXRecordDecl>(rd)) {
-    assert(!cir::MissingFeatures::cxxSupport());
-    cgt.getCGModule().errorNYI(rd->getSourceRange(),
-                               "isSafeToConvert: CXXRecordDecl");
-    return false;
+  if (auto *crd = dyn_cast<CXXRecordDecl>(rd)) {
+    if (crd->getNumBases() > 0) {
+      assert(!cir::MissingFeatures::cxxSupport());
+      cgt.getCGModule().errorNYI(rd->getSourceRange(),
+                                 "isSafeToConvert: CXXRecordDecl with bases");
+      return false;
+    }
   }
 
   // If this type would require laying out members that are currently being laid
@@ -227,7 +228,7 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
 
   // If converting this type would cause us to infinitely loop, don't do it!
   if (!isSafeToConvert(rd, *this)) {
-    cgm.errorNYI(rd->getSourceRange(), "recursive record layout");
+    deferredRecords.push_back(rd);
     return entry;
   }
 
@@ -238,9 +239,10 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
 
   // Force conversion of non-virtual base classes recursively.
   if (const auto *cxxRecordDecl = dyn_cast<CXXRecordDecl>(rd)) {
-    if (cxxRecordDecl->getNumBases() > 0) {
-      cgm.errorNYI(rd->getSourceRange(),
-                   "convertRecordDeclType: derived CXXRecordDecl");
+    for (const auto &base : cxxRecordDecl->bases()) {
+      if (base.isVirtual())
+        continue;
+      convertRecordDeclType(base.getType()->castAs<RecordType>()->getDecl());
     }
   }
 
@@ -260,7 +262,9 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
 
   // If we're done converting the outer-most record, then convert any deferred
   // records as well.
-  assert(!cir::MissingFeatures::recursiveRecordLayout());
+  if (recordsBeingLaidOut.empty())
+    while (!deferredRecords.empty())
+      convertRecordDeclType(deferredRecords.pop_back_val());
 
   return entry;
 }
@@ -384,6 +388,13 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     break;
   }
 
+  case Type::Complex: {
+    const auto *ct = cast<clang::ComplexType>(ty);
+    mlir::Type elementTy = convertType(ct->getElementType());
+    resultType = cir::ComplexType::get(elementTy);
+    break;
+  }
+
   case Type::LValueReference:
   case Type::RValueReference: {
     const ReferenceType *refTy = cast<ReferenceType>(ty);
@@ -421,8 +432,6 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   }
 
   case Type::Enum: {
-    // TODO(cir): Implement updateCompletedType for enums.
-    assert(!cir::MissingFeatures::updateCompletedType());
     const EnumDecl *ED = cast<EnumType>(ty)->getDecl();
     if (auto integerType = ED->getIntegerType(); !integerType.isNull())
       return convertType(integerType);
@@ -531,25 +540,84 @@ bool CIRGenTypes::isZeroInitializable(const RecordDecl *rd) {
   return getCIRGenRecordLayout(rd).isZeroInitializable();
 }
 
-const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
-    CanQualType returnType, llvm::ArrayRef<clang::CanQualType> argTypes) {
+const CIRGenFunctionInfo &
+CIRGenTypes::arrangeCIRFunctionInfo(CanQualType returnType,
+                                    llvm::ArrayRef<CanQualType> argTypes,
+                                    RequiredArgs required) {
   assert(llvm::all_of(argTypes,
-                      [](CanQualType T) { return T.isCanonicalAsParam(); }));
-
+                      [](CanQualType t) { return t.isCanonicalAsParam(); }));
   // Lookup or create unique function info.
   llvm::FoldingSetNodeID id;
-  CIRGenFunctionInfo::Profile(id, returnType, argTypes);
+  CIRGenFunctionInfo::Profile(id, required, returnType, argTypes);
 
   void *insertPos = nullptr;
   CIRGenFunctionInfo *fi = functionInfos.FindNodeOrInsertPos(id, insertPos);
-  if (fi)
+  if (fi) {
+    // We found a matching function info based on id. These asserts verify that
+    // it really is a match.
+    assert(
+        fi->getReturnType() == returnType &&
+        std::equal(fi->argTypesBegin(), fi->argTypesEnd(), argTypes.begin()) &&
+        "Bad match based on CIRGenFunctionInfo folding set id");
     return *fi;
+  }
 
   assert(!cir::MissingFeatures::opCallCallConv());
 
   // Construction the function info. We co-allocate the ArgInfos.
-  fi = CIRGenFunctionInfo::create(returnType, argTypes);
+  fi = CIRGenFunctionInfo::create(returnType, argTypes, required);
   functionInfos.InsertNode(fi, insertPos);
 
   return *fi;
+}
+
+const CIRGenFunctionInfo &CIRGenTypes::arrangeGlobalDeclaration(GlobalDecl gd) {
+  assert(!dyn_cast<ObjCMethodDecl>(gd.getDecl()) &&
+         "This is reported as a FIXME in LLVM codegen");
+  const auto *fd = cast<FunctionDecl>(gd.getDecl());
+
+  if (isa<CXXConstructorDecl>(gd.getDecl()) ||
+      isa<CXXDestructorDecl>(gd.getDecl())) {
+    cgm.errorNYI(SourceLocation(),
+                 "arrangeGlobalDeclaration for C++ constructor or destructor");
+  }
+
+  return arrangeFunctionDeclaration(fd);
+}
+
+// When we find the full definition for a TagDecl, replace the 'opaque' type we
+// previously made for it if applicable.
+void CIRGenTypes::updateCompletedType(const TagDecl *td) {
+  // If this is an enum being completed, then we flush all non-struct types
+  // from the cache. This allows function types and other things that may be
+  // derived from the enum to be recomputed.
+  if (const auto *ed = dyn_cast<EnumDecl>(td)) {
+    // Classic codegen clears the type cache if it contains an entry for this
+    // enum type that doesn't use i32 as the underlying type, but I can't find
+    // a test case that meets that condition. C++ doesn't allow forward
+    // declaration of enums, and C doesn't allow an incomplete forward
+    // declaration with a non-default type.
+    assert(
+        !typeCache.count(ed->getTypeForDecl()) ||
+        (convertType(ed->getIntegerType()) == typeCache[ed->getTypeForDecl()]));
+    // If necessary, provide the full definition of a type only used with a
+    // declaration so far.
+    assert(!cir::MissingFeatures::generateDebugInfo());
+    return;
+  }
+
+  // If we completed a RecordDecl that we previously used and converted to an
+  // anonymous type, then go ahead and complete it now.
+  const auto *rd = cast<RecordDecl>(td);
+  if (rd->isDependentType())
+    return;
+
+  // Only complete if we converted it already. If we haven't converted it yet,
+  // we'll just do it lazily.
+  if (recordDeclTypes.count(astContext.getTagDeclType(rd).getTypePtr()))
+    convertRecordDeclType(rd);
+
+  // If necessary, provide the full definition of a type only used with a
+  // declaration so far.
+  assert(!cir::MissingFeatures::generateDebugInfo());
 }

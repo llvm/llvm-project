@@ -1278,8 +1278,9 @@ LogicalResult GenericOp::verify() { return success(); }
 
 namespace {
 
-/// Remove any linalg operation (on tensors) that are just copying
-/// the values from inputs to the results. Requirements are
+/// Remove linalg operations that are just copying the values from inputs to
+/// results. In the memref case, the operation must be copying to and from the
+/// same value. Requirements are:
 /// 1) All iterator types are parallel
 /// 2) The body contains just a yield operation with the yielded values being
 ///    the arguments corresponding to the operands.
@@ -1304,18 +1305,27 @@ struct EraseIdentityLinalgOp : public OpRewritePattern<OpTy> {
 
     // In the buffer case, we need to check exact buffer equality.
     if (linalgOp.hasPureBufferSemantics()) {
-      if (linalgOp.getNumDpsInputs() == 1 && linalgOp.getNumDpsInits() == 1 &&
-          linalgOp.getDpsInputOperand(0)->get() ==
+      if (linalgOp.getNumDpsInputs() != 1 || linalgOp.getNumDpsInits() != 1 ||
+          linalgOp.getDpsInputOperand(0)->get() !=
               linalgOp.getDpsInitOperand(0)->get()) {
-        rewriter.eraseOp(linalgOp);
-        return success();
+        return rewriter.notifyMatchFailure(
+            linalgOp, "expected single input and output to be the same value");
       }
-      return failure();
+
+      auto yieldArg = dyn_cast<BlockArgument>(yieldOp.getOperand(0));
+      if (!yieldArg || yieldArg.getOwner() != &body) {
+        return rewriter.notifyMatchFailure(linalgOp,
+                                           "cannot fold fill-like op");
+      }
+
+      rewriter.eraseOp(linalgOp);
+      return success();
     }
 
-    // Mixed semantics is not supported yet.
-    if (!linalgOp.hasPureTensorSemantics())
-      return failure();
+    if (!linalgOp.hasPureTensorSemantics()) {
+      return rewriter.notifyMatchFailure(
+          linalgOp, "mixed semantics is not supported yet");
+    }
 
     // Get the argument number of the returned values. That is the operand
     // number to use for replacing uses of this operation.
@@ -2402,7 +2412,7 @@ std::string mlir::linalg::generateLibraryCallName(Operation *op) {
     }
   }
   name.reserve(128);
-  std::replace(name.begin(), name.end(), '.', '_');
+  llvm::replace(name, '.', '_');
   llvm::raw_string_ostream ss(name);
   ss << "_" << fun;
   for (Type t : op->getOperandTypes()) {
@@ -4327,8 +4337,9 @@ void ElementwiseOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
     result = helper.buildTernaryFn(kind.ternaryFn, block.getArgument(0),
                                    block.getArgument(1), block.getArgument(2));
 
-  } else
+  } else {
     assert(false && "found unhandled category in elemwise");
+  }
 
   yields.push_back(result);
   helper.yieldOutputs(yields);
@@ -4487,8 +4498,7 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
 
   // Return true if we have a zero-value tile.
   auto hasZeros = [&](ArrayRef<OpFoldResult> tiles) {
-    return llvm::any_of(
-        tiles, [](OpFoldResult tile) { return isConstantIntValue(tile, 0); });
+    return llvm::any_of(tiles, isZeroInteger);
   };
 
   // Verify tiles. Do not allow zero tiles.
