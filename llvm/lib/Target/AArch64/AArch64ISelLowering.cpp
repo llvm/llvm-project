@@ -29227,8 +29227,7 @@ AArch64TargetLowering::LowerVECTOR_DEINTERLEAVE(SDValue Op,
 
     SmallVector<SDValue, 5> Ops;
     Ops.push_back(DAG.getTargetConstant(IntID, DL, MVT::i64));
-    for (unsigned I = 0; I < Op.getNumOperands(); ++I)
-      Ops.push_back(Op.getOperand(I));
+    Ops.append(Op->op_values().begin(), Op->op_values().end());
     return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Op->getVTList(), Ops);
   }
 
@@ -29266,8 +29265,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
 
     SmallVector<SDValue, 5> Ops;
     Ops.push_back(DAG.getTargetConstant(IntID, DL, MVT::i64));
-    for (unsigned I = 0; I < Op.getNumOperands(); ++I)
-      Ops.push_back(Op.getOperand(I));
+    Ops.append(Op->op_values().begin(), Op->op_values().end());
     return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Op->getVTList(), Ops);
   }
 
