@@ -463,10 +463,7 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
     Constant *Elt =
         ConstantExpr::getExtractElement(V1, ConstantInt::get(Ty, 0));
 
-    if (Elt->isNullValue()) {
-      auto *VTy = VectorType::get(EltTy, MaskEltCount);
-      return ConstantAggregateZero::get(VTy);
-    } else if (!MaskEltCount.isScalable())
+    if (!MaskEltCount.isScalable() || Elt->isNullValue() || isa<UndefValue>(Elt))
       return ConstantVector::getSplat(MaskEltCount, Elt);
   }
 
