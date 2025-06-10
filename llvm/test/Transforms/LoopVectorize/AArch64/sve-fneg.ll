@@ -16,30 +16,30 @@ define void @fneg(ptr nocapture noundef writeonly %d, ptr nocapture noundef read
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 16
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 16
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[D1]], [[S2]]
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP5]], [[TMP4]]
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP6]], 16
+; CHECK-NEXT:    [[TMP7:%.*]] = mul nuw i64 [[TMP6]], 16
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], [[TMP7]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 16
+; CHECK-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], 16
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds half, ptr [[S]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds half, ptr [[TMP11]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP14:%.*]] = mul i64 [[TMP13]], 8
+; CHECK-NEXT:    [[TMP14:%.*]] = mul nuw i64 [[TMP13]], 8
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds half, ptr [[TMP11]], i64 [[TMP14]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x half>, ptr [[TMP12]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 8 x half>, ptr [[TMP15]], align 2
@@ -48,7 +48,7 @@ define void @fneg(ptr nocapture noundef writeonly %d, ptr nocapture noundef read
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds half, ptr [[D]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds half, ptr [[TMP18]], i32 0
 ; CHECK-NEXT:    [[TMP20:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP21:%.*]] = mul i64 [[TMP20]], 8
+; CHECK-NEXT:    [[TMP21:%.*]] = mul nuw i64 [[TMP20]], 8
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds half, ptr [[TMP18]], i64 [[TMP21]]
 ; CHECK-NEXT:    store <vscale x 8 x half> [[TMP16]], ptr [[TMP19]], align 2
 ; CHECK-NEXT:    store <vscale x 8 x half> [[TMP17]], ptr [[TMP22]], align 2

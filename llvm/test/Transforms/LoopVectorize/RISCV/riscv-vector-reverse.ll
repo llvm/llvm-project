@@ -178,7 +178,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<vector.memcheck>:
 ; CHECK-NEXT:    IR   %11 = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    IR   %12 = mul i64 %11, 4
+; CHECK-NEXT:    IR   %12 = mul nuw i64 %11, 4
 ; CHECK-NEXT:    IR   %13 = mul i64 %12, 4
 ; CHECK-NEXT:    IR   %14 = sub i64 %B1, %A2
 ; CHECK-NEXT:    IR   %diff.check = icmp ult i64 %14, %13
@@ -186,11 +186,11 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<vector.ph>:
 ; CHECK-NEXT:    IR   %15 = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    IR   %16 = mul i64 %15, 4
+; CHECK-NEXT:    IR   %16 = mul nuw i64 %15, 4
 ; CHECK-NEXT:    IR   %n.mod.vf = urem i64 %0, %16
 ; CHECK-NEXT:    IR   %n.vec = sub i64 %0, %n.mod.vf
 ; CHECK-NEXT:    IR   %17 = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    IR   %18 = mul i64 %17, 4
+; CHECK-NEXT:    IR   %18 = mul nuw i64 %17, 4
 ; CHECK-NEXT:    vp<[[END1:%.+]]> = DERIVED-IV ir<%0> + ir<[[VEC_TC]]> * ir<-1>
 ; CHECK-NEXT:    vp<[[END2:%.+]]> = DERIVED-IV ir<%n> + ir<[[VEC_TC]]> * ir<-1>
 ; CHECK-NEXT:  Successor(s): vector.body
@@ -426,7 +426,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<vector.memcheck>:
 ; CHECK-NEXT:    IR   %11 = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    IR   %12 = mul i64 %11, 4
+; CHECK-NEXT:    IR   %12 = mul nuw i64 %11, 4
 ; CHECK-NEXT:    IR   %13 = mul i64 %12, 4
 ; CHECK-NEXT:    IR   %14 = sub i64 %B1, %A2
 ; CHECK-NEXT:    IR   %diff.check = icmp ult i64 %14, %13
@@ -434,11 +434,11 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<vector.ph>:
 ; CHECK-NEXT:    IR   %15 = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    IR   %16 = mul i64 %15, 4
+; CHECK-NEXT:    IR   %16 = mul nuw i64 %15, 4
 ; CHECK-NEXT:    IR   %n.mod.vf = urem i64 %0, %16
 ; CHECK-NEXT:    IR   %n.vec = sub i64 %0, %n.mod.vf
 ; CHECK-NEXT:    IR   %17 = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    IR   %18 = mul i64 %17, 4
+; CHECK-NEXT:    IR   %18 = mul nuw i64 %17, 4
 ; CHECK-NEXT:    vp<[[END1:%.+]]> = DERIVED-IV ir<%0> + ir<[[VEC_TC]]> * ir<-1>
 ; CHECK-NEXT:    vp<[[END2:%.+]]> = DERIVED-IV ir<%n> + ir<[[VEC_TC]]> * ir<-1>
 ; CHECK-NEXT:  Successor(s): vector.body
