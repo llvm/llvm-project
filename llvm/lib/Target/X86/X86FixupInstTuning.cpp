@@ -223,8 +223,7 @@ bool X86FixupInstTuningPass::processInstruction(
   };
   
   auto ProcessBLENDToMOV = [&](unsigned MovOpc) -> bool {
-    if (!MI.getOperand(NumOperands - 1).isImm() ||
-        MI.getOperand(NumOperands - 1).getImm() != 1)
+    if (MI.getOperand(NumOperands - 1).getImm() != 1)
       return false;
 
     bool Force = MF.getFunction().hasOptSize();
@@ -235,22 +234,15 @@ bool X86FixupInstTuningPass::processInstruction(
     MI.removeOperand(NumOperands - 1);
     return true;
   };
+
   switch (Opc) {
-  case X86::VBLENDPSrri:
-  case X86::VBLENDPSYrri:
-  case X86::VBLENDMPSZ128rrkz:
-  case X86::VBLENDMPSZ256rrkz:
-  case X86::VBLENDMPSZrrkz: {
+  case X86::VBLENDPSrri: {
     int Imm = MI.getOperand(NumOperands - 1).getImm();
     if (Imm != 1)
       return false;
     return ProcessBLENDToMOV(X86::VMOVSSrr);
   }
-  case X86::VBLENDPDrri:
-  case X86::VBLENDPDYrri:
-  case X86::VBLENDMPDZ128rrkz:
-  case X86::VBLENDMPDZ256rrkz:
-  case X86::VBLENDMPDZrrkz: {
+  case X86::VBLENDPDrri: {
     int Imm = MI.getOperand(NumOperands - 1).getImm();
     if (Imm != 1)
       return false;

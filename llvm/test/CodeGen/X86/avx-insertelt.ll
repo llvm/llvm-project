@@ -8,7 +8,7 @@ define <8 x float> @insert_f32_firstelt_of_low_subvector(<8 x float> %x, float %
 ; ALL-LABEL: insert_f32_firstelt_of_low_subvector:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
-; ALL-NEXT:    vmovss {{.*#+}} ymm0 = ymm1[0],ymm0[1,2,3]
+; ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1,2,3,4,5,6,7]
 ; ALL-NEXT:    retq
   %i0 = insertelement <8 x float> %x, float %s, i32 0
   ret <8 x float> %i0
