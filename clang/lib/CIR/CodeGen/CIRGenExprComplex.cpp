@@ -45,10 +45,11 @@ void ComplexExprEmitter::emitStoreOfComplex(mlir::Location loc, mlir::Value val,
 }
 
 mlir::Value ComplexExprEmitter::VisitInitListExpr(InitListExpr *e) {
+  mlir::Location loc = cgf.getLoc(e->getExprLoc());
   if (e->getNumInits() == 2) {
     mlir::Value real = cgf.emitScalarExpr(e->getInit(0));
     mlir::Value imag = cgf.emitScalarExpr(e->getInit(1));
-    return builder.createComplexCreate(cgf.getLoc(e->getExprLoc()), real, imag);
+    return builder.createComplexCreate(loc, real, imag);
   }
 
   if (e->getNumInits() == 1) {
@@ -57,14 +58,11 @@ mlir::Value ComplexExprEmitter::VisitInitListExpr(InitListExpr *e) {
   }
 
   assert(e->getNumInits() == 0 && "Unexpected number of inits");
-  mlir::Location loc = cgf.getLoc(e->getExprLoc());
   QualType complexElemTy =
       e->getType()->castAs<clang::ComplexType>()->getElementType();
   mlir::Type complexElemLLVMTy = cgf.convertType(complexElemTy);
   mlir::TypedAttr defaultValue = builder.getZeroInitAttr(complexElemLLVMTy);
-  auto complexTy = cir::ComplexType::get(complexElemLLVMTy);
-  auto complexAttr =
-      cir::ConstComplexAttr::get(complexTy, defaultValue, defaultValue);
+  auto complexAttr = cir::ConstComplexAttr::get(defaultValue, defaultValue);
   return builder.create<cir::ConstantOp>(loc, complexAttr);
 }
 

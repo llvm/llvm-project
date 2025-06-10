@@ -505,7 +505,7 @@ void CIRGenFunction::emitExprAsInit(const Expr *init, const ValueDecl *d,
                    "emitExprAsInit: complex type captured by init");
     mlir::Location loc = getLoc(init->getExprLoc());
     emitStoreOfComplex(loc, complex, lvalue,
-                       /*init*/ true);
+                       /*isInit*/ true);
     return;
   }
   case cir::TEK_Aggregate:

@@ -1763,8 +1763,7 @@ OpFoldResult cir::ComplexCreateOp::fold(FoldAdaptor adaptor) {
   // `#cir.const_complex` operation.
   auto realAttr = mlir::cast<mlir::TypedAttr>(real);
   auto imagAttr = mlir::cast<mlir::TypedAttr>(imag);
-  auto complexTy = cir::ComplexType::get(realAttr.getType());
-  return cir::ConstComplexAttr::get(complexTy, realAttr, imagAttr);
+  return cir::ConstComplexAttr::get(realAttr, imagAttr);
 }
 
 //===----------------------------------------------------------------------===//
