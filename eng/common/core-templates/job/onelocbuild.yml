@@ -86,8 +86,7 @@ jobs:
         isAutoCompletePrSelected: ${{ parameters.AutoCompletePr }}
         ${{ if eq(parameters.CreatePr, true) }}:
           isUseLfLineEndingsSelected: ${{ parameters.UseLfLineEndings }}
-          ${{ if eq(parameters.RepoType, 'gitHub') }}:
-            isShouldReusePrSelected: ${{ parameters.ReusePr }}
+          isShouldReusePrSelected: ${{ parameters.ReusePr }}
         packageSourceAuth: patAuth
         patVariable: ${{ parameters.CeapexPat }}
         ${{ if eq(parameters.RepoType, 'gitHub') }}:
