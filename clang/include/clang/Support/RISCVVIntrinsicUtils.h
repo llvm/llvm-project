@@ -494,7 +494,7 @@ struct RVVIntrinsicRecord {
   const char *OverloadedName;
 
   // Required target features for this intrinsic.
-  std::string RequiredExtensions;
+  const char *RequiredExtensions;
 
   // Prototype for this intrinsic, index of RVVSignatureTable.
   uint16_t PrototypeIndex;

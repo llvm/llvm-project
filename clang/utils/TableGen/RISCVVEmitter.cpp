@@ -768,12 +768,8 @@ void RVVEmitter::createRVVIntrinsics(
       Log2LMULMask |= 1 << (Log2LMUL + 3);
 
     SR.Log2LMULMask = Log2LMULMask;
-    std::string RFs;
-    for (unsigned i = 0; i < RequiredFeatures.size(); ++i) {
-      RFs += RequiredFeatures[i].str();
-      if (i < RequiredFeatures.size() - 1)
-        RFs += ",";
-    }
+    std::string RFs =
+        join(RequiredFeatures.begin(), RequiredFeatures.end(), ",");
     SR.RequiredExtensions = RFs;
     SR.NF = NF;
     SR.HasMasked = HasMasked;
@@ -816,7 +812,7 @@ void RVVEmitter::createRVVIntrinsicRecords(std::vector<RVVIntrinsicRecord> &Out,
     R.PrototypeLength = SR.Prototype.size();
     R.SuffixLength = SR.Suffix.size();
     R.OverloadedSuffixSize = SR.OverloadedSuffix.size();
-    R.RequiredExtensions = SR.RequiredExtensions;
+    R.RequiredExtensions = SR.RequiredExtensions.c_str();
     R.TypeRangeMask = SR.TypeRangeMask;
     R.Log2LMULMask = SR.Log2LMULMask;
     R.NF = SR.NF;
