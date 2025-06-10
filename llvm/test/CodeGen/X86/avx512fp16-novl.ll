@@ -123,3 +123,87 @@ define <8 x half> @vector_uint16ToHalf(<8 x i16> %int16) {
   %fp16 = uitofp <8 x i16> %int16 to <8 x half>
   ret <8 x half> %fp16
 }
+
+define <8 x half> @select(<8 x half> %x) {
+; CHECK-LABEL: select:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; CHECK-NEXT:    vmovsh {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    vucomish %xmm1, %xmm0
+; CHECK-NEXT:    seta %al
+; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    kmovw %eax, %k0
+; CHECK-NEXT:    vpsrld $16, %xmm0, %xmm2
+; CHECK-NEXT:    vucomish %xmm1, %xmm2
+; CHECK-NEXT:    seta %al
+; CHECK-NEXT:    kmovd %eax, %k1
+; CHECK-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK-NEXT:    kshiftrw $14, %k1, %k1
+; CHECK-NEXT:    korw %k1, %k0, %k0
+; CHECK-NEXT:    movw $-5, %ax
+; CHECK-NEXT:    kmovd %eax, %k1
+; CHECK-NEXT:    kandw %k1, %k0, %k0
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; CHECK-NEXT:    vucomish %xmm1, %xmm2
+; CHECK-NEXT:    seta %al
+; CHECK-NEXT:    kmovd %eax, %k1
+; CHECK-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK-NEXT:    kshiftrw $13, %k1, %k1
+; CHECK-NEXT:    korw %k1, %k0, %k0
+; CHECK-NEXT:    movw $-9, %ax
+; CHECK-NEXT:    kmovd %eax, %k1
+; CHECK-NEXT:    kandw %k1, %k0, %k0
+; CHECK-NEXT:    vpsrlq $48, %xmm0, %xmm2
+; CHECK-NEXT:    vucomish %xmm1, %xmm2
+; CHECK-NEXT:    seta %al
+; CHECK-NEXT:    kmovd %eax, %k1
+; CHECK-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK-NEXT:    kshiftrw $12, %k1, %k1
+; CHECK-NEXT:    korw %k1, %k0, %k0
+; CHECK-NEXT:    movw $-17, %ax
+; CHECK-NEXT:    kmovd %eax, %k1
+; CHECK-NEXT:    kandw %k1, %k0, %k0
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
+; CHECK-NEXT:    vucomish %xmm1, %xmm2
+; CHECK-NEXT:    seta %al
+; CHECK-NEXT:    kmovd %eax, %k1
+; CHECK-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK-NEXT:    kshiftrw $11, %k1, %k1
+; CHECK-NEXT:    korw %k1, %k0, %k0
+; CHECK-NEXT:    movw $-33, %ax
+; CHECK-NEXT:    kmovd %eax, %k1
+; CHECK-NEXT:    kandw %k1, %k0, %k0
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vucomish %xmm1, %xmm2
+; CHECK-NEXT:    seta %al
+; CHECK-NEXT:    kmovd %eax, %k1
+; CHECK-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK-NEXT:    kshiftrw $10, %k1, %k1
+; CHECK-NEXT:    korw %k1, %k0, %k0
+; CHECK-NEXT:    movw $-65, %ax
+; CHECK-NEXT:    kmovd %eax, %k1
+; CHECK-NEXT:    kandw %k1, %k0, %k0
+; CHECK-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[3,3,3,3]
+; CHECK-NEXT:    vucomish %xmm1, %xmm2
+; CHECK-NEXT:    seta %al
+; CHECK-NEXT:    kmovd %eax, %k1
+; CHECK-NEXT:    kshiftlw $6, %k1, %k1
+; CHECK-NEXT:    korw %k1, %k0, %k0
+; CHECK-NEXT:    kshiftlw $9, %k0, %k0
+; CHECK-NEXT:    kshiftrw $9, %k0, %k0
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vucomish %xmm1, %xmm2
+; CHECK-NEXT:    seta %al
+; CHECK-NEXT:    kmovd %eax, %k1
+; CHECK-NEXT:    kshiftlw $7, %k1, %k1
+; CHECK-NEXT:    korw %k1, %k0, %k1
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; CHECK-NEXT:    vmovdqu16 %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+entry:
+  %c = fcmp ogt <8 x half> %x, splat (half 0xH3C00)
+  %s = select <8 x i1> %c, <8 x half> splat (half 0xH3C00), <8 x half> %x
+  ret <8 x half> %s
+}
