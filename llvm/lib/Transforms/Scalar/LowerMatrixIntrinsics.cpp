@@ -1113,7 +1113,6 @@ public:
     if (!PoisonedInsts.empty()) {
       // If we didn't remove all poisoned instructions, it's a hard error.
       dbgs() << "Poisoned but present instructions:\n";
-      Func.dump();
       for (auto *I : PoisonedInsts)
         dbgs() << *I << "\n";
       llvm_unreachable("Poisoned but instruction not removed");
