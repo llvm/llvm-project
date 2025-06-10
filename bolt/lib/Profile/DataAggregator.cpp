@@ -514,6 +514,10 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   deleteTempFiles();
 
 heatmap:
+  // Sort parsed traces for faster processing.
+  if (!opts::BasicAggregation)
+    llvm::sort(Traces, llvm::less_first());
+
   if (!opts::HeatmapMode)
     return Error::success();
 
@@ -580,8 +584,10 @@ void DataAggregator::processProfile(BinaryContext &BC) {
     }
   }
 
-  for (auto &FuncBranches : NamesToBranches)
+  for (auto &FuncBranches : NamesToBranches) {
     llvm::stable_sort(FuncBranches.second.Data);
+    llvm::stable_sort(FuncBranches.second.EntryData);
+  }
 
   for (auto &MemEvents : NamesToMemEvents)
     llvm::stable_sort(MemEvents.second.Data);
@@ -715,9 +721,8 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
   return true;
 }
 
-bool DataAggregator::doBranch(const Trace &Trace, uint64_t Count,
+bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
                               uint64_t Mispreds) {
-  uint64_t From = Trace.Branch, To = Trace.From;
   // Returns whether \p Offset in \p Func contains a return instruction.
   auto checkReturn = [&](const BinaryFunction &Func, const uint64_t Offset) {
     auto isReturn = [&](auto MI) { return MI && BC->MIB->isReturn(*MI); };
@@ -770,7 +775,7 @@ bool DataAggregator::doBranch(const Trace &Trace, uint64_t Count,
 }
 
 bool DataAggregator::doTrace(const Trace &Trace, uint64_t Count) {
-  const uint64_t Branch = Trace.Branch, From = Trace.From, To = Trace.To;
+  const uint64_t From = Trace.From, To = Trace.To;
   BinaryFunction *FromFunc = getBinaryFunctionContainingAddress(From);
   BinaryFunction *ToFunc = getBinaryFunctionContainingAddress(To);
   if (!FromFunc || !ToFunc) {
@@ -803,8 +808,13 @@ bool DataAggregator::doTrace(const Trace &Trace, uint64_t Count) {
 
   LLVM_DEBUG(dbgs() << "Processing " << FTs->size() << " fallthroughs for "
                     << FromFunc->getPrintName() << ":" << Trace << '\n');
-  for (auto [From, To] : *FTs)
+  for (auto [From, To] : *FTs) {
+    if (BAT) {
+      From = BAT->translate(FromFunc->getAddress(), From, /*IsBranchSrc=*/true);
+      To = BAT->translate(FromFunc->getAddress(), To, /*IsBranchSrc=*/false);
+    }
     doIntraBranch(*ParentFunc, From, To, Count, false);
+  }
 
   return true;
 }
@@ -1187,7 +1197,7 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   // Storage for parsed fields.
   StringRef EventName;
   std::optional<Location> Addr[3];
-  int64_t Counters[2];
+  int64_t Counters[2] = {0};
 
   while (Type == INVALID || Type == EVENT_NAME) {
     while (checkAndConsumeFS()) {
@@ -1277,7 +1287,7 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   }
 
   if (Type == BRANCH) {
-    Addr[2] = Location(Trace::EXTERNAL);
+    Addr[2] = Location(Trace::BR_ONLY);
   }
 
   Trace T{Addr[0]->Offset, Addr[1]->Offset, Addr[2]->Offset};
@@ -1285,8 +1295,9 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
 
   Traces.emplace_back(T, TI);
 
-  if (Addr[2]->Offset)
+  if (Addr[2]->Offset != Trace::BR_ONLY)
     NumTraces += Count;
+
   NumTotalSamples += Count;
 
   return std::error_code();
@@ -1299,7 +1310,7 @@ bool DataAggregator::ignoreKernelInterrupt(LBREntry &LBR) const {
 
 std::error_code DataAggregator::printLBRHeatMap() {
   outs() << "PERF2BOLT: parse branch events...\n";
-  NamedRegionTimer T("parseBranch", "Parsing branch events", TimerGroupName,
+  NamedRegionTimer T("buildHeatmap", "Building heatmap", TimerGroupName,
                      TimerGroupDesc, opts::TimeAggregator);
 
   if (BC->IsLinuxKernel) {
@@ -1336,7 +1347,7 @@ std::error_code DataAggregator::printLBRHeatMap() {
   for (const auto &[PC, Hits] : BasicSamples)
     HM.registerAddress(PC, Hits);
   for (const auto &[Trace, Info] : Traces)
-    if (Trace.To)
+    if (Trace.To != Trace::BR_ONLY)
       HM.registerAddressRange(Trace.From, Trace.To, Info.TakenCount);
 
   if (HM.getNumInvalidRanges())
@@ -1383,11 +1394,16 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
     // chronological order)
     if (NeedsSkylakeFix && NumEntry <= 2)
       continue;
-    TakenBranchInfo &Info = TraceMap[Trace{
-        LBR.From, LBR.To, NextLBR ? NextLBR->From : Trace::EXTERNAL}];
+    uint64_t TraceTo = Trace::BR_ONLY;
+    if (NextLBR) {
+      TraceTo = NextLBR->From;
+      ++NumTraces;
+    }
+    NextLBR = &LBR;
+
+    TakenBranchInfo &Info = TraceMap[Trace{LBR.From, LBR.To, TraceTo}];
     ++Info.TakenCount;
     Info.MispredCount += LBR.Mispred;
-    NextLBR = &LBR;
   }
   // Record LBR addresses not covered by fallthroughs (bottom-of-stack source
   // and top-of-stack target) as basic samples for heatmap.
@@ -1531,8 +1547,8 @@ void DataAggregator::processBranchEvents() {
   for (const auto &[Trace, Info] : Traces) {
     if (Trace.Branch != Trace::FT_ONLY &&
         Trace.Branch != Trace::FT_EXTERNAL_ORIGIN)
-      doBranch(Trace, Info.TakenCount, Info.MispredCount);
-    if (Trace.To)
+      doBranch(Trace.Branch, Trace.From, Info.TakenCount, Info.MispredCount);
+    if (Trace.To != Trace::BR_ONLY)
       doTrace(Trace, Info.TakenCount);
   }
   printBranchSamplesDiagnostics();
@@ -2190,7 +2206,6 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
       YamlBF.Id = BF->getFunctionNumber();
       YamlBF.Hash = BAT->getBFHash(FuncAddress);
       YamlBF.ExecCount = BF->getKnownExecutionCount();
-      YamlBF.ExternEntryCount = BF->getExternEntryCount();
       YamlBF.NumBasicBlocks = BAT->getNumBasicBlocks(FuncAddress);
       const BoltAddressTranslation::BBHashMapTy &BlockMap =
           BAT->getBBHashMap(FuncAddress);

@@ -589,12 +589,11 @@ bool GCNMaxILPSchedStrategy::tryCandidate(SchedCandidate &Cand,
   // This is a best effort to set things up for a post-RA pass. Optimizations
   // like generating loads of multiple registers should ideally be done within
   // the scheduler pass by combining the loads during DAG postprocessing.
-  const SUnit *CandNextClusterSU =
-      Cand.AtTop ? DAG->getNextClusterSucc() : DAG->getNextClusterPred();
-  const SUnit *TryCandNextClusterSU =
-      TryCand.AtTop ? DAG->getNextClusterSucc() : DAG->getNextClusterPred();
-  if (tryGreater(TryCand.SU == TryCandNextClusterSU,
-                 Cand.SU == CandNextClusterSU, TryCand, Cand, Cluster))
+  const ClusterInfo *CandCluster = Cand.AtTop ? TopCluster : BotCluster;
+  const ClusterInfo *TryCandCluster = TryCand.AtTop ? TopCluster : BotCluster;
+  if (tryGreater(TryCandCluster && TryCandCluster->contains(TryCand.SU),
+                 CandCluster && CandCluster->contains(Cand.SU), TryCand, Cand,
+                 Cluster))
     return TryCand.Reason != NoCand;
 
   // Avoid increasing the max critical pressure in the scheduled region.
@@ -664,12 +663,11 @@ bool GCNMaxMemoryClauseSchedStrategy::tryCandidate(SchedCandidate &Cand,
 
   // MaxMemoryClause-specific: We prioritize clustered instructions as we would
   // get more benefit from clausing these memory instructions.
-  const SUnit *CandNextClusterSU =
-      Cand.AtTop ? DAG->getNextClusterSucc() : DAG->getNextClusterPred();
-  const SUnit *TryCandNextClusterSU =
-      TryCand.AtTop ? DAG->getNextClusterSucc() : DAG->getNextClusterPred();
-  if (tryGreater(TryCand.SU == TryCandNextClusterSU,
-                 Cand.SU == CandNextClusterSU, TryCand, Cand, Cluster))
+  const ClusterInfo *CandCluster = Cand.AtTop ? TopCluster : BotCluster;
+  const ClusterInfo *TryCandCluster = TryCand.AtTop ? TopCluster : BotCluster;
+  if (tryGreater(TryCandCluster && TryCandCluster->contains(TryCand.SU),
+                 CandCluster && CandCluster->contains(Cand.SU), TryCand, Cand,
+                 Cluster))
     return TryCand.Reason != NoCand;
 
   // We only compare a subset of features when comparing nodes between

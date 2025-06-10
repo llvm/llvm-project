@@ -2760,66 +2760,6 @@ SDValue SelectionDAG::CreateStackTemporary(EVT VT1, EVT VT2) {
   return CreateStackTemporary(Bytes, Align);
 }
 
-void SelectionDAG::getSignAsIntValue(FloatSignAsInt &State, const SDLoc &DL,
-                                     SDValue Value) {
-  EVT FloatVT = Value.getValueType();
-  unsigned NumBits = FloatVT.getScalarSizeInBits();
-  State.FloatVT = FloatVT;
-  EVT IVT = FloatVT.changeTypeToInteger();
-  // Convert to an integer of the same size.
-  if (TLI->isTypeLegal(IVT)) {
-    State.IntValue = getNode(ISD::BITCAST, DL, IVT, Value);
-    State.SignMask = APInt::getSignMask(NumBits);
-    State.SignBit = NumBits - 1;
-    return;
-  }
-
-  auto &DataLayout = getDataLayout();
-  // Store the float to memory, then load the sign part out as an integer.
-  MVT LoadTy = TLI->getRegisterType(MVT::i8);
-  // First create a temporary that is aligned for both the load and store.
-  SDValue StackPtr = CreateStackTemporary(FloatVT, LoadTy);
-  int FI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
-  // Then store the float to it.
-  State.FloatPtr = StackPtr;
-  MachineFunction &MF = getMachineFunction();
-  State.FloatPointerInfo = MachinePointerInfo::getFixedStack(MF, FI);
-  State.Chain = getStore(getEntryNode(), DL, Value, State.FloatPtr,
-                         State.FloatPointerInfo);
-
-  SDValue IntPtr;
-  if (DataLayout.isBigEndian()) {
-    assert(FloatVT.isByteSized() && "Unsupported floating point type!");
-    // Load out a legal integer with the same sign bit as the float.
-    IntPtr = StackPtr;
-    State.IntPointerInfo = State.FloatPointerInfo;
-  } else {
-    // Advance the pointer so that the loaded byte will contain the sign bit.
-    unsigned ByteOffset = (NumBits / 8) - 1;
-    IntPtr = getMemBasePlusOffset(StackPtr, TypeSize::getFixed(ByteOffset), DL);
-    State.IntPointerInfo =
-        MachinePointerInfo::getFixedStack(MF, FI, ByteOffset);
-  }
-
-  State.IntPtr = IntPtr;
-  State.IntValue = getExtLoad(ISD::EXTLOAD, DL, LoadTy, State.Chain, IntPtr,
-                              State.IntPointerInfo, MVT::i8);
-  State.SignMask = APInt::getOneBitSet(LoadTy.getScalarSizeInBits(), 7);
-  State.SignBit = 7;
-}
-
-SDValue SelectionDAG::modifySignAsInt(const FloatSignAsInt &State,
-                                      const SDLoc &DL, SDValue NewIntValue) {
-  if (!State.Chain)
-    return getNode(ISD::BITCAST, DL, State.FloatVT, NewIntValue);
-
-  // Override the part containing the sign bit in the value stored on the stack.
-  SDValue Chain = getTruncStore(State.Chain, DL, NewIntValue, State.IntPtr,
-                                State.IntPointerInfo, MVT::i8);
-  return getLoad(State.FloatVT, DL, Chain, State.FloatPtr,
-                 State.FloatPointerInfo);
-}
-
 SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
                                 ISD::CondCode Cond, const SDLoc &dl) {
   EVT OpVT = N1.getValueType();
@@ -7956,7 +7896,18 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     break;
   }
   case ISD::INSERT_VECTOR_ELT: {
-    ConstantSDNode *N3C = dyn_cast<ConstantSDNode>(N3);
+    assert(VT.isVector() && VT == N1.getValueType() &&
+           "INSERT_VECTOR_ELT vector type mismatch");
+    assert(VT.isFloatingPoint() == N2.getValueType().isFloatingPoint() &&
+           "INSERT_VECTOR_ELT scalar fp/int mismatch");
+    assert((!VT.isFloatingPoint() ||
+            VT.getVectorElementType() == N2.getValueType()) &&
+           "INSERT_VECTOR_ELT fp scalar type mismatch");
+    assert((!VT.isInteger() ||
+            VT.getScalarSizeInBits() <= N2.getScalarValueSizeInBits()) &&
+           "INSERT_VECTOR_ELT int scalar size mismatch");
+
+    auto *N3C = dyn_cast<ConstantSDNode>(N3);
     // INSERT_VECTOR_ELT into out-of-bounds element is an UNDEF, except
     // for scalable vectors where we will generate appropriate code to
     // deal with out-of-bounds cases correctly.
@@ -8041,7 +7992,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     break;
   }
   case ISD::PARTIAL_REDUCE_UMLA:
-  case ISD::PARTIAL_REDUCE_SMLA: {
+  case ISD::PARTIAL_REDUCE_SMLA:
+  case ISD::PARTIAL_REDUCE_SUMLA: {
     [[maybe_unused]] EVT AccVT = N1.getValueType();
     [[maybe_unused]] EVT Input1VT = N2.getValueType();
     [[maybe_unused]] EVT Input2VT = N3.getValueType();
