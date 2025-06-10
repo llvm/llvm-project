@@ -22,6 +22,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -422,6 +423,10 @@ class LowerMatrixIntrinsics {
     }
 
     iterator_range<SmallVector<Value *, 8>::iterator> vectors() {
+      return make_range(Vectors.begin(), Vectors.end());
+    }
+
+    iterator_range<SmallVector<Value *, 8>::const_iterator> vectors() const {
       return make_range(Vectors.begin(), Vectors.end());
     }
 
@@ -1452,12 +1457,12 @@ public:
         Inst->getIntrinsicID() == Intrinsic::vector_reduce_fmul) {
       ResultV = Builder.CreateVectorSplat(ElementCount::getFixed(M.getStride()),
                                           Start);
-      for (unsigned VI = 0, VE = M.getNumVectors(); VI != VE; VI++)
-        ResultV = CreateVReduce(ResultV, M.getVector(VI));
+      for (auto &Vector : M.vectors())
+        ResultV = CreateVReduce(ResultV, Vector);
     } else {
       ResultV = M.getVector(0);
-      for (unsigned VI = 1, VE = M.getNumVectors(); VI != VE; VI++)
-        ResultV = CreateVReduce(ResultV, M.getVector(VI));
+      for (auto &Vector : drop_begin(M.vectors()))
+        ResultV = CreateVReduce(ResultV, Vector);
     }
 
     auto CreateHReduce = [&](Value *V) {
