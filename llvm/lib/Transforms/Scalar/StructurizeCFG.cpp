@@ -19,6 +19,7 @@
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/RegionIterator.h"
 #include "llvm/Analysis/RegionPass.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -287,6 +288,7 @@ class StructurizeCFG {
 
   UniformityInfo *UA = nullptr;
   DominatorTree *DT;
+  TargetTransformInfo *TTI;
 
   SmallVector<RegionNode *, 8> Order;
   BBSet Visited;
@@ -367,7 +369,7 @@ class StructurizeCFG {
 
 public:
   void init(Region *R);
-  bool run(Region *R, DominatorTree *DT);
+  bool run(Region *R, DominatorTree *DT, TargetTransformInfo *TTI);
   bool makeUniformRegion(Region *R, UniformityInfo &UA);
 };
 
@@ -393,8 +395,11 @@ public:
       if (SCFG.makeUniformRegion(R, UA))
         return false;
     }
+    Function *F = R->getEntry()->getParent();
+    TargetTransformInfo *TTI =
+        &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(*F);
     DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    return SCFG.run(R, DT);
+    return SCFG.run(R, DT, TTI);
   }
 
   StringRef getPassName() const override { return "Structurize control flow"; }
@@ -402,6 +407,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     if (SkipUniformRegions)
       AU.addRequired<UniformityInfoWrapperPass>();
+    AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
 
     AU.addPreserved<DominatorTreeWrapperPass>();
@@ -411,18 +417,23 @@ public:
 
 } // end anonymous namespace
 
-/// Helper function for heuristics to order if else block
-/// Checks whether an instruction is potential vector copy instruction, if so,
-/// checks if the operands are from different BB. if so, returns True.
-// Then there's a possibility of coalescing without interference when ordered
-// first.
-static bool hasAffectingInstructions(Instruction *I, BasicBlock *BB) {
+/// Helper function for heuristics to order if else block.
+/// Checks whether an instruction is zero cost instruction and checks if the
+/// operands are from different BB. If so, this instruction can be coalesced
+/// when this block is ordered first. So, this returns true.
+static bool hasAffectingInstructions(Instruction *I, BasicBlock *BB,
+                                     TargetTransformInfo *TTI) {
 
   if (I->getParent() != BB)
     return true;
 
-  // If the instruction is not a poterntial copy instruction, return true.
-  if (!isa<ExtractElementInst>(*I) && !isa<ExtractValueInst>(*I))
+  // If the instruction is not a zero cost instruction, return false.
+  auto Cost = TTI->getInstructionCost(I, TargetTransformInfo::TCK_CodeSize);
+  InstructionCost::CostType CostVal =
+      Cost.isValid()
+          ? Cost.getValue()
+          : (InstructionCost::CostType)TargetTransformInfo::TCC_Expensive;
+  if (CostVal != 0)
     return false;
 
   // Check if any operands are instructions defined in the same block.
@@ -457,9 +468,9 @@ INITIALIZE_PASS_END(StructurizeCFGLegacyPass, "structurizecfg",
 ///
 /// This function checks the incoming phi values in the merge block and
 /// orders based on the following heuristics  of Then and Else block. Checks
-/// whether an incoming phi can be potential copy instructions and if so
-/// checks whether copy within the block or not.
-/// Increases score if its a potential copy from outside the block.
+/// whether an incoming phi is a zero cost instructions and if so
+/// checks whether operands are within the block or not.
+/// Increases score if its a operands from outside the block.
 /// the higher scored block is ordered first.
 void StructurizeCFG::reorderIfElseBlock(BasicBlock *BB, unsigned Idx) {
   BranchInst *Term = dyn_cast<BranchInst>(BB->getTerminator());
@@ -483,9 +494,9 @@ void StructurizeCFG::reorderIfElseBlock(BasicBlock *BB, unsigned Idx) {
     Value *ElseVal = Phi.getIncomingValueForBlock(ElseBB);
 
     if (auto *Inst = dyn_cast<Instruction>(ThenVal))
-      ThenScore += hasAffectingInstructions(Inst, ThenBB);
+      ThenScore += hasAffectingInstructions(Inst, ThenBB, TTI);
     if (auto *Inst = dyn_cast<Instruction>(ElseVal))
-      ElseScore += hasAffectingInstructions(Inst, ElseBB);
+      ElseScore += hasAffectingInstructions(Inst, ElseBB, TTI);
   }
 
   if (ThenScore == ElseScore)
@@ -1390,12 +1401,13 @@ bool StructurizeCFG::makeUniformRegion(Region *R, UniformityInfo &UA) {
 }
 
 /// Run the transformation for each region found
-bool StructurizeCFG::run(Region *R, DominatorTree *DT) {
+bool StructurizeCFG::run(Region *R, DominatorTree *DT,
+                         TargetTransformInfo *TTI) {
   if (R->isTopLevelRegion())
     return false;
 
   this->DT = DT;
-
+  this->TTI = TTI;
   Func = R->getEntry()->getParent();
   assert(hasOnlySimpleTerminator(*Func) && "Unsupported block terminator.");
 
@@ -1457,7 +1469,7 @@ PreservedAnalyses StructurizeCFGPass::run(Function &F,
   bool Changed = false;
   DominatorTree *DT = &AM.getResult<DominatorTreeAnalysis>(F);
   auto &RI = AM.getResult<RegionInfoAnalysis>(F);
-
+  TargetTransformInfo *TTI = &AM.getResult<TargetIRAnalysis>(F);
   UniformityInfo *UI = nullptr;
   if (SkipUniformRegions)
     UI = &AM.getResult<UniformityInfoAnalysis>(F);
@@ -1476,7 +1488,7 @@ PreservedAnalyses StructurizeCFGPass::run(Function &F,
       continue;
     }
 
-    Changed |= SCFG.run(R, DT);
+    Changed |= SCFG.run(R, DT, TTI);
   }
   if (!Changed)
     return PreservedAnalyses::all();
