@@ -142,6 +142,10 @@ v_bitop3_b16_e64_dpp v255, v255, v255, src_scc bitop3:104 op_sel:[0,0,0,1] row_x
 // GFX1250: v_bitop3_b16_e64_dpp v255, v255, v255, src_scc bitop3:0x68 op_sel:[0,0,0,1] row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xff,0x45,0x33,0xd6,0xfa,0xfe,0xf7,0x0b,0xff,0x6f,0x0d,0x30]
 // GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
 
+v_bitop3_b16_e64_dpp v5, v1, v2, v3 bitop3:102 op_sel:[1,1,1,1] quad_perm:[0,1,2,3]
+// GFX1250: v_bitop3_b16_e64_dpp v5, v1, v2, v3 bitop3:0x66 op_sel:[1,1,1,1] quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x7c,0x33,0xd6,0xfa,0x04,0x0e,0xcc,0x01,0xe4,0x00,0xff]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
 v_add_min_i32 v2, v4, v7, v8 quad_perm:[1,2,3,1]
 // GFX1250: v_add_min_i32_e64_dpp v2, v4, v7, v8 quad_perm:[1,2,3,1] row_mask:0xf bank_mask:0xf ; encoding: [0x02,0x00,0x60,0xd6,0xfa,0x0e,0x22,0x04,0x04,0x79,0x00,0xff]
 // GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
