@@ -4116,6 +4116,11 @@ let Predicates = [HasSVEAES2, HasNonStreamingSVE2_or_SSVE_AES] in {
   def PMULL_2ZZZ_Q : sve_crypto_pmull_multi<"pmull">;
 }
 
+let Predicates = [HasSVE_or_SME, HasMatMulInt8] in {
+    def : Pat<(nxv4i32 (partial_reduce_sumla nxv4i32:$Acc, nxv16i8:$LHS, nxv16i8:$RHS)),
+              (USDOT_ZZZ $Acc, $RHS, $LHS)>;
+  } // End HasSVE_or_SME, HasMatMulInt8
+
 //===----------------------------------------------------------------------===//
 // SME or SVE2.1 instructions
 //===----------------------------------------------------------------------===//
