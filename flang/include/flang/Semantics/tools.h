@@ -182,9 +182,12 @@ const Symbol *HasImpureFinal(
     const Symbol &, std::optional<int> rank = std::nullopt);
 // Is this type finalizable or does it contain any polymorphic allocatable
 // ultimate components?
-bool MayRequireFinalization(const DerivedTypeSpec &derived);
+bool MayRequireFinalization(const DerivedTypeSpec &);
 // Does this type have an allocatable direct component?
-bool HasAllocatableDirectComponent(const DerivedTypeSpec &derived);
+bool HasAllocatableDirectComponent(const DerivedTypeSpec &);
+// Does this type have any defined assignment at any level (or any polymorphic
+// allocatable)?
+bool MayHaveDefinedAssignment(const DerivedTypeSpec &);
 
 bool IsInBlankCommon(const Symbol &);
 bool IsAssumedLengthCharacter(const Symbol &);
@@ -764,19 +767,8 @@ inline bool checkForSingleVariableOnRHS(
   return designator != nullptr;
 }
 
-/// Checks if the symbol on the LHS is present in the RHS expression.
-inline bool checkForSymbolMatch(const Fortran::semantics::SomeExpr *lhs,
-    const Fortran::semantics::SomeExpr *rhs) {
-  auto lhsSyms{Fortran::evaluate::GetSymbolVector(*lhs)};
-  const Fortran::semantics::Symbol &lhsSymbol{*lhsSyms.front()};
-  for (const Fortran::semantics::Symbol &symbol :
-      Fortran::evaluate::GetSymbolVector(*rhs)) {
-    if (lhsSymbol == symbol) {
-      return true;
-    }
-  }
-  return false;
-}
+// Checks whether the symbol on the LHS is present in the RHS expression.
+bool CheckForSymbolMatch(const SomeExpr *lhs, const SomeExpr *rhs);
 
 namespace operation {
 
@@ -924,6 +916,5 @@ bool IsSameOrConvertOf(const SomeExpr &expr, const SomeExpr &x);
 /// If the input is not Operation, Designator, FunctionRef or Constant,
 /// it returns std::nullopt.
 MaybeExpr GetConvertInput(const SomeExpr &x);
-
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TOOLS_H_
