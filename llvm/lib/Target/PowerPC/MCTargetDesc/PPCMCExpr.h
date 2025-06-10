@@ -15,9 +15,10 @@
 
 namespace llvm {
 
-class PPCMCExpr : public MCTargetExpr {
+class PPCMCExpr : public MCSpecifierExpr {
 public:
-  enum Specifier : uint8_t {
+  using Specifier = uint16_t;
+  enum {
     VK_None,
 
     VK_LO = MCSymbolRefExpr::FirstTargetSpecifier,
@@ -100,18 +101,12 @@ public:
   };
 
 private:
-  const Specifier specifier;
-  const MCExpr *Expr;
-
   std::optional<int64_t> evaluateAsInt64(int64_t Value) const;
 
   explicit PPCMCExpr(Specifier S, const MCExpr *Expr)
-      : specifier(S), Expr(Expr) {}
+      : MCSpecifierExpr(Expr, S) {}
 
 public:
-  /// @name Construction
-  /// @{
-
   static const PPCMCExpr *create(Specifier S, const MCExpr *Expr,
                                  MCContext &Ctx);
 
@@ -127,28 +122,11 @@ public:
     return create(VK_HA, Expr, Ctx);
   }
 
-  /// @}
-  /// @name Accessors
-  /// @{
-
-  Specifier getSpecifier() const { return specifier; }
-  const MCExpr *getSubExpr() const { return Expr; }
-
-  /// @}
-
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
   bool evaluateAsRelocatableImpl(MCValue &Res,
                                  const MCAssembler *Asm) const override;
-  void visitUsedExpr(MCStreamer &Streamer) const override;
-  MCFragment *findAssociatedFragment() const override {
-    return getSubExpr()->findAssociatedFragment();
-  }
 
   bool evaluateAsConstant(int64_t &Res) const;
-
-  static bool classof(const MCExpr *E) {
-    return E->getKind() == MCExpr::Target;
-  }
 };
 
 static inline PPCMCExpr::Specifier getSpecifier(const MCSymbolRefExpr *SRE) {
