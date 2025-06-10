@@ -737,3 +737,29 @@ func.func @fract_invalid_type(%arg0 : i32) {
   %0 = spirv.GL.Fract %arg0 : i32
   return
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Log2
+//===----------------------------------------------------------------------===//
+
+func.func @log2(%arg0 : f32) -> () {
+  // CHECK: spirv.GL.Log2 {{%.*}} : f32
+  %0 = spirv.GL.Log2 %arg0 : f32
+  return
+}
+
+func.func @log2vec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.GL.Log2 {{%.*}} : vector<3xf16>
+  %0 = spirv.GL.Log2 %arg0 : vector<3xf16>
+  return
+}
+
+// -----
+
+func.func @log2_invalid_type(%arg0 : i32) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32-bit float or vector of 16/32-bit float values}}
+  %0 = spirv.GL.Log2 %arg0 : i32
+  return
+}
