@@ -30,15 +30,14 @@ define void @test(ptr %a) nounwind ssp {
 ; MSVC-X86-NEXT:    movl ___security_cookie, %ecx
 ; MSVC-X86-NEXT:    cmpl %eax, %ecx
 ; MSVC-X86-NEXT:    jne LBB0_2
-; MSVC-X86:       # %bb.1: # %return
+; MSVC-X86-NEXT:  # %bb.1: # %return
 ; MSVC-X86-NEXT:    addl $12, %esp
 ; MSVC-X86-NEXT:    popl %esi
 ; MSVC-X86-NEXT:    retl
-; MSVC-X86:       LBB0_2: # %return
-; MSVC-X86-NEXT:    movl 8(%esp), %ecx
+; MSVC-X86-NEXT:  LBB0_2: # %return
+; MSVC-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; MSVC-X86-NEXT:    xorl %esp, %ecx
 ; MSVC-X86-NEXT:    calll @__security_check_cookie@4
-
 ;
 ; MSVC-X64-LABEL: test:
 ; MSVC-X64:       # %bb.0: # %entry
@@ -55,7 +54,7 @@ define void @test(ptr %a) nounwind ssp {
 ; MSVC-X64-NEXT:    leaq LC(%rip), %rcx
 ; MSVC-X64-NEXT:    movq %rsi, %rdx
 ; MSVC-X64-NEXT:    callq printf
-; MSVC-X64-NEXT:    movq 56(%rsp), %rax
+; MSVC-X64-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; MSVC-X64-NEXT:    xorq %rsp, %rax
 ; MSVC-X64-NEXT:    movq __security_cookie(%rip), %rcx
 ; MSVC-X64-NEXT:    cmpq %rax, %rcx
@@ -65,7 +64,7 @@ define void @test(ptr %a) nounwind ssp {
 ; MSVC-X64-NEXT:    popq %rsi
 ; MSVC-X64-NEXT:    retq
 ; MSVC-X64-NEXT:  .LBB0_2: # %return
-; MSVC-X64-NEXT:    movq 56(%rsp), %rcx
+; MSVC-X64-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; MSVC-X64-NEXT:    xorq %rsp, %rcx
 ; MSVC-X64-NEXT:    callq __security_check_cookie
 ;
@@ -95,7 +94,7 @@ define void @test(ptr %a) nounwind ssp {
 ; MSVC-X86-O0-NEXT:    jne LBB0_3
 ; MSVC-X86-O0-NEXT:    jmp LBB0_2
 ; MSVC-X86-O0-NEXT:  LBB0_3: # %return
-; MSVC-X86-O0-NEXT:    movl 16(%esp), %ecx
+; MSVC-X86-O0-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; MSVC-X86-O0-NEXT:    xorl %esp, %ecx
 ; MSVC-X86-O0-NEXT:    calll @__security_check_cookie@4
 ; MSVC-X86-O0-NEXT:  LBB0_2: # %return
@@ -123,12 +122,13 @@ define void @test(ptr %a) nounwind ssp {
 ; MSVC-X64-O0-NEXT:    jne .LBB0_3
 ; MSVC-X64-O0-NEXT:    jmp .LBB0_2
 ; MSVC-X64-O0-NEXT:  .LBB0_3: # %return
-; MSVC-X64-O0-NEXT:    movq 48(%rsp), %rcx
+; MSVC-X64-O0-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; MSVC-X64-O0-NEXT:    xorq %rsp, %rcx
 ; MSVC-X64-O0-NEXT:    callq __security_check_cookie
 ; MSVC-X64-O0-NEXT:  .LBB0_2: # %return
 ; MSVC-X64-O0-NEXT:    addq $56, %rsp
 ; MSVC-X64-O0-NEXT:    retq
+
 entry:
  %a_addr = alloca ptr    ; <ptr> [#uses=2]
  %buf = alloca [8 x i8]    ; <ptr> [#uses=2]
@@ -162,17 +162,17 @@ define void @test_vla(i32 %n) nounwind ssp {
 ; MSVC-X86-NEXT:    addl $4, %esp
 ; MSVC-X86-NEXT:    movl -4(%ebp), %eax
 ; MSVC-X86-NEXT:    xorl %ebp, %eax
-; MSVC-X86-NEXT:    movl    ___security_cookie, %ecx
-; MSVC-X86-NEXT:    cmpl    %eax, %ecx
-; MSVC-X86-NEXT:    jne     LBB1_2
-; MSVC-X86-NEXT:   # %bb.1:
-; MSVC-X86-NEXT:    movl    %ebp, %esp
-; MSVC-X86-NEXT:    popl    %ebp
+; MSVC-X86-NEXT:    movl ___security_cookie, %ecx
+; MSVC-X86-NEXT:    cmpl %eax, %ecx
+; MSVC-X86-NEXT:    jne LBB1_2
+; MSVC-X86-NEXT:  # %bb.1:
+; MSVC-X86-NEXT:    movl %ebp, %esp
+; MSVC-X86-NEXT:    popl %ebp
 ; MSVC-X86-NEXT:    retl
-; MSVC-X86-NEXT:   LBB1_2:
-; MSVC-X86-NEXT:    movl    -4(%ebp), %ecx
-; MSVC-X86-NEXT:    xorl    %ebp, %ecx
-; MSVC-X86-NEXT:    calll   @__security_check_cookie@4
+; MSVC-X86-NEXT:  LBB1_2:
+; MSVC-X86-NEXT:    movl -4(%ebp), %ecx
+; MSVC-X86-NEXT:    xorl %ebp, %ecx
+; MSVC-X86-NEXT:    calll @__security_check_cookie@4
 ;
 ; MSVC-X64-LABEL: test_vla:
 ; MSVC-X64:       # %bb.0:
@@ -308,13 +308,13 @@ define void @test_vla_realign(i32 %n) nounwind ssp {
 ; MSVC-X86-NEXT:    movl ___security_cookie, %ecx
 ; MSVC-X86-NEXT:    cmpl %eax, %ecx
 ; MSVC-X86-NEXT:    jne LBB2_2
-; MSVC-X86-NEXT:    # %bb.1:
+; MSVC-X86-NEXT:  # %bb.1:
 ; MSVC-X86-NEXT:    leal -8(%ebp), %esp
 ; MSVC-X86-NEXT:    popl %esi
 ; MSVC-X86-NEXT:    popl %edi
 ; MSVC-X86-NEXT:    popl %ebp
 ; MSVC-X86-NEXT:    retl
-; MSVC-X86-NEXT:    LBB2_2:
+; MSVC-X86-NEXT:  LBB2_2:
 ; MSVC-X86-NEXT:    movl 12(%esi), %ecx
 ; MSVC-X86-NEXT:    xorl %ebp, %ecx
 ; MSVC-X86-NEXT:    calll @__security_check_cookie@4
