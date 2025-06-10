@@ -487,6 +487,14 @@ private:
   bool SelectCVTFixedPosRecipOperand(SDValue N, SDValue &FixedPos,
                                      unsigned Width);
 
+  template <unsigned RegWidth>
+  bool SelectCVTFixedPosRecipOperandVec(SDValue N, SDValue &FixedPos) {
+    return SelectCVTFixedPosRecipOperandVec(N, FixedPos, RegWidth);
+  }
+
+  bool SelectCVTFixedPosRecipOperandVec(SDValue N, SDValue &FixedPos,
+                                        unsigned Width);
+
   bool SelectCMP_SWAP(SDNode *N);
 
   bool SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift);
@@ -3952,6 +3960,156 @@ static bool checkCVTFixedPointOperandWithFBits(SelectionDAG *CurDAG, SDValue N,
   return true;
 }
 
+static bool checkCVTFixedPointOperandWithFBitsForVectors(SelectionDAG *CurDAG,
+                                                         SDValue N,
+                                                         SDValue &FixedPos,
+                                                         unsigned RegWidth,
+                                                         bool isReciprocal) {
+
+  // Fast Path
+  if (N.getOpcode() == ISD::BUILD_VECTOR) {
+    // Match build_vector <float C, float C, ...>
+    unsigned NumElts = N.getNumOperands();
+    ConstantFPSDNode *First = dyn_cast<ConstantFPSDNode>(N.getOperand(0));
+    if (!First)
+      return false;
+
+    APFloat FVal = First->getValueAPF();
+    for (unsigned i = 1; i < NumElts; ++i) {
+      ConstantFPSDNode *CFP = dyn_cast<ConstantFPSDNode>(N.getOperand(i));
+      if (!CFP || !CFP->isExactlyValue(FVal))
+        return false;
+    }
+
+    if (N.getValueType().getVectorElementType() == MVT::f16) {
+      bool ignored;
+      FVal.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven,
+                   &ignored);
+    }
+
+    if (isReciprocal) {
+      if (!FVal.getExactInverse(&FVal))
+        return false;
+    }
+
+    bool IsExact;
+    APSInt IntVal(RegWidth + 1, true);
+    FVal.convertToInteger(IntVal, APFloat::rmTowardZero, &IsExact);
+
+    if (!IsExact || !IntVal.isPowerOf2())
+      return false;
+
+    unsigned FBits = IntVal.logBase2();
+    if (FBits == 0 || FBits > RegWidth)
+      return false;
+
+    FixedPos = CurDAG->getTargetConstant(FBits, SDLoc(N), MVT::i32);
+    return true;
+  }
+
+  // N must be ISD::BITCAST and convert a vector integer type to a vector float
+  // type.
+  if (N.getOpcode() != ISD::BITCAST || !N.getValueType().isVector() ||
+      !N.getValueType().isFloatingPoint()) {
+    return false;
+  }
+  SDValue VectorIntNode = N.getOperand(
+      0); // This is the v2i32 node (t16 in your DAG), likely AArch64ISD::DUP
+
+  // The source of the bitcast must be a splat-forming operation from a
+  // constant.
+  SDValue ScalarSourceNode;
+  bool isSplatConfirmed = false;
+
+  if (VectorIntNode.getOpcode() == AArch64ISD::DUP) {
+    // AArch64ISD::DUP inherently means a splat of its scalar operand.
+    ScalarSourceNode = VectorIntNode.getOperand(0);
+    isSplatConfirmed = true;
+  } else if (VectorIntNode.getOpcode() == ISD::SPLAT_VECTOR) {
+    ScalarSourceNode = VectorIntNode.getOperand(0);
+    isSplatConfirmed = true;
+  } else if (VectorIntNode.getOpcode() == ISD::BUILD_VECTOR) {
+    // For ISD::BUILD_VECTOR, we must explicitly check if it's a constant splat.
+    BuildVectorSDNode *BVN = cast<BuildVectorSDNode>(VectorIntNode.getNode());
+    APInt SplatValue;
+    APInt SplatUndef;
+    unsigned SplatBitSize;
+    bool HasAnyUndefs;
+    if (BVN->isConstantSplat(SplatValue, SplatUndef, SplatBitSize,
+                             HasAnyUndefs)) {
+      ScalarSourceNode = VectorIntNode.getOperand(0);
+      isSplatConfirmed = true;
+      return false; // BUILD_VECTOR was not a splat
+    }
+  } else {
+    // The node below the bitcast is not a recognized splat-forming node.
+    return false;
+  }
+
+  if (!isSplatConfirmed)
+    return false;
+
+  // ScalarSourceNode must be a constant (ISD::Constant or ISD::ConstantFP).
+  APFloat FVal(0.0);
+  if (auto *CFP = dyn_cast<ConstantFPSDNode>(ScalarSourceNode)) {
+    FVal = CFP->getValueAPF();
+  } else if (auto *CI = dyn_cast<ConstantSDNode>(ScalarSourceNode)) {
+    // If it's an integer constant, interpret its bits as a floating-point
+    // value. The target float element type is from
+    // N.getValueType().getVectorElementType()
+    EVT FloatEltVT = N.getValueType().getVectorElementType();
+
+    if (FloatEltVT == MVT::f32) {
+      FVal = APFloat(APFloat::IEEEsingle(), CI->getAPIntValue());
+    } else if (FloatEltVT == MVT::f64) {
+      FVal = APFloat(APFloat::IEEEdouble(), CI->getAPIntValue());
+    } else if (FloatEltVT == MVT::f16) {
+      FVal = APFloat(APFloat::IEEEhalf(), CI->getAPIntValue());
+    } else {
+      return false;
+    }
+  } else {
+    return false;
+  }
+
+  // 4. Perform fixed-point reciprocal check and power-of-2 validation on FVal.
+  // Normalize f16 to f32 if needed for consistent APFloat operations (if
+  // VecFloatVT was v2f16).
+  if (N.getValueType().getVectorElementType() == MVT::f16) {
+    bool ignored;
+    FVal.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven, &ignored);
+  }
+
+  // Handle reciprocal case if applicable for this fixed-point conversion.
+  if (isReciprocal) {
+    if (!FVal.getExactInverse(&FVal))
+      return false;
+  }
+
+  bool IsExact;
+  // RegWidth is the width of the floating point element type (e.g., 32 for f32,
+  // 64 for f64).
+  APSInt IntVal(RegWidth + 1,
+                true); // Use RegWidth + 1 for sufficient bits for conversion
+  FVal.convertToInteger(IntVal, APFloat::rmTowardZero, &IsExact);
+
+  if (!IsExact || !IntVal.isPowerOf2())
+    return false;
+
+  unsigned FBits = IntVal.logBase2();
+  // FBits must be non-zero and within the expected range for the instruction's
+  // scale field. The scale field is 6 bits, so FBits must be <= 63.
+  if (FBits == 0 ||
+      FBits > RegWidth) // FBits should fit within the float's precision
+    return false;
+
+  // 5. Set FixedPos to the extracted FBits as an i32 constant SDValue.
+  // This is the i32 immediate that the SCVTF instruction's 'scale' operand
+  // expects.
+  FixedPos = CurDAG->getTargetConstant(FBits, SDLoc(N), MVT::i32);
+  return true;
+}
+
 bool AArch64DAGToDAGISel::SelectCVTFixedPosOperand(SDValue N, SDValue &FixedPos,
                                                    unsigned RegWidth) {
   return checkCVTFixedPointOperandWithFBits(CurDAG, N, FixedPos, RegWidth,
@@ -3963,6 +4121,13 @@ bool AArch64DAGToDAGISel::SelectCVTFixedPosRecipOperand(SDValue N,
                                                         unsigned RegWidth) {
   return checkCVTFixedPointOperandWithFBits(CurDAG, N, FixedPos, RegWidth,
                                             true);
+}
+
+bool AArch64DAGToDAGISel::SelectCVTFixedPosRecipOperandVec(SDValue N,
+                                                           SDValue &FixedPos,
+                                                           unsigned RegWidth) {
+  return checkCVTFixedPointOperandWithFBitsForVectors(CurDAG, N, FixedPos,
+                                                      RegWidth, true);
 }
 
 // Inspects a register string of the form o0:op1:CRn:CRm:op2 gets the fields
