@@ -1173,7 +1173,7 @@ void LowerTypeTestsModule::lowerTypeTestCalls(
     if (BSI.isAllOnes()) {
       TIL.TheKind = (BSI.BitSize == 1) ? TypeTestResolution::Single
                                        : TypeTestResolution::AllOnes;
-    } else if (BSI.BitSize <= 64) {
+    } else if (BSI.BitSize <= IntPtrTy->getBitWidth()) {
       TIL.TheKind = TypeTestResolution::Inline;
       uint64_t InlineBits = 0;
       for (auto Bit : BSI.Bits)
