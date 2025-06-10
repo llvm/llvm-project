@@ -249,25 +249,22 @@ llvm::json::Value toJSON(const AdapterFeature &);
 /// Information about the capabilities of a debug adapter.
 struct Capabilities {
   /// The supported features for this adapter.
-  llvm::DenseSet<AdapterFeature> supportedFeatures{};
+  llvm::DenseSet<AdapterFeature> supportedFeatures;
 
   /// Available exception filter options for the `setExceptionBreakpoints`
   /// request.
   std::optional<std::vector<ExceptionBreakpointsFilter>>
-      exceptionBreakpointFilters{};
+      exceptionBreakpointFilters;
 
   /// The set of characters that should trigger completion in a REPL. If not
   /// specified, the UI should assume the `.` character.
-  std::optional<std::vector<std::string>> completionTriggerCharacters =
-      std::nullopt;
+  std::optional<std::vector<std::string>> completionTriggerCharacters;
 
   /// The set of additional module information exposed by the debug adapter.
-  std::optional<std::vector<ColumnDescriptor>> additionalModuleColumns =
-      std::nullopt;
+  std::optional<std::vector<ColumnDescriptor>> additionalModuleColumns;
 
   /// Checksum algorithms supported by the debug adapter.
-  std::optional<std::vector<ChecksumAlgorithm>> supportedChecksumAlgorithms =
-      std::nullopt;
+  std::optional<std::vector<ChecksumAlgorithm>> supportedChecksumAlgorithms;
 
   /// Modes of breakpoints supported by the debug adapter, such as 'hardware' or
   /// 'software'. If present, the client may allow the user to select a mode and
@@ -275,13 +272,13 @@ struct Capabilities {
   ///
   /// Clients may present the first applicable mode in this array as the
   /// 'default' mode in gestures that set breakpoints.
-  std::optional<std::vector<BreakpointMode>> breakpointModes = std::nullopt;
+  std::optional<std::vector<BreakpointMode>> breakpointModes;
 
   /// lldb-dap Extensions
   /// @{
 
   /// The version of the adapter.
-  std::optional<std::string> lldbExtVersion = std::nullopt;
+  std::optional<std::string> lldbExtVersion;
 
   /// @}
 };

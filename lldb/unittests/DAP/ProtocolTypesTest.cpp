@@ -670,11 +670,14 @@ TEST(ProtocolTypesTest, ThreadResponseBody) {
 }
 
 TEST(ProtocolTypesTest, CapabilitiesEventBody) {
-  const CapabilitiesEventBody body{Capabilities{/*supportedFeatures=*/{
+  Capabilities capabilities;
+  capabilities.supportedFeatures = {
       eAdapterFeatureANSIStyling,
       eAdapterFeatureBreakpointLocationsRequest,
-  }}};
-  const StringRef json = R"({
+  };
+  CapabilitiesEventBody body;
+  body.capabilities = capabilities;
+  StringRef json = R"({
   "capabilities": {
     "supportsANSIStyling": true,
     "supportsBreakpointLocationsRequest": true
