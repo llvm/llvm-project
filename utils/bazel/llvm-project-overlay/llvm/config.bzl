@@ -32,6 +32,7 @@ posix_defines = [
     "BACKTRACE_HEADER=<execinfo.h>",
     r'LTDL_SHLIB_EXT=\".so\"',
     r'LLVM_PLUGIN_EXT=\".so\"',
+    "LLVM_ENABLE_PLUGINS=1",
     "LLVM_ENABLE_THREADS=1",
     "HAVE_DEREGISTER_FRAME=1",
     "HAVE_LIBPTHREAD=1",

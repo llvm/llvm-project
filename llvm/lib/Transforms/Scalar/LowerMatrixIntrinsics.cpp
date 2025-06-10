@@ -22,6 +22,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -40,6 +41,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -51,6 +53,10 @@ using namespace llvm;
 using namespace PatternMatch;
 
 #define DEBUG_TYPE "lower-matrix-intrinsics"
+
+STATISTIC(FlattenedMatrices, "Number of matrix flattenings");
+STATISTIC(ReshapedMatrices, "Number of matrix reshapes");
+STATISTIC(SplitMatrices, "Number of matrix splits");
 
 static cl::opt<bool>
     FuseMatrix("fuse-matrix", cl::init(true), cl::Hidden,
@@ -221,7 +227,16 @@ struct ShapeInfo {
 
   /// Returns the transposed shape.
   ShapeInfo t() const { return ShapeInfo(NumColumns, NumRows); }
+
+  friend raw_ostream &operator<<(raw_ostream &OS, ShapeInfo SI);
+
+  LLVM_DUMP_METHOD void dump() const { dbgs() << *this << '\n'; }
 };
+
+raw_ostream &operator<<(raw_ostream &OS, ShapeInfo SI) {
+  return OS << SI.NumRows << 'x' << SI.NumColumns;
+}
+
 } // namespace
 
 static bool isUniformShape(Value *V) {
@@ -231,6 +246,15 @@ static bool isUniformShape(Value *V) {
 
   if (I->isBinaryOp())
     return true;
+
+  if (auto *II = dyn_cast<IntrinsicInst>(V))
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::abs:
+    case Intrinsic::fabs:
+      return true;
+    default:
+      return false;
+    }
 
   switch (I->getOpcode()) {
   case Instruction::FNeg:
@@ -457,6 +481,8 @@ class LowerMatrixIntrinsics {
       return getNumColumns();
     }
 
+    ShapeInfo shape() const { return {getNumRows(), getNumColumns()}; }
+
     /// Extract a vector of \p NumElts starting at index (\p I, \p J). If the
     /// matrix is column-major, the result vector is extracted from a column
     /// vector, otherwise from a row vector.
@@ -569,6 +595,28 @@ public:
       SplitVecs.push_back(V);
     }
 
+    LLVM_DEBUG(if (Instruction *Inst = dyn_cast<Instruction>(MatrixVal)) {
+      if (Found != Inst2ColumnMatrix.end()) {
+        // FIXME: re: "at least": SplitVecs.size() doesn't count the shuffles
+        // that embedInVector created.
+        dbgs() << "matrix reshape from " << Found->second.shape() << " to "
+               << SI << " using at least " << SplitVecs.size()
+               << " shuffles on behalf of:\n"
+               << *Inst << '\n';
+        ReshapedMatrices++;
+      } else if (!ShapeMap.contains(MatrixVal)) {
+        dbgs() << "splitting a " << SI << " matrix with " << SplitVecs.size()
+               << " shuffles beacuse we do not have a shape-aware lowering for "
+                  "its def:\n"
+               << *Inst << '\n';
+        SplitMatrices++;
+      } else {
+        // The ShapeMap has it, so it's a case where we're being lowered
+        // before the def, and we expect that InstCombine will clean things up
+        // afterward.
+      }
+    });
+
     return {SplitVecs};
   }
 
@@ -618,7 +666,7 @@ public:
       case Intrinsic::matrix_column_major_store:
         return true;
       default:
-        return false;
+        return isUniformShape(II);
       }
     return isUniformShape(V) || isa<StoreInst>(V) || isa<LoadInst>(V);
   }
@@ -1126,6 +1174,31 @@ public:
       return LowerColumnMajorLoad(Inst);
     case Intrinsic::matrix_column_major_store:
       return LowerColumnMajorStore(Inst);
+    case Intrinsic::abs:
+    case Intrinsic::fabs: {
+      IRBuilder<> Builder(Inst);
+      MatrixTy Result;
+      MatrixTy M = getMatrix(Inst->getOperand(0), SI, Builder);
+      Builder.setFastMathFlags(getFastMathFlags(Inst));
+
+      for (auto &Vector : M.vectors()) {
+        switch (Inst->getIntrinsicID()) {
+        case Intrinsic::abs:
+          Result.addVector(Builder.CreateBinaryIntrinsic(Intrinsic::abs, Vector,
+                                                         Inst->getOperand(1)));
+          continue;
+        case Intrinsic::fabs:
+          Result.addVector(
+              Builder.CreateUnaryIntrinsic(Inst->getIntrinsicID(), Vector));
+          continue;
+        default:
+          llvm_unreachable("unexpected intrinsic");
+        }
+      }
+
+      return Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
+                                               Result.getNumVectors());
+    }
     default:
       break;
     }
@@ -1348,11 +1421,21 @@ public:
     ToRemove.push_back(Inst);
     Value *Flattened = nullptr;
     for (Use &U : llvm::make_early_inc_range(Inst->uses())) {
-      if (!ShapeMap.contains(U.getUser())) {
-        if (!Flattened)
-          Flattened = Matrix.embedInVector(Builder);
-        U.set(Flattened);
+      if (ShapeMap.contains(U.getUser()))
+        continue;
+
+      if (!Flattened) {
+        Flattened = Matrix.embedInVector(Builder);
+        LLVM_DEBUG(
+            if (Instruction *User = dyn_cast<Instruction>(U.getUser())) dbgs()
+                << "flattening a " << Matrix.shape() << " matrix:\n"
+                << *Inst
+                << "\nbecause we do not have a shape-aware lowering for its "
+                   "user:\n"
+                << *User << '\n';);
+        FlattenedMatrices++;
       }
+      U.set(Flattened);
     }
   }
 
