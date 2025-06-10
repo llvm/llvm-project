@@ -369,7 +369,11 @@ Align AsmPrinter::getGVAlignment(const GlobalObject *GV, const DataLayout &DL,
     Alignment = InAlign;
 
   // If the GV has a specified alignment, take it into account.
-  const MaybeAlign GVAlign(GV->getAlign());
+  MaybeAlign GVAlign;
+  if (auto *GVar = dyn_cast<GlobalVariable>(GV))
+    GVAlign = GVar->getAlign();
+  else if (auto *F = dyn_cast<Function>(GV))
+    GVAlign = F->getAlign();
   if (!GVAlign)
     return Alignment;
 

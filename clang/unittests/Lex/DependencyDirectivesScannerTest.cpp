@@ -677,13 +677,28 @@ TEST(MinimizeSourceToDependencyDirectivesTest, EmptyIncludesAndImports) {
                Out.data());
 }
 
-TEST(MinimizeSourceToDependencyDirectivesTest, AtImportFailures) {
+TEST(MinimizeSourceToDependencyDirectivesTest, ImportFailures) {
   SmallVector<char, 128> Out;
 
   ASSERT_TRUE(minimizeSourceToDependencyDirectives("@import A\n", Out));
   ASSERT_FALSE(
       minimizeSourceToDependencyDirectives("@import MACRO(A);\n", Out));
   ASSERT_FALSE(minimizeSourceToDependencyDirectives("@import \" \";\n", Out));
+
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives("import <Foo.h>\n"
+                                                    "@import Foo;",
+                                                    Out));
+  EXPECT_STREQ("@import Foo;\n", Out.data());
+
+  ASSERT_FALSE(
+      minimizeSourceToDependencyDirectives("import <Foo.h>\n"
+                                           "#import <Foo.h>\n"
+                                           "@;\n"
+                                           "#pragma clang module import Foo",
+                                           Out));
+  EXPECT_STREQ("#import <Foo.h>\n"
+               "#pragma clang module import Foo\n",
+               Out.data());
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest, RawStringLiteral) {

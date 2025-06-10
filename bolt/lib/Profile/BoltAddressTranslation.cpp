@@ -552,7 +552,7 @@ BoltAddressTranslation::getFallthroughsInTrace(uint64_t FuncAddress,
     return Res;
 
   for (auto Iter = FromIter; Iter != ToIter;) {
-    const uint32_t Src = Iter->second >> 1;
+    const uint32_t Src = Iter->first;
     if (Iter->second & BRANCHENTRY) {
       ++Iter;
       continue;
@@ -563,7 +563,7 @@ BoltAddressTranslation::getFallthroughsInTrace(uint64_t FuncAddress,
       ++Iter;
     if (Iter->second & BRANCHENTRY)
       break;
-    Res.emplace_back(Src, Iter->second >> 1);
+    Res.emplace_back(Src, Iter->first);
   }
 
   return Res;

@@ -514,6 +514,10 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   deleteTempFiles();
 
 heatmap:
+  // Sort parsed traces for faster processing.
+  if (!opts::BasicAggregation)
+    llvm::sort(Traces, llvm::less_first());
+
   if (!opts::HeatmapMode)
     return Error::success();
 
@@ -580,8 +584,10 @@ void DataAggregator::processProfile(BinaryContext &BC) {
     }
   }
 
-  for (auto &FuncBranches : NamesToBranches)
+  for (auto &FuncBranches : NamesToBranches) {
     llvm::stable_sort(FuncBranches.second.Data);
+    llvm::stable_sort(FuncBranches.second.EntryData);
+  }
 
   for (auto &MemEvents : NamesToMemEvents)
     llvm::stable_sort(MemEvents.second.Data);
@@ -715,55 +721,53 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
   return true;
 }
 
-bool DataAggregator::doBranch(const Trace &Trace, uint64_t Count,
-                              uint64_t Mispreds) {
-  uint64_t From = Trace.Branch, To = Trace.From;
-  // Returns whether \p Offset in \p Func contains a return instruction.
-  auto checkReturn = [&](const BinaryFunction &Func, const uint64_t Offset) {
-    auto isReturn = [&](auto MI) { return MI && BC->MIB->isReturn(*MI); };
-    const uint64_t Addr = Func.getAddress() + Offset;
-    if (llvm::is_contained(Returns, Addr))
-      return true;
-    if (Func.hasInstructions()
-            ? isReturn(Func.getInstructionAtOffset(Offset))
-            : isReturn(Func.disassembleInstructionAtOffset(Offset)))
-      return Returns.emplace(Addr).second;
-    return false;
-  };
+bool DataAggregator::checkReturn(uint64_t Addr) {
+  auto isReturn = [&](auto MI) { return MI && BC->MIB->isReturn(*MI); };
+  if (llvm::is_contained(Returns, Addr))
+    return true;
 
+  BinaryFunction *Func = getBinaryFunctionContainingAddress(Addr);
+  if (!Func)
+    return false;
+
+  const uint64_t Offset = Addr - Func->getAddress();
+  if (Func->hasInstructions()
+          ? isReturn(Func->getInstructionAtOffset(Offset))
+          : isReturn(Func->disassembleInstructionAtOffset(Offset))) {
+    Returns.emplace(Addr);
+    return true;
+  }
+  return false;
+}
+
+bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
+                              uint64_t Mispreds) {
   // Mutates \p Addr to an offset into the containing function, performing BAT
   // offset translation and parent lookup.
   //
-  // Returns the containing function (or BAT parent) and whether the address
-  // corresponds to a return (if \p IsFrom) or a call continuation (otherwise).
+  // Returns the containing function (or BAT parent).
   auto handleAddress = [&](uint64_t &Addr, bool IsFrom) {
     BinaryFunction *Func = getBinaryFunctionContainingAddress(Addr);
     if (!Func) {
       Addr = 0;
-      return std::pair{Func, false};
+      return Func;
     }
 
     Addr -= Func->getAddress();
-
-    bool IsRet = IsFrom && checkReturn(*Func, Addr);
 
     if (BAT)
       Addr = BAT->translate(Func->getAddress(), Addr, IsFrom);
 
     if (BinaryFunction *ParentFunc = getBATParentFunction(*Func))
-      Func = ParentFunc;
+      return ParentFunc;
 
-    return std::pair{Func, IsRet};
+    return Func;
   };
 
-  auto [FromFunc, IsReturn] = handleAddress(From, /*IsFrom*/ true);
-  auto [ToFunc, _] = handleAddress(To, /*IsFrom*/ false);
+  BinaryFunction *FromFunc = handleAddress(From, /*IsFrom*/ true);
+  BinaryFunction *ToFunc = handleAddress(To, /*IsFrom*/ false);
   if (!FromFunc && !ToFunc)
     return false;
-
-  // Ignore returns.
-  if (IsReturn)
-    return true;
 
   // Treat recursive control transfers as inter-branches.
   if (FromFunc == ToFunc && To != 0) {
@@ -774,8 +778,9 @@ bool DataAggregator::doBranch(const Trace &Trace, uint64_t Count,
   return doInterBranch(FromFunc, ToFunc, From, To, Count, Mispreds);
 }
 
-bool DataAggregator::doTrace(const Trace &Trace, uint64_t Count) {
-  const uint64_t Branch = Trace.Branch, From = Trace.From, To = Trace.To;
+bool DataAggregator::doTrace(const Trace &Trace, uint64_t Count,
+                             bool IsReturn) {
+  const uint64_t From = Trace.From, To = Trace.To;
   BinaryFunction *FromFunc = getBinaryFunctionContainingAddress(From);
   BinaryFunction *ToFunc = getBinaryFunctionContainingAddress(To);
   if (!FromFunc || !ToFunc) {
@@ -788,9 +793,6 @@ bool DataAggregator::doTrace(const Trace &Trace, uint64_t Count) {
     LLVM_DEBUG(dbgs() << "Invalid trace " << Trace << '\n');
     return false;
   }
-
-  // All branches are checked in doBranch except external addresses.
-  bool IsReturn = llvm::is_contained(Returns, Branch);
 
   // Set ParentFunc to BAT parent function or FromFunc itself.
   BinaryFunction *ParentFunc = getBATParentFunction(*FromFunc);
@@ -811,8 +813,13 @@ bool DataAggregator::doTrace(const Trace &Trace, uint64_t Count) {
 
   LLVM_DEBUG(dbgs() << "Processing " << FTs->size() << " fallthroughs for "
                     << FromFunc->getPrintName() << ":" << Trace << '\n');
-  for (auto [From, To] : *FTs)
+  for (auto [From, To] : *FTs) {
+    if (BAT) {
+      From = BAT->translate(FromFunc->getAddress(), From, /*IsBranchSrc=*/true);
+      To = BAT->translate(FromFunc->getAddress(), To, /*IsBranchSrc=*/false);
+    }
     doIntraBranch(*ParentFunc, From, To, Count, false);
+  }
 
   return true;
 }
@@ -1200,7 +1207,7 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   // Storage for parsed fields.
   StringRef EventName;
   std::optional<Location> Addr[3];
-  int64_t Counters[2];
+  int64_t Counters[2] = {0};
 
   while (Type == INVALID || Type == EVENT_NAME) {
     while (checkAndConsumeFS()) {
@@ -1291,11 +1298,11 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   }
 
   if (Type == BRANCH)
-    Addr[2] = Location(Trace::EXTERNAL);
+    Addr[2] = Location(Trace::BR_ONLY);
 
   if (Type == RETURN) {
     if (!Addr[0]->Offset)
-      Addr[0]->Offset = Trace::EXTERNAL_RETURN;
+      Addr[0]->Offset = Trace::BR_EXTERNAL_RETURN;
     Returns.emplace(Addr[0]->Offset);
   }
 
@@ -1304,8 +1311,9 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
 
   Traces.emplace_back(T, TI);
 
-  if (Addr[2]->Offset)
+  if (Addr[2]->Offset != Trace::BR_ONLY)
     NumTraces += Count;
+
   NumTotalSamples += Count;
 
   return std::error_code();
@@ -1318,7 +1326,7 @@ bool DataAggregator::ignoreKernelInterrupt(LBREntry &LBR) const {
 
 std::error_code DataAggregator::printLBRHeatMap() {
   outs() << "PERF2BOLT: parse branch events...\n";
-  NamedRegionTimer T("parseBranch", "Parsing branch events", TimerGroupName,
+  NamedRegionTimer T("buildHeatmap", "Building heatmap", TimerGroupName,
                      TimerGroupDesc, opts::TimeAggregator);
 
   if (BC->IsLinuxKernel) {
@@ -1355,7 +1363,7 @@ std::error_code DataAggregator::printLBRHeatMap() {
   for (const auto &[PC, Hits] : BasicSamples)
     HM.registerAddress(PC, Hits);
   for (const auto &[Trace, Info] : Traces)
-    if (Trace.To)
+    if (Trace.To != Trace::BR_ONLY)
       HM.registerAddressRange(Trace.From, Trace.To, Info.TakenCount);
 
   if (HM.getNumInvalidRanges())
@@ -1402,11 +1410,16 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
     // chronological order)
     if (NeedsSkylakeFix && NumEntry <= 2)
       continue;
-    TakenBranchInfo &Info = TraceMap[Trace{
-        LBR.From, LBR.To, NextLBR ? NextLBR->From : Trace::EXTERNAL}];
+    uint64_t TraceTo = Trace::BR_ONLY;
+    if (NextLBR) {
+      TraceTo = NextLBR->From;
+      ++NumTraces;
+    }
+    NextLBR = &LBR;
+
+    TakenBranchInfo &Info = TraceMap[Trace{LBR.From, LBR.To, TraceTo}];
     ++Info.TakenCount;
     Info.MispredCount += LBR.Mispred;
-    NextLBR = &LBR;
   }
   // Record LBR addresses not covered by fallthroughs (bottom-of-stack source
   // and top-of-stack target) as basic samples for heatmap.
@@ -1548,11 +1561,13 @@ void DataAggregator::processBranchEvents() {
                      TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
 
   for (const auto &[Trace, Info] : Traces) {
-    if (Trace.Branch != Trace::FT_ONLY &&
+    bool IsReturn = checkReturn(Trace.Branch);
+    // Ignore returns.
+    if (!IsReturn && Trace.Branch != Trace::FT_ONLY &&
         Trace.Branch != Trace::FT_EXTERNAL_ORIGIN)
-      doBranch(Trace, Info.TakenCount, Info.MispredCount);
-    if (Trace.To)
-      doTrace(Trace, Info.TakenCount);
+      doBranch(Trace.Branch, Trace.From, Info.TakenCount, Info.MispredCount);
+    if (Trace.To != Trace::BR_ONLY)
+      doTrace(Trace, Info.TakenCount, IsReturn);
   }
   printBranchSamplesDiagnostics();
 }
@@ -2209,7 +2224,6 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
       YamlBF.Id = BF->getFunctionNumber();
       YamlBF.Hash = BAT->getBFHash(FuncAddress);
       YamlBF.ExecCount = BF->getKnownExecutionCount();
-      YamlBF.ExternEntryCount = BF->getExternEntryCount();
       YamlBF.NumBasicBlocks = BAT->getNumBasicBlocks(FuncAddress);
       const BoltAddressTranslation::BBHashMapTy &BlockMap =
           BAT->getBBHashMap(FuncAddress);

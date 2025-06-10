@@ -101,28 +101,27 @@ private:
 
   /// Container for the unit of branch data.
   /// Backwards compatible with legacy use for branches and fall-throughs:
-  /// - if \p Branch is FT_ONLY or FT_EXTERNAL_ORIGIN, the trace only contains
-  ///   fall-through data,
-  /// - if \p To is EXTERNAL, the trace only contains branch data.
+  /// - if \p Branch is FT_ONLY or FT_EXTERNAL_ORIGIN, the trace only
+  ///   contains fall-through data,
+  /// - if \p To is BR_ONLY, the trace only contains branch data.
   struct Trace {
     static constexpr const uint64_t EXTERNAL = 0ULL;
+    static constexpr const uint64_t BR_ONLY = -1ULL;
     static constexpr const uint64_t FT_ONLY = -1ULL;
     static constexpr const uint64_t FT_EXTERNAL_ORIGIN = -2ULL;
-    static constexpr const uint64_t EXTERNAL_RETURN = -3ULL;
+    static constexpr const uint64_t BR_EXTERNAL_RETURN = -3ULL;
 
     uint64_t Branch;
     uint64_t From;
     uint64_t To;
-    bool operator==(const Trace &Other) const {
-      return Branch == Other.Branch && From == Other.From && To == Other.To;
-    }
+    auto tie() const { return std::tie(Branch, From, To); }
+    bool operator==(const Trace &Other) const { return tie() == Other.tie(); }
+    bool operator<(const Trace &Other) const { return tie() < Other.tie(); }
   };
   friend raw_ostream &operator<<(raw_ostream &OS, const Trace &);
 
   struct TraceHash {
-    size_t operator()(const Trace &L) const {
-      return llvm::hash_combine(L.Branch, L.From, L.To);
-    }
+    size_t operator()(const Trace &L) const { return hash_combine(L.tie()); }
   };
 
   struct TakenBranchInfo {
@@ -270,11 +269,14 @@ private:
                      uint64_t From, uint64_t To, uint64_t Count,
                      uint64_t Mispreds);
 
+  /// Checks if \p Addr corresponds to a return instruction.
+  bool checkReturn(uint64_t Addr);
+
   /// Register a \p Branch.
-  bool doBranch(const Trace &Trace, uint64_t Count, uint64_t Mispreds);
+  bool doBranch(uint64_t From, uint64_t To, uint64_t Count, uint64_t Mispreds);
 
   /// Register a trace between two LBR entries supplied in execution order.
-  bool doTrace(const Trace &Trace, uint64_t Count);
+  bool doTrace(const Trace &Trace, uint64_t Count, bool IsReturn);
 
   /// Parser helpers
   /// Return false if we exhausted our parser buffer and finished parsing
@@ -532,14 +534,14 @@ inline raw_ostream &operator<<(raw_ostream &OS,
   case DataAggregator::Trace::FT_ONLY:
   case DataAggregator::Trace::FT_EXTERNAL_ORIGIN:
     break;
-  case DataAggregator::Trace::EXTERNAL_RETURN:
+  case DataAggregator::Trace::BR_EXTERNAL_RETURN:
     OS << "0 -> ";
     break;
   default:
     OS << Twine::utohexstr(T.Branch) << " -> ";
   }
   OS << Twine::utohexstr(T.From);
-  if (T.To)
+  if (T.To != DataAggregator::Trace::BR_ONLY)
     OS << " ... " << Twine::utohexstr(T.To);
   return OS;
 }
