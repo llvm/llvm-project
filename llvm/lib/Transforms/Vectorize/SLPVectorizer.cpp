@@ -226,6 +226,8 @@ static const int MinScheduleRegionSize = 16;
 /// Maximum allowed number of operands in the PHI nodes.
 static const unsigned MaxPHINumOperands = 128;
 
+static SmallDenseMap<Value *, Value *> IdentityInstrsMp;
+
 /// Predicate for the element types that the SLP vectorizer supports.
 ///
 /// The most important thing to filter here are types which are invalid in LLVM
@@ -2075,6 +2077,55 @@ public:
 
   OptimizationRemarkEmitter *getORE() { return ORE; }
 
+  static SmallVector<Value*, 8> setIdentityInstr(ArrayRef<Value *> VL) {
+    SmallVector<Value *, 8> New_VL(VL.begin(), VL.end());
+   if (VL.size() <= 2)
+     return New_VL;
+    auto It = find_if(VL, IsaPred<Instruction>);
+    if (It == VL.end())
+      return New_VL;
+    // work on unique list of instructions only:
+    SmallDenseMap<llvm::StringRef, bool> SeenInstrs;
+    for (auto *V : VL)
+      if (auto *I = dyn_cast<Instruction>(V)) {
+        if (!SeenInstrs[I->getName()])
+          SeenInstrs[I->getName()] = true;
+        else {
+          return New_VL;
+        }
+      }
+    Instruction *MainOp = cast<Instruction>(*It);
+    auto ValidOperands = count_if(VL, IsaPred<Instruction, PoisonValue>);
+    if (ValidOperands != (int) VL.size()-1)
+      return New_VL;
+    auto DifferentOperand = find_if_not(VL, IsaPred<Instruction, PoisonValue>);
+    if (DifferentOperand == VL.end())
+      return New_VL;
+    assert(!isa<Instruction>(*DifferentOperand) && !isa<PoisonValue>(*DifferentOperand) &&
+    "Expected different operand to be not an instruction");
+    auto FoundIdentityInstrIt = IdentityInstrsMp.find(*DifferentOperand);
+    if (FoundIdentityInstrIt != IdentityInstrsMp.end()) {
+      auto OperandIndex = std::distance(VL.begin(), DifferentOperand);
+      New_VL[OperandIndex] = FoundIdentityInstrIt->second;
+      return New_VL;
+    }
+    auto *Identity = ConstantExpr::getIdentity(MainOp, MainOp->getType(), true /*AllowRHSConstant*/);
+    if (!Identity)
+      return New_VL;
+    auto *NewInstr = MainOp->clone();
+    NewInstr->setOperand(0, *DifferentOperand);
+    NewInstr->setOperand(1, Identity);
+    NewInstr->insertAfter(cast<Instruction>(MainOp));
+    NewInstr->setName((*DifferentOperand)->getName() + ".identity");
+    auto OperandIndex = std::distance(VL.begin(), DifferentOperand);
+    New_VL[OperandIndex] = NewInstr;
+    assert(find_if_not(New_VL, IsaPred<Instruction, PoisonValue>) ==
+      New_VL.end() &&
+          "Expected all operands to be instructions");
+    IdentityInstrsMp.try_emplace(*DifferentOperand, NewInstr);
+    return New_VL;
+  }
+
   /// This structure holds any data we need about the edges being traversed
   /// during buildTreeRec(). We keep track of:
   /// (i) the user TreeEntry index, and
@@ -3786,7 +3837,8 @@ private:
       assert(OpVL.size() <= Scalars.size() &&
              "Number of operands is greater than the number of scalars.");
       Operands[OpIdx].resize(OpVL.size());
-      copy(OpVL, Operands[OpIdx].begin());
+      auto NewVL = BoUpSLP::setIdentityInstr(OpVL);
+      copy(NewVL, Operands[OpIdx].begin());
     }
 
   public:
@@ -4084,18 +4136,19 @@ private:
         "Reshuffling scalars not yet supported for nodes with padding");
     Last->ReuseShuffleIndices.append(ReuseShuffleIndices.begin(),
                                      ReuseShuffleIndices.end());
+    SmallVector<Value*, 8> NewVL =BoUpSLP::setIdentityInstr(VL);
     if (ReorderIndices.empty()) {
-      Last->Scalars.assign(VL.begin(), VL.end());
+      Last->Scalars.assign(NewVL.begin(), NewVL.end());
       if (S)
         Last->setOperations(S);
     } else {
       // Reorder scalars and build final mask.
-      Last->Scalars.assign(VL.size(), nullptr);
+      Last->Scalars.assign(NewVL.size(), nullptr);
       transform(ReorderIndices, Last->Scalars.begin(),
-                [VL](unsigned Idx) -> Value * {
-                  if (Idx >= VL.size())
-                    return UndefValue::get(VL.front()->getType());
-                  return VL[Idx];
+                [NewVL](unsigned Idx) -> Value * {
+                  if (Idx >= NewVL.size())
+                    return UndefValue::get(NewVL.front()->getType());
+                  return NewVL[Idx];
                 });
       InstructionsState S = getSameOpcode(Last->Scalars, *TLI);
       if (S)
@@ -4106,7 +4159,7 @@ private:
       assert(S && "Split nodes must have operations.");
       Last->setOperations(S);
       SmallPtrSet<Value *, 4> Processed;
-      for (Value *V : VL) {
+      for (Value *V : NewVL) {
         auto *I = dyn_cast<Instruction>(V);
         if (!I)
           continue;
@@ -4121,10 +4174,10 @@ private:
         }
       }
     } else if (!Last->isGather()) {
-      if (doesNotNeedToSchedule(VL))
+      if (doesNotNeedToSchedule(NewVL))
         Last->setDoesNotNeedToSchedule();
       SmallPtrSet<Value *, 4> Processed;
-      for (Value *V : VL) {
+      for (Value *V : NewVL) {
         if (isa<PoisonValue>(V))
           continue;
         auto It = ScalarToTreeEntries.find(V);
@@ -4146,7 +4199,7 @@ private:
 #if !defined(NDEBUG) || defined(EXPENSIVE_CHECKS)
         auto *BundleMember = Bundle.getBundle().begin();
         SmallPtrSet<Value *, 4> Processed;
-        for (Value *V : VL) {
+        for (Value *V : NewVL) {
           if (doesNotNeedToBeScheduled(V) || !Processed.insert(V).second)
             continue;
           ++BundleMember;
@@ -4159,7 +4212,7 @@ private:
     } else {
       // Build a map for gathered scalars to the nodes where they are used.
       bool AllConstsOrCasts = true;
-      for (Value *V : VL)
+      for (Value *V : NewVL)
         if (!isConstant(V)) {
           auto *I = dyn_cast<CastInst>(V);
           AllConstsOrCasts &= I && I->getType()->isIntegerTy();
@@ -4170,7 +4223,7 @@ private:
       if (AllConstsOrCasts)
         CastMaxMinBWSizes =
             std::make_pair(std::numeric_limits<unsigned>::max(), 1);
-      MustGather.insert_range(VL);
+      MustGather.insert_range(NewVL);
     }
 
     if (UserTreeIdx.UserTE)
@@ -20844,6 +20897,11 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
     }
   }
 
+  for (auto &I : IdentityInstrsMp) {
+    if (I.second && cast<Instruction>(I.second)->getParent())
+      cast<Instruction>(I.second)->eraseFromParent();
+  }
+  IdentityInstrsMp.clear();
   if (Changed) {
     R.optimizeGatherSequence();
     LLVM_DEBUG(dbgs() << "SLP: vectorized \"" << F.getName() << "\"\n");
