@@ -141,6 +141,10 @@ public:
   getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty = {},
                      ForDefinition_t isForDefinition = NotForDefinition);
 
+  CharUnits computeNonVirtualBaseClassOffset(
+      const CXXRecordDecl *derivedClass,
+      llvm::iterator_range<CastExpr::path_const_iterator> path);
+
   /// Return a constant array for the given string.
   mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *e);
 
@@ -167,7 +171,30 @@ public:
   clang::CharUnits getNaturalTypeAlignment(clang::QualType t,
                                            LValueBaseInfo *baseInfo);
 
+  /// This contains all the decls which have definitions but which are deferred
+  /// for emission and therefore should only be output if they are actually
+  /// used. If a decl is in this, then it is known to have not been referenced
+  /// yet.
+  std::map<llvm::StringRef, clang::GlobalDecl> deferredDecls;
+
+  // This is a list of deferred decls which we have seen that *are* actually
+  // referenced. These get code generated when the module is done.
+  std::vector<clang::GlobalDecl> deferredDeclsToEmit;
+  void addDeferredDeclToEmit(clang::GlobalDecl GD) {
+    deferredDeclsToEmit.emplace_back(GD);
+  }
+
   void emitTopLevelDecl(clang::Decl *decl);
+
+  /// Determine whether the definition must be emitted; if this returns \c
+  /// false, the definition can be emitted lazily if it's used.
+  bool mustBeEmitted(const clang::ValueDecl *d);
+
+  /// Determine whether the definition can be emitted eagerly, or should be
+  /// delayed until the end of the translation unit. This is relevant for
+  /// definitions whose linkage can change, e.g. implicit function
+  /// instantiations which may later be explicitly instantiated.
+  bool mayBeEmittedEagerly(const clang::ValueDecl *d);
 
   bool verifyModule() const;
 
@@ -178,6 +205,10 @@ public:
   getAddrOfFunction(clang::GlobalDecl gd, mlir::Type funcType = nullptr,
                     bool forVTable = false, bool dontDefer = false,
                     ForDefinition_t isForDefinition = NotForDefinition);
+
+  mlir::Operation *
+  getAddrOfGlobal(clang::GlobalDecl gd,
+                  ForDefinition_t isForDefinition = NotForDefinition);
 
   /// Emit code for a single global function or variable declaration. Forward
   /// declarations are emitted lazily.
@@ -214,6 +245,9 @@ public:
 
   void emitTentativeDefinition(const VarDecl *d);
 
+  // Make sure that this type is translated.
+  void updateCompletedType(const clang::TagDecl *td);
+
   bool supportsCOMDAT() const;
   void maybeSetTrivialComdat(const clang::Decl &d, mlir::Operation *op);
 
@@ -234,7 +268,16 @@ public:
     return builder.getSizeFromCharUnits(size);
   }
 
+  /// Emit any needed decls for which code generation was deferred.
+  void emitDeferred();
+
+  /// Helper for `emitDeferred` to apply actual codegen.
+  void emitGlobalDecl(const clang::GlobalDecl &d);
+
   const llvm::Triple &getTriple() const { return target.getTriple(); }
+
+  // Finalize CIR code generation.
+  void release();
 
   /// -------
   /// Visibility and Linkage
