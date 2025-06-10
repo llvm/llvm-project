@@ -260,8 +260,7 @@ applyTileToAll(RewriterBase &rewriter, Operation *transformOp,
       return failure();
 
     // Perform the replacement of tiled and fused values.
-    rewriter.replaceOp(tilingInterfaceOp,
-                       tiledResults->mergeResult.replacements);
+    rewriter.replaceOp(tilingInterfaceOp, tiledResults->replacements);
 
     // Report back the relevant handles to the transform op.
     tiledOps.push_back(tiledResults->tiledOps.front());
