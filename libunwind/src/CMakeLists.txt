@@ -74,6 +74,9 @@ set(LIBUNWIND_SOURCES
 if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
   add_link_flags_if_supported(-nostdlib++)
 else()
+  if (C_SUPPORTS_NODEFAULTLIBS_FLAG)
+    add_link_flags_if_supported(-nodefaultlibs)
+  endif()
   if (LIBUNWIND_USE_COMPILER_RT)
     add_library_flags("${LIBUNWIND_BUILTINS_LIBRARY}")
   else()
@@ -164,7 +167,6 @@ set_target_properties(unwind_shared
   PROPERTIES
     EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBUNWIND_ENABLE_SHARED}>,FALSE,TRUE>"
     LINK_FLAGS "${LIBUNWIND_LINK_FLAGS}"
-    LINKER_LANGUAGE C
     OUTPUT_NAME "${LIBUNWIND_SHARED_OUTPUT_NAME}"
     VERSION     "${LIBUNWIND_LIBRARY_VERSION}"
     SOVERSION   "1"
@@ -211,7 +213,6 @@ set_target_properties(unwind_static
   PROPERTIES
     EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBUNWIND_ENABLE_STATIC}>,FALSE,TRUE>"
     LINK_FLAGS "${LIBUNWIND_LINK_FLAGS}"
-    LINKER_LANGUAGE C
     OUTPUT_NAME "${LIBUNWIND_STATIC_OUTPUT_NAME}"
 )
 
