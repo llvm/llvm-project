@@ -103,7 +103,7 @@ void CIRGenFunction::emitCXXConstructorCall(
     const CXXConstructorDecl *d, CXXCtorType type, bool forVirtualBase,
     bool delegating, Address thisAddr, CallArgList &args, SourceLocation loc) {
 
-  const auto *cd = d->getParent();
+  const CXXRecordDecl *crd = d->getParent();
 
   // If this is a call to a trivial default constructor:
   // In LLVM: do nothing.
@@ -133,7 +133,7 @@ void CIRGenFunction::emitCXXConstructorCall(
   cir::CIRCallOpInterface c;
   emitCall(info, callee, ReturnValueSlot(), args, &c, getLoc(loc));
 
-  if (cgm.getCodeGenOpts().OptimizationLevel != 0 && !cd->isDynamicClass() &&
+  if (cgm.getCodeGenOpts().OptimizationLevel != 0 && !crd->isDynamicClass() &&
       type != Ctor_Base && cgm.getCodeGenOpts().StrictVTablePointers)
     cgm.errorNYI(d->getSourceRange(), "vtable assumption loads");
 }
