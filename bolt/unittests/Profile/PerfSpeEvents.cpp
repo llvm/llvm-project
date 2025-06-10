@@ -39,7 +39,7 @@ struct PerfSpeEventsTestHelper : public testing::Test {
   }
 
 protected:
-  using LBREntry = DataAggregator::LBREntry;
+  using Trace = DataAggregator::Trace;
 
   void initalizeLLVM() {
     llvm::InitializeAllTargetInfos();
@@ -73,40 +73,20 @@ protected:
   std::unique_ptr<ObjectFile> ObjFile;
   std::unique_ptr<BinaryContext> BC;
 
-  // @return true if LBREntries are equal.
-  bool checkLBREntry(const LBREntry &Lhs, const LBREntry &Rhs) {
-    return Lhs.From == Rhs.From && Lhs.To == Rhs.To &&
-           Lhs.Mispred == Rhs.Mispred;
-  }
-
   // Parse and check SPE brstack as LBR.
-  void parseAndCheckBrstackEvents(
-      uint64_t PID,
-      const std::vector<SmallVector<LBREntry, 2>> &ExpectedSamples) {
-    int NumSamples = 0;
-
+  void parseAndCheckBrstackEvents(uint64_t PID, uint64_t From, uint64_t To,
+                                  uint64_t Count, size_t SampleSize) {
     DataAggregator DA("<pseudo input>");
     DA.ParsingBuf = opts::ReadPerfEvents;
     DA.BC = BC.get();
     DataAggregator::MMapInfo MMap;
     DA.BinaryMMapInfo.insert(std::make_pair(PID, MMap));
 
-    // Process buffer.
-    while (DA.hasData()) {
-      ErrorOr<DataAggregator::PerfBranchSample> SampleRes =
-          DA.parseBranchSample();
-      if (std::error_code EC = SampleRes.getError())
-        EXPECT_NE(EC, std::errc::no_such_process);
+    DA.parseBranchEvents();
 
-      DataAggregator::PerfBranchSample &Sample = SampleRes.get();
-      EXPECT_EQ(Sample.LBR.size(), ExpectedSamples[NumSamples].size());
-
-      // Check the parsed LBREntries.
-      for (auto [Actual, Expected] :
-           zip_equal(Sample.LBR, ExpectedSamples[NumSamples]))
-        EXPECT_TRUE(checkLBREntry(Actual, Expected));
-      ++NumSamples;
-    }
+    EXPECT_EQ(DA.BranchLBRs.size(), SampleSize);
+    EXPECT_EQ(DA.BranchLBRs[Trace(From, To)].MispredCount, Count);
+    EXPECT_EQ(DA.BranchLBRs[Trace(From, To)].TakenCount, Count);
   }
 };
 
@@ -130,14 +110,10 @@ TEST_F(PerfSpeEventsTestHelper, SpeBranchesWithBrstack) {
                          "  1234  0xc001/0xc002/P/-/-/13/-/-\n"
                          "  1234  0xd001/0xd002/M/-/-/7/RET/-\n"
                          "  1234  0xe001/0xe002/P/-/-/14/RET/-\n"
+                         "  1234  0xd001/0xd002/M/-/-/7/RET/-\n"
                          "  1234  0xf001/0xf002/MN/-/-/8/COND/-\n";
 
-  std::vector<SmallVector<LBREntry>> ExpectedSamples = {
-      {{{0xa001, 0xa002, false}}}, {{{0xb001, 0xb002, false}}},
-      {{{0xc001, 0xc002, false}}}, {{{0xd001, 0xd002, true}}},
-      {{{0xe001, 0xe002, false}}}, {{{0xf001, 0xf002, true}}},
-  };
-  parseAndCheckBrstackEvents(1234, ExpectedSamples);
+  parseAndCheckBrstackEvents(1234, 0xd001, 0xd002, 2, 6);
 }
 
 #endif
