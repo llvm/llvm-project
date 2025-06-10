@@ -648,9 +648,6 @@ LLVM_DUMP_METHOD void StackColoring::dumpIntervals() const {
       dbgs() << ' ' << SIdx;
     dbgs() << '\n';
   }
-  for (unsigned Slot = 0; Slot < Slot2Info.size(); Slot++) {
-    Slot2Info[Slot].dump(this);
-  }
 }
 
 LLVM_DUMP_METHOD void StackColoring::SlotInfo::dump(const StackColoring* State) const {
@@ -1060,12 +1057,6 @@ void StackColoring::calculateLiveIntervals(unsigned NumSlots) {
                        });
     }
   }
-  LLVM_DEBUG({
-    for (SplitSlotChanges C : MidBlockSpillChanges) {
-        dbgs() << "Idx=" << C.BlockIdx << " Slot=" << C.Slot
-               << " IsStart=" << C.IsStart << " MI=" << *C.AtMI;
-    }
-  });
 
   // To avoid needing bounds checks
   MidBlockSpillChanges.push_back({nullptr, 0, false, InvalidIdx});
@@ -1583,10 +1574,6 @@ unsigned StackColoring::doMerging(unsigned NumSlots) {
     }
     std::stable_sort(
         SlotStack.begin(), SlotStack.end(), [&](unsigned Lhs, unsigned Rhs) {
-          if (Lhs == InvalidIdx)
-            return false;
-          if (Rhs == InvalidIdx)
-            return true;
           return Slot2Info[Lhs].SlotPriority < Slot2Info[Rhs].SlotPriority;
         });
   }
@@ -1594,6 +1581,7 @@ unsigned StackColoring::doMerging(unsigned NumSlots) {
   SlotInfo* LastQueryLhs = nullptr;
   SlotInfo* LastQueryRhs = nullptr;
   bool LastQueryRes = false;
+  // TODO: Real caching ?
   auto HasOverlapCached = [&](SlotInfo &Lhs, SlotInfo &Rhs) {
     if (&Lhs == LastQueryLhs && LastQueryRhs == &Rhs)
       return LastQueryRes;
@@ -1604,8 +1592,14 @@ unsigned StackColoring::doMerging(unsigned NumSlots) {
   };
 
   struct Status {
+    // This is the offset at which a slot on top should be placed. So the offset
+    // of the slot + the size of the slot
     unsigned Offset = 0;
+
+    // The Slot just below the offset.
     unsigned Slot = InvalidIdx;
+
+    // The index of the previous status in OlderStatus
     unsigned Prev = InvalidIdx;
   };
 
@@ -1616,22 +1610,41 @@ unsigned StackColoring::doMerging(unsigned NumSlots) {
   auto FindOffset = [&](SlotInfo &Info, unsigned Pt) {
     Status *Last = &LatestStatus[Pt];
 
-    // This is only called on Slot that have overlapping lifetimes
-    // So the no overlap only happens when there lifetime overlap but only one
-    // can be live because where they start in the CFG is mutually exclusive
-    // See the comment about implementation for an example
+    // The slots in the linked-list are always kept in ascending order, so the
+    // earliest slot has the lowest offset
+    // This loop handles cases where the latest slot doesn't cannot be both live
+    // because of the CFG, so even if there lifetime overlap, they can overlap
     while (LLVM_UNLIKELY(Last->Slot != InvalidIdx &&
                          !HasOverlapCached(Info, Slot2Info[Last->Slot])))
       Last = &OlderStatus[Last->Prev];
     return Last->Offset;
   };
   auto UpdateOffset = [&](SlotInfo &Info, unsigned Pt, unsigned Offset) {
-    Status& Last = LatestStatus[Pt];
+    Status* Last = &LatestStatus[Pt];
     unsigned Idx = OlderStatus.size();
-    OlderStatus.push_back(Last);
-    Last.Prev = Idx;
-    Last.Offset = Offset;
-    Last.Slot = &Info - Slot2Info.data();
+    OlderStatus.push_back(*Last);
+
+    // this is branch is not taken only when we are inserting a slot that wasn't
+    // overlapping with the previous slot and is smaller. so the slot inserted
+    // slot is not the new start of the linked-list
+    if (LLVM_LIKELY(Last->Offset <= Offset)) {
+      Last->Prev = Idx;
+      Last->Offset = Offset;
+      Last->Slot = &Info - Slot2Info.data();
+      return;
+    }
+
+    // Insure ordering of slots
+    Status* Inserted = &OlderStatus.back();
+    Inserted->Offset = Offset;
+    Inserted->Slot = &Info - Slot2Info.data();
+    Status *Curr = Last;
+    while (Curr->Prev != InvalidIdx && OlderStatus[Curr->Prev].Offset > Offset)
+      Curr = &OlderStatus[Curr->Prev];
+
+    // Insert the new node in the linked-list
+    Inserted->Prev = Curr->Prev;
+    Curr->Prev = Idx;
   };
 
   SmallVector<unsigned, MaxCandidatesToConsiderDefault> Candidates;
@@ -1643,25 +1656,34 @@ unsigned StackColoring::doMerging(unsigned NumSlots) {
     Candidates.push_back(SlotStack.pop_back_val());
   }
 
+  unsigned WorseCaseOffset = 0;
   while (!Candidates.empty()) {
-    int64_t BestScore = std::numeric_limits<int64_t>::max();
     unsigned BestIdx = InvalidIdx;
     unsigned BestOffset = InvalidIdx;
 
     for (unsigned K = 0; K < Candidates.size(); K++) {
       SlotInfo &Info = Slot2Info[Candidates[K]];
       unsigned Offset = 0;
-      for (unsigned Pt : Info.Liveness.set_bits())
+      for (unsigned Pt : Info.Liveness.set_bits()) {
         Offset = std::max(Offset, FindOffset(Info, Pt));
+
+        // If Offset == WorseCaseOffset, this is always a valid, options. so no
+        // more checking needed
+        // If Offset > BestOffset, we already found a better solution, so this
+        // one doesn't matter
+        if (Offset == WorseCaseOffset || Offset > BestOffset)
+          break;
+      }
 
       Offset = alignTo(Offset, Info.Align);
 
-      int64_t Score = (int64_t)Offset - (int64_t)Log2(Info.Align);
-      LLVM_DEBUG(dbgs() << "SlotInfo(" << Candidates[K] << ") Score=" << Score << "\n");
+      LLVM_DEBUG(dbgs() << "choice: SlotInfo(" << Candidates[K] << ") at " << Offset << "\n");
       bool IsBetter = [&] {
-        if (BestScore != Score)
-          return BestScore > Score;
+        if (BestOffset != Offset)
+          return BestOffset > Offset;
         SlotInfo &Other = Slot2Info[Candidates[K]];
+        if (Other.Align != Info.Align)
+          return Other.Align < Info.Align;
         if (Other.Size != Info.Size)
           return Other.Size < Info.Size;
         if (Other.SlotPriority != Info.SlotPriority)
@@ -1672,7 +1694,6 @@ unsigned StackColoring::doMerging(unsigned NumSlots) {
       }();
 
       if (IsBetter) {
-        BestScore = Score;
         BestIdx = K;
         BestOffset = Offset;
       }
@@ -1681,11 +1702,24 @@ unsigned StackColoring::doMerging(unsigned NumSlots) {
 
     LLVM_DEBUG(Info.dump(this));
     LLVM_DEBUG(dbgs() << "Placing SlotInfo(" << Candidates[BestIdx] << ") at "
-                      << BestOffset << " Score=" << BestScore << "\n");
+                      << BestOffset << "\n");
 
     Info.Offset = BestOffset;
+    WorseCaseOffset = std::max(WorseCaseOffset, BestOffset + Info.Size);
     for (unsigned Pt : Info.Liveness.set_bits())
       UpdateOffset(Info, Pt, BestOffset + Info.Size);
+#ifdef EXPENSIVE_CHECKS
+    // Validate the order of offsets in the linked-list
+    for (Status &S : LatestStatus) {
+      Status *Curr = &S;
+      unsigned CurrOffset = Curr->Offset;
+      while (Curr->Prev != InvalidIdx) {
+        assert(Curr->Offset <= CurrOffset);
+        CurrOffset = Curr->Offset;
+        Curr = &OlderStatus[Curr->Prev];
+      }
+    }
+#endif
 
     std::swap(Candidates[BestIdx], Candidates.back());
     Candidates.pop_back();
@@ -1788,7 +1822,6 @@ bool StackColoring::run(MachineFunction &Func) {
 
   // Propagate the liveness information.
   calculateLiveIntervals(NumSlots);
-  LLVM_DEBUG(dumpIntervals());
 
   // Search for allocas which are used outside of the declared lifetime
   // markers.
@@ -1796,6 +1829,7 @@ bool StackColoring::run(MachineFunction &Func) {
     removeInvalidSlotRanges();
 
   if (!UseNewStackColoring) {
+    LLVM_DEBUG(dumpIntervals());
     // Maps old slots to new slots.
     DenseMap<int, int> SlotRemap;
     unsigned RemovedSlots = 0;
