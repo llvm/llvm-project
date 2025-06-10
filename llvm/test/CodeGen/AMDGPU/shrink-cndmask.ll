@@ -722,3 +722,24 @@ define amdgpu_cs void @test_f64_uno(double %a, double %p, double %q, ptr addrspa
   store <2 x double> %ret1, ptr addrspace(1) %out
   ret void
 }
+
+define amdgpu_cs void @additional_test(i32 %a, i32 %p, i32 %q, i32 %r, ptr addrspace(1) %out) {
+; GCN-LABEL: additional_test:
+; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 1, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 1, v1, vcc_lo
+; GCN-NEXT:    v_cndmask_b32_e64 v1, v2, 2, vcc_lo
+; GCN-NEXT:    v_cndmask_b32_e32 v2, 3, v3, vcc_lo
+; GCN-NEXT:    global_store_b96 v[4:5], v[0:2], off
+; GCN-NEXT:    s_endpgm
+.entry:
+  %vcc = icmp sge i32 %a, 2
+  %val1 = select i1 %vcc, i32 %p, i32 1
+  %val2 = select i1 %vcc, i32 2, i32 %q
+  %val3 = select i1 %vcc, i32 %r, i32 3
+  %ret0 = insertelement <3 x i32> poison, i32 %val1, i32 0
+  %ret1 = insertelement <3 x i32> %ret0, i32 %val2, i32 1
+  %ret2 = insertelement <3 x i32> %ret1, i32 %val3, i32 2
+  store <3 x i32> %ret2, ptr addrspace(1) %out
+  ret void
+}
