@@ -503,26 +503,15 @@ void LayoutInfoPropagation::visitVectorBitcastOp(
   int outElemTyBitWidth =
       bitcast.getResultVectorType().getElementType().getIntOrFloatBitWidth();
 
-  // LaneLayout does not change.
-  const LaneLayout &newLaneLayout = resultLayout.getLayout();
-  const LaneData &currData = resultLayout.getData();
-  LaneData newLaneData;
-  // It's a widening bitcast
-  if (inElemTyBitWidth < outElemTyBitWidth) {
-    int ratio = outElemTyBitWidth / inElemTyBitWidth;
-    newLaneData = resultLayout.getData()[0] == 1
-                      ? LaneData({1, currData[1] * ratio})
-                      : LaneData({currData[0] * ratio, 1});
-  } else {
-    // It's a narrowing bitcast
-    int ratio = inElemTyBitWidth / outElemTyBitWidth;
-    newLaneData = resultLayout.getData()[0] == 1
-                      ? LaneData({1, currData[1] / ratio})
-                      : LaneData({currData[0] / ratio, 1});
+  // NOTE: We do not expect widening or narrowing bitcasts at this stage. Emit a
+  // warning and return.
+  if (inElemTyBitWidth != outElemTyBitWidth) {
+    bitcast.emitWarning("Widening or narrowing bitcasts are not expected at "
+                        "layout propagation stage.");
+    return;
   }
 
-  propagateIfChanged(operands[0],
-                     operands[0]->meet(LayoutInfo(newLaneLayout, newLaneData)));
+  propagateIfChanged(operands[0], operands[0]->meet(resultLayout));
 }
 
 /// Propagate the layout of the result to the tensor descriptor and mask
