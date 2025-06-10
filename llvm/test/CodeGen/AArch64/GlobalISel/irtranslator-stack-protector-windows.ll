@@ -21,7 +21,7 @@ define void @caller() sspreq {
 ; CHECK-NEXT:    ldr x9, [sp, #8]
 ; CHECK-NEXT:    ldr x8, [x8, :lo12:__security_cookie]
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne    .LBB0_2
+; CHECK-NEXT:    b.ne .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
