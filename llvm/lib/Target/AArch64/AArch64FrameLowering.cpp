@@ -2541,13 +2541,33 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     if (AFI->isStackRealigned() || MFI.hasVarSizedObjects()) {
       if (int64_t SVECalleeSavedSize = AFI->getSVECalleeSavedStackSize()) {
         // Set SP to start of SVE callee-save area from which they can
-        // be reloaded. The code below will deallocate the stack space
-        // space by moving FP -> SP.
-        emitFrameOffset(
-            MBB, RestoreBegin, DL, AArch64::SP, AArch64::FP,
-            StackOffset::get(-AFI->getCalleeSaveBaseToFrameRecordOffset(),
-                             -SVECalleeSavedSize),
-            TII, MachineInstr::FrameDestroy);
+        // be reloaded.
+        const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
+        if (!AFI->isStackRealigned() && RegInfo->hasBasePointer(MF)) {
+          // If the stack is not realigned we can use the base pointer to find
+          // the start of the SVE callee-saves (and deallocate locals).
+          emitFrameOffset(
+              MBB, RestoreBegin, DL, AArch64::SP, RegInfo->getBaseRegister(),
+              StackOffset::getFixed(NumBytes), TII, MachineInstr::FrameDestroy);
+        } else {
+          Register CalleeSaveBase = AArch64::FP;
+          if (int64_t CalleeSaveBaseOffset =
+                  AFI->getCalleeSaveBaseToFrameRecordOffset()) {
+            assert(RegInfo->hasBasePointer(MF) && "Expected base pointer!");
+            // NOTE: This base pointer is clobbered from this point on! The next
+            // step in eplilogue emission restoring callee-saves, so it should
+            // not be used after this point anyway.
+            CalleeSaveBase = RegInfo->getBaseRegister();
+            emitFrameOffset(MBB, RestoreBegin, DL, CalleeSaveBase, AArch64::FP,
+                            StackOffset::getFixed(-CalleeSaveBaseOffset), TII,
+                            MachineInstr::FrameDestroy);
+          }
+          // The code below will deallocate the stack space space by moving the
+          // SP to the start of the SVE callee-save area.
+          emitFrameOffset(MBB, RestoreBegin, DL, AArch64::SP, CalleeSaveBase,
+                          StackOffset::getScalable(-SVECalleeSavedSize), TII,
+                          MachineInstr::FrameDestroy);
+        }
       }
     } else {
       if (AFI->getSVECalleeSavedStackSize()) {

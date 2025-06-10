@@ -635,19 +635,9 @@ bool AArch64RegisterInfo::hasBasePointer(const MachineFunction &MF) const {
   // Furthermore, if both variable sized objects are present, and the
   // stack needs to be dynamically re-aligned, the base pointer is the only
   // reliable way to reference the locals.
-  if (MFI.hasVarSizedObjects() || MF.hasEHFunclets()) {
-    if (hasStackRealignment(MF))
-      return true;
-
-    auto &ST = MF.getSubtarget<AArch64Subtarget>();
-    const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-    if (ST.hasSVE() || ST.isStreaming()) {
-      // Frames that have variable sized objects and scalable SVE objects,
-      // should always use a basepointer.
-      if (!AFI->hasCalculatedStackSizeSVE() || AFI->getStackSizeSVE())
-        return true;
-    }
-
+  bool CannotUseSPForSVERestore =
+      MFI.hasVarSizedObjects() || hasStackRealignment(MF);
+  if (CannotUseSPForSVERestore || MF.hasEHFunclets()) {
     // Frames with hazard padding can have a large offset between the frame
     // pointer and GPR locals, which includes the emergency spill slot. If the
     // emergency spill slot is not within range of the load/store instructions
@@ -655,9 +645,21 @@ bool AArch64RegisterInfo::hasBasePointer(const MachineFunction &MF) const {
     // Since hasBasePointer() is called before we know if we have hazard padding
     // or an emergency spill slot we need to enable the basepointer
     // conservatively.
+    auto &ST = MF.getSubtarget<AArch64Subtarget>();
+    const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
     if (ST.getStreamingHazardSize() &&
         !AFI->getSMEFnAttrs().hasNonStreamingInterfaceAndBody()) {
       return true;
+    }
+
+    if (hasStackRealignment(MF))
+      return MFI.hasVarSizedObjects() || MF.hasEHFunclets();
+
+    if (ST.hasSVE() || ST.isStreaming()) {
+      // Frames that have variable sized objects and scalable SVE objects,
+      // should always use a basepointer.
+      if (!AFI->hasCalculatedStackSizeSVE() || AFI->getStackSizeSVE())
+        return true;
     }
 
     // Conservatively estimate whether the negative offset from the frame
