@@ -302,7 +302,7 @@ bool Variable::IsInScope(StackFrame *frame) {
   return false;
 }
 
-bool Variable::IsInScope(const Block &block, Address addr) {
+bool Variable::IsInScope(const Block &block, const Address &addr) {
   SymbolContext variable_sc;
   CalculateSymbolContext(&variable_sc);
 
