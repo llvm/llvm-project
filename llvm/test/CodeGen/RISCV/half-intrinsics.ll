@@ -649,7 +649,7 @@ define half @sincos_f16(half %a) nounwind {
 ; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw s2, a1, -1
+; RV64I-NEXT:    addi s2, a1, -1
 ; RV64I-NEXT:    and a0, a0, s2
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s0, a0
@@ -905,7 +905,7 @@ define half @pow_f16(half %a, half %b) nounwind {
 ; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw s2, a1, -1
+; RV64I-NEXT:    addi s2, a1, -1
 ; RV64I-NEXT:    and a0, a0, s2
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s1, a0
@@ -1748,7 +1748,7 @@ define half @fma_f16(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    mv s0, a2
 ; RV64I-NEXT:    mv s1, a1
 ; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw s3, a1, -1
+; RV64I-NEXT:    addi s3, a1, -1
 ; RV64I-NEXT:    and a0, a0, s3
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s2, a0
@@ -1853,7 +1853,7 @@ define half @fmuladd_f16(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    mv s0, a2
 ; RV64I-NEXT:    mv s1, a1
 ; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw s3, a1, -1
+; RV64I-NEXT:    addi s3, a1, -1
 ; RV64I-NEXT:    and a0, a0, s3
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s2, a0
@@ -2015,7 +2015,7 @@ define half @minnum_f16(half %a, half %b) nounwind {
 ; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw s2, a1, -1
+; RV64I-NEXT:    addi s2, a1, -1
 ; RV64I-NEXT:    and a0, a0, s2
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s1, a0
@@ -2099,7 +2099,7 @@ define half @maxnum_f16(half %a, half %b) nounwind {
 ; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw s2, a1, -1
+; RV64I-NEXT:    addi s2, a1, -1
 ; RV64I-NEXT:    and a0, a0, s2
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s1, a0
@@ -3143,7 +3143,7 @@ define half @maximumnum_half(half %x, half %y) {
 ; RV64I-NEXT:    .cfi_offset s2, -32
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw s2, a1, -1
+; RV64I-NEXT:    addi s2, a1, -1
 ; RV64I-NEXT:    and a0, a0, s2
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s1, a0
@@ -3247,7 +3247,7 @@ define half @minimumnum_half(half %x, half %y) {
 ; RV64I-NEXT:    .cfi_offset s2, -32
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw s2, a1, -1
+; RV64I-NEXT:    addi s2, a1, -1
 ; RV64I-NEXT:    and a0, a0, s2
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s1, a0
@@ -3990,7 +3990,7 @@ define half @atan2_f16(half %a, half %b) nounwind {
 ; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw s2, a1, -1
+; RV64I-NEXT:    addi s2, a1, -1
 ; RV64I-NEXT:    and a0, a0, s2
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    mv s1, a0

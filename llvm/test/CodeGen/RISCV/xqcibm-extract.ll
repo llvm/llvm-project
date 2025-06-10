@@ -231,3 +231,103 @@ define i64 @sexti32_i64_2(i32 %a) {
   %1 = sext i32 %a to i64
   ret i64 %1
 }
+
+define i32 @extu_from_and_i32(i32 %x) {
+; RV32I-LABEL: extu_from_and_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 20
+; RV32I-NEXT:    srli a0, a0, 20
+; RV32I-NEXT:    ret
+;
+; RV32XQCIBM-LABEL: extu_from_and_i32:
+; RV32XQCIBM:       # %bb.0:
+; RV32XQCIBM-NEXT:    qc.extu a0, a0, 12, 0
+; RV32XQCIBM-NEXT:    ret
+  %a = and i32 %x, 4095
+  ret i32 %a
+}
+
+define i64 @extu_from_and_i64(i64 %x) {
+; RV32I-LABEL: extu_from_and_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 20
+; RV32I-NEXT:    srli a0, a0, 20
+; RV32I-NEXT:    li a1, 0
+; RV32I-NEXT:    ret
+;
+; RV32XQCIBM-LABEL: extu_from_and_i64:
+; RV32XQCIBM:       # %bb.0:
+; RV32XQCIBM-NEXT:    qc.extu a0, a0, 12, 0
+; RV32XQCIBM-NEXT:    li a1, 0
+; RV32XQCIBM-NEXT:    ret
+  %a = and i64 %x, 4095
+  ret i64 %a
+}
+
+define i32 @extu_from_and_lshr_i32(i32 %x) {
+; RV32I-LABEL: extu_from_and_lshr_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 6
+; RV32I-NEXT:    srli a0, a0, 29
+; RV32I-NEXT:    ret
+;
+; RV32XQCIBM-LABEL: extu_from_and_lshr_i32:
+; RV32XQCIBM:       # %bb.0:
+; RV32XQCIBM-NEXT:    qc.extu a0, a0, 3, 23
+; RV32XQCIBM-NEXT:    ret
+  %shifted = lshr i32 %x, 23
+  %masked = and i32 %shifted, 7
+  ret i32 %masked
+}
+
+define i64 @extu_from_and_lshr_i64(i64 %x) {
+; RV32I-LABEL: extu_from_and_lshr_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a1, 6
+; RV32I-NEXT:    srli a0, a0, 20
+; RV32I-NEXT:    li a1, 0
+; RV32I-NEXT:    ret
+;
+; RV32XQCIBM-LABEL: extu_from_and_lshr_i64:
+; RV32XQCIBM:       # %bb.0:
+; RV32XQCIBM-NEXT:    qc.extu a0, a1, 12, 14
+; RV32XQCIBM-NEXT:    li a1, 0
+; RV32XQCIBM-NEXT:    ret
+  %shifted = lshr i64 %x, 46
+  %masked = and i64 %shifted, 4095
+  ret i64 %masked
+}
+
+define i32 @extu_from_lshr_and_i32(i32 %x) {
+; RV32I-LABEL: extu_from_lshr_and_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 8
+; RV32I-NEXT:    srli a0, a0, 20
+; RV32I-NEXT:    ret
+;
+; RV32XQCIBM-LABEL: extu_from_lshr_and_i32:
+; RV32XQCIBM:       # %bb.0:
+; RV32XQCIBM-NEXT:    qc.extu a0, a0, 12, 12
+; RV32XQCIBM-NEXT:    ret
+  %masked = and i32 %x, 16773120
+  %shifted = lshr i32 %masked, 12
+  ret i32 %shifted
+}
+
+define i64 @extu_from_lshr_and_i64(i64 %x) {
+; RV32I-LABEL: extu_from_lshr_and_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 8
+; RV32I-NEXT:    srli a0, a0, 20
+; RV32I-NEXT:    li a1, 0
+; RV32I-NEXT:    ret
+;
+; RV32XQCIBM-LABEL: extu_from_lshr_and_i64:
+; RV32XQCIBM:       # %bb.0:
+; RV32XQCIBM-NEXT:    qc.extu a0, a0, 12, 12
+; RV32XQCIBM-NEXT:    li a1, 0
+; RV32XQCIBM-NEXT:    ret
+  %masked = and i64 %x, 16773120
+  %shifted = lshr i64 %masked, 12
+  ret i64 %shifted
+}

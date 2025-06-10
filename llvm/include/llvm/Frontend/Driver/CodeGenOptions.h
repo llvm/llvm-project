@@ -13,6 +13,8 @@
 #ifndef LLVM_FRONTEND_DRIVER_CODEGENOPTIONS_H
 #define LLVM_FRONTEND_DRIVER_CODEGENOPTIONS_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 class Triple;
 class TargetLibraryInfoImpl;
@@ -46,8 +48,8 @@ enum class VectorLibrary {
   AMDLIBM             // AMD vector math library.
 };
 
-TargetLibraryInfoImpl *createTLII(const llvm::Triple &TargetTriple,
-                                  VectorLibrary Veclib);
+LLVM_ABI TargetLibraryInfoImpl *createTLII(const llvm::Triple &TargetTriple,
+                                           VectorLibrary Veclib);
 
 } // end namespace llvm::driver
 

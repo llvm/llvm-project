@@ -83,6 +83,7 @@ public:
   cir::RecordType::RecordKind getRecordKind(const clang::TagTypeKind kind) {
     switch (kind) {
     case clang::TagTypeKind::Class:
+      return cir::RecordType::Class;
     case clang::TagTypeKind::Struct:
       return cir::RecordType::Struct;
     case clang::TagTypeKind::Union:
@@ -93,6 +94,34 @@ public:
       llvm_unreachable("enums are not records");
     }
     llvm_unreachable("Unsupported record kind");
+  }
+
+  /// Get a CIR named record type.
+  ///
+  /// If a record already exists and is complete, but the client tries to fetch
+  /// it with a different set of attributes, this method will crash.
+  cir::RecordType getCompleteRecordTy(llvm::ArrayRef<mlir::Type> members,
+                                      llvm::StringRef name, bool packed,
+                                      bool padded) {
+    const auto nameAttr = getStringAttr(name);
+    auto kind = cir::RecordType::RecordKind::Struct;
+    assert(!cir::MissingFeatures::astRecordDeclAttr());
+
+    // Create or get the record.
+    auto type =
+        getType<cir::RecordType>(members, nameAttr, packed, padded, kind);
+
+    // If we found an existing type, verify that either it is incomplete or
+    // it matches the requested attributes.
+    assert(!type.isIncomplete() ||
+           (type.getMembers() == members && type.getPacked() == packed &&
+            type.getPadded() == padded));
+
+    // Complete an incomplete record or ensure the existing complete record
+    // matches the requested attributes.
+    type.complete(members, packed, padded);
+
+    return type;
   }
 
   /// Get an incomplete CIR struct type. If we have a complete record
@@ -280,24 +309,29 @@ public:
     return create<cir::BinOp>(loc, cir::BinOpKind::Div, lhs, rhs);
   }
 
+  Address createBaseClassAddr(mlir::Location loc, Address addr,
+                              mlir::Type destType, unsigned offset,
+                              bool assumeNotNull) {
+    if (destType == addr.getElementType())
+      return addr;
+
+    auto ptrTy = getPointerTo(destType);
+    auto baseAddr = create<cir::BaseClassAddrOp>(
+        loc, ptrTy, addr.getPointer(), mlir::APInt(64, offset), assumeNotNull);
+    return Address(baseAddr, destType, addr.getAlignment());
+  }
+
   cir::LoadOp createLoad(mlir::Location loc, Address addr,
                          bool isVolatile = false) {
-    mlir::IntegerAttr align;
-    uint64_t alignment = addr.getAlignment().getQuantity();
-    if (alignment)
-      align = getI64IntegerAttr(alignment);
+    mlir::IntegerAttr align = getAlignmentAttr(addr.getAlignment());
     return create<cir::LoadOp>(loc, addr.getPointer(), /*isDeref=*/false,
                                align);
   }
 
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, Address dst,
-                           ::mlir::IntegerAttr align = {}) {
-    if (!align) {
-      uint64_t alignment = dst.getAlignment().getQuantity();
-      if (alignment)
-        align = mlir::IntegerAttr::get(mlir::IntegerType::get(getContext(), 64),
-                                       alignment);
-    }
+                           mlir::IntegerAttr align = {}) {
+    if (!align)
+      align = getAlignmentAttr(dst.getAlignment());
     return CIRBaseBuilderTy::createStore(loc, val, dst.getPointer(), align);
   }
 
