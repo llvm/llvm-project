@@ -159,6 +159,10 @@ Changes in existing checks
   false positives on deleted constructors that cannot be used to construct
   objects, even if they have public or protected access.
 
+- Added an option to :doc:`bugprone-multi-level-implicit-pointer-conversion
+  <clang-tidy/checks/bugprone/multi-level-implicit-pointer-conversion>` to
+  choose whether to enable the check in C code or not.
+
 - Improved :doc:`bugprone-optional-value-conversion
   <clang-tidy/checks/bugprone/optional-value-conversion>` check to detect
   conversion in argument of ``std::make_optional``.
@@ -186,6 +190,16 @@ Changes in existing checks
 - Improved :doc:`concurrency-mt-unsafe
   <clang-tidy/checks/concurrency/mt-unsafe>` check by fixing a false positive
   where ``strerror`` was flagged as MT-unsafe.
+
+- Improved :doc:`google-readability-namespace-comments
+  <clang-tidy/checks/google/readability-namespace-comments>` check by adding
+  the option `AllowOmittingNamespaceComments` to accept if a namespace comment
+  is omitted entirely.
+
+- Improved :doc:`llvm-namespace-comment
+  <clang-tidy/checks/llvm/namespace-comment>` check by adding the option
+  `AllowOmittingNamespaceComments` to accept if a namespace comment is omitted
+  entirely.
 
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check by adding the option
@@ -223,6 +237,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-designated-initializers>` check by avoiding
   diagnosing designated initializers for ``std::array`` initializations.
 
+- Improved :doc:`modernize-use-integer-sign-comparison
+  <clang-tidy/checks/modernize/use-integer-sign-comparison>` check by matching
+  valid integer expressions not directly wrapped around an implicit cast.
+
 - Improved :doc:`modernize-use-ranges
   <clang-tidy/checks/modernize/use-ranges>` check by updating suppress
   warnings logic for ``nullptr`` in ``std::find``.
@@ -251,6 +269,10 @@ Changes in existing checks
   <clang-tidy/checks/performance/unnecessary-value-param>` check performance by
   tolerating fix-it breaking compilation when functions is used as pointers
   to avoid matching usage of functions within the current compilation unit.
+
+- Improved :doc:`readability-convert-member-functions-to-static
+  <clang-tidy/checks/readability/convert-member-functions-to-static>` check by
+  fixing false positives on member functions with an explicit object parameter.
 
 - Improved :doc:`readability-math-missing-parentheses
   <clang-tidy/checks/readability/math-missing-parentheses>` check by fixing
