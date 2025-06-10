@@ -293,18 +293,26 @@ static_assert(__is_trivially_copyable(S12));
 
 namespace constructible {
 
-struct S1 { // #c-S1
-    S1(int);
+struct S1 {  // #c-S1
+    S1(int); // #cc-S1
 };
 static_assert(__is_constructible(S1, char*));
 // expected-error@-1 {{static assertion failed due to requirement '__is_constructible(constructible::S1, char *)'}} \
+// expected-error@-1 {{no matching constructor for initialization of 'S1'}} \
+// expected-note@#c-S1 {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'char *' to 'const S1' for 1st argument}} \
+// expected-note@#c-S1 {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'char *' to 'S1' for 1st argument}} \
+// expected-note@#cc-S1 {{candidate constructor not viable: no known conversion from 'char *' to 'int' for 1st argument; dereference the argument with *}} \
 // expected-note@#c-S1 {{'S1' defined here}}
 
 struct S2 { // #c-S2
-    S2(int, float, double);
+    S2(int, float, double); // #cc-S2
 };
 static_assert(__is_constructible(S2, float));
 // expected-error@-1 {{static assertion failed due to requirement '__is_constructible(constructible::S2, float)'}} \
+// expected-note@#c-S2 {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'float' to 'const S2' for 1st argument}} \
+// expected-note@#c-S2 {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'float' to 'S2' for 1st argument}} \
+// expected-error@-1 {{no matching constructor for initialization of 'S2'}} \
+// expected-note@#cc-S2 {{candidate constructor not viable: requires 3 arguments, but 1 was provided}} \
 // expected-note@#c-S2 {{'S2' defined here}}
 
 static_assert(__is_constructible(void));

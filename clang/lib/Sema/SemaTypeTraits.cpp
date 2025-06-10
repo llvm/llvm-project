@@ -2194,7 +2194,6 @@ static void DiagnoseNonConstructibleReason(
   const CXXRecordDecl *D = T->getAsCXXRecordDecl();
   if (!D || D->isInvalidDecl() || !D->hasDefinition())
     return;
-  SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
 
   llvm::BumpPtrAllocator OpaqueExprAllocator;
   SmallVector<Expr *, 2> ArgExprs;
@@ -2211,19 +2210,14 @@ static void DiagnoseNonConstructibleReason(
 
   EnterExpressionEvaluationContext Unevaluated(
       SemaRef, Sema::ExpressionEvaluationContext::Unevaluated);
-  Sema::SFINAETrap SFINAE(SemaRef, /*ForValidityCheck=*/true);
   Sema::ContextRAII TUContext(SemaRef,
                               SemaRef.Context.getTranslationUnitDecl());
   InitializedEntity To(InitializedEntity::InitializeTemporary(T));
   InitializationKind InitKind(InitializationKind::CreateDirect(Loc, Loc, Loc));
   InitializationSequence Init(SemaRef, To, InitKind, ArgExprs);
 
-  if (Init.Diagnose(SemaRef, To, InitKind, ArgExprs)) {
-    auto ArgsRange = SourceRange(ArgExprs.front()->getBeginLoc(),
-                                 ArgExprs.back()->getEndLoc());
-
-    SemaRef.Diag(Loc, diag::err_ovl_no_viable_function_in_init) << T;
-  }
+  Init.Diagnose(SemaRef, To, InitKind, ArgExprs);
+  SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
 }
 
 static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
