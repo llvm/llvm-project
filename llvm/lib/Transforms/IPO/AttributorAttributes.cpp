@@ -12844,8 +12844,6 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
   /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     std::optional<unsigned> FlatAS = A.getInfoCache().getFlatAddressSpace();
-    if (!FlatAS.has_value())
-      llvm_unreachable("Must have flat address space!");
 
     unsigned AS = getAssociatedType()->getPointerAddressSpace();
     if (AS != *FlatAS || Map.empty())
