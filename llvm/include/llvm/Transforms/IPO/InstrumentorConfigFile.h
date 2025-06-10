@@ -19,9 +19,13 @@
 namespace llvm {
 namespace instrumentor {
 
-void writeConfigToJSON(InstrumentationConfig &IConf, StringRef OutputFile);
+/// Write the configuration in /p IConf to the file with path \p OutputFile.
+void writeConfigToJSON(InstrumentationConfig &IConf, StringRef OutputFile,
+                       LLVMContext &Ctx);
 
-bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile);
+/// Read the configuration from the file with path \p InputFile  into /p IConf.
+bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
+                        LLVMContext &Ctx);
 
 } // end namespace instrumentor
 } // end namespace llvm

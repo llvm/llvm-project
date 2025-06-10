@@ -21,6 +21,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
@@ -42,6 +43,7 @@
 #include <cstdint>
 #include <functional>
 #include <iterator>
+#include <memory>
 #include <string>
 #include <system_error>
 #include <type_traits>
@@ -51,19 +53,24 @@ using namespace llvm::instrumentor;
 
 #define DEBUG_TYPE "instrumentor"
 
-static cl::opt<std::string> WriteJSONConfig(
+namespace {
+
+/// The user option to specify an output JSON file to write the configuration.
+static cl::opt<std::string> WriteConfigFile(
     "instrumentor-write-config-file",
     cl::desc(
         "Write the instrumentor configuration into the specified JSON file"),
     cl::init(""));
-static cl::opt<std::string> ReadJSONConfig(
+
+/// The user option to specify an input JSON file to read the configuration.
+static cl::opt<std::string> ReadConfigFile(
     "instrumentor-read-config-file",
     cl::desc(
         "Read the instrumentor configuration from the specified JSON file"),
     cl::init(""));
 
-namespace {
-
+/// Set the debug location, if not set, after changing the insertion point of
+/// the IR builder \p IRB.
 template <typename IRBuilderTy> void ensureDbgLoc(IRBuilderTy &IRB) {
   if (IRB.getCurrentDebugLocation())
     return;
@@ -72,22 +79,23 @@ template <typename IRBuilderTy> void ensureDbgLoc(IRBuilderTy &IRB) {
     IRB.SetCurrentDebugLocation(DILocation::get(BB->getContext(), 0, 0, SP));
 }
 
+/// Attempt to cast \p V to type \p Ty.
 template <typename IRBTy>
 Value *tryToCast(IRBTy &IRB, Value *V, Type *Ty, const DataLayout &DL,
                  bool AllowTruncate = false) {
   if (!V)
     return Constant::getAllOnesValue(Ty);
-  auto *VTy = V->getType();
+  Type *VTy = V->getType();
   if (VTy == Ty)
     return V;
   if (VTy->isAggregateType())
     return V;
-  auto RequestedSize = DL.getTypeSizeInBits(Ty);
-  auto ValueSize = DL.getTypeSizeInBits(VTy);
-  bool IsTruncate = RequestedSize < ValueSize;
-  if (IsTruncate && !AllowTruncate)
+  TypeSize RequestedSize = DL.getTypeSizeInBits(Ty);
+  TypeSize ValueSize = DL.getTypeSizeInBits(VTy);
+  bool ShouldTruncate = RequestedSize < ValueSize;
+  if (ShouldTruncate && !AllowTruncate)
     return V;
-  if (IsTruncate && AllowTruncate)
+  if (ShouldTruncate && AllowTruncate)
     return tryToCast(IRB,
                      IRB.CreateIntCast(V, IRB.getIntNTy(RequestedSize),
                                        /*IsSigned=*/false),
@@ -97,35 +105,25 @@ Value *tryToCast(IRBTy &IRB, Value *V, Type *Ty, const DataLayout &DL,
   if (VTy->isIntegerTy() && Ty->isIntegerTy())
     return IRB.CreateIntCast(V, Ty, /*IsSigned=*/false);
   if (VTy->isFloatingPointTy() && Ty->isIntOrPtrTy()) {
-    switch (ValueSize) {
-    case 64:
-      return tryToCast(IRB, IRB.CreateBitCast(V, IRB.getInt64Ty()), Ty, DL,
-                       AllowTruncate);
-    case 32:
-      return tryToCast(IRB, IRB.CreateBitCast(V, IRB.getInt32Ty()), Ty, DL,
-                       AllowTruncate);
-    case 16:
-      return tryToCast(IRB, IRB.CreateBitCast(V, IRB.getInt16Ty()), Ty, DL,
-                       AllowTruncate);
-    case 8:
-      return tryToCast(IRB, IRB.CreateBitCast(V, IRB.getInt8Ty()), Ty, DL,
-                       AllowTruncate);
-    default:
-      llvm_unreachable("unsupported floating point size");
-    }
+    return tryToCast(IRB, IRB.CreateBitCast(V, IRB.getIntNTy(ValueSize)), Ty,
+                     DL, AllowTruncate);
   }
   return IRB.CreateBitOrPointerCast(V, Ty);
 }
 
+/// Get a constant integer/boolean of type \p IT and value \p Val.
 template <typename Ty> Constant *getCI(Type *IT, Ty Val) {
   return ConstantInt::get(IT, Val);
 }
 
+/// The core of the instrumentor pass, which instruments the module as the
+/// instrumentation configuration mandates.
 class InstrumentorImpl final {
 public:
+  /// Construct an instrumentor implementation using the configuration \p IConf.
   InstrumentorImpl(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
-                   Module &M, FunctionAnalysisManager &FAM)
-      : IConf(IConf), M(M), FAM(FAM), IIRB(IIRB) {
+                   Module &M)
+      : IConf(IConf), M(M), IIRB(IIRB) {
     IConf.populate(IIRB);
   }
 
@@ -133,10 +131,17 @@ public:
   bool instrument();
 
 private:
+  /// Indicate if the module should be instrumented based on the target.
   bool shouldInstrumentTarget();
+
+  /// Indicate if the function \p Fn should be instrumented.
   bool shouldInstrumentFunction(Function &Fn);
 
+  /// Instrument instruction \p I if needed, and use the argument caches in \p
+  /// ICaches.
   bool instrumentInstruction(Instruction &I, InstrumentationCaches &ICaches);
+
+  /// Instrument function \p Fn.
   bool instrumentFunction(Function &Fn);
 
   /// The instrumentation opportunities for instructions indexed by
@@ -149,8 +154,6 @@ private:
 
   /// The underlying module.
   Module &M;
-
-  FunctionAnalysisManager &FAM;
 
 protected:
   /// A special IR builder that keeps track of the inserted instructions.
@@ -169,12 +172,14 @@ bool InstrumentorImpl::shouldInstrumentTarget() {
     llvm::Regex TargetRegex(TargetRegexStr);
     std::string ErrMsg;
     if (!TargetRegex.isValid(ErrMsg)) {
-      errs() << "WARNING: failed to parse target regex: " << ErrMsg << "\n";
+      IIRB.Ctx.diagnose(DiagnosticInfoInstrumentation(
+          Twine("failed to parse target regex: ") + ErrMsg, DS_Warning));
       return false;
     }
     RegexMatches = TargetRegex.match(T.str());
   }
 
+  // Only instrument the module if the target has to be instrumented.
   return ((IsGPU && IConf.GPUEnabled->getBool()) ||
           (!IsGPU && IConf.HostEnabled->getBool())) &&
          RegexMatches;
@@ -196,7 +201,7 @@ bool InstrumentorImpl::instrumentInstruction(Instruction &I,
     return Changed;
 
   // Count epochs eagerly.
-  ++IIRB.Epoche;
+  ++IIRB.Epoch;
 
   Value *IPtr = &I;
   if (auto *IO = InstChoicesPRE.lookup(I.getOpcode())) {
@@ -247,14 +252,14 @@ bool InstrumentorImpl::instrument() {
   return Changed;
 }
 
-PreservedAnalyses InstrumentorPass::run(Module &M, FunctionAnalysisManager &FAM,
-                                        InstrumentationConfig &IConf,
-                                        InstrumentorIRBuilderTy &IIRB) {
-  InstrumentorImpl Impl(IConf, IIRB, M, FAM);
-  if (IConf.ReadConfig && !readConfigFromJSON(IConf, ReadJSONConfig))
+PreservedAnalyses InstrumentorPass::run(Module &M, InstrumentationConfig &IConf,
+                                        InstrumentorIRBuilderTy &IIRB,
+                                        bool ReadConfig) {
+  InstrumentorImpl Impl(IConf, IIRB, M);
+  if (ReadConfig && !readConfigFromJSON(IConf, ReadConfigFile, IIRB.Ctx))
     return PreservedAnalyses::all();
 
-  writeConfigToJSON(IConf, WriteJSONConfig);
+  writeConfigToJSON(IConf, WriteConfigFile, IIRB.Ctx);
 
   bool Changed = Impl.instrument();
   if (!Changed)
@@ -263,45 +268,43 @@ PreservedAnalyses InstrumentorPass::run(Module &M, FunctionAnalysisManager &FAM,
 }
 
 PreservedAnalyses InstrumentorPass::run(Module &M, ModuleAnalysisManager &MAM) {
-  auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  InstrumentationConfig *IConf =
-      UserIConf ? UserIConf : new InstrumentationConfig();
-  InstrumentorIRBuilderTy *IIRB =
-      UserIIRB ? UserIIRB : new InstrumentorIRBuilderTy(M, FAM);
+  // Only create them if the user did not provide them.
+  std::unique_ptr<InstrumentationConfig> IConfInt(
+      !UserIConf ? new InstrumentationConfig() : nullptr);
+  std::unique_ptr<InstrumentorIRBuilderTy> IIRBInt(
+      !UserIIRB ? new InstrumentorIRBuilderTy(M) : nullptr);
 
-  auto PA = run(M, FAM, *IConf, *IIRB);
+  auto *IConf = IConfInt ? IConfInt.get() : UserIConf;
+  auto *IIRB = IIRBInt ? IIRBInt.get() : UserIIRB;
 
-  if (!UserIIRB)
-    delete IIRB;
-  if (!UserIConf)
-    delete IConf;
+  auto PA = run(M, *IConf, *IIRB, !UserIConf);
 
   assert(!verifyModule(M, &errs()));
-
   return PA;
 }
 
-BaseConfigurationOpportunity *
-BaseConfigurationOpportunity::getBoolOption(InstrumentationConfig &IConf,
-                                            StringRef Name,
-                                            StringRef Description, bool Value) {
-  auto *BCO = new BaseConfigurationOpportunity();
+BaseConfigurationOption *
+BaseConfigurationOption::getBoolOption(InstrumentationConfig &IConf,
+                                       StringRef Name, StringRef Description,
+                                       bool DefaultValue) {
+  auto *BCO = new BaseConfigurationOption();
   BCO->Name = Name;
   BCO->Description = Description;
   BCO->Kind = BOOLEAN;
-  BCO->V.B = Value;
+  BCO->Value.Bool = DefaultValue;
   IConf.addBaseChoice(BCO);
   return BCO;
 }
 
-BaseConfigurationOpportunity *BaseConfigurationOpportunity::getStringOption(
-    InstrumentationConfig &IConf, StringRef Name, StringRef Description,
-    StringRef Value) {
-  auto *BCO = new BaseConfigurationOpportunity();
+BaseConfigurationOption *
+BaseConfigurationOption::getStringOption(InstrumentationConfig &IConf,
+                                         StringRef Name, StringRef Description,
+                                         StringRef DefaultValue) {
+  auto *BCO = new BaseConfigurationOption();
   BCO->Name = Name;
   BCO->Description = Description;
   BCO->Kind = STRING;
-  BCO->V.S = Value;
+  BCO->Value.String = DefaultValue;
   IConf.addBaseChoice(BCO);
   return BCO;
 }
@@ -312,12 +315,15 @@ void InstrumentationConfig::populate(InstrumentorIRBuilderTy &IIRB) {
   StoreIO::populate(*this, IIRB);
 }
 
-void InstrumentationConfig::addChoice(InstrumentationOpportunity &IO) {
+void InstrumentationConfig::addChoice(InstrumentationOpportunity &IO,
+                                      LLVMContext &Ctx) {
   auto *&ICPtr = IChoices[IO.getLocationKind()][IO.getName()];
-  if (ICPtr && IO.getLocationKind() != InstrumentationLocation::SPECIAL_VALUE) {
-    errs() << "WARNING: registered two instrumentation opportunities for the "
-              "same location ("
-           << ICPtr->getName() << " vs " << IO.getName() << ")!\n";
+  if (ICPtr) {
+    Ctx.diagnose(DiagnosticInfoInstrumentation(
+        Twine("registered two instrumentation opportunities for the same "
+              "location (") +
+            ICPtr->getName() + Twine(" vs ") + IO.getName() + Twine(")"),
+        DS_Warning));
   }
   ICPtr = &IO;
 }
@@ -325,13 +331,13 @@ void InstrumentationConfig::addChoice(InstrumentationOpportunity &IO) {
 Value *InstrumentationOpportunity::getIdPre(Value &V, Type &Ty,
                                             InstrumentationConfig &IConf,
                                             InstrumentorIRBuilderTy &IIRB) {
-  return getCI(&Ty, getIdFromEpoche(IIRB.Epoche));
+  return getCI(&Ty, getIdFromEpoch(IIRB.Epoch));
 }
 
 Value *InstrumentationOpportunity::getIdPost(Value &V, Type &Ty,
                                              InstrumentationConfig &IConf,
                                              InstrumentorIRBuilderTy &IIRB) {
-  return getCI(&Ty, -getIdFromEpoche(IIRB.Epoche));
+  return getCI(&Ty, -getIdFromEpoch(IIRB.Epoch));
 }
 
 Value *InstrumentationOpportunity::forceCast(Value &V, Type &Ty,
@@ -357,7 +363,7 @@ Value *InstrumentationOpportunity::replaceValue(Value &V, Value &NewV,
                            /*AllowTruncate=*/true);
   }
   V.replaceUsesWithIf(NewVCasted, [&](Use &U) {
-    if (IIRB.NewInsts.lookup(cast<Instruction>(U.getUser())) == IIRB.Epoche)
+    if (IIRB.NewInsts.lookup(cast<Instruction>(U.getUser())) == IIRB.Epoch)
       return false;
     if (isa<LifetimeIntrinsic>(U.getUser()) || U.getUser()->isDroppable())
       return false;
@@ -424,12 +430,10 @@ CallInst *IRTCallDescription::createLLVMCall(Value *&V,
   for (auto &It : IO.IRTArgs) {
     if (!It.Enabled)
       continue;
-    auto *&Param = ICaches.DirectArgCache[{IIRB.Epoche, IO.getName(), It.Name}];
+    auto *&Param = ICaches.DirectArgCache[{IIRB.Epoch, IO.getName(), It.Name}];
     if (!Param || It.NoCache)
       // Avoid passing the caches to the getter.
       Param = It.GetterCB(*V, *It.Ty, IConf, IIRB);
-    if (!Param)
-      errs() << IO.getName() << " : " << It.Name << "\n";
     assert(Param);
 
     if (Param->getType()->isVoidTy()) {
@@ -438,10 +442,11 @@ CallInst *IRTCallDescription::createLLVMCall(Value *&V,
                DL.getTypeSizeInBits(Param->getType()) >
                    DL.getTypeSizeInBits(It.Ty)) {
       if (!isPotentiallyIndirect(It)) {
-        errs() << "WARNING: Indirection needed for " << It.Name << " of " << *V
-               << " in " << IO.getName() << ", but not indicated\n. Got "
-               << *Param << " expected " << *It.Ty
-               << "; instrumentation is skipped";
+        IIRB.Ctx.diagnose(DiagnosticInfoInstrumentation(
+            Twine("indirection needed for ") + It.Name + Twine(" in ") +
+                IO.getName() +
+                Twine(", but not indicated. Instrumentation is skipped"),
+            DS_Warning));
         return nullptr;
       }
       ForceIndirection = true;
@@ -471,7 +476,7 @@ CallInst *IRTCallDescription::createLLVMCall(Value *&V,
       }
 
       auto *&CachedParam =
-          ICaches.IndirectArgCache[{IIRB.Epoche, IO.getName(), It.Name}];
+          ICaches.IndirectArgCache[{IIRB.Epoch, IO.getName(), It.Name}];
       if (CachedParam) {
         CallParam = CachedParam;
         continue;
@@ -504,19 +509,81 @@ CallInst *IRTCallDescription::createLLVMCall(Value *&V,
       continue;
     bool IsCustomReplaceable = IO.IRTArgs[I].Flags & IRTArg::REPLACABLE_CUSTOM;
     Value *NewValue = FnTy->isVoidTy() || IsCustomReplaceable
-                          ? ICaches.DirectArgCache[{IIRB.Epoche, IO.getName(),
+                          ? ICaches.DirectArgCache[{IIRB.Epoch, IO.getName(),
                                                     IO.IRTArgs[I].Name}]
                           : CI;
     assert(NewValue);
     if (ForceIndirection && !IsCustomReplaceable &&
         isPotentiallyIndirect(IO.IRTArgs[I])) {
-      auto *Q = ICaches.IndirectArgCache[{IIRB.Epoche, IO.getName(),
-                                          IO.IRTArgs[I].Name}];
+      auto *Q =
+          ICaches
+              .IndirectArgCache[{IIRB.Epoch, IO.getName(), IO.IRTArgs[I].Name}];
       NewValue = IIRB.IRB.CreateLoad(V->getType(), Q);
     }
     V = IO.IRTArgs[I].SetterCB(*V, *NewValue, IConf, IIRB);
   }
   return CI;
+}
+
+void StoreIO::init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
+                   ConfigTy *UserConfig) {
+  if (UserConfig)
+    Config = *UserConfig;
+
+  bool IsPRE = getLocationKind() == InstrumentationLocation::INSTRUCTION_PRE;
+  if (Config.has(PassPointer)) {
+    IRTArgs.push_back(
+        IRTArg(IIRB.PtrTy, "pointer", "The accessed pointer.",
+               ((IsPRE && Config.has(ReplacePointer)) ? IRTArg::REPLACABLE
+                                                      : IRTArg::NONE),
+               getPointer, setPointer));
+  }
+  if (Config.has(PassPointerAS)) {
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "pointer_as",
+                             "The address space of the accessed pointer.",
+                             IRTArg::NONE, getPointerAS));
+  }
+  if (Config.has(PassStoredValue)) {
+    IRTArgs.push_back(
+        IRTArg(getValueType(IIRB.Ctx), "value", "The stored value.",
+               IRTArg::POTENTIALLY_INDIRECT |
+                   (Config.has(PassStoredValueSize) ? IRTArg::INDIRECT_HAS_SIZE
+                                                    : IRTArg::NONE),
+               getValue));
+  }
+  if (Config.has(PassStoredValueSize)) {
+    IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "value_size",
+                             "The size of the stored value.", IRTArg::NONE,
+                             getValueSize));
+  }
+  if (Config.has(PassAlignment)) {
+    IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "alignment",
+                             "The known access alignment.", IRTArg::NONE,
+                             getAlignment));
+  }
+  if (Config.has(PassValueTypeId)) {
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "value_type_id",
+                             "The type id of the stored value.", IRTArg::NONE,
+                             getValueTypeId));
+  }
+  if (Config.has(PassAtomicityOrdering)) {
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "atomicity_ordering",
+                             "The atomicity ordering of the store.",
+                             IRTArg::NONE, getAtomicityOrdering));
+  }
+  if (Config.has(PassSyncScopeId)) {
+    IRTArgs.push_back(IRTArg(IIRB.Int8Ty, "sync_scope_id",
+                             "The sync scope id of the store.", IRTArg::NONE,
+                             getSyncScopeId));
+  }
+  if (Config.has(PassIsVolatile)) {
+    IRTArgs.push_back(IRTArg(IIRB.Int8Ty, "is_volatile",
+                             "Flag indicating a volatile store.", IRTArg::NONE,
+                             isVolatile));
+  }
+
+  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
+  IConf.addChoice(*this, IIRB.Ctx);
 }
 
 Value *StoreIO::getPointer(Value &V, Type &Ty, InstrumentationConfig &IConf,
@@ -580,6 +647,68 @@ Value *StoreIO::isVolatile(Value &V, Type &Ty, InstrumentationConfig &IConf,
                            InstrumentorIRBuilderTy &IIRB) {
   auto &SI = cast<StoreInst>(V);
   return getCI(&Ty, SI.isVolatile());
+}
+
+void LoadIO::init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
+                  ConfigTy *UserConfig) {
+  bool IsPRE = getLocationKind() == InstrumentationLocation::INSTRUCTION_PRE;
+  if (UserConfig)
+    Config = *UserConfig;
+  if (Config.has(PassPointer)) {
+    IRTArgs.push_back(
+        IRTArg(IIRB.PtrTy, "pointer", "The accessed pointer.",
+               ((IsPRE && Config.has(ReplacePointer)) ? IRTArg::REPLACABLE
+                                                      : IRTArg::NONE),
+               getPointer, setPointer));
+  }
+  if (Config.has(PassPointerAS)) {
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "pointer_as",
+                             "The address space of the accessed pointer.",
+                             IRTArg::NONE, getPointerAS));
+  }
+  if (!IsPRE && Config.has(PassValue)) {
+    IRTArgs.push_back(
+        IRTArg(getValueType(IIRB.Ctx), "value", "The loaded value.",
+               Config.has(ReplaceValue)
+                   ? IRTArg::REPLACABLE | IRTArg::POTENTIALLY_INDIRECT |
+                         (Config.has(PassValueSize) ? IRTArg::INDIRECT_HAS_SIZE
+                                                    : IRTArg::NONE)
+                   : IRTArg::NONE,
+               getValue, Config.has(ReplaceValue) ? replaceValue : nullptr));
+  }
+  if (Config.has(PassValueSize)) {
+    IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "value_size",
+                             "The size of the loaded value.", IRTArg::NONE,
+                             getValueSize));
+  }
+  if (Config.has(PassAlignment)) {
+    IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "alignment",
+                             "The known access alignment.", IRTArg::NONE,
+                             getAlignment));
+  }
+  if (Config.has(PassValueTypeId)) {
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "value_type_id",
+                             "The type id of the loaded value.", IRTArg::NONE,
+                             getValueTypeId));
+  }
+  if (Config.has(PassAtomicityOrdering)) {
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "atomicity_ordering",
+                             "The atomicity ordering of the load.",
+                             IRTArg::NONE, getAtomicityOrdering));
+  }
+  if (Config.has(PassSyncScopeId)) {
+    IRTArgs.push_back(IRTArg(IIRB.Int8Ty, "sync_scope_id",
+                             "The sync scope id of the load.", IRTArg::NONE,
+                             getSyncScopeId));
+  }
+  if (Config.has(PassIsVolatile)) {
+    IRTArgs.push_back(IRTArg(IIRB.Int8Ty, "is_volatile",
+                             "Flag indicating a volatile load.", IRTArg::NONE,
+                             isVolatile));
+  }
+
+  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
+  IConf.addChoice(*this, IIRB.Ctx);
 }
 
 Value *LoadIO::getPointer(Value &V, Type &Ty, InstrumentationConfig &IConf,

@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -22,16 +23,18 @@
 namespace llvm {
 namespace instrumentor {
 
-void writeConfigToJSON(InstrumentationConfig &IConf, StringRef OutputFile) {
+void writeConfigToJSON(InstrumentationConfig &IConf, StringRef OutputFile,
+                       LLVMContext &Ctx) {
   if (OutputFile.empty())
     return;
 
   std::error_code EC;
   raw_fd_stream OS(OutputFile, EC);
   if (EC) {
-    errs() << "WARNING: Failed to open instrumentor configuration file for "
-              "writing: "
-           << EC.message() << "\n";
+    Ctx.diagnose(DiagnosticInfoInstrumentation(
+        Twine("failed to open instrumentor configuration file for writing: ") +
+            EC.message(),
+        DS_Warning));
     return;
   }
 
@@ -40,12 +43,12 @@ void writeConfigToJSON(InstrumentationConfig &IConf, StringRef OutputFile) {
 
   J.attributeBegin("configuration");
   J.objectBegin();
-  for (auto *BaseCO : IConf.BaseConfigurationOpportunities) {
+  for (auto *BaseCO : IConf.BaseConfigurationOptions) {
     switch (BaseCO->Kind) {
-    case BaseConfigurationOpportunity::STRING:
+    case BaseConfigurationOption::STRING:
       J.attribute(BaseCO->Name, BaseCO->getString());
       break;
-    case BaseConfigurationOpportunity::BOOLEAN:
+    case BaseConfigurationOption::BOOLEAN:
       J.attribute(BaseCO->Name, BaseCO->getBool());
       break;
     }
@@ -89,67 +92,81 @@ void writeConfigToJSON(InstrumentationConfig &IConf, StringRef OutputFile) {
   J.objectEnd();
 }
 
-bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile) {
+bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
+                        LLVMContext &Ctx) {
   if (InputFile.empty())
     return true;
 
   std::error_code EC;
   auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(InputFile);
   if (std::error_code EC = BufferOrErr.getError()) {
-    errs() << "WARNING: Failed to open instrumentor configuration file for "
-              "reading: "
-           << EC.message() << "\n";
+    Ctx.diagnose(DiagnosticInfoInstrumentation(
+        Twine("failed to open instrumentor configuration file for reading: ") +
+            EC.message(),
+        DS_Warning));
     return false;
   }
   auto Buffer = std::move(BufferOrErr.get());
   json::Path::Root NullRoot;
   auto Parsed = json::parse(Buffer->getBuffer());
   if (!Parsed) {
-    errs() << "WARNING: Failed to parse the instrumentor configuration file: "
-           << Parsed.takeError() << "\n";
+    Ctx.diagnose(DiagnosticInfoInstrumentation(
+        Twine("failed to parse instrumentor configuration file: ") +
+            toString(Parsed.takeError()),
+        DS_Warning));
     return false;
   }
   auto *Config = Parsed->getAsObject();
   if (!Config) {
-    errs() << "WARNING: Failed to parse the instrumentor configuration file: "
-              "Expected "
-              "an object '{ ... }'\n";
+    Ctx.diagnose(DiagnosticInfoInstrumentation(
+        "failed to parse instrumentor configuration file, expected an object "
+        "'{ ... }'",
+        DS_Warning));
     return false;
   }
 
-  StringMap<BaseConfigurationOpportunity *> BCOMap;
-  for (auto *BO : IConf.BaseConfigurationOpportunities)
+  StringMap<BaseConfigurationOption *> BCOMap;
+  for (auto *BO : IConf.BaseConfigurationOptions)
     BCOMap[BO->Name] = BO;
 
   SmallPtrSet<InstrumentationOpportunity *, 32> SeenIOs;
   for (auto &It : *Config) {
     auto *Obj = It.second.getAsObject();
     if (!Obj) {
-      errs() << "WARNING: malformed JSON configuration, expected an object.\n";
+      Ctx.diagnose(DiagnosticInfoInstrumentation(
+          "malformed JSON configuration, expected an object", DS_Warning));
       continue;
     }
     if (It.first == "configuration") {
       for (auto &ObjIt : *Obj) {
         if (auto *BO = BCOMap.lookup(ObjIt.first)) {
           switch (BO->Kind) {
-          case BaseConfigurationOpportunity::STRING:
+          case BaseConfigurationOption::STRING:
             if (auto V = ObjIt.second.getAsString()) {
               BO->setString(IConf.SS.save(*V));
-            } else
-              errs() << "WARNING: configuration key '" << ObjIt.first
-                     << "' expects a string, value ignored\n";
+            } else {
+              Ctx.diagnose(DiagnosticInfoInstrumentation(
+                  Twine("configuration key '") + ObjIt.first.str() +
+                      Twine("' expects a string, value ignored"),
+                  DS_Warning));
+            }
             break;
-          case BaseConfigurationOpportunity::BOOLEAN:
+          case BaseConfigurationOption::BOOLEAN:
             if (auto V = ObjIt.second.getAsBoolean())
               BO->setBool(*V);
-            else
-              errs() << "WARNING: configuration key '" << ObjIt.first
-                     << "' expects a boolean, value ignored\n";
+            else {
+              Ctx.diagnose(DiagnosticInfoInstrumentation(
+                  Twine("configuration key '") + ObjIt.first.str() +
+                      Twine("' expects a boolean, value ignored"),
+                  DS_Warning));
+            }
             break;
           }
         } else if (!StringRef(ObjIt.first).ends_with(".description")) {
-          errs() << "WARNING: configuration key not found and ignored: "
-                 << ObjIt.first << "\n";
+          Ctx.diagnose(DiagnosticInfoInstrumentation(
+              Twine("configuration key '") + ObjIt.first.str() +
+                  Twine("' not found and ignored"),
+              DS_Warning));
         }
       }
       continue;
@@ -160,15 +177,17 @@ bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile) {
     for (auto &ObjIt : *Obj) {
       auto *InnerObj = ObjIt.second.getAsObject();
       if (!InnerObj) {
-        errs()
-            << "WARNING: malformed JSON configuration, expected an object.\n";
+        Ctx.diagnose(DiagnosticInfoInstrumentation(
+            "malformed JSON configuration, expected an object", DS_Warning));
         continue;
       }
       auto *IO = IChoiceMap.lookup(ObjIt.first);
       if (!IO) {
-        errs() << "WARNING: malformed JSON configuration, expected an object "
-                  "matching an instrumentor choice, got "
-               << ObjIt.first << ".\n";
+        Ctx.diagnose(DiagnosticInfoInstrumentation(
+            Twine("malformed JSON configuration, expected an object matching "
+                  "an instrumentor choice, got ") +
+                ObjIt.first.str(),
+            DS_Warning));
         continue;
       }
       SeenIOs.insert(IO);

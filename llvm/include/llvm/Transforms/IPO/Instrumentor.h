@@ -1,4 +1,4 @@
-//===- Transforms/IPO/Instrumentor.h --------------------------===//
+//===- Transforms/IPO/Instrumentor.h --------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -29,9 +29,9 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Transforms/IPO/InstrumentorUtils.h"
 #include "llvm/Transforms/Utils/Instrumentation.h"
 
-#include <bitset>
 #include <cstdint>
 #include <functional>
 #include <string>
@@ -43,100 +43,17 @@ namespace instrumentor {
 struct InstrumentationConfig;
 struct InstrumentationOpportunity;
 
-struct InstrumentorIRBuilderTy {
-  InstrumentorIRBuilderTy(Module &M, FunctionAnalysisManager &FAM)
-      : M(M), Ctx(M.getContext()), FAM(FAM),
-        IRB(Ctx, ConstantFolder(),
-            IRBuilderCallbackInserter(
-                [&](Instruction *I) { NewInsts[I] = Epoche; })) {}
-
-  ~InstrumentorIRBuilderTy() {
-    for (auto *I : ToBeErased) {
-      if (!I->getType()->isVoidTy())
-        I->replaceAllUsesWith(PoisonValue::get(I->getType()));
-      I->eraseFromParent();
-    }
-  }
-
-  /// Get a temporary alloca to communicate (large) values with the runtime.
-  AllocaInst *getAlloca(Function *Fn, Type *Ty, bool MatchType = false) {
-    const DataLayout &DL = Fn->getDataLayout();
-    auto *&AllocaList = AllocaMap[{Fn, DL.getTypeAllocSize(Ty)}];
-    if (!AllocaList)
-      AllocaList = new AllocaListTy;
-    AllocaInst *AI = nullptr;
-    for (auto *&ListAI : *AllocaList) {
-      if (MatchType && ListAI->getAllocatedType() != Ty)
-        continue;
-      AI = ListAI;
-      ListAI = *AllocaList->rbegin();
-      break;
-    }
-    if (AI)
-      AllocaList->pop_back();
-    else
-      AI = new AllocaInst(Ty, DL.getAllocaAddrSpace(), "",
-                          Fn->getEntryBlock().begin());
-    UsedAllocas[AI] = AllocaList;
-    return AI;
-  }
-
-  /// Return the temporary allocas.
-  void returnAllocas() {
-    for (auto [AI, List] : UsedAllocas)
-      List->push_back(AI);
-    UsedAllocas.clear();
-  }
-
-  /// Commonly used values for IR inspection and creation.
-  ///{
-
-  Module &M;
-
-  /// The underying LLVM context.
-  LLVMContext &Ctx;
-
-  const DataLayout &DL = M.getDataLayout();
-
-  Type *VoidTy = Type::getVoidTy(Ctx);
-  Type *IntptrTy = M.getDataLayout().getIntPtrType(Ctx);
-  PointerType *PtrTy = PointerType::getUnqual(Ctx);
-  IntegerType *Int8Ty = Type::getInt8Ty(Ctx);
-  IntegerType *Int32Ty = Type::getInt32Ty(Ctx);
-  IntegerType *Int64Ty = Type::getInt64Ty(Ctx);
-  Constant *NullPtrVal = Constant::getNullValue(PtrTy);
-  ///}
-
-  /// Mapping to remember temporary allocas for reuse.
-  using AllocaListTy = SmallVector<AllocaInst *>;
-  DenseMap<std::pair<Function *, unsigned>, AllocaListTy *> AllocaMap;
-  DenseMap<AllocaInst *, SmallVector<AllocaInst *> *> UsedAllocas;
-
-  void eraseLater(Instruction *I) { ToBeErased.insert(I); }
-  SmallPtrSet<Instruction *, 32> ToBeErased;
-
-  FunctionAnalysisManager &FAM;
-
-  IRBuilder<ConstantFolder, IRBuilderCallbackInserter> IRB;
-
-  /// Each instrumentation, i.a., of an instruction, is happening in a dedicated
-  /// epoche. The epoche allows to determine if instrumentation instructions
-  /// were already around, due to prior instrumentations, or have been
-  /// introduced to support the current instrumentation, i.a., compute
-  /// information about the current instruction.
-  unsigned Epoche = 0;
-
-  /// A mapping from instrumentation instructions to the epoche they have been
-  /// created.
-  DenseMap<Instruction *, unsigned> NewInsts;
-};
-
+/// Callback type for getting/setting a value for a instrumented opportunity.
+///{
 using GetterCallbackTy = std::function<Value *(
     Value &, Type &, InstrumentationConfig &, InstrumentorIRBuilderTy &)>;
 using SetterCallbackTy = std::function<Value *(
     Value &, Value &, InstrumentationConfig &, InstrumentorIRBuilderTy &)>;
+///}
 
+/// Helper to represent an argument to a instrumentation runtime function.
 struct IRTArg {
+  /// Flags describing the possible properties of an argument.
   enum IRArgFlagTy {
     NONE = 0,
     STRING = 1 << 0,
@@ -144,10 +61,10 @@ struct IRTArg {
     REPLACABLE_CUSTOM = 1 << 2,
     POTENTIALLY_INDIRECT = 1 << 3,
     INDIRECT_HAS_SIZE = 1 << 4,
-
     LAST,
   };
 
+  /// Construct an argument.
   IRTArg(Type *Ty, StringRef Name, StringRef Description, unsigned Flags,
          GetterCallbackTy GetterCB, SetterCallbackTy SetterCB = nullptr,
          bool Enabled = true, bool NoCache = false)
@@ -155,49 +72,85 @@ struct IRTArg {
         Flags(Flags), GetterCB(std::move(GetterCB)),
         SetterCB(std::move(SetterCB)), NoCache(NoCache) {}
 
+  /// Whether the argument is enabled and should be passed to the function call.
   bool Enabled;
+
+  /// The type of the argument.
   Type *Ty;
+
+  /// A string with the name of the argument.
   StringRef Name;
+
+  /// A string with the description of the argument.
   StringRef Description;
+
+  /// The flags that describe the properties of the argument. Multiple flags may
+  /// be specified.
   unsigned Flags;
+
+  /// The callback for getting the value of the argument.
   GetterCallbackTy GetterCB;
+
+  /// The callback for consuming the output value of the argument.
   SetterCallbackTy SetterCB;
+
+  /// Whether the argument value can be cached between the PRE and POST calls.
   bool NoCache;
 };
 
-struct InstrumentationCaches {
-  DenseMap<std::tuple<unsigned, StringRef, StringRef>, Value *> DirectArgCache;
-  DenseMap<std::tuple<unsigned, StringRef, StringRef>, Value *>
-      IndirectArgCache;
-};
-
+/// Helper to represent an instrumentation runtime function that is related to
+/// an instrumentation opportunity.
 struct IRTCallDescription {
-  IRTCallDescription(InstrumentationOpportunity &IConf, Type *RetTy = nullptr);
+  /// Construct an instrumentation function description linked to the \p IO
+  /// instrumentation opportunity and \p RetTy return type.
+  IRTCallDescription(InstrumentationOpportunity &IO, Type *RetTy = nullptr);
 
+  /// Create the type of the instrumentation function.
   FunctionType *createLLVMSignature(InstrumentationConfig &IConf,
                                     LLVMContext &Ctx, const DataLayout &DL,
                                     bool ForceIndirection);
+
+  /// Create a call instruction that calls to the instrumentation function and
+  /// passes the corresponding arguments.
   CallInst *createLLVMCall(Value *&V, InstrumentationConfig &IConf,
                            InstrumentorIRBuilderTy &IIRB, const DataLayout &DL,
                            InstrumentationCaches &ICaches);
 
+  /// Return whether the \p IRTA argument can be replaced.
   bool isReplacable(IRTArg &IRTA) const {
     return (IRTA.Flags & (IRTArg::REPLACABLE | IRTArg::REPLACABLE_CUSTOM));
   }
 
+  /// Return whether the function may have any indirect argument.
   bool isPotentiallyIndirect(IRTArg &IRTA) const {
     return ((IRTA.Flags & IRTArg::POTENTIALLY_INDIRECT) ||
             ((IRTA.Flags & IRTArg::REPLACABLE) && NumReplaceableArgs > 1));
   }
 
+  /// Whether the function requires indirection in some argument.
   bool RequiresIndirection = false;
+
+  /// Whether any argument may require indirection.
   bool MightRequireIndirection = false;
+
+  /// The number of arguments that can be replaced.
   unsigned NumReplaceableArgs = 0;
+
+  /// The instrumentation opportunity which it is linked to.
   InstrumentationOpportunity &IO;
+
+  /// The return type of the instrumentation function.
   Type *RetTy = nullptr;
 };
 
+/// Helper to represent an instrumentation location, which is composed of an
+/// instrumentation opportunity type and a position.
 struct InstrumentationLocation {
+  /// The supported location kinds, which are composed of a opportunity type and
+  /// position. The PRE position indicates the instrumentation function call is
+  /// inserted before the instrumented event occurs. The POST position indicates
+  /// the instrumentation call is inserted after the event occurs. Some
+  /// opportunity types may only support one position.
   enum KindTy {
     MODULE_PRE,
     MODULE_POST,
@@ -209,20 +162,26 @@ struct InstrumentationLocation {
     BASIC_BLOCK_POST,
     INSTRUCTION_PRE,
     INSTRUCTION_POST,
-    SPECIAL_VALUE,
-    Last = SPECIAL_VALUE,
+    Last = INSTRUCTION_POST,
   };
 
+  /// Construct an instrumentation location that is not instrumenting an
+  /// instruction.
   InstrumentationLocation(KindTy Kind) : Kind(Kind) {
     assert(Kind != INSTRUCTION_PRE && Kind != INSTRUCTION_POST &&
            "Opcode required!");
   }
 
+  /// Construct an instrumentation location belonging to the instrumentation of
+  /// an instruction.
   InstrumentationLocation(unsigned Opcode, bool IsPRE)
       : Kind(IsPRE ? INSTRUCTION_PRE : INSTRUCTION_POST), Opcode(Opcode) {}
 
+  /// Return the type and position.
   KindTy getKind() const { return Kind; }
 
+  /// Return the string representation given a location kind. This is the string
+  /// used in the configuration file.
   static StringRef getKindStr(KindTy Kind) {
     switch (Kind) {
     case MODULE_PRE:
@@ -245,11 +204,11 @@ struct InstrumentationLocation {
       return "instruction_pre";
     case INSTRUCTION_POST:
       return "instruction_post";
-    case SPECIAL_VALUE:
-      return "special_value";
     }
     llvm_unreachable("Invalid kind!");
   }
+
+  /// Return the location kind described by a string.
   static KindTy getKindFromStr(StringRef S) {
     return StringSwitch<KindTy>(S)
         .Case("module_pre", MODULE_PRE)
@@ -262,10 +221,10 @@ struct InstrumentationLocation {
         .Case("basic_block_post", BASIC_BLOCK_POST)
         .Case("instruction_pre", INSTRUCTION_PRE)
         .Case("instruction_post", INSTRUCTION_POST)
-        .Case("special_value", SPECIAL_VALUE)
         .Default(Last);
   }
 
+  /// Return whether a location kind is positioned before the event occurs.
   static bool isPRE(KindTy Kind) {
     switch (Kind) {
     case MODULE_PRE:
@@ -279,13 +238,16 @@ struct InstrumentationLocation {
     case FUNCTION_POST:
     case BASIC_BLOCK_POST:
     case INSTRUCTION_POST:
-    case SPECIAL_VALUE:
       return false;
     }
     llvm_unreachable("Invalid kind!");
   }
+
+  /// Return whether the instrumentation location is before the event occurs.
   bool isPRE() const { return isPRE(Kind); }
 
+  /// Get the opcode of the instruction instrumentation location. This function
+  /// may not be called by a non-instruction instrumentation location.
   unsigned getOpcode() const {
     assert((Kind == INSTRUCTION_PRE || Kind == INSTRUCTION_POST) &&
            "Expected instruction!");
@@ -293,95 +255,118 @@ struct InstrumentationLocation {
   }
 
 private:
+  /// The kind (type and position) of the instrumentation location.
   const KindTy Kind;
+
+  /// The opcode for instruction instrumentation locations.
   const unsigned Opcode = -1;
 };
 
-struct BaseConfigurationOpportunity {
+/// An option for the base configuration.
+struct BaseConfigurationOption {
+  /// The possible types of options.
   enum KindTy {
     STRING,
     BOOLEAN,
   };
 
-  static BaseConfigurationOpportunity *getBoolOption(InstrumentationConfig &IC,
-                                                     StringRef Name,
-                                                     StringRef Description,
-                                                     bool B);
-  static BaseConfigurationOpportunity *
-  getStringOption(InstrumentationConfig &IC, StringRef Name,
-                  StringRef Description, StringRef Value);
+  /// Create a boolean option with \p Name name, \p Description description and
+  /// \p DefaultValue as boolean default value.
+  static BaseConfigurationOption *getBoolOption(InstrumentationConfig &IC,
+                                                StringRef Name,
+                                                StringRef Description,
+                                                bool DefaultValue);
+
+  /// Create a string option with \p Name name, \p Description description and
+  /// \p DefaultValue as string default value.
+  static BaseConfigurationOption *getStringOption(InstrumentationConfig &IC,
+                                                  StringRef Name,
+                                                  StringRef Description,
+                                                  StringRef DefaultValue);
+
+  /// Helper union that holds any possible option type.
   union ValueTy {
-    bool B;
-    int64_t I;
-    StringRef S;
+    bool Bool;
+    StringRef String;
   };
 
+  /// Set and get of the boolean value. Only valid if it is a boolean option.
+  ///{
   void setBool(bool B) {
     assert(Kind == BOOLEAN && "Not a boolean!");
-    V.B = B;
+    Value.Bool = B;
   }
   bool getBool() const {
     assert(Kind == BOOLEAN && "Not a boolean!");
-    return V.B;
+    return Value.Bool;
   }
+  ///}
+
+  /// Set and get the string value. Only valid if it is a boolean option.
+  ///{
   void setString(StringRef S) {
     assert(Kind == STRING && "Not a string!");
-    V.S = S;
+    Value.String = S;
   }
   StringRef getString() const {
     assert(Kind == STRING && "Not a string!");
-    return V.S;
+    return Value.String;
   }
+  ///}
 
+  /// The information of the option.
+  ///{
   StringRef Name;
   StringRef Description;
   KindTy Kind;
-  ValueTy V = {0};
+  ValueTy Value = {0};
+  ///}
 };
 
-struct InstrumentorIRBuilderTy;
+/// The class that contains the configuration for the instrumentor. It holds the
+/// information for each instrumented opportunity, including the base
+/// configuration options. Another class may inherit from this one to modify the
+/// default behavior.
 struct InstrumentationConfig {
   virtual ~InstrumentationConfig() {}
 
+  /// Construct an instrumentation configuration with the base options.
   InstrumentationConfig() : SS(StringAllocator) {
-    RuntimePrefix = BaseConfigurationOpportunity::getStringOption(
+    RuntimePrefix = BaseConfigurationOption::getStringOption(
         *this, "runtime_prefix", "The runtime API prefix.", "__instrumentor_");
-    TargetRegex = BaseConfigurationOpportunity::getStringOption(
+    TargetRegex = BaseConfigurationOption::getStringOption(
         *this, "target_regex",
         "Regular expression to be matched against the module target. "
         "Only targets that match this regex will be instrumented",
         "");
-    HostEnabled = BaseConfigurationOpportunity::getBoolOption(
+    HostEnabled = BaseConfigurationOption::getBoolOption(
         *this, "host_enabled", "Instrument non-GPU targets", true);
-    GPUEnabled = BaseConfigurationOpportunity::getBoolOption(
+    GPUEnabled = BaseConfigurationOption::getBoolOption(
         *this, "gpu_enabled", "Instrument GPU targets", true);
   }
 
-  bool ReadConfig = true;
-
+  /// Populate the instrumentation opportunities.
   virtual void populate(InstrumentorIRBuilderTy &IIRB);
+
+  /// Get the runtime prefix for the instrumentation runtime functions.
   StringRef getRTName() const { return RuntimePrefix->getString(); }
 
+  /// Get the instrumentation function name.
   std::string getRTName(StringRef Prefix, StringRef Name,
                         StringRef Suffix1 = "", StringRef Suffix2 = "") const {
     return (getRTName() + Prefix + Name + Suffix1 + Suffix2).str();
   }
 
-  void addBaseChoice(BaseConfigurationOpportunity *BCO) {
-    BaseConfigurationOpportunities.push_back(BCO);
+  /// Add the base configuration option \p BCO into the list of base options.
+  void addBaseChoice(BaseConfigurationOption *BCO) {
+    BaseConfigurationOptions.push_back(BCO);
   }
-  SmallVector<BaseConfigurationOpportunity *> BaseConfigurationOpportunities;
 
-  BaseConfigurationOpportunity *RuntimePrefix;
-  BaseConfigurationOpportunity *TargetRegex;
-  BaseConfigurationOpportunity *HostEnabled;
-  BaseConfigurationOpportunity *GPUEnabled;
+  /// Register instrumentation opportunity \p IO.
+  void addChoice(InstrumentationOpportunity &IO, LLVMContext &Ctx);
 
-  EnumeratedArray<StringMap<InstrumentationOpportunity *>,
-                  InstrumentationLocation::KindTy>
-      IChoices;
-  void addChoice(InstrumentationOpportunity &IO);
-
+  /// Allocate an object of type \p Ty using a bump allocator and construct it
+  /// with the \p Args arguments. The object may not be freed manually.
   template <typename Ty, typename... ArgsTy>
   static Ty *allocate(ArgsTy &&...Args) {
     static SpecificBumpPtrAllocator<Ty> Allocator;
@@ -390,31 +375,47 @@ struct InstrumentationConfig {
     return Obj;
   }
 
+  /// The list of enabled base configuration options.
+  SmallVector<BaseConfigurationOption *> BaseConfigurationOptions;
+
+  /// The base configuration options.
+  BaseConfigurationOption *RuntimePrefix;
+  BaseConfigurationOption *TargetRegex;
+  BaseConfigurationOption *HostEnabled;
+  BaseConfigurationOption *GPUEnabled;
+
+  /// The map registered instrumentation opportunities. The map is indexed by
+  /// the instrumentation location kind and then by the opportunity name. Notice
+  /// that an instrumentation location may have more than one instrumentation
+  /// opportunity registered.
+  EnumeratedArray<StringMap<InstrumentationOpportunity *>,
+                  InstrumentationLocation::KindTy>
+      IChoices;
+
+  /// Utilities for allocating and building strings.
+  ///{
   BumpPtrAllocator StringAllocator;
   StringSaver SS;
+  ///}
 };
 
-template <typename EnumTy> struct BaseConfigTy {
-  std::bitset<static_cast<int>(EnumTy::NumConfig)> Options;
-
-  BaseConfigTy(bool Enable = true) {
-    if (Enable)
-      Options.set();
-  }
-
-  bool has(EnumTy Opt) const { return Options.test(static_cast<int>(Opt)); }
-  void set(EnumTy Opt, bool Value = true) {
-    Options.set(static_cast<int>(Opt), Value);
-  }
-};
-
+/// Base class for instrumentation opportunities. All opportunities should
+/// inherit from this class and implement the virtual class members.
 struct InstrumentationOpportunity {
-  InstrumentationOpportunity(const InstrumentationLocation IP) : IP(IP) {}
   virtual ~InstrumentationOpportunity() {}
 
+  /// Construct an opportunity with location \p IP.
+  InstrumentationOpportunity(const InstrumentationLocation IP) : IP(IP) {}
+
+  /// The instrumentation location of the opportunity.
   InstrumentationLocation IP;
 
+  /// The list of possible arguments for the instrumentation runtime function.
+  /// The order within the array determines the order of arguments. Arguments
+  /// may be disabled and will not be passed to the function call.
   SmallVector<IRTArg> IRTArgs;
+
+  /// Whether the opportunity is enabled.
   bool Enabled = true;
 
   /// Helpers to cast values, pass them to the runtime, and replace them. To be
@@ -425,12 +426,13 @@ struct InstrumentationOpportunity {
                          InstrumentorIRBuilderTy &IIRB) {
     return forceCast(V, Ty, IIRB);
   }
-
   static Value *replaceValue(Value &V, Value &NewV,
                              InstrumentationConfig &IConf,
                              InstrumentorIRBuilderTy &IIRB);
   ///}
 
+  /// Instrument the value \p V using the configuration \p IConf, and
+  /// potentially, the caches \p ICaches.
   virtual Value *instrument(Value *&V, InstrumentationConfig &IConf,
                             InstrumentorIRBuilderTy &IIRB,
                             InstrumentationCaches &ICaches) {
@@ -443,62 +445,89 @@ struct InstrumentationOpportunity {
     return CI;
   }
 
+  /// Get the return type for the instrumentation runtime function.
   virtual Type *getRetTy(LLVMContext &Ctx) const { return nullptr; }
+
+  /// Get the name of the instrumentation opportunity.
   virtual StringRef getName() const = 0;
 
+  /// Get the opcode of the instruction instrumentation opportunity. Only valid
+  /// if it is instruction instrumentation.
   unsigned getOpcode() const { return IP.getOpcode(); }
+
+  /// Get the location kind of the instrumentation opportunity.
   InstrumentationLocation::KindTy getLocationKind() const {
     return IP.getKind();
   }
 
   /// An optional callback that takes the value that is about to be
   /// instrumented and can return false if it should be skipped.
+  ///{
   using CallbackTy = std::function<bool(Value &)>;
-
   CallbackTy CB = nullptr;
+  ///}
 
-  static Value *getIdPre(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                         InstrumentorIRBuilderTy &IIRB);
-  static Value *getIdPost(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                          InstrumentorIRBuilderTy &IIRB);
-
+  /// Add arguments available in all instrumentation opportunities.
   void addCommonArgs(InstrumentationConfig &IConf, LLVMContext &Ctx,
                      bool PassId) {
     const auto CB = IP.isPRE() ? getIdPre : getIdPost;
-    if (PassId)
+    if (PassId) {
       IRTArgs.push_back(
           IRTArg(IntegerType::getInt32Ty(Ctx), "id",
                  "A unique ID associated with the given instrumentor call",
                  IRTArg::NONE, CB, nullptr, true, true));
+    }
   }
 
-  static int32_t getIdFromEpoche(uint32_t Epoche) {
-    static DenseMap<uint32_t, int32_t> EpocheIdMap;
+  /// Get the opportunity identifier for the pre and post positions.
+  ///{
+  static Value *getIdPre(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                         InstrumentorIRBuilderTy &IIRB);
+  static Value *getIdPost(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                          InstrumentorIRBuilderTy &IIRB);
+  ///}
+
+  /// Compute the opportunity identifier for the current instrumentation epoch
+  /// \p CurrentEpoch. The identifiers are assigned consecutively as the epoch
+  /// advances. Epochs may have no identifier assigned (e.g., because no id was
+  /// requested). This function always returns the same identifier when called
+  /// multiple times with the same epoch.
+  static int32_t getIdFromEpoch(uint32_t CurrentEpoch) {
+    static DenseMap<uint32_t, int32_t> EpochIdMap;
     static int32_t GlobalId = 0;
-    int32_t &EpochId = EpocheIdMap[Epoche];
+    int32_t &EpochId = EpochIdMap[CurrentEpoch];
     if (EpochId == 0)
       EpochId = ++GlobalId;
     return EpochId;
   }
 };
 
+/// The base instrumentation opportunity class for instruction opportunities.
+/// Each instruction opportunity should inherit from this class and implement
+/// the virtual class members.
 template <unsigned Opcode>
 struct InstructionIO : public InstrumentationOpportunity {
-  InstructionIO(bool IsPRE)
-      : InstrumentationOpportunity(InstrumentationLocation(Opcode, IsPRE)) {}
   virtual ~InstructionIO() {}
 
-  unsigned getOpcode() const { return Opcode; }
+  /// Construct an instruction opportunity.
+  InstructionIO(bool IsPRE)
+      : InstrumentationOpportunity(InstrumentationLocation(Opcode, IsPRE)) {}
 
+  /// Get the name of the instruction.
   StringRef getName() const override {
     return Instruction::getOpcodeName(Opcode);
   }
 };
 
+/// The instrumentation opportunity for store instructions.
 struct StoreIO : public InstructionIO<Instruction::Store> {
-  StoreIO(bool IsPRE) : InstructionIO(IsPRE) {}
   virtual ~StoreIO() {};
 
+  /// Construct a store instruction opportunity.
+  StoreIO(bool IsPRE) : InstructionIO(IsPRE) {}
+
+  /// The selector of arguments for store opportunities.
+  ///{
   enum ConfigKind {
     PassPointer = 0,
     ReplacePointer,
@@ -514,65 +543,23 @@ struct StoreIO : public InstructionIO<Instruction::Store> {
     NumConfig,
   };
 
+  using ConfigTy = BaseConfigTy<ConfigKind>;
+  ConfigTy Config;
+  ///}
+
+  /// Get the type of the stored value.
   virtual Type *getValueType(LLVMContext &Ctx) const {
     return IntegerType::getInt64Ty(Ctx);
   }
 
-  using ConfigTy = BaseConfigTy<ConfigKind>;
-  ConfigTy Config;
-
+  /// Initialize the store opportunity using the instrumentation config \p IConf
+  /// and the user config \p UserConfig.
   void init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
-            ConfigTy *UserConfig = nullptr) {
-    if (UserConfig)
-      Config = *UserConfig;
+            ConfigTy *UserConfig = nullptr);
 
-    bool IsPRE = getLocationKind() == InstrumentationLocation::INSTRUCTION_PRE;
-    if (Config.has(PassPointer))
-      IRTArgs.push_back(
-          IRTArg(IIRB.PtrTy, "pointer", "The accessed pointer.",
-                 ((IsPRE && Config.has(ReplacePointer)) ? IRTArg::REPLACABLE
-                                                        : IRTArg::NONE),
-                 getPointer, setPointer));
-    if (Config.has(PassPointerAS))
-      IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "pointer_as",
-                               "The address space of the accessed pointer.",
-                               IRTArg::NONE, getPointerAS));
-    if (Config.has(PassStoredValue))
-      IRTArgs.push_back(
-          IRTArg(getValueType(IIRB.Ctx), "value", "The stored value.",
-                 IRTArg::POTENTIALLY_INDIRECT | (Config.has(PassStoredValueSize)
-                                                     ? IRTArg::INDIRECT_HAS_SIZE
-                                                     : IRTArg::NONE),
-                 getValue));
-    if (Config.has(PassStoredValueSize))
-      IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "value_size",
-                               "The size of the stored value.", IRTArg::NONE,
-                               getValueSize));
-    if (Config.has(PassAlignment))
-      IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "alignment",
-                               "The known access alignment.", IRTArg::NONE,
-                               getAlignment));
-    if (Config.has(PassValueTypeId))
-      IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "value_type_id",
-                               "The type id of the stored value.", IRTArg::NONE,
-                               getValueTypeId));
-    if (Config.has(PassAtomicityOrdering))
-      IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "atomicity_ordering",
-                               "The atomicity ordering of the store.",
-                               IRTArg::NONE, getAtomicityOrdering));
-    if (Config.has(PassSyncScopeId))
-      IRTArgs.push_back(IRTArg(IIRB.Int8Ty, "sync_scope_id",
-                               "The sync scope id of the store.", IRTArg::NONE,
-                               getSyncScopeId));
-    if (Config.has(PassIsVolatile))
-      IRTArgs.push_back(IRTArg(IIRB.Int8Ty, "is_volatile",
-                               "Flag indicating a volatile store.",
-                               IRTArg::NONE, isVolatile));
-
-    addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
-    IConf.addChoice(*this);
-  }
-
+  /// Getters and setters for the arguments of the instrumentation function for
+  /// the store opportunity.
+  ///{
   static Value *getPointer(Value &V, Type &Ty, InstrumentationConfig &IConf,
                            InstrumentorIRBuilderTy &IIRB);
   static Value *setPointer(Value &V, Value &NewV, InstrumentationConfig &IConf,
@@ -594,7 +581,11 @@ struct StoreIO : public InstructionIO<Instruction::Store> {
                                InstrumentorIRBuilderTy &IIRB);
   static Value *isVolatile(Value &V, Type &Ty, InstrumentationConfig &IConf,
                            InstrumentorIRBuilderTy &IIRB);
+  ///}
 
+  /// Create the store opportunities for pre and post positions. The
+  /// opportunities are also initialized with the arguments for their
+  /// instrumentation calls.
   static void populate(InstrumentationConfig &IConf,
                        InstrumentorIRBuilderTy &IIRB) {
     for (auto IsPRE : {true, false}) {
@@ -604,10 +595,15 @@ struct StoreIO : public InstructionIO<Instruction::Store> {
   }
 };
 
+/// The instrumentation opportunity for load instructions.
 struct LoadIO : public InstructionIO<Instruction::Load> {
-  LoadIO(bool IsPRE) : InstructionIO(IsPRE) {}
   virtual ~LoadIO() {};
 
+  /// Construct a load opportunity.
+  LoadIO(bool IsPRE) : InstructionIO(IsPRE) {}
+
+  /// The selector of arguments for load opportunities.
+  ///{
   enum ConfigKind {
     PassPointer = 0,
     ReplacePointer,
@@ -624,65 +620,23 @@ struct LoadIO : public InstructionIO<Instruction::Load> {
     NumConfig,
   };
 
+  using ConfigTy = BaseConfigTy<ConfigKind>;
+  ConfigTy Config;
+  ///}
+
+  /// Get the type of the loaded value.
   virtual Type *getValueType(LLVMContext &Ctx) const {
     return IntegerType::getInt64Ty(Ctx);
   }
 
-  using ConfigTy = BaseConfigTy<ConfigKind>;
-  ConfigTy Config;
-
+  /// Initialize the load opportunity using the instrumentation config \p IConf
+  /// and the user config \p UserConfig.
   void init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
-            ConfigTy *UserConfig = nullptr) {
-    bool IsPRE = getLocationKind() == InstrumentationLocation::INSTRUCTION_PRE;
-    if (UserConfig)
-      Config = *UserConfig;
-    if (Config.has(PassPointer))
-      IRTArgs.push_back(
-          IRTArg(IIRB.PtrTy, "pointer", "The accessed pointer.",
-                 ((IsPRE && Config.has(ReplacePointer)) ? IRTArg::REPLACABLE
-                                                        : IRTArg::NONE),
-                 getPointer, setPointer));
-    if (Config.has(PassPointerAS))
-      IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "pointer_as",
-                               "The address space of the accessed pointer.",
-                               IRTArg::NONE, getPointerAS));
-    if (!IsPRE && Config.has(PassValue))
-      IRTArgs.push_back(IRTArg(
-          getValueType(IIRB.Ctx), "value", "The loaded value.",
-          Config.has(ReplaceValue)
-              ? IRTArg::REPLACABLE | IRTArg::POTENTIALLY_INDIRECT |
-                    (Config.has(PassValueSize) ? IRTArg::INDIRECT_HAS_SIZE
-                                               : IRTArg::NONE)
-              : IRTArg::NONE,
-          getValue, Config.has(ReplaceValue) ? replaceValue : nullptr));
-    if (Config.has(PassValueSize))
-      IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "value_size",
-                               "The size of the loaded value.", IRTArg::NONE,
-                               getValueSize));
-    if (Config.has(PassAlignment))
-      IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "alignment",
-                               "The known access alignment.", IRTArg::NONE,
-                               getAlignment));
-    if (Config.has(PassValueTypeId))
-      IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "value_type_id",
-                               "The type id of the loaded value.", IRTArg::NONE,
-                               getValueTypeId));
-    if (Config.has(PassAtomicityOrdering))
-      IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "atomicity_ordering",
-                               "The atomicity ordering of the load.",
-                               IRTArg::NONE, getAtomicityOrdering));
-    if (Config.has(PassSyncScopeId))
-      IRTArgs.push_back(IRTArg(IIRB.Int8Ty, "sync_scope_id",
-                               "The sync scope id of the load.", IRTArg::NONE,
-                               getSyncScopeId));
-    if (Config.has(PassIsVolatile))
-      IRTArgs.push_back(IRTArg(IIRB.Int8Ty, "is_volatile",
-                               "Flag indicating a volatile load.", IRTArg::NONE,
-                               isVolatile));
-    addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
-    IConf.addChoice(*this);
-  }
+            ConfigTy *UserConfig = nullptr);
 
+  /// Getters and setters for the arguments of the instrumentation function for
+  /// the load opportunity.
+  ///{
   static Value *getPointer(Value &V, Type &Ty, InstrumentationConfig &IConf,
                            InstrumentorIRBuilderTy &IIRB);
   static Value *setPointer(Value &V, Value &NewV, InstrumentationConfig &IConf,
@@ -704,7 +658,9 @@ struct LoadIO : public InstructionIO<Instruction::Load> {
                                InstrumentorIRBuilderTy &IIRB);
   static Value *isVolatile(Value &V, Type &Ty, InstrumentationConfig &IConf,
                            InstrumentorIRBuilderTy &IIRB);
+  ///}
 
+  /// Create the store opportunities for PRE and POST positions.
   static void populate(InstrumentationConfig &IConf,
                        InstrumentorIRBuilderTy &IIRB) {
     for (auto IsPRE : {true, false}) {
@@ -716,17 +672,24 @@ struct LoadIO : public InstructionIO<Instruction::Load> {
 
 } // namespace instrumentor
 
+/// The Instrumentor pass.
 class InstrumentorPass : public PassInfoMixin<InstrumentorPass> {
   using InstrumentationConfig = instrumentor::InstrumentationConfig;
   using InstrumentorIRBuilderTy = instrumentor::InstrumentorIRBuilderTy;
+
+  /// The configuration and IR builder provided by the user.
   InstrumentationConfig *UserIConf;
   InstrumentorIRBuilderTy *UserIIRB;
 
-  PreservedAnalyses run(Module &M, FunctionAnalysisManager &FAM,
-                        InstrumentationConfig &IConf,
-                        InstrumentorIRBuilderTy &IIRB);
+  PreservedAnalyses run(Module &M, InstrumentationConfig &IConf,
+                        InstrumentorIRBuilderTy &IIRB, bool ReadConfig);
 
 public:
+  /// Construct an instrumentor pass that will use the instrumentation
+  /// configuration \p IC and the IR builder \p IIRB. If an IR builder is not
+  /// provided, a default builder is used. When the configuration is not
+  /// provided, it is read from the config file if available and otherwise a
+  /// default configuration is used.
   InstrumentorPass(InstrumentationConfig *IC = nullptr,
                    InstrumentorIRBuilderTy *IIRB = nullptr)
       : UserIConf(IC), UserIIRB(IIRB) {}
