@@ -234,6 +234,8 @@ public:
   bool legalizeWaveID(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeWavegroupID(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeWaveIDInWavegroup(MachineInstr &MI, MachineIRBuilder &B) const;
+  bool legalizeWavegroupIdInCluster(MachineInstr &MI,
+                                    MachineIRBuilder &B) const;
   bool legalizeConstHwRegRead(MachineInstr &MI, MachineIRBuilder &B,
                               AMDGPU::Hwreg::Id HwReg, unsigned LowBit,
                               unsigned Width) const;

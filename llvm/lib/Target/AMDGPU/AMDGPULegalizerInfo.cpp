@@ -7787,6 +7787,24 @@ bool AMDGPULegalizerInfo::legalizeWaveIDInWavegroup(MachineInstr &MI,
   return true;
 }
 
+bool AMDGPULegalizerInfo::legalizeWavegroupIdInCluster(
+    MachineInstr &MI, MachineIRBuilder &B) const {
+  if (!ST.hasWavegroups())
+    return false;
+  // WavegroupIDInCluster = WorkgroupIDinCluster * 4 + WavegroupID
+  LLT S32 = LLT::scalar(32);
+  Register WgIdInCluster =
+      B.buildIntrinsic(Intrinsic::amdgcn_cluster_workgroup_flat_id, {S32})
+          .getReg(0);
+  Register WavegroupID =
+      B.buildIntrinsic(Intrinsic::amdgcn_wavegroup_id, {S32}).getReg(0);
+  Register Mul =
+      B.buildMul(S32, WgIdInCluster, B.buildConstant(S32, 4)).getReg(0);
+  B.buildAdd(S32, Mul, WavegroupID);
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPULegalizerInfo::legalizeConstHwRegRead(MachineInstr &MI,
                                                  MachineIRBuilder &B,
                                                  AMDGPU::Hwreg::Id HwReg,
@@ -8047,6 +8065,8 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return legalizeWavegroupID(MI, B);
   case Intrinsic::amdgcn_wave_id_in_wavegroup:
     return legalizeWaveIDInWavegroup(MI, B);
+  case Intrinsic::amdgcn_wavegroup_id_in_cluster:
+    return legalizeWavegroupIdInCluster(MI, B);
   case Intrinsic::amdgcn_lds_kernel_id:
     return legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::LDS_KERNEL_ID);

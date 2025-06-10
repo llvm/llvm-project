@@ -62,6 +62,7 @@ entry:
 ; KERNEL-NEXT:    .private_segment_fixed_size: 244
 ; KERNEL-NEXT:    .sgpr_count:     6
 ; KERNEL-NEXT:    .sgpr_spill_count: 0
+; KERNEL-NEXT:    .spatial_cluster: false
 ; KERNEL-NEXT:    .symbol:         foo.kd
 ; KERNEL-NEXT:    .uses_dynamic_stack: false
 ; KERNEL-NEXT:    .vgpr_count:     60

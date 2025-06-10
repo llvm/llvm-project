@@ -587,6 +587,8 @@ const MCExpr *AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
   }
   if (AMDGPU::getWavegroupEnable(MF.getFunction()))
     KernelCodeProperties |= amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEGROUP;
+  if (AMDGPU::getSpatialClusterEnable(MF.getFunction()))
+    KernelCodeProperties |= amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SPATIAL_CLUSTER;
   if (isGFX1250Only(ST) && ST.hasCUStores()) {
     KernelCodeProperties |= amdhsa::KERNEL_CODE_PROPERTY_USES_CU_STORES;
   }

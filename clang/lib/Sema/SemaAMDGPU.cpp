@@ -534,4 +534,11 @@ void SemaAMDGPU::handleAMDGPUWavegroupKernelAttr(Decl *D,
   D->addAttr(Addr);
 }
 
+void SemaAMDGPU::handleAMDGPUSpatialClusterKernelAttr(Decl *D,
+                                                      const ParsedAttr &AL) {
+  auto *Addr = ::new (getASTContext())
+      AMDGPUSpatialClusterKernelAttr(getASTContext(), AL);
+  D->addAttr(Addr);
+}
+
 } // namespace clang

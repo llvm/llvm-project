@@ -290,6 +290,11 @@ public:
   }
 
   bool isInlinableImm(MVT type) const;
+
+  bool isInlineIntZero() const {
+    return isImmLiteral() && !Imm.IsFPImm && Imm.Val == 0;
+  }
+
   bool isLiteralImm(MVT type) const;
 
   bool isRegKind() const {
@@ -828,12 +833,8 @@ public:
     return isRegOrInlineNoMods(AMDGPU::VReg_128RegClassID, MVT::i32);
   }
 
-  bool isGSrcVGPROrZero_128() const {
-    return isRegOrInlineNoMods(AMDGPU::VReg_128RegClassID, MVT::i32);
-  }
-
-  bool isGSrcVGPROrZero_256() const {
-    return isRegOrInlineNoMods(AMDGPU::VReg_256RegClassID, MVT::i32);
+  template <unsigned RCID> bool isGSrcVGPROrZero() const {
+    return !hasModifiers() && (isRegClass(RCID) || isInlineIntZero());
   }
 
   bool isVISrc_128_f32() const {
@@ -1536,6 +1537,12 @@ private:
                     bool IsAtomic);
 
 public:
+  enum AMDGPUMatchResultTy {
+    Match_Dummy = FIRST_TARGET_MATCH_RESULT_TY,
+#define GET_OPERAND_DIAGNOSTIC_TYPES
+#include "AMDGPUGenAsmMatcher.inc"
+  };
+
   enum OperandMode {
     OperandMode_Default,
     OperandMode_NSA,
@@ -5785,16 +5792,6 @@ bool AMDGPUAsmParser::validateVOPM(const MCInst &Inst,
   if (!isVOPMAsmOnly(Opcode))
     return true;
 
-  // Validate srcC
-  auto OpNum = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::srcC);
-  if (OpNum == -1)
-    return true;
-  const auto &Op = Inst.getOperand(OpNum);
-  if (Op.isImm() && Op.getImm() != 0) {
-    Error(getConstLoc(Operands), "only zero is supported as immediate operand");
-    return false;
-  }
-
   // TODO-GFX13: Validate instruction modifiers (aux_data) against specific
   // opcodes.
   return true;
@@ -6066,6 +6063,9 @@ static bool isInvalidVOPDY(const OperandVector &Operands,
   return false;
 }
 
+static const char *
+getMatchKindDiag(AMDGPUAsmParser::AMDGPUMatchResultTy MatchResult);
+
 bool AMDGPUAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                               OperandVector &Operands,
                                               MCStreamer &Out,
@@ -6077,6 +6077,13 @@ bool AMDGPUAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     uint64_t EI;
     auto R = MatchInstructionImpl(Operands, Inst, EI, MatchingInlineAsm,
                                   Variant);
+
+    if (const char *MatchDiag =
+            getMatchKindDiag(static_cast<AMDGPUMatchResultTy>(R))) {
+      SMLoc Loc = static_cast<AMDGPUOperand &>(*Operands[EI]).getStartLoc();
+      return Error(Loc, MatchDiag);
+    }
+
     // We order match statuses from least to most specific. We use most specific
     // status as resulting
     // Match_MnemonicFail < Match_InvalidOperand < Match_MissingFeature

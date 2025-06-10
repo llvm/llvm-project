@@ -7199,6 +7199,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_AMDGPUWavegroupKernel:
     S.AMDGPU().handleAMDGPUWavegroupKernelAttr(D, AL);
     break;
+  case ParsedAttr::AT_AMDGPUSpatialClusterKernel:
+    S.AMDGPU().handleAMDGPUSpatialClusterKernelAttr(D, AL);
+    break;
   case ParsedAttr::AT_AVRSignal:
     S.AVR().handleSignalAttr(D, AL);
     break;
