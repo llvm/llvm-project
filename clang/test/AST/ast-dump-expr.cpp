@@ -119,7 +119,7 @@ void UnaryExpressions(int *p) {
 
   noexcept(p - p);
   // CHECK: CXXNoexceptExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:17> 'bool'
-  // CHECK-NEXT: BinaryOperator 0x{{[^ ]*}} <col:12, col:16> 'long' '-'
+  // CHECK-NEXT: BinaryOperator 0x{{[^ ]*}} <col:12, col:16> '__ptrdiff_t':'long' '-'
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:12> 'int *' lvalue ParmVar 0x{{[^ ]*}} 'p' 'int *'
   // CHECK-NEXT: ImplicitCastExpr

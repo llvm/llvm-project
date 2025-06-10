@@ -25,6 +25,7 @@
 #include "clang/AST/RawCommentList.h"
 #include "clang/AST/SYCLKernelInfo.h"
 #include "clang/AST/TemplateName.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
@@ -1952,6 +1953,13 @@ private:
                                                         bool IsDependent,
                                                         QualType Canon) const;
 
+  // The core language uses these types as the result types of some expressions,
+  // which are typically standard integer types and consistent with it's
+  // typedefs (if any). These variables store the typedefs generated in the AST,
+  // not the typedefs provided in the header files.
+  mutable QualType SizeType;       // __size_t
+  mutable QualType SignedSizeType; // __signed_size_t
+  mutable QualType PtrdiffType;    // __ptrdiff_t
 public:
   /// Return the unique reference to the type for the specified TagDecl
   /// (struct/union/class/enum) decl.
@@ -1961,11 +1969,20 @@ public:
   /// <stddef.h>.
   ///
   /// The sizeof operator requires this (C99 6.5.3.4p4).
-  CanQualType getSizeType() const;
+  QualType getSizeType() const;
 
   /// Return the unique signed counterpart of
   /// the integer type corresponding to size_t.
-  CanQualType getSignedSizeType() const;
+  QualType getSignedSizeType() const;
+
+  /// Return the unique type for "ptrdiff_t" (C99 7.17) defined in
+  /// <stddef.h>. Pointer - pointer requires this (C99 6.5.6p9).
+  QualType getPointerDiffType() const;
+
+  /// Return the unique unsigned counterpart of "ptrdiff_t"
+  /// integer type. The standard (C11 7.21.6.1p7) refers to this type
+  /// in the definition of %tu format specifier.
+  QualType getUnsignedPointerDiffType() const;
 
   /// Return the unique type for "intmax_t" (C99 7.18.1.5), defined in
   /// <stdint.h>.
@@ -2005,15 +2022,6 @@ public:
   /// Return a type compatible with "uintptr_t" (C99 7.18.1.4),
   /// as defined by the target.
   QualType getUIntPtrType() const;
-
-  /// Return the unique type for "ptrdiff_t" (C99 7.17) defined in
-  /// <stddef.h>. Pointer - pointer requires this (C99 6.5.6p9).
-  QualType getPointerDiffType() const;
-
-  /// Return the unique unsigned counterpart of "ptrdiff_t"
-  /// integer type. The standard (C11 7.21.6.1p7) refers to this type
-  /// in the definition of %tu format specifier.
-  QualType getUnsignedPointerDiffType() const;
 
   /// Return the unique type for "pid_t" defined in
   /// <sys/types.h>. We need this to compute the correct type for vfork().

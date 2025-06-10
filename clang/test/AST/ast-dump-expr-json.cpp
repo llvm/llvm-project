@@ -1587,7 +1587,9 @@ void TestNonADLCall3() {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "qualType": "long"
+// CHECK-NEXT:           "desugaredQualType": "long",
+// CHECK-NEXT:           "qualType": "__ptrdiff_t",
+// CHECK-NEXT:           "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "prvalue",
 // CHECK-NEXT:          "opcode": "-",

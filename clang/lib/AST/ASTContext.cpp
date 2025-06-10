@@ -6729,14 +6729,55 @@ QualType ASTContext::getTagDeclType(const TagDecl *Decl) const {
 /// getSizeType - Return the unique type for "size_t" (C99 7.17), the result
 /// of the sizeof operator (C99 6.5.3.4p4). The value is target dependent and
 /// needs to agree with the definition in <stddef.h>.
-CanQualType ASTContext::getSizeType() const {
+QualType ASTContext::getSizeType() const {
+#if 0
+  if (SizeType.isNull()) {
+    SizeType = getTypedefType(buildImplicitTypedef(
+        getFromTargetType(Target->getSizeType()), "__size_t"));
+  }
+  return SizeType;
+#else
   return getFromTargetType(Target->getSizeType());
+#endif
 }
 
 /// Return the unique signed counterpart of the integer type
 /// corresponding to size_t.
-CanQualType ASTContext::getSignedSizeType() const {
+QualType ASTContext::getSignedSizeType() const {
+#if 0
+  if (SignedSizeType.isNull()) {
+    SignedSizeType = getTypedefType(buildImplicitTypedef(
+        getFromTargetType(Target->getSignedSizeType()), "__signed_size_t"));
+  }
+  return SignedSizeType;
+#else
   return getFromTargetType(Target->getSignedSizeType());
+#endif
+}
+
+/// getPointerDiffType - Return the unique type for "ptrdiff_t" (C99 7.17)
+/// defined in <stddef.h>. Pointer - pointer requires this (C99 6.5.6p9).
+QualType ASTContext::getPointerDiffType() const {
+#if 1
+  if (PtrdiffType.isNull()) {
+    if (getLangOpts().C99 || getLangOpts().CPlusPlus)
+      PtrdiffType = getTypedefType(buildImplicitTypedef(
+          getFromTargetType(Target->getPtrDiffType(LangAS::Default)),
+          "__ptrdiff_t"));
+    else
+      PtrdiffType = getFromTargetType(Target->getPtrDiffType(LangAS::Default));
+  }
+  return PtrdiffType;
+#else
+  return getFromTargetType(Target->getPtrDiffType(LangAS::Default));
+#endif
+}
+
+/// Return the unique unsigned counterpart of "ptrdiff_t"
+/// integer type. The standard (C11 7.21.6.1p7) refers to this type
+/// in the definition of %tu format specifier.
+QualType ASTContext::getUnsignedPointerDiffType() const {
+  return getFromTargetType(Target->getUnsignedPtrDiffType(LangAS::Default));
 }
 
 /// getIntMaxType - Return the unique type for "intmax_t" (C99 7.18.1.5).
@@ -6769,19 +6810,6 @@ QualType ASTContext::getIntPtrType() const {
 
 QualType ASTContext::getUIntPtrType() const {
   return getCorrespondingUnsignedType(getIntPtrType());
-}
-
-/// getPointerDiffType - Return the unique type for "ptrdiff_t" (C99 7.17)
-/// defined in <stddef.h>. Pointer - pointer requires this (C99 6.5.6p9).
-QualType ASTContext::getPointerDiffType() const {
-  return getFromTargetType(Target->getPtrDiffType(LangAS::Default));
-}
-
-/// Return the unique unsigned counterpart of "ptrdiff_t"
-/// integer type. The standard (C11 7.21.6.1p7) refers to this type
-/// in the definition of %tu format specifier.
-QualType ASTContext::getUnsignedPointerDiffType() const {
-  return getFromTargetType(Target->getUnsignedPtrDiffType(LangAS::Default));
 }
 
 /// Return the unique type for "pid_t" defined in
