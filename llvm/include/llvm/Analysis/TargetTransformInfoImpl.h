@@ -174,7 +174,7 @@ public:
         DL.getPointerSizeInBits(ToAS) != 32)
       return std::nullopt;
     // TODO: Do we need to thread more context in here?
-    KnownBits Known = computeKnownBits(MaskOp, DL, 0, nullptr, I);
+    KnownBits Known = computeKnownBits(MaskOp, DL, nullptr, I);
     if (Known.countMinLeadingOnes() < 32)
       return std::nullopt;
     return 32;
