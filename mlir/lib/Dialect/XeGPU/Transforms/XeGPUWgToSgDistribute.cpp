@@ -441,7 +441,7 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
         int count;
         SmallVector<int64_t> subShape;
         std::tie(subShape, count) = getSgShapeAndCount(
-            shape, dyn_cast<xegpu::LayoutAttr>(type.getEncoding()));
+            shape, dyn_cast_if_present<xegpu::LayoutAttr>(type.getEncoding()));
 
         auto newTy = VectorType::get(subShape, elemTy);
         result.append(count, newTy);
