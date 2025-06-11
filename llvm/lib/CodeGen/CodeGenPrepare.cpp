@@ -5790,8 +5790,7 @@ static BasicBlock::iterator findInsertPos(Value *Addr, Instruction *MemoryInst,
   // instruction after it.
   if (SunkAddr) {
     if (Instruction *AddrInst = dyn_cast<Instruction>(SunkAddr))
-      return AddrInst->isTerminator() ? MemoryInst->getIterator()
-                                      : std::next(AddrInst->getIterator());
+      return std::next(AddrInst->getIterator());
   }
 
   // Find the first user of Addr in current BB.
@@ -6100,6 +6099,13 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
       }
 
       if (!ResultIndex) {
+        auto PtrInst = dyn_cast<Instruction>(ResultPtr);
+        // Here we know that we have just a pointer without any offsets.  If
+        // this pointer comes from a different from the current basic block we
+        // need to know how to recreate it in another basic block.
+        // Currently we don't support recreation of any of instruction.
+        if (PtrInst && PtrInst->getParent() != MemoryInst->getParent())
+          return Modified;
         SunkAddr = ResultPtr;
       } else {
         if (ResultPtr->getType() != I8PtrTy)

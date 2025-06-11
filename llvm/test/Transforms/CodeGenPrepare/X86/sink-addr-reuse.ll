@@ -42,38 +42,3 @@ bb3:
 bb7:
   ret void
 }
-
-; Test a scenario when the address is the last instruction in the basic block.
-
-define void @adress_terminator() personality ptr null {
-; CHECK-LABEL: define void @adress_terminator() personality ptr null {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[PTR:%.*]] = invoke ptr null(i64 0)
-; CHECK-NEXT:            to label %[[BODY_1:.*]] unwind label %[[EHCLEANUP:.*]]
-; CHECK:       [[EHCLEANUP]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = cleanuppad within none []
-; CHECK-NEXT:    cleanupret from [[TMP0]] unwind to caller
-; CHECK:       [[BODY_1]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast ptr [[PTR]] to ptr
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[V0:%.*]] = load <4 x i32>, ptr [[PTR]], align 4
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[PTR]], align 4
-; CHECK-NEXT:    ret void
-;
-entry:
-  %ptr = invoke ptr null(i64 0) to label %body.1 unwind label %ehcleanup
-
-body.2:
-  %v0 = load <4 x i32>, ptr %2, align 4
-  store <4 x i32> zeroinitializer, ptr %2, align 4
-  ret void
-
-ehcleanup:
-  %1 = cleanuppad within none []
-  cleanupret from %1 unwind to caller
-
-body.1:
-  %2 = getelementptr { i32 }, ptr %ptr, i64 0, i32 0
-  store <4 x i32> zeroinitializer, ptr %2, align 4
-  br label %body.2
-}
