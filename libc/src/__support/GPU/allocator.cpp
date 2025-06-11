@@ -129,6 +129,14 @@ static inline constexpr T round_up(const T x) {
   return (x + N) & ~(N - 1);
 }
 
+// Perform a lane parallel memset on a uint32_t pointer.
+void uniform_memset(uint32_t *s, uint32_t c, uint32_t n, uint64_t uniform) {
+  uint64_t mask = gpu::get_lane_mask();
+  uint32_t workers = cpp::popcount(uniform);
+  for (uint32_t i = impl::lane_count(mask & uniform); i < n; i += workers)
+    s[i] = c;
+}
+
 } // namespace impl
 
 /// A slab allocator used to hand out identically sized slabs of memory.
@@ -163,13 +171,9 @@ struct Slab {
   // must be called before the bitfield can be accessed safely, memory is not
   // guaranteed to be zero initialized in the current implementation.
   void initialize(uint64_t uniform) {
-    uint64_t mask = gpu::get_lane_mask();
-    uint32_t *bitfield = get_bitfield();
-    uint32_t workers = cpp::popcount(uniform);
-    uint32_t words = (bitfield_bytes(get_chunk_size()) + sizeof(uint32_t) - 1) /
-                     sizeof(uint32_t);
-    for (uint32_t i = impl::lane_count(mask & uniform); i < words; i += workers)
-      bitfield[i] = 0;
+    uint32_t size = (bitfield_bytes(get_chunk_size()) + sizeof(uint32_t) - 1) /
+                    sizeof(uint32_t);
+    impl::uniform_memset(get_bitfield(), 0, size, uniform);
   }
 
   // Get the number of chunks that can theoretically fit inside this slab.
