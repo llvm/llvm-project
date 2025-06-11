@@ -105,11 +105,11 @@ exit:
   ret void
 }
 
-define void @loop_contains_store_safe_dependency(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(80) readonly %pred) {
+define void @loop_contains_store_safe_dependency(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(96) %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_safe_dependency'
 ; CHECK:       LV: Not vectorizing: Writes to memory unsupported in early exit loops.
 entry:
-  %forward = getelementptr i16, ptr %pred, i64 -8
+  %pred.plus.8 = getelementptr inbounds nuw i16, ptr %pred, i64 8
   br label %for.body
 
 for.body:
@@ -118,10 +118,10 @@ for.body:
   %data = load i16, ptr %st.addr, align 2
   %inc = add nsw i16 %data, 1
   store i16 %inc, ptr %st.addr, align 2
-  %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
+  %ee.addr = getelementptr inbounds nuw i16, ptr %pred.plus.8, i64 %iv
   %ee.val = load i16, ptr %ee.addr, align 2
   %ee.cond = icmp sgt i16 %ee.val, 500
-  %some.addr = getelementptr inbounds nuw i16, ptr %forward, i64 %iv
+  %some.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
   store i16 42, ptr %some.addr, align 2
   br i1 %ee.cond, label %exit, label %for.inc
 
@@ -139,7 +139,9 @@ define void @loop_contains_store_unsafe_dependency(ptr dereferenceable(40) noali
 ; CHECK:       LV: Not vectorizing: Writes to memory unsupported in early exit loops.
 entry:
   %unknown.offset = call i64 @get_an_unknown_offset()
-  %unknown.base = getelementptr i16, ptr %pred, i64 %unknown.offset
+  %unknown.cmp = icmp ult i64 %unknown.offset, 20
+  %clamped.offset = select i1 %unknown.cmp, i64 %unknown.offset, i64 20
+  %unknown.base = getelementptr i16, ptr %pred, i64 %clamped.offset
   br label %for.body
 
 for.body:
@@ -193,7 +195,7 @@ exit:
   ret void
 }
 
-define void @loop_contains_store_to_pointer_with_no_deref_info(ptr noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
+define void @loop_contains_store_to_pointer_with_no_deref_info(ptr align 2 dereferenceable(40) readonly %load.array, ptr align 2 noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_to_pointer_with_no_deref_info'
 ; CHECK:       LV: Not vectorizing: Writes to memory unsupported in early exit loops.
 entry:
@@ -201,9 +203,10 @@ entry:
 
 for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
-  %st.addr = getelementptr inbounds nuw i16, ptr %array, i64 %iv
-  %data = load i16, ptr %st.addr, align 2
+  %ld.addr = getelementptr inbounds nuw i16, ptr %load.array, i64 %iv
+  %data = load i16, ptr %ld.addr, align 2
   %inc = add nsw i16 %data, 1
+  %st.addr = getelementptr inbounds nuw i16, ptr %array, i64 %iv
   store i16 %inc, ptr %st.addr, align 2
   %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
   %ee.val = load i16, ptr %ee.addr, align 2
@@ -219,12 +222,10 @@ exit:
   ret void
 }
 
-define void @loop_contains_store_unknown_bounds(ptr noalias %array, ptr readonly %pred, i32 %n) {
+define void @loop_contains_store_unknown_bounds(ptr align 2 dereferenceable(100) noalias %array, ptr align 2 dereferenceable(100) readonly %pred, i64 %n) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_unknown_bounds'
 ; CHECK:       LV: Not vectorizing: Writes to memory unsupported in early exit loops.
 entry:
-  %n_bytes = mul nuw nsw i32 %n, 2
-  %tc = sext i32 %n to i64
   br label %for.body
 
 for.body:
@@ -240,7 +241,7 @@ for.body:
 
 for.inc:
   %iv.next = add nuw nsw i64 %iv, 1
-  %counted.cond = icmp eq i64 %iv.next, %tc
+  %counted.cond = icmp eq i64 %iv.next, %n
   br i1 %counted.cond, label %exit, label %for.body
 
 exit:
@@ -373,6 +374,32 @@ for.body:
 for.inc:
   %iv.next = add nuw nsw i64 %iv, 1
   %counted.cond = icmp eq i64 %iv.next, 20
+  br i1 %counted.cond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+define void @loop_contains_store_decrementing_iv(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
+; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_decrementing_iv'
+; CHECK:       LV: Not vectorizing: Writes to memory unsupported in early exit loops.
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 19, %entry ], [ %iv.next, %for.inc ]
+  %st.addr = getelementptr inbounds nuw i16, ptr %array, i64 %iv
+  %data = load i16, ptr %st.addr, align 2
+  %inc = add nsw i16 %data, 1
+  store i16 %inc, ptr %st.addr, align 2
+  %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
+  %ee.val = load i16, ptr %ee.addr, align 2
+  %ee.cond = icmp sgt i16 %ee.val, 500
+  br i1 %ee.cond, label %exit, label %for.inc
+
+for.inc:
+  %iv.next = sub nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 0
   br i1 %counted.cond, label %exit, label %for.body
 
 exit:
