@@ -10,16 +10,18 @@
 #define LLVM_LIBC_SRC___SUPPORT_MBSTATE_H
 
 #include "hdr/types/wchar_t.h"
+#include "stdint.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace internal {
 
-struct mbstate_t {
+struct mbstate {
   wchar_t partial;
-  unsigned char bits_processed;
-  unsigned char total_bytes;
-}; 
+  uint8_t bits_processed;
+  uint8_t total_bytes;
+};
 
+} // namespace internal
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MBSTATE_H
-

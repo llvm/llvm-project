@@ -9,28 +9,32 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CHARACTER_CONVERTER_H
 #define LLVM_LIBC_SRC___SUPPORT_CHARACTER_CONVERTER_H
 
+#include "hdr/types/char32_t.h"
+#include "hdr/types/char8_t.h"
 #include "hdr/types/wchar_t.h"
 #include "src/__support/wchar/mbstate.h"
 #include "src/__support/wchar/utf_ret.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace internal {
 
 class CharacterConverter {
 private:
   mbstate_t *state;
 
 public:
-  CharacterConverter();
+  CharacterConverter(mbstate_t *mbstate);
 
   bool isComplete();
 
-  int push(char utf8_byte);
-  int push(wchar_t utf32);
+  int push(char8_t utf8_byte);
+  int push(char32_t utf32);
 
-  utf_ret<char> pop_utf8();
-  utf_ret<wchar_t> pop_utf32();
+  utf_ret<char8_t> pop_utf8();
+  utf_ret<char32_t> pop_utf32();
 };
 
+} // namespace internal
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CHARACTER_CONVERTER_H
