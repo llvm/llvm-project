@@ -1687,22 +1687,22 @@ void ASTContext::getOverriddenMethods(
   Overridden.append(OverDecls.begin(), OverDecls.end());
 }
 
-std::optional<ASTContext::CXXRecordDeclRelocationInfo>
+std::optional<ASTContext::TypeRelocationInfo>
 ASTContext::getRelocationInfoForCXXRecord(const CXXRecordDecl *RD) const {
   assert(RD);
   CXXRecordDecl *D = RD->getDefinition();
-  auto it = RelocatableClasses.find(D);
-  if (it != RelocatableClasses.end())
+  auto it = RelocationInfo.find(D);
+  if (it != RelocationInfo.end())
     return it->getSecond();
   return std::nullopt;
 }
 
-void ASTContext::setRelocationInfoForCXXRecord(
-    const CXXRecordDecl *RD, CXXRecordDeclRelocationInfo Info) {
+void ASTContext::setRelocationInfoForCXXRecord(const CXXRecordDecl *RD,
+                                               TypeRelocationInfo Info) {
   assert(RD);
   CXXRecordDecl *D = RD->getDefinition();
-  assert(RelocatableClasses.find(D) == RelocatableClasses.end());
-  RelocatableClasses.insert({D, Info});
+  assert(RelocationInfo.find(D) == RelocationInfo.end());
+  RelocationInfo.insert({D, Info});
 }
 
 void ASTContext::addedLocalImportDecl(ImportDecl *Import) {
@@ -15119,6 +15119,21 @@ ASTContext::baseForVTableAuthentication(const CXXRecordDecl *ThisClass) {
     PrimaryBase = Base;
   }
   return PrimaryBase;
+}
+
+bool ASTContext::hasAddressDiscriminatedVTableAuthentication(
+    const CXXRecordDecl *Class) {
+  assert(Class->isPolymorphic());
+  const CXXRecordDecl *BaseType = baseForVTableAuthentication(Class);
+  using AuthAttr = VTablePointerAuthenticationAttr;
+  const auto *ExplicitAuth = BaseType->getAttr<AuthAttr>();
+  if (!ExplicitAuth)
+    return LangOpts.PointerAuthVTPtrAddressDiscrimination;
+  AuthAttr::AddressDiscriminationMode AddressDiscrimination =
+      ExplicitAuth->getAddressDiscrimination();
+  if (AddressDiscrimination == AuthAttr::DefaultAddressDiscrimination)
+    return LangOpts.PointerAuthVTPtrAddressDiscrimination;
+  return AddressDiscrimination == AuthAttr::AddressDiscrimination;
 }
 
 bool ASTContext::useAbbreviatedThunkName(GlobalDecl VirtualMethodDecl,

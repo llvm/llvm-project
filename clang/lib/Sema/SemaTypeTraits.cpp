@@ -226,12 +226,13 @@ static bool IsEligibleForReplacement(Sema &SemaRef, const CXXRecordDecl *D) {
   return !D->hasDeletedDestructor();
 }
 
-ASTContext::CXXRecordDeclRelocationInfo
-Sema::CheckCXX2CRelocatableAndReplaceable(const CXXRecordDecl *D) {
-  ASTContext::CXXRecordDeclRelocationInfo Info{false, false};
+ASTContext::TypeRelocationInfo
+Sema::GetCXX2CTypeRelocationInfo(const CXXRecordDecl *D) {
+  if (auto ExistingInfo = Context.getRelocationInfoForCXXRecord(D))
+    return *ExistingInfo;
 
   if (!getLangOpts().CPlusPlus || D->isInvalidDecl())
-    return Info;
+    return ASTContext::TypeRelocationInfo::invalid();
 
   assert(D->hasDefinition());
 
@@ -244,12 +245,11 @@ Sema::CheckCXX2CRelocatableAndReplaceable(const CXXRecordDecl *D) {
                *this, D, /*AllowUserDefined=*/true);
   };
 
-  auto IsUnion = [&, Is = std::optional<bool>{}]() mutable {
+  auto IsTrivialUnion = [&, Is = std::optional<bool>{}]() mutable {
     if (!Is.has_value())
       Is = D->isUnion() && !D->hasUserDeclaredCopyConstructor() &&
            !D->hasUserDeclaredCopyAssignment() &&
-           !D->hasUserDeclaredMoveOperation() &&
-           !D->hasUserDeclaredDestructor();
+           !D->hasUserDeclaredMoveOperation() && !D->hasUserDeclaredDestructor();
     return *Is;
   };
 
@@ -259,7 +259,9 @@ Sema::CheckCXX2CRelocatableAndReplaceable(const CXXRecordDecl *D) {
     return *Is;
   };
 
-  Info.IsRelocatable = [&] {
+  ASTContext::TypeRelocationInfo Info;
+
+  Info.updateRelocatable([&] {
     if (D->isDependentType())
       return false;
 
@@ -272,14 +274,14 @@ Sema::CheckCXX2CRelocatableAndReplaceable(const CXXRecordDecl *D) {
       return true;
 
     // is a union with no user-declared special member functions, or
-    if (IsUnion())
+    if (IsTrivialUnion())
       return true;
 
     // is default-movable.
     return IsDefaultMovable();
-  }();
+  }());
 
-  Info.IsReplaceable = [&] {
+  Info.updateReplaceable([&] {
     if (D->isDependentType())
       return false;
 
@@ -292,77 +294,133 @@ Sema::CheckCXX2CRelocatableAndReplaceable(const CXXRecordDecl *D) {
       return HasSuitableSMP();
 
     // is a union with no user-declared special member functions, or
-    if (IsUnion())
+    if (IsTrivialUnion())
       return HasSuitableSMP();
 
     // is default-movable.
     return IsDefaultMovable();
-  }();
+  }());
 
+  Info.setIsUnion(D->isUnion());
+
+  bool PtrauthMatters = LangOpts.PointerAuthIntrinsics ||
+                        LangOpts.PointerAuthVTPtrAddressDiscrimination;
+  if (PtrauthMatters) {
+    auto IsBottomRelocationInfo =
+        [](const ASTContext::TypeRelocationInfo &Info) {
+          return !Info.isReplaceable() && !Info.isRelocatable() &&
+                 Info.hasAddressDiscriminatedPointerAuth();
+        };
+
+    if (D->isPolymorphic())
+      Info.updateContainsAddressDiscriminatedValues(
+          Context.hasAddressDiscriminatedVTableAuthentication(D));
+    for (auto Base : D->bases()) {
+      if (IsBottomRelocationInfo(Info))
+        break;
+      bool BaseHasPtrauth = GetCXX2CTypeRelocationInfo(Base.getType())
+                                .hasAddressDiscriminatedPointerAuth();
+      Info.updateContainsAddressDiscriminatedValues(BaseHasPtrauth);
+    }
+    for (auto *FieldDecl : D->fields()) {
+      if (IsBottomRelocationInfo(Info))
+        break;
+      bool FieldHasPtrauth = GetCXX2CTypeRelocationInfo(FieldDecl->getType())
+                                 .hasAddressDiscriminatedPointerAuth();
+      Info.updateContainsAddressDiscriminatedValues(FieldHasPtrauth);
+    }
+  }
+  Context.setRelocationInfoForCXXRecord(D, Info);
   return Info;
 }
 
-bool Sema::IsCXXTriviallyRelocatableType(const CXXRecordDecl &RD) {
-  if (std::optional<ASTContext::CXXRecordDeclRelocationInfo> Info =
-          getASTContext().getRelocationInfoForCXXRecord(&RD))
-    return Info->IsRelocatable;
-  ASTContext::CXXRecordDeclRelocationInfo Info =
-      CheckCXX2CRelocatableAndReplaceable(&RD);
-  getASTContext().setRelocationInfoForCXXRecord(&RD, Info);
-  return Info.IsRelocatable;
+ASTContext::TypeRelocationInfo Sema::GetCXX2CTypeRelocationInfo(QualType T) {
+  T = T.getCanonicalType();
+  enum class DirectRelocationInformation { Yes, No, Unknown };
+  DirectRelocationInformation Relocatable =
+      DirectRelocationInformation::Unknown;
+  DirectRelocationInformation Replaceable =
+      DirectRelocationInformation::Unknown;
+  DirectRelocationInformation ContainsAddressDiscriminatedValues =
+      DirectRelocationInformation::Unknown;
+
+  auto UpdateRelocatable = [&](DirectRelocationInformation DRI) {
+    if (Relocatable == DirectRelocationInformation::Unknown ||
+        Relocatable == DirectRelocationInformation::Yes)
+      Relocatable = DRI;
+  };
+  auto UpdateReplaceable = [&](DirectRelocationInformation DRI) {
+    if (Replaceable == DirectRelocationInformation::Unknown ||
+        Replaceable == DirectRelocationInformation::Yes)
+      Replaceable = DRI;
+  };
+  auto UpdateAddressDiscrimination = [&](DirectRelocationInformation DRI) {
+    if (ContainsAddressDiscriminatedValues ==
+            DirectRelocationInformation::Unknown ||
+        ContainsAddressDiscriminatedValues == DirectRelocationInformation::No)
+      ContainsAddressDiscriminatedValues = DRI;
+  };
+
+  if (T->isVariableArrayType()) {
+    UpdateRelocatable(DirectRelocationInformation::No);
+    UpdateReplaceable(DirectRelocationInformation::No);
+  }
+
+  if (T.isConstQualified() || T.isVolatileQualified())
+    UpdateReplaceable(DirectRelocationInformation::No);
+
+  if (T.hasAddressDiscriminatedPointerAuth())
+    UpdateAddressDiscrimination(DirectRelocationInformation::Yes);
+
+  QualType BaseElementType =
+      SemaRef.getASTContext().getBaseElementType(T.getUnqualifiedType());
+
+  if (BaseElementType->isIncompleteType()) {
+    Relocatable = DirectRelocationInformation::No;
+    Replaceable = DirectRelocationInformation::No;
+  }
+
+  if (BaseElementType.hasNonTrivialObjCLifetime())
+    UpdateRelocatable(DirectRelocationInformation::No);
+
+  if (BaseElementType->isScalarType()) {
+    UpdateRelocatable(DirectRelocationInformation::Yes);
+    UpdateReplaceable(DirectRelocationInformation::Yes);
+    UpdateAddressDiscrimination(DirectRelocationInformation::No);
+  }
+
+  if (BaseElementType->isVectorType())
+    UpdateRelocatable(DirectRelocationInformation::Yes);
+
+  auto CreateInfo = [=]() -> ASTContext::TypeRelocationInfo {
+    ASTContext::TypeRelocationInfo Result;
+    return {Relocatable == DirectRelocationInformation::Yes,
+            Replaceable == DirectRelocationInformation::Yes,
+            ContainsAddressDiscriminatedValues ==
+                DirectRelocationInformation::Yes};
+  };
+
+  if (BaseElementType->isIncompleteType())
+    return CreateInfo();
+
+  const CXXRecordDecl *RD = BaseElementType->getAsCXXRecordDecl();
+  if (!RD)
+    return CreateInfo();
+
+  ASTContext::TypeRelocationInfo Info = GetCXX2CTypeRelocationInfo(RD);
+  Info.updateRelocatable(Relocatable != DirectRelocationInformation::No);
+  Info.updateReplaceable(Replaceable != DirectRelocationInformation::No);
+  Info.updateContainsAddressDiscriminatedValues(
+      ContainsAddressDiscriminatedValues == DirectRelocationInformation::Yes);
+  return Info;
 }
 
 bool Sema::IsCXXTriviallyRelocatableType(QualType Type) {
-
-  QualType BaseElementType = getASTContext().getBaseElementType(Type);
-
-  if (Type->isVariableArrayType())
-    return false;
-
-  if (BaseElementType.hasNonTrivialObjCLifetime())
-    return false;
-
-  if (BaseElementType.hasAddressDiscriminatedPointerAuth())
-    return false;
-
-  if (BaseElementType->isIncompleteType())
-    return false;
-
-  if (BaseElementType->isScalarType() || BaseElementType->isVectorType())
-    return true;
-
-  if (const auto *RD = BaseElementType->getAsCXXRecordDecl())
-    return IsCXXTriviallyRelocatableType(*RD);
-
-  return false;
-}
-
-static bool IsCXXReplaceableType(Sema &S, const CXXRecordDecl *RD) {
-  if (std::optional<ASTContext::CXXRecordDeclRelocationInfo> Info =
-          S.getASTContext().getRelocationInfoForCXXRecord(RD))
-    return Info->IsReplaceable;
-  ASTContext::CXXRecordDeclRelocationInfo Info =
-      S.CheckCXX2CRelocatableAndReplaceable(RD);
-  S.getASTContext().setRelocationInfoForCXXRecord(RD, Info);
-  return Info.IsReplaceable;
+  return GetCXX2CTypeRelocationInfo(Type).isRelocatable();
 }
 
 bool Sema::IsCXXReplaceableType(QualType Type) {
-  if (Type.isConstQualified() || Type.isVolatileQualified())
-    return false;
-
-  if (Type->isVariableArrayType())
-    return false;
-
-  QualType BaseElementType =
-      getASTContext().getBaseElementType(Type.getUnqualifiedType());
-  if (BaseElementType->isIncompleteType())
-    return false;
-  if (BaseElementType->isScalarType())
-    return true;
-  if (const auto *RD = BaseElementType->getAsCXXRecordDecl())
-    return ::IsCXXReplaceableType(*this, RD);
-  return false;
+  return GetCXX2CTypeRelocationInfo(Type).isReplaceable();
 }
 
 /// Checks that type T is not a VLA.
@@ -674,8 +732,14 @@ static bool IsTriviallyRelocatableType(Sema &SemaRef, QualType T) {
     return false;
 
   if (const auto *RD = BaseElementType->getAsCXXRecordDecl();
-      RD && !RD->isPolymorphic() && SemaRef.IsCXXTriviallyRelocatableType(*RD))
-    return true;
+      RD && !RD->isPolymorphic()) {
+    ASTContext::TypeRelocationInfo Info =
+        SemaRef.GetCXX2CTypeRelocationInfo(RD);
+    if (Info.hasAddressDiscriminatedPointerAuth())
+      return false;
+    if (Info.isRelocatable())
+      return true;
+  }
 
   if (const auto *RD = BaseElementType->getAsRecordDecl())
     return RD->canPassInRegisters();

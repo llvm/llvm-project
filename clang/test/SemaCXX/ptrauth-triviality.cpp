@@ -26,7 +26,7 @@ static_assert(!__is_trivially_assignable(S1, const S1&));
 static_assert(__is_trivially_destructible(S1));
 static_assert(!__is_trivially_copyable(S1));
 static_assert(!__is_trivially_relocatable(S1)); // expected-warning{{deprecated}}
-static_assert(!__builtin_is_cpp_trivially_relocatable(S1));
+static_assert(__builtin_is_cpp_trivially_relocatable(S1));
 static_assert(!__is_trivially_equality_comparable(S1));
 
 static_assert(__is_trivially_constructible(Holder<S1>));
@@ -35,7 +35,7 @@ static_assert(!__is_trivially_assignable(Holder<S1>, const Holder<S1>&));
 static_assert(__is_trivially_destructible(Holder<S1>));
 static_assert(!__is_trivially_copyable(Holder<S1>));
 static_assert(!__is_trivially_relocatable(Holder<S1>)); // expected-warning{{deprecated}}
-static_assert(!__builtin_is_cpp_trivially_relocatable(Holder<S1>));
+static_assert(__builtin_is_cpp_trivially_relocatable(Holder<S1>));
 static_assert(!__is_trivially_equality_comparable(Holder<S1>));
 
 struct S2 {
@@ -83,7 +83,7 @@ static_assert(!__is_trivially_constructible(Holder<S3>, const Holder<S3>&));
 static_assert(!__is_trivially_assignable(Holder<S3>, const Holder<S3>&));
 static_assert(__is_trivially_destructible(Holder<S3>));
 static_assert(!__is_trivially_copyable(Holder<S3>));
-static_assert(__is_trivially_relocatable(Holder<S3>)); // expected-warning{{deprecated}}
+static_assert(!__is_trivially_relocatable(Holder<S3>)); // expected-warning{{deprecated}}
 static_assert(__builtin_is_cpp_trivially_relocatable(Holder<S3>));
 static_assert(!__is_trivially_equality_comparable(Holder<S3>));
 
@@ -148,7 +148,7 @@ static_assert(!__is_trivially_assignable(S6, const S6&));
 static_assert(__is_trivially_destructible(S6));
 static_assert(!__is_trivially_copyable(S6));
 static_assert(!__is_trivially_relocatable(S6)); // expected-warning{{deprecated}}
-static_assert(!__builtin_is_cpp_trivially_relocatable(S6));
+static_assert(__builtin_is_cpp_trivially_relocatable(S6));
 static_assert(!__is_trivially_equality_comparable(S6));
 
 static_assert(__is_trivially_constructible(Holder<S6>));
@@ -157,7 +157,7 @@ static_assert(!__is_trivially_assignable(Holder<S6>, const Holder<S6>&));
 static_assert(__is_trivially_destructible(Holder<S6>));
 static_assert(!__is_trivially_copyable(Holder<S6>));
 static_assert(!__is_trivially_relocatable(Holder<S6>)); // expected-warning{{deprecated}}
-static_assert(!__builtin_is_cpp_trivially_relocatable(Holder<S6>));
+static_assert(__builtin_is_cpp_trivially_relocatable(Holder<S6>));
 static_assert(!__is_trivially_equality_comparable(Holder<S6>));
 
 struct S7 {

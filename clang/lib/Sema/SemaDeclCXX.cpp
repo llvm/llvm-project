@@ -10615,7 +10615,7 @@ void Sema::checkIllFormedTrivialABIStruct(CXXRecordDecl &RD) {
       }
   }
 
-  if (IsCXXTriviallyRelocatableType(RD))
+  if (GetCXX2CTypeRelocationInfo(&RD).isRelocatable())
     return;
 
   // Ill-formed if the copy and move constructors are deleted.
