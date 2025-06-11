@@ -19,7 +19,7 @@ llvm.func @atomic_hint(%v : !llvm.ptr, %x : !llvm.ptr, %expr : i32) {
   ^bb0(%arg0: i32):
     %result = llvm.add %arg0, %expr : i32
     omp.yield(%result : i32)
-  }
+  } {atomic_control = #omp.atomic_control<>}
 
   llvm.return
 }
