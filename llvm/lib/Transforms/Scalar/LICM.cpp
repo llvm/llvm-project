@@ -1722,7 +1722,7 @@ static bool sink(Instruction &I, LoopInfo *LI, DominatorTree *DT,
     Instruction *New = sinkThroughTriviallyReplaceablePHI(
         PN, &I, LI, SunkCopies, SafetyInfo, CurLoop, MSSAU);
     // As we sink the instruction out of the BB, drop its debug location.
-    New->setDebugLoc(DebugLoc::getDropped());
+    New->dropLocation();
     PN->replaceAllUsesWith(New);
     eraseInstruction(*PN, *SafetyInfo, MSSAU);
     Changed = true;
