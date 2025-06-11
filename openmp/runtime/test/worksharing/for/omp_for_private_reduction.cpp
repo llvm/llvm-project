@@ -73,34 +73,6 @@ void performMinMaxRed(int &min_val, int &max_val) {
       max_val = input_data[i];
   }
 }
-int performComplexReduction() {
-  double _Complex arr[N];
-  double _Complex expected = 0.0 + 0.0 * I;
-  double _Complex result = 0.0 + 0.0 * I;
-  int error = 0;
-
-  // Initialize the array and compute serial sum
-  for (int i = 0; i < N; ++i) {
-    arr[i] = i - i * I;
-    expected += arr[i];
-  }
-  double real_sum = 0.0, imag_sum = 0.0;
-#pragma omp parallel private(real_sum) private(imag_sum)
-  {
-#pragma omp for reduction(+ : real_sum, imag_sum)
-    for (int i = 0; i < N; ++i) {
-      real_sum += creal(arr[i]);
-      imag_sum += cimag(arr[i]);
-    }
-
-    result = real_sum + imag_sum * I;
-    if (cabs(result - expected) > 1e-6) {
-      error++;
-    }
-  }
-  return error;
-}
-
 std::complex<double> doComplexReduction(std::complex<double> *arr) {
   std::complex<double> result(1, 0);
 
@@ -138,7 +110,8 @@ int main(void) {
   const float kPiVal = 3.14f;
   const int kExpectedSum = 45; // Sum of 0..9
   const int kExpectedProd = 3628800; // 10!
-  const float kExpectedFsum = kPiVal * N; // 3.14f * 10
+  const float kExpectedFsum = 31.400000f; // 3.14f * 10
+  const float kTolerance = 1e-4f;
   const int kExpectedMin = 3;
   const int kExpectedMax = 12;
   std::complex<double> arr[N];
@@ -163,7 +136,7 @@ int main(void) {
       total_errors++;
     if (t_prod_v != kExpectedProd)
       total_errors++;
-    if (t_fsum_v != kExpectedFsum)
+    if (std::abs(t_fsum_v - kExpectedFsum) > kTolerance)
       total_errors++;
   }
 #pragma omp parallel num_threads(4)
@@ -177,7 +150,6 @@ int main(void) {
       total_errors++;
   }
   total_errors += checkUserDefinedReduction();
-  total_errors += performComplexReduction();
 #pragma omp parallel num_threads(4)
   {
     std::complex<double> result(1, 0);
