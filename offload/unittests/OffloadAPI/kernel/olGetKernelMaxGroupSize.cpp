@@ -16,7 +16,7 @@ OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olKernelGetMaxGroupSizeTest);
 TEST_P(olKernelGetMaxGroupSizeTest, Success) {
   size_t Size{0};
   ASSERT_SUCCESS(olGetKernelMaxGroupSize(Kernel, Device, 0, &Size));
-  ASSERT_GT(Size, 0);
+  ASSERT_GT(Size, 0u);
 }
 
 TEST_P(olKernelGetMaxGroupSizeTest, NullKernel) {
