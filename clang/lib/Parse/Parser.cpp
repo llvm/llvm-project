@@ -1875,13 +1875,7 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
 
 SourceLocation Parser::getEndOfPreviousToken() const {
   SourceLocation TokenEndLoc = PP.getLocForEndOfToken(PrevTokLocation);
-  if (TokenEndLoc.isValid())
-    return TokenEndLoc;
-
-  if (Tok.getLocation().isMacroID())
-    return PP.getSourceManager().getSpellingLoc(Tok.getLocation());
-
-  return Tok.getLocation();
+  return TokenEndLoc.isValid() ? TokenEndLoc : Tok.getLocation();
 }
 
 bool Parser::TryKeywordIdentFallback(bool DisableKeyword) {

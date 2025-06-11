@@ -231,11 +231,11 @@ void fn1() {
 }
 
 namespace GH143216 {
-#define FOO 1 case 3: // expected-error {{expected ':' after 'case'}}
+#define FOO 1 case 3:
 
 int f(int x) {
   switch (x) {
-  case FOO
+  case FOO // expected-error {{expected ':' after 'case'}}
     return 0;
   default:
     return 1;
