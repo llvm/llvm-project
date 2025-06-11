@@ -423,6 +423,7 @@ CreateRunThroughTaskSwitchingTrampolines(Thread &thread,
   //                         void *,
   //                         TaskContinuationFunction *,
   if (trampoline_name == "swift_asyncLet_get" ||
+      trampoline_name == "swift_asyncLet_get_throwing" ||
       trampoline_name == "swift_asyncLet_finish")
     return CreateRunThroughTaskSwitchThreadPlan(thread,
                                                 LLDB_REGNUM_GENERIC_ARG3);
