@@ -10,15 +10,15 @@ on:
       - 'main'
     paths:
       - 'clang/bindings/python/**'
+      - 'clang/test/bindings/python/**'
       - 'clang/tools/libclang/**'
-      - 'clang/CMakeList.txt'
       - '.github/workflows/libclang-python-tests.yml'
       - '.github/workflows/llvm-project-tests.yml'
   pull_request:
     paths:
       - 'clang/bindings/python/**'
+      - 'clang/test/bindings/python/**'
       - 'clang/tools/libclang/**'
-      - 'clang/CMakeList.txt'
       - '.github/workflows/libclang-python-tests.yml'
       - '.github/workflows/llvm-project-tests.yml'
 
@@ -33,7 +33,9 @@ jobs:
         python-version: ["3.8", "3.13"]
     uses: ./.github/workflows/llvm-project-tests.yml
     with:
-      build_target: check-clang-python
+      build_target: libclang
+      run: |
+        llvm-lit -v tools/clang/test --filter=bindings.sh
       projects: clang
       # There is an issue running on "windows-2019".
       # See https://github.com/llvm/llvm-project/issues/76601#issuecomment-1873049082.
