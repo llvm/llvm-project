@@ -46,11 +46,17 @@ class TestCoroutineHandle(TestBase):
                         ValueCheck(name="current_value", value="-1"),
                     ],
                 ),
+                # We don not check any members inside the `coro_frame`,
+                # as its contents are highly compiler-specific.
+                ValueCheck(name="coro_frame"),
             ],
         )
+
+        # For a type-erased `coroutine_handle<>`, we can still devirtualize
+        # the promise call and display the correctly typed promise. This
+        # currently only works in clang, because gcc is not adding the
+        # artificial `__promise` variable to the destroy function.
         if is_clang:
-            # For a type-erased `coroutine_handle<>`, we can still devirtualize
-            # the promise call and display the correctly typed promise.
             self.expect_expr(
                 "type_erased_hdl",
                 result_summary=re.compile("^coro frame = 0x[0-9a-f]*$"),
@@ -63,23 +69,26 @@ class TestCoroutineHandle(TestBase):
                             ValueCheck(name="current_value", value="-1"),
                         ],
                     ),
+                    ValueCheck(name="coro_frame"),
                 ],
             )
-            # For an incorrectly typed `coroutine_handle`, we use the user-supplied
-            # incorrect type instead of inferring the correct type. Strictly speaking,
-            # incorrectly typed coroutine handles are undefined behavior. However,
-            # it provides probably a better debugging experience if we display the
-            # promise as seen by the program instead of fixing this bug based on
-            # the available debug info.
-            self.expect_expr(
-                "incorrectly_typed_hdl",
-                result_summary=re.compile("^coro frame = 0x[0-9a-f]*$"),
-                result_children=[
-                    ValueCheck(name="resume", summary=test_generator_func_ptr_re),
-                    ValueCheck(name="destroy", summary=test_generator_func_ptr_re),
-                    ValueCheck(name="promise", dereference=ValueCheck(value="-1")),
-                ],
-            )
+
+        # For an incorrectly typed `coroutine_handle`, we use the user-supplied
+        # incorrect type instead of inferring the correct type. Strictly speaking,
+        # incorrectly typed coroutine handles are undefined behavior. However,
+        # it provides probably a better debugging experience if we display the
+        # promise as seen by the program instead of fixing this bug based on
+        # the available debug info.
+        self.expect_expr(
+            "incorrectly_typed_hdl",
+            result_summary=re.compile("^coro frame = 0x[0-9a-f]*$"),
+            result_children=[
+                ValueCheck(name="resume", summary=test_generator_func_ptr_re),
+                ValueCheck(name="destroy", summary=test_generator_func_ptr_re),
+                ValueCheck(name="promise", dereference=ValueCheck(value="-1")),
+                ValueCheck(name="coro_frame"),
+            ],
+        )
 
         process = self.process()
 
@@ -110,6 +119,7 @@ class TestCoroutineHandle(TestBase):
                         ValueCheck(name="current_value", value="42"),
                     ],
                 ),
+                ValueCheck(name="coro_frame"),
             ],
         )
 
@@ -133,6 +143,7 @@ class TestCoroutineHandle(TestBase):
                         ValueCheck(name="current_value", value="42"),
                     ],
                 ),
+                ValueCheck(name="coro_frame"),
             ],
         )
         if is_clang:
@@ -150,6 +161,7 @@ class TestCoroutineHandle(TestBase):
                             ValueCheck(name="current_value", value="42"),
                         ],
                     ),
+                    ValueCheck(name="coro_frame"),
                 ],
             )
 
