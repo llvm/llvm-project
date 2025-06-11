@@ -39,10 +39,6 @@ struct EntryPointGroup {
   EntryPointSet Functions;
 
   EntryPointGroup() = default;
-  EntryPointGroup(const EntryPointGroup &) = default;
-  EntryPointGroup &operator=(const EntryPointGroup &) = default;
-  EntryPointGroup(EntryPointGroup &&) = default;
-  EntryPointGroup &operator=(EntryPointGroup &&) = default;
 
   EntryPointGroup(int ID, EntryPointSet Functions = EntryPointSet())
       : ID(ID), Functions(std::move(Functions)) {}
@@ -70,12 +66,6 @@ class ModuleDesc {
   EntryPointGroup EntryPoints;
 
 public:
-  ModuleDesc() = delete;
-  ModuleDesc(const ModuleDesc &) = delete;
-  ModuleDesc &operator=(const ModuleDesc &) = delete;
-  ModuleDesc(ModuleDesc &&) = default;
-  ModuleDesc &operator=(ModuleDesc &&) = default;
-
   ModuleDesc(std::unique_ptr<Module> M,
              EntryPointGroup EntryPoints = EntryPointGroup())
       : M(std::move(M)), EntryPoints(std::move(EntryPoints)) {
@@ -135,7 +125,7 @@ public:
     // Group functions by their signature to handle case (2) described above
     DenseMap<const FunctionType *, DependencyGraph::GlobalSet>
         FuncTypeToFuncsMap;
-    for (const auto &F : M.functions()) {
+    for (const Function &F : M.functions()) {
       // Kernels can't be called (either directly or indirectly).
       if (isKernel(F))
         continue;
@@ -143,25 +133,25 @@ public:
       FuncTypeToFuncsMap[F.getFunctionType()].insert(&F);
     }
 
-    for (const auto &F : M.functions()) {
+    for (const Function &F : M.functions()) {
       // case (1), see comment above the class definition
       for (const Value *U : F.users())
         addUserToGraphRecursively(cast<const User>(U), &F);
 
       // case (2), see comment above the class definition
-      for (const auto &I : instructions(F)) {
-        const auto *CI = dyn_cast<CallInst>(&I);
-        if (!CI || !CI->isIndirectCall()) // Direct calls were handled above
+      for (const Instruction &I : instructions(F)) {
+        const CallBase *CB = dyn_cast<CallBase>(&I);
+        if (!CB || !CB->isIndirectCall()) // Direct calls were handled above
           continue;
 
-        const FunctionType *Signature = CI->getFunctionType();
-        const auto &PotentialCallees = FuncTypeToFuncsMap[Signature];
-        Graph[&F].insert(PotentialCallees.begin(), PotentialCallees.end());
+        const FunctionType *Signature = CB->getFunctionType();
+        GlobalSet &PotentialCallees = FuncTypeToFuncsMap[Signature];
+        Graph.emplace_or_assign(&F, std::move(PotentialCallees));
       }
     }
 
     // And every global variable (but their handling is a bit simpler)
-    for (const auto &GV : M.globals())
+    for (const GlobalVariable &GV : M.globals())
       for (const Value *U : GV.users())
         addUserToGraphRecursively(cast<const User>(U), &GV);
   }
@@ -182,7 +172,7 @@ private:
     while (!WorkList.empty()) {
       const User *U = WorkList.pop_back_val();
       if (const auto *I = dyn_cast<const Instruction>(U)) {
-        const auto *UFunc = I->getFunction();
+        const Function *UFunc = I->getFunction();
         Graph[UFunc].insert(V);
       } else if (isa<const Constant>(U)) {
         if (const auto *GV = dyn_cast<const GlobalVariable>(U))
@@ -190,10 +180,11 @@ private:
         // This could be a global variable or some constant expression (like
         // bitcast or gep). We trace users of this constant further to reach
         // global objects they are used by and add them to the graph.
-        for (const auto *UU : U->users())
+        for (const User *UU : U->users())
           WorkList.push_back(UU);
-      } else
+      } else {
         llvm_unreachable("Unhandled type of function user");
+      }
     }
   }
 
@@ -205,11 +196,11 @@ void collectFunctionsAndGlobalVariablesToExtract(
     SetVector<const GlobalValue *> &GVs, const Module &M,
     const EntryPointGroup &ModuleEntryPoints, const DependencyGraph &DG) {
   // We start with module entry points
-  for (const auto *F : ModuleEntryPoints.Functions)
+  for (const Function *F : ModuleEntryPoints.Functions)
     GVs.insert(F);
 
   // Non-discardable global variables are also include into the initial set
-  for (const auto &GV : M.globals())
+  for (const GlobalVariable &GV : M.globals())
     if (!GV.isDiscardableIfUnused())
       GVs.insert(&GV);
 
@@ -223,8 +214,9 @@ void collectFunctionsAndGlobalVariablesToExtract(
       if (const auto *Func = dyn_cast<const Function>(Dep)) {
         if (!Func->isDeclaration())
           GVs.insert(Func);
-      } else
+      } else {
         GVs.insert(Dep); // Global variables are added unconditionally
+      }
     }
   }
 }
@@ -237,13 +229,12 @@ ModuleDesc extractSubModule(const Module &M,
   // Clone definitions only for needed globals. Others will be added as
   // declarations and removed later.
   std::unique_ptr<Module> SubM = CloneModule(
-      M, VMap, [&](const GlobalValue *GV) { return GVs.count(GV); });
+      M, VMap, [&](const GlobalValue *GV) { return GVs.contains(GV); });
   // Replace entry points with cloned ones.
   EntryPointSet NewEPs;
   const EntryPointSet &EPs = ModuleEntryPoints.Functions;
-  std::for_each(EPs.begin(), EPs.end(), [&](const Function *F) {
-    NewEPs.insert(cast<Function>(VMap[F]));
-  });
+  llvm::for_each(
+      EPs, [&](const Function *F) { NewEPs.insert(cast<Function>(VMap[F])); });
   ModuleEntryPoints.Functions = std::move(NewEPs);
   return ModuleDesc{std::move(SubM), std::move(ModuleEntryPoints)};
 }
@@ -305,15 +296,9 @@ selectEntryPointGroups(const Module &M,
   // which is based on their contents, this greatly helps LIT tests
   std::map<int, EntryPointSet> EntryPointsMap;
 
-  for (const auto &F : M.functions()) {
-    if (auto Category = FC(F); Category) {
-      auto It = EntryPointsMap.find(*Category);
-      if (It == EntryPointsMap.end())
-        It = EntryPointsMap.emplace(*Category, EntryPointSet()).first;
-
-      It->second.insert(&F);
-    }
-  }
+  for (const auto &F : M.functions())
+    if (std::optional<int> Category = FC(F); Category)
+      EntryPointsMap[*Category].insert(&F);
 
   EntryPointGroupVec Groups;
   Groups.reserve(EntryPointsMap.size());
