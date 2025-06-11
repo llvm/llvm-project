@@ -98,6 +98,8 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
+* Add support for Zvfbfa (Additional BF16 vector compute support)
+
 Changes to the WebAssembly Backend
 ----------------------------------
 
