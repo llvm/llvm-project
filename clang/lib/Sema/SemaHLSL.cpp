@@ -764,6 +764,13 @@ void SemaHLSL::CheckSemanticAnnotation(
       return;
     DiagnoseAttrStageMismatch(AnnotationAttr, ST, {llvm::Triple::Compute});
     break;
+  case attr::HLSLSV_Position:
+    // TODO(#143523): allow use on other shader types & output once the overall
+    // semantic logic is implemented.
+    if (ST == llvm::Triple::Pixel)
+      return;
+    DiagnoseAttrStageMismatch(AnnotationAttr, ST, {llvm::Triple::Pixel});
+    break;
   default:
     llvm_unreachable("Unknown HLSLAnnotationAttr");
   }
@@ -1145,6 +1152,26 @@ void SemaHLSL::handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL) {
 
   D->addAttr(::new (getASTContext())
                  HLSLSV_DispatchThreadIDAttr(getASTContext(), AL));
+}
+
+bool SemaHLSL::diagnosePositionType(QualType T, const ParsedAttr &AL) {
+  const auto *VT = T->getAs<VectorType>();
+
+  if (!T->hasFloatingRepresentation() || (VT && VT->getNumElements() > 4)) {
+    Diag(AL.getLoc(), diag::err_hlsl_attr_invalid_type)
+        << AL << "float/float1/float2/float3/float4";
+    return false;
+  }
+
+  return true;
+}
+
+void SemaHLSL::handleSV_PositionAttr(Decl *D, const ParsedAttr &AL) {
+  auto *VD = cast<ValueDecl>(D);
+  if (!diagnosePositionType(VD->getType(), AL))
+    return;
+
+  D->addAttr(::new (getASTContext()) HLSLSV_PositionAttr(getASTContext(), AL));
 }
 
 void SemaHLSL::handleSV_GroupThreadIDAttr(Decl *D, const ParsedAttr &AL) {

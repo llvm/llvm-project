@@ -80,6 +80,7 @@ struct GPUProfGlobals {
 
   void dump() const;
   Error write() const;
+  bool empty() const;
 };
 
 /// Subclass of GlobalTy that holds the memory for a global of \p Ty.
@@ -191,9 +192,6 @@ public:
     return moveGlobalBetweenDeviceAndHost(Device, Image, HostGlobal,
                                           /*D2H=*/false);
   }
-
-  /// Checks whether a given image contains profiling globals.
-  bool hasProfilingGlobals(GenericDeviceTy &Device, DeviceImageTy &Image);
 
   /// Reads profiling data from a GPU image to supplied profdata struct.
   /// Iterates through the image symbol table and stores global values

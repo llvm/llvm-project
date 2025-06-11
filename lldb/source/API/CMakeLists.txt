@@ -292,6 +292,45 @@ else()
   endif()
 endif()
 
+# Stage all headers in the include directory in the build dir.
+file(GLOB public_headers ${LLDB_SOURCE_DIR}/include/lldb/API/*.h)
+set(lldb_header_staging_dir ${CMAKE_BINARY_DIR}/include/lldb)
+file(GLOB root_public_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-*.h)
+file(GLOB root_private_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-private*.h)
+list(REMOVE_ITEM root_public_headers ${root_private_headers})
+
+find_program(unifdef_EXECUTABLE unifdef)
+
+foreach(header
+    ${public_headers}
+    ${generated_public_headers}
+    ${root_public_headers})
+  get_filename_component(basename ${header} NAME)
+  set(staged_header ${lldb_header_staging_dir}/${basename})
+
+  if(unifdef_EXECUTABLE)
+    # unifdef returns 0 when the file is unchanged and 1 if something was changed.
+    # That means if we successfully remove SWIG code, the build system believes
+    # that the command has failed and stops. This is undesirable.
+    set(copy_command ${unifdef_EXECUTABLE} -USWIG ${header} > ${staged_header} || (exit 0))
+  else()
+    set(copy_command ${CMAKE_COMMAND} -E copy ${header} ${staged_header})
+  endif()
+
+  add_custom_command(
+    DEPENDS ${header} OUTPUT ${staged_header}
+    COMMAND ${copy_command}
+    COMMENT "LLDB headers: stage LLDB headers in include directory")
+
+  list(APPEND lldb_staged_headers ${staged_header})
+endforeach()
+
+add_custom_command(TARGET liblldb POST_BUILD
+  COMMAND ${LLDB_SOURCE_DIR}/scripts/version-header-fix.py ${LLDB_SOURCE_DIR}/include/lldb/lldb-defines.h ${lldb_header_staging_dir}/lldb-defines.h ${LLDB_VERSION_MAJOR} ${LLDB_VERSION_MINOR} ${LLDB_VERSION_PATCH}
+)
+add_custom_target(liblldb-header-staging DEPENDS ${lldb_staged_headers})
+add_dependencies(liblldb liblldb-header-staging)
+
 if(LLDB_BUILD_FRAMEWORK)
   include(LLDBFramework)
 
