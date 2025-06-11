@@ -243,17 +243,17 @@ public:
 
   bool GetAutoConfirm() const;
 
-  const FormatEntity::Entry *GetDisassemblyFormat() const;
+  FormatEntity::Entry GetDisassemblyFormat() const;
 
-  const FormatEntity::Entry *GetFrameFormat() const;
+  FormatEntity::Entry GetFrameFormat() const;
 
-  const FormatEntity::Entry *GetFrameFormatUnique() const;
+  FormatEntity::Entry GetFrameFormatUnique() const;
 
   uint64_t GetStopDisassemblyMaxSize() const;
 
-  const FormatEntity::Entry *GetThreadFormat() const;
+  FormatEntity::Entry GetThreadFormat() const;
 
-  const FormatEntity::Entry *GetThreadStopFormat() const;
+  FormatEntity::Entry GetThreadStopFormat() const;
 
   lldb::ScriptLanguage GetScriptLanguage() const;
 
@@ -297,7 +297,7 @@ public:
 
   bool GetShowStatusline() const;
 
-  const FormatEntity::Entry *GetStatuslineFormat() const;
+  FormatEntity::Entry GetStatuslineFormat() const;
   bool SetStatuslineFormat(const FormatEntity::Entry &format);
 
   llvm::StringRef GetSeparator() const;

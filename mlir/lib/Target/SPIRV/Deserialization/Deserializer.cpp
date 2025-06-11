@@ -1062,12 +1062,30 @@ LogicalResult spirv::Deserializer::processCooperativeMatrixTypeKHR(
            << operands[2];
   }
 
-  unsigned rows = getConstantInt(operands[3]).getInt();
-  unsigned columns = getConstantInt(operands[4]).getInt();
+  IntegerAttr rowsAttr = getConstantInt(operands[3]);
+  IntegerAttr columnsAttr = getConstantInt(operands[4]);
+  IntegerAttr useAttr = getConstantInt(operands[5]);
+
+  if (!rowsAttr)
+    return emitError(unknownLoc, "OpTypeCooperativeMatrixKHR `Rows` references "
+                                 "undefined constant <id> ")
+           << operands[3];
+
+  if (!columnsAttr)
+    return emitError(unknownLoc, "OpTypeCooperativeMatrixKHR `Columns` "
+                                 "references undefined constant <id> ")
+           << operands[4];
+
+  if (!useAttr)
+    return emitError(unknownLoc, "OpTypeCooperativeMatrixKHR `Use` references "
+                                 "undefined constant <id> ")
+           << operands[5];
+
+  unsigned rows = rowsAttr.getInt();
+  unsigned columns = columnsAttr.getInt();
 
   std::optional<spirv::CooperativeMatrixUseKHR> use =
-      spirv::symbolizeCooperativeMatrixUseKHR(
-          getConstantInt(operands[5]).getInt());
+      spirv::symbolizeCooperativeMatrixUseKHR(useAttr.getInt());
   if (!use) {
     return emitError(
                unknownLoc,
@@ -1450,11 +1468,11 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
   }
 
   auto resultID = operands[1];
-  if (auto vectorType = dyn_cast<VectorType>(resultType)) {
-    auto attr = DenseElementsAttr::get(vectorType, elements);
+  if (auto shapedType = dyn_cast<ShapedType>(resultType)) {
+    auto attr = DenseElementsAttr::get(shapedType, elements);
     // For normal constants, we just record the attribute (and its type) for
     // later materialization at use sites.
-    constantMap.try_emplace(resultID, attr, resultType);
+    constantMap.try_emplace(resultID, attr, shapedType);
   } else if (auto arrayType = dyn_cast<spirv::ArrayType>(resultType)) {
     auto attr = opBuilder.getArrayAttr(elements);
     constantMap.try_emplace(resultID, attr, resultType);
