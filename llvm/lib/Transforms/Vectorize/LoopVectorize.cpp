@@ -7774,10 +7774,13 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
           new VPVectorEndPointerRecipe(Ptr, &Plan.getVF(), getLoadStoreType(I),
                                        /*Stride*/ -1, Flags, I->getDebugLoc());
     } else {
-      VectorPtr = new VPVectorPointerRecipe(
-          Ptr, getLoadStoreType(I), /*Strided*/ false,
-          GEP ? GEP->getNoWrapFlags() : GEPNoWrapFlags::none(),
-          I->getDebugLoc());
+      const DataLayout &DL = I->getDataLayout();
+      auto *StrideTy = DL.getIndexType(Ptr->getUnderlyingValue()->getType());
+      VPValue *StrideOne = Plan.getOrAddLiveIn(ConstantInt::get(StrideTy, 1));
+      VectorPtr = new VPVectorPointerRecipe(Ptr, getLoadStoreType(I), StrideOne,
+                                            GEP ? GEP->getNoWrapFlags()
+                                                : GEPNoWrapFlags::none(),
+                                            I->getDebugLoc());
     }
     Builder.insert(VectorPtr);
     Ptr = VectorPtr;

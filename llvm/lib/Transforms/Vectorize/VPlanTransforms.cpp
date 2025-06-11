@@ -2732,22 +2732,21 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
       // The stride of consecutive reverse access must be -1.
       int64_t Stride = -1;
       auto *GEP = dyn_cast<GetElementPtrInst>(PtrUV->stripPointerCasts());
+      const DataLayout &DL = Ingredient.getDataLayout();
+      auto *StrideTy = DL.getIndexType(PtrUV->getType());
+      VPValue *StrideVPV =
+          Plan.getOrAddLiveIn(ConstantInt::get(StrideTy, Stride));
       // Create a new vector pointer for strided access.
-      auto *NewPtr = new VPVectorPointerRecipe(Ptr, ElementTy, /*Stride=*/true,
+      auto *NewPtr = new VPVectorPointerRecipe(Ptr, ElementTy, StrideVPV,
                                                GEP ? GEP->getNoWrapFlags()
                                                    : GEPNoWrapFlags::none(),
                                                VecEndPtr->getDebugLoc());
       NewPtr->insertBefore(MemR);
 
       auto *LoadR = cast<VPWidenLoadRecipe>(MemR);
-      auto *LI = cast<LoadInst>(&Ingredient);
-      const DataLayout &DL = LI->getDataLayout();
-      auto *StrideTy = DL.getIndexType(LI->getPointerOperand()->getType());
-      VPValue *StrideVPV =
-          Plan.getOrAddLiveIn(ConstantInt::get(StrideTy, Stride));
       auto *StridedLoad = new VPWidenStridedLoadRecipe(
-          *LI, NewPtr, StrideVPV, &Plan.getVF(), LoadR->getMask(), *LoadR,
-          LoadR->getDebugLoc());
+          *cast<LoadInst>(&Ingredient), NewPtr, StrideVPV, &Plan.getVF(),
+          LoadR->getMask(), *LoadR, LoadR->getDebugLoc());
       StridedLoad->insertBefore(LoadR);
       LoadR->replaceAllUsesWith(StridedLoad);
 

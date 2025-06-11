@@ -1767,23 +1767,20 @@ public:
 };
 
 /// A recipe to compute the pointers for widened memory accesses of IndexTy.
-/// Supports both consecutive and reverse consecutive accesses.
-/// TODO: Support non-unit strided accesses .
 class VPVectorPointerRecipe : public VPRecipeWithIRFlags,
-                              public VPUnrollPartAccessor<1> {
+                              public VPUnrollPartAccessor<2> {
   Type *IndexedTy;
 
-  /// Indicate whether to compute the pointer for strided memory accesses.
-  bool Strided;
-
 public:
-  VPVectorPointerRecipe(VPValue *Ptr, Type *IndexedTy, bool Strided,
+  VPVectorPointerRecipe(VPValue *Ptr, Type *IndexedTy, VPValue *Stride,
                         GEPNoWrapFlags GEPFlags, DebugLoc DL)
-      : VPRecipeWithIRFlags(VPDef::VPVectorPointerSC, ArrayRef<VPValue *>(Ptr),
-                            GEPFlags, DL),
-        IndexedTy(IndexedTy), Strided(Strided) {}
+      : VPRecipeWithIRFlags(VPDef::VPVectorPointerSC,
+                            ArrayRef<VPValue *>({Ptr, Stride}), GEPFlags, DL),
+        IndexedTy(IndexedTy) {}
 
   VP_CLASSOF_IMPL(VPDef::VPVectorPointerSC)
+
+  VPValue *getStride() const { return getOperand(1); }
 
   void execute(VPTransformState &State) override;
 
@@ -1802,7 +1799,7 @@ public:
   }
 
   VPVectorPointerRecipe *clone() override {
-    return new VPVectorPointerRecipe(getOperand(0), IndexedTy, Strided,
+    return new VPVectorPointerRecipe(getOperand(0), IndexedTy, getOperand(1),
                                      getGEPNoWrapFlags(), getDebugLoc());
   }
 

@@ -2384,16 +2384,20 @@ void VPVectorEndPointerRecipe::print(raw_ostream &O, const Twine &Indent,
 void VPVectorPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   unsigned CurrentPart = getUnrollPart(*this);
-  Type *IndexTy = getGEPIndexTy(State.VF.isScalable(), /*IsReverse*/ false,
-                                /*IsUnitStride*/ true, CurrentPart, Builder);
+  Value *Stride = State.get(getStride(), /*IsScalar*/ true);
+
+  auto *StrideC = dyn_cast<ConstantInt>(Stride);
+  bool IsStrideOne = StrideC && StrideC->isOne();
+  bool IsUnitStride = IsStrideOne || (StrideC && StrideC->isMinusOne());
+  Type *IndexTy =
+      getGEPIndexTy(State.VF.isScalable(),
+                    /*IsReverse*/ false, IsUnitStride, CurrentPart, Builder);
   Value *Ptr = State.get(getOperand(0), VPLane(0));
 
+  Stride = Builder.CreateSExtOrTrunc(Stride, IndexTy);
   Value *Increment = createStepForVF(Builder, IndexTy, State.VF, CurrentPart);
-  // TODO: Support non-unit-reverse strided accesses.
-  Value *Index =
-      Strided
-          ? Builder.CreateMul(Increment, ConstantInt::getSigned(IndexTy, -1))
-          : Increment;
+  Value *Index = IsStrideOne ? Increment : Builder.CreateMul(Increment, Stride);
+
   Value *ResultPtr =
       Builder.CreateGEP(IndexedTy, Ptr, Index, "", getGEPNoWrapFlags());
 

@@ -103,7 +103,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:      CLONE ir<[[IDX:%.+]]> = add nsw vp<[[STEPS]]>, ir<-1>
 ; CHECK-NEXT:      CLONE ir<[[ZEXT_IDX:%.+]]> = zext ir<[[IDX]]>
 ; CHECK-NEXT:      CLONE ir<[[LD_IDX:%.+]]> = getelementptr inbounds ir<%B>, ir<[[ZEXT_IDX]]>
-; CHECK-NEXT:      vp<[[LD_PTR:%.+]]> = vector-pointer ir<[[LD_IDX]]>
+; CHECK-NEXT:      vp<[[LD_PTR:%.+]]> = vector-pointer ir<[[LD_IDX]]>, ir<-1>
 ; CHECK-NEXT:      WIDEN ir<[[LD:%.+]]> = load vp<[[LD_PTR]]>, stride = ir<-1>, runtimeVF = vp<[[VF]]>
 ; CHECK-NEXT:      WIDEN ir<[[ADD:%.+]]> = add ir<[[LD]]>, ir<1>
 ; CHECK-NEXT:      CLONE ir<[[ST_IDX:%.+]]> = getelementptr inbounds ir<%A>, ir<[[ZEXT_IDX]]>
@@ -237,7 +237,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    CLONE ir<[[IDX:%.+]]> = add nsw vp<[[DEV_IV]]>, ir<-1>
 ; CHECK-NEXT:    CLONE ir<[[ZEXT_IDX:%.+]]> = zext ir<[[IDX]]>
 ; CHECK-NEXT:    CLONE ir<[[LD_IDX:%.+]]> = getelementptr inbounds ir<%B>, ir<[[ZEXT_IDX]]>
-; CHECK-NEXT:    vp<[[LD_PTR:%.+]]> = vector-pointer ir<[[LD_IDX]]>
+; CHECK-NEXT:    vp<[[LD_PTR:%.+]]> = vector-pointer ir<[[LD_IDX]]>, ir<-1>
 ; CHECK-NEXT:    WIDEN ir<[[LD:%.+]]> = load vp<[[LD_PTR]]>, stride = ir<-1>, runtimeVF = ir<[[VF]]>
 ; CHECK-NEXT:    WIDEN ir<[[ADD:%.+]]> = add ir<[[LD]]>, ir<1>
 ; CHECK-NEXT:    CLONE ir<[[ST_IDX:%.+]]> = getelementptr inbounds ir<%A>, ir<[[ZEXT_IDX]]>
@@ -510,7 +510,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:      CLONE ir<[[IDX:%.+]]> = add nsw vp<[[STEPS]]>, ir<-1>
 ; CHECK-NEXT:      CLONE ir<[[ZEXT_IDX:%.+]]> = zext ir<[[IDX]]>
 ; CHECK-NEXT:      CLONE ir<[[LD_IDX:%.+]]> = getelementptr inbounds ir<%B>, ir<[[ZEXT_IDX]]>
-; CHECK-NEXT:      vp<[[LD_PTR:%.+]]> = vector-pointer ir<[[LD_IDX]]>
+; CHECK-NEXT:      vp<[[LD_PTR:%.+]]> = vector-pointer ir<[[LD_IDX]]>, ir<-1>
 ; CHECK-NEXT:      WIDEN ir<[[LD:%.+]]> = load vp<[[LD_PTR]]>, stride = ir<-1>, runtimeVF = vp<[[VF]]>
 ; CHECK-NEXT:      WIDEN ir<[[ADD:%.+]]> = fadd ir<[[LD]]>, ir<1.000000e+00>
 ; CHECK-NEXT:      CLONE ir<[[ST_IDX:%.+]]> = getelementptr inbounds ir<%A>, ir<[[ZEXT_IDX]]>
@@ -644,7 +644,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    CLONE ir<[[IDX:%.+]]> = add nsw vp<[[DEV_IV]]>, ir<-1>
 ; CHECK-NEXT:    CLONE ir<[[ZEXT_IDX:%.+]]> = zext ir<[[IDX]]>
 ; CHECK-NEXT:    CLONE ir<[[LD_IDX:%.+]]> = getelementptr inbounds ir<%B>, ir<[[ZEXT_IDX]]>
-; CHECK-NEXT:    vp<[[LD_PTR:%.+]]> = vector-pointer ir<[[LD_IDX]]>
+; CHECK-NEXT:    vp<[[LD_PTR:%.+]]> = vector-pointer ir<[[LD_IDX]]>, ir<-1>
 ; CHECK-NEXT:    WIDEN ir<[[LD:%.+]]> = load vp<[[LD_PTR]]>, stride = ir<-1>, runtimeVF = ir<[[VF]]>
 ; CHECK-NEXT:    WIDEN ir<[[ADD:%.+]]> = fadd ir<[[LD]]>, ir<1.000000e+00>
 ; CHECK-NEXT:    CLONE ir<[[ST_IDX:%.+]]> = getelementptr inbounds ir<%A>, ir<[[ZEXT_IDX]]>
