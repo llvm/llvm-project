@@ -2,21 +2,6 @@
 
 # UNSUPPORTED: !libclang-loadable
 
-# Tests require libclang.so which is only built with LLVM_ENABLE_PIC=ON
-#
-# Covered by libclang-loadable, may need to augment test for lack of
-# libclang.so.
-
-# Do not try to run if libclang was built with sanitizers because
-# the sanitizer library will likely be loaded too late to perform
-# interception and will then fail.
-# We could use LD_PRELOAD/DYLD_INSERT_LIBRARIES but this isn't
-# portable so its easier just to not run the tests when building
-# with ASan.
-#
-# FIXME: Handle !LLVM_USE_SANITIZER = "".
-# lit.site.cfg.py has config.llvm_use_sanitizer = ""
-
 # Tests fail on Windows, and need someone knowledgeable to fix.
 # It's not clear whether it's a test or a valid binding problem.
 # XFAIL: target={{.*windows.*}}
@@ -24,11 +9,13 @@
 # The Python FFI interface is broken on AIX: https://bugs.python.org/issue38628.
 # XFAIL: target={{.*-aix.*}}
 
-# AArch64, Hexagon, and Sparc have known test failures that need to be
-# addressed.
+# AArch64 and Hexagon have known test failures that need to be addressed.
 # SystemZ has broken Python/FFI interface:
 # https://reviews.llvm.org/D52840#1265716
-# XFAIL: target={{(aarch64|hexagon|sparc*|s390x)-.*}}
+# XFAIL: target={{(aarch64|hexagon|s390x)-.*}}
+# python SEGVs on Linux/sparc64 when loading libclang.so.  Seems to be an FFI
+# issue, too.
+# XFAIL: target={{sparc.*-.*-linux.*}}
 
 # Tests will fail if cross-compiling for a different target, as tests will try
 # to use the host Python3_EXECUTABLE and make FFI calls to functions in target
