@@ -1580,7 +1580,12 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
       G->getAddressSpace() == AMDGPUAS::REGION_ADDRESS) {
     if (!MFI->isModuleEntryFunction() &&
         GV->getName() != "llvm.amdgcn.module.lds" &&
+#if LLPC_BUILD_NPI
+        !AMDGPU::isNamedBarrier(*cast<GlobalVariable>(GV)) &&
+        !AMDGPU::isLDSSemaphore(*cast<GlobalVariable>(GV))) {
+#else /* LLPC_BUILD_NPI */
         !AMDGPU::isNamedBarrier(*cast<GlobalVariable>(GV))) {
+#endif /* LLPC_BUILD_NPI */
       SDLoc DL(Op);
       const Function &Fn = DAG.getMachineFunction().getFunction();
       DAG.getContext()->diagnose(DiagnosticInfoUnsupported(

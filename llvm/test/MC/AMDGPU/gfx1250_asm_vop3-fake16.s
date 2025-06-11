@@ -100,6 +100,9 @@ v_bitop3_b16 v5, src_scc, vcc_lo, -1 bitop3:102 op_sel:[0,0,1,0]
 v_bitop3_b16 v255, 0xfe0b, vcc_hi, null bitop3:103 op_sel:[0,0,0,1]
 // GFX1250: v_bitop3_b16 v255, 0xfe0b, vcc_hi, null bitop3:0x67 op_sel:[0,0,0,1] ; encoding: [0xff,0x44,0x33,0xd6,0xff,0xd6,0xf0,0xe9,0x0b,0xfe,0x00,0x00]
 
+v_bitop3_b16 v1, v2, v3, v4 bitop3:103 op_sel:[1,1,1,1]
+// GFX1250: v_bitop3_b16 v1, v2, v3, v4 bitop3:0x67 op_sel:[1,1,1,1] ; encoding: [0x01,0x7c,0x33,0xd6,0x02,0x07,0x12,0xec]
+
 v_lshl_add_u64 v[2:3], s[4:5], v7, v[8:9]
 // GFX1250: v_lshl_add_u64 v[2:3], s[4:5], v7, v[8:9] ; encoding: [0x02,0x00,0x52,0xd6,0x04,0x0e,0x22,0x04]
 

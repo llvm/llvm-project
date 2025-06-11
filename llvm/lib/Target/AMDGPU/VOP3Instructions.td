@@ -105,15 +105,15 @@ def DIV_FIXUP_F32_PROF : VOP3_Profile<VOP_F32_F32_F32_F32> {
   let HasExtVOP3DPP = 0;
 #ifdef LLPC_BUILD_NPI
   let HasExt64BitDPP = 1;
+}
+def VOP_I64_I64_I64_DPP : VOP3_Profile<VOP_I64_I64_I64>;
+def VOP_I32_I32_I64_DPP : VOP3_Profile<VOPProfile<[i64, i32, i32, i64]>> {
+  let HasClamp = 1;
 #else /* LLPC_BUILD_NPI */
   let HasExtDPP = 0;
 #endif /* LLPC_BUILD_NPI */
 }
 #ifdef LLPC_BUILD_NPI
-def VOP_I64_I64_I64_DPP : VOP3_Profile<VOP_I64_I64_I64>;
-def VOP_I32_I32_I64_DPP : VOP3_Profile<VOPProfile<[i64, i32, i32, i64]>> {
-  let HasClamp = 1;
-}
 } // End HasExt64BitDPP = 1;
 #endif /* LLPC_BUILD_NPI */
 
@@ -1295,32 +1295,13 @@ class VOP3_BITOP3_Profile<VOPProfile pfl, VOP3Features f> : VOP3_Profile<pfl, f>
   let HasModifiers = 0;
 #ifdef LLPC_BUILD_NPI
   let HasVOPD3Src2 = 0;
-
-  field dag InsVOP3DPPBase = getInsVOP3Base<Src0VOP3DPP, Src1VOP3DPP,
-                  Src2VOP3DPP, NumSrcArgs, HasClamp,
-                  HasOpSel /* Modifiers */, HasOpSel /* HasSrc2Mods */, HasOMod,
-                  Src0ModVOP3DPP, Src1ModVOP3DPP, Src2ModVOP3DPP, 0 /* HasOpSel */>.ret;
-
-  let InsVOP3DPP =
-      !con(getInsVOP3DPPBase<InsVOP3DPPBase, DstRCVOP3DPP, 3, 1>.ret,
-           (ins bitop3_0:$bitop3), !if(HasOpSel, (ins op_sel0:$op_sel), (ins)),
-           (ins dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
-               DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl));
-  let InsVOP3DPP16 = !con(InsVOP3DPP, (ins Dpp16FI:$fi));
-
-  let InsVOP3DPP8 = !con(getInsVOP3DPPBase<InsVOP3DPPBase, DstRCVOP3DPP, 3, 1>.ret,
-                         (ins bitop3_0:$bitop3),
-                         !if (HasOpSel, (ins op_sel0:$op_sel), (ins)),
-                         (ins dpp8:$dpp8, Dpp8FI:$fi));
-
-  let InsVOPD3Y = (ins Src0VOPD3:$src0Y, Src1VOPD3:$vsrc1Y, bitop3_0:$bitop3);
-
-  let AsmVOP3DPP16 = getAsmVOP3DPP16<!if(HasOpSel, AsmVOP3OpSel, Asm64)>.ret;
-  let AsmVOP3DPP = getAsmVOP3DPP<!if(HasOpSel, AsmVOP3OpSel, Asm64)>.ret;
-  let AsmVOP3DPP8 = getAsmVOP3DPP8<!if(HasOpSel, AsmVOP3OpSel, Asm64)>.ret;
-  let AsmVOPD3Y = getAsmVOPDPart<NumSrcArgs, "Y", HasVOPD3Src2, HasModifiers>.ret # "$bitop3";
 #endif /* LLPC_BUILD_NPI */
   let HasBitOp3 = 1;
+#ifdef LLPC_BUILD_NPI
+
+  let InsVOPD3Y = (ins Src0VOPD3:$src0Y, Src1VOPD3:$vsrc1Y, bitop3_0:$bitop3);
+  let AsmVOPD3Y = getAsmVOPDPart<NumSrcArgs, "Y", HasVOPD3Src2, HasModifiers>.ret # "$bitop3";
+#endif /* LLPC_BUILD_NPI */
 }
 
 class VOP3_CVT_SCALE_F1632_FP8BF8_Profile<ValueType DstTy> : VOP3_Profile<VOPProfile<[DstTy, i32, f32, untyped]>,
@@ -1720,13 +1701,27 @@ let SubtargetPredicate = isGFX1250Plus, WaveSizePredicate = isWave32 in {
   def : PermlaneNoDppPat2Src<int_amdgcn_permlane_idx_gen, V_PERMLANE_IDX_GEN_B32_e64>;
 } // End SubtargetPredicate = isGFX1250Plus, WaveSizePredicate = isWave32
 
-let SubtargetPredicate = HasBitOp3Insts in {
+let HasClamp = 0, HasModifiers = 1 in {
+def BitOp3_B16_Profile : VOP3_BITOP3_Profile<VOPProfile <[i16, i16, i16, i16, i32]>, VOP3_OPSEL>;
+def BitOp3_B16_t16_Profile : VOP3_Profile_True16<BitOp3_B16_Profile>;
+def BitOp3_B16_fake16_Profile : VOP3_Profile_Fake16<BitOp3_B16_Profile>;
+}
+
+let OtherPredicates = [HasBitOp3Insts] in {
 #else /* LLPC_BUILD_NPI */
 let SubtargetPredicate = HasBitOp3Insts  in {
 #endif /* LLPC_BUILD_NPI */
   let isReMaterializable = 1 in {
+#ifdef LLPC_BUILD_NPI
+    let SubtargetPredicate = isGFX940Plus in
+      defm V_BITOP3_B16 : VOP3Inst <"v_bitop3_b16", BitOp3_B16_Profile>;
+    let SubtargetPredicate = isGFX1250Plus in
+      defm V_BITOP3_B16_gfx1250 : VOP3Inst_t16_with_profiles <"v_bitop3_b16_gfx1250", BitOp3_B16_Profile,
+                                    BitOp3_B16_t16_Profile, BitOp3_B16_fake16_Profile>;
+#else /* LLPC_BUILD_NPI */
     defm V_BITOP3_B16 : VOP3Inst <"v_bitop3_b16",
                                   VOP3_BITOP3_Profile<VOPProfile <[i16, i16, i16, i16, i32]>, VOP3_OPSEL>>;
+#endif /* LLPC_BUILD_NPI */
     defm V_BITOP3_B32 : VOP3Inst <"v_bitop3_b32",
 #ifdef LLPC_BUILD_NPI
                                   VOP3_BITOP3_Profile<VOPProfile <[i32, i32, i32, i32, i32]>, VOP3_REGULAR>>,
@@ -1735,29 +1730,73 @@ let SubtargetPredicate = HasBitOp3Insts  in {
                                   VOP3_BITOP3_Profile<VOPProfile <[i32, i32, i32, i32, i32]>, VOP3_REGULAR>>;
 #endif /* LLPC_BUILD_NPI */
   }
+#ifdef LLPC_BUILD_NPI
+
+#endif /* LLPC_BUILD_NPI */
   def : GCNPat<
     (i32 (int_amdgcn_bitop3 i32:$src0, i32:$src1, i32:$src2, i32:$bitop3)),
     (i32 (V_BITOP3_B32_e64 VSrc_b32:$src0, VSrc_b32:$src1, VSrc_b32:$src2, timm:$bitop3))
   >;
 
-#ifdef LLPC_BUILD_NPI
-  // TODO-GFX1250: This can be an opsel patern, but I expect to use 16-bit registers in true16 instead.
-#endif /* LLPC_BUILD_NPI */
   def : GCNPat<
+#ifdef LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
     (i16 (int_amdgcn_bitop3 i16:$src0, i16:$src1, i16:$src2, i32:$bitop3)),
     (i16 (V_BITOP3_B16_e64 0, VSrc_b16:$src0, 0, VSrc_b16:$src1, 0, VSrc_b16:$src2, timm:$bitop3, 0))
   >;
 
   def : GCNPat<
+#endif /* LLPC_BUILD_NPI */
     (i32 (BITOP3_32 i32:$src0, i32:$src1, i32:$src2, i32:$bitop3)),
     (i32 (V_BITOP3_B32_e64 VSrc_b32:$src0, VSrc_b32:$src1, VSrc_b32:$src2, timm:$bitop3))
   >;
 
+#ifdef LLPC_BUILD_NPI
+  let SubtargetPredicate = isGFX940Plus in {
+    def : GCNPat<
+      (i16 (int_amdgcn_bitop3 i16:$src0, i16:$src1, i16:$src2, i32:$bitop3)),
+      (i16 (V_BITOP3_B16_e64 0, VSrc_b16:$src0, 0, VSrc_b16:$src1, 0, VSrc_b16:$src2, timm:$bitop3, 0))
+    >;
+
+    def : GCNPat<
+      (i16 (BITOP3_16 i16:$src0, i16:$src1, i16:$src2, i32:$bitop3)),
+      (i16 (V_BITOP3_B16_e64 0, VSrc_b16:$src0, 0, VSrc_b16:$src1, 0, VSrc_b16:$src2, timm:$bitop3, 0))
+    >;
+  } // End SubtargetPredicate = isGFX940Plus
+
+  let SubtargetPredicate = isGFX1250Plus in {
+    let True16Predicate = UseFakeTrue16Insts in {
+      def : GCNPat<
+        (i16 (int_amdgcn_bitop3 i16:$src0, i16:$src1, i16:$src2, i32:$bitop3)),
+        (i16 (V_BITOP3_B16_gfx1250_fake16_e64 0, VSrc_b16:$src0, 0, VSrc_b16:$src1, 0, VSrc_b16:$src2, timm:$bitop3, 0))
+      >;
+
+      def : GCNPat<
+        (i16 (BITOP3_16 i16:$src0, i16:$src1, i16:$src2, i32:$bitop3)),
+        (i16 (V_BITOP3_B16_gfx1250_fake16_e64 0, VSrc_b16:$src0, 0, VSrc_b16:$src1, 0, VSrc_b16:$src2, timm:$bitop3, 0))
+      >;
+    }
+    let True16Predicate = UseRealTrue16Insts in {
+      def : GCNPat<
+        (i16 (int_amdgcn_bitop3 i16:$src0, i16:$src1, i16:$src2, i32:$bitop3)),
+        (i16 (V_BITOP3_B16_gfx1250_t16_e64 0, VSrcT_b16:$src0, 0, VSrcT_b16:$src1, 0, VSrcT_b16:$src2, timm:$bitop3, 0))
+      >;
+
+      def : GCNPat<
+        (i16 (BITOP3_16 i16:$src0, i16:$src1, i16:$src2, i32:$bitop3)),
+        (i16 (V_BITOP3_B16_gfx1250_t16_e64 0, VSrcT_b16:$src0, 0, VSrcT_b16:$src1, 0, VSrcT_b16:$src2, timm:$bitop3, 0))
+      >;
+    }
+  } // End SubtargetPredicate = isGFX1250Plus
+
+} // End OtherPredicates = [HasBitOp3Insts]
+#else /* LLPC_BUILD_NPI */
   def : GCNPat<
     (i16 (BITOP3_16 i16:$src0, i16:$src1, i16:$src2, i32:$bitop3)),
     (i16 (V_BITOP3_B16_e64 0, VSrc_b16:$src0, 0, VSrc_b16:$src1, 0, VSrc_b16:$src2, timm:$bitop3, 0))
   >;
 } // End SubtargetPredicate = HasBitOp3Insts
+#endif /* LLPC_BUILD_NPI */
 
 class DivFmasPat<ValueType vt, Instruction inst, Register CondReg> : GCNPat<
   (AMDGPUdiv_fmas (vt (VOP3Mods vt:$src0, i32:$src0_modifiers)),
@@ -2265,7 +2304,7 @@ defm V_MAXIMUM_F16            : VOP3Only_Realtriple_t16_and_fake16_gfx12_gfx13<0
 defm V_PERMLANE16_VAR_B32  : VOP3Only_Real_Base_gfx12_gfx13<0x30f, 0x315>;
 defm V_PERMLANEX16_VAR_B32 : VOP3Only_Real_Base_gfx12_gfx13<0x310, 0x316>;
 
-defm V_BITOP3_B16         : VOP3_Real_BITOP3_gfx1250_gfx13<0x233>;
+defm V_BITOP3_B16_gfx1250 : VOP3_Real_BITOP3_t16_and_fake16_gfx1250_gfx13<0x233, "v_bitop3_b16">;
 defm V_BITOP3_B32         : VOP3_Real_BITOP3_gfx1250_gfx13<0x234>;
 
 defm V_MAD_U32 : VOP3Only_Realtriple_gfx1250_gfx13<0x235>;
@@ -2411,31 +2450,31 @@ multiclass VOP3_Realtriple_t16_and_fake16_gfx11_gfx12<bits<10> op, string asmNam
 #ifdef LLPC_BUILD_NPI
 multiclass VOP3be_Real_gfx11_gfx12_gfx13<
     bits<10> op, string opName, string asmName> :
+  VOP3be_Real<GFX11Gen, op, opName, asmName>,
+  VOP3be_Real<GFX12Gen, op, opName, asmName>,
+  VOP3be_Real<GFX13Gen, op, opName, asmName>;
+
+multiclass VOP3be_Real_gfx11_gfx12_not_gfx1250_gfx13<bits<10> op, string opName, string asmName> :
 #else /* LLPC_BUILD_NPI */
 multiclass VOP3be_Real_gfx11_gfx12<bits<10> op, string opName, string asmName> :
 #endif /* LLPC_BUILD_NPI */
   VOP3be_Real<GFX11Gen, op, opName, asmName>,
 #ifdef LLPC_BUILD_NPI
-  VOP3be_Real<GFX12Gen, op, opName, asmName>,
+  VOP3be_Real<GFX12Not12_50Gen, op, opName, asmName>,
   VOP3be_Real<GFX13Gen, op, opName, asmName>;
 #else /* LLPC_BUILD_NPI */
   VOP3be_Real<GFX12Gen, op, opName, asmName>;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
-multiclass VOP3be_Real_gfx11_gfx12_not_gfx1250_gfx13<bits<10> op, string opName, string asmName> :
-  VOP3be_Real<GFX11Gen, op, opName, asmName>,
-  VOP3be_Real<GFX12Not12_50Gen, op, opName, asmName>,
-  VOP3be_Real<GFX13Gen, op, opName, asmName>;
+multiclass VOP3be_Realtriple_gfx1250<bits<10> op> :
+  VOP3be_Realtriple<GFX1250Gen, op>;
 #else /* LLPC_BUILD_NPI */
 multiclass VOP3_Real_No_Suffix_gfx11_gfx12<bits<10> op> :
   VOP3_Real_No_Suffix<GFX11Gen, op>, VOP3_Real_No_Suffix<GFX12Gen, op>;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
-multiclass VOP3be_Realtriple_gfx1250<bits<10> op> :
-  VOP3be_Realtriple<GFX1250Gen, op>;
-
 multiclass VOP3_Real_No_Suffix_gfx11_gfx12_gfx13<bits<10> op> :
   VOP3_Real_No_Suffix<GFX11Gen, op>, VOP3_Real_No_Suffix<GFX12Gen, op>,
   VOP3_Real_No_Suffix<GFX13Gen, op>;

@@ -40,6 +40,42 @@ define amdgpu_kernel void @test_sema(i32 %arg) {
   ret void
 }
 
+define void @test_sema_non_kernel(i32 inreg %arg) {
+; GFX13-LABEL: test_sema_non_kernel:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_rtscnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SEMA2_STATE), 0
+; GFX13-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SEMA1_STATE), 0xbc614e
+; GFX13-NEXT:    s_setreg_b32 hwreg(HW_REG_WAVE_SEMA1_STATE), s0
+; GFX13-NEXT:    s_sema_set_limit 0x4000
+; GFX13-NEXT:    s_sema_set_limit 0x2000
+; GFX13-NEXT:    s_sema_set_limit 0x2003
+; GFX13-NEXT:    s_sema_signal 2
+; GFX13-NEXT:    s_sema_signal 1
+; GFX13-NEXT:    s_sema_signal 49
+; GFX13-NEXT:    s_sema_wait 2
+; GFX13-NEXT:    s_sema_wait 1
+; GFX13-NEXT:    s_sema_wait 1
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
+  call void @llvm.amdgcn.s.sema.set.state(ptr addrspace(3) @sem, i32 0)
+  call void @llvm.amdgcn.s.sema.set.state(ptr addrspace(3) @sem2, i32 12345678)
+  call void @llvm.amdgcn.s.sema.set.state(ptr addrspace(3) @sem3, i32 %arg)
+  call void @llvm.amdgcn.s.sema.set.limit(ptr addrspace(3) @sem, i32 0)
+  call void @llvm.amdgcn.s.sema.set.limit(ptr addrspace(3) @sem2, i32 0)
+  call void @llvm.amdgcn.s.sema.set.limit(ptr addrspace(3) @sem3, i32 3)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem2)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem3)
+  call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem)
+  call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem2)
+  call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem3)
+  ret void
+}
+
 ; Regression test for generating illegal MIR.
 define amdgpu_ps <2 x half> @test_sema_tensor() {
 ; GFX13-LABEL: test_sema_tensor:
