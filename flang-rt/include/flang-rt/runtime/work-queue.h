@@ -94,7 +94,7 @@ private:
 
 // Base class for ticket workers that operate elementwise over descriptors
 class Elementwise {
-protected:
+public:
   RT_API_ATTRS Elementwise(
       const Descriptor &instance, const Descriptor *from = nullptr)
       : instance_{instance}, from_{from} {
@@ -120,6 +120,7 @@ protected:
     }
   }
 
+protected:
   const Descriptor &instance_, *from_{nullptr};
   std::size_t elements_{instance_.Elements()};
   std::size_t elementAt_{0};
@@ -129,7 +130,7 @@ protected:
 
 // Base class for ticket workers that operate over derived type components.
 class Componentwise {
-protected:
+public:
   RT_API_ATTRS Componentwise(const typeInfo::DerivedType &);
   RT_API_ATTRS bool IsComplete() const { return componentAt_ >= components_; }
   RT_API_ATTRS void Advance() {
@@ -147,6 +148,7 @@ protected:
   }
   RT_API_ATTRS void GetComponent();
 
+protected:
   const typeInfo::DerivedType &derived_;
   std::size_t components_{0}, componentAt_{0};
   const typeInfo::Component *component_{nullptr};
@@ -155,8 +157,8 @@ protected:
 
 // Base class for ticket workers that operate over derived type components
 // in an outer loop, and elements in an inner loop.
-class ComponentsOverElements : protected Componentwise, protected Elementwise {
-protected:
+class ComponentsOverElements : public Componentwise, public Elementwise {
+public:
   RT_API_ATTRS ComponentsOverElements(const Descriptor &instance,
       const typeInfo::DerivedType &derived, const Descriptor *from = nullptr)
       : Componentwise{derived}, Elementwise{instance, from} {
@@ -187,13 +189,14 @@ protected:
     Componentwise::Reset();
   }
 
+protected:
   int phase_{0};
 };
 
 // Base class for ticket workers that operate over elements in an outer loop,
 // type components in an inner loop.
-class ElementsOverComponents : protected Elementwise, protected Componentwise {
-protected:
+class ElementsOverComponents : public Elementwise, public Componentwise {
+public:
   RT_API_ATTRS ElementsOverComponents(const Descriptor &instance,
       const typeInfo::DerivedType &derived, const Descriptor *from = nullptr)
       : Elementwise{instance, from}, Componentwise{derived} {
@@ -219,6 +222,7 @@ protected:
     Elementwise::Advance();
   }
 
+protected:
   int phase_{0};
 };
 
