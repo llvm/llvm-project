@@ -1699,6 +1699,9 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
       CmdArgs.push_back(Args.MakeArgString(llvm::sys::getHostCPUName()));
     else
       CmdArgs.push_back(A->getValue());
+  } else {
+    CmdArgs.push_back("-tune-cpu");
+    CmdArgs.push_back("apple-m4");
   }
 
   AddUnalignedAccessWarning(CmdArgs);
