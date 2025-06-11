@@ -838,6 +838,34 @@ def SPIRV_GLAtanhOp : SPIRV_GLUnaryArithmeticOp<"Atanh", 24, SPIRV_Float16or32> 
 
 // -----
 
+def SPIRV_GLExp2Op : SPIRV_GLUnaryArithmeticOp<"Exp2", 29, SPIRV_Float16or32> {
+  let summary = "Result is 2 raised to the x power";
+
+  let description = [{
+    Result is 2 raised to the x power; 2**x.
+
+    ```
+    exp2(Inf) = Inf.
+    exp2(-Inf) = +0.
+    ```
+
+    The operand x must be a scalar or vector whose component type is 16-bit or
+    32-bit floating-point.
+
+    Result Type and the type of x must be the same type. Results are computed
+    per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.Exp2 %0 : f32
+    %3 = spirv.GL.Exp2 %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
 def SPIRV_GLLog2Op : SPIRV_GLUnaryArithmeticOp<"Log2", 30, SPIRV_Float16or32> {
   let summary = "Result is the base-2 logarithm of x";
 
