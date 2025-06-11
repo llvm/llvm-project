@@ -3259,9 +3259,12 @@ void VPWidenStridedLoadRecipe::execute(VPTransformState &State) {
 
   auto *PtrTy = Addr->getType();
   auto *StrideTy = Stride->getType();
+  const DataLayout &DL = Ingredient.getDataLayout();
+  Value *StrideInBytes = Builder.CreateMul(
+      Stride, ConstantInt::get(StrideTy, DL.getTypeAllocSize(ScalarDataTy)));
   CallInst *NewLI = Builder.CreateIntrinsic(
       Intrinsic::experimental_vp_strided_load, {DataTy, PtrTy, StrideTy},
-      {Addr, Stride, Mask, RunTimeVF}, nullptr, "wide.strided.load");
+      {Addr, StrideInBytes, Mask, RunTimeVF}, nullptr, "wide.strided.load");
   NewLI->addParamAttr(
       0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));
   applyMetadata(*NewLI);

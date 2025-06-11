@@ -2743,8 +2743,8 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
       auto *LI = cast<LoadInst>(&Ingredient);
       const DataLayout &DL = LI->getDataLayout();
       auto *StrideTy = DL.getIndexType(LI->getPointerOperand()->getType());
-      VPValue *StrideVPV = Plan.getOrAddLiveIn(
-          ConstantInt::get(StrideTy, Stride * DL.getTypeAllocSize(ElementTy)));
+      VPValue *StrideVPV =
+          Plan.getOrAddLiveIn(ConstantInt::get(StrideTy, Stride));
       auto *StridedLoad = new VPWidenStridedLoadRecipe(
           *LI, NewPtr, StrideVPV, &Plan.getVF(), LoadR->getMask(), *LoadR,
           LoadR->getDebugLoc());
