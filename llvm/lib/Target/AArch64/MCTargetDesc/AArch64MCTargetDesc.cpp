@@ -436,7 +436,7 @@ public:
       // architecturally defined to zero extend the upper 32 bits on a write.
       if (GPR32RC.contains(Reg))
         return true;
-      // SIMD&FP instructions operating on scalar data only acccess the lower
+      // SIMD&FP instructions operating on scalar data only access the lower
       // bits of a register, the upper bits are zero extended on a write. For
       // SIMD vector registers smaller than 128-bits, the upper 64-bits of the
       // register are zero extended on a write.

@@ -94,6 +94,7 @@ module std_core [system] {
     module extent                                     { header "__type_traits/extent.h" }
     module has_unique_object_representation           { header "__type_traits/has_unique_object_representation.h" }
     module has_virtual_destructor                     { header "__type_traits/has_virtual_destructor.h" }
+    module integer_traits                             { header "__type_traits/integer_traits.h" }
     module integral_constant                          { header "__type_traits/integral_constant.h" }
     module invoke                                     { header "__type_traits/invoke.h" }
     module is_abstract {
@@ -284,10 +285,6 @@ module std_core [system] {
       header "__type_traits/is_scalar.h"
       export std_core.type_traits.integral_constant
     }
-    module is_signed_integer {
-      header "__type_traits/is_signed_integer.h"
-      export std_core.type_traits.integral_constant
-    }
     module is_signed {
       header "__type_traits/is_signed.h"
       export std_core.type_traits.integral_constant
@@ -338,10 +335,6 @@ module std_core [system] {
     }
     module is_union {
       header "__type_traits/is_union.h"
-      export std_core.type_traits.integral_constant
-    }
-    module is_unsigned_integer {
-      header "__type_traits/is_unsigned_integer.h"
       export std_core.type_traits.integral_constant
     }
     module is_unsigned {
