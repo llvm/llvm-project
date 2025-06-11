@@ -220,6 +220,7 @@ def process_source_lines(source_lines, note, args):
         source_segments[-1].append(line + "\n")
     return source_segments
 
+
 def process_attribute_definition(line, attribute_namer):
     m = ATTR_DEF_RE.match(line)
     if m:
