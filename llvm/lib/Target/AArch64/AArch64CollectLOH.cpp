@@ -247,7 +247,6 @@ static bool supportLoadFromLiteral(const MachineInstr &MI) {
   }
 }
 
-
 /// Returns \p true if there are no non-debug instructions between \p First and
 /// \p Second
 static bool areInstructionsConsecutive(const MachineInstr *First,
