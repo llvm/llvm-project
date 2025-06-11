@@ -16,18 +16,17 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/TextEncoding.h"
 
-enum ConversionAction { NoConversion, ToSystemCharset, ToExecCharset };
+enum ConversionAction { NoConversion, ToSystemEncoding, ToExecEncoding };
 
 class LiteralConverter {
-  llvm::StringRef InternalCharset;
-  llvm::StringRef SystemCharset;
-  llvm::StringRef ExecCharset;
-  llvm::StringMap<llvm::TextEncodingConverter> TextEncodingConverters;
+  llvm::StringRef InternalEncoding;
+  llvm::StringRef SystemEncoding;
+  llvm::StringRef ExecEncoding;
+  llvm::TextEncodingConverter *ToSystemEncodingConverter;
+  llvm::TextEncodingConverter *ToExecEncodingConverter;
 
 public:
-  llvm::TextEncodingConverter *getConverter(const char *Codepage);
   llvm::TextEncodingConverter *getConverter(ConversionAction Action);
-  llvm::TextEncodingConverter *createAndInsertCharConverter(const char *To);
   void setConvertersFromOptions(const clang::LangOptions &Opts,
                                 const clang::TargetInfo &TInfo,
                                 clang::DiagnosticsEngine &Diags);

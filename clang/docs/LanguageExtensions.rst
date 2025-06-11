@@ -421,8 +421,9 @@ Builtin Macros
 
 ``__clang_literal_encoding__``
   Defined to a narrow string literal that represents the current encoding of
-  narrow string literals, e.g., ``"hello"``. This macro typically expands to
-  the text encoding specified by -fexec-charset if specified, or the system charset.
+  narrow string literals, e.g., ``"hello"``. This macro expands to the text
+  encoding specified by ``-fexec-charset`` if any, or a system-specific default
+  otherwise: ``"IBM-1047"`` on z/OS and ``"UTF-8"`` on all other systems.
 
 ``__clang_wide_literal_encoding__``
   Defined to a narrow string literal that represents the current encoding of

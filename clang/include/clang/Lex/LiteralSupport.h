@@ -251,7 +251,7 @@ public:
   StringLiteralParser(
       ArrayRef<Token> StringToks, Preprocessor &PP,
       StringLiteralEvalMethod StringMethod = StringLiteralEvalMethod::Evaluated,
-      ConversionAction Action = ToExecCharset);
+      ConversionAction Action = ToExecEncoding);
   StringLiteralParser(ArrayRef<Token> StringToks, const SourceManager &sm,
                       const LangOptions &features, const TargetInfo &target,
                       DiagnosticsEngine *diags = nullptr)
