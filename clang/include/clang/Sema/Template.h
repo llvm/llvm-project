@@ -261,6 +261,7 @@ enum class TemplateSubstitutionKind : char {
       //         ==
       //             AssociatedDecl) &&
       //        "Trying to change incorrect declaration?");
+      TemplateArgumentLists.back().AssociatedDeclAndFinal.setPointer(AssociatedDecl);
       TemplateArgumentLists.back().Args = Args;
     }
 

@@ -13134,6 +13134,8 @@ public:
     /// Whether we're substituting into constraints.
     bool InConstraintSubstitution;
 
+    bool InParameterMappingSubstitution;
+
     /// The point of instantiation or synthesis within the source code.
     SourceLocation PointOfInstantiation;
 
@@ -13873,9 +13875,15 @@ public:
   }
 
   /// Determine whether we are currently performing constraint substitution.
+  // FIXME: Rename it
   bool inConstraintSubstitution() const {
     return !CodeSynthesisContexts.empty() &&
            CodeSynthesisContexts.back().InConstraintSubstitution;
+  }
+
+  bool inParameterMappingSubstitution() const {
+    return !CodeSynthesisContexts.empty() &&
+           CodeSynthesisContexts.back().InParameterMappingSubstitution;
   }
 
   using EntityPrinter = llvm::function_ref<void(llvm::raw_ostream &)>;

@@ -1659,7 +1659,9 @@ static bool substituteParameterMappings(Sema &S, NormalizedConstraint &N,
       /*RelativeToPrimary=*/true,
       /*Pattern=*/nullptr,
       /*ForConstraintInstantiation=*/true);
-
+  // Don't build Subst* nodes to model lambda expressions.
+  // The transform of Subst* is oblivious to the lambda type.
+  MLTAL.setKind(TemplateSubstitutionKind::Rewrite);
   return substituteParameterMappings(S, N, MLTAL,
                                      CSE->getTemplateArgsAsWritten());
 }
