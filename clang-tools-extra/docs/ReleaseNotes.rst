@@ -219,6 +219,12 @@ Changes in existing checks
   tolerating fix-it breaking compilation when functions is used as pointers
   to avoid matching usage of functions within the current compilation unit.
 
+- Improved :doc: `bugprone-sizeof-expression
+ <clang-tidy/checks/bugprone/bugprone-sizeof-expression>` check.
+
+ Introduced WarnOnSizeOfInLoopTermination sub-class to detect misuses of sizeof expression
+ in loop conditions. 
+
 Removed checks
 ^^^^^^^^^^^^^^
 
