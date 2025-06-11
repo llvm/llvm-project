@@ -370,9 +370,6 @@ LogicalResult LayoutInfoPropagation::visitOperation(
           }
         }
       });
-  // Add a dependency from each result to program point after the operation.
-  for (const LayoutInfoLattice *r : results)
-    addDependency(const_cast<LayoutInfoLattice *>(r), getProgramPointAfter(op));
 
   return success();
 }
