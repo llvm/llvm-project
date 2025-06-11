@@ -3462,6 +3462,7 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
 
       return;
     }
+    assert(!State.VF.isScalable() && "VF is assumed to be non scalable.");
 
     // For each member in the group, shuffle out the appropriate data from the
     // wide loads.
