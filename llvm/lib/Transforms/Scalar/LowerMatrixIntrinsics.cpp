@@ -641,6 +641,7 @@ public:
             << " shuffles beacuse we do not have a shape-aware lowering for "
                "its def:\n"
             << *Inst << '\n');
+        (void)Inst;
         SplitMatrices++;
       } else {
         // The ShapeMap has it, so it's a case where we're being lowered

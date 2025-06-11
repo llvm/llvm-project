@@ -789,3 +789,29 @@ func.func @tanh_invalid_type(%arg0 : i32) -> () {
   %0 = spirv.GL.Tanh %arg0 : i32
   return
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Exp2
+//===----------------------------------------------------------------------===//
+
+func.func @exp2(%arg0 : f32) -> () {
+  // CHECK: spirv.GL.Exp2 {{%.*}} : f32
+  %0 = spirv.GL.Exp2 %arg0 : f32
+  return
+}
+
+func.func @exp2vec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.GL.Exp2 {{%.*}} : vector<3xf16>
+  %0 = spirv.GL.Exp2 %arg0 : vector<3xf16>
+  return
+}
+
+// -----
+
+func.func @exp2_invalid_type(%arg0 : i32) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32-bit float or vector of 16/32-bit float values}}
+  %0 = spirv.GL.Exp2 %arg0 : i32
+  return
+}
