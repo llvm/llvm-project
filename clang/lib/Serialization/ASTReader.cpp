@@ -8310,8 +8310,6 @@ Stmt *ASTReader::GetExternalDeclStmt(uint64_t Offset) {
     Error(std::move(Err));
     return nullptr;
   }
-  assert(NumCurrentElementsDeserializing == 0 &&
-         "should not be called while already deserializing");
   Deserializing D(this);
   return ReadStmtFromStream(*Loc.F);
 }
