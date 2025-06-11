@@ -356,6 +356,9 @@ static bool verifyDescriptorRangeFlag(uint32_t Version, uint32_t Type,
   if (popcount(llvm::to_underlying(Flags & DataFlags)) > 1)
     return false;
 
+  if (popcount(llvm::to_underlying(Flags & DataFlags)) == 1)
+    return true;
+
   // For volatile descriptors, DATA_STATIC is never valid.
   if ((Flags & FlagT::DESCRIPTORS_VOLATILE) == FlagT::DESCRIPTORS_VOLATILE) {
     FlagT Mask = FlagT::DESCRIPTORS_VOLATILE;
