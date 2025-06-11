@@ -113,6 +113,7 @@ private:
   bool fixCvtScaleForwardingHazard(MachineInstr *MI);
   bool fixGetRegWaitIdle(MachineInstr *MI);
   bool fixDsAtomicAsyncBarrierArriveB64(MachineInstr *MI);
+  bool fixScratchBaseForwardingHazard(MachineInstr *MI);
 
   int checkMAIHazards(MachineInstr *MI);
   int checkMAIHazards908(MachineInstr *MI);
