@@ -23,6 +23,7 @@
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/Support/InstructionCost.h"
 
 namespace llvm {
@@ -33,7 +34,6 @@ class DominatorTree;
 class InnerLoopVectorizer;
 class IRBuilderBase;
 class LoopInfo;
-class ModuleSlotTracker;
 class SCEV;
 class Type;
 class VPBasicBlock;
