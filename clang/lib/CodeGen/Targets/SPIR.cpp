@@ -56,6 +56,20 @@ public:
   llvm::Type *
   getHLSLType(CodeGenModule &CGM, const Type *Ty,
               const SmallVector<int32_t> *Packoffsets = nullptr) const override;
+
+  llvm::Type *
+  getHLSLPadding(CodeGenModule &CGM, CharUnits NumBytes) const override {
+    unsigned Size = NumBytes.getQuantity();
+    return llvm::TargetExtType::get(CGM.getLLVMContext(), "spirv.Padding", {},
+                                    {Size});
+  }
+
+  bool isHLSLPadding(llvm::Type *Ty) const override {
+    if (auto *TET = dyn_cast<llvm::TargetExtType>(Ty))
+      return TET->getName() == "spirv.Padding";
+    return false;
+  }
+
   llvm::Type *getSPIRVImageTypeFromHLSLResource(
       const HLSLAttributedResourceType::Attributes &attributes,
       QualType SampledType, CodeGenModule &CGM) const;

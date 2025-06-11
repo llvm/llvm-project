@@ -8,6 +8,7 @@
 
 #include "DXILCBufferAccess.h"
 #include "DirectX.h"
+#include "llvm/Analysis/DXILResource.h"
 #include "llvm/Frontend/HLSL/CBuffer.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/IR/IRBuilder.h"
@@ -96,10 +97,6 @@ struct CBufferResource {
       bool Success = GEP->accumulateConstantOffset(DL, ConstantOffset);
       (void)Success;
       assert(Success && "Offsets into cbuffer globals must be constant");
-
-      if (auto *ATy = dyn_cast<ArrayType>(Member->getValueType()))
-        ConstantOffset =
-            hlsl::translateCBufArrayOffset(DL, ConstantOffset, ATy);
 
       return ConstantOffset.getZExtValue();
     }
@@ -194,99 +191,18 @@ static void replaceLoad(LoadInst *LI, CBufferResource &CBR,
   DeadInsts.push_back(LI);
 }
 
-/// This function recursively copies N array elements from the cbuffer resource
-/// CBR to the MemCpy Destination. Recursion is used to unravel multidimensional
-/// arrays into a sequence of scalar/vector extracts and stores.
-static void copyArrayElemsForMemCpy(IRBuilder<> &Builder, MemCpyInst *MCI,
-                                    CBufferResource &CBR, ArrayType *ArrTy,
-                                    size_t ArrOffset, size_t N,
-                                    const Twine &Name = "") {
-  const DataLayout &DL = MCI->getDataLayout();
-  Type *ElemTy = ArrTy->getElementType();
-  size_t ElemTySize = DL.getTypeAllocSize(ElemTy);
-  for (unsigned I = 0; I < N; ++I) {
-    size_t Offset = ArrOffset + I * ElemTySize;
-
-    // Recursively copy nested arrays
-    if (ArrayType *ElemArrTy = dyn_cast<ArrayType>(ElemTy)) {
-      copyArrayElemsForMemCpy(Builder, MCI, CBR, ElemArrTy, Offset,
-                              ElemArrTy->getNumElements(), Name);
-      continue;
-    }
-
-    // Load CBuffer value and store it in Dest
-    APInt CBufArrayOffset(
-        DL.getIndexTypeSizeInBits(MCI->getSource()->getType()), Offset);
-    CBufArrayOffset =
-        hlsl::translateCBufArrayOffset(DL, CBufArrayOffset, ArrTy);
-    Value *CBufferVal =
-        CBR.loadValue(Builder, ElemTy, CBufArrayOffset.getZExtValue(), Name);
-    Value *GEP =
-        Builder.CreateInBoundsGEP(Builder.getInt8Ty(), MCI->getDest(),
-                                  {Builder.getInt32(Offset)}, Name + ".dest");
-    Builder.CreateStore(CBufferVal, GEP, MCI->isVolatile());
-  }
-}
-
-/// Replace memcpy from a cbuffer global with a memcpy from the cbuffer handle
-/// itself. Assumes the cbuffer global is an array, and the length of bytes to
-/// copy is divisible by array element allocation size.
-/// The memcpy source must also be a direct cbuffer global reference, not a GEP.
-static void replaceMemCpy(MemCpyInst *MCI, CBufferResource &CBR) {
-
-  ArrayType *ArrTy = dyn_cast<ArrayType>(CBR.getValueType());
-  assert(ArrTy && "MemCpy lowering is only supported for array types");
-
-  // This assumption vastly simplifies the implementation
-  if (MCI->getSource() != CBR.Member)
-    reportFatalUsageError(
-        "Expected MemCpy source to be a cbuffer global variable");
-
-  ConstantInt *Length = dyn_cast<ConstantInt>(MCI->getLength());
-  uint64_t ByteLength = Length->getZExtValue();
-
-  // If length to copy is zero, no memcpy is needed
-  if (ByteLength == 0) {
-    MCI->eraseFromParent();
-    return;
-  }
-
-  const DataLayout &DL = CBR.getDataLayout();
-
-  Type *ElemTy = ArrTy->getElementType();
-  size_t ElemSize = DL.getTypeAllocSize(ElemTy);
-  assert(ByteLength % ElemSize == 0 &&
-         "Length of bytes to MemCpy must be divisible by allocation size of "
-         "source/destination array elements");
-  size_t ElemsToCpy = ByteLength / ElemSize;
-
-  IRBuilder<> Builder(MCI);
-  CBR.createAndSetCurrentHandle(Builder);
-
-  copyArrayElemsForMemCpy(Builder, MCI, CBR, ArrTy, 0, ElemsToCpy,
-                          "memcpy." + MCI->getDest()->getName() + "." +
-                              MCI->getSource()->getName());
-
-  MCI->eraseFromParent();
-}
-
 static void replaceAccessesWithHandle(CBufferResource &CBR) {
   SmallVector<WeakTrackingVH> DeadInsts;
 
   SmallVector<User *> ToProcess{CBR.users()};
   while (!ToProcess.empty()) {
     User *Cur = ToProcess.pop_back_val();
+    assert(!isa<MemCpyInst>(Cur) &&
+           "memcpy should have been removed in an earlier pass");
 
     // If we have a load instruction, replace the access.
     if (auto *LI = dyn_cast<LoadInst>(Cur)) {
       replaceLoad(LI, CBR, DeadInsts);
-      continue;
-    }
-
-    // If we have a memcpy instruction, replace it with multiple accesses and
-    // subsequent stores to the destination
-    if (auto *MCI = dyn_cast<MemCpyInst>(Cur)) {
-      replaceMemCpy(MCI, CBR);
       continue;
     }
 
@@ -302,7 +218,8 @@ static void replaceAccessesWithHandle(CBufferResource &CBR) {
 }
 
 static bool replaceCBufferAccesses(Module &M) {
-  std::optional<hlsl::CBufferMetadata> CBufMD = hlsl::CBufferMetadata::get(M);
+  std::optional<hlsl::CBufferMetadata> CBufMD = hlsl::CBufferMetadata::get(
+      M, [](Type *Ty) { return isa<llvm::dxil::PaddingExtType>(Ty); });
   if (!CBufMD)
     return false;
 
