@@ -7161,7 +7161,7 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
     if (isa<CXXDestructorDecl>(M)) {
       llvm::SmallDenseSet<QualType> Visited;
       auto Check = [&Visited](QualType T, auto &&Check) -> bool {
-        if (!Visited.insert(T.getCanonicalType().getUnqualifiedType()).second)
+        if (!Visited.insert(T->getCanonicalTypeUnqualified()).second)
           return false;
         const CXXRecordDecl *RD =
             T->getBaseElementTypeUnsafe()->getAsCXXRecordDecl();
