@@ -1939,11 +1939,8 @@ bool AndroidPackedRelocationSection<ELFT>::updateAllocSize(Ctx &ctx) {
   // For Rela, we also want to sort by r_addend when r_info is the same. This
   // enables us to group by r_addend as well.
   llvm::sort(nonRelatives, [](const Elf_Rela &a, const Elf_Rela &b) {
-    if (a.r_info != b.r_info)
-      return a.r_info < b.r_info;
-    if (a.r_addend != b.r_addend)
-      return a.r_addend < b.r_addend;
-    return a.r_offset < b.r_offset;
+    return std::tie(a.r_info, a.r_addend, a.r_offset) <
+           std::tie(b.r_info, b.r_addend, b.r_offset);
   });
 
   // Group relocations with the same r_info. Note that each group emits a group
