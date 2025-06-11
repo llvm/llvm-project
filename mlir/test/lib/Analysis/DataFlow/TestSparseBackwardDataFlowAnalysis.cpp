@@ -182,8 +182,7 @@ struct TestWrittenToPass
     SymbolTableCollection symbolTable;
 
     DataFlowSolver solver(DataFlowConfig().setInterprocedural(interprocedural));
-    solver.load<DeadCodeAnalysis>();
-    solver.load<SparseConstantPropagation>();
+    DeadCodeAnalysis::loadAnalysis(solver);
     solver.load<WrittenToAnalysis>(symbolTable, assumeFuncWrites);
     if (failed(solver.initializeAndRun(op)))
       return signalPassFailure();
