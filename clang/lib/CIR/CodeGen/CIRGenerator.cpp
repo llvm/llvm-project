@@ -14,11 +14,13 @@
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/Target/LLVMIR/Import.h"
 
 #include "clang/AST/DeclGroup.h"
 #include "clang/CIR/CIRGenerator.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/OpenACC/RegisterOpenACCExtensions.h"
+#include "llvm/IR/DataLayout.h"
 
 using namespace cir;
 using namespace clang;
@@ -35,12 +37,20 @@ CIRGenerator::~CIRGenerator() {
   assert(deferredInlineMemberFuncDefs.empty() || diags.hasErrorOccurred());
 }
 
+static void setMLIRDataLayout(mlir::ModuleOp &mod, const llvm::DataLayout &dl) {
+  mlir::MLIRContext *mlirContext = mod.getContext();
+  mlir::DataLayoutSpecInterface dlSpec =
+      mlir::translateDataLayout(dl, mlirContext);
+  mod->setAttr(mlir::DLTIDialect::kDataLayoutAttrName, dlSpec);
+}
+
 void CIRGenerator::Initialize(ASTContext &astContext) {
   using namespace llvm;
 
   this->astContext = &astContext;
 
   mlirContext = std::make_unique<mlir::MLIRContext>();
+  mlirContext->loadDialect<mlir::DLTIDialect>();
   mlirContext->loadDialect<cir::CIRDialect>();
   mlirContext->getOrLoadDialect<mlir::acc::OpenACCDialect>();
 
@@ -51,6 +61,10 @@ void CIRGenerator::Initialize(ASTContext &astContext) {
 
   cgm = std::make_unique<clang::CIRGen::CIRGenModule>(
       *mlirContext.get(), astContext, codeGenOpts, diags);
+  mlir::ModuleOp mod = cgm->getModule();
+  llvm::DataLayout layout =
+      llvm::DataLayout(astContext.getTargetInfo().getDataLayoutString());
+  setMLIRDataLayout(mod, layout);
 }
 
 bool CIRGenerator::verifyModule() const { return cgm->verifyModule(); }
@@ -113,6 +127,29 @@ void CIRGenerator::emitDeferredDecls() {
   for (unsigned i = 0; i != deferredInlineMemberFuncDefs.size(); ++i)
     cgm->emitTopLevelDecl(deferredInlineMemberFuncDefs[i]);
   deferredInlineMemberFuncDefs.clear();
+}
+
+/// HandleTagDeclDefinition - This callback is invoked each time a TagDecl to
+/// (e.g. struct, union, enum, class) is completed. This allows the client to
+/// hack on the type, which can occur at any point in the file (because these
+/// can be defined in declspecs).
+void CIRGenerator::HandleTagDeclDefinition(TagDecl *d) {
+  if (diags.hasErrorOccurred())
+    return;
+
+  // Don't allow re-entrant calls to CIRGen triggered by PCH deserialization to
+  // emit deferred decls.
+  HandlingTopLevelDeclRAII handlingDecl(*this, /*EmitDeferred=*/false);
+
+  cgm->updateCompletedType(d);
+
+  // For MSVC compatibility, treat declarations of static data members with
+  // inline initializers as definitions.
+  if (astContext->getTargetInfo().getCXXABI().isMicrosoft())
+    cgm->errorNYI(d->getSourceRange(), "HandleTagDeclDefinition: MSABI");
+  // For OpenMP emit declare reduction functions, if required.
+  if (astContext->getLangOpts().OpenMP)
+    cgm->errorNYI(d->getSourceRange(), "HandleTagDeclDefinition: OpenMP");
 }
 
 void CIRGenerator::CompleteTentativeDefinition(VarDecl *d) {

@@ -19,6 +19,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/GlobalDecl.h"
+#include "clang/AST/RecordLayout.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
@@ -101,6 +102,25 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
 }
 
 CIRGenModule::~CIRGenModule() = default;
+
+/// FIXME: this could likely be a common helper and not necessarily related
+/// with codegen.
+/// Return the best known alignment for an unknown pointer to a
+/// particular class.
+CharUnits CIRGenModule::getClassPointerAlignment(const CXXRecordDecl *rd) {
+  if (!rd->hasDefinition())
+    return CharUnits::One(); // Hopefully won't be used anywhere.
+
+  auto &layout = astContext.getASTRecordLayout(rd);
+
+  // If the class is final, then we know that the pointer points to an
+  // object of that type and can use the full alignment.
+  if (rd->isEffectivelyFinal())
+    return layout.getAlignment();
+
+  // Otherwise, we have to assume it could be a subclass.
+  return layout.getNonVirtualAlignment();
+}
 
 CharUnits CIRGenModule::getNaturalTypeAlignment(QualType t,
                                                 LValueBaseInfo *baseInfo) {
@@ -213,13 +233,18 @@ CIRGenModule::getAddrOfGlobal(GlobalDecl gd, ForDefinition_t isForDefinition) {
   }
 
   if (isa<CXXMethodDecl>(d)) {
-    errorNYI(d->getSourceRange(), "getAddrOfGlobal: C++ method decl");
-    return nullptr;
+    const CIRGenFunctionInfo &fi =
+        getTypes().arrangeCXXMethodDeclaration(cast<CXXMethodDecl>(d));
+    cir::FuncType ty = getTypes().getFunctionType(fi);
+    return getAddrOfFunction(gd, ty, /*ForVTable=*/false, /*DontDefer=*/false,
+                             isForDefinition);
   }
 
   if (isa<FunctionDecl>(d)) {
-    errorNYI(d->getSourceRange(), "getAddrOfGlobal: function decl");
-    return nullptr;
+    const CIRGenFunctionInfo &fi = getTypes().arrangeGlobalDeclaration(gd);
+    cir::FuncType ty = getTypes().getFunctionType(fi);
+    return getAddrOfFunction(gd, ty, /*ForVTable=*/false, /*DontDefer=*/false,
+                             isForDefinition);
   }
 
   return getAddrOfGlobalVar(cast<VarDecl>(d), /*ty=*/nullptr, isForDefinition)
@@ -833,6 +858,11 @@ void CIRGenModule::maybeSetTrivialComdat(const Decl &d, mlir::Operation *op) {
   assert(!cir::MissingFeatures::opFuncSetComdat());
 }
 
+void CIRGenModule::updateCompletedType(const TagDecl *td) {
+  // Make sure that this type is translated.
+  genTypes.updateCompletedType(td);
+}
+
 // TODO(CIR): this could be a common method between LLVM codegen.
 static bool isVarDeclStrongDefinition(const ASTContext &astContext,
                                       CIRGenModule &cgm, const VarDecl *vd,
@@ -1130,18 +1160,29 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     emitGlobalOpenACCDecl(cast<OpenACCDeclareDecl>(decl));
     break;
   case Decl::Enum:
+  case Decl::Using:          // using X; [C++]
   case Decl::UsingDirective: // using namespace X; [C++]
   case Decl::Typedef:
   case Decl::TypeAlias: // using foo = bar; [C++11]
   case Decl::Record:
-  case Decl::CXXRecord:
     assert(!cir::MissingFeatures::generateDebugInfo());
+    break;
+
+  // No code generation needed.
+  case Decl::UsingShadow:
+  case Decl::Empty:
     break;
 
   // C++ Decls
   case Decl::LinkageSpec:
   case Decl::Namespace:
     emitDeclContext(Decl::castToDeclContext(decl));
+    break;
+
+  case Decl::ClassTemplateSpecialization:
+  case Decl::CXXRecord:
+    assert(!cir::MissingFeatures::generateDebugInfo());
+    assert(!cir::MissingFeatures::cxxRecordStaticMembers());
     break;
   }
 }
@@ -1150,6 +1191,34 @@ void CIRGenModule::setInitializer(cir::GlobalOp &op, mlir::Attribute value) {
   // Recompute visibility when updating initializer.
   op.setInitialValueAttr(value);
   assert(!cir::MissingFeatures::opGlobalVisibility());
+}
+
+std::pair<cir::FuncType, cir::FuncOp> CIRGenModule::getAddrAndTypeOfCXXStructor(
+    GlobalDecl gd, const CIRGenFunctionInfo *fnInfo, cir::FuncType fnType,
+    bool dontDefer, ForDefinition_t isForDefinition) {
+  auto *md = cast<CXXMethodDecl>(gd.getDecl());
+
+  if (isa<CXXDestructorDecl>(md)) {
+    // Always alias equivalent complete destructors to base destructors in the
+    // MS ABI.
+    if (getTarget().getCXXABI().isMicrosoft() &&
+        gd.getDtorType() == Dtor_Complete &&
+        md->getParent()->getNumVBases() == 0)
+      errorNYI(md->getSourceRange(),
+               "getAddrAndTypeOfCXXStructor: MS ABI complete destructor");
+  }
+
+  if (!fnType) {
+    if (!fnInfo)
+      fnInfo = &getTypes().arrangeCXXStructorDeclaration(gd);
+    fnType = getTypes().getFunctionType(*fnInfo);
+  }
+
+  auto fn = getOrCreateCIRFunction(getMangledName(gd), fnType, gd,
+                                   /*ForVtable=*/false, dontDefer,
+                                   /*IsThunk=*/false, isForDefinition);
+
+  return {fnType, fn};
 }
 
 cir::FuncOp CIRGenModule::getAddrOfFunction(clang::GlobalDecl gd,
@@ -1226,8 +1295,11 @@ StringRef CIRGenModule::getMangledName(GlobalDecl gd) {
   // Some ABIs don't have constructor variants. Make sure that base and complete
   // constructors get mangled the same.
   if (const auto *cd = dyn_cast<CXXConstructorDecl>(canonicalGd.getDecl())) {
-    errorNYI(cd->getSourceRange(), "getMangledName: C++ constructor");
-    return cast<NamedDecl>(gd.getDecl())->getIdentifier()->getName();
+    if (!getTarget().getCXXABI().hasConstructorVariants()) {
+      errorNYI(cd->getSourceRange(),
+               "getMangledName: C++ constructor without variants");
+      return cast<NamedDecl>(gd.getDecl())->getIdentifier()->getName();
+    }
   }
 
   // Keep the first result in the case of a mangling collision.
@@ -1273,11 +1345,6 @@ bool CIRGenModule::mustBeEmitted(const ValueDecl *global) {
          vd->getStorageDuration() == SD_Thread)) ||
        (codeGenOpts.KeepStaticConsts && vd->getStorageDuration() == SD_Static &&
         vd->getType().isConstQualified())))
-    return true;
-
-  // TODO(cir): We do want to defer function decls, but it's not implemented.
-  assert(!cir::MissingFeatures::deferredFuncDecls());
-  if (isa<FunctionDecl>(global))
     return true;
 
   return getASTContext().DeclMustBeEmitted(global);
@@ -1523,6 +1590,56 @@ cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
   cir::FuncOp funcOp = createCIRFunction(
       invalidLoc ? theModule->getLoc() : getLoc(funcDecl->getSourceRange()),
       mangledName, mlir::cast<cir::FuncType>(funcType), funcDecl);
+
+  // 'dontDefer' actually means don't move this to the deferredDeclsToEmit list.
+  if (dontDefer) {
+    // TODO(cir): This assertion will need an additional condition when we
+    // support incomplete functions.
+    assert(funcOp.getFunctionType() == funcType);
+    return funcOp;
+  }
+
+  // All MSVC dtors other than the base dtor are linkonce_odr and delegate to
+  // each other bottoming out wiht the base dtor. Therefore we emit non-base
+  // dtors on usage, even if there is no dtor definition in the TU.
+  if (isa_and_nonnull<CXXDestructorDecl>(d))
+    errorNYI(d->getSourceRange(), "getOrCreateCIRFunction: dtor");
+
+  // This is the first use or definition of a mangled name. If there is a
+  // deferred decl with this name, remember that we need to emit it at the end
+  // of the file.
+  auto ddi = deferredDecls.find(mangledName);
+  if (ddi != deferredDecls.end()) {
+    // Move the potentially referenced deferred decl to the
+    // DeferredDeclsToEmit list, and remove it from DeferredDecls (since we
+    // don't need it anymore).
+    addDeferredDeclToEmit(ddi->second);
+    deferredDecls.erase(ddi);
+
+    // Otherwise, there are cases we have to worry about where we're using a
+    // declaration for which we must emit a definition but where we might not
+    // find a top-level definition.
+    //   - member functions defined inline in their classes
+    //   - friend functions defined inline in some class
+    //   - special member functions with implicit definitions
+    // If we ever change our AST traversal to walk into class methods, this
+    // will be unnecessary.
+    //
+    // We also don't emit a definition for a function if it's going to be an
+    // entry in a vtable, unless it's already marked as used.
+  } else if (getLangOpts().CPlusPlus && d) {
+    // Look for a declaration that's lexically in a record.
+    for (const auto *fd = cast<FunctionDecl>(d)->getMostRecentDecl(); fd;
+         fd = fd->getPreviousDecl()) {
+      if (isa<CXXRecordDecl>(fd->getLexicalDeclContext())) {
+        if (fd->doesThisDeclarationHaveABody()) {
+          addDeferredDeclToEmit(gd.getWithDecl(fd));
+          break;
+        }
+      }
+    }
+  }
+
   return funcOp;
 }
 
@@ -1615,6 +1732,33 @@ bool CIRGenModule::verifyModule() const {
   // check the structural properties of the IR and invoke any specific
   // verifiers we have on the CIR operations.
   return mlir::verify(theModule).succeeded();
+}
+
+// TODO(cir): this can be shared with LLVM codegen.
+CharUnits CIRGenModule::computeNonVirtualBaseClassOffset(
+    const CXXRecordDecl *derivedClass,
+    llvm::iterator_range<CastExpr::path_const_iterator> path) {
+  CharUnits offset = CharUnits::Zero();
+
+  const ASTContext &astContext = getASTContext();
+  const CXXRecordDecl *rd = derivedClass;
+
+  for (const CXXBaseSpecifier *base : path) {
+    assert(!base->isVirtual() && "Should not see virtual bases here!");
+
+    // Get the layout.
+    const ASTRecordLayout &layout = astContext.getASTRecordLayout(rd);
+
+    const auto *baseDecl = cast<CXXRecordDecl>(
+        base->getType()->castAs<clang::RecordType>()->getDecl());
+
+    // Add the offset.
+    offset += layout.getBaseClassOffset(baseDecl);
+
+    rd = baseDecl;
+  }
+
+  return offset;
 }
 
 DiagnosticBuilder CIRGenModule::errorNYI(SourceLocation loc,
