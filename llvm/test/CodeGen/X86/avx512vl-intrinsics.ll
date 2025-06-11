@@ -869,7 +869,7 @@ define <8 x float> @test_mm512_max_ps_256(<8 x float> %a0, <8 x float> %a1, i8 %
 }
 declare <8 x float> @llvm.x86.avx.max.ps.256(<8 x float>, <8 x float>)
 
-define <4 x float> @test_mm512_maskz_max_ps_128(<4 x float> %a0, <4 x float> %a1, i8 %mask, i8 %mask2) {
+define <4 x float> @test_mm512_maskz_max_ps_128(<4 x float> %a0, <4 x float> %a1, i8 %mask) {
 ; X86-LABEL: test_mm512_maskz_max_ps_128:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
@@ -884,13 +884,12 @@ define <4 x float> @test_mm512_maskz_max_ps_128(<4 x float> %a0, <4 x float> %a1
 ; X64-NEXT:    retq # encoding: [0xc3]
   %1 = call <4 x float> @llvm.x86.sse.max.ps(<4 x float> %a0, <4 x float> %a1)
   %2 = bitcast i8 %mask to <8 x i1>
-  %3 = bitcast i8 %mask2 to <8 x i1>
-  %extract = shufflevector <8 x i1> %2, <8 x i1> %3, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %extract = shufflevector <8 x i1> %2, <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %4 = select <4 x i1> %extract, <4 x float> %1, <4 x float> zeroinitializer
   ret <4 x float> %4
 }
 
-define <4 x float> @test_mm512_mask_max_ps_128(<4 x float> %a0, <4 x float> %a1, <4 x float> %src, i8 %mask, i8 %mask2) {
+define <4 x float> @test_mm512_mask_max_ps_128(<4 x float> %a0, <4 x float> %a1, <4 x float> %src, i8 %mask) {
 ; X86-LABEL: test_mm512_mask_max_ps_128:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
@@ -907,8 +906,7 @@ define <4 x float> @test_mm512_mask_max_ps_128(<4 x float> %a0, <4 x float> %a1,
 ; X64-NEXT:    retq # encoding: [0xc3]
   %1 = call <4 x float> @llvm.x86.sse.max.ps(<4 x float> %a0, <4 x float> %a1)
   %2 = bitcast i8 %mask to <8 x i1>
-  %3 = bitcast i8 %mask2 to <8 x i1>
-  %extract = shufflevector <8 x i1> %2, <8 x i1> %3, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %extract = shufflevector <8 x i1> %2, <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %4 = select <4 x i1> %extract, <4 x float> %1, <4 x float> %src
   ret <4 x float> %4
 }
