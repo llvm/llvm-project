@@ -489,6 +489,18 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known = KnownBits::shl(LHSKnown, RHSKnown);
     break;
   }
+  case TargetOpcode::G_PTRTOADDR: {
+    if (DstTy.isVector())
+      break;
+    Register SrcReg = MI.getOperand(1).getReg();
+    computeKnownBitsImpl(SrcReg, Known, DemandedElts, Depth + 1);
+    unsigned PtrAS = MRI.getType(SrcReg).getAddressSpace();
+    unsigned AddrWidth = DL.getAddressSizeInBits(PtrAS);
+    if (AddrWidth < BitWidth)
+      Known = Known.trunc(AddrWidth);
+    Known = Known.zextOrTrunc(BitWidth);
+    break;
+  }
   case TargetOpcode::G_INTTOPTR:
   case TargetOpcode::G_PTRTOINT:
     if (DstTy.isVector())
