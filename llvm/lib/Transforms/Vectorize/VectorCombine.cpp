@@ -30,6 +30,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -3714,7 +3715,7 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
   using IndexRange = std::pair<int, int>;
   auto GetIndexRangeInShuffles = [&]() -> std::optional<IndexRange> {
     IndexRange OutputRange = IndexRange(OldNumElements, -1);
-    for (auto &Use : I.uses()) {
+    for (llvm::Use &Use : I.uses()) {
       // Ensure all uses match the required pattern.
       User *Shuffle = Use.getUser();
       ArrayRef<int> Mask;
@@ -3743,13 +3744,13 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
   };
 
   // Get the range of vector elements used by shufflevector instructions.
-  if (auto Indices = GetIndexRangeInShuffles()) {
+  if (std::optional<IndexRange> Indices = GetIndexRangeInShuffles()) {
     unsigned const NewNumElements = Indices->second + 1u;
 
     // If the range of vector elements is smaller than the full load, attempt
     // to create a smaller load.
     if (NewNumElements < OldNumElements) {
-      auto Builder = IRBuilder(&I);
+      IRBuilder Builder(&I);
       Builder.SetCurrentDebugLocation(I.getDebugLoc());
 
       // Calculate costs of old and new ops.
@@ -3765,17 +3766,17 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
                               OldLoad->getPointerAddressSpace(), CostKind);
 
       using UseEntry = std::pair<ShuffleVectorInst *, std::vector<int>>;
-      auto NewUses = SmallVector<UseEntry, 4u>();
-      auto SizeDiff = OldNumElements - NewNumElements;
+      SmallVector<UseEntry, 4u> NewUses;
+      unsigned const SizeDiff = OldNumElements - NewNumElements;
 
-      for (auto &Use : I.uses()) {
+      for (llvm::Use &Use : I.uses()) {
         auto *Shuffle = cast<ShuffleVectorInst>(Use.getUser());
-        auto OldMask = Shuffle->getShuffleMask();
+        ArrayRef<int> OldMask = Shuffle->getShuffleMask();
 
         // Create entry for new use.
         NewUses.push_back({Shuffle, {}});
-        auto &NewMask = NewUses.back().second;
-        for (auto Index : OldMask)
+        std::vector<int> &NewMask = NewUses.back().second;
+        for (int Index : OldMask)
           NewMask.push_back(Index >= static_cast<int>(OldNumElements)
                                 ? Index - SizeDiff
                                 : Index);
@@ -3796,13 +3797,13 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
       NewLoad->copyMetadata(I);
 
       // Replace all uses.
-      for (auto &Use : NewUses) {
-        auto *Shuffle = Use.first;
-        auto &NewMask = Use.second;
+      for (UseEntry &Use : NewUses) {
+        ShuffleVectorInst *Shuffle = Use.first;
+        std::vector<int> &NewMask = Use.second;
 
         Builder.SetInsertPoint(Shuffle);
         Builder.SetCurrentDebugLocation(Shuffle->getDebugLoc());
-        auto *NewShuffle = Builder.CreateShuffleVector(
+        Value *NewShuffle = Builder.CreateShuffleVector(
             NewLoad, PoisonValue::get(NewLoadTy), NewMask);
 
         replaceValue(*Shuffle, *NewShuffle);
