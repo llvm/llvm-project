@@ -577,12 +577,14 @@ public:
              .isNull())
       return Ty;
     // If Ty is Null, could be because the original type was a _BitInt.
-    // Get the bit size and round up to next power of 2, max char size
+    // Get the size of the _BitInt type (expressed in bits) and round it up to
+    // the next power of 2 that is at least the bit size of 'char' (usually 8).
     unsigned CharTypeSize = Ctx.getTypeSize(Ctx.CharTy);
     unsigned Pow2DestWidth =
         std::max(llvm::bit_ceil(Int.getBitWidth()), CharTypeSize);
-    Ty = Ctx.getIntTypeForBitwidth(Pow2DestWidth, Int.isSigned());
-    return Ty;
+    return Ctx.getIntTypeForBitwidth(Pow2DestWidth, Int.isSigned());
+    // Ty = Ctx.getIntTypeForBitwidth(Pow2DestWidth, Int.isSigned());
+    // return Ty;
   }
 
   // Get the QualTy for the input APSInt, and fix it if it has a bitwidth of 1.
@@ -598,9 +600,9 @@ public:
     if (APSIntBitwidth == 1 && Ty.isNull())
       return {Int.extend(Ctx.getTypeSize(Ctx.BoolTy)),
               getAPSIntType(Ctx, NewInt)};
-    if (!llvm::isPowerOf2_32(APSIntBitwidth) && !Ty.isNull())
-      return {Int.extend(Ctx.getTypeSize(Ty)), Ty};
-    return {Int, Ty};
+    if (llvm::isPowerOf2_32(APSIntBitwidth) || Ty.isNull())
+      return {Int, Ty};
+    return {Int.extend(Ctx.getTypeSize(Ty)), Ty};
   }
 
   // Perform implicit type conversion on binary symbolic expressions.
