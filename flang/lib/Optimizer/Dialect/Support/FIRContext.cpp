@@ -96,10 +96,7 @@ void fir::setAmdgpuIgnoreDenormalMode(mlir::ModuleOp mod) {
 }
 
 bool fir::getAmdgpuIgnoreDenormalMode(mlir::ModuleOp mod) {
-  if (auto attr =
-          mod->getAttrOfType<mlir::UnitAttr>(amdgpuIgnoreDenormalModeName))
-    return true;
-  return false;
+  return mod->hasAttrOfType<mlir::UnitAttr>(amdgpuIgnoreDenormalModeName);
 }
 
 static constexpr const char *amdgpuFineGrainedMemoryName =
@@ -110,10 +107,7 @@ void fir::setAmdgpuFineGrainedMemory(mlir::ModuleOp mod) {
 }
 
 bool fir::getAmdgpuFineGrainedMemory(mlir::ModuleOp mod) {
-  if (auto attr =
-          mod->getAttrOfType<mlir::UnitAttr>(amdgpuFineGrainedMemoryName))
-    return true;
-  return false;
+  return mod->hasAttrOfType<mlir::UnitAttr>(amdgpuFineGrainedMemoryName);
 }
 static constexpr const char *amdgpuRemoteMemoryName =
     "fir.amdgpu.remote.memory";
@@ -123,9 +117,7 @@ void fir::setAmdgpuRemoteMemory(mlir::ModuleOp mod) {
 }
 
 bool fir::getAmdgpuRemoteMemory(mlir::ModuleOp mod) {
-  if (auto attr = mod->getAttrOfType<mlir::UnitAttr>(amdgpuRemoteMemoryName))
-    return true;
-  return false;
+  return mod->hasAttrOfType<mlir::UnitAttr>(amdgpuRemoteMemoryName);
 }
 
 llvm::StringRef fir::getTuneCPU(mlir::ModuleOp mod) {
