@@ -250,5 +250,8 @@ template <typename A> std::optional<CharBlock> GetLastSource(A &x) {
   return GetSourceHelper<false>::GetSource(const_cast<const A &>(x));
 }
 
+// Checks whether the assignment statement has a single variable on the RHS.
+bool CheckForSingleVariableOnRHS(const AssignmentStmt &);
+
 } // namespace Fortran::parser
 #endif // FORTRAN_PARSER_TOOLS_H_
