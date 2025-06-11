@@ -832,11 +832,7 @@ StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
           << "'case'" << tok::colon
           << FixItHint::CreateReplacement(ColonLoc, ":");
     } else {
-      SourceLocation ExpectedLoc = PP.getLocForEndOfToken(PrevTokLocation);
-      if (ExpectedLoc.isInvalid() && LHS.get()) {
-        ExpectedLoc =
-            PP.getSourceManager().getSpellingLoc(LHS.get()->getExprLoc());
-      }
+      SourceLocation ExpectedLoc = getEndOfPreviousToken();
 
       Diag(ExpectedLoc, diag::err_expected_after)
           << "'case'" << tok::colon
