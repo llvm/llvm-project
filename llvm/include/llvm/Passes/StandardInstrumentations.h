@@ -15,7 +15,6 @@
 #ifndef LLVM_PASSES_STANDARDINSTRUMENTATIONS_H
 #define LLVM_PASSES_STANDARDINSTRUMENTATIONS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -28,6 +27,7 @@
 #include "llvm/IR/PassTimingInfo.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Transforms/IPO/SampleProfileProbe.h"
 
@@ -181,9 +181,9 @@ public:
     }
 
     LLVM_ABI static void printDiff(raw_ostream &out, const CFG &Before,
-                          const CFG &After);
+                                   const CFG &After);
     LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
-                    FunctionAnalysisManager::Invalidator &);
+                             FunctionAnalysisManager::Invalidator &);
   };
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -191,7 +191,7 @@ public:
 #endif
 
   LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC,
-                         ModuleAnalysisManager &MAM);
+                                  ModuleAnalysisManager &MAM);
 };
 
 // Base class for classes that report changes to the IR.
@@ -445,7 +445,8 @@ protected:
 // and added, respectively.  Changes to the IR that do not affect basic
 // blocks are not reported as having changed the IR.  The option
 // -print-module-scope does not affect this change reporter.
-class LLVM_ABI InLineChangePrinter : public TextChangeReporter<IRDataT<EmptyData>> {
+class LLVM_ABI InLineChangePrinter
+    : public TextChangeReporter<IRDataT<EmptyData>> {
 public:
   InLineChangePrinter(bool VerboseMode, bool ColourMode)
       : TextChangeReporter<IRDataT<EmptyData>>(VerboseMode),
@@ -477,7 +478,7 @@ class VerifyInstrumentation {
 public:
   VerifyInstrumentation(bool DebugLogging) : DebugLogging(DebugLogging) {}
   LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC,
-                         ModuleAnalysisManager *MAM);
+                                  ModuleAnalysisManager *MAM);
 };
 
 /// This class implements --time-trace functionality for new pass manager.
@@ -615,14 +616,15 @@ class StandardInstrumentations {
   bool VerifyEach;
 
 public:
-  LLVM_ABI StandardInstrumentations(LLVMContext &Context, bool DebugLogging,
+  LLVM_ABI
+  StandardInstrumentations(LLVMContext &Context, bool DebugLogging,
                            bool VerifyEach = false,
                            PrintPassOptions PrintPassOpts = PrintPassOptions());
 
   // Register all the standard instrumentation callbacks. If \p FAM is nullptr
   // then PreservedCFGChecker is not enabled.
   LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC,
-                         ModuleAnalysisManager *MAM = nullptr);
+                                  ModuleAnalysisManager *MAM = nullptr);
 
   TimePassesHandler &getTimePasses() { return TimePasses; }
 };

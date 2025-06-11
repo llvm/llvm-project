@@ -22,9 +22,9 @@
 #ifndef LLVM_PASSANALYSISSUPPORT_H
 #define LLVM_PASSANALYSISSUPPORT_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <tuple>
 #include <utility>
@@ -175,7 +175,8 @@ public:
   }
 
   /// Find pass that is implementing PI. Initialize pass for Function F.
-  LLVM_ABI std::tuple<Pass *, bool> findImplPass(Pass *P, AnalysisID PI, Function &F);
+  LLVM_ABI std::tuple<Pass *, bool> findImplPass(Pass *P, AnalysisID PI,
+                                                 Function &F);
 
   void addAnalysisImplsPair(AnalysisID PI, Pass *P) {
     if (findImplPass(PI) == P)
