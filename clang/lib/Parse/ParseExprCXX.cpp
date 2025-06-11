@@ -421,8 +421,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
       // like we never saw it.
       Token Identifier = Tok; // Stash away the identifier.
       ConsumeToken();         // Eat the identifier, current token is now '::'.
-      Diag(PP.getLocForEndOfToken(ConsumeToken()), diag::err_expected)
-          << tok::identifier;
+      ConsumeToken();
+      Diag(getEndOfPreviousToken(), diag::err_expected) << tok::identifier;
       UnconsumeToken(Identifier); // Stick the identifier back.
       Next = NextToken();         // Point Next at the '{' token.
     }

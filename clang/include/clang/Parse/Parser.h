@@ -290,9 +290,7 @@ public:
     return ConsumeToken();
   }
 
-  SourceLocation getEndOfPreviousToken() {
-    return PP.getLocForEndOfToken(PrevTokLocation);
-  }
+  SourceLocation getEndOfPreviousToken() const;
 
   /// GetLookAheadToken - This peeks ahead N tokens and returns that token
   /// without consuming any tokens.  LookAhead(0) returns 'Tok', LookAhead(1)
