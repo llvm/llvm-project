@@ -1230,7 +1230,8 @@ public:
   }
 
   /// Replace intrinsic calls.
-  MatrixTy VisitIntrinsicInst(IntrinsicInst *Inst, const ShapeInfo &SI, IRBuilder<> &Builder) {
+  MatrixTy VisitIntrinsicInst(IntrinsicInst *Inst, const ShapeInfo &SI,
+                              IRBuilder<> &Builder) {
     assert(Inst->getCalledFunction() &&
            Inst->getCalledFunction()->isIntrinsic());
 
@@ -1338,7 +1339,8 @@ public:
 
   /// Lower a load instruction with shape information.
   MatrixTy LowerLoad(Instruction *Inst, Value *Ptr, MaybeAlign Align,
-                     Value *Stride, bool IsVolatile, ShapeInfo Shape, IRBuilder<> &Builder) {
+                     Value *Stride, bool IsVolatile, ShapeInfo Shape,
+                     IRBuilder<> &Builder) {
     return loadMatrix(Inst->getType(), Ptr, Align, Stride, IsVolatile, Shape,
                       Builder);
   }
@@ -1415,7 +1417,8 @@ public:
     Value *Stride = Inst->getArgOperand(2);
     return LowerStore(Inst, Matrix, Ptr, Inst->getParamAlign(1), Stride,
                       cast<ConstantInt>(Inst->getArgOperand(3))->isOne(),
-                      {Inst->getArgOperand(4), Inst->getArgOperand(5)}, Builder);
+                      {Inst->getArgOperand(4), Inst->getArgOperand(5)},
+                      Builder);
   }
 
   // Set elements I..I+NumElts-1 to Block
@@ -2250,15 +2253,18 @@ public:
   }
 
   /// Lower load instructions.
-  MatrixTy VisitLoad(LoadInst *Inst, const ShapeInfo &SI, Value *Ptr, IRBuilder<> &Builder) {
+  MatrixTy VisitLoad(LoadInst *Inst, const ShapeInfo &SI, Value *Ptr,
+                     IRBuilder<> &Builder) {
     return LowerLoad(Inst, Ptr, Inst->getAlign(),
-                     Builder.getInt64(SI.getStride()), Inst->isVolatile(), SI, Builder);
+                     Builder.getInt64(SI.getStride()), Inst->isVolatile(), SI,
+                     Builder);
   }
 
   MatrixTy VisitStore(StoreInst *Inst, const ShapeInfo &SI, Value *StoredVal,
                       Value *Ptr, IRBuilder<> &Builder) {
     return LowerStore(Inst, StoredVal, Ptr, Inst->getAlign(),
-                      Builder.getInt64(SI.getStride()), Inst->isVolatile(), SI, Builder);
+                      Builder.getInt64(SI.getStride()), Inst->isVolatile(), SI,
+                      Builder);
   }
 
   MatrixTy VisitPHI(PHINode *Inst, const ShapeInfo &SI, IRBuilder<> &Builder) {
@@ -2309,13 +2315,15 @@ public:
     // finalizeLowering() may also insert instructions in some cases. The safe
     // place for those is at the end of the initial block of PHIs.
     auto IP = Inst->getInsertionPointAfterDef();
-    assert(IP.has_value() && "expected to find a valid insertion point after the phi");
+    assert(IP.has_value() &&
+           "expected to find a valid insertion point after the phi");
     Builder.SetInsertPoint(*IP);
     return PhiM;
   }
 
   /// Lower binary operators.
-  MatrixTy VisitBinaryOperator(BinaryOperator *Inst, const ShapeInfo &SI, IRBuilder<> &Builder) {
+  MatrixTy VisitBinaryOperator(BinaryOperator *Inst, const ShapeInfo &SI,
+                               IRBuilder<> &Builder) {
     Value *Lhs = Inst->getOperand(0);
     Value *Rhs = Inst->getOperand(1);
 
@@ -2337,7 +2345,8 @@ public:
   }
 
   /// Lower unary operators.
-  MatrixTy VisitUnaryOperator(UnaryOperator *Inst, const ShapeInfo &SI, IRBuilder<> &Builder) {
+  MatrixTy VisitUnaryOperator(UnaryOperator *Inst, const ShapeInfo &SI,
+                              IRBuilder<> &Builder) {
     Value *Op = Inst->getOperand(0);
 
     MatrixTy Result;
@@ -2363,7 +2372,8 @@ public:
   }
 
   /// Lower cast instructions.
-  MatrixTy VisitCastInstruction(CastInst *Inst, const ShapeInfo &Shape, IRBuilder<> &Builder) {
+  MatrixTy VisitCastInstruction(CastInst *Inst, const ShapeInfo &Shape,
+                                IRBuilder<> &Builder) {
     Value *Op = Inst->getOperand(0);
 
     MatrixTy Result;
