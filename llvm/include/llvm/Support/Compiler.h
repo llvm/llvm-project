@@ -208,19 +208,25 @@
 #endif
 #define LLVM_ABI_FRIEND LLVM_ABI
 #define LLVM_ABI_EXPORT __declspec(dllexport)
-#elif defined(__ELF__) || defined(__MINGW32__) || defined(_AIX) ||             \
-    defined(__MVS__) || defined(__CYGWIN__)
-#define LLVM_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+#elif __has_attribute(visibility)
+#define LLVM_ABI __attribute__((visibility("default")))
+#if defined(__ELF__) || defined(__MINGW32__) || defined(_AIX) ||               \
+    defined(__MVS__)
 #define LLVM_ABI_FRIEND
-#define LLVM_TEMPLATE_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+#define LLVM_TEMPLATE_ABI LLVM_ABI
 #define LLVM_EXPORT_TEMPLATE
-#define LLVM_ABI_EXPORT LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+#define LLVM_ABI_EXPORT LLVM_ABI
 #elif defined(__MACH__) || defined(__WASM__) || defined(__EMSCRIPTEN__)
-#define LLVM_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
 #define LLVM_ABI_FRIEND
 #define LLVM_TEMPLATE_ABI
 #define LLVM_EXPORT_TEMPLATE
-#define LLVM_ABI_EXPORT LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+#define LLVM_ABI_EXPORT LLVM_ABI
+#else
+#define LLVM_ABI
+#define LLVM_ABI_FRIEND
+#define LLVM_TEMPLATE_ABI
+#define LLVM_EXPORT_TEMPLATE
+#define LLVM_ABI_EXPORT
 #endif
 #else
 #define LLVM_ABI
@@ -228,6 +234,7 @@
 #define LLVM_TEMPLATE_ABI
 #define LLVM_EXPORT_TEMPLATE
 #define LLVM_ABI_EXPORT
+#endif
 #endif
 #define LLVM_C_ABI LLVM_ABI
 #endif
