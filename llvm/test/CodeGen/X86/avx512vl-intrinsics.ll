@@ -884,7 +884,7 @@ define <4 x float> @test_mm512_maskz_max_ps_128(<4 x float> %a0, <4 x float> %a1
 ; X64-NEXT:    retq # encoding: [0xc3]
   %1 = call <4 x float> @llvm.x86.sse.max.ps(<4 x float> %a0, <4 x float> %a1)
   %2 = bitcast i8 %mask to <8 x i1>
-  %3 = bitcast i8 %mask to <8 x i1>
+  %3 = bitcast i8 %mask2 to <8 x i1>
   %extract = shufflevector <8 x i1> %2, <8 x i1> %3, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %4 = select <4 x i1> %extract, <4 x float> %1, <4 x float> zeroinitializer
   ret <4 x float> %4
@@ -6860,7 +6860,7 @@ define <4 x float> @test_mask_vfmadd128_ps_rmkza(<4 x float> %a0, <4 x float> %a
   ret <4 x float> %1
 }
 
-define <4 x float> @test_mask_vfmadd128_ps_rmb(<4 x float> %a0, <4 x float> %a1, ptr %ptr_a2, i8 %mask, <4 x float> %orig) {
+define <4 x float> @test_mask_vfmadd128_ps_rmb(<4 x float> %a0, <4 x float> %a1, ptr %ptr_a2, i8 %mask) {
 ; X86-LABEL: test_mask_vfmadd128_ps_rmb:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -6877,7 +6877,7 @@ define <4 x float> @test_mask_vfmadd128_ps_rmb(<4 x float> %a0, <4 x float> %a1,
 ; X64-NEXT:    # xmm0 {%k1} = (xmm1 * xmm0) + mem
 ; X64-NEXT:    retq # encoding: [0xc3]
   %q = load float, ptr %ptr_a2
-  %vecinit.i = insertelement <4 x float> %orig, float %q, i32 0
+  %vecinit.i = insertelement <4 x float> poison, float %q, i32 0
   %vecinit2.i = insertelement <4 x float> %vecinit.i, float %q, i32 1
   %vecinit4.i = insertelement <4 x float> %vecinit2.i, float %q, i32 2
   %vecinit6.i = insertelement <4 x float> %vecinit4.i, float %q, i32 3
@@ -6888,7 +6888,7 @@ define <4 x float> @test_mask_vfmadd128_ps_rmb(<4 x float> %a0, <4 x float> %a1,
   ret <4 x float> %3
 }
 
-define <4 x float> @test_mask_vfmadd128_ps_rmba(<4 x float> %a0, <4 x float> %a1, ptr %ptr_a2, i8 %mask, <4 x float> %orig) {
+define <4 x float> @test_mask_vfmadd128_ps_rmba(<4 x float> %a0, <4 x float> %a1, ptr %ptr_a2, i8 %mask) {
 ; X86-LABEL: test_mask_vfmadd128_ps_rmba:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -6905,7 +6905,7 @@ define <4 x float> @test_mask_vfmadd128_ps_rmba(<4 x float> %a0, <4 x float> %a1
 ; X64-NEXT:    # xmm0 {%k1} = (xmm1 * xmm0) + mem
 ; X64-NEXT:    retq # encoding: [0xc3]
   %q = load float, ptr %ptr_a2, align 4
-  %vecinit.i = insertelement <4 x float> %orig, float %q, i32 0
+  %vecinit.i = insertelement <4 x float> poison, float %q, i32 0
   %vecinit2.i = insertelement <4 x float> %vecinit.i, float %q, i32 1
   %vecinit4.i = insertelement <4 x float> %vecinit2.i, float %q, i32 2
   %vecinit6.i = insertelement <4 x float> %vecinit4.i, float %q, i32 3
@@ -6916,7 +6916,7 @@ define <4 x float> @test_mask_vfmadd128_ps_rmba(<4 x float> %a0, <4 x float> %a1
   ret <4 x float> %3
 }
 
-define <4 x float> @test_mask_vfmadd128_ps_rmbz(<4 x float> %a0, <4 x float> %a1, ptr %ptr_a2, <4 x float> %orig) {
+define <4 x float> @test_mask_vfmadd128_ps_rmbz(<4 x float> %a0, <4 x float> %a1, ptr %ptr_a2) {
 ; X86-LABEL: test_mask_vfmadd128_ps_rmbz:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -6930,7 +6930,7 @@ define <4 x float> @test_mask_vfmadd128_ps_rmbz(<4 x float> %a0, <4 x float> %a1
 ; X64-NEXT:    # xmm0 = (xmm1 * xmm0) + mem
 ; X64-NEXT:    retq # encoding: [0xc3]
   %q = load float, ptr %ptr_a2
-  %vecinit.i = insertelement <4 x float> %orig, float %q, i32 0
+  %vecinit.i = insertelement <4 x float> poison, float %q, i32 0
   %vecinit2.i = insertelement <4 x float> %vecinit.i, float %q, i32 1
   %vecinit4.i = insertelement <4 x float> %vecinit2.i, float %q, i32 2
   %vecinit6.i = insertelement <4 x float> %vecinit4.i, float %q, i32 3
@@ -6938,7 +6938,7 @@ define <4 x float> @test_mask_vfmadd128_ps_rmbz(<4 x float> %a0, <4 x float> %a1
   ret <4 x float> %1
 }
 
-define <4 x float> @test_mask_vfmadd128_ps_rmbza(<4 x float> %a0, <4 x float> %a1, ptr %ptr_a2, <4 x float> %orig) {
+define <4 x float> @test_mask_vfmadd128_ps_rmbza(<4 x float> %a0, <4 x float> %a1, ptr %ptr_a2) {
 ; X86-LABEL: test_mask_vfmadd128_ps_rmbza:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -6952,7 +6952,7 @@ define <4 x float> @test_mask_vfmadd128_ps_rmbza(<4 x float> %a0, <4 x float> %a
 ; X64-NEXT:    # xmm0 = (xmm1 * xmm0) + mem
 ; X64-NEXT:    retq # encoding: [0xc3]
   %q = load float, ptr %ptr_a2, align 4
-  %vecinit.i = insertelement <4 x float> %orig, float %q, i32 0
+  %vecinit.i = insertelement <4 x float> poison, float %q, i32 0
   %vecinit2.i = insertelement <4 x float> %vecinit.i, float %q, i32 1
   %vecinit4.i = insertelement <4 x float> %vecinit2.i, float %q, i32 2
   %vecinit6.i = insertelement <4 x float> %vecinit4.i, float %q, i32 3
