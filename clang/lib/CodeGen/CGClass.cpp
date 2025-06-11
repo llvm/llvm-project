@@ -1635,7 +1635,8 @@ namespace {
     // If Sema only found a global operator delete previously, the dtor can
     // always call it. Otherwise we need to check the third bit and call the
     // appropriate operator delete, i.e. global or class-specific.
-    if (isa<CXXMethodDecl>(OD)) {
+    if (const FunctionDecl *GlobOD = Dtor->getOperatorGlobalDelete();
+        isa<CXXMethodDecl>(OD) && GlobOD) {
       // Third bit set signals that global operator delete is called, i.e.
       // ::delete appears on the callsite.
       llvm::Value *CheckTheBitForGlobDeleteCall = CGF.Builder.CreateAnd(
@@ -1649,12 +1650,7 @@ namespace {
       CGF.Builder.CreateCondBr(ShouldCallGlobDelete, ClassDelete, GlobDelete);
       CGF.EmitBlock(GlobDelete);
 
-      const FunctionDecl *GlobOD = Dtor->getOperatorGlobalDelete();
-      if (GlobOD)
-        EmitDeleteAndGoToEnd(GlobOD);
-      else
-        CGF.Builder.CreateUnreachable();
-
+      EmitDeleteAndGoToEnd(GlobOD);
       CGF.EmitBlock(ClassDelete);
     }
     EmitDeleteAndGoToEnd(OD);

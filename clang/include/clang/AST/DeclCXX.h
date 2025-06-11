@@ -2892,7 +2892,7 @@ public:
   }
 
   void setOperatorGlobalDelete(FunctionDecl *OD) {
-    auto *First = cast<CXXDestructorDecl>(getFirstDecl());
+    auto *First = cast<CXXDestructorDecl>(getCanonicalDecl());
     if (OD && !First->OperatorGlobalDelete)
       First->OperatorGlobalDelete = OD;
   }
