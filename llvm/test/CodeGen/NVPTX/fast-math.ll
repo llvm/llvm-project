@@ -29,7 +29,7 @@ define float @sqrt_div_fast(float %a, float %b) #0 {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [sqrt_div_fast_param_0];
-; CHECK-NEXT:    sqrt.rn.f32 %r2, %r1;
+; CHECK-NEXT:    sqrt.approx.f32 %r2, %r1;
 ; CHECK-NEXT:    ld.param.b32 %r3, [sqrt_div_fast_param_1];
 ; CHECK-NEXT:    div.approx.f32 %r4, %r2, %r3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
@@ -84,7 +84,7 @@ define float @sqrt_div_fast_ftz(float %a, float %b) #0 #1 {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [sqrt_div_fast_ftz_param_0];
-; CHECK-NEXT:    sqrt.rn.ftz.f32 %r2, %r1;
+; CHECK-NEXT:    sqrt.approx.ftz.f32 %r2, %r1;
 ; CHECK-NEXT:    ld.param.b32 %r3, [sqrt_div_fast_ftz_param_1];
 ; CHECK-NEXT:    div.approx.ftz.f32 %r4, %r2, %r3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;

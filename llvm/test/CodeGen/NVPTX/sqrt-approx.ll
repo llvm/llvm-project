@@ -83,7 +83,7 @@ define float @test_sqrt32(float %a) #0 {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_sqrt32_param_0];
-; CHECK-NEXT:    sqrt.rn.f32 %r2, %r1;
+; CHECK-NEXT:    sqrt.approx.f32 %r2, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %ret = tail call float @llvm.sqrt.f32(float %a)
@@ -115,7 +115,7 @@ define float @test_sqrt_ftz(float %a) #0 #1 {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_sqrt_ftz_param_0];
-; CHECK-NEXT:    sqrt.rn.ftz.f32 %r2, %r1;
+; CHECK-NEXT:    sqrt.approx.ftz.f32 %r2, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %ret = tail call float @llvm.sqrt.f32(float %a)
@@ -240,7 +240,7 @@ define float @test_sqrt32_refined(float %a) #0 #2 {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_sqrt32_refined_param_0];
-; CHECK-NEXT:    sqrt.rn.f32 %r2, %r1;
+; CHECK-NEXT:    sqrt.approx.f32 %r2, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %ret = tail call float @llvm.sqrt.f32(float %a)
@@ -352,7 +352,7 @@ define float @test_sqrt32_refined_ftz(float %a) #0 #1 #2 {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_sqrt32_refined_ftz_param_0];
-; CHECK-NEXT:    sqrt.rn.ftz.f32 %r2, %r1;
+; CHECK-NEXT:    sqrt.approx.ftz.f32 %r2, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %ret = tail call float @llvm.sqrt.f32(float %a)
