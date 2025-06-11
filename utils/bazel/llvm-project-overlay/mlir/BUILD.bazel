@@ -6881,8 +6881,8 @@ cc_library(
     deps = [
         ":SPIRVDialect",
         ":Support",
-        "//llvm:config",
         "//llvm:Support",
+        "//llvm:config",
     ],
 )
 
@@ -11249,13 +11249,19 @@ td_library(
 )
 
 gentbl_cc_library(
-    name = "TransformDialectEnumsIncGen",
+    name = "TransformAttrsIncGen",
     tbl_outs = {
         "include/mlir/Dialect/Transform/IR/TransformDialectEnums.h.inc": [
             "-gen-enum-decls",
         ],
         "include/mlir/Dialect/Transform/IR/TransformDialectEnums.cpp.inc": [
             "-gen-enum-defs",
+        ],
+        "include/mlir/Dialect/Transform/IR/TransformAttrs.h.inc": [
+            "-gen-attrdef-decls",
+        ],
+        "include/mlir/Dialect/Transform/IR/TransformAttrs.cpp.inc": [
+            "-gen-attrdef-defs",
         ],
     },
     tblgen = ":mlir-tblgen",
@@ -11382,7 +11388,7 @@ cc_library(
         ":Rewrite",
         ":SideEffectInterfaces",
         ":Support",
-        ":TransformDialectEnumsIncGen",
+        ":TransformAttrsIncGen",
         ":TransformDialectIncGen",
         ":TransformDialectInterfaces",
         ":TransformDialectUtils",
