@@ -19,6 +19,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/GlobalDecl.h"
+#include "clang/AST/RecordLayout.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
@@ -101,6 +102,25 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
 }
 
 CIRGenModule::~CIRGenModule() = default;
+
+/// FIXME: this could likely be a common helper and not necessarily related
+/// with codegen.
+/// Return the best known alignment for an unknown pointer to a
+/// particular class.
+CharUnits CIRGenModule::getClassPointerAlignment(const CXXRecordDecl *rd) {
+  if (!rd->hasDefinition())
+    return CharUnits::One(); // Hopefully won't be used anywhere.
+
+  auto &layout = astContext.getASTRecordLayout(rd);
+
+  // If the class is final, then we know that the pointer points to an
+  // object of that type and can use the full alignment.
+  if (rd->isEffectivelyFinal())
+    return layout.getAlignment();
+
+  // Otherwise, we have to assume it could be a subclass.
+  return layout.getNonVirtualAlignment();
+}
 
 CharUnits CIRGenModule::getNaturalTypeAlignment(QualType t,
                                                 LValueBaseInfo *baseInfo) {
@@ -1173,6 +1193,34 @@ void CIRGenModule::setInitializer(cir::GlobalOp &op, mlir::Attribute value) {
   assert(!cir::MissingFeatures::opGlobalVisibility());
 }
 
+std::pair<cir::FuncType, cir::FuncOp> CIRGenModule::getAddrAndTypeOfCXXStructor(
+    GlobalDecl gd, const CIRGenFunctionInfo *fnInfo, cir::FuncType fnType,
+    bool dontDefer, ForDefinition_t isForDefinition) {
+  auto *md = cast<CXXMethodDecl>(gd.getDecl());
+
+  if (isa<CXXDestructorDecl>(md)) {
+    // Always alias equivalent complete destructors to base destructors in the
+    // MS ABI.
+    if (getTarget().getCXXABI().isMicrosoft() &&
+        gd.getDtorType() == Dtor_Complete &&
+        md->getParent()->getNumVBases() == 0)
+      errorNYI(md->getSourceRange(),
+               "getAddrAndTypeOfCXXStructor: MS ABI complete destructor");
+  }
+
+  if (!fnType) {
+    if (!fnInfo)
+      fnInfo = &getTypes().arrangeCXXStructorDeclaration(gd);
+    fnType = getTypes().getFunctionType(*fnInfo);
+  }
+
+  auto fn = getOrCreateCIRFunction(getMangledName(gd), fnType, gd,
+                                   /*ForVtable=*/false, dontDefer,
+                                   /*IsThunk=*/false, isForDefinition);
+
+  return {fnType, fn};
+}
+
 cir::FuncOp CIRGenModule::getAddrOfFunction(clang::GlobalDecl gd,
                                             mlir::Type funcType, bool forVTable,
                                             bool dontDefer,
@@ -1247,8 +1295,11 @@ StringRef CIRGenModule::getMangledName(GlobalDecl gd) {
   // Some ABIs don't have constructor variants. Make sure that base and complete
   // constructors get mangled the same.
   if (const auto *cd = dyn_cast<CXXConstructorDecl>(canonicalGd.getDecl())) {
-    errorNYI(cd->getSourceRange(), "getMangledName: C++ constructor");
-    return cast<NamedDecl>(gd.getDecl())->getIdentifier()->getName();
+    if (!getTarget().getCXXABI().hasConstructorVariants()) {
+      errorNYI(cd->getSourceRange(),
+               "getMangledName: C++ constructor without variants");
+      return cast<NamedDecl>(gd.getDecl())->getIdentifier()->getName();
+    }
   }
 
   // Keep the first result in the case of a mangling collision.
@@ -1681,6 +1732,33 @@ bool CIRGenModule::verifyModule() const {
   // check the structural properties of the IR and invoke any specific
   // verifiers we have on the CIR operations.
   return mlir::verify(theModule).succeeded();
+}
+
+// TODO(cir): this can be shared with LLVM codegen.
+CharUnits CIRGenModule::computeNonVirtualBaseClassOffset(
+    const CXXRecordDecl *derivedClass,
+    llvm::iterator_range<CastExpr::path_const_iterator> path) {
+  CharUnits offset = CharUnits::Zero();
+
+  const ASTContext &astContext = getASTContext();
+  const CXXRecordDecl *rd = derivedClass;
+
+  for (const CXXBaseSpecifier *base : path) {
+    assert(!base->isVirtual() && "Should not see virtual bases here!");
+
+    // Get the layout.
+    const ASTRecordLayout &layout = astContext.getASTRecordLayout(rd);
+
+    const auto *baseDecl = cast<CXXRecordDecl>(
+        base->getType()->castAs<clang::RecordType>()->getDecl());
+
+    // Add the offset.
+    offset += layout.getBaseClassOffset(baseDecl);
+
+    rd = baseDecl;
+  }
+
+  return offset;
 }
 
 DiagnosticBuilder CIRGenModule::errorNYI(SourceLocation loc,
