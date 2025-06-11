@@ -529,16 +529,14 @@ void LVDWARFReader::createLineAndFileRecords(
     for (const DWARFDebugLine::FileNameEntry &Entry :
          Lines->Prologue.FileNames) {
       std::string Directory;
-      Lines->getDirectoryForEntry(Entry, Directory);
+      if (Lines->getDirectoryForEntry(Entry, Directory))
+        Directory = transformPath(Directory);
       if (Directory.empty())
         Directory = std::string(CompileUnit->getCompilationDirectory());
-      // Take just the filename component, as it may be contain the full
-      // path that would be added to the already existing path in Directory.
-      StringRef File =
-          llvm::sys::path::filename(dwarf::toStringRef(Entry.Name));
+      std::string File = transformPath(dwarf::toStringRef(Entry.Name));
       std::string String;
       raw_string_ostream(String) << Directory << "/" << File;
-      CompileUnit->addFilename(transformPath(String));
+      CompileUnit->addFilename(String);
     }
 
   // In DWARF5 the file indexes start at 0;
