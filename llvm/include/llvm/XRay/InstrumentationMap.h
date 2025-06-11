@@ -84,7 +84,7 @@ private:
   FunctionAddressMap FunctionAddresses;
   FunctionAddressReverseMap FunctionIds;
 
-  friend Expected<InstrumentationMap> loadInstrumentationMap(StringRef);
+  LLVM_ABI_FRIEND friend Expected<InstrumentationMap> loadInstrumentationMap(StringRef);
 
 public:
   /// Provides a raw accessor to the unordered map of function addresses.

@@ -12,11 +12,11 @@
 #ifndef LLVM_XRAY_TRACE_H
 #define LLVM_XRAY_TRACE_H
 
-#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <vector>
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
 #include "llvm/XRay/XRayRecord.h"
@@ -51,7 +51,7 @@ class Trace {
 
   typedef std::vector<XRayRecord>::const_iterator citerator;
 
-  friend Expected<Trace> loadTrace(const DataExtractor &, bool);
+  LLVM_ABI_FRIEND friend Expected<Trace> loadTrace(const DataExtractor &, bool);
 
 public:
   using size_type = RecordVector::size_type;
