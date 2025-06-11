@@ -174,6 +174,7 @@ int TGLexer::peekNextChar(int Index) const {
 }
 
 tgtok::TokKind TGLexer::LexToken(bool FileOrLineStart) {
+restart:
   TokStart = CurPtr;
   // This always consumes at least one character.
   int CurChar = getNextChar();
@@ -188,12 +189,12 @@ tgtok::TokKind TGLexer::LexToken(bool FileOrLineStart) {
     return ReturnError(TokStart, "unexpected character");
   case EOF:
     // Lex next token, if we just left an include file.
-    // Note that leaving an include file means that the next
-    // symbol is located at the end of the 'include "..."'
-    // construct, so LexToken() is called with default
-    // false parameter.
-    if (processEOF())
-      return LexToken();
+    if (processEOF()) {
+      // Leaving an include file means that the next symbol is located at the
+      // end of the 'include "..."'  construct.
+      FileOrLineStart = false;
+      goto restart;
+    }
 
     // Return EOF denoting the end of lexing.
     return tgtok::Eof;
@@ -238,10 +239,11 @@ tgtok::TokKind TGLexer::LexToken(bool FileOrLineStart) {
   case ' ':
   case '\t':
     // Ignore whitespace.
-    return LexToken(FileOrLineStart);
+    goto restart;
   case '\n':
     // Ignore whitespace, and identify the new line.
-    return LexToken(true);
+    FileOrLineStart = true;
+    goto restart;
   case '/':
     // If this is the start of a // comment, skip until the end of the line or
     // the end of the buffer.
@@ -252,7 +254,7 @@ tgtok::TokKind TGLexer::LexToken(bool FileOrLineStart) {
         return tgtok::Error;
     } else // Otherwise, this is an error.
       return ReturnError(TokStart, "unexpected character");
-    return LexToken(FileOrLineStart);
+    goto restart;
   case '-': case '+':
   case '0': case '1': case '2': case '3': case '4': case '5': case '6':
   case '7': case '8': case '9': {
