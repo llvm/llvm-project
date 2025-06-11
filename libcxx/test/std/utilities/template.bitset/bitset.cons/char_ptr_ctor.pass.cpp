@@ -72,6 +72,7 @@ TEST_CONSTEXPR_CXX23 void test_char_pointer_ctor()
     for (std::size_t i = 10; i < v.size(); ++i)
         assert(v[i] == false);
   }
+  // Verify that this constructor doesn't read over the given bound.
   // See https://github.com/llvm/llvm-project/issues/143684
   {
     const char not_null_terminated[] = {'1', '0', '1', '0', '1', '0', '1', '0', '1', '0'};

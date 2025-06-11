@@ -645,10 +645,10 @@ public:
   template <class _CharT, __enable_if_t<_IsCharLikeType<_CharT>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 explicit bitset(
       const _CharT* __str,
-      size_t __n    = static_cast<size_t>(-1),
+      size_t __n    = basic_string<_CharT>::npos,
       _CharT __zero = _CharT('0'),
       _CharT __one  = _CharT('1')) {
-    if (__n == static_cast<size_t>(-1))
+    if (__n == basic_string<_CharT>::npos)
       __init_from_string_view(basic_string_view<_CharT>(__str), __zero, __one);
     else
       __init_from_string_view(basic_string_view<_CharT>(__str, __n), __zero, __one);
