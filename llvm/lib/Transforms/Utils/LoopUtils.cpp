@@ -606,6 +606,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
 
   // Use a map to unique and a vector to guarantee deterministic ordering.
   llvm::SmallDenseSet<DebugVariable, 4> DeadDebugSet;
+  llvm::SmallVector<DbgVariableIntrinsic *, 4> DeadDebugInst;
   llvm::SmallVector<DbgVariableRecord *, 4> DeadDbgVariableRecords;
 
   if (ExitBlock) {
@@ -632,19 +633,29 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
           U.set(Poison);
         }
 
-        // For one of each variable encountered, preserve a debug record (set
+        // RemoveDIs: do the same as below for DbgVariableRecords.
+        if (Block->IsNewDbgInfoFormat) {
+          for (DbgVariableRecord &DVR : llvm::make_early_inc_range(
+                   filterDbgVars(I.getDbgRecordRange()))) {
+            DebugVariable Key(DVR.getVariable(), DVR.getExpression(),
+                              DVR.getDebugLoc().get());
+            if (!DeadDebugSet.insert(Key).second)
+              continue;
+            // Unlinks the DVR from it's container, for later insertion.
+            DVR.removeFromParent();
+            DeadDbgVariableRecords.push_back(&DVR);
+          }
+        }
+
+        // For one of each variable encountered, preserve a debug intrinsic (set
         // to Poison) and transfer it to the loop exit. This terminates any
         // variable locations that were set during the loop.
-        for (DbgVariableRecord &DVR :
-             llvm::make_early_inc_range(filterDbgVars(I.getDbgRecordRange()))) {
-          DebugVariable Key(DVR.getVariable(), DVR.getExpression(),
-                            DVR.getDebugLoc().get());
-          if (!DeadDebugSet.insert(Key).second)
-            continue;
-          // Unlinks the DVR from it's container, for later insertion.
-          DVR.removeFromParent();
-          DeadDbgVariableRecords.push_back(&DVR);
-        }
+        auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I);
+        if (!DVI)
+          continue;
+        if (!DeadDebugSet.insert(DebugVariable(DVI)).second)
+          continue;
+        DeadDebugInst.push_back(DVI);
       }
 
     // After the loop has been deleted all the values defined and modified
@@ -659,6 +670,9 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     assert(InsertDbgValueBefore != ExitBlock->end() &&
            "There should be a non-PHI instruction in exit block, else these "
            "instructions will have no parent.");
+
+    for (auto *DVI : DeadDebugInst)
+      DVI->moveBefore(*ExitBlock, InsertDbgValueBefore);
 
     // Due to the "head" bit in BasicBlock::iterator, we're going to insert
     // each DbgVariableRecord right at the start of the block, wheras dbg.values

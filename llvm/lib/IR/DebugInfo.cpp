@@ -2123,11 +2123,22 @@ static void emitDbgAssign(AssignmentInfo Info, Value *Val, Value *Dest,
     Expr = *R;
   }
   DIExpression *AddrExpr = DIExpression::get(StoreLikeInst.getContext(), {});
-  auto *Assign = DbgVariableRecord::createLinkedDVRAssign(
-      &StoreLikeInst, Val, VarRec.Var, Expr, Dest, AddrExpr, VarRec.DL);
+  if (StoreLikeInst.getParent()->IsNewDbgInfoFormat) {
+    auto *Assign = DbgVariableRecord::createLinkedDVRAssign(
+        &StoreLikeInst, Val, VarRec.Var, Expr, Dest, AddrExpr, VarRec.DL);
+    (void)Assign;
+    LLVM_DEBUG(if (Assign) errs() << " > INSERT: " << *Assign << "\n");
+    return;
+  }
+  auto Assign = DIB.insertDbgAssign(&StoreLikeInst, Val, VarRec.Var, Expr, Dest,
+                                    AddrExpr, VarRec.DL);
   (void)Assign;
-  LLVM_DEBUG(if (Assign) errs() << " > INSERT: " << *Assign << "\n");
-  return;
+  LLVM_DEBUG(if (!Assign.isNull()) {
+    if (const auto *Record = dyn_cast<DbgRecord *>(Assign))
+      errs() << " > INSERT: " << *Record << "\n";
+    else
+      errs() << " > INSERT: " << *cast<Instruction *>(Assign) << "\n";
+  });
 }
 
 #undef DEBUG_TYPE // Silence redefinition warning (from ConstantsContext.h).
