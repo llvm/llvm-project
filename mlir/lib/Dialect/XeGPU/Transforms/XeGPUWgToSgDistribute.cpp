@@ -316,8 +316,8 @@ struct WgToSgPrefetchNdOp : public OpConversionPattern<xegpu::PrefetchNdOp> {
 };
 
 /// This pattern transforms vector.broadcast ops to work at subgroup level.
-/// It splits the broadcast to match the subgroup shape and drops sgLayout/sgData.
-struct WgToSgVectorBroadcastOp : public OpConversionPattern<vector::BroadcastOp> {
+struct WgToSgVectorBroadcastOp
+    : public OpConversionPattern<vector::BroadcastOp> {
   using OpConversionPattern<vector::BroadcastOp>::OpConversionPattern;
 
   LogicalResult
@@ -325,13 +325,12 @@ struct WgToSgVectorBroadcastOp : public OpConversionPattern<vector::BroadcastOp>
                   ConversionPatternRewriter &rewriter) const override {
     auto resultType = dyn_cast<VectorType>(op.getResult().getType());
     if (!resultType)
-      return rewriter.notifyMatchFailure(op, "Result is not a vector type");
+      return failure();
 
     // Only handle broadcasts to vectors with XeGPU layout attribute
     xegpu::LayoutAttr layout = xegpu::getLayoutAttr(op.getResult());
     if (!layout || !layout.getSgLayout())
-      return rewriter.notifyMatchFailure(
-          op, "Result does not have a valid layout attribute for subgroup distribution");
+      return failure();
 
     // Extract sgShape from layout
     SmallVector<int64_t> sgShape;
@@ -347,15 +346,17 @@ struct WgToSgVectorBroadcastOp : public OpConversionPattern<vector::BroadcastOp>
       }
     }
 
-    VectorType newResultType = VectorType::get(sgShape, resultType.getElementType());
+    VectorType newResultType =
+        VectorType::get(sgShape, resultType.getElementType());
     SmallVector<Value> newBroadcasts;
 
-    // The operand is always a scalar or lower-rank vector, so just broadcast for each subgroup
-    for (Value unused : adaptor.getOperands().front()) {
-      // All subgroups get the same broadcasted value
+    // The operand is always a scalar or lower-rank vector, so just broadcast
+    // for each subgroup
+    for (size_t i = 0; i < adaptor.getOperands().front().size(); ++i) {
       auto newBroadcast = rewriter.create<vector::BroadcastOp>(
-          op.getLoc(), newResultType, adaptor.getOperands().front()[0]);
-      xegpu::setLayoutAttr(newBroadcast->getResult(0), layout.dropSgLayoutAndData());
+        op.getLoc(), newResultType, adaptor.getOperands().front()[i]);
+      xegpu::setLayoutAttr(newBroadcast->getResult(0),
+                 layout.dropSgLayoutAndData());
       newBroadcasts.push_back(newBroadcast.getResult());
     }
 
@@ -371,8 +372,7 @@ namespace xegpu {
 void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
   patterns.add<WgToSgCreateNdOp, WgToSgLoadNdOp, WgToSgStoreNdOp,
                WgToSgUpdateNdOffsetOp, WgToSgDpasOp, WgToSgPrefetchNdOp,
-               WgToSgVectorBroadcastOp>(
-      patterns.getContext());
+               WgToSgVectorBroadcastOp>(patterns.getContext());
 }
 } // namespace xegpu
 } // namespace mlir
@@ -420,13 +420,14 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
     return isLegal(layout);
   });
 
-  target.addDynamicallyLegalOp<vector::BroadcastOp>([=](vector::BroadcastOp op) -> bool {
-    auto resultType = dyn_cast<VectorType>(op.getResult().getType());
-    if (!resultType)
-      return true;
-    auto layout = xegpu::getLayoutAttr(op.getResult());
-    return isLegal(layout);
-  });
+  target.addDynamicallyLegalOp<vector::BroadcastOp>(
+      [=](vector::BroadcastOp op) -> bool {
+        auto resultType = dyn_cast<VectorType>(op.getResult().getType());
+        if (!resultType)
+          return true;
+        xegpu::LayoutAttr = xegpu::getLayoutAttr(op.getResult());
+        return isLegal(layout);
+      });
 
   target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
 
