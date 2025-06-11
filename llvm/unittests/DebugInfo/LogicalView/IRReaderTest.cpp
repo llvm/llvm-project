@@ -99,7 +99,7 @@ void checkElementProperties(LVReader *Reader) {
   EXPECT_EQ(RangeEntry.upper(), 0x23u);
   EXPECT_EQ(RangeEntry.scope()->getLineNumber(), 0u);
   EXPECT_EQ(RangeEntry.scope()->getName(), "test.cpp");
-  EXPECT_EQ(RangeEntry.scope()->getOffset(), 0x00u);
+  EXPECT_EQ(RangeEntry.scope()->getOffset(), 0x04u);
 
   ++IterRanges;
   RangeEntry = *IterRanges;
@@ -107,7 +107,7 @@ void checkElementProperties(LVReader *Reader) {
   EXPECT_EQ(RangeEntry.upper(), 0x4fu);
   EXPECT_EQ(RangeEntry.scope()->getLineNumber(), 0u);
   EXPECT_EQ(RangeEntry.scope()->getName(), "test.cpp");
-  EXPECT_EQ(RangeEntry.scope()->getOffset(), 0x00u);
+  EXPECT_EQ(RangeEntry.scope()->getOffset(), 0x04u);
 
   const LVPublicNames &PublicNames = CompileUnit->getPublicNames();
   ASSERT_EQ(PublicNames.size(), 1u);
@@ -122,7 +122,7 @@ void checkElementProperties(LVReader *Reader) {
   // Lines (debug and assembler) for 'foo'.
   const LVLines *Lines = Function->getLines();
   ASSERT_NE(Lines, nullptr);
-  ASSERT_EQ(Lines->size(), 0x18u);
+  ASSERT_EQ(Lines->size(), 0x1au);
 }
 
 // Check the logical elements selection.
@@ -135,24 +135,24 @@ void checkElementSelection(LVReader *Reader) {
   std::map<LVOffset, LVElement *> MapElements;
   for (LVElement *Element : MatchedElements)
     MapElements[Element->getOffset()] = Element;
-  ASSERT_EQ(MapElements.size(), 0x0eu);
+  ASSERT_EQ(MapElements.size(), 0x0du);
 
-  LVElement *Element = MapElements[0x0000000004]; // 'foo'
+  LVElement *Element = MapElements[0x0000000008]; // 'foo'
   ASSERT_NE(Element, nullptr);
   EXPECT_NE(Element->getName().find("foo"), StringRef::npos);
   EXPECT_EQ(Element->getIsScope(), 1);
 
-  Element = MapElements[0x000000000c]; // 'CONSTANT'
+  Element = MapElements[0x0000000010]; // 'CONSTANT'
   ASSERT_NE(Element, nullptr);
   EXPECT_NE(Element->getName().find("CONSTANT"), StringRef::npos);
   EXPECT_EQ(Element->getIsSymbol(), 1);
 
-  Element = MapElements[0x0000000024]; // 'INTPTR'
+  Element = MapElements[0x0000000028]; // 'INTPTR'
   ASSERT_NE(Element, nullptr);
   EXPECT_NE(Element->getName().find("INTPTR"), StringRef::npos);
   EXPECT_EQ(Element->getIsType(), 1);
 
-  Element = MapElements[0x000000001c]; // 'INTEGER'
+  Element = MapElements[0x0000000020]; // 'INTEGER'
   ASSERT_NE(Element, nullptr);
   EXPECT_NE(Element->getName().find("INTEGER"), StringRef::npos);
   EXPECT_EQ(Element->getIsType(), 1);
@@ -170,11 +170,11 @@ void checkElementSelection(LVReader *Reader) {
   std::set<LVOffset>::iterator Iter;
   ASSERT_EQ(SetScopes.size(), 3u);
 
-  Iter = SetScopes.find(0x0000000000); // CompileUnit <- 'foo'
+  Iter = SetScopes.find(0x0000000004); // CompileUnit <- 'foo'
   EXPECT_NE(Iter, SetScopes.end());
-  Iter = SetScopes.find(0x0000000004); // Function <- 'store i32 %1, ptr ...'
+  Iter = SetScopes.find(0x0000000008); // Function <- 'store i32 %1, ptr ...'
   EXPECT_NE(Iter, SetScopes.end());
-  Iter = SetScopes.find(0x0000000008); // LexicalScope <- 'INTEGER'
+  Iter = SetScopes.find(0x000000000c); // LexicalScope <- 'INTEGER'
   EXPECT_NE(Iter, SetScopes.end());
 }
 
@@ -186,7 +186,7 @@ void checkElementComparison(LVReader *Reference, LVReader *Target) {
 
   // Get comparison table.
   LVPassTable PassTable = Compare.getPassTable();
-  ASSERT_EQ(PassTable.size(), 10u);
+  ASSERT_EQ(PassTable.size(), 9u);
 
   LVReader *Reader;
   LVElement *Element;
@@ -223,7 +223,7 @@ void checkElementComparison(LVReader *Reference, LVReader *Target) {
   EXPECT_EQ(Pass, LVComparePass::Missing);
 
   // Target: Added Variable 'CONSTANT'
-  std::tie(Reader, Element, Pass) = PassTable[7];
+  std::tie(Reader, Element, Pass) = PassTable[6];
   ASSERT_NE(Reader, nullptr);
   ASSERT_NE(Element, nullptr);
   EXPECT_EQ(Reader, Target);
@@ -233,13 +233,23 @@ void checkElementComparison(LVReader *Reference, LVReader *Target) {
   EXPECT_EQ(Pass, LVComparePass::Added);
 
   // Target: Added TypeDefinition 'INTEGER'
-  std::tie(Reader, Element, Pass) = PassTable[8];
+  std::tie(Reader, Element, Pass) = PassTable[7];
   ASSERT_NE(Reader, nullptr);
   ASSERT_NE(Element, nullptr);
   EXPECT_EQ(Reader, Target);
   EXPECT_EQ(Element->getLevel(), 4u);
   EXPECT_EQ(Element->getLineNumber(), 4u);
   EXPECT_EQ(Element->getName(), "INTEGER");
+  EXPECT_EQ(Pass, LVComparePass::Added);
+
+  // Target: Added DebugLine
+  std::tie(Reader, Element, Pass) = PassTable[8];
+  ASSERT_NE(Reader, nullptr);
+  ASSERT_NE(Element, nullptr);
+  EXPECT_EQ(Reader, Target);
+  EXPECT_EQ(Element->getLevel(), 4u);
+  EXPECT_EQ(Element->getLineNumber(), 8u);
+  EXPECT_EQ(Element->getName(), "");
   EXPECT_EQ(Pass, LVComparePass::Added);
 }
 

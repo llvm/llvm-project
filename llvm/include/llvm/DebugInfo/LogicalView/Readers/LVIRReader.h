@@ -58,7 +58,9 @@ class LVIRReader final : public LVReader {
   // Whether to emit all linkage names, or just abstract subprograms.
   bool UseAllLinkageNames = true;
 
-  // Dependencies on external options (llc, etc).
+  // Looking at IR generated with the '-gdwarf -gsplit-dwarf=split' the only
+  // difference is setting the 'DICompileUnit::splitDebugFilename' to the
+  // name of the split filename: "xxx.dwo".
   bool includeMinimalInlineScopes() const;
   bool useAllLinkageNames() const { return UseAllLinkageNames; }
 
@@ -66,10 +68,7 @@ class LVIRReader final : public LVReader {
   void mapFortranLanguage(unsigned DWLang);
   bool moduleIsInFortran() const { return LanguageIsFortran; }
 
-  // Generate logical debug line before prologue.
-  bool GenerateLineBeforePrologue = true;
-
-  // We assume a constante increase between instructions.
+  // We assume a constant instruction-size increase between instructions.
   const unsigned OffsetIncrease = 4;
   void updateLineOffset() { CurrentOffset += OffsetIncrease; }
 
@@ -79,6 +78,7 @@ class LVIRReader final : public LVReader {
   std::unique_ptr<DbgValueRangeTable> DbgValueRanges;
 
   // Record the last assigned file index for each compile unit.
+  // This data structure is to aid mapping DIFiles onto a DWARF-like file table.
   using LVIndexFiles = std::map<LVScopeCompileUnit *, size_t>;
   LVIndexFiles IndexFiles;
 
@@ -99,13 +99,13 @@ class LVIRReader final : public LVReader {
     return FileIndex;
   }
 
-  // Collect the compile unit metadata files.
+  // Store a FileID number for each DIFile seen.
   using LVCompileUnitFiles = std::map<const DIFile *, size_t>;
   LVCompileUnitFiles CompileUnitFiles;
 
   size_t getOrCreateSourceID(const DIFile *File);
 
-  // Associate the logical elements to metadata objects.
+  // Associate the metadata objects to logical elements.
   using LVMDObjects = std::map<const MDNode *, LVElement *>;
   LVMDObjects MDObjects;
 
@@ -130,18 +130,23 @@ class LVIRReader final : public LVReader {
     return static_cast<LVType *>(getElementForSeenMD(MD));
   }
 
-  // Inlined concrete scopes with its associated inlined abstract scopes.
-  // When creating abstract scopes, there is no direct information to find
+  // Abstract scopes mapped to the associated inlined scopes.
+  // When creating inlined scopes, there is no direct information to find
   // the correct lexical scope.
-  using LVInlinedScopes = std::map<LVScope *, LVScope *>;
+  using LVScopeEntry = std::pair<LVScope *, const DILocation *>;
+  using LVInlinedScopes = std::map<LVScopeEntry, LVScope *>;
   LVInlinedScopes InlinedScopes;
 
-  void addInlinedScope(LVScope *ConcreteScope, LVScope *AbstractScope) {
-    if (InlinedScopes.find(ConcreteScope) == InlinedScopes.end())
-      InlinedScopes.emplace(ConcreteScope, AbstractScope);
+  void addInlinedScope(LVScope *AbstractScope, const DILocation *InlinedAt,
+                       LVScope *InlinedScope) {
+    auto Entry = LVScopeEntry(AbstractScope, InlinedAt);
+    if (InlinedScopes.find(Entry) == InlinedScopes.end())
+      InlinedScopes.emplace(Entry, InlinedScope);
   }
-  LVScope *getInlinedScope(LVScope *ConcreteScope) const {
-    LVInlinedScopes::const_iterator Iter = InlinedScopes.find(ConcreteScope);
+  LVScope *getInlinedScope(LVScope *AbstractScope,
+                           const DILocation *InlinedAt) const {
+    auto Entry = LVScopeEntry(AbstractScope, InlinedAt);
+    LVInlinedScopes::const_iterator Iter = InlinedScopes.find(Entry);
     return Iter != InlinedScopes.end() ? Iter->second : nullptr;
   }
 
@@ -163,9 +168,6 @@ class LVIRReader final : public LVReader {
 
   void processBasicBlocks(Function &F, const DISubprogram *SP);
 
-  void addGlobalName(StringRef Name, LVElement *Element,
-                     const DIScope *Context);
-
   void addAccess(LVElement *Element, DINode::DIFlags Flags);
 
   void addConstantValue(LVElement *Element, const DIExpression *DIExpr);
@@ -175,7 +177,7 @@ class LVIRReader final : public LVReader {
                         const DIType *Ty);
   void addConstantValue(LVElement *Element, const APInt &Value, bool Unsigned);
   void addConstantValue(LVElement *Element, uint64_t Value, const DIType *Ty);
-  void addConstantValue(LVElement *Element, bool Unsigned, uint64_t Value);
+  void addConstantValue(LVElement *Element, uint64_t Value, bool Unsigned);
 
   void addString(LVElement *Element, StringRef Str);
 
@@ -197,8 +199,6 @@ class LVIRReader final : public LVReader {
   bool applySubprogramDefinitionAttributes(LVScope *Function,
                                            const DISubprogram *SP,
                                            bool Minimal = false);
-  void applySubprogramAttributesToDefinition(LVScope *Function,
-                                             const DISubprogram *SP);
 
   void constructAggregate(LVScopeAggregate *Aggregate,
                           const DICompositeType *CTy);
@@ -210,7 +210,8 @@ class LVIRReader final : public LVReader {
                                 LVType *IndexType);
   void constructImportedEntity(LVElement *Element, const DIImportedEntity *IE);
 
-  void constructLine(LVScope *Scope, const DISubprogram *SP, Instruction &I);
+  void constructLine(LVScope *Scope, const DISubprogram *SP, Instruction &I,
+                     bool &GenerateLineBeforePrologue);
 
   LVSymbol *getOrCreateMember(LVScope *Aggregate, const DIDerivedType *DT);
   LVSymbol *getOrCreateStaticMember(LVScope *Aggregate,
@@ -220,14 +221,15 @@ class LVIRReader final : public LVReader {
   LVScope *getOrCreateScope(const DIScope *Context);
   void constructScope(LVElement *Element, const DIScope *Context);
 
-  LVScope *getOrCreateSubprogram(const DISubprogram *SP, bool Minimal = false);
+  LVScope *getOrCreateSubprogram(const DISubprogram *SP);
   LVScope *getOrCreateSubprogram(LVScope *Function, const DISubprogram *SP,
                                  bool Minimal = false);
   void constructSubprogramArguments(LVScope *Function,
                                     const DITypeRefArray Args);
 
-  LVScope *getOrCreateInlinedScope(LVScope *Parent, const DILocation *DL);
-  LVScope *getOrCreateAbstractScope(LVScope *OriginScope, const DILocation *DL);
+  LVScope *getOrCreateAbstractScope(LVScope *Parent, const DILocation *DL);
+  LVScope *getOrCreateInlinedScope(LVScope *AbstractScope,
+                                   const DILocation *DL);
 
   void constructSubrange(LVScopeArray *Array, const DISubrange *GSR,
                          LVType *IndexType);
@@ -245,8 +247,8 @@ class LVIRReader final : public LVReader {
   LVSymbol *getOrCreateVariable(const DIGlobalVariableExpression *GVE);
   LVSymbol *getOrCreateVariable(const DIVariable *Var,
                                 const DILocation *DL = nullptr);
-  LVSymbol *getOrCreateAbstractVariable(LVSymbol *OriginSymbol,
-                                        const DILocation *DL);
+  LVSymbol *getOrCreateInlinedVariable(LVSymbol *OriginSymbol,
+                                       const DILocation *DL);
 
   LVElement *constructElement(const DINode *DN);
 
