@@ -47,7 +47,9 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
+#include <fstream>
 #include <memory>
+#include <sstream>
 #include <system_error>
 using namespace clang;
 
@@ -981,8 +983,17 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
       for (llvm::vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC),
                                          DirEnd;
            Dir != DirEnd && !EC; Dir.increment(EC)) {
-        if (llvm::sys::path::extension(Dir->path()) == ".json")
-          CI.getSummaryManager().ParseSummaryFromJSON(Dir->path());
+        if (llvm::sys::path::extension(Dir->path()) == ".json") {
+          std::ifstream t(Dir->path().str());
+          std::stringstream buffer;
+          buffer << t.rdbuf();
+
+          auto JSON = llvm::json::parse(buffer.str());
+          if (!JSON)
+            continue;
+
+          CI.getSummaryManager().ParseSummaryFromJSON(*JSON->getAsArray());
+        }
       }
 
       // FIXME: debug only, remove later

@@ -1,11 +1,9 @@
 #include "clang/Sema/SemaSummarizer.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Index/USRGeneration.h"
-#include "clang/Sema/SummaryConsumer.h"
 #include "clang/Sema/SummaryAttribute.h"
+#include "clang/Sema/SummaryConsumer.h"
 #include <set>
-#include <fstream>
-#include <sstream>
 
 namespace clang {
 namespace {
@@ -103,22 +101,14 @@ void SummaryManager::SerializeSummary(llvm::json::OStream &JOS, const FunctionSu
   });
 }
 
-void SummaryManager::ParseSummaryFromJSON(StringRef path) {
-  std::ifstream t(path.str());
-  std::stringstream buffer;
-  buffer << t.rdbuf();
+void SummaryManager::ParseSummaryFromJSON(const llvm::json::Array &Summary) {
+  for (auto it = Summary.begin(); it != Summary.end(); ++it) {
+    const llvm::json::Object *FunctionSummary = it->getAsObject();
 
-  auto JSON = llvm::json::parse(buffer.str());
-  if (!JSON)
-    return;
-
-  llvm::json::Array *Summaries = JSON->getAsArray();
-  for(auto it = Summaries->begin(); it != Summaries->end(); ++it) {
-    llvm::json::Object *Summary = it->getAsObject();
-
-    SmallString<128> ID(*Summary->getString("id"));
+    SmallString<128> ID(*FunctionSummary->getString("id"));
     std::set<const SummaryAttribute *> FunctionAttrs;
-    llvm::json::Array *FunctionAttributes = Summary->getObject("attrs")->getArray("function");
+    const llvm::json::Array *FunctionAttributes =
+        FunctionSummary->getObject("attrs")->getArray("function");
     for(auto attrIt = FunctionAttributes->begin(); attrIt != FunctionAttributes->end(); ++attrIt) {
       for (auto &&Attr : Attributes) {
         if (Attr->parse(*attrIt->getAsString()))
@@ -127,7 +117,7 @@ void SummaryManager::ParseSummaryFromJSON(StringRef path) {
     }
 
     std::set<SmallVector<char>> Calls;
-    llvm::json::Array *CallEntries = Summary->getArray("calls");
+    const llvm::json::Array *CallEntries = FunctionSummary->getArray("calls");
     for(auto callIt = CallEntries->begin(); callIt != CallEntries->end(); ++callIt) {
       auto *Obj = callIt->getAsObject();
       Calls.emplace(SmallString<128>(*Obj->getString("id")));

@@ -49,7 +49,7 @@ public:
   void SummarizeFunctionBody(const FunctionDecl *FD);
 
   void SerializeSummary(llvm::json::OStream &, const FunctionSummary &) const;
-  void ParseSummaryFromJSON(StringRef path);
+  void ParseSummaryFromJSON(const llvm::json::Array &Summary);
 
   void ReduceSummaries();
 
