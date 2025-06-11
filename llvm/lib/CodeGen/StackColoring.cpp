@@ -529,7 +529,7 @@ private:
 
   /// Go over the machine function and change instructions which use stack
   /// slots to use the joint slots.
-  void remapInstructions(DenseMap<int, int> &SlotRemap, int MergedSlot);
+  void remapInstructions(DenseMap<int, int> &SlotRemap);
 
   /// The input program may contain instructions which are not inside lifetime
   /// markers. This can happen due to a bug in the compiler or due to a bug in
@@ -1188,7 +1188,7 @@ bool StackColoring::removeAllMarkers() {
   return Count;
 }
 
-void StackColoring::remapInstructions(DenseMap<int, int>& SlotRemap, int MergedSlot) {
+void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
   unsigned FixedInstr = 0;
   unsigned FixedMemOp = 0;
   unsigned FixedDbg = 0;
@@ -1198,9 +1198,6 @@ void StackColoring::remapInstructions(DenseMap<int, int>& SlotRemap, int MergedS
     if (!VI.Var || !VI.inStackSlot())
       continue;
     int Slot = VI.getStackSlot();
-    if (Slot >= 0 && Slot2Info[Slot].Offset != InvalidIdx) {
-      VI.updateStackSlot(MergedSlot);
-    }
     if (auto It = SlotRemap.find(Slot); It != SlotRemap.end()) {
       LLVM_DEBUG(dbgs() << "Remapping debug info for ["
                         << cast<DILocalVariable>(VI.Var)->getName() << "].\n");
@@ -1309,12 +1306,6 @@ void StackColoring::remapInstructions(DenseMap<int, int>& SlotRemap, int MergedS
         if (FromSlot<0)
           continue;
 
-        if (FromSlot >= 0 && Slot2Info[FromSlot].Offset != InvalidIdx) {
-          MO.setIndex(MergedSlot);
-          MO.setOffset(MO.getOffset() + Slot2Info[FromSlot].Offset);
-          continue;
-        }
-
         // Only look at mapped slots.
         if (!SlotRemap.count(FromSlot))
           continue;
@@ -1356,8 +1347,6 @@ void StackColoring::remapInstructions(DenseMap<int, int>& SlotRemap, int MergedS
           auto To = SlotRemap.find(FI);
           if (To != SlotRemap.end())
             SSRefs[FI].push_back(MMO);
-          if (FI >= 0 && Slot2Info[FI].Offset != InvalidIdx)
-            SSRefs[FI].push_back(MMO);
         }
 
         // If this memory location can be a slot remapped here,
@@ -1376,7 +1365,7 @@ void StackColoring::remapInstructions(DenseMap<int, int>& SlotRemap, int MergedS
                 // that is not remapped, we continue checking.
                 // Otherwise, we need to invalidate AA infomation.
                 const AllocaInst *AI = dyn_cast_or_null<AllocaInst>(V);
-                if ((AI && MergedAllocas.count(AI)) || UseNewStackColoring) {
+                if (AI && MergedAllocas.count(AI)) {
                   MayHaveConflictingAAMD = true;
                   break;
                 }
@@ -1400,20 +1389,13 @@ void StackColoring::remapInstructions(DenseMap<int, int>& SlotRemap, int MergedS
   // Rewrite MachineMemOperands that reference old frame indices.
   for (auto E : enumerate(SSRefs))
     if (!E.value().empty()) {
-      if (UseNewStackColoring) {
-        const PseudoSourceValue *NewSV =
-            MF->getPSVManager().getFixedStack(MergedSlot);
-        for (MachineMemOperand *Ref : E.value())
-          Ref->setValue(NewSV);
-      } else {
-        const PseudoSourceValue *NewSV = MF->getPSVManager().getFixedStack(
-            SlotRemap.find(E.index())->second);
-        for (MachineMemOperand *Ref : E.value())
-          Ref->setValue(NewSV);
-      }
+      const PseudoSourceValue *NewSV =
+          MF->getPSVManager().getFixedStack(SlotRemap.find(E.index())->second);
+      for (MachineMemOperand *Ref : E.value())
+        Ref->setValue(NewSV);
     }
 
-  // Update the location of C++ catch objects for the MSVC personality routine.
+    // Update the location of C++ catch objects for the MSVC personality routine.
   if (WinEHFuncInfo *EHInfo = MF->getWinEHFuncInfo())
     for (WinEHTryBlockMapEntry &TBME : EHInfo->TryBlockMap)
       for (WinEHHandlerType &H : TBME.HandlerArray)
@@ -1933,7 +1915,7 @@ bool StackColoring::run(MachineFunction &Func) {
     // indices to use the remapped frame index.
     if (!SlotRemap.empty()) {
       expungeSlotMap(SlotRemap, NumSlots);
-      remapInstructions(SlotRemap, InvalidIdx);
+      remapInstructions(SlotRemap);
     }
   } else {
     // Maybe this entire logic should be moved to a generic StackLayouter that
