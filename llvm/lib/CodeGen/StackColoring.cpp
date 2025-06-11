@@ -10,13 +10,7 @@
 // lifetime markers machine instructions (LIFETIME_START and LIFETIME_END),
 // which represent the possible lifetime of stack slots. It attempts to
 // merge disjoint stack slots and reduce the used stack space.
-// NOTE: This pass is not StackSlotColoring, which optimizes spill slots.
-//
-// TODO: In the future we plan to improve stack coloring in the following ways:
-// 1. Allow merging multiple small slots into a single larger slot at different
-//    offsets.
-// 2. Merge this pass with StackSlotColoring and allow merging of allocas with
-//    spill slots.
+// NOTE: This pass is not StackSlotColoring, which optimizes only spill slots.
 //
 //===----------------------------------------------------------------------===//
 
@@ -25,7 +19,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -100,9 +93,8 @@ static cl::opt<bool> UseNewStackColoring(
     "new-stack-coloring", cl::init(false), cl::Hidden,
     cl::desc("Use a better logic to try to reduce stack usage"));
 
-static constexpr unsigned MaxCandidatesToConsiderDefault = 5;
-static cl::opt<unsigned> MaxCandidatesToConsider(
-    "stackcoloring-max-candidates", cl::init(MaxCandidatesToConsiderDefault),
+static cl::opt<unsigned> MaxCandidatesOpt(
+    "stackcoloring-max-candidates", cl::init(0),
     cl::Hidden,
     cl::desc(
         "Max number of candidates that will be evaluated, 0 means no limit"));
@@ -656,7 +648,7 @@ LLVM_DUMP_METHOD void StackColoring::SlotInfo::dump(const StackColoring* State) 
     Slot = this - State->Slot2Info.data();
     dbgs() << "fi#" << Slot;
   } else
-  dbgs() << "SlotInfo"; 
+    dbgs() << "SlotInfo";
   dbgs() << ":";
   if (Offset != InvalidIdx)
     dbgs() << " offset=" << Offset;
@@ -665,10 +657,8 @@ LLVM_DUMP_METHOD void StackColoring::SlotInfo::dump(const StackColoring* State) 
       dbgs() << " \"" << State->MFI->getObjectAllocation(Slot)->getName() << "\"";
     if (State->MFI->isSpillSlotObjectIndex(Slot))
       dbgs() << " spill";
-    }
+  }
   dbgs() << " size=" << Size << " align=" << Align.value() << '\n';
-  if (IndexBasedLiveRange)
-    dbgs() << "Index: " << *IndexBasedLiveRange << "\n";
   dumpBV("LIVENESS   ", Liveness);
   BitVector Start;
   Start.resize(Liveness.size());
@@ -973,6 +963,13 @@ void StackColoring::calculateLiveIntervals(unsigned NumSlots) {
   unsigned SpillChangeCounter = 0;
 
   if (LS && LS->getNumIntervals()) {
+    // Here we prepare Spill slots lifetime informations
+    // Live ranges in the LiveStacks seem to be slightly outdated in many small
+    // ways. this is not an issue for stack-slot-coloring, because its only
+    // operating on LiveRange form LiveStack, but it is an issue here,
+    // So we only rely on LiveStack, to give us live edges, and conservatively
+    // re-construct in-block liveness changes
+
     for (const MachineBasicBlock &MBB : *MF) {
       BlockLifetimeInfo &MBBLiveness = BlockLiveness[MBB.getNumber()];
       MBBLiveness.LiveIn.resize(NumSlots);
@@ -1015,14 +1012,6 @@ void StackColoring::calculateLiveIntervals(unsigned NumSlots) {
           unsigned Slot = PSV->getFrameIndex();
           if (!LS->hasInterval(Slot))
             continue;
-          // if (Slot == 17) {
-          //   dbgs() << "MI: " << MI;
-          //   dbgs() << "MBB: " << MBB.getName() << "\n";
-          //   dbgs() << "MBB range:" << Indexes->getMBBRange(&MBB).first << "-"
-          //          << Indexes->getMBBRange(&MBB).second << "\n";
-          //   dbgs() << "slot range: " << LS->getInterval(Slot) << "\n";
-          //   dbgs() << "\n";
-          // }
           assert(MMO->isStore() != MMO->isLoad());
           if (MMO->isStore()) {
             if (!IsStoredTo[Slot]) {
@@ -1048,6 +1037,8 @@ void StackColoring::calculateLiveIntervals(unsigned NumSlots) {
                                           /*IsStart=*/false, Slot});
       }
 
+      // Ensure that the changes are in the same order they will be found and
+      // need to be processed in
       std::stable_sort(MidBlockSpillChanges.begin() + SizeOnStart,
                        MidBlockSpillChanges.end(),
                        [&](SplitSlotChanges Lhs, SplitSlotChanges Rhs) -> bool {
@@ -1081,6 +1072,8 @@ void StackColoring::calculateLiveIntervals(unsigned NumSlots) {
 
     bool StartedSinceInc = false;
     auto EndRangeFor = [&](int Slot) {
+      // The less index the better, so we only increase if the ranges would not
+      // be accurate without
       if (StartIdx[Slot] == CurrIdx || StartedSinceInc) {
         CurrIdx++;
         StartedSinceInc = false;
@@ -1101,9 +1094,6 @@ void StackColoring::calculateLiveIntervals(unsigned NumSlots) {
         continue;
       SlotIndex ThisIndex = Indexes->getInstructionIndex(MI);
       auto OnChange = [&](unsigned Slot, bool IsStart) {
-        // if (Slot == 3) {
-        //   outs() << "HERE\n";
-        // }
         if (IsStart) {
           StartedSinceInc = true;
           // If a slot is already definitely in use, we don't have to emit
@@ -1209,7 +1199,6 @@ void StackColoring::remapInstructions(DenseMap<int, int>& SlotRemap, int MergedS
       continue;
     int Slot = VI.getStackSlot();
     if (Slot >= 0 && Slot2Info[Slot].Offset != InvalidIdx) {
-      // FIXME: properly update the offset into MergedSlot debug
       VI.updateStackSlot(MergedSlot);
     }
     if (auto It = SlotRemap.find(Slot); It != SlotRemap.end()) {
@@ -1585,7 +1574,7 @@ unsigned StackColoring::doMerging(unsigned NumSlots) {
   SlotInfo* LastQueryLhs = nullptr;
   SlotInfo* LastQueryRhs = nullptr;
   bool LastQueryRes = false;
-  // TODO: Real caching ?
+  // Maybe there should be real caching here
   auto HasOverlapCached = [&](SlotInfo &Lhs, SlotInfo &Rhs) {
     if (&Lhs == LastQueryLhs && LastQueryRhs == &Rhs)
       return LastQueryRes;
@@ -1616,8 +1605,10 @@ unsigned StackColoring::doMerging(unsigned NumSlots) {
 
     // The slots in the linked-list are always kept in ascending order, so the
     // earliest slot has the lowest offset
-    // This loop handles cases where the latest slot doesn't cannot be both live
-    // because of the CFG, so even if there lifetime overlap, they can overlap
+    // This loop handles cases where this slot and the latest slot doesn't
+    // cannot be both live because of the CFG, so even if there lifetime
+    // overlap, they can overlap
+    // See comment about implementation higher in the file
     while (LLVM_UNLIKELY(Last->Slot != InvalidIdx &&
                          !HasOverlapCached(Info, Slot2Info[Last->Slot])))
       Last = &OlderStatus[Last->Prev];
@@ -1638,7 +1629,7 @@ unsigned StackColoring::doMerging(unsigned NumSlots) {
       return;
     }
 
-    // Insure ordering of slots
+    // Ensure ordering of slots
     Status* Inserted = &OlderStatus.back();
     Inserted->Offset = Offset;
     Inserted->Slot = &Info - Slot2Info.data();
@@ -1651,9 +1642,10 @@ unsigned StackColoring::doMerging(unsigned NumSlots) {
     Curr->Prev = Idx;
   };
 
-  SmallVector<unsigned, MaxCandidatesToConsiderDefault> Candidates;
-  unsigned MaxCandidates =
-      MaxCandidatesToConsider == 0 ? ~0u : MaxCandidatesToConsider;
+  // This is a vector but element ordering is not relevant
+  SmallVector<unsigned> Candidates;
+
+  unsigned MaxCandidates = MaxCandidatesOpt == 0 ? ~0u : MaxCandidatesOpt;
   for (unsigned I = 0; I < MaxCandidates; I++) {
     if (SlotStack.empty())
       break;
@@ -1666,7 +1658,7 @@ unsigned StackColoring::doMerging(unsigned NumSlots) {
     unsigned BestIdx = InvalidIdx;
     unsigned BestOffset = InvalidIdx;
 
-    LLVM_DEBUG(dbgs() << "top=" << WorseCaseOffset << " choosing: ");
+    LLVM_DEBUG(dbgs() << "Worse is at " << WorseCaseOffset << ", choosing: ");
     for (unsigned K = 0; K < Candidates.size(); K++) {
       SlotInfo &Info = Slot2Info[Candidates[K]];
       unsigned Offset = 0;
@@ -1705,7 +1697,8 @@ unsigned StackColoring::doMerging(unsigned NumSlots) {
         if (Other.SlotPriority != Info.SlotPriority)
           return Other.SlotPriority < Info.SlotPriority;
 
-        // Both are always stored in Slot2Info, so this is deterministic
+        // Both are always stored in Slot2Info, so this is equivalent to
+        // FrameIndex comparaison
         return &Other < &Info;
       }();
 
@@ -1783,10 +1776,10 @@ bool StackColoring::run(MachineFunction &Func) {
   VNInfoAllocator.Reset();
   Slot2Info.clear();
 
-  unsigned NumSlots = MFI->getObjectIndexEnd();
+  if (!UseNewStackColoring)
+    LS = nullptr;
 
-  // if (MF->getName() == "_ZL9transformPjS_Rm")
-  //   outs() << "HERE\n";
+  unsigned NumSlots = MFI->getObjectIndexEnd();
 
   // If there are no stack slots then there are no markers to remove.
   if (NumSlots < 2 || DisableColoring)
@@ -1898,22 +1891,10 @@ bool StackColoring::run(MachineFunction &Func) {
           auto &SecondS = LiveStarts[SecondSlot];
           assert(!First->empty() && !Second->empty() && "Found an empty range");
 
-          bool OldNoOverlap = !First->isLiveAtIndexes(SecondS) &&
-                              !Second->isLiveAtIndexes(FirstS);
-
-          SlotInfo &FSlot = Slot2Info[FirstSlot];
-          SlotInfo &SSlot = Slot2Info[SecondSlot];
-          bool NewNoOverlap = !FSlot.hasOverlap(SSlot);
-
-          // if (NewNoOverlap != OldNoOverlap) {
-          //   LLVM_DEBUG(dbgs() << "OldNoOverlap=" << OldNoOverlap
-          //                     << " NewNoOverlap=" << NewNoOverlap << "\n");
-          // }
-          // assert(OldNoOverlap == NewNoOverlap);
-
           // Merge disjoint slots. This is a little bit tricky - see the
           // Implementation Notes section for an explanation.
-          if (OldNoOverlap) {
+          if (!First->isLiveAtIndexes(SecondS) &&
+              !Second->isLiveAtIndexes(FirstS)) {
             Changed = true;
             First->MergeSegmentsInAsValue(*Second, First->getValNumInfo(0));
 
@@ -1921,8 +1902,6 @@ bool StackColoring::run(MachineFunction &Func) {
             FirstS.append(SecondS.begin(), SecondS.end());
             auto Mid = FirstS.begin() + OldSize;
             std::inplace_merge(FirstS.begin(), Mid, FirstS.end());
-
-            // FSlot.Liveness |= SSlot.Liveness;
 
             SlotRemap[SecondSlot] = FirstSlot;
             SortedSlots[J] = -1;
