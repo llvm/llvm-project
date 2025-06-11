@@ -39,10 +39,10 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 ; DXC-NEXT:                BaseShaderRegister: 1
 ; DXC-NEXT:                RegisterSpace:   0
 ; DXC-NEXT:                OffsetInDescriptorsFromTableStart: 4294967295
-; DXC-NEXT:                DATA_VOLATILE:   true
+; DXC-NEXT:                DATA_STATIC_WHILE_SET_AT_EXECUTE:   true
 ; DXC-NEXT:              - RangeType:       1
 ; DXC-NEXT:                NumDescriptors:  5
 ; DXC-NEXT:                BaseShaderRegister: 1
 ; DXC-NEXT:                RegisterSpace:   10
 ; DXC-NEXT:                OffsetInDescriptorsFromTableStart: 5
-; DXC-NEXT:                DESCRIPTORS_VOLATILE: true
+; DXC-NEXT:                DATA_VOLATILE: true
