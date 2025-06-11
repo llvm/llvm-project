@@ -32,8 +32,6 @@ using namespace llvm;
 STATISTIC(NumInstrRenumberings, "Number of renumberings across all blocks");
 
 DbgMarker *BasicBlock::createMarker(Instruction *I) {
-  assert(IsNewDbgInfoFormat &&
-         "Tried to create a marker in a non new debug-info block!");
   if (I->DebugMarker)
     return I->DebugMarker;
   DbgMarker *Marker = new DbgMarker();
@@ -43,8 +41,6 @@ DbgMarker *BasicBlock::createMarker(Instruction *I) {
 }
 
 DbgMarker *BasicBlock::createMarker(InstListType::iterator It) {
-  assert(IsNewDbgInfoFormat &&
-         "Tried to create a marker in a non new debug-info block!");
   if (It != end())
     return createMarker(&*It);
   DbgMarker *DM = getTrailingDbgRecords();

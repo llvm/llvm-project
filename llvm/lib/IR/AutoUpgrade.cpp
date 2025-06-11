@@ -1155,8 +1155,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
   case 'd':
     if (Name.consume_front("dbg.")) {
       // Mark debug intrinsics for upgrade to new debug format.
-      if (CanUpgradeDebugIntrinsicsToRecords &&
-          F->getParent()->IsNewDbgInfoFormat) {
+      if (CanUpgradeDebugIntrinsicsToRecords) {
         if (Name == "addr" || Name == "value" || Name == "assign" ||
             Name == "declare" || Name == "label") {
           // There's no function to replace these with.
@@ -4395,12 +4394,32 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
   return Builder.CreateBitCast(RMW, RetTy);
 }
 
-/// Helper to unwrap intrinsic call MetadataAsValue operands.
-template <typename MDType>
-static MDType *unwrapMAVOp(CallBase *CI, unsigned Op) {
-  if (MetadataAsValue *MAV = dyn_cast<MetadataAsValue>(CI->getArgOperand(Op)))
-    return dyn_cast<MDType>(MAV->getMetadata());
+/// Helper to unwrap intrinsic call MetadataAsValue operands. Return as a
+/// plain MDNode, as it's the verifier's job to check these are the correct
+/// types later.
+static MDNode *unwrapMAVOp(CallBase *CI, unsigned Op) {
+  if (Op < CI->arg_size()) {
+    if (MetadataAsValue *MAV =
+            dyn_cast<MetadataAsValue>(CI->getArgOperand(Op))) {
+      Metadata *MD = MAV->getMetadata();
+      return dyn_cast_if_present<MDNode>(MD);
+    }
+  }
   return nullptr;
+}
+
+/// Helper to unwrap Metadata MetadataAsValue operands, such as the Value field.
+static Metadata *unwrapMAVMetadataOp(CallBase *CI, unsigned Op) {
+  if (Op < CI->arg_size())
+    if (MetadataAsValue *MAV = dyn_cast<MetadataAsValue>(CI->getArgOperand(Op)))
+      return MAV->getMetadata();
+  return nullptr;
+}
+
+static MDNode *getDebugLocSafe(const Instruction *I) {
+  // The MDNode attached to this instruction might not be the correct type,
+  // as the verifier has not yet be run. Fetch it as a bare MDNode.
+  return I->getDebugLoc().getAsMDNode();
 }
 
 /// Convert debug intrinsic calls to non-instruction debug records.
@@ -4409,25 +4428,32 @@ static MDType *unwrapMAVOp(CallBase *CI, unsigned Op) {
 static void upgradeDbgIntrinsicToDbgRecord(StringRef Name, CallBase *CI) {
   DbgRecord *DR = nullptr;
   if (Name == "label") {
-    DR = new DbgLabelRecord(unwrapMAVOp<DILabel>(CI, 0), CI->getDebugLoc());
+    DR = DbgLabelRecord::createUnresolvedDbgLabelRecord(unwrapMAVOp(CI, 0),
+                                                        CI->getDebugLoc());
   } else if (Name == "assign") {
-    DR = new DbgVariableRecord(
-        unwrapMAVOp<Metadata>(CI, 0), unwrapMAVOp<DILocalVariable>(CI, 1),
-        unwrapMAVOp<DIExpression>(CI, 2), unwrapMAVOp<DIAssignID>(CI, 3),
-        unwrapMAVOp<Metadata>(CI, 4), unwrapMAVOp<DIExpression>(CI, 5),
-        CI->getDebugLoc());
+    DR = DbgVariableRecord::createUnresolvedDbgVariableRecord(
+        DbgVariableRecord::LocationType::Assign, unwrapMAVMetadataOp(CI, 0),
+        unwrapMAVOp(CI, 1), unwrapMAVOp(CI, 2), unwrapMAVOp(CI, 3),
+        unwrapMAVMetadataOp(CI, 4),
+        /*The address is a Value ref, it will be stored as a Metadata */
+        unwrapMAVOp(CI, 5), getDebugLocSafe(CI));
   } else if (Name == "declare") {
-    DR = new DbgVariableRecord(
-        unwrapMAVOp<Metadata>(CI, 0), unwrapMAVOp<DILocalVariable>(CI, 1),
-        unwrapMAVOp<DIExpression>(CI, 2), CI->getDebugLoc(),
-        DbgVariableRecord::LocationType::Declare);
+    DR = DbgVariableRecord::createUnresolvedDbgVariableRecord(
+        DbgVariableRecord::LocationType::Declare, unwrapMAVMetadataOp(CI, 0),
+        unwrapMAVOp(CI, 1), unwrapMAVOp(CI, 2), nullptr, nullptr, nullptr,
+        getDebugLocSafe(CI));
   } else if (Name == "addr") {
     // Upgrade dbg.addr to dbg.value with DW_OP_deref.
-    DIExpression *Expr = unwrapMAVOp<DIExpression>(CI, 2);
-    Expr = DIExpression::append(Expr, dwarf::DW_OP_deref);
-    DR = new DbgVariableRecord(unwrapMAVOp<Metadata>(CI, 0),
-                               unwrapMAVOp<DILocalVariable>(CI, 1), Expr,
-                               CI->getDebugLoc());
+    MDNode *ExprNode = unwrapMAVOp(CI, 2);
+    // Don't try to add something to the expression if it's not an expression.
+    // Instead, allow the verifier to fail later.
+    if (DIExpression *Expr = dyn_cast<DIExpression>(ExprNode)) {
+      ExprNode = DIExpression::append(Expr, dwarf::DW_OP_deref);
+    }
+    DR = DbgVariableRecord::createUnresolvedDbgVariableRecord(
+        DbgVariableRecord::LocationType::Value, unwrapMAVMetadataOp(CI, 0),
+        unwrapMAVOp(CI, 1), ExprNode, nullptr, nullptr, nullptr,
+        getDebugLocSafe(CI));
   } else if (Name == "value") {
     // An old version of dbg.value had an extra offset argument.
     unsigned VarOp = 1;
@@ -4440,9 +4466,10 @@ static void upgradeDbgIntrinsicToDbgRecord(StringRef Name, CallBase *CI) {
       VarOp = 2;
       ExprOp = 3;
     }
-    DR = new DbgVariableRecord(
-        unwrapMAVOp<Metadata>(CI, 0), unwrapMAVOp<DILocalVariable>(CI, VarOp),
-        unwrapMAVOp<DIExpression>(CI, ExprOp), CI->getDebugLoc());
+    DR = DbgVariableRecord::createUnresolvedDbgVariableRecord(
+        DbgVariableRecord::LocationType::Value, unwrapMAVMetadataOp(CI, 0),
+        unwrapMAVOp(CI, VarOp), unwrapMAVOp(CI, ExprOp), nullptr, nullptr,
+        nullptr, getDebugLocSafe(CI));
   }
   assert(DR && "Unhandled intrinsic kind in upgrade to DbgRecord");
   CI->getParent()->insertDbgRecordBefore(DR, CI->getIterator());
