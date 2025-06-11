@@ -481,17 +481,16 @@ define amdgpu_kernel void @s_fneg_fabs_v2bf16_non_bc_src(ptr addrspace(1) %out, 
 ; CI-NEXT:    s_lshl_b32 s2, s2, 16
 ; CI-NEXT:    v_add_f32_e64 v0, s3, 2.0
 ; CI-NEXT:    v_add_f32_e64 v1, s2, 1.0
-; CI-NEXT:    v_readfirstlane_b32 s2, v0
-; CI-NEXT:    s_and_b32 s2, s2, 0xffff0000
-; CI-NEXT:    v_and_b32_e32 v1, 0xffff0000, v1
-; CI-NEXT:    s_bitset0_b32 s2, 31
-; CI-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v1
-; CI-NEXT:    s_and_b32 s2, s2, 0xffff0000
-; CI-NEXT:    s_xor_b32 s2, s2, 0x80000000
+; CI-NEXT:    v_and_b32_e32 v0, 0x7fff0000, v0
+; CI-NEXT:    v_and_b32_e32 v1, 0x7fff0000, v1
+; CI-NEXT:    v_mul_f32_e64 v0, 1.0, |v0|
+; CI-NEXT:    v_mul_f32_e64 v1, 1.0, |v1|
 ; CI-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
-; CI-NEXT:    s_lshr_b32 s2, s2, 16
 ; CI-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
-; CI-NEXT:    v_alignbit_b32 v2, s2, v0, 16
+; CI-NEXT:    v_and_b32_e32 v1, 0xffff0000, v1
+; CI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; CI-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; CI-NEXT:    v_alignbit_b32 v2, v0, v1, 16
 ; CI-NEXT:    v_mov_b32_e32 v0, s0
 ; CI-NEXT:    v_mov_b32_e32 v1, s1
 ; CI-NEXT:    flat_store_dword v[0:1], v2
@@ -676,7 +675,7 @@ define amdgpu_kernel void @fneg_fabs_v4bf16(ptr addrspace(1) %out, <4 x bfloat> 
 ; CI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_lshl_b32 s4, s2, 16
-; CI-NEXT:    s_and_b32 s2, s2, 0xffff0000
+; CI-NEXT:    s_and_b32 s2, s2, 0x7fff0000
 ; CI-NEXT:    v_mul_f32_e64 v2, 1.0, |s2|
 ; CI-NEXT:    s_and_b32 s2, s3, 0xffff0000
 ; CI-NEXT:    s_lshl_b32 s5, s3, 16

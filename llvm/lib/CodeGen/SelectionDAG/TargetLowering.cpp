@@ -2991,14 +2991,20 @@ bool TargetLowering::SimplifyDemandedBits(
   case ISD::FCOPYSIGN: {
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
-    APInt SignMask = APInt::getSignMask(BitWidth);
 
-    if (!DemandedBits.intersects(SignMask))
+    unsigned BitWidth0 = Op0.getScalarValueSizeInBits();
+    unsigned BitWidth1 = Op1.getScalarValueSizeInBits();
+    APInt SignMask0 = APInt::getSignMask(BitWidth0);
+    APInt SignMask1 = APInt::getSignMask(BitWidth1);
+
+    if (!DemandedBits.intersects(SignMask0))
       return TLO.CombineTo(Op, Op0);
 
-    if (SimplifyDemandedBits(Op0, ~SignMask & DemandedBits, DemandedElts, Known,
-                             TLO, Depth + 1) ||
-        SimplifyDemandedBits(Op1, SignMask, DemandedElts, Known2, TLO,
+    APInt ScalarDemandedBits = DemandedBits.trunc(BitWidth0);
+
+    if (SimplifyDemandedBits(Op0, ~SignMask0 & ScalarDemandedBits, DemandedElts,
+                             Known, TLO, Depth + 1) ||
+        SimplifyDemandedBits(Op1, SignMask1, DemandedElts, Known2, TLO,
                              Depth + 1))
       return true;
 
@@ -3011,8 +3017,8 @@ bool TargetLowering::SimplifyDemandedBits(
           Op, TLO.DAG.getNode(ISD::FABS, dl, VT, Op0, Op->getFlags()));
 
     if (Known2.isNegative()) {
-      Known.One |= SignMask;
-      Known.Zero &= ~SignMask;
+      Known.One |= SignMask0;
+      Known.Zero &= ~SignMask0;
     }
 
     break;

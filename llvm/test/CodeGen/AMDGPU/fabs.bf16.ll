@@ -220,7 +220,7 @@ define amdgpu_kernel void @s_fabs_v4bf16(ptr addrspace(1) %out, <4 x bfloat> %in
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_and_b32 s4, s3, 0xffff0000
 ; CI-NEXT:    s_lshl_b32 s3, s3, 16
-; CI-NEXT:    s_and_b32 s5, s2, 0xffff0000
+; CI-NEXT:    s_and_b32 s5, s2, 0x7fff0000
 ; CI-NEXT:    v_mul_f32_e64 v0, 1.0, |s4|
 ; CI-NEXT:    v_mul_f32_e64 v1, 1.0, |s3|
 ; CI-NEXT:    v_mul_f32_e64 v2, 1.0, |s5|
@@ -944,7 +944,7 @@ define amdgpu_kernel void @v_extract_fabs_fold_v2bf16(ptr addrspace(1) %in) #0 {
 ; CI-NEXT:    flat_load_dword v0, v[0:1]
 ; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    v_lshlrev_b32_e32 v1, 16, v0
-; CI-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
+; CI-NEXT:    v_and_b32_e32 v0, 0x7fff0000, v0
 ; CI-NEXT:    v_mul_f32_e64 v1, 1.0, |v1|
 ; CI-NEXT:    v_mul_f32_e64 v0, 1.0, |v0|
 ; CI-NEXT:    v_and_b32_e32 v1, 0xffff0000, v1
