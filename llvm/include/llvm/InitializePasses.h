@@ -56,7 +56,8 @@ LLVM_ABI void initializeAssignmentTrackingAnalysisPass(PassRegistry &);
 LLVM_ABI void initializeAssumptionCacheTrackerPass(PassRegistry &);
 LLVM_ABI void initializeAtomicExpandLegacyPass(PassRegistry &);
 LLVM_ABI void initializeBasicBlockPathCloningPass(PassRegistry &);
-LLVM_ABI void initializeBasicBlockSectionsProfileReaderWrapperPassPass(PassRegistry &);
+LLVM_ABI void
+initializeBasicBlockSectionsProfileReaderWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeBasicBlockSectionsPass(PassRegistry &);
 LLVM_ABI void initializeBarrierNoopPass(PassRegistry &);
 LLVM_ABI void initializeBasicAAWrapperPassPass(PassRegistry &);
@@ -136,7 +137,8 @@ LLVM_ABI void initializeIRSimilarityIdentifierWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeIRTranslatorPass(PassRegistry &);
 LLVM_ABI void initializeIVUsersWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeIfConverterPass(PassRegistry &);
-LLVM_ABI void initializeImmutableModuleSummaryIndexWrapperPassPass(PassRegistry &);
+LLVM_ABI void
+initializeImmutableModuleSummaryIndexWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeImplicitNullChecksPass(PassRegistry &);
 LLVM_ABI void initializeIndirectBrExpandLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeInferAddressSpacesPass(PassRegistry &);
@@ -187,10 +189,12 @@ LLVM_ABI void initializeMIRAddFSDiscriminatorsPass(PassRegistry &);
 LLVM_ABI void initializeMIRCanonicalizerPass(PassRegistry &);
 LLVM_ABI void initializeMIRNamerPass(PassRegistry &);
 LLVM_ABI void initializeMIRPrintingPassPass(PassRegistry &);
-LLVM_ABI void initializeMachineBlockFrequencyInfoWrapperPassPass(PassRegistry &);
+LLVM_ABI void
+initializeMachineBlockFrequencyInfoWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeMachineBlockPlacementLegacyPass(PassRegistry &);
 LLVM_ABI void initializeMachineBlockPlacementStatsLegacyPass(PassRegistry &);
-LLVM_ABI void initializeMachineBranchProbabilityInfoWrapperPassPass(PassRegistry &);
+LLVM_ABI void
+initializeMachineBranchProbabilityInfoWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeMachineCFGPrinterPass(PassRegistry &);
 LLVM_ABI void initializeMachineCSELegacyPass(PassRegistry &);
 LLVM_ABI void initializeMachineCombinerPass(PassRegistry &);
@@ -205,14 +209,16 @@ LLVM_ABI void initializeMachineLateInstrsCleanupLegacyPass(PassRegistry &);
 LLVM_ABI void initializeMachineLICMPass(PassRegistry &);
 LLVM_ABI void initializeMachineLoopInfoWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeMachineModuleInfoWrapperPassPass(PassRegistry &);
-LLVM_ABI void initializeMachineOptimizationRemarkEmitterPassPass(PassRegistry &);
+LLVM_ABI void
+initializeMachineOptimizationRemarkEmitterPassPass(PassRegistry &);
 LLVM_ABI void initializeMachineOutlinerPass(PassRegistry &);
 LLVM_ABI void initializeStaticDataProfileInfoWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeStaticDataAnnotatorPass(PassRegistry &);
 LLVM_ABI void initializeMachinePipelinerPass(PassRegistry &);
 LLVM_ABI void initializeMachinePostDominatorTreeWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeMachineRegionInfoPassPass(PassRegistry &);
-LLVM_ABI void initializeMachineSanitizerBinaryMetadataLegacyPass(PassRegistry &);
+LLVM_ABI void
+initializeMachineSanitizerBinaryMetadataLegacyPass(PassRegistry &);
 LLVM_ABI void initializeMachineSchedulerLegacyPass(PassRegistry &);
 LLVM_ABI void initializeMachineSinkingLegacyPass(PassRegistry &);
 LLVM_ABI void initializeMachineTraceMetricsWrapperPassPass(PassRegistry &);
@@ -226,7 +232,8 @@ LLVM_ABI void initializeModuleSummaryIndexWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeModuloScheduleTestPass(PassRegistry &);
 LLVM_ABI void initializeNaryReassociateLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeObjCARCContractLegacyPassPass(PassRegistry &);
-LLVM_ABI void initializeOptimizationRemarkEmitterWrapperPassPass(PassRegistry &);
+LLVM_ABI void
+initializeOptimizationRemarkEmitterWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeOptimizePHIsLegacyPass(PassRegistry &);
 LLVM_ABI void initializePEILegacyPass(PassRegistry &);
 LLVM_ABI void initializePHIEliminationPass(PassRegistry &);
@@ -234,7 +241,8 @@ LLVM_ABI void initializePartiallyInlineLibCallsLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializePatchableFunctionLegacyPass(PassRegistry &);
 LLVM_ABI void initializePeepholeOptimizerLegacyPass(PassRegistry &);
 LLVM_ABI void initializePhiValuesWrapperPassPass(PassRegistry &);
-LLVM_ABI void initializePhysicalRegisterUsageInfoWrapperLegacyPass(PassRegistry &);
+LLVM_ABI void
+initializePhysicalRegisterUsageInfoWrapperLegacyPass(PassRegistry &);
 LLVM_ABI void initializePlaceBackedgeSafepointsLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializePostDomOnlyPrinterWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializePostDomOnlyViewerWrapperPassPass(PassRegistry &);
@@ -257,9 +265,11 @@ LLVM_ABI void initializePseudoProbeInserterPass(PassRegistry &);
 LLVM_ABI void initializeRAGreedyLegacyPass(PassRegistry &);
 LLVM_ABI void initializeReachingDefAnalysisPass(PassRegistry &);
 LLVM_ABI void initializeReassociateLegacyPassPass(PassRegistry &);
-LLVM_ABI void initializeRegAllocEvictionAdvisorAnalysisLegacyPass(PassRegistry &);
+LLVM_ABI void
+initializeRegAllocEvictionAdvisorAnalysisLegacyPass(PassRegistry &);
 LLVM_ABI void initializeRegAllocFastPass(PassRegistry &);
-LLVM_ABI void initializeRegAllocPriorityAdvisorAnalysisLegacyPass(PassRegistry &);
+LLVM_ABI void
+initializeRegAllocPriorityAdvisorAnalysisLegacyPass(PassRegistry &);
 LLVM_ABI void initializeRegAllocScoringPass(PassRegistry &);
 LLVM_ABI void initializeRegBankSelectPass(PassRegistry &);
 LLVM_ABI void initializeRegToMemWrapperPassPass(PassRegistry &);
@@ -286,7 +296,8 @@ LLVM_ABI void initializeScalarizeMaskedMemIntrinLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeScalarizerLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeScavengerTestPass(PassRegistry &);
 LLVM_ABI void initializeScopedNoAliasAAWrapperPassPass(PassRegistry &);
-LLVM_ABI void initializeSeparateConstOffsetFromGEPLegacyPassPass(PassRegistry &);
+LLVM_ABI void
+initializeSeparateConstOffsetFromGEPLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeShadowStackGCLoweringPass(PassRegistry &);
 LLVM_ABI void initializeShrinkWrapLegacyPass(PassRegistry &);
 LLVM_ABI void initializeSingleLoopExtractorPass(PassRegistry &);
@@ -303,7 +314,8 @@ LLVM_ABI void initializeStackProtectorPass(PassRegistry &);
 LLVM_ABI void initializeStackSafetyGlobalInfoWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeStackSafetyInfoWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeStackSlotColoringLegacyPass(PassRegistry &);
-LLVM_ABI void initializeStraightLineStrengthReduceLegacyPassPass(PassRegistry &);
+LLVM_ABI void
+initializeStraightLineStrengthReduceLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeStripDebugMachineModulePass(PassRegistry &);
 LLVM_ABI void initializeStructurizeCFGLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeTailCallElimPass(PassRegistry &);
