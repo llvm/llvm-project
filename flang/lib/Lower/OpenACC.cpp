@@ -2192,6 +2192,16 @@ static void determineDefaultLoopParMode(
       seqDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
           converter.getFirOpBuilder().getContext(),
           mlir::acc::DeviceType::None));
+    // Since the loop has some parallelism assigned - we cannot assign `seq`.
+    // However, the `acc.loop` verifier will check that one of seq, independent,
+    // or auto is marked. Seems reasonable to mark as auto since the OpenACC
+    // spec does say "If not, or if it is unable to make a determination, it
+    // must treat the auto clause as if it is a seq clause, and it must
+    // ignore any gang, worker, or vector clauses on the loop construct"
+    else
+      autoDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
+          converter.getFirOpBuilder().getContext(),
+          mlir::acc::DeviceType::None));
   } else {
     // As per OpenACC 3.3 standard section 2.9.7 auto clause:
     // When the parent compute construct is a kernels construct, a loop
