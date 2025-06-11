@@ -1069,10 +1069,6 @@ static Value *getDbgIntrinsicValueImpl(LLVMContext &VMContext, Value *V) {
   return MetadataAsValue::get(VMContext, ValueAsMetadata::get(V));
 }
 
-static Function *getDeclareIntrin(Module &M) {
-  return Intrinsic::getOrInsertDeclaration(&M, Intrinsic::dbg_declare);
-}
-
 DbgInstPtr DIBuilder::insertDbgValueIntrinsic(llvm::Value *Val,
                                               DILocalVariable *VarInfo,
                                               DIExpression *Expr,
