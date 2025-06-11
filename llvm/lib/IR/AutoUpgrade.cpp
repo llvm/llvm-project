@@ -4395,15 +4395,14 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
 }
 
 /// Helper to unwrap intrinsic call MetadataAsValue operands. Return as a
-/// plain MDNode, as it's the verifiers job to check these are the correct
+/// plain MDNode, as it's the verifier's job to check these are the correct
 /// types later.
 static MDNode *unwrapMAVOp(CallBase *CI, unsigned Op) {
   if (Op < CI->arg_size()) {
     if (MetadataAsValue *MAV =
             dyn_cast<MetadataAsValue>(CI->getArgOperand(Op))) {
       Metadata *MD = MAV->getMetadata();
-      if (isa<MDNode>(MD))
-        return reinterpret_cast<MDNode *>(MD);
+      return dyn_cast_if_present<MDNode>(MD);
     }
   }
   return nullptr;
