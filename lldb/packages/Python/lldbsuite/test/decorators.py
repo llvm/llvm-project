@@ -9,6 +9,7 @@ import re
 import sys
 import tempfile
 import subprocess
+import json
 
 # Third-party modules
 import unittest
@@ -451,23 +452,66 @@ def apple_simulator_test(platform):
     """
     Decorate the test as a test requiring a simulator for a specific platform.
 
-    Consider that a simulator is available if you have the corresponding SDK installed.
-    The SDK identifiers for simulators are iphonesimulator, appletvsimulator, watchsimulator
+    Consider that a simulator is available if you have the corresponding SDK
+    and runtime installed.
+
+    The SDK identifiers for simulators are iphonesimulator, appletvsimulator,
+    watchsimulator
     """
 
     def should_skip_simulator_test():
         if lldbplatformutil.getHostPlatform() not in ["darwin", "macosx"]:
             return "simulator tests are run only on darwin hosts."
+
+        # Make sure we recognize the platform.
+        mapping = {
+            "iphone": "ios",
+            "appletv": "tvos",
+            "watch": "watchos",
+        }
+        if platform not in mapping:
+            return "unknown simulator platform: {}".format(platform)
+
+        # Make sure we have an SDK.
         try:
             output = subprocess.check_output(
                 ["xcodebuild", "-showsdks"], stderr=subprocess.DEVNULL
             ).decode("utf-8")
-            if re.search("%ssimulator" % platform, output):
-                return None
-            else:
+            if not re.search("%ssimulator" % platform, output):
                 return "%s simulator is not supported on this system." % platform
         except subprocess.CalledProcessError:
             return "Simulators are unsupported on this system (xcodebuild failed)"
+
+        # Make sure we a simulator runtime.
+        try:
+            sim_devices_str = subprocess.check_output(
+                ["xcrun", "simctl", "list", "-j", "devices"]
+            ).decode("utf-8")
+
+            sim_devices = json.loads(sim_devices_str)["devices"]
+            for simulator in sim_devices:
+                if isinstance(simulator, dict):
+                    runtime = simulator["name"]
+                    devices = simulator["devices"]
+                else:
+                    runtime = simulator
+                    devices = sim_devices[simulator]
+
+                if not mapping[platform] in runtime.lower():
+                    continue
+
+                for device in devices:
+                    if (
+                        "availability" in device
+                        and device["availability"] == "(available)"
+                    ):
+                        return None
+                    if "isAvailable" in device and device["isAvailable"]:
+                        return None
+
+            return "{} simulator is not supported on this system.".format(platform)
+        except (subprocess.CalledProcessError, json.decoder.JSONDecodeError):
+            return "Simulators are unsupported on this system (simctl failed)"
 
     return skipTestIfFn(should_skip_simulator_test)
 
