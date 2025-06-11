@@ -2184,9 +2184,12 @@ public:
                                        MachineBasicBlock::iterator &MIT,
                                        unsigned Flags) const;
 
-  /// Remove all Linker Optimization Hints associated with instructions in
-  // \p MIs and \return the number of hints removed.
-  virtual size_t clearLOHs(const SmallPtrSetImpl<MachineInstr *> &MIs) const {
+  /// Remove all Linker Optimization Hints (LOH) associated with instructions in
+  /// \p MIs and \return the number of hints removed. This is useful in
+  /// transformations that cause these hints to be illegal, like in the machine
+  /// outliner.
+  virtual size_t clearLinkerOptimizationHints(
+      const SmallPtrSetImpl<MachineInstr *> &MIs) const {
     return 0;
   }
 

@@ -504,7 +504,8 @@ public:
     LOHRelated.insert_range(Args);
   }
 
-  size_t clearLOHs(const SmallPtrSetImpl<MachineInstr *> &MIs) {
+  size_t
+  clearLinkerOptimizationHints(const SmallPtrSetImpl<MachineInstr *> &MIs) {
     size_t InitialSize = LOHContainerSet.size();
     erase_if(LOHContainerSet, [&](const auto &D) {
       return any_of(D.getArgs(), [&](auto *Arg) { return MIs.contains(Arg); });

@@ -9641,13 +9641,13 @@ AArch64InstrInfo::getOutlinableRanges(MachineBasicBlock &MBB,
   return Ranges;
 }
 
-size_t
-AArch64InstrInfo::clearLOHs(const SmallPtrSetImpl<MachineInstr *> &MIs) const {
+size_t AArch64InstrInfo::clearLinkerOptimizationHints(
+    const SmallPtrSetImpl<MachineInstr *> &MIs) const {
   if (MIs.empty())
     return 0;
   auto *MI = *MIs.begin();
   auto *FuncInfo = MI->getMF()->getInfo<AArch64FunctionInfo>();
-  return FuncInfo->clearLOHs(MIs);
+  return FuncInfo->clearLinkerOptimizationHints(MIs);
 }
 
 outliner::InstrType

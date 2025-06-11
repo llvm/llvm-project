@@ -493,7 +493,8 @@ public:
   outliner::InstrType getOutliningTypeImpl(const MachineModuleInfo &MMI,
                                            MachineBasicBlock::iterator &MIT,
                                            unsigned Flags) const override;
-  size_t clearLOHs(const SmallPtrSetImpl<MachineInstr *> &MIs) const override;
+  size_t clearLinkerOptimizationHints(
+      const SmallPtrSetImpl<MachineInstr *> &MIs) const override;
   SmallVector<
       std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>>
   getOutlinableRanges(MachineBasicBlock &MBB, unsigned &Flags) const override;

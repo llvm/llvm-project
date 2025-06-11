@@ -1086,7 +1086,7 @@ bool MachineOutliner::outline(
       const TargetInstrInfo &TII = *C.getMF()->getSubtarget().getInstrInfo();
       for (MachineInstr &MI : C)
         MIs.insert(&MI);
-      size_t NumRemoved = TII.clearLOHs(MIs);
+      size_t NumRemoved = TII.clearLinkerOptimizationHints(MIs);
       MIs.clear();
       MinRemovedLOHs =
           std::min(MinRemovedLOHs.value_or(NumRemoved), NumRemoved);
