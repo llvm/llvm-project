@@ -4029,10 +4029,10 @@ bool VectorCombine::shrinkPhiOfShuffles(Instruction &I) {
   SmallVector<int, 16> NewMask;
   NewMask.reserve(Mask0.size());
 
-  for (auto I = 0u; I < Mask0.size(); ++I) {
-    if (Mask0[I] >= 0 && Mask1[I] >= 0)
-      NewMask.push_back(Mask0[I] - Mask1[I]);
-    else if (Mask0[I] == -1 && Mask1[I] == -1)
+  for (auto [M0, M1] : zip(Mask0, Mask1)) {
+    if (M0 >= 0 && M1 >= 0)
+      NewMask.push_back(M0 - M1);
+    else if (M0 == -1 && M1 == -1)
       continue;
     else
       return false;
@@ -4069,6 +4069,7 @@ bool VectorCombine::shrinkPhiOfShuffles(Instruction &I) {
   Builder.SetCurrentDebugLocation(Shuf->getDebugLoc());
   auto *PoisonVal = PoisonValue::get(InputVT);
   auto *NewShuf0 = Builder.CreateShuffleVector(Op, PoisonVal, NewMask);
+  Worklist.push(cast<Instruction>(NewShuf0));
 
   Builder.SetInsertPoint(Phi);
   Builder.SetCurrentDebugLocation(Phi->getDebugLoc());
