@@ -665,6 +665,8 @@ private:
   void emitAndUpdateRetAlloca(clang::QualType type, mlir::Location loc,
                               clang::CharUnits alignment);
 
+  CIRGenCallee emitDirectCallee(const GlobalDecl &gd);
+
 public:
   Address emitAddrOfFieldStorage(Address base, const FieldDecl *field,
                                  llvm::StringRef fieldName,
@@ -710,6 +712,9 @@ public:
   LValue emitBinaryOperatorLValue(const BinaryOperator *e);
 
   mlir::LogicalResult emitBreakStmt(const clang::BreakStmt &s);
+
+  RValue emitBuiltinExpr(const clang::GlobalDecl &gd, unsigned builtinID,
+                         const clang::CallExpr *e, ReturnValueSlot returnValue);
 
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
