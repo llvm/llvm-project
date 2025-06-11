@@ -1,8 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
-template<size_t T>
-struct [[gnu::packed]] Payload {
+template <size_t T> struct [[gnu::packed]] Payload {
   uint8_t data[T];
 };
 
