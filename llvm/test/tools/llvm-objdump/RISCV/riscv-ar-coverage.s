@@ -30,7 +30,7 @@
 .global _start
 .text
 
-# The core of the feature being added was address resolution for instruction 
+# The core of the feature being added was address resolution for instruction
 # sequences where a register is populated by immediate values via two
 # separate instructions. First by an instruction that provides the upper bits
 # (auipc, lui ...) followed by another instruction for the lower bits (addi,
@@ -38,7 +38,7 @@
 
 
 _start:
-  # Test block 1-3 each focus on a certain starting instruction in a sequences, 
+  # Test block 1-3 each focus on a certain starting instruction in a sequences,
   # the ones that provide the upper bits. The other sequence is another
   # instruction the provides the lower bits. The second instruction is
   # arbitrarily chosen to increase code coverage

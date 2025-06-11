@@ -187,12 +187,12 @@ public:
     switch (Inst.getOpcode()) {
     case RISCV::C_LUI:
     case RISCV::LUI: {
-      setGPRState(Inst.getOperand(0).getReg(), 
+      setGPRState(Inst.getOperand(0).getReg(),
                   SignExtend64<32>(Inst.getOperand(1).getImm() << 12));
       break;
     }
     case RISCV::AUIPC: {
-      setGPRState(Inst.getOperand(0).getReg(), 
+      setGPRState(Inst.getOperand(0).getReg(),
                   Addr + SignExtend64<32>(Inst.getOperand(1).getImm() << 12));
       break;
     }
@@ -302,8 +302,8 @@ public:
     case RISCV::C_SB:
     case RISCV::C_SH:
     case RISCV::C_LWSP:
-    case RISCV::C_SWSP: 
-    case RISCV::C_LDSP: 
+    case RISCV::C_SWSP:
+    case RISCV::C_LDSP:
     case RISCV::C_SDSP:
     case RISCV::C_FLWSP:
     case RISCV::C_FSWSP:
