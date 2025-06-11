@@ -1306,7 +1306,7 @@ MDNode *MDNode::getMergedCalleeTypeMetadata(LLVMContext &Ctx, MDNode *A,
                                             MDNode *B) {
   SmallVector<Metadata *, 8> AB;
   SmallSet<Metadata *, 8> MergedCallees;
-  auto AddUniqueCallees = [&AB, &MergedCallees](llvm::MDNode *N) {
+  auto AddUniqueCallees = [&AB, &MergedCallees](MDNode *N) {
     if (!N)
       return;
     for (const MDOperand &Op : N->operands()) {
@@ -1317,7 +1317,7 @@ MDNode *MDNode::getMergedCalleeTypeMetadata(LLVMContext &Ctx, MDNode *A,
   };
   AddUniqueCallees(A);
   AddUniqueCallees(B);
-  return llvm::MDNode::get(Ctx, AB);
+  return MDNode::get(Ctx, AB);
 }
 
 MDNode *MDNode::getMostGenericRange(MDNode *A, MDNode *B) {
