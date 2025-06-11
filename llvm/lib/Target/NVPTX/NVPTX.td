@@ -45,23 +45,28 @@ class FeaturePTX<int version>:
 // suffix) and sm_103 architectures (10 represents 'X', 3 represents 'Y', and no
 // feature suffix). Since 90 <= 103, sm_90 is compatible with sm_103.
 //
-// The family-specific architectures have 'f' feature suffix and they follow
+// The family-specific variants have 'f' feature suffix and they follow
 // following order:
 // sm_X{Y2}f > sm_X{Y1}f iff Y2 > Y1
 // sm_XY{f} > sm_{XY}{}
 //
 // For example, take sm_100f (10 represents 'X', 0 represents 'Y', and 'f'
 // represents 'z') and sm_103f (10 represents 'X', 3 represents 'Y', and 'f'
-// represents 'z') architectures. Since Y1 < Y2, sm_100f is compatible with
+// represents 'z') architecture variants. Since Y1 < Y2, sm_100f is compatible with
 // sm_103f. Similarly based on the second rule, sm_90 is compatible with sm_103f.
 //
-// The architecture-specific architectures have 'a' feature suffix and they follow
+// Some counter examples, take sm_100f and sm_120f (12 represents 'X', 0
+// represents 'Y', and 'f' represents 'z') architecture variants. Since both
+// belongs to different family i.e. X1 != X2, sm_100f is not compatible with
+// sm_120f.
+//
+// The architecture-specific variants have 'a' feature suffix and they follow
 // following order:
 // sm_XY{a} > sm_XY{f} > sm_{XY}{}
 //
 // For example, take sm_103a (10 represents 'X', 3 represents 'Y', and 'a'
-// represents 'z'), sm_103f, and sm_103 architectures. The sm_103 is compatible
-// with sm_103a and sm_103f, and sm_103f is compatible with sm_103a.
+// represents 'z'), sm_103f, and sm_103 architecture variants. The sm_103 is
+// compatible with sm_103a and sm_103f, and sm_103f is compatible with sm_103a.
 //
 // Encoding := Arch * 100 + 10 (for 'f') + 1 (for 'a')
 // Arch := X * 10 + Y
@@ -83,15 +88,13 @@ foreach sm = [20, 21, 30, 32, 35, 37, 50, 52, 53,
 
   // Family-specific targets which are compatible within same family
   // (e.g. FullSMVersion for sm_100f is 10010)
-  if !ge(sm, 100) then {
+  if !ge(sm, 100) then
     def SM#sm#f : FeatureSM<""#sm#"f", !add(!mul(sm, 100), 10)>;
-  }
 
   // Architecture-specific targets which are incompatible across architectures
   // (e.g. FullSMVersion for sm_100a is 10011)
-  if !ge(sm, 90) then {
+  if !ge(sm, 90) then
     def SM#sm#a : FeatureSM<""#sm#"a", !add(!mul(sm, 100), 11)>;
-  }
 }
 
 foreach version = [32, 40, 41, 42, 43, 50, 60, 61, 62, 63, 64, 65,
