@@ -5,11 +5,10 @@ define i1 @test_switch_with_xor(i32 %x) {
 ; CHECK-LABEL: define i1 @test_switch_with_xor(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[X]], 2
-; CHECK-NEXT:    switch i32 [[XOR]], label %[[SW_DEFAULT:.*]] [
-; CHECK-NEXT:      i32 1, label %[[SW_BB:.*]]
-; CHECK-NEXT:      i32 2, label %[[SW_BB]]
-; CHECK-NEXT:      i32 3, label %[[SW_BB]]
+; CHECK-NEXT:    switch i32 [[X]], label %[[SW_DEFAULT:.*]] [
+; CHECK-NEXT:      i32 3, label %[[SW_BB:.*]]
+; CHECK-NEXT:      i32 0, label %[[SW_BB]]
+; CHECK-NEXT:      i32 1, label %[[SW_BB]]
 ; CHECK-NEXT:    ]
 ; CHECK:       [[SW_BB]]:
 ; CHECK-NEXT:    ret i1 true
