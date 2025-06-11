@@ -41,17 +41,27 @@ public:
 private:
   template <typename T> struct TypeOf {
     static constexpr std::string_view get() {
+#if defined(__GNUC__)
       std::string_view v(__PRETTY_FUNCTION__);
       // Extract the "xyz" from the "pretty function" string:
       // "... [with T = xyz; std::string_view = ...]"
       std::string_view front("with T = ");
       std::string_view back("; std::string_view =");
 
+#elif defined(_MSC_VER)
+      std::string_view v(__FUNCSIG__);
+      // Extract the "xyz" from the "pretty function" string:
+      // "... TypeOf<xyz>::get(void)"
+      std::string_view front(" TypeOf<");
+      std::string_view back(">::get(void)");
+
+#else
+      return "";
+#endif
+
       if (auto fpos{v.find(front)}; fpos != v.npos) {
-        // Strip the part "... [with T = "
         v.remove_prefix(fpos + front.size());
         if (auto bpos{v.find(back)}; bpos != v.npos) {
-          // Strip the ending "; std::string_view = ...]"
           v.remove_suffix(v.size() - bpos);
           return v;
         }
