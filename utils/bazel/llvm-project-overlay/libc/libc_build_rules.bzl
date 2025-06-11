@@ -250,6 +250,7 @@ def libc_header_library(name, hdrs, deps = [], **kwargs):
 
 def libc_math_function(
         name,
+        hdrs = [],
         additional_deps = None):
     """Add a target for a math function.
 
@@ -276,6 +277,6 @@ def libc_math_function(
     libc_function(
         name = name,
         srcs = ["src/math/generic/" + name + ".cpp"],
-        hdrs = ["src/math/" + name + ".h"],
+        hdrs = ["src/math/" + name + ".h"] + hdrs,
         deps = [":__support_common"] + OLD_FPUTIL_DEPS + additional_deps,
     )

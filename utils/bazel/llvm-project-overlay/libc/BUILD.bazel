@@ -2569,6 +2569,10 @@ libc_math_function(
 
 libc_math_function(
     name = "expf",
+    hdrs = [
+        "src/__support/exp_float_constants.h",
+        "src/__support/expf.h",
+    ],
     additional_deps = [
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
