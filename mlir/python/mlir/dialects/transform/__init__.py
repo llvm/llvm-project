@@ -249,9 +249,7 @@ class ApplyRegisteredPassOp(ApplyRegisteredPassOp):
 
             if isinstance(value, (Value, Operation, OpView)):
                 dynamic_options.append(_get_op_result_or_value(value))
-                options_dict[key] = ParamOperandAttr(
-                    cur_param_operand_idx, context
-                )
+                options_dict[key] = ParamOperandAttr(cur_param_operand_idx, context)
                 cur_param_operand_idx += 1
             elif isinstance(value, Attribute):
                 options_dict[key] = value
