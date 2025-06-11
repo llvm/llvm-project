@@ -75,81 +75,85 @@ UnsignedDivisionByConstantInfo::get(const APInt &D, unsigned LeadingZeros,
                                     bool AllowEvenDivisorOptimization) {
   assert(!D.isZero() && !D.isOne() && "Precondition violation.");
   assert(D.getBitWidth() > 1 && "Does not work at smaller bitwidths.");
+  assert(D.getBitWidth() >= LeadingZeros &&
+         "Leading zeros more than bitwidth.");
 
-  APInt Delta;
-  struct UnsignedDivisionByConstantInfo Retval;
-  Retval.IsAdd = false; // initialize "add" indicator
-  APInt AllOnes =
-      APInt::getLowBitsSet(D.getBitWidth(), D.getBitWidth() - LeadingZeros);
   APInt SignedMin = APInt::getSignedMinValue(D.getBitWidth());
-  APInt SignedMax = APInt::getSignedMaxValue(D.getBitWidth());
+  APInt Quotient, Remainder;
 
-  // Calculate NC, the largest dividend such that NC.urem(D) == D-1.
-  APInt NC = AllOnes - (AllOnes + 1 - D).urem(D);
-  assert(NC.urem(D) == D - 1 && "Unexpected NC value");
-  unsigned P = D.getBitWidth() - 1; // initialize P
-  APInt Q1, R1, Q2, R2;
   // initialize Q1 = 2P/NC; R1 = rem(2P,NC)
-  APInt::udivrem(SignedMin, NC, Q1, R1);
-  // initialize Q2 = (2P-1)/D; R2 = rem((2P-1),D)
-  APInt::udivrem(SignedMax, D, Q2, R2);
-  do {
-    P = P + 1;
-    if (R1.uge(NC - R1)) {
-      // update Q1
-      Q1 <<= 1;
-      ++Q1;
-      // update R1
-      R1 <<= 1;
-      R1 -= NC;
-    } else {
-      Q1 <<= 1; // update Q1
-      R1 <<= 1; // update R1
-    }
-    if ((R2 + 1).uge(D - R2)) {
-      if (Q2.uge(SignedMax))
-        Retval.IsAdd = true;
-      // update Q2
-      Q2 <<= 1;
-      ++Q2;
-      // update R2
-      R2 <<= 1;
-      ++R2;
-      R2 -= D;
-    } else {
-      if (Q2.uge(SignedMin))
-        Retval.IsAdd = true;
-      // update Q2
-      Q2 <<= 1;
-      // update R2
-      R2 <<= 1;
-      ++R2;
-    }
-    // Delta = D - 1 - R2
-    Delta = D;
-    --Delta;
-    Delta -= R2;
-  } while (P < D.getBitWidth() * 2 &&
-           (Q1.ult(Delta) || (Q1 == Delta && R1.isZero())));
+  APInt::udivrem(SignedMin, D, Quotient, Remainder);
 
-  if (Retval.IsAdd && !D[0] && AllowEvenDivisorOptimization) {
+  APInt DownMultiplier = APInt::getZero(D.getBitWidth());
+  unsigned DownExponent = 0;
+
+  bool hasMagicDown = false;
+
+  unsigned CeilLog2 = D.ceilLogBase2();
+  struct UnsignedDivisionByConstantInfo Retval;
+
+  // Begin a loop that increments the exponent, until we find a power of 2 that
+  // works.
+  unsigned exponent;
+  for (exponent = 0;; exponent++) {
+    // Calculate the multiplier for the current exponent.
+    // Quotient and remainder is from previous exponent; compute it for this
+    // exponent.
+    if (Remainder.uge(D - Remainder)) {
+      // Doubling remainder will wrap around D
+      Quotient <<= 1;
+      ++Quotient;
+
+      Remainder <<= 1;
+      Remainder -= D;
+    } else {
+      Quotient <<= 1;
+      Remainder <<= 1;
+    }
+
+    if (exponent + LeadingZeros >= CeilLog2) {
+      // If we have reached the point where the multiplier is larger than
+      // the divisor, we can stop.
+      break;
+    }
+
+    APInt PowerOf2 =
+        APInt::getOneBitSet(D.getBitWidth(), exponent + LeadingZeros);
+
+    if ((D - Remainder).ule(PowerOf2)) {
+      break;
+    }
+
+    if (!hasMagicDown && Remainder.ule(PowerOf2)) {
+      // If we have not found a magic number yet, and the remainder is less
+      // than or equal to D - Remainder, we can use the current quotient as
+      // a magic number.
+      hasMagicDown = true;
+      DownMultiplier = Quotient;
+      DownExponent = exponent;
+    }
+  }
+
+  if (exponent < CeilLog2) {
+    // magic_up is efficient
+    Retval.Magic = std::move(Quotient);
+    ++Retval.Magic;
+    Retval.PreShift = 0;
+    Retval.PostShift = exponent;
+    Retval.IsAdd = false;
+  } else if (D[0]) {
+    assert(hasMagicDown && "Expected a magic number for down multiplier");
+    Retval.Magic = std::move(DownMultiplier);
+    Retval.PreShift = 0;
+    Retval.PostShift = DownExponent;
+    Retval.IsAdd = true;
+  } else {
     unsigned PreShift = D.countr_zero();
     APInt ShiftedD = D.lshr(PreShift);
     Retval =
         UnsignedDivisionByConstantInfo::get(ShiftedD, LeadingZeros + PreShift);
     assert(Retval.IsAdd == 0 && Retval.PreShift == 0);
     Retval.PreShift = PreShift;
-    return Retval;
   }
-
-  Retval.Magic = std::move(Q2);             // resulting magic number
-  ++Retval.Magic;
-  Retval.PostShift = P - D.getBitWidth(); // resulting shift
-  // Reduce shift amount for IsAdd.
-  if (Retval.IsAdd) {
-    assert(Retval.PostShift > 0 && "Unexpected shift");
-    Retval.PostShift -= 1;
-  }
-  Retval.PreShift = 0;
   return Retval;
 }
