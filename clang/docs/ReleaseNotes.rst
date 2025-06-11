@@ -695,6 +695,10 @@ Bug Fixes in This Version
   the second clause of a C-style ``for`` loop. (#GH139818)
 - Fixed a bug with constexpr evaluation for structs containing unions in case of C++ modules. (#GH143168)
 
+- When passing a qualified rvalue as the controlling expression of a
+  ``_Generic`` selection expression, Clang now properly strips the qualifiers.
+  Fixes #GH96713
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
