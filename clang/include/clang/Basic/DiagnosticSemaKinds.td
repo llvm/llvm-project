@@ -4063,6 +4063,9 @@ def warn_at_available_unchecked_use : Warning<
   "%select{@available|__builtin_available}0 does not guard availability here; "
   "use if (%select{@available|__builtin_available}0) instead">,
   InGroup<DiagGroup<"unsupported-availability-guard">>;
+def warn_availability_invalid_os_version
+    : Warning<"invalid %1 version '%0' in availability attribute">, InGroup<DiagGroup<"invalid-version-availability">>;
+def note_availability_invalid_os_version_adjusted: Note<"implicitly treating version as '%0'">;
 
 def warn_missing_sdksettings_for_availability_checking : Warning<
   "%0 availability is ignored without a valid 'SDKSettings.json' in the SDK">,
@@ -9432,6 +9435,8 @@ def err_cuda_host_shared : Error<
     "%select{__device__|__global__|__host__|__host__ __device__}0 functions">;
 def err_cuda_nonstatic_constdev: Error<"__constant__, __device__, and "
     "__managed__ are not allowed on non-static local variables">;
+def err_cuda_address_space_gpuvar: Error<"__constant__, __device__, and "
+    "__shared__ variables must use default address space">;
 def err_cuda_grid_constant_not_allowed : Error<
   "__grid_constant__ is only allowed on const-qualified kernel parameters">;
 def err_cuda_ovl_target : Error<
