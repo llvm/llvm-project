@@ -253,6 +253,12 @@ Interpreter::Visit(const UnaryOpNode *node) {
       rhs = dynamic_rhs;
 
     lldb::ValueObjectSP child_sp = rhs->Dereference(error);
+    if (!child_sp && m_use_synthetic) {
+      if (lldb::ValueObjectSP synth_obj_sp = rhs->GetSyntheticValue()) {
+        error.Clear();
+        child_sp = synth_obj_sp->Dereference(error);
+      }
+    }
     if (error.Fail())
       return llvm::make_error<DILDiagnosticError>(m_expr, error.AsCString(),
                                                   node->GetLocation());
@@ -280,6 +286,7 @@ Interpreter::Visit(const MemberOfNode *node) {
   auto base_or_err = Evaluate(node->GetBase());
   if (!base_or_err)
     return base_or_err;
+  bool expr_is_ptr = node->GetIsArrow();
   lldb::ValueObjectSP base = *base_or_err;
 
   // Perform some basic type & correctness checking.
@@ -319,11 +326,11 @@ Interpreter::Visit(const MemberOfNode *node) {
         return llvm::make_error<DILDiagnosticError>(
             m_expr, errMsg, node->GetLocation(), node->GetFieldName().size());
       }
+      expr_is_ptr = false;
     }
   }
 
   if (m_check_ptr_vs_member) {
-    bool expr_is_ptr = node->GetIsArrow();
     bool base_is_ptr = base->IsPointerType();
 
     if (expr_is_ptr != base_is_ptr) {
