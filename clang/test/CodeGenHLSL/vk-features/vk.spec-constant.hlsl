@@ -6,7 +6,7 @@
 [[vk::constant_id(1)]]
 const bool bool_const = true;
 
-[[vk::constant_id(2)]]
+[[vk::constant_id(1)]]
 const short short_const = 4;
 
 [[vk::constant_id(3)]]
@@ -124,7 +124,7 @@ void main() {
 // CHECK-SAME: ) #[[ATTR3]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
-// CHECK-NEXT:    [[TMP1:%.*]] = call i16 @_Z20__spirv_SpecConstantis(i32 2, i16 4)
+// CHECK-NEXT:    [[TMP1:%.*]] = call i16 @_Z20__spirv_SpecConstantis(i32 1, i16 4)
 // CHECK-NEXT:    store i16 [[TMP1]], ptr addrspace(10) @_ZL11short_const, align 2
 // CHECK-NEXT:    ret void
 //
