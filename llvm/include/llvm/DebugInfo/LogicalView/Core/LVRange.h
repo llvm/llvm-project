@@ -55,14 +55,14 @@ class LLVM_ABI LVRange final : public LVObject {
   LVAllocator Allocator;
   LVRangesTree RangesTree;
   LVRangeEntries RangeEntries;
-  LVAddress TombstoneAddress;
-  LVAddress Lower;
+  std::optional<LVAddress> TombstoneAddress;
+  LVAddress Lower = 0;
   LVAddress Upper = 0;
 
 public:
-  LVRange(LVAddress Address = InvalidTombstone)
+  LVRange(std::optional<LVAddress> Address = std::nullopt)
       : LVObject(), RangesTree(Allocator), TombstoneAddress(Address),
-        Lower(Address) {}
+        Lower(Address ? Address.value() : MaxAddress) {}
   LVRange(const LVRange &) = delete;
   LVRange &operator=(const LVRange &) = delete;
   ~LVRange() = default;
@@ -79,7 +79,7 @@ public:
 
   void clear() {
     RangeEntries.clear();
-    Lower = TombstoneAddress;
+    Lower = TombstoneAddress ? TombstoneAddress.value() : MaxAddress;
     Upper = 0;
   }
   bool empty() const { return RangeEntries.empty(); }

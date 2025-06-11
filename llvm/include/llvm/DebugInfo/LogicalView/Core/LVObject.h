@@ -92,9 +92,7 @@ using LVOffsets = SmallVector<LVOffset, 8>;
 // 0xffffffff when the size of an address is 32 bits).
 //
 // -1 (0xffffffff) => Valid tombstone
-// -2 (0xfffffffe) => Undefined tomstone
 const LVAddress MaxAddress = std::numeric_limits<uint64_t>::max();
-const LVAddress InvalidTombstone = MaxAddress - 1;
 
 enum class LVBinaryType { NONE, ELF, COFF };
 enum class LVComparePass { Missing, Added };

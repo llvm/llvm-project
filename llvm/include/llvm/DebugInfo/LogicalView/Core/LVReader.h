@@ -157,7 +157,7 @@ protected:
   LVRange *getSectionRanges(LVSectionIndex SectionIndex);
 
   // The value is updated for each Compile Unit that is processed.
-  LVAddress TombstoneAddress = InvalidTombstone;
+  std::optional<LVAddress> TombstoneAddress;
 
   // Record Compilation Unit entry.
   void addCompileUnitOffset(LVOffset Offset, LVScopeCompileUnit *CompileUnit) {
@@ -287,8 +287,8 @@ public:
 
   void setTombstoneAddress(LVAddress Address) { TombstoneAddress = Address; }
   LVAddress getTombstoneAddress() const {
-    assert(TombstoneAddress != InvalidTombstone && "Invalid tombstone value");
-    return TombstoneAddress;
+    assert(TombstoneAddress && "Unset tombstone value");
+    return TombstoneAddress.value();
   }
 
   // Access to the scopes root.
