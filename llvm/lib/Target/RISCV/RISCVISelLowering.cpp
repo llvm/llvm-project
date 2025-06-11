@@ -16147,6 +16147,14 @@ static bool narrowIndex(SDValue &N, ISD::MemIndexType IndexType, SelectionDAG &D
   return true;
 }
 
+// We're performing 2 combinations here:
+// === Rule 1 ===
+// Given VFirst = (vfirst_vl ..., EVL) and
+// (seteq (riscv_selectLT VFirst, 0, EVL, VFirst), EVL), we can replace it with
+// (setLT VFirst, 0). Similar replacements are done for variants w/ `setne` and
+// `riscv_selectGE`.
+//
+// === Rule 2 ===
 // Replace (seteq (i64 (and X, 0xffffffff)), C1) with
 // (seteq (i64 (sext_inreg (X, i32)), C1')) where C1' is C1 sign extended from
 // bit 31. Same for setne. C1' may be cheaper to materialize and the sext_inreg
@@ -16155,9 +16163,107 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
                                    const RISCVSubtarget &Subtarget) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
+  ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
   EVT VT = N->getValueType(0);
   EVT OpVT = N0.getValueType();
+  SDLoc DL(N);
 
+  // Both rules are looking for an equality compare.
+  if (!isIntEqualitySetCC(Cond))
+    return SDValue();
+
+  // Rule 1
+  using namespace SDPatternMatch;
+  auto matchSelectCC = [](SDValue Op, SDValue VLCandidate, bool Inverse,
+                          SDValue &Select) -> bool {
+    SDValue VLCandVTNode;
+    EVT VLCandVT = VLCandidate.getValueType();
+    // Remove any sext.
+    if (sd_match(Op, m_Opc(ISD::SIGN_EXTEND_INREG)))
+      Op = Op->getOperand(0);
+    if (sd_match(VLCandidate, m_Node(ISD::SIGN_EXTEND_INREG, m_Value(),
+                                     m_Value(VLCandVTNode)))) {
+      VLCandidate = VLCandidate->getOperand(0);
+      VLCandVT = cast<VTSDNode>(VLCandVTNode)->getVT();
+    }
+
+    SDValue VFirst, CC;
+    // This is the value used in both VFIRST_VL's VL operand and converting its
+    // result from -1 to VL.
+    SDValue EVL;
+    auto VFirstPattern =
+        m_AllOf(m_Node(RISCVISD::VFIRST_VL, m_Value(), m_Value(), m_Value(EVL)),
+                m_Value(VFirst));
+
+    auto SelectCCPattern =
+        m_Node(RISCVISD::SELECT_CC, VFirstPattern, m_SpecificInt(0),
+               m_Value(CC), m_Deferred(EVL), m_Deferred(VFirst));
+    auto InvSelectCCPattern =
+        m_Node(RISCVISD::SELECT_CC, VFirstPattern, m_SpecificInt(0),
+               m_Value(CC), m_Deferred(VFirst), m_Deferred(EVL));
+
+    if (Inverse) {
+      if (!sd_match(Op,
+                    m_AllOf(m_OneUse(InvSelectCCPattern), m_Value(Select))) ||
+          cast<CondCodeSDNode>(CC)->get() != ISD::SETGE)
+        return false;
+    } else {
+      if (!sd_match(Op, m_AllOf(m_OneUse(SelectCCPattern), m_Value(Select))) ||
+          cast<CondCodeSDNode>(CC)->get() != ISD::SETLT)
+        return false;
+    }
+
+    APInt ZExtMask;
+    unsigned EVLSizeInBits = EVL.getValueType().getFixedSizeInBits();
+    // If it is an extended value, it should be an zext.
+    if (sd_match(EVL, m_And(m_Value(), m_ConstInt(ZExtMask))) &&
+        ZExtMask.isMask()) {
+      EVL = EVL->getOperand(0);
+      EVLSizeInBits = ZExtMask.countTrailingOnes();
+    }
+
+    // Check if VLCandidate and EVL are equal.
+    if (EVL == VLCandidate)
+      // Make sure their original size are the same.
+      return VLCandVT.getFixedSizeInBits() == EVLSizeInBits;
+
+    return false;
+  };
+
+  auto buildSetCC = [&](SDValue Select, bool Inverse) -> SDValue {
+    ISD::CondCode NewCC = cast<CondCodeSDNode>(Select->getOperand(2))->get();
+    if (Inverse)
+      NewCC = ISD::getSetCCInverse(NewCC, OpVT);
+    return DAG.getSetCC(DL, VT, Select->getOperand(0), Select->getOperand(1),
+                        NewCC);
+  };
+
+  SDValue SelectVal;
+  if (matchSelectCC(N0, N1, /*Inverse=*/false, SelectVal) ||
+      matchSelectCC(N1, N0, /*Inverse=*/false, SelectVal)) {
+    if (Cond == ISD::SETEQ) {
+      // (seteq (SELECT_CC LHS, RHS, CC, N1, X), N1) => (setCC LHS, RHS)
+      // (seteq N0, (SELECT_CC LHS, RHS, CC, N0, X)) => (setCC LHS, RHS)
+      return buildSetCC(SelectVal, /*Inverse=*/false);
+    } else {
+      // (setne (SELECT_CC LHS, RHS, CC, N1, X), N1) => (setInvCC LHS, RHS)
+      // (setne N0, (SELECT_CC LHS, RHS, CC, N0, X)) => (setInvCC LHS, RHS)
+      return buildSetCC(SelectVal, /*Inverse=*/true);
+    }
+  } else if (matchSelectCC(N0, N1, /*Inverse=*/true, SelectVal) ||
+             matchSelectCC(N1, N0, /*Inverse=*/true, SelectVal)) {
+    if (Cond == ISD::SETEQ) {
+      // (seteq (SELECT_CC LHS, RHS, CC, X, N1), N1) => (setInvCC LHS, RHS)
+      // (seteq N0, (SELECT_CC LHS, RHS, CC, X, N0)) => (setInvCC LHS, RHS)
+      return buildSetCC(SelectVal, /*Inverse=*/true);
+    } else {
+      // (setne (SELECT_CC LHS, RHS, CC, X, N1), N1) => (setCC LHS, RHS)
+      // (setne N0, (SELECT_CC LHS, RHS, CC, X, N0)) => (setCC LHS, RHS)
+      return buildSetCC(SelectVal, /*Inverse=*/false);
+    }
+  }
+
+  // Rule 2
   if (OpVT != MVT::i64 || !Subtarget.is64Bit())
     return SDValue();
 
@@ -16172,11 +16278,6 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
       N0.getConstantOperandVal(1) != UINT64_C(0xffffffff))
     return SDValue();
 
-  // Looking for an equality compare.
-  ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
-  if (!isIntEqualitySetCC(Cond))
-    return SDValue();
-
   // Don't do this if the sign bit is provably zero, it will be turned back into
   // an AND.
   APInt SignMask = APInt::getOneBitSet(64, 31);
@@ -16185,16 +16286,15 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
 
   const APInt &C1 = N1C->getAPIntValue();
 
-  SDLoc dl(N);
   // If the constant is larger than 2^32 - 1 it is impossible for both sides
   // to be equal.
   if (C1.getActiveBits() > 32)
-    return DAG.getBoolConstant(Cond == ISD::SETNE, dl, VT, OpVT);
+    return DAG.getBoolConstant(Cond == ISD::SETNE, DL, VT, OpVT);
 
   SDValue SExtOp = DAG.getNode(ISD::SIGN_EXTEND_INREG, N, OpVT,
                                N0.getOperand(0), DAG.getValueType(MVT::i32));
-  return DAG.getSetCC(dl, VT, SExtOp, DAG.getConstant(C1.trunc(32).sext(64),
-                                                      dl, OpVT), Cond);
+  return DAG.getSetCC(DL, VT, SExtOp,
+                      DAG.getConstant(C1.trunc(32).sext(64), DL, OpVT), Cond);
 }
 
 static SDValue
