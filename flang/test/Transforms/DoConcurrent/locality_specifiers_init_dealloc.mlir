@@ -3,21 +3,21 @@
 
 // RUN: fir-opt --omp-do-concurrent-conversion="map-to=host" %s | FileCheck %s
 
-func.func @my_allocator() {
+func.func @my_allocator(%arg0: !fir.ref<!fir.box<!fir.array<10xf32>>>, %arg1: !fir.ref<!fir.box<!fir.array<10xf32>>>) {
   return
 }
 
-func.func @my_deallocator() {
+func.func @my_deallocator(%arg0: !fir.ref<!fir.box<!fir.array<10xf32>>>) {
   return
 }
 
 fir.local {type = local} @_QFlocal_assocEaa_private_box_10xf32 : !fir.box<!fir.array<10xf32>> init {
 ^bb0(%arg0: !fir.ref<!fir.box<!fir.array<10xf32>>>, %arg1: !fir.ref<!fir.box<!fir.array<10xf32>>>):
-  fir.call @my_allocator() : () -> ()
+  fir.call @my_allocator(%arg0, %arg1) : (!fir.ref<!fir.box<!fir.array<10xf32>>>, !fir.ref<!fir.box<!fir.array<10xf32>>>) -> ()
   fir.yield(%arg1 : !fir.ref<!fir.box<!fir.array<10xf32>>>)
 } dealloc {
 ^bb0(%arg0: !fir.ref<!fir.box<!fir.array<10xf32>>>):
-  fir.call @my_deallocator() : () -> ()
+  fir.call @my_deallocator(%arg0) : (!fir.ref<!fir.box<!fir.array<10xf32>>>) -> ()
   fir.yield
 }
 
@@ -38,12 +38,12 @@ func.func @_QPlocal_assoc() {
 }
 
 // CHECK:      omp.private {type = private} @[[PRIVATIZER:.*]] : !fir.box<!fir.array<10xf32>> init {
-// CHECK-NEXT: ^bb0(%{{.*}}: !{{.*}}, %{{.*}}: !{{.*}}):
-// CHECK-NEXT:   fir.call @my_allocator() : () -> ()
-// CHECK-NEXT:   omp.yield(%{{.*}})
+// CHECK-NEXT: ^bb0(%[[ORIG_ARG:.*]]: !{{.*}}, %[[PRIV_ARG:.*]]: !{{.*}}):
+// CHECK-NEXT:   fir.call @my_allocator(%[[ORIG_ARG]], %[[PRIV_ARG]]) : ({{.*}}) -> ()
+// CHECK-NEXT:   omp.yield(%[[PRIV_ARG]] : {{.*}})
 // CHECK-NEXT: } dealloc {
-// CHECK-NEXT: ^bb0(%{{.*}}: !{{.*}}):
-// CHECK-NEXT:   fir.call @my_deallocator() : () -> ()
+// CHECK-NEXT: ^bb0(%[[PRIV_ARG:.*]]: !{{.*}}):
+// CHECK-NEXT:   fir.call @my_deallocator(%[[PRIV_ARG]]) : ({{.*}}) -> ()
 // CHECK-NEXT:   omp.yield
 // CHECK-NEXT: }
 
