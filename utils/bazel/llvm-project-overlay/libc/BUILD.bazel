@@ -1601,6 +1601,7 @@ libc_support_library(
 libc_header_library(
     name = "libcxx_shared_headers",
     hdrs = [
+        "shared/libc_common.h",
         "shared/fp_bits.h",
         "shared/str_to_float.h",
         "shared/str_to_integer.h",
@@ -1618,7 +1619,7 @@ libc_header_library(
 libc_support_library(
     name = "errno",
     srcs = ["src/errno/libc_errno.cpp"],
-    hdrs = ["src/errno/libc_errno.h"],
+    hdrs = ["src/__support/libc_errno.h"],
     deps = [
         ":__support_common",
         ":__support_cpp_atomic",
