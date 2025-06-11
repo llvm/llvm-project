@@ -40,7 +40,6 @@ public:
 
 private:
   template <typename T> struct TypeOf {
-    static constexpr std::string_view name{TypeOf<T>::get()};
     static constexpr std::string_view get() {
       std::string_view v(__PRETTY_FUNCTION__);
       // Extract the "xyz" from the "pretty function" string:
@@ -59,6 +58,8 @@ private:
       }
       return "";
     }
+
+    static constexpr std::string_view name{TypeOf<T>::get()};
   };
 
   template <typename A, bool C> void Show(const common::Indirection<A, C> &x) {
