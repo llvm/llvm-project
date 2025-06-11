@@ -191,17 +191,17 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getEffectiveWavesPerEU(
       getOccupancyWithWorkGroupSizes(LDSBytes, FlatWorkGroupSizes).second};
   Default.first = std::min(Default.first, Default.second);
 
-  // Make sure requested minimum is less than requested maximum.
-  if (RequestedWavesPerEU.second &&
-      RequestedWavesPerEU.first > RequestedWavesPerEU.second)
-    return Default;
-
-  // Make sure requested values do not violate subtarget's specifications and
-  // are compatible with values implied by minimum/maximum flat workgroup sizes.
+  // Make sure requested minimum is within the default range and lower than the
+  // requested maximum. The latter must not violate target specification.
   if (RequestedWavesPerEU.first < Default.first ||
-      RequestedWavesPerEU.second > Default.second)
+      RequestedWavesPerEU.first > Default.second ||
+      RequestedWavesPerEU.first > RequestedWavesPerEU.second ||
+      RequestedWavesPerEU.second > getMaxWavesPerEU())
     return Default;
 
+  // We cannot exceed maximum occupancy implied by flat workgroup size and LDS.
+  RequestedWavesPerEU.second =
+      std::min(RequestedWavesPerEU.second, Default.second);
   return RequestedWavesPerEU;
 }
 

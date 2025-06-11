@@ -590,7 +590,7 @@ public:
   /// necessary.
   void emitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override {
     if (const MCSymbolRefExpr *SRE = dyn_cast_or_null<MCSymbolRefExpr>(Value)) {
-      if (getSpecifier(SRE) == ARMMCExpr::VK_SBREL && !(Size == 4)) {
+      if (SRE->getSpecifier() == ARMMCExpr::VK_SBREL && !(Size == 4)) {
         getContext().reportError(Loc, "relocated expression must be 32-bit");
         return;
       }
@@ -1299,9 +1299,8 @@ void ARMELFStreamer::EmitPersonalityFixup(StringRef Name) {
 
   visitUsedExpr(*PersonalityRef);
   MCDataFragment *DF = getOrCreateDataFragment();
-  DF->getFixups().push_back(MCFixup::create(DF->getContents().size(),
-                                            PersonalityRef,
-                                            MCFixup::getKindForSize(4, false)));
+  DF->getFixups().push_back(
+      MCFixup::create(DF->getContents().size(), PersonalityRef, FK_Data_4));
 }
 
 void ARMELFStreamer::FlushPendingOffset() {

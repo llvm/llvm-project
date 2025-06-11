@@ -207,6 +207,18 @@ define i32 @pat8(i32 %c) nounwind {
   ret i32 %or
 }
 
+define i32 @pat9(i32 %a) {
+; CHECK-LABEL: pat9:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lu12i.w $a1, -8
+; CHECK-NEXT:    ori $a1, $a1, 564
+; CHECK-NEXT:    bstrins.w $a0, $a1, 31, 16
+; CHECK-NEXT:    ret
+  %and = and i32 %a, 65535       ; 0x0000ffff
+  %or = or i32 %and, -2110521344 ; 0x82340000
+  ret i32 %or
+}
+
 ;; Test that bstrins.w is not generated because constant OR operand
 ;; doesn't fit into bits cleared by constant AND operand.
 define i32 @no_bstrins_w(i32 %a) nounwind {

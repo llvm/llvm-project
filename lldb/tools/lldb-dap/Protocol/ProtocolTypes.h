@@ -414,6 +414,16 @@ bool fromJSON(const llvm::json::Value &, SteppingGranularity &,
               llvm::json::Path);
 llvm::json::Value toJSON(const SteppingGranularity &);
 
+/// A Thread.
+struct Thread {
+  /// Unique identifier for the thread.
+  lldb::tid_t id = LLDB_INVALID_THREAD_ID;
+  /// The name of the thread.
+  std::string name;
+};
+bool fromJSON(const llvm::json::Value &, Thread &, llvm::json::Path);
+llvm::json::Value toJSON(const Thread &);
+
 /// Provides formatting information for a value.
 struct ValueFormat {
   /// Display the value in hex.
@@ -637,7 +647,7 @@ struct DisassembledInstruction {
 
   /// The address of the instruction. Treated as a hex value if prefixed with
   /// `0x`, or as a decimal value otherwise.
-  lldb::addr_t address;
+  lldb::addr_t address = LLDB_INVALID_ADDRESS;
 
   /// Raw bytes representing the instruction and its operands, in an
   /// implementation-defined format.

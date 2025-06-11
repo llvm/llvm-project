@@ -127,8 +127,8 @@ void MCResourceInfo::assignResourceInfoExpr(
       // Avoid constructing recursive definitions by detecting whether `Sym` is
       // found transitively within any of its `CalleeValSym`.
       if (!CalleeValSym->isVariable() ||
-          !CalleeValSym->getVariableValue(/*isUsed=*/false)
-               ->isSymbolUsedInExpression(Sym)) {
+          !AMDGPUMCExpr::isSymbolUsedInExpression(
+              Sym, CalleeValSym->getVariableValue())) {
         LLVM_DEBUG(dbgs() << "MCResUse:   " << Sym->getName() << ": Adding "
                           << CalleeValSym->getName() << " as callee\n");
         ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
@@ -244,8 +244,8 @@ void MCResourceInfo::gatherResourceInfo(
         // Avoid constructing recursive definitions by detecting whether `Sym`
         // is found transitively within any of its `CalleeValSym`.
         if (!CalleeValSym->isVariable() ||
-            !CalleeValSym->getVariableValue(/*isUsed=*/false)
-                 ->isSymbolUsedInExpression(Sym)) {
+            !AMDGPUMCExpr::isSymbolUsedInExpression(
+                Sym, CalleeValSym->getVariableValue())) {
           LLVM_DEBUG(dbgs() << "MCResUse:   " << Sym->getName() << ": Adding "
                             << CalleeValSym->getName() << " as callee\n");
           ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));

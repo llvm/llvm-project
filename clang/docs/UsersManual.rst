@@ -2300,12 +2300,14 @@ are listed below.
 .. option:: -f[no-]unique-source-file-names
 
    When enabled, allows the compiler to assume that each object file
-   passed to the linker has been compiled using a unique source file
-   path. This is useful for reducing link times when doing ThinLTO
-   in combination with whole-program devirtualization or CFI.
+   passed to the linker has a unique identifier. The identifier for
+   an object file is either the source file path or the value of the
+   argument `-funique-source-file-identifier` if specified. This is
+   useful for reducing link times when doing ThinLTO in combination with
+   whole-program devirtualization or CFI.
 
-   The full source path passed to the compiler must be unique. This
-   means that, for example, the following is a usage error:
+   The full source path or identifier passed to the compiler must be
+   unique. This means that, for example, the following is a usage error:
 
    .. code-block:: console
 
@@ -2326,6 +2328,11 @@ are listed below.
 
    A misuse of this flag may result in a duplicate symbol error at
    link time.
+
+.. option:: -funique-source-file-identifier=IDENTIFIER
+
+   Used with `-funique-source-file-names` to specify a source file
+   identifier.
 
 .. option:: -fforce-emit-vtables
 
@@ -3742,6 +3749,35 @@ Doxygen-style comments and ignores ordinary comments starting with ``//`` and
   It is also possible to use ``-fcomment-block-commands`` several times; e.g.
   ``-fcomment-block-commands=foo -fcomment-block-commands=bar`` does the same
   as above.
+
+.. _ccc-override-options:
+
+CCC_OVERRIDE_OPTIONS
+--------------------
+The environment variable ``CCC_OVERRIDE_OPTIONS`` can be used to edit clang's
+command line arguments. The value of this variable is a space-separated list of
+edits to perform. The edits are applied in the order in which they appear in
+``CCC_OVERRIDE_OPTIONS``. Each edit should be one of the following forms:
+
+- ``#``: Silence information about the changes to the command line arguments.
+
+- ``^FOO``: Add ``FOO`` as a new argument at the beginning of the command line
+  right after the name of the compiler executable.
+
+- ``+FOO``: Add ``FOO`` as a new argument at the end of the command line.
+
+- ``s/XXX/YYY/``: Substitute the regular expression ``XXX`` with ``YYY`` in the
+  command line.
+
+- ``xOPTION``: Removes all instances of the literal argument ``OPTION``.
+
+- ``XOPTION``: Removes all instances of the literal argument ``OPTION``, and the
+  following argument.
+
+- ``Ox``: Removes all flags matching ``O`` or ``O[sz0-9]`` and adds ``Ox`` at
+  the end of the command line.
+
+This environment variable does not affect the options added by the config files.
 
 .. _c:
 
