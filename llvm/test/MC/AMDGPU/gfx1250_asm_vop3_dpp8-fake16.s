@@ -174,6 +174,10 @@ v_cvt_pk_fp8_f32_e64_dpp v5, v1, v2 clamp dpp8:[7,6,5,4,2,3,0,1]
 // GFX1250: v_cvt_pk_fp8_f32_e64_dpp v5, v1, v2 clamp dpp8:[7,6,5,4,2,3,0,1] ; encoding: [0x05,0x80,0x69,0xd7,0xe9,0x04,0x02,0x00,0x01,0x77,0xa9,0x21]
 // GFX12-ERR: :[[@LINE-2]]:37: error: invalid operand for instruction
 
+v_cvt_pk_fp8_f32_e64_dpp v5, v1, v2 op_sel:[0,0,1] clamp dpp8:[7,6,5,4,2,3,0,1]
+// GFX1250: v_cvt_pk_fp8_f32_e64_dpp v5, v1, v2 op_sel:[0,0,1] clamp dpp8:[7,6,5,4,2,3,0,1] ; encoding: [0x05,0xc0,0x69,0xd7,0xe9,0x04,0x02,0x00,0x01,0x77,0xa9,0x21]
+// GFX12-ERR: :[[@LINE-2]]:58: error: not a valid operand.
+
 v_cvt_sr_fp8_f32_e64_dpp v5, v1, v2 clamp dpp8:[7,6,5,4,2,3,0,1]
 // GFX1250: v_cvt_sr_fp8_f32_e64_dpp v5, v1, v2 clamp dpp8:[7,6,5,4,2,3,0,1] ; encoding: [0x05,0x80,0x6b,0xd7,0xe9,0x04,0x02,0x00,0x01,0x77,0xa9,0x21]
 // GFX12-ERR: :[[@LINE-2]]:37: error: invalid operand for instruction
