@@ -22,6 +22,63 @@ using namespace clang::CIRGen;
 using namespace cir;
 using namespace mlir::acc;
 
+void CIRGenFunction::updateLoopOpParallelism(mlir::acc::LoopOp &op,
+                                             bool isOrphan,
+                                             OpenACCDirectiveKind dk) {
+  // Check that at least one of auto, independent, or seq is present
+  // for the device-independent default clauses.
+  auto hasDeviceNone = [](mlir::acc::DeviceTypeAttr attr) -> bool {
+    return attr.getValue() == mlir::acc::DeviceType::None;
+  };
+  bool hasDefaultSeq =
+      op.getSeqAttr()
+          ? llvm::any_of(
+                op.getSeqAttr().getAsRange<mlir::acc::DeviceTypeAttr>(),
+                hasDeviceNone)
+          : false;
+  bool hasDefaultIndependent =
+      op.getIndependentAttr()
+          ? llvm::any_of(
+                op.getIndependentAttr().getAsRange<mlir::acc::DeviceTypeAttr>(),
+                hasDeviceNone)
+          : false;
+  bool hasDefaultAuto =
+      op.getAuto_Attr()
+          ? llvm::any_of(
+                op.getAuto_Attr().getAsRange<mlir::acc::DeviceTypeAttr>(),
+                hasDeviceNone)
+          : false;
+
+  if (hasDefaultSeq || hasDefaultIndependent || hasDefaultAuto)
+    return;
+
+  // Orphan or parallel results in 'independent'.
+  if (isOrphan || dk == OpenACCDirectiveKind::Parallel ||
+      dk == OpenACCDirectiveKind::ParallelLoop) {
+    op.addIndependent(builder.getContext(), {});
+    return;
+  }
+
+  // Kernels always results in 'auto'.
+  if (dk == OpenACCDirectiveKind::Kernels ||
+      dk == OpenACCDirectiveKind::KernelsLoop) {
+    op.addAuto(builder.getContext(), {});
+    return;
+  }
+
+  // Serial should use 'seq' unless there is a gang, worker, or vector clause,
+  // in which case, it should use 'auto'.
+  assert(dk == OpenACCDirectiveKind::Serial ||
+         dk == OpenACCDirectiveKind::SerialLoop);
+
+  if (op.getWorkerAttr() || op.getVectorAttr() || op.getGangAttr()) {
+    op.addAuto(builder.getContext(), {});
+    return;
+  }
+
+  op.addSeq(builder.getContext(), {});
+}
+
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s) {
   mlir::Location start = getLoc(s.getSourceRange().getBegin());
@@ -89,6 +146,9 @@ CIRGenFunction::emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s) {
   // Emit all clauses.
   emitOpenACCClauses(op, s.getDirectiveKind(), s.getDirectiveLoc(),
                      s.clauses());
+
+  updateLoopOpParallelism(op, s.isOrphanedLoopConstruct(),
+                          s.getParentComputeConstructKind());
 
   mlir::LogicalResult stmtRes = mlir::success();
   // Emit body.
