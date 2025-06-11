@@ -208,7 +208,7 @@ def process_source_lines(source_lines, note, args):
     source_segments = [[]]
     for line in source_lines:
         # Remove previous note.
-        if line == note:
+        if line in note:
             continue
         # Remove previous CHECK lines.
         if line.find(args.check_prefix) != -1:
