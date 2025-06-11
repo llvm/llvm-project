@@ -4814,7 +4814,8 @@ bool CombinerHelper::reassociationCanBreakAddressingModePattern(
     MachineInstr *ConvUseMI = &UseMI;
     unsigned ConvUseOpc = ConvUseMI->getOpcode();
     while (ConvUseOpc == TargetOpcode::G_INTTOPTR ||
-           ConvUseOpc == TargetOpcode::G_PTRTOINT) {
+           ConvUseOpc == TargetOpcode::G_PTRTOINT ||
+           ConvUseOpc == TargetOpcode::G_PTRTOADDR) {
       Register DefReg = ConvUseMI->getOperand(0).getReg();
       if (!MRI.hasOneNonDBGUse(DefReg))
         break;

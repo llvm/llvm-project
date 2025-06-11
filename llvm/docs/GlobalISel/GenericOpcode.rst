@@ -169,6 +169,15 @@ Convert a pointer to an integer.
 
   %1:_(s32) = G_PTRTOINT %0:_(p0)
 
+G_PTRTOADDR
+^^^^^^^^^^^
+
+Extract the address part of a pointer to an integer.
+
+.. code-block:: none
+
+  %1:_(s32) = G_PTRTOADDR %0:_(p0)
+
 G_BITCAST
 ^^^^^^^^^
 

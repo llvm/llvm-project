@@ -134,6 +134,12 @@ def G_PTRTOINT : GenericInstruction {
   let hasSideEffects = false;
 }
 
+def G_PTRTOADDR : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src);
+  let hasSideEffects = false;
+}
+
 def G_BITCAST : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
