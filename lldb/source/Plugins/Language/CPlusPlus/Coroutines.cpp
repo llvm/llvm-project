@@ -143,14 +143,14 @@ lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::Update() {
   Function *destroy_func = ExtractDestroyFunction(target_sp, frame_ptr_addr);
   CompilerType void_type = ast_ctx->GetBasicType(lldb::eBasicTypeVoid);
   CompilerType promise_type;
-  if (CompilerType template_argt =
+  if (CompilerType template_arg =
           valobj_sp->GetCompilerType().GetTypeTemplateArgument(0))
-    promise_type = std::move(template_argt);
+    promise_type = std::move(template_arg);
   if (promise_type.IsVoidType()) {
     // Try to infer the promise_type if it was type-erased
     if (destroy_func) {
-      if (CompilerType inferred_type = InferArtificialCoroType(
-              destroy_func, ConstString("__promise"))) {
+      if (CompilerType inferred_type =
+              InferArtificialCoroType(destroy_func, ConstString("__promise"))) {
         promise_type = inferred_type;
       }
     }
@@ -168,11 +168,11 @@ lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::Update() {
   CompilerType coro_func_ptr_type = coro_func_type.GetPointerType();
   ValueObjectSP resume_ptr_sp = CreateValueObjectFromAddress(
       "resume", frame_ptr_addr + 0 * ptr_size, exe_ctx, coro_func_ptr_type);
-  lldbassert(resume_ptr_sp);
+  assert(resume_ptr_sp);
   m_children.push_back(std::move(resume_ptr_sp));
   ValueObjectSP destroy_ptr_sp = CreateValueObjectFromAddress(
       "destroy", frame_ptr_addr + 1 * ptr_size, exe_ctx, coro_func_ptr_type);
-  lldbassert(destroy_ptr_sp);
+  assert(destroy_ptr_sp);
   m_children.push_back(std::move(destroy_ptr_sp));
 
   // Add promise and coro_frame
@@ -196,10 +196,9 @@ lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::Update() {
 llvm::Expected<size_t>
 StdlibCoroutineHandleSyntheticFrontEnd::GetIndexOfChildWithName(
     ConstString name) {
-  for (size_t i = 0, limit = m_children.size(); i < limit; ++i) {
-    if (m_children[i]->GetName() == name) {
-      return i;
-    }
+  for (const auto &[idx, child_sp] : llvm::enumerate(m_children)) {
+    if (child_sp->GetName() == name)
+      return idx;
   }
 
   return llvm::createStringError("Type has no child named '%s'",
