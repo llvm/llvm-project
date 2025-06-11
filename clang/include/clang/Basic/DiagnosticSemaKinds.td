@@ -1763,23 +1763,38 @@ def err_user_defined_msg_constexpr : Error<
   "constant expression">;
 
 // Type traits explanations
-def note_unsatisfied_trait : Note<"%0 is not %enum_select<TraitName>{"
-                                  "%TriviallyRelocatable{trivially relocatable}"
-                                  "}1">;
+def note_unsatisfied_trait
+    : Note<"%0 is not %enum_select<TraitName>{"
+           "%TriviallyRelocatable{trivially relocatable}|"
+           "%Replaceable{replaceable}|"
+           "%TriviallyCopyable{trivially copyable}"
+           "}1">;
 
 def note_unsatisfied_trait_reason
     : Note<"because it "
            "%enum_select<TraitNotSatisfiedReason>{"
            "%Ref{is a reference type}|"
+           "%Const{is const}|"
+           "%Volatile{is volatile}|"
            "%HasArcLifetime{has an ARC lifetime qualifier}|"
            "%VLA{is a variably-modified type}|"
            "%VBase{has a virtual base %1}|"
-           "%NRBase{has a non-trivially-relocatable base %1}|"
-           "%NRField{has a non-trivially-relocatable member %1 of type %2}|"
+           "%NotScalarOrClass{not %select{a|an array of objects of}1 scalar or "
+           "class type}|"
+           "%NTRBase{has a non-trivially-relocatable base %1}|"
+           "%NTRField{has a non-trivially-relocatable member %1 of type %2}|"
+           "%NonReplaceableBase{has a non-replaceable base %1}|"
+           "%NonReplaceableField{has a non-replaceable member %1 of type %2}|"
+           "%NTCBase{has a non-trivially-copyable base %1}|"
+           "%NTCField{has a non-trivially-copyable member %1 of type %2}|"
            "%DeletedDtr{has a %select{deleted|user-provided}1 destructor}|"
            "%UserProvidedCtr{has a user provided %select{copy|move}1 "
            "constructor}|"
+           "%DeletedCtr{has a deleted %select{copy|move}1 "
+           "constructor}|"
            "%UserProvidedAssign{has a user provided %select{copy|move}1 "
+           "assignment operator}|"
+           "%DeletedAssign{has a deleted %select{copy|move}1 "
            "assignment operator}|"
            "%UnionWithUserDeclaredSMF{is a union with a user-declared "
            "%sub{select_special_member_kind}1}"
@@ -3105,8 +3120,6 @@ def err_reference_to_function_with_unsatisfied_constraints : Error<
   "invalid reference to function %0: constraints not satisfied">;
 def err_requires_expr_local_parameter_default_argument : Error<
   "default arguments not allowed for parameters of a requires expression">;
-def err_requires_expr_parameter_referenced_in_evaluated_context : Error<
-  "constraint variable %0 cannot be used in an evaluated context">;
 def note_expr_requirement_expr_substitution_error : Note<
   "%select{and|because}0 '%1' would be invalid: %2">;
 def note_expr_requirement_expr_unknown_substitution_error : Note<
@@ -4050,6 +4063,9 @@ def warn_at_available_unchecked_use : Warning<
   "%select{@available|__builtin_available}0 does not guard availability here; "
   "use if (%select{@available|__builtin_available}0) instead">,
   InGroup<DiagGroup<"unsupported-availability-guard">>;
+def warn_availability_invalid_os_version
+    : Warning<"invalid %1 version '%0' in availability attribute">, InGroup<DiagGroup<"invalid-version-availability">>;
+def note_availability_invalid_os_version_adjusted: Note<"implicitly treating version as '%0'">;
 
 def warn_missing_sdksettings_for_availability_checking : Warning<
   "%0 availability is ignored without a valid 'SDKSettings.json' in the SDK">,
@@ -9419,6 +9435,8 @@ def err_cuda_host_shared : Error<
     "%select{__device__|__global__|__host__|__host__ __device__}0 functions">;
 def err_cuda_nonstatic_constdev: Error<"__constant__, __device__, and "
     "__managed__ are not allowed on non-static local variables">;
+def err_cuda_address_space_gpuvar: Error<"__constant__, __device__, and "
+    "__shared__ variables must use default address space">;
 def err_cuda_grid_constant_not_allowed : Error<
   "__grid_constant__ is only allowed on const-qualified kernel parameters">;
 def err_cuda_ovl_target : Error<
@@ -12710,6 +12728,11 @@ def warn_noderef_on_non_pointer_or_array : Warning<
   "'noderef' can only be used on an array or pointer type">, InGroup<IgnoredAttributes>;
 def warn_noderef_to_dereferenceable_pointer : Warning<
   "casting to dereferenceable pointer removes 'noderef' attribute">, InGroup<NoDeref>;
+
+def warn_cast_discards_cfi_unchecked_callee
+    : Warning<"implicit conversion from %0 to %1 discards "
+              "'cfi_unchecked_callee' attribute">,
+      InGroup<DiagGroup<"cfi-unchecked-callee">>;
 
 def err_builtin_launder_invalid_arg : Error<
   "%select{non-pointer|function pointer|void pointer}0 argument to "

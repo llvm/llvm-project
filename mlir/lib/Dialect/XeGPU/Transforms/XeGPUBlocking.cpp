@@ -169,6 +169,12 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
   if (OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1)
     return getTileShape(op->getOpResult(0));
 
+  if (isa<vector::MultiDimReductionOp>(op))
+    return getTileShape(op->getOpOperand(0));
+
+  if (isa<vector::TransposeOp, vector::BroadcastOp>(op))
+    return getTileShape(op->getOpResult(0));
+
   return std::nullopt;
 }
 

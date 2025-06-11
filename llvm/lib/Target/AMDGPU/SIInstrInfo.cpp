@@ -5528,6 +5528,10 @@ unsigned SIInstrInfo::getVALUOp(const MachineInstr &MI) const {
     return AMDGPU::V_ADD_CO_U32_e32;
   case AMDGPU::S_SUB_U32:
     return AMDGPU::V_SUB_CO_U32_e32;
+  case AMDGPU::S_ADD_U64_PSEUDO:
+    return AMDGPU::V_ADD_U64_PSEUDO;
+  case AMDGPU::S_SUB_U64_PSEUDO:
+    return AMDGPU::V_SUB_U64_PSEUDO;
   case AMDGPU::S_SUBB_U32: return AMDGPU::V_SUBB_U32_e32;
   case AMDGPU::S_MUL_I32: return AMDGPU::V_MUL_LO_U32_e64;
   case AMDGPU::S_MUL_HI_U32: return AMDGPU::V_MUL_HI_U32_e64;
@@ -7310,12 +7314,6 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
   switch (Opcode) {
   default:
     break;
-  case AMDGPU::S_ADD_U64_PSEUDO:
-    NewOpcode = AMDGPU::V_ADD_U64_PSEUDO;
-    break;
-  case AMDGPU::S_SUB_U64_PSEUDO:
-    NewOpcode = AMDGPU::V_SUB_U64_PSEUDO;
-    break;
   case AMDGPU::S_ADD_I32:
   case AMDGPU::S_SUB_I32: {
     // FIXME: The u32 versions currently selected use the carry.
@@ -7729,6 +7727,29 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
                                  .addImm(0)  // clamp
                                  .addImm(0)  // omod
                                  .addImm(0); // opsel0
+    MRI.replaceRegWith(Inst.getOperand(0).getReg(), NewDst);
+    legalizeOperandsVALUt16(*NewInstr, MRI);
+    legalizeOperands(*NewInstr, MDT);
+    addUsersToMoveToVALUWorklist(NewDst, MRI, Worklist);
+    Inst.eraseFromParent();
+    return;
+  }
+  case AMDGPU::V_S_EXP_F16_e64:
+  case AMDGPU::V_S_LOG_F16_e64:
+  case AMDGPU::V_S_RCP_F16_e64:
+  case AMDGPU::V_S_RSQ_F16_e64:
+  case AMDGPU::V_S_SQRT_F16_e64: {
+    const DebugLoc &DL = Inst.getDebugLoc();
+    Register NewDst = MRI.createVirtualRegister(ST.useRealTrue16Insts()
+                                                    ? &AMDGPU::VGPR_16RegClass
+                                                    : &AMDGPU::VGPR_32RegClass);
+    auto NewInstr = BuildMI(*MBB, Inst, DL, get(NewOpcode), NewDst)
+                        .addImm(0) // src0_modifiers
+                        .add(Inst.getOperand(2))
+                        .addImm(0)  // clamp
+                        .addImm(0); // omod
+    if (ST.useRealTrue16Insts())
+      NewInstr.addImm(0); // opsel0
     MRI.replaceRegWith(Inst.getOperand(0).getReg(), NewDst);
     legalizeOperandsVALUt16(*NewInstr, MRI);
     legalizeOperands(*NewInstr, MDT);

@@ -976,32 +976,6 @@ public:
     }
   }
 
-  /// FIXME: Remove this function once transition to Align is over.
-  uint64_t getAlignment() const {
-    return cast<llvm::GlobalObject>(Val)->getAlignment();
-  }
-
-  /// Returns the alignment of the given variable or function.
-  ///
-  /// Note that for functions this is the alignment of the code, not the
-  /// alignment of a function pointer.
-  MaybeAlign getAlign() const {
-    return cast<llvm::GlobalObject>(Val)->getAlign();
-  }
-
-  // TODO: Add missing: setAlignment(Align)
-
-  /// Sets the alignment attribute of the GlobalObject.
-  /// This method will be deprecated as the alignment property should always be
-  /// defined.
-  void setAlignment(MaybeAlign Align);
-
-  unsigned getGlobalObjectSubClassData() const {
-    return cast<llvm::GlobalObject>(Val)->getGlobalObjectSubClassData();
-  }
-
-  void setGlobalObjectSubClassData(unsigned V);
-
   /// Check if this global has a custom object file section.
   ///
   /// This is more efficient than calling getSection() and checking for an empty
@@ -1293,6 +1267,18 @@ public:
   std::optional<CodeModel::Model> getCodeModel() const {
     return cast<llvm::GlobalVariable>(Val)->getCodeModel();
   }
+
+  /// Returns the alignment of the given variable.
+  MaybeAlign getAlign() const {
+    return cast<llvm::GlobalVariable>(Val)->getAlign();
+  }
+
+  // TODO: Add missing: setAligment(Align)
+
+  /// Sets the alignment attribute of the GlobalVariable.
+  /// This method will be deprecated as the alignment property should always be
+  /// defined.
+  void setAlignment(MaybeAlign Align);
 
   // TODO: Missing setCodeModel(). Requires custom tracker.
 
