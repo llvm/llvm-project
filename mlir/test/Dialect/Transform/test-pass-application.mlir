@@ -204,9 +204,9 @@ func.func @invalid_options_due_to_reserved_attr() {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
     %1 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    // expected-error @+2 {{the param_operand_index attribute is a marker reserved for indicating a value will be passed via params and is only used in the generic print format}}
+    // expected-error @+2 {{the param_operand attribute is a marker reserved for indicating a value will be passed via params and is only used in the generic print format}}
     %2 = transform.apply_registered_pass "canonicalize"
-        with options = { "top-down" = #transform.param_operand_index<0> } to %1 : (!transform.any_op) -> !transform.any_op
+        with options = { "top-down" = #transform.param_operand<index=0> } to %1 : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -306,7 +306,7 @@ module attributes {transform.with_named_sequence} {
 // Check that the following cases are caugh in the generic format. //
 /////////////////////////////////////////////////////////////////////
 
-// Invalid due to param_operand_index occurences in options dict not being
+// Invalid due to param_operand occurences in options dict not being
 // one-to-one with the dynamic options provided as params:
 //   param_operand_index out of bounds w.r.t. the number of options provided via params.
 
@@ -317,7 +317,7 @@ module attributes {transform.with_named_sequence} {
     %1 = "transform.param.constant"() <{value = 10 : i64}> : () -> !transform.any_param
     // expected-error @below {{dynamic option index 1 is out of bounds for the number of dynamic options: 1}}
     %2 = "transform.apply_registered_pass"(%1, %0) <{
-      options = {"max-iterations" = #transform.param_operand_index<1 : i64>,
+      options = {"max-iterations" = #transform.param_operand<index=1 : i64>,
                  "test-convergence" = true,
                  "top-down" = false},
       pass_name = "canonicalize"}>
@@ -328,10 +328,10 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// Invalid due to param_operand_index occurences in options dict not being
+// Invalid due to param_operand occurences in options dict not being
 // one-to-one with the dynamic options provided as params:
 //   the first option-param is referred to twice and the second one not at all.
-// (The pretty-printed format supports this by passing in the same param twice.)
+// (In the pretty-printed format, if you want to refer to a param SSA-value twice, it counts as two param arguments.)
 
 "builtin.module"() ({
   "transform.named_sequence"() <{function_type = (!transform.any_op) -> (), sym_name = "__transform_main"}> ({
@@ -341,8 +341,8 @@ module attributes {transform.with_named_sequence} {
     %2 = "transform.param.constant"() <{value = 1 : i64}> : () -> !transform.any_param
     // expected-error @below {{dynamic option index 0 is already used in options}}
     %3 = "transform.apply_registered_pass"(%1, %2, %0) <{
-      options = {"max-iterations" = #transform.param_operand_index<0 : i64>,
-                 "max-num-rewrites" = #transform.param_operand_index<0 : i64>,
+      options = {"max-iterations" = #transform.param_operand<index=0 : i64>,
+                 "max-num-rewrites" = #transform.param_operand<index=0 : i64>,
                  "test-convergence" = true,
                  "top-down" = false},
       pass_name = "canonicalize"}>
@@ -353,7 +353,7 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// Invalid due to param_operand_index occurences in options dict not being
+// Invalid due to param_operand occurences in options dict not being
 // one-to-one with the dynamic options provided as params:
 //   two option-params are provide though only the first one is referred to from the options-dict.
 
@@ -363,9 +363,9 @@ module attributes {transform.with_named_sequence} {
     %0 = "transform.structured.match"(%arg0) <{ops = ["func.func"]}> : (!transform.any_op) -> !transform.any_op
     %1 = "transform.param.constant"() <{value = 10 : i64}> : () -> !transform.any_param
     %2 = "transform.param.constant"() <{value = 1 : i64}> : () -> !transform.any_param
-    // expected-error @below {{a param operand does not have a corresponding param_operand_index attr in the options dict}}
+    // expected-error @below {{a param operand does not have a corresponding param_operand attr in the options dict}}
     %3 = "transform.apply_registered_pass"(%1, %2, %0) <{
-      options = {"max-iterations" = #transform.param_operand_index<0 : i64>,
+      options = {"max-iterations" = #transform.param_operand<index=0 : i64>,
                  "test-convergence" = true,
                  "top-down" = false},
       pass_name = "canonicalize"}>

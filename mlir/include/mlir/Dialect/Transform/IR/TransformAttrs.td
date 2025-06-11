@@ -41,9 +41,7 @@ def MatchCmpIPredicateAttr : I32EnumAttr<
   let cppNamespace = "::mlir::transform";
 }
 
-def ParamOperandIndexAttr : Transform_Attr<"ParamOperandIndex",
-                                           "param_operand_index" > {
-  let mnemonic = "param_operand_index";
+def ParamOperandAttr : Transform_Attr<"ParamOperand", "param_operand"> {
   let description = [{
     Used to refer to a specific param-operand (via its index) from within an
     attribute on a transform operation.
@@ -51,7 +49,7 @@ def ParamOperandIndexAttr : Transform_Attr<"ParamOperandIndex",
   let parameters = (ins
     "IntegerAttr":$index
   );
-  let assemblyFormat = "`<` $index `>`";
+  let assemblyFormat = "`<` `index` `=` $index `>`";
 }
 
 #endif  // MLIR_DIALECT_TRANSFORM_IR_TRANSFORMATTRS

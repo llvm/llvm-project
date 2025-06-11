@@ -21,9 +21,9 @@ except ImportError as e:
 from typing import Dict, Optional, Sequence, Union, NewType
 
 
-@register_attribute_builder("ParamOperandIndexAttr")
-def _paramOperandIndexAttr(x: int, context) -> Attribute:
-    return Attribute.parse(f"#transform.param_operand_index<{x}>", context=context)
+@register_attribute_builder("ParamOperandAttr")
+def _paramOperandAttr(x: int, context) -> Attribute:
+    return Attribute.parse(f"#transform.param_operand<index={x}>", context=context)
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
@@ -239,7 +239,7 @@ class ApplyRegisteredPassOp(ApplyRegisteredPassOp):
         options_dict = {}
         dynamic_options = []
 
-        ParamOperandIndexAttr = AttrBuilder.get("ParamOperandIndexAttr")
+        ParamOperandAttr = AttrBuilder.get("ParamOperandAttr")
         context = (loc and loc.context) or Context.current
 
         cur_param_operand_idx = 0
@@ -249,7 +249,7 @@ class ApplyRegisteredPassOp(ApplyRegisteredPassOp):
 
             if isinstance(value, (Value, Operation, OpView)):
                 dynamic_options.append(_get_op_result_or_value(value))
-                options_dict[key] = ParamOperandIndexAttr(
+                options_dict[key] = ParamOperandAttr(
                     cur_param_operand_idx, context
                 )
                 cur_param_operand_idx += 1

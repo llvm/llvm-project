@@ -800,8 +800,8 @@ transform::ApplyRegisteredPassOp::apply(transform::TransformRewriter &rewriter,
     optionsStream << "="; // And the key-value separator.
 
     Attribute valueAttrToAppend;
-    if (auto paramOperandIndex = dyn_cast<transform::ParamOperandIndexAttr>(
-            namedAttribute.getValue())) {
+    if (auto paramOperandIndex =
+            dyn_cast<transform::ParamOperandAttr>(namedAttribute.getValue())) {
       // The corresponding value attribute is passed in via a param.
       // Obtain the param-operand via its specified index.
       size_t dynamicOptionIdx = paramOperandIndex.getIndex().getInt();
@@ -906,16 +906,20 @@ static ParseResult parseApplyRegisteredPassOptions(
         return parser.emitError(parser.getCurrentLocation())
                << "expected a valid attribute or operand as value associated "
                << "to key '" << key << "'";
+      // To make use of the operand, we need to store it in the options dict.
+      // As SSA-values cannot occur in attributes, what we do instead is store
+      // an attribute in its place that contains the index of the param-operand,
+      // so that an attr-value associated to the param can be resolved later on.
       dynamicOptions.push_back(operand);
       auto wrappedIndex = IntegerAttr::get(
           IntegerType::get(parser.getContext(), 64), dynamicOptionsIdx++);
-      valueAttr = transform::ParamOperandIndexAttr::get(parser.getContext(),
-                                                        wrappedIndex);
+      valueAttr =
+          transform::ParamOperandAttr::get(parser.getContext(), wrappedIndex);
     } else if (failed(parsedValueAttr.value())) {
       return failure(); // NB: Attempted parse should have output error message.
-    } else if (isa<transform::ParamOperandIndexAttr>(valueAttr)) {
+    } else if (isa<transform::ParamOperandAttr>(valueAttr)) {
       return parser.emitError(parser.getCurrentLocation())
-             << "the param_operand_index attribute is a marker reserved for "
+             << "the param_operand attribute is a marker reserved for "
              << "indicating a value will be passed via params and is only used "
              << "in the generic print format";
     }
@@ -951,7 +955,8 @@ static void printApplyRegisteredPassOptions(OpAsmPrinter &printer,
   llvm::interleaveComma(options, printer, [&](NamedAttribute namedAttribute) {
     printer << namedAttribute.getName() << " = ";
     Attribute value = namedAttribute.getValue();
-    if (auto indexAttr = dyn_cast<transform::ParamOperandIndexAttr>(value)) {
+    if (auto indexAttr = dyn_cast<transform::ParamOperandAttr>(value)) {
+      // Resolve index of param-operand to its actual SSA-value and print that.
       printer.printOperand(dynamicOptions[indexAttr.getIndex().getInt()]);
     } else {
       printer.printAttribute(value);
@@ -966,9 +971,9 @@ LogicalResult transform::ApplyRegisteredPassOp::verify() {
 
   auto dynamicOptions = SmallVector<Value>(getDynamicOptions());
   for (NamedAttribute namedAttr : getOptions())
-    if (auto paramOperandIndex =
-            dyn_cast<transform::ParamOperandIndexAttr>(namedAttr.getValue())) {
-      size_t dynamicOptionIdx = paramOperandIndex.getIndex().getInt();
+    if (auto paramOperand =
+            dyn_cast<transform::ParamOperandAttr>(namedAttr.getValue())) {
+      size_t dynamicOptionIdx = paramOperand.getIndex().getInt();
       if (dynamicOptionIdx < 0 || dynamicOptionIdx >= dynamicOptions.size())
         return emitOpError()
                << "dynamic option index " << dynamicOptionIdx
@@ -983,7 +988,7 @@ LogicalResult transform::ApplyRegisteredPassOp::verify() {
   for (Value dynamicOption : dynamicOptions)
     if (dynamicOption)
       return emitOpError() << "a param operand does not have a corresponding "
-                           << "param_operand_index attr in the options dict";
+                           << "param_operand attr in the options dict";
 
   return success();
 }
