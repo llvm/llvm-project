@@ -45,6 +45,25 @@ enum class InfoType {
   IT_typedef
 };
 
+enum class CommentKind {
+  CK_FullComment,
+  CK_ParagraphComment,
+  CK_TextComment,
+  CK_InlineCommandComment,
+  CK_HTMLStartTagComment,
+  CK_HTMLEndTagComment,
+  CK_BlockCommandComment,
+  CK_ParamCommandComment,
+  CK_TParamCommandComment,
+  CK_VerbatimBlockComment,
+  CK_VerbatimBlockLineComment,
+  CK_VerbatimLineComment,
+  CK_Unknown
+};
+
+CommentKind stringToCommentKind(llvm::StringRef KindStr);
+llvm::StringRef commentKindToString(CommentKind Kind);
+
 // A representation of a parsed comment.
 struct CommentInfo {
   CommentInfo() = default;
@@ -60,13 +79,13 @@ struct CommentInfo {
   // the vector.
   bool operator<(const CommentInfo &Other) const;
 
-  // TODO: The Kind field should be an enum, so we can switch on it easily.
-  SmallString<16>
-      Kind; // Kind of comment (FullComment, ParagraphComment, TextComment,
-            // InlineCommandComment, HTMLStartTagComment, HTMLEndTagComment,
-            // BlockCommandComment, ParamCommandComment,
-            // TParamCommandComment, VerbatimBlockComment,
-            // VerbatimBlockLineComment, VerbatimLineComment).
+  CommentKind Kind = CommentKind::
+      CK_Unknown; // Kind of comment (FullComment, ParagraphComment,
+                  // TextComment, InlineCommandComment, HTMLStartTagComment,
+                  // HTMLEndTagComment, BlockCommandComment,
+                  // ParamCommandComment, TParamCommandComment,
+                  // VerbatimBlockComment, VerbatimBlockLineComment,
+                  // VerbatimLineComment).
   SmallString<64> Text;      // Text of the comment.
   SmallString<16> Name;      // Name of the comment (for Verbatim and HTML).
   SmallString<8> Direction;  // Parameter direction (for (T)ParamCommand).
@@ -164,6 +183,9 @@ struct TypeInfo {
   bool operator==(const TypeInfo &Other) const { return Type == Other.Type; }
 
   Reference Type; // Referenced type in this info.
+
+  bool IsTemplate = false;
+  bool IsBuiltIn = false;
 };
 
 // Represents one template parameter.
@@ -363,6 +385,9 @@ struct FunctionInfo : public SymbolInfo {
   // specializations.
   SmallString<16> FullName;
 
+  // Function Prototype
+  SmallString<256> Prototype;
+
   // When present, this function is a template or specialization.
   std::optional<TemplateInfo> Template;
 };
@@ -518,10 +543,13 @@ struct ClangDocContext {
   ClangDocContext(tooling::ExecutionContext *ECtx, StringRef ProjectName,
                   bool PublicOnly, StringRef OutDirectory, StringRef SourceRoot,
                   StringRef RepositoryUrl, StringRef RepositoryCodeLinePrefix,
-                  StringRef Base, std::vector<std::string> UserStylesheets);
+                  StringRef Base, std::vector<std::string> UserStylesheets,
+                  bool FTimeTrace = false);
   tooling::ExecutionContext *ECtx;
   std::string ProjectName; // Name of project clang-doc is documenting.
   bool PublicOnly; // Indicates if only public declarations are documented.
+  bool FTimeTrace; // Indicates if ftime trace is turned on
+  int Granularity; // Granularity of ftime trace
   std::string OutDirectory; // Directory for outputting generated files.
   std::string SourceRoot;   // Directory where processed files are stored. Links
                             // to definition locations will only be generated if

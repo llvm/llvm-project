@@ -93,6 +93,9 @@ bool isHeaderMask(const VPValue *V, VPlan &Plan);
 /// VPDerivedIV or VPCanonicalIVPHI).
 bool isUniformAcrossVFsAndUFs(VPValue *V);
 
+/// Returns the header block of the first, top-level loop, or null if none
+/// exist.
+VPBasicBlock *getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT);
 } // namespace vputils
 
 //===----------------------------------------------------------------------===//
@@ -229,16 +232,18 @@ public:
   /// single edge between \p From and \p To.
   static void insertOnEdge(VPBlockBase *From, VPBlockBase *To,
                            VPBlockBase *BlockPtr) {
-    auto &Successors = From->getSuccessors();
-    auto &Predecessors = To->getPredecessors();
-    assert(count(Successors, To) == 1 && count(Predecessors, From) == 1 &&
-           "must have single between From and To");
-    unsigned SuccIdx = std::distance(Successors.begin(), find(Successors, To));
-    unsigned PredIx =
-        std::distance(Predecessors.begin(), find(Predecessors, From));
+    unsigned SuccIdx = From->getIndexForSuccessor(To);
+    unsigned PredIx = To->getIndexForPredecessor(From);
     VPBlockUtils::connectBlocks(From, BlockPtr, -1, SuccIdx);
     VPBlockUtils::connectBlocks(BlockPtr, To, PredIx, -1);
   }
+
+  /// Returns true if \p VPB is a loop header, based on regions or \p VPDT in
+  /// their absence.
+  static bool isHeader(const VPBlockBase *VPB, const VPDominatorTree &VPDT);
+
+  /// Returns true if \p VPB is a loop latch, using isHeader().
+  static bool isLatch(const VPBlockBase *VPB, const VPDominatorTree &VPDT);
 };
 
 } // namespace llvm
