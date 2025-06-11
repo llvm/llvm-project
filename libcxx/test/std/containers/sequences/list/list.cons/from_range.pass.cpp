@@ -27,7 +27,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
 
   static_assert(test_constraints<std::list, int, double>());
 
-  if (!std::is_constant_evaluated()) {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     test_exception_safety_throwing_copy<std::list>();
     test_exception_safety_throwing_allocator<std::list, int>();
   }

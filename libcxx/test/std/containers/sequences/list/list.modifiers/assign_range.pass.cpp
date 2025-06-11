@@ -32,7 +32,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
   });
   test_sequence_assign_range_move_only<std::list>();
 
-  if (!std::is_constant_evaluated()) {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     test_assign_range_exception_safety_throwing_copy<std::list>();
     test_assign_range_exception_safety_throwing_allocator<std::list, int>();
   }
