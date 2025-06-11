@@ -1305,7 +1305,7 @@ static void addRange(SmallVectorImpl<ConstantInt *> &EndPoints,
 MDNode *MDNode::getMergedCalleeTypeMetadata(LLVMContext &Ctx, MDNode *A,
                                             MDNode *B) {
   SmallVector<Metadata *, 8> AB;
-  SmallSet<Metadata *, 8> MergedCallees;
+  SmallPtrSet<Metadata *, 8> MergedCallees;
   auto AddUniqueCallees = [&AB, &MergedCallees](MDNode *N) {
     if (!N)
       return;
