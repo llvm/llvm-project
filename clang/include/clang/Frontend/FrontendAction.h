@@ -85,7 +85,7 @@ protected:
   /// EndSourceFileAction() will not be called.
   virtual bool BeginSourceFileAction(CompilerInstance &CI) {
     if (CurrentInput.isPreprocessed())
-      CI.getPreprocessor().SetEnableMacroExpansion(false);
+      CI.getPreprocessor().SetMacroExpansionOnlyInDirectives();
     return true;
   }
 
@@ -103,7 +103,7 @@ protected:
   virtual void EndSourceFileAction() {
     if (CurrentInput.isPreprocessed())
       // reset the preprocessor macro expansion to the default
-      getCompilerInstance().getPreprocessor().SetEnableMacroExpansion(true);
+      getCompilerInstance().getPreprocessor().SetEnableMacroExpansion();
   }
 
   /// Callback at the end of processing a single input, to determine

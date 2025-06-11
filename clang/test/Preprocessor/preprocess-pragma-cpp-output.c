@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -E -x c %s | FileCheck %s
 // RUN: %clang_cc1 -x c -fsyntax-only %s -verify
+// RUN: %clang_cc1 -x cpp-output -fsyntax-only -verify %s
 // expected-no-diagnostics
-// RUN: %clang_cc1 -x cpp-output -fsyntax-only -verify=fail %s
 
 // The preprocessor does not expand macro-identifiers in #pragma directives.
 // When we preprocess & parse the code, clang expands the macros in directives.
@@ -14,7 +14,7 @@
 
 void foo() {
     // CHECK: #pragma unroll FACTOR
-    #pragma unroll FACTOR // fail-error{{use of undeclared identifier}}
+    #pragma unroll FACTOR
     for(;;) {
     }
     return;
