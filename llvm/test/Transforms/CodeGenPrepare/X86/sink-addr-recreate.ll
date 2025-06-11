@@ -7,8 +7,8 @@ target triple = "x86_64-grtev4-linux-gnu"
 ; Test a scenario when the address cannot be recreated in the current basic block
 
 declare ptr @get_ptr(i64)
-define void @address_terminator() personality ptr null {
-; CHECK-LABEL: define void @address_terminator() personality ptr null {
+define void @addr_from_invoke() personality ptr null {
+; CHECK-LABEL: define void @addr_from_invoke() personality ptr null {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[PTR:%.*]] = invoke ptr @get_ptr(i64 0)
 ; CHECK-NEXT:            to label %[[BODY_1:.*]] unwind label %[[EHCLEANUP:.*]]
