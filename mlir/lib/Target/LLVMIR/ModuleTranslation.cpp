@@ -1547,6 +1547,9 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   if (auto tuneCpu = func.getTuneCpu())
     llvmFunc->addFnAttr("tune-cpu", *tuneCpu);
 
+  if (auto reciprocalEstimates = func.getReciprocalEstimates())
+    llvmFunc->addFnAttr("reciprocal-estimates", *reciprocalEstimates);
+
   if (auto preferVectorWidth = func.getPreferVectorWidth())
     llvmFunc->addFnAttr("prefer-vector-width", *preferVectorWidth);
 

@@ -300,13 +300,13 @@ Sema::CheckCXX2CRelocatableAndReplaceable(const CXXRecordDecl *D) {
   return Info;
 }
 
-static bool IsCXXTriviallyRelocatableType(Sema &S, const CXXRecordDecl *RD) {
+bool Sema::IsCXXTriviallyRelocatableType(const CXXRecordDecl &RD) {
   if (std::optional<ASTContext::CXXRecordDeclRelocationInfo> Info =
-          S.getASTContext().getRelocationInfoForCXXRecord(RD))
+          getASTContext().getRelocationInfoForCXXRecord(&RD))
     return Info->IsRelocatable;
   ASTContext::CXXRecordDeclRelocationInfo Info =
-      S.CheckCXX2CRelocatableAndReplaceable(RD);
-  S.getASTContext().setRelocationInfoForCXXRecord(RD, Info);
+      CheckCXX2CRelocatableAndReplaceable(&RD);
+  getASTContext().setRelocationInfoForCXXRecord(&RD, Info);
   return Info.IsRelocatable;
 }
 
@@ -330,7 +330,7 @@ bool Sema::IsCXXTriviallyRelocatableType(QualType Type) {
     return true;
 
   if (const auto *RD = BaseElementType->getAsCXXRecordDecl())
-    return ::IsCXXTriviallyRelocatableType(*this, RD);
+    return IsCXXTriviallyRelocatableType(*RD);
 
   return false;
 }
@@ -672,7 +672,7 @@ static bool IsTriviallyRelocatableType(Sema &SemaRef, QualType T) {
     return false;
 
   if (const auto *RD = BaseElementType->getAsCXXRecordDecl();
-      RD && !RD->isPolymorphic() && IsCXXTriviallyRelocatableType(SemaRef, RD))
+      RD && !RD->isPolymorphic() && SemaRef.IsCXXTriviallyRelocatableType(*RD))
     return true;
 
   if (const auto *RD = BaseElementType->getAsRecordDecl())

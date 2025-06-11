@@ -226,6 +226,7 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
   YamlBF.Hash = BF.getHash();
   YamlBF.NumBasicBlocks = BF.size();
   YamlBF.ExecCount = BF.getKnownExecutionCount();
+  YamlBF.ExternEntryCount = BF.getExternEntryCount();
   DenseMap<const MCDecodedPseudoProbeInlineTree *, uint32_t> InlineTreeNodeId;
   if (PseudoProbeDecoder && BF.getGUID()) {
     std::tie(YamlBF.InlineTree, InlineTreeNodeId) =
@@ -303,9 +304,8 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
       }
       // Sort targets in a similar way to getBranchData, see Location::operator<
       llvm::sort(CSTargets, [](const auto &RHS, const auto &LHS) {
-        if (RHS.first != LHS.first)
-          return RHS.first < LHS.first;
-        return RHS.second.Offset < LHS.second.Offset;
+        return std::tie(RHS.first, RHS.second.Offset) <
+               std::tie(LHS.first, LHS.second.Offset);
       });
       for (auto &KV : CSTargets)
         YamlBB.CallSites.push_back(KV.second);

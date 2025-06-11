@@ -1464,6 +1464,16 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setPartialReduceMLAAction(MLAOps, MVT::v4i32, MVT::v16i8, Legal);
       setPartialReduceMLAAction(MLAOps, MVT::v2i32, MVT::v8i8, Legal);
       setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v16i8, Custom);
+
+      if (Subtarget->hasMatMulInt8()) {
+        setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v4i32,
+                                  MVT::v16i8, Legal);
+        setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v2i64,
+                                  MVT::v16i8, Custom);
+
+        setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v2i32,
+                                  MVT::v8i8, Legal);
+      }
     }
 
   } else /* !isNeonAvailable */ {
@@ -1894,6 +1904,13 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setPartialReduceMLAAction(MLAOps, MVT::nxv4i32, MVT::nxv16i8, Legal);
 
     setPartialReduceMLAAction(MLAOps, MVT::nxv2i64, MVT::nxv16i8, Custom);
+
+    if (Subtarget->hasMatMulInt8()) {
+      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::nxv4i32,
+                                MVT::nxv16i8, Legal);
+      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::nxv2i64,
+                                MVT::nxv16i8, Custom);
+    }
 
     // Wide add types
     if (Subtarget->hasSVE2() || Subtarget->hasSME()) {
@@ -7516,6 +7533,7 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerVECTOR_HISTOGRAM(Op, DAG);
   case ISD::PARTIAL_REDUCE_SMLA:
   case ISD::PARTIAL_REDUCE_UMLA:
+  case ISD::PARTIAL_REDUCE_SUMLA:
     return LowerPARTIAL_REDUCE_MLA(Op, DAG);
   }
 }

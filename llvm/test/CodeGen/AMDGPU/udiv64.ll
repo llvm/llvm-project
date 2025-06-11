@@ -348,10 +348,9 @@ define i64 @v_test_udiv_i64(i64 %x, i64 %y) {
 ; GCN-IR-NEXT:    v_lshr_b64 v[8:9], v[0:1], v10
 ; GCN-IR-NEXT:    v_addc_u32_e32 v13, vcc, -1, v3, vcc
 ; GCN-IR-NEXT:    v_not_b32_e32 v0, v14
-; GCN-IR-NEXT:    v_not_b32_e32 v1, 0
 ; GCN-IR-NEXT:    v_add_i32_e32 v0, vcc, v0, v15
 ; GCN-IR-NEXT:    v_mov_b32_e32 v10, 0
-; GCN-IR-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
+; GCN-IR-NEXT:    v_addc_u32_e64 v1, s[4:5], -1, 0, vcc
 ; GCN-IR-NEXT:    s_mov_b64 s[10:11], 0
 ; GCN-IR-NEXT:    v_mov_b32_e32 v11, 0
 ; GCN-IR-NEXT:    v_mov_b32_e32 v7, 0

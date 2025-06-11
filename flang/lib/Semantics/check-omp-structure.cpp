@@ -2933,9 +2933,9 @@ void OmpStructureChecker::CheckAtomicCaptureConstruct(
   const auto *e2 = GetExpr(context_, stmt2Expr);
 
   if (e1 && v1 && e2 && v2) {
-    if (semantics::checkForSingleVariableOnRHS(stmt1)) {
+    if (parser::CheckForSingleVariableOnRHS(stmt1)) {
       CheckAtomicCaptureStmt(stmt1);
-      if (semantics::checkForSymbolMatch(v2, e2)) {
+      if (CheckForSymbolMatch(v2, e2)) {
         // ATOMIC CAPTURE construct is of the form [capture-stmt, update-stmt]
         CheckAtomicUpdateStmt(stmt2);
       } else {
@@ -2947,8 +2947,8 @@ void OmpStructureChecker::CheckAtomicCaptureConstruct(
             "Captured variable/array element/derived-type component %s expected to be assigned in the second statement of ATOMIC CAPTURE construct"_err_en_US,
             stmt1Expr.source);
       }
-    } else if (semantics::checkForSymbolMatch(v1, e1) &&
-        semantics::checkForSingleVariableOnRHS(stmt2)) {
+    } else if (CheckForSymbolMatch(v1, e1) &&
+        parser::CheckForSingleVariableOnRHS(stmt2)) {
       // ATOMIC CAPTURE construct is of the form [update-stmt, capture-stmt]
       CheckAtomicUpdateStmt(stmt1);
       CheckAtomicCaptureStmt(stmt2);

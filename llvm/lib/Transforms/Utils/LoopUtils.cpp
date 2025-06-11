@@ -41,6 +41,7 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -1820,10 +1821,11 @@ void llvm::appendLoopsToWorklist(RangeT &&Loops,
   appendReversedLoopsToWorklist(reverse(Loops), Worklist);
 }
 
-template void llvm::appendLoopsToWorklist<ArrayRef<Loop *> &>(
+template LLVM_EXPORT_TEMPLATE void
+llvm::appendLoopsToWorklist<ArrayRef<Loop *> &>(
     ArrayRef<Loop *> &Loops, SmallPriorityWorklist<Loop *, 4> &Worklist);
 
-template void
+template LLVM_EXPORT_TEMPLATE void
 llvm::appendLoopsToWorklist<Loop &>(Loop &L,
                                     SmallPriorityWorklist<Loop *, 4> &Worklist);
 

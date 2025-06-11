@@ -945,17 +945,18 @@ public:
   LLVM_ABI CallInst *CreateGCGetPointerOffset(Value *DerivedPtr,
                                               const Twine &Name = "");
 
-  /// Create a call to llvm.vscale, multiplied by \p Scaling. The type of VScale
-  /// will be the same type as that of \p Scaling.
-  LLVM_ABI Value *CreateVScale(Constant *Scaling, const Twine &Name = "");
+  /// Create a call to llvm.vscale.<Ty>().
+  LLVM_ABI Value *CreateVScale(Type *Ty, const Twine &Name = "") {
+    return CreateIntrinsic(Intrinsic::vscale, {Ty}, {}, {}, Name);
+  }
 
   /// Create an expression which evaluates to the number of elements in \p EC
   /// at runtime.
-  LLVM_ABI Value *CreateElementCount(Type *DstType, ElementCount EC);
+  LLVM_ABI Value *CreateElementCount(Type *Ty, ElementCount EC);
 
   /// Create an expression which evaluates to the number of units in \p Size
   /// at runtime.  This works for both units of bits and bytes.
-  LLVM_ABI Value *CreateTypeSize(Type *DstType, TypeSize Size);
+  LLVM_ABI Value *CreateTypeSize(Type *Ty, TypeSize Size);
 
   /// Creates a vector of type \p DstType with the linear sequence <0, 1, ...>
   LLVM_ABI Value *CreateStepVector(Type *DstType, const Twine &Name = "");

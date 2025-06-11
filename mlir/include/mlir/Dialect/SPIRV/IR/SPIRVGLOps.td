@@ -838,6 +838,36 @@ def SPIRV_GLAtanhOp : SPIRV_GLUnaryArithmeticOp<"Atanh", 24, SPIRV_Float16or32> 
 
 // -----
 
+def SPIRV_GLLog2Op : SPIRV_GLUnaryArithmeticOp<"Log2", 30, SPIRV_Float16or32> {
+  let summary = "Result is the base-2 logarithm of x";
+
+  let description = [{
+    Result is the base-2 logarithm of x, i.e., the value y which satisfies the
+    equation x = 2**y. The resulting value is NaN if x < 0. Moreover:
+
+    ```
+    log(Inf) = Inf
+    log(1.0) = +0
+    log(±0) = -Inf
+    ```
+    
+    The operand x must be a scalar or vector whose component type is 16-bit or
+    32-bit floating-point.
+
+    Result Type and the type of x must be the same type. Results are computed
+    per component.
+
+    #### Example:
+    
+    ```mlir
+    %2 = spirv.GL.Log2 %0 : f32
+    %3 = spirv.GL.Log2 %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
 def SPIRV_GLFClampOp : SPIRV_GLTernaryArithmeticOp<"FClamp", 43, SPIRV_Float> {
   let summary = "Clamp x between min and max values.";
 

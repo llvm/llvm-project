@@ -29,7 +29,9 @@ using ::clang::transformer::makeRule;
 using ::clang::transformer::node;
 using ::clang::transformer::RewriteRuleWith;
 
+namespace {
 AST_MATCHER(Type, isCharType) { return Node.isCharType(); }
+} // namespace
 
 static const char DefaultStringLikeClasses[] = "::std::basic_string;"
                                                "::std::basic_string_view;"

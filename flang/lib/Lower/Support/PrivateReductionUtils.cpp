@@ -58,6 +58,7 @@ static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
   };
 
   mlir::Type valTy = fir::unwrapRefType(argType);
+  const bool argIsVolatile = fir::isa_volatile_type(argType);
   if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(valTy)) {
     // TODO: what about undoing init of unboxed derived types?
     if (auto recTy = mlir::dyn_cast<fir::RecordType>(
@@ -65,7 +66,7 @@ static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
       mlir::Type eleTy = boxTy.getEleTy();
       if (mlir::isa<fir::PointerType, fir::HeapType>(eleTy)) {
         mlir::Type mutableBoxTy =
-            fir::ReferenceType::get(fir::BoxType::get(eleTy));
+            fir::ReferenceType::get(fir::BoxType::get(eleTy), argIsVolatile);
         mlir::Value converted =
             builder.createConvert(loc, mutableBoxTy, block->getArgument(0));
         if (recTy.getNumLenParams() > 0)

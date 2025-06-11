@@ -1675,6 +1675,12 @@ bool SIFoldOperandsImpl::foldInstOperand(MachineInstr &MI,
       LLVM_DEBUG(dbgs() << "Folded source from " << MI << " into OpNo "
                         << static_cast<int>(Fold.UseOpNo) << " of "
                         << *Fold.UseMI);
+
+      if (Fold.isImm() && tryConstantFoldOp(Fold.UseMI)) {
+        LLVM_DEBUG(dbgs() << "Constant folded " << *Fold.UseMI);
+        Changed = true;
+      }
+
     } else if (Fold.Commuted) {
       // Restoring instruction's original operand order if fold has failed.
       TII->commuteInstruction(*Fold.UseMI, false);

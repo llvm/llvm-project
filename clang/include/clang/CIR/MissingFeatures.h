@@ -222,6 +222,9 @@ struct MissingFeatures {
   static bool instrumentation() { return false; }
   static bool cleanupAfterErrorDiags() { return false; }
   static bool cxxRecordStaticMembers() { return false; }
+  static bool isMemcpyEquivalentSpecialMember() { return false; }
+  static bool isTrivialCtorOrDtor() { return false; }
+  static bool implicitConstructorArgs() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }

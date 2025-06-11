@@ -22,6 +22,7 @@ typedef struct CF_BRIDGED_TYPE(id) CGImage *CGImageRef;
 #define NS_RETURNS_RETAINED __attribute__((ns_returns_retained))
 #define CF_CONSUMED __attribute__((cf_consumed))
 #define CF_RETURNS_RETAINED __attribute__((cf_returns_retained))
+#define NS_REQUIRES_PROPERTY_DEFINITIONS __attribute__((objc_requires_property_definitions))
 
 extern const CFAllocatorRef kCFAllocatorDefault;
 typedef struct _NSZone NSZone;

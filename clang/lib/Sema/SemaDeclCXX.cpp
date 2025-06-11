@@ -10571,29 +10571,6 @@ void Sema::checkIllFormedTrivialABIStruct(CXXRecordDecl &RD) {
     RD.dropAttr<TrivialABIAttr>();
   };
 
-  // Ill-formed if the copy and move constructors are deleted.
-  auto HasNonDeletedCopyOrMoveConstructor = [&]() {
-    // If the type is dependent, then assume it might have
-    // implicit copy or move ctor because we won't know yet at this point.
-    if (RD.isDependentType())
-      return true;
-    if (RD.needsImplicitCopyConstructor() &&
-        !RD.defaultedCopyConstructorIsDeleted())
-      return true;
-    if (RD.needsImplicitMoveConstructor() &&
-        !RD.defaultedMoveConstructorIsDeleted())
-      return true;
-    for (const CXXConstructorDecl *CD : RD.ctors())
-      if (CD->isCopyOrMoveConstructor() && !CD->isDeleted())
-        return true;
-    return false;
-  };
-
-  if (!HasNonDeletedCopyOrMoveConstructor()) {
-    PrintDiagAndRemoveAttr(0);
-    return;
-  }
-
   // Ill-formed if the struct has virtual functions.
   if (RD.isPolymorphic()) {
     PrintDiagAndRemoveAttr(1);
@@ -10636,6 +10613,32 @@ void Sema::checkIllFormedTrivialABIStruct(CXXRecordDecl &RD) {
         PrintDiagAndRemoveAttr(5);
         return;
       }
+  }
+
+  if (IsCXXTriviallyRelocatableType(RD))
+    return;
+
+  // Ill-formed if the copy and move constructors are deleted.
+  auto HasNonDeletedCopyOrMoveConstructor = [&]() {
+    // If the type is dependent, then assume it might have
+    // implicit copy or move ctor because we won't know yet at this point.
+    if (RD.isDependentType())
+      return true;
+    if (RD.needsImplicitCopyConstructor() &&
+        !RD.defaultedCopyConstructorIsDeleted())
+      return true;
+    if (RD.needsImplicitMoveConstructor() &&
+        !RD.defaultedMoveConstructorIsDeleted())
+      return true;
+    for (const CXXConstructorDecl *CD : RD.ctors())
+      if (CD->isCopyOrMoveConstructor() && !CD->isDeleted())
+        return true;
+    return false;
+  };
+
+  if (!HasNonDeletedCopyOrMoveConstructor()) {
+    PrintDiagAndRemoveAttr(0);
+    return;
   }
 }
 

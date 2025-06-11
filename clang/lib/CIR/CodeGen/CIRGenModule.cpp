@@ -103,6 +103,25 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
 
 CIRGenModule::~CIRGenModule() = default;
 
+/// FIXME: this could likely be a common helper and not necessarily related
+/// with codegen.
+/// Return the best known alignment for an unknown pointer to a
+/// particular class.
+CharUnits CIRGenModule::getClassPointerAlignment(const CXXRecordDecl *rd) {
+  if (!rd->hasDefinition())
+    return CharUnits::One(); // Hopefully won't be used anywhere.
+
+  auto &layout = astContext.getASTRecordLayout(rd);
+
+  // If the class is final, then we know that the pointer points to an
+  // object of that type and can use the full alignment.
+  if (rd->isEffectivelyFinal())
+    return layout.getAlignment();
+
+  // Otherwise, we have to assume it could be a subclass.
+  return layout.getNonVirtualAlignment();
+}
+
 CharUnits CIRGenModule::getNaturalTypeAlignment(QualType t,
                                                 LValueBaseInfo *baseInfo) {
   assert(!cir::MissingFeatures::opTBAA());
@@ -1174,6 +1193,34 @@ void CIRGenModule::setInitializer(cir::GlobalOp &op, mlir::Attribute value) {
   assert(!cir::MissingFeatures::opGlobalVisibility());
 }
 
+std::pair<cir::FuncType, cir::FuncOp> CIRGenModule::getAddrAndTypeOfCXXStructor(
+    GlobalDecl gd, const CIRGenFunctionInfo *fnInfo, cir::FuncType fnType,
+    bool dontDefer, ForDefinition_t isForDefinition) {
+  auto *md = cast<CXXMethodDecl>(gd.getDecl());
+
+  if (isa<CXXDestructorDecl>(md)) {
+    // Always alias equivalent complete destructors to base destructors in the
+    // MS ABI.
+    if (getTarget().getCXXABI().isMicrosoft() &&
+        gd.getDtorType() == Dtor_Complete &&
+        md->getParent()->getNumVBases() == 0)
+      errorNYI(md->getSourceRange(),
+               "getAddrAndTypeOfCXXStructor: MS ABI complete destructor");
+  }
+
+  if (!fnType) {
+    if (!fnInfo)
+      fnInfo = &getTypes().arrangeCXXStructorDeclaration(gd);
+    fnType = getTypes().getFunctionType(*fnInfo);
+  }
+
+  auto fn = getOrCreateCIRFunction(getMangledName(gd), fnType, gd,
+                                   /*ForVtable=*/false, dontDefer,
+                                   /*IsThunk=*/false, isForDefinition);
+
+  return {fnType, fn};
+}
+
 cir::FuncOp CIRGenModule::getAddrOfFunction(clang::GlobalDecl gd,
                                             mlir::Type funcType, bool forVTable,
                                             bool dontDefer,
@@ -1248,8 +1295,11 @@ StringRef CIRGenModule::getMangledName(GlobalDecl gd) {
   // Some ABIs don't have constructor variants. Make sure that base and complete
   // constructors get mangled the same.
   if (const auto *cd = dyn_cast<CXXConstructorDecl>(canonicalGd.getDecl())) {
-    errorNYI(cd->getSourceRange(), "getMangledName: C++ constructor");
-    return cast<NamedDecl>(gd.getDecl())->getIdentifier()->getName();
+    if (!getTarget().getCXXABI().hasConstructorVariants()) {
+      errorNYI(cd->getSourceRange(),
+               "getMangledName: C++ constructor without variants");
+      return cast<NamedDecl>(gd.getDecl())->getIdentifier()->getName();
+    }
   }
 
   // Keep the first result in the case of a mangling collision.
