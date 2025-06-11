@@ -1,7 +1,7 @@
 // RUN: mlir-translate --no-implicit-module --test-spirv-roundtrip %s | FileCheck %s
 // RUN: %if spirv-tools %{ mlir-translate -no-implicit-module -serialize-spirv %s | spirv-val %}
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Int64, Int16, Int8, Float64, Float16], []> {
+spirv.module Logical Vulkan requires #spirv.vce<v1.3, [VulkanMemoryModel, Shader, Int64, Int16, Int8, Float64, Float16, CooperativeMatrixKHR], [SPV_KHR_vulkan_memory_model, SPV_KHR_cooperative_matrix]> {
   // CHECK-LABEL: @bool_const
   spirv.func @bool_const() -> () "None" {
     // CHECK: spirv.Constant true
