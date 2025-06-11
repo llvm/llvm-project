@@ -1,4 +1,7 @@
-; RUN: llc --filetype=obj %s -o  - -experimental-debuginfo-iterators=false | dxil-dis -o - | FileCheck %s
+; RUN: llc --filetype=obj %s -o  - | dxil-dis -o - | FileCheck %s
+; Note: LLVM has soft disabled experimental-debuginfo-iterators in commit 6a45fce
+; XFAIL: *
+
 target triple = "dxil-unknown-shadermodel6.7-library"
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 

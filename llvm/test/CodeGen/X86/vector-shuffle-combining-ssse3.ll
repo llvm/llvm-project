@@ -763,6 +763,61 @@ define <16 x i8> @combine_and_pshufb_or_pshufb(<16 x i8> %a0, <16 x i8> %a1) {
   ret <16 x i8> %4
 }
 
+define <16 x i8> @combine_lshr_pshufb(<4 x i32> %a0) {
+; SSE-LABEL: combine_lshr_pshufb:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pshufb {{.*#+}} xmm0 = zero,zero,zero,xmm0[3,5,6,7,4,10,11],zero,xmm0[9,14,15],zero,zero
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_lshr_pshufb:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = zero,zero,zero,xmm0[3,5,6,7,4,10,11],zero,xmm0[9,14,15],zero,zero
+; AVX-NEXT:    retq
+  %shr = lshr <4 x i32> %a0, <i32 24, i32 0, i32 8, i32 16>
+  %bc = bitcast <4 x i32> %shr to <16 x i8>
+  %shuffle = shufflevector <16 x i8> %bc, <16 x i8> poison, <16 x i32> <i32 1, i32 2, i32 3, i32 0, i32 5, i32 6, i32 7, i32 4, i32 9, i32 10, i32 11, i32 8, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i8> %shuffle
+}
+
+define <16 x i8> @combine_shl_pshufb(<4 x i32> %a0) {
+; SSSE3-LABEL: combine_shl_pshufb:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; SSSE3-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; SSSE3-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; SSSE3-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[1,2,3,0,5,6,7,4,9,10,11,8,12,13,14,15]
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: combine_shl_pshufb:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[1,2,3,0,5,6,7,4,9,10,11,8,12,13,14,15]
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: combine_shl_pshufb:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,2,3,0,5,6,7,4,9,10,11,8,12,13,14,15]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: combine_shl_pshufb:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,2,3,0,4,5,6],zero,zero,xmm0[8,9],zero,zero,zero,xmm0[12,13]
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: combine_shl_pshufb:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,2,3,0,4,5,6],zero,zero,xmm0[8,9],zero,zero,zero,xmm0[12,13]
+; AVX512F-NEXT:    retq
+  %shr = shl <4 x i32> %a0, <i32 0, i32 8, i32 16, i32 16>
+  %bc = bitcast <4 x i32> %shr to <16 x i8>
+  %shuffle = shufflevector <16 x i8> %bc, <16 x i8> poison, <16 x i32> <i32 1, i32 2, i32 3, i32 0, i32 5, i32 6, i32 7, i32 4, i32 9, i32 10, i32 11, i32 8, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i8> %shuffle
+}
+
 define <16 x i8> @constant_fold_pshufb() {
 ; SSE-LABEL: constant_fold_pshufb:
 ; SSE:       # %bb.0:

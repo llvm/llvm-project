@@ -144,6 +144,10 @@ DEFAULT_FEATURES = [
         when=lambda cfg: hasCompileFlag(cfg, "-Wuser-defined-warnings"),
         actions=[AddCompileFlag("-Wuser-defined-warnings")],
     ),
+    Feature(
+        name="character-conversion-warnings",
+        when=lambda cfg: hasCompileFlag(cfg, "-Wcharacter-conversion"),
+    ),
     # Tests to validate whether the compiler has a way to set the maximum number
     # of steps during constant evaluation. Since the flag differs per compiler
     # store the "valid" flag as a feature. This allows passing the proper compile
@@ -440,7 +444,8 @@ for locale, alts in locales.items():
                 cfg, locale, alts, provide_locale_conversions[locale]
             )
             if locale in provide_locale_conversions
-            and "_LIBCPP_HAS_NO_WIDE_CHARACTERS" not in compilerMacros(cfg)
+            and ("_LIBCPP_HAS_WIDE_CHARACTERS" not in compilerMacros(cfg) or
+                 compilerMacros(cfg)["_LIBCPP_HAS_WIDE_CHARACTERS"] == "1")
             else [],
         ),
     )

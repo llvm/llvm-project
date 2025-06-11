@@ -41,7 +41,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _CharT, class _Traits>
-class _LIBCPP_TEMPLATE_VIS basic_ostream : virtual public basic_ios<_CharT, _Traits> {
+class basic_ostream : virtual public basic_ios<_CharT, _Traits> {
 public:
   // types (inherited from basic_ios (27.5.4)):
   typedef _CharT char_type;
@@ -71,7 +71,7 @@ protected:
 
 public:
   // 27.7.2.4 Prefix/suffix:
-  class _LIBCPP_TEMPLATE_VIS sentry;
+  class sentry;
 
   // 27.7.2.6 Formatted output:
   inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 basic_ostream& operator<<(basic_ostream& (*__pf)(basic_ostream&)) {
@@ -181,7 +181,7 @@ protected:
 };
 
 template <class _CharT, class _Traits>
-class _LIBCPP_TEMPLATE_VIS basic_ostream<_CharT, _Traits>::sentry {
+class basic_ostream<_CharT, _Traits>::sentry {
   bool __ok_;
   basic_ostream<_CharT, _Traits>& __os_;
 

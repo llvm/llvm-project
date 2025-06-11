@@ -538,7 +538,8 @@ if.then:                                          ; preds = %entry
   ret void
 
 if.then9:                                         ; preds = %entry
-  br i1 undef, label %sw.bb18, label %sw.bb
+  %undef = freeze i1 poison
+  br i1 %undef, label %sw.bb18, label %sw.bb
 
 sw.bb:                                            ; preds = %if.then9
   %i17 = load i8, ptr addrspace(1) null, align 1

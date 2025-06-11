@@ -790,7 +790,8 @@ private:
                       << " iterations of the first loop. \n");
 
     ValueToValueMapTy VMap;
-    FC0.Peeled = peelLoop(FC0.L, PeelCount, &LI, &SE, DT, &AC, true, VMap);
+    FC0.Peeled =
+        peelLoop(FC0.L, PeelCount, false, &LI, &SE, DT, &AC, true, VMap);
     if (FC0.Peeled) {
       LLVM_DEBUG(dbgs() << "Done Peeling\n");
 
@@ -1968,7 +1969,7 @@ private:
           PHINode::Create(LCV->getType(), 2, LCPHI->getName() + ".afterFC0");
       L1HeaderPHI->insertBefore(L1HeaderIP);
       L1HeaderPHI->addIncoming(LCV, FC0.Latch);
-      L1HeaderPHI->addIncoming(UndefValue::get(LCV->getType()),
+      L1HeaderPHI->addIncoming(PoisonValue::get(LCV->getType()),
                                FC0.ExitingBlock);
 
       LCPHI->setIncomingValue(L1LatchBBIdx, L1HeaderPHI);

@@ -1150,6 +1150,10 @@ define void @move_to_valu_vgpr_operand_phi(ptr addrspace(3) %out) {
 ; SI-NEXT:    v_add_i32_e64 v0, s[4:5], 8, v0
 ; SI-NEXT:  .LBB20_2: ; %bb1
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; SI-NEXT:    ;;#ASMSTART
+; SI-NEXT:    ; def s4
+; SI-NEXT:    ;;#ASMEND
+; SI-NEXT:    s_cmp_lg_u32 s4, 0
 ; SI-NEXT:    s_cbranch_scc1 .LBB20_1
 ; SI-NEXT:  ; %bb.3: ; %bb2
 ; SI-NEXT:    ; in Loop: Header=BB20_2 Depth=1
@@ -1173,6 +1177,10 @@ define void @move_to_valu_vgpr_operand_phi(ptr addrspace(3) %out) {
 ; VI-NEXT:    v_add_u32_e64 v0, s[4:5], 8, v0
 ; VI-NEXT:  .LBB20_2: ; %bb1
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    ;;#ASMSTART
+; VI-NEXT:    ; def s4
+; VI-NEXT:    ;;#ASMEND
+; VI-NEXT:    s_cmp_lg_u32 s4, 0
 ; VI-NEXT:    s_cbranch_scc1 .LBB20_1
 ; VI-NEXT:  ; %bb.3: ; %bb2
 ; VI-NEXT:    ; in Loop: Header=BB20_2 Depth=1
@@ -1189,7 +1197,9 @@ bb1:                                              ; preds = %bb3, %bb0
   %tmp0 = phi i32 [ 8, %bb0 ], [ %tmp4, %bb3 ]
   %tmp1 = add nsw i32 %tmp0, -1
   %tmp2 = getelementptr inbounds i32, ptr addrspace(3) %out, i32 %tmp1
-  br i1 undef, label %bb2, label %bb3
+  %cond = call i32 asm "; def $0","=s"()
+  %cmp = icmp eq i32 %cond, 0
+  br i1 %cmp, label %bb2, label %bb3
 
 bb2:                                              ; preds = %bb1
   store volatile i32 1, ptr addrspace(3) %tmp2, align 4

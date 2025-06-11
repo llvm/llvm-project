@@ -1507,7 +1507,9 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
 
   if (V->isNullValue())
     return ConstantAggregateZero::get(VTy);
-  else if (isa<UndefValue>(V))
+  if (isa<PoisonValue>(V))
+    return PoisonValue::get(VTy);
+  if (isa<UndefValue>(V))
     return UndefValue::get(VTy);
 
   Type *IdxTy = Type::getInt64Ty(VTy->getContext());
@@ -1709,6 +1711,8 @@ void ConstantVector::destroyConstantImpl() {
 
 Constant *Constant::getSplatValue(bool AllowPoison) const {
   assert(this->getType()->isVectorTy() && "Only valid for vectors!");
+  if (isa<PoisonValue>(this))
+    return PoisonValue::get(cast<VectorType>(getType())->getElementType());
   if (isa<ConstantAggregateZero>(this))
     return getNullValue(cast<VectorType>(getType())->getElementType());
   if (auto *CI = dyn_cast<ConstantInt>(this))
@@ -1891,78 +1895,62 @@ void PoisonValue::destroyConstantImpl() {
   getContext().pImpl->PVConstants.erase(getType());
 }
 
-BlockAddress *BlockAddress::get(BasicBlock *BB) {
-  assert(BB->getParent() && "Block must have a parent");
-  return get(BB->getParent(), BB);
-}
-
-BlockAddress *BlockAddress::get(Function *F, BasicBlock *BB) {
-  BlockAddress *&BA =
-    F->getContext().pImpl->BlockAddresses[std::make_pair(F, BB)];
+BlockAddress *BlockAddress::get(Type *Ty, BasicBlock *BB) {
+  BlockAddress *&BA = BB->getContext().pImpl->BlockAddresses[BB];
   if (!BA)
-    BA = new BlockAddress(F, BB);
-
-  assert(BA->getFunction() == F && "Basic block moved between functions");
+    BA = new BlockAddress(Ty, BB);
   return BA;
 }
 
-BlockAddress::BlockAddress(Function *F, BasicBlock *BB)
-    : Constant(PointerType::get(F->getContext(), F->getAddressSpace()),
-               Value::BlockAddressVal, AllocMarker) {
-  setOperand(0, F);
-  setOperand(1, BB);
-  BB->AdjustBlockAddressRefCount(1);
+BlockAddress *BlockAddress::get(BasicBlock *BB) {
+  assert(BB->getParent() && "Block must have a parent");
+  return get(BB->getParent()->getType(), BB);
+}
+
+BlockAddress *BlockAddress::get(Function *F, BasicBlock *BB) {
+  assert(BB->getParent() == F && "Block not part of specified function");
+  return get(BB->getParent()->getType(), BB);
+}
+
+BlockAddress::BlockAddress(Type *Ty, BasicBlock *BB)
+    : Constant(Ty, Value::BlockAddressVal, AllocMarker) {
+  setOperand(0, BB);
+  BB->setHasAddressTaken(true);
 }
 
 BlockAddress *BlockAddress::lookup(const BasicBlock *BB) {
   if (!BB->hasAddressTaken())
     return nullptr;
 
-  const Function *F = BB->getParent();
-  assert(F && "Block must have a parent");
-  BlockAddress *BA =
-      F->getContext().pImpl->BlockAddresses.lookup(std::make_pair(F, BB));
+  BlockAddress *BA = BB->getContext().pImpl->BlockAddresses.lookup(BB);
   assert(BA && "Refcount and block address map disagree!");
   return BA;
 }
 
 /// Remove the constant from the constant table.
 void BlockAddress::destroyConstantImpl() {
-  getFunction()->getType()->getContext().pImpl
-    ->BlockAddresses.erase(std::make_pair(getFunction(), getBasicBlock()));
-  getBasicBlock()->AdjustBlockAddressRefCount(-1);
+  getType()->getContext().pImpl->BlockAddresses.erase(getBasicBlock());
+  getBasicBlock()->setHasAddressTaken(false);
 }
 
 Value *BlockAddress::handleOperandChangeImpl(Value *From, Value *To) {
-  // This could be replacing either the Basic Block or the Function.  In either
-  // case, we have to remove the map entry.
-  Function *NewF = getFunction();
-  BasicBlock *NewBB = getBasicBlock();
-
-  if (From == NewF)
-    NewF = cast<Function>(To->stripPointerCasts());
-  else {
-    assert(From == NewBB && "From does not match any operand");
-    NewBB = cast<BasicBlock>(To);
-  }
+  assert(From == getBasicBlock());
+  BasicBlock *NewBB = cast<BasicBlock>(To);
 
   // See if the 'new' entry already exists, if not, just update this in place
   // and return early.
-  BlockAddress *&NewBA =
-    getContext().pImpl->BlockAddresses[std::make_pair(NewF, NewBB)];
+  BlockAddress *&NewBA = getContext().pImpl->BlockAddresses[NewBB];
   if (NewBA)
     return NewBA;
 
-  getBasicBlock()->AdjustBlockAddressRefCount(-1);
+  getBasicBlock()->setHasAddressTaken(false);
 
   // Remove the old entry, this can't cause the map to rehash (just a
   // tombstone will get added).
-  getContext().pImpl->BlockAddresses.erase(std::make_pair(getFunction(),
-                                                          getBasicBlock()));
+  getContext().pImpl->BlockAddresses.erase(getBasicBlock());
   NewBA = this;
-  setOperand(0, NewF);
-  setOperand(1, NewBB);
-  getBasicBlock()->AdjustBlockAddressRefCount(1);
+  setOperand(0, NewBB);
+  getBasicBlock()->setHasAddressTaken(true);
 
   // If we just want to keep the existing value, then return null.
   // Callers know that this means we shouldn't delete this value.
@@ -2850,23 +2838,21 @@ bool ConstantDataSequential::isElementTypeCompatible(Type *Ty) {
   return false;
 }
 
-unsigned ConstantDataSequential::getNumElements() const {
+uint64_t ConstantDataSequential::getNumElements() const {
   if (ArrayType *AT = dyn_cast<ArrayType>(getType()))
     return AT->getNumElements();
   return cast<FixedVectorType>(getType())->getNumElements();
 }
 
-
 uint64_t ConstantDataSequential::getElementByteSize() const {
-  return getElementType()->getPrimitiveSizeInBits()/8;
+  return getElementType()->getPrimitiveSizeInBits() / 8;
 }
 
 /// Return the start of the specified element.
-const char *ConstantDataSequential::getElementPointer(unsigned Elt) const {
+const char *ConstantDataSequential::getElementPointer(uint64_t Elt) const {
   assert(Elt < getNumElements() && "Invalid Elt");
-  return DataElements+Elt*getElementByteSize();
+  return DataElements + Elt * getElementByteSize();
 }
-
 
 /// Return true if the array is empty or all zeros.
 static bool isAllZeros(StringRef Arr) {
@@ -2894,9 +2880,7 @@ Constant *ConstantDataSequential::getImpl(StringRef Elements, Type *Ty) {
 
   // Do a lookup to see if we have already formed one of these.
   auto &Slot =
-      *Ty->getContext()
-           .pImpl->CDSConstants.insert(std::make_pair(Elements, nullptr))
-           .first;
+      *Ty->getContext().pImpl->CDSConstants.try_emplace(Elements).first;
 
   // The bucket can point to a linked list of different CDS's that have the same
   // body but different types.  For example, 0,0,0,1 could be a 4 element array
@@ -3106,8 +3090,7 @@ Constant *ConstantDataVector::getSplat(unsigned NumElts, Constant *V) {
   return ConstantVector::getSplat(ElementCount::getFixed(NumElts), V);
 }
 
-
-uint64_t ConstantDataSequential::getElementAsInteger(unsigned Elt) const {
+uint64_t ConstantDataSequential::getElementAsInteger(uint64_t Elt) const {
   assert(isa<IntegerType>(getElementType()) &&
          "Accessor can only be used when element is an integer");
   const char *EltPtr = getElementPointer(Elt);
@@ -3127,7 +3110,7 @@ uint64_t ConstantDataSequential::getElementAsInteger(unsigned Elt) const {
   }
 }
 
-APInt ConstantDataSequential::getElementAsAPInt(unsigned Elt) const {
+APInt ConstantDataSequential::getElementAsAPInt(uint64_t Elt) const {
   assert(isa<IntegerType>(getElementType()) &&
          "Accessor can only be used when element is an integer");
   const char *EltPtr = getElementPointer(Elt);
@@ -3155,7 +3138,7 @@ APInt ConstantDataSequential::getElementAsAPInt(unsigned Elt) const {
   }
 }
 
-APFloat ConstantDataSequential::getElementAsAPFloat(unsigned Elt) const {
+APFloat ConstantDataSequential::getElementAsAPFloat(uint64_t Elt) const {
   const char *EltPtr = getElementPointer(Elt);
 
   switch (getElementType()->getTypeID()) {
@@ -3180,19 +3163,19 @@ APFloat ConstantDataSequential::getElementAsAPFloat(unsigned Elt) const {
   }
 }
 
-float ConstantDataSequential::getElementAsFloat(unsigned Elt) const {
+float ConstantDataSequential::getElementAsFloat(uint64_t Elt) const {
   assert(getElementType()->isFloatTy() &&
          "Accessor can only be used when element is a 'float'");
   return *reinterpret_cast<const float *>(getElementPointer(Elt));
 }
 
-double ConstantDataSequential::getElementAsDouble(unsigned Elt) const {
+double ConstantDataSequential::getElementAsDouble(uint64_t Elt) const {
   assert(getElementType()->isDoubleTy() &&
          "Accessor can only be used when element is a 'float'");
   return *reinterpret_cast<const double *>(getElementPointer(Elt));
 }
 
-Constant *ConstantDataSequential::getElementAsConstant(unsigned Elt) const {
+Constant *ConstantDataSequential::getElementAsConstant(uint64_t Elt) const {
   if (getElementType()->isHalfTy() || getElementType()->isBFloatTy() ||
       getElementType()->isFloatTy() || getElementType()->isDoubleTy())
     return ConstantFP::get(getContext(), getElementAsAPFloat(Elt));

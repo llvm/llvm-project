@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTX.h"
-#include "Targets.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
@@ -71,10 +70,11 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
 
   if (TargetPointerWidth == 32)
     resetDataLayout(
-        "e-p:32:32-p6:32:32-i64:64-i128:128-v16:16-v32:32-n16:32:64");
+        "e-p:32:32-p6:32:32-p7:32:32-i64:64-i128:128-v16:16-v32:32-n16:32:64");
   else if (Opts.NVPTXUseShortPointers)
-    resetDataLayout("e-p3:32:32-p4:32:32-p5:32:32-p6:32:32-i64:64-i128:128-v16:"
-                    "16-v32:32-n16:32:64");
+    resetDataLayout(
+        "e-p3:32:32-p4:32:32-p5:32:32-p6:32:32-p7:32:32-i64:64-i128:128-v16:"
+        "16-v32:32-n16:32:64");
   else
     resetDataLayout("e-p6:32:32-i64:64-i128:128-v16:16-v32:32-n16:32:64");
 
@@ -240,6 +240,8 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case OffloadArch::GFX1201:
       case OffloadArch::AMDGCNSPIRV:
       case OffloadArch::Generic:
+      case OffloadArch::GRANITERAPIDS:
+      case OffloadArch::BMG_G21:
       case OffloadArch::LAST:
         break;
       case OffloadArch::UNKNOWN:

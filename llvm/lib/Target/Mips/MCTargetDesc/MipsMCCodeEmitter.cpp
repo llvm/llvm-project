@@ -580,11 +580,11 @@ unsigned MipsMCCodeEmitter::
 getExprOpValue(const MCExpr *Expr, SmallVectorImpl<MCFixup> &Fixups,
                const MCSubtargetInfo &STI) const {
   MCExpr::ExprKind Kind = Expr->getKind();
-  if (Kind == MCExpr::Target) {
+  if (Kind == MCExpr::Specifier) {
     const MipsMCExpr *MipsExpr = cast<MipsMCExpr>(Expr);
 
     Mips::Fixups FixupKind = Mips::Fixups(0);
-    switch (MipsExpr->getKind()) {
+    switch (MipsExpr->getSpecifier()) {
     case MipsMCExpr::MEK_None:
     case MipsMCExpr::MEK_Special:
       llvm_unreachable("Unhandled fixup kind!");
@@ -733,7 +733,7 @@ unsigned MipsMCCodeEmitter::getImmOpValue(const MCInst &MI, const MCOperand &MO,
   if (Expr->evaluateAsAbsolute(Res))
     return Res;
   unsigned MIFrm = MipsII::getFormat(MCII.get(MI.getOpcode()).TSFlags);
-  if (!isa<MCTargetExpr>(Expr) && MIFrm == MipsII::FrmI) {
+  if (!isa<MCSpecifierExpr>(Expr) && MIFrm == MipsII::FrmI) {
     Fixups.push_back(MCFixup::create(
         0, Expr, MCFixupKind(Mips::fixup_Mips_AnyImm16), Expr->getLoc()));
     return 0;

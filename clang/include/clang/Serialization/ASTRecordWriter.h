@@ -151,6 +151,20 @@ public:
     writeBool(Info.isDeref());
   }
 
+  void writeHLSLSpirvOperand(SpirvOperand Op) {
+    QualType ResultType;
+    llvm::APInt Value;
+
+    if (Op.isConstant() || Op.isType())
+      ResultType = Op.getResultType();
+    if (Op.isConstant() || Op.isLiteral())
+      Value = Op.getValue();
+
+    Record->push_back(Op.getKind());
+    writeQualType(ResultType);
+    writeAPInt(Value);
+  }
+
   /// Emit a source range.
   void AddSourceRange(SourceRange Range, LocSeq *Seq = nullptr) {
     return Writer->AddSourceRange(Range, *Record, Seq);
@@ -166,6 +180,10 @@ public:
 
   void writeUInt64(uint64_t Value) {
     Record->push_back(Value);
+  }
+
+  void writeUnsignedOrNone(UnsignedOrNone Value) {
+    Record->push_back(Value.toInternalRepresentation());
   }
 
   /// Emit an integral value.
@@ -306,6 +324,8 @@ public:
 
   /// Writes out a list of OpenACC clauses.
   void writeOpenACCClauseList(ArrayRef<const OpenACCClause *> Clauses);
+
+  void AddOpenACCRoutineDeclAttr(const OpenACCRoutineDeclAttr *A);
 
   /// Emit a string.
   void AddString(StringRef Str) {

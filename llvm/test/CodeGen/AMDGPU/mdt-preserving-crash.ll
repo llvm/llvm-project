@@ -26,19 +26,16 @@ define protected amdgpu_kernel void @_RSENC_PRInit______________________________
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB0_12
 ; CHECK-NEXT:  .LBB0_2: ; %while.cond.i
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    s_cmp_eq_u32 s4, 0
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_2
 ; CHECK-NEXT:  ; %bb.3: ; %if.end60
-; CHECK-NEXT:    s_mov_b64 vcc, exec
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_11
 ; CHECK-NEXT:  ; %bb.4: ; %if.end5.i
-; CHECK-NEXT:    s_mov_b64 vcc, vcc
-; CHECK-NEXT:    s_cbranch_vccz .LBB0_11
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_11
 ; CHECK-NEXT:  ; %bb.5: ; %if.end5.i314
-; CHECK-NEXT:    s_mov_b64 vcc, exec
-; CHECK-NEXT:    s_cbranch_execz .LBB0_11
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_11
 ; CHECK-NEXT:  ; %bb.6: ; %if.end5.i338
-; CHECK-NEXT:    s_mov_b64 vcc, vcc
-; CHECK-NEXT:    s_cbranch_vccz .LBB0_11
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_11
 ; CHECK-NEXT:  ; %bb.7: ; %if.end5.i362
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
@@ -49,7 +46,7 @@ define protected amdgpu_kernel void @_RSENC_PRInit______________________________
 ; CHECK-NEXT:    buffer_store_byte v0, v0, s[0:3], 0 offen
 ; CHECK-NEXT:    s_waitcnt vmcnt(1)
 ; CHECK-NEXT:    buffer_store_byte v1, off, s[0:3], 0 offset:257
-; CHECK-NEXT:    s_cbranch_execz .LBB0_11
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_11
 ; CHECK-NEXT:  ; %bb.8: ; %if.end5.i400
 ; CHECK-NEXT:    flat_load_ubyte v0, v[0:1]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -86,7 +83,8 @@ lor.lhs.false17:                                  ; preds = %if.end15
   br label %while.cond.i
 
 while.cond.i:                                     ; preds = %while.cond.i, %lor.lhs.false17
-  switch i32 undef, label %if.end60 [
+  %undef0 = freeze i32 poison
+  switch i32 %undef0, label %if.end60 [
     i32 0, label %while.cond.i
     i32 3, label %if.end60.loopexit857
   ]
@@ -115,7 +113,7 @@ if.end5.i:                                        ; preds = %if.then3.i, %if.end
   %conv612.i = sext i8 %2 to i32
   %sub13.i = add nsw i32 %conv612.i, -48
   %cmp714.i = icmp ugt i32 %sub13.i, 9
-  switch i8 undef, label %if.end5.i314 [
+  switch i8 poison, label %if.end5.i314 [
     i8 45, label %if.then.i306
     i8 43, label %if.then3.i308
   ]
@@ -132,7 +130,7 @@ if.end5.i314:                                     ; preds = %if.then3.i308, %if.
   %conv612.i311 = sext i8 %3 to i32
   %sub13.i312 = add nsw i32 %conv612.i311, -48
   %cmp714.i313 = icmp ugt i32 %sub13.i312, 9
-  switch i8 undef, label %if.end5.i338 [
+  switch i8 poison, label %if.end5.i338 [
     i8 45, label %if.then.i330
     i8 43, label %if.then3.i332
   ]
@@ -149,7 +147,7 @@ if.end5.i338:                                     ; preds = %if.then3.i332, %if.
   %conv612.i335 = sext i8 %4 to i32
   %sub13.i336 = add nsw i32 %conv612.i335, -48
   %cmp714.i337 = icmp ugt i32 %sub13.i336, 9
-  switch i8 undef, label %if.end5.i362 [
+  switch i8 poison, label %if.end5.i362 [
     i8 45, label %if.then.i354
     i8 43, label %if.then3.i356
   ]
@@ -170,7 +168,7 @@ if.end5.i362:                                     ; preds = %if.then3.i356, %if.
   %6 = load i8, ptr addrspace(1) getelementptr inbounds ([4096 x i8], ptr addrspace(1) @_RSENC_gDcd_______________________________, i64 0, i64 1153), align 1
   %arrayidx232250.1 = getelementptr inbounds [128 x i8], ptr addrspace(5) %pD10, i32 0, i32 1
   store i8 %6, ptr addrspace(5) %arrayidx232250.1, align 1
-  switch i8 undef, label %if.end5.i400 [
+  switch i8 poison, label %if.end5.i400 [
     i8 45, label %if.then.i392
     i8 43, label %if.then3.i394
   ]

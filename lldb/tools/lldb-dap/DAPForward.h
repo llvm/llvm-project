@@ -12,12 +12,15 @@
 // IWYU pragma: begin_exports
 
 namespace lldb_dap {
-struct BreakpointBase;
-struct ExceptionBreakpoint;
-struct FunctionBreakpoint;
-struct SourceBreakpoint;
-struct Watchpoint;
-struct InstructionBreakpoint;
+class BaseRequestHandler;
+class BreakpointBase;
+class ExceptionBreakpoint;
+class FunctionBreakpoint;
+class InstructionBreakpoint;
+class Log;
+class ResponseHandler;
+class SourceBreakpoint;
+class Watchpoint;
 struct DAP;
 } // namespace lldb_dap
 

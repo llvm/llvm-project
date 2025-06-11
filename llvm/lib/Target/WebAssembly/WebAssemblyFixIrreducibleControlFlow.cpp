@@ -375,7 +375,7 @@ void WebAssemblyFixIrreducibleControlFlow::makeSingleEntryLoop(
   // add them as successors.
   DenseMap<MachineBasicBlock *, unsigned> Indices;
   for (auto *Entry : SortedEntries) {
-    auto Pair = Indices.insert(std::make_pair(Entry, 0));
+    auto Pair = Indices.try_emplace(Entry);
     assert(Pair.second);
 
     unsigned Index = MIB.getInstr()->getNumExplicitOperands() - 1;

@@ -4,11 +4,18 @@
 // Verify the generic form can be parsed.
 // RUN: mlir-opt -allow-unregistered-dialect -mlir-print-op-generic %s | mlir-opt -allow-unregistered-dialect | FileCheck %s
 
-// CHECK-LABEL: func @ext_packed_fp8
-// CHECK: amdgpu.ext_packed_fp8
-func.func @ext_packed_fp8(%v: vector<4xf8E4M3FNUZ>) -> f32 {
+// CHECK-LABEL: func @ext_packed_fp8_s
+// CHECK: amdgpu.ext_packed_fp8 {{.*}} vector<4xf8E4M3FNUZ> to f32
+func.func @ext_packed_fp8_s(%v: vector<4xf8E4M3FNUZ>) -> f32 {
   %ret = amdgpu.ext_packed_fp8 %v[0] : vector<4xf8E4M3FNUZ> to f32
   func.return %ret : f32
+}
+
+// CHECK-LABEL: func @ext_packed_fp8_v
+// CHECK: amdgpu.ext_packed_fp8 {{.*}} vector<4xf8E4M3FNUZ> to vector<2xf32
+func.func @ext_packed_fp8_v(%v: vector<4xf8E4M3FNUZ>) -> vector<2xf32> {
+  %ret = amdgpu.ext_packed_fp8 %v[0] : vector<4xf8E4M3FNUZ> to vector<2xf32>
+  func.return %ret : vector<2xf32>
 }
 
 // CHECK-LABEL: func @packed_trunc_2xfp8
@@ -149,4 +156,18 @@ func.func @wmma(%arg0 : vector<16xf16>, %arg1 : vector<8xf16>) -> vector<8xf16> 
   // CHECK: amdgpu.wmma
   %0 = amdgpu.wmma %arg0 * %arg0 + %arg1 : vector<16xf16>, vector<16xf16>, vector<8xf16>
   func.return %0 : vector<8xf16>
+}
+
+// CHECK-LABEL: func @swizzle_bitmode
+func.func @swizzle_bitmode(%arg0 : f32) -> f32 {
+  // CHECK: amdgpu.swizzle_bitmode
+  %0 = amdgpu.swizzle_bitmode %arg0 1 2 4 : f32
+  func.return %0 : f32
+}
+
+// CHECK-LABEL: func @scaled_mfma
+func.func @scaled_mfma(%arg0 : f8E8M0FNU, %arg1 : vector<32xf6E2M3FN>, %arg2 : vector<16xf32>) -> vector<16xf32> {
+  // CHECK: amdgpu.scaled_mfma
+  %0 = amdgpu.scaled_mfma(%arg0[0] * %arg1) * (%arg0[1] * %arg1) + %arg2 { k = 64 : i32, m = 32 : i32, n = 32 : i32 } : f8E8M0FNU, vector<32xf6E2M3FN>, f8E8M0FNU, vector<32xf6E2M3FN>, vector<16xf32>
+  func.return %0 : vector<16xf32>
 }

@@ -365,7 +365,7 @@ define <vscale x 2 x double> @splat_nxv2f64(double %val) {
 define <vscale x 8 x bfloat> @splat_nxv8bf16_zero() #0 {
 ; CHECK-LABEL: splat_nxv8bf16_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.h, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ret
   ret <vscale x 8 x bfloat> zeroinitializer
 }
@@ -373,7 +373,7 @@ define <vscale x 8 x bfloat> @splat_nxv8bf16_zero() #0 {
 define <vscale x 4 x bfloat> @splat_nxv4bf16_zero() #0 {
 ; CHECK-LABEL: splat_nxv4bf16_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.h, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ret
   ret <vscale x 4 x bfloat> zeroinitializer
 }
@@ -381,7 +381,7 @@ define <vscale x 4 x bfloat> @splat_nxv4bf16_zero() #0 {
 define <vscale x 2 x bfloat> @splat_nxv2bf16_zero() #0 {
 ; CHECK-LABEL: splat_nxv2bf16_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.h, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ret
   ret <vscale x 2 x bfloat> zeroinitializer
 }
@@ -389,7 +389,7 @@ define <vscale x 2 x bfloat> @splat_nxv2bf16_zero() #0 {
 define <vscale x 8 x half> @splat_nxv8f16_zero() {
 ; CHECK-LABEL: splat_nxv8f16_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.h, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ret
   ret <vscale x 8 x half> zeroinitializer
 }
@@ -397,7 +397,7 @@ define <vscale x 8 x half> @splat_nxv8f16_zero() {
 define <vscale x 4 x half> @splat_nxv4f16_zero() {
 ; CHECK-LABEL: splat_nxv4f16_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.h, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ret
   ret <vscale x 4 x half> zeroinitializer
 }
@@ -405,7 +405,7 @@ define <vscale x 4 x half> @splat_nxv4f16_zero() {
 define <vscale x 2 x half> @splat_nxv2f16_zero() {
 ; CHECK-LABEL: splat_nxv2f16_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.h, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ret
   ret <vscale x 2 x half> zeroinitializer
 }
@@ -413,7 +413,7 @@ define <vscale x 2 x half> @splat_nxv2f16_zero() {
 define <vscale x 4 x float> @splat_nxv4f32_zero() {
 ; CHECK-LABEL: splat_nxv4f32_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.s, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ret
   ret <vscale x 4 x float> zeroinitializer
 }
@@ -421,7 +421,7 @@ define <vscale x 4 x float> @splat_nxv4f32_zero() {
 define <vscale x 2 x float> @splat_nxv2f32_zero() {
 ; CHECK-LABEL: splat_nxv2f32_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.s, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ret
   ret <vscale x 2 x float> zeroinitializer
 }
@@ -429,7 +429,7 @@ define <vscale x 2 x float> @splat_nxv2f32_zero() {
 define <vscale x 2 x double> @splat_nxv2f64_zero() {
 ; CHECK-LABEL: splat_nxv2f64_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.d, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ret
   ret <vscale x 2 x double> zeroinitializer
 }
@@ -512,7 +512,7 @@ define <vscale x 2 x bfloat> @splat_nxv2bf16_imm() {
 define <vscale x 4 x i32> @splat_nxv4i32_fold(<vscale x 4 x i32> %x) {
 ; CHECK-LABEL: splat_nxv4i32_fold:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.s, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ret
   %r = sub <vscale x 4 x i32> %x, %x
   ret <vscale x 4 x i32> %r
@@ -522,7 +522,7 @@ define <vscale x 4 x i32> @splat_nxv4i32_fold(<vscale x 4 x i32> %x) {
 define <vscale x 4 x float> @splat_nxv4f32_fold(<vscale x 4 x float> %x) {
 ; CHECK-LABEL: splat_nxv4f32_fold:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.s, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ret
   %r = fsub nnan <vscale x 4 x float> %x, %x
   ret <vscale x 4 x float> %r

@@ -82,3 +82,4 @@ def : FMVExtension<"sve2-bitperm", "SVE_BITPERM">;
 def : FMVExtension<"sve2-sha3", "SVE_SHA3">;
 def : FMVExtension<"sve2-sm4", "SVE_SM4">;
 def : FMVExtension<"wfxt", "WFXT">;
+def : FMVExtension<"cssc", "CSSC">;

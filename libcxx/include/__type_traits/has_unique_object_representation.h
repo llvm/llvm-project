@@ -22,7 +22,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 17
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIONS has_unique_object_representations
+struct _LIBCPP_NO_SPECIALIZATIONS has_unique_object_representations
     // TODO: We work around a Clang and GCC bug in __has_unique_object_representations by using remove_all_extents
     //       even though it should not be necessary. This was reported to the compilers:
     //         - Clang: https://github.com/llvm/llvm-project/issues/95311

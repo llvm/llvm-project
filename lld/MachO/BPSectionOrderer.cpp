@@ -73,7 +73,7 @@ struct BPOrdererMachO : lld::BPOrderer<BPOrdererMachO> {
     }
 
     llvm::sort(hashes);
-    hashes.erase(std::unique(hashes.begin(), hashes.end()), hashes.end());
+    hashes.erase(llvm::unique(hashes), hashes.end());
   }
 
   static llvm::StringRef getSymName(const Defined &sym) {
@@ -84,7 +84,7 @@ struct BPOrdererMachO : lld::BPOrderer<BPOrdererMachO> {
 
 private:
   static uint64_t
-  getRelocHash(const Reloc &reloc,
+  getRelocHash(const macho::Reloc &reloc,
                const llvm::DenseMap<const void *, uint64_t> &sectionToIdx) {
     auto *isec = reloc.getReferentInputSection();
     std::optional<uint64_t> sectionIdx;
@@ -115,7 +115,7 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
     for (auto *sec : file->sections) {
       for (auto &subsec : sec->subsections) {
         auto *isec = subsec.isec;
-        if (!isec || isec->data.empty())
+        if (!isec || isec->data.empty() || !isec->data.data())
           continue;
         // ConcatInputSections are entirely live or dead, so the offset is
         // irrelevant.
@@ -124,7 +124,7 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
         size_t idx = sections.size();
         sections.emplace_back(isec);
         for (auto *sym : BPOrdererMachO::getSymbols(*isec)) {
-          auto rootName = getRootSymbol(sym->getName());
+          auto rootName = lld::utils::getRootSymbol(sym->getName());
           rootSymbolToSectionIdxs[CachedHashStringRef(rootName)].insert(idx);
           if (auto linkageName =
                   BPOrdererMachO::getResolvedLinkageName(rootName))

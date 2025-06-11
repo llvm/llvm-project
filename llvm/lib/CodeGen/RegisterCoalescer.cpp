@@ -398,8 +398,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
   MachineFunctionProperties getClearedProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::IsSSA);
+    return MachineFunctionProperties().setIsSSA();
   }
 
   /// This is the pass entry point.
@@ -1398,7 +1397,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
 
   LiveRangeEdit::Remat RM(ValNo);
   RM.OrigMI = DefMI;
-  if (!Edit.canRematerializeAt(RM, ValNo, CopyIdx, true))
+  if (!Edit.canRematerializeAt(RM, ValNo, CopyIdx))
     return false;
 
   DebugLoc DL = CopyMI->getDebugLoc();
@@ -3814,8 +3813,7 @@ bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
     // into an existing tracking collection, or insert a new one.
     RegIt = RegToPHIIdx.find(CP.getDstReg());
     if (RegIt != RegToPHIIdx.end())
-      RegIt->second.insert(RegIt->second.end(), InstrNums.begin(),
-                           InstrNums.end());
+      llvm::append_range(RegIt->second, InstrNums);
     else
       RegToPHIIdx.insert({CP.getDstReg(), InstrNums});
   }

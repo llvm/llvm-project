@@ -208,6 +208,7 @@ public:
     Linux,
     Lv2, // PS3
     MacOSX,
+    Managarm,
     NetBSD,
     OpenBSD,
     Solaris,
@@ -299,6 +300,7 @@ public:
     Amplification,
     OpenCL,
     OpenHOS,
+    Mlibc,
 
     PAuthTest,
 
@@ -659,9 +661,6 @@ public:
     return getOS() == Triple::Win32;
   }
 
-  /// Tests whether the OS is Windows or UEFI.
-  bool isOSWindowsOrUEFI() const { return isOSWindows() || isUEFI(); }
-
   /// Checks if the environment is MSVC.
   bool isKnownWindowsMSVCEnvironment() const {
     return isOSWindows() && getEnvironment() == Triple::MSVC;
@@ -849,6 +848,8 @@ public:
 
   bool isVulkanOS() const { return getOS() == Triple::Vulkan; }
 
+  bool isOSManagarm() const { return getOS() == Triple::Managarm; }
+
   bool isShaderStageEnvironment() const {
     EnvironmentType Env = getEnvironment();
     return Env == Triple::Pixel || Env == Triple::Vertex ||
@@ -888,9 +889,7 @@ public:
   /// Tests whether the target is AMDGCN
   bool isAMDGCN() const { return getArch() == Triple::amdgcn; }
 
-  bool isAMDGPU() const {
-    return getArch() == Triple::r600 || getArch() == Triple::amdgcn;
-  }
+  bool isAMDGPU() const { return getArch() == Triple::r600 || isAMDGCN(); }
 
   /// Tests whether the target is Thumb (little and big endian).
   bool isThumb() const {
@@ -916,6 +915,34 @@ public:
             getEnvironment() == Triple::OpenHOS ||
             getEnvironment() == Triple::MuslEABIHF || isAndroid()) &&
            isOSBinFormatELF();
+  }
+
+  // ARM EABI is the bare-metal EABI described in ARM ABI documents and
+  // can be accessed via -target arm-none-eabi. This is NOT GNUEABI.
+  // FIXME: Add a flag for bare-metal for that target and set Triple::EABI
+  // even for GNUEABI, so we can make a distinction here and still conform to
+  // the EABI on GNU (and Android) mode. This requires change in Clang, too.
+  // FIXME: The Darwin exception is temporary, while we move users to
+  // "*-*-*-macho" triples as quickly as possible.
+  bool isTargetAEABI() const {
+    return (getEnvironment() == Triple::EABI ||
+            getEnvironment() == Triple::EABIHF) &&
+           !isOSDarwin() && !isOSWindows();
+  }
+
+  bool isTargetGNUAEABI() const {
+    return (getEnvironment() == Triple::GNUEABI ||
+            getEnvironment() == Triple::GNUEABIT64 ||
+            getEnvironment() == Triple::GNUEABIHF ||
+            getEnvironment() == Triple::GNUEABIHFT64) &&
+           !isOSDarwin() && !isOSWindows();
+  }
+
+  bool isTargetMuslAEABI() const {
+    return (getEnvironment() == Triple::MuslEABI ||
+            getEnvironment() == Triple::MuslEABIHF ||
+            getEnvironment() == Triple::OpenHOS) &&
+           !isOSDarwin() && !isOSWindows();
   }
 
   /// Tests whether the target is T32.
@@ -1221,6 +1248,9 @@ public:
   /// Test whether target triples are compatible.
   bool isCompatibleWith(const Triple &Other) const;
 
+  /// Test whether the target triple is for a GPU.
+  bool isGPU() const { return isSPIRV() || isNVPTX() || isAMDGPU(); }
+
   /// Merge target triples.
   std::string merge(const Triple &Other) const;
 
@@ -1270,7 +1300,11 @@ public:
 
   /// Returns a canonicalized OS version number for the specified OS.
   static VersionTuple getCanonicalVersionForOS(OSType OSKind,
-                                               const VersionTuple &Version);
+                                               const VersionTuple &Version,
+                                               bool IsInValidRange);
+
+  /// Returns whether an OS version is invalid and would not map to an Apple OS.
+  static bool isValidVersionForOS(OSType OSKind, const VersionTuple &Version);
 };
 
 } // End llvm namespace

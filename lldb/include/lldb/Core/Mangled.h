@@ -9,10 +9,11 @@
 #ifndef LLDB_CORE_MANGLED_H
 #define LLDB_CORE_MANGLED_H
 
+#include "lldb/Core/DemangledNameInfo.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
-#include "lldb/Utility/ConstString.h"
 #include "llvm/ADT/StringRef.h"
 
 #include <cstddef>
@@ -134,9 +135,15 @@ public:
   ///     A const reference to the display demangled name string object.
   ConstString GetDisplayDemangledName() const;
 
-  void SetDemangledName(ConstString name) { m_demangled = name; }
+  void SetDemangledName(ConstString name) {
+    m_demangled = name;
+    m_demangled_info.reset();
+  }
 
-  void SetMangledName(ConstString name) { m_mangled = name; }
+  void SetMangledName(ConstString name) {
+    m_mangled = name;
+    m_demangled_info.reset();
+  }
 
   /// Mangled name get accessor.
   ///
@@ -246,6 +253,8 @@ public:
   ///     for s, otherwise the enumerator for the mangling scheme detected.
   static Mangled::ManglingScheme GetManglingScheme(llvm::StringRef const name);
 
+  static bool IsMangledName(llvm::StringRef name);
+
   /// Decode a serialized version of this object from data.
   ///
   /// \param data
@@ -275,13 +284,26 @@ public:
   ///   table offsets in the cache data.
   void Encode(DataEncoder &encoder, ConstStringTable &strtab) const;
 
+  /// Retrieve \c DemangledNameInfo of the demangled name held by this object.
+  const std::optional<DemangledNameInfo> &GetDemangledInfo() const;
+
 private:
-  ///< The mangled version of the name.
+  /// If \c force is \c false, this function will re-use the previously
+  /// demangled name (if any). If \c force is \c true (or the mangled name
+  /// on this object was not previously demangled), demangle and cache the
+  /// name.
+  ConstString GetDemangledNameImpl(bool force) const;
+
+  /// The mangled version of the name.
   ConstString m_mangled;
 
-  ///< Mutable so we can get it on demand with
-  ///< a const version of this object.
+  /// Mutable so we can get it on demand with
+  /// a const version of this object.
   mutable ConstString m_demangled;
+
+  /// If available, holds information about where in \c m_demangled certain
+  /// parts of the name (e.g., basename, arguments, etc.) begin and end.
+  mutable std::optional<DemangledNameInfo> m_demangled_info = std::nullopt;
 };
 
 Stream &operator<<(Stream &s, const Mangled &obj);

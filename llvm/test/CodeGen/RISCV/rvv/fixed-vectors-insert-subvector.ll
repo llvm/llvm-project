@@ -269,11 +269,11 @@ define void @insert_v8i32_v2i32_0(ptr %vp, ptr %svp) {
 ; VLS-LABEL: insert_v8i32_v2i32_0:
 ; VLS:       # %bb.0:
 ; VLS-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; VLS-NEXT:    vle32.v v8, (a1)
-; VLS-NEXT:    vl2re32.v v10, (a0)
+; VLS-NEXT:    vle32.v v10, (a1)
+; VLS-NEXT:    vl2re32.v v8, (a0)
 ; VLS-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
-; VLS-NEXT:    vmv.v.v v10, v8
-; VLS-NEXT:    vs2r.v v10, (a0)
+; VLS-NEXT:    vmv.v.v v8, v10
+; VLS-NEXT:    vs2r.v v8, (a0)
 ; VLS-NEXT:    ret
   %sv = load <2 x i32>, ptr %svp
   %vec = load <8 x i32>, ptr %vp
@@ -298,11 +298,11 @@ define void @insert_v8i32_v2i32_2(ptr %vp, ptr %svp) {
 ; VLS-LABEL: insert_v8i32_v2i32_2:
 ; VLS:       # %bb.0:
 ; VLS-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; VLS-NEXT:    vle32.v v8, (a1)
-; VLS-NEXT:    vl2re32.v v10, (a0)
+; VLS-NEXT:    vle32.v v10, (a1)
+; VLS-NEXT:    vl2re32.v v8, (a0)
 ; VLS-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; VLS-NEXT:    vslideup.vi v10, v8, 2
-; VLS-NEXT:    vs2r.v v10, (a0)
+; VLS-NEXT:    vslideup.vi v8, v10, 2
+; VLS-NEXT:    vs2r.v v8, (a0)
 ; VLS-NEXT:    ret
   %sv = load <2 x i32>, ptr %svp
   %vec = load <8 x i32>, ptr %vp
@@ -326,11 +326,11 @@ define void @insert_v8i32_v2i32_6(ptr %vp, ptr %svp) {
 ; VLS-LABEL: insert_v8i32_v2i32_6:
 ; VLS:       # %bb.0:
 ; VLS-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; VLS-NEXT:    vle32.v v8, (a1)
-; VLS-NEXT:    vl2re32.v v10, (a0)
+; VLS-NEXT:    vle32.v v10, (a1)
+; VLS-NEXT:    vl2re32.v v8, (a0)
 ; VLS-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; VLS-NEXT:    vslideup.vi v11, v8, 2
-; VLS-NEXT:    vs2r.v v10, (a0)
+; VLS-NEXT:    vslideup.vi v9, v10, 2
+; VLS-NEXT:    vs2r.v v8, (a0)
 ; VLS-NEXT:    ret
   %sv = load <2 x i32>, ptr %svp
   %vec = load <8 x i32>, ptr %vp

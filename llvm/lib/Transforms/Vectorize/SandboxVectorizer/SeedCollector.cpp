@@ -12,6 +12,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Utils.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
@@ -46,7 +47,7 @@ ArrayRef<Instruction *> SeedBundle::getSlice(unsigned StartIdx,
   uint32_t BitCountPowerOfTwo = 0;
   // Can't start a slice with a used instruction.
   assert(!isUsed(StartIdx) && "Expected unused at StartIdx");
-  for (auto S : make_range(Seeds.begin() + StartIdx, Seeds.end())) {
+  for (Instruction *S : drop_begin(Seeds, StartIdx)) {
     // Stop if this instruction is used. This needs to be done before
     // getNumBits() because a "used" instruction may have been erased.
     if (isUsed(StartIdx + NumElements))
@@ -119,8 +120,9 @@ template <typename LoadOrStoreT> void SeedContainer::insert(LoadOrStoreT *LSI) {
 }
 
 // Explicit instantiations
-template void SeedContainer::insert<LoadInst>(LoadInst *);
-template void SeedContainer::insert<StoreInst>(StoreInst *);
+template LLVM_EXPORT_TEMPLATE void SeedContainer::insert<LoadInst>(LoadInst *);
+template LLVM_EXPORT_TEMPLATE void
+SeedContainer::insert<StoreInst>(StoreInst *);
 
 #ifndef NDEBUG
 void SeedContainer::print(raw_ostream &OS) const {

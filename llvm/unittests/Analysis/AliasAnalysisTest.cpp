@@ -186,6 +186,14 @@ TEST_F(AliasAnalysisTest, getModRefInfo) {
       AtomicRMWInst::Xchg, Addr, ConstantInt::get(IntType, 1), Alignment,
       AtomicOrdering::Monotonic, SyncScope::System, BB);
 
+  FunctionType *FooBarTy = FunctionType::get(Type::getVoidTy(C), {}, false);
+  Function::Create(FooBarTy, Function::ExternalLinkage, "foo", &M);
+  auto *BarF = Function::Create(FooBarTy, Function::ExternalLinkage, "bar", &M);
+  BarF->setDoesNotAccessMemory();
+
+  const Instruction *Foo = CallInst::Create(M.getFunction("foo"), {}, BB);
+  const Instruction *Bar = CallInst::Create(M.getFunction("bar"), {}, BB);
+
   ReturnInst::Create(C, nullptr, BB);
 
   auto &AA = getAAResults(*F);
@@ -203,6 +211,13 @@ TEST_F(AliasAnalysisTest, getModRefInfo) {
   EXPECT_EQ(AA.getModRefInfo(CmpXChg1, std::nullopt), ModRefInfo::ModRef);
   EXPECT_EQ(AA.getModRefInfo(AtomicRMW, MemoryLocation()), ModRefInfo::ModRef);
   EXPECT_EQ(AA.getModRefInfo(AtomicRMW, std::nullopt), ModRefInfo::ModRef);
+  EXPECT_EQ(AA.getModRefInfo(Store1, Load1), ModRefInfo::ModRef);
+  EXPECT_EQ(AA.getModRefInfo(Store1, Store1), ModRefInfo::ModRef);
+  EXPECT_EQ(AA.getModRefInfo(Store1, Add1), ModRefInfo::NoModRef);
+  EXPECT_EQ(AA.getModRefInfo(Store1, Foo), ModRefInfo::ModRef);
+  EXPECT_EQ(AA.getModRefInfo(Store1, Bar), ModRefInfo::NoModRef);
+  EXPECT_EQ(AA.getModRefInfo(Foo, Bar), ModRefInfo::NoModRef);
+  EXPECT_EQ(AA.getModRefInfo(Foo, Foo), ModRefInfo::ModRef);
 }
 
 static Instruction *getInstructionByName(Function &F, StringRef Name) {

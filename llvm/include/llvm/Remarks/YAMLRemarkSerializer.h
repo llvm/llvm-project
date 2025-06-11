@@ -14,6 +14,7 @@
 #define LLVM_REMARKS_YAMLREMARKSERIALIZER_H
 
 #include "llvm/Remarks/RemarkSerializer.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <optional>
 
@@ -31,7 +32,7 @@ namespace remarks {
 ///   - <KEY>: <VALUE>
 ///     DebugLoc:        { File: <FILE>, Line: <LINE>, Column: <COL> }
 /// ...
-struct YAMLRemarkSerializer : public RemarkSerializer {
+struct LLVM_ABI YAMLRemarkSerializer : public RemarkSerializer {
   /// The YAML streamer.
   yaml::Output YAMLOutput;
 
@@ -53,7 +54,7 @@ protected:
                        std::optional<StringTable> StrTab = std::nullopt);
 };
 
-struct YAMLMetaSerializer : public MetaSerializer {
+struct LLVM_ABI YAMLMetaSerializer : public MetaSerializer {
   std::optional<StringRef> ExternalFilename;
 
   YAMLMetaSerializer(raw_ostream &OS, std::optional<StringRef> ExternalFilename)
@@ -65,7 +66,7 @@ struct YAMLMetaSerializer : public MetaSerializer {
 /// Serialize the remarks to YAML using a string table. An remark entry looks
 /// like the regular YAML remark but instead of string entries it's using
 /// numbers that map to an index in the string table.
-struct YAMLStrTabRemarkSerializer : public YAMLRemarkSerializer {
+struct LLVM_ABI YAMLStrTabRemarkSerializer : public YAMLRemarkSerializer {
   /// Wether we already emitted the metadata in standalone mode.
   /// This should be set to true after the first invocation of `emit`.
   bool DidEmitMeta = false;
@@ -91,7 +92,7 @@ struct YAMLStrTabRemarkSerializer : public YAMLRemarkSerializer {
   }
 };
 
-struct YAMLStrTabMetaSerializer : public YAMLMetaSerializer {
+struct LLVM_ABI YAMLStrTabMetaSerializer : public YAMLMetaSerializer {
   /// The string table is part of the metadata.
   const StringTable &StrTab;
 

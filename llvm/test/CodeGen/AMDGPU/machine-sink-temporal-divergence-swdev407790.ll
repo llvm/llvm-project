@@ -3,9 +3,6 @@
 
 ; ModuleID = 'kernel_round1_passing.bc'
 source_filename = "/tmp/comgr-295d04/input/CompileSource"
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9"
-target triple = "amdgcn-amd-amdhsa"
-
 @kernel_round1.first_words_data = external hidden unnamed_addr addrspace(3) global [896 x i8], align 1
 @kernel_round1.collisionsData = external hidden unnamed_addr addrspace(3) global [3840 x i32], align 4
 @kernel_round1.collisionsNum = external hidden addrspace(3) global i32, align 4
@@ -392,6 +389,7 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    s_mov_b32 s14, s33
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_add_co_u32 v41, vcc_lo, v0, v41
+; CHECK-NEXT:    v_add_co_ci_u32_e64 v0, null, 0, v1, vcc_lo
 ; CHECK-NEXT:    v_cmp_le_u32_e32 vcc_lo, v47, v41
 ; CHECK-NEXT:    s_or_b32 s52, vcc_lo, s52
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s52
@@ -410,9 +408,9 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    v_add_co_u32 v2, s4, s64, v1
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v3, null, s65, 0, s4
 ; CHECK-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
-; CHECK-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v3, vcc_lo
+; CHECK-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v3, vcc_lo
 ; CHECK-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
-; CHECK-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; CHECK-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off offset:8
 ; CHECK-NEXT:    global_load_dwordx4 v[8:11], v[2:3], off offset:8
@@ -480,7 +478,7 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    v_lshrrev_b64 v[0:1], 16, v[45:46]
 ; CHECK-NEXT:    v_add_co_u32 v6, vcc_lo, v6, v10
 ; CHECK-NEXT:    v_or3_b32 v8, v8, v9, v62
-; CHECK-NEXT:    v_add_co_ci_u32_e32 v7, vcc_lo, 0, v7, vcc_lo
+; CHECK-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v7, vcc_lo
 ; CHECK-NEXT:    v_lshrrev_b64 v[4:5], 16, v[4:5]
 ; CHECK-NEXT:    v_or_b32_e32 v1, v11, v1
 ; CHECK-NEXT:    ; implicit-def: $vgpr42

@@ -2,39 +2,37 @@
 ; RUN: llc < %s -mtriple=aarch64-pc-win32 | FileCheck %s
 ; RUN: llc < %s -global-isel -mtriple=aarch64-pc-win32 -global-isel-abort=0 | FileCheck %s --check-prefix=GISEL
 
-%struct.__va_list = type { ptr, ptr, ptr, i32, i32 }
-
 ; Function Attrs: mustprogress noinline nounwind optnone uwtable
 define i1 @va_func(i32 %a, i8 %b, i8 %c, ...) {
 ; CHECK-LABEL: va_func:
 ; CHECK:       .seh_proc va_func
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    .seh_stackalloc 112
-; CHECK-NEXT:    str x19, [sp, #48] // 8-byte Folded Spill
-; CHECK-NEXT:    .seh_save_reg x19, 48
-; CHECK-NEXT:    str x30, [sp, #56] // 8-byte Folded Spill
-; CHECK-NEXT:    .seh_save_reg x30, 56
+; CHECK-NEXT:    sub sp, sp, #80
+; CHECK-NEXT:    .seh_stackalloc 80
+; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    .seh_save_reg x19, 16
+; CHECK-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
+; CHECK-NEXT:    .seh_save_reg x30, 24
 ; CHECK-NEXT:    .seh_endprologue
-; CHECK-NEXT:    add x8, sp, #72
+; CHECK-NEXT:    add x8, sp, #40
 ; CHECK-NEXT:    mov w19, w0
-; CHECK-NEXT:    stp x3, x4, [sp, #72]
-; CHECK-NEXT:    stp x5, x6, [sp, #88]
-; CHECK-NEXT:    str x7, [sp, #104]
-; CHECK-NEXT:    str x8, [sp, #16]
-; CHECK-NEXT:    str w0, [sp, #12]
-; CHECK-NEXT:    strb w1, [sp, #11]
-; CHECK-NEXT:    strb w2, [sp, #10]
+; CHECK-NEXT:    stp x3, x4, [sp, #40]
+; CHECK-NEXT:    stp x5, x6, [sp, #56]
+; CHECK-NEXT:    str x7, [sp, #72]
+; CHECK-NEXT:    str x8, [sp, #8]
+; CHECK-NEXT:    str w0, [sp, #4]
+; CHECK-NEXT:    strb w1, [sp, #3]
+; CHECK-NEXT:    strb w2, [sp, #2]
 ; CHECK-NEXT:    bl other
 ; CHECK-NEXT:    cmp w19, w0
 ; CHECK-NEXT:    cset w0, ls
 ; CHECK-NEXT:    .seh_startepilogue
-; CHECK-NEXT:    ldr x30, [sp, #56] // 8-byte Folded Reload
-; CHECK-NEXT:    .seh_save_reg x30, 56
-; CHECK-NEXT:    ldr x19, [sp, #48] // 8-byte Folded Reload
-; CHECK-NEXT:    .seh_save_reg x19, 48
-; CHECK-NEXT:    add sp, sp, #112
-; CHECK-NEXT:    .seh_stackalloc 112
+; CHECK-NEXT:    ldr x30, [sp, #24] // 8-byte Folded Reload
+; CHECK-NEXT:    .seh_save_reg x30, 24
+; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    .seh_save_reg x19, 16
+; CHECK-NEXT:    add sp, sp, #80
+; CHECK-NEXT:    .seh_stackalloc 80
 ; CHECK-NEXT:    .seh_endepilogue
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .seh_endfunclet
@@ -43,37 +41,37 @@ define i1 @va_func(i32 %a, i8 %b, i8 %c, ...) {
 ; GISEL-LABEL: va_func:
 ; GISEL:       .seh_proc va_func
 ; GISEL-NEXT:  // %bb.0:
-; GISEL-NEXT:    sub sp, sp, #112
-; GISEL-NEXT:    .seh_stackalloc 112
-; GISEL-NEXT:    str x19, [sp, #48] // 8-byte Folded Spill
-; GISEL-NEXT:    .seh_save_reg x19, 48
-; GISEL-NEXT:    str x30, [sp, #56] // 8-byte Folded Spill
-; GISEL-NEXT:    .seh_save_reg x30, 56
+; GISEL-NEXT:    sub sp, sp, #80
+; GISEL-NEXT:    .seh_stackalloc 80
+; GISEL-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; GISEL-NEXT:    .seh_save_reg x19, 16
+; GISEL-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
+; GISEL-NEXT:    .seh_save_reg x30, 24
 ; GISEL-NEXT:    .seh_endprologue
-; GISEL-NEXT:    add x8, sp, #72
+; GISEL-NEXT:    add x8, sp, #40
 ; GISEL-NEXT:    mov w19, w0
-; GISEL-NEXT:    stp x3, x4, [sp, #72]
-; GISEL-NEXT:    stp x5, x6, [sp, #88]
-; GISEL-NEXT:    str x7, [sp, #104]
-; GISEL-NEXT:    str x8, [sp, #16]
-; GISEL-NEXT:    str w0, [sp, #12]
-; GISEL-NEXT:    strb w1, [sp, #11]
-; GISEL-NEXT:    strb w2, [sp, #10]
+; GISEL-NEXT:    stp x3, x4, [sp, #40]
+; GISEL-NEXT:    stp x5, x6, [sp, #56]
+; GISEL-NEXT:    str x7, [sp, #72]
+; GISEL-NEXT:    str x8, [sp, #8]
+; GISEL-NEXT:    str w0, [sp, #4]
+; GISEL-NEXT:    strb w1, [sp, #3]
+; GISEL-NEXT:    strb w2, [sp, #2]
 ; GISEL-NEXT:    bl other
 ; GISEL-NEXT:    cmp w19, w0
 ; GISEL-NEXT:    cset w0, ls
 ; GISEL-NEXT:    .seh_startepilogue
-; GISEL-NEXT:    ldr x30, [sp, #56] // 8-byte Folded Reload
-; GISEL-NEXT:    .seh_save_reg x30, 56
-; GISEL-NEXT:    ldr x19, [sp, #48] // 8-byte Folded Reload
-; GISEL-NEXT:    .seh_save_reg x19, 48
-; GISEL-NEXT:    add sp, sp, #112
-; GISEL-NEXT:    .seh_stackalloc 112
+; GISEL-NEXT:    ldr x30, [sp, #24] // 8-byte Folded Reload
+; GISEL-NEXT:    .seh_save_reg x30, 24
+; GISEL-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; GISEL-NEXT:    .seh_save_reg x19, 16
+; GISEL-NEXT:    add sp, sp, #80
+; GISEL-NEXT:    .seh_stackalloc 80
 ; GISEL-NEXT:    .seh_endepilogue
 ; GISEL-NEXT:    ret
 ; GISEL-NEXT:    .seh_endfunclet
 ; GISEL-NEXT:    .seh_endproc
-  %valist = alloca %struct.__va_list
+  %valist = alloca ptr
   call void @llvm.va_start(ptr %valist)
   %a_alloc = alloca i32, align 4
   %b_alloc = alloca i8, align 1

@@ -18,7 +18,7 @@ bb:
 
 ; CHECK:      .set .Laliasee_default_vgpr64_sgpr102.num_vgpr, 53
 ; CHECK-NEXT: .set .Laliasee_default_vgpr64_sgpr102.num_agpr, 0
-; CHECK-NEXT: .set .Laliasee_default_vgpr64_sgpr102.numbered_sgpr, 32
+; CHECK-NEXT: .set .Laliasee_default_vgpr64_sgpr102.numbered_sgpr, 0
 define internal void @aliasee_default_vgpr64_sgpr102() #1 {
 bb:
   call void asm sideeffect "; clobber v52 ", "~{v52}"()
@@ -29,5 +29,3 @@ attributes #0 = { noinline norecurse nounwind optnone }
 attributes #1 = { noinline norecurse nounwind readnone willreturn }
 attributes #2 = { nounwind readnone willreturn }
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

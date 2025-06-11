@@ -168,25 +168,25 @@ void CSKYAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
 // Convert a CSKY-specific constant pool modifier into the associated
 // MCSymbolRefExpr variant kind.
-static CSKYMCExpr::VariantKind
+static CSKYMCExpr::Specifier
 getModifierVariantKind(CSKYCP::CSKYCPModifier Modifier) {
   switch (Modifier) {
   case CSKYCP::NO_MOD:
-    return CSKYMCExpr::VK_CSKY_None;
+    return CSKYMCExpr::VK_None;
   case CSKYCP::ADDR:
-    return CSKYMCExpr::VK_CSKY_ADDR;
+    return CSKYMCExpr::VK_ADDR;
   case CSKYCP::GOT:
-    return CSKYMCExpr::VK_CSKY_GOT;
+    return CSKYMCExpr::VK_GOT;
   case CSKYCP::GOTOFF:
-    return CSKYMCExpr::VK_CSKY_GOTOFF;
+    return CSKYMCExpr::VK_GOTOFF;
   case CSKYCP::PLT:
-    return CSKYMCExpr::VK_CSKY_PLT;
+    return CSKYMCExpr::VK_PLT;
   case CSKYCP::TLSGD:
-    return CSKYMCExpr::VK_CSKY_TLSGD;
+    return CSKYMCExpr::VK_TLSGD;
   case CSKYCP::TLSLE:
-    return CSKYMCExpr::VK_CSKY_TLSLE;
+    return CSKYMCExpr::VK_TLSLE;
   case CSKYCP::TLSIE:
-    return CSKYMCExpr::VK_CSKY_TLSIE;
+    return CSKYMCExpr::VK_TLSIE;
   }
   llvm_unreachable("Invalid CSKYCPModifier!");
 }

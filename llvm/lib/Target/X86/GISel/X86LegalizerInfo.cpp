@@ -99,11 +99,16 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(0, /*Min=*/8)
       .clampScalar(0, s8, sMaxScalar);
 
-  getActionDefinitionsBuilder({G_LROUND, G_LLROUND, G_FCOS, G_FCOSH, G_FACOS,
-                               G_FSIN, G_FSINH, G_FASIN, G_FTAN, G_FTANH,
-                               G_FATAN, G_FATAN2, G_FPOW, G_FEXP, G_FEXP2,
-                               G_FEXP10, G_FLOG, G_FLOG2, G_FLOG10})
+  getActionDefinitionsBuilder({G_LROUND, G_LLROUND, G_FCOS,  G_FCOSH,  G_FACOS,
+                               G_FSIN,   G_FSINH,   G_FASIN, G_FTAN,   G_FTANH,
+                               G_FATAN,  G_FATAN2,  G_FPOW,  G_FEXP,   G_FEXP2,
+                               G_FEXP10, G_FLOG,    G_FLOG2, G_FLOG10, G_FPOWI})
       .libcall();
+
+  getActionDefinitionsBuilder(G_FSQRT)
+      .legalFor(HasSSE1 || UseX87, {s32})
+      .legalFor(HasSSE2 || UseX87, {s64})
+      .legalFor(UseX87, {s80});
 
   // merge/unmerge
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
@@ -368,22 +373,16 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   // load/store: add more corner cases
   for (unsigned Op : {G_LOAD, G_STORE}) {
     auto &Action = getActionDefinitionsBuilder(Op);
-    Action.legalForTypesWithMemDesc({{s8, p0, s1, 1},
-                                     {s8, p0, s8, 1},
-                                     {s16, p0, s8, 1},
+    Action.legalForTypesWithMemDesc({{s8, p0, s8, 1},
                                      {s16, p0, s16, 1},
-                                     {s32, p0, s8, 1},
-                                     {s32, p0, s16, 1},
                                      {s32, p0, s32, 1},
                                      {s80, p0, s80, 1},
                                      {p0, p0, p0, 1},
                                      {v4s8, p0, v4s8, 1}});
     if (Is64Bit)
-      Action.legalForTypesWithMemDesc({{s64, p0, s8, 1},
-                                       {s64, p0, s16, 1},
-                                       {s64, p0, s32, 1},
-                                       {s64, p0, s64, 1},
-                                       {v2s32, p0, v2s32, 1}});
+      Action.legalForTypesWithMemDesc(
+          {{s64, p0, s64, 1}, {v2s32, p0, v2s32, 1}});
+
     if (HasSSE1)
       Action.legalForTypesWithMemDesc({{v4s32, p0, v4s32, 1}});
     if (HasSSE2)
@@ -402,6 +401,21 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                                        {v32s16, p0, v32s16, 1},
                                        {v16s32, p0, v16s32, 1},
                                        {v8s64, p0, v8s64, 1}});
+
+    // X86 supports extending loads but not stores for GPRs
+    if (Op == G_LOAD) {
+      Action.legalForTypesWithMemDesc({{s8, p0, s1, 1},
+                                       {s16, p0, s8, 1},
+                                       {s32, p0, s8, 1},
+                                       {s32, p0, s16, 1}});
+      if (Is64Bit)
+        Action.legalForTypesWithMemDesc(
+            {{s64, p0, s8, 1}, {s64, p0, s16, 1}, {s64, p0, s32, 1}});
+    } else {
+      Action.customIf([=](const LegalityQuery &Query) {
+        return Query.Types[0] != Query.MMODescrs[0].MemoryTy;
+      });
+    }
     Action.widenScalarToNextPow2(0, /*Min=*/8)
         .clampScalar(0, s8, sMaxScalar)
         .scalarize(0);
@@ -476,31 +490,25 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       });
 
   getActionDefinitionsBuilder(G_SITOFP)
-      .legalIf([=](const LegalityQuery &Query) {
-        return (HasSSE1 &&
-                (typePairInSet(0, 1, {{s32, s32}})(Query) ||
-                 (Is64Bit && typePairInSet(0, 1, {{s32, s64}})(Query)))) ||
-               (HasSSE2 &&
-                (typePairInSet(0, 1, {{s64, s32}})(Query) ||
-                 (Is64Bit && typePairInSet(0, 1, {{s64, s64}})(Query))));
-      })
-      .clampScalar(1, s32, sMaxScalar)
+      .legalFor(HasSSE1, {{s32, s32}})
+      .legalFor(HasSSE1 && Is64Bit, {{s32, s64}})
+      .legalFor(HasSSE2, {{s64, s32}})
+      .legalFor(HasSSE2 && Is64Bit, {{s64, s64}})
+      .clampScalar(1, (UseX87 && !HasSSE1) ? s16 : s32, sMaxScalar)
       .widenScalarToNextPow2(1)
+      .customForCartesianProduct(UseX87, {s32, s64, s80}, {s16, s32, s64})
       .clampScalar(0, s32, HasSSE2 ? s64 : s32)
       .widenScalarToNextPow2(0);
 
   getActionDefinitionsBuilder(G_FPTOSI)
-      .legalIf([=](const LegalityQuery &Query) {
-        return (HasSSE1 &&
-                (typePairInSet(0, 1, {{s32, s32}})(Query) ||
-                 (Is64Bit && typePairInSet(0, 1, {{s64, s32}})(Query)))) ||
-               (HasSSE2 &&
-                (typePairInSet(0, 1, {{s32, s64}})(Query) ||
-                 (Is64Bit && typePairInSet(0, 1, {{s64, s64}})(Query))));
-      })
-      .clampScalar(1, s32, HasSSE2 ? s64 : s32)
+      .legalFor(HasSSE1, {{s32, s32}})
+      .legalFor(HasSSE1 && Is64Bit, {{s64, s32}})
+      .legalFor(HasSSE2, {{s32, s64}})
+      .legalFor(HasSSE2 && Is64Bit, {{s64, s64}})
+      .clampScalar(0, (UseX87 && !HasSSE1) ? s16 : s32, sMaxScalar)
       .widenScalarToNextPow2(0)
-      .clampScalar(0, s32, sMaxScalar)
+      .customForCartesianProduct(UseX87, {s16, s32, s64}, {s32, s64, s80})
+      .clampScalar(1, s32, HasSSE2 ? s64 : s32)
       .widenScalarToNextPow2(1);
 
   // For G_UITOFP and G_FPTOUI without AVX512, we have to custom legalize types
@@ -655,8 +663,70 @@ bool X86LegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     return legalizeFPTOUI(MI, MRI, Helper);
   case TargetOpcode::G_UITOFP:
     return legalizeUITOFP(MI, MRI, Helper);
+  case TargetOpcode::G_STORE:
+    return legalizeNarrowingStore(MI, MRI, Helper);
+  case TargetOpcode::G_SITOFP:
+    return legalizeSITOFP(MI, MRI, Helper);
+  case TargetOpcode::G_FPTOSI:
+    return legalizeFPTOSI(MI, MRI, Helper);
   }
   llvm_unreachable("expected switch to return");
+}
+
+bool X86LegalizerInfo::legalizeSITOFP(MachineInstr &MI,
+                                      MachineRegisterInfo &MRI,
+                                      LegalizerHelper &Helper) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineFunction &MF = *MI.getMF();
+  auto [Dst, DstTy, Src, SrcTy] = MI.getFirst2RegLLTs();
+
+  assert((SrcTy.getSizeInBits() == 16 || SrcTy.getSizeInBits() == 32 ||
+          SrcTy.getSizeInBits() == 64) &&
+         "Unexpected source type for SITOFP in X87 mode.");
+
+  TypeSize MemSize = SrcTy.getSizeInBytes();
+  MachinePointerInfo PtrInfo;
+  Align Alignmt = Helper.getStackTemporaryAlignment(SrcTy);
+  auto SlotPointer = Helper.createStackTemporary(MemSize, Alignmt, PtrInfo);
+  MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
+      PtrInfo, MachineMemOperand::MOStore, MemSize, Align(MemSize));
+
+  // Store the integer value on the FPU stack.
+  MIRBuilder.buildStore(Src, SlotPointer, *StoreMMO);
+
+  MachineMemOperand *LoadMMO = MF.getMachineMemOperand(
+      PtrInfo, MachineMemOperand::MOLoad, MemSize, Align(MemSize));
+  MIRBuilder.buildInstr(X86::G_FILD)
+      .addDef(Dst)
+      .addUse(SlotPointer.getReg(0))
+      .addMemOperand(LoadMMO);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool X86LegalizerInfo::legalizeFPTOSI(MachineInstr &MI,
+                                      MachineRegisterInfo &MRI,
+                                      LegalizerHelper &Helper) const {
+  MachineFunction &MF = *MI.getMF();
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  auto [Dst, DstTy, Src, SrcTy] = MI.getFirst2RegLLTs();
+
+  TypeSize MemSize = DstTy.getSizeInBytes();
+  MachinePointerInfo PtrInfo;
+  Align Alignmt = Helper.getStackTemporaryAlignment(DstTy);
+  auto SlotPointer = Helper.createStackTemporary(MemSize, Alignmt, PtrInfo);
+  MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
+      PtrInfo, MachineMemOperand::MOStore, MemSize, Align(MemSize));
+
+  MIRBuilder.buildInstr(X86::G_FIST)
+      .addUse(Src)
+      .addUse(SlotPointer.getReg(0))
+      .addMemOperand(StoreMMO);
+
+  MIRBuilder.buildLoad(Dst, SlotPointer, PtrInfo, Align(MemSize));
+  MI.eraseFromParent();
+  return true;
 }
 
 bool X86LegalizerInfo::legalizeBuildVector(MachineInstr &MI,
@@ -747,6 +817,22 @@ bool X86LegalizerInfo::legalizeUITOFP(MachineInstr &MI,
   }
 
   return false;
+}
+
+bool X86LegalizerInfo::legalizeNarrowingStore(MachineInstr &MI,
+                                              MachineRegisterInfo &MRI,
+                                              LegalizerHelper &Helper) const {
+  auto &Store = cast<GStore>(MI);
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineMemOperand &MMO = **Store.memoperands_begin();
+  MachineFunction &MF = MIRBuilder.getMF();
+  LLT ValTy = MRI.getType(Store.getValueReg());
+  auto *NewMMO = MF.getMachineMemOperand(&MMO, MMO.getPointerInfo(), ValTy);
+
+  Helper.Observer.changingInstr(Store);
+  Store.setMemRefs(MF, {NewMMO});
+  Helper.Observer.changedInstr(Store);
+  return true;
 }
 
 bool X86LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,

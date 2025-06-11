@@ -14,10 +14,10 @@ define {i32, i1} @elect_sync(i32 %mask) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [elect_sync_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [elect_sync_param_0];
 ; CHECK-NEXT:    elect.sync %r2|%p1, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
-; CHECK-NEXT:    selp.u16 %rs1, -1, 0, %p1;
+; CHECK-NEXT:    selp.b16 %rs1, -1, 0, %p1;
 ; CHECK-NEXT:    st.param.b8 [func_retval0+4], %rs1;
 ; CHECK-NEXT:    ret;
   %val = call {i32, i1} @llvm.nvvm.elect.sync(i32 %mask)
@@ -34,7 +34,7 @@ define {i32, i1} @elect_sync_imm() {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    elect.sync %r1|%p1, -1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
-; CHECK-NEXT:    selp.u16 %rs1, -1, 0, %p1;
+; CHECK-NEXT:    selp.b16 %rs1, -1, 0, %p1;
 ; CHECK-NEXT:    st.param.b8 [func_retval0+4], %rs1;
 ; CHECK-NEXT:    ret;
   %val = call {i32, i1} @llvm.nvvm.elect.sync(i32 u0xffffffff)
@@ -51,11 +51,11 @@ define {i32, i1} @elect_sync_twice(i32 %mask) {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [elect_sync_twice_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [elect_sync_twice_param_0];
 ; CHECK-NEXT:    elect.sync %r2|%p1, %r1;
 ; CHECK-NEXT:    elect.sync %r3|%p2, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
-; CHECK-NEXT:    selp.u16 %rs1, -1, 0, %p1;
+; CHECK-NEXT:    selp.b16 %rs1, -1, 0, %p1;
 ; CHECK-NEXT:    st.param.b8 [func_retval0+4], %rs1;
 ; CHECK-NEXT:    ret;
   %val = call {i32, i1} @llvm.nvvm.elect.sync(i32 %mask)

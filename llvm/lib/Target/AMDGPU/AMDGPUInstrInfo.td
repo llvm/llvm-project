@@ -99,6 +99,12 @@ def AMDGPUtc_return_chain: SDNode<"AMDGPUISD::TC_RETURN_CHAIN",
   [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
 >;
 
+// With dynamic VGPRs.
+def AMDGPUtc_return_chain_dvgpr: SDNode<"AMDGPUISD::TC_RETURN_CHAIN_DVGPR",
+  SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>,
+  [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
+>;
+
 def AMDGPUtrap : SDNode<"AMDGPUISD::TRAP",
   SDTypeProfile<0, 1, [SDTCisVT<0, i16>]>,
     [SDNPHasChain, SDNPVariadic, SDNPSideEffect, SDNPOptInGlue]

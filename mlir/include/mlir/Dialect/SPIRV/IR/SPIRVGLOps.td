@@ -767,6 +767,107 @@ def SPIRV_GLTanhOp : SPIRV_GLUnaryArithmeticOp<"Tanh", 21, SPIRV_Float16or32> {
 
 // -----
 
+def SPIRV_GLAsinhOp : SPIRV_GLUnaryArithmeticOp<"Asinh", 22, SPIRV_Float16or32> {
+  let summary = "Arc hyperbolic sine of operand in radians.";
+
+  let description = [{
+    Arc hyperbolic sine; result is the inverse of sinh.
+
+    The operand x must be a scalar or vector whose component type is 16-bit or
+    32-bit floating-point.
+
+    Result Type and the type of x must be the same type. Results are computed
+    per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.Asinh %0 : f32
+    %3 = spirv.GL.Asinh %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_GLAcoshOp : SPIRV_GLUnaryArithmeticOp<"Acosh", 23, SPIRV_Float16or32> {
+  let summary = "Arc hyperbolic cosine of operand in radians.";
+
+  let description = [{
+    Arc hyperbolic cosine; result is the non-negative inverse of cosh. The resulting
+    value is NaN if x < 1.
+
+    The operand x must be a scalar or vector whose component type is 16-bit or
+    32-bit floating-point.
+
+    Result Type and the type of x must be the same type. Results are computed
+    per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.Acosh %0 : f32
+    %3 = spirv.GL.Acosh %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_GLAtanhOp : SPIRV_GLUnaryArithmeticOp<"Atanh", 24, SPIRV_Float16or32> {
+  let summary = "Arc hyperbolic tangent of operand in radians.";
+
+  let description = [{
+    Arc hyperbolic tangent; result is the inverse of tanh. The resulting value
+    is NaN if abs x ≥ 1.
+
+    The operand x must be a scalar or vector whose component type is 16-bit or
+    32-bit floating-point.
+
+    Result Type and the type of x must be the same type. Results are computed
+    per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.Atanh %0 : f32
+    %3 = spirv.GL.Atanh %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_GLLog2Op : SPIRV_GLUnaryArithmeticOp<"Log2", 30, SPIRV_Float16or32> {
+  let summary = "Result is the base-2 logarithm of x";
+
+  let description = [{
+    Result is the base-2 logarithm of x, i.e., the value y which satisfies the
+    equation x = 2**y. The resulting value is NaN if x < 0. Moreover:
+
+    ```
+    log(Inf) = Inf
+    log(1.0) = +0
+    log(±0) = -Inf
+    ```
+    
+    The operand x must be a scalar or vector whose component type is 16-bit or
+    32-bit floating-point.
+
+    Result Type and the type of x must be the same type. Results are computed
+    per component.
+
+    #### Example:
+    
+    ```mlir
+    %2 = spirv.GL.Log2 %0 : f32
+    %3 = spirv.GL.Log2 %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
 def SPIRV_GLFClampOp : SPIRV_GLTernaryArithmeticOp<"FClamp", 43, SPIRV_Float> {
   let summary = "Clamp x between min and max values.";
 
@@ -1158,6 +1259,33 @@ def SPIRV_GLFindUMsbOp : SPIRV_GLUnaryArithmeticOp<"FindUMsb", 75, SPIRV_Int32> 
     computed per component.
 
     This instruction is currently limited to 32-bit width components.
+  }];
+}
+
+// ----
+
+def SPIRV_GLFractOp : SPIRV_GLUnaryArithmeticOp<"Fract", 10, SPIRV_Float> {
+  let summary = "Returns the `x - floor(x)` of the operand";
+
+  let description = [{
+    Result is:
+
+    ```
+    fract(x) = x - floor(x)
+    fract(±0) = +0
+    fract(±Inf) = NaN
+    ```
+
+    The operand x must be a scalar or vector whose component type is floating-point.
+
+    Result Type and the type of x must be the same type. Results are computed per component.
+
+    #### Example:
+
+    ```mlir
+    %result = spirv.GL.Sqrt %x : f32
+    %result = spirv.GL.Sqrt %x : vector<3xf16>
+    ```
   }];
 }
 

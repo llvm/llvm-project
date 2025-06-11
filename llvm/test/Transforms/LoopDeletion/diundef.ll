@@ -1,5 +1,4 @@
 ; RUN: opt %s -passes=loop-deletion -S | FileCheck %s --implicit-check-not=dbg.value
-; RUN: opt %s -passes=loop-deletion -S --try-experimental-debuginfo-iterators | FileCheck %s --implicit-check-not=dbg.value
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.14.0"

@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/Support/Compiler.h"
 #include <vector>
 
 namespace llvm {
@@ -55,7 +56,7 @@ enum LCOMMType { NoAlignment, ByteAlignment, Log2Alignment };
 
 /// This class is intended to be used as a base class for asm
 /// properties and features specific to the target.
-class MCAsmInfo {
+class LLVM_ABI MCAsmInfo {
 public:
   /// Assembly character literal syntax types.
   enum AsmCharLiteralSyntax {
@@ -65,10 +66,13 @@ public:
                             /// quote, e.g., `'A`.
   };
 
-  struct VariantKindDesc {
+  // This describes a @ style relocation specifier (expr@specifier) supported by
+  // AsmParser::parsePrimaryExpr.
+  struct AtSpecifier {
     uint32_t Kind;
     StringRef Name;
   };
+  using VariantKindDesc = AtSpecifier;
 
 protected:
   //===------------------------------------------------------------------===//
@@ -162,13 +166,6 @@ protected:
   /// an inline assembly statement.  Defaults to "#APP\n", "#NO_APP\n"
   const char *InlineAsmStart;
   const char *InlineAsmEnd;
-
-  /// These are assembly directives that tells the assembler to interpret the
-  /// following instructions differently.  Defaults to ".code16", ".code32",
-  /// ".code64".
-  const char *Code16Directive;
-  const char *Code32Directive;
-  const char *Code64Directive;
 
   /// Which dialect of an assembler variant to use.  Defaults to 0
   unsigned AssemblerDialect = 0;
@@ -377,13 +374,12 @@ protected:
   /// names in .cfi_* directives.  Defaults to false.
   bool DwarfRegNumForCFI = false;
 
-  /// True if target uses parens to indicate the symbol variant instead of @.
-  /// For example, foo(plt) instead of foo@plt.  Defaults to false.
-  bool UseParensForSymbolVariant = false;
+  /// True if target uses @ (expr@specifier) for relocation specifiers.
+  bool UseAtForSpecifier = true;
 
-  /// True if the target uses parens for symbol names starting with
-  /// '$' character to distinguish them from absolute names.
-  bool UseParensForDollarSignNames = true;
+  /// (ARM-specific) Uses parens for relocation specifier in data
+  /// directives, e.g. .word foo(got).
+  bool UseParensForSpecifier = false;
 
   /// True if the target supports flags in ".loc" directive, false if only
   /// location is allowed.
@@ -424,13 +420,17 @@ protected:
   // If true, use Motorola-style integers in Assembly (ex. $0ac).
   bool UseMotorolaIntegers = false;
 
-  llvm::DenseMap<uint32_t, StringRef> VariantKindToName;
-  llvm::StringMap<uint32_t> NameToVariantKind;
+  llvm::DenseMap<uint32_t, StringRef> SpecifierToName;
+  llvm::StringMap<uint32_t> NameToSpecifier;
   void initializeVariantKinds(ArrayRef<VariantKindDesc> Descs);
 
 public:
   explicit MCAsmInfo();
   virtual ~MCAsmInfo();
+
+  // Explicitly non-copyable.
+  MCAsmInfo(MCAsmInfo const &) = delete;
+  MCAsmInfo &operator=(MCAsmInfo const &) = delete;
 
   /// Get the code pointer size in bytes.
   unsigned getCodePointerSize() const { return CodePointerSize; }
@@ -542,9 +542,6 @@ public:
 
   const char *getInlineAsmStart() const { return InlineAsmStart; }
   const char *getInlineAsmEnd() const { return InlineAsmEnd; }
-  const char *getCode16Directive() const { return Code16Directive; }
-  const char *getCode32Directive() const { return Code32Directive; }
-  const char *getCode64Directive() const { return Code64Directive; }
   unsigned getAssemblerDialect() const { return AssemblerDialect; }
   bool doesAllowAtInName() const { return AllowAtInName; }
   void setAllowAtInName(bool V) { AllowAtInName = V; }
@@ -649,10 +646,8 @@ public:
 
   bool doDwarfFDESymbolsUseAbsDiff() const { return DwarfFDESymbolsUseAbsDiff; }
   bool useDwarfRegNumForCFI() const { return DwarfRegNumForCFI; }
-  bool useParensForSymbolVariant() const { return UseParensForSymbolVariant; }
-  bool useParensForDollarSignNames() const {
-    return UseParensForDollarSignNames;
-  }
+  bool useAtForSpecifier() const { return UseAtForSpecifier; }
+  bool useParensForSpecifier() const { return UseParensForSpecifier; }
   bool supportsExtendedDwarfLocDirective() const {
     return SupportsExtendedDwarfLocDirective;
   }
@@ -708,8 +703,8 @@ public:
 
   bool shouldUseMotorolaIntegers() const { return UseMotorolaIntegers; }
 
-  StringRef getVariantKindName(uint32_t Kind) const;
-  std::optional<uint32_t> getVariantKindForName(StringRef Name) const;
+  StringRef getSpecifierName(uint32_t S) const;
+  std::optional<uint32_t> getSpecifierForName(StringRef Name) const;
 };
 
 } // end namespace llvm

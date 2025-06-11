@@ -32,7 +32,7 @@
 !CHECK-NEXT: omp.loop_nest
 !CHECK: %[[I_DECL:.*]]:2 = hlfir.declare %[[I_REF]] {uniq_name = "_QFreduction_ieorEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[PRV_DECL:.+]]:2 = hlfir.declare %[[PRV]] {{.*}} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: hlfir.assign %{{.*}} to %[[I_DECL]]#1 : i32, !fir.ref<i32>
+!CHECK: hlfir.assign %{{.*}} to %[[I_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK: %[[I_32:.*]] = fir.load %[[I_DECL]]#0 : !fir.ref<i32>
 !CHECK: %[[I_64:.*]] = fir.convert %[[I_32]] : (i32) -> i64
 !CHECK: %[[Y_I_REF:.*]] = hlfir.designate %[[Y_DECL]]#0 (%[[I_64]])  : (!fir.box<!fir.array<?xi32>>, i64) -> !fir.ref<i32>

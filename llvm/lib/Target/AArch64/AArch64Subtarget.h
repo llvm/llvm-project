@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/TargetParser/Triple.h"
 
 #define GET_SUBTARGETINFO_HEADER
 #include "AArch64GenSubtargetInfo.inc"
@@ -33,7 +34,6 @@
 namespace llvm {
 class GlobalValue;
 class StringRef;
-class Triple;
 
 class AArch64Subtarget final : public AArch64GenSubtargetInfo {
 public:
@@ -391,7 +391,7 @@ public:
   void mirFileLoaded(MachineFunction &MF) const override;
 
   // Return the known range for the bit length of SVE data registers. A value
-  // of 0 means nothing is known about that particular limit beyong what's
+  // of 0 means nothing is known about that particular limit beyond what's
   // implied by the architecture.
   unsigned getMaxSVEVectorSizeInBits() const {
     assert(isSVEorStreamingSVEAvailable() &&
@@ -403,6 +403,16 @@ public:
     assert(isSVEorStreamingSVEAvailable() &&
            "Tried to get SVE vector length without SVE support!");
     return MinSVEVectorSizeInBits;
+  }
+
+  // Return the known bit length of SVE data registers. A value of 0 means the
+  // length is unknown beyond what's implied by the architecture.
+  unsigned getSVEVectorSizeInBits() const {
+    assert(isSVEorStreamingSVEAvailable() &&
+           "Tried to get SVE vector length without SVE support!");
+    if (MinSVEVectorSizeInBits == MaxSVEVectorSizeInBits)
+      return MaxSVEVectorSizeInBits;
+    return 0;
   }
 
   bool useSVEForFixedLengthVectors() const {

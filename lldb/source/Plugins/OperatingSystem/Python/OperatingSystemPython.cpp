@@ -259,8 +259,8 @@ ThreadSP OperatingSystemPython::CreateThreadFromThreadInfo(
   if (!thread_sp) {
     if (did_create_ptr)
       *did_create_ptr = true;
-    thread_sp = std::make_shared<ThreadMemory>(*m_process, tid, name, queue,
-                                               reg_data_addr);
+    thread_sp = std::make_shared<ThreadMemoryProvidingNameAndQueue>(
+        *m_process, tid, name, queue, reg_data_addr);
   }
 
   if (core_number < core_thread_list.GetSize(false)) {

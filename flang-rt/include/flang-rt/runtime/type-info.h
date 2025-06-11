@@ -210,8 +210,12 @@ public:
   }
   RT_API_ATTRS const Descriptor &name() const { return name_.descriptor(); }
   RT_API_ATTRS std::uint64_t sizeInBytes() const { return sizeInBytes_; }
-  RT_API_ATTRS const Descriptor &uninstatiated() const {
+  RT_API_ATTRS const Descriptor &uninstantiated() const {
     return uninstantiated_.descriptor();
+  }
+  RT_API_ATTRS const DerivedType *uninstantiatedType() const {
+    return reinterpret_cast<const DerivedType *>(
+        uninstantiated().raw().base_addr);
   }
   RT_API_ATTRS const Descriptor &kindParameter() const {
     return kindParameter_.descriptor();
@@ -236,6 +240,7 @@ public:
   RT_API_ATTRS bool noFinalizationNeeded() const {
     return noFinalizationNeeded_;
   }
+  RT_API_ATTRS bool noDefinedAssignment() const { return noDefinedAssignment_; }
 
   RT_API_ATTRS std::size_t LenParameters() const {
     return lenParameterKind().Elements();
@@ -318,6 +323,7 @@ private:
   bool noInitializationNeeded_{false};
   bool noDestructionNeeded_{false};
   bool noFinalizationNeeded_{false};
+  bool noDefinedAssignment_{false};
 };
 
 } // namespace Fortran::runtime::typeInfo

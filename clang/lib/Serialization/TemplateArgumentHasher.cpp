@@ -65,7 +65,9 @@ void TemplateArgumentHasher::AddTemplateArgument(TemplateArgument TA) {
 
   switch (Kind) {
   case TemplateArgument::Null:
-    llvm_unreachable("Expected valid TemplateArgument");
+    // These can occur in incomplete substitutions performed with code
+    // completion (see PartialOverloading).
+    break;
   case TemplateArgument::Type:
     AddQualType(TA.getAsType());
     break;
@@ -317,7 +319,9 @@ public:
 
   void VisitMemberPointerType(const MemberPointerType *T) {
     AddQualType(T->getPointeeType());
-    AddType(T->getClass());
+    AddType(T->getQualifier()->getAsType());
+    if (auto *RD = T->getMostRecentCXXRecordDecl())
+      AddDecl(RD->getCanonicalDecl());
   }
 
   void VisitPackExpansionType(const PackExpansionType *T) {

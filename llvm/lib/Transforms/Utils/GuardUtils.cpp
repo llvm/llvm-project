@@ -71,7 +71,7 @@ void llvm::makeGuardControlFlowExplicit(Function *DeoptIntrinsic,
     // guard's condition.
     IRBuilder<> B(CheckBI);
     auto *WC = B.CreateIntrinsic(Intrinsic::experimental_widenable_condition,
-                                 {}, {}, nullptr, "widenable_cond");
+                                 {}, nullptr, "widenable_cond");
     CheckBI->setCondition(B.CreateAnd(CheckBI->getCondition(), WC,
                                       "exiplicit_guard_cond"));
     assert(isWidenableBranch(CheckBI) && "Branch must be widenable.");

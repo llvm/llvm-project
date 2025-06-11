@@ -26,9 +26,11 @@ on how to get in touch with us and to learn more about the current status.
    C++style
    DesignGuideline
    FortranForCProgrammers
+   FortranStandardsSupport
    GettingInvolved
    GettingStarted
    ImplementingASemanticCheck
+   OpenMPSupport
    PullRequestChecklist
 ```
 
@@ -51,6 +53,7 @@ on how to get in touch with us and to learn more about the current status.
    DebugGeneration
    Directives
    DoConcurrent
+   DoConcurrentConversionToOpenMP
    Extensions
    F202X
    FIRArrayOperations

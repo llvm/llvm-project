@@ -71,7 +71,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~bad_function_call() _NOEXCEPT override {}
 #  endif
 
-#  ifdef _LIBCPP_ABI_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE
+#  if _LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE
   const char* what() const _NOEXCEPT override;
 #  endif
 };
@@ -86,7 +86,7 @@ _LIBCPP_DIAGNOSTIC_POP
 }
 
 template <class _Fp>
-class _LIBCPP_TEMPLATE_VIS function; // undefined
+class function; // undefined
 
 namespace __function {
 
@@ -122,7 +122,7 @@ _LIBCPP_HIDE_FROM_ABI bool __not_null(function<_Fp> const& __f) {
   return !!__f;
 }
 
-#  if _LIBCPP_HAS_EXTENSION_BLOCKS
+#  if __has_extension(blocks)
 template <class _Rp, class... _Args>
 _LIBCPP_HIDE_FROM_ABI bool __not_null(_Rp (^__p)(_Args...)) {
   return __p;
@@ -234,7 +234,7 @@ public:
 // __base provides an abstract interface for copyable functors.
 
 template <class _Fp>
-class _LIBCPP_TEMPLATE_VIS __base;
+class __base;
 
 template <class _Rp, class... _ArgTypes>
 class __base<_Rp(_ArgTypes...)> {
@@ -437,7 +437,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI void swap(__value_func& __f) _NOEXCEPT {
-    if (&__f == this)
+    if (std::addressof(__f) == this)
       return;
     if ((void*)__f_ == &__buf_ && (void*)__f.__f_ == &__f.__buf_) {
       _LIBCPP_SUPPRESS_DEPRECATED_PUSH
@@ -550,8 +550,8 @@ private:
   template <typename _Fun>
   _LIBCPP_HIDE_FROM_ABI static const __policy* __choose_policy(/* is_small = */ false_type) {
     static constexpr __policy __policy = {
-        &__large_clone<_Fun>,
-        &__large_destroy<_Fun>,
+        std::addressof(__large_clone<_Fun>),
+        std::addressof(__large_destroy<_Fun>),
         false,
 #  if _LIBCPP_HAS_RTTI
         &typeid(typename _Fun::_Target)
@@ -600,7 +600,7 @@ struct __policy_invoker<_Rp(_ArgTypes...)> {
   // Creates an invoker that calls the given instance of __func.
   template <typename _Fun>
   _LIBCPP_HIDE_FROM_ABI static __policy_invoker __create() {
-    return __policy_invoker(&__call_impl<_Fun>);
+    return __policy_invoker(std::addressof(__call_impl<_Fun>));
   }
 
 private:
@@ -757,7 +757,7 @@ class __func<_Rp1 (^)(_ArgTypes1...), _Alloc, _Rp(_ArgTypes...)> : public __base
 
 public:
   _LIBCPP_HIDE_FROM_ABI explicit __func(__block_type const& __f)
-#    if _LIBCPP_HAS_OBJC_ARC
+#    if __has_feature(objc_arc)
       : __f_(__f)
 #    else
       : __f_(reinterpret_cast<__block_type>(__f ? _Block_copy(__f) : nullptr))
@@ -768,7 +768,7 @@ public:
   // [TODO] add && to save on a retain
 
   _LIBCPP_HIDE_FROM_ABI explicit __func(__block_type __f, const _Alloc& /* unused */)
-#    if _LIBCPP_HAS_OBJC_ARC
+#    if __has_feature(objc_arc)
       : __f_(__f)
 #    else
       : __f_(reinterpret_cast<__block_type>(__f ? _Block_copy(__f) : nullptr))
@@ -790,7 +790,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void destroy() _NOEXCEPT {
-#    if !_LIBCPP_HAS_OBJC_ARC
+#    if !__has_feature(objc_arc)
     if (__f_)
       _Block_release(__f_);
 #    endif
@@ -822,12 +822,12 @@ public:
 #    endif // _LIBCPP_HAS_RTTI
 };
 
-#  endif // _LIBCPP_HAS_EXTENSION_BLOCKS
+#  endif // _LIBCPP_HAS_BLOCKS_RUNTIME
 
 } // namespace __function
 
 template <class _Rp, class... _ArgTypes>
-class _LIBCPP_TEMPLATE_VIS function<_Rp(_ArgTypes...)>
+class function<_Rp(_ArgTypes...)>
     : public __function::__maybe_derive_from_unary_function<_Rp(_ArgTypes...)>,
       public __function::__maybe_derive_from_binary_function<_Rp(_ArgTypes...)> {
 #  ifndef _LIBCPP_ABI_OPTIMIZED_FUNCTION

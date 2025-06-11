@@ -36,8 +36,9 @@ define internal fastcc void @svm_node_closure_bsdf(ptr addrspace(1) %sd, ptr %st
 ; GCN: s_setpc_b64 s[30:31]
 entry:
   %8 = extractelement <4 x i32> %node, i64 0
-  %cmp.i.not = icmp eq i32 undef, 0
-  br i1 undef, label %common.ret.critedge, label %cond.true
+  %undef.i32 = freeze i32 poison
+  %cmp.i.not = icmp eq i32 %undef.i32, 0
+  br i1 poison, label %common.ret.critedge, label %cond.true
 
 cond.true:                                        ; preds = %entry
   %9 = load float, ptr null, align 4
@@ -120,13 +121,15 @@ if.then534:                                       ; preds = %bsdf_alloc.exit2188
   br label %if.end627.sink.split
 
 if.else568:                                       ; preds = %if.then413
-  br i1 undef, label %bsdf_alloc.exit2214, label %if.then.i2198
+  %undef.0 = freeze i1 poison
+  br i1 %undef.0, label %bsdf_alloc.exit2214, label %if.then.i2198
 
 if.then.i2198:                                    ; preds = %if.else568
-  br i1 undef, label %closure_alloc.exit.i2210, label %if.end.i.i2207
+  %undef.1 = freeze i1 poison
+  br i1 %undef.1, label %closure_alloc.exit.i2210, label %if.end.i.i2207
 
 if.end.i.i2207:                                   ; preds = %if.then.i2198
-  %arrayidx.i.i22028 = getelementptr inbounds %struct.ShaderData, ptr addrspace(1) %sd, i64 0, i32 30, i64 undef
+  %arrayidx.i.i22028 = getelementptr inbounds %struct.ShaderData, ptr addrspace(1) %sd, i64 0, i32 30, i64 0
   br label %closure_alloc.exit.i2210
 
 closure_alloc.exit.i2210:                         ; preds = %if.end.i.i2207, %if.then.i2198
@@ -185,7 +188,7 @@ sw.bb10:
 ; GCN-DAG: v_readlane_b32 s30, [[CSR_VGPR]],
 ; GCN: s_waitcnt vmcnt(0)
 ; GCN: s_setpc_b64 s[30:31]
-  call fastcc void @svm_node_closure_bsdf(ptr addrspace(1) null, ptr null, <4 x i32> zeroinitializer, ptr null, i32 poison, i8 undef, float poison, float poison, float poison, i1 undef, <4 x i32> poison, float poison, i32 poison, i1 undef, i1 undef, i1 undef, float poison, ptr addrspace(1) poison, ptr addrspace(1) poison, ptr addrspace(1) poison, i1 undef, ptr addrspace(1) poison, i32 poison, i1 undef, i32 poison, i64 undef, i32 poison)
+  call fastcc void @svm_node_closure_bsdf(ptr addrspace(1) null, ptr null, <4 x i32> zeroinitializer, ptr null, i32 poison, i8 poison, float poison, float poison, float poison, i1 poison, <4 x i32> poison, float poison, i32 poison, i1 poison, i1 poison, i1 poison, float poison, ptr addrspace(1) poison, ptr addrspace(1) poison, ptr addrspace(1) poison, i1 poison, ptr addrspace(1) poison, i32 poison, i1 poison, i32 poison, i64 poison, i32 poison)
   ret void
 }
 
