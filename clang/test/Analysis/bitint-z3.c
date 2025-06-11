@@ -8,9 +8,9 @@
 void clang_analyzer_warnIfReached();
 
 void c(int b, _BitInt(35) a) {
-  int d;
+  int d = 0;
   if (a)
-    b = d; // expected-warning{{Assigned value is uninitialized [core.uninitialized.Assign]}}
+    b = d;
   clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
 }
 

@@ -572,9 +572,8 @@ public:
   // TODO: Refactor to put elsewhere
   static inline QualType getAPSIntType(ASTContext &Ctx,
                                        const llvm::APSInt &Int) {
-    QualType Ty;
-    if (!(Ty = Ctx.getIntTypeForBitwidth(Int.getBitWidth(), Int.isSigned()))
-             .isNull())
+    const QualType Ty = Ctx.getIntTypeForBitwidth(Int.getBitWidth(), Int.isSigned());
+    if (!Ty.isNull())
       return Ty;
     // If Ty is Null, could be because the original type was a _BitInt.
     // Get the size of the _BitInt type (expressed in bits) and round it up to
@@ -583,8 +582,6 @@ public:
     unsigned Pow2DestWidth =
         std::max(llvm::bit_ceil(Int.getBitWidth()), CharTypeSize);
     return Ctx.getIntTypeForBitwidth(Pow2DestWidth, Int.isSigned());
-    // Ty = Ctx.getIntTypeForBitwidth(Pow2DestWidth, Int.isSigned());
-    // return Ty;
   }
 
   // Get the QualTy for the input APSInt, and fix it if it has a bitwidth of 1.
