@@ -51,15 +51,6 @@ Value &VectorBuilder::requestEVL() {
   return *ConstantInt::get(IntTy, StaticVectorLength.getFixedValue());
 }
 
-Value *VectorBuilder::createVectorInstruction(unsigned Opcode, Type *ReturnTy,
-                                              ArrayRef<Value *> InstOpArray,
-                                              const Twine &Name) {
-  auto VPID = VPIntrinsic::getForOpcode(Opcode);
-  if (VPID == Intrinsic::not_intrinsic)
-    return returnWithError<Value *>("No VPIntrinsic for this opcode");
-  return createVectorInstructionImpl(VPID, ReturnTy, InstOpArray, Name);
-}
-
 Value *VectorBuilder::createSimpleReduction(Intrinsic::ID RdxID,
                                             Type *ValTy,
                                             ArrayRef<Value *> InstOpArray,
