@@ -31,7 +31,7 @@ class RISCVMCPlusBuilder : public MCPlusBuilder {
 public:
   using MCPlusBuilder::MCPlusBuilder;
 
-  bool equals(const MCTargetExpr &A, const MCTargetExpr &B,
+  bool equals(const MCSpecifierExpr &A, const MCSpecifierExpr &B,
               CompFuncTy Comp) const override {
     const auto &RISCVExprA = cast<RISCVMCExpr>(A);
     const auto &RISCVExprB = cast<RISCVMCExpr>(B);
@@ -783,7 +783,6 @@ public:
     Inst.setOpcode(RISCV::ADD);
     Inst.insert(Inst.begin(), MCOperand::createReg(Reg));
     Inst.insert(Inst.begin() + 1, MCOperand::createReg(RISCV::X0));
-    return;
   }
 
   InstructionListType createLoadImmediate(const MCPhysReg Dest,

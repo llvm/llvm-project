@@ -393,8 +393,9 @@ public:
       uintptr_t IMask = ((uintptr_t)1) << I;
       uintptr_t Mask = EMask - IMask;
       setSmallBits(getSmallBits() | Mask);
-    } else
+    } else {
       getPointer()->set(I, E);
+    }
     return *this;
   }
 
@@ -424,8 +425,9 @@ public:
       uintptr_t IMask = ((uintptr_t)1) << I;
       uintptr_t Mask = EMask - IMask;
       setSmallBits(getSmallBits() & ~Mask);
-    } else
+    } else {
       getPointer()->reset(I, E);
+    }
     return *this;
   }
 

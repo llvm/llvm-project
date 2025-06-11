@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "Protocol/ProtocolTypes.h"
+#include "JSONUtils.h"
+#include "lldb/lldb-types.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JSON.h"
@@ -579,6 +582,15 @@ llvm::json::Value toJSON(const SteppingGranularity &SG) {
   llvm_unreachable("unhandled stepping granularity.");
 }
 
+bool fromJSON(const json::Value &Params, Thread &T, json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("id", T.id) && O.map("name", T.name);
+}
+
+json::Value toJSON(const Thread &T) {
+  return json::Object{{"id", T.id}, {"name", T.name}};
+}
+
 bool fromJSON(const llvm::json::Value &Params, ValueFormat &VF,
               llvm::json::Path P) {
   json::ObjectMapper O(Params, P);
@@ -780,6 +792,96 @@ bool fromJSON(const llvm::json::Value &Params, InstructionBreakpoint &IB,
          O.mapOptional("condition", IB.condition) &&
          O.mapOptional("hitCondition", IB.hitCondition) &&
          O.mapOptional("mode", IB.mode);
+}
+
+bool fromJSON(const llvm::json::Value &Params,
+              DisassembledInstruction::PresentationHint &PH,
+              llvm::json::Path P) {
+  auto rawHint = Params.getAsString();
+  if (!rawHint) {
+    P.report("expected a string");
+    return false;
+  }
+  std::optional<DisassembledInstruction::PresentationHint> hint =
+      StringSwitch<std::optional<DisassembledInstruction::PresentationHint>>(
+          *rawHint)
+          .Case("normal", DisassembledInstruction::
+                              eDisassembledInstructionPresentationHintNormal)
+          .Case("invalid", DisassembledInstruction::
+                               eDisassembledInstructionPresentationHintInvalid)
+          .Default(std::nullopt);
+  if (!hint) {
+    P.report("unexpected value");
+    return false;
+  }
+  PH = *hint;
+  return true;
+}
+
+llvm::json::Value toJSON(const DisassembledInstruction::PresentationHint &PH) {
+  switch (PH) {
+  case DisassembledInstruction::eDisassembledInstructionPresentationHintNormal:
+    return "normal";
+  case DisassembledInstruction::eDisassembledInstructionPresentationHintInvalid:
+    return "invalid";
+  }
+  llvm_unreachable("unhandled presentation hint.");
+}
+
+bool fromJSON(const llvm::json::Value &Params, DisassembledInstruction &DI,
+              llvm::json::Path P) {
+  llvm::json::ObjectMapper O(Params, P);
+  std::string raw_address;
+  if (!O || !O.map("address", raw_address))
+    return false;
+
+  std::optional<lldb::addr_t> address = DecodeMemoryReference(raw_address);
+  if (!address) {
+    P.field("address").report("expected string encoded uint64_t");
+    return false;
+  }
+
+  DI.address = *address;
+
+  return O.map("instruction", DI.instruction) &&
+         O.mapOptional("instructionBytes", DI.instructionBytes) &&
+         O.mapOptional("symbol", DI.symbol) &&
+         O.mapOptional("location", DI.location) &&
+         O.mapOptional("line", DI.line) && O.mapOptional("column", DI.column) &&
+         O.mapOptional("endLine", DI.endLine) &&
+         O.mapOptional("endColumn", DI.endColumn) &&
+         O.mapOptional("presentationHint", DI.presentationHint);
+}
+
+llvm::json::Value toJSON(const DisassembledInstruction &DI) {
+  llvm::json::Object result{{"instruction", DI.instruction}};
+  if (DI.address == LLDB_INVALID_ADDRESS) {
+    // VS Code has explicit comparisons to the string "-1" in order to check for
+    // invalid instructions. See
+    // https://github.com/microsoft/vscode/blob/main/src/vs/workbench/contrib/debug/browser/disassemblyView.ts
+    result.insert({"address", "-1"});
+  } else {
+    result.insert({"address", "0x" + llvm::utohexstr(DI.address)});
+  }
+
+  if (DI.instructionBytes)
+    result.insert({"instructionBytes", *DI.instructionBytes});
+  if (DI.symbol)
+    result.insert({"symbol", *DI.symbol});
+  if (DI.location)
+    result.insert({"location", *DI.location});
+  if (DI.line)
+    result.insert({"line", *DI.line});
+  if (DI.column)
+    result.insert({"column", *DI.column});
+  if (DI.endLine)
+    result.insert({"endLine", *DI.endLine});
+  if (DI.endColumn)
+    result.insert({"endColumn", *DI.endColumn});
+  if (DI.presentationHint)
+    result.insert({"presentationHint", *DI.presentationHint});
+
+  return result;
 }
 
 } // namespace lldb_dap::protocol

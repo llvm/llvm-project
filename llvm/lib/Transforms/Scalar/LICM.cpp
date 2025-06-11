@@ -786,8 +786,8 @@ public:
       return InitialPreheader;
     }
     BranchInst *BI = It->first;
-    assert(std::find_if(++It, HoistableBranches.end(), HasBBAsSuccessor) ==
-               HoistableBranches.end() &&
+    assert(std::none_of(std::next(It), HoistableBranches.end(),
+                        HasBBAsSuccessor) &&
            "BB is expected to be the target of at most one branch");
 
     LLVMContext &C = BB->getContext();
@@ -1928,8 +1928,9 @@ bool isNotCapturedBeforeOrInLoop(const Value *V, const Loop *L,
   // loop header, as the loop header is reachable from any instruction inside
   // the loop.
   // TODO: ReturnCaptures=true shouldn't be necessary here.
-  return !PointerMayBeCapturedBefore(V, /* ReturnCaptures */ true,
-                                     L->getHeader()->getTerminator(), DT);
+  return capturesNothing(PointerMayBeCapturedBefore(
+      V, /*ReturnCaptures=*/true, L->getHeader()->getTerminator(), DT,
+      /*IncludeI=*/false, CaptureComponents::Provenance));
 }
 
 /// Return true if we can prove that a caller cannot inspect the object if an
@@ -2247,7 +2248,7 @@ bool llvm::promoteLoopAccessesToScalars(
     if (SawUnorderedAtomic)
       PreheaderLoad->setOrdering(AtomicOrdering::Unordered);
     PreheaderLoad->setAlignment(Alignment);
-    PreheaderLoad->setDebugLoc(DebugLoc());
+    PreheaderLoad->setDebugLoc(DebugLoc::getDropped());
     if (AATags && LoadIsGuaranteedToExecute)
       PreheaderLoad->setAAMetadata(AATags);
 
@@ -2807,6 +2808,7 @@ static bool hoistMulAddAssociation(Instruction &I, Loop &L,
     auto *NewBO =
         BinaryOperator::Create(Ins->getOpcode(), LHS, RHS,
                                Ins->getName() + ".reass", Ins->getIterator());
+    NewBO->setDebugLoc(DebugLoc::getDropped());
     NewBO->copyIRFlags(Ins);
     if (VariantOp == Ins)
       VariantOp = NewBO;
@@ -2863,27 +2865,24 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
 
   auto *NewBO = BinaryOperator::Create(
       Opcode, LV, Inv, BO->getName() + ".reass", BO->getIterator());
+  NewBO->setDebugLoc(DebugLoc::getDropped());
 
-  // Copy NUW for ADDs if both instructions have it.
-  if (Opcode == Instruction::Add && BO->hasNoUnsignedWrap() &&
-      BO0->hasNoUnsignedWrap()) {
-    // If `Inv` was not constant-folded, a new Instruction has been created.
-    if (auto *I = dyn_cast<Instruction>(Inv))
-      I->setHasNoUnsignedWrap(true);
-    NewBO->setHasNoUnsignedWrap(true);
-  } else if (Opcode == Instruction::FAdd || Opcode == Instruction::FMul) {
+  if (Opcode == Instruction::FAdd || Opcode == Instruction::FMul) {
     // Intersect FMF flags for FADD and FMUL.
     FastMathFlags Intersect = BO->getFastMathFlags() & BO0->getFastMathFlags();
     if (auto *I = dyn_cast<Instruction>(Inv))
       I->setFastMathFlags(Intersect);
     NewBO->setFastMathFlags(Intersect);
-  } else if (Opcode == Instruction::Or) {
-    bool Disjoint = cast<PossiblyDisjointInst>(BO)->isDisjoint() &&
-                    cast<PossiblyDisjointInst>(BO0)->isDisjoint();
+  } else {
+    OverflowTracking Flags;
+    Flags.AllKnownNonNegative = false;
+    Flags.AllKnownNonZero = false;
+    Flags.mergeFlags(*BO);
+    Flags.mergeFlags(*BO0);
     // If `Inv` was not constant-folded, a new Instruction has been created.
-    if (auto *I = dyn_cast<PossiblyDisjointInst>(Inv))
-      I->setIsDisjoint(Disjoint);
-    cast<PossiblyDisjointInst>(NewBO)->setIsDisjoint(Disjoint);
+    if (auto *I = dyn_cast<Instruction>(Inv))
+      Flags.applyFlags(*I);
+    Flags.applyFlags(*NewBO);
   }
 
   BO->replaceAllUsesWith(NewBO);

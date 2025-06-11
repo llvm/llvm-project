@@ -75,7 +75,9 @@ public:
   /// Sets the DiagnosticsEngine that diag() will emit diagnostics to.
   // FIXME: this is required initialization, and should be a constructor param.
   // Fix the context -> diag engine -> consumer -> context initialization cycle.
-  void setDiagnosticsEngine(DiagnosticsEngine *DiagEngine) {
+  void setDiagnosticsEngine(std::unique_ptr<DiagnosticOptions> DiagOpts,
+                            DiagnosticsEngine *DiagEngine) {
+    this->DiagOpts = std::move(DiagOpts);
     this->DiagEngine = DiagEngine;
   }
 
@@ -215,11 +217,10 @@ public:
   using DiagLevelAndFormatString = std::pair<DiagnosticIDs::Level, std::string>;
   DiagLevelAndFormatString getDiagLevelAndFormatString(unsigned DiagnosticID,
                                                        SourceLocation Loc) {
-    return {
-        static_cast<DiagnosticIDs::Level>(
-            DiagEngine->getDiagnosticLevel(DiagnosticID, Loc)),
-        std::string(
-            DiagEngine->getDiagnosticIDs()->getDescription(DiagnosticID))};
+    return {static_cast<DiagnosticIDs::Level>(
+                DiagEngine->getDiagnosticLevel(DiagnosticID, Loc)),
+            std::string(
+                DiagEngine->getDiagnosticIDs()->getDescription(DiagnosticID))};
   }
 
   void setOptionsCollector(llvm::StringSet<> *Collector) {
@@ -231,6 +232,7 @@ private:
   // Writes to Stats.
   friend class ClangTidyDiagnosticConsumer;
 
+  std::unique_ptr<DiagnosticOptions> DiagOpts = nullptr;
   DiagnosticsEngine *DiagEngine = nullptr;
   std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider;
 

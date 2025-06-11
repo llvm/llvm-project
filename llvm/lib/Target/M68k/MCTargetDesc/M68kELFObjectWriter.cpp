@@ -33,8 +33,8 @@ public:
   ~M68kELFObjectWriter() override;
 
 protected:
-  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                        const MCFixup &Fixup, bool IsPCRel) const override;
+  unsigned getRelocType(const MCFixup &, const MCValue &,
+                        bool IsPCRel) const override;
 };
 } // namespace
 
@@ -61,9 +61,8 @@ static M68kRelType getType(unsigned Kind, M68kMCExpr::Specifier &Modifier,
   llvm_unreachable("Unimplemented");
 }
 
-unsigned M68kELFObjectWriter::getRelocType(MCContext &Ctx,
+unsigned M68kELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                            const MCValue &Target,
-                                           const MCFixup &Fixup,
                                            bool IsPCRel) const {
   auto Specifier = M68kMCExpr::Specifier(Target.getSpecifier());
   unsigned Kind = Fixup.getKind();

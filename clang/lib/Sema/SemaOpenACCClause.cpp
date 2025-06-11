@@ -198,8 +198,16 @@ class SemaOpenACCClauseVisitor {
       Mods = CheckSingle(Mods, ValidKinds, OpenACCModifierKind::AlwaysOut);
       Mods = CheckSingle(Mods, ValidKinds, OpenACCModifierKind::Readonly);
       Mods = CheckSingle(Mods, ValidKinds, OpenACCModifierKind::Zero);
+      Mods = CheckSingle(Mods, ValidKinds, OpenACCModifierKind::Capture);
       return Mods;
     };
+
+    // The 'capture' modifier is only valid on copyin, copyout, and create on
+    // structured data or compute constructs (which also includes combined).
+    bool IsStructuredDataOrCompute =
+        Clause.getDirectiveKind() == OpenACCDirectiveKind::Data ||
+        isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()) ||
+        isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind());
 
     switch (Clause.getClauseKind()) {
     default:
@@ -207,22 +215,33 @@ class SemaOpenACCClauseVisitor {
     case OpenACCClauseKind::Copy:
     case OpenACCClauseKind::PCopy:
     case OpenACCClauseKind::PresentOrCopy:
+      // COPY: Capture always
       return Check(OpenACCModifierKind::Always | OpenACCModifierKind::AlwaysIn |
-                   OpenACCModifierKind::AlwaysOut);
+                   OpenACCModifierKind::AlwaysOut |
+                   OpenACCModifierKind::Capture);
     case OpenACCClauseKind::CopyIn:
     case OpenACCClauseKind::PCopyIn:
     case OpenACCClauseKind::PresentOrCopyIn:
+      // COPYIN: Capture only struct.data & compute
       return Check(OpenACCModifierKind::Always | OpenACCModifierKind::AlwaysIn |
-                   OpenACCModifierKind::Readonly);
+                   OpenACCModifierKind::Readonly |
+                   (IsStructuredDataOrCompute ? OpenACCModifierKind::Capture
+                                              : OpenACCModifierKind::Invalid));
     case OpenACCClauseKind::CopyOut:
     case OpenACCClauseKind::PCopyOut:
     case OpenACCClauseKind::PresentOrCopyOut:
+      // COPYOUT: Capture only struct.data & compute
       return Check(OpenACCModifierKind::Always | OpenACCModifierKind::AlwaysIn |
-                   OpenACCModifierKind::Zero);
+                   OpenACCModifierKind::Zero |
+                   (IsStructuredDataOrCompute ? OpenACCModifierKind::Capture
+                                              : OpenACCModifierKind::Invalid));
     case OpenACCClauseKind::Create:
     case OpenACCClauseKind::PCreate:
     case OpenACCClauseKind::PresentOrCreate:
-      return Check(OpenACCModifierKind::Zero);
+      // CREATE: Capture only struct.data & compute
+      return Check(OpenACCModifierKind::Zero |
+                   (IsStructuredDataOrCompute ? OpenACCModifierKind::Capture
+                                              : OpenACCModifierKind::Invalid));
     }
     llvm_unreachable("didn't return from switch above?");
   }
@@ -1271,9 +1290,11 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitVectorClause(
       switch (SemaRef.getActiveComputeConstructInfo().Kind) {
       case OpenACCDirectiveKind::Invalid:
       case OpenACCDirectiveKind::Parallel:
+      case OpenACCDirectiveKind::ParallelLoop:
         // No restriction on when 'parallel' can contain an argument.
         break;
       case OpenACCDirectiveKind::Serial:
+      case OpenACCDirectiveKind::SerialLoop:
         // GCC disallows this, and there is no real good reason for us to permit
         // it, so disallow until we come up with a use case that makes sense.
         DiagIntArgInvalid(SemaRef, IntExpr, "length", OpenACCClauseKind::Vector,
@@ -1281,7 +1302,8 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitVectorClause(
                           SemaRef.getActiveComputeConstructInfo().Kind);
         IntExpr = nullptr;
         break;
-      case OpenACCDirectiveKind::Kernels: {
+      case OpenACCDirectiveKind::Kernels:
+      case OpenACCDirectiveKind::KernelsLoop: {
         const auto *Itr =
             llvm::find_if(SemaRef.getActiveComputeConstructInfo().Clauses,
                           llvm::IsaPred<OpenACCVectorLengthClause>);

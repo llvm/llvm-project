@@ -7,11 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "CommonArgs.h"
 #include "clang/Basic/TargetID.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
@@ -560,7 +559,7 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (C.getDriver().isUsingLTO()) {
     const bool ThinLTO = (C.getDriver().getLTOMode() == LTOK_Thin);
-    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0], ThinLTO);
+    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs, ThinLTO);
   } else if (Args.hasArg(options::OPT_mcpu_EQ)) {
     CmdArgs.push_back(Args.MakeArgString(
         "-plugin-opt=mcpu=" +

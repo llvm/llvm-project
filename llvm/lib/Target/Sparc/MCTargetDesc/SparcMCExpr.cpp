@@ -16,9 +16,7 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectStreamer.h"
-#include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Support/Casting.h"
 
 using namespace llvm;
 
@@ -134,17 +132,4 @@ uint16_t SparcMCExpr::parseSpecifier(StringRef name) {
 uint16_t SparcMCExpr::getFixupKind() const {
   assert(uint16_t(specifier) < FirstTargetFixupKind);
   return specifier;
-}
-
-bool SparcMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                            const MCAssembler *Asm) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
-    return false;
-
-  Res.setSpecifier(specifier);
-  return true;
-}
-
-void SparcMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
-  Streamer.visitUsedExpr(*getSubExpr());
 }
