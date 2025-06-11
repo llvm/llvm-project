@@ -151,104 +151,99 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
   // EABI Libcalls - EABI Section 6.2
   const struct {
     const RTLIB::Libcall Op;
-    const char * const Name;
-    const ISD::CondCode Cond;
+    const char *const Name;
   } LibraryCalls[] = {
-    // Floating point conversions - EABI Table 6
-    { RTLIB::FPROUND_F64_F32,   "__mspabi_cvtdf",   ISD::SETCC_INVALID },
-    { RTLIB::FPEXT_F32_F64,     "__mspabi_cvtfd",   ISD::SETCC_INVALID },
-    // The following is NOT implemented in libgcc
-    //{ RTLIB::FPTOSINT_F64_I16,  "__mspabi_fixdi", ISD::SETCC_INVALID },
-    { RTLIB::FPTOSINT_F64_I32,  "__mspabi_fixdli",  ISD::SETCC_INVALID },
-    { RTLIB::FPTOSINT_F64_I64,  "__mspabi_fixdlli", ISD::SETCC_INVALID },
-    // The following is NOT implemented in libgcc
-    //{ RTLIB::FPTOUINT_F64_I16,  "__mspabi_fixdu", ISD::SETCC_INVALID },
-    { RTLIB::FPTOUINT_F64_I32,  "__mspabi_fixdul",  ISD::SETCC_INVALID },
-    { RTLIB::FPTOUINT_F64_I64,  "__mspabi_fixdull", ISD::SETCC_INVALID },
-    // The following is NOT implemented in libgcc
-    //{ RTLIB::FPTOSINT_F32_I16,  "__mspabi_fixfi", ISD::SETCC_INVALID },
-    { RTLIB::FPTOSINT_F32_I32,  "__mspabi_fixfli",  ISD::SETCC_INVALID },
-    { RTLIB::FPTOSINT_F32_I64,  "__mspabi_fixflli", ISD::SETCC_INVALID },
-    // The following is NOT implemented in libgcc
-    //{ RTLIB::FPTOUINT_F32_I16,  "__mspabi_fixfu", ISD::SETCC_INVALID },
-    { RTLIB::FPTOUINT_F32_I32,  "__mspabi_fixful",  ISD::SETCC_INVALID },
-    { RTLIB::FPTOUINT_F32_I64,  "__mspabi_fixfull", ISD::SETCC_INVALID },
-    // TODO The following IS implemented in libgcc
-    //{ RTLIB::SINTTOFP_I16_F64,  "__mspabi_fltid", ISD::SETCC_INVALID },
-    { RTLIB::SINTTOFP_I32_F64,  "__mspabi_fltlid",  ISD::SETCC_INVALID },
-    // TODO The following IS implemented in libgcc but is not in the EABI
-    { RTLIB::SINTTOFP_I64_F64,  "__mspabi_fltllid", ISD::SETCC_INVALID },
-    // TODO The following IS implemented in libgcc
-    //{ RTLIB::UINTTOFP_I16_F64,  "__mspabi_fltud", ISD::SETCC_INVALID },
-    { RTLIB::UINTTOFP_I32_F64,  "__mspabi_fltuld",  ISD::SETCC_INVALID },
-    // The following IS implemented in libgcc but is not in the EABI
-    { RTLIB::UINTTOFP_I64_F64,  "__mspabi_fltulld", ISD::SETCC_INVALID },
-    // TODO The following IS implemented in libgcc
-    //{ RTLIB::SINTTOFP_I16_F32,  "__mspabi_fltif", ISD::SETCC_INVALID },
-    { RTLIB::SINTTOFP_I32_F32,  "__mspabi_fltlif",  ISD::SETCC_INVALID },
-    // TODO The following IS implemented in libgcc but is not in the EABI
-    { RTLIB::SINTTOFP_I64_F32,  "__mspabi_fltllif", ISD::SETCC_INVALID },
-    // TODO The following IS implemented in libgcc
-    //{ RTLIB::UINTTOFP_I16_F32,  "__mspabi_fltuf", ISD::SETCC_INVALID },
-    { RTLIB::UINTTOFP_I32_F32,  "__mspabi_fltulf",  ISD::SETCC_INVALID },
-    // The following IS implemented in libgcc but is not in the EABI
-    { RTLIB::UINTTOFP_I64_F32,  "__mspabi_fltullf", ISD::SETCC_INVALID },
+      // Floating point conversions - EABI Table 6
+      {RTLIB::FPROUND_F64_F32, "__mspabi_cvtdf"},
+      {RTLIB::FPEXT_F32_F64, "__mspabi_cvtfd"},
+      // The following is NOT implemented in libgcc
+      //{ RTLIB::FPTOSINT_F64_I16,  "__mspabi_fixdi" },
+      {RTLIB::FPTOSINT_F64_I32, "__mspabi_fixdli"},
+      {RTLIB::FPTOSINT_F64_I64, "__mspabi_fixdlli"},
+      // The following is NOT implemented in libgcc
+      //{ RTLIB::FPTOUINT_F64_I16,  "__mspabi_fixdu" },
+      {RTLIB::FPTOUINT_F64_I32, "__mspabi_fixdul"},
+      {RTLIB::FPTOUINT_F64_I64, "__mspabi_fixdull"},
+      // The following is NOT implemented in libgcc
+      //{ RTLIB::FPTOSINT_F32_I16,  "__mspabi_fixfi" },
+      {RTLIB::FPTOSINT_F32_I32, "__mspabi_fixfli"},
+      {RTLIB::FPTOSINT_F32_I64, "__mspabi_fixflli"},
+      // The following is NOT implemented in libgcc
+      //{ RTLIB::FPTOUINT_F32_I16,  "__mspabi_fixfu" },
+      {RTLIB::FPTOUINT_F32_I32, "__mspabi_fixful"},
+      {RTLIB::FPTOUINT_F32_I64, "__mspabi_fixfull"},
+      // TODO The following IS implemented in libgcc
+      //{ RTLIB::SINTTOFP_I16_F64,  "__mspabi_fltid" },
+      {RTLIB::SINTTOFP_I32_F64, "__mspabi_fltlid"},
+      // TODO The following IS implemented in libgcc but is not in the EABI
+      {RTLIB::SINTTOFP_I64_F64, "__mspabi_fltllid"},
+      // TODO The following IS implemented in libgcc
+      //{ RTLIB::UINTTOFP_I16_F64,  "__mspabi_fltud" },
+      {RTLIB::UINTTOFP_I32_F64, "__mspabi_fltuld"},
+      // The following IS implemented in libgcc but is not in the EABI
+      {RTLIB::UINTTOFP_I64_F64, "__mspabi_fltulld"},
+      // TODO The following IS implemented in libgcc
+      //{ RTLIB::SINTTOFP_I16_F32,  "__mspabi_fltif" },
+      {RTLIB::SINTTOFP_I32_F32, "__mspabi_fltlif"},
+      // TODO The following IS implemented in libgcc but is not in the EABI
+      {RTLIB::SINTTOFP_I64_F32, "__mspabi_fltllif"},
+      // TODO The following IS implemented in libgcc
+      //{ RTLIB::UINTTOFP_I16_F32,  "__mspabi_fltuf" },
+      {RTLIB::UINTTOFP_I32_F32, "__mspabi_fltulf"},
+      // The following IS implemented in libgcc but is not in the EABI
+      {RTLIB::UINTTOFP_I64_F32, "__mspabi_fltullf"},
 
-    // Floating point comparisons - EABI Table 7
-    { RTLIB::OEQ_F64, "__mspabi_cmpd", ISD::SETEQ },
-    { RTLIB::UNE_F64, "__mspabi_cmpd", ISD::SETNE },
-    { RTLIB::OGE_F64, "__mspabi_cmpd", ISD::SETGE },
-    { RTLIB::OLT_F64, "__mspabi_cmpd", ISD::SETLT },
-    { RTLIB::OLE_F64, "__mspabi_cmpd", ISD::SETLE },
-    { RTLIB::OGT_F64, "__mspabi_cmpd", ISD::SETGT },
-    { RTLIB::OEQ_F32, "__mspabi_cmpf", ISD::SETEQ },
-    { RTLIB::UNE_F32, "__mspabi_cmpf", ISD::SETNE },
-    { RTLIB::OGE_F32, "__mspabi_cmpf", ISD::SETGE },
-    { RTLIB::OLT_F32, "__mspabi_cmpf", ISD::SETLT },
-    { RTLIB::OLE_F32, "__mspabi_cmpf", ISD::SETLE },
-    { RTLIB::OGT_F32, "__mspabi_cmpf", ISD::SETGT },
+      // Floating point comparisons - EABI Table 7
+      {RTLIB::OEQ_F64, "__mspabi_cmpd"},
+      {RTLIB::UNE_F64, "__mspabi_cmpd"},
+      {RTLIB::OGE_F64, "__mspabi_cmpd"},
+      {RTLIB::OLT_F64, "__mspabi_cmpd"},
+      {RTLIB::OLE_F64, "__mspabi_cmpd"},
+      {RTLIB::OGT_F64, "__mspabi_cmpd"},
+      {RTLIB::OEQ_F32, "__mspabi_cmpf"},
+      {RTLIB::UNE_F32, "__mspabi_cmpf"},
+      {RTLIB::OGE_F32, "__mspabi_cmpf"},
+      {RTLIB::OLT_F32, "__mspabi_cmpf"},
+      {RTLIB::OLE_F32, "__mspabi_cmpf"},
+      {RTLIB::OGT_F32, "__mspabi_cmpf"},
 
-    // Floating point arithmetic - EABI Table 8
-    { RTLIB::ADD_F64,  "__mspabi_addd", ISD::SETCC_INVALID },
-    { RTLIB::ADD_F32,  "__mspabi_addf", ISD::SETCC_INVALID },
-    { RTLIB::DIV_F64,  "__mspabi_divd", ISD::SETCC_INVALID },
-    { RTLIB::DIV_F32,  "__mspabi_divf", ISD::SETCC_INVALID },
-    { RTLIB::MUL_F64,  "__mspabi_mpyd", ISD::SETCC_INVALID },
-    { RTLIB::MUL_F32,  "__mspabi_mpyf", ISD::SETCC_INVALID },
-    { RTLIB::SUB_F64,  "__mspabi_subd", ISD::SETCC_INVALID },
-    { RTLIB::SUB_F32,  "__mspabi_subf", ISD::SETCC_INVALID },
-    // The following are NOT implemented in libgcc
-    // { RTLIB::NEG_F64,  "__mspabi_negd", ISD::SETCC_INVALID },
-    // { RTLIB::NEG_F32,  "__mspabi_negf", ISD::SETCC_INVALID },
+      // Floating point arithmetic - EABI Table 8
+      {RTLIB::ADD_F64, "__mspabi_addd"},
+      {RTLIB::ADD_F32, "__mspabi_addf"},
+      {RTLIB::DIV_F64, "__mspabi_divd"},
+      {RTLIB::DIV_F32, "__mspabi_divf"},
+      {RTLIB::MUL_F64, "__mspabi_mpyd"},
+      {RTLIB::MUL_F32, "__mspabi_mpyf"},
+      {RTLIB::SUB_F64, "__mspabi_subd"},
+      {RTLIB::SUB_F32, "__mspabi_subf"},
+      // The following are NOT implemented in libgcc
+      // { RTLIB::NEG_F64,  "__mspabi_negd" },
+      // { RTLIB::NEG_F32,  "__mspabi_negf" },
 
-    // Universal Integer Operations - EABI Table 9
-    { RTLIB::SDIV_I16,   "__mspabi_divi", ISD::SETCC_INVALID },
-    { RTLIB::SDIV_I32,   "__mspabi_divli", ISD::SETCC_INVALID },
-    { RTLIB::SDIV_I64,   "__mspabi_divlli", ISD::SETCC_INVALID },
-    { RTLIB::UDIV_I16,   "__mspabi_divu", ISD::SETCC_INVALID },
-    { RTLIB::UDIV_I32,   "__mspabi_divul", ISD::SETCC_INVALID },
-    { RTLIB::UDIV_I64,   "__mspabi_divull", ISD::SETCC_INVALID },
-    { RTLIB::SREM_I16,   "__mspabi_remi", ISD::SETCC_INVALID },
-    { RTLIB::SREM_I32,   "__mspabi_remli", ISD::SETCC_INVALID },
-    { RTLIB::SREM_I64,   "__mspabi_remlli", ISD::SETCC_INVALID },
-    { RTLIB::UREM_I16,   "__mspabi_remu", ISD::SETCC_INVALID },
-    { RTLIB::UREM_I32,   "__mspabi_remul", ISD::SETCC_INVALID },
-    { RTLIB::UREM_I64,   "__mspabi_remull", ISD::SETCC_INVALID },
+      // Universal Integer Operations - EABI Table 9
+      {RTLIB::SDIV_I16, "__mspabi_divi"},
+      {RTLIB::SDIV_I32, "__mspabi_divli"},
+      {RTLIB::SDIV_I64, "__mspabi_divlli"},
+      {RTLIB::UDIV_I16, "__mspabi_divu"},
+      {RTLIB::UDIV_I32, "__mspabi_divul"},
+      {RTLIB::UDIV_I64, "__mspabi_divull"},
+      {RTLIB::SREM_I16, "__mspabi_remi"},
+      {RTLIB::SREM_I32, "__mspabi_remli"},
+      {RTLIB::SREM_I64, "__mspabi_remlli"},
+      {RTLIB::UREM_I16, "__mspabi_remu"},
+      {RTLIB::UREM_I32, "__mspabi_remul"},
+      {RTLIB::UREM_I64, "__mspabi_remull"},
 
-    // Bitwise Operations - EABI Table 10
-    // TODO: __mspabi_[srli/srai/slli] ARE implemented in libgcc
-    { RTLIB::SRL_I32,    "__mspabi_srll", ISD::SETCC_INVALID },
-    { RTLIB::SRA_I32,    "__mspabi_sral", ISD::SETCC_INVALID },
-    { RTLIB::SHL_I32,    "__mspabi_slll", ISD::SETCC_INVALID },
-    // __mspabi_[srlll/srall/sllll/rlli/rlll] are NOT implemented in libgcc
-
+      // Bitwise Operations - EABI Table 10
+      // TODO: __mspabi_[srli/srai/slli] ARE implemented in libgcc
+      {RTLIB::SRL_I32, "__mspabi_srll"},
+      {RTLIB::SRA_I32, "__mspabi_sral"},
+      {RTLIB::SHL_I32, "__mspabi_slll"},
+      // __mspabi_[srlll/srall/sllll/rlli/rlll] are NOT implemented in libgcc
   };
 
-  for (const auto &LC : LibraryCalls) {
+  for (const auto &LC : LibraryCalls)
     setLibcallName(LC.Op, LC.Name);
-    if (LC.Cond != ISD::SETCC_INVALID)
-      setCmpLibcallCC(LC.Op, LC.Cond);
-  }
 
   if (STI.hasHWMult16()) {
     const struct {
