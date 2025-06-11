@@ -1721,12 +1721,24 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
 
   // Avoid breaking min/max reduction pattern,
   // which is necessary for vectorization later.
-  if (isa<MinMaxIntrinsic>(&Op))
-    for (Value *IntrinOp : Op.operands())
-      if (auto *PN = dyn_cast<PHINode>(IntrinOp))
-        for (Value *PhiOp : PN->operands())
-          if (PhiOp == &Op)
+  if (auto *II = dyn_cast<IntrinsicInst>(&Op)) {
+    switch (II->getIntrinsicID()) {
+      case Intrinsic::umin:
+      case Intrinsic::smin:
+        if (ConstantInt *C = dyn_cast<ConstantInt>(FV))
+          if (C->isAllOnesValue())
             return nullptr;
+        break;
+      case Intrinsic::umax:
+      case Intrinsic::smax:
+        if (ConstantInt *C = dyn_cast<ConstantInt>(FV))
+          if (C->isZero())
+            return nullptr;
+        break;
+      default:
+        break;
+    }
+  }
 
   // Test if a FCmpInst instruction is used exclusively by a select as
   // part of a minimum or maximum operation. If so, refrain from doing
