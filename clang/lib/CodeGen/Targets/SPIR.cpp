@@ -76,8 +76,8 @@ public:
                                          llvm::AtomicOrdering Ordering,
                                          llvm::LLVMContext &Ctx) const override;
   bool supportsLibCall() const override {
-    return
-        getABIInfo().getTarget().getTriple().getVendor() != llvm::Triple::AMD;
+    return getABIInfo().getTarget().getTriple().getVendor() !=
+           llvm::Triple::AMD;
   }
 };
 
