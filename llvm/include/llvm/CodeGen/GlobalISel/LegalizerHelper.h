@@ -429,6 +429,7 @@ public:
   LLVM_ABI LegalizeResult lowerFunnelShift(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerEXT(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerTRUNC(MachineInstr &MI);
+  LLVM_ABI LegalizeResult lowerPTRTOADDR(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerRotateWithReverseRotate(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerRotate(MachineInstr &MI);
 

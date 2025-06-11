@@ -3883,6 +3883,18 @@ void SelectionDAGBuilder::visitSIToFP(const User &I) {
   setValue(&I, DAG.getNode(ISD::SINT_TO_FP, getCurSDLoc(), DestVT, N));
 }
 
+void SelectionDAGBuilder::visitPtrToAddr(const User &I) {
+  const auto &TLI = DAG.getTargetLoweringInfo();
+  const DataLayout &DL = DAG.getDataLayout();
+  // ptrtoaddr is equivalent to a truncate of ptrtoint to address/index width
+  auto Op0 = I.getOperand(0);
+  SDValue N = getValue(Op0);
+  EVT AddrVT = TLI.getValueType(DL, DL.getAddressType(Op0->getType()));
+  N = DAG.getPtrExtOrTrunc(N, getCurSDLoc(), AddrVT);
+  N = DAG.getZExtOrTrunc(N, getCurSDLoc(), TLI.getValueType(DL, I.getType()));
+  setValue(&I, N);
+}
+
 void SelectionDAGBuilder::visitPtrToInt(const User &I) {
   // What to do depends on the size of the integer and the size of the pointer.
   // We can either truncate, zero extend, or no-op, accordingly.
