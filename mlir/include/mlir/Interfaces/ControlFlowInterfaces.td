@@ -388,9 +388,10 @@ def WeightedBranchOpInterface : OpInterface<"WeightedBranchOpInterface"> {
     weight of each branch. The probability of executing a branch
     is computed as the ratio between the branch's weight and the total
     sum of the weights.
-    The number of weights must match the number of successors of the operation,
+    The weights are optional. If they are provided, then their number
+    must match the number of successors of the operation,
     with one exception for CallOpInterface operations, which may only
-    have on weight when they do not have any successors.
+    have one weight when they do not have any successors.
 
     The default implementations of the methods expect the operation
     to have an attribute of type DenseI32ArrayAttr named branch_weights.
@@ -398,24 +399,26 @@ def WeightedBranchOpInterface : OpInterface<"WeightedBranchOpInterface"> {
   let cppNamespace = "::mlir";
 
   let methods = [InterfaceMethod<
-                     /*desc=*/"Returns the branch weights attribute or nullptr",
-                     /*returnType=*/"::mlir::DenseI32ArrayAttr",
-                     /*methodName=*/"getBranchWeightsOrNull",
+                     /*desc=*/"Returns the branch weights",
+                     /*returnType=*/"::llvm::ArrayRef<int32_t>",
+                     /*methodName=*/"getWeights",
                      /*args=*/(ins),
                      /*methodBody=*/[{}],
                      /*defaultImpl=*/[{
         auto op = cast<ConcreteOp>(this->getOperation());
-        return op.getBranchWeightsAttr();
+        if (auto attr = op.getBranchWeightsAttr())
+          return attr.asArrayRef();
+        return {};
       }]>,
                  InterfaceMethod<
-                     /*desc=*/"Sets the branch weights attribute",
+                     /*desc=*/"Sets the branch weights",
                      /*returnType=*/"void",
-                     /*methodName=*/"setBranchWeights",
-                     /*args=*/(ins "::mlir::DenseI32ArrayAttr":$attr),
+                     /*methodName=*/"setWeights",
+                     /*args=*/(ins "::llvm::ArrayRef<int32_t>":$weights),
                      /*methodBody=*/[{}],
                      /*defaultImpl=*/[{
         auto op = cast<ConcreteOp>(this->getOperation());
-        op.setBranchWeightsAttr(attr);
+        op.setBranchWeightsAttr(::mlir::DenseI32ArrayAttr::get(op->getContext(), weights));
       }]>,
   ];
 
@@ -443,8 +446,9 @@ def WeightedRegionBranchOpInterface
     weight of each branch. The probability of executing a region is computed
     as the ratio between the region branch's weight and the total sum
     of the weights.
-    The number of weights must match the number of regions
-    held by the operation (including empty regions).
+    The weights are optional. If they are provided, then their number
+    must match the number of regions held by the operation
+    (including empty regions).
 
     The weights specify the probability of branching to a particular
     region when first executing the operation.
@@ -457,24 +461,26 @@ def WeightedRegionBranchOpInterface
   let cppNamespace = "::mlir";
 
   let methods = [InterfaceMethod<
-                     /*desc=*/"Returns the region weights attribute or nullptr",
-                     /*returnType=*/"::mlir::DenseI32ArrayAttr",
-                     /*methodName=*/"getRegionWeightsOrNull",
+                     /*desc=*/"Returns the region weights",
+                     /*returnType=*/"::llvm::ArrayRef<int32_t>",
+                     /*methodName=*/"getWeights",
                      /*args=*/(ins),
                      /*methodBody=*/[{}],
                      /*defaultImpl=*/[{
         auto op = cast<ConcreteOp>(this->getOperation());
-        return op.getRegionWeightsAttr();
+        if (auto attr = op.getRegionWeightsAttr())
+          return attr.asArrayRef();
+        return {};
       }]>,
                  InterfaceMethod<
-                     /*desc=*/"Sets the region weights attribute",
+                     /*desc=*/"Sets the region weights",
                      /*returnType=*/"void",
-                     /*methodName=*/"setRegionWeights",
-                     /*args=*/(ins "::mlir::DenseI32ArrayAttr":$attr),
+                     /*methodName=*/"setWeights",
+                     /*args=*/(ins "::llvm::ArrayRef<int32_t>":$weights),
                      /*methodBody=*/[{}],
                      /*defaultImpl=*/[{
         auto op = cast<ConcreteOp>(this->getOperation());
-        op.setRegionWeightsAttr(attr);
+        op.setRegionWeightsAttr(::mlir::DenseI32ArrayAttr::get(op->getContext(), weights));
       }]>,
   ];
 

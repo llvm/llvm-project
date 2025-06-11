@@ -85,11 +85,12 @@ detail::verifyBranchSuccessorOperands(Operation *op, unsigned succNo,
 // WeightedBranchOpInterface
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verifyWeights(Operation *op, DenseI32ArrayAttr weights,
-                                   int64_t expectedWeightsNum,
+static LogicalResult verifyWeights(Operation *op,
+                                   llvm::ArrayRef<int32_t> weights,
+                                   std::size_t expectedWeightsNum,
                                    llvm::StringRef weightAnchorName,
                                    llvm::StringRef weightRefName) {
-  if (!weights)
+  if (weights.empty())
     return success();
 
   if (weights.size() != expectedWeightsNum)
@@ -98,7 +99,7 @@ static LogicalResult verifyWeights(Operation *op, DenseI32ArrayAttr weights,
                            << ": " << weights.size() << " vs "
                            << expectedWeightsNum;
 
-  for (auto [index, weight] : llvm::enumerate(weights.asArrayRef()))
+  for (auto [index, weight] : llvm::enumerate(weights))
     if (weight < 0)
       return op->emitError() << "weight #" << index << " must be non-negative";
 
@@ -106,14 +107,14 @@ static LogicalResult verifyWeights(Operation *op, DenseI32ArrayAttr weights,
 }
 
 LogicalResult detail::verifyBranchWeights(Operation *op) {
-  auto weights = cast<WeightedBranchOpInterface>(op).getBranchWeightsOrNull();
+  llvm::ArrayRef<int32_t> weights =
+      cast<WeightedBranchOpInterface>(op).getWeights();
   unsigned successorsNum = op->getNumSuccessors();
   // CallOpInterface operations without successors may only have
   // one weight, though it seems to be redundant and indicate
   // 100% probability of calling the callee(s).
-  // TODO: maybe we should remove this interface for calls without
-  // successors.
-  int64_t weightsNum =
+  // TODO: maybe we should disallow weights for calls without successors.
+  std::size_t weightsNum =
       (successorsNum == 0 && isa<CallOpInterface>(op)) ? 1 : successorsNum;
   return verifyWeights(op, weights, weightsNum, "branch", "successors");
 }
@@ -123,8 +124,8 @@ LogicalResult detail::verifyBranchWeights(Operation *op) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult detail::verifyRegionBranchWeights(Operation *op) {
-  auto weights =
-      cast<WeightedRegionBranchOpInterface>(op).getRegionWeightsOrNull();
+  llvm::ArrayRef<int32_t> weights =
+      cast<WeightedRegionBranchOpInterface>(op).getWeights();
   return verifyWeights(op, weights, op->getNumRegions(), "region", "regions");
 }
 

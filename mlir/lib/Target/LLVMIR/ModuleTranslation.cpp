@@ -2027,13 +2027,14 @@ void ModuleTranslation::setDereferenceableMetadata(
 }
 
 void ModuleTranslation::setBranchWeightsMetadata(WeightedBranchOpInterface op) {
-  DenseI32ArrayAttr weightsAttr = op.getBranchWeightsOrNull();
-  if (!weightsAttr)
+  SmallVector<uint32_t> weights;
+  llvm::transform(op.getWeights(), std::back_inserter(weights),
+                  [](int32_t value) { return static_cast<uint32_t>(value); });
+  if (weights.empty())
     return;
 
   llvm::Instruction *inst = isa<CallOp>(op) ? lookupCall(op) : lookupBranch(op);
   assert(inst && "expected the operation to have a mapping to an instruction");
-  SmallVector<uint32_t> weights(weightsAttr.asArrayRef());
   inst->setMetadata(
       llvm::LLVMContext::MD_prof,
       llvm::MDBuilder(getLLVMContext()).createBranchWeights(weights));
