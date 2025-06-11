@@ -209,7 +209,7 @@ public:
 // 6.  When a pass is run on an IR that is not interesting (based on options).
 // 7.  When a pass is ignored (pass manager or adapter pass).
 // 8.  To compare two IR representations (of type \p T).
-template <typename IRUnitT> class ChangeReporter {
+template <typename IRUnitT> class LLVM_ABI ChangeReporter {
 protected:
   ChangeReporter(bool RunInVerboseMode) : VerboseMode(RunInVerboseMode) {}
 
@@ -258,7 +258,7 @@ protected:
 // An abstract template base class that handles printing banners and
 // reporting when things have not changed or are filtered out.
 template <typename IRUnitT>
-class TextChangeReporter : public ChangeReporter<IRUnitT> {
+class LLVM_ABI TextChangeReporter : public ChangeReporter<IRUnitT> {
 protected:
   TextChangeReporter(bool Verbose);
 
@@ -627,14 +627,9 @@ public:
   TimePassesHandler &getTimePasses() { return TimePasses; }
 };
 
-extern template class ChangeReporter<std::string>;
-extern template class TextChangeReporter<std::string>;
-
 extern template class BlockDataT<EmptyData>;
 extern template class FuncDataT<EmptyData>;
 extern template class IRDataT<EmptyData>;
-extern template class ChangeReporter<IRDataT<EmptyData>>;
-extern template class TextChangeReporter<IRDataT<EmptyData>>;
 extern template class IRComparer<EmptyData>;
 
 } // namespace llvm
