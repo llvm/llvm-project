@@ -2424,7 +2424,7 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       if (sym.GetType()->category() == semantics::DeclTypeSpec::TypeDerived) {
         auto &typeSpec = sym.GetType()->derivedTypeSpec();
         std::string mapperIdName =
-            typeSpec.name().ToString() + ".omp.default.mapper";
+            typeSpec.name().ToString() + llvm::omp::OmpDefaultMapperName;
         if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName))
           mapperIdName = converter.mangleName(mapperIdName, sym->owner());
         if (converter.getModuleOp().lookupSymbol(mapperIdName))
@@ -3200,8 +3200,8 @@ static void genAtomicCapture(lower::AbstractConverter &converter,
   firOpBuilder.createBlock(&(atomicCaptureOp->getRegion(0)));
   mlir::Block &block = atomicCaptureOp->getRegion(0).back();
   firOpBuilder.setInsertionPointToStart(&block);
-  if (semantics::checkForSingleVariableOnRHS(stmt1)) {
-    if (semantics::checkForSymbolMatch(semantics::GetExpr(stmt2Var),
+  if (parser::CheckForSingleVariableOnRHS(stmt1)) {
+    if (semantics::CheckForSymbolMatch(semantics::GetExpr(stmt2Var),
                                        semantics::GetExpr(stmt2Expr))) {
       // Atomic capture construct is of the form [capture-stmt, update-stmt]
       const semantics::SomeExpr &fromExpr = *semantics::GetExpr(stmt1Expr);

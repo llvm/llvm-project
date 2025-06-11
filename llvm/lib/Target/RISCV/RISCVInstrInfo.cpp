@@ -293,11 +293,7 @@ static bool isConvertibleToVMV_V_V(const RISCVSubtarget &STI,
         }
         // Only permit `vsetvli x0, x0, vtype` between COPY and the source
         // define instruction.
-        if (MBBI->getOperand(0).getReg() != RISCV::X0)
-          return false;
-        if (MBBI->getOperand(1).isImm())
-          return false;
-        if (MBBI->getOperand(1).getReg() != RISCV::X0)
+        if (!RISCVInstrInfo::isVLPreservingConfig(*MBBI))
           return false;
         continue;
       }
@@ -2698,7 +2694,11 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         CASE_OPERAND_UIMM(8)
         CASE_OPERAND_UIMM(10)
         CASE_OPERAND_UIMM(12)
+        CASE_OPERAND_UIMM(16)
         CASE_OPERAND_UIMM(20)
+        CASE_OPERAND_UIMM(32)
+        CASE_OPERAND_UIMM(48)
+        CASE_OPERAND_UIMM(64)
           // clang-format on
         case RISCVOp::OPERAND_UIMM2_LSB0:
           Ok = isShiftedUInt<1, 1>(Imm);

@@ -1206,7 +1206,8 @@ parser::Message *AttachDeclaration(
   }
   if (const auto *binding{
           unhosted->detailsIf<semantics::ProcBindingDetails>()}) {
-    if (binding->symbol().name() != symbol.name()) {
+    if (!symbol.attrs().test(semantics::Attr::DEFERRED) &&
+        binding->symbol().name() != symbol.name()) {
       message.Attach(binding->symbol().name(),
           "Procedure '%s' of type '%s' is bound to '%s'"_en_US, symbol.name(),
           symbol.owner().GetName().value(), binding->symbol().name());

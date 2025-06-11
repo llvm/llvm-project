@@ -60,6 +60,13 @@ CIRGenCallee CIRGenCallee::prepareConcreteCallee(CIRGenFunction &cgf) const {
   return *this;
 }
 
+/// Returns the canonical formal type of the given C++ method.
+static CanQual<FunctionProtoType> getFormalType(const CXXMethodDecl *md) {
+  return md->getType()
+      ->getCanonicalTypeUnqualified()
+      .getAs<FunctionProtoType>();
+}
+
 /// Adds the formal parameters in FPT to the given prefix. If any parameter in
 /// FPT has pass_object_size_attrs, then we'll add parameters for those, too.
 /// TODO(cir): this should be shared with LLVM codegen
@@ -74,6 +81,48 @@ static void appendParameterTypes(const CIRGenTypes &cgt,
   }
 
   cgt.getCGModule().errorNYI("appendParameterTypes: hasExtParameterInfos");
+}
+
+const CIRGenFunctionInfo &
+CIRGenTypes::arrangeCXXStructorDeclaration(GlobalDecl gd) {
+  auto *md = cast<CXXMethodDecl>(gd.getDecl());
+
+  llvm::SmallVector<CanQualType, 16> argTypes;
+  argTypes.push_back(deriveThisType(md->getParent(), md));
+
+  bool passParams = true;
+
+  if (auto *cd = dyn_cast<CXXConstructorDecl>(md)) {
+    // A base class inheriting constructor doesn't get forwarded arguments
+    // needed to construct a virtual base (or base class thereof)
+    if (cd->getInheritedConstructor())
+      cgm.errorNYI(cd->getSourceRange(),
+                   "arrangeCXXStructorDeclaration: inheriting constructor");
+  }
+
+  CanQual<FunctionProtoType> fpt = getFormalType(md);
+
+  if (passParams)
+    appendParameterTypes(*this, argTypes, fpt);
+
+  assert(!cir::MissingFeatures::implicitConstructorArgs());
+
+  RequiredArgs required =
+      (passParams && md->isVariadic() ? RequiredArgs(argTypes.size())
+                                      : RequiredArgs::All);
+
+  CanQualType resultType = theCXXABI.hasThisReturn(gd) ? argTypes.front()
+                           : theCXXABI.hasMostDerivedReturn(gd)
+                               ? astContext.VoidPtrTy
+                               : astContext.VoidTy;
+
+  assert(!theCXXABI.hasThisReturn(gd) &&
+         "Please send PR with a test and remove this");
+
+  assert(!cir::MissingFeatures::opCallCIRGenFuncInfoExtParamInfo());
+  assert(!cir::MissingFeatures::opCallFnInfoOpts());
+
+  return arrangeCIRFunctionInfo(resultType, argTypes, required);
 }
 
 /// Derives the 'this' type for CIRGen purposes, i.e. ignoring method CVR
@@ -103,13 +152,13 @@ CanQualType CIRGenTypes::deriveThisType(const CXXRecordDecl *rd,
 /// top of any implicit parameters already stored.
 static const CIRGenFunctionInfo &
 arrangeCIRFunctionInfo(CIRGenTypes &cgt, SmallVectorImpl<CanQualType> &prefix,
-                       CanQual<FunctionProtoType> ftp) {
+                       CanQual<FunctionProtoType> fpt) {
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
   RequiredArgs required =
-      RequiredArgs::getFromProtoWithExtraSlots(ftp, prefix.size());
+      RequiredArgs::getFromProtoWithExtraSlots(fpt, prefix.size());
   assert(!cir::MissingFeatures::opCallExtParameterInfo());
-  appendParameterTypes(cgt, prefix, ftp);
-  CanQualType resultType = ftp->getReturnType().getUnqualifiedType();
+  appendParameterTypes(cgt, prefix, fpt);
+  CanQualType resultType = fpt->getReturnType().getUnqualifiedType();
   return cgt.arrangeCIRFunctionInfo(resultType, prefix, required);
 }
 
@@ -122,7 +171,7 @@ arrangeFreeFunctionLikeCall(CIRGenTypes &cgt, CIRGenModule &cgm,
 
   if (const auto *proto = dyn_cast<FunctionProtoType>(fnType)) {
     if (proto->isVariadic())
-      cgm.errorNYI("call to variadic function");
+      required = RequiredArgs::getFromProtoWithExtraSlots(proto, 0);
     if (proto->hasExtParameterInfos())
       cgm.errorNYI("call to functions with extra parameter info");
   } else if (cgm.getTargetCIRGenInfo().isNoProtoCallVariadic(
@@ -139,6 +188,44 @@ arrangeFreeFunctionLikeCall(CIRGenTypes &cgt, CIRGenModule &cgm,
 
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
   return cgt.arrangeCIRFunctionInfo(retType, argTypes, required);
+}
+
+/// Arrange a call to a C++ method, passing the given arguments.
+///
+/// passProtoArgs indicates whether `args` has args for the parameters in the
+/// given CXXConstructorDecl.
+const CIRGenFunctionInfo &CIRGenTypes::arrangeCXXConstructorCall(
+    const CallArgList &args, const CXXConstructorDecl *d, CXXCtorType ctorKind,
+    bool passProtoArgs) {
+
+  // FIXME: Kill copy.
+  llvm::SmallVector<CanQualType, 16> argTypes;
+  for (const auto &arg : args)
+    argTypes.push_back(astContext.getCanonicalParamType(arg.ty));
+
+  assert(!cir::MissingFeatures::implicitConstructorArgs());
+  // +1 for implicit this, which should always be args[0]
+  unsigned totalPrefixArgs = 1;
+
+  CanQual<FunctionProtoType> fpt = getFormalType(d);
+  RequiredArgs required =
+      passProtoArgs
+          ? RequiredArgs::getFromProtoWithExtraSlots(fpt, totalPrefixArgs)
+          : RequiredArgs::All;
+
+  GlobalDecl gd(d, ctorKind);
+  if (theCXXABI.hasThisReturn(gd))
+    cgm.errorNYI(d->getSourceRange(),
+                 "arrangeCXXConstructorCall: hasThisReturn");
+  if (theCXXABI.hasMostDerivedReturn(gd))
+    cgm.errorNYI(d->getSourceRange(),
+                 "arrangeCXXConstructorCall: hasMostDerivedReturn");
+  CanQualType resultType = astContext.VoidTy;
+
+  assert(!cir::MissingFeatures::opCallFnInfoOpts());
+  assert(!cir::MissingFeatures::opCallCIRGenFuncInfoExtParamInfo());
+
+  return arrangeCIRFunctionInfo(resultType, argTypes, required);
 }
 
 /// Arrange a call to a C++ method, passing the given arguments.
@@ -198,7 +285,7 @@ CIRGenTypes::arrangeCXXMethodDeclaration(const CXXMethodDecl *md) {
 /// constructor or destructor.
 const CIRGenFunctionInfo &
 CIRGenTypes::arrangeCXXMethodType(const CXXRecordDecl *rd,
-                                  const FunctionProtoType *ftp,
+                                  const FunctionProtoType *fpt,
                                   const CXXMethodDecl *md) {
   llvm::SmallVector<CanQualType, 16> argTypes;
 
@@ -208,7 +295,7 @@ CIRGenTypes::arrangeCXXMethodType(const CXXRecordDecl *rd,
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
   return ::arrangeCIRFunctionInfo(
       *this, argTypes,
-      ftp->getCanonicalTypeUnqualified().getAs<FunctionProtoType>());
+      fpt->getCanonicalTypeUnqualified().getAs<FunctionProtoType>());
 }
 
 /// Arrange the argument and result information for the declaration or
@@ -409,6 +496,18 @@ void CIRGenFunction::emitCallArg(CallArgList &args, const clang::Expr *e,
   args.add(emitAnyExprToTemp(e), argType);
 }
 
+QualType CIRGenFunction::getVarArgType(const Expr *arg) {
+  // System headers on Windows define NULL to 0 instead of 0LL on Win64. MSVC
+  // implicitly widens null pointer constants that are arguments to varargs
+  // functions to pointer-sized ints.
+  if (!getTarget().getTriple().isOSWindows())
+    return arg->getType();
+
+  assert(!cir::MissingFeatures::msabi());
+  cgm.errorNYI(arg->getSourceRange(), "getVarArgType: NYI for Windows target");
+  return arg->getType();
+}
+
 /// Similar to emitAnyExpr(), however, the result will always be accessible
 /// even if no aggregate location is provided.
 RValue CIRGenFunction::emitAnyExprToTemp(const Expr *e) {
@@ -429,18 +528,20 @@ void CIRGenFunction::emitCallArgs(
   assert(!cir::MissingFeatures::opCallCallConv());
 
   // First, if a prototype was provided, use those argument types.
-  assert(!cir::MissingFeatures::opCallVariadic());
+  bool isVariadic = false;
   if (prototype.p) {
     assert(!cir::MissingFeatures::opCallObjCMethod());
 
     const auto *fpt = cast<const FunctionProtoType *>(prototype.p);
+    isVariadic = fpt->isVariadic();
+    assert(!cir::MissingFeatures::opCallCallConv());
     argTypes.assign(fpt->param_type_begin() + paramsToSkip,
                     fpt->param_type_end());
   }
 
   // If we still have any arguments, emit them using the type of the argument.
   for (const clang::Expr *a : llvm::drop_begin(argRange, argTypes.size()))
-    argTypes.push_back(a->getType());
+    argTypes.push_back(isVariadic ? getVarArgType(a) : a->getType());
   assert(argTypes.size() == (size_t)(argRange.end() - argRange.begin()));
 
   // We must evaluate arguments from right to left in the MS C++ ABI, because

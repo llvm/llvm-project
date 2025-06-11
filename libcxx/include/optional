@@ -247,7 +247,7 @@ _LIBCPP_PUSH_MACROS
 namespace std // purposefully not using versioning namespace
 {
 
-class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS bad_optional_access : public exception {
+class _LIBCPP_EXPORTED_FROM_ABI bad_optional_access : public exception {
 public:
   _LIBCPP_HIDE_FROM_ABI bad_optional_access() _NOEXCEPT                                      = default;
   _LIBCPP_HIDE_FROM_ABI bad_optional_access(const bad_optional_access&) _NOEXCEPT            = default;
@@ -263,8 +263,7 @@ public:
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-[[noreturn]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS void
-__throw_bad_optional_access() {
+[[noreturn]] inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_optional_access() {
 #    if _LIBCPP_HAS_EXCEPTIONS
   throw bad_optional_access();
 #    else
@@ -827,25 +826,25 @@ public:
   using __base::__get;
   using __base::has_value;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS constexpr value_type const& value() const& {
+  _LIBCPP_HIDE_FROM_ABI constexpr value_type const& value() const& {
     if (!this->has_value())
       std::__throw_bad_optional_access();
     return this->__get();
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS constexpr value_type& value() & {
+  _LIBCPP_HIDE_FROM_ABI constexpr value_type& value() & {
     if (!this->has_value())
       std::__throw_bad_optional_access();
     return this->__get();
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS constexpr value_type&& value() && {
+  _LIBCPP_HIDE_FROM_ABI constexpr value_type&& value() && {
     if (!this->has_value())
       std::__throw_bad_optional_access();
     return std::move(this->__get());
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS constexpr value_type const&& value() const&& {
+  _LIBCPP_HIDE_FROM_ABI constexpr value_type const&& value() const&& {
     if (!this->has_value())
       std::__throw_bad_optional_access();
     return std::move(this->__get());
@@ -867,7 +866,7 @@ public:
 
 #    if _LIBCPP_STD_VER >= 23
   template <class _Func>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS constexpr auto and_then(_Func&& __f) & {
+  _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) & {
     using _Up = invoke_result_t<_Func, value_type&>;
     static_assert(__is_std_optional<remove_cvref_t<_Up>>::value,
                   "Result of f(value()) must be a specialization of std::optional");
@@ -877,7 +876,7 @@ public:
   }
 
   template <class _Func>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS constexpr auto and_then(_Func&& __f) const& {
+  _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) const& {
     using _Up = invoke_result_t<_Func, const value_type&>;
     static_assert(__is_std_optional<remove_cvref_t<_Up>>::value,
                   "Result of f(value()) must be a specialization of std::optional");
@@ -887,7 +886,7 @@ public:
   }
 
   template <class _Func>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS constexpr auto and_then(_Func&& __f) && {
+  _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) && {
     using _Up = invoke_result_t<_Func, value_type&&>;
     static_assert(__is_std_optional<remove_cvref_t<_Up>>::value,
                   "Result of f(std::move(value())) must be a specialization of std::optional");
@@ -907,7 +906,7 @@ public:
   }
 
   template <class _Func>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS constexpr auto transform(_Func&& __f) & {
+  _LIBCPP_HIDE_FROM_ABI constexpr auto transform(_Func&& __f) & {
     using _Up = remove_cv_t<invoke_result_t<_Func, value_type&>>;
     static_assert(!is_array_v<_Up>, "Result of f(value()) should not be an Array");
     static_assert(!is_same_v<_Up, in_place_t>, "Result of f(value()) should not be std::in_place_t");
@@ -919,7 +918,7 @@ public:
   }
 
   template <class _Func>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS constexpr auto transform(_Func&& __f) const& {
+  _LIBCPP_HIDE_FROM_ABI constexpr auto transform(_Func&& __f) const& {
     using _Up = remove_cv_t<invoke_result_t<_Func, const value_type&>>;
     static_assert(!is_array_v<_Up>, "Result of f(value()) should not be an Array");
     static_assert(!is_same_v<_Up, in_place_t>, "Result of f(value()) should not be std::in_place_t");
@@ -931,7 +930,7 @@ public:
   }
 
   template <class _Func>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS constexpr auto transform(_Func&& __f) && {
+  _LIBCPP_HIDE_FROM_ABI constexpr auto transform(_Func&& __f) && {
     using _Up = remove_cv_t<invoke_result_t<_Func, value_type&&>>;
     static_assert(!is_array_v<_Up>, "Result of f(std::move(value())) should not be an Array");
     static_assert(!is_same_v<_Up, in_place_t>, "Result of f(std::move(value())) should not be std::in_place_t");
@@ -943,7 +942,7 @@ public:
   }
 
   template <class _Func>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS constexpr auto transform(_Func&& __f) const&& {
+  _LIBCPP_HIDE_FROM_ABI constexpr auto transform(_Func&& __f) const&& {
     using _Up = remove_cvref_t<invoke_result_t<_Func, const value_type&&>>;
     static_assert(!is_array_v<_Up>, "Result of f(std::move(value())) should not be an Array");
     static_assert(!is_same_v<_Up, in_place_t>, "Result of f(std::move(value())) should not be std::in_place_t");

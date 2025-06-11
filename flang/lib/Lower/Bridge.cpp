@@ -12,7 +12,6 @@
 
 #include "flang/Lower/Bridge.h"
 
-#include "OpenMP/DataSharingProcessor.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/Coarray.h"
@@ -59,6 +58,7 @@
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Runtime/iostat-consts.h"
+#include "flang/Semantics/openmp-dsa.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
@@ -1387,7 +1387,8 @@ private:
     if (isUnordered || sym.has<Fortran::semantics::HostAssocDetails>() ||
         sym.has<Fortran::semantics::UseDetails>()) {
       if (!shallowLookupSymbol(sym) &&
-          !sym.test(Fortran::semantics::Symbol::Flag::OmpShared)) {
+          !GetSymbolDSA(sym).test(
+              Fortran::semantics::Symbol::Flag::OmpShared)) {
         // Do concurrent loop variables are not mapped yet since they are local
         // to the Do concurrent scope (same for OpenMP loops).
         mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
@@ -2029,44 +2030,43 @@ private:
   void handleLocalitySpecs(const IncrementLoopInfo &info) {
     Fortran::semantics::SemanticsContext &semanticsContext =
         bridge.getSemanticsContext();
-    // TODO Extract `DataSharingProcessor` from omp to a more general location.
-    Fortran::lower::omp::DataSharingProcessor dsp(
-        *this, semanticsContext, getEval(),
-        /*useDelayedPrivatization=*/true, localSymbols);
     fir::LocalitySpecifierOperands privateClauseOps;
     auto doConcurrentLoopOp =
         mlir::dyn_cast_if_present<fir::DoConcurrentLoopOp>(info.loopOp);
-    // TODO Promote to using `enableDelayedPrivatization` (which is enabled by
-    // default unlike the staging flag) once the implementation of this is more
-    // complete.
-    bool useDelayedPriv =
-        enableDelayedPrivatizationStaging && doConcurrentLoopOp;
+    bool useDelayedPriv = enableDelayedPrivatization && doConcurrentLoopOp;
+    llvm::SetVector<const Fortran::semantics::Symbol *> allPrivatizedSymbols;
+    llvm::SmallSet<const Fortran::semantics::Symbol *, 16> mightHaveReadHostSym;
 
-    for (const Fortran::semantics::Symbol *sym : info.localSymList) {
+    for (const Fortran::semantics::Symbol *symToPrivatize : info.localSymList) {
       if (useDelayedPriv) {
-        dsp.privatizeSymbol<fir::LocalitySpecifierOp>(sym, &privateClauseOps);
+        Fortran::lower::privatizeSymbol<fir::LocalitySpecifierOp>(
+            *this, this->getFirOpBuilder(), localSymbols, allPrivatizedSymbols,
+            mightHaveReadHostSym, symToPrivatize, &privateClauseOps);
         continue;
       }
 
-      createHostAssociateVarClone(*sym, /*skipDefaultInit=*/false);
+      createHostAssociateVarClone(*symToPrivatize, /*skipDefaultInit=*/false);
     }
 
-    for (const Fortran::semantics::Symbol *sym : info.localInitSymList) {
+    for (const Fortran::semantics::Symbol *symToPrivatize :
+         info.localInitSymList) {
       if (useDelayedPriv) {
-        dsp.privatizeSymbol<fir::LocalitySpecifierOp>(sym, &privateClauseOps);
+        Fortran::lower::privatizeSymbol<fir::LocalitySpecifierOp>(
+            *this, this->getFirOpBuilder(), localSymbols, allPrivatizedSymbols,
+            mightHaveReadHostSym, symToPrivatize, &privateClauseOps);
         continue;
       }
 
-      createHostAssociateVarClone(*sym, /*skipDefaultInit=*/true);
+      createHostAssociateVarClone(*symToPrivatize, /*skipDefaultInit=*/true);
       const auto *hostDetails =
-          sym->detailsIf<Fortran::semantics::HostAssocDetails>();
+          symToPrivatize->detailsIf<Fortran::semantics::HostAssocDetails>();
       assert(hostDetails && "missing locality spec host symbol");
       const Fortran::semantics::Symbol *hostSym = &hostDetails->symbol();
       Fortran::evaluate::ExpressionAnalyzer ea{semanticsContext};
       Fortran::evaluate::Assignment assign{
-          ea.Designate(Fortran::evaluate::DataRef{*sym}).value(),
+          ea.Designate(Fortran::evaluate::DataRef{*symToPrivatize}).value(),
           ea.Designate(Fortran::evaluate::DataRef{*hostSym}).value()};
-      if (Fortran::semantics::IsPointer(*sym))
+      if (Fortran::semantics::IsPointer(*symToPrivatize))
         assign.u = Fortran::evaluate::Assignment::BoundsSpec{};
       genAssignment(assign);
     }
@@ -2083,7 +2083,7 @@ private:
           builder->getArrayAttr(privateClauseOps.privateSyms));
 
       for (auto [sym, privateVar] : llvm::zip_equal(
-               dsp.getAllSymbolsToPrivatize(), privateClauseOps.privateVars)) {
+               allPrivatizedSymbols, privateClauseOps.privateVars)) {
         auto arg = doConcurrentLoopOp.getRegion().begin()->addArgument(
             privateVar.getType(), doConcurrentLoopOp.getLoc());
         bindSymbol(*sym, hlfir::translateToExtendedValue(

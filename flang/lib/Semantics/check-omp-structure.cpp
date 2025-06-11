@@ -8,6 +8,7 @@
 
 #include "check-omp-structure.h"
 #include "definable.h"
+#include "resolve-names-utils.h"
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/type.h"
@@ -388,6 +389,16 @@ std::optional<bool> OmpStructureChecker::IsContiguous(
           },
       },
       object.u);
+}
+
+void OmpStructureChecker::CheckVariableListItem(
+    const SymbolSourceMap &symbols) {
+  for (auto &[symbol, source] : symbols) {
+    if (!IsVariableListItem(*symbol)) {
+      context_.SayWithDecl(
+          *symbol, source, "'%s' must be a variable"_err_en_US, symbol->name());
+    }
+  }
 }
 
 void OmpStructureChecker::CheckMultipleOccurrence(
@@ -2922,9 +2933,9 @@ void OmpStructureChecker::CheckAtomicCaptureConstruct(
   const auto *e2 = GetExpr(context_, stmt2Expr);
 
   if (e1 && v1 && e2 && v2) {
-    if (semantics::checkForSingleVariableOnRHS(stmt1)) {
+    if (parser::CheckForSingleVariableOnRHS(stmt1)) {
       CheckAtomicCaptureStmt(stmt1);
-      if (semantics::checkForSymbolMatch(v2, e2)) {
+      if (CheckForSymbolMatch(v2, e2)) {
         // ATOMIC CAPTURE construct is of the form [capture-stmt, update-stmt]
         CheckAtomicUpdateStmt(stmt2);
       } else {
@@ -2936,8 +2947,8 @@ void OmpStructureChecker::CheckAtomicCaptureConstruct(
             "Captured variable/array element/derived-type component %s expected to be assigned in the second statement of ATOMIC CAPTURE construct"_err_en_US,
             stmt1Expr.source);
       }
-    } else if (semantics::checkForSymbolMatch(v1, e1) &&
-        semantics::checkForSingleVariableOnRHS(stmt2)) {
+    } else if (CheckForSymbolMatch(v1, e1) &&
+        parser::CheckForSingleVariableOnRHS(stmt2)) {
       // ATOMIC CAPTURE construct is of the form [update-stmt, capture-stmt]
       CheckAtomicUpdateStmt(stmt1);
       CheckAtomicCaptureStmt(stmt2);
@@ -3510,6 +3521,17 @@ bool OmpStructureChecker::CheckReductionOperator(
         break;
       }
     }
+    // User-defined operators are OK if there has been a declared reduction
+    // for that. We mangle those names to store the user details.
+    if (const auto *definedOp{std::get_if<parser::DefinedOpName>(&dOpr.u)}) {
+      std::string mangled{MangleDefinedOperator(definedOp->v.symbol->name())};
+      const Scope &scope{definedOp->v.symbol->owner()};
+      if (const Symbol *symbol{scope.FindSymbol(mangled)}) {
+        if (symbol->detailsIf<UserReductionDetails>()) {
+          return true;
+        }
+      }
+    }
     context_.Say(source, "Invalid reduction operator in %s clause."_err_en_US,
         parser::ToUpperCaseLetters(getClauseName(clauseId).str()));
     return false;
@@ -3523,8 +3545,7 @@ bool OmpStructureChecker::CheckReductionOperator(
       valid =
           llvm::is_contained({"max", "min", "iand", "ior", "ieor"}, realName);
       if (!valid) {
-        auto *misc{name->symbol->detailsIf<MiscDetails>()};
-        valid = misc && misc->kind() == MiscDetails::Kind::ConstructName;
+        valid = name->symbol->detailsIf<UserReductionDetails>();
       }
     }
     if (!valid) {
@@ -3604,8 +3625,20 @@ void OmpStructureChecker::CheckReductionObjects(
   }
 }
 
+static bool CheckSymbolSupportsType(const Scope &scope,
+    const parser::CharBlock &name, const DeclTypeSpec &type) {
+  if (const auto *symbol{scope.FindSymbol(name)}) {
+    if (const auto *reductionDetails{
+            symbol->detailsIf<UserReductionDetails>()}) {
+      return reductionDetails->SupportsType(type);
+    }
+  }
+  return false;
+}
+
 static bool IsReductionAllowedForType(
-    const parser::OmpReductionIdentifier &ident, const DeclTypeSpec &type) {
+    const parser::OmpReductionIdentifier &ident, const DeclTypeSpec &type,
+    const Scope &scope, SemanticsContext &context) {
   auto isLogical{[](const DeclTypeSpec &type) -> bool {
     return type.category() == DeclTypeSpec::Logical;
   }};
@@ -3625,27 +3658,40 @@ static bool IsReductionAllowedForType(
       case parser::DefinedOperator::IntrinsicOperator::Multiply:
       case parser::DefinedOperator::IntrinsicOperator::Add:
       case parser::DefinedOperator::IntrinsicOperator::Subtract:
-        return type.IsNumeric(TypeCategory::Integer) ||
+        if (type.IsNumeric(TypeCategory::Integer) ||
             type.IsNumeric(TypeCategory::Real) ||
-            type.IsNumeric(TypeCategory::Complex);
+            type.IsNumeric(TypeCategory::Complex))
+          return true;
+        break;
 
       case parser::DefinedOperator::IntrinsicOperator::AND:
       case parser::DefinedOperator::IntrinsicOperator::OR:
       case parser::DefinedOperator::IntrinsicOperator::EQV:
       case parser::DefinedOperator::IntrinsicOperator::NEQV:
-        return isLogical(type);
+        if (isLogical(type)) {
+          return true;
+        }
+        break;
 
       // Reduction identifier is not in OMP5.2 Table 5.2
       default:
         DIE("This should have been caught in CheckIntrinsicOperator");
         return false;
       }
+      parser::CharBlock name{MakeNameFromOperator(*intrinsicOp, context)};
+      return CheckSymbolSupportsType(scope, name, type);
+    } else if (const auto *definedOp{
+                   std::get_if<parser::DefinedOpName>(&dOpr.u)}) {
+      return CheckSymbolSupportsType(
+          scope, MangleDefinedOperator(definedOp->v.symbol->name()), type);
     }
-    return true;
+    llvm_unreachable(
+        "A DefinedOperator is either a DefinedOpName or an IntrinsicOperator");
   }};
 
   auto checkDesignator{[&](const parser::ProcedureDesignator &procD) {
     const parser::Name *name{std::get_if<parser::Name>(&procD.u)};
+    CHECK(name && name->symbol);
     if (name && name->symbol) {
       const SourceName &realName{name->symbol->GetUltimate().name()};
       // OMP5.2: The type [...] of a list item that appears in a
@@ -3654,18 +3700,35 @@ static bool IsReductionAllowedForType(
         // IAND: arguments must be integers: F2023 16.9.100
         // IEOR: arguments must be integers: F2023 16.9.106
         // IOR: arguments must be integers: F2023 16.9.111
-        return type.IsNumeric(TypeCategory::Integer);
+        if (type.IsNumeric(TypeCategory::Integer)) {
+          return true;
+        }
       } else if (realName == "max" || realName == "min") {
         // MAX: arguments must be integer, real, or character:
         // F2023 16.9.135
         // MIN: arguments must be integer, real, or character:
         // F2023 16.9.141
-        return type.IsNumeric(TypeCategory::Integer) ||
-            type.IsNumeric(TypeCategory::Real) || isCharacter(type);
+        if (type.IsNumeric(TypeCategory::Integer) ||
+            type.IsNumeric(TypeCategory::Real) || isCharacter(type)) {
+          return true;
+        }
       }
+
+      // If we get here, it may be a user declared reduction, so check
+      // if the symbol has UserReductionDetails, and if so, the type is
+      // supported.
+      if (const auto *reductionDetails{
+              name->symbol->detailsIf<UserReductionDetails>()}) {
+        return reductionDetails->SupportsType(type);
+      }
+
+      // We also need to check for mangled names (max, min, iand, ieor and ior)
+      // and then check if the type is there.
+      parser::CharBlock mangledName{MangleSpecialFunctions(name->source)};
+      return CheckSymbolSupportsType(scope, mangledName, type);
     }
-    // TODO: user defined reduction operators. Just allow everything for now.
-    return true;
+    // Everything else is "not matching type".
+    return false;
   }};
 
   return common::visit(
@@ -3680,7 +3743,8 @@ void OmpStructureChecker::CheckReductionObjectTypes(
 
   for (auto &[symbol, source] : symbols) {
     if (auto *type{symbol->GetType()}) {
-      if (!IsReductionAllowedForType(ident, *type)) {
+      const auto &scope{context_.FindScope(symbol->name())};
+      if (!IsReductionAllowedForType(ident, *type, scope, context_)) {
         context_.Say(source,
             "The type of '%s' is incompatible with the reduction operator."_err_en_US,
             symbol->name());
@@ -4410,6 +4474,13 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
     CheckDoacross(*doaDep);
     CheckDependenceType(doaDep->GetDepType());
   } else {
+    using Modifier = parser::OmpDependClause::TaskDep::Modifier;
+    auto &modifiers{std::get<std::optional<std::list<Modifier>>>(taskDep->t)};
+    if (!modifiers) {
+      context_.Say(GetContext().clauseSource,
+          "A DEPEND clause on a TASK construct must have a valid task dependence type"_err_en_US);
+      return;
+    }
     CheckTaskDependenceType(taskDep->GetTaskDepType());
   }
 
@@ -4587,6 +4658,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Copyprivate &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_copyprivate);
   SymbolSourceMap symbols;
   GetSymbolsInObjectList(x.v, symbols);
+  CheckVariableListItem(symbols);
   CheckIntentInPointer(symbols, llvm::omp::Clause::OMPC_copyprivate);
   CheckCopyingPolymorphicAllocatable(
       symbols, llvm::omp::Clause::OMPC_copyprivate);
@@ -4859,12 +4931,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::From &x) {
   const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};
   SymbolSourceMap symbols;
   GetSymbolsInObjectList(objList, symbols);
-  for (const auto &[symbol, source] : symbols) {
-    if (!IsVariableListItem(*symbol)) {
-      context_.SayWithDecl(
-          *symbol, source, "'%s' must be a variable"_err_en_US, symbol->name());
-    }
-  }
+  CheckVariableListItem(symbols);
 
   // Ref: [4.5:109:19]
   // If a list item is an array section it must specify contiguous storage.
@@ -4904,12 +4971,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::To &x) {
   const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};
   SymbolSourceMap symbols;
   GetSymbolsInObjectList(objList, symbols);
-  for (const auto &[symbol, source] : symbols) {
-    if (!IsVariableListItem(*symbol)) {
-      context_.SayWithDecl(
-          *symbol, source, "'%s' must be a variable"_err_en_US, symbol->name());
-    }
-  }
+  CheckVariableListItem(symbols);
 
   // Ref: [4.5:109:19]
   // If a list item is an array section it must specify contiguous storage.
@@ -5493,12 +5555,8 @@ void OmpStructureChecker::CheckDependList(const parser::DataRef &d) {
             // Check if the base element is valid on Depend Clause
             CheckDependList(elem.value().base);
           },
-          [&](const common::Indirection<parser::StructureComponent> &) {
-            context_.Say(GetContext().clauseSource,
-                "A variable that is part of another variable "
-                "(such as an element of a structure) but is not an array "
-                "element or an array section cannot appear in a DEPEND "
-                "clause"_err_en_US);
+          [&](const common::Indirection<parser::StructureComponent> &comp) {
+            CheckDependList(comp.value().base);
           },
           [&](const common::Indirection<parser::CoindexedNamedObject> &) {
             context_.Say(GetContext().clauseSource,

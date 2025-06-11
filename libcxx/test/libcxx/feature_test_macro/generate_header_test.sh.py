@@ -7,6 +7,7 @@
 # ===----------------------------------------------------------------------===##
 
 # RUN: %{python} %s %{libcxx-dir}/utils %{libcxx-dir}/test/libcxx/feature_test_macro/test_data.json %t/tests
+# END.
 
 import os
 import sys
