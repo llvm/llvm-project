@@ -332,10 +332,10 @@ define i8 @masked_min_reduction(ptr %data, ptr %mask) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <32 x i8> [ <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, [[ENTRY]] ], [ [[TMP16:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <32 x i8> [ <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, [[ENTRY]] ], [ [[TMP17:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <32 x i8> [ <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, [[ENTRY]] ], [ [[TMP18:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <32 x i8> [ <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, [[ENTRY]] ], [ [[TMP19:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <32 x i8> [ splat (i8 -1), [[ENTRY]] ], [ [[TMP16:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <32 x i8> [ splat (i8 -1), [[ENTRY]] ], [ [[TMP17:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <32 x i8> [ splat (i8 -1), [[ENTRY]] ], [ [[TMP18:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <32 x i8> [ splat (i8 -1), [[ENTRY]] ], [ [[TMP19:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[DATA:%.*]] = getelementptr i8, ptr [[DATA1:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[DATA]], i64 32
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[DATA]], i64 64
@@ -356,10 +356,10 @@ define i8 @masked_min_reduction(ptr %data, ptr %mask) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq <32 x i8> [[WIDE_LOAD8]], zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq <32 x i8> [[WIDE_LOAD9]], zeroinitializer
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq <32 x i8> [[WIDE_LOAD10]], zeroinitializer
-; CHECK-NEXT:    [[TMP12:%.*]] = select <32 x i1> [[TMP8]], <32 x i8> [[WIDE_LOAD]], <32 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
-; CHECK-NEXT:    [[TMP13:%.*]] = select <32 x i1> [[TMP9]], <32 x i8> [[WIDE_LOAD4]], <32 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
-; CHECK-NEXT:    [[TMP14:%.*]] = select <32 x i1> [[TMP10]], <32 x i8> [[WIDE_LOAD5]], <32 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
-; CHECK-NEXT:    [[TMP15:%.*]] = select <32 x i1> [[TMP11]], <32 x i8> [[WIDE_LOAD6]], <32 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+; CHECK-NEXT:    [[TMP12:%.*]] = select <32 x i1> [[TMP8]], <32 x i8> [[WIDE_LOAD]], <32 x i8> splat (i8 -1)
+; CHECK-NEXT:    [[TMP13:%.*]] = select <32 x i1> [[TMP9]], <32 x i8> [[WIDE_LOAD4]], <32 x i8> splat (i8 -1)
+; CHECK-NEXT:    [[TMP14:%.*]] = select <32 x i1> [[TMP10]], <32 x i8> [[WIDE_LOAD5]], <32 x i8> splat (i8 -1)
+; CHECK-NEXT:    [[TMP15:%.*]] = select <32 x i1> [[TMP11]], <32 x i8> [[WIDE_LOAD6]], <32 x i8> splat (i8 -1)
 ; CHECK-NEXT:    [[TMP16]] = tail call <32 x i8> @llvm.umin.v32i8(<32 x i8> [[VEC_PHI]], <32 x i8> [[TMP12]])
 ; CHECK-NEXT:    [[TMP17]] = tail call <32 x i8> @llvm.umin.v32i8(<32 x i8> [[VEC_PHI1]], <32 x i8> [[TMP13]])
 ; CHECK-NEXT:    [[TMP18]] = tail call <32 x i8> @llvm.umin.v32i8(<32 x i8> [[VEC_PHI2]], <32 x i8> [[TMP14]])

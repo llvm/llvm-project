@@ -5084,7 +5084,6 @@ define void @no_fold_masked_min_loop(ptr nocapture readonly %vals, ptr nocapture
 ; CHECK-NEXT:    store i8 [[RES]], ptr [[OUT:%.*]], align 1
 ; CHECK-NEXT:    ret void
 ;
-
 entry:
   br label %loop
 
