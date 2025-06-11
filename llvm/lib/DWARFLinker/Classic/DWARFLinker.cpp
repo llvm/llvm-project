@@ -2297,8 +2297,37 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
 
         // Create a map of stmt sequence offsets to original row indices.
         DenseMap<uint64_t, unsigned> SeqOffToOrigRow;
-        for (const DWARFDebugLine::Sequence &Seq : LT->Sequences)
-          SeqOffToOrigRow[Seq.StmtSeqOffset] = Seq.FirstRowIndex;
+        // The DWARF parser's discovery of sequences can be incomplete. To
+        // ensure all DW_AT_LLVM_stmt_sequence attributes can be patched, we
+        // build a map from both the parser's results and a manual
+        // reconstruction.
+        if (!LT->Rows.empty()) {
+          // First, trust the sequences that the DWARF parser did identify.
+          for (const DWARFDebugLine::Sequence &Seq : LT->Sequences)
+            SeqOffToOrigRow.try_emplace(Seq.StmtSeqOffset, Seq.FirstRowIndex);
+
+          // Second, manually find sequence boundaries and match them to the
+          // sorted attributes to handle sequences the parser might have missed.
+          auto StmtAttrs = Unit.getStmtSeqListAttributes();
+          llvm::sort(StmtAttrs,
+                     [](const PatchLocation &A, const PatchLocation &B) {
+                       return A.get() < B.get();
+                     });
+
+          std::vector<size_t> SeqStartRows;
+          SeqStartRows.push_back(0);
+          for (size_t i = 0; i < LT->Rows.size() - 1; ++i)
+            if (LT->Rows[i].EndSequence)
+              SeqStartRows.push_back(i + 1);
+
+          // Correlate the sorted attributes with the reconstructed sequence
+          // starts. This provides a partial mapping if counts are mismatched,
+          // maximizing the number of correctly patched attributes.
+          size_t NumMappings = std::min(StmtAttrs.size(), SeqStartRows.size());
+          for (size_t i = 0; i < NumMappings; ++i) {
+            SeqOffToOrigRow.try_emplace(StmtAttrs[i].get(), SeqStartRows[i]);
+          }
+        }
 
         // Create a map of original row indices to new row indices.
         DenseMap<size_t, size_t> OrigRowToNewRow;

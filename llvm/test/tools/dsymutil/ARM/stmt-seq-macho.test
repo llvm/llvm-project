@@ -4,7 +4,12 @@
 # RUN: yaml2obj %t/stmt_seq_macho.exe.yaml -o %t/stmt_seq_macho.exe
 # RUN: yaml2obj %t/stmt_seq_macho.o.yaml   -o %t/stmt_seq_macho.o
 # RUN: dsymutil --flat --verify-dwarf=none -oso-prepend-path %t %t/stmt_seq_macho.exe -o %t/stmt_seq_macho.dSYM
-# RUN: llvm-dwarfdump --debug-info --debug-line -v %t/stmt_seq_macho.dSYM | sort | FileCheck %s -check-prefix=CHECK_DSYM
+# RUN: llvm-dwarfdump --debug-info --debug-line -v %t/stmt_seq_macho.dSYM > %t/stmt_seq_macho.dSYM.txt
+# RUN: cat %t/stmt_seq_macho.dSYM.txt | sort | FileCheck %s -check-prefix=CHECK_DSYM
+# RUN: cat %t/stmt_seq_macho.dSYM.txt | FileCheck %s -check-prefix=CHECK_NO_INVALID_OFFSET
+
+# CHECK_NO_INVALID_OFFSET-NOT: DW_AT_LLVM_stmt_sequence{{.*}}0xffffffff
+
 
 # CHECK_DSYM: DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset] ([[OFFSET1:(0x[0-9a-f]+)]])
 # CHECK_DSYM: DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset] ([[OFFSET2:(0x[0-9a-f]+)]])
