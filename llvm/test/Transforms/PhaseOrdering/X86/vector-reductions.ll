@@ -326,8 +326,6 @@ cleanup:
   ret i1 %retval.0
 }
 
-; From https://github.com/llvm/llvm-project/issues/139050.
-; FIXME: This should be vectorized.
 define i8 @masked_min_reduction(ptr %data, ptr %mask) {
 ; CHECK-LABEL: @masked_min_reduction(
 ; CHECK-NEXT:  entry:
