@@ -1,5 +1,5 @@
 // RUN: fir-opt --fir-add-alias-tags %s | FileCheck --check-prefixes=ALL,DEFAULT %s
-// RUN: fir-opt --fir-add-alias-tags --tbaa-local-alloc %s | FileCheck --check-prefixes=ALL,LOCAL %s
+// RUN: fir-opt --fir-add-alias-tags --local-alloc-tbaa %s | FileCheck --check-prefixes=ALL,LOCAL %s
 
 // Test AddAliasTagsPass creating sub-tree for TARGET/POINTER variables.
 

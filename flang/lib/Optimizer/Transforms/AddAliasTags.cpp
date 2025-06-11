@@ -44,7 +44,7 @@ static llvm::cl::opt<bool>
     enableDirect("direct-tbaa", llvm::cl::init(true), llvm::cl::Hidden,
                  llvm::cl::desc("Add TBAA tags to direct variables"));
 static llvm::cl::opt<bool>
-    enableLocalAllocs("tbaa-local-alloc", llvm::cl::init(true),
+    enableLocalAllocs("local-alloc-tbaa", llvm::cl::init(true),
                       llvm::cl::Hidden,
                       llvm::cl::desc("Add TBAA tags to local allocations."));
 
