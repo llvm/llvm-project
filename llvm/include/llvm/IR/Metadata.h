@@ -1252,6 +1252,12 @@ public:
   bool isReplaceable() const { return isTemporary() || isAlwaysReplaceable(); }
   bool isAlwaysReplaceable() const { return getMetadataID() == DIAssignIDKind; }
 
+  bool hasGeneralizedMDString() const {
+    if (getNumOperands() < 2 || !isa<MDString>(getOperand(1)))
+      return false;
+    return cast<MDString>(getOperand(1))->getString().ends_with(".generalized");
+  }
+
   unsigned getNumTemporaryUses() const {
     assert(isTemporary() && "Only for temporaries");
     return Context.getReplaceableUses()->getNumUses();
@@ -1463,6 +1469,8 @@ public:
                                        const Instruction *BInstr);
   static MDNode *getMergedMemProfMetadata(MDNode *A, MDNode *B);
   static MDNode *getMergedCallsiteMetadata(MDNode *A, MDNode *B);
+  static MDNode *getMergedCalleeTypeMetadata(LLVMContext &Ctx, MDNode *A,
+                                             MDNode *B);
 };
 
 /// Tuple of metadata.

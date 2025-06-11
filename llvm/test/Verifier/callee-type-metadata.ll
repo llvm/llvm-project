@@ -1,0 +1,23 @@
+;; Test if the callee_type metadata attached to indirect call sites adhere to the expected format.
+
+; RUN: not llvm-as -disable-output < %s 2>&1 | FileCheck %s
+define i32 @_Z13call_indirectPFicEc(ptr %func, i8 signext %x) !type !0 {
+entry:
+  %func.addr = alloca ptr, align 8
+  %x.addr = alloca i8, align 1
+  store ptr %func, ptr %func.addr, align 8
+  store i8 %x, ptr %x.addr, align 1
+  %fptr = load ptr, ptr %func.addr, align 8
+  %x_val = load i8, ptr %x.addr, align 1  
+  ;; callee_type metdata is a type metadata instead of a list of type metadata nodes.
+  ; CHECK: The callee_type metadata must be a list of type metadata nodes
+  %call = call i32 %fptr(i8 signext %x_val), !callee_type !0
+  ;; callee_type metdata must be a list of "generalized" type metadata.
+  ; CHECK: Only generalized type metadata can be part of the callee_type metadata list
+  %call2 = call i32 %fptr(i8 signext %x_val), !callee_type !2
+  ret i32 %call
+}
+
+!0 = !{i64 0, !"_ZTSFiPvcE.generalized"}
+!1 = !{i64 0, !"_ZTSFicE"}
+!2 = !{!1}
