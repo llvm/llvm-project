@@ -9,7 +9,6 @@
 #include "hdr/fcntl_macros.h"
 #include "hdr/sys_stat_macros.h"
 #include "hdr/types/struct_timeval.h"
-#include "src/errno/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/stdio/remove.h"
 #include "src/sys/stat/stat.h"

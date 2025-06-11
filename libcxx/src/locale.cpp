@@ -34,10 +34,6 @@
 #  define _CTYPE_DISABLE_MACROS
 #endif
 
-#if __has_include("<langinfo.h>")
-#  include <langinfo.h>
-#endif
-
 #include "include/atomic_support.h"
 #include "include/sso_allocator.h"
 
@@ -3957,7 +3953,7 @@ static bool is_narrow_non_breaking_space(const char* ptr) {
 }
 
 static bool is_non_breaking_space(const char* ptr) {
-  // https://www.fileformat.info/info/unicode/char/0a/index.htm
+  // https://www.fileformat.info/info/unicode/char/a0/index.htm
   return ptr[0] == '\xc2' && ptr[1] == '\xa0';
 }
 #endif // _LIBCPP_HAS_WIDE_CHARACTERS

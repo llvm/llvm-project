@@ -63,9 +63,9 @@ subroutine acc_update
 ! CHECK: acc.update_host accPtr(%[[DEVPTR_B]] : !fir.ref<!fir.array<10x10xf32>>) to varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10x10xf32>>) {name = "b", structured = false}
 
   !$acc update host(a) async
-! CHECK: %[[DEVPTR_A:.*]] = acc.getdeviceptr varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {asyncOnly = [#acc.device_type<none>], dataClause = #acc<data_clause acc_update_host>, name = "a", structured = false}
+! CHECK: %[[DEVPTR_A:.*]] = acc.getdeviceptr varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) async -> !fir.ref<!fir.array<10x10xf32>> {dataClause = #acc<data_clause acc_update_host>, name = "a", structured = false}
 ! CHECK: acc.update async dataOperands(%[[DEVPTR_A]] : !fir.ref<!fir.array<10x10xf32>>)
-! CHECK: acc.update_host accPtr(%[[DEVPTR_A]] : !fir.ref<!fir.array<10x10xf32>>) to varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) {asyncOnly = [#acc.device_type<none>], name = "a", structured = false}
+! CHECK: acc.update_host accPtr(%[[DEVPTR_A]] : !fir.ref<!fir.array<10x10xf32>>) async to varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) {name = "a", structured = false}
 
   !$acc update host(a) wait
 ! CHECK: %[[DEVPTR_A:.*]] = acc.getdeviceptr varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {dataClause = #acc<data_clause acc_update_host>, name = "a", structured = false}
@@ -73,9 +73,9 @@ subroutine acc_update
 ! CHECK: acc.update_host accPtr(%[[DEVPTR_A]] : !fir.ref<!fir.array<10x10xf32>>) to varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) {name = "a", structured = false}
 
   !$acc update host(a) async wait
-! CHECK: %[[DEVPTR_A:.*]] = acc.getdeviceptr varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {asyncOnly = [#acc.device_type<none>], dataClause = #acc<data_clause acc_update_host>, name = "a", structured = false}
+! CHECK: %[[DEVPTR_A:.*]] = acc.getdeviceptr varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) async -> !fir.ref<!fir.array<10x10xf32>> {dataClause = #acc<data_clause acc_update_host>, name = "a", structured = false}
 ! CHECK: acc.update async wait dataOperands(%[[DEVPTR_A]] : !fir.ref<!fir.array<10x10xf32>>)
-! CHECK: acc.update_host accPtr(%[[DEVPTR_A]] : !fir.ref<!fir.array<10x10xf32>>) to varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) {asyncOnly = [#acc.device_type<none>], name = "a", structured = false}
+! CHECK: acc.update_host accPtr(%[[DEVPTR_A]] : !fir.ref<!fir.array<10x10xf32>>) async to varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) {name = "a", structured = false}
 
   !$acc update host(a) async(1)
 ! CHECK: [[ASYNC1:%.*]] = arith.constant 1 : i32
@@ -108,8 +108,8 @@ subroutine acc_update
 ! CHECK: acc.update_host accPtr(%[[DEVPTR_A]] : !fir.ref<!fir.array<10x10xf32>>) to varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) {name = "a", structured = false}
 
   !$acc update host(a) device_type(host, nvidia) async
-! CHECK: %[[DEVPTR_A:.*]] = acc.getdeviceptr varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {asyncOnly = [#acc.device_type<host>, #acc.device_type<nvidia>], dataClause = #acc<data_clause acc_update_host>, name = "a", structured = false}
+! CHECK: %[[DEVPTR_A:.*]] = acc.getdeviceptr varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) async([#acc.device_type<host>, #acc.device_type<nvidia>]) -> !fir.ref<!fir.array<10x10xf32>> {dataClause = #acc<data_clause acc_update_host>, name = "a", structured = false}
 ! CHECK: acc.update async([#acc.device_type<host>, #acc.device_type<nvidia>]) dataOperands(%[[DEVPTR_A]] : !fir.ref<!fir.array<10x10xf32>>)
-! CHECK: acc.update_host accPtr(%[[DEVPTR_A]] : !fir.ref<!fir.array<10x10xf32>>) to varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) {asyncOnly = [#acc.device_type<host>, #acc.device_type<nvidia>], name = "a", structured = false}
+! CHECK: acc.update_host accPtr(%[[DEVPTR_A]] : !fir.ref<!fir.array<10x10xf32>>) async([#acc.device_type<host>, #acc.device_type<nvidia>]) to varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) {name = "a", structured = false}
 
 end subroutine acc_update

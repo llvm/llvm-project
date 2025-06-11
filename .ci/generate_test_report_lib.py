@@ -92,7 +92,9 @@ def generate_report(
             ]
         )
     elif failures:
-        report.extend(["", "## Failed Tests", "(click on a test name to see its output)"])
+        report.extend(
+            ["", "## Failed Tests", "(click on a test name to see its output)"]
+        )
 
         for testsuite_name, failures in failures.items():
             report.extend(["", f"### {testsuite_name}"])
@@ -117,6 +119,17 @@ def generate_report(
                 "All tests passed but another part of the build **failed**.",
                 "",
                 f"{download_text} the build's log file to see the details.",
+            ]
+        )
+
+    if failures or return_code != 0:
+        report.extend(
+            [
+                "",
+                "If these failures are unrelated to your changes (for example "
+                "tests are broken or flaky at HEAD), please open an issue at "
+                "https://github.com/llvm/llvm-project/issues and add the "
+                "`infrastructure` label.",
             ]
         )
 

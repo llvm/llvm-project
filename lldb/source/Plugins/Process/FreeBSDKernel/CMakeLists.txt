@@ -18,10 +18,10 @@ add_lldb_library(lldbPluginProcessFreeBSDKernel PLUGIN
   RegisterContextFreeBSDKernel_x86_64.cpp
   ThreadFreeBSDKernel.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbCore
     lldbTarget
     ${FBSDKERNEL_LIBS}
-  LINK_COMPONENTS
-    Support
   )
