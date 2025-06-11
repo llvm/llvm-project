@@ -16,6 +16,71 @@ static cl::opt<bool>
     HexagonEnableFastMathRuntimeCalls("hexagon-fast-math", cl::Hidden,
                                       cl::desc("Enable Fast Math processing"));
 
+static void setAArch64LibcallNames(RuntimeLibcallsInfo &Info,
+                                   const Triple &TT) {
+  if (TT.isWindowsArm64EC()) {
+    // FIXME: are there calls we need to exclude from this?
+#define HANDLE_LIBCALL(code, name)                                             \
+  {                                                                            \
+    const char *libcallName = Info.getLibcallName(RTLIB::code);                \
+    if (libcallName && libcallName[0] != '#')                                  \
+      Info.setLibcallName(RTLIB::code, "#" #name);                             \
+  }
+#include "llvm/IR/RuntimeLibcalls.def"
+#undef HANDLE_LIBCALL
+  }
+}
+
+static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT) {
+  // Register based DivRem for AEABI (RTABI 4.2)
+  if (TT.isTargetAEABI() || TT.isAndroid() || TT.isTargetGNUAEABI() ||
+      TT.isTargetMuslAEABI() || TT.isOSWindows()) {
+    if (TT.isOSWindows()) {
+      const struct {
+        const RTLIB::Libcall Op;
+        const char *const Name;
+        const CallingConv::ID CC;
+      } LibraryCalls[] = {
+          {RTLIB::SDIVREM_I8, "__rt_sdiv", CallingConv::ARM_AAPCS},
+          {RTLIB::SDIVREM_I16, "__rt_sdiv", CallingConv::ARM_AAPCS},
+          {RTLIB::SDIVREM_I32, "__rt_sdiv", CallingConv::ARM_AAPCS},
+          {RTLIB::SDIVREM_I64, "__rt_sdiv64", CallingConv::ARM_AAPCS},
+
+          {RTLIB::UDIVREM_I8, "__rt_udiv", CallingConv::ARM_AAPCS},
+          {RTLIB::UDIVREM_I16, "__rt_udiv", CallingConv::ARM_AAPCS},
+          {RTLIB::UDIVREM_I32, "__rt_udiv", CallingConv::ARM_AAPCS},
+          {RTLIB::UDIVREM_I64, "__rt_udiv64", CallingConv::ARM_AAPCS},
+      };
+
+      for (const auto &LC : LibraryCalls) {
+        Info.setLibcallName(LC.Op, LC.Name);
+        Info.setLibcallCallingConv(LC.Op, LC.CC);
+      }
+    } else {
+      const struct {
+        const RTLIB::Libcall Op;
+        const char *const Name;
+        const CallingConv::ID CC;
+      } LibraryCalls[] = {
+          {RTLIB::SDIVREM_I8, "__aeabi_idivmod", CallingConv::ARM_AAPCS},
+          {RTLIB::SDIVREM_I16, "__aeabi_idivmod", CallingConv::ARM_AAPCS},
+          {RTLIB::SDIVREM_I32, "__aeabi_idivmod", CallingConv::ARM_AAPCS},
+          {RTLIB::SDIVREM_I64, "__aeabi_ldivmod", CallingConv::ARM_AAPCS},
+
+          {RTLIB::UDIVREM_I8, "__aeabi_uidivmod", CallingConv::ARM_AAPCS},
+          {RTLIB::UDIVREM_I16, "__aeabi_uidivmod", CallingConv::ARM_AAPCS},
+          {RTLIB::UDIVREM_I32, "__aeabi_uidivmod", CallingConv::ARM_AAPCS},
+          {RTLIB::UDIVREM_I64, "__aeabi_uldivmod", CallingConv::ARM_AAPCS},
+      };
+
+      for (const auto &LC : LibraryCalls) {
+        Info.setLibcallName(LC.Op, LC.Name);
+        Info.setLibcallCallingConv(LC.Op, LC.CC);
+      }
+    }
+  }
+}
+
 /// Set default libcall names. If a target wants to opt-out of a libcall it
 /// should be placed here.
 void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
@@ -114,6 +179,40 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::OLE_F128, "__lekf2");
     setLibcallName(RTLIB::OGT_F128, "__gtkf2");
     setLibcallName(RTLIB::UO_F128, "__unordkf2");
+
+    setLibcallName(RTLIB::LOG_F128, "logf128");
+    setLibcallName(RTLIB::LOG2_F128, "log2f128");
+    setLibcallName(RTLIB::LOG10_F128, "log10f128");
+    setLibcallName(RTLIB::EXP_F128, "expf128");
+    setLibcallName(RTLIB::EXP2_F128, "exp2f128");
+    setLibcallName(RTLIB::SIN_F128, "sinf128");
+    setLibcallName(RTLIB::COS_F128, "cosf128");
+    setLibcallName(RTLIB::SINCOS_F128, "sincosf128");
+    setLibcallName(RTLIB::POW_F128, "powf128");
+    setLibcallName(RTLIB::FMIN_F128, "fminf128");
+    setLibcallName(RTLIB::FMAX_F128, "fmaxf128");
+    setLibcallName(RTLIB::REM_F128, "fmodf128");
+    setLibcallName(RTLIB::SQRT_F128, "sqrtf128");
+    setLibcallName(RTLIB::CEIL_F128, "ceilf128");
+    setLibcallName(RTLIB::FLOOR_F128, "floorf128");
+    setLibcallName(RTLIB::TRUNC_F128, "truncf128");
+    setLibcallName(RTLIB::ROUND_F128, "roundf128");
+    setLibcallName(RTLIB::LROUND_F128, "lroundf128");
+    setLibcallName(RTLIB::LLROUND_F128, "llroundf128");
+    setLibcallName(RTLIB::RINT_F128, "rintf128");
+    setLibcallName(RTLIB::LRINT_F128, "lrintf128");
+    setLibcallName(RTLIB::LLRINT_F128, "llrintf128");
+    setLibcallName(RTLIB::NEARBYINT_F128, "nearbyintf128");
+    setLibcallName(RTLIB::FMA_F128, "fmaf128");
+    setLibcallName(RTLIB::FREXP_F128, "frexpf128");
+
+    if (TT.isOSAIX()) {
+      bool isPPC64 = TT.isPPC64();
+      setLibcallName(RTLIB::MEMCPY, isPPC64 ? "___memmove64" : "___memmove");
+      setLibcallName(RTLIB::MEMMOVE, isPPC64 ? "___memmove64" : "___memmove");
+      setLibcallName(RTLIB::MEMSET, isPPC64 ? "___memset64" : "___memset");
+      setLibcallName(RTLIB::BZERO, isPPC64 ? "___bzero64" : "___bzero");
+    }
   }
 
   // A few names are different on particular architectures or environments.
@@ -247,7 +346,11 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     }
   }
 
-  if (TT.getArch() == Triple::ArchType::avr) {
+  if (TT.getArch() == Triple::ArchType::aarch64)
+    setAArch64LibcallNames(*this, TT);
+  else if (TT.isARM() || TT.isThumb())
+    setARMLibcallNames(*this, TT);
+  else if (TT.getArch() == Triple::ArchType::avr) {
     // Division rtlib functions (not supported), use divmod functions instead
     setLibcallName(RTLIB::SDIV_I8, nullptr);
     setLibcallName(RTLIB::SDIV_I16, nullptr);

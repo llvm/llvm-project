@@ -432,6 +432,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       })
       .Case([&](omp::WsloopOp op) {
         checkAllocate(op, result);
+        checkLinear(op, result);
         checkOrder(op, result);
         checkReduction(op, result);
       })

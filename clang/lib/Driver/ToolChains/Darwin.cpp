@@ -8,10 +8,10 @@
 
 #include "Darwin.h"
 #include "Arch/ARM.h"
-#include "CommonArgs.h"
 #include "clang/Basic/AlignedAllocation.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Options.h"
@@ -1642,14 +1642,16 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
     CmdArgs.push_back("-lSystem");
 
   // Select the dynamic runtime library and the target specific static library.
-  if (isTargetIOSBased()) {
-    // If we are compiling as iOS / simulator, don't attempt to link libgcc_s.1,
-    // it never went into the SDK.
-    // Linking against libgcc_s.1 isn't needed for iOS 5.0+
-    if (isIPhoneOSVersionLT(5, 0) && !isTargetIOSSimulator() &&
-        getTriple().getArch() != llvm::Triple::aarch64)
-      CmdArgs.push_back("-lgcc_s.1");
-  }
+  // Some old Darwin versions put builtins, libunwind, and some other stuff in
+  // libgcc_s.1.dylib. MacOS X 10.6 and iOS 5 moved those functions to
+  // libSystem, and made libgcc_s.1.dylib a stub. We never link libgcc_s when
+  // building for aarch64 or iOS simulator, since libgcc_s was made obsolete
+  // before either existed.
+  if (getTriple().getArch() != llvm::Triple::aarch64 &&
+      ((isTargetIOSBased() && isIPhoneOSVersionLT(5, 0) &&
+        !isTargetIOSSimulator()) ||
+       (isTargetMacOSBased() && isMacosxVersionLT(10, 6))))
+    CmdArgs.push_back("-lgcc_s.1");
   AddLinkRuntimeLib(Args, CmdArgs, "builtins");
 }
 
@@ -1719,10 +1721,14 @@ struct DarwinPlatform {
     UnderlyingOSVersion.reset();
     return Result;
   }
+  bool isValidOSVersion() const {
+    return llvm::Triple::isValidVersionForOS(getOSFromPlatform(Platform),
+                                             getOSVersion());
+  }
 
   VersionTuple getCanonicalOSVersion() const {
-    return llvm::Triple::getCanonicalVersionForOS(getOSFromPlatform(Platform),
-                                                  getOSVersion());
+    return llvm::Triple::getCanonicalVersionForOS(
+        getOSFromPlatform(Platform), getOSVersion(), /*IsInValidRange=*/true);
   }
 
   void setOSVersion(const VersionTuple &Version) {
@@ -2449,6 +2455,9 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   }
 
   assert(PlatformAndVersion && "Unable to infer Darwin variant");
+  if (!PlatformAndVersion->isValidOSVersion())
+    getDriver().Diag(diag::err_drv_invalid_version_number)
+        << PlatformAndVersion->getAsString(Args, Opts);
   // After the deployment OS version has been resolved, set it to the canonical
   // version before further error detection and converting to a proper target
   // triple.
@@ -2550,6 +2559,12 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
     ZipperedOSVersion = PlatformAndVersion->getZipperedOSVersion();
   setTarget(Platform, Environment, Major, Minor, Micro, ZipperedOSVersion);
   TargetVariantTriple = PlatformAndVersion->getTargetVariantTriple();
+  if (TargetVariantTriple &&
+      !llvm::Triple::isValidVersionForOS(TargetVariantTriple->getOS(),
+                                         TargetVariantTriple->getOSVersion())) {
+    getDriver().Diag(diag::err_drv_invalid_version_number)
+        << TargetVariantTriple->str();
+  }
 
   if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {
     StringRef SDK = getSDKName(A->getValue());
