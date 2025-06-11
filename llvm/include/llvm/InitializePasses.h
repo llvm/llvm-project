@@ -14,6 +14,8 @@
 #ifndef LLVM_INITIALIZEPASSES_H
 #define LLVM_INITIALIZEPASSES_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 class PassRegistry;
@@ -181,7 +183,6 @@ LLVM_ABI void initializeLowerGlobalDtorsLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeLowerIntrinsicsPass(PassRegistry &);
 LLVM_ABI void initializeLowerInvokeLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeLowerSwitchLegacyPassPass(PassRegistry &);
-void initializeKCFIPass(PassRegistry &);
 LLVM_ABI void initializeMIRAddFSDiscriminatorsPass(PassRegistry &);
 LLVM_ABI void initializeMIRCanonicalizerPass(PassRegistry &);
 LLVM_ABI void initializeMIRNamerPass(PassRegistry &);

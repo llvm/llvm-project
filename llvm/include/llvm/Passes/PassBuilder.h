@@ -899,7 +899,7 @@ struct NoOpModulePass : PassInfoMixin<NoOpModulePass> {
 /// No-op module analysis.
 class NoOpModuleAnalysis : public AnalysisInfoMixin<NoOpModuleAnalysis> {
   friend AnalysisInfoMixin<NoOpModuleAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   struct Result {};
@@ -917,7 +917,7 @@ struct NoOpCGSCCPass : PassInfoMixin<NoOpCGSCCPass> {
 /// No-op CGSCC analysis.
 class NoOpCGSCCAnalysis : public AnalysisInfoMixin<NoOpCGSCCAnalysis> {
   friend AnalysisInfoMixin<NoOpCGSCCAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   struct Result {};
@@ -936,7 +936,7 @@ struct NoOpFunctionPass : PassInfoMixin<NoOpFunctionPass> {
 /// No-op function analysis.
 class NoOpFunctionAnalysis : public AnalysisInfoMixin<NoOpFunctionAnalysis> {
   friend AnalysisInfoMixin<NoOpFunctionAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   struct Result {};
@@ -969,7 +969,7 @@ struct NoOpMachineFunctionPass : public PassInfoMixin<NoOpMachineFunctionPass> {
 /// No-op loop analysis.
 class NoOpLoopAnalysis : public AnalysisInfoMixin<NoOpLoopAnalysis> {
   friend AnalysisInfoMixin<NoOpLoopAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   struct Result {};
