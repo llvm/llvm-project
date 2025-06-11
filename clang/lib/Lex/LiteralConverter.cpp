@@ -12,58 +12,42 @@
 using namespace llvm;
 
 llvm::TextEncodingConverter *
-LiteralConverter::getConverter(const char *Codepage) {
-  auto Iter = TextEncodingConverters.find(Codepage);
-  if (Iter != TextEncodingConverters.end())
-    return &Iter->second;
-  return nullptr;
-}
-
-llvm::TextEncodingConverter *
 LiteralConverter::getConverter(ConversionAction Action) {
-  StringRef CodePage;
-  if (Action == ToSystemCharset)
-    CodePage = SystemCharset;
-  else if (Action == ToExecCharset)
-    CodePage = ExecCharset;
+  if (Action == ToSystemEncoding)
+    return ToSystemEncodingConverter;
+  else if (Action == ToExecEncoding)
+    return ToExecEncodingConverter;
   else
-    CodePage = InternalCharset;
-  return getConverter(CodePage.data());
-}
-
-llvm::TextEncodingConverter *
-LiteralConverter::createAndInsertCharConverter(const char *To) {
-  const char *From = InternalCharset.data();
-  llvm::TextEncodingConverter *Converter = getConverter(To);
-  if (Converter)
-    return Converter;
-
-  ErrorOr<TextEncodingConverter> ErrorOrConverter =
-      llvm::TextEncodingConverter::create(From, To);
-  if (!ErrorOrConverter)
     return nullptr;
-  TextEncodingConverters.insert_or_assign(StringRef(To),
-                                          std::move(*ErrorOrConverter));
-  return getConverter(To);
 }
 
 void LiteralConverter::setConvertersFromOptions(
     const clang::LangOptions &Opts, const clang::TargetInfo &TInfo,
     clang::DiagnosticsEngine &Diags) {
   using namespace llvm;
-  SystemCharset = TInfo.getTriple().getSystemCharset();
-  InternalCharset = "UTF-8";
-  ExecCharset = Opts.ExecCharset.empty() ? InternalCharset : Opts.ExecCharset;
-  // Create converter between internal and system charset
-  if (InternalCharset != SystemCharset)
-    createAndInsertCharConverter(SystemCharset.data());
-
-  // Create converter between internal and exec charset specified
-  // in fexec-charset option.
-  if (InternalCharset == ExecCharset)
-    return;
-  if (!createAndInsertCharConverter(ExecCharset.data())) {
-    Diags.Report(clang::diag::err_drv_invalid_value)
-        << "-fexec-charset" << ExecCharset;
+  InternalEncoding = "UTF-8";
+  SystemEncoding = TInfo.getTriple().getDefaultTextEncoding();
+  ExecEncoding =
+      Opts.ExecEncoding.empty() ? InternalEncoding : Opts.ExecEncoding;
+  // Create converter between internal and system encoding
+  if (InternalEncoding != SystemEncoding) {
+    ErrorOr<TextEncodingConverter> ErrorOrConverter =
+        llvm::TextEncodingConverter::create(InternalEncoding, SystemEncoding);
+    if (!ErrorOrConverter)
+      return;
+    ToSystemEncodingConverter =
+        new TextEncodingConverter(std::move(*ErrorOrConverter));
   }
+
+  // Create converter between internal and exec encoding specified
+  // in fexec-charset option.
+  if (InternalEncoding == ExecEncoding)
+    return;
+  ErrorOr<TextEncodingConverter> ErrorOrConverter =
+      llvm::TextEncodingConverter::create(InternalEncoding, ExecEncoding);
+  if (!ErrorOrConverter)
+    Diags.Report(clang::diag::err_drv_invalid_value)
+        << "-fexec-charset" << ExecEncoding;
+  ToExecEncodingConverter =
+      new TextEncodingConverter(std::move(*ErrorOrConverter));
 }

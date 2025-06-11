@@ -593,8 +593,8 @@ public:
   /// The allocation token mode.
   std::optional<llvm::AllocTokenMode> AllocTokenMode;
 
-  /// Name of the exec charset to convert the internal charset to.
-  std::string ExecCharset;
+  /// Name of the execution encoding to convert the internal encoding to.
+  std::string ExecEncoding;
 
   LangOptions();
 

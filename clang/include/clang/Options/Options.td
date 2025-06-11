@@ -7674,7 +7674,7 @@ def fexec_charset : Separate<["-"], "fexec-charset">, MetaVarName<"<charset>">,
   HelpText<"Set the execution <charset> for string and character literals. "
            "Supported character encodings include ISO8859-1, UTF-8, IBM-1047 "
            "and those supported by the host icu or iconv library.">,
-  MarshallingInfoString<LangOpts<"ExecCharset">>;
+  MarshallingInfoString<LangOpts<"ExecEncoding">>;
 def target_cpu : Separate<["-"], "target-cpu">,
   HelpText<"Target a specific cpu type">,
   MarshallingInfoString<TargetOpts<"CPU">>;

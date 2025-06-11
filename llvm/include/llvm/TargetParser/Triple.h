@@ -513,8 +513,8 @@ public:
   /// For example, "fooos1.2.3" would return "1.2.3".
   LLVM_ABI StringRef getEnvironmentVersionString() const;
 
-  /// getSystemCharset - Get the system charset of the triple.
-  StringRef getSystemCharset() const;
+  /// getDefaultTextEncoding - Get the default encoding of the triple.
+  StringRef getDefaultTextEncoding() const;
 
   /// @}
   /// @name Convenience Predicates

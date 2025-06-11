@@ -7567,9 +7567,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Set the default fexec-charset as the system charset.
   CmdArgs.push_back("-fexec-charset");
-  CmdArgs.push_back(Args.MakeArgString(Triple.getSystemCharset()));
-  if (Arg *execCharset = Args.getLastArg(options::OPT_fexec_charset_EQ)) {
-    StringRef value = execCharset->getValue();
+  CmdArgs.push_back(Args.MakeArgString(Triple.getDefaultTextEncoding()));
+  if (Arg *execEncoding = Args.getLastArg(options::OPT_fexec_charset_EQ)) {
+    StringRef value = execEncoding->getValue();
     llvm::ErrorOr<llvm::TextEncodingConverter> ErrorOrConverter =
         llvm::TextEncodingConverter::create("UTF-8", value.data());
     if (ErrorOrConverter) {
@@ -7577,7 +7577,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(Args.MakeArgString(value));
     } else {
       D.Diag(diag::err_drv_invalid_value)
-          << execCharset->getAsString(Args) << value;
+          << execEncoding->getAsString(Args) << value;
     }
   }
 
