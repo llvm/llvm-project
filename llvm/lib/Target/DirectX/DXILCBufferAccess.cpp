@@ -97,10 +97,6 @@ struct CBufferResource {
       (void)Success;
       assert(Success && "Offsets into cbuffer globals must be constant");
 
-      if (auto *ATy = dyn_cast<ArrayType>(Member->getValueType()))
-        ConstantOffset =
-            hlsl::translateCBufArrayOffset(DL, ConstantOffset, ATy);
-
       return ConstantOffset.getZExtValue();
     }
 
