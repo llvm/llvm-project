@@ -14,8 +14,8 @@
 #ifndef LLVM_XRAY_INSTRUMENTATIONMAP_H
 #define LLVM_XRAY_INSTRUMENTATIONMAP_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <cstdint>
@@ -32,7 +32,8 @@ class InstrumentationMap;
 
 /// Loads the instrumentation map from |Filename|. This auto-deduces the type of
 /// the instrumentation map.
-LLVM_ABI Expected<InstrumentationMap> loadInstrumentationMap(StringRef Filename);
+LLVM_ABI Expected<InstrumentationMap>
+loadInstrumentationMap(StringRef Filename);
 
 /// Represents an XRay instrumentation sled entry from an object file.
 struct SledEntry {
@@ -84,7 +85,8 @@ private:
   FunctionAddressMap FunctionAddresses;
   FunctionAddressReverseMap FunctionIds;
 
-  LLVM_ABI_FRIEND friend Expected<InstrumentationMap> loadInstrumentationMap(StringRef);
+  LLVM_ABI_FRIEND friend Expected<InstrumentationMap>
+      loadInstrumentationMap(StringRef);
 
 public:
   /// Provides a raw accessor to the unordered map of function addresses.

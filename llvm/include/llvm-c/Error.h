@@ -15,6 +15,7 @@
 #define LLVM_C_ERROR_H
 
 #include "llvm-c/ExternC.h"
+#include "llvm/Support/Compiler.h"
 
 LLVM_C_EXTERN_C_BEGIN
 

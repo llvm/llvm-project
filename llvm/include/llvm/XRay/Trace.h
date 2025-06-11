@@ -73,7 +73,8 @@ LLVM_ABI Expected<Trace> loadTraceFile(StringRef Filename, bool Sort = false);
 
 /// This function will attempt to load XRay trace records from the provided
 /// DataExtractor.
-LLVM_ABI Expected<Trace> loadTrace(const DataExtractor &Extractor, bool Sort = false);
+LLVM_ABI Expected<Trace> loadTrace(const DataExtractor &Extractor,
+                                   bool Sort = false);
 
 } // namespace xray
 } // namespace llvm
