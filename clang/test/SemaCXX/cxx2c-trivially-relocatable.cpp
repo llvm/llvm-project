@@ -333,6 +333,31 @@ struct CopyAssign1 {
    CopyAssign1 & operator=(CopyAssign1 const &) = default;
 };
 
+struct UserDeleted1 {
+    UserDeleted1(const UserDeleted1&) = delete;
+};
+static_assert(!__builtin_is_cpp_trivially_relocatable(UserDeleted1));
+static_assert(!__builtin_is_replaceable(UserDeleted1));
+
+struct UserDeleted2 {
+    UserDeleted2(UserDeleted2&&) = delete;
+};
+static_assert(!__builtin_is_cpp_trivially_relocatable(UserDeleted2));
+static_assert(!__builtin_is_replaceable(UserDeleted2));
+
+
+struct UserDeleted3 {
+    UserDeleted3 operator=(UserDeleted3);
+};
+static_assert(!__builtin_is_cpp_trivially_relocatable(UserDeleted3));
+static_assert(!__builtin_is_replaceable(UserDeleted3));
+
+struct UserDeleted4 {
+    UserDeleted4 operator=(UserDeleted4&&);
+};
+static_assert(!__builtin_is_cpp_trivially_relocatable(UserDeleted4));
+static_assert(!__builtin_is_replaceable(UserDeleted4));
+
 }
 
 
