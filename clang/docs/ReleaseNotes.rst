@@ -695,6 +695,9 @@ Bug Fixes in This Version
   the second clause of a C-style ``for`` loop. (#GH139818)
 - Fixed a bug with constexpr evaluation for structs containing unions in case of C++ modules. (#GH143168)
 
+- cv- and ref- qualified function types no longer silently produce invalid pointer to
+  qualified function types when they implicitly decay in some places. Fixes (#GH27059).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
