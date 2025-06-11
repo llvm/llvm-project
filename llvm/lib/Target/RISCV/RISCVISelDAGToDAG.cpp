@@ -683,6 +683,59 @@ bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
   return false;
 }
 
+bool RISCVDAGToDAGISel::trySignedBitfieldInsertInSign(SDNode *Node) {
+  // Only supported with XAndesPerf at the moment.
+  if (!Subtarget->hasVendorXAndesPerf())
+    return false;
+
+  auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
+  if (!N1C)
+    return false;
+
+  SDValue N0 = Node->getOperand(0);
+  if (!N0.hasOneUse())
+    return false;
+
+  auto BitfieldInsert = [&](SDValue N0, unsigned Msb, unsigned Lsb,
+                            const SDLoc &DL, MVT VT) {
+    unsigned Opc = RISCV::NDS_BFOS;
+    // If the Lsb is equal to the Msb, then the Lsb should be 0.
+    if (Lsb == Msb)
+      Lsb = 0;
+    return CurDAG->getMachineNode(Opc, DL, VT, N0.getOperand(0),
+                                  CurDAG->getTargetConstant(Lsb, DL, VT),
+                                  CurDAG->getTargetConstant(Msb, DL, VT));
+  };
+
+  SDLoc DL(Node);
+  MVT VT = Node->getSimpleValueType(0);
+  const unsigned RightShAmt = N1C->getZExtValue();
+
+  // Transform (sra (shl X, C1) C2) with C1 > C2
+  //        -> (NDS.BFOS X, lsb, msb)
+  if (N0.getOpcode() == ISD::SHL) {
+    auto *N01C = dyn_cast<ConstantSDNode>(N0->getOperand(1));
+    if (!N01C)
+      return false;
+
+    const unsigned LeftShAmt = N01C->getZExtValue();
+    // Make sure that this is a bitfield insertion (i.e., the shift-right
+    // amount should be less than the left-shift).
+    if (LeftShAmt <= RightShAmt)
+      return false;
+
+    const unsigned MsbPlusOne = VT.getSizeInBits() - RightShAmt;
+    const unsigned Msb = MsbPlusOne - 1;
+    const unsigned Lsb = LeftShAmt - RightShAmt;
+
+    SDNode *Sbi = BitfieldInsert(N0, Msb, Lsb, DL, VT);
+    ReplaceNode(Node, Sbi);
+    return true;
+  }
+
+  return false;
+}
+
 bool RISCVDAGToDAGISel::tryUnsignedBitfieldExtract(SDNode *Node,
                                                    const SDLoc &DL, MVT VT,
                                                    SDValue X, unsigned Msb,
@@ -1212,6 +1265,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   }
   case ISD::SRA: {
     if (trySignedBitfieldExtract(Node))
+      return;
+
+    if (trySignedBitfieldInsertInSign(Node))
       return;
 
     // Optimize (sra (sext_inreg X, i16), C) ->
