@@ -572,7 +572,8 @@ public:
   // TODO: Refactor to put elsewhere
   static inline QualType getAPSIntType(ASTContext &Ctx,
                                        const llvm::APSInt &Int) {
-    const QualType Ty = Ctx.getIntTypeForBitwidth(Int.getBitWidth(), Int.isSigned());
+    const QualType Ty =
+        Ctx.getIntTypeForBitwidth(Int.getBitWidth(), Int.isSigned());
     if (!Ty.isNull())
       return Ty;
     // If Ty is Null, could be because the original type was a _BitInt.
