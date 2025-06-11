@@ -2248,7 +2248,7 @@ bool llvm::promoteLoopAccessesToScalars(
     if (SawUnorderedAtomic)
       PreheaderLoad->setOrdering(AtomicOrdering::Unordered);
     PreheaderLoad->setAlignment(Alignment);
-    PreheaderLoad->dropLocation();
+    PreheaderLoad->setDebugLoc(DebugLoc::getDropped());
     if (AATags && LoadIsGuaranteedToExecute)
       PreheaderLoad->setAAMetadata(AATags);
 
