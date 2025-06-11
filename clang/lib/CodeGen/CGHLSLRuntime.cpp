@@ -13,10 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "CGHLSLRuntime.h"
-#include "Address.h"
 #include "CGDebugInfo.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "HLSLBufferLayoutBuilder.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attrs.inc"
@@ -26,6 +26,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
@@ -42,6 +43,8 @@
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
 #include <optional>
+
+#define DEBUG_TYPE "cghlslruntime"
 
 using namespace clang;
 using namespace CodeGen;
@@ -265,9 +268,9 @@ CGHLSLRuntime::convertHLSLSpecificType(const Type *T,
   assert(T->isHLSLSpecificType() && "Not an HLSL specific type!");
 
   // Check if the target has a specific translation for this type first.
-  if (llvm::Type *TargetTy =
+  if (llvm::Type *LayoutTy =
           CGM.getTargetCodeGenInfo().getHLSLType(CGM, T, Packoffsets))
-    return TargetTy;
+    return LayoutTy;
 
   llvm_unreachable("Generic handling of HLSL types is not supported.");
 }
@@ -284,10 +287,8 @@ void CGHLSLRuntime::emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
 
   // get the layout struct from constant buffer target type
   llvm::Type *BufType = BufGV->getValueType();
-  llvm::Type *BufLayoutType =
-      cast<llvm::TargetExtType>(BufType)->getTypeParameter(0);
   llvm::StructType *LayoutStruct = cast<llvm::StructType>(
-      cast<llvm::TargetExtType>(BufLayoutType)->getTypeParameter(0));
+      cast<llvm::TargetExtType>(BufType)->getTypeParameter(0));
 
   // Start metadata list associating the buffer global variable with its
   // constatns
@@ -325,6 +326,9 @@ void CGHLSLRuntime::emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
       }
       continue;
     }
+
+    if (CGM.getTargetCodeGenInfo().isHLSLPadding(*ElemIt))
+      ++ElemIt;
 
     assert(ElemIt != LayoutStruct->element_end() &&
            "number of elements in layout struct does not match");
@@ -423,12 +427,11 @@ void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *BufDecl) {
   if (BufDecl->hasValidPackoffset())
     fillPackoffsetLayout(BufDecl, Layout);
 
-  llvm::TargetExtType *TargetTy =
-      cast<llvm::TargetExtType>(convertHLSLSpecificType(
-          ResHandleTy, BufDecl->hasValidPackoffset() ? &Layout : nullptr));
+  llvm::Type *LayoutTy = convertHLSLSpecificType(
+      ResHandleTy, BufDecl->hasValidPackoffset() ? &Layout : nullptr);
   llvm::GlobalVariable *BufGV = new GlobalVariable(
-      TargetTy, /*isConstant*/ false,
-      GlobalValue::LinkageTypes::ExternalLinkage, PoisonValue::get(TargetTy),
+      LayoutTy, /*isConstant*/ false,
+      GlobalValue::LinkageTypes::ExternalLinkage, PoisonValue::get(LayoutTy),
       llvm::formatv("{0}{1}", BufDecl->getName(),
                     BufDecl->isCBuffer() ? ".cb" : ".tb"),
       GlobalValue::NotThreadLocal);
@@ -454,7 +457,7 @@ void CGHLSLRuntime::addRootSignature(
                      SignatureDecl->getRootElements(), nullptr, M);
 }
 
-llvm::TargetExtType *
+llvm::StructType *
 CGHLSLRuntime::getHLSLBufferLayoutType(const RecordType *StructType) {
   const auto Entry = LayoutTypes.find(StructType);
   if (Entry != LayoutTypes.end())
@@ -463,7 +466,7 @@ CGHLSLRuntime::getHLSLBufferLayoutType(const RecordType *StructType) {
 }
 
 void CGHLSLRuntime::addHLSLBufferLayoutType(const RecordType *StructType,
-                                            llvm::TargetExtType *LayoutTy) {
+                                            llvm::StructType *LayoutTy) {
   assert(getHLSLBufferLayoutType(StructType) == nullptr &&
          "layout type for this struct already exist");
   LayoutTypes[StructType] = LayoutTy;
@@ -996,4 +999,147 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
       return std::nullopt;
   }
   return CGF.MakeAddrLValue(TmpVar, ResultTy, AlignmentSource::Decl);
+}
+
+namespace {
+class HLSLBufferCopyEmitter {
+  CodeGenFunction &CGF;
+  Address DestPtr;
+  Address SrcPtr;
+  llvm::Type *LayoutTy = nullptr;
+
+  SmallVector<llvm::Value *> CurStoreIndices;
+  SmallVector<llvm::Value *> CurLoadIndices;
+
+  void emitCopyAtIndices(llvm::Type *FieldTy, llvm::ConstantInt *StoreIndex,
+                         llvm::ConstantInt *LoadIndex) {
+    CurStoreIndices.push_back(StoreIndex);
+    CurLoadIndices.push_back(LoadIndex);
+    auto RestoreIndices = llvm::make_scope_exit([&]() {
+      CurStoreIndices.pop_back();
+      CurLoadIndices.pop_back();
+    });
+
+    if (processArray(FieldTy))
+      return;
+    if (processBufferLayoutArray(FieldTy))
+      return;
+    if (processStruct(FieldTy))
+      return;
+
+    // We have a scalar or vector element - emit a copy.
+    CharUnits Align = CharUnits::fromQuantity(
+        CGF.CGM.getDataLayout().getABITypeAlign(FieldTy));
+    Address SrcGEP = RawAddress(
+        CGF.Builder.CreateInBoundsGEP(LayoutTy, SrcPtr.getBasePointer(),
+                                      CurLoadIndices, "cbuf.src"),
+        FieldTy, Align, SrcPtr.isKnownNonNull());
+    Address DestGEP = CGF.Builder.CreateInBoundsGEP(
+        DestPtr, CurStoreIndices, FieldTy, Align, "cbuf.dest");
+    llvm::Value *Load = CGF.Builder.CreateLoad(SrcGEP, "cbuf.load");
+    CGF.Builder.CreateStore(Load, DestGEP);
+  }
+
+  bool processArray(llvm::Type *FieldTy) {
+    auto *AT = dyn_cast<llvm::ArrayType>(FieldTy);
+    if (!AT)
+      return false;
+
+    // If we have an array then there isn't any padding
+    // between elements. We just need to copy each element over.
+    for (unsigned I = 0, E = AT->getNumElements(); I < E; ++I)
+      emitCopyAtIndices(AT->getElementType(),
+                        llvm::ConstantInt::get(CGF.SizeTy, I),
+                        llvm::ConstantInt::get(CGF.SizeTy, I));
+    return true;
+  }
+
+  bool processBufferLayoutArray(llvm::Type *FieldTy) {
+    auto *ST = dyn_cast<llvm::StructType>(FieldTy);
+    if (!ST || ST->getNumElements() != 2)
+      return false;
+
+    auto *PaddedEltsTy = dyn_cast<llvm::ArrayType>(ST->getElementType(0));
+    if (!PaddedEltsTy)
+      return false;
+
+    auto *PaddedTy = dyn_cast<llvm::StructType>(PaddedEltsTy->getElementType());
+    if (!PaddedTy || PaddedTy->getNumElements() != 2)
+      return false;
+
+    if (!CGF.CGM.getTargetCodeGenInfo().isHLSLPadding(
+            PaddedTy->getElementType(1)))
+      return false;
+
+    llvm::Type *ElementTy = ST->getElementType(1);
+    if (PaddedTy->getElementType(0) != ElementTy)
+      return false;
+
+    // All but the last of the logical array elements are in the padded array.
+    unsigned NumElts = PaddedEltsTy->getNumElements() + 1;
+
+    // Add an extra indirection to the load for the struct and walk the
+    // array prefix.
+    CurLoadIndices.push_back(llvm::ConstantInt::get(CGF.Int32Ty, 0));
+    for (unsigned I = 0; I < NumElts - 1; ++I) {
+      // We need to copy the element itself, without the padding.
+      CurLoadIndices.push_back(llvm::ConstantInt::get(CGF.SizeTy, I));
+      emitCopyAtIndices(ElementTy, llvm::ConstantInt::get(CGF.SizeTy, I),
+                        llvm::ConstantInt::get(CGF.Int32Ty, 0));
+      CurLoadIndices.pop_back();
+    }
+    CurLoadIndices.pop_back();
+
+    // Now copy the last element.
+    emitCopyAtIndices(ElementTy,
+                      llvm::ConstantInt::get(CGF.SizeTy, NumElts - 1),
+                      llvm::ConstantInt::get(CGF.Int32Ty, 1));
+
+    return true;
+  }
+
+  bool processStruct(llvm::Type *FieldTy) {
+    auto *ST = dyn_cast<llvm::StructType>(FieldTy);
+    if (!ST)
+      return false;
+
+    unsigned Skipped = 0;
+    for (unsigned I = 0, E = ST->getNumElements(); I < E; ++I) {
+      llvm::Type *ElementTy = ST->getElementType(I);
+      if (CGF.CGM.getTargetCodeGenInfo().isHLSLPadding(ElementTy))
+        ++Skipped;
+      else
+        emitCopyAtIndices(ElementTy, llvm::ConstantInt::get(CGF.Int32Ty, I),
+                          llvm::ConstantInt::get(CGF.Int32Ty, I + Skipped));
+    }
+    return true;
+  }
+
+public:
+  HLSLBufferCopyEmitter(CodeGenFunction &CGF, Address DestPtr, Address SrcPtr)
+      : CGF(CGF), DestPtr(DestPtr), SrcPtr(SrcPtr) {}
+
+  bool emitCopy(QualType CType) {
+    LayoutTy = HLSLBufferLayoutBuilder(CGF.CGM).layOutType(CType);
+
+    LLVM_DEBUG({
+      dbgs() << "Emitting copy of ";
+      LayoutTy->print(dbgs());
+      dbgs() << "\n";
+    });
+
+    // If we don't have an aggregate, we can just fall back to normal memcpy.
+    if (!LayoutTy->isAggregateType())
+      return false;
+
+    emitCopyAtIndices(LayoutTy, llvm::ConstantInt::get(CGF.SizeTy, 0),
+                      llvm::ConstantInt::get(CGF.SizeTy, 0));
+    return true;
+  }
+};
+} // namespace
+
+bool CGHLSLRuntime::emitBufferCopy(CodeGenFunction &CGF, Address DestPtr,
+                                   Address SrcPtr, QualType CType) {
+  return HLSLBufferCopyEmitter(CGF, DestPtr, SrcPtr).emitCopy(CType);
 }

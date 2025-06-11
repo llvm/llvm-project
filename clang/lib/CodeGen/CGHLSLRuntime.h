@@ -15,20 +15,19 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CGHLSLRUNTIME_H
 #define LLVM_CLANG_LIB_CODEGEN_CGHLSLRUNTIME_H
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/IntrinsicsDirectX.h"
-#include "llvm/IR/IntrinsicsSPIRV.h"
-
+#include "Address.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/HLSLRuntime.h"
-
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsDirectX.h"
+#include "llvm/IR/IntrinsicsSPIRV.h"
 
 #include <optional>
 #include <vector>
@@ -187,15 +186,17 @@ public:
 
   llvm::Instruction *getConvergenceToken(llvm::BasicBlock &BB);
 
-  llvm::TargetExtType *
-  getHLSLBufferLayoutType(const RecordType *LayoutStructTy);
+  llvm::StructType *getHLSLBufferLayoutType(const RecordType *LayoutStructTy);
   void addHLSLBufferLayoutType(const RecordType *LayoutStructTy,
-                               llvm::TargetExtType *LayoutTy);
+                               llvm::StructType *LayoutTy);
   void emitInitListOpaqueValues(CodeGenFunction &CGF, InitListExpr *E);
 
   std::optional<LValue>
   emitResourceArraySubscriptExpr(const ArraySubscriptExpr *E,
                                  CodeGenFunction &CGF);
+
+  bool emitBufferCopy(CodeGenFunction &CGF, Address DestPtr, Address SrcPtr,
+                      QualType CType);
 
 private:
   void emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
@@ -204,7 +205,7 @@ private:
                                    llvm::GlobalVariable *GV);
   llvm::Triple::ArchType getArch();
 
-  llvm::DenseMap<const clang::RecordType *, llvm::TargetExtType *> LayoutTypes;
+  llvm::DenseMap<const clang::RecordType *, llvm::StructType *> LayoutTypes;
 };
 
 } // namespace CodeGen

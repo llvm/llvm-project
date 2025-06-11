@@ -4869,6 +4869,32 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
         emitArraySubscriptGEP(*this, Int8Ty, Addr.emitRawPointer(*this),
                               ScaledIdx, false, SignedIndices, E->getExprLoc());
     Addr = Address(EltPtr, OrigBaseElemTy, EltAlign);
+  } else if (getLangOpts().HLSL &&
+             E->getType().getAddressSpace() == LangAS::hlsl_constant) {
+    // This is an array inside of a cbuffer.
+    Addr = EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
+
+    SmallVector<llvm::Value *, 2> Indices;
+    Indices.push_back(EmitIdxAfterBase(/*Promote*/true));
+
+    CharUnits ElementSize = getContext().getTypeSizeInChars(E->getType());
+    CharUnits RowAlignedSize = ElementSize.alignTo(CharUnits::fromQuantity(16));
+
+    llvm::Type *EltTyToIndex = Addr.getElementType();
+    if (RowAlignedSize > ElementSize) {
+      llvm::Type *Padding = CGM.getTargetCodeGenInfo().getHLSLPadding(
+          CGM, RowAlignedSize - ElementSize);
+      EltTyToIndex = llvm::StructType::get(
+          getLLVMContext(), {EltTyToIndex, Padding}, /*isPacked=*/true);
+      Indices.push_back(llvm::ConstantInt::get(Indices[0]->getType(), 0));
+    }
+
+    CharUnits EltAlign =
+      getArrayElementAlign(Addr.getAlignment(), Indices[0], RowAlignedSize);
+    llvm::Value *EltPtr =
+        emitArraySubscriptGEP(*this, EltTyToIndex, Addr.emitRawPointer(*this),
+                              Indices, false, SignedIndices, E->getExprLoc());
+    Addr = Address(EltPtr, Addr.getElementType(), EltAlign);
   } else if (const Expr *Array = isSimpleArrayDecayOperand(E->getBase())) {
     // If this is A[i] where A is an array, the frontend will have decayed the
     // base to be a ArrayToPointerDecay implicit cast.  While correct, it is
