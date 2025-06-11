@@ -51,7 +51,6 @@ define <1 x ptr> @vector_gep_v1i32(<1 x ptr> %b, <1 x i32> %off) {
 ;
 ; CHECK-GI-LABEL: vector_gep_v1i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    fmov w8, s1
 ; CHECK-GI-NEXT:    fmov x9, d0
 ; CHECK-GI-NEXT:    add x8, x9, w8, sxtw
