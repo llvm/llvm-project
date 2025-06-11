@@ -248,7 +248,7 @@ DirectoryBasedGlobalCompilationDatabase::DirectoryCache::CachedFile::load(
 static std::unique_ptr<tooling::CompilationDatabase>
 parseJSON(PathRef Path, llvm::StringRef Data, std::string &Error) {
   if (auto CDB = tooling::JSONCompilationDatabase::loadFromBuffer(
-          Data, Error, tooling::JSONCommandLineSyntax::AutoDetect)) {
+          Path, Data, Error, tooling::JSONCommandLineSyntax::AutoDetect)) {
     // FS used for expanding response files.
     // FIXME: ExpandResponseFilesDatabase appears not to provide the usual
     // thread-safety guarantees, as the access to FS is not locked!
