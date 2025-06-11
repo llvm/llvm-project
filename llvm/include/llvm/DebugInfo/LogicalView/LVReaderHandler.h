@@ -31,7 +31,7 @@ namespace logicalview {
 
 using LVReaders = std::vector<std::unique_ptr<LVReader>>;
 using ArgVector = std::vector<std::string>;
-using PdbOrObjOrIr =
+using InputHandle =
     PointerUnion<object::ObjectFile *, pdb::PDBFile *, object::IRObjectFile *,
                  MemoryBufferRef *, StringRef *>;
 
@@ -67,9 +67,8 @@ class LVReaderHandler {
   Error handleObject(LVReaders &Readers, StringRef Filename,
                      MemoryBufferRef Buffer);
 
-  Error createReader(StringRef Filename, LVReaders &Readers,
-                     PdbOrObjOrIr &Input, StringRef FileFormatName,
-                     StringRef ExePath = {});
+  Error createReader(StringRef Filename, LVReaders &Readers, InputHandle &Input,
+                     StringRef FileFormatName, StringRef ExePath = {});
 
 public:
   LVReaderHandler() = delete;

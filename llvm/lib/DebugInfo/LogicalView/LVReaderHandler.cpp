@@ -41,7 +41,7 @@ Error LVReaderHandler::process() {
 }
 
 Error LVReaderHandler::createReader(StringRef Filename, LVReaders &Readers,
-                                    PdbOrObjOrIr &Input,
+                                    InputHandle &Input,
                                     StringRef FileFormatName,
                                     StringRef ExePath) {
   auto CreateOneReader = [&]() -> std::unique_ptr<LVReader> {
@@ -66,7 +66,7 @@ Error LVReaderHandler::createReader(StringRef Filename, LVReaders &Readers,
       return std::make_unique<LVIRReader>(Filename, FileFormatName, Ir, W);
     }
     if (isa<MemoryBufferRef *>(Input)) {
-      // If the filename extension is '.ll' create a IR reader.
+      // If the filename extension is '.ll' create an IR reader.
       const StringRef IRFileExt = ".ll";
       MemoryBufferRef *MemBuf = cast<MemoryBufferRef *>(Input);
       if (llvm::sys::path::extension(Filename) == IRFileExt)
@@ -240,7 +240,7 @@ Error LVReaderHandler::handleMach(LVReaders &Readers, StringRef Filename,
     if (Expected<std::unique_ptr<MachOObjectFile>> MachOOrErr =
             ObjForArch.getAsObjectFile()) {
       MachOObjectFile &Obj = **MachOOrErr;
-      PdbOrObjOrIr Input = &Obj;
+      InputHandle Input = &Obj;
       if (Error Err =
               createReader(Filename, Readers, Input, Obj.getFileFormatName()))
         return Err;
@@ -260,7 +260,7 @@ Error LVReaderHandler::handleMach(LVReaders &Readers, StringRef Filename,
 
 Error LVReaderHandler::handleObject(LVReaders &Readers, StringRef Filename,
                                     Binary &Binary) {
-  if (PdbOrObjOrIr Input = dyn_cast<ObjectFile>(&Binary))
+  if (InputHandle Input = dyn_cast<ObjectFile>(&Binary))
     return createReader(Filename, Readers, Input,
                         cast<ObjectFile *>(Input)->getFileFormatName());
 
@@ -270,7 +270,7 @@ Error LVReaderHandler::handleObject(LVReaders &Readers, StringRef Filename,
   if (Archive *Arch = dyn_cast<Archive>(&Binary))
     return handleArchive(Readers, Filename, *Arch);
 
-  if (PdbOrObjOrIr Input = dyn_cast<IRObjectFile>(&Binary))
+  if (InputHandle Input = dyn_cast<IRObjectFile>(&Binary))
     return createReader(Filename, Readers, Input, "Bitcode IR");
 
   return createStringError(errc::not_supported,
@@ -287,7 +287,7 @@ Error LVReaderHandler::handleObject(LVReaders &Readers, StringRef Filename,
 
   std::unique_ptr<NativeSession> PdbSession;
   PdbSession.reset(static_cast<NativeSession *>(Session.release()));
-  PdbOrObjOrIr Input = &PdbSession->getPDBFile();
+  InputHandle Input = &PdbSession->getPDBFile();
   StringRef FileFormatName;
   size_t Pos = Buffer.find_first_of("\r\n");
   if (Pos)
@@ -297,7 +297,7 @@ Error LVReaderHandler::handleObject(LVReaders &Readers, StringRef Filename,
 
 Error LVReaderHandler::handleObject(LVReaders &Readers, StringRef Filename,
                                     MemoryBufferRef Buffer) {
-  if (PdbOrObjOrIr Input = dyn_cast<MemoryBufferRef>(&Buffer))
+  if (InputHandle Input = dyn_cast<MemoryBufferRef>(&Buffer))
     return createReader(Filename, Readers, Input, IRFileFormat);
 
   return createStringError(errc::not_supported,

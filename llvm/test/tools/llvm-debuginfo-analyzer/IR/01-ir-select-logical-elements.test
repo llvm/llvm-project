@@ -33,6 +33,7 @@
 ; ONE-NEXT: [003]           {Code} '%0 = load i8, ptr %ParamBool.addr, align 1, !dbg !26'
 ; ONE-NEXT: [003]           {Code} '%1 = load i32, ptr %ParamUnsigned.addr, align 4, !dbg !34'
 ; ONE-NEXT: [003]           {Code} '%2 = load i32, ptr %retval, align 4, !dbg !36'
+; ONE-NEXT: [003]           {Code} '%loadedv = trunc i8 %0 to i1, !dbg !26'
 ; ONE-NEXT: [003]           {Code} '%storedv = zext i1 %ParamBool to i8'
 ; ONE-NEXT: [003]           {Code} 'br i1 %loadedv, label %if.then, label %if.end, !dbg !26'
 ; ONE-NEXT: [003]           {Code} 'store i32 %1, ptr %retval, align 4, !dbg !35'
@@ -48,9 +49,9 @@
 ; ONE-NEXT: Scopes           5          0
 ; ONE-NEXT: Symbols          4          0
 ; ONE-NEXT: Types            2          0
-; ONE-NEXT: Lines           22         11
+; ONE-NEXT: Lines           23         12
 ; ONE-NEXT: -----------------------------
-; ONE-NEXT: Total           33         11
+; ONE-NEXT: Total           34         12
 
 ; RUN: llvm-as %p/Inputs/test-clang.ll -o %t.test-clang.bc
 
@@ -120,3 +121,31 @@
 ; THREE-NEXT: Lines            0          0
 ; THREE-NEXT: -----------------------------
 ; THREE-NEXT: Total            9          1
+
+; Select logical elements using exact match.
+; The following prints all 'symbols' and 'types' that contain 'INTPTR' in
+; their names or types, using a tab layout and given the number of matches.
+
+; RUN: llvm-debuginfo-analyzer --attribute=level \
+; RUN:                         --select=INTPTR \
+; RUN:                         --report=list \
+; RUN:                         --print=symbols,types,instructions,summary \
+; RUN:                         %p/Inputs/test-clang.ll 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=FOUR %s
+
+; FOUR:      Logical View:
+; FOUR-NEXT: [000]           {File} 'test-clang.ll'
+; FOUR-EMPTY:
+; FOUR-NEXT: [001]           {CompileUnit} 'test.cpp'
+; FOUR-NEXT: [002]     1     {TypeAlias} 'INTPTR' -> '* const int'
+; FOUR-NEXT: [003]     2     {Parameter} 'ParamPtr' -> 'INTPTR'
+; FOUR-EMPTY:
+; FOUR-NEXT: -----------------------------
+; FOUR-NEXT: Element      Total    Printed
+; FOUR-NEXT: -----------------------------
+; FOUR-NEXT: Scopes           5          0
+; FOUR-NEXT: Symbols          4          1
+; FOUR-NEXT: Types            2          1
+; FOUR-NEXT: Lines           23          0
+; FOUR-NEXT: -----------------------------
+; FOUR-NEXT: Total           34          2

@@ -2264,6 +2264,34 @@ layout and given the number of matches.
   -----------------------------
   Total           33         12
 
+The following prints all *symbols* and *types* that contain the exact **'INTPTR'**
+in their names or types, using a tab layout and given the number of matches.
+
+.. code-block:: none
+
+  llvm-debuginfo-analyzer --attribute=level
+                          --select=INTPTR
+                          --report=list
+                          --print=symbols,types,summary
+                          test-clang.ll
+
+  Logical View:
+  [000]           {File} 'test-clang.ll'
+
+  [001]           {CompileUnit} 'test.cpp'
+  [002]     1     {TypeAlias} 'INTPTR' -> '* const int'
+  [003]     2     {Parameter} 'ParamPtr' -> 'INTPTR'
+
+  -----------------------------
+  Element      Total    Printed
+  -----------------------------
+  Scopes           5          0
+  Symbols          4          1
+  Types            2          1
+  Lines           23          0
+  -----------------------------
+  Total           34          2
+
 COMPARISON MODE
 ^^^^^^^^^^^^^^^
 Given the previous example we found the above debug information issue
