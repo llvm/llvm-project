@@ -11,7 +11,6 @@
 
 #include "hdr/types/char32_t.h"
 #include "hdr/types/char8_t.h"
-#include "hdr/types/wchar_t.h"
 #include "src/__support/wchar/mbstate.h"
 #include "src/__support/wchar/utf_ret.h"
 

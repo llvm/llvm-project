@@ -4,7 +4,6 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_HDR_TYPES_CHAR8_T_H
@@ -20,4 +19,4 @@
 
 #endif // LLVM_LIBC_FULL_BUILD
 
-#endif // LLVM_LIBC_HDR_TYPES_char8_t_H
+#endif // LLVM_LIBC_HDR_TYPES_CHAR8_t_H

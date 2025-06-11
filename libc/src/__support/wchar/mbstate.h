@@ -10,7 +10,6 @@
 #define LLVM_LIBC_SRC___SUPPORT_MBSTATE_H
 
 #include "hdr/types/char32_t.h"
-#include "hdr/types/wchar_t.h"
 #include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
