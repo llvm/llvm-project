@@ -3000,9 +3000,7 @@ bool TargetLowering::SimplifyDemandedBits(
     if (!DemandedBits.intersects(SignMask0))
       return TLO.CombineTo(Op, Op0);
 
-    APInt ScalarDemandedBits = DemandedBits.trunc(BitWidth0);
-
-    if (SimplifyDemandedBits(Op0, ~SignMask0 & ScalarDemandedBits, DemandedElts,
+    if (SimplifyDemandedBits(Op0, ~SignMask0 & DemandedBits, DemandedElts,
                              Known, TLO, Depth + 1) ||
         SimplifyDemandedBits(Op1, SignMask1, DemandedElts, Known2, TLO,
                              Depth + 1))
@@ -3016,11 +3014,13 @@ bool TargetLowering::SimplifyDemandedBits(
       return TLO.CombineTo(
           Op, TLO.DAG.getNode(ISD::FABS, dl, VT, Op0, Op->getFlags()));
 
-    if (Known2.isNegative()) {
-      Known.One |= SignMask0;
-      Known.Zero &= ~SignMask0;
-    }
+    if (Known2.isNegative())
+      return TLO.CombineTo(
+          Op, TLO.DAG.getNode(ISD::FNEG, dl, VT,
+                              TLO.DAG.getNode(ISD::FABS, SDLoc(Op0), VT, Op0)));
 
+    Known.Zero &= ~SignMask0;
+    Known.One &= ~SignMask0;
     break;
   }
   case ISD::FNEG: {
