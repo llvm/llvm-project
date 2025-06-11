@@ -11,8 +11,8 @@
 #ifndef LLVM_OBJECTYAML_YAML2OBJ_H
 #define LLVM_OBJECTYAML_YAML2OBJ_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 namespace llvm {
@@ -67,22 +67,29 @@ struct YamlObjectFile;
 
 using ErrorHandler = llvm::function_ref<void(const Twine &Msg)>;
 
-LLVM_ABI bool yaml2archive(ArchYAML::Archive &Doc, raw_ostream &Out, ErrorHandler EH);
-LLVM_ABI bool yaml2coff(COFFYAML::Object &Doc, raw_ostream &Out, ErrorHandler EH);
-LLVM_ABI bool yaml2goff(GOFFYAML::Object &Doc, raw_ostream &Out, ErrorHandler EH);
+LLVM_ABI bool yaml2archive(ArchYAML::Archive &Doc, raw_ostream &Out,
+                           ErrorHandler EH);
+LLVM_ABI bool yaml2coff(COFFYAML::Object &Doc, raw_ostream &Out,
+                        ErrorHandler EH);
+LLVM_ABI bool yaml2goff(GOFFYAML::Object &Doc, raw_ostream &Out,
+                        ErrorHandler EH);
 LLVM_ABI bool yaml2elf(ELFYAML::Object &Doc, raw_ostream &Out, ErrorHandler EH,
-              uint64_t MaxSize);
-LLVM_ABI bool yaml2macho(YamlObjectFile &Doc, raw_ostream &Out, ErrorHandler EH);
+                       uint64_t MaxSize);
+LLVM_ABI bool yaml2macho(YamlObjectFile &Doc, raw_ostream &Out,
+                         ErrorHandler EH);
 LLVM_ABI bool yaml2minidump(MinidumpYAML::Object &Doc, raw_ostream &Out,
-                   ErrorHandler EH);
-LLVM_ABI bool yaml2offload(OffloadYAML::Binary &Doc, raw_ostream &Out, ErrorHandler EH);
-LLVM_ABI bool yaml2wasm(WasmYAML::Object &Doc, raw_ostream &Out, ErrorHandler EH);
-LLVM_ABI bool yaml2xcoff(XCOFFYAML::Object &Doc, raw_ostream &Out, ErrorHandler EH);
+                            ErrorHandler EH);
+LLVM_ABI bool yaml2offload(OffloadYAML::Binary &Doc, raw_ostream &Out,
+                           ErrorHandler EH);
+LLVM_ABI bool yaml2wasm(WasmYAML::Object &Doc, raw_ostream &Out,
+                        ErrorHandler EH);
+LLVM_ABI bool yaml2xcoff(XCOFFYAML::Object &Doc, raw_ostream &Out,
+                         ErrorHandler EH);
 LLVM_ABI bool yaml2dxcontainer(DXContainerYAML::Object &Doc, raw_ostream &Out,
-                      ErrorHandler EH);
+                               ErrorHandler EH);
 
 LLVM_ABI bool convertYAML(Input &YIn, raw_ostream &Out, ErrorHandler ErrHandler,
-                 unsigned DocNum = 1, uint64_t MaxSize = UINT64_MAX);
+                          unsigned DocNum = 1, uint64_t MaxSize = UINT64_MAX);
 
 /// Convenience function for tests.
 LLVM_ABI std::unique_ptr<object::ObjectFile>

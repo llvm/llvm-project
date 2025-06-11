@@ -15,11 +15,11 @@
 #ifndef LLVM_OBJECTYAML_DWARFYAML_H
 #define LLVM_OBJECTYAML_DWARFYAML_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/ObjectYAML/YAML.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <cstdint>
 #include <optional>
@@ -380,7 +380,8 @@ template <> struct MappingTraits<DWARFYAML::File> {
 };
 
 template <> struct MappingTraits<DWARFYAML::LineTableOpcode> {
-  LLVM_ABI static void mapping(IO &IO, DWARFYAML::LineTableOpcode &LineTableOpcode);
+  LLVM_ABI static void mapping(IO &IO,
+                               DWARFYAML::LineTableOpcode &LineTableOpcode);
 };
 
 template <> struct MappingTraits<DWARFYAML::LineTable> {
@@ -392,7 +393,8 @@ template <> struct MappingTraits<DWARFYAML::SegAddrPair> {
 };
 
 template <> struct MappingTraits<DWARFYAML::DWARFOperation> {
-  LLVM_ABI static void mapping(IO &IO, DWARFYAML::DWARFOperation &DWARFOperation);
+  LLVM_ABI static void mapping(IO &IO,
+                               DWARFYAML::DWARFOperation &DWARFOperation);
 };
 
 template <typename EntryType>
@@ -420,7 +422,8 @@ template <> struct MappingTraits<DWARFYAML::AddrTableEntry> {
 };
 
 template <> struct MappingTraits<DWARFYAML::StringOffsetsTable> {
-  LLVM_ABI static void mapping(IO &IO, DWARFYAML::StringOffsetsTable &StrOffsetsTable);
+  LLVM_ABI static void mapping(IO &IO,
+                               DWARFYAML::StringOffsetsTable &StrOffsetsTable);
 };
 
 template <> struct ScalarEnumerationTraits<dwarf::DwarfFormat> {
