@@ -1181,8 +1181,10 @@ static ExprResult formImmediatelyDeclaredConstraint(
   if (auto *CD = dyn_cast<ConceptDecl>(NamedConcept)) {
     ImmediatelyDeclaredConstraint = S.CheckConceptTemplateId(
         SS, /*TemplateKWLoc=*/SourceLocation(), NameInfo,
-        /*FoundDecl=*/FoundDecl ? FoundDecl : NamedConcept, CD,
-        &ConstraintArgs);
+        /*FoundDecl=*/FoundDecl ? FoundDecl : NamedConcept, NamedConcept,
+      &ConstraintArgs,
+      /*DoCheckConstraintSatisfaction=*/
+      !S.inParameterMappingSubstitution());
   }
   // We have a template template parameter
   else {
