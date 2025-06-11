@@ -26,13 +26,14 @@ target triple = "x86_64-unknown-linux"
 
 declare ptr @_ZNKSt9exception4whatEv()
 
-define i64 @_Z4testPSt9exception() {
-  %1 = call i1 @llvm.type.test(ptr null, metadata !"_ZTSSt9exception")
-  tail call void @llvm.assume(i1 %1)
-  %2 = getelementptr i8, ptr null, i64 16
-  %3 = load ptr, ptr %2, align 8
-  %4 = tail call ptr %3(ptr null)
-  ret i64 0
+define ptr @_Z4testPSt9exception() {
+  %1 = load ptr, ptr null, align 8
+  %2 = call i1 @llvm.type.test(ptr %1, metadata !"_ZTSSt9exception")
+  tail call void @llvm.assume(i1 %2)
+  %3 = getelementptr i8, ptr %1, i64 16
+  %4 = load ptr, ptr %3, align 8
+  %5 = tail call ptr %4(ptr null)
+  ret ptr %5
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write)
