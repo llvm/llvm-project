@@ -215,7 +215,8 @@ public:
     auto branchOp = rewriter.create<mlir::cf::CondBranchOp>(
         loc, ifOp.getCondition(), ifOpBlock, llvm::ArrayRef<mlir::Value>(),
         otherwiseBlock, llvm::ArrayRef<mlir::Value>());
-    if (auto weights = ifOp.getWeights())
+    llvm::ArrayRef<int32_t> weights = ifOp.getWeights();
+    if (!weights.empty())
       branchOp.setWeights(weights);
     rewriter.replaceOp(ifOp, continueBlock->getArguments());
     return success();
