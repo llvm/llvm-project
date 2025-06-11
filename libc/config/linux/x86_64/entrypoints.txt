@@ -364,6 +364,22 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wchar.btowc
     libc.src.wchar.wcslen
     libc.src.wchar.wctob
+    libc.src.wchar.wmemset
+    libc.src.wchar.wcschr
+    libc.src.wchar.wcsncmp
+    libc.src.wchar.wcscmp
+    libc.src.wchar.wcspbrk
+    libc.src.wchar.wcsrchr
+    libc.src.wchar.wcsspn
+    libc.src.wchar.wmemcmp
+    libc.src.wchar.wmempcpy
+    libc.src.wchar.wmemcpy
+    libc.src.wchar.wcsncpy
+    libc.src.wchar.wcscat
+    libc.src.wchar.wcsstr
+    libc.src.wchar.wcsncat
+    libc.src.wchar.wcscpy
+    libc.src.wchar.wmemchr
 
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
@@ -667,6 +683,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.acospif16
     libc.src.math.asinf16
     libc.src.math.asinhf16
+    libc.src.math.atanf16
     libc.src.math.atanhf16
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16

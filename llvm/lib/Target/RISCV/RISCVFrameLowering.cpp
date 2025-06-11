@@ -573,16 +573,12 @@ getPushOrLibCallsSavedInfo(const MachineFunction &MF,
       // `QC.CM.PUSH(FP)`. In these cases, prioritise the CFI info that points
       // to the versions saved by `QC.C.MIENTER(.NEST)` which is what FP
       // unwinding would use.
-      const auto *FII = llvm::find_if(FixedCSRFIQCIInterruptMap, [&](auto P) {
-        return P.first == CS.getReg();
-      });
-      if (FII != std::end(FixedCSRFIQCIInterruptMap))
+      if (llvm::is_contained(llvm::make_first_range(FixedCSRFIQCIInterruptMap),
+                             CS.getReg()))
         continue;
     }
 
-    const auto *FII = llvm::find_if(
-        FixedCSRFIMap, [&](MCPhysReg P) { return P == CS.getReg(); });
-    if (FII != std::end(FixedCSRFIMap))
+    if (llvm::is_contained(FixedCSRFIMap, CS.getReg()))
       PushOrLibCallsCSI.push_back(CS);
   }
 
@@ -599,10 +595,8 @@ getQCISavedInfo(const MachineFunction &MF,
     return QCIInterruptCSI;
 
   for (const auto &CS : CSI) {
-    const auto *FII = llvm::find_if(FixedCSRFIQCIInterruptMap, [&](auto P) {
-      return P.first == CS.getReg();
-    });
-    if (FII != std::end(FixedCSRFIQCIInterruptMap))
+    if (llvm::is_contained(llvm::make_first_range(FixedCSRFIQCIInterruptMap),
+                           CS.getReg()))
       QCIInterruptCSI.push_back(CS);
   }
 
@@ -633,7 +627,6 @@ void RISCVFrameLowering::allocateAndProbeStackForRVV(
 
   // It will be expanded to a probe loop in `inlineStackProbe`.
   BuildMI(MBB, MBBI, DL, TII->get(RISCV::PROBED_STACKALLOC_RVV))
-      .addReg(SPReg)
       .addReg(TargetReg);
 
   if (EmitCFI) {
@@ -828,9 +821,7 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
   }
 
   // It will be expanded to a probe loop in `inlineStackProbe`.
-  BuildMI(MBB, MBBI, DL, TII->get(RISCV::PROBED_STACKALLOC))
-      .addReg(SPReg)
-      .addReg(TargetReg);
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::PROBED_STACKALLOC)).addReg(TargetReg);
 
   if (EmitCFI) {
     // Set the CFA register back to SP.
@@ -2433,7 +2424,7 @@ void RISCVFrameLowering::inlineStackProbe(MachineFunction &MF,
         MI->getOpcode() == RISCV::PROBED_STACKALLOC_RVV) {
       MachineBasicBlock::iterator MBBI = MI->getIterator();
       DebugLoc DL = MBB.findDebugLoc(MBBI);
-      Register TargetReg = MI->getOperand(1).getReg();
+      Register TargetReg = MI->getOperand(0).getReg();
       emitStackProbeInline(MBBI, DL, TargetReg,
                            (MI->getOpcode() == RISCV::PROBED_STACKALLOC_RVV));
       MBBI->eraseFromParent();
