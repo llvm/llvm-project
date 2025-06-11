@@ -1,19 +1,32 @@
 #include "clang/Sema/SummaryAttribute.h"
+#include "clang/Sema/SemaSummarizer.h"
 
 namespace clang {
-std::string SummaryAttributeDescription::serialize() { return std::string(Serialzed); }
+void NoWriteGlobalDescription::Callback::run(const ast_matchers::MatchFinder::MatchResult &Result) {
+  const auto *Assignment =
+      Result.Nodes.getNodeAs<BinaryOperator>("assignment");
+  if (!Assignment)
+    return;
 
-std::optional<SummaryAttribute> SummaryAttributeDescription::parse(std::string_view input) {
-  if(input == Serialzed)
-    return Attr;
-
-  return std::nullopt;
+  WriteGlobal = true;
 }
 
-std::optional<SummaryAttribute> SummaryAttributeDescription::infer(const FunctionDecl *FD) {
-  if (predicate(FD))
-    return Attr;
+bool NoWriteGlobalDescription::infer(const FunctionDecl *FD) const {
+  using namespace ast_matchers;
+  MatchFinder Finder;
+  Callback CB;
 
-  return std::nullopt;
+  Finder.addMatcher(
+      functionDecl(forEachDescendant(
+          binaryOperator(isAssignmentOperator(),
+                         hasLHS(declRefExpr(to(varDecl(hasGlobalStorage())))))
+              .bind("assignment"))),
+      &CB);
+  Finder.match(*FD, FD->getASTContext());
+  return !CB.WriteGlobal;
+}
+
+bool NoWriteGlobalDescription::merge(const FunctionSummary &Summary) const {
+  return Summary.getFunctionAttrs().count(this);
 }
 } // namespace clang

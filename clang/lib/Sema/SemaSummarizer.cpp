@@ -37,80 +37,54 @@ public:
   }
 };
 
-class NoWriteGlobalDescription : public SummaryAttributeDescription {
-  class Callback : public ast_matchers::MatchFinder::MatchCallback {
-  public:
-    bool WriteGlobal = false;
-
-    void run(const ast_matchers::MatchFinder::MatchResult &Result) override {
-      const auto *Assignment =
-          Result.Nodes.getNodeAs<BinaryOperator>("assignment");
-      if (!Assignment)
-        return;
-
-      WriteGlobal = true;
-    };
-  };
-
-public:
-  NoWriteGlobalDescription()
-      : SummaryAttributeDescription(NO_WRITE_GLOBAL, "no_write_global") {}
-
-  bool predicate(const FunctionDecl *FD) override {
-    using namespace ast_matchers;
-    MatchFinder Finder;
-    Callback CB;
-
-    Finder.addMatcher(
-        functionDecl(forEachDescendant(
-            binaryOperator(isAssignmentOperator(),
-                           hasLHS(declRefExpr(to(varDecl(hasGlobalStorage())))))
-                .bind("assignment"))),
-        &CB);
-    Finder.match(*FD, FD->getASTContext());
-    return !CB.WriteGlobal;
-  };
-
-  bool merge(const FunctionSummary &Summary) const override {
-    return Summary.getFunctionAttrs().count(Attr);
-  };
-};
+SmallVector<char> GetUSR(const FunctionDecl *FD) {
+  SmallVector<char> USR;
+  index::generateUSRForDecl(FD, USR);
+  return USR;
+}
 } // namespace
 
 void FunctionSummary::addCall(const clang::FunctionDecl *FD) {
-  SmallVector<char> Call;
-  index::generateUSRForDecl(FD, Call);
-  Calls.emplace(Call);
+  Calls.emplace(GetUSR(FD));
 }
 
-FunctionSummary::FunctionSummary(SmallVector<char> ID, std::set<SummaryAttribute> FunctionAttrs, std::set<SmallVector<char>> Calls) :
+FunctionSummary::FunctionSummary(SmallVector<char> ID, std::set<const SummaryAttribute *> FunctionAttrs, std::set<SmallVector<char>> Calls) :
   ID(std::move(ID)), FunctionAttrs(std::move(FunctionAttrs)), Calls(std::move(Calls)) {}
 
-FunctionSummary::FunctionSummary(const clang::FunctionDecl *FD) {
-  index::generateUSRForDecl(FD, ID);
-}
+FunctionSummary::FunctionSummary(const clang::FunctionDecl *FD) : ID(GetUSR(FD)) {}
 
 SummaryManager::SummaryManager() {
-  AttributeDescriptions.emplace_back(std::make_unique<NoWriteGlobalDescription>());
+  Attributes.emplace_back(std::make_unique<NoWriteGlobalDescription>());
 
-  for(auto &&AttrDescr : AttributeDescriptions)
-    AttrToDescription[AttrDescr->getAttribute()] = AttrDescr.get();
+  for(auto &&Attr : Attributes) {
+    assert(KindToAttribute.count(Attr->getKind()) == 0 && "Attr already registered");
+    KindToAttribute[Attr->getKind()] = Attr.get();
+  }
 }
 
-FunctionSummary SummaryManager::SummarizeFunctionBody(const FunctionDecl *FD) {
+void SummaryManager::SaveSummary(std::unique_ptr<FunctionSummary> Summary) {
+  auto *SummaryPtr = FunctionSummaries.emplace_back(std::move(Summary)).get();
+  IDToSummary[SummaryPtr->getID()] = SummaryPtr;
+}
+
+const FunctionSummary *SummaryManager::GetSummary(const FunctionDecl *FD) const { 
+  auto USR = GetUSR(FD);
+  if(!IDToSummary.count(USR))
+    return nullptr;
+
+  return IDToSummary.at(USR);
+}
+
+void SummaryManager::SummarizeFunctionBody(const FunctionDecl *FD) {
   auto Summary = std::make_unique<FunctionSummary>(FD);
   CallCollector::CollectCalledFunctions(FD, *Summary);
 
-  for (auto &&AttrDesc : AttributeDescriptions) {
-    if (const auto &Attr = AttrDesc->infer(FD))
-      Summary->addAttribute(*Attr);
+  for (auto &&Attr : Attributes) {
+    if (Attr->infer(FD))
+      Summary->addAttribute(Attr.get());
   }
 
-  // FIXME: This is duplicated and hurts my eyes regardless
-  std::string key(Summary->getID().begin(), Summary->getID().size());
-  auto *SummaryPtr = FunctionSummaries.emplace_back(std::move(Summary)).get();
-  IDToSummary[key] = SummaryPtr;
-  return *SummaryPtr;
+  SaveSummary(std::move(Summary));
 }
 
 void SummaryManager::SerializeSummary(llvm::json::OStream &JOS, const FunctionSummary &Summary) const {
@@ -119,7 +93,7 @@ void SummaryManager::SerializeSummary(llvm::json::OStream &JOS, const FunctionSu
     JOS.attributeObject("attrs", [&]{
       JOS.attributeArray("function", [&]{
         for(auto &&Attr : Summary.getFunctionAttrs()) {
-          JOS.value(llvm::json::Value(AttributeDescriptions[Attr]->serialize()));
+          JOS.value(llvm::json::Value(Attr->serialize()));
         }
       });
     });
@@ -147,12 +121,12 @@ void SummaryManager::ParseSummaryFromJSON(StringRef path) {
     llvm::json::Object *Summary = it->getAsObject();
 
     SmallString<128> ID(*Summary->getString("id"));
-    std::set<SummaryAttribute> FunctionAttrs;
+    std::set<const SummaryAttribute *> FunctionAttrs;
     llvm::json::Array *FunctionAttributes = Summary->getObject("attrs")->getArray("function");
     for(auto attrIt = FunctionAttributes->begin(); attrIt != FunctionAttributes->end(); ++attrIt) {
-      for(auto &&AttrDesc : AttributeDescriptions) {
-        if(auto Attr = AttrDesc->parse(*attrIt->getAsString()))
-          FunctionAttrs.emplace(*Attr);
+      for(auto &&Attr : Attributes) {
+        if(Attr->parse(*attrIt->getAsString()))
+          FunctionAttrs.emplace(Attr.get());
       }
     }
 
@@ -163,11 +137,37 @@ void SummaryManager::ParseSummaryFromJSON(StringRef path) {
       Calls.emplace(SmallString<128>(*Obj->getString("id")));
     }
     
-    std::string key = ID.str().str();
-    auto ParsedSummary = std::make_unique<FunctionSummary>(std::move(ID), std::move(FunctionAttrs), std::move(Calls));
-    auto *ParsedSummaryPtr = FunctionSummaries.emplace_back(std::move(ParsedSummary)).get();
-    IDToSummary[key] = ParsedSummaryPtr;
+    SaveSummary(std::make_unique<FunctionSummary>(std::move(ID), std::move(FunctionAttrs), std::move(Calls)));
   }
+}
+
+bool SummaryManager::ReduceFunctionSummary(FunctionSummary &Function) {
+  bool changed = false;
+
+  for (auto &&call : Function.getCalls()) {
+    std::set<const SummaryAttribute *> reducedAttrs;
+
+    // If we don't have a summary about a called function, we forget
+    // everything about the current one as well.
+    if (!IDToSummary.count(call)) {
+      Function.replaceAttributes(std::move(reducedAttrs));
+      return true;
+    }
+
+    const FunctionSummary *callSummary = IDToSummary[call];
+
+    for (auto &&Attr : Function.getFunctionAttrs()) {
+      if (Attr->merge(*callSummary))
+        reducedAttrs.emplace(Attr);
+    }
+
+    if (reducedAttrs != Function.getFunctionAttrs()) {
+      Function.replaceAttributes(std::move(reducedAttrs));
+      changed = true;
+    }
+  }
+
+  return changed;
 }
 
 void SummaryManager::ReduceSummaries() {
@@ -175,38 +175,8 @@ void SummaryManager::ReduceSummaries() {
   while (changed) {
     changed = false;
 
-    for (auto &&Function : FunctionSummaries) {
-      for (auto &&call : Function->getCalls()) {
-        // FIXME: This is duplicated and hurts my eyes regardless
-        std::string key(call.begin(), call.size());
-
-        // If we don't have a summary about a called function, we forget
-        // everything about the current one as well.
-        if (!IDToSummary.count(key)) {
-          changed = true;
-          Function->clearAttributes();
-          break;
-        }
-
-        const FunctionSummary *callSummary = IDToSummary.at(key);
-
-        std::set<SummaryAttribute> reducedAttrs;
-        for (auto &&attr : Function->getFunctionAttrs()) {
-          // FIXME: handle union style attributes...
-          if (AttrToDescription[attr]->merge(*callSummary))
-            reducedAttrs.emplace(attr);
-        }
-
-        if (reducedAttrs != Function->getFunctionAttrs()) {
-          Function->clearAttributes();
-
-          for (auto &&attr : reducedAttrs)
-            Function->addAttribute(attr);
-
-          changed = true;
-        }
-      }
-    }
+    for (auto &&Function : FunctionSummaries)
+      changed |= ReduceFunctionSummary(*Function);
   }
 }
 
@@ -221,10 +191,10 @@ void SemaSummarizer::ActOnEndOfSourceFile() {
 }
 
 void SemaSummarizer::SummarizeFunctionBody(const FunctionDecl *FD) {
-  FunctionSummary Summary = TheSummaryManager->SummarizeFunctionBody(FD);
+  TheSummaryManager->SummarizeFunctionBody(FD);
 
   if(TheSummaryConsumer)
-    TheSummaryConsumer->ProcessFunctionSummary(Summary);
+    TheSummaryConsumer->ProcessFunctionSummary(*TheSummaryManager->GetSummary(FD));
 }
 
 } // namespace clang

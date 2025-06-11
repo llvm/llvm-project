@@ -9,35 +9,37 @@
 namespace clang {
 class FunctionSummary {
   SmallVector<char> ID;
-  std::set<SummaryAttribute> FunctionAttrs;
+  std::set<const SummaryAttribute *> FunctionAttrs;
   std::set<SmallVector<char>> Calls;
 
 public:
-  FunctionSummary(SmallVector<char> ID, std::set<SummaryAttribute> FunctionAttrs, std::set<SmallVector<char>> Calls);
+  FunctionSummary(SmallVector<char> ID, std::set<const SummaryAttribute *> FunctionAttrs, std::set<SmallVector<char>> Calls);
   FunctionSummary(const clang::FunctionDecl *FD);
 
   SmallVector<char> getID() const { return ID; }
-  const std::set<SummaryAttribute> &getFunctionAttrs() const { return FunctionAttrs; }
+  const std::set<const SummaryAttribute *> &getFunctionAttrs() const { return FunctionAttrs; }
   const std::set<SmallVector<char>> &getCalls() const { return Calls; }
 
-  void clearAttributes() { FunctionAttrs.clear(); }
-  void addAttribute(SummaryAttribute Attr) { FunctionAttrs.emplace(Attr); }
-  bool hasAttribute(SummaryAttribute Attr) const { return FunctionAttrs.count(Attr); }
+  void replaceAttributes(std::set<const SummaryAttribute *> Attrs) { FunctionAttrs = std::move(Attrs); }
+  void addAttribute(const SummaryAttribute * Attr) { FunctionAttrs.emplace(Attr); }
 
   void addCall(const clang::FunctionDecl *FD);
 };
 
 class SummaryManager {
-  std::map<std::string, const FunctionSummary *> IDToSummary;
+  std::map<SmallVector<char>, const FunctionSummary *> IDToSummary;
   std::vector<std::unique_ptr<FunctionSummary>> FunctionSummaries;
   
-  std::map<SummaryAttribute, const SummaryAttributeDescription *> AttrToDescription;
-  std::vector<std::unique_ptr<SummaryAttributeDescription>> AttributeDescriptions;
+  std::map<SummaryAttributeKind, const SummaryAttribute *> KindToAttribute;
+  std::vector<std::unique_ptr<SummaryAttribute>> Attributes;
 
+  void SaveSummary(std::unique_ptr<FunctionSummary> Summary);
+  bool ReduceFunctionSummary(FunctionSummary &FunctionSummary);
 public:
   SummaryManager();
 
-  FunctionSummary SummarizeFunctionBody(const FunctionDecl *FD);
+  const FunctionSummary *GetSummary(const FunctionDecl *FD) const;
+  void SummarizeFunctionBody(const FunctionDecl *FD);
   
   void SerializeSummary(llvm::json::OStream &, const FunctionSummary &) const;
   void ParseSummaryFromJSON(StringRef path);
