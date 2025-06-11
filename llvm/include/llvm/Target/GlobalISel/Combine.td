@@ -440,8 +440,8 @@ def unary_undef_to_zero: GICombineRule<
 def unary_undef_to_undef_frags : GICombinePatFrag<
   (outs root:$dst), (ins),
   !foreach(op,
-           [G_TRUNC, G_BITCAST, G_ANYEXT, G_PTRTOINT, G_INTTOPTR, G_FPTOSI,
-            G_FPTOUI],
+           [G_TRUNC, G_BITCAST, G_ANYEXT, G_PTRTOINT, G_PTRTOADDR, G_INTTOPTR,
+            G_FPTOSI, G_FPTOUI],
            (pattern (op $dst, $x), (G_IMPLICIT_DEF $x)))>;
 def unary_undef_to_undef : GICombineRule<
   (defs root:$dst),

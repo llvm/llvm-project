@@ -491,6 +491,7 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
   }
   case TargetOpcode::G_INTTOPTR:
   case TargetOpcode::G_PTRTOINT:
+  case TargetOpcode::G_PTRTOADDR:
     if (DstTy.isVector())
       break;
     // Fall through and handle them the same as zext/trunc.

@@ -343,6 +343,9 @@ HANDLE_TARGET_OPCODE(G_CONCAT_VECTORS)
 /// Generic pointer to int conversion.
 HANDLE_TARGET_OPCODE(G_PTRTOINT)
 
+/// Generic pointer to address conversion.
+HANDLE_TARGET_OPCODE(G_PTRTOADDR)
+
 /// Generic int to pointer conversion.
 HANDLE_TARGET_OPCODE(G_INTTOPTR)
 
