@@ -1421,15 +1421,15 @@ define <4 x bfloat> @shuffle_v4bf16(<3 x bfloat> %arg0, i1 %cond) {
 ; CHECK-V1-NEXT:  [[ENTRY:.*:]]
 ; CHECK-V1-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK-V1:       [[THEN]]:
-; CHECK-V1-NEXT:    [[VAL1:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+; CHECK-V1-NEXT:    [[TMP0:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; CHECK-V1-NEXT:    tail call void @func0()
 ; CHECK-V1-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK-V1:       [[ELSE]]:
-; CHECK-V1-NEXT:    [[VAL2:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V1-NEXT:    tail call void @func1()
 ; CHECK-V1-NEXT:    br label %[[FINALLY]]
 ; CHECK-V1:       [[FINALLY]]:
-; CHECK-V1-NEXT:    [[VAL3:%.*]] = phi <4 x bfloat> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
+; CHECK-V1-NEXT:    [[TMP1:%.*]] = phi <3 x bfloat> [ [[TMP0]], %[[THEN]] ], [ [[ARG0]], %[[ELSE]] ]
+; CHECK-V1-NEXT:    [[VAL3:%.*]] = shufflevector <3 x bfloat> [[TMP1]], <3 x bfloat> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V1-NEXT:    ret <4 x bfloat> [[VAL3]]
 ;
 ; CHECK-V2-LABEL: define <4 x bfloat> @shuffle_v4bf16(
@@ -1437,15 +1437,15 @@ define <4 x bfloat> @shuffle_v4bf16(<3 x bfloat> %arg0, i1 %cond) {
 ; CHECK-V2-NEXT:  [[ENTRY:.*:]]
 ; CHECK-V2-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK-V2:       [[THEN]]:
-; CHECK-V2-NEXT:    [[VAL1:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+; CHECK-V2-NEXT:    [[TMP0:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; CHECK-V2-NEXT:    tail call void @func0()
 ; CHECK-V2-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK-V2:       [[ELSE]]:
-; CHECK-V2-NEXT:    [[VAL2:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V2-NEXT:    tail call void @func1()
 ; CHECK-V2-NEXT:    br label %[[FINALLY]]
 ; CHECK-V2:       [[FINALLY]]:
-; CHECK-V2-NEXT:    [[VAL3:%.*]] = phi <4 x bfloat> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
+; CHECK-V2-NEXT:    [[TMP1:%.*]] = phi <3 x bfloat> [ [[TMP0]], %[[THEN]] ], [ [[ARG0]], %[[ELSE]] ]
+; CHECK-V2-NEXT:    [[VAL3:%.*]] = shufflevector <3 x bfloat> [[TMP1]], <3 x bfloat> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V2-NEXT:    ret <4 x bfloat> [[VAL3]]
 ;
 ; CHECK-V3-LABEL: define <4 x bfloat> @shuffle_v4bf16(
@@ -1453,15 +1453,15 @@ define <4 x bfloat> @shuffle_v4bf16(<3 x bfloat> %arg0, i1 %cond) {
 ; CHECK-V3-NEXT:  [[ENTRY:.*:]]
 ; CHECK-V3-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK-V3:       [[THEN]]:
-; CHECK-V3-NEXT:    [[VAL1:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+; CHECK-V3-NEXT:    [[TMP0:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; CHECK-V3-NEXT:    tail call void @func0()
 ; CHECK-V3-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK-V3:       [[ELSE]]:
-; CHECK-V3-NEXT:    [[VAL2:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V3-NEXT:    tail call void @func1()
 ; CHECK-V3-NEXT:    br label %[[FINALLY]]
 ; CHECK-V3:       [[FINALLY]]:
-; CHECK-V3-NEXT:    [[VAL3:%.*]] = phi <4 x bfloat> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
+; CHECK-V3-NEXT:    [[TMP1:%.*]] = phi <3 x bfloat> [ [[TMP0]], %[[THEN]] ], [ [[ARG0]], %[[ELSE]] ]
+; CHECK-V3-NEXT:    [[VAL3:%.*]] = shufflevector <3 x bfloat> [[TMP1]], <3 x bfloat> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V3-NEXT:    ret <4 x bfloat> [[VAL3]]
 ;
 ; CHECK-V4-LABEL: define <4 x bfloat> @shuffle_v4bf16(
@@ -1469,15 +1469,15 @@ define <4 x bfloat> @shuffle_v4bf16(<3 x bfloat> %arg0, i1 %cond) {
 ; CHECK-V4-NEXT:  [[ENTRY:.*:]]
 ; CHECK-V4-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK-V4:       [[THEN]]:
-; CHECK-V4-NEXT:    [[VAL1:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+; CHECK-V4-NEXT:    [[TMP0:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; CHECK-V4-NEXT:    tail call void @func0()
 ; CHECK-V4-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK-V4:       [[ELSE]]:
-; CHECK-V4-NEXT:    [[VAL2:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V4-NEXT:    tail call void @func1()
 ; CHECK-V4-NEXT:    br label %[[FINALLY]]
 ; CHECK-V4:       [[FINALLY]]:
-; CHECK-V4-NEXT:    [[VAL3:%.*]] = phi <4 x bfloat> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
+; CHECK-V4-NEXT:    [[TMP1:%.*]] = phi <3 x bfloat> [ [[TMP0]], %[[THEN]] ], [ [[ARG0]], %[[ELSE]] ]
+; CHECK-V4-NEXT:    [[VAL3:%.*]] = shufflevector <3 x bfloat> [[TMP1]], <3 x bfloat> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V4-NEXT:    ret <4 x bfloat> [[VAL3]]
 ;
 entry:
@@ -1504,15 +1504,15 @@ define <6 x bfloat> @shuffle_v6bf16(<3 x bfloat> %arg0, i1 %cond) {
 ; CHECK-V1-NEXT:  [[ENTRY:.*:]]
 ; CHECK-V1-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK-V1:       [[THEN]]:
-; CHECK-V1-NEXT:    [[VAL1:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <6 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-V1-NEXT:    [[TMP0:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; CHECK-V1-NEXT:    tail call void @func0()
 ; CHECK-V1-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK-V1:       [[ELSE]]:
-; CHECK-V1-NEXT:    [[VAL2:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <6 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V1-NEXT:    tail call void @func1()
 ; CHECK-V1-NEXT:    br label %[[FINALLY]]
 ; CHECK-V1:       [[FINALLY]]:
-; CHECK-V1-NEXT:    [[VAL3:%.*]] = phi <6 x bfloat> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
+; CHECK-V1-NEXT:    [[TMP1:%.*]] = phi <3 x bfloat> [ [[TMP0]], %[[THEN]] ], [ [[ARG0]], %[[ELSE]] ]
+; CHECK-V1-NEXT:    [[VAL3:%.*]] = shufflevector <3 x bfloat> [[TMP1]], <3 x bfloat> poison, <6 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V1-NEXT:    ret <6 x bfloat> [[VAL3]]
 ;
 ; CHECK-V2-LABEL: define <6 x bfloat> @shuffle_v6bf16(
@@ -1520,15 +1520,15 @@ define <6 x bfloat> @shuffle_v6bf16(<3 x bfloat> %arg0, i1 %cond) {
 ; CHECK-V2-NEXT:  [[ENTRY:.*:]]
 ; CHECK-V2-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK-V2:       [[THEN]]:
-; CHECK-V2-NEXT:    [[VAL1:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <6 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-V2-NEXT:    [[TMP0:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; CHECK-V2-NEXT:    tail call void @func0()
 ; CHECK-V2-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK-V2:       [[ELSE]]:
-; CHECK-V2-NEXT:    [[VAL2:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <6 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V2-NEXT:    tail call void @func1()
 ; CHECK-V2-NEXT:    br label %[[FINALLY]]
 ; CHECK-V2:       [[FINALLY]]:
-; CHECK-V2-NEXT:    [[VAL3:%.*]] = phi <6 x bfloat> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
+; CHECK-V2-NEXT:    [[TMP1:%.*]] = phi <3 x bfloat> [ [[TMP0]], %[[THEN]] ], [ [[ARG0]], %[[ELSE]] ]
+; CHECK-V2-NEXT:    [[VAL3:%.*]] = shufflevector <3 x bfloat> [[TMP1]], <3 x bfloat> poison, <6 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V2-NEXT:    ret <6 x bfloat> [[VAL3]]
 ;
 ; CHECK-V3-LABEL: define <6 x bfloat> @shuffle_v6bf16(
@@ -1536,15 +1536,15 @@ define <6 x bfloat> @shuffle_v6bf16(<3 x bfloat> %arg0, i1 %cond) {
 ; CHECK-V3-NEXT:  [[ENTRY:.*:]]
 ; CHECK-V3-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK-V3:       [[THEN]]:
-; CHECK-V3-NEXT:    [[VAL1:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <6 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-V3-NEXT:    [[TMP0:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; CHECK-V3-NEXT:    tail call void @func0()
 ; CHECK-V3-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK-V3:       [[ELSE]]:
-; CHECK-V3-NEXT:    [[VAL2:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <6 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V3-NEXT:    tail call void @func1()
 ; CHECK-V3-NEXT:    br label %[[FINALLY]]
 ; CHECK-V3:       [[FINALLY]]:
-; CHECK-V3-NEXT:    [[VAL3:%.*]] = phi <6 x bfloat> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
+; CHECK-V3-NEXT:    [[TMP1:%.*]] = phi <3 x bfloat> [ [[TMP0]], %[[THEN]] ], [ [[ARG0]], %[[ELSE]] ]
+; CHECK-V3-NEXT:    [[VAL3:%.*]] = shufflevector <3 x bfloat> [[TMP1]], <3 x bfloat> poison, <6 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V3-NEXT:    ret <6 x bfloat> [[VAL3]]
 ;
 ; CHECK-V4-LABEL: define <6 x bfloat> @shuffle_v6bf16(
@@ -1552,15 +1552,15 @@ define <6 x bfloat> @shuffle_v6bf16(<3 x bfloat> %arg0, i1 %cond) {
 ; CHECK-V4-NEXT:  [[ENTRY:.*:]]
 ; CHECK-V4-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK-V4:       [[THEN]]:
-; CHECK-V4-NEXT:    [[VAL1:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <6 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-V4-NEXT:    [[TMP0:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; CHECK-V4-NEXT:    tail call void @func0()
 ; CHECK-V4-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK-V4:       [[ELSE]]:
-; CHECK-V4-NEXT:    [[VAL2:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <6 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V4-NEXT:    tail call void @func1()
 ; CHECK-V4-NEXT:    br label %[[FINALLY]]
 ; CHECK-V4:       [[FINALLY]]:
-; CHECK-V4-NEXT:    [[VAL3:%.*]] = phi <6 x bfloat> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
+; CHECK-V4-NEXT:    [[TMP1:%.*]] = phi <3 x bfloat> [ [[TMP0]], %[[THEN]] ], [ [[ARG0]], %[[ELSE]] ]
+; CHECK-V4-NEXT:    [[VAL3:%.*]] = shufflevector <3 x bfloat> [[TMP1]], <3 x bfloat> poison, <6 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V4-NEXT:    ret <6 x bfloat> [[VAL3]]
 ;
 entry:
@@ -1587,15 +1587,15 @@ define <8 x bfloat> @shuffle_v8bf16(<3 x bfloat> %arg0, i1 %cond) {
 ; CHECK-V1-NEXT:  [[ENTRY:.*:]]
 ; CHECK-V1-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK-V1:       [[THEN]]:
-; CHECK-V1-NEXT:    [[VAL1:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-V1-NEXT:    [[TMP0:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; CHECK-V1-NEXT:    tail call void @func0()
 ; CHECK-V1-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK-V1:       [[ELSE]]:
-; CHECK-V1-NEXT:    [[VAL2:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <8 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V1-NEXT:    tail call void @func1()
 ; CHECK-V1-NEXT:    br label %[[FINALLY]]
 ; CHECK-V1:       [[FINALLY]]:
-; CHECK-V1-NEXT:    [[VAL3:%.*]] = phi <8 x bfloat> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
+; CHECK-V1-NEXT:    [[TMP1:%.*]] = phi <3 x bfloat> [ [[TMP0]], %[[THEN]] ], [ [[ARG0]], %[[ELSE]] ]
+; CHECK-V1-NEXT:    [[VAL3:%.*]] = shufflevector <3 x bfloat> [[TMP1]], <3 x bfloat> poison, <8 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V1-NEXT:    ret <8 x bfloat> [[VAL3]]
 ;
 ; CHECK-V2-LABEL: define <8 x bfloat> @shuffle_v8bf16(
@@ -1603,15 +1603,15 @@ define <8 x bfloat> @shuffle_v8bf16(<3 x bfloat> %arg0, i1 %cond) {
 ; CHECK-V2-NEXT:  [[ENTRY:.*:]]
 ; CHECK-V2-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK-V2:       [[THEN]]:
-; CHECK-V2-NEXT:    [[VAL1:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-V2-NEXT:    [[TMP0:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; CHECK-V2-NEXT:    tail call void @func0()
 ; CHECK-V2-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK-V2:       [[ELSE]]:
-; CHECK-V2-NEXT:    [[VAL2:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <8 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V2-NEXT:    tail call void @func1()
 ; CHECK-V2-NEXT:    br label %[[FINALLY]]
 ; CHECK-V2:       [[FINALLY]]:
-; CHECK-V2-NEXT:    [[VAL3:%.*]] = phi <8 x bfloat> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
+; CHECK-V2-NEXT:    [[TMP1:%.*]] = phi <3 x bfloat> [ [[TMP0]], %[[THEN]] ], [ [[ARG0]], %[[ELSE]] ]
+; CHECK-V2-NEXT:    [[VAL3:%.*]] = shufflevector <3 x bfloat> [[TMP1]], <3 x bfloat> poison, <8 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V2-NEXT:    ret <8 x bfloat> [[VAL3]]
 ;
 ; CHECK-V3-LABEL: define <8 x bfloat> @shuffle_v8bf16(
@@ -1619,15 +1619,15 @@ define <8 x bfloat> @shuffle_v8bf16(<3 x bfloat> %arg0, i1 %cond) {
 ; CHECK-V3-NEXT:  [[ENTRY:.*:]]
 ; CHECK-V3-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK-V3:       [[THEN]]:
-; CHECK-V3-NEXT:    [[VAL1:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-V3-NEXT:    [[TMP0:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; CHECK-V3-NEXT:    tail call void @func0()
 ; CHECK-V3-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK-V3:       [[ELSE]]:
-; CHECK-V3-NEXT:    [[VAL2:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <8 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V3-NEXT:    tail call void @func1()
 ; CHECK-V3-NEXT:    br label %[[FINALLY]]
 ; CHECK-V3:       [[FINALLY]]:
-; CHECK-V3-NEXT:    [[VAL3:%.*]] = phi <8 x bfloat> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
+; CHECK-V3-NEXT:    [[TMP1:%.*]] = phi <3 x bfloat> [ [[TMP0]], %[[THEN]] ], [ [[ARG0]], %[[ELSE]] ]
+; CHECK-V3-NEXT:    [[VAL3:%.*]] = shufflevector <3 x bfloat> [[TMP1]], <3 x bfloat> poison, <8 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V3-NEXT:    ret <8 x bfloat> [[VAL3]]
 ;
 ; CHECK-V4-LABEL: define <8 x bfloat> @shuffle_v8bf16(
@@ -1635,15 +1635,15 @@ define <8 x bfloat> @shuffle_v8bf16(<3 x bfloat> %arg0, i1 %cond) {
 ; CHECK-V4-NEXT:  [[ENTRY:.*:]]
 ; CHECK-V4-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK-V4:       [[THEN]]:
-; CHECK-V4-NEXT:    [[VAL1:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-V4-NEXT:    [[TMP0:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; CHECK-V4-NEXT:    tail call void @func0()
 ; CHECK-V4-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK-V4:       [[ELSE]]:
-; CHECK-V4-NEXT:    [[VAL2:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <8 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V4-NEXT:    tail call void @func1()
 ; CHECK-V4-NEXT:    br label %[[FINALLY]]
 ; CHECK-V4:       [[FINALLY]]:
-; CHECK-V4-NEXT:    [[VAL3:%.*]] = phi <8 x bfloat> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
+; CHECK-V4-NEXT:    [[TMP1:%.*]] = phi <3 x bfloat> [ [[TMP0]], %[[THEN]] ], [ [[ARG0]], %[[ELSE]] ]
+; CHECK-V4-NEXT:    [[VAL3:%.*]] = shufflevector <3 x bfloat> [[TMP1]], <3 x bfloat> poison, <8 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V4-NEXT:    ret <8 x bfloat> [[VAL3]]
 ;
 entry:
@@ -1670,15 +1670,15 @@ define <16 x bfloat> @shuffle_v16bf16(<3 x bfloat> %arg0, i1 %cond) {
 ; CHECK-V1-NEXT:  [[ENTRY:.*:]]
 ; CHECK-V1-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK-V1:       [[THEN]]:
-; CHECK-V1-NEXT:    [[VAL1:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-V1-NEXT:    [[TMP0:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; CHECK-V1-NEXT:    tail call void @func0()
 ; CHECK-V1-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK-V1:       [[ELSE]]:
-; CHECK-V1-NEXT:    [[VAL2:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <16 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V1-NEXT:    tail call void @func1()
 ; CHECK-V1-NEXT:    br label %[[FINALLY]]
 ; CHECK-V1:       [[FINALLY]]:
-; CHECK-V1-NEXT:    [[VAL3:%.*]] = phi <16 x bfloat> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
+; CHECK-V1-NEXT:    [[TMP1:%.*]] = phi <3 x bfloat> [ [[TMP0]], %[[THEN]] ], [ [[ARG0]], %[[ELSE]] ]
+; CHECK-V1-NEXT:    [[VAL3:%.*]] = shufflevector <3 x bfloat> [[TMP1]], <3 x bfloat> poison, <16 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V1-NEXT:    ret <16 x bfloat> [[VAL3]]
 ;
 ; CHECK-V2-LABEL: define <16 x bfloat> @shuffle_v16bf16(
@@ -1686,15 +1686,15 @@ define <16 x bfloat> @shuffle_v16bf16(<3 x bfloat> %arg0, i1 %cond) {
 ; CHECK-V2-NEXT:  [[ENTRY:.*:]]
 ; CHECK-V2-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK-V2:       [[THEN]]:
-; CHECK-V2-NEXT:    [[VAL1:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-V2-NEXT:    [[TMP0:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; CHECK-V2-NEXT:    tail call void @func0()
 ; CHECK-V2-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK-V2:       [[ELSE]]:
-; CHECK-V2-NEXT:    [[VAL2:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <16 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V2-NEXT:    tail call void @func1()
 ; CHECK-V2-NEXT:    br label %[[FINALLY]]
 ; CHECK-V2:       [[FINALLY]]:
-; CHECK-V2-NEXT:    [[VAL3:%.*]] = phi <16 x bfloat> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
+; CHECK-V2-NEXT:    [[TMP1:%.*]] = phi <3 x bfloat> [ [[TMP0]], %[[THEN]] ], [ [[ARG0]], %[[ELSE]] ]
+; CHECK-V2-NEXT:    [[VAL3:%.*]] = shufflevector <3 x bfloat> [[TMP1]], <3 x bfloat> poison, <16 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V2-NEXT:    ret <16 x bfloat> [[VAL3]]
 ;
 ; CHECK-V3-LABEL: define <16 x bfloat> @shuffle_v16bf16(
@@ -1702,15 +1702,15 @@ define <16 x bfloat> @shuffle_v16bf16(<3 x bfloat> %arg0, i1 %cond) {
 ; CHECK-V3-NEXT:  [[ENTRY:.*:]]
 ; CHECK-V3-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK-V3:       [[THEN]]:
-; CHECK-V3-NEXT:    [[VAL1:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-V3-NEXT:    [[TMP0:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; CHECK-V3-NEXT:    tail call void @func0()
 ; CHECK-V3-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK-V3:       [[ELSE]]:
-; CHECK-V3-NEXT:    [[VAL2:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <16 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V3-NEXT:    tail call void @func1()
 ; CHECK-V3-NEXT:    br label %[[FINALLY]]
 ; CHECK-V3:       [[FINALLY]]:
-; CHECK-V3-NEXT:    [[VAL3:%.*]] = phi <16 x bfloat> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
+; CHECK-V3-NEXT:    [[TMP1:%.*]] = phi <3 x bfloat> [ [[TMP0]], %[[THEN]] ], [ [[ARG0]], %[[ELSE]] ]
+; CHECK-V3-NEXT:    [[VAL3:%.*]] = shufflevector <3 x bfloat> [[TMP1]], <3 x bfloat> poison, <16 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V3-NEXT:    ret <16 x bfloat> [[VAL3]]
 ;
 ; CHECK-V4-LABEL: define <16 x bfloat> @shuffle_v16bf16(
@@ -1718,15 +1718,15 @@ define <16 x bfloat> @shuffle_v16bf16(<3 x bfloat> %arg0, i1 %cond) {
 ; CHECK-V4-NEXT:  [[ENTRY:.*:]]
 ; CHECK-V4-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK-V4:       [[THEN]]:
-; CHECK-V4-NEXT:    [[VAL1:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-V4-NEXT:    [[TMP0:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; CHECK-V4-NEXT:    tail call void @func0()
 ; CHECK-V4-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK-V4:       [[ELSE]]:
-; CHECK-V4-NEXT:    [[VAL2:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <16 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V4-NEXT:    tail call void @func1()
 ; CHECK-V4-NEXT:    br label %[[FINALLY]]
 ; CHECK-V4:       [[FINALLY]]:
-; CHECK-V4-NEXT:    [[VAL3:%.*]] = phi <16 x bfloat> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
+; CHECK-V4-NEXT:    [[TMP1:%.*]] = phi <3 x bfloat> [ [[TMP0]], %[[THEN]] ], [ [[ARG0]], %[[ELSE]] ]
+; CHECK-V4-NEXT:    [[VAL3:%.*]] = shufflevector <3 x bfloat> [[TMP1]], <3 x bfloat> poison, <16 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V4-NEXT:    ret <16 x bfloat> [[VAL3]]
 ;
 entry:
@@ -1753,15 +1753,15 @@ define <32 x bfloat> @shuffle_v32bf16(<3 x bfloat> %arg0, i1 %cond) {
 ; CHECK-V1-NEXT:  [[ENTRY:.*:]]
 ; CHECK-V1-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK-V1:       [[THEN]]:
-; CHECK-V1-NEXT:    [[VAL1:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <32 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-V1-NEXT:    [[TMP0:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; CHECK-V1-NEXT:    tail call void @func0()
 ; CHECK-V1-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK-V1:       [[ELSE]]:
-; CHECK-V1-NEXT:    [[VAL2:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <32 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V1-NEXT:    tail call void @func1()
 ; CHECK-V1-NEXT:    br label %[[FINALLY]]
 ; CHECK-V1:       [[FINALLY]]:
-; CHECK-V1-NEXT:    [[VAL3:%.*]] = phi <32 x bfloat> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
+; CHECK-V1-NEXT:    [[TMP1:%.*]] = phi <3 x bfloat> [ [[TMP0]], %[[THEN]] ], [ [[ARG0]], %[[ELSE]] ]
+; CHECK-V1-NEXT:    [[VAL3:%.*]] = shufflevector <3 x bfloat> [[TMP1]], <3 x bfloat> poison, <32 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V1-NEXT:    ret <32 x bfloat> [[VAL3]]
 ;
 ; CHECK-V2-LABEL: define <32 x bfloat> @shuffle_v32bf16(
@@ -1769,15 +1769,15 @@ define <32 x bfloat> @shuffle_v32bf16(<3 x bfloat> %arg0, i1 %cond) {
 ; CHECK-V2-NEXT:  [[ENTRY:.*:]]
 ; CHECK-V2-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK-V2:       [[THEN]]:
-; CHECK-V2-NEXT:    [[VAL1:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <32 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-V2-NEXT:    [[TMP0:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; CHECK-V2-NEXT:    tail call void @func0()
 ; CHECK-V2-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK-V2:       [[ELSE]]:
-; CHECK-V2-NEXT:    [[VAL2:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <32 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V2-NEXT:    tail call void @func1()
 ; CHECK-V2-NEXT:    br label %[[FINALLY]]
 ; CHECK-V2:       [[FINALLY]]:
-; CHECK-V2-NEXT:    [[VAL3:%.*]] = phi <32 x bfloat> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
+; CHECK-V2-NEXT:    [[TMP1:%.*]] = phi <3 x bfloat> [ [[TMP0]], %[[THEN]] ], [ [[ARG0]], %[[ELSE]] ]
+; CHECK-V2-NEXT:    [[VAL3:%.*]] = shufflevector <3 x bfloat> [[TMP1]], <3 x bfloat> poison, <32 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V2-NEXT:    ret <32 x bfloat> [[VAL3]]
 ;
 ; CHECK-V3-LABEL: define <32 x bfloat> @shuffle_v32bf16(
@@ -1785,15 +1785,15 @@ define <32 x bfloat> @shuffle_v32bf16(<3 x bfloat> %arg0, i1 %cond) {
 ; CHECK-V3-NEXT:  [[ENTRY:.*:]]
 ; CHECK-V3-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK-V3:       [[THEN]]:
-; CHECK-V3-NEXT:    [[VAL1:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <32 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-V3-NEXT:    [[TMP0:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; CHECK-V3-NEXT:    tail call void @func0()
 ; CHECK-V3-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK-V3:       [[ELSE]]:
-; CHECK-V3-NEXT:    [[VAL2:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <32 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V3-NEXT:    tail call void @func1()
 ; CHECK-V3-NEXT:    br label %[[FINALLY]]
 ; CHECK-V3:       [[FINALLY]]:
-; CHECK-V3-NEXT:    [[VAL3:%.*]] = phi <32 x bfloat> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
+; CHECK-V3-NEXT:    [[TMP1:%.*]] = phi <3 x bfloat> [ [[TMP0]], %[[THEN]] ], [ [[ARG0]], %[[ELSE]] ]
+; CHECK-V3-NEXT:    [[VAL3:%.*]] = shufflevector <3 x bfloat> [[TMP1]], <3 x bfloat> poison, <32 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V3-NEXT:    ret <32 x bfloat> [[VAL3]]
 ;
 ; CHECK-V4-LABEL: define <32 x bfloat> @shuffle_v32bf16(
@@ -1801,15 +1801,15 @@ define <32 x bfloat> @shuffle_v32bf16(<3 x bfloat> %arg0, i1 %cond) {
 ; CHECK-V4-NEXT:  [[ENTRY:.*:]]
 ; CHECK-V4-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK-V4:       [[THEN]]:
-; CHECK-V4-NEXT:    [[VAL1:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <32 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-V4-NEXT:    [[TMP0:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; CHECK-V4-NEXT:    tail call void @func0()
 ; CHECK-V4-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK-V4:       [[ELSE]]:
-; CHECK-V4-NEXT:    [[VAL2:%.*]] = shufflevector <3 x bfloat> [[ARG0]], <3 x bfloat> poison, <32 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V4-NEXT:    tail call void @func1()
 ; CHECK-V4-NEXT:    br label %[[FINALLY]]
 ; CHECK-V4:       [[FINALLY]]:
-; CHECK-V4-NEXT:    [[VAL3:%.*]] = phi <32 x bfloat> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
+; CHECK-V4-NEXT:    [[TMP1:%.*]] = phi <3 x bfloat> [ [[TMP0]], %[[THEN]] ], [ [[ARG0]], %[[ELSE]] ]
+; CHECK-V4-NEXT:    [[VAL3:%.*]] = shufflevector <3 x bfloat> [[TMP1]], <3 x bfloat> poison, <32 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V4-NEXT:    ret <32 x bfloat> [[VAL3]]
 ;
 entry:
@@ -2002,15 +2002,15 @@ define <4 x half> @shuffle_v4f16(<3 x half> %arg0, i1 %cond) {
 ; CHECK-V1-NEXT:  [[ENTRY:.*:]]
 ; CHECK-V1-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK-V1:       [[THEN]]:
-; CHECK-V1-NEXT:    [[VAL1:%.*]] = shufflevector <3 x half> [[ARG0]], <3 x half> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+; CHECK-V1-NEXT:    [[TMP0:%.*]] = shufflevector <3 x half> [[ARG0]], <3 x half> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; CHECK-V1-NEXT:    tail call void @func0()
 ; CHECK-V1-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK-V1:       [[ELSE]]:
-; CHECK-V1-NEXT:    [[VAL2:%.*]] = shufflevector <3 x half> [[ARG0]], <3 x half> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V1-NEXT:    tail call void @func1()
 ; CHECK-V1-NEXT:    br label %[[FINALLY]]
 ; CHECK-V1:       [[FINALLY]]:
-; CHECK-V1-NEXT:    [[VAL3:%.*]] = phi <4 x half> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
+; CHECK-V1-NEXT:    [[TMP1:%.*]] = phi <3 x half> [ [[TMP0]], %[[THEN]] ], [ [[ARG0]], %[[ELSE]] ]
+; CHECK-V1-NEXT:    [[VAL3:%.*]] = shufflevector <3 x half> [[TMP1]], <3 x half> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V1-NEXT:    ret <4 x half> [[VAL3]]
 ;
 ; CHECK-V2-LABEL: define <4 x half> @shuffle_v4f16(
@@ -2018,15 +2018,15 @@ define <4 x half> @shuffle_v4f16(<3 x half> %arg0, i1 %cond) {
 ; CHECK-V2-NEXT:  [[ENTRY:.*:]]
 ; CHECK-V2-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK-V2:       [[THEN]]:
-; CHECK-V2-NEXT:    [[VAL1:%.*]] = shufflevector <3 x half> [[ARG0]], <3 x half> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+; CHECK-V2-NEXT:    [[TMP0:%.*]] = shufflevector <3 x half> [[ARG0]], <3 x half> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; CHECK-V2-NEXT:    tail call void @func0()
 ; CHECK-V2-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK-V2:       [[ELSE]]:
-; CHECK-V2-NEXT:    [[VAL2:%.*]] = shufflevector <3 x half> [[ARG0]], <3 x half> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V2-NEXT:    tail call void @func1()
 ; CHECK-V2-NEXT:    br label %[[FINALLY]]
 ; CHECK-V2:       [[FINALLY]]:
-; CHECK-V2-NEXT:    [[VAL3:%.*]] = phi <4 x half> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
+; CHECK-V2-NEXT:    [[TMP1:%.*]] = phi <3 x half> [ [[TMP0]], %[[THEN]] ], [ [[ARG0]], %[[ELSE]] ]
+; CHECK-V2-NEXT:    [[VAL3:%.*]] = shufflevector <3 x half> [[TMP1]], <3 x half> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V2-NEXT:    ret <4 x half> [[VAL3]]
 ;
 ; CHECK-V3-LABEL: define <4 x half> @shuffle_v4f16(
@@ -2085,15 +2085,15 @@ define <6 x half> @shuffle_v6f16(<3 x half> %arg0, i1 %cond) {
 ; CHECK-V1-NEXT:  [[ENTRY:.*:]]
 ; CHECK-V1-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK-V1:       [[THEN]]:
-; CHECK-V1-NEXT:    [[VAL1:%.*]] = shufflevector <3 x half> [[ARG0]], <3 x half> poison, <6 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-V1-NEXT:    [[TMP0:%.*]] = shufflevector <3 x half> [[ARG0]], <3 x half> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; CHECK-V1-NEXT:    tail call void @func0()
 ; CHECK-V1-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK-V1:       [[ELSE]]:
-; CHECK-V1-NEXT:    [[VAL2:%.*]] = shufflevector <3 x half> [[ARG0]], <3 x half> poison, <6 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V1-NEXT:    tail call void @func1()
 ; CHECK-V1-NEXT:    br label %[[FINALLY]]
 ; CHECK-V1:       [[FINALLY]]:
-; CHECK-V1-NEXT:    [[VAL3:%.*]] = phi <6 x half> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
+; CHECK-V1-NEXT:    [[TMP1:%.*]] = phi <3 x half> [ [[TMP0]], %[[THEN]] ], [ [[ARG0]], %[[ELSE]] ]
+; CHECK-V1-NEXT:    [[VAL3:%.*]] = shufflevector <3 x half> [[TMP1]], <3 x half> poison, <6 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V1-NEXT:    ret <6 x half> [[VAL3]]
 ;
 ; CHECK-V2-LABEL: define <6 x half> @shuffle_v6f16(
@@ -2101,15 +2101,15 @@ define <6 x half> @shuffle_v6f16(<3 x half> %arg0, i1 %cond) {
 ; CHECK-V2-NEXT:  [[ENTRY:.*:]]
 ; CHECK-V2-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK-V2:       [[THEN]]:
-; CHECK-V2-NEXT:    [[VAL1:%.*]] = shufflevector <3 x half> [[ARG0]], <3 x half> poison, <6 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-V2-NEXT:    [[TMP0:%.*]] = shufflevector <3 x half> [[ARG0]], <3 x half> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; CHECK-V2-NEXT:    tail call void @func0()
 ; CHECK-V2-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK-V2:       [[ELSE]]:
-; CHECK-V2-NEXT:    [[VAL2:%.*]] = shufflevector <3 x half> [[ARG0]], <3 x half> poison, <6 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V2-NEXT:    tail call void @func1()
 ; CHECK-V2-NEXT:    br label %[[FINALLY]]
 ; CHECK-V2:       [[FINALLY]]:
-; CHECK-V2-NEXT:    [[VAL3:%.*]] = phi <6 x half> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
+; CHECK-V2-NEXT:    [[TMP1:%.*]] = phi <3 x half> [ [[TMP0]], %[[THEN]] ], [ [[ARG0]], %[[ELSE]] ]
+; CHECK-V2-NEXT:    [[VAL3:%.*]] = shufflevector <3 x half> [[TMP1]], <3 x half> poison, <6 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V2-NEXT:    ret <6 x half> [[VAL3]]
 ;
 ; CHECK-V3-LABEL: define <6 x half> @shuffle_v6f16(
@@ -2168,15 +2168,15 @@ define <8 x half> @shuffle_v8f16(<3 x half> %arg0, i1 %cond) {
 ; CHECK-V1-NEXT:  [[ENTRY:.*:]]
 ; CHECK-V1-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK-V1:       [[THEN]]:
-; CHECK-V1-NEXT:    [[VAL1:%.*]] = shufflevector <3 x half> [[ARG0]], <3 x half> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-V1-NEXT:    [[TMP0:%.*]] = shufflevector <3 x half> [[ARG0]], <3 x half> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; CHECK-V1-NEXT:    tail call void @func0()
 ; CHECK-V1-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK-V1:       [[ELSE]]:
-; CHECK-V1-NEXT:    [[VAL2:%.*]] = shufflevector <3 x half> [[ARG0]], <3 x half> poison, <8 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V1-NEXT:    tail call void @func1()
 ; CHECK-V1-NEXT:    br label %[[FINALLY]]
 ; CHECK-V1:       [[FINALLY]]:
-; CHECK-V1-NEXT:    [[VAL3:%.*]] = phi <8 x half> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
+; CHECK-V1-NEXT:    [[TMP1:%.*]] = phi <3 x half> [ [[TMP0]], %[[THEN]] ], [ [[ARG0]], %[[ELSE]] ]
+; CHECK-V1-NEXT:    [[VAL3:%.*]] = shufflevector <3 x half> [[TMP1]], <3 x half> poison, <8 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V1-NEXT:    ret <8 x half> [[VAL3]]
 ;
 ; CHECK-V2-LABEL: define <8 x half> @shuffle_v8f16(
@@ -2184,15 +2184,15 @@ define <8 x half> @shuffle_v8f16(<3 x half> %arg0, i1 %cond) {
 ; CHECK-V2-NEXT:  [[ENTRY:.*:]]
 ; CHECK-V2-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK-V2:       [[THEN]]:
-; CHECK-V2-NEXT:    [[VAL1:%.*]] = shufflevector <3 x half> [[ARG0]], <3 x half> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-V2-NEXT:    [[TMP0:%.*]] = shufflevector <3 x half> [[ARG0]], <3 x half> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; CHECK-V2-NEXT:    tail call void @func0()
 ; CHECK-V2-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK-V2:       [[ELSE]]:
-; CHECK-V2-NEXT:    [[VAL2:%.*]] = shufflevector <3 x half> [[ARG0]], <3 x half> poison, <8 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V2-NEXT:    tail call void @func1()
 ; CHECK-V2-NEXT:    br label %[[FINALLY]]
 ; CHECK-V2:       [[FINALLY]]:
-; CHECK-V2-NEXT:    [[VAL3:%.*]] = phi <8 x half> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
+; CHECK-V2-NEXT:    [[TMP1:%.*]] = phi <3 x half> [ [[TMP0]], %[[THEN]] ], [ [[ARG0]], %[[ELSE]] ]
+; CHECK-V2-NEXT:    [[VAL3:%.*]] = shufflevector <3 x half> [[TMP1]], <3 x half> poison, <8 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V2-NEXT:    ret <8 x half> [[VAL3]]
 ;
 ; CHECK-V3-LABEL: define <8 x half> @shuffle_v8f16(
@@ -2251,15 +2251,15 @@ define <16 x half> @shuffle_v16f16(<3 x half> %arg0, i1 %cond) {
 ; CHECK-V1-NEXT:  [[ENTRY:.*:]]
 ; CHECK-V1-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK-V1:       [[THEN]]:
-; CHECK-V1-NEXT:    [[VAL1:%.*]] = shufflevector <3 x half> [[ARG0]], <3 x half> poison, <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-V1-NEXT:    [[TMP0:%.*]] = shufflevector <3 x half> [[ARG0]], <3 x half> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; CHECK-V1-NEXT:    tail call void @func0()
 ; CHECK-V1-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK-V1:       [[ELSE]]:
-; CHECK-V1-NEXT:    [[VAL2:%.*]] = shufflevector <3 x half> [[ARG0]], <3 x half> poison, <16 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V1-NEXT:    tail call void @func1()
 ; CHECK-V1-NEXT:    br label %[[FINALLY]]
 ; CHECK-V1:       [[FINALLY]]:
-; CHECK-V1-NEXT:    [[VAL3:%.*]] = phi <16 x half> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
+; CHECK-V1-NEXT:    [[TMP1:%.*]] = phi <3 x half> [ [[TMP0]], %[[THEN]] ], [ [[ARG0]], %[[ELSE]] ]
+; CHECK-V1-NEXT:    [[VAL3:%.*]] = shufflevector <3 x half> [[TMP1]], <3 x half> poison, <16 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V1-NEXT:    ret <16 x half> [[VAL3]]
 ;
 ; CHECK-V2-LABEL: define <16 x half> @shuffle_v16f16(
@@ -2267,15 +2267,15 @@ define <16 x half> @shuffle_v16f16(<3 x half> %arg0, i1 %cond) {
 ; CHECK-V2-NEXT:  [[ENTRY:.*:]]
 ; CHECK-V2-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK-V2:       [[THEN]]:
-; CHECK-V2-NEXT:    [[VAL1:%.*]] = shufflevector <3 x half> [[ARG0]], <3 x half> poison, <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-V2-NEXT:    [[TMP0:%.*]] = shufflevector <3 x half> [[ARG0]], <3 x half> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; CHECK-V2-NEXT:    tail call void @func0()
 ; CHECK-V2-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK-V2:       [[ELSE]]:
-; CHECK-V2-NEXT:    [[VAL2:%.*]] = shufflevector <3 x half> [[ARG0]], <3 x half> poison, <16 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V2-NEXT:    tail call void @func1()
 ; CHECK-V2-NEXT:    br label %[[FINALLY]]
 ; CHECK-V2:       [[FINALLY]]:
-; CHECK-V2-NEXT:    [[VAL3:%.*]] = phi <16 x half> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
+; CHECK-V2-NEXT:    [[TMP1:%.*]] = phi <3 x half> [ [[TMP0]], %[[THEN]] ], [ [[ARG0]], %[[ELSE]] ]
+; CHECK-V2-NEXT:    [[VAL3:%.*]] = shufflevector <3 x half> [[TMP1]], <3 x half> poison, <16 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V2-NEXT:    ret <16 x half> [[VAL3]]
 ;
 ; CHECK-V3-LABEL: define <16 x half> @shuffle_v16f16(
@@ -2334,15 +2334,15 @@ define <32 x half> @shuffle_v32f16(<3 x half> %arg0, i1 %cond) {
 ; CHECK-V1-NEXT:  [[ENTRY:.*:]]
 ; CHECK-V1-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK-V1:       [[THEN]]:
-; CHECK-V1-NEXT:    [[VAL1:%.*]] = shufflevector <3 x half> [[ARG0]], <3 x half> poison, <32 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-V1-NEXT:    [[TMP0:%.*]] = shufflevector <3 x half> [[ARG0]], <3 x half> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; CHECK-V1-NEXT:    tail call void @func0()
 ; CHECK-V1-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK-V1:       [[ELSE]]:
-; CHECK-V1-NEXT:    [[VAL2:%.*]] = shufflevector <3 x half> [[ARG0]], <3 x half> poison, <32 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V1-NEXT:    tail call void @func1()
 ; CHECK-V1-NEXT:    br label %[[FINALLY]]
 ; CHECK-V1:       [[FINALLY]]:
-; CHECK-V1-NEXT:    [[VAL3:%.*]] = phi <32 x half> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
+; CHECK-V1-NEXT:    [[TMP1:%.*]] = phi <3 x half> [ [[TMP0]], %[[THEN]] ], [ [[ARG0]], %[[ELSE]] ]
+; CHECK-V1-NEXT:    [[VAL3:%.*]] = shufflevector <3 x half> [[TMP1]], <3 x half> poison, <32 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V1-NEXT:    ret <32 x half> [[VAL3]]
 ;
 ; CHECK-V2-LABEL: define <32 x half> @shuffle_v32f16(
@@ -2350,15 +2350,15 @@ define <32 x half> @shuffle_v32f16(<3 x half> %arg0, i1 %cond) {
 ; CHECK-V2-NEXT:  [[ENTRY:.*:]]
 ; CHECK-V2-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK-V2:       [[THEN]]:
-; CHECK-V2-NEXT:    [[VAL1:%.*]] = shufflevector <3 x half> [[ARG0]], <3 x half> poison, <32 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-V2-NEXT:    [[TMP0:%.*]] = shufflevector <3 x half> [[ARG0]], <3 x half> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; CHECK-V2-NEXT:    tail call void @func0()
 ; CHECK-V2-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK-V2:       [[ELSE]]:
-; CHECK-V2-NEXT:    [[VAL2:%.*]] = shufflevector <3 x half> [[ARG0]], <3 x half> poison, <32 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V2-NEXT:    tail call void @func1()
 ; CHECK-V2-NEXT:    br label %[[FINALLY]]
 ; CHECK-V2:       [[FINALLY]]:
-; CHECK-V2-NEXT:    [[VAL3:%.*]] = phi <32 x half> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
+; CHECK-V2-NEXT:    [[TMP1:%.*]] = phi <3 x half> [ [[TMP0]], %[[THEN]] ], [ [[ARG0]], %[[ELSE]] ]
+; CHECK-V2-NEXT:    [[VAL3:%.*]] = shufflevector <3 x half> [[TMP1]], <3 x half> poison, <32 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
 ; CHECK-V2-NEXT:    ret <32 x half> [[VAL3]]
 ;
 ; CHECK-V3-LABEL: define <32 x half> @shuffle_v32f16(
