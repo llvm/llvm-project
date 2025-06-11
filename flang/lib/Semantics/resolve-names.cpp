@@ -58,6 +58,8 @@ using MessageFormattedText = parser::MessageFormattedText;
 class ResolveNamesVisitor;
 class ScopeHandler;
 
+void SetImplicitCUDADevice(bool inDeviceSubprogram, Symbol &symbol);
+
 // ImplicitRules maps initial character of identifier to the DeclTypeSpec
 // representing the implicit type; std::nullopt if none.
 // It also records the presence of IMPLICIT NONE statements.
@@ -2867,8 +2869,31 @@ void ScopeHandler::PopScope() {
   // Entities that are not yet classified as objects or procedures are now
   // assumed to be objects.
   // TODO: Statement functions
+  bool inDeviceSubprogram{false};
+  Symbol *scopeSym{currScope().symbol()};
+  if (currScope().kind() == Scope::Kind::BlockConstruct) {
+    scopeSym = currScope().parent().symbol();
+  }
+  if (scopeSym) {
+    if (auto *details{scopeSym->detailsIf<SubprogramDetails>()}) {
+      // Check the current procedure is a device procedure to apply implicit
+      // attribute at the end.
+      if (auto attrs{details->cudaSubprogramAttrs()}) {
+        if (*attrs == common::CUDASubprogramAttrs::Device ||
+            *attrs == common::CUDASubprogramAttrs::Global ||
+            *attrs == common::CUDASubprogramAttrs::Grid_Global) {
+          inDeviceSubprogram = true;
+        }
+      }
+    }
+  }
   for (auto &pair : currScope()) {
     ConvertToObjectEntity(*pair.second);
+    if (currScope_->kind() == Scope::Kind::BlockConstruct) {
+      // Only look for specification in BlockConstruct. Other cases are done in
+      // ResolveSpecificationParts.
+      SetImplicitCUDADevice(inDeviceSubprogram, *pair.second);
+    }
   }
   funcResultStack_.Pop();
   // If popping back into a global scope, pop back to the top scope.
@@ -9555,7 +9580,7 @@ void ResolveNamesVisitor::CreateGeneric(const parser::GenericSpec &x) {
   info.Resolve(&MakeSymbol(symbolName, Attrs{}, std::move(genericDetails)));
 }
 
-static void SetImplicitCUDADevice(bool inDeviceSubprogram, Symbol &symbol) {
+void SetImplicitCUDADevice(bool inDeviceSubprogram, Symbol &symbol) {
   if (inDeviceSubprogram && symbol.has<ObjectEntityDetails>()) {
     auto *object{symbol.detailsIf<ObjectEntityDetails>()};
     if (!object->cudaDataAttr() && !IsValue(symbol) &&
@@ -9571,24 +9596,6 @@ void ResolveNamesVisitor::FinishSpecificationPart(
   misparsedStmtFuncFound_ = false;
   funcResultStack().CompleteFunctionResultType();
   CheckImports();
-  bool inDeviceSubprogram{false};
-  Symbol *scopeSym{currScope().symbol()};
-  if (currScope().kind() == Scope::Kind::BlockConstruct) {
-    scopeSym = currScope().parent().symbol();
-  }
-  if (scopeSym) {
-    if (auto *details{scopeSym->detailsIf<SubprogramDetails>()}) {
-      // Check the current procedure is a device procedure to apply implicit
-      // attribute at the end.
-      if (auto attrs{details->cudaSubprogramAttrs()}) {
-        if (*attrs == common::CUDASubprogramAttrs::Device ||
-            *attrs == common::CUDASubprogramAttrs::Global ||
-            *attrs == common::CUDASubprogramAttrs::Grid_Global) {
-          inDeviceSubprogram = true;
-        }
-      }
-    }
-  }
   for (auto &pair : currScope()) {
     auto &symbol{*pair.second};
     if (inInterfaceBlock()) {
@@ -9622,11 +9629,6 @@ void ResolveNamesVisitor::FinishSpecificationPart(
         SetImplicitAttr(symbol, Attr::BIND_C);
         SetBindNameOn(symbol);
       }
-    }
-    if (currScope().kind() == Scope::Kind::BlockConstruct) {
-      // Only look for specification in BlockConstruct. Other cases are done in
-      // ResolveSpecificationParts.
-      SetImplicitCUDADevice(inDeviceSubprogram, symbol);
     }
   }
   currScope().InstantiateDerivedTypes();
