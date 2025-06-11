@@ -55,6 +55,8 @@ trap at-exit EXIT
 
 projects="${1}"
 targets="${2}"
+runtimes="${3}"
+runtime_targets="${4}"
 
 lit_args="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests"
 
@@ -70,7 +72,7 @@ export LLVM_SYMBOLIZER_PATH=`which llvm-symbolizer`
 # It will not be built unless it is used.
 cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLVM_ENABLE_PROJECTS="${projects}" \
-      -D LLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
+      -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
       -G Ninja \
       -D CMAKE_PREFIX_PATH="${HOME}/.local" \
       -D CMAKE_BUILD_TYPE=Release \
@@ -91,17 +93,9 @@ echo "--- ninja"
 # Targets are not escaped as they are passed as separate arguments.
 ninja -C "${BUILD_DIR}" -k 0 ${targets}
 
-runtimes="${3}"
-runtime_targets="${4}"
-
 # Compiling runtimes with just-built Clang and running their tests
 # as an additional testing for Clang.
-if [[ "${runtimes}" != "" ]]; then
-  if [[ "${runtime_targets}" == "" ]]; then
-    echo "Runtimes to build are specified, but targets are not."
-    exit 1
-  fi
-
+if [[ "${runtimes_targets}" != "" ]]; then
   echo "--- cmake runtimes C++26"
 
   cmake \
