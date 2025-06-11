@@ -92,3 +92,43 @@ def FeatureDataCache : SubtargetFeature<"dcache", "HasDataCache", "true",
                                         "Enable Xtensa Data Cache option">;
 def HasDataCache : Predicate<"Subtarget->hasDataCache()">,
                    AssemblerPredicate<(all_of FeatureDataCache)>;
+
+// Xtensa Interrupts Options.
+def FeatureHighPriInterrupts : SubtargetFeature<"highpriinterrupts",
+                                                "HasHighPriInterrupts", "true",
+                                                "Enable Xtensa HighPriInterrupts option">;
+def HasHighPriInterrupts : Predicate<"Subtarget->hasHighPriInterrupts()">,
+                                      AssemblerPredicate<(all_of FeatureHighPriInterrupts)>;
+
+foreach i = {3-7} in
+    def FeatureHighPriInterruptsLevel#i : SubtargetFeature<"highpriinterrupts-level"#i,
+         "HasHighPriInterruptsLevel"#i#"", "true", "Enable Xtensa HighPriInterrupts Level"#i, [FeatureHighPriInterrupts]>;
+
+def FeatureInterrupt : SubtargetFeature<"interrupt", "HasInterrupt", "true",
+                                        "Enable Xtensa Interrupt option">;
+def HasInterrupt : Predicate<"Subtarget->hasInterrupt()">,
+                              AssemblerPredicate<(all_of FeatureInterrupt)>;
+
+def FeatureException : SubtargetFeature<"exception", "HasException", "true",
+                                        "Enable Xtensa Exception option">;
+def HasException : Predicate<"Subtarget->hasException()">,
+                              AssemblerPredicate<(all_of FeatureException)>;
+
+def FeatureDebug : SubtargetFeature<"debug", "HasDebug", "true",
+                                    "Enable Xtensa Debug option">;
+def HasDebug : Predicate<"Subtarget->hasDebug()">,
+                          AssemblerPredicate<(all_of FeatureDebug)>;
+
+foreach i = {1-3} in
+    def FeatureTimers#i : SubtargetFeature<"timers"#i,
+         "HasTimers"#i#"", "true", "Enable Xtensa Timers "#i>;
+
+def FeaturePRID : SubtargetFeature<"prid", "HasPRID", "true",
+                                   "Enable Xtensa Processor ID option">;
+def HasPRID : Predicate<"Subtarget->hasPRID()">,
+                         AssemblerPredicate<(all_of FeaturePRID)>;
+
+def FeatureCoprocessor : SubtargetFeature<"coprocessor", "HasCoprocessor", "true",
+                                          "Enable Xtensa Coprocessor option">;
+def HasCoprocessor : Predicate<"Subtarget->hasCoprocessor()">,
+                                AssemblerPredicate<(all_of FeatureCoprocessor)>;
