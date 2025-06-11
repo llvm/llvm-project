@@ -767,6 +767,12 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
         return false; // Not 'arm.mve.vctp64'.
       }
 
+      if (Name.starts_with("vrintn.v")) {
+        NewFn = Intrinsic::getOrInsertDeclaration(
+            F->getParent(), Intrinsic::roundeven, F->arg_begin()->getType());
+        return true;
+      }
+
       // These too are changed to accept a v2i1 instead of the old v4i1.
       if (Name.consume_back(".v4i1")) {
         // 'arm.mve.*.v4i1'.
@@ -1149,8 +1155,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
   case 'd':
     if (Name.consume_front("dbg.")) {
       // Mark debug intrinsics for upgrade to new debug format.
-      if (CanUpgradeDebugIntrinsicsToRecords &&
-          F->getParent()->IsNewDbgInfoFormat) {
+      if (CanUpgradeDebugIntrinsicsToRecords) {
         if (Name == "addr" || Name == "value" || Name == "assign" ||
             Name == "declare" || Name == "label") {
           // There's no function to replace these with.
@@ -1343,12 +1348,9 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         // nvvm.abs.{i,ii}
         Expand =
             Name == "i" || Name == "ll" || Name == "bf16" || Name == "bf16x2";
-      else if (Name == "fabs.f" || Name == "fabs.ftz.f" || Name == "fabs.d")
+      else if (Name.consume_front("fabs."))
         // nvvm.fabs.{f,ftz.f,d}
-        Expand = true;
-      else if (Name == "clz.ll" || Name == "popc.ll" || Name == "h2f" ||
-               Name == "swap.lo.hi.b64")
-        Expand = true;
+        Expand = Name == "f" || Name == "ftz.f" || Name == "d";
       else if (Name.consume_front("max.") || Name.consume_front("min."))
         // nvvm.{min,max}.{i,ii,ui,ull}
         Expand = Name == "s" || Name == "i" || Name == "ll" || Name == "us" ||
@@ -1380,7 +1382,18 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         Expand = (Name.starts_with("i.") || Name.starts_with("f.") ||
                   Name.starts_with("p."));
       else
-        Expand = false;
+        Expand = StringSwitch<bool>(Name)
+                     .Case("barrier0", true)
+                     .Case("barrier.n", true)
+                     .Case("barrier.sync.cnt", true)
+                     .Case("barrier.sync", true)
+                     .Case("barrier", true)
+                     .Case("bar.sync", true)
+                     .Case("clz.ll", true)
+                     .Case("popc.ll", true)
+                     .Case("h2f", true)
+                     .Case("swap.lo.hi.b64", true)
+                     .Default(false);
 
       if (Expand) {
         NewFn = nullptr;
@@ -2478,6 +2491,21 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     MDNode *MD = MDNode::get(Builder.getContext(), {});
     LD->setMetadata(LLVMContext::MD_invariant_load, MD);
     return LD;
+  } else if (Name == "barrier0" || Name == "barrier.n" || Name == "bar.sync") {
+    Value *Arg =
+        Name.ends_with('0') ? Builder.getInt32(0) : CI->getArgOperand(0);
+    Rep = Builder.CreateIntrinsic(Intrinsic::nvvm_barrier_cta_sync_aligned_all,
+                                  {}, {Arg});
+  } else if (Name == "barrier") {
+    Rep = Builder.CreateIntrinsic(
+        Intrinsic::nvvm_barrier_cta_sync_aligned_count, {},
+        {CI->getArgOperand(0), CI->getArgOperand(1)});
+  } else if (Name == "barrier.sync") {
+    Rep = Builder.CreateIntrinsic(Intrinsic::nvvm_barrier_cta_sync_all, {},
+                                  {CI->getArgOperand(0)});
+  } else if (Name == "barrier.sync.cnt") {
+    Rep = Builder.CreateIntrinsic(Intrinsic::nvvm_barrier_cta_sync_count, {},
+                                  {CI->getArgOperand(0), CI->getArgOperand(1)});
   } else {
     Intrinsic::ID IID = shouldUpgradeNVPTXBF16Intrinsic(Name);
     if (IID != Intrinsic::not_intrinsic &&
@@ -4366,12 +4394,32 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
   return Builder.CreateBitCast(RMW, RetTy);
 }
 
-/// Helper to unwrap intrinsic call MetadataAsValue operands.
-template <typename MDType>
-static MDType *unwrapMAVOp(CallBase *CI, unsigned Op) {
-  if (MetadataAsValue *MAV = dyn_cast<MetadataAsValue>(CI->getArgOperand(Op)))
-    return dyn_cast<MDType>(MAV->getMetadata());
+/// Helper to unwrap intrinsic call MetadataAsValue operands. Return as a
+/// plain MDNode, as it's the verifier's job to check these are the correct
+/// types later.
+static MDNode *unwrapMAVOp(CallBase *CI, unsigned Op) {
+  if (Op < CI->arg_size()) {
+    if (MetadataAsValue *MAV =
+            dyn_cast<MetadataAsValue>(CI->getArgOperand(Op))) {
+      Metadata *MD = MAV->getMetadata();
+      return dyn_cast_if_present<MDNode>(MD);
+    }
+  }
   return nullptr;
+}
+
+/// Helper to unwrap Metadata MetadataAsValue operands, such as the Value field.
+static Metadata *unwrapMAVMetadataOp(CallBase *CI, unsigned Op) {
+  if (Op < CI->arg_size())
+    if (MetadataAsValue *MAV = dyn_cast<MetadataAsValue>(CI->getArgOperand(Op)))
+      return MAV->getMetadata();
+  return nullptr;
+}
+
+static MDNode *getDebugLocSafe(const Instruction *I) {
+  // The MDNode attached to this instruction might not be the correct type,
+  // as the verifier has not yet be run. Fetch it as a bare MDNode.
+  return I->getDebugLoc().getAsMDNode();
 }
 
 /// Convert debug intrinsic calls to non-instruction debug records.
@@ -4380,25 +4428,32 @@ static MDType *unwrapMAVOp(CallBase *CI, unsigned Op) {
 static void upgradeDbgIntrinsicToDbgRecord(StringRef Name, CallBase *CI) {
   DbgRecord *DR = nullptr;
   if (Name == "label") {
-    DR = new DbgLabelRecord(unwrapMAVOp<DILabel>(CI, 0), CI->getDebugLoc());
+    DR = DbgLabelRecord::createUnresolvedDbgLabelRecord(unwrapMAVOp(CI, 0),
+                                                        CI->getDebugLoc());
   } else if (Name == "assign") {
-    DR = new DbgVariableRecord(
-        unwrapMAVOp<Metadata>(CI, 0), unwrapMAVOp<DILocalVariable>(CI, 1),
-        unwrapMAVOp<DIExpression>(CI, 2), unwrapMAVOp<DIAssignID>(CI, 3),
-        unwrapMAVOp<Metadata>(CI, 4), unwrapMAVOp<DIExpression>(CI, 5),
-        CI->getDebugLoc());
+    DR = DbgVariableRecord::createUnresolvedDbgVariableRecord(
+        DbgVariableRecord::LocationType::Assign, unwrapMAVMetadataOp(CI, 0),
+        unwrapMAVOp(CI, 1), unwrapMAVOp(CI, 2), unwrapMAVOp(CI, 3),
+        unwrapMAVMetadataOp(CI, 4),
+        /*The address is a Value ref, it will be stored as a Metadata */
+        unwrapMAVOp(CI, 5), getDebugLocSafe(CI));
   } else if (Name == "declare") {
-    DR = new DbgVariableRecord(
-        unwrapMAVOp<Metadata>(CI, 0), unwrapMAVOp<DILocalVariable>(CI, 1),
-        unwrapMAVOp<DIExpression>(CI, 2), CI->getDebugLoc(),
-        DbgVariableRecord::LocationType::Declare);
+    DR = DbgVariableRecord::createUnresolvedDbgVariableRecord(
+        DbgVariableRecord::LocationType::Declare, unwrapMAVMetadataOp(CI, 0),
+        unwrapMAVOp(CI, 1), unwrapMAVOp(CI, 2), nullptr, nullptr, nullptr,
+        getDebugLocSafe(CI));
   } else if (Name == "addr") {
     // Upgrade dbg.addr to dbg.value with DW_OP_deref.
-    DIExpression *Expr = unwrapMAVOp<DIExpression>(CI, 2);
-    Expr = DIExpression::append(Expr, dwarf::DW_OP_deref);
-    DR = new DbgVariableRecord(unwrapMAVOp<Metadata>(CI, 0),
-                               unwrapMAVOp<DILocalVariable>(CI, 1), Expr,
-                               CI->getDebugLoc());
+    MDNode *ExprNode = unwrapMAVOp(CI, 2);
+    // Don't try to add something to the expression if it's not an expression.
+    // Instead, allow the verifier to fail later.
+    if (DIExpression *Expr = dyn_cast<DIExpression>(ExprNode)) {
+      ExprNode = DIExpression::append(Expr, dwarf::DW_OP_deref);
+    }
+    DR = DbgVariableRecord::createUnresolvedDbgVariableRecord(
+        DbgVariableRecord::LocationType::Value, unwrapMAVMetadataOp(CI, 0),
+        unwrapMAVOp(CI, 1), ExprNode, nullptr, nullptr, nullptr,
+        getDebugLocSafe(CI));
   } else if (Name == "value") {
     // An old version of dbg.value had an extra offset argument.
     unsigned VarOp = 1;
@@ -4411,9 +4466,10 @@ static void upgradeDbgIntrinsicToDbgRecord(StringRef Name, CallBase *CI) {
       VarOp = 2;
       ExprOp = 3;
     }
-    DR = new DbgVariableRecord(
-        unwrapMAVOp<Metadata>(CI, 0), unwrapMAVOp<DILocalVariable>(CI, VarOp),
-        unwrapMAVOp<DIExpression>(CI, ExprOp), CI->getDebugLoc());
+    DR = DbgVariableRecord::createUnresolvedDbgVariableRecord(
+        DbgVariableRecord::LocationType::Value, unwrapMAVMetadataOp(CI, 0),
+        unwrapMAVOp(CI, VarOp), unwrapMAVOp(CI, ExprOp), nullptr, nullptr,
+        nullptr, getDebugLocSafe(CI));
   }
   assert(DR && "Unhandled intrinsic kind in upgrade to DbgRecord");
   CI->getParent()->insertDbgRecordBefore(DR, CI->getIterator());
@@ -4434,7 +4490,6 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
   Builder.SetInsertPoint(CI->getParent(), CI->getIterator());
 
   if (!NewFn) {
-    bool FallthroughToDefaultUpgrade = false;
     // Get the Function's name.
     StringRef Name = F->getName();
 
@@ -4462,29 +4517,15 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     } else if (IsAMDGCN) {
       Rep = upgradeAMDGCNIntrinsicCall(Name, CI, F, Builder);
     } else if (IsDbg) {
-      // We might have decided we don't want the new format after all between
-      // first requesting the upgrade and now; skip the conversion if that is
-      // the case, and check here to see if the intrinsic needs to be upgraded
-      // normally.
-      if (!CI->getModule()->IsNewDbgInfoFormat) {
-        bool NeedsUpgrade =
-            upgradeIntrinsicFunction1(CI->getCalledFunction(), NewFn, false);
-        if (!NeedsUpgrade)
-          return;
-        FallthroughToDefaultUpgrade = true;
-      } else {
-        upgradeDbgIntrinsicToDbgRecord(Name, CI);
-      }
+      upgradeDbgIntrinsicToDbgRecord(Name, CI);
     } else {
       llvm_unreachable("Unknown function for CallBase upgrade.");
     }
 
-    if (!FallthroughToDefaultUpgrade) {
-      if (Rep)
-        CI->replaceAllUsesWith(Rep);
-      CI->eraseFromParent();
-      return;
-    }
+    if (Rep)
+      CI->replaceAllUsesWith(Rep);
+    CI->eraseFromParent();
+    return;
   }
 
   const auto &DefaultCase = [&]() -> void {

@@ -132,8 +132,7 @@ struct AArch64CollectLOH : public MachineFunctionPass {
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
   StringRef getPassName() const override { return AARCH64_COLLECT_LOH_NAME; }
@@ -233,7 +232,7 @@ static bool isCandidateLoad(const MachineInstr &MI) {
   }
 }
 
-/// Check whether the given instruction can load a litteral.
+/// Check whether the given instruction can load a literal.
 static bool supportLoadFromLiteral(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
@@ -248,7 +247,7 @@ static bool supportLoadFromLiteral(const MachineInstr &MI) {
   }
 }
 
-/// Number of GPR registers traked by mapRegToGPRIndex()
+/// Number of GPR registers tracked by mapRegToGPRIndex()
 static const unsigned N_GPR_REGS = 31;
 /// Map register number to index from 0-30.
 static int mapRegToGPRIndex(MCRegister Reg) {

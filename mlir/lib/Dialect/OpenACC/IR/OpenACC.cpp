@@ -1079,11 +1079,11 @@ static LogicalResult verifyDeviceTypeAndSegmentCountMatch(
 
 LogicalResult acc::ParallelOp::verify() {
   if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
-          *this, getPrivatizations(), getPrivateOperands(), "private",
+          *this, getPrivatizationRecipes(), getPrivateOperands(), "private",
           "privatizations", /*checkOperandType=*/false)))
     return failure();
   if (failed(checkSymOperandList<mlir::acc::FirstprivateRecipeOp>(
-          *this, getFirstprivatizations(), getFirstprivateOperands(),
+          *this, getFirstprivatizationRecipes(), getFirstprivateOperands(),
           "firstprivate", "firstprivatizations", /*checkOperandType=*/false)))
     return failure();
   if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
@@ -1870,11 +1870,11 @@ mlir::Value SerialOp::getWaitDevnum(mlir::acc::DeviceType deviceType) {
 
 LogicalResult acc::SerialOp::verify() {
   if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
-          *this, getPrivatizations(), getPrivateOperands(), "private",
+          *this, getPrivatizationRecipes(), getPrivateOperands(), "private",
           "privatizations", /*checkOperandType=*/false)))
     return failure();
   if (failed(checkSymOperandList<mlir::acc::FirstprivateRecipeOp>(
-          *this, getFirstprivatizations(), getFirstprivateOperands(),
+          *this, getFirstprivatizationRecipes(), getFirstprivateOperands(),
           "firstprivate", "firstprivatizations", /*checkOperandType=*/false)))
     return failure();
   if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
@@ -2488,7 +2488,7 @@ LogicalResult acc::LoopOp::verify() {
   }
 
   if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
-          *this, getPrivatizations(), getPrivateOperands(), "private",
+          *this, getPrivatizationRecipes(), getPrivateOperands(), "private",
           "privatizations", false)))
     return failure();
 
@@ -3819,4 +3819,15 @@ mlir::acc::getMutableDataOperands(mlir::Operation *accOp) {
               [&](auto entry) { return entry.getDataClauseOperandsMutable(); })
           .Default([&](mlir::Operation *) { return nullptr; })};
   return dataOperands;
+}
+
+mlir::Operation *mlir::acc::getEnclosingComputeOp(mlir::Region &region) {
+  mlir::Operation *parentOp = region.getParentOp();
+  while (parentOp) {
+    if (mlir::isa<ACC_COMPUTE_CONSTRUCT_OPS>(parentOp)) {
+      return parentOp;
+    }
+    parentOp = parentOp->getParentOp();
+  }
+  return nullptr;
 }

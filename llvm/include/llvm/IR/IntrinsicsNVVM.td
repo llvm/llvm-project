@@ -128,6 +128,12 @@
 //   * llvm.nvvm.swap.lo.hi.b64      --> llvm.fshl(x, x, 32)
 //   * llvm.nvvm.atomic.load.inc.32  --> atomicrmw uinc_wrap
 //   * llvm.nvvm.atomic.load.dec.32  --> atomicrmw udec_wrap
+// * llvm.nvvm.barrier0              --> llvm.nvvm.barrier.cta.sync.aligned.all(0)
+// * llvm.nvvm.barrier.n             --> llvm.nvvm.barrier.cta.sync.aligned.all(x)
+// * llvm.nvvm.bar.sync              --> llvm.nvvm.barrier.cta.sync.aligned.all(x)
+// * llvm.nvvm.barrier               --> llvm.nvvm.barrier.cta.sync.aligned(x, y)
+// * llvm.nvvm.barrier.sync          --> llvm.nvvm.barrier.cta.sync.all(x)
+// * llvm.nvvm.barrier.sync.cnt      --> llvm.nvvm.barrier.cta.sync(x, y)
 
 def llvm_global_ptr_ty  : LLVMQualPointerType<1>;         // (global)ptr
 def llvm_shared_ptr_ty  : LLVMQualPointerType<3>;         // (shared)ptr
@@ -739,14 +745,34 @@ class NVVMBuiltin :
 }
 
 let TargetPrefix = "nvvm" in {
-  def int_nvvm_prmt : NVVMBuiltin,
-      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-        [IntrNoMem, IntrSpeculatable]>;
+
+  // PRMT - permute
+
+  let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
+    def int_nvvm_prmt : NVVMBuiltin,
+      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
+
+    foreach mode = ["f4e", "b4e"] in
+      def int_nvvm_prmt_ # mode :
+          DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
+
+    // Note: these variants also have 2 source operands but only one will ever
+    // be used so we eliminate the other operand in the IR (0 is used as the
+    // placeholder in the backend).
+    foreach mode = ["rc8", "ecl", "ecr", "rc16"] in
+      def int_nvvm_prmt_ # mode :
+          DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty]>;
+  }
 
   def int_nvvm_nanosleep : NVVMBuiltin,
       DefaultAttrsIntrinsic<[], [llvm_i32_ty],
                             [IntrConvergent, IntrNoMem, IntrHasSideEffects]>;
 
+  // Performance Monitor Events (pm events) intrinsics
+  def int_nvvm_pm_event_mask : NVVMBuiltin,
+      DefaultAttrsIntrinsic<[], [llvm_i16_ty],
+                [IntrConvergent, IntrNoMem, IntrHasSideEffects,
+                 ImmArg<ArgIndex<0>>]>;
 //
 // Min Max
 //
@@ -1065,7 +1091,7 @@ let TargetPrefix = "nvvm" in {
     def int_nvvm_fsh # direction # _clamp :
       DefaultAttrsIntrinsic<[llvm_anyint_ty],
         [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
-        [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
+        [IntrNoMem, IntrSpeculatable]>;
 
 //
 // FLO - Find Leading One
@@ -1074,7 +1100,7 @@ let TargetPrefix = "nvvm" in {
     def int_nvvm_flo_ # sign :
       DefaultAttrsIntrinsic<[llvm_i32_ty],
         [llvm_anyint_ty, llvm_i1_ty],
-        [IntrNoMem, IntrSpeculatable, IntrWillReturn, ImmArg<ArgIndex<1>>]>;
+        [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>]>;
 
 //
 // szext
@@ -1263,18 +1289,6 @@ let TargetPrefix = "nvvm" in {
   defm int_nvvm_atomic_cas_gen_i  : PTXAtomicWithScope3<llvm_anyint_ty>;
 
 // Bar.Sync
-
-  // The builtin for "bar.sync 0" is called __syncthreads.  Unlike most of the
-  // intrinsics in this file, this one is a user-facing API.
-  def int_nvvm_barrier0 : ClangBuiltin<"__syncthreads">,
-      Intrinsic<[], [], [IntrConvergent, IntrNoCallback]>;
-  // Synchronize all threads in the CTA at barrier 'n'.
-  def int_nvvm_barrier_n : ClangBuiltin<"__nvvm_bar_n">,
-      Intrinsic<[], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
-  // Synchronize 'm', a multiple of warp size, (arg 2) threads in
-  // the CTA at barrier 'n' (arg 1).
-  def int_nvvm_barrier : ClangBuiltin<"__nvvm_bar">,
-      Intrinsic<[], [llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
   def int_nvvm_barrier0_popc : ClangBuiltin<"__nvvm_bar0_popc">,
       Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
   def int_nvvm_barrier0_and : ClangBuiltin<"__nvvm_bar0_and">,
@@ -1282,16 +1296,21 @@ let TargetPrefix = "nvvm" in {
   def int_nvvm_barrier0_or : ClangBuiltin<"__nvvm_bar0_or">,
       Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
 
-  def int_nvvm_bar_sync : NVVMBuiltin,
-      Intrinsic<[], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
   def int_nvvm_bar_warp_sync : NVVMBuiltin,
       Intrinsic<[], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
 
-  // barrier.sync id[, cnt]
-  def int_nvvm_barrier_sync : NVVMBuiltin,
-      Intrinsic<[], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
-  def int_nvvm_barrier_sync_cnt : NVVMBuiltin,
-      Intrinsic<[], [llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
+  // barrier{.cta}.sync{.aligned}      a{, b};
+  // barrier{.cta}.arrive{.aligned}    a, b;
+  let IntrProperties = [IntrConvergent, IntrNoCallback] in {
+    foreach align = ["", "_aligned"] in {
+      def int_nvvm_barrier_cta_sync # align # _all :
+          Intrinsic<[], [llvm_i32_ty]>;
+      def int_nvvm_barrier_cta_sync # align # _count :
+          Intrinsic<[], [llvm_i32_ty, llvm_i32_ty]>;
+      def int_nvvm_barrier_cta_arrive # align # _count :
+          Intrinsic<[], [llvm_i32_ty, llvm_i32_ty]>;
+    }
+  }
 
   // barrier.cluster.[wait, arrive, arrive.relaxed]
   def int_nvvm_barrier_cluster_arrive :
@@ -2277,4 +2296,33 @@ let IntrProperties = [IntrArgMemOnly, IntrWriteMem, WriteOnly<ArgIndex<0>>,
   def int_nvvm_st_bulk_shared_cta :
       DefaultAttrsIntrinsic<[], [llvm_shared_ptr_ty, llvm_i64_ty, llvm_i64_ty]>;
 }
+
+//
+// clusterlaunchcontorl Intrinsics
+//
+
+// clusterlaunchcontrol.try_cancel
+
+def int_nvvm_clusterlaunchcontrol_try_cancel_async_shared
+    : DefaultAttrsIntrinsic<[], [llvm_shared_ptr_ty, llvm_shared_ptr_ty],
+                [IntrHasSideEffects, IntrArgMemOnly],
+                "llvm.nvvm.clusterlaunchcontrol.try_cancel.async.shared">;
+
+def int_nvvm_clusterlaunchcontrol_try_cancel_async_multicast_shared
+    : DefaultAttrsIntrinsic<[], [llvm_shared_ptr_ty, llvm_shared_ptr_ty],
+                [IntrHasSideEffects, IntrArgMemOnly],
+                "llvm.nvvm.clusterlaunchcontrol.try_cancel.async.multicast.shared">;
+
+// clusterlaunchcontrol.query_cancel.is_canceled
+
+def int_nvvm_clusterlaunchcontrol_query_cancel_is_canceled
+    : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_i128_ty], [IntrNoMem, IntrSpeculatable],
+                            "llvm.nvvm.clusterlaunchcontrol.query_cancel.is_canceled">;
+
+foreach dim = ["x", "y", "z"] in {
+def int_nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_ # dim
+    : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i128_ty], [IntrNoMem, IntrSpeculatable],
+                            "llvm.nvvm.clusterlaunchcontrol.query_cancel.get_first_ctaid." # dim>;
+}
+
 } // let TargetPrefix = "nvvm"

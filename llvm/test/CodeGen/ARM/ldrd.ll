@@ -16,7 +16,7 @@ declare ptr @get_ptr()
 declare void @use_i64(i64 %v)
 
 define void @test_ldrd(i64 %a) nounwind readonly "frame-pointer"="all" {
-; CHECK-LABEL: test_ldrd:
+; CHECK-LABEL: test_ldrd:{{.*$}}
 ; NORMAL: bl{{x?}} _get_ptr
 ; A8: ldrd r0, r1, [r0]
 ; Cortex-M3 errata 602117: LDRD with base in list may result in incorrect base
@@ -138,7 +138,7 @@ define void @strd_spill_ldrd_reload(i32 %v0, i32 %v1) "frame-pointer"="all" {
 
 declare void @extfunc2(ptr, i32, i32)
 
-; CHECK-LABEL: ldrd_postupdate_dec:
+; CHECK-LABEL: ldrd_postupdate_dec:{{.*$}}
 ; NORMAL: ldrd r1, r2, [r0], #-8
 ; CONSERVATIVE-NOT: ldrd
 ; CHECK: bl{{x?}} _extfunc
@@ -151,7 +151,7 @@ define void @ldrd_postupdate_dec(ptr %p0) "frame-pointer"="all" {
   ret void
 }
 
-; CHECK-LABEL: ldrd_postupdate_inc:
+; CHECK-LABEL: ldrd_postupdate_inc:{{.*$}}
 ; NORMAL: ldrd r1, r2, [r0], #8
 ; CONSERVATIVE-NOT: ldrd
 ; CHECK: bl{{x?}} _extfunc
@@ -164,7 +164,7 @@ define void @ldrd_postupdate_inc(ptr %p0) "frame-pointer"="all" {
   ret void
 }
 
-; CHECK-LABEL: strd_postupdate_dec:
+; CHECK-LABEL: strd_postupdate_dec:{{.*$}}
 ; NORMAL: strd r1, r2, [r0], #-8
 ; CONSERVATIVE-NOT: strd
 ; CHECK: bx lr
@@ -176,7 +176,7 @@ define ptr @strd_postupdate_dec(ptr %p0, i32 %v0, i32 %v1) "frame-pointer"="none
   ret ptr %p1
 }
 
-; CHECK-LABEL: strd_postupdate_inc:
+; CHECK-LABEL: strd_postupdate_inc:{{.*$}}
 ; NORMAL: strd r1, r2, [r0], #8
 ; CONSERVATIVE-NOT: strd
 ; CHECK: bx lr
@@ -188,7 +188,7 @@ define ptr @strd_postupdate_inc(ptr %p0, i32 %v0, i32 %v1) "frame-pointer"="none
   ret ptr %p1
 }
 
-; CHECK-LABEL: ldrd_strd_aa:
+; CHECK-LABEL: ldrd_strd_aa:{{.*$}}
 ; NORMAL: ldrd [[TMP1:r[0-9]]], [[TMP2:r[0-9]]],
 ; NORMAL: strd [[TMP1]], [[TMP2]],
 ; CONSERVATIVE-NOT: ldrd

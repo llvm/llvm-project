@@ -245,8 +245,8 @@ inline _LIBCPP_HIDE_FROM_ABI constexpr auto to_address(_Tp* __p) noexcept {
 }
 
 template <class _Pointer>
-inline _LIBCPP_HIDE_FROM_ABI constexpr auto
-to_address(const _Pointer& __p) noexcept -> decltype(std::__to_address(__p)) {
+inline _LIBCPP_HIDE_FROM_ABI constexpr auto to_address(const _Pointer& __p) noexcept
+    -> decltype(std::__to_address(__p)) {
   return std::__to_address(__p);
 }
 #endif
@@ -301,6 +301,18 @@ concept __resettable_smart_pointer_with_args = requires(_Smart __s, _Pointer __p
 };
 
 #endif
+
+// This function ensures safe conversions between fancy pointers at compile-time, where we avoid casts from/to
+// `__void_pointer` by obtaining the underlying raw pointer from the fancy pointer using `std::to_address`,
+// then dereferencing it to retrieve the pointed-to object, and finally constructing the target fancy pointer
+// to that object using the `std::pointer_traits<>::pinter_to` function.
+template <class _PtrTo, class _PtrFrom>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI _PtrTo __static_fancy_pointer_cast(const _PtrFrom& __p) {
+  using __ptr_traits   = pointer_traits<_PtrTo>;
+  using __element_type = typename __ptr_traits::element_type;
+  return __p ? __ptr_traits::pointer_to(*static_cast<__element_type*>(std::addressof(*__p)))
+             : static_cast<_PtrTo>(nullptr);
+}
 
 _LIBCPP_END_NAMESPACE_STD
 

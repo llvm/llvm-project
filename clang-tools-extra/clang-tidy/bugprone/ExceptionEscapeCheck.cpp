@@ -8,9 +8,7 @@
 
 #include "ExceptionEscapeCheck.h"
 
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringSet.h"
 
 using namespace clang::ast_matchers;
