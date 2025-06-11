@@ -318,20 +318,19 @@ struct WgToSgPrefetchNdOp : public OpConversionPattern<xegpu::PrefetchNdOp> {
 };
 
 // This pattern transforms elementwise ops (unary/binary) in math/arith dialect
-template <typename Op>
-struct WgToSgElementwiseOp : public OpConversionPattern<Op> {
-  using OpConversionPattern<Op>::OpConversionPattern;
-  using OneToNOpAdaptor = typename OpConversionPattern<Op>::OneToNOpAdaptor;
+struct WgToSgElementwiseOp : public ConversionPattern {
+  WgToSgElementwiseOp(MLIRContext *ctx)
+      : ConversionPattern(MatchAnyOpTypeTag(), /*benefit=*/1, ctx) {}
 
   LogicalResult
-  matchAndRewrite(Op op, OneToNOpAdaptor adaptor,
+  matchAndRewrite(Operation *op, ArrayRef<ValueRange> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    // All operands/results must be 1D or 2D vectors
-    auto resultType = dyn_cast<VectorType>(op.getResult().getType());
-    if (!resultType || (resultType.getRank() != 1 && resultType.getRank() != 2))
-      return rewriter.notifyMatchFailure(
-          op, "Result type is not a 1D or 2D vector");
+    // Only match ops with elementwise trait
+    if (!OpTrait::hasElementwiseMappableTraits(op))
+      return rewriter.notifyMatchFailure(op, "Not an elementwise op");
 
+    // All operands/results must be 1D or 2D vectors
+    auto resultType = dyn_cast<VectorType>(op->getResult(0).getType());
     ArrayRef<int64_t> shape = resultType.getShape();
     for (Value operand : op->getOperands()) {
       auto operandType = dyn_cast<VectorType>(operand.getType());
@@ -362,38 +361,32 @@ struct WgToSgElementwiseOp : public OpConversionPattern<Op> {
       }
     }
 
-    size_t numVariants = adaptor.getOperands().empty()
-                             ? 0
-                             : adaptor.getOperands().front().size();
-    for (auto &operandVec : adaptor.getOperands())
+    size_t numVariants = operands.empty() ? 0 : operands.front().size();
+    for (auto &operandVec : operands)
       if (operandVec.size() != numVariants)
         return rewriter.notifyMatchFailure(
             op, "Operand lists have mismatched sizes");
 
     SmallVector<Value> newResults;
-
-    auto origResultType = dyn_cast<VectorType>(op->getResult(0).getType());
     VectorType newResultType =
-        origResultType
-            ? VectorType::get(sgShape, origResultType.getElementType())
-            : VectorType::get(sgShape, resultType.getElementType());
+        VectorType::get(sgShape, resultType.getElementType());
 
     for (size_t i = 0; i < numVariants; ++i) {
-      SmallVector<Value> operands;
-      for (auto &operandVec : adaptor.getOperands())
-        operands.push_back(operandVec[i]);
+      SmallVector<Value> opOperands;
+      for (auto &operandVec : operands)
+        opOperands.push_back(operandVec[i]);
 
-      auto newOp = rewriter.create<Op>(op.getLoc(), newResultType, operands);
-
-      // Copy all attributes except "layout", and add "layout_result_0" with
-      // sgLayout/data dropped
+      OperationState state(op->getLoc(), op->getName());
+      state.addOperands(opOperands);
+      state.addTypes(newResultType);
+      // Copy all attributes except "layout"
       for (auto attr : op->getAttrs()) {
         if (attr.getName() != "layout")
-          newOp->setAttr(attr.getName(), attr.getValue());
+          state.addAttribute(attr.getName(), attr.getValue());
       }
-      newOp->setAttr("layout_result_0", layout.dropSgLayoutAndData());
-
-      newResults.push_back(newOp.getResult());
+      state.addAttribute("layout_result_0", layout.dropSgLayoutAndData());
+      Operation *newOp = rewriter.create(state);
+      newResults.push_back(newOp->getResult(0));
     }
 
     rewriter.replaceOpWithMultiple(op, {newResults});
@@ -407,59 +400,8 @@ namespace mlir {
 namespace xegpu {
 void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
   patterns.add<WgToSgCreateNdOp, WgToSgLoadNdOp, WgToSgStoreNdOp,
-               WgToSgUpdateNdOffsetOp, WgToSgDpasOp, WgToSgPrefetchNdOp>(
-      patterns.getContext());
-  // Add elementwise operations that can be distributed to subgroups
-  patterns.add<
-      WgToSgElementwiseOp<arith::AddFOp>, WgToSgElementwiseOp<arith::SubFOp>,
-      WgToSgElementwiseOp<math::ExpOp>, WgToSgElementwiseOp<math::SqrtOp>,
-      WgToSgElementwiseOp<math::AbsFOp>, WgToSgElementwiseOp<math::CosOp>,
-      WgToSgElementwiseOp<math::CoshOp>, WgToSgElementwiseOp<math::AcosOp>,
-      WgToSgElementwiseOp<math::AcoshOp>, WgToSgElementwiseOp<math::SinOp>,
-      WgToSgElementwiseOp<math::SinhOp>, WgToSgElementwiseOp<math::AsinOp>,
-      WgToSgElementwiseOp<math::AsinhOp>, WgToSgElementwiseOp<math::TanOp>,
-      WgToSgElementwiseOp<math::TanhOp>, WgToSgElementwiseOp<math::AtanOp>,
-      WgToSgElementwiseOp<math::Atan2Op>, WgToSgElementwiseOp<math::AtanhOp>,
-      WgToSgElementwiseOp<math::ErfOp>, WgToSgElementwiseOp<math::LogOp>,
-      WgToSgElementwiseOp<math::Log2Op>, WgToSgElementwiseOp<math::FloorOp>,
-      WgToSgElementwiseOp<math::CeilOp>, WgToSgElementwiseOp<math::PowFOp>,
-      WgToSgElementwiseOp<math::RsqrtOp>, WgToSgElementwiseOp<arith::NegFOp>,
-      WgToSgElementwiseOp<arith::AddIOp>, WgToSgElementwiseOp<arith::SubIOp>,
-      WgToSgElementwiseOp<arith::MulFOp>, WgToSgElementwiseOp<arith::MulIOp>,
-      WgToSgElementwiseOp<arith::ShLIOp>, WgToSgElementwiseOp<arith::ShRSIOp>,
-      WgToSgElementwiseOp<arith::ShRUIOp>, WgToSgElementwiseOp<arith::DivFOp>,
-      WgToSgElementwiseOp<arith::DivSIOp>, WgToSgElementwiseOp<arith::DivUIOp>,
-      WgToSgElementwiseOp<arith::MaximumFOp>,
-      WgToSgElementwiseOp<arith::MinimumFOp>,
-      WgToSgElementwiseOp<arith::RemSIOp>, WgToSgElementwiseOp<arith::RemUIOp>,
-      WgToSgElementwiseOp<arith::TruncFOp>,
-      WgToSgElementwiseOp<arith::TruncIOp>, WgToSgElementwiseOp<arith::ExtFOp>,
-      WgToSgElementwiseOp<arith::ExtSIOp>, WgToSgElementwiseOp<arith::ExtUIOp>,
-      WgToSgElementwiseOp<arith::SIToFPOp>,
-      WgToSgElementwiseOp<arith::UIToFPOp>,
-      WgToSgElementwiseOp<arith::FPToSIOp>,
-      WgToSgElementwiseOp<arith::FPToUIOp>,
-      WgToSgElementwiseOp<arith::IndexCastUIOp>,
-      WgToSgElementwiseOp<arith::IndexCastOp>,
-      WgToSgElementwiseOp<arith::BitcastOp>, WgToSgElementwiseOp<arith::CmpIOp>,
-      WgToSgElementwiseOp<arith::CmpFOp>, WgToSgElementwiseOp<arith::AndIOp>,
-      WgToSgElementwiseOp<arith::CeilDivSIOp>,
-      WgToSgElementwiseOp<arith::CeilDivUIOp>,
-      WgToSgElementwiseOp<arith::FloorDivSIOp>,
-      WgToSgElementwiseOp<arith::MaxNumFOp>,
-      WgToSgElementwiseOp<arith::MaxSIOp>, WgToSgElementwiseOp<arith::MaxUIOp>,
-      WgToSgElementwiseOp<arith::MinNumFOp>,
-      WgToSgElementwiseOp<arith::MinSIOp>, WgToSgElementwiseOp<arith::MinUIOp>,
-      WgToSgElementwiseOp<arith::OrIOp>, WgToSgElementwiseOp<arith::RemFOp>,
-      WgToSgElementwiseOp<arith::XOrIOp>, WgToSgElementwiseOp<math::AbsIOp>,
-      WgToSgElementwiseOp<math::CbrtOp>, WgToSgElementwiseOp<math::CopySignOp>,
-      WgToSgElementwiseOp<math::CtPopOp>, WgToSgElementwiseOp<math::ErfcOp>,
-      WgToSgElementwiseOp<math::Exp2Op>, WgToSgElementwiseOp<math::ExpM1Op>,
-      WgToSgElementwiseOp<math::FPowIOp>, WgToSgElementwiseOp<math::IPowIOp>,
-      WgToSgElementwiseOp<math::Log10Op>, WgToSgElementwiseOp<math::Log1pOp>,
-      WgToSgElementwiseOp<math::RoundOp>,
-      WgToSgElementwiseOp<math::RoundEvenOp>,
-      WgToSgElementwiseOp<math::TruncOp>>(patterns.getContext());
+               WgToSgUpdateNdOffsetOp, WgToSgDpasOp, WgToSgPrefetchNdOp,
+               WgToSgElementwiseOp>(patterns.getContext());
 }
 } // namespace xegpu
 } // namespace mlir
@@ -508,17 +450,16 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
   });
   target.addDynamicallyLegalDialect<math::MathDialect, arith::ArithDialect>(
       [=](Operation *op) -> std::optional<bool> {
-        // Handle unary and binary operations
-        if (op->getNumOperands() < 1 || op->getNumOperands() > 2)
+        // Only handle elementwise mappable ops
+        if (!OpTrait::hasElementwiseMappableTraits(op))
           return true;
 
-        // check if input and output are vectors
         VectorType resultType =
             dyn_cast<VectorType>(op->getResult(0).getType());
         if (!resultType || resultType.getRank() != 2)
           return true;
 
-        // Check if all operands are vectors
+        // Check if all operands are vectors of the same shape
         for (Value operand : op->getOperands()) {
           VectorType operandType = dyn_cast<VectorType>(operand.getType());
           if (!operandType || operandType.getRank() != 2 ||
