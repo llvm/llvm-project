@@ -1583,6 +1583,20 @@ bool IRTranslator::translateCast(unsigned Opcode, const User &U,
   return true;
 }
 
+bool IRTranslator::translatePtrToAddr(const User &U,
+                                      MachineIRBuilder &MIRBuilder) {
+  Register Op = getOrCreateVReg(*U.getOperand(0));
+  Type *PtrTy = U.getOperand(0)->getType();
+  LLT AddrTy = getLLTForType(*DL->getAddressType(PtrTy), *DL);
+  auto IntPtrTy = getLLTForType(*DL->getIntPtrType(PtrTy), *DL);
+  auto PtrToInt = MIRBuilder.buildPtrToInt(IntPtrTy, Op);
+  auto Addr = PtrToInt;
+  if (AddrTy != IntPtrTy)
+    Addr = MIRBuilder.buildTrunc(AddrTy, PtrToInt.getReg(0));
+  MIRBuilder.buildZExtOrTrunc(getOrCreateVReg(U), Addr.getReg(0));
+  return true;
+}
+
 bool IRTranslator::translateGetElementPtr(const User &U,
                                           MachineIRBuilder &MIRBuilder) {
   Value &Op0 = *U.getOperand(0);

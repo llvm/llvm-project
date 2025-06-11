@@ -52,9 +52,9 @@ define <2 x i64> @ptrtoaddr_vec(ptr addrspace(8) %ignored, <2 x ptr addrspace(8)
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v4
-; CHECK-NEXT:    v_mov_b32_e32 v1, v5
+; CHECK-NEXT:    v_and_b32_e32 v1, 0xffff, v5
+; CHECK-NEXT:    v_and_b32_e32 v3, 0xffff, v9
 ; CHECK-NEXT:    v_mov_b32_e32 v2, v8
-; CHECK-NEXT:    v_mov_b32_e32 v3, v9
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %ret = ptrtoaddr <2 x ptr addrspace(8)> %ptr to <2 x i64>
   ret <2 x i64> %ret
@@ -78,15 +78,14 @@ define zeroext i256 @ptrtoint_ext(ptr addrspace(8) %ignored, ptr addrspace(8) %p
 }
 
 ;; Check that we extend the offset to i256 instead of reinterpreting all bits.
-;; FIXME: this is wrong, we are removing the trunc to i48:
 define zeroext i256 @ptrtoaddr_ext(ptr addrspace(8) %ignored, ptr addrspace(8) %ptr) {
 ; CHECK-LABEL: ptrtoaddr_ext:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v4
-; CHECK-NEXT:    v_mov_b32_e32 v1, v5
-; CHECK-NEXT:    v_mov_b32_e32 v2, v6
-; CHECK-NEXT:    v_mov_b32_e32 v3, v7
+; CHECK-NEXT:    v_and_b32_e32 v1, 0xffff, v5
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    v_mov_b32_e32 v3, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v4, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v5, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v6, 0
