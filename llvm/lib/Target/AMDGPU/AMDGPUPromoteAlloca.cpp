@@ -821,23 +821,34 @@ static BasicBlock::iterator skipToNonAllocaInsertPt(BasicBlock &BB,
 /// Get the underlying type of a homogeneous aggregate type, or nullptr if the
 /// type is non-homogeneous.
 static Type *getHomogeneousType(Type *Ty) {
-  if (auto *VectorTy = dyn_cast<FixedVectorType>(Ty))
-    return VectorTy->getElementType();
-  if (auto *ArrayTy = dyn_cast<ArrayType>(Ty))
-    return getHomogeneousType(ArrayTy->getElementType());
-  if (auto *StructTy = dyn_cast<StructType>(Ty)) {
-    if (StructTy->getNumElements() == 0)
+  Type *ElemTy = nullptr;
+  SmallVector<Type *> WorkList;
+  WorkList.push_back(Ty);
+  while (!WorkList.empty()) {
+    Type *CurTy = WorkList.pop_back_val();
+
+    // Check if the current type is an aggregate type.
+    if (auto *VectorTy = dyn_cast<FixedVectorType>(CurTy)) {
+      WorkList.push_back(VectorTy->getElementType());
+      continue;
+    }
+    if (auto *ArrayTy = dyn_cast<ArrayType>(CurTy)) {
+      WorkList.push_back(ArrayTy->getElementType());
+      continue;
+    }
+    if (auto *StructTy = dyn_cast<StructType>(CurTy)) {
+      WorkList.append(StructTy->element_begin(), StructTy->element_end());
+      continue;
+    }
+
+    // If not, it must be the same as all other non-aggregate types.
+    if (!ElemTy)
+      ElemTy = CurTy;
+    else if (ElemTy != CurTy)
       return nullptr;
-
-    auto *Iter = StructTy->element_begin();
-    Type *HTy = getHomogeneousType(*Iter);
-    for (; Iter != StructTy->element_end(); ++Iter)
-      if (getHomogeneousType(*Iter) != HTy)
-        return nullptr;
-
-    return HTy;
   }
-  return Ty;
+
+  return ElemTy;
 }
 
 // FIXME: Should try to pick the most likely to be profitable allocas first.

@@ -228,6 +228,21 @@ define void @test_s3i8s1i8v2i8(i64 %idx) {
   ret void
 }
 
+define void @test_s3i8i8s0(i64 %idx) {
+; CHECK-LABEL: define void @test_s3i8i8s0(
+; CHECK-SAME: i64 [[IDX:%.*]]) {
+; CHECK-NEXT:    [[STACK:%.*]] = freeze <2 x i8> poison
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i8> [[STACK]], i64 [[IDX]]
+; CHECK-NEXT:    call void @clobber_i8(i8 [[TMP1]])
+; CHECK-NEXT:    ret void
+;
+  %stack = alloca {i8, i8, {}}, align 4, addrspace(5)
+  %ptr = getelementptr inbounds i8, ptr addrspace(5) %stack, i64 %idx
+  %val = load i8, ptr addrspace(5) %ptr, align 1
+  call void @clobber_i8(i8 %val)
+  ret void
+}
+
 ; heterogeneous element types are not supported
 define void @test_heterogeneous(i64 %idx) {
 ; CHECK-LABEL: define void @test_heterogeneous(
@@ -245,9 +260,26 @@ define void @test_heterogeneous(i64 %idx) {
   ret void
 }
 
-; empty structs are not supported
+; empty types are not supported
 define void @test_empty(i64 %idx) {
 ; CHECK-LABEL: define void @test_empty(
+; CHECK-SAME: i64 [[IDX:%.*]]) {
+; CHECK-NEXT:    [[STACK:%.*]] = alloca {}, align 4, addrspace(5)
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, ptr addrspace(5) [[STACK]], i64 [[IDX]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i8, ptr addrspace(5) [[PTR]], align 1
+; CHECK-NEXT:    call void @clobber_i8(i8 [[VAL]])
+; CHECK-NEXT:    ret void
+;
+  %stack = alloca {}, align 4, addrspace(5)
+  %ptr = getelementptr inbounds i8, ptr addrspace(5) %stack, i64 %idx
+  %val = load i8, ptr addrspace(5) %ptr, align 1
+  call void @clobber_i8(i8 %val)
+  ret void
+}
+
+; singleton types are not supported
+define void @test_singleton(i64 %idx) {
+; CHECK-LABEL: define void @test_singleton(
 ; CHECK-SAME: i64 [[IDX:%.*]]) {
 ; CHECK-NEXT:    [[STACK:%.*]] = alloca { i8, {} }, align 4, addrspace(5)
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, ptr addrspace(5) [[STACK]], i64 [[IDX]]
