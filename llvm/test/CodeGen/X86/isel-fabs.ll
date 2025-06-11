@@ -6,7 +6,7 @@
 ; RUN: llc < %s -mtriple=i686-- -mattr=-x87,+sse,+sse2 -fast-isel -fast-isel-abort=1 | FileCheck %s --check-prefixes=FASTISEL-X86
 ; RUN: llc < %s -mtriple=i686-- -mattr=-x87,+sse,+sse2 -global-isel -global-isel-abort=1 | FileCheck %s --check-prefixes=GISEL-X86
 
-define float @test_float_abs(float %arg) {
+define float @test_float_abs(float %arg) nounwind {
 ; X64-LABEL: test_float_abs:
 ; X64:       # %bb.0:
 ; X64-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -42,7 +42,7 @@ define float @test_float_abs(float %arg) {
     ret float %abs
 }
 
-define double @test_double_abs(double %arg) {
+define double @test_double_abs(double %arg) nounwind {
 ; X64-LABEL: test_double_abs:
 ; X64:       # %bb.0:
 ; X64-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -66,10 +66,7 @@ define double @test_double_abs(double %arg) {
 ; FASTISEL-X86-LABEL: test_double_abs:
 ; FASTISEL-X86:       # %bb.0:
 ; FASTISEL-X86-NEXT:    pushl %ebp
-; FASTISEL-X86-NEXT:    .cfi_def_cfa_offset 8
-; FASTISEL-X86-NEXT:    .cfi_offset %ebp, -8
 ; FASTISEL-X86-NEXT:    movl %esp, %ebp
-; FASTISEL-X86-NEXT:    .cfi_def_cfa_register %ebp
 ; FASTISEL-X86-NEXT:    andl $-8, %esp
 ; FASTISEL-X86-NEXT:    subl $8, %esp
 ; FASTISEL-X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -79,7 +76,6 @@ define double @test_double_abs(double %arg) {
 ; FASTISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; FASTISEL-X86-NEXT:    movl %ebp, %esp
 ; FASTISEL-X86-NEXT:    popl %ebp
-; FASTISEL-X86-NEXT:    .cfi_def_cfa %esp, 4
 ; FASTISEL-X86-NEXT:    retl
 ;
 ; GISEL-X86-LABEL: test_double_abs:
