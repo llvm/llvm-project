@@ -2278,6 +2278,7 @@ class CastInst : public UnaryInstruction {
       return Opcode::FPToSI;
     case llvm::Instruction::FPExt:
       return Opcode::FPExt;
+    case llvm::Instruction::PtrToAddr:
     case llvm::Instruction::PtrToInt:
       return Opcode::PtrToInt;
     case llvm::Instruction::IntToPtr:
