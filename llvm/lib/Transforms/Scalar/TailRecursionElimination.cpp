@@ -515,7 +515,8 @@ void TailRecursionEliminator::createTailRecurseLoopHeader(CallInst *CI) {
   BasicBlock *NewEntry = BasicBlock::Create(F.getContext(), "", &F, HeaderBB);
   NewEntry->takeName(HeaderBB);
   HeaderBB->setName("tailrecurse");
-  BranchInst::Create(HeaderBB, NewEntry);
+  auto *BI = BranchInst::Create(HeaderBB, NewEntry);
+  BI->setDebugLoc(DebugLoc::getCompilerGenerated());
   // If the new branch preserves the debug location of CI, it could result in
   // misleading stepping, if CI is located in a conditional branch.
   // So, here we don't give any debug location to the new branch.
@@ -801,6 +802,7 @@ void TailRecursionEliminator::cleanupAndFinalize() {
         SelectInst *SI =
             SelectInst::Create(RetKnownPN, RetPN, RI->getOperand(0),
                                "current.ret.tr", RI->getIterator());
+        SI->setDebugLoc(DebugLoc::getCompilerGenerated());
         RetSelects.push_back(SI);
         RI->setOperand(0, SI);
       }

@@ -432,7 +432,8 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
       BasicBlock *NewUnreachableBB =
           BasicBlock::Create(BB->getContext(), "default.unreachable",
                              BB->getParent(), DefaultDest);
-      new UnreachableInst(BB->getContext(), NewUnreachableBB);
+      auto *UI = new UnreachableInst(BB->getContext(), NewUnreachableBB);
+      UI->setDebugLoc(DebugLoc::getTemporary());
 
       DefaultDest->removePredecessor(BB);
       SI->setDefaultDest(NewUnreachableBB);
