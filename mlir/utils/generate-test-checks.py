@@ -224,7 +224,13 @@ def process_attribute_definition(line, attribute_namer):
     m = ATTR_DEF_RE.match(line)
     if m:
         attribute_name = attribute_namer.generate_name(m.group(1))
-        return '// CHECK: #[[' + attribute_name + ':.+]] =' + line[len(m.group(0)):] + '\n'
+        return (
+            "// CHECK: #[["
+            + attribute_name
+            + ":.+]] ="
+            + line[len(m.group(0)) :]
+            + "\n"
+        )
     return None
 
 def process_attribute_references(line, attribute_namer):
@@ -414,7 +420,7 @@ def main():
             # Emit any pending attribute definitions at the start of this scope
             for attr in pending_attr_defs:
                 attr_line = process_attribute_definition(attr, attribute_namer)
-                if (attr_line):
+                if attr_line:
                     output_segments[-1].append(attr_line)
             pending_attr_defs.clear()
 
