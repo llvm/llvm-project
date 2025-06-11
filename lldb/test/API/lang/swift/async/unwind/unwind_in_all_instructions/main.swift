@@ -43,7 +43,8 @@ func ASYNC___5___() async -> Int {
 
 @main struct Main {
   static func main() async {
-    let result = await ASYNC___5___() // BREAK HERE
+    print("BREAK HERE")
+    let result = await ASYNC___5___()
     print(result)
   }
 }

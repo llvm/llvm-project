@@ -22,6 +22,7 @@ class TestCase(lldbtest.TestBase):
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, "BREAK HERE", source_file
         )
+        bkpt.SetEnabled(False) # avoid hitting multiple locations in async breakpoints
 
         expected_line_nums = [4]  # print(x)
         expected_line_nums += [5, 6, 7, 5, 6, 7, 5]  # two runs over the loop

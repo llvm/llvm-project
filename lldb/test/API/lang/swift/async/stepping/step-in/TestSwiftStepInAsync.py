@@ -13,6 +13,7 @@ class TestCase(lldbtest.TestBase):
     def test(self):
         """Test step-in to async functions"""
         self.build()
+        self.runCmd("settings set language.enable-filter-for-line-breakpoints true")
         src = lldb.SBFileSpec('main.swift')
         _, process, _, _ = lldbutil.run_to_source_breakpoint(self, 'await', src)
 

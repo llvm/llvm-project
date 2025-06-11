@@ -12,6 +12,7 @@ class TestSwiftAsyncBreakpoints(lldbtest.TestBase):
     def test(self):
         """Test async breakpoints"""
         self.build()
+        self.runCmd("settings set language.enable-filter-for-line-breakpoints true")
         filespec = lldb.SBFileSpec("main.swift")
         target, process, thread, breakpoint1 = lldbutil.run_to_source_breakpoint(
             self, "Breakpoint1", filespec

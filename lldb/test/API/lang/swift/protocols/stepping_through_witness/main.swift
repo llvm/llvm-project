@@ -10,7 +10,8 @@ class SlowRandomNumberGenerator: RandomNumberGenerator {
 }
 
 func doMath<RNG: RandomNumberGenerator>(with rng: RNG) async {
-    let y = await rng.random(in: 101...200) // break here
+    print("break here")
+    let y = await rng.random(in: 101...200)
     print("Y is \(y)")
 }
 

@@ -22,6 +22,9 @@ class TestSwiftSteppingThroughWitness(TestBase):
             self, "break here", lldb.SBFileSpec("main.swift")
         )
 
+        # First, get to the await call.
+        thread.StepOver()
+
         thread.StepInto()
         stop_reason = thread.GetStopReason()
         self.assertStopReason(stop_reason, lldb.eStopReasonPlanComplete)
@@ -48,6 +51,9 @@ class TestSwiftSteppingThroughWitness(TestBase):
             self, "break here", lldb.SBFileSpec("main.swift")
         )
 
+        # First, get to the await call.
+        thread.StepOver()
+
         thread.StepOver()
         stop_reason = thread.GetStopReason()
         self.assertStopReason(stop_reason, lldb.eStopReasonPlanComplete)
@@ -55,4 +61,4 @@ class TestSwiftSteppingThroughWitness(TestBase):
         self.assertIn("doMath", frame0.GetFunctionName())
 
         line_entry = frame0.GetLineEntry()
-        self.assertEqual(14, line_entry.GetLine())
+        self.assertEqual(15, line_entry.GetLine())
