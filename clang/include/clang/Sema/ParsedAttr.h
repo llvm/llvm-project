@@ -178,6 +178,10 @@ private:
   LLVM_PREFERRED_TYPE(bool)
   mutable unsigned IsPragmaClangAttribute : 1;
 
+  /// Determines if the attribute will be printed as macro in the diagnostics.
+  LLVM_PREFERRED_TYPE(bool)
+  mutable unsigned PrintMacroName : 1;
+
   /// The location of the 'unavailable' keyword in an
   /// availability attribute.
   SourceLocation UnavailableLoc;
@@ -212,7 +216,7 @@ private:
         UsedAsTypeAttr(false), IsAvailability(false),
         IsTypeTagForDatatype(false), IsProperty(false), HasParsedType(false),
         HasProcessingCache(false), IsPragmaClangAttribute(false),
-        Info(ParsedAttrInfo::get(*this)) {
+        PrintMacroName(false), Info(ParsedAttrInfo::get(*this)) {
     if (numArgs)
       memcpy(getArgsBuffer(), args, numArgs * sizeof(ArgsUnion));
   }
@@ -229,8 +233,8 @@ private:
         NumArgs(1), Invalid(false), UsedAsTypeAttr(false), IsAvailability(true),
         IsTypeTagForDatatype(false), IsProperty(false), HasParsedType(false),
         HasProcessingCache(false), IsPragmaClangAttribute(false),
-        UnavailableLoc(unavailable), MessageExpr(messageExpr),
-        Info(ParsedAttrInfo::get(*this)) {
+        PrintMacroName(false), UnavailableLoc(unavailable),
+        MessageExpr(messageExpr), Info(ParsedAttrInfo::get(*this)) {
     ArgsUnion PVal(Parm);
     memcpy(getArgsBuffer(), &PVal, sizeof(ArgsUnion));
     new (getAvailabilityData())
@@ -247,7 +251,8 @@ private:
         NumArgs(3), Invalid(false), UsedAsTypeAttr(false),
         IsAvailability(false), IsTypeTagForDatatype(false), IsProperty(false),
         HasParsedType(false), HasProcessingCache(false),
-        IsPragmaClangAttribute(false), Info(ParsedAttrInfo::get(*this)) {
+        IsPragmaClangAttribute(false), PrintMacroName(false),
+        Info(ParsedAttrInfo::get(*this)) {
     ArgsUnion *Args = getArgsBuffer();
     Args[0] = Parm1;
     Args[1] = Parm2;
@@ -263,7 +268,8 @@ private:
         NumArgs(1), Invalid(false), UsedAsTypeAttr(false),
         IsAvailability(false), IsTypeTagForDatatype(true), IsProperty(false),
         HasParsedType(false), HasProcessingCache(false),
-        IsPragmaClangAttribute(false), Info(ParsedAttrInfo::get(*this)) {
+        IsPragmaClangAttribute(false), PrintMacroName(false),
+        Info(ParsedAttrInfo::get(*this)) {
     ArgsUnion PVal(ArgKind);
     memcpy(getArgsBuffer(), &PVal, sizeof(ArgsUnion));
     detail::TypeTagForDatatypeData &ExtraData = getTypeTagForDatatypeDataSlot();
@@ -281,7 +287,7 @@ private:
         UsedAsTypeAttr(false), IsAvailability(false),
         IsTypeTagForDatatype(false), IsProperty(false), HasParsedType(true),
         HasProcessingCache(false), IsPragmaClangAttribute(false),
-        Info(ParsedAttrInfo::get(*this)) {
+        PrintMacroName(false), Info(ParsedAttrInfo::get(*this)) {
     new (&getTypeBuffer()) ParsedType(typeArg);
   }
 
@@ -293,7 +299,8 @@ private:
         NumArgs(0), Invalid(false), UsedAsTypeAttr(false),
         IsAvailability(false), IsTypeTagForDatatype(false), IsProperty(true),
         HasParsedType(false), HasProcessingCache(false),
-        IsPragmaClangAttribute(false), Info(ParsedAttrInfo::get(*this)) {
+        IsPragmaClangAttribute(false), PrintMacroName(false),
+        Info(ParsedAttrInfo::get(*this)) {
     new (&getPropertyDataBuffer()) detail::PropertyData(getterId, setterId);
   }
 
@@ -478,9 +485,11 @@ public:
   /// Set the macro identifier info object that this parsed attribute was
   /// declared in if it was declared in a macro. Also set the expansion location
   /// of the macro.
-  void setMacroIdentifier(IdentifierInfo *MacroName, SourceLocation Loc) {
+  void setMacroIdentifier(IdentifierInfo *MacroName, SourceLocation Loc,
+                          bool PrintMcrName) {
     MacroII = MacroName;
     MacroExpansionLoc = Loc;
+    PrintMacroName = PrintMcrName;
   }
 
   /// Returns true if this attribute was declared in a macro.
@@ -494,6 +503,12 @@ public:
     assert(hasMacroIdentifier() && "Can only get the macro expansion location "
                                    "if this attribute has a macro identifier.");
     return MacroExpansionLoc;
+  }
+
+  bool printMacroName() const {
+    if (!hasMacroIdentifier())
+      return false;
+    return PrintMacroName;
   }
 
   /// Check if the attribute has exactly as many args as Num. May output an
@@ -1106,16 +1121,16 @@ enum AttributeDeclKind {
 
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
                                              const ParsedAttr &At) {
-  DB.AddTaggedVal(reinterpret_cast<uint64_t>(At.getAttrName()),
+  const IdentifierInfo *AttrName =
+      At.printMacroName() ? At.getMacroIdentifier() : At.getAttrName();
+  DB.AddTaggedVal(reinterpret_cast<uint64_t>(AttrName),
                   DiagnosticsEngine::ak_identifierinfo);
   return DB;
 }
 
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
                                              const ParsedAttr *At) {
-  DB.AddTaggedVal(reinterpret_cast<uint64_t>(At->getAttrName()),
-                  DiagnosticsEngine::ak_identifierinfo);
-  return DB;
+  return DB << *At;
 }
 
 /// AttributeCommonInfo has a non-explicit constructor which takes an
