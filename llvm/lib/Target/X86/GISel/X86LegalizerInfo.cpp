@@ -467,8 +467,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       });
 
   getActionDefinitionsBuilder(G_FABS)
-      .legalFor(UseX87 && !HasSSE2, {s32, s64, s80})
-      .custom();
+      .legalFor(UseX87 && !HasSSE2 && !HasSSE1, {s32, s64, s80})
+      .lower();
 
   // fp comparison
   getActionDefinitionsBuilder(G_FCMP)
@@ -673,8 +673,6 @@ bool X86LegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     return legalizeSITOFP(MI, MRI, Helper);
   case TargetOpcode::G_FPTOSI:
     return legalizeFPTOSI(MI, MRI, Helper);
-  case TargetOpcode::G_FABS:
-    return legalizeFAbs(MI, MRI, Helper);
   }
   llvm_unreachable("expected switch to return");
 }
@@ -841,42 +839,6 @@ bool X86LegalizerInfo::legalizeNarrowingStore(MachineInstr &MI,
   return true;
 }
 
-bool X86LegalizerInfo::legalizeFAbs(MachineInstr &MI, MachineRegisterInfo &MRI,
-                                    LegalizerHelper &Helper) const {
-
-  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
-  Register SrcReg = MI.getOperand(1).getReg();
-  Register DstReg = MI.getOperand(0).getReg();
-  LLT Ty = MRI.getType(DstReg);
-  if (Subtarget.is32Bit()) {
-    // Reset sign bit
-    MIRBuilder.buildAnd(
-        DstReg, SrcReg,
-        MIRBuilder.buildConstant(
-            Ty, APInt::getSignedMaxValue(Ty.getScalarSizeInBits())));
-  } else {
-    // In 64 bit mode, constant pool is used.
-    auto &MF = MIRBuilder.getMF();
-    Type *IRTy = getTypeForLLT(Ty, MF.getFunction().getContext());
-    Constant *ConstMask = ConstantInt::get(
-        IRTy, APInt::getSignedMaxValue(Ty.getScalarSizeInBits()));
-    LLT DstTy = MRI.getType(DstReg);
-    const DataLayout &DL = MIRBuilder.getDataLayout();
-    unsigned AddrSpace = DL.getDefaultGlobalsAddressSpace();
-    Align Alignment(DL.getABITypeAlign(
-        getTypeForLLT(DstTy, MF.getFunction().getContext())));
-    auto Addr = MIRBuilder.buildConstantPool(
-        LLT::pointer(AddrSpace, DL.getPointerSizeInBits(AddrSpace)),
-        MF.getConstantPool()->getConstantPoolIndex(ConstMask, Alignment));
-    MachineMemOperand *MMO =
-        MF.getMachineMemOperand(MachinePointerInfo::getConstantPool(MF),
-                                MachineMemOperand::MOLoad, DstTy, Alignment);
-    auto LoadedMask = MIRBuilder.buildLoad(DstTy, Addr, *MMO);
-    MIRBuilder.buildAnd(DstReg, SrcReg, LoadedMask);
-  }
-  MI.eraseFromParent();
-  return true;
-}
 bool X86LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                          MachineInstr &MI) const {
   return true;

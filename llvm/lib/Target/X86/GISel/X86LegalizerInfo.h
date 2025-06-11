@@ -54,8 +54,6 @@ private:
 
   bool legalizeFPTOSI(MachineInstr &MI, MachineRegisterInfo &MRI,
                       LegalizerHelper &Helper) const;
-  bool legalizeFAbs(MachineInstr &MI, MachineRegisterInfo &MRI,
-                    LegalizerHelper &Helper) const;
 };
 } // namespace llvm
 #endif
