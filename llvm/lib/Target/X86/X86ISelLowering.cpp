@@ -57969,7 +57969,26 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
+  unsigned int Opcode = N->getOpcode();
   SDLoc DL(N);
+
+  // Use a 32-bit add+zext if upper 33 bits known zero.
+  if (VT == MVT::i64 && Subtarget.is64Bit()) {
+    APInt HiMask = APInt::getHighBitsSet(64, 33);
+    if (DAG.MaskedValueIsZero(Op0, HiMask) &&
+        DAG.MaskedValueIsZero(Op1, HiMask)) {
+      SDValue LHS = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Op0);
+      SDValue RHS = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Op1);
+      bool NSW = Op0->getFlags().hasNoSignedWrap();
+      NSW = NSW & DAG.willNotOverflowAdd(true, LHS, RHS);
+      SDNodeFlags Flags;
+      // No unsigned wrap when upper 33 bits are zeros hence always true
+      Flags.setNoUnsignedWrap(true);
+      Flags.setNoSignedWrap(NSW);
+      SDValue Sum = DAG.getNode(Opcode, DL, MVT::i32, LHS, RHS, Flags);
+      return DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Sum);
+    }
+  }
 
   if (SDValue Select = pushAddIntoCmovOfConsts(N, DL, DAG, Subtarget))
     return Select;
