@@ -73,7 +73,8 @@ def FlagsAttr : OpenMP_Attr<"Flags", "flags"> {
 // AtomicControlAttr
 //===----------------------------------------------------------------------===//
 
-// Runtime library flags attribute that holds information for lowering to LLVM.
+// Atomic control attributes hold information about architectural
+// characteristics which are required for lowering atomic operations.
 def AtomicControlAttr : OpenMP_Attr<"AtomicControl", "atomic_control"> {
   let parameters =
       (ins DefaultValuedParameter<"bool", "false">:$amdgpu_ignore_denormal_mode,

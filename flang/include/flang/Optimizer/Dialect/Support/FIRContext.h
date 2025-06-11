@@ -75,7 +75,7 @@ bool getAtomicRemoteMemory(mlir::ModuleOp mod);
 /// module `mod` is still live.
 void setTuneCPU(mlir::ModuleOp mod, llvm::StringRef cpu);
 
-// set Atomic control options for amd gpu.
+// set atomic control options for AMD gpu.
 void setAmdgpuAtomicControlOptions(mlir::ModuleOp mod,
                                    bool amdgpuIgnoreDenormalMode,
                                    bool amdgpuNoFineGrainedMemory,
