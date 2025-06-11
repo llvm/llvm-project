@@ -7,4 +7,5 @@ mlir_target_link_libraries(MLIRPassTests
   PRIVATE
   MLIRDebug
   MLIRFuncDialect
+  MLIRParser
   MLIRPass)
