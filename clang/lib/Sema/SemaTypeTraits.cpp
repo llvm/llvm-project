@@ -2046,13 +2046,13 @@ static void DiagnoseNonDefaultMovable(Sema &SemaRef, SourceLocation Loc,
           << diag::TraitNotSatisfiedReason::UserProvidedAssign
           << Decl->isMoveAssignmentOperator() << Decl->getSourceRange();
   }
-  CXXDestructorDecl *Dtr = D->getDestructor();
-  if (Dtr)
+  if (CXXDestructorDecl *Dtr = D->getDestructor()) {
     Dtr = Dtr->getCanonicalDecl();
-  if (Dtr && Dtr->isUserProvided() && !Dtr->isDefaulted())
-    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-        << diag::TraitNotSatisfiedReason::DeletedDtr << /*User Provided*/ 1
-        << Dtr->getSourceRange();
+    if (Dtr->isUserProvided() && !Dtr->isDefaulted())
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::DeletedDtr << /*User Provided*/ 1
+          << Dtr->getSourceRange();
+  }
 }
 
 static void DiagnoseNonTriviallyRelocatableReason(Sema &SemaRef,
