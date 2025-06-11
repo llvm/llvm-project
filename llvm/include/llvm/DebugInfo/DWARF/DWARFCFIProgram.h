@@ -24,6 +24,9 @@
 namespace llvm {
 
 namespace dwarf {
+
+class CFIPrinter;
+
 /// Represent a sequence of Call Frame Information instructions that, when read
 /// in order, construct a table mapping PC to frame state. This can also be
 /// referred to as "CFI rules" in DWARF literature to avoid confusion with
@@ -34,6 +37,7 @@ class CFIProgram {
 public:
   static constexpr size_t MaxOperands = 3;
   typedef SmallVector<uint64_t, MaxOperands> Operands;
+  friend CFIPrinter;
 
   /// An instruction consists of a DWARF CFI opcode and an optional sequence of
   /// operands. If it refers to an expression, then this expression has its own
@@ -79,10 +83,6 @@ public:
   /// where a problem occurred in case an error is returned.
   LLVM_ABI Error parse(DWARFDataExtractor Data, uint64_t *Offset,
                        uint64_t EndOffset);
-
-  LLVM_ABI void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
-                     unsigned IndentLevel,
-                     std::optional<uint64_t> InitialLocation) const;
 
   void addInstruction(const Instruction &I) { Instructions.push_back(I); }
 
@@ -147,11 +147,6 @@ private:
   /// Retrieve the array describing the types of operands according to the enum
   /// above. This is indexed by opcode.
   static ArrayRef<OperandType[MaxOperands]> getOperandTypes();
-
-  /// Print \p Opcode's operand number \p OperandIdx which has value \p Operand.
-  void printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
-                    const Instruction &Instr, unsigned OperandIdx,
-                    uint64_t Operand, std::optional<uint64_t> &Address) const;
 };
 
 } // end namespace dwarf
