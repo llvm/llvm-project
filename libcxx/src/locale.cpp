@@ -34,10 +34,6 @@
 #  define _CTYPE_DISABLE_MACROS
 #endif
 
-#if __has_include("<langinfo.h>")
-#  include <langinfo.h>
-#endif
-
 #include "include/atomic_support.h"
 #include "include/sso_allocator.h"
 

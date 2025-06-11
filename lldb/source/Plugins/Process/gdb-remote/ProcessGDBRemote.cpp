@@ -1728,7 +1728,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
 
   reg_ctx_sp->InvalidateIfNeeded(true);
 
-  auto iter = std::find(m_thread_ids.begin(), m_thread_ids.end(), tid);
+  auto iter = llvm::find(m_thread_ids, tid);
   if (iter != m_thread_ids.end())
     SetThreadPc(thread_sp, iter - m_thread_ids.begin());
 
@@ -2758,11 +2758,10 @@ Status ProcessGDBRemote::WriteObjectFile(
   Status error;
   // Sort the entries by address because some writes, like those to flash
   // memory, must happen in order of increasing address.
-  std::stable_sort(
-      std::begin(entries), std::end(entries),
-      [](const ObjectFile::LoadableData a, const ObjectFile::LoadableData b) {
-        return a.Dest < b.Dest;
-      });
+  llvm::stable_sort(entries, [](const ObjectFile::LoadableData a,
+                                const ObjectFile::LoadableData b) {
+    return a.Dest < b.Dest;
+  });
   m_allow_flash_writes = true;
   error = Process::WriteObjectFile(entries);
   if (error.Success())

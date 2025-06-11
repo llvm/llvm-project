@@ -164,11 +164,12 @@ ModuleImport::ModuleImport(ModuleOp mlirModule,
                            std::unique_ptr<llvm::Module> llvmModule,
                            bool emitExpensiveWarnings,
                            bool importEmptyDICompositeTypes,
-                           bool preferUnregisteredIntrinsics)
+                           bool preferUnregisteredIntrinsics,
+                           bool importStructsAsLiterals)
     : builder(mlirModule->getContext()), context(mlirModule->getContext()),
       mlirModule(mlirModule), llvmModule(std::move(llvmModule)),
       iface(mlirModule->getContext()),
-      typeTranslator(*mlirModule->getContext()),
+      typeTranslator(*mlirModule->getContext(), importStructsAsLiterals),
       debugImporter(std::make_unique<DebugImporter>(
           mlirModule, importEmptyDICompositeTypes)),
       loopAnnotationImporter(
@@ -755,7 +756,6 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
 
   // Build ModuleFlagProfileSummaryAttr by sequentially fetching elements in
   // a fixed order: format, total count, etc.
-  SmallVector<Attribute> profileSummary;
   std::optional<ProfileSummaryFormatKind> format = convertProfileSummaryFormat(
       mlirModule, llvmModule, mdTuple->getOperand(summayIdx++));
   if (!format.has_value())
@@ -2073,6 +2073,40 @@ LogicalResult ModuleImport::convertIntrinsic(llvm::CallInst *inst) {
   return emitError(loc) << "unhandled intrinsic: " << diag(*inst);
 }
 
+ArrayAttr
+ModuleImport::convertAsmInlineOperandAttrs(const llvm::CallBase &llvmCall) {
+  const auto *ia = cast<llvm::InlineAsm>(llvmCall.getCalledOperand());
+  unsigned argIdx = 0;
+  SmallVector<mlir::Attribute> opAttrs;
+  bool hasIndirect = false;
+
+  for (const llvm::InlineAsm::ConstraintInfo &ci : ia->ParseConstraints()) {
+    // Only deal with constraints that correspond to call arguments.
+    if (ci.Type == llvm::InlineAsm::isLabel || !ci.hasArg())
+      continue;
+
+    // Only increment `argIdx` in terms of constraints containing arguments,
+    // which are guaranteed to happen in the same order of the call arguments.
+    if (ci.isIndirect) {
+      if (llvm::Type *paramEltType = llvmCall.getParamElementType(argIdx)) {
+        SmallVector<mlir::NamedAttribute> attrs;
+        attrs.push_back(builder.getNamedAttr(
+            mlir::LLVM::InlineAsmOp::getElementTypeAttrName(),
+            mlir::TypeAttr::get(convertType(paramEltType))));
+        opAttrs.push_back(builder.getDictionaryAttr(attrs));
+        hasIndirect = true;
+      }
+    } else {
+      opAttrs.push_back(builder.getDictionaryAttr({}));
+    }
+    argIdx++;
+  }
+
+  // Avoid emitting an array where all entries are empty dictionaries.
+  return hasIndirect ? ArrayAttr::get(mlirModule->getContext(), opAttrs)
+                     : nullptr;
+}
+
 LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
   // Convert all instructions that do not provide an MLIR builder.
   Location loc = translateLoc(inst->getDebugLoc());
@@ -2159,14 +2193,18 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
         Type resultTy = convertType(callInst->getType());
         if (!resultTy)
           return failure();
+        ArrayAttr operandAttrs = convertAsmInlineOperandAttrs(*callInst);
         return builder
             .create<InlineAsmOp>(
                 loc, resultTy, *operands,
                 builder.getStringAttr(asmI->getAsmString()),
                 builder.getStringAttr(asmI->getConstraintString()),
-                /*has_side_effects=*/true,
-                /*is_align_stack=*/false, /*asm_dialect=*/nullptr,
-                /*operand_attrs=*/nullptr)
+                asmI->hasSideEffects(), asmI->isAlignStack(),
+                convertTailCallKindFromLLVM(callInst->getTailCallKind()),
+                AsmDialectAttr::get(
+                    mlirModule.getContext(),
+                    convertAsmDialectFromLLVM(asmI->getDialect())),
+                operandAttrs)
             .getOperation();
       }
       bool isIncompatibleCall;
@@ -2597,6 +2635,15 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
       attr.isStringAttribute())
     funcOp.setTargetFeaturesAttr(
         LLVM::TargetFeaturesAttr::get(context, attr.getValueAsString()));
+
+  if (llvm::Attribute attr = func->getFnAttribute("reciprocal-estimates");
+      attr.isStringAttribute())
+    funcOp.setReciprocalEstimatesAttr(
+        StringAttr::get(context, attr.getValueAsString()));
+
+  if (llvm::Attribute attr = func->getFnAttribute("prefer-vector-width");
+      attr.isStringAttribute())
+    funcOp.setPreferVectorWidth(attr.getValueAsString());
 
   if (llvm::Attribute attr = func->getFnAttribute("unsafe-fp-math");
       attr.isStringAttribute())
@@ -3081,7 +3128,8 @@ ModuleImport::translateDereferenceableAttr(const llvm::MDNode *node,
 OwningOpRef<ModuleOp> mlir::translateLLVMIRToModule(
     std::unique_ptr<llvm::Module> llvmModule, MLIRContext *context,
     bool emitExpensiveWarnings, bool dropDICompositeTypeElements,
-    bool loadAllDialects, bool preferUnregisteredIntrinsics) {
+    bool loadAllDialects, bool preferUnregisteredIntrinsics,
+    bool importStructsAsLiterals) {
   // Preload all registered dialects to allow the import to iterate the
   // registered LLVMImportDialectInterface implementations and query the
   // supported LLVM IR constructs before starting the translation. Assumes the
@@ -3099,7 +3147,8 @@ OwningOpRef<ModuleOp> mlir::translateLLVMIRToModule(
 
   ModuleImport moduleImport(module.get(), std::move(llvmModule),
                             emitExpensiveWarnings, dropDICompositeTypeElements,
-                            preferUnregisteredIntrinsics);
+                            preferUnregisteredIntrinsics,
+                            importStructsAsLiterals);
   if (failed(moduleImport.initializeImportInterface()))
     return {};
   if (failed(moduleImport.convertDataLayout()))

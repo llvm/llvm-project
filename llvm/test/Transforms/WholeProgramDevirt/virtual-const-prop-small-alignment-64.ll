@@ -1,12 +1,14 @@
-; RUN: opt -S -passes=wholeprogramdevirt -whole-program-visibility %s | FileCheck %s
-
 ;; This target uses 64-bit sized and aligned pointers.
-target datalayout = "e-p:64:64"
+; RUN: opt -S -passes=wholeprogramdevirt -whole-program-visibility --data-layout="e-p:64:64-i64:64:64" %s | FileCheck %s
+
+;; The tests should be the exact same even with different preferred alignments since
+;; the ABI alignment is used.
+; RUN: opt -S -passes=wholeprogramdevirt -whole-program-visibility --data-layout="e-p:64:64-i64:64:128" %s | FileCheck %s
 
 ;; Constant propagation should be agnostic towards sections.
 ;; Also the new global should be in the original vtable's section.
 ; CHECK:      [[VT1DATA:@[^ ]*]] = {{.*}} { [8 x i8], [3 x ptr], [0 x i8] }
-; CHECK-SAME:   [8 x i8]  c"\00\00\01\00\00\00\03\00",
+; CHECK-SAME:   [8 x i8]  c"\00\00\00\00\00\00\03\00",
 ; CHECK-SAME: }, section "vt1sec", !type [[T8:![0-9]+]]
 @vt1 = constant [3 x ptr] [
 ptr @vf0i1,
@@ -24,7 +26,7 @@ ptr @vf1i32
 ;; 2. The call instruction in @call3 is replaced with a GEP + load.
 ;;
 ; CHECK:      [[VT2DATA:@[^ ]*]] = {{.*}} { [8 x i8], [3 x ptr], [0 x i8] }
-; CHECK-SAME:   [8 x i8] c"\00\00\02\00\00\00\02\01",
+; CHECK-SAME:   [8 x i8] c"\00\00\00\00\00\00\02\01",
 ; CHECK-SAME: !type [[T8]]
 @vt2 = constant [3 x ptr] [
 ptr @vf1i1,
@@ -37,8 +39,8 @@ ptr @vf2i32
 ;; All the functions returning i8s and i1s should still be constant-propagated
 ;; because we can still do an aligned load regardless of where the 1-byte aligned
 ;; vtable is.
-; CHECK:      [[VT3DATA:@[^ ]*]] = {{.*}} { [6 x i8], [3 x ptr], [0 x i8] }
-; CHECK-SAME:   [6 x i8] c"\03\00\00\00\03\00",
+; CHECK:      [[VT3DATA:@[^ ]*]] = {{.*}} { [2 x i8], [3 x ptr], [0 x i8] }
+; CHECK-SAME:   [2 x i8] c"\03\00",
 ; CHECK-SAME: }, align 1, !type [[T5:![0-9]+]]
 @vt3 = constant [3 x ptr] [
 ptr @vf0i1,
@@ -48,7 +50,7 @@ ptr @vf3i32
 
 ;; This represents an overaligned vtable.
 ; CHECK:      [[VT4DATA:@[^ ]*]] = {{.*}} { [16 x i8], [3 x ptr], [0 x i8] }
-; CHECK-SAME:   [16 x i8] c"\00\00\00\00\00\00\00\00\00\00\04\00\00\00\02\01",
+; CHECK-SAME:   [16 x i8] c"\00\00\00\00\00\00\00\00\00\00\00\00\00\00\02\01",
 ; CHECK-SAME: },  align 16, !type [[T16:![0-9]+]]
 @vt4 = constant [3 x ptr] [
 ptr @vf1i1,
@@ -79,8 +81,8 @@ ptr @vf6i64
 ], !type !1
 
 ;; Test relative vtables
-; CHECK:      [[VT6RELDATA:@[^ ]*]] = {{.*}} { [12 x i8], [3 x i32], [0 x i8] } 
-; CHECK-SAME:   [12 x i8] c"\00\00\00\0B\05\00\00\00\00\00\00\00",
+; CHECK:      [[VT6RELDATA:@[^ ]*]] = {{.*}} { [4 x i8], [3 x i32], [0 x i8] } 
+; CHECK-SAME:   [4 x i8] c"\00\00\00\0B",
 ; CHECK-SAME: ], [0 x i8] zeroinitializer }, !type [[TREL:![0-9]+]]
 @vt6_rel = constant [3 x i32] [
 i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @vf0i1 to i64), i64 ptrtoint (ptr @vt6_rel to i64)) to i32),
@@ -88,8 +90,8 @@ i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @vf10i8 to i64), i64 
 i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @vf5i64 to i64), i64 ptrtoint (ptr @vt6_rel to i64)) to i32)
 ], !type !2
 
-; CHECK:      [[VT7RELDATA:@[^ ]*]] = {{.*}} { [12 x i8], [3 x i32], [0 x i8] }
-; CHECK-SAME:   [12 x i8] c"\00\00\00\0A\06\00\00\00\00\00\00\00",
+; CHECK:      [[VT7RELDATA:@[^ ]*]] = {{.*}} { [4 x i8], [3 x i32], [0 x i8] }
+; CHECK-SAME:   [4 x i8] c"\00\00\00\0A",
 ; CHECK-SAME: ], [0 x i8] zeroinitializer }, !type [[TREL]]
 @vt7_rel = constant [3 x i32] [
 i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @vf1i1 to i64), i64 ptrtoint (ptr @vt7_rel to i64)) to i32),
@@ -99,12 +101,12 @@ i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @vf6i64 to i64), i64 
 
 ; CHECK: @vt1 = alias [3 x ptr], getelementptr inbounds ({ [8 x i8], [3 x ptr], [0 x i8] }, ptr [[VT1DATA]], i32 0, i32 1)
 ; CHECK: @vt2 = alias [3 x ptr], getelementptr inbounds ({ [8 x i8], [3 x ptr], [0 x i8] }, ptr [[VT2DATA]], i32 0, i32 1)
-; CHECK: @vt3 = alias [3 x ptr], getelementptr inbounds ({ [6 x i8], [3 x ptr], [0 x i8] }, ptr [[VT3DATA]], i32 0, i32 1)
+; CHECK: @vt3 = alias [3 x ptr], getelementptr inbounds ({ [2 x i8], [3 x ptr], [0 x i8] }, ptr [[VT3DATA]], i32 0, i32 1)
 ; CHECK: @vt4 = alias [3 x ptr], getelementptr inbounds ({ [16 x i8], [3 x ptr], [0 x i8] }, ptr [[VT4DATA]], i32 0, i32 1)
 ; CHECK: @vt6 = alias [3 x ptr], getelementptr inbounds ({ [16 x i8], [3 x ptr], [0 x i8] }, ptr [[VT6DATA]], i32 0, i32 1)
 ; CHECK: @vt7 = alias [3 x ptr], getelementptr inbounds ({ [16 x i8], [3 x ptr], [0 x i8] }, ptr [[VT7DATA]], i32 0, i32 1)
-; CHECK: @vt6_rel = alias [3 x i32], getelementptr inbounds ({ [12 x i8], [3 x i32], [0 x i8] }, ptr [[VT6RELDATA]], i32 0, i32 1)
-; CHECK: @vt7_rel = alias [3 x i32], getelementptr inbounds ({ [12 x i8], [3 x i32], [0 x i8] }, ptr [[VT7RELDATA]], i32 0, i32 1)
+; CHECK: @vt6_rel = alias [3 x i32], getelementptr inbounds ({ [4 x i8], [3 x i32], [0 x i8] }, ptr [[VT6RELDATA]], i32 0, i32 1)
+; CHECK: @vt7_rel = alias [3 x i32], getelementptr inbounds ({ [4 x i8], [3 x i32], [0 x i8] }, ptr [[VT7RELDATA]], i32 0, i32 1)
 
 define i1 @vf0i1(ptr %this) readnone {
   ret i1 0
@@ -200,9 +202,10 @@ define i32 @call3(ptr %obj) {
   %fptr = load ptr, ptr %fptrptr
   %result = call i32 %fptr(ptr %obj)
   ret i32 %result
-  ; CHECK: [[VTGEP2:%[^ ]*]] = getelementptr i8, ptr %vtable, i32 -6
-  ; CHECK: [[VTLOAD:%[^ ]*]] = load i32, ptr [[VTGEP2]]
-  ; CHECK: ret i32 [[VTLOAD]]
+  ; CHECK: [[FPTRPTR:%.*]] = getelementptr [3 x ptr], ptr %vtable, i32 0, i32 2
+  ; CHECK: [[FPTR:%.*]] = load ptr, ptr [[FPTRPTR]], align 8
+  ; CHECK: [[RES:%.*]] = call i32 [[FPTR]](ptr %obj)
+  ; CHECK: ret i32 [[RES]]
 }
 
 ; CHECK-LABEL: define i1 @call4(
@@ -266,9 +269,9 @@ define i64 @call5_rel(ptr %obj) {
   %fptr = call ptr @llvm.load.relative.i32(ptr %vtable, i32 8)
   %result = call i64 %fptr(ptr %obj)
   ret i64 %result
-  ; CHECK: [[VTGEP2:%[^ ]*]] = getelementptr i8, ptr %vtable, i32 -8
-  ; CHECK: [[VTLOAD:%[^ ]*]] = load i64, ptr [[VTGEP2]]
-  ; CHECK: ret i64 [[VTLOAD]]
+  ; CHECK: [[FPTR:%.*]] = call ptr @llvm.load.relative.i32(ptr %vtable, i32 8)
+  ; CHECK: [[RES:%.*]] = call i64 [[FPTR]](ptr %obj)
+  ; CHECK: ret i64 [[RES]]
 }
 
 ; CHECK-LABEL: define i8 @call6_rel(
@@ -279,7 +282,7 @@ define i8 @call6_rel(ptr %obj) {
   %fptr = call ptr @llvm.load.relative.i32(ptr %vtable, i32 4)
   %result = call i8 %fptr(ptr %obj)
   ret i8 %result
-  ; CHECK: [[VTGEP2:%[^ ]*]] = getelementptr i8, ptr %vtable, i32 -9
+  ; CHECK: [[VTGEP2:%[^ ]*]] = getelementptr i8, ptr %vtable, i32 -1
   ; CHECK: [[VTLOAD:%[^ ]*]] = load i8, ptr [[VTGEP2]]
   ; CHECK: ret i8 [[VTLOAD]]
 }
@@ -290,10 +293,10 @@ declare void @__cxa_pure_virtual()
 declare ptr @llvm.load.relative.i32(ptr, i32)
 
 ; CHECK: [[T8]] = !{i32 8, !"typeid"}
-; CHECK: [[T5]] = !{i32 6, !"typeid"}
+; CHECK: [[T5]] = !{i32 2, !"typeid"}
 ; CHECK: [[T16]] = !{i32 16, !"typeid"}
 ; CHECK: [[T1]] = !{i32 16, !"typeid2"}
-; CHECK: [[TREL]] = !{i32 12, !"typeid3"}
+; CHECK: [[TREL]] = !{i32 4, !"typeid3"}
 
 !0 = !{i32 0, !"typeid"}
 !1 = !{i32 0, !"typeid2"}

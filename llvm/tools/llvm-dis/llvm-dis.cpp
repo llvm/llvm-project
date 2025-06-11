@@ -96,8 +96,6 @@ static cl::opt<bool> PrintThinLTOIndexOnly(
     cl::desc("Only read thinlto index and print the index as LLVM assembly."),
     cl::init(false), cl::Hidden, cl::cat(DisCategory));
 
-extern cl::opt<bool> UseNewDbgInfoFormat;
-
 namespace {
 
 static void printDebugLoc(const DebugLoc &DL, formatted_raw_ostream &OS) {
@@ -270,9 +268,8 @@ int main(int argc, char **argv) {
       // All that llvm-dis does is write the assembly to a file.
       if (!DontPrint) {
         if (M) {
-          M->setIsNewDbgInfoFormat(UseNewDbgInfoFormat);
-          if (UseNewDbgInfoFormat)
-            M->removeDebugIntrinsicDeclarations();
+          M->setIsNewDbgInfoFormat(true);
+          M->removeDebugIntrinsicDeclarations();
           M->print(Out->os(), Annotator.get(), PreserveAssemblyUseListOrder);
         }
         if (Index)

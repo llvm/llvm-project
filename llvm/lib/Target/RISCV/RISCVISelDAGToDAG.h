@@ -46,11 +46,7 @@ public:
                                     std::vector<SDValue> &OutOps) override;
 
   bool SelectAddrFrameIndex(SDValue Addr, SDValue &Base, SDValue &Offset);
-  bool SelectAddrRegImm(SDValue Addr, SDValue &Base, SDValue &Offset,
-                        bool IsRV32Zdinx = false);
-  bool SelectAddrRegImmRV32Zdinx(SDValue Addr, SDValue &Base, SDValue &Offset) {
-    return SelectAddrRegImm(Addr, Base, Offset, true);
-  }
+  bool SelectAddrRegImm(SDValue Addr, SDValue &Base, SDValue &Offset);
   bool SelectAddrRegImmLsb00000(SDValue Addr, SDValue &Base, SDValue &Offset);
 
   bool SelectAddrRegRegScale(SDValue Addr, unsigned MaxShiftAmount,
@@ -81,8 +77,11 @@ public:
 
   bool tryShrinkShlLogicImm(SDNode *Node);
   bool trySignedBitfieldExtract(SDNode *Node);
-  bool tryUnsignedBitfieldExtract(SDNode *Node, SDLoc DL, MVT VT, SDValue X,
-                                  unsigned Msb, unsigned Lsb);
+  bool trySignedBitfieldInsertInSign(SDNode *Node);
+  bool tryUnsignedBitfieldExtract(SDNode *Node, const SDLoc &DL, MVT VT,
+                                  SDValue X, unsigned Msb, unsigned Lsb);
+  bool tryUnsignedBitfieldInsertInZero(SDNode *Node, const SDLoc &DL, MVT VT,
+                                       SDValue X, unsigned Msb, unsigned Lsb);
   bool tryIndexedLoad(SDNode *Node);
 
   bool selectShiftMask(SDValue N, unsigned ShiftWidth, SDValue &ShAmt);
@@ -120,9 +119,11 @@ public:
     return selectSHXADD_UWOp(N, ShAmt, Val);
   }
 
+  bool selectZExtImm32(SDValue N, SDValue &Val);
   bool selectNegImm(SDValue N, SDValue &Val);
   bool selectInvLogicImm(SDValue N, SDValue &Val);
 
+  bool orIsAdd(const SDNode *Node) const;
   bool hasAllNBitUsers(SDNode *Node, unsigned Bits,
                        const unsigned Depth = 0) const;
   bool hasAllBUsers(SDNode *Node) const { return hasAllNBitUsers(Node, 8); }
@@ -201,6 +202,8 @@ private:
   bool doPeepholeMergeVVMFold();
   bool doPeepholeNoRegPassThru();
   bool performCombineVMergeAndVOps(SDNode *N);
+  bool selectImm64IfCheaper(int64_t Imm, int64_t OrigImm, SDValue N,
+                            SDValue &Val);
 };
 
 class RISCVDAGToDAGISelLegacy : public SelectionDAGISelLegacy {

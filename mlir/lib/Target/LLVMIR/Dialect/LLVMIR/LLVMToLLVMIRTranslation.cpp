@@ -19,6 +19,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/MatrixBuilder.h"
 #include "llvm/IR/Operator.h"
@@ -308,7 +309,6 @@ static llvm::Metadata *convertModuleFlagProfileSummaryAttr(
     llvm::IRBuilderBase &builder, LLVM::ModuleTranslation &moduleTranslation) {
   llvm::LLVMContext &context = builder.getContext();
   llvm::MDBuilder mdb(context);
-  SmallVector<llvm::Metadata *> summaryNodes;
 
   auto getIntTuple = [&](StringRef key, uint64_t val) -> llvm::MDTuple * {
     SmallVector<llvm::Metadata *> tupleNodes{
@@ -508,6 +508,8 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     llvm::CallInst *inst = builder.CreateCall(
         inlineAsmInst,
         moduleTranslation.lookupValues(inlineAsmOp.getOperands()));
+    inst->setTailCallKind(convertTailCallKindToLLVM(
+        inlineAsmOp.getTailCallKindAttr().getTailCallKind()));
     if (auto maybeOperandAttrs = inlineAsmOp.getOperandAttrs()) {
       llvm::AttributeList attrList;
       for (const auto &it : llvm::enumerate(*maybeOperandAttrs)) {
@@ -515,6 +517,8 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
         if (!attr)
           continue;
         DictionaryAttr dAttr = cast<DictionaryAttr>(attr);
+        if (dAttr.empty())
+          continue;
         TypeAttr tAttr =
             cast<TypeAttr>(dAttr.get(InlineAsmOp::getElementTypeAttrName()));
         llvm::AttrBuilder b(moduleTranslation.getLLVMContext());
