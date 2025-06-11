@@ -15,7 +15,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(float, fbfloat16, (LIBC_NAMESPACE::bfloat16 x)) {
+LLVM_LIBC_FUNCTION(float, fbfloat16, (bfloat16 x)) {
   if (x.bits == 0)
     return 0.0f;
   else

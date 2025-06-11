@@ -5328,6 +5328,5 @@ add_fp_unittest(
   SRCS
     fbfloat16_test.cpp
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.fbfloat16
 )
