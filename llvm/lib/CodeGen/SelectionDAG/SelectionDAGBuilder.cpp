@@ -3884,8 +3884,15 @@ void SelectionDAGBuilder::visitSIToFP(const User &I) {
 }
 
 void SelectionDAGBuilder::visitPtrToAddr(const User &I) {
-  // FIXME: this is not correct for pointers with addr width != pointer width
-  visitPtrToInt(I);
+  const auto &TLI = DAG.getTargetLoweringInfo();
+  const DataLayout &DL = DAG.getDataLayout();
+  // ptrtoaddr is equivalent to a truncate of ptrtoint to address/index width
+  auto Op0 = I.getOperand(0);
+  SDValue N = getValue(Op0);
+  EVT AddrVT = TLI.getValueType(DL, DL.getAddressType(Op0->getType()));
+  N = DAG.getPtrExtOrTrunc(N, getCurSDLoc(), AddrVT);
+  N = DAG.getZExtOrTrunc(N, getCurSDLoc(), TLI.getValueType(DL, I.getType()));
+  setValue(&I, N);
 }
 
 void SelectionDAGBuilder::visitPtrToInt(const User &I) {
