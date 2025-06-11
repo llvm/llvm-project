@@ -40,7 +40,7 @@ bool LanguageCategory::Get(FormattersMatchData &match_data,
     return false;
 
   if (match_data.GetTypeForCache()) {
-    if (m_format_cache.Get(match_data.GetTypeForCache(), retval_sp))
+    if (m_format_cache.Get(match_data, retval_sp))
       return (bool)retval_sp;
   }
 

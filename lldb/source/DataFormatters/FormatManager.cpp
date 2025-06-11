@@ -657,7 +657,7 @@ ImplSP FormatManager::GetCached(FormattersMatchData &match_data) {
   if (match_data.GetTypeForCache()) {
     LLDB_LOGF(log, "\n\n" FORMAT_LOG("Looking into cache for type %s"),
               match_data.GetTypeForCache().AsCString("<invalid>"));
-    if (m_format_cache.Get(match_data.GetTypeForCache(), retval_sp)) {
+    if (m_format_cache.Get(match_data, retval_sp)) {
       if (log) {
         LLDB_LOGF(log, FORMAT_LOG("Cache search success. Returning."));
         LLDB_LOGV(log, "Cache hits: {0} - Cache Misses: {1}",

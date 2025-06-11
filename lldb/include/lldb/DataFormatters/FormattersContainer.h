@@ -50,6 +50,7 @@ class TypeMatcher {
   /// - eFormatterMatchCallback: run the function in m_name to decide if a type
   ///   matches or not.
   lldb::FormatterMatchType m_match_type;
+  uint32_t m_tag = 0;
 
   // if the user tries to add formatters for, say, "struct Foo" those will not
   // match any type because of the way we strip qualifiers from typenames this
@@ -86,7 +87,8 @@ public:
   /// name specifier.
   TypeMatcher(lldb::TypeNameSpecifierImplSP type_specifier)
       : m_name(type_specifier->GetName()),
-        m_match_type(type_specifier->GetMatchType()) {
+        m_match_type(type_specifier->GetMatchType()),
+        m_tag(type_specifier->GetTag()) {
     if (m_match_type == lldb::eFormatterMatchRegex)
       m_type_name_regex = RegularExpression(type_specifier->GetName());
   }
@@ -134,7 +136,7 @@ public:
   /// (lldb) type summary add --summary-string \"A\" -x TypeName
   /// (lldb) type summary delete TypeName
   bool CreatedBySameMatchString(TypeMatcher other) const {
-    return GetMatchString() == other.GetMatchString();
+    return GetMatchString() == other.GetMatchString() && m_tag == other.m_tag;
   }
 };
 
@@ -181,6 +183,11 @@ public:
     std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
     for (auto &formatter : llvm::reverse(m_map)) {
       if (formatter.first.Matches(candidate)) {
+        if (formatter.second && formatter.second->GetTypeValidator() &&
+            !formatter.second->GetTypeValidator()(
+                candidate.GetType().GetCompilerType(false)))
+          continue;
+
         entry = formatter.second;
         return true;
       }

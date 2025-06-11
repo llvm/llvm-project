@@ -15,6 +15,7 @@
 #include <memory>
 #include <string>
 
+#include "lldb/DataFormatters/TypeValidator.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
 
@@ -276,6 +277,9 @@ public:
 
   uint32_t &GetRevision() { return m_my_revision; }
 
+  CxxTypeValidatorFn *GetTypeValidator() const { return m_validator_fn; }
+  void SetTypeValidator(CxxTypeValidatorFn *value) { m_validator_fn = value; }
+
   typedef std::shared_ptr<TypeSummaryImpl> SharedPointer;
 
 protected:
@@ -288,6 +292,7 @@ protected:
 private:
   Kind m_kind;
   uint32_t m_ptr_match_depth = 1;
+  CxxTypeValidatorFn *m_validator_fn = nullptr;
   TypeSummaryImpl(const TypeSummaryImpl &) = delete;
   const TypeSummaryImpl &operator=(const TypeSummaryImpl &) = delete;
 };

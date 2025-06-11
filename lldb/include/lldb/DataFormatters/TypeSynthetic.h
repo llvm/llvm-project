@@ -277,12 +277,17 @@ public:
 
   void SetPtrMatchDepth(uint32_t value) { m_ptr_match_depth = value; }
 
+  CxxTypeValidatorFn *GetTypeValidator() const { return m_validator_fn; }
+  void SetTypeValidator(CxxTypeValidatorFn *value) { m_validator_fn = value; }
+
 protected:
   uint32_t m_my_revision = 0;
   Flags m_flags;
   uint32_t m_ptr_match_depth = 1;
 
 private:
+  CxxTypeValidatorFn *m_validator_fn = nullptr;
+
   SyntheticChildren(const SyntheticChildren &) = delete;
   const SyntheticChildren &operator=(const SyntheticChildren &) = delete;
 };
