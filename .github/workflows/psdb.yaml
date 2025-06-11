@@ -20,6 +20,5 @@ jobs:
     with:
       job_name: 'llvm-psdb'
       is_psdb: true
-      git_config_file: 'configs/git/llvm-project/llvm.yaml'
-      library_branch: 'hongzhao/component'
+      library_branch: 'hongzhao/component1'
     secrets: inherit
