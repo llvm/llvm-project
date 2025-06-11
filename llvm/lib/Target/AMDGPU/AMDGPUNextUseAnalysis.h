@@ -16,6 +16,7 @@
 
 #include "SIRegisterInfo.h"
 #include "GCNSubtarget.h"
+#include "AMDGPUSSARAUtils.h"
 
 #include <algorithm>
 #include <limits>
@@ -33,15 +34,16 @@ public:
   VRegMaskPair(Register VReg, LaneBitmask LaneMask)
       : VReg(VReg), LaneMask(LaneMask) {}
 
-  VRegMaskPair(const MachineOperand MO, const TargetRegisterInfo &TRI) {
+  VRegMaskPair(const MachineOperand MO, const SIRegisterInfo *TRI, const MachineRegisterInfo *MRI) {
     assert(MO.isReg() && "Not a register operand!");
     Register R = MO.getReg();
+    const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, R);
     assert(R.isVirtual() && "Not a virtual register!");
     VReg = R;
-    LaneMask = LaneBitmask::getAll();
+    LaneMask = getFullMaskForRC(*RC, TRI);
     unsigned subRegIndex = MO.getSubReg();
     if (subRegIndex) {
-      LaneMask = TRI.getSubRegIndexLaneMask(subRegIndex);
+      LaneMask = TRI->getSubRegIndexLaneMask(subRegIndex);
     }
   }
 
@@ -305,6 +307,17 @@ public:
                   const VRegMaskPair VMP) {
     if (!VMP.VReg.isVirtual())
       report_fatal_error("Only virtual registers allowed!\n", true);
+    // FIXME: We use the same Infinity value to indicate both invalid distance
+    // and too long for out of block values. It is okay if the use out of block
+    // is at least one instruction further then the end of loop exit. In this
+    // case we have a distance Infinity + 1 and hence register is not considered
+    // dead. What if the register is defined by the last instruction in the loop
+    // exit block and out of loop use is in PHI? By design the dist of all PHIs
+    // from the beginning of block are ZERO and hence the distance of
+    // out-of-the-loop use will be exactly Infinity So, the register will be
+    // mistakenly considered DEAD! On another hand, any predecessor of the block
+    // containing PHI must have a branch as the last instruction. In this case
+    // the current design works.
     return I == MBB.end() ? getNextUseDistance(MBB, VMP) == Infinity
                           : getNextUseDistance(I, VMP) == Infinity;
   }

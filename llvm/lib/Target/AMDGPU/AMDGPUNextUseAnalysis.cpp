@@ -111,12 +111,13 @@ void NextUseResult::analyze(const MachineFunction &MF) {
               if (ValueSrc->getNumber() == MBB->getNumber()) {
                 // We assume that all the PHIs have zero distance from the
                 // succ end!
-                Curr.insert({U.getReg(), LaneBitmask::getAll()}, 0);
+                Curr.insert(VRegMaskPair(U, TRI, MRI), 0);
               }
             }
           }
-          for (auto &U : PHI.defs())
-            Curr.clear({U.getReg(), LaneBitmask::getAll()});
+          for (auto &U : PHI.defs()) {
+            Curr.clear(VRegMaskPair(U, TRI, MRI));
+          }
         }
       }
 
@@ -142,7 +143,7 @@ void NextUseResult::analyze(const MachineFunction &MF) {
 
         for (auto &MO : MI.operands()) {
           if (MO.isReg() && MO.getReg().isVirtual()) {
-            VRegMaskPair P(MO, *TRI);
+            VRegMaskPair P(MO, TRI, MRI);
             if (MO.isUse()) {
               Curr.insert(P, 0);
               UsedInBlock[MBB->getNumber()].insert(P);
