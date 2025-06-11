@@ -18,7 +18,18 @@ from lit.llvm.subst import ToolSubst
 config.name = "LLVM"
 
 # testFormat: The test format to use to interpret tests.
-config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
+# We prefer the lit internal shell which provides a better user experience on failures
+# unless the user explicitly disables it with LIT_USE_INTERNAL_SHELL=0 env var.
+use_lit_shell = True
+lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
+if lit_shell_env:
+    use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
+
+config.test_format = lit.formats.ShTest(execute_external=not use_lit_shell)
+
+# FIXME: Tests that REQUIRES: shell are unsupported by the lit internal shell
+if use_lit_shell:
+    config.available_features.discard("shell")
 
 # suffixes: A list of file extensions to treat as test files. This is overriden
 # by individual lit.local.cfg files in the test subdirectories.
