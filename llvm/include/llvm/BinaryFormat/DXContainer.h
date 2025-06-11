@@ -167,7 +167,7 @@ enum class RootDescriptorFlag : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-#define DESCRIPTOR_RANGE_FLAG(Num, Val) Val = 1ull << Num,
+#define DESCRIPTOR_RANGE_FLAG(Num, Val) Val = Num,
 enum class DescriptorRangeFlag : uint32_t {
 #include "DXContainerConstants.def"
 
