@@ -3593,9 +3593,10 @@ static Value *foldOrOfInversions(BinaryOperator &I,
   return nullptr;
 }
 
-// A decomposition of ((X & Mask) ? 0 : Mask * Factor) . The NUW / NSW bools
+// A decomposition of ((X & Mask) * Factor). The NUW / NSW bools
 // track these properities for preservation. Note that we can decompose
-// equivalent forms of this expression (e.g. ((X & Mask) * Factor))
+// equivalent select form of this expression (e.g. (!(X & Mask) ? 0 : Mask *
+// Factor))
 struct DecomposedBitMaskMul {
   Value *X;
   APInt Factor;
@@ -3609,11 +3610,10 @@ static std::optional<DecomposedBitMaskMul> matchBitmaskMul(Value *V) {
   if (!Op)
     return std::nullopt;
 
-  const APInt *MulConst = nullptr;
-
   // Decompose (A & N) * C) into BitMaskMul
   Value *Original = nullptr;
   const APInt *Mask = nullptr;
+  const APInt *MulConst = nullptr;
   if (match(Op, m_Mul(m_And(m_Value(Original), m_APInt(Mask)),
                       m_APInt(MulConst)))) {
     if (MulConst->isZero() || Mask->isZero())
@@ -3742,9 +3742,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
                                    /*NSW=*/true, /*NUW=*/true))
       return R;
 
-    // (!(A & N) ? 0 : N * C) + (!(A & M) ? 0 : M * C) -> A & (N + M) * C
-    // This also accepts the equivalent mul form of (A & N) ? 0 : N * C)
-    // expressions i.e. (A & N) * C
+    // (A & N) * C + (A & M) * C -> (A & (N + M)) & C
+    // This also accepts the equivalent select form of (A & N) * C
+    // expressions i.e. !(A & N) ? 0 : N * C)
     auto Decomp1 = matchBitmaskMul(I.getOperand(1));
     if (Decomp1) {
       auto Decomp0 = matchBitmaskMul(I.getOperand(0));
@@ -3752,11 +3752,11 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
           (Decomp0->Mask & Decomp1->Mask).isZero() &&
           Decomp0->Factor == Decomp1->Factor) {
 
-        auto NewAnd = Builder.CreateAnd(
+        Value *NewAnd = Builder.CreateAnd(
             Decomp0->X, ConstantInt::get(Decomp0->X->getType(),
                                          (Decomp0->Mask + Decomp1->Mask)));
 
-        auto Combined = BinaryOperator::CreateMul(
+        auto *Combined = BinaryOperator::CreateMul(
             NewAnd, ConstantInt::get(NewAnd->getType(), Decomp1->Factor));
 
         Combined->setHasNoUnsignedWrap(Decomp0->NUW && Decomp1->NUW);
