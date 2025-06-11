@@ -34,6 +34,12 @@ namespace {
 class ScalarExprEmitter;
 } // namespace
 
+namespace mlir {
+namespace acc {
+class LoopOp;
+} // namespace acc
+} // namespace mlir
+
 namespace clang::CIRGen {
 
 class CIRGenFunction : public CIRGenTypeCache {
@@ -1081,6 +1087,12 @@ private:
   void emitOpenACCClauses(ComputeOp &op, LoopOp &loopOp,
                           OpenACCDirectiveKind dirKind, SourceLocation dirLoc,
                           ArrayRef<const OpenACCClause *> clauses);
+
+  // The OpenACC LoopOp requires that we have auto, seq, or independent on all
+  // LoopOp operations for the 'none' device type case. This function checks if
+  // the LoopOp has one, else it updates it to have one.
+  void updateLoopOpParallelism(mlir::acc::LoopOp &op, bool isOrphan,
+                               OpenACCDirectiveKind dk);
 
 public:
   mlir::LogicalResult
