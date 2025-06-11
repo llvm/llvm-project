@@ -120,7 +120,7 @@ void test5_GH62711() {
 
 void test6_GH50244() {
   double array[16];
-  // CHECK:      UnaryExprOrTypeTraitExpr {{.*}} 'unsigned long' contains-errors sizeof
+  // CHECK:      UnaryExprOrTypeTraitExpr {{.*}} '__size_t':'unsigned long' contains-errors sizeof
   // CHECK-NEXT: `-CallExpr {{.*}} '<dependent type>' contains-errors
   // CHECK-NEXT:   |-DeclRefExpr {{.*}} 'int ()'
   // CHECK-NEXT:   `-RecoveryExpr {{.*}} '<dependent type>'

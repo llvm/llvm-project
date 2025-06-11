@@ -70,7 +70,7 @@ void F(EmptyE e) {
 // CHECK-NEXT: Succs (1): B1
 // CHECK: [B1]
 // CHECK-NEXT:   1: __builtin_object_size
-// CHECK-NEXT:   2: [B1.1] (ImplicitCastExpr, BuiltinFnToFnPtr, unsigned long (*)(const void *, int) noexcept)
+// CHECK-NEXT:   2: [B1.1] (ImplicitCastExpr, BuiltinFnToFnPtr, __size_t (*)(const void *, int) noexcept)
 // CHECK-NEXT:   3: [B1.2](dummy(), 0)
 // CHECK-NEXT:   4: (void)[B1.3] (CStyleCastExpr, ToVoid, void)
 // CHECK-NEXT:   Preds (1): B2

@@ -3911,7 +3911,9 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
-// CHECK-NEXT:       "qualType": "unsigned long"
+// CHECK-NEXT:       "desugaredQualType": "unsigned long",
+// CHECK-NEXT:       "qualType": "__size_t",
+// CHECK-NEXT:       "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "valueCategory": "prvalue",
 // CHECK-NEXT:      "name": "sizeof",
@@ -3964,7 +3966,9 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
-// CHECK-NEXT:       "qualType": "unsigned long"
+// CHECK-NEXT:       "desugaredQualType": "unsigned long",
+// CHECK-NEXT:       "qualType": "__size_t",
+// CHECK-NEXT:       "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "valueCategory": "prvalue",
 // CHECK-NEXT:      "name": "sizeof",
@@ -3989,7 +3993,9 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
-// CHECK-NEXT:       "qualType": "unsigned long"
+// CHECK-NEXT:       "desugaredQualType": "unsigned long",
+// CHECK-NEXT:       "qualType": "__size_t",
+// CHECK-NEXT:       "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "valueCategory": "prvalue",
 // CHECK-NEXT:      "name": "alignof",

@@ -6726,41 +6726,49 @@ QualType ASTContext::getTagDeclType(const TagDecl *Decl) const {
   return getTypeDeclType(const_cast<TagDecl*>(Decl));
 }
 
+// Inject __size_t, __signed_size_t, and __ptrdiff_t to provide portable hints
+// and diagnostics. In C and C++, expressions of type size_t can be obtained via
+// the sizeof operator, expressions of type ptrdiff_t via pointer subtraction,
+// and expressions of type signed size_t via the z literal suffix (since C++23).
+// However, no core language mechanism directly produces an expression of type
+// unsigned ptrdiff_t. The unsigned ptrdiff_t type is solely required by format
+// specifiers for printf and scanf. Consequently, no expression's type needs to
+// be displayed as unsigned ptrdiff_t. Verification of whether a type is
+// unsigned ptrdiff_t is also unnecessary, as no corresponding typedefs exist.
+// Therefore, injecting a typedef for signed ptrdiff_t is not required.
+
 /// getSizeType - Return the unique type for "size_t" (C99 7.17), the result
 /// of the sizeof operator (C99 6.5.3.4p4). The value is target dependent and
 /// needs to agree with the definition in <stddef.h>.
 QualType ASTContext::getSizeType() const {
-#if 0
   if (SizeType.isNull()) {
-    SizeType = getTypedefType(buildImplicitTypedef(
-        getFromTargetType(Target->getSizeType()), "__size_t"));
+    if (auto const &LO = getLangOpts(); !LO.HLSL && (LO.C99 || LO.CPlusPlus))
+      SizeType = getTypedefType(buildImplicitTypedef(
+          getFromTargetType(Target->getSizeType()), "__size_t"));
+    else
+      SizeType = getFromTargetType(Target->getSizeType());
   }
   return SizeType;
-#else
-  return getFromTargetType(Target->getSizeType());
-#endif
 }
 
 /// Return the unique signed counterpart of the integer type
 /// corresponding to size_t.
 QualType ASTContext::getSignedSizeType() const {
-#if 0
   if (SignedSizeType.isNull()) {
-    SignedSizeType = getTypedefType(buildImplicitTypedef(
-        getFromTargetType(Target->getSignedSizeType()), "__signed_size_t"));
+    if (auto const &LO = getLangOpts(); !LO.HLSL && (LO.C99 || LO.CPlusPlus))
+      SignedSizeType = getTypedefType(buildImplicitTypedef(
+          getFromTargetType(Target->getSignedSizeType()), "__signed_size_t"));
+    else
+      SignedSizeType = getFromTargetType(Target->getSignedSizeType());
   }
   return SignedSizeType;
-#else
-  return getFromTargetType(Target->getSignedSizeType());
-#endif
 }
 
 /// getPointerDiffType - Return the unique type for "ptrdiff_t" (C99 7.17)
 /// defined in <stddef.h>. Pointer - pointer requires this (C99 6.5.6p9).
 QualType ASTContext::getPointerDiffType() const {
-#if 1
   if (PtrdiffType.isNull()) {
-    if (getLangOpts().C99 || getLangOpts().CPlusPlus)
+    if (auto const &LO = getLangOpts(); !LO.HLSL && (LO.C99 || LO.CPlusPlus))
       PtrdiffType = getTypedefType(buildImplicitTypedef(
           getFromTargetType(Target->getPtrDiffType(LangAS::Default)),
           "__ptrdiff_t"));
@@ -6768,9 +6776,6 @@ QualType ASTContext::getPointerDiffType() const {
       PtrdiffType = getFromTargetType(Target->getPtrDiffType(LangAS::Default));
   }
   return PtrdiffType;
-#else
-  return getFromTargetType(Target->getPtrDiffType(LangAS::Default));
-#endif
 }
 
 /// Return the unique unsigned counterpart of "ptrdiff_t"
