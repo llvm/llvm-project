@@ -228,23 +228,48 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   ReturnHelper ReturnValue(PropSize, PropValue, PropSizeRet);
 
   // Find the info if it exists under any of the given names
-  auto GetInfo = [&](std::vector<std::string> Names) {
+  auto GetInfoString = [&](std::vector<std::string> Names) {
     if (Device == HostDevice())
-      return std::string("Host");
+      return "Host";
 
     if (!Device->Device)
-      return std::string("");
+      return "";
 
     auto Info = Device->Device->obtainInfoImpl();
     if (auto Err = Info.takeError())
-      return std::string("");
+      return "";
 
     for (auto Name : Names) {
       if (auto Entry = Info->get(Name))
-        return (*Entry)->Value;
+        return (*Entry)->Value.c_str();
     }
 
-    return std::string("");
+    return "";
+  };
+  auto GetInfoXyz = [&](std::vector<std::string> Names) {
+    if (!Device->Device)
+      return ol_dimensions_t{0, 0, 0};
+
+    auto Info = Device->Device->obtainInfoImpl();
+    if (auto Err = Info.takeError())
+      return ol_dimensions_t{0, 0, 0};
+
+    for (auto Name : Names) {
+      if (auto Entry = Info->get(Name)) {
+        auto Node = *Entry;
+        ol_dimensions_t Out{0, 0, 0};
+
+        if (auto X = Node->get("x"))
+          Out.x = stoi((*X)->Value);
+        if (auto Y = Node->get("y"))
+          Out.y = stoi((*Y)->Value);
+        if (auto Z = Node->get("z"))
+          Out.z = stoi((*Z)->Value);
+        return Out;
+      }
+    }
+
+    return ol_dimensions_t{0, 0, 0};
   };
 
   switch (PropName) {
@@ -254,12 +279,15 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
     return Device == HostDevice() ? ReturnValue(OL_DEVICE_TYPE_HOST)
                                   : ReturnValue(OL_DEVICE_TYPE_GPU);
   case OL_DEVICE_INFO_NAME:
-    return ReturnValue(GetInfo({"Device Name"}).c_str());
+    return ReturnValue(GetInfoString({"Device Name"}));
   case OL_DEVICE_INFO_VENDOR:
-    return ReturnValue(GetInfo({"Vendor Name"}).c_str());
+    return ReturnValue(GetInfoString({"Vendor Name"}));
   case OL_DEVICE_INFO_DRIVER_VERSION:
     return ReturnValue(
-        GetInfo({"CUDA Driver Version", "HSA Runtime Version"}).c_str());
+        GetInfoString({"CUDA Driver Version", "HSA Runtime Version"}));
+  case OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE:
+    return ReturnValue(GetInfoXyz({"Workgroup Max Size per Dimension" /*AMD*/,
+                                   "Maximum Block Dimensions" /*CUDA*/}));
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "getDeviceInfo enum '%i' is invalid", PropName);
