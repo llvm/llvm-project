@@ -295,17 +295,16 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *SpaceOp = EmitScalarExpr(E->getArg(2));
     Value *RangeOp = EmitScalarExpr(E->getArg(3));
     Value *IndexOp = EmitScalarExpr(E->getArg(4));
+    Value *Name = EmitScalarExpr(E->getArg(5));
     // FIXME: NonUniformResourceIndex bit is not yet implemented
     // (llvm/llvm-project#135452)
     Value *NonUniform =
         llvm::ConstantInt::get(llvm::Type::getInt1Ty(getLLVMContext()), false);
 
-    auto [IntrinsicID, HasNameArg] =
+    llvm::Intrinsic::ID IntrinsicID =
         CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic();
-    SmallVector<Value *> Args{SpaceOp, RegisterOp, RangeOp, IndexOp,
-                              NonUniform};
-    if (HasNameArg)
-      Args.push_back(EmitScalarExpr(E->getArg(5)));
+    SmallVector<Value *> Args{SpaceOp, RegisterOp, RangeOp,
+                              IndexOp, NonUniform, Name};
     return Builder.CreateIntrinsic(HandleTy, IntrinsicID, Args);
   }
   case Builtin::BI__builtin_hlsl_resource_handlefromimplicitbinding: {
@@ -314,16 +313,16 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *RangeOp = EmitScalarExpr(E->getArg(2));
     Value *IndexOp = EmitScalarExpr(E->getArg(3));
     Value *OrderID = EmitScalarExpr(E->getArg(4));
+    Value *Name = EmitScalarExpr(E->getArg(5));
     // FIXME: NonUniformResourceIndex bit is not yet implemented
     // (llvm/llvm-project#135452)
     Value *NonUniform =
         llvm::ConstantInt::get(llvm::Type::getInt1Ty(getLLVMContext()), false);
 
-    auto [IntrinsicID, HasNameArg] =
+    llvm::Intrinsic::ID IntrinsicID =
         CGM.getHLSLRuntime().getCreateHandleFromImplicitBindingIntrinsic();
-    SmallVector<Value *> Args{OrderID, SpaceOp, RangeOp, IndexOp, NonUniform};
-    if (HasNameArg)
-      Args.push_back(EmitScalarExpr(E->getArg(5)));
+    SmallVector<Value *> Args{OrderID, SpaceOp,    RangeOp,
+                              IndexOp, NonUniform, Name};
     return Builder.CreateIntrinsic(HandleTy, IntrinsicID, Args);
   }
   case Builtin::BI__builtin_hlsl_all: {
