@@ -24,7 +24,7 @@ define <16 x float> @shuffle_v16f32_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08
 ;
 ; FAST-LABEL: shuffle_v16f32_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08:
 ; FAST:       # %bb.0:
-; FAST-NEXT:    vbroadcastss {{.*#+}} zmm1 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
+; FAST-NEXT:    vmovaps {{.*#+}} zmm1 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
 ; FAST-NEXT:    vpermps %zmm0, %zmm1, %zmm0
 ; FAST-NEXT:    retq
   %shuffle = shufflevector <16 x float> %a, <16 x float> %b, <16 x i32><i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8>
@@ -40,7 +40,7 @@ define <16 x float> @shuffle_v16f32_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08
 ;
 ; FAST-LABEL: shuffle_v16f32_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_bc:
 ; FAST:       # %bb.0:
-; FAST-NEXT:    vbroadcastss {{.*#+}} zmm1 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
+; FAST-NEXT:    vmovaps {{.*#+}} zmm1 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
 ; FAST-NEXT:    vpermps %zmm0, %zmm1, %zmm0
 ; FAST-NEXT:    retq
   %tmp0 = bitcast <16 x i32> %a to <16 x float>
@@ -248,7 +248,7 @@ define <16 x i32> @shuffle_v16i32_04_04_04_04_04_04_04_04_04_04_04_04_04_04_04_0
 ;
 ; FAST-LABEL: shuffle_v16i32_04_04_04_04_04_04_04_04_04_04_04_04_04_04_04_04:
 ; FAST:       # %bb.0:
-; FAST-NEXT:    vbroadcastss {{.*#+}} zmm1 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
+; FAST-NEXT:    vmovaps {{.*#+}} zmm1 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
 ; FAST-NEXT:    vpermps %zmm0, %zmm1, %zmm0
 ; FAST-NEXT:    retq
   %shuffle = shufflevector <16 x i32> %a, <16 x i32> %b, <16 x i32><i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
@@ -638,7 +638,7 @@ define <16 x float> @shuffle_v8f32_v16f32_04_04_04_04_04_04_04_04_04_04_04_04_04
 ; FAST-LABEL: shuffle_v8f32_v16f32_04_04_04_04_04_04_04_04_04_04_04_04_04_04_04_04:
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; FAST-NEXT:    vbroadcastss {{.*#+}} zmm1 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
+; FAST-NEXT:    vmovaps {{.*#+}} zmm1 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
 ; FAST-NEXT:    vpermps %zmm0, %zmm1, %zmm0
 ; FAST-NEXT:    retq
   %shuffle = shufflevector <8 x float> %a, <8 x float> poison, <16 x i32> <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>

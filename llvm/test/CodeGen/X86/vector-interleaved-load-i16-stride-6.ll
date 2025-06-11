@@ -2874,14 +2874,14 @@ define void @load_i16_stride6_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vpermi2w %zmm4, %zmm3, %zmm2
 ; AVX512BW-NEXT:    vpblendw {{.*#+}} ymm1 = ymm2[0,1,2],ymm1[3,4,5,6,7],ymm2[8,9,10],ymm1[11,12,13,14,15]
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
-; AVX512BW-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [16,16,16,4,10,16,22,28,16,16,16,4,10,16,22,28]
+; AVX512BW-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [0,0,0,4,10,16,22,28,0,0,0,4,10,16,22,28]
 ; AVX512BW-NEXT:    # ymm2 = mem[0,1,0,1]
 ; AVX512BW-NEXT:    vpermw %zmm5, %zmm2, %zmm2
 ; AVX512BW-NEXT:    vpmovsxbw {{.*#+}} ymm6 = [34,40,46,52,58,0,6,12,18,24,30,0,0,0,0,0]
 ; AVX512BW-NEXT:    vpermi2w %zmm3, %zmm4, %zmm6
 ; AVX512BW-NEXT:    vpblendw {{.*#+}} ymm2 = ymm6[0,1,2],ymm2[3,4,5,6,7],ymm6[8,9,10],ymm2[11,12,13,14,15]
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm2 = ymm6[0,1,2,3],ymm2[4,5,6,7]
-; AVX512BW-NEXT:    vbroadcasti128 {{.*#+}} ymm6 = [16,16,16,5,11,17,23,29,16,16,16,5,11,17,23,29]
+; AVX512BW-NEXT:    vbroadcasti128 {{.*#+}} ymm6 = [0,0,0,5,11,17,23,29,0,0,0,5,11,17,23,29]
 ; AVX512BW-NEXT:    # ymm6 = mem[0,1,0,1]
 ; AVX512BW-NEXT:    vpermw %zmm5, %zmm6, %zmm6
 ; AVX512BW-NEXT:    vpmovsxbw {{.*#+}} ymm7 = [35,41,47,53,59,1,7,13,19,25,31,0,0,0,0,0]
@@ -2929,14 +2929,14 @@ define void @load_i16_stride6_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-FCP-NEXT:    vpermi2w %zmm4, %zmm3, %zmm2
 ; AVX512BW-FCP-NEXT:    vpblendw {{.*#+}} ymm1 = ymm2[0,1,2],ymm1[3,4,5,6,7],ymm2[8,9,10],ymm1[11,12,13,14,15]
 ; AVX512BW-FCP-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
-; AVX512BW-FCP-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [16,16,16,4,10,16,22,28,16,16,16,4,10,16,22,28]
+; AVX512BW-FCP-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [0,0,0,4,10,16,22,28,0,0,0,4,10,16,22,28]
 ; AVX512BW-FCP-NEXT:    # ymm2 = mem[0,1,0,1]
 ; AVX512BW-FCP-NEXT:    vpermw %zmm5, %zmm2, %zmm2
 ; AVX512BW-FCP-NEXT:    vpmovsxbw {{.*#+}} ymm6 = [34,40,46,52,58,0,6,12,18,24,30,0,0,0,0,0]
 ; AVX512BW-FCP-NEXT:    vpermi2w %zmm3, %zmm4, %zmm6
 ; AVX512BW-FCP-NEXT:    vpblendw {{.*#+}} ymm2 = ymm6[0,1,2],ymm2[3,4,5,6,7],ymm6[8,9,10],ymm2[11,12,13,14,15]
 ; AVX512BW-FCP-NEXT:    vpblendd {{.*#+}} ymm2 = ymm6[0,1,2,3],ymm2[4,5,6,7]
-; AVX512BW-FCP-NEXT:    vbroadcasti128 {{.*#+}} ymm6 = [16,16,16,5,11,17,23,29,16,16,16,5,11,17,23,29]
+; AVX512BW-FCP-NEXT:    vbroadcasti128 {{.*#+}} ymm6 = [0,0,0,5,11,17,23,29,0,0,0,5,11,17,23,29]
 ; AVX512BW-FCP-NEXT:    # ymm6 = mem[0,1,0,1]
 ; AVX512BW-FCP-NEXT:    vpermw %zmm5, %zmm6, %zmm6
 ; AVX512BW-FCP-NEXT:    vpmovsxbw {{.*#+}} ymm7 = [35,41,47,53,59,1,7,13,19,25,31,0,0,0,0,0]
@@ -2984,14 +2984,14 @@ define void @load_i16_stride6_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vpermi2w %zmm4, %zmm3, %zmm2
 ; AVX512DQ-BW-NEXT:    vpblendw {{.*#+}} ymm1 = ymm2[0,1,2],ymm1[3,4,5,6,7],ymm2[8,9,10],ymm1[11,12,13,14,15]
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
-; AVX512DQ-BW-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [16,16,16,4,10,16,22,28,16,16,16,4,10,16,22,28]
+; AVX512DQ-BW-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [0,0,0,4,10,16,22,28,0,0,0,4,10,16,22,28]
 ; AVX512DQ-BW-NEXT:    # ymm2 = mem[0,1,0,1]
 ; AVX512DQ-BW-NEXT:    vpermw %zmm5, %zmm2, %zmm2
 ; AVX512DQ-BW-NEXT:    vpmovsxbw {{.*#+}} ymm6 = [34,40,46,52,58,0,6,12,18,24,30,0,0,0,0,0]
 ; AVX512DQ-BW-NEXT:    vpermi2w %zmm3, %zmm4, %zmm6
 ; AVX512DQ-BW-NEXT:    vpblendw {{.*#+}} ymm2 = ymm6[0,1,2],ymm2[3,4,5,6,7],ymm6[8,9,10],ymm2[11,12,13,14,15]
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} ymm2 = ymm6[0,1,2,3],ymm2[4,5,6,7]
-; AVX512DQ-BW-NEXT:    vbroadcasti128 {{.*#+}} ymm6 = [16,16,16,5,11,17,23,29,16,16,16,5,11,17,23,29]
+; AVX512DQ-BW-NEXT:    vbroadcasti128 {{.*#+}} ymm6 = [0,0,0,5,11,17,23,29,0,0,0,5,11,17,23,29]
 ; AVX512DQ-BW-NEXT:    # ymm6 = mem[0,1,0,1]
 ; AVX512DQ-BW-NEXT:    vpermw %zmm5, %zmm6, %zmm6
 ; AVX512DQ-BW-NEXT:    vpmovsxbw {{.*#+}} ymm7 = [35,41,47,53,59,1,7,13,19,25,31,0,0,0,0,0]
@@ -3039,14 +3039,14 @@ define void @load_i16_stride6_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-FCP-NEXT:    vpermi2w %zmm4, %zmm3, %zmm2
 ; AVX512DQ-BW-FCP-NEXT:    vpblendw {{.*#+}} ymm1 = ymm2[0,1,2],ymm1[3,4,5,6,7],ymm2[8,9,10],ymm1[11,12,13,14,15]
 ; AVX512DQ-BW-FCP-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
-; AVX512DQ-BW-FCP-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [16,16,16,4,10,16,22,28,16,16,16,4,10,16,22,28]
+; AVX512DQ-BW-FCP-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [0,0,0,4,10,16,22,28,0,0,0,4,10,16,22,28]
 ; AVX512DQ-BW-FCP-NEXT:    # ymm2 = mem[0,1,0,1]
 ; AVX512DQ-BW-FCP-NEXT:    vpermw %zmm5, %zmm2, %zmm2
 ; AVX512DQ-BW-FCP-NEXT:    vpmovsxbw {{.*#+}} ymm6 = [34,40,46,52,58,0,6,12,18,24,30,0,0,0,0,0]
 ; AVX512DQ-BW-FCP-NEXT:    vpermi2w %zmm3, %zmm4, %zmm6
 ; AVX512DQ-BW-FCP-NEXT:    vpblendw {{.*#+}} ymm2 = ymm6[0,1,2],ymm2[3,4,5,6,7],ymm6[8,9,10],ymm2[11,12,13,14,15]
 ; AVX512DQ-BW-FCP-NEXT:    vpblendd {{.*#+}} ymm2 = ymm6[0,1,2,3],ymm2[4,5,6,7]
-; AVX512DQ-BW-FCP-NEXT:    vbroadcasti128 {{.*#+}} ymm6 = [16,16,16,5,11,17,23,29,16,16,16,5,11,17,23,29]
+; AVX512DQ-BW-FCP-NEXT:    vbroadcasti128 {{.*#+}} ymm6 = [0,0,0,5,11,17,23,29,0,0,0,5,11,17,23,29]
 ; AVX512DQ-BW-FCP-NEXT:    # ymm6 = mem[0,1,0,1]
 ; AVX512DQ-BW-FCP-NEXT:    vpermw %zmm5, %zmm6, %zmm6
 ; AVX512DQ-BW-FCP-NEXT:    vpmovsxbw {{.*#+}} ymm7 = [35,41,47,53,59,1,7,13,19,25,31,0,0,0,0,0]

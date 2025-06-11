@@ -257,7 +257,7 @@ define void @vp_fabs_v4f32(<4 x float> %a0, <4 x float> %a1, ptr %out, i32 %vp) 
 ; AVX512-LABEL: vp_fabs_v4f32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa %xmm0, (%rdi)
+; AVX512-NEXT:    vmovaps %xmm0, (%rdi)
 ; AVX512-NEXT:    retq
   %res = call <4 x float> @llvm.vp.fabs.v4f32(<4 x float> %a0, <4 x i1> <i1 -1, i1 -1, i1 -1, i1 -1>, i32 %vp)
   store <4 x float> %res, ptr %out
@@ -320,7 +320,7 @@ define void @vp_fneg_v4f32(<4 x float> %a0, <4 x float> %a1, ptr %out, i32 %vp) 
 ; AVX512-LABEL: vp_fneg_v4f32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa %xmm0, (%rdi)
+; AVX512-NEXT:    vmovaps %xmm0, (%rdi)
 ; AVX512-NEXT:    retq
   %res = call <4 x float> @llvm.vp.fneg.v4f32(<4 x float> %a0, <4 x i1> <i1 -1, i1 -1, i1 -1, i1 -1>, i32 %vp)
   store <4 x float> %res, ptr %out

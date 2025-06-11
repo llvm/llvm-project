@@ -841,8 +841,7 @@ define dso_local void @fallback_broadcast_v4i64_to_v8i64(<4 x i64> %a, <8 x i64>
 ;
 ; X86-AVX512-LABEL: fallback_broadcast_v4i64_to_v8i64:
 ; X86-AVX512:       # %bb.0: # %entry
-; X86-AVX512-NEXT:    vbroadcasti64x4 {{.*#+}} zmm2 = [1,0,2,0,3,0,4,0,1,0,2,0,3,0,4,0]
-; X86-AVX512-NEXT:    # zmm2 = mem[0,1,2,3,0,1,2,3]
+; X86-AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [1,2,3,4,1,2,3,4]
 ; X86-AVX512-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
 ; X86-AVX512-NEXT:    vpaddq %zmm2, %zmm1, %zmm1
 ; X86-AVX512-NEXT:    vpandq %zmm2, %zmm1, %zmm1
@@ -891,8 +890,7 @@ define dso_local void @fallback_broadcast_v4i64_to_v8i64(<4 x i64> %a, <8 x i64>
 ;
 ; X64-AVX512-LABEL: fallback_broadcast_v4i64_to_v8i64:
 ; X64-AVX512:       # %bb.0: # %entry
-; X64-AVX512-NEXT:    vbroadcasti64x4 {{.*#+}} zmm2 = [1,2,3,4,1,2,3,4]
-; X64-AVX512-NEXT:    # zmm2 = mem[0,1,2,3,0,1,2,3]
+; X64-AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [1,2,3,4,1,2,3,4]
 ; X64-AVX512-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
 ; X64-AVX512-NEXT:    vpaddq %zmm2, %zmm1, %zmm1
 ; X64-AVX512-NEXT:    vpandq %zmm2, %zmm1, %zmm1

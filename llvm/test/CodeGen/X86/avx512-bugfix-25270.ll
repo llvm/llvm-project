@@ -11,12 +11,12 @@ define void @bar__512(ptr %var) #0 {
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    vmovups (%rdi), %zmm0
 ; CHECK-NEXT:    vmovups %zmm0, (%rsp) ## 64-byte Spill
-; CHECK-NEXT:    vbroadcastss {{.*#+}} zmm1 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
+; CHECK-NEXT:    vmovaps {{.*#+}} zmm1 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
 ; CHECK-NEXT:    vmovaps %zmm1, (%rdi)
 ; CHECK-NEXT:    callq _Print__512
 ; CHECK-NEXT:    vmovups (%rsp), %zmm0 ## 64-byte Reload
 ; CHECK-NEXT:    callq _Print__512
-; CHECK-NEXT:    vbroadcastss {{.*#+}} zmm0 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
+; CHECK-NEXT:    vmovaps {{.*#+}} zmm0 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
 ; CHECK-NEXT:    vmovaps %zmm0, (%rbx)
 ; CHECK-NEXT:    addq $64, %rsp
 ; CHECK-NEXT:    popq %rbx
