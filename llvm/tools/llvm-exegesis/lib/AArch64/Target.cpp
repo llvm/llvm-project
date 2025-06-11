@@ -54,23 +54,32 @@ static bool isPointerAuth(unsigned Opcode) {
   // We would like to measure these instructions, but they can behave
   // differently on different platforms, and maybe the snippets need to look
   // different for these instructions,
-  // Platform-specific handling:  On Linux, we disable authentication, may
-  // interfere with measurements. On non-Linux platforms, disable opcodes for
-  // now.
+  // Platform-specific handling:  On Linux, owing to the fact that disabling
+  // keys can cause exegesis to crash, the user may pass
+  // --aarch64-keep-pack-keys in case we disable authentication to ensure
+  // forward progress. On non-Linux platforms, disable opcodes for now.
+  case AArch64::AUTIAZ:
+  case AArch64::AUTIBZ:
+  case AArch64::AUTIASP:
+  case AArch64::AUTIBSP:
+  case AArch64::AUTIASPPCi:
+  case AArch64::AUTIBSPPCi:
+  case AArch64::AUTIASPPCr:
+  case AArch64::AUTIBSPPCr:
+  case AArch64::AUTIA1716:
+  case AArch64::AUTIB1716:
+  case AArch64::AUTIA171615:
+  case AArch64::AUTIB171615:
+  case AArch64::AUTIA:
+  case AArch64::AUTIB:
   case AArch64::AUTDA:
   case AArch64::AUTDB:
-  case AArch64::AUTDZA:
-  case AArch64::AUTDZB:
-  case AArch64::AUTIA:
-  case AArch64::AUTIA1716:
-  case AArch64::AUTIASP:
-  case AArch64::AUTIAZ:
-  case AArch64::AUTIB:
-  case AArch64::AUTIB1716:
-  case AArch64::AUTIBSP:
-  case AArch64::AUTIBZ:
   case AArch64::AUTIZA:
   case AArch64::AUTIZB:
+  case AArch64::AUTDZA:
+  case AArch64::AUTDZB:
+  case AArch64::LDRAAwriteback:
+  case AArch64::LDRABwriteback:
     return true;
   }
 }
