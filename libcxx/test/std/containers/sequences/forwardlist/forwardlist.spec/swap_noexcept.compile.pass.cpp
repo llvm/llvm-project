@@ -12,10 +12,10 @@
 
 // void swap(forward_list& c)
 //     noexcept(!allocator_type::propagate_on_container_swap::value ||
-//              __is_nothrow_swappable<allocator_type>::value);
+//              __is_nothrow_swappable<allocator_type>::value);          // constexpr since C++26
 //
 //  In C++17, the standard says that swap shall have:
-//     noexcept(is_always_equal<allocator_type>::value);
+//     noexcept(is_always_equal<allocator_type>::value);                 // constexpr since C++26
 
 // This tests a conforming extension
 
@@ -52,7 +52,7 @@ struct some_alloc2 {
   typedef std::true_type is_always_equal;
 };
 
-int main(int, char**) {
+void f() {
   {
     typedef std::forward_list<MoveOnly> C;
     static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
@@ -83,6 +83,4 @@ int main(int, char**) {
     static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
   }
 #endif
-
-  return 0;
 }

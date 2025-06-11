@@ -77,9 +77,7 @@ struct MCInstInBFReference {
     return BF == RHS.BF && Offset == RHS.Offset;
   }
   bool operator<(const MCInstInBFReference &RHS) const {
-    if (BF != RHS.BF)
-      return BF < RHS.BF;
-    return Offset < RHS.Offset;
+    return std::tie(BF, Offset) < std::tie(RHS.BF, RHS.Offset);
   }
   operator MCInst &() const {
     assert(BF != nullptr);
