@@ -11,7 +11,6 @@ target triple = "nvptx64-unknown-unknown"
 define ptx_kernel void @ex_zext(ptr noalias readonly %data, ptr %res) {
 ; CHECK-LABEL: ex_zext(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
@@ -20,8 +19,7 @@ define ptx_kernel void @ex_zext(ptr noalias readonly %data, ptr %res) {
 ; CHECK-NEXT:    cvta.to.global.u64 %rd2, %rd1;
 ; CHECK-NEXT:    ld.param.b64 %rd3, [ex_zext_param_1];
 ; CHECK-NEXT:    cvta.to.global.u64 %rd4, %rd3;
-; CHECK-NEXT:    ld.global.nc.b8 %rs1, [%rd2];
-; CHECK-NEXT:    cvt.u32.u8 %r1, %rs1;
+; CHECK-NEXT:    ld.global.nc.b8 %r1, [%rd2];
 ; CHECK-NEXT:    st.global.b32 [%rd4], %r1;
 ; CHECK-NEXT:    ret;
 entry:
@@ -34,7 +32,6 @@ entry:
 define ptx_kernel void @ex_sext(ptr noalias readonly %data, ptr %res) {
 ; CHECK-LABEL: ex_sext(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
@@ -43,8 +40,7 @@ define ptx_kernel void @ex_sext(ptr noalias readonly %data, ptr %res) {
 ; CHECK-NEXT:    cvta.to.global.u64 %rd2, %rd1;
 ; CHECK-NEXT:    ld.param.b64 %rd3, [ex_sext_param_1];
 ; CHECK-NEXT:    cvta.to.global.u64 %rd4, %rd3;
-; CHECK-NEXT:    ld.global.nc.b8 %rs1, [%rd2];
-; CHECK-NEXT:    cvt.s32.s8 %r1, %rs1;
+; CHECK-NEXT:    ld.global.nc.s8 %r1, [%rd2];
 ; CHECK-NEXT:    st.global.b32 [%rd4], %r1;
 ; CHECK-NEXT:    ret;
 entry:

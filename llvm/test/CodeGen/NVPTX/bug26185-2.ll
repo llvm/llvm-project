@@ -15,7 +15,6 @@ define ptx_kernel void @spam(ptr addrspace(1) noalias nocapture readonly %arg, p
 ; CHECK-LABEL: spam(
 ; CHECK:       .maxntid 1, 1, 1
 ; CHECK-NEXT:  {
-; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<9>;
 ; CHECK-EMPTY:
@@ -25,8 +24,7 @@ define ptx_kernel void @spam(ptr addrspace(1) noalias nocapture readonly %arg, p
 ; CHECK-NEXT:    shl.b64 %rd3, %rd2, 1;
 ; CHECK-NEXT:    add.s64 %rd4, %rd1, %rd3;
 ; CHECK-NEXT:    ld.param.b64 %rd5, [spam_param_1];
-; CHECK-NEXT:    ld.global.nc.b16 %rs1, [%rd4+16];
-; CHECK-NEXT:    cvt.s32.s16 %r1, %rs1;
+; CHECK-NEXT:    ld.global.nc.s16 %r1, [%rd4+16];
 ; CHECK-NEXT:    mul.wide.s32 %rd6, %r1, %r1;
 ; CHECK-NEXT:    ld.global.b64 %rd7, [%rd5];
 ; CHECK-NEXT:    add.s64 %rd8, %rd6, %rd7;
