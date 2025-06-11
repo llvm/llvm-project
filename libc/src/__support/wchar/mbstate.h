@@ -1,4 +1,4 @@
-//===-- Definition of mbstate_t -------------------------- -----*-- C++ -*-===//
+//===-- Definition of mbstate----------------------------- -----*-- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,14 +9,15 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MBSTATE_H
 #define LLVM_LIBC_SRC___SUPPORT_MBSTATE_H
 
+#include "hdr/types/char32_t.h"
 #include "hdr/types/wchar_t.h"
-#include "stdint.h"
+#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 struct mbstate {
-  wchar_t partial;
+  char32_t partial;
   uint8_t bits_processed;
   uint8_t total_bytes;
 };
