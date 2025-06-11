@@ -522,8 +522,6 @@ define <8 x i1> @test_fcmp_une(<8 x half> %a, <8 x half> %b) #0 {
 ; CHECK-CVT-NEXT:    fcmeq v0.4s, v0.4s, v1.4s
 ; CHECK-CVT-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
 ; CHECK-CVT-NEXT:    mvn v0.16b, v0.16b
-; CHECK-CVT-NEXT:    shl v0.8h, v0.8h, #15
-; CHECK-CVT-NEXT:    cmlt v0.8h, v0.8h, #0
 ; CHECK-CVT-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-CVT-NEXT:    ret
 ;
@@ -552,8 +550,6 @@ define <8 x i1> @test_fcmp_ueq(<8 x half> %a, <8 x half> %b) #0 {
 ; CHECK-CVT-NEXT:    orr v0.16b, v0.16b, v3.16b
 ; CHECK-CVT-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-CVT-NEXT:    mvn v0.16b, v0.16b
-; CHECK-CVT-NEXT:    shl v0.8h, v0.8h, #15
-; CHECK-CVT-NEXT:    cmlt v0.8h, v0.8h, #0
 ; CHECK-CVT-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-CVT-NEXT:    ret
 ;
@@ -580,8 +576,6 @@ define <8 x i1> @test_fcmp_ugt(<8 x half> %a, <8 x half> %b) #0 {
 ; CHECK-CVT-NEXT:    fcmge v0.4s, v1.4s, v0.4s
 ; CHECK-CVT-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
 ; CHECK-CVT-NEXT:    mvn v0.16b, v0.16b
-; CHECK-CVT-NEXT:    shl v0.8h, v0.8h, #15
-; CHECK-CVT-NEXT:    cmlt v0.8h, v0.8h, #0
 ; CHECK-CVT-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-CVT-NEXT:    ret
 ;
@@ -606,8 +600,6 @@ define <8 x i1> @test_fcmp_uge(<8 x half> %a, <8 x half> %b) #0 {
 ; CHECK-CVT-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
 ; CHECK-CVT-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
 ; CHECK-CVT-NEXT:    mvn v0.16b, v0.16b
-; CHECK-CVT-NEXT:    shl v0.8h, v0.8h, #15
-; CHECK-CVT-NEXT:    cmlt v0.8h, v0.8h, #0
 ; CHECK-CVT-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-CVT-NEXT:    ret
 ;
@@ -632,8 +624,6 @@ define <8 x i1> @test_fcmp_ult(<8 x half> %a, <8 x half> %b) #0 {
 ; CHECK-CVT-NEXT:    fcmge v0.4s, v0.4s, v1.4s
 ; CHECK-CVT-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
 ; CHECK-CVT-NEXT:    mvn v0.16b, v0.16b
-; CHECK-CVT-NEXT:    shl v0.8h, v0.8h, #15
-; CHECK-CVT-NEXT:    cmlt v0.8h, v0.8h, #0
 ; CHECK-CVT-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-CVT-NEXT:    ret
 ;
@@ -658,8 +648,6 @@ define <8 x i1> @test_fcmp_ule(<8 x half> %a, <8 x half> %b) #0 {
 ; CHECK-CVT-NEXT:    fcmgt v0.4s, v0.4s, v1.4s
 ; CHECK-CVT-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
 ; CHECK-CVT-NEXT:    mvn v0.16b, v0.16b
-; CHECK-CVT-NEXT:    shl v0.8h, v0.8h, #15
-; CHECK-CVT-NEXT:    cmlt v0.8h, v0.8h, #0
 ; CHECK-CVT-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-CVT-NEXT:    ret
 ;
@@ -688,8 +676,6 @@ define <8 x i1> @test_fcmp_uno(<8 x half> %a, <8 x half> %b) #0 {
 ; CHECK-CVT-NEXT:    orr v0.16b, v0.16b, v3.16b
 ; CHECK-CVT-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-CVT-NEXT:    mvn v0.16b, v0.16b
-; CHECK-CVT-NEXT:    shl v0.8h, v0.8h, #15
-; CHECK-CVT-NEXT:    cmlt v0.8h, v0.8h, #0
 ; CHECK-CVT-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-CVT-NEXT:    ret
 ;
@@ -719,8 +705,6 @@ define <8 x i1> @test_fcmp_one(<8 x half> %a, <8 x half> %b) #0 {
 ; CHECK-CVT-NEXT:    orr v1.16b, v2.16b, v4.16b
 ; CHECK-CVT-NEXT:    orr v0.16b, v0.16b, v3.16b
 ; CHECK-CVT-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-CVT-NEXT:    shl v0.8h, v0.8h, #15
-; CHECK-CVT-NEXT:    cmlt v0.8h, v0.8h, #0
 ; CHECK-CVT-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-CVT-NEXT:    ret
 ;
@@ -745,8 +729,6 @@ define <8 x i1> @test_fcmp_oeq(<8 x half> %a, <8 x half> %b) #0 {
 ; CHECK-CVT-NEXT:    fcmeq v2.4s, v3.4s, v2.4s
 ; CHECK-CVT-NEXT:    fcmeq v0.4s, v0.4s, v1.4s
 ; CHECK-CVT-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
-; CHECK-CVT-NEXT:    shl v0.8h, v0.8h, #15
-; CHECK-CVT-NEXT:    cmlt v0.8h, v0.8h, #0
 ; CHECK-CVT-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-CVT-NEXT:    ret
 ;
@@ -769,8 +751,6 @@ define <8 x i1> @test_fcmp_ogt(<8 x half> %a, <8 x half> %b) #0 {
 ; CHECK-CVT-NEXT:    fcmgt v2.4s, v3.4s, v2.4s
 ; CHECK-CVT-NEXT:    fcmgt v0.4s, v0.4s, v1.4s
 ; CHECK-CVT-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
-; CHECK-CVT-NEXT:    shl v0.8h, v0.8h, #15
-; CHECK-CVT-NEXT:    cmlt v0.8h, v0.8h, #0
 ; CHECK-CVT-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-CVT-NEXT:    ret
 ;
@@ -793,8 +773,6 @@ define <8 x i1> @test_fcmp_oge(<8 x half> %a, <8 x half> %b) #0 {
 ; CHECK-CVT-NEXT:    fcmge v2.4s, v3.4s, v2.4s
 ; CHECK-CVT-NEXT:    fcmge v0.4s, v0.4s, v1.4s
 ; CHECK-CVT-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
-; CHECK-CVT-NEXT:    shl v0.8h, v0.8h, #15
-; CHECK-CVT-NEXT:    cmlt v0.8h, v0.8h, #0
 ; CHECK-CVT-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-CVT-NEXT:    ret
 ;
@@ -817,8 +795,6 @@ define <8 x i1> @test_fcmp_olt(<8 x half> %a, <8 x half> %b) #0 {
 ; CHECK-CVT-NEXT:    fcmgt v2.4s, v3.4s, v2.4s
 ; CHECK-CVT-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
 ; CHECK-CVT-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
-; CHECK-CVT-NEXT:    shl v0.8h, v0.8h, #15
-; CHECK-CVT-NEXT:    cmlt v0.8h, v0.8h, #0
 ; CHECK-CVT-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-CVT-NEXT:    ret
 ;
@@ -841,8 +817,6 @@ define <8 x i1> @test_fcmp_ole(<8 x half> %a, <8 x half> %b) #0 {
 ; CHECK-CVT-NEXT:    fcmge v2.4s, v3.4s, v2.4s
 ; CHECK-CVT-NEXT:    fcmge v0.4s, v1.4s, v0.4s
 ; CHECK-CVT-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
-; CHECK-CVT-NEXT:    shl v0.8h, v0.8h, #15
-; CHECK-CVT-NEXT:    cmlt v0.8h, v0.8h, #0
 ; CHECK-CVT-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-CVT-NEXT:    ret
 ;
@@ -869,8 +843,6 @@ define <8 x i1> @test_fcmp_ord(<8 x half> %a, <8 x half> %b) #0 {
 ; CHECK-CVT-NEXT:    orr v1.16b, v2.16b, v4.16b
 ; CHECK-CVT-NEXT:    orr v0.16b, v0.16b, v3.16b
 ; CHECK-CVT-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-CVT-NEXT:    shl v0.8h, v0.8h, #15
-; CHECK-CVT-NEXT:    cmlt v0.8h, v0.8h, #0
 ; CHECK-CVT-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-CVT-NEXT:    ret
 ;

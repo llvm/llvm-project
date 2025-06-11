@@ -22,7 +22,7 @@ directories::
         - test
         - utils
 
-Each of these directories is explained breifly below.
+Each of these directories is explained briefly below.
 
 The ``benchmarks`` directory
 ----------------------------

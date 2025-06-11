@@ -139,7 +139,7 @@ void SystemZELFFrameLowering::orderFrameObjects(
       return ADensityCmp < BDensityCmp;
     return A.DPairCount * B.ObjectSize < B.DPairCount * A.ObjectSize;
   };
-  std::stable_sort(SortingObjects.begin(), SortingObjects.end(), CmpD12);
+  llvm::stable_sort(SortingObjects, CmpD12);
 
   // Now modify the original list to represent the final order that
   // we want.

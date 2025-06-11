@@ -497,6 +497,11 @@ func.func private @matrix_type(!spirv.matrix<4 x vector<4xf16>>) -> ()
 
 // -----
 
+// CHECK: func private @matrix_type(!spirv.struct<(!spirv.matrix<3 x vector<3xf32>> [0])>)
+func.func private @matrix_type(!spirv.struct<(!spirv.matrix<3 x vector<3xf32>> [0])>) -> ()
+
+// -----
+
 // expected-error @+1 {{matrix is expected to have 2, 3, or 4 columns}}
 func.func private @matrix_invalid_size(!spirv.matrix<5 x vector<3xf32>>) -> ()
 

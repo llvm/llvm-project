@@ -125,6 +125,12 @@ static constexpr llvm::StringRef getInternalFuncNameAttrName() {
   return "fir.internal_name";
 }
 
+/// Attribute to mark alloca that have been given a lifetime marker so that
+/// later pass do not try adding new ones.
+static constexpr llvm::StringRef getHasLifetimeMarkerAttrName() {
+  return "fir.has_lifetime";
+}
+
 /// Does the function, \p func, have a host-associations tuple argument?
 /// Some internal procedures may have access to host procedure variables.
 bool hasHostAssociationArgument(mlir::func::FuncOp func);
@@ -220,6 +226,19 @@ inline bool hasProcedureAttr(mlir::Operation *op) {
 inline bool hasBindcAttr(mlir::Operation *op) {
   return hasProcedureAttr<fir::FortranProcedureFlagsEnum::bind_c>(op);
 }
+
+/// Get the allocation size of a given alloca if it has compile time constant
+/// size.
+std::optional<int64_t> getAllocaByteSize(fir::AllocaOp alloca,
+                                         const mlir::DataLayout &dl,
+                                         const fir::KindMapping &kindMap);
+
+/// Return true, if \p rebox operation keeps the input array
+/// continuous if it is initially continuous.
+/// When \p checkWhole is false, then the checking is only done
+/// for continuity in the innermost dimension, otherwise,
+/// the checking is done for continuity of the whole result of rebox.
+bool reboxPreservesContinuity(fir::ReboxOp rebox, bool checkWhole = true);
 
 } // namespace fir
 

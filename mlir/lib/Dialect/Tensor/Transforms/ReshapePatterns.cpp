@@ -185,13 +185,11 @@ struct BubbleUpExpandThroughParallelCollapse
         ArrayRef<int64_t> collapsedStaticShapes = staticSourceSize.slice(
             collapseReassociation.front(), collapseReassociation.size());
         int64_t numCollapsedDynamic =
-            llvm::count_if(collapsedStaticShapes,
-                           [](int64_t d) { return ShapedType::isDynamic(d); });
+            llvm::count_if(collapsedStaticShapes, ShapedType::isDynamic);
         ArrayRef<int64_t> expandedStaticShapes = staticResultSize.slice(
             expandReassociation.front(), expandReassociation.size());
         int64_t numExpandedDynamic =
-            llvm::count_if(expandedStaticShapes,
-                           [](int64_t d) { return ShapedType::isDynamic(d); });
+            llvm::count_if(expandedStaticShapes, ShapedType::isDynamic);
         if (numCollapsedDynamic > 1 || numExpandedDynamic > 1 ||
             collapsedStaticShapes != expandedStaticShapes) {
           return failure();
@@ -452,7 +450,7 @@ struct BubbleUpExpandShapeThroughExtractSlice
     std::function<bool(OpFoldResult, OpFoldResult, OpFoldResult)>
         isZeroOffsetAndFullSize =
             [](OpFoldResult offset, OpFoldResult sliceSize, OpFoldResult size) {
-              if (!isConstantIntValue(offset, 0))
+              if (!isZeroInteger(offset))
                 return false;
               FailureOr<bool> maybeEqual =
                   ValueBoundsConstraintSet::areEqual(sliceSize, size);
@@ -476,7 +474,7 @@ struct BubbleUpExpandShapeThroughExtractSlice
       // Find the first expanded dim after the first dim with non-unit extracted
       // size.
       for (; i < e; ++i) {
-        if (!isConstantIntValue(sizes[indices[i]], 1)) {
+        if (!isOneInteger(sizes[indices[i]])) {
           // +1 to skip the first non-unit size dim.
           i++;
           break;

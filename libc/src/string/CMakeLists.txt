@@ -15,10 +15,8 @@ add_header_library(
   HDRS
     string_utils.h
   DEPENDS
-    .memory_utils.inline_bzero
-    .memory_utils.inline_memcpy
     libc.hdr.types.size_t
-    libc.include.stdlib
+    libc.hdr.limits_macros
     libc.src.__support.CPP.bitset
     libc.src.__support.CPP.type_traits
     libc.src.__support.common
@@ -442,7 +440,7 @@ function(add_memcmp memcmp_name)
   )
 endfunction()
 
-if(${LIBC_TARGET_ARCHITECTURE_IS_X86})
+if(${LIBC_TARGET_ARCHITECTURE_IS_X86_64})
   add_memcmp(memcmp_x86_64_opt_sse2   COMPILE_OPTIONS -march=k8             REQUIRE SSE2)
   add_memcmp(memcmp_x86_64_opt_sse4   COMPILE_OPTIONS -march=nehalem        REQUIRE SSE4_2)
   add_memcmp(memcmp_x86_64_opt_avx2   COMPILE_OPTIONS -march=haswell        REQUIRE AVX2)
@@ -474,7 +472,7 @@ function(add_memcpy memcpy_name)
   )
 endfunction()
 
-if(${LIBC_TARGET_ARCHITECTURE_IS_X86})
+if(${LIBC_TARGET_ARCHITECTURE_IS_X86_64})
   add_memcpy(memcpy_x86_64_opt_sse2   COMPILE_OPTIONS -march=k8             REQUIRE SSE2)
   add_memcpy(memcpy_x86_64_opt_sse4   COMPILE_OPTIONS -march=nehalem        REQUIRE SSE4_2)
   add_memcpy(memcpy_x86_64_opt_avx    COMPILE_OPTIONS -march=sandybridge    REQUIRE AVX)
@@ -510,7 +508,7 @@ function(add_memmove memmove_name)
   )
 endfunction()
 
-if(${LIBC_TARGET_ARCHITECTURE_IS_X86})
+if(${LIBC_TARGET_ARCHITECTURE_IS_X86_64})
   add_memmove(memmove_x86_64_opt_sse2   COMPILE_OPTIONS -march=k8             REQUIRE SSE2)
   add_memmove(memmove_x86_64_opt_sse4   COMPILE_OPTIONS -march=nehalem        REQUIRE SSE4_2)
   add_memmove(memmove_x86_64_opt_avx2   COMPILE_OPTIONS -march=haswell        REQUIRE AVX2)
@@ -544,7 +542,7 @@ function(add_memset memset_name)
   )
 endfunction()
 
-if(${LIBC_TARGET_ARCHITECTURE_IS_X86})
+if(${LIBC_TARGET_ARCHITECTURE_IS_X86_64})
   add_memset(memset_x86_64_opt_sse2   COMPILE_OPTIONS -march=k8             REQUIRE SSE2)
   add_memset(memset_x86_64_opt_sse4   COMPILE_OPTIONS -march=nehalem        REQUIRE SSE4_2)
   add_memset(memset_x86_64_opt_avx2   COMPILE_OPTIONS -march=haswell        REQUIRE AVX2)
