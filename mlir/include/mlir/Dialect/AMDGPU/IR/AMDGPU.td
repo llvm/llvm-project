@@ -115,8 +115,8 @@ def AMDGPU_ExtPackedFp8Op :
 def AMDGPU_ScaledExtPackedOp
     : AMDGPU_Op<"scaled_ext_packed", [Pure]>,
       Arguments<(
-          ins AnyTypeOf<[VectorOfLengthAndType<[2, 3, 4], [F8E5M2, F8E4M3FN]>,
-                         VectorOfLengthAndType<[2, 3, 4, 5, 6, 7, 8],
+          ins AnyTypeOf<[VectorOfLengthAndType<[1, 2, 3, 4], [F8E5M2, F8E4M3FN]>,
+                         VectorOfLengthAndType<[1, 2, 3, 4, 5, 6, 7, 8],
                                                [F4E2M1FN]>]>:$source,
           F32:$scale,
           ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<7>]>:$index)>,
@@ -173,7 +173,7 @@ def AMDGPU_PackedTrunc2xFp8Op :
 
 def AMDGPU_PackedScaledTruncOp
     : AMDGPU_Op<"packed_scaled_trunc", [Pure]>,
-      Arguments<(ins VectorOfLengthAndType<[2], [F32, F16, BF16]>:$source,
+      Arguments<(ins VectorOfLengthAndType<[1, 2], [F32, F16, BF16]>:$source,
           F32:$scale,
           ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<7>]>:$index,
           Optional<AnyTypeOf<
@@ -184,7 +184,7 @@ def AMDGPU_PackedScaledTruncOp
                           FixedVectorOfLengthAndType<[8], [F4E2M1FN]>]>:$res)> {
   let summary = "Round two floats into a packed vector of floats";
   let description = [{
-    Scale and round the inputs `sourceA` and `sourceB` (which is undefined if not
+    Scale and round the inputs `source` (which is undefined if not
     specified) into the low or high word (bottom two or top two) elements
     of the returned vector, keeping the other two elements of `existing`
     unchanged if present (or undefined if it was not passed in).

@@ -1270,10 +1270,10 @@ LogicalResult ScaledExtPackedOpLowering::matchAndRewrite(
   Value source = adaptor.getSource();
   Value scale = adaptor.getScale();
 
-  VectorType sourceVecType = dyn_cast<VectorType>(op.getSource().getType());
-  Type sourceElemType = getElementTypeOrSelf(op.getSource());
-  VectorType destVecType = dyn_cast<VectorType>(op.getResult().getType());
-  Type destElemType = getElementTypeOrSelf(op.getResult());
+  VectorType sourceVecType = cast<VectorType>(op.getSource().getType());
+  Type sourceElemType = sourceVecType.getElementType();
+  VectorType destVecType = cast<VectorType>(op.getResult().getType());
+  Type destElemType = destVecType.getElementType();
 
   VectorType packedVecType;
   if (isa<Float8E5M2Type, Float8E4M3FNType>(sourceElemType)) {
@@ -1287,8 +1287,7 @@ LogicalResult ScaledExtPackedOpLowering::matchAndRewrite(
   }
 
   // Extend to a packedVectorType
-  if (!sourceVecType ||
-      sourceVecType.getNumElements() < packedVecType.getNumElements()) {
+  if (sourceVecType.getNumElements() < packedVecType.getNumElements()) {
     Value longVec = rewriter.create<LLVM::ZeroOp>(loc, packedVecType);
     if (!sourceVecType) {
       longVec = rewriter.create<LLVM::InsertElementOp>(
@@ -1352,7 +1351,8 @@ LogicalResult PackedScaledTruncOpLowering::matchAndRewrite(
 
   Type resultType = op.getResult().getType();
   Type resultElemType = getElementTypeOrSelf(resultType);
-  Type sourceElemType = getElementTypeOrSelf(op.getSource());
+  VectorType sourceVecType = cast<VectorType>(op.getSource().getType());
+  Type sourceElemType = sourceVecType.getElementType();
 
   Type intResultType = isa<Float4E2M1FNType>(resultElemType) ? i32 : v2i16;
 
@@ -1363,6 +1363,14 @@ LogicalResult PackedScaledTruncOpLowering::matchAndRewrite(
     existing = rewriter.create<LLVM::BitcastOp>(loc, intResultType, existing);
   else
     existing = rewriter.create<LLVM::ZeroOp>(loc, intResultType);
+
+  if (sourceVecType.getNumElements() < 2) {
+    Value c0 = createI32Constant(rewriter, loc, 0);
+    Value elem0 = rewriter.create<LLVM::ExtractElementOp>(loc, source, c0);
+    VectorType v2 = VectorType::get(2, sourceElemType);
+    source = rewriter.create<LLVM::ZeroOp>(loc, v2);
+    source = rewriter.create<LLVM::InsertElementOp>(loc, source, elem0, c0);
+  }
 
   Value sourceA, sourceB;
   if (sourceElemType.isF32()) {
