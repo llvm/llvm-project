@@ -3447,6 +3447,7 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
           DeinterleavedValues[I] =
               State.Builder.CreateExtractValue(Deinterleave, I);
       } else {
+        // TODO: No in-tree target will reach this case. Should this be removed?
         assert(isPowerOf2_32(InterleaveFactor) &&
                "Unsupported deinterleave factor for scalable vectors");
         DeinterleavedValues[0] = NewLoad;
