@@ -248,7 +248,7 @@ Error ExegesisAArch64Target::randomizeTargetMCOperand(
     case AArch64::MOVIv4s_msl:
     case AArch64::MVNIv2s_msl:
     case AArch64::MVNIv4s_msl:
-      AssignedValue = MCOperand::createImm(8); // or 16, as needed
+      AssignedValue = MCOperand::createImm(8); // or 16
       return Error::success();
     default:
       AssignedValue = MCOperand::createImm(0);
@@ -256,6 +256,7 @@ Error ExegesisAArch64Target::randomizeTargetMCOperand(
     }
   }
   case MCOI::OperandType::OPERAND_PCREL:
+  case MCOI::OperandType::OPERAND_FIRST_TARGET:
     AssignedValue = MCOperand::createImm(0);
     return Error::success();
   default:
