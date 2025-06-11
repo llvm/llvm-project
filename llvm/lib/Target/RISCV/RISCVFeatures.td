@@ -680,11 +680,24 @@ def FeatureStdExtV
                      [FeatureStdExtZvl128b, FeatureStdExtZve64d]>,
       RISCVExtensionBitmask<0, 21>;
 
+def FeatureStdExtZvfbfa
+    : RISCVExperimentalExtension<0, 1, "Additional BF16 vector compute support",
+                                 [FeatureStdExtZve32f, FeatureStdExtZfbfmin]>;
+def HasStdExtZvfbfa : Predicate<"Subtarget->hasStdExtZvfbfa()">,
+                      AssemblerPredicate<(all_of FeatureStdExtZvfbfa),
+                          "'Zvfbfa' (Additional BF16 vector compute support)">;
+
 def FeatureStdExtZvfbfmin
     : RISCVExtension<1, 0, "Vector BF16 Converts", [FeatureStdExtZve32f]>;
 def HasStdExtZvfbfmin : Predicate<"Subtarget->hasStdExtZvfbfmin()">,
                         AssemblerPredicate<(all_of FeatureStdExtZvfbfmin),
                             "'Zvfbfmin' (Vector BF16 Converts)">;
+
+def HasStdExtZvfbfminOrZvfbfa
+    : Predicate<"Subtarget->hasStdExtZvfbfmin() || Subtarget->hasStdExtZvfbfa()">,
+      AssemblerPredicate<(any_of FeatureStdExtZvfbfmin, FeatureStdExtZvfbfa),
+                         "'Zvfbfmin' (Vector BF16 Converts) or "
+                         "'Zvfbfa' (Additional BF16 vector compute support)">;
 
 def FeatureStdExtZvfbfwma
     : RISCVExtension<1, 0, "Vector BF16 widening mul-add",
@@ -692,6 +705,12 @@ def FeatureStdExtZvfbfwma
 def HasStdExtZvfbfwma : Predicate<"Subtarget->hasStdExtZvfbfwma()">,
                         AssemblerPredicate<(all_of FeatureStdExtZvfbfwma),
                             "'Zvfbfwma' (Vector BF16 widening mul-add)">;
+
+def HasStdExtZvfbfwmaOrZvfbfa
+    : Predicate<"Subtarget->hasStdExtZvfbfwma() || Subtarget->hasStdExtZvfbfa()">,
+      AssemblerPredicate<(any_of FeatureStdExtZvfbfwma, FeatureStdExtZvfbfa),
+                         "'Zvfbfwma' (Vector BF16 widening mul-add) or "
+                         "'Zvfbfa' (Additional BF16 vector compute support)">;
 
 def FeatureStdExtZvfhmin
     : RISCVExtension<1, 0,
