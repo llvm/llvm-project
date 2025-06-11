@@ -8,7 +8,7 @@
 ; };
 ; long test(std::exception *p) {
 ;   const char* ch = p->what();
-;   return std::strlen(ch);
+;   ...;
 ; }
 ;
 ; Build command is "clang++ -O2 -target x86_64-unknown-linux -flto=thin \
@@ -21,8 +21,8 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux"
 
-@_ZTVSt9exception = available_externally constant { [5 x ptr] } { [5 x ptr] [ptr null, ptr null, ptr null, ptr null, ptr @_ZNKSt9exception4whatEv] }, !type !0, !type !1, !vcall_visibility !2
-@_ZTV1A.0 = constant [5 x ptr] [ptr null, ptr null, ptr null, ptr null, ptr @_ZNK1A4whatEv], !type !3, !type !4, !type !5, !type !6, !vcall_visibility !2
+@_ZTVSt9exception = available_externally constant { [5 x ptr] } { [5 x ptr] [ptr null, ptr null, ptr null, ptr null, ptr @_ZNKSt9exception4whatEv] }, !type !0, !type !1
+@_ZTV1A.0 = constant [5 x ptr] [ptr null, ptr null, ptr null, ptr null, ptr @_ZNK1A4whatEv], !type !3, !type !4, !type !5, !type !6
 
 declare ptr @_ZNKSt9exception4whatEv()
 
@@ -50,7 +50,6 @@ attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memo
 
 !0 = !{i64 16, !"_ZTSSt9exception"}
 !1 = !{i64 32, !"_ZTSMSt9exceptionKDoFPKcvE.virtual"}
-!2 = !{i64 1}
 !3 = !{i32 16, !"_ZTS1A"}
 !4 = !{i32 32, !"_ZTSM1AKDoFPKcvE.virtual"}
 !5 = !{i32 16, !"_ZTSSt9exception"}

@@ -1093,7 +1093,7 @@ bool DevirtModule::tryFindVirtualCallTargets(
     std::vector<VirtualCallTarget> &TargetsForSlot,
     const std::set<TypeMemberInfo> &TypeMemberInfos, uint64_t ByteOffset,
     ModuleSummaryIndex *ExportSummary) {
-  bool hasAvailableExternally = false;
+  bool HasAvailableExternally = false;
   for (const TypeMemberInfo &TM : TypeMemberInfos) {
     if (!TM.Bits->GV->isConstant())
       return false;
@@ -1106,11 +1106,11 @@ bool DevirtModule::tryFindVirtualCallTargets(
 
     // Record if the first GV is AvailableExternally
     if (TargetsForSlot.empty())
-      hasAvailableExternally = TM.Bits->GV->hasAvailableExternallyLinkage();
+      HasAvailableExternally = TM.Bits->GV->hasAvailableExternallyLinkage();
 
     // When the first GV is AvailableExternally, check if all other GVs are
     // also AvailableExternally. If they are not the same, return false.
-    if (!TargetsForSlot.empty() && hasAvailableExternally &&
+    if (!TargetsForSlot.empty() && HasAvailableExternally &&
         !TM.Bits->GV->hasAvailableExternallyLinkage())
       return false;
 
