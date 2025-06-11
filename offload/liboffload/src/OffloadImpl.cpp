@@ -228,7 +228,7 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   ReturnHelper ReturnValue(PropSize, PropValue, PropSizeRet);
 
   // Find the info if it exists under any of the given names
-  auto FindInfo = [&](InfoQueueTy &DevInfo, std::vector<std::string> &Names)
+  auto FindInfo = [&](InfoQueueTy &DevInfo, llvm::SmallVector<StringRef> &Names)
       -> std::optional<decltype(DevInfo.getQueue().begin())> {
     if (!Device->Device)
       return std::nullopt;
@@ -250,7 +250,7 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
 
     return std::nullopt;
   };
-  auto GetInfoString = [&](std::vector<std::string> Names) {
+  auto GetInfoString = [&](llvm::SmallVector<StringRef> Names) {
     InfoQueueTy DevInfo;
 
     if (auto Item = FindInfo(DevInfo, Names)) {
@@ -259,7 +259,7 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
       return "";
     }
   };
-  auto GetInfoXyz = [&](std::vector<std::string> Names) {
+  auto GetInfoXyz = [&](llvm::SmallVector<StringRef> Names) {
     InfoQueueTy DevInfo;
 
     if (auto Item = FindInfo(DevInfo, Names)) {
