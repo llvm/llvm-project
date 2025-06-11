@@ -1,4 +1,5 @@
 #include "AMDGPU.h"
+#include "GCNSubtarget.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -9,7 +10,7 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/GenericIteratedDominanceFrontier.h"
-#include "GCNSubtarget.h"
+#include "AMDGPUSSARAUtils.h"
 
 #include <stack>
 
@@ -26,12 +27,21 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
   const SIRegisterInfo *TRI;
   MachineRegisterInfo *MRI;
 
+  typedef struct {
+    Register CurName;
+    LaneBitmask PrevMask;
+    unsigned PrevSubRegIdx;
+    MachineInstr *DefMI;
+  } CurVRegInfo;
+
+  using VRegDefStack = std::vector<CurVRegInfo>;
+
   SetVector<unsigned> CrossBlockVRegs;
   DenseMap<unsigned, SmallPtrSet<MachineBasicBlock *, 8>> DefBlocks;
   DenseMap<unsigned, SmallPtrSet<MachineBasicBlock *, 8>> LiveInBlocks;
   DenseMap<unsigned, SmallSet<unsigned, 4>> PHINodes;
   DenseMap<MachineInstr *, unsigned> PHIMap;
-  DenseMap<unsigned, std::stack<unsigned>> VregNames;
+  DenseMap<unsigned, VRegDefStack> VregNames;
   DenseSet<unsigned> DefSeen;
 
   void collectCrossBlockVRegs(MachineFunction &MF);
@@ -52,21 +62,84 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
       const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, Res);
       Register NewVReg = MRI->createVirtualRegister(RC);
       PHI.getOperand(0).setReg(NewVReg);
-      VregNames[Res].push(NewVReg);
+      VregNames[Res].push_back(
+          {NewVReg, getFullMaskForRC(*RC, TRI), AMDGPU::NoRegister, &PHI});
       DefSeen.insert(NewVReg);
     }
     for (auto &I : make_range(MBB.getFirstNonPHI(), MBB.end())) {
-     
+
+      // TODO: Need to support the RENAIMED set to avoid replacing the registers
+      // which were not renamed in uses!
       for (auto &Op : I.uses()) {
         if (Op.isReg() && Op.getReg().isVirtual()) {
           unsigned VReg = Op.getReg();
-          if (VregNames[VReg].empty()) {
-            // If no new name is available, use the original VReg.
+          assert(!VregNames[VReg].empty() &&
+                 "Error: use does not dominated by definition!\n");
+          CurVRegInfo VRInfo = VregNames[VReg].back();
+          unsigned CurVReg = VRInfo.CurName;
+          // Does it meet the TODO above ?
+          if (CurVReg == VReg)
             continue;
+          unsigned DefSubregIdx = VRInfo.PrevSubRegIdx;
+          LaneBitmask DefMask = VRInfo.PrevMask;
+          MachineInstr *DefMI = VregNames[VReg].back().DefMI;
+          MachineOperand *DefOp = DefMI->findRegisterDefOperand(CurVReg,
+          TRI);
+
+          // LaneBitmask DefMask = getOperandLaneMask(*DefOp);
+          dbgs() << "Def mask : " << PrintLaneMask(DefMask) << "\n";
+          LaneBitmask UseMask = getOperandLaneMask(Op, TRI, MRI);
+          dbgs() << "Use mask : " << PrintLaneMask(UseMask) << "\n";
+          LaneBitmask UndefSubRegs = UseMask & ~DefMask;
+          dbgs() << "UndefSubRegs: " << PrintLaneMask(UndefSubRegs) << "\n";
+
+          unsigned SubRegIdx = AMDGPU::NoRegister;
+          
+          if (UndefSubRegs.any()) {
+            // The closest Def defines not all the subregs used here!
+            SmallVector<std::tuple<unsigned, unsigned, unsigned>> RegSeqOps;
+
+            RegSeqOps.push_back({CurVReg, DefOp->getSubReg(), DefSubregIdx});
+
+            VRegDefStack VregDefs = VregNames[VReg];
+
+            VRegDefStack::reverse_iterator It = ++VregDefs.rbegin();
+            for (; It != VregDefs.rend(); ++It) {
+              // auto CurDef = It->CurDefMI;
+              auto R = It->CurName;
+              // auto CurDefOp = CurDef->findRegisterDefOperand(R, TRI);
+              LaneBitmask DefMask = It->PrevMask;
+              dbgs() << "Lanes defined for VReg before renaming : "
+                     << PrintLaneMask(DefMask) << "\n";
+              LaneBitmask CurDefinedBits = DefMask & UndefSubRegs;
+              dbgs() << "Defined bits are : " << PrintLaneMask(CurDefinedBits)
+                     << "\n";
+ 
+              if (unsigned SubRegIdx = getSubRegIndexForLaneMask(CurDefinedBits, TRI))
+                RegSeqOps.push_back({R, SubRegIdx, SubRegIdx});
+              // clear subregs for which definition is found
+              UndefSubRegs &= ~CurDefinedBits;
+              dbgs() << "UndefSubRegs: " << PrintLaneMask(UndefSubRegs) << "\n";
+              if (UndefSubRegs.none())
+                break;
+            }
+            // All subreg defs are found. Insert REG_SEQUENCE.
+            auto *RC = TRI->getRegClassForOperandReg(*MRI, Op);
+            CurVReg = MRI->createVirtualRegister(RC);
+            auto RS = BuildMI(MBB, I, I.getDebugLoc(), TII->get(AMDGPU::REG_SEQUENCE),
+                    CurVReg);
+            for (auto O : RegSeqOps) {
+              auto [R, SrcSubreg, DstSubreg] = O;
+              RS.addReg(R, 0, SrcSubreg);
+              RS.addImm(DstSubreg);
+            }
+          } else {
+            if ((DefMask | UseMask) != UseMask) {
+              SubRegIdx = getSubRegIndexForLaneMask(UseMask & DefMask, TRI);
+            }
           }
-          unsigned NewVReg = VregNames[VReg].top();
-          //VregNames[VReg].pop();
-          Op.setReg(NewVReg);
+          Op.setReg(CurVReg);
+          Op.setSubReg(SubRegIdx);
         }
       }
 
@@ -74,11 +147,21 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
         if (Op.getReg().isVirtual()) {
           unsigned VReg = Op.getReg();
           if (DefSeen.contains(VReg)) {
-            const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, VReg);
+            const TargetRegisterClass *RC =
+                TRI->getRegClassForOperandReg(*MRI, Op);
             Register NewVReg = MRI->createVirtualRegister(RC);
-            Op.setReg(NewVReg);
-            VregNames[VReg].push(NewVReg);
+            VregNames[VReg].push_back({NewVReg,
+                                       getOperandLaneMask(Op, TRI, MRI),
+                                       Op.getSubReg(), &I});
+
+            Op.ChangeToRegister(NewVReg, true, false, false, false, false);
+            Op.setSubReg(AMDGPU::NoRegister);
+            LLVM_DEBUG(dbgs()
+                       << "Renaming VReg: " << Register::virtReg2Index(VReg)
+                       << " to " << Register::virtReg2Index(NewVReg) << "\n");
           } else {
+            VregNames[VReg].push_back(
+                {VReg, getOperandLaneMask(Op, TRI, MRI), Op.getSubReg(), &I});
             DefSeen.insert(VReg);
           }
         }
@@ -87,12 +170,17 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
 
     for (auto Succ : successors(&MBB)) {
       for (auto &PHI : Succ->phis()) {
-        Register Res = PHIMap[&PHI];
-        if (VregNames[Res].empty()) {
-          PHI.addOperand(MachineOperand::CreateReg(Res, false));
+        Register VReg = PHIMap[&PHI];
+        if (VregNames[VReg].empty()) {
+          PHI.addOperand(MachineOperand::CreateReg(VReg, false, false, false,
+                                                   false, false));
         } else {
-          PHI.addOperand(
-              MachineOperand::CreateReg(VregNames[Res].top(), false));
+          CurVRegInfo VRInfo = VregNames[VReg].back();
+          MachineInstr *DefMI = VregNames[VReg].back().DefMI;
+          MachineOperand *DefOp = DefMI->findRegisterDefOperand(VRInfo.CurName, TRI);
+          PHI.addOperand(MachineOperand::CreateReg(VRInfo.CurName, false, false,
+                                                   false, false, false, false,
+                                                   DefOp->getSubReg()));
         }
         PHI.addOperand(MachineOperand::CreateMBB(&MBB));
       }
@@ -110,7 +198,7 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
         if (Op.getReg().isVirtual()) {
           Register VReg = Op.getReg();
           if (!VregNames[VReg].empty())
-            VregNames[VReg].pop();
+            VregNames[VReg].pop_back();
         }
       }
     }
@@ -142,7 +230,6 @@ void AMDGPURebuildSSALegacy::collectCrossBlockVRegs(MachineFunction &MF) {
         if (Op.isReg() && Op.getReg().isVirtual() &&
             !Killed.contains(Op.getReg())) {
           CrossBlockVRegs.insert(Op.getReg());
-          LiveInBlocks[Op.getReg()].insert(&MBB);
         }
       }
       for (auto Op : I.defs()) {
@@ -168,9 +255,7 @@ bool AMDGPURebuildSSALegacy::runOnMachineFunction(MachineFunction &MF) {
   PHINodes.clear();
   VregNames.clear();
   DefSeen.clear();
-  //   for (auto &MBB : MF) {
-  //     PHINodes[MBB.getNumber()] = SmallSet<unsigned, 4>();
-  //   }
+ 
   // Collect all cross-block virtual registers.
   // This includes registers that are live-in to the function, and registers
   // that are defined in multiple blocks.
@@ -185,6 +270,11 @@ bool AMDGPURebuildSSALegacy::runOnMachineFunction(MachineFunction &MF) {
 
   for (auto VReg : CrossBlockVRegs) {
     SmallVector<MachineBasicBlock *> PHIBlocks;
+    for (auto &MBB : MF) {
+      LiveRange &LR = LIS->getInterval(VReg);
+      if (LIS->isLiveInToMBB(LR, &MBB))
+        LiveInBlocks[VReg].insert(&MBB);
+    }
 
     LLVM_DEBUG(
         dbgs() << "findPHINodesPlacement input:\nVreg: "
@@ -217,19 +307,9 @@ bool AMDGPURebuildSSALegacy::runOnMachineFunction(MachineFunction &MF) {
 
     // Rename virtual registers in the basic block.
   renameVRegs(MF.front());
-  LLVM_DEBUG(dbgs() << "##### Vreg names after renaming ##################\n";
-             for (auto &Pair : VregNames) {
-               dbgs() << Register::virtReg2Index(Pair.first) << ": ";
-               if (Pair.second.empty()) {
-                 dbgs() << "empty";
-               } else {
-                 dbgs() << Pair.second.top();
-               }
-               dbgs() << "\n";
-             } dbgs()
-             << "\n");
-
-  return false;
+  MF.getProperties().set(MachineFunctionProperties::Property::IsSSA);
+  MF.getProperties().reset(MachineFunctionProperties::Property ::NoPHIs);
+  return MRI->isSSA();
 }
 
 char AMDGPURebuildSSALegacy::ID = 0;
