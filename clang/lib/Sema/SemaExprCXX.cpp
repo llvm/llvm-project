@@ -2888,7 +2888,7 @@ static bool resolveAllocationOverload(
     // type-identity-less argument list.
     IAP.PassTypeIdentity = TypeAwareAllocationMode::No;
     IAP.PassAlignment = InitialAlignmentMode;
-    Args = UntypedParameters;
+    Args = std::move(UntypedParameters);
   }
   assert(!S.isStdTypeIdentity(Args[0]->getType(), nullptr));
   return resolveAllocationOverloadInterior(
