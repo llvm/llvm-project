@@ -12921,7 +12921,7 @@ def err_spirv_enum_not_valid : Error<
 
 def err_specialization_const_lit_init
     : Error<"variable with 'vk::constant_id' attribute cannot have an "
-            "initializer that is not a constexpr">;
+            "initializer that is not a literal">;
 def err_specialization_const_missing_initializer
     : Error<
           "variable with 'vk::constant_id' attribute must have an initializer">;
