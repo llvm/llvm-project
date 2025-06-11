@@ -48,15 +48,8 @@ public:
   const FunctionSummary *GetSummary(const FunctionDecl *FD) const;
   void SummarizeFunctionBody(const FunctionDecl *FD);
 
-  void SerializeSummary(llvm::json::OStream &, const FunctionSummary &) const;
   void ParseSummaryFromJSON(const llvm::json::Array &Summary);
-
   void ReduceSummaries();
-
-  // FIXME: debug only, remove later
-  const std::vector<std::unique_ptr<FunctionSummary>> &getSummaries() {
-    return FunctionSummaries;
-  }
 };
 
 // FIXME: Is this class needed?

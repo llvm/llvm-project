@@ -81,26 +81,6 @@ void SummaryManager::SummarizeFunctionBody(const FunctionDecl *FD) {
   CreateSummary(GetUSR(FD), std::move(Attrs), CallCollector().collect(FD));
 }
 
-void SummaryManager::SerializeSummary(llvm::json::OStream &JOS, const FunctionSummary &Summary) const {
-  JOS.object([&]{
-    JOS.attribute("id", llvm::json::Value(Summary.getID()));
-    JOS.attributeObject("attrs", [&] {
-      JOS.attributeArray("function", [&] {
-        for (auto &&Attr : Summary.getAttributes()) {
-          JOS.value(llvm::json::Value(Attr->serialize()));
-        }
-      });
-    });
-    JOS.attributeArray("calls", [&]{
-      for(auto &&Call : Summary.getCalls()) {
-        JOS.object([&]{
-          JOS.attribute("id", llvm::json::Value(Call));
-        });
-      }
-    });
-  });
-}
-
 void SummaryManager::ParseSummaryFromJSON(const llvm::json::Array &Summary) {
   for (auto it = Summary.begin(); it != Summary.end(); ++it) {
     const llvm::json::Object *FunctionSummary = it->getAsObject();

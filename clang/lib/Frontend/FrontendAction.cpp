@@ -996,21 +996,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
         }
       }
 
-      // FIXME: debug only, remove later
-      for (auto &&S : CI.getSummaryManager().getSummaries()) {
-        llvm::json::OStream Out(llvm::errs());
-        CI.getSummaryManager().SerializeSummary(Out, *S);
-      }
-      llvm::errs() << '\n';
-
       CI.getSummaryManager().ReduceSummaries();
-
-      // FIXME: debug only, remove later
-      for (auto &&S : CI.getSummaryManager().getSummaries()) {
-        llvm::json::OStream Out(llvm::errs());
-        CI.getSummaryManager().SerializeSummary(Out, *S);
-      }
-      llvm::errs() << '\n';
     }
   }
 
