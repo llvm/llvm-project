@@ -87,20 +87,6 @@ const MCFixup *RISCVMCExpr::getPCRelHiFixup(const MCFragment **DFOut) const {
   return nullptr;
 }
 
-bool RISCVMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                            const MCAssembler *Asm) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
-    return false;
-  Res.setSpecifier(specifier);
-
-  // Custom fixup types are not valid with symbol difference expressions.
-  return !Res.getSubSym();
-}
-
-void RISCVMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
-  Streamer.visitUsedExpr(*getSubExpr());
-}
-
 std::optional<RISCVMCExpr::Specifier>
 RISCVMCExpr::getSpecifierForName(StringRef name) {
   return StringSwitch<std::optional<RISCVMCExpr::Specifier>>(name)

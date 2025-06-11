@@ -122,7 +122,7 @@ _LIBCPP_HIDE_FROM_ABI bool __not_null(function<_Fp> const& __f) {
   return !!__f;
 }
 
-#  if _LIBCPP_HAS_EXTENSION_BLOCKS
+#  if __has_extension(blocks)
 template <class _Rp, class... _Args>
 _LIBCPP_HIDE_FROM_ABI bool __not_null(_Rp (^__p)(_Args...)) {
   return __p;
@@ -757,7 +757,7 @@ class __func<_Rp1 (^)(_ArgTypes1...), _Alloc, _Rp(_ArgTypes...)> : public __base
 
 public:
   _LIBCPP_HIDE_FROM_ABI explicit __func(__block_type const& __f)
-#    if _LIBCPP_HAS_OBJC_ARC
+#    if __has_feature(objc_arc)
       : __f_(__f)
 #    else
       : __f_(reinterpret_cast<__block_type>(__f ? _Block_copy(__f) : nullptr))
@@ -768,7 +768,7 @@ public:
   // [TODO] add && to save on a retain
 
   _LIBCPP_HIDE_FROM_ABI explicit __func(__block_type __f, const _Alloc& /* unused */)
-#    if _LIBCPP_HAS_OBJC_ARC
+#    if __has_feature(objc_arc)
       : __f_(__f)
 #    else
       : __f_(reinterpret_cast<__block_type>(__f ? _Block_copy(__f) : nullptr))
@@ -790,7 +790,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void destroy() _NOEXCEPT {
-#    if !_LIBCPP_HAS_OBJC_ARC
+#    if !__has_feature(objc_arc)
     if (__f_)
       _Block_release(__f_);
 #    endif
@@ -822,7 +822,7 @@ public:
 #    endif // _LIBCPP_HAS_RTTI
 };
 
-#  endif // _LIBCPP_HAS_EXTENSION_BLOCKS
+#  endif // _LIBCPP_HAS_BLOCKS_RUNTIME
 
 } // namespace __function
 

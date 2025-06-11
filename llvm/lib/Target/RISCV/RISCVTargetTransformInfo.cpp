@@ -305,8 +305,7 @@ InstructionCost RISCVTTIImpl::getPartialReductionCost(
   if (!ST->hasStdExtZvqdotq() || ST->getELen() < 64 ||
       Opcode != Instruction::Add || !BinOp || *BinOp != Instruction::Mul ||
       InputTypeA != InputTypeB || !InputTypeA->isIntegerTy(8) ||
-      OpAExtend != OpBExtend || !AccumType->isIntegerTy(32) ||
-      !VF.isKnownMultipleOf(4))
+      !AccumType->isIntegerTy(32) || !VF.isKnownMultipleOf(4))
     return InstructionCost::getInvalid();
 
   Type *Tp = VectorType::get(AccumType, VF.divideCoefficientBy(4));

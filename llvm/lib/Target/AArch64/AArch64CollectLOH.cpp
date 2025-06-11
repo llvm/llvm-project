@@ -232,7 +232,7 @@ static bool isCandidateLoad(const MachineInstr &MI) {
   }
 }
 
-/// Check whether the given instruction can load a litteral.
+/// Check whether the given instruction can load a literal.
 static bool supportLoadFromLiteral(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
@@ -247,6 +247,7 @@ static bool supportLoadFromLiteral(const MachineInstr &MI) {
   }
 }
 
+
 /// Returns \p true if there are no non-debug instructions between \p First and
 /// \p Second
 static bool areInstructionsConsecutive(const MachineInstr *First,
@@ -258,7 +259,7 @@ static bool areInstructionsConsecutive(const MachineInstr *First,
   return next_nodbg(It, EndIt) == Second->getIterator();
 }
 
-/// Number of GPR registers traked by mapRegToGPRIndex()
+/// Number of GPR registers tracked by mapRegToGPRIndex()
 static const unsigned N_GPR_REGS = 31;
 /// Map register number to index from 0-30.
 static int mapRegToGPRIndex(MCRegister Reg) {

@@ -235,6 +235,9 @@ struct Config {
   ReportPolicy zGcsReport = ReportPolicy::None;
   ReportPolicy zGcsReportDynamic = ReportPolicy::None;
   ReportPolicy zExecuteOnlyReport = ReportPolicy::None;
+  ReportPolicy zZicfilpUnlabeledReport = ReportPolicy::None;
+  ReportPolicy zZicfilpFuncSigReport = ReportPolicy::None;
+  ReportPolicy zZicfissReport = ReportPolicy::None;
   bool ltoBBAddrMap;
   llvm::StringRef ltoBasicBlockSections;
   std::pair<llvm::StringRef, llvm::StringRef> thinLTOObjectSuffixReplace;
