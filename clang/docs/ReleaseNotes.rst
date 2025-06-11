@@ -153,7 +153,11 @@ Resolutions to C++ Defect Reports
 - Bumped the ``__cpp_constexpr`` feature-test macro to ``202002L`` in C++20 mode as indicated in
   `P2493R0 <https://wg21.link/P2493R0>`_.
 
+- Implemented `CWG2517 Useless restriction on use of parameter in `
+  `constraint-expression <https://cplusplus.github.io/CWG/issues/2517.html>`_.
 - Implemented `CWG3005 Function parameters should never be name-independent <https://wg21.link/CWG3005>`_.
+
+- Implemented `CWG2496 ref-qualifiers and virtual overriding <https://wg21.link/CWG2496>`_.
 
 C Language Changes
 ------------------
@@ -287,6 +291,8 @@ C23 Feature Support
   directive. Fixes #GH126940.
 - Fixed a crash when a declaration of a ``constexpr`` variable with an invalid
   type. Fixes #GH140887
+- Documented `WG14 N3006 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3006.htm>`_
+  which clarified how Clang is handling underspecified object declarations.
 
 C11 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -317,6 +323,8 @@ Non-comprehensive list of changes in this release
   ``sizeof`` or ``typeof`` expression. (#GH138444)
 - Deprecation warning is emitted for the deprecated ``__reference_binds_to_temporary`` intrinsic.
   ``__reference_constructs_from_temporary`` should be used instead. (#GH44056)
+- Added `__builtin_get_vtable_pointer` to directly load the primary vtable pointer from a
+  polymorphic object.
 
 New Compiler Flags
 ------------------
@@ -612,6 +620,8 @@ Improvements to Clang's diagnostics
   diagnostic group ``-Wimplicit-int-comparison-on-negation``, grouped under
   ``-Wimplicit-int-conversion``, so user can turn it off independently.
 
+- Improved the FixIts for unused lambda captures.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -681,6 +691,10 @@ Bug Fixes in This Version
 - Fixed an assertion failure in serialization of constexpr structs containing unions. (#GH140130)
 - Fixed duplicate entries in TableGen that caused the wrong attribute to be selected. (GH#140701)
 - Fixed type mismatch error when 'builtin-elementwise-math' arguments have different qualifiers, this should be well-formed. (#GH141397)
+- Constant evaluation now correctly runs the destructor of a variable declared in
+  the second clause of a C-style ``for`` loop. (#GH139818)
+- Fixed a bug with constexpr evaluation for structs containing unions in case of C++ modules. (#GH143168)
+- Fixed incorrect token location when emitting diagnostics for tokens expanded from macros. (#GH143216)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -702,6 +716,15 @@ Bug Fixes to Compiler Builtins
   Note that, it is generally unsafe to ``memcpy`` non-trivially copyable types that
   are ``__builtin_is_cpp_trivially_relocatable``. It is recommended to use
   ``__builtin_trivially_relocate`` instead.
+
+- ``__reference_binds_to_temporary``, ``__reference_constructs_from_temporary``
+  and ``__reference_converts_from_temporary`` intrinsics no longer consider
+  function references can bind to temporary objects. (#GH114344)
+
+- ``__reference_constructs_from_temporary`` and
+  ``__reference_converts_from_temporary`` intrinsics detect reference binding
+  to prvalue instead of xvalue now if the second operand is an object type, per
+  `LWG3819 <https://cplusplus.github.io/LWG/issue3819>`_.
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -817,12 +840,17 @@ Bug Fixes to C++ Support
 - Clang modules now allow a module and its user to differ on TrivialAutoVarInit*
 - Fixed an access checking bug when initializing non-aggregates in default arguments (#GH62444), (#GH83608)
 - Fixed a pack substitution bug in deducing class template partial specializations. (#GH53609)
+- Fixed a crash when constant evaluating some explicit object member assignment operators. (#GH142835)
+- Fixed an access checking bug when substituting into concepts (#GH115838)
+- Fix a bug where private access specifier of overloaded function not respected. (#GH107629)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed type checking when a statement expression ends in an l-value of atomic type. (#GH106576)
 - Fixed uninitialized use check in a lambda within CXXOperatorCallExpr. (#GH129198)
 - Fixed a malformed printout of ``CXXParenListInitExpr`` in certain contexts.
+- Fixed a malformed printout of certain calling convention function attributes. (#GH143160)
+- Fixed dependency calculation for TypedefTypes (#GH89774)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -833,7 +861,7 @@ Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Fixed crash when ``-print-stats`` is enabled in compiling IR files. (#GH131608)
-- Fix code completion crash involving PCH serialzied templates. (#GH139019)
+- Fix code completion crash involving PCH serialized templates. (#GH139019)
 
 OpenACC Specific Changes
 ------------------------
@@ -1036,7 +1064,9 @@ Sanitizers
 ----------
 
 - ``-fsanitize=vptr`` is no longer a part of ``-fsanitize=undefined``.
-- Sanitizer ignorelists now support the syntax ``src:*=sanitize``.
+- Sanitizer ignorelists now support the syntax ``src:*=sanitize``,
+  ``type:*=sanitize``, ``fun:*=sanitize``, ``global:*=sanitize``,
+  and ``mainfile:*=sanitize``.
 
 Python Binding Changes
 ----------------------
@@ -1072,6 +1102,10 @@ OpenMP Support
   open parenthesis. (#GH139665)
 - An error is now emitted when OpenMP ``collapse`` and ``ordered`` clauses have
   an argument larger than what can fit within a 64-bit integer.
+- Added support for private variable reduction.
+- Fixed mapping of arrays of structs containing nested structs with user defined
+  mappers, by using compiler-generated default mappers for the outer structs for
+  such maps.
 
 Improvements
 ^^^^^^^^^^^^

@@ -43,7 +43,6 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.size_t
     libc.hdr.types.wchar_t
-    libc.src.__support.wctype_utils
 )
 
 add_entrypoint_object(
@@ -54,7 +53,6 @@ add_entrypoint_object(
     wcschr.h
   DEPENDS
     libc.hdr.wchar_macros
-    libc.src.__support.wctype_utils
 )
 
 add_entrypoint_object(
@@ -75,7 +73,6 @@ add_entrypoint_object(
     wcspbrk.h
   DEPENDS
     libc.hdr.wchar_macros
-    libc.src.__support.wctype_utils
     libc.src.__support.macros.null_check
 )
 
@@ -109,7 +106,6 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.wchar_macros
     libc.hdr.types.size_t
-    libc.src.__support.wctype_utils
 )
 
 add_entrypoint_object(
@@ -121,7 +117,6 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.size_t
     libc.hdr.wchar_macros
-    libc.src.__support.wctype_utils
     libc.src.__support.macros.null_check
 )
 
@@ -134,7 +129,30 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.size_t
     libc.hdr.wchar_macros
-    libc.src.__support.wctype_utils
+)
+
+add_entrypoint_object(
+  wcsncpy
+  SRCS
+    wcsncpy.cpp
+  HDRS
+    wcsncpy.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.wchar_macros
+    libc.src.string.string_utils
+)
+
+add_entrypoint_object(
+  wcscat
+  SRCS
+    wcscat.cpp
+  HDRS
+    wcscat.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.wchar_macros
+    libc.src.string.string_utils
 )
 
 add_entrypoint_object(
@@ -162,6 +180,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  wmemchr
+  SRCS
+    wmemchr.cpp
+  HDRS
+    wmemchr.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.wchar_macros
+)
+
+add_entrypoint_object(
   wmempcpy
   SRCS
     wmempcpy.cpp
@@ -170,8 +199,6 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.size_t
     libc.hdr.wchar_macros
-    libc.src.__support.wctype_utils
-    libc.src.string.memory_utils.inline_memcpy
 )
 
 add_entrypoint_object(
@@ -183,6 +210,5 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.size_t
     libc.hdr.wchar_macros
-    libc.src.string.memory_utils.inline_memcpy
     libc.src.string.string_utils
 )

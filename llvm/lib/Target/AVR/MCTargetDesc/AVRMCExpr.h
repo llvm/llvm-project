@@ -16,10 +16,11 @@
 namespace llvm {
 
 /// A expression in AVR machine code.
-class AVRMCExpr : public MCTargetExpr {
+class AVRMCExpr : public MCSpecifierExpr {
 public:
+  using Specifier = Spec;
   /// Specifies the type of an expression.
-  enum Specifier {
+  enum {
     VK_None,
 
     VK_AVR_NONE = MCSymbolRefExpr::FirstTargetSpecifier,
@@ -48,11 +49,8 @@ public:
   static const AVRMCExpr *create(Specifier S, const MCExpr *Expr,
                                  bool isNegated, MCContext &Ctx);
 
-  /// Gets the type of the expression.
-  Specifier getSpecifier() const { return specifier; }
   /// Gets the name of the expression.
   const char *getName() const;
-  const MCExpr *getSubExpr() const { return SubExpr; }
   /// Gets the fixup which corresponds to the expression.
   AVR::Fixups getFixupKind() const;
   /// Evaluates the fixup as a constant value.
@@ -64,15 +62,6 @@ public:
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
   bool evaluateAsRelocatableImpl(MCValue &Res,
                                  const MCAssembler *Asm) const override;
-  void visitUsedExpr(MCStreamer &streamer) const override;
-
-  MCFragment *findAssociatedFragment() const override {
-    return getSubExpr()->findAssociatedFragment();
-  }
-
-  static bool classof(const MCExpr *E) {
-    return E->getKind() == MCExpr::Target;
-  }
 
 public:
   static Specifier parseSpecifier(StringRef Name);
@@ -80,14 +69,11 @@ public:
 private:
   int64_t evaluateAsInt64(int64_t Value) const;
 
-  const Specifier specifier;
-  const MCExpr *SubExpr;
   bool Negated;
 
 private:
   explicit AVRMCExpr(Specifier S, const MCExpr *Expr, bool Negated)
-      : specifier(S), SubExpr(Expr), Negated(Negated) {}
-  ~AVRMCExpr() = default;
+      : MCSpecifierExpr(Expr, S), Negated(Negated) {}
 };
 
 } // end namespace llvm

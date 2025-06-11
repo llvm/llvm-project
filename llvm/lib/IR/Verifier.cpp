@@ -735,12 +735,6 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
         "Global is external, but doesn't have external or weak linkage!", &GV);
 
   if (const GlobalObject *GO = dyn_cast<GlobalObject>(&GV)) {
-
-    if (MaybeAlign A = GO->getAlign()) {
-      Check(A->value() <= Value::MaximumAlignment,
-            "huge alignment values are unsupported", GO);
-    }
-
     if (const MDNode *Associated =
             GO->getMetadata(LLVMContext::MD_associated)) {
       Check(Associated->getNumOperands() == 1,
@@ -829,6 +823,11 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
 
 void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
   Type *GVType = GV.getValueType();
+
+  if (MaybeAlign A = GV.getAlign()) {
+    Check(A->value() <= Value::MaximumAlignment,
+          "huge alignment values are unsupported", &GV);
+  }
 
   if (GV.hasInitializer()) {
     Check(GV.getInitializer()->getType() == GVType,
@@ -2382,6 +2381,31 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
       CheckFailed("'allockind()' can't be both zeroed and uninitialized");
   }
 
+  if (Attribute A = Attrs.getFnAttr("alloc-variant-zeroed"); A.isValid()) {
+    StringRef S = A.getValueAsString();
+    Check(!S.empty(), "'alloc-variant-zeroed' must not be empty");
+    Function *Variant = M.getFunction(S);
+    if (Variant) {
+      Attribute Family = Attrs.getFnAttr("alloc-family");
+      Attribute VariantFamily = Variant->getFnAttribute("alloc-family");
+      if (Family.isValid())
+        Check(VariantFamily.isValid() &&
+                  VariantFamily.getValueAsString() == Family.getValueAsString(),
+              "'alloc-variant-zeroed' must name a function belonging to the "
+              "same 'alloc-family'");
+
+      Check(Variant->hasFnAttribute(Attribute::AllocKind) &&
+                (Variant->getFnAttribute(Attribute::AllocKind).getAllocKind() &
+                 AllocFnKind::Zeroed) != AllocFnKind::Unknown,
+            "'alloc-variant-zeroed' must name a function with "
+            "'allockind(\"zeroed\")'");
+
+      Check(FT == Variant->getFunctionType(),
+            "'alloc-variant-zeroed' must name a function with the same "
+            "signature");
+    }
+  }
+
   if (Attrs.hasFnAttr(Attribute::VScaleRange)) {
     unsigned VScaleMin = Attrs.getFnAttrs().getVScaleRangeMin();
     if (VScaleMin == 0)
@@ -2843,6 +2867,11 @@ void Verifier::visitFunction(const Function &F) {
 
   Check(!F.hasStructRetAttr() || F.getReturnType()->isVoidTy(),
         "Invalid struct return type!", &F);
+
+  if (MaybeAlign A = F.getAlign()) {
+    Check(A->value() <= Value::MaximumAlignment,
+          "huge alignment values are unsupported", &F);
+  }
 
   AttributeList Attrs = F.getAttributes();
 
@@ -6685,7 +6714,7 @@ void Verifier::visit(DbgVariableRecord &DVR) {
   CheckDI(DVR.getType() == DbgVariableRecord::LocationType::Value ||
               DVR.getType() == DbgVariableRecord::LocationType::Declare ||
               DVR.getType() == DbgVariableRecord::LocationType::Assign,
-          "invalid #dbg record type", &DVR, DVR.getType());
+          "invalid #dbg record type", &DVR, DVR.getType(), BB, F);
 
   // The location for a DbgVariableRecord must be either a ValueAsMetadata,
   // DIArgList, or an empty MDNode (which is a legacy representation for an
@@ -6693,30 +6722,33 @@ void Verifier::visit(DbgVariableRecord &DVR) {
   auto *MD = DVR.getRawLocation();
   CheckDI(MD && (isa<ValueAsMetadata>(MD) || isa<DIArgList>(MD) ||
                  (isa<MDNode>(MD) && !cast<MDNode>(MD)->getNumOperands())),
-          "invalid #dbg record address/value", &DVR, MD);
+          "invalid #dbg record address/value", &DVR, MD, BB, F);
   if (auto *VAM = dyn_cast<ValueAsMetadata>(MD)) {
     visitValueAsMetadata(*VAM, F);
     if (DVR.isDbgDeclare()) {
       // Allow integers here to support inttoptr salvage.
       Type *Ty = VAM->getValue()->getType();
       CheckDI(Ty->isPointerTy() || Ty->isIntegerTy(),
-              "location of #dbg_declare must be a pointer or int", &DVR, MD);
+              "location of #dbg_declare must be a pointer or int", &DVR, MD, BB,
+              F);
     }
   } else if (auto *AL = dyn_cast<DIArgList>(MD)) {
     visitDIArgList(*AL, F);
   }
 
   CheckDI(isa_and_nonnull<DILocalVariable>(DVR.getRawVariable()),
-          "invalid #dbg record variable", &DVR, DVR.getRawVariable());
+          "invalid #dbg record variable", &DVR, DVR.getRawVariable(), BB, F);
   visitMDNode(*DVR.getRawVariable(), AreDebugLocsAllowed::No);
 
   CheckDI(isa_and_nonnull<DIExpression>(DVR.getRawExpression()),
-          "invalid #dbg record expression", &DVR, DVR.getRawExpression());
+          "invalid #dbg record expression", &DVR, DVR.getRawExpression(), BB,
+          F);
   visitMDNode(*DVR.getExpression(), AreDebugLocsAllowed::No);
 
   if (DVR.isDbgAssign()) {
     CheckDI(isa_and_nonnull<DIAssignID>(DVR.getRawAssignID()),
-            "invalid #dbg_assign DIAssignID", &DVR, DVR.getRawAssignID());
+            "invalid #dbg_assign DIAssignID", &DVR, DVR.getRawAssignID(), BB,
+            F);
     visitMDNode(*cast<DIAssignID>(DVR.getRawAssignID()),
                 AreDebugLocsAllowed::No);
 
@@ -6727,29 +6759,29 @@ void Verifier::visit(DbgVariableRecord &DVR) {
     CheckDI(
         isa<ValueAsMetadata>(RawAddr) ||
             (isa<MDNode>(RawAddr) && !cast<MDNode>(RawAddr)->getNumOperands()),
-        "invalid #dbg_assign address", &DVR, DVR.getRawAddress());
+        "invalid #dbg_assign address", &DVR, DVR.getRawAddress(), BB, F);
     if (auto *VAM = dyn_cast<ValueAsMetadata>(RawAddr))
       visitValueAsMetadata(*VAM, F);
 
     CheckDI(isa_and_nonnull<DIExpression>(DVR.getRawAddressExpression()),
             "invalid #dbg_assign address expression", &DVR,
-            DVR.getRawAddressExpression());
+            DVR.getRawAddressExpression(), BB, F);
     visitMDNode(*DVR.getAddressExpression(), AreDebugLocsAllowed::No);
 
     // All of the linked instructions should be in the same function as DVR.
     for (Instruction *I : at::getAssignmentInsts(&DVR))
       CheckDI(DVR.getFunction() == I->getFunction(),
-              "inst not in same function as #dbg_assign", I, &DVR);
+              "inst not in same function as #dbg_assign", I, &DVR, BB, F);
   }
 
   // This check is redundant with one in visitLocalVariable().
   DILocalVariable *Var = DVR.getVariable();
-  CheckDI(isType(Var->getRawType()), "invalid type ref", Var,
-          Var->getRawType());
+  CheckDI(isType(Var->getRawType()), "invalid type ref", Var, Var->getRawType(),
+          BB, F);
 
   auto *DLNode = DVR.getDebugLoc().getAsMDNode();
   CheckDI(isa_and_nonnull<DILocation>(DLNode), "invalid #dbg record DILocation",
-          &DVR, DLNode);
+          &DVR, DLNode, BB, F);
   DILocation *Loc = DVR.getDebugLoc();
 
   // The scopes for variables and !dbg attachments must agree.
@@ -6761,7 +6793,7 @@ void Verifier::visit(DbgVariableRecord &DVR) {
   CheckDI(VarSP == LocSP,
           "mismatched subprogram between #dbg record variable and DILocation",
           &DVR, BB, F, Var, Var->getScope()->getSubprogram(), Loc,
-          Loc->getScope()->getSubprogram());
+          Loc->getScope()->getSubprogram(), BB, F);
 
   verifyFnArgs(DVR);
 }

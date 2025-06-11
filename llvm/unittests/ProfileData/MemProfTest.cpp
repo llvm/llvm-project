@@ -19,16 +19,18 @@
 #include "llvm/ProfileData/MemProfData.inc"
 #include "llvm/ProfileData/MemProfRadixTree.h"
 #include "llvm/ProfileData/MemProfReader.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 #include <initializer_list>
 
-extern llvm::cl::opt<float> MemProfLifetimeAccessDensityColdThreshold;
-extern llvm::cl::opt<unsigned> MemProfAveLifetimeColdThreshold;
-extern llvm::cl::opt<unsigned> MemProfMinAveLifetimeAccessDensityHotThreshold;
-extern llvm::cl::opt<bool> MemProfUseHotHints;
+LLVM_ABI extern llvm::cl::opt<float> MemProfLifetimeAccessDensityColdThreshold;
+LLVM_ABI extern llvm::cl::opt<unsigned> MemProfAveLifetimeColdThreshold;
+LLVM_ABI extern llvm::cl::opt<unsigned>
+    MemProfMinAveLifetimeAccessDensityHotThreshold;
+LLVM_ABI extern llvm::cl::opt<bool> MemProfUseHotHints;
 
 namespace llvm {
 namespace memprof {
