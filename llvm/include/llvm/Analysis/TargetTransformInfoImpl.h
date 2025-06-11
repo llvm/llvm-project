@@ -734,8 +734,7 @@ public:
     }
     case Instruction::PtrToAddr: {
       unsigned DstSize = Dst->getScalarSizeInBits();
-      if (DL.isLegalInteger(DstSize) &&
-          DstSize >= DL.getPointerAddressSizeInBits(Src))
+      if (DL.isLegalInteger(DstSize) && DstSize >= DL.getAddressSizeInBits(Src))
         return 0;
       break;
     }
@@ -1094,10 +1093,7 @@ public:
   }
   virtual bool preferAlternateOpcodeVectorization() const { return true; }
 
-  virtual bool preferPredicatedReductionSelect(unsigned Opcode,
-                                               Type *Ty) const {
-    return false;
-  }
+  virtual bool preferPredicatedReductionSelect() const { return false; }
 
   virtual bool preferEpilogueVectorization() const { return true; }
 

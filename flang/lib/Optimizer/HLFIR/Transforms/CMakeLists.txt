@@ -5,11 +5,13 @@ add_flang_library(HLFIRTransforms
   ConvertToFIR.cpp
   InlineElementals.cpp
   InlineHLFIRAssign.cpp
+  InlineHLFIRCopyIn.cpp
   LowerHLFIRIntrinsics.cpp
   LowerHLFIROrderedAssignments.cpp
   ScheduleOrderedAssignments.cpp
   SimplifyHLFIRIntrinsics.cpp
   OptimizedBufferization.cpp
+  PropagateFortranVariableAttributes.cpp
 
   DEPENDS
   CUFAttrsIncGen

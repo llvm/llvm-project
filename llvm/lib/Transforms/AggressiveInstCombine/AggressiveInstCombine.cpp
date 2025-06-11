@@ -328,15 +328,33 @@ static bool tryToRecognizePopCount(Instruction &I) {
                               m_SpecificInt(Mask33))))) {
         Value *Root, *SubOp1;
         // Matching "i - ((i >> 1) & 0x55555555...)".
+        const APInt *AndMask;
         if (match(AndOp0, m_Sub(m_Value(Root), m_Value(SubOp1))) &&
             match(SubOp1, m_And(m_LShr(m_Specific(Root), m_SpecificInt(1)),
-                                m_SpecificInt(Mask55)))) {
-          LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
-          IRBuilder<> Builder(&I);
-          I.replaceAllUsesWith(
-              Builder.CreateIntrinsic(Intrinsic::ctpop, I.getType(), {Root}));
-          ++NumPopCountRecognized;
-          return true;
+                                m_APInt(AndMask)))) {
+          auto CheckAndMask = [&]() {
+            if (*AndMask == Mask55)
+              return true;
+
+            // Exact match failed, see if any bits are known to be 0 where we
+            // expect a 1 in the mask.
+            if (!AndMask->isSubsetOf(Mask55))
+              return false;
+
+            APInt NeededMask = Mask55 & ~*AndMask;
+            return MaskedValueIsZero(cast<Instruction>(SubOp1)->getOperand(0),
+                                     NeededMask,
+                                     SimplifyQuery(I.getDataLayout()));
+          };
+
+          if (CheckAndMask()) {
+            LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
+            IRBuilder<> Builder(&I);
+            I.replaceAllUsesWith(
+                Builder.CreateIntrinsic(Intrinsic::ctpop, I.getType(), {Root}));
+            ++NumPopCountRecognized;
+            return true;
+          }
         }
       }
     }
@@ -422,8 +440,7 @@ static bool foldSqrt(CallInst *Call, LibFunc Func, TargetTransformInfo &TTI,
   if (TTI.haveFastSqrt(Ty) &&
       (Call->hasNoNaNs() ||
        cannotBeOrderedLessThanZero(
-           Arg, 0,
-           SimplifyQuery(Call->getDataLayout(), &TLI, &DT, &AC, Call)))) {
+           Arg, SimplifyQuery(Call->getDataLayout(), &TLI, &DT, &AC, Call)))) {
     IRBuilder<> Builder(Call);
     Value *NewSqrt =
         Builder.CreateIntrinsic(Intrinsic::sqrt, Ty, Arg, Call, "sqrt");
@@ -530,7 +547,7 @@ static bool tryToRecognizeTableBasedCttz(Instruction &I) {
     return false;
 
   GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(LI->getPointerOperand());
-  if (!GEP || !GEP->isInBounds() || GEP->getNumIndices() != 2)
+  if (!GEP || !GEP->hasNoUnsignedSignedWrap() || GEP->getNumIndices() != 2)
     return false;
 
   if (!GEP->getSourceElementType()->isArrayTy())
@@ -827,6 +844,62 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
   return true;
 }
 
+/// Combine away instructions providing they are still equivalent when compared
+/// against 0. i.e do they have any bits set.
+static Value *optimizeShiftInOrChain(Value *V, IRBuilder<> &Builder) {
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I || I->getOpcode() != Instruction::Or || !I->hasOneUse())
+    return nullptr;
+
+  Value *A;
+
+  // Look deeper into the chain of or's, combining away shl (so long as they are
+  // nuw or nsw).
+  Value *Op0 = I->getOperand(0);
+  if (match(Op0, m_CombineOr(m_NSWShl(m_Value(A), m_Value()),
+                             m_NUWShl(m_Value(A), m_Value()))))
+    Op0 = A;
+  else if (auto *NOp = optimizeShiftInOrChain(Op0, Builder))
+    Op0 = NOp;
+
+  Value *Op1 = I->getOperand(1);
+  if (match(Op1, m_CombineOr(m_NSWShl(m_Value(A), m_Value()),
+                             m_NUWShl(m_Value(A), m_Value()))))
+    Op1 = A;
+  else if (auto *NOp = optimizeShiftInOrChain(Op1, Builder))
+    Op1 = NOp;
+
+  if (Op0 != I->getOperand(0) || Op1 != I->getOperand(1))
+    return Builder.CreateOr(Op0, Op1);
+  return nullptr;
+}
+
+static bool foldICmpOrChain(Instruction &I, const DataLayout &DL,
+                            TargetTransformInfo &TTI, AliasAnalysis &AA,
+                            const DominatorTree &DT) {
+  CmpPredicate Pred;
+  Value *Op0;
+  if (!match(&I, m_ICmp(Pred, m_Value(Op0), m_Zero())) ||
+      !ICmpInst::isEquality(Pred))
+    return false;
+
+  // If the chain or or's matches a load, combine to that before attempting to
+  // remove shifts.
+  if (auto OpI = dyn_cast<Instruction>(Op0))
+    if (OpI->getOpcode() == Instruction::Or)
+      if (foldConsecutiveLoads(*OpI, DL, TTI, AA, DT))
+        return true;
+
+  IRBuilder<> Builder(&I);
+  // icmp eq/ne or(shl(a), b), 0 -> icmp eq/ne or(a, b), 0
+  if (auto *Res = optimizeShiftInOrChain(Op0, Builder)) {
+    I.replaceAllUsesWith(Builder.CreateICmp(Pred, Res, I.getOperand(1)));
+    return true;
+  }
+
+  return false;
+}
+
 // Calculate GEP Stride and accumulated const ModOffset. Return Stride and
 // ModOffset
 static std::pair<APInt, APInt>
@@ -843,7 +916,7 @@ getStrideAndModOffsetOfGEP(Value *PtrOp, const DataLayout &DL) {
 
     for (auto [V, Scale] : VarOffsets) {
       // Only keep a power of two factor for non-inbounds
-      if (!GEP->isInBounds())
+      if (!GEP->hasNoUnsignedSignedWrap())
         Scale = APInt::getOneBitSet(Scale.getBitWidth(), Scale.countr_zero());
 
       if (!Stride)
@@ -1253,6 +1326,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       MadeChange |= tryToRecognizeTableBasedCttz(I);
       MadeChange |= foldConsecutiveLoads(I, DL, TTI, AA, DT);
       MadeChange |= foldPatternedLoads(I, DL);
+      MadeChange |= foldICmpOrChain(I, DL, TTI, AA, DT);
       // NOTE: This function introduces erasing of the instruction `I`, so it
       // needs to be called at the end of this sequence, otherwise we may make
       // bugs.

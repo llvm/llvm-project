@@ -55,7 +55,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Demangle/Demangle.h"
-#include "llvm/Support/Endian.h"
 #include <algorithm>
 
 using namespace llvm;
@@ -162,7 +161,7 @@ static RelType getMipsPairType(RelType type, bool isLocal) {
     // symbol, the R_MIPS_GOT16 relocation creates a GOT entry to hold
     // the high 16 bits of the symbol's value. A paired R_MIPS_LO16
     // relocations handle low 16 bits of the address. That allows
-    // to allocate only one GOT entry for every 64 KBytes of local data.
+    // to allocate only one GOT entry for every 64 KiB of local data.
     return isLocal ? R_MIPS_LO16 : R_MIPS_NONE;
   case R_MICROMIPS_GOT16:
     return isLocal ? R_MICROMIPS_LO16 : R_MIPS_NONE;

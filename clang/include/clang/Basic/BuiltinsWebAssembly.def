@@ -192,6 +192,7 @@ TARGET_BUILTIN(__builtin_wasm_replace_lane_f16x8, "V8hV8hIif", "nc", "fp16")
 // in which case the argument spec (second argument) is unused.
 
 TARGET_BUILTIN(__builtin_wasm_ref_null_extern, "i", "nct", "reference-types")
+TARGET_BUILTIN(__builtin_wasm_ref_is_null_extern, "ii", "nct", "reference-types")
 
 // A funcref represented as a function pointer with the funcref attribute
 // attached to the type, therefore SemaChecking will check for the right
