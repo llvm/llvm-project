@@ -54,10 +54,9 @@ static SmallVector<Value> sliceTransferIndices(ArrayRef<int64_t> elementOffsets,
   return slicedIndices;
 }
 
-// Compute the new indices for vector.load/store by adding `offsets` to
-// `originalIndices`.
-// It assumes m <= n (m = offsets.size(), n = originalIndices.size())
-// Last m of `originalIndices` will be updated.
+// Compute the new indices by adding `offsets` to `originalIndices`.
+// If m < n (m = offsets.size(), n = originalIndices.size()),
+// then only the trailing m values in `originalIndices` are updated.
 static SmallVector<Value> computeIndices(PatternRewriter &rewriter,
                                          Location loc,
                                          ArrayRef<Value> originalIndices,
@@ -65,21 +64,17 @@ static SmallVector<Value> computeIndices(PatternRewriter &rewriter,
   assert(offsets.size() <= originalIndices.size() &&
          "Offsets should not exceed the number of original indices");
   SmallVector<Value> indices(originalIndices);
-  auto originalIter = originalIndices.rbegin();
-  auto offsetsIter = offsets.rbegin();
-  auto indicesIter = indices.rbegin();
-  while (offsetsIter != offsets.rend()) {
-    Value original = *originalIter;
-    int64_t offset = *offsetsIter;
-    if (offset != 0)
-      *indicesIter = rewriter.create<arith::AddIOp>(
-          loc, original, rewriter.create<arith::ConstantIndexOp>(loc, offset));
-    originalIter++;
-    offsetsIter++;
-    indicesIter++;
+
+  auto start = indices.size() - offsets.size();
+  for (auto [i, offset] : llvm::enumerate(offsets)) {
+    if (offset != 0) {
+      indices[start + i] = rewriter.create<arith::AddIOp>(
+          loc, originalIndices[start + i],
+          rewriter.create<arith::ConstantIndexOp>(loc, offset));
+    }
   }
   return indices;
-};
+}
 
 // Clones `op` into a new operations that takes `operands` and returns
 // `resultTypes`.
@@ -658,7 +653,6 @@ private:
   vector::UnrollVectorOptions options;
 };
 
-// clang-format off
 // This pattern unrolls the vector load into multiple 1D vector loads by
 // extracting slices from the base memory and inserting them into the result
 // vector using vector.insert_strided_slice.
@@ -667,11 +661,13 @@ private:
 // is converted to :
 //   %cst = arith.constant dense<0.0> : vector<4x4xf32>
 //   %slice_0 = vector.load %base[%indices] : memref<4x4xf32>, vector<4xf32>
-//   %result_0 = vector.insert_strided_slice %slice_0, %cst {offsets = [0, 0], strides = [1]} : vector<4xf32> into vector<4x4xf32>
-//   %slice_1 = vector.load %base[%indices + 1] : memref<4x4xf32>, vector<4xf32>
-//   %result_1 = vector.insert_strided_slice %slice_1, %result_0 {offsets = [1, 0], strides = [1]} : vector<4xf32> into vector<4x4xf32>
+//   %result_0 = vector.insert_strided_slice %slice_0, %cst
+//     {offsets = [0, 0], strides = [1]} : vector<4xf32> into vector<4x4xf32>
+//   %slice_1 = vector.load %base[%indices + 1]
+//     : memref<4x4xf32>, vector<4xf32>
+//   %result_1 = vector.insert_strided_slice %slice_1, %result_0
+//     {offsets = [1, 0], strides = [1]} : vector<4xf32> into vector<4x4xf32>
 //   ...
-// clang-format on
 struct UnrollLoadPattern : public OpRewritePattern<vector::LoadOp> {
   UnrollLoadPattern(MLIRContext *context,
                     const vector::UnrollVectorOptions &options,
