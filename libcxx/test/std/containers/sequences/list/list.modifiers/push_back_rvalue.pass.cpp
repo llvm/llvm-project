@@ -10,7 +10,7 @@
 
 // <list>
 
-// void push_back(value_type&& x); // constexpr since C++26// constexpr since C++26
+// void push_back(value_type&& x); // constexpr since C++26
 
 #include <list>
 #include <cassert>
