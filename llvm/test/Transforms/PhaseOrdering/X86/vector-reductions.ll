@@ -356,14 +356,14 @@ define i8 @masked_min_reduction(ptr %data, ptr %mask) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq <32 x i8> [[WIDE_LOAD8]], zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq <32 x i8> [[WIDE_LOAD9]], zeroinitializer
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq <32 x i8> [[WIDE_LOAD10]], zeroinitializer
-; CHECK-NEXT:    [[TMP12:%.*]] = select <32 x i1> [[TMP8]], <32 x i8> [[WIDE_LOAD]], <32 x i8> splat (i8 -1)
-; CHECK-NEXT:    [[TMP13:%.*]] = select <32 x i1> [[TMP9]], <32 x i8> [[WIDE_LOAD4]], <32 x i8> splat (i8 -1)
-; CHECK-NEXT:    [[TMP14:%.*]] = select <32 x i1> [[TMP10]], <32 x i8> [[WIDE_LOAD5]], <32 x i8> splat (i8 -1)
-; CHECK-NEXT:    [[TMP15:%.*]] = select <32 x i1> [[TMP11]], <32 x i8> [[WIDE_LOAD6]], <32 x i8> splat (i8 -1)
-; CHECK-NEXT:    [[TMP16]] = tail call <32 x i8> @llvm.umin.v32i8(<32 x i8> [[VEC_PHI]], <32 x i8> [[TMP12]])
-; CHECK-NEXT:    [[TMP17]] = tail call <32 x i8> @llvm.umin.v32i8(<32 x i8> [[VEC_PHI1]], <32 x i8> [[TMP13]])
-; CHECK-NEXT:    [[TMP18]] = tail call <32 x i8> @llvm.umin.v32i8(<32 x i8> [[VEC_PHI2]], <32 x i8> [[TMP14]])
-; CHECK-NEXT:    [[TMP19]] = tail call <32 x i8> @llvm.umin.v32i8(<32 x i8> [[VEC_PHI3]], <32 x i8> [[TMP15]])
+; CHECK-NEXT:    [[TMP12:%.*]] = tail call <32 x i8> @llvm.umin.v32i8(<32 x i8> [[VEC_PHI]], <32 x i8> [[WIDE_LOAD]])
+; CHECK-NEXT:    [[TMP16]] = select <32 x i1> [[TMP8]], <32 x i8> [[TMP12]], <32 x i8> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP14:%.*]] = tail call <32 x i8> @llvm.umin.v32i8(<32 x i8> [[VEC_PHI1]], <32 x i8> [[WIDE_LOAD4]])
+; CHECK-NEXT:    [[TMP17]] = select <32 x i1> [[TMP9]], <32 x i8> [[TMP14]], <32 x i8> [[VEC_PHI1]]
+; CHECK-NEXT:    [[TMP23:%.*]] = tail call <32 x i8> @llvm.umin.v32i8(<32 x i8> [[VEC_PHI2]], <32 x i8> [[WIDE_LOAD5]])
+; CHECK-NEXT:    [[TMP18]] = select <32 x i1> [[TMP10]], <32 x i8> [[TMP23]], <32 x i8> [[VEC_PHI2]]
+; CHECK-NEXT:    [[TMP24:%.*]] = tail call <32 x i8> @llvm.umin.v32i8(<32 x i8> [[VEC_PHI3]], <32 x i8> [[WIDE_LOAD6]])
+; CHECK-NEXT:    [[TMP19]] = select <32 x i1> [[TMP11]], <32 x i8> [[TMP24]], <32 x i8> [[VEC_PHI3]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 128
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
