@@ -319,7 +319,7 @@ private:
 template <bool IS_COMPONENTWISE>
 class DerivedAssignTicket
     : public ImmediateTicketRunner<DerivedAssignTicket<IS_COMPONENTWISE>>,
-      private std::conditional_t<IS_COMPONENTWISE, ComponentsOverElements,
+      protected std::conditional_t<IS_COMPONENTWISE, ComponentsOverElements,
           ElementsOverComponents> {
 public:
   using Base = std::conditional_t<IS_COMPONENTWISE, ComponentsOverElements,
@@ -348,7 +348,7 @@ namespace io::descr {
 template <io::Direction DIR>
 class DescriptorIoTicket
     : public ImmediateTicketRunner<DescriptorIoTicket<DIR>>,
-      private Elementwise {
+      protected Elementwise {
 public:
   RT_API_ATTRS DescriptorIoTicket(io::IoStatementState &io,
       const Descriptor &descriptor, const io::NonTbpDefinedIoTable *table,
@@ -372,7 +372,7 @@ private:
 
 template <io::Direction DIR>
 class DerivedIoTicket : public ImmediateTicketRunner<DerivedIoTicket<DIR>>,
-                        private ElementsOverComponents {
+                        protected ElementsOverComponents {
 public:
   RT_API_ATTRS DerivedIoTicket(io::IoStatementState &io,
       const Descriptor &descriptor, const typeInfo::DerivedType &derived,
