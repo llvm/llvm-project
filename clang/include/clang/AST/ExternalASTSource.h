@@ -51,6 +51,7 @@ class RecordDecl;
 class Selector;
 class Stmt;
 class TagDecl;
+class VarDecl;
 
 /// Abstract interface for external sources of AST nodes.
 ///
@@ -194,6 +195,10 @@ public:
   /// True if this function declaration was a definition before in its own
   /// module.
   virtual bool wasThisDeclarationADefinition(const FunctionDecl *FD);
+
+  virtual bool hasInitializerWithSideEffects(const VarDecl *VD) const {
+    return false;
+  }
 
   /// Finds all declarations lexically contained within the given
   /// DeclContext, after applying an optional filter predicate.

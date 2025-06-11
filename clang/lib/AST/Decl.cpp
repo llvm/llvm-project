@@ -2434,6 +2434,31 @@ VarDecl *VarDecl::getInitializingDeclaration() {
   return Def;
 }
 
+bool VarDecl::hasInitWithSideEffects() const {
+  if (!hasInit())
+    return false;
+
+  // Check if we can get the initializer without deserializing
+  const Expr *E = nullptr;
+  if (auto *S = dyn_cast<Stmt *>(Init)) {
+    E = cast<Expr>(S);
+  } else {
+    auto *Eval = getEvaluatedStmt();
+    if (!Eval->Value.isOffset())
+      E = cast<Expr>(Eval->Value.get(nullptr));
+  }
+
+  if (E)
+    return E->HasSideEffects(getASTContext()) &&
+           // We can get a value-dependent initializer during error recovery.
+           (E->isValueDependent() || !evaluateValue());
+
+  assert(getEvaluatedStmt()->Value.isOffset());
+  // ASTReader tracks this without having to deserialize the initializer
+  return getASTContext().getExternalSource()->hasInitializerWithSideEffects(
+      this);
+}
+
 bool VarDecl::isOutOfLine() const {
   if (Decl::isOutOfLine())
     return true;
