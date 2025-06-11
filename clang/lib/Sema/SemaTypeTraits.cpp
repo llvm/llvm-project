@@ -105,7 +105,7 @@ static CXXMethodDecl *LookupSpecialMemberFromXValue(Sema &SemaRef,
   switch (OCS.BestViableFunction(SemaRef, LookupLoc, Best)) {
   case OR_Success:
   case OR_Deleted:
-    return cast<CXXMethodDecl>(Best->Function);
+    return cast<CXXMethodDecl>(Best->Function)->getCanonicalDecl();
   default:
     return nullptr;
   }
@@ -121,10 +121,8 @@ static bool hasSuitableConstructorForRelocation(Sema &SemaRef,
 
   CXXMethodDecl *Decl =
       LookupSpecialMemberFromXValue(SemaRef, D, /*Assign=*/false);
-  if (!Decl)
-    return false;
-  Decl = Decl->getCanonicalDecl();
-  return Decl->isUserProvided() == AllowUserDefined && !Decl->isDeleted();
+  return Decl && Decl->isUserProvided() == AllowUserDefined &&
+         !Decl->isDeleted();
 }
 
 static bool hasSuitableMoveAssignmentOperatorForRelocation(
@@ -138,8 +136,9 @@ static bool hasSuitableMoveAssignmentOperatorForRelocation(
       LookupSpecialMemberFromXValue(SemaRef, D, /*Assign=*/true);
   if (!Decl)
     return false;
-  Decl = Decl->getCanonicalDecl();
-  return Decl->isUserProvided() == AllowUserDefined && !Decl->isDeleted();
+
+  return Decl && Decl->isUserProvided() == AllowUserDefined &&
+         !Decl->isDeleted();
 }
 
 // [C++26][class.prop]
@@ -2034,7 +2033,7 @@ static void DiagnoseNonDefaultMovable(Sema &SemaRef, SourceLocation Loc,
   if (!D->hasSimpleMoveConstructor() && !D->hasSimpleCopyConstructor()) {
     const auto *Decl = cast_or_null<CXXConstructorDecl>(
         LookupSpecialMemberFromXValue(SemaRef, D, /*Assign=*/false));
-    if (Decl && Decl->getCanonicalDecl()->isUserProvided())
+    if (Decl && Decl->isUserProvided())
       SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
           << diag::TraitNotSatisfiedReason::UserProvidedCtr
           << Decl->isMoveConstructor() << Decl->getSourceRange();
@@ -2042,7 +2041,7 @@ static void DiagnoseNonDefaultMovable(Sema &SemaRef, SourceLocation Loc,
   if (!D->hasSimpleMoveAssignment() && !D->hasSimpleCopyAssignment()) {
     CXXMethodDecl *Decl =
         LookupSpecialMemberFromXValue(SemaRef, D, /*Assign=*/true);
-    if (Decl && Decl->getCanonicalDecl()->isUserProvided())
+    if (Decl && Decl->isUserProvided())
       SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
           << diag::TraitNotSatisfiedReason::UserProvidedAssign
           << Decl->isMoveAssignmentOperator() << Decl->getSourceRange();
