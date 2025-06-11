@@ -1959,8 +1959,7 @@ PtrParts SplitPtrStructs::visitPtrToAddrInst(PtrToAddrInst &PA) {
   IRB.SetInsertPoint(&PA);
 
   auto [Rsrc, Off] = getPtrParts(Ptr);
-  Value *Res = IRB.CreateIntCast(Off, PA.getType(), /*isSigned=*/false,
-                                 PA.getName() + ".off");
+  Value *Res = IRB.CreateIntCast(Off, PA.getType(), /*isSigned=*/false);
   copyMetadata(Res, &PA);
   Res->takeName(&PA);
   SplitUsers.insert(&PA);
