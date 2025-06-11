@@ -75,10 +75,10 @@ ProgramHeaders:
     LastSec:  .note.foo
 
 # RUN: yaml2obj --docnum=3 %s -o %t3.o
-# RUN: llvm-readelf -n %t3.o 2>&1 | FileCheck -DFILE=%t3.o %s --check-prefix=ERR-FILE-COUNT
-# RUN: llvm-readobj -n %t3.o 2>&1 | FileCheck -DFILE=%t3.o %s --check-prefix=ERR-FILE-COUNT
+# RUN: llvm-readelf -n %t3.o 2>&1 | FileCheck -DFILE=%t3.o %s --check-prefix=ERR-FILE-NUM
+# RUN: llvm-readobj -n %t3.o 2>&1 | FileCheck -DFILE=%t3.o %s --check-prefix=ERR-FILE-NUM
 
-# ERR-FILE-COUNT: warning: '[[FILE]]': unable to read note with index 0 from the PT_NOTE segment with index 0: unable to read file mappings (found 2): the note of size 0x2c is too short
+# ERR-FILE-NUM: warning: '[[FILE]]': unable to read note with index 0 from the PT_NOTE segment with index 0: unable to read file mappings (found 2): the note of size 0x2c is too short
 
 # .section ".note.foo", "a"
 #       .align 4
