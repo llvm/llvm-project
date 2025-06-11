@@ -47,7 +47,7 @@ FunctionSummary::FunctionSummary(
       Calls(std::move(Calls)) {}
 
 SummaryManager::SummaryManager() {
-  Attributes.emplace_back(std::make_unique<NoWriteGlobalDescription>());
+  Attributes.emplace_back(std::make_unique<NoWriteGlobalAttr>());
 
   for (auto &&Attr : Attributes) {
     assert(KindToAttribute.count(Attr->getKind()) == 0 &&

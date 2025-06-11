@@ -2,7 +2,7 @@
 #include "clang/Sema/SemaSummarizer.h"
 
 namespace clang {
-void NoWriteGlobalDescription::Callback::run(
+void NoWriteGlobalAttr::Callback::run(
     const ast_matchers::MatchFinder::MatchResult &Result) {
   const auto *Assignment = Result.Nodes.getNodeAs<BinaryOperator>("assignment");
   if (!Assignment)
@@ -11,7 +11,7 @@ void NoWriteGlobalDescription::Callback::run(
   WriteGlobal = true;
 }
 
-bool NoWriteGlobalDescription::infer(const FunctionDecl *FD) const {
+bool NoWriteGlobalAttr::infer(const FunctionDecl *FD) const {
   using namespace ast_matchers;
   MatchFinder Finder;
   Callback CB;
@@ -26,7 +26,7 @@ bool NoWriteGlobalDescription::infer(const FunctionDecl *FD) const {
   return !CB.WriteGlobal;
 }
 
-bool NoWriteGlobalDescription::merge(const FunctionSummary &Summary) const {
+bool NoWriteGlobalAttr::merge(const FunctionSummary &Summary) const {
   return Summary.getAttributes().count(this);
 }
 } // namespace clang

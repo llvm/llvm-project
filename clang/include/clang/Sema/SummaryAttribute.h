@@ -32,7 +32,7 @@ public:
   };
 };
 
-class NoWriteGlobalDescription : public SummaryAttribute {
+class NoWriteGlobalAttr : public SummaryAttribute {
   class Callback : public ast_matchers::MatchFinder::MatchCallback {
   public:
     bool WriteGlobal = false;
@@ -42,8 +42,7 @@ class NoWriteGlobalDescription : public SummaryAttribute {
   };
 
 public:
-  NoWriteGlobalDescription()
-      : SummaryAttribute(NO_WRITE_GLOBAL, "no_write_global") {}
+  NoWriteGlobalAttr() : SummaryAttribute(NO_WRITE_GLOBAL, "no_write_global") {}
 
   bool infer(const FunctionDecl *FD) const override final;
   bool merge(const FunctionSummary &Summary) const override final;
