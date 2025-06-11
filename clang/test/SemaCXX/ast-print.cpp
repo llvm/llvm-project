@@ -243,3 +243,28 @@ struct S {
 constexpr auto var = T::X;
 //CHECK: constexpr auto var = T::X;
 }
+
+namespace RecursiveClass {
+// CHECK:      struct Recursive {
+// CHECK-NEXT:     struct obj *(*next)(struct Recursive *);
+// CHECK-NEXT: };
+struct Recursive {
+  struct obj *(*next)(struct Recursive *q);
+};
+}
+
+namespace ClassParameter {
+// CHECK:      struct A {
+// CHECK-NEXT:     int x;
+// CHECK-NEXT: };
+// CHECK-NEXT: struct Foo {
+// CHECK-NEXT:     struct obj *(*next)(struct A *);
+// CHECK-NEXT: ;
+struct A {
+  int x;
+};
+
+struct Foo {
+  struct obj *(*next)(struct A *q);
+};
+}
