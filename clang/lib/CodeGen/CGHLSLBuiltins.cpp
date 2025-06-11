@@ -215,6 +215,43 @@ static Intrinsic::ID getWaveActiveMaxIntrinsic(llvm::Triple::ArchType Arch,
   }
 }
 
+// Returns the mangled name for a builtin function that the SPIR-V backend
+// will expand into a spec Constant.
+static std::string getSpecConstantFunctionName(clang::QualType SpecConstantType,
+                                               ASTContext &Context) {
+  // The parameter types for our conceptual intrinsic function.
+  QualType ClangParamTypes[] = {Context.IntTy, SpecConstantType};
+
+  // Create a temporary FunctionDecl for the builtin fuction. It won't be
+  // added to the AST.
+  FunctionProtoType::ExtProtoInfo EPI;
+  QualType FnType =
+      Context.getFunctionType(SpecConstantType, ClangParamTypes, EPI);
+  DeclarationName FuncName = &Context.Idents.get("__spirv_SpecConstant");
+  FunctionDecl *FnDeclForMangling = FunctionDecl::Create(
+      Context, Context.getTranslationUnitDecl(), SourceLocation(),
+      SourceLocation(), FuncName, FnType, /*TSI=*/nullptr, SC_Extern);
+
+  // Attach the created parameter declarations to the function declaration.
+  SmallVector<ParmVarDecl *, 2> ParamDecls;
+  for (QualType ParamType : ClangParamTypes) {
+    ParmVarDecl *PD = ParmVarDecl::Create(
+        Context, FnDeclForMangling, SourceLocation(), SourceLocation(),
+        /*IdentifierInfo*/ nullptr, ParamType, /*TSI*/ nullptr, SC_None,
+        /*DefaultArg*/ nullptr);
+    ParamDecls.push_back(PD);
+  }
+  FnDeclForMangling->setParams(ParamDecls);
+
+  // Get the mangled name.
+  std::string Name;
+  llvm::raw_string_ostream MangledNameStream(Name);
+  MangleContext *Mangler = Context.createMangleContext();
+  Mangler->mangleName(FnDeclForMangling, MangledNameStream);
+  MangledNameStream.flush();
+  return Name;
+}
+
 Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                                             const CallExpr *E,
                                             ReturnValueSlot ReturnValue) {
@@ -800,7 +837,8 @@ llvm::Function *clang::CodeGen::CodeGenFunction::getSpecConstantFunction(
 
   // Find or create the declaration for the function.
   llvm::Module *M = &CGM.getModule();
-  std::string MangledName = getSpecConstantFunctionName(SpecConstantType);
+  std::string MangledName =
+      getSpecConstantFunctionName(SpecConstantType, getContext());
   llvm::Function *SpecConstantFn = M->getFunction(MangledName);
 
   if (!SpecConstantFn) {
@@ -812,40 +850,4 @@ llvm::Function *clang::CodeGen::CodeGenFunction::getSpecConstantFunction(
         FnTy, llvm::GlobalValue::ExternalLinkage, MangledName, M);
   }
   return SpecConstantFn;
-}
-
-std::string clang::CodeGen::CodeGenFunction::getSpecConstantFunctionName(
-    const clang::QualType &SpecConstantType) {
-  // The parameter types for our conceptual intrinsic function.
-  ASTContext &Context = getContext();
-  QualType ClangParamTypes[] = {Context.IntTy, SpecConstantType};
-
-  // Create a temporary FunctionDecl for the builtin fuction. It won't be
-  // added to the AST.
-  FunctionProtoType::ExtProtoInfo EPI;
-  QualType FnType =
-      Context.getFunctionType(SpecConstantType, ClangParamTypes, EPI);
-  DeclarationName FuncName = &Context.Idents.get("__spirv_SpecConstant");
-  FunctionDecl *FnDeclForMangling = FunctionDecl::Create(
-      Context, Context.getTranslationUnitDecl(), SourceLocation(),
-      SourceLocation(), FuncName, FnType, /*TSI=*/nullptr, SC_Extern);
-
-  // Attach the created parameter declarations to the function declaration.
-  SmallVector<ParmVarDecl *, 2> ParamDecls;
-  for (QualType ParamType : ClangParamTypes) {
-    ParmVarDecl *PD = ParmVarDecl::Create(
-        Context, FnDeclForMangling, SourceLocation(), SourceLocation(),
-        /*IdentifierInfo*/ nullptr, ParamType, /*TSI*/ nullptr, SC_None,
-        /*DefaultArg*/ nullptr);
-    ParamDecls.push_back(PD);
-  }
-  FnDeclForMangling->setParams(ParamDecls);
-
-  // Get the mangled name.
-  std::string Name;
-  llvm::raw_string_ostream MangledNameStream(Name);
-  MangleContext *Mangler = Context.createMangleContext();
-  Mangler->mangleName(FnDeclForMangling, MangledNameStream);
-  MangledNameStream.flush();
-  return Name;
 }

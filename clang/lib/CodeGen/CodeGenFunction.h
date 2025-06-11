@@ -4856,11 +4856,6 @@ public:
   llvm::Function *
   getSpecConstantFunction(const clang::QualType &SpecConstantType);
 
-  // Returns the mangled name for a builtin function that the SPIR-V backend
-  // will expand into a spec Constant.
-  std::string
-  getSpecConstantFunctionName(const clang::QualType &SpecConstantType);
-
   llvm::Value *EmitDirectXBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitSPIRVBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitScalarOrConstFoldImmArg(unsigned ICEArguments, unsigned Idx,
