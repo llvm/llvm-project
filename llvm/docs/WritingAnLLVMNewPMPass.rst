@@ -129,6 +129,10 @@ manager will ensure that the pass will be run on every function in a module.
 The ``PreservedAnalyses`` return value says that all analyses (e.g. dominator
 tree) are still valid after this pass since we didn't modify any functions.
 
+We need to put  ``HelloWorld.cpp`` to ``add_llvm_component_library`` in the
+``llvm/lib/Transforms/Utils/CMakeLists.txt`` file. This will ensure that the
+pass is built and linked into ``opt``.
+
 That's it for the pass itself. Now in order to "register" the pass, we need
 to add it to a couple places. Add the following to
 ``llvm/lib/Passes/PassRegistry.def`` in the ``FUNCTION_PASS`` section
