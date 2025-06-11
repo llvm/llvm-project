@@ -13,7 +13,6 @@
 
 #include "character_converter.h"
 
-
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
