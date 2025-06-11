@@ -3300,6 +3300,7 @@ struct LocalitySpecifierOpConversion
   llvm::LogicalResult
   matchAndRewrite(fir::LocalitySpecifierOp localizer, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
+#ifdef EXPENSIVE_CHECKS
     auto uses = mlir::SymbolTable::getSymbolUses(
         localizer, localizer->getParentOfType<mlir::ModuleOp>());
 
@@ -3309,8 +3310,8 @@ struct LocalitySpecifierOpConversion
     // `fir.do_loop` nests. In case of parallelization, the `fir.do_concurrent`
     // users are expected to have been lowered to the target parallel model
     // (e.g. OpenMP).
-    if (!uses || !uses->empty())
-      return mlir::failure();
+    assert(uses && uses->empty());
+#endif
 
     rewriter.eraseOp(localizer);
     return mlir::success();
