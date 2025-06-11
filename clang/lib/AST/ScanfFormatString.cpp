@@ -506,7 +506,7 @@ bool ScanfSpecifier::fixType(QualType QT, QualType RawQT,
 
   // Handle size_t, ptrdiff_t, etc. that have dedicated length modifiers in C99.
   if (LangOpt.C99 || LangOpt.CPlusPlus11)
-    namedTypeToLengthModifier(PT, LM);
+    namedTypeToLengthModifier(Ctx, PT, LM);
 
   // If fixing the length modifier was enough, we are done.
   if (hasValidLengthModifier(Ctx.getTargetInfo(), LangOpt)) {

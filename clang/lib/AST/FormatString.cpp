@@ -13,6 +13,7 @@
 
 #include "clang/AST/FormatString.h"
 #include "FormatStringParsing.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -321,27 +322,37 @@ bool clang::analyze_format_string::ParseUTF8InvalidSpecifier(
 // Methods on ArgType.
 //===----------------------------------------------------------------------===//
 
-static bool namedTypeToLengthModifierKind(QualType QT,
+static bool namedTypeToLengthModifierKind(ASTContext &Ctx, QualType QT,
                                           LengthModifier::Kind &K) {
   for (/**/; const auto *TT = QT->getAs<TypedefType>();
        QT = TT->getDecl()->getUnderlyingType()) {
-    StringRef Name = TT->getDecl()->getIdentifier()->getName();
-    if (Name == "size_t" || Name == "__size_t") {
-      K = LengthModifier::AsSizeT;
-      return true;
-    } else if (Name == "__signed_size_t" ||
-               Name == "ssize_t" /*Not C99, but common in Unix.*/) {
-      K = LengthModifier::AsSizeT;
-      return true;
-    } else if (Name == "ptrdiff_t" || Name == "__ptrdiff_t") {
-      K = LengthModifier::AsPtrDiff;
-      return true;
-    } else if (Name == "intmax_t") {
-      K = LengthModifier::AsIntMax;
-      return true;
-    } else if (Name == "uintmax_t") {
-      K = LengthModifier::AsIntMax;
-      return true;
+    const auto *TD = TT->getDecl();
+    auto const *DC = TT->getDecl()->getDeclContext();
+    bool RC = false;
+    if (Ctx.getLangOpts().C99) {
+      RC = DC->isTranslationUnit();
+    } else if (Ctx.getLangOpts().CPlusPlus) {
+      RC = DC->isTranslationUnit() || DC->isStdNamespace();
+    }
+    if (RC) {
+      StringRef Name = TD->getIdentifier()->getName();
+      if (Name == "size_t" || Name == "__size_t") {
+        K = LengthModifier::AsSizeT;
+        return true;
+      } else if (Name == "__signed_size_t" ||
+                 Name == "ssize_t" /*Not C99, but common in Unix.*/) {
+        K = LengthModifier::AsSizeT;
+        return true;
+      } else if (Name == "ptrdiff_t" || Name == "__ptrdiff_t") {
+        K = LengthModifier::AsPtrDiff;
+        return true;
+      } else if (Name == "intmax_t") {
+        K = LengthModifier::AsIntMax;
+        return true;
+      } else if (Name == "uintmax_t") {
+        K = LengthModifier::AsIntMax;
+        return true;
+      }
     }
   }
   return false;
@@ -374,7 +385,7 @@ matchesSizeTPtrdiffT(ASTContext &C, QualType T, QualType E,
     return T->isUnsignedIntegerType() ? MatchKind::Match
                                       : MatchKind::NoMatchSignedness;
 
-  if (Kind Actual = Kind::None; namedTypeToLengthModifierKind(T, Actual)) {
+  if (Kind Actual = Kind::None; namedTypeToLengthModifierKind(C, T, Actual)) {
     if (Actual == LE)
       return MatchKind::Match;
     else if (Actual == Kind::AsPtrDiff || Actual == Kind::AsSizeT)
@@ -1281,10 +1292,10 @@ FormatSpecifier::getCorrectedLengthModifier() const {
   return std::nullopt;
 }
 
-bool FormatSpecifier::namedTypeToLengthModifier(QualType QT,
+bool FormatSpecifier::namedTypeToLengthModifier(ASTContext &Ctx, QualType QT,
                                                 LengthModifier &LM) {
   if (LengthModifier::Kind Out = LengthModifier::Kind::None;
-      namedTypeToLengthModifierKind(QT, Out)) {
+      namedTypeToLengthModifierKind(Ctx, QT, Out)) {
     LM.setKind(Out);
     return true;
   }

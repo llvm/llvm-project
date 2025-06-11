@@ -920,7 +920,7 @@ bool PrintfSpecifier::fixType(QualType QT, const LangOptions &LangOpt,
 
   // Handle size_t, ptrdiff_t, etc. that have dedicated length modifiers in C99.
   if (LangOpt.C99 || LangOpt.CPlusPlus11)
-    namedTypeToLengthModifier(QT, LM);
+    namedTypeToLengthModifier(Ctx, QT, LM);
 
   // If fixing the length modifier was enough, we might be done.
   if (hasValidLengthModifier(Ctx.getTargetInfo(), LangOpt)) {
