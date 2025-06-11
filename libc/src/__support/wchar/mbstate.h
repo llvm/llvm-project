@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MBSTATE_H
 #define LLVM_LIBC_SRC___SUPPORT_MBSTATE_H
 
+#include "src/__support/common.h"
 #include "hdr/types/char32_t.h"
 #include <stdint.h>
 
