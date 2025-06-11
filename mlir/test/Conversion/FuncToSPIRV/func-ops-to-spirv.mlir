@@ -46,6 +46,21 @@ func.func @call_functions(%arg0: index) -> index {
   return %0: index
 }
 
+// CHECK-LABEL: spirv.func @resolve_unrealized_conversion_cast
+func.func @resolve_unrealized_conversion_cast(%arg0: index, %arg1: index) {
+  %0 = builtin.unrealized_conversion_cast %arg1 : index to i32
+  %1 = builtin.unrealized_conversion_cast %arg0 : index to i32
+// CHECK-NOT: builtin.unrealized_conversion_cast
+  spirv.Branch ^bb1(%1 : i32)
+^bb1(%2: i32):  // 2 preds: ^bb0, ^bb2
+  %3 = spirv.SLessThan %2, %0 : i32
+  spirv.BranchConditional %3, ^bb2, ^bb3
+^bb2:  // pred: ^bb1
+  spirv.Branch ^bb1(%0 : i32)
+^bb3:  // pred: ^bb1
+  return
+}
+
 }
 
 // -----
