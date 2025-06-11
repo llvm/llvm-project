@@ -2223,8 +2223,13 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
 
   if (isa<PoisonValue>(Operands[0])) {
     // TODO: All of these operations should probably propagate poison.
-    if (IntrinsicID == Intrinsic::canonicalize)
+    switch (IntrinsicID) {
+    case Intrinsic::canonicalize:
+    case Intrinsic::sqrt:
       return PoisonValue::get(Ty);
+    default:
+      break;
+    }
   }
 
   if (isa<UndefValue>(Operands[0])) {
