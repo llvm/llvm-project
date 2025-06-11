@@ -6882,6 +6882,7 @@ cc_library(
         ":SPIRVDialect",
         ":Support",
         "//llvm:config",
+        "//llvm:Support",
     ],
 )
 
