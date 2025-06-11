@@ -199,13 +199,6 @@ define void @select_v16f16(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fcmeq p1.h, p0/z, z1.h, z0.h
 ; CHECK-NEXT:    fcmeq p0.h, p0/z, z2.h, z3.h
-; CHECK-NEXT:    mov z4.h, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    mov z5.h, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    and z4.h, z4.h, #0x1
-; CHECK-NEXT:    and z5.h, z5.h, #0x1
-; CHECK-NEXT:    cmpne p1.h, p0/z, z4.h, #0
-; CHECK-NEXT:    cmpne p0.h, p0/z, z5.h, #0
 ; CHECK-NEXT:    mov z0.h, p1/m, z1.h
 ; CHECK-NEXT:    sel z1.h, p0, z2.h, z3.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -441,13 +434,6 @@ define void @select_v8f32(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fcmeq p1.s, p0/z, z1.s, z0.s
 ; CHECK-NEXT:    fcmeq p0.s, p0/z, z2.s, z3.s
-; CHECK-NEXT:    mov z4.s, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    mov z5.s, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    and z4.s, z4.s, #0x1
-; CHECK-NEXT:    and z5.s, z5.s, #0x1
-; CHECK-NEXT:    cmpne p1.s, p0/z, z4.s, #0
-; CHECK-NEXT:    cmpne p0.s, p0/z, z5.s, #0
 ; CHECK-NEXT:    mov z0.s, p1/m, z1.s
 ; CHECK-NEXT:    sel z1.s, p0, z2.s, z3.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -572,13 +558,6 @@ define void @select_v4f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fcmeq p1.d, p0/z, z1.d, z0.d
 ; CHECK-NEXT:    fcmeq p0.d, p0/z, z2.d, z3.d
-; CHECK-NEXT:    mov z4.d, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    mov z5.d, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    and z4.d, z4.d, #0x1
-; CHECK-NEXT:    and z5.d, z5.d, #0x1
-; CHECK-NEXT:    cmpne p1.d, p0/z, z4.d, #0
-; CHECK-NEXT:    cmpne p0.d, p0/z, z5.d, #0
 ; CHECK-NEXT:    mov z0.d, p1/m, z1.d
 ; CHECK-NEXT:    sel z1.d, p0, z2.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
