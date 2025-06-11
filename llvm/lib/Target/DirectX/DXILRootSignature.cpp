@@ -232,7 +232,8 @@ static bool parseDescriptorRange(LLVMContext *Ctx,
 static bool parseDescriptorTable(LLVMContext *Ctx,
                                  mcdxbc::RootSignatureDesc &RSD,
                                  MDNode *DescriptorTableNode) {
-  if (DescriptorTableNode->getNumOperands() < 2)
+  const unsigned int NumOperands = DescriptorTableNode->getNumOperands();
+  if (NumOperands < 2)
     return reportError(Ctx, "Invalid format for Descriptor Table");
 
   dxbc::RTS0::v1::RootParameterHeader Header;
@@ -245,7 +246,7 @@ static bool parseDescriptorTable(LLVMContext *Ctx,
   Header.ParameterType =
       llvm::to_underlying(dxbc::RootParameterType::DescriptorTable);
 
-  for (unsigned int I = 2; I < DescriptorTableNode->getNumOperands(); I++) {
+  for (unsigned int I = 2; I < NumOperands; I++) {
     MDNode *Element = dyn_cast<MDNode>(DescriptorTableNode->getOperand(I));
     if (Element == nullptr)
       return reportError(Ctx, "Missing Root Element Metadata Node.");
@@ -340,63 +341,40 @@ static bool verifyRangeType(uint32_t Type) {
   return false;
 }
 
-template <typename... FlagTypes>
-static bool isFlagSet(uint32_t Flags, FlagTypes... FlagsToCheck) {
-  return ((Flags & llvm::to_underlying(FlagsToCheck)) | ...) == Flags;
-}
-
 static bool verifyDescriptorRangeFlag(uint32_t Version, uint32_t Type,
-                                      uint32_t Flags) {
+                                      uint32_t FlagsVal) {
+  using FlagT = dxbc::DescriptorRangeFlag;
+  FlagT Flags = FlagT(FlagsVal);
+
   const bool IsSampler =
       (Type == llvm::to_underlying(dxbc::DescriptorRangeType::Sampler));
 
-  if (Version == 1) {
-    if (IsSampler) {
-      return Flags == 0;
+  // The data-specific flags are mutually exclusive.
+  FlagT DataFlags = FlagT::DATA_VOLATILE | FlagT::DATA_STATIC |
+                    FlagT::DATA_STATIC_WHILE_SET_AT_EXECUTE;
+
+  if (popcount(llvm::to_underlying(Flags & DataFlags)) > 1)
+    return false;
+
+  // For volatile descriptors, DATA_STATIC is never valid.
+  if ((Flags & FlagT::DESCRIPTORS_VOLATILE) == FlagT::DESCRIPTORS_VOLATILE) {
+    FlagT Mask = FlagT::DESCRIPTORS_VOLATILE;
+    if (!IsSampler) {
+      Mask |= FlagT::DATA_VOLATILE;
+      Mask |= FlagT::DATA_STATIC_WHILE_SET_AT_EXECUTE;
     }
-    return Flags ==
-           llvm::to_underlying(dxbc::DescriptorRangeFlag::DESCRIPTORS_VOLATILE);
+    return (Flags & ~Mask) == FlagT::NONE;
   }
 
-  if (Version == 2) {
-    if (IsSampler) {
-      return Flags == 0 ||
-             isFlagSet(Flags, dxbc::DescriptorRangeFlag::DATA_VOLATILE) ||
-             isFlagSet(Flags,
-                       dxbc::DescriptorRangeFlag::
-                           DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS);
-    }
-    // Valid flag combinations for non-sampler Version 2
-    return Flags == 0 ||
-           isFlagSet(Flags, dxbc::DescriptorRangeFlag::DESCRIPTORS_VOLATILE) ||
-           isFlagSet(Flags, dxbc::DescriptorRangeFlag::DATA_VOLATILE) ||
-           isFlagSet(Flags, dxbc::DescriptorRangeFlag::DATA_STATIC) ||
-           isFlagSet(
-               Flags,
-               dxbc::DescriptorRangeFlag::DATA_STATIC_WHILE_SET_AT_EXECUTE) ||
-           isFlagSet(Flags,
-                     dxbc::DescriptorRangeFlag::
-                         DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS) ||
-           isFlagSet(Flags, dxbc::DescriptorRangeFlag::DESCRIPTORS_VOLATILE,
-                     dxbc::DescriptorRangeFlag::DATA_VOLATILE) ||
-           isFlagSet(
-               Flags, dxbc::DescriptorRangeFlag::DESCRIPTORS_VOLATILE,
-               dxbc::DescriptorRangeFlag::DATA_STATIC_WHILE_SET_AT_EXECUTE) ||
-           isFlagSet(Flags,
-                     dxbc::DescriptorRangeFlag::
-                         DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS,
-                     dxbc::DescriptorRangeFlag::DATA_VOLATILE) ||
-           isFlagSet(Flags,
-                     dxbc::DescriptorRangeFlag::
-                         DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS,
-                     dxbc::DescriptorRangeFlag::DATA_STATIC) ||
-           isFlagSet(
-               Flags,
-               dxbc::DescriptorRangeFlag::
-                   DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS,
-               dxbc::DescriptorRangeFlag::DATA_STATIC_WHILE_SET_AT_EXECUTE);
+  // For default (static) or "STATIC_KEEPING_BUFFER_BOUNDS_CHECKS" descriptors,
+  // the other data-specific flags may all be set.
+  FlagT Mask = FlagT::DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS;
+  if (!IsSampler) {
+    Mask |= FlagT::DATA_VOLATILE;
+    Mask |= FlagT::DATA_STATIC;
+    Mask |= FlagT::DATA_STATIC_WHILE_SET_AT_EXECUTE;
   }
-  return false;
+  return (Flags & ~Mask) == FlagT::NONE;
 }
 
 static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
@@ -556,7 +534,6 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
 
   OS << "Root Signature Definitions"
      << "\n";
-  uint8_t Space = 0;
   for (const Function &F : M) {
     auto It = RSDMap.find(&F);
     if (It == RSDMap.end())
@@ -565,32 +542,30 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
     OS << "Definition for '" << F.getName() << "':\n";
 
     // start root signature header
-    OS << indent(Space) << "Flags: " << format_hex(RS.Flags, 8) << "\n";
-    OS << indent(Space) << "Version: " << RS.Version << "\n";
-    OS << indent(Space) << "RootParametersOffset: " << RS.RootParameterOffset
-       << "\n";
-    OS << indent(Space) << "NumParameters: " << RS.ParametersContainer.size()
-       << "\n";
+    OS << "Flags: " << format_hex(RS.Flags, 8) << "\n";
+    OS << "Version: " << RS.Version << "\n";
+    OS << "RootParametersOffset: " << RS.RootParameterOffset << "\n";
+    OS << "NumParameters: " << RS.ParametersContainer.size() << "\n";
     for (size_t I = 0; I < RS.ParametersContainer.size(); I++) {
       const auto &[Type, Loc] =
           RS.ParametersContainer.getTypeAndLocForParameter(I);
       const dxbc::RTS0::v1::RootParameterHeader Header =
           RS.ParametersContainer.getHeader(I);
 
-      OS << indent(Space) << "- Parameter Type: " << Type << "\n";
-      OS << indent(Space + 2)
-         << "Shader Visibility: " << Header.ShaderVisibility << "\n";
+      OS << "- Parameter Type: " << Type << "\n";
+      OS << indent(2) << "Shader Visibility: " << Header.ShaderVisibility
+         << "\n";
 
       switch (Type) {
       case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit): {
         const dxbc::RTS0::v1::RootConstants &Constants =
             RS.ParametersContainer.getConstant(Loc);
-        OS << indent(Space + 2) << "Register Space: " << Constants.RegisterSpace
+        OS << indent(2) << "Register Space: " << Constants.RegisterSpace
            << "\n";
-        OS << indent(Space + 2)
-           << "Shader Register: " << Constants.ShaderRegister << "\n";
-        OS << indent(Space + 2)
-           << "Num 32 Bit Values: " << Constants.Num32BitValues << "\n";
+        OS << indent(2) << "Shader Register: " << Constants.ShaderRegister
+           << "\n";
+        OS << indent(2) << "Num 32 Bit Values: " << Constants.Num32BitValues
+           << "\n";
         break;
       }
       case llvm::to_underlying(dxbc::RootParameterType::CBV):
@@ -598,43 +573,37 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
       case llvm::to_underlying(dxbc::RootParameterType::SRV): {
         const dxbc::RTS0::v2::RootDescriptor &Descriptor =
             RS.ParametersContainer.getRootDescriptor(Loc);
-        OS << indent(Space + 2)
-           << "Register Space: " << Descriptor.RegisterSpace << "\n";
-        OS << indent(Space + 2)
-           << "Shader Register: " << Descriptor.ShaderRegister << "\n";
+        OS << indent(2) << "Register Space: " << Descriptor.RegisterSpace
+           << "\n";
+        OS << indent(2) << "Shader Register: " << Descriptor.ShaderRegister
+           << "\n";
         if (RS.Version > 1)
-          OS << indent(Space + 2) << "Flags: " << Descriptor.Flags << "\n";
+          OS << indent(2) << "Flags: " << Descriptor.Flags << "\n";
         break;
       }
       case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
         const mcdxbc::DescriptorTable &Table =
             RS.ParametersContainer.getDescriptorTable(Loc);
-        OS << indent(Space + 2) << "NumRanges: " << Table.Ranges.size() << "\n";
+        OS << indent(2) << "NumRanges: " << Table.Ranges.size() << "\n";
 
         for (const dxbc::RTS0::v2::DescriptorRange Range : Table) {
-          OS << indent(Space + 2) << "- Range Type: " << Range.RangeType
-             << "\n";
-          OS << indent(Space + 4) << "Register Space: " << Range.RegisterSpace
-             << "\n";
-          OS << indent(Space + 4)
+          OS << indent(2) << "- Range Type: " << Range.RangeType << "\n";
+          OS << indent(4) << "Register Space: " << Range.RegisterSpace << "\n";
+          OS << indent(4)
              << "Base Shader Register: " << Range.BaseShaderRegister << "\n";
-          OS << indent(Space + 4) << "Num Descriptors: " << Range.NumDescriptors
+          OS << indent(4) << "Num Descriptors: " << Range.NumDescriptors
              << "\n";
-          OS << indent(Space + 4) << "Offset In Descriptors From Table Start: "
+          OS << indent(4) << "Offset In Descriptors From Table Start: "
              << Range.OffsetInDescriptorsFromTableStart << "\n";
           if (RS.Version > 1)
-            OS << indent(Space + 4) << "Flags: " << Range.Flags << "\n";
+            OS << indent(4) << "Flags: " << Range.Flags << "\n";
         }
         break;
       }
       }
     }
-    OS << indent(Space) << "NumStaticSamplers: " << 0 << "\n";
-    OS << indent(Space) << "StaticSamplersOffset: " << RS.StaticSamplersOffset
-       << "\n";
-
-    Space--;
-    // end root signature header
+    OS << "NumStaticSamplers: " << 0 << "\n";
+    OS << "StaticSamplersOffset: " << RS.StaticSamplersOffset << "\n";
   }
   return PreservedAnalyses::all();
 }
