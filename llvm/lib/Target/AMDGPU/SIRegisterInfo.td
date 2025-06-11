@@ -547,10 +547,24 @@ class RegisterTypes<list<ValueType> reg_types> {
 }
 
 def Reg16Types : RegisterTypes<[i16, f16, bf16]>;
-def Reg32Types : RegisterTypes<[i32, f32, v2i16, v2f16, v2bf16, p2, p3, p5, p6]>;
-def Reg64Types : RegisterTypes<[i64, f64, v2i32, v2f32, p0, p1, p4, v4i16, v4f16, v4bf16]>;
+def Reg32DataTypes: RegisterTypes<[i32, f32, v2i16, v2f16, v2bf16]>;
+def Reg32PtrTypes: RegisterTypes<[p2, p3, p5, p6]>;
+def Reg32Types : RegisterTypes<!listconcat(Reg32DataTypes.types, Reg32PtrTypes.types)>;
+def Reg64DataTypes: RegisterTypes<[i64, f64, v2i32, v2f32, v4i16, v4f16, v4bf16]>;
+def Reg64PtrTypes: RegisterTypes<[p0, p1, p4]>;
+def Reg64Types : RegisterTypes<!listconcat(Reg64DataTypes.types, Reg64PtrTypes.types)>;
 def Reg96Types : RegisterTypes<[v3i32, v3f32]>;
 def Reg128Types : RegisterTypes<[v4i32, v4f32, v2i64, v2f64, v8i16, v8f16, v8bf16]>;
+def Reg160Types : RegisterTypes<[v5i32, v5f32]>;
+def Reg192Types : RegisterTypes<[v6i32, v6f32, v3i64, v3f64]>;
+def Reg224Types : RegisterTypes<[v7i32, v7f32]>;
+def Reg256Types : RegisterTypes<[v8i32, v8f32, v4i64, v4f64, v16i16, v16f16, v16bf16]>;
+def Reg288Types : RegisterTypes<[v9i32, v9f32]>;
+def Reg320Types : RegisterTypes<[v10i32, v10f32]>;
+def Reg352Types : RegisterTypes<[v11i32, v11f32]>;
+def Reg384Types : RegisterTypes<[v12i32, v12f32]>;
+def Reg512Types : RegisterTypes<[v16i32, v16f32, v8i64, v8f64, v32i16, v32f16, v32bf16]>;
+def Reg1024Types : RegisterTypes<[v32i32, v32f32, v16i64, v16f64]>;
 
 let HasVGPR = 1 in {
 // VOP3 and VINTERP can access 256 lo and 256 hi registers.
@@ -894,18 +908,18 @@ multiclass SRegClass<int numRegs,
 
 defm "" : SRegClass<3, Reg96Types.types, SGPR_96Regs, TTMP_96Regs>;
 defm "" : SRegClass<4, Reg128Types.types, SGPR_128Regs, TTMP_128Regs, /*hasNull*/ true>;
-defm "" : SRegClass<5, [v5i32, v5f32], SGPR_160Regs, TTMP_160Regs>;
-defm "" : SRegClass<6, [v6i32, v6f32, v3i64, v3f64], SGPR_192Regs, TTMP_192Regs>;
-defm "" : SRegClass<7, [v7i32, v7f32], SGPR_224Regs, TTMP_224Regs>;
-defm "" : SRegClass<8, [v8i32, v8f32, v4i64, v4f64, v16i16, v16f16, v16bf16], SGPR_256Regs, TTMP_256Regs, /*hasNull*/ true>;
-defm "" : SRegClass<9, [v9i32, v9f32], SGPR_288Regs, TTMP_288Regs>;
-defm "" : SRegClass<10, [v10i32, v10f32], SGPR_320Regs, TTMP_320Regs>;
-defm "" : SRegClass<11, [v11i32, v11f32], SGPR_352Regs, TTMP_352Regs>;
-defm "" : SRegClass<12, [v12i32, v12f32], SGPR_384Regs, TTMP_384Regs>;
+defm "" : SRegClass<5, Reg160Types.types, SGPR_160Regs, TTMP_160Regs>;
+defm "" : SRegClass<6, Reg192Types.types, SGPR_192Regs, TTMP_192Regs>;
+defm "" : SRegClass<7, Reg224Types.types, SGPR_224Regs, TTMP_224Regs>;
+defm "" : SRegClass<8, Reg256Types.types, SGPR_256Regs, TTMP_256Regs, /*hasNull*/ true>;
+defm "" : SRegClass<9, Reg288Types.types, SGPR_288Regs, TTMP_288Regs>;
+defm "" : SRegClass<10, Reg320Types.types, SGPR_320Regs, TTMP_320Regs>;
+defm "" : SRegClass<11, Reg352Types.types, SGPR_352Regs, TTMP_352Regs>;
+defm "" : SRegClass<12, Reg384Types.types, SGPR_384Regs, TTMP_384Regs>;
 
 let GlobalPriority = true in {
-defm "" : SRegClass<16, [v16i32, v16f32, v8i64, v8f64, v32i16, v32f16, v32bf16], SGPR_512Regs, TTMP_512Regs>;
-defm "" : SRegClass<32, [v32i32, v32f32, v16i64, v16f64], SGPR_1024Regs>;
+defm "" : SRegClass<16, Reg512Types.types, SGPR_512Regs, TTMP_512Regs>;
+defm "" : SRegClass<32, Reg1024Types.types, SGPR_1024Regs>;
 }
 
 def VRegOrLds_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
@@ -944,23 +958,22 @@ multiclass VRegClass<int numRegs, list<ValueType> regTypes, dag regList> {
   }
 }
 
-defm VReg_64 : VRegClass<2, [i64, f64, v2i32, v2f32, v4f16, v4bf16, v4i16, p0, p1, p4],
-                                (add VGPR_64)>;
+defm VReg_64 : VRegClass<2, Reg64Types.types, (add VGPR_64)>;
 defm VReg_96 : VRegClass<3, Reg96Types.types, (add VGPR_96)>;
 defm VReg_128 : VRegClass<4, Reg128Types.types, (add VGPR_128)>;
-defm VReg_160 : VRegClass<5, [v5i32, v5f32], (add VGPR_160)>;
+defm VReg_160 : VRegClass<5, Reg160Types.types, (add VGPR_160)>;
 
-defm VReg_192 : VRegClass<6, [v6i32, v6f32, v3i64, v3f64], (add VGPR_192)>;
-defm VReg_224 : VRegClass<7, [v7i32, v7f32], (add VGPR_224)>;
-defm VReg_256 : VRegClass<8, [v8i32, v8f32, v4i64, v4f64, v16i16, v16f16, v16bf16], (add VGPR_256)>;
-defm VReg_288 : VRegClass<9, [v9i32, v9f32], (add VGPR_288)>;
-defm VReg_320 : VRegClass<10, [v10i32, v10f32], (add VGPR_320)>;
-defm VReg_352 : VRegClass<11, [v11i32, v11f32], (add VGPR_352)>;
-defm VReg_384 : VRegClass<12, [v12i32, v12f32], (add VGPR_384)>;
+defm VReg_192 : VRegClass<6, Reg192Types.types, (add VGPR_192)>;
+defm VReg_224 : VRegClass<7, Reg224Types.types, (add VGPR_224)>;
+defm VReg_256 : VRegClass<8, Reg256Types.types, (add VGPR_256)>;
+defm VReg_288 : VRegClass<9, Reg288Types.types, (add VGPR_288)>;
+defm VReg_320 : VRegClass<10, Reg320Types.types, (add VGPR_320)>;
+defm VReg_352 : VRegClass<11, Reg352Types.types, (add VGPR_352)>;
+defm VReg_384 : VRegClass<12, Reg384Types.types, (add VGPR_384)>;
 
 let GlobalPriority = true in {
-defm VReg_512 : VRegClass<16, [v16i32, v16f32, v8i64, v8f64, v32i16, v32f16, v32bf16], (add VGPR_512)>;
-defm VReg_1024 : VRegClass<32, [v32i32, v32f32, v16i64, v16f64], (add VGPR_1024)>;
+defm VReg_512 : VRegClass<16, Reg512Types.types, (add VGPR_512)>;
+defm VReg_1024 : VRegClass<32, Reg1024Types.types, (add VGPR_1024)>;
 }
 
 multiclass ARegClass<int numRegs, list<ValueType> regTypes, dag regList> {

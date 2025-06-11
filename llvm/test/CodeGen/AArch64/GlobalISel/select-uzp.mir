@@ -16,11 +16,12 @@ body:             |
 
     ; CHECK-LABEL: name: uzp1_v4s32
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:fpr128 = COPY $q1
-    ; CHECK: [[UZP1v4i32_:%[0-9]+]]:fpr128 = UZP1v4i32 [[COPY]], [[COPY1]]
-    ; CHECK: $q0 = COPY [[UZP1v4i32_]]
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr128 = COPY $q1
+    ; CHECK-NEXT: [[UZP1v4i32_:%[0-9]+]]:fpr128 = UZP1v4i32 [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $q0 = COPY [[UZP1v4i32_]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:fpr(<4 x s32>) = COPY $q0
     %1:fpr(<4 x s32>) = COPY $q1
     %2:fpr(<4 x s32>) = G_UZP1 %0, %1
@@ -39,11 +40,12 @@ body:             |
 
     ; CHECK-LABEL: name: uzp2_v4s32
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:fpr128 = COPY $q1
-    ; CHECK: [[UZP2v4i32_:%[0-9]+]]:fpr128 = UZP2v4i32 [[COPY]], [[COPY1]]
-    ; CHECK: $q0 = COPY [[UZP2v4i32_]]
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr128 = COPY $q1
+    ; CHECK-NEXT: [[UZP2v4i32_:%[0-9]+]]:fpr128 = UZP2v4i32 [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $q0 = COPY [[UZP2v4i32_]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
   %0:fpr(<4 x s32>) = COPY $q0
   %1:fpr(<4 x s32>) = COPY $q1
   %2:fpr(<4 x s32>) = G_UZP2 %0, %1

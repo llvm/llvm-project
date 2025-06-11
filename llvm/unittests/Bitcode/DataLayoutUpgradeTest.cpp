@@ -47,6 +47,10 @@ TEST(DataLayoutUpgradeTest, ValidDataLayoutUpgrade) {
   EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64-G1", "amdgcn"),
             "e-p:64:64-G1-ni:7:8:9-p7:160:256:256:32-p8:128:128:128:48-p9:192:"
             "256:256:32");
+  // Check that the old AMDGCN p8:128:128 definition is upgraded
+  EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64-p8:128:128-G1", "amdgcn"),
+            "e-p:64:64-p8:128:128:128:48-G1-ni:7:8:9-p7:160:256:256:32-"
+            "p9:192:256:256:32");
   // but that r600 does not.
   EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32-G1", "r600"), "e-p:32:32-G1");
 

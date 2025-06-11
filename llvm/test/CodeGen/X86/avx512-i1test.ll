@@ -14,13 +14,13 @@ define void @func() {
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %bb33
-; CHECK-NEXT:   # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    testb   %al, %al
-; CHECK-NEXT:    jne     .LBB0_1
-; CHECK-NEXT:  # %bb.2:                                # %bb35
-; CHECK-NEXT:  #   in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    testb   %al, %al
-; CHECK-NEXT:    jmp     .LBB0_1
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_1
+; CHECK-NEXT:  # %bb.2: # %bb35
+; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jmp .LBB0_1
 bb1:
   br i1 poison, label %L_10, label %L_10
 

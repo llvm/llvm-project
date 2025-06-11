@@ -435,10 +435,7 @@ public:
   bool isLegalToVectorizeReduction(const RecurrenceDescriptor &RdxDesc,
                                    ElementCount VF) const override;
 
-  bool preferPredicatedReductionSelect(unsigned Opcode,
-                                       Type *Ty) const override {
-    return ST->hasSVE();
-  }
+  bool preferPredicatedReductionSelect() const override { return ST->hasSVE(); }
 
   InstructionCost
   getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,

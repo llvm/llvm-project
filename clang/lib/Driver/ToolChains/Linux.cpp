@@ -12,8 +12,8 @@
 #include "Arch/Mips.h"
 #include "Arch/PPC.h"
 #include "Arch/RISCV.h"
-#include "CommonArgs.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Distro.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Options.h"
@@ -23,7 +23,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/VirtualFileSystem.h"
-#include <system_error>
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;

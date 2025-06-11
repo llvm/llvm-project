@@ -654,7 +654,7 @@ define <2 x double> @v2f128_double(<2 x fp128> %a, <2 x fp128> %b, <2 x double> 
 ; CHECK-GI-NEXT:    cmp w0, #0
 ; CHECK-GI-NEXT:    cset w19, lt
 ; CHECK-GI-NEXT:    bl __lttf2
-; CHECK-GI-NEXT:    mov v0.d[0], x19
+; CHECK-GI-NEXT:    fmov d0, x19
 ; CHECK-GI-NEXT:    cmp w0, #0
 ; CHECK-GI-NEXT:    cset w8, lt
 ; CHECK-GI-NEXT:    ldp q2, q1, [sp, #32] // 32-byte Folded Reload
@@ -761,29 +761,29 @@ define <3 x double> @v3f128_double(<3 x fp128> %a, <3 x fp128> %b, <3 x double> 
 ; CHECK-GI-NEXT:    cmp w0, #0
 ; CHECK-GI-NEXT:    cset w22, lt
 ; CHECK-GI-NEXT:    bl __lttf2
+; CHECK-GI-NEXT:    ldp q0, q2, [sp, #64] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    sbfx x8, x21, #0, #1
-; CHECK-GI-NEXT:    ldp q3, q2, [sp, #64] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    ldp q4, q3, [sp, #96] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    sbfx x9, x22, #0, #1
+; CHECK-GI-NEXT:    fmov d1, x8
 ; CHECK-GI-NEXT:    cmp w0, #0
 ; CHECK-GI-NEXT:    ldr x30, [sp, #128] // 8-byte Folded Reload
-; CHECK-GI-NEXT:    mov v0.d[0], x8
-; CHECK-GI-NEXT:    mov v1.d[0], x8
-; CHECK-GI-NEXT:    sbfx x8, x22, #0, #1
-; CHECK-GI-NEXT:    mov v2.d[1], v3.d[0]
-; CHECK-GI-NEXT:    ldp q4, q3, [sp, #96] // 32-byte Folded Reload
-; CHECK-GI-NEXT:    ldp x22, x21, [sp, #144] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov v0.d[1], x8
-; CHECK-GI-NEXT:    mov v1.d[1], x8
-; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
+; CHECK-GI-NEXT:    mov v2.d[1], v0.d[0]
+; CHECK-GI-NEXT:    fmov d0, x8
 ; CHECK-GI-NEXT:    cset w8, lt
+; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
 ; CHECK-GI-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-GI-NEXT:    and v1.16b, v2.16b, v1.16b
-; CHECK-GI-NEXT:    bic v0.16b, v3.16b, v0.16b
+; CHECK-GI-NEXT:    mov v1.d[1], x9
+; CHECK-GI-NEXT:    ldp x22, x21, [sp, #144] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    mov v0.d[1], x9
 ; CHECK-GI-NEXT:    and x9, x19, x8
 ; CHECK-GI-NEXT:    bic x8, x20, x8
 ; CHECK-GI-NEXT:    ldp x20, x19, [sp, #160] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    orr x8, x9, x8
-; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-GI-NEXT:    bic v1.16b, v3.16b, v1.16b
+; CHECK-GI-NEXT:    and v0.16b, v2.16b, v0.16b
 ; CHECK-GI-NEXT:    fmov d2, x8
+; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    add sp, sp, #176
@@ -929,22 +929,22 @@ define <3 x i32> @v3f64_i32(<3 x double> %a, <3 x double> %b, <3 x i32> %d, <3 x
 ; CHECK-GI-NEXT:    fcmp d2, d5
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
-; CHECK-GI-NEXT:    mov v1.s[0], w8
+; CHECK-GI-NEXT:    fmov s1, w8
 ; CHECK-GI-NEXT:    cset w9, mi
-; CHECK-GI-NEXT:    mov v2.s[0], w9
-; CHECK-GI-NEXT:    mov w9, #-1 // =0xffffffff
-; CHECK-GI-NEXT:    fcmgt v0.2d, v3.2d, v0.2d
 ; CHECK-GI-NEXT:    mov v1.s[1], w8
-; CHECK-GI-NEXT:    mov v3.s[0], w9
-; CHECK-GI-NEXT:    xtn v0.2s, v0.2d
+; CHECK-GI-NEXT:    fmov s2, w9
+; CHECK-GI-NEXT:    fcmgt v0.2d, v3.2d, v0.2d
 ; CHECK-GI-NEXT:    mov v1.s[2], w8
-; CHECK-GI-NEXT:    mov v3.s[1], w9
+; CHECK-GI-NEXT:    mov w8, #-1 // =0xffffffff
+; CHECK-GI-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-GI-NEXT:    mov v0.d[1], v2.d[0]
-; CHECK-GI-NEXT:    mov v3.s[2], w9
+; CHECK-GI-NEXT:    fmov s2, w8
+; CHECK-GI-NEXT:    mov v2.s[1], w8
 ; CHECK-GI-NEXT:    ushl v0.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    neg v1.4s, v1.4s
+; CHECK-GI-NEXT:    mov v2.s[2], w8
 ; CHECK-GI-NEXT:    sshl v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    eor v1.16b, v0.16b, v3.16b
+; CHECK-GI-NEXT:    eor v1.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    and v0.16b, v6.16b, v0.16b
 ; CHECK-GI-NEXT:    and v1.16b, v7.16b, v1.16b
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
@@ -969,8 +969,6 @@ define <4 x i32> @v4f64_i32(<4 x double> %a, <4 x double> %b, <4 x i32> %d, <4 x
 ; CHECK-GI-NEXT:    fcmgt v0.2d, v2.2d, v0.2d
 ; CHECK-GI-NEXT:    fcmgt v1.2d, v3.2d, v1.2d
 ; CHECK-GI-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #31
-; CHECK-GI-NEXT:    sshr v0.4s, v0.4s, #31
 ; CHECK-GI-NEXT:    bsl v0.16b, v4.16b, v5.16b
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1001,18 +999,18 @@ define <3 x float> @v3f32_float(<3 x float> %a, <3 x float> %b, <3 x float> %d, 
 ; CHECK-GI-LABEL: v3f32_float:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov w8, #31 // =0x1f
-; CHECK-GI-NEXT:    mov w9, #-1 // =0xffffffff
 ; CHECK-GI-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
-; CHECK-GI-NEXT:    mov v4.s[0], w8
-; CHECK-GI-NEXT:    mov v5.s[0], w9
+; CHECK-GI-NEXT:    fmov s4, w8
 ; CHECK-GI-NEXT:    mov v4.s[1], w8
-; CHECK-GI-NEXT:    mov v5.s[1], w9
 ; CHECK-GI-NEXT:    mov v4.s[2], w8
-; CHECK-GI-NEXT:    mov v5.s[2], w9
+; CHECK-GI-NEXT:    mov w8, #-1 // =0xffffffff
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    mov v1.s[1], w8
 ; CHECK-GI-NEXT:    ushl v0.4s, v0.4s, v4.4s
-; CHECK-GI-NEXT:    neg v1.4s, v4.4s
-; CHECK-GI-NEXT:    sshl v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    eor v1.16b, v0.16b, v5.16b
+; CHECK-GI-NEXT:    neg v4.4s, v4.4s
+; CHECK-GI-NEXT:    sshl v0.4s, v0.4s, v4.4s
+; CHECK-GI-NEXT:    mov v1.s[2], w8
+; CHECK-GI-NEXT:    eor v1.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    and v0.16b, v2.16b, v0.16b
 ; CHECK-GI-NEXT:    and v1.16b, v3.16b, v1.16b
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
@@ -1079,18 +1077,18 @@ define <3 x i32> @v3f32_i32(<3 x float> %a, <3 x float> %b, <3 x i32> %d, <3 x i
 ; CHECK-GI-LABEL: v3f32_i32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov w8, #31 // =0x1f
-; CHECK-GI-NEXT:    mov w9, #-1 // =0xffffffff
 ; CHECK-GI-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
-; CHECK-GI-NEXT:    mov v4.s[0], w8
-; CHECK-GI-NEXT:    mov v5.s[0], w9
+; CHECK-GI-NEXT:    fmov s4, w8
 ; CHECK-GI-NEXT:    mov v4.s[1], w8
-; CHECK-GI-NEXT:    mov v5.s[1], w9
 ; CHECK-GI-NEXT:    mov v4.s[2], w8
-; CHECK-GI-NEXT:    mov v5.s[2], w9
+; CHECK-GI-NEXT:    mov w8, #-1 // =0xffffffff
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    mov v1.s[1], w8
 ; CHECK-GI-NEXT:    ushl v0.4s, v0.4s, v4.4s
-; CHECK-GI-NEXT:    neg v1.4s, v4.4s
-; CHECK-GI-NEXT:    sshl v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    eor v1.16b, v0.16b, v5.16b
+; CHECK-GI-NEXT:    neg v4.4s, v4.4s
+; CHECK-GI-NEXT:    sshl v0.4s, v0.4s, v4.4s
+; CHECK-GI-NEXT:    mov v1.s[2], w8
+; CHECK-GI-NEXT:    eor v1.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    and v0.16b, v2.16b, v0.16b
 ; CHECK-GI-NEXT:    and v1.16b, v3.16b, v1.16b
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
@@ -1145,8 +1143,6 @@ define <7 x half> @v7f16_half(<7 x half> %a, <7 x half> %b, <7 x half> %d, <7 x 
 ; CHECK-SD-NOFP16-NEXT:    fcmgt v4.4s, v5.4s, v4.4s
 ; CHECK-SD-NOFP16-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
 ; CHECK-SD-NOFP16-NEXT:    uzp1 v0.8h, v0.8h, v4.8h
-; CHECK-SD-NOFP16-NEXT:    shl v0.8h, v0.8h, #15
-; CHECK-SD-NOFP16-NEXT:    cmlt v0.8h, v0.8h, #0
 ; CHECK-SD-NOFP16-NEXT:    bsl v0.16b, v2.16b, v3.16b
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
@@ -1275,8 +1271,6 @@ define <8 x half> @v8f16_half(<8 x half> %a, <8 x half> %b, <8 x half> %d, <8 x 
 ; CHECK-SD-NOFP16-NEXT:    fcmgt v4.4s, v5.4s, v4.4s
 ; CHECK-SD-NOFP16-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
 ; CHECK-SD-NOFP16-NEXT:    uzp1 v0.8h, v0.8h, v4.8h
-; CHECK-SD-NOFP16-NEXT:    shl v0.8h, v0.8h, #15
-; CHECK-SD-NOFP16-NEXT:    cmlt v0.8h, v0.8h, #0
 ; CHECK-SD-NOFP16-NEXT:    bsl v0.16b, v2.16b, v3.16b
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
@@ -1295,8 +1289,6 @@ define <8 x half> @v8f16_half(<8 x half> %a, <8 x half> %b, <8 x half> %d, <8 x 
 ; CHECK-GI-NOFP16-NEXT:    fcmgt v4.4s, v5.4s, v4.4s
 ; CHECK-GI-NOFP16-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
 ; CHECK-GI-NOFP16-NEXT:    uzp1 v0.8h, v4.8h, v0.8h
-; CHECK-GI-NOFP16-NEXT:    shl v0.8h, v0.8h, #15
-; CHECK-GI-NOFP16-NEXT:    sshr v0.8h, v0.8h, #15
 ; CHECK-GI-NOFP16-NEXT:    bsl v0.16b, v2.16b, v3.16b
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
@@ -1328,10 +1320,6 @@ define <16 x half> @v16f16_half(<16 x half> %a, <16 x half> %b, <16 x half> %d, 
 ; CHECK-SD-NOFP16-NEXT:    fcmgt v0.4s, v2.4s, v0.4s
 ; CHECK-SD-NOFP16-NEXT:    uzp1 v1.8h, v1.8h, v16.8h
 ; CHECK-SD-NOFP16-NEXT:    uzp1 v0.8h, v0.8h, v3.8h
-; CHECK-SD-NOFP16-NEXT:    shl v1.8h, v1.8h, #15
-; CHECK-SD-NOFP16-NEXT:    shl v0.8h, v0.8h, #15
-; CHECK-SD-NOFP16-NEXT:    cmlt v1.8h, v1.8h, #0
-; CHECK-SD-NOFP16-NEXT:    cmlt v0.8h, v0.8h, #0
 ; CHECK-SD-NOFP16-NEXT:    bsl v1.16b, v5.16b, v7.16b
 ; CHECK-SD-NOFP16-NEXT:    bsl v0.16b, v4.16b, v6.16b
 ; CHECK-SD-NOFP16-NEXT:    ret
@@ -1349,9 +1337,9 @@ define <16 x half> @v16f16_half(<16 x half> %a, <16 x half> %b, <16 x half> %d, 
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v16.4s, v0.4h
 ; CHECK-GI-NOFP16-NEXT:    fcvtl2 v0.4s, v0.8h
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v17.4s, v1.4h
-; CHECK-GI-NOFP16-NEXT:    fcvtl2 v1.4s, v1.8h
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v18.4s, v2.4h
 ; CHECK-GI-NOFP16-NEXT:    fcvtl2 v2.4s, v2.8h
+; CHECK-GI-NOFP16-NEXT:    fcvtl2 v1.4s, v1.8h
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v19.4s, v3.4h
 ; CHECK-GI-NOFP16-NEXT:    fcvtl2 v3.4s, v3.8h
 ; CHECK-GI-NOFP16-NEXT:    fcmgt v16.4s, v18.4s, v16.4s
@@ -1360,12 +1348,12 @@ define <16 x half> @v16f16_half(<16 x half> %a, <16 x half> %b, <16 x half> %d, 
 ; CHECK-GI-NOFP16-NEXT:    fcmgt v1.4s, v3.4s, v1.4s
 ; CHECK-GI-NOFP16-NEXT:    uzp1 v0.8h, v16.8h, v0.8h
 ; CHECK-GI-NOFP16-NEXT:    uzp1 v1.8h, v2.8h, v1.8h
-; CHECK-GI-NOFP16-NEXT:    shl v0.8h, v0.8h, #15
-; CHECK-GI-NOFP16-NEXT:    shl v1.8h, v1.8h, #15
-; CHECK-GI-NOFP16-NEXT:    sshr v0.8h, v0.8h, #15
-; CHECK-GI-NOFP16-NEXT:    sshr v1.8h, v1.8h, #15
-; CHECK-GI-NOFP16-NEXT:    bsl v0.16b, v4.16b, v6.16b
-; CHECK-GI-NOFP16-NEXT:    bsl v1.16b, v5.16b, v7.16b
+; CHECK-GI-NOFP16-NEXT:    and v2.16b, v4.16b, v0.16b
+; CHECK-GI-NOFP16-NEXT:    bic v0.16b, v6.16b, v0.16b
+; CHECK-GI-NOFP16-NEXT:    and v3.16b, v5.16b, v1.16b
+; CHECK-GI-NOFP16-NEXT:    bic v1.16b, v7.16b, v1.16b
+; CHECK-GI-NOFP16-NEXT:    orr v0.16b, v2.16b, v0.16b
+; CHECK-GI-NOFP16-NEXT:    orr v1.16b, v3.16b, v1.16b
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: v16f16_half:
@@ -1384,45 +1372,41 @@ entry:
 define <7 x i32> @v7f16_i32(<7 x half> %a, <7 x half> %b, <7 x i32> %d, <7 x i32> %e) {
 ; CHECK-SD-NOFP16-LABEL: v7f16_i32:
 ; CHECK-SD-NOFP16:       // %bb.0: // %entry
-; CHECK-SD-NOFP16-NEXT:    fcvtl2 v2.4s, v0.8h
-; CHECK-SD-NOFP16-NEXT:    fcvtl2 v3.4s, v1.8h
+; CHECK-SD-NOFP16-NEXT:    fmov s2, w0
+; CHECK-SD-NOFP16-NEXT:    fmov s4, w7
 ; CHECK-SD-NOFP16-NEXT:    mov x8, sp
-; CHECK-SD-NOFP16-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-SD-NOFP16-NEXT:    fcvtl v1.4s, v1.4h
-; CHECK-SD-NOFP16-NEXT:    ldr s4, [sp, #24]
-; CHECK-SD-NOFP16-NEXT:    add x9, sp, #32
-; CHECK-SD-NOFP16-NEXT:    ld1 { v4.s }[1], [x9]
-; CHECK-SD-NOFP16-NEXT:    add x9, sp, #16
-; CHECK-SD-NOFP16-NEXT:    fcmgt v2.4s, v3.4s, v2.4s
-; CHECK-SD-NOFP16-NEXT:    fmov s3, w4
+; CHECK-SD-NOFP16-NEXT:    fmov s5, w4
+; CHECK-SD-NOFP16-NEXT:    fcvtl v6.4s, v0.4h
+; CHECK-SD-NOFP16-NEXT:    ldr s3, [sp, #24]
+; CHECK-SD-NOFP16-NEXT:    fcvtl v7.4s, v1.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl2 v0.4s, v0.8h
+; CHECK-SD-NOFP16-NEXT:    add x9, sp, #8
+; CHECK-SD-NOFP16-NEXT:    mov v2.s[1], w1
+; CHECK-SD-NOFP16-NEXT:    ld1 { v4.s }[1], [x8]
+; CHECK-SD-NOFP16-NEXT:    fcvtl2 v1.4s, v1.8h
+; CHECK-SD-NOFP16-NEXT:    mov v5.s[1], w5
+; CHECK-SD-NOFP16-NEXT:    add x8, sp, #32
+; CHECK-SD-NOFP16-NEXT:    ld1 { v3.s }[1], [x8]
+; CHECK-SD-NOFP16-NEXT:    add x8, sp, #16
+; CHECK-SD-NOFP16-NEXT:    fcmgt v6.4s, v7.4s, v6.4s
+; CHECK-SD-NOFP16-NEXT:    ld1 { v4.s }[2], [x9]
+; CHECK-SD-NOFP16-NEXT:    add x9, sp, #40
+; CHECK-SD-NOFP16-NEXT:    mov v2.s[2], w2
 ; CHECK-SD-NOFP16-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
-; CHECK-SD-NOFP16-NEXT:    fmov s1, w0
-; CHECK-SD-NOFP16-NEXT:    mov v3.s[1], w5
-; CHECK-SD-NOFP16-NEXT:    mov v1.s[1], w1
-; CHECK-SD-NOFP16-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
-; CHECK-SD-NOFP16-NEXT:    fmov s2, w7
-; CHECK-SD-NOFP16-NEXT:    mov v3.s[2], w6
-; CHECK-SD-NOFP16-NEXT:    ld1 { v2.s }[1], [x8]
-; CHECK-SD-NOFP16-NEXT:    mov v1.s[2], w2
-; CHECK-SD-NOFP16-NEXT:    add x8, sp, #8
-; CHECK-SD-NOFP16-NEXT:    shl v0.8h, v0.8h, #15
-; CHECK-SD-NOFP16-NEXT:    ld1 { v2.s }[2], [x8]
-; CHECK-SD-NOFP16-NEXT:    add x8, sp, #40
-; CHECK-SD-NOFP16-NEXT:    cmlt v0.8h, v0.8h, #0
-; CHECK-SD-NOFP16-NEXT:    mov v1.s[3], w3
-; CHECK-SD-NOFP16-NEXT:    ld1 { v4.s }[2], [x8]
-; CHECK-SD-NOFP16-NEXT:    ld1 { v2.s }[3], [x9]
-; CHECK-SD-NOFP16-NEXT:    sshll v5.4s, v0.4h, #0
-; CHECK-SD-NOFP16-NEXT:    sshll2 v0.4s, v0.8h, #0
-; CHECK-SD-NOFP16-NEXT:    bif v1.16b, v2.16b, v5.16b
-; CHECK-SD-NOFP16-NEXT:    bsl v0.16b, v3.16b, v4.16b
+; CHECK-SD-NOFP16-NEXT:    mov v5.s[2], w6
+; CHECK-SD-NOFP16-NEXT:    ld1 { v3.s }[2], [x9]
+; CHECK-SD-NOFP16-NEXT:    ld1 { v4.s }[3], [x8]
+; CHECK-SD-NOFP16-NEXT:    mov v1.16b, v6.16b
+; CHECK-SD-NOFP16-NEXT:    mov v2.s[3], w3
+; CHECK-SD-NOFP16-NEXT:    bsl v0.16b, v5.16b, v3.16b
+; CHECK-SD-NOFP16-NEXT:    bsl v1.16b, v2.16b, v4.16b
+; CHECK-SD-NOFP16-NEXT:    mov w5, v0.s[1]
+; CHECK-SD-NOFP16-NEXT:    mov w6, v0.s[2]
+; CHECK-SD-NOFP16-NEXT:    fmov w4, s0
 ; CHECK-SD-NOFP16-NEXT:    mov w1, v1.s[1]
 ; CHECK-SD-NOFP16-NEXT:    mov w2, v1.s[2]
 ; CHECK-SD-NOFP16-NEXT:    mov w3, v1.s[3]
-; CHECK-SD-NOFP16-NEXT:    mov w5, v0.s[1]
-; CHECK-SD-NOFP16-NEXT:    mov w6, v0.s[2]
 ; CHECK-SD-NOFP16-NEXT:    fmov w0, s1
-; CHECK-SD-NOFP16-NEXT:    fmov w4, s0
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: v7f16_i32:
@@ -1465,49 +1449,49 @@ define <7 x i32> @v7f16_i32(<7 x half> %a, <7 x half> %b, <7 x i32> %d, <7 x i32
 ; CHECK-GI-NOFP16-NEXT:    mov v2.h[0], v0.h[4]
 ; CHECK-GI-NOFP16-NEXT:    mov v3.h[0], v1.h[4]
 ; CHECK-GI-NOFP16-NEXT:    mov w8, #31 // =0x1f
-; CHECK-GI-NOFP16-NEXT:    mov v4.s[0], w8
-; CHECK-GI-NOFP16-NEXT:    mov w9, #-1 // =0xffffffff
-; CHECK-GI-NOFP16-NEXT:    mov v5.s[0], w0
-; CHECK-GI-NOFP16-NEXT:    mov v6.s[0], w9
-; CHECK-GI-NOFP16-NEXT:    mov v7.s[0], w7
-; CHECK-GI-NOFP16-NEXT:    ldr s16, [sp]
-; CHECK-GI-NOFP16-NEXT:    ldr s17, [sp, #24]
-; CHECK-GI-NOFP16-NEXT:    ldr s18, [sp, #32]
+; CHECK-GI-NOFP16-NEXT:    fmov s4, w8
+; CHECK-GI-NOFP16-NEXT:    fmov s7, w0
+; CHECK-GI-NOFP16-NEXT:    ldr s5, [sp]
+; CHECK-GI-NOFP16-NEXT:    fmov s16, w7
+; CHECK-GI-NOFP16-NEXT:    fmov s18, w4
+; CHECK-GI-NOFP16-NEXT:    ldr s17, [sp, #32]
+; CHECK-GI-NOFP16-NEXT:    ldr s6, [sp, #8]
 ; CHECK-GI-NOFP16-NEXT:    mov v2.h[1], v0.h[5]
 ; CHECK-GI-NOFP16-NEXT:    mov v3.h[1], v1.h[5]
 ; CHECK-GI-NOFP16-NEXT:    mov v4.s[1], w8
-; CHECK-GI-NOFP16-NEXT:    mov v5.s[1], w1
-; CHECK-GI-NOFP16-NEXT:    mov v17.s[1], v18.s[0]
-; CHECK-GI-NOFP16-NEXT:    mov v6.s[1], w9
-; CHECK-GI-NOFP16-NEXT:    mov v7.s[1], v16.s[0]
-; CHECK-GI-NOFP16-NEXT:    ldr s16, [sp, #8]
+; CHECK-GI-NOFP16-NEXT:    mov v7.s[1], w1
+; CHECK-GI-NOFP16-NEXT:    mov v16.s[1], v5.s[0]
+; CHECK-GI-NOFP16-NEXT:    ldr s5, [sp, #24]
+; CHECK-GI-NOFP16-NEXT:    mov v18.s[1], w5
+; CHECK-GI-NOFP16-NEXT:    mov v5.s[1], v17.s[0]
 ; CHECK-GI-NOFP16-NEXT:    mov v2.h[2], v0.h[6]
 ; CHECK-GI-NOFP16-NEXT:    mov v3.h[2], v1.h[6]
-; CHECK-GI-NOFP16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-GI-NOFP16-NEXT:    mov v4.s[2], w8
+; CHECK-GI-NOFP16-NEXT:    mov w8, #-1 // =0xffffffff
+; CHECK-GI-NOFP16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v1.4s, v1.4h
-; CHECK-GI-NOFP16-NEXT:    mov v5.s[2], w2
-; CHECK-GI-NOFP16-NEXT:    mov v6.s[2], w9
-; CHECK-GI-NOFP16-NEXT:    mov v7.s[2], v16.s[0]
-; CHECK-GI-NOFP16-NEXT:    ldr s16, [sp, #40]
+; CHECK-GI-NOFP16-NEXT:    mov v7.s[2], w2
+; CHECK-GI-NOFP16-NEXT:    mov v16.s[2], v6.s[0]
+; CHECK-GI-NOFP16-NEXT:    ldr s6, [sp, #40]
+; CHECK-GI-NOFP16-NEXT:    mov v18.s[2], w6
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v2.4s, v2.4h
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v3.4s, v3.4h
-; CHECK-GI-NOFP16-NEXT:    mov v17.s[2], v16.s[0]
+; CHECK-GI-NOFP16-NEXT:    mov v5.s[2], v6.s[0]
 ; CHECK-GI-NOFP16-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
-; CHECK-GI-NOFP16-NEXT:    mov v5.s[3], w3
+; CHECK-GI-NOFP16-NEXT:    mov v7.s[3], w3
 ; CHECK-GI-NOFP16-NEXT:    fcmgt v2.4s, v3.4s, v2.4s
-; CHECK-GI-NOFP16-NEXT:    mov v3.s[0], w4
+; CHECK-GI-NOFP16-NEXT:    fmov s3, w8
+; CHECK-GI-NOFP16-NEXT:    mov v3.s[1], w8
 ; CHECK-GI-NOFP16-NEXT:    ushl v2.4s, v2.4s, v4.4s
 ; CHECK-GI-NOFP16-NEXT:    neg v4.4s, v4.4s
-; CHECK-GI-NOFP16-NEXT:    mov v3.s[1], w5
+; CHECK-GI-NOFP16-NEXT:    mov v3.s[2], w8
 ; CHECK-GI-NOFP16-NEXT:    sshl v2.4s, v2.4s, v4.4s
 ; CHECK-GI-NOFP16-NEXT:    ldr s4, [sp, #16]
-; CHECK-GI-NOFP16-NEXT:    mov v3.s[2], w6
-; CHECK-GI-NOFP16-NEXT:    mov v7.s[3], v4.s[0]
-; CHECK-GI-NOFP16-NEXT:    eor v1.16b, v2.16b, v6.16b
-; CHECK-GI-NOFP16-NEXT:    and v2.16b, v3.16b, v2.16b
-; CHECK-GI-NOFP16-NEXT:    and v1.16b, v17.16b, v1.16b
-; CHECK-GI-NOFP16-NEXT:    bsl v0.16b, v5.16b, v7.16b
+; CHECK-GI-NOFP16-NEXT:    mov v16.s[3], v4.s[0]
+; CHECK-GI-NOFP16-NEXT:    eor v1.16b, v2.16b, v3.16b
+; CHECK-GI-NOFP16-NEXT:    and v2.16b, v18.16b, v2.16b
+; CHECK-GI-NOFP16-NEXT:    bsl v0.16b, v7.16b, v16.16b
+; CHECK-GI-NOFP16-NEXT:    and v1.16b, v5.16b, v1.16b
 ; CHECK-GI-NOFP16-NEXT:    orr v1.16b, v2.16b, v1.16b
 ; CHECK-GI-NOFP16-NEXT:    mov s2, v0.s[1]
 ; CHECK-GI-NOFP16-NEXT:    mov s3, v0.s[2]
@@ -1526,60 +1510,60 @@ define <7 x i32> @v7f16_i32(<7 x half> %a, <7 x half> %b, <7 x i32> %d, <7 x i32
 ; CHECK-GI-FP16-LABEL: v7f16_i32:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
 ; CHECK-GI-FP16-NEXT:    fcmgt v0.8h, v1.8h, v0.8h
-; CHECK-GI-FP16-NEXT:    mov w9, #31 // =0x1f
-; CHECK-GI-FP16-NEXT:    mov v4.s[0], w0
-; CHECK-GI-FP16-NEXT:    mov v2.s[0], w9
-; CHECK-GI-FP16-NEXT:    mov v5.s[0], w7
-; CHECK-GI-FP16-NEXT:    ldr s6, [sp]
-; CHECK-GI-FP16-NEXT:    mov v7.s[0], w4
+; CHECK-GI-FP16-NEXT:    mov w10, #31 // =0x1f
+; CHECK-GI-FP16-NEXT:    fmov s5, w0
+; CHECK-GI-FP16-NEXT:    fmov s2, w10
+; CHECK-GI-FP16-NEXT:    fmov s6, w7
+; CHECK-GI-FP16-NEXT:    ldr s3, [sp]
+; CHECK-GI-FP16-NEXT:    fmov s17, w4
+; CHECK-GI-FP16-NEXT:    ldr s7, [sp, #24]
 ; CHECK-GI-FP16-NEXT:    ldr s16, [sp, #32]
-; CHECK-GI-FP16-NEXT:    ldr s17, [sp, #8]
+; CHECK-GI-FP16-NEXT:    mov v5.s[1], w1
 ; CHECK-GI-FP16-NEXT:    umov w8, v0.h[4]
-; CHECK-GI-FP16-NEXT:    umov w10, v0.h[5]
-; CHECK-GI-FP16-NEXT:    mov v4.s[1], w1
-; CHECK-GI-FP16-NEXT:    mov v2.s[1], w9
-; CHECK-GI-FP16-NEXT:    mov v5.s[1], v6.s[0]
-; CHECK-GI-FP16-NEXT:    ldr s6, [sp, #24]
-; CHECK-GI-FP16-NEXT:    mov v7.s[1], w5
-; CHECK-GI-FP16-NEXT:    mov v6.s[1], v16.s[0]
-; CHECK-GI-FP16-NEXT:    ldr s16, [sp, #40]
-; CHECK-GI-FP16-NEXT:    mov v1.s[0], w8
+; CHECK-GI-FP16-NEXT:    umov w9, v0.h[5]
+; CHECK-GI-FP16-NEXT:    mov v2.s[1], w10
+; CHECK-GI-FP16-NEXT:    mov v6.s[1], v3.s[0]
+; CHECK-GI-FP16-NEXT:    ldr s3, [sp, #8]
+; CHECK-GI-FP16-NEXT:    mov v17.s[1], w5
+; CHECK-GI-FP16-NEXT:    mov v7.s[1], v16.s[0]
+; CHECK-GI-FP16-NEXT:    mov v5.s[2], w2
+; CHECK-GI-FP16-NEXT:    fmov s1, w8
 ; CHECK-GI-FP16-NEXT:    umov w8, v0.h[6]
+; CHECK-GI-FP16-NEXT:    mov v2.s[2], w10
 ; CHECK-GI-FP16-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-GI-FP16-NEXT:    mov v2.s[2], w9
-; CHECK-GI-FP16-NEXT:    mov v4.s[2], w2
-; CHECK-GI-FP16-NEXT:    mov v5.s[2], v17.s[0]
-; CHECK-GI-FP16-NEXT:    mov v7.s[2], w6
+; CHECK-GI-FP16-NEXT:    mov v6.s[2], v3.s[0]
+; CHECK-GI-FP16-NEXT:    ldr s3, [sp, #40]
+; CHECK-GI-FP16-NEXT:    mov v17.s[2], w6
+; CHECK-GI-FP16-NEXT:    mov v1.s[1], w9
+; CHECK-GI-FP16-NEXT:    mov v7.s[2], v3.s[0]
+; CHECK-GI-FP16-NEXT:    mov v5.s[3], w3
 ; CHECK-GI-FP16-NEXT:    shl v0.4s, v0.4s, #31
-; CHECK-GI-FP16-NEXT:    mov v6.s[2], v16.s[0]
-; CHECK-GI-FP16-NEXT:    mov v1.s[1], w10
-; CHECK-GI-FP16-NEXT:    mov w10, #-1 // =0xffffffff
-; CHECK-GI-FP16-NEXT:    mov v3.s[0], w10
-; CHECK-GI-FP16-NEXT:    mov v4.s[3], w3
-; CHECK-GI-FP16-NEXT:    sshr v0.4s, v0.4s, #31
 ; CHECK-GI-FP16-NEXT:    mov v1.s[2], w8
-; CHECK-GI-FP16-NEXT:    mov v3.s[1], w10
+; CHECK-GI-FP16-NEXT:    mov w8, #-1 // =0xffffffff
+; CHECK-GI-FP16-NEXT:    sshr v0.4s, v0.4s, #31
+; CHECK-GI-FP16-NEXT:    fmov s4, w8
+; CHECK-GI-FP16-NEXT:    mov v4.s[1], w8
 ; CHECK-GI-FP16-NEXT:    ushl v1.4s, v1.4s, v2.4s
 ; CHECK-GI-FP16-NEXT:    neg v2.4s, v2.4s
-; CHECK-GI-FP16-NEXT:    mov v3.s[2], w10
 ; CHECK-GI-FP16-NEXT:    sshl v1.4s, v1.4s, v2.4s
 ; CHECK-GI-FP16-NEXT:    ldr s2, [sp, #16]
-; CHECK-GI-FP16-NEXT:    mov v5.s[3], v2.s[0]
-; CHECK-GI-FP16-NEXT:    eor v3.16b, v1.16b, v3.16b
-; CHECK-GI-FP16-NEXT:    and v1.16b, v7.16b, v1.16b
-; CHECK-GI-FP16-NEXT:    and v2.16b, v6.16b, v3.16b
-; CHECK-GI-FP16-NEXT:    bsl v0.16b, v4.16b, v5.16b
-; CHECK-GI-FP16-NEXT:    orr v1.16b, v1.16b, v2.16b
-; CHECK-GI-FP16-NEXT:    mov s2, v0.s[1]
+; CHECK-GI-FP16-NEXT:    mov v4.s[2], w8
+; CHECK-GI-FP16-NEXT:    mov v6.s[3], v2.s[0]
+; CHECK-GI-FP16-NEXT:    eor v3.16b, v1.16b, v4.16b
+; CHECK-GI-FP16-NEXT:    and v1.16b, v17.16b, v1.16b
+; CHECK-GI-FP16-NEXT:    bsl v0.16b, v5.16b, v6.16b
+; CHECK-GI-FP16-NEXT:    and v2.16b, v7.16b, v3.16b
 ; CHECK-GI-FP16-NEXT:    mov s3, v0.s[2]
 ; CHECK-GI-FP16-NEXT:    mov s4, v0.s[3]
 ; CHECK-GI-FP16-NEXT:    fmov w0, s0
+; CHECK-GI-FP16-NEXT:    orr v1.16b, v1.16b, v2.16b
+; CHECK-GI-FP16-NEXT:    mov s2, v0.s[1]
 ; CHECK-GI-FP16-NEXT:    mov s5, v1.s[1]
 ; CHECK-GI-FP16-NEXT:    mov s6, v1.s[2]
-; CHECK-GI-FP16-NEXT:    fmov w4, s1
-; CHECK-GI-FP16-NEXT:    fmov w1, s2
 ; CHECK-GI-FP16-NEXT:    fmov w2, s3
+; CHECK-GI-FP16-NEXT:    fmov w1, s2
 ; CHECK-GI-FP16-NEXT:    fmov w3, s4
+; CHECK-GI-FP16-NEXT:    fmov w4, s1
 ; CHECK-GI-FP16-NEXT:    fmov w5, s5
 ; CHECK-GI-FP16-NEXT:    fmov w6, s6
 ; CHECK-GI-FP16-NEXT:    ret
@@ -1630,17 +1614,12 @@ entry:
 define <8 x i32> @v8f16_i32(<8 x half> %a, <8 x half> %b, <8 x i32> %d, <8 x i32> %e) {
 ; CHECK-SD-NOFP16-LABEL: v8f16_i32:
 ; CHECK-SD-NOFP16:       // %bb.0: // %entry
-; CHECK-SD-NOFP16-NEXT:    fcvtl2 v6.4s, v0.8h
-; CHECK-SD-NOFP16-NEXT:    fcvtl2 v7.4s, v1.8h
-; CHECK-SD-NOFP16-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-SD-NOFP16-NEXT:    fcvtl v1.4s, v1.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl v6.4s, v0.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl v7.4s, v1.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl2 v0.4s, v0.8h
+; CHECK-SD-NOFP16-NEXT:    fcvtl2 v1.4s, v1.8h
 ; CHECK-SD-NOFP16-NEXT:    fcmgt v6.4s, v7.4s, v6.4s
 ; CHECK-SD-NOFP16-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
-; CHECK-SD-NOFP16-NEXT:    uzp1 v0.8h, v0.8h, v6.8h
-; CHECK-SD-NOFP16-NEXT:    shl v0.8h, v0.8h, #15
-; CHECK-SD-NOFP16-NEXT:    cmlt v0.8h, v0.8h, #0
-; CHECK-SD-NOFP16-NEXT:    sshll v6.4s, v0.4h, #0
-; CHECK-SD-NOFP16-NEXT:    sshll2 v0.4s, v0.8h, #0
 ; CHECK-SD-NOFP16-NEXT:    mov v1.16b, v0.16b
 ; CHECK-SD-NOFP16-NEXT:    mov v0.16b, v6.16b
 ; CHECK-SD-NOFP16-NEXT:    bsl v1.16b, v3.16b, v5.16b
@@ -1694,37 +1673,24 @@ entry:
 define <16 x i32> @v16f16_i32(<16 x half> %a, <16 x half> %b, <16 x i32> %d, <16 x i32> %e) {
 ; CHECK-SD-NOFP16-LABEL: v16f16_i32:
 ; CHECK-SD-NOFP16:       // %bb.0: // %entry
-; CHECK-SD-NOFP16-NEXT:    fcvtl2 v17.4s, v0.8h
-; CHECK-SD-NOFP16-NEXT:    fcvtl2 v18.4s, v2.8h
-; CHECK-SD-NOFP16-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-SD-NOFP16-NEXT:    fcvtl v2.4s, v2.4h
-; CHECK-SD-NOFP16-NEXT:    fcvtl2 v16.4s, v1.8h
-; CHECK-SD-NOFP16-NEXT:    fcvtl2 v19.4s, v3.8h
-; CHECK-SD-NOFP16-NEXT:    fcvtl v1.4s, v1.4h
-; CHECK-SD-NOFP16-NEXT:    fcvtl v3.4s, v3.4h
-; CHECK-SD-NOFP16-NEXT:    fcmgt v17.4s, v18.4s, v17.4s
-; CHECK-SD-NOFP16-NEXT:    fcmgt v0.4s, v2.4s, v0.4s
-; CHECK-SD-NOFP16-NEXT:    fcmgt v2.4s, v19.4s, v16.4s
-; CHECK-SD-NOFP16-NEXT:    fcmgt v1.4s, v3.4s, v1.4s
-; CHECK-SD-NOFP16-NEXT:    ldp q18, q19, [sp, #32]
-; CHECK-SD-NOFP16-NEXT:    uzp1 v0.8h, v0.8h, v17.8h
-; CHECK-SD-NOFP16-NEXT:    uzp1 v1.8h, v1.8h, v2.8h
-; CHECK-SD-NOFP16-NEXT:    ldp q2, q20, [sp]
-; CHECK-SD-NOFP16-NEXT:    shl v0.8h, v0.8h, #15
-; CHECK-SD-NOFP16-NEXT:    shl v1.8h, v1.8h, #15
-; CHECK-SD-NOFP16-NEXT:    cmlt v0.8h, v0.8h, #0
-; CHECK-SD-NOFP16-NEXT:    cmlt v1.8h, v1.8h, #0
-; CHECK-SD-NOFP16-NEXT:    sshll v3.4s, v0.4h, #0
-; CHECK-SD-NOFP16-NEXT:    sshll v16.4s, v1.4h, #0
-; CHECK-SD-NOFP16-NEXT:    sshll2 v17.4s, v1.8h, #0
-; CHECK-SD-NOFP16-NEXT:    sshll2 v1.4s, v0.8h, #0
-; CHECK-SD-NOFP16-NEXT:    mov v0.16b, v3.16b
-; CHECK-SD-NOFP16-NEXT:    mov v3.16b, v17.16b
-; CHECK-SD-NOFP16-NEXT:    bsl v1.16b, v5.16b, v20.16b
-; CHECK-SD-NOFP16-NEXT:    bsl v0.16b, v4.16b, v2.16b
-; CHECK-SD-NOFP16-NEXT:    mov v2.16b, v16.16b
-; CHECK-SD-NOFP16-NEXT:    bsl v3.16b, v7.16b, v19.16b
-; CHECK-SD-NOFP16-NEXT:    bsl v2.16b, v6.16b, v18.16b
+; CHECK-SD-NOFP16-NEXT:    fcvtl v16.4s, v1.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl v17.4s, v3.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl v18.4s, v0.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl v19.4s, v2.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl2 v1.4s, v1.8h
+; CHECK-SD-NOFP16-NEXT:    fcvtl2 v3.4s, v3.8h
+; CHECK-SD-NOFP16-NEXT:    fcvtl2 v0.4s, v0.8h
+; CHECK-SD-NOFP16-NEXT:    fcvtl2 v2.4s, v2.8h
+; CHECK-SD-NOFP16-NEXT:    fcmgt v16.4s, v17.4s, v16.4s
+; CHECK-SD-NOFP16-NEXT:    fcmgt v18.4s, v19.4s, v18.4s
+; CHECK-SD-NOFP16-NEXT:    fcmgt v3.4s, v3.4s, v1.4s
+; CHECK-SD-NOFP16-NEXT:    fcmgt v1.4s, v2.4s, v0.4s
+; CHECK-SD-NOFP16-NEXT:    ldp q0, q19, [sp]
+; CHECK-SD-NOFP16-NEXT:    ldp q2, q17, [sp, #32]
+; CHECK-SD-NOFP16-NEXT:    bit v0.16b, v4.16b, v18.16b
+; CHECK-SD-NOFP16-NEXT:    bsl v1.16b, v5.16b, v19.16b
+; CHECK-SD-NOFP16-NEXT:    bsl v3.16b, v7.16b, v17.16b
+; CHECK-SD-NOFP16-NEXT:    bit v2.16b, v6.16b, v16.16b
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: v16f16_i32:
