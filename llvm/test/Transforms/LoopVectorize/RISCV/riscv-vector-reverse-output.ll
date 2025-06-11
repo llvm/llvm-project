@@ -39,7 +39,7 @@ define void @vector_reverse_i32(ptr noalias %A, ptr noalias %B) {
 ; RV64-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1023, [[INDEX]]
 ; RV64-NEXT:    [[TMP8:%.*]] = add nsw i64 [[OFFSET_IDX]], -1
 ; RV64-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP8]]
-; RV64-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i32 0
+; RV64-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i64 0
 ; RV64-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP5]] to i32
 ; RV64-NEXT:    [[WIDE_STRIDED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vp.strided.load.nxv4i32.p0.i64(ptr align 4 [[TMP10]], i64 -4, <vscale x 4 x i1> splat (i1 true), i32 [[TMP11]])
 ; RV64-NEXT:    [[TMP12:%.*]] = add <vscale x 4 x i32> [[WIDE_STRIDED_LOAD]], splat (i32 1)
@@ -149,7 +149,7 @@ define void @vector_reverse_i32(ptr noalias %A, ptr noalias %B) {
 ; RV64-UF2-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1023, [[INDEX]]
 ; RV64-UF2-NEXT:    [[TMP8:%.*]] = add nsw i64 [[OFFSET_IDX]], -1
 ; RV64-UF2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP8]]
-; RV64-UF2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i32 0
+; RV64-UF2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i64 0
 ; RV64-UF2-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
 ; RV64-UF2-NEXT:    [[TMP12:%.*]] = mul i64 [[TMP11]], 4
 ; RV64-UF2-NEXT:    [[TMP13:%.*]] = mul i64 [[TMP12]], -1
@@ -235,7 +235,7 @@ define void @vector_reverse_f32(ptr noalias %A, ptr noalias %B) {
 ; RV64-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1023, [[INDEX]]
 ; RV64-NEXT:    [[TMP8:%.*]] = add nsw i64 [[OFFSET_IDX]], -1
 ; RV64-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP8]]
-; RV64-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i32 0
+; RV64-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i64 0
 ; RV64-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP5]] to i32
 ; RV64-NEXT:    [[WIDE_STRIDED_LOAD:%.*]] = call <vscale x 4 x float> @llvm.experimental.vp.strided.load.nxv4f32.p0.i64(ptr align 4 [[TMP10]], i64 -4, <vscale x 4 x i1> splat (i1 true), i32 [[TMP11]])
 ; RV64-NEXT:    [[TMP12:%.*]] = fadd <vscale x 4 x float> [[WIDE_STRIDED_LOAD]], splat (float 1.000000e+00)
@@ -345,7 +345,7 @@ define void @vector_reverse_f32(ptr noalias %A, ptr noalias %B) {
 ; RV64-UF2-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1023, [[INDEX]]
 ; RV64-UF2-NEXT:    [[TMP8:%.*]] = add nsw i64 [[OFFSET_IDX]], -1
 ; RV64-UF2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP8]]
-; RV64-UF2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i32 0
+; RV64-UF2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i64 0
 ; RV64-UF2-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
 ; RV64-UF2-NEXT:    [[TMP12:%.*]] = mul i64 [[TMP11]], 4
 ; RV64-UF2-NEXT:    [[TMP13:%.*]] = mul i64 [[TMP12]], -1
