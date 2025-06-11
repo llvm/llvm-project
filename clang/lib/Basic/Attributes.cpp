@@ -213,8 +213,7 @@ getScopeFromNormalizedScopeName(StringRef ScopeName) {
       .Case("vk", AttributeCommonInfo::Scope::VK)
       .Case("msvc", AttributeCommonInfo::Scope::MSVC)
       .Case("omp", AttributeCommonInfo::Scope::OMP)
-      .Case("riscv", AttributeCommonInfo::Scope::RISCV)
-      .Case("vk", AttributeCommonInfo::Scope::HLSL);
+      .Case("riscv", AttributeCommonInfo::Scope::RISCV);
 }
 
 unsigned AttributeCommonInfo::calculateAttributeSpellingListIndex() const {
