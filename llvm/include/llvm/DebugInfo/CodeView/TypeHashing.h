@@ -214,8 +214,8 @@ template <> struct DenseMapInfo<codeview::GloballyHashedType> {
     return *reinterpret_cast<const unsigned *>(Val.Hash.data());
   }
 
-  static bool isEqual(codeview::GloballyHashedType LHS,
-                      codeview::GloballyHashedType RHS) {
+  static bool isEqual(const codeview::GloballyHashedType &LHS,
+                      const codeview::GloballyHashedType &RHS) {
     return LHS == RHS;
   }
 };
