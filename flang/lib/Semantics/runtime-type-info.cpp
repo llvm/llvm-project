@@ -661,10 +661,6 @@ const Symbol *RuntimeTableBuilder::DescribeType(
     AddValue(dtValues, derivedTypeSchema_, "nofinalizationneeded"s,
         IntExpr<1>(
             derivedTypeSpec && !MayRequireFinalization(*derivedTypeSpec)));
-    // Similarly, a flag to enable optimized runtime assignment.
-    AddValue(dtValues, derivedTypeSchema_, "nodefinedassignment"s,
-        IntExpr<1>(
-            derivedTypeSpec && !MayHaveDefinedAssignment(*derivedTypeSpec)));
   }
   dtObject.get<ObjectEntityDetails>().set_init(MaybeExpr{
       StructureExpr(Structure(derivedTypeSchema_, std::move(dtValues)))});
