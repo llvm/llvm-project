@@ -3294,7 +3294,7 @@ static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
   // Scalable vectors cannot use arbitrary shufflevectors (only splats), so
   // must use intrinsics to interleave.
   if (VecTy->isScalableTy()) {
-    assert(Factor <= 8 && "Unsupported interelave factor for scalable vectors");
+    assert(Factor <= 8 && "Unsupported interleave factor for scalable vectors");
     VectorType *InterleaveTy =
         VectorType::get(VecTy->getElementType(),
                         VecTy->getElementCount().multiplyCoefficientBy(Factor));
