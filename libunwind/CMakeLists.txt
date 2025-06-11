@@ -55,7 +55,6 @@ option(LIBUNWIND_USE_FRAME_HEADER_CACHE "Cache frame headers for unwinding. Requ
 option(LIBUNWIND_REMEMBER_HEAP_ALLOC "Use heap instead of the stack for .cfi_remember_state." OFF)
 option(LIBUNWIND_INSTALL_HEADERS "Install the libunwind headers." ON)
 option(LIBUNWIND_ENABLE_FRAME_APIS "Include libgcc-compatible frame apis." OFF)
-option(LIBUNWIND_EXECUTE_ONLY_CODE "Compile libunwind as execute-only." OFF)
 
 set(LIBUNWIND_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
     "Define suffix of library directory name (32/64)")
@@ -109,11 +108,6 @@ else()
 endif()
 option(LIBUNWIND_HIDE_SYMBOLS
   "Do not export any symbols from the static library." ${LIBUNWIND_DEFAULT_HIDE_SYMBOLS})
-
-if (LIBUNWIND_EXECUTE_ONLY_CODE AND NOT LLVM_RUNTIMES_BUILD)
-  message(SEND_ERROR "LIBUNWIND_EXECUTE_ONLY_CODE is only supported "
-                     "for runtimes build of libunwind.")
-endif()
 
 # If toolchain is FPXX, we switch to FP64 to save the full FPRs. See:
 # https://web.archive.org/web/20180828210612/https://dmz-portal.mips.com/wiki/MIPS_O32_ABI_-_FR0_and_FR1_Interlinking
@@ -338,15 +332,7 @@ if (C_SUPPORTS_COMMENT_LIB_PRAGMA)
   endif()
 endif()
 
-if (LIBUNWIND_EXECUTE_ONLY_CODE)
-  add_compile_flags_if_supported(-mexecute-only)
-  if (NOT CXX_SUPPORTS_MEXECUTE_ONLY_FLAG)
-    add_compile_flags_if_supported(-mpure-code)
-    if (NOT CXX_SUPPORTS_MPURE_CODE_FLAG)
-      message(SEND_ERROR
-        "Compiler doesn't support -mexecute-only or -mpure-code option!")
-    endif()
-  endif()
+if (LLVM_EXECUTE_ONLY_CODE)
   add_compile_definitions(_LIBUNWIND_EXECUTE_ONLY_CODE)
 endif()
 
