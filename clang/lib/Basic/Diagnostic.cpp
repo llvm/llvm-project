@@ -119,6 +119,8 @@ bool DiagnosticsEngine::popMappings(SourceLocation Loc) {
   return true;
 }
 
+void DiagnosticsEngine::ResetPragmas() { DiagStatesByLoc.clear(/*Soft=*/true); }
+
 void DiagnosticsEngine::Reset(bool soft /*=false*/) {
   ErrorOccurred = false;
   UncompilableErrorOccurred = false;
@@ -135,7 +137,7 @@ void DiagnosticsEngine::Reset(bool soft /*=false*/) {
   if (!soft) {
     // Clear state related to #pragma diagnostic.
     DiagStates.clear();
-    DiagStatesByLoc.clear();
+    DiagStatesByLoc.clear(false);
     DiagStateOnPushStack.clear();
 
     // Create a DiagState and DiagStatePoint representing diagnostic changes
