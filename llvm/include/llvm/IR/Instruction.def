@@ -190,35 +190,36 @@ HANDLE_CAST_INST(43, UIToFP  , UIToFPInst  )  // UInt -> floating point
 HANDLE_CAST_INST(44, SIToFP  , SIToFPInst  )  // SInt -> floating point
 HANDLE_CAST_INST(45, FPTrunc , FPTruncInst )  // Truncate floating point
 HANDLE_CAST_INST(46, FPExt   , FPExtInst   )  // Extend floating point
-HANDLE_CAST_INST(47, PtrToInt, PtrToIntInst)  // Pointer -> Integer
-HANDLE_CAST_INST(48, IntToPtr, IntToPtrInst)  // Integer -> Pointer
-HANDLE_CAST_INST(49, BitCast , BitCastInst )  // Type cast
-HANDLE_CAST_INST(50, AddrSpaceCast, AddrSpaceCastInst)  // addrspace cast
-  LAST_CAST_INST(50)
+HANDLE_CAST_INST(47, PtrToInt, PtrToIntInst)  // Pointer -> Integer (bitcast)
+HANDLE_CAST_INST(48, PtrToAddr, PtrToAddrInst) // Pointer -> Address
+HANDLE_CAST_INST(49, IntToPtr, IntToPtrInst)  // Integer -> Pointer
+HANDLE_CAST_INST(50, BitCast , BitCastInst )  // Type cast
+HANDLE_CAST_INST(51, AddrSpaceCast, AddrSpaceCastInst)  // addrspace cast
+  LAST_CAST_INST(51)
 
- FIRST_FUNCLETPAD_INST(51)
-HANDLE_FUNCLETPAD_INST(51, CleanupPad, CleanupPadInst)
-HANDLE_FUNCLETPAD_INST(52, CatchPad  , CatchPadInst)
-  LAST_FUNCLETPAD_INST(52)
+ FIRST_FUNCLETPAD_INST(52)
+HANDLE_FUNCLETPAD_INST(52, CleanupPad, CleanupPadInst)
+HANDLE_FUNCLETPAD_INST(53, CatchPad  , CatchPadInst)
+  LAST_FUNCLETPAD_INST(53)
 
 // Other operators...
- FIRST_OTHER_INST(53)
-HANDLE_OTHER_INST(53, ICmp   , ICmpInst   )  // Integer comparison instruction
-HANDLE_OTHER_INST(54, FCmp   , FCmpInst   )  // Floating point comparison instr.
-HANDLE_OTHER_INST(55, PHI    , PHINode    )  // PHI node instruction
-HANDLE_OTHER_INST(56, Call   , CallInst   )  // Call a function
-HANDLE_OTHER_INST(57, Select , SelectInst )  // select instruction
-HANDLE_USER_INST (58, UserOp1, Instruction)  // May be used internally in a pass
-HANDLE_USER_INST (59, UserOp2, Instruction)  // Internal to passes only
-HANDLE_OTHER_INST(60, VAArg  , VAArgInst  )  // vaarg instruction
-HANDLE_OTHER_INST(61, ExtractElement, ExtractElementInst)// extract from vector
-HANDLE_OTHER_INST(62, InsertElement, InsertElementInst)  // insert into vector
-HANDLE_OTHER_INST(63, ShuffleVector, ShuffleVectorInst)  // shuffle two vectors.
-HANDLE_OTHER_INST(64, ExtractValue, ExtractValueInst)// extract from aggregate
-HANDLE_OTHER_INST(65, InsertValue, InsertValueInst)  // insert into aggregate
-HANDLE_OTHER_INST(66, LandingPad, LandingPadInst)  // Landing pad instruction.
-HANDLE_OTHER_INST(67, Freeze, FreezeInst) // Freeze instruction.
-  LAST_OTHER_INST(67)
+ FIRST_OTHER_INST(54)
+HANDLE_OTHER_INST(54, ICmp   , ICmpInst   )  // Integer comparison instruction
+HANDLE_OTHER_INST(55, FCmp   , FCmpInst   )  // Floating point comparison instr.
+HANDLE_OTHER_INST(56, PHI    , PHINode    )  // PHI node instruction
+HANDLE_OTHER_INST(57, Call   , CallInst   )  // Call a function
+HANDLE_OTHER_INST(58, Select , SelectInst )  // select instruction
+HANDLE_USER_INST (59, UserOp1, Instruction)  // May be used internally in a pass
+HANDLE_USER_INST (60, UserOp2, Instruction)  // Internal to passes only
+HANDLE_OTHER_INST(61, VAArg  , VAArgInst  )  // vaarg instruction
+HANDLE_OTHER_INST(62, ExtractElement, ExtractElementInst)// extract from vector
+HANDLE_OTHER_INST(63, InsertElement, InsertElementInst)  // insert into vector
+HANDLE_OTHER_INST(64, ShuffleVector, ShuffleVectorInst)  // shuffle two vectors.
+HANDLE_OTHER_INST(65, ExtractValue, ExtractValueInst)// extract from aggregate
+HANDLE_OTHER_INST(66, InsertValue, InsertValueInst)  // insert into aggregate
+HANDLE_OTHER_INST(67, LandingPad, LandingPadInst)  // Landing pad instruction.
+HANDLE_OTHER_INST(68, Freeze, FreezeInst) // Freeze instruction.
+  LAST_OTHER_INST(68)
 
 #undef  FIRST_TERM_INST
 #undef HANDLE_TERM_INST
