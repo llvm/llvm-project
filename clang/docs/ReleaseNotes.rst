@@ -1100,6 +1100,7 @@ OpenMP Support
   open parenthesis. (#GH139665)
 - An error is now emitted when OpenMP ``collapse`` and ``ordered`` clauses have
   an argument larger than what can fit within a 64-bit integer.
+- Added support for private variable reduction.
 
 Improvements
 ^^^^^^^^^^^^
