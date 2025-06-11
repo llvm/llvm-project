@@ -20,4 +20,4 @@
 
 #endif // LLVM_LIBC_FULL_BUILD
 
-#endif // LLVM_LIBC_HDR_TYPES_char32_t_H
+#endif // LLVM_LIBC_HDR_TYPES_char32_T_H
