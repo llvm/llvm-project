@@ -2461,34 +2461,10 @@ LogicalResult acc::LoopOp::verify() {
   if (hasDuplicateDeviceTypes(getAuto_(), deviceTypes) ||
       hasDuplicateDeviceTypes(getIndependent(), deviceTypes) ||
       hasDuplicateDeviceTypes(getSeq(), deviceTypes)) {
-    return emitError() << "only one of auto, independent, seq can be present "
-                          "at the same time";
-  }
-
-  // Check that at least one of auto, independent, or seq is present
-  // for the device-independent default clauses.
-  auto hasDeviceNone = [](mlir::acc::DeviceTypeAttr attr) -> bool {
-    return attr.getValue() == mlir::acc::DeviceType::None;
-  };
-  bool hasDefaultSeq =
-      getSeqAttr()
-          ? llvm::any_of(getSeqAttr().getAsRange<mlir::acc::DeviceTypeAttr>(),
-                         hasDeviceNone)
-          : false;
-  bool hasDefaultIndependent =
-      getIndependentAttr()
-          ? llvm::any_of(
-                getIndependentAttr().getAsRange<mlir::acc::DeviceTypeAttr>(),
-                hasDeviceNone)
-          : false;
-  bool hasDefaultAuto =
-      getAuto_Attr()
-          ? llvm::any_of(getAuto_Attr().getAsRange<mlir::acc::DeviceTypeAttr>(),
-                         hasDeviceNone)
-          : false;
-  if (!hasDefaultSeq && !hasDefaultIndependent && !hasDefaultAuto) {
-    return emitError()
-           << "at least one of auto, independent, seq must be present";
+    return emitError() << "only one of \"" << acc::LoopOp::getAutoAttrStrName()
+                       << "\", " << getIndependentAttrName() << ", "
+                       << getSeqAttrName()
+                       << " can be present at the same time";
   }
 
   // Gang, worker and vector are incompatible with seq.
@@ -2507,7 +2483,7 @@ LogicalResult acc::LoopOp::verify() {
           getGangValue(mlir::acc::GangArgType::Static,
                        deviceTypeAttr.getValue()))
         return emitError()
-               << "gang, worker or vector cannot appear with seq";
+               << "gang, worker or vector cannot appear with the seq attr";
     }
   }
 
