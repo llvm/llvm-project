@@ -12,6 +12,7 @@
 #ifndef LLVM_XRAY_TRACE_H
 #define LLVM_XRAY_TRACE_H
 
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <vector>
 
@@ -68,11 +69,11 @@ public:
 
 /// This function will attempt to load XRay trace records from the provided
 /// |Filename|.
-Expected<Trace> loadTraceFile(StringRef Filename, bool Sort = false);
+LLVM_ABI Expected<Trace> loadTraceFile(StringRef Filename, bool Sort = false);
 
 /// This function will attempt to load XRay trace records from the provided
 /// DataExtractor.
-Expected<Trace> loadTrace(const DataExtractor &Extractor, bool Sort = false);
+LLVM_ABI Expected<Trace> loadTrace(const DataExtractor &Extractor, bool Sort = false);
 
 } // namespace xray
 } // namespace llvm
