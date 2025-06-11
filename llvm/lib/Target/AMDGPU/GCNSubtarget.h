@@ -1879,6 +1879,12 @@ public:
     return getGeneration() == GFX12;
   }
 
+  // Requires s_wait_alu(0) after s102/s103 write and src_flat_scratch_base
+  // read.
+  bool hasScratchBaseForwardingHazard() const {
+    return GFX1250Insts && getGeneration() == GFX12;
+  }
+
   bool isDynamicVGPREnabled() const { return DynamicVGPR; }
 
   /// \returns true if the subtarget supports clusters of workgroups.

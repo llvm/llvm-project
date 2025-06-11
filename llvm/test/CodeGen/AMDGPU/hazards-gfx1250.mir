@@ -15,3 +15,481 @@ body: |
     ; GCN-NEXT: S_WAITCNT_DEPCTR 65507
     DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 $vgpr1, 0, 0, implicit-def $asynccnt, implicit $asynccnt, implicit $exec
 ...
+
+---
+name: write_s102_read_flat_scr_base_lo
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; GCN-LABEL: name: write_s102_read_flat_scr_base_lo
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr102 = S_MOV_B32 0
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 61950
+    ; GCN-NEXT: $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_lo, $vgpr0, implicit $exec
+    $sgpr102 = S_MOV_B32 0
+    $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_lo, $vgpr0, implicit $exec
+...
+
+---
+name: write_s103_read_flat_scr_base_hi
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; GCN-LABEL: name: write_s103_read_flat_scr_base_hi
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr103 = S_MOV_B32 0
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 61950
+    ; GCN-NEXT: $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_hi, $vgpr0, implicit $exec
+    $sgpr103 = S_MOV_B32 0
+    $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_hi, $vgpr0, implicit $exec
+...
+
+---
+name: write_s102_read_flat_scr_base
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; GCN-LABEL: name: write_s102_read_flat_scr_base
+    ; GCN: $sgpr102 = S_MOV_B32 0
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 61950
+    ; GCN-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $src_flat_scratch_base
+    $sgpr102 = S_MOV_B32 0
+    $sgpr0_sgpr1 = S_MOV_B64 $src_flat_scratch_base
+...
+
+---
+name: write_s103_read_flat_scr_base
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; GCN-LABEL: name: write_s103_read_flat_scr_base
+    ; GCN: $sgpr103 = S_MOV_B32 0
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 61950
+    ; GCN-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $src_flat_scratch_base
+    $sgpr103 = S_MOV_B32 0
+    $sgpr0_sgpr1 = S_MOV_B64 $src_flat_scratch_base
+...
+
+---
+name: write_s102_s103_read_flat_scr_base
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; GCN-LABEL: name: write_s102_s103_read_flat_scr_base
+    ; GCN: $sgpr102_sgpr103 = S_MOV_B64 0
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 61950
+    ; GCN-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $src_flat_scratch_base
+    $sgpr102_sgpr103 = S_MOV_B64 0
+    $sgpr0_sgpr1 = S_MOV_B64 $src_flat_scratch_base
+...
+
+---
+name: write_s102_getreg_flat_scr_base_lo
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; GCN-LABEL: name: write_s102_getreg_flat_scr_base_lo
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr102 = S_MOV_B32 0
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 61950
+    ; GCN-NEXT: $sgpr1 = S_GETREG_B32 20, implicit $mode
+    $sgpr102 = S_MOV_B32 0
+    $sgpr1 = S_GETREG_B32 20, implicit $mode
+...
+
+---
+name: write_s103_getreg_flat_scr_base_hi
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; GCN-LABEL: name: write_s103_getreg_flat_scr_base_hi
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr103 = S_MOV_B32 0
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 61950
+    ; GCN-NEXT: $sgpr1 = S_GETREG_B32 21, implicit $mode
+    $sgpr103 = S_MOV_B32 0
+    $sgpr1 = S_GETREG_B32 21, implicit $mode
+...
+
+---
+name: write_s102_s103_getreg_flat_scr_base_hi
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; GCN-LABEL: name: write_s102_s103_getreg_flat_scr_base_hi
+    ; GCN: $sgpr102_sgpr103 = S_MOV_B64 0
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 61950
+    ; GCN-NEXT: $sgpr1 = S_GETREG_B32 21, implicit $mode
+    $sgpr102_sgpr103 = S_MOV_B64 0
+    $sgpr1 = S_GETREG_B32 21, implicit $mode
+...
+
+---
+name: write_s102_read_flat_scr_base_lo_9_salu_valu
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; GCN-LABEL: name: write_s102_read_flat_scr_base_lo_9_salu_valu
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr102 = S_MOV_B32 0
+    ; GCN-NEXT: $sgpr0 = S_MOV_B32 0
+    ; GCN-NEXT: $sgpr1 = S_MOV_B32 0
+    ; GCN-NEXT: $sgpr2_sgpr3 = S_MOV_B64 0
+    ; GCN-NEXT: $vgpr1, $vcc_lo = V_ADDC_U32_e64 0, $vgpr0, $sgpr0, 0, implicit $exec
+    ; GCN-NEXT: $vgpr2 = V_ADDC_U32_e32 $vgpr0, $vgpr0, implicit-def $vcc_lo, implicit $vcc_lo, implicit $exec
+    ; GCN-NEXT: S_NOP 0
+    ; GCN-NEXT: $vgpr3 = DS_READ_B32 $vgpr0, 0, 0, implicit $m0, implicit $exec
+    ; GCN-NEXT: $sgpr4 = S_MOV_B32 0
+    ; GCN-NEXT: $sgpr5 = S_MOV_B32 0
+    ; GCN-NEXT: $sgpr6 = S_MOV_B32 0
+    ; GCN-NEXT: $sgpr7 = S_MOV_B32 0
+    ; GCN-NEXT: $sgpr8_sgpr9 = S_LOAD_DWORDX2_IMM renamable $sgpr4_sgpr5, 0, 0
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 61950
+    ; GCN-NEXT: $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_lo, $vgpr0, implicit $exec
+    $sgpr102 = S_MOV_B32 0
+    $sgpr0 = S_MOV_B32 0
+    $sgpr1 = S_MOV_B32 0
+    $sgpr2_sgpr3 = S_MOV_B64 0
+    $vgpr1, $vcc_lo = V_ADDC_U32_e64 0, $vgpr0, $sgpr0, 0, implicit $exec
+    $vgpr2 = V_ADDC_U32_e32 $vgpr0, $vgpr0, implicit-def $vcc, implicit $vcc, implicit $exec
+    ; NOP does not count because it does not write SGPRs
+    S_NOP 0
+    ; DS_READ_B32 does not count because it is not SALU or VALU
+    $vgpr3 = DS_READ_B32 $vgpr0, 0, 0, implicit $m0, implicit $exec
+    $sgpr4 = S_MOV_B32 0
+    $sgpr5 = S_MOV_B32 0
+    $sgpr6 = S_MOV_B32 0
+    $sgpr7 = S_MOV_B32 0
+    ; S_LOAD_DWORDX2_IMM does not count because it is not SALU
+    $sgpr8_sgpr9 = S_LOAD_DWORDX2_IMM renamable $sgpr4_sgpr5, 0, 0
+    $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_lo, $vgpr0, implicit $exec
+...
+
+---
+name: write_s102_read_flat_scr_base_lo_10_salu_valu_expired
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; GCN-LABEL: name: write_s102_read_flat_scr_base_lo_10_salu_valu_expired
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr102 = S_MOV_B32 0
+    ; GCN-NEXT: $sgpr0 = S_MOV_B32 0
+    ; GCN-NEXT: $sgpr1 = S_MOV_B32 0
+    ; GCN-NEXT: $sgpr2_sgpr3 = S_MOV_B64 0
+    ; GCN-NEXT: $vgpr1, $vcc_lo = V_ADDC_U32_e64 0, $vgpr0, $sgpr0, 0, implicit $exec
+    ; GCN-NEXT: $vgpr2 = V_ADDC_U32_e32 $vgpr0, $vgpr0, implicit-def $vcc_lo, implicit $vcc_lo, implicit $exec
+    ; GCN-NEXT: S_NOP 0
+    ; GCN-NEXT: $vgpr3 = DS_READ_B32 $vgpr0, 0, 0, implicit $m0, implicit $exec
+    ; GCN-NEXT: $sgpr4 = S_MOV_B32 0
+    ; GCN-NEXT: $sgpr5 = S_MOV_B32 0
+    ; GCN-NEXT: $sgpr6 = S_MOV_B32 0
+    ; GCN-NEXT: $sgpr7 = S_MOV_B32 0
+    ; GCN-NEXT: $sgpr8_sgpr9 = S_LOAD_DWORDX2_IMM renamable $sgpr4_sgpr5, 0, 0
+    ; GCN-NEXT: $sgpr10 = S_MOV_B32 0
+    ; GCN-NEXT: $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_lo, $vgpr0, implicit $exec
+    $sgpr102 = S_MOV_B32 0
+    $sgpr0 = S_MOV_B32 0
+    $sgpr1 = S_MOV_B32 0
+    $sgpr2_sgpr3 = S_MOV_B64 0
+    $vgpr1, $vcc_lo = V_ADDC_U32_e64 0, $vgpr0, $sgpr0, 0, implicit $exec
+    $vgpr2 = V_ADDC_U32_e32 $vgpr0, $vgpr0, implicit-def $vcc, implicit $vcc, implicit $exec
+    ; NOP does not count because it does not write SGPRs
+    S_NOP 0
+    ; DS_READ_B32 does not count because it is not SALU or VALU
+    $vgpr3 = DS_READ_B32 $vgpr0, 0, 0, implicit $m0, implicit $exec
+    $sgpr4 = S_MOV_B32 0
+    $sgpr5 = S_MOV_B32 0
+    $sgpr6 = S_MOV_B32 0
+    $sgpr7 = S_MOV_B32 0
+    ; S_LOAD_DWORDX2_IMM does not count because it is not SALU
+    $sgpr8_sgpr9 = S_LOAD_DWORDX2_IMM renamable $sgpr4_sgpr5, 0, 0
+    $sgpr10 = S_MOV_B32 0
+    $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_lo, $vgpr0, implicit $exec
+...
+
+---
+name: write_s103_read_flat_scr_base_hi_9_salu_valu
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; GCN-LABEL: name: write_s103_read_flat_scr_base_hi_9_salu_valu
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr103 = S_MOV_B32 0
+    ; GCN-NEXT: $sgpr0 = S_MOV_B32 0
+    ; GCN-NEXT: $sgpr1 = S_MOV_B32 0
+    ; GCN-NEXT: $sgpr2_sgpr3 = S_MOV_B64 0
+    ; GCN-NEXT: $vgpr1, $vcc_lo = V_ADDC_U32_e64 0, $vgpr0, $sgpr0, 0, implicit $exec
+    ; GCN-NEXT: $vgpr2 = V_ADDC_U32_e32 $vgpr0, $vgpr0, implicit-def $vcc_lo, implicit $vcc_lo, implicit $exec
+    ; GCN-NEXT: S_NOP 0
+    ; GCN-NEXT: $vgpr3 = DS_READ_B32 $vgpr0, 0, 0, implicit $m0, implicit $exec
+    ; GCN-NEXT: $sgpr4 = S_MOV_B32 0
+    ; GCN-NEXT: $sgpr5 = S_MOV_B32 0
+    ; GCN-NEXT: $sgpr6 = S_MOV_B32 0
+    ; GCN-NEXT: $sgpr7 = S_MOV_B32 0
+    ; GCN-NEXT: $sgpr8_sgpr9 = S_LOAD_DWORDX2_IMM renamable $sgpr4_sgpr5, 0, 0
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 61950
+    ; GCN-NEXT: $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_hi, $vgpr0, implicit $exec
+    $sgpr103 = S_MOV_B32 0
+    $sgpr0 = S_MOV_B32 0
+    $sgpr1 = S_MOV_B32 0
+    $sgpr2_sgpr3 = S_MOV_B64 0
+    $vgpr1, $vcc_lo = V_ADDC_U32_e64 0, $vgpr0, $sgpr0, 0, implicit $exec
+    $vgpr2 = V_ADDC_U32_e32 $vgpr0, $vgpr0, implicit-def $vcc, implicit $vcc, implicit $exec
+    ; NOP does not count because it does not write SGPRs
+    S_NOP 0
+    ; DS_READ_B32 does not count because it is not SALU or VALU
+    $vgpr3 = DS_READ_B32 $vgpr0, 0, 0, implicit $m0, implicit $exec
+    $sgpr4 = S_MOV_B32 0
+    $sgpr5 = S_MOV_B32 0
+    $sgpr6 = S_MOV_B32 0
+    $sgpr7 = S_MOV_B32 0
+    ; S_LOAD_DWORDX2_IMM does not count because it is not SALU
+    $sgpr8_sgpr9 = S_LOAD_DWORDX2_IMM renamable $sgpr4_sgpr5, 0, 0
+    $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_hi, $vgpr0, implicit $exec
+...
+
+---
+name: write_s103_read_flat_scr_base_hi_10_salu_valu_expired
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; GCN-LABEL: name: write_s103_read_flat_scr_base_hi_10_salu_valu_expired
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr103 = S_MOV_B32 0
+    ; GCN-NEXT: $sgpr0 = S_MOV_B32 0
+    ; GCN-NEXT: $sgpr1 = S_MOV_B32 0
+    ; GCN-NEXT: $sgpr2_sgpr3 = S_MOV_B64 0
+    ; GCN-NEXT: $vgpr1, $vcc_lo = V_ADDC_U32_e64 0, $vgpr0, $sgpr0, 0, implicit $exec
+    ; GCN-NEXT: $vgpr2 = V_ADDC_U32_e32 $vgpr0, $vgpr0, implicit-def $vcc_lo, implicit $vcc_lo, implicit $exec
+    ; GCN-NEXT: S_NOP 0
+    ; GCN-NEXT: $vgpr3 = DS_READ_B32 $vgpr0, 0, 0, implicit $m0, implicit $exec
+    ; GCN-NEXT: $sgpr4 = S_MOV_B32 0
+    ; GCN-NEXT: $sgpr5 = S_MOV_B32 0
+    ; GCN-NEXT: $sgpr6 = S_MOV_B32 0
+    ; GCN-NEXT: $sgpr7 = S_MOV_B32 0
+    ; GCN-NEXT: $sgpr8_sgpr9 = S_LOAD_DWORDX2_IMM renamable $sgpr4_sgpr5, 0, 0
+    ; GCN-NEXT: $sgpr10 = S_MOV_B32 0
+    ; GCN-NEXT: $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_hi, $vgpr0, implicit $exec
+    $sgpr103 = S_MOV_B32 0
+    $sgpr0 = S_MOV_B32 0
+    $sgpr1 = S_MOV_B32 0
+    $sgpr2_sgpr3 = S_MOV_B64 0
+    $vgpr1, $vcc_lo = V_ADDC_U32_e64 0, $vgpr0, $sgpr0, 0, implicit $exec
+    $vgpr2 = V_ADDC_U32_e32 $vgpr0, $vgpr0, implicit-def $vcc, implicit $vcc, implicit $exec
+    ; NOP does not count because it does not write SGPRs
+    S_NOP 0
+    ; DS_READ_B32 does not count because it is not SALU or VALU
+    $vgpr3 = DS_READ_B32 $vgpr0, 0, 0, implicit $m0, implicit $exec
+    $sgpr4 = S_MOV_B32 0
+    $sgpr5 = S_MOV_B32 0
+    $sgpr6 = S_MOV_B32 0
+    $sgpr7 = S_MOV_B32 0
+    ; S_LOAD_DWORDX2_IMM does not count because it is not SALU
+    $sgpr8_sgpr9 = S_LOAD_DWORDX2_IMM renamable $sgpr4_sgpr5, 0, 0
+    $sgpr10 = S_MOV_B32 0
+    $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_hi, $vgpr0, implicit $exec
+...
+
+---
+name: write_s102_read_flat_scr_base_hi_no_hazard
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; GCN-LABEL: name: write_s102_read_flat_scr_base_hi_no_hazard
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr102 = S_MOV_B32 0
+    ; GCN-NEXT: $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_hi, $vgpr0, implicit $exec
+    $sgpr102 = S_MOV_B32 0
+    $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_hi, $vgpr0, implicit $exec
+...
+
+---
+name: write_s102_read_flat_scr_base_lo_expired_by_wait0
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; GCN-LABEL: name: write_s102_read_flat_scr_base_lo_expired_by_wait0
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr102 = S_MOV_B32 0
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 0
+    ; GCN-NEXT: S_NOP 0
+    ; GCN-NEXT: $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_lo, $vgpr0, implicit $exec
+    $sgpr102 = S_MOV_B32 0
+    S_WAITCNT_DEPCTR 0
+    S_NOP 0
+    $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_lo, $vgpr0, implicit $exec
+...
+
+---
+name: write_s102_read_flat_scr_base_lo_expired_by_wait_vs_sdst_sa_sdst
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; GCN-LABEL: name: write_s102_read_flat_scr_base_lo_expired_by_wait_vs_sdst_sa_sdst
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr102 = S_MOV_B32 0
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 61950
+    ; GCN-NEXT: S_NOP 0
+    ; GCN-NEXT: $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_lo, $vgpr0, implicit $exec
+    $sgpr102 = S_MOV_B32 0
+    S_WAITCNT_DEPCTR 61950
+    S_NOP 0
+    $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_lo, $vgpr0, implicit $exec
+...
+
+---
+name: write_s102_read_flat_scr_base_lo_not_expired_by_wait_va_sdst_only
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; GCN-LABEL: name: write_s102_read_flat_scr_base_lo_not_expired_by_wait_va_sdst_only
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr102 = S_MOV_B32 0
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 61951
+    ; GCN-NEXT: S_NOP 0
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 61950
+    ; GCN-NEXT: $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_lo, $vgpr0, implicit $exec
+    $sgpr102 = S_MOV_B32 0
+    S_WAITCNT_DEPCTR 61951
+    S_NOP 0
+    $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_lo, $vgpr0, implicit $exec
+...
+
+---
+name: write_s102_read_flat_scr_base_lo_not_expired_by_wait_sa_sdst_only
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; GCN-LABEL: name: write_s102_read_flat_scr_base_lo_not_expired_by_wait_sa_sdst_only
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr102 = S_MOV_B32 0
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GCN-NEXT: S_NOP 0
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 61950
+    ; GCN-NEXT: $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_lo, $vgpr0, implicit $exec
+    $sgpr102 = S_MOV_B32 0
+    S_WAITCNT_DEPCTR 65534
+    S_NOP 0
+    $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_lo, $vgpr0, implicit $exec
+...
+
+---
+name: write_s102_write_s103_read_flat_scr_base_lo_read_flat_scr_base_hi
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; GCN-LABEL: name: write_s102_write_s103_read_flat_scr_base_lo_read_flat_scr_base_hi
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr102 = S_MOV_B32 0
+    ; GCN-NEXT: $sgpr103 = S_MOV_B32 0
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 61950
+    ; GCN-NEXT: $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_lo, $vgpr0, implicit $exec
+    ; GCN-NEXT: $vgpr1 = V_ADD_U32_e32 $src_flat_scratch_base_hi, $vgpr0, implicit $exec
+    $sgpr102 = S_MOV_B32 0
+    $sgpr103 = S_MOV_B32 0
+    $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_lo, $vgpr0, implicit $exec
+    $vgpr1 = V_ADD_U32_e32 $src_flat_scratch_base_hi, $vgpr0, implicit $exec
+...
+
+---
+name: write_s102_read_flat_scr_base_lo_cross_blocks
+tracksRegLiveness: true
+body: |
+  ; GCN-LABEL: name: write_s102_read_flat_scr_base_lo_cross_blocks
+  ; GCN: bb.0:
+  ; GCN-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; GCN-NEXT:   liveins: $vgpr0, $sgpr0
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   $sgpr102 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
+  ; GCN-NEXT:   $sgpr1 = S_MOV_B32 0
+  ; GCN-NEXT:   $sgpr2 = S_MOV_B32 0
+  ; GCN-NEXT:   $sgpr3 = S_MOV_B32 0
+  ; GCN-NEXT:   $sgpr4 = S_MOV_B32 0
+  ; GCN-NEXT:   $sgpr5 = S_MOV_B32 0
+  ; GCN-NEXT:   $sgpr6 = S_MOV_B32 0
+  ; GCN-NEXT:   $sgpr7 = S_MOV_B32 0
+  ; GCN-NEXT:   $sgpr8 = S_MOV_B32 0
+  ; GCN-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit $scc
+  ; GCN-NEXT:   S_BRANCH %bb.1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
+  ; GCN-NEXT:   successors: %bb.2(0x80000000)
+  ; GCN-NEXT:   liveins: $vgpr0
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   $sgpr102 = S_MOV_B32 0
+  ; GCN-NEXT:   $sgpr1 = S_MOV_B32 0
+  ; GCN-NEXT:   $sgpr2 = S_MOV_B32 0
+  ; GCN-NEXT:   $sgpr3 = S_MOV_B32 0
+  ; GCN-NEXT:   $sgpr4 = S_MOV_B32 0
+  ; GCN-NEXT:   $sgpr5 = S_MOV_B32 0
+  ; GCN-NEXT:   $sgpr6 = S_MOV_B32 0
+  ; GCN-NEXT:   $sgpr7 = S_MOV_B32 0
+  ; GCN-NEXT:   $sgpr8 = S_MOV_B32 0
+  ; GCN-NEXT:   $sgpr9 = S_MOV_B32 0
+  ; GCN-NEXT:   S_BRANCH %bb.2
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.2:
+  ; GCN-NEXT:   liveins: $vgpr0
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   S_WAITCNT_DEPCTR 61950
+  ; GCN-NEXT:   $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_lo, $vgpr0, implicit $exec
+  bb.0:
+    liveins: $vgpr0, $sgpr0
+    $sgpr102 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
+    $sgpr1 = S_MOV_B32 0
+    $sgpr2 = S_MOV_B32 0
+    $sgpr3 = S_MOV_B32 0
+    $sgpr4 = S_MOV_B32 0
+    $sgpr5 = S_MOV_B32 0
+    $sgpr6 = S_MOV_B32 0
+    $sgpr7 = S_MOV_B32 0
+    $sgpr8 = S_MOV_B32 0
+    S_CBRANCH_SCC0 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    liveins: $vgpr0
+    $sgpr102 = S_MOV_B32 0
+    $sgpr1 = S_MOV_B32 0
+    $sgpr2 = S_MOV_B32 0
+    $sgpr3 = S_MOV_B32 0
+    $sgpr4 = S_MOV_B32 0
+    $sgpr5 = S_MOV_B32 0
+    $sgpr6 = S_MOV_B32 0
+    $sgpr7 = S_MOV_B32 0
+    $sgpr8 = S_MOV_B32 0
+    $sgpr9 = S_MOV_B32 0
+    S_BRANCH %bb.2
+
+  bb.2:
+    liveins: $vgpr0
+    $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_lo, $vgpr0, implicit $exec
+...
