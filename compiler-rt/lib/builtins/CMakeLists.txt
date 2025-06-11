@@ -913,7 +913,6 @@ else ()
       cmake_push_check_state()
       # TODO: we should probably make most of the checks in builtin-config depend on the target flags.
       set(BUILTIN_CFLAGS_${arch} ${BUILTIN_CFLAGS})
-      set(BUILTIN_DEFS_${arch} ${BUILTIN_DEFS})
       # CMAKE_REQUIRED_FLAGS must be a space separated string
       # Join BUILTIN_CFLAGS_${arch} and TARGET_${arch}_CFLAGS as a
       # space-separated string.
@@ -951,13 +950,6 @@ else ()
       if(COMPILER_RT_HAS_${arch}_BFLOAT16)
         list(APPEND ${arch}_SOURCES ${BF16_SOURCES})
       endif()
-      if (COMPILER_RT_HAS_MEXECUTE_ONLY_FLAG)
-        append_list_if(COMPILER_RT_EXECUTE_ONLY_CODE -mexecute-only BUILTIN_CFLAGS_${arch})
-        append_list_if(COMPILER_RT_EXECUTE_ONLY_CODE COMPILER_RT_EXECUTE_ONLY_CODE BUILTIN_DEFS_${arch})
-      elseif (COMPILER_RT_HAS_MPURE_CODE_FLAG)
-        append_list_if(COMPILER_RT_EXECUTE_ONLY_CODE -mpure-code BUILTIN_CFLAGS_${arch})
-        append_list_if(COMPILER_RT_EXECUTE_ONLY_CODE COMPILER_RT_EXECUTE_ONLY_CODE BUILTIN_DEFS_${arch})
-      endif()
 
       # Remove a generic C builtin when an arch-specific builtin is specified.
       filter_builtin_sources(${arch}_SOURCES ${arch})
@@ -979,7 +971,7 @@ else ()
                               ARCHS ${arch}
                               DEPS ${deps_${arch}}
                               SOURCES ${${arch}_SOURCES}
-                              DEFS ${BUILTIN_DEFS_${arch}}
+                              DEFS ${BUILTIN_DEFS}
                               CFLAGS ${BUILTIN_CFLAGS_${arch}}
                               C_STANDARD 11
                               CXX_STANDARD 17
@@ -1052,11 +1044,6 @@ if (COMPILER_RT_BUILD_CRT)
   append_list_if(COMPILER_RT_HAS_WNO_PEDANTIC -Wno-pedantic CRT_CFLAGS)
   if (COMPILER_RT_HAS_FCF_PROTECTION_FLAG)
     append_list_if(COMPILER_RT_ENABLE_CET -fcf-protection=full CRT_CFLAGS)
-  endif()
-  if (COMPILER_RT_HAS_MEXECUTE_ONLY_FLAG)
-    append_list_if(COMPILER_RT_EXECUTE_ONLY_CODE -mexecute-only CRT_CFLAGS)
-  elseif (COMPILER_RT_HAS_MPURE_CODE_FLAG)
-    append_list_if(COMPILER_RT_EXECUTE_ONLY_CODE -mpure-code CRT_CFLAGS)
   endif()
 
   foreach(arch ${BUILTIN_SUPPORTED_ARCH})

@@ -309,9 +309,8 @@ option(COMPILER_RT_USE_BUILTINS_LIBRARY
 
 option(COMPILER_RT_USE_ATOMIC_LIBRARY "Use compiler-rt atomic instead of libatomic" OFF)
 
-option(COMPILER_RT_EXECUTE_ONLY_CODE "Compile compiler-rt as execute-only" OFF)
-if (COMPILER_RT_EXECUTE_ONLY_CODE AND NOT LLVM_RUNTIMES_BUILD)
-  message(SEND_ERROR "COMPILER_RT_EXECUTE_ONLY_CODE is only supported "
+if (LLVM_EXECUTE_ONLY_CODE AND NOT LLVM_RUNTIMES_BUILD)
+  message(SEND_ERROR "LLVM_EXECUTE_ONLY_CODE is only supported "
                      "for runtimes build of compiler-rt.")
 endif()
 
@@ -611,19 +610,9 @@ string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}
 list(APPEND COMPILER_RT_COMMON_CFLAGS ${stdlib_flag})
 list(APPEND COMPILER_RT_COMMON_LINK_FLAGS ${stdlib_flag})
 
-# Add flags for execute-only code generation.
-# We need to add to both COMPILER_RT_COMMON_CFLAGS and CMAKE_<LANG>_FLAGS.
-if (COMPILER_RT_HAS_MEXECUTE_ONLY_FLAG)
-  append_list_if(COMPILER_RT_EXECUTE_ONLY_CODE -mexecute-only COMPILER_RT_COMMON_CFLAGS)
-  append_list_if(COMPILER_RT_EXECUTE_ONLY_CODE -DCOMPILER_RT_EXECUTE_ONLY_CODE COMPILER_RT_COMMON_CFLAGS)
-  append_string_if(COMPILER_RT_EXECUTE_ONLY_CODE -mexecute-only CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-  append_string_if(COMPILER_RT_EXECUTE_ONLY_CODE -DCOMPILER_RT_EXECUTE_ONLY_CODE CMAKE_ASM_FLAGS)
-elseif (COMPILER_RT_HAS_MPURE_CODE_FLAG)
-  append_list_if(COMPILER_RT_EXECUTE_ONLY_CODE -mpure-code COMPILER_RT_COMMON_CFLAGS)
-  append_list_if(COMPILER_RT_EXECUTE_ONLY_CODE -DCOMPILER_RT_EXECUTE_ONLY_CODE COMPILER_RT_COMMON_CFLAGS)
-  append_string_if(COMPILER_RT_EXECUTE_ONLY_CODE -mpure-code CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-  append_string_if(COMPILER_RT_EXECUTE_ONLY_CODE -DCOMPILER_RT_EXECUTE_ONLY_CODE CMAKE_ASM_FLAGS)
-endif()
+# Add assembler flags for execute-only code generation. C and C++ flags should have already
+# been added to CMAKE_C_FLAGS and CMAKE_CXX_FLAGS.
+append_string_if(LLVM_EXECUTE_ONLY_CODE -DCOMPILER_RT_EXECUTE_ONLY_CODE CMAKE_ASM_FLAGS)
 
 # TODO: There's a lot of duplication across lib/*/tests/CMakeLists.txt files,
 # move some of the common flags to COMPILER_RT_UNITTEST_CFLAGS.
