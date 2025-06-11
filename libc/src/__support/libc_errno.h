@@ -83,7 +83,7 @@ LIBC_ERRNO_MODE_SYSTEM_INLINE.
 
 #define libc_errno errno
 
-#else // !LIBC_ERRNO_MODE_SYSTEM
+#else // !LIBC_ERRNO_MODE_SYSTEM_INLINE
 
 #include "hdr/errno_macros.h"
 #include "src/__support/macros/config.h"
@@ -103,6 +103,6 @@ extern Errno libc_errno;
 
 using LIBC_NAMESPACE::libc_errno;
 
-#endif // LIBC_ERRNO_MODE_SYSTEM
+#endif // LIBC_ERRNO_MODE_SYSTEM_INLINE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_LIBC_ERRNO_H
