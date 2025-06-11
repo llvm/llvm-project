@@ -2907,7 +2907,7 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
                 continue;
               }
               // Matching distance is smaller than the previously matched
-              // specific. Let it go thourgh so the current procedure is picked.
+              // specific. Let it go through so the current procedure is picked.
             } else {
               // 16.9.144(6): a bare NULL() is not allowed as an actual
               // argument to a generic procedure if the specific procedure
@@ -3376,6 +3376,10 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::FunctionReference &funcRef,
         auto &mutableRef{const_cast<parser::FunctionReference &>(funcRef)};
         *structureConstructor =
             mutableRef.ConvertToStructureConstructor(type.derivedTypeSpec());
+        // Don't use saved typed expressions left over from argument
+        // analysis; they might not be valid structure components
+        // (e.g., a TYPE(*) argument)
+        auto restorer{DoNotUseSavedTypedExprs()};
         return Analyze(structureConstructor->value());
       }
     }
@@ -4058,7 +4062,7 @@ MaybeExpr ExpressionAnalyzer::ExprOrVariable(
       // first to be sure.
       std::optional<parser::StructureConstructor> ctor;
       result = Analyze(funcRef->value(), &ctor);
-      if (result && ctor) {
+      if (ctor) {
         // A misparsed function reference is really a structure
         // constructor.  Repair the parse tree in situ.
         const_cast<PARSED &>(x).u = std::move(*ctor);
@@ -4820,31 +4824,41 @@ bool ArgumentAnalyzer::OkLogicalIntegerAssignment(
 
 std::optional<ProcedureRef> ArgumentAnalyzer::GetDefinedAssignmentProc() {
   const Symbol *proc{nullptr};
+  bool isProcElemental{false};
   std::optional<int> passedObjectIndex;
   std::string oprNameString{"assignment(=)"};
   parser::CharBlock oprName{oprNameString};
   const auto &scope{context_.context().FindScope(source_)};
-  // If multiple resolutions were possible, they will have been already
-  // diagnosed.
   {
     auto restorer{context_.GetContextualMessages().DiscardMessages()};
     if (const Symbol *symbol{scope.FindSymbol(oprName)}) {
       ExpressionAnalyzer::AdjustActuals noAdjustment;
       proc =
           context_.ResolveGeneric(*symbol, actuals_, noAdjustment, true).first;
+      if (proc) {
+        isProcElemental = IsElementalProcedure(*proc);
+      }
     }
-    for (std::size_t i{0}; !proc && i < actuals_.size(); ++i) {
+    for (std::size_t i{0}; (!proc || isProcElemental) && i < actuals_.size();
+        ++i) {
       const Symbol *generic{nullptr};
       if (const Symbol *
           binding{FindBoundOp(oprName, i, generic, /*isSubroutine=*/true)}) {
-        if (CheckAccessibleSymbol(scope, DEREF(generic))) {
-          // ignore inaccessible type-bound ASSIGNMENT(=) generic
-        } else if (const Symbol *
-            resolution{GetBindingResolution(GetType(i), *binding)}) {
-          proc = resolution;
-        } else {
-          proc = binding;
-          passedObjectIndex = i;
+        // ignore inaccessible type-bound ASSIGNMENT(=) generic
+        if (!CheckAccessibleSymbol(scope, DEREF(generic))) {
+          const Symbol *resolution{GetBindingResolution(GetType(i), *binding)};
+          const Symbol &newProc{*(resolution ? resolution : binding)};
+          bool isElemental{IsElementalProcedure(newProc)};
+          if (!proc || !isElemental) {
+            // Non-elemental resolution overrides elemental
+            proc = &newProc;
+            isProcElemental = isElemental;
+            if (resolution) {
+              passedObjectIndex.reset();
+            } else {
+              passedObjectIndex = i;
+            }
+          }
         }
       }
     }
@@ -4904,6 +4918,19 @@ std::optional<ActualArgument> ArgumentAnalyzer::AnalyzeExpr(
         "TYPE(*) dummy argument may only be used as an actual argument"_err_en_US);
   } else if (MaybeExpr argExpr{AnalyzeExprOrWholeAssumedSizeArray(expr)}) {
     if (isProcedureCall_ || !IsProcedureDesignator(*argExpr)) {
+      // Pad Hollerith actual argument with spaces up to a multiple of 8
+      // bytes, in case the data are interpreted as double precision
+      // (or a smaller numeric type) by legacy code.
+      if (auto hollerith{UnwrapExpr<Constant<Ascii>>(*argExpr)};
+          hollerith && hollerith->wasHollerith()) {
+        std::string bytes{hollerith->values()};
+        while ((bytes.size() % 8) != 0) {
+          bytes += ' ';
+        }
+        Constant<Ascii> c{std::move(bytes)};
+        c.set_wasHollerith(true);
+        argExpr = AsGenericExpr(std::move(c));
+      }
       ActualArgument arg{std::move(*argExpr)};
       SetArgSourceLocation(arg, expr.source);
       return std::move(arg);

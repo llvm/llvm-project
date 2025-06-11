@@ -1031,13 +1031,10 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
         // Change (any_of FeatureAll, (any_of ...)) to (any_of FeatureAll, ...).
         if (IsOr && D->getNumArgs() == 2 && isa<DagInit>(D->getArg(1))) {
           const DagInit *RHS = cast<DagInit>(D->getArg(1));
-          SmallVector<const Init *> Args{D->getArg(0)};
-          SmallVector<const StringInit *> ArgNames{D->getArgName(0)};
-          for (unsigned i = 0, e = RHS->getNumArgs(); i != e; ++i) {
-            Args.push_back(RHS->getArg(i));
-            ArgNames.push_back(RHS->getArgName(i));
-          }
-          D = DagInit::get(D->getOperator(), nullptr, Args, ArgNames);
+          SmallVector<std::pair<const Init *, const StringInit *>> Args{
+              *D->getArgAndNames().begin()};
+          llvm::append_range(Args, RHS->getArgAndNames());
+          D = DagInit::get(D->getOperator(), Args);
         }
 
         for (auto *Arg : D->getArgs()) {
@@ -1141,10 +1138,10 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
       uint32_t UnescapedSize = 0;
       std::string EncodedAsmString = IAP->formatAliasString(UnescapedSize);
       auto Insertion =
-          AsmStringOffsets.insert({EncodedAsmString, AsmStringsSize});
+          AsmStringOffsets.try_emplace(EncodedAsmString, AsmStringsSize);
       if (Insertion.second) {
         // If the string is new, add it to the vector.
-        AsmStrings.push_back({AsmStringsSize, EncodedAsmString});
+        AsmStrings.emplace_back(AsmStringsSize, EncodedAsmString);
         AsmStringsSize += UnescapedSize + 1;
       }
       unsigned AsmStrOffset = Insertion.first->second;

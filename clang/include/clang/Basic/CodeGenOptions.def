@@ -278,8 +278,6 @@ CODEGENOPT(SanitizeCfiICallNormalizeIntegers, 1, 0) ///< Normalize integer types
                                                     ///< CFI icall function signatures
 CODEGENOPT(SanitizeCfiCanonicalJumpTables, 1, 0) ///< Make jump table symbols canonical
                                                  ///< instead of creating a local jump table.
-CODEGENOPT(UniqueSourceFileNames, 1, 0) ///< Allow the compiler to assume that TUs
-                                        ///< have unique source file names at link time
 CODEGENOPT(SanitizeKcfiArity, 1, 0) ///< Embed arity in KCFI patchable function prefix
 CODEGENOPT(SanitizeCoverageType, 2, 0) ///< Type of sanitizer coverage
                                        ///< instrumentation.
@@ -389,7 +387,7 @@ ENUM_CODEGENOPT(Inlining, InliningMethod, 2, NormalInlining)
 VALUE_CODEGENOPT(InlineMaxStackSize, 32, UINT_MAX)
 
 // Vector functions library to use.
-ENUM_CODEGENOPT(VecLib, llvm::driver::VectorLibrary, 3, llvm::driver::VectorLibrary::NoLibrary)
+ENUM_CODEGENOPT(VecLib, llvm::driver::VectorLibrary, 4, llvm::driver::VectorLibrary::NoLibrary)
 
 /// The default TLS model to use.
 ENUM_CODEGENOPT(DefaultTLSModel, TLSModel, 2, GeneralDynamicTLSModel)

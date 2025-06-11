@@ -8,6 +8,7 @@ add_public_tablegen_target(LLDBDAPOptionsTableGen)
 add_lldb_library(lldbDAP
   Breakpoint.cpp
   BreakpointBase.cpp
+  CommandPlugins.cpp
   DAP.cpp
   DAPError.cpp
   DAPLog.cpp
@@ -20,9 +21,11 @@ add_lldb_library(lldbDAP
   LLDBUtils.cpp
   OutputRedirector.cpp
   ProgressEvent.cpp
+  ProtocolUtils.cpp
   RunInTerminal.cpp
   SourceBreakpoint.cpp
   Transport.cpp
+  Variables.cpp
   Watchpoint.cpp
 
   Handler/ResponseHandler.cpp
@@ -64,16 +67,16 @@ add_lldb_library(lldbDAP
   Handler/VariablesRequestHandler.cpp
 
   Protocol/ProtocolBase.cpp
+  Protocol/ProtocolEvents.cpp
   Protocol/ProtocolTypes.cpp
   Protocol/ProtocolRequests.cpp
-
-  LINK_LIBS
-    liblldb
-    lldbHost
 
   LINK_COMPONENTS
     Option
     Support
+  LINK_LIBS
+    liblldb
+    lldbHost
   )
 
 target_include_directories(lldbDAP

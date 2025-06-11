@@ -11,7 +11,7 @@
 // CHECK-RV64-LABEL: define dso_local void @test_vsoxei16_v_bf16mf4(
 // CHECK-RV64-SAME: ptr noundef [[RS1:%.*]], <vscale x 1 x i16> [[RS2:%.*]], <vscale x 1 x bfloat> [[VS3:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv1bf16.nxv1i16.i64(<vscale x 1 x bfloat> [[VS3]], ptr [[RS1]], <vscale x 1 x i16> [[RS2]], i64 [[VL]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv1bf16.p0.nxv1i16.i64(<vscale x 1 x bfloat> [[VS3]], ptr [[RS1]], <vscale x 1 x i16> [[RS2]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsoxei16_v_bf16mf4(__bf16 *rs1, vuint16mf4_t rs2, vbfloat16mf4_t vs3,
@@ -22,7 +22,7 @@ void test_vsoxei16_v_bf16mf4(__bf16 *rs1, vuint16mf4_t rs2, vbfloat16mf4_t vs3,
 // CHECK-RV64-LABEL: define dso_local void @test_vsoxei16_v_bf16mf2(
 // CHECK-RV64-SAME: ptr noundef [[RS1:%.*]], <vscale x 2 x i16> [[RS2:%.*]], <vscale x 2 x bfloat> [[VS3:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv2bf16.nxv2i16.i64(<vscale x 2 x bfloat> [[VS3]], ptr [[RS1]], <vscale x 2 x i16> [[RS2]], i64 [[VL]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv2bf16.p0.nxv2i16.i64(<vscale x 2 x bfloat> [[VS3]], ptr [[RS1]], <vscale x 2 x i16> [[RS2]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsoxei16_v_bf16mf2(__bf16 *rs1, vuint16mf2_t rs2, vbfloat16mf2_t vs3,
@@ -33,7 +33,7 @@ void test_vsoxei16_v_bf16mf2(__bf16 *rs1, vuint16mf2_t rs2, vbfloat16mf2_t vs3,
 // CHECK-RV64-LABEL: define dso_local void @test_vsoxei16_v_bf16m1(
 // CHECK-RV64-SAME: ptr noundef [[RS1:%.*]], <vscale x 4 x i16> [[RS2:%.*]], <vscale x 4 x bfloat> [[VS3:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv4bf16.nxv4i16.i64(<vscale x 4 x bfloat> [[VS3]], ptr [[RS1]], <vscale x 4 x i16> [[RS2]], i64 [[VL]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv4bf16.p0.nxv4i16.i64(<vscale x 4 x bfloat> [[VS3]], ptr [[RS1]], <vscale x 4 x i16> [[RS2]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsoxei16_v_bf16m1(__bf16 *rs1, vuint16m1_t rs2, vbfloat16m1_t vs3,
@@ -44,7 +44,7 @@ void test_vsoxei16_v_bf16m1(__bf16 *rs1, vuint16m1_t rs2, vbfloat16m1_t vs3,
 // CHECK-RV64-LABEL: define dso_local void @test_vsoxei16_v_bf16m2(
 // CHECK-RV64-SAME: ptr noundef [[RS1:%.*]], <vscale x 8 x i16> [[RS2:%.*]], <vscale x 8 x bfloat> [[VS3:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv8bf16.nxv8i16.i64(<vscale x 8 x bfloat> [[VS3]], ptr [[RS1]], <vscale x 8 x i16> [[RS2]], i64 [[VL]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv8bf16.p0.nxv8i16.i64(<vscale x 8 x bfloat> [[VS3]], ptr [[RS1]], <vscale x 8 x i16> [[RS2]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsoxei16_v_bf16m2(__bf16 *rs1, vuint16m2_t rs2, vbfloat16m2_t vs3,
@@ -55,7 +55,7 @@ void test_vsoxei16_v_bf16m2(__bf16 *rs1, vuint16m2_t rs2, vbfloat16m2_t vs3,
 // CHECK-RV64-LABEL: define dso_local void @test_vsoxei16_v_bf16m4(
 // CHECK-RV64-SAME: ptr noundef [[RS1:%.*]], <vscale x 16 x i16> [[RS2:%.*]], <vscale x 16 x bfloat> [[VS3:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv16bf16.nxv16i16.i64(<vscale x 16 x bfloat> [[VS3]], ptr [[RS1]], <vscale x 16 x i16> [[RS2]], i64 [[VL]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv16bf16.p0.nxv16i16.i64(<vscale x 16 x bfloat> [[VS3]], ptr [[RS1]], <vscale x 16 x i16> [[RS2]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsoxei16_v_bf16m4(__bf16 *rs1, vuint16m4_t rs2, vbfloat16m4_t vs3,
@@ -66,7 +66,7 @@ void test_vsoxei16_v_bf16m4(__bf16 *rs1, vuint16m4_t rs2, vbfloat16m4_t vs3,
 // CHECK-RV64-LABEL: define dso_local void @test_vsoxei16_v_bf16m8(
 // CHECK-RV64-SAME: ptr noundef [[RS1:%.*]], <vscale x 32 x i16> [[RS2:%.*]], <vscale x 32 x bfloat> [[VS3:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv32bf16.nxv32i16.i64(<vscale x 32 x bfloat> [[VS3]], ptr [[RS1]], <vscale x 32 x i16> [[RS2]], i64 [[VL]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv32bf16.p0.nxv32i16.i64(<vscale x 32 x bfloat> [[VS3]], ptr [[RS1]], <vscale x 32 x i16> [[RS2]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsoxei16_v_bf16m8(__bf16 *rs1, vuint16m8_t rs2, vbfloat16m8_t vs3,
@@ -77,7 +77,7 @@ void test_vsoxei16_v_bf16m8(__bf16 *rs1, vuint16m8_t rs2, vbfloat16m8_t vs3,
 // CHECK-RV64-LABEL: define dso_local void @test_vsoxei16_v_bf16mf4_m(
 // CHECK-RV64-SAME: <vscale x 1 x i1> [[VM:%.*]], ptr noundef [[RS1:%.*]], <vscale x 1 x i16> [[RS2:%.*]], <vscale x 1 x bfloat> [[VS3:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv1bf16.nxv1i16.i64(<vscale x 1 x bfloat> [[VS3]], ptr [[RS1]], <vscale x 1 x i16> [[RS2]], <vscale x 1 x i1> [[VM]], i64 [[VL]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv1bf16.p0.nxv1i16.i64(<vscale x 1 x bfloat> [[VS3]], ptr [[RS1]], <vscale x 1 x i16> [[RS2]], <vscale x 1 x i1> [[VM]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsoxei16_v_bf16mf4_m(vbool64_t vm, __bf16 *rs1, vuint16mf4_t rs2,
@@ -88,7 +88,7 @@ void test_vsoxei16_v_bf16mf4_m(vbool64_t vm, __bf16 *rs1, vuint16mf4_t rs2,
 // CHECK-RV64-LABEL: define dso_local void @test_vsoxei16_v_bf16mf2_m(
 // CHECK-RV64-SAME: <vscale x 2 x i1> [[VM:%.*]], ptr noundef [[RS1:%.*]], <vscale x 2 x i16> [[RS2:%.*]], <vscale x 2 x bfloat> [[VS3:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv2bf16.nxv2i16.i64(<vscale x 2 x bfloat> [[VS3]], ptr [[RS1]], <vscale x 2 x i16> [[RS2]], <vscale x 2 x i1> [[VM]], i64 [[VL]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv2bf16.p0.nxv2i16.i64(<vscale x 2 x bfloat> [[VS3]], ptr [[RS1]], <vscale x 2 x i16> [[RS2]], <vscale x 2 x i1> [[VM]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsoxei16_v_bf16mf2_m(vbool32_t vm, __bf16 *rs1, vuint16mf2_t rs2,
@@ -99,7 +99,7 @@ void test_vsoxei16_v_bf16mf2_m(vbool32_t vm, __bf16 *rs1, vuint16mf2_t rs2,
 // CHECK-RV64-LABEL: define dso_local void @test_vsoxei16_v_bf16m1_m(
 // CHECK-RV64-SAME: <vscale x 4 x i1> [[VM:%.*]], ptr noundef [[RS1:%.*]], <vscale x 4 x i16> [[RS2:%.*]], <vscale x 4 x bfloat> [[VS3:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv4bf16.nxv4i16.i64(<vscale x 4 x bfloat> [[VS3]], ptr [[RS1]], <vscale x 4 x i16> [[RS2]], <vscale x 4 x i1> [[VM]], i64 [[VL]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv4bf16.p0.nxv4i16.i64(<vscale x 4 x bfloat> [[VS3]], ptr [[RS1]], <vscale x 4 x i16> [[RS2]], <vscale x 4 x i1> [[VM]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsoxei16_v_bf16m1_m(vbool16_t vm, __bf16 *rs1, vuint16m1_t rs2,
@@ -110,7 +110,7 @@ void test_vsoxei16_v_bf16m1_m(vbool16_t vm, __bf16 *rs1, vuint16m1_t rs2,
 // CHECK-RV64-LABEL: define dso_local void @test_vsoxei16_v_bf16m2_m(
 // CHECK-RV64-SAME: <vscale x 8 x i1> [[VM:%.*]], ptr noundef [[RS1:%.*]], <vscale x 8 x i16> [[RS2:%.*]], <vscale x 8 x bfloat> [[VS3:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv8bf16.nxv8i16.i64(<vscale x 8 x bfloat> [[VS3]], ptr [[RS1]], <vscale x 8 x i16> [[RS2]], <vscale x 8 x i1> [[VM]], i64 [[VL]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv8bf16.p0.nxv8i16.i64(<vscale x 8 x bfloat> [[VS3]], ptr [[RS1]], <vscale x 8 x i16> [[RS2]], <vscale x 8 x i1> [[VM]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsoxei16_v_bf16m2_m(vbool8_t vm, __bf16 *rs1, vuint16m2_t rs2,
@@ -121,7 +121,7 @@ void test_vsoxei16_v_bf16m2_m(vbool8_t vm, __bf16 *rs1, vuint16m2_t rs2,
 // CHECK-RV64-LABEL: define dso_local void @test_vsoxei16_v_bf16m4_m(
 // CHECK-RV64-SAME: <vscale x 16 x i1> [[VM:%.*]], ptr noundef [[RS1:%.*]], <vscale x 16 x i16> [[RS2:%.*]], <vscale x 16 x bfloat> [[VS3:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv16bf16.nxv16i16.i64(<vscale x 16 x bfloat> [[VS3]], ptr [[RS1]], <vscale x 16 x i16> [[RS2]], <vscale x 16 x i1> [[VM]], i64 [[VL]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv16bf16.p0.nxv16i16.i64(<vscale x 16 x bfloat> [[VS3]], ptr [[RS1]], <vscale x 16 x i16> [[RS2]], <vscale x 16 x i1> [[VM]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsoxei16_v_bf16m4_m(vbool4_t vm, __bf16 *rs1, vuint16m4_t rs2,
@@ -132,7 +132,7 @@ void test_vsoxei16_v_bf16m4_m(vbool4_t vm, __bf16 *rs1, vuint16m4_t rs2,
 // CHECK-RV64-LABEL: define dso_local void @test_vsoxei16_v_bf16m8_m(
 // CHECK-RV64-SAME: <vscale x 32 x i1> [[VM:%.*]], ptr noundef [[RS1:%.*]], <vscale x 32 x i16> [[RS2:%.*]], <vscale x 32 x bfloat> [[VS3:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv32bf16.nxv32i16.i64(<vscale x 32 x bfloat> [[VS3]], ptr [[RS1]], <vscale x 32 x i16> [[RS2]], <vscale x 32 x i1> [[VM]], i64 [[VL]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv32bf16.p0.nxv32i16.i64(<vscale x 32 x bfloat> [[VS3]], ptr [[RS1]], <vscale x 32 x i16> [[RS2]], <vscale x 32 x i1> [[VM]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsoxei16_v_bf16m8_m(vbool2_t vm, __bf16 *rs1, vuint16m8_t rs2,
