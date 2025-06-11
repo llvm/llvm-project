@@ -7597,7 +7597,7 @@ then the interleave count will be determined automatically.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This metadata selectively allows or disallows reassociating floating-point
-reductions, which otherwise may be unsafe to reassociate, during the loop
+reductions, which otherwise may be unsafe to reassociate, during loop
 vectorization. For example, a floating point ``ADD`` reduction without
 ``reassoc`` fast-math flags may be vectorized provided that this metadata
 allows it. The first operand is the string
@@ -7605,6 +7605,18 @@ allows it. The first operand is the string
 and the second operand is a bit. If the bit operand value is 1 unsafe
 reduction reassociations are enabled. A value of 0 disables unsafe
 reduction reassociations.
+
+Note that the reassociation of floating point reductions that is allowed
+by other means is considered safe, so this metadata is a no-op
+in such cases.
+
+For example, reassociation of floating point reduction
+in a loop with ``!{!"llvm.loop.vectorize.enable", i1 1}`` metadata is allowed
+regardless of the value of
+``llvm.loop.vectorize.reassociate_fpreductions.enable``.
+
+Similarly, the reassociation is allowed for reduction operations
+with ``reassoc`` fast-math flags always.
 
 .. code-block:: llvm
 
