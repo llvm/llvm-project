@@ -772,7 +772,7 @@ protected:
 /// Look for a meaningful debug location on the instruction or its operands.
 static DebugLoc getDebugLocFromInstOrOperands(Instruction *I) {
   if (!I)
-    return DebugLoc();
+    return DebugLoc::getUnknown();
 
   DebugLoc Empty;
   if (I->getDebugLoc() != Empty)
@@ -1881,13 +1881,15 @@ public:
     if (SCEVCheckBlock) {
       SCEVCheckBlock->getTerminator()->moveBefore(
           Preheader->getTerminator()->getIterator());
-      new UnreachableInst(Preheader->getContext(), SCEVCheckBlock);
+      auto *UI = new UnreachableInst(Preheader->getContext(), SCEVCheckBlock);
+      UI->setDebugLoc(DebugLoc::getTemporary());
       Preheader->getTerminator()->eraseFromParent();
     }
     if (MemCheckBlock) {
       MemCheckBlock->getTerminator()->moveBefore(
           Preheader->getTerminator()->getIterator());
-      new UnreachableInst(Preheader->getContext(), MemCheckBlock);
+      auto *UI = new UnreachableInst(Preheader->getContext(), MemCheckBlock);
+      UI->setDebugLoc(DebugLoc::getTemporary());
       Preheader->getTerminator()->eraseFromParent();
     }
 
