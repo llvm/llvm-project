@@ -6844,7 +6844,8 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
         // FIXME: In this case, the values of the other subobjects are
         // specified, since zero-initialization sets all padding bits to zero.
         if (!Value->hasValue() ||
-            (Value->isUnion() && Value->getUnionField() != FD)) {
+            (Value->isUnion() &&
+             !declaresSameEntity(Value->getUnionField(), FD))) {
           if (CD->isUnion())
             *Value = APValue(FD);
           else
@@ -15245,21 +15246,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
       return Info.Ctx.getTypeSize(DestType) == Info.Ctx.getTypeSize(SrcType);
     }
 
-    if (Info.Ctx.getLangOpts().CPlusPlus && Info.InConstantContext &&
-        Info.EvalMode == EvalInfo::EM_ConstantExpression &&
-        DestType->isEnumeralType()) {
-
-      bool ConstexprVar = true;
-
-      // We know if we are here that we are in a context that we might require
-      // a constant expression or a context that requires a constant
-      // value. But if we are initializing a value we don't know if it is a
-      // constexpr variable or not. We can check the EvaluatingDecl to determine
-      // if it constexpr or not. If not then we don't want to emit a diagnostic.
-      if (const auto *VD = dyn_cast_or_null<VarDecl>(
-              Info.EvaluatingDecl.dyn_cast<const ValueDecl *>()))
-        ConstexprVar = VD->isConstexpr();
-
+    if (Info.Ctx.getLangOpts().CPlusPlus && DestType->isEnumeralType()) {
       const EnumType *ET = dyn_cast<EnumType>(DestType.getCanonicalType());
       const EnumDecl *ED = ET->getDecl();
       // Check that the value is within the range of the enumeration values.
@@ -15279,13 +15266,13 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
         ED->getValueRange(Max, Min);
         --Max;
 
-        if (ED->getNumNegativeBits() && ConstexprVar &&
+        if (ED->getNumNegativeBits() &&
             (Max.slt(Result.getInt().getSExtValue()) ||
              Min.sgt(Result.getInt().getSExtValue())))
           Info.CCEDiag(E, diag::note_constexpr_unscoped_enum_out_of_range)
               << llvm::toString(Result.getInt(), 10) << Min.getSExtValue()
               << Max.getSExtValue() << ED;
-        else if (!ED->getNumNegativeBits() && ConstexprVar &&
+        else if (!ED->getNumNegativeBits() &&
                  Max.ult(Result.getInt().getZExtValue()))
           Info.CCEDiag(E, diag::note_constexpr_unscoped_enum_out_of_range)
               << llvm::toString(Result.getInt(), 10) << Min.getZExtValue()
