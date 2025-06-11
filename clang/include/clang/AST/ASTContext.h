@@ -1971,6 +1971,8 @@ public:
   /// The sizeof operator requires this (C99 6.5.3.4p4).
   QualType getSizeType() const;
 
+  CanQualType getCanonicalSizeType() const;
+
   /// Return the unique signed counterpart of
   /// the integer type corresponding to size_t.
   QualType getSignedSizeType() const;

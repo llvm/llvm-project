@@ -224,7 +224,7 @@ static void appendParameterTypes(
     prefix.push_back(FPT->getParamType(I));
     if (ExtInfos[I].hasPassObjectSize())
       prefix.push_back(
-          CGT.getContext().getSizeType()->getCanonicalTypeUnqualified());
+          CGT.getContext().getCanonicalSizeType());
   }
 
   addExtParameterInfosForCall(paramInfos, FPT.getTypePtr(), PrefixSize,

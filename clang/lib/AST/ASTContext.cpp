@@ -6751,6 +6751,10 @@ QualType ASTContext::getSizeType() const {
   return SizeType;
 }
 
+CanQualType ASTContext::getCanonicalSizeType() const {
+  return getFromTargetType(Target->getSizeType());
+}
+
 /// Return the unique signed counterpart of the integer type
 /// corresponding to size_t.
 QualType ASTContext::getSignedSizeType() const {

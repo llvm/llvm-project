@@ -1666,7 +1666,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   const QualType IntTy = ACtx.IntTy;
   const QualType UnsignedIntTy = ACtx.UnsignedIntTy;
   const QualType LongTy = ACtx.LongTy;
-  const QualType SizeTyCanonTy = ACtx.getSizeType().getCanonicalType();
+  const QualType SizeTyCanonTy = ACtx.getCanonicalSizeType();
 
   const QualType VoidPtrTy = getPointerTy(VoidTy); // void *
   const QualType IntPtrTy = getPointerTy(IntTy);   // int *
