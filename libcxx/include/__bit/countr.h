@@ -11,7 +11,7 @@
 
 #include <__concepts/arithmetic.h>
 #include <__config>
-#include <__type_traits/is_unsigned.h>
+#include <__type_traits/is_unsigned_integer.h>
 #include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -25,7 +25,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __countr_zero(_Tp __t) _NOEXCEPT {
-  static_assert(is_unsigned<_Tp>::value, "__countr_zero only works with unsigned types");
+  static_assert(__libcpp_is_unsigned_integer<_Tp>::value, "__countr_zero only works with unsigned types");
   return __builtin_ctzg(__t, numeric_limits<_Tp>::digits);
 }
 
