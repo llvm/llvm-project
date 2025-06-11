@@ -970,7 +970,8 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
   // simplification pipeline, so this only needs to run when it could affect the
   // function simplification pipeline, which is only the case with recursive
   // functions.
-  MainCGPipeline.addPass(PostOrderFunctionAttrsPass(/*SkipNonRecursive*/ true));
+  MainCGPipeline.addPass(PostOrderFunctionAttrsPass(
+      /*SkipNonRecursive*/ true, Phase == ThinOrFullLTOPhase::FullLTOPostLink));
 
   // When at O3 add argument promotion to the pass pipeline.
   // FIXME: It isn't at all clear why this should be limited to O3.
@@ -992,7 +993,8 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
 
   // Finally, deduce any function attributes based on the fully simplified
   // function.
-  MainCGPipeline.addPass(PostOrderFunctionAttrsPass());
+  MainCGPipeline.addPass(PostOrderFunctionAttrsPass(
+      false, Phase == ThinOrFullLTOPhase::FullLTOPostLink));
 
   // Mark that the function is fully simplified and that it shouldn't be
   // simplified again if we somehow revisit it due to CGSCC mutations unless
@@ -1914,7 +1916,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     // Promoting by-reference arguments to by-value exposes more constants to
     // IPSCCP.
     CGSCCPassManager CGPM;
-    CGPM.addPass(PostOrderFunctionAttrsPass());
+    CGPM.addPass(PostOrderFunctionAttrsPass(false, true));
     CGPM.addPass(ArgumentPromotionPass());
     CGPM.addPass(
         createCGSCCToFunctionPassAdaptor(SROAPass(SROAOptions::ModifyCFG)));
@@ -2076,8 +2078,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM),
                                                 PTO.EagerlyInvalidateAnalyses));
 
-  MPM.addPass(
-      createModuleToPostOrderCGSCCPassAdaptor(PostOrderFunctionAttrsPass()));
+  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
+      PostOrderFunctionAttrsPass(false, true)));
 
   // Require the GlobalsAA analysis for the module so we can query it within
   // MainFPM.

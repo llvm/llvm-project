@@ -2068,7 +2068,9 @@ static void inferAttrsFromFunctionBodies(const SCCNodeSet &SCCNodes,
 }
 
 static void addNoRecurseAttrs(const SCCNodeSet &SCCNodes,
-                              SmallPtrSet<Function *, 8> &Changed) {
+                              SmallPtrSet<Function *, 8> &Changed,
+                              bool AnyFunctionsAddressIsTaken,
+                              bool IsLTOPostLink) {
   // Try and identify functions that do not recurse.
 
   // If the SCC contains multiple nodes we know for sure there is recursion.
@@ -2081,6 +2083,10 @@ static void addNoRecurseAttrs(const SCCNodeSet &SCCNodes,
 
   if (F->hasAddressTaken())
     return;
+
+  Module *M = F->getParent();
+  llvm::TargetLibraryInfoImpl TLII(llvm::Triple(M->getTargetTriple()));
+  llvm::TargetLibraryInfo TLI(TLII);
   // If all of the calls in F are identifiable and can be proven to not
   // callback F, F is norecurse. This check also detects self-recursion
   // as F is not currently marked norecurse, so any call from F to F
@@ -2096,11 +2102,21 @@ static void addNoRecurseAttrs(const SCCNodeSet &SCCNodes,
         if (Callee->doesNotRecurse())
           continue;
 
-        // External call with NoCallback attribute.
+        LibFunc LF;
         if (Callee->isDeclaration()) {
+          // External call with NoCallback attribute.
           if (Callee->hasFnAttribute(Attribute::NoCallback))
             continue;
-          return;
+          // We rely on this only in post link stage when all functions in the
+          // program are known.
+          if (IsLTOPostLink && !AnyFunctionsAddressIsTaken &&
+              TLI.getLibFunc(Callee->getName(), LF))
+            continue;
+          // Do not consider external functions safe unless we are in LTO
+          // post-link stage and have information about all functions in the
+          // program.
+          if (!IsLTOPostLink)
+            return;
         }
       }
     }
@@ -2252,7 +2268,8 @@ static SCCNodesResult createSCCNodeSet(ArrayRef<Function *> Functions) {
 template <typename AARGetterT>
 static SmallPtrSet<Function *, 8>
 deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter,
-                       bool ArgAttrsOnly) {
+                       bool ArgAttrsOnly, bool AnyFunctionAddressTaken = false,
+                       bool IsLTOPostLink = false) {
   SCCNodesResult Nodes = createSCCNodeSet(Functions);
 
   // Bail if the SCC only contains optnone functions.
@@ -2282,7 +2299,8 @@ deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter,
     addNoAliasAttrs(Nodes.SCCNodes, Changed);
     addNonNullAttrs(Nodes.SCCNodes, Changed);
     inferAttrsFromFunctionBodies(Nodes.SCCNodes, Changed);
-    addNoRecurseAttrs(Nodes.SCCNodes, Changed);
+    addNoRecurseAttrs(Nodes.SCCNodes, Changed, AnyFunctionAddressTaken,
+                      IsLTOPostLink);
 
   // Finally, infer the maximal set of attributes from the ones we've inferred
   // above.  This is handling the cases where one attribute on a signature
@@ -2324,8 +2342,29 @@ PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
     Functions.push_back(&N.getFunction());
   }
 
+  bool AnyFunctionsAddressIsTaken = false;
+  // Check if any function in the whole program has its address taken.
+  // We use this information when inferring norecurse attribute: If there is
+  // no function whose address is taken, we conclude that any external function
+  // cannot callback into any user function.
+  if (IsLTOPostLink) {
+    // Get the parent Module of the Function
+    Module &M = *C.begin()->getFunction().getParent();
+    for (Function &F : M) {
+      // We only care about functions defined in user program whose addresses
+      // escape, making them potential callback targets.
+      if (F.isDeclaration())
+        continue;
+
+      if (F.hasAddressTaken()) {
+        AnyFunctionsAddressIsTaken = true;
+        break; // break if we found one
+      }
+    }
+  }
   auto ChangedFunctions =
-      deriveAttrsInPostOrder(Functions, AARGetter, ArgAttrsOnly);
+      deriveAttrsInPostOrder(Functions, AARGetter, ArgAttrsOnly,
+                             AnyFunctionsAddressIsTaken, IsLTOPostLink);
   if (ChangedFunctions.empty())
     return PreservedAnalyses::all();
 
