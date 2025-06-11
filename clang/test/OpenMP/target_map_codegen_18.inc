@@ -63,32 +63,34 @@
 // CK19-NOUSE: [[MTYPE09:@.+]] = private {{.*}}constant [1 x i64] [i64 2]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK19: [[SIZE10:@.+]] = private {{.*}}constant [1 x i64] [i64 240]
-// CK19-USE: [[MTYPE10:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
-// CK19-NOUSE: [[MTYPE10:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
+// CK19: [[SIZE10:@.+]] = private {{.*}}constant [2 x i64] [i64 240, i64 {{4|8}}]
+// CK19-USE: [[MTYPE10:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 16384]
+// CK19-NOUSE: [[MTYPE10:@.+]] = private {{.*}}constant [2 x i64] [i64 3, i64 16384]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK19: [[SIZE11:@.+]] = private {{.*}}constant [1 x i64] [i64 240]
-// CK19-USE: [[MTYPE11:@.+]] = private {{.*}}constant [1 x i64] [i64 32]
-// CK19-NOUSE: [[MTYPE11:@.+]] = private {{.*}}constant [1 x i64] zeroinitializer
+// CK19: [[SIZE11:@.+]] = private {{.*}}constant [2 x i64] [i64 240, i64 {{4|8}}]
+// CK19-USE: [[MTYPE11:@.+]] = private {{.*}}constant [2 x i64] [i64 32, i64 16384]
+// CK19-NOUSE: [[MTYPE11:@.+]] = private {{.*}}constant [2 x i64] [i64 0, i64 16384]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK19: [[SIZE12:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
-// CK19-USE: [[MTYPE12:@.+]] = private {{.*}}constant [1 x i64] [i64 33]
-// CK19-NOUSE: [[MTYPE12:@.+]] = private {{.*}}constant [1 x i64] [i64 1]
+// CK19: [[SIZE12:@.+]] = private {{.*}}constant [2 x i64] [i64 4, i64 {{4|8}}]
+// CK19-USE: [[MTYPE12:@.+]] = private {{.*}}constant [2 x i64] [i64 33, i64 16384]
+// CK19-NOUSE: [[MTYPE12:@.+]] = private {{.*}}constant [2 x i64] [i64 1, i64 16384]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK19-USE: [[MTYPE13:@.+]] = private {{.*}}constant [1 x i64] [i64 32]
-// CK19-NOUSE: [[MTYPE13:@.+]] = private {{.*}}constant [1 x i64] zeroinitializer
+// CK19: [[SIZE13:@.+]] = private {{.*}}constant [2 x i64] [i64 0, i64 {{4|8}}]
+// CK19-USE: [[MTYPE13:@.+]] = private {{.*}}constant [2 x i64] [i64 32, i64 16384]
+// CK19-NOUSE: [[MTYPE13:@.+]] = private {{.*}}constant [2 x i64] [i64 0, i64 16384]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK19-USE: [[MTYPE14:@.+]] = private {{.*}}constant [1 x i64] [i64 33]
-// CK19-NOUSE: [[MTYPE14:@.+]] = private {{.*}}constant [1 x i64] [i64 1]
+// CK19: [[SIZE14:@.+]] = private {{.*}}constant [2 x i64] [i64 0, i64 {{4|8}}]
+// CK19-USE: [[MTYPE14:@.+]] = private {{.*}}constant [2 x i64] [i64 33, i64 16384]
+// CK19-NOUSE: [[MTYPE14:@.+]] = private {{.*}}constant [2 x i64] [i64 1, i64 16384]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK19: [[SIZE15:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
-// CK19-USE: [[MTYPE15:@.+]] = private {{.*}}constant [1 x i64] [i64 34]
-// CK19-NOUSE: [[MTYPE15:@.+]] = private {{.*}}constant [1 x i64] [i64 2]
+// CK19: [[SIZE15:@.+]] = private {{.*}}constant [2 x i64] [i64 4, i64 {{4|8}}]
+// CK19-USE: [[MTYPE15:@.+]] = private {{.*}}constant [2 x i64] [i64 34, i64 16384]
+// CK19-NOUSE: [[MTYPE15:@.+]] = private {{.*}}constant [2 x i64] [i64 2, i64 16384]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19-USE: [[SIZE16:@.+]] = private {{.*}}constant [2 x i64] [i64 {{8|4}}, i64 0]
@@ -527,6 +529,10 @@ void explicit_maps_single (int ii){
   }
 
   // Region 10
+
+  //  &pa[0], &pa[20], 60 * sizeof(pa[0]), TO | FROM [| PARAM]
+  //  &pa, &pa[20], sizeof(pa), ATTACH
+
   // CK19-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 [[DEVICE:.+]], i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
   // CK19-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
   // CK19-DAG: store ptr [[BPGEP:%.+]], ptr [[BPARG]]
@@ -543,6 +549,14 @@ void explicit_maps_single (int ii){
   // CK19-DAG: [[SEC0]] = getelementptr {{.*}}ptr [[RVAR00:%.+]], i{{.+}} 20
   // CK19-DAG: [[RVAR00]] = load ptr, ptr [[VAR0]]
 
+  // CK19-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
+  // CK19-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
+  // CK19-DAG: store ptr [[VAR0]], ptr [[BP1]]
+  // CK19-DAG: store ptr [[SEC1:%.+]], ptr [[P1]]
+  // CK19-DAG: [[RVAR0]] = load ptr, ptr [[VAR0:%[^,]+]]
+  // CK19-DAG: [[SEC1]] = getelementptr {{.*}}ptr [[RVAR1:%.+]], i{{.+}} 20
+  // CK19-DAG: [[RVAR1]] = load ptr, ptr [[VAR0]]
+
   // CK19-USE: call void [[CALL10:@.+]](ptr {{[^,]+}})
   // CK19-NOUSE: call void [[CALL10:@.+]]()
   #pragma omp target map(tofrom:pa[20:60])
@@ -553,6 +567,10 @@ void explicit_maps_single (int ii){
   }
 
   // Region 11
+
+  //  &pa[0], &pa[/*lb=*/0], 60 * sizeof(pa[0]), ALLOC [| PARAM]
+  //  &pa, &pa[/*lb=*/0], sizeof(pa), ATTACH
+
   // CK19-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 [[DEVICE:.+]], i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
   // CK19-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
   // CK19-DAG: store ptr [[BPGEP:%.+]], ptr [[BPARG]]
@@ -569,6 +587,14 @@ void explicit_maps_single (int ii){
   // CK19-DAG: [[SEC0]] = getelementptr {{.*}}ptr [[RVAR00:%.+]], i{{.+}} 0
   // CK19-DAG: [[RVAR00]] = load ptr, ptr [[VAR0]]
 
+  // CK19-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
+  // CK19-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
+  // CK19-DAG: store ptr [[VAR0]], ptr [[BP1]]
+  // CK19-DAG: store ptr [[SEC1:%.+]], ptr [[P1]]
+  // CK19-DAG: [[RVAR0]] = load ptr, ptr [[VAR0:%[^,]+]]
+  // CK19-DAG: [[SEC1]] = getelementptr {{.*}}ptr [[RVAR1:%.+]], i{{.+}} 0
+  // CK19-DAG: [[RVAR1]] = load ptr, ptr [[VAR0]]
+
   // CK19-USE: call void [[CALL11:@.+]](ptr {{[^,]+}})
   // CK19-NOUSE: call void [[CALL11:@.+]]()
   #pragma omp target map(alloc:pa[:60])
@@ -579,6 +605,10 @@ void explicit_maps_single (int ii){
   }
 
   // Region 12
+
+  //  &pa[0], &pa[15], 1 * sizeof(pa[0]), TO [| PARAM]
+  //  &pa, &pa[15], sizeof(pa), ATTACH
+
   // CK19-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 [[DEVICE:.+]], i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
   // CK19-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
   // CK19-DAG: store ptr [[BPGEP:%.+]], ptr [[BPARG]]
@@ -595,6 +625,14 @@ void explicit_maps_single (int ii){
   // CK19-DAG: [[SEC0]] = getelementptr {{.*}}ptr [[RVAR00:%.+]], i{{.+}} 15
   // CK19-DAG: [[RVAR00]] = load ptr, ptr [[VAR0]]
 
+  // CK19-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
+  // CK19-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
+  // CK19-DAG: store ptr [[VAR0]], ptr [[BP1]]
+  // CK19-DAG: store ptr [[SEC1:%.+]], ptr [[P1]]
+  // CK19-DAG: [[RVAR0]] = load ptr, ptr [[VAR0:%[^,]+]]
+  // CK19-DAG: [[SEC1]] = getelementptr {{.*}}ptr [[RVAR1:%.+]], i{{.+}} 15
+  // CK19-DAG: [[RVAR1]] = load ptr, ptr [[VAR0]]
+
   // CK19-USE: call void [[CALL12:@.+]](ptr {{[^,]+}})
   // CK19-NOUSE: call void [[CALL12:@.+]]()
   #pragma omp target map(to:pa[15])
@@ -605,6 +643,10 @@ void explicit_maps_single (int ii){
   }
 
   // Region 13
+
+  //  &pa[0], &pa[ii-23], ii * sizeof(pa[0]), ALLOC [| PARAM]
+  //  &pa, &pa[ii-23], sizeof(pa), ATTACH
+
   // CK19-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 [[DEVICE:.+]], i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
   // CK19-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
   // CK19-DAG: store ptr [[BPGEP:%.+]], ptr [[BPARG]]
@@ -627,6 +669,14 @@ void explicit_maps_single (int ii){
   // CK19-DAG: [[SEC0]] = getelementptr {{.*}}ptr [[RVAR00:%.+]], i{{.+}} %{{.*}}
   // CK19-DAG: [[RVAR00]] = load ptr, ptr [[VAR0]]
 
+  // CK19-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
+  // CK19-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
+  // CK19-DAG: store ptr [[VAR0]], ptr [[BP1]]
+  // CK19-DAG: store ptr [[SEC1:%.+]], ptr [[P1]]
+  // CK19-DAG: [[RVAR0]] = load ptr, ptr [[VAR0:%[^,]+]]
+  // CK19-DAG: [[SEC1]] = getelementptr {{.*}}ptr [[RVAR1:%.+]], i{{.+}} %{{.*}}
+  // CK19-DAG: [[RVAR1]] = load ptr, ptr [[VAR0]]
+
   // CK19-USE: call void [[CALL13:@.+]](ptr {{[^,]+}})
   // CK19-NOUSE: call void [[CALL13:@.+]]()
   #pragma omp target map(alloc:pa[ii-23:ii])
@@ -637,6 +687,10 @@ void explicit_maps_single (int ii){
   }
 
   // Region 14
+
+  //  &pa[0], &pa[/*lb=*/0], ii * sizeof(pa[0]), ALLOC [| PARAM]
+  //  &pa, &pa[/*lb=*/0], sizeof(pa), ATTACH
+
   // CK19-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 [[DEVICE:.+]], i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
   // CK19-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
   // CK19-DAG: store ptr [[BPGEP:%.+]], ptr [[BPARG]]
@@ -659,6 +713,14 @@ void explicit_maps_single (int ii){
   // CK19-DAG: [[SEC0]] = getelementptr {{.*}}ptr [[RVAR00:%.+]], i{{.+}} 0
   // CK19-DAG: [[RVAR00]] = load ptr, ptr [[VAR0]]
 
+  // CK19-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
+  // CK19-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
+  // CK19-DAG: store ptr [[VAR0]], ptr [[BP1]]
+  // CK19-DAG: store ptr [[SEC1:%.+]], ptr [[P1]]
+  // CK19-DAG: [[RVAR0]] = load ptr, ptr [[VAR0:%[^,]+]]
+  // CK19-DAG: [[SEC1]] = getelementptr {{.*}}ptr [[RVAR1:%.+]], i{{.+}} 0
+  // CK19-DAG: [[RVAR1]] = load ptr, ptr [[VAR0]]
+
   // CK19-USE: call void [[CALL14:@.+]](ptr {{[^,]+}})
   // CK19-NOUSE: call void [[CALL14:@.+]]()
   #pragma omp target map(to:pa[:ii])
@@ -669,6 +731,10 @@ void explicit_maps_single (int ii){
   }
 
   // Region 15
+
+  //  &pa[0], &pa[ii + 12], 1 * sizeof(pa[0]), TO [| PARAM]
+  //  &pa, &pa[ii + 12], sizeof(pa), ATTACH
+
   // CK19-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 [[DEVICE:.+]], i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
   // CK19-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
   // CK19-DAG: store ptr [[BPGEP:%.+]], ptr [[BPARG]]
@@ -684,6 +750,14 @@ void explicit_maps_single (int ii){
   // CK19-DAG: [[RVAR0]] = load ptr, ptr [[VAR0:%[^,]+]]
   // CK19-DAG: [[SEC0]] = getelementptr {{.*}}ptr [[RVAR00:%.+]], i{{.+}} %{{.*}}
   // CK19-DAG: [[RVAR00]] = load ptr, ptr [[VAR0]]
+
+  // CK19-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
+  // CK19-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
+  // CK19-DAG: store ptr [[VAR0]], ptr [[BP1]]
+  // CK19-DAG: store ptr [[SEC1:%.+]], ptr [[P1]]
+  // CK19-DAG: [[RVAR0]] = load ptr, ptr [[VAR0:%[^,]+]]
+  // CK19-DAG: [[SEC1]] = getelementptr {{.*}}ptr [[RVAR1:%.+]], i{{.+}} %{{.*}}
+  // CK19-DAG: [[RVAR1]] = load ptr, ptr [[VAR0]]
 
   // CK19-USE: call void [[CALL15:@.+]](ptr {{[^,]+}})
   // CK19-NOUSE: call void [[CALL15:@.+]]()

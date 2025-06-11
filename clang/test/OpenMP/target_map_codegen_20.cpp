@@ -69,9 +69,9 @@
 // CK21-NOUSE: [[MTYPE00:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK21-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK21: [[SIZE01:@.+]] = private {{.*}}constant [1 x i64] [i64 492]
-// CK21-USE: [[MTYPE01:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
-// CK21-NOUSE: [[MTYPE01:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
+// CK21: [[SIZE01:@.+]] = private {{.*}}constant [2 x i64] [i64 492, i64 {{4|8}}]
+// CK21-USE: [[MTYPE01:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 16384]
+// CK21-NOUSE: [[MTYPE01:@.+]] = private {{.*}}constant [2 x i64] [i64 3, i64 16384]
 
 // CK21-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK21: [[SIZE02:@.+]] = private {{.*}}constant [2 x i64] [i64 0, i64 500]
@@ -130,6 +130,10 @@ struct CC {
     }
 
 // Region 01
+//
+//   &lb[0], &lb[/*lower_bound=*/0], X * sizeof(T), (TO | FROM) / (TO | FROM | PARAM)
+//   &lb, &lb[/*lower_bound=*/0], sizeof(T*), ATTACH
+//
 // CK21-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CK21-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
 // CK21-DAG: store ptr [[BPGEP:%.+]], ptr [[BPARG]]
@@ -140,11 +144,18 @@ struct CC {
 
 // CK21-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
 // CK21-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-// CK21-DAG: store ptr [[RVAR0:%.+]], ptr [[BP0]]
-// CK21-DAG: store ptr [[SEC0:%.+]], ptr [[P0]]
-// CK21-DAG: [[RVAR0]] = load ptr, ptr [[VAR0:%[^,]+]]
-// CK21-DAG: [[SEC0]] = getelementptr {{.*}}ptr [[RVAR00:%.+]], i{{.+}} 0
-// CK21-DAG: [[RVAR00]] = load ptr, ptr [[VAR0]]
+// CK21-DAG: store ptr [[RLB:%.+]], ptr [[BP0]]
+// CK21-DAG: store ptr [[RLB0:%.+]], ptr [[P0]]
+// CK21-DAG: [[RLB]] = load ptr, ptr %lb
+// CK21-DAG: [[RLB0]] = getelementptr {{.*}}ptr [[RLB_1:%.+]], i{{.+}} 0
+// CK21-DAG: [[RLB_1]] = load ptr, ptr %lb
+
+// CK21-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
+// CK21-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
+// CK21-DAG: store ptr %lb, ptr [[BP1]]
+// CK21-DAG: store ptr [[RLB0_1:%.+]], ptr [[P1]]
+// CK21-DAG: [[RLB0_1]] = getelementptr {{.*}}ptr [[RLB_2:%.+]], i{{.+}} 0
+// CK21-DAG: [[RLB_2]] = load ptr, ptr %lb
 
 // CK21-USE: call void [[CALL01:@.+]](ptr {{[^,]+}})
 // CK21-NOUSE: call void [[CALL01:@.+]]()

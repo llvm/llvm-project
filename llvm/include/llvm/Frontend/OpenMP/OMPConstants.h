@@ -239,6 +239,9 @@ enum class OpenMPOffloadMappingFlags : uint64_t {
   // dynamic.
   // This is an OpenMP extension for the sake of OpenACC support.
   OMP_MAP_OMPX_HOLD = 0x2000,
+  /// Attach the pointer to the device address of the array section.
+  /// Used when mapping array sections on pointers.
+  OMP_MAP_ATTACH = 0x4000,
   /// Signal that the runtime library should use args as an array of
   /// descriptor_dim pointers and use args_size as dims. Used when we have
   /// non-contiguous list items in target update directive

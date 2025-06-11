@@ -7091,8 +7091,7 @@ private:
       const ValueDecl *Mapper = nullptr, bool ForDeviceAddr = false,
       const ValueDecl *BaseDecl = nullptr, const Expr *MapExpr = nullptr,
       ArrayRef<OMPClauseMappableExprCommon::MappableExprComponentListRef>
-          OverlappedElements = {},
-      bool AreBothBasePtrAndPteeMapped = false) const {
+          OverlappedElements = {}) const {
     // The following summarizes what has to be generated for each map and the
     // types below. The generated information is expressed in this order:
     // base pointer, section pointer, size, flags
@@ -7270,14 +7269,9 @@ private:
     //     of arguments, hence MEMBER_OF(4)
     //
     // map(p, p[:100])
-    // For "pragma omp target":
-    // &p, &p, sizeof(p), TARGET_PARAM | TO | FROM
-    // &p, &p[0], 100*sizeof(float), PTR_AND_OBJ | TO | FROM (*)
-    // Otherwise:
-    // ===> map(p[:100])
-    // &p, &p[0], 100*sizeof(float), TARGET_PARAM | PTR_AND_OBJ | TO | FROM
-    // (*) We need to use PTR_AND_OBJ here to ensure that the mapped copies of
-    // p and p[0] get attached.
+    // &p, &p, sizeof(float*), TARGET_PARAM | TO | FROM
+    // &p[0], &p[0], 100*sizeof(float), TO | FROM
+    // &p, &p[0], sizeof(float*), ATTACH
 
     // Track if the map information being generated is the first for a capture.
     bool IsCaptureFirstInfo = IsFirstComponentList;
@@ -7302,19 +7296,12 @@ private:
     const auto *OASE = dyn_cast<ArraySectionExpr>(AssocExpr);
     const auto *OAShE = dyn_cast<OMPArrayShapingExpr>(AssocExpr);
 
-    // For map(p, p[0]) on a "target" construct, we need to map "p" by itself
-    // as it has to be passed by-reference as the kernel argument.
-    // For other constructs, we can skip mapping "p" because the PTR_AND_OBJ
-    // mapping for map(p[0]) will take care of mapping p as well.
-    SkipStandalonePtrMapping =
-        AreBothBasePtrAndPteeMapped &&
-        (!isa<const OMPExecutableDirective *>(CurDir) ||
-         !isOpenMPTargetExecutionDirective(
-             cast<const OMPExecutableDirective *>(CurDir)->getDirectiveKind()));
+    // ATTACH entries are generated based solely on array section presence
 
-    if (SkipStandalonePtrMapping && std::next(I) == CE)
-      return;
-
+    // Track info for ATTACH entry generation
+    bool ShouldGenerateAttachEntry = false;
+    Address AttachBaseAddr = Address::invalid();
+    Address AttachFirstElemAddr = Address::invalid();
     if (isa<MemberExpr>(AssocExpr)) {
       // The base is the 'this' pointer. The content of the pointer is going
       // to be the base of the field being mapped.
@@ -7357,9 +7344,8 @@ private:
         // can be associated with the combined storage if shared memory mode is
         // active or the base declaration is not global variable.
         const auto *VD = dyn_cast<VarDecl>(I->getAssociatedDeclaration());
-        if (!AreBothBasePtrAndPteeMapped &&
-            (CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory() ||
-             !VD || VD->hasLocalStorage()))
+        if (CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory() ||
+            !VD || VD->hasLocalStorage())
           BP = CGF.EmitLoadOfPointer(BP, Ty->castAs<PointerType>());
         else
           FirstPointerInComplexData = true;
@@ -7469,6 +7455,8 @@ private:
       // types.
       const auto *OASE =
           dyn_cast<ArraySectionExpr>(I->getAssociatedExpression());
+      const auto *ASE =
+          dyn_cast<ArraySubscriptExpr>(I->getAssociatedExpression());
       const auto *OAShE =
           dyn_cast<OMPArrayShapingExpr>(I->getAssociatedExpression());
       const auto *UO = dyn_cast<UnaryOperator>(I->getAssociatedExpression());
@@ -7643,6 +7631,40 @@ private:
           break;
         }
         llvm::Value *Size = getExprTypeSize(I->getAssociatedExpression());
+        // Check if this is an array section or subscript on a standalone pointer (not struct member)
+        bool IsArraySectionOnPointer = false;
+        
+        // Lambda to handle BP loading for global pointers
+        auto LoadGlobalPointerIfNeeded = [&]() {
+          if (FirstPointerInComplexData) {
+            QualType Ty = Components.rbegin()
+                              ->getAssociatedDeclaration()
+                              ->getType()
+                              .getNonReferenceType();
+            BP = CGF.EmitLoadOfPointer(BP, Ty->castAs<PointerType>());
+            FirstPointerInComplexData = false;
+          }
+        };
+        
+        // Check if we should use ATTACH-style mapping for this expression
+        IsArraySectionOnPointer = shouldUseAttachStyleMapping(I->getAssociatedExpression(), EncounteredME != nullptr);
+        
+        if (IsArraySectionOnPointer) {
+          // For global pointers, load the pointer value so BP points to &p[0] instead of &p
+          LoadGlobalPointerIfNeeded();
+          // Set flags for ATTACH entry generation (only for the first array section/subscript we encounter)
+          if (!ShouldGenerateAttachEntry) {
+            ShouldGenerateAttachEntry = true;
+            if (OASE) {
+              AttachBaseAddr = CGF.EmitLValue(OASE->getBase()).getAddress();
+              AttachFirstElemAddr = CGF.EmitArraySectionExpr(OASE, /*IsLowerBound=*/true).getAddress();
+            } else if (ASE) {
+              AttachBaseAddr = CGF.EmitLValue(ASE->getBase()).getAddress();
+              AttachFirstElemAddr = CGF.EmitLValue(ASE).getAddress();
+            }
+          }
+        }
+        
         // Skip adding an entry in the CurInfo of this combined entry if the
         // whole struct is currently being mapped. The struct needs to be added
         // in the first position before any data internal to the struct is being
@@ -7686,12 +7708,13 @@ private:
           // same expression except for the first one. We also need to signal
           // this map is the first one that relates with the current capture
           // (there is a set of entries for each capture).
+          // Don't use PTR_AND_OBJ when we have array sections/subscripts on pointers
+          bool AddPtrFlag = (!IsExpressionFirstInfo || RequiresReference ||
+                             FirstPointerInComplexData || IsMemberReference) &&
+                            !IsArraySectionOnPointer;
           OpenMPOffloadMappingFlags Flags =
               getMapTypeBits(MapType, MapModifiers, MotionModifiers, IsImplicit,
-                             !IsExpressionFirstInfo || RequiresReference ||
-                                 FirstPointerInComplexData || IsMemberReference,
-                             SkipStandalonePtrMapping ||
-                                 (IsCaptureFirstInfo && !RequiresReference),
+                             AddPtrFlag, IsCaptureFirstInfo && !RequiresReference,
                              IsNonContiguous);
 
           if (!IsExpressionFirstInfo || IsMemberReference) {
@@ -7783,6 +7806,34 @@ private:
     // record.
     if (!EncounteredME)
       PartialStruct.HasCompleteRecord = true;
+
+    // Generate ATTACH entry for array sections and subscripts on standalone
+    // pointers Info was already collected during the main component loop
+
+    if (ShouldGenerateAttachEntry && AttachBaseAddr.isValid() &&
+        AttachFirstElemAddr.isValid()) {
+      // Generate ATTACH entry: &pointer, &pointer[idx], sizeof(pointer), ATTACH
+      // Since this is for standalone pointers only, we use CombinedInfo
+      CombinedInfo.Exprs.emplace_back(BaseDecl, MapExpr);
+      CombinedInfo.BasePointers.push_back(AttachBaseAddr.emitRawPointer(CGF));
+      CombinedInfo.DevicePtrDecls.push_back(nullptr);
+      CombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
+      CombinedInfo.Pointers.push_back(AttachFirstElemAddr.emitRawPointer(CGF));
+      // Size is the size of the pointer itself - use pointer size, not BaseDecl
+      // size
+      llvm::Value *PointerSize = CGF.Builder.CreateIntCast(
+          llvm::ConstantInt::get(
+              CGF.CGM.SizeTy,
+              CGF.getContext().getTypeSize(
+                  CGF.getContext().getPointerType(CGF.getContext().VoidTy)) /
+                  8),
+          CGF.Int64Ty, /*isSigned=*/true);
+      CombinedInfo.Sizes.push_back(PointerSize);
+      // ATTACH flag
+      CombinedInfo.Types.push_back(OpenMPOffloadMappingFlags::OMP_MAP_ATTACH);
+      CombinedInfo.Mappers.push_back(nullptr);
+      CombinedInfo.NonContigInfo.Dims.push_back(1);
+    }
 
     if (!IsNonContiguous)
       return;
@@ -8057,6 +8108,47 @@ private:
     }
   }
 
+  /// Helper to check if we should use ATTACH-style mapping for single-level
+  /// pointers This is used for both ATTACH generation and use_device_ptr
+  /// consistency
+  static bool shouldUseAttachStyleMapping(const Expr *E,
+                                          bool IsInStructContext) {
+    if (IsInStructContext)
+    const Expr *BaseExpr = nullptr;
+    if (const auto *OASE = dyn_cast<ArraySectionExpr>(E)) {
+      if (!ArraySectionExpr::getBaseOriginalType(OASE->getBase())
+               .getCanonicalType()
+               ->isAnyPointerType())
+        return false;
+      BaseExpr = OASE->getBase();
+    } else if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E)) {
+      if (!ArraySectionExpr::getBaseOriginalType(ASE->getBase())
+               .getCanonicalType()
+               ->isAnyPointerType())
+        return false;
+      BaseExpr = ASE->getBase();
+    } else {
+      return false;
+    }
+
+    // Only handle simple variable references to single-level pointers
+    // Skip complex expressions like (*q)[3:10] and multi-level pointers like
+    // q[1][3:5]
+    if (const auto *DRE =
+            dyn_cast<DeclRefExpr>(BaseExpr->IgnoreParenImpCasts())) {
+      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+        // Check that the original declaration is a single-level pointer, not
+        // pointer-to-pointer
+        QualType DeclType =
+            VD->getType().getNonReferenceType().getCanonicalType();
+        bool result = DeclType->isPointerType() &&
+               !DeclType->getPointeeType()->isPointerType();
+        return result;
+      }
+    }
+    return false;
+  }
+
   /// Generate all the base pointers, section pointers, sizes, map types, and
   /// mappers for the extracted mappable expressions (all included in \a
   /// CombinedInfo). Also, for each item that relates with a device pointer, a
@@ -8211,7 +8303,24 @@ private:
           }
         };
 
-    auto &&IsMapInfoExist = [&Info](CodeGenFunction &CGF, const ValueDecl *VD,
+    // Helper to check if a component list uses ATTACH-style mapping for
+    // single-level pointers
+    auto ComponentListUsesAttachStyleMapping =
+        [](const auto &Components) -> bool {
+      if (Components.empty())
+        return false;
+
+      // Check if any component uses ATTACH-style mapping
+      for (const auto &Component : Components) {
+        const Expr *E = Component.getAssociatedExpression();
+        if (E && shouldUseAttachStyleMapping(E, false)) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    auto &&IsMapInfoExist = [&Info, &ComponentListUsesAttachStyleMapping](CodeGenFunction &CGF, const ValueDecl *VD,
                                     const Expr *IE, bool IsDevAddr) -> bool {
       // We potentially have map information for this declaration already.
       // Look for the first set of components that refer to it. If found,
@@ -8246,7 +8355,12 @@ private:
                   !VD->getType().getNonReferenceType()->isPointerType() ||
                   PrevCI == CI->Components.rend() ||
                   isa<MemberExpr>(PrevCI->getAssociatedExpression()) || !VarD ||
-                  VarD->hasLocalStorage()) {
+                  VarD->hasLocalStorage() ||
+                  // For global pointers with ATTACH-style mapping, also allow
+                  // ReturnDevicePointer to ensure consistent behavior between
+                  // global and local pointers
+                  (VarD && !VarD->hasLocalStorage() &&
+                   ComponentListUsesAttachStyleMapping(CI->Components))) {
                 CI->ForDeviceAddr = IsDevAddr;
                 CI->ReturnDevicePointer = true;
                 Found = true;
@@ -8315,21 +8429,6 @@ private:
       MapCombinedInfoTy StructBaseCurInfo;
       const Decl *D = Data.first;
       const ValueDecl *VD = cast_or_null<ValueDecl>(D);
-      bool HasMapBasePtr = false;
-      bool HasMapArraySec = false;
-      if (VD && VD->getType()->isAnyPointerType()) {
-        for (const auto &M : Data.second) {
-          HasMapBasePtr = any_of(M, [](const MapInfo &L) {
-            return isa_and_present<DeclRefExpr>(L.VarRef);
-          });
-          HasMapArraySec = any_of(M, [](const MapInfo &L) {
-            return isa_and_present<ArraySectionExpr, ArraySubscriptExpr>(
-                L.VarRef);
-          });
-          if (HasMapBasePtr && HasMapArraySec)
-            break;
-        }
-      }
       for (const auto &M : Data.second) {
         for (const MapInfo &L : M) {
           assert(!L.Components.empty() &&
@@ -8346,8 +8445,7 @@ private:
               CurInfo, StructBaseCurInfo, PartialStruct,
               /*IsFirstComponentList=*/false, L.IsImplicit,
               /*GenerateAllInfoForClauses*/ true, L.Mapper, L.ForDeviceAddr, VD,
-              L.VarRef, /*OverlappedElements*/ {},
-              HasMapBasePtr && HasMapArraySec);
+              L.VarRef, /*OverlappedElements*/ {});
 
           // If this entry relates to a device pointer, set the relevant
           // declaration and add the 'return pointer' flag.
@@ -8805,8 +8903,6 @@ public:
     assert(isa<const OMPExecutableDirective *>(CurDir) &&
            "Expect a executable directive");
     const auto *CurExecDir = cast<const OMPExecutableDirective *>(CurDir);
-    bool HasMapBasePtr = false;
-    bool HasMapArraySec = false;
     for (const auto *C : CurExecDir->getClausesOfKind<OMPMapClause>()) {
       const auto *EI = C->getVarRefs().begin();
       for (const auto L : C->decl_component_lists(VD)) {
@@ -8818,11 +8914,6 @@ public:
         assert(VDecl == VD && "We got information for the wrong declaration??");
         assert(!Components.empty() &&
                "Not expecting declaration with no component lists.");
-        if (VD && E && VD->getType()->isAnyPointerType() && isa<DeclRefExpr>(E))
-          HasMapBasePtr = true;
-        if (VD && E && VD->getType()->isAnyPointerType() &&
-            (isa<ArraySectionExpr>(E) || isa<ArraySubscriptExpr>(E)))
-          HasMapArraySec = true;
         DeclComponentLists.emplace_back(Components, C->getMapType(),
                                         C->getMapTypeModifiers(),
                                         C->isImplicit(), Mapper, E);
@@ -9016,7 +9107,7 @@ public:
             StructBaseCombinedInfo, PartialStruct, IsFirstComponentList,
             IsImplicit, /*GenerateAllInfoForClauses*/ false, Mapper,
             /*ForDeviceAddr=*/false, VD, VarRef,
-            /*OverlappedElements*/ {}, HasMapBasePtr && HasMapArraySec);
+            /*OverlappedElements*/ {});
       IsFirstComponentList = false;
     }
   }
