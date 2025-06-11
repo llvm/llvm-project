@@ -39,8 +39,7 @@ public:
   }
 
 private:
-  template <typename T>
-  struct TypeOf {
+  template <typename T> struct TypeOf {
     static constexpr std::string_view name{TypeOf<T>::get()};
     static constexpr std::string_view get() {
       std::string_view v(__PRETTY_FUNCTION__);
