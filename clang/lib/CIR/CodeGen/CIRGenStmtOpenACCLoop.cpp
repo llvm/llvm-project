@@ -27,56 +27,29 @@ void CIRGenFunction::updateLoopOpParallelism(mlir::acc::LoopOp &op,
                                              OpenACCDirectiveKind dk) {
   // Check that at least one of auto, independent, or seq is present
   // for the device-independent default clauses.
-  auto hasDeviceNone = [](mlir::acc::DeviceTypeAttr attr) -> bool {
-    return attr.getValue() == mlir::acc::DeviceType::None;
-  };
-  bool hasDefaultSeq =
-      op.getSeqAttr()
-          ? llvm::any_of(
-                op.getSeqAttr().getAsRange<mlir::acc::DeviceTypeAttr>(),
-                hasDeviceNone)
-          : false;
-  bool hasDefaultIndependent =
-      op.getIndependentAttr()
-          ? llvm::any_of(
-                op.getIndependentAttr().getAsRange<mlir::acc::DeviceTypeAttr>(),
-                hasDeviceNone)
-          : false;
-  bool hasDefaultAuto =
-      op.getAuto_Attr()
-          ? llvm::any_of(
-                op.getAuto_Attr().getAsRange<mlir::acc::DeviceTypeAttr>(),
-                hasDeviceNone)
-          : false;
-
-  if (hasDefaultSeq || hasDefaultIndependent || hasDefaultAuto)
+  if (op.hasParallelismFlag(mlir::acc::DeviceType::None))
     return;
 
-  // Orphan or parallel results in 'independent'.
-  if (isOrphan || dk == OpenACCDirectiveKind::Parallel ||
-      dk == OpenACCDirectiveKind::ParallelLoop) {
+  switch (dk) {
+  default:
+    llvm_unreachable("Invalid parent directive kind");
+  case OpenACCDirectiveKind::Invalid:
+  case OpenACCDirectiveKind::Parallel:
+  case OpenACCDirectiveKind::ParallelLoop:
     op.addIndependent(builder.getContext(), {});
     return;
-  }
-
-  // Kernels always results in 'auto'.
-  if (dk == OpenACCDirectiveKind::Kernels ||
-      dk == OpenACCDirectiveKind::KernelsLoop) {
+  case OpenACCDirectiveKind::Kernels:
+  case OpenACCDirectiveKind::KernelsLoop:
     op.addAuto(builder.getContext(), {});
     return;
-  }
-
-  // Serial should use 'seq' unless there is a gang, worker, or vector clause,
-  // in which case, it should use 'auto'.
-  assert(dk == OpenACCDirectiveKind::Serial ||
-         dk == OpenACCDirectiveKind::SerialLoop);
-
-  if (op.getWorkerAttr() || op.getVectorAttr() || op.getGangAttr()) {
-    op.addAuto(builder.getContext(), {});
+  case OpenACCDirectiveKind::Serial:
+  case OpenACCDirectiveKind::SerialLoop:
+    if (op.hasDefaultGangWorkerVector())
+      op.addAuto(builder.getContext(), {});
+    else
+      op.addSeq(builder.getContext(), {});
     return;
-  }
-
-  op.addSeq(builder.getContext(), {});
+  };
 }
 
 mlir::LogicalResult
