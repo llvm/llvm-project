@@ -3769,19 +3769,13 @@ static Constant *ConstantFoldFixedVectorCall(
     if (NumElements == VecNumElements && StartingIndex == 0)
       return Vec;
 
-    const unsigned NonPoisonNumElements =
-        std::min(StartingIndex + NumElements, VecNumElements);
-    for (unsigned I = StartingIndex; I < NonPoisonNumElements; ++I) {
+    for (unsigned I = StartingIndex, E = StartingIndex + NumElements; I < E;
+         ++I) {
       Constant *Elt = Vec->getAggregateElement(I);
       if (!Elt)
         return nullptr;
       Result[I - StartingIndex] = Elt;
     }
-
-    // Remaining elements are poison since they are out of bounds.
-    for (unsigned I = NonPoisonNumElements, E = StartingIndex + NumElements;
-         I < E; ++I)
-      Result[I - StartingIndex] = PoisonValue::get(FVTy->getElementType());
 
     return ConstantVector::get(Result);
   }
@@ -3801,15 +3795,9 @@ static Constant *ConstantFoldFixedVectorCall(
     if (SubVecNumElements == VecNumElements && IdxN == 0)
       return SubVec;
 
-    // Make sure indices are in the range [0, VecNumElements), otherwise the
-    // result is a poison value.
-    if (IdxN >= VecNumElements || IdxN + SubVecNumElements > VecNumElements ||
-        (IdxN % SubVecNumElements) != 0)
-      return PoisonValue::get(FVTy);
-
     for (unsigned I = 0; I < VecNumElements; ++I) {
       Constant *Elt;
-      if (I >= IdxN && I < IdxN + SubVecNumElements)
+      if (I < IdxN + SubVecNumElements)
         Elt = SubVec->getAggregateElement(I - IdxN);
       else
         Elt = Vec->getAggregateElement(I);
