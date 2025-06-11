@@ -31,7 +31,7 @@ define void @reverse_load_store(i64 %startval, ptr noalias %ptr, ptr noalias %pt
 ; IF-EVL-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[STARTVAL:%.*]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], -1
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[PTR:%.*]], i64 [[TMP6]]
-; IF-EVL-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i32 0
+; IF-EVL-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i64 0
 ; IF-EVL-NEXT:    [[WIDE_STRIDED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vp.strided.load.nxv4i32.p0.i64(ptr align 4 [[TMP8]], i64 -4, <vscale x 4 x i1> splat (i1 true), i32 [[TMP5]])
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[PTR2:%.*]], i64 [[TMP6]]
 ; IF-EVL-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP5]] to i64
@@ -129,7 +129,7 @@ define void @reverse_load_store_masked(i64 %startval, ptr noalias %ptr, ptr noal
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP8]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP5]])
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = icmp slt <vscale x 4 x i32> [[VP_OP_LOAD]], splat (i32 100)
 ; IF-EVL-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[PTR1:%.*]], i64 [[TMP6]]
-; IF-EVL-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[TMP10]], i32 0
+; IF-EVL-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[TMP10]], i64 0
 ; IF-EVL-NEXT:    [[WIDE_STRIDED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vp.strided.load.nxv4i32.p0.i64(ptr align 4 [[TMP11]], i64 -4, <vscale x 4 x i1> [[TMP9]], i32 [[TMP5]])
 ; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[PTR2:%.*]], i64 [[TMP6]]
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = zext i32 [[TMP5]] to i64
