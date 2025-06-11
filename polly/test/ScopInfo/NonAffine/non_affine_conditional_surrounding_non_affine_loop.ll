@@ -1,16 +1,20 @@
 ; RUN: opt %loadNPMPolly -polly-allow-nonaffine-branches \
-; RUN:     -polly-invariant-load-hoisting=true \
-; RUN:     -polly-allow-nonaffine-loops=true \
-; RUN:     '-passes=print<polly-detect>,print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=INNERMOST
+; RUN: -polly-invariant-load-hoisting=true -polly-allow-nonaffine-loops=true \
+; RUN: -polly-region-expansion-profitability-check=0 \
+; RUN: '-passes=print<polly-detect>,print<polly-function-scops>' \
+; RUN: -disable-output < %s 2>&1 | FileCheck %s --check-prefix=INNERMOST
 ; RUN: opt %loadNPMPolly -polly-allow-nonaffine \
-; RUN:     -polly-invariant-load-hoisting=true \
-; RUN:     -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true \
-; RUN:     '-passes=print<polly-detect>,print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=ALL
+; RUN: -polly-invariant-load-hoisting=true -polly-allow-nonaffine-branches \
+; RUN: -polly-allow-nonaffine-loops=true \
+; RUN: -polly-region-expansion-profitability-check=0 \
+; RUN: '-passes=print<polly-detect>,print<polly-function-scops>' -disable-output \
+; RUN: < %s 2>&1 | FileCheck %s --check-prefix=ALL
 ; RUN: opt %loadNPMPolly -polly-allow-nonaffine \
-; RUN:     -polly-invariant-load-hoisting=true \
-; RUN:     -polly-process-unprofitable=false \
-; RUN:     -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true \
-; RUN:     '-passes=print<polly-detect>,print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=PROFIT
+; RUN: -polly-invariant-load-hoisting=true -polly-process-unprofitable=false \
+; RUN: -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true \
+; RUN: -polly-region-expansion-profitability-check=0 \
+; RUN: '-passes=print<polly-detect>,print<polly-function-scops>' -disable-output \
+; RUN: < %s 2>&1 | FileCheck %s --check-prefix=PROFIT
 ;
 ; Negative test for INNERMOST.
 ; At the moment we will optimistically assume A[i] in the conditional before the inner
