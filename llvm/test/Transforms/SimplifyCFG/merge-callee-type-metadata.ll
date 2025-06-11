@@ -54,7 +54,7 @@ if.end:                                           ; preds = %if.else, %if.then
 }
 
 ;; Test if the callee_type metadata is merged correctly when
-;; only the right instruction has callee_type metadata.
+;; only the left instruction has callee_type metadata.
 define ptr @_Z10test_leftb(i1 zeroext %b) {
 ; CHECK-LABEL: define ptr @_Z10test_leftb(
 ; CHECK-SAME: i1 zeroext [[B:%.*]]) {
@@ -79,7 +79,7 @@ if.end:                                           ; preds = %if.else, %if.then
 }
 
 ;; Test if the callee_type metadata is merged correctly when
-;; each of the callee_type metadata are lists.
+;; only the right instruction has callee_type metadata.
 define ptr @_Z10test_rightb(i1 zeroext %b) {
 ; CHECK-LABEL: define ptr @_Z10test_rightb(
 ; CHECK-SAME: i1 zeroext [[B:%.*]]) {
@@ -104,7 +104,7 @@ if.end:                                           ; preds = %if.else, %if.then
 }
 
 ;; Test if the callee_type metadata is merged correctly when
-;; only the left instruction has callee_type metadata.
+;; each of the callee_type metadata are lists.
 define ptr @_Z10test_listb(i1 zeroext %b) {
 ; CHECK-LABEL: define ptr @_Z10test_listb(
 ; CHECK-SAME: i1 zeroext [[B:%.*]]) {
