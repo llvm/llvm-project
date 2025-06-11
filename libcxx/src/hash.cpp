@@ -56,7 +56,6 @@ inline void __check_for_overflow(size_t N) {
     if (N > 0xFFFFFFFB)
       std::__throw_overflow_error("__next_prime overflow");
   } else {
-    static_assert(sizeof(size_t) == 8);
     if (N > 0xFFFFFFFFFFFFFFC5ull)
       std::__throw_overflow_error("__next_prime overflow");
   }
