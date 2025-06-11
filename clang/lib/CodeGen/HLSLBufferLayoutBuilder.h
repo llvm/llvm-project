@@ -24,16 +24,13 @@ class CodeGenModule;
 class HLSLBufferLayoutBuilder {
 private:
   CodeGenModule &CGM;
-  llvm::StringRef LayoutTypeName;
 
 public:
-  HLSLBufferLayoutBuilder(CodeGenModule &CGM, llvm::StringRef LayoutTypeName)
-      : CGM(CGM), LayoutTypeName(LayoutTypeName) {}
+  HLSLBufferLayoutBuilder(CodeGenModule &CGM) : CGM(CGM) {}
 
-  // Returns LLVM target extension type with the name LayoutTypeName
-  // for given structure type and layout data. The first number in
-  // the Layout is the size followed by offsets for each struct element.
-  llvm::TargetExtType *
+  // Returns an explicitly padded type for the given structure type and layout
+  // data.
+  llvm::StructType *
   createLayoutType(const RecordType *StructType,
                    const llvm::SmallVector<int32_t> *Packoffsets = nullptr);
 
