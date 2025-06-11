@@ -19,10 +19,10 @@ namespace internal {
 
 class CharacterConverter {
 private:
-  mbstate_t *state;
+  mbstate *state;
 
 public:
-  CharacterConverter(mbstate_t *mbstate);
+  CharacterConverter(mbstate *mbstate);
 
   bool isComplete();
 

@@ -16,7 +16,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-CharacterConverter::CharacterConverter(mbstate_t *mbstate) { state = mbstate; }
+CharacterConverter::CharacterConverter(mbstate *mbstate) { state = mbstate; }
 
 bool CharacterConverter::isComplete() {}
 
