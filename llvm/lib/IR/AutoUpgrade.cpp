@@ -4490,6 +4490,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
   Builder.SetInsertPoint(CI->getParent(), CI->getIterator());
 
   if (!NewFn) {
+    bool FallthroughToDefaultUpgrade = false;
     // Get the Function's name.
     StringRef Name = F->getName();
 
@@ -4517,15 +4518,29 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     } else if (IsAMDGCN) {
       Rep = upgradeAMDGCNIntrinsicCall(Name, CI, F, Builder);
     } else if (IsDbg) {
-      upgradeDbgIntrinsicToDbgRecord(Name, CI);
+      // We might have decided we don't want the new format after all between
+      // first requesting the upgrade and now; skip the conversion if that is
+      // the case, and check here to see if the intrinsic needs to be upgraded
+      // normally.
+      if (!CI->getModule()->IsNewDbgInfoFormat) {
+        bool NeedsUpgrade =
+            upgradeIntrinsicFunction1(CI->getCalledFunction(), NewFn, false);
+        if (!NeedsUpgrade)
+          return;
+        FallthroughToDefaultUpgrade = true;
+      } else {
+        upgradeDbgIntrinsicToDbgRecord(Name, CI);
+      }
     } else {
       llvm_unreachable("Unknown function for CallBase upgrade.");
     }
 
-    if (Rep)
-      CI->replaceAllUsesWith(Rep);
-    CI->eraseFromParent();
-    return;
+    if (!FallthroughToDefaultUpgrade) {
+      if (Rep)
+        CI->replaceAllUsesWith(Rep);
+      CI->eraseFromParent();
+      return;
+    }
   }
 
   const auto &DefaultCase = [&]() -> void {
