@@ -813,38 +813,6 @@ bool HasAllocatableDirectComponent(const DerivedTypeSpec &derived) {
   return std::any_of(directs.begin(), directs.end(), IsAllocatable);
 }
 
-static bool MayHaveDefinedAssignment(
-    const DerivedTypeSpec &derived, std::set<const Scope *> &checked) {
-  if (const Scope *scope{derived.GetScope()};
-      scope && checked.find(scope) == checked.end()) {
-    checked.insert(scope);
-    for (const auto &[_, symbolRef] : *scope) {
-      if (const auto *generic{symbolRef->detailsIf<GenericDetails>()}) {
-        if (generic->kind().IsAssignment()) {
-          return true;
-        }
-      } else if (symbolRef->has<ObjectEntityDetails>() &&
-          !IsPointer(*symbolRef)) {
-        if (const DeclTypeSpec *type{symbolRef->GetType()}) {
-          if (type->IsPolymorphic()) {
-            return true;
-          } else if (const DerivedTypeSpec *derived{type->AsDerived()}) {
-            if (MayHaveDefinedAssignment(*derived, checked)) {
-              return true;
-            }
-          }
-        }
-      }
-    }
-  }
-  return false;
-}
-
-bool MayHaveDefinedAssignment(const DerivedTypeSpec &derived) {
-  std::set<const Scope *> checked;
-  return MayHaveDefinedAssignment(derived, checked);
-}
-
 bool IsAssumedLengthCharacter(const Symbol &symbol) {
   if (const DeclTypeSpec * type{symbol.GetType()}) {
     return type->category() == DeclTypeSpec::Character &&
