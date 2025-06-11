@@ -425,8 +425,9 @@ void LoopBase<BlockT, LoopT>::print(raw_ostream &OS, bool Verbose,
       if (i)
         OS << ",";
       BB->printAsOperand(OS, false);
-    } else
-      OS << "\n";
+    } else {
+      OS << '\n';
+    }
 
     if (BB == H)
       OS << "<header>";

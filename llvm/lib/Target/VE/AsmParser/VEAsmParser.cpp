@@ -17,7 +17,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
@@ -1048,11 +1048,13 @@ const MCExpr *VEAsmParser::extractSpecifier(const MCExpr *E,
   case MCExpr::Target:
   case MCExpr::Constant:
     return nullptr;
+  case MCExpr::Specifier:
+    llvm_unreachable("unused by this backend");
 
   case MCExpr::SymbolRef: {
     const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(E);
 
-    switch (getSpecifier(SRE)) {
+    switch (SRE->getSpecifier()) {
     case VEMCExpr::VK_None:
       // Use VK_REFLONG to a symbol without modifiers.
       Variant = VEMCExpr::VK_REFLONG;

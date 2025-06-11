@@ -66,7 +66,7 @@ dependency with ``INITIALIZE_PASS_DEPENDENCY``.
   ...
 
   INITIALIZE_PASS_BEGIN(...)
-  INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysis)
+  INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
   INITIALIZE_PASS_END(...)
 
 and require the pass in ``getAnalysisUsage``.
@@ -74,10 +74,10 @@ and require the pass in ``getAnalysisUsage``.
 .. code-block:: c++
 
   void MyPass::getAnalysisUsage(AnalysisUsage &AU) const {
-    AU.addRequired<GISelValueTrackingAnalysis>();
+    AU.addRequired<GISelValueTrackingAnalysisLegacy>();
     // Optional: If your pass preserves known bits analysis (many do) then
     //           indicate that it's preserved for re-use by another pass here.
-    AU.addPreserved<GISelValueTrackingAnalysis>();
+    AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   }
 
 Then it's just a matter of fetching the analysis and using it:
@@ -86,7 +86,7 @@ Then it's just a matter of fetching the analysis and using it:
 
   bool MyPass::runOnMachineFunction(MachineFunction &MF) {
     ...
-    GISelValueTracking &VT = getAnalysis<GISelValueTrackingAnalysis>().get(MF);
+    GISelValueTracking &VT = getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
     ...
     MachineInstr *MI = ...;
     KnownBits Known = VT->getKnownBits(MI->getOperand(0).getReg());

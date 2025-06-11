@@ -17,6 +17,7 @@
 #include "CGOpenCLRuntime.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "CodeGenPGO.h"
 #include "ConstantEmitter.h"
 #include "TargetInfo.h"
 #include "clang/AST/Attr.h"
@@ -40,8 +41,7 @@ CGBlockInfo::CGBlockInfo(const BlockDecl *block, StringRef name)
 
   // Skip asm prefix, if any.  'name' is usually taken directly from
   // the mangled name of the enclosing function.
-  if (!name.empty() && name[0] == '\01')
-    name = name.substr(1);
+  name.consume_front("\01");
 }
 
 // Anchor the vtable to this translation unit.
@@ -127,7 +127,7 @@ static std::string getBlockDescriptorName(const CGBlockInfo &BlockInfo,
         CGM.getContext().getObjCEncodingForBlock(BlockInfo.getBlockExpr());
     /// Replace occurrences of '@' with '\1'. '@' is reserved on ELF platforms
     /// as a separator between symbol name and symbol version.
-    std::replace(TypeAtEncoding.begin(), TypeAtEncoding.end(), '@', '\1');
+    llvm::replace(TypeAtEncoding, '@', '\1');
   }
   Name += "e" + llvm::to_string(TypeAtEncoding.size()) + "_" + TypeAtEncoding;
   Name += "l" + CGM.getObjCRuntime().getRCBlockLayoutStr(CGM, BlockInfo);
@@ -1523,7 +1523,7 @@ llvm::Function *CodeGenFunction::GenerateBlockFunction(
   if (IsLambdaConversionToBlock)
     EmitLambdaBlockInvokeBody();
   else {
-    PGO.assignRegionCounters(GlobalDecl(blockDecl), fn);
+    PGO->assignRegionCounters(GlobalDecl(blockDecl), fn);
     incrementProfileCounter(blockDecl->getBody());
     EmitStmt(blockDecl->getBody());
   }
