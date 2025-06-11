@@ -800,6 +800,7 @@ set(files
   __type_traits/extent.h
   __type_traits/has_unique_object_representation.h
   __type_traits/has_virtual_destructor.h
+  __type_traits/integer_traits.h
   __type_traits/integral_constant.h
   __type_traits/invoke.h
   __type_traits/is_abstract.h
@@ -850,7 +851,6 @@ set(files
   __type_traits/is_same.h
   __type_traits/is_scalar.h
   __type_traits/is_signed.h
-  __type_traits/is_signed_integer.h
   __type_traits/is_specialization.h
   __type_traits/is_standard_layout.h
   __type_traits/is_swappable.h
@@ -864,7 +864,6 @@ set(files
   __type_traits/is_unbounded_array.h
   __type_traits/is_union.h
   __type_traits/is_unsigned.h
-  __type_traits/is_unsigned_integer.h
   __type_traits/is_valid_expansion.h
   __type_traits/is_void.h
   __type_traits/is_volatile.h
