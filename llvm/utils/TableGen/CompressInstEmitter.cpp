@@ -124,7 +124,7 @@ class CompressInstEmitter {
   const RecordKeeper &Records;
   const CodeGenTarget Target;
   std::vector<CompressPat> CompressPatterns;
-  unsigned SourceLastTiedOp; // Postion of the last tied operand in Source Inst
+  unsigned SourceLastTiedOp; // postion of the last tied operand in Source Inst
   void addDagOperandMapping(const Record *Rec, const DagInit *Dag,
                             const CodeGenInstruction &Inst,
                             IndexedMap<OpData> &OperandMap, bool IsSourceInst);
@@ -220,18 +220,16 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
   // are represented.
   unsigned TiedCount = 0;
   unsigned OpNo = 0;
-  if (IsSourceInst) {
+  if (IsSourceInst)
     SourceLastTiedOp = std::numeric_limits<unsigned int>::max();
-  }
   for (const auto &Opnd : Inst.Operands) {
     int TiedOpIdx = Opnd.getTiedRegister();
     if (-1 != TiedOpIdx) {
       // Set the entry in OperandMap for the tied operand we're skipping.
       OperandMap[OpNo].Kind = OperandMap[TiedOpIdx].Kind;
       OperandMap[OpNo].Data = OperandMap[TiedOpIdx].Data;
-      if (IsSourceInst) {
+      if (IsSourceInst)
         SourceLastTiedOp = OpNo;
-      }
       ++OpNo;
       ++TiedCount;
       continue;
