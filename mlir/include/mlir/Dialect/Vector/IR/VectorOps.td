@@ -793,7 +793,7 @@ def Vector_FMAOp :
 def Vector_ToElementsOp : Vector_Op<"to_elements", [
     Pure,
     TypesMatchWith<"operand element type matches result types",
-                   "input", "elements", "SmallVector<Type>("
+                   "source", "elements", "SmallVector<Type>("
                    "::llvm::cast<VectorType>($_self).getNumElements(), "
                    "::llvm::cast<VectorType>($_self).getElementType())">]> {
   let summary = "operation that decomposes a vector into all its scalar elements";
@@ -836,15 +836,15 @@ def Vector_ToElementsOp : Vector_Op<"to_elements", [
     ```
   }];
 
-  let arguments = (ins AnyVectorOfAnyRank:$input);
+  let arguments = (ins AnyVectorOfAnyRank:$source);
   let results = (outs Variadic<AnyType>:$elements);
-  let assemblyFormat = "$input attr-dict `:` type($input)";
+  let assemblyFormat = "$source attr-dict `:` type($source)";
 }
 
 def Vector_FromElementsOp : Vector_Op<"from_elements", [
     Pure,
     TypesMatchWith<"operand types match result element type",
-                   "result", "elements", "SmallVector<Type>("
+                   "dest", "elements", "SmallVector<Type>("
                    "::llvm::cast<VectorType>($_self).getNumElements(), "
                    "::llvm::cast<VectorType>($_self).getElementType())">]> {
   let summary = "operation that defines a vector from scalar elements";
@@ -877,8 +877,8 @@ def Vector_FromElementsOp : Vector_Op<"from_elements", [
   }];
 
   let arguments = (ins Variadic<AnyType>:$elements);
-  let results = (outs AnyFixedVectorOfAnyRank:$result);
-  let assemblyFormat = "$elements attr-dict `:` type($result)";
+  let results = (outs AnyFixedVectorOfAnyRank:$dest);
+  let assemblyFormat = "$elements attr-dict `:` type($dest)";
   let hasCanonicalizer = 1;
 }
 
