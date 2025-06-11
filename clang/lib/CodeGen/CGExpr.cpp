@@ -85,6 +85,98 @@ enum VariableTypeDescriptorKind : uint16_t {
 //                        Miscellaneous Helper Methods
 //===--------------------------------------------------------------------===//
 
+static llvm::StringRef GetTrapMessageForHandler(SanitizerHandler ID) {
+  switch (ID) {
+  case SanitizerHandler::AddOverflow:
+    return "The addition of two signed integers resulted in overflow.";
+
+  case SanitizerHandler::BuiltinUnreachable:
+    return "_builtin_unreachable encountered.";
+
+  case SanitizerHandler::CFICheckFail:
+    return "Control flow integrity check failed.";
+
+  case SanitizerHandler::DivremOverflow: // Unsure
+    return "stub";
+
+  case SanitizerHandler::DynamicTypeCacheMiss: // Unsure
+    return "Data requested for dynamic type not found in cache memory.";
+
+  case SanitizerHandler::FloatCastOverflow: // Pasted from LLVM docs, maybe
+                                            // something better to put here.
+    return "Conversion to, from, or between floating-point types which would "
+           "overflow the destination.";
+
+  case SanitizerHandler::FunctionTypeMismatch:
+    return "Function called with arguments of a different data type than "
+           "expected";
+
+  case SanitizerHandler::ImplicitConversion:
+    return "Implicit conversion occurred.";
+
+  case SanitizerHandler::InvalidBuiltin:
+    return "Built-in function or keyword not recognized.";
+
+  case SanitizerHandler::InvalidObjCCast:
+    return "Invalid Objective-C cast.";
+
+  case SanitizerHandler::LoadInvalidValue:
+    return "stub";
+
+  case SanitizerHandler::MissingReturn:
+    return "Function is missing a return.";
+
+  case SanitizerHandler::MulOverflow:
+    return "The multiplication of two signed integers resulted in overflow.";
+
+  case SanitizerHandler::NegateOverflow:
+    return "Underflow/negative overflow occurred.";
+
+  case SanitizerHandler::
+      NullabilityArg: // Next 4 pasted from
+                      // https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html
+    return "Passing null as a function parameter which is annotated with "
+           "_Nonnull";
+
+  case SanitizerHandler::NullabilityReturn:
+    return "Returning null from a function with a return type annotated with "
+           "_Nonnull";
+
+  case SanitizerHandler::NonnullArg:
+    return "Passing null as a function parameter which is declared to never be "
+           "null";
+
+  case SanitizerHandler::NonnullReturn:
+    return "Returning null pointer from a function which is declared to never "
+           "be null";
+
+  case SanitizerHandler::OutOfBounds:
+    return "Out of bounds -- memory accessed outside of expected boundaries.";
+
+  case SanitizerHandler::PointerOverflow:
+    return "stub";
+
+  case SanitizerHandler::ShiftOutOfBounds:
+    return "Bit shift attempted to move bits beyond boundaries of data type's "
+           "bit size.";
+
+  case SanitizerHandler::SubOverflow:
+    return "The subtraction of two signed integers resulted in overflow.";
+
+  case SanitizerHandler::TypeMismatch:
+    return "Type mismatch -- value type used does not match type expected.";
+
+  case SanitizerHandler::AlignmentAssumption: // Help on bottom 2
+    return "stub";
+
+  case SanitizerHandler::VLABoundNotPositive:
+    return "stub";
+
+  default:
+    return "";
+  }
+}
+
 /// CreateTempAlloca - This creates a alloca and inserts it into the entry
 /// block.
 RawAddress
@@ -4041,7 +4133,8 @@ void CodeGenFunction::EmitUnreachable(SourceLocation Loc) {
 
 void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
                                     SanitizerHandler CheckHandlerID,
-                                    bool NoMerge) {
+                                    bool NoMerge, StringRef Annotation,
+                                    StringRef TrapMessage) {
   llvm::BasicBlock *Cont = createBasicBlock("cont");
 
   // If we're optimizing, collapse all calls to trap down to just one per
@@ -4051,6 +4144,14 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
 
   llvm::BasicBlock *&TrapBB = TrapBBs[CheckHandlerID];
 
+  llvm::DILocation *TrapLocation = Builder.getCurrentDebugLocation();
+  llvm::StringRef Category = GetTrapMessageForHandler(CheckHandlerID);
+
+  if (getDebugInfo() && !Category.empty()) {
+    TrapLocation = getDebugInfo()->CreateTrapFailureMessageFor(
+        TrapLocation, Category, TrapMessage);
+  }
+
   NoMerge = NoMerge || !CGM.getCodeGenOpts().OptimizationLevel ||
             (CurCodeDecl && CurCodeDecl->hasAttr<OptimizeNoneAttr>());
 
@@ -4059,8 +4160,16 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
     auto Call = TrapBB->begin();
     assert(isa<llvm::CallInst>(Call) && "Expected call in trap BB");
 
-    Call->applyMergedLocation(Call->getDebugLoc(),
-                              Builder.getCurrentDebugLocation());
+    // Call->applyMergedLocation(Call->getDebugLoc(),
+    //                           Builder.getCurrentDebugLocation());
+    Call->applyMergedLocation(Call->getDebugLoc(), TrapLocation);
+
+    auto Unreachable = ++TrapBB->begin();
+    if (isa<llvm::UnreachableInst>(Unreachable)) {
+      Unreachable->applyMergedLocation(Unreachable->getDebugLoc(),
+                                       TrapLocation);
+    }
+
     Builder.CreateCondBr(Checked, Cont, TrapBB,
                          MDHelper.createLikelyBranchWeights());
   } else {
@@ -4068,6 +4177,8 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
     Builder.CreateCondBr(Checked, Cont, TrapBB,
                          MDHelper.createLikelyBranchWeights());
     EmitBlock(TrapBB);
+
+    ApplyDebugLocation applyTrapDI(*this, TrapLocation);
 
     llvm::CallInst *TrapCall =
         Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::ubsantrap),
