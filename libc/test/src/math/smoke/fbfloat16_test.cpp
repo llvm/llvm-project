@@ -6,21 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/fbfloat16.h"
+#include "src/__support/FPUtil/bfloat16.h"
 
+#include "src/math/fbfloat16.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
 // TODO: change this to bfloat16
-using LlvmLibcFBfloat16Test = LIBC_NAMESPACE::testing::FPTest<float>;
+using LlvmLibcFBfloat16Test = LIBC_NAMESPACE::testing::FPTest<bfloat16>;
 
 TEST_F(LlvmLibcFBfloat16Test, SpecialNumbers) {
 
-  LIBC_NAMESPACE::bfloat16 x{0.0f};
+  bfloat16 x{0.0f};
   ASSERT_EQ(0, static_cast<int>(x.bits));
 
 
-  LIBC_NAMESPACE::bfloat16 y{1.0f};
+  bfloat16 y{1.0f};
   ASSERT_EQ(1, static_cast<int>(y.bits));
 
   // TODO: implement this!

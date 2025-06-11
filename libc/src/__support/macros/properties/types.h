@@ -11,13 +11,14 @@
 #define LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_TYPES_H
 
 #include "hdr/float_macros.h"                         // LDBL_MANT_DIG
-#include "include/llvm-libc-macros/bfloat16-macros.h" // LIBC_TYPES_HAS_BFLOAT16
 #include "include/llvm-libc-macros/float16-macros.h"  // LIBC_TYPES_HAS_FLOAT16
 #include "include/llvm-libc-types/float128.h"         // float128
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/compiler.h"
 #include "src/__support/macros/properties/cpu_features.h"
 #include "src/__support/macros/properties/os.h"
+
+#include "src/__support/macros/config.h" // LIBC_NAMESPACE_DECL
 
 #include <stdint.h> // UINT64_MAX, __SIZEOF_INT128__
 
@@ -60,9 +61,20 @@ using float16 = _Float16;
 // "include/llvm-libc-types/float128.h"
 
 // -- bfloat16 support ---------------------------------------------------------
+
+// since we have our own generic type, we don't need to check against any
+// compiler versions
+// TODO: verify this
+#define LIBC_TYPES_HAS_BFLOAT16
+
+
 #ifdef LIBC_TYPES_HAS_BFLOAT16
 
-using bfloat16 = BFloat16;
+namespace LIBC_NAMESPACE_DECL {
+    struct BFloat16;
+}
+
+using bfloat16 = LIBC_NAMESPACE::BFloat16;
 
 #endif // LIBC_TYPES_HAS_BFLOAT16
 

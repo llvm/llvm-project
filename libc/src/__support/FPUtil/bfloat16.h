@@ -47,8 +47,6 @@ struct BFloat16 {
   }
 };
 
-using bfloat16 = BFloat16;
-
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_BFLOAT16_H
