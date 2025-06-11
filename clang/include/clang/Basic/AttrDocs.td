@@ -8529,6 +8529,20 @@ The full documentation is available here: https://docs.microsoft.com/en-us/windo
   }];
 }
 
+def HLSLSV_PositionDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``SV_Position`` semantic, when applied to an input parameter in a pixel
+shader, contains the location of the pixel center (x, y) in screen space.
+This semantic can be applied to the parameter, or a field in a struct used
+as an input parameter.
+This attribute is supported as an input in pixel, hull, domain and mesh shaders.
+This attribute is supported as an output in vertex, geometry and domain shaders.
+
+The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-semantics
+  }];
+}
+
 def HLSLGroupSharedAddressSpaceDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
