@@ -133,7 +133,7 @@ func.func @atomic_update() {
     %1 = arith.constant 1 : i32
     %2 = arith.addi %arg0, %1  : i32
     omp.yield(%2 : i32)
-  }
+  } {atomic_control = #omp.atomic_control<>}
   return
 }
 llvm.mlir.global internal @_QFsEc() : i32 {

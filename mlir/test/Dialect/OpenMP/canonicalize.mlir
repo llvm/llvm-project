@@ -4,7 +4,7 @@ func.func @update_no_op(%x : memref<i32>) {
   omp.atomic.update %x : memref<i32> {
   ^bb0(%xval : i32):
     omp.yield(%xval : i32)
-  }
+  } {atomic_control = #omp.atomic_control<>}
   return
 }
 
@@ -17,7 +17,7 @@ func.func @update_write_op(%x : memref<i32>, %value: i32) {
   omp.atomic.update %x : memref<i32> {
   ^bb0(%xval : i32):
     omp.yield(%value : i32)
-  }
+  } {atomic_control = #omp.atomic_control<>}
   return
 }
 
@@ -33,7 +33,7 @@ func.func @update_normal(%x : memref<i32>, %value: i32) {
   ^bb0(%xval : i32):
     %newval = arith.addi %xval, %value : i32
     omp.yield(%newval : i32)
-  }
+  } {atomic_control = #omp.atomic_control<>}
   return
 }
 
@@ -50,7 +50,7 @@ func.func @update_unnecessary_computations(%x: memref<i32>) {
   ^bb0(%xval: i32):
     %newval = arith.addi %xval, %c0 : i32
     omp.yield(%newval: i32)
-  }
+  } {atomic_control = #omp.atomic_control<>}
   return
 }
 
@@ -65,7 +65,7 @@ func.func @update_unnecessary_computations(%x: memref<i32>) {
   ^bb0(%xval: i32):
     %newval = arith.muli %xval, %c0 : i32
     omp.yield(%newval: i32)
-  }
+  } {atomic_control = #omp.atomic_control<>}
   return
 }
 
