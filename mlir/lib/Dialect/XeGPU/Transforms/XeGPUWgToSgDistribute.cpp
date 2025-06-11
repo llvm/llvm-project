@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
+#include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
@@ -314,13 +315,63 @@ struct WgToSgPrefetchNdOp : public OpConversionPattern<xegpu::PrefetchNdOp> {
   }
 };
 
+/// This pattern transforms vector.broadcast ops to work at subgroup level.
+/// It splits the broadcast to match the subgroup shape and drops sgLayout/sgData.
+struct WgToSgVectorBroadcastOp : public OpConversionPattern<vector::BroadcastOp> {
+  using OpConversionPattern<vector::BroadcastOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::BroadcastOp op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto resultType = dyn_cast<VectorType>(op.getResult().getType());
+    if (!resultType)
+      return rewriter.notifyMatchFailure(op, "Result is not a vector type");
+
+    // Only handle broadcasts to vectors with XeGPU layout attribute
+    xegpu::LayoutAttr layout = xegpu::getLayoutAttr(op.getResult());
+    if (!layout || !layout.getSgLayout())
+      return rewriter.notifyMatchFailure(
+          op, "Result does not have a valid layout attribute for subgroup distribution");
+
+    // Extract sgShape from layout
+    SmallVector<int64_t> sgShape;
+    if (auto sgDataAttr = layout.getSgData()) {
+      sgShape = llvm::to_vector_of<int64_t>(sgDataAttr.asArrayRef());
+    } else {
+      auto sgLayoutArr = layout.getSgLayout();
+      ArrayRef<int64_t> shape = resultType.getShape();
+      sgShape.reserve(shape.size());
+      for (size_t i = 0; i < shape.size(); ++i) {
+        assert(sgLayoutArr[i] != 0 && "sgLayout elements must be non-zero");
+        sgShape.push_back(shape[i] / sgLayoutArr[i]);
+      }
+    }
+
+    VectorType newResultType = VectorType::get(sgShape, resultType.getElementType());
+    SmallVector<Value> newBroadcasts;
+
+    // The operand is always a scalar or lower-rank vector, so just broadcast for each subgroup
+    for (Value unused : adaptor.getOperands().front()) {
+      // All subgroups get the same broadcasted value
+      auto newBroadcast = rewriter.create<vector::BroadcastOp>(
+          op.getLoc(), newResultType, adaptor.getOperands().front()[0]);
+      xegpu::setLayoutAttr(newBroadcast->getResult(0), layout.dropSgLayoutAndData());
+      newBroadcasts.push_back(newBroadcast.getResult());
+    }
+
+    rewriter.replaceOpWithMultiple(op, {newBroadcasts});
+    return success();
+  }
+};
+
 } // namespace
 
 namespace mlir {
 namespace xegpu {
 void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
   patterns.add<WgToSgCreateNdOp, WgToSgLoadNdOp, WgToSgStoreNdOp,
-               WgToSgUpdateNdOffsetOp, WgToSgDpasOp, WgToSgPrefetchNdOp>(
+               WgToSgUpdateNdOffsetOp, WgToSgDpasOp, WgToSgPrefetchNdOp,
+               WgToSgVectorBroadcastOp>(
       patterns.getContext());
 }
 } // namespace xegpu
@@ -366,6 +417,14 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
 
   target.addDynamicallyLegalOp<xegpu::DpasOp>([=](xegpu::DpasOp op) -> bool {
     auto layout = dyn_cast_or_null<xegpu::LayoutAttr>(op->getAttr("layout"));
+    return isLegal(layout);
+  });
+
+  target.addDynamicallyLegalOp<vector::BroadcastOp>([=](vector::BroadcastOp op) -> bool {
+    auto resultType = dyn_cast<VectorType>(op.getResult().getType());
+    if (!resultType)
+      return true;
+    auto layout = xegpu::getLayoutAttr(op.getResult());
     return isLegal(layout);
   });
 
