@@ -189,8 +189,7 @@ void CIRGenFunction::emitDelegateCallArg(CallArgList &args,
     // For the most part, we just need to load the alloca, except that aggregate
     // r-values are actually pointers to temporaries.
   } else {
-    cgm.errorNYI(param->getSourceRange(),
-                 "emitDelegateCallArg: convertTempToRValue");
+    args.add(convertTempToRValue(local, type, loc), type);
   }
 
   // Deactivate the cleanup for the callee-destructed param that was pushed.

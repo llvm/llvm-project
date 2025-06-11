@@ -203,7 +203,11 @@ void AggExprEmitter::emitInitializationToLValue(Expr *e, LValue lv) {
     cgf.cgm.errorNYI("emitInitializationToLValue TEK_Complex");
     break;
   case cir::TEK_Aggregate:
-    cgf.emitAggExpr(e, AggValueSlot::forLValue(lv));
+    cgf.emitAggExpr(e, AggValueSlot::forLValue(lv, AggValueSlot::IsDestructed,
+                                               AggValueSlot::IsNotAliased,
+                                               AggValueSlot::MayOverlap,
+                                               dest.isZeroed()));
+
     return;
   case cir::TEK_Scalar:
     if (lv.isSimple())
@@ -284,6 +288,8 @@ LValue CIRGenFunction::emitAggExprToLValue(const Expr *e) {
   assert(hasAggregateEvaluationKind(e->getType()) && "Invalid argument!");
   Address temp = createMemTemp(e->getType(), getLoc(e->getSourceRange()));
   LValue lv = makeAddrLValue(temp, e->getType());
-  emitAggExpr(e, AggValueSlot::forLValue(lv));
+  emitAggExpr(e, AggValueSlot::forLValue(lv, AggValueSlot::IsNotDestructed,
+                                         AggValueSlot::IsNotAliased,
+                                         AggValueSlot::DoesNotOverlap));
   return lv;
 }

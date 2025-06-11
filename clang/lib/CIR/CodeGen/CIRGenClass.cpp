@@ -53,6 +53,21 @@ bool CIRGenFunction::isConstructorDelegationValid(
   return true;
 }
 
+/// This routine generates necessary code to initialize base classes and
+/// non-static data members belonging to this constructor.
+void CIRGenFunction::emitCtorPrologue(const CXXConstructorDecl *cd,
+                                      CXXCtorType ctorType,
+                                      FunctionArgList &args) {
+  if (cd->isDelegatingConstructor())
+    return emitDelegatingCXXConstructorCall(cd, args);
+
+  if (cd->getNumCtorInitializers() != 0) {
+    // There's much more to do here.
+    cgm.errorNYI(cd->getSourceRange(), "emitCtorPrologue: any initializer");
+    return;
+  }
+}
+
 Address CIRGenFunction::loadCXXThisAddress() {
   assert(curFuncDecl && "loading 'this' without a func declaration?");
   assert(isa<CXXMethodDecl>(curFuncDecl));
@@ -100,6 +115,29 @@ void CIRGenFunction::emitDelegateCXXConstructorCall(
 
   emitCXXConstructorCall(ctor, ctorType, /*ForVirtualBase=*/false,
                          /*Delegating=*/true, thisAddr, delegateArgs, loc);
+}
+
+void CIRGenFunction::emitDelegatingCXXConstructorCall(
+    const CXXConstructorDecl *ctor, const FunctionArgList &args) {
+  assert(ctor->isDelegatingConstructor());
+
+  Address thisPtr = loadCXXThisAddress();
+
+  assert(!cir::MissingFeatures::objCGC());
+  assert(!cir::MissingFeatures::sanitizers());
+  AggValueSlot aggSlot = AggValueSlot::forAddr(
+      thisPtr, Qualifiers(), AggValueSlot::IsDestructed,
+      AggValueSlot::IsNotAliased, AggValueSlot::MayOverlap,
+      AggValueSlot::IsNotZeroed);
+
+  emitAggExpr(ctor->init_begin()[0]->getInit(), aggSlot);
+
+  const CXXRecordDecl *classDecl = ctor->getParent();
+  if (cgm.getLangOpts().Exceptions && !classDecl->hasTrivialDestructor()) {
+    cgm.errorNYI(ctor->getSourceRange(),
+                 "emitDelegatingCXXConstructorCall: exception");
+    return;
+  }
 }
 
 Address CIRGenFunction::getAddressOfBaseClass(

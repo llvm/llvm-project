@@ -526,14 +526,8 @@ void CIRGenFunction::emitConstructorBody(FunctionArgList &args) {
   // TODO: in restricted cases, we can emit the vbase initializers of a
   // complete ctor and then delegate to the base ctor.
 
-  assert(!cir::MissingFeatures::emitCtorPrologue());
-  if (ctor->isDelegatingConstructor()) {
-    // This will be handled in emitCtorPrologue, but we should emit a diagnostic
-    // rather than silently fail to delegate.
-    cgm.errorNYI(ctor->getSourceRange(),
-                 "emitConstructorBody: delegating ctor");
-    return;
-  }
+  // Emit the constructor prologue, i.e. the base and member initializers.
+  emitCtorPrologue(ctor, ctorType, args);
 
   // TODO(cir): propagate this result via mlir::logical result. Just unreachable
   // now just to have it handled.
