@@ -204,5 +204,5 @@ if platform.system() == "Darwin":
 # version of Python that was used to build lldb to run our tests.
 config.environment["PYTHONHOME"] = config.python_root_dir
 config.environment["PATH"] = os.path.pathsep.join(
-    config.python_root_dir, config.environment.get("PATH", "")
+    (config.python_root_dir, config.environment.get("PATH", ""))
 )
