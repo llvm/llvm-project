@@ -3992,7 +3992,7 @@ Controlling implementation limits
   Sets the limit for the number of full-expressions evaluated in a single
   constant expression evaluation. This also controls the maximum size
   of array and dynamic array allocation that can be constant evaluated.
-  The default is 1048576.
+  The default is 20000000.
 
 .. option:: -ftemplate-depth=N
 
