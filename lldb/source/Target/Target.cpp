@@ -1706,6 +1706,8 @@ bool Target::SetArchitecture(const ArchSpec &arch_spec, bool set_platform,
         if (PlatformSP arch_platform_sp =
                 GetDebugger().GetPlatformList().GetOrCreate(other, {},
                                                             &platform_arch)) {
+          arch_platform_sp->SetLocateModuleCallback(
+              platform_sp->GetLocateModuleCallback());
           SetPlatform(arch_platform_sp);
           if (platform_arch.IsValid())
             other = platform_arch;
