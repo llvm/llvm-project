@@ -2307,6 +2307,8 @@ def VecSplatOp : CIR_Op<"vec.splat", [Pure,
   let assemblyFormat = [{
     $value `:` type($value) `,` qualified(type($result)) attr-dict
   }];
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
