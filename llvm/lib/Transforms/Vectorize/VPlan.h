@@ -934,6 +934,10 @@ public:
     /// Scale the first operand (vector step) by the second operand
     /// (scalar-step).  Casts both operands to the result type if needed.
     WideIVStep,
+    /// Start vector for reductions with 3 operands: the original start value,
+    /// the identity value for the reduction and an integer indicating the
+    /// scaling factor.
+    ReductionStartVector,
     // Creates a step vector starting from 0 to VF with a step of 1.
     StepVector,
 
@@ -2231,7 +2235,7 @@ public:
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
-    return Op == getStartValue();
+    return isOrdered() || isInLoop();
   }
 };
 

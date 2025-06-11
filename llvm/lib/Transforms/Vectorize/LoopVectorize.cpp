@@ -611,9 +611,6 @@ protected:
   /// Middle Block between the vector and the scalar.
   BasicBlock *LoopMiddleBlock = nullptr;
 
-  /// A list of all bypass blocks. The first block is the entry of the loop.
-  SmallVector<BasicBlock *, 4> LoopBypassBlocks;
-
   /// Trip count of the original loop.
   Value *TripCount = nullptr;
 
@@ -2445,7 +2442,6 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
   if (hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator()))
     setBranchWeights(BI, MinItersBypassWeights, /*IsExpected=*/false);
   ReplaceInstWithInst(TCCheckBlock->getTerminator(), &BI);
-  LoopBypassBlocks.push_back(TCCheckBlock);
 
   assert(cast<VPIRBasicBlock>(Plan.getEntry())->getIRBasicBlock() ==
              TCCheckBlock &&
@@ -2461,9 +2457,6 @@ BasicBlock *InnerLoopVectorizer::emitSCEVChecks(BasicBlock *Bypass) {
   assert((!Cost->OptForSize ||
           Cost->Hints->getForce() == LoopVectorizeHints::FK_Enabled) &&
          "Cannot SCEV check stride or overflow when optimizing for size");
-  assert(!LoopBypassBlocks.empty() &&
-         "Should already be a bypass block due to iteration count check");
-  LoopBypassBlocks.push_back(SCEVCheckBlock);
   AddedSafetyChecks = true;
 
   introduceCheckBlockInVPlan(SCEVCheckBlock);
@@ -2499,7 +2492,6 @@ BasicBlock *InnerLoopVectorizer::emitMemRuntimeChecks(BasicBlock *Bypass) {
     });
   }
 
-  LoopBypassBlocks.push_back(MemCheckBlock);
 
   AddedSafetyChecks = true;
 
@@ -7218,13 +7210,15 @@ static Value *getStartValueFromReductionResult(VPInstruction *RdxResult) {
   return StartVPV->getLiveInIRValue();
 }
 
-// If \p R is a Compute{Reduction,AnyOf,FindLastIV}Result when vectorizing the
+// If \p EpiResumePhiR is resume VPPhi for a reduction when vectorizing the
 // epilog loop, fix the reduction's scalar PHI node by adding the incoming value
 // from the main vector loop.
 static void fixReductionScalarResumeWhenVectorizingEpilog(
-    VPRecipeBase *R, VPTransformState &State, BasicBlock *LoopMiddleBlock,
-    BasicBlock *BypassBlock) {
-  auto *EpiRedResult = dyn_cast<VPInstruction>(R);
+    VPPhi *EpiResumePhiR, VPTransformState &State, BasicBlock *BypassBlock) {
+  // Get the VPInstruction computing the reduction result in the middle block.
+  // The first operand may not be from the middle block if it is not connected
+  // to the scalar preheader. In that case, there's nothing to fix.
+  auto *EpiRedResult = dyn_cast<VPInstruction>(EpiResumePhiR->getOperand(0));
   if (!EpiRedResult ||
       (EpiRedResult->getOpcode() != VPInstruction::ComputeAnyOfResult &&
        EpiRedResult->getOpcode() != VPInstruction::ComputeReductionResult &&
@@ -7235,8 +7229,14 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
       cast<VPReductionPHIRecipe>(EpiRedResult->getOperand(0));
   const RecurrenceDescriptor &RdxDesc =
       EpiRedHeaderPhi->getRecurrenceDescriptor();
-  Value *MainResumeValue =
-      EpiRedHeaderPhi->getStartValue()->getUnderlyingValue();
+  Value *MainResumeValue;
+  if (auto *VPI = dyn_cast<VPInstruction>(EpiRedHeaderPhi->getStartValue())) {
+    assert((VPI->getOpcode() == VPInstruction::Broadcast ||
+            VPI->getOpcode() == VPInstruction::ReductionStartVector) &&
+           "unexpected start recipe");
+    MainResumeValue = VPI->getOperand(0)->getUnderlyingValue();
+  } else
+    MainResumeValue = EpiRedHeaderPhi->getStartValue()->getUnderlyingValue();
   if (RecurrenceDescriptor::isAnyOfRecurrenceKind(
           RdxDesc.getRecurrenceKind())) {
     Value *StartV = EpiRedResult->getOperand(1)->getLiveInIRValue();
@@ -7269,12 +7269,7 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
   // When fixing reductions in the epilogue loop we should already have
   // created a bc.merge.rdx Phi after the main vector body. Ensure that we carry
   // over the incoming values correctly.
-  using namespace VPlanPatternMatch;
-  assert(count_if(EpiRedResult->users(), IsaPred<VPPhi>) == 1 &&
-         "ResumePhi must have a single user");
-  auto *EpiResumePhiVPI =
-      cast<VPInstruction>(*find_if(EpiRedResult->users(), IsaPred<VPPhi>));
-  auto *EpiResumePhi = cast<PHINode>(State.get(EpiResumePhiVPI, true));
+  auto *EpiResumePhi = cast<PHINode>(State.get(EpiResumePhiR, true));
   EpiResumePhi->setIncomingValueForBlock(
       BypassBlock, MainResumePhi->getIncomingValueForBlock(BypassBlock));
 }
@@ -7383,18 +7378,12 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       }
     }
     VPBasicBlock *ScalarPH = BestVPlan.getScalarPreheader();
-    ArrayRef<VPBlockBase *> ScalarPreds = ScalarPH->getPredecessors();
-    if (!ScalarPreds.empty()) {
+    if (ScalarPH->getNumPredecessors() > 0) {
       // If ScalarPH has predecessors, we may need to update its reduction
-      // resume values. If there is a middle block, it must be the first
-      // predecessor. Note that the first predecessor may not be the middle
-      // block, if the middle block doesn't branch to the scalar preheader. In
-      // that case, fixReductionScalarResumeWhenVectorizingEpilog will be a
-      // no-op.
-      auto *MiddleVPBB = cast<VPBasicBlock>(ScalarPreds[0]);
-      for (VPRecipeBase &R : *MiddleVPBB) {
-        fixReductionScalarResumeWhenVectorizingEpilog(
-            &R, State, State.CFG.VPBB2IRBB[MiddleVPBB], BypassBlock);
+      // resume values.
+      for (VPRecipeBase &R : ScalarPH->phis()) {
+        fixReductionScalarResumeWhenVectorizingEpilog(cast<VPPhi>(&R), State,
+                                                      BypassBlock);
       }
     }
   }
@@ -7560,8 +7549,6 @@ EpilogueVectorizerMainLoop::emitIterationCountCheck(BasicBlock *Bypass,
                                    nullptr, "vector.ph");
 
   if (ForEpilogue) {
-    LoopBypassBlocks.push_back(TCCheckBlock);
-
     // Save the trip count so we don't have to regenerate it in the
     // vec.epilog.iter.check. This is safe to do because the trip count
     // generated here dominates the vector epilog iter check.
@@ -7622,13 +7609,6 @@ EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton() {
 
   DT->changeImmediateDominator(LoopScalarPreHeader,
                                EPI.EpilogueIterationCountCheck);
-  // Keep track of bypass blocks, as they feed start values to the induction and
-  // reduction phis in the scalar loop preheader.
-  if (EPI.SCEVSafetyCheck)
-    LoopBypassBlocks.push_back(EPI.SCEVSafetyCheck);
-  if (EPI.MemSafetyCheck)
-    LoopBypassBlocks.push_back(EPI.MemSafetyCheck);
-  LoopBypassBlocks.push_back(EPI.EpilogueIterationCountCheck);
 
   // The vec.epilog.iter.check block may contain Phi nodes from inductions or
   // reductions which merge control-flow from the latch block and the middle
@@ -7699,7 +7679,6 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
     setBranchWeights(BI, Weights, /*IsExpected=*/false);
   }
   ReplaceInstWithInst(Insert->getTerminator(), &BI);
-  LoopBypassBlocks.push_back(Insert);
 
   // A new entry block has been created for the epilogue VPlan. Hook it in, as
   // otherwise we would try to modify the entry to the main vector loop.
@@ -9173,7 +9152,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       continue;
 
     const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
-    Type *PhiTy = PhiR->getOperand(0)->getLiveInIRValue()->getType();
+    Type *PhiTy = PhiR->getUnderlyingValue()->getType();
     // If tail is folded by masking, introduce selects between the phi
     // and the users outside the vector region of each reduction, at the
     // beginning of the dedicated latch block.
@@ -9310,6 +9289,27 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       // value after generating the ResumePhi recipe, which uses the original
       // start value.
       PhiR->setOperand(0, Plan->getOrAddLiveIn(RdxDesc.getSentinelValue()));
+    }
+    RecurKind RK = RdxDesc.getRecurrenceKind();
+    if ((!RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) &&
+         !RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK) &&
+         !RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))) {
+      VPBuilder PHBuilder(Plan->getVectorPreheader());
+      VPValue *Iden = Plan->getOrAddLiveIn(
+          getRecurrenceIdentity(RK, PhiTy, RdxDesc.getFastMathFlags()));
+      // If the PHI is used by a partial reduction, set the scale factor.
+      unsigned ScaleFactor =
+          RecipeBuilder.getScalingForReduction(RdxDesc.getLoopExitInstr())
+              .value_or(1);
+      Type *I32Ty = IntegerType::getInt32Ty(PhiTy->getContext());
+      auto *ScaleFactorVPV =
+          Plan->getOrAddLiveIn(ConstantInt::get(I32Ty, ScaleFactor));
+      VPValue *StartV = PHBuilder.createNaryOp(
+          VPInstruction::ReductionStartVector,
+          {PhiR->getStartValue(), Iden, ScaleFactorVPV},
+          PhiTy->isFloatingPointTy() ? RdxDesc.getFastMathFlags()
+                                     : FastMathFlags());
+      PhiR->setOperand(0, StartV);
     }
   }
   for (VPRecipeBase *R : ToDelete)
@@ -9741,25 +9741,16 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
       // VPlan.
       // FIXME: Improve modeling for canonical IV start values in the epilogue
       // loop.
-      BasicBlock *MainMiddle = find_singleton<BasicBlock>(
-          predecessors(L->getLoopPreheader()),
-          [&EPI](BasicBlock *BB, bool) -> BasicBlock * {
-            if (BB != EPI.MainLoopIterationCountCheck &&
-                BB != EPI.EpilogueIterationCountCheck &&
-                BB != EPI.SCEVSafetyCheck && BB != EPI.MemSafetyCheck)
-              return BB;
-            return nullptr;
-          });
       using namespace llvm::PatternMatch;
       Type *IdxTy = IV->getScalarType();
       PHINode *EPResumeVal = find_singleton<PHINode>(
           L->getLoopPreheader()->phis(),
-          [&EPI, IdxTy, MainMiddle](PHINode &P, bool) -> PHINode * {
+          [&EPI, IdxTy](PHINode &P, bool) -> PHINode * {
             if (P.getType() == IdxTy &&
-                P.getIncomingValueForBlock(MainMiddle) == EPI.VectorTripCount &&
                 match(
                     P.getIncomingValueForBlock(EPI.MainLoopIterationCountCheck),
-                    m_SpecificInt(0)))
+                    m_SpecificInt(0)) &&
+                is_contained(P.incoming_values(), EPI.VectorTripCount))
               return &P;
             return nullptr;
           });
@@ -9825,6 +9816,15 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
         Value *Cmp = Builder.CreateICmpEQ(ResumeV, ToFrozen[StartV]);
         ResumeV =
             Builder.CreateSelect(Cmp, RdxDesc.getSentinelValue(), ResumeV);
+      } else {
+        VPValue *StartVal = Plan.getOrAddLiveIn(ResumeV);
+        auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
+        if (auto *VPI = dyn_cast<VPInstruction>(PhiR->getStartValue())) {
+          assert(VPI->getOpcode() == VPInstruction::ReductionStartVector &&
+                 "unexpected start value");
+          VPI->setOperand(0, StartVal);
+          continue;
+        }
       }
     } else {
       // Retrieve the induction resume values for wide inductions from

@@ -1377,7 +1377,7 @@ GDBRemoteCommunicationServerCommon::GetModuleInfo(llvm::StringRef module_path,
 
 std::vector<std::string> GDBRemoteCommunicationServerCommon::HandleFeatures(
     const llvm::ArrayRef<llvm::StringRef> client_features) {
-  // 128KBytes is a reasonable max packet size--debugger can always use less.
+  // 128 KiB is a reasonable max packet size--debugger can always use less.
   constexpr uint32_t max_packet_size = 128 * 1024;
 
   // Features common to platform server and llgs.
