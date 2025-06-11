@@ -661,6 +661,10 @@ const Symbol *RuntimeTableBuilder::DescribeType(
     AddValue(dtValues, derivedTypeSchema_, "nofinalizationneeded"s,
         IntExpr<1>(
             derivedTypeSpec && !MayRequireFinalization(*derivedTypeSpec)));
+    // Similarly, a flag to enable optimized runtime assignment.
+    AddValue(dtValues, derivedTypeSchema_, "nodefinedassignment"s,
+        IntExpr<1>(
+            derivedTypeSpec && !MayHaveDefinedAssignment(*derivedTypeSpec)));
   }
   dtObject.get<ObjectEntityDetails>().set_init(MaybeExpr{
       StructureExpr(Structure(derivedTypeSchema_, std::move(dtValues)))});
@@ -1063,7 +1067,7 @@ RuntimeTableBuilder::DescribeSpecialGenerics(const Scope &dtScope,
     specials =
         DescribeSpecialGenerics(*parentScope, thisScope, derivedTypeSpec);
   }
-  for (auto pair : dtScope) {
+  for (const auto &pair : dtScope) {
     const Symbol &symbol{*pair.second};
     if (const auto *generic{symbol.detailsIf<GenericDetails>()}) {
       DescribeSpecialGeneric(*generic, specials, thisScope, derivedTypeSpec);
@@ -1241,7 +1245,7 @@ void RuntimeTableBuilder::DescribeSpecialProc(
     AddValue(values, specialSchema_, procCompName,
         SomeExpr{evaluate::ProcedureDesignator{specific}});
     // index might already be present in the case of an override
-    specials.emplace(*index,
+    specials.insert_or_assign(*index,
         evaluate::StructureConstructor{
             DEREF(specialSchema_.AsDerived()), std::move(values)});
   }
