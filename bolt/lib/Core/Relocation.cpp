@@ -87,7 +87,9 @@ static bool isSupportedAArch64(uint32_t Type) {
   case ELF::R_AARCH64_PREL32:
   case ELF::R_AARCH64_PREL64:
   case ELF::R_AARCH64_ABS16:
+  case ELF::R_AARCH64_P32_ABS16:
   case ELF::R_AARCH64_ABS32:
+  case ELF::R_AARCH64_P32_ABS32:
   case ELF::R_AARCH64_ABS64:
   case ELF::R_AARCH64_MOVW_UABS_G0:
   case ELF::R_AARCH64_MOVW_UABS_G0_NC:
@@ -167,6 +169,7 @@ static size_t getSizeForTypeAArch64(uint32_t Type) {
     errs() << object::getELFRelocationTypeName(ELF::EM_AARCH64, Type) << '\n';
     llvm_unreachable("unsupported relocation type");
   case ELF::R_AARCH64_ABS16:
+  case ELF::R_AARCH64_P32_ABS16:
   case ELF::R_AARCH64_PREL16:
     return 2;
   case ELF::R_AARCH64_CALL26:
@@ -204,6 +207,7 @@ static size_t getSizeForTypeAArch64(uint32_t Type) {
   case ELF::R_AARCH64_MOVW_UABS_G2_NC:
   case ELF::R_AARCH64_MOVW_UABS_G3:
   case ELF::R_AARCH64_ABS32:
+  case ELF::R_AARCH64_P32_ABS32:
   case ELF::R_AARCH64_PLT32:
     return 4;
   case ELF::R_AARCH64_ABS64:
@@ -290,7 +294,9 @@ static uint64_t encodeValueAArch64(uint32_t Type, uint64_t Value, uint64_t PC) {
   default:
     llvm_unreachable("unsupported relocation");
   case ELF::R_AARCH64_ABS16:
+  case ELF::R_AARCH64_P32_ABS16:
   case ELF::R_AARCH64_ABS32:
+  case ELF::R_AARCH64_P32_ABS32:
   case ELF::R_AARCH64_ABS64:
     break;
   case ELF::R_AARCH64_PREL16:
@@ -352,7 +358,9 @@ static uint64_t extractValueAArch64(uint32_t Type, uint64_t Contents,
     errs() << object::getELFRelocationTypeName(ELF::EM_AARCH64, Type) << '\n';
     llvm_unreachable("unsupported relocation type");
   case ELF::R_AARCH64_ABS16:
+  case ELF::R_AARCH64_P32_ABS16:
   case ELF::R_AARCH64_ABS32:
+  case ELF::R_AARCH64_P32_ABS32:
   case ELF::R_AARCH64_ABS64:
     return Contents;
   case ELF::R_AARCH64_PREL16:
@@ -643,7 +651,9 @@ static bool isPCRelativeAArch64(uint32_t Type) {
   default:
     llvm_unreachable("Unknown relocation type");
   case ELF::R_AARCH64_ABS16:
+  case ELF::R_AARCH64_P32_ABS16:
   case ELF::R_AARCH64_ABS32:
+  case ELF::R_AARCH64_P32_ABS32:
   case ELF::R_AARCH64_ABS64:
   case ELF::R_AARCH64_LDST64_ABS_LO12_NC:
   case ELF::R_AARCH64_ADD_ABS_LO12_NC:

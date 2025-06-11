@@ -2244,7 +2244,9 @@ public:
     switch (RelType) {
     case ELF::R_AARCH64_ABS64:
     case ELF::R_AARCH64_ABS32:
+    case ELF::R_AARCH64_P32_ABS32:
     case ELF::R_AARCH64_ABS16:
+    case ELF::R_AARCH64_P32_ABS16:
     case ELF::R_AARCH64_ADD_ABS_LO12_NC:
     case ELF::R_AARCH64_ADR_GOT_PAGE:
     case ELF::R_AARCH64_ADR_PREL_LO21:
