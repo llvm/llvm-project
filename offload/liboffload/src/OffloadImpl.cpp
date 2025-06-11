@@ -228,16 +228,13 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   ReturnHelper ReturnValue(PropSize, PropValue, PropSizeRet);
 
   // Find the info if it exists under any of the given names
-  auto GetInfo = [&](std::vector<std::string> Names) {
-    InfoQueueTy DevInfo;
-    if (Device == HostDevice())
-      return std::string("Host");
-
+  auto FindInfo = [&](InfoQueueTy &DevInfo, std::vector<std::string> &Names)
+      -> std::optional<decltype(DevInfo.getQueue().begin())> {
     if (!Device->Device)
-      return std::string("");
+      return std::nullopt;
 
     if (auto Err = Device->Device->obtainInfoImpl(DevInfo))
-      return std::string("");
+      return std::nullopt;
 
     for (auto Name : Names) {
       auto InfoKeyMatches = [&](const InfoQueueTy::InfoQueueEntryTy &Info) {
@@ -247,11 +244,50 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
                                DevInfo.getQueue().end(), InfoKeyMatches);
 
       if (Item != std::end(DevInfo.getQueue())) {
-        return Item->Value;
+        return Item;
       }
     }
 
-    return std::string("");
+    return std::nullopt;
+  };
+  auto GetInfoString = [&](std::vector<std::string> Names) {
+    InfoQueueTy DevInfo;
+
+    if (auto Item = FindInfo(DevInfo, Names)) {
+      return (*Item)->Value.c_str();
+    } else {
+      return "";
+    }
+  };
+  auto GetInfoXyz = [&](std::vector<std::string> Names) {
+    InfoQueueTy DevInfo;
+
+    if (auto Item = FindInfo(DevInfo, Names)) {
+      auto Iter = *Item;
+      ol_dimensions_t Out{0, 0, 0};
+      auto Level = Iter->Level + 1;
+
+      while ((++Iter)->Level == Level) {
+        switch (Iter->Key[0]) {
+        case 'x':
+          Out.x = std::stoi(Iter->Value);
+          break;
+        case 'y':
+          Out.y = std::stoi(Iter->Value);
+          break;
+        case 'z':
+          Out.z = std::stoi(Iter->Value);
+          break;
+        default:
+          // Ignore any extra values
+          (void)0;
+        }
+      }
+
+      return Out;
+    } else {
+      return ol_dimensions_t{0, 0, 0};
+    }
   };
 
   switch (PropName) {
@@ -261,12 +297,21 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
     return Device == HostDevice() ? ReturnValue(OL_DEVICE_TYPE_HOST)
                                   : ReturnValue(OL_DEVICE_TYPE_GPU);
   case OL_DEVICE_INFO_NAME:
-    return ReturnValue(GetInfo({"Device Name"}).c_str());
+    if (Device == HostDevice())
+      return ReturnValue("Host");
+    return ReturnValue(GetInfoString({"Device Name"}));
   case OL_DEVICE_INFO_VENDOR:
-    return ReturnValue(GetInfo({"Vendor Name"}).c_str());
+    if (Device == HostDevice())
+      return ReturnValue("Host");
+    return ReturnValue(GetInfoString({"Vendor Name"}));
   case OL_DEVICE_INFO_DRIVER_VERSION:
+    if (Device == HostDevice())
+      return ReturnValue("Host");
     return ReturnValue(
-        GetInfo({"CUDA Driver Version", "HSA Runtime Version"}).c_str());
+        GetInfoString({"CUDA Driver Version", "HSA Runtime Version"}));
+  case OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE:
+    return ReturnValue(GetInfoXyz({"Workgroup Max Size per Dimension" /*AMD*/,
+                                   "Maximum Block Dimensions" /*CUDA*/}));
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "getDeviceInfo enum '%i' is invalid", PropName);
