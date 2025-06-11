@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/libc_errno.h"
 #include "src/stdio/clearerr.h"
 #include "src/stdio/fclose.h"
 #include "src/stdio/feof.h"
@@ -33,6 +34,7 @@ public:
     // This is an error and not a real EOF.
     ASSERT_EQ(LIBC_NAMESPACE::feof(file), 0);
     ASSERT_NE(LIBC_NAMESPACE::ferror(file), 0);
+    libc_errno = 0;
 
     ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file));
 
