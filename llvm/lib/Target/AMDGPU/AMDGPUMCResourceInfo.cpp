@@ -122,7 +122,7 @@ const MCExpr *MCResourceInfo::flattenedCycleMax(MCSymbol *RecSym,
       // where <callee_symbol> will eventually recurse. If this condition holds,
       // the recursion occurs within some other (possibly unresolvable) MCExpr,
       // thus using the worst case value then.
-      if (CurExpr->isSymbolUsedInExpression(RecSym)) {
+      if (!AMDGPUMCExpr::isSymbolUsedInExpression(RecSym, CurExpr)) {
         LLVM_DEBUG(dbgs() << "MCResUse:   " << RecSym->getName()
                           << ": Recursion in unexpected sub-expression, using "
                              "module maximum\n");
