@@ -326,16 +326,37 @@ private:
           TODO(localizer.getLoc(),
                "local_init conversion is not supported yet");
 
-        if (!localizer.getInitRegion().empty())
-          TODO(localizer.getLoc(),
-               "non-empty `init` regions are not supported yet");
-
         auto oldIP = rewriter.saveInsertionPoint();
         rewriter.setInsertionPointAfter(localizer);
         auto privatizer = rewriter.create<mlir::omp::PrivateClauseOp>(
             localizer.getLoc(), sym.getLeafReference().str() + ".omp",
             localizer.getTypeAttr().getValue(),
             mlir::omp::DataSharingClauseType::Private);
+
+        if (!localizer.getInitRegion().empty()) {
+          rewriter.cloneRegionBefore(localizer.getInitRegion(),
+                                     privatizer.getInitRegion(),
+                                     privatizer.getInitRegion().begin());
+          auto firYield = mlir::cast<fir::YieldOp>(
+              privatizer.getInitRegion().back().getTerminator());
+          rewriter.setInsertionPoint(firYield);
+          rewriter.create<mlir::omp::YieldOp>(firYield.getLoc(),
+                                              firYield.getOperands());
+          rewriter.eraseOp(firYield);
+        }
+
+        if (!localizer.getDeallocRegion().empty()) {
+          rewriter.cloneRegionBefore(localizer.getDeallocRegion(),
+                                     privatizer.getDeallocRegion(),
+                                     privatizer.getDeallocRegion().begin());
+          auto firYield = mlir::cast<fir::YieldOp>(
+              privatizer.getDeallocRegion().back().getTerminator());
+          rewriter.setInsertionPoint(firYield);
+          rewriter.create<mlir::omp::YieldOp>(firYield.getLoc(),
+                                              firYield.getOperands());
+          rewriter.eraseOp(firYield);
+        }
+
         rewriter.restoreInsertionPoint(oldIP);
 
         wsloopClauseOps.privateVars.push_back(op);
