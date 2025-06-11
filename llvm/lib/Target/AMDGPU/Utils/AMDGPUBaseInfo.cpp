@@ -1362,7 +1362,7 @@ getIntegerPairAttribute(const Function &F, StringRef Name,
                         std::pair<unsigned, unsigned> Default,
                         bool OnlyFirstRequired) {
   if (auto Attr = getIntegerPairAttribute(F, Name, OnlyFirstRequired))
-    return {Attr->first, Attr->second ? *(Attr->second) : Default.second};
+    return {Attr->first, Attr->second.value_or(Default.second)};
   return Default;
 }
 
@@ -2122,71 +2122,6 @@ bool getHasColorExport(const Function &F) {
 
 bool getHasDepthExport(const Function &F) {
   return F.getFnAttributeAsParsedInteger("amdgpu-depth-export", 0) != 0;
-}
-
-bool isShader(CallingConv::ID cc) {
-  switch (cc) {
-  case CallingConv::AMDGPU_VS:
-  case CallingConv::AMDGPU_LS:
-  case CallingConv::AMDGPU_HS:
-  case CallingConv::AMDGPU_ES:
-  case CallingConv::AMDGPU_GS:
-  case CallingConv::AMDGPU_PS:
-  case CallingConv::AMDGPU_CS_Chain:
-  case CallingConv::AMDGPU_CS_ChainPreserve:
-  case CallingConv::AMDGPU_CS:
-    return true;
-  default:
-    return false;
-  }
-}
-
-bool isGraphics(CallingConv::ID cc) {
-  return isShader(cc) || cc == CallingConv::AMDGPU_Gfx;
-}
-
-bool isCompute(CallingConv::ID cc) {
-  return !isGraphics(cc) || cc == CallingConv::AMDGPU_CS;
-}
-
-bool isEntryFunctionCC(CallingConv::ID CC) {
-  switch (CC) {
-  case CallingConv::AMDGPU_KERNEL:
-  case CallingConv::SPIR_KERNEL:
-  case CallingConv::AMDGPU_VS:
-  case CallingConv::AMDGPU_GS:
-  case CallingConv::AMDGPU_PS:
-  case CallingConv::AMDGPU_CS:
-  case CallingConv::AMDGPU_ES:
-  case CallingConv::AMDGPU_HS:
-  case CallingConv::AMDGPU_LS:
-    return true;
-  default:
-    return false;
-  }
-}
-
-bool isModuleEntryFunctionCC(CallingConv::ID CC) {
-  switch (CC) {
-  case CallingConv::AMDGPU_Gfx:
-    return true;
-  default:
-    return isEntryFunctionCC(CC) || isChainCC(CC);
-  }
-}
-
-bool isChainCC(CallingConv::ID CC) {
-  switch (CC) {
-  case CallingConv::AMDGPU_CS_Chain:
-  case CallingConv::AMDGPU_CS_ChainPreserve:
-    return true;
-  default:
-    return false;
-  }
-}
-
-bool isKernelCC(const Function *Func) {
-  return AMDGPU::isModuleEntryFunctionCC(Func->getCallingConv());
 }
 
 bool hasXNACK(const MCSubtargetInfo &STI) {

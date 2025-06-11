@@ -12,6 +12,7 @@ from clang.cindex import (
     TemplateArgumentKind,
     TranslationUnit,
     TypeKind,
+    conf,
 )
 
 if "CLANG_LIBRARY_PATH" in os.environ:
@@ -1050,3 +1051,16 @@ struct B {};
         self.assertEqual(cursor1, cursor1_2)
         self.assertNotEqual(cursor1, cursor2)
         self.assertNotEqual(cursor1, "foo")
+
+    def test_null_cursor(self):
+        tu = get_tu("int a = 729;")
+
+        for cursor in tu.cursor.walk_preorder():
+            self.assertFalse(cursor.is_null())
+
+        nc = conf.lib.clang_getNullCursor()
+        self.assertTrue(nc.is_null())
+        with self.assertRaises(Exception):
+            nc.is_definition()
+        with self.assertRaises(Exception):
+            nc.spelling
