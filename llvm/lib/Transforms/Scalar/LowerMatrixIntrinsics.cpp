@@ -57,10 +57,8 @@ using namespace PatternMatch;
 #define DEBUG_TYPE "lower-matrix-intrinsics"
 
 STATISTIC(FlattenedMatrices, "Number of matrix flattenings");
-#ifndef NDEBUG
 STATISTIC(ReshapedMatrices, "Number of matrix reshapes");
 STATISTIC(SplitMatrices, "Number of matrix splits");
-#endif
 
 static cl::opt<bool>
     FuseMatrix("fuse-matrix", cl::init(true), cl::Hidden,
@@ -627,27 +625,29 @@ public:
       SplitVecs.push_back(V);
     }
 
-    LLVM_DEBUG(if (Instruction *Inst = dyn_cast<Instruction>(MatrixVal)) {
+    if (Instruction *Inst = dyn_cast<Instruction>(MatrixVal)) {
       if (Found != Inst2ColumnMatrix.end()) {
         // FIXME: re: "at least": SplitVecs.size() doesn't count the shuffles
         // that embedInVector created.
-        dbgs() << "matrix reshape from " << Found->second.shape() << " to "
-               << SI << " using at least " << SplitVecs.size()
-               << " shuffles on behalf of:\n"
-               << *Inst << '\n';
+        LLVM_DEBUG(dbgs() << "matrix reshape from " << Found->second.shape()
+                          << " to " << SI << " using at least "
+                          << SplitVecs.size() << " shuffles on behalf of:\n"
+                          << *Inst << '\n');
         ReshapedMatrices++;
       } else if (!ShapeMap.contains(MatrixVal)) {
-        dbgs() << "splitting a " << SI << " matrix with " << SplitVecs.size()
-               << " shuffles beacuse we do not have a shape-aware lowering for "
-                  "its def:\n"
-               << *Inst << '\n';
+        LLVM_DEBUG(
+            dbgs()
+            << "splitting a " << SI << " matrix with " << SplitVecs.size()
+            << " shuffles beacuse we do not have a shape-aware lowering for "
+               "its def:\n"
+            << *Inst << '\n');
         SplitMatrices++;
       } else {
         // The ShapeMap has it, so it's a case where we're being lowered
         // before the def, and we expect that InstCombine will clean things up
         // afterward.
       }
-    });
+    }
 
     return {SplitVecs};
   }
