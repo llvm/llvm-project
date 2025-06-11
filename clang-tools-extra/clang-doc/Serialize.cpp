@@ -270,7 +270,7 @@ private:
 };
 
 void ClangDocCommentVisitor::parseComment(const comments::Comment *C) {
-  CurrentCI.Kind = C->getCommentKindName();
+  CurrentCI.Kind = stringToCommentKind(C->getCommentKindName());
   ConstCommentVisitor<ClangDocCommentVisitor>::visit(C);
   for (comments::Comment *Child :
        llvm::make_range(C->child_begin(), C->child_end())) {
@@ -742,6 +742,7 @@ static void populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
   I.ReturnType = getTypeInfoForType(D->getReturnType(), LO);
   I.Prototype = getFunctionPrototype(D);
   parseParameters(I, D);
+  I.IsStatic = D->isStatic();
 
   populateTemplateParameters(I.Template, D);
 

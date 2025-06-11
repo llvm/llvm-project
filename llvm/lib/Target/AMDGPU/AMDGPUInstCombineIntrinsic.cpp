@@ -365,8 +365,7 @@ bool GCNTTIImpl::canSimplifyLegacyMulToMul(const Instruction &I,
   }
 
   SimplifyQuery SQ = IC.getSimplifyQuery().getWithInstruction(&I);
-  if (isKnownNeverInfOrNaN(Op0, /*Depth=*/0, SQ) &&
-      isKnownNeverInfOrNaN(Op1, /*Depth=*/0, SQ)) {
+  if (isKnownNeverInfOrNaN(Op0, SQ) && isKnownNeverInfOrNaN(Op1, SQ)) {
     // Neither operand is infinity or NaN.
     return true;
   }
@@ -463,6 +462,8 @@ static bool isTriviallyUniform(const Use &U) {
   Value *V = U.get();
   if (isa<Constant>(V))
     return true;
+  if (const auto *A = dyn_cast<Argument>(V))
+    return AMDGPU::isArgPassedInSGPR(A);
   if (const auto *II = dyn_cast<IntrinsicInst>(V)) {
     if (!AMDGPU::isIntrinsicAlwaysUniform(II->getIntrinsicID()))
       return false;

@@ -19,16 +19,16 @@ namespace clang::tidy::readability {
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/readability/const-return-type.html
 class ConstReturnTypeCheck : public ClangTidyCheck {
- public:
-   ConstReturnTypeCheck(StringRef Name, ClangTidyContext *Context)
-       : ClangTidyCheck(Name, Context),
-         IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
-   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
-   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
-   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+public:
+  ConstReturnTypeCheck(StringRef Name, ClangTidyContext *Context)
+      : ClangTidyCheck(Name, Context),
+        IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+  void registerMatchers(ast_matchers::MatchFinder *Finder) override;
+  void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
- private:
-   const bool IgnoreMacros;
+private:
+  const bool IgnoreMacros;
 };
 
 } // namespace clang::tidy::readability

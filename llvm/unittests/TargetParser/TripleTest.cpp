@@ -2354,6 +2354,79 @@ TEST(TripleTest, getOSVersion) {
   T.getMacOSXVersion(Version);
   EXPECT_EQ(VersionTuple(10, 16), Version);
 
+  // 16 forms a valid triple, even though it's not
+  // a version of a macOS.
+  T = Triple("x86_64-apple-macos16.0");
+  EXPECT_TRUE(T.isMacOSX());
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(16, 0), Version);
+
+  T = Triple("arm64-apple-macosx26.1");
+  EXPECT_TRUE(T.isMacOSX());
+  EXPECT_FALSE(T.isiOS());
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_FALSE(T.isArch32Bit());
+  EXPECT_TRUE(T.isArch64Bit());
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(26, 1), Version);
+
+  // 19.0 forms a valid triple, even though it's not
+  // a version of a iOS.
+  T = Triple("arm64-apple-ios19.0");
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_TRUE(T.isiOS());
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_FALSE(T.isArch32Bit());
+  EXPECT_TRUE(T.isArch64Bit());
+  T.getiOSVersion();
+  EXPECT_EQ(VersionTuple(19, 0), T.getOSVersion());
+
+  T = Triple("arm64-apple-ios27.0");
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_TRUE(T.isiOS());
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_FALSE(T.isArch32Bit());
+  EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(VersionTuple(27, 0), T.getiOSVersion());
+
+  T = Triple("arm64-apple-watchos12.0");
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_TRUE(T.isWatchOS());
+  EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(VersionTuple(26, 0), T.getiOSVersion());
+
+  T = Triple("arm64-apple-visionos3.0");
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_TRUE(T.isXROS());
+  EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(VersionTuple(26, 0), T.getiOSVersion());
+
+  T = Triple("x86_64-apple-darwin26");
+  EXPECT_TRUE(T.isMacOSX());
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(27), Version);
+
+  // Check invalid ranges are remapped.
+  T = Triple("arm64-apple-visionos6.0");
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_TRUE(T.isXROS());
+  EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(VersionTuple(29, 0), T.getiOSVersion());
+
+  T = Triple("arm64-apple-watchos14.0");
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_TRUE(T.isWatchOS());
+  EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(VersionTuple(28, 0), T.getiOSVersion());
+
+  T = Triple("arm64-apple-ios21.1");
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_TRUE(T.isiOS());
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_FALSE(T.isArch32Bit());
+  EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(VersionTuple(28, 1), T.getiOSVersion());
+
   T = Triple("x86_64-apple-darwin20");
   EXPECT_TRUE(T.isMacOSX());
   T.getMacOSXVersion(Version);
@@ -2468,11 +2541,76 @@ TEST(TripleTest, isMacOSVersionLT) {
 TEST(TripleTest, CanonicalizeOSVersion) {
   EXPECT_EQ(VersionTuple(10, 15, 4),
             Triple::getCanonicalVersionForOS(Triple::MacOSX,
-                                             VersionTuple(10, 15, 4)));
-  EXPECT_EQ(VersionTuple(11, 0), Triple::getCanonicalVersionForOS(
-                                     Triple::MacOSX, VersionTuple(10, 16)));
+                                             VersionTuple(10, 15, 4),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(11, 0),
+            Triple::getCanonicalVersionForOS(
+                Triple::MacOSX, VersionTuple(10, 16), /*IsInValidRange=*/true));
   EXPECT_EQ(VersionTuple(20),
-            Triple::getCanonicalVersionForOS(Triple::Darwin, VersionTuple(20)));
+            Triple::getCanonicalVersionForOS(Triple::Darwin, VersionTuple(20),
+                                             /*IsInValidRange=*/true));
+
+  // Validate mappings for all expected OS versions remapping to 26.
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::MacOSX, VersionTuple(16),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::IOS, VersionTuple(19),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::TvOS, VersionTuple(19),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::WatchOS, VersionTuple(12),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::XROS, VersionTuple(3),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::Darwin, VersionTuple(26),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::BridgeOS, VersionTuple(26),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::BridgeOS, VersionTuple(26),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(10),
+            Triple::getCanonicalVersionForOS(Triple::BridgeOS, VersionTuple(10),
+                                             /*IsInValidRange=*/true));
+
+  // Verify invalid ranges can be remapped.
+  EXPECT_EQ(VersionTuple(28),
+            Triple::getCanonicalVersionForOS(Triple::MacOSX, VersionTuple(18),
+                                             /*IsInValidRange=*/false));
+  EXPECT_EQ(VersionTuple(28),
+            Triple::getCanonicalVersionForOS(Triple::IOS, VersionTuple(21),
+                                             /*IsInValidRange=*/false));
+  EXPECT_EQ(VersionTuple(28),
+            Triple::getCanonicalVersionForOS(Triple::WatchOS, VersionTuple(14),
+                                             /*IsInValidRange=*/false));
+  EXPECT_EQ(VersionTuple(28),
+            Triple::getCanonicalVersionForOS(Triple::TvOS, VersionTuple(21),
+                                             /*IsInValidRange=*/false));
+}
+
+TEST(TripleTest, CheckValidOSVersion) {
+  EXPECT_TRUE(Triple::isValidVersionForOS(Triple::MacOSX, VersionTuple(16)));
+  EXPECT_TRUE(Triple::isValidVersionForOS(Triple::IOS, VersionTuple(19)));
+  EXPECT_TRUE(Triple::isValidVersionForOS(Triple::TvOS, VersionTuple(19)));
+  EXPECT_TRUE(Triple::isValidVersionForOS(Triple::TvOS, VersionTuple(18, 2)));
+  EXPECT_TRUE(Triple::isValidVersionForOS(Triple::WatchOS, VersionTuple(12)));
+  EXPECT_TRUE(Triple::isValidVersionForOS(Triple::XROS, VersionTuple(3)));
+  EXPECT_TRUE(Triple::isValidVersionForOS(Triple::Darwin, VersionTuple(26)));
+  EXPECT_TRUE(
+      Triple::isValidVersionForOS(Triple::BridgeOS, VersionTuple(26, 1, 1)));
+
+  EXPECT_FALSE(
+      Triple::isValidVersionForOS(Triple::MacOSX, VersionTuple(16, 1)));
+  EXPECT_FALSE(Triple::isValidVersionForOS(Triple::MacOSX, VersionTuple(18)));
+  EXPECT_FALSE(Triple::isValidVersionForOS(Triple::IOS, VersionTuple(21)));
+  EXPECT_FALSE(Triple::isValidVersionForOS(Triple::WatchOS, VersionTuple(14)));
+  EXPECT_FALSE(Triple::isValidVersionForOS(Triple::TvOS, VersionTuple(21)));
 }
 
 TEST(TripleTest, FileFormat) {

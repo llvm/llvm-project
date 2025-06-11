@@ -429,6 +429,13 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
               "module.">,
        Option<"unsafeFPMath", "unsafe-fp-math", "bool", /*default=*/"false",
               "Set the unsafe-fp-math attribute on functions in the module.">,
+       Option<"reciprocals", "mrecip", "std::string", /*default=*/"",
+              "Set the reciprocal-estimates attribute on functions in the "
+              "module.">,
+       Option<"preferVectorWidth", "prefer-vector-width", "std::string",
+              /*default=*/"",
+              "Set the prefer-vector-width attribute on functions in the "
+              "module.">,
        Option<"tuneCPU", "tune-cpu", "std::string", /*default=*/"",
               "Set the tune-cpu attribute on functions in the module.">,
        Option<"setNoCapture", "set-nocapture", "bool", /*default=*/"false",

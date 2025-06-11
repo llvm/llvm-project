@@ -17,6 +17,7 @@
 #include "CGDebugInfo.h"
 #include "CGObjCRuntime.h"
 #include "CGOpenCLRuntime.h"
+#include "CGPointerAuthInfo.h"
 #include "CGRecordLayout.h"
 #include "CGValue.h"
 #include "CodeGenFunction.h"
@@ -2008,11 +2009,12 @@ Value *CodeGenFunction::EmitCheckedArgForBuiltin(const Expr *E,
   if (!SanOpts.has(SanitizerKind::Builtin))
     return ArgValue;
 
-  SanitizerScope SanScope(this);
+  auto CheckOrdinal = SanitizerKind::SO_Builtin;
+  auto CheckHandler = SanitizerHandler::InvalidBuiltin;
+  SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
   Value *Cond = Builder.CreateICmpNE(
       ArgValue, llvm::Constant::getNullValue(ArgValue->getType()));
-  EmitCheck(std::make_pair(Cond, SanitizerKind::SO_Builtin),
-            SanitizerHandler::InvalidBuiltin,
+  EmitCheck(std::make_pair(Cond, CheckOrdinal), CheckHandler,
             {EmitCheckSourceLocation(E->getExprLoc()),
              llvm::ConstantInt::get(Builder.getInt8Ty(), Kind)},
             {});
@@ -2024,10 +2026,11 @@ Value *CodeGenFunction::EmitCheckedArgForAssume(const Expr *E) {
   if (!SanOpts.has(SanitizerKind::Builtin))
     return ArgValue;
 
-  SanitizerScope SanScope(this);
+  auto CheckOrdinal = SanitizerKind::SO_Builtin;
+  auto CheckHandler = SanitizerHandler::InvalidBuiltin;
+  SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
   EmitCheck(
-      std::make_pair(ArgValue, SanitizerKind::SO_Builtin),
-      SanitizerHandler::InvalidBuiltin,
+      std::make_pair(ArgValue, CheckOrdinal), CheckHandler,
       {EmitCheckSourceLocation(E->getExprLoc()),
        llvm::ConstantInt::get(Builder.getInt8Ty(), BCK_AssumePassedFalse)},
       std::nullopt);
@@ -2050,7 +2053,15 @@ static Value *EmitOverflowCheckedAbs(CodeGenFunction &CGF, const CallExpr *E,
       return EmitAbs(CGF, ArgValue, true);
   }
 
-  CodeGenFunction::SanitizerScope SanScope(&CGF);
+  SmallVector<SanitizerKind::SanitizerOrdinal, 1> Ordinals;
+  SanitizerHandler CheckHandler;
+  if (SanitizeOverflow) {
+    Ordinals.push_back(SanitizerKind::SO_SignedIntegerOverflow);
+    CheckHandler = SanitizerHandler::NegateOverflow;
+  } else
+    CheckHandler = SanitizerHandler::SubOverflow;
+
+  SanitizerDebugLocation SanScope(&CGF, Ordinals, CheckHandler);
 
   Constant *Zero = Constant::getNullValue(ArgValue->getType());
   Value *ResultAndOverflow = CGF.Builder.CreateBinaryIntrinsic(
@@ -2062,12 +2073,12 @@ static Value *EmitOverflowCheckedAbs(CodeGenFunction &CGF, const CallExpr *E,
   // TODO: support -ftrapv-handler.
   if (SanitizeOverflow) {
     CGF.EmitCheck({{NotOverflow, SanitizerKind::SO_SignedIntegerOverflow}},
-                  SanitizerHandler::NegateOverflow,
+                  CheckHandler,
                   {CGF.EmitCheckSourceLocation(E->getArg(0)->getExprLoc()),
                    CGF.EmitCheckTypeDescriptor(E->getType())},
                   {ArgValue});
   } else
-    CGF.EmitTrapCheck(NotOverflow, SanitizerHandler::SubOverflow);
+    CGF.EmitTrapCheck(NotOverflow, CheckHandler);
 
   Value *CmpResult = CGF.Builder.CreateICmpSLT(ArgValue, Zero, "abscond");
   return CGF.Builder.CreateSelect(CmpResult, Result, ArgValue, "abs");
@@ -5619,6 +5630,18 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       Result = Builder.CreateIntToPtr(Result, OrigValueType);
     }
     return RValue::get(Result);
+  }
+
+  case Builtin::BI__builtin_get_vtable_pointer: {
+    const Expr *Target = E->getArg(0);
+    QualType TargetType = Target->getType();
+    const CXXRecordDecl *Decl = TargetType->getPointeeCXXRecordDecl();
+    assert(Decl);
+    auto ThisAddress = EmitPointerWithAlignment(Target);
+    assert(ThisAddress.isValid());
+    llvm::Value *VTablePointer =
+        GetVTablePtr(ThisAddress, Int8PtrTy, Decl, VTableAuthMode::MustTrap);
+    return RValue::get(VTablePointer);
   }
 
   case Builtin::BI__exception_code:

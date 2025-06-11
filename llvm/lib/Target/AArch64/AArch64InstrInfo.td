@@ -685,23 +685,35 @@ defm trunc_masked_scatter_i32 : masked_gather_scatter<trunc_masked_scatter_i32>;
 def top16Zero: PatLeaf<(i32 GPR32:$src), [{
   return Op.getValueType() == MVT::i32 &&
          CurDAG->MaskedValueIsZero(Op, APInt::getHighBitsSet(32, 16));
-  }]>;
+  }]> {
+  let GISelLeafPredicateCode = [{
+    return VT && VT->maskedValueIsZero(Reg, APInt::getHighBitsSet(32, 16)); }];
+}
 
 // top32Zero - answer true if the upper 32 bits of $src are 0, false otherwise
 def top32Zero: PatLeaf<(i64 GPR64:$src), [{
   return Op.getValueType() == MVT::i64 &&
          CurDAG->MaskedValueIsZero(Op, APInt::getHighBitsSet(64, 32));
-  }]>;
+  }]> {
+  let GISelLeafPredicateCode = [{ 
+    return VT && VT->maskedValueIsZero(Reg, APInt::getHighBitsSet(64, 32)); }];
+}
 
 // topbitsallzero - Return true if all bits except the lowest bit are known zero
 def topbitsallzero32: PatLeaf<(i32 GPR32:$src), [{
   return Op.getValueType() == MVT::i32 &&
          CurDAG->MaskedValueIsZero(Op, APInt::getHighBitsSet(32, 31));
-  }]>;
+  }]> {
+  let GISelLeafPredicateCode = [{ 
+    return VT && VT->maskedValueIsZero(Reg, APInt::getHighBitsSet(32, 31)); }];
+}
 def topbitsallzero64: PatLeaf<(i64 GPR64:$src), [{
   return Op.getValueType() == MVT::i64 &&
          CurDAG->MaskedValueIsZero(Op, APInt::getHighBitsSet(64, 63));
-  }]>;
+  }]> {
+  let GISelLeafPredicateCode = [{ 
+    return VT && VT->maskedValueIsZero(Reg, APInt::getHighBitsSet(64, 63)); }];
+}
 
 // Node definitions.
 // Compare-and-branch
@@ -853,7 +865,7 @@ def AArch64uzp2      : SDNode<"AArch64ISD::UZP2", SDT_AArch64Zip>;
 def AArch64trn1      : SDNode<"AArch64ISD::TRN1", SDT_AArch64Zip>;
 def AArch64trn2      : SDNode<"AArch64ISD::TRN2", SDT_AArch64Zip>;
 
-// Vector immedate moves
+// Vector immediate moves
 def AArch64movi_edit : SDNode<"AArch64ISD::MOVIedit", SDT_AArch64MOVIedit>;
 def AArch64movi_shift : SDNode<"AArch64ISD::MOVIshift", SDT_AArch64MOVIshift>;
 def AArch64movi_msl : SDNode<"AArch64ISD::MOVImsl", SDT_AArch64MOVIshift>;
@@ -1475,7 +1487,7 @@ let Predicates = [HasPCDPHINT] in {
 }
 
 // In order to be able to write readable assembly, LLVM should accept assembly
-// inputs that use Branch Target Indentification mnemonics, even with BTI disabled.
+// inputs that use Branch Target Identification mnemonics, even with BTI disabled.
 // However, in order to be compatible with other assemblers (e.g. GAS), LLVM
 // should not emit these mnemonics unless BTI is enabled.
 def : InstAlias<"bti",  (HINT 32), 0>;
@@ -1698,6 +1710,11 @@ multiclass SIMDSUDOTIndex {
 }
 
 defm SUDOTlane : SIMDSUDOTIndex;
+
+def : Pat<(v2i32 (partial_reduce_sumla v2i32:$Acc, v8i8:$LHS, v8i8:$RHS)),
+              (USDOTv8i8 $Acc, $RHS, $LHS)>;
+def : Pat<(v4i32 (partial_reduce_sumla v4i32:$Acc, v16i8:$LHS, v16i8:$RHS)),
+              (USDOTv16i8 $Acc, $RHS, $LHS)>;
 
 }
 
@@ -5572,6 +5589,9 @@ let isPseudo = 1 in {
   def SEH_PACSignLR : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_SaveAnyRegQP : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$reg1, i32imm:$offs), []>, Sched<[]>;
   def SEH_SaveAnyRegQPX : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$reg1, i32imm:$offs), []>, Sched<[]>;
+  def SEH_AllocZ : Pseudo<(outs), (ins i32imm:$offs), []>, Sched<[]>;
+  def SEH_SaveZReg : Pseudo<(outs), (ins i32imm:$reg, i32imm:$offs), []>, Sched<[]>;
+  def SEH_SavePReg : Pseudo<(outs), (ins i32imm:$reg, i32imm:$offs), []>, Sched<[]>;
 }
 
 // Pseudo instructions for Windows EH
@@ -5968,12 +5988,12 @@ defm SMAXP    : SIMDThreeSameVectorBHS<0,0b10100,"smaxp", int_aarch64_neon_smaxp
 defm SMAX     : SIMDThreeSameVectorBHS<0,0b01100,"smax", smax>;
 defm SMINP    : SIMDThreeSameVectorBHS<0,0b10101,"sminp", int_aarch64_neon_sminp>;
 defm SMIN     : SIMDThreeSameVectorBHS<0,0b01101,"smin", smin>;
-defm SQADD    : SIMDThreeSameVector<0,0b00001,"sqadd", int_aarch64_neon_sqadd>;
+defm SQADD    : SIMDThreeSameVector<0,0b00001,"sqadd", saddsat>;
 defm SQDMULH  : SIMDThreeSameVectorHS<0,0b10110,"sqdmulh",int_aarch64_neon_sqdmulh>;
 defm SQRDMULH : SIMDThreeSameVectorHS<1,0b10110,"sqrdmulh",int_aarch64_neon_sqrdmulh>;
 defm SQRSHL   : SIMDThreeSameVector<0,0b01011,"sqrshl", int_aarch64_neon_sqrshl>;
 defm SQSHL    : SIMDThreeSameVector<0,0b01001,"sqshl", int_aarch64_neon_sqshl>;
-defm SQSUB    : SIMDThreeSameVector<0,0b00101,"sqsub", int_aarch64_neon_sqsub>;
+defm SQSUB    : SIMDThreeSameVector<0,0b00101,"sqsub", ssubsat>;
 defm SRHADD   : SIMDThreeSameVectorBHS<0,0b00010,"srhadd", avgceils>;
 defm SRSHL    : SIMDThreeSameVector<0,0b01010,"srshl", int_aarch64_neon_srshl>;
 defm SSHL     : SIMDThreeSameVector<0,0b01000,"sshl", int_aarch64_neon_sshl>;
@@ -5987,10 +6007,10 @@ defm UMAXP    : SIMDThreeSameVectorBHS<1,0b10100,"umaxp", int_aarch64_neon_umaxp
 defm UMAX     : SIMDThreeSameVectorBHS<1,0b01100,"umax", umax>;
 defm UMINP    : SIMDThreeSameVectorBHS<1,0b10101,"uminp", int_aarch64_neon_uminp>;
 defm UMIN     : SIMDThreeSameVectorBHS<1,0b01101,"umin", umin>;
-defm UQADD    : SIMDThreeSameVector<1,0b00001,"uqadd", int_aarch64_neon_uqadd>;
+defm UQADD    : SIMDThreeSameVector<1,0b00001,"uqadd", uaddsat>;
 defm UQRSHL   : SIMDThreeSameVector<1,0b01011,"uqrshl", int_aarch64_neon_uqrshl>;
 defm UQSHL    : SIMDThreeSameVector<1,0b01001,"uqshl", int_aarch64_neon_uqshl>;
-defm UQSUB    : SIMDThreeSameVector<1,0b00101,"uqsub", int_aarch64_neon_uqsub>;
+defm UQSUB    : SIMDThreeSameVector<1,0b00101,"uqsub", usubsat>;
 defm URHADD   : SIMDThreeSameVectorBHS<1,0b00010,"urhadd", avgceilu>;
 defm URSHL    : SIMDThreeSameVector<1,0b01010,"urshl", int_aarch64_neon_urshl>;
 defm USHL     : SIMDThreeSameVector<1,0b01000,"ushl", int_aarch64_neon_ushl>;
@@ -5998,12 +6018,6 @@ defm SQRDMLAH : SIMDThreeSameVectorSQRDMLxHTiedHS<1,0b10000,"sqrdmlah",
                                                   int_aarch64_neon_sqrdmlah>;
 defm SQRDMLSH : SIMDThreeSameVectorSQRDMLxHTiedHS<1,0b10001,"sqrdmlsh",
                                                     int_aarch64_neon_sqrdmlsh>;
-
-// Extra saturate patterns, other than the intrinsics matches above
-defm : SIMDThreeSameVectorExtraPatterns<"SQADD", saddsat>;
-defm : SIMDThreeSameVectorExtraPatterns<"UQADD", uaddsat>;
-defm : SIMDThreeSameVectorExtraPatterns<"SQSUB", ssubsat>;
-defm : SIMDThreeSameVectorExtraPatterns<"UQSUB", usubsat>;
 
 defm AND : SIMDLogicalThreeVector<0, 0b00, "and", and>;
 defm BIC : SIMDLogicalThreeVector<0, 0b01, "bic",
@@ -6342,19 +6356,19 @@ defm FCMGT    : SIMDThreeScalarFPCmp<1, 1, 0b100, "fcmgt", AArch64fcmgt>;
 defm FMULX    : SIMDFPThreeScalar<0, 0, 0b011, "fmulx", int_aarch64_neon_fmulx, HasNEONandIsStreamingSafe>;
 defm FRECPS   : SIMDFPThreeScalar<0, 0, 0b111, "frecps", int_aarch64_neon_frecps, HasNEONandIsStreamingSafe>;
 defm FRSQRTS  : SIMDFPThreeScalar<0, 1, 0b111, "frsqrts", int_aarch64_neon_frsqrts, HasNEONandIsStreamingSafe>;
-defm SQADD    : SIMDThreeScalarBHSD<0, 0b00001, "sqadd", int_aarch64_neon_sqadd>;
+defm SQADD    : SIMDThreeScalarBHSD<0, 0b00001, "sqadd", int_aarch64_neon_sqadd, saddsat>;
 defm SQDMULH  : SIMDThreeScalarHS<  0, 0b10110, "sqdmulh", int_aarch64_neon_sqdmulh>;
 defm SQRDMULH : SIMDThreeScalarHS<  1, 0b10110, "sqrdmulh", int_aarch64_neon_sqrdmulh>;
-defm SQRSHL   : SIMDThreeScalarBHSD<0, 0b01011, "sqrshl",int_aarch64_neon_sqrshl>;
-defm SQSHL    : SIMDThreeScalarBHSD<0, 0b01001, "sqshl", int_aarch64_neon_sqshl>;
-defm SQSUB    : SIMDThreeScalarBHSD<0, 0b00101, "sqsub", int_aarch64_neon_sqsub>;
+defm SQRSHL   : SIMDThreeScalarBHSD<0, 0b01011, "sqrshl", int_aarch64_neon_sqrshl, int_aarch64_neon_sqrshl>;
+defm SQSHL    : SIMDThreeScalarBHSD<0, 0b01001, "sqshl", int_aarch64_neon_sqshl, int_aarch64_neon_sqshl>;
+defm SQSUB    : SIMDThreeScalarBHSD<0, 0b00101, "sqsub", int_aarch64_neon_sqsub, ssubsat>;
 defm SRSHL    : SIMDThreeScalarD<   0, 0b01010, "srshl", int_aarch64_neon_srshl>;
 defm SSHL     : SIMDThreeScalarD<   0, 0b01000, "sshl", int_aarch64_neon_sshl>;
 defm SUB      : SIMDThreeScalarD<   1, 0b10000, "sub", sub>;
-defm UQADD    : SIMDThreeScalarBHSD<1, 0b00001, "uqadd", int_aarch64_neon_uqadd>;
-defm UQRSHL   : SIMDThreeScalarBHSD<1, 0b01011, "uqrshl",int_aarch64_neon_uqrshl>;
-defm UQSHL    : SIMDThreeScalarBHSD<1, 0b01001, "uqshl", int_aarch64_neon_uqshl>;
-defm UQSUB    : SIMDThreeScalarBHSD<1, 0b00101, "uqsub", int_aarch64_neon_uqsub>;
+defm UQADD    : SIMDThreeScalarBHSD<1, 0b00001, "uqadd", int_aarch64_neon_uqadd, uaddsat>;
+defm UQRSHL   : SIMDThreeScalarBHSD<1, 0b01011, "uqrshl", int_aarch64_neon_uqrshl, int_aarch64_neon_uqrshl>;
+defm UQSHL    : SIMDThreeScalarBHSD<1, 0b01001, "uqshl", int_aarch64_neon_uqshl, int_aarch64_neon_uqshl>;
+defm UQSUB    : SIMDThreeScalarBHSD<1, 0b00101, "uqsub", int_aarch64_neon_uqsub, usubsat>;
 defm URSHL    : SIMDThreeScalarD<   1, 0b01010, "urshl", int_aarch64_neon_urshl>;
 defm USHL     : SIMDThreeScalarD<   1, 0b01000, "ushl", int_aarch64_neon_ushl>;
 let Predicates = [HasRDM] in {
@@ -6720,10 +6734,8 @@ defm SMLAL   : SIMDLongThreeVectorTiedBHS<0, 0b1000, "smlal",
 defm SMLSL   : SIMDLongThreeVectorTiedBHS<0, 0b1010, "smlsl",
     TriOpFrag<(sub node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
 defm SMULL   : SIMDLongThreeVectorBHS<0, 0b1100, "smull", AArch64smull>;
-defm SQDMLAL : SIMDLongThreeVectorSQDMLXTiedHS<0, 0b1001, "sqdmlal",
-                                               int_aarch64_neon_sqadd>;
-defm SQDMLSL : SIMDLongThreeVectorSQDMLXTiedHS<0, 0b1011, "sqdmlsl",
-                                               int_aarch64_neon_sqsub>;
+defm SQDMLAL : SIMDLongThreeVectorSQDMLXTiedHS<0, 0b1001, "sqdmlal", saddsat>;
+defm SQDMLSL : SIMDLongThreeVectorSQDMLXTiedHS<0, 0b1011, "sqdmlsl", ssubsat>;
 defm SQDMULL : SIMDLongThreeVectorHS<0, 0b1101, "sqdmull",
                                      int_aarch64_neon_sqdmull>;
 defm SSUBL   : SIMDLongThreeVectorBHS<0, 0b0010, "ssubl",
@@ -7161,6 +7173,16 @@ def : Pat<(v8bf16 (AArch64dup (bf16 FPR16:$Rn))),
             (INSERT_SUBREG (v8i16 (IMPLICIT_DEF)), FPR16:$Rn, hsub),
             (i64 0)))>;
 
+// Patterns for importing fpr i8 G_DUP under GISel.
+def : Pat<(v8i8 (AArch64dup (i8 FPR8:$Rn))),
+          (v8i8 (DUPv8i8lane
+            (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)), FPR8:$Rn, bsub),
+            (i64 0)))>;
+def : Pat<(v16i8 (AArch64dup (i8 FPR8:$Rn))),
+          (v16i8 (DUPv16i8lane
+            (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)), FPR8:$Rn, bsub),
+            (i64 0)))>;
+
 def : Pat<(v4f16 (AArch64duplane16 (v8f16 V128:$Rn), VectorIndexH:$imm)),
           (DUPv4i16lane V128:$Rn, VectorIndexH:$imm)>;
 def : Pat<(v8f16 (AArch64duplane16 (v8f16 V128:$Rn), VectorIndexH:$imm)),
@@ -7274,6 +7296,13 @@ def : Pat<(v4i16 (vec_ins_or_scal_vec GPR32:$Rn)),
           (SUBREG_TO_REG (i32 0),
                          (f32 (COPY_TO_REGCLASS GPR32:$Rn, FPR32)), ssub)>;
 
+def : Pat<(v2i32 (vec_ins_or_scal_vec GPR32:$Rn)),
+          (INSERT_SUBREG (v2i32 (IMPLICIT_DEF)), GPR32:$Rn, ssub)>;
+def : Pat<(v4i32 (vec_ins_or_scal_vec GPR32:$Rn)),
+          (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), GPR32:$Rn, ssub)>;
+def : Pat<(v2i64 (vec_ins_or_scal_vec GPR64:$Rn)),
+          (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)), GPR64:$Rn, dsub)>;
+
 def : Pat<(v4f16 (vec_ins_or_scal_vec (f16 FPR16:$Rn))),
           (INSERT_SUBREG (v4f16 (IMPLICIT_DEF)), FPR16:$Rn, hsub)>;
 def : Pat<(v8f16 (vec_ins_or_scal_vec (f16 FPR16:$Rn))),
@@ -7283,16 +7312,6 @@ def : Pat<(v4bf16 (vec_ins_or_scal_vec (bf16 FPR16:$Rn))),
           (INSERT_SUBREG (v4bf16 (IMPLICIT_DEF)), FPR16:$Rn, hsub)>;
 def : Pat<(v8bf16 (vec_ins_or_scal_vec (bf16 FPR16:$Rn))),
           (INSERT_SUBREG (v8bf16 (IMPLICIT_DEF)), FPR16:$Rn, hsub)>;
-
-def : Pat<(v2i32 (vec_ins_or_scal_vec (i32 FPR32:$Rn))),
-            (v2i32 (INSERT_SUBREG (v2i32 (IMPLICIT_DEF)),
-                                  (i32 FPR32:$Rn), ssub))>;
-def : Pat<(v4i32 (vec_ins_or_scal_vec (i32 FPR32:$Rn))),
-            (v4i32 (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)),
-                                  (i32 FPR32:$Rn), ssub))>;
-def : Pat<(v2i64 (vec_ins_or_scal_vec (i64 FPR64:$Rn))),
-            (v2i64 (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)),
-                                  (i64 FPR64:$Rn), dsub))>;
 
 def : Pat<(v4f16 (vec_ins_or_scal_vec (f16 FPR16:$Rn))),
           (INSERT_SUBREG (v4f16 (IMPLICIT_DEF)), FPR16:$Rn, hsub)>;
@@ -8282,9 +8301,9 @@ defm SMLAL : SIMDVectorIndexedLongSDTied<0, 0b0010, "smlal",
 defm SMLSL : SIMDVectorIndexedLongSDTied<0, 0b0110, "smlsl",
     TriOpFrag<(sub node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
 defm SMULL : SIMDVectorIndexedLongSD<0, 0b1010, "smull", AArch64smull>;
-defm SQDMLAL : SIMDIndexedLongSQDMLXSDTied<0, 0b0011, "sqdmlal",
+defm SQDMLAL : SIMDIndexedLongSQDMLXSDTied<0, 0b0011, "sqdmlal", saddsat,
                                            int_aarch64_neon_sqadd>;
-defm SQDMLSL : SIMDIndexedLongSQDMLXSDTied<0, 0b0111, "sqdmlsl",
+defm SQDMLSL : SIMDIndexedLongSQDMLXSDTied<0, 0b0111, "sqdmlsl", ssubsat,
                                            int_aarch64_neon_sqsub>;
 defm SQRDMLAH : SIMDIndexedSQRDMLxHSDTied<1, 0b1101, "sqrdmlah",
                                           int_aarch64_neon_sqrdmlah>;

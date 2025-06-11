@@ -18,7 +18,7 @@ define void @test(ptr %src, i8 %c, i64 %size) {
   ret void
 }
 
-; Differing sizes, so left as it is.
+; Differing sizes, but would be UB if size1 < size2 since the memcpy would reference outside of the first alloca
 define void @negative_test(ptr %src, i8 %c, i64 %size1, i64 %size2) {
 ; CHECK-LABEL: @negative_test(
 ; CHECK-NEXT:    [[DST1:%.*]] = alloca i8, i64 [[SIZE1:%.*]], align 1

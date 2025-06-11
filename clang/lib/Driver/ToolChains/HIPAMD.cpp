@@ -8,10 +8,10 @@
 
 #include "HIPAMD.h"
 #include "AMDGPU.h"
-#include "CommonArgs.h"
 #include "HIPUtility.h"
 #include "SPIRV.h"
 #include "clang/Basic/Cuda.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/InputInfo.h"

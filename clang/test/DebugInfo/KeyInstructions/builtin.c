@@ -64,6 +64,7 @@ void fun() {
 // CHECK-NEXT: %4 = trunc i32 %3 to i8, !dbg [[G15R2:!.*]]
 // CHECK-NEXT: call void @llvm.memset{{.*}}, !dbg [[G15R1:!.*]]
     __builtin_memset(f4, v, sizeof(float) * 4);
+// CHECK: ret{{.*}}, !dbg [[RET:!.*]]
 }
 
 // CHECK: [[G1R2]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 2)
@@ -86,3 +87,4 @@ void fun() {
 // CHECK: [[G15R3]] = !DILocation({{.*}}, atomGroup: 15, atomRank: 3)
 // CHECK: [[G15R2]] = !DILocation({{.*}}, atomGroup: 15, atomRank: 2)
 // CHECK: [[G15R1]] = !DILocation({{.*}}, atomGroup: 15, atomRank: 1)
+// CHECK: [[RET]] = !DILocation({{.*}}, atomGroup: 16, atomRank: 1)

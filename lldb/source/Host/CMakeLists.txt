@@ -142,6 +142,7 @@ else()
     add_host_subdirectory(aix
       aix/Host.cpp
       aix/HostInfoAIX.cpp
+      aix/Support.cpp
       )
   endif()
 endif()
@@ -176,14 +177,15 @@ endif()
 add_lldb_library(lldbHost NO_PLUGIN_DEPENDENCIES
   ${HOST_SOURCES}
 
+  ADDITIONAL_HEADER_DIRS
+    ${LLDB_INCLUDE_DIR}/lldb/Host
+  LINK_COMPONENTS
+    Object
+    Support
   LINK_LIBS
     lldbUtility
     ${EXTRA_LIBS}
     ${LLDBObjCLibs}
     ${LLDB_LIBEDIT_LIBS}
-
-  LINK_COMPONENTS
-    Object
-    Support
   )
 

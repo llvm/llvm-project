@@ -10,7 +10,7 @@
 
 // <forward_list>
 
-// iterator insert_after(const_iterator p, initializer_list<value_type> il);
+// iterator insert_after(const_iterator p, initializer_list<value_type> il); // constexpr since C++26
 
 #include <forward_list>
 #include <cassert>
@@ -18,7 +18,7 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef int T;
     typedef std::forward_list<T> C;
@@ -69,6 +69,15 @@ int main(int, char**) {
     assert(*std::next(c.begin(), 3) == 1);
     assert(*std::next(c.begin(), 4) == 2);
   }
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

@@ -399,3 +399,54 @@ define i8 @sub_const_on_lhs_negative(i8 %x) {
   %s = select i1 %cmp, i8 %sub, i8 50
   ret i8 %s
 }
+
+define i8 @smin_ugt(i8 %x) {
+; CHECK-LABEL: define i8 @smin_ugt(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[S:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 50)
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %smin = call i8 @llvm.smin.i8(i8 %x, i8 50)
+  %cmp = icmp ugt i8 %x, 100
+  %s = select i1 %cmp, i8 50, i8 %smin
+  ret i8 %s
+}
+
+define i8 @smax_ugt(i8 %x) {
+; CHECK-LABEL: define i8 @smax_ugt(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 100)
+; CHECK-NEXT:    [[S:%.*]] = call i8 @llvm.smax.i8(i8 [[TMP1]], i8 50)
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %smax = call i8 @llvm.smax.i8(i8 %x, i8 50)
+  %cmp = icmp ugt i8 %x, 100
+  %s = select i1 %cmp, i8 100, i8 %smax
+  ret i8 %s
+}
+
+define i8 @umin_slt(i8 %x) {
+; CHECK-LABEL: define i8 @umin_slt(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 0)
+; CHECK-NEXT:    [[S:%.*]] = call i8 @llvm.umin.i8(i8 [[TMP1]], i8 100)
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %cmp = icmp slt i8 %x, 0
+  %umin = tail call i8 @llvm.umin.i8(i8 %x, i8 100)
+  %s = select i1 %cmp, i8 0, i8 %umin
+  ret i8 %s
+}
+
+define i8 @umax_sgt(i8 %x) {
+; CHECK-LABEL: define i8 @umax_sgt(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[X]], i8 100)
+; CHECK-NEXT:    [[S:%.*]] = call i8 @llvm.umax.i8(i8 [[TMP1]], i8 50)
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %cmp = icmp sgt i8 %x, 100
+  %umax = tail call i8 @llvm.umax.i8(i8 %x, i8 50)
+  %s = select i1 %cmp, i8 100, i8 %umax
+  ret i8 %s
+}

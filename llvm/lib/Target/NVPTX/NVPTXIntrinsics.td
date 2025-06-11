@@ -997,6 +997,16 @@ def INT_NVVM_NANOSLEEP_I : BasicNVPTXInst<(outs), (ins i32imm:$i), "nanosleep.u3
 def INT_NVVM_NANOSLEEP_R : BasicNVPTXInst<(outs), (ins Int32Regs:$i), "nanosleep.u32",
                              [(int_nvvm_nanosleep i32:$i)]>,
         Requires<[hasPTX<63>, hasSM<70>]>;
+
+let hasSideEffects = 1 in {
+// Performance Monitor events
+def INT_PM_EVENT_MASK : BasicNVPTXInst<(outs),
+                        (ins i16imm:$mask),
+                        "pmevent.mask",
+                        [(int_nvvm_pm_event_mask timm:$mask)]>,
+                        Requires<[hasSM<20>, hasPTX<30>]>;
+} // hasSideEffects
+
 //
 // Min Max
 //

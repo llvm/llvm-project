@@ -17,7 +17,7 @@ define i32 @addiw(i32 %a) {
 ; NO-STRIP-LABEL: addiw:
 ; NO-STRIP:       # %bb.0:
 ; NO-STRIP-NEXT:    lui a1, 1
-; NO-STRIP-NEXT:    addiw a1, a1, -1
+; NO-STRIP-NEXT:    addi a1, a1, -1
 ; NO-STRIP-NEXT:    addw a0, a0, a1
 ; NO-STRIP-NEXT:    ret
 ;

@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/Binary.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/TextAPI/Architecture.h"
@@ -25,7 +26,7 @@ namespace object {
 
 class TapiFile;
 
-class TapiUniversal : public Binary {
+class LLVM_ABI TapiUniversal : public Binary {
 public:
   class ObjectForArch {
     const TapiUniversal *Parent;
@@ -65,7 +66,7 @@ public:
       return Parent->ParsedFile->getInstallName() == getInstallName();
     }
 
-    Expected<std::unique_ptr<TapiFile>> getAsObjectFile() const;
+    LLVM_ABI Expected<std::unique_ptr<TapiFile>> getAsObjectFile() const;
   };
 
   class object_iterator {

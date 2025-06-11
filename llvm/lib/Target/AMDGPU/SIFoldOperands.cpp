@@ -374,6 +374,12 @@ bool SIFoldOperandsImpl::canUseImmWithOpSel(FoldCandidate &Fold) const {
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
+    // VOP3 packed instructions ignore op_sel source modifiers, we cannot encode
+    // two different constants.
+    if ((TSFlags & SIInstrFlags::VOP3) && !(TSFlags & SIInstrFlags::VOP3P) &&
+        static_cast<uint16_t>(Fold.ImmToFold) !=
+            static_cast<uint16_t>(Fold.ImmToFold >> 16))
+      return false;
     break;
   }
 
@@ -1669,6 +1675,12 @@ bool SIFoldOperandsImpl::foldInstOperand(MachineInstr &MI,
       LLVM_DEBUG(dbgs() << "Folded source from " << MI << " into OpNo "
                         << static_cast<int>(Fold.UseOpNo) << " of "
                         << *Fold.UseMI);
+
+      if (Fold.isImm() && tryConstantFoldOp(Fold.UseMI)) {
+        LLVM_DEBUG(dbgs() << "Constant folded " << *Fold.UseMI);
+        Changed = true;
+      }
+
     } else if (Fold.Commuted) {
       // Restoring instruction's original operand order if fold has failed.
       TII->commuteInstruction(*Fold.UseMI, false);

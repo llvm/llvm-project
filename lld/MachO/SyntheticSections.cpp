@@ -14,6 +14,7 @@
 #include "InputFiles.h"
 #include "ObjC.h"
 #include "OutputSegment.h"
+#include "SectionPriorities.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 
@@ -1760,26 +1761,25 @@ void DeduplicatedCStringSection::finalizeContents() {
     }
   }
 
-  // Assign an offset for each string and save it to the corresponding
+  // Sort the strings for performance and compression size win, and then
+  // assign an offset for each string and save it to the corresponding
   // StringPieces for easy access.
-  for (CStringInputSection *isec : inputs) {
-    for (const auto &[i, piece] : llvm::enumerate(isec->pieces)) {
-      if (!piece.live)
-        continue;
-      auto s = isec->getCachedHashStringRef(i);
-      auto it = stringOffsetMap.find(s);
-      assert(it != stringOffsetMap.end());
-      StringOffset &offsetInfo = it->second;
-      if (offsetInfo.outSecOff == UINT64_MAX) {
-        offsetInfo.outSecOff =
-            alignToPowerOf2(size, 1ULL << offsetInfo.trailingZeros);
-        size =
-            offsetInfo.outSecOff + s.size() + 1; // account for null terminator
-      }
-      piece.outSecOff = offsetInfo.outSecOff;
+  for (auto &[isec, i] : priorityBuilder.buildCStringPriorities(inputs)) {
+    auto &piece = isec->pieces[i];
+    auto s = isec->getCachedHashStringRef(i);
+    auto it = stringOffsetMap.find(s);
+    assert(it != stringOffsetMap.end());
+    lld::macho::DeduplicatedCStringSection::StringOffset &offsetInfo =
+        it->second;
+    if (offsetInfo.outSecOff == UINT64_MAX) {
+      offsetInfo.outSecOff =
+          alignToPowerOf2(size, 1ULL << offsetInfo.trailingZeros);
+      size = offsetInfo.outSecOff + s.size() + 1; // account for null terminator
     }
-    isec->isFinal = true;
+    piece.outSecOff = offsetInfo.outSecOff;
   }
+  for (CStringInputSection *isec : inputs)
+    isec->isFinal = true;
 }
 
 void DeduplicatedCStringSection::writeTo(uint8_t *buf) const {

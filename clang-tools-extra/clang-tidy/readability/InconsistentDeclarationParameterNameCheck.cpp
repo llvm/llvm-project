@@ -131,8 +131,8 @@ findDifferingParamsInDeclaration(const FunctionDecl *ParameterSourceDeclaration,
 
 InconsistentDeclarationsContainer
 findInconsistentDeclarations(const FunctionDecl *OriginalDeclaration,
-                            const FunctionDecl *ParameterSourceDeclaration,
-                            SourceManager &SM, bool Strict) {
+                             const FunctionDecl *ParameterSourceDeclaration,
+                             SourceManager &SM, bool Strict) {
   InconsistentDeclarationsContainer InconsistentDeclarations;
   SourceLocation ParameterSourceLocation =
       ParameterSourceDeclaration->getLocation();

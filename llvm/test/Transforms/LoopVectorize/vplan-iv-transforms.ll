@@ -38,7 +38,7 @@ define void @iv_no_binary_op_in_descriptor(i1 %c, ptr %dst) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME:%.+]]> = resume-phi vp<[[VEC_TC]]>, ir<0>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME:%.+]]> = phi [ vp<[[VEC_TC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop.header>:

@@ -636,14 +636,17 @@ SBTarget::ResolveSymbolContextForAddress(const SBAddress &addr,
                                          uint32_t resolve_scope) {
   LLDB_INSTRUMENT_VA(this, addr, resolve_scope);
 
-  SBSymbolContext sc;
+  SBSymbolContext sb_sc;
   SymbolContextItem scope = static_cast<SymbolContextItem>(resolve_scope);
   if (addr.IsValid()) {
-    if (TargetSP target_sp = GetSP())
+    if (TargetSP target_sp = GetSP()) {
+      lldb_private::SymbolContext &sc = sb_sc.ref();
+      sc.target_sp = target_sp;
       target_sp->GetImages().ResolveSymbolContextForAddress(addr.ref(), scope,
-                                                            sc.ref());
+                                                            sc);
+    }
   }
-  return sc;
+  return sb_sc;
 }
 
 size_t SBTarget::ReadMemory(const SBAddress addr, void *buf, size_t size,
@@ -1960,7 +1963,17 @@ lldb::SBInstructionList SBTarget::ReadInstructions(lldb::SBAddress base_addr,
       const size_t bytes_read =
           target_sp->ReadMemory(*addr_ptr, data.GetBytes(), data.GetByteSize(),
                                 error, force_live_memory, &load_addr);
+
       const bool data_from_file = load_addr == LLDB_INVALID_ADDRESS;
+      if (!flavor_string || flavor_string[0] == '\0') {
+        // FIXME - we don't have the mechanism in place to do per-architecture
+        // settings.  But since we know that for now we only support flavors on
+        // x86 & x86_64,
+        const llvm::Triple::ArchType arch =
+            target_sp->GetArchitecture().GetTriple().getArch();
+        if (arch == llvm::Triple::x86 || arch == llvm::Triple::x86_64)
+          flavor_string = target_sp->GetDisassemblyFlavor();
+      }
       sb_instructions.SetDisassembler(Disassembler::DisassembleBytes(
           target_sp->GetArchitecture(), nullptr, flavor_string,
           target_sp->GetDisassemblyCPU(), target_sp->GetDisassemblyFeatures(),
@@ -2017,7 +2030,16 @@ SBTarget::GetInstructionsWithFlavor(lldb::SBAddress base_addr,
     if (base_addr.get())
       addr = *base_addr.get();
 
-    const bool data_from_file = true;
+    constexpr bool data_from_file = true;
+    if (!flavor_string || flavor_string[0] == '\0') {
+      // FIXME - we don't have the mechanism in place to do per-architecture
+      // settings.  But since we know that for now we only support flavors on
+      // x86 & x86_64,
+      const llvm::Triple::ArchType arch =
+          target_sp->GetArchitecture().GetTriple().getArch();
+      if (arch == llvm::Triple::x86 || arch == llvm::Triple::x86_64)
+        flavor_string = target_sp->GetDisassemblyFlavor();
+    }
 
     sb_instructions.SetDisassembler(Disassembler::DisassembleBytes(
         target_sp->GetArchitecture(), nullptr, flavor_string,

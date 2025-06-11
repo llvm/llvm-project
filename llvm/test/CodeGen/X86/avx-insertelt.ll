@@ -221,10 +221,9 @@ define <8 x float> @insert_f32_firstelts(<8 x float> %x, float %s) {
 define <4 x double> @insert_f64_firstelts(<4 x double> %x, double %s) {
 ; AVX-LABEL: insert_f64_firstelts:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vblendps {{.*#+}} xmm2 = xmm1[0,1],xmm0[2,3]
-; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
-; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
+; AVX-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
+; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
+; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3],ymm1[4,5],ymm0[6,7]
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: insert_f64_firstelts:

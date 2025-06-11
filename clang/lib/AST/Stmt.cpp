@@ -1154,12 +1154,12 @@ void SwitchStmt::setConditionVariable(const ASTContext &Ctx, VarDecl *V) {
          "This switch statement has no storage for a condition variable!");
 
   if (!V) {
-    getTrailingObjects<Stmt *>()[varOffset()] = nullptr;
+    getTrailingObjects()[varOffset()] = nullptr;
     return;
   }
 
   SourceRange VarRange = V->getSourceRange();
-  getTrailingObjects<Stmt *>()[varOffset()] = new (Ctx)
+  getTrailingObjects()[varOffset()] = new (Ctx)
       DeclStmt(DeclGroupRef(V), VarRange.getBegin(), VarRange.getEnd());
 }
 
@@ -1215,12 +1215,12 @@ void WhileStmt::setConditionVariable(const ASTContext &Ctx, VarDecl *V) {
          "This while statement has no storage for a condition variable!");
 
   if (!V) {
-    getTrailingObjects<Stmt *>()[varOffset()] = nullptr;
+    getTrailingObjects()[varOffset()] = nullptr;
     return;
   }
 
   SourceRange VarRange = V->getSourceRange();
-  getTrailingObjects<Stmt *>()[varOffset()] = new (Ctx)
+  getTrailingObjects()[varOffset()] = new (Ctx)
       DeclStmt(DeclGroupRef(V), VarRange.getBegin(), VarRange.getEnd());
 }
 

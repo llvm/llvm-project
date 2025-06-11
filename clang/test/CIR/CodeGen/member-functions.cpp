@@ -13,6 +13,7 @@ void C::f() {}
 // CIR: cir.func @_ZN1C1fEv(%[[THIS_ARG:.*]]: !cir.ptr<!rec_C>
 // CIR:   %[[THIS_ADDR:.*]] = cir.alloca !cir.ptr<!rec_C>, !cir.ptr<!cir.ptr<!rec_C>>, ["this", init]
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ADDR]] : !cir.ptr<!rec_C>, !cir.ptr<!cir.ptr<!rec_C>>
+// CIR:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]] : !cir.ptr<!cir.ptr<!rec_C>>, !cir.ptr<!rec_C>
 // CIR:   cir.return
 // CIR: }
 
@@ -23,8 +24,9 @@ void C::f2(int a, int b) {}
 // CIR-NEXT:   %[[A_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
 // CIR-NEXT:   %[[B_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
 // CIR-NEXT:   cir.store %[[THIS_ARG]], %[[THIS_ADDR]] : !cir.ptr<!rec_C>, !cir.ptr<!cir.ptr<!rec_C>>
-// CIR-NEXT:   cir.store %[[A_ARG]], %[[A_ADDR]] : !s32i, !cir.ptr<!s32i> loc(#loc12)
-// CIR-NEXT:   cir.store %[[B_ARG]], %[[B_ADDR]] : !s32i, !cir.ptr<!s32i> loc(#loc12)
+// CIR-NEXT:   cir.store %[[A_ARG]], %[[A_ADDR]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:   cir.store %[[B_ARG]], %[[B_ADDR]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]] : !cir.ptr<!cir.ptr<!rec_C>>, !cir.ptr<!rec_C>
 // CIR-NEXT:   cir.return
 // CIR-NEXT: }
 

@@ -186,6 +186,7 @@ static ClangTidyModuleRegistry::Add<ReadabilityModule>
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the ReadabilityModule.
+// NOLINTNEXTLINE(misc-use-internal-linkage)
 volatile int ReadabilityModuleAnchorSource = 0;
 
 } // namespace clang::tidy

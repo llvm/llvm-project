@@ -691,6 +691,7 @@ OpenACCModifierKind Parser::tryParseModifierList(OpenACCClauseKind CK) {
         .Case("alwaysout", OpenACCModifierKind::AlwaysOut)
         .Case("readonly", OpenACCModifierKind::Readonly)
         .Case("zero", OpenACCModifierKind::Zero)
+        .Case("capture", OpenACCModifierKind::Capture)
         .Default(OpenACCModifierKind::Invalid);
   };
 

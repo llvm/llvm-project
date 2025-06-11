@@ -34,7 +34,7 @@ static char ValidDatePatternChars[] = {
 // A string pattern is valid if all the letters(a-z, A-Z) in it belong to the
 // set of reserved characters. See:
 // https://www.unicode.org/reports/tr35/tr35.html#Invalid_Patterns
-bool isValidDatePattern(StringRef Pattern) {
+static bool isValidDatePattern(StringRef Pattern) {
   return llvm::all_of(Pattern, [](const auto &PatternChar) {
     return !isalpha(PatternChar) ||
            llvm::is_contained(ValidDatePatternChars, PatternChar);

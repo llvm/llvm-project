@@ -845,17 +845,43 @@ Serializer::prepareDenseElementsConstant(Location loc, Type constType,
     return 0;
   }
 
+  int64_t numberOfConstituents = shapedType.getDimSize(dim);
   uint32_t resultID = getNextID();
   SmallVector<uint32_t, 4> operands = {typeID, resultID};
-  operands.reserve(shapedType.getDimSize(dim) + 2);
   auto elementType = cast<spirv::CompositeType>(constType).getElementType(0);
-  for (int i = 0; i < shapedType.getDimSize(dim); ++i) {
-    index[dim] = i;
+
+  // "If the Result Type is a cooperative matrix type, then there must be only
+  // one Constituent, with scalar type matching the cooperative matrix Component
+  // Type, and all components of the matrix are initialized to that value."
+  // (https://github.khronos.org/SPIRV-Registry/extensions/KHR/SPV_KHR_cooperative_matrix.html)
+  if (isa<spirv::CooperativeMatrixType>(constType)) {
+    if (!valueAttr.isSplat()) {
+      emitError(
+          loc,
+          "cannot serialize a non-splat value for a cooperative matrix type");
+      return 0;
+    }
+    // numberOfConstituents is 1, so we only need one more elements in the
+    // SmallVector, so the total is 3 (1 + 2).
+    operands.reserve(3);
+    // We set dim directly to `shapedType.getRank()` so the recursive call
+    // directly returns the scalar type.
     if (auto elementID = prepareDenseElementsConstant(
-            loc, elementType, valueAttr, dim + 1, index)) {
+            loc, elementType, valueAttr, /*dim=*/shapedType.getRank(), index)) {
       operands.push_back(elementID);
     } else {
       return 0;
+    }
+  } else {
+    operands.reserve(numberOfConstituents + 2);
+    for (int i = 0; i < numberOfConstituents; ++i) {
+      index[dim] = i;
+      if (auto elementID = prepareDenseElementsConstant(
+              loc, elementType, valueAttr, dim + 1, index)) {
+        operands.push_back(elementID);
+      } else {
+        return 0;
+      }
     }
   }
   spirv::Opcode opcode = spirv::Opcode::OpConstantComposite;

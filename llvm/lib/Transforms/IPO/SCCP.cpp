@@ -76,10 +76,8 @@ static void findReturnsToZap(Function &F,
                if (!isa<CallBase>(U))
                  return true;
                if (U->getType()->isStructTy()) {
-                 return all_of(Solver.getStructLatticeValueFor(U),
-                               [](const ValueLatticeElement &LV) {
-                                 return !SCCPSolver::isOverdefined(LV);
-                               });
+                 return none_of(Solver.getStructLatticeValueFor(U),
+                                SCCPSolver::isOverdefined);
                }
 
                // We don't consider assume-like intrinsics to be actual address
