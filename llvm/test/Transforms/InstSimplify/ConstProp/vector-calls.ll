@@ -51,16 +51,16 @@ define <8 x i32> @fold_vector_interleave2() {
   ret <8 x i32> %1
 }
 
-define {<4 x i32>, <4 x i32>} @fold_vector_deinterleav2() {
-; CHECK-LABEL: define { <4 x i32>, <4 x i32> } @fold_vector_deinterleav2() {
+define {<4 x i32>, <4 x i32>} @fold_vector_deinterleave2() {
+; CHECK-LABEL: define { <4 x i32>, <4 x i32> } @fold_vector_deinterleave2() {
 ; CHECK-NEXT:    ret { <4 x i32>, <4 x i32> } { <4 x i32> <i32 1, i32 2, i32 3, i32 4>, <4 x i32> <i32 5, i32 6, i32 7, i32 8> }
 ;
   %1 = call {<4 x i32>, <4 x i32>} @llvm.vector.deinterleave2.v4i32.v8i32(<8 x i32> <i32 1, i32 5, i32 2, i32 6, i32 3, i32 7, i32 4, i32 8>)
   ret {<4 x i32>, <4 x i32>} %1
 }
 
-define {<vscale x 4 x i32>, <vscale x 4 x i32>} @fold_scalable_vector_deinterleav2() {
-; CHECK-LABEL: define { <vscale x 4 x i32>, <vscale x 4 x i32> } @fold_scalable_vector_deinterleav2() {
+define {<vscale x 4 x i32>, <vscale x 4 x i32>} @fold_scalable_vector_deinterleave2() {
+; CHECK-LABEL: define { <vscale x 4 x i32>, <vscale x 4 x i32> } @fold_scalable_vector_deinterleave2() {
 ; CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } zeroinitializer
 ;
   %1 = call {<vscale x 4 x i32>, <vscale x 4 x i32>} @llvm.vector.deinterleave2.v4i32.v8i32(<vscale x 8 x i32> zeroinitializer)
