@@ -42,9 +42,6 @@ public:
   void emitInstanceFunctionProlog(SourceLocation loc,
                                   CIRGenFunction &cgf) override;
 
-  void addImplicitStructorParams(CIRGenFunction &cgf, QualType &retTy,
-                                 FunctionArgList &params) override;
-
   void emitCXXConstructors(const clang::CXXConstructorDecl *d) override;
   void emitCXXStructor(clang::GlobalDecl gd) override;
 };
@@ -82,19 +79,6 @@ void CIRGenItaniumCXXABI::emitInstanceFunctionProlog(SourceLocation loc,
   }
 }
 
-void CIRGenItaniumCXXABI::addImplicitStructorParams(CIRGenFunction &cgf,
-                                                    QualType &retTY,
-                                                    FunctionArgList &params) {
-  const auto *md = cast<CXXMethodDecl>(cgf.curGD.getDecl());
-  assert(isa<CXXConstructorDecl>(md) || isa<CXXDestructorDecl>(md));
-
-  // Check if we need a VTT parameter as well.
-  if (needsVTTParameter(cgf.curGD)) {
-    cgf.cgm.errorNYI(cgf.curFuncDecl->getLocation(),
-                     "addImplicitStructorParams: VTT parameter");
-  }
-}
-
 void CIRGenItaniumCXXABI::emitCXXStructor(GlobalDecl gd) {
   auto *md = cast<CXXMethodDecl>(gd.getDecl());
   auto *cd = dyn_cast<CXXConstructorDecl>(md);
@@ -128,8 +112,9 @@ void CIRGenItaniumCXXABI::emitCXXConstructors(const CXXConstructorDecl *d) {
   }
 }
 
-/// Return whether the given global decl needs a VTT parameter, which it does if
-/// it's a base constructor or destructor with virtual bases.
+/// Return whether the given global decl needs a VTT (virtual table table)
+/// parameter, which it does if it's a base constructor or destructor with
+/// virtual bases.
 bool CIRGenItaniumCXXABI::needsVTTParameter(GlobalDecl gd) {
   auto *md = cast<CXXMethodDecl>(gd.getDecl());
 

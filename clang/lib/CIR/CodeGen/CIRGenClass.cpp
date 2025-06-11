@@ -22,11 +22,10 @@ using namespace clang;
 using namespace clang::CIRGen;
 
 /// Checks whether the given constructor is a valid subject for the
-/// complete-to-base constructor delgation optimization, i.e. emitting the
+/// complete-to-base constructor delegation optimization, i.e. emitting the
 /// complete constructor as a simple call to the base constructor.
 bool CIRGenFunction::isConstructorDelegationValid(
     const CXXConstructorDecl *ctor) {
-
   // Currently we disable the optimization for classes with virtual bases
   // because (1) the address of parameter variables need to be consistent across
   // all initializers but (2) the delegate function call necessarily creates a

@@ -527,6 +527,13 @@ void CIRGenFunction::emitConstructorBody(FunctionArgList &args) {
   // complete ctor and then delegate to the base ctor.
 
   assert(!cir::MissingFeatures::emitCtorPrologue());
+  if (ctor->isDelegatingConstructor()) {
+    // This will be handled in emitCtorPrologue, but we should emit a diagnostic
+    // rather than silently fail to delegate.
+    cgm.errorNYI(ctor->getSourceRange(),
+                 "emitConstructorBody: delegating ctor");
+    return;
+  }
 
   // TODO(cir): propagate this result via mlir::logical result. Just unreachable
   // now just to have it handled.
@@ -572,7 +579,7 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
     args.push_back(param);
 
   if (md && (isa<CXXConstructorDecl>(md) || isa<CXXDestructorDecl>(md)))
-    cgm.getCXXABI().addImplicitStructorParams(*this, retTy, args);
+    assert(!cir::MissingFeatures::cxxabiStructorImplicitParam());
 
   return retTy;
 }
