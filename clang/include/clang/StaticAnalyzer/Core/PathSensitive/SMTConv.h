@@ -572,15 +572,16 @@ public:
   // TODO: Refactor to put elsewhere
   static inline QualType getAPSIntType(ASTContext &Ctx,
                                        const llvm::APSInt &Int) {
-    QualType Ty = Ctx.getIntTypeForBitwidth(Int.getBitWidth(), Int.isSigned());
+    QualType Ty;
+    if (!(Ty = Ctx.getIntTypeForBitwidth(Int.getBitWidth(), Int.isSigned()))
+             .isNull())
+      return Ty;
     // If Ty is Null, could be because the original type was a _BitInt.
     // Get the bit size and round up to next power of 2, max char size
-    if (Ty.isNull()) {
-      unsigned CharTypeSize = Ctx.getTypeSize(Ctx.CharTy);
-      unsigned Pow2DestWidth =
-          std::max(llvm::bit_ceil(Int.getBitWidth()), CharTypeSize);
-      Ty = Ctx.getIntTypeForBitwidth(Pow2DestWidth, Int.isSigned());
-    }
+    unsigned CharTypeSize = Ctx.getTypeSize(Ctx.CharTy);
+    unsigned Pow2DestWidth =
+        std::max(llvm::bit_ceil(Int.getBitWidth()), CharTypeSize);
+    Ty = Ctx.getIntTypeForBitwidth(Pow2DestWidth, Int.isSigned());
     return Ty;
   }
 
@@ -594,15 +595,12 @@ public:
     // FIXME: This should be a cast from a 1-bit integer type to a boolean type,
     // but the former is not available in Clang. Instead, extend the APSInt
     // directly.
-    if (APSIntBitwidth == 1 && Ty.isNull()) {
-      NewInt = Int.extend(Ctx.getTypeSize(Ctx.BoolTy));
-      Ty = getAPSIntType(Ctx, NewInt);
-    } else if (!llvm::isPowerOf2_32(APSIntBitwidth) && !Ty.isNull()) {
-      NewInt = Int.extend(Ctx.getTypeSize(Ty));
-    } else
-      NewInt = Int;
-
-    return std::make_pair(NewInt, Ty);
+    if (APSIntBitwidth == 1 && Ty.isNull())
+      return {Int.extend(Ctx.getTypeSize(Ctx.BoolTy)),
+              getAPSIntType(Ctx, NewInt)};
+    if (!llvm::isPowerOf2_32(APSIntBitwidth) && !Ty.isNull())
+      return {Int.extend(Ctx.getTypeSize(Ty)), Ty};
+    return {Int, Ty};
   }
 
   // Perform implicit type conversion on binary symbolic expressions.
