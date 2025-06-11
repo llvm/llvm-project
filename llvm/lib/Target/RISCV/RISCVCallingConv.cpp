@@ -347,8 +347,9 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
     RISCVABI::ABI ABI = Subtarget.getTargetABI();
     if (HasCFBranch &&
         (ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E))
-      reportFatalUsageError("Nested functions with control flow protection are not "
-                            "usable with ILP32E or LP64E ABI.");
+      reportFatalUsageError(
+          "Nested functions with control flow protection are not "
+          "usable with ILP32E or LP64E ABI.");
     if (MCRegister Reg = State.AllocateReg(StaticChainReg)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
