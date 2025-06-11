@@ -12,9 +12,9 @@
 #ifndef LLVM_OBJECTYAML_DWARFEMITTER_H
 #define LLVM_OBJECTYAML_DWARFEMITTER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/TargetParser/Host.h"
