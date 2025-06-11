@@ -622,6 +622,8 @@ Improvements to Clang's diagnostics
 
 - Improved the FixIts for unused lambda captures.
 
+- Clang now suggests a fix-it to correct ``template`` in a template-template parameter with a missing ``<`` to ``typename``
+
 Improvements to Clang's time-trace
 ----------------------------------
 
