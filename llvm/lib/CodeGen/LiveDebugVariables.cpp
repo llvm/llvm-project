@@ -715,6 +715,7 @@ static void printExtendedName(raw_ostream &OS, const DINode *Node,
     Res = V->getName();
     Line = V->getLine();
   } else if (const auto *L = dyn_cast<const DILabel>(Node)) {
+    // XXX what are we doing here? Adjust it?
     Res = L->getName();
     Line = L->getLine();
   }

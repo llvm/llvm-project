@@ -1581,7 +1581,10 @@ private:
               ("__coro_resume_" + Twine(SuspendIndex)).str();
           DILocation& DILoc = *SuspendLoc.get();
           DILabel *ResumeLabel = DBuilder.createLabel(
-              DIS, LabelName, DILoc.getFile(), SuspendLoc.getLine());
+              DIS, LabelName, DILoc.getFile(), SuspendLoc.getLine(), SuspendLoc.getCol(),
+              /*IsArtificial=*/true,
+              /*CoroSuspendIdx=*/SuspendIndex,
+              /*AlwaysPreserve=*/false);
           DBuilder.insertLabel(ResumeLabel, &DILoc, ResumeBB->begin());
         }
       }
