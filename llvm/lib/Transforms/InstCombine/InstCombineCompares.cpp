@@ -1298,6 +1298,7 @@ Instruction *InstCombinerImpl::foldICmpWithZero(ICmpInst &Cmp) {
     // eq/ne (mul X, Y)) with (icmp eq/ne X/Y) and if X/Y is known non-zero that
     // will fold to a constant elsewhere.
   }
+
   return nullptr;
 }
 
