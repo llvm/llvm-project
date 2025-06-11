@@ -151,7 +151,7 @@ program acc_loop
 
 ! CHECK:      acc.loop private(@privatization_ref_10x10xf32 -> %{{.*}} : !fir.ref<!fir.array<10x10xf32>>, @privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
   ! When the induction variable is explicitly private - only a single private entry should be created.
   !$acc loop private(i)
@@ -161,7 +161,7 @@ program acc_loop
 
 ! CHECK:      acc.loop private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
   !$acc loop private(c, d)
   DO i = 1, n
@@ -170,7 +170,7 @@ program acc_loop
 
 ! CHECK:      acc.loop private(@privatization_ref_10x10xf32 -> %{{.*}} : !fir.ref<!fir.array<10x10xf32>>, @privatization_ref_10x10xf32 -> %{{.*}} : !fir.ref<!fir.array<10x10xf32>>, @privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
   !$acc loop private(c) private(d)
   DO i = 1, n
@@ -179,7 +179,7 @@ program acc_loop
 
 ! CHECK:      acc.loop private(@privatization_ref_10x10xf32 -> %{{.*}} : !fir.ref<!fir.array<10x10xf32>>, @privatization_ref_10x10xf32 -> %{{.*}} : !fir.ref<!fir.array<10x10xf32>>, @privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
   !$acc loop tile(2)
   DO i = 1, n
@@ -189,7 +189,7 @@ program acc_loop
 ! CHECK:      [[TILESIZE:%.*]] = arith.constant 2 : i32
 ! CHECK:      acc.loop {{.*}} tile({[[TILESIZE]] : i32}) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
  !$acc loop tile(*)
   DO i = 1, n
@@ -198,7 +198,7 @@ program acc_loop
 ! CHECK:      [[TILESIZEM1:%.*]] = arith.constant -1 : i32
 ! CHECK:      acc.loop {{.*}} tile({[[TILESIZEM1]] : i32}) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
   !$acc loop tile(2, 2)
   DO i = 1, n
@@ -211,7 +211,7 @@ program acc_loop
 ! CHECK:      [[TILESIZE2:%.*]] = arith.constant 2 : i32
 ! CHECK:      acc.loop {{.*}} tile({[[TILESIZE1]] : i32, [[TILESIZE2]] : i32}) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
   !$acc loop tile(tileSize)
   DO i = 1, n
@@ -220,7 +220,7 @@ program acc_loop
 
 ! CHECK:      acc.loop {{.*}} tile({%{{.*}} : i32}) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
   !$acc loop tile(tileSize, tileSize)
   DO i = 1, n
@@ -231,7 +231,7 @@ program acc_loop
 
 ! CHECK:      acc.loop {{.*}} tile({%{{.*}} : i32, %{{.*}} : i32}) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
   !$acc loop collapse(2)
   DO i = 1, n
