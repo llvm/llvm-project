@@ -619,7 +619,7 @@ func.func @_QPs() {
     %c1_i32 = arith.constant 1 : i32
     %1 = arith.addi %arg0, %c1_i32 : i32
     omp.yield(%1 : i32)
-  }
+  } {atomic_control = #omp.atomic_control<>}
   return
 }
 fir.global internal @_QFsEc : i32 {
@@ -634,7 +634,7 @@ fir.global internal @_QFsEc : i32 {
 // CHECK:      %[[CONST_1:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK:      %[[OUT_VAL:.*]] = llvm.add %[[IN_VAL]], %[[CONST_1]]  : i32
 // CHECK:      omp.yield(%[[OUT_VAL]] : i32)
-// CHECK:    }
+// CHECK:    } {atomic_control = #omp.atomic_control<>}
 // CHECK:    llvm.return
 // CHECK:  }
 // CHECK:  llvm.mlir.global internal @[[GLOBAL]]() {{.*}} : i32 {
