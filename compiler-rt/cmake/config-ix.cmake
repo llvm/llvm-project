@@ -115,8 +115,6 @@ check_cxx_compiler_flag(--sysroot=.          COMPILER_RT_HAS_SYSROOT_FLAG)
 check_cxx_compiler_flag("-Werror -mcrc"      COMPILER_RT_HAS_MCRC_FLAG)
 check_cxx_compiler_flag(-fno-partial-inlining COMPILER_RT_HAS_FNO_PARTIAL_INLINING_FLAG)
 check_cxx_compiler_flag("-Werror -ftrivial-auto-var-init=pattern" COMPILER_RT_HAS_TRIVIAL_AUTO_INIT)
-check_cxx_compiler_flag(-mexecute-only       COMPILER_RT_HAS_MEXECUTE_ONLY_FLAG)
-check_cxx_compiler_flag(-mpure-code          COMPILER_RT_HAS_MPURE_CODE_FLAG)
 
 if(NOT WIN32 AND NOT CYGWIN)
   # MinGW warns if -fvisibility-inlines-hidden is used.
