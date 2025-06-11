@@ -15,7 +15,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-int write_out(cpp::string_view str_view, File *f) {
+static int write_out(cpp::string_view str_view, File *f) {
   if (str_view.size() > 0) {
     auto result = f->write_unlocked(str_view.data(), str_view.size());
     if (result.has_error())
@@ -26,7 +26,8 @@ int write_out(cpp::string_view str_view, File *f) {
 
 // separate function so that we can return early on error but still get the
 // unlock. This function sets errno and should not be called elsewhere.
-void write_sequence(cpp::string_view str_view, cpp::string_view err_str) {
+static void write_sequence(cpp::string_view str_view,
+                           cpp::string_view err_str) {
   int write_err;
   // TODO: this seems like there should be some sort of queue system to
   // deduplicate this code.
