@@ -24,7 +24,7 @@ constexpr extern long double cx_var_ld = __builtin_huge_vall();
 // OGCG: @cx_var_ld = {{.*}} x86_fp80 0xK7FFF8000000000000000
 
 int is_constant_evaluated() {
-    return __builtin_is_constant_evaluated();
+  return __builtin_is_constant_evaluated();
 }
 
 // CIR: cir.func @_Z21is_constant_evaluatedv() -> !s32i

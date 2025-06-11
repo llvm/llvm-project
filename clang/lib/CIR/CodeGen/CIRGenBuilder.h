@@ -238,11 +238,7 @@ public:
   cir::ConstantOp getConstInt(mlir::Location loc, mlir::Type t, uint64_t c);
 
   cir::ConstantOp getConstFP(mlir::Location loc, mlir::Type t,
-                             llvm::APFloat fpVal) {
-    assert(mlir::isa<cir::CIRFPTypeInterface>(t) &&
-           "expected floating point type");
-    return create<cir::ConstantOp>(loc, getAttr<cir::FPAttr>(t, fpVal));
-  }
+                             llvm::APFloat fpVal);
 
   bool isInt8Ty(mlir::Type i) {
     return i == typeCache.UInt8Ty || i == typeCache.SInt8Ty;

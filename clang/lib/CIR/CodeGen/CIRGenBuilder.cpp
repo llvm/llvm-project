@@ -59,6 +59,14 @@ cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc, mlir::Type t,
   return create<cir::ConstantOp>(loc, cir::IntAttr::get(t, c));
 }
 
+cir::ConstantOp
+clang::CIRGen::CIRGenBuilderTy::getConstFP(mlir::Location loc, mlir::Type t,
+                                           llvm::APFloat fpVal) {
+  assert(mlir::isa<cir::CIRFPTypeInterface>(t) &&
+         "expected floating point type");
+  return create<cir::ConstantOp>(loc, getAttr<cir::FPAttr>(t, fpVal));
+}
+
 // This can't be defined in Address.h because that file is included by
 // CIRGenBuilder.h
 Address Address::withElementType(CIRGenBuilderTy &builder,
