@@ -34,8 +34,8 @@ define i1 @func1() {
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
-    %r = call i1 @llvm.amdgcn.s.barrier.signal.isfirst(i32 -1)
-    ret i1 %r
+  %r = call i1 @llvm.amdgcn.s.barrier.signal.isfirst(i32 -1)
+  ret i1 %r
 }
 
 declare i1 @llvm.amdgcn.s.barrier.signal.isfirst(i32)
