@@ -31,7 +31,7 @@ constexpr uint32_t kMagicNumber = 0x07230203;
 constexpr uint32_t kGeneratorNumber = 22;
 
 /// Max number of words
-/// See https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#_universal_limits
+/// https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#_universal_limits
 constexpr uint32_t kMaxWordCount = 65535;
 
 /// Max number of words for literal
