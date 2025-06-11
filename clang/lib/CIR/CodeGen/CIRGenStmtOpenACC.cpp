@@ -102,6 +102,8 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpCombinedConstruct(
 
     emitOpenACCClauses(computeOp, loopOp, dirKind, dirLoc, clauses);
 
+    updateLoopOpParallelism(loopOp, /*isOrphan=*/false, dirKind);
+
     builder.create<TermOp>(end);
   }
 
