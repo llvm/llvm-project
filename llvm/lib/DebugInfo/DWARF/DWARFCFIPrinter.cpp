@@ -24,7 +24,6 @@
 using namespace llvm;
 using namespace dwarf;
 
-
 void CFIPrinter::print(const CFIProgram &P, raw_ostream &OS,
                        DIDumpOptions DumpOpts, unsigned IndentLevel,
                        std::optional<uint64_t> Address) {
