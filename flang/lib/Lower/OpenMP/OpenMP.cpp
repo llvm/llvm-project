@@ -3911,6 +3911,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
       // Capturing operation.
       assert(action0 != analysis.None && action1 != analysis.None &&
              "Expexcing two actions");
+      (void)action0;
+      (void)action1;
       captureOp =
           builder.create<mlir::omp::AtomicCaptureOp>(loc, hint, memOrder);
       // Set the non-atomic insertion point to before the atomic.capture.
