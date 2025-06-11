@@ -59383,7 +59383,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
 
   // We can always convert per-lane vXf64 shuffles into VSHUFPD.
   if (!IsSplat &&
-      (VT == MVT::v4f64 || (VT == MVT::v8f64 && Subtarget.useAVX512Regs())) &&
+      ((NumOps == 2 && VT == MVT::v4f64) ||
+       (NumOps == 4 && VT == MVT::v8f64 && Subtarget.useAVX512Regs())) &&
       all_of(Ops, [](SDValue Op) { return Op.hasOneUse(); })) {
     // Collect the individual per-lane v2f64/v4f64 shuffles.
     MVT OpVT = Ops[0].getSimpleValueType();
