@@ -25,8 +25,7 @@ using namespace llvm;
 using namespace llvm::dwarf;
 
 DIBuilder::DIBuilder(Module &m, bool AllowUnresolvedNodes, DICompileUnit *CU)
-    : M(m), VMContext(M.getContext()), CUNode(CU), DeclareFn(nullptr),
-      ValueFn(nullptr), LabelFn(nullptr), AssignFn(nullptr),
+    : M(m), VMContext(M.getContext()), CUNode(CU),
       AllowUnresolvedNodes(AllowUnresolvedNodes) {
   if (CUNode) {
     if (const auto &ETs = CUNode->getEnumTypes())
@@ -1067,10 +1066,6 @@ static void initIRBuilder(IRBuilder<> &Builder, const DILocation *DL,
 static Value *getDbgIntrinsicValueImpl(LLVMContext &VMContext, Value *V) {
   assert(V && "no value passed to dbg intrinsic");
   return MetadataAsValue::get(VMContext, ValueAsMetadata::get(V));
-}
-
-static Function *getDeclareIntrin(Module &M) {
-  return Intrinsic::getOrInsertDeclaration(&M, Intrinsic::dbg_declare);
 }
 
 DbgInstPtr DIBuilder::insertDbgValueIntrinsic(llvm::Value *Val,
