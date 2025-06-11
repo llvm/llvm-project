@@ -20,11 +20,10 @@
 #include <__fwd/bit_reference.h>
 #include <__iterator/segmented_iterator.h>
 #include <__string/constexpr_c_functions.h>
+#include <__type_traits/arithmetic_traits.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_equality_comparable.h>
-#include <__type_traits/is_integral.h>
-#include <__type_traits/is_signed.h>
 #include <__utility/move.h>
 #include <limits>
 

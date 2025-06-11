@@ -469,6 +469,7 @@ namespace std
 #  include <__type_traits/aligned_storage.h>
 #  include <__type_traits/aligned_union.h>
 #  include <__type_traits/alignment_of.h>
+#  include <__type_traits/arithmetic_traits.h>
 #  include <__type_traits/common_type.h>
 #  include <__type_traits/conditional.h>
 #  include <__type_traits/decay.h>
@@ -477,7 +478,6 @@ namespace std
 #  include <__type_traits/has_virtual_destructor.h>
 #  include <__type_traits/integral_constant.h>
 #  include <__type_traits/is_abstract.h>
-#  include <__type_traits/is_arithmetic.h>
 #  include <__type_traits/is_array.h>
 #  include <__type_traits/is_assignable.h>
 #  include <__type_traits/is_base_of.h>
@@ -489,10 +489,8 @@ namespace std
 #  include <__type_traits/is_destructible.h>
 #  include <__type_traits/is_empty.h>
 #  include <__type_traits/is_enum.h>
-#  include <__type_traits/is_floating_point.h>
 #  include <__type_traits/is_function.h>
 #  include <__type_traits/is_fundamental.h>
-#  include <__type_traits/is_integral.h>
 #  include <__type_traits/is_literal_type.h>
 #  include <__type_traits/is_member_pointer.h>
 #  include <__type_traits/is_nothrow_assignable.h>
@@ -505,7 +503,6 @@ namespace std
 #  include <__type_traits/is_reference.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/is_scalar.h>
-#  include <__type_traits/is_signed.h>
 #  include <__type_traits/is_standard_layout.h>
 #  include <__type_traits/is_trivial.h>
 #  include <__type_traits/is_trivially_assignable.h>
@@ -513,7 +510,6 @@ namespace std
 #  include <__type_traits/is_trivially_copyable.h>
 #  include <__type_traits/is_trivially_destructible.h>
 #  include <__type_traits/is_union.h>
-#  include <__type_traits/is_unsigned.h>
 #  include <__type_traits/is_void.h>
 #  include <__type_traits/is_volatile.h>
 #  include <__type_traits/make_signed.h>

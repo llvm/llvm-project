@@ -16,8 +16,8 @@
 #include <__charconv/to_chars_base_10.h>
 #include <__config>
 #include <__memory/addressof.h>
+#include <__type_traits/arithmetic_traits.h>
 #include <__type_traits/enable_if.h>
-#include <__type_traits/is_unsigned.h>
 #include <cstdint>
 #include <limits>
 

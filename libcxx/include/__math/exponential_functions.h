@@ -10,9 +10,8 @@
 #define _LIBCPP___MATH_EXPONENTIAL_FUNCTIONS_H
 
 #include <__config>
+#include <__type_traits/arithmetic_traits.h>
 #include <__type_traits/enable_if.h>
-#include <__type_traits/is_arithmetic.h>
-#include <__type_traits/is_integral.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/promote.h>
 

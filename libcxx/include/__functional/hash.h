@@ -14,13 +14,12 @@
 #include <__functional/unary_function.h>
 #include <__fwd/functional.h>
 #include <__memory/addressof.h>
+#include <__type_traits/arithmetic_traits.h>
 #include <__type_traits/conjunction.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_enum.h>
-#include <__type_traits/is_floating_point.h>
-#include <__type_traits/is_integral.h>
 #include <__type_traits/underlying_type.h>
 #include <__utility/pair.h>
 #include <__utility/swap.h>

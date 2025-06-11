@@ -19,9 +19,9 @@
 #include <__cstddef/size_t.h>
 #include <__format/concepts.h>
 #include <__format/format_arg.h>
+#include <__type_traits/arithmetic_traits.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/extent.h>
-#include <__type_traits/integer_traits.h>
 #include <__type_traits/remove_const.h>
 #include <cstdint>
 #include <string>

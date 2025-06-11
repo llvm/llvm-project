@@ -19,12 +19,12 @@
 #include <__functional/identity.h>
 #include <__iterator/aliasing_iterator.h>
 #include <__iterator/iterator_traits.h>
+#include <__type_traits/arithmetic_traits.h>
 #include <__type_traits/desugars_to.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_equality_comparable.h>
-#include <__type_traits/is_integral.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 

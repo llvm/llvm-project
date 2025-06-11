@@ -106,9 +106,7 @@ template<> class numeric_limits<cv long double>;
 #  include <__cxx03/limits>
 #else
 #  include <__config>
-#  include <__type_traits/is_arithmetic.h>
-#  include <__type_traits/is_signed.h>
-#  include <__type_traits/remove_cv.h>
+#  include <__type_traits/arithmetic_traits.h>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
