@@ -43,21 +43,24 @@ namespace llvm {
 
 inline std::error_code disableAutoConversion(int FD) {
 #ifdef __MVS__
-  return disablezOSAutoConversion(FD);
+  if (::disablezOSAutoConversion(FD) == -1)
+    return errnoAsErrorCode();
 #endif
   return std::error_code();
 }
 
 inline std::error_code enableAutoConversion(int FD) {
 #ifdef __MVS__
-  return enablezOSAutoConversion(FD);
+  if (::enablezOSAutoConversion(FD) == -1)
+    return errnoAsErrorCode();
 #endif
   return std::error_code();
 }
 
 inline std::error_code restoreStdHandleAutoConversion(int FD) {
 #ifdef __MVS__
-  return restorezOSStdHandleAutoConversion(FD);
+  if (::restorezOSStdHandleAutoConversion(FD) == -1)
+    return errnoAsErrorCode();
 #endif
   return std::error_code();
 }
