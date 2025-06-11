@@ -18,8 +18,11 @@ class TestCoroutineHandle(TestBase):
         self.build(dictionary={stdlib_type: "1"})
         is_clang = self.expectedCompiler(["clang"])
 
+        # Clang <= 20 used to also name the resume/destroy functions
+        # as `my_generator_func`.
+        # Never versions of clang name the clones as `.resume`/`.destroy`.
         test_generator_func_ptr_re = re.compile(
-            r"^\(a.out`my_generator_func\(\) at main.cpp:[0-9]*\)$"
+            r"^\(a.out`my_generator_func\(\)( \(\..*\))? at main.cpp:[0-9]*\)$"
         )
 
         # Run until the initial suspension point
