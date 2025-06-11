@@ -12248,13 +12248,14 @@ enum class PredicateConstraint { Uph, Upl, Upa };
 // not what we want. The code here pre-empts this by matching the register
 // explicitly.
 static std::optional<std::pair<unsigned, const TargetRegisterClass *>>
-parsePredicateRegAsConstraint(StringRef Constraint) {
+parseSVERegAsConstraint(StringRef Constraint) {
   if (!Constraint.starts_with('{') || !Constraint.ends_with('}') ||
-      Constraint[1] != 'p')
+      (Constraint[1] != 'p' && Constraint[1] != 'z'))
     return std::nullopt;
 
+  bool IsPredicate = Constraint[1] == 'p';
   Constraint = Constraint.substr(2, Constraint.size() - 3);
-  bool IsPredicateAsCount = Constraint.starts_with("n");
+  bool IsPredicateAsCount = IsPredicate && Constraint.starts_with("n");
   if (IsPredicateAsCount)
     Constraint = Constraint.drop_front(1);
 
@@ -12262,7 +12263,9 @@ parsePredicateRegAsConstraint(StringRef Constraint) {
   if (Constraint.getAsInteger(10, V) || V > 31)
     return std::nullopt;
 
-  if (IsPredicateAsCount)
+  if (!IsPredicate)
+    return std::make_pair(AArch64::Z0 + V, &AArch64::ZPRRegClass);
+  else if (IsPredicateAsCount)
     return std::make_pair(AArch64::PN0 + V, &AArch64::PNRRegClass);
   else
     return std::make_pair(AArch64::P0 + V, &AArch64::PPRRegClass);
@@ -12515,8 +12518,18 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
       break;
     }
   } else {
-    if (const auto P = parsePredicateRegAsConstraint(Constraint))
-      return *P;
+    if (const auto P = parseSVERegAsConstraint(Constraint)) {
+      // SME functions that are not in streaming mode, should
+      // still observe clobbers of Z-registers by clobbering
+      // the lower 128bits of those registers.
+      if (AArch64::ZPRRegClass.hasSubClassEq(P->second) &&
+          !Subtarget->hasSVE() && Subtarget->hasSME() &&
+          !Subtarget->isStreaming())
+        return std::make_pair(TRI->getSubReg(P->first, AArch64::zsub),
+                              &AArch64::FPR128RegClass);
+      else
+        return *P;
+    }
     if (const auto PC = parsePredicateConstraint(Constraint))
       if (const auto *RegClass = getPredicateRegisterClass(*PC, VT))
         return std::make_pair(0U, RegClass);
