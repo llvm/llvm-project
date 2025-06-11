@@ -955,7 +955,7 @@ macro(add_llvm_library name)
   if (ARG_MODULE AND NOT TARGET ${name})
     # Add empty "phony" target
     add_custom_target(${name})
-  elseif ( EXCLUDE_FROM_ALL )
+  elseif( EXCLUDE_FROM_ALL )
     set_target_properties( ${name} PROPERTIES EXCLUDE_FROM_ALL ON)
   elseif(ARG_BUILDTREE_ONLY)
     set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS_BUILDTREE_ONLY ${name})

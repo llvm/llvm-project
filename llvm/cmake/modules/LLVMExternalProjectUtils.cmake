@@ -392,8 +392,6 @@ function(llvm_ExternalProject_Add name source_dir)
                ${verbose}
                -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
                ${sysroot_arg}
-               -DCMAKE_C_COMPILER_LAUNCHER=ccache
-               -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
                -DLLVM_BINARY_DIR=${PROJECT_BINARY_DIR}
                -DLLVM_CONFIG_PATH=${llvm_config_path}
                -DLLVM_ENABLE_WERROR=${LLVM_ENABLE_WERROR}
