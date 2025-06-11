@@ -157,7 +157,7 @@ module attributes {transform.with_named_sequence} {
                          "test-convergence" = true,
                          "max-num-rewrites" =  %max_rewrites }
         to %1
-        : (!transform.any_param, !transform.any_param, !transform.any_op) -> !transform.any_op
+        : (!transform.any_op, !transform.any_param, !transform.any_param) -> !transform.any_op
     transform.yield
   }
 }
@@ -171,7 +171,6 @@ func.func @invalid_options_as_str() {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
     %1 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %max_iter = transform.param.constant "max-iterations=10" -> !transform.any_param
     // expected-error @+2 {{expected '{' in options dictionary}}
     %2 = transform.apply_registered_pass "canonicalize"
         with options = "top-down=false" to %1 : (!transform.any_op) -> !transform.any_op
@@ -256,7 +255,7 @@ module attributes {transform.with_named_sequence} {
     // expected-error @+2 {{expected '{' in options dictionary}}
     transform.apply_registered_pass "canonicalize"
         with options = %pass_options to %1
-        : (!transform.any_param, !transform.any_op) -> !transform.any_op
+        : (!transform.any_op, !transform.any_param) -> !transform.any_op
     transform.yield
   }
 }
@@ -276,7 +275,7 @@ module attributes {transform.with_named_sequence} {
     // expected-error @below {{options passed as a param must have a single value associated, param 0 associates 2}}
     transform.apply_registered_pass "canonicalize"
         with options = { "top-down" = %topdown_options } to %1
-        : (!transform.any_param, !transform.any_op) -> !transform.any_op
+        : (!transform.any_op, !transform.any_param) -> !transform.any_op
     transform.yield
   }
 }
@@ -316,12 +315,12 @@ module attributes {transform.with_named_sequence} {
     %0 = "transform.structured.match"(%arg0) <{ops = ["func.func"]}> : (!transform.any_op) -> !transform.any_op
     %1 = "transform.param.constant"() <{value = 10 : i64}> : () -> !transform.any_param
     // expected-error @below {{dynamic option index 1 is out of bounds for the number of dynamic options: 1}}
-    %2 = "transform.apply_registered_pass"(%1, %0) <{
+    %2 = "transform.apply_registered_pass"(%0, %1) <{
       options = {"max-iterations" = #transform.param_operand<index=1 : i64>,
                  "test-convergence" = true,
                  "top-down" = false},
       pass_name = "canonicalize"}>
-    : (!transform.any_param, !transform.any_op) -> !transform.any_op
+    : (!transform.any_op, !transform.any_param) -> !transform.any_op
     "transform.yield"() : () -> ()
   }) : () -> ()
 }) {transform.with_named_sequence} : () -> ()
@@ -340,13 +339,13 @@ module attributes {transform.with_named_sequence} {
     %1 = "transform.param.constant"() <{value = 10 : i64}> : () -> !transform.any_param
     %2 = "transform.param.constant"() <{value = 1 : i64}> : () -> !transform.any_param
     // expected-error @below {{dynamic option index 0 is already used in options}}
-    %3 = "transform.apply_registered_pass"(%1, %2, %0) <{
+    %3 = "transform.apply_registered_pass"(%0, %1, %2) <{
       options = {"max-iterations" = #transform.param_operand<index=0 : i64>,
                  "max-num-rewrites" = #transform.param_operand<index=0 : i64>,
                  "test-convergence" = true,
                  "top-down" = false},
       pass_name = "canonicalize"}>
-    : (!transform.any_param, !transform.any_param, !transform.any_op) -> !transform.any_op
+    : (!transform.any_op, !transform.any_param, !transform.any_param) -> !transform.any_op
     "transform.yield"() : () -> ()
   }) : () -> ()
 }) {transform.with_named_sequence} : () -> ()
@@ -364,12 +363,12 @@ module attributes {transform.with_named_sequence} {
     %1 = "transform.param.constant"() <{value = 10 : i64}> : () -> !transform.any_param
     %2 = "transform.param.constant"() <{value = 1 : i64}> : () -> !transform.any_param
     // expected-error @below {{a param operand does not have a corresponding param_operand attr in the options dict}}
-    %3 = "transform.apply_registered_pass"(%1, %2, %0) <{
+    %3 = "transform.apply_registered_pass"(%0, %1, %2) <{
       options = {"max-iterations" = #transform.param_operand<index=0 : i64>,
                  "test-convergence" = true,
                  "top-down" = false},
       pass_name = "canonicalize"}>
-    : (!transform.any_param, !transform.any_param, !transform.any_op) -> !transform.any_op
+    : (!transform.any_op, !transform.any_param, !transform.any_param) -> !transform.any_op
     "transform.yield"() : () -> ()
   }) : () -> ()
 }) {transform.with_named_sequence} : () -> ()

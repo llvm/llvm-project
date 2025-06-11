@@ -263,12 +263,12 @@ def testApplyRegisteredPassOp(module: Module):
     )
     with InsertionPoint(sequence.body):
         mod = transform.ApplyRegisteredPassOp(
-            transform.AnyOpType.get(), "canonicalize", sequence.bodyTarget
+            transform.AnyOpType.get(), sequence.bodyTarget, "canonicalize"
         )
         mod = transform.ApplyRegisteredPassOp(
             transform.AnyOpType.get(),
-            "canonicalize",
             mod.result,
+            "canonicalize",
             options={"top-down": BoolAttr.get(False)},
         )
         max_iter = transform.param_constant(
@@ -281,12 +281,12 @@ def testApplyRegisteredPassOp(module: Module):
         )
         transform.apply_registered_pass(
             transform.AnyOpType.get(),
-            "canonicalize",
             mod,
+            "canonicalize",
             options={
                 "top-down": BoolAttr.get(False),
                 "max-iterations": max_iter,
-                "test-convergence": BoolAttr.get(True),
+                "test-convergence": True,
                 "max-rewrites": max_rewrites,
             },
         )
@@ -305,4 +305,4 @@ def testApplyRegisteredPassOp(module: Module):
     # CHECK-SAME:                    "max-rewrites" =  %[[MAX_REWRITE]],
     # CHECK-SAME:                    "test-convergence" = true,
     # CHECK-SAME:                    "top-down" = false}
-    # CHECK-SAME:    to %{{.*}} : (!transform.any_param, !transform.any_param, !transform.any_op) -> !transform.any_op
+    # CHECK-SAME:    to %{{.*}} : (!transform.any_op, !transform.any_param, !transform.any_param) -> !transform.any_op

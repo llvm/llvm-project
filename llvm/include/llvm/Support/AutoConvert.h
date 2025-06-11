@@ -16,6 +16,7 @@
 
 #ifdef __MVS__
 #include <_Ccsid.h>
+#endif
 #ifdef __cplusplus
 #include "llvm/Support/ErrorOr.h"
 #include <system_error>
@@ -28,15 +29,57 @@
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
+
 int enablezOSAutoConversion(int FD);
 int disablezOSAutoConversion(int FD);
 int restorezOSStdHandleAutoConversion(int FD);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
 #ifdef __cplusplus
 namespace llvm {
+
+inline std::error_code disableAutoConversion(int FD) {
+#ifdef __MVS__
+  if (::disablezOSAutoConversion(FD) == -1)
+    return errnoAsErrorCode();
+#endif
+  return std::error_code();
+}
+
+inline std::error_code enableAutoConversion(int FD) {
+#ifdef __MVS__
+  if (::enablezOSAutoConversion(FD) == -1)
+    return errnoAsErrorCode();
+#endif
+  return std::error_code();
+}
+
+inline std::error_code restoreStdHandleAutoConversion(int FD) {
+#ifdef __MVS__
+  if (::restorezOSStdHandleAutoConversion(FD) == -1)
+    return errnoAsErrorCode();
+#endif
+  return std::error_code();
+}
+
+inline std::error_code setFileTag(int FD, int CCSID, bool Text) {
+#ifdef __MVS__
+  return setzOSFileTag(FD, CCSID, Text);
+#endif
+  return std::error_code();
+}
+
+inline ErrorOr<bool> needConversion(const char *FileName, const int FD = -1) {
+#ifdef __MVS__
+  return needzOSConversion(FileName, FD);
+#endif
+  return false;
+}
+
+#ifdef __MVS__
 
 /** \brief Disable the z/OS enhanced ASCII auto-conversion for the file
  * descriptor.
@@ -63,9 +106,8 @@ ErrorOr<__ccsid_t> getzOSFileTag(const char *FileName, const int FD = -1);
  */
 ErrorOr<bool> needzOSConversion(const char *FileName, const int FD = -1);
 
+#endif /* __MVS__*/
 } /* namespace llvm */
 #endif /* __cplusplus */
-
-#endif /* __MVS__ */
 
 #endif /* LLVM_SUPPORT_AUTOCONVERT_H */

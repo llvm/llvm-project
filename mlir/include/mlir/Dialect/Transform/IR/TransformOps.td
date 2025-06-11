@@ -434,10 +434,10 @@ def ApplyRegisteredPassOp : TransformDialectOp<"apply_registered_pass",
     of targeted ops.
   }];
 
-  let arguments = (ins StrAttr:$pass_name,
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                       StrAttr:$pass_name,
                        DefaultValuedAttr<DictionaryAttr, "{}">:$options,
-                       Variadic<TransformParamTypeInterface>:$dynamic_options,
-                       TransformHandleTypeInterface:$target);
+                       Variadic<TransformParamTypeInterface>:$dynamic_options);
   let results = (outs TransformHandleTypeInterface:$result);
   let assemblyFormat = [{
     $pass_name (`with` `options` `=`

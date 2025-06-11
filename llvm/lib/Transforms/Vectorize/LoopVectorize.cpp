@@ -505,9 +505,6 @@ public:
   /// Fix the vectorized code, taking care of header phi's, and more.
   void fixVectorizedLoop(VPTransformState &State);
 
-  // Return true if any runtime check is added.
-  bool areSafetyChecksAdded() { return AddedSafetyChecks; }
-
   /// Fix the non-induction PHIs in \p Plan.
   void fixNonInductionPHIs(VPTransformState &State);
 
@@ -619,9 +616,6 @@ protected:
 
   /// The profitablity analysis.
   LoopVectorizationCostModel *Cost;
-
-  // Record whether runtime checks are added.
-  bool AddedSafetyChecks = false;
 
   /// BFI and PSI are used to check for profile guided size optimizations.
   BlockFrequencyInfo *BFI;
@@ -1777,6 +1771,9 @@ class GeneratedRTChecks {
   /// they have been used.
   Value *MemRuntimeCheckCond = nullptr;
 
+  /// True if any checks have been added.
+  bool AddedAnyChecks = false;
+
   DominatorTree *DT;
   LoopInfo *LI;
   TargetTransformInfo *TTI;
@@ -2038,9 +2035,9 @@ public:
     if (AddBranchWeights)
       setBranchWeights(BI, SCEVCheckBypassWeights, /*IsExpected=*/false);
     ReplaceInstWithInst(SCEVCheckBlock->getTerminator(), &BI);
-
     // Mark the check as used, to prevent it from being removed during cleanup.
     SCEVCheckCond = nullptr;
+    AddedAnyChecks = true;
     return SCEVCheckBlock;
   }
 
@@ -2070,8 +2067,12 @@ public:
 
     // Mark the check as used, to prevent it from being removed during cleanup.
     MemRuntimeCheckCond = nullptr;
+    AddedAnyChecks = true;
     return MemCheckBlock;
   }
+
+  /// Return true if any runtime checks have been added
+  bool hasChecks() const { return AddedAnyChecks; }
 };
 } // namespace
 
@@ -2459,7 +2460,6 @@ BasicBlock *InnerLoopVectorizer::emitSCEVChecks(BasicBlock *Bypass) {
   assert((!Cost->OptForSize ||
           Cost->Hints->getForce() == LoopVectorizeHints::FK_Enabled) &&
          "Cannot SCEV check stride or overflow when optimizing for size");
-  AddedSafetyChecks = true;
 
   introduceCheckBlockInVPlan(SCEVCheckBlock);
   return SCEVCheckBlock;
@@ -2493,9 +2493,6 @@ BasicBlock *InnerLoopVectorizer::emitMemRuntimeChecks(BasicBlock *Bypass) {
                 "(e.g., adding 'restrict').";
     });
   }
-
-
-  AddedSafetyChecks = true;
 
   introduceCheckBlockInVPlan(MemCheckBlock);
   return MemCheckBlock;
@@ -10287,7 +10284,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         }
         ++LoopsEpilogueVectorized;
 
-        if (!MainILV.areSafetyChecksAdded())
+        if (!Checks.hasChecks())
           DisableRuntimeUnroll = true;
       } else {
         InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, VF.Width,
@@ -10299,7 +10296,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         // Add metadata to disable runtime unrolling a scalar loop when there
         // are no runtime checks about strides and memory. A scalar loop that is
         // rarely used is not worth unrolling.
-        if (!LB.areSafetyChecksAdded())
+        if (!Checks.hasChecks())
           DisableRuntimeUnroll = true;
       }
       // Report the vectorization decision.
